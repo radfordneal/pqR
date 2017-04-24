@@ -1193,11 +1193,11 @@ for pointers to commercialized versions of R.
 
 *Rweb* is developed and maintained by Jeff Banfield
 <jeff@math.montana.edu>.  The Rweb Home Page
-(http://www.math.montana.edu/Rweb/) provides access to all three
-versions of Rweb--a simple text entry form that returns output and
-graphs, a more sophisticated JavaScript version that provides a multiple
-window environment, and a set of point and click modules that are useful
-for introductory statistics courses and require no knowledge of the R
+(https://rweb.stat.umn.edu/Rweb/) provides access to all three versions
+of Rweb--a simple text entry form that returns output and graphs, a more
+sophisticated JavaScript version that provides a multiple window
+environment, and a set of point and click modules that are useful for
+introductory statistics courses and require no knowledge of the R
 language.  All of the Rweb versions can analyze Web accessible datasets
 if a URL is provided.
 

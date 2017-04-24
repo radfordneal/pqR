@@ -1,6 +1,6 @@
 % File src/library/utils/man/RweaveLatex.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2014 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{RweaveLatex}
@@ -8,8 +8,9 @@
 \alias{RweaveLatexSetup}
 \title{R/LaTeX Driver for Sweave}
 \description{
-  A driver for \code{\link{Sweave}} that translates R code chunks in
-  LaTeX files.
+  A driver for \code{\link{Sweave}} that translates \R code chunks in
+  LaTeX files by \dQuote{running them}, i.e., \code{\link{parse}()} and
+  \code{\link{eval}()} each.
 }
 \usage{
 RweaveLatex()
@@ -88,9 +89,9 @@ RweaveLatexSetup(file, syntax, output = NULL, quiet = FALSE,
   interfere with certain encoding and typeface selections.  If you have
   problems in the rendering of certain character sets, try this option.
 
-  As from \R 3.1.0 it also supports the \samp{[inconsolata]} option, to
-  render monospaced text in \code{inconsolata}, the font used by default
-  for \R help pages.
+  It also supports the \samp{[inconsolata]} option, to render monospaced
+  text in \code{inconsolata}, the font used by default for \R help
+  pages.
 
   The use of fancy quotes (see \code{\link{sQuote}}) can cause problems
   when setting \R output.  Either set
@@ -251,11 +252,17 @@ my.Swd <- function(name, width, height, ...)
                  units = "in", type = "quartz", bg = "transparent")
 @
 }
+  Alternatively for \R >= 3.4.0, if the function exists in a package
+  (rather than the \code{.GlobalEnv}) it can be used by setting
+  \code{grdevice = "pkg::my.Swd"} (or with \samp{:::} instead of
+  \samp{::} if the function is not exported).
+
   Currently only one custom device can be used for each chunk, but
   different devices can be used for different chunks.
 
   A replacement for \code{\link{dev.off}} can be provided as a function
-  with suffix \code{.off}, e.g.\sspace{}\code{my.Swd.off()}.
+  with suffix \code{.off}, e.g.\sspace{}\code{my.Swd.off()} or
+  \code{pkg::my.Swd.off()}, respectively.
 }
 
 \section{Hook Functions}{

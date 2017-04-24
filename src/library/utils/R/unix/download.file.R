@@ -29,31 +29,13 @@ download.file <-
     if(method == "auto") {
         if(length(url) != 1L || typeof(url) != "character")
             stop("'url' must be a length-one character vector");
-	method <-
-	    if(capabilities("libcurl") && grepl("^(ht|f)tps:", url))
-		"libcurl"
-            else "internal2"
+        ## As from 3.3.0 all Unix-alikes support libcurl.
+	method <- if(grepl("^file:", url)) "internal" else "libcurl"
     }
 
     switch(method,
 	   "internal" = {
 	       status <- .External(C_download, url, destfile, quiet, mode, cacheOK)
-               if (status == 2L) stop(gettextf("cannot open URL '%s'", url))
-	       ## needed for Mac GUI from download.packages etc
-	       if(!quiet) flush.console()
-	   },
-	   "internal2" = {
-               ## want redirection warning immediately
-               if(getOption('warn') == 0L) {
-                   op <- options(warn = 1L)
-                   on.exit(options(op))
-               }
-	       status <- .External(C_download, url, destfile, quiet, mode, cacheOK)
-               if (status == 2L) {
-                   if(!quiet)
-                       message('switching to method = "libcurl" because of redirection to https')
-                   status <- .Internal(curlDownload(url, destfile, quiet, mode, cacheOK))
-               }
 	       ## needed for Mac GUI from download.packages etc
 	       if(!quiet) flush.console()
 	   },
@@ -72,6 +54,7 @@ download.file <-
 				      paste(extra, collapse = " "),
 				      shQuote(url),
 				      "-O", shQuote(path.expand(destfile))))
+               if(status) stop("'wget' call had nonzero exit status")
 	   },
 	   "curl" = {
 	       if(length(url) != 1L || typeof(url) != "character")
@@ -84,6 +67,7 @@ download.file <-
 				      paste(extra, collapse = " "),
 				      shQuote(url),
 				      " -o", shQuote(path.expand(destfile))))
+               if(status) stop("'curl' call had nonzero exit status")
 	   },
 	   "lynx" =
 	       stop("method 'lynx' is defunct", domain = NA))

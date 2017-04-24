@@ -57,7 +57,7 @@ convertUnit <- function(x, unitTo, axisFrom="x", typeFrom="location",
     stop("'x' argument must be a unit object")
   if (is.na(whatfrom) || is.na(whatto))
     stop("invalid 'axis' or 'type'")
-  value <- grid.Call(L_convert, x, as.integer(whatfrom),
+  value <- grid.Call(C_convert, x, as.integer(whatfrom),
                  as.integer(whatto), valid.units(unitTo))
   if (!valueOnly)
     unit(value, unitTo)
@@ -109,7 +109,7 @@ convertNative <- function(unit, dimension="x", type="location") {
 # in the current context
 calcStringMetric <- function(text) {
     # .Call rather than .Call.graphics because it is a one-off calculation
-    metric <- grid.Call(L_stringMetric, text)
+    metric <- grid.Call(C_stringMetric, text)
     names(metric) <- c("ascent", "descent", "width")
     metric
 }
@@ -200,12 +200,16 @@ valid.data <- function(units, data) {
 }
 
 valid.units <- function(units) {
-  .Call(L_validUnits, units)
+  .Call(C_validUnits, units)
 }
 
 as.character.unit <- function(x, ...) {
   class(x) <- NULL
   paste0(x, attr(x, "unit"))
+}
+
+format.unit <- function(x, ...) {
+    paste0(format(unclass(x), ...), attr(x, "unit"))
 }
 
 #########################
@@ -279,6 +283,14 @@ as.character.unit.arithmetic <- function(x, ...) {
     paste0(fname, "(", paste(x$arg1, collapse=", "), ")")
 }
 
+format.unit.arithmetic <- function(x, ...) {
+    fname <- x$fname
+    if (fname == "+" || fname == "-" || fname == "*")
+        paste0(format(x$arg1, ...), fname, format(x$arg2, ...))
+    else
+        paste0(fname, "(", paste(format(x$arg1, ...), collapse=", "), ")")
+}
+
 unit.pmax <- function(...) {
 
   select.i <- function(unit, i) {
@@ -347,6 +359,10 @@ is.unit.list <- function(x) {
 as.character.unit.list <- function(x, ...) {
   ## *apply cannot work on 'x' directly because of "wrong" length()s
   vapply(seq_along(x), function(i) as.character(x[[i]]), "")
+}
+
+format.unit.list <- function(x, ...) {
+    vapply(seq_along(x), function(i) format(x[[i]], ...), "")
 }
 
 #########################

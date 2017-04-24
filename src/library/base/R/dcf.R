@@ -114,13 +114,15 @@ function(file, fields = NULL, all = FALSE, keep.white = NULL)
     tags <- sub(":.*", "", lines[line_has_tag])
     lines[line_has_tag] <-
         sub("[^:]*:[[:space:]]*", "", lines[line_has_tag])
-    foldable <- rep.int(is.na(match(tags, keep.white)), lengths)
+    fold <- is.na(match(tags, keep.white))
+    foldable <- rep.int(fold, lengths)
     lines[foldable] <- sub("^[[:space:]]*", "", lines[foldable])
     lines[foldable] <- sub("[[:space:]]*$", "", lines[foldable])
 
     vals <- mapply(function(from, to) paste(lines[from:to],
                                             collapse = "\n"),
                    c(1L, pos[-length(pos)] + 1L), pos)
+    vals[fold] <- trimws(vals[fold])
 
     out <- .assemble_things_into_a_data_frame(tags, vals, nums[pos])
 
@@ -200,7 +202,7 @@ function(x, file = "", append = FALSE,
     if(length(eor)) {
         ## Newline for end of record.
         ## Note that we do not write a trailing blank line.
-        eor[ diff(c(col(out))[is_not_empty]) >= 1L ] <- "\n"
+        eor[ which(diff(c(col(out))[is_not_empty]) >= 1L) ] <- "\n"
     }
     writeLines(paste0(c(out[is_not_empty]), eor), file)
 }

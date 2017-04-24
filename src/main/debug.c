@@ -43,14 +43,14 @@ SEXP attribute_hidden do_debug(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (TYPEOF(CAR(args)) != CLOSXP &&
 	TYPEOF(CAR(args)) != SPECIALSXP &&
 	TYPEOF(CAR(args)) != BUILTINSXP)
-	errorcall(call, _("argument must be a function"));
+	error(_("argument must be a function"));
     switch(PRIMVAL(op)) {
     case 0: // debug()
 	SET_RDEBUG(CAR(args), 1);
 	break;
     case 1: // undebug()
 	if( RDEBUG(CAR(args)) != 1 )
-	    warningcall(call, "argument is not being debugged");
+	    warning("argument is not being debugged");
 	SET_RDEBUG(CAR(args), 0);
 	break;
     case 2: // isdebugged()
@@ -241,7 +241,7 @@ SEXP attribute_hidden do_retracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
 	errorcall(call, _("argument must not be a function"));
 
     previous = CADR(argList);
-    if(!isNull(previous) && !isString(previous))
+    if(!isNull(previous) && (!isString(previous) || LENGTH(previous) != 1))
 	    errorcall(call, _("invalid '%s' argument"), "previous");
 
     if (RTRACE(object)) {

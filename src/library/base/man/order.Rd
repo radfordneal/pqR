@@ -1,6 +1,6 @@
 % File src/library/base/man/order.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2016 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{order}
@@ -17,10 +17,10 @@
 }
 \usage{
 order(\dots, na.last = TRUE, decreasing = FALSE,
-      method = c("shell", "radix"))
+      method = c("auto", "shell", "radix"))
 
 sort.list(x, partial = NULL, na.last = TRUE, decreasing = FALSE,
-          method = c("shell", "quick", "radix"))
+          method = c("auto", "shell", "quick", "radix"))
 }
 \arguments{
   \item{\dots}{a sequence of numeric, complex, character or logical
@@ -37,8 +37,10 @@ sort.list(x, partial = NULL, na.last = TRUE, decreasing = FALSE,
     \code{FALSE}, they are put first; if \code{NA}, they are removed
     (see \sQuote{Note}.)}
   \item{method}{the method to be used: partial matches are allowed.  The
-    default is \code{"shell"} except for some special cases: see
-    \sQuote{Details}.  For details of methods \code{"shell"}, 
+    default (\code{"auto"}) implies \code{"radix"} for short numeric vectors,
+    integer vectors, logical vectors and factors.
+    Otherwise, it implies \code{"shell"}.
+    For details of methods \code{"shell"}, 
     \code{"quick"}, and \code{"radix"},
     see the help for \code{\link{sort}}.}
 }
@@ -57,14 +59,14 @@ sort.list(x, partial = NULL, na.last = TRUE, decreasing = FALSE,
   \code{\link{Comparison}}.
 
   The \code{"shell"} method is generally the safest bet and is the
-  default method, except for factors and integer vectors, where
-  \code{"radix"} is assumed. Method \code{"radix"} stably sorts logical,
+  default method, except for short factors, numeric vectors,
+  integer vectors and logical vectors, where \code{"radix"} is assumed.
+  Method \code{"radix"} stably sorts logical,
   numeric and character vectors in linear time. It outperforms the other
   methods, although there are caveats (see \code{\link{sort}}).  Method
   \code{"quick"} for \code{sort.list} is only supported for numeric
   \code{x} with \code{na.last = NA}, is not stable, and is slower than
-  \code{"radix"}. The \code{"radix"} method has less precision when
-  sorting real-valued numbers.
+  \code{"radix"}. 
   
   \code{partial = NULL} is supported for compatibility with other
   implementations of S, but no other values are accepted and ordering is
@@ -105,8 +107,7 @@ sort.list(x, partial = NULL, na.last = TRUE, decreasing = FALSE,
 }
   both sort the non-\code{NA} values of \code{x}.
 
-  Prior to \R 3.1.0 \code{method = "radix"} was only supported for
-  non-negative integers. Prior to \R 3.3.0 it was only supported for
+  Prior to \R 3.3.0 \code{method = "radix"} was only supported for
   integers of range less than 100,000.
 }
 

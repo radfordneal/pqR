@@ -198,15 +198,13 @@ static int nblock[NBLOCK];
 #define TEND(i)
 #endif
 
-static int range, off; // used by both icount and do_radixsort
+static int range, xmin; // used by both icount and do_radixsort
 static void setRange(int *x, int n)
 {
-    int xmin = NA_INTEGER, xmax = NA_INTEGER;
+    xmin = NA_INTEGER;
+    int xmax = NA_INTEGER;
     double overflow;
 
-    off = (nalast == 1) ? 0 : 1;   // nalast^decreasing ? 0 : 1;
-    // off = 0 will store values starting from index 0. NAs will go last.
-    // off = 1 will store values starting from index 1. NAs will be at 0th index.
     int i = 0;
     while(i < n && x[i] == NA_INTEGER) i++;
     if (i < n) xmax = xmin = x[i];
@@ -233,9 +231,6 @@ static void setRange(int *x, int n)
     }
 
     range = xmax - xmin + 1;
-    // so that  off+order*x[i]  (below in icount)
-    // => (x[i]-xmin)+0|1  or  (xmax-x[i])+0|1
-    off = order == 1 ? -xmin + off : xmax + off;
 
     return;
 }
@@ -257,7 +252,7 @@ static void icount(int *x, int *o, int n)
    3. Pushes group sizes onto stack
 */
 {
-    int napos = (nalast == 1) ? range : 0;  // take care of 'nalast' argument
+    int napos = range; // NA's always counted in last bin
     // static is IMPORTANT, counting sort is called repetitively.
     static unsigned int counts[N_RANGE + 1] = { 0 };
     /* counts are set back to 0 at the end efficiently. 1e5 = 0.4MB i.e
@@ -273,26 +268,36 @@ static void icount(int *x, int *o, int n)
 	if (x[i] == NA_INTEGER)
 	    counts[napos]++;
 	else
-	    counts[off + order * x[i]]++;
+	    counts[x[i] - xmin]++;
     }
     
     int tmp = 0;
-    for (int i = 0; i <= range; i++) 
+    if (nalast != 1 && counts[napos]) {
+        push(counts[napos]);
+        tmp += counts[napos];
+    }
+    int w = (order==1) ? 0 : range-1;
+    for (int i = 0; i < range; i++) 
         /* no point in adding tmp < n && i <= range, since range includes max, 
            need to go to max, unlike 256 loops elsewhere in radixsort.c */
     {
-	if (counts[i]) {
+	if (counts[w]) {
 	    // cumulate but not through 0's.
 	    // Helps resetting zeros when n < range, below.
-	    push(counts[i]);
-	    counts[i] = (tmp += counts[i]);
+	    push(counts[w]);
+	    counts[w] = (tmp += counts[w]);
 	}
+        w += order; // order is +1 or -1
+    }
+    if (nalast == 1 && counts[napos]) {
+        push(counts[napos]);
+        counts[napos] = (tmp += counts[napos]);
     }
     for (int i = n - 1; i >= 0; i--) {
 	// This way na.last=TRUE/FALSE cases will have just a
 	// single if-check overhead.
 	o[--counts[(x[i] == NA_INTEGER) ? napos :
-		   off + order * x[i]]] = (int) (i + 1);
+		   x[i] - xmin]] = (int) (i + 1);
     }
     // nalast = 1, -1 are both taken care already.
     if (nalast == 0)
@@ -309,7 +314,7 @@ static void icount(int *x, int *o, int n)
 	counts[napos] = 0;
 	for (int i = 0; i < n; i++) {
 	    if (x[i] != NA_INTEGER)
-		counts[off + order * x[i]] = 0;
+		counts[x[i] - xmin] = 0;
 	}
     } else
 	memset(counts, 0, (range + 1) * sizeof(int));
@@ -608,7 +613,6 @@ static void iradix_r(int *xsub, int *osub, int n, int radix)
 // + changed to MSD and hooked into do_radixsort framework here.
 // + replaced tolerance with rounding s.f.
 
-static int dround = 2;
 static unsigned long long dmask1;
 static unsigned long long dmask2;
 
@@ -616,22 +620,6 @@ static void setNumericRounding(int dround)
 {
     dmask1 = dround ? 1 << (8 * dround - 1) : 0;
     dmask2 = 0xffffffffffffffff << dround * 8;
-}
-
-SEXP attribute_hidden do_setNumericRounding(SEXP droundArg)
-{
-    if (!isInteger(droundArg) || LENGTH(droundArg) != 1)
-	error("Must an integer or numeric vector length 1");
-    if (INTEGER(droundArg)[0] < 0 || INTEGER(droundArg)[0] > 2)
-	error("Must be 2 (default) or 1 or 0");
-    dround = INTEGER(droundArg)[0];
-    setNumericRounding(dround);
-    return R_NilValue;
-}
-
-SEXP attribute_hidden do_getNumericRounding()
-{
-    return ScalarInteger(dround);
 }
 
 static union {
@@ -646,24 +634,7 @@ unsigned long long dtwiddle(void *p, int i, int order)
     if (R_FINITE(u.d)) {
 	u.ull = (u.d != 0.0) ? u.ull + ((u.ull & dmask1) << 1) : 0;
     } else if (ISNAN(u.d)) {
-	/* 1. NA twiddled to all bits 0, sorts first.  R's value 1954 cleared.
-
-	   2. NaN twiddled to set just bit 13, sorts immediately after
-	   NA. 13th bit to be consistent with "quiet" na bit but any
-	   bit outside last 2 bytes would do.  (ref:
-	   http://r.789695.n4.nabble.com/Question-re-NA-NaNs-in-R-td4685014.html)
-
-	   3. This also normalises a difference between NA on 32bit R
-	   (bit 13 set) and 64bit R (bit 13 not set)
-
-	   4. -Inf twiddled to : 0 sign, exponent all 0, mantissa all
-	   1, sorts after NaN
-
-	   5. +Inf twiddled to : 1 sign, exponent all 1, mantissa all
-	   0, sorts last since finite numbers are defined by not-all-1
-	   in exponent
-	*/
-	u.ull = (ISNA(u.d) ? 0 : (1ULL << 51));
+	u.ull = 0;
 	return (nalast == 1 ? ~u.ull : u.ull);
     }
     unsigned long long mask = (u.ull & 0x8000000000000000) ?
@@ -1490,10 +1461,13 @@ static void isort(int *x, int *o, int n)
     if (n <= 2) {
 	// nalast = 0 and n == 2 (check bottom of this file for explanation)
 	if (nalast == 0 && n == 2) {
+	    if (o[0] == -1) {
+		o[0] = 1;
+		o[1] = 2;
+	    }
 	    for (int i = 0; i < n; i++)
 		if (x[i] == NA_INTEGER)
 		    o[i] = 0;
-                else o[i] = i + 1;
 	    push(1); push(1);
 	    return;
 	} else Error("Internal error: isort received n=%d. isorted should have dealt with this (e.g. as a reverse sorted vector) already",n);
@@ -1540,10 +1514,13 @@ static void dsort(double *x, int *o, int n)
 	if (nalast == 0 && n == 2) {
 	    // don't have to twiddle here.. at least one will be NA
 	    // and 'n' WILL BE 2.
+	    if (o[0] == -1) {
+		o[0] = 1;
+		o[1] = 2;
+	    }
 	    for (int i = 0; i < n; i++)
 		if (is_nan(x, i))
 		    o[i] = 0;
-                else o[i] = i + 1;
 	    push(1); push(1);
 	    return;
 	}
@@ -1576,11 +1553,7 @@ SEXP attribute_hidden do_radixsort(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (sizeof(double) != 8) {
         error("radix sort assumes sizeof(double) == 8");
     }
-
-    /* (ML) Controls the precision of numeric vector sorting; may want
-       to make this a parameter */
-    setNumericRounding(dround);
-
+    
     nalast = (asLogical(CAR(args)) == NA_LOGICAL) ? 0 :
 	(asLogical(CAR(args)) == TRUE) ? 1 : -1; // 1=TRUE, -1=FALSE, 0=NA
     args = CDR(args);
@@ -1597,6 +1570,9 @@ SEXP attribute_hidden do_radixsort(SEXP call, SEXP op, SEXP args, SEXP rho)
     */
     sortStr = asLogical(CAR(args));
     args = CDR(args);
+
+    /* When grouping, we round off doubles to account for imprecision */
+    setNumericRounding(retGrp ? 2 : 0);
 
     if (args == R_NilValue)
 	return R_NilValue;
@@ -1887,15 +1863,22 @@ SEXP attribute_hidden do_radixsort(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (retGrp) {
         int maxgrpn = NA_INTEGER;
         ngrp = gsngrp[flip];
-        setAttrib(ans, install("ends"), x = allocVector(INTSXP, ngrp));
+        SEXP s_ends = install("ends");
+        setAttrib(ans, s_ends, x = allocVector(INTSXP, ngrp));
         if (ngrp > 0) {
             INTEGER(x)[0] = gs[flip][0];
             for (int i = 1; i < ngrp; i++)
                 INTEGER(x)[i] = INTEGER(x)[i - 1] + gs[flip][i];
             maxgrpn = gsmax[flip];
         }
-        setAttrib(ans, install("maxgrpn"), ScalarInteger(maxgrpn));
-        setAttrib(ans, R_ClassSymbol, mkString("grouping"));
+        SEXP s_maxgrpn = install("maxgrpn");
+        setAttrib(ans, s_maxgrpn, ScalarInteger(maxgrpn));
+        SEXP nms;
+        PROTECT(nms = allocVector(STRSXP, 2));
+        SET_STRING_ELT(nms, 0, mkChar("grouping"));
+        SET_STRING_ELT(nms, 1, mkChar("integer"));
+        setAttrib(ans, R_ClassSymbol, nms);
+        UNPROTECT(1);
     }
 
     Rboolean dropZeros = !retGrp && !isSorted && nalast == 0;

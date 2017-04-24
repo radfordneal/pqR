@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1998--2015  The R Core Team.
+ *  Copyright (C) 1998--2017  The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -182,7 +182,21 @@ extern void R_WaitEvent(void);
 
 /*  Heap and Pointer Protection Stack Sizes.  */
 
-/* These are all required by C99 */
+/* These headers are all required by C99.
+   However, we use types below such as uintptr_t which are optional in C11.
+   And on some older systems they were in inttypes.h but not stdint.h.
+
+   Up to 2.11.1 (r52035, May 2010) we had
+
+#if !defined(HAVE_INTPTR_T) && !defined(intptr_t)
+ typedef long intptr_t;
+#endif
+#if !defined(HAVE_UINTPTR_T) && !defined(uintptr_t)
+ typedef unsigned long uintptr_t;
+#endif
+    but size_t might be better.
+
+ */
 #ifdef HAVE_INTTYPES_H
 # include <inttypes.h>
 #endif
@@ -491,6 +505,7 @@ typedef struct {
 } R_bcstack_t;
 # define PARTIALSXP_MASK (~255)
 # define IS_PARTIAL_SXP_TAG(x) ((x) & PARTIALSXP_MASK)
+# define RAWMEM_TAG 254
 #else
 typedef SEXP R_bcstack_t;
 #endif
@@ -522,7 +537,10 @@ typedef struct RCNTXT {
     void *cenddata;		/* data for C "on.exit" thunk */
     void *vmax;		        /* top of R_alloc stack */
     int intsusp;                /* interrupts are suspended */
-    int gcenabled;		/* R_GCenabled value */
+    int gcenabled;		/* R_GCEnabled value */
+    int bcintactive;            /* R_BCIntActive value */
+    SEXP bcbody;                /* R_BCbody value */
+    void* bcpc;                 /* R_BCpc value */
     SEXP handlerstack;          /* condition handler stack */
     SEXP restartstack;          /* stack of available restarts */
     struct RPRSTACK *prstack;   /* stack of pending promises */
@@ -531,8 +549,9 @@ typedef struct RCNTXT {
     IStackval *intstack;
 #endif
     SEXP srcref;	        /* The source line in effect */
-    int browserfinish;     /* should browser finish this context without stopping */
-    SEXP returnValue;			/* only set during on.exit calls */
+    int browserfinish;          /* should browser finish this context without
+                                   stopping */
+    SEXP returnValue;           /* only set during on.exit calls */
     struct RCNTXT *jumptarget;	/* target for a continuing jump */
     int jumpmask;               /* associated LONGJMP argument */
 } RCNTXT, *context;
@@ -603,6 +622,13 @@ typedef enum {
     GTOP
 } RELOP_TYPE;
 
+typedef enum {
+    MATPROD_DEFAULT = 1,
+    MATPROD_INTERNAL,
+    MATPROD_BLAS,
+    MATPROD_DEFAULT_SIMD  /* experimental */
+} MATPROD_TYPE;
+
 /* File Handling */
 /*
 #define R_EOF	65535
@@ -643,6 +669,11 @@ LibExtern char *R_Home;		    /* Root of the R tree */
 extern0 R_size_t R_NSize  INI_as(R_NSIZE);/* Size of cons cell heap */
 extern0 R_size_t R_VSize  INI_as(R_VSIZE);/* Size of the vector heap */
 extern0 int	R_GCEnabled INI_as(1);
+extern0 int	R_in_gc INI_as(0);
+extern0 int	R_BCIntActive INI_as(0); /* bcEval called more recently than
+                                            eval */
+extern0 void*	R_BCpc INI_as(NULL);/* current byte code instruction */
+extern0 SEXP	R_BCbody INI_as(NULL); /* current byte code object */
 extern0 SEXP	R_NHeap;	    /* Start of the cons cell heap */
 extern0 SEXP	R_FreeSEXP;	    /* Cons cell free list */
 extern0 R_size_t R_Collected;	    /* Number of free cons cells (after gc) */
@@ -672,6 +703,7 @@ extern0 int	R_Expressions	INI_as(5000);	/* options(expressions) */
 extern0 int	R_Expressions_keep INI_as(5000);	/* options(expressions) */
 extern0 Rboolean R_KeepSource	INI_as(FALSE);	/* options(keep.source) */
 extern0 Rboolean R_CBoundsCheck	INI_as(FALSE);	/* options(CBoundsCheck) */
+extern0 MATPROD_TYPE R_Matprod	INI_as(MATPROD_DEFAULT);  /* options(matprod) */
 extern0 int	R_WarnLength	INI_as(1000);	/* Error/warning max length */
 extern0 int	R_nwarnings	INI_as(50);
 extern uintptr_t R_CStackLimit	INI_as((uintptr_t)-1);	/* C stack limit */
@@ -764,17 +796,25 @@ extern0 double elapsedLimitValue       	INI_as(-1.0);
 
 void resetTimeLimits(void);
 
-#define R_BCNODESTACKSIZE 100000
+#define R_BCNODESTACKSIZE 200000
 extern0 R_bcstack_t *R_BCNodeStackBase, *R_BCNodeStackTop, *R_BCNodeStackEnd;
 #ifdef BC_INT_STACK
 # define R_BCINTSTACKSIZE 10000
 extern0 IStackval *R_BCIntStackBase, *R_BCIntStackTop, *R_BCIntStackEnd;
 #endif
-extern0 int R_jit_enabled INI_as(0);
+extern0 int R_jit_enabled INI_as(0); /* has to be 0 during R startup */
 extern0 int R_compile_pkgs INI_as(0);
+extern0 int R_check_constants INI_as(0);
+extern0 int R_disable_bytecode INI_as(0);
 extern SEXP R_cmpfun(SEXP);
+extern SEXP R_cmpfun1(SEXP); /* unconditional fresh compilation */
 extern void R_init_jit_enabled(void);
-extern void R_initAsignSymbols(void);
+extern void R_initAssignSymbols(void);
+#ifdef R_USE_SIGNALS
+extern SEXP R_findBCInterpreterSrcref(RCNTXT*);
+#endif
+extern SEXP R_getCurrentSrcref();
+extern SEXP R_getBCInterpreterExpression();
 
 LibExtern SEXP R_CachedScalarReal INI_as(NULL);
 LibExtern SEXP R_CachedScalarInteger INI_as(NULL);
@@ -817,6 +857,12 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 LibExtern SEXP R_TrueValue INI_as(NULL);
 LibExtern SEXP R_FalseValue INI_as(NULL);
 LibExtern SEXP R_LogicalNAValue INI_as(NULL);
+
+/* for PCRE as from R 3.4.0 */
+extern0 Rboolean R_PCRE_use_JIT INI_as(TRUE);
+extern0 int R_PCRE_study INI_as(10);
+extern0 int R_PCRE_limit_recursion;
+
 
 #ifdef __MAIN__
 # undef extern
@@ -862,6 +908,7 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 # define EncodeString           Rf_EncodeString
 # define EnsureString 		Rf_EnsureString
 # define endcontext		Rf_endcontext
+# define errorcall_cpy		Rf_errorcall_cpy
 # define ErrorMessage		Rf_ErrorMessage
 # define evalList		Rf_evalList
 # define evalListKeepMissing	Rf_evalListKeepMissing
@@ -926,6 +973,7 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 # define NewEnvironment		Rf_NewEnvironment
 # define OneIndex		Rf_OneIndex
 # define onintr			Rf_onintr
+# define onintrNoResume		Rf_onintrNoResume
 # define onsigusr1              Rf_onsigusr1
 # define onsigusr2              Rf_onsigusr2
 # define parse			Rf_parse
@@ -1001,6 +1049,7 @@ char	*R_HomeDir(void);
 Rboolean R_FileExists(const char *);
 Rboolean R_HiddenFile(const char *);
 double	R_FileMtime(const char *);
+int	R_GetFDLimit();
 
 /* environment cell access */
 typedef struct { SEXP cell; } R_varloc_t; /* use struct to prevent casting */
@@ -1091,6 +1140,7 @@ Rboolean R_current_debug_state(void);
 Rboolean R_has_methods(SEXP);
 void R_InitialData(void);
 SEXP R_possible_dispatch(SEXP, SEXP, SEXP, SEXP, Rboolean);
+Rboolean inherits2(SEXP, const char *);
 void InitGraphics(void);
 void InitMemory(void);
 void InitNames(void);
@@ -1127,6 +1177,7 @@ SEXP mkSYMSXP(SEXP, SEXP);
 SEXP mkTrue(void);
 SEXP NewEnvironment(SEXP, SEXP, SEXP);
 void onintr(void);
+void onintrNoResume(void);
 RETSIGTYPE onsigusr1(int);
 RETSIGTYPE onsigusr2(int);
 R_xlen_t OneIndex(SEXP, SEXP, R_xlen_t, int, SEXP*, int, SEXP);
@@ -1189,7 +1240,7 @@ void begincontext(RCNTXT*, int, SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP dynamicfindVar(SEXP, RCNTXT*);
 void endcontext(RCNTXT*);
 int framedepth(RCNTXT*);
-void R_InsertRestartHandlers(RCNTXT *, Rboolean);
+void R_InsertRestartHandlers(RCNTXT *, const char *);
 void NORET R_JumpToContext(RCNTXT *, int, SEXP);
 SEXP R_syscall(int,RCNTXT*);
 int R_sysparent(int,RCNTXT*);
@@ -1204,6 +1255,7 @@ void NORET R_jumpctxt(RCNTXT *, int, SEXP);
 SEXP ItemName(SEXP, R_xlen_t);
 
 /* ../main/errors.c : */
+void NORET errorcall_cpy(SEXP, const char *, ...);
 void NORET ErrorMessage(SEXP, int, ...);
 void WarningMessage(SEXP, R_WARNING, ...);
 SEXP R_GetTraceback(int);

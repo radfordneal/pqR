@@ -1,5 +1,5 @@
 
-R version 3.3.3 beta (2017-02-23 r72250) -- "Another Canoe"
+R version 3.4.0 RC (2017-04-18 r72543) -- "You Stupid Darkness"
 Copyright (C) 2017 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -21,9 +21,12 @@ Type 'q()' to quit R.
 > if(.Platform$OS.type == "unix" &&
 +    is.null(nsl("cran.r-project.org"))) q()
 > 
-> # test do_download.
-> nrow(available.packages(contrib.url("http://cran.r-project.org")))
-[1] 10142
+> # test do_download (and "record" #{packages}):
+> ap <- available.packages(contrib.url("http://cran.r-project.org"))
+> ## IGNORE_RDIFF_BEGIN
+> nrow(ap)
+[1] 10455
+> ## IGNORE_RDIFF_END
 > 
 > # test url connections on http
 > zz <- url("http://cran.r-project.org/")

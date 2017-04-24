@@ -1,6 +1,7 @@
-## Regression tests for R 3.[123].*
+## Regression tests for R 3.[0-3].*
 
 pdf("reg-tests-1c.pdf", encoding = "ISOLatin1.enc")
+.pt <- proc.time()
 
 ## mapply with classed objects with length method
 ## was not documented to work in 2.x.y
@@ -52,6 +53,7 @@ stopifnot(!is.unsorted(NA))
 
 ## str(.) for large factors should be fast:
 u <- as.character(runif(1e5))
+dummy <- str(u); dummy <- str(u); # force compilation of str
 t1 <- max(0.001, system.time(str(u))[[1]]) # get a baseline > 0
 uf <- factor(u)
 (t2 <- system.time(str(uf))[[1]]) / t1 # typically around 1--2
@@ -582,6 +584,7 @@ stopifnot(identical(crossprod(2, v), t(2) %*% v),
 	  identical(5 %*% v, 5 %*% t(v)),
           identical(tcrossprod(m, 1:2), m %*% 1:2) )
 ## gave error "non-conformable arguments" in R <= 3.2.0
+proc.time() - .pt; .pt <- proc.time()
 
 
 ## list <--> environment
@@ -590,29 +593,7 @@ stopifnot(identical(L0, as.list(as.environment(L0))))
 ## as.env..() did not work, and as.list(..) gave non-NULL names in R 3.1.x
 
 
-## all.equal() for environments and refClass()es
-RR <- setRefClass("Ex", fields = list(nr = "numeric"))
-m1 <- RR$new(); m2 <- RR$new(); m3 <- RR$new(nr = pi); m4 <- RR$new(nr=3.14159)
-ee <- emptyenv(); e2 <- new.env()
-stopifnot(all.equal(ee,ee), identical(ee,ee), !identical(ee,e2), all.equal(ee,e2),
-	  identical(m3,m3), !identical(m1,m2),
-	  all.equal(m1,m2), !isTRUE(all.equal(m1,m3)), !isTRUE(all.equal(m1,m4)),
-	  all.equal(m3,m4, tol=1e-6), grepl("relative difference", all.equal(m3,m4)),
-	  TRUE)
-## did not work in R 3.1.x
-e3 <- new.env()
-e3$p <- "p"; e2$p <- "p"; ae.p <- all.equal(e2,e3)
-e3$q <- "q";              ae.q <- all.equal(e2,e3)
-e2$q <- "Q";              ae.Q <- all.equal(e2,e3)
-stopifnot(ae.p, grepl("^Length", ae.q), grepl("string mismatch", ae.Q))
-e2$q <- "q"; e2$r <- pi; e3$r <- 3.14159265
-stopifnot(all.equal(e2, e3),
-	  grepl("relative difference", all.equal(e2, e3, tol=1e-10)))
-g <- globalenv() # so it now contains itself
-l <- list(e = g)
-stopifnot(all.equal(g, g),
-	  all.equal(l, l))
-## these ran into infinite recursion error.
+### all.equal() refClass()es check moved to methods package
 
 
 ## missing() did not propagate through '...', PR#15707
@@ -623,28 +604,21 @@ stopifnot(identical(check2(one, , three), c(FALSE, TRUE, FALSE)))
 ## missing() was unable to handle recursive promises
 
 
-## envRefClass prototypes are a bit special -- broke all.equal() for baseenv()
-rc <- getClass("refClass")
-rp <- rc@prototype
-str(rp) ## failed
-rp ## show() failed ..
-(ner <- new("envRefClass")) # show() failed
-stopifnot(all.equal(rp,rp), all.equal(ner,ner))
-be <- baseenv()
-system.time(stopifnot(all.equal(be,be)))## <- takes a few sec's
-stopifnot(
-    grepl("not identical.*character", print(all.equal(rp, ner))),
-    grepl("not identical.*character", print(all.equal(ner, rp))))
-system.time(stopifnot(all.equal(globalenv(), globalenv())))
-## Much of the above failed in  R <= 3.2.0
+### envRefClass check moved to methods package
 
 
+## takes too long with JIT enabled:
+.jit.lev <- compiler::enableJIT(0)
+Sys.getenv("_R_CHECK_LENGTH_1_CONDITION_") -> oldV
+Sys.setenv("_R_CHECK_LENGTH_1_CONDITION_" = "false") # only *warn*
 ## while did not protect its argument, which caused an error
 ## under gctorture, PR#15990
 gctorture()
 suppressWarnings(while(c(FALSE, TRUE)) 1)
 gctorture(FALSE)
 ## gave an error because the test got released when the warning was generated.
+compiler::enableJIT(.jit.lev)# revert
+Sys.setenv("_R_CHECK_LENGTH_1_CONDITION_" = oldV)
 
 
 ## hist(x, breaks =) with too large bins, PR#15988
@@ -778,6 +752,7 @@ if(.Platform$OS.type == "unix" &&
 				    "[1] 1 2 3")))
 }
 ## (failed for < 1 hr, in R-devel only)
+proc.time() - .pt; .pt <- proc.time()
 
 
 ## Parsing large exponents of floating point numbers, PR#16358
@@ -963,16 +938,20 @@ df <- data.frame(.id = 1:3 %% 3 == 2, a = 1:3)
 d2 <- within(df, {d = a + 2})
 stopifnot(identical(names(d2), c(".id", "a", "d")))
 ## lost the '.id' column in R <= 3.2.2
+proc.time() - .pt; .pt <- proc.time()
 
 ## system() truncating and splitting long lines of output, PR#16544
 ## only works when platform has getline() in stdio.h, and Solaris does not.
-## op <- options(warn = 2)# no warnings allowed
-## if(.Platform$OS.type == "unix") { # only works when platform has getline() in stdio.h
-##     cn <- paste(1:2222, collapse=" ")
-##     rs <- system(paste("echo", cn), intern=TRUE)
-##     stopifnot(identical(rs, cn))
-## }
-## options(op)
+known.POSIX_2008 <- .Platform$OS.type == "unix" &&
+     (Sys.info()[["sysname"]] != "SunOS")
+## ^^^ explicitly exclude *non*-working platforms above
+if(known.POSIX_2008) {
+    cat("testing system(\"echo\", <large>) : "); op <- options(warn = 2)# no warnings allowed
+    cn <- paste(1:2222, collapse=" ")
+    rs <- system(paste("echo", cn), intern=TRUE)
+    stopifnot(identical(rs, cn))
+    cat("[Ok]\n"); options(op)
+}
 
 
 ## tail.matrix()
@@ -1081,6 +1060,7 @@ tools::assertError(cov(1:6, f <- gl(2,3)))# was ok already
 tools::assertWarning(var(f))
 tools::assertWarning( sd(f))
 ## var() "worked" in R <= 3.2.2  using the underlying integer codes
+proc.time() - .pt; .pt <- proc.time()
 
 
 ## loess(*, .. weights) - PR#16587
@@ -1306,6 +1286,7 @@ stopifnot(all.equal(coef(flm), cf[,"tear"]),
                     cbind(rate = 3:2, additive = 3:4,
                           `rate:additive` = c(3L, 8L))))
 ## dummy.coef() were missing coefficients in R <= 3.2.3
+proc.time() - .pt; .pt <- proc.time()
 
 
 ## format.POSIXlt() with modified 'zone' or length-2 format
@@ -1394,6 +1375,7 @@ stopifnot(
     identical(c(smooth(y, "3RS3R", do.ends=FALSE, endrule="copy")),
               c(4, 4, 3, 3, 5, 6, 6, 6, 6, 6)))
 ## do.ends=TRUE was not obeyed for the "3RS*" kinds, for 3.0.0 <= R <= 3.2.3
+proc.time() - .pt; .pt <- proc.time()
 
 
 ## prettyDate() for subsecond ranges
@@ -1533,6 +1515,7 @@ if(FALSE) { # save 0.4 sec
 nn <- c(1:33,10*(4:9),100*(1+unique(sort(rpois(20,4)))))
 pzn <- lengths(lapply(nn, pretty, x=tOz))
 stopifnot(0.5 <= min(pzn/(nn+1)), max(pzn/(nn+1)) <= 1.5)
+proc.time() - .pt; .pt <- proc.time()
 
 
 
@@ -1583,38 +1566,17 @@ stopifnot(identical(class(z), "matrix"))
 ## kept "mts" in 3.2.4, PR#16769
 
 
-## match(x, t): fast algorithm for length-1 'x' -- PR#16885
-## a) string 'x'  when only encoding differs
-tmp <- "年付"
-tmp2 <- "\u5e74\u4ed8" ; Encoding(tmp2) <- "UTF-8"
-for(ex in list(c(tmp, tmp2), c("foo","foo"))) {
-    cat(sprintf("\n|%s|%s| :\n----------\n", ex[1], ex[2]))
-    for(enc in c("latin1", "UTF-8", "unknown")) { # , "MAC", "WINDOWS-1251"
-	cat(sprintf("%9s: ", enc))
-	tt <- ex[1]; Encoding(tt) <- enc; t2 <- ex[2]
-	if(identical(i1 <- (  tt       %in% t2),
-		     i2 <- (c(tt, "a") %in% t2)[1]))
-	    cat(i1,"\n")
-	else
-	    stop("differing: ", i1, ", ", i2)
-    }
-}
-outerID <- function(x,y, ...) outer(x,y, Vectorize(identical,c("x","y")), ...)
-## b) complex 'x' with different kinds of NaN
-x0 <- c(0,1, NA_real_, NaN)
-z <- outer(x0,x0, complex, length.out=1L)
-z <- c(z[is.na(z)], # <- of length 4 * 4 - 2*2 = 12
-       as.complex(NaN), as.complex(0/0), # <- typically these two differ in bits
-       complex(real = NaN), complex(imaginary = NaN),
-       NA_complex_, complex(real = NA), complex(imaginary = NA))
-## 1..12 all differ, then only [14] ("0/0") differs in first (low level):
-symnum(outerID(z,z, FALSE,FALSE,FALSE,FALSE))
-symnum(outerID(z,z))
-(mz <- match(z, z)) # currently different {NA,NaN} patterns differ - not in print()/format() _FIXME_
-stopifnot(identical(mz, c(1:4, 1L, 3L, 7:8, 2L, 4L, 8L, 12L, # <- would change after FIXME
-                          rep(2L, 4), 7L, 1L, 1L)))
-zRI <- rbind(Re=Re(z), Im=Im(z)) # and see the pattern :
-print(cbind(format = format(z), t(zRI), mz), quote=FALSE)
-stopifnot(identical(mz, sapply(z, match, table = z)))
-## the latter has length(x) == 1 in match(x,*)  and failed in R 3.3.0
+## as.hclust() and str() for deeply nested dendrograms
+op <- options(expressions = 300) # so problem triggers early
+d500 <- mkDend(500, 'x', 'single')
+sink(tempfile()); str(d500) ; sink()
+hc2 <- as.hclust(d500)
+options(op)
+## gave .. nested too deeply / node stack overflow / "C stack usage ..."
+## for R <= 3.3.z
 
+
+
+## keep at end
+rbind(last =  proc.time() - .pt,
+      total = proc.time())

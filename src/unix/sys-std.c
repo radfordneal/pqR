@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2016  The R Core Team
+ *  Copyright (C) 1997--2017  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,6 +28,8 @@
 
 /* See system.txt for a description of functions */
 
+/* select() is essential here, but configure has required it */
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -47,16 +49,13 @@
 #include <R_ext/Riconv.h>
 #include <R_ext/Print.h> // for REprintf
 
+#define __SYSTEM__
+/* includes <sys/select.h> and <sys/time.h> */
+#include <R_ext/eventloop.h>
+#undef __SYSTEM__
+
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>		/* for unlink */
-#endif
-
-#ifdef HAVE_SYS_TIME_H
-# include <sys/time.h>		/* for struct timeval */
-#endif
-
-#ifdef HAVE_SYS_SELECT_H
-# include <sys/select.h>	/* for select, according to recent POSIX */
 #endif
 
 extern SA_TYPE SaveAction;
@@ -89,10 +88,6 @@ void attribute_hidden Rstd_Suicide(const char *s)
 	 * considerably more complex.
 	 */
 
-#define __SYSTEM__
-#include <R_ext/eventloop.h>
-#undef __SYSTEM__
-
 /*
   The following provides a version of select() that catches interrupts
   and handles them using the supplied interrupt handler or the default
@@ -123,7 +118,8 @@ int R_SelectEx(int  n,  fd_set  *readfds,  fd_set  *writefds,
 	   non-interruptable? LT */
 	return select(n, readfds, writefds, exceptfds, timeout);
     else {
-	volatile sel_intr_handler_t myintr = intr != NULL ? intr : onintr;
+	volatile sel_intr_handler_t myintr = intr != NULL ?
+	    intr : onintrNoResume;
 	volatile int old_interrupts_suspended = R_interrupts_suspended;
 	if (SIGSETJMP(seljmpbuf, 1)) {
 	    myintr();
@@ -418,14 +414,45 @@ getSelectedHandler(InputHandler *handlers, fd_set *readMask)
 
 
 #ifdef HAVE_LIBREADLINE
+/* As from R 3.4.0, this implies we have the headers too.
+   We use entry points
 
-# ifdef HAVE_READLINE_READLINE_H
-#  include <readline/readline.h>
+   rl_callback_handler_install
+   rl_callback_handler_remove
+   rl_callback_read_char
+   rl_readline_name
+
+   , if HAVE_RL_COMPLETION_MATCHES (>= 4.2)
+
+   rl_attempted_completion_function
+   rl_attempted_completion_over
+   rl_basic_word_break_characters
+   rl_completer_word_break_characters
+   rl_completion_append_character
+   rl_completion_matches
+   rl_line_buffer
+
+   and others conditionally:
+
+   rl_cleanup_after_signal (>= 4.0)
+   rl_done
+   rl_end
+   rl_free_line_state (>= 4.0)
+   rl_line_buffer
+   rl_mark
+   rl_point
+   rl_readline_state (>= 4.2)
+   rl_resize_terminal (>= 4.0)
+   rl_sort_completion_matches (>= 6.0)
+ */
+
+# include <readline/readline.h>
+
 /* For compatibility with pre-readline-4.2 systems, 
    also missing in Apple's emulation via the NetBSD editline library.*/
-#  if !defined (_RL_FUNCTION_TYPEDEF)
+# if !defined (_RL_FUNCTION_TYPEDEF)
 typedef void rl_vcpfunc_t (char *);
-#  endif /* _RL_FUNCTION_TYPEDEF */
+# endif /* _RL_FUNCTION_TYPEDEF */
 
 # if defined(RL_READLINE_VERSION) && RL_READLINE_VERSION >= 0x0603
 /* readline 6.3's rl_callback_handler_install() no longer installs
@@ -434,16 +461,6 @@ typedef void rl_vcpfunc_t (char *);
    by setting rl_catch_sigwinch.)
  */
 #  define NEED_INT_HANDLER
-# endif
-# else
-typedef void rl_vcpfunc_t (char *);
-extern void rl_callback_handler_install(const char *, rl_vcpfunc_t *);
-extern void rl_callback_handler_remove(void);
-extern void rl_callback_read_char(void);
-extern char *tilde_expand (const char *);
-extern const char *rl_readline_name;
-/* Other externals are used, but only if the readline >= 6.3 is detected,
-   and that requires the header. */
 # endif
 
 attribute_hidden
@@ -570,6 +587,13 @@ pushReadline(const char *prompt, rl_vcpfunc_t f)
 static void resetReadline(void)
 {
     rl_free_line_state();
+/* This might be helpful/needed in future, but we cannot tell until
+   readline 7.0 is released.  Only info so far:
+   https://lists.gnu.org/archive/html/bug-readline/2016-02/msg00000.html
+#ifdef HAVE_RL_CALLBACK_SIGCLEANUP
+    rl_callback_sigcleanup();
+#endif
+*/
     rl_cleanup_after_signal();
     RL_UNSETSTATE(RL_STATE_ISEARCH | RL_STATE_NSEARCH | RL_STATE_VIMOTION |
 		  RL_STATE_NUMERICARG | RL_STATE_MULTIKEY);
@@ -650,7 +674,7 @@ static void
 handleInterrupt(void)
 {
     popReadline();
-    onintr();
+    onintrNoResume();
 }
 
 #ifdef HAVE_RL_COMPLETION_MATCHES
@@ -738,8 +762,8 @@ static void initialize_rlcompletion(void)
     /* Tell the completer that we want a crack first. */
     rl_attempted_completion_function = R_custom_completion;
 
-    /* Disable sorting of possible completions; only readline >= 6.0 */
-#if RL_READLINE_VERSION >= 0x0600
+// This was added in readline 6.0
+#ifdef HAVE_RL_SORT_COMPLETION_MATCHES
     rl_sort_completion_matches = 0;
 #endif
 
@@ -879,7 +903,7 @@ void set_rl_word_breaks(const char *str)
 static void
 handleInterrupt(void)
 {
-    onintr();
+    onintrNoResume();
 }
 #endif /* HAVE_LIBREADLINE */
 
@@ -930,7 +954,7 @@ Rstd_ReadConsole(const char *prompt, unsigned char *buf, int len,
 /* according to system.txt, should be terminated in \n, so check this
    at eof and error */
 	if ((err || feof(ifp ? ifp : stdin))
-	    && (ll == 0 || buf[ll - 1] != '\n') && ll < len) {
+	    && (ll == 0 || buf[ll - 1] != '\n') && ll < (size_t)len) {
 	    buf[ll++] = '\n'; buf[ll] = '\0';
 	}
 	if (!R_Slave) {
@@ -978,8 +1002,10 @@ Rstd_ReadConsole(const char *prompt, unsigned char *buf, int len,
 #ifdef NEED_INT_HANDLER
             if (UsingReadline && caught_sigwinch) {
 		caught_sigwinch = FALSE;
-		// iintroduced in readline 4.0: only used for >= 6.3
+		// introduced in readline 4.0: only used for >= 6.3
+#ifdef HAVE_RL_RESIZE_TERMINAL
 		rl_resize_terminal();
+#endif
             }
 #endif
 
@@ -1137,8 +1163,7 @@ void attribute_hidden NORET Rstd_CleanUp(SA_TYPE saveact, int status, int runLas
     case SA_SAVE:
 	if(runLast) R_dot_Last();
 	if(R_DirtyImage) R_SaveGlobalEnv();
-#ifdef HAVE_LIBREADLINE
-# ifdef HAVE_READLINE_HISTORY_H
+#if defined(HAVE_LIBREADLINE) && defined(HAVE_READLINE_HISTORY_H)
 	if(R_Interactive && UsingReadline) {
 	    int err;
 	    R_setupHistory(); /* re-read the history size and filename */
@@ -1147,8 +1172,7 @@ void attribute_hidden NORET Rstd_CleanUp(SA_TYPE saveact, int status, int runLas
 	    if(err) warning(_("problem in saving the history file '%s'"),
 			    R_HistoryFile);
 	}
-# endif /* HAVE_READLINE_HISTORY_H */
-#endif /* HAVE_LIBREADLINE */
+#endif
 	break;
     case SA_NOSAVE:
 	if(runLast) R_dot_Last();
@@ -1265,13 +1289,11 @@ void attribute_hidden Rstd_ShowMessage(const char *s)
 
 void attribute_hidden Rstd_read_history(const char *s)
 {
-#ifdef HAVE_LIBREADLINE
-# ifdef HAVE_READLINE_HISTORY_H
+#if defined(HAVE_LIBREADLINE) && defined(HAVE_READLINE_HISTORY_H)
     if(R_Interactive && UsingReadline) {
 	read_history(s);
     }
-# endif /* HAVE_READLINE_HISTORY_H */
-#endif /* HAVE_LIBREADLINE */
+#endif
 }
 
 void attribute_hidden Rstd_loadhistory(SEXP call, SEXP op, SEXP args, SEXP env)

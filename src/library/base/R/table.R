@@ -1,7 +1,7 @@
 #  File src/library/base/R/table.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2015 The R Core Team
+#  Copyright (C) 1995-2016 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -38,20 +38,23 @@ table <- function (..., exclude = if (useNA=="no") c(NA, NaN),
 	    nm
 	}
     }
-    if (!missing(exclude) && is.null(exclude))
-        useNA <- "always"
-
-    useNA <- match.arg(useNA)
+    miss.use <- missing(useNA)
+    miss.exc <- missing(exclude)
+    ## useNA <- if (!miss.exc && is.null(exclude)) "always" (2.8.0 <= R <= 3.3.1)
+    useNA <- if (miss.use && !miss.exc &&
+		 !match(NA, exclude, nomatch=0L)) "ifany"
+	     else match.arg(useNA)
+    doNA <- useNA != "no"
+    if(!miss.use && !miss.exc && doNA && match(NA, exclude, nomatch=0L))
+	warning("'exclude' containing NA and 'useNA' != \"no\"' are a bit contradicting")
     args <- list(...)
     if (!length(args))
 	stop("nothing to tabulate")
-    if (length(args) == 1L && is.list(args[[1L]])) {
+    if (length(args) == 1L && is.list(args[[1L]])) { ## e.g. a data.frame
 	args <- args[[1L]]
 	if (length(dnn) != length(args))
-	    dnn <- if (!is.null(argn <- names(args)))
-		 argn
-	    else
-		 paste(dnn[1L], seq_along(args), sep = ".")
+	    dnn <- if (!is.null(argn <- names(args))) argn
+		   else paste(dnn[1L], seq_along(args), sep = ".")
     }
     # 0L, 1L, etc: keep 'bin' and 'pd' integer - as long as tabulate() requires it
     bin <- 0L
@@ -63,45 +66,74 @@ table <- function (..., exclude = if (useNA=="no") c(NA, NaN),
 	if (is.null(lens)) lens <- length(a)
 	else if (length(a) != lens)
 	    stop("all arguments must have the same length")
-        cat <-
-            if (is.factor(a)) {
-                if (any(is.na(levels(a)))) # Don't touch this!
-                    a
-                else {
-                    ## The logic here is tricky because it tries to do
-                    ## something sensible if both 'exclude' and
-                    ## 'useNA' are set.
-                    ##
-                    ## A non-null setting of 'exclude' sets the
-                    ## excluded levels to missing, which is different
-                    ## from the <NA> factor level. Excluded levels are
-                    ## NOT tabulated, even if 'useNA' is set.
-                    if (is.null(exclude) && useNA != "no")
-                        addNA(a, ifany = (useNA == "ifany"))
-                    else {
-                        if (useNA != "no")
-                            a <- addNA(a, ifany = (useNA == "ifany"))
-                        ll <- levels(a)
-                        a <- factor(a, levels = ll[!(ll %in% exclude)],
-                               exclude = if (useNA == "no") NA)
-                    }
-                }
-            }
-            else { # NB: this excludes first, unlike the case above.
-                a <- factor(a, exclude = exclude)
-                if (useNA != "no")
-                    addNA(a, ifany = (useNA == "ifany"))
-                else
-                    a
-            }
+        fact.a <- is.factor(a)
+        ## The logic here is tricky in order to be sensible if
+        ## both 'exclude' and 'useNA' are set.
+        ##
+	if(doNA) aNA <- anyNA(a) # *before* the following
+        if(!fact.a) { ## factor(*, exclude=*) may generate NA levels where there were none!
+            a0 <- a
+            ## A non-null setting of 'exclude' sets the
+            ## excluded levels to missing, which is different
+            ## from the <NA> factor level, but these
+            ## excluded levels must NOT EVER be tabulated.
+            a <- # NB: this excludes first, unlike the is.factor() case
+                factor(a, exclude = exclude)
+        }
 
-	nl <- length(ll <- levels(cat))
+	## if(doNA)
+        ##     a <- addNA(a, ifany = (useNA == "ifany"))
+        ## Instead, do the addNA() manually and remember *if* we did :
+        add.na <- doNA
+        if(add.na) {
+	    ifany <- (useNA == "ifany") # FALSE when "always"
+	    anNAc <- anyNA(a) # sometimes, but not always == aNA above
+	    add.na <- if (!ifany || anNAc) {
+			  ll <- levels(a)
+			  if(add.ll <- !anyNA(ll)) {
+			      ll <- c(ll, NA)
+			      ## FIXME? can we call  a <- factor(a, ...)
+			      ##        only here,and be done?
+			      TRUE
+			  }
+			  else if (!ifany && !anNAc)
+			      FALSE
+			  else
+			      TRUE
+		      }
+		      else
+			  FALSE
+        } # else remains FALSE
+	if(add.na) ## complete the "manual" addNA():
+	    a <- factor(a, levels = ll, exclude = NULL)
+	else
+	    ll <- levels(a)
+        a <- as.integer(a)
+        if (fact.a && !miss.exc) { ## remove excluded levels
+	    ll <- ll[keep <- which(match(ll, exclude, nomatch=0L) == 0L)]
+	    a <- match(a, keep)
+	} else if(!fact.a && add.na) {
+	    ## remove NA level if it was added only for excluded in factor(a, exclude=.)
+	    ## set those a[] to NA which correspond to excluded values,
+	    ## but not those which correspond to NA-levels:
+	    ## if(doNA) they must be counted,  possibly as 0,  e.g.,
+	    ## for	table(1:3, exclude = 1) #-> useNA = "ifany"
+	    ## or	table(1:3, exclude = 1, useNA = "always")
+	    if(ifany && !aNA && add.ll) { # rm the NA-level again (why did we add it?)
+		ll <- ll[!is.na(ll)]
+		is.na(a) <- match(a0, c(exclude,NA), nomatch=0L) > 0L
+	    } else { # e.g. !ifany :  useNA == "always"
+		is.na(a) <- match(a0,   exclude,     nomatch=0L) > 0L
+	    }
+        }
+
+	nl <- length(ll)
 	dims <- c(dims, nl)
         if (prod(dims) > .Machine$integer.max)
             stop("attempt to make a table with >= 2^31 elements")
 	dn <- c(dn, list(ll))
-	## requiring   all(unique(as.integer(cat)) == 1L:nlevels(cat))  :
-	bin <- bin + pd * (as.integer(cat) - 1L)
+	## requiring   all(unique(a) == 1:nl)  :
+	bin <- bin + pd * (a - 1L)
 	pd <- pd * nl
     }
     names(dn) <- dnn
@@ -254,4 +286,4 @@ function(x, i, j, ..., drop = TRUE)
     if((ldr > 1L) || (ldr == length(dim(x))))
         class(ret) <- "table"
     ret
-}    
+}

@@ -5,7 +5,7 @@
 ## Usage:
 ##   R CMD config [options] [VAR]
 
-## Copyright (C) 2002-2016 The R Core Team
+## Copyright (C) 2002-2017 The R Core Team
 ##
 ## This document is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 ## A copy of the GNU General Public License is available at
 ## https://www.R-project.org/Licenses/
 
-revision='$Revision: 71188 $'
+revision='$Revision: 72376 $'
 version=`set - ${revision}; echo ${2}`
 version="R configuration information retrieval script: ${R_VERSION} (r${version})
 
@@ -41,8 +41,9 @@ Options:
 			a C/C++ file using R as a library
       --ldflags         print linker flags needed for linking a front-end
                         against the R library
-      --no-user-files  ignore customization files under ~/.R
-      --no-site-files  ignore site customization files under R_HOME/etc
+      --no-user-files   ignore customization files under ~/.R
+      --no-site-files   ignore site customization files under R_HOME/etc
+      --all             print names and values of all variables below
 
 Variables:
   BLAS_LIBS     flags needed for linking against external BLAS libraries
@@ -53,16 +54,33 @@ Variables:
   CPP           C preprocessor
   CPPFLAGS      C/C++ preprocessor flags, e.g. -I<dir> if you have
 		headers in a nonstandard directory <dir>
-  CXX           compiler command for C++98 code
-  CXXCPP        C++98 preprocessor
+  CXX           default compiler command for C++ code
+  CXXCPP        C++ preprocessor
   CXXFLAGS      compiler flags for CXX
-  CXXPICFLAGS   special flags for compiling C++98 code to be included in a
+  CXXPICFLAGS   special flags for compiling C++ code to be included in a
 		shared library
-  CXX1X         compiler command for C++11 code
-  CXX1XSTD      flag used with CXX1X to enable C++11 support
-  CXX1XFLAGS    further compiler flags for CXX1X
-  CXX1XPICFLAGS
+  CXX98         compiler command for C++98 code
+  CXX98CPP      C++98 preprocessor
+  CXX98FLAGS    compiler flags for CXX98
+  CXX98PICFLAGS special flags for compiling C++98 code to be included in a
+		shared library
+  CXX11         compiler command for C++11 code
+  CXX11STD      flag used with CXX11 to enable C++11 support
+  CXX11FLAGS    further compiler flags for CXX11
+  CXX11PICFLAGS
                 special flags for compiling C++11 code to be included in
+                a shared library
+  CXX14         compiler command for C++14 code
+  CXX14STD      flag used with CXX14 to enable C++14 support
+  CXX14FLAGS    further compiler flags for CXX14
+  CXX14PICFLAGS
+                special flags for compiling C++14 code to be included in
+                a shared library
+  CXX17         compiler command for C++17 code
+  CXX17STD      flag used with CXX17 to enable C++17 support
+  CXX17FLAGS    further compiler flags for CXX17
+  CXX17PICFLAGS
+                special flags for compiling C++17 code to be included in
                 a shared library
   DYLIB_EXT	file extension (including '.') for dynamic libraries
   DYLIB_LD      command for linking dynamic libraries which contain
@@ -95,9 +113,9 @@ Variables:
   SAFE_FFLAGS   Safe (as conformant as possible) Fortran 77 compiler flags
   SHLIB_CFLAGS  additional CFLAGS used when building shared objects
   SHLIB_CXXLD   command for linking shared objects which contain
-		object files from a C++ compiler
+		object files from a C++ compiler (and CXX98 CXX11 CXX14 CXX17)
   SHLIB_CXXLDFLAGS
-		special flags used by SHLIB_CXXLD
+		special flags used by SHLIB_CXXLD (and CXX98 CXX11 CXX14 CXX17)
   SHLIB_EXT	file extension (including '.') for shared objects
   SHLIB_FFLAGS  additional FFLAGS used when building shared objects
   SHLIB_LD      command for linking shared objects which contain
@@ -119,7 +137,7 @@ fi
 
 usage="${usage}
   
-Report bugs at bugs.r-project.org ."
+Report bugs at <https://bugs.R-project.org>."
 
 ## <NOTE>
 ## The variables are basically the precious configure variables (with
@@ -160,6 +178,7 @@ LIBR=`eval $query VAR=LIBR`
 STATIC_LIBR=`eval $query VAR=STATIC_LIBR`
 MAIN_LDFLAGS=`eval $query VAR=MAIN_LDFLAGS`
 LIBS=`eval $query VAR=LIBS`
+LDFLAGS=`eval $query VAR=LDFLAGS`
 
 
 if test -n "${R_ARCH}"; then
@@ -171,6 +190,7 @@ fi
 var=
 personal="yes"
 site="yes"
+all="no"
 while test -n "${1}"; do
   case "${1}" in
     -h|--help)
@@ -207,6 +227,9 @@ while test -n "${1}"; do
       ;;
     --no-site-files)
       site="no"
+      ;;
+    --all)
+      all="yes"
       ;;
     *)
       if test -z "${var}"; then
@@ -252,15 +275,26 @@ fi
 query="${MAKE} -s ${makefiles} print R_HOME=${R_HOME}"
 
 ok_c_vars="CC CFLAGS CPICFLAGS CPP CPPFLAGS"
-ok_cxx_vars="CXX CXXCPP CXXFLAGS CXXPICFLAGS CXX1X CXX1XSTD CXX1XFLAGS CXX1XPICFLAGS"
+ok_cxx_vars="CXX CXXCPP CXXFLAGS CXXPICFLAGS CXX11 CXX11STD CXX11FLAGS CXX11PICFLAGS CXX14 CXX14STD CXX14FLAGS CXX14PICFLAGS CXX98 CXX98STD CXX98FLAGS CXX98PICFLAGS CXX17 CXX17STD CXX17FLAGS CXX17PICFLAGS CXX1X CXX1XSTD CXX1XFLAGS CXX1XPICFLAGS"
 ok_dylib_vars="DYLIB_EXT DYLIB_LD DYLIB_LDFLAGS"
 ok_objc_vars="OBJC OBJCFLAGS"
 ok_java_vars="JAVA JAVAC JAVAH JAR JAVA_HOME JAVA_LIBS JAVA_CPPFLAGS"
 ok_f77_vars="F77 FFLAGS FPICFLAGS FLIBS SAFE_FFLAGS FC FCFLAGS FCPICFLAGS"
 ok_ld_vars="LDFLAGS"
-ok_shlib_vars="SHLIB_CFLAGS SHLIB_CXXLD SHLIB_CXXLDFLAGS SHLIB_EXT SHLIB_FFLAGS SHLIB_LD SHLIB_LDFLAGS SHLIB_FCLD SHLIB_FCLDFLAGS"
+ok_shlib_vars="SHLIB_CFLAGS SHLIB_CXXLD SHLIB_CXXLDFLAGS SHLIB_CXX98LD SHLIB_CXX98LDFLAGS SHLIB_CXX11LD SHLIB_CXX11LDFLAGS SHLIB_CXX14LD SHLIB_CXX14LDFLAGS SHLIB_CXX17LD SHLIB_CXX17LDFLAGS SHLIB_EXT SHLIB_FFLAGS SHLIB_LD SHLIB_LDFLAGS SHLIB_FCLD SHLIB_FCLDFLAGS SHLIB_CXX1XLD SHLIB_CXX1XLDFLAGS"
 ok_tcltk_vars="TCLTK_CPPFLAGS TCLTK_LIBS"
 ok_other_vars="BLAS_LIBS LAPACK_LIBS MAKE LIBnn LOCAL_SOFT COMPILED_BY"
+
+if test "${all}" = "yes"; then
+  query="${MAKE} -s ${makefiles} print-name-and-value R_HOME=${R_HOME}"
+  for v in ${ok_c_vars} ${ok_cxx_vars} ${ok_dylib_vars} ${ok_f77_vars} \
+	   ${ok_objc_vars} ${ok_java_vars} \
+	   ${ok_ld_vars} ${ok_shlib_vars} ${ok_tcltk_vars} \
+	   ${ok_other_vars}; do
+    eval "${query} VAR=${v}"
+  done
+  exit 0
+fi
 
 ## Can we do this elegantly using case?
 

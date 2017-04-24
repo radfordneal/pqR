@@ -9,7 +9,7 @@ fi
 DYLIB_EXT=`${R_HOME}/bin/R CMD config DYLIB_EXT`
 tools_classpath=${R_SHARE_DIR}/java
 
-revision='$Rev: 71249 $'
+revision='$Rev: 71736 $'
 version=`set - ${revision}; echo ${2}`
 version="R Java configurator: ${R_VERSION} (r${version})
 
@@ -52,7 +52,7 @@ javareconf cannot detect automatically:
   JAVA_LIBS      libraries (as linker flags) necessary to compile
                  JNI programs
 
-Report bugs at bugs.r-project.org ."
+Report bugs at <https://bugs.R-project.org>."
 
 
 dry_run=no

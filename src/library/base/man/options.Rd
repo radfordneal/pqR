@@ -1,6 +1,6 @@
 % File src/library/base/man/options.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2016 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{options}
@@ -77,8 +77,8 @@ getOption(x, default = NULL)
       disabled as a synonym for \code{"n"} in the browser.}
 
     \item{\code{checkPackageLicense}:}{logical, not set by default.  If
-      true, \code{\link{library}} asks a user to accept any non-standard
-      license at first use.
+      true, \code{\link{loadNamespace}} asks a user to accept any
+      non-standard license at first load of the package.
     }
 
     \item{\code{check.bounds}:}{logical, defaulting to \code{FALSE}.  If
@@ -116,9 +116,9 @@ getOption(x, default = NULL)
       and upon entry to a function whose debugging flag is set.
       Initially unset, and only used if set to a positive integer.}
 
-    \item{\code{digits}:}{controls the number of digits to print when
-      printing numeric values.  It is a suggestion only.  Valid values
-      are 1\dots{}22 with default 7.  See the note in
+    \item{\code{digits}:}{controls the number of significant digits to
+      print when printing numeric values.  It is a suggestion only.
+      Valid values are 1\dots{}22 with default 7.  See the note in
       \code{\link{print.default}} about values greater than 15.}
 
     \item{\code{digits.secs}:}{controls the maximum number of digits to
@@ -165,6 +165,10 @@ getOption(x, default = NULL)
       limit is reached an error is thrown.  The current number under
       evaluation can be found by calling \code{\link{Cstack_info}}.}
 
+    \item{\code{interrupt}:}{a function taking no arguments to be called
+      on a user interrupt if the interrupt condition is not otherwise
+      handled.}
+
     \item{\code{keep.source}:}{When \code{TRUE}, the source code for
       functions (newly defined or loaded) is stored internally
       allowing comments to be kept in the right places.  Retrieve the
@@ -176,8 +180,42 @@ getOption(x, default = NULL)
 
     %% used by tools::makeLazyLoading
     \item{\code{keep.source.pkgs}:}{As for \code{keep.source}, used only
-    when packages are installed.  Defaults to \code{FALSE} unless the
-    environment variable \env{R_KEEP_PKG_SOURCE} is set to \code{yes}.}
+      when packages are installed.  Defaults to \code{FALSE} unless the
+      environment variable \env{R_KEEP_PKG_SOURCE} is set to \code{yes}.}
+
+    \item{\code{matprod}:}{a string selecting the implementation of
+      the matrix products \code{\link{\%*\%}}, \code{\link{crossprod}}, and
+      \code{\link{tcrossprod}} for double and complex vectors:
+      \describe{
+	\item{\code{"internal"}}{uses an unoptimized 3-loop algorithm
+	  which correctly propagates \code{\link{NaN}} and
+	  \code{\link{Inf}} values and is consistent in precision with
+	  other summation algorithms inside \R like \code{\link{sum}} or
+	  \code{\link{colSums}} (which now means that it uses a \code{long
+	    double} accumulator for summation if available and enabled,
+	  see \code{\link{capabilities}}).}
+	\item{\code{"default"}}{uses BLAS to speed up computation, but
+	  to ensure correct propagation of \code{NaN} and \code{Inf}
+	  values it uses an unoptimized 3-loop algorithm for inputs that may
+	  contain \code{NaN} or \code{Inf} values.  When deemed
+	  beneficial for performance, \code{"default"} may call the
+	  3-loop algorithm unconditionally, i.e., without checking the
+	  input for NaN/Inf values.  The 3-loop algorithm uses (only) a
+	  \code{double} accumulator for summation, which is consistent
+	  with the reference BLAS implementation.}
+	\item{\code{"blas"}}{uses BLAS unconditionally without any
+	  checks and should be used with extreme caution.  BLAS
+	  libraries do not propagate \code{\link{NaN}} or
+	  \code{\link{Inf}} values correctly and for inputs with
+	  \code{NaN}/\code{Inf} values the results may be undefined.}
+	\item{\code{"default.simd"}}{is experimental and will likely be
+	  removed in future versions of \R.  It provides the same behavior
+	  as \code{"default"}, but the check whether the input contains
+	  NaN/Inf values is faster on some SIMD hardware.  On older
+	  systems it will run correctly, but may be much slower than
+	  \code{"default"}.}
+      }
+    }
 
     \item{\code{max.print}:}{integer, defaulting to \code{99999}.
       \code{\link{print}} or \code{\link{show}} methods can make use of
@@ -191,10 +229,6 @@ getOption(x, default = NULL)
       \code{\link{format}} and \code{\link{as.character}} but not when
       deparsing nor by \code{\link{sprintf}} nor \code{\link{formatC}}
       (which are sometimes used prior to printing.)
-
-      Only single-byte characters were supported prior to \R 3.2.0.
-      In \R 3.2.1 and earlier, multi- (or zero-) character \code{OutDec}
-      were accepted, but always worked only partially.
     }
 
     \item{\code{pager}:}{the command used for displaying text files by
@@ -227,7 +261,30 @@ getOption(x, default = NULL)
       \code{"a4"}, or \code{"letter"} in US and Canadian locales.
 #endif
     }
+    
+    \item{\code{PCRE_limit_recursion}:}{Logical: should
+      \code{\link{grep}(perl = TRUE)} and similar limit the maximal
+      recursion allowed when matching?  PCRE can be built not to use a
+      recursion stack (see \code{\link{pcre_config}}, but it is by
+      default with a recursion limit of 10000000 which potentially needs
+      a very large C stack: see the discussion at
+      \url{http://www.pcre.org/original/doc/html/pcrestack.html}.  If
+      true, the limit is reduced using \R's estimate of the C stack size
+      available (if known), otherwise 10000.  If \code{NA}, the limit is
+      imposed only if any input string has 1000 or more bytes.}
+       
+     \item{\code{PCRE_study}:}{Logical or integer: should
+      \code{\link{grep}(perl = TRUE)} and similar \sQuote{study} the
+      patterns?  Either logical or a numerical threshold for the minimum
+      number of strings to be matched for the pattern to be studied (the
+      default is \code{10})).  Missing values and negative numbers are
+      treated as false.}
 
+    \item{\code{PCRE_use_JIT}:}{Logical: should \code{\link{grep}(perl =
+	TRUE)}, \code{\link{strsplit}(perl = TRUE)} and similar make use
+      of PCRE's Just-In-Time compiler for studied patterns, if
+      available?  Missing values are treated as false.}
+      
     \item{\code{pdfviewer}:}{default PDF viewer.
       The default is set from the environment variable \env{R_PDFVIEWER},
 #ifdef unix
@@ -361,7 +418,10 @@ getOption(x, default = NULL)
 
     \item{\code{nwarnings}:}{the limit for the number of warnings kept
       when \code{warn = 0}, default 50.  This will discard messages if
-      called whilst they are being collected.}
+      called whilst they are being collected.  If you increase this
+      limit, be aware that the current implementation pre-allocates
+      the equivalent of a named list for them, i.e., do not increase it to
+      more than say a million.}
 
     \item{\code{width}:}{controls the maximum number of columns on a
       line used in printing vectors, matrices and arrays, and when
@@ -478,7 +538,8 @@ getOption(x, default = NULL)
       \code{c("unordered", "ordered")}, but the names are unused.}
 
     \item{\code{na.action}:}{the name of a function for treating missing
-      values (\code{\link{NA}}'s) for certain situations.}
+      values (\code{\link{NA}}'s) for certain situations, see
+      \code{\link{na.action}} and \code{\link{na.pass}}.}
 
     \item{\code{show.coef.Pvalues}:}{logical, affecting whether P
       values are printed in summary tables of coefficients.  See
@@ -555,7 +616,7 @@ getOption(x, default = NULL)
       requests.  If \code{NULL}, requests will be made without a
       user agent header.
       The default is \code{R (<version> <platform> <arch> <os>)} .}
-    
+
     \item{\code{install.lock}:}{logical: should per-directory package
       locking be used by \code{\link{install.packages}}?  Most useful
       for binary installs on macOS and Windows, but can be used in a
@@ -604,15 +665,15 @@ getOption(x, default = NULL)
 #ifdef windows
       Possible values are \code{"win.binary"}, \code{"source"} and
       \code{"both"} (the default).  Some macOS builds use
-      \code{"mac.binary"} and \code{"mac.binary.mavericks"}.
+      \code{"mac.binary.el-capitan"}.
 #endif
 #ifdef unix
       Possible values are \code{"source"} (the default except under a
-      CRAN macOS build), \code{"mac.binary."},
-      \code{"mac.binary.mavericks"} and \code{"both"} (the default for
-      CRAN macOS builds).  Windows uses
-      \code{"win.binary"}. (\code{"mac.binary.leopard"} and
-      \code{"mac.binary.universal"} are no longer in use.)
+      CRAN macOS build), \code{"mac.binary.el-capitan"} and
+      \code{"both"} (the default for CRAN macOS builds).  Windows uses
+      \code{"win.binary"}. (\code{"mac.binary.mavericks"},
+      \code{"mac.binary.leopard"}, \code{"mac.binary.universal"} are no
+      longer in use.)
 #endif
       Value \code{"binary"} is a synonym for the native binary type (if
       there is one); \code{"both"} is used by
@@ -648,7 +709,7 @@ getOption(x, default = NULL)
       used.
 #endif
     }
-      
+
     \item{\code{useHTTPS}:}{logical.  Used by \code{\link{chooseCRANmirror}}:
       are secure mirrors preferred?  If not set, \code{TRUE} is assumed.}
   }

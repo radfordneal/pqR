@@ -148,6 +148,7 @@ function(dir,
         defaults <- list(which = c("Depends", "Imports", "LinkingTo"),
                          recursive = FALSE,
                          repos = getOption("repos"))
+        defaults0 <- defaults
         pos <- pmatch(names(reverse), names(defaults), nomatch = 0L)
         defaults[pos] <- reverse[pos > 0L]
 
@@ -172,6 +173,22 @@ function(dir,
                                  which = defaults$which,
                                  recursive = defaults$recursive,
                                  reverse = TRUE)
+        }
+
+        add_recommended_maybe <-
+            config_val_to_logical(Sys.getenv("_R_TOOLS_C_P_I_D_ADD_RECOMMENDED_MAYBE_",
+                                             "FALSE"))
+        if(add_recommended_maybe) {
+            ## Add all recommended packages with any dependency on the
+            ## packages to be checked.
+            rnames <-
+                c(rnames,
+                  names(Filter(length,
+                               lapply(package_dependencies(.get_standard_package_names()$recommended,
+                                                           available,
+                                                           which = "all"),
+                                      intersect,
+                                      pnames))))
         }
 
         rnames <- intersect(unlist(rnames, use.names = FALSE),
@@ -598,6 +615,13 @@ function(dir, all = FALSE, full = FALSE)
 
 ### ** check_packages_in_dir_results
 
+## <FIXME>
+## For new-style logs from successful check runs (a '* DONE' line
+## followed by a 'Status: ' line), we could simply get the status from
+## the 'Status: ' line.
+## Change to fully rely on the new format eventually.
+## </FIXME>
+
 check_packages_in_dir_results <-
 function(dir, logs = NULL)
 {
@@ -611,20 +635,26 @@ function(dir, logs = NULL)
 
     results <- lapply(logs, function(log) {
         lines <- read_check_log(log)
-        ## Should this be anchored with $ as well?
-        re <- "^\\*.*\\.\\.\\. *(\\[.*\\])? *(NOTE|WARNING|ERROR)"
-        ## Note that we use WARN instead of WARNING for the summary.
+        ## See analyze_lines() inside analyze_check_log():
+        re <- "^\\* (loading checks for arch|checking (examples|tests) \\.\\.\\.$)"
+        pos <- grep(re, lines, perl = TRUE, useBytes = TRUE)
+        if(length(pos <- pos[pos < length(lines)]))
+            lines <- lines[-pos]
+        re <- "^\\*\\*? ((checking|creating|running examples for arch|running tests for arch) .*) \\.\\.\\.( (\\[[^ ]*\\]))?( (NOTE|WARNING|ERROR)|)$"
         m <- regexpr(re, lines, perl = TRUE, useBytes = TRUE)
         ind <- (m > 0L)
-        status <- if(any(ind)) {
-            category <- sub(re, "\\2", lines[ind],
-                            perl = TRUE, useBytes = TRUE)
-            if(any(category == "ERROR")) "ERROR"
-            else if(any(category == "WARNING")) "WARN"
-            else "NOTE"
-        } else {
-            "OK"
-        }
+        ## Note that we use WARN instead of WARNING for the summary.
+        status <-
+            if(any(ind)) {
+                status <- sub(re, "\\6", lines[ind],
+                              perl = TRUE, useBytes = TRUE)
+                if(any(status == "")) "FAIL"
+                else if(any(status == "ERROR")) "ERROR"
+                else if(any(status == "WARNING")) "WARN"
+                else "NOTE"
+            } else {
+                "OK"
+            }
         list(status = status, lines = lines[ind])
     })
     names(results) <- sub("\\.Rcheck$", "", basename(dirname(logs)))
@@ -644,7 +674,7 @@ function(results)
                  status, deparse.level = 0L)
     tab <- tab[match(c("Source packages", "Reverse depends"),
                      rownames(tab), nomatch = 0L),
-               match(c("ERROR", "WARN", "NOTE", "OK"),
+               match(c("FAIL", "ERROR", "WARN", "NOTE", "OK"),
                      colnames(tab), nomatch = 0L),
                drop = FALSE]
     names(dimnames(tab)) <- NULL
@@ -654,24 +684,44 @@ function(results)
 ### ** read_check_log
 
 read_check_log <-
-function(log)
+function(log, drop = TRUE)
 {
     lines <- readLines(log, warn = FALSE)
 
-    ## Drop CRAN check status footer.
-    ## Ideally, we would have a more general mechanism to detect footer
-    ## information to be skipped (e.g., a line consisting of a single
-    ## non-printing control character?)
-    pos <- grep("^Current CRAN status:", lines,
-                perl = TRUE, useBytes = TRUE)
-    if(length(pos) && lines[pos <- (pos[1L] - 1L)] == "") {
-        lines <- lines[seq_len(pos - 1L)]
+    if(drop) {
+        ## Drop CRAN check status footer.
+        ## Ideally, we would have a more general mechanism to detect
+        ## footer information to be skipped (e.g., a line consisting of
+        ## a single non-printing control character?)
+        pos <- grep("^Current CRAN status:", lines,
+                    perl = TRUE, useBytes = TRUE)
+        if(length(pos) && lines[pos <- (pos[1L] - 1L)] == "") {
+            lines <- lines[seq_len(pos - 1L)]
+        }
     }
 
+    ## <FIXME>
+    ## Remove eventually.
+    len <- length(lines)
+    end <- lines[len]
+    if(grepl(re <- "^(\\*.*\\.\\.\\.)(\\* elapsed time.*)$", end,
+             perl = TRUE, useBytes = TRUE)) {
+        lines <- c(lines[seq_len(len - 1L)],
+                   sub(re, "\\1", end, perl = TRUE, useBytes = TRUE),
+                   sub(re, "\\2", end, perl = TRUE, useBytes = TRUE))
+    }
+    ## </FIXME
+    
     lines
 }
 
 ### ** analyze_check_log
+
+## <FIXME>
+## New-style check logs should have a '* DONE' line followed by a
+## 'Status:' line.  If not, a check failure occurred.
+## Change to fully rely on the new format eventually.
+## </FIXME>
 
 analyze_check_log <-
 function(log, drop_ok = TRUE)
@@ -680,12 +730,26 @@ function(log, drop_ok = TRUE)
         list(Package = package, Version = version,
              Flags = flags, Chunks = chunks)
 
+    ## <FIXME>
+    ## All calls to grep(), grepl() and sub() use arguments
+    ## perl = TRUE and useBytes = TRUE.
+    ## Simplify by using inlined functions pgrep() etc, a la
+    psub <- function(pattern, replacement, x)
+        sub(pattern, replacement, x, perl = TRUE, useBytes = TRUE)
+        ## .Internal(sub(pattern, replacement, x, FALSE, TRUE, FALSE, TRUE))
+    ## </FIXME>
+    
     ## Alternatives for left and right quotes.
     lqa <- "'|\xe2\x80\x98"
     rqa <- "'|\xe2\x80\x99"
     ## Group when used ...
 
-    drop_ok_status_tags <- c("OK", "NONE", "SKIPPED")
+    if(is.character(drop_ok)) {
+        drop_ok_status_tags <- drop_ok
+        drop_ok <- TRUE
+    } else {
+        drop_ok_status_tags <- c("OK", "NONE", "SKIPPED")
+    }
 
     ## Start by reading in.
     lines <- read_check_log(log)
@@ -726,42 +790,54 @@ function(log, drop_ok = TRUE)
 
     ## Get footer.
     len <- length(lines)
-    ## Some check systems explicitly record the elapsed time in the
-    ## last line:
-    if(grepl("^\\* elapsed time ", lines[len],
-             perl = TRUE, useBytes = TRUE)) {
-        lines <- lines[-len]
-        len <- len - 1L
-    }
-    ## Summary footers.
-    ## Better (but 'perl=TRUE' ??) if(startsWith(lines[len], "Status: "))
-    if(grepl("^Status: ", lines[len],
-             perl = TRUE, useBytes = TRUE)) {
-        ## New-style status summary.
-        lines <- lines[-len]
-        len <- len - 1L
-    } else {
-        ## Old-style status summary.
-        num <- length(grep("^(NOTE|WARNING): There",
-                           lines[c(len - 1L, len)]))
-        if(num > 0L) {
-            pos <- seq.int(len - num + 1L, len)
-            lines <- lines[-pos]
-            len <- len - num
+    pos <- which(lines == "* DONE")
+    if(length(pos) &&
+       ((pos <- pos[length(pos)]) < len) &&
+       startsWith(lines[pos + 1L], "Status: "))
+        lines <- lines[seq_len(pos - 1L)]
+    else {
+        ## Not really new style, or failure ... argh.
+        ## Some check systems explicitly record the elapsed time in the
+        ## last line:
+        if(grepl("^\\* elapsed time ", lines[len],
+                 perl = TRUE, useBytes = TRUE)) {
+            lines <- lines[-len]
+            len <- len - 1L
+            while(grepl("^[[:space:]]*$", lines[len])) {
+                lines <- lines[-len]
+                len <- len - 1L
+            }
         }
+        ## Summary footers.
+        if(startsWith(lines[len], "Status: ")) {
+            ## New-style status summary.
+            lines <- lines[-len]
+            len <- len - 1L
+        } else {
+            ## Old-style status summary.
+            num <- length(grep("^(NOTE|WARNING): There",
+                               lines[c(len - 1L, len)]))
+            if(num > 0L) {
+                pos <- seq.int(len - num + 1L, len)
+                lines <- lines[-pos]
+                len <- len - num
+            }
+        }
+        if(lines[len] == "* DONE")
+            lines <- lines[-len]
     }
-    ## New-style end-of-check tag.
-    if(lines[len] == "* DONE")
-        lines <- lines[-len]
 
     analyze_lines <- function(lines) {
         ## Windows has
         ##   * loading checks for arch
         ##   * checking examples ...
         ##   * checking tests ...
-        ## headers: drop these.
+        ## headers: drop these (unless in the last line, where they
+        ## indicate failure).
         re <- "^\\* (loading checks for arch|checking (examples|tests) \\.\\.\\.$)"
-        lines <- lines[!grepl(re, lines, perl = TRUE, useBytes = TRUE)]
+        pos <- grep(re, lines, perl = TRUE, useBytes = TRUE)
+        if(length(pos <- pos[pos < length(lines)]))
+            lines <- lines[-pos]
         ## We might still have
         ##   * package encoding:
         ## entries for packages declaring a package encoding.
@@ -772,7 +848,7 @@ function(log, drop_ok = TRUE)
         ##   ** running examples for arch
         ##   ** running tests for arch
         ## So let's drop everything up to the first such entry.
-        re <- "^\\*\\*? ((checking|creating|running examples for arch|running tests for arch) .*) \\.\\.\\.( (\\[[^ ]*\\]))? (.*)$"
+        re <- "^\\*\\*? ((checking|creating|running examples for arch|running tests for arch) .*) \\.\\.\\.( (\\[[^ ]*\\]))?( (.*)|)$"
         ind <- grepl(re, lines, perl = TRUE, useBytes = TRUE)
         csi <- cumsum(ind)
         ind <- (csi > 0)
@@ -784,16 +860,20 @@ function(log, drop_ok = TRUE)
                        ##   _R_CHECK_VIGNETTE_TIMING_=yes
                        ## will result in a different chunk format ...
                        line <- s[1L]
-                       list(check =
-                            sub(re, "\\1", line, perl = TRUE, useBytes = TRUE),
-                            status =
-                            sub(re, "\\5", line, perl = TRUE, useBytes = TRUE),
+                       check <- sub(re, "\\1", line,
+                                    perl = TRUE, useBytes = TRUE)
+                       status <- sub(re, "\\6", line,
+                                     perl = TRUE, useBytes = TRUE)
+                       if(status == "") status <- "FAIL"
+                       list(check = check,
+                            status = status,
                             output = paste(s[-1L], collapse = "\n"))
                    })
 
         status <- vapply(chunks, `[[`, "", "status")
         if(identical(drop_ok, TRUE) ||
-           (is.na(drop_ok) && all(status != "ERROR")))
+           (is.na(drop_ok)
+               && all(is.na(match(c("ERROR", "FAIL"), status)))))
             chunks <- chunks[is.na(match(status, drop_ok_status_tags))]
 
         chunks
@@ -912,9 +992,6 @@ function(x, ...)
 check_packages_in_dir_changes <-
 function(dir, old, outputs = FALSE, sources = FALSE)
 {
-    check_packages_in_dir_changes_classes <-
-        c("check_packages_in_dir_changes", "data.frame")
-
     dir <- if(inherits(dir, "check_packages_in_dir"))
         dir <- attr(dir, "dir")
     else
@@ -932,6 +1009,20 @@ function(dir, old, outputs = FALSE, sources = FALSE)
     if(!inherits(old, "check_details"))
         old <- check_packages_in_dir_details(old, drop_ok = FALSE)
 
+    check_details_changes(new, old, outputs)
+}
+
+### ** check_details_changes
+
+check_details_changes <-
+function(new, old, outputs = FALSE)
+{
+    check_details_changes_classes <-
+        c("check_details_changes", "data.frame")
+
+    if(!inherits(new, "check_details")) stop("wrong class")
+    if(!inherits(old, "check_details")) stop("wrong class")
+
     ## Simplify matters by considering only "changes" in *available*
     ## results/details.
 
@@ -943,7 +1034,7 @@ function(dir, old, outputs = FALSE, sources = FALSE)
                          Old = character(),
                          New = character(),
                          stringsAsFactors = FALSE)
-        class(db) <- check_packages_in_dir_changes_classes
+        class(db) <- check_details_changes_classes
         return(db)
     }
 
@@ -967,8 +1058,10 @@ function(dir, old, outputs = FALSE, sources = FALSE)
     db <- do.call(rbind, chunks)
 
     ## Drop checks that are OK in both versions
-    x.issue <- !is.na(match(db$Status.x, c("NOTE","ERROR","WARNING")))
-    y.issue <- !is.na(match(db$Status.y, c("NOTE","ERROR","WARNING")))
+    x.issue <- !is.na(match(db$Status.x,
+                            c("ERROR","FAIL","NOTE","WARNING")))
+    y.issue <- !is.na(match(db$Status.y,
+                            c("ERROR","FAIL","NOTE","WARNING")))
     db <- db[x.issue | y.issue,]
 
     ## Even with the above simplification, missing entries do not
@@ -980,10 +1073,12 @@ function(dir, old, outputs = FALSE, sources = FALSE)
     sx <- as.character(db$Status.x)
     sy <- as.character(db$Status.y)
     if(outputs) {
-        sx <- sprintf("%s\n  %s", sx,
-                      gsub("\n", "\n  ", db$Output.x, fixed = TRUE))
-        sy <- sprintf("%s\n  %s", sy,
-                      gsub("\n", "\n  ", db$Output.y, fixed = TRUE))
+        ind <- nzchar(ox <- db$Output.x)
+        sx[ind] <- sprintf("%s\n  %s", sx[ind],
+                           gsub("\n", "\n  ", ox[ind], fixed = TRUE))
+        ind <- nzchar(oy <- db$Output.y)
+        sy[ind] <- sprintf("%s\n  %s", sy[ind],
+                           gsub("\n", "\n  ", oy[ind], fixed = TRUE))
     }
     sx[is.na(db$Status.x)] <- ""
     sy[is.na(db$Status.y)] <- ""
@@ -1006,12 +1101,12 @@ function(dir, old, outputs = FALSE, sources = FALSE)
 
     db <- db[c("Package", "Check", "Old", "New")]
 
-    class(db) <- check_packages_in_dir_changes_classes
+    class(db) <- check_details_changes_classes
 
     db
 }
 
-format.check_packages_in_dir_changes <-
+format.check_details_changes <-
 function(x, ...)
 {
     if(!nrow(x)) return(character())
@@ -1026,7 +1121,7 @@ function(x, ...)
                    ""))
 }
 
-print.check_packages_in_dir_changes <-
+print.check_details_changes <-
 function(x, ...)
 {
     if(length(y <- format(x)))

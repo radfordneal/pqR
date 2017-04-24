@@ -399,12 +399,31 @@ stopifnot(unlist(lapply(ggm, function(g) !is.null(getGeneric(g, where = em)))),
 	  ## all above worked in 2.7.0, however:
 	  isGeneric("show",  where=e4),
 	  hasMethods("show", where=e4), hasMethods("show", where=em),
-	  ## isGeneric("dim", where=as.environment("package:Matrix"))
 	  identical(as.character(gg4), #gg4 has packages attr.; tools::: doesn't
 		    tools:::get_S4_generics_with_methods(e4))
 	  )
 ## the last failed in R 2.7.0 : was not showing  "show"
-## TODO: use "Matrix" checks once that is >= 1.0
+
+if(require("Matrix")) {
+    D5. <- Diagonal(x = 5:1)
+    D5N <- D5.; D5N[5,5] <- NA
+    stopifnot(isGeneric("dim", where=as.environment("package:Matrix")),
+	      identical(D5., pmin(D5.)),
+	      identical(D5., pmax(D5.)),
+	      identical(D5., pmax(D5., -1)),
+	      identical(D5., pmin(D5., 7)),
+	      inherits((D5.3 <- pmin(D5.+2, 3)), "Matrix"),
+	      identical(as.matrix(pmin(D5.+2 , 3)),
+			pmin(as.matrix(D5.+2), 3)),
+	      identical(pmin(1, D5.), pmin(1, as.matrix(D5.))),
+	      identical(D5N, pmax(D5N, -1)),
+	      identical(D5N, pmin(D5N, 5)),
+	      identical(unname(as.matrix(pmin(D5N+1, 3))),
+			       pmin(as.matrix(D5N)+1, 3)),
+	      ##
+	      TRUE)
+}
+
 
 ## containing "array" ("matrix", "ts", ..)
 t. <- ts(1:10, frequency = 4, start = c(1959, 2))
@@ -825,3 +844,64 @@ stopifnot(
     identical(formals(getGeneric("as.vector")), formals(base::as.vector)),
     identical(formals(getGeneric("unlist")),    formals(base::unlist)))
 ## failed for a while in R-devel (3.3.0)
+
+setClass("myInteger", contains=c("integer", "VIRTUAL"))
+setClass("mySubInteger", contains="myInteger")
+new("mySubInteger", 1L)
+## caused infinite recursion in R 3.3.0
+
+detach("package:methods", force=TRUE)
+methods::setClass("test1", methods::representation(date="POSIXct"))
+methods::setClass("test2", contains="test1")
+test <- function(x) UseMethod('test', x)
+test.test1 <- function(x) 'Hi'
+test(methods::new("test2", date=as.POSIXct("2003-10-09")))
+stopifnot(require("methods"))
+## S3 dispatch to superclass methods failed on S4 objects when
+## methods package was not attached
+
+
+## Tests for class fetching and conflict resolution
+setClass("htest1", slots=c(a="numeric",b="data.frame"), package="package1")
+setClass("htest2", slots=c(a="logical"), package="package2")
+class.list = list(
+    package1=getClassDef("htest1", where=class_env1),
+    package2=getClassDef("htest2", where=class_env2)
+)
+
+firstclass  <- methods:::.resolveClassList(class.list,.GlobalEnv,
+                                           package="package1")
+secondclass <- methods:::.resolveClassList(class.list,.GlobalEnv,
+                                           package="package2")
+alsofirstclass <- methods:::.resolveClassList(class.list,.GlobalEnv,
+                                              package="package3")
+stopifnot(!identical(firstclass, secondclass))
+stopifnot(identical(firstclass, class.list[[1]]))
+stopifnot(identical(secondclass, class.list[[2]]))
+stopifnot(identical(alsofirstclass, class.list[[1]]))
+
+## implicit coercion of S4 object to vector via as.vector() in sub-assignment
+setClass("A", representation(stuff="numeric"))
+as.vector.A <- function (x, mode="any") x@stuff
+v <- c(3.5, 0.1)
+a <- new("A", stuff=v)
+x <- y <- numeric(10)
+x[3:4] <- a
+y[3:4] <- v
+stopifnot(identical(x, y))
+
+## callNextMethod() was broken when augmenting args of primitive generics
+foo <- setClass("foo")
+bar <- setClass("bar", contains = "foo")
+
+setMethod("[", "foo",  function(x, i, j, ..., flag = FALSE, drop = FALSE) {
+    flag
+})
+
+setMethod("[", "bar", function(x, i, j, ..., flag = FALSE, drop = FALSE) {
+    callNextMethod()
+})
+
+BAR <- new("bar")
+stopifnot(identical(BAR[1L], FALSE))
+stopifnot(identical(BAR[1L, , flag=TRUE], TRUE))

@@ -555,7 +555,6 @@ static R_INLINE SEXP getPrimitive(SEXP symbol)
 /* the second the object and any remaining are matched with the */
 /* formals of the chosen method. */
 
-#define ARGUSED(x) LEVELS(x)
 
 /* This is a special .Internal */
 SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -829,7 +828,32 @@ SEXP attribute_hidden do_unclass(SEXP call, SEXP op, SEXP args, SEXP env)
     return CAR(args);
 }
 
+/** Version of inherits() that supports S4 inheritance and implicit
+    classes.  The inlined inherits() does not have access to private
+    entry points R_data_class() and R_data_class2(). The semantics of
+    inherits2() are identical to that of the R-level inherits(),
+    except there is no translation.
+*/
 
+Rboolean attribute_hidden inherits2(SEXP x, const char *what) {
+    if (OBJECT(x)) {
+	SEXP klass;
+  
+	if(IS_S4_OBJECT(x))
+	    PROTECT(klass = R_data_class2(x));
+	else
+	    PROTECT(klass = R_data_class(x, FALSE));
+	int nclass = length(klass);
+	for (int i = 0; i < nclass; i++) {
+	    if (!strcmp(CHAR(STRING_ELT(klass, i)), what)) {
+		UNPROTECT(1);
+		return TRUE;
+	    }
+	}
+	UNPROTECT(1);
+    }
+    return FALSE;
+}
 
 /* NOTE: Fast  inherits(x, what)    in ../include/Rinlinedfuns.h
  * ----        ----------------- */
@@ -858,13 +882,7 @@ static SEXP inherits3(SEXP x, SEXP what, SEXP which)
 
     if( !isLogical(which) || (LENGTH(which) != 1) )
 	error(_("'which' must be a length 1 logical vector"));
-    int isvec = asLogical(which);
-
-#ifdef _be_too_picky_
-    if(IS_S4_OBJECT(x) && nwhat == 1 && !isvec &&
-       !isNull(R_getClassDef(translateChar(STRING_ELT(what, 0)))))
-	warning(_("use 'is()' instead of 'inherits()' on S4 objects"));
-#endif
+    Rboolean isvec = asLogical(which);
 
     if(isvec)
 	PROTECT(rval = allocVector(INTSXP, nwhat));
@@ -936,7 +954,6 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
 	   .selectSuperClasses(getClass("....")@contains, dropVirtual=TRUE)  */
 	SEXP classExts, superCl, _call;
 	static SEXP s_contains = NULL, s_selectSuperCl = NULL;
-	int i;
 	if(!s_contains) {
 	    s_contains      = install("contains");
 	    s_selectSuperCl = install(".selectSuperClasses");
@@ -948,7 +965,7 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
 	superCl = eval(_call, rho);
 	UNPROTECT(3); /* _call, classExts, classDef */
 	PROTECT(superCl);
-	for(i=0; i < LENGTH(superCl); i++) {
+	for(int i=0; i < LENGTH(superCl); i++) {
 	    const char *s_class = CHAR(STRING_ELT(superCl, i));
 	    for (ans = 0; ; ans++) {
 		if (!strlen(valid[ans]))
@@ -1189,7 +1206,7 @@ SEXP R_set_prim_method(SEXP fname, SEXP op, SEXP code_vec, SEXP fundef,
     }
     if (!isPrimitive(op)) {
         SEXP internal = R_do_slot(op, install("internal"));
-        op = INTERNAL(install(CHAR(asChar(internal))));
+        op = INTERNAL(installTrChar(asChar(internal)));
         if (op == R_NilValue) {
           error("'internal' slot does not name an internal function: %s",
                 CHAR(asChar(internal)));
@@ -1431,7 +1448,7 @@ SEXP attribute_hidden
 R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 		    Rboolean promisedArgs)
 {
-    SEXP fundef, value, mlist=R_NilValue, s, a, b;
+    SEXP fundef, value, mlist=R_NilValue, s, a, b, suppliedvars;
     int offset;
     prim_methods_t current;
     offset = PRIMOFFSET(op);
@@ -1462,17 +1479,22 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
             if (inherits(value, "internalDispatchMethod")) {
                 return(NULL);
             }
+            PROTECT(suppliedvars = list1(mkString(PRIMNAME(op))));
+            SET_TAG(suppliedvars, R_dot_Generic);
 	    /* found a method, call it with promised args */
 	    if(!promisedArgs) {
 		PROTECT(s = promiseArgs(CDR(call), rho));
 		if (length(s) != length(args)) error(_("dispatch error"));
 		for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
 		    SET_PRVALUE(CAR(b), CAR(a));
-		value =  applyClosure(call, value, s, rho, R_NilValue);
-		UNPROTECT(1);
+		value =  applyClosure(call, value, s, rho, suppliedvars);
+		UNPROTECT(2);
 		return value;
-	    } else
-		return applyClosure(call, value, args, rho, R_NilValue);
+	    } else {
+		value = applyClosure(call, value, args, rho, suppliedvars);
+                UNPROTECT(1);
+                return value;
+            }
 	}
 	/* else, need to perform full method search */
     }

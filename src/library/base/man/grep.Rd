@@ -169,7 +169,7 @@ regexec(pattern, text, ignore.case = FALSE, perl = FALSE,
   giving the lengths of the matches (or \eqn{-1} for no match).
 
   Where matching failed because of resource limits (especially for PCRE)
-  this is regarded as a non-match.
+  this is regarded as a non-match, usually with a warning.
 }
 
 \section{Warning}{
@@ -198,9 +198,19 @@ regexec(pattern, text, ignore.case = FALSE, perl = FALSE,
   Often byte-based matching suffices in a UTF-8 locale since byte
   patterns of one character never match part of another.
 
-  PCRE-based matching puts additional effort into \sQuote{studying} the
-  compiled pattern when \code{x}/\code{text} has length greater than
-  10.
+  PCRE-based matching by default puts additional effort into
+  \sQuote{studying} the compiled pattern when \code{x}/\code{text} has
+  length at least 10.  As from \R 3.4.0 that study may use the PCRE JIT
+  compiler on platforms where it is available (see
+  \code{\link{pcre_config}}).  The details are controlled by
+  \code{\link{options}} \code{PCRE_study} and \code{PCRE_use_JIT}.
+  (Some timing comparisons can be seen by running file
+  \file{tests/PCRE.R} in the \R sources (and perhaps installed).)
+  People working with PCRE and very long strings can adjust the maximum
+  size of the JIT stack by setting environment variable
+  \env{R_PCRE_JIT_STACK_MAXSIZE} before JIT is used to a value between
+  \code{1} and \code{1000} in MB: the default is \code{64}.  (Then would
+  usually be wise to set the \link{option} \code{PCRE_limit_recursion}.)
 }
 
 \source{
@@ -242,6 +252,8 @@ regexec(pattern, text, ignore.case = FALSE, perl = FALSE,
   \code{\link{apropos}} uses regexps and has more examples.
 
   \code{\link{grepRaw}} for matching raw vectors.
+  
+  Options \code{PCRE_study} and \code{PCRE_use_JIT}.
 }
 \examples{
 grep("[a-z]", letters)
@@ -258,11 +270,11 @@ gsub("([ab])", "\\\\1_\\\\1_", "abc and ABC")
 txt <- c("The", "licenses", "for", "most", "software", "are",
   "designed", "to", "take", "away", "your", "freedom",
   "to", "share", "and", "change", "it.",
-   "", "By", "contrast,", "the", "GNU", "General", "Public", "License",
-   "is", "intended", "to", "guarantee", "your", "freedom", "to",
-   "share", "and", "change", "free", "software", "--",
-   "to", "make", "sure", "the", "software", "is",
-   "free", "for", "all", "its", "users")
+  "", "By", "contrast,", "the", "GNU", "General", "Public", "License",
+  "is", "intended", "to", "guarantee", "your", "freedom", "to",
+  "share", "and", "change", "free", "software", "--",
+  "to", "make", "sure", "the", "software", "is",
+  "free", "for", "all", "its", "users")
 ( i <- grep("[gu]", txt) ) # indices
 stopifnot( txt[i] == grep("[gu]", txt, value = TRUE) )
 

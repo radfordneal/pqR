@@ -7,15 +7,16 @@
 \alias{smooth.spline}
 \alias{.nknots.smspl}
 %\alias{print.smooth.spline}% is not exported
+%\alias{hatvalues.smooth.spline}% is not exported
 \title{Fit a Smoothing Spline}
 \description{
   Fits a cubic smoothing spline to the supplied data.
 }
 \usage{
-smooth.spline(x, y = NULL, w = NULL, df, spar = NULL, cv = FALSE,
+smooth.spline(x, y = NULL, w = NULL, df, spar = NULL, lambda = NULL, cv = FALSE,
               all.knots = FALSE, nknots = .nknots.smspl,
               keep.data = TRUE, df.offset = 0, penalty = 1,
-              control.spar = list(), tol = 1e-6 * IQR(x))
+              control.spar = list(), tol = 1e-6 * IQR(x), keep.stuff = FALSE)
 }
 \arguments{
  \item{x}{a vector giving the values of the predictor variable, or  a
@@ -29,19 +30,31 @@ smooth.spline(x, y = NULL, w = NULL, df, spar = NULL, cv = FALSE,
    the smoother matrix).  Must be in \eqn{(1,n_x]}{(1,nx]},
    \eqn{n_x}{nx} the number of unique x values, see below.}
  \item{spar}{smoothing parameter, typically (but not necessarily) in
-   \eqn{(0,1]}.  The coefficient \eqn{\lambda} of the integral of the
-   squared second derivative in the fit (penalized log likelihood)
-   criterion is a monotone function of \code{spar}, see the details
-   below.}
- \item{cv}{ordinary (\code{TRUE}) or \sQuote{generalized} cross-validation
-   (GCV) when \code{FALSE}; is used for smoothing parameter computation
-   only when \code{df} is not specified; it is used however
-   to determine \code{cv.crit} in the result.  Setting it to \code{NA}
-   for speedup skips the evaluation of leverages and any score.}
- \item{all.knots}{if \code{TRUE}, all distinct points in \code{x} are used as
-   knots.  If \code{FALSE} (default), a subset of \code{x[]} is used,
+   \eqn{(0,1]}.  When \code{spar} is specified, the coefficient
+   \eqn{\lambda} of the integral of the squared second derivative in the
+   fit (penalized log likelihood) criterion is a monotone function of
+   \code{spar}, see the details below.  Alternatively \code{lambda} may
+   be specified instead of the \emph{scale free} \code{spar}=\eqn{s}.}
+ \item{lambda}{if desired, the internal design-dependent smoothing
+   parameter \eqn{\lambda} can be specified instead of \code{spar}.
+   This may be desirable for resampling algorithms such as cross
+   validation or the bootstrap.}
+ \item{cv}{ordinary leave-one-out (\code{TRUE}) or \sQuote{generalized}
+   cross-validation (GCV) when \code{FALSE}; is used for smoothing
+   parameter computation only when both \code{spar} and \code{df} are
+   not specified; it is used however to determine \code{cv.crit} in the
+   result.  Setting it to \code{NA} for speedup skips the evaluation of
+   leverages and any score.}
+ \item{all.knots}{if \code{TRUE}, all distinct points in \code{x} are used
+   as knots.  If \code{FALSE} (default), a subset of \code{x[]} is used,
    specifically \code{x[j]} where the \code{nknots} indices are evenly
-   spaced in \code{1:n}, see also the next argument \code{nknots}.}
+   spaced in \code{1:n}, see also the next argument \code{nknots}.
+
+   Alternatively, a strictly increasing \code{\link{numeric}} vector
+   specifying \dQuote{all the knots} to be used; must be rescaled
+   to \eqn{[0, 1]} already such that it corresponds to the
+   \code{ans $ fit$knots} sequence returned, not repeating the boundary
+   knots.}
  \item{nknots}{integer or \code{\link{function}} giving the number of
    knots to use when \code{all.knots = FALSE}.  If a function (as by
    default), the number of knots is \code{nknots(nx)}.  By default for
@@ -82,6 +95,9 @@ smooth.spline(x, y = NULL, w = NULL, df, spar = NULL, cv = FALSE,
    values.  The values are binned into bins of size \code{tol} and
    values which fall into the same bin are regarded as the same.  Must
    be strictly positive (and finite).}
+ \item{keep.stuff}{an experimental \code{\link{logical}} indicating if
+   the result should keep extras from the internal computations.  Should
+   allow to reconstruct the \eqn{X} matrix and more.}
 }
 \details{
   Neither \code{x} nor \code{y} are allowed to containing missing or
@@ -92,7 +108,8 @@ smooth.spline(x, y = NULL, w = NULL, df, spar = NULL, cv = FALSE,
   regarded as the same are replaced by the first of their values and the
   corresponding \code{y} and \code{w} are pooled accordingly.
 
-  The computational \eqn{\lambda} used (as a function of
+  Unless \code{lambda} has been specified instead of \code{lambda},
+  the computational \eqn{\lambda} used (as a function of
   \eqn{s=spar}{\code{spar}}) is
   \eqn{\lambda = r * 256^{3 s - 1}}{\lambda = r * 256^(3*spar - 1)}
   where
@@ -111,10 +128,12 @@ smooth.spline(x, y = NULL, w = NULL, df, spar = NULL, cv = FALSE,
   \eqn{c} is the solution of the (ridge regression)
   \eqn{(X' W X + \lambda \Sigma) c = X' W y}.
 
-  If \code{spar} is missing or \code{NULL}, the value of \code{df} is used to
-  determine the degree of smoothing.  If both are missing, leave-one-out
-  cross-validation (ordinary or \sQuote{generalized} as determined by
-  \code{cv}) is used to determine \eqn{\lambda}.
+  If \code{spar} and \code{lambda} are missing or \code{NULL}, the value
+  of \code{df} is used to determine the degree of smoothing.  If
+  \code{df} is missing as well, leave-one-out cross-validation (ordinary
+  or \sQuote{generalized} as determined by \code{cv}) is used to
+  determine \eqn{\lambda}.
+
   Note that from the above relation,
 %%  lam      = r * 256^(3s - 1)
 %%  log(lam) = log(r) + (3s - 1) * log(256)
@@ -134,8 +153,11 @@ smooth.spline(x, y = NULL, w = NULL, df, spar = NULL, cv = FALSE,
   happen for values larger than 2 or so. Don't think of setting
   \code{spar} or the controls \code{low} and \code{high} outside such a
   safe range, unless you know what you are doing!
+  Similarly, specifying \code{lambda} instead of \code{spar} is
+  delicate, notably as the range of \dQuote{safe} values for
+  \code{lambda} is not scale-invariant and hence entirely data dependent.
 
-  The \sQuote{generalized} cross-validation method will work correctly when
+  The \sQuote{generalized} cross-validation method GCV will work correctly when
   there are duplicated points in \code{x}.  However, it is ambiguous what
   leave-one-out cross-validation means with duplicated points, and the
   internal code uses an approximation that involves leaving out groups
@@ -165,6 +187,7 @@ smooth.spline(x, y = NULL, w = NULL, df, spar = NULL, cv = FALSE,
   \item{y}{the fitted values corresponding to \code{x}.}
   \item{w}{the weights used at the unique values of \code{x}.}
   \item{yin}{the y values used at the unique \code{y} values.}
+  \item{tol}{the \code{tol} argument (whose default depends on \code{x}).}
   \item{data}{only if \code{keep.data = TRUE}: itself a
     \code{\link{list}} with components \code{x}, \code{y} and \code{w}
     of the same length.  These are the original \eqn{(x_i,y_i,w_i),
@@ -172,10 +195,13 @@ smooth.spline(x, y = NULL, w = NULL, df, spar = NULL, cv = FALSE,
     hence be longer than the above \code{x} component; see details.
     }
   \item{lev}{(when \code{cv} was not \code{NA}) leverages, the diagonal
-  values of the smoother matrix.}
+    values of the smoother matrix.}
   \item{cv.crit}{cross-validation score, \sQuote{generalized} or true, depending
-    on \code{cv}.}
-  \item{pen.crit}{penalized criterion}
+    on \code{cv}.  The CV score is often called \dQuote{PRESS} (and
+    labeled on \code{\link{print}()}), for \sQuote{\bold{PRE}diction
+      \bold{S}um of \bold{S}quares}.}
+  \item{pen.crit}{the penalized criterion, a non-negative number; simply
+    the (weighted) residual sum of squares (RSS), \code{ sum(.$w * residuals(.)^2) }.}
   \item{crit}{the criterion value minimized in the underlying
     \code{.Fortran} routine \file{sslvrg}.  When \code{df} has been specified,
     the criterion is \eqn{3 + (tr(S_\lambda) - df)^2}{3 + (tr(S[lambda]) - df)^2},
@@ -184,16 +210,22 @@ smooth.spline(x, y = NULL, w = NULL, df, spar = NULL, cv = FALSE,
     this value may become quite imprecise when the true \code{df} is
     between and 1 and 2.
   }
-  \item{spar}{the value of \code{spar} computed or given.}
+  \item{spar}{the value of \code{spar} computed or given, unless it has been
+    given as \code{c(lambda = *)}, when it set to \code{NA} here.}
+  \item{ratio}{(when \code{spar} above is not \code{NA}), the value
+    \eqn{r}, the ratio of two matrix traces.}
   \item{lambda}{the value of \eqn{\lambda} corresponding to \code{spar},
     see the details above.}
   \item{iparms}{named integer(3) vector where \code{..$ipars["iter"]}
     gives number of spar computing iterations used.}
+  \item{auxMat}{experimental; when \code{keep.stuff} was true, a
+    \dQuote{flat} numeric vector containing parts of the internal computations.}
   \item{fit}{list for use by \code{\link{predict.smooth.spline}}, with
     components
     \describe{
       \item{knot:}{the knot sequence (including the repeated boundary
-        knots).}
+        knots), scaled into \eqn{[0, 1]} (via \code{min} and
+	\code{range}).}
       \item{nk:}{number of coefficients or number of \sQuote{proper}
         knots plus 2.}
       \item{coef:}{coefficients for the spline basis used.}
@@ -202,6 +234,9 @@ smooth.spline(x, y = NULL, w = NULL, df, spar = NULL, cv = FALSE,
     }
   }
   \item{call}{the matched call.}
+
+  \code{method(class = "smooth.spline")} shows a
+  \code{\link{hatvalues}()} method based on the \code{lev} vector above.
 }
 \references{
   Chambers, J. M. and Hastie, T. J. (1992)
@@ -221,9 +256,8 @@ smooth.spline(x, y = NULL, w = NULL, df, spar = NULL, cv = FALSE,
 \source{
   This function is based on code in the \code{GAMFIT} Fortran program by
   T. Hastie and R. Tibshirani (originally taken from
-  \url{http://lib.stat.cmu.edu/general/}, which is now defunct but
-  mirrors may still be available),
-  which makes use of spline code by Finbarr O'Sullivan.  Its design
+  \url{http://lib.stat.cmu.edu/general/gamfit})
+   which makes use of spline code by Finbarr O'Sullivan.  Its design
   parallels the \code{smooth.spline} function of Chambers & Hastie (1992).
 }
 \seealso{
@@ -232,23 +266,21 @@ smooth.spline(x, y = NULL, w = NULL, df, spar = NULL, cv = FALSE,
 }
 \examples{
 require(graphics)
-
-attach(cars)
-plot(speed, dist, main = "data(cars)  &  smoothing splines")
-cars.spl <- smooth.spline(speed, dist)
-(cars.spl)
+plot(dist ~ speed, data = cars, main = "data(cars)  &  smoothing splines")
+cars.spl <- with(cars, smooth.spline(speed, dist))
+cars.spl
 ## This example has duplicate points, so avoid cv = TRUE
 \dontshow{
-  stopifnot(cars.spl $ w == table(speed)) # weights = multiplicities
+  stopifnot(cars.spl $ w == table(cars$speed)) # weights = multiplicities
   utils::str(cars.spl, digits = 5, vec.len = 6)
   cars.spl$fit
 }
 lines(cars.spl, col = "blue")
-lines(smooth.spline(speed, dist, df = 10), lty = 2, col = "red")
+ss10 <- smooth.spline(cars[,"speed"], cars[,"dist"], df = 10)
+lines(ss10, lty = 2, col = "red")
 legend(5,120,c(paste("default [C.V.] => df =",round(cars.spl$df,1)),
                "s( * , df = 10)"), col = c("blue","red"), lty = 1:2,
        bg = 'bisque')
-detach()
 
 
 ## Residual (Tukey Anscombe) plot:
@@ -276,16 +308,21 @@ axis(4, at=.nknots.smspl(10000), line=-.5, col=c..,col.axis=c.., las=1)
 ##-- artificial example
 y18 <- c(1:3, 5, 4, 7:3, 2*(2:5), rep(10, 4))
 xx  <- seq(1, length(y18), len = 201)
-(s2  <- smooth.spline(y18)) # GCV
+(s2   <- smooth.spline(y18)) # GCV
 (s02  <- smooth.spline(y18, spar = 0.2))
 (s02. <- smooth.spline(y18, spar = 0.2, cv = NA))
 plot(y18, main = deparse(s2$call), col.main = 2)
 lines(s2, col = "gray"); lines(predict(s2, xx), col = 2)
 lines(predict(s02, xx), col = 3); mtext(deparse(s02$call), col = 3)
 
+## Specifying 'lambda' instead of usual spar :
+(s2. <- smooth.spline(y18, lambda = s2$lambda, tol = s2$tol))
+
 \dontshow{
-stopifnot(all.equal(predict(s02 , xx),
-		    predict(s02., xx), tolerance = 1e-15))
+nD <- c("spar", "ratio", "iparms", "call"); nn <- setdiff(names(s2), nD)
+stopifnot(all.equal(s2[nn], s2.[nn], tol = 7e-7), # seen 6.86e-8
+          all.equal(predict(s02 , xx),
+		    predict(s02., xx), tol = 1e-15))
 }
 \donttest{
 ## The following shows the problematic behavior of 'spar' searching:

@@ -1,6 +1,6 @@
 % File src/library/utils/man/utils-defunct.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2012 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{utils-defunct}
@@ -11,6 +11,7 @@
 \alias{CRAN.packages}
 #ifdef windows
 \alias{zip.unpack}
+\alias{setInternet2}
 #endif
 
 \title{Defunct Functions in Package \pkg{utils}}
@@ -32,6 +33,8 @@ zip.file.extract(file, zipname = "R.zip",
 
 #ifdef windows
 zip.unpack(zipname, dest)
+# disabled in 3.3.0, defunct in 3.4.0
+setInternet2(use = TRUE)
 #endif
 }
 \seealso{

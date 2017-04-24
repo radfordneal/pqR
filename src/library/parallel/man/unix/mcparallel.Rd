@@ -118,7 +118,7 @@ mccollect(jobs, wait = TRUE, timeout = 0, intermediate = FALSE)
 }
 
 \note{
-  The \link{serialize}d
+    Prior to \R 3.4.0 and on a 32-bit platform, the \link{serialize}d
   result from each forked process is limited to \eqn{2^{31} - 1}{2^31 -
     1} bytes.  (Returning very large results via serialization is
   inefficient and should be avoided.)

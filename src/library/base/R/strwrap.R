@@ -1,7 +1,7 @@
 #  File src/library/base/R/strwrap.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2015 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -27,22 +27,25 @@ function(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
          prefix = "", simplify = TRUE, initial = prefix)
 {
     if(!is.character(x)) x <- as.character(x)
+
     ## Useful variables.
     indentString <- strrep(" ", indent)
     exdentString <- strrep(" ", exdent)
     y <- list()                         # return value
-    UB <- TRUE
-    ## input need not be valid in this locale, e.g. from write.dcf
-    ## but if x has UTF-8 encoding we want to preserve it, so
-    if(all(Encoding(x) == "UTF-8")) UB <- FALSE
-    else {
-        ## Let's convert anything else with a marked encoding
-        ## to the current locale
-        enc <- Encoding(x) %in% c("latin1", "UTF-8")
-        if(length(enc)) x[enc] <- enc2native(x[enc])
-    }
-    z <- lapply(strsplit(x, "\n[ \t\n]*\n", perl = TRUE, useBytes = UB),
-                strsplit, "[ \t\n]", perl = TRUE, useBytes = UB)
+
+    ## We use strsplit() to tokenize input into paras and words, and
+    ## hence need to tweak how it handles/transforms encodings.  To
+    ## preserve encodings, it seems "best" to canonicalize to UTF-8
+    ## (ensuring valid UTF-8), and at the end convert back to latin1
+    ## where we originally had latin1.
+    enc <- Encoding(x)
+    x <- enc2utf8(x)
+    if(any(ind <- !validEnc(x)))
+        x[ind] <- iconv(x[ind], "UTF-8", "UTF-8", sub = "byte")
+
+    z <- lapply(strsplit(x, "\n[ \t\n]*\n", perl = TRUE),
+                strsplit, "[ \t\n]", perl = TRUE)
+
     ## Now z[[i]][[j]] is a character vector of all "words" in
     ## paragraph j of x[i].
 
@@ -136,6 +139,18 @@ function(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
             c(y, "")
     }
 
+    if(length(pos <- which(enc == "latin1"))) {
+        y[pos] <-
+            lapply(y[pos],
+                   function(s) {
+                       e <- Encoding(s)
+                       if(length(p <- which(e == "UTF-8")))
+                           s[p] <- iconv(s[p], "UTF-8", "latin1",
+                                         sub = "byte")
+                       s
+                   })
+    }
+
     if(simplify) y <- as.character(unlist(y))
     y
 }
@@ -172,8 +187,11 @@ function(x, y, style = c("table", "list"),
 
     if(is.null(indent))
         indent <- switch(style, table = width / 3, list = width / 9)
-    if(indent > 0.5 * width)
-        stop("incorrect values of 'indent' and 'width'")
+    ## change 2017-03-12 suggeested by Bill Dunlap
+    ## https://stat.ethz.ch/pipermail/r-devel/2017-March/073873.html
+    ## if(indent > 0.5 * width)
+    ##    warning("'indent' is too large for 'width' and will be reduced")
+    indent <- min(indent, 0.5*width)
 
     indentString <- strrep(" ", indent)
 

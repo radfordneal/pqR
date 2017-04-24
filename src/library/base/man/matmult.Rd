@@ -1,6 +1,6 @@
 % File src/library/base/man/matmult.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2014 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{matmult}
@@ -23,6 +23,10 @@ x \%*\% y
   When a vector is promoted to a matrix, its names are not
   promoted to row or column names, unlike \code{\link{as.matrix}}.
 
+  Promotion of a vector to a 1-row or 1-column matrix happens when one
+  of the two choices allows \code{x} and \code{y} to get conformable
+  dimensions.
+  
   This operator is S4 generic but not S3 generic.  S4 methods need to be
   written for a function of two arguments named \code{x} and \code{y}.
 }
@@ -31,9 +35,8 @@ x \%*\% y
   dimensions which have only one level.
 }
 \note{
-  Since \R 3.2.0, promotion of a vector to a 1-row or 1-column matrix
-  happens in even more cases, when one of the two choices allows
-  \code{x} and \code{y} to get conformable dimensions.
+  The propagation of NaN/Inf values, precision, and performance of matrix
+  products can be controlled by \code{\link{options}("matprod")}.
 }
 \references{
   Becker, R. A., Chambers, J. M. and Wilks, A. R. (1988)

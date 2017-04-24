@@ -1,7 +1,7 @@
 #  File src/library/tools/R/parseRd.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2015 The R Core Team
+#  Copyright (C) 1995-2016 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 
 parse_Rd <- function(file, srcfile = NULL, encoding = "unknown",
                      verbose = FALSE, fragment = FALSE,
-                     warningCalls = TRUE, 
+                     warningCalls = TRUE,
                      macros = file.path(R.home("share"), "Rd", "macros", "system.Rd"),
 		     permissive = FALSE)
 {
@@ -34,7 +34,7 @@ parse_Rd <- function(file, srcfile = NULL, encoding = "unknown",
         }
     } else file0 <- "<connection>"
     lines <- readLines(file, warn = FALSE)
-    if(is.character(macros)) 
+    if(is.character(macros))
     	macros <- initialRdMacros(macros = macros)
     ## remove old-style marking for data, keep line nos
     lines[lines == "\\non_function{}"] <- ""
@@ -43,7 +43,8 @@ parse_Rd <- function(file, srcfile = NULL, encoding = "unknown",
     ## Note this is required to be on a line by itself,
     ## but some people have preceding whitespace
     enc <- grep("\\encoding{", lines, fixed = TRUE, useBytes=TRUE)
-    enc <- grep("^[[:space:]]*\\\\encoding\\{([^}]*)\\}.*", lines[enc], value=TRUE)
+    enc <- grep("^[[:space:]]*\\\\encoding\\{([^}]*)\\}.*", lines[enc],
+                value = TRUE)
     if(length(enc)) {
         if(length(enc) > 1L)
             warning(file0, ": multiple \\encoding lines, using the first",
@@ -67,26 +68,35 @@ parse_Rd <- function(file, srcfile = NULL, encoding = "unknown",
         if (any(is.na(iconv(lines, "", "ASCII"))))
             stop(file0, ": non-ASCII input and no declared encoding",
                  domain = NA, call. = warningCalls)
-    } else if (encoding != "UTF-8")
-    	lines <- iconv(lines, encoding, "UTF-8", sub = "byte")
+    } else {
+	if (encoding != "UTF-8")
+    	    lines <- iconv(lines, encoding, "UTF-8", sub = "byte")
+        ## Strip UTF-8 BOM if necessary.
+        bytes <- charToRaw(lines[1L])
+        if(identical(as.integer(bytes[1L : 3L]),
+                     c(0xefL, 0xbbL, 0xbfL)))
+            lines[1L] <- rawToChar(bytes[-(1L : 3L)])
+    }
 
     tcon <- file()
     writeLines(lines, tcon, useBytes = TRUE)
     on.exit(close(tcon))
-    
+
     warndups <- config_val_to_logical(Sys.getenv("_R_WARN_DUPLICATE_RD_MACROS_", "FALSE"))
 
-    if (permissive) 
+    if (permissive)
 	# FIXME:  this should test for a special class of warning rather than testing the
 	#         message, but those are currently not easily generated from C code.
 	result <- withCallingHandlers(.External2(C_parseRd, tcon, srcfile, "UTF-8",
-                            verbose, basename, fragment, warningCalls, macros, warndups),
-		       warning = function(w) 
+                                                 verbose, basename, fragment,
+                                                 warningCalls, macros, warndups),
+		       warning = function(w)
 			    if (grepl("unknown macro", conditionMessage(w)))
 				invokeRestart("muffleWarning") )
     else
 	result <- .External2(C_parseRd, tcon, srcfile, "UTF-8",
-                         verbose, basename, fragment, warningCalls, macros, warndups)
+                             verbose, basename, fragment, warningCalls,
+                             macros, warndups)
     result <- expandDynamicFlags(result)
     if (permissive)
 	result <- permissify(result)
@@ -102,8 +112,8 @@ print.Rd <- function(x, deparse = FALSE, ...)
 as.character.Rd <- function(x, deparse = FALSE, ...)
 {
     ZEROARG <- c("\\cr", "\\dots", "\\ldots", "\\R", "\\tab") # Only these cause trouble when {} is added
-    TWOARG <- c("\\section", "\\item", "\\enc", "\\method", "\\S3method",
-                "\\S4method", "\\tabular")
+    TWOARG <- c("\\section", "\\subsection", "\\item", "\\enc",
+                "\\method", "\\S3method", "\\S4method", "\\tabular")
     USERMACROS <- c("USERMACRO", "\\newcommand", "\\renewcommand")
     EQN <- c("\\deqn", "\\eqn", "\\figure")
     modes <- c(RLIKE = 1L, LATEXLIKE = 2L, VERBATIM = 3L, INOPTION = 4L, COMMENTMODE = 5L, UNKNOWNMODE = 6L)
@@ -186,12 +196,13 @@ as.character.Rd <- function(x, deparse = FALSE, ...)
 
 deparseRdElement <- function(element, state)
     .Call(C_deparseRd, element, state)
-    
+
 # Convert unknown tags into text displaying the tag with braces if necessary
 # This allows unknown LateX macros to be embedded in the text, and to be just passed
 # through.
 
-permissify <- function(Rd) {  
+permissify <- function(Rd)
+{
     tags <- RdTags(Rd)
     oldclass <- class(Rd)
     oldsrcref <- utils::getSrcref(Rd)
@@ -203,9 +214,10 @@ permissify <- function(Rd) {
    	    Rd[[i]] <- tagged(Rd[[i]], "TEXT", utils::getSrcref(Rd[[i]]))
             while (i < length(tags)) {
 		if (tags[i+1] == "LIST") {
-		    Rd <- c(Rd[seq_len(i)], list(tagged("{", "TEXT", utils::getSrcref(Rd[[i+1]]))), 
-		                        permissify(Rd[[i+1]]), 
-            	                        list(tagged("}", "TEXT", utils::getSrcref(Rd[[i+1]]))), 
+		    Rd <- c(Rd[seq_len(i)],
+                            list(tagged("{", "TEXT", utils::getSrcref(Rd[[i+1]]))),
+                            permissify(Rd[[i+1]]),
+                            list(tagged("}", "TEXT", utils::getSrcref(Rd[[i+1]]))),
 			    Rd[seq_along(Rd)[-seq_len(i+1)]])
 		    tags <- RdTags(Rd)
 		    i <- i+3

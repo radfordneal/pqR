@@ -9,7 +9,11 @@ options(warn = 1) # print as they occur
 
 plot(0) # this should remain constant
 str(par(c("usr","xaxp","yaxp")))
-
+stopifnot(all.equal(
+    par(c("usr","xaxp","yaxp"))
+   ,
+    list(usr = c(0.568, 1.432, -1.08, 1.08),
+         xaxp = c(0.6, 1.4, 4), yaxp = c(-1, 1, 4))))
 
 
 ### Test for centring of chars.  All the chars which are plotted should
@@ -149,3 +153,8 @@ hc <- hclust(dst <- dist(c(1:2, 5)), method="ave")
 plot(hc, cex = 2, axes=FALSE, ann=FALSE)
 ## cex was not used in 3.0.[01]
 
+## axis.Date() and axis.POSIXct() with reversed 'xlim'
+toD <- as.Date("2016-08-19"); dates <- c(toD - 10, toD)
+plot(dates, 1:2, xlim = rev(dates),
+     ann=FALSE, yaxt="n", frame.plot=FALSE)
+## failed to label the dates in R <= 3.3.1

@@ -1,7 +1,7 @@
 #  File src/library/base/R/datetime.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -225,33 +225,28 @@ strptime <- function(x, format, tz = "")
 format.POSIXct <- function(x, format = "", tz = "", usetz = FALSE, ...)
 {
     if(!inherits(x, "POSIXct")) stop("wrong class")
+    ## NB identical(tz, "") is *NOT* the same as missing(tz)
     if(missing(tz) && !is.null(tzone <- attr(x, "tzone"))) tz <- tzone
     structure(format.POSIXlt(as.POSIXlt(x, tz), format, usetz, ...),
               names = names(x))
 }
 
-## could handle arrays for max.print
-print.POSIXct <- function(x, ...)
+## could handle arrays for max.print \\ keep in sync with  print.Date() in ./dates.R
+print.POSIXct <-
+print.POSIXlt <- function(x, tz = "", usetz = TRUE, ...)
 {
     max.print <- getOption("max.print", 9999L)
+    FORM <- if(missing(tz)) function(z) format(x, usetz = usetz)
+	    else function(z) format(x, tz = tz, usetz = usetz)
     if(max.print < length(x)) {
-        print(format(x[seq_len(max.print)], usetz = TRUE), ...)
+	print(FORM(x[seq_len(max.print)]), ...)
         cat(' [ reached getOption("max.print") -- omitted',
             length(x) - max.print, 'entries ]\n')
-    } else print(format(x, usetz = TRUE), ...)
+    } else
+	print(if(length(x)) FORM(x) else paste(class(x)[1L], "of length 0"), ...)
     invisible(x)
 }
 
-print.POSIXlt <- function(x, ...)
-{
-    max.print <- getOption("max.print", 9999L)
-    if(max.print < length(x)) {
-        print(format(x[seq_len(max.print)], usetz = TRUE), ...)
-        cat(' [ reached getOption("max.print") -- omitted',
-            length(x) - max.print, 'entries ]\n')
-   } else print(format(x, usetz = TRUE), ...)
-    invisible(x)
-}
 
 summary.POSIXct <- function(object, digits = 15L, ...)
 {
@@ -471,16 +466,16 @@ difftime <-
     z <- unclass(time1) - unclass(time2)
     attr(z, "tzone") <- NULL # it may get copied from args of `-`
     units <- match.arg(units)
-    if(units == "auto") {
-        if(all(is.na(z))) units <- "secs"
-        else {
-            zz <- min(abs(z),na.rm = TRUE)
-            if(is.na(zz) || zz < 60) units <- "secs"
-            else if(zz < 3600) units <- "mins"
-            else if(zz < 86400) units <- "hours"
-            else units <- "days"
-        }
-    }
+    if(units == "auto")
+	units <-
+	    if(all(is.na(z))) "secs"
+	    else {
+		zz <- min(abs(z), na.rm = TRUE)
+		if(!is.finite(zz) || zz < 60) "secs"
+		else if(zz < 3600) "mins"
+		else if(zz < 86400) "hours"
+		else "days"
+	    }
     switch(units,
            "secs" = .difftime(z, units = "secs"),
            "mins" = .difftime(z/60, units = "mins"),
@@ -496,9 +491,9 @@ difftime <-
 as.difftime <- function(tim, format = "%X", units = "auto")
 {
     if (inherits(tim, "difftime")) return(tim)
-    if (is.character(tim)){
+    if (is.character(tim)) {
         difftime(strptime(tim, format = format),
-             strptime("0:0:0", format = "%X"), units = units)
+                 strptime("0:0:0", format = "%X"), units = units)
     } else {
         if (!is.numeric(tim)) stop("'tim' is not character or numeric")
 	if (units == "auto") stop("need explicit units for numeric conversion")
@@ -543,7 +538,7 @@ print.difftime <- function(x, digits = getOption("digits"), ...)
     if(is.array(x) || length(x) > 1L) {
         cat("Time differences in ", attr(x, "units"), "\n", sep = "")
         y <- unclass(x); attr(y, "units") <- NULL
-        print(y)
+	print(y, digits=digits, ...)
     }
     else
         cat("Time difference of ", format(unclass(x), digits = digits), " ",
@@ -666,7 +661,7 @@ Summary.difftime <- function (..., na.rm)
     if(Nargs == 0) {
         .difftime(do.call(.Generic), "secs")
     } else {
-        units <- sapply(x, function(x) attr(x, "units"))
+        units <- sapply(x, attr, "units")
         if(all(units == units[1L])) {
             args <- c(lapply(x, as.vector), na.rm = na.rm)
         } else {
@@ -900,6 +895,8 @@ julian.POSIXt <- function(x, origin = as.POSIXct("1970-01-01", tz = "GMT"), ...)
     structure(res, "origin" = origin)
 }
 
+## Note that  'abbreviate' works *vectorized* here :
+
 weekdays <- function(x, abbreviate) UseMethod("weekdays")
 weekdays.POSIXt <- function(x, abbreviate = FALSE)
 {
@@ -1028,7 +1025,7 @@ is.numeric.POSIXt <- function(x) FALSE
 
 split.POSIXct <-
 function(x, f, drop = FALSE, ...)
-    lapply(split.default(as.double(x), f, drop = drop), .POSIXct,
+    lapply(split.default(as.double(x), f, drop = drop, ...), .POSIXct,
            tz = attr(x, "tzone"))
 
 xtfrm.POSIXct <- function(x) as.numeric(x)

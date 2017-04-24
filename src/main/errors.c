@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1995--2015  The R Core Team.
+ *  Copyright (C) 1995--2017  The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -133,22 +133,50 @@ void R_CheckUserInterrupt(void)
 #endif
 }
 
-void onintr()
+static SEXP getInterruptCondition();
+
+static void onintrEx(Rboolean resumeOK)
 {
     if (R_interrupts_suspended) {
 	R_interrupts_pending = 1;
 	return;
     }
     else R_interrupts_pending = 0;
-    signalInterrupt();
+
+    if (resumeOK) {
+	SEXP rho = R_GlobalContext->cloenv;
+	int dbflag = RDEBUG(rho);
+	RCNTXT restartcontext;
+	begincontext(&restartcontext, CTXT_RESTART, R_NilValue, R_GlobalEnv,
+		     R_BaseEnv, R_NilValue, R_NilValue);
+	if (SETJMP(restartcontext.cjmpbuf)) {
+	    SET_RDEBUG(rho, dbflag); /* in case browser() has messed with it */
+	    R_ReturnedValue = R_NilValue;
+	    R_Visible = FALSE;
+	    endcontext(&restartcontext);
+	    return;
+	}
+	R_InsertRestartHandlers(&restartcontext, "resume");
+	signalInterrupt();
+	endcontext(&restartcontext);
+    }
+    else signalInterrupt();
+
+    /* Interrupts do not inherit from error, so we should not run the
+       user erro handler. But we have been, so as a transition,
+       continue to use options('error') if options('interrupt') is not
+       set */
+    Rboolean tryUserError = GetOption1(install("interrupt")) == R_NilValue;
 
     REprintf("\n");
-    /* Attempt to run user error option, save a traceback, show
-       warnings, and reset console; also stop at restart (try/browser)
-       frames.  Not clear this is what we really want, but this
-       preserves current behavior */
-    jump_to_top_ex(TRUE, TRUE, TRUE, TRUE, FALSE);
+    /* Attempt to save a traceback, show warnings, and reset console;
+       also stop at restart (try/browser) frames.  Not clear this is
+       what we really want, but this preserves current behavior */
+    jump_to_top_ex(TRUE, tryUserError, TRUE, TRUE, FALSE);
 }
+
+void onintr()  { onintrEx(TRUE); }
+void onintrNoResume() { onintrEx(FALSE); }
 
 /* SIGUSR1: save and quit
    SIGUSR2: save and quit, don't run .Last or on.exit().
@@ -251,10 +279,23 @@ static R_INLINE void RprintTrunc(char *buf)
     }
 }
 
+static SEXP getCurrentCall()
+{
+    RCNTXT *c = R_GlobalContext;
+
+    /* This can be called before R_GlobalContext is defined, so... */
+    /* If profiling is on, this can be a CTXT_BUILTIN */
+
+    if (c && (c->callflag & CTXT_BUILTIN)) c = c->nextcontext;
+    if (c == R_GlobalContext && R_BCIntActive)
+	return R_getBCInterpreterExpression();
+    else
+	return c ? c->call : R_NilValue;
+}
+
 void warning(const char *format, ...)
 {
     char buf[BUFSIZE], *p;
-    RCNTXT *c = R_GlobalContext;
 
     va_list(ap);
     va_start(ap, format);
@@ -263,8 +304,7 @@ void warning(const char *format, ...)
     p = buf + strlen(buf) - 1;
     if(strlen(buf) > 0 && *p == '\n') *p = '\0';
     RprintTrunc(buf);
-    if (c && (c->callflag & CTXT_BUILTIN)) c = c->nextcontext;
-    warningcall(c ? c->call : R_NilValue, "%s", buf);
+    warningcall(getCurrentCall(), "%s", buf);
 }
 
 /* declarations for internal condition handling */
@@ -579,9 +619,20 @@ static void restore_inError(void *data)
     R_Expressions = R_Expressions_keep;
 }
 
+/* Do not check constants on error more than this number of times per one
+   R process lifetime; if so many errors are generated, the performance
+   overhead due to the checks would be too high, and the program is doing
+   something strange anyway (i.e. running no-segfault tests). The constant
+   checks in GC and session exit (or .Call) do not have such limit. */
+static int allowedConstsChecks = 1000;
+
 static void NORET
 verrorcall_dflt(SEXP call, const char *format, va_list ap)
 {
+    if (allowedConstsChecks > 0) {
+	allowedConstsChecks--;
+	R_checkConstants(TRUE);
+    }
     RCNTXT cntxt;
     char *p, *tr;
     int oldInError;
@@ -717,6 +768,10 @@ void NORET errorcall(SEXP call, const char *format,...)
 {
     va_list(ap);
 
+    if (call == R_CurrentExpression)
+	/* behave like error( */
+	call = getCurrentCall();
+
     va_start(ap, format);
     vsignalError(call, format, ap);
     va_end(ap);
@@ -736,6 +791,21 @@ void NORET errorcall(SEXP call, const char *format,...)
     va_end(ap);
 }
 
+/* Like errorcall, but copies all data for the error message into a buffer
+   before doing anything else. */
+attribute_hidden
+void NORET errorcall_cpy(SEXP call, const char *format, ...)
+{
+    char buf[BUFSIZE];
+
+    va_list(ap);
+    va_start(ap, format);
+    Rvsnprintf(buf, BUFSIZE, format, ap);
+    va_end(ap);
+
+    errorcall(call, "%s", buf);
+}
+
 SEXP attribute_hidden do_geterrmessage(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP res;
@@ -750,16 +820,12 @@ SEXP attribute_hidden do_geterrmessage(SEXP call, SEXP op, SEXP args, SEXP env)
 void error(const char *format, ...)
 {
     char buf[BUFSIZE];
-    RCNTXT *c = R_GlobalContext;
 
     va_list(ap);
     va_start(ap, format);
     Rvsnprintf(buf, min(BUFSIZE, R_WarnLength), format, ap);
     va_end(ap);
-    /* This can be called before R_GlobalContext is defined, so... */
-    /* If profiling is on, this can be a CTXT_BUILTIN */
-    if (c && (c->callflag & CTXT_BUILTIN)) c = c->nextcontext;
-    errorcall(c ? c->call : R_NilValue, "%s", buf);
+    errorcall(getCurrentCall(), "%s", buf);
 }
 
 static void try_jump_to_restart(void)
@@ -907,7 +973,7 @@ SEXP attribute_hidden do_gettext(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     if(isNull(string) || !n) return string;
 
-    if(!isString(string)) errorcall(call, _("invalid '%s' value"), "string");
+    if(!isString(string)) error(_("invalid '%s' value"), "string");
 
     if(isNull(CAR(args))) {
 	RCNTXT *cptr;
@@ -940,7 +1006,7 @@ SEXP attribute_hidden do_gettext(SEXP call, SEXP op, SEXP args, SEXP rho)
     } else if(isString(CAR(args)))
 	domain = translateChar(STRING_ELT(CAR(args),0));
     else if(isLogical(CAR(args)) && LENGTH(CAR(args)) == 1 && LOGICAL(CAR(args))[0] == NA_LOGICAL) ;
-    else errorcall(call, _("invalid '%s' value"), "domain");
+    else error(_("invalid '%s' value"), "domain");
 
     if(strlen(domain)) {
 	PROTECT(ans = allocVector(STRSXP, n));
@@ -1046,7 +1112,7 @@ SEXP attribute_hidden do_ngettext(SEXP call, SEXP op, SEXP args, SEXP rho)
     } else if(isString(sdom))
 	domain = CHAR(STRING_ELT(sdom,0));
     else if(isLogical(sdom) && LENGTH(sdom) == 1 && LOGICAL(sdom)[0] == NA_LOGICAL) ;
-    else errorcall(call, _("invalid '%s' value"), "domain");
+    else error(_("invalid '%s' value"), "domain");
 
     /* libintl seems to malfunction if given a message of "" */
     if(strlen(domain) && length(STRING_ELT(msg1, 0))) {
@@ -1071,12 +1137,12 @@ SEXP attribute_hidden do_bindtextdomain(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     checkArity(op, args);
     if(!isString(CAR(args)) || LENGTH(CAR(args)) != 1)
-	errorcall(call, _("invalid '%s' value"), "domain");
+	error(_("invalid '%s' value"), "domain");
     if(isNull(CADR(args))) {
 	res = bindtextdomain(translateChar(STRING_ELT(CAR(args),0)), NULL);
     } else {
 	if(!isString(CADR(args)) || LENGTH(CADR(args)) != 1)
-	    errorcall(call, _("invalid '%s' value"), "dirname");
+	    error(_("invalid '%s' value"), "dirname");
 	res = bindtextdomain(translateChar(STRING_ELT(CAR(args),0)),
 			     translateChar(STRING_ELT(CADR(args),0)));
     }
@@ -1233,6 +1299,10 @@ void WarningMessage(SEXP call, R_WARNING which_warn, ...)
 	i++;
     }
 
+/* clang pre-3.9.0 says
+      warning: passing an object that undergoes default argument promotion to 
+      'va_start' has undefined behavior [-Wvarargs]
+*/
     va_start(ap, which_warn);
     Rvsnprintf(buf, BUFSIZE, _(WarningDB[i].format), ap);
     va_end(ap);
@@ -1329,8 +1399,14 @@ SEXP R_GetTraceback(int skip)
 		skip--;
 	    else {
 		SETCAR(t, deparse1(c->call, 0, DEFAULTDEPARSE));
-		if (c->srcref && !isNull(c->srcref))
-		    setAttrib(CAR(t), R_SrcrefSymbol, duplicate(c->srcref));
+		if (c->srcref && !isNull(c->srcref)) {
+		    SEXP sref;
+		    if (c->srcref == R_InBCInterpreter)
+			sref = R_findBCInterpreterSrcref(c);
+		    else
+			sref = c->srcref;
+		    setAttrib(CAR(t), R_SrcrefSymbol, duplicate(sref));
+		}
 		t = CDR(t);
 	    }
 	}
@@ -1673,10 +1749,16 @@ static void signalInterrupt(void)
     }
     R_HandlerStack = oldstack;
     UNPROTECT(1);
+
+    SEXP h = GetOption1(install("interrupt"));
+    if (h != R_NilValue) {
+	SEXP call = PROTECT(LCONS(h, R_NilValue));
+	eval(call, R_GlobalEnv);
+    }
 }
 
 void attribute_hidden
-R_InsertRestartHandlers(RCNTXT *cptr, Rboolean browser)
+R_InsertRestartHandlers(RCNTXT *cptr, const char *cname)
 {
     SEXP klass, rho, entry, name;
 
@@ -1694,7 +1776,7 @@ R_InsertRestartHandlers(RCNTXT *cptr, Rboolean browser)
     entry = mkHandlerEntry(klass, rho, R_RestartToken, rho, R_NilValue, TRUE);
     R_HandlerStack = CONS(entry, R_HandlerStack);
     UNPROTECT(1);
-    PROTECT(name = mkString(browser ? "browser" : "tryRestart"));
+    PROTECT(name = mkString(cname));
     PROTECT(entry = allocVector(VECSXP, 2));
     SET_VECTOR_ELT(entry, 0, name);
     SET_VECTOR_ELT(entry, 1, R_MakeExternalPtr(cptr, R_NilValue, R_NilValue));
@@ -1816,9 +1898,9 @@ SEXP attribute_hidden do_addTryHandlers(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     if (R_GlobalContext == R_ToplevelContext ||
 	! (R_GlobalContext->callflag & CTXT_FUNCTION))
-	errorcall(call, _("not in a try context"));
+	error(_("not in a try context"));
     SET_RESTART_BIT_ON(R_GlobalContext->callflag);
-    R_InsertRestartHandlers(R_GlobalContext, FALSE);
+    R_InsertRestartHandlers(R_GlobalContext, "tryRestart");
     return R_NilValue;
 }
 
@@ -1894,4 +1976,125 @@ R_GetSrcFilename(SEXP srcref)
     if (TYPEOF(srcfile) != STRSXP)
 	return ScalarString(mkChar(""));
     return srcfile;
+}
+
+
+/*
+ * C level tryCatch support
+ */
+
+/* There are two functions:
+
+       R_TryCatchError    handles error conditions;
+
+       R_TryCatch         can handle any condition type and allows a
+                          finalize action.
+*/
+
+SEXP R_tryCatchError(SEXP (*body)(void *), void *bdata,
+		     SEXP (*handler)(SEXP, void *), void *hdata)
+{
+    SEXP val;
+    SEXP cond = Rf_mkString("error");
+
+    PROTECT(cond);
+    val = R_tryCatch(body, bdata, cond, handler, hdata, NULL, NULL);
+    UNPROTECT(1);
+    return val;
+}
+
+/* This implementation uses R's tryCatch via calls from C to R to
+   invoke R's tryCatch, and then back to C to infoke the C
+   body/handler functions via a .Internal helper. This makes the
+   implementation fairly simple but not fast. If performance becomes
+   an issue we can look into a pure C implementation. LT */
+
+typedef struct {
+    SEXP (*body)(void *);
+    void *bdata;
+    SEXP (*handler)(SEXP, void *);
+    void *hdata;
+    void (*finally)(void *);
+    void *fdata;
+} tryCatchData_t;
+
+static SEXP default_tryCatch_handler(SEXP cond, void *data)
+{
+    return R_NilValue;
+}
+
+static void default_tryCatch_finally(void *data) { }
+
+static SEXP trycatch_callback = NULL;
+static const char* trycatch_callback_source =
+    "function(code, conds, fin) {\n"
+    "    handler <- function(cond)\n"
+    "        if (inherits(cond, conds))\n"
+    "            .Internal(C_tryCatchHelper(code, 1L, cond))\n"
+    "        else\n"
+    "            signalCondition(cond)\n"
+    "    if (fin)\n"
+    "        tryCatch(.Internal(C_tryCatchHelper(code, 0L)),\n"
+    "                 condition = handler,\n"
+    "                 finally = .Internal(C_tryCatchHelper(code, 2L)))\n"
+    "    else\n"
+    "        tryCatch(.Internal(C_tryCatchHelper(code, 0L)),\n"
+    "                 condition = handler)\n"
+    "}";
+
+SEXP R_tryCatch(SEXP (*body)(void *), void *bdata,
+		SEXP conds,
+		SEXP (*handler)(SEXP, void *), void *hdata,
+		void (*finally)(void *), void *fdata)
+{
+    if (body == NULL) error("must supply a body function");
+
+    if (trycatch_callback == NULL) {
+	trycatch_callback = R_ParseEvalString(trycatch_callback_source,
+					      R_BaseNamespace);
+	R_PreserveObject(trycatch_callback);
+    }
+    
+    tryCatchData_t tcd = {
+	.body = body,
+	.bdata = bdata,
+	.handler = handler != NULL ? handler : default_tryCatch_handler,
+	.hdata = hdata,
+	.finally = finally != NULL ? finally : default_tryCatch_finally,
+	.fdata = fdata
+    };
+
+    SEXP fin = finally != NULL ? R_TrueValue : R_FalseValue;
+    SEXP tcdptr = R_MakeExternalPtr(&tcd, R_NilValue, R_NilValue);
+    SEXP expr = lang4(trycatch_callback, tcdptr, conds, fin);
+    PROTECT(expr);
+    SEXP val = eval(expr, R_GlobalEnv);
+    UNPROTECT(1); /* expr */
+    return val;
+}
+
+SEXP do_tryCatchHelper(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    SEXP eptr = CAR(args);
+    SEXP sw = CADR(args);
+    SEXP cond = CADDR(args);
+    
+    if (TYPEOF(eptr) != EXTPTRSXP)
+	error("not an external pointer");
+
+    tryCatchData_t *ptcd = R_ExternalPtrAddr(CAR(args));
+
+    switch (asInteger(sw)) {
+    case 0:
+	return ptcd->body(ptcd->bdata);
+    case 1:
+	if (ptcd->handler != NULL)
+	    return ptcd->handler(cond, ptcd->hdata);
+	else return R_NilValue;
+    case 2:
+	if (ptcd->finally != NULL)
+	    ptcd->finally(ptcd->fdata);
+	return R_NilValue;
+    default: return R_NilValue; /* should not happen */
+    }
 }

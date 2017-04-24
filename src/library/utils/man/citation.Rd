@@ -1,6 +1,6 @@
 % File src/library/utils/man/citation.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2014 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{citation}
@@ -19,6 +19,7 @@ readCitationFile(file, meta = NULL)
   \item{package}{a character string with the name of a single package.
     An error occurs if more than one package name is given.}
   \item{lib.loc}{a character vector with path names of \R libraries, or
+    the directory containing the source for \code{package}, or
     \code{NULL}.  The default value of \code{NULL} corresponds to all
     libraries currently known.  If the default is used, the loaded
     packages are searched before the libraries.}
@@ -41,10 +42,10 @@ readCitationFile(file, meta = NULL)
   Execute function \code{citation()} for information on how to cite the
   base R system in publications.  If the name of a non-base package is
   given, the function either returns the information contained in the
-  \file{CITATION} file of the package or auto-generates citation
-  information.  In the latter case the package \file{DESCRIPTION} file
-  is parsed, the resulting citation object may be arbitrarily bad, but
-  is quite useful (at least as a starting point) in most cases.
+  \file{CITATION} file of the package (using \code{readCitationFile}
+  with \code{meta} equal to \code{packageDescription(package, lib.loc)})
+  or auto-generates citation information from the \file{DESCRIPTION}
+  file.
 
   In \R >= 2.14.0, one can use a \samp{Authors@R} field in
   \file{DESCRIPTION} to provide (\R code giving) a
@@ -87,7 +88,9 @@ readCitationFile(file, meta = NULL)
   any) of \code{meta} to determine the encoding of the file.
 }
 \value{
-  An object inheriting from class \code{"\link{bibentry}"}.
+  An object of class \code{"citation"}, inheriting from class
+  \code{"\link{bibentry}"}; see there, notably for the
+  \code{\link{print}} and \code{\link{format}} methods.
 }
 \seealso{
   \code{\link{bibentry}}
@@ -104,4 +107,14 @@ if(nchar(system.file(package = "foreign"))) citation("foreign")
 ## extract the bibtex entry from the return value
 x <- citation()
 toBibtex(x)
+
+\donttest{
+## A citation with more than one bibentry:
+cm <- tryCatch(citation("mgcv"),
+               error = function(e) {
+                 warning("Recommended package 'mgcv' is not installed properly")
+                 stop(e$message) })
+cm # short entries (2-3 lines each)
+print(cm, bibtex = TRUE) # each showing its bibtex code
+}%dont
 }

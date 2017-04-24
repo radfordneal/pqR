@@ -24,12 +24,11 @@ factor <- function(x = character(), levels, labels = levels,
     if (missing(levels)) {
 	y <- unique(x, nmax = nmax)
 	ind <- sort.list(y) # or possibly order(x) which is more (too ?) tolerant
-	y <- as.character(y)
-	levels <- unique(y[ind])
+	levels <- unique(as.character(y)[ind])
     }
     force(ordered) # check if original x is an ordered factor
-    exclude <- as.vector(exclude, typeof(x)) # may result in NA
-    x <- as.character(x)
+    if(!is.character(x))
+	x <- as.character(x)
     ## levels could be a long vectors, but match will not handle that.
     levels <- levels[is.na(match(levels, exclude))]
     f <- match(x, levels)
@@ -45,6 +44,18 @@ factor <- function(x = character(), levels, labels = levels,
 	else paste0(labels, seq_along(levels))
     class(f) <- c(if(ordered) "ordered", "factor")
     f
+}
+
+
+## Also used for methods::validObject(<factor>) :
+.valid.factor <- function(object) {
+    levs <- levels(object)
+    if (!is.character(levs))
+        return("factor levels must be \"character\"")
+    if (d <- anyDuplicated(levs))
+	return(sprintf("duplicated level [%d] in factor", d))
+    ## 'else'	ok :
+    TRUE
 }
 
 is.factor <- function(x) inherits(x, "factor")
@@ -91,12 +102,17 @@ nlevels <- function(x) length(levels(x))
 }
 
 droplevels <- function(x, ...) UseMethod("droplevels")
-droplevels.factor <- function(x, ...) factor(x)
-droplevels.data.frame <- function(x, except = NULL, ...)
+## default 'exclude' matches `[.factor` (drop=TRUE)
+droplevels.factor <- function(x, exclude = if(anyNA(levels(x))) NULL else NA, ...)
+    factor(x, exclude = exclude)
+
+droplevels.data.frame <- function(x, except = NULL, exclude, ...)
   {
     ix <- vapply(x, is.factor, NA)
     if (!is.null(except)) ix[except] <- FALSE
-    x[ix] <- lapply(x[ix], factor)
+    x[ix] <- if(missing(exclude))
+		  lapply(x[ix], droplevels)
+	     else lapply(x[ix], droplevels, exclude=exclude)
     x
   }
 
@@ -128,12 +144,10 @@ print.factor <- function (x, quote = FALSE, max.levels = NULL,
     if (length(x) == 0L)
         cat(if(ord)"ordered" else "factor", "(0)\n", sep = "")
     else {
-        ## The idea here is to preserve all relevant attributes such as
-        ## names and dims
-        xx <- x
-        class(xx) <- NULL
-        levels(xx) <- NULL
+        xx <- character(length(x))
         xx[] <- as.character(x)
+        keepAttrs <- setdiff(names(attributes(x)), c("levels", "class"))
+        attributes(xx)[keepAttrs] <- attributes(x)[keepAttrs]
         print(xx, quote = quote, ...)
     }
     maxl <- if(is.null(max.levels)) TRUE else max.levels
@@ -155,6 +169,8 @@ print.factor <- function (x, quote = FALSE, max.levels = NULL,
                       else lev, collapse = colsep),
             "\n", sep = "")
     }
+    if(!isTRUE(val <- .valid.factor(x)))
+	warning(val) # stop() in the future
     invisible(x)
 }
 
@@ -342,8 +358,9 @@ Summary.ordered <- function(..., na.rm)
 addNA <- function(x, ifany=FALSE)
 {
     if (!is.factor(x)) x <- factor(x)
-    if (ifany & !anyNA(x)) return(x)
+    if (ifany && !anyNA(x)) return(x)
     ll <- levels(x)
     if (!anyNA(ll)) ll <- c(ll, NA)
+    else if (!ifany && !anyNA(x)) return(x)
     factor(x, levels=ll, exclude=NULL)
 }

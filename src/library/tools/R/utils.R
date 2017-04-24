@@ -189,6 +189,8 @@ showNonASCIIfile <-
 function(file)
     showNonASCII(readLines(file, warn = FALSE))
 
+env_path <- function(...) file.path(..., fsep = .Platform$path.sep)
+
 ### * Text utilities.
 
 ### ** delimMatch
@@ -204,7 +206,7 @@ function(x, delim = c("{", "}"), syntax = "Rd")
     if(syntax != "Rd")
         stop("only Rd syntax is currently supported")
 
-    .Call(delim_match, x, delim)
+    .Call(C_delim_match, x, delim)
 }
 
 
@@ -314,7 +316,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
                                       shQuote(file)),
                                     env = env0)
 
-        log <- paste(file_path_sans_ext(file), "log", sep = ".")
+        log <- paste0(file_path_sans_ext(file), ".log")
 
         ## With Texinfo 6.1 (precisely, c6637), texi2dvi may not rerun
         ## often enough and give a non-zero status value when it should
@@ -336,7 +338,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
         ## analyze the log files in any case.
         errors <- character()
         ## (La)TeX errors.
-        log <- paste(file_path_sans_ext(file), "log", sep = ".")
+        log <- paste0(file_path_sans_ext(file), ".log")
         if(file_test("-f", log)) {
             lines <- .get_LaTeX_errors_from_log_file(log)
             if(length(lines))
@@ -345,7 +347,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
                                 sep = "\n")
         }
         ## BibTeX errors.
-        log <- paste(file_path_sans_ext(file), "blg", sep = ".")
+        log <- paste0(file_path_sans_ext(file), ".blg")
         if(file_test("-f", log)) {
             lines <- .get_BibTeX_errors_from_blg_file(log)
             if(length(lines))
@@ -411,7 +413,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
                intern=TRUE, ignore.stderr=TRUE)
         msg <- ""
         ## (La)TeX errors.
-        logfile <- paste(base, "log", sep = ".")
+        logfile <- paste0(base, ".log")
         if(file_test("-f", logfile)) {
             lines <- .get_LaTeX_errors_from_log_file(logfile)
             if(length(lines))
@@ -420,7 +422,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
                              sep = "\n")
         }
         ## BibTeX errors.
-        logfile <- paste(base, "blg", sep = ".")
+        logfile <- paste0(base, ".blg")
         if(file_test("-f", logfile)) {
             lines <- .get_BibTeX_errors_from_blg_file(logfile)
             if(length(lines))
@@ -495,7 +497,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
 ### ** .BioC_version_associated_with_R_version
 
 .BioC_version_associated_with_R_version <-
-    function() numeric_version(Sys.getenv("R_BIOC_VERSION", "3.4"))
+    function() numeric_version(Sys.getenv("R_BIOC_VERSION", "3.5"))
 ## Things are more complicated from R-2.15.x with still two BioC
 ## releases a year, so we do need to set this manually.
 ## Wierdly, 3.0 is the second version (after 2.14) for the 3.1.x series.
@@ -533,12 +535,18 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
 
 ### * Internal utility functions.
 
+### ** %notin%
+
+`%notin%` <-
+function(x, y)
+    is.na(match(x, y))
+
 ### ** %w/o%
 
 ## x without y, as in the examples of ?match.
 `%w/o%` <-
 function(x, y)
-    x[!x %in% y]
+    x[is.na(match(x, y))]
 
 ### ** .OStype
 
@@ -604,6 +612,16 @@ function(txt)
     txt <- gsub("(\xe2\x80\x9c|\xe2\x80\x9d)", '"', txt,
                 perl = TRUE, useBytes = TRUE)
     txt
+}
+
+### ** .enc2latin1
+
+.enc2latin1 <-
+function(x)
+{
+    if(length(pos <- which(Encoding(x) == "UTF-8")))
+        x[pos] <- iconv(x[pos], "UTF-8", "latin1", sub = "byte")
+    x
 }
 
 ### ** .eval_with_capture
@@ -675,7 +693,7 @@ function(file1, file2)
 {
     ## Use a fast version of file.append() that ensures LF between
     ## files.
-    .Call(codeFilesAppend, file1, file2)
+    .Call(C_codeFilesAppend, file1, file2)
 }
 
 ### ** .file_path_relative_to_dir
@@ -1071,7 +1089,7 @@ function()
             repos <- .get_repositories()[nms, "URL"]
             names(repos) <- nms
             if(repos["CRAN"] == "@CRAN@")
-                repos["CRAN"] <- "http://CRAN.R-project.org"
+                repos["CRAN"] <- "https://CRAN.R-project.org"
         }
     }
     repos
@@ -1139,6 +1157,7 @@ function()
                "Package",
                "Packaged",
                "Priority",
+               "RdMacros",
                "Suggests",
                "SysDataCompression",
                "SystemRequirements",
@@ -1240,7 +1259,7 @@ function(txt, lst, selective = TRUE)
         lst <- scan(what = character(), text = txt, quiet = TRUE)
     lst <- sort(unique(lst))
     nms <- lapply(lst, utils::find)
-    ind <- sapply(nms, length) > 0L
+    ind <- lengths(nms) > 0L
     imp <- split(lst[ind], substring(unlist(nms[ind]), 9L))
     if(selective) {
         sprintf("importFrom(%s)",
@@ -1382,7 +1401,7 @@ function(package, lib.loc)
     ## check interprets all output as indicating a problem.
     if(package != "base")
         .try_quietly({
-            pos <- match(paste("package", package, sep = ":"), search())
+            pos <- match(paste0("package:", package), search())
             if(!is.na(pos)) {
                 detach(pos = pos,
                        unload = ! package %in% c("tcltk", "tools"))
@@ -1417,7 +1436,8 @@ function(type = c("code", "data", "demo", "docs", "vignette"))
            demo = c("R", "r"),
            docs = c("Rd", "rd", "Rd.gz", "rd.gz"),
            vignette = c(outer(c("R", "r", "S", "s"), c("nw", "tex"),
-                              paste, sep = ""), "Rmd"))
+                              paste0),
+                        "Rmd"))
 }
 
 ### ** .make_S3_group_generic_env
@@ -1484,11 +1504,12 @@ nonS3methods <- function(package)
         list(base = c("all.equal", "all.names", "all.vars", "expand.grid",
              "format.char", "format.info", "format.pval",
              "max.col",
+             "pmax.int", "pmin.int",
              ## the next two only exist in *-defunct.Rd.
              "print.atomic", "print.coefmat",
              "qr.Q", "qr.R", "qr.X", "qr.coef", "qr.fitted", "qr.qty",
              "qr.qy", "qr.resid", "qr.solve",
-             "rep.int", "seq.int", "sort.int", "sort.list"),
+             "rep.int", "sample.int", "seq.int", "sort.int", "sort.list"),
              AMORE = "sim.MLPnet",
              BSDA = "sign.test",
              ChemometricsWithR = "lda.loofun",
@@ -1549,6 +1570,7 @@ nonS3methods <- function(package)
              reposTools = "update.packages2",
              rgeos = "scale.poly",
              sac = "cumsum.test",
+             sfsmisc = "cumsum.test",
              sm = "print.graph",
              splusTimeDate = "sort.list",
              splusTimeSeries = "sort.list",
@@ -1594,7 +1616,8 @@ function(ifile, ofile)
     .system_with_capture("pandoc",
                          paste(shQuote(normalizePath(ifile)), "-s",
                                "--email-obfuscation=references",
-                               "--css=../../CRAN_web.css",
+                               ## "--css=https://cran.r-project.org/web/CRAN_web.css",
+                               "--self-contained",
                                "-o", shQuote(ofile)))
 }
 
@@ -1730,13 +1753,9 @@ function(x, dfile)
     }
     ## Avoid declared encodings when writing out.
     Encoding(x) <- "unknown"
-
     ## Avoid folding for fields where we keep whitespace when reading,
     ## plus two where legacy code does not strip whitespace and so
-    ## we should not wrap the field.  In R 3.3.x, read.dcf can
-    ## add newlines, so we strip here.
-     if(!is.na(x["BugReports"]))
-         x["BugReports"] <- trimws(x["BugReports"])
+    ## we should not wrap the field.
     write.dcf(rbind(x), dfile,
               keep.white = c(.keep_white_description_fields,
                              "Maintainer", "BugReports"))
@@ -1775,15 +1794,17 @@ function(x)
     y <- character()
     if(!is.na(aar <- x["Authors@R"])) {
         aar <- utils:::.read_authors_at_R_field(aar)
+        lat <- identical(enc, "latin1")
         if(is.na(x["Author"])) {
             tmp <- utils:::.format_authors_at_R_field_for_author(aar)
-            ## uses strwrap, so will be in current locale
-            if(!is.na(enc)) tmp <- iconv(tmp, "", enc)
+            if(lat) tmp <- .enc2latin1(tmp)
             y["Author"] <- tmp
         }
-        if(is.na(x["Maintainer"]))
-            y["Maintainer"] <-
-                utils:::.format_authors_at_R_field_for_maintainer(aar)
+        if(is.na(x["Maintainer"])) {
+            tmp <- utils:::.format_authors_at_R_field_for_maintainer(aar)
+            if(lat) tmp <- .enc2latin1(tmp)
+            y["Maintainer"] <- tmp
+        }
     }
     y
 }
@@ -1816,20 +1837,25 @@ function(file, envir, enc = NA)
     ## as @code{sys.source(file, envir, keep.source = FALSE)}.
     oop <- options(keep.source = FALSE)
     on.exit(options(oop))
-    assignmentSymbolLM <- as.symbol("<-")
-    assignmentSymbolEq <- as.symbol("=")
-    if(!is.na(enc) &&
-       !(Sys.getlocale("LC_CTYPE") %in% c("C", "POSIX"))) {
-        con <- file(file, encoding = enc)
-        on.exit(close(con))
-    } else con <- file
+
+### <FIXME> for S4, setClass() .. are assignments, but must be called
+    ##         with correct 'where = envir'!
+    ## Possible solution: modified versions of these functions with changed
+    ##                    'where = ...' (default arg) in formals(.)
+    ## stopifnot(require(methods, quietly=TRUE))
+    ## assignmentSymbols <- c(c("<-", "="),
+    ##                        ls(pattern = "^set[A-Z]", pos = "package:methods"))
+    assignmentSymbols <- c("<-", "=")
+### </FIXME>
+    con <-
+	if(!is.na(enc) && !(Sys.getlocale("LC_CTYPE") %in% c("C", "POSIX"))) {
+	    on.exit(close(con), add = TRUE)
+	    file(file, encoding = enc)
+	} else file
     exprs <- parse(n = -1L, file = con)
-    if(!length(exprs))
-        return(invisible())
-    for(e in Filter(length, exprs)) {
-        if(is.call(e) &&
-           (e[[1L]] == assignmentSymbolLM ||
-            e[[1L]] == assignmentSymbolEq))
+    exprs <- exprs[lengths(exprs) > 0L]
+    for(e in exprs) {
+	if(is.call(e) && as.character(e[[1L]]) %in% assignmentSymbols)
             eval(e, envir)
     }
     invisible()
@@ -1848,7 +1874,7 @@ function(dir, envir, meta = character())
         stop("unable to create ", con)
     ## If the (DESCRIPTION) metadata contain a Collate specification,
     ## use this for determining the code files and their order.
-    txt <- meta[c(paste("Collate", .OStype(), sep = "."), "Collate")]
+    txt <- meta[c(paste0("Collate.", .OStype()), "Collate")]
     ind <- which(!is.na(txt))
     files <- if(any(ind))
         Filter(function(x) file_test("-f", x),
@@ -1858,11 +1884,9 @@ function(dir, envir, meta = character())
     if(!all(.file_append_ensuring_LFs(con, files)))
         stop("unable to write code files")
     tryCatch(.source_assignments(con, envir, enc = meta["Encoding"]),
-             error =
-             function(e)
-             stop("cannot source package code\n",
-                  conditionMessage(e),
-                  call. = FALSE))
+             error = function(e)
+                 stop("cannot source package code:\n", conditionMessage(e),
+                      call. = FALSE))
 }
 
 ### * .split_dependencies
@@ -2038,13 +2062,13 @@ Rcmd <- function(args, ...)
 ### ** pskill
 
 pskill <- function(pid, signal = SIGTERM)
-    invisible(.Call(ps_kill, pid, signal))
+    invisible(.Call(C_ps_kill, pid, signal))
 
 ### ** psnice
 
 psnice <- function(pid = Sys.getpid(), value = NA_integer_)
 {
-    res <- .Call(ps_priority, pid, value)
+    res <- .Call(C_ps_priority, pid, value)
     if(is.na(value)) res else invisible(res)
 }
 
@@ -2101,6 +2125,41 @@ toTitleCase <- function(text)
         stop("'text' must be a character vector")
     sapply(text, titleCase1, USE.NAMES = FALSE)
 }
+
+### ** path_and_libPath
+
+##' Typically the union of R_LIBS and current .libPaths(); may differ e.g. via R_PROFILE
+path_and_libPath <- function(...)
+{
+    lP <- .libPaths()
+    ## don't call normalizePath on paths which do not exist: allowed in R_LIBS!
+    ep0 <- c(strsplit(env_path(...), .Platform$path.sep, fixed = TRUE)[[1L]], lP[-length(lP)])
+    ep0 <- ep0[dir.exists(ep0)]
+    paste(unique(normalizePath(ep0)), collapse = .Platform$path.sep)
+}
+
+### ** str_parse_logic
+
+##' @param otherwise: can be call, such as quote(errmesg(...))
+str_parse_logic <- function(ch, default = TRUE, otherwise = default) {
+    if (is.na(ch)) default
+    else switch(ch,
+                "yes"=, "Yes" =, "true" =, "True" =, "TRUE" = TRUE,
+                "no" =, "No" =, "false" =, "False" =, "FALSE" = FALSE,
+                eval(otherwise))
+}
+
+### ** str_parse
+
+str_parse <- function(ch, default = TRUE, logical = TRUE, otherwise = default) {
+    if(logical)
+        str_parse_logic(ch, default=default, otherwise=otherwise)
+    else if(is.na(ch))
+        default
+    else
+        ch
+}
+
 
 ### Local variables: ***
 ### mode: outline-minor ***

@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1999-2015  The R Core Team.
+ *  Copyright (C) 1999-2017  The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -733,7 +733,7 @@ static void R_FlushGlobalCacheFromUserTable(SEXP udb)
     names = tb->objects(tb);
     n = length(names);
     for(i = 0; i < n ; i++)
-	R_FlushGlobalCache(Rf_installChar(STRING_ELT(names,i)));
+	R_FlushGlobalCache(Rf_installTrChar(STRING_ELT(names,i)));
 }
 
 static void R_AddGlobalCache(SEXP symbol, SEXP place)
@@ -1424,7 +1424,8 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
   This could call findVar1.  NB: they behave differently on failure.
 */
 
-SEXP findFun(SEXP symbol, SEXP rho)
+attribute_hidden
+SEXP findFun3(SEXP symbol, SEXP rho, SEXP call)
 {
     SEXP vl;
 
@@ -1462,16 +1463,23 @@ SEXP findFun(SEXP symbol, SEXP rho)
 		TYPEOF(vl) == SPECIALSXP)
 		return (vl);
 	    if (vl == R_MissingArg)
-		error(_("argument \"%s\" is missing, with no default"),
+		errorcall(call,
+		      _("argument \"%s\" is missing, with no default"),
 		      CHAR(PRINTNAME(symbol)));
 	}
 	rho = ENCLOS(rho);
     }
-    error(_("could not find function \"%s\""), EncodeChar(PRINTNAME(symbol)));
+    errorcall_cpy(call,
+                  _("could not find function \"%s\""),
+                  EncodeChar(PRINTNAME(symbol)));
     /* NOT REACHED */
     return R_UnboundValue;
 }
 
+SEXP findFun(SEXP symbol, SEXP rho)
+{
+    return findFun3(symbol, rho, R_CurrentExpression);
+}
 
 /*----------------------------------------------------------------------
 
@@ -4015,5 +4023,69 @@ Rboolean attribute_hidden isUnmodifiedSpecSym(SEXP sym, SEXP env) {
 		&& env != R_BaseNamespace && existsVarInFrame(env, sym))
 	    return FALSE;
     return TRUE;
+}
+
+void findFunctionForBodyInNamespace(SEXP body, SEXP nsenv, SEXP nsname) {
+    if (R_IsNamespaceEnv(nsenv) != TRUE)
+	error("argument 'nsenv' is not a namespace");
+    SEXP args = PROTECT(list3(nsenv /* x */,
+	R_TrueValue /* all.names */,
+	R_FalseValue /* sorted */));
+    SEXP env2listOp = INTERNAL(install("env2list"));
+
+    SEXP elist = do_env2list(R_NilValue, env2listOp, args, R_NilValue);
+    PROTECT(elist);
+    R_xlen_t n = xlength(elist);
+    R_xlen_t i;
+    SEXP names = PROTECT(getAttrib(elist, R_NamesSymbol));
+    for(i = 0; i < n; i++) {
+	SEXP value = VECTOR_ELT(elist, i);
+	const char *vname = CHAR(STRING_ELT(names, i));
+	/* the constants checking requires shallow comparison */
+	if (TYPEOF(value) == CLOSXP && R_ClosureExpr(value) == body)
+	    REprintf("Function %s in namespace %s has this body.\n",
+		vname,
+		CHAR(PRINTNAME(nsname)));
+	/* search S4 registry */
+	const char *s4prefix = ".__T__";
+	if (TYPEOF(value) == ENVSXP &&
+		!strncmp(vname, s4prefix, strlen(s4prefix))) {
+	    SETCAR(args, value); /* re-use args */
+	    SEXP rlist = do_env2list(R_NilValue, env2listOp, args, R_NilValue);
+	    PROTECT(rlist);
+	    R_xlen_t rn = xlength(rlist);
+	    R_xlen_t ri;
+	    SEXP rnames = PROTECT(getAttrib(rlist, R_NamesSymbol));
+	    for(ri = 0; ri < rn; ri++) {
+		SEXP rvalue = VECTOR_ELT(rlist, ri);
+		/* the constants checking requires shallow comparison */
+		if (TYPEOF(rvalue) == CLOSXP &&
+			R_ClosureExpr(rvalue) == body)
+		    REprintf("S4 Method %s defined in namespace %s with "
+			"signature %s has this body.\n",
+			vname + strlen(s4prefix),
+			CHAR(PRINTNAME(nsname)),
+			CHAR(STRING_ELT(rnames, ri)));
+	    }
+	    UNPROTECT(2); /* rlist, rnames */
+	}
+    }
+    UNPROTECT(3); /* names, elist, args */
+}
+
+/*  findFunctionForBody - for a given function body, try to find a closure and
+    the name of its binding (and the name of the package). For debugging. */
+void attribute_hidden findFunctionForBody(SEXP body) {
+    SEXP nstable = HASHTAB(R_NamespaceRegistry);
+    CHECK_HASH_TABLE(nstable);
+    int n = length(nstable);
+    int i;
+    for(i = 0; i < n; i++) {
+	SEXP frame = VECTOR_ELT(nstable, i);
+	while (frame != R_NilValue) {
+	    findFunctionForBodyInNamespace(body, CAR(frame), TAG(frame));
+	    frame = CDR(frame);
+	}
+    }
 }
 

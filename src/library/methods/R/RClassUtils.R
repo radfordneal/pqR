@@ -319,7 +319,7 @@ completeClassDefinition <-
         if(any(undefClasses))
             warning(sprintf(gettext("undefined slot classes in definition of %s: %s", domain = "R-methods"),
                              .dQ(ClassDef@className),
-                             paste(names(properties)[undefClasses], gettextf("(class %s)", .dQ(unlist(properties, recursive = FALSE)[undefClasses])), collapse = ", ", sep = "")),
+                             paste0(names(properties)[undefClasses], gettextf("(class %s)", .dQ(unlist(properties, recursive = FALSE)[undefClasses])), collapse = ", ")),
                     call. = FALSE, domain = NA)
         ClassDef@slots <- properties
         ClassDef
@@ -937,9 +937,9 @@ showExtends <-
             if(!eli@simple) {
                 if(is.function(eli@test) && !identical(body(eli@test), TRUE)) {
                     how[i] <-
-                        paste(how[i], if(is.function(eli@coerce))
+                        paste0(how[i], if(is.function(eli@coerce))
                               ", with explicit test and coerce" else
-                              ", with explicit test", sep="")
+                              ", with explicit test")
                 }
                 else if(is.function(eli@coerce))
                     how[i] <- paste0(how[i], ", with explicit coerce")
@@ -1566,14 +1566,26 @@ setDataPart <- function(object, value, check = TRUE) {
         f <- byExt@replace
         byExpr <- body(f)
         if(!strictBy) {
-            toDef <- getClassDef(to)
-            byDef <- getClassDef(by)
+            toDef <- getClassDef(to, package=packageSlot(toExt))
+            byDef <- getClassDef(by, package=packageSlot(byExt))
             strictBy <- is.null(toDef) || is.null(byDef) || toDef@virtual || byDef@virtual
         }
-        ## Is there a danger of infinite loop below?
-        expr <- substitute({.value <- as(from, BY, STRICT); as(.value, TO) <- value; value <- .value; BYEXPR},
-                           list(BY=by, TO = to, BYEXPR = byExpr, STRICT = strictBy))
-        body(f, envir = environment(f)) <- expr
+        if (isVirtualClass(by, .requirePackage(packageSlot(byExt)))) {
+            skipDef <- getClassDef(by, package=packageSlot(byExt))
+            skipExt <- skipDef@contains[[to]]
+            if (!is.null(skipExt)) {
+                body(f, envir = environment(f)) <-
+                    call("as", body(skipExt@replace), byExt@subClass)
+            }
+        } else {
+            expr <- substitute({
+                .value <- as(from, BY, STRICT)
+                as(.value, TO) <- value
+                value <- .value
+                BYEXPR
+            }, list(BY=by, TO = to, BYEXPR = byExpr, STRICT = strictBy))
+            body(f, envir = environment(f)) <- expr
+        }
         toExt@replace <- f
         toExt@by <- toExt@subClass
         toExt@subClass <- byExt@subClass
@@ -1824,7 +1836,7 @@ substituteFunctionArgs <-
         .GlobalEnv
     else {
         ##FIXME:  the paste should not be needed
-        pkg <- paste("package", package, sep=":")
+        pkg <- paste0("package:", package)
         ## need to allow for versioned installs: prefer exact match.
         m <- charmatch(pkg, search())
         if(is.na(m)) # not attached, better be an available namespace
@@ -2033,17 +2045,23 @@ assign("#HAS_DUPLICATE_CLASS_NAMES", FALSE, envir = .classTable)
     }
 }
 
-## the workhorse of class access
+## .getClassesFromCache() and .resolveClassList()
+## are the workhorses of class access
 ## The underlying C code will return name if it is not a character vector
 ## in the assumption this is a classRepresentation or subclass of that.
 ## In principle, this could replace the checks on class(name) in getClassDef
 ## and new(), which don't work for subclasses of classRepresentation anyway.
-.getClassFromCache <- function(name, where, package = packageSlot(name),
-                               resolve.confl = "first", resolve.msg = TRUE) {
-	value <- .Call(C_R_getClassFromCache, name, .classTable)
-	if(is.list(value)) { ## multiple classes with this name -- choose at most one
-	    if(is.null(package)) package <-
-                if(is.character(where)) where else getPackageName(where, FALSE) # may be ""
+.getClassesFromCache <- function(name) {
+    .Call(C_R_getClassFromCache, name, .classTable)
+}
+
+## When .simpleGetClassFromCache returns a list, pick the most appropriate
+.resolveClassList <- function(value, where, package, resolve.confl = "first",
+                              resolve.msg = TRUE)
+{
+    if(is.null(package))
+        package <- if(is.character(where)) where
+                   else getPackageName(where, FALSE) # may be ""
 	    pkgs <- names(value)
 	    i <- match(package, pkgs, 0L)
 	    if(i == 0L && package != "methods") ## try 'methods':
@@ -2054,17 +2072,29 @@ assign("#HAS_DUPLICATE_CLASS_NAMES", FALSE, envir = .classTable)
 		switch(resolve.confl,
 		       "none" = NULL,
 		       "first" = {
-			   if(resolve.msg)
+			   if(resolve.msg) {
 			       message(gettextf(
 				"Found more than one class \"%s\" in cache; using the first, from namespace '%s'",
-				name, pkgs[1]), domain=NA)
+                           value[[1]]@className, pkgs[1]), domain=NA)
+                               message("Also defined by ",
+                                       paste(sQuote(pkgs[-1]), collapse = " "))
+                           }
 			   value[[1]]
 		       },
 		       "all" = value) # return all, a list
 	    }
 	}
-	else #either a class definition or NULL
-	    value
+
+.getClassFromCache <- function(name, where, package = packageSlot(name),
+                               resolve.confl = "first", resolve.msg = TRUE)
+{
+    value <- .getClassesFromCache(name)
+    if(is.list(value)) {
+        ## multiple classes with this name -- choose at most one
+        value <- .resolveClassList(value, where, package, resolve.confl,
+                                   resolve.msg)
+    }
+    value
 }
 
 ### insert superclass information into all the subclasses of this

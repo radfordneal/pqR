@@ -147,7 +147,7 @@ stopifnot(p > 0.001)
 Dates <- seq(as.Date("2005/01/01"), as.Date("2009/01/01"), "day")
 months <- format(Dates, format = "%m")
 years <- format(Dates, format = "%Y")
-mn <- as.vector(unlist(sapply(split(months, years), table)))
+mn <- unlist(lapply(unname(split(months, years)), table), use.names=FALSE)
 ty <- as.vector(table(years))
 # Test hist.Date() for months
 stopifnot(identical(hist(Dates, "month", plot = FALSE)$counts, mn))
@@ -231,6 +231,7 @@ op <- options(warn=2)
 m <- c(-Inf,Inf)
 stopifnot(rnorm(2, mean = m) == m,
           rexp (2, Inf) == 0)
+set.seed(11)
 rt(1, Inf)
 R <- list(try(rnorm(2, numeric())),
           try(rexp (2, numeric())),
@@ -243,6 +244,7 @@ stopifnot(sapply(R, function(ch) sub(".* : ", '', ch) ==
 
 
 ## predict.loess with transformed variables
+set.seed(11)
 y <- 1:100 + rnorm(100)
 od <- data.frame(x=1:100, z=1:100 + rnorm(100, 10))
 nd <- data.frame(x=1:100, z=11:110)
@@ -321,7 +323,7 @@ stopifnot(identical(unclass(z), c('z', 'y', 'x', 'w')))
 ## repeated third and later args in R < 2.7.1.
 
 ## PD found that f==f contains NA when f has NA levels (but no missing value)
-f1 <- factor(c(1, 2, NA), exclude = "")
+f1 <- factor(c(1, 2, NA), levels = 1:2)
 f2 <- factor(c(1, 2, NA), exclude = NULL)
 stopifnot(identical(f1, factor(c(1,2,NA))),
           nlevels(f1) == 2, nlevels(f2) == 3,
@@ -717,11 +719,11 @@ stopifnot(length(lf <- levels(fi)) == 3, lf[1] == "a.b.c",
 ## interaction() failed to produce unique levels before 2.9.1
 
 levs <- c("A","A")
-## warnings for now {errors in the future}
+## warnings since 2009; errors since R 3.4.0 (R-devel, June 2016):
 local({
-    assertWarning(gl(2,3, labels = levs))
-    assertWarning(factor(levs, levels=levs))
-    assertWarning(factor(1:2,	 labels=levs))
+    assertError(gl(2,3, labels = levs))
+    assertError(factor(levs, levels=levs))
+    assertError(factor(1:2,  labels=levs))
     })
 ## failed in R < 2.10.0
 L <- c("no", "yes")
@@ -1815,9 +1817,9 @@ stopifnot(all.equal(hc$height[5:11],
                       3.21380039, 2.9653438476, 6.1418258), tolerance = 1e-9))
 ## Also ensure that hclust() remains fast:
 set.seed(1); nn <- 2000
-tm0 <- system.time(dst <- as.dist(matrix(runif(n = nn^2, min = 0, max = 1), nn, nn)))
+tm0 <- system.time(dst <- as.dist(matrix(runif(n = nn^2, min = 0, max = 1)^1.1, nn, nn)))
 (tm <- system.time(hc <- hclust(dst, method="average")))
-stopifnot(tm[1] < tm0[1])
+stopifnot(tm[1] <= tm0[1])
 ## was slow  from R 1.9.0 up to R 2.15.0
 
 

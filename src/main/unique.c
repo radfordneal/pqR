@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
+ *  Copyright (C) 1995, 1996, 2017  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1997--2016  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -126,11 +126,10 @@ static Rcomplex unify_complex_na(Rcomplex z) {
     Rcomplex ans;
     ans.r = (z.r == 0.0) ? 0.0 : z.r;
     ans.i = (z.i == 0.0) ? 0.0 : z.i;
-    /* we want all NaNs except NA equal, and all NAs equal */
-    if (R_IsNA(ans.r)) ans.r = NA_REAL;
-    else if (R_IsNaN(ans.r)) ans.r = R_NaN;
-    if (R_IsNA(ans.i)) ans.i = NA_REAL;
-    else if (R_IsNaN(ans.i)) ans.i = R_NaN;
+    if (R_IsNA(ans.r) || R_IsNA(ans.i))
+	ans.r = ans.i = NA_REAL;
+    else if (R_IsNaN(ans.r) || R_IsNaN(ans.i))
+	ans.r = ans.i = R_NaN;
     return ans;
 }
 
@@ -209,17 +208,17 @@ static int requal(SEXP x, R_xlen_t i, SEXP y, R_xlen_t j)
  * but R's print() and format()  render all as "NA" */
 static int cplx_eq(Rcomplex x, Rcomplex y)
 {
-    if (!ISNAN(x.r) && !ISNAN(x.i) &&
-	!ISNAN(y.r) && !ISNAN(y.i))
+    if (!ISNAN(x.r) && !ISNAN(x.i) && !ISNAN(y.r) && !ISNAN(y.i))
 	return x.r == y.r && x.i == y.i;
-    else if ((R_IsNA(x.r) || R_IsNA(x.i)) &&
-	     (R_IsNA(y.r) || R_IsNA(y.i)))
-	return 1;
-    else if ((R_IsNaN(x.r) || R_IsNaN(x.i)) &&
-	     (R_IsNaN(y.r) || R_IsNaN(y.i)))
-	return 1;
-    else
+    else if (R_IsNA(x.r) || R_IsNA(x.i)) // x is NA
+	return (R_IsNA(y.r) || R_IsNA(y.i)) ? 1 : 0;
+    else if (R_IsNA(y.r) || R_IsNA(y.i)) // y is NA but x is not
 	return 0;
+    // else : none is NA but there's at least one NaN;  hence  ISNAN(.) == R_IsNaN(.)
+    return
+	(((ISNAN(x.r) && ISNAN(y.r)) || (!ISNAN(x.r) && !ISNAN(y.r) && x.r == y.r)) && // Re
+	 ((ISNAN(x.i) && ISNAN(y.i)) || (!ISNAN(x.i) && !ISNAN(y.i) && x.i == y.i))    // Im
+	    ) ? 1 : 0;
 }
 
 static int cequal(SEXP x, R_xlen_t i, SEXP y, R_xlen_t j)
@@ -826,7 +825,7 @@ static SEXP match_transform(SEXP s, SEXP env)
 	else if(inherits(s, "POSIXlt")) { /* and maybe more classes in the future:
 					   * Call R's (generic)	 as.character(s) : */
 	    SEXP call, r;
-	    PROTECT(call = lang2(install("as.character"), s));
+	    PROTECT(call = lang2(R_AsCharacterSymbol, s));
 	    r = eval(call, env);
 	    UNPROTECT(1);
 	    return r;
@@ -868,7 +867,7 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
     PROTECT(table = coerceVector(table, type)); nprot++;
 
     // special case scalar x -- for speed only :
-    if(XLENGTH(x) == 1 && !incomp && TYPEOF(table) != CPLXSXP) {
+    if(XLENGTH(x) == 1 && !incomp) {
       PROTECT(ans = ScalarInteger(nmatch)); nprot++;
       switch (type) {
       case STRSXP: {
@@ -1255,8 +1254,6 @@ SEXP attribute_hidden do_charmatch(SEXP call, SEXP op, SEXP args, SEXP env)
 /* Functions for matching the supplied arguments to the */
 /* formal arguments of functions.  The returned value */
 /* is a list with all components named. */
-
-#define ARGUSED(x) LEVELS(x)
 
 static SEXP StripUnmatched(SEXP s)
 {
@@ -1740,13 +1737,6 @@ SEXP Rf_csduplicated(SEXP x)
 
 #include <R_ext/Random.h>
 
-// more fine-grained  unif_rand() for n > INT_MAX
-static R_INLINE double ru()
-{
-    double U = 33554432.0;
-    return (floor(U*unif_rand()) + unif_rand())/U;
-}
-
 // sample.int(.) --> .Internal(sample2(n, size)) :
 SEXP attribute_hidden do_sample2(SEXP call, SEXP op, SEXP args, SEXP env)
 {
@@ -1767,7 +1757,7 @@ SEXP attribute_hidden do_sample2(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(data.HashTable);
 	for (int i = 0; i < k; i++)
 	    for(int j = 0; j < 100; j++) { // average < 2
-		ry[i] = floor(dn * ru() + 1);
+		ry[i] = R_unif_index(dn) + 1;
 		if(!isDuplicated(ans, i, &data)) break;
 	    }
    } else {
@@ -1777,7 +1767,7 @@ SEXP attribute_hidden do_sample2(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(data.HashTable);
 	for (int i = 0; i < k; i++)
 	    for(int j = 0; j < 100; j++) { // average < 2
-		iy[i] = (int)(dn * unif_rand() + 1);
+		iy[i] = (int)(R_unif_index(dn) + 1);
 		if(!isDuplicated(ans, i, &data)) break;
 	    }
     }

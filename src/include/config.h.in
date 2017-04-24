@@ -153,9 +153,6 @@
 /* Define to 1 if you have the <curl/curl.h> header file. */
 #undef HAVE_CURL_CURL_H
 
-/* define if the compiler supports basic C++11 syntax */
-#undef HAVE_CXX11
-
 /* Define if the GNU dcgettext() function is already present or preinstalled.
    */
 #undef HAVE_DCGETTEXT
@@ -163,6 +160,14 @@
 /* Define to 1 if you have the declaration of `alloca', and to 0 if you don't.
    */
 #undef HAVE_DECL_ALLOCA
+
+/* Define to 1 if you have the declaration of `dladdr', and to 0 if you don't.
+   */
+#undef HAVE_DECL_DLADDR
+
+/* Define to 1 if you have the declaration of `dlsym', and to 0 if you don't.
+   */
+#undef HAVE_DECL_DLSYM
 
 /* Define to 1 if you have the declaration of `feof_unlocked', and to 0 if you
    don't. (For intl) */
@@ -195,6 +200,14 @@
 /* Define to 1 if you have the declaration of `realpath', and to 0 if you
    don't. */
 #undef HAVE_DECL_REALPATH
+
+/* Define to 1 if you have the declaration of `RTLD_DEFAULT', and to 0 if you
+   don't. */
+#undef HAVE_DECL_RTLD_DEFAULT
+
+/* Define to 1 if you have the declaration of `RTLD_NEXT', and to 0 if you
+   don't. */
+#undef HAVE_DECL_RTLD_NEXT
 
 /* Define to 1 if you have the declaration of `siglongjmp', and to 0 if you
    don't. */
@@ -232,8 +245,14 @@
    */
 #undef HAVE_DIRENT_H
 
+/* Define to 1 if you have the `dladdr' function. */
+#undef HAVE_DLADDR
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
+
+/* Define to 1 if you have the `dlsym' function. */
+#undef HAVE_DLSYM
 
 /* Define to 1 if you have the <dl.h> header file. */
 #undef HAVE_DL_H
@@ -278,9 +297,6 @@
 /* Define if C's Rcomplex and Fortran's COMPLEX*16 can be interchanged, and
    can do arithmetic on the latter. */
 #undef HAVE_FORTRAN_DOUBLE_COMPLEX
-
-/* Define to 1 if you have the <fpu_control.h> header file. */
-#undef HAVE_FPU_CONTROL_H
 
 /* Define to 1 if fseeko (and presumably ftello) exists and is declared. */
 #undef HAVE_FSEEKO
@@ -420,7 +436,7 @@
 /* Define if your <locale.h> file defines LC_MESSAGES. */
 #undef HAVE_LC_MESSAGES
 
-/* Define if your system has libcurl >= 7.28.0 with support for https. */
+/* Define if your system has libcurl >= 7.22.0 with support for https. */
 #undef HAVE_LIBCURL
 
 /* Define if __libc_stack_end is visible. */
@@ -554,6 +570,9 @@
 /* Define if you have C OpenMP support. */
 #undef HAVE_OPENMP
 
+/* Define if your OpenMP 4 implementation fully supports SIMD reduction */
+#undef HAVE_OPENMP_SIMDRED
+
 /* Define to 1 if you have pangocairo. */
 #undef HAVE_PANGOCAIRO
 
@@ -623,8 +642,17 @@
 /* Define to 1 if you have the `rintl' function. */
 #undef HAVE_RINTL
 
+/* Define to 1 if you have the `rl_callback_sigcleanup' function. */
+#undef HAVE_RL_CALLBACK_SIGCLEANUP
+
 /* Define to 1 if you have the `rl_completion_matches' function. */
 #undef HAVE_RL_COMPLETION_MATCHES
+
+/* Define to 1 if you have the `rl_resize_terminal' function. */
+#undef HAVE_RL_RESIZE_TERMINAL
+
+/* Define to 1 if you have the `rl_sort_completion_matches' function. */
+#undef HAVE_RL_SORT_COMPLETION_MATCHES
 
 /* Define to 1 if you have the `sched_getaffinity' function. */
 #undef HAVE_SCHED_GETAFFINITY
@@ -634,6 +662,9 @@
 
 /* Define to 1 if you have the `sched_setaffinity' function. */
 #undef HAVE_SCHED_SETAFFINITY
+
+/* Define to 1 if you have the `select' function. */
+#undef HAVE_SELECT
 
 /* Define to 1 if you have the `setenv' function. */
 #undef HAVE_SETENV
@@ -827,6 +858,9 @@
 /* Define to 1 if you have the `utime' function. */
 #undef HAVE_UTIME
 
+/* Define to 1 if you have the `utimensat' function. */
+#undef HAVE_UTIMENSAT
+
 /* Define to 1 if you have the `utimes' function. */
 #undef HAVE_UTIMES
 
@@ -945,12 +979,6 @@
 
 /* Define if mktime sets errno. */
 #undef MKTIME_SETS_ERRNO
-
-/* Define if your system needs __setfpucw() to control FPU rounding. This was
-   used to control floating point precision, rounding and floating point
-   exceptions on older Linux systems. As of GLIBC 2.1 this function is not
-   used anymore. */
-#undef NEED___SETFPUCW
 
 /* Define to disable Valgrind instrumentation */
 #undef NVALGRIND

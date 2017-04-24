@@ -87,7 +87,8 @@ tanpi(x)
    direction.
 
    Complex arguments for  \code{cospi}, \code{sinpi}, and \code{tanpi}
-   are not yet implemented.% but patches are welcome
+   are not yet implemented, and they are a \sQuote{future direction} of
+   ISO/IEC TS 18661-4.% but patches are welcome
 }
 
 \section{S4 methods}{
@@ -107,7 +108,7 @@ tanpi(x)
 
   For \code{cospi}, \code{sinpi}, and \code{tanpi} the C11 extension
   ISO/IEC TS 18661-4:2015 (draft at
-  \url{http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1785.pdf}).
+  \url{http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1950.pdf}).
   
 }
 \examples{

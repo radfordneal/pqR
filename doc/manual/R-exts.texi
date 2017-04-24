@@ -510,7 +510,9 @@ The @samp{BugReports} field may contain a single @acronym{URL} to which
 bug reports about the package should be submitted.  This @acronym{URL}
 will be used by @code{bug.report} instead of sending an email to the
 maintainer.  A browser is opened for a @samp{http://} or @samp{https://}
-@acronym{URL} (and others are ignored).
+@acronym{URL}.  As from @R{} 3.4.0, @code{bug.report} will try to
+extract an email address (preferably from a @samp{mailto:} URL or
+enclosed in angle brackets).
 
 @c DESCRIPTION field Priority
 Base and recommended packages (i.e., packages contained in the @R{}
@@ -565,7 +567,6 @@ Windows build would zip up the data directory or not prior to @R{}
 @c DESCRIPTION field Biarch
 The @samp{Biarch} logical field is used on Windows to select the
 @command{INSTALL} option @option{--force-biarch} for this package.
-(Introduced in @R{} 3.0.0.)
 
 @c DESCRIPTION field BuildVignettes
 The @samp{BuildVignettes} logical field can be set to a false value to
@@ -677,7 +678,9 @@ added by the package management tools.
 There is no restriction on the use of other fields not mentioned here
 (but using other capitalizations of these field names would cause
 confusion).  Fields @code{Note}, @code{Contact} (for contacting the
-authors/developers) and @code{MailingList} are in common use. Some
+authors/developers@footnote{As from @R{} 3.4.0, @code{bug.report} will
+try to extract an email address from a @code{Contact} field if there is
+no @code{BugReports} field.}) and @code{MailingList} are in common use. Some
 repositories (including @acronym{CRAN} and R-forge) add their own
 fields.
 
@@ -963,9 +966,8 @@ LinkingTo: link1, link2
 @end example
 
 @noindent
-As from @R{} 3.0.2 the @samp{LinkingTo} field can have a version
-requirement which is checked at installation.  (In earlier versions of
-@R{} it would cause the specification to be ignored.)
+The @samp{LinkingTo} field can have a version requirement which is
+checked at installation.
 
 Specifying a package in @samp{LinkingTo} suffices if these are C++
 headers containing source code or static linking is done at
@@ -1237,9 +1239,9 @@ and have one of the extensions @file{.R} or @file{.r}.  If present, the
 line for each demo, giving its name and a description separated by a tab
 or at least three spaces. (This index file is not generated
 automatically.)  Note that a demo does not have a specified encoding and
-so should be an @acronym{ASCII} file (@pxref{Encoding issues}).  As from
-@R{} 3.0.0 @code{demo()} will use the package encoding if there is one,
-but this is mainly useful for non-@acronym{ASCII} comments.
+so should be an @acronym{ASCII} file (@pxref{Encoding issues}). Function
+@code{demo()} will use the package encoding if there is one, but this is
+mainly useful for non-@acronym{ASCII} comments.
 
 @cindex .Rinstignore file
 The contents of the @file{inst} subdirectory will be copied recursively
@@ -1253,9 +1255,9 @@ exclude files from being installed, one can specify a list of exclude
 patterns in file @file{.Rinstignore} in the top-level source directory.
 These patterns should be Perl-like regular expressions (see the help for
 @code{regexp} in @R{} for the precise details), one per line, to be
-matched case-insensitively@footnote{on all platforms from @R{} 3.1.0}
-against the file and directory paths, e.g.@: @file{doc/.*[.]png$} will
-exclude all PNG files in @file{inst/doc} based on the extension.
+matched case-insensitively against the file and directory paths, e.g.@:
+@file{doc/.*[.]png$} will exclude all PNG files in @file{inst/doc} based
+on the extension.
 
 Note that with the exceptions of @file{INDEX},
 @file{LICENSE}/@file{LICENCE} and @file{NEWS}, information files at the
@@ -1284,14 +1286,15 @@ is too complex to put in the @file{DESCRIPTION} file.
 
 Subdirectory @file{tests} is for additional package-specific test code,
 similar to the specific tests that come with the @R{} distribution.
-Test code can either be provided directly in a @file{.R} file, or
-@emph{via} a @file{.Rin} file containing code which in turn creates the
-corresponding @file{.R} file (e.g., by collecting all function objects
-in the package and then calling them with the strangest arguments).  The
-results of running a @file{.R} file are written to a @file{.Rout} file.
-If there is a corresponding@footnote{The best way to generate such a
-file is to copy the @file{.Rout} from a successful run of @command{R CMD
-check}.  If you want to generate it separately, do run @R{} with options
+Test code can either be provided directly in a @file{.R} (or @file{.r}
+as from @R{} 3.4.0) file, or @emph{via} a @file{.Rin} file containing
+code which in turn creates the corresponding @file{.R} file (e.g., by
+collecting all function objects in the package and then calling them
+with the strangest arguments).  The results of running a @file{.R} file
+are written to a @file{.Rout} file.  If there is a
+corresponding@footnote{The best way to generate such a file is to copy
+the @file{.Rout} from a successful run of @command{R CMD check}.  If you
+want to generate it separately, do run @R{} with options
 @option{--vanilla --slave} and with environment variable
 @env{LANGUAGE=en} set to get messages in English.  Be careful not to use
 output with the option @option{--timings} (and note that
@@ -1401,8 +1404,7 @@ is best is to try them all and look at the size of the
 @file{@var{pkgname}/data/Rdata.rdb} file.
 
 Lazy-loading is not supported for very large datasets (those which when
-serialized exceed 2GB, the limit for the format on 32-bit platforms and
-all platforms prior to @R{} 3.0.0).
+serialized exceed 2GB, the limit for the format on 32-bit platforms).
 
 @c DESCRIPTION field SysDataCompression
 The analogue for @file{sysdata.rda} is field @samp{SysDataCompression}:
@@ -1746,6 +1748,8 @@ pkg-config --list-all | sort
 * Configure example::           
 * Using F95 code::              
 * Using C++11 code::            
+* Using C++14 code::
+* Using C++17 code::
 @end menu
 
 @node Using Makevars, Configure example, Configure and cleanup, Configure and cleanup
@@ -1885,7 +1889,7 @@ SLAMC_FFLAGS=$(R_XTRA_FFLAGS) $(FPICFLAGS) $(SHLIB_FFLAGS) $(SAFE_FFLAGS)
 all: $(SHLIB)
 
 slamc.o: slamc.f
-	$(F77) $(SLAMC_FFLAGS) -c -o slamc.o slamc.f
+        $(F77) $(SLAMC_FFLAGS) -c -o slamc.o slamc.f
 @end example
 
 @noindent
@@ -1896,7 +1900,7 @@ infinite looping.  The Windows equivalent was
 all: $(SHLIB)
 
 slamc.o: slamc.f
-	$(F77) $(SAFE_FFLAGS) -c -o slamc.o slamc.f
+        $(F77) $(SAFE_FFLAGS) -c -o slamc.o slamc.f
 @end example
 
 @noindent
@@ -1915,7 +1919,7 @@ all: $(SHLIB)
 $(SHLIB): mylibs
 
 mylibs:
-	(cd subdir; $(MAKE))
+        (cd subdir; $(MAKE))
 @end example
 
 @noindent
@@ -2058,7 +2062,7 @@ PKG_LIBS = $(SHLIB_OPENMP_CFLAGS)
 @end example
 
 Note that the macro @code{SHLIB_OPENMP_CXXFLAGS} applies to the default
-C++ compiler and not necessarily to the C++11 compiler: users of the
+C++ compiler and not necessarily to the C++11/14/17 compiler: users of the
 latter should do their own @command{configure} checks (an example is
 available in CRAN package @CRANpkg{ARTP2}).
 
@@ -2192,6 +2196,11 @@ unambiguously determined without testing for yourself: however, that
 @samp{_REENTRANT} is defined@footnote{some Windows toolchains had the
 typo @samp{_REENTRANCE} instead.} in C/C++ code is a good indication.
 
+Note that not all @code{pthreads} implementations are equivalent as parts
+are optional (see
+@uref{http://pubs.opengroup.org/@/onlinepubs/@/009695399/@/basedefs/@/pthread.h.html}):
+for example, macOS lacks the `Barriers' option.
+
 See also the comments on thread-safety and performance under OpenMP: on
 all known @R{} platforms OpenMP is implemented @emph{via}
 @code{pthreads} and the known performance issues are in the latter.
@@ -2239,8 +2248,8 @@ PKG_LIBS = -LCsdp/lib -lsdp $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
 $(SHLIB): Csdp/lib/libsdp.a
 
 Csdp/lib/libsdp.a:      
-	@@(cd Csdp/lib && $(MAKE) libsdp.a \
-	  CC="$(CC)" CFLAGS="$(CFLAGS) $(CPICFLAGS)" AR="$(AR)" RANLIB="$(RANLIB)")
+        @@(cd Csdp/lib && $(MAKE) libsdp.a \
+          CC="$(CC)" CFLAGS="$(CFLAGS) $(CPICFLAGS)" AR="$(AR)" RANLIB="$(RANLIB)")
 @end smallexample
 
 @noindent
@@ -2276,9 +2285,9 @@ AC_INIT([RODBC], 1.1.8) dnl package name, version
 dnl A user-specifiable option
 odbc_mgr=""
 AC_ARG_WITH([odbc-manager],
-	    AC_HELP_STRING([--with-odbc-manager=MGR],
-			   [specify the ODBC manager, e.g. odbc or iodbc]),
-	    [odbc_mgr=$withval])
+            AC_HELP_STRING([--with-odbc-manager=MGR],
+                           [specify the ODBC manager, e.g. odbc or iodbc]),
+            [odbc_mgr=$withval])
 
 if test "$odbc_mgr" = "odbc" ; then
   AC_PATH_PROGS(ODBC_CONFIG, odbc_config)
@@ -2287,9 +2296,9 @@ fi
 dnl Select an optional include path, from a configure option
 dnl or from an environment variable.
 AC_ARG_WITH([odbc-include],
-	    AC_HELP_STRING([--with-odbc-include=INCLUDE_PATH],
-			   [the location of ODBC header files]),
-	    [odbc_include_path=$withval])
+            AC_HELP_STRING([--with-odbc-include=INCLUDE_PATH],
+                           [the location of ODBC header files]),
+            [odbc_include_path=$withval])
 RODBC_CPPFLAGS="-I."
 if test [ -n "$odbc_include_path" ] ; then
    RODBC_CPPFLAGS="-I. -I$@{odbc_include_path@}"
@@ -2301,9 +2310,9 @@ fi
 
 dnl ditto for a library path
 AC_ARG_WITH([odbc-lib],
-	    AC_HELP_STRING([--with-odbc-lib=LIB_PATH],
-			   [the location of ODBC libraries]),
-	    [odbc_lib_path=$withval])
+            AC_HELP_STRING([--with-odbc-lib=LIB_PATH],
+                           [the location of ODBC libraries]),
+            [odbc_lib_path=$withval])
 if test [ -n "$odbc_lib_path" ] ; then
    LIBS="-L$odbc_lib_path $@{LIBS@}"
 else
@@ -2427,7 +2436,8 @@ extension @file{.f90} or @file{.f95}.  For platforms using
 @command{gfortran}, you may need to include @option{-std=f2003} or
 @option{-std=f2008} in @code{PKG_FCFLAGS}: the default is `GNU Fortran',
 Fortran 95 with non-standard extensions.  The Oracle @command{f95}
-compiler `accepts some Fortran 2003 features'.
+compiler `accepts some Fortran 2003/8 features' (search for `Oracle
+Developer Studio 12.5: Fortran User's Guide' and look for §4.6).
 
 Modern versions of Fortran support modules, whereby compiling one source
 file creates a module file which is then included in others. (Module
@@ -2445,7 +2455,7 @@ to contain something like
 cmi.o dmi.o: iface.o
 @end example
 
-@node Using C++11 code,  , Using F95 code, Configure and cleanup
+@node Using C++11 code, Using C++14 code, Using F95 code, Configure and cleanup
 @subsection Using C++11 code
 
 @R{} can be built without a C++ compiler although one is available (but
@@ -2456,12 +2466,14 @@ considerably from the standard).  Some compilers have a concept of
 `C++03' (`essentially a bug fix') or `C++ Technical Report 1' (TR1), an
 optional addition to the `C++03' revision which was published in 2007.
 A revised standard was published in 2011 and compilers with pretty much
-complete implementations are becoming available.  C++11 added all of the
-C99 features which are not otherwise implemented in C++, and C++
-compilers commonly accept C99 extensions to C++98.  A minor
-update@footnote{The changes are linked from
+complete implementations are available.  C++11 added all of the C99
+features which are not otherwise implemented in C++, and C++ compilers
+commonly accept C99 extensions to C++98.  A minor update@footnote{The
+changes are linked from
 @uref{https://isocpp.org/@/std/@/standing-documents/@/sd-6-sg10-feature-test-recommendations}.}
-to C++11 (C++14) was published in December 2014.
+to C++11 (C++14) was published in December 2014.  The next standard has
+been sent to ISO and is likely to be approved in 2017: it is informally
+known as C++17.
 
 What standard a C++ compiler aims to support can be hard to determine:
 the value@footnote{Values @code{199711}, @code{201103L} and
@@ -2476,7 +2488,7 @@ native@footnote{Some distributions, notably Debian, have supplied a
 build of @command{clang} with @command{g++}'s headers and library.
 Conversely, Apple's command named @command{g++} is based on
 @command{clang} using @code{libc++}.}  @code{libc++} headers and library
-include many C++11 features, and does not support TR1.
+includes many C++11 features, and does not support TR1.
 
 Since version 3.1.0, @R{} has provided support for C++11 in packages in
 addition to C++98.  This support is not uniform across platforms as it
@@ -2496,31 +2508,41 @@ file (or @file{Makevars.win} on Windows) should include the line
 CXX_STD = CXX11
 @end example
 @noindent
-Compilation and linking will then be done with the C++11 compiler.  If
-any other value is given to the @samp{CXX_STD} macro it will be ignored.
-(Further options may become available in the future as the C++ standard
-evolves.)
+Compilation and linking will then be done with the C++11 compiler.
 
-Packages without a @file{Makevars} file may specify that they require
-C++11 by including @samp{C++11} in the @samp{SystemRequirements} field
-of the @file{DESCRIPTION} file, e.g.
+Packages without a @file{src/Makevars} or @file{src/Makefile} file may
+specify that they require C++11 for code in the @file{src} directory by
+including @samp{C++11} in the @samp{SystemRequirements} field of the
+@file{DESCRIPTION} file, e.g.
 
 @example
 SystemRequirements: C++11
 @end example
 
-If a package does have a @file{Makevars[.win]} file then setting the
+If a package does have a @file{src/Makevars[.win]} file then setting the
 make variable @samp{CXX_STD} is preferred, as it allows @command{R CMD
 SHLIB} to work correctly in the package's @file{src} directory.
 
+Conversely, to ensure that the C++98 standard is assumed even when this
+is not the compiler default, use
+
+@example
+SystemRequirements: C++98
+@end example
+@noindent
+or
+@example
+CXX_STD = CXX98
+@end example
+
 The C++11 compiler will be used systematically by R for all C++ code
-if the environment variable @env{USE_CXX1X} is defined (with any
+if the environment variable @env{USE_CXX11} is defined (with any
 value). Hence this environment variable should be defined when invoking
 @command{R CMD SHLIB} in the absence of a @file{Makevars} file (or
 @file{Makevars.win} on Windows) if a C++11 compiler is required.
 
 Further control over compilation of C++11 code can be obtained by
-specifying the macros @samp{CXX1X} and @samp{CXX1XSTD} when @R{} is
+specifying the macros @samp{CXX11} and @samp{CXX11STD} when @R{} is
 configured@footnote{For
 details of these and related macros, see file @file{config.site} in
 the @R{} sources.}, or in a personal or site @file{Makevars} file.
@@ -2529,31 +2551,20 @@ the @R{} sources.}, or in a personal or site @file{Makevars} file.
 R-admin, R Installation and Administration}.
 @end ifset
 If C++11 support is not available then these macros are both empty; if
-it is available by default, @samp{CXX1X} defaults to @samp{CXX} and
-@samp{CXX1XSTD} is empty . Otherwise, @samp{CXX1X} defaults to the same
-value as the C++ compiler @samp{CXX} and the flag @samp{CXX1XSTD}
-defaults to @option{-std=c++11} or @option{-std=c++0x} (the latter on
-Windows prior to @R{} 3.3.0).  It is possible to specify @samp{CXX1X} to
-be a distinct compiler just for C++11--using packages, e.g.@:
-@command{g++} on Solaris.  Note however that different C++ compilers
-(and even different versions of the same compiler) often differ in their
-ABI so their outputs can rarely be mixed. By setting @samp{CXX1XSTD} it
-is also possible to choose a different dialect of the standard such as
-@option{-std=gnu++11}, or enable support for the 2014 revision using
-something like @option{-std=c++14} or @option{-std=c++1y}.
+it is available by default, @samp{CXX11} defaults to @samp{CXX} and
+@samp{CXX11STD} is empty . Otherwise, @samp{CXX11} defaults to the same
+value as the C++ compiler @samp{CXX} and the flag @samp{CXX11STD}
+defaults to @option{-std=c++11} or similar.  It is possible to specify
+@samp{CXX11} to be a distinct compiler just for C++11--using packages,
+e.g.@: @command{g++} on Solaris.  Note however that different C++
+compilers (and even different versions of the same compiler) often
+differ in their ABI so their outputs can rarely be mixed. By setting
+@samp{CXX11STD} it is also possible to choose a different dialect of the
+standard such as @option{-std=c++11}.
 
 As noted above, support for C++11 varies across platforms: on some
 platforms, it may be possible or necessary to select a different
 compiler for C++11, @emph{via} personal or site @file{Makevars} files.
-Note too that support for C++11 may include C++14 support, so that
-including emulation of C++14 features should be done by something like
-@example
-#if __cplusplus >= 201402L
-using std::make_unique;
-#else
-// your emulation
-#endif
-@end example
 
 There is no guarantee that C++11 can be used in a package in combination
 with any other compiled language (even C), as the C++11 compiler may be
@@ -2564,10 +2575,10 @@ If a package using C++11 has a @command{configure} script it is
 essential that it selects the correct compiler, @emph{via} something like
 
 @example
-CXX1X=`"$@{R_HOME@}/bin/R" CMD config CXX1X`
-CXX1XSTD=`"$@{R_HOME@}/bin/R" CMD config CXX1XSTD`
-CXX="$@{CXX1X@} $@{CXX1XSTD@}"
-CXXFLAGS=`"$@{R_HOME@}/bin/R" CMD config CXX1XFLAGS`
+CXX11=`"$@{R_HOME@}/bin/R" CMD config CXX11`
+CXX11STD=`"$@{R_HOME@}/bin/R" CMD config CXX11STD`
+CXX="$@{CXX11@} $@{CXX11STD@}"
+CXXFLAGS=`"$@{R_HOME@}/bin/R" CMD config CXX11FLAGS`
 AC_LANG(C++)
 @end example
 
@@ -2579,8 +2590,105 @@ down the macros to specify that compiler, e.g.@: in @file{src/Makevars}
 @example
 sublibs:
          @@(cd libs && $(MAKE) \
-            CXX="$(CXX1X) $(CXX1XSTD)" CXXFLAGS="$(CXX1XFLAGS) $(CXX1XPICFLAGS)")
+            CXX="$(CXX11) $(CXX11STD)" CXXFLAGS="$(CXX11FLAGS) $(CXX11PICFLAGS)")
 @end example
+
+Note that the mechanisms described here specify C++11 for code compiled
+by @command{R CMD SHLIB} as used by default by @command{R CMD INSTALL}.
+They do not necessarily apply if there is a @file{src/Makefile} file,
+nor to compilation done in vignettes or @emph{via} other packages.
+
+@node Using C++14 code, Using C++17 code, Using C++11 code, Configure and cleanup
+@subsection Using C++14 code
+
+Support for a C++14 has been explicitly added to @R{} from version
+3.4.0. Similar considerations to C++11 apply, except that the variables
+associated with the C++14 compiler use the prefix @samp{CXX14} instead
+of @samp{CXX11}. Hence to use C++14 code in a package, the package's
+@file{Makevars} file (or @file{Makevars.win} on Windows) should include
+the line
+@example
+CXX_STD = CXX14
+@end example
+
+In the absence of a @file{Makevars} file, C++14 support can also be
+requested by the line:
+@example
+SystemRequirements: C++14
+@end example
+@noindent
+in the @file{DESCRIPTION} file. Finally, the C++14 compiler can be
+used systematically by setting the environment variable @env{USE_CXX17}.
+
+Note that code written for C++11 that emulates features of C++14 will
+not necessarily compile under a C++14 compiler@footnote{As from @R{}
+3.4.0, @command{configure} attempts to supply a C++14 compiler only if
+explicitly requested.  However, earlier versions of @R{} will use the
+default C++14 mode of @command{g++} 6 and later.}, since the emulation
+typically leads to a namespace clash. In order to ensure that the code
+also compiles under C++14, something like the following should be
+done:
+@example
+#if __cplusplus >= 201402L
+using std::make_unique;
+#else
+// your emulation
+#endif
+@end example
+
+@noindent
+Code needing C++14 features would do better to test for their presence
+@emph{via} `SD-6 feature tests'@footnote{@uref{See
+https://isocpp.org/@/std/@/standing-documents/@/sd-6-sg10-feature-test-recommendations}
+or
+@uref{http://en.cppreference.com/@/w/@/cpp/@/experimental/@/feature_test}.
+It seems a reasonable assumption that any compiler promising some C++14
+conformance will provide these---e.g.@: @command{g++} 4.9.x did but
+4.8.5 did not.}.  That test could be
+
+@example
+#include <memory> // header where this is defined
+#if defined(__cpp_lib_make_unique) && (__cpp_lib_make_unique >= 201304)
+using std::make_unique;
+#else
+// your emulation
+#endif
+@end example
+
+The webpage
+@uref{http://en.cppreference.com/@/w/@/cpp/@/compiler_support} gives
+some information on which compilers are known to support recent C++
+features, including those in the C++17 drafts (for which feature tests
+should be used).
+
+@node Using C++17 code,  , Using C++14 code, Configure and cleanup
+@subsection Using C++17 code
+
+Experimental support for C++17 has been added to @R{} version 3.4.0. The
+@file{configure} script tests a subset of C++17 features.  At the time
+of writing (March 2017) both @code{clang 4.0.0} and the pre-release
+version @code{gcc 7.0.1 (20170314)} pass these tests (with flags
+@option{-std=gnu++1z} and @option{-std=gnu++17} respectively chosen by
+the @file{configure} script).  Note that the C++17 feature tests are
+incomplete and are subject to change in future @R{} versions as compiler
+support for the standard improves.
+
+The variables associated with the C++17 compiler use the prefix
+@samp{CXX17}.  Hence to use C++17 code in a package, the package's
+@file{Makevars} file (or @file{Makevars.win} on Windows) should
+include the line
+@example
+CXX_STD = CXX17
+@end example
+
+In the absence of a @file{Makevars} file, C++17 support can also be
+requested by the line:
+@example
+SystemRequirements: C++17
+@end example
+@noindent
+in the @file{DESCRIPTION} file. Finally, the C++17 compiler can be
+used systematically by setting the environment variable @env{USE_CXX17}.
 
 @node Checking and building packages, Writing package vignettes, Configure and cleanup, Creating R packages
 @section Checking and building packages
@@ -2968,20 +3076,20 @@ To exclude files from being put into the package, one can specify a list
 of exclude patterns in file @file{.Rbuildignore} in the top-level source
 directory.  These patterns should be Perl-like regular expressions (see
 the help for @code{regexp} in @R{} for the precise details), one per
-line, to be matched case-insensitively@footnote{on all platforms from
-@R{} 3.1.0.} against the file and directory names relative to the
-top-level package source directory.  In addition, directories from
-source control systems@footnote{called @file{CVS} or @file{.svn} or
-@file{.arch-ids} or @file{.bzr} or @file{.git} (but not files called
-@file{.git}) or @file{.hg}.} or from @command{eclipse}@footnote{called
-@file{.metadata}.}, directories with names ending @file{.Rcheck} or
-@file{Old} or @file{old} and files @file{GNUMakefile}@footnote{which is
-an error: GNU make uses @file{GNUmakefile}.}, @file{Read-and-delete-me}
-or with base names starting with @samp{.#}, or starting and ending with
-@samp{#}, or ending in @samp{~}, @samp{.bak} or @samp{.swp}, are
-excluded by default.  In addition, those files in the @file{R},
-@file{demo} and @file{man} directories which are flagged by @command{R
-CMD check} as having invalid names will be excluded.
+line, to be matched case-insensitively against the file and directory
+names relative to the top-level package source directory.  In addition,
+directories from source control systems@footnote{called @file{CVS} or
+@file{.svn} or @file{.arch-ids} or @file{.bzr} or @file{.git} (but not
+files called @file{.git}) or @file{.hg}.} or from
+@command{eclipse}@footnote{called @file{.metadata}.}, directories with
+names ending @file{.Rcheck} or @file{Old} or @file{old} and files
+@file{GNUMakefile}@footnote{which is an error: GNU make uses
+@file{GNUmakefile}.}, @file{Read-and-delete-me} or with base names
+starting with @samp{.#}, or starting and ending with @samp{#}, or ending
+in @samp{~}, @samp{.bak} or @samp{.swp}, are excluded by default.  In
+addition, those files in the @file{R}, @file{demo} and @file{man}
+directories which are flagged by @command{R CMD check} as having invalid
+names will be excluded.
 
 Use @kbd{R CMD build --help} to obtain more information about the usage
 of the @R{} package builder.
@@ -3185,7 +3293,10 @@ placing them in the @file{inst/doc} hierarchy of the source package or
 by using calls to @code{system.file()}.  All other files needed to
 re-make the vignettes (such as @LaTeX{} style files, Bib@TeX{} input
 files and files for any figures not created by running the code in the
-vignette) must be in the vignette source directory.
+vignette) must be in the vignette source directory.  @code{R CMD check} 
+will check that vignette production has succeeded by comparing
+modification times of output files in @file{inst/doc} with
+the source in @file{vignettes}.
 
 @code{R CMD build} will automatically@footnote{unless inhibited by using
 @samp{BuildVignettes: no} in the @file{DESCRIPTION} file.} create the
@@ -3228,10 +3339,10 @@ all: pdf clean
 pdf: ABC-intro.pdf ABC-details.pdf
 
 %.pdf:  %.tex
-	texi2dvi --pdf $*
+        texi2dvi --pdf $*
 
 clean:
-	rm *.tex ABC-details-*.pdf
+        rm *.tex ABC-details-*.pdf
 @end example
 
 @noindent
@@ -3361,10 +3472,10 @@ would have been in the locale's encoding.
 @node Non-Sweave vignettes,  , Encodings and vignettes, Writing package vignettes
 @subsection Non-Sweave vignettes
 
-@R{} 3.0.0 and later allow vignettes in formats other than Sweave by
-means of ``vignette engines''.  For example @CRANpkg{knitr} version 1.1
-or later can create @file{.tex} files from a variation on Sweave format,
-and @file{.html} files from a variation on ``markdown'' format. These
+Vignettes in formats other than Sweave are supported @emph{via}
+``vignette engines''.  For example @CRANpkg{knitr} version 1.1 or later
+can create @file{.tex} files from a variation on Sweave format, and
+@file{.html} files from a variation on ``markdown'' format. These
 engines replace the @code{Sweave()} function with other functions to
 convert vignette source files into @LaTeX{} files for processing into
 @file{.pdf}, or directly into @file{.pdf} or @file{.html} files. The
@@ -3408,7 +3519,7 @@ to register those engines in the package @code{.onLoad} function.
 For example, that function could make the call
 @example
 tools::vignetteEngine("knitr", weave = vweave, tangle = vtangle,
-		      pattern = "[.]Rmd$", package = "knitr")
+                      pattern = "[.]Rmd$", package = "knitr")
 @end example
 @noindent
 (The actual registration in @CRANpkg{knitr} is more complicated, because
@@ -3601,9 +3712,6 @@ S3method(print, check_so_symbols, .print.via.format)
 @noindent
 when @code{print.check_so_symbols} is not needed.
 
-There used to be a limit on the number of @code{S3method} directives: it
-was @code{500} prior to @R{} 3.0.2.
-
 @node Load hooks, useDynLib, Registering S3 methods, Package namespaces
 @subsection Load hooks
 
@@ -3622,16 +3730,15 @@ exported.
 @findex .onUnload
 @findex .onDetach
 @findex .Last.lib
-Packages can use a @code{.onDetach} (as from @R{} 3.0.0) or @code{.Last.lib}
-function (provided the latter is exported from the namespace) when
-@code{detach} is called on the package.  It is called with a single
-argument, the full path to the installed package.  There is also a hook
-@code{.onUnload} which is called when the namespace is unloaded
-(@emph{via} a call to @code{unloadNamespace}, perhaps called by
-@code{detach(unload = TRUE)}) with argument the full path to the installed
-package's directory.  @code{.onUnload} and @code{.onDetach} should be
-defined in the namespace and not exported, but @code{.Last.lib} does
-need to be exported.
+Packages can use a @code{.onDetach} or @code{.Last.lib} function
+(provided the latter is exported from the namespace) when @code{detach}
+is called on the package.  It is called with a single argument, the full
+path to the installed package.  There is also a hook @code{.onUnload}
+which is called when the namespace is unloaded (@emph{via} a call to
+@code{unloadNamespace}, perhaps called by @code{detach(unload = TRUE)})
+with argument the full path to the installed package's directory.
+@code{.onUnload} and @code{.onDetach} should be defined in the namespace
+and not exported, but @code{.Last.lib} does need to be exported.
 
 Packages are not likely to need @code{.onAttach} (except perhaps for a
 start-up banner); code to set options and load shared objects should be
@@ -3778,13 +3885,13 @@ static R_NativePrimitiveArgType foo_t[] = @{
     REALSXP, INTSXP, STRSXP, LGLSXP
 @};
 
-static R_CMethodDef cMethods[] = @{
+static const R_CMethodDef cMethods[] = @{
    @{"foo", (DL_FUNC) &foo, 4, foo_t@},
    @{"bar_sym", (DL_FUNC) &bar, 0@},
-   @{NULL, NULL, 0@}
+   @{NULL, NULL, 0, NULL@}
 @};
 
-static R_CallMethodDef callMethods[] = @{
+static const R_CallMethodDef callMethods[] = @{
    @{"R_call_sym", (DL_FUNC) &R_call, 4@},
    @{"R_version_sym", (DL_FUNC) &R_version, 0@},
    @{NULL, NULL, 0@}
@@ -3930,11 +4037,11 @@ importFrom("graphics", plot)
 importFrom("stats", optim, qchisq)
 ## For these, we define methods or (AIC, BIC, nobs) an implicit generic:
 importFrom("stats", AIC, BIC, coef, confint, logLik, nobs, profile,
-	   update, vcov)
+           update, vcov)
 exportClasses(mle, profile.mle, summary.mle)
 ## All methods for imported generics:
 exportMethods(coef, confint, logLik, plot, profile, summary,
-	      show, update, vcov)
+              show, update, vcov)
 ## implicit generics which do not have any methods here
 export(AIC, BIC, nobs)
 @end example
@@ -4360,12 +4467,11 @@ and libraries are searched once in the order they are specified.  Not
 all linkers allow a space after @option{-L} .
 
 @item
-Great care is needed with the use of @code{LinkingTo}.  This puts one or
-more directories on the include search path ahead of system headers but
-currently@footnote{This will change in @R{} 3.4.0.} after those
-specified in the @code{CPPFLAGS} macro of the @R{} build (which normally
-includes @code{-I/usr/local/include}, but most platforms ignore that and
-include it with the system headers).
+Care is needed with the use of @code{LinkingTo}.  This puts one or more
+directories on the include search path ahead of system headers but
+(prior to @R{} 3.4.0) after those specified in the @code{CPPFLAGS} macro
+of the @R{} build (which normally includes @code{-I/usr/local/include},
+but most platforms ignore that and include it with the system headers).
 
 Any confusion would be avoided by having @code{LinkingTo} headers in a
 directory named after the package.  In any case, name conflicts of
@@ -4660,7 +4766,7 @@ so it is strongly recommended to check in a UTF-8 locale.
 @subsection Portable C and C++ code
 
 Writing portable C and C++ code is mainly a matter of observing the
-standards (C99, C++98 or where declared C++11) and testing that
+standards (C99, C++98 or where declared C++11/14) and testing that
 extensions (such as POSIX functions) are supported.
 
 Note that the `TR1' C++ extensions are not part of any of these
@@ -4852,6 +4958,7 @@ strlen strncmp strtol tan trunc
 @end example
 
 @item
+@c including clang as from 4.0.0
 Some C++ compilers refuse to compile constructs such as
 @example
       if(ptr > 0) @{ ....@}
@@ -4928,9 +5035,10 @@ However, modes of @command{gcc} with `GNU EXTENSIONS' (which are the
 default, either @option{-std=gnu99} or @option{-std=gnu11}) declare
 enough macros to ensure that missing declarations are rarely seen.
 
-This applies also to constants such as @code{M_PI}, which are part of
-the X/Open standard: to use these define @code{_XOPEN_SOURCE} before
-including any headers.
+This applies also to constants such as @code{M_PI} and @code{M_LN2},
+which are part of the X/Open standard: to use these define
+@code{_XOPEN_SOURCE} before including any headers, or include the @R{}
+header @file{Rmath.h}.
 
 @item
 Similarly, package authors commonly assume things are part of C++ when
@@ -4940,7 +5048,27 @@ they were introduced in C++11 if at all.  Recent examples from
 erf expm1 fmin fmax lgamma lround loglp round snprintf strcasecmp trunc
 @end example
 @noindent
-and the POSIX function @code{strdup}.
+(all of which are in the @code{std} namespace in C++11) and the POSIX
+functions @code{strdup} and @code{strncasecmp} and constants @code{M_PI}
+and @code{M_LN2} (see the previous item).  @R{} has long provided
+@code{fmax2}, @code{fmin2}, @code{fround}, @code{ftrunc},
+@code{lgammafn}, @code{log1p} (if needed) and many of the X/Open
+constants, declared in header @file{Rmath.h}.  Uses of @code{erf} can be
+replaced by @code{pnorm} (see the @R{} help page for the latter).
+
+@item
+Using @code{alloca} portably is tricky: it is neither an ISO C nor a
+POSIX function.  An adequately portable preamble is
+@example
+#ifdef __GNUC__
+/* Includes GCC, clang and Intel compilers */
+# undef alloca
+# define alloca(x) __builtin_alloca((x))
+#elif defined(__sun) || defined(_AIX)
+/* this is necessary (and sufficient) for Solaris 10 and AIX 6: */
+# include <alloca.h>
+#endif
+@end example
 
 @end itemize
 
@@ -5051,9 +5179,9 @@ start and others use it to end).
 In @R{} messages it is also possible to use @code{sQuote} or @code{dQuote} as in
 
 @example
-	stop(gettextf("object must be of class %s or %s",
-		      dQuote("manova"), dQuote("maov")),
-	     domain = NA)
+        stop(gettextf("object must be of class %s or %s",
+                      dQuote("manova"), dQuote("maov")),
+             domain = NA)
 @end example
 
 @item
@@ -5065,12 +5193,12 @@ Slovenian has four).  So avoid constructions such as was once used in
 @example
 if((length(nopkgs) > 0) && !missing(lib.loc)) @{
     if(length(nopkgs) > 1)
-	warning("libraries ",
-		paste(sQuote(nopkgs), collapse = ", "),
-		" contain no packages")
+        warning("libraries ",
+                paste(sQuote(nopkgs), collapse = ", "),
+                " contain no packages")
     else
-	warning("library ", paste(sQuote(nopkgs)),
-		" contains no package")
+        warning("library ", paste(sQuote(nopkgs)),
+                " contains no package")
 @}
 @end example
 
@@ -5081,10 +5209,10 @@ and was replaced by
 if((length(nopkgs) > 0) && !missing(lib.loc)) @{
     pkglist <- paste(sQuote(nopkgs), collapse = ", ")
     msg <- sprintf(ngettext(length(nopkgs),
-			    "library %s contains no packages",
-			    "libraries %s contain no packages",
-			    domain = "R-base"),
-		   pkglist)
+                            "library %s contains no packages",
+                            "libraries %s contain no packages",
+                            domain = "R-base"),
+                   pkglist)
     warning(msg, domain=NA)
 @}
 @end example
@@ -6166,9 +6294,9 @@ a hyperlink in @HTML{} and PDF conversion.  Displayed using
 Indicate a uniform resource locator (@acronym{URL}) for the World Wide
 Web.  The argument is handled as `verbatim' text (with percent and
 braces escaped by backslash), and rendered as a hyperlink in @HTML{} and
-PDF conversion.  Linefeeds are removed, and as from @R{} 3.2.0 leading
-and trailing whitespace@footnote{as defined by the @R{} function
-@code{trimws}.} is removed. @xref{Specifying URLs}.
+PDF conversion.  Linefeeds are removed, and leading and trailing
+whitespace@footnote{as defined by the @R{} function @code{trimws}.} is
+removed. @xref{Specifying URLs}.
 
 Displayed using @code{typewriter} font where possible.
 
@@ -6178,8 +6306,8 @@ Indicate a hyperlink to the World Wide Web. The first argument is
 handled as `verbatim' text (with percent and braces escaped by
 backslash) and is used as the @acronym{URL} in the hyperlink, with the
 second argument of @LaTeX{}-like text displayed to the user.  Linefeeds
-are removed from the first argument, and as from @R{} 3.2.0 leading and
-trailing whitespace is removed.
+are removed from the first argument, and leading and trailing whitespace
+is removed.
 
 Note that RFC3986-encoded URLs (e.g.@: using @samp{\%28VS.85\%29} in
 place of @samp{(VS.85)}) may not work correctly in versions of @R{}
@@ -6356,7 +6484,7 @@ The following example is from @file{Poisson.Rd}:
 @example
 @group
   \deqn@{p(x) = \frac@{\lambda^x e^@{-\lambda@}@}@{x!@}@}@{%
-	p(x) = \lambda^x exp(-\lambda)/x!@}
+        p(x) = \lambda^x exp(-\lambda)/x!@}
   for \eqn@{x = 0, 1, 2, \ldots@}.
 @end group
 @end example
@@ -7009,12 +7137,12 @@ As an example, consider the following code (from Venables & Ripley,
 @group
 library(MASS); library(boot)
 storm.fm <- nls(Time ~ b*Viscosity/(Wt - c), stormer,
-		start = c(b=30.401, c=2.2183))
+                start = c(b=30.401, c=2.2183))
 st <- cbind(stormer, fit=fitted(storm.fm))
 storm.bf <- function(rs, i) @{
     st$Time <-  st$fit + rs[i]
     tmp <- nls(Time ~ (b * Viscosity)/(Wt - c), st,
-	       start = coef(storm.fm))
+               start = coef(storm.fm))
     tmp$m$getAllPars()
 @}
 rs <- scale(resid(storm.fm), scale = FALSE) # remove the mean
@@ -7360,14 +7488,14 @@ CPU_CLK_UNHALT...|
   samples|      %|
 ------------------
    166761 99.9161 Rdev
-	CPU_CLK_UNHALT...|
-	  samples|      %|
-	------------------
-	    70586 42.3276 no-vmlinux
-	    56963 34.1585 libc-2.16.so
-	    36922 22.1407 R
-	     1584  0.9499 stats.so
-	      624  0.3742 libm-2.16.so
+        CPU_CLK_UNHALT...|
+          samples|      %|
+        ------------------
+            70586 42.3276 no-vmlinux
+            56963 34.1585 libc-2.16.so
+            36922 22.1407 R
+             1584  0.9499 stats.so
+              624  0.3742 libm-2.16.so
 ...
 @end example
 
@@ -7423,13 +7551,13 @@ second plot, showed
   samples|      %|
 ------------------
    381845 99.9885 R
-	CPU_CLK_UNHALT...|
-	  samples|      %|
-	------------------
-	   187484 49.0995 sm.so
-	   169627 44.4230 no-vmlinux
-	    12636  3.3092 libgfortran.so.3.0.0
-	     6455  1.6905 R
+        CPU_CLK_UNHALT...|
+          samples|      %|
+        ------------------
+           187484 49.0995 sm.so
+           169627 44.4230 no-vmlinux
+            12636  3.3092 libgfortran.so.3.0.0
+             6455  1.6905 R
 @end example
 
 @noindent
@@ -7621,7 +7749,7 @@ suite.
 Error: no valid set of coefficients has been found: please supply starting values
 > traceback()
 3: stop("no valid set of coefficients has been found: please supply
-	 starting values", call. = FALSE)
+         starting values", call. = FALSE)
 2: glm.fit(x = X, y = Y, weights = weights, start = start, etastart = etastart,
        mustart = mustart, offset = offset, family = family, control = control,
        intercept = attr(mt, "intercept") > 0)
@@ -7640,7 +7768,7 @@ compiled code, for example (from @code{?nls})
 
 @smallexample
 Error in nls(y ~ a + b * x, start = list(a = 0.12345, b = 0.54321), trace = TRUE) :
-	step factor 0.000488281 reduced below 'minFactor' of 0.000976563
+        step factor 0.000488281 reduced below 'minFactor' of 0.000976563
 >  traceback()
 2: .Call(R_nls_iter, m, ctrl, trace)
 1: nls(y ~ a + b * x, start = list(a = 0.12345, b = 0.54321), trace = TRUE)
@@ -7665,7 +7793,7 @@ need not be the innermost call, as in
    @{
        setPars(newPars)
        assign("resid", .swts * (lhs - assign("rhs", getRHS(), envir = thisEnv)),
-	   envir = thisEnv)
+           envir = thisEnv)
        assign("dev", sum(resid^2), envir = thisEnv)
        assign("QR", qr(.swts * attr(rhs, "gradient")), envir = thisEnv)
        return(QR$rank < min(dim(QR$qr)))
@@ -7772,16 +7900,16 @@ Browse[1]> ls()
 [31] "varmu"      "w"          "weights"    "x"          "xnames"
 [36] "y"          "ynames"     "z"
 Browse[1]> eta
-	    1             2             3             4             5
+            1             2             3             4             5
  0.000000e+00 -2.235357e-06 -1.117679e-05 -5.588393e-05 -2.794197e-04
-	    6             7             8             9
+            6             7             8             9
 -1.397098e-03 -6.985492e-03 -3.492746e-02 -1.746373e-01
 Browse[1]> valideta(eta)
 [1] TRUE
 Browse[1]> mu
-	1         2         3         4         5         6         7         8
+        1         2         3         4         5         6         7         8
 1.0000000 0.9999978 0.9999888 0.9999441 0.9997206 0.9986039 0.9930389 0.9656755
-	9
+        9
 0.8397616
 Browse[1]> validmu(mu)
 [1] FALSE
@@ -7856,16 +7984,16 @@ Browse[1]> start
 [1] -2.235357e-06
 debug: eta <- drop(x %*% start)
 Browse[1]> eta
-	    1             2             3             4             5
+            1             2             3             4             5
  0.000000e+00 -2.235357e-06 -1.117679e-05 -5.588393e-05 -2.794197e-04
-	    6             7             8             9
+            6             7             8             9
 -1.397098e-03 -6.985492e-03 -3.492746e-02 -1.746373e-01
 Browse[1]>
 debug: mu <- linkinv(eta <- eta + offset)
 Browse[1]> mu
-	1         2         3         4         5         6         7         8
+        1         2         3         4         5         6         7         8
 1.0000000 0.9999978 0.9999888 0.9999441 0.9997206 0.9986039 0.9930389 0.9656755
-	9
+        9
 0.8397616
 @end smallexample
 
@@ -8050,7 +8178,7 @@ of @R{} with extra instrumentation to help @code{valgrind} detect errors
 in the use of memory allocated from the @R{} heap.  The
 @command{configure} option is
 @option{--with-valgrind-instrumentation=@var{level}}, where @var{level}
-is 0, 1 or 2.  Level 0 is the default and does not add any anything.
+is 0, 1 or 2.  Level 0 is the default and does not add anything.
 Level 1 will detect some uses@footnote{Those in some numeric, logical,
 integer, raw, complex vectors and in memory allocated by
 @code{R_alloc}.} of uninitialised memory and has little impact on speed
@@ -8302,25 +8430,21 @@ separately.} of @command{clang} and GCC.  Its (main) runtime library is
 linked into each package's DLL, so it is less often needed to be
 included in @env{MAIN_LDFLAGS}.
 
-Some versions have greatly increased compilation times on a few
-files@footnote{e.g.@: @file{src/main/dotcode.c} and parts of the
-@CRANpkg{Matrix} sources with @command{clang} 3.7.0 amd later.}.
-
 This sanitizer can be combined with the Address Sanitizer by
 @option{-fsanitize=undefined,address} (where both are supported).
 
 Finer control of what is checked can be achieved by other options: for
 @command{clang} see
 @uref{http://clang.llvm.org/@/docs/@/UsersManual.html#controlling-code-generation}.@footnote{or
-the user manual for your version of @command{clang}, e.g.@:
-@uref{http://llvm.org/@/releases/@/3.8.1/@/tools/@/docs/@/UsersManual.html} or
-@uref{http://llvm.org/@/releases/@/3.8.0/@/tools/@/clang/@/docs/@/UsersManual.html}.}
+the user manual for your version of @command{clang}, e.g.@: (the paths
+have differed for some versions)
+@uref{http://llvm.org/@/releases/@/4.0.0/@/tools/@/clang/@/docs/@/UsersManual.html}.}
 The current set for @command{clang} is (on a single line):
 @example
 -fsanitize=alignment,bool,bounds,enum,float-cast-overflow,
 float-divide-by-zero,function,integer-divide-by-zero,nonnull-attribute,
 null,object-size,return,returns-nonnull-attribute,shift,
-signed-integer-overflow,unreachable,vla-bound,vptr
+signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound,vptr
 @end example
 
 @noindent
@@ -8332,14 +8456,7 @@ like
 @end example
 
 @noindent
-(@code{function}, @code{return} and @code{vptr} apply only to C++).  In
-addition,
-@example
--fsanitize=unsigned-integer-overflow
-@end example
-@noindent
-is available as a separate option in some versions of @command{clang}
-(not enabled by @option{-fsanitize=undefined}).
+(@code{function}, @code{return} and @code{vptr} apply only to C++).
 
 @command{clang} 3.5 and later may need
 
@@ -8348,7 +8465,7 @@ is available as a separate option in some versions of @command{clang}
 @end example
 
 @noindent
-for C++ code (in @code{CXX} and @code{CXX1X}) as the run-time library
+for C++ code (in @code{CXX} and @code{CXX11}) as the run-time library
 for @code{vptr} needs to be linked into the main @R{} executable (and
 that would need to be linked by @code{clang++}, not @code{clang}: you
 could try building @R{} with something like
@@ -8356,16 +8473,12 @@ could try building @R{} with something like
 MAIN_LD="clang++ -fsanitize=undefined"
 @end example
 @noindent
-and perhaps for @command{clang} 3.7.x
-@example
-R_OPENMP_CFLAGS="-fopenmp=libomp"
-@end example
-@noindent
 or add @code{-lclang_rt.asan_cxx-x86_64}@footnote{This includes the C++
 UBSAN handlers, despite its name.} or similar to @code{LD_FLAGS}).
 
-See @uref{https://gcc.gnu.org/@/onlinedocs/@/gcc/@/Debugging-Options.html} (or
-the manual for your version of GCC, installed or @emph{via}
+See
+@uref{https://gcc.gnu.org/@/onlinedocs/@/gcc/@/Instrumentation-Options.html}
+(or the manual for your version of GCC, installed or @emph{via}
 @uref{https://gcc.gnu.org/@/onlinedocs/}) for the options supported by
 GCC: 5.3 supports
 @example
@@ -8390,8 +8503,8 @@ GCC 6 added
 -fsanitize=bounds-strict
 @end example
 @noindent
-an extension of @code{bounds} to `flexible array member-like arrays'.
-
+(an extension of @code{bounds} to `flexible array member-like arrays'),
+@option{-fsanitize=shift-base} and @option{-fsanitize=shift-exponent}.
 
 Other useful flags include
 @example
@@ -8524,11 +8637,11 @@ disabling it.)
 
 A fairly common cause of such crashes is a package which uses @code{.C}
 or @code{.Fortran} and writes beyond (at either end) one of the
-arguments it is passed.  As from @R{} 3.0.0 there is a good way to
-detect this: using @code{options(CBoundsCheck = TRUE)} (which can be
-selected @emph{via} the environment variable @env{R_C_BOUNDS_CHECK=yes)}
-changes the way @code{.C} and @code{.Fortran} work to check if the
-compiled code writes in the 64 bytes at either end of an argument.
+arguments it is passed.  There is a good way to detect this: using
+@code{options(CBoundsCheck = TRUE)} (which can be selected @emph{via}
+the environment variable @env{R_C_BOUNDS_CHECK=yes)} changes the way
+@code{.C} and @code{.Fortran} work to check if the compiled code writes
+in the 64 bytes at either end of an argument.
 
 Another cause of a `crash' is to overrun the C stack.  @R{} tries to
 track that in its own code, but it may happen in third-party compiled
@@ -8689,7 +8802,7 @@ $2 = @{
     vecsxp = @{
       length = 2,
       type = @{c = 0x40634700 "0>X@@D>X@@0>X@@", i = 0x40634700,
-	f = 0x40634700, z = 0x40634700, s = 0x40634700@},
+        f = 0x40634700, z = 0x40634700, s = 0x40634700@},
       truelength = 1075851272,
     @},
     primsxp = @{offset = 2@},
@@ -8916,10 +9029,10 @@ package writers using the same symbol name, and such name clashes are
 normally sufficient to cause @R{} to crash.  (If it is not present and
 the call is from the body of a function defined in a package namespace,
 the shared object loaded by the first (if any) @code{useDynLib}
-directive will be used.  However, prior to @R{} 2.15.2 the detection of
-the correct namespace is unreliable and you are strongly recommended to
-use the @code{PACKAGE} argument for packages to be used with earlier
-versions of @R{}.
+directive will be used.  
+@c However, prior to @R{} 2.15.2 the detection of the correct namespace is
+@c unreliable and you are strongly recommended to use the @code{PACKAGE}
+@c argument for packages to be used with earlier versions of @R{}.
 
 Note that the compiled code should not return anything except through
 its arguments: C functions should be of type @code{void} and FORTRAN
@@ -8936,10 +9049,10 @@ void convolve(double *a, int *na, double *b, int *nb, double *ab)
     int nab = *na + *nb - 1;
 
     for(int i = 0; i < nab; i++)
-	ab[i] = 0.0;
+        ab[i] = 0.0;
     for(int i = 0; i < *na; i++)
-	for(int j = 0; j < *nb; j++)
-	    ab[i + j] += a[i] * b[j];
+        for(int j = 0; j < *nb; j++)
+            ab[i + j] += a[i] * b[j];
 @}
 @end group
 @end example
@@ -9199,7 +9312,7 @@ SEXP myCall(SEXP a, SEXP b, SEXP c);
 we would describe this as
 
 @example
-static R_CallMethodDef callMethods[]  = @{
+static const R_CallMethodDef callMethods[]  = @{
   @{"myCall", (DL_FUNC) &myCall, 3@},
   @{NULL, NULL, 0@}
 @};
@@ -9247,9 +9360,9 @@ static R_NativePrimitiveArgType myC_t[] = @{
     REALSXP, INTSXP, STRSXP, LGLSXP
 @};
 
-static R_CMethodDef cMethods[] = @{
-   @{"myC", (DL_FUNC) &myC, 4, myC_t@}
-   @{NULL, NULL, 0@}
+static const R_CMethodDef cMethods[] = @{
+   @{"myC", (DL_FUNC) &myC, 4, myC_t@},
+   @{NULL, NULL, 0, NULL@}
 @};
 @end group
 @end example
@@ -9308,9 +9421,9 @@ useDynLib(stats, .registration = TRUE, .fixes = "C_")
 in its @file{NAMESPACE} file, and then @code{ansari.test}'s default
 methods can contain
 @example
-	pansari <- function(q, m, n)
-	    .C(C_pansari, as.integer(length(q)), p = as.double(q),
-		as.integer(m), as.integer(n))$p
+        pansari <- function(q, m, n)
+            .C(C_pansari, as.integer(length(q)), p = as.double(q),
+                as.integer(m), as.integer(n))$p
 @end example
 
 @noindent
@@ -9340,7 +9453,9 @@ allows @code{.C} etc calls which specify entry points by @R{} objects
 such as @code{C_pansari} (and not by character strings).  Each provides
 some protection against accidentally finding your entry points when
 people supply a character string without a package, and avoids slowing
-down such searches.  (For the visibility attribute @pxref{Controlling
+down such searches.  Routine @code{R_forceSymbols} is available from
+@R{} 3.0.0, so packages using it should have a dependency on at least
+@samp{R (>= 3.0.0)}.  (For the visibility attribute @pxref{Controlling
 visibility}.)
 
 In more detail, if a package @code{mypkg} contains entry points
@@ -9503,7 +9618,7 @@ package):
 
 #define CALLDEF(name, n)  @{#name, (DL_FUNC) &name, n@}
 
-const static R_CallMethodDef R_CallDef[] = @{
+static const R_CallMethodDef R_CallDef[] = @{
    CALLDEF(spline_basis, ?),
    CALLDEF(spline_value, ?),
    @{NULL, NULL, 0@}
@@ -9518,10 +9633,11 @@ void R_init_splines(DllInfo *dll)
 
 @noindent
 and then replace the @code{?} in the skeleton with the actual numbers of
-arguments.  You will need to add declarations of the functions unless
-appending to the only C source file.  Some packages will already have
-these in a header file, or you could create one and include it in
-@file{init.c}, for example @file{splines.h} containing
+arguments.  You will need to add declarations (also known as
+`prototypes') of the functions unless appending to the only C source
+file.  Some packages will already have these in a header file, or you
+could create one and include it in @file{init.c}, for example
+@file{splines.h} containing
 
 @smallexample
 @group
@@ -9530,6 +9646,14 @@ extern SEXP spline_basis(SEXP knots, SEXP order, SEXP xvals, SEXP derivs);
 extern SEXP spline_value(SEXP knots, SEXP coeff, SEXP order, SEXP x, SEXP deriv);
 @end group
 @end smallexample
+@noindent
+Tools are available to extract declarations, at least for C and C++
+code: see the help file for
+@code{package_native_routine_registration_skeleton} in package
+@pkg{tools}. Here we could have used
+@example
+cproto -I/path/to/R/include -e splines.c
+@end example
 
 For examples of registering other types of calls, see packages
 @pkg{graphics} and @pkg{stats}.  In particular, when registering entry
@@ -9567,8 +9691,10 @@ void R_init_splines(DllInfo *dll)
 
 @end itemize
 
-A skeleton for the steps so far can be made using tools in @R{} 3.4.0
-and later.
+A skeleton for the steps so far can be made using
+@code{package_native_routine_registration_skeleton} in package
+@pkg{tools}.  This will optionally create declarations based on the
+usage in the @R{} code.
 
 The remaining steps are optional but recommended.
 
@@ -9588,7 +9714,7 @@ Find all the relevant calls in the @R{} code and edit them to use the
 @smallexample
 temp <- .Call("spline_basis", knots, ord, x, derivs, PACKAGE = "splines")
 y[accept] <- .Call("spline_value", knots, coeff, ord, x[accept], deriv, PACKAGE = "splines")
-y = .Call"spline_value", knots, coef(object), ord, x, deriv, PACKAGE = "splines"))
+y = .Call("spline_value", knots, coef(object), ord, x, deriv, PACKAGE = "splines")
 @end smallexample
 @noindent
 to
@@ -9596,8 +9722,11 @@ to
 @smallexample
 temp <- .Call(C_spline_basis, knots, ord, x, derivs)
 y[accept] <- .Call(C_spline_value, knots, coeff, ord, x[accept], deriv)
-y = .Call(C_spline_value, knots, coef(object), ord, x, deriv))
+y = .Call(C_spline_value, knots, coef(object), ord, x, deriv)
 @end smallexample
+
+Check that there is no @code{exportPattern} directive which
+unintentionally exports the newly created @R{} objects.
 
 @item
 Restrict @code{.Call} to using the @R{} symbols by editing
@@ -9691,7 +9820,7 @@ We end up with a file @file{src/init.c} containing
 
 #define CALLDEF(name, n)  @{#name, (DL_FUNC) &name, n@}
 
-const static R_CallMethodDef R_CallDef[] = @{
+static const R_CallMethodDef R_CallDef[] = @{
     CALLDEF(spline_basis, 4),
     CALLDEF(spline_value, 5),
     @{NULL, NULL, 0@}
@@ -9723,7 +9852,7 @@ two routines declared in header @file{R_ext/Rdynload.h} as
 @findex R_GetCCallable
 @example
 void R_RegisterCCallable(const char *package, const char *name,
-			 DL_FUNC fptr);
+                         DL_FUNC fptr);
 DL_FUNC R_GetCCallable(const char *package, const char *name);
 @end example
 
@@ -10006,7 +10135,7 @@ should @strong{not} be included within an @code{extern "C"} block (as
 they include system headers@footnote{Even including C system headers in
 such a block has caused compilation errors.}).  The inclusion of system
 headers in C++ changed in @R{} 3.3.0@footnote{with an exception for the
-Solaris C++ compiler to be removed in @R{} 3.4.0.}, so if you care about
+Solaris C++ compiler, removed in @R{} 3.4.0.}, so if you care about
 earlier versions of @R{} please check your package there.
 
 Legacy header @file{S.h} cannot be used with C++.
@@ -10228,7 +10357,7 @@ by setting
 
 @example
 library.dynam("packA", pkg, lib,
-	      DLLpath = system.file("libs", package="packB"))
+              DLLpath = system.file("libs", package="packB"))
 @end example
 
 Note that @code{DLLpath} can only set one path, and so for linking to
@@ -10618,9 +10747,9 @@ SEXP out(SEXP x, SEXP y)
     SEXP ans = PROTECT(allocMatrix(REALSXP, nx, ny));
     double *rx = REAL(x), *ry = REAL(y), *rans = REAL(ans);
     for(int i = 0; i < nx; i++) @{
-	double tmp = rx[i];
-	for(int j = 0; j < ny; j++)
-	    rans[i + nx*j] = tmp * ry[j];
+        double tmp = rx[i];
+        for(int j = 0; j < ny; j++)
+            rans[i + nx*j] = tmp * ry[j];
     @}
     UNPROTECT(1);
     return ans;
@@ -10648,7 +10777,7 @@ SEXP out(SEXP x, SEXP y)
     for(int i = 0; i < nx; i++) @{
       double tmp = rx[i];
       for(int j = 0; j < ny; j++)
-	rans[i + nx*j] = tmp * ry[j];
+        rans[i + nx*j] = tmp * ry[j];
     @}
 
     SEXP dimnames = PROTECT(allocVector(VECSXP, 2));
@@ -10792,10 +10921,10 @@ SEXP getListElement(SEXP list, const char *str)
 
 @group
     for (int i = 0; i < length(list); i++)
-	if(strcmp(CHAR(STRING_ELT(names, i)), str) == 0) @{
-	   elmt = VECTOR_ELT(list, i);
-	   break;
-	@}
+        if(strcmp(CHAR(STRING_ELT(names, i)), str) == 0) @{
+           elmt = VECTOR_ELT(list, i);
+           break;
+        @}
     return elmt;
 @}
 @end group
@@ -10861,9 +10990,9 @@ SEXP getvar(SEXP name, SEXP rho)
     SEXP ans;
 
     if(!isString(name) || length(name) != 1)
-	error("name is not a single string");
+        error("name is not a single string");
     if(!isEnvironment(rho))
-	error("rho should be an environment");
+        error("rho should be an environment");
     ans = findVar(installChar(STRING_ELT(name, 0)), rho);
     Rprintf("first value is %f\n", REAL(ans)[0]);
     return R_NilValue;
@@ -10952,7 +11081,7 @@ and language objects (whose internal structures just differ by
 block: it constructs a pairlist from @code{u} followed by @code{v}
 (which is a pairlist or @code{R_NilValue}).  @code{LCONS} is a variant
 that constructs a language object.  Functions @code{list1} to
-@code{list5} construct a pairlist from one to five items, and
+@code{list6} construct a pairlist from one to six items, and
 @code{lang1} to @code{lang6} do the same for a language object (a
 function to call plus zero to five arguments).  Functions @code{elt} and
 @code{lastElt} find the @var{i}th element and the last element of a
@@ -11119,7 +11248,7 @@ SEXP convolve2(SEXP a, SEXP b)
     xa = REAL(a); xb = REAL(b); xab = REAL(ab);
     for(int i = 0; i < nab; i++) xab[i] = 0.0;
     for(int i = 0; i < na; i++)
-	for(int j = 0; j < nb; j++) xab[i + j] += xa[i] * xb[j];
+        for(int j = 0; j < nb; j++) xab[i + j] += xa[i] * xb[j];
     UNPROTECT(3);
     return ab;
 @}
@@ -11206,43 +11335,43 @@ SEXP showArgs(SEXP args)
 @{
     args = CDR(args); /* skip 'name' */
     for(int i = 0; args != R_NilValue; i++, args = CDR(args)) @{
-	const char *name =
-	    isNull(TAG(args)) ? "" : CHAR(PRINTNAME(TAG(args)));
-	SEXP el = CAR(args);
-	if (length(el) == 0) @{
-	    Rprintf("[%d] '%s' R type, length 0\n", i+1, name);
-	   continue;
-	@}
+        const char *name =
+            isNull(TAG(args)) ? "" : CHAR(PRINTNAME(TAG(args)));
+        SEXP el = CAR(args);
+        if (length(el) == 0) @{
+            Rprintf("[%d] '%s' R type, length 0\n", i+1, name);
+           continue;
+        @}
 @end group
 @group
-	switch(TYPEOF(el)) @{
-	case REALSXP:
-	    Rprintf("[%d] '%s' %f\n", i+1, name, REAL(el)[0]);
-	    break;
+        switch(TYPEOF(el)) @{
+        case REALSXP:
+            Rprintf("[%d] '%s' %f\n", i+1, name, REAL(el)[0]);
+            break;
 @end group
 @group
-	case LGLSXP:
-	case INTSXP:
-	    Rprintf("[%d] '%s' %d\n", i+1, name, INTEGER(el)[0]);
-	    break;
+        case LGLSXP:
+        case INTSXP:
+            Rprintf("[%d] '%s' %d\n", i+1, name, INTEGER(el)[0]);
+            break;
 @end group
 @group
-	case CPLXSXP:
-	@{
-	    Rcomplex cpl = COMPLEX(el)[0];
-	    Rprintf("[%d] '%s' %f + %fi\n", i+1, name, cpl.r, cpl.i);
-	@}
-	    break;
+        case CPLXSXP:
+        @{
+            Rcomplex cpl = COMPLEX(el)[0];
+            Rprintf("[%d] '%s' %f + %fi\n", i+1, name, cpl.r, cpl.i);
+        @}
+            break;
 @end group
 @group
-	case STRSXP:
-	    Rprintf("[%d] '%s' %s\n", i+1, name,
-		   CHAR(STRING_ELT(el, 0)));
-	   break;
+        case STRSXP:
+            Rprintf("[%d] '%s' %s\n", i+1, name,
+                   CHAR(STRING_ELT(el, 0)));
+           break;
 @end group
 @group
-	default:
-	    Rprintf("[%d] '%s' R type\n", i+1, name);
+        default:
+            Rprintf("[%d] '%s' R type\n", i+1, name);
        @}
     @}
     return R_NilValue;
@@ -11291,10 +11420,10 @@ or @code{convolveE}:
     ...
   for(int i = 0; i < na; i++)
     for(int j = 0; j < nb; j++)
-	if(ISNA(xa[i]) || ISNA(xb[j]) || ISNA(xab[i + j]))
-	    xab[i + j] = NA_REAL;
-	else
-	    xab[i + j] += xa[i] * xb[j];
+        if(ISNA(xa[i]) || ISNA(xb[j]) || ISNA(xab[i + j]))
+            xab[i + j] = NA_REAL;
+        else
+            xab[i + j] += xa[i] * xb[j];
     ...
 @end group
 @end example
@@ -11353,8 +11482,8 @@ SEXP lapply(SEXP list, SEXP expr, SEXP rho)
     if(!isEnvironment(rho)) error("'rho' should be an environment");
     ans = PROTECT(allocVector(VECSXP, n));
     for(int i = 0; i < n; i++) @{
-	defineVar(install("x"), VECTOR_ELT(list, i), rho);
-	SET_VECTOR_ELT(ans, i, eval(expr, rho));
+        defineVar(install("x"), VECTOR_ELT(list, i), rho);
+        SET_VECTOR_ELT(ans, i, eval(expr, rho));
     @}
     setAttrib(ans, R_NamesSymbol, getAttrib(list, R_NamesSymbol));
     UNPROTECT(1);
@@ -11382,8 +11511,8 @@ SEXP lapply2(SEXP list, SEXP fn, SEXP rho)
     R_fcall = PROTECT(lang2(fn, R_NilValue));
     ans = PROTECT(allocVector(VECSXP, n));
     for(int i = 0; i < n; i++) @{
-	SETCADR(R_fcall, VECTOR_ELT(list, i));
-	SET_VECTOR_ELT(ans, i, eval(R_fcall, rho));
+        SETCADR(R_fcall, VECTOR_ELT(list, i));
+        SET_VECTOR_ELT(ans, i, eval(R_fcall, rho));
     @}
     setAttrib(ans, R_NamesSymbol, getAttrib(list, R_NamesSymbol));
     UNPROTECT(2);
@@ -11455,12 +11584,12 @@ and an example are
 @example
 zero <- function(f, guesses, tol = 1e-7) @{
     f.check <- function(x) @{
-	x <- f(x)
-	if(!is.numeric(x)) stop("Need a numeric result")
-	as.double(x)
+        x <- f(x)
+        if(!is.numeric(x)) stop("Need a numeric result")
+        as.double(x)
     @}
     .Call("zero", body(f.check), as.double(guesses), as.double(tol),
-	  new.env())
+          new.env())
 @}
 
 cube1 <- function(x) (x^2 + 1) * (x - 1.5)
@@ -11499,7 +11628,7 @@ double feval(double x, SEXP f, SEXP rho)
 SEXP zero(SEXP f, SEXP guesses, SEXP stol, SEXP rho)
 @{
     double x0 = REAL(guesses)[0], x1 = REAL(guesses)[1],
-	   tol = REAL(stol)[0];
+           tol = REAL(stol)[0];
     double f0, f1, fc, xc;
 @end group
 
@@ -11513,15 +11642,15 @@ SEXP zero(SEXP f, SEXP guesses, SEXP stol, SEXP rho)
 
 @group
     for(;;) @{
-	xc = 0.5*(x0+x1);
-	if(fabs(x0-x1) < tol) return  mkans(xc);
-	fc = feval(xc, f, rho);
-	if(fc == 0) return  mkans(xc);
-	if(f0*fc > 0.0) @{
-	    x0 = xc; f0 = fc;
-	@} else @{
-	    x1 = xc; f1 = fc;
-	@}
+        xc = 0.5*(x0+x1);
+        if(fabs(x0-x1) < tol) return  mkans(xc);
+        fc = feval(xc, f, rho);
+        if(fc == 0) return  mkans(xc);
+        if(f0*fc > 0.0) @{
+            x0 = xc; f0 = fc;
+        @} else @{
+            x1 = xc; f1 = fc;
+        @}
     @}
 @}
 @end group
@@ -11545,14 +11674,14 @@ numeric.deriv <- function(expr, theta, rho=sys.frame(sys.parent()))
     eps <- sqrt(.Machine$double.eps)
     ans <- eval(substitute(expr), rho)
     grad <- matrix(, length(ans), length(theta),
-		   dimnames=list(NULL, theta))
+                   dimnames=list(NULL, theta))
     for (i in seq_along(theta)) @{
-	old <- get(theta[i], envir=rho)
-	delta <- eps * max(1, abs(old))
-	assign(theta[i], old+delta, envir=rho)
-	ans1 <- eval(substitute(expr), rho)
-	assign(theta[i], old, envir=rho)
-	grad[, i] <- (ans1 - ans)/delta
+        old <- get(theta[i], envir=rho)
+        delta <- eps * max(1, abs(old))
+        assign(theta[i], old+delta, envir=rho)
+        ans1 <- eval(substitute(expr), rho)
+        assign(theta[i], old, envir=rho)
+        grad[, i] <- (ans1 - ans)/delta
     @}
     attr(ans, "gradient") <- grad
     ans
@@ -11577,7 +11706,7 @@ with example usage
 
 @example
 .External("numeric_deriv", quote(sin(omega*x*y)),
-	  c("x", "y"), .GlobalEnv)
+          c("x", "y"), .GlobalEnv)
 @end example
 
 @noindent
@@ -11601,9 +11730,9 @@ SEXP numeric_deriv(SEXP args)
 @group
     expr = CADR(args);
     if(!isString(theta = CADDR(args)))
-	error("theta should be of type character");
+        error("theta should be of type character");
     if(!isEnvironment(rho = CADDDR(args)))
-	error("rho should be an environment");
+        error("rho should be an environment");
 @end group
 
 @group
@@ -11614,16 +11743,16 @@ SEXP numeric_deriv(SEXP args)
 
 @group
     for(i = 0, start = 0; i < LENGTH(theta); i++, start += LENGTH(ans)) @{
-	par = PROTECT(findVar(installChar(STRING_ELT(theta, i)), rho));
-	tt = REAL(par)[0];
-	xx = fabs(tt);
-	delta = (xx < 1) ? eps : xx*eps;
-	REAL(par)[0] += delta;
-	ans1 = PROTECT(coerceVector(eval(expr, rho), REALSXP));
-	for(int j = 0; j < LENGTH(ans); j++)
-	    rgr[j + start] = (REAL(ans1)[j] - rans[j])/delta;
-	REAL(par)[0] = tt;
-	UNPROTECT(2); /* par, ans1 */
+        par = PROTECT(findVar(installChar(STRING_ELT(theta, i)), rho));
+        tt = REAL(par)[0];
+        xx = fabs(tt);
+        delta = (xx < 1) ? eps : xx*eps;
+        REAL(par)[0] += delta;
+        ans1 = PROTECT(coerceVector(eval(expr, rho), REALSXP));
+        for(int j = 0; j < LENGTH(ans); j++)
+            rgr[j + start] = (REAL(ans1)[j] - rans[j])/delta;
+        REAL(par)[0] = tt;
+        UNPROTECT(2); /* par, ans1 */
     @}
 @end group
 
@@ -11644,9 +11773,9 @@ The code to handle the arguments is
 @group
     expr = CADR(args);
     if(!isString(theta = CADDR(args)))
-	error("theta should be of type character");
+        error("theta should be of type character");
     if(!isEnvironment(rho = CADDDR(args)))
-	error("rho should be an environment");
+        error("rho should be an environment");
 @end group
 @end example
 
@@ -11681,7 +11810,7 @@ applicable.)
 @example
 @group
     for(i = 0, start = 0; i < LENGTH(theta); i++, start += LENGTH(ans)) @{
-	par = PROTECT(findVar(installChar(STRING_ELT(theta, i)), rho));
+        par = PROTECT(findVar(installChar(STRING_ELT(theta, i)), rho));
 @end group
 @end example
 
@@ -11698,11 +11827,11 @@ install the name and use @code{findVar} to find its value.
 
 @example
 @group
-	tt = REAL(par)[0];
-	xx = fabs(tt);
-	delta = (xx < 1) ? eps : xx*eps;
-	REAL(par)[0] += delta;
-	ans1 = PROTECT(coerceVector(eval(expr, rho), REALSXP));
+        tt = REAL(par)[0];
+        xx = fabs(tt);
+        delta = (xx < 1) ? eps : xx*eps;
+        REAL(par)[0] += delta;
+        ans1 = PROTECT(coerceVector(eval(expr, rho), REALSXP));
 @end group
 @end example
 
@@ -11717,10 +11846,10 @@ changed parameter value.
 
 @example
 @group
-	for(int j = 0; j < LENGTH(ans); j++)
-	    rgr[j + start] = (REAL(ans1)[j] - rans[j])/delta;
-	REAL(par)[0] = tt;
-	UNPROTECT(2);
+        for(int j = 0; j < LENGTH(ans); j++)
+            rgr[j + start] = (REAL(ans1)[j] - rans[j])/delta;
+        REAL(par)[0] = tt;
+        UNPROTECT(2);
     @}
 @end group
 @end example
@@ -11777,17 +11906,17 @@ SEXP menu_ttest3()
     ParseStatus status;
    ...
     if(done == 1) @{
-	cmdSexp = PROTECT(allocVector(STRSXP, 1));
-	SET_STRING_ELT(cmdSexp, 0, mkChar(cmd));
-	cmdexpr = PROTECT(R_ParseVector(cmdSexp, -1, &status, R_NilValue));
-	if (status != PARSE_OK) @{
-	    UNPROTECT(2);
-	    error("invalid call %s", cmd);
-	@}
-	/* Loop is needed here as EXPSEXP will be of length > 1 */
-	for(int i = 0; i < length(cmdexpr); i++)
-	    ans = eval(VECTOR_ELT(cmdexpr, i), R_GlobalEnv);
-	UNPROTECT(2);
+        cmdSexp = PROTECT(allocVector(STRSXP, 1));
+        SET_STRING_ELT(cmdSexp, 0, mkChar(cmd));
+        cmdexpr = PROTECT(R_ParseVector(cmdSexp, -1, &status, R_NilValue));
+        if (status != PARSE_OK) @{
+            UNPROTECT(2);
+            error("invalid call %s", cmd);
+        @}
+        /* Loop is needed here as EXPSEXP will be of length > 1 */
+        for(int i = 0; i < length(cmdexpr); i++)
+            ans = eval(VECTOR_ELT(cmdexpr, i), R_GlobalEnv);
+        UNPROTECT(2);
     @}
     return ans;
 @}
@@ -11881,10 +12010,20 @@ the external pointer represents, if that memory is allocated from the
 @R{} heap.  Both @code{tag} and @code{prot} can be @code{R_NilValue},
 and often are.
 
+An alternative way as from @R{} 3.4.0 to create an external pointer from
+a function pointer is
+
+@example
+typedef void * (*R_DL_FUNC)();
+SEXP R_MakeExternalPtrFn(R_DL_FUNC p, SEXP tag, SEXP prot);
+@end example
+
+
 The elements of an external pointer can be accessed and set @emph{via}
 
 @example
 void *R_ExternalPtrAddr(SEXP s);
+DL_FUNC R_ExternalPtrAddrFn(SEXP s);
 SEXP R_ExternalPtrTag(SEXP s);
 SEXP R_ExternalPtrProtected(SEXP s);
 void R_ClearExternalPtr(SEXP s);
@@ -11925,9 +12064,9 @@ set to the C @code{NULL} pointer.
 
 Finalizers can be run at many places in the code base and much of it,
 including the @R{} interpreter, is not re-entrant.  So great care is
-needed in choosing the code to be run in a finalizer. As from @R{} 3.0.3
-finalizers are marked to be run at garbage collection but only run at a
-somewhat safe point thereafter.
+needed in choosing the code to be run in a finalizer.  Finalizers are
+marked to be run at garbage collection but only run at a somewhat safe
+point thereafter.
 
 @cindex weak reference
 Weak references are used to allow the programmer to maintain information
@@ -11945,7 +12084,7 @@ Weak reference objects are created by one of
 @example
 SEXP R_MakeWeakRef(SEXP key, SEXP val, SEXP fin, Rboolean onexit);
 SEXP R_MakeWeakRefC(SEXP key, SEXP val, R_CFinalizer_t fin,
-		    Rboolean onexit);
+                    Rboolean onexit);
 @end example
 
 @noindent
@@ -11990,7 +12129,7 @@ is created by
     ptr = R_MakeExternalPtr(thisHandle, install("RODBC_channel"), R_NilValue);
     PROTECT(ptr);
     R_RegisterCFinalizerEx(ptr, chanFinalizer, TRUE);
-	    ...
+            ...
     /* return the channel no */
     INTEGER(ans)[0] = nChannels;
     /* and the connection string as an attribute */
@@ -12095,7 +12234,7 @@ Function
 @findex reEnc
 @example
 const char *reEnc(const char *x, cetype_t ce_in, cetype_t ce_out,
-		  int subst);
+                  int subst);
 @end example
 
 @noindent
@@ -12284,14 +12423,9 @@ This is only recommended for experts.
 Note that this memory will be freed on error or user interrupt
 (if allowed: @pxref{Allowing interrupts}).
 
-@c Note that although @var{n} is @code{size_t}, there may be limits imposed
-@c by @R{}'s internal allocation mechanism.  These will only come into play
-@c on 64-bit systems, where the limit for @var{n} prior to @R{} 3.0.0 was
-@c just under 16Gb.
-
 The memory returned is only guaranteed to be aligned as required for
 @code{double} pointers: take precautions if casting to a pointer which
-needs more.  As from @R{} 3.2.0 there is also
+needs more.  There is also
 
 @example
 long double *R_allocLD(size_t @var{n})
@@ -12689,9 +12823,9 @@ normal distribution:
 @group
 double dnorm(double @var{x}, double @var{mu}, double @var{sigma}, int @var{give_log});
 double pnorm(double @var{x}, double @var{mu}, double @var{sigma}, int @var{lower_tail},
-	     int @var{give_log});
+             int @var{give_log});
 double qnorm(double @var{p}, double @var{mu}, double @var{sigma}, int @var{lower_tail},
-	     int @var{log_p});
+             int @var{log_p});
 double rnorm(double @var{mu}, double @var{sigma});
 @end group
 @end example
@@ -12957,8 +13091,8 @@ without causing unnecessary overflows or throwing away too much accuracy.
 @deftypefunx double fmin2 (double @var{x}, double @var{y})
 Return the larger (@code{max}) or smaller (@code{min}) of two integer or
 double numbers, respectively.  Note that @code{fmax2} and @code{fmin2}
-differ from C99's @code{fmax} and @code{fmin} when one of the arguments
-is a @code{NaN}: these versions return @code{NaN}.
+differ from C99/C++11's @code{fmax} and @code{fmin} when one of the
+arguments is a @code{NaN}: these versions return @code{NaN}.
 @end deftypefun
 
 @deftypefun double sign (double @var{x})
@@ -13002,9 +13136,11 @@ not.)
 @c maybe not all into the index ...
 
 @R{} has a set of commonly used mathematical constants encompassing
-constants usually found @file{math.h} and contains further ones that are
-used in statistical computations.  All these are defined to (at least)
-30 digits accuracy in @file{Rmath.h}.  The following definitions
+constants defined by POSIX and usually@footnote{but see the second
+paragraph of @pxref{Portable C and C++ code}.} found in @file{math.h}
+(but maybe not in the C++ header @file{cmath}) and contains further ones
+that are used in statistical computations.  These are defined to (at
+least) 30 digits accuracy in @file{Rmath.h}.  The following definitions
 use @code{ln(x)} for the natural logarithm (@code{log(x)} in @R{}).
 
 @quotation
@@ -13086,44 +13222,44 @@ The interfaces (defined in header @file{R_ext/Applic.h}) are
 @findex nmmin
 @example
 void nmmin(int n, double *xin, double *x, double *Fmin, optimfn fn,
-	   int *fail, double abstol, double intol, void *ex,
-	   double alpha, double beta, double gamma, int trace,
-	   int *fncount, int maxit);
+           int *fail, double abstol, double intol, void *ex,
+           double alpha, double beta, double gamma, int trace,
+           int *fncount, int maxit);
 @end example
 
 @item BFGS:
 @findex vmmin
 @example
 void vmmin(int n, double *x, double *Fmin,
-	   optimfn fn, optimgr gr, int maxit, int trace,
-	   int *mask, double abstol, double reltol, int nREPORT,
-	   void *ex, int *fncount, int *grcount, int *fail);
+           optimfn fn, optimgr gr, int maxit, int trace,
+           int *mask, double abstol, double reltol, int nREPORT,
+           void *ex, int *fncount, int *grcount, int *fail);
 @end example
 
 @item Conjugate gradients:
 @findex cgmin
 @example
 void cgmin(int n, double *xin, double *x, double *Fmin,
-	   optimfn fn, optimgr gr, int *fail, double abstol,
-	   double intol, void *ex, int type, int trace,
-	   int *fncount, int *grcount, int maxit);
+           optimfn fn, optimgr gr, int *fail, double abstol,
+           double intol, void *ex, int type, int trace,
+           int *fncount, int *grcount, int maxit);
 @end example
 
 @item Limited-memory BFGS with bounds:
 @findex lbfgsb
 @example
 void lbfgsb(int n, int lmm, double *x, double *lower,
-	    double *upper, int *nbd, double *Fmin, optimfn fn,
-	    optimgr gr, int *fail, void *ex, double factr,
-	    double pgtol, int *fncount, int *grcount,
-	    int maxit, char *msg, int trace, int nREPORT);
+            double *upper, int *nbd, double *Fmin, optimfn fn,
+            optimgr gr, int *fail, void *ex, double factr,
+            double pgtol, int *fncount, int *grcount,
+            int maxit, char *msg, int trace, int nREPORT);
 @end example
 
 @item Simulated annealing:
 @findex samin
 @example
 void samin(int n, double *x, double *Fmin, optimfn fn, int maxit,
-	   int tmax, double temp, int trace, void *ex);
+           int tmax, double temp, int trace, void *ex);
 @end example
 
 @end itemize
@@ -13169,20 +13305,20 @@ integrals over finite and infinite intervals (or ``ranges'' or
 @findex Rdqags
 @example
 void Rdqags(integr_fn f, void *ex, double *a, double *b,
-	    double *epsabs, double *epsrel,
-	    double *result, double *abserr, int *neval, int *ier,
-	    int *limit, int *lenw, int *last,
-	    int *iwork, double *work);
+            double *epsabs, double *epsrel,
+            double *result, double *abserr, int *neval, int *ier,
+            int *limit, int *lenw, int *last,
+            int *iwork, double *work);
 @end example
 
 @item Infinite:
 @findex Rdqagi
 @example
 void Rdqagi(integr_fn f, void *ex, double *bound, int *inf,
-	    double *epsabs, double *epsrel,
-	    double *result, double *abserr, int *neval, int *ier,
-	    int *limit, int *lenw, int *last,
-	    int *iwork, double *work);
+            double *epsabs, double *epsrel,
+            double *result, double *abserr, int *neval, int *ier,
+            int *limit, int *lenw, int *last,
+            int *iwork, double *work);
 @end example
 
 @end itemize
@@ -13477,8 +13613,8 @@ header file @file{Rversion.h} for their format.  Note that the minor
 version includes the patchlevel (as in @samp{2.2}).
 
 Packages which use @code{alloca} need to ensure it is defined: as it is
-part of neither C nor POSIX there is no standard way to do so.  As
-from @R{} 3.2.2 one can use
+part of neither C nor POSIX there is no standard way to do so.  One can
+use
 
 @example
 #include <Rconfig.h> // for HAVE_ALLOCA_H
@@ -13713,7 +13849,7 @@ Let us re-iterate the advice to include system headers before the @R{}
 header files, especially @file{Rinternals.h} (included by
 @file{Rdefines.h}) and @file{Rmath.h}, which redefine names which may be
 used in system headers (fewer if @samp{R_NO_REMAP} is defined, or
-@samp{R_NO_REMAP_RMATH} for @file{Rmath.h}, as from @R{} 3.1.0).
+@samp{R_NO_REMAP_RMATH} for @file{Rmath.h}).
 
 @node Generic functions and methods, Linking GUIs and other front-ends to R, The R API, Top
 @chapter Generic functions and methods
@@ -14006,13 +14142,13 @@ int main(int ac, char **av)
     /* do some more setup */
 
     /* submit some code to R, which is done interactively via
-	run_Rmainloop();
+        run_Rmainloop();
 
-	A possible substitute for a pseudo-console is
+        A possible substitute for a pseudo-console is
 
-	R_ReplDLLinit();
-	while(R_ReplDLLdo1() > 0) @{
-	/* add user actions here if desired */
+        R_ReplDLLinit();
+        while(R_ReplDLLdo1() > 0) @{
+        /* add user actions here if desired */
        @}
 
      */
@@ -14430,11 +14566,14 @@ the @pkg{tcltk} package.
 It is not intended that these facilities are used by packages, but if
 they are needed exceptionally, the package should ensure that it cleans
 up and removes its handlers when its namespace is unloaded.  Note that
-the header @file{sys/select.h} is required: users should check this is
-available and define @code{HAVE_SYS_SELECT_H} before including
-@file{R_ext/eventloop.h}.  (It is often the case that another header
-will include @file{sys/select.h} before @file{eventloop.h} is processed,
-but this should not be relied on.)
+the header @file{sys/select.h} is needed@footnote{At least according to
+POSIX 2004 and later.  Earlier standards prescribed @file{sys/time.h}
+and HP-UX continued to use that: @file{R_ext/eventloop.h} will include
+it from @R{} 3.4.0 if @code{HAVE_SYS_TIME_H} is defined.}: users should
+check this is available and define @code{HAVE_SYS_SELECT_H} before
+including @file{R_ext/eventloop.h}. (It is often the case that another
+header will include @file{sys/select.h} before @file{eventloop.h} is
+processed, but this should not be relied on.)
 
 An alternative front-end needs both to make provision for other @R{}
 events whilst waiting for input, and to ensure that it is not frozen out
@@ -14462,7 +14601,9 @@ substitute is defined in @R{}, so your code needs to define
 @code{HAVE_UINTPTR_T} appropriately.  To do so, test if the type is
 defined in C header @file{stdint.h} or C++ header @file{cstdint} and if
 so include the header and define @code{HAVE_UINTPTR_T} before including
-@file{Rinterface.h}.
+@file{Rinterface.h}.  (As from @R{} 3.4.0 for C code one can simply
+include @file{Rconfig.h}, possibly @emph{via} @file{R.h}, and for C++11
+code @file{Rinterface.h} will include the header @file{cstdint}.)
 
 These will be set@footnote{at least on platforms where the values are
 available, that is having @code{getrlimit} and on Linux or having

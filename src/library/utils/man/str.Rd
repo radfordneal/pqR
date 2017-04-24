@@ -1,6 +1,6 @@
 % File src/library/utils/man/str.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2009 R Core Team
+% Copyright 1995-2016 R Core Team
 % Distributed under GPL 2 or later
 
 \name{str}
@@ -17,6 +17,7 @@ str(object, \dots)
 \method{str}{default}(object, max.level = NA,
     vec.len  = strO$vec.len, digits.d = strO$digits.d,
     nchar.max = 128, give.attr = TRUE,
+    drop.deparse.attr = strO$drop.deparse.attr,
     give.head = TRUE, give.length = give.head,
     width = getOption("width"), nest.lev = 0,
     indent.str = paste(rep.int(" ", max(0, nest.lev + 1)),
@@ -26,6 +27,7 @@ str(object, \dots)
     formatNum = strO$formatNum, list.len = 99, \dots)
 
 strOptions(strict.width = "no", digits.d = 3, vec.len = 4,
+           drop.deparse.attr = TRUE,
            formatNum = function(x, ...)
                        format(x, trim = TRUE, drop0trailing = TRUE, ...))
 }
@@ -60,6 +62,11 @@ strOptions(strict.width = "no", digits.d = 3, vec.len = 4,
     \code{longch} example below.}
   \item{give.attr}{logical; if \code{TRUE} (default), show attributes
     as sub structures.}
+  \item{drop.deparse.attr}{logical; if \code{TRUE} (default),
+    \code{\link{deparse}(control = <S>)} will not have
+    \code{"showAttributes"} in \code{<S>}.  Used to be hard coded to
+    \code{FALSE} and hence can be set via \code{strOptions()} for back
+    compatibility.}
   \item{give.length}{logical; if \code{TRUE} (default), indicate
     length (as \code{[1:\dots]}).}
   \item{give.head}{logical; if \code{TRUE} (default), give (possibly
@@ -129,11 +136,33 @@ ch <- letters[1:12]; is.na(ch) <- 3:5
 str(ch) # character NA's
 
 str(list(a = "A", L = as.list(1:100)), list.len = 9)
+##                                     ------------
+## " .. [list output truncated] "
+
+## Long strings,   'nchar.max'; 'strict.width' :
 nchar(longch <- paste(rep(letters,100), collapse = ""))
 str(longch)
 str(longch, nchar.max = 52)
-
 str(longch, strict.width = "wrap")
+
+## Multibyte characters in strings (in multibyte locales):
+oloc <- Sys.getlocale("LC_CTYPE")
+mbyte.lc <- if(.Platform$OS.type == "windows")
+ "English_United States.28605" else "en_GB.UTF-8"
+try(Sys.setlocale("LC_CTYPE", mbyte.lc))
+## Truncation behavior (<-> correct width measurement) for "long" non-ASCII:
+idx <- c(65313:65338, 65345:65350)
+fwch <- intToUtf8(idx) # full width character string: each has width 2
+ch <- strtrim(paste(LETTERS, collapse="._"), 64)
+(ncc <- c(c.ch = nchar(ch),   w.ch = nchar(ch,   "w"),
+          c.fw = nchar(fwch), w.fw = nchar(fwch, "w")))
+stopifnot(unname(ncc) == c(64,64, 32, 64))
+## nchar.max: 1st line needs an increase of  2  in order to see  1  (in UTF-8!):
+invisible(lapply(60:66, function(N) str(fwch, nchar.max = N)))
+invisible(lapply(60:66, function(N) str( ch , nchar.max = N))) # "1 is 1" here
+## revert locale to previous:
+Sys.setlocale("LC_CTYPE", oloc)
+
 
 ## Settings for narrow transcript :
 op <- options(width = 60,

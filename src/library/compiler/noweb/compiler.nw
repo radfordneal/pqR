@@ -134,23 +134,28 @@ installed or for just-in-time (JIT) compilation of functions or
 expressions.  The mechanism for enabling these is experimental and
 likely to change.
 
-For now, compilation of packages requires the use of lazy loading and
-can be enabled either by calling [[compilePKGS]] with argument
-[[TRUE]] or by starting R with the environment variable
-[[R_COMPILE_PKGS]] set to a positive integer value.  In a UNIX-like
-environment, for example, installing a package with
+For now, compilation of packages requires the use of lazy loading and can be
+enabled either by calling [[compilePKGS]] with argument [[TRUE]] or by
+starting R with the environment variable [[_R_COMPILE_PKGS_]] set to a
+positive integer value.  These settings are used internally during R build
+to compile the base package (and tools, utils, methods, etc) and by
+[[R CMD INSTALL]].
+Functions are compiled as they are written to the lazy loading database.
+Compilation of packages should only be enabled for that time, because it
+adds noticeable time and space overhead to any serialization.
+
+In a UNIX-like environment, for example, installing a package with
 \begin{verbatim}
 env R_COMPILE_PKGS=1 R CMD INSTALL foo.tar.gz
 \end{verbatim}
-will compile the functions in the package as they are written to the
-lazy loading data base.
+will internally enable package compilation using [[compilePKGS]].
 
 If R is installed from source then the base and required packages can
 be compiled on installation using
 \begin{verbatim}
 make bytecode
 \end{verbatim}
-This does not require setting the [[R_COMPILE_PKGS]] environment variable.
+This does not require setting the [[_R_COMPILE_PKGS_]] environment variable.
 
 JIT compilation can be enabled from within R by calling [[enableJIT]]
 with a non-negative integer argument or by starting R with the
@@ -185,14 +190,23 @@ well as various compiler option settings.
 
 The simplest function in the top level compiler interface is the
 function [[compile]].  This function requires an expression argument
-and takes two optional arguments: an environment and a list of
-options. The default environment is the global environment.
+and takes three optional arguments: an environment, a list of
+options and source code reference.  The default environment is the global
+environment. By default, the source reference argument is [[NULL]] and the
+source reference is taken from the [[srcref]] attribute of the expression
+argument.
 <<[[compile]] function>>=
-compile <- function(e, env = .GlobalEnv, options = NULL) {
+compile <- function(e, env = .GlobalEnv, options = NULL, srcref = NULL) {
     cenv <- makeCenv(env)
     cntxt <- make.toplevelContext(cenv, options)
     cntxt$env <- addCenvVars(cenv, findLocals(e, cntxt))
-    genCode(e, cntxt)
+    if (mayCallBrowser(e, cntxt))
+        ## NOTE: compilation will be attempted repeatedly
+        e
+    else if (is.null(srcref))
+        genCode(e, cntxt)
+    else
+        genCode(e, cntxt, loc = list(expr = e, srcref = srcref))
 }
 @ %def compile
 The supplied environment is converted into a compilation environment
@@ -205,13 +219,13 @@ Compilation environments are described in Section
 \ref{sec:environments} and compiler contexts in Section
 \ref{sec:contexts}. The [[genCode]] function is defined as
 <<[[genCode]] function>>=
-genCode <- function(e, cntxt, gen = NULL) {
-    cb <- make.codeBuf(e)
+genCode <- function(e, cntxt, gen = NULL, loc = NULL) {
+    cb <- make.codeBuf(e, loc)
     if (is.null(gen))
-        cmp(e, cb, cntxt)
+        cmp(e, cb, cntxt, setloc = FALSE)
     else
         gen(cb, cntxt)
-    codeBufCode(cb)
+    codeBufCode(cb, cntxt)
 }
 @ %def genCode
 [[genCode]] creates a code buffer, fills the code buffer, and then
@@ -220,7 +234,9 @@ the most common case [[genCode]] uses the low level recursive
 compilation function [[cmp]], described in Section \ref{subsec:cmp},
 to generate the code.  For added flexibility it can be given a
 generator function that emits code into the code buffer based on the
-provided context.  This is used in Section \ref{sec:loops} for ****.
+provided context.  This is used in Section \ref{sec:loops} for
+compilation of loop bodies in loops that require an explicit loop context
+(and a long jump in the byte-code interpreter).
 
 
 \subsection{Basic code buffer interface}
@@ -294,13 +310,19 @@ else
 @ 
 The function [[cmp]] is then defined as
 <<[[cmp]] function>>=
-cmp <- function(e, cb, cntxt, missingOK = FALSE) {
+cmp <- function(e, cb, cntxt, missingOK = FALSE, setloc = TRUE) {
+    if (setloc) {
+        sloc <- cb$savecurloc()
+        cb$setcurexpr(e)
+    }
     ce <- constantFold(e, cntxt)
     if (is.null(ce)) {
         <<generate code for expression [[e]]>>
     }
     else
         cmpConst(ce$value, cb, cntxt)
+    if (setloc)
+        cb$restorecurloc(sloc)
 }
 @ %def cmp
 The call code generator [[cmpCall]] will recursively call [[cmp]].
@@ -524,12 +546,14 @@ cmpCallExprFun <- function(fun, args, call, cb, cntxt) {
 The actual definition of [[cmpCall]] is a bit more complex than the
 simplified one given above:
 <<[[cmpCall]] function>>=
-cmpCall <- function(call, cb, cntxt) {
+cmpCall <- function(call, cb, cntxt, inlineOK = TRUE) {
+    sloc <- cb$savecurloc()
+    cb$setcurexpr(call)
     cntxt <- make.callContext(cntxt, call)
     fun <- call[[1]]
     args <- call[-1]
     if (typeof(fun) == "symbol") {
-        if (! tryInline(call, cb, cntxt)) {
+        if (! (inlineOK && tryInline(call, cb, cntxt))) {
             <<check the call to a symbol function>>
 	    cmpCallSymFun(fun, args, call, cb, cntxt)
         }
@@ -538,14 +562,16 @@ cmpCall <- function(call, cb, cntxt) {
         <<hack for handling [[break()]] and [[next()]] expressions>>
         cmpCallExprFun(fun, args, call, cb, cntxt)
     }
+    cb$restorecurloc(sloc)
 }
 @ %def cmpCall
 The main addition is the use of a [[tryInline]] function which tries
-to generate more efficient code for particular functions.  This
-function returns [[TRUE]] if it has handled code generation and
-[[FALSE]] if it has not.  Code will be generated by the inline
-mechanism if inline handlers for the particular function are available
-and the optimization level permits their use.  Details of the inlining
+to generate more efficient code for particular functions.  The
+[[inlineOK]] argument can be used to disable inlining. This function
+returns [[TRUE]] if it has handled code generation and [[FALSE]] if it
+has not.  Code will be generated by the inline mechanism if inline
+handlers for the particular function are available and the
+optimization level permits their use.  Details of the inlining
 mechanism are given in Section \ref{sec:inlining}.
 
 In addition to the inlining mechanism, some checking of the call is
@@ -563,23 +589,20 @@ else {
 @ 
 and [[checkCall]] is defined as
 <<[[checkCall]] function>>=
-## **** clean up to use tryCatch
 ## **** figure out how to handler multi-line deparses
 ## ****     e.g. checkCall(`{`, quote({}))
 ## **** better design would capture error object, wrap it up, and pass it on
+## **** use approach from codetools to capture partial argument match
+## ****     warnings if enabled?
 checkCall <- function(def, call, signal = warning) {
     if (typeof(def) %in% c("builtin", "special"))
         def <- args(def)
     if (typeof(def) != "closure" || any.dots(call))
         NA
     else {
-        old <- getOption("show.error.messages")
-        if (is.null(old)) old <- TRUE
-        options(show.error.messages=FALSE)
-        msg <- try({match.call(def, call); NULL})
-        options(show.error.messages=old)
+        msg <- tryCatch({match.call(def, call); NULL},
+                        error = function(e) conditionMessage(e))
         if (! is.null(msg)) {
-            msg <- sub("\n$", "", sub("^E.*: ", "", msg))
             emsg <- gettextf("possible error in '%s': %s",
                              deparse(call, 20)[1], msg)
             if (! is.null(signal)) signal(emsg)
@@ -684,7 +707,7 @@ though it is not clean how much this would gain.
 <<compile a general argument>>=
 else {
     if (is.symbol(a) || typeof(a) == "language") {
-        ci <- cb$putconst(genCode(a, pcntxt))
+        ci <- cb$putconst(genCode(a, pcntxt, loc = cb$savecurloc()))
         cb$putcode(MAKEPROM.OP, ci)
     }
     else
@@ -794,7 +817,8 @@ addition, the expression to be compiled into the code buffer is stored
 as the first constant in the constant pool; this can be used to
 retrieve the source code for a compiled expression.
 <<[[make.codeBuf]] function>>=
-make.codeBuf <- function(expr) {
+make.codeBuf <- function(expr, loc = NULL) {
+    <<source location tracking implementation>>
     <<instruction stream buffer implementation>>
     <<constant pool buffer implementation>>
     <<label management interface>>
@@ -804,8 +828,15 @@ make.codeBuf <- function(expr) {
                putconst = putconst,
                makelabel = makelabel,
                putlabel = putlabel,
-	       patchlabels = patchlabels)
+	       patchlabels = patchlabels,
+               setcurexpr = setcurexpr,
+               setcurloc = setcurloc,
+               commitlocs = commitlocs,
+               savecurloc = savecurloc,
+               restorecurloc = restorecurloc)
     cb$putconst(expr) ## insert expression as first constant.
+      ## NOTE: this will also insert the srcref directly into the constant
+      ## pool
     cb
 }
 @ %def make.codeBuf
@@ -823,13 +854,29 @@ codeCount <- 1
 putcode <- function(...) {
     new <- list(...)
     newLen <- length(new)
-    while (codeCount + newLen > length(codeBuf))
+    while (codeCount + newLen > length(codeBuf)) {
         codeBuf <<- c(codeBuf, vector("list", length(codeBuf)))
-    codeBuf[(codeCount + 1) : (codeCount + newLen)] <<- new
+        if (exprTrackingOn)
+            exprBuf <<- c(exprBuf, vector("integer", length(exprBuf)))
+        if (srcrefTrackingOn)
+            srcrefBuf <<- c(srcrefBuf, vector("integer", length(srcrefBuf)))
+    }
+    codeRange <- (codeCount + 1) : (codeCount + newLen)
+    codeBuf[codeRange] <<- new
+
+    if (exprTrackingOn) {   ## put current expression into the constant pool
+        ei <- putconst(curExpr)
+        exprBuf[codeRange] <<- ei
+    }
+    if (srcrefTrackingOn) { ## put current srcref into the constant pool
+        si <- putconst(curSrcref)
+        srcrefBuf[codeRange] <<- si
+    }
+
     codeCount <<- codeCount + newLen
 }
 getcode <- function() as.integer(codeBuf[1 : codeCount])
-@ 
+@ %def
 
 The constant pool is accumulated into a list buffer.  The zero-based
 index of the constant in the pool is returned by the insertion
@@ -853,6 +900,116 @@ getconst <- function()
     .Internal(getconst(constBuf, constCount))
 @ %def
 
+The compiler maintains a mapping from code to source locations. For each
+value in the code buffer (instruction and operand) there is a source code
+reference ([[srcref]]) and the corresponding expression (AST).  The code
+buffer implementation remembers the current location (source reference and
+expression), which can be set by [[setcurloc]], [[setcurexpr]] or
+[[restorecurloc]] and retrieved by [[savecurloc]].  In addition to emitting
+code, [[putconst]] also copies the current location information into the
+constant pool and records the resulting constant indices in a source
+reference buffer and expression buffer.  When the final code is extracted
+using [[codeBufCode]], the source reference and expression buffers are
+copied into the constant pool as vectors indexed by code offset (program
+counter).
+<<source location tracking functions>>=
+extractSrcref <- function(sref, idx) {
+    if (is.list(sref) && length(sref) >= idx)
+        sref <- sref[[idx]]
+    else if (is.integer(sref) && length(sref) >= 6)
+        sref
+    else
+        NULL
+}
+getExprSrcref <- function(expr) {
+    sattr <- attr(expr, "srcref")
+    extractSrcref(sattr, 1)
+}
+# if block is a block srcref, get its idx'th entry
+# if block is a single srcref, return this srcref
+getBlockSrcref <- function(block, idx) {
+  extractSrcref(block, idx)
+}
+@ %def
+
+<<source location tracking implementation>>=
+exprTrackingOn <- TRUE
+srcrefTrackingOn <- TRUE
+
+if (is.null(loc)) {
+    curExpr <- expr
+    curSrcref <- getExprSrcref(expr)
+} else {
+    curExpr <- loc$expr
+    curSrcref <- loc$srcref
+}
+
+if (is.null(curSrcref))
+    ## when top-level srcref is null, we speculate there will be no
+    ##   source references within the compiled expressions either,
+    ##   disabling the tracking makes the resulting constant pool
+    ##   smaller
+    srcrefTrackingOn <- FALSE
+
+exprBuf <- NA   ## exprBuf will have the same length as codeBuf
+srcrefBuf <- NA ## srcrefBuf will have the same length as codeBuf
+
+if (!exprTrackingOn) {
+    curExpr <- NULL
+    exprBuf <- NULL
+}
+if (!srcrefTrackingOn) {
+    curSrcref <- NULL
+    srcrefBuf <- NULL
+}
+
+## set the current expression
+## also update the srcref according to expr, if expr has srcref attribute
+##   (note: never clears current srcref)
+setcurexpr <- function(expr) {
+    if (exprTrackingOn) {
+        curExpr <<- expr
+    }
+    if (srcrefTrackingOn) {
+        sref <- getExprSrcref(expr)
+        if (!is.null(sref) && srcrefTrackingOn)
+            curSrcref <<- sref
+     }
+}
+## unconditionally sets the current expression and srcrefs
+setcurloc <- function(expr, sref) {
+    if (exprTrackingOn)
+        curExpr <<- expr
+    if (srcrefTrackingOn)
+        curSrcref <<- sref
+}
+## add location information (current expressions, srcrefs) to the constant pool
+commitlocs <- function() {
+    if (exprTrackingOn) {
+      exprs <- exprBuf[1:codeCount]
+      class(exprs) <- "expressionsIndex"
+      putconst(exprs)
+    }
+
+    if (srcrefTrackingOn) {
+      srefs <- srcrefBuf[1:codeCount]
+      class(srefs) <- "srcrefsIndex"
+      putconst(srefs)
+    }
+
+    ## these entries will be at the end of the constant pool, assuming only the compiler
+    ## uses these two classes
+    NULL
+}
+savecurloc <- function() {
+    list(expr = curExpr, srcref = curSrcref)
+}
+restorecurloc <- function(saved) {
+    if (exprTrackingOn) curExpr <<- saved$expr
+    if (srcrefTrackingOn) curSrcref <<- saved$srcref
+}
+@ %def
+
 
 Labels are used for identifying targets for branching instruction.  The
 label management interface creates new labels with [[makelabel]] as
@@ -873,11 +1030,11 @@ by [[patchlabels]].  Labels can appear directly in the instruction
 stream and in lists that have been placed in the instruction stream;
 this is used for the [[SWITCH]] instruction.
 <<label management interface>>=
-patchlabels <- function() {
+patchlabels <- function(cntxt) {
     offset <- function(lbl) {
         if (is.null(labels[[lbl]]))
-            stop(gettextf("no offset recorded for label \"%s\"", lbl),
-                 domain = NA)
+            cntxt$stop(gettextf("no offset recorded for label \"%s\"", lbl),
+                       cntxt)
         labels[[lbl]]
     }
     for (i in 1 : codeCount) {
@@ -896,8 +1053,9 @@ patchlabels <- function() {
 The contents of the code buffer is extracted into a code object by
 calling [[codeBufCode]]:
 <<[[codeBufCode]] function>>=
-codeBufCode <- function(cb) {
-    cb$patchlabels()
+codeBufCode <- function(cb, cntxt) {
+    cb$patchlabels(cntxt)
+    cb$commitlocs()
     .Internal(mkCode(cb$code(), cb$const()))
 }
 @ %def codeBufCode
@@ -1053,7 +1211,7 @@ be suppressed.
 <<compiler options data base>>=
 compilerOptions <- new.env(hash = TRUE, parent = emptyenv())
 compilerOptions$optimize <- 2
-compilerOptions$suppressAll <- FALSE
+compilerOptions$suppressAll <- TRUE
 compilerOptions$suppressUndefined <-
     c(".Generic", ".Method", ".Random.seed", ".self")
 @ %def compilerOptions
@@ -1220,6 +1378,35 @@ notifyNoSwitchcases <- function(cntxt)
     if (! suppressAll(cntxt))
         cntxt$warn(gettext("'switch' with no alternatives"), cntxt)
 @ %def notifyNoSwitchcases
+
+The compiler signals when it encounters that a special syntactic function,
+such as [[for]], has been assigned to.
+<<[[notifyAssignSyntacticFun]] function>>=
+notifyAssignSyntacticFun <- function(funs, cntxt) {
+    if (! suppressAll(cntxt)) {
+        msg <- ngettext(length(funs),
+            "local assignment to syntactic function: ",
+            "local assignments to syntactic functions: ")
+        cntxt$warn(paste(msg, paste(funs, collapse = ", ")), cntxt)
+    }
+}
+@ %def notifyAssignSyntacticFun
+
+When the compiler encounters an error during JIT or package
+compilation, it catches the error and returns the original uncompiled
+code letting the AST interpreter handle it. This can happen due to a
+compiler bug or when the code being compiled violates certain
+assumptions made by the compiler (such as a certain discipline on
+frame types in the evaluation environment, as checked in
+[[frameTypes]]). The compiler will notify about catching such errors
+via [[notifyCompilerError]].
+
+<<[[notifyCompilerError]] function>>=
+notifyCompilerError <- function(msg)
+    if (!compilerOptions$suppressAll)
+        cat(paste(gettext("Error: compilation failed - "), msg, "\n"))
+@ %def notifyCompilerError
+
 
 \section{Compilation environments}
 \label{sec:environments}
@@ -1476,50 +1663,46 @@ environment.
 A simple approach for identifying all local variables created within
 an expression is given by
 <<findlocals0>>=
-findLocals0 <- function(e) {
+findLocals0 <- function(e, cntxt) {
     if (typeof(e) == "language") {
         if (typeof(e[[1]]) %in% c("symbol", "character"))
             switch(as.character(e[[1]]),
                    <<[[findLocals0]] switch clauses>>
-                   findLocalsList0(e[-1]))
-         else findLocalsList0(e)
+                   findLocalsList0(e[-1], cntxt))
+         else findLocalsList0(e, cntxt)
     }
     else character(0)
 }
 
-findLocalsList0 <- function(elist)
-    unique(unlist(lapply(elist, findLocals0)))
+findLocalsList0 <- function(elist, cntxt)
+    unique(unlist(lapply(elist, findLocals0, cntxt)))
 @ %def findLocals0 findLocalsList0
 
 For assignment expressions the assignment variable is added to any
 variables found in the value expression.
 <<[[findLocals0]] switch clauses>>=
 "=" =,
-"<-" = unique(c(getAssignedVar(e),
-                findLocalsList0(e[-1]))),
+"<-" = unique(c(getAssignedVar(e, cntxt),
+                findLocalsList0(e[-1], cntxt))),
 @ %def
 The assigned variable is determined by [[getAssignedVar]]:
 <<[[getAssignedVar]] function>>=
-getAssignedVar <- function(e) {
+getAssignedVar <- function(e, cntxt) {
     v <- e[[2]]
     if (missing(v))
-        stop(gettextf("bad assignment: %s", pasteExpr(e)),
-             domain = NA)
+        cntxt$stop(gettextf("bad assignment: %s", pasteExpr(e)), cntxt)
     else if (typeof(v) %in% c("symbol", "character"))
         as.character(v)
     else {
         while (typeof(v) == "language") {
             if (length(v) < 2)
-                stop(gettextf("bad assignment: %s", pasteExpr(e)),
-                     domain = NA)
+                cntxt$stop(gettextf("bad assignment: %s", pasteExpr(e)), cntxt)
             v <- v[[2]]
             if (missing(v))
-                stop(gettextf("bad assignment: %s", pasteExpr(e)),
-                     domain = NA)
+                cntxt$stop(gettextf("bad assignment: %s", pasteExpr(e)), cntxt)
         }
         if (typeof(v) != "symbol")
-            stop(gettextf("bad assignment: %s", pasteExpr(e)),
-                 domain = NA)
+            cntxt$stop(gettextf("bad assignment: %s", pasteExpr(e)), cntxt)
         as.character(v)
     }
 }
@@ -1529,7 +1712,7 @@ For [[for]] loops the loop variable is added to any variables found in
 the sequence and body expressions.
 <<[[findLocals0]] switch clauses>>=
 "for" = unique(c(as.character(e[2]),
-                 findLocalsList0(e[-2]))),
+                 findLocalsList0(e[-2], cntxt))),
 @ %def
 
 The variable in [[assign]] and [[delayedAssign]] expressions is
@@ -1540,8 +1723,8 @@ environment argument.
 "assign" = if (length(e) == 3 &&
                is.character(e[[2]]) &&
                length(e[[2]]) == 1)
-               c(e[[2]], findLocals0(e[[3]], shadowed))
-           else findLocalsList1(e[1], shadowed),
+               c(e[[2]], findLocals0(e[[3]], cntxt))
+           else findLocalsList0(e[1], cntxt),
 @ %def
 
 Variables defined within local functions created by [[function]]
@@ -1558,7 +1741,7 @@ evaluate their arguments and so do not contribute new local variables.
 "function" = character(0),
 "~" = character(0),
 "local" = if (length(e) == 2) character(0)
-          else findLocalsList0(e[-1]),
+          else findLocalsList0(e[-1], cntxt),
 "expression" =,
 "quote" = character(0),
 @ %def findLocals0
@@ -1576,38 +1759,38 @@ surrounding function.  To allow for this we can add an optional
 variable [[shadowed]] for providing a character vector of names of
 variables with shadowing local definitions.
 <<[[findLocals1]] function>>=
-findLocals1 <- function(e, shadowed = character(0)) {
+findLocals1 <- function(e, shadowed = character(0), cntxt) {
     if (typeof(e) == "language") {
         if (typeof(e[[1]]) %in% c("symbol", "character")) {
             v <- as.character(e[[1]])
             switch(v,
                    <<[[findLocals1]] switch clauses>>
-                   findLocalsList1(e[-1], shadowed))
+                   findLocalsList1(e[-1], shadowed, cntxt))
         }
-         else findLocalsList1(e, shadowed)
+         else findLocalsList1(e, shadowed, cntxt)
     }
     else character(0)
 }
 @ %def findLocals1 
 %% **** merge into single chunk??
 <<[[findLocalsList1]] function>>=
-findLocalsList1 <- function(elist, shadowed)
-    unique(unlist(lapply(elist, findLocals1, shadowed)))
+findLocalsList1 <- function(elist, shadowed, cntxt)
+    unique(unlist(lapply(elist, findLocals1, shadowed, cntxt)))
 @ %def findLocalsList1
 The handling of assignment operators, [[for]] loops, [[function]] and
 [[~]] expressions is analogous to the approach in [[findLocals0]].
 <<[[findLocals1]] switch clauses>>=
 "=" =,
-"<-" = unique(c(getAssignedVar(e),
-                findLocalsList1(e[-1], shadowed))),
+"<-" = unique(c(getAssignedVar(e, cntxt),
+                findLocalsList1(e[-1], shadowed, cntxt))),
 "for" = unique(c(as.character(e[2]),
-                 findLocalsList1(e[-2], shadowed))),
+                 findLocalsList1(e[-2], shadowed, cntxt))),
 "delayedAssign" =,
 "assign" = if (length(e) == 3 &&
                is.character(e[[2]]) &&
                length(e[[2]]) == 1)
-               c(e[[2]], findLocals1(e[[3]], shadowed))
-           else findLocalsList1(e[1], shadowed),
+               c(e[[2]], findLocals1(e[[3]], shadowed, cntxt))
+           else findLocalsList1(e[1], shadowed, cntxt),
 "function" = character(0),
 "~" = character(0),
 @ %def
@@ -1617,11 +1800,11 @@ definitions.
 <<[[findLocals1]] switch clauses>>=
 "local" = if (! v %in% shadowed && length(e) == 2)
               character(0)
-          else findLocalsList1(e[-1], shadowed),
+          else findLocalsList1(e[-1], shadowed, cntxt),
 "expression" =,
 "quote" = if (! v %in% shadowed)
               character(0)
-          else findLocalsList1(e[-1], shadowed),
+          else findLocalsList1(e[-1], shadowed, cntxt),
 @ %def
 The assignment functions could also be shadowed, but this is not very
 common, and assuming that they are not errs in the conservative
@@ -1647,7 +1830,6 @@ not to be shadowed.  This can be iterated to convergence.  It is also
 useful to check before returning whether any of the syntactically
 special variables has been assigned to.  If so, so a warning is
 issued.
-%% **** allow overriding of the warning function by cntxt?
 %% **** look into speeding up findLocalsList
 <<[[findLocalsList]] function>>=
 findLocalsList <- function(elist, cntxt) {
@@ -1657,7 +1839,7 @@ findLocalsList <- function(elist, cntxt) {
     sf <- initialShadowedFuns
     nsf <- length(sf)
     repeat {
-        vals <- findLocalsList1(elist, sf)
+        vals <- findLocalsList1(elist, sf, cntxt)
         redefined <- sf %in% vals
         last.nsf <- nsf
         sf <- unique(c(shadowed, sf[redefined]))
@@ -1665,13 +1847,8 @@ findLocalsList <- function(elist, cntxt) {
         ## **** need to fix the termination condition used in codetools!!!
         if (last.nsf == nsf) {
             rdsf <- vals %in% specialSyntaxFuns
-            if (any(rdsf)) {
-                msg <- ngettext(sum(rdsf),
-                                "local assignment to syntactic function: ",
-                                "local assignments to syntactic functions: ")
-                warning(msg, paste(vals[rdsf], collapse = ", "),
-                        domain = NA)
-            }
+            if (any(rdsf))
+                notifyAssignSyntacticFun(vals[rdsf], cntxt)
             return(vals)
         }
     }
@@ -1733,7 +1910,10 @@ optimization settings.  There are four possible optimization levels:
 \item[Level 2:] In addition to the inlining permitted by Level 1,
   functions that are syntactically special or are considered core
   language functions and are found via the global environment at
-  compile time may be inlined.
+  compile time may be inlined. Other functions in the base packages
+  found via the global environment may be inlined with a guard that
+  ensures at runtime that the inlined function has not been masked;
+  if it has, then the call in handled by the AST interpreter.
 \item[Level 3:] Any function in the base packages found via the global
   environment may be inlined.
   %% **** should there be an explicit list of functions where inlining
@@ -1768,24 +1948,46 @@ returns [[FALSE]].
 <<[[tryInline]] function>>=
 tryInline <- function(e, cb, cntxt) {
     name <- as.character(e[[1]])
-    info <- getInlineInfo(name, cntxt)
+    info <- getInlineInfo(name, cntxt, guardOK = TRUE)
     if (is.null(info))
         FALSE
     else {
         h <- getInlineHandler(name, info$package)
-        if (! is.null(h))
-            h(e, cb, cntxt)
+        if (! is.null(h)) {
+            if (info$guard) {
+	        <<inline with a guard instruction>>
+            }
+            else h(e, cb, cntxt)
+	}
         else FALSE
     }
 }
 @ %def tryInline
+If a guard instruction is needed then the instruction is emitted that
+will check validity of the inlined function at runtime; if the inlined
+code is not valid the guard instruction will evaluate the call in the
+AST interpreter and jump over the inlined code. The inlined code is
+handled as a non-tail-call; if the call is in tail position, then a
+return instruction is emitted.
+<<inline with a guard instruction>>=
+tailcall <- cntxt$tailcall
+if (tailcall) cntxttailcall <- FALSE
+expridx <- cb$putconst(e)
+endlabel <- cb$makelabel()
+cb$putcode(BASEGUARD.OP, expridx, endlabel)
+if (! h(e, cb, cntxt))
+    cmpCall(e, cb, cntxt, inlineOK = FALSE)
+cb$putlabel(endlabel)
+if (tailcall) cb$putcode(RETURN.OP)
+TRUE
+@ 
 
 The function [[getInlineInfo]] implements the optimization rules
 described at the beginning of this section.
 <<[[getInlineInfo]] function>>=
 noInlineSymbols <- c("standardGeneric")
 
-getInlineInfo <- function(name, cntxt) {
+getInlineInfo <- function(name, cntxt, guardOK = FALSE) {
     optimize <- cntxt$optimize
     if (optimize > 0 && ! (name %in% noInlineSymbols)) {
         info <- findCenvVar(name, cntxt$env)
@@ -1796,15 +1998,23 @@ getInlineInfo <- function(name, cntxt) {
             frame <- info$frame
             if (ftype == "namespace") {
                 <<fixup for a namespace import frame>>
-                info$package <- nsName(findHomeNS(name, frame))
+                info$package <- nsName(findHomeNS(name, frame, cntxt))
+		info$guard <- FALSE
                 info
             }
             else if (ftype == "global" &&
                      (optimize >= 3 ||
                       (optimize >= 2 && name %in% languageFuns))) {
                 info$package <- packFrameName(frame)
+		info$guard <- FALSE
                 info
             }
+            else if (guardOK && ftype == "global" &&
+                     packFrameName(frame) == "base") {
+                info$package <- packFrameName(frame)
+                info$guard <- TRUE
+                info
+            }                
             else NULL
         }
     }
@@ -2049,14 +2259,21 @@ setInlineHandler("{", function(e, cb, cntxt) {
     if (n == 1)
         cmp(NULL, cb, cntxt)
     else {
+        sloc <- cb$savecurloc()
+        bsrefs <- attr(e, "srcref")
         if (n > 2) {
             ncntxt <- make.noValueContext(cntxt)
             for (i in 2 : (n - 1)) {
-                cmp(e[[i]], cb, ncntxt)
+                subexp <- e[[i]]
+                cb$setcurloc(subexp, getBlockSrcref(bsrefs, i))
+                cmp(subexp, cb, ncntxt, setloc = FALSE)
                 cb$putcode(POP.OP)
             }
         }
-        cmp(e[[n]], cb, cntxt)
+        subexp <- e[[n]]
+        cb$setcurloc(subexp, getBlockSrcref(bsrefs, n))
+        cmp(subexp, cb, cntxt, setloc = FALSE)
+        cb$restorecurloc(sloc)
     }
     TRUE
 })
@@ -2076,9 +2293,12 @@ versions of the compiler.
 setInlineHandler("function", function(e, cb, cntxt) {
     forms <- e[[2]]
     body <- e[[3]]
+    sref <- e[[4]]
     ncntxt <- make.functionContext(cntxt, forms, body)
-    cbody <- genCode(body, ncntxt)
-    ci <- cb$putconst(list(forms, cbody))
+    if (mayCallBrowser(body, cntxt))
+        return(FALSE)
+    cbody <- genCode(body, ncntxt, loc = cb$savecurloc())
+    ci <- cb$putconst(list(forms, cbody, sref))
     cb$putcode(MAKECLOSURE.OP, ci)
     if (cntxt$tailcall) cb$putcode(RETURN.OP)
     TRUE
@@ -2142,19 +2362,23 @@ One frequently used [[SPECIAL]] function is [[.Internal]]. When the
 compile the call as for a [[BUILTIN]] function.  For [[.Internal]]
 functions of type [[SPECIAL]] there is less of an advantage, and so
 the [[.Internal]] expression is compiled with [[cmpSpecial]].  It may
-be useful to use introduce a [[GETINTLSPECIAL]] instruction and handle
-these analogously to [[.Internal]] functions of type [[BUILTIN]].
+be useful to introduce a [[GETINTLSPECIAL]] instruction and handle
+these analogously to [[.Internal]] functions of type [[BUILTIN]].  The
+handler is assigned to the variable [[cmpDotInternalCall]] to allow
+its use in inlining.
 %% **** look into adding GETINTLSPECIAL??
 <<inlining handler for [[.Internal]]>>=
-setInlineHandler(".Internal", function(e, cb, cntxt) {
+cmpDotInternalCall <- function(e, cb, cntxt) {
     ee <- e[[2]]
     sym <- ee[[1]]
     if (.Internal(is.builtin.internal(sym)))
         cmpBuiltin(ee, cb, cntxt, internal = TRUE)
     else
         cmpSpecial(e, cb, cntxt)
-})
-@ %def
+}
+
+setInlineHandler(".Internal", cmpDotInternalCall)
+@ %def cmpDotInternalCall
 
 
 \subsection{The [[local]] function}
@@ -2170,21 +2394,41 @@ essentially the same as
 (function() expr)()
 \end{verbatim}
 There may be some minor differences related to what the [[sys.xyz]]
-functions return but these do not seem to be important. So the
-compiler handles one argument [[local]] calls by making this
+functions return. An instance of this was found in the [[RefManageR]]
+package which used [[parent.frame(2)]] to access the environment from which
+[[local]] was invoked. In this case, the use of [[parent.frame]] was
+unnecessary (and [[local]] was not needed either); the maintainer
+accepted a patch fixing this. The code pattern in the package was
+\begin{verbatim}
+MakeBibLaTeX <- function(docstyle = "text") local({
+  docstyle <- get("docstyle", parent.frame(2))
+  sortKeys <- function() 42
+  environment()
+})
+\end{verbatim}
+and the suggested fix was
+\begin{verbatim}
+MakeBibLaTeX <- function(docstyle = "text") {
+  sortKeys <- function() 42
+  environment()
+}
+\end{verbatim}
+So the compiler handles one argument [[local]] calls by making this
 conversion and compiling the result.
 %% **** add to language manual?
 <<inlining handler for [[local]] function>>=
 setInlineHandler("local", function(e, cb, cntxt) {
     if (length(e) == 2) {
-        ee <- as.call(list(as.call(list(as.name("function"), NULL, e[[2]]))))
+        ee <- as.call(list(as.call(list(
+            as.name("function"), NULL, e[[2]], NULL))))
         cmp(ee, cb, cntxt)
         TRUE
     }
     else FALSE
 })
 @ %def
-
+The interpreter couls, and probably should, be modified to handle this
+case of a [[local]] call expression in the same way as the compiler.
 
 \subsection{The [[return]] function}
 \label{subsec:return}
@@ -2436,9 +2680,22 @@ context for each loop, and [[break]] and [[next]] use [[longjmp]] to
 transfer control.  In general, compiled loops need to use a similar
 approach.  For now, this is implemented by the [[STARTLOOPCNTXT]] and
 [[ENDLOOPCNTXT]] instructions.  The [[STARTLOOPCNTXT]] instructions
-takes one argument, the constant pool index for a code object
-implementing the loop body.  The loop body should end with a call to
-[[ENDLOOPCNTXT]].
+takes two operands, a flag indicating whether the loop is a [[for]]
+loop or not, and a label which points after the loop. The interpreter
+jumps to this label in case of a non-local jump implementing
+[[break]].  The loop body should end with a call to [[ENDLOOPCNTXT]],
+which takes one operand indicating whether this is a [[for]] loop or
+not.  [[ENDLOOPCNTXT]] terminates the context established by
+[[STARTLOOPCNTXT]] and pops it off the context stack.  The context
+data is stored on the byte code interpreter stack; in the case of a
+[[for]] loop some loop state information is duplicated on the stack by
+[[STARTLOOPCNTXT]] and removed again by [[ENDLOOPCNTXT]]. The byte
+code intepreter stores the [[pc]] in a slot in the [[RCNTXT]]
+structure so it is available after a [[longjmp]] triggered by a
+[[break]] for retrieving the label on the [[ENDLOOPCNTXT]]
+instruction.  An alternative would be to add separate
+[[STARTFORLOOPCNTXT]] and [[ENDFORLOOPCNTXT]] instructions. Then the
+[[pc]] or the label could be stored on the note stack.
 
 At least with some assumptions it is often possible to implement
 [[break]] and [[next]] calls as simple [[GOTO]]s.  If all [[break]]
@@ -2460,7 +2717,7 @@ defined as
 <<inlining handler for [[repeat]] loops>>=
 setInlineHandler("repeat", function(e, cb, cntxt) {
     body <- e[[2]]
-    <<generate context and body code for [[repeat]] loop>>
+    <<generate context and body for [[repeat]] loop>>
     <<generate [[repeat]] and [[while]] loop wrap-up code>>
     TRUE
 })
@@ -2468,26 +2725,19 @@ setInlineHandler("repeat", function(e, cb, cntxt) {
 
 If a loop context is not needed then the code for the loop body is
 just written to the original code buffer.  The [[else]] clause in the
-code chunk below generates the code for the general case.  [[genCode]]
-is used to produce a new code object containing code for the loop body
-followed by the [[ENDLOOPCNTXT]] instruction, The code object is then
-installed in the context pool.  The [[STARTLOOPCNTXT]] instruction is
-emitted to the main code buffer.  When a separate code object is
-written the need for using [[RETURNJMP]] for [[return]] calls is
-indicated by setting the [[needRETURNJMP]] flag in the compiler
-context to [[TRUE]].
-<<generate context and body code for [[repeat]] loop>>=
+code chunk below generates the code for the general case. The need for
+using [[RETURNJMP]] for [[return]] calls is indicated by setting the
+[[needRETURNJMP]] flag in the compiler context to [[TRUE]].
+<<generate context and body for [[repeat]] loop>>=
 if (checkSkipLoopCntxt(body, cntxt))
     cmpRepeatBody(body, cb, cntxt)
 else {
     cntxt$needRETURNJMP <- TRUE ## **** do this a better way
-    code <- genCode(body, cntxt,
-                    function(cb, cntxt) {
-                        cmpRepeatBody(body, cb, cntxt)
-                        cb$putcode(ENDLOOPCNTXT.OP)
-                    })
-    bi <- cb$putconst(code)
-    cb$putcode(STARTLOOPCNTXT.OP, bi)
+    ljmpend.label <- cb$makelabel()
+    cb$putcode(STARTLOOPCNTXT.OP, 0, ljmpend.label)
+    cmpRepeatBody(body, cb, cntxt)
+    cb$putlabel(ljmpend.label)
+    cb$putcode(ENDLOOPCNTXT.OP, 0)
 }
 @ %def
 
@@ -2564,7 +2814,7 @@ structure of the [[repeat]] code generator:
 setInlineHandler("while", function(e, cb, cntxt) {
     cond <- e[[2]]
     body <- e[[3]]
-    <<generate context and body code for [[while]] loop>>
+    <<generate context and body for [[while]] loop>>
     <<generate [[repeat]] and [[while]] loop wrap-up code>>
     TRUE
 })
@@ -2573,18 +2823,16 @@ The context and body generation chunk is similar as well. The
 expression stored in the code object isn't quite right as what is
 compiled includes both the test and the body, but this code object
 should not be externally visible.
-<<generate context and body code for [[while]] loop>>=
+<<generate context and body for [[while]] loop>>=
 if (checkSkipLoopCntxt(cond, cntxt) && checkSkipLoopCntxt(body, cntxt))
     cmpWhileBody(e, cond, body, cb, cntxt)
 else {
     cntxt$needRETURNJMP <- TRUE ## **** do this a better way
-    code <- genCode(body, cntxt, ## **** expr isn't quite right
-                    function(cb, cntxt) {
-                        cmpWhileBody(e, cond, body, cb, cntxt)
-                        cb$putcode(ENDLOOPCNTXT.OP)
-                    })
-    bi <- cb$putconst(code)
-    cb$putcode(STARTLOOPCNTXT.OP, bi)
+    ljmpend.label <- cb$makelabel()
+    cb$putcode(STARTLOOPCNTXT.OP, 0, ljmpend.label)
+    cmpWhileBody(e, cond, body, cb, cntxt)
+    cb$putlabel(ljmpend.label)
+    cb$putcode(ENDLOOPCNTXT.OP, 0)
 }
 @ %def
 
@@ -2654,7 +2902,7 @@ setInlineHandler("for", function(e, cb, cntxt) {
     cmp(seq, cb, ncntxt)
     ci <- cb$putconst(sym)
     callidx <- cb$putconst(e)
-    <<generate context and body code for [[for]] loop>>
+    <<generate context and body for [[for]] loop>>
     <<generate [[for]] loop wrap-up code>>
     TRUE
 })
@@ -2669,7 +2917,7 @@ for the body will be a [[GOTO]] instruction that jumps to the
 [[STEPFOR]] instruction.  This design means the stepping and the jump
 can be handled by one instruction instead of two, a step instruction
 and a [[GOTO]].
-<<generate context and body code for [[for]] loop>>=
+<<generate context and body for [[for]] loop>>=
 if (checkSkipLoopCntxt(body, cntxt))
     cmpForBody(callidx, body, ci, cb, cntxt)
 else {
@@ -2677,13 +2925,11 @@ else {
     ctxt.label <- cb$makelabel()
     cb$putcode(STARTFOR.OP, callidx, ci, ctxt.label)
     cb$putlabel(ctxt.label)
-    code <- genCode(body, cntxt, ## **** expr isn't quite right
-                    function(cb, cntxt) {
-                        cmpForBody(NULL, body, NULL, cb, cntxt)
-                        cb$putcode(ENDLOOPCNTXT.OP)
-                    })
-    bi <- cb$putconst(code)
-    cb$putcode(STARTLOOPCNTXT.OP, bi)
+    ljmpend.label <- cb$makelabel()
+    cb$putcode(STARTLOOPCNTXT.OP, 1, ljmpend.label)
+    cmpForBody(NULL, body, NULL, cb, cntxt)
+    cb$putlabel(ljmpend.label)
+    cb$putcode(ENDLOOPCNTXT.OP, 1)
 }
 @ %def
 
@@ -2748,7 +2994,12 @@ cannot contain relevant [[break]] or [[next]] calls.  These stop
 expressions are calls to the three loop functions and to [[function]].
 Calls to functions like [[quote]] that are known not to evaluate their
 arguments could also be included among the stop functions but this
-doesn't seem particularly worth while at this time.
+doesn't seem particularly worth while at this time. Loops that include a
+call to [[eval]] (or [[evalq]]) are compiled with context to support a
+programming pattern present e.g. in package [[Rmpi]]: a server application
+is implemented using an infinite loop, which evaluates de-serialized code
+received from the client; the server shuts down when it receives a
+serialized version of [[break]].
 
 The recursive checking function is defined as
 <<[[checkSkipLoopCntxt]] function>>=
@@ -2763,6 +3014,8 @@ checkSkipLoopCntxt <- function(e, cntxt, breakOK = TRUE) {
                 TRUE
             else if (isLoopTopFun(fname, cntxt))
                 checkSkipLoopCntxtList(e[-1], cntxt, breakOK)
+            else if (fname %in% c("eval", "evalq"))
+                FALSE
             else
                 checkSkipLoopCntxtList(e[-1], cntxt, FALSE)
         }
@@ -2976,7 +3229,9 @@ cmpMath1 <- function(e, cb, cntxt) {
         name <- as.character(e[[1]])
         idx <- match(name, math1funs) - 1
         if (is.na(idx))
-            stop(sQuote(name), "is not a registered math1 function")
+            cntxt$stop(
+                paste(sQuote(name), "is not a registered math1 function"),
+                cntxt)
         ncntxt <- make.nonTailCallContext(cntxt)
         cmp(e[[2]], cb, ncntxt);
         ci <- cb$putconst(e)
@@ -3222,10 +3477,8 @@ cmpSimpleInternal <- function(e, cb, cntxt) {
         call <- inlineSimpleInternalCall(e, def)
         if (is.null(call))
             FALSE
-        else {
-            cmp(call, cb, cntxt)
-            TRUE
-        }
+	else
+            cmpDotInternalCall(call, cb, cntxt)
     }
 }
 @ %def cmpSimpleInternal
@@ -3234,7 +3487,8 @@ cmpSimpleInternal <- function(e, cb, cntxt) {
 safeBaseInternals <- c("atan2", "besselY", "beta", "choose",
                        "drop", "inherits", "is.vector", "lbeta", "lchoose",
                        "nchar", "polyroot", "typeof", "vector", "which.max",
-                       "which.min", "is.loaded", "identical")
+                       "which.min", "is.loaded", "identical",
+                       "match", "rep.int", "rep_len")
 
 for (i in safeBaseInternals) setInlineHandler(i,  cmpSimpleInternal)
 @ %def safeBaseInternals
@@ -3269,7 +3523,7 @@ in test code to check that the assumption made in the compiler is
 valid.  The implementation is
 <<[[simpleInternals]] function>>=
 simpleInternals <- function(pos = "package:base") {
-    names <- ls(pos = pos, all = T)
+    names <- ls(pos = pos, all = TRUE)
     if (length(names) == 0)
         character(0)
     else {
@@ -3761,7 +4015,7 @@ cmpAssign <- function(e, cb, cntxt) {
     superAssign <- as.character(e[[1]]) == "<<-"
     lhs <- e[[2]]
     value <- e[[3]]
-    symbol <- as.name(getAssignedVar(e))
+    symbol <- as.name(getAssignedVar(e, cntxt))
     if (superAssign && ! findVar(symbol, cntxt))
         notifyNoSuperAssignVar(symbol, cntxt)
     if (is.name(lhs) || is.character(lhs))
@@ -4037,7 +4291,7 @@ of the expressions that need to be considered, with [[*tmp*]] in place
 of the current left hand side argument. For example, for an assignment
 of the form [[f(g(h(x, k), j), i) <- v]] this produces
 \begin{verbatim}
-> flattenPlace(quote(f(g(h(x, k), j), i)))
+> flattenPlace(quote(f(g(h(x, k), j), i)))$places
 [[1]]
 f(`*tmp*`, i)
 
@@ -4057,9 +4311,12 @@ order. An argument context is used since there are already values on
 the stack.
 <<compile code to compute left hand side values>>=
 ncntxt <- make.argContext(cntxt)
-flatPlace <- flattenPlace(lhs)
-for (p in rev(flatPlace[-1]))
-    cmpGetterCall(p, cb, ncntxt)
+flat <- flattenPlace(lhs, cntxt)
+flatOrigPlace <- flat$origplaces
+flatPlace <- flat$places
+flatPlaceIdxs <- seq_along(flatPlace)[-1]
+for (i in rev(flatPlaceIdxs))
+    cmpGetterCall(flatPlace[[i]], flatOrigPlace[[i]], cb, ncntxt)
 @ %def
 The compilation of the individual calls carried out by
 [[cmpGetterCall]], which is presented in Section \ref{subsec:getter}.
@@ -4069,19 +4326,21 @@ right hand side value, to preserve the stack invariant.
 
 The function [[flattenPlace]] is defined as
 <<[[flattenPlace]] function>>=
-flattenPlace <- function(place) {
+flattenPlace <- function(place, cntxt) {
     places <- NULL
+    origplaces <- NULL
     while (typeof(place) == "language") {
         if (length(place) < 2)
-            stop("bad assignment 1")
+            cntxt$stop(gettext("bad assignment 1"), cntxt)
+        origplaces <- c(origplaces, list(place))
         tplace <- place
         tplace[[2]] <- as.name("*tmp*")
         places <- c(places, list(tplace))
         place <- place[[2]]
     }
     if (typeof(place) != "symbol")
-        stop("bad assignment 2")
-    places
+        cntxt$stop(gettext("bad assignment 2"), cntxt)
+    list(places = places, origplaces = origplaces)
 }
 @ %def flattenPlace
 
@@ -4090,9 +4349,9 @@ the original right hand side value followed by the left hand side
 values in the order in which they need to be modified. Code to call
 the sequence of replacement functions is generated by
 <<compile code to compute right hand side values>>=
-cmpSetterCall(flatPlace[[1]], value, cb, ncntxt)
-for (p in flatPlace[-1])
-    cmpSetterCall(p, as.name("*vtmp*"), cb, ncntxt)
+cmpSetterCall(flatPlace[[1]], flatOrigPlace[[1]], value, cb, ncntxt)
+for (i in flatPlaceIdxs)
+    cmpSetterCall(flatPlace[[i]], flatOrigPlace[[i]], as.name("*vtmp*"), cb, ncntxt)
 @ %def
 The first call uses the expression for the original right hand side in
 its call; all others will use [[*vtmp*]].  Each replacement function
@@ -4119,17 +4378,20 @@ the function is specified in the form [[foo::bar]] or [[foo:::bar]]
 differs only compiling the function expression and using [[CHECKFUN]]
 to verify the result and prepare the stack.
 <<[[cmpSetterCall]] function>>=
-cmpSetterCall <- function(place, vexpr, cb, cntxt) {
+cmpSetterCall <- function(place, origplace, vexpr, cb, cntxt) {
     afun <- getAssignFun(place[[1]])
     acall <- as.call(c(afun, as.list(place[-1]), list(value = vexpr)))
     acall[[2]] <- as.name("*tmp*")
     ncntxt <- make.callContext(cntxt, acall)
+    sloc <- cb$savecurloc()
+    cexpr <- as.call(c(afun, as.list(origplace[-1]), list(value = vexpr)))
+    cb$setcurexpr(cexpr)
     if (is.null(afun))
         ## **** warn instead and arrange for cmpSpecial?
         ## **** or generate code to signal runtime error?
         cntxt$stop(gettext("invalid function in complex assignment"))
     else if (typeof(afun) == "symbol") {
-        if (! trySetterInline(afun, place, acall, cb, ncntxt)) {
+        if (! trySetterInline(afun, place, origplace, acall, cb, ncntxt)) {
             ci <- cb$putconst(afun)
             cb$putcode(GETFUN.OP, ci)
             <<compile additional arguments and call to setter function>>
@@ -4140,6 +4402,7 @@ cmpSetterCall <- function(place, vexpr, cb, cntxt) {
         cb$putcode(CHECKFUN.OP)
         <<compile additional arguments and call to setter function>>
     }
+    cb$restorecurloc(sloc)
 }
 @ %def cmpSetterCall
 The common code for compiling additional arguments and issuing the
@@ -4211,7 +4474,7 @@ getSetterInlineHandler <- function(name, package = "base") {
     else NULL
 }
 
-trySetterInline <- function(afun, place, call, cb, cntxt) {
+trySetterInline <- function(afun, place, origplace, call, cb, cntxt) {
     name <- as.character(afun)
     info <- getInlineInfo(name, cntxt)
     if (is.null(info))
@@ -4219,7 +4482,7 @@ trySetterInline <- function(afun, place, call, cb, cntxt) {
     else {
         h <- getSetterInlineHandler(name, info$package)
         if (! is.null(h))
-            h(afun, place, call, cb, cntxt)
+            h(afun, place, origplace, call, cb, cntxt)
         else FALSE
     }
 }
@@ -4231,7 +4494,7 @@ would produce runtime errors; these are compiled by the generic
 mechanism.
 %% **** might be useful to signal a warning at compile time
 <<setter inline handler for [[$<-]]>>=
-setSetterInlineHandler("$<-", function(afun, place, call, cb, cntxt) {
+setSetterInlineHandler("$<-", function(afun, place, origplace, call, cb, cntxt) {
     if (any.dots(place) || length(place) != 3)
         FALSE
     else {
@@ -4275,11 +4538,11 @@ cmpSetterDispatch <- function(start.op, dflt.op, afun, place, call, cb, cntxt) {
 The two inlining handlers are then defined as
 <<setter inline handlers for [[ [<- ]] and [[ [[<- ]]>>=
 # **** this is now handled differently; see "Improved subset ..."
-# setSetterInlineHandler("[<-", function(afun, place, call, cb, cntxt)
+# setSetterInlineHandler("[<-", function(afun, place, origplace, call, cb, cntxt)
 #     cmpSetterDispatch(STARTSUBASSIGN.OP, DFLTSUBASSIGN.OP,
 #                       afun, place, call, cb, cntxt))
 
-# setSetterInlineHandler("[[<-", function(afun, place, call, cb, cntxt)
+# setSetterInlineHandler("[[<-", function(afun, place, origplace, call, cb, cntxt)
 #     cmpSetterDispatch(STARTSUBASSIGN2.OP, DFLTSUBASSIGN2.OP,
 #                       afun, place, call, cb, cntxt))
 @ %def
@@ -4291,12 +4554,12 @@ is then compiled by a recursive call to [[cmpSetterCall]]; the handler
 will decline in this second call and the default compilation strategy
 will be used.
 <<setter inlining handler for [[@<-]]>>=
-setSetterInlineHandler("@<-", function(afun, place, acall, cb, cntxt) {
+setSetterInlineHandler("@<-", function(afun, place, origplace, acall, cb, cntxt) {
     if (! dots.or.missing(place) && length(place) == 3 &&
         typeof(place[[3]]) == "symbol") {
         place[[3]] <- as.character(place[[3]])
         vexpr <- acall[[length(acall)]]
-	cmpSetterCall(place, vexpr, cb, cntxt)
+	cmpSetterCall(place, origplace, vexpr, cb, cntxt)
         TRUE
     }
     else FALSE
@@ -4313,8 +4576,10 @@ for installing the getter function on the stack.  These are then
 followed by common code for handling the additional arguments and the
 call.
 <<[[cmpGetterCall]] function>>=
-cmpGetterCall <- function(place, cb, cntxt) {
+cmpGetterCall <- function(place, origplace, cb, cntxt) {
     ncntxt <- make.callContext(cntxt, place)
+    sloc <- cb$savecurloc()
+    cb$setcurexpr(origplace)
     fun <- place[[1]]
     if (typeof(fun) == "symbol") {
         if (! tryGetterInline(place, cb, ncntxt)) {
@@ -4328,6 +4593,7 @@ cmpGetterCall <- function(place, cb, cntxt) {
         cb$putcode(CHECKFUN.OP)
 	<<compile additional arguments and call to getter function>>
     }
+    cb$restorecurloc(sloc)
 }
 @ %def cmpGetterCall
 In the common code, as in setter calls a [[NULL]] is placed on the
@@ -4545,7 +4811,7 @@ constNames <- c("pi", "T", "F")
 Call expressions are handled by determining whether the function
 called is eligible for constant folding, attempting to constant fold
 the arguments, and calling the folding function.  The result is the
-passed to [[checkConst]].  If an error occurs in the call to the
+passed to [[checkConst]].  If an error or a warning occurs in the call to the
 folding function then [[constantFoldCall]] returns [[NULL]].
 <<[[constantFoldCall]] function>>=
 constantFoldCall <- function(e, cntxt) {
@@ -4566,7 +4832,8 @@ constantFoldCall <- function(e, cntxt) {
             modes <- unlist(lapply(args, mode))
             if (all(modes %in% constModes)) {
                 tryCatch(checkConst(do.call(ffun, args)),
-                         error = function(e) NULL) ## **** issue warning??
+                         error = function(e) NULL, warning = function(w) NULL)
+                ## **** issue warning??
             }
             else NULL
         }
@@ -4627,7 +4894,13 @@ cmpfun <- function(f, options = NULL) {
     if (type == "closure") {
         cntxt <- make.toplevelContext(makeCenv(environment(f)), options)
         ncntxt <- make.functionContext(cntxt, formals(f), body(f))
-        b <- genCode(body(f), ncntxt)
+        if (mayCallBrowser(body(f), ncntxt))
+            return(f)
+        if (typeof(body(f)) != "language" || body(f)[1] != "{")
+            loc <- list(expr = body(f), srcref = getExprSrcref(f))
+        else
+            loc <- NULL
+        b <- genCode(body(f), ncntxt, loc = loc)
         val <- .Internal(bcClose(formals(f), b, environment(f)))
         attrs <- attributes(f)
         if (! is.null(attrs))
@@ -4647,14 +4920,56 @@ have a variant that returns the uncompiled function if there is an
 error during compilation.
 <<[[tryCmpfun]] function>>=
 tryCmpfun <- function(f)
-    tryCatch(cmpfun(f), error = function(e) f)
+    tryCatch(cmpfun(f), error = function(e) {
+        notifyCompilerError(paste(e$message, "at", deparse(e$call)))
+        f
+    })
 @ %def tryCmpfun
 
-A similar usility for expressions for use in JIT compilation of loops:
+A similar utility for expressions for use in JIT compilation of loops:
 <<[[tryCompile]] function>>=
 tryCompile <- function(e, ...)
-    tryCatch(compile(e, ...), error = function(err) e)
+    tryCatch(compile(e, ...), error = function(err) {
+        notifyCompilerError(paste(err$message, "at", deparse(err$call)))
+        e
+    })
 @ %def tryCompile
+
+If a function contains a call to [[browser]], it should not be compiled,
+because the byte-code interpreter does not support command-by-command
+execution ("n"). This function explores the AST of a closure to find out if
+it may contain a call to [[browser]]:
+
+<<[[mayCallBrowser]] function>>=
+mayCallBrowser <- function(e, cntxt) {
+    if (typeof(e) == "language") {
+        fun <- e[[1]]
+        if (typeof(fun) == "symbol") {
+            fname <- as.character(fun)
+            if (fname == "browser") ## not checking isBaseVar to err on the
+                                    ## positive
+                TRUE
+            else if (fname == "function" && isBaseVar(fname, cntxt))
+                FALSE
+            else
+                mayCallBrowserList(e[-1], cntxt)
+        }
+        else
+            mayCallBrowserList(e, cntxt)
+    }
+    else FALSE
+}
+@ %def mayCallBrowser
+
+A version that operates on a list of expressions is
+<<[[mayCallBrowserList]] function>>=
+mayCallBrowserList <- function(elist, cntxt) {
+    for (a in as.list(elist))
+        if (! missing(a) && mayCallBrowser(a, cntxt))
+            return(TRUE)
+    FALSE
+}
+@ %def mayCallBrowserList
 
 
 \subsection{Compiling and loading files}
@@ -4692,7 +5007,8 @@ cmpfile <- function(infile, outfile, ascii = FALSE, env = .GlobalEnv,
                     cat(paste("compiling expression", deparse(e, 20)[1],
                               "...\n"))
             }
-            cforms[[i]] <- genCode(e, cntxt)
+            if (!mayCallBrowser(e, cntxt))
+                cforms[[i]] <- genCode(e, cntxt)
         }
         cat(gettextf("saving to file \"%s\" ... ", outfile))
         .Internal(save.to.file(cforms, outfile, ascii))
@@ -4855,10 +5171,23 @@ function also allows undefined variables to be suppressed and the
 optimization level to be specified using environment variables.
 <<[[.onLoad]] function>>=
 .onLoad <- function(libname, pkgname) {
-    if (Sys.getenv("R_COMPILER_SUPPRESS_ALL") != "")
-        setCompilerOptions(suppressAll = TRUE)
-    if (Sys.getenv("R_COMPILER_SUPPRESS_UNDEFINED") != "")
-        setCompilerOptions(suppressUndefined = TRUE)
+    envAsLogical <- function(varName) {
+        value = Sys.getenv(varName)
+        if (value == "")
+            NA
+        else
+            switch(value,
+                "1"=, "TRUE"=, "true"=, "True"=, "yes"=, "Yes"= TRUE,
+                "0"=, "FALSE"=,"false"=,"False"=, "no"=, "No" = FALSE,
+                stop(gettextf("invalid environment variable value: %s==%s",
+                    varName, value)))
+    }
+    val <- envAsLogical("R_COMPILER_SUPPRESS_ALL")
+    if (!is.na(val))
+        setCompilerOptions(suppressAll = val)
+    val <- envAsLogical("R_COMPILER_SUPPRESS_UNDEFINED")
+    if (!is.na(val))
+        setCompilerOptions(suppressUndefined = val)
     if (Sys.getenv("R_COMPILER_OPTIMIZE") != "")
         tryCatch({
             lev <- as.integer(Sys.getenv("R_COMPILER_OPTIMIZE"))
@@ -5041,7 +5370,7 @@ cmpSubassignDispatch <- function(start.op, dflt.op, afun, place, call, cb,
 Again the handlers fall back to [[cmpSetterDispatch]] if there are
 named arguments or other complication.
 <<inline handlers for subassignment>>=
-setSetterInlineHandler("[<-", function(afun, place, call, cb, cntxt) {
+setSetterInlineHandler("[<-", function(afun, place, origplace, call, cb, cntxt) {
     if (dots.or.missing(place) || ! is.null(names(place)) || length(place) < 3)
         cmpSetterDispatch(STARTSUBASSIGN.OP, DFLTSUBASSIGN.OP,
                           afun, place, call, cb, cntxt) ## punt
@@ -5058,7 +5387,7 @@ setSetterInlineHandler("[<-", function(afun, place, call, cb, cntxt) {
     }
 })
 
-setSetterInlineHandler("[[<-", function(afun, place, call, cb, cntxt) {
+setSetterInlineHandler("[[<-", function(afun, place, origplace, call, cb, cntxt) {
     if (dots.or.missing(place) || ! is.null(names(place)) || length(place) < 3)
         cmpSetterDispatch(STARTSUBASSIGN2.OP, DFLTSUBASSIGN2.OP,
                           afun, place, call, cb, cntxt) ## punt
@@ -5359,7 +5688,7 @@ its imports, or if the home namespace cannot be determined.
 ## imports environment) find the namespace in which the symbol's value
 ## was originally defined. Returns NULL if the symbol is not found via
 ## the namespace.
-findHomeNS <- function(sym, ns) {
+findHomeNS <- function(sym, ns, cntxt) {
     <<if [[ns]] is an imports frame find the corresponding namespace>>
     if (exists(sym, ns, inherits = FALSE))
         ns
@@ -5385,7 +5714,8 @@ if (! isNamespace(ns)) {
     ## namespace.
     name <- attr(ns, "name")
     if (is.null(name))
-        stop("'ns' must be a namespace or a namespace imports environment")
+        cntxt$stop("'ns' must be a namespace or a namespace imports environment",
+            cntxt)
     ns <- getNamespace(sub("imports:", "", attr(ns, "name")))
 }
 @ %def
@@ -5418,7 +5748,7 @@ if (identical(ins, .BaseNamespaceEnv))
 else
     exports <- get(".__NAMESPACE__.", ins)$exports
 if (exists(sym, exports, inherits = FALSE))
-    return(findHomeNS(sym, ins))
+    return(findHomeNS(sym, ins, cntxt))
 @ %def
 
 For selective imports the [[imports]] entry is a named character
@@ -5435,7 +5765,7 @@ if (pos) {
     ## renaming this is still supported by the
     ## namespace code.)
     if (sym == exports[pos])
-        return(findHomeNS(sym, ins))
+        return(findHomeNS(sym, ins, cntxt))
     else
         return(NULL)
 }
@@ -5633,6 +5963,7 @@ DOTCALL.OP <- 119
 COLON.OP <- 120
 SEQALONG.OP <- 121
 SEQLEN.OP <- 122
+BASEGUARD.OP <- 123
 @ 
 
 \subsection{Instruction argument counts and names}
@@ -5645,8 +5976,8 @@ BRIFNOT.OP = 2,
 POP.OP = 0,
 DUP.OP = 0,
 PRINTVALUE.OP = 0,
-STARTLOOPCNTXT.OP = 1,
-ENDLOOPCNTXT.OP = 0,
+STARTLOOPCNTXT.OP = 2,
+ENDLOOPCNTXT.OP = 1,
 DOLOOPNEXT.OP = 0,
 DOLOOPBREAK.OP = 0,
 STARTFOR.OP = 3,
@@ -5760,7 +6091,8 @@ MATH1.OP = 2,
 DOTCALL.OP = 2,
 COLON.OP = 1,
 SEQALONG.OP = 1,
-SEQLEN.OP = 1
+SEQLEN.OP = 1,
+BASEGUARD.OP = 2
 )
 @ 
 
@@ -5921,6 +6253,8 @@ Opcodes.names <- names(Opcodes.argc)
 ## Code buffer implementation
 ##
 
+<<source location tracking functions>>
+
 <<[[make.codeBuf]] function>>
 
 <<[[codeBufCode]] function>>
@@ -5977,6 +6311,9 @@ Opcodes.names <- names(Opcodes.argc)
 
 <<[[cmpTag]] function>>
 
+<<[[mayCallBrowser]] function>>
+
+<<[[mayCallBrowserList]] function>>
 
 ##
 ## Inlining mechanism
@@ -6245,6 +6582,10 @@ Opcodes.names <- names(Opcodes.argc)
 <<[[notifyMultipleSwitchDefaults]] function>>
 
 <<[[notifyNoSwitchcases]] function>>
+
+<<[[notifyAssignSyntacticFun]] function>>
+
+<<[[notifyCompilerError]] function>>
 
 
 ##

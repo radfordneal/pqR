@@ -36,10 +36,12 @@ n.knots <- function(n) {
 }
 
 smooth.spline <-
-    function(x, y = NULL, w = NULL, df, spar = NULL, cv = FALSE,
+    function(x, y = NULL, w = NULL, df, spar = NULL, lambda = NULL, cv = FALSE,
              all.knots = FALSE, nknots = .nknots.smspl, keep.data = TRUE,
              df.offset = 0, penalty = 1, control.spar = list(),
-             tol = 1e-6 * IQR(x))
+	     tol = 1e-6 * IQR(x),
+	     keep.stuff = FALSE) # was "fix" till R 3.3.x
+
 {
     contr.sp <- list(low = -1.5, # low = 0.      was default till R 1.3.x
                      high = 1.5,
@@ -47,19 +49,21 @@ smooth.spline <-
                      eps = 2e-8, # eps = 0.00244 was default till R 1.3.x
                      maxit = 500, trace = getOption("verbose"))
     contr.sp[names(control.spar)] <- control.spar
-    if(!all(sapply(contr.sp[1:4], is.numeric)) ||
+    ctrl.Num <- contr.sp[1:4]
+    if(!all(vapply(ctrl.Num, is.numeric, NA)) ||
        contr.sp$tol < 0 || contr.sp$eps <= 0 || contr.sp$maxit <= 0)
         stop("invalid 'control.spar'")
 
-    xy <- xy.coords(x, y)
+    xy <- xy.coords(x, y, setLab=FALSE)
     y <- xy$y
     x <- xy$x
     if(!all(is.finite(c(x, y))))
         stop("missing or infinite values in inputs are not allowed")
     n <- length(x)
     if(is.na(n)) stop("invalid number of points")
+    no.wgts <- is.null(w)
     w <-
-	if(is.null(w)) rep_len(1, n)
+	if(no.wgts) 1 # rep_len(1, n)
 	else {
 	    if(n != length(w)) stop("lengths of 'x' and 'w' must match")
 	    if(any(w < 0)) stop("all weights should be non-negative")
@@ -70,6 +74,7 @@ smooth.spline <-
     ## Replace y[], w[] for same x[] (to a precision of 'tol') by their mean :
     if(!is.finite(tol) || tol <= 0)
         stop("'tol' must be strictly positive and finite")
+    if(!match(keep.stuff, c(FALSE,TRUE))) stop("invalid 'keep.stuff'")
     xx <- round((x - mean(x))/tol)  # de-mean to avoid possible overflow
     nd <- !duplicated(xx); ux <- sort(x[nd]); uxx <- sort(xx[nd])
     nx <- length(ux)
@@ -85,9 +90,11 @@ smooth.spline <-
 		   simplify = simplify, USE.NAMES = FALSE)
 	}
 	tmp <- matrix(unlist(tapply1(seq_len(n), ox,
-				     function(i, y, w)
-				     c(sum(w[i]), sum(w[i]*y[i]),sum(w[i]*y[i]^2)),
-				     y = y, w = w), use.names = FALSE),
+				     if(length(w) == 1L) function(i)
+					 c(length(i), sum(y[i]), sum(y[i]^2))
+				     else function(i)
+					 c(sum(w[i]), sum(w[i]*y[i]),sum(w[i]*y[i]^2))),
+                             use.names = FALSE),
 		      ncol = 3, byrow = TRUE)
     }
     wbar <- tmp[, 1L]
@@ -101,33 +108,53 @@ smooth.spline <-
         warning("cross-validation with non-unique 'x' values seems doubtful")
     r.ux <- ux[nx] - ux[1L]
     xbar <- (ux - ux[1L])/r.ux           # scaled to [0,1]
-    if(all.knots) {
-        if(!missing(nknots) && !is.null(nknots))
-            warning("'all.knots' is TRUE; 'nknots' specification is disregarded")
-        nknots <- nx
-    } else if(is.null(nknots))# <- for back compatibility
-	nknots <- .nknots.smspl(nx)
-    else {
-	if(is.function(nknots))
-	    nknots <- nknots(nx)
-	else if(!is.numeric(nknots))
-	    stop("'nknots' must be numeric (in {1,..,n})")
-	if(nknots < 1)
-	    stop("'nknots' must be at least 1")
-	else if(nknots > nx)
-	    stop("cannot use more inner knots than unique 'x' values")
+    if(is.numeric(all.knots)) {
+	if(is.unsorted(all.knots, strictly = TRUE))
+	    stop("Numeric 'all.knots' must be strictly increasing")
+	if(!missing(nknots) && !is.null(nknots))
+	    warning("'all.knots' is vector of knots; 'nknots' specification is disregarded")
+	nknots <- length(all.knots)
+	if(0 < all.knots[1] || all.knots[nknots] < 1)
+	    stop("numeric 'all.knots' must cover [0,1] (= the transformed data-range)")
+        ## otherwise, it seg.faults when .Fortran() is returning (why ?)
+        knot <- c(rep(all.knots[1 ], 3),
+                  all.knots,
+                  rep(all.knots[nknots], 3))
+    } else {
+        if(all.knots) {
+            if(!missing(nknots) && !is.null(nknots))
+                warning("'all.knots' is TRUE; 'nknots' specification is disregarded")
+            nknots <- nx
+        } else if(is.null(nknots))# <- for back compatibility
+            nknots <- .nknots.smspl(nx)
+        else { ## all.knots is false; nknots not NULL
+            if(is.function(nknots))
+                nknots <- nknots(nx)
+            else if(!is.numeric(nknots))
+                stop("'nknots' must be numeric (in {1,..,n})")
+            if(nknots < 1)
+                stop("'nknots' must be at least 1")
+            else if(nknots > nx)
+                stop("cannot use more inner knots than unique 'x' values")
+        }
+        knot <- c(rep(xbar[1 ], 3),
+                  if(all.knots) xbar else xbar[seq.int(1, nx, length.out = nknots)],
+                  rep(xbar[nx], 3))
     }
-    knot <- c(rep(xbar[1 ], 3),
-              if(all.knots) xbar else xbar[seq.int(1, nx, length.out = nknots)],
-              rep(xbar[nx], 3))
     nk <- nknots + 2L ## == length(knot) - 4
 
-    ## ispar != 1 : compute spar (later)
-    ispar <-
-        if(is.null(spar) || missing(spar)) { ## || spar == 0
-            if(contr.sp$trace) -1L else 0L
-        } else 1L
-    spar <- if(ispar == 1L) as.double(spar) else double(1)
+    spar.is.lambda <- !missing(lambda)
+    if (spar.is.lambda <- !missing(lambda)) {
+        if(!missing(spar)) stop("must not specify both 'spar' and 'lambda'")
+        ispar <- 1L
+    } else
+        ## ispar != 1 : compute spar (later)
+        ispar <-
+            if(is.null(spar) || missing(spar)) { ## || spar == 0
+                if(contr.sp$trace) -1L else 0L
+            } else 1L
+    spar <- if(spar.is.lambda) as.double(lambda)
+            else if(ispar == 1L) as.double(spar) else double(1)
     ## was <- if(missing(spar)) 0 else if(spar < 1.01e-15) 0 else  1
     ## but package forecast passed a length-0 vector.
     if(length(spar) != 1) stop("'spar' must be of length 1")
@@ -142,11 +169,10 @@ smooth.spline <-
 	    dofoff <- df
 	} else warning("not using invalid df; must have 1 < df <= n := #{unique x} = ", nx)
     }
-    iparms <- c(icrit=icrit, ispar=ispar, iter=as.integer(contr.sp$maxit))
-
-    keep.stuff <- FALSE ## << to become an argument in the future
+    iparms <- c(icrit=icrit, ispar=ispar, iter = as.integer(contr.sp$maxit),
+                spar.is.lambda)
     ans.names <- c("coef","ty","lev","spar","parms","crit","iparms","ier",
-                   if(keep.stuff) "scratch")
+		   if(keep.stuff) "scratch")
     fit <- .Fortran(C_rbart,		# code in ../src/qsbart.f
 		    as.double(penalty),
 		    as.double(dofoff),
@@ -163,30 +189,25 @@ smooth.spline <-
 		    crit = double(1),
 		    iparms = iparms,
 		    spar = spar,
-		    parms = unlist(contr.sp[1:4]),
-		    scratch = double(17L * nk + 1L),
+		    parms = c(unlist(ctrl.Num), ratio = -1.), # no NA here
+		    scratch = double((17L+1L) * nk + 1L),#
 		    ld4  = 4L,
 		    ldnk = 1L,
 		    ier = integer(1L)
 		    )[ans.names]
 
-### FIXME only was needed, when we had  DUP=FALSE
-    stopifnot(identical(wbar, tmp[,1]))
-    ## now we have clobbered wbar, recompute it.
-    ## wbar <- tmp[, 1]
-
     if(is.na(cv)) lev <- df <- NA
-    else {
+    else { # now when dpfa() with 'tol', signals error earlier, happens less often:
 	lev <- fit$lev
 	df <- sum(lev)
 	if(is.na(df))
 	    stop("NA lev[]; probably smoothing parameter 'spar' way too large!")
     }
     if(fit$ier > 0L ) {
-        sml <- fit$spar < 0.5
-	wtxt <- paste("smoothing parameter value too",
-                      if(sml) "small" else "large")
-        if(sml) {
+	offKind <- if(spar.is.lambda) "extreme" # not easy to know if small | large
+		   else if(sml <- fit$spar < 0.5) "small" else "large"
+	wtxt <- paste("smoothing parameter value too", offKind)
+        if(spar.is.lambda || sml) {
             ## used to give warning too and mean() as below, but that's rubbish
             stop(wtxt)
         } else {
@@ -197,27 +218,40 @@ smooth.spline <-
     }
     cv.crit <-
 	if(is.na(cv)) NA
-	else if(cv) {
-	    ww <- wbar
-	    ww[!(ww > 0)] <- 1
-	    weighted.mean(((y - fit$ty[ox])/(1 - (lev[ox] * w)/ww[ox]))^2, w)
-	} else weighted.mean((y - fit$ty[ox])^2, w)/
-	    (1 - (df.offset + penalty * df)/n)^2
-    pen.crit <- sum(wbar * (ybar - fit$ty)^2)
-    fit.object <- list(knot = knot, nk = nk, min = ux[1L], range = r.ux,
-		       coef = fit$coef)
-    class(fit.object) <- "smooth.spline.fit"
-    ## parms :  c(low = , high = , tol = , eps = )
-    object <- list(x = ux, y = fit$ty, w = wbar, yin = ybar,
-                   data = if(keep.data) list(x = x, y = y, w = w),
-		   lev = lev, cv.crit = cv.crit, pen.crit = pen.crit,
-                   crit = fit$crit,
-                   df = df, spar = fit$spar,
-                   lambda = unname(fit$parms["low"]),
-                   iparms = fit$iparms, # c(icrit= , ispar= , iter= )
-                   fit = fit.object, call = match.call())
-    class(object) <- "smooth.spline"
-    object
+	else {
+	    r <- y - fit$ty[ox]
+	    if(cv) {
+		ww <- wbar
+		ww[ww == 0] <- 1
+		r <- r / (1 - (lev[ox] * w)/ww[ox])
+		if(no.wgts) mean(r^2) else weighted.mean(r^2, w)
+	    } else
+		(if(no.wgts) mean(r^2) else weighted.mean(r^2, w)) /
+		    (1 - (df.offset + penalty * df)/n)^2
+        }
+    ## return :
+    structure(
+	## parms :  c(low = , high = , tol = , eps = )
+	list(x = ux, y = fit$ty, w = wbar, yin = ybar, tol = tol,
+	     data = if(keep.data) list(x = x, y = y, w = w), no.weights = no.wgts,
+	     lev = lev, cv.crit = cv.crit,
+	     pen.crit = sum(wbar * (ybar - fit$ty)^2),
+	     crit = fit$crit,
+	     df = df,
+	     spar = if(spar.is.lambda) NA else fit$spar,
+	     ratio= if(spar.is.lambda) NA else fit$parms[["ratio"]],
+	     lambda = fit$parms[["low"]],
+	     iparms = c(fit$iparms, errorI = if(fit$ier) fit$ier else NA),#c(icrit= ,ispar= ,iter= )
+	     auxM = if(keep.stuff)
+			list(XWy  = fit$scratch[      seq_len(nk)],
+			     XWX  = fit$scratch[nk  + seq_len(4*nk)],
+			     Sigma= fit$scratch[5*nk+ seq_len(4*nk)],
+			     R    = fit$scratch[9*nk+ seq_len(4*nk)] ),
+	     fit = structure(list(knot = knot, nk = nk, min = ux[1L], range = r.ux,
+				  coef = fit$coef),
+			     class = "smooth.spline.fit"),
+	     call = match.call()),
+	class = "smooth.spline")
 }
 
 fitted.smooth.spline <- function(object, ...) {
@@ -249,6 +283,15 @@ residuals.smooth.spline <-
     res
 }
 
+hatvalues.smooth.spline <- function (model, ...) {
+    if(!is.list(dat <- model$data))
+        stop("need result of smooth.spline(keep.data = TRUE)")
+    ## "expand" leverages:
+    hat <- model$lev
+    hat[hat > 1 - 10 * .Machine$double.eps] <- 1 # as in hatvalues.lm
+    hat[match(dat$x, model$x)]
+}
+
 
 print.smooth.spline <- function(x, digits = getOption("digits"), ...)
 {
@@ -265,10 +308,11 @@ print.smooth.spline <- function(x, digits = getOption("digits"), ...)
     cat("\n")
     cat("Equivalent Degrees of Freedom (Df):", format(x$df,digits=digits))
     cat("\n")
-    cat("Penalized Criterion:", format(x$pen.crit, digits=digits))
-    cat("\n")
+    cat(sprintf("Penalized Criterion (%sRSS): %s\n",
+		if(x$no.weights) "" else "weighted ",
+		format(x$pen.crit, digits=digits)))
     if(!is.na(cv))
-        cat(if(cv) "PRESS: " else "GCV: ",
+	cat(if(cv) "PRESS(l.o.o. CV): " else "GCV: ",
             format(x$cv.crit, digits = digits), "\n", sep = "")
     invisible(x)
 }
@@ -329,15 +373,15 @@ predict.smooth.spline.fit <- function(object, x, deriv = 0, ...)
 }
 
 supsmu <-
-  function(x, y, wt = rep(1, n), span = "cv", periodic = FALSE, bass = 0)
+  function(x, y, wt = rep(1, n), span = "cv", periodic = FALSE, bass = 0, trace = FALSE)
 {
     if(span == "cv") span <- 0
+    else if(span < 0 || span > 1) stop("'span' must be between 0 and 1.")
     n <- length(y)
     if(!n || !is.numeric(y)) stop("'y' must be numeric vector")
     if(length(x) != n) stop("number of observations in 'x' and 'y' must match.")
     if(length(wt) != n)
 	stop("number of weights must match number of observations.")
-    if(span < 0 || span > 1) stop("'span' must be between 0 and 1.")
     if(periodic) {
 	iper <- 2L
 	xrange <- range(x)
@@ -356,7 +400,7 @@ supsmu <-
                                  "%d observation with NA, NaN or Inf deleted",
                                  "%d observations with NAs, NaNs and/or Infs deleted"),
                         diff), domain = NA)
-    .Fortran(C_setsmu)
+    .Fortran(C_setsmu, as.integer(trace))
     smo <- .Fortran(C_supsmu,
 		    as.integer(leno),
 		    as.double(xo),

@@ -28,6 +28,8 @@ all: Makefile R docs
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 
+## FIXME:  NEWS.rds is needed by news() and hence in principle part of 'R', but
+##  it can only be built by R_EXE which at this point does not exist (if built from scratch)
 R: Makefile svnonly
 	@for d in $(SUBDIRS); do \
 	  (cd $${d} && $(MAKE) $@) || exit 1; \
@@ -50,7 +52,7 @@ NEWS.rds: $(srcdir)/NEWS.Rd
 	  'NEWS.rds')" | $(R_EXE)
 
 NEWS: NEWS.rds
-	@$(ECHO) "creating NEWS"
+	@$(ECHO) "creating doc/NEWS"
 	@$(ECHO) 'options(warn=1);tools:::Rd2txt_NEWS_in_Rd("NEWS.rds", "NEWS")' |  $(R_EXE)
 
 html/NEWS.html: NEWS.rds
@@ -64,7 +66,7 @@ NEWS.pdf: NEWS.rds
 	@if test -z "$(PDFLATEX)"; then \
 	  $(ECHO) "'pdflatex' is needed to make NEWS.pdf but is missing on your system."; \
 	else \
-	 $(ECHO) "creating NEWS.pdf"; \
+	 $(ECHO) "creating doc/NEWS.pdf"; \
 	 $(ECHO) 'options(warn=1);tools:::Rd2pdf_NEWS_in_Rd("NEWS.rds", "NEWS.pdf")' |  LC_COLLATE=C $(R_EXE); \
 	fi
 

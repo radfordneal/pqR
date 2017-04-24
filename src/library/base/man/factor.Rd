@@ -1,6 +1,6 @@
 % File src/library/base/man/factor.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2013 R Core Team
+% Copyright 1995-2016 R Core Team
 % Distributed under GPL 2 or later
 
 \name{factor}
@@ -18,6 +18,7 @@
 \alias{Ops.ordered}
 \alias{Summary.ordered}
 \alias{addNA}
+\alias{.valid.factor}
 \concept{categorical variable}
 \concept{enumerated type}
 \concept{category}
@@ -53,12 +54,13 @@ addNA(x, ifany = FALSE)
     values taken by \code{\link{as.character}(x)}, sorted into
     increasing order \emph{of \code{x}}.  Note that this set can be
     specified as smaller than \code{sort(unique(x))}.}
-  \item{labels}{\emph{either} an optional character vector of labels for the
-    levels (in the same order as \code{levels} after removing those in
-    \code{exclude}), \emph{or} a character string of length 1.}
+  \item{labels}{\emph{either} an optional character vector of (unique)
+    labels for the levels (in the same order as \code{levels} after
+    removing those in \code{exclude}), \emph{or} a character string of
+    length 1.}
   \item{exclude}{a vector of values to be excluded when forming the
-    set of levels.  This should be of the same type as \code{x}, and
-    will be coerced if necessary.}
+    set of levels.  This may be factor with the same level set as \code{x}
+    or should be a \code{character}.}
   \item{ordered}{logical flag to determine if the levels should be regarded
     as ordered (in the order given).}
   \item{nmax}{an upper bound on the number of levels; see \sQuote{Details}.}
@@ -85,13 +87,18 @@ addNA(x, ifany = FALSE)
   factor and \code{FALSE} otherwise.
 
   \code{as.factor} coerces its argument to a factor.
-  It is an abbreviated form of \code{factor}.
+  It is an abbreviated (sometimes faster) form of \code{factor}.
 
   \code{as.ordered(x)} returns \code{x} if this is ordered, and
   \code{ordered(x)} otherwise.
 
   \code{addNA} modifies a factor by turning \code{NA} into an extra
   level (so that \code{NA} values are counted in tables, for instance).
+
+  \code{.valid.factor(object)} checks the validity of a factor,
+  currently only \code{levels(object)}, and returns \code{TRUE} if it is
+  valid, otherwise a string describing the validity problem.  This
+  function is used for \code{\link{validObject}(<factor>)}.
 }
 \details{
   The type of the vector \code{x} is not restricted; it only must have
@@ -115,11 +122,15 @@ addNA(x, ifany = FALSE)
   which case the levels are that character string with a sequence
   number appended.
 
-  \code{factor(x, exclude = NULL)} applied to a factor is a no-operation
-  unless there are unused levels: in that case, a factor with the
-  reduced level set is returned.  If \code{exclude} is used it should
-  also be a factor with the same level set as \code{x} or a set of codes
-  for the levels to be excluded.
+  \code{factor(x, exclude = NULL)} applied to a factor without
+  \code{\link{NA}}s is a no-operation unless there are unused levels: in
+  that case, a factor with the reduced level set is returned.  If
+  \code{exclude} is used, since \R version 3.4.0, excluding non-existing
+  character levels is equivalent to excluding nothing, and when
+  \code{exclude} is a \code{\link{character}} vector, that \emph{is}
+  applied to the levels of \code{x}.
+  Alternatively, \code{exclude} can be factor with the same level set as
+  \code{x} and will exclude the levels present in \code{exclude}.
 
   The codes of a factor may contain \code{\link{NA}}.  For a numeric
   \code{x}, set \code{exclude = NULL} to make \code{\link{NA}} an extra
@@ -225,6 +236,14 @@ is.na(x)[2] <- TRUE
 x  # [1] 1    <NA> <NA>
 is.na(x)
 # [1] FALSE  TRUE FALSE
+
+## More rational, since R 3.4.0 :
+factor(c(1:2, NA), exclude =  "" ) # keeps <NA> , as
+factor(c(1:2, NA), exclude = NULL) # always did
+## exclude = <character>
+z # ordered levels 'A < B < C'
+factor(z, exclude = "C") # does exclude
+factor(z, exclude = "B") # ditto
 
 ## Using addNA()
 Month <- airquality$Month

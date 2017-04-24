@@ -151,15 +151,14 @@
 #define HAVE_CTAN 1
 
 /* Define to 1 if you have the `ctanh' function. */
-#define HAVE_CTANH 1
+/* The ctanh function does not work properly, at R level "tanh(356+0i)"
+   returns "1+NaNi", but it should return "1+0i". */
+/* #undef HAVE_CTANH */
 
 /* Define to 1 if you have the <curl/curl.h> header file.
    Set on the command line where supported.
 */
 /* #undef HAVE_CURL_CURL_H */
-
-/* define if the compiler supports basic C++11 syntax */
-#define HAVE_CXX11 1
 
 /* Define if the GNU dcgettext() function is already present or preinstalled.
    */

@@ -1,7 +1,7 @@
 #  File src/library/utils/R/sessionInfo.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -59,8 +59,7 @@ sessionInfo <- function(package = NULL)
                        sprintf("%s %s %s",
                                ifelse(as.numeric(ver1) < 12, "OS X", "macOS"),
                                switch(ver1,
-                                      "4" = "Tiger",
-                                      "5" = "Leopard",
+                                      ## 10.6 is earliest that can be installed
                                       "6" = "Snow Leopard",
                                       "7" = "Lion",
                                       "8" = "Mountain Lion",
@@ -104,6 +103,10 @@ sessionInfo <- function(package = NULL)
         pkgDesc <- c(pkgDesc, lapply(loadedOnly, packageDescription))
         z$loadedOnly <- pkgDesc[loadedOnly]
     }
+    z$matprod <- as.character(options("matprod"))
+    es <- extSoftVersion()
+    z$BLAS <- as.character(es["BLAS"]) #drop name
+    z$LAPACK <- La_library()
     class(z) <- "sessionInfo"
     z
 }
@@ -119,6 +122,18 @@ print.sessionInfo <- function(x, locale = TRUE, ...)
     cat(x$R.version$version.string, "\n", sep = "")
     cat("Platform: ", x$platform, "\n", sep = "")
     if (!is.null(x$running)) cat("Running under: ",  x$running, "\n", sep = "")
+    cat("\n")
+    cat("Matrix products: ", x$matprod, "\n", sep = "")
+    blas <- x$BLAS
+    if (is.null(blas)) blas <- ""
+    lapack <- x$LAPACK
+    if (is.null(lapack)) lapack <- ""
+    if (blas == lapack && nzchar(blas))
+        cat("BLAS/LAPACK: ", blas, "\n", sep = "")
+    else {
+        if (nzchar(blas)) cat("BLAS: ", blas, "\n", sep = "")
+        if (nzchar(lapack)) cat("LAPACK: ", lapack, "\n", sep = "")
+    }
     cat("\n")
     if(locale) {
         cat("locale:\n")
@@ -150,6 +165,25 @@ toLatex.sessionInfo <- function(object, locale = TRUE, ...)
         z <- c(z,
                paste0("  \\item Locale: \\verb|",
                       gsub(";","|, \\\\verb|", object$locale) , "|"))
+    }
+
+    z <- c(z,
+           paste0("  \\item Running under: \\verb|",
+                  gsub(";","|, \\\\verb|", object$running) , "|"))
+
+    z <- c(z, paste0("  \\item Matrix products: ", object$matprod))
+    blas <- object$BLAS
+    if (is.null(blas)) blas <- ""
+    lapack <- object$LAPACK
+    if (is.null(lapack)) lapack <- ""
+
+    if (blas == lapack && nzchar(blas))
+        z <- c(z, paste0("  \\item BLAS/LAPACK: \\verb|", blas, "|"))
+    else {
+        if (nzchar(blas))
+            z <- c(z, paste0("  \\item BLAS: \\verb|", blas, "|"))
+        if (nzchar(lapack))
+            z <- c(z, paste0("  \\item LAPACK: \\verb|", lapack, "|"))
     }
 
     z <- c(z, strwrap(paste("\\item Base packages: ",

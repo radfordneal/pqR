@@ -107,7 +107,7 @@
             else if(is.call(fname) && identical(fname[[1L]], as.name("::"))) {
                 whereF <- as.character(fname[[2L]])
                 require(whereF, character.only = TRUE)
-                whereF <- as.environment(paste("package", whereF, sep=":"))
+                whereF <- as.environment(paste0("package:", whereF))
                 pname <-  fname[[2L]]
                 what <- as.character(fname[[3L]])
             }
@@ -166,6 +166,18 @@
                     getGeneric(as.character(fname), TRUE, where)
                 else def
         def <- selectMethod(what, signature, fdef = fdef, optional = TRUE)
+        if(isRematched(def)) {
+            expr <- substitute(trace(.local, tracer = tr, at = at,
+                                     exit = ex,  print = pr,
+                                     edit = ed,
+                                     where = sys.frame(sys.nframe())),
+                               list( tr = substitute(tracer),
+                                    ex = exit, at = at, pr = print,
+                                    ed = edit))
+            at <- 3L
+            tracer <- expr
+            print <- FALSE
+        }
         if(is.null(def)) {
             warning(gettextf("cannot untrace method for %s; no method defined for this signature: %s",
                              sQuote(what),
@@ -313,7 +325,8 @@
 		  else "specified method for function"
         object <- paste0(" ", object, " \"", what, "\" ")
         .message(action, object, location)
-        if(nameSpaceCase && !untrace && exists(what, envir = .GlobalEnv)) {
+        ## tracing methods (signature not null) works without setting where
+        if(nameSpaceCase && !untrace && is.null(signature) && exists(what, envir = .GlobalEnv)) {
 	    untcall <- paste0("untrace(\"", what,
 			      "\", where = getNamespace(\"", pname, "\"))")
             .message("Warning: Tracing only in the namespace; to untrace you will need:\n    ",
@@ -566,7 +579,7 @@ setCacheOnAssign <- function(env, onOff = cacheOnAssign(env))
 }
 
 .getImportsEnv <- function(pkg) {
-    iname = paste("imports:", pkg, sep="")
+    iname = paste0("imports:", pkg)
     empty = emptyenv()
     env = asNamespace(pkg)
 
@@ -587,7 +600,7 @@ setCacheOnAssign <- function(env, onOff = cacheOnAssign(env))
 
 ### finding the package name for a loaded namespace
 .searchNamespaceNames <- function(env)
-    paste("namespace", getNamespaceName(env), sep=":")
+    paste0("namespace:", getNamespaceName(env))
 
 .findFunEnvAndName <- function(what, where, signature = NULL) {
     pname <- character()
@@ -691,7 +704,7 @@ evalSource <- function(source, package = "", lock = TRUE, cache = FALSE) {
     if(!nzchar(package))
         envp <- .GlobalEnv # will look for the package after evaluating source
     else {
-        pstring <- paste("package",package, sep=":")
+        pstring <- paste0("package:",package)
         packageIsVisible <- pstring %in% search()
         if(packageIsVisible) {
             envp <- as.environment(pstring)

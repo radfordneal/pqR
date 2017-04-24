@@ -1753,6 +1753,11 @@ f <- function(...) stop()
 do.call(f, mtcars)
 traceback()
 
+## Debugger can handle a function that has a single function call as its body
+g <- function(fun) fun(1)
+debug(g)
+g(function(x) x+1)
+
 options(op)
 ## unlimited < 2.3.0
 
@@ -3014,6 +3019,28 @@ DF.Dates$x2 <- c(1:6, NA)
 ## now, NA's show fine:
 summary(DF.Dates)
 ## 2 of 4  summary(.) above did not show NA's  in R <= 3.2.3
+
+
+## Printing complex matrix
+matrix(1i,2,13)
+## Spacing was wrong in R <= 3.2.4
+
+
+E <- expression(poly = x^3 - 3 * x^2)
+str(E)
+## no longer shows "structure(...., .Names = ..)"
+
+
+## summary(<logical>) working via table():
+logi <- c(NA, logical(3), NA, !logical(2), NA)
+summary(logi)
+summary(logi[!is.na(logi)])
+summary(TRUE)
+## was always showing counts for NA's even when 0 in  2.8.0 <= R <= 3.3.1
+ii <- as.integer(logi)
+summary(ii)
+summary(ii[!is.na(ii)])
+summary(1L)
 
 
 ## str.default() for "AsIs" arrays

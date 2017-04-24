@@ -114,6 +114,10 @@ integrate(dnorm, 0, 200)
 integrate(dnorm, 0, 2000)
 integrate(dnorm, 0, 20000) ## fails on many systems
 integrate(dnorm, 0, Inf)   ## works
+\dontshow{tools::assertError(}
+integrate(dnorm, 0:1, 20) #-> error!
+## "silently" gave  integrate(dnorm, 0, 20)  in earlier versions of R
+\dontshow{ , verbose=TRUE)}
 }
 \keyword{math}
 \keyword{utilities}

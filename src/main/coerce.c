@@ -423,7 +423,7 @@ static SEXP coerceToSymbol(SEXP v)
     }
     PROTECT(ans);
     if (warn) CoercionWarning(warn);/*2000/10/23*/
-    ans = installChar(ans);
+    ans = installTrChar(ans);
     UNPROTECT(2); /* ans, v */
     return ans;
 }
@@ -1275,7 +1275,7 @@ SEXP CreateTag(SEXP x)
 	&& length(STRING_ELT(x, 0)) >= 1) {
 	x = installTrChar(STRING_ELT(x, 0));
     } else
-	x = installChar(STRING_ELT(deparse1(x, 1, SIMPLEDEPARSE), 0));
+	x = installTrChar(STRING_ELT(deparse1(x, 1, SIMPLEDEPARSE), 0));
     return x;
 }
 
@@ -1370,7 +1370,7 @@ SEXP asCharacterFactor(SEXP x)
 {
     SEXP ans;
 
-    if( !inherits(x, "factor") )
+    if( !inherits2(x, "factor") )
 	error(_("attempting to coerce non-factor"));
 
     R_xlen_t i, n = XLENGTH(x);
@@ -1451,7 +1451,7 @@ SEXP attribute_hidden do_asvector(SEXP call, SEXP op, SEXP args, SEXP rho)
     x = CAR(args);
 
     if (!isString(CADR(args)) || LENGTH(CADR(args)) != 1)
-	errorcall_return(call, R_MSG_mode);
+	error_return(R_MSG_mode);
     if (!strcmp("function", (CHAR(STRING_ELT(CADR(args), 0))))) /* ASCII */
 	type = CLOSXP;
     else
@@ -1500,7 +1500,7 @@ SEXP attribute_hidden do_asvector(SEXP call, SEXP op, SEXP args, SEXP rho)
     case ANYSXP: /* any */
 	break;
     default:
-	errorcall_return(call, R_MSG_mode);
+	error_return(R_MSG_mode);
     }
     ans = ascommon(call, x, type);
     switch(TYPEOF(ans)) { /* keep attributes for these: */
@@ -1529,7 +1529,7 @@ SEXP attribute_hidden do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     arglist = CAR(args);
     if (!isNewList(arglist))
-	errorcall(call, _("list argument expected"));
+	error(_("list argument expected"));
 
     envir = CADR(args);
     if (isNull(envir)) {
@@ -1537,11 +1537,11 @@ SEXP attribute_hidden do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
 	envir = R_BaseEnv;
     } else
     if (!isEnvironment(envir))
-	errorcall(call, _("invalid environment"));
+	error(_("invalid environment"));
 
     n = length(arglist);
     if (n < 1)
-	errorcall(call, _("argument must have length at least 1"));
+	error(_("argument must have length at least 1"));
     PROTECT(names = getAttrib(arglist, R_NamesSymbol));
     PROTECT(pargs = args = allocList(n - 1));
     for (i = 0; i < n - 1; i++) {
@@ -1563,7 +1563,7 @@ SEXP attribute_hidden do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
        )
 	    args =  mkCLOSXP(args, body, envir);
     else
-	    errorcall(call, _("invalid body for function"));
+	    error(_("invalid body for function"));
     UNPROTECT(3); /* body, pargs, names */
     return args;
 }
@@ -1935,7 +1935,7 @@ SEXP attribute_hidden do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     x = CAR(args);
     if (!isString(CADR(args)) || LENGTH(CADR(args)) != 1)
-	errorcall_return(call, R_MSG_mode);
+	error_return(R_MSG_mode);
 
     stype = CHAR(STRING_ELT(CADR(args), 0)); /* ASCII */
 
@@ -2749,7 +2749,7 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
 	valueType = (whichType == -1) ? (SEXPTYPE) -1 : classTable[whichType].sexp;
 	PROTECT(cur_class = R_data_class(obj, FALSE)); nProtect++;
 	/*  assigning type as a class deletes an explicit class attribute. */
-	if(valueType != -1) {
+	if(valueType != (SEXPTYPE)-1) {
 	    setAttrib(obj, R_ClassSymbol, R_NilValue);
 	    if(IS_S4_OBJECT(obj)) /* NULL class is only valid for S3 objects */
 	      do_unsetS4(obj, value);

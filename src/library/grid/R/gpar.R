@@ -1,7 +1,7 @@
 #  File src/library/grid/R/gpar.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2012 The R Core Team
+#  Copyright (C) 1995-2016 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -53,10 +53,27 @@ validGP <- function(gpars) {
       }
     }
   }
+  checkNA <- function(gparname) {
+      if (!is.na(match(gparname, names(gpars)))) {
+          if (any(is.na(gpars[[gparname]]))) {
+              # ALL NA gets removed (ignored)
+              if (all(is.na(gpars[[gparname]]))) {
+                  gpars[[gparname]] <<- NULL
+              } else {
+                  stop(gettextf("mixture of missing and non-missing values for %s",
+                                gparname),
+                       domain=NA)
+              }
+          }
+      }
+  }
   # fontsize, lineheight, cex, lwd should be numeric and not NULL
   numnotnull("fontsize")
+  checkNA("fontsize")
   numnotnull("lineheight")
+  checkNA("lineheight")
   numnotnull("cex")
+  checkNA("cex")
   numnotnull("lwd")
   numnotnull("lex")
   # gamma defunct in 2.7.0
@@ -126,6 +143,7 @@ validGP <- function(gpars) {
     else {
       check.length("fontfamily")
       gpars$fontfamily <- as.character(gpars$fontfamily)
+      checkNA("fontfamily")
     }
   }
   # fontface can be character or integer;  map character to integer
@@ -183,7 +201,7 @@ validGP <- function(gpars) {
 set.gpar <- function(gp) {
   if (!is.gpar(gp))
     stop("argument must be a 'gpar' object")
-  temp <- grid.Call(L_getGPar)
+  temp <- grid.Call(C_getGPar)
   # gamma defunct in 2.7.0
   if ("gamma" %in% names(gp)) {
       warning("'gamma' 'gpar' element is defunct")
@@ -210,12 +228,12 @@ set.gpar <- function(gp) {
   temp$alpha <- tempalpha
   temp$lex <- templex
   # Do this as a .Call.graphics to get it onto the base display list
-  grid.Call.graphics(L_setGPar, temp)
+  grid.Call.graphics(C_setGPar, temp)
 }
 
 get.gpar <- function(names=NULL) {
   if (is.null(names)) {
-    result <- grid.Call(L_getGPar)
+    result <- grid.Call(C_getGPar)
     # drop gamma
     result$gamma <- NULL
   } else {
@@ -227,7 +245,7 @@ get.gpar <- function(names=NULL) {
       warning("'gamma' 'gpar' element is defunct")
       names <- names[-match("gamma", names)]
     }
-    result <- unclass(grid.Call(L_getGPar))[names]
+    result <- unclass(grid.Call(C_getGPar))[names]
   }
   class(result) <- "gpar"
   result

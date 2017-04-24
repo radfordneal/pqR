@@ -44,11 +44,11 @@ function(x, by, FUN, ..., simplify = TRUE, drop = TRUE)
     if(!is.list(by))
         stop("'by' must be a list")
     if(is.null(names(by)) && length(by))
-        names(by) <- paste("Group", seq_along(by), sep = ".")
+        names(by) <- paste0("Group.", seq_along(by))
     else {
         nam <- names(by)
         ind <- which(!nzchar(nam))
-        names(by)[ind] <- paste("Group", ind, sep = ".")
+        names(by)[ind] <- paste0("Group.", ind)
     }
 
     nrx <- NROW(x)
@@ -63,12 +63,15 @@ function(x, by, FUN, ..., simplify = TRUE, drop = TRUE)
 
     nrx <- NROW(x)
 
-    # Generate a group identifier vector with integers and dots.
-    ident <- function(x){
-        y <- as.integer(as.factor(x))
-        z <- gsub(" ", "0", format(y, scientific = FALSE)) # for right sort order
-        return(z)
-       }
+    ## Generate a group identifier vector with integers and dots.
+    ident <- function(x) {
+        y <- as.factor(x)
+        l <- length(levels(y))
+        s <- as.character(seq_len(l))
+        n <- nchar(s)
+        levels(y) <- paste0(strrep("0", n[l] - n), s)
+        as.character(y)
+    }
     grp <- if(ncol(y)) {
         grp <- lapply(rev(y), ident)
         names(grp) <- NULL

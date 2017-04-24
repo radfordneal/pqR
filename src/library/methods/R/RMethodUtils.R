@@ -398,9 +398,11 @@ rematchDefinition <- function(definition, generic, mnames, fnames, signature)
 	trailingArgs <- fnames[seq.int(to = length(fnames), length.out = ntrail)]
 	if(!identical(	mnames[seq.int(to = length(mnames), length.out = ntrail)],
 		      trailingArgs))
-	    stop(gettextf("arguments (%s) after '...' in the generic must appear in the method, in the same place at the end of the argument list",
-			  paste(trailingArgs, collapse=", ")),
-                 call. = TRUE, domain = NA)
+	    stop(gettextf("%s arguments (%s) after %s in the generic must appear in the method, in the same place at the end of the argument list",
+                          .renderSignature(generic@generic, signature),
+			  paste(sQuote(trailingArgs), collapse = ", "),
+                          sQuote("...")),
+                 call. = FALSE, domain = NA)
 	newCallNames <- character(length(newCall))
 	newCallNames[seq.int(to = length(newCallNames), length.out = ntrail)] <-
 	    trailingArgs
@@ -414,19 +416,25 @@ rematchDefinition <- function(definition, generic, mnames, fnames, signature)
     generic
 }
 
-unRematchDefinition <- function(definition)
+
+isRematched <- function(definition)
 {
-    ## undo the effects of rematchDefiniition, if it was used.
+    ## detect the effects of rematchDefinition, if it was used.
     ## Has the obvious disadvantage of depending on the implementation.
     ## If we considered the rematching part of the API, a cleaner solution
     ## would be to include the "as given to setMethod" definition as a slot
+
     bdy <- body(definition)
     if(.identC(class(bdy),"{") && length(bdy) > 1L) {
         bdy <- bdy[[2L]]
-        if(.identC(class(bdy), "<-") &&
-           identical(bdy[[2L]], as.name(".local")))
-            definition <- bdy[[3L]]
-    }
+        .identC(class(bdy), "<-") && identical(bdy[[2L]], as.name(".local"))
+    } else FALSE
+}
+
+unRematchDefinition <- function(definition)
+{
+    if(isRematched(definition))
+        definition <-  body(definition)[[2]][[3]] # value in assignmt to .local
     definition
 }
 
@@ -529,7 +537,7 @@ getGeneric <-
             ##  fdef <- def <- .makeGenericForCache(def)
             pkg <- prev@package
             if(identical(pkg, newpkg)) { # redefinition
-                assign(name, def, envir = table)
+                table[[name]] <- def
                 return(fdef)
             }
             prev <- list(prev)          # start a per-package list
@@ -546,7 +554,7 @@ getGeneric <-
     }
 
     .getMethodsTable(fdef)              # force initialization
-    assign(name, def, envir = table)
+    table[[name]] <- def
     fdef
 }
 
@@ -807,14 +815,19 @@ cacheMetaData <-
     ## to update class and method information.
     pkg <- getPackageName(where)
     classes <- getClasses(where)
-    for(cl in classes) {
-        cldef <- (if(attach) get(classMetaName(cl), where) # NOT getClassDef, it will use cache
-                  else  getClassDef(cl, searchWhere))
-        if(is(cldef, "classRepresentation")) {
-            if(attach) {
-                .cacheClass(cl, cldef, is(cldef, "ClassUnionRepresentation"), where)
-            }
-            else if(identical(cldef@package, pkg)) {
+    if (attach) {
+        for(cl in classes) {
+            ## NOT getClassDef, it will use cache
+            cldef <- get(classMetaName(cl), where)
+            if(is(cldef, "classRepresentation"))
+                .cacheClass(cl, cldef, is(cldef, "ClassUnionRepresentation"),
+                            where)
+        }
+    } else {
+        for(cl in classes) {
+            cldef <- getClassDef(cl, searchWhere)
+            if(is(cldef, "classRepresentation") &&
+               identical(cldef@package, pkg)) {
                 .uncacheClass(cl, cldef)
                 .removeSuperclassBackRefs(cl, cldef, searchWhere)
             }
@@ -1505,7 +1518,7 @@ getGroupMembers <- function(group, recursive = FALSE, character = TRUE)
     if(!is.null(ns))
         asNamespace(ns)
     else {
-        i <- match(paste("package", what, sep=":"), search())
+        i <- match(paste0("package:", what), search())
         if(is.na(i))
             .GlobalEnv
         else

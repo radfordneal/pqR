@@ -1,11 +1,11 @@
 #  File src/library/stats/R/lm.influence.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2012 The R Core Team
+#  Copyright (C) 1995-2016 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2 of the License, or
+#  the Free Software Foundation; either version 3 of the License, or
 #  (at your option) any later version.
 #
 #  This program is distributed in the hope that it will be useful,
@@ -102,16 +102,16 @@ influence.glm <- function(model, do.coef = TRUE, ...) {
 }
 
 hatvalues <- function(model, ...) UseMethod("hatvalues")
-hatvalues.lm <- function(model, infl = lm.influence(model, do.coef=FALSE), ...)
-{
-    setNames(infl$hat, names(infl$wt.res))
-}
+hatvalues.lm <- function(model, infl = lm.influence(model, do.coef=FALSE), ...) infl$hat
 
 rstandard <- function(model, ...) UseMethod("rstandard")
 rstandard.lm <- function(model, infl = lm.influence(model, do.coef=FALSE),
-                         sd = sqrt(deviance(model)/df.residual(model)), ...)
+                         sd = sqrt(deviance(model)/df.residual(model)),
+                         type = c("sd.1", "predictive"), ...)
 {
-    res <- infl$wt.res / (sd * sqrt(1 - infl$hat))
+    type <- match.arg(type)
+    res <- infl$wt.res / switch(type, "sd.1" = sd * sqrt(1 - infl$hat),
+				"predictive" = 1 - infl$hat)
     res[is.infinite(res)] <- NaN
     res
 }
@@ -245,7 +245,7 @@ influence.measures <- function(model)
     h <- infl$hat
     dfbetas <- infl$coefficients / outer(infl$sigma, sqrt(diag(xxi)))
     vn <- variable.names(model); vn[vn == "(Intercept)"] <- "1_"
-    colnames(dfbetas) <- paste("dfb",abbreviate(vn),sep=".")
+    colnames(dfbetas) <- paste0("dfb.", abbreviate(vn))
     ## Compatible to dffits():
     dffits <- e*sqrt(h)/(si*(1-h))
     if(any(ii <- is.infinite(dffits))) dffits[ii] <- NaN

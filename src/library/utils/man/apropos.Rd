@@ -43,7 +43,7 @@ find(what, mode = "any", numeric = FALSE, simple.words = TRUE)
 
   Unlike the default behaviour of \code{\link{ls}}, names which
   begin with a \samp{.} are included (and these are often
-  \sQuote{internal} objects).
+  \sQuote{internal} objects --- as from \R 3.4.0 most such are excluded).
 }
 \author{Originally, Kurt Hornik and Martin Maechler (May 1997).}
 \value{
@@ -67,9 +67,7 @@ require(stats)
 
 %% some of these have enormous output that varies a lot by version
 \dontrun{apropos("lm")}
-apropos("GLM")                      # more than a dozen
-## that may include internal objects starting '.__C__' if
-## methods is attached
+apropos("GLM")                      # several
 apropos("GLM", ignore.case = FALSE) # not one
 apropos("lq")
 

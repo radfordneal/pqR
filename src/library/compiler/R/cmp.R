@@ -23,7 +23,7 @@
 
 compilerOptions <- new.env(hash = TRUE, parent = emptyenv())
 compilerOptions$optimize <- 2
-compilerOptions$suppressAll <- FALSE
+compilerOptions$suppressAll <- TRUE
 compilerOptions$suppressUndefined <-
     c(".Generic", ".Method", ".Random.seed", ".self")
 
@@ -127,7 +127,7 @@ frameTypes <- function(env) {
 ## imports environment) find the namespace in which the symbol's value
 ## was originally defined. Returns NULL if the symbol is not found via
 ## the namespace.
-findHomeNS <- function(sym, ns) {
+findHomeNS <- function(sym, ns, cntxt) {
     if (! isNamespace(ns)) {
         ## As a convenience this allows for 'ns' to be the imports fame
         ## of a namespace. It appears that these now have a 'name'
@@ -135,7 +135,8 @@ findHomeNS <- function(sym, ns) {
         ## namespace.
         name <- attr(ns, "name")
         if (is.null(name))
-            stop("'ns' must be a namespace or a namespace imports environment")
+            cntxt$stop("'ns' must be a namespace or a namespace imports environment",
+                cntxt)
         ns <- getNamespace(sub("imports:", "", attr(ns, "name")))
     }
     if (exists(sym, ns, inherits = FALSE))
@@ -151,7 +152,7 @@ findHomeNS <- function(sym, ns) {
                 else
                     exports <- get(".__NAMESPACE__.", ins)$exports
                 if (exists(sym, exports, inherits = FALSE))
-                    return(findHomeNS(sym, ins))
+                    return(findHomeNS(sym, ins, cntxt))
             }
             else {
                 exports <- imports[[i]]
@@ -162,7 +163,7 @@ findHomeNS <- function(sym, ns) {
                     ## renaming this is still supported by the
                     ## namespace code.)
                     if (sym == exports[pos])
-                        return(findHomeNS(sym, ins))
+                        return(findHomeNS(sym, ins, cntxt))
                     else
                         return(NULL)
                 }
@@ -198,64 +199,60 @@ nsName <- function(ns) {
 ## Finding possible local variables
 ##
 
-getAssignedVar <- function(e) {
+getAssignedVar <- function(e, cntxt) {
     v <- e[[2]]
     if (missing(v))
-        stop(gettextf("bad assignment: %s", pasteExpr(e)),
-             domain = NA)
+        cntxt$stop(gettextf("bad assignment: %s", pasteExpr(e)), cntxt)
     else if (typeof(v) %in% c("symbol", "character"))
         as.character(v)
     else {
         while (typeof(v) == "language") {
             if (length(v) < 2)
-                stop(gettextf("bad assignment: %s", pasteExpr(e)),
-                     domain = NA)
+                cntxt$stop(gettextf("bad assignment: %s", pasteExpr(e)), cntxt)
             v <- v[[2]]
             if (missing(v))
-                stop(gettextf("bad assignment: %s", pasteExpr(e)),
-                     domain = NA)
+                cntxt$stop(gettextf("bad assignment: %s", pasteExpr(e)), cntxt)
         }
         if (typeof(v) != "symbol")
-            stop(gettextf("bad assignment: %s", pasteExpr(e)),
-                 domain = NA)
+            cntxt$stop(gettextf("bad assignment: %s", pasteExpr(e)), cntxt)
         as.character(v)
     }
 }
 
-findLocals1 <- function(e, shadowed = character(0)) {
+findLocals1 <- function(e, shadowed = character(0), cntxt) {
     if (typeof(e) == "language") {
         if (typeof(e[[1]]) %in% c("symbol", "character")) {
             v <- as.character(e[[1]])
             switch(v,
                    "=" =,
-                   "<-" = unique(c(getAssignedVar(e),
-                                   findLocalsList1(e[-1], shadowed))),
+                   "<-" = unique(c(getAssignedVar(e, cntxt),
+                                   findLocalsList1(e[-1], shadowed, cntxt))),
                    "for" = unique(c(as.character(e[2]),
-                                    findLocalsList1(e[-2], shadowed))),
+                                    findLocalsList1(e[-2], shadowed, cntxt))),
                    "delayedAssign" =,
                    "assign" = if (length(e) == 3 &&
                                   is.character(e[[2]]) &&
                                   length(e[[2]]) == 1)
-                                  c(e[[2]], findLocals1(e[[3]], shadowed))
-                              else findLocalsList1(e[1], shadowed),
+                                  c(e[[2]], findLocals1(e[[3]], shadowed, cntxt))
+                              else findLocalsList1(e[1], shadowed, cntxt),
                    "function" = character(0),
                    "~" = character(0),
                    "local" = if (! v %in% shadowed && length(e) == 2)
                                  character(0)
-                             else findLocalsList1(e[-1], shadowed),
+                             else findLocalsList1(e[-1], shadowed, cntxt),
                    "expression" =,
                    "quote" = if (! v %in% shadowed)
                                  character(0)
-                             else findLocalsList1(e[-1], shadowed),
-                   findLocalsList1(e[-1], shadowed))
+                             else findLocalsList1(e[-1], shadowed, cntxt),
+                   findLocalsList1(e[-1], shadowed, cntxt))
         }
-         else findLocalsList1(e, shadowed)
+         else findLocalsList1(e, shadowed, cntxt)
     }
     else character(0)
 }
 
-findLocalsList1 <- function(elist, shadowed)
-    unique(unlist(lapply(elist, findLocals1, shadowed)))
+findLocalsList1 <- function(elist, shadowed, cntxt)
+    unique(unlist(lapply(elist, findLocals1, shadowed, cntxt)))
 
 findLocals <- function(e, cntxt)
     findLocalsList(list(e), cntxt)
@@ -267,7 +264,7 @@ findLocalsList <- function(elist, cntxt) {
     sf <- initialShadowedFuns
     nsf <- length(sf)
     repeat {
-        vals <- findLocalsList1(elist, sf)
+        vals <- findLocalsList1(elist, sf, cntxt)
         redefined <- sf %in% vals
         last.nsf <- nsf
         sf <- unique(c(shadowed, sf[redefined]))
@@ -275,13 +272,8 @@ findLocalsList <- function(elist, cntxt) {
         ## **** need to fix the termination condition used in codetools!!!
         if (last.nsf == nsf) {
             rdsf <- vals %in% specialSyntaxFuns
-            if (any(rdsf)) {
-                msg <- ngettext(sum(rdsf),
-                                "local assignment to syntactic function: ",
-                                "local assignments to syntactic functions: ")
-                warning(msg, paste(vals[rdsf], collapse = ", "),
-                        domain = NA)
-            }
+            if (any(rdsf))
+                notifyAssignSyntacticFun(vals[rdsf], cntxt)
             return(vals)
         }
     }
@@ -463,7 +455,8 @@ constantFoldCall <- function(e, cntxt) {
             modes <- unlist(lapply(args, mode))
             if (all(modes %in% constModes)) {
                 tryCatch(checkConst(do.call(ffun, args)),
-                         error = function(e) NULL) ## **** issue warning??
+                         error = function(e) NULL, warning = function(w) NULL)
+                ## **** issue warning??
             }
             else NULL
         }
@@ -523,8 +516,8 @@ BRIFNOT.OP = 2,
 POP.OP = 0,
 DUP.OP = 0,
 PRINTVALUE.OP = 0,
-STARTLOOPCNTXT.OP = 1,
-ENDLOOPCNTXT.OP = 0,
+STARTLOOPCNTXT.OP = 2,
+ENDLOOPCNTXT.OP = 1,
 DOLOOPNEXT.OP = 0,
 DOLOOPBREAK.OP = 0,
 STARTFOR.OP = 3,
@@ -638,7 +631,8 @@ MATH1.OP = 2,
 DOTCALL.OP = 2,
 COLON.OP = 1,
 SEQALONG.OP = 1,
-SEQLEN.OP = 1
+SEQLEN.OP = 1,
+BASEGUARD.OP = 2
 )
 
 Opcodes.names <- names(Opcodes.argc)
@@ -766,21 +760,131 @@ DOTCALL.OP <- 119
 COLON.OP <- 120
 SEQALONG.OP <- 121
 SEQLEN.OP <- 122
+BASEGUARD.OP <- 123
 
 
 ##
 ## Code buffer implementation
 ##
 
-make.codeBuf <- function(expr) {
+extractSrcref <- function(sref, idx) {
+    if (is.list(sref) && length(sref) >= idx)
+        sref <- sref[[idx]]
+    else if (is.integer(sref) && length(sref) >= 6)
+        sref
+    else
+        NULL
+}
+getExprSrcref <- function(expr) {
+    sattr <- attr(expr, "srcref")
+    extractSrcref(sattr, 1)
+}
+# if block is a block srcref, get its idx'th entry
+# if block is a single srcref, return this srcref
+getBlockSrcref <- function(block, idx) {
+  extractSrcref(block, idx)
+}
+
+make.codeBuf <- function(expr, loc = NULL) {
+    exprTrackingOn <- TRUE
+    srcrefTrackingOn <- TRUE
+
+    if (is.null(loc)) {
+        curExpr <- expr
+        curSrcref <- getExprSrcref(expr)
+    } else {
+        curExpr <- loc$expr
+        curSrcref <- loc$srcref
+    }
+
+    if (is.null(curSrcref))
+        ## when top-level srcref is null, we speculate there will be no
+        ##   source references within the compiled expressions either,
+        ##   disabling the tracking makes the resulting constant pool
+        ##   smaller
+        srcrefTrackingOn <- FALSE
+
+    exprBuf <- NA   ## exprBuf will have the same length as codeBuf
+    srcrefBuf <- NA ## srcrefBuf will have the same length as codeBuf
+
+    if (!exprTrackingOn) {
+        curExpr <- NULL
+        exprBuf <- NULL
+    }
+    if (!srcrefTrackingOn) {
+        curSrcref <- NULL
+        srcrefBuf <- NULL
+    }
+
+    ## set the current expression
+    ## also update the srcref according to expr, if expr has srcref attribute
+    ##   (note: never clears current srcref)
+    setcurexpr <- function(expr) {
+        if (exprTrackingOn) {
+            curExpr <<- expr
+        }
+        if (srcrefTrackingOn) {
+            sref <- getExprSrcref(expr)
+            if (!is.null(sref) && srcrefTrackingOn)
+                curSrcref <<- sref
+         }
+    }
+    ## unconditionally sets the current expression and srcrefs
+    setcurloc <- function(expr, sref) {
+        if (exprTrackingOn)
+            curExpr <<- expr
+        if (srcrefTrackingOn)
+            curSrcref <<- sref
+    }
+    ## add location information (current expressions, srcrefs) to the constant pool
+    commitlocs <- function() {
+        if (exprTrackingOn) {
+          exprs <- exprBuf[1:codeCount]
+          class(exprs) <- "expressionsIndex"
+          putconst(exprs)
+        }
+
+        if (srcrefTrackingOn) {
+          srefs <- srcrefBuf[1:codeCount]
+          class(srefs) <- "srcrefsIndex"
+          putconst(srefs)
+        }
+
+        ## these entries will be at the end of the constant pool, assuming only the compiler
+        ## uses these two classes
+        NULL
+    }
+    savecurloc <- function() {
+        list(expr = curExpr, srcref = curSrcref)
+    }
+    restorecurloc <- function(saved) {
+        if (exprTrackingOn) curExpr <<- saved$expr
+        if (srcrefTrackingOn) curSrcref <<- saved$srcref
+    }
     codeBuf <- list(.Internal(bcVersion()))
     codeCount <- 1
     putcode <- function(...) {
         new <- list(...)
         newLen <- length(new)
-        while (codeCount + newLen > length(codeBuf))
+        while (codeCount + newLen > length(codeBuf)) {
             codeBuf <<- c(codeBuf, vector("list", length(codeBuf)))
-        codeBuf[(codeCount + 1) : (codeCount + newLen)] <<- new
+            if (exprTrackingOn)
+                exprBuf <<- c(exprBuf, vector("integer", length(exprBuf)))
+            if (srcrefTrackingOn)
+                srcrefBuf <<- c(srcrefBuf, vector("integer", length(srcrefBuf)))
+        }
+        codeRange <- (codeCount + 1) : (codeCount + newLen)
+        codeBuf[codeRange] <<- new
+
+        if (exprTrackingOn) {   ## put current expression into the constant pool
+            ei <- putconst(curExpr)
+            exprBuf[codeRange] <<- ei
+        }
+        if (srcrefTrackingOn) { ## put current srcref into the constant pool
+            si <- putconst(curSrcref)
+            srcrefBuf[codeRange] <<- si
+        }
+
         codeCount <<- codeCount + newLen
     }
     getcode <- function() as.integer(codeBuf[1 : codeCount])
@@ -800,11 +904,11 @@ make.codeBuf <- function(expr) {
     labels <- vector("list")
     makelabel <- function() { idx <<- idx + 1; paste0("L", idx) }
     putlabel <- function(name) labels[[name]] <<- codeCount
-    patchlabels <- function() {
+    patchlabels <- function(cntxt) {
         offset <- function(lbl) {
             if (is.null(labels[[lbl]]))
-                stop(gettextf("no offset recorded for label \"%s\"", lbl),
-                     domain = NA)
+                cntxt$stop(gettextf("no offset recorded for label \"%s\"", lbl),
+                           cntxt)
             labels[[lbl]]
         }
         for (i in 1 : codeCount) {
@@ -824,23 +928,31 @@ make.codeBuf <- function(expr) {
                putconst = putconst,
                makelabel = makelabel,
                putlabel = putlabel,
-               patchlabels = patchlabels)
+               patchlabels = patchlabels,
+               setcurexpr = setcurexpr,
+               setcurloc = setcurloc,
+               commitlocs = commitlocs,
+               savecurloc = savecurloc,
+               restorecurloc = restorecurloc)
     cb$putconst(expr) ## insert expression as first constant.
+      ## NOTE: this will also insert the srcref directly into the constant
+      ## pool
     cb
 }
 
-codeBufCode <- function(cb) {
-    cb$patchlabels()
+codeBufCode <- function(cb, cntxt) {
+    cb$patchlabels(cntxt)
+    cb$commitlocs()
     .Internal(mkCode(cb$code(), cb$const()))
 }
 
-genCode <- function(e, cntxt, gen = NULL) {
-    cb <- make.codeBuf(e)
+genCode <- function(e, cntxt, gen = NULL, loc = NULL) {
+    cb <- make.codeBuf(e, loc)
     if (is.null(gen))
-        cmp(e, cb, cntxt)
+        cmp(e, cb, cntxt, setloc = FALSE)
     else
         gen(cb, cntxt)
-    codeBufCode(cb)
+    codeBufCode(cb, cntxt)
 }
 
 
@@ -912,7 +1024,11 @@ make.loopContext <- function(cntxt, loop.label, end.label) {
 ## Compiler top level
 ##
 
-cmp <- function(e, cb, cntxt, missingOK = FALSE) {
+cmp <- function(e, cb, cntxt, missingOK = FALSE, setloc = TRUE) {
+    if (setloc) {
+        sloc <- cb$savecurloc()
+        cb$setcurexpr(e)
+    }
     ce <- constantFold(e, cntxt)
     if (is.null(ce)) {
         if (typeof(e) == "language")
@@ -930,6 +1046,8 @@ cmp <- function(e, cb, cntxt, missingOK = FALSE) {
     }
     else
         cmpConst(ce$value, cb, cntxt)
+    if (setloc)
+        cb$restorecurloc(sloc)
 }
 
 cmpConst <- function(val, cb, cntxt) {
@@ -973,12 +1091,14 @@ cmpSym <- function(sym, cb, cntxt, missingOK = FALSE) {
     }
 }
 
-cmpCall <- function(call, cb, cntxt) {
+cmpCall <- function(call, cb, cntxt, inlineOK = TRUE) {
+    sloc <- cb$savecurloc()
+    cb$setcurexpr(call)
     cntxt <- make.callContext(cntxt, call)
     fun <- call[[1]]
     args <- call[-1]
     if (typeof(fun) == "symbol") {
-        if (! tryInline(call, cb, cntxt)) {
+        if (! (inlineOK && tryInline(call, cb, cntxt))) {
             if (findLocVar(fun, cntxt))
                 notifyLocalFun(fun, cntxt)
             else {
@@ -999,6 +1119,7 @@ cmpCall <- function(call, cb, cntxt) {
             return(cmp(fun, cb, cntxt))
         cmpCallExprFun(fun, args, call, cb, cntxt)
     }
+    cb$restorecurloc(sloc)
 }
 
 cmpCallSymFun <- function(fun, args, call, cb, cntxt) {
@@ -1043,7 +1164,7 @@ cmpCallArgs <- function(args, cb, cntxt) {
                        cntxt)
         else {
             if (is.symbol(a) || typeof(a) == "language") {
-                ci <- cb$putconst(genCode(a, pcntxt))
+                ci <- cb$putconst(genCode(a, pcntxt, loc = cb$savecurloc()))
                 cb$putcode(MAKEPROM.OP, ci)
             }
             else
@@ -1066,23 +1187,20 @@ cmpConstArg <- function(a, cb, cntxt) {
     }
 }
 
-## **** clean up to use tryCatch
 ## **** figure out how to handler multi-line deparses
 ## ****     e.g. checkCall(`{`, quote({}))
 ## **** better design would capture error object, wrap it up, and pass it on
+## **** use approach from codetools to capture partial argument match
+## ****     warnings if enabled?
 checkCall <- function(def, call, signal = warning) {
     if (typeof(def) %in% c("builtin", "special"))
         def <- args(def)
     if (typeof(def) != "closure" || any.dots(call))
         NA
     else {
-        old <- getOption("show.error.messages")
-        if (is.null(old)) old <- TRUE
-        options(show.error.messages=FALSE)
-        msg <- try({match.call(def, call); NULL})
-        options(show.error.messages=old)
+        msg <- tryCatch({match.call(def, call); NULL},
+                        error = function(e) conditionMessage(e))
         if (! is.null(msg)) {
-            msg <- sub("\n$", "", sub("^E.*: ", "", msg))
             emsg <- gettextf("possible error in '%s': %s",
                              deparse(call, 20)[1], msg)
             if (! is.null(signal)) signal(emsg)
@@ -1103,6 +1221,31 @@ cmpTag <- function(n, cb) {
     }
 }
 
+mayCallBrowser <- function(e, cntxt) {
+    if (typeof(e) == "language") {
+        fun <- e[[1]]
+        if (typeof(fun) == "symbol") {
+            fname <- as.character(fun)
+            if (fname == "browser") ## not checking isBaseVar to err on the
+                                    ## positive
+                TRUE
+            else if (fname == "function" && isBaseVar(fname, cntxt))
+                FALSE
+            else
+                mayCallBrowserList(e[-1], cntxt)
+        }
+        else
+            mayCallBrowserList(e, cntxt)
+    }
+    else FALSE
+}
+
+mayCallBrowserList <- function(elist, cntxt) {
+    for (a in as.list(elist))
+        if (! missing(a) && mayCallBrowser(a, cntxt))
+            return(TRUE)
+    FALSE
+}
 
 ##
 ## Inlining mechanism
@@ -1146,7 +1289,7 @@ haveInlineHandler <- function(name, package = "base") {
 
 noInlineSymbols <- c("standardGeneric")
 
-getInlineInfo <- function(name, cntxt) {
+getInlineInfo <- function(name, cntxt, guardOK = FALSE) {
     optimize <- cntxt$optimize
     if (optimize > 0 && ! (name %in% noInlineSymbols)) {
         info <- findCenvVar(name, cntxt$env)
@@ -1164,15 +1307,23 @@ getInlineInfo <- function(name, cntxt) {
                         cntxt$stop(gettext("bad namespace import frame"))
                     frame <- top
                 }
-                info$package <- nsName(findHomeNS(name, frame))
+                info$package <- nsName(findHomeNS(name, frame, cntxt))
+                info$guard <- FALSE
                 info
             }
             else if (ftype == "global" &&
                      (optimize >= 3 ||
                       (optimize >= 2 && name %in% languageFuns))) {
                 info$package <- packFrameName(frame)
+                info$guard <- FALSE
                 info
             }
+            else if (guardOK && ftype == "global" &&
+                     packFrameName(frame) == "base") {
+                info$package <- packFrameName(frame)
+                info$guard <- TRUE
+                info
+            }                
             else NULL
         }
     }
@@ -1181,13 +1332,26 @@ getInlineInfo <- function(name, cntxt) {
 
 tryInline <- function(e, cb, cntxt) {
     name <- as.character(e[[1]])
-    info <- getInlineInfo(name, cntxt)
+    info <- getInlineInfo(name, cntxt, guardOK = TRUE)
     if (is.null(info))
         FALSE
     else {
         h <- getInlineHandler(name, info$package)
-        if (! is.null(h))
-            h(e, cb, cntxt)
+        if (! is.null(h)) {
+            if (info$guard) {
+                tailcall <- cntxt$tailcall
+                if (tailcall) cntxttailcall <- FALSE
+                expridx <- cb$putconst(e)
+                endlabel <- cb$makelabel()
+                cb$putcode(BASEGUARD.OP, expridx, endlabel)
+                if (! h(e, cb, cntxt))
+                    cmpCall(e, cb, cntxt, inlineOK = FALSE)
+                cb$putlabel(endlabel)
+                if (tailcall) cb$putcode(RETURN.OP)
+                TRUE
+            }
+            else h(e, cb, cntxt)
+        }
         else FALSE
     }
 }
@@ -1200,9 +1364,12 @@ tryInline <- function(e, cb, cntxt) {
 setInlineHandler("function", function(e, cb, cntxt) {
     forms <- e[[2]]
     body <- e[[3]]
+    sref <- e[[4]]
     ncntxt <- make.functionContext(cntxt, forms, body)
-    cbody <- genCode(body, ncntxt)
-    ci <- cb$putconst(list(forms, cbody))
+    if (mayCallBrowser(body, cntxt))
+        return(FALSE)
+    cbody <- genCode(body, ncntxt, loc = cb$savecurloc())
+    ci <- cb$putconst(list(forms, cbody, sref))
     cb$putcode(MAKECLOSURE.OP, ci)
     if (cntxt$tailcall) cb$putcode(RETURN.OP)
     TRUE
@@ -1213,14 +1380,21 @@ setInlineHandler("{", function(e, cb, cntxt) {
     if (n == 1)
         cmp(NULL, cb, cntxt)
     else {
+        sloc <- cb$savecurloc()
+        bsrefs <- attr(e, "srcref")
         if (n > 2) {
             ncntxt <- make.noValueContext(cntxt)
             for (i in 2 : (n - 1)) {
-                cmp(e[[i]], cb, ncntxt)
+                subexp <- e[[i]]
+                cb$setcurloc(subexp, getBlockSrcref(bsrefs, i))
+                cmp(subexp, cb, ncntxt, setloc = FALSE)
                 cb$putcode(POP.OP)
             }
         }
-        cmp(e[[n]], cb, cntxt)
+        subexp <- e[[n]]
+        cb$setcurloc(subexp, getBlockSrcref(bsrefs, n))
+        cmp(subexp, cb, cntxt, setloc = FALSE)
+        cb$restorecurloc(sloc)
     }
     TRUE
 })
@@ -1337,7 +1511,7 @@ getSetterInlineHandler <- function(name, package = "base") {
     else NULL
 }
 
-trySetterInline <- function(afun, place, call, cb, cntxt) {
+trySetterInline <- function(afun, place, origplace, call, cb, cntxt) {
     name <- as.character(afun)
     info <- getInlineInfo(name, cntxt)
     if (is.null(info))
@@ -1345,7 +1519,7 @@ trySetterInline <- function(afun, place, call, cb, cntxt) {
     else {
         h <- getSetterInlineHandler(name, info$package)
         if (! is.null(h))
-            h(afun, place, call, cb, cntxt)
+            h(afun, place, origplace, call, cb, cntxt)
         else FALSE
     }
 }
@@ -1393,7 +1567,7 @@ cmpAssign <- function(e, cb, cntxt) {
     superAssign <- as.character(e[[1]]) == "<<-"
     lhs <- e[[2]]
     value <- e[[3]]
-    symbol <- as.name(getAssignedVar(e))
+    symbol <- as.name(getAssignedVar(e, cntxt))
     if (superAssign && ! findVar(symbol, cntxt))
         notifyNoSuperAssignVar(symbol, cntxt)
     if (is.name(lhs) || is.character(lhs))
@@ -1403,23 +1577,27 @@ cmpAssign <- function(e, cb, cntxt) {
     else cmpSpecial(e, cb, cntxt) # punt for now
 }
 
-flattenPlace <- function(place) {
+flattenPlace <- function(place, cntxt) {
     places <- NULL
+    origplaces <- NULL
     while (typeof(place) == "language") {
         if (length(place) < 2)
-            stop("bad assignment 1")
+            cntxt$stop(gettext("bad assignment 1"), cntxt)
+        origplaces <- c(origplaces, list(place))
         tplace <- place
         tplace[[2]] <- as.name("*tmp*")
         places <- c(places, list(tplace))
         place <- place[[2]]
     }
     if (typeof(place) != "symbol")
-        stop("bad assignment 2")
-    places
+        cntxt$stop(gettext("bad assignment 2"), cntxt)
+    list(places = places, origplaces = origplaces)
 }
 
-cmpGetterCall <- function(place, cb, cntxt) {
+cmpGetterCall <- function(place, origplace, cb, cntxt) {
     ncntxt <- make.callContext(cntxt, place)
+    sloc <- cb$savecurloc()
+    cb$setcurexpr(origplace)
     fun <- place[[1]]
     if (typeof(fun) == "symbol") {
         if (! tryGetterInline(place, cb, ncntxt)) {
@@ -1441,6 +1619,7 @@ cmpGetterCall <- function(place, cb, cntxt) {
         cb$putcode(GETTER_CALL.OP, cci)
         cb$putcode(SWAP.OP)
     }
+    cb$restorecurloc(sloc)
 }
 
 checkAssign <- function(e, cntxt) {
@@ -1502,12 +1681,15 @@ cmpComplexAssign <- function(symbol, lhs, value, superAssign, cb, cntxt) {
     cb$putcode(startOP, csi)
 
     ncntxt <- make.argContext(cntxt)
-    flatPlace <- flattenPlace(lhs)
-    for (p in rev(flatPlace[-1]))
-        cmpGetterCall(p, cb, ncntxt)
-    cmpSetterCall(flatPlace[[1]], value, cb, ncntxt)
-    for (p in flatPlace[-1])
-        cmpSetterCall(p, as.name("*vtmp*"), cb, ncntxt)
+    flat <- flattenPlace(lhs, cntxt)
+    flatOrigPlace <- flat$origplaces
+    flatPlace <- flat$places
+    flatPlaceIdxs <- seq_along(flatPlace)[-1]
+    for (i in rev(flatPlaceIdxs))
+        cmpGetterCall(flatPlace[[i]], flatOrigPlace[[i]], cb, ncntxt)
+    cmpSetterCall(flatPlace[[1]], flatOrigPlace[[1]], value, cb, ncntxt)
+    for (i in flatPlaceIdxs)
+        cmpSetterCall(flatPlace[[i]], flatOrigPlace[[i]], as.name("*vtmp*"), cb, ncntxt)
 
     cb$putcode(endOP, csi)
     if (cntxt$tailcall) {
@@ -1517,17 +1699,20 @@ cmpComplexAssign <- function(symbol, lhs, value, superAssign, cb, cntxt) {
     TRUE;
 }
 
-cmpSetterCall <- function(place, vexpr, cb, cntxt) {
+cmpSetterCall <- function(place, origplace, vexpr, cb, cntxt) {
     afun <- getAssignFun(place[[1]])
     acall <- as.call(c(afun, as.list(place[-1]), list(value = vexpr)))
     acall[[2]] <- as.name("*tmp*")
     ncntxt <- make.callContext(cntxt, acall)
+    sloc <- cb$savecurloc()
+    cexpr <- as.call(c(afun, as.list(origplace[-1]), list(value = vexpr)))
+    cb$setcurexpr(cexpr)
     if (is.null(afun))
         ## **** warn instead and arrange for cmpSpecial?
         ## **** or generate code to signal runtime error?
         cntxt$stop(gettext("invalid function in complex assignment"))
     else if (typeof(afun) == "symbol") {
-        if (! trySetterInline(afun, place, acall, cb, ncntxt)) {
+        if (! trySetterInline(afun, place, origplace, acall, cb, ncntxt)) {
             ci <- cb$putconst(afun)
             cb$putcode(GETFUN.OP, ci)
             cb$putcode(PUSHNULLARG.OP)
@@ -1546,6 +1731,7 @@ cmpSetterCall <- function(place, vexpr, cb, cntxt) {
         cvi <- cb$putconst(vexpr)
         cb$putcode(SETTER_CALL.OP, cci, cvi)
     }
+    cb$restorecurloc(sloc)
 }
 
 getAssignFun <- function(fun) {
@@ -1585,7 +1771,7 @@ setInlineHandler("<-", cmpAssign)
 setInlineHandler("=", cmpAssign)
 setInlineHandler("<<-", cmpAssign)
 
-setSetterInlineHandler("$<-", function(afun, place, call, cb, cntxt) {
+setSetterInlineHandler("$<-", function(afun, place, origplace, call, cb, cntxt) {
     if (any.dots(place) || length(place) != 3)
         FALSE
     else {
@@ -1603,11 +1789,11 @@ setSetterInlineHandler("$<-", function(afun, place, call, cb, cntxt) {
 })
 
 # **** this is now handled differently; see "Improved subset ..."
-# setSetterInlineHandler("[<-", function(afun, place, call, cb, cntxt)
+# setSetterInlineHandler("[<-", function(afun, place, origplace, call, cb, cntxt)
 #     cmpSetterDispatch(STARTSUBASSIGN.OP, DFLTSUBASSIGN.OP,
 #                       afun, place, call, cb, cntxt))
 
-# setSetterInlineHandler("[[<-", function(afun, place, call, cb, cntxt)
+# setSetterInlineHandler("[[<-", function(afun, place, origplace, call, cb, cntxt)
 #     cmpSetterDispatch(STARTSUBASSIGN2.OP, DFLTSUBASSIGN2.OP,
 #                       afun, place, call, cb, cntxt))
 
@@ -1711,6 +1897,8 @@ checkSkipLoopCntxt <- function(e, cntxt, breakOK = TRUE) {
                 TRUE
             else if (isLoopTopFun(fname, cntxt))
                 checkSkipLoopCntxtList(e[-1], cntxt, breakOK)
+            else if (fname %in% c("eval", "evalq"))
+                FALSE
             else
                 checkSkipLoopCntxtList(e[-1], cntxt, FALSE)
         }
@@ -1726,13 +1914,11 @@ setInlineHandler("repeat", function(e, cb, cntxt) {
         cmpRepeatBody(body, cb, cntxt)
     else {
         cntxt$needRETURNJMP <- TRUE ## **** do this a better way
-        code <- genCode(body, cntxt,
-                        function(cb, cntxt) {
-                            cmpRepeatBody(body, cb, cntxt)
-                            cb$putcode(ENDLOOPCNTXT.OP)
-                        })
-        bi <- cb$putconst(code)
-        cb$putcode(STARTLOOPCNTXT.OP, bi)
+        ljmpend.label <- cb$makelabel()
+        cb$putcode(STARTLOOPCNTXT.OP, 0, ljmpend.label)
+        cmpRepeatBody(body, cb, cntxt)
+        cb$putlabel(ljmpend.label)
+        cb$putcode(ENDLOOPCNTXT.OP, 0)
     }
     cb$putcode(LDNULL.OP)
     if (cntxt$tailcall) {
@@ -1760,13 +1946,11 @@ setInlineHandler("while", function(e, cb, cntxt) {
         cmpWhileBody(e, cond, body, cb, cntxt)
     else {
         cntxt$needRETURNJMP <- TRUE ## **** do this a better way
-        code <- genCode(body, cntxt, ## **** expr isn't quite right
-                        function(cb, cntxt) {
-                            cmpWhileBody(e, cond, body, cb, cntxt)
-                            cb$putcode(ENDLOOPCNTXT.OP)
-                        })
-        bi <- cb$putconst(code)
-        cb$putcode(STARTLOOPCNTXT.OP, bi)
+        ljmpend.label <- cb$makelabel()
+        cb$putcode(STARTLOOPCNTXT.OP, 0, ljmpend.label)
+        cmpWhileBody(e, cond, body, cb, cntxt)
+        cb$putlabel(ljmpend.label)
+        cb$putcode(ENDLOOPCNTXT.OP, 0)
     }
     cb$putcode(LDNULL.OP)
     if (cntxt$tailcall) {
@@ -1809,13 +1993,11 @@ setInlineHandler("for", function(e, cb, cntxt) {
         ctxt.label <- cb$makelabel()
         cb$putcode(STARTFOR.OP, callidx, ci, ctxt.label)
         cb$putlabel(ctxt.label)
-        code <- genCode(body, cntxt, ## **** expr isn't quite right
-                        function(cb, cntxt) {
-                            cmpForBody(NULL, body, NULL, cb, cntxt)
-                            cb$putcode(ENDLOOPCNTXT.OP)
-                        })
-        bi <- cb$putconst(code)
-        cb$putcode(STARTLOOPCNTXT.OP, bi)
+        ljmpend.label <- cb$makelabel()
+        cb$putcode(STARTLOOPCNTXT.OP, 1, ljmpend.label)
+        cmpForBody(NULL, body, NULL, cb, cntxt)
+        cb$putlabel(ljmpend.label)
+        cb$putcode(ENDLOOPCNTXT.OP, 1)
     }
     cb$putcode(ENDFOR.OP)
     if (cntxt$tailcall) {
@@ -1955,7 +2137,9 @@ cmpMath1 <- function(e, cb, cntxt) {
         name <- as.character(e[[1]])
         idx <- match(name, math1funs) - 1
         if (is.na(idx))
-            stop(sQuote(name), "is not a registered math1 function")
+            cntxt$stop(
+                paste(sQuote(name), "is not a registered math1 function"),
+                cntxt)
         ncntxt <- make.nonTailCallContext(cntxt)
         cmp(e[[2]], cb, ncntxt);
         ci <- cb$putconst(e)
@@ -2098,14 +2282,16 @@ cmpSpecial <- function(e, cb, cntxt) {
     TRUE
 }
 
-setInlineHandler(".Internal", function(e, cb, cntxt) {
+cmpDotInternalCall <- function(e, cb, cntxt) {
     ee <- e[[2]]
     sym <- ee[[1]]
     if (.Internal(is.builtin.internal(sym)))
         cmpBuiltin(ee, cb, cntxt, internal = TRUE)
     else
         cmpSpecial(e, cb, cntxt)
-})
+}
+
+setInlineHandler(".Internal", cmpDotInternalCall)
 
 
 ##
@@ -2177,7 +2363,8 @@ setInlineHandler("$", function(e, cb, cntxt) {
 
 setInlineHandler("local", function(e, cb, cntxt) {
     if (length(e) == 2) {
-        ee <- as.call(list(as.call(list(as.name("function"), NULL, e[[2]]))))
+        ee <- as.call(list(as.call(list(
+            as.name("function"), NULL, e[[2]], NULL))))
         cmp(ee, cb, cntxt)
         TRUE
     }
@@ -2335,17 +2522,16 @@ cmpSimpleInternal <- function(e, cb, cntxt) {
         call <- inlineSimpleInternalCall(e, def)
         if (is.null(call))
             FALSE
-        else {
-            cmp(call, cb, cntxt)
-            TRUE
-        }
+        else
+            cmpDotInternalCall(call, cb, cntxt)
     }
 }
 
 safeBaseInternals <- c("atan2", "besselY", "beta", "choose",
                        "drop", "inherits", "is.vector", "lbeta", "lchoose",
                        "nchar", "polyroot", "typeof", "vector", "which.max",
-                       "which.min", "is.loaded", "identical")
+                       "which.min", "is.loaded", "identical",
+                       "match", "rep.int", "rep_len")
 
 for (i in safeBaseInternals) setInlineHandler(i,  cmpSimpleInternal)
 
@@ -2562,12 +2748,12 @@ cmpMultiColon <- function(e, cb, cntxt) {
 setInlineHandler("::", cmpMultiColon)
 setInlineHandler(":::", cmpMultiColon)
 
-setSetterInlineHandler("@<-", function(afun, place, acall, cb, cntxt) {
+setSetterInlineHandler("@<-", function(afun, place, origplace, acall, cb, cntxt) {
     if (! dots.or.missing(place) && length(place) == 3 &&
         typeof(place[[3]]) == "symbol") {
         place[[3]] <- as.character(place[[3]])
         vexpr <- acall[[length(acall)]]
-        cmpSetterCall(place, vexpr, cb, cntxt)
+        cmpSetterCall(place, origplace, vexpr, cb, cntxt)
         TRUE
     }
     else FALSE
@@ -2675,16 +2861,35 @@ notifyNoSwitchcases <- function(cntxt)
     if (! suppressAll(cntxt))
         cntxt$warn(gettext("'switch' with no alternatives"), cntxt)
 
+notifyAssignSyntacticFun <- function(funs, cntxt) {
+    if (! suppressAll(cntxt)) {
+        msg <- ngettext(length(funs),
+            "local assignment to syntactic function: ",
+            "local assignments to syntactic functions: ")
+        cntxt$warn(paste(msg, paste(funs, collapse = ", ")), cntxt)
+    }
+}
+
+notifyCompilerError <- function(msg)
+    if (!compilerOptions$suppressAll)
+        cat(paste(gettext("Error: compilation failed - "), msg, "\n"))
+
 
 ##
 ## Compiler interface
 ##
 
-compile <- function(e, env = .GlobalEnv, options = NULL) {
+compile <- function(e, env = .GlobalEnv, options = NULL, srcref = NULL) {
     cenv <- makeCenv(env)
     cntxt <- make.toplevelContext(cenv, options)
     cntxt$env <- addCenvVars(cenv, findLocals(e, cntxt))
-    genCode(e, cntxt)
+    if (mayCallBrowser(e, cntxt))
+        ## NOTE: compilation will be attempted repeatedly
+        e
+    else if (is.null(srcref))
+        genCode(e, cntxt)
+    else
+        genCode(e, cntxt, loc = list(expr = e, srcref = srcref))
 }
 
 cmpfun <- function(f, options = NULL) {
@@ -2692,7 +2897,13 @@ cmpfun <- function(f, options = NULL) {
     if (type == "closure") {
         cntxt <- make.toplevelContext(makeCenv(environment(f)), options)
         ncntxt <- make.functionContext(cntxt, formals(f), body(f))
-        b <- genCode(body(f), ncntxt)
+        if (mayCallBrowser(body(f), ncntxt))
+            return(f)
+        if (typeof(body(f)) != "language" || body(f)[1] != "{")
+            loc <- list(expr = body(f), srcref = getExprSrcref(f))
+        else
+            loc <- NULL
+        b <- genCode(body(f), ncntxt, loc = loc)
         val <- .Internal(bcClose(formals(f), b, environment(f)))
         attrs <- attributes(f)
         if (! is.null(attrs))
@@ -2707,10 +2918,16 @@ cmpfun <- function(f, options = NULL) {
 }
 
 tryCmpfun <- function(f)
-    tryCatch(cmpfun(f), error = function(e) f)
+    tryCatch(cmpfun(f), error = function(e) {
+        notifyCompilerError(paste(e$message, "at", deparse(e$call)))
+        f
+    })
 
 tryCompile <- function(e, ...)
-    tryCatch(compile(e, ...), error = function(err) e)
+    tryCatch(compile(e, ...), error = function(err) {
+        notifyCompilerError(paste(err$message, "at", deparse(err$call)))
+        e
+    })
 
 cmpframe <- function(inpos, file) {
     expr.needed <- 1000
@@ -2784,7 +3001,8 @@ cmpfile <- function(infile, outfile, ascii = FALSE, env = .GlobalEnv,
                     cat(paste("compiling expression", deparse(e, 20)[1],
                               "...\n"))
             }
-            cforms[[i]] <- genCode(e, cntxt)
+            if (!mayCallBrowser(e, cntxt))
+                cforms[[i]] <- genCode(e, cntxt)
         }
         cat(gettextf("saving to file \"%s\" ... ", outfile))
         .Internal(save.to.file(cforms, outfile, ascii))
@@ -2861,10 +3079,23 @@ setCompilerOptions <- function(...) {
 }
 
 .onLoad <- function(libname, pkgname) {
-    if (Sys.getenv("R_COMPILER_SUPPRESS_ALL") != "")
-        setCompilerOptions(suppressAll = TRUE)
-    if (Sys.getenv("R_COMPILER_SUPPRESS_UNDEFINED") != "")
-        setCompilerOptions(suppressUndefined = TRUE)
+    envAsLogical <- function(varName) {
+        value = Sys.getenv(varName)
+        if (value == "")
+            NA
+        else
+            switch(value,
+                "1"=, "TRUE"=, "true"=, "True"=, "yes"=, "Yes"= TRUE,
+                "0"=, "FALSE"=,"false"=,"False"=, "no"=, "No" = FALSE,
+                stop(gettextf("invalid environment variable value: %s==%s",
+                    varName, value)))
+    }
+    val <- envAsLogical("R_COMPILER_SUPPRESS_ALL")
+    if (!is.na(val))
+        setCompilerOptions(suppressAll = val)
+    val <- envAsLogical("R_COMPILER_SUPPRESS_UNDEFINED")
+    if (!is.na(val))
+        setCompilerOptions(suppressUndefined = val)
     if (Sys.getenv("R_COMPILER_OPTIMIZE") != "")
         tryCatch({
             lev <- as.integer(Sys.getenv("R_COMPILER_OPTIMIZE"))
@@ -3026,7 +3257,7 @@ cmpSubassignDispatch <- function(start.op, dflt.op, afun, place, call, cb,
     }
 }
 
-setSetterInlineHandler("[<-", function(afun, place, call, cb, cntxt) {
+setSetterInlineHandler("[<-", function(afun, place, origplace, call, cb, cntxt) {
     if (dots.or.missing(place) || ! is.null(names(place)) || length(place) < 3)
         cmpSetterDispatch(STARTSUBASSIGN.OP, DFLTSUBASSIGN.OP,
                           afun, place, call, cb, cntxt) ## punt
@@ -3043,7 +3274,7 @@ setSetterInlineHandler("[<-", function(afun, place, call, cb, cntxt) {
     }
 })
 
-setSetterInlineHandler("[[<-", function(afun, place, call, cb, cntxt) {
+setSetterInlineHandler("[[<-", function(afun, place, origplace, call, cb, cntxt) {
     if (dots.or.missing(place) || ! is.null(names(place)) || length(place) < 3)
         cmpSetterDispatch(STARTSUBASSIGN2.OP, DFLTSUBASSIGN2.OP,
                           afun, place, call, cb, cntxt) ## punt

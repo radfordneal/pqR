@@ -1,5 +1,5 @@
 
-R version 3.3.3 beta (2017-02-23 r72250) -- "Another Canoe"
+R version 3.4.0 RC (2017-04-18 r72543) -- "You Stupid Darkness"
 Copyright (C) 2017 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -23,6 +23,20 @@ Type 'q()' to quit R.
 > library('tools')
 > 
 > base::assign(".oldSearch", base::search(), pos = 'CheckExEnv')
+> cleanEx()
+> nameEx("CRANtools")
+> ### * CRANtools
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: CRANtools
+> ### Title: CRAN Package Repository Tools
+> ### Aliases: CRAN_package_db CRAN_check_results CRAN_check_details
+> ###   CRAN_memtest_notes summarize_CRAN_check_status
+> 
+> ### ** Examples
+> 
+> 
 > cleanEx()
 > nameEx("HTMLheader")
 > ### * HTMLheader
@@ -188,7 +202,7 @@ Error in assertWarning(ff()) :
 > bibstyle("unsorted", sortKeys = function(refs) seq_along(refs),
 +     fmtPrefix = function(paper) paste0("[", paper$.index, "]"),
 +        .init = TRUE)
-<environment: 0x230b910>
+<environment: 0x3620938>
 > print(refs, .bibstyle = "unsorted")
 [1] R Core Team (2013). _R: A Language and Environment for Statistical
 Computing_. R Foundation for Statistical Computing, Vienna, Austria.
@@ -438,6 +452,7 @@ _Journal of the Royal Statistical Society, Series B_, *26*, pp.
 > ### Aliases: check_packages_in_dir summarize_check_packages_in_dir_depends
 > ###   summarize_check_packages_in_dir_results
 > ###   summarize_check_packages_in_dir_timings check_packages_in_dir_changes
+> ###   check_packages_in_dir_details
 > ### Keywords: utilities
 > 
 > ### ** Examples
@@ -591,49 +606,6 @@ attr(,"match.length")
 > 
 > 
 > cleanEx()
-> nameEx("getDepList")
-> ### * getDepList
-> 
-> flush(stderr()); flush(stdout())
-> 
-> ### Name: getDepList
-> ### Title: Functions to Retrieve Dependency Information
-> ### Aliases: getDepList pkgDepends
-> ### Keywords: utilities
-> 
-> ### ** Examples
-> 
-> pkgDepends("tools", local = FALSE)
-Warning: 'pkgDepends' is deprecated.
-Use 'package_dependencies()' instead.
-See help("Deprecated")
-Warning: 'package.dependencies' is deprecated.
-Use 'package_dependencies' instead.
-See help("Deprecated")
-Warning: 'getDepList' is deprecated.
-Use 'dependsOnPkgs() or package_dependencies()' instead.
-See help("Deprecated")
-$Depends
-character(0)
-
-$Installed
-character(0)
-
-$Found
-list()
-
-$NotFound
-character(0)
-
-$R
-character(0)
-
-attr(,"class")
-[1] "DependsList"
-> 
-> 
-> 
-> cleanEx()
 > nameEx("getVignetteInfo")
 > ### * getVignetteInfo
 > 
@@ -646,40 +618,6 @@ attr(,"class")
 > 
 > ### ** Examples
 > 
-> 
-> 
-> 
-> cleanEx()
-> nameEx("installFoundDepends")
-> ### * installFoundDepends
-> 
-> flush(stderr()); flush(stdout())
-> 
-> ### Name: installFoundDepends
-> ### Title: A function to install unresolved dependencies
-> ### Aliases: installFoundDepends
-> ### Keywords: utilities
-> 
-> ### ** Examples
-> 
-> ## Set up a temporary directory to install packages to
-> tmp <- tempfile()
-> dir.create(tmp)
-> 
-> pDL <- pkgDepends("tools", local = FALSE)
-Warning: 'pkgDepends' is deprecated.
-Use 'package_dependencies()' instead.
-See help("Deprecated")
-Warning: 'package.dependencies' is deprecated.
-Use 'package_dependencies' instead.
-See help("Deprecated")
-Warning: 'getDepList' is deprecated.
-Use 'dependsOnPkgs() or package_dependencies()' instead.
-See help("Deprecated")
-> installFoundDepends(pDL$Found, destdir = tmp)
-Warning: 'installFoundDepends()' is deprecated: It is misleading nowadays
- since it has never taken 'Imports' into consideration
-NULL
 > 
 > 
 > 
@@ -711,6 +649,14 @@ NULL
 > ### Keywords: utilities
 > 
 > ### ** Examples
+> ## Don't show: 
+> checkMV <- function(r)
++   stopifnot(is.character(r),
++             length(r) == 0 || (length(r) == 1 && file.exists(r)))
+> checkMV(makevars_user())
+> checkMV(makevars_site())
+> ## End(Don't show)
+> 
 > 
 > 
 > cleanEx()
@@ -744,14 +690,50 @@ NULL
 > 
 > ### ** Examples
 > 
-> ## Not run: 
-> ##D pdb <- available.packages()
-> ##D deps <- package_dependencies(packages = "MASS", pdb,
-> ##D                     which = c("Depends", "Imports", "LinkingTo", "Suggests"),
-> ##D                     recursive = TRUE, reverse = TRUE)
-> ##D length(deps$MASS)
-> ## End(Not run)
 > 
+> 
+> 
+> cleanEx()
+> nameEx("package_native_routine_registration_skeleton")
+> ### * package_native_routine_registration_skeleton
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: package_native_routine_registration_skeleton
+> ### Title: Write Skeleton for Adding Native Routine Registration to a
+> ###   Package
+> ### Aliases: package_native_routine_registration_skeleton
+> 
+> ### ** Examples
+> ## Not run: 
+> ##D ## with a completed splines/DESCRIPTION file,
+> ##D tools::package_native_routine_registration_skeleton('splines',,,FALSE)
+> ##D ## produces
+> ##D #include <R.h>
+> ##D #include <Rinternals.h>
+> ##D #include <stdlib.h> // for NULL
+> ##D #include <R_ext/Rdynload.h>
+> ##D 
+> ##D /* FIXME: 
+> ##D    Check these declarations against the C/Fortran source code.
+> ##D */
+> ##D 
+> ##D /* .Call calls */
+> ##D extern SEXP spline_basis(SEXP, SEXP, SEXP, SEXP);
+> ##D extern SEXP spline_value(SEXP, SEXP, SEXP, SEXP, SEXP);
+> ##D 
+> ##D static const R_CallMethodDef CallEntries[] = {
+> ##D     {"spline_basis", (DL_FUNC) &spline_basis, 4},
+> ##D     {"spline_value", (DL_FUNC) &spline_value, 5},
+> ##D     {NULL, NULL, 0}
+> ##D };
+> ##D 
+> ##D void R_init_splines(DllInfo *dll)
+> ##D {
+> ##D     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
+> ##D     R_useDynamicSymbols(dll, FALSE);
+> ##D }
+> ## End(Not run)
 > 
 > 
 > cleanEx()
@@ -1015,7 +997,7 @@ List of 6
 > ###
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  0.193 0.004 0.198 0 0 
+Time elapsed:  0.26 0.004 0.264 0 0 
 > grDevices::dev.off()
 null device 
           1 

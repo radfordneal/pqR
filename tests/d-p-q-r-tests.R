@@ -13,6 +13,7 @@ options(warn = 2)
 ##      ======== No warnings, unless explicitly asserted via
 assertWarning <- tools::assertWarning
 
+as.nan <- function(x) { x[is.na(x) & !is.nan(x)] <- NaN ; x }
 ###-- these are identical in ./arith-true.R ["fixme": use source(..)]
 opt.conformance <- 0
 Meps <- .Machine $ double.eps
@@ -974,6 +975,65 @@ stopifnot(all.equal(d, dpois(x, mu)),
 	  identical(NI, N2))
 options(op)
 ## size = Inf -- mostly gave NaN  in R <= 3.2.3
+
+## qpois(p, *) for invalid 'p' should give NaN -- PR#16972
+stopifnot(is.nan(suppressWarnings(c(qpois(c(-2,3, NaN), 3), qpois(1, 3, log.p=TRUE),
+                                    qpois(.5, 0, log.p=TRUE), qpois(c(-1,pi), 0)))))
+## those in the 2nd line gave 0 in R <= 3.3.1
+## Similar but different for qgeom():
+stopifnot(qgeom((0:8)/8, prob=1) == 0, ## p=1 gave Inf in R <= 3.3.1
+          is.nan(suppressWarnings(qgeom(c(-1/4, 1.1), prob=1))))
+
+## all our RNG  r<dist>() functions:
+##' catch all: value and warnings or error <-- demo(error.catching) :
+tryCatch.W.E <- function(expr) {
+    W <- NULL
+    w.handler <- function(w){ # warning handler
+	W <<- w
+	invokeRestart("muffleWarning")
+    }
+    list(value = withCallingHandlers(tryCatch(expr, error = function(e) e),
+				     warning = w.handler),
+	 warning = W)
+}
+.stat.ns <- asNamespace("stats")
+Ns <- 4
+for(dist in PDQR) {
+    fn <- paste0("r",dist)
+    cat(sprintf("%-9s(%d, ..): ", fn, Ns))
+    F <- get(fn, envir = .stat.ns)
+    nArg <- length(fms <- formals(F))
+    if(dist %in% c("nbinom", "gamma")) ## cannot specify *both* 'prob' & 'mu' / 'rate' & 'scale'
+        nArg <- nArg - 1
+    nA1 <- nArg - 1 # those beside the first (= 'n' mostly)
+    expected <- rep(if(dist %in% PDQRinteg) NA_integer_ else NaN, Ns)
+    for(ia in seq_len(nA1)) {
+        aa <- rep(list(1), nA1)
+        aa[[ia]] <- NA
+        cat(ia,"")
+        R <- tryCatch.W.E( do.call(F, c(Ns, aa)) )
+        if(!inherits(R$warning, "simpleWarning")) cat(" .. did *NOT* give a warning! ")
+	if(!(identical(R$value, expected))) { ## allow NA/NaN mismatch in these cases for now:
+	    if(!(dist %in% c("beta","f","t") && all(is.na(R$value))))
+		cat(" .. not giving expected NA/NaN's ")
+        }
+    }
+    cat(" [Ok]\n")
+}
+
+
+## qbeta() in very asymmetric cases
+sh2 <- 2^seq(9,16, by=1/16)
+qbet <- qbeta(1e-10, 1.5, shape2=sh2, lower.tail=FALSE)
+plot(sh2, 1- pbeta(qbet, 1.5, sh2, lower.tail=FALSE) * 1e10, log="x")
+dqb <- diff(qbet); d2qb <- diff(dqb); d3qb <- diff(d2qb)
+stopifnot(all.equal(qbet[[1]], 0.047206901483498, tol=1e-12),
+	  max(abs(1- pbeta(qbet, 1.5, sh2, lower.tail=FALSE) * 1e10)) < 1e-12,# Lx 64b: 2.4e-13
+	  0 > dqb, dqb > -0.002,
+	  0 < d2qb, d2qb < 0.00427,
+	  -3.2e-8 > d3qb, d3qb > -3.1e-6,
+	  diff(d3qb) > 1e-9)
+## had discontinuity (from wrong jump out of Newton) in R <= 3.3.2
 
 
 

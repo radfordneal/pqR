@@ -1,6 +1,6 @@
 % File src/library/compiler/man/compile.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 2011-2016 R Core Team
+% Copyright 2011-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{compile}
@@ -16,7 +16,7 @@
 \title{Byte Code Compiler}
 \usage{
 cmpfun(f, options = NULL)
-compile(e, env = .GlobalEnv, options = NULL)
+compile(e, env = .GlobalEnv, options = NULL, srcref = NULL)
 cmpfile(infile, outfile, ascii = FALSE, env = .GlobalEnv,
         verbose = FALSE, options = NULL)
 loadcmp(file, envir = .GlobalEnv, chdir = FALSE)
@@ -30,6 +30,7 @@ setCompilerOptions(...)
   \item{f}{a closure.}
   \item{options}{list of named compiler options: see \sQuote{Details}.}
   \item{env}{the top level environment for the compiling.}
+  \item{srcref}{initial source reference for the expression.}
   \item{file,infile,outfile}{pathnames; outfile defaults to infile with
     a \file{.Rc} extension in place of any existing extension.}
   \item{ascii}{logical; should the compiled file be saved in ascii format?}
@@ -68,22 +69,26 @@ setCompilerOptions(...)
 
   \code{enableJIT} enables or disables just-in-time (JIT)
   compilation. JIT is disabled if the argument is 0. If \code{level} is
-  1 then closures are compiled before their first use.  If \code{level}
-  is 2, then in addition closures are also compiled before they are
-  duplicated (useful for some packages, like \code{lattice}, that store
-  closures in lists).  If \code{level} is 3 then in addition all loops
-  are compiled before they are executed.  JIT level 3 requires the
-  compiler option \code{optimize} to be 2 or 3.  The JIT level can also
-  be selected by starting \R with the environment variable
-  \code{R_ENABLE_JIT} set to one of these values. Calling
+  1 then larger closures are compiled before their first use.  If
+  \code{level} is 2, then some small closures are also compiled before
+  their second use.  If \code{level} is 3 then in addition
+  all top level loops are compiled before they are executed.  JIT level
+  3 requires the compiler option \code{optimize} to be 2 or 3.  The JIT
+  level can also be selected by starting \R with the environment
+  variable \code{R_ENABLE_JIT} set to one of these values. Calling
   \code{enableJIT} with a negative argument returns the current JIT
   level. The default JIT level is \code{3}.
 
   \code{compilePKGS} enables or disables compiling packages when they
-  are installed.  This requires that the package use lazy loading as
+  are installed.  This requires that the package uses lazy loading as
   compilation occurs as functions are written to the lazy loading data
   base. This can also be enabled by starting \R with the environment
-  variable \code{R_COMPILE_PKGS} set to a positive integer value.
+  variable \code{_R_COMPILE_PKGS_} set to a positive integer value.
+  This should not be enabled outside package installation, because it
+  causes any serialized function to be compiled, which comes with
+  time and space overhead. \code{R_COMPILE_PKGS} can be used, instead,
+  to instruct \code{INSTALL} to enable/disable compilation of packages
+  during installation.
 
   Currently the compiler warns about a variety of things.  It does
   this by using \code{cat} to print messages.  Eventually this should
@@ -103,7 +108,9 @@ setCompilerOptions(...)
   The default value is returned unless a value is supplied in the
   \code{options} argument; the \code{options} argument is primarily for
   internal use.  \code{setCompilerOption} sets the default option
-  values. It returns a named list of the previous values.
+  values. Options to set are identified by argument names, e.g.
+  \code{setCompilerOptions(suppressAll = TRUE, optimize = 3)}.
+  It returns a named list of the previous values.
 
   Calling the compiler a byte code compiler is actually a bit of a
   misnomer: the external representation of code objects currently uses
@@ -113,6 +120,7 @@ setCompilerOptions(...)
 \author{Luke Tierney}
 
 \examples{
+oldJIT <- enableJIT(0)
 # a simple example
 f <- function(x) x+1
 fc <- cmpfun(f)
@@ -173,5 +181,6 @@ for (i in 1:1000) la1(y, is.null)
 for (i in 1:1000) la1c(y, is.null)
 for (i in 1:1000) la2(y, is.null)
 for (i in 1:1000) la2c(y, is.null)
-}}
+}
+enableJIT(oldJIT)}
 \keyword{programming}

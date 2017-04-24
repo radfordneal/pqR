@@ -277,7 +277,7 @@ function(package, dir, lib.loc = NULL)
         ## with a DB of the parsed (and platform processed, see
         ## above) Rd objects.
         db_file <- file.path(dir, "help", package)
-        if(file_test("-f", paste(db_file, "rdx", sep = "."))) {
+        if(file_test("-f", paste0(db_file, ".rdx"))) {
             db <- fetchRdDB(db_file)
             pathfile <- file.path(dir, "help", "paths.rds")
             if(file.exists(pathfile)) {
@@ -425,7 +425,7 @@ function(dir = NULL, files = NULL,
  	    built <- built[!some_os]
  	    names_built <- names(built)
  	}
- 	built[!(names_built %in% basenames)] <- NULL
+ 	built[names_built %notin% basenames] <- NULL
  	if (length(built)) {
  	    which <- match(names(built), basenames)
  	    if (all(file_test("-nt", built_file, files[which]))) {
@@ -703,6 +703,8 @@ function(x)
 # textConnection converts to the local encoding, and we convert back,
 # so unrepresentable characters will be lost
 
+## FIXME: use out = tempfile(), like .Rd_get_latex.
+
 .Rd_get_text <-
 function(x) {
     # Handle easy cases first
@@ -779,7 +781,7 @@ function(db)
             stop(sprintf(ngettext(sum(idx),
                                   "missing/empty \\name field in Rd file\n%s",
                                   "missing/empty \\name field in Rd files\n%s"),
-                         paste(" ", Rd_paths[idx], collapse = "\n")),
+                         paste0("  ", Rd_paths[idx], collapse = "\n")),
                  call. = FALSE, domain = NA)
         }
     }

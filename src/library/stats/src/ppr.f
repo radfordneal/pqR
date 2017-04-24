@@ -39,8 +39,8 @@ C                        ^^^ really (ndb) of  smart(.)
       integer i,j,l, lm
       double precision sw,s
 c Common Vars
-      double precision         span,alpha,big
-      integer           ifl,lf
+      double precision       span,alpha,big
+      integer         ifl,lf
       common /pprpar/ ifl,lf,span,alpha,big
 
       double precision conv,            cutmin,fdel,cjeps
@@ -48,30 +48,35 @@ c Common Vars
       common /pprz01/ conv,maxit,mitone,cutmin,fdel,cjeps,mitcj
 
       sw=0d0
-      do 161 j=1,n
- 161     sw=sw+w(j)
-      do 201 j=1,n
-         do 201 i=1,q
+      do j=1,n
+         sw=sw+w(j)
+      end do
+      do j=1,n
+         do i=1,q
             r(i,j)=y(q*(j-1)+i)
- 201  continue
-      do 241 i=1,q
+         end do
+      end do
+      do i=1,q
          s=0d0
-         do 251 j=1,n
+         do j=1,n
             s=s+w(j)*r(i,j)
- 251     continue
+         end do
          yb(i)=s/sw
- 241  continue
+      end do
 c     yb is vector of means
-      do 261 j=1,n
-        do 261 i=1,q
- 261       r(i,j)=r(i,j)-yb(i)
+      do j=1,n
+        do i=1,q
+          r(i,j)=r(i,j)-yb(i)
+         end do
+      end do
       ys=0.d0
-      do 281 i=1,q
+      do i=1,q
          s=0.d0
-         do 291 j=1,n
- 291        s=s+w(j)*r(i,j)**2
+         do j=1,n
+            s=s+w(j)*r(i,j)**2
+         end do
          ys=ys+ww(i)*s/sw
- 281  continue
+      end do
       if(ys .gt. 0d0) goto 311
 c     ys is the overall standard deviation -- quit if zero
       return
@@ -79,9 +84,11 @@ c     ys is the overall standard deviation -- quit if zero
  311  continue
       ys=sqrt(ys)
       s=1.d0/ys
-      do 331 j=1,n
-         do 331 i=1,q
- 331        r(i,j)=r(i,j)*s
+      do j=1,n
+         do i=1,q
+            r(i,j)=r(i,j)*s
+         end do
+      end do
 
 c     r is now standardized residuals
 c     subfit adds up to m  terms one at time; lm is the number fitted.
@@ -90,45 +97,58 @@ c     subfit adds up to m  terms one at time; lm is the number fitted.
       call fulfit(lm,lf,p,q,n,w,sw,x,r,ww,a,b,f,t,asr,sc,bt,g,dp,edf)
 C REPEAT
  371  continue
-      do 381 l=1,lm
+      do l=1,lm
         sc(l,1)=l+0.1d0
         s=0d0
-        do 391 i=1,q
- 391       s=s+ww(i)*abs(b(i,l))
+        do i=1,q
+           s=s+ww(i)*abs(b(i,l))
+        end do
         sc(l,2)=-s
- 381  continue
+      end do
       call sort(sc(1,2),sc,1,lm)
-      do 461 j=1,n
-         do 461 i=1,q
- 461        r(i,j)=y(q*(j-1)+i)
-      do 521 i=1,q
-        do 531 j=1,n
+      do j=1,n
+         do i=1,q
+            r(i,j)=y(q*(j-1)+i)
+         end do
+      end do
+
+      do i=1,q
+        do j=1,n
            r(i,j)=r(i,j)-yb(i)
            s=0.d0
-           do 541 l=1,lm
- 541          s=s+b(i,l)*f(j,l)
+           do l=1,lm
+              s=s+b(i,l)*f(j,l)
+           end do
           r(i,j)=r(i,j)/ys-s
-531     continue
-521   continue
+         end do
+      end do
+
       if(lm.le.mu) goto 9999
 c back to integer:
-      l=sc(lm,1)
+      l=int(sc(lm,1))
       asr1=0d0
-      do 561 j=1,n
-        do 561 i=1,q
+      do j=1,n
+        do i=1,q
           r(i,j)=r(i,j)+b(i,l)*f(j,l)
-561     asr1=asr1+w(j)*ww(i)*r(i,j)**2
+          asr1=asr1+w(j)*ww(i)*r(i,j)**2
+         end do
+      end do
+
       asr1=asr1/sw
       asr(1)=asr1
       if(l .ge. lm) goto 591
-      do 601 i=1,p
- 601     a(i,l)=a(i,lm)
-      do 611 i=1,q
- 611     b(i,l)=b(i,lm)
-      do 621 j=1,n
+      do i=1,p
+         a(i,l)=a(i,lm)
+      end do
+      do i=1,q
+         b(i,l)=b(i,lm)
+      end do
+      do j=1,n
          f(j,l)=f(j,lm)
- 621     t(j,l)=t(j,lm)
-591   continue
+         t(j,l)=t(j,lm)
+      end do
+
+ 591  continue
       lm=lm-1
       call fulfit(lm,lf,p,q,n,w,sw,x,r,ww,a,b,f,t,asr,sc,bt,g,dp,edf)
       goto 371
@@ -141,7 +161,7 @@ C END REPEAT
       subroutine subfit(m,p,q,n,w,sw,x,r,ww,lm,a,b,f,t,asr,sc,
      &     bt,g,dp,edf)
 c Args
-      integer              m,p,q,n,            lm
+      integer           m,p,q,n,            lm
       double precision w(n),sw, x(p,n),r(q,n),ww(q),a(p,m),b(q,m),
      &     f(n,m), t(n,m), asr(15), sc(n,15), bt(q), g(p,3), edf(m)
       double precision dp(*)
@@ -149,8 +169,8 @@ c Var
       integer i,j,l, iflsv
       double precision asrold
 c Common Vars
-      double precision         span,alpha,big
-      integer           ifl,lf
+      double precision       span,alpha,big
+      integer         ifl,lf
       common /pprpar/ ifl,lf,span,alpha,big
 
       double precision conv,            cutmin,fdel,cjeps
@@ -167,9 +187,11 @@ c Common Vars
 c does 'edf' mean 'edf(1)' or 'edf(l)'?
          call onetrm(0,p,q,n,w,sw,x,r,ww,a(1,lm),b(1,lm),
      &        f(1,lm),t(1,lm),asr(1),sc,g,dp,edf(1))
-         do 10 j=1,n
+         do 20 j=1,n
             do 10 i=1,q
- 10            r(i,j)=r(i,j)-b(i,lm)*f(j,lm)
+               r(i,j)=r(i,j)-b(i,lm)*f(j,lm)
+ 10         continue
+ 20      continue
          if(lm.eq.1) goto 100
          if(lf.gt.0) then
             if(lm.eq.m) return
@@ -187,7 +209,7 @@ c does 'edf' mean 'edf(1)' or 'edf(l)'?
       subroutine fulfit(lm,lbf,p,q,n,w,sw,x,r,ww,a,b,f,t,
      &     asr,sc,bt,g,dp,edf)
 c Args
-      integer              lm,lbf,p,q,n
+      integer           lm,lbf,p,q,n
       double precision w(n),sw,x(p,n),r(q,n),ww(q),a(p,lm),b(q,lm),
      &     f(n,lm),t(n,lm),asr(1+lm), sc(n,15),bt(q),g(p,3), edf(lm)
       double precision dp(*)
@@ -195,8 +217,8 @@ c Var
       double precision asri, fsv, asrold
       integer i,j,iter,lp,isv
 c Common Vars
-      double precision         span,alpha,big
-      integer           ifl,lf
+      double precision       span,alpha,big
+      integer         ifl,lf
       common /pprpar/ ifl,lf,span,alpha,big
 
       double precision conv,            cutmin,fdel,cjeps
@@ -217,31 +239,39 @@ C Outer loop:
       asrold=asri
       iter=iter+1
       do 100 lp=1,lm
-        do 1 i=1,q
- 1         bt(i)=b(i,lp)
-        do 2 i=1,p
- 2         g(i,3)=a(i,lp)
-        do 3 j=1,n
-          do 3 i=1,q
- 3           r(i,j)=r(i,j)+bt(i)*f(j,lp)
+        do 10 i=1,q
+           bt(i)=b(i,lp)
+ 10     continue
+        do 20 i=1,p
+           g(i,3)=a(i,lp)
+ 20     continue
+        do 35 j=1,n
+          do 30 i=1,q
+             r(i,j)=r(i,j)+bt(i)*f(j,lp)
+ 30       continue
+ 35    continue
 
         call onetrm(1,p,q,n,w,sw,x,r,ww,g(1,3),bt,sc(1,14),sc(1,15),
      &            asri,sc,g,dp,edf(lp))
         if(asri .lt. asrold) then
-           do 4 i=1,q
- 4            b(i,lp)=bt(i)
-           do 5 i=1,p
- 5            a(i,lp)=g(i,3)
-           do 6 j=1,n
+           do 40 i=1,q
+              b(i,lp)=bt(i)
+ 40        continue
+           do 50 i=1,p
+              a(i,lp)=g(i,3)
+ 50        continue
+           do 60 j=1,n
               f(j,lp)=sc(j,14)
               t(j,lp)=sc(j,15)
- 6         continue
+ 60        continue
         else
            asri=asrold
         endif
-        do 8 j=1,n
-          do 8 i=1,q
- 8           r(i,j)=r(i,j)-b(i,lp)*f(j,lp)
+        do 85 j=1,n
+          do 80 i=1,q
+             r(i,j)=r(i,j)-b(i,lp)*f(j,lp)
+ 80       continue
+ 85    continue
 100   continue
       if((iter .le. maxit) .and. ((asri .gt. 0d0)
      &     .and. ((asrold-asri)/asrold .ge. conv))) goto 1000
@@ -257,7 +287,7 @@ C Outer loop:
       subroutine onetrm(jfl,p,q,n,w,sw,x,y,ww,a,b,f,t,asr,
      &     sc,g,dp,edf)
 c Args
-      integer              jfl,p,q,n
+      integer           jfl,p,q,n
       double precision w(n),sw, x(p,n),y(q,n),ww(q),a(p),b(q),f(n),t(n),
      &     asr, sc(n,13),g(p,2), edf
       double precision dp(*)
@@ -265,8 +295,8 @@ c Var
       double precision asrold,s
       integer i,j,iter
 c Common Vars
-      double precision         span,alpha,big
-      integer           ifl,lf
+      double precision       span,alpha,big
+      integer         ifl,lf
       common /pprpar/ ifl,lf,span,alpha,big
 
       double precision conv,            cutmin,fdel,cjeps
@@ -282,24 +312,27 @@ C REPEAT
       do 11 j=1,n
          s=0d0
          do 21 i=1,q
- 21         s=s+ww(i)*b(i)*y(i,j)
+            s=s+ww(i)*b(i)*y(i,j)
+ 21      continue
          sc(j,13)=s
-11    continue
+ 11   continue
       call oneone(max0(jfl,iter-1),p,n,w,sw,sc(1,13),x,a,f,t,
      &                 asr,sc,g,dp,edf)
       do 31 i=1,q
         s=0d0
         do 41 j=1,n
- 41        s=s+w(j)*y(i,j)*f(j)
+           s=s+w(j)*y(i,j)*f(j)
+ 41     continue
         b(i)=s/sw
-31    continue
+ 31   continue
       asr=0d0
       do 51 i=1,q
          s=0d0
          do 61 j=1,n
- 61         s=s+w(j)*(y(i,j)-b(i)*f(j))**2
+            s=s+w(j)*(y(i,j)-b(i)*f(j))**2
+ 61      continue
          asr=asr+ww(i)*s/sw
-51    continue
+ 51   continue
       if((q .ne. 1) .and. (iter .le. maxit) .and. (asr .gt. 0d0)
      &      .and. (asrold-asr)/asrold .ge. conv) goto 1000
       return
@@ -307,15 +340,15 @@ C REPEAT
 
       subroutine oneone(ist,p,n, w,sw,y,x,a,f,t,asr,sc,g,dp,edf)
 c Args
-      integer              ist,p,n
+      integer           ist,p,n
       double precision w(n),sw,y(n),x(p,n),a(p),f(n),t(n),asr,
      &     sc(n,12), g(p,2), edf, dp(*)
 c Var
       integer i,j,k,iter
       double precision sml, s,v,cut,asrold
 c Common Vars
-      double precision         span,alpha,big
-      integer           ifl,lf
+      double precision       span,alpha,big
+      integer         ifl,lf
       common /pprpar/ ifl,lf,span,alpha,big
 
       double precision conv,            cutmin,fdel,cjeps
@@ -367,7 +400,7 @@ C REPEAT [inner loop] -----
  90   continue
       call sort(sc(1,11),sc,1,n)
       do 110 j=1,n
-        k=sc(j,1)
+        k=int(sc(j,1))
         sc(j,2)=y(k)
         sc(j,3)=max(w(k),sml)
  110  continue
@@ -393,7 +426,7 @@ C     --------
         a(i)=g(i,2)
  160  continue
       do 170 j=1,n
-        k=sc(j,1)
+        k=int(sc(j,1))
         t(k)=sc(j,11)
         f(k)=sc(j,12)
  170  continue
@@ -401,7 +434,7 @@ C     --------
       if(iter.gt.mitone.or.p.le.1) goto 199
       call pprder(n,sc(1,11),sc(1,12),sc(1,3),fdel,sc(1,4),sc(1,5))
       do 180 j=1,n
-        k=sc(j,1)
+        k=int(sc(j,1))
         sc(j,5)=y(j)-f(j)
         sc(k,6)=sc(j,4)
  180  continue
@@ -424,7 +457,8 @@ c--------------
       if(v .gt. 0d0) then
         v=1d0/sqrt(v/sw)
         do 230 j=1,n
- 230      f(j)=f(j)*v
+          f(j)=f(j)*v
+ 230   continue
       endif
       return
       end
@@ -728,8 +762,8 @@ C avoid bounds error: this was .and. but order is not guaranteed
       integer i,lm1,l,l1
       double precision s,t,sml
 c Common
-      double precision         span,alpha,big
-      integer           ifl,lf
+      double precision       span,alpha,big
+      integer         ifl,lf
       common /pprpar/ ifl,lf,span,alpha,big
 
 
@@ -786,42 +820,51 @@ c Common
       block data bkppr
 
 c Common Vars
-      double precision         span,alpha,big
-      integer           ifl,lf
+      double precision       span,alpha,big
+      integer         ifl,lf
       common /pprpar/ ifl,lf,span,alpha,big
 
       double precision conv,            cutmin,fdel,cjeps
       integer              maxit,mitone,                  mitcj
       common /pprz01/ conv,maxit,mitone,cutmin,fdel,cjeps,mitcj
 
-      double precision     df, gcvpen
-      integer                          ismethod
-      common /spsmooth/ df, gcvpen, ismethod
+      double precision  df, gcvpen
+      integer                       ismethod
+      logical                                 trace
+      common /spsmooth/ df, gcvpen, ismethod, trace
+
+      data df, gcvpen, ismethod, trace /4d0, 1d0, 0, .false./
 
       data ifl,maxit, conv, mitone, cutmin, fdel,
      &     span,alpha, big, cjeps, mitcj, lf
      &     /6,  20,   .005,   20,     0.1,  0.02,
      &     0.0,  0.0,1.0e20,0.001,   1,    2/
-      data df, gcvpen, ismethod /4d0, 1d0, 0/
       end
 
       subroutine setppr(span1, alpha1, optlevel, ism, df1, gcvpen1)
-c Put `parameters' into Common blocks
+c Put 'parameters' into Common blocks
       integer optlevel,ism
       double precision span1,alpha1, df1, gcvpen1
 
-      double precision         span,alpha,big
-      integer           ifl,lf
+      double precision       span,alpha,big
+      integer         ifl,lf
       common /pprpar/ ifl,lf,span,alpha,big
 
-      double precision     df, gcvpen
-      integer                          ismethod
-      common /spsmooth/ df, gcvpen, ismethod
+      double precision  df, gcvpen
+      integer                       ismethod
+      logical                                 trace
+      common /spsmooth/ df, gcvpen, ismethod, trace
 
       span = span1
       lf = optlevel
       alpha = alpha1
-      ismethod = ism
+      if(ism .ge. 0) then
+         ismethod = ism
+         trace = .false.
+      else
+         ismethod = -(ism+1)
+         trace = .true.
+      end if
       df = df1
       gcvpen = gcvpen1
       return
@@ -841,7 +884,7 @@ c
  10      continue
          call sort(t(1,l),sp,1,n)
          do 20 j=1,n
-            k=sp(j,1)
+            k=int(sp(j,1))
             f(j,l)=sp(k,2)
  20      continue
  100  continue
@@ -857,11 +900,11 @@ c
      +     inp,ja,jb,jf,jt,jfl,jfh,jtl,jth, mu
       double precision ys, s, t
 
-      m=smod(1)+0.1d0
-      p=smod(2)+0.1d0
-      q=smod(3)+0.1d0
-      n=smod(4)+0.1d0
-      mu=smod(5)+0.1d0
+      m= int(smod(1)+0.1d0)
+      p= int(smod(2)+0.1d0)
+      q= int(smod(3)+0.1d0)
+      n= int(smod(4)+0.1d0)
+      mu=int(smod(5)+0.1d0)
       ys=smod(q+6)
       ja=q+6
       jb=ja+p*m
@@ -930,12 +973,17 @@ C        END
       return
       end
 
-      subroutine setsmu
-      double precision     df, gcvpen
-      integer                          ismethod
-      common /spsmooth/ df, gcvpen, ismethod
+c Called from R's supsmu()
+      subroutine setsmu (tr)
+      integer tr
+
+      double precision  df, gcvpen
+      integer                       ismethod
+      logical                                 trace
+      common /spsmooth/ df, gcvpen, ismethod, trace
 
       ismethod = 0
+      trace = tr .ne. 0
       return
       end
 
@@ -968,7 +1016,7 @@ c       iper=1 => x is ordered interval variable.
 c       iper=2 => x is a periodic variable with values
 c                 in the range (0.0,1.0) and period 1.0.
 c    span : smoother span (fraction of observations in window).
-c           span=0.0 => automatic (variable) span selection.
+c           span=0.0 <=> "cv" : automatic (variable) span selection.
 c    alpha : controls high frequency (small span) penality
 c            used with automatic span selection (bass tone control).
 c            (alpha.le.0.0 or alpha.gt.10.0 => no effect.)
@@ -993,14 +1041,17 @@ c Var
       double precision sy,sw, a,h(n),f, scale,vsmlsq,resmin
       integer i,j, jper
 
-      double precision  spans(3),          big,sml,eps
+      double precision  spans(3),    big,sml,eps
       common /spans/ spans  /consts/ big,sml,eps
 
-      double precision     df, gcvpen
-      integer                          ismethod
-      common /spsmooth/ df, gcvpen, ismethod
+      double precision  df, gcvpen
+      integer                       ismethod
+      logical                                 trace
+      common /spsmooth/ df, gcvpen, ismethod, trace
+c     Called from R's supsmu(),  ismethod = 0, always (but not when called from ppr)
 
       if (x(n).gt.x(1)) go to 30
+c     x(n) <= x(1) :  boundary case:  smo[.] :=  weighted mean( y )
       sy=0d0
       sw=sy
       do 10 j=1,n
@@ -1013,15 +1064,15 @@ c Var
          smo(j)=a
  20   continue
       return
- 30   continue
 
-C     change by
-      if (ismethod .ne. 0) then
-        call spline(n, x, y, w, smo, edf)
+C     Normal Case
+ 30   continue
+      if (ismethod .ne. 0) then ! possible only when called from ppr()
+         call spline(n, x, y, w, smo, edf, sc)
       else
          i=n/4
          j=3*i
-         scale=x(j)-x(i)
+         scale=x(j)-x(i) ! = IQR(x)
  40      if (scale.gt.0d0) go to 50
          if (j.lt.n) j=j+1
          if (i.gt.1) i=i-1
@@ -1031,10 +1082,12 @@ C     change by
          jper=iper
          if (iper.eq.2.and.(x(1).lt.0d0.or.x(n).gt.1d0)) jper=1
          if (jper.lt.1.or.jper.gt.2) jper=1
-         if (span.le.0d0) go to 60
-         call smooth (n,x,y,w,span,jper,vsmlsq,smo,sc)
-         return
- 60      do 70 i=1,3
+         if (span .gt. 0d0) then
+            call smooth (n,x,y,w,span,jper,vsmlsq,smo,sc)
+            return
+         end if
+C     else  "cv" (crossvalidation) from  three spans[]
+         do 70 i=1,3
             call smooth (n,x,y,w,spans(i),jper,vsmlsq,
      &           sc(1,2*i-1),sc(1,7))
             call smooth (n,x,sc(1,7),w,spans(2),-jper,vsmlsq,
@@ -1047,8 +1100,8 @@ C     change by
                resmin=sc(j,2*i)
                sc(j,7)=spans(i)
  80         continue
-            if (alpha.gt.0d0.and.alpha.le.10d0 .and.
-     &           resmin.lt.sc(j,6).and.resmin.gt.0d0)
+            if (alpha.gt.0d0 .and. alpha.le.10d0 .and.
+     &           resmin.lt.sc(j,6) .and. resmin.gt.0d0)
      &           sc(j,7)= sc(j,7)+(spans(3)-sc(j,7)) *
      &                          max(sml,resmin/sc(j,6))**(10d0-alpha)
  90      continue
@@ -1079,55 +1132,64 @@ c Var
       integer i,j, in,out, jper,ibw,it, j0
       double precision xm,ym,var,cvar, fbw,fbo,xti,xto,tmp, a,h,sy,wt
 
+c will use 'trace':
+      double precision  df, gcvpen
+      integer                       ismethod
+      logical                                 trace
+      common /spsmooth/ df, gcvpen, ismethod, trace
+
       xm=0d0
       ym=xm
       var=ym
       cvar=var
       fbw=cvar
       jper=iabs(iper)
-      ibw=0.5d0*span*n+0.5d0
+      ibw=int(0.5d0*span*n+0.5d0)
       if (ibw.lt.2) ibw=2
       it=2*ibw+1
       if (it .gt. n) it = n
-      do 20 i=1,it
+      do i=1,it
          j=i
          if (jper.eq.2) j=i-ibw-1
-         if (j.ge.1) xti=x(j)
-         if (j.ge.1) go to 10
-         j=n+j
-         xti=x(j)-1d0
- 10      wt=w(j)
+         if (j.ge.1) then
+            xti=x(j)
+         else ! if (j.lt.1) then
+            j=n+j
+            xti=x(j)-1d0
+         end if
+         wt=w(j)
          fbo=fbw
          fbw=fbw+wt
          if (fbw.gt.0d0) xm=(fbo*xm+wt*xti)/fbw
          if (fbw.gt.0d0) ym=(fbo*ym+wt*y(j))/fbw
          tmp=0d0
          if (fbo.gt.0d0) tmp=fbw*wt*(xti-xm)/fbo
-         var=var+tmp*(xti-xm)
+         var =var +tmp*(xti-xm)
          cvar=cvar+tmp*(y(j)-ym)
- 20   continue
+      end do
+
       do 80 j=1,n
          out=j-ibw-1
          in=j+ibw
-         if ((jper.ne.2).and.(out.lt.1.or.in.gt.n)) go to 60
-         if (out.ge.1) go to 30
-         out=n+out
-         xto=x(out)-1d0
-         xti=x(in)
-         go to 50
- 30      if (in.le.n) go to 40
-         in=in-n
-         xti=x(in)+1d0
-         xto=x(out)
-         go to 50
- 40      xto=x(out)
-         xti=x(in)
- 50      wt=w(out)
+         if ((jper.ne.2) .and. (out.lt.1.or.in.gt.n)) go to 60
+         if (out .lt. 1) then
+            out=n+out
+            xto=x(out)-1d0
+            xti=x(in)
+         else if (in .gt. n) then
+            in=in-n
+            xti=x(in)+1d0
+            xto=x(out)
+         else
+            xto=x(out)
+            xti=x(in)
+         end if
+         wt=w(out)
          fbo=fbw
          fbw=fbw-wt
          tmp=0d0
          if (fbw.gt.0d0) tmp=fbo*wt*(xto-xm)/fbw
-         var=var-tmp*(xto-xm)
+         var = var-tmp*(xto-xm)
          cvar=cvar-tmp*(y(out)-ym)
          if (fbw.gt.0d0) xm=(fbo*xm-wt*xto)/fbw
          if (fbw.gt.0d0) ym=(fbo*ym-wt*y(out))/fbw
@@ -1138,47 +1200,54 @@ c Var
          if (fbw.gt.0d0) ym=(fbo*ym+wt*y(in))/fbw
          tmp=0d0
          if (fbo.gt.0d0) tmp=fbw*wt*(xti-xm)/fbo
-         var=var+tmp*(xti-xm)
+         var = var+tmp*(xti-xm)
          cvar=cvar+tmp*(y(in)-ym)
  60      a=0d0
          if (var.gt.vsmlsq) a=cvar/var
          smo(j)=a*(x(j)-xm)+ym
-         if (iper.le.0) go to 80
-         h=0d0
-         if (fbw.gt.0d0) h=1d0/fbw
-         if (var.gt.vsmlsq) h=h+(x(j)-xm)**2/var
-         acvr(j)=0d0
-         a=1d0-w(j)*h
-         if (a.le.0d0) go to 70
-         acvr(j)=abs(y(j)-smo(j))/a
-         go to 80
- 70      if (j.le.1) go to 80
-         acvr(j)=acvr(j-1)
+         if (iper.gt.0) then
+            h=0d0
+            if (fbw.gt.0d0) h=1d0/fbw
+            if (var.gt.vsmlsq) h=h+(x(j)-xm)**2/var
+            acvr(j)=0d0
+            a=1d0-w(j)*h
+            if (a.gt.0d0) then
+               acvr(j)=abs(y(j)-smo(j))/a
+            else if (j.gt.1) then
+               acvr(j)=acvr(j-1)
+            end if
+         end if
  80   continue
+
+      if(trace) call smoothprt(span, iper, var, cvar) ! -> ./ksmooth.c
+
+c-- Recompute fitted values smo(j) as weighted mean for non-unique x(.) values:
       j=1
-c--
  90   j0=j
       sy=smo(j)*w(j)
       fbw=w(j)
       if (j.ge.n) go to 110
- 100  if (x(j+1).gt.x(j)) go to 110
+ 100  if (x(j+1).le.x(j)) then
+         j=j+1
+         sy=sy+w(j)*smo(j)
+         fbw=fbw+w(j)
+         if (j.lt.n) go to 100
+      end if
+ 110  if (j.gt.j0) then
+         a=0d0
+         if (fbw.gt.0d0) a=sy/fbw
+         do i=j0,j
+            smo(i)=a
+         end do
+      end if
       j=j+1
-      sy=sy+w(j)*smo(j)
-      fbw=fbw+w(j)
-      if (j.lt.n) go to 100
- 110  if (j.le.j0) go to 130
-      a=0d0
-      if (fbw.gt.0d0) a=sy/fbw
-      do 120 i=j0,j
-         smo(i)=a
- 120  continue
- 130  j=j+1
       if (j.le.n) go to 90
       return
       end
 
+
       block data bksupsmu
-      double precision spans(3), big,sml,eps
+      double precision spans(3),    big,sml,eps
       common /spans/ spans /consts/ big,sml,eps
 
       data spans, big,sml,eps /0.05,0.2,0.5, 1.0e20,1.0e-7,1.0e-3/
@@ -1203,9 +1272,12 @@ c these parameter values can be changed by declaring the
 c relevant labeled common in the main program and resetting
 c them with executable statements.
 c
-c-----------------------------------------------------------------
 
-      subroutine spline (n, x, y, w, smo, edf)
+c Only for  ppr(*, ismethod != 0):  Compute "smoothing" spline
+c  (rather, a penalized regression spline with at most 15 (inner) knots):
+c-----------------------------------------------------------------
+c
+      subroutine spline (n, x, y, w, smo, edf, sc)
 c
 c------------------------------------------------------------------
 c
@@ -1214,6 +1286,8 @@ c    n : number of observations.
 c    x(n) : ordered abscissa values.
 c    y(n) : corresponding ordinate (response) values.
 c    w(n) : weight for each (x,y) observation.
+c work space:
+c    sc(n,7) : used for dx(n), dy(n), dw(n), dsmo(n), lev(n)
 c output:
 c   smo(n) : smoothed ordinate (response) values.
 c   edf : equivalent degrees of freedom
@@ -1221,22 +1295,53 @@ c
 c------------------------------------------------------------------
 c Args
       integer n
-      double precision x(n), y(n), w(n), smo(n), edf
+      double precision x(n), y(n), w(n), smo(n), edf, sc(n,7)
+
+      call splineAA(n, x, y, w, smo, edf,
+     +     sc(n,1), ! dx
+     +     sc(n,2), ! dy
+     +     sc(n,3), ! dw
+     +     sc(n,4), ! dsmo
+     +     sc(n,5)) ! lev
+
+      return
+      end
+
+
+      subroutine splineAA(n, x, y, w, smo, edf, dx, dy, dw, dsmo, lev)
+c
+c  Workhorse of spline() above
+c------------------------------------------------------------------
+c
+c Additional input variables (no extra output, work):
+c     dx :
+c     dy :
+c     dw :
+c     dsmo:
+c     lev : "leverages", i.e., diagonal entries S_{i,i} of the smoother matrix
+
+c
+c------------------------------------------------------------------
+c Args
+      integer n
+      double precision x(n), y(n), w(n), smo(n), edf,
+     +     dx(n), dy(n), dw(n), dsmo(n), lev(n)
 c Var
       double precision knot(29), coef(25), work((17+25)*25)
-      double precision dx(2500),dy(2500), dw(2500),dsmo(2500), lev(2500)
-      double precision param(4), df1, lambda, crit, p, s
-      integer iparms(3), i, nk, ip, isetup,ier
+      double precision param(5), df1, lambda, crit, p, s
+      integer iparms(4), i, nk, ip, ier
 
-      double precision     df, gcvpen
-      integer                          ismethod
-      common /spsmooth/ df, gcvpen, ismethod
+      double precision  df, gcvpen
+      integer                       ismethod
+      logical                                 trace
+      common /spsmooth/ df, gcvpen, ismethod, trace
 
-      if (n .gt. 2500) call bdrsplerr()
-      do 10 i = 1,n
+c__no-more__ if (n .gt. 2500) call bdrsplerr()
+      do i = 1,n
         dx(i) = (x(i)-x(1))/(x(n)-x(1))
         dy(i) = y(i)
- 10     dw(i) = w(i)
+        dw(i) = w(i)
+      end do
       nk = min(n,15)
       knot(1) = dx(1)
       knot(2) = dx(1)
@@ -1246,47 +1351,47 @@ c Var
       knot(nk+2) = dx(n)
       knot(nk+3) = dx(n)
       knot(nk+4) = dx(n)
-      do 40 i = 5, nk
-        p = (n-1)*real(i-4)/real(nk-3)
-        ip = int(p)
-        p = p-ip
-        knot(i) = (1-p)*dx(ip+1) + p*dx(ip+2)
- 40   continue
+      do i = 5, nk
+         p = (n-1)*real(i-4)/real(nk-3)
+         ip = int(p)
+         p = p-ip
+         knot(i) = (1-p)*dx(ip+1) + p*dx(ip+2)
+      end do
 c      call dblepr('knots', 5, knot, nk+4)
-C     iparms(1:2) := (icrit, ispar)  for ./sbart.f
-      if (iabs(ismethod) .eq. 1) then
+C     iparms(1:2) := (icrit, ispar)  for ./sbart.c
+      if (ismethod .eq. 1) then
          iparms(1) = 3
          df1 = df
       else
          iparms(1) = 1
          df1 = 0d0
       endif
-c     ispar := 0 <==> estimate `spar' :
-      iparms(2) = 0
-c     maxit = 500 :
-      iparms(3) = 500
-      param(1) = 0d0
-      param(2) = 1.5d0
-c  tol for `spar' estimation:
+c
+      iparms(2) = 0   ! ispar := 0 <==> estimate `spar'
+      iparms(3) = 500 ! maxit = 500
+      iparms(4) = 0   ! spar (!= lambda)
+c
+      param(1) = 0d0   ! = lspar : min{spar}
+      param(2) = 1.5d0 ! = uspar : max{spar}
+c     tol for 'spar' estimation:
       param(3) = 1d-2
-c   this was `eps' (=? sqrt(machine eps)) in ./sbart.f :
+c     'eps' (~= 2^-12 = sqrt(2^-24) ?= sqrt(machine eps)) in ./sbart.c :
       param(4) = .000244
 
       ier = 1
       call rbart(gcvpen,df1,dx,dy,dw,0.0d0,n,knot,nk,coef,dsmo,lev,
      &     crit,iparms,lambda,param, work,4,1,ier)
-      if(ier .gt. 0) call intpr('TROUBLE:',8, ier, 1)
-      do 50 i = 1,n
- 50      smo(i) = dsmo(i)
+      if(ier .gt. 0) call intpr('spline(.) TROUBLE:', 18, ier, 1)
+      do i = 1,n
+         smo(i) = dsmo(i)
+      end do
 c      call dblepr('smoothed',8, dsmo, n)
       s = 0
-      do 60 i = 1, n
- 60      s = s + lev(i)
+      do i = 1, n
+         s = s + lev(i)
+      end do
       edf = s
-      if(ismethod.lt.0) then
-         call dblepr('lambda', 6, lambda, 1)
-         call dblepr('df', 2, s, 1)
-      endif
+      if(trace) call splineprt(df,gcvpen,ismethod, lambda, edf)
       return
       end
 
@@ -1297,7 +1402,7 @@ C=== This was 'sort()' in  gamfit's  mysort.f  [or sortdi() in sortdi.f ] :
 C
 C===  FIXME:  Translate to C and add to ../../../main/sort.c <<<<<
 C
-C     why on earth is       a() double precision ????
+C     a[] is double precision because the caller reuses a double (sometimes v[] itself!)
       subroutine sort (v,a, ii,jj)
 c
 c     Puts into a the permutation vector which sorts v into
@@ -1320,12 +1425,12 @@ c
  10   if (i.ge.j) go to 80
  20   k=i
       ij=(j+i)/2
-      t=a(ij)
+      t=int(a(ij))
       vt=v(ij)
       if (v(i).le.vt) go to 30
       a(ij)=a(i)
       a(i)=t
-      t=a(ij)
+      t=int(a(ij))
       v(ij)=v(i)
       v(i)=vt
       vt=v(ij)
@@ -1333,14 +1438,14 @@ c
       if (v(j).ge.vt) go to 50
       a(ij)=a(j)
       a(j)=t
-      t=a(ij)
+      t=int(a(ij))
       v(ij)=v(j)
       v(j)=vt
       vt=v(ij)
       if (v(i).le.vt) go to 50
       a(ij)=a(i)
       a(i)=t
-      t=a(ij)
+      t=int(a(ij))
       v(ij)=v(i)
       v(i)=vt
       vt=v(ij)
@@ -1351,7 +1456,7 @@ c
       v(k)=vtt
  50   l=l-1
       if (v(l).gt.vt) go to 50
-      tt=a(l)
+      tt=int(a(l))
       vtt=v(l)
  60   k=k+1
       if (v(k).lt.vt) go to 60
@@ -1376,7 +1481,7 @@ c
       i=i-1
  100  i=i+1
       if (i.eq.j) go to 80
-      t=a(i+1)
+      t=int(a(i+1))
       vt=v(i+1)
       if (v(i).le.vt) go to 100
       k=i

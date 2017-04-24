@@ -149,7 +149,7 @@ attachNamespace <- function(ns, pos = 2L, depends = NULL)
     ns <- asNamespace(ns, base.OK = FALSE)
     nsname <- getNamespaceName(ns)
     nspath <- .getNamespaceInfo(ns, "path")
-    attname <- paste("package", nsname, sep = ":")
+    attname <- paste0("package:", nsname)
     if (attname %in% search())
         stop("namespace is already attached")
     env <- attach(NULL, pos = pos, name = attname)
@@ -179,11 +179,13 @@ dynGet <- function(x, ifnotfound = stop(gettextf("%s not found",
 		   minframe = 1L, inherits = FALSE)
 {
     n <- sys.nframe()
+    myObj <- structure(list(.b = as.raw(7)), foo = 47L)# "very improbable" object
     while (n > minframe) {
 	n <- n - 1L
 	env <- sys.frame(n)
-	if ( exists   (x, envir = env, inherits=inherits))
-	    return(get(x, envir = env, inherits=inherits))
+	r <- get0(x, envir = env, inherits=inherits, ifnotfound = myObj)
+	if(!identical(r, myObj))
+	    return(r)
     }
     ifnotfound
 }
@@ -234,7 +236,7 @@ loadNamespace <- function (package, lib.loc = NULL,
         }
         makeNamespace <- function(name, version = NULL, lib = NULL) {
             impenv <- new.env(parent = .BaseNamespaceEnv, hash = TRUE)
-            attr(impenv, "name") <- paste("imports", name, sep = ":")
+            attr(impenv, "name") <- paste0("imports:", name)
             env <- new.env(parent = impenv, hash = TRUE)
             name <- as.character(as.name(name))
             version <- as.character(version)
@@ -243,7 +245,7 @@ loadNamespace <- function (package, lib.loc = NULL,
             info$spec <- c(name = name, version = version)
             setNamespaceInfo(env, "exports", new.env(hash = TRUE, parent = baseenv()))
             dimpenv <- new.env(parent = baseenv(), hash = TRUE)
-            attr(dimpenv, "name") <- paste("lazydata", name, sep = ":")
+            attr(dimpenv, "name") <- paste0("lazydata:", name)
             setNamespaceInfo(env, "lazydata", dimpenv)
             setNamespaceInfo(env, "imports", list("base" = TRUE))
             ## this should be an absolute path
@@ -281,7 +283,7 @@ loadNamespace <- function (package, lib.loc = NULL,
             popath <- if (pkgname %in% std) .popath else file.path(pkgpath, "po")
             if(!file.exists(popath)) return()
             bindtextdomain(pkgname, popath)
-            bindtextdomain(paste("R", pkgname, sep = "-"), popath)
+            bindtextdomain(paste0("R-", pkgname), popath)
         }
 
         assignNativeRoutines <- function(dll, lib, env, nativeRoutines) {
@@ -391,6 +393,60 @@ loadNamespace <- function (package, lib.loc = NULL,
                               sQuote(package), version, zop, zversion),
                      domain = NA)
         }
+
+        ## moved from library in R 3.4.0
+        checkLicense <- function(pkg, pkgInfo, pkgPath)
+        {
+            L <- tools:::analyze_license(pkgInfo$DESCRIPTION["License"])
+            if(!L$is_empty && !L$is_verified) {
+                site_file <-
+                    path.expand(file.path(R.home("etc"), "licensed.site"))
+                if(file.exists(site_file) &&
+                   pkg %in% readLines(site_file)) return()
+                personal_file <- path.expand("~/.R/licensed")
+                if(file.exists(personal_file)) {
+                    agreed <- readLines(personal_file)
+                    if(pkg %in% agreed) return()
+                } else agreed <- character()
+                if(!interactive())
+                    stop(gettextf(
+                        "package %s has a license that you need to accept in an interactive session",
+                        sQuote(pkg)), domain = NA)
+                lfiles <- file.path(pkgpath, c("LICENSE", "LICENCE"))
+                lfiles <- lfiles[file.exists(lfiles)]
+                if(length(lfiles)) {
+                    message(gettextf(
+                        "package %s has a license that you need to accept after viewing",
+                        sQuote(pkg)), domain = NA)
+                    readline("press RETURN to view license")
+                    encoding <- pkgInfo$DESCRIPTION["Encoding"]
+                    if(is.na(encoding)) encoding <- ""
+                    ## difR and EVER have a Windows' 'smart quote' LICEN[CS]E file
+                    if(encoding == "latin1") encoding <- "cp1252"
+                    file.show(lfiles[1L], encoding = encoding)
+                } else {
+                    message(gettextf(paste("package %s has a license that you need to accept:",
+                                           "according to the DESCRIPTION file it is",
+                                           "%s", sep="\n"),
+                                     sQuote(pkg),
+                                     pkgInfo$DESCRIPTION["License"]), domain = NA)
+                }
+                choice <- utils::menu(c("accept", "decline"),
+                                      title = paste("License for", sQuote(pkg)))
+                if(choice != 1)
+                    stop(gettextf("license for package %s not accepted",
+                                  sQuote(package)), domain = NA, call. = FALSE)
+                dir.create(dirname(personal_file), showWarnings=FALSE)
+                writeLines(c(agreed, pkg), personal_file)
+            }
+        }
+
+        ## avoid any bootstrapping issues by these exemptions
+        if(!package %in% c("datasets", "grDevices", "graphics", "methods",
+                           "stats", "tools", "utils") &&
+           isTRUE(getOption("checkPackageLicense", FALSE)))
+            checkLicense(package, pkgInfo, pkgpath)
+
         ns <- makeNamespace(package, version = version, lib = package.lib)
         on.exit(.Internal(unregisterNamespace(package)))
 
@@ -522,10 +578,8 @@ loadNamespace <- function (package, lib.loc = NULL,
             ## defaults to exportPatterns
             if(!length(classPatterns))
                 classPatterns <- nsInfo$exportPatterns
-            for (p in classPatterns) {
-                pClasses <- c(aClasses[grep(p, aClasses)], pClasses)
-            }
-            pClasses <- unique(pClasses)
+            pClasses <- unique(unlist(lapply(classPatterns, grep, aClasses,
+                                             value=TRUE)))
             if( length(pClasses) ) {
                 good <- vapply(pClasses, methods::isClass, NA, where = ns)
                 if( !any(good) && length(nsInfo$exportClassPatterns))
@@ -723,7 +777,7 @@ unloadNamespace <- function(ns)
 	}
 	ns <- asNamespace(ns, base.OK = FALSE)
 	nsname <- getNamespaceName(ns)
-	pos <- match(paste("package", nsname, sep = ":"), search())
+	pos <- match(paste0("package:", nsname), search())
 	if (! is.na(pos)) detach(pos = pos)
 	users <- getNamespaceUsers(ns)
 	if (length(users))
@@ -802,8 +856,7 @@ namespaceImportFrom <- function(self, ns, vars, generics, packages,
     whichMethodMetaNames <- function(impvars) {
         if(!.isMethodsDispatchOn())
             return(numeric())
-        mm <- ".__T__"
-        seq_along(impvars)[substr(impvars, 1L, nchar(mm, type = "c")) == mm]
+	seq_along(impvars)[startsWith(impvars, ".__T__")]
     }
     genericPackage <- function(f) {
         if(methods::is(f, "genericFunction")) f@package
@@ -1068,10 +1121,9 @@ namespaceExport <- function(ns, vars) {
 
 .mergeExportMethods <- function(new, ns)
 {
-    ## avoid bootstrapping issues
-    ##    mm <- methods:::methodsPackageMetaName("M","")
-    mm <- ".__M__"
-    newMethods <- new[substr(new, 1L, nchar(mm, type = "c")) == mm]
+    ## avoid bootstrapping issues when using methods:::methodsPackageMetaName("M","")
+    ## instead of  ".__M__" :
+    newMethods <- new[startsWith(new, ".__M__")]
     nsimports <- parent.env(ns)
     for(what in newMethods) {
 	if(!is.null(m1 <- nsimports[[what]])) {
@@ -1160,7 +1212,8 @@ parseNamespaceFile <- function(package, package.lib, mustExist = TRUE)
         evalToChar <- function(cc) {
             vars <- all.vars(cc)
             names(vars) <- vars
-            as.character(eval(eval(call("substitute", cc, as.list(vars)))))
+            as.character(eval(eval(call("substitute", cc, as.list(vars))),
+                              .GlobalEnv))
         }
         switch(as.character(e[[1L]]),
                "if" = if (eval(e[[2L]], .GlobalEnv))
@@ -1286,7 +1339,7 @@ parseNamespaceFile <- function(package, package.lib, mustExist = TRUE)
                                           keep.source = FALSE,
                                           srcfile = NULL)[[1L]]
                                if(is.call(e))
-                                   val <- eval(e)
+                                   val <- eval(e, .GlobalEnv)
                                else
                                    val <- as.character(e)
                                if(length(val))
@@ -1484,7 +1537,7 @@ registerS3methods <- function(info, package, env)
        nrow(overwrite) &&
        Sys.getenv("_R_LOAD_CHECK_OVERWRITE_S3_METHODS_")
           %in% c(package, "all")) {
-        std <- as.vector(unlist(tools:::.get_standard_package_names()))
+        std <- unlist(tools:::.get_standard_package_names(), use.names=FALSE)
         overwrite <- overwrite[overwrite[, 2L] %in% std, , drop = FALSE]
        if(nr <- nrow(overwrite)) {
            msg <- ngettext(nr,

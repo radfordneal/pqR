@@ -1,7 +1,7 @@
 #  File src/library/base/R/source.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2014 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -18,21 +18,20 @@
 
 source <-
 function(file, local = FALSE, echo = verbose, print.eval = echo,
+         exprs, spaced = use_file,
 	 verbose = getOption("verbose"),
 	 prompt.echo = getOption("prompt"),
-	 max.deparse.length = 150, chdir = FALSE,
+	 max.deparse.length = 150, width.cutoff = 60L,
+         deparseCtrl = "showAttributes", ## rather?  c("keepInteger", "showAttributes", "keepNA"),
+         chdir = FALSE,
          encoding = getOption("encoding"),
          continue.echo = getOption("continue"),
          skip.echo = 0, keep.source = getOption("keep.source"))
 {
-    envir <- if (isTRUE(local)) {
-        parent.frame()
-    } else if(identical(local, FALSE)) {
-        .GlobalEnv
-    } else if (is.environment(local)) {
-        local
-    } else stop("'local' must be TRUE, FALSE or an environment")
-    have_encoding <- !missing(encoding) && encoding != "unknown"
+    envir <- if (isTRUE(local)) parent.frame()
+	     else if(identical(local, FALSE)) .GlobalEnv
+	     else if (is.environment(local)) local
+	     else stop("'local' must be TRUE, FALSE or an environment")
     if (!missing(echo)) {
 	if (!is.logical(echo))
 	    stop("'echo' must be logical")
@@ -45,10 +44,14 @@ function(file, local = FALSE, echo = verbose, print.eval = echo,
 	cat("'envir' chosen:")
 	print(envir)
     }
+
+    if(use_file <- missing(exprs)) {
+
     ofile <- file # for use with chdir = TRUE
-    from_file <- FALSE
+    from_file <- FALSE # true, if not stdin() nor from srcref
     srcfile <- NULL
     if(is.character(file)) {
+        have_encoding <- !missing(encoding) && encoding != "unknown"
         if(identical(encoding, "unknown")) {
             enc <- utils::localeToCharset()
             encoding <- enc[length(enc)]
@@ -100,10 +103,11 @@ function(file, local = FALSE, echo = verbose, print.eval = echo,
 	}
     } else {
     	lines <- readLines(file, warn = FALSE)
-    	if (isTRUE(keep.source))
-    	    srcfile <- srcfilecopy(deparse(substitute(file)), lines)
-    	else
-    	    srcfile <- deparse(substitute(file))
+        srcfile <-
+            if (isTRUE(keep.source))
+                srcfilecopy(deparse(substitute(file)), lines)
+            else
+                deparse(substitute(file))
     }
 
     exprs <- if (!from_file) {
@@ -116,9 +120,8 @@ function(file, local = FALSE, echo = verbose, print.eval = echo,
     on.exit()
     if (from_file) close(file)
 
-    Ne <- length(exprs)
     if (verbose)
-	cat("--> parsed", Ne, "expressions; now eval(.)ing them:\n")
+	cat("--> parsed", length(exprs), "expressions; now eval(.)ing them:\n")
 
     if (chdir){
         if(is.character(ofile)) {
@@ -136,6 +139,13 @@ function(file, local = FALSE, echo = verbose, print.eval = echo,
         }
     }
 
+    } else { # 'exprs' specified: !use_file
+	if(!missing(file)) stop("specify either 'file' or 'exprs' but not both")
+	if(!is.expression(exprs))
+	    exprs <- as.expression(exprs)
+    }
+
+    Ne <- length(exprs)
     if (echo) {
 	## Reg.exps for string delimiter/ NO-string-del /
 	## odd-number-of-str.del needed, when truncating below
@@ -145,14 +155,15 @@ function(file, local = FALSE, echo = verbose, print.eval = echo,
         ## A helper function for echoing source.  This is simpler than the
         ## same-named one in Sweave
 	trySrcLines <- function(srcfile, showfrom, showto) {
-	    lines <- tryCatch(suppressWarnings(getSrcLines(srcfile, showfrom, showto)),
-			      error = function(e)e)
-	    if (inherits(lines, "error")) character() else lines
+	    tryCatch(suppressWarnings(getSrcLines(srcfile, showfrom, showto)),
+		     error = function(e) character())
 	}
     }
     yy <- NULL
     lastshown <- 0
     srcrefs <- attr(exprs, "srcref")
+    if(verbose && !is.null(srcrefs)) {
+        cat("has srcrefs:\n"); utils::str(srcrefs) }
     for (i in seq_len(Ne+echo)) {
     	tail <- i > Ne
         if (!tail) {
@@ -187,18 +198,19 @@ function(file, local = FALSE, echo = verbose, print.eval = echo,
 	    if (is.null(srcref)) {
 	    	if (!tail) {
 		    # Deparse.  Must drop "expression(...)"
-		    dep <- substr(paste(deparse(ei, control = "showAttributes"),
+		    dep <- substr(paste(deparse(ei, width.cutoff = width.cutoff,
+						control = deparseCtrl),
 					collapse = "\n"), 12L, 1e+06L)
-		    ## We really do want chars here as \n\t may be embedded.
 		    dep <- paste0(prompt.echo,
 				  gsub("\n", paste0("\n", continue.echo), dep))
+		    ## We really do want chars here as \n\t may be embedded.
 		    nd <- nchar(dep, "c") - 1L
 		}
 	    }
 	    if (nd) {
 		do.trunc <- nd > max.deparse.length
 		dep <- substr(dep, 1L, if (do.trunc) max.deparse.length else nd)
-		cat("\n", dep, if (do.trunc)
+		cat(if (spaced) "\n", dep, if (do.trunc)
 		    paste(if (grepl(sd, dep) && grepl(oddsd, dep))
 			  " ...\" ..." else " ....", "[TRUNCATED] "),
 		    "\n", sep = "")
@@ -226,8 +238,9 @@ function(file, local = FALSE, echo = verbose, print.eval = echo,
 		    print(yy$value)
 	    }
 	    if (verbose)
-		cat(" .. after ", sQuote(deparse(ei,
-		    control = c("showAttributes","useSource"))), "\n", sep = "")
+		cat(" .. after ", sQuote(deparse(ei, control =
+					  unique(c(deparseCtrl, "useSource")))),
+		    "\n", sep = "")
  	}
     }
     invisible(yy)
@@ -235,13 +248,14 @@ function(file, local = FALSE, echo = verbose, print.eval = echo,
 
 sys.source <-
 function(file, envir = baseenv(), chdir = FALSE,
-	 keep.source = getOption("keep.source.pkgs"))
+	 keep.source = getOption("keep.source.pkgs"),
+	 toplevel.env = as.environment(envir))
 {
     if(!(is.character(file) && file.exists(file)))
 	stop(gettextf("'%s' is not an existing file", file))
     keep.source <- as.logical(keep.source)
     oop <- options(keep.source = keep.source,
-		   topLevelEnvironment = as.environment(envir))
+		   topLevelEnvironment = toplevel.env)
     on.exit(options(oop))
     if (keep.source) {
     	lines <- readLines(file, warn = FALSE)
@@ -260,4 +274,23 @@ function(file, envir = baseenv(), chdir = FALSE,
     }
     for (i in seq_along(exprs)) eval(exprs[i], envir)
     invisible()
+}
+
+withAutoprint <- function(exprs, evaluated = FALSE, local = parent.frame(),
+                          print. = TRUE, echo = TRUE, max.deparse.length = Inf,
+                          width.cutoff = max(20, getOption("width")),
+                          deparseCtrl = c("keepInteger", "showAttributes", "keepNA"),
+                          ...)
+{
+    if(!evaluated) {
+	exprs <- substitute(exprs)
+	if(is.call(exprs)) {
+	    if(exprs[[1]] == quote(`{`))
+		exprs <- as.list(exprs[-1])
+	    ## else: use that call
+	} ## else can be 'symbol' or e.g. numeric constant
+    }
+    source(exprs = exprs, local = local, print.eval = print., echo = echo,
+           max.deparse.length = max.deparse.length, width.cutoff = width.cutoff,
+	   deparseCtrl = deparseCtrl, ...)
 }

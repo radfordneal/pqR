@@ -226,8 +226,9 @@ stopifnot(all.equal(cov(X,X,method="spearman",use="complete"),
                     cov(X1,X1,method="spearman",use="complete")))
 
 ## DateTimeClasses
-(dls <- .leap.seconds[-1] - .leap.seconds[-22])
+(dls <- .leap.seconds[-1] - .leap.seconds[-length(.leap.seconds)])
 table(dls)
+stopifnot(sum(dls == 365) >= 11)
 ## end of moved from DateTimeClasses.Rd
 
 
@@ -1917,7 +1918,7 @@ stopifnot(is.na(z[1]))
 ## gave (randomly) 1 or 3 in 1.6.1
 
 
-## PR#2469: read.table on MacOS CR-terminated files.
+## PR#2469: read.table on Mac OS CR-terminated files.
 tmp <- tempfile()
 x <- c("aaa", "bbb", "ccc")
 cat(x, sep="\r", file=tmp)
@@ -2335,7 +2336,7 @@ x[, num] <- list()
 ## .Random.seed was searched for with inherits=TRUE
 rm(.Random.seed)
 attach(list(.Random.seed=c(0:4)))
-runif(1)
+x <- runif(1)
 detach(2)
 (new <- RNGkind())
 stopifnot(identical(new, c("Mersenne-Twister", "Inversion")))
@@ -2417,6 +2418,7 @@ Quine <- structure(list(Eth = structure(c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     .Names = c("Eth", "Sex", "Age", "Slow or fast", "Days"),
     class = "data.frame", row.names = 1:46)
 step(aov(log(Days+2.5) ~ .^4, data=Quine))
+set.seed(11)
 DF <- data.frame(y=rnorm(21), `x 1`=-10:10., check.names = FALSE)
 lm(y ~ ., data = DF)
 (fm <- lm(y ~ `x 1` + I(`x 1`^2), data = DF))
@@ -2466,22 +2468,6 @@ pc.cr <- princomp(~ Murder + Assault + UrbanPop,
                   data = USArrests, na.action=na.exclude, cor = TRUE)
 update(pc.cr, ~ . + Rape)
 ## end of moved from princomp.Rd
-
-
-## smooth.spline.Rd
-y18 <- c(1:3,5,4,7:3,2*(2:5),rep(10,4))
-xx  <- seq(1,length(y18), len=201)
-s2. <- smooth.spline(y18, cv=TRUE,con=list(trace=TRUE, tol=1e-6,low= -3,maxit=20))
-s2. ## Intel-Linux: Df ~= (even! > ) 18 : interpolating -- much smaller PRESS
-## {others, e.g., may end quite differently!}
-lines(predict(s2., xx), col = 4)
-mtext(deparse(s2.$call,200), side= 1, line= -1, cex= 0.8, col= 4)
-
-sdf8 <- smooth.spline(y18, df = 8, con=list(trace=TRUE))
-sdf8 ; sdf8$df - 8
-
-try(smooth.spline(y18, spar = 50)) #>> error : spar 'way too large'
-## end of moved from smooth.spline.Rd
 
 
 ## arima{0}
@@ -3026,6 +3012,26 @@ stopifnot(identical(names(cumsum(x)), nm),
           identical(names(cumprod(x)), nm))
 ## 1.9.x dropped names
 
+## cumsum etc preserve NAs
+# double
+x <- c(1, NA,  3)
+r <- c(1, NA, NA)
+stopifnot(identical(cumsum(x), r))
+stopifnot(identical(cumprod(x), r))
+stopifnot(identical(cummin(x), r))
+stopifnot(identical(cummax(x), r))
+# complex
+x <- c(1+1i, NA, 3)
+r <- c(1+1i, NA, NA)
+stopifnot(identical(cumsum(x), r))
+stopifnot(identical(cumprod(x), r))
+# integer
+x <- c(1L, NA, 3L)
+r <- c(1L, NA, NA)
+stopifnot(identical(cumsum(x), r))
+stopifnot(identical(cumprod(x), c(1, NA, NA))) # returns double
+stopifnot(identical(cummin(x), r))
+stopifnot(identical(cummax(x), r))
 
 ## complex superassignments
 e <- c(a=1, b=2)
@@ -3820,9 +3826,10 @@ aggregate(as.ts(c(1,2,3,4,5,6,7,8,9,10)),1/5,mean)
 
 
 ## prcomp(tol=1e-6)
+set.seed(16)
 x <- matrix(runif(30),ncol=10)
 s <- prcomp(x, tol=1e-6)
-stopifnot(length(s$sdev) == ncol(s$rotation))
+stopifnot(length(s$sdev) == 3, ncol(s$rotation) == 2)
 summary(s)
 ## last failed in 2.2.0
 

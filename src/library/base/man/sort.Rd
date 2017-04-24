@@ -20,7 +20,7 @@ sort(x, decreasing = FALSE, \dots)
 \method{sort}{default}(x, decreasing = FALSE, na.last = NA, \dots)
 
 sort.int(x, partial = NULL, na.last = NA, decreasing = FALSE,
-         method = c("shell", "quick", "radix"), index.return = FALSE)
+         method = c("auto", "shell", "quick", "radix"), index.return = FALSE)
 }
 \arguments{
   \item{x}{for \code{sort} an \R object with a class or a numeric,
@@ -56,6 +56,10 @@ sort.int(x, partial = NULL, na.last = NA, decreasing = FALSE,
   Complex values are sorted first by the real part, then the imaginary
   part.
 
+  The \code{"auto"} method selects \code{"radix"} for short (less than
+  \eqn{2^{31}}{2^31} elements) numeric vectors, integer vectors, logical
+  vectors and factors; otherwise, \code{"shell"}.
+  
   Except for method \code{"radix"},
   the sort order for character vectors will depend on the collating
   sequence of the locale in use: see \code{\link{Comparison}}.
@@ -103,9 +107,9 @@ sort.int(x, partial = NULL, na.last = NA, decreasing = FALSE,
 
   The \code{"radix"} method generally outperforms the other methods,
   especially for character vectors and small integers. Compared to quick
-  sort, it is slightly faster for (large) integers and double vectors
-  (but unlike quick sort, radix is stable and supports all
-  \code{na.last} options). The implementation is order of magnitudes
+  sort, it is slightly faster for vectors with large integer or real
+  values (but unlike quick sort, radix is stable and supports all
+  \code{na.last} options). The implementation is orders of magnitude
   faster than shell sort for character vectors, in part thanks to clever
   use of the internal \code{CHARSXP} table.
 
@@ -115,10 +119,6 @@ sort.int(x, partial = NULL, na.last = NA, decreasing = FALSE,
       If \code{x} is a \code{character} vector, all elements must share
       the same encoding. Only UTF-8 (including ASCII) and Latin-1
       encodings are supported. Collation always follows the "C" locale.
-    }
-    \item{
-      There is a small loss of precision when comparing double
-      values. This may be configurable in the future.
     }
     \item{
       Long vectors (with more than 2^32 elements) and \code{complex}
@@ -144,7 +144,7 @@ sort.int(x, partial = NULL, na.last = NA, decreasing = FALSE,
   \code{sort.list}) as quicksort is not stable.  For \code{method ==
   "radix"}, \code{index.return} is supported for all \code{na.last}
   modes. The other methods only support \code{index.return}
-  when \code{na.last} is \code{NA}, so the index vector
+  when \code{na.last} is \code{NA}. The index vector
   refers to element numbers \emph{after removal of \code{NA}s}: see
   \code{\link{order}} if you want the original element numbers.
 
@@ -220,7 +220,7 @@ system.time(x1 <- sort(x, method = "shell"))
 system.time(x2 <- sort(x, method = "quick"))
 system.time(x3 <- sort(x, method = "radix"))
 stopifnot(identical(x1, x2))
-stopifnot(all.equal(x1, x3)) # imprecision in radix sort
+stopifnot(identical(x1, x3))
 }}
 \keyword{univar}
 \keyword{manip}

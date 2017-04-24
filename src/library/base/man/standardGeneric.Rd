@@ -1,22 +1,28 @@
 % File src/library/base/man/standardGeneric.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2007 R Core Team
+% Copyright 1995-2016 R Core Team
 % Distributed under GPL 2 or later
 
 \name{standardGeneric}
 \alias{standardGeneric}
 \title{Formal Method System -- Dispatching S4 Methods}
-% and other Placeholders
 \description{
   The function \code{standardGeneric} initiates dispatch of S4
   methods: see the references and the documentation of the
   \pkg{methods} package.  Usually, calls to this function are
   generated automatically and not explicitly by the programmer.
 }
-  % was "and do not need to be called directly in any case."
-  % but standardGeneric() should be "called directly" , right?
 \usage{
 standardGeneric(f, fdef)
+}
+\arguments{
+  \item{f}{
+    The name of the generic.
+  }
+  \item{fdef}{
+    The generic function definition. Never passed when
+    defining a new generic.
+  }
 }
 \details{
   \code{standardGeneric} dispatches the method defined for a generic
@@ -43,4 +49,3 @@ function definition will cause certain failure.
  Springer (For the original S4 version.)
 }
 \keyword{programming}
-\keyword{internal}

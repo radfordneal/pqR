@@ -1,6 +1,6 @@
 % File src/library/base/man/c.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2016 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 \name{c}
 \title{Combine Values into a Vector or List}
@@ -54,7 +54,7 @@ c(\dots)
 }
 \section{S4 methods}{
   This function is S4 generic, but with argument list
-  \code{(x, ..., recursive = FALSE)}.
+  \code{(x, ...)}.
 }
 \references{
   Becker, R. A., Chambers, J. M. and Wilks, A. R. (1988)

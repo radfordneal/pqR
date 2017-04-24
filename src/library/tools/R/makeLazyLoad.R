@@ -1,7 +1,7 @@
 #  File src/library/tools/R/makeLazyLoad.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2015 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,8 +23,7 @@ code2LazyLoadDB <-
 {
     pkgpath <- find.package(package, lib.loc, quiet = TRUE)
     if(!length(pkgpath))
-        stop(gettextf("there is no package called '%s'", package),
-             domain = NA)
+        stop(gettextf("there is no package called '%s'", package), domain = NA)
     dbbase <- file.path(pkgpath, "R", package)
     if (packageHasNamespace(package, dirname(pkgpath))) {
         if (! is.null(.getNamespace(as.name(package))))
@@ -109,8 +108,8 @@ data2LazyLoadDB <- function(package, lib.loc = NULL, compress = TRUE)
     }
     if(dir.exists(dataDir)) {
         if(file.exists(file.path(dataDir, "Rdata.rds")) &&
-	    file.exists(file.path(dataDir, paste(package, "rdx", sep="."))) &&
-	    file.exists(file.path(dataDir, paste(package, "rdb", sep="."))) ){
+	    file.exists(file.path(dataDir, paste0(package, ".rdx"))) &&
+	    file.exists(file.path(dataDir, paste0(package, ".rdb"))) ){
             warning("package seems to be using lazy loading for data already")
         }
 	else {
@@ -178,7 +177,7 @@ makeLazyLoadDB <- function(from, filebase, compress = TRUE, ascii = FALSE,
         getenv <- function(n) find(n, enames, envs)
         insert <- function(e) {
             idx <<- idx + 1
-            name <- paste("env", idx, sep="::")
+            name <- paste0("env::", idx)
             envs <<- c(e, envs)
             enames <<- c(name, enames)
             name
@@ -197,8 +196,8 @@ makeLazyLoadDB <- function(from, filebase, compress = TRUE, ascii = FALSE,
        .Internal(lazyLoadDBinsertValue(x[[1L]], file, ascii, compress, hook))
     }
 
-    mapfile <- paste(filebase, "rdx", sep = ".")
-    datafile <- paste(filebase, "rdb", sep = ".")
+    mapfile <- paste0(filebase, ".rdx")
+    datafile <- paste0(filebase, ".rdb")
     close(file(datafile, "wb")) # truncate to zero
     table <- envtable()
     varenv <- new.env(hash = TRUE)
@@ -260,7 +259,8 @@ makeLazyLoading <-
              keep.source = getOption("keep.source.pkgs"))
 {
     if(!is.logical(compress) && ! compress %in% c(2,3))
-        stop("invalid value for 'compress': should be FALSE, TRUE, 2 or 3")
+	stop(gettextf("invalid value for '%s' : %s", "compress",
+		      "should be FALSE, TRUE, 2 or 3"), domain = NA)
     options(warn = 1L)
     findpack <- function(package, lib.loc) {
         pkgpath <- find.package(package, lib.loc, quiet = TRUE)

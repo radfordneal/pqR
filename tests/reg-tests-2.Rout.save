@@ -1,5 +1,5 @@
 
-R version 3.3.3 beta (2017-02-23 r72250) -- "Another Canoe"
+R version 3.4.0 RC (2017-04-18 r72543) -- "You Stupid Darkness"
 Copyright (C) 2017 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -978,7 +978,7 @@ $B$subset
 > x <- c(round(runif(10), 2), 10000)
 > summary(x)
      Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
-    0.060     0.320     0.630   909.600     0.905 10000.000 
+    0.060     0.320     0.630   909.592     0.905 10000.000 
 > summary(data.frame(x))
        x            
  Min.   :    0.060  
@@ -4881,8 +4881,7 @@ coef[0] = 1
 > ## using NULL as a replacement value
 > DF <- data.frame(A=1:2, B=3:4)
 > try(DF[2, 1:3] <- NULL)
-Error in `[<-.data.frame`(`*tmp*`, 2, 1:3, value = NULL) : 
-  replacement has length zero
+Error in x[[jj]][iseq] <- vjj : replacement has length zero
 > ## wrong error message in R < 2.2.0
 > 
 > 
@@ -5112,6 +5111,15 @@ Calls: do.call -> <Anonymous>
     ...
 1: do.call(f, mtcars)
 > 
+> ## Debugger can handle a function that has a single function call as its body
+> g <- function(fun) fun(1)
+> debug(g)
+> g(function(x) x+1)
+debugging in: g(function(x) x + 1)
+debug: fun(1)
+Browse[2]> 
+exiting from: g(function(x) x + 1)
+[1] 2
 > options(op)
 > ## unlimited < 2.3.0
 > 
@@ -6363,6 +6371,7 @@ function(given = NULL) {
     if (is.null(given)) callObj$default <- TRUE
     callObj
 }
+<bytecode: 0x5510f80>
 > print(foo, useSource = FALSE)
 function (given = NULL) 
 {
@@ -6373,6 +6382,7 @@ function (given = NULL)
         callObj$default <- TRUE
     callObj
 }
+<bytecode: 0x5510f80>
 > attr(foo, "srcref") <- NULL
 > foo
 function (given = NULL) 
@@ -6384,6 +6394,7 @@ function (given = NULL)
         callObj$default <- TRUE
     callObj
 }
+<bytecode: 0x5510f80>
 > (f <- structure(function(){}, note = "just a note",
 +                 yada = function() "not the same"))
 function(){}
@@ -6405,15 +6416,15 @@ function ()
 > print.function
 function (x, ...)  
  - attr(*, "srcref")=Class 'srcref'  atomic [1:8] 1 19 1 63 19 63 1 1
-  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3511f88> 
+  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x55645f0> 
 > f
 function ()  
  - attr(*, "srcref")=Class 'srcref'  atomic [1:8] 1 17 1 28 17 28 1 1
-  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3508f58> 
+  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x5558fc0> 
  - attr(*, "note")= chr "just a note"
  - attr(*, "yada")=function ()  
   ..- attr(*, "srcref")=Class 'srcref'  atomic [1:8] 2 24 2 48 24 48 2 2
-  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x3508f58> 
+  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x5558fc0> 
 > rm(print.function)
 > ## auto-printing and printing differed up to R 2.9.x
 > 
@@ -6505,7 +6516,7 @@ sample estimates:
 > bar <- as.data.frame(foo)
 > val <- integer(0)
 > try(bar$NewCol <- val)
-Error in `$<-.data.frame`(`*tmp*`, "NewCol", value = integer(0)) : 
+Error in `$<-.data.frame`(`*tmp*`, NewCol, value = integer(0)) : 
   replacement has 0 rows, data has 3
 > # similar, not in the report
 > try(bar[["NewCol"]] <- val)
@@ -7100,17 +7111,17 @@ In pl$ab : partial match of 'ab' to 'abc'
 > 
 > ## seq() with NaN etc inputs now gives explicit error messages
 > try(seq(NaN))
-Error in seq.default(NaN) : 'from' cannot be NA, NaN or infinite
+Error in seq.default(NaN) : 'from' must be a finite number
 > try(seq(to = NaN))
-Error in seq.default(to = NaN) : 'to' cannot be NA, NaN or infinite
+Error in seq.default(to = NaN) : 'to' must be a finite number
 > try(seq(NaN, NaN))
-Error in seq.default(NaN, NaN) : 'from' cannot be NA, NaN or infinite
+Error in seq.default(NaN, NaN) : 'from' must be a finite number
 > try(seq.int(NaN))
-Error in seq.int(NaN) : 'from' cannot be NA, NaN or infinite
+Error in seq.int(NaN) : 'from' must be a finite number
 > try(seq.int(to = NaN))
-Error in seq.int(to = NaN) : 'to' cannot be NA, NaN or infinite
+Error in seq.int(to = NaN) : 'to' must be a finite number
 > try(seq.int(NaN, NaN))
-Error in seq.int(NaN, NaN) : 'from' cannot be NA, NaN or infinite
+Error in seq.int(NaN, NaN) : 'from' must be a finite number
 > ## R 3.0.1 gave messages from ':' or about negative-length vectors.
 > 
 > 
@@ -7808,6 +7819,44 @@ structure(list(one = 1, two = ), .Names = c("one", "two"))
  Max.   :1969-12-28   Max.   :7.0   Max.   :6.00  
  NA's   :3                          NA's   :1     
 > ## 2 of 4  summary(.) above did not show NA's  in R <= 3.2.3
+> 
+> 
+> ## Printing complex matrix
+> matrix(1i,2,13)
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11] [,12] [,13]
+[1,] 0+1i 0+1i 0+1i 0+1i 0+1i 0+1i 0+1i 0+1i 0+1i  0+1i  0+1i  0+1i  0+1i
+[2,] 0+1i 0+1i 0+1i 0+1i 0+1i 0+1i 0+1i 0+1i 0+1i  0+1i  0+1i  0+1i  0+1i
+> ## Spacing was wrong in R <= 3.2.4
+> 
+> 
+> E <- expression(poly = x^3 - 3 * x^2)
+> str(E)
+  expression(poly = x^3 - 3 * x^2)
+> ## no longer shows "structure(...., .Names = ..)"
+> 
+> 
+> ## summary(<logical>) working via table():
+> logi <- c(NA, logical(3), NA, !logical(2), NA)
+> summary(logi)
+   Mode   FALSE    TRUE    NA's 
+logical       3       2       3 
+> summary(logi[!is.na(logi)])
+   Mode   FALSE    TRUE 
+logical       3       2 
+> summary(TRUE)
+   Mode    TRUE 
+logical       1 
+> ## was always showing counts for NA's even when 0 in  2.8.0 <= R <= 3.3.1
+> ii <- as.integer(logi)
+> summary(ii)
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+    0.0     0.0     0.0     0.4     1.0     1.0       3 
+> summary(ii[!is.na(ii)])
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    0.0     0.0     0.0     0.4     1.0     1.0 
+> summary(1L)
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
 > 
 > 
 > ## str.default() for "AsIs" arrays

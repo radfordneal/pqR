@@ -818,8 +818,8 @@ void setup_Rmainloop(void)
     InitTempDir(); /* must be before InitEd */
     InitMemory();
     InitStringHash(); /* must be before InitNames */
-    InitNames();
     InitBaseEnv();
+    InitNames(); /* must be after InitBaseEnv to use R_EmptyEnv */
     InitGlobalEnv();
     InitDynload();
     InitOptions();
@@ -1136,8 +1136,18 @@ static int ParseBrowser(SEXP CExpr, SEXP rho)
 	    rval = 2;
 	    printwhere();
 	    /* SET_RDEBUG(rho, 1); */
+	} else if (!strcmp(expr, "r")) {
+	    SEXP hooksym = install(".tryResumeInterrupt");
+	    if (SYMVALUE(hooksym) != R_UnboundValue) {
+		SEXP hcall;
+		R_Busy(1);
+		PROTECT(hcall = LCONS(hooksym, R_NilValue));
+		eval(hcall, R_GlobalEnv);
+		UNPROTECT(1);
+	    }
 	}
     }
+
     return rval;
 }
 
@@ -1234,7 +1244,7 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    R_Visible = FALSE;
 	}
 	R_GlobalContext = &thiscontext;
-	R_InsertRestartHandlers(&thiscontext, TRUE);
+	R_InsertRestartHandlers(&thiscontext, "browser");
 	R_ReplConsole(rho, savestack, browselevel+1);
 	endcontext(&thiscontext);
     }
@@ -1291,7 +1301,7 @@ SEXP attribute_hidden do_quit(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return R_NilValue;
     }
     if( !isString(CAR(args)) )
-	errorcall(call, _("one of \"yes\", \"no\", \"ask\" or \"default\" expected."));
+	error(_("one of \"yes\", \"no\", \"ask\" or \"default\" expected."));
     tmp = CHAR(STRING_ELT(CAR(args), 0)); /* ASCII */
     if( !strcmp(tmp, "ask") ) {
 	ask = SA_SAVEASK;
@@ -1304,7 +1314,7 @@ SEXP attribute_hidden do_quit(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if( !strcmp(tmp, "default") )
 	ask = SA_DEFAULT;
     else
-	errorcall(call, _("unrecognized value of 'save'"));
+	error(_("unrecognized value of 'save'"));
     status = asInteger(CADR(args));
     if (status == NA_INTEGER) {
 	warning(_("invalid 'status', 0 assumed"));
@@ -1468,7 +1478,10 @@ R_removeTaskCallback(SEXP which)
     Rboolean val;
 
     if(TYPEOF(which) == STRSXP) {
-	val = Rf_removeTaskCallbackByName(CHAR(STRING_ELT(which, 0)));
+	if (LENGTH(which) == 0)
+	    val = FALSE;
+	else
+	    val = Rf_removeTaskCallbackByName(CHAR(STRING_ELT(which, 0)));
     } else {
 	id = asInteger(which);
 	if (id != NA_INTEGER) val = Rf_removeTaskCallbackByIndex(id - 1);

@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995-1998  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1999-2015  The R Core Team.
+ *  Copyright (C) 1999-2016  The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -85,7 +85,7 @@ SEXP attribute_hidden do_delayed(SEXP call, SEXP op, SEXP args, SEXP rho)
 	eenv = R_BaseEnv;
     } else
     if (!isEnvironment(eenv))
-	errorcall(call, _("invalid '%s' argument"), "eval.env");
+	error(_("invalid '%s' argument"), "eval.env");
 
     args = CDR(args);
     aenv = CAR(args);
@@ -94,7 +94,7 @@ SEXP attribute_hidden do_delayed(SEXP call, SEXP op, SEXP args, SEXP rho)
 	aenv = R_BaseEnv;
     } else
     if (!isEnvironment(aenv))
-	errorcall(call, _("invalid '%s' argument"), "assign.env");
+	error(_("invalid '%s' argument"), "assign.env");
 
     defineVar(name, mkPROMISE(expr, eenv), aenv);
     return R_NilValue;
@@ -118,7 +118,7 @@ SEXP attribute_hidden do_makelazy(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isEnvironment(aenv)) error(_("invalid '%s' argument"), "assign.env");
 
     for(i = 0; i < XLENGTH(names); i++) {
-	SEXP name = installChar(STRING_ELT(names, i));
+	SEXP name = installTrChar(STRING_ELT(names, i));
 	PROTECT(val = eval(VECTOR_ELT(values, i), eenv));
 	PROTECT(expr0 = duplicate(expr));
 	SETCAR(CDR(expr0), val);
@@ -244,8 +244,12 @@ SEXP attribute_hidden do_formals(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     if (TYPEOF(CAR(args)) == CLOSXP)
 	return duplicate(FORMALS(CAR(args)));
-    else
+    else {
+	if(!(TYPEOF(CAR(args)) == BUILTINSXP ||
+	     TYPEOF(CAR(args)) == SPECIALSXP))
+	    warningcall(call, _("argument is not a function"));
 	return R_NilValue;
+    }
 }
 
 SEXP attribute_hidden do_body(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -253,7 +257,12 @@ SEXP attribute_hidden do_body(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     if (TYPEOF(CAR(args)) == CLOSXP)
 	return duplicate(BODY_EXPR(CAR(args)));
-    else return R_NilValue;
+    else {
+	if(!(TYPEOF(CAR(args)) == BUILTINSXP ||
+	     TYPEOF(CAR(args)) == SPECIALSXP))
+	    warningcall(call, _("argument is not a function"));
+	return R_NilValue;
+    }
 }
 
 SEXP attribute_hidden do_bodyCode(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -640,9 +649,8 @@ SEXP attribute_hidden do_cat(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 #endif
 	    else
-		errorcall(call,
-			  _("argument %d (type '%s') cannot be handled by 'cat'"),
-			  1+iobj, type2char(TYPEOF(s)));
+		error(_("argument %d (type '%s') cannot be handled by 'cat'"),
+		      1+iobj, type2char(TYPEOF(s)));
 	    /* FIXME : cat(...) should handle ANYTHING */
 	    size_t w = strlen(p);
 	    cat_sepwidth(sepr, &sepw, ntot);
@@ -688,10 +696,9 @@ SEXP attribute_hidden do_cat(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 SEXP attribute_hidden do_makelist(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP list, names, next;
-    int i, n, havenames;
-
+    int n, havenames;
     /* compute number of args and check for names */
+    SEXP next;
     for (next = args, n = 0, havenames = FALSE;
 	 next != R_NilValue;
 	 next = CDR(next)) {
@@ -700,9 +707,9 @@ SEXP attribute_hidden do_makelist(SEXP call, SEXP op, SEXP args, SEXP rho)
 	n++;
     }
 
-    PROTECT(list = allocVector(VECSXP, n));
-    PROTECT(names = havenames ? allocVector(STRSXP, n) : R_NilValue);
-    for (i = 0; i < n; i++) {
+    SEXP list = PROTECT(allocVector(VECSXP, n));
+    SEXP names = PROTECT(havenames ? allocVector(STRSXP, n) : R_NilValue);
+    for (int i = 0; i < n; i++) {
 	if (havenames) {
 	    if (TAG(args) != R_NilValue)
 		SET_STRING_ELT(names, i, PRINTNAME(TAG(args)));

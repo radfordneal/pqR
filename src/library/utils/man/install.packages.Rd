@@ -1,6 +1,6 @@
 % File src/library/utils/man/install.packages.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2015 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{install.packages}
@@ -210,7 +210,7 @@ install.packages(pkgs, lib, repos = getOption("repos"),
 \section{Binary packages}{
   This section applies only to platforms where binary packages are
   available: Windows and CRAN builds for macOS.
-  
+
   \R packages are primarily distributed as \emph{source} packages, but
   \emph{binary} packages (a packaging up of the installed package) are
   also supported, and the type most commonly used on Windows and by the
@@ -218,9 +218,9 @@ install.packages(pkgs, lib, repos = getOption("repos"),
   downloading a file from a repository or from a local file.
 
   Possible values of \code{type} are (currently) \code{"source"},
-  \code{"mac.binary"}, \code{"mac.binary.mavericks"} and
-  \code{"win.binary"}: the appropriate binary type where
-  supported can also be selected as \code{"binary"}.
+  \code{"mac.binary"}, \code{"mac.binary.el-capitan"} and
+  \code{"win.binary"}: the appropriate binary type where supported can
+  also be selected as \code{"binary"}.
 
   For a binary install from a repository, the function checks for the
   availability of a source package on the same repository, and reports
@@ -229,7 +229,7 @@ install.packages(pkgs, lib, repos = getOption("repos"),
 \preformatted{    options(install.packages.check.source = "no")}
   and should be if there is a partial repository containing only binary
   files.
-  
+
   An alternative (and the current default) is \code{"both"} which means
   \sQuote{use binary if available and current, otherwise try
     source}. The action if there are source packages which are preferred
@@ -237,7 +237,7 @@ install.packages(pkgs, lib, repos = getOption("repos"),
   \code{\link{getOption}("install.packages.compile.from.source")}.
   \code{type = "both"} will be silently changed to \code{"binary"} if
   either \code{contriburl} or \code{available} is specified.
-  
+
   Using packages with \code{type = "source"} always works provided the
   package contains no C/C++/Fortran code that needs compilation.
 #ifdef windows
@@ -260,7 +260,7 @@ install.packages(pkgs, lib, repos = getOption("repos"),
   problem, but the installation may fail as Windows locks files in use.
 #endif
 #ifdef unix
-  Otherwise, on macOS you otherwise need to have installed the
+  Otherwise, on macOS you need to have installed the
   \sQuote{Command-line tools for Xcode} (see the \sQuote{R Installation
     and Administration Manual}) and if needed by the package a Fortran
   compiler, and have them in your path.

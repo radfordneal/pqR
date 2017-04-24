@@ -58,7 +58,8 @@ latex_canonical_encoding  <- function(encoding)
 }
 
 ## 'encoding' is passed to parse_Rd, as the input encoding
-Rd2latex <- function(Rd, out="", defines=.Platform$OS.type, stages="render",
+Rd2latex <- function(Rd, out = "", defines = .Platform$OS.type,
+                     stages = "render",
 		     outputEncoding = "ASCII", fragment = FALSE, ...,
                      writeEncoding = TRUE)
 {
@@ -70,10 +71,10 @@ Rd2latex <- function(Rd, out="", defines=.Platform$OS.type, stages="render",
                 writeLines(x, con, useBytes = TRUE, ...)
         } else {
             function(x, con, outputEncoding, ...) {
-                x <- iconv(x, "UTF-8", outputEncoding,  mark=FALSE)
+                x <- iconv(x, "UTF-8", outputEncoding,  mark = FALSE)
                 if (anyNA(x)) {
                     x <- iconv(x, "UTF-8", outputEncoding,
-                               sub="byte", mark=FALSE)
+                               sub = "byte", mark = FALSE)
                     encode_warn <<- TRUE
                 }
                 writeLines(x, con, useBytes = TRUE, ...)

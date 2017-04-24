@@ -67,7 +67,7 @@
 /*
  *  R : A Computer Langage for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2015  The R Core Team
+ *  Copyright (C) 1997--2016  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -3145,7 +3145,7 @@ static SEXP xxnewcommand(SEXP cmd, SEXP name, SEXP defn, YYLTYPE *lloc)
     else
     	PROTECT(thedefn = mkString(""));
     if (warnDups) {
-	prev = findVar(installChar(STRING_ELT(thename, 0)), parseState.xxMacroList);
+	prev = findVar(installTrChar(STRING_ELT(thename, 0)), parseState.xxMacroList);
     	if (prev != R_UnboundValue && strcmp(CHAR(STRING_ELT(cmd,0)), "\\renewcommand")) {
 	    snprintf(buffer, sizeof(buffer), _("Macro '%s' previously defined."), 
                  CHAR(STRING_ELT(thename, 0)));
@@ -3164,7 +3164,7 @@ static SEXP xxnewcommand(SEXP cmd, SEXP name, SEXP defn, YYLTYPE *lloc)
     setAttrib(ans, install("Rd_tag"), cmd);
     setAttrib(ans, install("definition"), thedefn);
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
-    defineVar(installChar(STRING_ELT(thename, 0)), ans, parseState.xxMacroList);
+    defineVar(installTrChar(STRING_ELT(thename, 0)), ans, parseState.xxMacroList);
 
     UNPROTECT_PTR(thedefn);
     UNPROTECT_PTR(cmd);
@@ -4392,7 +4392,7 @@ static void PopState() {
  If there is text then that is read and the other arguments are ignored.
 */
 
-SEXP C_parseRd(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP parseRd(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     args = CDR(args);
 
@@ -4459,7 +4459,7 @@ SEXP C_parseRd(SEXP call, SEXP op, SEXP args, SEXP env)
  .External2(C_deparseRd, element, state)
 */
 
-SEXP C_deparseRd(SEXP e, SEXP state)
+SEXP deparseRd(SEXP e, SEXP state)
 {
     SEXP result;
     int  outlen, *statevals, quoteBraces, inRComment;
