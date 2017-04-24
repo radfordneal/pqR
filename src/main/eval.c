@@ -3840,30 +3840,25 @@ typedef union { double dval; int ival; } scalar_value_t;
 static R_INLINE int bcStackScalar(R_bcstack_t *s, scalar_value_t *v)
 {
     SEXP x = *s;
-    if (!HAS_ATTRIB(x)) {
-	switch(TYPEOF(x)) {
-	case REALSXP:
-	    if (LENGTH(x) == 1) {
-		v->dval = REAL(x)[0];
-		return REALSXP;
-	    }
-	    else return 0;
-	case INTSXP:
-	    if (LENGTH(x) == 1) {
-		v->ival = INTEGER(x)[0];
-		return INTSXP;
-	    }
-	    else return 0;
-	case LGLSXP:
-	    if (LENGTH(x) == 1) {
-		v->ival = LOGICAL(x)[0];
-		return LGLSXP;
-	    }
-	    else return 0;
-	default: return 0;
-	}
+
+    if (HAS_ATTRIB(x) || LENGTH(x) != 1)
+        return 0;
+
+    int type = TYPEOF(x);
+
+    switch (type) {
+        case REALSXP:
+            v->dval = REAL(x)[0];
+            break;
+        case INTSXP:  /* INT and LGL assumed to have same representation */
+        case LGLSXP:
+            v->ival = INTEGER(x)[0];
+            break;
+        default: 
+            return 0;
     }
-    else return 0;
+
+    return type;
 }
 
 #define DO_FAST_RELOP2(op,a,b) do { \
@@ -4189,7 +4184,7 @@ typedef int BCODE;
 
 static R_INLINE SEXP GET_BINDING_CELL(SEXP symbol, SEXP rho)
 {
-    if (rho == R_BaseEnv || rho == R_BaseNamespace)
+    if (IS_BASE(rho))
 	return R_NilValue;
     else {
 	SEXP loc = (SEXP) R_findVarLocInFrame(rho, symbol);
@@ -4342,40 +4337,42 @@ static R_INLINE SEXP FORCE_PROMISE(SEXP value, SEXP symbol, SEXP rho,
     return value;
 }
 
-static R_INLINE SEXP FIND_VAR_NO_CACHE(SEXP symbol, SEXP rho, SEXP cell)
+static R_INLINE SEXP getddvar(SEXP symbol, SEXP rho, Rboolean keepmiss)
 {
-    SEXP value;
-    /* only need to search the current frame again if
-       binding was special or frame is a base frame */
-    if (cell != R_NilValue ||
-	rho == R_BaseEnv || rho == R_BaseNamespace)
-	value =  findVar(symbol, rho);
-    else
-	value =  findVar(symbol, ENCLOS(rho));
+    SEXP value = ddfindVar(symbol, rho);
+
+    if (TYPEOF(value) == PROMSXP)
+        return FORCE_PROMISE(value, symbol, rho, keepmiss);
+
+    if (value == R_UnboundValue)
+	unbound_var_error(symbol);
+
+    if (value == R_MissingArg && !keepmiss)
+	arg_missing_error(symbol);
+
+    if (NAMEDCNT_EQ_0(value))
+	SET_NAMEDCNT_1(value);
+
     return value;
 }
 
-static void getvar_error (SEXP value, SEXP symbol)
-{
-    if (value == R_UnboundValue)
-	unbound_var_error(symbol);
-    if (value == R_MissingArg)
-	arg_missing_error(symbol);
-    abort();
-}
-
-static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
-			    Rboolean dd, Rboolean keepmiss,
-			    R_binding_cache_t vcache, int sidx)
+static R_INLINE SEXP getvar(SEXP symbol, SEXP rho, Rboolean keepmiss,
+                            R_binding_cache_t vcache, int sidx)
+                            /* use getddvar if a .. var */
 {
     SEXP value;
-    if (dd)
-	value = ddfindVar(symbol, rho);
-    else if (vcache != NULL) {
+
+    if (vcache != NULL) {
 	SEXP cell = GET_BINDING_CELL_CACHE(symbol, rho, vcache, sidx);
 	value = BINDING_VALUE(cell);
-	if (value == R_UnboundValue)
-	    value = FIND_VAR_NO_CACHE(symbol, rho, cell);
+	if (value == R_UnboundValue) {
+            /* only need to search the current frame again if
+               binding was special or frame is a base frame */
+            if (cell != R_NilValue || IS_BASE(rho))
+                value =  findVar(symbol, rho);
+            else
+                value =  findVar(symbol, ENCLOS(rho));
+        }
     }
     else
 	value = findVar(symbol, rho);
@@ -4383,8 +4380,11 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
     if (TYPEOF(value) == PROMSXP)
         return FORCE_PROMISE(value, symbol, rho, keepmiss);
 
-    if (value == R_UnboundValue || value == R_MissingArg && !keepmiss)
-        getvar_error(value,symbol);
+    if (value == R_UnboundValue)
+	unbound_var_error(symbol);
+
+    if (value == R_MissingArg && !keepmiss)
+	arg_missing_error(symbol);
 
     if (NAMEDCNT_EQ_0(value))
 	SET_NAMEDCNT_1(value);
@@ -4440,9 +4440,10 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 	    }								\
 	}								\
     }									\
-    SEXP symbol = constants[sidx];				\
+    SEXP symbol = constants[sidx];					\
     R_Visible = TRUE;							\
-    BCNPUSH(getvar(symbol, rho, dd, keepmiss, vcache, sidx));		\
+    BCNPUSH(dd ? getddvar (symbol, rho, keepmiss)			\
+               : getvar (symbol, rho, keepmiss, vcache, sidx));		\
     NEXT();								\
 } while (0)
 #else
@@ -4450,7 +4451,8 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
   int sidx = GETOP(); \
   SEXP symbol = constants[sidx]; \
   R_Visible = TRUE; \
-  BCNPUSH(getvar(symbol, rho, dd, keepmiss, vcache, sidx));	\
+  BCNPUSH(dd ? getddvar (symbol, rho, keepmiss)				\
+               getvar (symbol, rho, dd, keepmiss, vcache, sidx);	\
   NEXT(); \
 } while (0)
 #endif
@@ -4673,21 +4675,25 @@ static void loopWithContext(volatile SEXP code, volatile SEXP rho)
 static R_INLINE int bcStackIndex(R_bcstack_t *s)
 {
     SEXP idx = *s;
-    switch(TYPEOF(idx)) {
-    case INTSXP:
-	if (LENGTH(idx) == 1 && INTEGER(idx)[0] != NA_INTEGER)
-	    return INTEGER(idx)[0];
-	else return -1;
-    case REALSXP:
-	if (LENGTH(idx) == 1) {
-	    double val = REAL(idx)[0];
-	    if (! ISNAN(val) && val <= INT_MAX && val > INT_MIN)
-		return val;
-	    else return -1;
-	}
-	else return -1;
-    default: return -1;
+    int ival = -1;
+
+    if (LENGTH(idx) == 1) {
+
+        switch(TYPEOF(idx)) {
+        case INTSXP:
+            ival = INTEGER(idx)[0];
+            if (ival == NA_INTEGER)
+                ival = -1;
+            break;
+        case REALSXP: ;
+            double val = REAL(idx)[0];
+            if (!ISNAN(val) && val <= INT_MAX && val > INT_MIN)
+                ival = (int) val;
+            break;
+        }
     }
+
+    return ival;
 }
 
 static void VECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *si,
@@ -5695,7 +5701,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	SEXP symbol = constants[GETOP()];
 	value = GETSTACK(-1);
-	BCNPUSH(getvar(symbol, ENCLOS(rho), FALSE, FALSE, NULL, 0));
+	BCNPUSH(getvar(symbol, ENCLOS(rho), FALSE, NULL, 0));
 	BCNPUSH(value);
 	/* top three stack entries are now RHS value, LHS value, RHS value */
 	NEXT();
