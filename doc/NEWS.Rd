@@ -5,6 +5,126 @@
 \title{R News}
 \encoding{UTF-8}
 
+\section{\Rlogo CHANGES IN R 3.3.3}{
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item Changes when redirection of a \samp{http://} URL to a
+      \samp{https://} URL is encountered:
+
+      \itemize{
+	\item The internal methods of \code{download.file()} and
+	\code{url()} now report that they cannot follow this (rather
+	than failing silently).
+
+	\item (Unix-alike) \code{download.file(method = "auto")} (the
+	default) re-tries with \code{method = "libcurl"}.
+
+	\item (Unix-alike) \code{url(method = "default")} with an
+	explicit \code{open} argument re-tries with
+	\code{method = "libcurl"}.  This covers many of the usages,
+	e.g.\sspace{}\code{readLines()} with a URL argument.
+      }
+    }
+  }
+
+  \subsection{INSTALLATION on a UNIX-ALIKE}{
+    \itemize{
+      \item The \command{configure} check for the \code{zlib} version is
+      now robust to versions longer than 5 characters, including
+      \code{1.2.11}.
+    }
+  }
+
+  \subsection{UTILITIES}{
+    \itemize{
+      \item Environmental variable \env{_R_CHECK_TESTS_NLINES_} controls
+      how \command{R CMD check} reports failing tests (see §8 of the
+      \sQuote{R Internals} manual).
+    }
+  }
+
+  \subsection{DEPRECATED AND DEFUNCT}{
+    \itemize{
+      \item (C-level Native routine registration.)  The undocumented
+      \code{styles} field of the components of \code{R_CMethodDef} and
+      \code{R_FortranMethodDef} is deprecated.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{vapply(x, *)} now works with long vectors \code{x}.
+      (\PR{17174})
+
+      \item \code{isS3method("is.na.data.frame")} and similar are
+      correct now.  (\PR{17171})
+
+      \item \code{grepRaw(<long>, <short>, fixed = TRUE)} now works,
+      thanks to a patch by Mikko Korpela.  (\PR{17132})
+
+      \item Package installation into a library where the package exists
+      \emph{via} symbolic link now should work wherever
+      \code{Sys.readlink()} works, resolving \PR{16725}.
+
+      \item \code{"Cincinnati"} was missing an \code{"n"} in the
+      \code{precip} dataset.
+
+      \item Fix buffer overflow vulnerability in \code{pdf()} when
+      loading an encoding file.  Reported by Talos (TALOS-2016-0227).
+
+      \item \code{getDLLRegisteredRoutines()} now produces its warning
+      correctly when multiple DLLs match, thanks to Matt Dowle's \PR{17184}.
+
+      \item \code{Sys.timezone()} now returns non-NA also on platforms
+      such as \samp{Ubuntu 14.04.5 LTS}, thanks to Mikko Korpela's
+      \PR{17186}.
+
+      \item \code{format(x)} for an illegal \code{"POSIXlt"} object
+      \code{x} no longer segfaults.
+
+      \item \code{methods(f)} now also works for \code{f} \code{"("}
+      or \code{"{"}.
+
+      \item (Windows only)  \code{dir.create()} did not check the length
+      of the path to create, and so could overflow a buffer and crash
+      \R.  (\PR{17206})
+
+      \item On some systems, very small hexadecimal numbers in hex notation
+      would underflow to zero.  (\PR{17199})
+
+      \item \code{pmin()} and \code{pmax()} now work again for
+      \code{ordered} factors and 0-length S3 classed objects, thanks to
+      Suharto Anggono's \PR{17195} and \PR{17200}.
+
+      \item \code{bug.report()} did not do any validity checking on a
+      package's \samp{BugReports} field.  It now ignores an empty field,
+      removes leading whitespace and only attempts to open
+      \samp{http://} and \samp{https://} URLs, falling back to emailing
+      the maintainer.
+
+      \item Bandwidth selectors \code{bw.ucv()} and
+      \code{bw.SJ()} gave incorrect answers or incorrectly reported an
+      error (because of integer overflow) for inputs longer than
+      46341.  Similarly for \code{bw.bcv()} at length 5793.
+
+      Another possible integer overflow is checked and may result in an
+      error report (rather than an incorrect result) for much longer
+      inputs (millions for a smooth distribution).
+
+      \item \code{findMethod()} failed if the active signature had
+      expanded beyond what a particular package used. (Example with
+      packages \CRANpkg{XR} and \CRANpkg{XRJulia} on \acronym{CRAN}.)
+
+      \item \code{qbeta()} underflowed too early in some very asymmetric
+      cases.  (\PR{17178})
+
+      \item \command{R CMD Rd2pdf} had problems with packages with
+      non-ASCII titles in \file{.Rd} files (usually the titles were
+      omitted).
+    }
+  }
+}
+
 \section{\Rlogo CHANGES IN R 3.3.2}{
   \subsection{NEW FEATURES}{
     \itemize{
@@ -445,7 +565,7 @@
       not \samp{"Her"} as before) are given special treatment by the
       graphics engine.
 
-      \item S4 values are automatically coerced to vector (via
+      \item S4 values are automatically coerced to vector (\emph{via}
       \code{as.vector}) when subassigned into atomic vectors.
 
       \item \code{findInterval()} gets a \code{left.open} option.
@@ -744,7 +864,7 @@
 
       \item \code{xpdrows.data.frame()} was not checking for unique
       row names; in particular, this affected assignment to non-existing
-      rows via numerical indexing. (\PR{16570})
+      rows \emph{via} numerical indexing. (\PR{16570})
 
       \item \code{tail.matrix()} did not work for zero rows matrices,
       and could produce row \dQuote{labels} such as \code{"[1e+05,]"}.
@@ -2453,9 +2573,9 @@
       \item \code{options(list())} now works (trivially). (\PR{15979})
 
       \item \code{merge(<dendrogram>, ..)} now works correctly for two
-      `independent' dendrograms (\PR{15648}), and still compatibly via
-      \code{adjust = "auto"} e.g. for two branches of an existing
-      dendrogram.
+      `independent' dendrograms (\PR{15648}), and still compatibly
+      \emph{via} \code{adjust = "auto"} e.g. for two branches of an
+      existing dendrogram.
 
       \item The \code{plot} method for \code{"hclust"} objects gets an
       optional argument \code{check}; when that is true (the default) it
@@ -2508,7 +2628,8 @@
 
       \item Work around a bug in OS X Yosemite where key environment
       variables may be duplicated causing issues in subprocesses. The
-      duplicates are now removed on R startup (via Rprofile). (\PR{16042})
+      duplicates are now removed on \R startup (\emph{via}
+      Rprofile). (\PR{16042})
 
       \item Adjust X11 auto-launch detection in DISPLAY on OS X to
       recognize latest XQuartz.
@@ -2822,7 +2943,7 @@
       otherwise only names, dims and dimnames are.
 
       \item \code{colorRamp()} and \code{colorRampPalette()} now allow
-      non-opaque colours and a ramp in opacity via the new argument
+      non-opaque colours and a ramp in opacity \emph{via} the new argument
       \code{alpha = TRUE}.  (Suggested by Alberto Krone-Martins, but
       optionally as there are existing uses which expect only RGB values.)
       % https://stat.ethz.ch/pipermail/r-devel/2013-July/067046.html
@@ -3706,8 +3827,8 @@
       \item \code{col2rgb()} now converts factors to character strings
       not integer codes (suggested by Bryan Hanson).
 
-      \item \code{tail(warnings())} now works, via the new \code{`[`}
-      method.
+      \item \code{tail(warnings())} now works, \emph{via} the new
+      \code{`[`} method.
 
       \item There is now support for the LaTeX style file \file{zi4.sty}
       which has in some distributions replaced \file{inconsolata.sty}.
@@ -3746,8 +3867,8 @@
 
       \item Methods invoked by \code{NextMethod()} had a different
       dynamic parent to the generic. This was causing trouble where S3
-      methods invoked via lazy evaluation could lose track of their
-      generic.  (\PR{15267})
+      methods invoked \emph{via} lazy evaluation could lose track of
+      their generic.  (\PR{15267})
 
       \item Code for the negative binomial distribution now treats the case
       \code{size == 0} as a one-point distribution at zero.
@@ -4128,8 +4249,9 @@
       \command{Rterm} or \command{Rgui}) would lose any
       zero-length strings from the command line arguments. (\PR{15406})
 
-      \item Errors in the encoding specified on the command line via
-      \command{--encoding=foo} were not handled properly.  (\PR{15405})
+      \item Errors in the encoding specified on the command line
+      \emph{via} \command{--encoding=foo} were not handled properly.
+      (\PR{15405})
 
       \item If \code{x} is a symbol, \code{is.vector(x, "name")} now
       returns \code{TRUE}, since \code{"name"} and \code{"symbol"}
@@ -4727,14 +4849,14 @@
       \item The \code{parse()} function has a new parameter
       \code{keep.source}, which defaults to \code{options("keep.source")}.
 
-      \item Profiling via \code{Rprof()} now optionally records information
-      at the statement level, not just the function level.
+      \item Profiling \emph{via} \code{Rprof()} now optionally records
+      information at the statement level, not just the function level.
 
       \item The \code{Rprof()} function now quotes function names in
       in its output file on Windows, to be consistent with the quoting
       in Unix.
 
-      \item Profiling via \code{Rprof()} now optionally records
+      \item Profiling \emph{via} \code{Rprof()} now optionally records
       information about time spent in GC.
 
       \item The HTML help page for a package now displays non-vignette
@@ -5159,7 +5281,7 @@
       affinity settings like OpenBLAS) -- the function is rather
       intended to support affinity control in high-level parallel
       functions.  In the future, \R may supplement lack of affinity
-      control in the OS by its own bookkeeping via \code{mcaffinity()}
+      control in the OS by its own bookkeeping \emph{via} \code{mcaffinity()}
       related to processes and threads it spawns.
 
       \item \code{mcparallel()} has a new argument \code{mc.affinity}
@@ -5350,7 +5472,7 @@
       reentrant, leading to errors in rare circumstances such as a
       garbage collection triggering a recursive call.
 
-      \item Field assignments in reference class objects via
+      \item Field assignments in reference class objects \emph{via}
       \code{$<-} were not being checked
       because the magic incantation to turn methods on for that
       primitive operator had been inadvertently omitted. %$

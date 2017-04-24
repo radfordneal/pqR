@@ -1,6 +1,6 @@
 
-R version 3.3.2 RC (2016-10-26 r71594) -- "Sincere Pumpkin Patch"
-Copyright (C) 2016 The R Foundation for Statistical Computing
+R version 3.3.3 beta (2017-02-23 r72250) -- "Another Canoe"
+Copyright (C) 2017 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -323,5 +323,5 @@ Warning messages:
 > 
 > ## Last Line:
 > cat('Time elapsed: ', proc.time() - .proctime00,'\n')
-Time elapsed:  0.194 0.002 0.196 0 0 
+Time elapsed:  0.137 0.003 0.14 0 0 
 > 

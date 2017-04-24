@@ -2793,7 +2793,14 @@ setRlibs <-
                              stdout = "", stderr = "", arch = arch)
             t2 <- proc.time()
             if (status) {
+                print_time(t1, t2, Log)
                 errorLog(Log)
+                if (Log$con > 0L && file.exists(tf)) {
+                    ## write results only to 00check.log
+                    lines <- readLines(tf, warn = FALSE)
+                    cat(lines, sep = "\n", file = Log$con)
+                    unlink(tf)
+                }
                 ## Don't just fail: try to log where the problem occurred.
                 ## First, find the test which failed.
                 ## (Maybe there was an error without a failing test.)
@@ -2805,14 +2812,27 @@ setRlibs <-
                     file <- bad_files[1L]
                     lines <- readLines(file, warn = FALSE)
                     file <- file.path(test_dir, sub("out\\.fail", "", file))
+                    keep <- as.integer(Sys.getenv("_R_CHECK_TESTS_NLINES_",
+                                                  "13"))
+                    ## keep = 0 means keep all of it, but we will
+                    ## always omit the R preamble and start at the first
+                    ## line with an R prompt.
                     ll <- length(lines)
-                    lines <- lines[max(1, ll-12):ll]
+                    st <- grep("^>", lines, useBytes = TRUE)
+                    if (length(st)) {
+                        lines <- lines[st[1L]:ll]
+                        ll <- length(lines)
+                    }
+                    if (keep > 0L)
+                        lines <- lines[max(1L, ll-keep-1L):ll]
                     if (R_check_suppress_RandR_message)
                         lines <- grep('^Xlib: *extension "RANDR" missing on display',
                                       lines, invert = TRUE, value = TRUE,
                                       useBytes = TRUE)
                     printLog(Log, sprintf("Running the tests in %s failed.\n", sQuote(file)))
-                    printLog(Log, "Last 13 lines of output:\n")
+                    printLog(Log, if(keep > 0L && keep < ll)
+                             sprintf("Last %i lines of output:\n", keep)
+                             else "Complete output:\n")
                     printLog0(Log, .format_lines_with_indent(lines), "\n")
                 }
                 return(FALSE)
@@ -2822,7 +2842,7 @@ setRlibs <-
                 if (Log$con > 0L && file.exists(tf)) {
                     ## write results only to 00check.log
                     lines <- readLines(tf, warn = FALSE)
-                    cat(lines, sep="\n", file = Log$con)
+                    cat(lines, sep = "\n", file = Log$con)
                     unlink(tf)
                 }
             }
@@ -3160,6 +3180,7 @@ setRlibs <-
                                 useBytes = TRUE)
                 warns <- grep("^Warning: file .* is not portable",
                               out, value = TRUE, useBytes = TRUE)
+                print_time(t1, t2, Log)
                 if (status) {
                     if(skip_run_maybe || !ran) warningLog(Log) else noteLog(Log)
                     out <- utils::tail(out, as.numeric(Sys.getenv("_R_CHECK_VIGNETTES_NLINES_", "25")))
@@ -3180,7 +3201,6 @@ setRlibs <-
                         unlink(vd2, recursive = TRUE)
                     if (!config_val_to_logical(Sys.getenv("_R_CHECK_ALWAYS_LOG_VIGNETTE_OUTPUT_", "false")))
                             unlink(outfile)
-                    print_time(t1, t2, Log)
                     resultLog(Log, "OK")
                 }
             } else {
@@ -3585,7 +3605,9 @@ setRlibs <-
                              ": warning: .* \\[-Wvla-extension\\]",
                              ": warning: format string contains '[\\]0'",
                              ": warning: .* \\[-Wc[+][+]11-long-long\\]",
-                             ": warning: empty macro arguments are a C99 feature"
+                             ": warning: empty macro arguments are a C99 feature",
+                             ## for non-portable flags (seen in sub-Makefiles)
+                             "warning: .* \\[-Wunknown-warning-option\\]"
                              )
 
                 warn_re <- paste0("(", paste(warn_re, collapse = "|"), ")")
@@ -4302,7 +4324,7 @@ setRlibs <-
                 R.version[["major"]], ".",  R.version[["minor"]],
                 " (r", R.version[["svn rev"]], ")\n", sep = "")
             cat("",
-                "Copyright (C) 1997-2013 The R Core Team.",
+                "Copyright (C) 1997-2016 The R Core Team.",
                 "This is free software; see the GNU General Public License version 2",
                 "or later for copying conditions.  There is NO warranty.",
                 sep="\n")

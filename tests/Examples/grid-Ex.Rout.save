@@ -1,6 +1,6 @@
 
-R version 3.3.2 RC (2016-10-26 r71594) -- "Sincere Pumpkin Patch"
-Copyright (C) 2016 The R Foundation for Statistical Computing
+R version 3.3.3 beta (2017-02-23 r72250) -- "Another Canoe"
+Copyright (C) 2017 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -2069,7 +2069,7 @@ vp1::vp2
 > ###
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  1.09 0.009 1.099 0 0 
+Time elapsed:  1.091 0.015 1.11 0 0 
 > grDevices::dev.off()
 null device 
           1 

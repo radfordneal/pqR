@@ -1,6 +1,6 @@
 % File src/library/utils/man/download.file.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2016 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{download.file}
@@ -38,7 +38,7 @@ download.file(url, destfile, method, quiet = FALSE, mode = "w",
 
   \item{mode}{character.  The mode with which to write the file.  Useful
     values are \code{"w"}, \code{"wb"} (binary), \code{"a"} (append) and
-    \code{"ab"}.  Only used for the \code{"internal"} method.
+    \code{"ab"}.  Not used for methods \code{"wget"} and \code{"curl"}.
 #ifdef windows
     (See also \sQuote{Details}.)
 #endif
@@ -59,7 +59,8 @@ download.file(url, destfile, method, quiet = FALSE, mode = "w",
   If \code{method = "auto"} is chosen (the default), on a Unix-alike
   method \code{"libcurl"} is chosen for \samp{https://} and
   \samp{ftps://} URLs and the \code{"internal"} method is chosen for
-  other schemes.
+  other schemes.  If redirection from \samp{http://} to \samp{https://}
+  is encountered, the download is re-tried with method \code{"libcurl"}.
 #endif
 #ifdef windows
   If \code{method = "auto"} is chosen (the default), on Windows the
@@ -99,10 +100,12 @@ download.file(url, destfile, method, quiet = FALSE, mode = "w",
   \code{\link{available.packages}}.
 
   The \code{"libcurl"} and \code{"wget"} methods follow \samp{http://}
-  and \samp{https://} redirections: the \code{"internal"} method does not.
-  (For method \code{"curl"} use argument \code{extra = "-L"}. To disable
-  redirection in \command{wget}, use \code{extra = "--max-redirect=0"}.)
-  (The \code{"wininet"} method supports some redirections but not all.)
+  and \samp{https://} redirections to any scheme they support: the
+  \code{"internal"} method follows \samp{http://} to \samp{http://}
+  redirections only.  (For method \code{"curl"} use argument \code{extra
+  = "-L"}.  To disable redirection in \command{wget}, use \code{extra =
+  "--max-redirect=0"}.)  The \code{"wininet"} method supports some
+  redirections but not all.
   
   Note that \samp{https://} URLs are not supported by the
   \code{"internal"} method but are supported by the \code{"libcurl"}
@@ -115,7 +118,7 @@ download.file(url, destfile, method, quiet = FALSE, mode = "w",
   does not support them.
 
   Most methods do not percent-encode special characters such as spaces
-  in URLs (see \code{\link{URLencode}}), but it seems the
+  in HTTP URLs (see \code{\link{URLencode}}), but it seems the
   \code{"wininet"} method does.
 
   The remaining details apply to the \code{"internal"}, \code{"wininet"}
@@ -159,7 +162,7 @@ download.file(url, destfile, method, quiet = FALSE, mode = "w",
 #endif
 }
 \note{
-   Files of more than 2GB are supported on 64-bit builds of \R; they
+  Files of more than 2GB are supported on 64-bit builds of \R; they
   may be truncated on some 32-bit builds.
 
   Methods \code{"wget"} and \code{"curl"} are mainly for historical
@@ -252,10 +255,25 @@ download.file(url, destfile, method, quiet = FALSE, mode = "w",
   \samp{ftp:} URLs are accessed using the FTP protocol which has a
   number of variants.  One distinction is between \sQuote{active} and
   \sQuote{(extended) passive} modes: which is used is chosen by the
-  client.  The \code{"internal"} and \code{"libcurl"} method use passive
+  client.  The \code{"internal"} and \code{"libcurl"} methods use passive
   mode, and that is almost universally used by browsers.  Prior to \R
-  3.2.3 the \code{"wininet"} method used active mode: since it first
+  3.2.3 the \code{"wininet"} method used active mode: nowadays it first
   tries passive and then active.
+}
+\section{Good practice}{
+  Setting the \code{method} should be left to the end user.  Neither of
+  the \command{wget} nor \command{curl} commands is widely available:
+  you can check if one is available \emph{via} \code{\link{Sys.which}},
+  and should do so in a package or script.
+  
+  If you use \code{download.file} in a package or script, you must check
+  the return value, since it is possible that the download will fail
+  with a non-zero status but not an \R error.
+
+  The supported \code{method}s do change: method \code{libcurl} was
+  introduced in \R 3.2.0 and is still optional on Windows -- use
+  \code{\link{capabilities}("libcurl")} in a program to see if it is
+  available.
 }
 \value{
   An (invisible) integer code, \code{0} for success and non-zero for

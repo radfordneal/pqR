@@ -1,6 +1,6 @@
 % File src/library/base/man/grep.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2016 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{grep}
@@ -84,9 +84,7 @@ regexec(pattern, text, ignore.case = FALSE, perl = FALSE,
   Arguments which should be character strings or character vectors are
   coerced to character if possible.
 
-  Each of these functions (apart from \code{regexec}, which currently
-  does not support Perl-style regular expressions) operates in one of
-  three modes:
+  Each of these functions operates in one of three modes:
   \enumerate{
     \item \code{fixed = TRUE}: use exact matching.
     \item \code{perl = TRUE}: use Perl-style regular expressions.
@@ -122,7 +120,7 @@ regexec(pattern, text, ignore.case = FALSE, perl = FALSE,
 
   Invalid inputs in the current locale are warned about up to 5 times.
 
-  Caseless matching with \code{PERL = TRUE} for non-ASCII characters
+  Caseless matching with \code{perl = TRUE} for non-ASCII characters
   depends on the PCRE library being compiled with \sQuote{Unicode
   property support}: an external library might not be.
 }
@@ -169,6 +167,9 @@ regexec(pattern, text, ignore.case = FALSE, perl = FALSE,
   substrings corresponding to parenthesized subexpressions of
   \code{pattern}, with attribute \code{"match.length"} a vector
   giving the lengths of the matches (or \eqn{-1} for no match).
+
+  Where matching failed because of resource limits (especially for PCRE)
+  this is regarded as a non-match.
 }
 
 \section{Warning}{
@@ -196,15 +197,19 @@ regexec(pattern, text, ignore.case = FALSE, perl = FALSE,
   checked before matching, and the actual matching will be faster.
   Often byte-based matching suffices in a UTF-8 locale since byte
   patterns of one character never match part of another.
+
+  PCRE-based matching puts additional effort into \sQuote{studying} the
+  compiled pattern when \code{x}/\code{text} has length greater than
+  10.
 }
 
 \source{
   The C code for POSIX-style regular expression matching has changed
-  over the years.  As from \R 2.10.0 the TRE library of Ville Laurikari
-  (\url{http://laurikari.net/tre/}) is used.  The POSIX standard does
-  give some room for interpretation, especially in the handling of
-  invalid regular expressions and the collation of character ranges, so
-  the results will have changed slightly over the years.
+  over the years.  As from \R 2.10.0 (Oct 2009) the TRE library of Ville
+  Laurikari (\url{http://laurikari.net/tre/}) is used.  The POSIX
+  standard does give some room for interpretation, especially in the
+  handling of invalid regular expressions and the collation of character
+  ranges, so the results will have changed slightly over the years.
 
   For Perl-style matching PCRE (\url{http://www.pcre.org}) is used.
 }

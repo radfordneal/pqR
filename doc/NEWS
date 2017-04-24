@@ -1,5 +1,102 @@
 R News
 
+CHANGES IN R 3.3.3:
+
+  NEW FEATURES:
+
+    * Changes when redirection of a http:// URL to a https:// URL is
+      encountered:
+
+        * The internal methods of download.file() and url() now report
+          that they cannot follow this (rather than failing silently).
+
+        * (Unix-alike) download.file(method = "auto") (the default)
+          re-tries with method = "libcurl".
+
+        * (Unix-alike) url(method = "default") with an explicit open
+          argument re-tries with method = "libcurl".  This covers many
+          of the usages, e.g. readLines() with a URL argument.
+
+  INSTALLATION on a UNIX-ALIKE:
+
+    * The configure check for the zlib version is now robust to
+      versions longer than 5 characters, including 1.2.11.
+
+  UTILITIES:
+
+    * Environmental variable _R_CHECK_TESTS_NLINES_ controls how R CMD
+      check reports failing tests (see SS8 of the 'R Internals' manual).
+
+  DEPRECATED AND DEFUNCT:
+
+    * (C-level Native routine registration.)  The undocumented styles
+      field of the components of R_CMethodDef and R_FortranMethodDef is
+      deprecated.
+
+  BUG FIXES:
+
+    * vapply(x, *) now works with long vectors x.  (PR#17174)
+
+    * isS3method("is.na.data.frame") and similar are correct now.
+      (PR#17171)
+
+    * grepRaw(<long>, <short>, fixed = TRUE) now works, thanks to a
+      patch by Mikko Korpela.  (PR#17132)
+
+    * Package installation into a library where the package exists
+      _via_ symbolic link now should work wherever Sys.readlink()
+      works, resolving PR#16725.
+
+    * "Cincinnati" was missing an "n" in the precip dataset.
+
+    * Fix buffer overflow vulnerability in pdf() when loading an
+      encoding file.  Reported by Talos (TALOS-2016-0227).
+
+    * getDLLRegisteredRoutines() now produces its warning correctly
+      when multiple DLLs match, thanks to Matt Dowle's PR#17184.
+
+    * Sys.timezone() now returns non-NA also on platforms such as
+      Ubuntu 14.04.5 LTS, thanks to Mikko Korpela's PR#17186.
+
+    * format(x) for an illegal "POSIXlt" object x no longer segfaults.
+
+    * methods(f) now also works for f "(" or "{".
+
+    * (Windows only) dir.create() did not check the length of the path
+      to create, and so could overflow a buffer and crash R.
+      (PR#17206)
+
+    * On some systems, very small hexadecimal numbers in hex notation
+      would underflow to zero.  (PR#17199)
+
+    * pmin() and pmax() now work again for ordered factors and 0-length
+      S3 classed objects, thanks to Suharto Anggono's PR#17195 and
+      PR#17200.
+
+    * bug.report() did not do any validity checking on a package's
+      BugReports field.  It now ignores an empty field, removes leading
+      whitespace and only attempts to open http:// and https:// URLs,
+      falling back to emailing the maintainer.
+
+    * Bandwidth selectors bw.ucv() and bw.SJ() gave incorrect answers
+      or incorrectly reported an error (because of integer overflow)
+      for inputs longer than 46341.  Similarly for bw.bcv() at length
+      5793.
+
+      Another possible integer overflow is checked and may result in an
+      error report (rather than an incorrect result) for much longer
+      inputs (millions for a smooth distribution).
+
+    * findMethod() failed if the active signature had expanded beyond
+      what a particular package used. (Example with packages XR and
+      XRJulia on CRAN.)
+
+    * qbeta() underflowed too early in some very asymmetric cases.
+      (PR#17178)
+
+    * R CMD Rd2pdf had problems with packages with non-ASCII titles in
+      .Rd files (usually the titles were omitted).
+
 CHANGES IN R 3.3.2:
 
   NEW FEATURES:
@@ -388,7 +485,7 @@ CHANGES IN R 3.3.0:
     * Only font family names starting with "Hershey" (and not "Her" as
       before) are given special treatment by the graphics engine.
 
-    * S4 values are automatically coerced to vector (via as.vector)
+    * S4 values are automatically coerced to vector (_via_ as.vector)
       when subassigned into atomic vectors.
 
     * findInterval() gets a left.open option.
@@ -656,7 +753,7 @@ CHANGES IN R 3.3.0:
       retrieving HTTP error pages (where the ISP reports the error).
 
     * xpdrows.data.frame() was not checking for unique row names; in
-      particular, this affected assignment to non-existing rows via
+      particular, this affected assignment to non-existing rows _via_
       numerical indexing. (PR#16570)
 
     * tail.matrix() did not work for zero rows matrices, and could
@@ -2174,8 +2271,8 @@ CHANGES IN R 3.1.2:
     * options(list()) now works (trivially). (PR#15979)
 
     * merge(<dendrogram>, ..) now works correctly for two `independent'
-      dendrograms (PR#15648), and still compatibly via adjust = "auto"
-      e.g. for two branches of an existing dendrogram.
+      dendrograms (PR#15648), and still compatibly _via_ adjust =
+      "auto" e.g. for two branches of an existing dendrogram.
 
     * The plot method for "hclust" objects gets an optional argument
       check; when that is true (the default) it checks more carefully
@@ -2225,7 +2322,7 @@ CHANGES IN R 3.1.2:
 
     * Work around a bug in OS X Yosemite where key environment
       variables may be duplicated causing issues in subprocesses. The
-      duplicates are now removed on R startup (via Rprofile).
+      duplicates are now removed on R startup (_via_ Rprofile).
       (PR#16042)
 
     * Adjust X11 auto-launch detection in DISPLAY on OS X to recognize
@@ -2514,7 +2611,7 @@ CHANGES IN R 3.1.0:
       names, dims and dimnames are.
 
     * colorRamp() and colorRampPalette() now allow non-opaque colours
-      and a ramp in opacity via the new argument alpha = TRUE.
+      and a ramp in opacity _via_ the new argument alpha = TRUE.
       (Suggested by Alberto Krone-Martins, but optionally as there are
       existing uses which expect only RGB values.)
 
@@ -3333,7 +3430,7 @@ CHANGES IN R 3.0.2:
     * col2rgb() now converts factors to character strings not integer
       codes (suggested by Bryan Hanson).
 
-    * tail(warnings()) now works, via the new `[` method.
+    * tail(warnings()) now works, _via_ the new `[` method.
 
     * There is now support for the LaTeX style file zi4.sty which has
       in some distributions replaced inconsolata.sty.
@@ -3371,7 +3468,7 @@ CHANGES IN R 3.0.2:
 
     * Methods invoked by NextMethod() had a different dynamic parent to
       the generic. This was causing trouble where S3 methods invoked
-      via lazy evaluation could lose track of their generic.
+      _via_ lazy evaluation could lose track of their generic.
       (PR#15267)
 
     * Code for the negative binomial distribution now treats the case
@@ -3714,7 +3811,7 @@ CHANGES IN R 3.0.2:
       lose any zero-length strings from the command line arguments.
       (PR#15406)
 
-    * Errors in the encoding specified on the command line via
+    * Errors in the encoding specified on the command line _via_
       --encoding=foo were not handled properly.  (PR#15405)
 
     * If x is a symbol, is.vector(x, "name") now returns TRUE, since
@@ -4264,13 +4361,13 @@ CHANGES IN R 3.0.0:
     * The parse() function has a new parameter keep.source, which
       defaults to options("keep.source").
 
-    * Profiling via Rprof() now optionally records information at the
+    * Profiling _via_ Rprof() now optionally records information at the
       statement level, not just the function level.
 
     * The Rprof() function now quotes function names in in its output
       file on Windows, to be consistent with the quoting in Unix.
 
-    * Profiling via Rprof() now optionally records information about
+    * Profiling _via_ Rprof() now optionally records information about
       time spent in GC.
 
     * The HTML help page for a package now displays non-vignette
@@ -4650,8 +4747,8 @@ CHANGES IN R 3.0.0:
       affinity settings like OpenBLAS) - the function is rather
       intended to support affinity control in high-level parallel
       functions.  In the future, R may supplement lack of affinity
-      control in the OS by its own bookkeeping via mcaffinity() related
-      to processes and threads it spawns.
+      control in the OS by its own bookkeeping _via_ mcaffinity()
+      related to processes and threads it spawns.
 
     * mcparallel() has a new argument mc.affinity which attempts to set
       the affinity of the child process according to the specification
@@ -4818,7 +4915,7 @@ CHANGES IN R 3.0.0:
       rare circumstances such as a garbage collection triggering a
       recursive call.
 
-    * Field assignments in reference class objects via $<- were not
+    * Field assignments in reference class objects _via_ $<- were not
       being checked because the magic incantation to turn methods on
       for that primitive operator had been inadvertently omitted.
 

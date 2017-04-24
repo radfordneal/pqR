@@ -7,6 +7,174 @@
 
 <h2>R News</h2>
 
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.3.3</h3>
+
+
+
+<h4>NEW FEATURES</h4>
+
+
+<ul>
+<li><p> Changes when redirection of a <span class="samp">http://</span> URL to a
+<span class="samp">https://</span> URL is encountered:
+</p>
+
+<ul>
+<li><p> The internal methods of <code>download.file()</code> and
+<code>url()</code> now report that they cannot follow this (rather
+than failing silently).
+</p>
+</li>
+<li><p> (Unix-alike) <code>download.file(method = "auto")</code> (the
+default) re-tries with <code>method = "libcurl"</code>.
+</p>
+</li>
+<li><p> (Unix-alike) <code>url(method = "default")</code> with an
+explicit <code>open</code> argument re-tries with
+<code>method = "libcurl"</code>.  This covers many of the usages,
+e.g. <code>readLines()</code> with a URL argument.
+</p>
+</li></ul>
+
+</li></ul>
+
+
+
+
+<h4>INSTALLATION on a UNIX-ALIKE</h4>
+
+
+<ul>
+<li><p> The <code>configure</code> check for the <code>zlib</code> version is
+now robust to versions longer than 5 characters, including
+<code>1.2.11</code>.
+</p>
+</li></ul>
+
+
+
+
+<h4>UTILITIES</h4>
+
+
+<ul>
+<li><p> Environmental variable <span class="env">_R_CHECK_TESTS_NLINES_</span> controls
+how <code>R CMD check</code> reports failing tests (see §8 of the
+&lsquo;R Internals&rsquo; manual).
+</p>
+</li></ul>
+
+
+
+
+<h4>DEPRECATED AND DEFUNCT</h4>
+
+
+<ul>
+<li><p> (C-level Native routine registration.)  The undocumented
+<code>styles</code> field of the components of <code>R_CMethodDef</code> and
+<code>R_FortranMethodDef</code> is deprecated.
+</p>
+</li></ul>
+
+
+
+
+<h4>BUG FIXES</h4>
+
+
+<ul>
+<li> <p><code>vapply(x, *)</code> now works with long vectors <code>x</code>.
+(<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17174">PR#17174</a>)
+</p>
+</li>
+<li> <p><code>isS3method("is.na.data.frame")</code> and similar are
+correct now.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17171">PR#17171</a>)
+</p>
+</li>
+<li> <p><code>grepRaw(&lt;long&gt;, &lt;short&gt;, fixed = TRUE)</code> now works,
+thanks to a patch by Mikko Korpela.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17132">PR#17132</a>)
+</p>
+</li>
+<li><p> Package installation into a library where the package exists
+<em>via</em> symbolic link now should work wherever
+<code>Sys.readlink()</code> works, resolving <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16725">PR#16725</a>.
+</p>
+</li>
+<li> <p><code>"Cincinnati"</code> was missing an <code>"n"</code> in the
+<code>precip</code> dataset.
+</p>
+</li>
+<li><p> Fix buffer overflow vulnerability in <code>pdf()</code> when
+loading an encoding file.  Reported by Talos (TALOS-2016-0227).
+</p>
+</li>
+<li> <p><code>getDLLRegisteredRoutines()</code> now produces its warning
+correctly when multiple DLLs match, thanks to Matt Dowle's <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17184">PR#17184</a>.
+</p>
+</li>
+<li> <p><code>Sys.timezone()</code> now returns non-NA also on platforms
+such as <span class="samp">Ubuntu 14.04.5 LTS</span>, thanks to Mikko Korpela's
+<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17186">PR#17186</a>.
+</p>
+</li>
+<li> <p><code>format(x)</code> for an illegal <code>"POSIXlt"</code> object
+<code>x</code> no longer segfaults.
+</p>
+</li>
+<li> <p><code>methods(f)</code> now also works for <code>f</code> <code>"("</code>
+or <code>"{"</code>.
+</p>
+</li>
+<li><p> (Windows only)  <code>dir.create()</code> did not check the length
+of the path to create, and so could overflow a buffer and crash
+<span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span>.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17206">PR#17206</a>)
+</p>
+</li>
+<li><p> On some systems, very small hexadecimal numbers in hex notation
+would underflow to zero.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17199">PR#17199</a>)
+</p>
+</li>
+<li> <p><code>pmin()</code> and <code>pmax()</code> now work again for
+<code>ordered</code> factors and 0-length S3 classed objects, thanks to
+Suharto Anggono's <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17195">PR#17195</a> and <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17200">PR#17200</a>.
+</p>
+</li>
+<li> <p><code>bug.report()</code> did not do any validity checking on a
+package's <span class="samp">BugReports</span> field.  It now ignores an empty field,
+removes leading whitespace and only attempts to open
+<span class="samp">http://</span> and <span class="samp">https://</span> URLs, falling back to emailing
+the maintainer.
+</p>
+</li>
+<li><p> Bandwidth selectors <code>bw.ucv()</code> and
+<code>bw.SJ()</code> gave incorrect answers or incorrectly reported an
+error (because of integer overflow) for inputs longer than
+46341.  Similarly for <code>bw.bcv()</code> at length 5793.
+</p>
+<p>Another possible integer overflow is checked and may result in an
+error report (rather than an incorrect result) for much longer
+inputs (millions for a smooth distribution).
+</p>
+</li>
+<li> <p><code>findMethod()</code> failed if the active signature had
+expanded beyond what a particular package used. (Example with
+packages <a href="https://CRAN.R-project.org/package=XR"><span class="pkg">XR</span></a> and <a href="https://CRAN.R-project.org/package=XRJulia"><span class="pkg">XRJulia</span></a> on <acronym><span class="acronym">CRAN</span></acronym>.)
+</p>
+</li>
+<li> <p><code>qbeta()</code> underflowed too early in some very asymmetric
+cases.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17178">PR#17178</a>)
+</p>
+</li>
+<li> <p><code>R CMD Rd2pdf</code> had problems with packages with
+non-ASCII titles in &lsquo;<span class="file">.Rd</span>&rsquo; files (usually the titles were
+omitted).
+</p>
+</li></ul>
+
+
+
+
 <h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.3.2</h3>
 
 
@@ -579,7 +747,7 @@ not <span class="samp">"Her"</span> as before) are given special treatment by th
 graphics engine.
 </p>
 </li>
-<li><p> S4 values are automatically coerced to vector (via
+<li><p> S4 values are automatically coerced to vector (<em>via</em>
 <code>as.vector</code>) when subassigned into atomic vectors.
 </p>
 </li>
@@ -961,7 +1129,7 @@ error).
 </li>
 <li> <p><code>xpdrows.data.frame()</code> was not checking for unique
 row names; in particular, this affected assignment to non-existing
-rows via numerical indexing. (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16570">PR#16570</a>)
+rows <em>via</em> numerical indexing. (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16570">PR#16570</a>)
 </p>
 </li>
 <li> <p><code>tail.matrix()</code> did not work for zero rows matrices,
@@ -3195,9 +3363,9 @@ environments. (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=159
 </p>
 </li>
 <li> <p><code>merge(&lt;dendrogram&gt;, ..)</code> now works correctly for two
-&lsquo;independent&rsquo; dendrograms (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=15648">PR#15648</a>), and still compatibly via
-<code>adjust = "auto"</code> e.g. for two branches of an existing
-dendrogram.
+&lsquo;independent&rsquo; dendrograms (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=15648">PR#15648</a>), and still compatibly
+<em>via</em> <code>adjust = "auto"</code> e.g. for two branches of an
+existing dendrogram.
 </p>
 </li>
 <li><p> The <code>plot</code> method for <code>"hclust"</code> objects gets an
@@ -3265,7 +3433,8 @@ possible will be supported in future versions of <span style="font-family: Couri
 </li>
 <li><p> Work around a bug in OS X Yosemite where key environment
 variables may be duplicated causing issues in subprocesses. The
-duplicates are now removed on R startup (via Rprofile). (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16042">PR#16042</a>)
+duplicates are now removed on <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span> startup (<em>via</em>
+Rprofile). (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16042">PR#16042</a>)
 </p>
 </li>
 <li><p> Adjust X11 auto-launch detection in DISPLAY on OS X to
@@ -3668,7 +3837,7 @@ otherwise only names, dims and dimnames are.
 </p>
 </li>
 <li> <p><code>colorRamp()</code> and <code>colorRampPalette()</code> now allow
-non-opaque colours and a ramp in opacity via the new argument
+non-opaque colours and a ramp in opacity <em>via</em> the new argument
 <code>alpha = TRUE</code>.  (Suggested by Alberto Krone-Martins, but
 optionally as there are existing uses which expect only RGB values.)
 
@@ -4804,8 +4973,8 @@ or factors with 100,000 levels, the latter as in <a href="https://bugs.R-project
 not integer codes (suggested by Bryan Hanson).
 </p>
 </li>
-<li> <p><code>tail(warnings())</code> now works, via the new <code>`[`</code>
-method.
+<li> <p><code>tail(warnings())</code> now works, <em>via</em> the new
+<code>`[`</code> method.
 </p>
 </li>
 <li><p> There is now support for the LaTeX style file &lsquo;<span class="file">zi4.sty</span>&rsquo;
@@ -4854,8 +5023,8 @@ error.  (Request of Reijo Sund.)
 </li>
 <li><p> Methods invoked by <code>NextMethod()</code> had a different
 dynamic parent to the generic. This was causing trouble where S3
-methods invoked via lazy evaluation could lose track of their
-generic.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=15267">PR#15267</a>)
+methods invoked <em>via</em> lazy evaluation could lose track of
+their generic.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=15267">PR#15267</a>)
 </p>
 </li>
 <li><p> Code for the negative binomial distribution now treats the case
@@ -5361,8 +5530,9 @@ token.
 zero-length strings from the command line arguments. (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=15406">PR#15406</a>)
 </p>
 </li>
-<li><p> Errors in the encoding specified on the command line via
-<code>--encoding=foo</code> were not handled properly.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=15405">PR#15405</a>)
+<li><p> Errors in the encoding specified on the command line
+<em>via</em> <code>--encoding=foo</code> were not handled properly.
+(<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=15405">PR#15405</a>)
 </p>
 </li>
 <li><p> If <code>x</code> is a symbol, <code>is.vector(x, "name")</code> now
@@ -6121,8 +6291,8 @@ during a plot.
 <code>keep.source</code>, which defaults to <code>options("keep.source")</code>.
 </p>
 </li>
-<li><p> Profiling via <code>Rprof()</code> now optionally records information
-at the statement level, not just the function level.
+<li><p> Profiling <em>via</em> <code>Rprof()</code> now optionally records
+information at the statement level, not just the function level.
 </p>
 </li>
 <li><p> The <code>Rprof()</code> function now quotes function names in
@@ -6130,7 +6300,7 @@ in its output file on Windows, to be consistent with the quoting
 in Unix.
 </p>
 </li>
-<li><p> Profiling via <code>Rprof()</code> now optionally records
+<li><p> Profiling <em>via</em> <code>Rprof()</code> now optionally records
 information about time spent in GC.
 </p>
 </li>
@@ -6669,7 +6839,7 @@ directly (with the exception of fixing libraries that break
 affinity settings like OpenBLAS) &ndash; the function is rather
 intended to support affinity control in high-level parallel
 functions.  In the future, <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span> may supplement lack of affinity
-control in the OS by its own bookkeeping via <code>mcaffinity()</code>
+control in the OS by its own bookkeeping <em>via</em> <code>mcaffinity()</code>
 related to processes and threads it spawns.
 </p>
 </li>
@@ -6918,7 +7088,7 @@ reentrant, leading to errors in rare circumstances such as a
 garbage collection triggering a recursive call.
 </p>
 </li>
-<li><p> Field assignments in reference class objects via
+<li><p> Field assignments in reference class objects <em>via</em>
 <code>$&lt;-</code> were not being checked
 because the magic incantation to turn methods on for that
 primitive operator had been inadvertently omitted. 
