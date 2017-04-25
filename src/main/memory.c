@@ -1111,21 +1111,63 @@ static double recovery_frac0 = 0.5;  /* Recent average recovery from gen0 */
 static double recovery_frac1 = 0.5;  /* Recent average recovery from gen1 */
 static double recovery_frac2 = 0.1;  /* Recent average recovery from gen2 */
 
+#define DEBUG_STRATEGY gc_reporting  /* Set to 0, 1, or gc_reporting */
+
 static void gc_strategy (void)
 {
     gc_countdown = 100;
 
-    if (sggc_info.gen0_count * recovery_frac0 
-         < 0.75 * (sggc_info.gen1_count + sggc_info.gen2_count))
-        return;
+    /* See if a garbage collection should be done based on sizes of big objects,
+       and if so at which level. */
 
-    if ((gc_count - gc_count_last_full) * recovery_frac2 > 4.0)
+    if (sggc_info.gen0_big_chunks + sggc_info.gen1_big_chunks > 500000) {
+        if (sggc_info.gen0_big_chunks > 3.0 * sggc_info.gen1_big_chunks) {
+            if (DEBUG_STRATEGY) REprintf("GC from big chunks level 0\n");
+            gc_next_level = 0;
+            goto collect;
+        }
+        else if (sggc_info.gen1_big_chunks > 0.5 * sggc_info.gen2_big_chunks) {
+            if (DEBUG_STRATEGY) REprintf("GC from big chunks level 1\n");
+            gc_next_level = 1;
+            goto collect;
+        }
+    }
+
+    /* See if a garbage collection should be done based on object counts,
+       and if so at which level. */
+
+    if (sggc_info.gen0_count * recovery_frac0 
+           > 0.75 * (sggc_info.gen1_count + sggc_info.gen2_count)) {
+        if ((gc_count-gc_count_last_full) * recovery_frac2 > 4.0) {
+            if (DEBUG_STRATEGY) REprintf("GC from counts level 2\n");
+            gc_next_level = 2;
+            goto collect;
+        }
+        else if (sggc_info.gen1_count * recovery_frac1 
+             > 0.1 * (sggc_info.gen1_count + sggc_info.gen2_count)) {
+            if (DEBUG_STRATEGY) REprintf("GC from counts level 1\n");
+            gc_next_level = 1;
+            goto collect;
+        }
+        else {
+            if (DEBUG_STRATEGY) REprintf("GC from counts level 0\n");
+            gc_next_level = 0;
+            goto collect;
+        }
+    }
+
+    return;
+
+    /* Do a garbage collection.  Make if a full one fairly often if we've
+       got lots of memory in generation 2. */
+
+  collect:
+
+    if (gc_count-gc_count_last_full > 5 && sggc_info.gen2_big_chunks 
+                 * (double)(gc_count-gc_count_last_full) > 100000000) {
+        if (DEBUG_STRATEGY) REprintf("Changed to level 2 by gen2 big chunks\n");
         gc_next_level = 2;
-    else if (sggc_info.gen1_count * recovery_frac1 
-         < 0.1 * (sggc_info.gen1_count + sggc_info.gen2_count))
-        gc_next_level = 0;    
-    else 
-        gc_next_level = 1;
+    }
 
     R_gc_internal(1,R_NoObject);
 }
@@ -1154,10 +1196,6 @@ static void update_recovery_fractions (struct sggc_info old_sggc_info)
         break;
     
     }
-
-    if (0) /* may be enabled for debugging/tuning */
-        printf ("Recovery fractions: %.3f %.3f %.3f\n",
-                 recovery_frac0, recovery_frac1, recovery_frac2);
 }
 
 /* Macro to wrap allocation statement in code to do garbage collections. */
@@ -1949,7 +1987,10 @@ static void R_gc_internal (int reason, SEXP counters)
 
     gc_next_level = 2;  /* just in case - should be changed before next call */
 
-    if (gc_reporting) {
+    update_recovery_fractions(old_sggc_info);
+
+    if (gc_reporting || DEBUG_STRATEGY) {
+
         REprintf(
     "Garbage collection %lld = %lld+%lld+%lld (level %d), %.3f Megabytes, %s\n",
         gc_count, gc_count-gc_count1-gc_count2, gc_count1, gc_count2, 
@@ -1957,7 +1998,15 @@ static void R_gc_internal (int reason, SEXP counters)
         reason == 0 ? "requested" : reason == 1 ? "automatic" : "space needed");
     }
 
-    update_recovery_fractions(old_sggc_info);
+    if (DEBUG_STRATEGY) {
+        printf (
+         "Cnts: 1/%u 2/%u, Bigchnks: 1/%u 2/%u, Recov: 0/%.2f 1/%.2f 2/%.2f\n",
+          sggc_info.gen1_count, 
+          sggc_info.gen2_count, 
+          (unsigned) sggc_info.gen1_big_chunks, 
+          (unsigned) sggc_info.gen2_big_chunks, 
+          recovery_frac0, recovery_frac1, recovery_frac2);
+    }
 
     gc_ran_finalizers = RunFinalizers();
 }
