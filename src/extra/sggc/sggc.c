@@ -1373,7 +1373,11 @@ void sggc_collect_old_to_new (void)
       { old_to_new_check = 1;
       }
     }
-    sggc_find_object_ptrs (v);
+#   ifdef SGGC_FIND_OBJECT_RETURN
+      sggc_look_at (sggc_find_object_ptrs (v));
+#   else
+      sggc_find_object_ptrs (v);
+#   endif
     if (old_to_new_check > 0) 
     { remove = 1;
     }
@@ -1406,11 +1410,29 @@ void sggc_collect_look_at (void)
   { 
     while ((v = set_first (&to_look_at, 1)) != SGGC_NO_OBJECT)
     {
-      if (SGGC_DEBUG) printf("sggc_collect: looking at %x\n",(unsigned)v);
-
-      put_in_right_old_gen (v);
-  
-      sggc_find_object_ptrs (v);
+#     ifdef SGGC_FIND_OBJECT_RETURN
+      { for (;;)
+        { if (SGGC_DEBUG) printf("sggc_collect: looking at %x\n",(unsigned)v);
+          put_in_right_old_gen (v);
+          v = sggc_find_object_ptrs (v);
+          if (v == SGGC_NO_OBJECT)
+          { break;
+          }
+          if (SGGC_DEBUG)
+          { printf ("sggc_collect: from find_object_ptrs: %x\n", (unsigned)v);
+          }
+          if (!set_chain_contains(SET_UNUSED_FREE_NEW,v))
+          { break;
+          }
+          set_remove (&free_or_new[SGGC_KIND(v)], v);
+        } 
+      }
+#     else
+      { if (SGGC_DEBUG) printf("sggc_collect: looking at %x\n",(unsigned)v);
+        put_in_right_old_gen (v);
+        sggc_find_object_ptrs (v);
+      }
+#     endif
     }
 
 #   ifdef SGGC_AFTER_MARKING
@@ -1925,46 +1947,50 @@ void sggc_collect (int level)
 
 void sggc_look_at (sggc_cptr_t cptr)
 {
+  if (cptr == SGGC_NO_OBJECT)
+  { return;
+  }
+
   if (SGGC_DEBUG) 
   { printf ("sggc_look_at: %x %d\n", (unsigned)cptr, old_to_new_check);
   }
 
-  if (cptr != SGGC_NO_OBJECT)
-  { if (old_to_new_check != 0)
-    { if (old_to_new_check < 0)
-      { return;
-      }
+  if (old_to_new_check != 0)
+  { if (old_to_new_check < 0)
+    { return;
+    }
 #ifdef SGGC_KIND_UNCOLLECTED
-      else if (old_to_new_check == 3) /* reference from an uncollected object */
-      { if (!sggc_is_constant(cptr)   /* not to a constant or uncollected obj */
-              && !sggc_kind_uncollected[SGGC_KIND(cptr)])
-        { old_to_new_check = 0;
-        }
+    else if (old_to_new_check == 3) /* reference from an uncollected object */
+    { if (!sggc_is_constant(cptr)   /* not to a constant or uncollected obj */
+            && !sggc_kind_uncollected[SGGC_KIND(cptr)])
+      { old_to_new_check = 0;
       }
+    }
 #endif
-      else if (collect_level == 0) /* ref won't be from generation 1 */
-      { if (!set_chain_contains (SET_OLD_GEN2_UNCOL, cptr)) /* to gen 0 or 1 */
-        { old_to_new_check = 0;
-        }
-      }
-      else if (collect_level == 1 && old_to_new_check == 2)
-      { if (!set_chain_contains (SET_OLD_GEN2_UNCOL, cptr) /* reference is to */
-              && !set_chain_contains (SET_OLD_GEN1, cptr)) /* generation 0 */
-        { old_to_new_check = 0;
-        }
-      }
-      else /* collect_level==2 || collect_level == 1 && old_to_new_check == 1 */
-      { if (!set_chain_contains (SET_OLD_GEN2_UNCOL, cptr) /* reference is to */
-              && !set_chain_contains (SET_OLD_GEN1, cptr)) /* generation 0 */
-        { old_to_new_check = -1;
-        }
-        return;
+    else if (collect_level == 0) /* ref won't be from generation 1 */
+    { if (!set_chain_contains (SET_OLD_GEN2_UNCOL, cptr)) /* to gen 0 or 1 */
+      { old_to_new_check = 0;
       }
     }
-    if (set_remove (&free_or_new[SGGC_KIND(cptr)], cptr))
-    { set_add (&to_look_at, cptr);
-      if (SGGC_DEBUG) printf("sggc_look_at: will look at %x\n",(unsigned)cptr);
+    else if (collect_level == 1 && old_to_new_check == 2)
+    { if (!set_chain_contains (SET_OLD_GEN2_UNCOL, cptr) /* reference is to */
+            && !set_chain_contains (SET_OLD_GEN1, cptr)) /*    generation 0 */
+      { old_to_new_check = 0;
+      }
     }
+    else /* collect_level==2 || collect_level == 1 && old_to_new_check == 1 */
+    { if (!set_chain_contains (SET_OLD_GEN2_UNCOL, cptr) /* reference is to */
+            && !set_chain_contains (SET_OLD_GEN1, cptr)) /*    generation 0 */
+      { old_to_new_check = -1;
+      }
+      return;
+    }
+  }
+
+  if (set_chain_contains(SET_UNUSED_FREE_NEW,cptr)) /* faster than set_remove */
+  { set_remove (&free_or_new[SGGC_KIND(cptr)], cptr);
+    set_add (&to_look_at, cptr);
+    if (SGGC_DEBUG) printf("sggc_look_at: will look at %x\n",(unsigned)cptr);
   }
 }
 
@@ -1976,8 +2002,9 @@ void sggc_mark (sggc_cptr_t cptr)
   if (SGGC_DEBUG) printf("sggc_mark: %x\n",(unsigned)cptr);
 
   if (cptr != SGGC_NO_OBJECT)
-  { if (set_remove (&free_or_new[SGGC_KIND(cptr)], cptr))
-    { put_in_right_old_gen (cptr);
+  { if (set_chain_contains(SET_UNUSED_FREE_NEW,cptr)) /*faster than set_remove*/
+    { set_remove (&free_or_new[SGGC_KIND(cptr)], cptr);
+      put_in_right_old_gen (cptr);
     }
   }
 }

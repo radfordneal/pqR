@@ -27,6 +27,11 @@
 #endif
 
 
+/* USE ALTERNATIVE INTERFACE FOR SGGC_FIND_OBJECT_PTRS. */
+
+#define SGGC_FIND_OBJECT_RETURN  /* sggc_find_object_ptrs returns cptr value */
+
+
 /* ELIMINATE USE_AUX_FOR_ATTRIB IF IRRELEVANT. */
 
 #if USE_COMPRESSED_POINTERS || SIZEOF_CHAR_P != 8

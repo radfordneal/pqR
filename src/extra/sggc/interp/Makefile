@@ -6,7 +6,8 @@ all:	interp interp-db interp-pg interp-no-offset interp-no-set-static \
 	interp-uncollected-nil interp-uncollected-nil-syms \
 	interp-uncollected-nil-syms-globals interp-call-freed \
 	interp-clear-free interp-clear-free-no-reuse interp-check-valid \
-	interp-no-object-zero interp-seg-blocking interp-data-blocking
+	interp-no-object-zero interp-seg-blocking interp-data-blocking \
+	interp-find-obj-ret
 
 CC=gcc
 
@@ -147,3 +148,9 @@ interp-data-blocking:	interp.c sggc.c set.c sggc-app.h sggc.h set-app.h set.h
 	 -DSGGC_MAX_SEGMENTS=10000 -DSET_STATIC=1 -DSGGC_USE_OFFSET_POINTERS=1 \
 	 -DSGGC_SMALL_DATA_BLOCKING=8 -DSGGC_SMALL_DATA_ALIGN=32 \
 	 interp.c sggc.c -o interp-data-blocking
+
+interp-find-obj-ret:	interp.c sggc.c set.c sggc-app.h sggc.h set-app.h set.h
+	$(CC) -g -O3 -march=native -mtune=native \
+	 -DSGGC_MAX_SEGMENTS=10000 -DSET_STATIC=1 -DSGGC_USE_OFFSET_POINTERS=1 \
+	 -DSGGC_FIND_OBJECT_RETURN \
+	 interp.c sggc.c -o interp-find-obj-ret

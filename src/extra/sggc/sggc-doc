@@ -185,6 +185,13 @@ represent SGGC_NO_OBJECT:
                         be represented by all 0 bits, rather than the
                         default of all 1 bits.
 
+The following may be define to change the interface used for
+communicating references to objects that are in use:
+
+  SGGC_FIND_OBJECT_RETURN  If defined (as anything), an alternative
+                           interface is used for sggc_find_object_ptrs
+                           (as described below).
+
 The following types must be defined in sggc-app.h:
 
   sggc_length_t         Type for the "length" of an object.  The
@@ -740,17 +747,30 @@ before sggc.h is included):
 
   void sggc_find_root_ptrs (void)
 
-    This procedure must call sggc_look_at for every "root" pointer via
-    which an object might be referenced, passing sggc_look_at (or
-    sggc_mark) the compressed pointer for that object.  See the
-    discussion above for more context.
+    This procedure must call sggc_look_at (or sggc_mark) for every
+    "root" pointer via which an object might be referenced, passing
+    sggc_look_at (or sggc_mark) the compressed pointer for that
+    object.  
 
-  void sggc_find_object_ptrs (sggc_cptr_t cptr)
+    See the discussion above for more context.
 
-    This procedure must call sggc_look_at (not sggc_mark) for every
-    object that is referenced via 'cptr' (in any order), passing it
-    the compressed pointer to the object that is referenced.  See the
-    discussion above for more context.  
+  void/sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
+
+    If SGGC_FIND_OBJECT_RETURN is not defined, this procedure must
+    call sggc_look_at (not sggc_mark) for every object that is
+    referenced via 'cptr' (in any order), passing it the compressed
+    pointer to the object that is referenced.  The return type of
+    sggc_find_object_ptrs will in this case be void.
+
+    If SGGC_FIND_OBJECT_RETURN is defined (as anything), the return
+    type is sggc_cptr_t, and sggc_find_object_ptrs may choose to call
+    sggc_look_at for all but one of the referenced objects, and return
+    the remaining referenced object as its value - this will slightly
+    reduce the overhead of this operation.  If a reference is not
+    returned in this way, the value returned by sggc_find_object_ptr
+    should be SGGC_NO_OBJECT.
+
+    See the discussion above for more context.
 
   char *sggc_aux1_read_only (sggc_kind_t kind)
 

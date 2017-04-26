@@ -214,6 +214,16 @@ sggc_nchunks_t Rf_nchunks (int type, unsigned length)
 
 #endif
 
+
+/* Tell garbage collector about references in an object.  Uses the
+   alternative interface enabled with SGGC_FIND_OBJECT_RETURN, in 
+   which sggc_find_object_ptrs may return a reference rather than
+   call sggc_look_at for it.  Which object references exist can be
+   determined from the SGGC type, without needing to get the R type.
+   Fields in objects of several R types sharing an SGGC type are 
+   accessed using one of these type's macros - eg, CAR, CDR, TAG
+   for not just LISTSXP but also ENVSXP, etc. */
+
 #undef NOT_LVALUE          /* Allow CAR, etc. as lvalue here, since */
 #define NOT_LVALUE(x) (x)  /*   needed for &STRING_ELT(...) below   */
 
@@ -223,12 +233,16 @@ sggc_nchunks_t Rf_nchunks (int type, unsigned length)
 #define CHK_NO_OBJECT(x) ((x) != R_NoObject)
 #endif
 
-void sggc_find_object_ptrs (sggc_cptr_t cptr)
+sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
 {
     sggc_type_t sggctype = SGGC_TYPE(cptr);
 
+    /* No references to follow:  NILSXP, CHARSXP. */
+
     if (sggctype == 0)
-        return;
+        return SGGC_NO_OBJECT;
+
+    /* Find attribute. */
 
     SEXP a, n;
 
@@ -239,51 +253,65 @@ void sggc_find_object_ptrs (sggc_cptr_t cptr)
     a = ATTRIB(n);
 #endif
 
+    /* Only attribute:  INTSXP, REALSXP, and other non-pointer vectors. */
+
+    if (sggctype == 1)
+        return CHK_NO_OBJECT(a) ? CPTR_FROM_SEXP(a) : SGGC_NO_OBJECT;
+
+    /* Follow attribute reference. */
+
     if (CHK_NO_OBJECT(a) && a != R_NilValue) {
         sggc_cptr_t p = CPTR_FROM_SEXP(a);
         sggc_look_at(p);
     }
 
-    if (sggctype == 1)
-        return;
-
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && USE_AUX_FOR_ATTRIB
     n = SEXP_FROM_CPTR(cptr);
 #endif
+
+    /* Three-pointer (+ attribute) objects:  LISTSXP, ENVSXP, etc. */
 
     if (sggctype == 2) {
         SEXP car = CAR(n), cdr = CDR(n), tag = TAG(n);
         if (CHK_NO_OBJECT(car))
             sggc_look_at(CPTR_FROM_SEXP(car));
-        if (cdr != R_NilValue && CHK_NO_OBJECT(cdr)) 
-            sggc_look_at(CPTR_FROM_SEXP(cdr));
         if (tag != R_NilValue && CHK_NO_OBJECT(tag)) 
             sggc_look_at(CPTR_FROM_SEXP(tag));
-        return;
+        return cdr != R_NilValue && CHK_NO_OBJECT(cdr) ? CPTR_FROM_SEXP(cdr) 
+                                                       : SGGC_NO_OBJECT;
     }
 
+    /* Vectors of pointers (+ attribute):  VECSXP, EXPRSXP, STRSXP. */
+
     if (sggctype == 3) {
-        SEXP *ptr = &STRING_ELT(n,0);
         R_len_t cnt = LENGTH(n);
+        if (cnt == 1)
+            return CPTR_FROM_SEXP (STRING_ELT (n,0));
+        SEXP *ptr = &STRING_ELT(n,0);
         while (cnt > 0) {
             sggc_cptr_t p = CPTR_FROM_SEXP(*ptr);
             sggc_look_at(p);
             ptr += 1;
             cnt -= 1;
         }
-        return;
+        return SGGC_NO_OBJECT;
     }
+
+    /* Two-pointer (+ attribute) objects:  EXTPTRSXP, S4SXP. */
 
     if (sggctype == 4) {
         if (CHK_NO_OBJECT(CDR(n)))
             sggc_look_at(CPTR_FROM_SEXP(CDR(n)));
         if (CHK_NO_OBJECT(TAG(n)))
             sggc_look_at(CPTR_FROM_SEXP(TAG(n)));
-        return;
+        return SGGC_NO_OBJECT;
     }
 
+    /* Uncollected with only attribute, done last since they shouldn't really
+       be encountered here. */
+
     if (sggctype == 5)
-        return;
+        return CHK_NO_OBJECT(a) ? CPTR_FROM_SEXP(a) : SGGC_NO_OBJECT;
 
     abort();
 }

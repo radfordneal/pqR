@@ -206,6 +206,22 @@ void sggc_find_root_ptrs (void)
   }
 }
 
+#ifdef SGGC_FIND_OBJECT_RETURN
+sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
+{
+  if (SGGC_TYPE(cptr) == TYPE_LIST)
+  { sggc_look_at (LIST(cptr)->head);
+    return LIST(cptr)->tail;
+  }
+
+  else if (SGGC_TYPE(cptr) == TYPE_BINDING)
+  { sggc_look_at (BINDING(cptr)->value);
+    return BINDING(cptr)->next;
+  }
+
+  return SGGC_NO_OBJECT;
+}
+#else
 void sggc_find_object_ptrs (sggc_cptr_t cptr)
 {
   if (SGGC_TYPE(cptr) == TYPE_LIST)
@@ -218,6 +234,7 @@ void sggc_find_object_ptrs (sggc_cptr_t cptr)
     sggc_look_at (BINDING(cptr)->next);
   }
 }
+#endif
 
 /* ALLOCATE FUNCTION FOR THIS APPLICATION.  Calls the garbage collector
    when necessary, or otherwise every 100th allocation, with every 500th

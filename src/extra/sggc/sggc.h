@@ -239,7 +239,12 @@ void sggc_find_root_ptrs (void);
 #endif
 
 #ifndef sggc_find_object_ptrs
-void sggc_find_object_ptrs (sggc_cptr_t cptr);
+#ifdef SGGC_FIND_OBJECT_RETURN
+sggc_cptr_t
+#else
+void 
+#endif
+sggc_find_object_ptrs (sggc_cptr_t cptr);
 #endif
 
 #ifdef SGGC_AUX1_READ_ONLY
