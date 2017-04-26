@@ -261,10 +261,8 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
 
     /* Follow attribute reference. */
 
-    if (a != R_NilValue && CHK_NO_OBJECT(a)) {
-        sggc_cptr_t p = CPTR_FROM_SEXP(a);
-        sggc_look_at(p);
-    }
+    if (a != R_NilValue && CHK_NO_OBJECT(a))
+        sggc_look_at(CPTR_FROM_SEXP(a));
 
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && USE_AUX_FOR_ATTRIB
     n = SEXP_FROM_CPTR(cptr);
@@ -290,8 +288,7 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
             return CPTR_FROM_SEXP (STRING_ELT (n,0));
         SEXP *ptr = &STRING_ELT(n,0);
         while (cnt > 0) {
-            sggc_cptr_t p = CPTR_FROM_SEXP(*ptr);
-            sggc_look_at(p);
+            sggc_look_at(CPTR_FROM_SEXP(*ptr));
             ptr += 1;
             cnt -= 1;
         }
