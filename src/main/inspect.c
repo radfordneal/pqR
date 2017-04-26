@@ -128,15 +128,11 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
         Rprintf("R_NoObject\n");
         return;
     }
-#   if USE_COMPRESSED_POINTERS
-       Rprintf("@%d.%d %02d %s k%d [", 
-                SGGC_SEGMENT_INDEX(v), SGGC_SEGMENT_OFFSET(v),
-                TYPEOF(v), typename(v), GCKIND(v));
-#   else
-       Rprintf("@%llx %02d %s k%d [", 
-                (long long) v,
-                TYPEOF(v), typename(v), GCKIND(v));
-#   endif
+    Rprintf("@%llx/%d.%d t%02d %s k%d [", 
+             (long long) v, 
+             SGGC_SEGMENT_INDEX(CPTR_FROM_SEXP(v)), 
+             SGGC_SEGMENT_OFFSET(CPTR_FROM_SEXP(v)),
+             TYPEOF(v), typename(v), GCKIND(v));
     if (OBJECT(v)) { a = 1; Rprintf("OBJ"); }
     if (NAMEDCNT(v)) { if (a) Rprintf(","); Rprintf("NAM(%d)",NAMEDCNT(v)); a = 1; }
     if (! ((VECTOR_OR_CHAR_TYPES >> TYPEOF(v)) & 1)) {

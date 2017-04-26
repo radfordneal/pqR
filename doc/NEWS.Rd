@@ -50,6 +50,9 @@
   \item Memory allocated by a C function using \code{R_alloc} will no
         longer appear in output of \code{Rprofmem}.
   \item The \code{pages} argument for Rprofmem is now ignored.
+  \item The output of \code{.Internal(inspect(x))} now includes both the
+        uncompressed and the compressed pointers to \code{x}, and omits
+        some information that was specific to the previous garbage collector.
   }}
 
   \subsection{CHANGES TO THE C API}{
