@@ -1693,8 +1693,6 @@ void sggc_collect_remove_free_big (void)
                     (unsigned)v, nch);
           }
           (void) set_remove (&old_to_new, v);
-
-if (sggc_info.gen2_big_chunks<nch) { extern void * R_inspect(void *); R_inspect(SGGC_DATA(v)); abort(); }
           sggc_info.gen2_big_chunks -= nch;
         }
         else if (collect_level > 1 && set_remove (&old_gen2_big, v))
@@ -1703,7 +1701,6 @@ if (sggc_info.gen2_big_chunks<nch) { extern void * R_inspect(void *); R_inspect(
                     (unsigned)v, nch);
           }
           (void) set_remove (&old_to_new, v);
-if (sggc_info.gen2_big_chunks<nch) { extern void * R_inspect(void *); R_inspect(SGGC_DATA(v)); abort(); }
           sggc_info.gen2_big_chunks -= nch;
         }
         else
@@ -1712,7 +1709,6 @@ if (sggc_info.gen2_big_chunks<nch) { extern void * R_inspect(void *); R_inspect(
               "sggc_collect: %x that was newly-allocated is free (%d chunks)\n",
                (unsigned)v, nch);
           }
-if (sggc_info.gen1_big_chunks<nch) { extern void * R_inspect(void *); R_inspect(SGGC_DATA(v)); abort(); }
           sggc_info.gen1_big_chunks -= nch;
         }
 
