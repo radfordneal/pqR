@@ -1959,6 +1959,18 @@ static void R_gc_internal (int reason, SEXP counters)
 {
     struct sggc_info old_sggc_info = sggc_info;
 
+    if (DEBUG_STRATEGY) {
+        printf (
+         "AT START: Cnts: 0/%u 1/%u 2/%u, Bigchnks: 0/%u 1/%u 2/%u, Recov: 0/%.2f 1/%.2f 2/%.2f\n",
+          sggc_info.gen0_count, 
+          sggc_info.gen1_count, 
+          sggc_info.gen2_count, 
+          (unsigned) sggc_info.gen0_big_chunks, 
+          (unsigned) sggc_info.gen1_big_chunks, 
+          (unsigned) sggc_info.gen2_big_chunks, 
+          recovery_frac0, recovery_frac1, recovery_frac2);
+    }
+
     gc_count += 1;
     if (gc_next_level == 1) gc_count1 += 1;
     if (gc_next_level == 2) gc_count2 += 1;
