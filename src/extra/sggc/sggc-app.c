@@ -256,11 +256,12 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
     /* Only attribute:  INTSXP, REALSXP, and other non-pointer vectors. */
 
     if (sggctype == 1)
-        return CHK_NO_OBJECT(a) ? CPTR_FROM_SEXP(a) : SGGC_NO_OBJECT;
+        return a != R_NilValue && CHK_NO_OBJECT(a) ? CPTR_FROM_SEXP(a) 
+                                                   : SGGC_NO_OBJECT;
 
     /* Follow attribute reference. */
 
-    if (CHK_NO_OBJECT(a) && a != R_NilValue) {
+    if (a != R_NilValue && CHK_NO_OBJECT(a)) {
         sggc_cptr_t p = CPTR_FROM_SEXP(a);
         sggc_look_at(p);
     }
