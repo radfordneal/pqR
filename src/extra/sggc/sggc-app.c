@@ -272,27 +272,30 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
 
     if (sggctype == 2) {
         SEXP car = CAR(n), cdr = CDR(n), tag = TAG(n);
-        if (CHK_NO_OBJECT(car))
-            sggc_look_at(CPTR_FROM_SEXP(car));
         if (tag != R_NilValue && CHK_NO_OBJECT(tag)) 
             sggc_look_at(CPTR_FROM_SEXP(tag));
-        return cdr != R_NilValue && CHK_NO_OBJECT(cdr) ? CPTR_FROM_SEXP(cdr) 
-                                                       : SGGC_NO_OBJECT;
+        if (cdr == R_NilValue)
+            return CHK_NO_OBJECT(car) ? CPTR_FROM_SEXP(car) : SGGC_NO_OBJECT;
+        if (CHK_NO_OBJECT(car))
+            sggc_look_at(CPTR_FROM_SEXP(car));
+        return CHK_NO_OBJECT(cdr) ? CPTR_FROM_SEXP(cdr) : SGGC_NO_OBJECT;
     }
 
     /* Vectors of pointers (+ attribute):  VECSXP, EXPRSXP, STRSXP. */
 
     if (sggctype == 3) {
-        R_len_t cnt = LENGTH(n);
-        if (cnt == 1)
-            return CPTR_FROM_SEXP (STRING_ELT (n,0));
+        R_len_t len = LENGTH(n);
+        if (len == 0)
+            return SGGC_NO_OBJECT;
         SEXP *ptr = &STRING_ELT(n,0);
-        while (cnt > 0) {
+        if (len == 1)
+            return CPTR_FROM_SEXP(*ptr);
+        SEXP *last = &STRING_ELT(n,len-1);
+        do {
             sggc_look_at(CPTR_FROM_SEXP(*ptr));
             ptr += 1;
-            cnt -= 1;
-        }
-        return SGGC_NO_OBJECT;
+        } while (ptr != last);
+        return CPTR_FROM_SEXP(*last);
     }
 
     /* Two-pointer (+ attribute) objects:  EXTPTRSXP, S4SXP. */
@@ -300,9 +303,7 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
     if (sggctype == 4) {
         if (CHK_NO_OBJECT(CDR(n)))
             sggc_look_at(CPTR_FROM_SEXP(CDR(n)));
-        if (CHK_NO_OBJECT(TAG(n)))
-            sggc_look_at(CPTR_FROM_SEXP(TAG(n)));
-        return SGGC_NO_OBJECT;
+        return CHK_NO_OBJECT(TAG(n)) ? CPTR_FROM_SEXP(TAG(n)) : SGGC_NO_OBJECT;
     }
 
     /* Uncollected with only attribute, done last since they shouldn't really
