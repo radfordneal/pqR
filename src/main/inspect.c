@@ -133,7 +133,8 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
              SGGC_SEGMENT_INDEX(CPTR_FROM_SEXP(v)), 
              SGGC_SEGMENT_OFFSET(CPTR_FROM_SEXP(v)),
              TYPEOF(v), typename(v), GCKIND(v));
-    if (OBJECT(v)) { a = 1; Rprintf("OBJ"); }
+    if (OBJECT(v)) { Rprintf("OBJ"); a = 1; }
+    if (IS_CONSTANT(v)) { if (a) Rprintf(","); Rprintf("CONST"); a = 1; }
     if (NAMEDCNT(v)) { if (a) Rprintf(","); Rprintf("NAM(%d)",NAMEDCNT(v)); a = 1; }
     if (! ((VECTOR_OR_CHAR_TYPES >> TYPEOF(v)) & 1)) {
         if (RDEBUG(v)) { if (a) Rprintf(","); Rprintf("DBG"); a = 1; }
