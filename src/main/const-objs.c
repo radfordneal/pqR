@@ -57,16 +57,27 @@
 #   define LENGTH1 /* nothing */
 #   define LENGTH1_NONVEC /* nothing */
 #   define NILATTRIB /* nothing */
+#   define NUM_OFFSET(o) (o)
+#   define CONS_OFFSET(o) (o)
 #elif USE_AUX_FOR_ATTRIB
 #   define CPTR_FIELD(index,offset) .cptr = SGGC_CPTR_VAL(index,offset),
 #   define LENGTH1 .length = 1,
 #   define LENGTH1_NONVEC /* nothing */
 #   define NILATTRIB /* nothing */
+#   define NUM_OFFSET(o) (2*(o))
+#   define CONS_OFFSET(o) (2*(o))
 #else
 #   define CPTR_FIELD(index,offset) .cptr = SGGC_CPTR_VAL(index,offset),
 #   define LENGTH1 .length = 1,
 #   define LENGTH1_NONVEC .length = 1,
 #   define NILATTRIB .attrib = R_NilValue,
+#   if SIZEOF_CHAR_P == 4
+#       define NUM_OFFSET(o) (2*(o))
+#       define CONS_OFFSET(o) (2*(o))
+#   else
+#       define NUM_OFFSET(o) (2*(o))
+#       define CONS_OFFSET(o) (3*(o))
+#   endif
 #endif
 
 
@@ -95,10 +106,10 @@ R_CONST SEXPREC R_NilValue_const = { \
 
 #if USE_COMPRESSED_POINTERS
 #define SCALAR_BOX(typ,offset) { \
-    CONST_HEADER(typ,R_SGGC_STATIC_BOXES_INDEX,offset) }
+    CONST_HEADER(typ,R_SGGC_STATIC_BOXES_INDEX,NUM_OFFSET(offset)) }
 #else
 #define SCALAR_BOX(typ,offset) { \
-    CONST_HEADER(typ,R_SGGC_STATIC_BOXES_INDEX,offset), \
+    CONST_HEADER(typ,R_SGGC_STATIC_BOXES_INDEX,NUM_OFFSET(offset)), \
     LENGTH1 }
 #endif
 
@@ -142,32 +153,32 @@ SYM_SEXPREC R_sym_consts[1] = {
 /* Logical, integer, and real constants. */
 
 #define LOGICAL_CONST(v,offset) { \
-    CONST_HEADER(LGLSXP,R_SGGC_NUM_INDEX,offset), \
+    CONST_HEADER(LGLSXP,R_SGGC_NUM_INDEX,NUM_OFFSET(offset)), \
     LENGTH1 \
     .data = { .i = v } \
 }
 
 #define INTEGER_CONST(v,offset) { \
-    CONST_HEADER(INTSXP,R_SGGC_NUM_INDEX,offset), \
+    CONST_HEADER(INTSXP,R_SGGC_NUM_INDEX,NUM_OFFSET(offset)), \
     LENGTH1 \
     .data = { .i = v } \
 }
 
 #define REAL_CONST(v,offset) { \
-    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,offset), \
+    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,NUM_OFFSET(offset)), \
     LENGTH1 \
     .data = { .d = v } \
 }
 
 #ifdef WORDS_BIGENDIAN
 #define REAL_NA_CONST(offset) { \
-    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,offset), \
+    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,Yoffset)), \
     LENGTH1 \
     .data = { .w = { 0x7ff00000, 1954 } } \
 }
 #else
 #define REAL_NA_CONST(offset) { \
-    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,offset), \
+    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,NUM_OFFSET(offset)), \
     LENGTH1 \
     .data = { .w = { 1954, 0x7ff00000 } } \
 }
@@ -194,7 +205,7 @@ R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS] = {
 /* 1-element pairlist constants.  Set LENGTH (if it exists) to 1. */
 
 #define LIST1_CONST(car,offset) { \
-    CONST_HEADER(LISTSXP,R_SGGC_LIST1_INDEX,offset), \
+    CONST_HEADER(LISTSXP,R_SGGC_LIST1_INDEX,CONS_OFFSET(offset)), \
     LENGTH1_NONVEC \
     .u = { .listsxp = \
             { .carval = car, .cdrval = R_NilValue, .tagval = R_NilValue } \
