@@ -41,7 +41,7 @@
 #if 1
 #undef error
 #define error abort_on_error
-static R_NORETURN void abort_on_error()
+static R_NORETURN void abort_on_error(char *s,...)
 { abort();
 }
 #endif
