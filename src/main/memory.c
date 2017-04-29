@@ -576,8 +576,7 @@ void sggc_find_root_ptrs (void)
        and because we need to clear LASTSYMENV and LASTSYMENVNOTFOUND.
        Plus it's faster to mark / follow the pointers with special
        code here.  So we don't need old-to-new processing when setting
-       fields.  Also, INTERNAL is always an uncollected primitive, so
-       needn't mark.
+       fields.
 
        The symbol table may be nonexistent at startup (NULL). */
 

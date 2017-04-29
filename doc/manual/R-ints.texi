@@ -300,7 +300,7 @@ such symbols.  Currently, this bit is maintained only for unhashed
 environments (always set to zero for hashed environments).
 
 @findex trace_base bit
-The @code{trace} bit is used for functions for @code{trace()}.  For
+The @code{trace_base} bit is used for functions for @code{trace()}.  For
 environments, it is a flag (accessed with @code{IS_BASE}) set only for
 the base environment and namespace, and used to slightly speed up the
 check for whether an environment is one of these, which is done in
@@ -423,7 +423,7 @@ Bits 5 to 15 of the gp field are used for the table offset in a
 @code{BUILTINSXP} or @code{SPECIALSXP}.  This offset is found again
 from the name when restoring saved data.
 
-@node The 'data', Allocation classes, Rest of header, SEXPs
+@node The 'data',  , Rest of header, SEXPs
 @subsection The `data'
 
 A @code{SEXPREC} is a C structure containing the 64-bit header as
@@ -432,7 +432,6 @@ node) and the node data, a union
 
 @example
 union @{
-    struct primsxp_struct primsxp;
     struct listsxp_struct listsxp;
     struct envsxp_struct envsxp;
     struct closxp_struct closxp;
@@ -441,22 +440,21 @@ union @{
 @end example
 
 @noindent
-All of these alternatives apart from the first are three pointers, and
-the first should be no larger, so the union should occupy three words.
+All of these alternatives consist of three SEXP values.
+
+The data for vectors, symbols, and primitives (builtin and special) is
+held in different structures.
 
 @cindex vector type
 The vector types are @code{RAWSXP}, @code{CHARSXP}, @code{LGLSXP},
 @code{INTSXP}, @code{REALSXP}, @code{CPLXSXP}, @code{STRSXP},
-@code{VECSXP}, @code{EXPRSXP} and @code{WEAKREFSXP}.  Remember that such
-types are a @code{VECTOR_SEXPREC}, which again consists of the header
-and the same three pointers, but followed by an integer giving the
-length of the vector, and then followed by the data.
+@code{VECSXP}, @code{EXPRSXP} and @code{WEAKREFSXP}.  Such
+are a @code{VECTOR_SEXPREC}, which contains a @code{sxpinfo} header,
+an integer giving the length of the vector, an integer ``truelength'',
+and the actual data.
 The data is aligned as required for a double and/or a pointer (even
 when the actual data is integer, or some other type not requiring this
 alignment).
-
-A @code{symsxp} structure is also overlaid on top of these other
-structures (see below).
 
 The `data' for the various types are given in the table below.  A lot of
 this is interpretation, i.e. the types are not checked.  In particular,
@@ -475,25 +473,26 @@ Note that since there is only one @code{NILSXP}, the tests
 @code{s==R_NilValue} and @code{isNull(s)} should be equivalent.
 
 @item SYMSXP
-Pointers to three nodes, the name, value and internal, accessed by
-@code{PRINTNAME} (a @code{CHARSXP}), @code{SYMVALUE} and
-@code{INTERNAL}.  (If the symbol's value is a @code{.Internal} function,
-the last is a pointer to the appropriate @code{SEXPREC}.)  Many symbols
-have @code{SYMVALUE} @code{R_UnboundValue}.  
+Contains a pointer to the 
+@code{PRINTNAME} (a @code{CHARSXP}) and the value in the base environment
+(@code{SYMVALUE}).  Internal primitives were previously held here also,
+but are now recorded elsewhere.
 
-A fourth pointer follows
-this, pointing to the next symbol in the global hash table of symbols.
+There is also a pointer to the next symbol in the global hash table of symbols.
 It is not used outside routines for maintaining this table.  Note
 that currently symbols are never removed from this table, and hence
-never garbage collected.  This is sometimes relied upon in C code,
+never garbage collected, and this is sometimes relied upon in C code,
 making it difficult to change the scheme so that space for unused
-symbols can be recovered.
+symbols can be recovered.  Accepting this, pqR now treats symbos as
+uncollectable objects in the garbage collector.
 
-There are then three further pointers, used to record the last
+There are three further pointers, used to record the last
 binding of the symbol that was found in an unhashed environment,
 and the last environment in which the symbol was not found (in a
 lookup for a function).
 See the next section on @ref{Environments and variable lookup}.
+
+Finally, the hash value used for lookups in hashed environments is recorded.
 
 @item CLOSXP
 Pointers to the formals (a pairlist), the body and the environment.
@@ -583,18 +582,6 @@ of this type.
 
 @end table
 
-@node Allocation classes,  , The 'data', SEXPs
-@subsection Allocation classes
-
-@cindex allocation classes
-As we have seen, the field @code{gccls} in the header is three bits to
-label up to 8 classes of nodes.  The sizes of the small node classes 
-(all except class 7) are determined by code in memory.c; one will
-always be large enough for the non-vector nodes.  Nodes in these classes
-are allocated from pages of about 2000 bytes.  Vectors that do not
-fit in any small node class are given node class 7, and allocated
-individually.
-
 @node Environments and variable lookup, Attributes, SEXPs, R Internal Structures
 @section Environments and variable lookup
 
@@ -618,7 +605,11 @@ help for @code{lockBinding} and @code{lockEnvironment}.
 Finally, there are additional places that `variables' can be looked up, called
 `user databases' in comments in the code.  These seem undocumented in
 the @R{} sources, but apparently refer to the @pkg{RObjectTable} package
-at @uref{http://www.omegahat.org/RObjectTables/}.  
+at @uref{http://www.omegahat.org/RObjectTables/}.  In pqR, S3 methods
+should not be stored in such user databases, since it is assumed that
+if a symbol @code{fun.cls} does not exist, then there is no @code{fun} method
+for class @code{cls}, which may not be true if the method exists in a 
+user database.
 
 @cindex base environment
 @cindex environment, base
@@ -628,10 +619,10 @@ that environment is not used.  Rather its bindings are recorded in
 the @code{SYMVALUE} field of a symbol (which is @code{R_UnboundValue}
 if it has no value in the base environment).  This environment contains
 heavily-used symbols such as @code{+} and @code{for}.  Note that 
-the @code{INTERNAL} field of a symbol may also contain values, but
-these are not technically bindings in any environment.
+the ``internal'' functions are not bindings in any environment, but are
+recorded in a separate table.
 When @R{} is started the primitive and
-internal functions are installed (by C code) in these fields of symbols.
+internal functions are installed (by C code).
 Then @code{.Platform} and @code{.Machine} are computed and the
 base package is loaded into the base environment followed by the system
 profile.
@@ -674,7 +665,7 @@ which a lookup for the symbol failed, provided that lookup was for a
 function, and either the lookup later succeeded, or the lookup was for
 an S3 method (for which lookups often fail).
 
-These fields are cleared to the C NULL pointer (rather than being
+These fields are cleared to R_NoObject (rather than being
 followed) by the garbage collector, so that they will not result in
 memory being occupied after the environment or the object bound is no
 longer used.  Note that it is possible that although these pointers
