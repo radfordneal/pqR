@@ -128,8 +128,8 @@ checked against the current version of the source code.
 @cindex SEXP
 @cindex SEXPRREC
 The values of R variableso and other objects can be thought of as
-either a @code{SEXP} (a pointer), or the structure it points to, a
-@code{SEXPREC} (and there are alternative forms used for vectors
+either a @code{SEXP} (a pointer of some sort), or the structure it points to, 
+a @code{SEXPREC} (and there are alternative forms used for vectors
 pointing to @code{VECTOR_SEXPREC} structures).
 So the basic building blocks of @R{} objects are often called
 @emph{nodes}, meaning @code{SEXPREC}s or @code{VECTOR_SEXPREC}s.
@@ -137,13 +137,17 @@ So the basic building blocks of @R{} objects are often called
 Note that the internal structure of the @code{SEXPREC} is not made
 available to @R{} Extensions: rather @code{SEXP} is an opaque pointer,
 and the internals can only be accessed by the functions provided.
+Depending on how pqR is configured, a @code{SEXP} may be an actual
+memory address (an uncompressed pointer), which will be 32 or 64
+bits in size, depending on the platform, or it may be a compressed
+pointer, 32 bits in size, that specifies the location of an object
+via a segment index and offset within a segment
 
 @cindex node
-Node structures of all types have as their first four fields a 64-bit
-@code{sxpinfo} header, a pointer to the attributes, and pointers
-to the previous and next node in a doubly-linked list (for garbage
-collection purposes). Additional fields vary by type (a @code{SEXPTYPE}), 
-which is specfied by a five-bit field in the @code{sxpinfo} header.
+Node structures of all types contain, in some fashion, a 64-bit
+@code{sxpinfo} header and a pointer to a pairlist of attributes.  
+Additional information varies by type (a @code{SEXPTYPE}), which is
+specfied by a five-bit field in the @code{sxpinfo} header.
 
 @menu
 * SEXPTYPEs::                   
@@ -201,7 +205,7 @@ are @code{LGLSXP}, @code{INTSXP}, @code{REALSXP}, @code{CPLXSP},
 the name going back to the origins of @R{} as a Scheme-like language)
 are rarely seen at @R{} level, but are for example used for argument
 lists.  Character vectors are effectively lists all of whose elements
-are @code{CHARSXP}, a type that is rarely visible at @R{} level.
+are @code{CHARSXP}, a type that is rarely (never?) visible at @R{} level.
 
 @cindex language object
 @cindex argument list
@@ -241,45 +245,38 @@ The @code{sxpinfo} header is defined as the 64-bit C structure below:
 
 @example
 struct sxpinfo_struct @{
+
     /* Type and namedcnt in first byte */
     unsigned int nmcnt : 3;   /* count of "names" referring to object */
-    unsigned int type : 5;    /* @r{discussed above} */
-    /* Garbage collector stuff - keep in one byte to maybe speed up access */
-    unsigned int gccls : 3;   /* node class for garbage collector */
-    unsigned int gcgen : 1;   /* old generation number - may be best first */
-    unsigned int mark : 1;    /* marks object as in use in garbage collector */
+    unsigned int type : 5;    /* ==> (FUNSXP == 99) %% 2^5 == 3 == CLOSXP
+                                 -> warning: `type' is narrower than values
+                                              of its type
+                                 when SEXPTYPE was an enum */
+
+    /* Miscellaneous flags, some with multiple meanings depending on type */
+
+    unsigned int debug : 1;       /* Function/Environment: is being debugged */
+    unsigned int rstep_spec : 1;  /* Function: is to be debugged just once,
+                                     Symbol: this is a "special" symbol,
+                                     Environment: has no special symbols */
+    unsigned int trace_base : 1;  /* Function: is being traced,
+                                     Symbol: has base binding in global cache,
+                                     Environment: R_BaseEnv or R_BaseNamespace*/
+    unsigned int has_attrib : 1;  /* Set to 1 iff ATTRIB != R_NilValue, except
+                                     not used when ATTRIB isn't normal attrib */
+    unsigned int unused : 1;
+
     /* Object flag */
     unsigned int obj : 1;     /* set if this is an S3 or S4 object */
+
     /* Flags to synchronize with helper threads */
     unsigned int in_use: 1;   /* whether contents may be in use by a helper */
     unsigned int being_computed : 1;  /* whether helper may be computing this */
-    /* "general purpose" field, used for miscellaneous purposes */
+
+    /* The "general purpose" field, used for miscellaneous purposes */
     unsigned int gp : 16;     /* The "general purpose" field */
-    union @{
-      struct @{               /* field below is for vectors only */
-        R_len_t truelength;      /* for old stuff - may someday be defunct... */
-      @} vec;
-      struct @{               /* fields below are for non-vectors only */
-        /* Debugging */
-        unsigned int debug : 1;  /* function/environment is being debugged */
-        unsigned int rstep : 1;  /* function is to be debugged, but only once */
-        unsigned int trace : 1;  /* function is being traced */
-        /* Symbol binding */
-        unsigned int unused : 1;      /* not yet used */
-        unsigned int spec_sym : 1;    /* this is a "special" symbol */
-        unsigned int no_spec_sym : 1; /* environment has no special symbols */
-        unsigned int base_env : 1;    /* this is R_BaseEnv or R_BaseNamespace */
-        unsigned int basec : 1;       /* sym has base binding in global cache */
-        /* Primitive operations */
-        unsigned char pending_ok;/* whether args can have computation pending */
-        unsigned short var1;     /* variant for eval of unary primitive arg */
-      @} nonvec;
-    @} u;
 @};
 @end example
-
-Note that one field is for vectors only (including @code{CHARSXP}), while
-some other fields are for non-vectors only.
 
 @findex debug bit
 The @code{debug} bit is used for closures and environments.  For
@@ -288,38 +285,35 @@ indicates that evaluations of the function should be run under the
 browser.  For environments it indicates whether the browsing is in
 single-step mode.
 
-@findex rstep bit
+@findex rstep_spec bit
 @findex RSTEP
-The @code{rstep} bit is used only for closures, to indicate "debugonce".
+@findex SPEC_SYM
+@findex NO_SPEC_SYM
+The @code{rstep_spec} bit is used for closures to indicate
+"debugonce".  It is used for symbols to indicate (with @code{SPEC_SYM}) 
+that it is one of a set of special symbols (eg, @code{+} and @code{if}) 
+for which an attempt is made to have function lookup be faster.  It is
+used for environments (with @code{NO_SPEC_SYM}) to indicate that the
+environment has no symbols with the @code{SPEC_SYM} flag set (and has
+never had such a symbol), so that it can be bypassed in searches for
+such symbols.  Currently, this bit is maintained only for unhashed
+environments (always set to zero for hashed environments).
 
-@findex trace bit
-The @code{trace} bit is used for functions for @code{trace()}.
+@findex trace_base bit
+The @code{trace} bit is used for functions for @code{trace()}.  For
+environments, it is a flag (accessed with @code{IS_BASE}) set only for
+the base environment and namespace, and used to slightly speed up the
+check for whether an environment is one of these, which is done in
+time-critical code.  For symbols, it is used for the @code{BASE_CACHE}
+flag, that indicates that the symbol is in the global cache with a
+binding in the base environment, allowing its value to be obtained
+directly without looking in the hash table. (Currently done only for
+non-active bindings that are functions.)
 
-@findex basec bit
-For symbols, the @code{basec} bit is used for the @code{BASE_CACHE} flag, that
-indicates that the symbol is in the global cache with a binding in the 
-base environment, allowing its value to be obtained directly without 
-looking in the hash table. (Currently done only for non-active bindings
-that are functions.)
-
-@findex spec_sym bit
-The @code{spec_sym} bit is used as the @code{SPEC_SYM} flag for
-symbols, indicating that it is one of a set of special symbols (eg, @code{+}
-and @code{if}) for which an attempt is made to have function lookup be faster.  
-
-@findex base_env bit
-The @code{base-env} bit, accessed by the @code{IS_BASE} macro, is used
-to slightly speed up the check for whether an environment is either
-@code{R_BaseEnd} or @code{R_BaseNamespace}, which is done in
-time-critical code.
-
-@findex no_spec_sym bit
-The @code{no_spec_sym} bit is used as the @code{NO_SPEC_SYM} flag for 
-environments to indicate that the environment has no symbols with the 
-@code{SPEC_SYM} flag set (and has never had such a symbol), 
-so that it can be bypassed in searches for such symbols.  Currently,
-this bit is maintained only for unhashed environments (always set to zero
-for hashed environments).
+@findex has_attrib bit
+The @code{has_attrib} bit is used to flag an object that does not
+have @code{R_NilValue} for @code{ATTRIB}, allowing a slightly faster
+check of this.
 
 @findex nmcnt field
 @findex named field
