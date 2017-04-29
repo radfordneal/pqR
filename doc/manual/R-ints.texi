@@ -2030,14 +2030,14 @@ static R_StringBuffer ex_buff = @{NULL, 0, MAXELTSIZE@};
 @node Internals of R_alloc,  , Memory allocators, Memory allocators
 @subsection Internals of R_alloc
 
-The memory used by @code{R_alloc} is allocated as @R{} vectors, of type
-@code{RAWSXP} for `small' allocations (less than 2^31 - 1 bytes) and of
-type @code{REALSXP} for allocations up to 2^34 - 1 bytes on 64-bit
-machines.  Thus the allocation is in units of 8 bytes, and is rounded
-up.  A request for zero bytes currently returns @code{NULL} (but
-this should not be relied on).  For historical reasons, in all other
-cases 1 byte is added before rounding up so the allocation is always
-1--8 bytes more than was asked for: again this should not be relied on.
+The memory used by @code{R_alloc} is allocated as part of the same
+heap as R objects, and recovered by the same garbage collector, but it
+is never used as an R object, and may not have all (or any) of the
+header fields that an R object would have.  For historical reasons, at
+least one more byte is allocated than was asked for, but this should
+not be relied on.  The actual amount allocated will be rounded up to a
+whole number of 16-byte chunks, perhaps after adding some header
+overhead.
 
 The vectors allocated are protected via the setting of @code{R_VStack},
 as the garbage collector marks everything that can be reached from that
