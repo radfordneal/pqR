@@ -124,12 +124,84 @@ the source code.
 @node Configuration, Segmented Generational Garbage Collection, R Internal Structures, R Internal Structures
 @section Configuration
 
-xxx
+Designing efficient layouts for objects requires knowledge of the
+sizes of various C data types.  Accordingly, pqR is designed for a
+limited set of platforms, which however does encompass virtually all
+those that are current.  Specifically, pqR can be configured for
+systems with either 32-bit C pointers or 64-bit C pointers, with all
+systems assumed to have both 32-bit and 64-bit versions of integers
+(with two's complement representation of negative values), specifiable
+with the C99 types @code{int32_t} and @code{int64_t} and corresponding
+unsigned versions @code{uint32_t} and @code{uint64_t}.  The C
+@code{int} type is also assumed in places to be identical to
+@code{int32_t}.
+
+The @code{R_len_t} type is defined as @code{int}.  For compatibility
+with code written for R-3.0.0 and later R Core versions,
+@code{R_xlen_t} and related symbols are defined, but are the same as
+the non-x versions (as is the case with R-3.0.0 for 32-bit platforms).
+
+For all platforms, the @option{--enable-compressed-pointers} option to
+@command{./configure} can be used to enable use of 32-bit compressed
+pointers.  This makes sense even when uncompressed pointers are 32
+bits in size, though the benefits may then be less than for 64-bit
+platforms.  For 64-bit platforms, the @option{--enable-aux-for-attrib}
+option can be used to change how attributes are stored.
+For more information on these options, see the
+@ifset UseExternalXrefs
+@ref{Compressed and uncompressed pointers, , Compressed and uncompressed pointers, R-admin, R Installation and Administration}:
+@end ifset
+@ifclear UseExternalXrefs
+`R Installation and Administration'
+@end ifclear
+manual.
+
 
 @node Segmented Generational Garbage Collection, SEXPs, Configuration, R Internal Structures
 @section Segmented Generational Garbage Collection
 
-xxx
+Memory allocation and garbage collection in pqR are done using the
+Segmented Generational Garbage Collection (SGGC) facility written by
+Radford M. Neal, and stored in src/extra/sggc.  See the
+@file{sggc-doc}, @file{sggc-imp}, and @file{set-doc} files there for
+documentation on this facility.  This directory also contains the
+files @file{sggc-app.h} and @file{sggc-app.c}, which specify how
+SGGC is used by the pqR interpreter.
+
+The SGGC facility allocates objects in ``segments'', each of which can
+contain several small objects, or a single big object.  An object can
+be identified by a 32-bit ``compressed pointer'' consisting of the
+index of a segment and an offset within that segment.  pqR may be
+configured so that compressed pointers are used throughout the
+interpreter, with the @code{SEXP} type being a compressed pointer.
+Alternatively, a @code{SEXP} can be an ordinary (uncompressed)
+pointer, with compressed pointers used only for interfacing to the
+SGGC facility.
+
+The SGGC ``type'' of an object is not used to represent the R type,
+since this is incompatibile with the occassional use of
+@code{SET_TYPEOF} to change the R type.  Instead, the
+SGGC type is used to specify what references need to be followed
+during garbage collection, and to control which objects are
+uncollected (currently @code{SYMSXP}, @code{SPECIALSXP}, and
+@code{BUILTINSXP} objects).
+
+Five configurations are supported, as follows:
+
+@itemize
+@item 32-bit C pointers with @code{SEXP} a 32-bit compressed pointer
+@item 64-bit C pointers with @code{SEXP} a 32-bit compressed pointer
+@item 32-bit C pointers with @code{SEXP} a 32-bit uncompressed pointer
+@item 64-bit C pointers with @code{SEXP} a 64-bit uncompressed pointer
+@item 64-bit C pointers with @code{SEXP} a 64-bit uncompressed pointer,
+      with attributes stored as ``auxiliary information'', in order
+      to allow tighter packing of the main data area.
+@end itemize
+
+The first two configurations have almost identical data layouts, with
+only external pointers and primitives differing due to the different
+sizes of C pointers.  
+
 
 @node SEXPs, Environments and variable lookup, Segmented Generational Garbage Collection, R Internal Structures
 @section SEXPs
@@ -139,9 +211,9 @@ xxx
 The values of R variableso and other objects can be thought of as
 either a @code{SEXP} (a pointer of some sort), or the structure it points to, 
 a @code{SEXPREC} (and there are alternative forms used for vectors
-pointing to @code{VECTOR_SEXPREC} structures).
+pointing to @code{VECTOR_SEXPREC} structures, and symbols and primitives).
 So the basic building blocks of @R{} objects are often called
-@emph{nodes}, meaning @code{SEXPREC}s or @code{VECTOR_SEXPREC}s.
+@emph{nodes}, meaning @code{SEXPREC}s, or @code{VECTOR_SEXPREC}s, or other such.
 
 Note that the internal structure of the @code{SEXPREC} is not made
 available to @R{} Extensions: rather @code{SEXP} is an opaque pointer,

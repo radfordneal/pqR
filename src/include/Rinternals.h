@@ -759,7 +759,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define OBJECT(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.obj)
 #define RTRACE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_base)
 #define LEVELS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)
-  /* For SET_OBJECT and SET_TYPE, don't set if new value is the current value,
+  /* For SET_OBJECT and SET_TYPEOF, don't set if new value is the current value,
      to avoid crashing on an innocuous write to a constant that may be stored
      in read-only memory. */
 #define SET_OBJECT(x,v) do { \

@@ -13,8 +13,8 @@
   \item pqR now uses a new garbage collector and new schemes for memory
         layout.  Objects are represented more compactly, much more compactly
         if ``compressed pointers'' are used. Garbage collection is faster,
-        and will have a more localized memory access/write pattern, of
-        significance for cache performance and for performance with
+        and will have a more localized memory access/write pattern, which
+        may be of significance for cache performance and for performance with
         functions like \code{mclapply} from the \code{parallel} package.
   }}
 
@@ -25,9 +25,9 @@
         32-bit compressed pointers, which considerably reduces
         memory usage (especially if many small objects are used) 
         on a system with 64-bit pointers (slightly on
-        a system with 32-bit pointers).  Speed on some tasks
-        will also be improved, while on other tasks, using compressed
-        pointers has a speed penalty of up to about 25\%.
+        a system with 32-bit pointers).  Use of compressed pointers
+        results in a speed penalty on some tasks of up to about 30\%,
+        while on other tasks the lower memory usage may improve speed.
   \item There is now an \code{--enable-aux-for-attrib} option to
         \code{configure}.  This is ignored if 
         \code{--enable-compressed-pointers} is used, or if the platform
@@ -51,7 +51,8 @@
         longer appear in output of \code{Rprofmem}.
   \item The \code{pages} argument for Rprofmem is now ignored.
   \item The output of \code{.Internal(inspect(x))} now includes both the
-        uncompressed and the compressed pointers to \code{x}, and omits
+        uncompressed and the compressed pointers to \code{x}, and other
+        information relevant to the new scheme, while omitting
         some information that was specific to the previous garbage collector.
   }}
 
@@ -61,7 +62,7 @@
         been safe to use.
   \item The probably never-used \code{call_R} and \code{call_S} functions
         have been disabled.
-  \item It is now illegal to set the \code{INTERNAL} field of a symbol
+  \item It is now illegal to set the ``internal'' value associated with a symbol
         to anything other than a primitive function (\code{BUILTINSXP}
         or \code{SPECIALSXP} type).
   \item Passing a non-vector object to a C function using \code{.C} is now
@@ -76,7 +77,7 @@
   \itemize{
   \item Cross-references between manuals in doc/manual, such as R-admin.html
         and R-exts.html,
-        now go to the other manuals in this same place.  Previously (and
+        now go to the other manuals in the same place.  Previously (and
         in current R core versions), they went to the manuals of that
         name at cran.r-project.org, even when those manuals are not for
         the same version of R.
