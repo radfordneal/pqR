@@ -1160,7 +1160,7 @@ static void gc_strategy (sggc_nchunks_t nch)
        and if so at which level. */
 
     if (sggc_info.gen0_count * recovery_frac0 
-           > 0.85 * (sggc_info.gen1_count + sggc_info.gen2_count)) {
+           > 1.1 * (sggc_info.gen1_count + sggc_info.gen2_count)) {
         if ((gc_count-gc_count_last_full) * recovery_frac2 > 4.0) {
             if (DEBUG_STRATEGY) REprintf("GC from counts level 2\n");
             gc_next_level = 2;
