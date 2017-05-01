@@ -154,14 +154,27 @@ static unsigned int char_hash_size = STRHASHINITSIZE;
 static unsigned int char_hash_mask = STRHASHINITSIZE-1;
 
 
-/* Variables recording garbage collections and other state. */
+/* Variables recording information used for GC strategy and info display. */
+
+static int gc_countdown = 100;  /* Collections before next strategic decision */
 
 static long long int gc_count = 0;     /* Number of garbage collections done */
 static long long int gc_count1 = 0;    /*   - at level 1 */
 static long long int gc_count2 = 0;    /*   - at level 2 */
+
 static long long int gc_count_last_full; /* gc_count after last done at lev 2 */
+static size_t gc_big_chunks_last_full;   /* big chunks after last lev 2 */
+
+static double recovery_frac0 = 0.5;  /* Recent average recovery from gen0 */
+static double recovery_frac1 = 0.5;  /* Recent average recovery from gen1 */
+static double recovery_frac2 = 0.1;  /* Recent average recovery from gen2 */
+
+
+/* Other global variables. */
+
 static int gc_last_level = 0;          /* Level of most recently done GC */
 static int gc_next_level = 0;          /* Level currently planned for next GC */
+
 static int gc_ran_finalizers;          /* Whether finalizers ran in last GC */
 static int gc_reporting = 0;           /* Should message be printed on GC? */
 
@@ -1102,19 +1115,25 @@ void attribute_hidden InitMemory()
 /* GC STRATEGY.  The numerical constants below are tunable, as is the
    overall strategy.  The numerical constants have not been given
    names because they are used only here, and their meanings are best
-   discerned by looking at this code. */
-
-static int gc_countdown = 100;  /* Collections before next strategic decision */
-
-static double recovery_frac0 = 0.5;  /* Recent average recovery from gen0 */
-static double recovery_frac1 = 0.5;  /* Recent average recovery from gen1 */
-static double recovery_frac2 = 0.1;  /* Recent average recovery from gen2 */
+   discerned by looking at this code.  The argument is the number of
+   chunks for the object being allocated (or anything small if it's small). */
 
 #define DEBUG_STRATEGY gc_reporting  /* Set to 0, 1, or gc_reporting */
 
-static void gc_strategy (void)
+static void gc_strategy (sggc_nchunks_t nch)
 {
+    const size_t total_big_chunks = sggc_info.gen0_big_chunks 
+      + sggc_info.gen1_big_chunks + sggc_info.gen2_big_chunks;
+
     gc_countdown = 100;
+
+    /* See if a garbage collection should be done based on the size of the
+       object being allocated. */
+
+    if (nch > 0.4 * gc_big_chunks_last_full && nch > 0.7 * total_big_chunks) {
+        gc_next_level = 2;
+        goto collect;
+    }
 
     /* See if a garbage collection should be done based on sizes of big objects,
        and if so at which level. */
@@ -1132,11 +1151,16 @@ static void gc_strategy (void)
         }
     }
 
+    if (total_big_chunks > 3.0 * gc_big_chunks_last_full) {
+        gc_next_level = 2;
+        goto collect;
+    }
+
     /* See if a garbage collection should be done based on object counts,
        and if so at which level. */
 
     if (sggc_info.gen0_count * recovery_frac0 
-           > 0.75 * (sggc_info.gen1_count + sggc_info.gen2_count)) {
+           > 0.85 * (sggc_info.gen1_count + sggc_info.gen2_count)) {
         if ((gc_count-gc_count_last_full) * recovery_frac2 > 4.0) {
             if (DEBUG_STRATEGY) REprintf("GC from counts level 2\n");
             gc_next_level = 2;
@@ -1157,41 +1181,49 @@ static void gc_strategy (void)
 
     return;
 
-    /* Do a garbage collection.  Make if a full one fairly often if we've
-       got lots of memory in generation 2. */
+    /* Do a garbage collection.  Be sure to do a full one once in a while. */
 
   collect:
 
-    if (gc_count-gc_count_last_full > 5 && sggc_info.gen2_big_chunks 
-                 * (double)(gc_count-gc_count_last_full) > 100000000) {
-        if (DEBUG_STRATEGY) REprintf("Changed to level 2 by gen2 big chunks\n");
+    if (gc_count - gc_count_last_full > 100) {
+        if (DEBUG_STRATEGY) REprintf("Changed to level 2 by count\n");
         gc_next_level = 2;
     }
 
     R_gc_internal(1,R_NoObject);
 }
 
-static void update_recovery_fractions (struct sggc_info old_sggc_info)
+static void update_strategy_data (struct sggc_info old_sggc_info)
 {
-    switch (gc_last_level) {
+    gc_count += 1;
+
+    switch (gc_next_level) {
+
     case 0:
         recovery_frac0 = 0.9 * recovery_frac0 + 0.1 * (1 - 
           (double)(sggc_info.gen1_count-old_sggc_info.gen1_count) 
             / (1+old_sggc_info.gen0_count));
         if (recovery_frac0 < 0.1) recovery_frac0 = 0.1;
         break;
+
     case 1:
+        gc_count1 += 1;
         recovery_frac1 = 0.9 * recovery_frac1 + 0.1 * (1 -
           (double)(sggc_info.gen2_count-old_sggc_info.gen2_count) 
             / (1+old_sggc_info.gen1_count));
         if (recovery_frac1 < 0.1) recovery_frac1 = 0.1;
         break;
+
     case 2: ;
+        gc_count2 += 1;
         double recovered = old_sggc_info.gen2_count + old_sggc_info.gen1_count
                              - sggc_info.gen2_count;
         recovery_frac2 = 0.9 * recovery_frac2 + 0.1 * (
          recovered / (1 + old_sggc_info.gen2_count + old_sggc_info.gen1_count));
         if (recovery_frac2 < 0.05) recovery_frac2 = 0.05;
+        gc_count_last_full = gc_count;
+        gc_big_chunks_last_full = 
+          sggc_info.gen1_big_chunks + sggc_info.gen2_big_chunks;
         break;
     
     }
@@ -1199,9 +1231,9 @@ static void update_recovery_fractions (struct sggc_info old_sggc_info)
 
 /* Macro to wrap allocation statement in code to do garbage collections. */
 
-#define ALLOC_WITH_COLLECT(alloc_stmt,fail_stmt) do { \
+#define ALLOC_WITH_COLLECT(alloc_stmt,fail_stmt,nch) do { \
     gc_countdown -= 1; \
-    if (gc_countdown <= 0) gc_strategy(); \
+    if (gc_countdown <= 0 || nch > 100000) gc_strategy(nch); \
     alloc_stmt; \
     while (cp == SGGC_NO_OBJECT) { \
         if (gc_last_level < 2 && gc_next_level < gc_last_level + 1) { \
@@ -1233,7 +1265,7 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
     sggc_cptr_t cp;
 
     ALLOC_WITH_COLLECT(cp = sggc_alloc (sggctype, sggclength),
-                       mem_error());
+                       mem_error(), sggclength);
 
     SEXP r = SEXP_FROM_CPTR (cp);
 #if !USE_COMPRESSED_POINTERS
@@ -1256,7 +1288,7 @@ static SEXP alloc_sym (void)
     sggc_cptr_t cp;
 
     ALLOC_WITH_COLLECT(cp = sggc_alloc_small_kind (SGGC_SYM_KIND),
-                       mem_error());
+                       mem_error(), 1);
 
     SEXP r = SEXP_FROM_CPTR (cp);
 #if !USE_COMPRESSED_POINTERS
@@ -1348,7 +1380,7 @@ char *R_alloc (size_t nelem, int eltsize)
     sggc_cptr_t cp;
 
     ALLOC_WITH_COLLECT(cp = sggc_alloc (1, nch), 
-                       goto cannot_allocate);
+                       goto cannot_allocate, nch);
 
     SEXP r = SEXP_FROM_CPTR (cp);
 #if !USE_COMPRESSED_POINTERS
@@ -1968,11 +2000,9 @@ static void R_gc_internal (int reason, SEXP counters)
           (unsigned) sggc_info.gen1_big_chunks, 
           (unsigned) sggc_info.gen2_big_chunks, 
           recovery_frac0, recovery_frac1, recovery_frac2);
+        printf("GC count: %lld, last full: %lld, last full big chunks: %u\n",
+          gc_count, gc_count_last_full, (unsigned)gc_big_chunks_last_full);
     }
-
-    gc_count += 1;
-    if (gc_next_level == 1) gc_count1 += 1;
-    if (gc_next_level == 2) gc_count2 += 1;
 
     BEGIN_SUSPEND_INTERRUPTS {
 
@@ -1988,17 +2018,15 @@ static void R_gc_internal (int reason, SEXP counters)
 	sggc_collect(gc_next_level);
 
         sggc_call_for_object_in_use (0);
-        gc_last_level = gc_next_level;
 	gc_end_timing();
 
     } END_SUSPEND_INTERRUPTS;
 
-    if (gc_last_level == 2)
-        gc_count_last_full = gc_count;
+    update_strategy_data(old_sggc_info);
+
+    gc_last_level = gc_next_level;
 
     gc_next_level = 2;  /* just in case - should be changed before next call */
-
-    update_recovery_fractions(old_sggc_info);
 
     if (gc_reporting || DEBUG_STRATEGY) {
 
