@@ -79,8 +79,9 @@ always completely adequate, is as follows:
      as fast a version of pqR on recent processors as the other options.
      See the comments in the MkRules files for more details.
 
- 10) Possibly edit the options (eg, whether helper threads are
-     enabled) at the start of fixed\h\config.h (in src\gnuwin32).
+ 10) Possibly edit the options (eg, whether helper threads or
+     compressed pointers are enabled) at the start of fixed\h\config.h
+     (in src\gnuwin32).
 
  11) Issue the following commands in a Windows console (command
      prompt) window (after issuing the commands in step (5)), in order
