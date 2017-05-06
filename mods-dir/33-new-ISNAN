@@ -1,5 +1,0 @@
-New approach to ISNAN, ISNA, etc.  Assumes IEEE floating point double
-corresponds to 64-bit int in consistent endian way.  Implements these
-as static inline functions on that basis, using union.  No longer any
-need for ENABLE_ISNAN_TRICK, since this should work on all current
-processors (any with consistent endianness).
