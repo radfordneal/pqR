@@ -93,10 +93,6 @@
        compiler on a supported architecture if it has different
        syntax for inline assembly language from gcc.
 
-   PROTECTCHECK / TESTING_WRITE_BARRIER
-
-       If defined, tries to detect unprotected SEXPs.  See below.
-
    Other debug options are set by the definitions below. */
 
 #define DEBUG_GLOBAL_STRING_HASH 0

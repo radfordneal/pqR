@@ -369,18 +369,6 @@ AC_ARG_ENABLE([maintainer-mode],
 [use_maintainer_mode=no])
 AM_CONDITIONAL(MAINTAINER_MODE, [test "x${use_maintainer_mode}" = xyes])
 
-## Enable testing the write barrier.
-AC_ARG_ENABLE([strict-barrier],
-[AS_HELP_STRING([--enable-strict-barrier],[provoke compile error on write barrier violation
-                 @<:@no@:>@])],
-[use_strict_barrier="${enableval}"],
-[use_strict_barrier=no])
-if test x"${use_strict_barrier}" = xyes; then
-  AC_DEFINE(TESTING_WRITE_BARRIER, 1,
-            [Define to enable provoking compile errors on write barrier
-             violation.])
-fi
-
 AC_ARG_ENABLE([prebuilt-html],
 [AS_HELP_STRING([--enable-prebuilt-html],[build static HTML help pages @<:@no@:>@])],
 [want_prebuilt_html="${enableval}"],

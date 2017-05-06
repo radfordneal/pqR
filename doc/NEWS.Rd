@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2017-05-05}{
+\section{CHANGES IN VERSION RELEASED 2017-05-06}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -39,6 +39,12 @@
         attributes for objects being stored as ``auxiliary information'',
         which allows for some objects to be stored more compactly,
         with possible speed and memory advantages.
+  \item The \code{--enable-strict-barrier} option to \code{configure}
+        has been removed.  In pqR, usages in C code such as \code{CAR(x)=y}
+        cause compile errors regardless of this option, so it is not
+        needed for that purpose.  The use of this option to enable the 
+        \code{PROTECTCHECK} feature will be replaced by a similar feature
+        in a future pqR release.
   }}
 
   \subsection{DOCUMENTATION AND FEATURE CHANGES}{

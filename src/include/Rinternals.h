@@ -459,9 +459,7 @@ typedef struct VECTOR_SEXPREC_C {
 /* Pairlist and data access macros / static inline functions that are now 
    used everywhere (rather than non-inline functions, though those still
    exist in memory.c).  Type checks are done for data access unless 
-   USE_RINTERNALS is defined. 
-
-   NOTE:  Need to see how this all affects PROTECTCHECK... */
+   USE_RINTERNALS is defined. */
 
 #ifdef USE_RINTERNALS
 

@@ -1031,9 +1031,6 @@
 /* Define if you have C/C++/Fortran OpenMP support for package code. */
 /* #undef SUPPORT_OPENMP */
 
-/* Define to enable provoking compile errors on write barrier violation. */
-/* #undef TESTING_WRITE_BARRIER */
-
 /* Define to 1 if the type of the st_atim member of a struct stat is struct
    timespec. */
 /* #undef TYPEOF_STRUCT_STAT_ST_ATIM_IS_STRUCT_TIMESPEC */

@@ -2,6 +2,10 @@ Replaces the previously-used garbage collector with one using sggc.
 
 Information about this is in NEWS, R-admin, R-exts, and R-ints.
 
+Got rid of --enable-strict-barrier, which is not needed in pqR to make
+CAR(x)=y illegal.  The PROTECTCHECK aspect of it may be reintroduced
+later.
+
 Also fixes the problem of manual cross-references going to wrong
 versons at r-project.org (noted in NEWS).
 

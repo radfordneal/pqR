@@ -1483,20 +1483,16 @@ permitted for all objects, even those for which it is not meaningful,
 
 @cindex write barrier
 
-All code in @R{} extensions is by default behind the write barrier, which
-enforces use of (for example) @code{SETCAR(x,y)} rather than @code{CAR(x)=y},
-as is essential for generational garbage collection to work correctly.
+The write barrier enforces use of (for example) @code{SETCAR(x,y)}
+rather than @code{CAR(x)=y}, which will produce a compiler error.  The
+write barrier is essential for generational garbage collection to work
+correctly.
 
-The only way to obtain direct access to the internals of the
-@code{SEXPREC}s is to define @samp{USE_RINTERNALS} before including
-header file @file{Rinternals.h}, which is normally defined in
-@file{Defn.h}.  To enable a check on the way that the access is used,
-@R{} can be compiled with flag @option{--enable-strict-barrier} which
-ensures that header @file{Defn.h} does not define
-@samp{USE_RINTERNALS} and hence that @code{SEXP} is opaque in most of
-@R{} itself.  (There are some necessary exceptions: foremost in
-@file{memory.c} and @file{access.c} where the accessor functions are
-defined.)
+The write barrier is overridden only in @file{src/main/memory.c},
+@file{src/main/access.c}, and @file{src/extra/sggc/sggc-app.c}, in
+order to perform low-level memory management operations and to
+implement @code{SETCAR}, etc.  Overriding it is done by redefining the
+@code{NOT_LVALUE} macro.
 
 For background papers see
 @uref{http://www.stat.uiowa.edu/~luke/R/barrier.html} and
