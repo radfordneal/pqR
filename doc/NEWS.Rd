@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2017-05-02}{
+\section{CHANGES IN VERSION RELEASED 2017-05-05}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -16,6 +16,10 @@
         and will have a more localized memory access/write pattern, which
         may be of significance for cache performance and for performance with
         functions like \code{mclapply} from the \code{parallel} package.
+
+        The new garbage collection scheme uses a general-purpose Segmented
+        Generational Garbage Collector, the source code for which is at
+        https://gitlab.com/radfordneal/sggc
   }}
 
   \subsection{INSTALLATION}{
