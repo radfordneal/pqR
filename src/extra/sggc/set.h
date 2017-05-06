@@ -164,7 +164,7 @@ static inline int set_chain_contains (int chain, set_value_t val)
 {
   set_index_t index = SET_VAL_INDEX(val);
   set_offset_t offset = SET_VAL_OFFSET(val);
-  struct set_segment * restrict seg = SET_SEGMENT(index);
+  struct set_segment *seg = SET_SEGMENT(index);
 
   return (seg->bits[chain] >> offset) & 1;
 }
@@ -178,7 +178,7 @@ static inline int set_chain_contains (int chain, set_value_t val)
 static inline int set_chain_contains_any_in_segment(int chain, set_value_t val)
 {
   set_index_t index = SET_VAL_INDEX(val);
-  struct set_segment * restrict seg = SET_SEGMENT(index);
+  struct set_segment *seg = SET_SEGMENT(index);
 
   return seg->bits[chain] != 0;
 }
@@ -186,7 +186,7 @@ static inline int set_chain_contains_any_in_segment(int chain, set_value_t val)
 
 /* CHECK WHETHER A SET, OR ANY SET USING THE SAME CHAIN, CONTAINS A VALUE. */
 
-static inline int set_contains (struct set * restrict set, set_value_t val)
+static inline int set_contains (struct set *set, set_value_t val)
 {
   return set_chain_contains (set->chain, val);
 }
@@ -252,7 +252,7 @@ static inline int set_first_bit_pos (set_bits_t b)
 static inline set_bits_t set_chain_segment_bits (int chain, set_value_t val)
 {
   set_index_t index = SET_VAL_INDEX(val);
-  struct set_segment * restrict seg = SET_SEGMENT(index);
+  struct set_segment *seg = SET_SEGMENT(index);
 
   return seg->bits[chain];
 }
@@ -260,11 +260,11 @@ static inline set_bits_t set_chain_segment_bits (int chain, set_value_t val)
 
 /* ASSIGN BITS INDICATING MEMBERSHIP FOR THE SEGMENT CONTAINING AN ELEMENT. */
 
-static inline void set_assign_segment_bits (struct set * restrict set, 
+static inline void set_assign_segment_bits (struct set *set, 
                                             set_value_t val, set_bits_t b)
 {
   set_index_t index = SET_VAL_INDEX(val);
-  struct set_segment * restrict seg = SET_SEGMENT(index);
+  struct set_segment *seg = SET_SEGMENT(index);
 
   set->n_elements -= set_bit_count(seg->bits[set->chain]);
   seg->bits[set->chain] = b;
@@ -282,7 +282,7 @@ static inline set_value_t set_chain_next (int chain, set_value_t val)
 {
   set_index_t index = SET_VAL_INDEX(val);
   set_offset_t offset = SET_VAL_OFFSET(val);
-  struct set_segment * restrict seg = SET_SEGMENT(index);
+  struct set_segment *seg = SET_SEGMENT(index);
 
   /* Get the bits after the one for the element we are looking after. */
 
@@ -296,7 +296,7 @@ static inline set_value_t set_chain_next (int chain, set_value_t val)
 
   if (b == 0)
   { set_index_t nindex;
-    struct set_segment * restrict nseg;
+    struct set_segment *nseg;
 
     for (;;)
     { 
@@ -331,10 +331,10 @@ static inline set_value_t set_chain_next (int chain, set_value_t val)
 static inline set_value_t set_chain_next_segment (int chain, set_value_t val)
 {
   set_index_t index = SET_VAL_INDEX(val);
-  struct set_segment * restrict seg = SET_SEGMENT(index);
+  struct set_segment *seg = SET_SEGMENT(index);
 
   set_index_t nindex;
-  struct set_segment * restrict nseg;
+  struct set_segment *nseg;
 
   /* Go to the next segment, removing any segments that are unused. If there
      is no next segment, return SET_NO_VALUE. */
@@ -368,10 +368,10 @@ static inline set_value_t set_chain_next_segment (int chain, set_value_t val)
    This segment is then added to the linked list of segments for this
    set if it is not there already, and the element count is updated. */
 
-static inline int set_add (struct set * restrict set, set_value_t val)
+static inline int set_add (struct set *set, set_value_t val)
 {
   set_index_t index = SET_VAL_INDEX(val);
-  struct set_segment * restrict seg = SET_SEGMENT(index);
+  struct set_segment *seg = SET_SEGMENT(index);
 
   set_bits_t b = seg->bits[set->chain];
   set_bits_t t = (set_bits_t)1 << SET_VAL_OFFSET(val);
@@ -399,10 +399,10 @@ static inline int set_add (struct set * restrict set, set_value_t val)
    chain, within the segment structure for this value's index, and updating
    the count of elements in the set. */
 
-static inline int set_remove (struct set * restrict set, set_value_t val)
+static inline int set_remove (struct set *set, set_value_t val)
 {
   set_index_t index = SET_VAL_INDEX(val);
-  struct set_segment * restrict seg = SET_SEGMENT(index);
+  struct set_segment *seg = SET_SEGMENT(index);
 
   set_bits_t b = seg->bits[set->chain];
   set_bits_t t = (set_bits_t)1 << SET_VAL_OFFSET(val);

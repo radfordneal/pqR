@@ -77,9 +77,9 @@ static void check_n_elements (struct set *set);
 
 /* REMOVE ANY EMPTY SEGMENTS AT THE FRONT OF A SET. */
 
-static inline void remove_empty (struct set * restrict set)
+static inline void remove_empty (struct set *set)
 {
-  struct set_segment * restrict seg;
+  struct set_segment *seg;
 
   CHK_SET(set);
 
@@ -141,7 +141,7 @@ static int check_has_seg (struct set *set, set_index_t index)
 
 /* INITIALIZE A SET, AS EMPTY. */
 
-SET_PROC_CLASS void set_init (struct set * restrict set, int chain)
+SET_PROC_CLASS void set_init (struct set *set, int chain)
 {
   CHK_CHAIN(chain);
 
@@ -153,7 +153,7 @@ SET_PROC_CLASS void set_init (struct set * restrict set, int chain)
 
 /* INITIALIZE A SEGMENT STRUCTURE. */
 
-SET_PROC_CLASS void set_segment_init (struct set_segment * restrict seg)
+SET_PROC_CLASS void set_segment_init (struct set_segment *seg)
 {
   int j;
   for (j = 0; j < SET_CHAINS; j++)
@@ -173,9 +173,9 @@ SET_PROC_CLASS void set_segment_init (struct set_segment * restrict seg)
    ensure that if the segment no longer contains elements of this set
    it can be used in another set using the same chain.  */
 
-SET_PROC_CLASS set_value_t set_first (struct set * restrict set, int remove)
+SET_PROC_CLASS set_value_t set_first (struct set *set, int remove)
 { 
-  struct set_segment * restrict seg;
+  struct set_segment *seg;
   set_value_t first;
   set_bits_t b;
   int o;
@@ -217,12 +217,12 @@ SET_PROC_CLASS set_value_t set_first (struct set * restrict set, int remove)
    if 'val' is removed, the segment containing it is not removed from
    the list even if it no longer has any elements.) */
 
-SET_PROC_CLASS set_value_t set_next (struct set * restrict set, 
+SET_PROC_CLASS set_value_t set_next (struct set *set, 
                                      set_value_t val, int remove)
 {
   set_index_t index = SET_VAL_INDEX(val);
   set_offset_t offset = SET_VAL_OFFSET(val);
-  struct set_segment * restrict seg = SET_SEGMENT(index);
+  struct set_segment *seg = SET_SEGMENT(index);
 
   CHK_SET(set);
   CHK_SEGMENT(seg,set->chain);
@@ -246,7 +246,7 @@ SET_PROC_CLASS set_value_t set_next (struct set * restrict set,
 
   if (b == 0)
   { set_index_t nindex;
-    struct set_segment * restrict nseg;
+    struct set_segment *nseg;
 
     for (;;)
     { 
@@ -282,9 +282,9 @@ SET_PROC_CLASS set_value_t set_next (struct set * restrict set,
 /* RETURN THE BITS INDICATING MEMBERSHIP FOR THE FIRST SEGMENT OF A SET. 
    First removes empty segments at the front. */
 
-SET_PROC_CLASS set_bits_t set_first_bits (struct set * restrict set)
+SET_PROC_CLASS set_bits_t set_first_bits (struct set *set)
 {
-  struct set_segment * restrict seg;
+  struct set_segment *seg;
 
   CHK_SET(set);
   remove_empty(set);
@@ -299,10 +299,10 @@ SET_PROC_CLASS set_bits_t set_first_bits (struct set * restrict set)
 
 /* MOVE THE FIRST SEGMENT OF A SET TO ANOTHER SET USING THE SAME CHAIN. */
 
-SET_PROC_CLASS void set_move_first (struct set * restrict src, 
-                                    struct set * restrict dst)
+SET_PROC_CLASS void set_move_first (struct set *src, 
+                                    struct set *dst)
 {
-  struct set_segment * restrict seg;
+  struct set_segment *seg;
   set_index_t index;
   set_value_t cnt;
 
@@ -336,12 +336,12 @@ SET_PROC_CLASS void set_move_first (struct set * restrict src,
 
 /* MOVE SEGMENT AFTER THAT CONTAINING AN ELEMENT TO ANOTHER SET IN THE CHAIN. */
 
-SET_PROC_CLASS void set_move_next (struct set * restrict src, set_value_t val, 
-                                   struct set * restrict dst)
+SET_PROC_CLASS void set_move_next (struct set *src, set_value_t val, 
+                                   struct set *dst)
 {
   set_index_t index = SET_VAL_INDEX(val);
   set_offset_t offset = SET_VAL_OFFSET(val);
-  struct set_segment * restrict seg = SET_SEGMENT(index);
+  struct set_segment *seg = SET_SEGMENT(index);
   set_value_t cnt;
 
   CHK_SET(src);
@@ -355,7 +355,7 @@ SET_PROC_CLASS void set_move_next (struct set * restrict src, set_value_t val,
 
   if (SET_DEBUG && nindex == SET_END_OF_CHAIN) abort();
 
-  struct set_segment * restrict nseg = SET_SEGMENT(nindex);
+  struct set_segment *nseg = SET_SEGMENT(nindex);
   CHK_SEGMENT(nseg,chain);
   if (SET_DEBUG && nseg->bits[chain] == 0) abort();
 
@@ -374,14 +374,14 @@ SET_PROC_CLASS void set_move_next (struct set * restrict src, set_value_t val,
 
 /* ADD ELEMENTS IN ANY SET USING SOME CHAIN WITHIN SOME SEGMENT TO SOME SET. */
 
-SET_PROC_CLASS void set_add_segment (struct set * restrict set, 
+SET_PROC_CLASS void set_add_segment (struct set *set, 
                                      set_value_t val, int chain)
 {
   CHK_SET(set);
   int dst_chain = set->chain;
 
   set_index_t index = SET_VAL_INDEX(val);
-  struct set_segment * restrict seg = SET_SEGMENT(index);
+  struct set_segment *seg = SET_SEGMENT(index);
 
   CHK_SEGMENT(seg,dst_chain);
   CHK_SEGMENT(seg,chain);
@@ -405,14 +405,14 @@ SET_PROC_CLASS void set_add_segment (struct set * restrict set,
 
 /* REMOVE ELEMENTS IN A SET WITHIN SOME SEGMENT AND IN ANY SET IN SOME CHAIN. */
 
-SET_PROC_CLASS void set_remove_segment (struct set * restrict set, 
+SET_PROC_CLASS void set_remove_segment (struct set *set, 
                                         set_value_t val, int chain)
 {
   CHK_SET(set);
   int dst_chain = set->chain;
 
   set_index_t index = SET_VAL_INDEX(val);
-  struct set_segment * restrict seg = SET_SEGMENT(index);
+  struct set_segment *seg = SET_SEGMENT(index);
 
   CHK_SEGMENT(seg,dst_chain);
   CHK_SEGMENT(seg,chain);

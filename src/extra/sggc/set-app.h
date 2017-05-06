@@ -88,13 +88,13 @@
 #define SET_DO_BEFORE_INLINE \
   SGGC_EXTERN struct set_segment sggc_segment[SGGC_MAX_SEGMENTS];
 #else
-SGGC_EXTERN struct set_segment * restrict sggc_segment[SGGC_MAX_SEGMENTS];
+SGGC_EXTERN struct set_segment *sggc_segment[SGGC_MAX_SEGMENTS];
 #endif
 #else
 #ifdef SGGC_SEG_DIRECT
-SGGC_EXTERN struct set_segment * restrict sggc_segment;
+SGGC_EXTERN struct set_segment *sggc_segment;
 #else
-SGGC_EXTERN struct set_segment * restrict * restrict sggc_segment;
+SGGC_EXTERN struct set_segment **sggc_segment;
 #endif
 #endif
 

@@ -567,7 +567,7 @@ static void next_aux_pos (sggc_kind_t kind, char **block, unsigned char *pos,
 
 static set_index_t new_segment (void)
 {
-  struct set_segment * restrict seg;
+  struct set_segment *seg;
 
   if (next_segment == maximum_segments)
   { return -1;
@@ -705,7 +705,7 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
   size_t data_size = 0;     /* size of data area, if allocated here, else 0 */
 
   set_index_t index;        /* index of segment that object will be in */
-  struct set_segment * restrict seg;  /* ptr to struct for seg object goes in */
+  struct set_segment *seg;  /* ptr to struct for seg object goes in */
   sggc_cptr_t v;            /* pointer to object to be returned as value */
 
   /* Look for an existing segment for this object to go in.  For a
