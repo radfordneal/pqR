@@ -1118,7 +1118,7 @@ void attribute_hidden InitMemory()
    discerned by looking at this code.  The argument is the number of
    chunks for the object being allocated (or anything small if it's small). */
 
-#define DEBUG_STRATEGY gc_reporting  /* Set to 0, 1, or gc_reporting */
+#define DEBUG_STRATEGY 0  /* Set to 0, 1, or gc_reporting */
 
 static void gc_strategy (sggc_nchunks_t nch)
 {
