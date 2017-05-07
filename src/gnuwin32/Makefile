@@ -86,7 +86,7 @@ EXTRALIBS = getline/gl.a ../extra/xdr/libxdr.a \
    ../extra/intl/libintl.a ../extra/trio/libtrio.a ../extra/tzone/libtz.a \
    ../extra/tre/libtre.a ../extra/xz/liblzma.a \
    ../extra/helpers/libhelpers.a ../extra/matprod/libmatprod.a \
-   ../extra/libsggc.a
+   ../extra/sggc/libsggc.a
 
 # flags to ensure that Doug Lea's malloc is used:
 ifdef LEA_MALLOC
