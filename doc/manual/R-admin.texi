@@ -5091,7 +5091,6 @@ This item is installed by the @file{Rtools*.exe} installer.
 @c du is used by R CMD check
 @c expr is used in tools/GETVERSION
 @c find is used in installer/Makefile
-@c expr is used in tools/GETCONFIG
 @c gzip is used in src/library/Makefile.win, R CMD build
 @c ls is used in src/library/*/Makefile.win
 @c mkdir is used in numerous Makefiles

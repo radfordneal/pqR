@@ -24,14 +24,26 @@ line=`grep "HAVE_AQUA" config.h`
 echo "${line}"
 line=`grep "SUPPORT_OPENMP" config.h`
 echo "${line}"
-line=`grep "SIZEOF_SIZE_T" config.h`
-echo "${line}"
-line=`grep "SIZEOF_CHAR_P" config.h`
-echo "${line}"
 line=`grep "USE_COMPRESSED_POINTERS" config.h`
 echo "${line}"
 line=`grep "USE_AUX_FOR_ATTRIB" config.h`
 echo "${line}"
+
+# Special fudge needed because the 'grep' idea doesn't work if config.h
+# contains multiple definitions with conditions.
+if test x$WIN = x32; then
+  echo "#define SIZEOF_SIZE_T 4"
+  echo "#define SIZEOF_CHAR_P 4"
+elif test x$WIN = x64; then
+  echo "#define SIZEOF_SIZE_T 8"
+  echo "#define SIZEOF_CHAR_P 8"
+else
+  line=`grep "SIZEOF_SIZE_T" config.h`
+  echo "${line}"
+  line=`grep "SIZEOF_CHAR_P" config.h`
+  echo "${line}"
+fi
+
 echo
 echo "#endif /* not R_CONFIG_H */"
 echo
