@@ -173,7 +173,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
   0, 1, 2, 3, 4, 5, \
   0, 1, 2, 3, 4, 5, \
   0, 1, 2, 3, 4, 5  \
-};
+}
 
 #define SGGC_KIND_UNCOLLECTED \
 { 0, 0, 0, 0, 0, 1, \
@@ -184,7 +184,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
   0, 0, 0, 0, 0, 1, \
   0, 0, 0, 0, 0, 1, \
   0, 0, 0, 0, 0, 1  \
-};
+}
 
 #define SGGC_CHAR_KIND_START 0
 #define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
