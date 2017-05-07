@@ -35,7 +35,7 @@ psignal.h: ../gnuwin32/fixed/h/psignal.h
 	@cp $< $@
 
 Rconfig.h: config.h $(R_HOME)/tools/GETCONFIG
-	@sh $(R_HOME)/tools/GETCONFIG > Rconfig.h
+	@sh $(R_HOME)/tools/GETCONFIG $(WIN) > Rconfig.h
 
 Rversion.h: $(R_HOME)/VERSION $(R_HOME)/SVN-REVISION $(R_HOME)/tools/GETVERSION
 	@sh $(R_HOME)/tools/GETVERSION > $@

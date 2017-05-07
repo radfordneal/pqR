@@ -31,10 +31,10 @@ echo "${line}"
 
 # Special fudge needed because the 'grep' idea doesn't work if config.h
 # contains multiple definitions with conditions.
-if test x$WIN = x32; then
+if test x$1 = x32; then
   echo "#define SIZEOF_SIZE_T 4"
   echo "#define SIZEOF_CHAR_P 4"
-elif test x$WIN = x64; then
+elif test x$1 = x64; then
   echo "#define SIZEOF_SIZE_T 8"
   echo "#define SIZEOF_CHAR_P 8"
 else
