@@ -272,7 +272,7 @@ struct promsxp_struct {
    but these are in auxiliary information 1 and auxiliary information 2. */
 
 #define SEXPREC_HEADER \
-    struct sxpinfo_struct sxpinfo \
+    struct sxpinfo_struct sxpinfo
 
 #endif
 
@@ -300,7 +300,7 @@ struct promsxp_struct {
 
 #define SEXPREC_HEADER \
     struct sxpinfo_struct sxpinfo; \
-    uint32_t cptr; \
+    uint32_t cptr
 
 #endif
 
