@@ -2902,6 +2902,13 @@ else
   R_SH_VAR_ADD(r_blas_info2, [LAPACK: ${LAPACK_LIBS}], [, ])
 fi
 
+cptr_msg=${use_compressed_pointers}
+if test x"${use_aux_for_attrib}" = xyes; then
+  if test x"${use_compressed_pointers}" = xno; then
+    cptr_msg="no  (auxiliary information used for attributes)"
+  fi
+fi
+
 AC_MSG_RESULT(
 [
 R is now configured for ${host}, ${ac_cv_sizeof_char_p}-byte pointers
@@ -2916,7 +2923,7 @@ R is now configured for ${host}, ${ac_cv_sizeof_char_p}-byte pointers
   Fortran 90/95 compiler: ${r_f95_compiler}
   Obj-C compiler:         ${r_objc_compiler}
 
-  Compressed pointers:    ${use_compressed_pointers}
+  Compressed pointers:    ${cptr_msg}
 
   BLAS/LAPACK options:    ${r_blas_info1}
                           ${r_blas_info2}
