@@ -81,7 +81,7 @@ pid_t Rf_fork(void);
 
 #include <R_ext/sggc-app.h>
 
-#define ConstExtern extern  /* redefined as nothing in const-objs.c */
+#define ConstExtern extern    /* These are defined in const-objs.c */
 
 
 /* The NOT_LVALUE macro is used to disallow assignment to CDR(s), etc.
@@ -1473,7 +1473,7 @@ LibExtern SEXP R_NilValue;          /* Variable form, for those that need it */
 #if USE_COMPRESSED_POINTERS
 #define R_NilValue ((SEXP)SGGC_CPTR_VAL(R_SGGC_NIL_INDEX,0))
 #else
-LibExtern R_CONST SEXPREC R_NilValue_const; /* defined in const-objs.c */
+ConstExtern R_CONST SEXPREC R_NilValue_const; /* defined in const-objs.c */
 #define R_NilValue ((SEXP) &R_NilValue_const)
 #endif
 
