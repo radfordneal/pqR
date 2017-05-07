@@ -48,18 +48,7 @@
 /* probably no longer needed */
 #define NEW_CONDITION_HANDLING
 
-/* To test the write barrier used by the generational collector,
-   define TESTING_WRITE_BARRIER.  This makes the internal structure of
-   SEXPRECs visible only inside of files that explicitly define
-   USE_RINTERNALS, and all uses of SEXPREC fields that do not go
-   through the appropriate functions or macros will become compilation
-   errors.  Since this does impose a small but noticable performance
-   penalty, code that includes Defn.h (or code that explicitly defines
-   USE_RINTERNALS) can access a SEXPREC's fields directly. */
-
-#ifndef TESTING_WRITE_BARRIER
-# define USE_RINTERNALS
-#endif
+#define USE_RINTERNALS
 
 #ifdef HAVE_VISIBILITY_ATTRIBUTE
 # define attribute_visible __attribute__ ((visibility ("default")))
