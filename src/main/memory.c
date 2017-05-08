@@ -692,7 +692,6 @@ void sggc_after_marking (int level, int rep)
 {
     int any;
     SEXP s; 
-    int i;
 
     /* LOOK AT TASKS, THE FIRST TIME. */
 
@@ -1007,7 +1006,7 @@ static R_size_t R_StandardPPStackSize, R_RealPPStackSize;
 
 void attribute_hidden InitMemory()
 {
-    int gen, i;
+    int i;
 
 #if VALGRIND_TEST
     valgrind_test();
@@ -2050,12 +2049,8 @@ static void R_gc_internal (int reason, SEXP counters)
 static SEXP do_memlimits(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
-    double nsize, vsize;
-    R_size_t tmp;
 
     checkArity(op, args);
-    nsize = asReal(CAR(args));
-    vsize = asReal(CADR(args));
 
     PROTECT(ans = allocVector(REALSXP, 2));
     REAL(ans)[0] = NA_REAL;
@@ -2067,7 +2062,7 @@ static SEXP do_memlimits(SEXP call, SEXP op, SEXP args, SEXP env)
 static SEXP do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, nms, v;
-    int i, tmp;
+    int i;
 
     /* Allocate space for counts. */
 
