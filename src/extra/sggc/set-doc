@@ -155,8 +155,12 @@ be put after set.h is included, as illustrated in test-set/set-app.h,
 or be put in SET_DO_BEFORE_INLINE.)
 
 The set-app.h file should be included in application modules that use
-the set facility.  There are two options for how an application
-accesses the procedures in set.c.
+the set facility.  If SET_NO_FUNCTIONS is defined before it is
+included, non-inline functions declarations will be omitted, with only
+types, macros, and inline functions defined.
+
+There are two options for how an application accesses the procedures
+in set.c.
 
 One method is to separately compile set.c into an object file, and
 then link this with modules that use the set facility (or put it in a

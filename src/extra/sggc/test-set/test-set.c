@@ -20,6 +20,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "set-app.h"
+#if SET_STATIC
+#include "set.c"
+#endif
 
 #define N_SET 3
 struct set set[N_SET];

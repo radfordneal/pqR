@@ -31,7 +31,7 @@
 #include "sggc-app.h"
 
 #if SET_STATIC
-#  include "set.c"     /* Define set procedures here as static, not linked */
+# include "set.c"      /* Define set procedures here as static, not linked */
 #endif
 
 

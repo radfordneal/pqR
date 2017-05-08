@@ -76,7 +76,10 @@ To use SGGC, an application should create an sggc-app.h file, which
 must define some constants and declare some types (see below) and then
 include the sggc.h file.  The sggc-app.h file should be included in
 application modules that use the SGGC library, and is also included in
-the source file for the SGGC library routines.
+the source file for the SGGC library routines.  If SGGC_NO_FUNCTIONS
+is defined before sggc-app.h is included, non-inline function
+declarations in sggc.h will be omitted, with only types, macros, and
+inline functions defined.
 
 The following constants must be declared with #define in sggc-app.h,
 before it includes sggc.h:
@@ -442,14 +445,14 @@ macros) below, which have (if functions) prototypes as shown:
 
   char *SGGC_AUX1 (sggc_cptr_t cptr)
 
-    Exists only if the application defines SGGC_AUX1_SIZE in set-app.h.  
+    Exists only if the application defines SGGC_AUX1_SIZE in sggc-app.h.  
 
     Returns a regular pointer to the auxiliary information 1 for the
     object whose compressed pointer is passed.
 
   char *SGGC_AUX2 (sggc_cptr_t cptr)
 
-    Exists only if the application defines SGGC_AUX2_SIZE in set-app.h.  
+    Exists only if the application defines SGGC_AUX2_SIZE in sggc-app.h.  
 
     Returns a regular pointer to the auxiliary information 2 for the
     object whose compressed pointer is passed.

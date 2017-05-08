@@ -1,14 +1,19 @@
 The stable versions of SGGC below are tagged in the source code repository.
 
+Version 2017-05-07
+
+  Introduces SET_NO_FUNCTIONS and SGGC_NO_FUNCTIONS.
+  Used in pqR-2017-05-07.
+
 Version 2017-05-06
 
- Removed uses of "restrict", since it doesn't work with C++.
- Used in pqR-2017-05-06.
+  Removed uses of "restrict", since it doesn't work with C++.
+  Used in pqR-2017-05-06.
 
 Version 2017-05-05
 
- SGGC_FIND_OBJECT_RETURN added to API.  Bug fix and other tweaks.
- Used in pqR-2017-05-05.
+  SGGC_FIND_OBJECT_RETURN added to API.  Bug fix and other tweaks.
+  Used in pqR-2017-05-05.
 
 Version 2017-04-22
 

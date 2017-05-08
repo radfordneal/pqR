@@ -17,7 +17,9 @@
  *  http://www.r-project.org/Licenses/
  */
 
+#define NEED_SGGC_FUNCTIONS
 #include <Defn.h>
+#include "set.c"
 
 
 #if USE_COMPRESSED_POINTERS

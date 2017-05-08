@@ -284,8 +284,6 @@ SET_PROC_CLASS set_value_t set_next (struct set *set,
 
 SET_PROC_CLASS set_bits_t set_first_bits (struct set *set)
 {
-  struct set_segment *seg;
-
   CHK_SET(set);
   remove_empty(set);
 
@@ -340,7 +338,6 @@ SET_PROC_CLASS void set_move_next (struct set *src, set_value_t val,
                                    struct set *dst)
 {
   set_index_t index = SET_VAL_INDEX(val);
-  set_offset_t offset = SET_VAL_OFFSET(val);
   struct set_segment *seg = SET_SEGMENT(index);
   set_value_t cnt;
 
