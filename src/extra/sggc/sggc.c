@@ -302,7 +302,7 @@ static int do_not_reuse_memory;  /* Non-zero to suppress reuse */
 
 int sggc_init (unsigned max_segments)
 {
-  int i, j, k;
+  int j, k;
 
   /* Check that auxiliary block sizes aren't too big. */
 
