@@ -2488,6 +2488,13 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     return ans;
 }
 
+/* This is entirely legacy, with no known users (Mar 2012).
+   So we freeze the code involved (as much as possible). 
+
+   NOW DISABLED.
+ */
+
+#if 0
 
 static const struct {
     const char *name;
@@ -2514,14 +2521,6 @@ static int string2type(char *s)
     }
     error(_("type \"%s\" not supported in interlanguage calls"), s);
 }
-
-/* This is entirely legacy, with no known users (Mar 2012).
-   So we freeze the code involved (as much as possible). 
-
-   NOW DISABLED.
- */
-
-#if 0
 
 static void *RObjToCPtr2(SEXP s)
 {

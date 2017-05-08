@@ -48,6 +48,7 @@
    the R_CONST symbol defined in Rinternals.h is empty (rather than 'const'). */
 
 
+#define NEED_SGGC_FUNCTIONS
 #include "Defn.h"    /* Includes Rinternals.h, which defines R_CONST */
 #include <complex.h>
 
@@ -59,7 +60,7 @@
 #   define NILATTRIB /* nothing */
 #   define NUM_OFFSET(o) (o)
 #   define CONS_OFFSET(o) (o)
-#elif USE_AUX_FOR_ATTRIB
+#elif SIZEOF_CHAR_P == 8 && USE_AUX_FOR_ATTRIB
 #   define CPTR_FIELD(index,offset) .cptr = SGGC_CPTR_VAL(index,offset),
 #   define LENGTH1 .length = 1,
 #   define LENGTH1_NONVEC /* nothing */

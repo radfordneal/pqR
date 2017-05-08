@@ -44,13 +44,14 @@
 #define SGGC_EXTERN  /* So SGGC globals are actually defined here */
 
 #define R_USE_SIGNALS 1
+#define NEED_SGGC_FUNCTIONS
 #include <Defn.h>
+#include <sggc/sggc.c>
 #include <Print.h>
 #include <R_ext/GraphicsEngine.h> /* GEDevDesc, GEgetDevice */
 #include <R_ext/Rdynload.h>
 
 #include <helpers/helpers-app.h>
-#include <sggc/sggc.c>
 
 #undef NOT_LVALUE          /* Allow CAR, etc. on left of assignment here, */
 #define NOT_LVALUE(x) (x)  /* since it's needed to implement SETCAR, etc. */

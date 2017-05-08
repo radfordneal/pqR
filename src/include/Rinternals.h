@@ -79,6 +79,9 @@ pid_t Rf_fork(void);
 
 #include <R_ext/libextern.h>
 
+#ifndef NEED_SGGC_FUNCTIONS
+#define SGGC_NO_FUNCTIONS
+#endif
 #include <R_ext/sggc-app.h>
 
 #define ConstExtern extern    /* These are defined in const-objs.c */
@@ -90,7 +93,7 @@ pid_t Rf_fork(void);
  * function in those modules that actually need to assign (eg, memory.c).
  */
 
-#define NOT_LVALUE(x) (0,(x)) /* Makes using x on left of assignment an error */
+#define NOT_LVALUE(x) (0,(x)) /* Make use on left of assignment an error */
 
 
 /* Variables that need to be declared as firstprivate in omp parallel

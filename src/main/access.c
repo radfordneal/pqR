@@ -31,6 +31,7 @@
 #endif
 
 #define R_USE_SIGNALS 1
+#define NEED_SGGC_FUNCTIONS
 #include <Defn.h>
 #include <Print.h>
 #include <R_ext/Rdynload.h>
