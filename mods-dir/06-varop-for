@@ -1,4 +1,0 @@
-For loops in which the index variable goes through an integer sequence
-are now done without actualy allocating a vector to hold the sequence.
-This saves both space and time.  This is implemented using the variant
-result facility, which is used by ":" and other sequence primitives.

@@ -1,6 +1,0 @@
-Implement fast interface for primitive subassign functions.
-
-Also introduces R_NoObject.
-
-Correct information in help([[) ([[<- can have multtiple indexes).
-

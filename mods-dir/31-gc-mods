@@ -1,6 +1,0 @@
-Modifications to the garbage collector.
-
-Small tweak to process nodes more often, possibly improving cache performance.
-
-Scan symbol table first, and forward pointers from symbols directly, avoiding
-the need to forward the symbol itself.
