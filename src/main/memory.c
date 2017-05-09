@@ -522,7 +522,7 @@ static SEXP do_regFinaliz(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* THE GENERATIONAL GARBAGE COLLECTOR. */
 
 #define LOOK_AT(x) \
-  ((void) ((x) != R_NoObject ? sggc_look_at(CPTR_FROM_SEXP(x)) : 0))
+  ((x) != R_NoObject ? sggc_look_at(CPTR_FROM_SEXP(x)) : (void) 0)
 
 #define MARK(x) sggc_mark(CPTR_FROM_SEXP(x))
 
