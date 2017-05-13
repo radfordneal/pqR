@@ -39,7 +39,7 @@
 
 /* Enable the redefinition of "error" below to abort on invalid API arguments */
 
-#if 1
+#if 0
 #undef error
 #define error abort_on_error
 static R_NORETURN void abort_on_error(char *s,...)
