@@ -12,6 +12,35 @@ pqR-project.org site.
 The short version of these instructions, easier to read but maybe not
 always completely adequate, is as follows:
 
+  0) Some general notes:
+
+         o The build process takes a while, minutes to an hour or so,
+           depending on how fast your computer is.  Don't conclude
+           that the "make" command used below has hung up just because
+           it's taking a while.  It's important that the computer not
+           automatically decide to go to sleep while the build is
+           progressing.
+
+         o You may have to disable anti-virus software, which can
+           interfere with the build process by doing things like
+           opening a file that was created to snoop on it, leading to
+           an error when the build process tries to change the file
+           while another process has it open.
+
+         o Some general knowledge of how the Windows command prompt
+           window works will be helpful.  In particular, note that if
+           any of the file names referred to below have spaces in them
+           (possible because your user name has spaces), it will be
+           necessary to enclode the file name in double quotes ("..").
+
+         o Text files in the distribution follow the Linux/Unix/Mac
+           convention of marking ends of lines with LF only, whereas
+           Windows uses CR + LF.  Because of this, some Windows tools
+           won't show them correctly (though the "more" and "cat"
+           commands should work).  If you already have a version of R
+           installed, you can edit such files with the RGui or RStudio
+           editor.
+
   1) Obtain TeX from somewhere, such as http://miktex.org.  (If you
      get the basic MiKTeX version, note that it will at times ask
      about downloading more parts of TeX, and that this may result in
@@ -55,7 +84,8 @@ always completely adequate, is as follows:
 
      This will create the directory pqR-YYYY-MM-DD, which is both the
      source directory and the directory in which pqR will be built.
-     If you wish, you can rename this directory now (but not later).
+     If you wish, you can rename this directory now (but not later),
+     using the "mv" command.
 
   7) Change into the pqR-YYYY-MM-DD directory, and in it untar the 
      win-extra file you downloaded in step (4), as follows (or 
@@ -83,7 +113,16 @@ always completely adequate, is as follows:
      compressed pointers are enabled) at the start of fixed\h\config.h
      (in src\gnuwin32).
 
- 11) Issue the following commands in a Windows console (command
+ 11) Enter the command 
+
+          set R_NO_BASE_COMPILE=TRUE
+
+     if you don't want the base and recommended packages to be byte
+     compiled. (If you want byte compilation, though it isn't always
+     desirable for pqR, do not set R_NO_BASE_COMPILE at all, or set it
+     to FALSE.)
+
+ 12) Issue the following commands in a Windows console (command
      prompt) window (after issuing the commands in step (5)), in order
      to build pqR in-place in the source directory:
 
@@ -93,19 +132,11 @@ always completely adequate, is as follows:
           cd ..
           make cairodevices >make-cairo.out 2>&1
 
-     Including the command 
+     The first "make" command will take a while.  You can monitor the
+     make.out files from another console window to see how things are
+     progressing during the build.
 
-          set R_NO_BASE_COMPILE=TRUE
-
-     before the "make all recommended" command will inhibit byte
-     compilation of the base and recommended packages.  (If you want
-     byte compilation, do not set R_NO_BASE_COMPILE at all, or set it
-     to FALSE.)
-
-     You can monitor the make.out files from another console window to
-     see how things are progressing during the build.
-
- 12) You should now be able to run Rterm.exe, by typing the command
+ 13) You should now be able to run Rterm.exe, by typing the command
      <build-dir>\bin\<arch>\Rterm.exe to the Windows console, where
      <build-dir> is the source/build directory you are using and
      <arch> is i386 for 32-bit builds and x64 for 64-bit builds.
@@ -116,7 +147,7 @@ always completely adequate, is as follows:
 
      before running Rterm.  The default if this is not set is 0.
 
- 13) You can check the installation by running the command
+ 14) You can check the installation by running the command
 
          make check-all >check-all.out 2>&1
 
@@ -124,13 +155,13 @@ always completely adequate, is as follows:
      check-all.out in another console window.  You can run this check
      with varying numbers of helper threads, set as above.
 
- 14) You can make the PDF manuals (when in src/gnuwin32) with
+ 15) You can make the PDF manuals (when in src/gnuwin32) with
 
          make manuals >make-manuals.out 2>&1
 
- 15) You should be able to run the R Gui by typing the command
+ 16) You should be able to run the R Gui by typing the command
      <build-dir>\bin\<arch>\RGui.exe to the Windows command prompt.
      The number of helper threads can be set as for Rterm.
 
- 16) The programs R.exe and Rscript.exe in <build-dir>\bin should also
+ 17) The programs R.exe and Rscript.exe in <build-dir>\bin should also
      work now, with the number of helper threads set as above. 
