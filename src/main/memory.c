@@ -1127,6 +1127,7 @@ static void gc_strategy (sggc_nchunks_t nch)
        object being allocated. */
 
     if (nch > 0.4 * gc_big_chunks_last_full && nch > 0.7 * total_big_chunks) {
+        if (DEBUG_STRATEGY) REprintf("GC from large allocation\n");
         gc_next_level = 2;
         goto collect;
     }
@@ -1145,11 +1146,11 @@ static void gc_strategy (sggc_nchunks_t nch)
             gc_next_level = 1;
             goto collect;
         }
-    }
-
-    if (total_big_chunks > 3.0 * gc_big_chunks_last_full) {
-        gc_next_level = 2;
-        goto collect;
+        else if (total_big_chunks > 3.0 * gc_big_chunks_last_full) {
+            if (DEBUG_STRATEGY) REprintf("GC from big chunks level 2\n");
+            gc_next_level = 2;
+            goto collect;
+        }
     }
 
     /* See if a garbage collection should be done based on object counts,
@@ -1181,7 +1182,7 @@ static void gc_strategy (sggc_nchunks_t nch)
 
   collect:
 
-    if (gc_count - gc_count_last_full > 100) {
+    if (gc_next_level < 2 && gc_count - gc_count_last_full > 100) {
         if (DEBUG_STRATEGY) REprintf("Changed to level 2 by count\n");
         gc_next_level = 2;
     }
