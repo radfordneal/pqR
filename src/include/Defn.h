@@ -269,13 +269,8 @@ extern void R_ProcessEvents(void);
 
 /*  Heap and Pointer Protection Stack Sizes.  */
 
-#if defined HAVE_DECL_SIZE_MAX && HAVE_DECL_SIZE_MAX
-  typedef size_t R_size_t;
-# define R_SIZE_T_MAX SIZE_MAX
-#else
-# error SIZE_MAX is required for C99
-#endif
-
+typedef size_t R_size_t;
+#define R_SIZE_T_MAX SIZE_MAX
 
 #define Mega 1048576. /* 1 Mega Byte := 2^20 (= 1048576) Bytes */
 #define Giga 1073741824. /* 1 Giga Byte := 2^30 Bytes */

@@ -20,11 +20,7 @@
 #ifndef SGGC_APP_H_
 #define SGGC_APP_H_
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#else
-# include <Rconfig.h>
-#endif
+#include <Rconfig.h>
 
 
 /* USE ALTERNATIVE INTERFACE FOR SGGC_FIND_OBJECT_PTRS. */
