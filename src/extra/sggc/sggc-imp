@@ -258,30 +258,30 @@ SETS OF OBJECTS
 
 SGGC maintains several sets of objects, using the set facilities
 documented in set-doc.  Some of these sets share the same 'chain'.
-There are five chains, identified by symbols defined in set-app.h (the
-application specific header file for use of the set facility by SGGC),
-as follows:
+There are five chains, identified by symbols defined in sbset-app.h
+(the application specific header file for use of the sbset facility by
+SGGC), as follows:
 
-  SET_UNUSED_FREE_NEW   Used for sets of free or newly-allocated objects
+  SGGC_UNUSED_FREE_NEW  Used for sets of free or newly-allocated objects
                         of different kinds, called 'free_or_new[k]'
                         for each kind k, and a set of unused big
                         segments, called 'unused'.
 
-  SET_OLD_GEN1          Used for sets of objects in old generation 1,
+  SGGC_OLD_GEN1         Used for sets of objects in old generation 1,
                         separated by kind, called 'old_gen1[k]', plus
                         'old_gen1_big' for the big kinds.
 
-  SET_OLD_GEN2_UNCOL    Used for sets of objects in old generation 2,
+  SGGC_OLD_GEN2_UNCOL   Used for sets of objects in old generation 2,
                         separated by kind, called 'old_gen2[k]', plus
                         'old_gen2_big' for the big kinds, as well as
                         for the sets of uncollected objects, by kind,
                         called 'uncollected[k]', and for the set of
                         constant objects, called 'constants'.
 
-  SET_OLD_TO_NEW        Used for the set of objects possibly having 
+  SGGC_OLD_TO_NEW       Used for the set of objects possibly having 
                         old-to-new references, called 'old_to_new'.
 
-  SET_LOOK_AT           Used for the set of objects that need to be
+  SGGC_LOOK_AT          Used for the set of objects that need to be
                         looked at to follow pointers they contain,
                         called 'to_look_at'.
 
@@ -293,7 +293,7 @@ produce a slight efficiency advantage.  Note that big kinds must be
 put in a separate, single, set since big segments can change their
 kind, and would not be removed from a per-kind old_gen set in a way
 that would allow them to change to another set sharing the same chain
-(something possible only for removal with set_first).  This is OK,
+(something possible only for removal with sbset_first).  This is OK,
 because the 'free_or_new[k]' set for a big kind k contains all and
 only the newly-free big objects of kind k (with no objects freed in
 earlier collections).
@@ -321,10 +321,10 @@ when checking whether a new reference stored in an object requires
 putting the object in 'old_to_new'.
 
 Note that with five chains, plus four bytes of extra information used
-by SGGC, the size of a set_segment structure is 64 bytes, which may be
-a good size for cache performance.  As a power of two, it also allows
-efficient indexing in an array of segments, which is used with one
-implementation option (the alternative being to use an array of
+by SGGC, the size of a sbset_segment structure is 64 bytes, which may
+be a good size for cache performance.  As a power of two, it also
+allows efficient indexing in an array of segments, which is used with
+one implementation option (the alternative being to use an array of
 pointers to segments).
 
 
@@ -361,7 +361,7 @@ of kind k are added to the 'uncollected[k]' set when allocated, not to
 'free_or_new[k]'.
 
 The sggc_alloc_small_kind_quickly function uses a bit vector, called
-'sggc_next_free_bits[k]', to represent the free objects of kind k in
+'SGGC_next_free_bits[k]', to represent the free objects of kind k in
 the segment that such free objects are currently being taken from,
 with the next free object being 'sggc_next_free_val[k]'.  When
 'sggc_next_free_bits[k]' is zero, allocation of a new object will
@@ -392,7 +392,7 @@ compressed pointer to it, via the structure describing its segment.
 Once the marking process has finished, the objects in all the
 'free_or_new' sets are known to be unused.  However, some of them may
 still be in 'old_gen2' or 'old_gen1', so these sets are scanned to
-remove elements that are in a set in the SET_UNUSED_FREE_NEW chain.
+remove elements that are in a set in the SGGC_UNUSED_FREE_NEW chain.
 Such objects are also removed from the 'old_to_new' set (see below).
 
 If the application has registered a procedure that is to be called for
@@ -541,8 +541,8 @@ different implementation options.  The first two below are primarily
 useful for debugging and performance evaluation, since the default is
 likely to be the best choice.
 
-SET_USE_BUILTINS may be set to 0 or 1 to disable or enable use of the
-gcc/clang builtin functions for finding and counting 1 bits.  The
+SBSET_USE_BUILTINS may be set to 0 or 1 to disable or enable use of
+the gcc/clang builtin functions for finding and counting 1 bits.  The
 default if this is not set is to use them if the compiler appears to
 be gcc or clang.
 
@@ -603,12 +603,12 @@ include the following:
     allocating an object (moving them to 'small_unused' at that time,
     preferring to allocate from a partially-used segment), or in a
     separate pass over the 'free_or_new' sets at the end of a level 2
-    garbage collection.  The currently unused set_move_first and
-    set_move_next procedures provided by the set facility are intended
-    to facilitate this.  The segments in 'small_unused' could then be
-    reused for any small kind.  Their data areas might or might not be
-    freed when they are put in 'small_unused' (perhaps only if a call
-    of sggc_alloc_zeroed fails).
+    garbage collection.  The currently unused sbset_move_first and
+    sbset_move_next procedures provided by the set facility are
+    intended to facilitate this.  The segments in 'small_unused' could
+    then be reused for any small kind.  Their data areas might or
+    might not be freed when they are put in 'small_unused' (perhaps
+    only if a call of sggc_alloc_zeroed fails).
 
   o Currently, SGGC never frees memory used for auxiliary information,
     though it may be reused for other objects of the same kind (or a
@@ -654,7 +654,7 @@ include the following:
     field currently records the necessary information for this.
 
   o Uncollected objects with old-to-new references could be kept in a
-    separate set that uses the SET_OLD_TO_NEW chain (since they are
+    separate set that uses the SGGC_OLD_TO_NEW chain (since they are
     in separate kinds, hence don't share segments with collected
     objects).  A record could then be kept of the youngest generation
     of any reference from an uncollected object, allowing scanning of

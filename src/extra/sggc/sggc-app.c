@@ -20,7 +20,7 @@
 #define NEED_SGGC_FUNCTIONS
 #include <config.h>
 #include <Defn.h>
-#include "set.c"
+#include "sbset.c"
 
 
 #if USE_COMPRESSED_POINTERS

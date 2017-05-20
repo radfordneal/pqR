@@ -12,7 +12,7 @@ include $(top_builddir)/Makeconf
 
 distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
 
-SGGC_HEADERS = sggc-app.h sggc.h set-app.h set.h
+SGGC_HEADERS = sggc-app.h sggc.h sbset-app.h sbset.h
 
 ## Partially included by the API (1) headers in .., but not part of the
 ## API per se. 
@@ -46,11 +46,11 @@ sggc-app.h:	$(srcdir)/../../extra/sggc/sggc-app.h
 sggc.h:		$(srcdir)/../../extra/sggc/sggc.h
 	cp $(srcdir)/../../extra/sggc/sggc.h .
 
-set-app.h:	$(srcdir)/../../extra/sggc/set-app.h
-	cp $(srcdir)/../../extra/sggc/set-app.h .
+sbset-app.h:	$(srcdir)/../../extra/sggc/sbset-app.h
+	cp $(srcdir)/../../extra/sggc/sbset-app.h .
 
-set.h:		$(srcdir)/../../extra/sggc/set.h
-	cp $(srcdir)/../../extra/sggc/set.h .
+sbset.h:	$(srcdir)/../../extra/sggc/sbset.h
+	cp $(srcdir)/../../extra/sggc/sbset.h .
 
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@

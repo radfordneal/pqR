@@ -15,7 +15,7 @@ all: fixh config.h
 	@mkdir -p $(R_HOME)/include/R_ext
 	@cp -p $(SRC_HEADERS) $(OBJ_HEADERS) iconv.h $(R_HOME)/include
 	@cp -p ../extra/sggc/sggc.h ../extra/sggc/sggc-app.h \
-	       ../extra/sggc/set.h ../extra/sggc/set-app.h R_ext
+	       ../extra/sggc/sbset.h ../extra/sggc/sbset-app.h R_ext
 	@cp -p R_ext/*.h $(R_HOME)/include/R_ext
 	@cp -p ../extra/graphapp/graphapp.h ../extra/graphapp/ga.h \
 	  $(R_HOME)/include

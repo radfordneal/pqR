@@ -26,7 +26,7 @@
 /* SELECT WHETHER SGGC_NO_OBJECT IS ALL 0s OR ALL 1s. */
 
 #ifdef SGGC_NO_OBJECT_ZERO
-#define SET_NO_VALUE_ZERO
+#define SBSET_NO_VALUE_ZERO
 #endif
 
 
@@ -39,10 +39,10 @@
 #endif
 
 #ifdef SGGC_NO_FUNCTIONS
-#define SET_NO_FUNCTIONS
+#define SBSET_NO_FUNCTIONS
 #endif
 
-#include "set-app.h"
+#include "sbset-app.h"
 #include <stdlib.h>
 #ifdef SGGC_USE_MEMSET
 #include <string.h>
@@ -51,13 +51,13 @@
 
 /* COMPRESSED POINTER (INDEX, OFFSET) TYPE, AND NO OBJECT CONSTANT. */
 
-typedef set_value_t sggc_cptr_t;  /* Type of compressed pointer (index,offset)*/
+typedef sbset_value_t sggc_cptr_t; /* Type of compressed pointer, index+offset*/
 
-#define SGGC_CPTR_VAL(i,o) SET_VAL((i),(o))
-#define SGGC_SEGMENT_INDEX(p) SET_VAL_INDEX(p)
-#define SGGC_SEGMENT_OFFSET(p) SET_VAL_OFFSET(p)
+#define SGGC_CPTR_VAL(i,o) SBSET_VAL((i),(o))
+#define SGGC_SEGMENT_INDEX(p) SBSET_VAL_INDEX(p)
+#define SGGC_SEGMENT_OFFSET(p) SBSET_VAL_OFFSET(p)
 
-#define SGGC_NO_OBJECT SET_NO_VALUE   /* Special "no object" pointer */
+#define SGGC_NO_OBJECT SBSET_NO_VALUE   /* Special "no object" pointer */
 
 
 /* ARRAYS OF POINTERS TO SPACE FOR MAIN AND AUXILIARY DATA .  The sggc_data
@@ -110,7 +110,7 @@ SGGC_EXTERN sggc_dptr *sggc_aux2; /* Pointer to array of pointers
 
 #endif
 
-#define SGGC_CHUNKS_IN_SMALL_SEGMENT (1 << SET_OFFSET_BITS)
+#define SGGC_CHUNKS_IN_SMALL_SEGMENT (1 << SBSET_OFFSET_BITS)
 
 
 /* INLINE FUNCTION TO GET DATA POINTER FOR AN OBJECT, and similarly
@@ -129,21 +129,21 @@ SGGC_EXTERN sggc_dptr *sggc_aux2; /* Pointer to array of pointers
 #endif
 
 static inline char *SGGC_DATA (sggc_cptr_t cptr)
-{ return ((char *) (sggc_data[SET_VAL_INDEX(cptr)] 
-            + (SGGC_OFFSET_CALC) SGGC_CHUNK_SIZE * (SGGC_OFFSET_CALC) cptr));
+{ return ((char *) (sggc_data[SBSET_VAL_INDEX(cptr)] +
+   (SGGC_OFFSET_CALC) SGGC_CHUNK_SIZE * (SGGC_OFFSET_CALC) cptr));
 }
 
 #ifdef SGGC_AUX1_SIZE
 static inline char *SGGC_AUX1 (sggc_cptr_t cptr)
-{ return ((char *) (sggc_aux1[SET_VAL_INDEX(cptr)] 
-   + (SGGC_OFFSET_CALC) SGGC_AUX1_SIZE * (SGGC_OFFSET_CALC) cptr));
+{ return ((char *) (sggc_aux1[SBSET_VAL_INDEX(cptr)] +
+   (SGGC_OFFSET_CALC) SGGC_AUX1_SIZE * (SGGC_OFFSET_CALC) cptr));
 }
 #endif
 
 #ifdef SGGC_AUX2_SIZE
 static inline char *SGGC_AUX2 (sggc_cptr_t cptr)
-{ return ((char *) (sggc_aux2[SET_VAL_INDEX(cptr)] 
-   + (SGGC_OFFSET_CALC) SGGC_AUX2_SIZE * (SGGC_OFFSET_CALC) cptr));
+{ return ((char *) (sggc_aux2[SBSET_VAL_INDEX(cptr)] +
+   (SGGC_OFFSET_CALC) SGGC_AUX2_SIZE * (SGGC_OFFSET_CALC) cptr));
 }
 #endif
 
@@ -155,21 +155,21 @@ static inline char *SGGC_AUX2 (sggc_cptr_t cptr)
 #endif
 
 static inline char *SGGC_DATA (sggc_cptr_t cptr)
-{ return sggc_data[SET_VAL_INDEX(cptr)] 
-   + (SGGC_OFFSET_CALC)SGGC_CHUNK_SIZE * (SGGC_OFFSET_CALC)SET_VAL_OFFSET(cptr);
+{ return sggc_data[SBSET_VAL_INDEX(cptr)] +
+   (SGGC_OFFSET_CALC)SGGC_CHUNK_SIZE * (SGGC_OFFSET_CALC)SBSET_VAL_OFFSET(cptr);
 }
 
 #ifdef SGGC_AUX1_SIZE
 static inline char *SGGC_AUX1 (sggc_cptr_t cptr)
-{ return sggc_aux1[SET_VAL_INDEX(cptr)] 
-   + (SGGC_OFFSET_CALC)SGGC_AUX1_SIZE * (SGGC_OFFSET_CALC) SET_VAL_OFFSET(cptr);
+{ return sggc_aux1[SBSET_VAL_INDEX(cptr)] +
+   (SGGC_OFFSET_CALC)SGGC_AUX1_SIZE * (SGGC_OFFSET_CALC) SBSET_VAL_OFFSET(cptr);
 }
 #endif
 
 #ifdef SGGC_AUX2_SIZE
 static inline char *SGGC_AUX2 (sggc_cptr_t cptr)
-{ return sggc_aux2[SET_VAL_INDEX(cptr)] 
-   + (SGGC_OFFSET_CALC)SGGC_AUX2_SIZE * (SGGC_OFFSET_CALC) SET_VAL_OFFSET(cptr);
+{ return sggc_aux2[SBSET_VAL_INDEX(cptr)] +
+   (SGGC_OFFSET_CALC)SGGC_AUX2_SIZE * (SGGC_OFFSET_CALC) SBSET_VAL_OFFSET(cptr);
 }
 #endif
 
@@ -193,12 +193,12 @@ SGGC_EXTERN sggc_type_t *sggc_type;  /* Types of objects in each segment */
 
 /* Macro to access type of object, using the index of its segment. */
 
-#define SGGC_TYPE(cptr) (sggc_type[SET_VAL_INDEX(cptr)])
+#define SGGC_TYPE(cptr) (sggc_type[SBSET_VAL_INDEX(cptr)])
 
 /* Inline function to find the kind of the segment containing an object. */
 
 static inline sggc_kind_t SGGC_KIND (sggc_cptr_t cptr) 
-{ return SET_SEGMENT(SET_VAL_INDEX(cptr))->x.small.kind; /* same as big.kind */
+{ return SBSET_SEGMENT(SBSET_VAL_INDEX(cptr))->x.small.kind; /* == x.big.kind */
 }
 
 /* Numbers of chunks for the various kinds (zero for kinds for big segments). */
@@ -313,7 +313,7 @@ sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
 
 static inline int sggc_youngest_generation (sggc_cptr_t from_ptr)
 {
-  return set_chain_contains (SET_UNUSED_FREE_NEW, from_ptr);
+  return sbset_chain_contains (SGGC_UNUSED_FREE_NEW, from_ptr);
 }
 
 
@@ -322,7 +322,7 @@ static inline int sggc_youngest_generation (sggc_cptr_t from_ptr)
 
 static inline int sggc_not_marked (sggc_cptr_t cptr)
 {
-  return set_chain_contains (SET_UNUSED_FREE_NEW, cptr);
+  return sbset_chain_contains (SGGC_UNUSED_FREE_NEW, cptr);
 }
 
 
@@ -330,7 +330,7 @@ static inline int sggc_not_marked (sggc_cptr_t cptr)
 
 static inline int sggc_is_constant (sggc_cptr_t cptr)
 {
-  return SET_SEGMENT(SET_VAL_INDEX(cptr)) -> x.small.constant;
+  return SBSET_SEGMENT(SBSET_VAL_INDEX(cptr)) -> x.small.constant;
                                           /* x.big.constant is the same thing */
 }
 
@@ -341,10 +341,10 @@ static inline int sggc_is_constant (sggc_cptr_t cptr)
 static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
 {
   extern sggc_cptr_t sggc_next_free_val[SGGC_N_KINDS];
-  extern set_bits_t sggc_next_free_bits[SGGC_N_KINDS];
+  extern sbset_bits_t sggc_next_free_bits[SGGC_N_KINDS];
   extern int sggc_next_segment_not_free[SGGC_N_KINDS];
 
-  set_bits_t nfb = sggc_next_free_bits[kind];  /* bits indicating where free */
+  sbset_bits_t nfb = sggc_next_free_bits[kind]; /* bits indicating where free */
 
   if (nfb == 0)
   { return SGGC_NO_OBJECT;
@@ -357,17 +357,18 @@ static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
   if (nfb != 0)
   { sggc_cptr_t new_nfv = nfv + nch;
     if ((nfb&1) == 0) /* next object in segment not free, look for first free */
-    { int o = set_first_bit_pos(nfb);
+    { int o = sbset_first_bit_pos(nfb);
       nfb >>= o;
       new_nfv += o;
     }
     sggc_next_free_val[kind] = new_nfv;
   }
   else if (!sggc_next_segment_not_free[kind])
-  { sggc_cptr_t n = set_chain_next_segment (SET_UNUSED_FREE_NEW, nfv);
+  { sggc_cptr_t n = sbset_chain_next_segment (SGGC_UNUSED_FREE_NEW, nfv);
     sggc_next_free_val[kind] = n;
     if (n != SGGC_NO_OBJECT)
-    { nfb = set_chain_segment_bits(SET_UNUSED_FREE_NEW,n) >> SET_VAL_OFFSET(n);
+    { nfb = sbset_chain_segment_bits(SGGC_UNUSED_FREE_NEW,n) 
+              >> SBSET_VAL_OFFSET(n);
     }
   }
   else
@@ -391,9 +392,9 @@ static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
 
 #ifdef SGGC_KIND_UNCOLLECTED
   extern const int sggc_kind_uncollected[SGGC_N_KINDS];
-  extern struct set sggc_uncollected_sets[SGGC_N_KINDS];
+  extern struct sbset sggc_uncollected_sets[SGGC_N_KINDS];
   if (sggc_kind_uncollected[kind])
-  { set_add (&sggc_uncollected_sets[kind], nfv);
+  { sbset_add (&sggc_uncollected_sets[kind], nfv);
     sggc_info.uncol_count += 1;
   }
   else
@@ -412,27 +413,27 @@ static inline void sggc_old_to_new_check (sggc_cptr_t from_ptr,
 {
   /* If from_ptr is youngest generation, no need to check anything else. */
 
-  if (set_chain_contains (SET_UNUSED_FREE_NEW, from_ptr))
+  if (sbset_chain_contains (SGGC_UNUSED_FREE_NEW, from_ptr))
   { return;
   }
 
   /* Can quit now if from_ptr is already in an old-to-new set (which are
-     the only ones using the SET_OLD_TO_NEW chain). */
+     the only ones using the SGGC_OLD_TO_NEW chain). */
 
-  if (set_chain_contains (SET_OLD_TO_NEW, from_ptr))
+  if (sbset_chain_contains (SGGC_OLD_TO_NEW, from_ptr))
   { return;
   }
 
   /* Note:  from_ptr shouldn't be a constant, so below can look in whole chain,
      in order to check for from_ptr being old generation 2 or uncollected. */
 
-  if (set_chain_contains (SET_OLD_GEN2_UNCOL, from_ptr))
+  if (sbset_chain_contains (SGGC_OLD_GEN2_UNCOL, from_ptr))
   { 
     /* If from_ptr is in old generation 2 or uncollected, only others in 
        old generation 2, uncollected, or constants, can possibly be 
        referenced without using old-to-new. */
 
-    if (set_chain_contains (SET_OLD_GEN2_UNCOL, to_ptr)) 
+    if (sbset_chain_contains (SGGC_OLD_GEN2_UNCOL, to_ptr)) 
     { 
 #ifndef SGGC_KIND_UNCOLLECTED
 
@@ -462,7 +463,7 @@ static inline void sggc_old_to_new_check (sggc_cptr_t from_ptr,
     /* If from_ptr is in old generation 1, only references to newly 
        allocated objects require using old-to-new. */
 
-    if (!set_chain_contains (SET_UNUSED_FREE_NEW, to_ptr))
+    if (!sbset_chain_contains (SGGC_UNUSED_FREE_NEW, to_ptr))
     { return;
     }
   }
@@ -470,8 +471,8 @@ static inline void sggc_old_to_new_check (sggc_cptr_t from_ptr,
   /* If we get here, we need to record the existence of an old-to-new
      reference in from_ptr. */
 
-  extern struct set sggc_old_to_new_set;
-  set_add (&sggc_old_to_new_set, from_ptr);
+  extern struct sbset sggc_old_to_new_set;
+  sbset_add (&sggc_old_to_new_set, from_ptr);
 }
 
 
@@ -479,5 +480,5 @@ static inline void sggc_old_to_new_check (sggc_cptr_t from_ptr,
 
 static inline sggc_cptr_t sggc_next_uncollected_of_kind (sggc_cptr_t obj)
 {
-  return set_chain_next (SET_OLD_GEN2_UNCOL, obj);
+  return sbset_chain_next (SGGC_OLD_GEN2_UNCOL, obj);
 }

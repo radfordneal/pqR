@@ -1,0 +1,406 @@
+SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION
+       Application interface of the facility for maintaining sets of objects
+
+Copyright (c) 2016, 2017 Radford M. Neal.
+
+   This is part of the SGGC library, which is free software.  You can
+   redistribute it and/or modify it under the terms of the GNU General
+   Public License as published by the Free Software Foundation; either
+   version 2 of the License, or (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License along
+   with this program; if not, write to the Free Software Foundation, Inc.,
+   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+INTRODUCTION
+
+This facility supporting segmental bit-vector sets is designed for use
+by SGGC, but could be used for other purposes, and hence is documented
+separately here.
+
+The sbset facility manages sets of "values", each of which is in a
+"segment".  The number of possible values in a segment is fixed and in
+the present implementation is limited to a power of two between 8 and
+64 (larger values would require new coding and have a performance
+cost).  Not all the values allowed in a segment need exist.  Segments
+have integer indexes from 0 up, and values within a segment have
+offsets that are integers from 0 to the number of possible values in a
+segment minus one.  A value within a segment is identified by the pair
+of segment index and offset within segment, which must fit in 32 bits
+(though expanding this to 64 bits, allowing bigger indexes, would be
+possible).
+
+What segment indexes are permitted is determined by the application,
+via its definition of the SBSET_SEGMENT function/macro, and its calls
+of the sbset_segment_init procedure.  The application must reserve
+SBSET_NO_VALUE as something never used as a real value, but can select
+whether the (index, offset) pair for SBSET_NO_VALUE has both index and
+offset that are all 0 bits, or both index and offset that are all 1
+bits.
+
+Each set is associated with a "chain", with the restriction that two
+sets sharing the same chain must not both contain values that are in
+the same segment (see more on this below).  For some purposes, a chain
+can be regarded as a set that is the union of all sets sharing that
+chain.  The number of chains is intended to be small, and this number
+must be fixed at compile time.  The number of sets using these chains
+is not restricted, and sets could be dynamically created if desired.
+
+For some operations, the values in a set are ordered.  This ordering
+always groups values within one segment together, and the ordering
+within a segment is always by numeric offset within the segment.
+
+Each segment is associated with a data structure that contains, for
+every chain, a bit vector indicating which values within the segment
+are members of some set using that chain, along with the index of a
+following segment containing further members of this set (or an end
+flag).  The structure describing a set contains the identifier of the
+chain it uses, the index of the first segment containing members of
+the set (or an end flag, if there are none), and a count of how many
+elements are in the set.
+
+Functions are provided for testing for membership in some set that
+uses a chain, adding a value to a set, removing a value from a set,
+scanning the elements of a set in order, finding the number of
+elements in a set, and some other operations.
+
+
+USING THE SBSET FACILITY
+
+To use the sbset facility, an application should create an sbset-app.h
+file, which must start by defining some constants (see below), then
+include the sbset.h file, and conclude with some additional
+declarations (see below).
+
+The following constants should be declared with #define at the start
+of sbset-app.h:
+
+  SBSET_OFFSET_BITS  Number of bits in the "offset" of a value.  Must
+                     be 3, 4, 5, or 6, corresponding to 8, 16, 32, or
+                     64 possible values in a segment.
+
+  SBSET_CHAINS       Number of chains that may be used for sets.  Must
+                     be at least 1.  Larger values will result in 
+                     more memory being used for every segment.
+
+  SBSET_EXTRA_INFO   (optional) If desired, a declaration for additional
+                     information that is stored in the structure for a
+                     segment.  This might allow space to be used that
+                     would otherwise be wasted as padding for
+                     alignment.  Should have the form of a structure
+                     field, including the terminating semicolon.
+
+The application may also define the following:
+
+  SBSET_NO_VALUE_ZERO  If defined (as anything), SBSET_NO_VALUE will 
+                       consist of all 0 bits (rather than all 1 bits).
+
+For convenience, the application might also at this point define
+symbols for the chains, which are identified by integers from 0 to
+SBSET_CHAINS-1, though these symbols would be used only by the
+application itself.  Also, the definition of SBSET_EXTRA_INFO might
+involve various other declarations.
+
+The sbset.h file should then be included in sbset-app.h.  It will
+define the following types:
+
+  sbset_offset_t     The type of the offset of a value within a segment.
+                     Currently a generic int.  Not used in structures.
+
+  sbset_index_t      The type of the index used to identify a segment.
+                     Currently int32_t.
+
+  sbset_value_t      The type holding a value - an (index,offset) pair.
+                     Currently uint32_t.
+
+  struct sbset_segment  Structure holding information on a segment.
+                     Fields of this should not be accessed directly.
+
+  struct sbset       Structure holding information on a set.
+                     Fields of this should not be accessed directly.
+
+The following constant is also defined in sbset.h:
+
+  SBSET_NO_VALUE     A constant of type sbset_value_t that must not be
+                     used as an actual value, and hence can be used to
+                     indicate the absence of a value.  By default,
+                     this value has all 1s for both index and offset,
+                     but if the applicaton defines SBSET_NO_VALUE_ZERO
+                     it is instead all 0s.
+
+Finally, the sbset.h file will declare prototypes (or macros, or
+static inline definitions) for the functions documented below.  If
+sbset-app.h defines SBSET_DO_BEFORE_INLINE, the code it is defined to
+will be inserted before any inline function definitions in sbset.h,
+but after all the other declarations.
+
+Before including sbset.h in sbset-app.h, the application should
+declare a function (or macro), which (if a function) should have the
+following prototype:
+
+  struct sbset_segment *SBSET_SEGMENT (sbset_index_t index);
+
+This function (or macro) should return the pointer to the segment
+information for the segment with the given index.  It is up to the
+application to decide how memory for segment structures is allocated
+(eg, a static array, or using an array of pointers to structures
+allocated with malloc), and hence how a pointer is found from an
+index.  (Note that the actual definition of SBSET_SEGMENT might need
+to be put after sbset.h is included, as illustrated in
+test-set/sbset-app.h, or be put in SBSET_DO_BEFORE_INLINE.)
+
+The sbset-app.h file should be included in application modules that
+use the sbset facility.  If SBSET_NO_FUNCTIONS is defined before it is
+included, non-inline functions declarations will be omitted, with only
+types, macros, and inline functions defined.
+
+There are two options for how an application accesses the procedures
+in sbset.c.
+
+One method is to separately compile sbset.c into an object file, and
+then link this with modules that use the sbset facility (or put it in
+a library that will be used by such modules).
+
+The other method is to instead include sbset.c in every source file
+that uses the sbset facility, after including sbset-app.h, in which
+case sbset.c does not need to be compiled into an object file itself.
+(It would also be possible to include sbset.c in some modules, while
+linking others to the result of compiling sbset.c.)  The preprocessor
+symbol SBSET_STATIC must be defined as something other than 0 before
+including sbset.c, either by a #define in the source or by a compiler
+option.  SBSET_STATIC must be undefined, or defining as 0, when
+sbset.c is compiled separately.
+
+Note that the sbset facility does not use any persistent variables, so
+there is no duplicatation of state from including sbset.c in more than
+one module.  However, memory may be wasted by duplication of code if
+sbset.c is included in many modules.  The advantages of including
+sbset.c rather than linking to it are that the names of the sbset
+facility procedures will be declared "static", avoiding potential name
+conflicts, and that an optimizing compiler may be able to produce
+faster code when it can see the definitions of the sbset facility's
+procedures (eg, sometimes inlining code).
+
+Whether the sbset facility tries to use fast builtin functions for
+finding and counting 1 bits in a word can be controlled by defining
+the SBSET_USE_BUILTINS pre-processor symbol to be 0 or 1.  If it is
+not defined, the builtin functions are used when the gcc or clang
+compilers are used (as indicated by __GNUC__ or __clang__ being
+defined).
+
+
+SETS SHARING THE SAME CHAIN
+
+To keep the size of a segment structure small, it is desirable for the
+number of chains that are used for sets to be small.  Many sets can
+share the same chain provided certain restrictions and assumptions are
+satisfied.
+
+First, two sets sharing the same chain must not, at the same time,
+contain elements that are values in the same segment.  (This is
+because membership of values within one segment is represented by a
+single bit vector for each chain, which cannot represent the
+memberships of two different sets.)
+
+Furthermore, a set must not even contain an element that is in a
+segment if a value in that segment was _previously_ an element of
+another set using the same chain, _unless_ that element was removed
+from the other chain using the 'remove' option of the sbset_first
+function (and not subsequently added again).
+
+Tests for membership in a set are always actually tests for membership
+in any set that uses a given chain - ie, for membership in the union
+of all sets sharing the chain.  This may sometimes be what is desired.
+Membership in a single set can be determined using sbset_contains only
+if it is guaranteed (by the structure of the application) that the
+value cannot be a member of any other set using the same chain.
+
+
+FUNCTIONS IMPLEMENTING SET OPERATIONS
+
+The following functions (or macros) are provided by the sbset facility
+for use in an application, with prototypes (if functions) as shown:
+
+  sbset_value_t SBSET_VAL (sbset_index_t index, sbset_offset_t offset)
+
+    Creates a value that may be an element of a set, from a segment
+    index and an offset within this segment.  Before this value can be
+    used, the segment with the given index must be initialized with
+    sbset_segment_init.
+
+  sbset_index_t SBSET_VAL_INDEX (sbset_value_t val)
+
+    Returns the segment index of a value, as was passed to SBSET_VAL.
+
+  sbset_offset_t SBSET_VAL_OFFSET (sbset_value_t val)
+
+    Returns the offset within its segment of a value, as was passed to
+    SBSET_VAL.
+
+  void sbset_init (struct sbset *set, int chain)
+
+    Initializes a set structure, as an empty set that uses the
+    indicated chain (which must be between 0 and SBSET_CHAINS-1).
+    Note that the set must never contain elements with the same
+    segment index as elements of any other set using the same chain.
+
+  void sbset_segment_init (struct sbset_segment *seg)
+
+    Initializes a segment structure, after which values within this
+    segment may be put in sets.  The application is responsible for
+    associating segment structures with segment indexes (as is done
+    with the SBSET_SEGMENT function it defines).
+
+  int sbset_chain (struct sbset *set);
+
+    Returns the chain used by a set, as was passed to sbset_init when
+    the set was initialized.
+
+  int sbset_add (struct sbset *set, sbset_value_t val)
+
+    Changes 'set' so that it contains 'val' as an element.  Returns 1
+    if 'set' had already contained 'val', 0 if not.  Note that 'val'
+    must not be added to a set if that set shares its chain with
+    another set that contains elements in the same segment as 'val',
+    or that previously contained such elements unless they were
+    removed using the 'remove' option of sbset_first.
+
+  int sbset_remove (struct sbset *set, sbset_value_t val)
+
+    Removes 'val' from 'set', and returns 1 if 'val' was previously in
+    'set', and 0 if not.  The caller of remove must ensure that 'val'
+    is not a member of any other set using the same chain as 'set'.
+    Note that removing all elements in a segment from a set with
+    sbset_remove is not sufficient to permit this segment to be used
+    in another set using the same chain.
+
+  int sbset_contains (struct sbset *set, sbset_value_t val)
+
+    Returns 1 if 'val' is an element of any set using the same chain
+    as 'set', and 0 otherwise.  Note that a returned value of 1 is
+    indicative of membership in 'set' only if it is guaranteed that
+    'val' is not a member of any other set using the same chain.
+
+  int sbset_chain_contains (int chain, sbset_value_t val)
+
+    Returns 1 if 'val' is an element of any set using 'chain' (ie, is
+    a member of the union of all sets using 'chain'), and 0 otherwise.
+
+  int sbset_chain_contains_any_in_segment (int chain, sbset_value_t val)
+
+    Returns 1 if any set using 'chain' contains any elements in the
+    same segment as 'val'.
+
+  sbset_value_t sbset_first (struct sbset *set, int remove)
+
+    Finds the first element in 'set', returning SBSET_NO_VALUE if the
+    set is empty.  If the 'remove' argument is non-zero, the value
+    found is also removed from 'set'.  If the value is removed, and no
+    other values from the same segment are elements of 'set', the
+    values in this segment may afterward be added to another set that
+    uses the same chain as 'set'.
+
+  sbset_value_t sbset_next (struct sbset *set, sbset_value_t val,
+                            int remove)
+
+    Returns the next element of 'set' after 'val', which must be an
+    element of 'set.  Returns SBSET_NO_VALUE if there are no elements
+    past 'val'.  If the 'remove' argument is non-zero, 'val' is also
+    removed from 'set' (but the element returned is not removed).
+
+    If 'val' is not removed, the value returned (if not SBSET_NO_VALUE) 
+    will either be in the same segment as 'val' or in the next
+    segment.  This is of relevance if sbset_move_next will be used.
+
+  sbset_value_t sbset_chain_next (int chain, sbset_value_t val)
+
+    Like sbset_next, except that the set is specified by a chain
+    ('val' must be an element of a set using that chain), and there is
+    no option to remove the element.
+
+  sbset_value_t sbset_chain_next_segment (int chain, sbset_value_t val)
+
+    Returns the next element after 'val' that is in a different
+    segment, within the set using 'chain' that contains 'val'.  It is
+    an error for 'val' not be be in any set using 'chain'.  Returns
+    SBSET_NO_VALUE if there is no such element.
+
+  sbset_bits_t sbset_first_bits (struct sbset *set)
+
+    Returns the bit vector indicating membership of all values in the
+    segment of the first element in 'set', with the low-order bit
+    being for the value with offset zero.  If 'set' is empty, the
+    value returned is zero, which will not be returned otherwise.
+
+  sbset_bits_t sbset_chain_segment_bits (int chain, sbset_value_t val)
+
+    Returns the bit vector indicating membership in a set using
+    'chain' of all values in the the segment containing 'val' (which
+    must be an element of a set using 'chain').
+
+  void sbset_assign_segment_bits (struct sbset *set, sbset_value_t val, 
+                                                   sbset_bits_t b)
+
+    Sets the bit vector indicating membership in 'set' for the
+    segment containing 'val' to the bit vector 'b'.  When
+    sbset_assign_segment_bits is called, 'val' must already be an
+    element of 'set'.  This operation has the effect of adding or
+    removing values for which the bit at their offset position differs
+    between 'b' and the previous vector of bits.  Removing all
+    elements in the segment by using 0 for 'b' is allowed.
+
+  void sbset_move_first (struct sbset *src, struct sbset *dst)
+
+    Moves elements in the first segment of one set to another set that
+    uses the same chain.  All elements of 'src' that are in the
+    segment containing the first element of 'src' are moved to 'dst'
+    (becoming its first elements).  It is an error for 'src' to be
+    empty, or for 'src' and 'dst' to use different chains.
+
+  void sbset_move_next (struct sbset *src, sbset_value_t val, 
+                        struct sbset *dst)
+
+    Moves elements of 'src' in the segment after the segment
+    containing 'val' to the front of 'dst'.  It is an error for there
+    to be no elements of 'src' after 'val' that are in a different
+    segment from 'val', or for 'src' and 'dst' to use different
+    chains.
+
+  void sbset_add_segment (struct sbset *set, sbset_value_t val, int chain)
+
+    Add to 'set' all elements of sets using the given 'chain' that are
+    in the same segment as 'val' (which need not be an element of any
+    set using 'chain').  The added elements must not be in any other
+    set using the same chain as 'set'.
+
+  void sbset_remove_segment (struct sbset *set, sbset_value_t val,
+                             int chain)
+
+    Removes from 'set' all elements of sets using the given 'chain'
+    that are in the same segment as 'val' (which must be an element of
+    'set', but need not be an element of any set using 'chain').
+
+  sbset_value_t sbset_n_elements (struct sbset *set)
+
+    Returns the number of elements in 'set', zero if the set is empty.
+    The return type is sbset_value_t because this is guaranteed to be
+    a large enough integer type (unsigned).
+
+  int sbset_bit_count (sbset_bits_t b)
+
+    Returns 1 bits in 'b'.  This is mainly for internal use, but may
+    be useful to applications that use sbset_segment_bits.
+
+  int sbset_first_bit_pos (sbset_bits_t b)
+
+    Returns the index of the first (lowest-order) 1 bit in 'b', with
+    the bottom bit having index 0.  This is mainly for internal use,
+    but may be useful to applications that use sbset_segment_bits.
+
+All the functions above take O(1) amortized time.

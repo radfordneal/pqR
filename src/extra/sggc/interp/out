@@ -1,0 +1,205 @@
+BASE RUNS
+--
+ 
+RUNS WITH -alloc-kind
+--
+ 
+RUNS WITH -alloc-small-kind
+--
+ 
+RUNS WITH -alloc-small-kind-quickly
+--
+ 
+RUNS WITH -call-freed
+--- out-e-i	2017-04-16 19:36:19.000000000 -0400
++++ o-e-i	2017-05-20 12:24:04.000000000 -0400
+@@ -14,3 +14,5 @@
+ Counts... Gen0: 2, Gen1: 39, Gen2: 714, Uncollected: 0
+ Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
+ Number of segments: 31,  Total memory usage: 18639 bytes
++Number of freed objects: 45246
++Freed + still around: 46001
+--
+--- out-e-r	2017-04-16 19:36:19.000000000 -0400
++++ o-e-r	2017-05-20 12:24:04.000000000 -0400
+@@ -14,3 +14,5 @@
+ Counts... Gen0: 86, Gen1: 93, Gen2: 750, Uncollected: 0
+ Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
+ Number of segments: 35,  Total memory usage: 21555 bytes
++Number of freed objects: 62556
++Freed + still around: 63485
+ 
+RUNS WITH -check-valid
+--
+ 
+RUNS WITH -clear-free
+--
+ 
+RUNS WITH -clear-free-no-reuse
+--- out-e-i	2017-04-16 19:36:19.000000000 -0400
++++ o-e-i	2017-05-20 12:24:04.000000000 -0400
+@@ -13,4 +13,4 @@
+ Allocated objects: 46001
+ Counts... Gen0: 2, Gen1: 39, Gen2: 714, Uncollected: 0
+ Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
+-Number of segments: 31,  Total memory usage: 18639 bytes
++Number of segments: 1155,  Total memory usage: 722835 bytes
+--
+--- out-e-r	2017-04-16 19:36:19.000000000 -0400
++++ o-e-r	2017-05-20 12:24:04.000000000 -0400
+@@ -13,4 +13,4 @@
+ Allocated objects: 63485
+ Counts... Gen0: 86, Gen1: 93, Gen2: 750, Uncollected: 0
+ Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
+-Number of segments: 35,  Total memory usage: 21555 bytes
++Number of segments: 1554,  Total memory usage: 986442 bytes
+ 
+RUNS WITH -data-blocking
+--
+ 
+RUNS WITH -db
+--
+ 
+RUNS WITH -find-obj-ret
+--
+ 
+RUNS WITH -memset-quickly
+--
+ 
+RUNS WITH -no-builtins
+--
+ 
+RUNS WITH -no-max-segments
+--
+ 
+RUNS WITH -no-object-zero
+--
+ 
+RUNS WITH -no-offset
+--
+ 
+RUNS WITH -no-sbset-static
+--
+ 
+RUNS WITH -no-segment-at-a-time
+--
+ 
+RUNS WITH -pg
+--
+ 
+RUNS WITH -seg-blocking
+--
+ 
+RUNS WITH -seg-direct
+--- out-e-i	2017-04-16 19:36:19.000000000 -0400
++++ o-e-i	2017-05-20 12:24:05.000000000 -0400
+@@ -13,4 +13,4 @@
+ Allocated objects: 46001
+ Counts... Gen0: 2, Gen1: 39, Gen2: 714, Uncollected: 0
+ Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
+-Number of segments: 31,  Total memory usage: 18639 bytes
++Number of segments: 31,  Total memory usage: 18391 bytes
+--
+--- out-e-r	2017-04-16 19:36:19.000000000 -0400
++++ o-e-r	2017-05-20 12:24:05.000000000 -0400
+@@ -13,4 +13,4 @@
+ Allocated objects: 63485
+ Counts... Gen0: 86, Gen1: 93, Gen2: 750, Uncollected: 0
+ Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
+-Number of segments: 35,  Total memory usage: 21555 bytes
++Number of segments: 35,  Total memory usage: 21275 bytes
+ 
+RUNS WITH -seg-direct-no-max
+--- out-e-i	2017-04-16 19:36:19.000000000 -0400
++++ o-e-i	2017-05-20 12:24:05.000000000 -0400
+@@ -13,4 +13,4 @@
+ Allocated objects: 46001
+ Counts... Gen0: 2, Gen1: 39, Gen2: 714, Uncollected: 0
+ Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
+-Number of segments: 31,  Total memory usage: 18639 bytes
++Number of segments: 31,  Total memory usage: 18391 bytes
+--
+--- out-e-r	2017-04-16 19:36:19.000000000 -0400
++++ o-e-r	2017-05-20 12:24:05.000000000 -0400
+@@ -13,4 +13,4 @@
+ Allocated objects: 63485
+ Counts... Gen0: 86, Gen1: 93, Gen2: 750, Uncollected: 0
+ Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
+-Number of segments: 35,  Total memory usage: 21555 bytes
++Number of segments: 35,  Total memory usage: 21275 bytes
+ 
+RUNS WITH -uncollected-nil
+--- out-e-i	2017-04-16 19:36:19.000000000 -0400
++++ o-e-i	2017-05-20 12:24:05.000000000 -0400
+@@ -11,6 +11,6 @@
+ 11 \ l
+ 12 \ ((O I) (I I) (I O I) (I I I) (I I O I) (I O I I) (I O O O I) (I I O O I) (I I I O I) (I O I I I) (I I I I I) (I O I O O I) (I O O I O I) (I I O I O I) (I I I I O I) (I O I O I I) (I I O I I I) (I O I I I I) (I I O O O O I) (I I I O O O I) (I O O I O O I) (I I I I O O I) (I I O O I O I) (I O O I I O I) (I O O O O I I) (I O I O O I I) (I I I O O I I) (I I O I O I I) (I O I I O I I) (I O O O I I I) (I I I I I I I))
+ Allocated objects: 46001
+-Counts... Gen0: 2, Gen1: 39, Gen2: 714, Uncollected: 0
+-Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
++Counts... Gen0: 2, Gen1: 39, Gen2: 713, Uncollected: 1
++Big chunks... Gen0: 0, Gen1: 0, Gen2: 0, Uncollected: 1
+ Number of segments: 31,  Total memory usage: 18639 bytes
+--
+--- out-e-r	2017-04-16 19:36:19.000000000 -0400
++++ o-e-r	2017-05-20 12:24:05.000000000 -0400
+@@ -11,6 +11,6 @@
+ 11 \ l
+ 12 \ ((O I) (I I) (I O I) (I I I) (I I O I) (I O I I) (I O O O I) (I I O O I) (I I I O I) (I O I I I) (I I I I I) (I O I O O I) (I O O I O I) (I I O I O I) (I I I I O I) (I O I O I I) (I I O I I I) (I O I I I I) (I I O O O O I) (I I I O O O I) (I O O I O O I) (I I I I O O I) (I I O O I O I) (I O O I I O I) (I O O O O I I) (I O I O O I I) (I I I O O I I) (I I O I O I I) (I O I I O I I) (I O O O I I I) (I I I I I I I))
+ Allocated objects: 63485
+-Counts... Gen0: 86, Gen1: 93, Gen2: 750, Uncollected: 0
+-Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
++Counts... Gen0: 86, Gen1: 93, Gen2: 749, Uncollected: 1
++Big chunks... Gen0: 0, Gen1: 0, Gen2: 0, Uncollected: 1
+ Number of segments: 35,  Total memory usage: 21555 bytes
+ 
+RUNS WITH -uncollected-nil-syms
+--- out-e-i	2017-04-16 19:36:19.000000000 -0400
++++ o-e-i	2017-05-20 12:24:05.000000000 -0400
+@@ -11,6 +11,6 @@
+ 11 \ l
+ 12 \ ((O I) (I I) (I O I) (I I I) (I I O I) (I O I I) (I O O O I) (I I O O I) (I I I O I) (I O I I I) (I I I I I) (I O I O O I) (I O O I O I) (I I O I O I) (I I I I O I) (I O I O I I) (I I O I I I) (I O I I I I) (I I O O O O I) (I I I O O O I) (I O O I O O I) (I I I I O O I) (I I O O I O I) (I O O I I O I) (I O O O O I I) (I O I O O I I) (I I I O O I I) (I I O I O I I) (I O I I O I I) (I O O O I I I) (I I I I I I I))
+ Allocated objects: 46001
+-Counts... Gen0: 2, Gen1: 39, Gen2: 714, Uncollected: 0
+-Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
++Counts... Gen0: 2, Gen1: 39, Gen2: 649, Uncollected: 65
++Big chunks... Gen0: 0, Gen1: 0, Gen2: 0, Uncollected: 1
+ Number of segments: 31,  Total memory usage: 18639 bytes
+--
+--- out-e-r	2017-04-16 19:36:19.000000000 -0400
++++ o-e-r	2017-05-20 12:24:05.000000000 -0400
+@@ -11,6 +11,6 @@
+ 11 \ l
+ 12 \ ((O I) (I I) (I O I) (I I I) (I I O I) (I O I I) (I O O O I) (I I O O I) (I I I O I) (I O I I I) (I I I I I) (I O I O O I) (I O O I O I) (I I O I O I) (I I I I O I) (I O I O I I) (I I O I I I) (I O I I I I) (I I O O O O I) (I I I O O O I) (I O O I O O I) (I I I I O O I) (I I O O I O I) (I O O I I O I) (I O O O O I I) (I O I O O I I) (I I I O O I I) (I I O I O I I) (I O I I O I I) (I O O O I I I) (I I I I I I I))
+ Allocated objects: 63485
+-Counts... Gen0: 86, Gen1: 93, Gen2: 750, Uncollected: 0
+-Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
++Counts... Gen0: 86, Gen1: 93, Gen2: 685, Uncollected: 65
++Big chunks... Gen0: 0, Gen1: 0, Gen2: 0, Uncollected: 1
+ Number of segments: 35,  Total memory usage: 21555 bytes
+ 
+RUNS WITH -uncollected-nil-syms-globals
+--- out-e-i	2017-04-16 19:36:19.000000000 -0400
++++ o-e-i	2017-05-20 12:24:05.000000000 -0400
+@@ -11,6 +11,6 @@
+ 11 \ l
+ 12 \ ((O I) (I I) (I O I) (I I I) (I I O I) (I O I I) (I O O O I) (I I O O I) (I I I O I) (I O I I I) (I I I I I) (I O I O O I) (I O O I O I) (I I O I O I) (I I I I O I) (I O I O I I) (I I O I I I) (I O I I I I) (I I O O O O I) (I I I O O O I) (I O O I O O I) (I I I I O O I) (I I O O I O I) (I O O I I O I) (I O O O O I I) (I O I O O I I) (I I I O O I I) (I I O I O I I) (I O I I O I I) (I O O O I I I) (I I I I I I I))
+ Allocated objects: 46001
+-Counts... Gen0: 2, Gen1: 39, Gen2: 714, Uncollected: 0
+-Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
+-Number of segments: 31,  Total memory usage: 18639 bytes
++Counts... Gen0: 2, Gen1: 39, Gen2: 585, Uncollected: 129
++Big chunks... Gen0: 0, Gen1: 0, Gen2: 0, Uncollected: 1
++Number of segments: 31,  Total memory usage: 18895 bytes
+--
+--- out-e-r	2017-04-16 19:36:19.000000000 -0400
++++ o-e-r	2017-05-20 12:24:05.000000000 -0400
+@@ -11,6 +11,6 @@
+ 11 \ l
+ 12 \ ((O I) (I I) (I O I) (I I I) (I I O I) (I O I I) (I O O O I) (I I O O I) (I I I O I) (I O I I I) (I I I I I) (I O I O O I) (I O O I O I) (I I O I O I) (I I I I O I) (I O I O I I) (I I O I I I) (I O I I I I) (I I O O O O I) (I I I O O O I) (I O O I O O I) (I I I I O O I) (I I O O I O I) (I O O I I O I) (I O O O O I I) (I O I O O I I) (I I I O O I I) (I I O I O I I) (I O I I O I I) (I O O O I I I) (I I I I I I I))
+ Allocated objects: 63485
+-Counts... Gen0: 86, Gen1: 93, Gen2: 750, Uncollected: 0
+-Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
++Counts... Gen0: 86, Gen1: 93, Gen2: 621, Uncollected: 129
++Big chunks... Gen0: 0, Gen1: 0, Gen2: 0, Uncollected: 1
+ Number of segments: 35,  Total memory usage: 21555 bytes

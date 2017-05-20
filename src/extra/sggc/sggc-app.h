@@ -67,7 +67,7 @@
 
 #define SGGC_USE_OFFSET_POINTERS 1  /* Use offset form of data pointers */
 
-#define SET_STATIC 1          /* Static set procedures in source, not linked */
+#define SBSET_STATIC 1        /* Static set procedures in source, not linked */
 
 #define SGGC_NO_OBJECT_ZERO   /* Make SGGC_NO_OBJECT be all 0s rather than 1s */
 

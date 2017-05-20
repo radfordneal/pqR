@@ -18,7 +18,7 @@ with various option settings to test these out, as is done in the
 Makefile supplied.
 
 A facility used by SGGC for managing sets of values is documented in
-set-doc, and tested in test-set, also runnable with run-tests.
+sbset-doc, and tested in test-sbset, also runnable with run-tests.
 
 See VERSIONS for information on current and past stable versions.
 
