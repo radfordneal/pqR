@@ -95,7 +95,7 @@ interp-memset-quickly:	interp.c sggc.c sbset.c sggc-app.h sggc.h \
 	$(CC) -g -O3 -march=native -mtune=native \
 	 -DSGGC_MAX_SEGMENTS=10000 -DSBSET_STATIC=1 \
 	 -DSGGC_USE_OFFSBSET_POINTERS=1 \
-	 -DSGGC_USE_MEMSET \
+	 -DSGGC_USE_MEMSET -DSGGC_ALLOC_DATA_ZERO \
 	 interp.c sggc.c -o interp-memset-quickly
 
 interp-seg-direct:	interp.c sggc.c sbset.c sggc-app.h sggc.h \

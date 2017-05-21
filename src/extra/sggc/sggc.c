@@ -84,15 +84,27 @@
 #endif
 
 
-/* ALLOCATE / FREE MACROS.  Defaults to the system calloc/free if something
-   else is not defined in sggc-app.h. */
+/* ALLOCATE / FREE MACROS.  Defaults to the system calloc/malloc/free
+   if something else is not defined in sggc-app.h.  Also defines the
+   appropriate allocation routine for data areas, according to whether
+   SGGC_DATA_ALLOC_ZERO is defined. */
 
-#ifndef sggc_alloc_zeroed
-#define sggc_alloc_zeroed(n) calloc(n,1)
+#ifndef sggc_mem_alloc_zero
+#define sggc_mem_alloc_zero(n) calloc(n,1)
 #endif
 
-#ifndef sggc_free
-#define sggc_free free
+#ifndef sggc_mem_alloc
+#define sggc_mem_alloc(n) malloc(n)
+#endif
+
+#ifndef sggc_mem_free
+#define sggc_mem_free free
+#endif
+
+#ifdef SGGC_DATA_ALLOC_ZERO
+#define sggc_mem_alloc_data(n) sggc_mem_alloc_zero(n)
+#else
+#define sggc_mem_alloc_data(n) sggc_mem_alloc(n)
 #endif
 
 
@@ -322,42 +334,42 @@ int sggc_init (unsigned max_segments)
 
 #ifndef SGGC_MAX_SEGMENTS
 
-    sggc_segment = sggc_alloc_zeroed (max_segments * sizeof *sggc_segment);
+    sggc_segment = sggc_mem_alloc (max_segments * sizeof *sggc_segment);
     if (sggc_segment == NULL)
     { return 1;
     }
 
-    sggc_data = sggc_alloc_zeroed (max_segments * sizeof *sggc_data);
+    sggc_data = sggc_mem_alloc (max_segments * sizeof *sggc_data);
     if (sggc_data == NULL)
-    { sggc_free((void*)sggc_segment);
+    { sggc_mem_free((void*)sggc_segment);
       return 2;
     }
 
-    sggc_type = sggc_alloc_zeroed (max_segments * sizeof *sggc_type);
+    sggc_type = sggc_mem_alloc (max_segments * sizeof *sggc_type);
     if (sggc_type == NULL)
-    { sggc_free((void*)sggc_segment);
-      sggc_free((void*)sggc_data);
+    { sggc_mem_free((void*)sggc_segment);
+      sggc_mem_free((void*)sggc_data);
       return 3;
     }
 
 #   ifdef SGGC_AUX1_SIZE
-      sggc_aux1 = sggc_alloc_zeroed (max_segments * sizeof *sggc_aux1);
+      sggc_aux1 = sggc_mem_alloc (max_segments * sizeof *sggc_aux1);
       if (sggc_aux1 == NULL)
-      { sggc_free((void*)sggc_segment);
-        sggc_free((void*)sggc_data);
-        sggc_free((void*)sggc_type);
+      { sggc_mem_free((void*)sggc_segment);
+        sggc_mem_free((void*)sggc_data);
+        sggc_mem_free((void*)sggc_type);
         return 4;
       }
 #   endif
 
 #   ifdef SGGC_AUX2_SIZE
-      sggc_aux2 = sggc_alloc_zeroed (max_segments * sizeof *sggc_aux2);
+      sggc_aux2 = sggc_mem_alloc (max_segments * sizeof *sggc_aux2);
       if (sggc_aux2 == NULL)
-      { sggc_free((void*)sggc_segment);
-        sggc_free((void*)sggc_data);
-        sggc_free((void*)sggc_type);
+      { sggc_mem_free((void*)sggc_segment);
+        sggc_mem_free((void*)sggc_data);
+        sggc_mem_free((void*)sggc_type);
 #       ifdef SGGC_AUX1_SIZE
-          sggc_free((void*)sggc_aux1);
+          sggc_mem_free((void*)sggc_aux1);
 #       endif
         return 5;
       }
@@ -580,7 +592,7 @@ static sbset_index_t new_segment (void)
 # elif SGGC_SEG_BLOCKING > 1
     if (seg_block_remaining == 0)
     { char *sb;
-      sb = sggc_alloc_zeroed (SGGC_SEG_BLOCKING * sizeof (struct sbset_segment));
+      sb = sggc_mem_alloc_zero (SGGC_SEG_BLOCKING*sizeof(struct sbset_segment));
       if (sb == NULL)
       { return -1;
       }
@@ -603,7 +615,7 @@ static sbset_index_t new_segment (void)
     seg_block += 1;
     seg_block_remaining -= 1;
 # else
-    seg = sggc_alloc_zeroed (sizeof **sggc_segment);
+    seg = sggc_mem_alloc_zero (sizeof **sggc_segment);
     if (seg == NULL)
     { return -1;
     }
@@ -647,7 +659,6 @@ static sbset_index_t new_segment (void)
 
 
 /* ARRANGE THAT A SMALL DATA AREA IS AVAILABLE.  Sets small_data_area_next 
-
    to NULL if it couldn't allocate space.  Otherwise, small_data_area_next 
    is set to point just past the data area that is available, which is of 
    size SMALL_DATA_AREA_SIZE.  If the data area is not used in the end, 
@@ -661,11 +672,11 @@ static void get_small_data_area (void)
   { 
 #   if SGGC_SMALL_DATA_AREA_ALIGN
       small_data_area_next = 
-       sggc_alloc_zeroed (SMALL_DATA_AREA_SIZE * SGGC_SMALL_DATA_AREA_BLOCKING
+       sggc_mem_alloc_data (SMALL_DATA_AREA_SIZE*SGGC_SMALL_DATA_AREA_BLOCKING
                             + SGGC_SMALL_DATA_AREA_ALIGN - 1);
 #   else
       small_data_area_next = 
-       sggc_alloc_zeroed (SMALL_DATA_AREA_SIZE * SGGC_SMALL_DATA_AREA_BLOCKING);
+       sggc_mem_alloc_data (SMALL_DATA_AREA_SIZE*SGGC_SMALL_DATA_AREA_BLOCKING);
 #   endif
     if (small_data_area_next == NULL)
     { return;
@@ -741,10 +752,10 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
     }
 
     data_size = (size_t) SGGC_CHUNK_SIZE * nch;
-    data = sggc_alloc_zeroed (data_size);
+    data = sggc_mem_alloc_data (data_size);
     if (SGGC_DEBUG) 
     { printf (
-       "sggc_alloc: called alloc_zeroed for data (big %d, %d chunks):: %p\n", 
+       "sggc_alloc: called mem_alloc_data for data (big %d, %d chunks):: %p\n", 
         kind, (int)nch, data);
     }
 
@@ -791,7 +802,7 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
         NULL;
 #     endif
     if (!read_only_aux1 && kind_aux1_block[kind] == NULL)
-    { kind_aux1_block[kind] = sggc_alloc_zeroed
+    { kind_aux1_block[kind] = sggc_mem_alloc
                                (SGGC_CHUNKS_IN_SMALL_SEGMENT
                                  * SGGC_AUX1_BLOCK_SIZE * SGGC_AUX1_SIZE);
       if (kind_aux1_block[kind] == NULL) 
@@ -816,7 +827,7 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
         NULL;
 #     endif
     if (!read_only_aux2 && kind_aux2_block[kind] == NULL)
-    { kind_aux2_block[kind] = sggc_alloc_zeroed
+    { kind_aux2_block[kind] = sggc_mem_alloc
                                (SGGC_CHUNKS_IN_SMALL_SEGMENT
                                  * SGGC_AUX2_BLOCK_SIZE * SGGC_AUX2_SIZE);
       if (kind_aux2_block[kind] == NULL) 
@@ -1001,7 +1012,7 @@ fail:
   { if (v != SGGC_NO_OBJECT) 
     { sbset_add (&unused, v);
     }
-    sggc_free(data);
+    sggc_mem_free(data);
   }
   else
   { small_data_area_next -= SMALL_DATA_AREA_SIZE;
@@ -1763,7 +1774,7 @@ void sggc_collect_remove_free_big (void)
         { printf ("sggc_collect: calling free for data for %x:: %p\n", 
                    v, SGGC_DATA(v));
         }
-        sggc_free ((char *) SGGC_DATA(v));
+        sggc_mem_free ((char *) SGGC_DATA(v));
         sggc_info.total_mem_usage -= (size_t) SGGC_CHUNK_SIZE * nch;
 
         /* Put it in 'unused', for later re-use. */

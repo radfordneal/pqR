@@ -32,7 +32,8 @@ typedef unsigned sggc_nchunks_t;/* Type for how many chunks are in a segment */
 #define SGGC_AUX1_SIZE 4        /* Size of auxiliary information */
 #define SGGC_AUX1_BLOCK_SIZE 4  /* Number of blocks in aux1 allocations */
 
-/* Use special malloc/free for testing, defining sggc_malloc and sggc_free. */
+/* Special alloc/free for testing; defines sggc_mem_alloc_zero,
+   sggc_mem_alloc, and sggc_mem_free. */
 
 #include "test-calloc.h"
 

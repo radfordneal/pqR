@@ -352,7 +352,7 @@ static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
 
   sggc_cptr_t nfv = sggc_next_free_val[kind];  /* pointer to current free obj */
   sggc_nchunks_t nch = sggc_kind_chunks[kind]; /* number of chunks for object */
-/* printf("--- %llx %x",nfb,nfv); */
+
   nfb >>= nch;
   if (nfb != 0)
   { sggc_cptr_t new_nfv = nfv + nch;
@@ -374,12 +374,11 @@ static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
   else
   { sggc_next_free_val[kind] = SGGC_NO_OBJECT;
   }
-/* printf(" : %llx %x\n",nfb,sggc_next_free_val[kind]); */
 
   sggc_next_free_bits[kind] = nfb;
 
+#ifdef SGGC_DATA_ALLOC_ZERO
   uint64_t *p = (uint64_t *) SGGC_DATA(nfv);   /* should be aligned properly  */
-
 #ifdef SGGC_USE_MEMSET
   memset (p, 0, (size_t) SGGC_CHUNK_SIZE * nch);
 #else
@@ -388,6 +387,7 @@ static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
     for (i = 0; i <SGGC_CHUNK_SIZE; i += 8) *p++ = 0;
     nch -= 1;
   } while (nch > 0);
+#endif
 #endif
 
 #ifdef SGGC_KIND_UNCOLLECTED

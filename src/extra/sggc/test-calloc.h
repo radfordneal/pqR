@@ -18,8 +18,9 @@
    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
 
-#define sggc_alloc_zeroed test_calloc
+#define sggc_mem_alloc_zero test_calloc
+#define sggc_mem_alloc test_calloc
 void *test_calloc (size_t size);
 
-#define sggc_free test_free
+#define sggc_mem_free test_free
 void test_free (void *ptr);

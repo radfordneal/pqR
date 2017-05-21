@@ -1,31 +1,31 @@
 STARTING TEST: segs = 5, iters = 50
 
 ABOUT TO CALL sggc_init
-test_calloc: 1 in use after:: 0x7fdcf8402620
-test_calloc: 2 in use after:: 0x7fdcf8402650
-test_calloc: 3 in use after:: 0x7fdcf8400370
+test_calloc: 1 in use after:: 0x7ff63bc031c0
+test_calloc: 2 in use after:: 0x7ff63bc031f0
+test_calloc: 3 in use after:: 0x7ff63bc03220
 DONE sggc_init
 ALLOCATING nil
 sggc_alloc: type 0, length 0, kind 0
-test_calloc: 4 in use after:: 0x7fdcf8402680
-sggc_alloc: called alloc_zeroed for data (big 0, 1 chunks):: 0x7fdcf8402680
-test_calloc: 5 in use after:: 0x7fdcf8402690
+test_calloc: 4 in use after:: 0x7ff63bc03230
+sggc_alloc: called mem_alloc_data for data (big 0, 1 chunks):: 0x7ff63bc03230
+test_calloc: 5 in use after:: 0x7ff63bc03240
 sggc_alloc: created 0 in new segment
 ALLOC RETURNING 0
 
 ITERATION 1
 ALLOCATING a, leaving contents as nil
 sggc_alloc: type 1, length 2, kind 1
-test_calloc: 6 in use after:: 0x7fdcf8802000
-test_calloc: 7 in use after:: 0x7fdcf84026d0
+test_calloc: 6 in use after:: 0x7ff63c000600
+test_calloc: 7 in use after:: 0x7ff63bc03280
 sggc_alloc: created 40 in new segment
 sggc_alloc: new segment has bits ffffffffffffffff, 64 in free_or_new[1]
 sggc_alloc: next_free_val[1]=41, next_free_bits[1]=7fffffffffffffff
 ALLOC RETURNING 40
 ALLOCATING b, setting contents to 100*i .. 100*i+9
 sggc_alloc: type 2, length 10, kind 5
-test_calloc: 8 in use after:: 0x7fdcf8802400
-test_calloc: 9 in use after:: 0x7fdcf8402720
+test_calloc: 8 in use after:: 0x7ff63c000a00
+test_calloc: 9 in use after:: 0x7ff63bc032c0
 sggc_alloc: created 80 in new segment
 sggc_alloc: new segment has bits 1249249249249249, 21 in free_or_new[5]
 sggc_alloc: next_free_val[5]=83, next_free_bits[5]=0249249249249249
@@ -37,8 +37,8 @@ sggc_alloc: next_free_val[1]=42, next_free_bits[1]=3fffffffffffffff
 ALLOC RETURNING 41
 ALLOCATING d, setting contents to 7777
 sggc_alloc: type 2, length 1, kind 3
-test_calloc: 10 in use after:: 0x7fdcf8802800
-test_calloc: 11 in use after:: 0x7fdcf8402760
+test_calloc: 10 in use after:: 0x7ff63c003600
+test_calloc: 11 in use after:: 0x7ff63bc03300
 sggc_alloc: created c0 in new segment
 sggc_alloc: new segment has bits ffffffffffffffff, 64 in free_or_new[3]
 sggc_alloc: next_free_val[3]=c1, next_free_bits[3]=7fffffffffffffff
@@ -3160,9 +3160,9 @@ sggc_alloc: found c3 in next_free
 sggc_alloc: next_free_val[3]=c4, next_free_bits[3]=0fffffffffffffff
 ALLOC RETURNING c3
 sggc_alloc: type 2, length 12, kind 2
-test_calloc: 12 in use after:: 0x7fdcf84027a0
-sggc_alloc: called alloc_zeroed for data (big 2, 4 chunks):: 0x7fdcf84027a0
-test_calloc: 13 in use after:: 0x7fdcf84027e0
+test_calloc: 12 in use after:: 0x7ff63bc03340
+sggc_alloc: called mem_alloc_data for data (big 2, 4 chunks):: 0x7ff63bc03340
+test_calloc: 13 in use after:: 0x7ff63bc03380
 sggc_alloc: created 100 in new segment
 ALLOC RETURNING 100
 
@@ -3219,8 +3219,8 @@ CALLED_FOR_NEWLY_FREE: Object 92 of kind 5 being freed at end
 sggc_collect: 92 in old_gen1 now free
 CALLED_FOR_NEWLY_FREE: Object 100 of kind 2 being freed at end
 sggc_collect: 100 that was newly-allocated is free (4 chunks)
-sggc_collect: calling free for data for 100:: 0x7fdcf84027a0
-test_free: 12 in use after:: 0x7fdcf84027a0
+sggc_collect: calling free for data for 100:: 0x7ff63bc03340
+test_free: 12 in use after:: 0x7ff63bc03340
 sggc_collect: putting 100 in unused
 CALLED_FOR_OBJECT_IN_USE: Object 0 with 1 chunks
 sggc_collect: done
@@ -3237,8 +3237,8 @@ sggc_alloc: next_free_val[3]=c1, next_free_bits[3]=7fffffffffffffff
 ALLOC RETURNING c0
 sggc_alloc: type 2, length 12, kind 2
 sggc_alloc: found 100 in unused
-test_calloc: 13 in use after:: 0x7fdcf84027a0
-sggc_alloc: called alloc_zeroed for data (big 2, 4 chunks):: 0x7fdcf84027a0
+test_calloc: 13 in use after:: 0x7ff63bc03340
+sggc_alloc: called mem_alloc_data for data (big 2, 4 chunks):: 0x7ff63bc03340
 ALLOC RETURNING 100
 
 COLLECTING AT LEVEL 0

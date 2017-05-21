@@ -195,6 +195,15 @@ communicating references to objects that are in use:
                            interface is used for sggc_find_object_ptrs
                            (as described below).
 
+The following may be defined to ensure that data areas are initialized
+to zeros:
+
+  SGGC_DATA_ALLOC_ZERO  If defined (as anything), the data area of an
+                        object allocated with sggc_alloc (or related
+                        functions) will be initialized to all zero
+                        bits.  Otherwise, the contents of the data
+                        area for a new object are undefined.
+
 The following types must be defined in sggc-app.h:
 
   sggc_length_t         Type for the "length" of an object.  The
@@ -207,7 +216,7 @@ The following types must be defined in sggc-app.h:
 
 An application may optionally define the following in sggc-app.h:
 
-  sggc_alloc_zeroed     May be defined as a simple symbol or as a 
+  sggc_mem_alloc_zero   May be defined as a simple symbol or as a 
                         one-argument macro (not a function), which
                         is used by SGGC to allocate a block of memory
                         with the given number of bytes, which must be 
@@ -216,11 +225,21 @@ An application may optionally define the following in sggc-app.h:
                         to an 8-byte boundary.  Defaults to a call of
                         the C library 'calloc' function.
 
-  sggc_free             May be defined as a simple symbol or as a 
+  sggc_mem_alloc        May be defined as a simple symbol or as a 
+                        one-argument macro (not a function), which is
+                        used by SGGC to allocate a block of memory
+                        with the given number of bytes, whose contents
+                        are undefined, with return of NULL indicating
+                        failure.  The memory must be aligned to an
+                        8-byte boundary.  Defaults to a call of the C
+                        library 'malloc' function.
+
+  sggc_mem_free         May be defined as a simple symbol or as a 
                         one-argument macro (not a function), which is
                         used by SGGC to free blocks of memory that
-                        were allocated by sggc_alloc_zeroed.  Defaults
-                        to the symbol 'free', the C library function.
+                        were allocated by sggc_mem_alloc_zero or
+                        sggc_mem_alloc.  Defaults to the symbol
+                        'free', the C library function.
 
 The sggc.h file should be included after the above have been defined,
 at the end of sggc-app.h.  It will define the following types:

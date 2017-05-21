@@ -349,13 +349,14 @@ existing segment in the 'unused' set, which is shared by all the kinds
 that use big segments.  These objects have auxiliary information
 already allocated (which is the same for all kinds, and cannot be
 read-only), but do not have a data area allocated - one is allocated
-using sggc_alloc_zeroed when the segment becomes used.  If 'unused' is
-empty, sggc_alloc_zeroed is used to allocate a new segment, data, and
-auxiliary information (if a partial block is not already allocated).
+using sggc_mem_alloc_zero when the segment becomes used.  If 'unused'
+is empty, sggc_mem_alloc_zero is used to allocate a new segment, data,
+and auxiliary information (if a partial block is not already
+allocated).
 
 Objects of an uncollected kind are allocated in the same way, except
 that there will never be more than one segment of free objects, which
-will have recently been created with sggc_alloc_zeroed, since
+will have recently been created with sggc_mem_alloc_zero, since
 allocated objects of this kind never become free.  Uncollected objects
 of kind k are added to the 'uncollected[k]' set when allocated, not to
 'free_or_new[k]'.
@@ -552,10 +553,11 @@ up some operations.
 
 SGGC_USE_MEMSET may be defined (as anything) to enable use of memset
 rather than a loop (possibly unrolled by the compiler) when clearing
-the data area for an object in a small segment.  Since these objects
-are typically small, it's not obvious which is faster.  It's possible
-that this option is ineffective, with the compiler begin clever enough
-to (not necessarily wisely?) convert a loop to a call of memset.
+the data area for an object in a small segment (which is done only if
+SGGC_ALLOC_DATA_ZERO is defined).  Since these objects are typically
+small, it's not obvious which is faster.  It's possible that this
+option is ineffective, with the compiler begin clever enough to (not
+necessarily wisely?) convert a loop to a call of memset.
 
 SGGC_SEG_DIRECT may be defined (as anything) to enable use of a direct
 array of segments, rather than the default of using an array of
@@ -608,7 +610,7 @@ include the following:
     intended to facilitate this.  The segments in 'small_unused' could
     then be reused for any small kind.  Their data areas might or
     might not be freed when they are put in 'small_unused' (perhaps
-    only if a call of sggc_alloc_zeroed fails).
+    only if a call of sggc_mem_alloc_zero fails).
 
   o Currently, SGGC never frees memory used for auxiliary information,
     though it may be reused for other objects of the same kind (or a

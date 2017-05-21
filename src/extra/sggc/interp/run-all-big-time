@@ -1,0 +1,10 @@
+#!/bin/bash
+
+echo "BASE RUNS"
+time run-e-i-big
+
+for i in `ls -d interp-* | fgrep -v .dSYM | sed "s/interp//g"`; do
+  echo " "
+  echo "RUN WITH" $i
+  time run-e-i-big $i >/dev/null
+done
