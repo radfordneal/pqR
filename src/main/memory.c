@@ -187,8 +187,6 @@ static int gc_reporting = 0;           /* Should message be printed on GC? */
 static int gc_force_wait = 0;
 static int gc_force_gap = 0;
 static Rboolean gc_inhibit_release = FALSE;
-#define FORCE_GC (gc_force_wait > 0 ? \
-  (--gc_force_wait > 0 ? 0 : (gc_force_wait = gc_force_gap, 1)) : 0)
 
 #define GC_PROT(X) do { \
     int __wait__ = gc_force_wait; \
@@ -1231,6 +1229,13 @@ static void update_strategy_data (struct sggc_info old_sggc_info)
 /* Macro to wrap allocation statement in code to do garbage collections. */
 
 #define ALLOC_WITH_COLLECT(alloc_stmt,fail_stmt,nch) do { \
+    if (gc_force_wait > 0) { \
+        gc_force_wait -= 1; \
+        if (gc_force_wait == 0) { \
+            gc_force_wait = gc_force_gap; \
+            R_gc_internal(3,R_NoObject); \
+        } \
+    } \
     gc_countdown -= 1; \
     if (gc_countdown <= 0 || nch > 100000) gc_strategy(nch); \
     alloc_stmt; \
@@ -1306,15 +1311,18 @@ static SEXP alloc_sym (void)
 
 /* Fast allocation of a small object.  It never garbage collects, but
    just returns R_NoObject if it fails to allocate (possibly because
-   the sggc routine thought it wasn't easy).  The caller must then
-   call alloc_obj.  The caller must specify both the R type and the
-   correct corresponding SGGC kind, for the desired length (if
-   relevant).  The TYPE and ATTRIB fields are set here, but not
-   LENGTH. */
+   the sggc routine thought it wasn't easy), or if gctorture is enabled. 
+   The caller must then call alloc_obj.  The caller must specify both 
+   the R type and the correct corresponding SGGC kind, for the desired
+   length (if relevant).  The TYPE and ATTRIB fields are set here, but 
+   not LENGTH. */
 
 static inline SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
 {
     sggc_cptr_t cp;
+
+    if (gc_force_wait > 0)
+        return R_NoObject;
 
     cp = sggc_alloc_small_kind_quickly (kind);
 
@@ -1981,8 +1989,8 @@ static void count_obj (sggc_cptr_t v, sggc_nchunks_t nch)
 }
 
 /* Main GC procedure.  Arguments are the reason for collection (0=requested,
-   1=automatic, 2=space needed) and a vector in which to store type counts,
-   or R_NoObject if this is not to be done. */
+   1=automatic, 2=space needed, 3=gctorture) and a vector in which to store 
+   type counts, or R_NoObject if this is not to be done. */
 
 static void R_gc_internal (int reason, SEXP counters)
 {
@@ -2032,7 +2040,10 @@ static void R_gc_internal (int reason, SEXP counters)
     "Garbage collection %lld = %lld+%lld+%lld (level %d), %.3f Megabytes, %s\n",
         gc_count, gc_count-gc_count1-gc_count2, gc_count1, gc_count2, 
         gc_last_level, (double) sggc_info.total_mem_usage / 1024 / 1024,
-        reason == 0 ? "requested" : reason == 1 ? "automatic" : "space needed");
+        reason == 0 ? "requested" : 
+        reason == 1 ? "automatic" : 
+        reason == 2 ? "space needed" : 
+                      "gctorture");
     }
 
     if (DEBUG_STRATEGY) {

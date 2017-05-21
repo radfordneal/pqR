@@ -42,10 +42,11 @@ gcinfo(verbose)
   (for an explanation see the \sQuote{R Internals} manual).  This is
   followed by the total memory usage after collection (excluding
   constants), and by what prompted the current collection --- either
-  ``requested'', ``automatic'', or ``space needed'', the last
-  indicating that an attempt at allocating a new object failed, and
-  collection is being done in an attempt to recover enough memory for
-  it to succeed.
+  ``requested'', ``automatic'', ``space needed'', or ``gctorture''.
+  The last reason indicates a collection forced by \code{gctorture}.  The
+  ``space needed'' reason indicates that an attempt at allocating a new object
+  failed, and collection is being done in an attempt to recover enough memory 
+  for it to succeed.
 }
 
 \value{
@@ -70,7 +71,9 @@ gcinfo(verbose)
   \code{\link{reg.finalizer}} for actions to happen at garbage
   collection.
 
-  \code{gc.time} for time spent in garbage collection.
+  \code{\link{gc.time}} for time spent in garbage collection.
+
+  \code{\link{gctorture}} for forcing a garbage collection on every allocation.
 }
 \examples{\donttest{
 gc() #- do it now
