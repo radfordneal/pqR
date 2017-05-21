@@ -23,6 +23,11 @@
 #include <Rconfig.h>
 
 
+/* SET DATA AREAS TO ZEROS ON ALLOCATION. */
+
+#define SGGC_DATA_ALLOC_ZERO
+
+
 /* USE ALTERNATIVE INTERFACE FOR SGGC_FIND_OBJECT_PTRS. */
 
 #define SGGC_FIND_OBJECT_RETURN  /* sggc_find_object_ptrs returns cptr value */

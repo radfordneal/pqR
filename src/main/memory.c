@@ -1277,7 +1277,7 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
     r->cptr = cp;
 #endif
 
-    r->sxpinfo = zero_sxpinfo;
+    UPTR_FROM_SEXP(r)->sxpinfo = zero_sxpinfo;
     TYPEOF(r) = type;
     ATTRIB(r) = R_NilValue;
 
@@ -1309,7 +1309,7 @@ static SEXP alloc_sym (void)
     r->cptr = cp;
 #endif
 
-    r->sxpinfo = zero_sxpinfo;
+    UPTR_FROM_SEXP(r)->sxpinfo = zero_sxpinfo;
     TYPEOF(r) = SYMSXP;
     ATTRIB(r) = R_NilValue;
 
@@ -1351,7 +1351,7 @@ static inline SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
     r->cptr = cp;
 #endif
 
-    r->sxpinfo = zero_sxpinfo;
+    UPTR_FROM_SEXP(r)->sxpinfo = zero_sxpinfo;
     TYPEOF(r) = type;
     ATTRIB(r) = R_NilValue;
 
