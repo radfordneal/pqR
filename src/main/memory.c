@@ -134,6 +134,8 @@ extern void *Rm_realloc(void * p, size_t n);
 
 /* Miscellaneous declarations for garbage collector. */
 
+static const struct sxpinfo_struct zero_sxpinfo;  /* Initialized to zeros */
+
 static void R_gc_internal(int,SEXP);   /* The main GC procedure */
 
 static SEXP R_PreciousList;            /* List of Persistent Objects */
@@ -1253,7 +1255,8 @@ static void mem_error(void)
 
 
 /* Allocate an object.  Sets all flags to zero, attribute to R_NilValue,
-   type as passed.  Does not set LENGTH, which will sometimes be read-only. */
+   type as passed.  Does not set LENGTH, which will sometimes be read-only
+   or non-existent. */
 
 static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 {
@@ -1269,6 +1272,7 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
     r->cptr = cp;
 #endif
 
+    r->sxpinfo = zero_sxpinfo;
     TYPEOF(r) = type;
     ATTRIB(r) = R_NilValue;
 
@@ -1292,6 +1296,7 @@ static SEXP alloc_sym (void)
     r->cptr = cp;
 #endif
 
+    r->sxpinfo = zero_sxpinfo;
     TYPEOF(r) = SYMSXP;
     ATTRIB(r) = R_NilValue;
 
@@ -1322,6 +1327,7 @@ static inline SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
     r->cptr = cp;
 #endif
 
+    r->sxpinfo = zero_sxpinfo;
     TYPEOF(r) = type;
     ATTRIB(r) = R_NilValue;
 
@@ -1535,8 +1541,8 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 #endif
 
     FRAME(newrho) = valuelist;
-    ENCLOS(newrho) = Rf_chk_valid_SEXP(rho);
     HASHTAB(newrho) = R_NilValue;
+    ENCLOS(newrho) = Rf_chk_valid_SEXP(rho);
 
     v = Rf_chk_valid_SEXP(valuelist);
     n = Rf_chk_valid_SEXP(namelist);
@@ -1640,14 +1646,9 @@ SEXP attribute_hidden mkCLOSXP(SEXP formals, SEXP body, SEXP rho)
     if (LENGTH(c) != 1) LENGTH(c) = 1;
 #endif
 
-#ifdef not_used_CheckFormals
-    if(isList(formals))
-	SET_FORMALS(c, formals);
-    else
-	error(_("invalid formal arguments for 'function'"));
-#else
-    SET_FORMALS(c, formals);
-#endif
+    FORMALS(c) = formals;
+    BODY(c) = body;
+    CLOENV(c) = rho == R_NilValue ? R_GlobalEnv : rho;
 
     switch (TYPEOF(body)) {
     case CLOSXP:
@@ -1656,13 +1657,9 @@ SEXP attribute_hidden mkCLOSXP(SEXP formals, SEXP body, SEXP rho)
     case DOTSXP:
     case ANYSXP:
 	error(_("invalid body argument for 'function'"));
-	break;
     default:
-	SET_BODY(c, body);
 	break;
     }
-
-    SET_CLOENV(c, rho == R_NilValue ? R_GlobalEnv : rho);
 
     return c;
 }
@@ -1730,6 +1727,7 @@ static SEXP allocVector1 (SEXPTYPE type)
         s = alloc_obj(type,1);
     }
     LENGTH(s) = 1;
+    TRUELENGTH(s) = 0;
     if (R_IsMemReporting) R_ReportAllocation (s);
 
 #else
@@ -1863,24 +1861,26 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 
     s = alloc_obj(type,length);
     LENGTH(s) = length;
+    TRUELENGTH(s) = 0;
     if (R_IsMemReporting) R_ReportAllocation (s);
 
 #if VALGRIND_LEVEL>0
     VALGRIND_MAKE_MEM_UNDEFINED(DATAPTR(s), actual_size);
 #endif
 
-    /* Allocated space has been zeroed, which ensures CHARSXP has terminating
-       null.  But still need to set STRSXPs to R_BlankString and perhaps
-       VECSXP/EXPRSXPs to R_NilValue (if it's not zero). */
+    /* Need to set STRSXPs to R_BlankString, VECSXP/EXPRSXPs to R_NilValue,
+       and ensure CHARSXP is null-terminated. */
 
     if (type == VECSXP || type == EXPRSXP) {
-        if (R_NilValue != 0)
-            for (i = 0; i < length; i++)
-                VECTOR_ELT(s,i) = R_NilValue;  /* no old-to-new check needed */
+        for (i = 0; i < length; i++)
+            VECTOR_ELT(s,i) = R_NilValue;      /* no old-to-new check needed */
     }
     else if (type == STRSXP) {
         for (i = 0; i < length; i++)
             STRING_ELT(s,i) = R_BlankString;   /* no old-to-new check needed */
+    }
+    else if (type == CHARSXP) {
+        CHAR_RW(s)[length] = 0; /* ensure there's a terminating null character*/
     }
 
     return s;
@@ -1910,6 +1910,7 @@ SEXP allocS4Object(void)
    if (LENGTH(s) != 1) LENGTH(s) = 1;
 #endif
    SET_S4_OBJECT(s);
+   CDR(s) = R_NilValue;  /* unused, but looked at by garbage collector */
    TAG(s) = R_NilValue;
    return s;
 }
@@ -2359,8 +2360,7 @@ static SEXP do_pnamedcnt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 
 /*******************************************/
-/* Non-sampling memory use profiler reports vector allocations and/or
-   calls to GetNewPage */
+/* Non-sampling memory use profiler reports vector allocations.
 /*******************************************/
 
 static void R_OutputStackTrace (void)

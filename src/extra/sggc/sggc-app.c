@@ -233,7 +233,7 @@ sggc_nchunks_t Rf_nchunks (int type, unsigned length)
 #if USE_COMPRESSED_POINTERS
 #define CHK_NO_OBJECT(x) 1  /* since checked in sggc_look_at */
 #else
-#define CHK_NO_OBJECT(x) ((x) != R_NoObject)
+#define CHK_NO_OBJECT(x) ((x) != R_NoObject, 1)
 #endif
 
 sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
