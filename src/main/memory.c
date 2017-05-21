@@ -1259,9 +1259,9 @@ static void mem_error(void)
 }
 
 
-/* Allocate an object.  Sets all flags to zero, attribute to R_NilValue,
-   type as passed.  Does not set LENGTH, which will sometimes be read-only
-   or non-existent. */
+/* Allocate an object.  Sets all flags to zero, attribute to R_NilValue, and
+   type as passed.  Set LENGTH to 1 except if USE_AUX_FOR_ATTRIB enabled
+   (since then LENGTH may not exist). */
 
 static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 {
@@ -1280,6 +1280,14 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
     r->sxpinfo = zero_sxpinfo;
     TYPEOF(r) = type;
     ATTRIB(r) = R_NilValue;
+
+#   if USE_COMPRESSED_POINTERS
+        /* LENGTH is in AUX1, which may be read-only. */
+        if (!sggc_aux1_read_only (SGGC_KIND(cp)))
+            * (R_len_t *) SGGC_AUX1(cp) = 1;
+#   elif !USE_AUX_FOR_ATTRIB
+        LENGTH(r) = 1;
+#   endif
 
     return r;
 }
@@ -1304,6 +1312,14 @@ static SEXP alloc_sym (void)
     r->sxpinfo = zero_sxpinfo;
     TYPEOF(r) = SYMSXP;
     ATTRIB(r) = R_NilValue;
+
+#   if USE_COMPRESSED_POINTERS
+        /* LENGTH is in AUX1, which may be read-only. */
+        if (!sggc_aux1_read_only (SGGC_SYM_KIND))
+            * (R_len_t *) SGGC_AUX1(cp) = 1;
+#   elif !USE_AUX_FOR_ATTRIB
+        LENGTH(r) = 1;
+#   endif
 
     return r;
 }
@@ -1338,6 +1354,14 @@ static inline SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
     r->sxpinfo = zero_sxpinfo;
     TYPEOF(r) = type;
     ATTRIB(r) = R_NilValue;
+
+#   if USE_COMPRESSED_POINTERS
+        /* LENGTH is in AUX1, which may be read-only. */
+        if (!sggc_aux1_read_only (kind))
+            * (R_len_t *) SGGC_AUX1(cp) = 1;
+#   elif !USE_AUX_FOR_ATTRIB
+        LENGTH(r) = 1;
+#   endif
 
     return r;
 }
@@ -1458,9 +1482,6 @@ SEXP allocSExp(SEXPTYPE t)
         CAR(s) = R_NilValue;
         CDR(s) = R_NilValue;
         TAG(s) = R_NilValue;
-#if !USE_AUX_FOR_ATTRIB
-        if (LENGTH(s) != 1) LENGTH(s) = 1;
-#endif
         return s;
     }
 }
@@ -1476,10 +1497,6 @@ SEXP cons(SEXP car, SEXP cdr)
         s = alloc_obj(LISTSXP,1);
         UNPROTECT(2);
     }
-
-#if !USE_AUX_FOR_ATTRIB
-    if (LENGTH(s) != 1) LENGTH(s) = 1;
-#endif
 
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
@@ -1499,10 +1516,6 @@ SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
         s = alloc_obj(LISTSXP,1);
         UNPROTECT(3);
     }
-
-#if !USE_AUX_FOR_ATTRIB
-    if (LENGTH(s) != 1) LENGTH(s) = 1;
-#endif
 
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
@@ -1544,10 +1557,6 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 
     SEXP v, n;
 
-#if !USE_AUX_FOR_ATTRIB
-    if (LENGTH(newrho) != 1) LENGTH(newrho) = 1;
-#endif
-
     FRAME(newrho) = valuelist;
     HASHTAB(newrho) = R_NilValue;
     ENCLOS(newrho) = Rf_chk_valid_SEXP(rho);
@@ -1577,10 +1586,6 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
         s = alloc_obj(PROMSXP,1);
         UNPROTECT(2);
     }
-
-#if !USE_AUX_FOR_ATTRIB
-    if (LENGTH(s) != 1) LENGTH(s) = 1;
-#endif
 
     SET_NAMEDCNT_MAX(expr);
     /* SET_NAMEDCNT_1(s); */
@@ -1619,9 +1624,6 @@ SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
 
     if (result == 0) {
 	result = alloc_obj(type,1);
-#if !USE_AUX_FOR_ATTRIB
-        if (LENGTH(result) != 1) LENGTH(result) = 1;
-#endif
 	SET_PRIMOFFSET(result, offset);
         primitive_cache[offset] = result;
     }
@@ -1649,10 +1651,6 @@ SEXP attribute_hidden mkCLOSXP(SEXP formals, SEXP body, SEXP rho)
         c = alloc_obj(CLOSXP,1);
         UNPROTECT(3);
     }
-
-#if !USE_AUX_FOR_ATTRIB
-    if (LENGTH(c) != 1) LENGTH(c) = 1;
-#endif
 
     FORMALS(c) = formals;
     BODY(c) = body;
@@ -1697,10 +1695,6 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     c = alloc_sym();
     UNPROTECT(2);
 
-#if !USE_AUX_FOR_ATTRIB
-    if (LENGTH(c) != 1) LENGTH(c) = 1;
-#endif
-
     SET_PRINTNAME (c, name);
     SET_SYMVALUE (c, value);
     NEXTSYM_PTR(c) = R_NilValue;
@@ -1734,7 +1728,9 @@ static SEXP allocVector1 (SEXPTYPE type)
     if ((s = alloc_fast(SGGC_SMALL_VEC_KIND,type)) == R_NoObject) {
         s = alloc_obj(type,1);
     }
-    LENGTH(s) = 1;
+#   if USE_AUX_FOR_ATTRIB
+        LENGTH(s) = 1;
+#   endif
     TRUELENGTH(s) = 0;
     if (R_IsMemReporting) R_ReportAllocation (s);
 
@@ -1914,9 +1910,6 @@ SEXP allocList(int n)
 SEXP allocS4Object(void)
 {
    SEXP s = alloc_obj(S4SXP,1);
-#if !USE_AUX_FOR_ATTRIB
-   if (LENGTH(s) != 1) LENGTH(s) = 1;
-#endif
    SET_S4_OBJECT(s);
    CDR(s) = R_NilValue;  /* unused, but looked at by garbage collector */
    TAG(s) = R_NilValue;
@@ -2309,9 +2302,6 @@ void R_ReleaseObject(SEXP object)
 SEXP R_MakeExternalPtr(void *p, SEXP tag, SEXP prot)
 {
     SEXP s = alloc_obj(EXTPTRSXP,1);
-#if !USE_AUX_FOR_ATTRIB
-    if (LENGTH(s) != 1) LENGTH(s) = 1;
-#endif
     EXTPTR_PTR(s) = p;
     EXTPTR_PROT(s) = Rf_chk_valid_SEXP(prot);
     EXTPTR_TAG(s) = Rf_chk_valid_SEXP(tag);
@@ -2326,9 +2316,6 @@ SEXP R_MakeExternalPtrFn(DL_FUNC p, SEXP tag, SEXP prot)
 {
     fn_ptr tmp;
     SEXP s = alloc_obj(EXTPTRSXP,1);
-#if !USE_AUX_FOR_ATTRIB
-    if (LENGTH(s) != 1) LENGTH(s) = 1;
-#endif
     tmp.fn = p;
     EXTPTR_PTR(s) = tmp.p;
     EXTPTR_PROT(s) = Rf_chk_valid_SEXP(prot);
