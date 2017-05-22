@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2017-05-07}{
+\section{CHANGES IN VERSION RELEASED 2017-05-22}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -38,7 +38,8 @@
         does not use 64-bit pointers.  Otherwise, it results in 
         attributes for objects being stored as ``auxiliary information'',
         which allows for some objects to be stored more compactly,
-        with possible speed and memory advantages.
+        with some possible speed and memory advantages, though some operations
+        become slightly slower.
   \item The \code{--enable-strict-barrier} option to \code{configure}
         has been removed.  In pqR, usages in C code such as \code{CAR(x)=y}
         cause compile errors regardless of this option, so it is not

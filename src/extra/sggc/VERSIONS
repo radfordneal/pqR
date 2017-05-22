@@ -1,5 +1,12 @@
 The stable versions of SGGC below are tagged in the source code repository.
 
+Version 2017-05-22
+
+  Renamed set module to sbset to avoid name conflicts.  Changed memory
+  allocation interface to provide both zero-initialized allocation and 
+  non-zero-initialized allocation, and provided option whether data areas
+  are initialized.  Used in pqR-2017-05-22.
+
 Version 2017-05-07
 
   Introduces SET_NO_FUNCTIONS and SGGC_NO_FUNCTIONS.
