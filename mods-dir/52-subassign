@@ -1,4 +1,0 @@
-Speed up simple scalar assignments with [<- when index is a positive
-number, replacement is a scalar, and types match.
-
-Slight improvements to [<- and $<- from looking for evaluated promises.
