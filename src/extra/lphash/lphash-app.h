@@ -31,8 +31,6 @@ typedef unsigned lphash_hash_t;     /* Character hash as stored in print name */
 #endif
 
 #define lphash_free free
-#define lphash_match(e,k) 0
-#define lphash_make_entry(k) 0
 
 #include "lphash.h"
 

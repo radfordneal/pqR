@@ -647,6 +647,18 @@ static void SetupBuiltins(void)
 
 extern SEXP framenames; /* from model.c */
 
+lphash_entry_t lphash_make_entry (lphash_key_t key)
+{
+    return mkSYMSXP (mkChar(key), R_UnboundValue);
+}
+
+int lphash_match (lphash_entry_t entry, lphash_key_t key)
+{
+    SEXP sym = SEXP_FROM_CPTR ((sggc_cptr_t) entry);
+
+    return strcmp (key, PRINTNAME(sym)) == 0;
+}
+
 /* initialize the symbol table */
 void InitNames()
 {
