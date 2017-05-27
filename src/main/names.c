@@ -656,6 +656,8 @@ void InitNames()
 	R_Suicide("couldn't allocate memory for symbol table");
     for (int i = 0; i < HSIZE; i++) R_SymbolTable[i] = R_NilValue;
 
+    R_lphashSymTbl = lphash_create (HSIZE);
+
     /* Set up built-in functions.  Do first so internals have small
        compressed pointers. */
 

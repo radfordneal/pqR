@@ -86,7 +86,7 @@ EXTRALIBS = getline/gl.a ../extra/xdr/libxdr.a \
    ../extra/intl/libintl.a ../extra/trio/libtrio.a ../extra/tzone/libtz.a \
    ../extra/tre/libtre.a ../extra/xz/liblzma.a \
    ../extra/helpers/libhelpers.a ../extra/matprod/libmatprod.a \
-   ../extra/sggc/libsggc.a
+   ../extra/sggc/libsggc.a ../extra/lphash/liblphash.a
 
 # flags to ensure that Doug Lea's malloc is used:
 ifdef LEA_MALLOC
@@ -125,7 +125,7 @@ rlibs:
 	$(MK) -C ../main CFLAGS='$(CFLAGS)' FFLAGS='$(FFLAGS)' malloc-DEFS='$(malloc-DEFS)' -f Makefile.win
 	$(MK) -C ./getline CFLAGS='$(CFLAGS)'
 	@for ex in graphapp pcre bzip2 zlib xdr tre trio \
-                   helpers matprod sggc tzone win_iconv xz; do \
+                   helpers matprod sggc lphash tzone win_iconv xz; do \
 	  $(MK) -C ../extra/$${ex} CFLAGS='$(CFLAGS)' -f Makefile.win || exit 1; \
 	done
 
@@ -222,6 +222,9 @@ front-ends:
 
 ../extra/matprod/libsggc.a:
 	$(MK) -C ../extra/sggc -f Makefile.win
+
+../extra/matprod/liblphash.a:
+	$(MK) -C ../extra/lphash -f Makefile.win
 
 NEWSdocs:
 	@$(MK) -C ../../doc -f Makefile.win

@@ -2686,6 +2686,7 @@ AC_CONFIG_FILES(
   src/extra/matprod/Makefile
   src/extra/helpers/Makefile
   src/extra/sggc/Makefile
+  src/extra/lphash/Makefile
   src/include/Makefile
   src/include/Rmath.h0
   src/include/R_ext/Makefile

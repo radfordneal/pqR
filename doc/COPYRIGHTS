@@ -6,6 +6,9 @@ Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal.
 The library in src/extra/sggc is Copyright (C) 2016, 2017 Radford M. Neal,
 and licensed under GPL2 or later.
 
+The library in src/extra/lphash is Copyright (C) 2017 Radford M. Neal,
+and licensed under GPL2 or later.
+
 The library in src/extra/matprod is Copyright (C) 2013, 2014 Radford M. Neal, 
 and licensed under GPL2 or later.
 

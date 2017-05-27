@@ -1,0 +1,31 @@
+#-*- Makefile -*-
+include ../../gnuwin32/MkRules
+
+DEFS=-DHAVE_CONFIG_H
+
+CPPFLAGS=-I../../include -I. $(DEFS) $(OPENMP)
+
+## done this way for parallel make
+all:
+	$(MAKE) -f Makefile.win makeMakedeps
+	$(MAKE) -f Makefile.win liblphash.a
+
+CSOURCES = lphash.c
+
+OBJS = $(CSOURCES:.c=.o)
+liblphash.a: $(OBJS)
+
+clean:
+	@$(RM) *.o *~ *.d Makedeps
+
+distclean: clean
+	@$(RM) liblphash.a
+
+# Dependencies
+DEPS=$(CSOURCES:.c=.d)
+
+makeMakedeps: $(DEPS)
+	@$(RM) Makedeps
+	@cat $(DEPS) >> Makedeps
+
+-include Makedeps

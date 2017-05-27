@@ -94,11 +94,12 @@ R_LIBINTL = @BUILD_LIBINTL_TRUE@ ../extra/intl/libintl.a
 R_MATPROD = ../extra/matprod/libmatprod.a
 R_HELPERS = ../extra/helpers/libhelpers.a
 R_SGGC = ../extra/sggc/libsggc.a
+R_LPHASH = ../extra/lphash/liblphash.a
 
 MAIN_LIBS = ../unix/libunix.a ../appl/libappl.a ../nmath/libnmath.a
 MAIN_OBJS = `ls ../unix/*.o ../appl/*.o ../nmath/*.o`
 EXTRA_STATIC_LIBS = \
-  $(R_ZLIBS) $(R_BZLIBS) $(R_PCRE) $(R_TRE) $(R_XDR) $(R_XZ) $(R_LIBINTL) $(R_MATPROD) $(R_HELPERS) $(R_SGGC)
+  $(R_ZLIBS) $(R_BZLIBS) $(R_PCRE) $(R_TRE) $(R_XDR) $(R_XZ) $(R_LIBINTL) $(R_MATPROD) $(R_HELPERS) $(R_SGGC) $(R_LPHASH)
 STATIC_LIBS = $(MAIN_LIBS) $(EXTRA_STATIC_LIBS)
 
 EXTRA_LIBS = $(BLAS_LIBS) $(FLIBS) $(R_XTRA_LIBS) @LIBINTL@ $(READLINE_LIBS) $(LIBS)
@@ -158,7 +159,8 @@ libR.a: $(OBJECTS) $(STATIC_LIBS)
 	-@mkdir libs
 	@(cd libs; for l in $(STATIC_LIBS); do $(AR) x ../$$l; done)
 	@rm -rf $@
-	$(AR) cr $@ $(OBJECTS) libs/*o
+	@(cd libs; echo Directory libs contains: *.o)
+	$(AR) cr $@ $(OBJECTS) libs/*.o
 	$(RANLIB) $@
 	@rm -rf libs
 

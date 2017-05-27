@@ -233,6 +233,7 @@
  R_lazyLoadDBflush
  R_lazyLoadDBinsertValue
  R_localtime
+ R_lphashSymTbl
  R_max_memory
  R_max_num_math_threads
  R_mktime

@@ -1981,6 +1981,24 @@ static void count_obj (sggc_cptr_t v, sggc_nchunks_t nch)
     if (type < 24) INTEGER(counters_vec)[type] += 1;
 }
 
+
+/* Allocation function used by lphash, for allocating symbol hash table. */
+
+void *lphash_malloc (size_t size)
+{
+    void *m;
+
+    m = malloc(size);
+
+    if (m == NULL) {
+        R_gc_internal (2, R_NoObject);
+        m = malloc(size);
+    }
+
+    return m;
+}
+
+
 /* Main GC procedure.  Arguments are the reason for collection (0=requested,
    1=automatic, 2=space needed, 3=gctorture) and a vector in which to store 
    type counts, or R_NoObject if this is not to be done. */

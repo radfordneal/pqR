@@ -1,0 +1,201 @@
+LPHASH - A LOCALLY-PROBED HASHING FACILITY
+
+Copyright (c) 2017 Radford M. Neal.
+
+   The lphash library is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License along
+   with this program; if not, write to the Free Software Foundation, Inc.,
+   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+INTRODUCTION
+
+The lphash library of C functions supports non-chaining hash tables in
+which the probes following an initial hash location are done locally,
+to improve cache performance.  Currently, only insertion and lookup
+operations are supported - no deletion - as this is all that is
+required for some applications, such as the symbol table in an
+implementation of R.  The size of the hash table is automatically
+increased as needed.
+
+The application using lphash defines the type of an entry in the hash
+table, and the type of a key.  It also defines the type of a hash
+value, which is computed by the application from a key.  It also
+supplies functions or macros to create an entry with a given key and
+to test whether an entry matches a key.
+
+
+USING LPHASH IN AN APPLICATION
+
+To use lphash, an application should create an lphash-app.h file,
+which must define the constants and types below and then include the
+lphash.h file.  The lphash-app.h file must be included by application
+modules that use the lphash library, and is also included in the C
+source file for the lphash library routines.
+
+The following types must be defined in lphash-app.h:
+
+  lphash_entry_t  The type of an entry in the hash table, which must
+                  be an integer or pointer type, so that comparison is
+                  possible.  (Larger types would also have a bad
+                  effect on performance.)
+
+  lphash_key_t    The type of a key that may be tested for matching
+                  an entry in the hash table.  Could be the actual key
+                  value, or a pointer to it.
+
+  lphash_hash_t   An unsigned integer type to be used for hash values.
+
+The following constant must be defined in lphash-app.h:
+
+  LPHASH_NO_ENTRY A value of type lphash_entry_t that will not compare
+                  equal to any actual entry, and which can therefore
+                  be used to mark an empty hash bucket, or signal that
+                  no entry was found.
+
+The lphash.h file will define the following type:
+
+  lphash_table_t  The type of a pointer to a hash table managed by
+                  the lphash functions.  The application should not
+                  directly reference fields of this table.
+
+The application must provide the following functions (or macros),
+which will have prototypes declared for them as below in lphash.h (if
+they are not macros):
+
+  int lphash_match (lphash_entry_t entry, lphash_key_t key)
+
+    Returns 1 if the 'key' matches 'entry', and 0 if not.
+
+  lphash_entry_t lphash_make_entry (lphash_key_t key)
+
+    Creates an entry for the given key.  It should be the case that
+    lphash_match would return 1 if called with the new entry and this
+    key, but this is not checked.
+
+  void *lphash_malloc (size_t size)
+
+    Allocates 'size' bytes of memory (with undefined contents) to be
+    used as part of a hash table.  Returns NULL if allocation fails.
+
+  void lphash_free (void *ptr)
+
+    Frees memory allocated by lphash_malloc.
+
+An application might simply define lphash_malloc and lphash_free to be
+the standard malloc and free functions from the C library, or might
+define an lphash_malloc that tries to recover memory from elsewhere if
+allocation initially fails.
+
+The application may optionally define the following in lphash-app.h:
+
+  LPHASH_MAX_LOAD  A real value greater than zero and less than one
+                   giving the maximum ratio of occupied to total hash
+                   buckets.  When this maximum is exceeded, a larger
+                   table is allocated, if possible (see below).  If
+                   not defined, it defaults to 0.75.
+
+  LPHASH_ALIGN     The address boundary to which the array of hash
+                   buckets is aligned.  Must be a power of two.  If
+                   not defined, it defaults to 64, which is a common
+                   size for a cache line.
+
+  LPHASH_LINEAR    If defined (as anything), indexes of successive
+                   probe locations will be found by adding, rather
+                   than xor'ing (see below for details).
+
+  LPHASH_STATS     If defined (as anything), some statistics will
+                   be collected (at a small performance cost). The
+                   details are subject to change, and may be found by
+                   looking at the source code in lphash.c.
+
+
+FUNCTIONS PROVIDED BY LPHASH TO THE APPLICATION
+
+The lphash library provides an application with the functions (or
+macros) below, which (if functions) have prototypes as shown:
+
+  lphash_table_t lphash_create (int initial_size)
+
+    Returns a pointer to a new hash table, which is initially empty,
+    and has the number of buckets specified by the argument, which
+    should be a power of two and at least 8.  (The size is silently
+    increased to 8 if it is less, and is otherwise silently decreased
+    to the next lower power of two if it is not a power of two.)
+
+    The initial size specification is relevant only for performance.
+    The table size is increased as needed later, but if it is known
+    that many entries will be needed, allocating a large table
+    initially will reduce startup costs.  
+
+    NULL is returned if a new table cannot be allocated.
+
+  lphash_entry_t lphash_lookup (lphash_table_t table, lphash_hash_t hash,
+                                lphash_key_t key)
+
+    Looks for an entry in 'table' that has the given 'hash' and
+    matches the given 'key'.  Returns the entry found, or returns
+    LPHASH_NO_ENTRY if no matching entry is present in 'table'.
+
+  lphash_entry_t lphash_insert (lphash_table_t table, lphash_hash_t hash, 
+                                lphash_key_t key)
+
+    Searches for an entry in 'table' that has the given 'hash' and
+    matches the given 'key'.  If one is found, it is returned.
+    Otherwise, a new entry created by calling lphash_make_entry is
+    added to 'table', except that if adding a new entry would overflow
+    the table (see below), LPHASH_NO_ENTRY is returned instead.
+
+  void lphash_destroy (lphash_table_t table)
+
+    Destroys the given hash table, calling lphash_free for all memory
+    areas that it was using.
+
+The size of a hash table will be doubled when an insertion would
+increase the load ratio above LPHASH_MAX_LOAD, except that if memory
+for the larger table cannot be allocated (lphash_malloc returns NULL),
+the existing table will be used, until the load ratio exceeds
+sqrt(LPHASH_MAX_LOAD), at which point an attempt to allocate a bigger
+table will again be made, and if this fails, the table is considered
+to have overflowed, and no new entries can be added.
+
+
+LPHASH HASHING AND PROBING STRATEGY
+
+The hash buckets used by lphash contain a C structure value consisting
+of an lphash_hash_t value and an lphash_entry_t value.
+
+The number of buckets in a hash table is always a power of two.  The
+hash value passed to lphash_lookup or lphash_insert is used to form an
+initial index of a bucket in the table by simply taking the
+appropriate number of low order bits of the hash value.
+
+The bucket array is aligned to a LPHASH_ALIGN address boundary.  If
+LPHASH_ALIGN is at least the size of a cache line (assumed to be a
+power of two), and the size of a bucket is a power of two no larger
+than a cache line, all buckets will be in a single cache line.
+
+If the initial bucket looked at by lphash_lookup or lphash_insert
+based on the hash value is occupied by an entry that does not have the
+same hash value or does not match the key, indexes of further buckets
+to be probed in succession are found by exclusive or'ing the low-order
+bits of the hash value with the binary representations of the integers
+1, 2, 3, etc.  Given the assumptions above, this probing order
+guarantees that the probes will be confined to a single cache line
+until all buckets in that cache line have been probed.
+
+For experimental purposes, defining the symbol LPHASH_LINEAR (as
+anything) in lphash-app.h will switch lphash to using the strategy of
+probing successive buckets (modulo the table size) - ie, probing by
+adding 1, 2, 3, etc. (modulo the number of buckets) rather than
+exclusive-or'ing.
+
