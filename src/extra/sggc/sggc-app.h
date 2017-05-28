@@ -124,7 +124,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 
       Symbol:             Primitive:                        External pointer:
         info, pname         info, padding                     info, unused/shift
-        value, nextsym      C-function                        prot, tag
+        value, nspad        C-function                        prot, tag
         lastenv, last-enf   fast-C-function                   external ptr(+pad)
         lastbinding, hash   64 bits of info                   padding, padding
         = 32 bytes          padding if 32-bit                 = 32 bytes
@@ -222,7 +222,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
         length, hash        length, padding                   length, padding
         pname               C-function                        external ptr
         value               fast-C-function                   prot
-        nextsym             64 bits of info                   tag
+        nspad               64 bits of info                   tag
         lastenv, last-enf   = 48 bytes                        = 48 bytes
         lastbinding           (3 chunks)                        (3 chunks)
         = 64 bytes
@@ -302,7 +302,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
         info, cptr          info, cptr                        info, cptr
         pname               C-function                        external ptr
         value               fast-C-function                   prot
-        nextsym             64 bits of info                   tag
+        nspad               64 bits of info                   tag
         lastenv, last-enf   = 32 bytes                        = 32 bytes
         lastbinding         (2 chunks)                        (2 chunks)
         hash, padding
@@ -385,7 +385,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
         info, cptr          info, cptr                        info, cptr
         attrib, length      attrib, length                    attrib, length
         pname, value        C-function, fast-C-function       prot, tag
-        nextsym, lastenv    64 bits of info                   xptr, padding
+        nspad, lastenv      64 bits of info                   xptr, padding
         last-enf, lastbinding     = 32 bytes                  = 32 bytes
         hash, padding               (2 chunks)                  (2 chunks)
         = 48 bytes          

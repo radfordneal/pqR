@@ -97,6 +97,7 @@
 
 #define USE_FAST_PROTECT_MACROS
 #define R_USE_SIGNALS 1
+#define NEED_SGGC_FUNCTIONS
 #include "Defn.h"
 #include <R_ext/Callbacks.h>
 
@@ -2671,23 +2672,28 @@ static void HashTableValues(SEXP table, int all, SEXP values, int *indx)
 	FrameValues(VECTOR_ELT(table, i), all, values, indx);
 }
 
+#define NOT_IN_SYMBOL_TABLE(s) \
+    (s == R_MissingArg || s == R_MissingUnder || s == R_RestartToken)
+
 static int BuiltinSize(int all, int intern)
 {
+    sggc_cptr_t nxt;
     int count = 0;
-    SEXP s;
-    int j;
-    for (j = 0; j < HSIZE; j++) {
-	for (s = R_SymbolTable[j]; s != R_NilValue; s = NEXTSYM_PTR(s)) {
-	    if (intern) {
-		if (INTERNAL(s) != R_NilValue)
-		    count++;
-	    }
-	    else {
-		if ((all || CHAR(PRINTNAME(s))[0] != '.')
-		    && SYMVALUE(s) != R_UnboundValue)
-		    count++;
-	    }
-	}
+
+    for (nxt = sggc_first_uncollected_of_kind(SGGC_SYM_KIND);
+         nxt != SGGC_NO_OBJECT;
+         nxt = sggc_next_uncollected_of_kind(nxt)) {
+        SEXP s = SEXP_FROM_CPTR(nxt);
+        if (NOT_IN_SYMBOL_TABLE(s)) continue;
+        if (intern) {
+            if (INTERNAL(s) != R_NilValue)
+                count++;
+        }
+        else {
+            if ((all || CHAR(PRINTNAME(s))[0] != '.')
+                && SYMVALUE(s) != R_UnboundValue)
+                count++;
+        }
     }
     return count;
 }
@@ -2695,48 +2701,53 @@ static int BuiltinSize(int all, int intern)
 static void
 BuiltinNames(int all, int intern, SEXP names, int *indx)
 {
-    SEXP s;
-    int j;
-    for (j = 0; j < HSIZE; j++) {
-	for (s = R_SymbolTable[j]; s != R_NilValue; s = NEXTSYM_PTR(s)) {
-	    if (intern) {
-		if (INTERNAL(s) != R_NilValue)
-		    SET_STRING_ELT(names, (*indx)++, PRINTNAME(s));
-	    }
-	    else {
-		if ((all || CHAR(PRINTNAME(s))[0] != '.')
-		    && SYMVALUE(s) != R_UnboundValue)
-		    SET_STRING_ELT(names, (*indx)++, PRINTNAME(s));
-	    }
-	}
+    sggc_cptr_t nxt;
+
+    for (nxt = sggc_first_uncollected_of_kind(SGGC_SYM_KIND);
+         nxt != SGGC_NO_OBJECT;
+         nxt = sggc_next_uncollected_of_kind(nxt)) {
+        SEXP s = SEXP_FROM_CPTR(nxt);
+        if (NOT_IN_SYMBOL_TABLE(s)) continue;
+        if (intern) {
+            if (INTERNAL(s) != R_NilValue)
+                SET_STRING_ELT(names, (*indx)++, PRINTNAME(s));
+        }
+        else {
+            if ((all || CHAR(PRINTNAME(s))[0] != '.')
+                && SYMVALUE(s) != R_UnboundValue)
+                SET_STRING_ELT(names, (*indx)++, PRINTNAME(s));
+        }
     }
 }
 
 static void
 BuiltinValues(int all, int intern, SEXP values, int *indx)
 {
-    SEXP s, vl;
-    int j;
-    for (j = 0; j < HSIZE; j++) {
-	for (s = R_SymbolTable[j]; s != R_NilValue; s = NEXTSYM_PTR(s)) {
-	    if (intern) {
-		if (INTERNAL(s) != R_NilValue) {
-		    vl = SYMVALUE(s);
-		    if (TYPEOF(vl) == PROMSXP)
-			vl = forcePromise(vl);
-		    SET_VECTOR_ELT(values, (*indx)++, duplicate(vl));
-		}
-	    }
-	    else {
-		if ((all || CHAR(PRINTNAME(s))[0] != '.')
-		    && SYMVALUE(s) != R_UnboundValue) {
-		    vl = SYMVALUE(s);
-		    if (TYPEOF(vl) == PROMSXP)
-			vl = forcePromise(vl);
-		    SET_VECTOR_ELT(values, (*indx)++, duplicate(vl));
-		}
-	    }
-	}
+    sggc_cptr_t nxt;
+
+    for (nxt = sggc_first_uncollected_of_kind(SGGC_SYM_KIND);
+         nxt != SGGC_NO_OBJECT;
+         nxt = sggc_next_uncollected_of_kind(nxt)) {
+        SEXP s = SEXP_FROM_CPTR(nxt);
+        if (NOT_IN_SYMBOL_TABLE(s)) continue;
+        SEXP vl;
+        if (intern) {
+            if (INTERNAL(s) != R_NilValue) {
+                vl = SYMVALUE(s);
+                if (TYPEOF(vl) == PROMSXP)
+                    vl = forcePromise(vl);
+                SET_VECTOR_ELT(values, (*indx)++, duplicate(vl));
+            }
+        }
+        else {
+            if ((all || CHAR(PRINTNAME(s))[0] != '.')
+                && SYMVALUE(s) != R_UnboundValue) {
+                vl = SYMVALUE(s);
+                if (TYPEOF(vl) == PROMSXP)
+                    vl = forcePromise(vl);
+                SET_VECTOR_ELT(values, (*indx)++, duplicate(vl));
+            }
+        }
     }
 }
 
@@ -3108,12 +3119,15 @@ void R_LockEnvironment(SEXP env, Rboolean bindings)
 
     if (IS_BASE(env)) {
 	if (bindings) {
-	    SEXP s;
-	    int j;
-	    for (j = 0; j < HSIZE; j++)
-		for (s = R_SymbolTable[j]; s != R_NilValue; s = NEXTSYM_PTR(s))
-		    if(SYMVALUE(s) != R_UnboundValue)
-			LOCK_BINDING(s);
+            sggc_cptr_t nxt;
+            for (nxt = sggc_first_uncollected_of_kind(SGGC_SYM_KIND);
+                 nxt != SGGC_NO_OBJECT;
+                 nxt = sggc_next_uncollected_of_kind(nxt)) {
+                SEXP s = SEXP_FROM_CPTR(nxt);
+                if (NOT_IN_SYMBOL_TABLE(s)) continue;
+                if (SYMVALUE(s) != R_UnboundValue)
+                    LOCK_BINDING(s);
+            }
 	}
 #ifdef NOT_YET
 	/* causes problems with Matrix */

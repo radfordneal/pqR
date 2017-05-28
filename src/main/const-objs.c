@@ -144,8 +144,7 @@ SYM_SEXPREC R_sym_consts[1] = {
 {
     CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,0),
     .symsxp = { .pname = R_NilValue, 
-                .value = R_UnboundValue, 
-                .nextsym = R_NilValue
+                .value = R_UnboundValue
               }
 }
 };

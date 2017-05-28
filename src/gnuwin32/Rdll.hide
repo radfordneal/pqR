@@ -173,7 +173,6 @@
  R_SrcrefSymbol
  R_StdinEnc
  R_StringHash
- R_SymbolTable
  R_TextBufferFree
  R_TextBufferGetc
  R_TextBufferInit

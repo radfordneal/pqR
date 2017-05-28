@@ -649,26 +649,25 @@ extern SEXP framenames; /* from model.c */
 
 lphash_entry_t lphash_make_entry (lphash_key_t key)
 {
-    return mkSYMSXP (mkChar(key), R_UnboundValue);
+    return CPTR_FROM_SEXP (mkSYMSXP (mkChar(key), R_UnboundValue));
 }
 
 int lphash_match (lphash_entry_t entry, lphash_key_t key)
 {
     SEXP sym = SEXP_FROM_CPTR ((sggc_cptr_t) entry);
 
-    return strcmp (key, PRINTNAME(sym)) == 0;
+    return strcmp (key, CHAR(PRINTNAME(sym))) == 0;
 }
 
 /* initialize the symbol table */
 void InitNames()
 {
-    /* Allocate and initialize the symbol table. */
-
-    if (!(R_SymbolTable = (SEXP *) calloc(HSIZE, sizeof(SEXP))))
-	R_Suicide("couldn't allocate memory for symbol table");
-    for (int i = 0; i < HSIZE; i++) R_SymbolTable[i] = R_NilValue;
+    /* Create the symbol table. */
 
     R_lphashSymTbl = lphash_create (HSIZE);
+
+    if (R_lphashSymTbl == NULL)
+	R_Suicide("couldn't allocate memory for symbol table");
 
     /* Set up built-in functions.  Do first so internals have small
        compressed pointers. */
@@ -720,45 +719,27 @@ void InitNames()
 
 static SEXP install_with_hashcode (const char *name, int hashcode)
 {
-    SEXP sym;
-    int i;
+    sggc_cptr_t sym_cptr;
 
-    i = hashcode & HSIZE_MASK;
+    sym_cptr = lphash_lookup (R_lphashSymTbl, hashcode, name);
 
-    /* Check to see if the symbol is already present;  if it is, return it. */
-    for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = NEXTSYM_PTR(sym)) {
-        if (CHAR_HASH(PRINTNAME(sym)) == hashcode /* quick pre-check */
-             && strcmp (name, CHAR(PRINTNAME(sym))) == 0)
-            return sym;
-    }
+    if (sym_cptr != LPHASH_NO_ENTRY)
+        return SEXP_FROM_CPTR(sym_cptr);
 
     /* Create a new symbol node and link it into the table. */
     if (strlen(name) > MAXIDSIZE)
 	error(_("variable names are limited to %d bytes"), MAXIDSIZE);
-    sym = mkSYMSXP(mkChar(name), R_UnboundValue);
-    NEXTSYM_PTR(sym) = R_SymbolTable[i];
-    R_SymbolTable[i] = sym;
 
-    return sym;
+    sym_cptr = lphash_insert (R_lphashSymTbl, hashcode, name);
+
+    if (sym_cptr == LPHASH_NO_ENTRY)
+        R_Suicide("couldn't allocate memory to expand symbol table");
+
+    return SEXP_FROM_CPTR(sym_cptr);
 }
 
 SEXP install(const char *name)
 {
-#if 0  /* Enable for tuning info */
-    if (strcmp(name,"HOWMANYSYMBOLS")==0) {
-        double count = 0, count_sq = 0;
-        for (i = 0; i<HSIZE; i++) {
-            int c = 0;
-            for (sym=R_SymbolTable[i]; sym!=R_NilValue; sym=NEXTSYM_PTR(sym))
-                c += 1;
-            count += c;
-            count_sq += c*c;
-        }
-        Rprintf("Number of symbols in table: %f\n", count);
-        Rprintf("Expected number in accessed bucket: %f\n", count_sq/count);
-    }
-#endif
-
     if (*name == '\0')
 	error(_("attempt to use zero-length variable name"));
 
@@ -784,23 +765,11 @@ SEXP installChar(SEXP charSXP)
 
 SEXP installed_already(const char *name)
 {
-    unsigned hashcode;
-    SEXP sym;
-    int i;
+    sggc_cptr_t sym_cptr;
 
-    if (*name == 0) return R_NoObject;
+    sym_cptr = lphash_lookup (R_lphashSymTbl, Rf_char_hash(name), name);
 
-    hashcode = Rf_char_hash(name);
-    i = hashcode & HSIZE_MASK;
-
-    /* Check to see if the symbol is already present;  if it is, return it. */
-    for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = NEXTSYM_PTR(sym)) {
-        if (CHAR_HASH(PRINTNAME(sym)) == hashcode /* quick pre-check */
-             && strcmp (name, CHAR(PRINTNAME(sym))) == 0)
-            return sym;
-    }
-
-    return R_NoObject;
+    return sym_cptr == LPHASH_NO_ENTRY ? R_NoObject : SEXP_FROM_CPTR(sym_cptr);
 }
 
 

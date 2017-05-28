@@ -577,66 +577,23 @@ void sggc_find_root_ptrs (void)
     for (SEXP *sp = R_BCNodeStackBase; sp<R_BCNodeStackTop; sp++)
         LOOK_AT(*sp);
 
-    /* Scan symbols.  May be done either using the symbol table or
-       SGGC's set of uncollected objects of the symbol kind.  Scanning
-       the uncollected set may have better cache properties.
+    /* Scan symbols, using SGGC's set of uncollected objects of the
+       symbol kind. We have to scan the symbol table specially because
+       we need to clear LASTSYMENV and LASTSYMENVNOTFOUND.  Plus it's
+       faster to mark / follow the pointers with special code here.
+       So we don't need old-to-new processing when setting fields. */
 
-       We have to scan the symbol table specially, because it's linked
-       by NEXTSYM_PTR, which sggc_find_object_ptrs doesn't know about,
-       and because we need to clear LASTSYMENV and LASTSYMENVNOTFOUND.
-       Plus it's faster to mark / follow the pointers with special
-       code here.  So we don't need old-to-new processing when setting
-       fields.
+    sggc_cptr_t nxt;
 
-       The symbol table may be nonexistent at startup (NULL). */
-
-    if (0)  /* scan using the symbol table */
-    {
-        if (R_SymbolTable != NULL) { 
-            for (i = 0; i < HSIZE; i++) {
-                for (SEXP s = R_SymbolTable[i]; s!=R_NilValue; s = NEXTSYM_PTR(s)){
-                    LASTSYMENV(s) = R_NoObject32;
-                    LASTSYMENVNOTFOUND(s) = R_NoObject32;
-                    MARK(PRINTNAME(s));
-                    if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
-                    if (ATTRIB(s) != R_NilValue) LOOK_AT(ATTRIB(s));
-                }
-            }
-        }
-    
-        /* Clear fields in the few symbols not in the symbol table, though
-           they shouldn't ever be set anyway.  Note that R_UnboundValue is
-           a constant now, so its fields shouldn't change. */
-    
-        if (R_MissingArg) {
-            LASTSYMENV(R_MissingArg) = R_NoObject32;
-            LASTSYMENVNOTFOUND(R_MissingArg) = R_NoObject32;
-            LASTSYMBINDING(R_MissingArg) = R_NoObject;
-        }
-        if (R_MissingUnder) {
-            LASTSYMENV(R_MissingUnder) = R_NoObject32;
-            LASTSYMENVNOTFOUND(R_MissingUnder) = R_NoObject32;
-            LASTSYMBINDING(R_MissingUnder) = R_NoObject;
-        }
-        if (R_RestartToken) {
-            LASTSYMENV(R_RestartToken) = R_NoObject32;
-            LASTSYMENVNOTFOUND(R_RestartToken) = R_NoObject32;
-            LASTSYMBINDING(R_RestartToken) = R_NoObject;
-        }
-    }
-    else  /* scan using the SGGC uncollected set */
-    {
-        sggc_cptr_t nxt;
-        for (nxt = sggc_first_uncollected_of_kind(SGGC_SYM_KIND);
-             nxt != SGGC_NO_OBJECT;
-             nxt = sggc_next_uncollected_of_kind(nxt)) {
-            SEXP s = SEXP_FROM_CPTR(nxt);
-            LASTSYMENV(s) = R_NoObject32;
-            LASTSYMENVNOTFOUND(s) = R_NoObject32;
-            MARK(PRINTNAME(s));
-            if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
-            if (ATTRIB(s) != R_NilValue) LOOK_AT(ATTRIB(s));
-        }
+    for (nxt = sggc_first_uncollected_of_kind(SGGC_SYM_KIND);
+         nxt != SGGC_NO_OBJECT;
+         nxt = sggc_next_uncollected_of_kind(nxt)) {
+        SEXP s = SEXP_FROM_CPTR(nxt);
+        LASTSYMENV(s) = R_NoObject32;
+        LASTSYMENVNOTFOUND(s) = R_NoObject32;
+        MARK(PRINTNAME(s));
+        if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
+        if (ATTRIB(s) != R_NilValue) LOOK_AT(ATTRIB(s));
     }
 
     /* Forward other roots. */
@@ -1697,7 +1654,6 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 
     SET_PRINTNAME (c, name);
     SET_SYMVALUE (c, value);
-    NEXTSYM_PTR(c) = R_NilValue;
     LASTSYMENV(c) = R_NoObject32;
     LASTSYMENVNOTFOUND(c) = R_NoObject32;
     LASTSYMBINDING(c) = R_NoObject;
@@ -1987,6 +1943,8 @@ static void count_obj (sggc_cptr_t v, sggc_nchunks_t nch)
 void *lphash_malloc (size_t size)
 {
     void *m;
+
+    /* REprintf("lphash_malloc: %u\n",(unsigned)size); */
 
     m = malloc(size);
 
