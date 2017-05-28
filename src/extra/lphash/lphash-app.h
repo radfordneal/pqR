@@ -22,13 +22,9 @@
 
 typedef unsigned lphash_entry_t;    /* Compressed pointer to symbol object */
 typedef char *lphash_key_t;         /* Symbol's print name */
-typedef unsigned lphash_hash_t;     /* Character hash as stored in print name */
+typedef unsigned lphash_hash_t;     /* Character hash as stored in PRINTNAME */
 
 #define LPHASH_NO_ENTRY 0 /* R_NoObject */
-
-#ifndef LPHASH_MAX_LOAD
-#define LPHASH_MAX_LOAD 0.7
-#endif
 
 #define lphash_free free
 

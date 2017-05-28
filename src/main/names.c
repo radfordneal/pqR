@@ -712,12 +712,12 @@ void InitNames()
 }
 
 
-/*  install - probe the symbol table. 
+/*  Create a symbol in the symbol table, if not already present.
     If "name" is not found, it is installed in the symbol table.
     For install, the symbol corresponding to the C string "name" is returned.
     For instalChar, the name is given as an R CHARSXP.  */
 
-static SEXP install_with_hashcode (const char *name, int hashcode)
+static SEXP install_with_hashcode (char *name, int hashcode)
 {
     sggc_cptr_t sym_cptr;
 
@@ -743,18 +743,13 @@ SEXP install(const char *name)
     if (*name == '\0')
 	error(_("attempt to use zero-length variable name"));
 
-    return install_with_hashcode (name, Rf_char_hash(name));
+    return install_with_hashcode ((char *) name, Rf_char_hash(name));
 }
 
 SEXP installChar(SEXP charSXP)
 {
-    const char *name = CHAR(charSXP);
-    unsigned hashcode = CHAR_HASH(charSXP);
-    SEXP res;
-
     PROTECT(charSXP);
-
-    res = install_with_hashcode (name, hashcode);
+    SEXP res = install_with_hashcode((char*) CHAR(charSXP), CHAR_HASH(charSXP));
     UNPROTECT(1);
 
     return res;
@@ -767,7 +762,7 @@ SEXP installed_already(const char *name)
 {
     sggc_cptr_t sym_cptr;
 
-    sym_cptr = lphash_lookup (R_lphashSymTbl, Rf_char_hash(name), name);
+    sym_cptr = lphash_lookup (R_lphashSymTbl, Rf_char_hash(name), (char*) name);
 
     return sym_cptr == LPHASH_NO_ENTRY ? R_NoObject : SEXP_FROM_CPTR(sym_cptr);
 }
