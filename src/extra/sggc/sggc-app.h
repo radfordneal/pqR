@@ -124,9 +124,9 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 
       Symbol:             Primitive:                        External pointer:
         info, pname         info, padding                     info, unused/shift
-        value, nspad        C-function                        prot, tag
-        lastenv, last-enf   fast-C-function                   external ptr(+pad)
-        lastbinding, hash   64 bits of info                   padding, padding
+        value, hash         C-function                        prot, tag
+        lastenv, lastbind   fast-C-function                   external ptr(+pad)
+        lastenf, padding    64 bits of info                   padding, padding
         = 32 bytes          padding if 32-bit                 = 32 bytes
           (2 chunks)        = 32 bytes                        (2 chunks)
                             (2 chunks)
@@ -152,7 +152,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 #define SGGC_KIND_CHUNKS \
 { 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
   1,   1,   1,   1,   1,   2, /* Smallest sizes for the SGGC types */ \
-  2,   2,   1,   2,   2,   2, /* 2nd smallest sizes, unused for types 2&5 */ \
+  2,   2,   1,   2,   2,   2, /* 2nd smallest sizes, unused for type 2 */ \
   3,   4,   1,   4,   2,   2, /* 3rd smallest sizes, unused for types 2,4&5 */ \
   5,   8,   1,   8,   2,   2, /* 4th smallest sizes, unused for types 2,4&5 */ \
   8,  16,   1,  16,   2,   2, /* 5th smallest sizes, unused for types 2,4&5 */ \
@@ -219,12 +219,12 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
       Symbol:             Primitive:                        External pointer:
         info, cptr          info, cptr                        info, cptr
         attrib              attrib                            attrib
-        length, hash        length, padding                   length, padding
+        length, padding     length, padding                   length, padding
         pname               C-function                        external ptr
         value               fast-C-function                   prot
-        nspad               64 bits of info                   tag
-        lastenv, last-enf   = 48 bytes                        = 48 bytes
-        lastbinding           (3 chunks)                        (3 chunks)
+        hash, lastenv       64 bits of info                   tag
+        lastbinding         = 48 bytes                        = 48 bytes
+        lastenf, padding      (3 chunks)                        (3 chunks)
         = 64 bytes
           (4 chunks)
 */
@@ -302,13 +302,11 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
         info, cptr          info, cptr                        info, cptr
         pname               C-function                        external ptr
         value               fast-C-function                   prot
-        nspad               64 bits of info                   tag
-        lastenv, last-enf   = 32 bytes                        = 32 bytes
-        lastbinding         (2 chunks)                        (2 chunks)
-        hash, padding
-        padding
-        = 64 bytes
-          (4 chunks)
+        hash, lastenv       64 bits of info                   tag
+        lastbinding         = 32 bytes                        = 32 bytes
+        lastenf, padding      (2 chunks)                        (2 chunks)
+        = 48 bytes
+          (3 chunks)
 */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
@@ -324,12 +322,12 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 #define SGGC_KIND_CHUNKS \
 { 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
   2,   2,   2,   2,   2,   2, /* Smallest sizes for the SGGC types */ \
-  3,   3,   2,   3,   2,   4, /* 2nd smallest sizes, unused for types 2&4 */ \
-  4,   5,   2,   5,   2,   4, /* 3rd smallest sizes, unused for types 2,4&5 */ \
-  5,   8,   2,   8,   2,   4, /* 4th smallest sizes, unused for types 2,4&5 */ \
-  8,  16,   2,  16,   2,   4, /* 5th smallest sizes, unused for types 2,4&5 */ \
- 16,  32,   2,  32,   2,   4, /* 6th smallest sizes, unused for types 2,4&5 */ \
- 32,  32,   2,  32,   2,   4  /* 7th smallest sizes, only for type 0 */ \
+  3,   3,   2,   3,   2,   3, /* 2nd smallest sizes, unused for types 2&4 */ \
+  4,   5,   2,   5,   2,   3, /* 3rd smallest sizes, unused for types 2,4&5 */ \
+  5,   8,   2,   8,   2,   3, /* 4th smallest sizes, unused for types 2,4&5 */ \
+  8,  16,   2,  16,   2,   3, /* 5th smallest sizes, unused for types 2,4&5 */ \
+ 16,  32,   2,  32,   2,   3, /* 6th smallest sizes, unused for types 2,4&5 */ \
+ 32,  32,   2,  32,   2,   3  /* 7th smallest sizes, only for type 0 */ \
 }
 
 #define SGGC_KIND_TYPES \
@@ -385,9 +383,9 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
         info, cptr          info, cptr                        info, cptr
         attrib, length      attrib, length                    attrib, length
         pname, value        C-function, fast-C-function       prot, tag
-        nspad, lastenv      64 bits of info                   xptr, padding
-        last-enf, lastbinding     = 32 bytes                  = 32 bytes
-        hash, padding               (2 chunks)                  (2 chunks)
+        hash, lastenv       64 bits of info                   xptr, padding
+        lastbinding, lastenf  = 32 bytes                        = 32 bytes
+        padding, padding      (2 chunks)                        (2 chunks)
         = 48 bytes          
           (3 chunks)
 */

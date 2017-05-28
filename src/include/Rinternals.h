@@ -290,8 +290,7 @@ struct promsxp_struct {
     struct sxpinfo_struct sxpinfo; \
     uint32_t cptr; \
     SEXP attrib; \
-    R_len_t length
-
+    R_len_t length;
 #endif
 
 #if !USE_COMPRESSED_POINTERS && USE_AUX_FOR_ATTRIB
@@ -368,28 +367,20 @@ typedef struct PRIM_SEXPREC {
 struct symsxp_struct {
     SEXP pname;
     SEXP value;
-    SEXP nspad;
+    int32_t sym_hash;
     SEXP32 lastenv;
-    SEXP32 lastenvnotfound;
     SEXP lastbinding;
+    SEXP32 lastenvnotfound;
+    int32_t padding;
 };
 
 typedef struct SYM_SEXPREC {
     SEXPREC_HEADER;
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
-    int32_t sym_hash;
+    int32_t padding;
 #endif
     struct symsxp_struct symsxp;
-#if USE_COMPRESSED_POINTERS
-    int32_t sym_hash;
-#endif
-#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && USE_AUX_FOR_ATTRIB
-    int32_t sym_hash;
-    int32_t padding;
-    int64_t padding2;
-#endif
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
-    int32_t sym_hash;
     int32_t padding;
 #endif
 } SYM_SEXPREC, *SYMSEXP;
