@@ -749,12 +749,14 @@ extern void helpers_wait_until_not_in_use(SEXP);
 /* General Cons Cell Attributes */
 
 #if USE_COMPRESSED_POINTERS
-#define ATTRIB(x)       NOT_LVALUE(* (SEXP *) SGGC_AUX2(x))
+#define ATTRIB_W(x)     (* (SEXP *) SGGC_AUX2(x))
 #elif SIZEOF_CHAR_P==8 && USE_AUX_FOR_ATTRIB
-#define ATTRIB(x)       NOT_LVALUE(* (SEXP *) SGGC_AUX1(CPTR_FROM_SEXP(x)))
+#define ATTRIB_W(x)     (* (SEXP *) SGGC_AUX1(CPTR_FROM_SEXP(x)))
 #else
-#define ATTRIB(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->attrib)
+#define ATTRIB_W(x)     (UPTR_FROM_SEXP(x)->attrib)
 #endif
+
+#define ATTRIB(x)       NOT_LVALUE(TYPEOF(x)==SYMSXP ? R_NilValue : ATTRIB_W(x))
 
 #define HAS_ATTRIB(x)   NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.has_attrib)
 #define OBJECT(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.obj)
