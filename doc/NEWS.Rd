@@ -6,6 +6,25 @@
 \encoding{UTF-8}
 
 
+\section{CHANGES IN VERSION RELEASED 2017-00-00}{
+
+  \subsection{INTRODUCTION}{
+  \itemize{ 
+  \item This release has several performance improvements.
+  }}
+
+  \subsection{DOCUMENTATION AND FEATURE CHANGES}{
+  \itemize{
+  \item Attempts to set attributes on a symbol are now silently ignored,
+        both at the R level, with \code{attr} and \code{attributes}, and
+        at the C API level, with \code{SET_ATTRIB}.  Getting the attributes
+        of a symbol returns NULL.  Previously (and also in R-3.4.0),
+        attributes could be attached to symbols, but they were lost
+        when a workspace was saved and restored.
+  }}
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2017-05-22}{
 
   \subsection{INTRODUCTION}{
