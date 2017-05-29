@@ -178,6 +178,10 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
         else {
 	    Rprintf("\"%s\"%s", CHAR(PRINTNAME(v)), 
                     SYMVALUE(v)==R_UnboundValue ? "" : " (has value)");
+	    Rprintf("%s", 
+                    ATTRIB_W(v)==R_NilValue ? "" : "  (has attr)");
+	    Rprintf("%s", 
+                    BASE_CACHE(v) ? " basecache" : "");
             Rprintf (" LAST...");
             if (LASTSYMENV(v) == R_NoObject32) Rprintf (" -");
             else Rprintf(" %d.%d", 
