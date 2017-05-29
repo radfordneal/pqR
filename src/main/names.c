@@ -649,12 +649,12 @@ extern SEXP framenames; /* from model.c */
 
 lphash_entry_t lphash_make_entry (lphash_key_t key)
 {
-    return CPTR_FROM_SEXP (mkSYMSXP (mkChar(key), R_UnboundValue));
+    return SEXP32_FROM_SEXP (mkSYMSXP (mkChar(key), R_UnboundValue));
 }
 
 int lphash_match (lphash_entry_t entry, lphash_key_t key)
 {
-    SEXP sym = SEXP_FROM_CPTR ((sggc_cptr_t) entry);
+    SEXP sym = SEXP_FROM_SEXP32 ((SEXP32) entry);
 
     return strcmp (key, CHAR(PRINTNAME(sym))) == 0;
 }
@@ -719,23 +719,23 @@ void InitNames()
 
 static SEXP install_with_hashcode (char *name, int hashcode)
 {
-    sggc_cptr_t sym_cptr;
+    SEXP32 sym32;
 
-    sym_cptr = lphash_lookup (R_lphashSymTbl, hashcode, name);
+    sym32 = lphash_lookup (R_lphashSymTbl, hashcode, name);
 
-    if (sym_cptr != LPHASH_NO_ENTRY)
-        return SEXP_FROM_CPTR(sym_cptr);
+    if (sym32 != LPHASH_NO_ENTRY)
+        return SEXP_FROM_SEXP32(sym32);
 
     /* Create a new symbol node and link it into the table. */
     if (strlen(name) > MAXIDSIZE)
 	error(_("variable names are limited to %d bytes"), MAXIDSIZE);
 
-    sym_cptr = lphash_insert (R_lphashSymTbl, hashcode, name);
+    sym32 = lphash_insert (R_lphashSymTbl, hashcode, name);
 
-    if (sym_cptr == LPHASH_NO_ENTRY)
+    if (sym32 == LPHASH_NO_ENTRY)
         R_Suicide("couldn't allocate memory to expand symbol table");
 
-    return SEXP_FROM_CPTR(sym_cptr);
+    return SEXP_FROM_SEXP32(sym32);
 }
 
 SEXP install(const char *name)
@@ -760,11 +760,11 @@ SEXP installChar(SEXP charSXP)
 
 SEXP installed_already(const char *name)
 {
-    sggc_cptr_t sym_cptr;
+    sggc_cptr_t sym32;
 
-    sym_cptr = lphash_lookup (R_lphashSymTbl, Rf_char_hash(name), (char*) name);
+    sym32 = lphash_lookup (R_lphashSymTbl, Rf_char_hash(name), (char*) name);
 
-    return sym_cptr == LPHASH_NO_ENTRY ? R_NoObject : SEXP_FROM_CPTR(sym_cptr);
+    return sym32 == LPHASH_NO_ENTRY ? R_NoObject : SEXP_FROM_SEXP32(sym32);
 }
 
 
