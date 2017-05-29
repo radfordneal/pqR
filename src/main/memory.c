@@ -1318,6 +1318,8 @@ static inline SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
             * (R_len_t *) SGGC_AUX1(cp) = 1;
 #   elif !USE_AUX_FOR_ATTRIB
         LENGTH(r) = 1;
+#   else
+        /* LENGTH may not exist */
 #   endif
 
     return r;
@@ -1483,24 +1485,15 @@ SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
 
 /*----------------------------------------------------------------------
 
-  NewEnvironment
+  NewEnvironment protects its arguments.
 
-  Create an environment by extending "rho" with a frame obtained by
-  pairing the variable names given by the tags on "namelist" with
-  the values given by the elements of "valuelist".  Note that "namelist" 
-  can be shorter than "valuelist" if the rest of "valuelist" already 
-  has tags. (In particular, "namelist" can be R_NilValue if all of
-  "valuelist" already has tags.)
-
-  NewEnvironment is defined directly to avoid the need to protect its
-  arguments unless a GC will actually occur.  This definition allows
-  the namelist argument to be shorter than the valuelist; in this
-  case the remaining values must be named already.  (This is useful
-  in cases where the entire valuelist is already named--namelist can
-  then be R_NilValue.)
-
-  The valuelist is destructively modified and used as the
-  environment's frame. */
+  Create an environment with "rho" as the enclosing environment, with
+  frame obtained by pairing the variable names given by the tags on
+  "namelist" with the values given by the elements of "valuelist".
+  Note that "namelist" can be shorter than "valuelist" if the rest of
+  "valuelist" already has tags. (In particular, "namelist" can be
+  R_NilValue if all of "valuelist" already has tags.)  Note that the
+  value list is destructively converted into the new frame. */
 
 SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 {
@@ -1517,6 +1510,7 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
     FRAME(newrho) = valuelist;
     HASHTAB(newrho) = R_NilValue;
     ENCLOS(newrho) = Rf_chk_valid_SEXP(rho);
+    ENVSYMBITS(newrho) = 0;
 
     v = Rf_chk_valid_SEXP(valuelist);
     n = Rf_chk_valid_SEXP(namelist);

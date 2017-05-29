@@ -250,12 +250,6 @@ struct listsxp_struct {
     SEXP tagval;
 };
 
-struct envsxp_struct {
-    SEXP frame;
-    SEXP enclos;
-    SEXP hashtab;
-};
-
 struct closxp_struct {
     SEXP formals;
     SEXP body;
@@ -319,7 +313,6 @@ typedef struct SEXPREC {
 #endif
     union {
 	struct listsxp_struct listsxp;
-	struct envsxp_struct envsxp;
 	struct closxp_struct closxp;
 	struct promsxp_struct promsxp;
     } u;
@@ -327,6 +320,25 @@ typedef struct SEXPREC {
     int32_t padding;
 #endif
 } SEXPREC;
+
+
+/* Version of SEXPREC used for environments. */
+
+struct envsxp_struct {
+    SEXP frame;
+    SEXP enclos;
+    SEXP hashtab;
+    uint64_t symbits;
+};
+
+typedef struct ENV_SEXPEC {
+    SEXPREC_HEADER;
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
+    int32_t padding;
+#endif
+    struct envsxp_struct envsxp;
+    int64_t padding2;
+} ENV_SEXPREC, *ENVSEXP;
 
 
 /* Version of SEXPREC used for primitives. */
@@ -839,11 +851,13 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SET_SPEC_SYM(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec = (v)) 
 
 /* Environment Access Macros */
-#define FRAME(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->u.envsxp.frame)
-#define ENCLOS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->u.envsxp.enclos)
-#define HASHTAB(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->u.envsxp.hashtab)
-#define ENVFLAGS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)	/* for environments */
+#define FRAME(x)	NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->envsxp.frame)
+#define ENCLOS(x)	NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->envsxp.enclos)
+#define HASHTAB(x)	NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->envsxp.hashtab)
+#define ENVFLAGS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)
 #define SET_ENVFLAGS(x,v)	((UPTR_FROM_SEXP(x)->sxpinfo.gp)=(v))
+#define ENVSYMBITS(x)   NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->envsxp.symbits)
+#define SET_ENVSYMBITS(x,v)  (((ENVSEXP)UPTR_FROM_SEXP(x))->envsxp.symbits=(v))
 #define NO_SPEC_SYM(x)  NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec) 
                                            /* 1 = env has no special symbol */
 #define SET_NO_SPEC_SYM(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec = (v))
@@ -1449,7 +1463,7 @@ LibExtern SEXP R_EmptyEnv;          /* Variable form, for those that need it */
 #if USE_COMPRESSED_POINTERS
 #define R_EmptyEnv ((SEXP)SGGC_CPTR_VAL(R_SGGC_ENV_INDEX,0))
 #else
-ConstExtern R_CONST SEXPREC R_env_consts[1]; /* Defined in const-objs.c */
+ConstExtern R_CONST ENV_SEXPREC R_env_consts[1]; /* Defined in const-objs.c */
 #define R_EmptyEnv ((SEXP) &R_env_consts[0])
 #endif
 

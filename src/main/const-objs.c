@@ -125,12 +125,14 @@ VECTOR_SEXPREC_C R_ScalarBox_space[4] = {
 /* Definition of the R_EmptyEnv constant, whose address when cast to SEXP is 
    R_EmptyEnv.  Leave LENGTH (if present) as zero. */
 
-R_CONST SEXPREC R_env_consts[1] = {
+R_CONST ENV_SEXPREC R_env_consts[1] = {
 {
     CONST_HEADER(ENVSXP,R_SGGC_ENV_INDEX,0),
-    .u = { .envsxp = 
-            { .frame = R_NilValue, .enclos = R_NilValue, .hashtab = R_NilValue }
-         }
+    .envsxp = { .frame = R_NilValue, 
+                .enclos = R_NilValue, 
+                .hashtab = R_NilValue,
+                .symbits = 0
+              }
 }
 };
 
