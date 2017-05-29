@@ -1774,10 +1774,11 @@ SEXP ScalarRawMaybeConst(Rbyte x)
     return ScalarRaw(x);
 }
 
-/* Allocate a vector object (and also list-like objects).
-   This ensures validity of list-like (LISTSXP, VECSXP, EXPRSXP),
-   STRSXP and CHARSXP types; others are initialized to all zero bits.
-*/
+/* Allocate a vector object (and also list-like objects).  
+
+   Initializes to ensure validity of list-like (LISTSXP, VECSXP,
+   EXPRSXP), STRSXP and CHARSXP types; otherwise leaves data
+   unitialized.  */
 
 SEXP allocVector(SEXPTYPE type, R_len_t length)
 {
@@ -2056,8 +2057,9 @@ static SEXP do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     setAttrib(ans, R_NamesSymbol, nms);
 
-    /* Do a GC, with counts added to 'ans'. */
+    /* Do a full GC, with counts added to 'ans'. */
 
+    gc_next_level = 2;
     R_gc_internal(0,ans);
 
     /* Undo counts for objects allocated by R_alloc. */
