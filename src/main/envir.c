@@ -239,14 +239,6 @@ void setNoSpecSymFlag (SEXP env)
   internal changes of implementation without affecting client code.
 */
 
-/*----------------------------------------------------------------------
-
-  String Hashing
-
-  This is taken from the second edition of the "Dragon Book" by
-  Aho, Ullman and Sethi.
-
-*/
 
 /*----------------------------------------------------------------------
 
@@ -591,20 +583,11 @@ static SEXP R_HashProfile(SEXP table)
   ----------------------------------------------------------------------*/
 
 
-/* Global variable caching.  A cache is maintained in a hash table,
-   R_GlobalCache.  The entry values are either R_UnboundValue (a
-   flushed cache entry), the binding LISTSXP cell from the environment
-   containing the binding found in a search from R_GlobalEnv, or a
-   symbol if the globally visible binding lives in the base package.
-   The cache for a variable is flushed if a new binding for it is
-   created in a global frame or if the variable is removed from any
-   global frame, or if a base cache entry is changed.
-
-   Symbols in the global cache with values from the base environment
-   that are functions (and not active bindings) are flagged with BASE_CACHE,
-   so that their value can be returned immediately without needing to look 
-   in the hash table.  They must still have entries in the hash table, 
-   however, so that they can beflushed as needed.
+/* Global variable caching.  A cache is maintained in the symvalue and
+   attribute fields of symbols.  BASE_CACHE flags a symbol whose
+   cached value is in symvalue.  Otherwise, the cached binding cell
+   is in the attribute field, R_NilValue if the symbol is not in the
+   global cache.
 
    To make sure the cache is valid, all binding creations and removals
    from global frames must go through the interface functions in this
@@ -623,10 +606,6 @@ static SEXP R_HashProfile(SEXP table)
 #define MARK_AS_LOCAL_FRAME(e) \
   SET_ENVFLAGS(e, ENVFLAGS(e) & (~ GLOBAL_FRAME_MASK))
 
-#define INITIAL_CACHE_SIZE 1000
-
-static SEXP R_GlobalCache, R_GlobalCachePreserve;
-
 static SEXP R_BaseNamespaceName;
 
 void attribute_hidden InitBaseEnv()
@@ -640,9 +619,6 @@ void attribute_hidden InitGlobalEnv()
     R_GlobalEnv = R_NewHashedEnv(R_BaseEnv, ScalarIntegerMaybeConst(0));
 
     MARK_AS_GLOBAL_FRAME(R_GlobalEnv);
-    R_GlobalCache = R_NewHashTable(INITIAL_CACHE_SIZE);
-    R_GlobalCachePreserve = CONS(R_GlobalCache, R_NilValue);
-    R_PreserveObject(R_GlobalCachePreserve);
 
     R_BaseNamespace = NewEnvironment(R_NilValue, R_NilValue, R_GlobalEnv);
     UPTR_FROM_SEXP(R_BaseNamespace)->sxpinfo.trace_base = 1;
@@ -653,22 +629,14 @@ void attribute_hidden InitGlobalEnv()
     R_NamespaceRegistry = R_NewHashedEnv(R_NilValue, ScalarIntegerMaybeConst(0));
     R_PreserveObject(R_NamespaceRegistry);
     defineVar(install("base"), R_BaseNamespace, R_NamespaceRegistry);
+
     /**** needed to properly initialize the base namespace */
 }
 
-static inline int hashIndex(SEXP symbol, SEXP table)
+static inline void R_FlushGlobalCache(SEXP sym)
 {
-    return SYM_HASH(symbol) % HASHSIZE(table);
-}
-
-static void R_FlushGlobalCache(SEXP sym)
-{
-    SEXP entry = R_HashGetLoc(hashIndex(sym, R_GlobalCache), sym,
-			      R_GlobalCache);
-    if (entry != R_NilValue) {
-	SETCAR(entry, R_UnboundValue);
-        SET_BASE_CACHE(sym,0);
-    }
+    ATTRIB_W(sym) = R_NilValue;
+    SET_BASE_CACHE(sym,0);
 }
 
 static void R_FlushGlobalCacheFromTable(SEXP table)
@@ -699,62 +667,23 @@ static void R_FlushGlobalCacheFromUserTable(SEXP udb)
 	R_FlushGlobalCache(Rf_installChar(STRING_ELT(names,i)));
 }
 
-static void R_AddGlobalCache(SEXP symbol, SEXP place)
+static inline void R_AddGlobalCacheBase(SEXP symbol)
 {
-    int oldslotsused = HASHSLOTSUSED(R_GlobalCache);
-    R_HashSet(hashIndex(symbol, R_GlobalCache), symbol, R_GlobalCache, place,
-	      FALSE);
+    ATTRIB_W(symbol) = R_NilValue;
+    SET_BASE_CACHE (symbol, !IS_ACTIVE_BINDING(symbol));
+}
 
-    /* We set the BASE_CACHE flag for symbols in the base environment
-       that aren't active bindings and whose values are functions or
-       promises with function values. */
-
-    SET_BASE_CACHE (symbol, symbol==place && !IS_ACTIVE_BINDING(symbol)
-      && (isFunction(SYMVALUE(symbol)) || TYPEOF(SYMVALUE(symbol)) == PROMSXP
-            && isFunction(PRVALUE_PENDING_OK(SYMVALUE(symbol)))));
-
-#   if 0  /* enable for debug info */
-        static int chk = 1, prnt;
-        if (chk) { chk = 0; prnt = getenv("PRNT") != 0; }
-        if (prnt) {
-            REprintf("Added %s, base %d",CHAR(PRINTNAME(symbol)),symbol==place);
-            if (symbol==place) {
-                REprintf(", type %d, base cache %d", TYPEOF(SYMVALUE(symbol)),
-                                                       BASE_CACHE(symbol));
-                if (TYPEOF(SYMVALUE(symbol)) == PROMSXP)
-                    REprintf(", prvalue type %d",
-                       TYPEOF(PRVALUE_PENDING_OK(SYMVALUE(symbol))));
-            }
-            REprintf("\n");
-        }
-#   endif
-
-    if (oldslotsused != HASHSLOTSUSED(R_GlobalCache) &&
-        R_HashSizeCheck(R_GlobalCache)) {
-	R_GlobalCache = R_HashResize(R_GlobalCache);
-	SETCAR(R_GlobalCachePreserve, R_GlobalCache);
-    }
+static inline void R_AddGlobalCacheNonBase(SEXP symbol, SEXP place)
+{
+    ATTRIB_W(symbol) = place;
+    SET_BASE_CACHE (symbol, 0);
 }
 
 static SEXP R_GetGlobalCache(SEXP symbol)
 {
-    SEXP vl;
-
-    if (BASE_CACHE(symbol))
-        return SYMVALUE(symbol);
-
-    vl = R_HashGet(hashIndex(symbol, R_GlobalCache), symbol, R_GlobalCache);
-    switch(TYPEOF(vl)) {
-    case SYMSXP:
-        vl = SYMBOL_BINDING_VALUE(vl);  /* Value of R_UnboundValue is itself */
-        if (TYPEOF(vl) == PROMSXP && isFunction(PRVALUE_PENDING_OK(vl)))
-            SET_BASE_CACHE(symbol,1);
-        return vl;
-    case LISTSXP:
-	return BINDING_VALUE(vl);
-    default:
-	error(_("invalid cached value in R_GetGlobalCache"));
-    }
+    return BASE_CACHE(symbol) ? SYMVALUE(symbol)
+         : ATTRIB_W(symbol) != R_NilValue ? BINDING_VALUE(ATTRIB_W(symbol))
+         : R_UnboundValue;
 }
 
 
@@ -1110,7 +1039,7 @@ SEXP findVarInFrame(SEXP rho, SEXP symbol)
    cache can be used.  Doesn't wait for the value found to be computed.
    Always set R_binding_cell to R_NilValue - fast updates here aren't needed. */
 
-static SEXP findGlobalVar(SEXP symbol)
+static inline SEXP findGlobalVar(SEXP symbol)
 {
     SEXP vl, rho;
 
@@ -1126,14 +1055,14 @@ static SEXP findGlobalVar(SEXP symbol)
 	if (IS_BASE(rho)) {
 	    vl = SYMBOL_BINDING_VALUE(symbol);
 	    if (vl != R_UnboundValue)
-		R_AddGlobalCache(symbol, symbol);
+		R_AddGlobalCacheBase(symbol);
 	    return vl;
         }
         else {
 	    vl = findVarLocInFrame(rho, symbol, &canCache);
 	    if (vl != R_NilValue) {
 		if(canCache)
-		    R_AddGlobalCache(symbol, vl);
+		    R_AddGlobalCacheNonBase(symbol, vl);
 		return BINDING_VALUE(vl);
 	    }
 	}
@@ -1433,14 +1362,7 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
             continue;
         }
 
-        /* See if it is in the global cache.  For lookups outside packages,
-           it usually is there if it's in any of the remaining environments. */ 
-
         if (rho == R_GlobalEnv) {
-            if (BASE_CACHE(symbol)) {
-                vl = SYMVALUE(symbol);
-                goto got_value;
-            }
             vl = findGlobalVar(symbol);
             if (vl != R_UnboundValue)
                 goto got_value;

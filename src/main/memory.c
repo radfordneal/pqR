@@ -593,7 +593,7 @@ void sggc_find_root_ptrs (void)
         LASTSYMENVNOTFOUND(s) = R_NoObject32;
         MARK(PRINTNAME(s));
         if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
-        if (ATTRIB(s) != R_NilValue) LOOK_AT(ATTRIB(s));
+        if (ATTRIB_W(s) != R_NilValue) LOOK_AT(ATTRIB_W(s));
     }
 
     /* Forward other roots. */
@@ -623,7 +623,7 @@ void sggc_find_root_ptrs (void)
 
     if (R_VStack != R_NoObject) {
         SEXP v;
-        for (v = R_VStack; v != R_NilValue; v = ATTRIB(v))
+        for (v = R_VStack; v != R_NilValue; v = ATTRIB_W(v))
             MARK(v);  /* contains no pointers to follow, other than ATTRIB */
     }
 
@@ -756,7 +756,7 @@ void sggc_after_marking (int level, int rep)
 	SEXP t;
         while (p < q) {
 	    t = R_NilValue;
-	    for (s = *p; s != R_NilValue; s = ATTRIB(s)) {
+	    for (s = *p; s != R_NilValue; s = ATTRIB_W(s)) {
                 if (DEBUG_GLOBAL_STRING_HASH && TYPEOF(s)!=CHARSXP)
                    REprintf(
                      "R_StringHash table contains a non-CHARSXP (%d, gc)!\n",
@@ -765,9 +765,9 @@ void sggc_after_marking (int level, int rep)
                     /* remove unused CHARSXP */
 		    if (t == R_NilValue) /* head of list */
                         /* Do NOT use SET_VECTOR_ELT - no old-to-new tracking */
-			*p = ATTRIB(s);
+			*p = ATTRIB_W(s);
 		    else
-			ATTRIB(t) = ATTRIB(s);
+			ATTRIB_W(t) = ATTRIB_W(s);
 		}
                 else 
                     t = s;
@@ -797,7 +797,7 @@ static int free_charsxp (sggc_cptr_t cptr)
     SEXP chain = VECTOR_ELT(R_StringHash,index);
 
     if (chain == chr) {  /* CHARSXP to be deleted is first in chain */
-        chain = ATTRIB(chain);
+        chain = ATTRIB_W(chain);
         VECTOR_ELT(R_StringHash,index) = chain;
         if (chain == R_NilValue)
             SET_HASHSLOTSUSED (R_StringHash, HASHSLOTSUSED(R_StringHash) - 1);
@@ -808,9 +808,9 @@ static int free_charsxp (sggc_cptr_t cptr)
         SEXP prev;
         do {
             prev = chain;
-            chain = ATTRIB(chain);
+            chain = ATTRIB_W(chain);
         } while (chain != chr);
-        ATTRIB(prev) = ATTRIB(chain);
+        ATTRIB_W(prev) = ATTRIB_W(chain);
     }
 
     return 0;
@@ -1236,7 +1236,7 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 
     UPTR_FROM_SEXP(r)->sxpinfo = zero_sxpinfo;
     TYPEOF(r) = type;
-    ATTRIB(r) = R_NilValue;
+    ATTRIB_W(r) = R_NilValue;
 
 #   if USE_COMPRESSED_POINTERS
         /* LENGTH is in AUX1, which may be read-only. */
@@ -1268,7 +1268,7 @@ static SEXP alloc_sym (void)
 
     UPTR_FROM_SEXP(r)->sxpinfo = zero_sxpinfo;
     TYPEOF(r) = SYMSXP;
-    ATTRIB(r) = R_NilValue;
+    ATTRIB_W(r) = R_NilValue;
 
 #   if USE_COMPRESSED_POINTERS
         /* LENGTH is in AUX1, which may be read-only. */
@@ -1310,7 +1310,7 @@ static inline SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
 
     UPTR_FROM_SEXP(r)->sxpinfo = zero_sxpinfo;
     TYPEOF(r) = type;
-    ATTRIB(r) = R_NilValue;
+    ATTRIB_W(r) = R_NilValue;
 
 #   if USE_COMPRESSED_POINTERS
         /* LENGTH is in AUX1, which may be read-only. */
@@ -1379,7 +1379,7 @@ char *R_alloc (size_t nelem, int eltsize)
     r->cptr = cp;
 #endif
 
-    ATTRIB(r) = R_VStack;
+    ATTRIB_W(r) = R_VStack;
     R_VStack = r;
 
     char *s = (char *) UPTR_FROM_SEXP(r);
@@ -2062,7 +2062,7 @@ static SEXP do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
 
     /* Undo counts for objects allocated by R_alloc. */
 
-    for (v = R_VStack; v != R_NilValue && v != R_NoObject; v = ATTRIB(v)) {
+    for (v = R_VStack; v != R_NilValue && v != R_NoObject; v = ATTRIB_W(v)) {
         int type = TYPEOF(v);
         if (type > LGLSXP) type -= 2;
         if (type < 24) INTEGER(ans)[type] -= 1;
@@ -2541,7 +2541,7 @@ static void R_StringHash_resize(unsigned int newsize)
     for (counter = 0; counter < LENGTH(old_table); counter++) {
 	val = VECTOR_ELT(old_table, counter);
 	while (val != R_NilValue) {
-	    next = ATTRIB(val);
+	    next = ATTRIB_W(val);
 #if DEBUG_GLOBAL_STRING_HASH
             if (TYPEOF(val)!=CHARSXP)
                REprintf("R_StringHash table contains a non-CHARSXP (%d, rs)!\n",
@@ -2556,7 +2556,7 @@ static void R_StringHash_resize(unsigned int newsize)
                destrictive modification, which does NOT do the old-to-new
                check, since table entries aren't supposed to be marked
                in the initial pass of the GC. */
-	    ATTRIB(val) = new_chain;                   /* not SET_ATTRIB! */
+	    ATTRIB_W(val) = new_chain;                   /* not SET_ATTRIB! */
 	    VECTOR_ELT(new_table, new_hashcode) = val; /* not SET_VECTOR_ELT! */
 	    val = next;
 	}
@@ -2634,7 +2634,7 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 
     for (val = VECTOR_ELT(R_StringHash, hashcode); 
          val != R_NilValue; 
-         val = ATTRIB(val)) {
+         val = ATTRIB_W(val)) {
 	if (need_enc == (ENC_KNOWN(val) | IS_BYTES(val))) {
             if (full_hash == CHAR_HASH(val) && LENGTH(val) == len
                    && memcmp (CHAR(val), name, len) == 0) {
@@ -2673,7 +2673,7 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 
     /* The modifications below should NOT do the old-to-new check, since
        the table should not be looked at in the initial GC scan. */
-    ATTRIB(val) = VECTOR_ELT(R_StringHash, hashcode);      /* not SET_ATTRIB! */
+    ATTRIB_W(val) = VECTOR_ELT(R_StringHash, hashcode);    /* not SET_ATTRIB! */
     VECTOR_ELT(R_StringHash, hashcode) = val;          /* not SET_VECTOR_ELT! */
 
     /* Resize the hash table if desirable and possible. */
@@ -2713,7 +2713,7 @@ void do_show_cache(int n)
 		else if (IS_BYTES(chain))
 		    Rprintf("B");
 		Rprintf("|%s| ", CHAR(chain));
-		chain = ATTRIB(chain);
+		chain = ATTRIB_W(chain);
 	    } while (chain != R_NilValue);
 	    Rprintf("\n");
 	    j++;
@@ -2740,7 +2740,7 @@ void do_write_cache()
 		    else if (IS_BYTES(chain))
 			fprintf(f, "B");
 		    fprintf(f, "|%s| ", CHAR(chain));
-		    chain = ATTRIB(chain);
+		    chain = ATTRIB_W(chain);
 		} while (chain != R_NilValue);
 		fprintf(f, "\n");
 	    }
@@ -2925,7 +2925,7 @@ static R_size_t objectsize(SEXP s)
     /* Add in attributes, except for CHARSXP, where they are actually
        the links for the CHARSXP cache. */
 
-    if (TYPEOF(s) != CHARSXP)
+    if (TYPEOF(s) != CHARSXP && TYPEOF(s) != SYMSXP)
         cnt += objectsize(ATTRIB(s));
 
     return cnt;

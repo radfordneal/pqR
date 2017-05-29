@@ -1,0 +1,11 @@
+Replace global hash table of symbol bindings with use of attrib field
+in symbols for global binding (along with value field for base bindings).
+
+
+This requires (silently) disallowing setting of attributes on symbols
+at R level, which are not currently saved in a workspace in any case.
+This is documented in NEWS, help(attr), and help(attributes).
+
+New ATTRIB_W macro for internal use allows r/w access without such
+checks, as needed for use for global bindings, or for efficiency.
+

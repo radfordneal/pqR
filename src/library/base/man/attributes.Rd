@@ -24,6 +24,8 @@ mostattributes(obj) <- value
   \item{value}{an appropriate named list of attributes, or \code{NULL}.}
 }
 \details{
+  As for \code{\link{attr}}, attempts to set attributes on a symbol
+  are silently ignored.
   Unlike \code{\link{attr}} it is possible to set attributes on a
   \code{NULL} object: it will first be coerced to an empty list.
   
