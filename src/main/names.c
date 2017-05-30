@@ -638,8 +638,10 @@ static void SetupBuiltins(void)
 
     /* Flag "special" symbols. */
 
-    for (i = 0; Spec_name[i]; i++)
-        SET_SYMBITS (install(Spec_name[i]), 1);
+    for (i = 0; Spec_name[i]; i++) {
+        SEXP sym = install(Spec_name[i]);
+        SET_SYMBITS (sym, SYMBITS(sym) | 1);
+    }
 }
 
 extern SEXP framenames; /* from model.c */
@@ -732,7 +734,9 @@ static SEXP install_with_hashcode (char *name, int hashcode)
     if (sym32 == LPHASH_NO_ENTRY)
         R_Suicide("couldn't allocate memory to expand symbol table");
 
-    return SEXP_FROM_SEXP32(sym32);
+    SEXP sym = SEXP_FROM_SEXP32(sym32);
+
+    return sym;
 }
 
 SEXP install(const char *name)

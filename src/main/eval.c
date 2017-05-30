@@ -59,7 +59,8 @@ static inline SEXP FINDFUN (SEXP symbol, SEXP rho)
         SEXP res = SYMVALUE(symbol);
         if (TYPEOF(res) == PROMSXP)
             res = PRVALUE_PENDING_OK(res);
-        return res;
+        if (isFunction(res))
+            return res;
     }
 
     return findFun_nospecsym(symbol,rho);
