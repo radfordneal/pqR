@@ -1723,11 +1723,26 @@ extern void *alloca(size_t);
 #endif
 
 
+/* Skip to the first environment that might contain the given symbol,
+   on the basis of symbits.  Note that ENVSYMBITS(R_EmptyEnv) and
+   ENVSYMBITS(R_GlobalEnv) are both all 1s. */
+
+static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
+{
+    R_symbits_t bits = SYMBITS(symbol);
+    while ((ENVSYMBITS(rho) & bits) != bits)
+        rho = ENCLOS(rho);
+    return rho;
+}
+
+
 /* Inline version of findVarPendingOK, for speed when symbol is found
    from LASTSYMBINDING.  Doesn't necessarily set R_binding_cell. */
 
 static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
 {
+    rho = SKIP_USING_SYMBITS (rho, sym);
+
     if (LASTSYMENV(sym) == SEXP32_FROM_SEXP(rho)) {
         SEXP b = CAR(LASTSYMBINDING(sym));
         if (b != R_UnboundValue)

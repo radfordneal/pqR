@@ -505,14 +505,13 @@ static void R_HashFrame(SEXP rho)
 	/* If using a previously-unused slot then increase HASHSLOTSUSED */
 	if (chain == R_NilValue) 
             SET_HASHSLOTSUSED(table, HASHSLOTSUSED(table) + 1);
-else if (TYPEOF(chain) != LISTSXP) abort();
 	tmp_chain = frame;
 	frame = CDR(frame);
 	SETCDR(tmp_chain, chain);
 	SET_VECTOR_ELT(table, hashcode, tmp_chain);
     }
     SET_FRAME(rho, R_NilValue);
-    SET_ENVSYMBITS(rho, 0);
+    SET_ENVSYMBITS(rho, ~(R_symbits_t)0);
 }
 
 
@@ -872,8 +871,6 @@ SEXP findVarInFramePendingOK(SEXP rho, SEXP symbol)
 {
     SEXP value;
 
-    if (TYPEOF(symbol) != SYMSXP) abort();
-
     if (SEXP32_FROM_SEXP(rho) == LASTSYMENV(symbol)) {
         SEXP binding = LASTSYMBINDING(symbol); /* won't be an active binding */
         if ( ! BINDING_IS_LOCKED(binding)) {
@@ -893,8 +890,6 @@ SEXP findVarInFramePendingOK(SEXP rho, SEXP symbol)
 SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 {
     SEXP value;
-
-    if (TYPEOF(symbol) != SYMSXP) abort();
 
     if (SEXP32_FROM_SEXP(rho) == LASTSYMENV(symbol)) {
         SEXP binding = LASTSYMBINDING(symbol); /* won't be an active binding */
@@ -1081,6 +1076,8 @@ SEXP findVar(SEXP symbol, SEXP rho)
 {
     SEXP value;
 
+    rho = SKIP_USING_SYMBITS (rho, symbol);
+
     /* This first loop handles local frames, if there are any.  It
        will also handle all frames if rho is a global frame other than
        R_GlobalEnv */
@@ -1106,6 +1103,8 @@ SEXP findVar(SEXP symbol, SEXP rho)
 SEXP findVarPendingOK(SEXP symbol, SEXP rho)
 {
     SEXP value;
+
+    rho = SKIP_USING_SYMBITS (rho, symbol);
 
     /* This first loop handles local frames, if there are any.  It
        will also handle all frames if rho is a global frame other than
@@ -1141,9 +1140,10 @@ SEXP findVarPendingOK(SEXP symbol, SEXP rho)
 SEXP attribute_hidden
 findVar1(SEXP symbol, SEXP rho, SEXPTYPE mode, int inherits)
 {
-    SEXP vl;
+    if (inherits) rho = SKIP_USING_SYMBITS (rho, symbol);
+
     while (rho != R_EmptyEnv) {
-	vl = findVarInFrame3(rho, symbol, TRUE);
+	SEXP vl = findVarInFrame3(rho, symbol, TRUE);
 	if (vl != R_UnboundValue) {
 	    if (mode == ANYSXP) return vl;
 	    if (TYPEOF(vl) == PROMSXP)
@@ -1167,23 +1167,24 @@ static SEXP
 findVar1mode(SEXP symbol, SEXP rho, SEXPTYPE mode, int inherits,
 	     Rboolean doGet)
 {
-    SEXP vl;
-    int tl;
+    if (inherits) rho = SKIP_USING_SYMBITS (rho, symbol);
+
     if (mode == INTSXP) mode = REALSXP;
     if (mode == FUNSXP || mode ==  BUILTINSXP || mode == SPECIALSXP)
 	mode = CLOSXP;
+
     while (rho != R_EmptyEnv) {
+        SEXP vl;
 	if (! doGet && mode == ANYSXP)
 	    vl = findVarInFrame3(rho, symbol, 2);
 	else
 	    vl = findVarInFrame3(rho, symbol, doGet);
-
 	if (vl != R_UnboundValue) {
 	    if (mode == ANYSXP) return vl;
 	    if (TYPEOF(vl) == PROMSXP)
                 vl = forcePromise(vl);
 	    if (mode == CLOSXP && isFunction(vl)) return vl;
-	    tl = TYPEOF(vl);
+	    int tl = TYPEOF(vl);
             if (tl == INTSXP) tl = REALSXP;
 	    if (tl == mode) return vl;
 	}
@@ -1310,21 +1311,12 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
 
 SEXP findFun(SEXP symbol, SEXP rho)
 {
-    /* Skip to the first environment that might contain such a symbol, on
-       the basis of symbits.  Note that ENVSYMBITS(R_EmptyEnv) is all 1s. */
-
-    R_symbits_t bits = SYMBITS(symbol);
-    while ((ENVSYMBITS(rho) & bits) != bits)
-        rho = ENCLOS(rho);
-
-    return findFun_nospecsym(symbol,rho);
+    return findFun_nospecsym (symbol, SKIP_USING_SYMBITS(rho,symbol));
 }
 
 SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
 {
     SEXP vl;
-
-    if (TYPEOF(symbol) != SYMSXP) abort();
 
     /* Search environments for a definition that is a function. */
 
@@ -1367,21 +1359,16 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
     error(_("could not find function \"%s\""), CHAR(PRINTNAME(symbol)));
 }
 
-/* Variation on findFun that doesn't report errors itself, doesn't
-   check for special symbols, does not use the global cache (which is
-   quicker if most searches are expected to fail), and records a failed
-   local search even if the whole search fails (unlike findFun).  
-
-   Used for looking up methods in objects.c. */
+/* Variation on findFun that doesn't report errors itself and does not
+   use the global cache (which is quicker if most searches are
+   expected to fail).  Used for looking up methods in objects.c. */
 
 SEXP findFunMethod(SEXP symbol, SEXP rho)
 {
-    if (TYPEOF(symbol) != SYMSXP) abort();
-
-    SEXP vl;
-
-    for ( ; rho != R_EmptyEnv; rho = ENCLOS(rho)) {
-	vl = findVarInFramePendingOK(rho, symbol);
+    for (rho = SKIP_USING_SYMBITS(rho,symbol); 
+         rho != R_EmptyEnv; 
+         rho = ENCLOS(rho)) {
+	SEXP vl = findVarInFramePendingOK(rho, symbol);
 	if (vl == R_UnboundValue)
             continue;
         if (TYPEOF(vl) == PROMSXP)
@@ -1416,8 +1403,6 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
 {
     int hashcode;
     SEXP loc;
-
-    if (TYPEOF(symbol) != SYMSXP) abort();
 
     PROTECT3(symbol,value,rho);
 
