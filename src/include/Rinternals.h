@@ -325,18 +325,17 @@ typedef struct SEXPREC {
 /* Version of SEXPREC used for environments. */
 
 struct envsxp_struct {
-    SEXP frame;
-    SEXP enclos;
-    SEXP hashtab;
-    uint64_t symbits;
 };
 
-typedef struct ENV_SEXPEC {
+typedef struct ENV_SEXPREC {
     SEXPREC_HEADER;
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
     int32_t padding;
 #endif
-    struct envsxp_struct envsxp;
+    SEXP frame;
+    SEXP enclos;
+    SEXP hashtab;
+    uint64_t symbits;
     int64_t padding2;
 } ENV_SEXPREC, *ENVSEXP;
 
@@ -851,13 +850,13 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SET_SPEC_SYM(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec = (v)) 
 
 /* Environment Access Macros */
-#define FRAME(x)	NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->envsxp.frame)
-#define ENCLOS(x)	NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->envsxp.enclos)
-#define HASHTAB(x)	NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->envsxp.hashtab)
+#define FRAME(x)	NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->frame)
+#define ENCLOS(x)	NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->enclos)
+#define HASHTAB(x)	NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->hashtab)
 #define ENVFLAGS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)
 #define SET_ENVFLAGS(x,v)	((UPTR_FROM_SEXP(x)->sxpinfo.gp)=(v))
-#define ENVSYMBITS(x)   NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->envsxp.symbits)
-#define SET_ENVSYMBITS(x,v)  (((ENVSEXP)UPTR_FROM_SEXP(x))->envsxp.symbits=(v))
+#define ENVSYMBITS(x)   NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->symbits)
+#define SET_ENVSYMBITS(x,v)  (((ENVSEXP)UPTR_FROM_SEXP(x))->symbits=(v))
 #define NO_SPEC_SYM(x)  NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec) 
                                            /* 1 = env has no special symbol */
 #define SET_NO_SPEC_SYM(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec = (v))

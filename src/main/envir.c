@@ -342,36 +342,35 @@ static SEXP R_HashGetLoc(int hashcode, SEXP symbol, SEXP table)
   Hash table initialisation function.  Creates a table of size 'size'. 
 */
 
-static SEXP R_NewHashTable(int size)
+static inline SEXP R_NewHashTable(int size)
 {
     SEXP table;
 
-    if (size <= 0) size = HASHMINSIZE;
+    if (size < HASHMINSIZE) size = HASHMINSIZE;
 
-    /* Allocate hash table in the form of a vector */
-    PROTECT(table = allocVector(VECSXP, size));
+    table = allocVector(VECSXP, size);
     SET_HASHSLOTSUSED(table, 0);
-    UNPROTECT(1);
-    return(table);
+
+    return table;
 }
 
 /*----------------------------------------------------------------------
 
   R_NewHashedEnv
 
-  Returns a new environment with a hash table initialized with default
+  Returns a new environment with a hash table initialized with specified
   size.  The only non-static hash table function.
 */
 
 SEXP R_NewHashedEnv(SEXP enclos, SEXP size)
 {
-    SEXP s;
+    SEXP s, t;
 
-    PROTECT(enclos);
     PROTECT(size);
     PROTECT(s = NewEnvironment(R_NilValue, R_NilValue, enclos));
-    SET_HASHTAB(s, R_NewHashTable(asInteger(size)));
-    UNPROTECT(3);
+    t = R_NewHashTable(asInteger(size));
+    SET_HASHTAB (s, t);
+    UNPROTECT(2);
     return s;
 }
 
@@ -391,6 +390,9 @@ static SEXP R_HashResize(SEXP table)
     SEXP new_table, chain, new_chain, tmp_chain;
     int new_size, counter, new_hashcode;
 #if DEBUG_OUTPUT
+    Rprintf("\nABOUT TO RESIZE HASH TABLE %llu/%u\n",
+            (long long unsigned) UPTR_FROM_SEXP(table),
+            (unsigned) CPTR_FROM_SEXP(table));
     int n_entries = 0;
 #endif
 
@@ -415,6 +417,7 @@ static SEXP R_HashResize(SEXP table)
 #if DEBUG_OUTPUT
             n_entries += 1;
 #endif
+            if (TYPEOF(chain) != LISTSXP) abort();
             new_hashcode = SYM_HASH(TAG(chain)) % HASHSIZE(new_table);
 	    new_chain = VECTOR_ELT(new_table, new_hashcode);
 	    /* If using a previously-unused slot then increase HASHSLOTSUSED */
@@ -434,7 +437,9 @@ static SEXP R_HashResize(SEXP table)
 
     /* Some debugging statements */
 #if DEBUG_OUTPUT
-    Rprintf("RESIZED TABLE WITH %d ENTRIES O.K.\n",n_entries);
+    Rprintf("RESIZED TABLE WITH %d ENTRIES, NEW TABLE IS %llu/%u\n", n_entries,
+            (long long unsigned) UPTR_FROM_SEXP(new_table),
+            (unsigned) CPTR_FROM_SEXP(new_table));
     Rprintf("Old size: %d, New size: %d\n",HASHSIZE(table),HASHSIZE(new_table));
     Rprintf("Old slotsused: %d, New slotsused: %d\n",
 	    HASHSLOTSUSED(table), HASHSLOTSUSED(new_table));
@@ -450,19 +455,19 @@ static SEXP R_HashResize(SEXP table)
   R_HashSizeCheck
 
   Hash table size rechecking function.	Looks at the fraction of table
-  entries that have one or more symbols, comparing to a threshold value
-  (which should be in the interval (0,1)).  Returns true if the table 
-  needs to be resized.  Does NOT check whether resizing shouldn't be 
-  done because HASHMAXSIZE would then be exceeded.
+  entries that have one or more symbols, comparing to a threshold value.
+  Returns true if the table needs to be resized.  Does NOT check whether 
+  resizing shouldn't be done because HASHMAXSIZE would then be exceeded.
 */
 
 static R_INLINE int R_HashSizeCheck(SEXP table)
 {
-    /* Do some checking */
+
+#if DEBUG_CHECK
+
     if (TYPEOF(table) != VECSXP)
 	error("argument not of type VECSXP, R_HashSizeCheck");
 
-#if DEBUG_CHECK
     int slotsused = 0;
     int i;
     for (i = 0; i<LENGTH(table); i++) {
@@ -476,9 +481,10 @@ static R_INLINE int R_HashSizeCheck(SEXP table)
                 HASHSLOTSUSED(table), slotsused);
         abort();
     }
+
 #endif
 
-    return HASHSLOTSUSED(table) > 0.5 * HASHSIZE(table);
+    return 0 && HASHSLOTSUSED(table) > 0.5 * HASHSIZE(table);
 }
 
 
@@ -496,6 +502,11 @@ static void R_HashFrame(SEXP rho)
     int hashcode;
     SEXP frame, chain, tmp_chain, table;
 
+#if DEBUG_OUTPUT
+    Rprintf("\nMAKING ENVIRONMENT %llu HASHED, WITH SIZE %d\n",
+            (long long unsigned)table, HASHSIZE(table));
+#endif
+
     /* Do some checking */
     if (TYPEOF(rho) != ENVSXP)
 	error("argument not of type ENVSXP, from R_Hashframe");
@@ -507,6 +518,7 @@ static void R_HashFrame(SEXP rho)
 	/* If using a previously-unused slot then increase HASHSLOTSUSED */
 	if (chain == R_NilValue) 
             SET_HASHSLOTSUSED(table, HASHSLOTSUSED(table) + 1);
+else if (TYPEOF(chain) != LISTSXP) abort();
 	tmp_chain = frame;
 	frame = CDR(frame);
 	SETCDR(tmp_chain, chain);

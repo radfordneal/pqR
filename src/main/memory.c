@@ -145,6 +145,10 @@ extern SEXP framenames;                /* in model.c */
 
 static sggc_kind_t R_type_length1_to_kind[32]; /* map R type to kind if len 1 */
 
+SEXP R_gc_abort_if_free = R_NoObject;  /* Debugging aid:  If set to other than
+                                          R_NoObject, will (maybe) cause abort
+                                          if free after a garbage collection */
+
 
 /* char_hash_size MUST be a power of 2 and char_hash_mask == char_hash_size - 1
    in order for x & char_hash_mask to be equivalent to x % char_hash_size. */
@@ -985,9 +989,10 @@ void attribute_hidden InitMemory()
     if (getenv("R_SHOW_SEXPREC_SIZES")) {
         REprintf("Sizes of SEXPREC structures:\n");
         REprintf(
-        "SEXPREC %d, SYM_SEXPREC %d, PRIM_SEXPREC %d, EXTPTR_SEXPREC %d, VECTOR_SEXPREC %d, VECTOR_SEXPREC_C %d\n",
+        "SEXPREC %d, ENV_SEXPREC %d, SYM_SEXPREC %d, PRIM_SEXPREC %d, EXTPTR_SEXPREC %d, VECTOR_SEXPREC %d, VECTOR_SEXPREC_C %d\n",
          (int) sizeof (SEXPREC), 
-         (int) sizeof (SYM_SEXPREC), 
+         (int) sizeof (ENV_SEXPREC),
+         (int) sizeof (SYM_SEXPREC),
          (int) sizeof (PRIM_SEXPREC),
          (int) sizeof (EXTPTR_SEXPREC),
          (int) sizeof (VECTOR_SEXPREC),
@@ -1246,6 +1251,8 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
         LENGTH(r) = 1;
 #   endif
 
+    if (0 && R_gc_abort_if_free == r) abort();  /* can enable as debug aid */
+
     return r;
 }
 
@@ -1277,6 +1284,8 @@ static SEXP alloc_sym (void)
 #   elif !USE_AUX_FOR_ATTRIB
         LENGTH(r) = 1;
 #   endif
+
+    if (0 && R_gc_abort_if_free == r) abort();  /* can enable as debug aid */
 
     return r;
 }
@@ -1321,6 +1330,8 @@ static inline SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
 #   else
         /* LENGTH may not exist */
 #   endif
+
+    if (0 && R_gc_abort_if_free == r) abort();  /* can enable as debug aid */
 
     return r;
 }
@@ -1389,6 +1400,8 @@ char *R_alloc (size_t nelem, int eltsize)
     s += SGGC_CHUNK_SIZE;  /* don't use header, with cptr and attrib */
 #endif 
 
+    if (0 && R_gc_abort_if_free == r) abort();  /* can enable as debug aid */
+
     return s;
 
   cannot_allocate:
@@ -1432,6 +1445,9 @@ SEXP allocSExp(SEXPTYPE t)
 
     case SYMSXP:
         return mkSYMSXP (R_BlankString, R_UnboundValue);
+
+    case ENVSXP:
+        return NewEnvironment (R_NilValue, R_NilValue, R_NilValue);
         
     case EXTPTRSXP:
         return R_MakeExternalPtr (NULL, R_NilValue, R_NilValue);
@@ -1817,7 +1833,6 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
     s = alloc_obj(type,length);
     LENGTH(s) = length;
     TRUELENGTH(s) = 0;
-    if (R_IsMemReporting) R_ReportAllocation (s);
 
 #if VALGRIND_LEVEL>0
     VALGRIND_MAKE_MEM_UNDEFINED(DATAPTR(s), actual_size);
@@ -1837,6 +1852,8 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
     else if (type == CHARSXP) {
         CHAR_RW(s)[length] = 0; /* ensure there's a terminating null character*/
     }
+
+    if (R_IsMemReporting) R_ReportAllocation (s);
 
     return s;
 }
@@ -2018,6 +2035,12 @@ static void R_gc_internal (int reason, SEXP counters)
           (unsigned) sggc_info.gen1_big_chunks, 
           (unsigned) sggc_info.gen2_big_chunks, 
           recovery_frac0, recovery_frac1, recovery_frac2);
+    }
+
+    /* Debugging aid, which isn't fully-implemented yet. */
+
+    if (R_gc_abort_if_free != R_NoObject) {
+        sggc_check_valid_cptr (R_gc_abort_if_free);
     }
 
     gc_ran_finalizers = RunFinalizers();

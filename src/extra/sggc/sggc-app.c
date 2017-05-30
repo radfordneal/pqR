@@ -107,6 +107,7 @@ sggc_nchunks_t Rf_nchunks (int type, unsigned length)
         return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)16*length) / SGGC_CHUNK_SIZE;
     case EXTPTRSXP:
     case SYMSXP:
+    case ENVSXP:
         return sggc_kind_chunks[2*SGGC_N_TYPES+R_type_to_sggc_type[type]];
     default:
         return sggc_kind_chunks[SGGC_N_TYPES+R_type_to_sggc_type[type]];
@@ -141,6 +142,7 @@ sggc_nchunks_t Rf_nchunks (int type, unsigned length)
     case CPLXSXP:
         return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)16*length) / SGGC_CHUNK_SIZE;
     case SYMSXP:
+    case ENVSXP:
         return sggc_kind_chunks[2*SGGC_N_TYPES+R_type_to_sggc_type[type]];
     default:
         return sggc_kind_chunks[SGGC_N_TYPES+R_type_to_sggc_type[type]];
@@ -175,6 +177,7 @@ sggc_nchunks_t Rf_nchunks (int type, unsigned length)
     case CPLXSXP:
         return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)16*length) / SGGC_CHUNK_SIZE;
     case SYMSXP:
+    case ENVSXP:
         return sggc_kind_chunks[2*SGGC_N_TYPES+R_type_to_sggc_type[type]];
     default:
         return sggc_kind_chunks[SGGC_N_TYPES+R_type_to_sggc_type[type]];
@@ -209,6 +212,7 @@ sggc_nchunks_t Rf_nchunks (int type, unsigned length)
     case CPLXSXP:
         return (hd + SGGC_CHUNK_SIZE-1 + (uint64_t)16*length) / SGGC_CHUNK_SIZE;
     case SYMSXP:
+    case ENVSXP:
         return sggc_kind_chunks[2*SGGC_N_TYPES+R_type_to_sggc_type[type]];
     default:
         return sggc_kind_chunks[SGGC_N_TYPES+R_type_to_sggc_type[type]];

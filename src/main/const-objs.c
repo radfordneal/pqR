@@ -128,11 +128,10 @@ VECTOR_SEXPREC_C R_ScalarBox_space[4] = {
 R_CONST ENV_SEXPREC R_env_consts[1] = {
 {
     CONST_HEADER(ENVSXP,R_SGGC_ENV_INDEX,0),
-    .envsxp = { .frame = R_NilValue, 
-                .enclos = R_NilValue, 
-                .hashtab = R_NilValue,
-                .symbits = 0
-              }
+    .frame = R_NilValue, 
+    .enclos = R_NilValue, 
+    .hashtab = R_NilValue,
+    .symbits = 0
 }
 };
 
