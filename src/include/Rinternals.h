@@ -390,8 +390,7 @@ typedef struct SYM_SEXPREC {
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
     int32_t padding;
 #endif
-    SEXP32 lastenvnotfound;
-    uint32_t symbits;
+    R_symbits_t symbits;
 } SYM_SEXPREC, *SYMSEXP;
 
 
@@ -833,7 +832,6 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SYMVALUE(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->value)
 #define LASTSYMENV(x)	(((SYMSEXP) UPTR_FROM_SEXP(x))->lastenv)
 #define LASTSYMBINDING(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->lastbinding)
-#define LASTSYMENVNOTFOUND(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->lastenvnotfound)
 #define SYMBITS(x)      NOT_LVALUE((((SYMSEXP) UPTR_FROM_SEXP(x))->symbits))
 #define SET_SYMBITS(x,v)  (((SYMSEXP) UPTR_FROM_SEXP(x))->symbits = (v))
 #define DDVAL_MASK	1

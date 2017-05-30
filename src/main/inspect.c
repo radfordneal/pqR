@@ -190,12 +190,6 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
                    (LASTSYMENV(v)))),
                   SGGC_SEGMENT_OFFSET(CPTR_FROM_SEXP(SEXP_FROM_SEXP32
                    (LASTSYMENV(v)))));
-            if (LASTSYMENVNOTFOUND(v) == R_NoObject32) Rprintf (" -");
-            else Rprintf(" %d.%d", 
-                  SGGC_SEGMENT_INDEX(CPTR_FROM_SEXP(SEXP_FROM_SEXP32
-                   (LASTSYMENVNOTFOUND(v)))),
-                  SGGC_SEGMENT_OFFSET(CPTR_FROM_SEXP(SEXP_FROM_SEXP32
-                   (LASTSYMENVNOTFOUND(v)))));
 #           if USE_COMPRESSED_POINTERS
                 if (LASTSYMBINDING(v) == R_NoObject) Rprintf (" -");
                 else Rprintf(" %d.%d", SGGC_SEGMENT_INDEX(LASTSYMBINDING(v)),

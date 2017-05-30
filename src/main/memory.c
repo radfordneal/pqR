@@ -582,10 +582,10 @@ void sggc_find_root_ptrs (void)
         LOOK_AT(*sp);
 
     /* Scan symbols, using SGGC's set of uncollected objects of the
-       symbol kind. We have to scan the symbol table specially because
-       we need to clear LASTSYMENV and LASTSYMENVNOTFOUND.  Plus it's
-       faster to mark / follow the pointers with special code here.
-       So we don't need old-to-new processing when setting fields. */
+       symbol kind.  We have to scan the symbol table specially
+       because we need to clear LASTSYMENV.  Plus it's faster to mark
+       the pointers with special code here.  Because we scan this way,
+       we don't need old-to-new processing when setting symbol fields. */
 
     sggc_cptr_t nxt;
 
@@ -594,7 +594,6 @@ void sggc_find_root_ptrs (void)
          nxt = sggc_next_uncollected_of_kind(nxt)) {
         SEXP s = SEXP_FROM_CPTR(nxt);
         LASTSYMENV(s) = R_NoObject32;
-        LASTSYMENVNOTFOUND(s) = R_NoObject32;
         MARK(PRINTNAME(s));
         if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
         if (ATTRIB_W(s) != R_NilValue) LOOK_AT(ATTRIB_W(s));
@@ -1665,7 +1664,6 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     SET_PRINTNAME (c, name);
     SET_SYMVALUE (c, value);
     LASTSYMENV(c) = R_NoObject32;
-    LASTSYMENVNOTFOUND(c) = R_NoObject32;
     LASTSYMBINDING(c) = R_NoObject;
     SYMBITS(c) = 0;  /* all 0s to disable feature if not set later */
 
