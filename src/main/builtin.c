@@ -450,11 +450,11 @@ static SEXP do_newenv(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if( hash ) {
 	args = CDR(args);
-	PROTECT(size = coerceVector(CAR(args), INTSXP));
-	if (INTEGER(size)[0] == NA_INTEGER)
-	    INTEGER(size)[0] = 0; /* so it will use the internal default */
+	size = coerceVector(CAR(args), INTSXP);
+	if (LENGTH(size) < 1 || INTEGER(size)[0] == NA_INTEGER) {
+            size = ScalarIntegerMaybeConst(0);  /* use the internal default */
+        }
 	ans = R_NewHashedEnv(enclos, size);
-	UNPROTECT(1);
     } else
 	ans = NewEnvironment(R_NilValue, R_NilValue, enclos);
     return ans;
