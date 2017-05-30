@@ -46,20 +46,20 @@
 #include <helpers/helpers-app.h>
 
 
-/* Inline version of findFun, for speed when a special symbol is found in
-   the base environmet. */
+/* Inline version of findFun, meant to be fast when a special symbol is found 
+   in the base environmet. */
 
 static inline SEXP FINDFUN (SEXP symbol, SEXP rho)
 {
-    if (SPEC_SYM(symbol)) {
-        while (NO_SPEC_SYM(rho)) /* note that NO_SPEC_SYM(R_EmptyEnv) is 0 */
-            rho = ENCLOS(rho);
-        if (rho == R_GlobalEnv && BASE_CACHE(symbol)) {
-            SEXP res = SYMVALUE(symbol);
-            if (TYPEOF(res) == PROMSXP)
-                res = PRVALUE_PENDING_OK(res);
-            return res;
-        }
+    R_symbits_t bits = SYMBITS(symbol);
+    while ((ENVSYMBITS(rho) & bits) != bits)
+        rho = ENCLOS(rho);
+
+    if (rho == R_GlobalEnv && BASE_CACHE(symbol)) {
+        SEXP res = SYMVALUE(symbol);
+        if (TYPEOF(res) == PROMSXP)
+            res = PRVALUE_PENDING_OK(res);
+        return res;
     }
 
     return findFun_nospecsym(symbol,rho);
@@ -970,7 +970,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	a = CDR(a);
     }
 
-    setNoSpecSymFlag (newrho);
+    set_envsymbits (newrho);
 
     /*  Fix up any extras that were supplied by usemethod. */
 

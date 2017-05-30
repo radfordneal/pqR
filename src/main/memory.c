@@ -1526,7 +1526,7 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
     FRAME(newrho) = valuelist;
     HASHTAB(newrho) = R_NilValue;
     ENCLOS(newrho) = Rf_chk_valid_SEXP(rho);
-    ENVSYMBITS(newrho) = 0;
+    ENVSYMBITS(newrho) = ~(R_symbits_t)0; /* all 1s disables if not set later */
 
     v = Rf_chk_valid_SEXP(valuelist);
     n = Rf_chk_valid_SEXP(namelist);
@@ -1667,6 +1667,7 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     LASTSYMENV(c) = R_NoObject32;
     LASTSYMENVNOTFOUND(c) = R_NoObject32;
     LASTSYMBINDING(c) = R_NoObject;
+    SYMBITS(c) = 0;  /* all 0s to disable feature if not set later */
 
     SET_DDVAL(c, isDDName(name));
 
@@ -2040,7 +2041,7 @@ static void R_gc_internal (int reason, SEXP counters)
     /* Debugging aid, which isn't fully-implemented yet. */
 
     if (R_gc_abort_if_free != R_NoObject) {
-        sggc_check_valid_cptr (R_gc_abort_if_free);
+        sggc_check_valid_cptr (CPTR_FROM_SEXP(R_gc_abort_if_free));
     }
 
     gc_ran_finalizers = RunFinalizers();

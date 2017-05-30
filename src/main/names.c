@@ -381,10 +381,7 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 };
 
 
-/* Table of special names.  These are marked as special with SET_SPEC_SYM.  
-   Environments that have never contained such a symbol are marked as such,
-   with NO_SPEC_SYM, so they can be quickly skipped when searching for a 
-   function named by such a special symbol. 
+/* Table of special names. 
 
    Any symbols can be put here, but ones that contain special characters, or are
    reserved words, are the ones unlikely to be defined in any environment other
@@ -642,7 +639,7 @@ static void SetupBuiltins(void)
     /* Flag "special" symbols. */
 
     for (i = 0; Spec_name[i]; i++)
-        SET_SPEC_SYM (install(Spec_name[i]), 1);
+        SET_SYMBITS (install(Spec_name[i]), 1);
 }
 
 extern SEXP framenames; /* from model.c */

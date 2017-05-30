@@ -131,7 +131,7 @@ R_CONST ENV_SEXPREC R_env_consts[1] = {
     .frame = R_NilValue, 
     .enclos = R_NilValue, 
     .hashtab = R_NilValue,
-    .symbits = 0
+    .envsymbits = ~(R_symbits_t)0 /* all 1s, so searches will definitely look */
 }
 };
 
@@ -144,9 +144,9 @@ R_CONST ENV_SEXPREC R_env_consts[1] = {
 SYM_SEXPREC R_sym_consts[1] = { 
 {
     CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,0),
-    .symsxp = { .pname = R_NilValue, 
-                .value = R_UnboundValue
-              }
+    .pname = R_NilValue, 
+    .value = R_UnboundValue,
+    .symbits = 0
 }
 };
 

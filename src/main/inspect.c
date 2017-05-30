@@ -141,7 +141,6 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
         if (RTRACE(v)) { if (a) Rprintf(","); Rprintf("TR"); a = 1; }
         if (RSTEP(v)) { if (a) Rprintf(","); Rprintf("STP"); a = 1; }
         if (BASE_CACHE(v)) { if (a) Rprintf(","); Rprintf("BC"); a = 1; }
-        if (SPEC_SYM(v)) { if (a) Rprintf(","); Rprintf("SS"); a = 1; }
     }
     if (IS_S4_OBJECT(v)) { if (a) Rprintf(","); Rprintf("S4"); a = 1; }
     if (TYPEOF(v) == SYMSXP || TYPEOF(v) == LISTSXP) {
@@ -149,6 +148,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
 	if (BINDING_IS_LOCKED(v)) { if (a) Rprintf(","); Rprintf("LCK"); a = 1; }
     }    
     if (TYPEOF(v) == ENVSXP) {
+        Rprintf("SB%016llx",(unsigned long long)ENVSYMBITS(v)); a = 1;
         if (FRAME_IS_LOCKED(v)) { if (a) Rprintf(","); Rprintf("LCK"); a = 1; }
 	if (IS_GLOBAL_FRAME(v)) { if (a) Rprintf(","); Rprintf("GL"); a = 1; }
     }
@@ -182,6 +182,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
                     ATTRIB_W(v)==R_NilValue ? "" : "  (has attr)");
 	    Rprintf("%s", 
                     BASE_CACHE(v) ? " basecache" : "");
+            Rprintf(" SB%016llx",(unsigned long long)SYMBITS(v));
             Rprintf (" LAST...");
             if (LASTSYMENV(v) == R_NoObject32) Rprintf (" -");
             else Rprintf(" %d.%d", 

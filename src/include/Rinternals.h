@@ -324,8 +324,7 @@ typedef struct SEXPREC {
 
 /* Version of SEXPREC used for environments. */
 
-struct envsxp_struct {
-};
+typedef uint64_t R_symbits_t;
 
 typedef struct ENV_SEXPREC {
     SEXPREC_HEADER;
@@ -335,7 +334,7 @@ typedef struct ENV_SEXPREC {
     SEXP frame;
     SEXP enclos;
     SEXP hashtab;
-    uint64_t symbits;
+    R_symbits_t envsymbits;
     int64_t padding2;
 } ENV_SEXPREC, *ENVSEXP;
 
@@ -376,13 +375,6 @@ typedef struct PRIM_SEXPREC {
 /* Version of SEXPREC used for symbols. */
 
 struct symsxp_struct {
-    SEXP pname;
-    SEXP value;
-    int32_t sym_hash;
-    SEXP32 lastenv;
-    SEXP lastbinding;
-    SEXP32 lastenvnotfound;
-    int32_t padding;
 };
 
 typedef struct SYM_SEXPREC {
@@ -390,10 +382,16 @@ typedef struct SYM_SEXPREC {
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
     int32_t padding;
 #endif
-    struct symsxp_struct symsxp;
+    SEXP pname;
+    SEXP value;
+    int32_t sym_hash;
+    SEXP32 lastenv;
+    SEXP lastbinding;
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
     int32_t padding;
 #endif
+    SEXP32 lastenvnotfound;
+    uint32_t symbits;
 } SYM_SEXPREC, *SYMSEXP;
 
 
@@ -831,11 +829,13 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SET_RSTEP(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec=(v))
 
 /* Symbol Access Macros */
-#define PRINTNAME(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->symsxp.pname)
-#define SYMVALUE(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->symsxp.value)
-#define LASTSYMENV(x)	(((SYMSEXP) UPTR_FROM_SEXP(x))->symsxp.lastenv)
-#define LASTSYMBINDING(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->symsxp.lastbinding)
-#define LASTSYMENVNOTFOUND(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->symsxp.lastenvnotfound)
+#define PRINTNAME(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->pname)
+#define SYMVALUE(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->value)
+#define LASTSYMENV(x)	(((SYMSEXP) UPTR_FROM_SEXP(x))->lastenv)
+#define LASTSYMBINDING(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->lastbinding)
+#define LASTSYMENVNOTFOUND(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->lastenvnotfound)
+#define SYMBITS(x)      NOT_LVALUE((((SYMSEXP) UPTR_FROM_SEXP(x))->symbits))
+#define SET_SYMBITS(x,v)  (((SYMSEXP) UPTR_FROM_SEXP(x))->symbits = (v))
 #define DDVAL_MASK	1
 #define DDVAL(x)	(UPTR_FROM_SEXP(x)->sxpinfo.gp & DDVAL_MASK) /* for ..1, ..2 etc */
 #define SET_DDVAL_BIT(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= DDVAL_MASK)
@@ -845,21 +845,14 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
                                                                in global cache*/
 #define SET_BASE_CACHE(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.trace_base = (v))
 
-/* Flag indicating whether a symbol is special. */
-#define SPEC_SYM(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec)
-#define SET_SPEC_SYM(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec = (v)) 
-
 /* Environment Access Macros */
 #define FRAME(x)	NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->frame)
 #define ENCLOS(x)	NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->enclos)
 #define HASHTAB(x)	NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->hashtab)
 #define ENVFLAGS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)
 #define SET_ENVFLAGS(x,v)	((UPTR_FROM_SEXP(x)->sxpinfo.gp)=(v))
-#define ENVSYMBITS(x)   NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->symbits)
-#define SET_ENVSYMBITS(x,v)  (((ENVSEXP)UPTR_FROM_SEXP(x))->symbits=(v))
-#define NO_SPEC_SYM(x)  NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec) 
-                                           /* 1 = env has no special symbol */
-#define SET_NO_SPEC_SYM(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec = (v))
+#define ENVSYMBITS(x)   NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->envsymbits)
+#define SET_ENVSYMBITS(x,v)  (((ENVSEXP)UPTR_FROM_SEXP(x))->envsymbits=(v))
 #define IS_BASE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_base)
                            /* 1 = R_BaseEnv or R_BaseNamespace */
 #define IS_USER_DATABASE(rho) \
@@ -1736,9 +1729,9 @@ SEXP Rf_ScalarRawMaybeConst(Rbyte);
 SEXP Rf_ScalarRealMaybeConst(double);
 SEXP Rf_ScalarStringMaybeConst(SEXP);
 SEXP Rf_setAttrib(SEXP, SEXP, SEXP);
-void Rf_setNoSpecSymFlag(SEXP);
 void Rf_setSVector(SEXP*, int, SEXP);
 void Rf_set_elements_to_NA_or_NULL(SEXP, int, int);
+void Rf_set_envsymbits(SEXP);
 void Rf_setVar(SEXP, SEXP, SEXP);
 int Rf_set_var_in_frame(SEXP, SEXP, SEXP, int, int);
 void Rf_set_var_nonlocal(SEXP, SEXP, SEXP, int);
@@ -2172,9 +2165,9 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define ScalarRaw		Rf_ScalarRaw
 #define ScalarRawMaybeConst		Rf_ScalarRawMaybeConst
 #define setAttrib		Rf_setAttrib
-#define setNoSpecSymFlag	Rf_setNoSpecSymFlag
 #define setSVector		Rf_setSVector
 #define set_elements_to_NA_or_NULL Rf_set_elements_to_NA_or_NULL
+#define set_envsymbits		Rf_set_envsymbits
 #define setVar			Rf_setVar
 #define set_var_in_frame	Rf_set_var_in_frame
 #define set_var_nonlocal	Rf_set_var_nonlocal

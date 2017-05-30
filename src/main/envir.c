@@ -48,9 +48,6 @@
  *  "value" slot is inspected for a value.  This "top-level"
  *  environment is where system functions and variables reside.
  *
- *  Environments with the NO_SPEC_SYM flag are known to not contain any
- *  special symbols, as indicated by the SPEC_SYM macro.  Lookup for
- *  such a symbol can then bypass  this environment without searching it.
  */
 
 /* R 1.8.0: namespaces are no longer experimental, so the following
@@ -197,34 +194,24 @@ static SEXP getActiveValue(SEXP fun)
 
 #endif
 
-/* Function to correctly set NO_SPEC_SYM flag for an (unhashed) environment. */
+/* Function to correctly set ENVSYMBITS for an (unhashed) environment. */
 
-void setNoSpecSymFlag (SEXP env)
+void set_envsymbits (SEXP env)
 {
     SEXP frame;
+    R_symbits_t bits;
    
-    if (HASHTAB(env)!=R_NilValue) {
-        SET_NO_SPEC_SYM (env, 0); 
+    if (HASHTAB(env) != R_NilValue) {
+        SET_ENVSYMBITS (env, ~(R_symbits_t)0); 
         return;
     }
 
-    /* Unrolled loop, which relies on CAR, CDR, and TAG of R_NilValue 
-       being R_NilValue.  Also relies on SPEC_SYM(R_NilValue) being 0. */
+    bits = 0;
+    for (frame = FRAME(env); frame != R_NilValue; frame = CDR(frame)) {
+        bits |= SYMBITS (TAG (frame));
+    }
 
-    frame = FRAME(env);
-    do {
-        if (SPEC_SYM(TAG(frame))) goto special;
-        frame = CDR(frame);
-        if (SPEC_SYM(TAG(frame))) goto special;
-        frame = CDR(frame);
-    } while (frame != R_NilValue);
-
-    SET_NO_SPEC_SYM (env, 1);
-    return;
-
-  special:
-    SET_NO_SPEC_SYM (env, 0);
-    return;
+    SET_ENVSYMBITS (env, bits);
 }
 
 /*----------------------------------------------------------------------
@@ -525,7 +512,7 @@ else if (TYPEOF(chain) != LISTSXP) abort();
 	SET_VECTOR_ELT(table, hashcode, tmp_chain);
     }
     SET_FRAME(rho, R_NilValue);
-    SET_NO_SPEC_SYM(rho, 0);
+    SET_ENVSYMBITS(rho, 0);
 }
 
 
@@ -1321,33 +1308,26 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
   (Though it's often bypassed by the FINDFUN macro in eval.c.)
 
   In typical usage, rho will be an unhashed local environment with the
-  NO_SPEC_SYM flag set, with ENCLOS giving further such environments, until 
-  R_GlobalEnv is reached, where the function will be found in the global
-  cache (if it wasn't in one of the local environemnts).  Note that
-  R_GlobalEnv will not have NO_SPEC_SYM set, even if it has no special
-  symbols - otherwise, it might be skipped, and hence the global cache
-  would be skipped as well.
+  with ENCLOS giving further such environments, until R_GlobalEnv is
+  reached, where the function will be found in the global cache (if it
+  wasn't in one of the local environemnts). 
 
-  An environment can also be skipped when the symbol has LASTSYMENVNOTFOUND
+  An environment can be skipped when the symbol has LASTSYMENVNOTFOUND
   equal to that environment.  LASTSYMENVNOTFOUND is updated to the last
   unhashed environment where the symbol wasn't found.
 
   There is no need to wait for computations of the values found to finish, 
   since functions never have their computation deferred.
-
-  The findFun_nospecsym function skips the special symbol check, for use in 
-  the FINDFUN macro when that check has already been done.
 */
 
 SEXP findFun(SEXP symbol, SEXP rho)
 {
-    /* If it's a special symbol, skip to the first environment that might 
-       contain such a symbol. */
+    /* Skip to the first environment that might contain such a symbol, on
+       the basis of symbits.  Note that ENVSYMBITS(R_EmptyEnv) is all 1s. */
 
-    if (SPEC_SYM(symbol)) {
-        while (NO_SPEC_SYM(rho)) /* note that NO_SPEC_SYM(R_EmptyEnv) is 0 */
-            rho = ENCLOS(rho);
-    }
+    R_symbits_t bits = SYMBITS(symbol);
+    while ((ENVSYMBITS(rho) & bits) != bits)
+        rho = ENCLOS(rho);
 
     return findFun_nospecsym(symbol,rho);
 }
@@ -1557,8 +1537,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         if (HASHTAB(rho) == R_NilValue) {
             new = cons_with_tag (value, FRAME(rho), symbol);
             SET_FRAME(rho, new);
-            if (SPEC_SYM(symbol))
-                SET_NO_SPEC_SYM(rho,0);
+            SET_ENVSYMBITS (rho, ENVSYMBITS(rho) | SYMBITS(symbol));
         }
         else {
             SEXP table = HASHTAB(rho);
