@@ -736,6 +736,13 @@ static SEXP install_with_hashcode (char *name, int hashcode)
 
     SEXP sym = SEXP_FROM_SEXP32(sym32);
 
+    int b1, b2;
+    b1 = hashcode % 63;
+    b2 = hashcode % 62;
+    if (b2 >= b1) b2 += 1;
+
+    SET_SYMBITS (sym, ((R_symbits_t)2 << b1) | ((R_symbits_t)2 << b2));
+
     return sym;
 }
 
