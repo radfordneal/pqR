@@ -2980,7 +2980,7 @@ void attribute_hidden CheckFormals(SEXP ls)
 		goto err;
 	return;
     }
- err: abort();
+ err:
     error(_("invalid formal argument list for \"function\""));
 }
 
