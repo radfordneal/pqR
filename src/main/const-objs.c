@@ -172,7 +172,7 @@ SYM_SEXPREC R_sym_consts[1] = {
 
 #ifdef WORDS_BIGENDIAN
 #define REAL_NA_CONST(offset) { \
-    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,Yoffset)), \
+    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,NUM_OFFSET(offset)), \
     LENGTH1 \
     .data = { .w = { 0x7ff00000, 1954 } } \
 }
