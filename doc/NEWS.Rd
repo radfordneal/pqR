@@ -34,7 +34,7 @@
 }
 
 
-\section{CHANGES IN VERSION RELEASED 2017-05-22}{
+\section{CHANGES IN VERSION RELEASED 2017-06-01}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
