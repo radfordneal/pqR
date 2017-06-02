@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2017-06-01}{
+\section{CHANGES IN VERSION RELEASED 2017-06-02}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -75,7 +75,10 @@
         have been disabled.
   \item It is now illegal to set the ``internal'' value associated with a symbol
         to anything other than a primitive function (\code{BUILTINSXP}
-        or \code{SPECIALSXP} type).
+        or \code{SPECIALSXP} type).  The \code{INTERNAL} values are no longer
+        stored in symbol objects, but in a separate table, with the
+        consequence that it may not be possible to use \code{SET_INTERNAL}
+        for a symbol that was not given an internal value during initialization.
   \item Passing a non-vector object to a C function using \code{.C} is now
         even less advisable than before.  If compressed pointers are used,
         this will work only if the argument is recevied as a \code{void*}
