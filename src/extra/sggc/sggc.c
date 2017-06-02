@@ -152,8 +152,8 @@ static int kind_chunk_end[SGGC_N_KINDS];
 /* MACRO TO FIND THE NUMBER OF CHUNKS ALLOCATED FOR A BIG SEGMENT. */
 
 #define CHUNKS_ALLOCATED(seg) \
-  ((seg)->x.big.huge ? (seg)->x.big.alloc_chunks << SGGC_HUGE_SHIFT \
-                     : (seg)->x.big.alloc_chunks)
+  ((seg)->X.Big.huge ? (seg)->X.Big.alloc_chunks << SGGC_HUGE_SHIFT \
+                     : (seg)->X.Big.alloc_chunks)
 
 
 
@@ -736,7 +736,7 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
       index = SBSET_VAL_INDEX(v);
       seg = SBSET_SEGMENT(index);
       sggc_type[index] = type;  /* may reuse big segments of other types */
-      seg->x.big.kind = kind; 
+      seg->X.Big.kind = kind; 
     }
 
     nch = sggc_nchunks (type, length);
@@ -857,8 +857,8 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
 
     sggc_type[index] = type;
     seg = SBSET_SEGMENT(index);
-    seg->x.big.big = big;
-    seg->x.big.kind = kind;  /* small.kind and big.kind are the same place */
+    seg->X.Big.big = big;
+    seg->X.Big.kind = kind;  /* small.kind and big.kind are the same place */
 
     v = SGGC_CPTR_VAL(index,0);
     if (SGGC_DEBUG) 
@@ -928,7 +928,7 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
       { sggc_aux1[index] = (sggc_dptr) (kind_aux1_block[kind] 
                              + kind_aux1_block_pos[kind] * SGGC_AUX1_SIZE);
         if (0 && !big) /* could be enabled if aux1_off were ever actually used*/
-        { seg->x.small.aux1_off = kind_aux1_block_pos[kind];
+        { seg->X.Small.aux1_off = kind_aux1_block_pos[kind];
         }
         if (SGGC_DEBUG)
         { printf(
@@ -954,7 +954,7 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
       { sggc_aux2[index] = (sggc_dptr) (kind_aux2_block[kind] 
                              + kind_aux2_block_pos[kind] * SGGC_AUX2_SIZE);
         if (0 && !big) /* could be enabled if aux2_off were ever actually used*/
-        { seg->x.small.aux2_off = kind_aux2_block_pos[kind];
+        { seg->X.Small.aux2_off = kind_aux2_block_pos[kind];
         }
         if (SGGC_DEBUG)
         { printf(
@@ -977,12 +977,12 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
 
   if (big)
   { if (nch < HUGE_CHUNKS)
-    { seg->x.big.alloc_chunks = nch;
-      seg->x.big.huge = 0;
+    { seg->X.Big.alloc_chunks = nch;
+      seg->X.Big.huge = 0;
     }
     else
-    { seg->x.big.alloc_chunks = nch >> SGGC_HUGE_SHIFT;
-      seg->x.big.huge = 1;
+    { seg->X.Big.alloc_chunks = nch >> SGGC_HUGE_SHIFT;
+      seg->X.Big.huge = 1;
     }
 #ifdef SGGC_KIND_UNCOLLECTED
     if (sggc_kind_uncollected[kind])
@@ -1106,11 +1106,11 @@ sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
   struct sbset_segment *seg = SBSET_SEGMENT(index);
   sggc_cptr_t v = SGGC_CPTR_VAL(index,0);
 
-  /* The seg->x.small fields below coincide with the seg->x.big fields. */
+  /* The seg->X.Small fields below coincide with the seg->X.Big fields. */
 
-  seg->x.small.big = sggc_kind_chunks[kind] == 0;
-  seg->x.small.constant = 1;
-  seg->x.small.kind = kind;
+  seg->X.Small.big = sggc_kind_chunks[kind] == 0;
+  seg->X.Small.constant = 1;
+  seg->X.Small.kind = kind;
 
   sbset_add (&constants, v);
   sbset_assign_segment_bits (&constants, v, bits);
@@ -1123,13 +1123,13 @@ sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
 # ifdef SGGC_AUX1_SIZE
     sggc_aux1[index] = (sggc_dptr) aux1;
     OFFSET(sggc_aux1,index,SGGC_AUX1_SIZE);
-    seg->x.small.aux1_off = 0;
+    seg->X.Small.aux1_off = 0;
 # endif
 
 # ifdef SGGC_AUX2_SIZE
     sggc_aux2[index] = (sggc_dptr) aux2;
     OFFSET(sggc_aux2,index,SGGC_AUX2_SIZE);
-    seg->x.small.aux2_off = 0;
+    seg->X.Small.aux2_off = 0;
 # endif
     
   if (SGGC_DEBUG) 

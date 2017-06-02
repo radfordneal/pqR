@@ -60,7 +60,7 @@
       unsigned big : 1;       /* 1 for a big segment with one large object  */ \
       unsigned huge : 1;      /* 1 if maximum cnunks not less than 2^21     */ \
       unsigned alloc_chunks : 21; /* Chunks that fit in allocated space, if */ \
-    } big;                     /* huge is 0, else that >> by HUGE_SHIFT     */ \
+    } Big;                     /* huge is 0, else that >> by HUGE_SHIFT     */ \
     struct                 /* For small segments... */ \
     { unsigned char kind;     /* The kind of segment (equal to type if big) */ \
       unsigned constant : 1;  /* 1 for a constant segment                   */ \
@@ -69,8 +69,8 @@
       /* setting of aux1_off and aux2_off below may be disabled in sggc.c   */ \
       unsigned char aux1_off; /* Offset of aux1 info from start of block    */ \
       unsigned char aux2_off; /* Offset of aux2 info from start of block    */ \
-    } small; \
-  } x;
+    } Small; \
+  } X;
 
 
 /* POINTER TO ARRAY OF SEGMENTS OR POINTERS TO SEGMENTS.  This array
