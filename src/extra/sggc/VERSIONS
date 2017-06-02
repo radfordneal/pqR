@@ -1,5 +1,13 @@
 The stable versions of SGGC below are tagged in the source code repository.
 
+Version 2017-06-02
+
+  Change of names from x.big and x.small to X.Big and X.Small, which
+  seems to avoid some sort of name conflict in the 'rgl' package with
+  pqR when compiled on Windows (though it seems like it should be OK,
+  and it works on Linux - possibly a bug in the Windows compiler).
+  Used in pqR-2017-06-02.
+
 Version 2017-05-22
 
   Renamed set module to sbset to avoid name conflicts.  Changed memory

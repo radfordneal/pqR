@@ -198,7 +198,7 @@ SGGC_EXTERN sggc_type_t *sggc_type;  /* Types of objects in each segment */
 /* Inline function to find the kind of the segment containing an object. */
 
 static inline sggc_kind_t SGGC_KIND (sggc_cptr_t cptr) 
-{ return SBSET_SEGMENT(SBSET_VAL_INDEX(cptr))->x.small.kind; /* == x.big.kind */
+{ return SBSET_SEGMENT(SBSET_VAL_INDEX(cptr))->X.Small.kind; /* == X.Big.kind */
 }
 
 /* Numbers of chunks for the various kinds (zero for kinds for big segments). */
@@ -330,8 +330,8 @@ static inline int sggc_not_marked (sggc_cptr_t cptr)
 
 static inline int sggc_is_constant (sggc_cptr_t cptr)
 {
-  return SBSET_SEGMENT(SBSET_VAL_INDEX(cptr)) -> x.small.constant;
-                                          /* x.big.constant is the same thing */
+  return SBSET_SEGMENT(SBSET_VAL_INDEX(cptr)) -> X.Small.constant;
+                                          /* X.Big.constant is the same thing */
 }
 
 
