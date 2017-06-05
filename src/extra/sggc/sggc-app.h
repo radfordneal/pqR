@@ -42,7 +42,7 @@
 #define SGGC_SMALL_DATA_AREA_BLOCKING 128
 
 #if 1
-#define SGGC_SMALL_DATA_AREA_ALIGN 32 /* Two chunks, suitable for all configs */
+#define SGGC_SMALL_DATA_AREA_ALIGN 64   /* Typical cache line size */
 #endif
 
 
