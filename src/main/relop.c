@@ -391,200 +391,236 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 	i2 = (++i2 == n2) ? 0 : i2,\
 	++i)
 
+#define RELOP_MACRO(FETCH,NANCHK1,NANCHK2,EQCMP,LTCMP) do { \
+ \
+    int i, i1, i2, n, n1, n2; \
+    int T = !F; \
+    SEXP ans; \
+ \
+    n1 = LENGTH(s1); \
+    n2 = LENGTH(s2); \
+    n = (n1 > n2) ? n1 : n2; \
+    PROTECT (ans = allocVector(LGLSXP, n)); \
+ \
+    if (code == EQOP) { \
+        if (n2 == 1) { \
+            x2 = FETCH(s2,0); \
+            if (NANCHK2) \
+                for (i = 0; i<n; i++) LOGICAL(ans)[i] = NA_LOGICAL; \
+            else \
+                for (i = 0; i<n; i++) { \
+                    x1 = FETCH(s1,i); \
+                    LOGICAL(ans)[i] = \
+                      NANCHK1 ? NA_LOGICAL : EQCMP ? T : F; \
+                } \
+        } \
+        else if (n1 == 1) { \
+            x1 = FETCH(s1,0); \
+            if (NANCHK1) \
+                for (i = 0; i<n; i++) LOGICAL(ans)[i] = NA_LOGICAL; \
+            else \
+                for (i = 0; i<n; i++) { \
+                    x2 = FETCH(s2,i); \
+                    LOGICAL(ans)[i] = \
+                      NANCHK2 ? NA_LOGICAL : EQCMP ? T : F; \
+                } \
+        } \
+        else if (n1 == n2) { \
+            for (i = 0; i<n; i++) { \
+	        x1 = FETCH(s1,i); \
+                x2 = FETCH(s2,i); \
+                LOGICAL(ans)[i] = NANCHK1 || NANCHK2 ? NA_LOGICAL \
+	                        : EQCMP ? T : F; \
+            } \
+        } \
+        else { \
+	    mod_iterate(n1, n2, i1, i2) { \
+	        x1 = FETCH(s1,i1); \
+                x2 = FETCH(s2,i2); \
+                LOGICAL(ans)[i] = NANCHK1 || NANCHK2 ? NA_LOGICAL \
+	                        : EQCMP ? T : F; \
+            } \
+	} \
+    } \
+    else { /* LTOP */ \
+        if (n2 == 1) { \
+            x2 = FETCH(s2,0); \
+            if (NANCHK2) \
+                for (i = 0; i<n; i++) LOGICAL(ans)[i] = NA_LOGICAL; \
+            else \
+                for (i = 0; i<n; i++) { \
+                    x1 = FETCH(s1,i); \
+                    LOGICAL(ans)[i] = \
+                      NANCHK1 ? NA_LOGICAL : LTCMP ? T : F; \
+                } \
+        } \
+        else if (n1 == 1) { \
+            x1 = FETCH(s1,0); \
+            if (NANCHK1) \
+                for (i = 0; i<n; i++) LOGICAL(ans)[i] = NA_LOGICAL; \
+            else \
+                for (i = 0; i<n; i++) { \
+                    x2 = FETCH(s2,i); \
+                    LOGICAL(ans)[i] = \
+                      NANCHK2 ? NA_LOGICAL : LTCMP ? T : F; \
+                } \
+        } \
+        else if (n1 == n2) { \
+            for (i = 0; i<n; i++) { \
+	        x1 = FETCH(s1,i); \
+                x2 = FETCH(s2,i); \
+                LOGICAL(ans)[i] = NANCHK1 || NANCHK2 ? NA_LOGICAL \
+	                        : LTCMP ? T : F; \
+            } \
+        } \
+        else { \
+	    mod_iterate(n1, n2, i1, i2) { \
+	        x1 = FETCH(s1,i1); \
+                x2 = FETCH(s2,i2); \
+                LOGICAL(ans)[i] = NANCHK1 || NANCHK2 ? NA_LOGICAL \
+	                        : LTCMP ? T : F; \
+            } \
+	} \
+    } \
+ \
+    UNPROTECT(1); \
+    return ans; \
+ \
+} while (0)
+
+#define RELOP_AND_MACRO(FETCH,NANCHK1,NANCHK2,EQCMP,LTCMP) do { \
+ \
+    int i, i1, i2, n, n1, n2; \
+    int T = !F; \
+    int ans; \
+ \
+    n1 = LENGTH(s1); \
+    n2 = LENGTH(s2); \
+    n = (n1 > n2) ? n1 : n2; \
+ \
+    ans = TRUE; \
+ \
+    if (code == EQOP) { \
+        if (n2 == 1) { \
+            x2 = FETCH(s2,0); \
+            if (NANCHK2) \
+                ans = NA_LOGICAL; \
+            else \
+                for (i = 0; i<n; i++) { \
+                    x1 = FETCH(s1,i); \
+                    if (NANCHK1) \
+                        ans = NA_LOGICAL; \
+                    else if (EQCMP ? F : T) \
+                        goto false; \
+                } \
+        } \
+        else if (n1 == 1) { \
+            x1 = FETCH(s1,0); \
+            if (NANCHK1) \
+                ans = NA_LOGICAL; \
+            else \
+                for (i = 0; i<n; i++) { \
+                    x2 = FETCH(s2,i); \
+                    if (NANCHK2) \
+                        ans = NA_LOGICAL; \
+                    else if (EQCMP ? F : T) \
+                        goto false; \
+                } \
+        } \
+        else if (n1 == n2) { \
+            for (i = 0; i<n; i++) { \
+	        x1 = FETCH(s1,i); \
+                x2 = FETCH(s2,i); \
+                if (NANCHK1 || NANCHK2) \
+                    ans = NA_LOGICAL; \
+                else if (EQCMP ? F : T) \
+                    goto false; \
+            } \
+        } \
+        else { \
+	    mod_iterate(n1, n2, i1, i2) { \
+	        x1 = FETCH(s1,i1); \
+                x2 = FETCH(s2,i2); \
+                if (NANCHK1 || NANCHK2) \
+                    ans = NA_LOGICAL; \
+                else if (EQCMP ? F : T) \
+                    goto false; \
+            } \
+	} \
+    } \
+    else { /* LTOP */ \
+        if (n2 == 1) { \
+            x2 = FETCH(s2,0); \
+            if (NANCHK2) \
+                ans = NA_LOGICAL; \
+            else \
+                for (i = 0; i<n; i++) { \
+                    x1 = FETCH(s1,i); \
+                    if (NANCHK1) \
+                        ans = NA_LOGICAL; \
+                    else if (LTCMP ? F : T) \
+                        goto false; \
+                } \
+        } \
+        else if (n1 == 1) { \
+            x1 = FETCH(s1,0); \
+            if (NANCHK1) \
+                ans = NA_LOGICAL; \
+            else \
+                for (i = 0; i<n; i++) { \
+                    x2 = FETCH(s2,i); \
+                    if (NANCHK2) \
+                        ans = NA_LOGICAL; \
+                    else if (LTCMP ? F : T) \
+                        goto false; \
+                } \
+        } \
+        else if (n1 == n2) { \
+            for (i = 0; i<n; i++) { \
+	        x1 = FETCH(s1,i); \
+                x2 = FETCH(s2,i); \
+                if (NANCHK1 || NANCHK2) \
+                    ans = NA_LOGICAL; \
+                else if (LTCMP ? F : T) \
+                    goto false; \
+            } \
+        } \
+        else { \
+	    mod_iterate(n1, n2, i1, i2) { \
+	        x1 = FETCH(s1,i1); \
+                x2 = FETCH(s2,i2); \
+                if (NANCHK1 || NANCHK2) \
+                    ans = NA_LOGICAL; \
+                else if (LTCMP ? F : T) \
+                    goto false; \
+            } \
+	} \
+    } \
+ \
+    return ScalarLogicalMaybeConst(ans); \
+ \
+  false: \
+    return ScalarLogicalMaybeConst(FALSE); \
+ \
+} while (0)
+
+
 static SEXP integer_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    int i, i1, i2, n, n1, n2;
     int x1, x2;
-    int T = !F;
-    SEXP ans;
 
-    n1 = LENGTH(s1);
-    n2 = LENGTH(s2);
-    n = (n1 > n2) ? n1 : n2;
-    ans = allocVector(LGLSXP, n);
+#   define INT_FETCH(s,i) (INTEGER(s)[i])
 
-    if (code == EQOP) {
-        if (n2 == 1) {
-            x2 = INTEGER(s2)[0];
-            if (x2==NA_INTEGER) 
-                for (i = 0; i<n; i++) LOGICAL(ans)[i] = NA_LOGICAL;
-            else 
-                for (i = 0; i<n; i++) {
-                    x1 = INTEGER(s1)[i];
-                    LOGICAL(ans)[i] = 
-                      x1==NA_INTEGER ? NA_LOGICAL : x1 == x2 ? T : F;
-                }
-        }
-        else if (n1 == 1) {
-            x1 = INTEGER(s1)[0];
-            if (x1==NA_INTEGER) 
-                for (i = 0; i<n; i++) LOGICAL(ans)[i] = NA_LOGICAL;
-            else 
-                for (i = 0; i<n; i++) {
-                    x2 = INTEGER(s2)[i];
-                    LOGICAL(ans)[i] = 
-                      x2==NA_INTEGER ? NA_LOGICAL : x1 == x2 ? T : F;
-                }
-        }
-        else if (n1 == n2) {
-            for (i = 0; i<n; i++) {
-	        x1 = INTEGER(s1)[i];
-                x2 = INTEGER(s2)[i];
-                LOGICAL(ans)[i] =  
-                   x1==NA_INTEGER || x2==NA_INTEGER ? NA_LOGICAL
-                     : x1 == x2 ? T : F;
-            }
-        }
-        else {
-	    mod_iterate(n1, n2, i1, i2) {
-	        x1 = INTEGER(s1)[i1];
-                x2 = INTEGER(s2)[i2];
-                LOGICAL(ans)[i] =  
-                   x1==NA_INTEGER || x2==NA_INTEGER ? NA_LOGICAL
-                     : x1 == x2 ? T : F;
-            }
-	}
-    }
-    else { /* LTOP */
-        if (n2 == 1) {
-            x2 = INTEGER(s2)[0];
-            if (x2==NA_INTEGER) 
-                for (i = 0; i<n; i++) LOGICAL(ans)[i] = NA_LOGICAL;
-            else 
-                for (i = 0; i<n; i++) {
-                    x1 = INTEGER(s1)[i];
-                    LOGICAL(ans)[i] = 
-                      x1==NA_INTEGER ? NA_LOGICAL : x1 < x2 ? T : F;
-                }
-        }
-        else if (n1 == 1) {
-            x1 = INTEGER(s1)[0];
-            if (x1==NA_INTEGER) 
-                for (i = 0; i<n; i++) LOGICAL(ans)[i] = NA_LOGICAL;
-            else 
-                for (i = 0; i<n; i++) {
-                    x2 = INTEGER(s2)[i];
-                    LOGICAL(ans)[i] = 
-                      x2==NA_INTEGER ? NA_LOGICAL : x1 < x2 ? T : F;
-                }
-        }
-        else if (n1 == n2) {
-            for (i = 0; i<n; i++) {
-	        x1 = INTEGER(s1)[i];
-                x2 = INTEGER(s2)[i];
-                LOGICAL(ans)[i] =  
-                   x1==NA_INTEGER || x2==NA_INTEGER ? NA_LOGICAL
-                     : x1 < x2 ? T : F;
-            }
-        }
-        else {
-	    mod_iterate(n1, n2, i1, i2) {
-	        x1 = INTEGER(s1)[i1];
-                x2 = INTEGER(s2)[i2];
-                LOGICAL(ans)[i] =  
-                   x1==NA_INTEGER || x2==NA_INTEGER ? NA_LOGICAL
-                     : x1 < x2 ? T : F;
-            }
-	}
-    }
-
-    return ans;
+    RELOP_MACRO (INT_FETCH, x1==NA_INTEGER, x2==NA_INTEGER, x1==x2, x1<x2);
 }
 
 static SEXP real_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    int i, i1, i2, n, n1, n2;
     double x1, x2;
-    int T = !F;
-    SEXP ans;
 
-    n1 = LENGTH(s1);
-    n2 = LENGTH(s2);
-    n = (n1 > n2) ? n1 : n2;
-    ans = allocVector(LGLSXP, n);
+#   define REAL_FETCH(s,i) (REAL(s)[i])
 
-    if (code == EQOP) {
-        if (n2 == 1) {
-            x2 = REAL(s2)[0];
-            if (ISNAN(x2)) 
-                for (i = 0; i<n; i++) LOGICAL(ans)[i] = NA_LOGICAL;
-            else 
-                for (i = 0; i<n; i++) {
-                    x1 = REAL(s1)[i];
-                    LOGICAL(ans)[i] = 
-                      ISNAN(x1) ? NA_LOGICAL : x1 == x2 ? T : F;
-                }
-        }
-        else if (n1 == 1) {
-            x1 = REAL(s1)[0];
-            if (ISNAN(x1)) 
-                for (i = 0; i<n; i++) LOGICAL(ans)[i] = NA_LOGICAL;
-            else 
-                for (i = 0; i<n; i++) {
-                    x2 = REAL(s2)[i];
-                    LOGICAL(ans)[i] = 
-                      ISNAN(x2) ? NA_LOGICAL : x1 == x2 ? T : F;
-                }
-        }
-        else if (n1 == n2) {
-            for (i = 0; i<n; i++) {
-	        x1 = REAL(s1)[i];
-                x2 = REAL(s2)[i];
-                LOGICAL(ans)[i] = ISNAN(x1) || ISNAN(x2) ? NA_LOGICAL
-	                        : x1 == x2 ? T : F;
-            }
-        }
-        else {
-	    mod_iterate(n1, n2, i1, i2) {
-	        x1 = REAL(s1)[i1];
-                x2 = REAL(s2)[i2];
-                LOGICAL(ans)[i] = ISNAN(x1) || ISNAN(x2) ? NA_LOGICAL
-	                        : x1 == x2 ? T : F;
-            }
-	}
-    }
-    else { /* LTOP */
-        if (n2 == 1) {
-            x2 = REAL(s2)[0];
-            if (ISNAN(x2)) 
-                for (i = 0; i<n; i++) LOGICAL(ans)[i] = NA_LOGICAL;
-            else 
-                for (i = 0; i<n; i++) {
-                    x1 = REAL(s1)[i];
-                    LOGICAL(ans)[i] = 
-                      ISNAN(x1) ? NA_LOGICAL : x1 < x2 ? T : F;
-                }
-        }
-        else if (n1 == 1) {
-            x1 = REAL(s1)[0];
-            if (ISNAN(x1)) 
-                for (i = 0; i<n; i++) LOGICAL(ans)[i] = NA_LOGICAL;
-            else 
-                for (i = 0; i<n; i++) {
-                    x2 = REAL(s2)[i];
-                    LOGICAL(ans)[i] = 
-                      ISNAN(x2) ? NA_LOGICAL : x1 < x2 ? T : F;
-                }
-        }
-        else if (n1 == n2) {
-            for (i = 0; i<n; i++) {
-	        x1 = REAL(s1)[i];
-                x2 = REAL(s2)[i];
-                LOGICAL(ans)[i] = ISNAN(x1) || ISNAN(x2) ? NA_LOGICAL
-	                        : x1 < x2 ? T : F;
-            }
-        }
-        else {
-	    mod_iterate(n1, n2, i1, i2) {
-	        x1 = REAL(s1)[i1];
-                x2 = REAL(s2)[i2];
-                LOGICAL(ans)[i] = ISNAN(x1) || ISNAN(x2) ? NA_LOGICAL
-	                        : x1 < x2 ? T : F;
-            }
-	}
-    }
-
-    return ans;
+    RELOP_MACRO (REAL_FETCH, ISNAN(x1), ISNAN(x2), x1==x2, x1<x2);
 }
 
 static SEXP real_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
@@ -1092,78 +1128,11 @@ true:
 
 static SEXP raw_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    int i, i1, i2, n, n1, n2;
     Rbyte x1, x2;
-    int T = !F;
-    SEXP ans;
 
-    n1 = LENGTH(s1);
-    n2 = LENGTH(s2);
-    n = (n1 > n2) ? n1 : n2;
-    ans = allocVector(LGLSXP, n);
+#   define RAW_FETCH(s,i) (RAW(s)[i])
 
-    if (code == EQOP) {
-        if (n2 == 1) {
-            x2 = RAW(s2)[0];
-            for (i = 0; i<n; i++) {
-                x1 = RAW(s1)[i];
-                LOGICAL(ans)[i] = x1 == x2 ? T : F;
-            }
-        }
-        else if (n1 == 1) {
-            x1 = RAW(s1)[0];
-            for (i = 0; i<n; i++) {
-                x2 = RAW(s2)[i];
-                LOGICAL(ans)[i] =  x1 == x2 ? T : F;
-            }
-        }
-        else if (n1 == n2) {
-            for (i = 0; i<n; i++) {
-	        x1 = RAW(s1)[i];
-                x2 = RAW(s2)[i];
-                LOGICAL(ans)[i] = x1 == x2 ? T : F;
-            }
-        }
-        else {
-	    mod_iterate(n1, n2, i1, i2) {
-	        x1 = RAW(s1)[i1];
-                x2 = RAW(s2)[i2];
-                LOGICAL(ans)[i] = x1 == x2 ? T : F;
-            }
-	}
-    }
-    else { /* LTOP */
-        if (n2 == 1) {
-            x2 = RAW(s2)[0];
-            for (i = 0; i<n; i++) {
-                x1 = RAW(s1)[i];
-                LOGICAL(ans)[i] = x1 < x2 ? T : F;
-            }
-        }
-        else if (n1 == 1) {
-            x1 = RAW(s1)[0];
-            for (i = 0; i<n; i++) {
-                x2 = RAW(s2)[i];
-                LOGICAL(ans)[i] =  x1 < x2 ? T : F;
-            }
-        }
-        else if (n1 == n2) {
-            for (i = 0; i<n; i++) {
-	        x1 = RAW(s1)[i];
-                x2 = RAW(s2)[i];
-                LOGICAL(ans)[i] = x1 < x2 ? T : F;
-            }
-        }
-        else {
-	    mod_iterate(n1, n2, i1, i2) {
-	        x1 = RAW(s1)[i1];
-                x2 = RAW(s2)[i2];
-                LOGICAL(ans)[i] = x1 < x2 ? T : F;
-            }
-	}
-    }
-
-    return ans;
+    RELOP_MACRO (RAW_FETCH, 0, 0, x1==x2, x1<x2);
 }
 
 
