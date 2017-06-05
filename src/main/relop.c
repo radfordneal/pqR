@@ -828,12 +828,10 @@ static SEXP complex_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 }
 
 
-/* POSIX allows EINVAL when one of the strings contains characters
-   outside the collation domain. */
 static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    int i, n, n1, n2, res;
-    SEXP ans, c1, c2;
+    int i, i1, i2, n, n1, n2, res;
+    SEXP ans, x1, x2;
     int T = !F;
 
     n1 = LENGTH(s1);
@@ -842,24 +840,52 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
     PROTECT(ans = allocVector(LGLSXP, n));
 
     if (code == EQOP) {
-	for (i = 0; i < n; i++) {
-	    c1 = STRING_ELT(s1, i % n1);
-	    c2 = STRING_ELT(s2, i % n2);
-	    LOGICAL(ans)[i] = c1 == NA_STRING || c2 == NA_STRING ? NA_LOGICAL
-		            : SEQL(c1, c2) ? T : F;
+        if (n2 == 1) {
+            x2 = STRING_ELT(s2,0);
+            for (i = 0; i<n; i++) {
+                x1 = STRING_ELT(s1,i);
+                LOGICAL(ans)[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
+                                : SEQL(x1, x2) ? T : F;
+            }
+        }
+        else if (n1 == 1) {
+            x1 = STRING_ELT(s1,0);
+            for (i = 0; i<n; i++) {
+                x2 = STRING_ELT(s2,i);
+                LOGICAL(ans)[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
+                                : SEQL(x1, x2) ? T : F;
+            }
+        }
+        else if (n1 == n2) {
+            for (i = 0; i<n; i++) {
+	        x1 = STRING_ELT(s1,i);
+                x2 = STRING_ELT(s2,i);
+                LOGICAL(ans)[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
+                                : SEQL(x1, x2) ? T : F;
+            }
+        }
+        else {
+	    mod_iterate(n1, n2, i1, i2) {
+	        x1 = STRING_ELT(s1,i1);
+                x2 = STRING_ELT(s2,i2);
+                LOGICAL(ans)[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
+                                : SEQL(x1, x2) ? T : F;
+            }
 	}
     }
     else { /* LTOP */
 	for (i = 0; i < n; i++) {
-	    c1 = STRING_ELT(s1, i % n1);
-	    c2 = STRING_ELT(s2, i % n2);
-	    if (c1 == NA_STRING || c2 == NA_STRING)
+	    x1 = STRING_ELT(s1, i % n1);
+	    x2 = STRING_ELT(s2, i % n2);
+	    if (x1 == NA_STRING || x2 == NA_STRING)
 		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else if (c1 == c2)
+	    else if (x1 == x2)
 		LOGICAL(ans)[i] = F;
 	    else {
+                /* POSIX allows EINVAL when one of the strings contains
+                   characters outside the collation domain. */
 		errno = 0;
-		res = Scollate(c1, c2);
+		res = Scollate(x1, x2);
 		LOGICAL(ans)[i] = errno ? NA_LOGICAL : res < 0 ? T : F;
 	    }
 	}

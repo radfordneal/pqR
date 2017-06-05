@@ -1,0 +1,4 @@
+Optimize relational operators on strings to avoid % for ==/!=.
+
+Implement and/or variants for relational operators on both strings and raw data.
+
