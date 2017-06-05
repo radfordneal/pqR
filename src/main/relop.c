@@ -43,7 +43,11 @@ static SEXP real_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
 static SEXP real_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
 static SEXP complex_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
 static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
+static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
+static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
 static SEXP raw_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
+static SEXP raw_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
+static SEXP raw_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2);
 
 SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y, 
                                int objx, int objy, SEXP env, int variant)
@@ -258,7 +262,21 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
     if (isString(x) || isString(y)) {
 	REPROTECT(x = coerceVector(x, STRSXP), xpi);
 	REPROTECT(y = coerceVector(y, STRSXP), ypi);
-	ans = string_relop (code, negate, x, y);
+        switch (VARIANT_KIND(variant)) {
+        case VARIANT_AND: 
+            ans = string_relop_and (code, negate, x, y); 
+            if (xts || yts) UNPROTECT(2);
+            UNPROTECT(5);
+            return ans;
+        case VARIANT_OR:
+            ans = string_relop_or (code, negate, x, y);
+            if (xts || yts) UNPROTECT(2);
+            UNPROTECT(5);
+            return ans;
+        default:
+            ans = string_relop (code, negate, x, y);
+            break;
+        }
     }
     else if (isComplex(x) || isComplex(y)) {
 	REPROTECT(x = coerceVector(x, CPLXSXP), xpi);
@@ -894,6 +912,183 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
     UNPROTECT(1);
     return ans;
 }
+
+
+static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
+{
+    int i, i1, i2, n, n1, n2, res;
+    SEXP x1, x2;
+    int T = !F;
+    int ans;
+
+    n1 = LENGTH(s1);
+    n2 = LENGTH(s2);
+    n = (n1 > n2) ? n1 : n2;
+
+    ans = TRUE;
+
+    if (code == EQOP) {
+        if (n2 == 1) {
+            x2 = STRING_ELT(s2,0);
+            if (x2 == NA_STRING)
+                ans = NA_LOGICAL;
+            else
+                for (i = 0; i<n; i++) {
+                    x1 = STRING_ELT(s1,i);
+                    if (x1==NA_STRING)
+                        ans = NA_LOGICAL;
+                    else if (SEQL(x1, x2) ? F : T)
+                        goto false;
+            }
+        }
+        else if (n1 == 1) {
+            x1 = STRING_ELT(s1,0);
+            if (x1 == NA_STRING)
+                ans = NA_LOGICAL;
+            else
+                for (i = 0; i<n; i++) {
+                    x2 = STRING_ELT(s2,i);
+                    if (x2==NA_STRING)
+                        ans = NA_LOGICAL;
+                    else if (SEQL(x1, x2) ? F : T)
+                        goto false;
+            }
+        }
+        else if (n1 == n2) {
+            for (i = 0; i<n; i++) {
+	        x1 = STRING_ELT(s1,i);
+                x2 = STRING_ELT(s2,i);
+                if (x1==NA_STRING || x2==NA_STRING)
+                    ans = NA_LOGICAL;
+                else if (SEQL(x1, x2) ? F : T)
+                    goto false;
+            }
+        }
+        else {
+	    mod_iterate(n1, n2, i1, i2) {
+	        x1 = STRING_ELT(s1,i1);
+                x2 = STRING_ELT(s2,i2);
+                if (x1==NA_STRING || x2==NA_STRING)
+                    ans = NA_LOGICAL;
+                else if (SEQL(x1, x2) ? F : T)
+                    goto false;
+            }
+	}
+    }
+    else { /* LTOP */
+	for (i = 0; i < n; i++) {
+	    x1 = STRING_ELT(s1, i % n1);
+	    x2 = STRING_ELT(s2, i % n2);
+	    if (x1 == NA_STRING || x2 == NA_STRING)
+		ans = NA_LOGICAL;
+	    else if (x1 == x2)
+		goto false;
+	    else {
+                /* POSIX allows EINVAL when one of the strings contains
+                   characters outside the collation domain. */
+		errno = 0;
+		res = Scollate(x1, x2);
+                if (errno)
+                    ans = NA_LOGICAL;
+                else if (res < 0 ? F : T)
+                    goto false;
+	    }
+	}
+    }
+
+    return ScalarLogicalMaybeConst(ans);
+
+false:
+    return ScalarLogicalMaybeConst(FALSE);
+}
+
+
+static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
+{
+    int i, i1, i2, n, n1, n2, res;
+    SEXP x1, x2;
+    int T = !F;
+    int ans;
+
+    n1 = LENGTH(s1);
+    n2 = LENGTH(s2);
+    n = (n1 > n2) ? n1 : n2;
+
+    ans = FALSE;
+
+    if (code == EQOP) {
+        if (n2 == 1) {
+            x2 = STRING_ELT(s2,0);
+            if (x2 == NA_STRING)
+                ans = NA_LOGICAL;
+            else
+                for (i = 0; i<n; i++) {
+                    x1 = STRING_ELT(s1,i);
+                    if (x1==NA_STRING)
+                        ans = NA_LOGICAL;
+                    else if (SEQL(x1, x2) ? T : F)
+                        goto true;
+            }
+        }
+        else if (n1 == 1) {
+            x1 = STRING_ELT(s1,0);
+            if (x1 == NA_STRING)
+                ans = NA_LOGICAL;
+            else
+                for (i = 0; i<n; i++) {
+                    x2 = STRING_ELT(s2,i);
+                    if (x2==NA_STRING)
+                        ans = NA_LOGICAL;
+                    else if (SEQL(x1, x2) ? T : F)
+                        goto true;
+            }
+        }
+        else if (n1 == n2) {
+            for (i = 0; i<n; i++) {
+	        x1 = STRING_ELT(s1,i);
+                x2 = STRING_ELT(s2,i);
+                if (x1==NA_STRING || x2==NA_STRING)
+                    ans = NA_LOGICAL;
+                else if (SEQL(x1, x2) ? T : F)
+                    goto true;
+            }
+        }
+        else {
+	    mod_iterate(n1, n2, i1, i2) {
+	        x1 = STRING_ELT(s1,i1);
+                x2 = STRING_ELT(s2,i2);
+                if (x1==NA_STRING || x2==NA_STRING)
+                    ans = NA_LOGICAL;
+                else if (SEQL(x1, x2) ? T : F)
+                    goto true;
+            }
+	}
+    }
+    else { /* LTOP */
+	for (i = 0; i < n; i++) {
+	    x1 = STRING_ELT(s1, i % n1);
+	    x2 = STRING_ELT(s2, i % n2);
+	    if (x1 == NA_STRING || x2 == NA_STRING)
+		ans = NA_LOGICAL;
+	    else if (x1 != x2) {
+                /* POSIX allows EINVAL when one of the strings contains
+                   characters outside the collation domain. */
+		errno = 0;
+		res = Scollate(x1, x2);
+                if (errno)
+                    ans = NA_LOGICAL;
+                else if (res < 0 ? T : F)
+                    goto true;
+	    }
+	}
+    }
+
+    return ScalarLogicalMaybeConst(ans);
+
+true:
+    return ScalarLogicalMaybeConst(TRUE);
+}
+
 
 static SEXP raw_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
