@@ -31,7 +31,7 @@ always completely adequate, is as follows:
            window works will be helpful.  In particular, note that if
            any of the file names referred to below have spaces in them
            (possible because your user name has spaces), it will be
-           necessary to enclode the file name in double quotes ("..").
+           necessary to enclose the file name in double quotes ("..").
 
          o Text files in the distribution follow the Linux/Unix/Mac
            convention of marking ends of lines with LF only, whereas
@@ -47,7 +47,7 @@ always completely adequate, is as follows:
      the build process appearing to hang if the window that MiKTeX
      puts up asking about this is covered by another window.)
 
-  2) Obtain Rtools33.exe from http:/pqR-project.org/Rtools33.exe (do
+  2) Obtain Rtools33.exe from http://pqR-project.org/Rtools33.exe (do
      not use the version obtainable via r-project.org, which is a
      later version not tested with pqR).  Run this to install the
      required build tools, but do not choose the options to install
