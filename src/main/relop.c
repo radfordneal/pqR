@@ -55,7 +55,7 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
     SEXP klass = R_NilValue;
     SEXP tsp = R_NilValue;
     SEXP xnames, ynames, tmp, ans, dims;
-    int nx, ny, xarray, yarray, xts, yts, itmp;
+    int xarray, yarray, xts, yts, itmp;
     Rboolean mismatch = FALSE, iS;
     PROTECT_INDEX xpi, ypi;
 
@@ -90,79 +90,76 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
 
     WAIT_UNTIL_COMPUTED_2(x,y);
 
-    if (TYPEOF(x) != REALSXP && TYPEOF(x) != INTSXP
-     || TYPEOF(y) != REALSXP && TYPEOF(y) != INTSXP) {
+    /* Get types and lengths of operands.  Pretend that logical is
+       integer, as they have the same representation. */
 
-        nx = length(x);
-        ny = length(y);
-    }
+    SEXPTYPE typeof_x = TYPEOF(x);
+    SEXPTYPE typeof_y = TYPEOF(y);
 
-    else {
+    if (typeof_x == LGLSXP) typeof_x = INTSXP;
+    if (typeof_y == LGLSXP) typeof_y = INTSXP;
 
-        /* Handle integer or real vectors that have no attributes quickly. */ 
+    int nx = (ATOMIC_VECTOR_TYPES >> typeof_x) & 1 ? LENGTH(x) : length(x);
+    int ny = (ATOMIC_VECTOR_TYPES >> typeof_y) & 1 ? LENGTH(y) : length(y);
 
-        nx = LENGTH(x);
-        ny = LENGTH(y);
+    /* Handle integer/logical/real vectors that have no attributes quickly. */ 
 
-        if (!HAS_ATTRIB(x) && !HAS_ATTRIB(y) && nx > 0 && ny > 0) {
+    if ((typeof_x == REALSXP || typeof_x == INTSXP)
+          && (typeof_y == REALSXP || typeof_y == INTSXP)
+          && !HAS_ATTRIB(x) && !HAS_ATTRIB(y) 
+          && nx > 0 && ny > 0) {
+
+        /* Handle scalars even quicker using ScalarLogicalMaybeConst. */
     
-            /* Handle scalars even quicker, using ScalarLogicalMaybeConst. */
-    
-            if (nx==1 && ny==1) {
-                /* Separate code when both integers, in case a double can't hold
-                   an integer to full precision. */
-                int result;
-                if (TYPEOF(x) == INTSXP && TYPEOF(y) == INTSXP) {
-                    int x1 = INTEGER(x)[0];
-                    int y1 = INTEGER(y)[0];
-                    result = x1 == NA_INTEGER || y1 == NA_INTEGER ? NA_LOGICAL
-                           : code == EQOP ? x1 == y1 : /* LTOP */ x1 < y1;
-                }
-                else {
-                    double x1 = TYPEOF(x) == REALSXP ? REAL(x)[0]
-                       : INTEGER(x)[0]!=NA_INTEGER ? INTEGER(x)[0] : NA_REAL;
-                    double y1 = TYPEOF(y) == REALSXP ? REAL(y)[0]
-                       : INTEGER(y)[0]!=NA_INTEGER ? INTEGER(y)[0] : NA_REAL;
-                    result = ISNAN(x1) || ISNAN(y1) ? NA_LOGICAL
-                           : code == EQOP ? x1 == y1 : /* LTOP */ x1 < y1;
-                }
-                return ScalarLogicalMaybeConst (negate && result!=NA_LOGICAL 
-                                                 ? !result : result);
-            } 
-            else {
-                PROTECT2(x,y);
-                if (((nx > ny) ? nx % ny : ny % nx) != 0) {
-        	        warningcall (call,
+        if (nx==1 && ny==1) {
+
+            /* Assumes integers can be represented to full precision as reals */
+
+            double x1 = typeof_x == REALSXP ? REAL(x)[0]
+               : INTEGER(x)[0]!=NA_INTEGER ? INTEGER(x)[0] : NA_REAL;
+
+            double y1 = typeof_y == REALSXP ? REAL(y)[0]
+               : INTEGER(y)[0]!=NA_INTEGER ? INTEGER(y)[0] : NA_REAL;
+
+            int result = ISNAN(x1) || ISNAN(y1) ? NA_LOGICAL
+                       : code == EQOP ? x1 == y1 : /* LTOP */ x1 < y1;
+
+            return ScalarLogicalMaybeConst (negate && result != NA_LOGICAL 
+                                             ? !result : result);
+        } 
+        else {
+            PROTECT2(x,y);
+            if (((nx > ny) ? nx % ny : ny % nx) != 0) {
+ 	            warningcall (call,
           _("longer object length is not a multiple of shorter object length"));
-                }
-                if (TYPEOF(x) == INTSXP && TYPEOF(y) == INTSXP) 
-                    ans = integer_relop (code, negate, x, y);
-                else {
-                    if (TYPEOF(x) == INTSXP) {
-                        x = coerceVector(x,REALSXP);
-                        UNPROTECT(2);
-                        PROTECT2(x,y);
-                    }
-                    if (TYPEOF(y) == INTSXP) {
-                        y = coerceVector(y,REALSXP);
-                        UNPROTECT(2);
-                        PROTECT2(x,y);
-                    }
-                    switch (VARIANT_KIND(variant)) {
-                    case VARIANT_AND: 
-                        ans = real_relop_and (code, negate, x, y); 
-                        break;
-                    case VARIANT_OR:
-                        ans = real_relop_or (code, negate, x, y);
-                        break;
-                    default:
-                        ans = real_relop (code, negate, x, y);
-                        break;
-                    }
-                }
-                UNPROTECT(2);
-                return ans;
             }
+            if (typeof_x == INTSXP && typeof_y == INTSXP) 
+                ans = integer_relop (code, negate, x, y);
+            else {
+                if (typeof_x == INTSXP) {
+                    x = coerceVector(x,REALSXP);
+                    UNPROTECT(2);
+                    PROTECT2(x,y);
+                }
+                if (typeof_y == INTSXP) {
+                    y = coerceVector(y,REALSXP);
+                    UNPROTECT(2);
+                    PROTECT2(x,y);
+                }
+                switch (VARIANT_KIND(variant)) {
+                case VARIANT_AND: 
+                    ans = real_relop_and (code, negate, x, y); 
+                    break;
+                case VARIANT_OR:
+                    ans = real_relop_or (code, negate, x, y);
+                    break;
+                default:
+                    ans = real_relop (code, negate, x, y);
+                    break;
+                }
+            }
+            UNPROTECT(2);
+            return ans;
         }
     }
     
@@ -171,7 +168,7 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
 
     /* That symbols and calls were allowed was undocumented prior to
        R 2.5.0.  We deparse them as deparse() would, minus attributes */
-    if ((iS = isSymbol(x)) || TYPEOF(x) == LANGSXP) {
+    if ((iS = isSymbol(x)) || typeof_x == LANGSXP) {
 	SEXP tmp = allocVector(STRSXP, 1);
 	PROTECT(tmp);
 	SET_STRING_ELT(tmp, 0, (iS) ? PRINTNAME(x) :
@@ -179,7 +176,7 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
 	REPROTECT(x = tmp, xpi);
 	UNPROTECT(1);
     }
-    if ((iS = isSymbol(y)) || TYPEOF(y) == LANGSXP) {
+    if ((iS = isSymbol(y)) || typeof_y == LANGSXP) {
 	SEXP tmp = allocVector(STRSXP, 1);
 	PROTECT(tmp);
 	SET_STRING_ELT(tmp, 0, (iS) ? PRINTNAME(y) :
@@ -194,11 +191,11 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
 	    return allocVector(LGLSXP,0);
 	}
 	errorcall(call,
-		  _("comparison (%d) is possible only for atomic and list types"),
-		  PRIMVAL(op));
+	  _("comparison (%d) is possible only for atomic and list types"),
+	  PRIMVAL(op));
     }
 
-    if (TYPEOF(x) == EXPRSXP || TYPEOF(y) == EXPRSXP)
+    if (typeof_x == EXPRSXP || typeof_y == EXPRSXP)
 	errorcall(call, _("comparison is not allowed for expressions"));
 
     /* ELSE :  x and y are both atomic or list */
@@ -304,24 +301,20 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
             break;
         }
     }
-    else if (TYPEOF(x) == INTSXP || TYPEOF(y) == INTSXP) {
-                                /* NOT isInteger, since it needs to be true for
-                                   factors with VARIANT_UNCLASS_FLAG */
+    else if (typeof_x == INTSXP || typeof_y == INTSXP) {
+        /* NOT isInteger, since it needs to be true for factors with
+           VARIANT_UNCLASS_FLAG.  Assumes LOGICAL same as INTEGER. */
 	REPROTECT(x = coerceVector(x, INTSXP), xpi);
 	REPROTECT(y = coerceVector(y, INTSXP), ypi);
 	ans = integer_relop (code, negate, x, y);
     }
-    else if (isLogical(x) || isLogical(y)) {
-     /* assumes LOGICAL same as INTEGER */
-	REPROTECT(x = coerceVector(x, LGLSXP), xpi);
-	REPROTECT(y = coerceVector(y, LGLSXP), ypi);
-	ans = integer_relop (code, negate, x, y);
-    }
-    else if (TYPEOF(x) == RAWSXP || TYPEOF(y) == RAWSXP) {
+    else if (typeof_x == RAWSXP || typeof_y == RAWSXP) {
 	REPROTECT(x = coerceVector(x, RAWSXP), xpi);
 	REPROTECT(y = coerceVector(y, RAWSXP), ypi);
 	ans = raw_relop (code, negate, x, y);
-    } else errorcall(call, _("comparison of these types is not implemented"));
+    }
+    else 
+        errorcall(call, _("comparison of these types is not implemented"));
 
 
     PROTECT(ans);
