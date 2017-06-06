@@ -208,7 +208,7 @@ sizes of C pointers.
 
 @cindex SEXP
 @cindex SEXPRREC
-The values of R variableso and other objects can be thought of as
+The values of R variables and other objects can be thought of as
 either a @code{SEXP} (a pointer of some sort), or the structure it points to, 
 a @code{SEXPREC} (and there are alternative forms used for vectors
 pointing to @code{VECTOR_SEXPREC} structures, and symbols and primitives).
@@ -225,7 +225,7 @@ pointer, 32 bits in size, that specifies the location of an object
 via a segment index and offset within a segment
 
 @cindex node
-Node structures of all types contain, in some fashion, a 64-bit
+Node structures of all types contain, in some fashion, a 32-bit
 @code{sxpinfo} header and a pointer to a pairlist of attributes.  
 Additional information varies by type (a @code{SEXPTYPE}), which is
 specfied by a five-bit field in the @code{sxpinfo} header.
@@ -321,7 +321,7 @@ solely of a simple type such as an atomic vector or function.  Prior to
 @node Rest of header, The 'data', SEXPTYPEs, SEXPs
 @subsection Rest of header
 
-The @code{sxpinfo} header is defined as the 64-bit C structure below:
+The @code{sxpinfo} header is defined as the 32-bit C structure below:
 
 @example
 struct sxpinfo_struct @{
