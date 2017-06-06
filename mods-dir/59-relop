@@ -1,4 +1,6 @@
 Optimize relational operators on strings to avoid % for ==/!=.
 
-Implement and/or variants for relational operators on both strings and raw data.
+Implement and/or/sum variants for relational operations on all types.
 
+Structure as task procedures (except for strings), and do in helpers
+for non-variant and sum variants.
