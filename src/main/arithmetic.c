@@ -1319,9 +1319,14 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         if (TYPEOF(ans)==CPLXSXP) threshold >>= 1;
         if (oper>TIMESOP) threshold >>= 1;
 
-        if (n >= threshold) {
-            if (IS_STATIC_BOX(x)) x = duplicate(x);
-            if (IS_STATIC_BOX(y)) y = duplicate(y);
+        if (n >= threshold && (variant & VARIANT_PENDING_OK)) {
+            if (IS_STATIC_BOX(x) && IS_STATIC_BOX(y)) {
+                PROTECT(x = duplicate(x));
+                y = duplicate(y);
+                UNPROTECT(1);
+            }
+            else if (IS_STATIC_BOX(x)) x = duplicate(x);
+            else if (IS_STATIC_BOX(y)) y = duplicate(y);
         }
         DO_NOW_OR_LATER2 (variant, n>=threshold, flags, task, oper, ans, x, y);
 
