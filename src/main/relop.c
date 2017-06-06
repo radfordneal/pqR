@@ -880,6 +880,8 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 /* MAIN PART OF IMPLMENTATION OF RELATIONAL OPERATORS.  Called from
    do_relop below, and from elsewhere. */
 
+#define T_relop THRESHOLD_ADJUST(24) 
+
 SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y, 
                                int objx, int objy, SEXP env, int variant)
 {
@@ -919,8 +921,6 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
         break;
     }
 
-    WAIT_UNTIL_COMPUTED_2(x,y);
-
     /* Get types and lengths of operands.  Pretend that logical is
        integer, as they have the same representation. */
 
@@ -944,6 +944,8 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
         /* Handle scalars even quicker using ScalarLogicalMaybeConst. */
     
         if (nx==1 && ny==1) {
+
+            WAIT_UNTIL_COMPUTED_2(x,y);
 
             /* Assumes integers can be represented to full precision as reals */
 
@@ -1108,6 +1110,7 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
     }
 
     if (typeof_x == STRSXP || typeof_y == STRSXP) {
+        WAIT_UNTIL_COMPUTED_2(x,y);
         switch (VARIANT_KIND(variant)) {
         case VARIANT_AND: 
             ans = string_relop_and (code, negate, x, y); 
@@ -1125,7 +1128,7 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
             UNPROTECT(5);
             return ans;
         default:
-            ans = string_relop (code, negate, x, y);
+            PROTECT(ans = string_relop (code, negate, x, y));
             break;
         }
     }
@@ -1133,31 +1136,47 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
         helpers_op_t codeop = (code<<1) | negate;
         switch (VARIANT_KIND(variant)) {
         case VARIANT_AND: 
+            WAIT_UNTIL_COMPUTED_2(x,y);
             ans = allocVector1LGL();
             task_relop_and (codeop, ans, x, y); 
             if (xts || yts) UNPROTECT(2);
             UNPROTECT(5);
             return ans;
         case VARIANT_OR:
+            WAIT_UNTIL_COMPUTED_2(x,y);
             ans = allocVector1LGL();
             task_relop_or (codeop, ans, x, y); 
             if (xts || yts) UNPROTECT(2);
             UNPROTECT(5);
             return ans;
         case VARIANT_SUM:
-            ans = allocVector1INT();
-            task_relop_sum (codeop, ans, x, y); 
+            PROTECT(ans = allocVector1INT());
+            if (IS_STATIC_BOX(x) && IS_STATIC_BOX(y)) {
+                PROTECT(x = duplicate(x));
+                y = duplicate(y);
+                UNPROTECT(1);
+            }
+            else if (IS_STATIC_BOX(x)) x = duplicate(x);
+            else if (IS_STATIC_BOX(y)) y = duplicate(y);
+            DO_NOW_OR_LATER2 (variant, n >= T_relop, 0, task_relop_sum, codeop, 
+                              ans, x, y);
             if (xts || yts) UNPROTECT(2);
-            UNPROTECT(5);
+            UNPROTECT(6);
             return ans;
         default:
-            ans = allocVector(LGLSXP,n);
-            task_relop (codeop, ans, x, y); 
+            PROTECT(ans = allocVector(LGLSXP,n));
+            if (IS_STATIC_BOX(x) && IS_STATIC_BOX(y)) {
+                PROTECT(x = duplicate(x));
+                y = duplicate(y);
+                UNPROTECT(1);
+            }
+            else if (IS_STATIC_BOX(x)) x = duplicate(x);
+            else if (IS_STATIC_BOX(y)) y = duplicate(y);
+            DO_NOW_OR_LATER2 (variant, n >= T_relop, 0, task_relop, codeop, 
+                              ans, x, y);
             break;
         }
     }
-
-    PROTECT(ans);
 
     /* Tack on dims, names, ts stuff, if necessary. */
 

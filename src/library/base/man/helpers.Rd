@@ -104,6 +104,13 @@ Functions \tab Output piped? \tab Input piped? \tab Remarks\cr
                    \tab (see below)
                    \tab done by master\cr
 \tab\tab\tab\cr
+<, >, <=, >=, ==, != \tab No
+                   \tab No
+                   \tab String ops\cr 
+                   \tab
+                   \tab 
+                   \tab done by master\cr
+\tab\tab\tab\cr
 \%\%               \tab No
                    \tab If real op
                    \tab Done by master\cr
@@ -181,10 +188,11 @@ operand is complex (but one may be integer or logical), and only
 for operands whose length is equal to the length of the result.
 
 The \code{sum} function will currently pass on a result computed by a
-task that sums the results of a function of one argument in the first
-group above (\code{abs}, \code{floor}, etc.) using pqR's internal
-``variant result'' mechanism, with pipelining, but \code{sum} does not
-operate as a task otherwise.
+task that sums the results of a relational operator or that sums the
+results of a function of one argument in the first group above
+(\code{abs}, \code{floor}, etc.), using pqR's internal ``variant
+result'' mechanism (with pipelining for the one-argument functions),
+but \code{sum} does not operate as a task otherwise.
 
 Task merging is currently done only for mathematical functions of one
 real argument (except \code{abs}) and the \code{+}, \code{-},
