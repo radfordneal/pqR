@@ -103,8 +103,8 @@
 
 #include <helpers/helpers-app.h>
 
-#define DEBUG_OUTPUT 0          /* 0 to 2 for increasing debug output */
-#define DEBUG_CHECK 0           /* 1 to enable debug check of HASHSLOTSUSED */
+#define DEBUG_OUTPUT 1          /* 0 to 2 for increasing debug output */
+#define DEBUG_CHECK 1           /* 1 to enable debug check of HASHSLOTSUSED */
 
 /* various definitions of macros/functions in Defn.h */
 
@@ -380,11 +380,10 @@ SEXP R_NewHashedEnv(SEXP enclos, SEXP size)
 
   R_HashResize
 
-  Hash table resizing function. Increase the size of the hash table by
-  HASHTABLEGROWTHRATE. The vector is reallocated, but the
-  lists within the hash table have their pointers shuffled around
-  so that they are not reallocated.
-*/
+  Hash table resizing function. Increases the size of the hash table
+  by a factor of two (accounting for header). The vector is
+  reallocated, but the lists within the hash table have their pointers
+  shuffled around so that they are not reallocated.  */
 
 static SEXP R_HashResize(SEXP table)
 {
@@ -398,14 +397,13 @@ static SEXP R_HashResize(SEXP table)
     if (TYPEOF(table) != VECSXP)
 	error("argument not of type VECSXP, from R_HashResize");
 
-    /* Allocate the new hash table.  Return old table if not worth resizing
-       because near maximum allowed. */
-    new_size = (int) (HASHSIZE(table) * HASHTABLEGROWTHRATE);
-    if (new_size > HASHMAXSIZE) {
-        new_size = HASHMAXSIZE;
-        if (new_size <= 1.05 * HASHSIZE(table))
-            return table;
-    }
+    /* Allocate the new hash table.  Return old table if would exceed max. */
+
+    new_size = 2 * (HASHSIZE(table) + SGGC_ENV_HASH_HEAD) - SGGC_ENV_HASH_HEAD;
+
+    if (new_size > HASHMAXSIZE)
+        return table;
+
     new_table = R_NewHashTable (new_size);
 
     /* Move entries into new table. */

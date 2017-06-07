@@ -180,11 +180,10 @@ extern0 SEXP	R_previousSymbol;     /* "previous" */
 #define ASCII_MASK (1<<6)
 
 /* Symbol and string hash table declarations. */
-#define HASHMAXSIZE          1000000
+#define HASHMINSIZE	     (32 - SGGC_ENV_HASH_HEAD)
+#define HASHMAXSIZE          ((1 << 20) - SGGC_ENV_HASH_HEAD)
 #define HASHSIZE(x)	     LENGTH(x)
 #define HASHSLOTSUSED(x)     TRUELENGTH(x)
-#define HASHTABLEGROWTHRATE  1.27
-#define HASHMINSIZE	     29
 #define SET_HASHSLOTSUSED(x,v) SET_TRUELENGTH(x,v)
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
