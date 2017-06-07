@@ -390,9 +390,11 @@
  Rf_regerror
  Rf_regexec
  Rf_regfree
+ Rf_set_elements_to_NA_or_NULL
  Rf_setBaseDevice
  Rf_setIVector
  Rf_setRVector
+ Rf_setenvsymbits
  Rf_ssort
  Rf_stirlerr
  Rf_strmat2intmat

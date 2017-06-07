@@ -125,27 +125,27 @@ VECTOR_SEXPREC_C R_ScalarBox_space[4] = {
 /* Definition of the R_EmptyEnv constant, whose address when cast to SEXP is 
    R_EmptyEnv.  Leave LENGTH (if present) as zero. */
 
-R_CONST SEXPREC R_env_consts[1] = {
+R_CONST ENV_SEXPREC R_env_consts[1] = {
 {
     CONST_HEADER(ENVSXP,R_SGGC_ENV_INDEX,0),
-    .u = { .envsxp = 
-            { .frame = R_NilValue, .enclos = R_NilValue, .hashtab = R_NilValue }
-         }
+    .frame = R_NilValue, 
+    .enclos = R_NilValue, 
+    .hashtab = R_NilValue,
+    .envsymbits = ~(R_symbits_t)0 /* all 1s, so searches will definitely look */
 }
 };
 
 
 /* Definition of the R_UnboundValue constant, whose address when cast to SEXP
    is R_UnboundValue.  Don't put in read-only memory, so won't have to special
-   case it when clearing LASTSYMENV and LASTSYMENVNOTFOUND.  Leave LENGTH
-   (if it exists) as zero. */
+   case it when clearing LASTSYMENV.  Leave LENGTH (if it exists) as zero. */
 
 SYM_SEXPREC R_sym_consts[1] = { 
 {
     CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,0),
-    .symsxp = { .pname = R_NilValue, 
-                .value = R_UnboundValue
-              }
+    .pname = R_NilValue, 
+    .value = R_UnboundValue,
+    .symbits = 0
 }
 };
 

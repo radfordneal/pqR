@@ -42,7 +42,7 @@
 #define SGGC_SMALL_DATA_AREA_BLOCKING 128
 
 #if 1
-#define SGGC_SMALL_DATA_AREA_ALIGN 32 /* Two chunks, suitable for all configs */
+#define SGGC_SMALL_DATA_AREA_ALIGN 64   /* Typical cache line size */
 #endif
 
 
@@ -122,14 +122,14 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
         = 16 bytes          = 16 bytes if length==1 (except for CPLXSXP)
           (1 chunk)           (1 chunk)
 
-      Symbol:             Primitive:                        External pointer:
-        info, pname         info, padding                     info, unused/shift
-        value, hash         C-function                        prot, tag
-        lastenv, lastbind   fast-C-function                   external ptr(+pad)
-        lastenf, padding    64 bits of info                   padding, padding
-        = 32 bytes          padding if 32-bit                 = 32 bytes
-          (2 chunks)        = 32 bytes                        (2 chunks)
-                            (2 chunks)
+      Symbol:             Primitive:        Environment:    External pointer:
+        info, pname         info, padding     info, frame     info, unused/shift
+        value, hash         C-function        enclos, hastab  prot, tag
+        lastenv, lastbind   fast-C-function   envsymbits      external ptr(+pad)
+        symbits             64 bits of info   padding         padding
+        = 32 bytes          padding if 32-bit = 32 bytes      = 32 bytes
+          (2 chunks)        = 32 bytes          (2 chunks)      (2 chunks)
+                              (2 chunks)
 */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
@@ -152,12 +152,12 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 #define SGGC_KIND_CHUNKS \
 { 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
   1,   1,   1,   1,   1,   2, /* Smallest sizes for the SGGC types */ \
-  2,   2,   1,   2,   2,   2, /* 2nd smallest sizes, unused for type 2 */ \
-  3,   4,   1,   4,   2,   2, /* 3rd smallest sizes, unused for types 2,4&5 */ \
-  5,   8,   1,   8,   2,   2, /* 4th smallest sizes, unused for types 2,4&5 */ \
-  8,  16,   1,  16,   2,   2, /* 5th smallest sizes, unused for types 2,4&5 */ \
- 16,  32,   1,  32,   2,   2, /* 6th smallest sizes, unused for types 2,4&5 */ \
- 32,  32,   1,  32,   2,   2  /* 7th smallest sizes, only for type 0 */ \
+  2,   2,   2,   2,   2,   2, /* 2nd smallest sizes */ \
+  3,   4,   2,   4,   2,   2, /* 3rd smallest sizes, unused for types 2,4&5 */ \
+  5,   8,   2,   8,   2,   2, /* 4th smallest sizes, unused for types 2,4&5 */ \
+  8,  16,   2,  16,   2,   2, /* 5th smallest sizes, unused for types 2,4&5 */ \
+ 16,  32,   2,  32,   2,   2, /* 6th smallest sizes, unused for types 2,4&5 */ \
+ 32,  32,   2,  32,   2,   2  /* 7th smallest sizes, only for type 0 */ \
 }
 
 #define SGGC_KIND_TYPES \
@@ -184,7 +184,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 
 #define SGGC_CHAR_KIND_START 0
 #define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
-#define SGGC_ENV_KIND  (SGGC_N_TYPES + 2)
+#define SGGC_ENV_KIND  (2*SGGC_N_TYPES + 2)
 #define SGGC_PROM_KIND (SGGC_N_TYPES + 2)
 #define SGGC_CLOS_KIND (SGGC_N_TYPES + 2)
 #define SGGC_SYM_KIND  (2*SGGC_N_TYPES + 5)
@@ -216,17 +216,17 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
         = 48 bytes          = 32 bytes if length==1 (except for CPLXSXP)
           (3 chunks)          (2 chunks)
 
-      Symbol:             Primitive:                        External pointer:
-        info, cptr          info, cptr                        info, cptr
-        attrib              attrib                            attrib
-        length, padding     length, padding                   length, padding
-        pname               C-function                        external ptr
-        value               fast-C-function                   prot
-        hash, lastenv       64 bits of info                   tag
-        lastbinding         = 48 bytes                        = 48 bytes
-        lastenf, padding      (3 chunks)                        (3 chunks)
-        = 64 bytes
-          (4 chunks)
+      Symbol:             Primitive:        Environment:     External pointer:
+        info, cptr          info, cptr        info, cptr       info, cptr
+        attrib              attrib            attrib           attrib
+        length, padding     length, padding   length, padding  length, padding
+        pname               C-function        frame            external ptr
+        value               fast-C-function   encos            prot
+        hash, lastenv       64 bits of info   hashtab          tag
+        lastbinding         = 48 bytes        envsymbits       = 48 bytes
+        symbits               (3 chunks)      padding            (3 chunks)
+        = 64 bytes                            = 64 bytes
+          (4 chunks)                            (4 chunks)
 */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
@@ -239,12 +239,12 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 #define SGGC_KIND_CHUNKS \
 { 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
   2,   2,   3,   2,   3,   3, /* Smallest sizes for the SGGC types */ \
-  3,   3,   3,   3,   3,   4, /* 2nd smallest sizes, unused for types 2&4 */ \
-  4,   5,   3,   5,   3,   4, /* 3rd smallest sizes, unused for types 2,4&5 */ \
-  5,   8,   3,   8,   3,   4, /* 4th smallest sizes, unused for types 2,4&5 */ \
-  8,  16,   3,  16,   3,   4, /* 5th smallest sizes, unused for types 2,4&5 */ \
- 16,  32,   3,  32,   3,   4, /* 6th smallest sizes, unused for types 2,4&5 */ \
- 32,  32,   3,  32,   3,   4  /* 7th smallest sizes, only for type 0 */ \
+  3,   3,   4,   3,   3,   4, /* 2nd smallest sizes, unused for type 4 */ \
+  4,   5,   4,   5,   3,   4, /* 3rd smallest sizes, unused for types 2,4&5 */ \
+  5,   8,   4,   8,   3,   4, /* 4th smallest sizes, unused for types 2,4&5 */ \
+  8,  16,   4,  16,   3,   4, /* 5th smallest sizes, unused for types 2,4&5 */ \
+ 16,  32,   4,  32,   3,   4, /* 6th smallest sizes, unused for types 2,4&5 */ \
+ 32,  32,   4,  32,   3,   4  /* 7th smallest sizes, only for type 0 */ \
 }
 
 #define SGGC_KIND_TYPES \
@@ -271,7 +271,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 
 #define SGGC_CHAR_KIND_START 0
 #define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
-#define SGGC_ENV_KIND  (SGGC_N_TYPES + 2)
+#define SGGC_ENV_KIND  (2*SGGC_N_TYPES + 2)
 #define SGGC_PROM_KIND (SGGC_N_TYPES + 2)
 #define SGGC_CLOS_KIND (SGGC_N_TYPES + 2)
 #define SGGC_SYM_KIND  (2*SGGC_N_TYPES + 5)
@@ -298,15 +298,15 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
         = 32 bytes          = 32 bytes if length==1
           (2 chunks)          (2 chunks)
 
-      Symbol:             Primitive:                        External pointer:
-        info, cptr          info, cptr                        info, cptr
-        pname               C-function                        external ptr
-        value               fast-C-function                   prot
-        hash, lastenv       64 bits of info                   tag
-        lastbinding         = 32 bytes                        = 32 bytes
-        lastenf, padding      (2 chunks)                        (2 chunks)
-        = 48 bytes
-          (3 chunks)
+      Symbol:             Primitive:         Environment:    External pointer:
+        info, cptr          info, cptr         info, cptr      info, cptr
+        pname               C-function         frame           external ptr
+        value               fast-C-function    encos           prot
+        hash, lastenv       64 bits of info    hashtab         tag
+        lastbinding         = 32 bytes         envsymbits      = 32 bytes
+        symbits               (2 chunks)       padding           (2 chunks)
+        = 48 bytes                             = 48 bytes
+          (3 chunks)                             (3 chunks)
 */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
@@ -322,12 +322,12 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 #define SGGC_KIND_CHUNKS \
 { 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
   2,   2,   2,   2,   2,   2, /* Smallest sizes for the SGGC types */ \
-  3,   3,   2,   3,   2,   3, /* 2nd smallest sizes, unused for types 2&4 */ \
-  4,   5,   2,   5,   2,   3, /* 3rd smallest sizes, unused for types 2,4&5 */ \
-  5,   8,   2,   8,   2,   3, /* 4th smallest sizes, unused for types 2,4&5 */ \
-  8,  16,   2,  16,   2,   3, /* 5th smallest sizes, unused for types 2,4&5 */ \
- 16,  32,   2,  32,   2,   3, /* 6th smallest sizes, unused for types 2,4&5 */ \
- 32,  32,   2,  32,   2,   3  /* 7th smallest sizes, only for type 0 */ \
+  3,   3,   3,   3,   2,   3, /* 2nd smallest sizes, unused for type 4 */ \
+  4,   5,   3,   5,   2,   3, /* 3rd smallest sizes, unused for types 2,4&5 */ \
+  5,   8,   3,   8,   2,   3, /* 4th smallest sizes, unused for types 2,4&5 */ \
+  8,  16,   3,  16,   2,   3, /* 5th smallest sizes, unused for types 2,4&5 */ \
+ 16,  32,   3,  32,   2,   3, /* 6th smallest sizes, unused for types 2,4&5 */ \
+ 32,  32,   3,  32,   2,   3  /* 7th smallest sizes, only for type 0 */ \
 }
 
 #define SGGC_KIND_TYPES \
@@ -354,7 +354,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 
 #define SGGC_CHAR_KIND_START 0
 #define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
-#define SGGC_ENV_KIND  (SGGC_N_TYPES + 2)
+#define SGGC_ENV_KIND  (2*SGGC_N_TYPES + 2)
 #define SGGC_PROM_KIND (SGGC_N_TYPES + 2)
 #define SGGC_CLOS_KIND (SGGC_N_TYPES + 2)
 #define SGGC_SYM_KIND  (2*SGGC_N_TYPES + 5)
@@ -379,15 +379,15 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
         = 32 bytes          = 32 bytes if length==1 (except for CPLXSXP)
         (2 chunks)          (2 chunks)
 
-      Symbol:             Primitive:                        External pointer:
-        info, cptr          info, cptr                        info, cptr
-        attrib, length      attrib, length                    attrib, length
-        pname, value        C-function, fast-C-function       prot, tag
-        hash, lastenv       64 bits of info                   xptr, padding
-        lastbinding, lastenf  = 32 bytes                        = 32 bytes
-        padding, padding      (2 chunks)                        (2 chunks)
-        = 48 bytes          
-          (3 chunks)
+      Symbol:             Primitive:           Environment:   External pointer:
+        info, cptr          info, cptr           info, cptr     info, cptr
+        attrib, length      attrib, length       attrib, length  attrib, length
+        pname, value        C-function, fastfun  frame, enclos   prot, tag
+        hash, lastenv       64 bits of info      hashtab, pad    xptr, padding
+        lastbinding, padding  = 32 bytes         envsymbits      = 32 bytes
+        symbits                 (2 chunks)       padding           (2 chunks)
+        = 48 bytes                               = 48 bytes
+          (3 chunks)                               (3 chunks)
 */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
@@ -400,12 +400,12 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 #define SGGC_KIND_CHUNKS \
 { 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
   2,   2,   2,   2,   2,   2, /* Smallest sizes for the SGGC types */ \
-  3,   3,   2,   3,   2,   3, /* 2nd smallest sizes, unused for types 2&4 */ \
-  4,   5,   2,   5,   2,   3, /* 3rd smallest sizes, unused for types 2,4&5 */ \
-  5,   8,   2,   8,   2,   3, /* 4th smallest sizes, unused for types 2,4&5 */ \
-  8,  16,   2,  16,   2,   3, /* 5th smallest sizes, unused for types 2,4&5 */ \
- 16,  32,   2,  32,   2,   3, /* 6th smallest sizes, unused for types 2,4&5 */ \
- 32,  32,   2,  32,   2,   3  /* 7th smallest sizes, only for type 0 */ \
+  3,   3,   3,   3,   2,   3, /* 2nd smallest sizes, unused for type 4 */ \
+  4,   5,   3,   5,   2,   3, /* 3rd smallest sizes, unused for types 2,4&5 */ \
+  5,   8,   3,   8,   2,   3, /* 4th smallest sizes, unused for types 2,4&5 */ \
+  8,  16,   3,  16,   2,   3, /* 5th smallest sizes, unused for types 2,4&5 */ \
+ 16,  32,   3,  32,   2,   3, /* 6th smallest sizes, unused for types 2,4&5 */ \
+ 32,  32,   3,  32,   2,   3  /* 7th smallest sizes, only for type 0 */ \
 }
 
 #define SGGC_KIND_TYPES \
@@ -432,7 +432,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 
 #define SGGC_CHAR_KIND_START 0
 #define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
-#define SGGC_ENV_KIND  (SGGC_N_TYPES + 2)
+#define SGGC_ENV_KIND  (2*SGGC_N_TYPES + 2)
 #define SGGC_PROM_KIND (SGGC_N_TYPES + 2)
 #define SGGC_CLOS_KIND (SGGC_N_TYPES + 2)
 #define SGGC_SYM_KIND  (2*SGGC_N_TYPES + 5)

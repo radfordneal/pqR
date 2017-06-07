@@ -562,9 +562,16 @@ void (SET_PRINTNAME)(SEXP x, SEXP v)
     SYM_HASH(x) = R_Newhashpjw (CHAR (v));
 }
 
-void (SET_SYMVALUE)(SEXP x, SEXP v) { SYMVALUE(x) = v; }
+void (SET_SYMVALUE)(SEXP x, SEXP v) 
+{
+    /* No old-to-new check is needed, since symbols are scanned specially. */
+
+    SYMVALUE(x) = v;  
+}
 void (SET_INTERNAL)(SEXP x, SEXP v) 
 {
+    /* No old-to-new check is needed, since primatives are uncollected. */
+
     sggc_cptr_t s = CPTR_FROM_SEXP(x);
     if (TYPEOF(v)!=BUILTINSXP && TYPEOF(v)!=SPECIALSXP) abort(); 
     if (s < R_first_internal || s > R_max_internal) abort();

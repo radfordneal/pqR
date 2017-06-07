@@ -1,0 +1,6 @@
+Replace the special flag for symbols like +, -, etc. by a more general
+method of quickly determining that some symbols do not have a binding
+in an environment.  Removes the "last symbol not found" facility,
+which should be largely superceded by this change.
+
+Fixed bug: a <- as.integer(NA); e <- new.env(size=a); print(a)

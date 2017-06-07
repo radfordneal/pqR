@@ -381,10 +381,7 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 };
 
 
-/* Table of special names.  These are marked as special with SET_SPEC_SYM.  
-   Environments that have never contained such a symbol are marked as such,
-   with NO_SPEC_SYM, so they can be quickly skipped when searching for a 
-   function named by such a special symbol. 
+/* Table of special names. 
 
    Any symbols can be put here, but ones that contain special characters, or are
    reserved words, are the ones unlikely to be defined in any environment other
@@ -641,8 +638,10 @@ static void SetupBuiltins(void)
 
     /* Flag "special" symbols. */
 
-    for (i = 0; Spec_name[i]; i++)
-        SET_SPEC_SYM (install(Spec_name[i]), 1);
+    for (i = 0; Spec_name[i]; i++) {
+        SEXP sym = install(Spec_name[i]);
+        SET_SYMBITS (sym, SYMBITS(sym) | 1);
+    }
 }
 
 extern SEXP framenames; /* from model.c */
@@ -735,7 +734,16 @@ static SEXP install_with_hashcode (char *name, int hashcode)
     if (sym32 == LPHASH_NO_ENTRY)
         R_Suicide("couldn't allocate memory to expand symbol table");
 
-    return SEXP_FROM_SEXP32(sym32);
+    SEXP sym = SEXP_FROM_SEXP32(sym32);
+
+    int b1, b2;
+    b1 = hashcode % 63;
+    b2 = hashcode % 62;
+    if (b2 >= b1) b2 += 1;
+
+    SET_SYMBITS (sym, ((R_symbits_t)2 << b1) | ((R_symbits_t)2 << b2));
+
+    return sym;
 }
 
 SEXP install(const char *name)

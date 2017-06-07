@@ -22,6 +22,15 @@
         attributes could be attached to symbols, but they were lost
         when a workspace was saved and restored.
   }}
+
+  \subsection{BUG FIXES}{
+  \itemize{
+  \item Fixed a bug illustrated by the following:
+\preformatted{    a <- as.integer(NA); e <- new.env(size=a); print(a)
+}
+        The value printed was previously 0 rather than NA.
+        This bug also exists in R Core versions to at least R-3.4.0.
+  }}
 }
 
 

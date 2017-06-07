@@ -48,9 +48,6 @@
  *  "value" slot is inspected for a value.  This "top-level"
  *  environment is where system functions and variables reside.
  *
- *  Environments with the NO_SPEC_SYM flag are known to not contain any
- *  special symbols, as indicated by the SPEC_SYM macro.  Lookup for
- *  such a symbol can then bypass  this environment without searching it.
  */
 
 /* R 1.8.0: namespaces are no longer experimental, so the following
@@ -197,34 +194,24 @@ static SEXP getActiveValue(SEXP fun)
 
 #endif
 
-/* Function to correctly set NO_SPEC_SYM flag for an (unhashed) environment. */
+/* Function to correctly set ENVSYMBITS for an (unhashed) environment. */
 
-void setNoSpecSymFlag (SEXP env)
+void set_envsymbits (SEXP env)
 {
     SEXP frame;
+    R_symbits_t bits;
    
-    if (HASHTAB(env)!=R_NilValue) {
-        SET_NO_SPEC_SYM (env, 0); 
+    if (HASHTAB(env) != R_NilValue) {
+        SET_ENVSYMBITS (env, ~(R_symbits_t)0); 
         return;
     }
 
-    /* Unrolled loop, which relies on CAR, CDR, and TAG of R_NilValue 
-       being R_NilValue.  Also relies on SPEC_SYM(R_NilValue) being 0. */
+    bits = 0;
+    for (frame = FRAME(env); frame != R_NilValue; frame = CDR(frame)) {
+        bits |= SYMBITS (TAG (frame));
+    }
 
-    frame = FRAME(env);
-    do {
-        if (SPEC_SYM(TAG(frame))) goto special;
-        frame = CDR(frame);
-        if (SPEC_SYM(TAG(frame))) goto special;
-        frame = CDR(frame);
-    } while (frame != R_NilValue);
-
-    SET_NO_SPEC_SYM (env, 1);
-    return;
-
-  special:
-    SET_NO_SPEC_SYM (env, 0);
-    return;
+    SET_ENVSYMBITS (env, bits);
 }
 
 /*----------------------------------------------------------------------
@@ -342,36 +329,35 @@ static SEXP R_HashGetLoc(int hashcode, SEXP symbol, SEXP table)
   Hash table initialisation function.  Creates a table of size 'size'. 
 */
 
-static SEXP R_NewHashTable(int size)
+static inline SEXP R_NewHashTable(int size)
 {
     SEXP table;
 
-    if (size <= 0) size = HASHMINSIZE;
+    if (size < HASHMINSIZE) size = HASHMINSIZE;
 
-    /* Allocate hash table in the form of a vector */
-    PROTECT(table = allocVector(VECSXP, size));
+    table = allocVector(VECSXP, size);
     SET_HASHSLOTSUSED(table, 0);
-    UNPROTECT(1);
-    return(table);
+
+    return table;
 }
 
 /*----------------------------------------------------------------------
 
   R_NewHashedEnv
 
-  Returns a new environment with a hash table initialized with default
+  Returns a new environment with a hash table initialized with specified
   size.  The only non-static hash table function.
 */
 
 SEXP R_NewHashedEnv(SEXP enclos, SEXP size)
 {
-    SEXP s;
+    SEXP s, t;
 
-    PROTECT(enclos);
     PROTECT(size);
     PROTECT(s = NewEnvironment(R_NilValue, R_NilValue, enclos));
-    SET_HASHTAB(s, R_NewHashTable(asInteger(size)));
-    UNPROTECT(3);
+    t = R_NewHashTable(asInteger(size));
+    SET_HASHTAB (s, t);
+    UNPROTECT(2);
     return s;
 }
 
@@ -391,6 +377,9 @@ static SEXP R_HashResize(SEXP table)
     SEXP new_table, chain, new_chain, tmp_chain;
     int new_size, counter, new_hashcode;
 #if DEBUG_OUTPUT
+    Rprintf("\nABOUT TO RESIZE HASH TABLE %llu/%u\n",
+            (long long unsigned) UPTR_FROM_SEXP(table),
+            (unsigned) CPTR_FROM_SEXP(table));
     int n_entries = 0;
 #endif
 
@@ -415,6 +404,7 @@ static SEXP R_HashResize(SEXP table)
 #if DEBUG_OUTPUT
             n_entries += 1;
 #endif
+            if (TYPEOF(chain) != LISTSXP) abort();
             new_hashcode = SYM_HASH(TAG(chain)) % HASHSIZE(new_table);
 	    new_chain = VECTOR_ELT(new_table, new_hashcode);
 	    /* If using a previously-unused slot then increase HASHSLOTSUSED */
@@ -434,7 +424,9 @@ static SEXP R_HashResize(SEXP table)
 
     /* Some debugging statements */
 #if DEBUG_OUTPUT
-    Rprintf("RESIZED TABLE WITH %d ENTRIES O.K.\n",n_entries);
+    Rprintf("RESIZED TABLE WITH %d ENTRIES, NEW TABLE IS %llu/%u\n", n_entries,
+            (long long unsigned) UPTR_FROM_SEXP(new_table),
+            (unsigned) CPTR_FROM_SEXP(new_table));
     Rprintf("Old size: %d, New size: %d\n",HASHSIZE(table),HASHSIZE(new_table));
     Rprintf("Old slotsused: %d, New slotsused: %d\n",
 	    HASHSLOTSUSED(table), HASHSLOTSUSED(new_table));
@@ -450,19 +442,19 @@ static SEXP R_HashResize(SEXP table)
   R_HashSizeCheck
 
   Hash table size rechecking function.	Looks at the fraction of table
-  entries that have one or more symbols, comparing to a threshold value
-  (which should be in the interval (0,1)).  Returns true if the table 
-  needs to be resized.  Does NOT check whether resizing shouldn't be 
-  done because HASHMAXSIZE would then be exceeded.
+  entries that have one or more symbols, comparing to a threshold value.
+  Returns true if the table needs to be resized.  Does NOT check whether 
+  resizing shouldn't be done because HASHMAXSIZE would then be exceeded.
 */
 
 static R_INLINE int R_HashSizeCheck(SEXP table)
 {
-    /* Do some checking */
+
+#if DEBUG_CHECK
+
     if (TYPEOF(table) != VECSXP)
 	error("argument not of type VECSXP, R_HashSizeCheck");
 
-#if DEBUG_CHECK
     int slotsused = 0;
     int i;
     for (i = 0; i<LENGTH(table); i++) {
@@ -476,9 +468,10 @@ static R_INLINE int R_HashSizeCheck(SEXP table)
                 HASHSLOTSUSED(table), slotsused);
         abort();
     }
+
 #endif
 
-    return HASHSLOTSUSED(table) > 0.5 * HASHSIZE(table);
+    return 0 && HASHSLOTSUSED(table) > 0.5 * HASHSIZE(table);
 }
 
 
@@ -495,6 +488,11 @@ static void R_HashFrame(SEXP rho)
 {
     int hashcode;
     SEXP frame, chain, tmp_chain, table;
+
+#if DEBUG_OUTPUT
+    Rprintf("\nMAKING ENVIRONMENT %llu HASHED, WITH SIZE %d\n",
+            (long long unsigned)table, HASHSIZE(table));
+#endif
 
     /* Do some checking */
     if (TYPEOF(rho) != ENVSXP)
@@ -513,7 +511,7 @@ static void R_HashFrame(SEXP rho)
 	SET_VECTOR_ELT(table, hashcode, tmp_chain);
     }
     SET_FRAME(rho, R_NilValue);
-    SET_NO_SPEC_SYM(rho, 0);
+    SET_ENVSYMBITS(rho, ~(R_symbits_t)0);
 }
 
 
@@ -897,8 +895,6 @@ SEXP findVarInFramePendingOK(SEXP rho, SEXP symbol)
 {
     SEXP value;
 
-    if (TYPEOF(symbol) != SYMSXP) abort();
-
     if (SEXP32_FROM_SEXP(rho) == LASTSYMENV(symbol)) {
         SEXP binding = LASTSYMBINDING(symbol); /* won't be an active binding */
         if ( ! BINDING_IS_LOCKED(binding)) {
@@ -918,8 +914,6 @@ SEXP findVarInFramePendingOK(SEXP rho, SEXP symbol)
 SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 {
     SEXP value;
-
-    if (TYPEOF(symbol) != SYMSXP) abort();
 
     if (SEXP32_FROM_SEXP(rho) == LASTSYMENV(symbol)) {
         SEXP binding = LASTSYMBINDING(symbol); /* won't be an active binding */
@@ -950,11 +944,7 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 
 /* Version that doesn't check LASTSYMBINDING.  Split from above so the
    simplest case will have low overhead.  Can also be called directly
-   if it's known that checking LASTSYMBINDING won't help. 
-
-   Will fail quickly when the symbol has LASTSYMENVNOTFOUND equal to 
-   the environment.  LASTSYMENVNOTFOUND is also updated on failure if the 
-   environment is unhashed. */
+   if it's known that checking LASTSYMBINDING won't help. */
 
 SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 {
@@ -999,12 +989,8 @@ SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 
     else if (HASHTAB(rho) == R_NilValue) {
 
-        if (LASTSYMENVNOTFOUND(symbol) != SEXP32_FROM_SEXP(rho)) {
-            loc = FRAME(rho);
-            SEARCH_LOOP (loc, symbol, goto found);
-            LASTSYMENVNOTFOUND(symbol) = SEXP32_FROM_SEXP(rho);
-        }
-
+        loc = FRAME(rho);
+        SEARCH_LOOP (loc, symbol, goto found);
         goto ret;
 
       found: 
@@ -1116,6 +1102,8 @@ SEXP findVar(SEXP symbol, SEXP rho)
 {
     SEXP value;
 
+    rho = SKIP_USING_SYMBITS (rho, symbol);
+
     /* This first loop handles local frames, if there are any.  It
        will also handle all frames if rho is a global frame other than
        R_GlobalEnv */
@@ -1141,6 +1129,8 @@ SEXP findVar(SEXP symbol, SEXP rho)
 SEXP findVarPendingOK(SEXP symbol, SEXP rho)
 {
     SEXP value;
+
+    rho = SKIP_USING_SYMBITS (rho, symbol);
 
     /* This first loop handles local frames, if there are any.  It
        will also handle all frames if rho is a global frame other than
@@ -1176,9 +1166,10 @@ SEXP findVarPendingOK(SEXP symbol, SEXP rho)
 SEXP attribute_hidden
 findVar1(SEXP symbol, SEXP rho, SEXPTYPE mode, int inherits)
 {
-    SEXP vl;
+    if (inherits) rho = SKIP_USING_SYMBITS (rho, symbol);
+
     while (rho != R_EmptyEnv) {
-	vl = findVarInFrame3(rho, symbol, TRUE);
+	SEXP vl = findVarInFrame3(rho, symbol, TRUE);
 	if (vl != R_UnboundValue) {
 	    if (mode == ANYSXP) return vl;
 	    if (TYPEOF(vl) == PROMSXP)
@@ -1202,23 +1193,24 @@ static SEXP
 findVar1mode(SEXP symbol, SEXP rho, SEXPTYPE mode, int inherits,
 	     Rboolean doGet)
 {
-    SEXP vl;
-    int tl;
+    if (inherits) rho = SKIP_USING_SYMBITS (rho, symbol);
+
     if (mode == INTSXP) mode = REALSXP;
     if (mode == FUNSXP || mode ==  BUILTINSXP || mode == SPECIALSXP)
 	mode = CLOSXP;
+
     while (rho != R_EmptyEnv) {
+        SEXP vl;
 	if (! doGet && mode == ANYSXP)
 	    vl = findVarInFrame3(rho, symbol, 2);
 	else
 	    vl = findVarInFrame3(rho, symbol, doGet);
-
 	if (vl != R_UnboundValue) {
 	    if (mode == ANYSXP) return vl;
 	    if (TYPEOF(vl) == PROMSXP)
                 vl = forcePromise(vl);
 	    if (mode == CLOSXP && isFunction(vl)) return vl;
-	    tl = TYPEOF(vl);
+	    int tl = TYPEOF(vl);
             if (tl == INTSXP) tl = REALSXP;
 	    if (tl == mode) return vl;
 	}
@@ -1335,44 +1327,22 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
   (Though it's often bypassed by the FINDFUN macro in eval.c.)
 
   In typical usage, rho will be an unhashed local environment with the
-  NO_SPEC_SYM flag set, with ENCLOS giving further such environments, until 
-  R_GlobalEnv is reached, where the function will be found in the global
-  cache (if it wasn't in one of the local environemnts).  Note that
-  R_GlobalEnv will not have NO_SPEC_SYM set, even if it has no special
-  symbols - otherwise, it might be skipped, and hence the global cache
-  would be skipped as well.
-
-  An environment can also be skipped when the symbol has LASTSYMENVNOTFOUND
-  equal to that environment.  LASTSYMENVNOTFOUND is updated to the last
-  unhashed environment where the symbol wasn't found.
+  with ENCLOS giving further such environments, until R_GlobalEnv is
+  reached, where the function will be found in the global cache (if it
+  wasn't in one of the local environemnts). 
 
   There is no need to wait for computations of the values found to finish, 
   since functions never have their computation deferred.
-
-  The findFun_nospecsym function skips the special symbol check, for use in 
-  the FINDFUN macro when that check has already been done.
 */
 
 SEXP findFun(SEXP symbol, SEXP rho)
 {
-    /* If it's a special symbol, skip to the first environment that might 
-       contain such a symbol. */
-
-    if (SPEC_SYM(symbol)) {
-        while (NO_SPEC_SYM(rho)) /* note that NO_SPEC_SYM(R_EmptyEnv) is 0 */
-            rho = ENCLOS(rho);
-    }
-
-    return findFun_nospecsym(symbol,rho);
+    return findFun_nospecsym (symbol, SKIP_USING_SYMBITS(rho,symbol));
 }
 
 SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
 {
-    SEXP32 last_sym_not_found = LASTSYMENVNOTFOUND(symbol);
-    SEXP last_unhashed_env_nf = R_NoObject;
     SEXP vl;
-
-    if (TYPEOF(symbol) != SYMSXP) abort();
 
     /* Search environments for a definition that is a function. */
 
@@ -1395,34 +1365,18 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
             goto err;
         }
 
-        /* See if it's known from LASTSYMENVNOTFOUND that this symbol isn't 
-           in this environment. */
-
-        if (SEXP32_FROM_SEXP(rho) == last_sym_not_found) {
-            last_unhashed_env_nf = rho;
-            continue;
-        }
-
         vl = findVarInFramePendingOK (rho, symbol);
-	if (vl != R_UnboundValue)
-            goto got_value;
+	if (vl == R_UnboundValue)
+            continue;
 
-        if (HASHTAB(rho) == R_NilValue)
-            last_unhashed_env_nf = rho;
-        continue;
-
-    got_value:
+      got_value:
         if (TYPEOF(vl) == PROMSXP) {
             SEXP pv = PRVALUE_PENDING_OK(vl);
             vl = pv != R_UnboundValue ? pv : forcePromise(vl);
         }
 
-        if (isFunction (vl)) {
-            if (last_unhashed_env_nf != R_NoObject)
-                LASTSYMENVNOTFOUND(symbol) = 
-                  SEXP32_FROM_SEXP(last_unhashed_env_nf);
+        if (isFunction (vl))
             return vl;
-        }
 
         if (vl == R_MissingArg)
             arg_missing_error(symbol);
@@ -1432,25 +1386,16 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
     error(_("could not find function \"%s\""), CHAR(PRINTNAME(symbol)));
 }
 
-/* Variation on findFun that doesn't report errors itself, doesn't
-   check for special symbols, and records a failed local search even
-   if the whole search fails (unlike findFun).
 
+/* Variation on findFun that doesn't report errors itself.
    Used for looking up methods in objects.c. */
 
 SEXP findFunMethod(SEXP symbol, SEXP rho)
 {
-    if (TYPEOF(symbol) != SYMSXP) abort();
+    for (rho = SKIP_USING_SYMBITS(rho,symbol); 
+         rho != R_EmptyEnv; 
+         rho = ENCLOS(rho)) {
 
-    SEXP32 last_sym_not_found = LASTSYMENVNOTFOUND(symbol);
-    SEXP last_unhashed_env_nf = R_NoObject;
-    SEXP vl;
-
-    for ( ; rho != R_EmptyEnv; rho = ENCLOS(rho)) {
-        if (SEXP32_FROM_SEXP(rho) == last_sym_not_found) {
-            last_unhashed_env_nf = rho;
-            continue;
-        }
         if (rho == R_GlobalEnv) {
             vl = findGlobalVar(symbol);
             if (vl == R_UnboundValue)
@@ -1458,24 +1403,16 @@ SEXP findFunMethod(SEXP symbol, SEXP rho)
         }
         else {
             vl = findVarInFramePendingOK(rho, symbol);
-            if (vl == R_UnboundValue) {
-                if (HASHTAB(rho) == R_NilValue)
-                    last_unhashed_env_nf = rho;
+            if (vl == R_UnboundValue)
                 continue;
-            }
         }
+
         if (TYPEOF(vl) == PROMSXP)
             vl = forcePromise(vl);
-        if (isFunction(vl)) {
-            if (last_unhashed_env_nf != R_NoObject)
-                LASTSYMENVNOTFOUND(symbol) = 
-                  SEXP32_FROM_SEXP(last_unhashed_env_nf);
+        if (isFunction(vl))
             return vl;
-        }
     }
 
-    if (last_unhashed_env_nf != R_NoObject && !IS_BASE(last_unhashed_env_nf))
-        LASTSYMENVNOTFOUND(symbol) = SEXP32_FROM_SEXP(last_unhashed_env_nf);
     return R_UnboundValue;
 }
 
@@ -1502,8 +1439,6 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
 {
     int hashcode;
     SEXP loc;
-
-    if (TYPEOF(symbol) != SYMSXP) abort();
 
     PROTECT3(symbol,value,rho);
 
@@ -1549,10 +1484,8 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     }
 
     if (HASHTAB(rho) == R_NilValue) {
-        if (LASTSYMENVNOTFOUND(symbol) != SEXP32_FROM_SEXP(rho)) {
-            loc = FRAME(rho);
-            SEARCH_LOOP (loc, symbol, goto found_update_last);
-        }
+        loc = FRAME(rho);
+        SEARCH_LOOP (loc, symbol, goto found_update_last);
     }
     else { /* hashed environment */
         hashcode = SYM_HASH(symbol) % HASHSIZE(HASHTAB(rho));
@@ -1578,8 +1511,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         if (HASHTAB(rho) == R_NilValue) {
             new = cons_with_tag (value, FRAME(rho), symbol);
             SET_FRAME(rho, new);
-            if (SPEC_SYM(symbol))
-                SET_NO_SPEC_SYM(rho,0);
+            SET_ENVSYMBITS (rho, ENVSYMBITS(rho) | SYMBITS(symbol));
         }
         else {
             SEXP table = HASHTAB(rho);
@@ -1591,9 +1523,6 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
             if (R_HashSizeCheck(table))
                 SET_HASHTAB(rho, R_HashResize(table));
         }
-
-        if (LASTSYMENVNOTFOUND(symbol) == SEXP32_FROM_SEXP(rho))
-            LASTSYMENVNOTFOUND(symbol) = R_NoObject32;
 
         if (incdec&2)
             INC_NAMEDCNT(value);
