@@ -147,6 +147,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
     if (TYPEOF(v) == SYMSXP || TYPEOF(v) == LISTSXP) {
 	if (IS_ACTIVE_BINDING(v)) { if (a) Rprintf(","); Rprintf("AB"); a = 1; }
 	if (BINDING_IS_LOCKED(v)) { if (a) Rprintf(","); Rprintf("LCK"); a = 1; }
+        if (ATTRIB_W(v) == R_UnboundValue) { if (a) Rprintf(","); Rprintf("UGLB"); a = 1; }
     }    
     if (TYPEOF(v) == ENVSXP) {
         if (FRAME_IS_LOCKED(v)) { if (a) Rprintf(","); Rprintf("LCK"); a = 1; }
