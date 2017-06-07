@@ -678,11 +678,35 @@ static inline void R_AddGlobalCacheNonBase(SEXP symbol, SEXP place)
     SET_BASE_CACHE (symbol, 0);
 }
 
+static inline void R_AddGlobalCacheNotFound(SEXP symbol)
+{
+    ATTRIB_W(symbol) = R_UnboundValue;
+    SET_BASE_CACHE (symbol, 0);
+}
+
 static SEXP R_GetGlobalCache(SEXP symbol)
 {
-    return BASE_CACHE(symbol) ? SYMVALUE(symbol)
-         : ATTRIB_W(symbol) != R_NilValue ? BINDING_VALUE(ATTRIB_W(symbol))
-         : R_UnboundValue;
+    SEXP val;
+
+    if (BASE_CACHE(symbol)) {
+        val = SYMVALUE(symbol);
+        return val;
+    }
+
+    if (ATTRIB_W(symbol) == R_UnboundValue)
+        return R_UnboundValue;
+
+    if (ATTRIB_W(symbol) == R_NilValue)
+        return R_NoObject;
+
+    val = BINDING_VALUE(ATTRIB_W(symbol));
+
+    if (val == R_UnboundValue) {
+        ATTRIB_W(symbol) = R_NilValue;
+        return R_NoObject;
+    }
+
+    return val;
 }
 
 
@@ -1045,7 +1069,7 @@ static inline SEXP findGlobalVar(SEXP symbol)
     R_binding_cell = R_NilValue;
 
     vl = R_GetGlobalCache(symbol);
-    if (vl != R_UnboundValue)
+    if (vl != R_NoObject)
 	return vl;
 
     Rboolean canCache = TRUE;
@@ -1053,9 +1077,10 @@ static inline SEXP findGlobalVar(SEXP symbol)
     for (rho = R_GlobalEnv; rho != R_EmptyEnv; rho = ENCLOS(rho)) {
 	if (IS_BASE(rho)) {
 	    vl = SYMBOL_BINDING_VALUE(symbol);
-	    if (vl != R_UnboundValue)
+	    if (vl != R_UnboundValue) {
 		R_AddGlobalCacheBase(symbol);
-	    return vl;
+                return vl;
+            }
         }
         else {
 	    vl = findVarLocInFrame(rho, symbol, &canCache);
@@ -1068,6 +1093,7 @@ static inline SEXP findGlobalVar(SEXP symbol)
 
     }
 
+    R_AddGlobalCacheNotFound(symbol);
     return R_UnboundValue;
 }
 
@@ -1365,7 +1391,7 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
             vl = findGlobalVar(symbol);
             if (vl != R_UnboundValue)
                 goto got_value;
-            continue;
+            goto err;
         }
 
         /* See if it's known from LASTSYMENVNOTFOUND that this symbol isn't 
@@ -1401,13 +1427,13 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
             arg_missing_error(symbol);
     }
 
+  err:
     error(_("could not find function \"%s\""), CHAR(PRINTNAME(symbol)));
 }
 
 /* Variation on findFun that doesn't report errors itself, doesn't
-   check for special symbols, does not use the global cache (which is
-   quicker if most searches are expected to fail), and records a failed
-   local search even if the whole search fails (unlike findFun).  
+   check for special symbols, and records a failed local search even
+   if the whole search fails (unlike findFun).
 
    Used for looking up methods in objects.c. */
 
@@ -1424,11 +1450,18 @@ SEXP findFunMethod(SEXP symbol, SEXP rho)
             last_unhashed_env_nf = rho;
             continue;
         }
-	vl = findVarInFramePendingOK(rho, symbol);
-	if (vl == R_UnboundValue) {
-            if (HASHTAB(rho) == R_NilValue)
-                last_unhashed_env_nf = rho;
-            continue;
+        if (rho == R_GlobalEnv) {
+            vl = findGlobalVar(symbol);
+            if (vl == R_UnboundValue)
+                break;
+        }
+        else {
+            vl = findVarInFramePendingOK(rho, symbol);
+            if (vl == R_UnboundValue) {
+                if (HASHTAB(rho) == R_NilValue)
+                    last_unhashed_env_nf = rho;
+                continue;
+            }
         }
         if (TYPEOF(vl) == PROMSXP)
             vl = forcePromise(vl);
