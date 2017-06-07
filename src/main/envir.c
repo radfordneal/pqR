@@ -1396,6 +1396,8 @@ SEXP findFunMethod(SEXP symbol, SEXP rho)
          rho != R_EmptyEnv; 
          rho = ENCLOS(rho)) {
 
+        SEXP vl;
+
         if (rho == R_GlobalEnv) {
             vl = findGlobalVar(symbol);
             if (vl == R_UnboundValue)
