@@ -2,3 +2,5 @@ Changes regarding hashed environments.
 
 Minimum size of hash table now depends on pointer size/type.
 Now expands by factors of two.
+
+Default env size is now NA (internal default).
