@@ -1,5 +1,10 @@
 The stable versions of SGGC below are tagged in the source code repository.
 
+Version 2017-06-09
+
+  Added sggc_nchunks_allocated to API.  Fixed typos in sggc-doc.
+  Used in pqR-2017-06-09.
+
 Version 2017-06-02
 
   Change of names from x.big and x.small to X.Big and X.Small, which

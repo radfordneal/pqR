@@ -162,6 +162,11 @@ int main (int argc, char **argv)
 
 # include "test-common.h"
 
+  printf("\nNUMBER OF CHUNKS:  nil %d, a %d, b %d, c %d, d %d, e %d\n",
+         sggc_nchunks_allocated(CPTR(nil)), sggc_nchunks_allocated(CPTR(a)),
+         sggc_nchunks_allocated(CPTR(b)),   sggc_nchunks_allocated(CPTR(c)),
+         sggc_nchunks_allocated(CPTR(d)), sggc_nchunks_allocated(CPTR(e)));
+
   printf("\nCOLLECTING EVERYTHING, EXCEPT nil\n\n");
   a = b = c = d = e = nil;
   sggc_collect(2);

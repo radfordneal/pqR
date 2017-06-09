@@ -283,6 +283,7 @@ sggc_cptr_t sggc_alloc (sggc_type_t type, sggc_length_t length);
 sggc_cptr_t sggc_alloc_kind (sggc_kind_t kind, sggc_length_t length);
 sggc_cptr_t sggc_alloc_small_kind (sggc_kind_t kind);
 #endif
+sggc_nchunks_t sggc_nchunks_allocated (sggc_cptr_t object);
 void sggc_collect (int level);
 void sggc_look_at (sggc_cptr_t cptr);
 void sggc_mark (sggc_cptr_t cptr);
