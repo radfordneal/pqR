@@ -259,8 +259,20 @@ void (UNSET_S4_OBJECT)(SEXP x){ UNSET_S4_OBJECT(Rf_chk_valid_SEXP(x)); }
 
 /* Vector Accessors */
 int (LENGTH)(SEXP x) { return LENGTH(Rf_chk_valid_SEXP(x)); }
+
+void (SETLENGTH)(SEXP x, int v) 
+{ 
+    if (!isVector(Rf_chk_valid_SEXP(x)))
+        abort();
+    if (v < 0)
+        abort();
+    if (Rf_nchunks(TYPEOF(x),v) > sggc_nchunks_allocated(CPTR_FROM_SEXP(x)))
+        abort();
+
+    LENGTH(x) = v;
+}
+
 int (TRUELENGTH)(SEXP x) { return TRUELENGTH(Rf_chk_valid_SEXP(x)); }
-void (SETLENGTH)(SEXP x, int v) { SETLENGTH(Rf_chk_valid_SEXP(x), v); }
 void (SET_TRUELENGTH)(SEXP x, int v) { SET_TRUELENGTH(Rf_chk_valid_SEXP(x), v); }
 
 const char *(R_CHAR)(SEXP x) {
