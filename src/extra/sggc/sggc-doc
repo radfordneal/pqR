@@ -342,7 +342,7 @@ type must be determinable from the kind), but there can be several
 kinds for a type that use big segments or small segments, perhaps with
 different numbers of data chunks, depending on length.
 
-The application also provides an sggc_nchunk function (or macro) that
+The application also provides an sggc_nchunks function (or macro) that
 returns the number of data chunks needed for an object of given type
 and length.  This is called when SGGC needs to allocate space for a
 big segment.
@@ -452,7 +452,7 @@ macros) below, which have (if functions) prototypes as shown:
     Returns the type of the object whose compressed pointer is passed,
     an integer from 0 to SGGC_N_TYPES-1.
 
-  sggc_type_t SGGC_KIND (sggc_cptr_t cptr)
+  sggc_kind_t SGGC_KIND (sggc_cptr_t cptr)
 
     Returns the kind of the object whose compressed pointer is passed,
     an integer from 0 to SGGC_N_KIND-1.
@@ -544,6 +544,13 @@ macros) below, which have (if functions) prototypes as shown:
     possible, in which case the application should try calling either
     sggc_alloc_small_kind, sggc_alloc_kind, or sggc_alloc instead.
     Does not require that SGGC_KIND_TYPE be defined.
+
+  sggc_nchunks_t sggc_nchunks_allocated (sggc_cptr_t object)
+
+    Returns the number of chunks actually allocated for the data area
+    of the given object, which may be greater than what was asked for
+    (indirectly) in the the call of sggc_alloc (or related functions).
+    The entirety of this allocated can be used by the application.
 
   void sggc_collect (int level)
 
