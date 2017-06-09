@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2017-06-02}{
+\section{CHANGES IN VERSION RELEASED 2017-06-09}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -69,8 +69,8 @@
 
   \subsection{CHANGES TO THE C API}{
   \itemize{
-  \item The \code{SETLENGTH} function has been eliminated.  It has never 
-        been safe to use.
+  \item The \code{SETLENGTH} function now performs some checks to avoid
+        possible disaster.  Its use is still discouraged.
   \item The probably never-used \code{call_R} and \code{call_S} functions
         have been disabled.
   \item It is now illegal to set the ``internal'' value associated with a symbol
