@@ -180,6 +180,11 @@ int main (int argc, char **argv)
 
 # include "test-common.h"
 
+  printf("\nNUMBER OF CHUNKS:  nil %d, a %d, b %d, c %d, d %d, e %d\n",
+         sggc_nchunks_allocated(nil), sggc_nchunks_allocated(a),
+         sggc_nchunks_allocated(b),   sggc_nchunks_allocated(c),
+         sggc_nchunks_allocated(d), sggc_nchunks_allocated(e));
+
   alloc_count = 0;  /* don't want any automatic timed collections */
 
   for (k = 2; k < SGGC_N_KINDS; k++)
