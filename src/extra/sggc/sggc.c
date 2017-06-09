@@ -1075,6 +1075,17 @@ sggc_cptr_t sggc_alloc_small_kind (sggc_kind_t kind)
 #endif
 
 
+/* RETURN ACTUAL NUMBER OF CHUNKS IN DATA AREA OF AN OBJECT. */
+
+sggc_nchunks_t sggc_nchunks_allocated (sggc_cptr_t object)
+{
+  sggc_kind_t kind = SGGC_KIND(object);
+
+  return sggc_kind_chunks[kind] != 0 ? sggc_kind_chunks[kind]    /* small seg */
+   : CHUNKS_ALLOCATED (SBSET_SEGMENT (SBSET_VAL_INDEX(object)));   /* big seg */
+}
+
+
 /* REGISTER A CONSTANT SEGMENT. */
 
 sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,

@@ -173,6 +173,11 @@ int main (int argc, char **argv)
 
 # include "test-common.h"
 
+  printf("\nNUMBER OF CHUNKS:  nil %d, a %d, b %d, c %d, d %d, e %d\n",
+         sggc_nchunks_allocated(nil), sggc_nchunks_allocated(a),
+         sggc_nchunks_allocated(b),   sggc_nchunks_allocated(c),
+         sggc_nchunks_allocated(d), sggc_nchunks_allocated(e));
+
   sggc_call_for_newly_freed_object (1, freed1);
   sggc_call_for_newly_freed_object (2, freed2);
   sggc_call_for_object_in_use (in_use);
