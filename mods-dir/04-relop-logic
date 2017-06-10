@@ -1,7 +1,0 @@
-Logical operations and relational operators have been sped up in
-simple cases, and use the new facility for producing a scalar logical
-result without allocating new storage.  Relational operators have also
-been substantially speeded up for long vectors.  Relational operators
-are reduced to either EQOP or LTOP to avoid repetitive code, which
-then makes it reasonable to specially treat equal length operands and
-operands of length 1.
