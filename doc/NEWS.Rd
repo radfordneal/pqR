@@ -59,6 +59,11 @@
         which allows for some objects to be stored more compactly,
         with some possible speed and memory advantages, though some operations
         become slightly slower.
+  \item Packages containing C code must be installed with a build of
+        pqR configured with the same setting of
+        \code{--enable-compressed-pointers} or
+        \code{--enable-aux-for-attrib} as the build of pqR in which
+        they are used.
   \item The \code{--enable-strict-barrier} option to \code{configure}
         has been removed.  In pqR, usages in C code such as \code{CAR(x)=y}
         cause compile errors regardless of this option, so it is not
