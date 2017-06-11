@@ -50,10 +50,6 @@
  *    when the format is changed so older versions of R can recognize
  *    and reject the new format with a meaningful error message.
  *
- *    R should remain able to write older workspace formats.  An error
- *    should be signaled if the contents to be saved is not compatible
- *    with the requested format.
- *
  *    To allow older versions of R to give useful error messages, the
  *    header now contains the version of R that wrote the workspace
  *    and the oldest version that can read the workspace.  These
@@ -62,24 +58,16 @@
  *    temporarily in the development stage.  If readers are not
  *    provided in a release version, then these should specify the
  *    oldest reader R version as -1.
+ *
+ * Currently, only version 2 may be read or written.
  */
 
 #define R_MAGIC_ASCII_V2   2001
 #define R_MAGIC_BINARY_V2  2002
 #define R_MAGIC_XDR_V2     2003
-#define R_MAGIC_ASCII_V1   1001
-#define R_MAGIC_BINARY_V1  1002
-#define R_MAGIC_XDR_V1     1003
 #define R_MAGIC_EMPTY      999
 #define R_MAGIC_CORRUPT    998
-#define R_MAGIC_MAYBE_TOONEW 997
-
-/* pre-1 formats (R < 0.99.0) */
-#define R_MAGIC_BINARY 1975
-#define R_MAGIC_ASCII  1976
-#define R_MAGIC_XDR    1977
-#define R_MAGIC_BINARY_VERSION16 1971
-#define R_MAGIC_ASCII_VERSION16	 1972
+#define R_MAGIC_MAYBE_TOO_OLD_NEW 997
 
 
 /* Static Globals, DIE, DIE, DIE! */
@@ -190,132 +178,6 @@ static void DummyOutNewline(FILE *fp, SaveLoadData *d)
 
 static void DummyTerm(FILE *fp, SaveLoadData *d)
 {
-}
-
-/* ----- O l d - s t y l e  (p r e 1. 0)  R e s t o r e ----- */
-
-/* This section is only used to load old-style workspaces / objects */
-
-
-/* ----- L o w l e v e l -- A s c i i -- I / O ----- */
-
-static int AsciiInInteger(FILE *fp, SaveLoadData *d)
-{
-    int x, res;
-    res = fscanf(fp, "%s", d->smbuf);
-    if(res != 1) error(_("read error"));
-    if (strcmp(d->smbuf, "NA") == 0)
-	return NA_INTEGER;
-    else {
-	res = sscanf(d->smbuf, "%d", &x);
-	if(res != 1) error(_("read error"));
-	return x;
-    }
-}
-
-static double AsciiInReal(FILE *fp, SaveLoadData *d)
-{
-    double x;
-    int res = fscanf(fp, "%s", d->smbuf);
-    if(res != 1) error(_("read error"));
-    if (strcmp(d->smbuf, "NA") == 0)
-	x = NA_REAL;
-    else if (strcmp(d->smbuf, "Inf") == 0)
-	x = R_PosInf;
-    else if (strcmp(d->smbuf, "-Inf") == 0)
-	x = R_NegInf;
-    else
-	res  = sscanf(d->smbuf, "%lg", &x);
-	if(res != 1) error(_("read error"));
-    return x;
-}
-
-static Rcomplex AsciiInComplex(FILE *fp, SaveLoadData *d)
-{
-    Rcomplex x;
-    int res;
-    res = fscanf(fp, "%s", d->smbuf);
-    if(res != 1) error(_("read error"));
-    if (strcmp(d->smbuf, "NA") == 0)
-	x.r = NA_REAL;
-    else if (strcmp(d->smbuf, "Inf") == 0)
-	x.r = R_PosInf;
-    else if (strcmp(d->smbuf, "-Inf") == 0)
-	x.r = R_NegInf;
-    else {
-	res  = sscanf(d->smbuf, "%lg", &x.r);
-	if(res != 1) error(_("read error"));
-    }
-
-    res = fscanf(fp, "%s", d->smbuf);
-    if(res != 1) error(_("read error"));
-    if (strcmp(d->smbuf, "NA") == 0)
-	x.i = NA_REAL;
-    else if (strcmp(d->smbuf, "Inf") == 0)
-	x.i = R_PosInf;
-    else if (strcmp(d->smbuf, "-Inf") == 0)
-	x.i = R_NegInf;
-    else {
-	res = sscanf(d->smbuf, "%lg", &x.i);
-	if(res != 1) error(_("read error"));
-    }
-    return x;
-}
-
-
-static char *AsciiInString(FILE *fp, SaveLoadData *d)
-{
-    int c;
-    char *bufp = d->buffer.data;
-    while ((c = R_fgetc(fp)) != '"');
-    while ((c = R_fgetc(fp)) != R_EOF && c != '"') {
-	if (c == '\\') {
-	    if ((c = R_fgetc(fp)) == R_EOF) break;
-	    switch(c) {
-	    case 'n':  c = '\n'; break;
-	    case 't':  c = '\t'; break;
-	    case 'v':  c = '\v'; break;
-	    case 'b':  c = '\b'; break;
-	    case 'r':  c = '\r'; break;
-	    case 'f':  c = '\f'; break;
-	    case 'a':  c = '\a'; break;
-	    case '\\': c = '\\'; break;
-	    case '\?': c = '\?'; break;
-	    case '\'': c = '\''; break;
-	    case '\"': c = '\"'; break;
-	    default:  break;
-	    }
-	}
-	*bufp++ = c;
-    }
-    *bufp = '\0';
-    return d->buffer.data;
-}
-
-static SEXP AsciiLoad(FILE *fp, int startup, SaveLoadData *d)
-{
-    InputRoutines m;
-
-    m.InInit = DummyInit;
-    m.InInteger = AsciiInInteger;
-    m.InReal = AsciiInReal;
-    m.InComplex = AsciiInComplex;
-    m.InString = AsciiInString;
-    m.InTerm = DummyTerm;
-    return DataLoad(fp, startup, &m, 0, d);
-}
-
-static SEXP AsciiLoadOld(FILE *fp, int version, int startup, SaveLoadData *d)
-{
-    InputRoutines m;
-
-    m.InInit = DummyInit;
-    m.InInteger = AsciiInInteger;
-    m.InReal = AsciiInReal;
-    m.InComplex = AsciiInComplex;
-    m.InString = AsciiInString;
-    m.InTerm = DummyTerm;
-    return DataLoad(fp, startup, &m, version, d);
 }
 
 /* ----- L o w l e v e l -- X D R -- I / O ----- */
@@ -582,7 +444,8 @@ static void RemakeNextSEXP(FILE *fp, NodeInfo *node, int version, InputRoutines 
     SET_VECTOR_ELT(node->NewAddress, idx, s);
 }
 
-static void RestoreSEXP(SEXP s, FILE *fp, InputRoutines *m, NodeInfo *node, int version, SaveLoadData *d)
+static void RestoreSEXP(SEXP s, FILE *fp, InputRoutines *m, NodeInfo *node,
+                        int version, SaveLoadData *d)
 {
     unsigned int j, type;
     int len;
@@ -1750,15 +1613,6 @@ static void R_WriteMagic(FILE *fp, int number)
 
     number = abs(number);
     switch (number) {
-    case R_MAGIC_ASCII_V1:   /* Version 1 - R Data, ASCII Format */
-	strcpy((char*)buf, "RDA1");
-	break;
-    case R_MAGIC_BINARY_V1:  /* Version 1 - R Data, Binary Format */
-	strcpy((char*)buf, "RDB1");
-	break;
-    case R_MAGIC_XDR_V1:     /* Version 1 - R Data, XDR Binary Format */
-	strcpy((char*)buf, "RDX1");
-	break;
     case R_MAGIC_ASCII_V2:   /* Version >=2 - R Data, ASCII Format */
 	strcpy((char*)buf, "RDA2");
 	break;
@@ -1792,15 +1646,6 @@ static int R_ReadMagic(FILE *fp)
 	    return R_MAGIC_CORRUPT;
     }
 
-    if (strncmp((char*)buf, "RDA1\n", 5) == 0) {
-	return R_MAGIC_ASCII_V1;
-    }
-    else if (strncmp((char*)buf, "RDB1\n", 5) == 0) {
-	return R_MAGIC_BINARY_V1;
-    }
-    else if (strncmp((char*)buf, "RDX1\n", 5) == 0) {
-	return R_MAGIC_XDR_V1;
-    }
     if (strncmp((char*)buf, "RDA2\n", 5) == 0) {
 	return R_MAGIC_ASCII_V2;
     }
@@ -1811,7 +1656,7 @@ static int R_ReadMagic(FILE *fp)
 	return R_MAGIC_XDR_V2;
     }
     else if (strncmp((char *)buf, "RD", 2) == 0)
-	return R_MAGIC_MAYBE_TOONEW;
+	return R_MAGIC_MAYBE_TOO_OLD_NEW;
 
     /* Intel gcc seems to screw up a single expression here */
     d1 = (buf[3]-'0') % 10;
@@ -1830,13 +1675,7 @@ void attribute_hidden R_SaveToFileV(SEXP obj, FILE *fp, int ascii, int version)
     SaveLoadData data = {{NULL, 0, MAXELTSIZE}};
 
     if (version == 1) {
-	if (ascii) {
-	    R_WriteMagic(fp, R_MAGIC_ASCII_V1);
-	    NewAsciiSave(obj, fp, &data);
-	} else {
-	    R_WriteMagic(fp, R_MAGIC_XDR_V1);
-	    NewXdrSave(obj, fp, &data);
-	}
+        abort();  /* no longer supported */
     }
     else {
 	struct R_outpstream_st out;
@@ -1864,6 +1703,7 @@ void attribute_hidden R_SaveToFile(SEXP obj, FILE *fp, int ascii)
     /* different handling of errors */
 
 #define return_and_free(X) {r = X; R_FreeStringBuffer(&data.buffer); return r;}
+
 SEXP attribute_hidden R_LoadFromFile(FILE *fp, int startup)
 {
     struct R_inpstream_st in;
@@ -1873,22 +1713,6 @@ SEXP attribute_hidden R_LoadFromFile(FILE *fp, int startup)
 
     magic = R_ReadMagic(fp);
     switch(magic) {
-    case R_MAGIC_XDR:
-	return_and_free(XdrLoad(fp, startup, &data));
-    case R_MAGIC_BINARY:
-	return_and_free(BinaryLoad(fp, startup, &data));
-    case R_MAGIC_ASCII:
-	return_and_free(AsciiLoad(fp, startup, &data));
-    case R_MAGIC_BINARY_VERSION16:
-	return_and_free(BinaryLoadOld(fp, 16, startup, &data));
-    case R_MAGIC_ASCII_VERSION16:
-	return_and_free(AsciiLoadOld(fp, 16, startup, &data));
-    case R_MAGIC_ASCII_V1:
-	return_and_free(NewAsciiLoad(fp, &data));
-    case R_MAGIC_BINARY_V1:
-	return_and_free(NewBinaryLoad(fp, &data));
-    case R_MAGIC_XDR_V1:
-	return_and_free(NewXdrLoad(fp, &data));
     case R_MAGIC_ASCII_V2:
 	R_InitFileInPStream(&in, fp, R_pstream_ascii_format, NULL, R_NoObject);
 	return_and_free(R_Unserialize(&in));
@@ -1903,8 +1727,8 @@ SEXP attribute_hidden R_LoadFromFile(FILE *fp, int startup)
 	switch (magic) {
 	case R_MAGIC_EMPTY:
 	    error(_("restore file may be empty -- no data loaded"));
-	case R_MAGIC_MAYBE_TOONEW:
-	    error(_("restore file may be from a newer version of R -- no data loaded"));
+	case R_MAGIC_MAYBE_TOO_OLD_NEW:
+	    error(_("restore file may be from a newer or much older version of R -- no data loaded"));
 	default:
 	    error(_("bad restore file magic number (file may be corrupted) -- no data loaded"));
 	}
@@ -1915,77 +1739,6 @@ static void saveload_cleanup(void *data)
 {
     FILE *fp = (FILE *) data;
     fclose(fp);
-}
-
-/* Only used for version 1 saves */
-static SEXP do_save(SEXP call, SEXP op, SEXP args, SEXP env)
-{
-    /* save(list, file, ascii, version, environment) */
-
-    SEXP s, t, source, tmp;
-    int len, j, version, ep;
-    FILE *fp;
-    RCNTXT cntxt;
-
-    checkArity(op, args);
-
-
-    if (TYPEOF(CAR(args)) != STRSXP)
-	error(_("first argument must be a character vector"));
-    if (!isValidStringF(CADR(args)))
-	error(_("'file' must be non-empty string"));
-    if (TYPEOF(CADDR(args)) != LGLSXP)
-	error(_("'ascii' must be logical"));
-    if (CADDDR(args) == R_NilValue)
-	version = R_DefaultSaveFormatVersion;
-    else
-	version = asInteger(CADDDR(args));
-    if (version == NA_INTEGER || version <= 0)
-	error(_("invalid '%s' argument"), "version");
-    source = CAR(nthcdr(args,4));
-    if (source != R_NilValue && TYPEOF(source) != ENVSXP)
-	error(_("invalid '%s' argument"), "environment");
-    ep = asLogical(CAR(nthcdr(args,5)));
-    if (ep == NA_LOGICAL)
-	error(_("invalid '%s' argument"), "eval.promises");
-
-    fp = RC_fopen(STRING_ELT(CADR(args), 0), "wb", TRUE);
-    if (!fp) {
-	const char *cfile = CHAR(STRING_ELT(CADR(args), 0));
-	error(_("cannot open file '%s': %s"), cfile, strerror(errno));
-    }
-
-    /* set up a context which will close the file if there is an error */
-    begincontext(&cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
-		 R_NilValue, R_NilValue);
-    cntxt.cend = &saveload_cleanup;
-    cntxt.cenddata = fp;
-
-    len = length(CAR(args));
-    PROTECT(s = allocList(len));
-
-    t = s;
-    for (j = 0; j < len; j++, t = CDR(t)) {
-	SET_TAG(t, installChar(STRING_ELT(CAR(args), j)));
-	tmp = findVar(TAG(t), source);
-	if (tmp == R_UnboundValue)
-            unbound_var_error(TAG(t));
-	if(ep && TYPEOF(tmp) == PROMSXP) {
-	    PROTECT(tmp);
-	    tmp = eval(tmp, source);
-	    UNPROTECT(1);
-	}
-	SETCAR(t, tmp);
-   }
-
-    R_SaveToFileV(s, fp, INTEGER(CADDR(args))[0], version);
-
-    UNPROTECT(1);
-    /* end the context after anything that could raise an error but before
-       closing the file so it doesn't get done twice */
-    endcontext(&cntxt);
-    fclose(fp);
-    return R_NilValue;
 }
 
 static SEXP RestoreToEnv(SEXP ans, SEXP aenv)
@@ -2043,52 +1796,6 @@ static SEXP R_LoadSavedData(FILE *fp, SEXP aenv)
 {
     return RestoreToEnv(R_LoadFromFile(fp, 0), aenv);
 }
-
-/* This is only used for version 1 or earlier formats */
-static SEXP do_load(SEXP call, SEXP op, SEXP args, SEXP env)
-{
-    SEXP fname, aenv, val;
-    FILE *fp;
-    RCNTXT cntxt;
-
-    checkArity(op, args);
-
-    if (!isValidString(fname = CAR(args)))
-	error(_("first argument must be a file name"));
-
-    /* GRW 1/26/99 GRW : added environment parameter so that */
-    /* the loaded objects can be placed where desired  */
-
-    aenv = CADR(args);
-    if (TYPEOF(aenv) == NILSXP)
-	error(_("use of NULL environment is defunct"));
-    else if (TYPEOF(aenv) != ENVSXP)
-	error(_("invalid '%s' argument"), "envir");
-
-    /* Process the saved file to obtain a list of saved objects. */
-    fp = RC_fopen(STRING_ELT(fname, 0), "rb", TRUE);
-    if (!fp) error(_("unable to open file"));
-
-    /* set up a context which will close the file if there is an error */
-    begincontext(&cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
-		 R_NilValue, R_NilValue);
-    cntxt.cend = &saveload_cleanup;
-    cntxt.cenddata = fp;
-
-    PROTECT(val = R_LoadSavedData(fp, aenv));
-
-    /* end the context after anything that could raise an error but before
-       closing the file so it doesn't get done twice */
-    endcontext(&cntxt);
-    fclose(fp);
-    UNPROTECT(1);
-    return val;
-}
-
-/* defined in Rinternals.h
-#define R_XDR_DOUBLE_SIZE 8
-#define R_XDR_INTEGER_SIZE 4
-*/
 
 void attribute_hidden R_XDREncodeDouble(double d, void *buf)
 {
@@ -2244,8 +1951,8 @@ static SEXP do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
 	version = asInteger(CADDDR(args));
     if (version == NA_INTEGER || version <= 0)
 	error(_("invalid '%s' argument"), "version");
-    if (version < 2)
-	error(_("cannot save to connections in version %d format"), version);
+    if (version != 2)
+	error(_("cannot save in version %d format"), version);
     source = CAR(nthcdr(args,4));
     if (source != R_NilValue && TYPEOF(source) != ENVSXP)
 	error(_("invalid '%s' argument"), "environment");
@@ -2379,8 +2086,6 @@ attribute_hidden FUNTAB R_FunTab_saveload[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"save",	do_save,	0,	111,	6,	{PP_FUNCALL, PREC_FN,	0}},
-{"load",	do_load,	0,	111,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"saveToConn",	do_saveToConn,	0,	111,	6,	{PP_FUNCALL, PREC_FN,	0}},
 {"loadFromConn2",do_loadFromConn2,0,	111,	2,	{PP_FUNCALL, PREC_FN,	0}},
 

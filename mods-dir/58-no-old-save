@@ -1,0 +1,2 @@
+Get rid of old save/load code for obsolete formats, since it would
+need to be modified when env hash scheme is changed.
