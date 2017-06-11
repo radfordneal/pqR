@@ -39,16 +39,14 @@ save.image(file = ".RData", version = NULL, ascii = FALSE,
     written.  The default value of \code{ascii} is \code{FALSE} which
     leads to a binary file being written.}
   \item{version}{the workspace format version to use.  \code{NULL}
-    specifies the current default format.  The version used from \R
-    0.99.0 to \R 1.3.1 was version 1.  The default format as from \R
-    1.4.0 is version 2.}
+    specifies the current default format.  This is currently version 2,
+    and this is currently the only one allowed.}
   \item{envir}{environment to search for objects to be saved.}
   \item{compress}{logical or character string specifying whether saving
     to a named file is to use compression.  \code{TRUE} corresponds to
     \command{gzip} compression, and (from \R 2.10.0) character strings
     \code{"gzip"}, \code{"bzip2"} or \code{"xz"} specify the
-    type of compression.  Ignored when \code{file} is a connection
-    and for workspace format version 1.} 
+    type of compression.  Ignored when \code{file} is a connection.}
   \item{compression_level}{integer: the level of compression to be
     used.  Defaults to \code{6} for \command{gzip} compression and to
     \code{9} for \command{bzip2} or \command{xz} compression.}
@@ -56,7 +54,7 @@ save.image(file = ".RData", version = NULL, ascii = FALSE,
     forced before saving?}
   \item{precheck}{logical: should the existence of the objects be
     checked before starting to save (and in particular before opening
-    the file/connection)?  Does not apply to version 1 saves.}
+    the file/connection)?}
   \item{safe}{logical.  If \code{TRUE}, a temporary file is used for
     creating the saved workspace.  The temporary file is renamed to
     \code{file} if the save succeeds.  This preserves an existing
