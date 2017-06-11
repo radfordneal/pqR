@@ -884,6 +884,9 @@ SEXP with_no_nth (SEXP s, int n)
 /* TODO: a  Length(.) {say} which is  length() + dispatch (S3 + S4) if needed
          for one approach, see do_seq_along() in ../main/seq.c
 */
+
+R_xlen_t xlength(SEXP s) { return length(s); }
+
 R_len_t length(SEXP s)
 {
     extern int Rf_envlength(SEXP);
