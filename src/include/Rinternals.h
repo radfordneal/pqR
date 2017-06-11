@@ -528,8 +528,10 @@ static inline int LENGTH (SEXP x)
 #define XLENGTH(x) LENGTH(x)
 #define XTRUELENGTH(x) TRUELENGTH(x)
 #define SHORT_VEC_LENGTH(x) LENGTH(x)
+#define SET_SHORT_VEC_LENGTH SETLENGTH
 #define SET_SHORT_VEC_TRUELENGTH(x,v) SET_TRUELENGTH((x),(v))
 #define IS_LONG_VEC(x) 0
+#define IS_SCALAR(x,type) (TYPEOF(x) == (type) && LENGTH(x) == 1)
 
 #define CAAR(e)		CAR(CAR(e))
 #define CDAR(e)		CDR(CAR(e))
@@ -1701,6 +1703,7 @@ Rboolean Rf_isUnordered(SEXP);
 Rboolean Rf_isUnsorted(SEXP, Rboolean);
 R_len_t Rf_length(SEXP);
 SEXP Rf_lengthgets(SEXP, R_len_t);
+SEXP Rf_xlengthgets(SEXP, R_xlen_t);
 SEXP R_lsInternal(SEXP, Rboolean);
 SEXP Rf_match(SEXP, SEXP, int);
 SEXP Rf_matchE(SEXP, SEXP, int, SEXP);
@@ -1744,6 +1747,7 @@ void Rf_unprotect_ptr(SEXP);
 SEXP Rf_with_changed_nth(SEXP,int,SEXP);
 SEXP Rf_with_no_nth(SEXP,int);
 SEXP Rf_with_pairlist_appended(SEXP,SEXP);
+R_xlen_t Rf_xlength(SEXP);
 
 SEXP R_ProtectWithIndex(SEXP, PROTECT_INDEX *);
 void R_Reprotect(SEXP, PROTECT_INDEX);
@@ -2183,6 +2187,8 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define with_changed_nth	Rf_with_changed_nth
 #define with_no_nth		Rf_with_no_nth
 #define with_pairlist_appended	Rf_with_pairlist_appended
+#define xlength(x)		Rf_xlength(x)
+#define xlengthgets		Rf_xlengthgets
 
 #endif
 
