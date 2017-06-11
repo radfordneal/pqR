@@ -1,5 +1,6 @@
 #  File src/library/base/R/load.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -17,7 +18,6 @@
 load <- function (file, envir = parent.frame())
 {
     if (is.character(file)) {
-        ## files are allowed to be of an earlier format
         ## gzfile can open gzip, bzip2, xz and uncompressed files.
         con <- gzfile(file)
         on.exit(close(con))
@@ -29,12 +29,7 @@ load <- function (file, envir = parent.frame())
             ## a check while we still know the call to load()
             if(grepl("RD[ABX][12]\r", magic))
                 stop("input has been corrupted, with LF replaced by CR")
-            ## Not a version 2 magic number, so try the pre-R-1.4.0 code
-            warning(gettextf("file %s has magic number '%s'\n   Use of save versions prior to 2 is deprecated",
-                             sQuote(basename(file)),
-                             gsub("[\n\r]*", "", magic)),
-                    domain = NA, call. = FALSE)
-            return(.Internal(load(file, envir)))
+            error("Use of save versions prior to 2 is no longer allowed")
         }
     } else if (inherits(file, "connection")) {
         con <- if(inherits(file, "gzfile") || inherits(file, "gzcon")) file
@@ -57,15 +52,15 @@ save <- function(..., list = character(),
         ascii <- opts$ascii
     if (missing(version)) version <- opts$version
     if (!is.null(version) && version < 2)
-        warning("Use of save versions prior to 2 is deprecated")
+        error("Use of save versions prior to 2 is no longer allowed")
 
     if(missing(list) && !length(list(...)))
 	warning("nothing specified to be save()d")
     names <- as.character( substitute(list(...)))[-1L]
     list <- c(list, names)
-    if (!is.null(version) && version == 1)
-        invisible(.Internal(save(list, file, ascii, version, envir,
-                                 eval.promises)))
+    if (!is.null(version) && version == 1) { 
+        # Should no longer happen.
+    }
     else {
         if (precheck) {
             ## check for existence of objects before opening connection
