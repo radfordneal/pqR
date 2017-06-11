@@ -865,6 +865,8 @@ static SEXP do_makevector(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* do_lengthgets: assign a length to a vector (or a list, if it is vectorizable)
  */ 
 
+SEXP xlengthgets(SEXP x, R_xlen_t len) { return lengthgets(x,len); }
+
 SEXP lengthgets(SEXP x, R_len_t len)
 {
     R_len_t lenx, i;

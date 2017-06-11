@@ -122,6 +122,7 @@ static const char *typename(SEXP v) {
    pvec is the max. number of vector elements to show, and prom is
    whether recursion happens for promises.  */
 static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
+    extern sggc_nchunks_t sggc_nchunks_allocated(sggc_cptr_t);
     int a = 0;
     pp(pre);
     if (v == R_NoObject) {
