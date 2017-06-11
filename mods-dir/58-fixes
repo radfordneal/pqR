@@ -1,0 +1,4 @@
+Miscellaneous fixes.
+
+Added xlength and xlengthgets functions for compatibility with R >= 3.
+
