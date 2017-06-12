@@ -367,7 +367,7 @@ typedef struct PRIM_SEXPREC {
 struct symsxp_struct {
     SEXP pname;
     SEXP value;
-    int32_t sym_hash;
+    uint32_t sym_hash;
     SEXP32 lastenv;
     SEXP lastbinding;
     SEXP32 lastenvnotfound;

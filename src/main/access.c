@@ -571,7 +571,7 @@ int attribute_hidden R_Newhashpjw(const char *s)
 void (SET_PRINTNAME)(SEXP x, SEXP v) 
 { 
     PRINTNAME(x) = v; 
-    SYM_HASH(x) = R_Newhashpjw (CHAR (v));
+    SET_SYM_HASH(x,v);
 }
 
 void (SET_SYMVALUE)(SEXP x, SEXP v) { SYMVALUE(x) = v; }

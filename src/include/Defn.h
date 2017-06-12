@@ -187,7 +187,8 @@ extern0 SEXP	R_previousSymbol;     /* "previous" */
 #define SET_HASHSLOTSUSED(x,v) SET_TRUELENGTH(x,v)
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
-#define SYM_HASH(x)     (((SYM_SEXPREC*)UPTR_FROM_SEXP(x))->symsxp.sym_hash)
+#define SET_SYM_HASH(x,v) (((SYM_SEXPREC*)UPTR_FROM_SEXP(x))->symsxp.sym_hash=v)
+#define SYM_HASH(x)     (((SYM_SEXPREC*)UPTR_FROM_SEXP(x))->symsxp.sym_hash>>1)
 #define CHAR_HASH(x)    TRUELENGTH(x)
 
 /* Test whether this is a constant object (defined in const-objs.c). */
