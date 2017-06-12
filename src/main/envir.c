@@ -103,8 +103,8 @@
 
 #include <helpers/helpers-app.h>
 
-#define DEBUG_OUTPUT 1          /* 0 to 2 for increasing debug output */
-#define DEBUG_CHECK 1           /* 1 to enable debug check of HASHSLOTSUSED */
+#define DEBUG_OUTPUT 0          /* 0 to 2 for increasing debug output */
+#define DEBUG_CHECK 0           /* 1 to enable debug check of HASHSLOTSUSED */
 
 /* various definitions of macros/functions in Defn.h */
 
