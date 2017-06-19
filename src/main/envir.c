@@ -234,7 +234,7 @@ void setNoSpecSymFlag (SEXP env)
   We use a basic separate chaining algorithm.	A hash table consists
   of SEXP (vector) which contains a number of SEXPs (lists).
 
-  The only non-static function is R_NewHashedEnv, which allows code to
+  The main non-static function is R_NewHashedEnv, which allows code to
   request a hashed environment.  All others are static to allow
   internal changes of implementation without affecting client code.
 */
@@ -373,6 +373,38 @@ SEXP R_NewHashedEnv(SEXP enclos, SEXP size)
     SET_HASHTAB(s, R_NewHashTable(asInteger(size)));
     UNPROTECT(3);
     return s;
+}
+
+
+/*----------------------------------------------------------------------
+
+  R_HashRehash
+
+  Redo the hashing in the table, since it may have been done with a
+  different hash function.  The lists within the hash table have their
+  pointers shuffled around so that they are not reallocated.  */
+
+void attribute_hidden R_HashRehash (SEXP table)
+{
+    /* Do some checking */
+    if (TYPEOF(table) != VECSXP)
+	error("argument not of type VECSXP, from R_HashRehash");
+
+    int size = HASHSIZE(table);
+    int i;
+
+    for (i = 0; i < size; i++) {
+        SEXP e;
+        e = VECTOR_ELT (table, i);
+        SET_VECTOR_ELT (table, i, R_NilValue);
+        while (e != R_NilValue) {
+            int j = SYM_HASH(TAG(e)) % size;
+            SEXP f = CDR(e);
+            SETCDR (e, VECTOR_ELT (table, j));
+            SET_VECTOR_ELT (table, j, e);
+            e = f;
+        }
+    }
 }
 
 
@@ -1580,6 +1612,9 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
                 SET_NO_SPEC_SYM(rho,0);
         }
         else {
+if (strcmp("baseline",CHAR(PRINTNAME(symbol)))==0)
+ REprintf("adding 'baseline' symbol %p to %p with hashcode %d %d %d\n",
+   symbol, rho, SYM_HASH(symbol), HASHSIZE(HASHTAB(rho)), hashcode); 
             SEXP table = HASHTAB(rho);
             SEXP chain = VECTOR_ELT(table,hashcode);
             new = cons_with_tag (value, chain, symbol);

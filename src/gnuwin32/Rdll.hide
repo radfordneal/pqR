@@ -114,6 +114,7 @@
  R_HTTPDCreate
  R_HTTPDStop
  R_HandlerStack
+ R_HashRehash
  R_HiddenFile
  R_InitialData
  R_InsertRestartHandlers

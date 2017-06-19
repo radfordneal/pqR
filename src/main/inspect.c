@@ -179,7 +179,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
         if (v == R_UnboundValue)
             Rprintf("<UnboundValue>");
         else {
-	    Rprintf("\"%s\"%s", CHAR(PRINTNAME(v)), 
+	    Rprintf("\"%s\" %d %s", CHAR(PRINTNAME(v)), SYM_HASH(v),
                     SYMVALUE(v)==R_UnboundValue ? "" : " (has value)");
 	    Rprintf("%s", 
                     ATTRIB_W(v)==R_NilValue ? "" : "  (has attr)");
@@ -339,7 +339,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
 }
 
 /* internal API - takes one mandatory argument (object to inspect) and
-   two optional arguments (deep and pvec - see above), positional argument
+   three optional arguments (deep, pvec, prom - see above), positional argument
    matching only */
 static SEXP do_inspect(SEXP call, SEXP op, SEXP args, SEXP env) {
     SEXP obj = CAR(args);

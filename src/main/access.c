@@ -554,7 +554,7 @@ int (DDVAL)(SEXP x) { return DDVAL(Rf_chk_valid_SEXP(x)); }
 
    Used in name.c also, at the moment. */
 
-int attribute_hidden R_Newhashpjw(const char *s)
+int attribute_hidden R_Newhashpjw_disabled(const char *s)
 {
     char *p;
     unsigned h = 0, g;
@@ -571,7 +571,7 @@ int attribute_hidden R_Newhashpjw(const char *s)
 void (SET_PRINTNAME)(SEXP x, SEXP v) 
 { 
     PRINTNAME(x) = v; 
-    SET_SYM_HASH(x,v);
+    SYM_HASH(x) = CHAR_HASH(v);
 }
 
 void (SET_SYMVALUE)(SEXP x, SEXP v) { SYMVALUE(x) = v; }

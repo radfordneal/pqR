@@ -187,8 +187,7 @@ extern0 SEXP	R_previousSymbol;     /* "previous" */
 #define SET_HASHSLOTSUSED(x,v) SET_TRUELENGTH(x,v)
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
-#define SET_SYM_HASH(x,v) (((SYM_SEXPREC*)UPTR_FROM_SEXP(x))->symsxp.sym_hash=v)
-#define SYM_HASH(x)     (((SYM_SEXPREC*)UPTR_FROM_SEXP(x))->symsxp.sym_hash>>1)
+#define SYM_HASH(x)     (((SYM_SEXPREC*)UPTR_FROM_SEXP(x))->symsxp.sym_hash)
 #define CHAR_HASH(x)    TRUELENGTH(x)
 
 /* Test whether this is a constant object (defined in const-objs.c). */
@@ -1501,12 +1500,13 @@ void Rcons_vprintf(const char *, va_list);
 SEXP RemoveVariable(SEXP, SEXP);
 SEXP R_data_class(SEXP , Rboolean);
 SEXP R_data_class2(SEXP);
+void R_HashRehash(SEXP);
 char *R_LibraryFileName(const char *, char *, size_t);
 SEXP R_LoadFromFile(FILE*, int);
 SEXP R_NewHashedEnv(SEXP, SEXP);
 int R_Newhashpjw(const char *);
-unsigned Rf_char_hash(const char *);
-unsigned Rf_char_hash_len(const char *, int len);
+int Rf_char_hash(const char *);
+int Rf_char_hash_len(const char *, int len);
 FILE* R_OpenLibraryFile(const char *);
 SEXP R_Primitive(const char *);
 void R_RestoreGlobalEnv(void);

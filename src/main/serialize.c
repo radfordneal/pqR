@@ -1557,7 +1557,10 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 		/* We don't write out the object bit for environments,
 		   so reconstruct it here if needed. */
 		SET_OBJECT(s, 1);
-	    R_RestoreHashCount(s);
+            if (IS_HASHED(s)) {
+                R_HashRehash(HASHTAB(s));
+                R_RestoreHashCount(s);
+            }
 	    if (locked) R_LockEnvironment(s, FALSE);
 	    /* Convert a NULL enclosure to baseenv() */
 	    if (ENCLOS(s) == R_NilValue) SET_ENCLOS(s, R_BaseEnv);
@@ -2690,7 +2693,7 @@ static SEXP readRawFromFile(SEXP file, SEXP key)
 /* Gets the binding values of variables from a frame and returns them
    as a list.  If the force argument is true, promises are forced;
    otherwise they are not. */
-
+extern int debug_flagg = 0;
 SEXP attribute_hidden R_getVarsFromFrame(SEXP vars, SEXP env, SEXP forcesxp)
 {
     SEXP val, tmp, sym;
@@ -2713,11 +2716,8 @@ SEXP attribute_hidden R_getVarsFromFrame(SEXP vars, SEXP env, SEXP forcesxp)
 	sym = installChar(STRING_ELT(vars, i));
 
 	tmp = findVarInFrame(env, sym);
-	if (tmp == R_UnboundValue) {
-/*		PrintValue(env);
-		PrintValue(R_GetTraceback(0)); */  /* DJM debugging */
+	if (tmp == R_UnboundValue)
 	    error(_("object '%s' not found"), CHAR(STRING_ELT(vars, i)));
-	    }
 	if (force && TYPEOF(tmp) == PROMSXP) {
 	    PROTECT(tmp);
 	    tmp = eval(tmp, R_GlobalEnv);
