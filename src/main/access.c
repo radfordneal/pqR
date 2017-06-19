@@ -540,34 +540,6 @@ int (DDVAL)(SEXP x) { return DDVAL(Rf_chk_valid_SEXP(x)); }
 /* Don't do old-to-new check when setting fields in symbols, since they are
    always scanned anyway. */
 
-/* This hash function seems to work well enough for symbol tables,
-   and hash tables get saved as part of environments so changing it
-   is a major decision.
-
-   Note that there is some confusion here about whether the result
-   is signed or unsigned, but since in fact the top four bits (out
-   of 32) are always zero, it makes no real difference.
-
-   PROBLEM HERE???  If characters can have the top bit set, the 
-   result can depend on whether the "char" type is signed, which 
-   is platform-dependent.  
-
-   Used in name.c also, at the moment. */
-
-int attribute_hidden R_Newhashpjw_disabled(const char *s)
-{
-    char *p;
-    unsigned h = 0, g;
-    for (p = (char *) s; *p; p++) {
-	h = (h << 4) + (*p);
-	if ((g = h & 0xf0000000) != 0) {
-	    h = h ^ (g >> 24);
-	    h = h ^ g;
-	}
-    }
-    return h;
-}
-
 void (SET_PRINTNAME)(SEXP x, SEXP v) 
 { 
     PRINTNAME(x) = v; 

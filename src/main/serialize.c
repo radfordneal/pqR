@@ -975,7 +975,10 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream,
 	    OutInteger(stream, R_EnvironmentIsLocked(s) ? 1 : 0);
 	    WriteItem(ENCLOS(s), ref_table, stream, nosharing);
 	    WriteItem(FRAME(s), ref_table, stream, nosharing);
-	    WriteItem(HASHTAB(s), ref_table, stream, nosharing);
+            SEXP newtable = R_HashRehashOld(HASHTAB(s));
+            PROTECT(newtable);
+	    WriteItem(newtable, ref_table, stream, nosharing);
+            UNPROTECT(1);
 	    WriteItem(ATTRIB(s), ref_table, stream, nosharing);
 	}
     }

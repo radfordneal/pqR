@@ -408,6 +408,70 @@ void attribute_hidden R_HashRehash (SEXP table)
 }
 
 
+/* OLD HASH FUNCTION.  Only for writing out data, for compatibility with
+   R versions that use the old hash function and assume data was written
+   using it.
+
+   Note that there is some confusion here about whether the result
+   is signed or unsigned, but since in fact the top four bits (out
+   of 32) are always zero, it makes no real difference.
+
+   PROBLEM HERE???  If characters can have the top bit set, the result
+   can depend on whether the "char" type is signed, which is
+   platform-dependent. */
+
+static int R_Newhashpjw(const char *s)
+{
+    signed char *p;
+    unsigned h = 0, g;
+    for (p = (char *) s; *p; p++) {
+	h = (h << 4) + (*p);
+	if ((g = h & 0xf0000000) != 0) {
+	    h = h ^ (g >> 24);
+	    h = h ^ g;
+	}
+    }
+    return h;
+}
+
+/*----------------------------------------------------------------------
+
+  R_HashRehashOld
+
+  Return a new version of the table, rehashed with the old hash function.
+  Allocates new nodes for the chains. */
+
+SEXP attribute_hidden R_HashRehashOld (SEXP table)
+{
+    /* Do some checking */
+    if (TYPEOF(table) != VECSXP)
+	error("argument not of type VECSXP, from R_HashRehashOld");
+
+    int size = HASHSIZE(table);
+    SEXP newtable;
+    int i;
+
+    PROTECT (newtable = allocVector (VECSXP, size));
+
+    for (i = 0; i < size; i++) {
+        SEXP e;
+        e = VECTOR_ELT (table, i);
+        while (e != R_NilValue) {
+            int j = R_Newhashpjw(CHAR(PRINTNAME(TAG(e)))) % size;
+            SET_VECTOR_ELT (newtable, j, 
+              cons_with_tag (CAR(e), VECTOR_ELT(newtable,j), TAG(e)));
+            e = CDR(e);
+        }
+    }
+
+    UNPROTECT(1); /* newtable */
+
+    return newtable;
+}
+
+
+
+
 /*----------------------------------------------------------------------
 
   R_HashResize
