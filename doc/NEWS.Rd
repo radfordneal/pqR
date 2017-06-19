@@ -21,6 +21,9 @@
         of a symbol returns NULL.  Previously (and also in R-3.4.0),
         attributes could be attached to symbols, but they were lost
         when a workspace was saved and restored.
+  \item The default \code{size} for \code{new.env} is now \code{NA}, which
+        gives an internal default, which now varies depending on the
+        platform and configuration options.
   }}
 
   \subsection{BUG FIXES}{

@@ -180,11 +180,10 @@ extern0 SEXP	R_previousSymbol;     /* "previous" */
 #define ASCII_MASK (1<<6)
 
 /* Symbol and string hash table declarations. */
-#define HASHMAXSIZE          1000000
+#define HASHMINSIZE	     (32 - SGGC_ENV_HASH_HEAD)
+#define HASHMAXSIZE          ((1 << 20) - SGGC_ENV_HASH_HEAD)
 #define HASHSIZE(x)	     LENGTH(x)
 #define HASHSLOTSUSED(x)     TRUELENGTH(x)
-#define HASHTABLEGROWTHRATE  1.27
-#define HASHMINSIZE	     29
 #define SET_HASHSLOTSUSED(x,v) SET_TRUELENGTH(x,v)
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
@@ -1501,12 +1500,13 @@ void Rcons_vprintf(const char *, va_list);
 SEXP RemoveVariable(SEXP, SEXP);
 SEXP R_data_class(SEXP , Rboolean);
 SEXP R_data_class2(SEXP);
+void R_HashRehash(SEXP);
+SEXP R_HashRehashOld(SEXP);
 char *R_LibraryFileName(const char *, char *, size_t);
 SEXP R_LoadFromFile(FILE*, int);
 SEXP R_NewHashedEnv(SEXP, SEXP);
-int R_Newhashpjw(const char *);
-unsigned Rf_char_hash(const char *);
-unsigned Rf_char_hash_len(const char *, int len);
+int Rf_char_hash(const char *);
+int Rf_char_hash_len(const char *, int len);
 FILE* R_OpenLibraryFile(const char *);
 SEXP R_Primitive(const char *);
 void R_RestoreGlobalEnv(void);

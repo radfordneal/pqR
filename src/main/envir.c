@@ -221,7 +221,7 @@ void set_envsymbits (SEXP env)
   We use a basic separate chaining algorithm.	A hash table consists
   of SEXP (vector) which contains a number of SEXPs (lists).
 
-  The only non-static function is R_NewHashedEnv, which allows code to
+  The main non-static function is R_NewHashedEnv, which allows code to
   request a hashed environment.  All others are static to allow
   internal changes of implementation without affecting client code.
 */
@@ -364,13 +364,108 @@ SEXP R_NewHashedEnv(SEXP enclos, SEXP size)
 
 /*----------------------------------------------------------------------
 
+  R_HashRehash
+
+  Redo the hashing in the table, since it may have been done with a
+  different hash function.  The lists within the hash table have their
+  pointers shuffled around so that they are not reallocated.  */
+
+void attribute_hidden R_HashRehash (SEXP table)
+{
+    /* Do some checking */
+    if (TYPEOF(table) != VECSXP)
+	error("argument not of type VECSXP, from R_HashRehash");
+
+    int size = HASHSIZE(table);
+    int i;
+
+    for (i = 0; i < size; i++) {
+        SEXP e;
+        e = VECTOR_ELT (table, i);
+        SET_VECTOR_ELT (table, i, R_NilValue);
+        while (e != R_NilValue) {
+            int j = SYM_HASH(TAG(e)) % size;
+            SEXP f = CDR(e);
+            SETCDR (e, VECTOR_ELT (table, j));
+            SET_VECTOR_ELT (table, j, e);
+            e = f;
+        }
+    }
+}
+
+
+/* OLD HASH FUNCTION.  Only for writing out data, for compatibility with
+   R versions that use the old hash function and assume data was written
+   using it.
+
+   Note that there is some confusion here about whether the result
+   is signed or unsigned, but since in fact the top four bits (out
+   of 32) are always zero, it makes no real difference.
+
+   PROBLEM HERE???  If characters can have the top bit set, the result
+   can depend on whether the "char" type is signed, which is
+   platform-dependent. */
+
+static int R_Newhashpjw(const char *s)
+{
+    signed char *p;
+    unsigned h = 0, g;
+    for (p = (char *) s; *p; p++) {
+	h = (h << 4) + (*p);
+	if ((g = h & 0xf0000000) != 0) {
+	    h = h ^ (g >> 24);
+	    h = h ^ g;
+	}
+    }
+    return h;
+}
+
+/*----------------------------------------------------------------------
+
+  R_HashRehashOld
+
+  Return a new version of the table, rehashed with the old hash function.
+  Allocates new nodes for the chains. */
+
+SEXP attribute_hidden R_HashRehashOld (SEXP table)
+{
+    /* Do some checking */
+    if (TYPEOF(table) != VECSXP)
+	error("argument not of type VECSXP, from R_HashRehashOld");
+
+    int size = HASHSIZE(table);
+    SEXP newtable;
+    int i;
+
+    PROTECT (newtable = allocVector (VECSXP, size));
+
+    for (i = 0; i < size; i++) {
+        SEXP e;
+        e = VECTOR_ELT (table, i);
+        while (e != R_NilValue) {
+            int j = R_Newhashpjw(CHAR(PRINTNAME(TAG(e)))) % size;
+            SET_VECTOR_ELT (newtable, j, 
+              cons_with_tag (CAR(e), VECTOR_ELT(newtable,j), TAG(e)));
+            e = CDR(e);
+        }
+    }
+
+    UNPROTECT(1); /* newtable */
+
+    return newtable;
+}
+
+
+
+
+/*----------------------------------------------------------------------
+
   R_HashResize
 
-  Hash table resizing function. Increase the size of the hash table by
-  HASHTABLEGROWTHRATE. The vector is reallocated, but the
-  lists within the hash table have their pointers shuffled around
-  so that they are not reallocated.
-*/
+  Hash table resizing function. Increases the size of the hash table
+  by a factor of two (accounting for header). The vector is
+  reallocated, but the lists within the hash table have their pointers
+  shuffled around so that they are not reallocated.  */
 
 static SEXP R_HashResize(SEXP table)
 {
@@ -387,14 +482,13 @@ static SEXP R_HashResize(SEXP table)
     if (TYPEOF(table) != VECSXP)
 	error("argument not of type VECSXP, from R_HashResize");
 
-    /* Allocate the new hash table.  Return old table if not worth resizing
-       because near maximum allowed. */
-    new_size = (int) (HASHSIZE(table) * HASHTABLEGROWTHRATE);
-    if (new_size > HASHMAXSIZE) {
-        new_size = HASHMAXSIZE;
-        if (new_size <= 1.05 * HASHSIZE(table))
-            return table;
-    }
+    /* Allocate the new hash table.  Return old table if would exceed max. */
+
+    new_size = 2 * (HASHSIZE(table) + SGGC_ENV_HASH_HEAD) - SGGC_ENV_HASH_HEAD;
+
+    if (new_size > HASHMAXSIZE)
+        return table;
+
     new_table = R_NewHashTable (new_size);
 
     /* Move entries into new table. */
@@ -1516,6 +1610,9 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
             SET_ENVSYMBITS (rho, ENVSYMBITS(rho) | SYMBITS(symbol));
         }
         else {
+if (strcmp("baseline",CHAR(PRINTNAME(symbol)))==0)
+ REprintf("adding 'baseline' symbol %p to %p with hashcode %d %d %d\n",
+   symbol, rho, SYM_HASH(symbol), HASHSIZE(HASHTAB(rho)), hashcode); 
             SEXP table = HASHTAB(rho);
             SEXP chain = VECTOR_ELT(table,hashcode);
             new = cons_with_tag (value, chain, symbol);

@@ -1,0 +1,14 @@
+Changes regarding hashed environments.
+
+Minimum size of hash table now depends on pointer size/type.  Now
+expands by factors of two.
+
+Default env size is now NA (internal default).
+
+Hash for environemnts in SYM_HASH(symbol) is now taken from CHAR_HASH
+of printname.  CHAR_HASH/SYM_HASH now only 31 bits, so signed/unsigned
+not an issue.
+
+Serialization converts to old hash scheme on write, and to the new
+hash scheme on read, for backcompatibility both ways.
+

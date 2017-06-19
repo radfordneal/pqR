@@ -570,7 +570,7 @@ Rboolean StringFalse(const char *name)
    from inlining it.  Two forms, one for null-terminated string, other with
    specified length. */
 
-attribute_hidden unsigned Rf_char_hash (const char *s)
+attribute_hidden int Rf_char_hash (const char *s)
 {
     /* Hash function due to Dan Bernstein, called "djb2" at
        http://www.cse.yorku.ca/~oz/hash.html */
@@ -583,10 +583,10 @@ attribute_hidden unsigned Rf_char_hash (const char *s)
         h = (h << 5) + h + t;
     }
 
-    return h;
+    return h & 0x7fffffff;
 }
 
-attribute_hidden unsigned int Rf_char_hash_len (const char *s, int len)
+attribute_hidden int Rf_char_hash_len (const char *s, int len)
 {
     /* Hash function due to Dan Bernstein, called "djb2" at
        http://www.cse.yorku.ca/~oz/hash.html 
@@ -608,7 +608,8 @@ attribute_hidden unsigned int Rf_char_hash_len (const char *s, int len)
         h = (h << 10) + (h << 6) + h + t;
         len -= 2;
     }
-    return h;
+
+    return h & 0x7fffffff;
 }
 
 /* used in bind.c and options.c */

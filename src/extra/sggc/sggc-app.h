@@ -182,6 +182,8 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
   0, 0, 0, 0, 0, 1  \
 }
 
+#define SGGC_ENV_HASH_HEAD 2   /* Size of env hash table header, in ptrs */
+
 #define SGGC_CHAR_KIND_START 0
 #define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
 #define SGGC_ENV_KIND  (2*SGGC_N_TYPES + 2)
@@ -269,6 +271,8 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
   0, 0, 0, 0, 0, 1  \
 }
 
+#define SGGC_ENV_HASH_HEAD 3   /* Size of env hash table header, in ptrs */
+
 #define SGGC_CHAR_KIND_START 0
 #define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
 #define SGGC_ENV_KIND  (2*SGGC_N_TYPES + 2)
@@ -352,6 +356,8 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
   0, 0, 0, 0, 0, 1  \
 }
 
+#define SGGC_ENV_HASH_HEAD 2   /* Size of env hash table header, in ptrs */
+
 #define SGGC_CHAR_KIND_START 0
 #define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
 #define SGGC_ENV_KIND  (2*SGGC_N_TYPES + 2)
@@ -429,6 +435,8 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
   0, 0, 0, 0, 0, 1, \
   0, 0, 0, 0, 0, 1  \
 };
+
+#define SGGC_ENV_HASH_HEAD 6   /* Size of env hash table header, in ptrs */
 
 #define SGGC_CHAR_KIND_START 0
 #define SGGC_LIST_KIND (SGGC_N_TYPES + 2)
