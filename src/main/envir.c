@@ -242,40 +242,45 @@ void setNoSpecSymFlag (SEXP env)
 
 /*----------------------------------------------------------------------
 
-  R_HashSet
+  R_HashAddEntry 
 
-  Hashtable set function.  Sets 'symbol' in 'table' to be 'value'.
-  'hashcode' must be provided by user.	Allocates some memory for list
-  entries.
+  Adds an entry to the chain at index i in a hash table, keeping the
+  chain sorted by increasing hash value, and secondarily printname (out 
+  of a desire for save/load to not change the order).  HASHSLOTUSED is 
+  updated. */
 
-*/
-
-static void R_HashSet(int hashcode, SEXP symbol, SEXP table, SEXP value,
-                      Rboolean frame_locked)
+static void R_HashAddEntry (SEXP table, int i, SEXP entry)
 {
-    SEXP chain = VECTOR_ELT(table, hashcode);
+    SEXP next = VECTOR_ELT(table,i);
 
-    SEXP loc, new_chain;
+    if (next == R_NilValue) {
+        SET_HASHSLOTSUSED (table, HASHSLOTSUSED(table) + 1);
+        SET_VECTOR_ELT (table, i, entry);
+        SETCDR (entry, R_NilValue);
+    }
+    else {
+        int entry_hash = SYM_HASH(TAG(entry));
+        SEXP last = R_NilValue;
 
-    loc = chain;
-    SEARCH_LOOP (loc, symbol, goto found);
+        for (;;) {
+            int next_hash = SYM_HASH(TAG(next));
+            if (entry_hash < next_hash || entry_hash == next_hash &&
+                  strcmp (CHAR(PRINTNAME(TAG(entry))),
+                          CHAR(PRINTNAME(TAG(next)))) < 0)
+                break;
+            last = next;
+            next = CDR(next);
+            if (next == R_NilValue)
+                break;
+        }
 
-    if (frame_locked)
-        error(_("cannot add bindings to a locked environment"));
-
-    /* Add the value into the chain */
-
-    if (chain == R_NilValue) SET_HASHSLOTSUSED(table, HASHSLOTSUSED(table) + 1);
-    new_chain = cons_with_tag (value, chain, symbol);
-    SET_VECTOR_ELT (table, hashcode, new_chain);
-    return;
-
-  found:
-    SET_BINDING_VALUE(loc, value);
-    SET_MISSING(loc, 0);        /* Over-ride for new value */
-    return;
+        SETCDR (entry, next);
+        if (last == R_NilValue)
+            SET_VECTOR_ELT (table, i, entry);
+        else
+            SETCDR (last, entry);
+    }
 }
-
 
 
 /*----------------------------------------------------------------------
@@ -400,11 +405,12 @@ void attribute_hidden R_HashRehash (SEXP table)
         while (e != R_NilValue) {
             int j = SYM_HASH(TAG(e)) % size;
             SEXP f = CDR(e);
-            SETCDR (e, VECTOR_ELT (table, j));
-            SET_VECTOR_ELT (table, j, e);
+            R_HashAddEntry (table, j, e);
             e = f;
         }
     }
+
+    R_RestoreHashCount(table);
 }
 
 
@@ -452,14 +458,15 @@ SEXP attribute_hidden R_HashRehashOld (SEXP table)
     int i;
 
     PROTECT (newtable = allocVector (VECSXP, size));
+    SET_HASHSLOTSUSED (newtable, 0);
 
     for (i = 0; i < size; i++) {
         SEXP e;
         e = VECTOR_ELT (table, i);
         while (e != R_NilValue) {
             int j = R_Newhashpjw(CHAR(PRINTNAME(TAG(e)))) % size;
-            SET_VECTOR_ELT (newtable, j, 
-              cons_with_tag (CAR(e), VECTOR_ELT(newtable,j), TAG(e)));
+            R_HashAddEntry (newtable, j, 
+                            cons_with_tag (CAR(e), R_NilValue, TAG(e)));
             e = CDR(e);
         }
     }
@@ -510,14 +517,9 @@ static SEXP R_HashResize(SEXP table)
             n_entries += 1;
 #endif
             new_hashcode = SYM_HASH(TAG(chain)) % HASHSIZE(new_table);
-	    new_chain = VECTOR_ELT(new_table, new_hashcode);
-	    /* If using a previously-unused slot then increase HASHSLOTSUSED */
-	    if (new_chain == R_NilValue)
-		SET_HASHSLOTSUSED(new_table, HASHSLOTSUSED(new_table) + 1);
 	    tmp_chain = chain;
 	    chain = CDR(chain);
-	    SETCDR(tmp_chain, new_chain);
-	    SET_VECTOR_ELT(new_table, new_hashcode,  tmp_chain);
+            R_HashAddEntry (new_table, new_hashcode, tmp_chain);
 #if DEBUG_OUTPUT>1
 	    Rprintf(
              "HASHSIZE=%d HASHSLOTSUSED=%d counter=%d HASHCODE=%d\n",
@@ -597,14 +599,9 @@ static void R_HashFrame(SEXP rho)
     frame = FRAME(rho);
     while (frame != R_NilValue) {
 	hashcode = SYM_HASH(TAG(frame)) % HASHSIZE(table);
-	chain = VECTOR_ELT(table, hashcode);
-	/* If using a previously-unused slot then increase HASHSLOTSUSED */
-	if (chain == R_NilValue) 
-            SET_HASHSLOTSUSED(table, HASHSLOTSUSED(table) + 1);
 	tmp_chain = frame;
 	frame = CDR(frame);
-	SETCDR(tmp_chain, chain);
-	SET_VECTOR_ELT(table, hashcode, tmp_chain);
+        R_HashAddEntry (table, hashcode, tmp_chain);
     }
     SET_FRAME(rho, R_NilValue);
     SET_NO_SPEC_SYM(rho, 0);
@@ -1676,15 +1673,9 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
                 SET_NO_SPEC_SYM(rho,0);
         }
         else {
-if (strcmp("baseline",CHAR(PRINTNAME(symbol)))==0)
- REprintf("adding 'baseline' symbol %p to %p with hashcode %d %d %d\n",
-   symbol, rho, SYM_HASH(symbol), HASHSIZE(HASHTAB(rho)), hashcode); 
             SEXP table = HASHTAB(rho);
-            SEXP chain = VECTOR_ELT(table,hashcode);
-            new = cons_with_tag (value, chain, symbol);
-            SET_VECTOR_ELT (table, hashcode, new);
-            if (chain == R_NilValue)
-                SET_HASHSLOTSUSED (table, HASHSLOTSUSED(table) + 1);
+            new = cons_with_tag (value, R_NilValue, symbol);
+            R_HashAddEntry (table, hashcode, new);
             if (R_HashSizeCheck(table))
                 SET_HASHTAB(rho, R_HashResize(table));
         }
