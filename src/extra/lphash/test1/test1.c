@@ -21,14 +21,14 @@
 
 #include "lphash-app.h"
 
-int lphash_match (lphash_entry_t entry, lphash_key_t key)
+int lphash_match (lphash_bucket_t *bucket, lphash_key_t key)
 {
-  return entry == atoi(key);
+  return bucket->entry == atoi(key);
 }
 
-lphash_entry_t lphash_make_entry (lphash_key_t key)
+void lphash_setup_bucket (lphash_bucket_t *bucket, lphash_key_t key)
 {
-  return atoi(key);
+  bucket->entry = atoi(key);
 }
 
 lphash_hash_t hash (lphash_key_t key)
@@ -49,7 +49,7 @@ char *tests[] =
 
 int main (int argc, char **argv)
 {
-  lphash_table_t tbl;
+  lphash_table_t *tbl;
 
   tbl = lphash_create (16);
   if (tbl == NULL)
@@ -92,8 +92,11 @@ int main (int argc, char **argv)
     }
     printf("\n");
     for (s = 0; tests[s]; s++)
-    { printf("%c",s==0?'e':' ');
-      printf("%4d",lphash_lookup(tbl,hash(tests[s]),tests[s]));
+    { lphash_bucket_t *b;
+      printf("%c",s==0?'e':' ');
+      b = lphash_key_lookup(tbl,hash(tests[s]),tests[s]);
+      printf("%4d", b ? b->entry : -1);
+      if (lphash_entry_lookup(tbl,hash(tests[s]),atoi(tests[s])) != b) abort();
     }
     printf("\n");
     for (s = 0; tests[s]; s++)
@@ -109,7 +112,7 @@ int main (int argc, char **argv)
     printf ("\nInserting %s: h %d (%d), e %d\n", 
             tests[t], 
             hash(tests[t]), hash(tests[t]) & (tbl->size-1),
-            lphash_insert(tbl,hash(tests[t]),tests[t]));
+            lphash_insert(tbl,hash(tests[t]),tests[t])->entry);
   }
 
   printf("\nStatistics: ");

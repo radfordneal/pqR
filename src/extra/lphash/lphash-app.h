@@ -20,11 +20,19 @@
 #ifndef LPHASH_APP_H_
 #define LPHASH_APP_H_
 
-typedef unsigned lphash_entry_t;    /* Compressed pointer to symbol object */
+typedef unsigned lphash_entry_t;    /* SEXP32 pointer to symbol object */
 typedef char *lphash_key_t;         /* Symbol's print name */
-typedef unsigned lphash_hash_t;     /* Character hash as stored in PRINTNAME */
+typedef int lphash_hash_t;          /* Character/symbol hash as stored in symbol
+                                       and in PRINTNAME(symbol) */
 
-#define LPHASH_NO_ENTRY 0 /* R_NoObject */
+/* Structure of bucket in hash table. */
+
+typedef struct {
+    lphash_entry_t entry;           /* SEXP32 pointer to symbol object */
+    lphash_hash_t hash;             /* Character/symbol hash */
+} lphash_bucket_t;
+
+#define LPHASH_NO_ENTRY 0           /* R_NoObject */
 
 #define lphash_free free
 

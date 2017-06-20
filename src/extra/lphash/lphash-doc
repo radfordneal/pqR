@@ -27,17 +27,17 @@ required for some applications, such as the symbol table in an
 implementation of R.  The size of the hash table is automatically
 increased as needed.
 
-The application using lphash defines the type of an entry in the hash
-table, and the type of a key.  It also defines the type of a hash
-value, which is computed by the application from a key.  It also
-supplies functions or macros to create an entry with a given key and
-to test whether an entry matches a key.
+The application using lphash defines the type of a (unique) entry in
+the hash table, the type of a key, and the type of a hash bucket.  It
+also defines the type of a hash value, which is computed by the
+application from a key.  It supplies functions or macros to create a
+new hash bucket, and to test whether a bucket matches a key.
 
 
 USING LPHASH IN AN APPLICATION
 
 To use lphash, an application should create an lphash-app.h file,
-which must define the constants and types below and then include the
+which must define the types and constants below and then include the
 lphash.h file.  The lphash-app.h file must be included by application
 modules that use the lphash library, and is also included in the C
 source file for the lphash library routines.
@@ -55,32 +55,39 @@ The following types must be defined in lphash-app.h:
 
   lphash_hash_t   An unsigned integer type to be used for hash values.
 
+  lphash_bucket_t A structure type containing an "entry" field of type
+                  lphash_entry_t, a "hash" field of type lphash_hash_t,
+                  and possibly other fields used by the application.
+                  The value of the "entry" field of a bucket must be
+                  unique to that bucket.
+
 The following constant must be defined in lphash-app.h:
 
   LPHASH_NO_ENTRY A value of type lphash_entry_t that will not compare
                   equal to any actual entry, and which can therefore
-                  be used to mark an empty hash bucket, or signal that
-                  no entry was found.
+                  be used to mark an empty hash bucket.
 
 The lphash.h file will define the following type:
 
-  lphash_table_t  The type of a pointer to a hash table managed by
-                  the lphash functions.  The application should not
-                  directly reference fields of this table.
+  lphash_table_t  The type of a hash table managed by the lphash
+                  functions.  The application should not directly
+                  reference fields of this table.
 
 The application must provide the following functions (or macros),
 which will have prototypes declared for them as below in lphash.h (if
 they are not macros):
 
-  int lphash_match (lphash_entry_t entry, lphash_key_t key)
+  int lphash_match (lphash_bucket_t *bucket, lphash_key_t key)
 
-    Returns 1 if the 'key' matches 'entry', and 0 if not.
+    Returns 1 if the 'key' matches the bucket, and 0 if not.
 
-  lphash_entry_t lphash_make_entry (lphash_key_t key)
+  void lphash_setup_bucket (lphash_bucket_t *bucket, lphash_key_t key)
 
-    Creates an entry for the given key.  It should be the case that
-    lphash_match would return 1 if called with the new entry and this
-    key, but this is not checked.
+    Initializes a bucket with an entry for the given key.  When this
+    procedure is called, the bucket will have already been initialized
+    to all zeros, except that the hash field will be set to the hash
+    value.  It should be the case that lphash_match would return 1 if
+    called with the new bucket and this key, but this is not checked.
 
   void *lphash_malloc (size_t size)
 
@@ -124,7 +131,7 @@ FUNCTIONS PROVIDED BY LPHASH TO THE APPLICATION
 The lphash library provides an application with the functions (or
 macros) below, which (if functions) have prototypes as shown:
 
-  lphash_table_t lphash_create (int initial_size)
+  lphash_table_t *lphash_create (int initial_size)
 
     Returns a pointer to a new hash table, which is initially empty,
     and has the number of buckets specified by the argument, which
@@ -139,23 +146,33 @@ macros) below, which (if functions) have prototypes as shown:
 
     NULL is returned if a new table cannot be allocated.
 
-  lphash_entry_t lphash_lookup (lphash_table_t table, lphash_hash_t hash,
-                                lphash_key_t key)
+  lphash_bucket_t *lphash_key_lookup (lphash_table_t *table, 
+                                      lphash_hash_t hash, 
+                                      lphash_key_t key)
 
-    Looks for an entry in 'table' that has the given 'hash' and
-    matches the given 'key'.  Returns the entry found, or returns
-    LPHASH_NO_ENTRY if no matching entry is present in 'table'.
+    Looks for a bucket in 'table' that has the given 'hash' and
+    matches the given 'key'.  Returns a pointer to the bucket found,
+    or NULL if no matching bucket is present in 'table'.
 
-  lphash_entry_t lphash_insert (lphash_table_t table, lphash_hash_t hash, 
-                                lphash_key_t key)
+  lphash_bucket_t *lphash_entry_lookup (lphash_table_t *table, 
+                                        lphash_hash_t hash, 
+                                        lphash_entry_t entry)
+
+    Looks for a bucket in 'table' that has the given 'hash' and the
+    given 'entry'.  Returns a pointer to the bucket found, or NULL if
+    no bucket with that entry is present in 'table'.
+
+  lphash_bucket_t *lphash_insert (lphash_table_t *table, 
+                                  lphash_hash_t hash, 
+                                  lphash_key_t key)
 
     Searches for an entry in 'table' that has the given 'hash' and
     matches the given 'key'.  If one is found, it is returned.
-    Otherwise, a new entry created by calling lphash_make_entry is
-    added to 'table', except that if adding a new entry would overflow
-    the table (see below), LPHASH_NO_ENTRY is returned instead.
+    Otherwise, a new bucket is added to 'table', and initialized by
+    calling lphash_setup_bucket, except that if adding a new entry
+    would overflow the table (see below), NULL is returned instead.
 
-  void lphash_destroy (lphash_table_t table)
+  void lphash_destroy (lphash_table_t *table)
 
     Destroys the given hash table, calling lphash_free for all memory
     areas that it was using.

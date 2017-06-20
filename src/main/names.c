@@ -646,14 +646,14 @@ static void SetupBuiltins(void)
 
 extern SEXP framenames; /* from model.c */
 
-lphash_entry_t lphash_make_entry (lphash_key_t key)
+void lphash_setup_bucket (lphash_bucket_t *bucket, lphash_key_t key)
 {
-    return SEXP32_FROM_SEXP (mkSYMSXP (mkChar(key), R_UnboundValue));
+    bucket->entry =  SEXP32_FROM_SEXP (mkSYMSXP (mkChar(key), R_UnboundValue));
 }
 
-int lphash_match (lphash_entry_t entry, lphash_key_t key)
+int lphash_match (lphash_bucket_t *bucket, lphash_key_t key)
 {
-    SEXP sym = SEXP_FROM_SEXP32 ((SEXP32) entry);
+    SEXP sym = SEXP_FROM_SEXP32 ((SEXP32) bucket->entry);
 
     return strcmp (key, CHAR(PRINTNAME(sym))) == 0;
 }
@@ -718,23 +718,22 @@ void InitNames()
 
 static SEXP install_with_hashcode (char *name, int hashcode)
 {
-    SEXP32 sym32;
+    lphash_bucket_t *bucket;
 
-    sym32 = lphash_lookup (R_lphashSymTbl, hashcode, name);
-
-    if (sym32 != LPHASH_NO_ENTRY)
-        return SEXP_FROM_SEXP32(sym32);
+    bucket = lphash_key_lookup (R_lphashSymTbl, hashcode, name);
+    if (bucket != NULL)
+        return SEXP_FROM_SEXP32 (bucket->entry);
 
     /* Create a new symbol node and link it into the table. */
     if (strlen(name) > MAXIDSIZE)
 	error(_("variable names are limited to %d bytes"), MAXIDSIZE);
 
-    sym32 = lphash_insert (R_lphashSymTbl, hashcode, name);
+    bucket = lphash_insert (R_lphashSymTbl, hashcode, name);
 
-    if (sym32 == LPHASH_NO_ENTRY)
+    if (bucket == NULL)
         R_Suicide("couldn't allocate memory to expand symbol table");
 
-    SEXP sym = SEXP_FROM_SEXP32(sym32);
+    SEXP sym = SEXP_FROM_SEXP32(bucket->entry);
 
     int b1, b2;
     b1 = hashcode % 63;
@@ -768,11 +767,12 @@ SEXP installChar(SEXP charSXP)
 
 SEXP installed_already(const char *name)
 {
-    sggc_cptr_t sym32;
+    lphash_bucket_t *bucket;
 
-    sym32 = lphash_lookup (R_lphashSymTbl, Rf_char_hash(name), (char*) name);
+    bucket = lphash_key_lookup (R_lphashSymTbl, Rf_char_hash(name), 
+                                                (char *) name);
 
-    return sym32 == LPHASH_NO_ENTRY ? R_NoObject : SEXP_FROM_SEXP32(sym32);
+    return bucket == NULL ? R_NoObject : SEXP_FROM_SEXP32 (bucket->entry);
 }
 
 

@@ -40,7 +40,7 @@ int main (int argc, char **argv)
     exit(1);
   }
 
-  lphash_table_t tbl;
+  lphash_table_t *tbl;
 
   tbl = lphash_create (1 << log2_buckets);
   if (tbl == NULL)
@@ -84,7 +84,7 @@ int main (int argc, char **argv)
       lphash_hash_t h = hash(e);
       int old_probes = tbl->probes;
   
-      if (lphash_lookup(tbl,h,e) != e)
+      if (lphash_key_lookup(tbl,h,e)->entry != e)
       { fprintf(stderr,"lookup failed (%d %d)\n",i,e);
         exit(1);
       }

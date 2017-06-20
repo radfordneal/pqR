@@ -981,7 +981,7 @@ LibExtern int	R_Is_Running;	    /* for Windows memory manager */
 /* Evaluation Environment */
 LibExtern SEXP	R_CurrentExpr;	    /* Currently evaluating expression */
 extern0 SEXP	R_ReturnedValue;    /* Slot for return-ing values */
-extern0 lphash_table_t R_lphashSymTbl; /* Symbol table maintained by lphash */
+extern0 lphash_table_t *R_lphashSymTbl; /* Symbol table maintained by lphash */
 #ifdef R_USE_SIGNALS
 LibExtern RCNTXT R_Toplevel;	    /* Storage for the toplevel environment */
 LibExtern RCNTXT* R_ToplevelContext;  /* The toplevel environment */
