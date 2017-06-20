@@ -673,20 +673,21 @@ void InitNames()
 
     SetupBuiltins();
 
-    /* The SYMSXP objects below are not in the symbol table. */
+    /* The SYMSXP objects below are not in the symbol table.  Their
+       printnames are determined specially by PRINTNAME. */
 
     /* R_MissingArg */
     R_MissingArg = mkSYMSXP(R_NilValue,R_NilValue);
     SET_SYMVALUE(R_MissingArg, R_MissingArg);
-    SET_PRINTNAME(R_MissingArg, mkChar(""));
+
     /* R_MissingUnder */
     R_MissingUnder = mkSYMSXP(R_NilValue,R_NilValue);
     SET_SYMVALUE(R_MissingUnder, R_MissingArg);
-    SET_PRINTNAME(R_MissingUnder, mkChar("_"));
+
     /* R_RestartToken */
     R_RestartToken = mkSYMSXP(R_NilValue,R_NilValue);
     SET_SYMVALUE(R_RestartToken, R_RestartToken);
-    SET_PRINTNAME(R_RestartToken, mkChar(""));
+
 
     /* String constants (CHARSXP values) */
     /* Note: we don't want NA_STRING to be in the CHARSXP cache, so that
@@ -700,6 +701,8 @@ void InitNames()
     R_BlankString = mkChar("");
     R_BlankScalarString = ScalarString(R_BlankString);
     SET_NAMEDCNT_MAX(R_BlankScalarString);
+    /* R_UnderscoreString */
+    R_UnderscoreString = mkChar("_");
 
     /* Set up a set of globals so that a symbol table search can be
        avoided when matching something like dim or dimnames. */
@@ -733,7 +736,11 @@ static SEXP install_with_hashcode (char *name, int hashcode)
     if (bucket == NULL)
         R_Suicide("couldn't allocate memory to expand symbol table");
 
+    SEXP pname = mkChar(name);
+    bucket->pname = SEXP32_FROM_SEXP(pname);
+
     SEXP sym = SEXP_FROM_SEXP32(bucket->entry);
+    SYM_HASH(sym) = CHAR_HASH(pname);
 
     int b1, b2;
     b1 = hashcode % 63;

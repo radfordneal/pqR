@@ -605,6 +605,7 @@ void sggc_find_root_ptrs (void)
         &NA_STRING,	          /* Builtin constants */
         &R_BlankString,
 	&R_BlankScalarString,
+        &R_UnderscoreString,
 
         &R_print.na_string,       /* Printing defaults - very kludgy! */
         &R_print.na_string_noquote,
@@ -1661,7 +1662,6 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     c = alloc_sym();
     UNPROTECT(2);
 
-    SET_PRINTNAME (c, name);
     SET_SYMVALUE (c, value);
     LASTSYMENV(c) = R_NoObject32;
     LASTSYMBINDING(c) = R_NoObject;

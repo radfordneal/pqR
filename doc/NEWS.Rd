@@ -21,6 +21,9 @@
         of a symbol returns NULL.  Previously (and also in R-3.4.0),
         attributes could be attached to symbols, but they were lost
         when a workspace was saved and restored.
+  \item There is no longer a \code{SET_PRINTNAME} function available in
+        the C API.  Setting the print name of a symbol has never been
+        a safe or reasonable thing to do.
   \item The default \code{size} for \code{new.env} is now \code{NA}, which
         gives an internal default, which now varies depending on the
         platform and configuration options.

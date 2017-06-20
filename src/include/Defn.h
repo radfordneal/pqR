@@ -167,6 +167,7 @@ extern0 SEXP	R_sort_list;          /* "sort.list" */
 extern0 SEXP	R_S3MethodsTable;     /* ".__S3MethodsTable__." */
 extern0 SEXP	R_previousSymbol;     /* "previous" */
 
+extern0 SEXP	R_UnderscoreString;   /* "_", as a CHARSXP */
 
  /* writable char access for R internal use only */
 #define CHAR_RW(x)	((char *) CHAR(x))

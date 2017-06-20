@@ -382,7 +382,7 @@ typedef struct SYM_SEXPREC {
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
     int32_t padding;
 #endif
-    SEXP pname;
+    SEXP pname_disabled;
     SEXP value;
     int32_t sym_hash;
     SEXP32 lastenv;
@@ -830,7 +830,6 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SET_RSTEP(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec=(v))
 
 /* Symbol Access Macros */
-#define PRINTNAME(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->pname)
 #define SYMVALUE(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->value)
 #define LASTSYMENV(x)	(((SYMSEXP) UPTR_FROM_SEXP(x))->lastenv)
 #define LASTSYMBINDING(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->lastbinding)
@@ -960,7 +959,6 @@ SEXP (SYMVALUE)(SEXP x);
 SEXP (INTERNAL)(SEXP x);
 int  (DDVAL)(SEXP x);
 void (SET_DDVAL)(SEXP x, int v);
-void SET_PRINTNAME(SEXP x, SEXP v);
 void SET_SYMVALUE(SEXP x, SEXP v);
 void SET_INTERNAL(SEXP x, SEXP v);
 
