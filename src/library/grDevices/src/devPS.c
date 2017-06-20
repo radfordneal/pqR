@@ -406,17 +406,26 @@ static int GetNextItem(FILE *fp, char *dest, int c, EncodingInputState *state)
 {
     if (c < 0) state->p = NULL;
     while (1) {
-	if (feof(fp)) { state->p = NULL; return 1; }
-	if (!state->p || *state->p == '\n' || *state->p == '\0') {
+	if (feof(fp)) { 
+            state->p = NULL;
+            return 1;
+        }
+	if (state->p == NULL || *state->p == '\n' || *state->p == '\0') {
 	    state->p = fgets(state->buf, 1000, fp);
 	}
 	/* check for incomplete encoding file */
-	if(!state->p) return 1;
-	while (isspace((int)* state->p)) state->p++;
-	if (state->p == '\0' || *state->p == '%'|| *state->p == '\n') { state->p = NULL; continue; }
+	if (state->p == NULL)
+            return 1;
+	while (isspace ((int) *state->p))
+            state->p++;
+	if (*state->p == '\0' || *state->p == '%'|| *state->p == '\n') { 
+            state->p = NULL;
+            continue;
+        }
 	state->p0 = state->p;
-	while (!isspace((int)*state->p)) state->p++;
-	if (state->p != '\0') *state->p++ = '\0';
+	while (!isspace ((int) *state->p))
+            state->p++;
+	if (*state->p != '\0') *state->p++ = '\0';
 	if(c == 45) strcpy(dest, "/minus"); else strcpy(dest, state->p0);
 	break;
     }

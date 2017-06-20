@@ -1412,7 +1412,7 @@ Rf_addTaskCallback(R_ToplevelCallback cb, void *data,
     }
 
     if(!name) {
-	char buf[5];
+	char buf[12];
 	sprintf(buf, "%d", which+1);
 	el->name = strdup(buf);
     } else
