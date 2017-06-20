@@ -2,3 +2,5 @@ Miscellaneous fixes.
 
 Added xlength and xlengthgets functions for compatibility with R >= 3.
 
+Minor fixes (some possibly real) to avoid gcc7 warnings.
+
