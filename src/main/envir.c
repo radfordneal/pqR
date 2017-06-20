@@ -396,6 +396,7 @@ void attribute_hidden R_HashRehash (SEXP table)
 	error("argument not of type VECSXP, from R_HashRehash");
 
     int size = HASHSIZE(table);
+    int slots = HASHSLOTSUSED(table);
     int i;
 
     for (i = 0; i < size; i++) {
@@ -410,7 +411,7 @@ void attribute_hidden R_HashRehash (SEXP table)
         }
     }
 
-    R_RestoreHashCount(table);
+    SET_HASHSLOTSUSED (table, slots);
 }
 
 
@@ -460,13 +461,20 @@ SEXP attribute_hidden R_HashRehashOld (SEXP table)
     PROTECT (newtable = allocVector (VECSXP, size));
     SET_HASHSLOTSUSED (newtable, 0);
 
+    SETLEVELS (newtable, LEVELS(table));              /* just in case... */
+    SET_ATTRIB (newtable, ATTRIB(table));
+    SET_OBJECT (newtable, OBJECT(table));
+    if (IS_S4_OBJECT(table)) SET_S4_OBJECT(newtable);
+
     for (i = 0; i < size; i++) {
         SEXP e;
         e = VECTOR_ELT (table, i);
         while (e != R_NilValue) {
             int j = R_Newhashpjw(CHAR(PRINTNAME(TAG(e)))) % size;
-            R_HashAddEntry (newtable, j, 
-                            cons_with_tag (CAR(e), R_NilValue, TAG(e)));
+            SEXP f = cons_with_tag (CAR(e), R_NilValue, TAG(e));
+            SETLEVELS (f, LEVELS(e));
+            SET_ATTRIB (f, ATTRIB(e));
+            R_HashAddEntry (newtable, j, f);
             e = CDR(e);
         }
     }
