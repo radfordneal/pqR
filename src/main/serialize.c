@@ -2697,7 +2697,7 @@ static SEXP readRawFromFile(SEXP file, SEXP key)
 /* Gets the binding values of variables from a frame and returns them
    as a list.  If the force argument is true, promises are forced;
    otherwise they are not. */
-extern int debug_flagg = 0;
+
 SEXP attribute_hidden R_getVarsFromFrame(SEXP vars, SEXP env, SEXP forcesxp)
 {
     SEXP val, tmp, sym;
