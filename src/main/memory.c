@@ -787,8 +787,9 @@ void sggc_after_marking (int level, int rep)
 }
 
 
-/* Function called when a CHARSXP is freed.  Removes it from the cache.  
-   Note that the manipulations should NOT be done with an old-to-new check! */
+/* Function called when a CHARSXP is freed (if SCAN_CHARSXP_CACHE is
+   not enabled).  Removes it from the cache.  Note that the
+   manipulations should NOT be done with an old-to-new check! */
 
 static int free_charsxp (sggc_cptr_t cptr)
 {
@@ -928,7 +929,7 @@ static SEXP do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
     static double max_objects = 0, max_megabytes = 0;
 
     SEXP value;
-    int ogc, reset_max;
+    int ogc, reset_max, lev;
 
     checkArity(op, args);
     ogc = gc_reporting;
@@ -938,7 +939,9 @@ static SEXP do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
         max_objects = 0;
         max_megabytes = 0;
     }
-    gc_next_level = 2;
+    lev = asInteger(CADDR(args));
+    if (lev < 0 || lev > 2) lev = 2;
+    gc_next_level = lev;
 
     R_gc();
 
@@ -3089,7 +3092,7 @@ attribute_hidden FUNTAB R_FunTab_memory[] =
 {"gctorture",	do_gctorture,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"gctorture2",	do_gctorture2,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"gcinfo",	do_gcinfo,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"gc",		do_gc,		0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"gc",		do_gc,		0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"gc.time",	do_gctime,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"mem.limits",	do_memlimits,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"memory.profile",do_memoryprofile, 0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
