@@ -138,9 +138,9 @@ drop <- function(x).Internal(drop(x))
 format.info <- function(x, digits = NULL, nsmall = 0L)
     .Internal(format.info(x, digits, nsmall))
 
-gc <- function(verbose = getOption("verbose"),	reset=FALSE)
+gc <- function(verbose = getOption("verbose"),	reset=FALSE, level=2)
 {
-    res <- matrix(.Internal(gc(verbose, reset)),2,3)
+    res <- matrix(.Internal(gc(verbose, reset, as.integer(level))),2,3)
     res[_,2] <- round(res[_,2],3)
     rownames(res) <- c("Current","Maximum")
     colnames(res) <- c("Objects","Megabytes","Segments")
