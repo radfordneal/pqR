@@ -47,20 +47,80 @@ typedef struct
 } lphash_table_t;
 
 
-/* FUNCTIONS PROVIDED BY LPHASH TO THE APPLICATION. */
+/* PROTOTYPES FOR FUNCTIONS PROVIDED BY LPHASH TO THE APPLICATION. */
 
 lphash_table_t *lphash_create (int initial_size);
 
 lphash_bucket_t *lphash_key_lookup (lphash_table_t *table, lphash_hash_t hash,
-                                   lphash_key_t key);
-
-lphash_bucket_t *lphash_entry_lookup (lphash_table_t *table, lphash_hash_t hash,
-                                     lphash_entry_t entry);
+                                    lphash_key_t key);
 
 lphash_bucket_t *lphash_insert (lphash_table_t *table, lphash_hash_t hash,
                                 lphash_key_t key);
 
 void lphash_destroy (lphash_table_t *table);
+
+
+/* INLINE FUNCTIONS PROVIDED BY LPHASH TO THE APPLICATION. */
+
+static inline lphash_bucket_t *lphash_entry_lookup (lphash_table_t *table,
+                                                    lphash_hash_t hash,
+                                                    lphash_entry_t entry)
+{
+  int i, x;
+
+  i = hash & (table->size-1);
+  x = 0;
+
+  /* Note:  Table should always have an empty bucket, ensuring termination. */
+
+  for (;;)
+  {
+#   ifdef LPHASH_LINEAR
+      int ix = (i+x) & (table->size-1);
+#   else
+      int ix = i^x;
+#   endif
+
+    lphash_bucket_t *b = &table->buckets[ix];
+
+    if (b->entry == entry)
+    { return b;
+    }
+
+    if (b->entry == LPHASH_NO_ENTRY)
+    {  return NULL;
+    }
+
+    x += 1;
+  }
+}
+
+static inline lphash_bucket_t *lphash_first_bucket (lphash_table_t *table)
+{ 
+  if (table->occupied == 0)
+  { return NULL;
+  }
+
+  lphash_bucket_t *b = table->buckets;
+  while (b->entry == LPHASH_NO_ENTRY)
+  { b += 1;
+  }
+  return b;
+}
+
+static inline lphash_bucket_t *lphash_next_bucket (lphash_table_t *table, 
+                                                   lphash_bucket_t *bucket)
+{ 
+  for (;;)
+  { bucket += 1;
+    if (bucket >= table->buckets + table->size)
+    { return NULL;
+    }
+    if (bucket->entry != LPHASH_NO_ENTRY)
+    { return bucket;
+    }
+  }
+}
 
 
 /* FUNCTIONS PROVIDED BY THE APPLICATION TO LPHASH.  Not declared if 

@@ -47,11 +47,15 @@ lphash_hash_t hash (lphash_key_t key)
 char *tests[] = 
   { "4", "127", "10", "5", "12", "1050", "7", "1100", "1045", "132" };
 
+#ifndef TABLE_SIZE
+#define TABLE_SIZE 16
+#endif
+
 int main (int argc, char **argv)
 {
   lphash_table_t *tbl;
 
-  tbl = lphash_create (16);
+  tbl = lphash_create (TABLE_SIZE);
   if (tbl == NULL)
   { fprintf (stderr, "Can't create table\n");
     exit(1);
@@ -113,7 +117,25 @@ int main (int argc, char **argv)
             tests[t], 
             hash(tests[t]), hash(tests[t]) & (tbl->size-1),
             lphash_insert(tbl,hash(tests[t]),tests[t])->entry);
+
+    if (TABLE_SIZE == 8 && t+1 == 7)
+    { printf("\nScan with one empty bucket:");
+      lphash_bucket_t *b = lphash_first_bucket(tbl);
+      while (b != NULL)
+      { printf(" %d",b->entry);
+        b = lphash_next_bucket(tbl,b);
+      }
+      printf("\n");
+    }
   }
+
+  printf("\nFinal scan:");
+  lphash_bucket_t *b = lphash_first_bucket(tbl);
+  while (b != NULL)
+  { printf(" %d",b->entry);
+    b = lphash_next_bucket(tbl,b);
+  }
+  printf("\n");
 
   printf("\nStatistics: ");
   printf("load %d/%d, %d searches (%d not found), %d probes, %d matches\n",

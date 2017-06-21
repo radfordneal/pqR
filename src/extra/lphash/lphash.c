@@ -149,6 +149,8 @@ static inline lphash_bucket_t *key_search (lphash_table_t *table,
   i = hash & (table->size-1);
   x = 0;
 
+  /* Note:  Table should always have an empty bucket, ensuring termination. */
+
   for (;;)
   { 
 #   ifdef LPHASH_LINEAR
@@ -183,10 +185,6 @@ static inline lphash_bucket_t *key_search (lphash_table_t *table,
     }
 
     x += 1;
-
-    if (x == table->size)
-    { abort(); /* shouldn't happen - table should always have an empty bucket */
-    }
   }
 }
 
@@ -281,41 +279,4 @@ lphash_bucket_t *lphash_key_lookup (lphash_table_t *table, lphash_hash_t hash,
   lphash_bucket_t *b = key_search (table, hash, key);
 
   return b->entry == LPHASH_NO_ENTRY ? NULL : b;
-}
-
-
-/* SEARCH THE HASH TABLE FOR A GIVEN ENTRY. */
-
-lphash_bucket_t *lphash_entry_lookup (lphash_table_t *table, lphash_hash_t hash,
-                                      lphash_entry_t entry)
-{
-  int i, x;
-  
-  i = hash & (table->size-1);
-  x = 0;
-
-  for (;;)
-  { 
-#   ifdef LPHASH_LINEAR
-      int ix = (i+x) & (table->size-1);
-#   else
-      int ix = i^x;
-#   endif
-
-    lphash_bucket_t *b = &table->buckets[ix];
-
-    if (b->entry == entry)
-    { return b;
-    }
-
-    if (b->entry == LPHASH_NO_ENTRY)
-    {  return NULL;
-    }
-
-    x += 1;
-
-    if (x == table->size)
-    { abort(); /* shouldn't happen - table should always have an empty bucket */
-    }
-  }
 }

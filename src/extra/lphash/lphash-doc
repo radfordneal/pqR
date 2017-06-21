@@ -172,6 +172,21 @@ macros) below, which (if functions) have prototypes as shown:
     calling lphash_setup_bucket, except that if adding a new entry
     would overflow the table (see below), NULL is returned instead.
 
+  lphash_bucket_t *lphash_first_bucket (lphash_table_t *table)
+
+    Returns a pointer to the first occupied bucket in 'table',
+    according to some arbitrary ordering, which could change with a
+    subsequent insertion.  Returns NULL if the table contains no
+    occupied buckets.
+
+  lphash_bucket_t *lphash_next_bucket (lphash_table_t *table,
+                                       lphash_bucket_t *bucket)
+
+    Returns a pointer to the next occupied bucket after 'bucket' in
+    'table', according to the same arbitrary ordering as for
+    lphash_first_bucket.  Returns NULL if 'bucket' was the last bucket
+    in this ordering.
+
   void lphash_destroy (lphash_table_t *table)
 
     Destroys the given hash table, calling lphash_free for all memory
