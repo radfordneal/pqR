@@ -7,7 +7,7 @@
 \name{gc}
 \title{Garbage Collection}
 \usage{
-gc(verbose = getOption("verbose"), reset=FALSE)
+gc(verbose = getOption("verbose"), reset=FALSE, level=2)
 gcinfo(verbose)
 }
 \alias{gc}
@@ -17,9 +17,13 @@ gcinfo(verbose)
     statistics about numbers of objects and space used.}
   \item{reset}{logical; if \code{TRUE} the values for maximum counts and
     space used are reset to the current values.}
+  \item{level}{integer; the level of garbage collection to do.}
 }
 \description{
-  A call of \code{gc} causes a garbage collection to take place.
+  A call of \code{gc} causes a garbage collection to take place.  
+  If the level is 2, all unreferenced storage will be recovered.
+  Levels 1 and 0 may recover less storage, but are faster.
+
   \code{gcinfo} sets a flag so that
   automatic collection is either silent (\code{verbose=FALSE}) or
   prints memory usage statistics (\code{verbose=TRUE}).
