@@ -2384,10 +2384,11 @@ static int mbcs_get_next(int c, wchar_t *wc)
     if(utf8locale) {
 	clen = utf8clen(c);
 	for(i = 1; i < clen; i++) {
-	    s[i] = xxgetc();
-	    if(s[i] == R_EOF) 
+	    int ch = xxgetc();
+	    if (ch == R_EOF) 
                 error(_("EOF whilst reading MBCS char at line %d"), 
                         ps->sr->xxlineno);
+	    s[i] = ch;
 	}
 	s[clen] ='\0'; /* x86 Solaris requires this */
 	res = mbrtowc(wc, s, clen, NULL);
@@ -2439,10 +2440,12 @@ static int mbcs_get_next2(int c, ucs_t *wc)
     if(utf8locale) {
 	clen = utf8clen(c);
 	for(i = 1; i < clen; i++) {
-	    s[i] = xxgetc();
+	    int ch = xxgetc();
+	    if (ch == R_EOF) 
 	    if(s[i] == R_EOF)
                 error(_("EOF whilst reading MBCS char at line %d"),
                          ps->sr->xxlineno);
+	    s[i] = ch;
 	}
 	s[clen] ='\0'; /* x86 Solaris requires this */
 	res = mbtoucs(wc, s, clen);
