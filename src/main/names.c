@@ -737,6 +737,8 @@ static SEXP install_with_hashcode (char *name, int hashcode)
         R_Suicide("couldn't allocate memory to expand symbol table");
 
     SEXP pname = mkChar(name);
+    IS_PRINTNAME(pname) = 1;
+
     bucket->pname = CPTR_FROM_SEXP(pname);
 
     SEXP sym = SEXP_FROM_SEXP32(bucket->entry);

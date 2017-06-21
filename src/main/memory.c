@@ -71,6 +71,10 @@
 #define SCAN_CHARSXP_CACHE 0    /* If 1, char cache is scanned after marking;
                                    if 0, uses sggc_call_for_newly_free_object */
 
+#define MIN_PRINTNAME_SCAN_LEVEL 2 /* Minimum collection level at which the
+                                      printnames of symbols are marked.  Values
+                                      from 0 (always) to 3 (never) are valid */
+ 
 #define ENABLE_SHARED_CONSTANTS 1  /* Normally 1, to enable use of shared
                                       constants 0.0, 0L, etc. But doesn't affect
                                       sharing of logicals FALSE, TRUE, and NA,
@@ -598,12 +602,17 @@ void sggc_find_root_ptrs (void)
         if (ATTRIB_W(s) != R_NilValue) LOOK_AT(ATTRIB_W(s));
     }
 
-    /* Scan printnames in symbol table. */
+    /* Perhaps scan printnames in symbol table.  Not necessary for
+       correctness, since they won't be freed anyway, but this may
+       perhaps be faster for full collections than almost freeing many
+       of them and then backing out in free_charsxp. */
 
-    for (lphash_bucket_t *b = lphash_first_bucket(R_lphashSymTbl);
-         b != NULL;
-         b = lphash_next_bucket(R_lphashSymTbl,b)) {
-        sggc_mark (b->pname);
+    if (gc_next_level >= MIN_PRINTNAME_SCAN_LEVEL) {
+        for (lphash_bucket_t *b = lphash_first_bucket(R_lphashSymTbl);
+             b != NULL;
+             b = lphash_next_bucket(R_lphashSymTbl,b)) {
+            sggc_mark (b->pname);
+        }
     }
 
     /* Forward other roots. */
@@ -803,6 +812,9 @@ static int free_charsxp (sggc_cptr_t cptr)
     SEXP chr = SEXP_FROM_CPTR(cptr);
 
     if (TYPEOF(chr) != CHARSXP) abort();
+
+    if (IS_PRINTNAME(chr))
+        return 1;  /* don't free after all if it's used as a symbol printname */
 
     int index = CHAR_HASH(chr) & char_hash_mask;
 

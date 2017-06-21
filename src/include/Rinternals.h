@@ -231,7 +231,7 @@ struct sxpinfo_struct {
                                      Environment: R_BaseEnv or R_BaseNamespace*/
     unsigned int has_attrib : 1;  /* Set to 1 iff ATTRIB != R_NilValue, except
                                      not used when ATTRIB isn't normal attrib */
-    unsigned int unused : 1;
+    unsigned int is_printname : 1;/* CHARSXP: is used as a symbol's printname */
 
     /* Object flag */
     unsigned int obj : 1;     /* set if this is an S3 or S4 object */
@@ -759,6 +759,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 #define ATTRIB(x)       NOT_LVALUE(TYPEOF(x)==SYMSXP ? R_NilValue : ATTRIB_W(x))
 
+#define IS_PRINTNAME(x) (UPTR_FROM_SEXP(x)->sxpinfo.is_printname)
 #define HAS_ATTRIB(x)   NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.has_attrib)
 #define OBJECT(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.obj)
 #define RTRACE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_base)
