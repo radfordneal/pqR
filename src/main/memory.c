@@ -594,9 +594,16 @@ void sggc_find_root_ptrs (void)
          nxt = sggc_next_uncollected_of_kind(nxt)) {
         SEXP s = SEXP_FROM_CPTR(nxt);
         LASTSYMENV(s) = R_NoObject32;
-        MARK(PRINTNAME(s));
         if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
         if (ATTRIB_W(s) != R_NilValue) LOOK_AT(ATTRIB_W(s));
+    }
+
+    /* Scan printnames in symbol table. */
+
+    for (lphash_bucket_t *b = lphash_first_bucket(R_lphashSymTbl);
+         b != NULL;
+         b = lphash_next_bucket(R_lphashSymTbl,b)) {
+        sggc_mark (b->pname);
     }
 
     /* Forward other roots. */

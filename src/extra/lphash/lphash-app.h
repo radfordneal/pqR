@@ -30,7 +30,7 @@ typedef int lphash_hash_t;          /* Character/symbol hash as stored in symbol
 typedef struct {
     lphash_entry_t entry;           /* SEXP32 pointer to symbol object */
     lphash_hash_t hash;             /* Character/symbol hash */
-    unsigned pname;                 /* SEXP32 pointer to print name */
+    unsigned pname;                 /* Compressed pointer to print name */
     unsigned padding;
 } lphash_bucket_t;
 

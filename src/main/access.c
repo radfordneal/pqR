@@ -543,7 +543,7 @@ SEXP (PRINTNAME)(SEXP x)
     if (bucket == NULL)
         return x == R_MissingUnder ? R_UnderscoreString : R_BlankString;
     else
-        return SEXP_FROM_SEXP32(bucket->pname);
+        return SEXP_FROM_CPTR(bucket->pname);
 }
 
 SEXP (SYMVALUE)(SEXP x) { return Rf_chk_valid_SEXP(SYMVALUE(Rf_chk_valid_SEXP(x))); }
