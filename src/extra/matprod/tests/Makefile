@@ -1,7 +1,7 @@
 # MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
 #           Makefile for Compiling Test Programs
 #
-# Copyright (c) 2013 Radford M. Neal.
+# Copyright (c) 2013, 2017 Radford M. Neal.
 # 
 #   The matprod library is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -17,17 +17,28 @@
 #   with this program; if not, write to the Free Software Foundation, Inc.,
 #   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-progs=matprod-test matprod-alt-test piped-matprod-test piped-matprod-d-test \
-      blas-test blas2-test
+progs=matprod-test matprod-norestrict-test matprod-alt-test \
+      piped-matprod-test piped-matprod-norestrict-test piped-matprod-d-test \
 
-CC=gcc
-CFLAGS=-g -O3 -march=native -mtune=native -mfpmath=sse
+blas-progs=blas1-test blas2-test blas3-test  # blas0-test omitted
+
+CC=gcc-7
+CFLAGS=-g -std=gnu99 -O3 -march=native -mtune=native -mfpmath=sse
 
 all:	$(progs)
+	true
+
+blas:	$(blas-progs)
+	true
 
 matprod-test:		test.h test.c matprod-test.c ../matprod.h ../matprod.c
 	$(CC) -I.. -I. $(CFLAGS) test.c matprod-test.c ../matprod.c \
 		-o matprod-test
+
+matprod-norestrict-test:	test.h test.c matprod-test.c ../matprod.h ../matprod.c
+	$(CC) -I.. -I. $(CFLAGS) -DMATPROD_NO_RESTRICT \
+		test.c matprod-test.c ../matprod.c \
+		-o matprod-norestrict-test
 
 matprod-alt-test:	test.h test.c matprod-test.c ../matprod.h ../matprod.c
 	$(CC) -I.. -I. $(CFLAGS) \
@@ -42,30 +53,35 @@ piped-matprod-test:	test.h test.c piped-matprod-test.c ../piped-matprod.h \
 		test.c piped-matprod-test.c ../piped-matprod.c helpers.c \
 		-o piped-matprod-test
 
+piped-matprod-norestrict-test:	test.h test.c piped-matprod-test.c ../piped-matprod.h \
+			../piped-matprod.c helpers-app.h helpers.h helpers.c
+	$(CC) -I.. -I. $(CFLAGS) -fopenmp -DMATPROD_NO_RESTRICT \
+		test.c piped-matprod-test.c ../piped-matprod.c helpers.c \
+		-o piped-matprod-norestrict-test
+
 piped-matprod-d-test:	test.h test.c piped-matprod-test.c ../piped-matprod.h \
 			../piped-matprod.c helpers-app.h helpers.h helpers.c
 	$(CC) -I.. -I. $(CFLAGS) -fopenmp -DHELPERS_DISABLED \
 		test.c piped-matprod-test.c ../piped-matprod.c helpers.c \
 		-o piped-matprod-d-test
 
-blas1-test:		test.h test.c blas-test.c \
+blas0-test:		test.h test.c blas-test.c \
 			ddot.f dgemm.f dgemv.f dsyrk.f lsame.f
 	$(CC) -I.. -I. $(CFLAGS) \
 		test.c blas-test.c ddot.f dgemm.f dgemv.f dsyrk.f lsame.f \
-		-o blas1-test
+		-o blas0-test
+
+blas1-test:		test.h test.c blas-test.c blas.f
+	$(CC) -I.. -I. $(CFLAGS) test.c blas-test.c blas.f \
+		-lm -o blas1-test
 
 blas2-test:		test.h test.c blas-test.c blas.f
-	$(CC) -I.. -I. $(CFLAGS) test.c blas-test.c blas.f \
+	$(CC) -I.. -I. $(CFLAGS) test.c blas-test.c blas2.f \
 		-lm -o blas2-test
 
 blas3-test:		test.h test.c blas-test.c
-	$(CC) -I.. -I. $(CFLAGS) test.c blas-test.c -lblas \
+	$(CC) -I.. -I. $(CFLAGS) test.c blas-test.c /usr/lib/libblas.so.3 \
 		-lm -o blas3-test
 
-blas4-test:		test.h test.c blas-test.c
-	$(CC) -I.. -I. $(CFLAGS) test.c blas-test.c \
-                /usr/lib/openblas-base/libopenblas.a -lpthread \
-		-lm -o blas4-test
-
 clean:
-	rm -f $(progs)
+	rm -f $(progs) $(blas-progs)

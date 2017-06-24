@@ -1,7 +1,7 @@
 /* MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
              Interface to Procedures Without Pipelining
 
-   Copyright (c) 2013, 2014 Radford M. Neal.
+   Copyright (c) 2013, 2014, 2017 Radford M. Neal.
 
    The matprod library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -19,9 +19,46 @@
 */
 
 
-double matprod_vec_vec (double *x, double *y, int k);
-void matprod_vec_mat (double *x, double *y, double *z, int k, int m);
-void matprod_mat_vec (double *x, double *y, double *z, int n, int k);
-void matprod_mat_mat (double *x, double *y, double *z, int n, int k, int m);
-void matprod_trans1 (double *x, double *y, double *z, int n, int k, int m);
-void matprod_trans2 (double *x, double *y, double *z, int n, int k, int m);
+/* Define MATPROD_RESTRICT as the restrict keyword, unless
+   MATPROD_NO_RESTRICT has been defined, in which case it is nothing. */
+
+#undef MATPROD_RESTRICT
+
+#ifdef MATPROD_NO_RESTRICT
+#define MATPROD_RESTRICT 
+#else
+#define MATPROD_RESTRICT restrict
+#endif
+
+
+double matprod_vec_vec (double * MATPROD_RESTRICT x,
+          double * MATPROD_RESTRICT y,
+          int k);
+void matprod_vec_mat (double * MATPROD_RESTRICT x,
+          double * MATPROD_RESTRICT y,
+          double * MATPROD_RESTRICT z,
+          int k,
+          int m);
+void matprod_mat_vec (double * MATPROD_RESTRICT x,
+          double * MATPROD_RESTRICT y,
+          double * MATPROD_RESTRICT z,
+          int n,
+          int k);
+void matprod_mat_mat (double * MATPROD_RESTRICT x,
+          double * MATPROD_RESTRICT y,
+          double * MATPROD_RESTRICT z,
+          int n,
+          int k,
+          int m);
+void matprod_trans1 (double * MATPROD_RESTRICT x,
+          double * MATPROD_RESTRICT y,
+          double * MATPROD_RESTRICT z,
+          int n,
+          int k,
+          int m);
+void matprod_trans2 (double * MATPROD_RESTRICT x,
+          double * MATPROD_RESTRICT y,
+          double * MATPROD_RESTRICT z,
+          int n,
+          int k,
+          int m);

@@ -3,7 +3,7 @@
 # MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
 #           Shell File to Run a Series of Tests
 #
-# Copyright (c) 2013 Radford M. Neal.
+# Copyright (c) 2013, 2017 Radford M. Neal.
 # 
 #   The matprod library is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -20,12 +20,13 @@
 #   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-prog=$1
+# run-tests program
+#
+# Uses the given test program for a variety of tests, displaying timing
+# information, along with some headers.
 
-while [ x$2 != x ]; do
-  export $2
-  shift
-done
+
+prog=$1
 
 echo " "; echo VEC_VEC
 

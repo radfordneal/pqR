@@ -1,6 +1,9 @@
 #!/bin/bash
 
-for i in blas blas2 matprod matprod-alt piped-matprod piped-matprod-d; do
+# Run all tests, except ones involving blas.
+
+for i in matprod matprod-alt matprod-norestrict \
+         piped-matprod piped-matprod-d piped-matprod-norestrict; do
   run-tests $i-test >& $i.out
   tim $i
 done

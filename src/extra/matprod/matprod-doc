@@ -1,7 +1,7 @@
 MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
           Documentation for Library Procedures and Test Programs
 
-Copyright (C) 2013, 2014 Radford M. Neal.
+Copyright (C) 2013, 2014, 2017 Radford M. Neal.
 
   The matprod library is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -49,6 +49,9 @@ routines with matrices stored in standard C (row-major) order, just
 reverse the order of the operands (and exchange matprod_trans1 and
 matprod_trans2).
 
+The declarations below are written with pointers declared as simply
+"double *", but, the actual declaration will be "double * restrict"
+unless the matprod source is compiled with -DMATPROD_NO_RESTRICT.
 
 Procedures in matprod.c:
 
@@ -238,6 +241,10 @@ follows:
       Uses the procedures in matprod.c with the alternative algorithms
       enabled for all the procedures.
 
+    matprod-norestrict
+
+      As for matprod-test, except compiled with -DMATPROD_NO_RESTRICT.
+
     piped-matprod-test
 
       Uses the procedures in piped-matprod.c, and the helpers library.
@@ -253,7 +260,11 @@ follows:
       threads to be assessed, by comparing with piped-matprod-test
       with HELPERS set to 0 (or not set).
 
-    blas-test
+    piped-matprod-norestrict
+
+      As for piped-matprod-test, except compiled with -DMATPROD_NO_RESTRICT.
+
+    blas0-test
 
       Uses BLAS routines in the following FORTRAN source files:
 
@@ -262,12 +273,26 @@ follows:
       A xerbla routine for BLAS error reporting is provided as part of 
       the test program.  The dsyrk routine is used when the "T" option 
       is specified, along with a C routine for filling in the lower 
-      triangle of the matrix from the upper triangle.
+      triangle of the matrix from the upper triangle.  
+
+    blas1-test
+
+      Like blas-test, except that all BLAS routines are taken from
+      one file called blas.f.
 
     blas2-test
 
       Like blas-test, except that all BLAS routines are taken from
-      one file called blas.f.
+      one file called blas2.f.
+
+    blas3-test
+
+      Like blas-test, except that BLAS routines are taken from the
+      /usr/lib/libblas.so.3 library, which can be set to various
+      BLAS implementations.
+
+The blas test programs are not compiled by default, but are by "make
+blas" (except for blas0-test).
 
 The helpers procedures that are used in the piped-matprod test
 programs can be obtained from github.com/radfordneal/helpers.
@@ -283,6 +308,5 @@ pipelined input cannot otherwise be arranged.  (Of course, this is
 slower than just accessing the already-initialized matrix.)
 
 The shell file run-tests runs a series of tests, with the test program
-specified by its first argument (eg, matprod-test) and a setting of an
-environment variable given by its optional second argument.
+specified by its first argument (eg, matprod-test).
 

@@ -1,7 +1,7 @@
 /* MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
              C Procedures for Matrix Multiplication Without Pipelining
 
-   Copyright (c) 2013, 2014 Radford M. Neal.
+   Copyright (c) 2013, 2014, 2017 Radford M. Neal.
 
    The matprod library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@
    Use -DALT_MATPROD_VEC_VEC to switch between these two implementations.
    Change #ifdef to #ifndef or vice versa below to change the default. */
 
-double matprod_vec_vec (double *x, double *y, int k)
+double matprod_vec_vec (double * MATPROD_RESTRICT x, double * MATPROD_RESTRICT y, int k)
 {
 #   ifdef ALT_MATPROD_VEC_VEC
     {
@@ -90,7 +90,7 @@ double matprod_vec_vec (double *x, double *y, int k)
    Use -DALT_MATPROD_VEC_MAT to switch between these two implementations.
    Change #ifdef to #ifndef or vice versa below to change the default. */
 
-void matprod_vec_mat (double *x, double *y, double *z, int k, int m)
+void matprod_vec_mat (double * MATPROD_RESTRICT x, double * MATPROD_RESTRICT y, double * MATPROD_RESTRICT z, int k, int m)
 {
     /* If m is odd, compute the first element of the result (the dot product
        of x and the first column of y).  Adjust y, z, and m to account for 
@@ -229,7 +229,7 @@ void matprod_vec_mat (double *x, double *y, double *z, int k, int m)
    using -DALT_MATPROD_MAT_VEC.  Change #ifdef to #ifndef or vice versa below 
    to change the default. */
 
-void matprod_mat_vec (double *x, double *y, double *z, int n, int k)
+void matprod_mat_vec (double * MATPROD_RESTRICT x, double * MATPROD_RESTRICT y, double * MATPROD_RESTRICT z, int n, int k)
 {
     double *p, *q;
     double *e, *f;
@@ -326,7 +326,7 @@ void matprod_mat_vec (double *x, double *y, double *z, int n, int k)
    controlled using -DALT_MATPROD.  Change #ifdef to #ifndef or 
    vice versa below to change the default. */
 
-void matprod_mat_mat (double *x, double *y, double *z, int n, int k, int m)
+void matprod_mat_mat (double * MATPROD_RESTRICT x, double * MATPROD_RESTRICT y, double * MATPROD_RESTRICT z, int n, int k, int m)
 {
     if (n <= 0) return;
 
@@ -583,7 +583,7 @@ void matprod_mat_mat (double *x, double *y, double *z, int n, int k, int m)
    There is no alternate implementation for this procedure.
 */
 
-void matprod_trans1 (double *x, double *y, double *z, int n, int k, int m)
+void matprod_trans1 (double * MATPROD_RESTRICT x, double * MATPROD_RESTRICT y, double * MATPROD_RESTRICT z, int n, int k, int m)
 {
     int sym = x==y && n==m;  /* same operands, so symmetric result? */
     int j = 0;               /* number of columns of result produced so far */
@@ -760,7 +760,7 @@ void matprod_trans1 (double *x, double *y, double *z, int n, int k, int m)
    controlled using -DALT_MATPROD_TRANS2.  Change #ifdef to #ifndef or
    vice versa below to change the default. */
 
-void matprod_trans2 (double *x, double *y, double *z, int n, int k, int m)
+void matprod_trans2 (double * MATPROD_RESTRICT x, double * MATPROD_RESTRICT y, double * MATPROD_RESTRICT z, int n, int k, int m)
 {
     int sym = x==y && n==m;  /* same operands, so symmetric result? */
     double *ex = x + n*k;    /* point past end of x */

@@ -1,0 +1,1 @@
+New version of matprod, that uses "restrict" to allow better optimization.
