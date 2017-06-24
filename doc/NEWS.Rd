@@ -34,6 +34,14 @@
         The value printed was previously 0 rather than NA.
         This bug also exists in R Core versions to at least R-3.4.0.
   }}
+  \subsection{PERFORMANCE IMPROVEMENTS}{
+  \itemize{
+  \item Relational operators are now faster, and may sometimes be done in 
+        helper threads (though currently without pipelining of data).
+        Computations such as \code{sum(vec>0)} are now done with a
+        merged procedure that avoids creating \code{vec>0} as an intermediate
+        value.
+  }
 }
 
 
