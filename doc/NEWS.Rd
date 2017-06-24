@@ -22,6 +22,14 @@
         attributes could be attached to symbols, but they were lost
         when a workspace was saved and restored.
   }}
+  \subsection{PERFORMANCE IMPROVEMENTS}{
+  \itemize{
+  \item Relational operators are now faster, and may sometimes be done in 
+        helper threads (though currently without pipelining of data).
+        Computations such as \code{sum(vec>0)} are now done with a
+        merged procedure that avoids creating \code{vec>0} as an intermediate
+        value.
+  }
 }
 
 
