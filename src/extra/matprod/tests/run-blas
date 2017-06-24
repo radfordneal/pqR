@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Run all blas tests.
+
+export OPENBLAS_NUM_THREADS=1
+
+for i in blas1 blas2 blas3; do
+  run-tests $i-test >& $i.out
+  tim $i
+done

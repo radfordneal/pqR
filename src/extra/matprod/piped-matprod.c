@@ -1,7 +1,7 @@
 /* MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
              Task Procedures for Matrix Multiplication With Pipelining
 
-   Copyright (c) 2013, 2014 Radford M. Neal.
+   Copyright (c) 2013, 2014, 2017 Radford M. Neal.
 
    The matprod library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -32,8 +32,11 @@
 void task_piped_matprod_vec_vec (helpers_op_t op, helpers_var_ptr sz, 
                                  helpers_var_ptr sx, helpers_var_ptr sy)
 {
-    double *x = REAL(sx), *y = REAL(sy), *ox = x;
+    double * MATPROD_RESTRICT x = REAL(sx);
+    double * MATPROD_RESTRICT y = REAL(sy);
+
     helpers_size_t k, a;
+    double *ox = x;
     double s;
 
     k = LENGTH(sx);
@@ -80,7 +83,10 @@ void task_piped_matprod_vec_vec (helpers_op_t op, helpers_var_ptr sz,
 void task_piped_matprod_vec_mat (helpers_op_t op, helpers_var_ptr sz, 
                                  helpers_var_ptr sx, helpers_var_ptr sy)
 {
-    double *x = REAL(sx), *y = REAL(sy), *z = REAL(sz);
+    double * MATPROD_RESTRICT x = REAL(sx);
+    double * MATPROD_RESTRICT y = REAL(sy);
+    double * MATPROD_RESTRICT z = REAL(sz);
+
     helpers_size_t k_times_m = LENGTH(sy);
     helpers_size_t k = LENGTH(sx);
     helpers_size_t m = LENGTH(sz);
@@ -211,7 +217,10 @@ void task_piped_matprod_vec_mat (helpers_op_t op, helpers_var_ptr sz,
 void task_piped_matprod_mat_vec (helpers_op_t op, helpers_var_ptr sz, 
                                  helpers_var_ptr sx, helpers_var_ptr sy)
 {
-    double *x = REAL(sx), *y = REAL(sy), *z = REAL(sz);
+    double * MATPROD_RESTRICT x = REAL(sx);
+    double * MATPROD_RESTRICT y = REAL(sy);
+    double * MATPROD_RESTRICT z = REAL(sz);
+
     helpers_size_t k = LENGTH(sy);
     helpers_size_t n = LENGTH(sz);
     helpers_size_t a;
@@ -323,8 +332,10 @@ void task_piped_matprod_mat_vec (helpers_op_t op, helpers_var_ptr sz,
 void task_piped_matprod_mat_mat (helpers_op_t op, helpers_var_ptr sz, 
                                  helpers_var_ptr sx, helpers_var_ptr sy)
 {
-    double *x = REAL(sx), *y = REAL(sy), *z = REAL(sz);
-    double *oy = y;
+    double * MATPROD_RESTRICT x = REAL(sx);
+    double * MATPROD_RESTRICT y = REAL(sy);
+    double * MATPROD_RESTRICT z = REAL(sz);
+
     helpers_size_t k = op;
     helpers_size_t n_times_k = LENGTH(sx);
     helpers_size_t k_times_m = LENGTH(sy);
@@ -333,6 +344,7 @@ void task_piped_matprod_mat_mat (helpers_op_t op, helpers_var_ptr sz,
     helpers_size_t m = k_times_m / k;
     helpers_size_t done = 0;
     helpers_size_t a = 0;
+    double *oy = y;
 
     if (n_times_m == 0)  return;
 
@@ -631,14 +643,17 @@ void task_piped_matprod_mat_mat (helpers_op_t op, helpers_var_ptr sz,
 void task_piped_matprod_trans1 (helpers_op_t op, helpers_var_ptr sz, 
                                 helpers_var_ptr sx, helpers_var_ptr sy)
 {
-    double *x = REAL(sx), *y = REAL(sy), *z = REAL(sz);
-    double *oy = y;
+    double * MATPROD_RESTRICT x = REAL(sx);
+    double * MATPROD_RESTRICT y = REAL(sy);
+    double * MATPROD_RESTRICT z = REAL(sz);
+
     helpers_size_t k = op;
     helpers_size_t n_times_k = LENGTH(sx);
     helpers_size_t k_times_m = LENGTH(sy);
     helpers_size_t n_times_m = LENGTH(sz);
     helpers_size_t n = n_times_k / k;
     helpers_size_t m = k_times_m / k;
+    double *oy = y;
 
     int sym = x==y && n==m;  /* same operands, so symmetric result? */
     int j = 0;               /* number of columns of result produced so far */
@@ -839,7 +854,10 @@ void task_piped_matprod_trans1 (helpers_op_t op, helpers_var_ptr sz,
 void task_piped_matprod_trans2 (helpers_op_t op, helpers_var_ptr sz, 
                                 helpers_var_ptr sx, helpers_var_ptr sy)
 {
-    double *x = REAL(sx), *y = REAL(sy), *z = REAL(sz);
+    double * MATPROD_RESTRICT x = REAL(sx);
+    double * MATPROD_RESTRICT y = REAL(sy);
+    double * MATPROD_RESTRICT z = REAL(sz);
+
     helpers_size_t k = op;
     helpers_size_t n_times_k = LENGTH(sx);
     helpers_size_t k_times_m = LENGTH(sy);

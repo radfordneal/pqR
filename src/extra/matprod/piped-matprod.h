@@ -18,6 +18,19 @@
    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+
+/* Define MATPROD_RESTRICT as the restrict keyword, unless
+   MATPROD_NO_RESTRICT has been defined, in which case it is nothing. */
+
+#undef MATPROD_RESTRICT
+
+#ifdef MATPROD_NO_RESTRICT
+#define MATPROD_RESTRICT 
+#else
+#define MATPROD_RESTRICT restrict
+#endif
+
+
 helpers_task_proc task_piped_matprod_vec_vec;
 helpers_task_proc task_piped_matprod_vec_mat;
 helpers_task_proc task_piped_matprod_mat_vec;
