@@ -36,7 +36,7 @@
   \item New versions of the C matrix multiply functions are now used,
         which may be faster due to use of the C "restrict" keyword to
         allow better optimization.
-  }
+  }}
 
   \subsection{BUG FIXES}{
   \itemize{
