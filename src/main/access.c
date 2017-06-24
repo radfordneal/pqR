@@ -532,19 +532,26 @@ attribute_hidden int (PRIMOFFSET)(SEXP x) { return PRIMOFFSET(x); }
 attribute_hidden void (SET_PRIMOFFSET)(SEXP x, int v) { SET_PRIMOFFSET(x, v); }
 
 /* Symbol Accessors */
-SEXP (PRINTNAME)(SEXP x) { return Rf_chk_valid_SEXP(PRINTNAME(Rf_chk_valid_SEXP(x))); }
+
+SEXP (PRINTNAME)(SEXP x) 
+{ 
+    Rf_chk_valid_SEXP(x);
+
+    lphash_bucket_t *bucket
+      = lphash_entry_lookup (R_lphashSymTbl, SYM_HASH(x), SEXP32_FROM_SEXP(x));
+
+    if (bucket == NULL)
+        return x == R_MissingUnder ? R_UnderscoreString : R_BlankString;
+    else
+        return SEXP_FROM_CPTR(bucket->pname);
+}
+
 SEXP (SYMVALUE)(SEXP x) { return Rf_chk_valid_SEXP(SYMVALUE(Rf_chk_valid_SEXP(x))); }
 SEXP (INTERNAL)(SEXP x) { return Rf_chk_valid_SEXP(INTERNAL(Rf_chk_valid_SEXP(x))); }
 int (DDVAL)(SEXP x) { return DDVAL(Rf_chk_valid_SEXP(x)); }
 
 /* Don't do old-to-new check when setting fields in symbols, since they are
    always scanned anyway. */
-
-void (SET_PRINTNAME)(SEXP x, SEXP v) 
-{ 
-    PRINTNAME(x) = v; 
-    SYM_HASH(x) = CHAR_HASH(v);
-}
 
 void (SET_SYMVALUE)(SEXP x, SEXP v) 
 {

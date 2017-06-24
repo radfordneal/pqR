@@ -231,7 +231,7 @@ struct sxpinfo_struct {
                                      Environment: R_BaseEnv or R_BaseNamespace*/
     unsigned int has_attrib : 1;  /* Set to 1 iff ATTRIB != R_NilValue, except
                                      not used when ATTRIB isn't normal attrib */
-    unsigned int unused : 1;
+    unsigned int is_printname : 1;/* CHARSXP: is used as a symbol's printname */
 
     /* Object flag */
     unsigned int obj : 1;     /* set if this is an S3 or S4 object */
@@ -382,7 +382,7 @@ typedef struct SYM_SEXPREC {
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
     int32_t padding;
 #endif
-    SEXP pname;
+    SEXP pname_disabled;
     SEXP value;
     int32_t sym_hash;
     SEXP32 lastenv;
@@ -759,6 +759,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 #define ATTRIB(x)       NOT_LVALUE(TYPEOF(x)==SYMSXP ? R_NilValue : ATTRIB_W(x))
 
+#define IS_PRINTNAME(x) (UPTR_FROM_SEXP(x)->sxpinfo.is_printname)
 #define HAS_ATTRIB(x)   NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.has_attrib)
 #define OBJECT(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.obj)
 #define RTRACE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_base)
@@ -830,7 +831,6 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SET_RSTEP(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec=(v))
 
 /* Symbol Access Macros */
-#define PRINTNAME(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->pname)
 #define SYMVALUE(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->value)
 #define LASTSYMENV(x)	(((SYMSEXP) UPTR_FROM_SEXP(x))->lastenv)
 #define LASTSYMBINDING(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->lastbinding)
@@ -960,7 +960,6 @@ SEXP (SYMVALUE)(SEXP x);
 SEXP (INTERNAL)(SEXP x);
 int  (DDVAL)(SEXP x);
 void (SET_DDVAL)(SEXP x, int v);
-void SET_PRINTNAME(SEXP x, SEXP v);
 void SET_SYMVALUE(SEXP x, SEXP v);
 void SET_INTERNAL(SEXP x, SEXP v);
 

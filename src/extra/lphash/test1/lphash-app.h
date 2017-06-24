@@ -21,6 +21,8 @@ typedef int lphash_entry_t;
 typedef char *lphash_key_t;
 typedef unsigned lphash_hash_t;
 
+typedef struct { lphash_entry_t entry; lphash_hash_t hash; } lphash_bucket_t;
+
 #define LPHASH_NO_ENTRY (-1)
 
 #ifndef LPHASH_MAX_LOAD

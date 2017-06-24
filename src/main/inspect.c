@@ -168,6 +168,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
 				avoid it .. */
         PrintEnvironment(v);
     if (TYPEOF(v) == CHARSXP) {
+        if (IS_PRINTNAME(v)) Rprintf(" [printname]");
 	if (IS_BYTES(v)) Rprintf(" [bytes]");
 	if (IS_LATIN1(v)) Rprintf(" [latin1]");
 	if (IS_UTF8(v)) Rprintf(" [UTF8]");

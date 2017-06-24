@@ -27,11 +27,6 @@
    referenced by the application, except for testing and performance
    evaluation (using the statistics fields). */
 
-typedef struct 
-{ lphash_entry_t entry;      /* Entry in this bucket, or LPHASH_NO_ENTRY */
-  lphash_hash_t hash;        /* Full hash value for this entry (if present) */
-} lphash_bucket_t;
-
 typedef struct
 { 
   int size;                  /* Number of buckets in table */
@@ -43,37 +38,100 @@ typedef struct
   int buckets_offset;        /* Offset added to align buckets */
 
 # ifdef LPHASH_STATS
-  int searches;              /* Number of searches done */
-  int not_found;             /* Number of searches where entry not found */
+  int searches;              /* Number of key searches done */
+  int not_found;             /* Number of key searches where entry not found */
   int probes;                /* Number of buckets probed */
   int matches;               /* Number of calls of lphash_match */
 # endif
 
-} *lphash_table_t;
+} lphash_table_t;
 
 
-/* FUNCTIONS PROVIDED BY LPHASH TO THE APPLICATION. */
+/* PROTOTYPES FOR FUNCTIONS PROVIDED BY LPHASH TO THE APPLICATION. */
 
-lphash_table_t lphash_create (int initial_size);
+lphash_table_t *lphash_create (int initial_size);
 
-lphash_entry_t lphash_lookup (lphash_table_t table, lphash_hash_t hash,
-                              lphash_key_t key);
+lphash_bucket_t *lphash_key_lookup (lphash_table_t *table, lphash_hash_t hash,
+                                    lphash_key_t key);
 
-lphash_entry_t lphash_insert (lphash_table_t table, lphash_hash_t hash,
-                              lphash_key_t key);
+lphash_bucket_t *lphash_insert (lphash_table_t *table, lphash_hash_t hash,
+                                lphash_key_t key);
 
-void lphash_destroy (lphash_table_t table);
+void lphash_destroy (lphash_table_t *table);
+
+
+/* INLINE FUNCTIONS PROVIDED BY LPHASH TO THE APPLICATION. */
+
+static inline lphash_bucket_t *lphash_entry_lookup (lphash_table_t *table,
+                                                    lphash_hash_t hash,
+                                                    lphash_entry_t entry)
+{
+  int i, x;
+
+  i = hash & (table->size-1);
+  x = 0;
+
+  /* Note:  Table should always have an empty bucket, ensuring termination. */
+
+  for (;;)
+  {
+#   ifdef LPHASH_LINEAR
+      int ix = (i+x) & (table->size-1);
+#   else
+      int ix = i^x;
+#   endif
+
+    lphash_bucket_t *b = &table->buckets[ix];
+
+    if (b->entry == entry)
+    { return b;
+    }
+
+    if (b->entry == LPHASH_NO_ENTRY)
+    {  return NULL;
+    }
+
+    x += 1;
+  }
+}
+
+static inline lphash_bucket_t *lphash_first_bucket (lphash_table_t *table)
+{ 
+  if (table->occupied == 0)
+  { return NULL;
+  }
+
+  lphash_bucket_t *b = table->buckets;
+  while (b->entry == LPHASH_NO_ENTRY)
+  { b += 1;
+  }
+  return b;
+}
+
+static inline lphash_bucket_t *lphash_next_bucket (lphash_table_t *table, 
+                                                   lphash_bucket_t *bucket)
+{ 
+  for (;;)
+  { bucket += 1;
+    if (bucket >= table->buckets + table->size)
+    { return NULL;
+    }
+    if (bucket->entry != LPHASH_NO_ENTRY)
+    { return bucket;
+    }
+  }
+}
 
 
 /* FUNCTIONS PROVIDED BY THE APPLICATION TO LPHASH.  Not declared if 
    the application has defined them as macros (in lphash-app.h). */
 
 #ifndef lphash_match 
-int lphash_match (lphash_entry_t entry, lphash_key_t key);
+int lphash_match (lphash_bucket_t *bucket, lphash_key_t key);
 #endif
 
-#ifndef lphash_make_entry
-lphash_entry_t lphash_make_entry (lphash_key_t key);
+#ifndef lphash_setup_bucket
+void lphash_setup_bucket (lphash_bucket_t *bucket, lphash_key_t key);
 #endif
 
 #ifndef lphash_malloc

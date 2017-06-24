@@ -646,14 +646,14 @@ static void SetupBuiltins(void)
 
 extern SEXP framenames; /* from model.c */
 
-lphash_entry_t lphash_make_entry (lphash_key_t key)
+void lphash_setup_bucket (lphash_bucket_t *bucket, lphash_key_t key)
 {
-    return SEXP32_FROM_SEXP (mkSYMSXP (mkChar(key), R_UnboundValue));
+    bucket->entry =  SEXP32_FROM_SEXP (mkSYMSXP (mkChar(key), R_UnboundValue));
 }
 
-int lphash_match (lphash_entry_t entry, lphash_key_t key)
+int lphash_match (lphash_bucket_t *bucket, lphash_key_t key)
 {
-    SEXP sym = SEXP_FROM_SEXP32 ((SEXP32) entry);
+    SEXP sym = SEXP_FROM_SEXP32 ((SEXP32) bucket->entry);
 
     return strcmp (key, CHAR(PRINTNAME(sym))) == 0;
 }
@@ -673,20 +673,21 @@ void InitNames()
 
     SetupBuiltins();
 
-    /* The SYMSXP objects below are not in the symbol table. */
+    /* The SYMSXP objects below are not in the symbol table.  Their
+       printnames are determined specially by PRINTNAME. */
 
     /* R_MissingArg */
     R_MissingArg = mkSYMSXP(R_NilValue,R_NilValue);
     SET_SYMVALUE(R_MissingArg, R_MissingArg);
-    SET_PRINTNAME(R_MissingArg, mkChar(""));
+
     /* R_MissingUnder */
     R_MissingUnder = mkSYMSXP(R_NilValue,R_NilValue);
     SET_SYMVALUE(R_MissingUnder, R_MissingArg);
-    SET_PRINTNAME(R_MissingUnder, mkChar("_"));
+
     /* R_RestartToken */
     R_RestartToken = mkSYMSXP(R_NilValue,R_NilValue);
     SET_SYMVALUE(R_RestartToken, R_RestartToken);
-    SET_PRINTNAME(R_RestartToken, mkChar(""));
+
 
     /* String constants (CHARSXP values) */
     /* Note: we don't want NA_STRING to be in the CHARSXP cache, so that
@@ -700,6 +701,8 @@ void InitNames()
     R_BlankString = mkChar("");
     R_BlankScalarString = ScalarString(R_BlankString);
     SET_NAMEDCNT_MAX(R_BlankScalarString);
+    /* R_UnderscoreString */
+    R_UnderscoreString = mkChar("_");
 
     /* Set up a set of globals so that a symbol table search can be
        avoided when matching something like dim or dimnames. */
@@ -718,23 +721,28 @@ void InitNames()
 
 static SEXP install_with_hashcode (char *name, int hashcode)
 {
-    SEXP32 sym32;
+    lphash_bucket_t *bucket;
 
-    sym32 = lphash_lookup (R_lphashSymTbl, hashcode, name);
-
-    if (sym32 != LPHASH_NO_ENTRY)
-        return SEXP_FROM_SEXP32(sym32);
+    bucket = lphash_key_lookup (R_lphashSymTbl, hashcode, name);
+    if (bucket != NULL)
+        return SEXP_FROM_SEXP32 (bucket->entry);
 
     /* Create a new symbol node and link it into the table. */
     if (strlen(name) > MAXIDSIZE)
 	error(_("variable names are limited to %d bytes"), MAXIDSIZE);
 
-    sym32 = lphash_insert (R_lphashSymTbl, hashcode, name);
+    bucket = lphash_insert (R_lphashSymTbl, hashcode, name);
 
-    if (sym32 == LPHASH_NO_ENTRY)
+    if (bucket == NULL)
         R_Suicide("couldn't allocate memory to expand symbol table");
 
-    SEXP sym = SEXP_FROM_SEXP32(sym32);
+    SEXP pname = mkChar(name);
+    IS_PRINTNAME(pname) = 1;
+
+    bucket->pname = CPTR_FROM_SEXP(pname);
+
+    SEXP sym = SEXP_FROM_SEXP32(bucket->entry);
+    SYM_HASH(sym) = CHAR_HASH(pname);
 
     int b1, b2;
     b1 = hashcode % 63;
@@ -768,11 +776,12 @@ SEXP installChar(SEXP charSXP)
 
 SEXP installed_already(const char *name)
 {
-    sggc_cptr_t sym32;
+    lphash_bucket_t *bucket;
 
-    sym32 = lphash_lookup (R_lphashSymTbl, Rf_char_hash(name), (char*) name);
+    bucket = lphash_key_lookup (R_lphashSymTbl, Rf_char_hash(name), 
+                                                (char *) name);
 
-    return sym32 == LPHASH_NO_ENTRY ? R_NoObject : SEXP_FROM_SEXP32(sym32);
+    return bucket == NULL ? R_NoObject : SEXP_FROM_SEXP32 (bucket->entry);
 }
 
 

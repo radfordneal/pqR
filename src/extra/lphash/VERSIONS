@@ -1,5 +1,13 @@
 The stable versions of lphash below are tagged in source code repository.
 
+Version 2017-06-21
+
+  Added scanning functions, some functions now static inline.
+
+Version 2017-06-08
+
+  Revised API; buckets visible to application; lookup by entry as well as key.
+
 Version 2017-05-26
 
   First complete version.

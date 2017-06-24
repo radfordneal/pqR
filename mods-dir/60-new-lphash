@@ -1,0 +1,4 @@
+New version of lphash, and changes to use it.
+
+PRINTNAME now kept in symbol table hash bucket.
+

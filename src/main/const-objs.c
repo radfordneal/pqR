@@ -143,7 +143,6 @@ R_CONST ENV_SEXPREC R_env_consts[1] = {
 SYM_SEXPREC R_sym_consts[1] = { 
 {
     CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,0),
-    .pname = R_NilValue, 
     .value = R_UnboundValue,
     .symbits = 0
 }

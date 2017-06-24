@@ -167,6 +167,7 @@ extern0 SEXP	R_sort_list;          /* "sort.list" */
 extern0 SEXP	R_S3MethodsTable;     /* ".__S3MethodsTable__." */
 extern0 SEXP	R_previousSymbol;     /* "previous" */
 
+extern0 SEXP	R_UnderscoreString;   /* "_", as a CHARSXP */
 
  /* writable char access for R internal use only */
 #define CHAR_RW(x)	((char *) CHAR(x))
@@ -981,7 +982,7 @@ LibExtern int	R_Is_Running;	    /* for Windows memory manager */
 /* Evaluation Environment */
 LibExtern SEXP	R_CurrentExpr;	    /* Currently evaluating expression */
 extern0 SEXP	R_ReturnedValue;    /* Slot for return-ing values */
-extern0 lphash_table_t R_lphashSymTbl; /* Symbol table maintained by lphash */
+extern0 lphash_table_t *R_lphashSymTbl; /* Symbol table maintained by lphash */
 #ifdef R_USE_SIGNALS
 LibExtern RCNTXT R_Toplevel;	    /* Storage for the toplevel environment */
 LibExtern RCNTXT* R_ToplevelContext;  /* The toplevel environment */

@@ -23,6 +23,8 @@ typedef int lphash_entry_t;
 typedef int lphash_key_t;
 typedef unsigned lphash_hash_t;
 
+typedef struct { lphash_entry_t entry; lphash_hash_t hash; } lphash_bucket_t;
+
 #define LPHASH_NO_ENTRY (-1)
 
 #ifndef LPHASH_MAX_LOAD
@@ -32,7 +34,7 @@ typedef unsigned lphash_hash_t;
 #define lphash_malloc malloc
 #define lphash_free free
 
-#define lphash_match(e,k) ((e) == (k))
-#define lphash_make_entry(k) (k)
+#define lphash_match(b,k) ((b)->entry == (k))
+#define lphash_setup_bucket(b,k) ((b)->entry = (k))
 
 #include "lphash.h"
