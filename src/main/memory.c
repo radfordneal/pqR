@@ -1891,7 +1891,7 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 /* Reallocate a vector with different length, returning the same storage
    if possible/reasonable, and otherwise new storage, after copying contents
    up to new length and initializing any new elements to NA, or R_NilValue,
-   or raw 0. */
+   or raw 0.  Protects its argument. */
 
 SEXP reallocVector (SEXP vec, R_len_t length)
 {
@@ -1942,11 +1942,13 @@ SEXP reallocVector (SEXP vec, R_len_t length)
         vec->cptr = cp;
 #endif
         ATTRIB_W(vec) = ATTRIB_W(old_vec);  /* might not be in SGGC_DATA */
+        LENGTH(vec) = length;
+
+        if (R_IsMemReporting) R_ReportAllocation (vec);
     }
-
-    /* Set length to new value. */
-
-    LENGTH(vec) = length;
+    else {
+        LENGTH(vec) = length;
+    }
 
     /* See if we need to initialize new elements. */
 
@@ -2533,6 +2535,8 @@ print_newline:
 
 static void R_ReportAllocation (SEXP s)
 {
+    PROTECT(s);
+
     SEXPTYPE type = TYPEOF(s);
     R_len_t length = LENGTH(s);
     R_size_t size = SGGC_TOTAL_BYTES(type,length);
@@ -2558,6 +2562,8 @@ static void R_ReportAllocation (SEXP s)
         }
         R_OutputStackTrace();
     }
+
+    UNPROTECT(1);
 }
 
 static void R_EndMemReporting(void)
