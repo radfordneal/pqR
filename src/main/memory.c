@@ -1899,13 +1899,16 @@ SEXP reallocVector (SEXP vec, R_len_t length)
     sggc_nchunks_t new_chunks = Rf_nchunks (TYPEOF(vec), length);
     R_len_t curr_len = LENGTH(vec);
 
-    /* See if we can just reduce LENGTH and return current location. 
-       Don't do this if the new vector would have lots of unused space. */
+    /* See if we can just reduce LENGTH and return current location.
+       Don't do this if the new vector would have lots of unused space
+       - half or more, so that we won't reallocate into a small object
+       of the same size (could be cleverer about this, but may not be
+       worth it). */
 
     if (length <= curr_len) {
         if (length == curr_len)
             return vec;
-        if (new_chunks >= 0.85 * curr_chunks || curr_chunks - new_chunks < 3) {
+        if (new_chunks >= (curr_chunks>>1) || curr_chunks - new_chunks < 4) {
             LENGTH(vec) = length;
             return vec;
         }
@@ -1915,7 +1918,7 @@ SEXP reallocVector (SEXP vec, R_len_t length)
        over existing elements.  Allocate a bit extra if possible, to
        help with any future length extensions. */
 
-    if (new_chunks > curr_chunks || new_chunks < 0.9 * curr_chunks) {
+    if (new_chunks > curr_chunks || length < curr_len) {
 
         if ((int) (new_chunks*1.05) <= INT_MAX)
             new_chunks = (int) (new_chunks*1.05);
