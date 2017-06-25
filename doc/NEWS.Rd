@@ -15,6 +15,9 @@
 
   \subsection{DOCUMENTATION AND FEATURE CHANGES}{
   \itemize{
+  \item It is now allowed to set the length of an ``expression''
+        object with \code{length(e)<-len}, as for other vector
+        types.  Any extra elements are set to \code{NULL}.
   \item Attempts to set attributes on a symbol are now silently ignored,
         both at the R level, with \code{attr} and \code{attributes}, and
         at the C API level, with \code{SET_ATTRIB}.  Getting the attributes

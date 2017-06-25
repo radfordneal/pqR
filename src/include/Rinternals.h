@@ -1645,6 +1645,7 @@ SEXP Rf_allocVector1RAW(void);
 SEXP Rf_allocVector1LGL(void);
 SEXP Rf_allocVector1INT(void);
 SEXP Rf_allocVector1REAL(void);
+SEXP Rf_reallocVector(SEXP, R_len_t);
 int  Rf_any_duplicated(SEXP x, Rboolean from_last);
 int  Rf_any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last);
 SEXP Rf_applyClosure(SEXP, SEXP, SEXP, SEXP, SEXP);
@@ -2009,6 +2010,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define allocVector1LGL		Rf_allocVector1LGL
 #define allocVector1INT		Rf_allocVector1INT
 #define allocVector1REAL	Rf_allocVector1REAL
+#define reallocVector		Rf_reallocVector
 #define any_duplicated		Rf_any_duplicated
 #define any_duplicated3		Rf_any_duplicated3
 #define applyClosure		Rf_applyClosure

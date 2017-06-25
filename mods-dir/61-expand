@@ -1,0 +1,4 @@
+Improve performance when vectors are extended.
+
+Done for length(vec) <- len.  Also now allow length(e) <- len when e
+is an "expression".

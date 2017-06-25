@@ -959,7 +959,27 @@ static SEXP do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (len == NA_INTEGER)
        errorcall(call,_("missing value for 'length'"));
     if (len < 0) errorcall(call,_("invalid value"));
-    return lengthgets(x, len);
+
+    if (isVector(x) && !NAMEDCNT_GT_1(x)) {
+        SEXP xnames = getAttrib (x, R_NamesSymbol);
+        if (xnames != R_NilValue) {
+            R_len_t old_len = LENGTH(xnames);
+            R_len_t i;
+            xnames = reallocVector (xnames, len);
+            for (i = old_len; i < len; i++) 
+                SET_STRING_ELT (xnames, i, R_BlankString);
+        }
+        PROTECT(xnames);
+        PROTECT(x = reallocVector (x, len));
+        ATTRIB_W(x) = R_NilValue;
+        if (xnames != R_NilValue)
+            setAttrib (x, R_NamesSymbol, xnames);
+        UNPROTECT(2);  /* x, xnames */
+        SET_NAMEDCNT_0(x);
+        return x;
+    }
+    else
+        return lengthgets(x, len);
 }
 
 /* Expand dots in args, but do not evaluate */
