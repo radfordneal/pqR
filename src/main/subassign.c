@@ -35,51 +35,38 @@
 
 
 /* EnlargeVector() takes a vector "x" and changes its length to "newlen".
-   This allows to assign values "past the end" of the vector or list.
-   Note that, unlike S, we only extend as much as is necessary.
-*/
-static SEXP EnlargeVector(SEXP call, SEXP x, R_len_t newlen)
-{
-    R_len_t i, len;
-    SEXP newx, names, newnames;
+   This allows to assign values "past the end" of the vector or list. */
 
-    /* Sanity Checks */
+static SEXP EnlargeVector(SEXP call, SEXP x, R_len_t new_len)
+{
     if (!isVector(x))
 	errorcall(call,_("attempt to enlarge non-vector"));
 
-    /* Enlarge the vector itself. */
-    len = LENGTH(x);
+    R_len_t len = LENGTH(x);
+
     if (LOGICAL(GetOption1(install("check.bounds")))[0])
 	warningcall (call,
           _("assignment outside vector/list limits (extending from %d to %d)"),
-          len, newlen);
-    PROTECT(x);
-    PROTECT(newx = allocVector(TYPEOF(x), newlen));
+          len, new_len);
 
-    if (isVectorList(x)) {
-        /* should be OK to copy without adjusting NAMEDCNT (x won't be used) */
-        copy_vector_elements (newx, 0, x, 0, len);
-        /* elements after ones copied were set to R_NilValue by allocVector */
-    }
-    else {
-        copy_elements (newx, 0, 1, x, 0, 1, len);
-        set_elements_to_NA_or_NULL (newx, len, newlen-len);
+    SEXP xnames = getAttrib (x, R_NamesSymbol);
+    SEXP new_x, new_xnames;
+
+    if (xnames != R_NilValue) {
+        R_len_t old_len = LENGTH(xnames);
+        R_len_t i;
+        new_xnames = reallocVector (xnames, new_len);
+        for (i = old_len; i < new_len; i++)
+            SET_STRING_ELT (new_xnames, i, R_BlankString);
     }
 
-    /* Adjust the attribute list. */
-    names = getAttrib(x, R_NamesSymbol);
-    if (names != R_NilValue) {
-	PROTECT(newnames = allocVector(STRSXP, newlen));
-	for (i = 0; i < len; i++)
-	    SET_STRING_ELT(newnames, i, STRING_ELT(names, i));
-	for (i = len; i < newlen; i++)
-	    SET_STRING_ELT(newnames, i, R_BlankString);
-	setAttrib(newx, R_NamesSymbol, newnames);
-	UNPROTECT(1);
-    }
-    copyMostAttrib(x, newx);
-    UNPROTECT(2);
-    return newx;
+    PROTECT(new_xnames);
+    PROTECT(new_x = reallocVector (x, new_len));
+    if (xnames != R_NilValue && new_xnames != xnames)
+        setAttrib (new_x, R_NamesSymbol, new_xnames);
+    UNPROTECT(2);  /* new_x, new_xnames */
+
+    return new_x;
 }
 
 /* used instead of coerceVector to embed a non-vector in a list for
