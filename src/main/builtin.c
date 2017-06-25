@@ -136,26 +136,47 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
 static R_len_t asVecSize(SEXP call, SEXP x)
 {
     if (TYPEOF(x) != INTSXP && TYPEOF(x) != REALSXP || LENGTH(x) != 1)
-        errorcall(call,_("invalid value"));
+        if (call == R_NilValue)
+            error(_("invalid '%s' argument"),"length");
+        else
+            errorcall(call,_("invalid value"));
 
     if (TYPEOF(x) == INTSXP) {
         int res = INTEGER(x)[0];
         if (res == NA_INTEGER)
-            errorcall(call,_("vector size cannot be NA"));
+            if (call == R_NilValue)
+                error(_("vector size cannot be NA"));
+            else
+                errorcall(call,_("vector size cannot be NA"));
         if (res < 0)
-            errorcall(call,_("vector size cannot be negative"));
+            if (call == R_NilValue)
+                error(_("vector size cannot be negative"));
+            else
+                errorcall(call,_("vector size cannot be negative"));
         return res;
     }
     else {  /* REALSXP */
         double d = REAL(x)[0];
         if (ISNAN(d)) 
-            errorcall(call,_("vector size cannot be NA/NaN"));
+            if (call == R_NilValue)
+                error(_("vector size cannot be NA/NaN"));
+            else
+                errorcall(call,_("vector size cannot be NA/NaN"));
         if (!R_FINITE(d))
-            errorcall(call,_("vector size cannot be infinite"));
+            if (call == R_NilValue)
+                error(_("vector size cannot be infinite"));
+            else
+                errorcall(call,_("vector size cannot be infinite"));
         if (d < 0)
-            errorcall(call,_("vector size cannot be negative"));
+            if (call == R_NilValue)
+                error(_("vector size cannot be negative"));
+            else
+                errorcall(call,_("vector size cannot be negative"));
         if (d > R_LEN_T_MAX)
-            errorcall(call,_("vector size specified is too large"));
+            if (call == R_NilValue)
+                error(_("vector size specified is too large"));
+            else
+                errorcall(call,_("vector size specified is too large"));
         return (R_len_t) d;
     }
 }
@@ -822,7 +843,7 @@ static SEXP do_makevector(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXPTYPE mode;
 
     checkArity(op, args);
-    len = asVecSize(call,CADR(args));
+    len = asVecSize(R_NilValue,CADR(args));
     s = coerceVector(CAR(args), STRSXP);
     if (length(s) != 1) error(_("invalid '%s' argument"), "mode");
 
