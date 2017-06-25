@@ -133,28 +133,31 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
 }
 
 
-static R_len_t asVecSize(SEXP x)
+static R_len_t asVecSize(SEXP call, SEXP x)
 {
-    if (isVectorAtomic(x) && LENGTH(x) >= 1) {
-	switch (TYPEOF(x)) {
-	case INTSXP: 
-	{
-	    int res = INTEGER(x)[0];
-	    if(res == NA_INTEGER) error(_("vector size cannot be NA"));
-	    return res;
-	}
-	case REALSXP:
-	{
-	    double d = REAL(x)[0];
-	    if(ISNAN(d)) error(_("vector size cannot be NA/NaN"));
-	    if(!R_FINITE(d)) error(_("vector size cannot be infinite"));
-	    if(d < 0) error(_("vector size cannot be negative"));
-	    if(d > R_LEN_T_MAX) error(_("vector size specified is too large"));
-	    return (R_size_t) d;
-	}
-	}
+    if (TYPEOF(x) != INTSXP && TYPEOF(x) != REALSXP || LENGTH(x) != 1)
+        errorcall(call,_("invalid value"));
+
+    if (TYPEOF(x) == INTSXP) {
+        int res = INTEGER(x)[0];
+        if (res == NA_INTEGER)
+            errorcall(call,_("vector size cannot be NA"));
+        if (res < 0)
+            errorcall(call,_("vector size cannot be negative"));
+        return res;
     }
-    return -1;  /* which gives error in the caller */
+    else {  /* REALSXP */
+        double d = REAL(x)[0];
+        if (ISNAN(d)) 
+            errorcall(call,_("vector size cannot be NA/NaN"));
+        if (!R_FINITE(d))
+            errorcall(call,_("vector size cannot be infinite"));
+        if (d < 0)
+            errorcall(call,_("vector size cannot be negative"));
+        if (d > R_LEN_T_MAX)
+            errorcall(call,_("vector size specified is too large"));
+        return (R_len_t) d;
+    }
 }
 
 static SEXP do_delayed(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -819,9 +822,7 @@ static SEXP do_makevector(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXPTYPE mode;
 
     checkArity(op, args);
-    if (length(CADR(args)) != 1) error(_("invalid '%s' argument"), "length");
-    len = asVecSize(CADR(args));
-    if (len < 0) error(_("invalid '%s' argument"), "length");
+    len = asVecSize(call,CADR(args));
     s = coerceVector(CAR(args), STRSXP);
     if (length(s) != 1) error(_("invalid '%s' argument"), "mode");
 
@@ -871,11 +872,13 @@ SEXP lengthgets(SEXP x, R_len_t len)
 {
     R_len_t lenx, i;
     SEXP rval, names, xnames, t;
-    if (!isVector(x) && !isVectorizable(x))
+    if (!isVector(x) && !isPairList(x))
 	error(_("cannot set length of non-vector"));
     lenx = length(x);
-    if (lenx == len)
-	return (x);
+    if (lenx == len) {
+        /* Return without removing attributes - relied on in 'methods'. */
+	return x;  
+    }
     PROTECT(rval = allocVector(TYPEOF(x), len));
     if (isVector(x)) {
         PROTECT(xnames = getAttrib(x, R_NamesSymbol));
@@ -888,8 +891,6 @@ SEXP lengthgets(SEXP x, R_len_t len)
     }
 
     switch (TYPEOF(x)) {
-    case NILSXP:
-	break;
     case LGLSXP:
     case INTSXP:
 	for (i = 0; i < len; i++)
@@ -913,12 +914,6 @@ SEXP lengthgets(SEXP x, R_len_t len)
 	for (i = lenx; i < len; i++)
 	    SET_STRING_ELT(rval, i, NA_STRING);
 	break;
-    case LISTSXP:
-	for (t = rval; t != R_NilValue; t = CDR(t), x = CDR(x)) {
-	    SETCAR(t, CAR(x));
-	    SET_TAG(t, TAG(x));
-            INC_NAMEDCNT(CAR(x));
-	}
     case VECSXP:
         copy_vector_elements (rval, 0, x, 0, len > lenx ? lenx : len);
         if (NAMEDCNT_GT_1(x)) {
@@ -930,8 +925,19 @@ SEXP lengthgets(SEXP x, R_len_t len)
 	for (i = 0; i < len; i++)
 	    RAW(rval)[i] = i < lenx ? RAW(x)[i] : (Rbyte) 0;
 	break;
+    case NILSXP:
+	break;        /* DUBIOUS THING TO DO! */
+    case LISTSXP:
+    case LANGSXP:
+        /* below uses fact that CAR, CDR, and TAG of R_NilValue are R_NilValue*/
+	for (t = rval; t != R_NilValue; t = CDR(t), x = CDR(x)) {
+	    SETCAR(t, CAR(x));
+	    SET_TAG(t, TAG(x));
+            INC_NAMEDCNT(CAR(x));
+	}
+        break;
     default:
-	UNIMPLEMENTED_TYPE("length<-", x);
+	abort();
     }
 
     UNPROTECT(1);
@@ -951,16 +957,11 @@ static SEXP do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(isObject(x) && DispatchOrEval(call, op, "length<-", args,
 				     rho, &ans, 0, 1))
 	return(ans);
-    if (!isVector(x) && !isVectorizable(x))
+    if (!isVector(x) && !isPairList(x))
        errorcall(call,_("invalid argument"));
-    if (length(CADR(args)) != 1)
-       errorcall(call,_("invalid value"));
-    len = asVecSize(CADR(args));
-    if (len == NA_INTEGER)
-       errorcall(call,_("missing value for 'length'"));
-    if (len < 0) errorcall(call,_("invalid value"));
+    len = asVecSize(call,CADR(args));
 
-    if (isVector(x) && !NAMEDCNT_GT_1(x)) {
+    if (isVector(x) && !NAMEDCNT_GT_1(x) && LENGTH(x) != len) {
         SEXP xnames = getAttrib (x, R_NamesSymbol);
         if (xnames != R_NilValue) {
             R_len_t old_len = LENGTH(xnames);

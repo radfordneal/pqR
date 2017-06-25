@@ -46,6 +46,9 @@
 
   \subsection{BUG FIXES}{
   \itemize{
+  \item Previously, \code{length(plist)<-n} did not work when \code{plist}
+        was a pairlist, but it does now.  This bug also exists in R Core
+        versions to at least R-3.4.0.
   \item Fixed a bug illustrated by the following:
 \preformatted{    a <- as.integer(NA); e <- new.env(size=a); print(a)
 }
