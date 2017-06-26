@@ -55,15 +55,23 @@ static SEXP EnlargeVector(SEXP call, SEXP x, R_len_t new_len)
     if (xnames != R_NilValue) {
         R_len_t old_len = LENGTH(xnames);
         R_len_t i;
-        new_xnames = reallocVector (xnames, new_len);
+        if (NAMEDCNT_GT_1(xnames)) {
+            new_xnames = allocVector (STRSXP, new_len);
+            copy_string_elements (new_xnames, 0, xnames, 0, old_len);
+        }
+        else
+            new_xnames = reallocVector (xnames, new_len);
         for (i = old_len; i < new_len; i++)
             SET_STRING_ELT (new_xnames, i, R_BlankString);
     }
 
     PROTECT(new_xnames);
     PROTECT(new_x = reallocVector (x, new_len));
-    if (xnames != R_NilValue && new_xnames != xnames)
+    if (xnames != R_NilValue && new_xnames != xnames) {
         setAttrib (new_x, R_NamesSymbol, new_xnames);
+        if (NAMEDCNT_EQ_0(new_xnames))
+            SET_NAMEDCNT(new_xnames,1);
+    }
     UNPROTECT(2);  /* new_x, new_xnames */
 
     return new_x;
@@ -1776,22 +1784,25 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 		SET_VECTOR_ELEMENT_TO_VALUE(x, imatch, val);
 	    }
 	    else {
-		/* We are introducing a new element.
-		   Enlarge the list, add the new element,
-		   and finally, adjust the attributes. */
 		SEXP ans, ansnames;
-		PROTECT(ans = allocVector(type, nx + 1));
-		PROTECT(ansnames = allocVector(STRSXP, nx + 1));
-                copy_vector_elements (ans, 0, x, 0, nx);
-		if (names == R_NilValue)
-		    for (int i = 0; i < nx; i++)
-			SET_STRING_ELT(ansnames, i, R_BlankString);
-		else
-                    copy_string_elements (ansnames, 0, names, 0, nx);
-		SET_VECTOR_ELEMENT_TO_VALUE(ans, nx, val);
-		SET_STRING_ELT(ansnames, nx, pname);
-		setAttrib(ans, R_NamesSymbol, ansnames);
-		copyMostAttrib(x, ans);
+                if (x == R_NilValue)
+                    PROTECT (ans = allocVector (VECSXP, 1));
+                else
+                    PROTECT (ans = reallocVector (x, nx+1));
+                if (names == R_NilValue || NAMEDCNT_GT_1(names)) {
+                    R_len_t i;
+                    PROTECT(ansnames = allocVector (STRSXP, nx+1));
+                    if (names != R_NilValue)
+                        copy_string_elements (ansnames, 0, names, 0, nx);
+                }
+                else {
+                    PROTECT(ansnames = reallocVector (names, nx+1));
+                }
+		SET_VECTOR_ELEMENT_TO_VALUE (ans, nx, val);
+		SET_STRING_ELT (ansnames, nx, pname);
+		setAttrib (ans, R_NamesSymbol, ansnames);
+                if (NAMEDCNT_EQ_0(ansnames))
+                    SET_NAMEDCNT(ansnames,1);
 		UNPROTECT(2);
 		x = ans;
 	    }

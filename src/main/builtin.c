@@ -987,9 +987,16 @@ static SEXP do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho)
         if (xnames != R_NilValue) {
             R_len_t old_len = LENGTH(xnames);
             R_len_t i;
-            xnames = reallocVector (xnames, len);
-            for (i = old_len; i < len; i++) 
-                SET_STRING_ELT (xnames, i, R_BlankString);
+            if (NAMEDCNT_GT_1(xnames)) {
+                SEXP old_names = xnames;
+                xnames = allocVector (STRSXP, len);
+                copy_string_elements (xnames, 0, old_names, 0, len);
+            }
+            else {
+                xnames = reallocVector (xnames, len);
+                for (i = old_len; i < len; i++) 
+                    SET_STRING_ELT (xnames, i, R_BlankString);
+            }
         }
         PROTECT(xnames);
         PROTECT(x = reallocVector (x, len));
