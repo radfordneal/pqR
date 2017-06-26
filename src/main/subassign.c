@@ -50,7 +50,8 @@ static SEXP EnlargeVector(SEXP call, SEXP x, R_len_t new_len)
           len, new_len);
 
     SEXP xnames = getAttrib (x, R_NamesSymbol);
-    SEXP new_x, new_xnames;
+    SEXP new_xnames = R_NilValue;
+    SEXP new_x;
 
     if (xnames != R_NilValue) {
         R_len_t old_len = LENGTH(xnames);
