@@ -1263,9 +1263,15 @@ static SEXP DeleteOneVectorListItem(SEXP x, int which)
         DEC_NAMEDCNT(VECTOR_ELT(x,which));
 	xnames = getNamesAttrib(x);
 	if (xnames != R_NilValue) {
-	    PROTECT(ynames = NAMEDCNT_GT_1(xnames) ? allocVector(STRSXP, n-1)
-                                                   : reallocVector(xnames,n-1));
-            copy_string_elements (ynames, which, xnames, which+1, n-which-1);
+            if (NAMEDCNT_GT_1(xnames)) {
+                PROTECT(ynames = allocVector(STRSXP, n-1));
+                copy_string_elements(ynames, 0, xnames, 0, which);
+                copy_string_elements(ynames, which, xnames, which+1, n-which-1);
+            }
+            else {
+                copy_string_elements(xnames, which, xnames, which+1, n-which-1);
+                PROTECT(ynames = reallocVector(xnames,n-1));
+            }
 	    if (y != x || ynames != xnames) 
                 setAttrib(y, R_NamesSymbol, ynames);
 	    UNPROTECT(1);
