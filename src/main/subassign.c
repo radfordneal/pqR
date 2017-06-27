@@ -181,12 +181,20 @@ static SEXP DeleteListElementsSeq (SEXP x, R_len_t start, R_len_t end)
 
     xnames = getNamesAttrib(x);
     if (xnames != R_NilValue) {
-        PROTECT(xnewnames = allocVector(STRSXP, len-(end-start+1)));
-        if (start>1) 
-            copy_string_elements (xnewnames, 0, xnames, 0, start-1);
-        if (end<len) 
-            copy_string_elements (xnewnames, start-1, xnames, end, len-end);
-        setAttrib(xnew, R_NamesSymbol, xnewnames);
+        if (NAMEDCNT_GT_1(xnames)) {
+            PROTECT(xnewnames = allocVector(STRSXP, len-(end-start+1)));
+            if (start > 1)
+                copy_string_elements(xnewnames, 0, xnames, 0, start-1);
+            if (end < len)
+                copy_string_elements(xnewnames, start-1, xnames, end, len-end);
+        }
+        else {
+            if (end < len)
+                copy_string_elements(xnames, start-1, xnames, end, len-end);
+            PROTECT(xnewnames = reallocVector(xnames,len-(end-start+1)));
+        }
+        if (xnew != x || xnewnames != xnames) 
+            setAttrib(xnew, R_NamesSymbol, xnewnames);
         UNPROTECT(1);
     }
 
@@ -1251,38 +1259,6 @@ static SEXP do_subassign_dflt_seq
     return x;
 }
 
-static SEXP DeleteOneVectorListItem(SEXP x, int which)
-{
-    SEXP y, xnames, ynames;
-    int n;
-    n = length(x);
-    if (0 <= which && which < n) {
-	PROTECT(y = allocVector(TYPEOF(x), n-1));
-        copy_vector_elements (y, 0, x, 0, which);
-        copy_vector_elements (y, which, x, which+1, n-which-1);
-        DEC_NAMEDCNT(VECTOR_ELT(x,which));
-	xnames = getNamesAttrib(x);
-	if (xnames != R_NilValue) {
-            if (NAMEDCNT_GT_1(xnames)) {
-                PROTECT(ynames = allocVector(STRSXP, n-1));
-                copy_string_elements(ynames, 0, xnames, 0, which);
-                copy_string_elements(ynames, which, xnames, which+1, n-which-1);
-            }
-            else {
-                copy_string_elements(xnames, which, xnames, which+1, n-which-1);
-                PROTECT(ynames = reallocVector(xnames,n-1));
-            }
-	    if (y != x || ynames != xnames) 
-                setAttrib(y, R_NamesSymbol, ynames);
-	    UNPROTECT(1);
-	}
-	copyMostAttrib(x, y);
-	UNPROTECT(1);
-	return y;
-    }
-    return x;
-}
-
 /* The [[<- operator; should be fast. */
 
 static SEXP do_subassign2_dflt_int
@@ -1481,7 +1457,7 @@ static SEXP do_subassign2_dflt_int
     if (isVector(x)) {
 
         if (nsubs == 1 && isVectorList(x) && y == R_NilValue) {
-            PROTECT(x = DeleteOneVectorListItem(x, offset));
+            PROTECT(x = DeleteListElementsSeq (x, offset+1, offset+1));
         }
         else {
 
