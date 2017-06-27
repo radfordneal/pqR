@@ -5,7 +5,7 @@ is an "expression".  Fix length(p) <- len when p is a pairlist/language object.
 
 Done for [, [[, and $ as well.
 
-Extending names tries to be fast, but won't be, because NAMEDCNT gets
-set to max elsewhere.
+Introduces new internal procedures getNamesAttrib and no_dim_attributes.
+
 
 

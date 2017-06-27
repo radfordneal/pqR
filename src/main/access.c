@@ -365,7 +365,9 @@ void (SET_STRING_ELT)(SEXP x, int i, SEXP v) {
     STRING_ELT(x, i) = v;
 }
 
-/* Copy n string elements from v (starting at j) to x (starting at i). */
+/* Copy n string elements from v (starting at j) to x (starting at i). 
+   Copied sequentially; x and v can be the same object, but note the
+   consequences of this. */
 void copy_string_elements(SEXP x, int i, SEXP v, int j, int n) 
 {
     SEXP e;
@@ -375,8 +377,8 @@ void copy_string_elements(SEXP x, int i, SEXP v, int j, int n)
 	error("%s() can only be applied to a '%s', not a '%s'",
          "copy_string_elements", "character vector", type2char(TYPEOF(x)));
 
-    if (sggc_youngest_generation(CPTR_FROM_SEXP(x))) {
-        /* x can't be older than anything */
+    if (sggc_youngest_generation(CPTR_FROM_SEXP(x)) || x == v) {
+        /* x can't be older than anything, or just copying within x */
         for (k = 0; k<n; k++) {
             e = STRING_ELT(v,j+k);
             STRING_ELT(x,i+k) = e;

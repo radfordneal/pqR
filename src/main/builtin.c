@@ -983,14 +983,15 @@ static SEXP do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho)
     len = asVecSize(call,CADR(args));
 
     if (isVector(x) && !NAMEDCNT_GT_1(x) && LENGTH(x) != len) {
-        SEXP xnames = getAttrib (x, R_NamesSymbol);
+        SEXP xnames = getNamesAttrib(x);
         if (xnames != R_NilValue) {
             R_len_t old_len = LENGTH(xnames);
             R_len_t i;
             if (NAMEDCNT_GT_1(xnames)) {
                 SEXP old_names = xnames;
                 xnames = allocVector (STRSXP, len);
-                copy_string_elements (xnames, 0, old_names, 0, len);
+                copy_string_elements (xnames, 0, old_names, 0, 
+                                      len > old_len ? old_len : len);
             }
             else {
                 xnames = reallocVector (xnames, len);

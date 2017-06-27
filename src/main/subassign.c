@@ -34,8 +34,11 @@
 #include <R_ext/RS.h> /* for test of S4 objects */
 
 
-/* EnlargeVector() takes a vector "x" and changes its length to "newlen".
-   This allows to assign values "past the end" of the vector or list. */
+/* EnlargeVector() takes a vector "x" and changes its length to
+   "newlen".  This allows to assign values "past the end" of the
+   vector or list.  Names are extended as well, if present.  The dim
+   and dimnames attributes are deleted. Other attributes are
+   preserved. */
 
 static SEXP EnlargeVector(SEXP call, SEXP x, R_len_t new_len)
 {
@@ -49,7 +52,7 @@ static SEXP EnlargeVector(SEXP call, SEXP x, R_len_t new_len)
           _("assignment outside vector/list limits (extending from %d to %d)"),
           len, new_len);
 
-    SEXP xnames = getAttrib (x, R_NamesSymbol);
+    SEXP xnames = getNamesAttrib(x);
     SEXP new_xnames = R_NilValue;
     SEXP new_x;
 
@@ -68,18 +71,16 @@ static SEXP EnlargeVector(SEXP call, SEXP x, R_len_t new_len)
 
     PROTECT(new_xnames);
     PROTECT(new_x = reallocVector (x, new_len));
-    if (xnames != R_NilValue && new_xnames != xnames) {
+    no_dim_attributes(new_x);
+    if (xnames != R_NilValue && new_xnames != xnames)
         setAttrib (new_x, R_NamesSymbol, new_xnames);
-        if (NAMEDCNT_EQ_0(new_xnames))
-            SET_NAMEDCNT(new_xnames,1);
-    }
     UNPROTECT(2);  /* new_x, new_xnames */
 
     return new_x;
 }
 
 /* used instead of coerceVector to embed a non-vector in a list for
-   purposes of SubassignTypeFix, for cases in wich coerceVector should
+   purposes of SubassignTypeFix, for cases in which coerceVector should
    fail; namely, S4SXP */
 static SEXP embedInVector(SEXP v)
 {
@@ -178,7 +179,7 @@ static SEXP DeleteListElementsSeq (SEXP x, R_len_t start, R_len_t end)
     if (end<len) 
         copy_vector_elements (xnew, start-1, x, end, len-end);
 
-    xnames = getAttrib(x, R_NamesSymbol);
+    xnames = getNamesAttrib(x);
     if (xnames != R_NilValue) {
         PROTECT(xnewnames = allocVector(STRSXP, len-(end-start+1)));
         if (start>1) 
@@ -250,7 +251,7 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
             DEC_NAMEDCNT (VECTOR_ELT (x, i));
     }
 
-    xnames = getAttrib(x, R_NamesSymbol);
+    xnames = getNamesAttrib(x);
     if (xnames != R_NilValue) {
 	PROTECT(xnewnames = allocVector(STRSXP, ii));
 	ii = 0;
@@ -574,7 +575,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
        attribute (a vector list) of the generated subscript vector */
     if (TYPEOF(s)==STRSXP && 
           (newnames = getAttrib(indx, R_UseNamesSymbol)) != R_NilValue) {
-        SEXP oldnames = getAttrib(x, R_NamesSymbol);
+        SEXP oldnames = getNamesAttrib(x);
         if (oldnames == R_NilValue) {
             PROTECT(oldnames = allocVector(STRSXP,nx)); /* all R_BlankString */
             setAttrib(x, R_NamesSymbol, oldnames);
@@ -1260,12 +1261,13 @@ static SEXP DeleteOneVectorListItem(SEXP x, int which)
         copy_vector_elements (y, 0, x, 0, which);
         copy_vector_elements (y, which, x, which+1, n-which-1);
         DEC_NAMEDCNT(VECTOR_ELT(x,which));
-	xnames = getAttrib(x, R_NamesSymbol);
+	xnames = getNamesAttrib(x);
 	if (xnames != R_NilValue) {
-	    PROTECT(ynames = allocVector(STRSXP, n - 1));
-            copy_string_elements (ynames, 0, xnames, 0, which);
+	    PROTECT(ynames = NAMEDCNT_GT_1(xnames) ? allocVector(STRSXP, n-1)
+                                                   : reallocVector(xnames,n-1));
             copy_string_elements (ynames, which, xnames, which+1, n-which-1);
-	    setAttrib(y, R_NamesSymbol, ynames);
+	    if (y != x || ynames != xnames) 
+                setAttrib(y, R_NamesSymbol, ynames);
 	    UNPROTECT(1);
 	}
 	copyMostAttrib(x, y);
@@ -1398,7 +1400,7 @@ static SEXP do_subassign2_dflt_int
                       _("recursive indexing failed at level %d\n"), i+1);
                 length_x = length(x);
                 off = get1index (thesub, 
-                        str_sym_sub ? getAttrib(x, R_NamesSymbol) : R_NilValue,
+                        str_sym_sub ? getNamesAttrib(x) : R_NilValue,
                         length_x, TRUE, i, call);
                 if (off < 0 || off >= length_x)
                     errorcall(call, _("no such index at level %d\n"), i+1);
@@ -1440,7 +1442,7 @@ static SEXP do_subassign2_dflt_int
     if (nsubs == 1) {
         int str_sym_sub = isString(thesub) || isSymbol(thesub);
         offset = get1index (thesub, 
-                   str_sym_sub ? getAttrib(x,R_NamesSymbol) : R_NilValue,
+                   str_sym_sub ? getNamesAttrib(x) : R_NilValue,
                    length_x, FALSE, (recursed ? len-1 : -1), call);
         if (offset < 0) {
             if (str_sym_sub)
@@ -1500,7 +1502,7 @@ static SEXP do_subassign2_dflt_int
             /* (if it doesn't already exist) and set the new */
             /* value in the names attribute. */
             if (stretch && newname != R_NilValue) {
-                names = getAttrib(x, R_NamesSymbol);
+                names = getNamesAttrib(x);
                 if (names == R_NilValue) {
                     PROTECT(names = allocVector(STRSXP, LENGTH(x)));
                     SET_STRING_ELT(names, offset, newname);
@@ -1731,7 +1733,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
         else {
             if (NAMEDCNT_GT_1(x) || x == val)
                 REPROTECT(x = dup_top_level(x), pxidx);
-            names = getAttrib(x, R_NamesSymbol);
+            names = getNamesAttrib(x);
             nx = LENGTH(x);
 
             /* Set imatch to the index of the selected element, stays at
@@ -1801,9 +1803,8 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
                 }
 		SET_VECTOR_ELEMENT_TO_VALUE (ans, nx, val);
 		SET_STRING_ELT (ansnames, nx, pname);
+                no_dim_attributes(ans);
 		setAttrib (ans, R_NamesSymbol, ansnames);
-                if (NAMEDCNT_EQ_0(ansnames))
-                    SET_NAMEDCNT(ansnames,1);
 		UNPROTECT(2);
 		x = ans;
 	    }

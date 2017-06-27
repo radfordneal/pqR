@@ -380,6 +380,7 @@
  Rf_mkSYMSXP
  Rf_name2col
  Rf_nonsubsettable_error
+ Rf_no_dim_attributes
  Rf_onsigusr1
  Rf_onsigusr2
  Rf_osDynSymbol
@@ -667,6 +668,7 @@
  getConnection_no_err
  getDefaults
  getGraphMenu
+ getNamesAttrib
  getIdentification
  getParseContext
  getParseFilename
