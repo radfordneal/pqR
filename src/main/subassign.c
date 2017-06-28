@@ -173,13 +173,24 @@ static SEXP DeleteListElementsSeq (SEXP x, R_len_t start, R_len_t end)
     if (start > end)
         return x;
 
-    PROTECT(xnew = allocVector(TYPEOF(x), len-(end-start+1)));
-    if (start>1) 
-        copy_vector_elements (xnew, 0, x, 0, start-1);
-    for (i = start; i <= end; i++)
-        DEC_NAMEDCNT (VECTOR_ELT (x, i-1));
-    if (end<len) 
-        copy_vector_elements (xnew, start-1, x, end, len-end);
+    if (NAMEDCNT_GT_1(x)) {
+        PROTECT(xnew = allocVector(TYPEOF(x), len-(end-start+1)));
+        for (i = start; i <= end; i++) /* after we know alloc won't fail */
+            DEC_NAMEDCNT (VECTOR_ELT (x, i-1));
+        if (start>1) 
+            copy_vector_elements (xnew, 0, x, 0, start-1);
+        if (end<len) 
+            copy_vector_elements (xnew, start-1, x, end, len-end);
+        copyMostAttrib(x, xnew);
+    }
+    else {
+        for (i = start; i <= end; i++)
+            DEC_NAMEDCNT (VECTOR_ELT (x, i-1));
+        if (end<len) 
+            copy_vector_elements (x, start-1, x, end, len-end);
+        PROTECT(xnew = reallocVector(x, len-(end-start+1)));
+        no_dim_attributes(xnew);
+    }
 
     xnames = getNamesAttrib(x);
     if (xnames != R_NilValue) {
@@ -200,7 +211,6 @@ static SEXP DeleteListElementsSeq (SEXP x, R_len_t start, R_len_t end)
         UNPROTECT(1);
     }
 
-    copyMostAttrib(x, xnew);
     UNPROTECT(1);
     return xnew;
 }
