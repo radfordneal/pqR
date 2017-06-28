@@ -1,0 +1,4 @@
+More tests.  
+
+tests/extend-contract.R tests vector extension and contractions with
+length<-, [, [[, and $.
