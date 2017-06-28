@@ -858,7 +858,9 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define ENVFLAGS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)
 #define SET_ENVFLAGS(x,v)	((UPTR_FROM_SEXP(x)->sxpinfo.gp)=(v))
 #define ENVSYMBITS(x)   NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->envsymbits)
-#define SET_ENVSYMBITS(x,v)  (((ENVSEXP)UPTR_FROM_SEXP(x))->envsymbits=(v))
+#define SET_ENVSYMBITS(x,v)   (((ENVSEXP)UPTR_FROM_SEXP(x))->envsymbits=(v))
+#define ENVSYMBITS2(x)  NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->envsymbits2)
+#define SET_ENVSYMBITS2(x,v)  (((ENVSEXP)UPTR_FROM_SEXP(x))->envsymbits2=(v))
 #define IS_BASE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_base)
                            /* 1 = R_BaseEnv or R_BaseNamespace */
 #define IS_USER_DATABASE(rho) \

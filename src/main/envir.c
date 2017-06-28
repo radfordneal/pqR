@@ -194,24 +194,29 @@ static SEXP getActiveValue(SEXP fun)
 
 #endif
 
-/* Function to correctly set ENVSYMBITS for an (unhashed) environment. */
+/* Function to correctly set ENVSYMBITS and ENVSYMBITS2 for an (unhashed) 
+   environment. */
 
 void set_envsymbits (SEXP env)
 {
     SEXP frame;
     R_symbits_t bits;
+    R_symbits2_t bits2;
    
     if (HASHTAB(env) != R_NilValue) {
         SET_ENVSYMBITS (env, ~(R_symbits_t)0); 
+        SET_ENVSYMBITS2 (env, ~(R_symbits2_t)0); 
         return;
     }
 
     bits = 0;
     for (frame = FRAME(env); frame != R_NilValue; frame = CDR(frame)) {
         bits |= SYMBITS (TAG (frame));
+        bits2 |= SYMBITS2 (TAG (frame));
     }
 
     SET_ENVSYMBITS (env, bits);
+    SET_ENVSYMBITS2 (env, bits2);
 }
 
 /*----------------------------------------------------------------------
@@ -611,6 +616,7 @@ static void R_HashFrame(SEXP rho)
     }
     SET_FRAME(rho, R_NilValue);
     SET_ENVSYMBITS(rho, ~(R_symbits_t)0);
+    SET_ENVSYMBITS2(rho, ~(R_symbits2_t)0);
 }
 
 
@@ -1613,6 +1619,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
             new = cons_with_tag (value, FRAME(rho), symbol);
             SET_FRAME(rho, new);
             SET_ENVSYMBITS (rho, ENVSYMBITS(rho) | SYMBITS(symbol));
+            SET_ENVSYMBITS2 (rho, ENVSYMBITS2(rho) | SYMBITS2(symbol));
         }
         else {
             SEXP table = HASHTAB(rho);

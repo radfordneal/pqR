@@ -1548,7 +1548,9 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
     FRAME(newrho) = valuelist;
     HASHTAB(newrho) = R_NilValue;
     ENCLOS(newrho) = Rf_chk_valid_SEXP(rho);
-    ENVSYMBITS(newrho) = ~(R_symbits_t)0; /* all 1s disables if not set later */
+
+    ENVSYMBITS2(newrho) = ~(R_symbits2_t)0;/* all 1s disables if not set later*/
+    ENVSYMBITS(newrho) = ~(R_symbits_t)0;
 
     v = Rf_chk_valid_SEXP(valuelist);
     n = Rf_chk_valid_SEXP(namelist);
@@ -1687,7 +1689,8 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     SET_SYMVALUE (c, value);
     LASTSYMENV(c) = R_NoObject32;
     LASTSYMBINDING(c) = R_NoObject;
-    SYMBITS(c) = 0;  /* all 0s to disable feature if not set later */
+    SYMBITS2(c) = 0;  /* all 0s to disable feature if not set later */
+    SYMBITS(c) = 0;   
 
     SET_DDVAL(c, isDDName(name));
 

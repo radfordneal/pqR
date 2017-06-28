@@ -131,7 +131,8 @@ R_CONST ENV_SEXPREC R_env_consts[1] = {
     .frame = R_NilValue, 
     .enclos = R_NilValue, 
     .hashtab = R_NilValue,
-    .envsymbits = ~(R_symbits_t)0 /* all 1s, so searches will definitely look */
+    .envsymbits2 = ~(R_symbits2_t)0,  /* all 1s, so SKIP_USING_SYMBITS will */
+    .envsymbits = ~(R_symbits_t)0     /*   stop at empty environment        */
 }
 };
 
@@ -144,7 +145,8 @@ SYM_SEXPREC R_sym_consts[1] = {
 {
     CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,0),
     .value = R_UnboundValue,
-    .symbits = 0
+    .symbits2 = 0,  /* all 0s, so will always look for this */
+    .symbits = 0    /*   (and presumably not find it)       */
 }
 };
 

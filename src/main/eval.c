@@ -51,9 +51,7 @@
 
 static inline SEXP FINDFUN (SEXP symbol, SEXP rho)
 {
-    R_symbits_t bits = SYMBITS(symbol);
-    while ((ENVSYMBITS(rho) & bits) != bits)
-        rho = ENCLOS(rho);
+    rho = SKIP_USING_SYMBITS (rho, symbol);
 
     if (rho == R_GlobalEnv && BASE_CACHE(symbol)) {
         SEXP res = SYMVALUE(symbol);
