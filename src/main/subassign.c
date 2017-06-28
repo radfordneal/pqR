@@ -166,9 +166,11 @@ static SEXP DeleteListElementsSeq (SEXP x, R_len_t start, R_len_t end)
     R_len_t i, len;
 
     len = length(x);
+    if (start < 1)
+        start = 1;
     if (end > len) 
         end = len;
-    if (start>end)
+    if (start > end)
         return x;
 
     PROTECT(xnew = allocVector(TYPEOF(x), len-(end-start+1)));
@@ -1734,35 +1736,15 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
         }
 
         if (val == R_NilValue) {
-            /* If "val" is NULL, this is an element deletion */
-            /* if there is a match to "name" otherwise "x" */
-            /* is unchanged.  The attributes need adjustment. */
-            if (imatch >= 0) {
-                SEXP ans, ansnames;
-                PROTECT(ans = allocVector(type, nx - 1));
-                PROTECT(ansnames = allocVector(STRSXP, nx - 1));
-                DEC_NAMEDCNT (VECTOR_ELT(x,imatch));
-                if (imatch > 0) {
-                    copy_vector_elements (ans, 0, x, 0, imatch);
-                    copy_string_elements (ansnames, 0, names, 0, imatch);
-                }
-                if (imatch+1 < nx) {
-                    copy_vector_elements (ans, imatch, x, imatch+1, 
-                                          nx-imatch-1);
-                    copy_string_elements (ansnames, imatch, names, imatch+1,
-                                          nx-imatch-1);
-                }
-                setAttrib(ans, R_NamesSymbol, ansnames);
-                copyMostAttrib(x, ans);
-                UNPROTECT(2);
-                x = ans;
-            }
+            /* If "val" is NULL, this is an element deletion if there
+               is a match to "name" otherwise "x" is unchanged. */
+            if (imatch >= 0)
+                x = DeleteListElementsSeq (x, imatch+1, imatch+1);
             /* else x is unchanged */
         }
         else {
-	    /* If "val" is non-NULL, we are either replacing */
-	    /* an existing list element or we are adding a new */
-	    /* element. */
+            /* If "val" is non-NULL, we are either replacing an existing 
+               list element or we are adding a new element. */
 	    if (imatch >= 0) {
 		/* We are just replacing an element */
                 DEC_NAMEDCNT (VECTOR_ELT(x,imatch));
