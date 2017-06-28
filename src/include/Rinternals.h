@@ -223,9 +223,7 @@ struct sxpinfo_struct {
     /* Miscellaneous flags, some with multiple meanings depending on type */
 
     unsigned int debug : 1;       /* Function/Environment: is being debugged */
-    unsigned int rstep_spec : 1;  /* Function: is to be debugged just once,
-                                     Symbol: this is a "special" symbol,
-                                     Environment: has no special symbols */
+    unsigned int rstep : 1;       /* Function: is to be debugged just once */
     unsigned int trace_base : 1;  /* Function: is being traced,
                                      Symbol: has base binding in global cache,
                                      Environment: R_BaseEnv or R_BaseNamespace*/
@@ -326,6 +324,12 @@ typedef struct SEXPREC {
 
 typedef uint64_t R_symbits_t;
 
+#if USE_COMPRESSED_POINTERS
+typedef uint32_t R_symbits2_t;
+#else
+typedef uint64_t R_symbits2_t;
+#endif
+
 typedef struct ENV_SEXPREC {
     SEXPREC_HEADER;
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
@@ -334,8 +338,11 @@ typedef struct ENV_SEXPREC {
     SEXP frame;
     SEXP enclos;
     SEXP hashtab;
+#if USE_COMPRESSED_POINTERS
+    int32_t padding2;
+#endif
+    R_symbits2_t envsymbits2;
     R_symbits_t envsymbits;
-    int64_t padding2;
 } ENV_SEXPREC, *ENVSEXP;
 
 
@@ -382,14 +389,11 @@ typedef struct SYM_SEXPREC {
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
     int32_t padding;
 #endif
-    SEXP pname_disabled;
+    SEXP lastbinding;
     SEXP value;
     int32_t sym_hash;
     SEXP32 lastenv;
-    SEXP lastbinding;
-#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
-    int32_t padding;
-#endif
+    R_symbits2_t symbits2;
     R_symbits_t symbits;
 } SYM_SEXPREC, *SYMSEXP;
 
@@ -827,15 +831,17 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define CLOENV(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->u.closxp.env)
 #define RDEBUG(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.debug)
 #define SET_RDEBUG(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.debug=(v))
-#define RSTEP(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec)
-#define SET_RSTEP(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.rstep_spec=(v))
+#define RSTEP(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep)
+#define SET_RSTEP(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.rstep=(v))
 
 /* Symbol Access Macros */
 #define SYMVALUE(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->value)
 #define LASTSYMENV(x)	(((SYMSEXP) UPTR_FROM_SEXP(x))->lastenv)
 #define LASTSYMBINDING(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->lastbinding)
 #define SYMBITS(x)      NOT_LVALUE((((SYMSEXP) UPTR_FROM_SEXP(x))->symbits))
+#define SYMBITS2(x)     NOT_LVALUE((((SYMSEXP) UPTR_FROM_SEXP(x))->symbits2))
 #define SET_SYMBITS(x,v)  (((SYMSEXP) UPTR_FROM_SEXP(x))->symbits = (v))
+#define SET_SYMBITS2(x,v) (((SYMSEXP) UPTR_FROM_SEXP(x))->symbits2 = (v))
 #define DDVAL_MASK	1
 #define DDVAL(x)	(UPTR_FROM_SEXP(x)->sxpinfo.gp & DDVAL_MASK) /* for ..1, ..2 etc */
 #define SET_DDVAL_BIT(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= DDVAL_MASK)

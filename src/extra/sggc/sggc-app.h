@@ -123,9 +123,9 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
           (1 chunk)           (1 chunk)
 
       Symbol:             Primitive:        Environment:    External pointer:
-        info, pname         info, padding     info, frame     info, unused/shift
+        info, lastbinding   info, padding     info, frame     info, unused/shift
         value, hash         C-function        enclos, hastab  prot, tag
-        lastenv, lastbind   fast-C-function   envsymbits      external ptr(+pad)
+        lastenv, symbits2   fast-C-function   envsymbits      external ptr(+pad)
         symbits             64 bits of info   padding         padding
         = 32 bytes          padding if 32-bit = 32 bytes      = 32 bytes
           (2 chunks)        = 32 bytes          (2 chunks)      (2 chunks)
@@ -222,10 +222,10 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
         info, cptr          info, cptr        info, cptr       info, cptr
         attrib              attrib            attrib           attrib
         length, padding     length, padding   length, padding  length, padding
-        pname               C-function        frame            external ptr
+        lastbinding         C-function        frame            external ptr
         value               fast-C-function   encos            prot
         hash, lastenv       64 bits of info   hashtab          tag
-        lastbinding         = 48 bytes        envsymbits       = 48 bytes
+        symbits2            = 48 bytes        envsymbits       = 48 bytes
         symbits               (3 chunks)      padding            (3 chunks)
         = 64 bytes                            = 64 bytes
           (4 chunks)                            (4 chunks)
@@ -304,10 +304,10 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 
       Symbol:             Primitive:         Environment:    External pointer:
         info, cptr          info, cptr         info, cptr      info, cptr
-        pname               C-function         frame           external ptr
+        lastbinding         C-function         frame           external ptr
         value               fast-C-function    encos           prot
         hash, lastenv       64 bits of info    hashtab         tag
-        lastbinding         = 32 bytes         envsymbits      = 32 bytes
+        symbits2            = 32 bytes         envsymbits      = 32 bytes
         symbits               (2 chunks)       padding           (2 chunks)
         = 48 bytes                             = 48 bytes
           (3 chunks)                             (3 chunks)
@@ -388,9 +388,9 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
       Symbol:             Primitive:           Environment:   External pointer:
         info, cptr          info, cptr           info, cptr     info, cptr
         attrib, length      attrib, length       attrib, length  attrib, length
-        pname, value        C-function, fastfun  frame, enclos   prot, tag
+        lastbinding, value  C-function, fastfun  frame, enclos   prot, tag
         hash, lastenv       64 bits of info      hashtab, pad    xptr, padding
-        lastbinding, padding  = 32 bytes         envsymbits      = 32 bytes
+        symbits2            = 32 bytes         envsymbits      = 32 bytes
         symbits                 (2 chunks)       padding           (2 chunks)
         = 48 bytes                               = 48 bytes
           (3 chunks)                               (3 chunks)
