@@ -10,7 +10,8 @@
 
   \subsection{INTRODUCTION}{
   \itemize{ 
-  \item This release has several performance improvements.
+  \item This release has several signficicant performance improvements,
+        and a few minor feature changes and bug fixes.
   }}
 
   \subsection{DOCUMENTATION AND FEATURE CHANGES}{
@@ -34,6 +35,12 @@
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
+  \item Operations that increase or decrease the length of a vector
+        (including lists) now often make changes in place, rather than
+        allocating a new vector.  A small amount of additional
+        memory is sometimes allocated at the end of a vector to allow
+        expansion without reallocation.  This improvement mirrors a
+        recent improvement in R-3.4.0, but applies in more situations.
   \item Relational operators are now faster, and may sometimes be done in 
         helper threads (though currently without pipelining of data).
         Computations such as \code{sum(vec>0)} are now done with a
