@@ -1703,6 +1703,9 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 #   if USE_SYM_TUNECNTS
         ((SYMSEXP)UPTR_FROM_SEXP(c))->sym_tunecnt = 0;
 #   endif
+#   if USE_SYM_TUNECNTS2
+        ((SYMSEXP)UPTR_FROM_SEXP(c))->sym_tunecnt2 = 0;
+#   endif
 
     SET_DDVAL(c, isDDName(name));
 

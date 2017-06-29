@@ -221,7 +221,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
       Symbol:             Primitive:        Environment:     External pointer:
         info, cptr          info, cptr        info, cptr       info, cptr
         attrib              attrib            attrib           attrib
-        length, padding     length, padding   length, tunecnts length, padding
+        length, tunecnts2   length, padding   length, tunecnts length, padding
         lastbinding         C-function        frame            external ptr
         value               fast-C-function   enclos           prot
         hash, lastenv       64 bits of info   hashtab          tag

@@ -1732,11 +1732,18 @@ extern void *alloca(size_t);
 static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
 {
     R_symbits_t bits = SYMBITS(symbol);
+#   if USE_SYMBITS2
     R_symbits2_t bits2 = SYMBITS2(symbol);
+#   endif
 
     while ((ENVSYMBITS(rho) & bits) != bits 
-        || (ENVSYMBITS2(rho) & bits2) != bits2) {
-
+#       if USE_SYMBITS2
+             || (ENVSYMBITS2(rho) & bits2) != bits2
+#       endif
+    ) {
+#       if USE_SYM_TUNECNTS2
+            ((SYMSEXP)UPTR_FROM_SEXP(symbol))->sym_tunecnt2 += 1;
+#       endif
         rho = ENCLOS(rho);
     }
 
