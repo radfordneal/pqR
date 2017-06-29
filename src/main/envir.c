@@ -201,22 +201,33 @@ void set_envsymbits (SEXP env)
 {
     SEXP frame;
     R_symbits_t bits;
+#   if USE_SYMBITS2
     R_symbits2_t bits2;
+#   endif
    
     if (HASHTAB(env) != R_NilValue) {
         SET_ENVSYMBITS (env, ~(R_symbits_t)0); 
-        SET_ENVSYMBITS2 (env, ~(R_symbits2_t)0); 
+#       if USE_SYMBITS2
+            SET_ENVSYMBITS2 (env, ~(R_symbits2_t)0); 
+#       endif
         return;
     }
 
     bits = 0;
+#   if USE_SYMBITS2
+        bits2 = 0;
+#   endif
     for (frame = FRAME(env); frame != R_NilValue; frame = CDR(frame)) {
         bits |= SYMBITS (TAG (frame));
-        bits2 |= SYMBITS2 (TAG (frame));
+#       if USE_SYMBITS2
+            bits2 |= SYMBITS2 (TAG (frame));
+#       endif
     }
 
     SET_ENVSYMBITS (env, bits);
-    SET_ENVSYMBITS2 (env, bits2);
+#   if USE_SYMBITS2
+        SET_ENVSYMBITS2 (env, bits2);
+#   endif
 }
 
 /*----------------------------------------------------------------------
@@ -386,7 +397,7 @@ void attribute_hidden R_HashRehash (SEXP table)
     if (TYPEOF(table) != VECSXP)
 	error("argument not of type VECSXP, from R_HashRehash");
 
-    int size = HASHSIZE(table);
+    int size = LENGTH(table);
     int slots = HASHSLOTSUSED(table);
     int i;
 
@@ -445,7 +456,7 @@ SEXP attribute_hidden R_HashRehashOld (SEXP table)
     if (TYPEOF(table) != VECSXP)
 	error("argument not of type VECSXP, from R_HashRehashOld");
 
-    int size = HASHSIZE(table);
+    int size = LENGTH(table);
     SEXP newtable;
     int i;
 
@@ -504,7 +515,7 @@ static SEXP R_HashResize(SEXP table)
 
     /* Allocate the new hash table.  Return old table if would exceed max. */
 
-    new_size = 2 * (HASHSIZE(table) + SGGC_ENV_HASH_HEAD) - SGGC_ENV_HASH_HEAD;
+    new_size = 2 * (LENGTH(table) + SGGC_ENV_HASH_HEAD) - SGGC_ENV_HASH_HEAD;
 
     if (new_size > HASHMAXSIZE)
         return table;
@@ -519,14 +530,14 @@ static SEXP R_HashResize(SEXP table)
             n_entries += 1;
 #endif
             if (TYPEOF(chain) != LISTSXP) abort();
-            new_hashcode = SYM_HASH(TAG(chain)) % HASHSIZE(new_table);
+            new_hashcode = SYM_HASH(TAG(chain)) % LENGTH(new_table);
 	    tmp_chain = chain;
 	    chain = CDR(chain);
             R_HashAddEntry (new_table, new_hashcode, tmp_chain);
 #if DEBUG_OUTPUT>1
 	    Rprintf(
-             "HASHSIZE=%d HASHSLOTSUSED=%d counter=%d HASHCODE=%d\n",
-              HASHSIZE(table), HASHSLOTSUSED(table), counter, new_hashcode);
+             "LENGTH=%d HASHSLOTSUSED=%d counter=%d HASHCODE=%d\n",
+              LENGTH(table), HASHSLOTSUSED(table), counter, new_hashcode);
 #endif
 	}
     }
@@ -536,7 +547,7 @@ static SEXP R_HashResize(SEXP table)
     Rprintf("RESIZED TABLE WITH %d ENTRIES, NEW TABLE IS %llu/%u\n", n_entries,
             (long long unsigned) UPTR_FROM_SEXP(new_table),
             (unsigned) CPTR_FROM_SEXP(new_table));
-    Rprintf("Old size: %d, New size: %d\n",HASHSIZE(table),HASHSIZE(new_table));
+    Rprintf("Old size: %d, New size: %d\n",LENGTH(table),LENGTH(new_table));
     Rprintf("Old slotsused: %d, New slotsused: %d\n",
 	    HASHSLOTSUSED(table), HASHSLOTSUSED(new_table));
 #endif
@@ -580,7 +591,7 @@ static R_INLINE int R_HashSizeCheck(SEXP table)
 
 #endif
 
-    return 0 && HASHSLOTSUSED(table) > 0.5 * HASHSIZE(table);
+    return 0 && HASHSLOTSUSED(table) > 0.5 * LENGTH(table);
 }
 
 
@@ -598,25 +609,29 @@ static void R_HashFrame(SEXP rho)
     int hashcode;
     SEXP frame, chain, tmp_chain, table;
 
-#if DEBUG_OUTPUT
-    Rprintf("\nMAKING ENVIRONMENT %llu HASHED, WITH SIZE %d\n",
-            (long long unsigned)table, HASHSIZE(table));
-#endif
-
     /* Do some checking */
     if (TYPEOF(rho) != ENVSXP)
 	error("argument not of type ENVSXP, from R_Hashframe");
+
     table = HASHTAB(rho);
+
+#if DEBUG_OUTPUT
+    Rprintf("\nMAKING ENVIRONMENT %llu HASHED, WITH SIZE %d\n",
+            (long long unsigned)table, LENGTH(table));
+#endif
+
     frame = FRAME(rho);
     while (frame != R_NilValue) {
-	hashcode = SYM_HASH(TAG(frame)) % HASHSIZE(table);
+	hashcode = SYM_HASH(TAG(frame)) % LENGTH(table);
 	tmp_chain = frame;
 	frame = CDR(frame);
         R_HashAddEntry (table, hashcode, tmp_chain);
     }
     SET_FRAME(rho, R_NilValue);
     SET_ENVSYMBITS(rho, ~(R_symbits_t)0);
-    SET_ENVSYMBITS2(rho, ~(R_symbits2_t)0);
+#   if USE_SYMBITS2
+        SET_ENVSYMBITS2(rho, ~(R_symbits2_t)0);
+#   endif
 }
 
 
@@ -746,7 +761,7 @@ static void R_FlushGlobalCacheFromTable(SEXP table)
 {
     int i, size;
     SEXP chain;
-    size = HASHSIZE(table);
+    size = LENGTH(table);
     for (i = 0; i < size; i++) {
 	for (chain = VECTOR_ELT(table, i); chain != R_NilValue; chain = CDR(chain))
 	    R_FlushGlobalCache(TAG(chain));
@@ -910,7 +925,7 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
     }
     else {
         int hashcode;
-	hashcode = SYM_HASH(symbol) % HASHSIZE(HASHTAB(rho));
+	hashcode = SYM_HASH(symbol) % HASHLEN(rho);
 	/* Will return 'R_NilValue' if not found */
 	loc = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
     }
@@ -1122,7 +1137,7 @@ SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 
     else {
         int hashcode;
-        hashcode = SYM_HASH(symbol) % HASHSIZE(HASHTAB(rho));
+        hashcode = SYM_HASH(symbol) % HASHLEN(rho);
         loc = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
         if (loc == R_NilValue)
             goto ret;
@@ -1595,7 +1610,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         SEARCH_LOOP (loc, symbol, goto found_update_last);
     }
     else { /* hashed environment */
-        hashcode = SYM_HASH(symbol) % HASHSIZE(HASHTAB(rho));
+        hashcode = SYM_HASH(symbol) % HASHLEN(rho);
         loc = VECTOR_ELT(HASHTAB(rho), hashcode);
         SEARCH_LOOP (loc, symbol, goto found);
     }
@@ -1619,7 +1634,9 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
             new = cons_with_tag (value, FRAME(rho), symbol);
             SET_FRAME(rho, new);
             SET_ENVSYMBITS (rho, ENVSYMBITS(rho) | SYMBITS(symbol));
-            SET_ENVSYMBITS2 (rho, ENVSYMBITS2(rho) | SYMBITS2(symbol));
+#           if USE_SYMBITS2
+                SET_ENVSYMBITS2 (rho, ENVSYMBITS2(rho) | SYMBITS2(symbol));
+#           endif
         }
         else {
             SEXP table = HASHTAB(rho);
@@ -1855,7 +1872,7 @@ SEXP attribute_hidden RemoveVariable(SEXP name, SEXP env)
     if (IS_HASHED(env)) {
 	SEXP hashtab = HASHTAB(env);
         int hashcode = SYM_HASH(name);
-	int idx = hashcode % HASHSIZE(hashtab);
+	int idx = hashcode % HASHLEN(env);
 	list = RemoveFromList(name, VECTOR_ELT(hashtab, idx), &value);
 	if (value != R_NoObject) {
 	    SET_VECTOR_ELT(hashtab, idx, list);
@@ -3130,7 +3147,7 @@ void R_LockEnvironment(SEXP env, Rboolean bindings)
 	    SEXP table, chain;
 	    int i, size;
 	    table = HASHTAB(env);
-	    size = HASHSIZE(table);
+	    size = HASHLEN(env);
 	    for (i = 0; i < size; i++)
 		for (chain = VECTOR_ELT(table, i);
 		     chain != R_NilValue;
@@ -3301,7 +3318,7 @@ Rboolean R_HasFancyBindings(SEXP rho)
 	int i, size;
 
 	table = HASHTAB(rho);
-	size = HASHSIZE(table);
+	size = HASHLEN(rho);
 	for (i = 0; i < size; i++)
 	    for (chain = VECTOR_ELT(table, i);
 		 chain != R_NilValue;
@@ -3396,7 +3413,7 @@ void R_RestoreHashCount(SEXP rho)
 	int i, count, size;
 
 	table = HASHTAB(rho);
-	size = HASHSIZE(table);
+	size = HASHLEN(rho);
 	for (i = 0, count = 0; i < size; i++)
 	    if (VECTOR_ELT(table, i) != R_NilValue)
 		count++;

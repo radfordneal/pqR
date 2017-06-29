@@ -183,7 +183,8 @@ extern0 SEXP	R_UnderscoreString;   /* "_", as a CHARSXP */
 /* Symbol and string hash table declarations. */
 #define HASHMINSIZE	     (32 - SGGC_ENV_HASH_HEAD)
 #define HASHMAXSIZE          ((1 << 20) - SGGC_ENV_HASH_HEAD)
-#define HASHSIZE(x)	     LENGTH(x)
+#define HASHLEN(x)           (((ENV_SEXPREC*)UPTR_FROM_SEXP(x))->hashlen)
+#define SET_HASHLEN(x,v)     (((ENV_SEXPREC*)UPTR_FROM_SEXP(x))->hashlen = (v))
 #define HASHSLOTSUSED(x)     TRUELENGTH(x)
 #define SET_HASHSLOTSUSED(x,v) SET_TRUELENGTH(x,v)
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)

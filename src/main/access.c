@@ -578,7 +578,12 @@ int (ENVFLAGS)(SEXP x) { return ENVFLAGS(Rf_chk_valid_SEXP(x)); }
 
 void (SET_FRAME)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); FRAME(x) = v; }
 void (SET_ENCLOS)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); ENCLOS(x) = v; }
-void (SET_HASHTAB)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); HASHTAB(x) = v; }
+void (SET_HASHTAB)(SEXP x, SEXP v) 
+{ 
+    CHECK_OLD_TO_NEW(x, v);
+    HASHTAB(x) = v; 
+    SET_HASHLEN(x,LENGTH(v));
+}
 void (SET_ENVFLAGS)(SEXP x, int v) { SET_ENVFLAGS(x, v); }
 
 /* Promise Accessors */

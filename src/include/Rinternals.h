@@ -322,25 +322,29 @@ typedef struct SEXPREC {
 
 /* Version of SEXPREC used for environments. */
 
-typedef uint64_t R_symbits_t;
+#define USE_SYMBITS2 1      /* May be 0 or 1, not clear which is faster */
 
-#if USE_COMPRESSED_POINTERS
-typedef uint32_t R_symbits2_t;
+#if USE_AUX_FOR_ATTRIB
+#define USE_ENV_TUNECNTS 0  /* Must be kept as 0 */
 #else
-typedef uint64_t R_symbits2_t;
+#define USE_ENV_TUNECNTS 0  /* May be 0 or 1 - normally 0 to avoid slowdown */
 #endif
+
+typedef uint64_t R_symbits_t;
+typedef uint32_t R_symbits2_t;
 
 typedef struct ENV_SEXPREC {
     SEXPREC_HEADER;
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
-    int32_t padding;
+    uint32_t tunecnts;
 #endif
     SEXP frame;
     SEXP enclos;
     SEXP hashtab;
-#if USE_COMPRESSED_POINTERS
-    int32_t padding2;
+#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
+    uint32_t tunecnts;
 #endif
+    int32_t hashlen;
     R_symbits2_t envsymbits2;
     R_symbits_t envsymbits;
 } ENV_SEXPREC, *ENVSEXP;
@@ -381,8 +385,11 @@ typedef struct PRIM_SEXPREC {
 
 /* Version of SEXPREC used for symbols. */
 
-struct symsxp_struct {
-};
+#if USE_COMPRESSED_POINTERS
+#define USE_SYM_TUNECNTS 0  /* Must be kept as 0 */
+#else
+#define USE_SYM_TUNECNTS 1  /* May be 0 or 1 - normally 0 to avoid slowdown */
+#endif
 
 typedef struct SYM_SEXPREC {
     SEXPREC_HEADER;
@@ -393,6 +400,9 @@ typedef struct SYM_SEXPREC {
     SEXP value;
     int32_t sym_hash;
     SEXP32 lastenv;
+#if !USE_COMPRESSED_POINTERS
+    uint32_t tunecnts;
+#endif
     R_symbits2_t symbits2;
     R_symbits_t symbits;
 } SYM_SEXPREC, *SYMSEXP;
