@@ -148,14 +148,29 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
     if (TYPEOF(v) == SYMSXP || TYPEOF(v) == LISTSXP) {
 	if (IS_ACTIVE_BINDING(v)) { if (a) Rprintf(","); Rprintf("AB"); a = 1; }
 	if (BINDING_IS_LOCKED(v)) { if (a) Rprintf(","); Rprintf("LCK"); a = 1; }
+    }
+    if (TYPEOF(v) == SYMSXP) {
         if (ATTRIB_W(v) == R_UnboundValue) { if (a) Rprintf(","); Rprintf("UGLB"); a = 1; }
+        else if (ATTRIB_W(v) != R_NilValue) { if (a) Rprintf(","); Rprintf("GLB"); a = 1; }
+#       if USE_SYM_TUNECNTS
+            if (a) Rprintf(","); 
+            Rprintf("tu%u",((SYMSEXP)UPTR_FROM_SEXP(v))->sym_tunecnt); 
+            a = 1;
+#       endif
     }    
     if (TYPEOF(v) == ENVSXP) {
         Rprintf("SB%016llx",(unsigned long long)ENVSYMBITS(v)); 
-        Rprintf(" SB2%016llx",(unsigned long long)ENVSYMBITS2(v));
+#       if USE_SYMBITS2
+            Rprintf(" SB2%08llx",(unsigned long long)ENVSYMBITS2(v));
+#       endif
         a = 1;
         if (FRAME_IS_LOCKED(v)) { if (a) Rprintf(","); Rprintf("LCK"); a = 1; }
 	if (IS_GLOBAL_FRAME(v)) { if (a) Rprintf(","); Rprintf("GL"); a = 1; }
+#       if USE_ENV_TUNECNTS
+            if (a) Rprintf(","); 
+            Rprintf("tu%u",((ENVSEXP)UPTR_FROM_SEXP(v))->env_tunecnt);
+            a = 1;
+#       endif
     }
     if (LEVELS(v)) { if (a) Rprintf(","); Rprintf("gp=0x%x", LEVELS(v)); a = 1; }
     if (ATTRIB(v) && ATTRIB(v) != R_NilValue) { if (a) Rprintf(","); Rprintf("ATT"); a = 1; }

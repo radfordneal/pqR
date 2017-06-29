@@ -172,17 +172,34 @@ static SEXP getActiveValue(SEXP fun)
    The optimal amount of unrolling may depend on whether compressed or
    uncompressed pointers are used, so these cases are distinguished. */
 
+#if USE_SYM_TUNECNTS
+#define INC_SYM_TUNECNT(sym) (((SYMSEXP)UPTR_FROM_SEXP(sym))->sym_tunecnt += 1)
+#else 
+#define INC_SYM_TUNECNT(sym) 0
+#endif
+
+#if USE_ENV_TUNECNTS
+#define INC_ENV_TUNECNT(env) (((ENVSEXP)UPTR_FROM_SEXP(env))->env_tunecnt += 1)
+#else 
+#define INC_ENV_TUNECNT(env) 0
+#endif
+
 #if USE_COMPRESSED_POINTERS
-   
-#define SEARCH_LOOP(chain,symbol,statement) \
+
+#define SEARCH_LOOP(env,chain,symbol,statement) do { \
+    INC_SYM_TUNECNT(symbol); \
+    INC_ENV_TUNECNT(env); \
     do { \
         if (TAG(chain) == symbol) statement; \
         chain = CDR(chain); \
-    } while (chain != R_NilValue)
+    } while (chain != R_NilValue); \
+} while (0)
 
 #else
    
-#define SEARCH_LOOP(chain,symbol,statement) \
+#define SEARCH_LOOP(env,chain,symbol,statement) do { \
+    INC_SYM_TUNECNT(symbol); \
+    INC_ENV_TUNECNT(env); \
     do { \
         if (TAG(chain) == symbol) statement; \
         chain = CDR(chain); \
@@ -190,7 +207,8 @@ static SEXP getActiveValue(SEXP fun)
         chain = CDR(chain); \
         if (TAG(chain) == symbol) statement; \
         chain = CDR(chain); \
-    } while (chain != R_NilValue)
+    } while (chain != R_NilValue); \
+} while (0)
 
 #endif
 
@@ -296,11 +314,11 @@ static void R_HashAddEntry (SEXP table, int i, SEXP entry)
 
 */
 
-static SEXP R_HashGet(int hashcode, SEXP symbol, SEXP table)
+static SEXP R_HashGet(SEXP env, int hashcode, SEXP symbol, SEXP table)
 {
     SEXP chain = VECTOR_ELT(table, hashcode);
 
-    SEARCH_LOOP (chain, symbol, goto found);
+    SEARCH_LOOP (env, chain, symbol, goto found);
 
     return R_UnboundValue;
 
@@ -308,11 +326,11 @@ found:
     return BINDING_VALUE(chain);
 }
 
-static Rboolean R_HashExists(int hashcode, SEXP symbol, SEXP table)
+static Rboolean R_HashExists(SEXP env, int hashcode, SEXP symbol, SEXP table)
 {
     SEXP chain = VECTOR_ELT(table, hashcode);
 
-    SEARCH_LOOP (chain, symbol, goto found);
+    SEARCH_LOOP (env, chain, symbol, goto found);
 
     return FALSE;
 
@@ -332,11 +350,11 @@ found:
 
 */
 
-static SEXP R_HashGetLoc(int hashcode, SEXP symbol, SEXP table)
+static inline SEXP R_HashGetLoc(SEXP env, int hashcode, SEXP symbol, SEXP table)
 {
     SEXP chain = VECTOR_ELT(table, hashcode);
 
-    SEARCH_LOOP (chain, symbol, return chain);
+    SEARCH_LOOP (env, chain, symbol, return chain);
 
     return R_NilValue;
 }
@@ -911,7 +929,7 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
     else if (HASHTAB(rho) == R_NilValue) {
 
         loc = FRAME(rho);
-        SEARCH_LOOP (loc, symbol, goto found);
+        SEARCH_LOOP (rho, loc, symbol, goto found);
 
         return R_NilValue;
 
@@ -927,7 +945,7 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
         int hashcode;
 	hashcode = SYM_HASH(symbol) % HASHLEN(rho);
 	/* Will return 'R_NilValue' if not found */
-	loc = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
+	loc = R_HashGetLoc(rho, hashcode, symbol, HASHTAB(rho));
     }
 
     return loc;
@@ -1110,7 +1128,7 @@ SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
     else if (HASHTAB(rho) == R_NilValue) {
 
         loc = FRAME(rho);
-        SEARCH_LOOP (loc, symbol, goto found);
+        SEARCH_LOOP (rho, loc, symbol, goto found);
         goto ret;
 
       found: 
@@ -1138,7 +1156,7 @@ SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
     else {
         int hashcode;
         hashcode = SYM_HASH(symbol) % HASHLEN(rho);
-        loc = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
+        loc = R_HashGetLoc(rho, hashcode, symbol, HASHTAB(rho));
         if (loc == R_NilValue)
             goto ret;
         if (IS_ACTIVE_BINDING(loc) || BINDING_IS_LOCKED(loc)) {
@@ -1607,12 +1625,12 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
 
     if (HASHTAB(rho) == R_NilValue) {
         loc = FRAME(rho);
-        SEARCH_LOOP (loc, symbol, goto found_update_last);
+        SEARCH_LOOP (rho, loc, symbol, goto found_update_last);
     }
     else { /* hashed environment */
         hashcode = SYM_HASH(symbol) % HASHLEN(rho);
         loc = VECTOR_ELT(HASHTAB(rho), hashcode);
-        SEARCH_LOOP (loc, symbol, goto found);
+        SEARCH_LOOP (rho, loc, symbol, goto found);
     }
 
     if (create) { /* try to create new variable */

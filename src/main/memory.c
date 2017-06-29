@@ -1554,6 +1554,10 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 #   endif
     ENVSYMBITS(newrho) = ~(R_symbits_t)0;       /* all 1s disables */
 
+#   if USE_ENV_TUNECNTS
+        ((ENVSEXP)UPTR_FROM_SEXP(newrho))->env_tunecnt = 0;
+#   endif
+
     v = Rf_chk_valid_SEXP(valuelist);
     n = Rf_chk_valid_SEXP(namelist);
     while (v != R_NilValue && n != R_NilValue) {
@@ -1695,6 +1699,10 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
         SYMBITS2(c) = 0;  /* all 0s to disable feature if not set later */
 #   endif
     SYMBITS(c) = 0;       /* all 0s to disable feature if not set later */
+
+#   if USE_SYM_TUNECNTS
+        ((SYMSEXP)UPTR_FROM_SEXP(c))->sym_tunecnt = 0;
+#   endif
 
     SET_DDVAL(c, isDDName(name));
 
