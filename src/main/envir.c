@@ -609,7 +609,7 @@ static R_INLINE int R_HashSizeCheck(SEXP table)
 
 #endif
 
-    return 0 && HASHSLOTSUSED(table) > 0.5 * LENGTH(table);
+    return HASHSLOTSUSED(table) > 0.5 * LENGTH(table);
 }
 
 
