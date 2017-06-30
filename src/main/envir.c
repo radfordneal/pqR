@@ -212,34 +212,64 @@ static SEXP getActiveValue(SEXP fun)
 
 #endif
 
-/* Function to correctly set ENVSYMBITS and ENVSYMBITS2 for an (unhashed) 
-   environment. */
+/* Function to correctly set ENVSYMBITS and ENVSYMBITS2 for an environment. */
 
-void set_envsymbits (SEXP env)
+static void chainbits (SEXP chain, 
+                       R_symbits_t *pbits 
+#                      if USE_SYMBITS2
+                       , R_symbits2_t *pbits2
+#                      endif
+                      )
 {
-    SEXP frame;
     R_symbits_t bits;
 #   if USE_SYMBITS2
     R_symbits2_t bits2;
 #   endif
    
-    if (HASHTAB(env) != R_NilValue) {
-        SET_ENVSYMBITS (env, ~(R_symbits_t)0); 
-#       if USE_SYMBITS2
-            SET_ENVSYMBITS2 (env, ~(R_symbits2_t)0); 
-#       endif
-        return;
-    }
-
     bits = 0;
 #   if USE_SYMBITS2
         bits2 = 0;
 #   endif
-    for (frame = FRAME(env); frame != R_NilValue; frame = CDR(frame)) {
-        bits |= SYMBITS (TAG (frame));
+
+    while (chain != R_NilValue) {
+        bits |= SYMBITS (TAG (chain));
 #       if USE_SYMBITS2
-            bits2 |= SYMBITS2 (TAG (frame));
+            bits2 |= SYMBITS2 (TAG (chain));
 #       endif
+        chain = CDR(chain);
+    }
+
+    *pbits |= bits;
+#   if USE_SYMBITS2
+        *pbits2 |= bits2;
+#   endif
+}
+
+void attribute_hidden set_symbits_in_env (SEXP env)
+{
+    R_symbits_t bits = 0;
+#   if USE_SYMBITS2
+    R_symbits2_t bits2 = 0;
+#   endif
+   
+    if (HASHTAB(env) != R_NilValue) {
+        SEXP table = HASHTAB(env);
+        R_len_t len = HASHLEN(env);
+        R_len_t i;
+        for (i = 0; i < len; i++) {
+            chainbits (VECTOR_ELT(table,i), &bits
+#                      if USE_SYMBITS2
+                       , &bits2
+#                      endif
+                      );
+        }
+    }
+    else {
+        chainbits (FRAME(env), &bits
+#                  if USE_SYMBITS2
+                   , &bits2
+#                  endif
+                  );
     }
 
     SET_ENVSYMBITS (env, bits);
@@ -1651,10 +1681,6 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         if (HASHTAB(rho) == R_NilValue) {
             new = cons_with_tag (value, FRAME(rho), symbol);
             SET_FRAME(rho, new);
-            SET_ENVSYMBITS (rho, ENVSYMBITS(rho) | SYMBITS(symbol));
-#           if USE_SYMBITS2
-                SET_ENVSYMBITS2 (rho, ENVSYMBITS2(rho) | SYMBITS2(symbol));
-#           endif
         }
         else {
             SEXP table = HASHTAB(rho);
@@ -1663,6 +1689,11 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
             if (R_HashSizeCheck(table))
                 SET_HASHTAB(rho, R_HashResize(table));
         }
+
+        SET_ENVSYMBITS (rho, ENVSYMBITS(rho) | SYMBITS(symbol));
+#       if USE_SYMBITS2
+            SET_ENVSYMBITS2 (rho, ENVSYMBITS2(rho) | SYMBITS2(symbol));
+#       endif
 
         if (incdec&2)
             INC_NAMEDCNT(value);
@@ -2457,10 +2488,12 @@ static SEXP do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 		    error(_("all elements of a list must be named"));
 	    PROTECT(s = allocSExp(ENVSXP));
 	    SET_FRAME(s, duplicate(CAR(args)));
+            set_symbits_in_env(s);
 	} else if (isEnvironment(CAR(args))) {
 	    SEXP p, loadenv = CAR(args);
 
 	    PROTECT(s = allocSExp(ENVSXP));
+            set_symbits_in_env(s);  /* will get set to 0s, since nothing yet */
 	    if (HASHTAB(loadenv) != R_NilValue) {
 		int i, n;
 		n = length(HASHTAB(loadenv));

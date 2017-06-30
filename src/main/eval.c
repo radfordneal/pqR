@@ -969,7 +969,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	a = CDR(a);
     }
 
-    set_envsymbits (newrho);
+    set_symbits_in_env (newrho);
 
     /*  Fix up any extras that were supplied by usemethod. */
 

@@ -392,6 +392,7 @@
  Rf_regexec
  Rf_regfree
  Rf_set_elements_to_NA_or_NULL
+ Rf_set_symbits_in_env
  Rf_setBaseDevice
  Rf_setIVector
  Rf_setRVector
