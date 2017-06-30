@@ -183,7 +183,8 @@ extern0 SEXP	R_UnderscoreString;   /* "_", as a CHARSXP */
 /* Symbol and string hash table declarations. */
 #define HASHMINSIZE	     (32 - SGGC_ENV_HASH_HEAD)
 #define HASHMAXSIZE          ((1 << 20) - SGGC_ENV_HASH_HEAD)
-#define HASHSIZE(x)	     LENGTH(x)
+#define HASHLEN(x)           (((ENV_SEXPREC*)UPTR_FROM_SEXP(x))->hashlen)
+#define SET_HASHLEN(x,v)     (((ENV_SEXPREC*)UPTR_FROM_SEXP(x))->hashlen = (v))
 #define HASHSLOTSUSED(x)     TRUELENGTH(x)
 #define SET_HASHSLOTSUSED(x,v) SET_TRUELENGTH(x,v)
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
@@ -1727,14 +1728,27 @@ extern void *alloca(size_t);
 
 
 /* Skip to the first environment that might contain the given symbol,
-   on the basis of symbits.  Note that ENVSYMBITS(R_EmptyEnv) and
-   ENVSYMBITS(R_GlobalEnv) are both all 1s. */
+   on the basis of symbits.  Note that ENVSYMBITS and ENVSYMBITS2 are
+   both all 1s for R_EmptyEnv and R_GlobalEnv. */
 
 static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
 {
     R_symbits_t bits = SYMBITS(symbol);
-    while ((ENVSYMBITS(rho) & bits) != bits)
+#   if USE_SYMBITS2
+    R_symbits2_t bits2 = SYMBITS2(symbol);
+#   endif
+
+    while ((ENVSYMBITS(rho) & bits) != bits 
+#       if USE_SYMBITS2
+             || (ENVSYMBITS2(rho) & bits2) != bits2
+#       endif
+    ) {
+#       if USE_SYM_TUNECNTS2
+            ((SYMSEXP)UPTR_FROM_SEXP(symbol))->sym_tunecnt2 += 1;
+#       endif
         rho = ENCLOS(rho);
+    }
+
     return rho;
 }
 

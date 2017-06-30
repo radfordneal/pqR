@@ -140,20 +140,47 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
     if (NAMEDCNT(v)) { if (a) Rprintf(","); Rprintf("NAM(%d)",NAMEDCNT(v)); a = 1; }
     if (! ((VECTOR_OR_CHAR_TYPES >> TYPEOF(v)) & 1)) {
         if (RDEBUG(v)) { if (a) Rprintf(","); Rprintf("DBG"); a = 1; }
-        if (RTRACE(v)) { if (a) Rprintf(","); Rprintf("TR"); a = 1; }
+        if (TYPEOF(v)!=ENVSXP && TYPEOF(v)!=SYMSXP && RTRACE(v)) { 
+            if (a) Rprintf(","); Rprintf("TR"); a = 1; 
+        }
         if (RSTEP(v)) { if (a) Rprintf(","); Rprintf("STP"); a = 1; }
-        if (BASE_CACHE(v)) { if (a) Rprintf(","); Rprintf("BC"); a = 1; }
+        if (TYPEOF(v)==ENVSXP && IS_BASE(v)) { 
+            if (a) Rprintf(","); Rprintf("BC"); a = 1; 
+        }
     }
     if (IS_S4_OBJECT(v)) { if (a) Rprintf(","); Rprintf("S4"); a = 1; }
     if (TYPEOF(v) == SYMSXP || TYPEOF(v) == LISTSXP) {
 	if (IS_ACTIVE_BINDING(v)) { if (a) Rprintf(","); Rprintf("AB"); a = 1; }
 	if (BINDING_IS_LOCKED(v)) { if (a) Rprintf(","); Rprintf("LCK"); a = 1; }
+    }
+    if (TYPEOF(v) == SYMSXP) {
         if (ATTRIB_W(v) == R_UnboundValue) { if (a) Rprintf(","); Rprintf("UGLB"); a = 1; }
+        else if (ATTRIB_W(v) != R_NilValue) { if (a) Rprintf(","); Rprintf("GLB"); a = 1; }
+#       if USE_SYM_TUNECNTS
+            if (a) Rprintf(","); 
+            Rprintf("tu%u",((SYMSEXP)UPTR_FROM_SEXP(v))->sym_tunecnt); 
+            a = 1;
+#       endif
+#       if USE_SYM_TUNECNTS2
+            if (a) Rprintf(","); 
+            Rprintf("tv%u",((SYMSEXP)UPTR_FROM_SEXP(v))->sym_tunecnt2); 
+            a = 1;
+#       endif
     }    
     if (TYPEOF(v) == ENVSXP) {
-        Rprintf("SB%016llx",(unsigned long long)ENVSYMBITS(v)); a = 1;
+        if (a) Rprintf(","); 
+        Rprintf("SB%016llx",(unsigned long long)ENVSYMBITS(v)); 
+#       if USE_SYMBITS2
+            Rprintf(".%08llx",(unsigned long long)ENVSYMBITS2(v));
+#       endif
+        a = 1;
         if (FRAME_IS_LOCKED(v)) { if (a) Rprintf(","); Rprintf("LCK"); a = 1; }
 	if (IS_GLOBAL_FRAME(v)) { if (a) Rprintf(","); Rprintf("GL"); a = 1; }
+#       if USE_ENV_TUNECNTS
+            if (a) Rprintf(","); 
+            Rprintf("tu%u",((ENVSEXP)UPTR_FROM_SEXP(v))->env_tunecnt);
+            a = 1;
+#       endif
     }
     if (LEVELS(v)) { if (a) Rprintf(","); Rprintf("gp=0x%x", LEVELS(v)); a = 1; }
     if (ATTRIB(v) && ATTRIB(v) != R_NilValue) { if (a) Rprintf(","); Rprintf("ATT"); a = 1; }
@@ -187,6 +214,9 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
 	    Rprintf("%s", 
                     BASE_CACHE(v) ? " basecache" : "");
             Rprintf(" SB%016llx",(unsigned long long)SYMBITS(v));
+#           if USE_SYMBITS2
+                Rprintf(".%08llx",(unsigned long long)SYMBITS2(v));
+#           endif
             Rprintf (" LAST...");
             if (LASTSYMENV(v) == R_NoObject32) Rprintf (" -");
             else Rprintf(" %d.%d", 

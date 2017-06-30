@@ -1548,7 +1548,15 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
     FRAME(newrho) = valuelist;
     HASHTAB(newrho) = R_NilValue;
     ENCLOS(newrho) = Rf_chk_valid_SEXP(rho);
-    ENVSYMBITS(newrho) = ~(R_symbits_t)0; /* all 1s disables if not set later */
+
+#   if USE_SYMBITS2
+        ENVSYMBITS2(newrho) = ~(R_symbits2_t)0; /* all 1s disables */
+#   endif
+    ENVSYMBITS(newrho) = ~(R_symbits_t)0;       /* all 1s disables */
+
+#   if USE_ENV_TUNECNTS
+        ((ENVSEXP)UPTR_FROM_SEXP(newrho))->env_tunecnt = 0;
+#   endif
 
     v = Rf_chk_valid_SEXP(valuelist);
     n = Rf_chk_valid_SEXP(namelist);
@@ -1687,7 +1695,17 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     SET_SYMVALUE (c, value);
     LASTSYMENV(c) = R_NoObject32;
     LASTSYMBINDING(c) = R_NoObject;
-    SYMBITS(c) = 0;  /* all 0s to disable feature if not set later */
+#   if USE_SYMBITS2
+        SYMBITS2(c) = 0;  /* all 0s to disable feature if not set later */
+#   endif
+    SYMBITS(c) = 0;       /* all 0s to disable feature if not set later */
+
+#   if USE_SYM_TUNECNTS
+        ((SYMSEXP)UPTR_FROM_SEXP(c))->sym_tunecnt = 0;
+#   endif
+#   if USE_SYM_TUNECNTS2
+        ((SYMSEXP)UPTR_FROM_SEXP(c))->sym_tunecnt2 = 0;
+#   endif
 
     SET_DDVAL(c, isDDName(name));
 
@@ -2494,7 +2512,7 @@ static SEXP do_pnamedcnt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 
 /*******************************************/
-/* Non-sampling memory use profiler reports vector allocations.
+/* Non-sampling memory use profiler reports vector allocations. */
 /*******************************************/
 
 static void R_OutputStackTrace (void)
@@ -2670,14 +2688,13 @@ SEXP mkChar(const char *name)
    code for get/set of values since our keys are char* and not SEXP symbol types
    and the string hash table is treated specially in garbage collection.
 
-   Experience has shown that it is better to use a different hash function,
-   and a power of 2 for the hash size.
+   Experience has shown that it is better to use a power of 2 for the hash size.
 */
 
 void attribute_hidden InitStringHash()
 {
     R_StringHash = allocVector (VECSXP, char_hash_size);
-    HASHSIZE(R_StringHash) = char_hash_size;
+    LENGTH(R_StringHash) = char_hash_size;
     HASHSLOTSUSED(R_StringHash) = 0;
 }
 
@@ -2688,7 +2705,7 @@ static void R_StringHash_resize(unsigned int newsize)
     SEXP new_table, new_chain, val, next;
     unsigned int counter, new_hashcode, newmask;
 #if DEBUG_GLOBAL_STRING_HASH
-    unsigned int oldsize = HASHSIZE(R_StringHash);
+    unsigned int oldsize = LENGTH(R_StringHash);
     unsigned int oldslotsused = HASHSLOTSUSED(R_StringHash);
 #endif
 
@@ -2730,7 +2747,7 @@ static void R_StringHash_resize(unsigned int newsize)
     char_hash_mask = newmask;
 #if DEBUG_GLOBAL_STRING_HASH
     Rprintf ("Resized:  size %d => %d,  slotsused %d => %d\n",
-      oldsize, HASHSIZE(new_table), oldslotsused, HASHSLOTSUSED(new_table));
+      oldsize, LENGTH(new_table), oldslotsused, HASHSLOTSUSED(new_table));
 #endif
 }
 
@@ -2841,7 +2858,7 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
     VECTOR_ELT(R_StringHash, hashcode) = val;          /* not SET_VECTOR_ELT! */
 
     /* Resize the hash table if desirable and possible. */
-    if (HASHSLOTSUSED(R_StringHash) > 0.85 * HASHSIZE(R_StringHash)
+    if (HASHSLOTSUSED(R_StringHash) > 0.85 * LENGTH(R_StringHash)
          && 2*char_hash_size <= STRHASHMAXSIZE) {
         /* NOTE!  Must protect val here, since it is NOT protected by
            its presence in the hash table. */

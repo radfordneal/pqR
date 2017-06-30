@@ -46,6 +46,9 @@
         Computations such as \code{sum(vec>0)} are now done with a
         merged procedure that avoids creating \code{vec>0} as an intermediate
         value.
+  \item Improved methods for symbol lookup are now used, which increase
+        speed in many contexts, and especially in functions that are
+        defined in packages (rather than in the global workspace).
   \item New versions of the C matrix multiply functions are now used,
         which may be faster due to use of the C "restrict" keyword to
         allow better optimization.

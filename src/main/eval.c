@@ -51,9 +51,7 @@
 
 static inline SEXP FINDFUN (SEXP symbol, SEXP rho)
 {
-    R_symbits_t bits = SYMBITS(symbol);
-    while ((ENVSYMBITS(rho) & bits) != bits)
-        rho = ENCLOS(rho);
+    rho = SKIP_USING_SYMBITS (rho, symbol);
 
     if (rho == R_GlobalEnv && BASE_CACHE(symbol)) {
         SEXP res = SYMVALUE(symbol);
@@ -971,7 +969,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	a = CDR(a);
     }
 
-    set_envsymbits (newrho);
+    set_symbits_in_env (newrho);
 
     /*  Fix up any extras that were supplied by usemethod. */
 
@@ -3053,6 +3051,7 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     case LISTSXP:
 	/* This usage requires all the pairlist to be named */
 	env = NewEnvironment(R_NilValue, duplicate(CADR(args)), encl);
+        set_symbits_in_env(env);
 	break;
     case VECSXP:
 	/* PR#14035 */
@@ -3060,6 +3059,7 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	for (xptr = x ; xptr != R_NilValue ; xptr = CDR(xptr))
 	    SET_NAMEDCNT_MAX(CAR(xptr));
 	env = NewEnvironment(R_NilValue, x, encl);
+        set_symbits_in_env(env);
 	break;
     case INTSXP:
     case REALSXP:
