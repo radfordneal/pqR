@@ -124,6 +124,56 @@ SEXP attribute_hidden getAttrib00(SEXP vec, SEXP name)
     return R_NilValue;
 }
 
+/* Get the "names" attribute, and don't change its NAMEDCNT unless
+   it's really taken from another attribute.  Used directly in
+   subassign.c, and in getAttrib0 below. */
+
+static SEXP getAttrib0(SEXP vec, SEXP name);
+
+SEXP attribute_hidden getNamesAttrib (SEXP vec)
+{
+    SEXP s;
+
+    if (isVector(vec) || isList(vec) || isLanguage(vec)) {
+        s = getAttrib00(vec, R_DimSymbol);
+        if (TYPEOF(s) == INTSXP && LENGTH(s) == 1) {
+            s = getAttrib0(vec, R_DimNamesSymbol);
+            if (s != R_NilValue) {
+                s = VECTOR_ELT(s,0);
+                SET_NAMEDCNT_MAX(s);
+                return s;
+            }
+        }
+    }
+
+    if (isList(vec) || isLanguage(vec)) {
+        R_len_t len = length(vec);
+        int any = 0;
+        int i = 0;
+        PROTECT(s = allocVector(STRSXP, len));
+        for ( ; vec != R_NilValue; vec = CDR(vec), i++) {
+            if (TAG(vec) == R_NilValue)
+                SET_STRING_ELT(s, i, R_BlankString);
+            else if (isSymbol(TAG(vec))) {
+                any = 1;
+                SET_STRING_ELT(s, i, PRINTNAME(TAG(vec)));
+            }
+            else
+                error(_("getAttrib: invalid type (%s) for TAG"),
+                      type2char(TYPEOF(TAG(vec))));
+        }
+        UNPROTECT(1);
+        return any ? s : R_NilValue;
+    }
+
+    for (s = ATTRIB(vec); s != R_NilValue; s = CDR(s)) {
+	if (TAG(s) == R_NamesSymbol && TYPEOF(CAR(s)) == STRSXP)
+	    return CAR(s);
+    }
+
+    return R_NilValue;
+}
+
 /* The 0 version of getAttrib can be called when it is known that "name'
    is a symbol (not a string) and is not R_RowNamesSymbol (or the special
    processing for R_RowNamesSymbol is not desired).  (Currently static,
@@ -135,39 +185,9 @@ static SEXP getAttrib0(SEXP vec, SEXP name)
     int len, i, any;
 
     if (name == R_NamesSymbol) {
-	if(isVector(vec) || isList(vec) || isLanguage(vec)) {
-	    s = getAttrib00(vec, R_DimSymbol);
-	    if(TYPEOF(s) == INTSXP && LENGTH(s) == 1) {
-		s = getAttrib0(vec, R_DimNamesSymbol);
-		if(!isNull(s)) {
-		    SET_NAMEDCNT_MAX(VECTOR_ELT(s, 0));
-		    return VECTOR_ELT(s, 0);
-		}
-	    }
-	}
-	if (isList(vec) || isLanguage(vec)) {
-	    len = length(vec);
-	    PROTECT(s = allocVector(STRSXP, len));
-	    i = 0;
-	    any = 0;
-	    for ( ; vec != R_NilValue; vec = CDR(vec), i++) {
-		if (TAG(vec) == R_NilValue)
-		    SET_STRING_ELT(s, i, R_BlankString);
-		else if (isSymbol(TAG(vec))) {
-		    any = 1;
-		    SET_STRING_ELT(s, i, PRINTNAME(TAG(vec)));
-		}
-		else
-		    error(_("getAttrib: invalid type (%s) for TAG"),
-			  type2char(TYPEOF(TAG(vec))));
-	    }
-	    UNPROTECT(1);
-	    if (any) {
-		if (!isNull(s)) SET_NAMEDCNT_MAX(s);
-		return (s);
-	    }
-	    return R_NilValue;
-	}
+        s = getNamesAttrib(vec);
+        SET_NAMEDCNT_MAX(s);
+        return s;
     }
 
     s = getAttrib00(vec,name);
@@ -204,7 +224,7 @@ static SEXP getAttrib0(SEXP vec, SEXP name)
 SEXP getAttrib(SEXP vec, SEXP name)
 {
     if(TYPEOF(vec) == CHARSXP)
-	error("cannot have attributes on a CHARSXP");
+        error("cannot have attributes on a CHARSXP");
     /* pre-test to avoid expensive operations if clearly not needed -- LT */
     if (!HAS_ATTRIB(vec) && !(TYPEOF(vec) == LISTSXP || TYPEOF(vec) == LANGSXP))
 	return R_NilValue;
@@ -300,6 +320,32 @@ SEXP setAttrib(SEXP vec, SEXP name, SEXP val)
     else
 	return installAttrib(vec, name, val);
 }
+
+
+/* Remove dim and dimnames attributes. */
+
+void attribute_hidden no_dim_attributes (SEXP x)
+{
+    PROTECT(x);
+
+    SEXP s = ATTRIB(x);
+    SEXP t = s;
+    SEXP p;
+
+    while (t != R_NilValue) {
+        if (TAG(t) == R_DimSymbol || TAG(t) == R_DimNamesSymbol) {
+            if (t == s) 
+                SET_ATTRIB(x,CDR(t));
+            else
+                SETCDR(p,CDR(t));
+        }
+        p = t;
+        t = CDR(t);
+    }
+
+    UNPROTECT(1);
+}
+
 
 /* This is called in the case of binary operations to copy */
 /* most attributes from (one of) the input arguments to */

@@ -1,0 +1,8 @@
+Improve performance when vectors are extended/contracted.
+
+Done for length(vec) <- len.  Also now allow length(e) <- len when e
+is an "expression".  Fix length(p) <- len when p is a pairlist/language object.
+
+Done for [, [[, and $ as well.
+
+Introduces new internal procedures getNamesAttrib and no_dim_attributes.

@@ -1645,6 +1645,7 @@ SEXP Rf_allocVector1RAW(void);
 SEXP Rf_allocVector1LGL(void);
 SEXP Rf_allocVector1INT(void);
 SEXP Rf_allocVector1REAL(void);
+SEXP Rf_reallocVector(SEXP, R_len_t);
 int  Rf_any_duplicated(SEXP x, Rboolean from_last);
 int  Rf_any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last);
 SEXP Rf_applyClosure(SEXP, SEXP, SEXP, SEXP, SEXP);
@@ -1688,6 +1689,7 @@ SEXP Rf_findVarInFrame3_nolast(SEXP, SEXP, int);
 SEXP Rf_fixup_NaRm(SEXP);
 SEXP Rf_getAttrib(SEXP, SEXP);
 SEXP Rf_getAttrib00(SEXP, SEXP);
+SEXP Rf_getNamesAttrib(SEXP);
 SEXP Rf_GetArrayDimnames(SEXP);
 SEXP Rf_GetColNames(SEXP);
 void Rf_GetMatrixDimnames(SEXP, SEXP*, SEXP*, const char**, const char**);
@@ -2009,6 +2011,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define allocVector1LGL		Rf_allocVector1LGL
 #define allocVector1INT		Rf_allocVector1INT
 #define allocVector1REAL	Rf_allocVector1REAL
+#define reallocVector		Rf_reallocVector
 #define any_duplicated		Rf_any_duplicated
 #define any_duplicated3		Rf_any_duplicated3
 #define applyClosure		Rf_applyClosure
@@ -2063,6 +2066,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define GetArrayDimnames	Rf_GetArrayDimnames
 #define getAttrib		Rf_getAttrib
 #define getAttrib00		Rf_getAttrib00
+#define getNamesAttrib		Rf_getNamesAttrib
 #define getCharCE		Rf_getCharCE
 #define GetColNames		Rf_GetColNames
 #define GetMatrixDimnames	Rf_GetMatrixDimnames

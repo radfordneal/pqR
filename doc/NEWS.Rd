@@ -10,11 +10,15 @@
 
   \subsection{INTRODUCTION}{
   \itemize{ 
-  \item This release has several performance improvements.
+  \item This release has several signficicant performance improvements,
+        and a few minor feature changes and bug fixes.
   }}
 
   \subsection{DOCUMENTATION AND FEATURE CHANGES}{
   \itemize{
+  \item It is now allowed to set the length of an ``expression''
+        object with \code{length(e)<-len}, as for other vector
+        types.  Any extra elements are set to \code{NULL}.
   \item Attempts to set attributes on a symbol are now silently ignored,
         both at the R level, with \code{attr} and \code{attributes}, and
         at the C API level, with \code{SET_ATTRIB}.  Getting the attributes
@@ -31,6 +35,12 @@
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
+  \item Operations that increase or decrease the length of a vector
+        (including lists) now often make changes in place, rather than
+        allocating a new vector.  A small amount of additional
+        memory is sometimes allocated at the end of a vector to allow
+        expansion without reallocation.  This improvement mirrors a
+        recent improvement in R-3.4.0, but applies in more situations.
   \item Relational operators are now faster, and may sometimes be done in 
         helper threads (though currently without pipelining of data).
         Computations such as \code{sum(vec>0)} are now done with a
@@ -43,6 +53,9 @@
 
   \subsection{BUG FIXES}{
   \itemize{
+  \item Previously, \code{length(plist)<-n} did not work when \code{plist}
+        was a pairlist, but it does now.  This bug also exists in R Core
+        versions to at least R-3.4.0.
   \item Fixed a bug illustrated by the following:
 \preformatted{    a <- as.integer(NA); e <- new.env(size=a); print(a)
 }

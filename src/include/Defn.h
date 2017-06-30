@@ -1276,6 +1276,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define mkTrue			Rf_mkTrue
 # define NewEnvironment		Rf_NewEnvironment
 # define nonsubsettable_error	Rf_nonsubsettable_error
+# define no_dim_attributes	Rf_no_dim_attributes
 # define onintr			Rf_onintr
 # define onsigusr1              Rf_onsigusr1
 # define onsigusr2              Rf_onsigusr2
@@ -1479,6 +1480,7 @@ SEXP mkQUOTE(SEXP);
 SEXP mkSYMSXP(SEXP, SEXP);
 SEXP mkTrue(void);
 SEXP NewEnvironment(SEXP, SEXP, SEXP);
+void no_dim_attributes(SEXP);
 void onintr(void);
 RETSIGTYPE onsigusr1(int);
 RETSIGTYPE onsigusr2(int);

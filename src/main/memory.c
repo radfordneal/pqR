@@ -1851,7 +1851,15 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
               type2char(type), length);
     }
 
-    s = alloc_obj(type,length);
+    /* Bump up length for long vectors slightly to allow for small extension. */
+
+    R_len_t alloc_len = length;
+    if (alloc_len > INT_MAX-10)
+        alloc_len = INT_MAX;
+    else if (alloc_len > 1000)
+        alloc_len += 10;
+
+    s = alloc_obj(type,alloc_len);
     LENGTH(s) = length;
     TRUELENGTH(s) = 0;
 
@@ -1878,6 +1886,118 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 
     return s;
 }
+
+
+/* Reallocate a vector with different length, returning the same storage
+   if possible/reasonable, and otherwise new storage, after copying contents
+   up to new length and initializing any new elements to NA, or R_NilValue,
+   or raw 0.  Protects its argument. */
+
+SEXP reallocVector (SEXP vec, R_len_t length)
+{
+    sggc_nchunks_t curr_chunks = sggc_nchunks_allocated (CPTR_FROM_SEXP(vec));
+    sggc_nchunks_t new_chunks = Rf_nchunks (TYPEOF(vec), length);
+    R_len_t curr_len = LENGTH(vec);
+
+    /* See if we can just reduce LENGTH and return current location.
+       Don't do this if the new vector would have lots of unused space
+       - half or more, so that we won't reallocate into a small object
+       of the same size (could be cleverer about this, but may not be
+       worth it). */
+
+    if (length <= curr_len) {
+        if (length == curr_len)
+            return vec;
+        if (new_chunks >= (curr_chunks>>1) || curr_chunks - new_chunks < 4) {
+            LENGTH(vec) = length;
+            return vec;
+        }
+    }
+
+    /* See if we need to allocate a bigger/smaller object, and copy
+       over existing elements.  Allocate a bit extra if possible, to
+       help with any future length extensions. */
+
+    if (new_chunks > curr_chunks || length < curr_len) {
+
+        if ((int) (new_chunks*1.05) <= INT_MAX)
+            new_chunks = (int) (new_chunks*1.05);
+        else
+            new_chunks = INT_MAX;
+
+        SEXP old_vec = vec;
+
+        sggc_type_t sggctype = R_type_to_sggc_type[TYPEOF(vec)];
+        sggc_cptr_t cp;
+
+        PROTECT(old_vec);
+        ALLOC_WITH_COLLECT(cp = sggc_alloc (sggctype, new_chunks),
+                           mem_error(), new_chunks);
+        UNPROTECT(1);
+
+        sggc_nchunks_t copy_chunks 
+                        = new_chunks < curr_chunks ? new_chunks : curr_chunks;
+        memcpy (SGGC_DATA(cp), SGGC_DATA(CPTR_FROM_SEXP(old_vec)), 
+                (size_t) copy_chunks * SGGC_CHUNK_SIZE);
+
+        vec = SEXP_FROM_CPTR(cp);
+#if !USE_COMPRESSED_POINTERS
+        vec->cptr = cp;
+#endif
+        ATTRIB_W(vec) = ATTRIB_W(old_vec);  /* might not be in SGGC_DATA */
+        LENGTH(vec) = length;
+
+        if (R_IsMemReporting) R_ReportAllocation (vec);
+    }
+    else {
+        LENGTH(vec) = length;
+    }
+
+    /* See if we need to initialize new elements. */
+
+    if (length > curr_len) {
+
+        R_len_t i;
+
+        switch (TYPEOF(vec)) {
+        case LGLSXP:
+        case INTSXP:
+            for (i = curr_len; i < length; i++)
+                INTEGER(vec)[i] = NA_INTEGER;
+            break;
+        case REALSXP:
+            for (i = curr_len; i < length; i++)
+                REAL(vec)[i] = NA_REAL;
+            break;
+        case CPLXSXP:
+            for (i = curr_len; i < length; i++) {
+                COMPLEX(vec)[i].r = NA_REAL;
+                COMPLEX(vec)[i].i = NA_REAL;
+            }
+            break;
+        case STRSXP:
+            for (i = curr_len; i < length; i++)
+                SET_STRING_ELT(vec, i, NA_STRING);
+            break;
+        case VECSXP:
+        case EXPRSXP:
+            for (i = curr_len; i < length; i++)
+                SET_VECTOR_ELT(vec, i, R_NilValue);
+            break;
+        case RAWSXP:
+            for (i = curr_len; i < length; i++)
+                RAW(vec)[i] = 0;
+            break;
+        default:
+            abort();
+        }
+    }
+
+    /* Return the new vector. */
+
+    return vec;
+}
+
 
 /* For future hiding of allocVector(CHARSXP) */
 SEXP attribute_hidden allocCharsxp(R_len_t len)
@@ -2418,6 +2538,8 @@ print_newline:
 
 static void R_ReportAllocation (SEXP s)
 {
+    PROTECT(s);
+
     SEXPTYPE type = TYPEOF(s);
     R_len_t length = LENGTH(s);
     R_size_t size = SGGC_TOTAL_BYTES(type,length);
@@ -2443,6 +2565,8 @@ static void R_ReportAllocation (SEXP s)
         }
         R_OutputStackTrace();
     }
+
+    UNPROTECT(1);
 }
 
 static void R_EndMemReporting(void)
