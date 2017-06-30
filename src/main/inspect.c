@@ -140,9 +140,13 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
     if (NAMEDCNT(v)) { if (a) Rprintf(","); Rprintf("NAM(%d)",NAMEDCNT(v)); a = 1; }
     if (! ((VECTOR_OR_CHAR_TYPES >> TYPEOF(v)) & 1)) {
         if (RDEBUG(v)) { if (a) Rprintf(","); Rprintf("DBG"); a = 1; }
-        if (RTRACE(v)) { if (a) Rprintf(","); Rprintf("TR"); a = 1; }
+        if (TYPEOF(v)!=ENVSXP && TYPEOF(v)!=SYMSXP && RTRACE(v)) { 
+            if (a) Rprintf(","); Rprintf("TR"); a = 1; 
+        }
         if (RSTEP(v)) { if (a) Rprintf(","); Rprintf("STP"); a = 1; }
-        if (BASE_CACHE(v)) { if (a) Rprintf(","); Rprintf("BC"); a = 1; }
+        if (TYPEOF(v)==ENVSXP && IS_BASE(v)) { 
+            if (a) Rprintf(","); Rprintf("BC"); a = 1; 
+        }
     }
     if (IS_S4_OBJECT(v)) { if (a) Rprintf(","); Rprintf("S4"); a = 1; }
     if (TYPEOF(v) == SYMSXP || TYPEOF(v) == LISTSXP) {
@@ -164,6 +168,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
 #       endif
     }    
     if (TYPEOF(v) == ENVSXP) {
+        if (a) Rprintf(","); 
         Rprintf("SB%016llx",(unsigned long long)ENVSYMBITS(v)); 
 #       if USE_SYMBITS2
             Rprintf(".%08llx",(unsigned long long)ENVSYMBITS2(v));
