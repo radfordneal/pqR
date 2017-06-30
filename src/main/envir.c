@@ -3212,6 +3212,7 @@ void R_LockEnvironment(SEXP env, Rboolean bindings)
 	}
     }
     LOCK_FRAME(env);
+    set_symbits_in_env(env);
 }
 
 Rboolean R_EnvironmentIsLocked(SEXP env)
