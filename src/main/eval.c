@@ -3051,6 +3051,7 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     case LISTSXP:
 	/* This usage requires all the pairlist to be named */
 	env = NewEnvironment(R_NilValue, duplicate(CADR(args)), encl);
+        set_symbits_in_env(env);
 	break;
     case VECSXP:
 	/* PR#14035 */
@@ -3058,6 +3059,7 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	for (xptr = x ; xptr != R_NilValue ; xptr = CDR(xptr))
 	    SET_NAMEDCNT_MAX(CAR(xptr));
 	env = NewEnvironment(R_NilValue, x, encl);
+        set_symbits_in_env(env);
 	break;
     case INTSXP:
     case REALSXP:
