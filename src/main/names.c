@@ -381,7 +381,8 @@ attribute_hidden FUNTAB R_FunTab_names[] =
 };
 
 
-/* Table of special names. 
+/* Table of special names.  These are the only ones that have bit 0 of
+   symbits set.
 
    Any symbols can be put here, but ones that contain special characters, or are
    reserved words, are the ones unlikely to be defined in any environment other
@@ -584,7 +585,7 @@ static void SetupBuiltins(void)
     R_max_internal = 0;
 
     for (i = 0; R_FunTab[i].name!=NULL; i++) {
-        if ((R_FunTab[i].eval % 100 )/10) {
+        if ((R_FunTab[i].eval % 100) / 10) {
             SEXP sym = install(R_FunTab[i].name);
             if (R_first_internal == 0)
                 R_first_internal = CPTR_FROM_SEXP(sym);
@@ -602,24 +603,32 @@ static void SetupBuiltins(void)
         R_Suicide("Can't allocate R_internal_table");
 
     /* Install the primitive and internal functions.  Look for fast versions
-       of the primitives (but not internals). */
+       of the primitives (but not internals).  Set bits 1-13 of symbits for
+       symbols for primitives, based on their index in FunTab (not name). */
 
     for (i = 0; R_FunTab[i].name!=NULL; i++) {
+
         SEXP (*this_cfun)() = R_FunTab[i].cfun;
         int this_code = R_FunTab[i].code;
         SEXP prim;
         /* prim needs protect since install can (and does here) allocate.
            Except... mkPRIMSXP now caches them all, so maybe not. */
         PROTECT(prim = mkPRIMSXP(i, R_FunTab[i].eval % 10));
+
         if (0) { /* enable to display info */
             Rprintf ("SETUP: %s, internal %d, visible %d\n",
                      PRIMNAME(prim), PRIMINTERNAL(prim), PRIMPRINT(prim));
         }
+
         SEXP sym = install(R_FunTab[i].name);
-        if ((R_FunTab[i].eval % 100 )/10)
+
+        if ((R_FunTab[i].eval % 100) / 10) {
             SET_INTERNAL(sym, prim);
+        }
         else {
+
             SET_SYMVALUE(sym, prim);
+
             for (j = 0; FastFunTab_ptrs[j]!=NULL; j++) {
                 for (k = 0; FastFunTab_ptrs[j][k].slow!=0; k++) {
                     FASTFUNTAB *f = &FastFunTab_ptrs[j][k];
@@ -631,12 +640,23 @@ static void SetupBuiltins(void)
                     }
                 }
             }
+
+          found: ;
+
+            R_symbits_t w;
+            int b1, b2;
+            b1 = 1 + i % 13;
+            b2 = 1 + i % 12;
+            if (b2 >= b1) b2 += 1;
+            w = (((R_symbits_t)1) << b1) | (((R_symbits_t)1) << b2);
+            SET_SYMBITS (sym, SYMBITS(sym) | w);
         }
-      found:
+
         UNPROTECT(1);
     }
 
-    /* Flag "special" symbols. */
+    /* Set bit 0 in symbits for "special" symbols, to make extra sure we
+       will be likely to skip straight to base environment on lookup. */
 
     for (i = 0; Spec_name[i]; i++) {
         SEXP sym = install(Spec_name[i]);
@@ -744,14 +764,18 @@ static SEXP install_with_hashcode (char *name, int hashcode)
     SEXP sym = SEXP_FROM_SEXP32(bucket->entry);
     SYM_HASH(sym) = CHAR_HASH(pname);
 
+    /* Set up symbits.  May be fiddled to try to improve performance. 
+       Currently, the low 14 bits of symbits are reserved for special and
+       primitive symbols. */
+
     int b1, b2;
-    b1 = hashcode % 63;
-    b2 = hashcode % 62;
+    b1 = 14 + hashcode % 50;
+    b2 = 14 + hashcode % 49;
     if (b2 >= b1) b2 += 1;
 
-    SET_SYMBITS (sym, (((R_symbits_t)2) << b1) | (((R_symbits_t)2) << b2));
+    SET_SYMBITS (sym, (((R_symbits_t)1) << b1) | (((R_symbits_t)1) << b2));
 
-    SET_SYMBITS2 (sym, ((R_symbits2_t)1) << ((hashcode>>5) & 31)); /* for now */
+    SET_SYMBITS2 (sym, ((R_symbits2_t)1) << ((hashcode % 997) & 31));
 
     return sym;
 }
