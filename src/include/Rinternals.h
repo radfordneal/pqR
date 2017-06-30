@@ -327,7 +327,7 @@ typedef struct SEXPREC {
 #if USE_AUX_FOR_ATTRIB
 #define USE_ENV_TUNECNTS 0  /* Must be kept as 0 */
 #else
-#define USE_ENV_TUNECNTS 1  /* May be 0 or 1 - normally 0 to avoid slowdown */
+#define USE_ENV_TUNECNTS 0  /* May be 0 or 1 - normally 0 to avoid slowdown */
 #endif
 
 typedef uint64_t R_symbits_t;
@@ -388,13 +388,13 @@ typedef struct PRIM_SEXPREC {
 #if USE_COMPRESSED_POINTERS
 #define USE_SYM_TUNECNTS 0   /* Must be kept as 0 */
 #else
-#define USE_SYM_TUNECNTS 1   /* May be 0 or 1 - normally 0 to avoid slowdown */
+#define USE_SYM_TUNECNTS 0   /* May be 0 or 1 - normally 0 to avoid slowdown */
 #endif
 
 #if USE_COMPRESSED_POINTERS || SIZEOF_CHAR_P != 8 || USE_AUX_FOR_ATTRIB
 #define USE_SYM_TUNECNTS2 0  /* Must be kept as 0 */
 #else
-#define USE_SYM_TUNECNTS2 1  /* May be 0 or 1 - normally 0 to avoid slowdown */
+#define USE_SYM_TUNECNTS2 0  /* May be 0 or 1 - normally 0 to avoid slowdown */
 #endif
 
 typedef struct SYM_SEXPREC {
