@@ -394,6 +394,44 @@ void copy_string_elements(SEXP x, int i, SEXP v, int j, int n)
     }
 }
 
+/* Store repeated copies of the string elements of v in x (starting at i),
+   until n elements have been stored. */
+void rep_string_elements(SEXP x, int i, SEXP v, int n) 
+{
+    R_len_t lenv = LENGTH(v);
+    R_len_t k;
+
+    if(TYPEOF(x) != STRSXP)
+	error("%s() can only be applied to a '%s', not a '%s'",
+         "rep_string_elements", "character vector", type2char(TYPEOF(x)));
+
+    if (sggc_youngest_generation(CPTR_FROM_SEXP(x))) {
+        /* x can't be older than anything */
+        k = 0;
+        while (n > 0) {
+            STRING_ELT(x,i) = STRING_ELT(v,k);
+            i += 1;
+            n -= 1;
+            k += 1;
+            if (k >= lenv) k = 0;
+        }
+    }
+    else {  
+        /* need to check each time if x is older */
+        SEXP e;
+        k = 0;
+        while (n > 0) {
+            e = STRING_ELT(v,k);
+            CHECK_OLD_TO_NEW(x, e);
+            STRING_ELT(x,i) = e;
+            i += 1;
+            n -= 1;
+            k += 1;
+            if (k >= lenv) k = 0;
+        }
+    }
+}
+
 SEXP (SET_VECTOR_ELT)(SEXP x, int i, SEXP v) {
     if (v == R_NoObject) abort();
     /*  we need to allow vector-like types here */

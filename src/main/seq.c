@@ -282,8 +282,7 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                 break;
             }
             case STRSXP: {
-                SEXP v = STRING_ELT(s,0);
-                for (i = 0; i < na; i++) SET_STRING_ELT (a, i, v);
+                rep_string_elements (a, 0, s, na);
                 break;
             }
             case LISTSXP: {
@@ -339,10 +338,7 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                 }
                 break;
             case STRSXP:
-                for (i = 0, j = 0; i < na; i++, j++) {
-                    if (j >= ns) j = 0;
-                    SET_STRING_ELT(a, i, STRING_ELT(s, j));
-                }
+                rep_string_elements (a, 0, s, na);
                 break;
             case LISTSXP:
                 for (u = a, j = 0; u != R_NilValue; u = CDR(u), j++) {
