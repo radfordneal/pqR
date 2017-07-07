@@ -232,11 +232,12 @@ static SEXP do_colon(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     return ans;
 }
 
-/* Task procedure for rep and rep.int.  Repeats first input to the length
-   of the output.  If the second input is null, repeats each element once
-   in each cycle; if it is scalar, repeats each element that many times
-   each cycle; if it is a vector (same length as first input), it repeats 
-   each element the specified number of times each cycle. 
+/* Task procedure for rep, rep.int, and rep_len.  Repeats first input
+   to the length of the output.  If the second input is null, repeats
+   each element once in each cycle; if it is scalar, repeats each
+   element that many times each cycle; if it is a vector (same length
+   as first input), it repeats each element the specified number of
+   times each cycle.
   
    Should be master-only if input is not numeric.  Does not pipeline input
    or output. */
@@ -769,6 +770,73 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 }
 
 
+/* Internal rep_len, with arguments x and length.out.  Mostly taken from
+   R-3.4.0, apart from the call of task_rep. */
+
+static SEXP do_rep_len(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+{
+    R_xlen_t ns, na;
+    SEXP a, s, len;
+
+    checkArity(op, args);
+    s = CAR(args);
+
+    if (!isVector(s) && s != R_NilValue)
+	error(_("attempt to replicate non-vector"));
+
+    len = CADR(args);
+    if(length(len) != 1)
+	error(_("invalid '%s' value"), "length.out");
+    if (TYPEOF(len) != INTSXP) {
+	double sna = asReal(len);
+	if (ISNAN(sna) || sna <= -1. || sna >= R_XLEN_T_MAX + 1.)
+	    error(_("invalid '%s' value"), "length.out");
+	na = (R_xlen_t) sna;
+    } else
+	if ((na = asInteger(len)) == NA_INTEGER || na < 0) /* na = 0 ok */
+	    error(_("invalid '%s' value"), "length.out");
+
+    if (TYPEOF(s) == NILSXP && na > 0)
+	error(_("cannot replicate NULL to a non-zero length"));
+    ns = xlength(s);
+    if (ns == 0) {
+	SEXP a;
+	PROTECT(a = duplicate(s));
+	if(na > 0) a = xlengthgets(a, na);
+	UNPROTECT(1);
+	return a;
+    }
+
+    PROTECT(a = allocVector(TYPEOF(s), na));
+
+    HELPERS_NOW_OR_LATER (
+      !helpers_not_multithreading && na >= T_rep && isVectorNonpointer(s)
+         && (variant & VARIANT_PENDING_OK) != 0, 
+      FALSE, 0, task_rep, 0, a, s, (helpers_var_ptr) 0);
+
+#ifdef _S4_rep_keepClass
+    if(IS_S4_OBJECT(s)) { /* e.g. contains = "list" */
+	setAttrib(a, R_ClassSymbol, getAttrib(s, R_ClassSymbol));
+	SET_S4_OBJECT(a);
+    }
+#endif
+
+    if (inherits(s, "factor")) {
+	SEXP tmp;
+	if(inherits(s, "ordered")) {
+	    PROTECT(tmp = allocVector(STRSXP, 2));
+	    SET_STRING_ELT(tmp, 0, mkChar("ordered"));
+	    SET_STRING_ELT(tmp, 1, mkChar("factor"));
+	} else PROTECT(tmp = mkString("factor"));
+	setAttrib(a, R_ClassSymbol, tmp);
+	UNPROTECT(1);
+	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
+    }
+    UNPROTECT(1);
+    return a;
+}
+
+
 /* do_seq implements seq.int, which dispatches on methods for seq. */
 
 #define FEPS 1e-10
@@ -1021,6 +1089,7 @@ attribute_hidden FUNTAB R_FunTab_seq[] =
 {":",		do_colon,	0,	1000,	2,	{PP_BINARY2, PREC_COLON,  0}},
 {"..",		do_colon,	1,	1000,	2,	{PP_BINARY2, PREC_COLON,  0}},
 {"rep.int",	do_rep_int,	0,	1011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rep_len",	do_rep_len,	0,	1011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"rep",		do_rep,		0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq.int",	do_seq,		0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq_along",	do_seq_along,	0,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},

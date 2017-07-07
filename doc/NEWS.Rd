@@ -67,6 +67,15 @@
         The value printed was previously 0 rather than NA.
         This bug also exists in R Core versions to at least R-3.4.0.
   }}
+
+  \subsection{NEW FEATURES FROM R CORE RELEASES}{
+  \itemize{
+  \item From R-3.0.0: There is a new function \code{rep_len()} analogous to 
+        \code{rep.int()} for when speed is required (and names are not).
+
+        Note, however, that in pqR \code{rep} is as fast as
+        \code{rep_len} (and also \code{rep.int}) when there are no names.
+  }}
 }
 
 

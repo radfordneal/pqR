@@ -1,7 +1,7 @@
 % File src/library/base/man/rep.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
-% Modifications for pqR Copyright (c) 2014 Radford M. Neal.
+% Modifications for pqR Copyright (c) 2014, 2017 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{rep}
@@ -17,12 +17,16 @@
   \code{rep} replicates the values in \code{x}.  It is a generic
   function, and the (internal) default method is described here.
 
-  \code{rep.int} is a faster simplified version for the most common case.
+  \code{rep.int} and \code{rep_len} are simplified versions for two
+  common cases, which do not preserve names, and hence are faster
+  when names are present.  They are not generic.
 }
 \usage{
 rep(x, \dots)
 
 rep.int(x, times)
+
+rep_len(x, length.out)
 }
 \arguments{
   \item{x}{a vector (of any mode including a list) or a pairlist or a
@@ -45,7 +49,7 @@ rep.int(x, times)
 	\code{1} if \code{NA} or invalid.}
     }
   }
-  \item{times}{see \code{\dots}.}
+  \item{times, length.out}{see \code{\dots}.}
 }
 
 \details{
@@ -79,8 +83,8 @@ rep.int(x, times)
   An object of the same type as \code{x} (except that \code{rep}, though
   not \code{rep.int}, will coerce pairlists to vector lists).
 
-  \code{rep.int} returns no attributes (except the class if returning a
-  factor).
+  \code{rep.int} and \code{rep_len} return no attributes (except the
+  class if returning a factor).
 
   The default method of \code{rep} gives the result names (which will
   almost always contain duplicates) if \code{x} had names, but retains
@@ -93,9 +97,9 @@ rep.int(x, times)
   \code{.Fortran} with \code{DUP=FALSE}.
 }
 \note{
-  Function \code{rep.int} is a simple case handled by internal code, and
-  provided as a separate function for S compatibility, and for speed in
-  some cases (such as when names are present but not needed in the result).
+  Function \code{rep.int} is a simple case 
+  provided as a separate function for S compatibility, and for speed
+  when names are present but not needed in the result.
 
   Function \code{rep} is a primitive, but (partial) matching of argument
   names is performed as for normal functions.  You can no longer pass a
@@ -139,6 +143,7 @@ x
 rep(x, 2)
 rep(x, each=2)
 rep.int(x, 2)  # no names
+rep_len(x, 10)
 }
 \keyword{manip}
 \keyword{chron}
