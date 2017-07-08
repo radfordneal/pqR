@@ -8,6 +8,7 @@
 \alias{rep}
 \alias{rep.factor}
 \alias{rep.int}
+\alias{rep_len}
 \alias{rep.POSIXct}
 \alias{rep.POSIXlt}
 \alias{rep.Date}
