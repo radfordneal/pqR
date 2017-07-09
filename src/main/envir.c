@@ -1114,8 +1114,8 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
    simplest case will have low overhead.  Can also be called directly
    if it's known that checking LASTSYMBINDING won't help. 
 
-   Will fail quickly when the symbol has LASTSYMENVNOTFOUND equal to 
-   the environment.  LASTSYMENVNOTFOUND is also updated on failure if the 
+   Will fail quickly when the symbol has LASTENVNOTFOUND equal to 
+   the environment.  LASTENVNOTFOUND is also updated on failure if the 
    environment is unhashed. */
 
 SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
@@ -1161,10 +1161,10 @@ SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 
     else if (HASHTAB(rho) == R_NilValue) {
 
-        if (LASTSYMENVNOTFOUND(symbol) != SEXP32_FROM_SEXP(rho)) {
+        if (LASTENVNOTFOUND(symbol) != SEXP32_FROM_SEXP(rho)) {
             loc = FRAME(rho);
             SEARCH_LOOP (rho, loc, symbol, goto found);
-            LASTSYMENVNOTFOUND(symbol) = SEXP32_FROM_SEXP(rho);
+            LASTENVNOTFOUND(symbol) = SEXP32_FROM_SEXP(rho);
         }
         goto ret;
 
@@ -1506,8 +1506,8 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
   reached, where the function will be found in the global cache (if it
   wasn't in one of the local environemnts). 
 
-  An environment can be skipped when the symbol has LASTSYMENVNOTFOUND
-  equal to that environment.  LASTSYMENVNOTFOUND is updated to the last
+  An environment can be skipped when the symbol has LASTENVNOTFOUND
+  equal to that environment.  LASTENVNOTFOUND is updated to the last
   unhashed environment where the symbol wasn't found.
 
   There is no need to wait for computations of the values found to finish, 
@@ -1521,7 +1521,7 @@ SEXP findFun(SEXP symbol, SEXP rho)
 
 SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
 {
-    SEXP32 last_sym_not_found = LASTSYMENVNOTFOUND(symbol);
+    SEXP32 last_sym_not_found = LASTENVNOTFOUND(symbol);
     SEXP last_unhashed_env_nf = R_NoObject;
     SEXP vl;
 
@@ -1546,7 +1546,7 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
             goto err;
         }
 
-        /* See if it's known from LASTSYMENVNOTFOUND that this symbol isn't 
+        /* See if it's known from LASTENVNOTFOUND that this symbol isn't 
            in this environment. */
 
         if (SEXP32_FROM_SEXP(rho) == last_sym_not_found) {
@@ -1570,7 +1570,7 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
 
         if (isFunction (vl)) {
             if (last_unhashed_env_nf != R_NoObject)
-                LASTSYMENVNOTFOUND(symbol) = 
+                LASTENVNOTFOUND(symbol) = 
                   SEXP32_FROM_SEXP(last_unhashed_env_nf);
             return vl;
         }
@@ -1589,7 +1589,7 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
 
 SEXP findFunMethod(SEXP symbol, SEXP rho)
 {
-    SEXP32 last_sym_not_found = LASTSYMENVNOTFOUND(symbol);
+    SEXP32 last_sym_not_found = LASTENVNOTFOUND(symbol);
     SEXP last_unhashed_env_nf = R_NoObject;
 
     for (rho = SKIP_USING_SYMBITS(rho,symbol); 
@@ -1616,14 +1616,14 @@ SEXP findFunMethod(SEXP symbol, SEXP rho)
             vl = forcePromise(vl);
         if (isFunction(vl)) {
             if (last_unhashed_env_nf != R_NoObject)
-                LASTSYMENVNOTFOUND(symbol) = 
+                LASTENVNOTFOUND(symbol) = 
                   SEXP32_FROM_SEXP(last_unhashed_env_nf);
             return vl;
         }
     }
 
     if (last_unhashed_env_nf != R_NoObject && !IS_BASE(last_unhashed_env_nf))
-        LASTSYMENVNOTFOUND(symbol) = SEXP32_FROM_SEXP(last_unhashed_env_nf);
+        LASTENVNOTFOUND(symbol) = SEXP32_FROM_SEXP(last_unhashed_env_nf);
     return R_UnboundValue;
 }
 
@@ -1695,7 +1695,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     }
 
     if (HASHTAB(rho) == R_NilValue) {
-        if (LASTSYMENVNOTFOUND(symbol) != SEXP32_FROM_SEXP(rho)) {
+        if (LASTENVNOTFOUND(symbol) != SEXP32_FROM_SEXP(rho)) {
             loc = FRAME(rho);
             SEARCH_LOOP (rho, loc, symbol, goto found_update_last);
         }
@@ -1735,8 +1735,8 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
 
         SET_ENVSYMBITS (rho, ENVSYMBITS(rho) | SYMBITS(symbol));
 
-        if (LASTSYMENVNOTFOUND(symbol) == SEXP32_FROM_SEXP(rho))
-            LASTSYMENVNOTFOUND(symbol) = R_NoObject32;
+        if (LASTENVNOTFOUND(symbol) == SEXP32_FROM_SEXP(rho))
+            LASTENVNOTFOUND(symbol) = R_NoObject32;
 
         if (incdec&2)
             INC_NAMEDCNT(value);

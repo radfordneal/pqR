@@ -851,7 +851,7 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SYMVALUE(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->value)
 #define LASTSYMENV(x)	(((SYMSEXP) UPTR_FROM_SEXP(x))->lastenv)
 #define LASTSYMBINDING(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->lastbinding)
-#define LASTSYMENVNOTFOUND(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->lastenvnotfound)
+#define LASTENVNOTFOUND(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->lastenvnotfound)
 #define SYMBITS(x)      NOT_LVALUE((((SYMSEXP) UPTR_FROM_SEXP(x))->symbits))
 #define SET_SYMBITS(x,v)  (((SYMSEXP) UPTR_FROM_SEXP(x))->symbits = (v))
 #define DDVAL_MASK	1

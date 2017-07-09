@@ -138,7 +138,7 @@ R_CONST ENV_SEXPREC R_env_consts[1] = {
 
 /* Definition of the R_UnboundValue constant, whose address when cast to SEXP
    is R_UnboundValue.  Don't put in read-only memory, so won't have to special
-   case it when clearing LASTSYMENV and LASTSYMENVNOTFOUND.  Leave LENGTH
+   case it when clearing LASTSYMENV and LASTENVNOTFOUND.  Leave LENGTH
    (if it exists) as zero. */
 
 SYM_SEXPREC R_sym_consts[1] = { 
