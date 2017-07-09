@@ -390,7 +390,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
         attrib, length      attrib, length       attrib, length  attrib, length
         lastbinding, value  C-function, fastfun  frame, enclos   prot, tag
         hash, lastenv       64 bits of info      hashtab, tcnts  xptr, padding
-        tunecnts, symbits2  = 32 bytes           hashlen, pad    = 32 bytes
+        tunecnts, lastenf   = 32 bytes           hashlen, pad    = 32 bytes
         symbits                 (2 chunks)       envsymbits        (2 chunks)
         = 48 bytes                               = 48 bytes
           (3 chunks)                               (3 chunks)

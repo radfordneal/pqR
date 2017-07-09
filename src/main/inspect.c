@@ -170,9 +170,6 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
     if (TYPEOF(v) == ENVSXP) {
         if (a) Rprintf(","); 
         Rprintf("SB%016llx",(unsigned long long)ENVSYMBITS(v)); 
-#       if USE_SYMBITS2
-            Rprintf(".%08llx",(unsigned long long)ENVSYMBITS2(v));
-#       endif
         a = 1;
         if (FRAME_IS_LOCKED(v)) { if (a) Rprintf(","); Rprintf("LCK"); a = 1; }
 	if (IS_GLOBAL_FRAME(v)) { if (a) Rprintf(","); Rprintf("GL"); a = 1; }
@@ -214,9 +211,6 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
 	    Rprintf("%s", 
                     BASE_CACHE(v) ? " basecache" : "");
             Rprintf(" SB%016llx",(unsigned long long)SYMBITS(v));
-#           if USE_SYMBITS2
-                Rprintf(".%08llx",(unsigned long long)SYMBITS2(v));
-#           endif
             Rprintf (" LAST...");
             if (LASTSYMENV(v) == R_NoObject32) Rprintf (" -");
             else Rprintf(" %d.%d", 

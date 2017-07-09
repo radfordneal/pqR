@@ -1726,21 +1726,14 @@ extern void *alloca(size_t);
 
 
 /* Skip to the first environment that might contain the given symbol,
-   on the basis of symbits.  Note that ENVSYMBITS and ENVSYMBITS2 are
-   both all 1s for R_EmptyEnv and R_GlobalEnv. */
+   on the basis of symbits.  Note that ENVSYMBITS is all 1s for
+   R_EmptyEnv and R_GlobalEnv. */
 
 static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
 {
     R_symbits_t bits = SYMBITS(symbol);
-#   if USE_SYMBITS2
-    R_symbits2_t bits2 = SYMBITS2(symbol);
-#   endif
 
-    while ((ENVSYMBITS(rho) & bits) != bits 
-#       if USE_SYMBITS2
-             || (ENVSYMBITS2(rho) & bits2) != bits2
-#       endif
-    ) {
+    while ((ENVSYMBITS(rho) & bits) != bits) {
 #       if USE_SYM_TUNECNTS2
             ((SYMSEXP)UPTR_FROM_SEXP(symbol))->sym_tunecnt2 += 1;
 #       endif

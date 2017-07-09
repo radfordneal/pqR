@@ -212,70 +212,39 @@ static SEXP getActiveValue(SEXP fun)
 
 #endif
 
-/* Function to correctly set ENVSYMBITS and ENVSYMBITS2 for an environment. */
+/* Function to correctly set ENVSYMBITS for an environment. */
 
-static void chainbits (SEXP chain, 
-                       R_symbits_t *pbits 
-#                      if USE_SYMBITS2
-                       , R_symbits2_t *pbits2
-#                      endif
-                      )
+static void chainbits (SEXP chain, R_symbits_t *pbits)
 {
     R_symbits_t bits;
-#   if USE_SYMBITS2
-    R_symbits2_t bits2;
-#   endif
    
     bits = 0;
-#   if USE_SYMBITS2
-        bits2 = 0;
-#   endif
 
     while (chain != R_NilValue) {
         bits |= SYMBITS (TAG (chain));
-#       if USE_SYMBITS2
-            bits2 |= SYMBITS2 (TAG (chain));
-#       endif
         chain = CDR(chain);
     }
 
     *pbits |= bits;
-#   if USE_SYMBITS2
-        *pbits2 |= bits2;
-#   endif
 }
 
 void attribute_hidden set_symbits_in_env (SEXP env)
 {
     R_symbits_t bits = 0;
-#   if USE_SYMBITS2
-    R_symbits2_t bits2 = 0;
-#   endif
    
     if (HASHTAB(env) != R_NilValue) {
         SEXP table = HASHTAB(env);
         R_len_t len = HASHLEN(env);
         R_len_t i;
         for (i = 0; i < len; i++) {
-            chainbits (VECTOR_ELT(table,i), &bits
-#                      if USE_SYMBITS2
-                       , &bits2
-#                      endif
-                      );
+            chainbits (VECTOR_ELT(table,i), &bits);
         }
     }
     else {
-        chainbits (FRAME(env), &bits
-#                  if USE_SYMBITS2
-                   , &bits2
-#                  endif
-                  );
+        chainbits (FRAME(env), &bits);
     }
 
     SET_ENVSYMBITS (env, bits);
-#   if USE_SYMBITS2
-        SET_ENVSYMBITS2 (env, bits2);
-#   endif
 }
 
 /*----------------------------------------------------------------------
@@ -677,9 +646,6 @@ static void R_HashFrame(SEXP rho)
     }
     SET_FRAME(rho, R_NilValue);
     SET_ENVSYMBITS(rho, ~(R_symbits_t)0);
-#   if USE_SYMBITS2
-        SET_ENVSYMBITS2(rho, ~(R_symbits2_t)0);
-#   endif
 }
 
 
