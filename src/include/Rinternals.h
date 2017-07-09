@@ -322,8 +322,6 @@ typedef struct SEXPREC {
 
 /* Version of SEXPREC used for environments. */
 
-#define USE_SYMBITS2 1      /* May be 0 or 1, not clear which is faster */
-
 #if USE_AUX_FOR_ATTRIB
 #define USE_ENV_TUNECNTS 0  /* Must be kept as 0 */
 #else
@@ -331,7 +329,6 @@ typedef struct SEXPREC {
 #endif
 
 typedef uint64_t R_symbits_t;
-typedef uint32_t R_symbits2_t;
 
 typedef struct ENV_SEXPREC {
     SEXPREC_HEADER;
@@ -345,7 +342,7 @@ typedef struct ENV_SEXPREC {
     uint32_t env_tunecnt;
 #endif
     int32_t hashlen;
-    R_symbits2_t envsymbits2;
+    int32_t padding;
     R_symbits_t envsymbits;
 } ENV_SEXPREC, *ENVSEXP;
 
@@ -409,7 +406,7 @@ typedef struct SYM_SEXPREC {
 #if !USE_COMPRESSED_POINTERS
     uint32_t sym_tunecnt;
 #endif
-    R_symbits2_t symbits2;
+    SEXP32 lastenvnotfound;
     R_symbits_t symbits;
 } SYM_SEXPREC, *SYMSEXP;
 
@@ -854,10 +851,9 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SYMVALUE(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->value)
 #define LASTSYMENV(x)	(((SYMSEXP) UPTR_FROM_SEXP(x))->lastenv)
 #define LASTSYMBINDING(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->lastbinding)
+#define LASTSYMENVNOTFOUND(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->lastenvnotfound)
 #define SYMBITS(x)      NOT_LVALUE((((SYMSEXP) UPTR_FROM_SEXP(x))->symbits))
-#define SYMBITS2(x)     NOT_LVALUE((((SYMSEXP) UPTR_FROM_SEXP(x))->symbits2))
 #define SET_SYMBITS(x,v)  (((SYMSEXP) UPTR_FROM_SEXP(x))->symbits = (v))
-#define SET_SYMBITS2(x,v) (((SYMSEXP) UPTR_FROM_SEXP(x))->symbits2 = (v))
 #define DDVAL_MASK	1
 #define DDVAL(x)	(UPTR_FROM_SEXP(x)->sxpinfo.gp & DDVAL_MASK) /* for ..1, ..2 etc */
 #define SET_DDVAL_BIT(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= DDVAL_MASK)
@@ -875,8 +871,6 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SET_ENVFLAGS(x,v)	((UPTR_FROM_SEXP(x)->sxpinfo.gp)=(v))
 #define ENVSYMBITS(x)   NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->envsymbits)
 #define SET_ENVSYMBITS(x,v)   (((ENVSEXP)UPTR_FROM_SEXP(x))->envsymbits=(v))
-#define ENVSYMBITS2(x)  NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->envsymbits2)
-#define SET_ENVSYMBITS2(x,v)  (((ENVSEXP)UPTR_FROM_SEXP(x))->envsymbits2=(v))
 #define IS_BASE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_base)
                            /* 1 = R_BaseEnv or R_BaseNamespace */
 #define IS_USER_DATABASE(rho) \

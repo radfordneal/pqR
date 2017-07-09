@@ -775,8 +775,6 @@ static SEXP install_with_hashcode (char *name, int hashcode)
 
     SET_SYMBITS (sym, (((R_symbits_t)1) << b1) | (((R_symbits_t)1) << b2));
 
-    SET_SYMBITS2 (sym, ((R_symbits2_t)1) << ((hashcode % 997) & 31));
-
     return sym;
 }
 

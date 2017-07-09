@@ -131,23 +131,22 @@ R_CONST ENV_SEXPREC R_env_consts[1] = {
     .frame = R_NilValue, 
     .enclos = R_NilValue, 
     .hashtab = R_NilValue,
-    .envsymbits2 = ~(R_symbits2_t)0,  /* all 1s, so SKIP_USING_SYMBITS will */
-    .envsymbits = ~(R_symbits_t)0     /*   stop at empty environment        */
-}
+    .envsymbits = ~(R_symbits_t)0     /* all 1s, so SKIP_USING_SYMBITS will */
+}                                     /*   stop at empty environment        */
 };
 
 
 /* Definition of the R_UnboundValue constant, whose address when cast to SEXP
    is R_UnboundValue.  Don't put in read-only memory, so won't have to special
-   case it when clearing LASTSYMENV.  Leave LENGTH (if it exists) as zero. */
+   case it when clearing LASTSYMENV and LASTSYMENVNOTFOUND.  Leave LENGTH
+   (if it exists) as zero. */
 
 SYM_SEXPREC R_sym_consts[1] = { 
 {
     CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,0),
     .value = R_UnboundValue,
-    .symbits2 = 0,  /* all 0s, so will always look for this */
-    .symbits = 0    /*   (and presumably not find it)       */
-}
+    .symbits = 0                    /* all 0s, so will always look for this */
+}                                   /*   (and presumably not find it)       */
 };
 
 
