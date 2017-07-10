@@ -1842,6 +1842,8 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
         cinp = input==R_NilValue ? CHAR(PRINTNAME(name)) : translateChar(input);
 	havematch = 0;
 	for (y = x ; y != R_NilValue ; y = CDR(y)) {
+            if (TAG(y) == R_NilValue)
+                continue;
             ctarg = CHAR(PRINTNAME(TAG(y)));
 	    mtch = ep_match_strings(ctarg, cinp);
 	    if (mtch>0) /* exact */ {

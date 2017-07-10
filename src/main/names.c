@@ -693,21 +693,24 @@ void InitNames()
 
     SetupBuiltins();
 
-    /* The SYMSXP objects below are not in the symbol table.  Their
-       printnames are determined specially by PRINTNAME. */
+    /* R_BlankString */
+    R_BlankString = mkChar("");
+    R_BlankScalarString = ScalarString(R_BlankString);
+    SET_NAMEDCNT_MAX(R_BlankScalarString);
+
+    /* The SYMSXP objects below are not in the symbol table. */
 
     /* R_MissingArg */
-    R_MissingArg = mkSYMSXP(R_NilValue,R_NilValue);
+    R_MissingArg = mkSYMSXP(R_BlankString,R_NilValue);
     SET_SYMVALUE(R_MissingArg, R_MissingArg);
 
     /* R_MissingUnder */
-    R_MissingUnder = mkSYMSXP(R_NilValue,R_NilValue);
-    SET_SYMVALUE(R_MissingUnder, R_MissingArg);
+    R_UnderscoreString = mkChar("_");
+    R_MissingUnder = mkSYMSXP(R_UnderscoreString,R_MissingArg);
 
     /* R_RestartToken */
-    R_RestartToken = mkSYMSXP(R_NilValue,R_NilValue);
+    R_RestartToken = mkSYMSXP(R_BlankString,R_NilValue);
     SET_SYMVALUE(R_RestartToken, R_RestartToken);
-
 
     /* String constants (CHARSXP values) */
     /* Note: we don't want NA_STRING to be in the CHARSXP cache, so that
@@ -717,12 +720,6 @@ void InitNames()
     strcpy(CHAR_RW(NA_STRING), "NA");
     SET_CACHED(NA_STRING);  /* Mark it */
     R_print.na_string = NA_STRING;
-    /* R_BlankString */
-    R_BlankString = mkChar("");
-    R_BlankScalarString = ScalarString(R_BlankString);
-    SET_NAMEDCNT_MAX(R_BlankScalarString);
-    /* R_UnderscoreString */
-    R_UnderscoreString = mkChar("_");
 
     /* Set up a set of globals so that a symbol table search can be
        avoided when matching something like dim or dimnames. */
@@ -747,7 +744,6 @@ static SEXP install_with_hashcode (char *name, int hashcode)
     if (bucket != NULL)
         return SEXP_FROM_SEXP32 (bucket->entry);
 
-    /* Create a new symbol node and link it into the table. */
     if (strlen(name) > MAXIDSIZE)
 	error(_("variable names are limited to %d bytes"), MAXIDSIZE);
 
@@ -756,13 +752,7 @@ static SEXP install_with_hashcode (char *name, int hashcode)
     if (bucket == NULL)
         R_Suicide("couldn't allocate memory to expand symbol table");
 
-    SEXP pname = mkChar(name);
-    IS_PRINTNAME(pname) = 1;
-
-    bucket->pname = CPTR_FROM_SEXP(pname);
-
     SEXP sym = SEXP_FROM_SEXP32(bucket->entry);
-    SYM_HASH(sym) = CHAR_HASH(pname);
 
     /* Set up symbits.  May be fiddled to try to improve performance. 
        Currently, the low 14 bits of symbits are reserved for special and

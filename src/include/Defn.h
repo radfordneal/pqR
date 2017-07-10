@@ -189,7 +189,12 @@ extern0 SEXP	R_UnderscoreString;   /* "_", as a CHARSXP */
 #define SET_HASHSLOTSUSED(x,v) SET_TRUELENGTH(x,v)
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
+#if SYM_HASH_IN_SYM
 #define SYM_HASH(x)     (((SYM_SEXPREC*)UPTR_FROM_SEXP(x))->sym_hash)
+#else
+#define SYM_HASH(x)     CHAR_HASH(PRINTNAME(x))
+#endif
+
 #define CHAR_HASH(x)    TRUELENGTH(x)
 
 /* Test whether this is a constant object (defined in const-objs.c). */

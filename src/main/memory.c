@@ -589,8 +589,14 @@ void sggc_find_root_ptrs (void)
        symbol kind. We have to scan the symbol table specially because
        we need to clear LASTSYMENV and LASTENVNOTFOUND.  Plus it's
        faster to mark / follow the pointers with special code here.
-       So we don't need old-to-new processing when setting fields. */
+       So we don't need old-to-new processing when setting fields.
 
+       Marking printnames is not necessary for correctness, since they
+       won't be freed anyway, but this may perhaps be faster for full
+       collections than almost freeing many of them and then backing
+       out in free_charsxp. */
+
+    int level = gc_next_level;
     sggc_cptr_t nxt;
 
     for (nxt = sggc_first_uncollected_of_kind(SGGC_SYM_KIND);
@@ -601,28 +607,15 @@ void sggc_find_root_ptrs (void)
         LASTENVNOTFOUND(s) = R_NoObject32;
         if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
         if (ATTRIB_W(s) != R_NilValue) LOOK_AT(ATTRIB_W(s));
-    }
-
-    /* Perhaps scan printnames in symbol table.  Not necessary for
-       correctness, since they won't be freed anyway, but this may
-       perhaps be faster for full collections than almost freeing many
-       of them and then backing out in free_charsxp. */
-
-    if (gc_next_level >= MIN_PRINTNAME_SCAN_LEVEL) {
-        for (lphash_bucket_t *b = lphash_first_bucket(R_lphashSymTbl);
-             b != NULL;
-             b = lphash_next_bucket(R_lphashSymTbl,b)) {
-            sggc_mark (b->pname);
-        }
+        if (level >= MIN_PRINTNAME_SCAN_LEVEL)
+            sggc_mark(CPTR_FROM_SEXP32(((SYMSEXP)UPTR_FROM_SEXP(s))->pname));
     }
 
     /* Forward other roots. */
 
     static SEXP *root_vars[] = { 
         &NA_STRING,	          /* Builtin constants */
-        &R_BlankString,
-	&R_BlankScalarString,
-        &R_UnderscoreString,
+	&R_BlankScalarString,     /* Will also protect R_BlankString */
 
         &R_print.na_string,       /* Printing defaults - very kludgy! */
         &R_print.na_string_noquote,
@@ -1690,10 +1683,17 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     c = alloc_sym();
     UNPROTECT(2);
 
-    SET_SYMVALUE (c, value);
+    ((SYMSEXP)UPTR_FROM_SEXP(c))->pname = SEXP32_FROM_SEXP(name);
+    IS_PRINTNAME(name) = 1;
+#   if SYM_HASH_IN_SYM
+        SYM_HASH(c) = CHAR_HASH(name);
+#   endif    
+
+    SYMVALUE(c) = value;
     LASTSYMENV(c) = R_NoObject32;
     LASTENVNOTFOUND(c) = R_NoObject32;
     LASTSYMBINDING(c) = R_NoObject;
+
     SYMBITS(c) = 0;       /* all 0s to disable feature if not set later */
 
 #   if USE_SYM_TUNECNTS

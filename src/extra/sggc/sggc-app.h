@@ -115,6 +115,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 /*    All:
         length in auxiliary information 1 (may be shared read-only constant)
         attrib in auxiliary information 2
+        no room in symbol for hash (uses hash from printname)
 
       Cons-type:          Vector:             
         info, car           info, truelength
@@ -124,8 +125,8 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 
       Symbol:             Primitive:        Environment:    External pointer:
         info, lastbinding   info, padding     info, frame     info, unused/shift
-        value, hash         C-function        enclos, hashtab prot, tag
-        lastenv, lastenf    fast-C-function   hashlen, pad    external ptr(+pad)
+        value, pname        C-function        enclos, hashtab prot, tag
+        lastenv, lastenf    fast-C-function   hashlen, tcnts  external ptr(+pad)
         symbits             64 bits of info   envsymbits      padding
         = 32 bytes          padding if 32-bit = 32 bytes      = 32 bytes
           (2 chunks)        = 32 bytes          (2 chunks)      (2 chunks)
@@ -221,11 +222,11 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
       Symbol:             Primitive:        Environment:     External pointer:
         info, cptr          info, cptr        info, cptr       info, cptr
         attrib              attrib            attrib           attrib
-        length, tunecnts2   length, padding   length, tunecnts length, padding
+        length, tunecnts    length, padding   length, padding  length, padding
         lastbinding         C-function        frame            external ptr
         value               fast-C-function   enclos           prot
-        hash, lastenv       64 bits of info   hashtab          tag
-        tunecnts, lastenf   = 48 bytes        hashlen, pad     = 48 bytes
+        pname, lastenv      64 bits of info   hashtab          tag
+        hash, lastenf       = 48 bytes        hashlen, tcnts   = 48 bytes
         symbits               (3 chunks)      envsymbits          (3 chunks)
         = 64 bytes                            = 64 bytes
           (4 chunks)                            (4 chunks)
@@ -306,8 +307,8 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
         info, cptr          info, cptr         info, cptr      info, cptr
         lastbinding         C-function         frame           external ptr
         value               fast-C-function    enlcos          prot
-        hash, lastenv       64 bits of info    hashtab         tag
-        tunecnts, lastenf   = 32 bytes         hashlen, pad    = 32 bytes
+        pname, lastenv      64 bits of info    hashtab         tag
+        hash, lastenf       = 32 bytes         hashlen, tcnts  = 32 bytes
         symbits               (2 chunks)       envsymbits        (2 chunks)
         = 48 bytes                             = 48 bytes
           (3 chunks)                             (3 chunks)
@@ -389,8 +390,8 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
         info, cptr          info, cptr           info, cptr     info, cptr
         attrib, length      attrib, length       attrib, length  attrib, length
         lastbinding, value  C-function, fastfun  frame, enclos   prot, tag
-        hash, lastenv       64 bits of info      hashtab, tcnts  xptr, padding
-        tunecnts, lastenf   = 32 bytes           hashlen, pad    = 32 bytes
+        pname, lastenv      64 bits of info      hashtab,hashlen xptr, padding
+        hash, lastenf       = 32 bytes           tcnts, padding  = 32 bytes
         symbits                 (2 chunks)       envsymbits        (2 chunks)
         = 48 bytes                               = 48 bytes
           (3 chunks)                               (3 chunks)

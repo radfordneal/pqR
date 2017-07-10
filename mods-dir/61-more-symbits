@@ -1,4 +1,7 @@
 Puts back the lastsymenvnotfound feature, since symbits don't
 replace it entirely due to environemnts with too many symbols.
 
+Puts printname back in symbol (not symbol table hash entry), as 
+not having it there slowed some operations.
+
 Also uses symbits for more environments, including hashed ones.

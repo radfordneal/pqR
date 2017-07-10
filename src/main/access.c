@@ -533,19 +533,7 @@ attribute_hidden void (SET_PRIMOFFSET)(SEXP x, int v) { SET_PRIMOFFSET(x, v); }
 
 /* Symbol Accessors */
 
-SEXP (PRINTNAME)(SEXP x) 
-{ 
-    Rf_chk_valid_SEXP(x);
-
-    lphash_bucket_t *bucket
-      = lphash_entry_lookup (R_lphashSymTbl, SYM_HASH(x), SEXP32_FROM_SEXP(x));
-
-    if (bucket == NULL)
-        return x == R_MissingUnder ? R_UnderscoreString : R_BlankString;
-    else
-        return SEXP_FROM_CPTR(bucket->pname);
-}
-
+SEXP (PRINTNAME)(SEXP x) { return Rf_chk_valid_SEXP(PRINTNAME(Rf_chk_valid_SEXP(x))); }
 SEXP (SYMVALUE)(SEXP x) { return Rf_chk_valid_SEXP(SYMVALUE(Rf_chk_valid_SEXP(x))); }
 SEXP (INTERNAL)(SEXP x) { return Rf_chk_valid_SEXP(INTERNAL(Rf_chk_valid_SEXP(x))); }
 int (DDVAL)(SEXP x) { return DDVAL(Rf_chk_valid_SEXP(x)); }
@@ -561,7 +549,7 @@ void (SET_SYMVALUE)(SEXP x, SEXP v)
 }
 void (SET_INTERNAL)(SEXP x, SEXP v) 
 {
-    /* No old-to-new check is needed, since primatives are uncollected. */
+    /* No old-to-new check is needed, since primitives are uncollected. */
 
     sggc_cptr_t s = CPTR_FROM_SEXP(x);
     if (TYPEOF(v)!=BUILTINSXP && TYPEOF(v)!=SPECIALSXP) abort(); 

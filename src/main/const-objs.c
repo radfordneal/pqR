@@ -144,6 +144,7 @@ R_CONST ENV_SEXPREC R_env_consts[1] = {
 SYM_SEXPREC R_sym_consts[1] = { 
 {
     CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,0),
+    .pname = SGGC_CPTR_VAL(R_SGGC_NIL_INDEX,0),
     .value = R_UnboundValue,
     .symbits = 0                    /* all 0s, so will always look for this */
 }                                   /*   (and presumably not find it)       */
