@@ -121,13 +121,12 @@ R_compute_identical(SEXP x, SEXP y, int flags)
 	    SEXP elx, ely;
 	    if(length(ax) != length(ay)) return FALSE;
 	    /* They are the same length and should have
-	       unique non-empty non-NA tags */
+	       unique non-empty non-null tags */
 	    for(elx = ax; elx != R_NilValue; elx = CDR(elx)) {
-		const char *tx = CHAR(PRINTNAME(TAG(elx)));
-		for(ely = ay; ely != R_NilValue; ely = CDR(ely))
-		    if(streql(tx, CHAR(PRINTNAME(TAG(ely))))) {
+		for(ely = ay; ely != R_NilValue; ely = CDR(ely)) {
+		    if (TAG(ely) == TAG(elx)) {
 			/* We need to treat row.names specially here */
-			if(streql(tx, "row.names")) {
+			if (TAG(elx) == R_RowNamesSymbol) {
 			    PROTECT(atrx = getAttrib(x, R_RowNamesSymbol));
 			    PROTECT(atry = getAttrib(y, R_RowNamesSymbol));
 			    if(!R_compute_identical(atrx, atry, flags)) {
@@ -140,6 +139,7 @@ R_compute_identical(SEXP x, SEXP y, int flags)
 				return FALSE;
 			break;
 		    }
+                }
 		if(ely == R_NilValue) return FALSE;
 	    }
 	}
@@ -220,7 +220,7 @@ R_compute_identical(SEXP x, SEXP y, int flags)
 		return FALSE;
 	    if(!R_compute_identical(CAR(x), CAR(y), flags))
 		return FALSE;
-	    if(!R_compute_identical(PRINTNAME(TAG(x)), PRINTNAME(TAG(y)), flags))
+            if (TAG(x) != TAG(y))
 		return FALSE;
 	    x = CDR(x);
 	    y = CDR(y);
