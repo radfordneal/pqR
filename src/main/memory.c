@@ -586,11 +586,17 @@ void sggc_find_root_ptrs (void)
         LOOK_AT(*sp);
 
     /* Scan symbols, using SGGC's set of uncollected objects of the
-       symbol kind.  We have to scan the symbol table specially
-       because we need to clear LASTSYMENV.  Plus it's faster to mark
-       the pointers with special code here.  Because we scan this way,
-       we don't need old-to-new processing when setting symbol fields. */
+       symbol kind. We have to scan the symbol table specially because
+       we need to clear LASTSYMENV and LASTENVNOTFOUND.  Plus it's
+       faster to mark / follow the pointers with special code here.
+       So we don't need old-to-new processing when setting fields.
 
+       Marking printnames is not necessary for correctness, since they
+       won't be freed anyway, but this may perhaps be faster for full
+       collections than almost freeing many of them and then backing
+       out in free_charsxp. */
+
+    int level = gc_next_level;
     sggc_cptr_t nxt;
 
     for (nxt = sggc_first_uncollected_of_kind(SGGC_SYM_KIND);
@@ -598,30 +604,18 @@ void sggc_find_root_ptrs (void)
          nxt = sggc_next_uncollected_of_kind(nxt)) {
         SEXP s = SEXP_FROM_CPTR(nxt);
         LASTSYMENV(s) = R_NoObject32;
+        LASTENVNOTFOUND(s) = R_NoObject32;
         if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
         if (ATTRIB_W(s) != R_NilValue) LOOK_AT(ATTRIB_W(s));
-    }
-
-    /* Perhaps scan printnames in symbol table.  Not necessary for
-       correctness, since they won't be freed anyway, but this may
-       perhaps be faster for full collections than almost freeing many
-       of them and then backing out in free_charsxp. */
-
-    if (gc_next_level >= MIN_PRINTNAME_SCAN_LEVEL) {
-        for (lphash_bucket_t *b = lphash_first_bucket(R_lphashSymTbl);
-             b != NULL;
-             b = lphash_next_bucket(R_lphashSymTbl,b)) {
-            sggc_mark (b->pname);
-        }
+        if (level >= MIN_PRINTNAME_SCAN_LEVEL)
+            sggc_mark(CPTR_FROM_SEXP32(((SYMSEXP)UPTR_FROM_SEXP(s))->pname));
     }
 
     /* Forward other roots. */
 
     static SEXP *root_vars[] = { 
         &NA_STRING,	          /* Builtin constants */
-        &R_BlankString,
-	&R_BlankScalarString,
-        &R_UnderscoreString,
+	&R_BlankScalarString,     /* Will also protect R_BlankString */
 
         &R_print.na_string,       /* Printing defaults - very kludgy! */
         &R_print.na_string_noquote,
@@ -1549,9 +1543,6 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
     HASHTAB(newrho) = R_NilValue;
     ENCLOS(newrho) = Rf_chk_valid_SEXP(rho);
 
-#   if USE_SYMBITS2
-        ENVSYMBITS2(newrho) = ~(R_symbits2_t)0; /* all 1s disables */
-#   endif
     ENVSYMBITS(newrho) = ~(R_symbits_t)0;       /* all 1s disables */
 
 #   if USE_ENV_TUNECNTS
@@ -1692,12 +1683,17 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     c = alloc_sym();
     UNPROTECT(2);
 
-    SET_SYMVALUE (c, value);
+    ((SYMSEXP)UPTR_FROM_SEXP(c))->pname = SEXP32_FROM_SEXP(name);
+    IS_PRINTNAME(name) = 1;
+#   if SYM_HASH_IN_SYM
+        SYM_HASH(c) = CHAR_HASH(name);
+#   endif    
+
+    SYMVALUE(c) = value;
     LASTSYMENV(c) = R_NoObject32;
+    LASTENVNOTFOUND(c) = R_NoObject32;
     LASTSYMBINDING(c) = R_NoObject;
-#   if USE_SYMBITS2
-        SYMBITS2(c) = 0;  /* all 0s to disable feature if not set later */
-#   endif
+
     SYMBITS(c) = 0;       /* all 0s to disable feature if not set later */
 
 #   if USE_SYM_TUNECNTS
