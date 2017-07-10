@@ -212,70 +212,39 @@ static SEXP getActiveValue(SEXP fun)
 
 #endif
 
-/* Function to correctly set ENVSYMBITS and ENVSYMBITS2 for an environment. */
+/* Function to correctly set ENVSYMBITS for an environment. */
 
-static void chainbits (SEXP chain, 
-                       R_symbits_t *pbits 
-#                      if USE_SYMBITS2
-                       , R_symbits2_t *pbits2
-#                      endif
-                      )
+static void chainbits (SEXP chain, R_symbits_t *pbits)
 {
     R_symbits_t bits;
-#   if USE_SYMBITS2
-    R_symbits2_t bits2;
-#   endif
    
     bits = 0;
-#   if USE_SYMBITS2
-        bits2 = 0;
-#   endif
 
     while (chain != R_NilValue) {
         bits |= SYMBITS (TAG (chain));
-#       if USE_SYMBITS2
-            bits2 |= SYMBITS2 (TAG (chain));
-#       endif
         chain = CDR(chain);
     }
 
     *pbits |= bits;
-#   if USE_SYMBITS2
-        *pbits2 |= bits2;
-#   endif
 }
 
 void attribute_hidden set_symbits_in_env (SEXP env)
 {
     R_symbits_t bits = 0;
-#   if USE_SYMBITS2
-    R_symbits2_t bits2 = 0;
-#   endif
    
     if (HASHTAB(env) != R_NilValue) {
         SEXP table = HASHTAB(env);
         R_len_t len = HASHLEN(env);
         R_len_t i;
         for (i = 0; i < len; i++) {
-            chainbits (VECTOR_ELT(table,i), &bits
-#                      if USE_SYMBITS2
-                       , &bits2
-#                      endif
-                      );
+            chainbits (VECTOR_ELT(table,i), &bits);
         }
     }
     else {
-        chainbits (FRAME(env), &bits
-#                  if USE_SYMBITS2
-                   , &bits2
-#                  endif
-                  );
+        chainbits (FRAME(env), &bits);
     }
 
     SET_ENVSYMBITS (env, bits);
-#   if USE_SYMBITS2
-        SET_ENVSYMBITS2 (env, bits2);
-#   endif
 }
 
 /*----------------------------------------------------------------------
@@ -677,9 +646,6 @@ static void R_HashFrame(SEXP rho)
     }
     SET_FRAME(rho, R_NilValue);
     SET_ENVSYMBITS(rho, ~(R_symbits_t)0);
-#   if USE_SYMBITS2
-        SET_ENVSYMBITS2(rho, ~(R_symbits2_t)0);
-#   endif
 }
 
 
@@ -1112,7 +1078,11 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 
 /* Version that doesn't check LASTSYMBINDING.  Split from above so the
    simplest case will have low overhead.  Can also be called directly
-   if it's known that checking LASTSYMBINDING won't help. */
+   if it's known that checking LASTSYMBINDING won't help. 
+
+   Will fail quickly when the symbol has LASTENVNOTFOUND equal to 
+   the environment.  LASTENVNOTFOUND is also updated on failure if the 
+   environment is unhashed. */
 
 SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 {
@@ -1157,8 +1127,11 @@ SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
 
     else if (HASHTAB(rho) == R_NilValue) {
 
-        loc = FRAME(rho);
-        SEARCH_LOOP (rho, loc, symbol, goto found);
+        if (LASTENVNOTFOUND(symbol) != SEXP32_FROM_SEXP(rho)) {
+            loc = FRAME(rho);
+            SEARCH_LOOP (rho, loc, symbol, goto found);
+            LASTENVNOTFOUND(symbol) = SEXP32_FROM_SEXP(rho);
+        }
         goto ret;
 
       found: 
@@ -1499,6 +1472,10 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
   reached, where the function will be found in the global cache (if it
   wasn't in one of the local environemnts). 
 
+  An environment can be skipped when the symbol has LASTENVNOTFOUND
+  equal to that environment.  LASTENVNOTFOUND is updated to the last
+  unhashed environment where the symbol wasn't found.
+
   There is no need to wait for computations of the values found to finish, 
   since functions never have their computation deferred.
 */
@@ -1510,6 +1487,8 @@ SEXP findFun(SEXP symbol, SEXP rho)
 
 SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
 {
+    SEXP32 last_sym_not_found = LASTENVNOTFOUND(symbol);
+    SEXP last_unhashed_env_nf = R_NoObject;
     SEXP vl;
 
     /* Search environments for a definition that is a function. */
@@ -1533,18 +1512,34 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
             goto err;
         }
 
-        vl = findVarInFramePendingOK (rho, symbol);
-	if (vl == R_UnboundValue)
-            continue;
+        /* See if it's known from LASTENVNOTFOUND that this symbol isn't 
+           in this environment. */
 
-      got_value:
+        if (SEXP32_FROM_SEXP(rho) == last_sym_not_found) {
+            last_unhashed_env_nf = rho;
+            continue;
+        }
+
+        vl = findVarInFramePendingOK (rho, symbol);
+	if (vl != R_UnboundValue)
+            goto got_value;
+
+        if (HASHTAB(rho) == R_NilValue)
+            last_unhashed_env_nf = rho;
+        continue;
+
+    got_value:
         if (TYPEOF(vl) == PROMSXP) {
             SEXP pv = PRVALUE_PENDING_OK(vl);
             vl = pv != R_UnboundValue ? pv : forcePromise(vl);
         }
 
-        if (isFunction (vl))
+        if (isFunction (vl)) {
+            if (last_unhashed_env_nf != R_NoObject)
+                LASTENVNOTFOUND(symbol) = 
+                  SEXP32_FROM_SEXP(last_unhashed_env_nf);
             return vl;
+        }
 
         if (vl == R_MissingArg)
             arg_missing_error(symbol);
@@ -1560,6 +1555,9 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
 
 SEXP findFunMethod(SEXP symbol, SEXP rho)
 {
+    SEXP32 last_sym_not_found = LASTENVNOTFOUND(symbol);
+    SEXP last_unhashed_env_nf = R_NoObject;
+
     for (rho = SKIP_USING_SYMBITS(rho,symbol); 
          rho != R_EmptyEnv; 
          rho = ENCLOS(rho)) {
@@ -1572,17 +1570,26 @@ SEXP findFunMethod(SEXP symbol, SEXP rho)
                 break;
         }
         else {
-            vl = findVarInFramePendingOK(rho, symbol);
-            if (vl == R_UnboundValue)
+            vl = findVarInFramePendingOK (rho, symbol);
+            if (vl == R_UnboundValue) {
+                if (HASHTAB(rho) == R_NilValue)
+                    last_unhashed_env_nf = rho;
                 continue;
+            }
         }
 
         if (TYPEOF(vl) == PROMSXP)
             vl = forcePromise(vl);
-        if (isFunction(vl))
+        if (isFunction(vl)) {
+            if (last_unhashed_env_nf != R_NoObject)
+                LASTENVNOTFOUND(symbol) = 
+                  SEXP32_FROM_SEXP(last_unhashed_env_nf);
             return vl;
+        }
     }
 
+    if (last_unhashed_env_nf != R_NoObject && !IS_BASE(last_unhashed_env_nf))
+        LASTENVNOTFOUND(symbol) = SEXP32_FROM_SEXP(last_unhashed_env_nf);
     return R_UnboundValue;
 }
 
@@ -1654,8 +1661,10 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     }
 
     if (HASHTAB(rho) == R_NilValue) {
-        loc = FRAME(rho);
-        SEARCH_LOOP (rho, loc, symbol, goto found_update_last);
+        if (LASTENVNOTFOUND(symbol) != SEXP32_FROM_SEXP(rho)) {
+            loc = FRAME(rho);
+            SEARCH_LOOP (rho, loc, symbol, goto found_update_last);
+        }
     }
     else { /* hashed environment */
         hashcode = SYM_HASH(symbol) % HASHLEN(rho);
@@ -1691,9 +1700,9 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         }
 
         SET_ENVSYMBITS (rho, ENVSYMBITS(rho) | SYMBITS(symbol));
-#       if USE_SYMBITS2
-            SET_ENVSYMBITS2 (rho, ENVSYMBITS2(rho) | SYMBITS2(symbol));
-#       endif
+
+        if (LASTENVNOTFOUND(symbol) == SEXP32_FROM_SEXP(rho))
+            LASTENVNOTFOUND(symbol) = R_NoObject32;
 
         if (incdec&2)
             INC_NAMEDCNT(value);
