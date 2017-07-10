@@ -1,0 +1,4 @@
+Performance improvement to rep.
+
+Added rep_len as in R-3.0.0.  Took the outer code for it largely from
+R-3.4.0, with actual operation done in a pqR task procedure.

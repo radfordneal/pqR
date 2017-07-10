@@ -158,7 +158,7 @@ sum                \tab N/A (scalar)
                    \tab (see below)
                    \tab (see below)\cr
 \tab\tab\tab\cr
-rep, rep.int       \tab No
+rep, rep.int, rep_len \tab No
                    \tab No
                    \tab If non-numeric \cr
 \tab\tab           \tab done by master\cr

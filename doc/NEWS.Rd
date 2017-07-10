@@ -46,6 +46,8 @@
         Computations such as \code{sum(vec>0)} are now done with a
         merged procedure that avoids creating \code{vec>0} as an intermediate
         value.
+  \item The \code{rep} function is now often faster for string vectors,
+        and for vectors of any type that have names.
   \item Improved methods for symbol lookup are now used, which increase
         speed in many contexts, and especially in functions that are
         defined in packages (rather than in the global workspace).
@@ -64,6 +66,15 @@
 }
         The value printed was previously 0 rather than NA.
         This bug also exists in R Core versions to at least R-3.4.0.
+  }}
+
+  \subsection{NEW FEATURES FROM R CORE RELEASES}{
+  \itemize{
+  \item From R-3.0.0: There is a new function \code{rep_len()} analogous to 
+        \code{rep.int()} for when speed is required (and names are not).
+
+        Note, however, that in pqR \code{rep} is as fast as
+        \code{rep_len} (and also \code{rep.int}) when there are no names.
   }}
 }
 

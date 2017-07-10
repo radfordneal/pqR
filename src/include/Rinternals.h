@@ -946,6 +946,7 @@ SEXP (STRING_ELT)(SEXP x, int i);
 SEXP (VECTOR_ELT)(SEXP x, int i);
 void SET_STRING_ELT(SEXP x, int i, SEXP v);
 void copy_string_elements(SEXP x, int i, SEXP v, int j, int n);
+void rep_string_elements(SEXP x, int i, SEXP v, int n);
 SEXP SET_VECTOR_ELT(SEXP x, int i, SEXP v);
 void copy_vector_elements(SEXP x, int i, SEXP v, int j, int n);
 SEXP *(STRING_PTR)(SEXP x);
