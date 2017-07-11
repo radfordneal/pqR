@@ -54,7 +54,7 @@
   \item New versions of the C matrix multiply functions are now used,
         which may be faster due to use of the C "restrict" keyword to
         allow better optimization.
-  \item The \code{%%} and \code{%/%} operators are now faster when 
+  \item The \code{\%\%} and \code{\%/\%} operators are now faster when 
         their operands are real vectors that contain integer values.
   }}
 
