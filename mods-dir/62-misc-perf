@@ -1,0 +1,7 @@
+Miscellaeous performance improvements.
+
+Removed a call of R_data_class in R_set_class, because its value
+is never used.
+
+Do %% and %/% on real operands that are integers same as for integer 
+operands.

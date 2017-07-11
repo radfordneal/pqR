@@ -186,8 +186,12 @@ void attribute_hidden InitArithmetic()
     
    WARNING:  myfmod may call "warning", and hence may allocate storage.
  */
-static double myfmod(double x1, double x2)
+static inline double myfmod(double x1, double x2)
 {
+    int i1 = (int)x1, i2 = (int)x2;
+    if ((double)i1 == x1 && i1 >= 0 && (double)i2 == x2 && i2 > 0)
+        return (double) (i1 % i2);
+
     double q = x1 / x2, tmp;
 
     if (x2 == 0.0) return R_NaN;
@@ -198,8 +202,12 @@ static double myfmod(double x1, double x2)
     return tmp - q * x2;
 }
 
-static double myfloor(double x1, double x2)
+static inline double myfloor(double x1, double x2)
 {
+    int i1 = (int)x1, i2 = (int)x2;
+    if ((double)i1 == x1 && i1 >= 0 && (double)i2 == x2 && i2 > 0)
+        return (double) (i1 / i2);
+
     double q = x1 / x2, tmp;
 
     if (x2 == 0.0) return q;
