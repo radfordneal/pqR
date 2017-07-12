@@ -2830,6 +2830,9 @@ fi
 if test "${r_cv_cairo_works}" = yes; then
   R_SH_VAR_ADD(r_capabilities, [cairo], [, ])
 fi
+if test "${use_ICU}" = yes; then
+  R_SH_VAR_ADD(r_capabilities, [ICU], [, ])
+fi
 
 r_options=
 if test "${want_helper_threads}" = yes; then

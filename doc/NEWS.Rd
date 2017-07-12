@@ -10,8 +10,9 @@
 
   \subsection{INTRODUCTION}{
   \itemize{ 
-  \item This release has several signficicant performance improvements,
-        and a few minor feature changes and bug fixes.
+  \item This release has several signficicant performance improvements.
+        It also has some feature changes and bug fixes, including some
+        features from later R Core versions.
   }}
 
   \subsection{DOCUMENTATION AND FEATURE CHANGES}{
@@ -77,7 +78,28 @@
 
         Note, however, that in pqR \code{rep} is as fast as
         \code{rep_len} (and also \code{rep.int}) when there are no names.
-  }}
+
+  \item From R-3.1.2: \code{capabilities()} now reports if ICU is
+        compiled in for use for collation (it is only actually used if
+        a suitable locale is set for collation, and never for a
+        \code{C} locale).
+
+  \item From R-3.1.2: \code{icuSetCollate()} allows \code{locale = "default"},
+        and \code{locale = "none"} to use OS services rather than ICU for
+        collation.
+
+        Environment variable \env{R_ICU_LOCALE} can be used to set the
+        default ICU locale, in case the one derived from the OS locale is
+        inappropriate (this is currently necessary on Windows).
+
+  \item From R-3.1.2: New function \code{icuGetCollate()} to report on the ICU
+        collation locale in use (if any).
+
+  \item From R-3.1.3: \code{icuSetCollate()} now accepts \code{locale = "ASCII"}
+        which uses the basic C function \code{strcmp} and so collates
+        strings byte-by-byte in numerical order.
+  }}  
+>>>>>>> 62-collate
 }
 
 

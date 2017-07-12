@@ -1,6 +1,6 @@
 #  File src/library/base/R/New-Internal.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2014 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2014, 2017 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -276,6 +276,10 @@ setSessionTimeLimit <- function(cpu = Inf, elapsed = Inf)
     .Internal(setSessionTimeLimit(cpu, elapsed))
 
 icuSetCollate <- function(...) .Internal(icuSetCollate(...))
+icuGetCollate <- function(type = c("actual", "valid")) {
+    type <- match.arg(type)
+    .Internal(icuGetCollate(match(type, c("actual", "valid"))))
+}
 
 ## base has no S4 generics
 .noGenerics <- TRUE

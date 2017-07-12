@@ -1,6 +1,7 @@
 % File src/library/base/man/capabilities.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
+% Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{capabilities}
@@ -73,7 +74,7 @@ capabilities(what = NULL)
       \code{\link{iconv}} supported?  Always true as from \R 2.10.0.}
     \item{NLS}{is there Natural Language Support (for message translations)?}
     \item{profmem}{is there support for memory profiling?  See
-      \code{\link{tracemem}}.}
+      \code{\link{tracemem}}. Always \code{FALSE} in pqR.}
     \item{cairo}{is there support the \code{\link{svg}},
       \code{\link{cairo_pdf}} and \code{\link{cairo_ps}} devices, and
       for \code{type = "cairo"} in the
@@ -82,6 +83,9 @@ capabilities(what = NULL)
 #endif
       \code{\link{bmp}}, \code{\link{jpeg}}, \code{\link{png}},
       and \code{\link{tiff}} devices?}
+  \item{ICU}{is ICU available for collation?  See the help on
+    \link{Comparison} and \code{\link{icuSetCollate}}: it is never
+    used for a C locale.}
 }
 \seealso{\code{\link{.Platform}}}
 
