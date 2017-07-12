@@ -381,10 +381,10 @@ typedef struct PRIM_SEXPREC {
 
 /* Version of SEXPREC used for symbols. */
 
-#if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
-#define USE_SYM_TUNECNTS 0   /* May be 0 or 1 - normally 0 to avoid slowdown */
-#else
+#if 1 /* currently no space for this */
 #define USE_SYM_TUNECNTS 0   /* Must be kept as 0 */
+#else
+#define USE_SYM_TUNECNTS 0   /* May be 0 or 1 - normally 0 to avoid slowdown */
 #endif
 
 #if 1 /* currently no space for this */
@@ -393,7 +393,7 @@ typedef struct PRIM_SEXPREC {
 #define USE_SYM_TUNECNTS2 0  /* May be 0 or 1 - normally 0 to avoid slowdown */
 #endif
 
-#if USE_COMPRESSED_POINTERS
+#if USE_COMPRESSED_POINTERS || SIZEOF_CHAR_P == 8 && USE_AUX_FOR_ATTRIB
 #define SYM_HASH_IN_SYM 0    /* No room for it */
 #else
 #define SYM_HASH_IN_SYM 1
@@ -402,12 +402,14 @@ typedef struct PRIM_SEXPREC {
 typedef struct SYM_SEXPREC {
     SEXPREC_HEADER;
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && !USE_AUX_FOR_ATTRIB
-    uint32_t sym_tunecnt;
-#endif
-    SEXP lastbinding;
-    SEXP value;
-    SEXP32 pname;
     SEXP32 lastenv;
+#endif
+    SEXP pname;
+    SEXP value;
+    SEXP lastbinding;
+#if USE_COMPRESSED_POINTERS || SIZEOF_CHAR_P == 4 || USE_AUX_FOR_ATTRIB
+    SEXP32 lastenv;
+#endif
 #if SYM_HASH_IN_SYM
     uint32_t sym_hash;
 #endif
@@ -853,8 +855,7 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SET_RSTEP(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.rstep=(v))
 
 /* Symbol Access Macros */
-#define PRINTNAME(x)	\
-  NOT_LVALUE(SEXP_FROM_SEXP32(((SYMSEXP) UPTR_FROM_SEXP(x))->pname))
+#define PRINTNAME(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->pname)
 #define SYMVALUE(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->value)
 #define LASTSYMENV(x)	(((SYMSEXP) UPTR_FROM_SEXP(x))->lastenv)
 #define LASTSYMBINDING(x) (((SYMSEXP) UPTR_FROM_SEXP(x))->lastbinding)
