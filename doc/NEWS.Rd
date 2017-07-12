@@ -65,6 +65,14 @@
         The value printed was previously 0 rather than NA.
         This bug also exists in R Core versions to at least R-3.4.0.
   }}
+
+  \subsection{NEW FEATURES FROM R CORE VERSIONS}{
+  \itemize{
+  \item From R-3.1.2: \code{capabilities()} now reports if ICU is
+        compiled in for use for collation (it is only actually used if
+        a suitable locale is set for collation, and never for a
+        \code{C} locale).
+  }}  
 }
 
 

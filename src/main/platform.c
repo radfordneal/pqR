@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1949,6 +1949,8 @@ static SEXP do_capabilitiesX11(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
 }
 
+#define N_CAPABILITIES 16  /* must be increased as necessary */
+
 static SEXP do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, ansnames;
@@ -1963,9 +1965,10 @@ static SEXP do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     checkArity(op, args);
 
-    PROTECT(ans = allocVector(LGLSXP, 15));
-    PROTECT(ansnames = allocVector(STRSXP, 15));
+    PROTECT(ans = allocVector(LGLSXP, N_CAPABILITIES));
+    PROTECT(ansnames = allocVector(STRSXP, N_CAPABILITIES));
 
+    if (i >= N_CAPABILITIES) abort();
     SET_STRING_ELT(ansnames, i, mkChar("jpeg"));
 #ifdef HAVE_JPEG
 # if defined Unix && !defined HAVE_WORKING_CAIRO
@@ -1977,6 +1980,7 @@ static SEXP do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
     LOGICAL(ans)[i++] = FALSE;
 #endif
 
+    if (i >= N_CAPABILITIES) abort();
     SET_STRING_ELT(ansnames, i, mkChar("png"));
 #ifdef HAVE_PNG
 # if defined Unix && !defined HAVE_WORKING_CAIRO
@@ -1988,6 +1992,7 @@ static SEXP do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
     LOGICAL(ans)[i++] = FALSE;
 #endif
 
+    if (i >= N_CAPABILITIES) abort();
     SET_STRING_ELT(ansnames, i, mkChar("tiff"));
 #ifdef HAVE_TIFF
 # if defined Unix && !defined HAVE_WORKING_CAIRO
@@ -1999,6 +2004,7 @@ static SEXP do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
     LOGICAL(ans)[i++] = FALSE;
 #endif
 
+    if (i >= N_CAPABILITIES) abort();
     SET_STRING_ELT(ansnames, i, mkChar("tcltk"));
 #ifdef HAVE_TCLTK
     LOGICAL(ans)[i++] = TRUE;
@@ -2006,6 +2012,7 @@ static SEXP do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
     LOGICAL(ans)[i++] = FALSE;
 #endif
 
+    if (i >= N_CAPABILITIES) abort();
     SET_STRING_ELT(ansnames, i, mkChar("X11"));
 #ifdef HAVE_X11
 # if defined(Unix) /*  && !defined(__APPLE_CC__) removed in 2.11.0 */
@@ -2017,6 +2024,7 @@ static SEXP do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
     LOGICAL(ans)[i++] = FALSE;
 #endif
 
+    if (i >= N_CAPABILITIES) abort();
     SET_STRING_ELT(ansnames, i, mkChar("aqua"));
 #ifdef HAVE_AQUA
     LOGICAL(ans)[i++] = TRUE;
@@ -2024,6 +2032,7 @@ static SEXP do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
     LOGICAL(ans)[i++] = FALSE;
 #endif
 
+    if (i >= N_CAPABILITIES) abort();
     SET_STRING_ELT(ansnames, i, mkChar("http/ftp"));
 #if HAVE_INTERNET
     LOGICAL(ans)[i++] = TRUE;
@@ -2031,6 +2040,7 @@ static SEXP do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
     LOGICAL(ans)[i++] = FALSE;
 #endif
 
+    if (i >= N_CAPABILITIES) abort();
     SET_STRING_ELT(ansnames, i, mkChar("sockets"));
 #ifdef HAVE_SOCKETS
     LOGICAL(ans)[i++] = TRUE;
@@ -2038,6 +2048,7 @@ static SEXP do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
     LOGICAL(ans)[i++] = FALSE;
 #endif
 
+    if (i >= N_CAPABILITIES) abort();
     SET_STRING_ELT(ansnames, i, mkChar("libxml"));
 #ifdef SUPPORT_LIBXML
     LOGICAL(ans)[i++] = TRUE;
@@ -2045,6 +2056,7 @@ static SEXP do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
     LOGICAL(ans)[i++] = FALSE;
 #endif
 
+    if (i >= N_CAPABILITIES) abort();
     SET_STRING_ELT(ansnames, i, mkChar("fifo"));
 #if defined(HAVE_MKFIFO) && defined(HAVE_FCNTL_H)
     LOGICAL(ans)[i++] = TRUE;
@@ -2052,6 +2064,7 @@ static SEXP do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
     LOGICAL(ans)[i++] = FALSE;
 #endif
 
+    if (i >= N_CAPABILITIES) abort();
     /* This one is complex.  Set it to be true only in interactive use,
        with the Windows and GNOME GUIs (but not Tk GUI) or under Unix
        if readline is available and in use. */
@@ -2072,10 +2085,12 @@ static SEXP do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
     i++;
 
-/* always true as from R 2.10.0 */
+    if (i >= N_CAPABILITIES) abort();
+    /* always true as from R 2.10.0 */
     SET_STRING_ELT(ansnames, i, mkChar("iconv"));
     LOGICAL(ans)[i++] = TRUE;
 
+    if (i >= N_CAPABILITIES) abort();
     SET_STRING_ELT(ansnames, i, mkChar("NLS"));
 #ifdef ENABLE_NLS
     LOGICAL(ans)[i++] = TRUE;
@@ -2083,9 +2098,11 @@ static SEXP do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
     LOGICAL(ans)[i++] = FALSE;
 #endif
 
+    if (i >= N_CAPABILITIES) abort();
     SET_STRING_ELT(ansnames, i, mkChar("profmem"));
     LOGICAL(ans)[i++] = FALSE;  /* always - memory profiling no longer exists */
 
+    if (i >= N_CAPABILITIES) abort();
     SET_STRING_ELT(ansnames, i, mkChar("cairo"));
 #ifdef HAVE_WORKING_CAIRO
     LOGICAL(ans)[i++] = TRUE;
@@ -2101,6 +2118,16 @@ static SEXP do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
 #else
     LOGICAL(ans)[i++] = FALSE;
 #endif
+
+    if (i >= N_CAPABILITIES) abort();
+    SET_STRING_ELT(ansnames, i, mkChar("ICU"));
+    #ifdef USE_ICU
+        LOGICAL(ans)[i++] = TRUE;
+    #else
+        LOGICAL(ans)[i++] = FALSE;
+    #endif
+
+    if (i != N_CAPABILITIES) abort();
 
     setAttrib(ans, R_NamesSymbol, ansnames);
     UNPROTECT(2);
