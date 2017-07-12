@@ -1,2 +1,5 @@
 Put in some collation stuff from later R Core releases, both for
 features, and for performance improvement.
+
+Includes putting ICU in "capabilities()", the new icuGetCollate function,
+and changes to icuSetCollate.
