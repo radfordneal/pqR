@@ -718,7 +718,6 @@ void InitNames()
     /* NA_STRING */
     NA_STRING = allocCharsxp(strlen("NA"));
     strcpy(CHAR_RW(NA_STRING), "NA");
-    SET_CACHED(NA_STRING);  /* Mark it */
     R_print.na_string = NA_STRING;
 
     /* Set up a set of globals so that a symbol table search can be

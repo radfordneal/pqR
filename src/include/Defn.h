@@ -177,7 +177,7 @@ extern0 SEXP	R_UnderscoreString;   /* "_", as a CHARSXP */
 #define LATIN1_MASK (1<<2)
 #define UTF8_MASK (1<<3)
 /* (1<<4) is taken by S4_OBJECT_MASK */
-#define CACHED_MASK (1<<5)
+#define CACHED_MASK (1<<5)  /* no longer used */
 #define ASCII_MASK (1<<6)
 
 /* Symbol and string hash table declarations. */
@@ -225,8 +225,7 @@ typedef union { int i; double r; } R_static_box_contents;
 # define IS_UTF8(x) (UPTR_FROM_SEXP(x)->sxpinfo.gp & UTF8_MASK)
 # define SET_UTF8(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= UTF8_MASK)
 # define ENC_KNOWN(x) (UPTR_FROM_SEXP(x)->sxpinfo.gp & (LATIN1_MASK|UTF8_MASK))
-# define SET_CACHED(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= CACHED_MASK)
-# define IS_CACHED(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) & CACHED_MASK)
+# define IS_CACHED(x) 1  /* All strings are cached, except NA_STRING */
 #else /* USE_RINTERNALS */
 /* Needed only for write-barrier testing */
 int IS_BYTES(SEXP x);
@@ -238,8 +237,6 @@ void SET_ASCII(SEXP x);
 int IS_UTF8(SEXP x);
 void SET_UTF8(SEXP x);
 int ENC_KNOWN(SEXP x);
-int SET_CACHED(SEXP x);
-int IS_CACHED(SEXP x);
 #endif /* USE_RINTERNALS */
 
 #include "Internal.h"		/* do_FOO */
@@ -1969,19 +1966,20 @@ static inline int ISNAN_NOT_NA (double x)
 static inline int SEQL(SEXP a, SEXP b)
 {
     /* The only case where pointer comparisons do not suffice is where
-      we have two strings in different encodings (which must be
-      non-ASCII strings). Note that one of the strings could be marked
-      as unknown. */
-    if (a == b) return 1;
-    /* Leave this to compiler to optimize */
-    if (IS_CACHED(a) && IS_CACHED(b) && ENC_KNOWN(a) == ENC_KNOWN(b))
+       we have two strings in different encodings (which must be
+       non-ASCII strings). Note that one of the strings could be marked
+       as unknown. */
+
+    if (a == b)
+        return 1;
+
+    if (ENC_KNOWN(a) == ENC_KNOWN(b))
 	return 0;
-    else {
-    	SEXP vmax = R_VStack;
-    	int result = !strcmp(translateCharUTF8(a), translateCharUTF8(b));
-    	R_VStack = vmax; /* discard any memory used by translateCharUTF8 */
-    	return result;
-    }
+
+    SEXP vmax = R_VStack;
+    int result = !strcmp(translateCharUTF8(a), translateCharUTF8(b));
+    R_VStack = vmax; /* discard any memory used by translateCharUTF8 */
+    return result;
 }
 
 
