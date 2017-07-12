@@ -607,8 +607,7 @@ void sggc_find_root_ptrs (void)
         LASTENVNOTFOUND(s) = R_NoObject32;
         if (SYMVALUE(s) != R_UnboundValue) LOOK_AT(SYMVALUE(s));
         if (ATTRIB_W(s) != R_NilValue) LOOK_AT(ATTRIB_W(s));
-        if (level >= MIN_PRINTNAME_SCAN_LEVEL)
-            sggc_mark(CPTR_FROM_SEXP32(((SYMSEXP)UPTR_FROM_SEXP(s))->pname));
+        if (level >= MIN_PRINTNAME_SCAN_LEVEL) MARK(PRINTNAME(s));
     }
 
     /* Forward other roots. */
@@ -1683,7 +1682,7 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     c = alloc_sym();
     UNPROTECT(2);
 
-    ((SYMSEXP)UPTR_FROM_SEXP(c))->pname = SEXP32_FROM_SEXP(name);
+    PRINTNAME(c) = name;
     IS_PRINTNAME(name) = 1;
 #   if SYM_HASH_IN_SYM
         SYM_HASH(c) = CHAR_HASH(name);
