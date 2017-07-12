@@ -2840,7 +2840,6 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
     }
     if (is_ascii) SET_ASCII(val);
     CHAR_HASH(val) = full_hash;
-    SET_CACHED(val);  /* Mark it */
 
     /* add the new value to the cache */
     
@@ -2990,23 +2989,10 @@ R_FreeStringBufferL(R_StringBuffer *buf)
 
 /* ======== These need direct access to gp field for efficiency ======== */
 
-/* This has NA_STRING = NA_STRING.  Inlined version is SEQL. */
+/* This has NA_STRING = NA_STRING.  Uses inlined version from Defn.h. */
 int Seql(SEXP a, SEXP b)
 {
-    /* The only case where pointer comparisons do not suffice is where
-      we have two strings in different encodings (which must be
-      non-ASCII strings). Note that one of the strings could be marked
-      as unknown. */
-    if (a == b) return 1;
-    /* Leave this to compiler to optimize */
-    if (IS_CACHED(a) && IS_CACHED(b) && ENC_KNOWN(a) == ENC_KNOWN(b))
-	return 0;
-    else {
-    	SEXP vmax = R_VStack;
-    	int result = !strcmp(translateCharUTF8(a), translateCharUTF8(b));
-    	R_VStack = vmax; /* discard any memory used by translateCharUTF8 */
-    	return result;
-    }
+    return SEQL(a,b);
 }
 
 

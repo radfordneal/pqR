@@ -1,0 +1,2 @@
+Changes based on all CHARSXPs now being cached (except NA_STRING),
+so some simplifications/speedups are possible.

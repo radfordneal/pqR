@@ -48,7 +48,6 @@ struct _HashData {
 
     int nomatch;
     Rboolean useUTF8;
-    Rboolean useCache;
 };
 
 
@@ -154,8 +153,7 @@ static int shash(SEXP x, int indx, HashData *d)
     unsigned int k;
     const char *p;
     const void *vmax = VMAXGET();
-    if(!d->useUTF8 && d->useCache) return cshash(x, indx, d);
-    /* Not having d->useCache really should not happen anymore. */
+    if(!d->useUTF8) return cshash(x, indx, d);
     p = translateCharUTF8(STRING_ELT(x, indx));
     k = 0;
     while (*p++)
@@ -212,7 +210,6 @@ static int sequal(SEXP x, int i, SEXP y, int j)
        so avoid looking at the contents */
     if (STRING_ELT(x, i) == STRING_ELT(y, j)) return 1;
     /* Then if either is NA the other cannot be */
-    /* Once all CHARSXPs are cached, Seql will handle this */
     if (STRING_ELT(x, i) == NA_STRING || STRING_ELT(y, j) == NA_STRING)
 	return 0;
     return SEQL(STRING_ELT(x, i), STRING_ELT(y, j));
@@ -319,7 +316,6 @@ static void MKsetup(int n, HashData *d)
 static void HashTableSetup(SEXP x, HashData *d)
 {
     d->useUTF8 = FALSE;
-    d->useCache = TRUE;
     switch (TYPEOF(x)) {
     case LGLSXP:
 	d->hash = lhash;
@@ -412,16 +408,13 @@ SEXP duplicated(SEXP x, Rboolean from_last)
     HashTableSetup(x, &data);					\
     h = INTEGER(data.HashTable);				\
     if(TYPEOF(x) == STRSXP) {					\
-	data.useUTF8 = FALSE; data.useCache = TRUE;		\
+	data.useUTF8 = FALSE; 					\
 	for(i = 0; i < LENGTH(x); i++) {			\
 	    if(IS_BYTES(STRING_ELT(x, i))) {			\
 		data.useUTF8 = FALSE; break;			\
 	    }                                                   \
     	    if(ENC_KNOWN(STRING_ELT(x, i))) {                   \
 		data.useUTF8 = TRUE;                            \
-	    }							\
-	    if(!IS_CACHED(STRING_ELT(x, i))) {                  \
-		data.useCache = FALSE; break;                   \
 	    }							\
 	}							\
     }
@@ -748,7 +741,6 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
     if(type == STRSXP) {
 	Rboolean useBytes = FALSE;
 	Rboolean useUTF8 = FALSE;
-        Rboolean useCache = TRUE;
         int len_x = length(x);
 	for(i = 0; i < len_x; i++) {
             SEXP s = STRING_ELT(x, i);
@@ -760,31 +752,20 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
 	    if(ENC_KNOWN(s)) {
 		useUTF8 = TRUE;
 	    }
-            if(!IS_CACHED(s)) {
-		useCache = FALSE;
-		break;
-	    }
         }
-	if(!useBytes || useCache) {
-            int len_table = length(table);
-	    for(i = 0; i < len_table; i++) {
-                SEXP s = STRING_ELT(table, i);
-		if(IS_BYTES(s)) {
-		    useBytes = TRUE;
-		    useUTF8 = FALSE;
-		    break;
-		}
-		if(ENC_KNOWN(s)) {
-		    useUTF8 = TRUE;
-		}
-		if(!IS_CACHED(s)) {
-		    useCache = FALSE;
-		    break;
-		}
+        int len_table = length(table);
+        for(i = 0; i < len_table; i++) {
+            SEXP s = STRING_ELT(table, i);
+            if(IS_BYTES(s)) {
+                useBytes = TRUE;
+                useUTF8 = FALSE;
+                break;
+            }
+            if(ENC_KNOWN(s)) {
+                useUTF8 = TRUE;
             }
         }
 	data.useUTF8 = useUTF8;
-        data.useCache = useCache;
     }
 
     DoHashing(table, &data);
