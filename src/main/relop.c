@@ -542,6 +542,7 @@ void task_relop_sum (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
+    void *vmax = VMAXGET();
     int i, i1, i2, n, n1, n2, res;
     SEXP ans, x1, x2;
     int T = !F;
@@ -586,21 +587,70 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	}
     }
     else { /* LTOP */
-	for (i = 0; i < n; i++) {
-	    x1 = STRING_ELT(s1, i % n1);
-	    x2 = STRING_ELT(s2, i % n2);
-	    if (x1 == NA_STRING || x2 == NA_STRING)
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else if (x1 == x2)
-		LOGICAL(ans)[i] = F;
-	    else {
-                /* POSIX allows EINVAL when one of the strings contains
-                   characters outside the collation domain. */
-		errno = 0;
-		res = Scollate(x1, x2);
-		LOGICAL(ans)[i] = errno ? NA_LOGICAL : res < 0 ? T : F;
-	    }
-	}
+        if (n2 == 1) {
+            x2 = STRING_ELT(s2,0);
+            for (i = 0; i<n; i++) {
+                x1 = STRING_ELT(s1,i);
+                if (x1 == NA_STRING || x2 == NA_STRING)
+                    LOGICAL(ans)[i] = NA_LOGICAL;
+                else if (x1 == x2)
+                    LOGICAL(ans)[i] = F;
+                else {
+                    errno = 0; /* POSIX may use when outside collation domain */
+                    res = Scollate(x1, x2);
+                    LOGICAL(ans)[i] = errno ? NA_LOGICAL : res < 0 ? T : F;
+                    VMAXSET(vmax);  /* release storage mabye used by Scollate */
+                }
+            }
+        }
+        else if (n1 == 1) {
+            x1 = STRING_ELT(s1,0);
+            for (i = 0; i<n; i++) {
+                x2 = STRING_ELT(s2,i);
+                if (x1 == NA_STRING || x2 == NA_STRING)
+                    LOGICAL(ans)[i] = NA_LOGICAL;
+                else if (x1 == x2)
+                    LOGICAL(ans)[i] = F;
+                else {
+                    errno = 0; /* POSIX may use when outside collation domain */
+                    res = Scollate(x1, x2);
+                    LOGICAL(ans)[i] = errno ? NA_LOGICAL : res < 0 ? T : F;
+                    VMAXSET(vmax);  /* release storage mabye used by Scollate */
+                }
+            }
+        }
+        else if (n1 == n2) {
+            for (i = 0; i<n; i++) {
+	        x1 = STRING_ELT(s1,i);
+                x2 = STRING_ELT(s2,i);
+                if (x1 == NA_STRING || x2 == NA_STRING)
+                    LOGICAL(ans)[i] = NA_LOGICAL;
+                else if (x1 == x2)
+                    LOGICAL(ans)[i] = F;
+                else {
+                    errno = 0; /* POSIX may use when outside collation domain */
+                    res = Scollate(x1, x2);
+                    LOGICAL(ans)[i] = errno ? NA_LOGICAL : res < 0 ? T : F;
+                    VMAXSET(vmax);  /* release storage mabye used by Scollate */
+                }
+            }
+        }
+        else {
+            mod_iterate(n1, n2, i1, i2) {
+                x1 = STRING_ELT(s1,i1);
+                x2 = STRING_ELT(s2,i2);
+                if (x1 == NA_STRING || x2 == NA_STRING)
+                    LOGICAL(ans)[i] = NA_LOGICAL;
+                else if (x1 == x2)
+                    LOGICAL(ans)[i] = F;
+                else {
+                    errno = 0; /* POSIX may use when outside collation domain */
+                    res = Scollate(x1, x2);
+                    LOGICAL(ans)[i] = errno ? NA_LOGICAL : res < 0 ? T : F;
+                    VMAXSET(vmax);  /* release storage mabye used by Scollate */
+                }
+            }
+        }
     }
 
     UNPROTECT(1);
