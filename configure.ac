@@ -515,9 +515,9 @@ AC_ARG_WITH([ICU],
 ## Byte-compilation of packages.
 AC_ARG_ENABLE([byte-compiled-packages],
 [AS_HELP_STRING([--enable-byte-compiled-packages],
-                [byte-compile base and recommended packages @<:@yes@:>@])],
+                [byte-compile base and recommended packages @<:@no@:>@])],
 [want_byte_compiled_packages="${enableval}"],
-[want_byte_compiled_packages=yes])
+[want_byte_compiled_packages=no])
 AM_CONDITIONAL(BYTE_COMPILE_PACKAGES,
                [test "x${want_byte_compiled_packages}" = xyes])
 
@@ -2936,7 +2936,6 @@ R is now configured for ${host}, ${ac_cv_sizeof_char_p}-byte pointers
   Other capabilities:     ${r_capabilities}
   Other options enabled:  ${r_options}
 
-  Byte compile packages:  ${want_byte_compiled_packages}
   Recommended packages:   ${use_recommended_packages} 
 ])
 if test -n "${warn_f77_cc_double_complex}"; then

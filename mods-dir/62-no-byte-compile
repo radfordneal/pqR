@@ -1,0 +1,4 @@
+Change the defaults to not byte compile packages, even if asked to in
+DESCRIPTION, and to ignore byte code when evaluating a function, with
+these being overridden only by setting the R_DO_BYTECOMPILE and
+R_USE_BYTECODE environment variables to TRUE.
