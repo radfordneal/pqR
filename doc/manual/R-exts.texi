@@ -640,7 +640,9 @@ The @samp{ByteCompile} logical field controls if the package code is
 byte-compiled on installation: the default is currently not to, so this
 may be useful for a package known to benefit particularly from
 byte-compilation (which can take quite a long time and increases the
-installed size of the package).
+installed size of the package).  However, in pqR, byte compilation of
+packages is never done, regardless of this setting, unless the environment
+variable @code{R_PKG_BYTECOMPILE} is set to @code{TRUE}.
 
 The @samp{ZipData} logical field used to control whether the automatic
 Windows build would zip up the data directory or not: set this to

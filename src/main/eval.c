@@ -777,6 +777,9 @@ void attribute_hidden R_init_jit_enabled(void)
 	    else
 		R_compile_pkgs = FALSE;
 	}
+        char *doit = getenv("R_PKG_BYTECOMPILE");
+        if (doit == NULL || strcmp(doit,"TRUE") != 0)
+            R_compile_pkgs = FALSE;
     }
 
     if (R_disable_bytecode <= 0) {
@@ -788,6 +791,9 @@ void attribute_hidden R_init_jit_enabled(void)
 	    else
 		R_disable_bytecode = FALSE;
 	}
+        char *use = getenv("R_USE_BYTECODE");
+        if (use == NULL || strcmp(use,"TRUE") != 0)
+            R_disable_bytecode = TRUE;
     }
 }
     
@@ -4986,6 +4992,11 @@ static R_NORETURN void bad_function_error (void)
 
 static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 {
+
+  /* allow bytecode to be disabled for testing */
+  if (R_disable_bytecode)
+      return eval(bytecodeExpr(body), rho);
+
   SEXP value;
   SEXP *constants;
   BCODE *pc, *codebase;
@@ -5007,10 +5018,6 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   INITIALIZE_MACHINE();
   codebase = pc = BCCODE(body);
   constants = (SEXP *) DATAPTR(BCCONSTS(body));
-
-  /* allow bytecode to be disabled for testing */
-  if (R_disable_bytecode)
-      return eval(bytecodeExpr(body), rho);
 
   /* check version */
   {

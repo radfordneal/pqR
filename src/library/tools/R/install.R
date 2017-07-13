@@ -1020,6 +1020,8 @@
                                           default = byte_compile)
             rcp <- as.numeric(Sys.getenv("R_COMPILE_PKGS"))
             BC <- BC || (!is.na(rcp) && rcp > 0)
+            if (!identical(Sys.getenv("R_PKG_BYTECOMPILE"),"TRUE"))
+                BC <- FALSE
             if (BC) {
                 starsmsg(stars,
                          "byte-compile and prepare package for lazy loading")

@@ -15,8 +15,22 @@
         features from later R Core versions.
   }}
 
-  \subsection{DOCUMENTATION AND FEATURE CHANGES}{
+  \subsection{FEATURE CHANGES}{
   \itemize{
+  \item Byte compilation is now discouraged, because on the whole it 
+        makes performance worse rather than better, since it does not
+        support some pqR performance improvements, and because it does not
+        implement some pqR language extensions.
+
+        It is still possible to enable byte compilation, but this is
+        meant only for research purposes, to compare performance of
+        interpreted and byte-compiled code.  No byte compilation
+        of packages will be done unless the \code{R_PKG_BYTECOMPILE}
+        environment variable is set to \code{TRUE}, regardless of any
+        other settings.  Byte code will not be used when evaluating
+        expressions unless the \code{R_USE_BYTECODE} environment
+        variable is set to \code{TRUE}, even if its evaluation is
+        explicitly requested.
   \item It is now allowed to set the length of an ``expression''
         object with \code{length(e)<-len}, as for other vector
         types.  Any extra elements are set to \code{NULL}.

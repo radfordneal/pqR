@@ -13,6 +13,8 @@
 \alias{compilePKGS}
 \alias{getCompilerOption}
 \alias{setCompilerOptions}
+\alias{R_PKG_BYTECOMPILE}
+\alias{R_USE_BYTECODE}
 \title{Byte Code Compiler}
 \usage{
 cmpfun(f, options = NULL)
@@ -45,6 +47,20 @@ setCompilerOptions(...)
 }
 \description{
   These functions provide an interface to a byte code compiler for R.
+
+  In pqR, use of the byte code compiler is discouraged, because it does
+  not implement some pqR language extensions, and because it on the whole makes
+  performance worse, rather than better, due to it not supporting some
+  pqR performance improvements.  
+
+  It is still possible to enable byte compilation, but this is meant
+  only for research purposes, to compare performance of interpreted
+  and byte-compiled code.  No byte compilation of packages will be
+  done unless the \code{R_PKG_BYTECOMPILE} environment variable is set
+  to \code{TRUE}, regardless of any other settings.  Byte code will
+  not be used when evaluating expressions unless the
+  \code{R_USE_BYTECODE} environment variable is set to \code{TRUE},
+  even if its evaluation is explicitly requested.
 }
 \details{
   The function \code{cmpfun} compiles the body of a closure and
