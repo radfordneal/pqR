@@ -62,6 +62,9 @@ setCompilerOptions(...)
   not be used when evaluating expressions unless the
   \code{R_USE_BYTECODE} environment variable is set to \code{TRUE},
   even if its evaluation is explicitly requested.
+
+  The JIT feature is now never enabled, regardless of any attempt to
+  do so as described below.
 }
 \details{
   The function \code{cmpfun} compiles the body of a closure and

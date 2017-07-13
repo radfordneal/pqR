@@ -4,3 +4,5 @@ function.
 
 Thse changes can be overridden only by setting the R_PKG_BYTECOMPILE
 and R_USE_BYTECODE environment variables to TRUE.
+
+JIT is now never enabled.

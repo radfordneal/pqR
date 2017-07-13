@@ -31,6 +31,9 @@
         expressions unless the \code{R_USE_BYTECODE} environment
         variable is set to \code{TRUE}, even if its evaluation is
         explicitly requested.
+
+        The JIT feature is now never enabled, regardless of any attempt
+        to do so.
   \item It is now allowed to set the length of an ``expression''
         object with \code{length(e)<-len}, as for other vector
         types.  Any extra elements are set to \code{NULL}.

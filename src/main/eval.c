@@ -759,6 +759,7 @@ static int R_disable_bytecode = 0;
 void attribute_hidden R_init_jit_enabled(void)
 {
     if (R_jit_enabled <= 0) {
+        R_jit_enabled = 0;  /* never do JIT now */
 	char *enable = getenv("R_ENABLE_JIT");
 	if (enable != NULL) {
 	    int val = atoi(enable);
@@ -846,6 +847,9 @@ static SEXP R_compileAndExecute(SEXP call, SEXP rho)
 
 static SEXP do_enablejit(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
+    R_jit_enabled = 0;  /* never use JIT now */
+    return ScalarIntegerMaybeConst(0);
+
     int old = R_jit_enabled, new;
     checkArity(op, args);
     new = asInteger(CAR(args));
