@@ -1,6 +1,7 @@
 % File src/library/compiler/man/compile.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 2011 R Core Team
+% Modifications for pqR Copyright (c) 2017 Radford M. Neal
 % Distributed under GPL 2 or later
 
 \name{compile}
