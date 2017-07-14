@@ -2386,6 +2386,12 @@ static SEXP do_ICUset(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
+SEXP attribute_hidden do_ICUget(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    checkArity(op, args);
+    return mkString("ICU not in use");
+}
+
 void attribute_hidden resetICUcollator(void) {}
 
 # ifdef Win32
