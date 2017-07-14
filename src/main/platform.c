@@ -86,17 +86,17 @@ static void Init_R_Machine(SEXP rho)
 
     /* Check that double rounding doesn't happen. */
 
-    static double val = 
-              0x1.0000000000001p0;
+    volatile static double val1 = 0x1.0000000000001p0,
+                           val2 = 0x0.00000000000007ffffff8p0;
 
-    if (val + 0x0.00000000000007ffffff8p0 != val) {
+    if (val1 + val2 != val1) {
         R_Suicide(
          "Floating-point arithmetic exhibits double rounding (not IEEE)\n");
     }
 
     /* Check that denormalized numbers exist. */
 
-    if ((val * 0x1p-515 * 0x1p-515) * 0x1p515 * 0x1p515 != 1) {
+    if ((((val1 * 0x1p-515) * 0x1p-515) * 0x1p515)) * 0x1p515 != 1) {
         R_Suicide(
          "Floating-point arithmetic lacks denormalized numbers (not IEEE)\n");
     }
