@@ -77,10 +77,10 @@ static void Init_R_Machine(SEXP rho)
 
     /* Check that this is consistent with 64-bit IEEE floating point. */
     
-    if (R_AccuractyInfo.irnd != 5
+    if (R_AccuracyInfo.irnd != 5
      || R_AccuracyInfo.eps  != 0x0.0000000000001p0
      || R_AccuracyInfo.xmax != 0x1.fffffffffffffp1023) {
-        RSuicide(
+        R_Suicide(
          "Floating-point arithmetic does not match 64-bit IEEE standard\n");
     }
 
@@ -90,14 +90,14 @@ static void Init_R_Machine(SEXP rho)
               0x1.0000000000001p0;
 
     if (val + 0x0.00000000000007ffffff8p0 != val) {
-        RSuicide(
+        R_Suicide(
          "Floating-point arithmetic exhibits double rounding (not IEEE)\n");
     }
 
     /* Check that denormalized numbers exist. */
 
-    if ((val * 0x1p-515 * 0x1p-515) * 0x1p515 * 0x1p515) != 1) {
-        RSuicide(
+    if ((val * 0x1p-515 * 0x1p-515) * 0x1p515 * 0x1p515 != 1) {
+        R_Suicide(
          "Floating-point arithmetic lacks denormalized numbers (not IEEE)\n");
     }
 
