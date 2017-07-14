@@ -51,6 +51,17 @@
         platform and configuration options.
   }}
 
+  \subsection{INSTALLATION}{
+  \itemize{
+  \item A platform on which pqR is installed must now
+        implement correct 64-bit IEEE floating-point arithmetic for the C 
+        "double" type.  In particular, this means that pqR is not supported
+        on Intel x86 platforms without SSE2 instructions (Pentium III
+        and earlier), since given current software environments, it is 
+        effectively impossible to use the FPU in these system to
+        perform correctly-rounded 64-bit floating-point operations.
+  }}
+
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
   \item Operations that increase or decrease the length of a vector

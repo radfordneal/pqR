@@ -1,7 +1,7 @@
 % File src/library/base/man/Arithmetic.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
-% Modifications for pqR Copyright (c) 2014, 2016 Radford M. Neal.
+% Modifications for pqR Copyright (c) 2014, 2016, 2017 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Arithmetic}
@@ -120,12 +120,11 @@ x \%/\% y
   \code{c(e1, e2)}.
 }
 \section{Implementation limits}{
-  \R is dependent on OS services (and they on FPUs) for floating-point
-  arithmetic.  On all current \R platforms IEC 60559 (also known as IEEE
-  754) arithmetic is used, but some things in those standards are
-  optional.  In particular, the support for \emph{denormal numbers}
-  (those outside the range given by \code{\link{.Machine}}) may differ
-  between platforms and even between calculations on a single platform.
+  pqR now requires that floating-point arithmetic conform to the
+  IEC 60559 (also known as IEEE 754) standard, and will complain and
+  refuse to start if it detects that this is not so.  This includes
+  support for \emph{denormal numbers}
+  (non-zero numbers closer to zero than \code{.Machine$double.xmin}).
 
   Another potential issue is signed zeroes: on IEC 60659 platforms there
   are two zeroes with internal representations differing by sign.  Where
@@ -145,11 +144,6 @@ x \%/\% y
   one system to another, or when pqR is compiled on the same system
   with different compilers, or when the operation is done in different
   contexts (eg, as a scalar or vector).  It might even vary randomly.
-  (Note: For an Intel system, using a gcc compiler, consistent
-  preference for the result being \code{NA} for operations where both
-  \code{NA} and \code{NaN} are operands may be obtained by building
-  pqR with the \code{-mfpmath=387} option in \code{CFLAGS}, but this 
-  is likely to reduce the speed of some arithmetic operations.)
 }
 \note{
   \code{**} is accepted as a synonym for \code{^}, referring to the

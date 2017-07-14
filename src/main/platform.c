@@ -75,6 +75,32 @@ static void Init_R_Machine(SEXP rho)
 	   &R_AccuracyInfo.xmin,
 	   &R_AccuracyInfo.xmax);
 
+    /* Check that this is consistent with 64-bit IEEE floating point. */
+    
+    if (R_AccuractyInfo.irnd != 5
+     || R_AccuracyInfo.eps  != 0x0.0000000000001p0
+     || R_AccuracyInfo.xmax != 0x1.fffffffffffffp1023) {
+        RSuicide(
+         "Floating-point arithmetic does not match 64-bit IEEE standard\n");
+    }
+
+    /* Check that double rounding doesn't happen. */
+
+    static double val = 
+              0x1.0000000000001p0;
+
+    if (val + 0x0.00000000000007ffffff8p0 != val) {
+        RSuicide(
+         "Floating-point arithmetic exhibits double rounding (not IEEE)\n");
+    }
+
+    /* Check that denormalized numbers exist. */
+
+    if ((val * 0x1p-515 * 0x1p-515) * 0x1p515 * 0x1p515) != 1) {
+        RSuicide(
+         "Floating-point arithmetic lacks denormalized numbers (not IEEE)\n");
+    }
+
     R_dec_min_exponent = floor(log10(R_AccuracyInfo.xmin)); /* smallest decimal exponent */
     PROTECT(ans = allocVector(VECSXP, 18));
     PROTECT(nms = allocVector(STRSXP, 18));
