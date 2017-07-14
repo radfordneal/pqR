@@ -1457,14 +1457,14 @@ struct R_local_protect {
 
 #ifdef SGGC_NO_OBJECT_ZERO
 #define R_SGGC_NIL_INDEX 1
-#define R_SGGC_STATIC_BOXES_INDEX 2
+#define R_SGGC_SCALAR_STACK_INDEX 2
 #define R_SGGC_ENV_INDEX 3
 #define R_SGGC_SYM_INDEX 4
 #define R_SGGC_NUM_INDEX 5
 #define R_SGGC_LIST1_INDEX 6
 #else
 #define R_SGGC_NIL_INDEX 0
-#define R_SGGC_STATIC_BOXES_INDEX 1
+#define R_SGGC_SCALAR_STACK_INDEX 1
 #define R_SGGC_ENV_INDEX 2
 #define R_SGGC_SYM_INDEX 3
 #define R_SGGC_NUM_INDEX 4
@@ -1544,19 +1544,13 @@ ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS];
 #define R_ScalarRealNA          ((SEXP) &R_ScalarNumerical_consts[17])
 #endif
 
-/* Integer and real static boxes.  Defined in const-objs.c. */
+/* Start of scalar stack. */
 
 #if USE_COMPRESSED_POINTERS
-#define R_ScalarIntegerBox0 ((SEXP)SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,0))
-#define R_ScalarIntegerBox  ((SEXP)SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,1))
-#define R_ScalarRealBox0    ((SEXP)SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,2))
-#define R_ScalarRealBox     ((SEXP)SGGC_CPTR_VAL(R_SGGC_STATIC_BOXES_INDEX,3))
+#define R_scalar_stack_start ((SEXP) SGGC_CPTR_VAL(R_SGGC_SCALAR_STACK_INDEX,0))
 #else
-ConstExtern VECTOR_SEXPREC_C R_ScalarBox_space[4];
-#define R_ScalarIntegerBox0 ((SEXP) &R_ScalarBox_space[0])
-#define R_ScalarIntegerBox  ((SEXP) &R_ScalarBox_space[1])
-#define R_ScalarRealBox0    ((SEXP) &R_ScalarBox_space[2])
-#define R_ScalarRealBox     ((SEXP) &R_ScalarBox_space[3])
+ConstExtern VECTOR_SEXPREC_C R_scalar_stack_space[32];
+#define R_scalar_stack_start ((SEXP) &R_scalar_stack_space[0])
 #endif
 
 #if USE_COMPRESSED_POINTERS
@@ -1830,6 +1824,7 @@ LibExtern struct {
     SEXP binding_cell;            /* Binding cell for variable found, or NULL */
     char *CStackThreshold;        /* Threshold for overflow detection */
     SEXP VStack;                  /* R_alloc stack pointer */
+    SEXP scalar_stack;            /* Next unused position on scalar stack */
     const struct R_local_protect *local_protect_start;/*Start of protect chain*/
     SEXP Srcref;                  /* Current srcref, for debuggers */
     SEXP BraceSymbol;             /* Symbol { */
@@ -1839,13 +1834,14 @@ LibExtern struct {
 #define InitHighFrequencyGlobals() \
 do \
 { \
-    R_high_frequency_globals.EvalDepth   = 0; \
-    R_high_frequency_globals.Expressions = 5000; \
-    R_high_frequency_globals.evalcount   = 0; \
-    R_high_frequency_globals.VStack      = R_NoObject; \
-    R_high_frequency_globals.PPStackSize = R_PPSSIZE; \
+    R_high_frequency_globals.EvalDepth    = 0; \
+    R_high_frequency_globals.Expressions  = 5000; \
+    R_high_frequency_globals.evalcount    = 0; \
+    R_high_frequency_globals.VStack       = R_NoObject; \
+    R_high_frequency_globals.scalar_stack = R_scalar_stack_start; \
+    R_high_frequency_globals.PPStackSize  = R_PPSSIZE; \
+    R_high_frequency_globals.Profiling    = 0; \
     R_high_frequency_globals.local_protect_start = NULL; \
-    R_high_frequency_globals.Profiling = 0; \
 } while (0)
 
 

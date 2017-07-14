@@ -58,6 +58,7 @@
  *	vmax		the current setting of the R_alloc stack
  *	srcref		the srcref at the time of the call
  *	local_pr        saved value of R_local_protect_start
+ *	scalar_stack    saved value of R_scalar_stack
  *
  *  Context types can be one of:
  *
@@ -191,6 +192,7 @@ void attribute_hidden R_restore_globals(RCNTXT *cptr)
     R_BCIntStackTop = cptr->intstack;
 #endif
     R_local_protect_start = cptr->local_pr;
+    R_scalar_stack = cptr->scalar_stack;
 }
 
 
@@ -258,6 +260,7 @@ void begincontext(RCNTXT * cptr, int flags,
 #endif
     cptr->srcref = R_Srcref;
     cptr->local_pr = R_local_protect_start;
+    cptr->scalar_stack = R_scalar_stack;
     R_GlobalContext = cptr;
 }
 

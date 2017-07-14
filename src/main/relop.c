@@ -1201,13 +1201,13 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
             return ans;
         case VARIANT_SUM:
             PROTECT(ans = allocVector1INT());
-            if (IS_STATIC_BOX(x) && IS_STATIC_BOX(y)) {
+            if (ON_SCALAR_STACK(x) && ON_SCALAR_STACK(y)) {
                 PROTECT(x = duplicate(x));
                 y = duplicate(y);
                 UNPROTECT(1);
             }
-            else if (IS_STATIC_BOX(x)) x = duplicate(x);
-            else if (IS_STATIC_BOX(y)) y = duplicate(y);
+            else if (ON_SCALAR_STACK(x)) x = duplicate(x);
+            else if (ON_SCALAR_STACK(y)) y = duplicate(y);
             DO_NOW_OR_LATER2 (variant, n >= T_relop, 0, task_relop_sum, codeop, 
                               ans, x, y);
             if (xts || yts) UNPROTECT(2);
@@ -1215,13 +1215,13 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
             return ans;
         default:
             PROTECT(ans = allocVector(LGLSXP,n));
-            if (IS_STATIC_BOX(x) && IS_STATIC_BOX(y)) {
+            if (ON_SCALAR_STACK(x) && ON_SCALAR_STACK(y)) {
                 PROTECT(x = duplicate(x));
                 y = duplicate(y);
                 UNPROTECT(1);
             }
-            else if (IS_STATIC_BOX(x)) x = duplicate(x);
-            else if (IS_STATIC_BOX(y)) y = duplicate(y);
+            else if (ON_SCALAR_STACK(x)) x = duplicate(x);
+            else if (ON_SCALAR_STACK(y)) y = duplicate(y);
             DO_NOW_OR_LATER2 (variant, n >= T_relop, 0, task_relop, codeop, 
                               ans, x, y);
             break;

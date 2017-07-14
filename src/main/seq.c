@@ -1103,6 +1103,6 @@ attribute_hidden FUNTAB R_FunTab_seq[] =
 attribute_hidden FASTFUNTAB R_FastFunTab_seq[] = {
 /*slow func	fast func,     code or -1   dsptch  variant */
 
-{ do_seq_len,	do_fast_seq_len,-1,		0,  VARIANT_STATIC_BOX_OK },
+{ do_seq_len,	do_fast_seq_len,-1,		0,  VARIANT_SCALAR_STACK_OK },
 { 0,		0,		0,		0,  0 }
 };

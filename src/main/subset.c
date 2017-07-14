@@ -1173,16 +1173,16 @@ static inline SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
         case LGLSXP:  
             return ScalarLogicalMaybeConst (LOGICAL(x)[ix]);
         case INTSXP:  
-            if (variant & VARIANT_STATIC_BOX_OK) {
-                *INTEGER(R_ScalarIntegerBox) = INTEGER(x)[ix];
-                return R_ScalarIntegerBox;
+            if (variant & VARIANT_SCALAR_STACK_OK & 0) {
+/*                *INTEGER(R_ScalarIntegerBox) = INTEGER(x)[ix];
+                return R_ScalarIntegerBox; */
             }
             else
                 return ScalarIntegerMaybeConst(INTEGER(x)[ix]);
         case REALSXP: 
-            if (variant & VARIANT_STATIC_BOX_OK) {
-                *REAL(R_ScalarRealBox) = REAL(x)[ix];
-                return R_ScalarRealBox;
+            if (variant & VARIANT_SCALAR_STACK_OK & 0) {
+/*                *REAL(R_ScalarRealBox) = REAL(x)[ix];
+                return R_ScalarRealBox; */
             }
             else
                 return ScalarRealMaybeConst(REAL(x)[ix]);
@@ -1281,16 +1281,16 @@ static inline SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2,
     case LGLSXP:  
         return ScalarLogicalMaybeConst (LOGICAL(x)[e]);
     case INTSXP:  
-        if (variant & VARIANT_STATIC_BOX_OK) {
-            *INTEGER(R_ScalarIntegerBox) = INTEGER(x)[e];
-            return R_ScalarIntegerBox;
+        if (variant & VARIANT_SCALAR_STACK_OK & 0) {
+/*            *INTEGER(R_ScalarIntegerBox) = INTEGER(x)[e];
+            return R_ScalarIntegerBox; */
         }
         else
             return ScalarIntegerMaybeConst(INTEGER(x)[e]);
     case REALSXP: 
-        if (variant & VARIANT_STATIC_BOX_OK) {
-            *REAL(R_ScalarRealBox) = REAL(x)[e];
-            return R_ScalarRealBox;
+        if (variant & VARIANT_SCALAR_STACK_OK & 0) {
+/*            *REAL(R_ScalarRealBox) = REAL(x)[e];
+            return R_ScalarRealBox; */
         }
         else
             return ScalarRealMaybeConst(REAL(x)[e]);
@@ -1320,9 +1320,8 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
        and has one or two index arguments in total, evaluate the first index
        with VARIANT_SEQ, so it may come as a range rather than a vector, and 
        evaluate the array with VARIANT_PENDING_OK.  If there is just one
-       index, evaluate it with VARIANT_STATIC_BOX, so if scalar it can
-       arrive in a static box.  (We don't do this if evaluation of the remaining
-       arguments might also use this static box.) */
+       index, evaluate it with VARIANT_SCALAR_STACK, so if scalar it can
+       arrive on the scalar stack. */
 
     if (args != R_NilValue && CAR(args) != R_DotsSymbol) {
         SEXP array = CAR(args);
@@ -1345,7 +1344,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             int seq = 0;
             int avar = 
               remargs == R_NilValue 
-                ? VARIANT_SEQ | VARIANT_STATIC_BOX_OK 
+                ? VARIANT_SEQ | VARIANT_SCALAR_STACK_OK 
                               | VARIANT_MISSING_OK 
                               | VARIANT_PENDING_OK :
               CDR(remargs) == R_NilValue 

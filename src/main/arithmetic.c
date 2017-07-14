@@ -370,14 +370,14 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             case MINUSOP: ;
                 if (type==REALSXP) {
                     ans = NAMEDCNT_EQ_0(arg1) ? arg1
-                        : variant & VARIANT_STATIC_BOX_OK ? R_ScalarRealBox
+                        : variant & VARIANT_SCALAR_STACK_OK & 0 ? 0
                         :   allocVector1REAL();
                     WAIT_UNTIL_COMPUTED(arg1);
                     *REAL(ans) = - *REAL(arg1);
                 }
                 else { /* INTSXP */
                     ans = NAMEDCNT_EQ_0(arg1) ? arg1 
-                        : variant & VARIANT_STATIC_BOX_OK ? R_ScalarIntegerBox
+                        : variant & VARIANT_SCALAR_STACK_OK & 0 ? 0
                         :   allocVector1INT();
                     WAIT_UNTIL_COMPUTED(arg1);
                     *INTEGER(ans) = *INTEGER(arg1)==NA_INTEGER ? NA_INTEGER
@@ -394,7 +394,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
                 ans = NAMEDCNT_EQ_0(arg2) ? arg2
                     : NAMEDCNT_EQ_0(arg1) ? arg1
-                    : variant & VARIANT_STATIC_BOX_OK ? R_ScalarRealBox
+                    : variant & VARIANT_SCALAR_STACK_OK & 0 ? 0
                     :   allocVector1REAL();
 
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
@@ -437,7 +437,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
                 ans = NAMEDCNT_EQ_0(arg2) ? arg2
                     : NAMEDCNT_EQ_0(arg1) ? arg1 
-                    : variant & VARIANT_STATIC_BOX_OK ? R_ScalarIntegerBox
+                    : variant & VARIANT_SCALAR_STACK_OK & 0 ? 0
                     :   allocVector1INT();
 
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
@@ -476,7 +476,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
   ret:
     UNPROTECT(3);
-    if (IS_STATIC_BOX(ans) && (variant & VARIANT_STATIC_BOX_OK) == 0)
+    if (ON_SCALAR_STACK(ans) && (variant & VARIANT_SCALAR_STACK_OK & 0) == 0)
         ans = duplicate(ans);
     return ans;
 }
@@ -1328,13 +1328,13 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         if (oper>TIMESOP) threshold >>= 1;
 
         if (n >= threshold && (variant & VARIANT_PENDING_OK)) {
-            if (IS_STATIC_BOX(x) && IS_STATIC_BOX(y)) {
+            if (ON_SCALAR_STACK(x) && ON_SCALAR_STACK(y)) {
                 PROTECT(x = duplicate(x));
                 y = duplicate(y);
                 UNPROTECT(1);
             }
-            else if (IS_STATIC_BOX(x)) x = duplicate(x);
-            else if (IS_STATIC_BOX(y)) y = duplicate(y);
+            else if (ON_SCALAR_STACK(x)) x = duplicate(x);
+            else if (ON_SCALAR_STACK(y)) y = duplicate(y);
         }
         DO_NOW_OR_LATER2 (variant, n>=threshold, flags, task, oper, ans, x, y);
 
@@ -1668,10 +1668,10 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
             sy = sa;
             *REAL(sy) = res;
         }
-        else if ((variant & VARIANT_STATIC_BOX_OK) && (!HAS_ATTRIB(sa)
+        else if ((variant & VARIANT_SCALAR_STACK_OK & 0) && (!HAS_ATTRIB(sa)
                    || ((variant & VARIANT_ANY_ATTR) && !isObject(sa)))) {
-            sy = R_ScalarRealBox;
-            *REAL(sy) = res;
+/*            sy = R_ScalarRealBox;
+            *REAL(sy) = res; */
         }
         else {
             PROTECT(sy = ScalarReal(res));
@@ -1818,8 +1818,8 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
         int n = LENGTH(x);
         if (n == 1) {
             s = NAMEDCNT_EQ_0(x) && TYPEOF(x) == INTSXP ? x 
-              : (variant&VARIANT_STATIC_BOX_OK) != 0 && !HAS_ATTRIB(x) 
-                  ? R_ScalarIntegerBox : allocVector1INT();
+              : (variant & VARIANT_SCALAR_STACK_OK & 0) != 0 && !HAS_ATTRIB(x) 
+                  ? /*R_ScalarIntegerBox*/0 : allocVector1INT();
             int v = *INTEGER(x);
             WAIT_UNTIL_COMPUTED(x);
             *INTEGER(s) = v==NA_INTEGER ? NA_INTEGER : v<0 ? -v : v;
@@ -1846,8 +1846,8 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
         }
         else if (n == 1) {
             s = NAMEDCNT_EQ_0(x) ? x 
-              : (variant&VARIANT_STATIC_BOX_OK) != 0 && !HAS_ATTRIB(x)
-                  ? R_ScalarRealBox : allocVector1REAL();
+              : (variant & VARIANT_SCALAR_STACK_OK & 0) != 0 && !HAS_ATTRIB(x)
+                  ? /*R_ScalarRealBox*/ 0 : allocVector1REAL();
             WAIT_UNTIL_COMPUTED(x);
             *REAL(s) = fabs(*REAL(x));
         }
@@ -2168,7 +2168,7 @@ SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
         SEXP arg, ans;
         arg = evalv (CAR(args), env, 
-                     VARIANT_PENDING_OK | VARIANT_STATIC_BOX_OK);
+                     VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK);
         if (isObject(arg)) {
             WAIT_UNTIL_COMPUTED(arg);
             args = CONS(arg, R_NilValue);
@@ -2902,8 +2902,8 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 
 attribute_hidden FASTFUNTAB R_FastFunTab_arithmetic[] = {
 /*slow func	fast func,     code or -1   dsptch  variant */
-{ do_math1,	do_fast_math1,	-1,             1,  VARIANT_STATIC_BOX_OK },
-{ do_trunc,	do_fast_trunc,	-1,		1,  VARIANT_STATIC_BOX_OK },
-{ do_abs,	do_fast_abs,	-1,		1,  VARIANT_STATIC_BOX_OK },
+{ do_math1,	do_fast_math1,	-1,             1,  VARIANT_SCALAR_STACK_OK },
+{ do_trunc,	do_fast_trunc,	-1,		1,  VARIANT_SCALAR_STACK_OK },
+{ do_abs,	do_fast_abs,	-1,		1,  VARIANT_SCALAR_STACK_OK },
 { 0,		0,		0,		0,  0 }
 };
