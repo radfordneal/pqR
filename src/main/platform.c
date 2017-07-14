@@ -96,7 +96,7 @@ static void Init_R_Machine(SEXP rho)
 
     /* Check that denormalized numbers exist. */
 
-    if ((((val1 * 0x1p-515) * 0x1p-515) * 0x1p515)) * 0x1p515 != 1) {
+    if ((((val1 * 0x1p-515) * 0x1p-515) * 0x1p515) * 0x1p515 != 1) {
         R_Suicide(
          "Floating-point arithmetic lacks denormalized numbers (not IEEE)\n");
     }
