@@ -1,14 +1,15 @@
 ## THIS IS THE VERSION FOR 32-BIT BUILDS ON A 32-BIT WINDOWS SYSTEM.
 ##
-## This version should work on any non-ancient Intel/AMD procesor, including
-## i386 processors without SSE2 support (eg, Pentium III).
+## This version should work on any procesors from the Pentium 4 on, but
+## not on processors without SSE2 support (eg, Pentium III).  Processors
+## without SSE2 instructions are no longer supported with pqR.
 ##
 ## To use, copy to MkRules.local, and then edit options below if desired.
 ##
-## Use MkRules.dist32-sse2 or MkRules.dist64 as a starting point if you are
-## building for a 32-bit system with SSE2 instructions or for a 64-bit system.
-## But note that if used with pqR-win-extras-32, MkRules.dist32 can be used
-## on 64-bit system (though it's likely not as fast as a 64-bit build).
+## Use MkRules.dist64 as a starting point if you are building for a 64-bit 
+## system.  But note that if used with pqR-win-extras-32, MkRules.dist32
+## can be used on a 64-bit system (though it's likely not as fast as a 
+## 64-bit build, and will be more memory-limited).
 
 
 ## This is only used when building R itself but it does customize
@@ -46,11 +47,14 @@ MULTI = 32
 # (including the trailing /, and use / not \).
 TOOL_PATH =
 
-# Compilers use a -m64 or -m32 option to select architectures.  If only
-# -m32 is specified, it will work for processors earlier than the Pentium 4,
-# which lack SSE2 instructions.
+# Compilers use a -m64 or -m32 option to select architectures.  Including
+# -msse2 and -mfpmath=sse as well will ensure reproducibility of floating-point
+# operations, but this assumes a Pentium 4 or later machine.  SSE2 instructions
+# require 16-byte stack alignment, which appears to not be ensured by setup code
+# for Windows, so the -mstackrealign option is specified to force C procedures
+# to ensure this alignment.
 
-M_ARCH = -m32
+M_ARCH = -m32 -msse2 -mfpmath=sse -mstackrealign
 
 # Optimization levels for most C and Fortran compiles.  A high level is
 # not necessarily better than a lower level, both because it may actually

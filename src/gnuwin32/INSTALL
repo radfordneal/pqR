@@ -96,17 +96,17 @@ always completely adequate, is as follows:
   8) Change to the src\gnuwin32 sub-directory of the source/build
      directory.
 
-  9) Copy one of MkRules.dist32, MkRules.dist32-sse2, or MkRules.dist64
-     to MkRules.local and possibly edit MkRules.local as appropriate.
-     For example, if runing 64-bit Windows, you might use the command
+  9) Copy either MkRules.dist32 or MkRules.dist64 to MkRules.local and
+     possibly edit MkRules.local as appropriate.  For example, if
+     runing 64-bit Windows, you might use the command
 
          cp MkRules.dist64 MkRules.local
 
      Note that the names are case-sensitive!
 
      MkRules.dist32 should work for any Windows XP, Vista, 7, 8, or 10
-     system (in conjunction with pqR-win-extras-32), but will not produce
-     as fast a version of pqR on recent processors as the other options.
+     system (in conjunction with pqR-win-extras-32), but on 64-bit systems
+     will be slower and more memory-limited than using MkRules.dist64.
      See the comments in the MkRules files for more details.
 
  10) Possibly edit the options (eg, whether helper threads or

@@ -1,6 +1,7 @@
 % File src/library/base/man/zMachine.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2010 R Core Team
+% Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{.Machine}
@@ -87,17 +88,17 @@
     \code{12} (most 32-bit builds) or \code{16} (most 64-bit builds).}
   \item{sizeof.pointer}{the number of bytes in a C \code{SEXP}
     type.  Will be \code{4} on 32-bit builds and \code{8} on 64-bit
-    builds of \R.}
+    builds of \R, except that it will be \code{4} for any build using
+    compressed pointers.}
 }
 \details{
-  The algorithm is based on Cody's (1988) subroutine MACHAR.  As
-  all current implementations of \R use 32-bit integers and almost all
-  use IEC 60559 floating-point (double precision) arithmetic, all but
-  the last two values are the same for almost all \R builds.
+  The algorithm is based on Cody's (1988) subroutine MACHAR.  Since
+  pqR uses 32-bit integers and 64-bit IEC 60559 floating-point (aka IEEE
+  floating-point) arithmetic, all but the last four values below should be
+  the same for all builds.
 
-  Note that on most platforms smaller positive values than
-  \code{.Machine$double.xmin} can occur.  On a typical \R platform the
-  smallest positive double is about \code{5e-324}.
+  Note that smaller positive values than
+  \code{.Machine$double.xmin} can occur, down to about \code{5e-324}.
 }
 \note{
   \code{sizeof.longdouble} only tells you the amount of storage

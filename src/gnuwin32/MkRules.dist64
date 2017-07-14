@@ -4,8 +4,8 @@
 ##
 ## To use, copy to MkRules.local, and then edit options below if desired.
 ##
-## Use MkRules.dist32 or MkRules.dist32-sse2 as a starting point if you are
-## building for a 32-bit system (without or with SSE2 instructions).
+## Use MkRules.dist32 as a starting point if you are building for a 32-bit 
+## system (which must have SSE2 instructions).
 
 
 ## This is only used when building R itself but it does customize
