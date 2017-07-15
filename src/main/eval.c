@@ -1303,15 +1303,14 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
 
 static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    SEXP Cond, Stmt, condval;
-    int condlogical;
+    SEXP Cond, Stmt;
     int absent_else = 0;
 
     Cond = CAR(args); args = CDR(args);
     Stmt = CAR(args); args = CDR(args);
 
-    condval = evalv (Cond, rho, VARIANT_SCALAR_STACK_OK);
-    condlogical = asLogicalNoNA (condval, call);
+    SEXP condval = evalv (Cond, rho, VARIANT_SCALAR_STACK_OK);
+    int condlogical = asLogicalNoNA (condval, call);
     if (ON_SCALAR_STACK(condval)) POP_SCALAR_STACK(1);
 
     if (!condlogical) {
@@ -1649,11 +1648,9 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 		 R_NilValue);
 
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) { /* <- back here for "next" */
-        SEXP condval;
-        int condlogical;
         for (;;) {
-            condval = evalv (CAR(args), rho, VARIANT_SCALAR_STACK_OK);
-            condlogical = asLogicalNoNA (condval, call);
+            SEXP condval = evalv (CAR(args), rho, VARIANT_SCALAR_STACK_OK);
+            int condlogical = asLogicalNoNA (condval, call);
             if (ON_SCALAR_STACK(condval)) POP_SCALAR_STACK(1);
             if (!condlogical) 
                 break;
@@ -2275,7 +2272,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         /* Evaluate the right hand side, asking for it on the scalar stack. */
 
         rhs = EVALV (rhs, rho, 
-                 local_assign | VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK);
+               local_assign | VARIANT_PENDING_OK/* | VARIANT_SCALAR_STACK_OK*/);
 
         /* See if the assignment was done by the rhs operator. */
 
@@ -2307,11 +2304,12 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                  && LEVELS(v) == LEVELS(rhs) && !NAMEDCNT_GT_1(v)) {
                 if (NAMEDCNT_EQ_0(v))
                     SET_NAMEDCNT_1(v);
-                helpers_wait_until_not_in_use(v);
                 if (ON_SCALAR_STACK(rhs))
                     POP_SCALAR_STACK(1);
-                else
+                else {
+                    helpers_wait_until_not_in_use(v);
                     WAIT_UNTIL_COMPUTED(v);
+                }
                 switch (rhs_type) {
                 case LGLSXP:  *LOGICAL(v) = *LOGICAL(rhs); break;
                 case INTSXP:  *INTEGER(v) = *INTEGER(rhs); break;
@@ -2409,11 +2407,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
     if (maybe_fast) {
         PROTECT(rhs = EVALV (rhs, rho, 
-                  (variant & VARIANT_NULL) ? VARIANT_SCALAR_STACK_OK : 0));
-        if (ON_SCALAR_STACK(rhs)) {
-/*
-            SAVE_STATIC_BOX_CONTENTS(rhs,&rhs_contents);  */
-        }
+                  (variant & VARIANT_NULL & 0) ? VARIANT_SCALAR_STACK_OK : 0));
     }
     else
         PROTECT(rhs = EVALV (rhs, rho, VARIANT_PENDING_OK));
@@ -2491,9 +2485,6 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
     if (depth == 1) {
 
         SEXP fn;
-
-/*        if (IS_STATIC_BOX(rhs))
-            RESTORE_STATIC_BOX_CONTENTS(rhs,&rhs_contents);  */
 
         if (maybe_fast && !isObject(varval) && CADDR(lhs) != R_DotsSymbol
               && (fn = FINDFUN(assgnfcn,rho), 

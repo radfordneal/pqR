@@ -1142,14 +1142,18 @@ static R_INLINE R_len_t simple_index (SEXP s)
 /* Look for the simple case of subscripting an atomic vector with one 
    valid integer or real subscript that is positive or negative (not zero, 
    NA, or out of bounds), with no dim attribute.  Returns the result, or 
-   R_NilValue if it's not so simple.  The arguments x and s do not need to 
-   be protected before this function is called.  It's OK for x to still be 
-   being computed. The variant for the return result is the last argument. */
+   R_NilValue if it's not so simple.  Return result may be on scalar stack,
+   if variant allows.
+
+   The arguments x and s do not need to be protected before this
+   function is called.  It's OK for x to still be being computed. The
+   variant for the return result is the last argument. */
 
 static inline SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
 {
     R_len_t ix, n;
     int typeofx;
+    SEXP r;
 
     typeofx = TYPEOF(x);
 
@@ -1171,18 +1175,26 @@ static inline SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
         }
         switch (typeofx) {
         case LGLSXP:  
-            return ScalarLogicalMaybeConst (LOGICAL(x)[ix]);
+            if (CAN_USE_SCALAR_STACK(variant)) {
+                r = PUSH_SCALAR_STACK(LGLSXP);
+                *LOGICAL(r) = LOGICAL(x)[ix];
+                return r;
+            }
+            else
+                return ScalarLogicalMaybeConst (LOGICAL(x)[ix]);
         case INTSXP:  
-            if (variant & VARIANT_SCALAR_STACK_OK & 0) {
-/*                *INTEGER(R_ScalarIntegerBox) = INTEGER(x)[ix];
-                return R_ScalarIntegerBox; */
+            if (CAN_USE_SCALAR_STACK(variant)) {
+                r = PUSH_SCALAR_STACK(INTSXP);
+                *INTEGER(r) = INTEGER(x)[ix];
+                return r;
             }
             else
                 return ScalarIntegerMaybeConst(INTEGER(x)[ix]);
         case REALSXP: 
-            if (variant & VARIANT_SCALAR_STACK_OK & 0) {
-/*                *REAL(R_ScalarRealBox) = REAL(x)[ix];
-                return R_ScalarRealBox; */
+            if (CAN_USE_SCALAR_STACK(variant)) {
+                r = PUSH_SCALAR_STACK(REALSXP);
+                *REAL(r) = REAL(x)[ix];
+                return r;
             }
             else
                 return ScalarRealMaybeConst(REAL(x)[ix]);
@@ -1198,7 +1210,6 @@ static inline SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
     else { /* ix < 0 */
 
         R_len_t ex;
-        SEXP r;
 
         WAIT_UNTIL_COMPUTED(x);
         PROTECT(x);
@@ -1256,6 +1267,7 @@ static inline SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2,
                                           int variant)
 {
     R_len_t ix1, ix2, nrow, ncol, avail, e;
+    SEXP r;
 
     if (!isVectorAtomic(x))
         return R_NilValue;
@@ -1279,18 +1291,26 @@ static inline SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2,
 
     switch (TYPEOF(x)) {
     case LGLSXP:  
-        return ScalarLogicalMaybeConst (LOGICAL(x)[e]);
+        if (CAN_USE_SCALAR_STACK(variant)) {
+            r = PUSH_SCALAR_STACK(LGLSXP);
+            *LOGICAL(r) = LOGICAL(x)[e];
+            return r;
+        }
+        else
+            return ScalarLogicalMaybeConst (LOGICAL(x)[e]);
     case INTSXP:  
-        if (variant & VARIANT_SCALAR_STACK_OK & 0) {
-/*            *INTEGER(R_ScalarIntegerBox) = INTEGER(x)[e];
-            return R_ScalarIntegerBox; */
+        if (CAN_USE_SCALAR_STACK(variant)) {
+            r = PUSH_SCALAR_STACK(INTSXP);
+            *INTEGER(r) = INTEGER(x)[e];
+            return r;
         }
         else
             return ScalarIntegerMaybeConst(INTEGER(x)[e]);
     case REALSXP: 
-        if (variant & VARIANT_SCALAR_STACK_OK & 0) {
-/*            *REAL(R_ScalarRealBox) = REAL(x)[e];
-            return R_ScalarRealBox; */
+        if (CAN_USE_SCALAR_STACK(variant)) {
+            r = PUSH_SCALAR_STACK(REALSXP);
+            *REAL(r) = REAL(x)[e];
+            return r;
         }
         else
             return ScalarRealMaybeConst(REAL(x)[e]);
@@ -1344,7 +1364,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             int seq = 0;
             int avar = 
               remargs == R_NilValue 
-                ? VARIANT_SEQ | VARIANT_SCALAR_STACK_OK 
+                ? VARIANT_SEQ /* | VARIANT_SCALAR_STACK_OK */
                               | VARIANT_MISSING_OK 
                               | VARIANT_PENDING_OK :
               CDR(remargs) == R_NilValue 

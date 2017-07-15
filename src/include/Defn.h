@@ -636,7 +636,8 @@ typedef struct {
                                      R_variant_result with VARIANT_RTN_FLAG. */
 
 #define VARIANT_SCALAR_STACK_OK 0x0800 /* May return the result on the scalar
-                                          stack.  Values on the stack never
+                                          stack; caller is responsible for 
+                                          removing it. Values on the stack never
                                           have their computation pending.
                                           Does not set R_variant_result. */
 
@@ -1995,6 +1996,15 @@ static inline int SEQL(SEXP a, SEXP b)
     R_VStack = vmax; /* discard any memory used by translateCharUTF8 */
     return result;
 }
+
+
+/* Macros to assist with primitive functions. */
+
+#define CAN_USE_SCALAR_STACK(v) \
+  (((v) & VARIANT_SCALAR_STACK_OK) && SCALAR_STACK_SPACE())
+
+#define NO_ATTRIBUTES_OK(v,o) \
+  (!HAS_ATTRIB(o) || (((v) & VARIANT_ANY_ATTR) && !isObject(o)))
 
 
 /* Macro to quickly handle special case of no alloc for R_AllocStringBuffer. */

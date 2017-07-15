@@ -41,7 +41,7 @@
 # undef __LIBM_PRIVATE
 #endif
 
-#include "static-boxes.h"  /* for inline static_box_eval2 function */
+#include "scalar-stack.h"
 
 
 static inline void maybe_dup_attributes (SEXP to, SEXP from, int variant)
@@ -324,11 +324,24 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     int opcode = PRIMVAL(op), obj1, obj2;
     SEXP argsevald, ans, arg1, arg2;
 
-    /* Evaluate arguments, maybe putting them in static boxes. */
+    /* Evaluate arguments, maybe putting them on the scalar stack. */
 
-    argsevald = 
-      static_box_eval2 (args, &arg1, &arg2, &obj1, &obj2, env, call, variant);
-    PROTECT3(argsevald,arg1,arg2);
+    PROTECT (argsevald = 
+      scalar_stack_eval2(args, &arg1, &arg2, &obj1, &obj2, env, call, variant));
+    PROTECT2(arg1,arg2);
+
+#   if 1  /* may be enabled for debugging purposes */
+        if (ON_SCALAR_STACK(arg1)) {
+            arg1 = duplicate(arg1); 
+            UNPROTECT(2); PROTECT2(arg1,arg2); 
+            POP_SCALAR_STACK(1); 
+        }
+        if (ON_SCALAR_STACK(arg2)) {
+            arg2 = duplicate(arg2); 
+            UNPROTECT(2); PROTECT2(arg1,arg2); 
+            POP_SCALAR_STACK(1); 
+        }
+#   endif
 
     /* Check for dispatch on S3 or S4 objects. */
 
@@ -350,18 +363,17 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                         1, PRIMNAME(op), 2);
 
     /* Arguments are now in arg1 and arg2, and are protected. 
-       They may be in static boxes. */
+       They may be on the scalar stack. */
 
     /* We quickly do real arithmetic and integer plus/minus on scalars with 
-       no attributes (as will be the case for static boxes).  We don't
-       bother trying local assignment, since returning the result in a
-       static box should be about as fast. */
+       no attributes (as will be the case for scalar stack values).  We don't
+       bother trying local assignment, since returning the result on the
+       scalar stack should be about as fast. */
 
     int type = TYPEOF(arg1);
 
-    if ((type==REALSXP || type==INTSXP) && LENGTH(arg1)==1 &&
-         (!HAS_ATTRIB(arg1) || !isObject(arg1) && (variant&VARIANT_ANY_ATTR))) {
-
+    if ((type==REALSXP || type==INTSXP) && LENGTH(arg1) == 1
+                                        && NO_ATTRIBUTES_OK (variant, arg1)) {
         if (CDR(argsevald)==R_NilValue) { /* Unary operation */
             switch (opcode) {
             case PLUSOP:
@@ -387,9 +399,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             default: abort();
             }
         }
-        else if (TYPEOF(arg2)==type && LENGTH(arg2)==1 &&
-         (!HAS_ATTRIB(arg2) || !isObject(arg2) && (variant&VARIANT_ANY_ATTR))) {
-
+        else if (TYPEOF(arg2)==type && LENGTH(arg2)==1
+                                    && NO_ATTRIBUTES_OK (variant, arg2)) {
             if (type==REALSXP) {
 
                 ans = NAMEDCNT_EQ_0(arg2) ? arg2
@@ -468,7 +479,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
     }
 
-    /* Otherwise, handle the general case (but won't be a static box). */
+    /* Otherwise, handle the general case (and won't be on the scalar stack). */
 
     ans = CDR(argsevald)==R_NilValue 
            ? R_unary (call, op, arg1, obj1, env, variant) 
@@ -1671,8 +1682,8 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
             sy = sa;
             *REAL(sy) = res;
         }
-        else if ((variant & VARIANT_SCALAR_STACK_OK) && SCALAR_STACK_SPACE() &&
-         (!HAS_ATTRIB(sa) || ((variant & VARIANT_ANY_ATTR) && !isObject(sa)))) {
+        else if (CAN_USE_SCALAR_STACK(variant)
+                  && NO_ATTRIBUTES_OK(variant,sa)) {
             sy = PUSH_SCALAR_STACK(REALSXP);
             *REAL(sy) = res;
         }
@@ -1815,16 +1826,18 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
 {   
     SEXP s;
 
+    if (ON_SCALAR_STACK(x)) POP_SCALAR_STACK(1);
+
     if (TYPEOF(x) == INTSXP || TYPEOF(x) == LGLSXP) {
 	/* integer or logical ==> return integer,
 	   factor was covered by Math.factor. */
         int n = LENGTH(x);
         if (n == 1) {
             s = NAMEDCNT_EQ_0(x) && TYPEOF(x) == INTSXP ? x 
-              : (variant & VARIANT_SCALAR_STACK_OK & 0) != 0 && !HAS_ATTRIB(x) 
-                  ? /*R_ScalarIntegerBox*/0 : allocVector1INT();
-            int v = *INTEGER(x);
+              : CAN_USE_SCALAR_STACK(variant) && NO_ATTRIBUTES_OK(variant,x)
+                  ? PUSH_SCALAR_STACK(INTSXP) : allocVector1INT();
             WAIT_UNTIL_COMPUTED(x);
+            int v = *INTEGER(x);
             *INTEGER(s) = v==NA_INTEGER ? NA_INTEGER : v<0 ? -v : v;
         }
         else {
@@ -1849,27 +1862,27 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
         }
         else if (n == 1) {
             s = NAMEDCNT_EQ_0(x) ? x 
-              : (variant & VARIANT_SCALAR_STACK_OK & 0) != 0 && !HAS_ATTRIB(x)
-                  ? /*R_ScalarRealBox*/ 0 : allocVector1REAL();
+              : CAN_USE_SCALAR_STACK(variant) && NO_ATTRIBUTES_OK(variant,x)
+                  ? PUSH_SCALAR_STACK(REALSXP) : allocVector1REAL();
             WAIT_UNTIL_COMPUTED(x);
             *REAL(s) = fabs(*REAL(x));
         }
-        else { /* x won't be a static box, since n != 1 */
+        else { /* x won't be on scalar stack, since n != 1 */
             s = NAMEDCNT_EQ_0(x) ? x : allocVector(REALSXP, n);
             DO_NOW_OR_LATER1 (variant, n >= T_abs,
                               HELPERS_PIPE_IN01_OUT, task_abs, 0, s, x);
         }
+
     } else if (isComplex(x)) {
         WAIT_UNTIL_COMPUTED(x);
         s = do_fast_cmathfuns (call, op, x, env, variant);
+
     } else
         non_numeric_errorcall(call);
 
-    if (x!=s) {
-        PROTECT(s);
-        DUPLICATE_ATTRIB(s, x);
-        UNPROTECT(1);
-    }
+    PROTECT(s);
+    maybe_dup_attributes (s, x, variant);
+    UNPROTECT(1);
 
     return s;
 }

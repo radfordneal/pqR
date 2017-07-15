@@ -26,12 +26,12 @@
  */
 
 
-/* Inline function used by operators that can take operands in static boxes,
-   and that can handle unclassed objects (VARIANT_UNCLASS_FLAG).
+/* Inline function used by operators that can take operands on the
+   scalar stack and can handle unclassed objects (VARIANT_UNCLASS_FLAG).
 
-   Evaluates two arguments that may be put in static boxes.  The two
-   arguments are returned in arg1 and arg2, and whether they are
-   objects (accounting for VARIANT_UNCLASS_FLAG) in obj1 and obj2. 
+   Evaluates two arguments that may be put on the scalar stack.  These
+   two arguments are returned in arg1 and arg2, and whether they are
+   objects (accounting for VARIANT_UNCLASS_FLAG) in obj1 and obj2.  
    A list of the evaluated arguments is returned as the value of the
    function, if one of the first two is an object, so that dispatch
    must be attempted (note that the argument count in this case may
@@ -48,7 +48,7 @@
 
    The args and env arguments must be protected by the caller. */
 
-static inline SEXP static_box_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
+static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
                      int *obj1, int *obj2, SEXP env, SEXP call, int variant)
 {
     SEXP argsevald;
