@@ -62,7 +62,9 @@ void attribute_hidden wait_until_arguments_computed (SEXP args);
 /* Rf_builtin_op is a separate function, defined in a different source
    file than where it is used in eval.c, to prevent inlining by the
    compiler, so that the local 'cntxt' variable will occupy space on
-   the stack only if it is really needed. */
+   the stack only if it is really needed. 
+
+   Keep in sync with Rf_builtin_op_no_cntxt, in eval.c. */
 
 SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
 {
