@@ -1303,13 +1303,18 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
 
 static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    SEXP Cond, Stmt;
+    SEXP Cond, Stmt, condval;
+    int condlogical;
     int absent_else = 0;
 
     Cond = CAR(args); args = CDR(args);
     Stmt = CAR(args); args = CDR(args);
 
-    if (!asLogicalNoNA (evalv(Cond,rho,VARIANT_SCALAR_STACK_OK), call)) {
+    condval = evalv (Cond, rho, VARIANT_SCALAR_STACK_OK);
+    condlogical = asLogicalNoNA (condval, call);
+    if (ON_SCALAR_STACK(condval)) POP_SCALAR_STACK(1);
+
+    if (!condlogical) {
         /* go to else part */
         if (args != R_NilValue)
             Stmt = CAR(args);
@@ -1644,8 +1649,14 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 		 R_NilValue);
 
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) { /* <- back here for "next" */
-	while (asLogicalNoNA 
-                 (evalv (CAR(args), rho, VARIANT_SCALAR_STACK_OK), call)) {
+        SEXP condval;
+        int condlogical;
+        for (;;) {
+            condval = evalv (CAR(args), rho, VARIANT_SCALAR_STACK_OK);
+            condlogical = asLogicalNoNA (condval, call);
+            if (ON_SCALAR_STACK(condval)) POP_SCALAR_STACK(1);
+            if (!condlogical) 
+                break;
 	    DO_LOOP_RDEBUG(call, op, body, rho, bgn);
 	    evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
 	}
@@ -2273,12 +2284,13 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             goto done;
         }
 
-        /* Try to copy the value, not assign the object, if the rhs is scalar
-           and doesn't have zero NAMEDCNT (for which assignment would be free). 
-           This will copy from a static box, which must be replaced by a regular
-           value if the copy can't be done.  If the copy can't be done, but 
-           a binding cell was found here, the assignment is done directly into
-           the binding cell, avoiding overhead of calling set_var_in_frame.
+        /* Try to copy the value, not assign the object, if the rhs is
+           scalar and doesn't have zero NAMEDCNT (for which assignment
+           would be free).  This will copy from the scalar stack,
+           which must be replaced by a regular value if the copy can't
+           be done.  If the copy can't be done, but a binding cell was
+           found here, the assignment is done directly into the binding 
+           cell, avoiding overhead of calling set_var_in_frame.
 
            Avoid accessing NAMEDCNT in a way that will cause unnecessary waits
            for task completion. */
@@ -2296,7 +2308,10 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 if (NAMEDCNT_EQ_0(v))
                     SET_NAMEDCNT_1(v);
                 helpers_wait_until_not_in_use(v);
-                WAIT_UNTIL_COMPUTED(v);
+                if (ON_SCALAR_STACK(rhs))
+                    POP_SCALAR_STACK(1);
+                else
+                    WAIT_UNTIL_COMPUTED(v);
                 switch (rhs_type) {
                 case LGLSXP:  *LOGICAL(v) = *LOGICAL(rhs); break;
                 case INTSXP:  *INTEGER(v) = *INTEGER(rhs); break;
@@ -2308,8 +2323,9 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 goto done;
             }
             if (ON_SCALAR_STACK(rhs)) {
-/*                rhs = rhs==R_ScalarIntegerBox ? ScalarInteger(*INTEGER(rhs))
-                                              : ScalarReal(*REAL(rhs)); */
+                rhs = TYPEOF(rhs) == INTSXP ? ScalarInteger(*INTEGER(rhs))
+                                            : ScalarReal(*REAL(rhs));
+                POP_SCALAR_STACK(1);
             }
             if (R_binding_cell != R_NilValue) {
                 DEC_NAMEDCNT_AND_PRVALUE(v);
