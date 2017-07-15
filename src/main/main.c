@@ -908,6 +908,8 @@ void setup_Rmainloop(void)
     R_Toplevel.handlerstack = R_HandlerStack;
     R_Toplevel.restartstack = R_RestartStack;
     R_Toplevel.srcref = R_NilValue;
+    R_Toplevel.local_pr = R_local_protect_start;
+    R_Toplevel.scalar_stack = R_scalar_stack;
     R_GlobalContext = R_ToplevelContext = &R_Toplevel;
 
     R_Warnings = R_NilValue;
