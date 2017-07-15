@@ -303,6 +303,8 @@ static int ReplGetc (void *vstate)
 
 int Rf_ReplIteration (SEXP rho, R_ReplState *state)
 {
+    SEXP R_scalar_stack_at_start = R_scalar_stack;
+
     int browsevalue;
     SEXP value, thisExpr;
     SrcRefState ParseState;
@@ -386,6 +388,7 @@ int Rf_ReplIteration (SEXP rho, R_ReplState *state)
 	R_CurrentExpr = R_NilValue;  /* recover memory */
 	UNPROTECT(2);
 
+        if (R_scalar_stack != R_scalar_stack_at_start) abort();
 	return 1;
 
     case PARSE_ERROR:

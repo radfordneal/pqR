@@ -103,14 +103,16 @@ R_CONST SEXPREC R_NilValue_const = { \
 
 /* Scalar stack, on which values may be returned when VARIANT_SCALAR_STACK_OK
    is used.  These objects are not actually constant, since the data they 
-   contain is changed, but are allocated similarly. */
+   contain is changed, but are allocated similarly.  Types are initialized
+   to RAWSXP, which is never used, so the high-water mark will be visible
+   for debugging and tuning. */
 
 #if USE_COMPRESSED_POINTERS
 #define SCALAR_STACK_VALUE(offset) { \
-    CONST_HEADER(REALSXP,R_SGGC_SCALAR_STACK_INDEX,NUM_OFFSET(offset)) }
+    CONST_HEADER(RAWSXP,R_SGGC_SCALAR_STACK_INDEX,NUM_OFFSET(offset)) }
 #else
 #define SCALAR_STACK_VALUE(offset) { \
-    CONST_HEADER(REALSXP,R_SGGC_SCALAR_STACK_INDEX,NUM_OFFSET(offset)), \
+    CONST_HEADER(RAWSXP,R_SGGC_SCALAR_STACK_INDEX,NUM_OFFSET(offset)), \
     LENGTH1 }
 #endif
 

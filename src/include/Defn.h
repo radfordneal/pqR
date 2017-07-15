@@ -205,6 +205,27 @@ extern0 SEXP	R_UnderscoreString;   /* "_", as a CHARSXP */
 #define ON_SCALAR_STACK(x) \
   (SGGC_SEGMENT_INDEX(CPTR_FROM_SEXP(x)) == R_SGGC_SCALAR_STACK_INDEX)
 
+#if USE_COMPRESSED_POINTERS
+# define SCALAR_STACK_ENTRY(n) (R_scalar_stack_start+(n))
+# define POP_SCALAR_STACK(n) (R_scalar_stack -= (n))
+# define PUSH_SCALAR_STACK(type) \
+   ((TYPEOF(R_scalar_stack) = (type)), (R_scalar_stack += 1), R_scalar_stack-1)
+# define SCALAR_STACK(n) (R_scalar_stack-(n))
+#else
+# define SCALAR_STACK_ENTRY(n) \
+   ((SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack_start)+(n)))
+# define POP_SCALAR_STACK(n) \
+   (R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-(n)))
+# define PUSH_SCALAR_STACK(type) \
+   ((TYPEOF(R_scalar_stack) = (type)), \
+    (R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)+1)), \
+    (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-1))
+# define SCALAR_STACK(n) \
+   ((SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-(n)))
+#endif
+
+#define SCALAR_STACK_SPACE() (R_scalar_stack <= SCALAR_STACK_ENTRY(31))
+
 #ifdef USE_RINTERNALS
 # define IS_BYTES(x) (UPTR_FROM_SEXP(x)->sxpinfo.gp & BYTES_MASK)
 # define SET_BYTES(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= BYTES_MASK)

@@ -1627,7 +1627,7 @@ void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
 #define T_math1 THRESHOLD_ADJUST(5)
 
 static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
-                  /* Note:  sa may be a static box. */
+                  /* Note:  sa may be on the scalar stack. */
 {
     if (opcode == 10003) /* horrible kludge for log */
         opcode = 13;
@@ -1638,6 +1638,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
 
     int local_assign = 0;
     int n = LENGTH(sa);
+    SEXP sa0 = sa;
 
     if (TYPEOF(sa) != REALSXP)
         sa = coerceVector(sa, REALSXP); /* coercion can lose the object bit */
@@ -1649,7 +1650,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
 
     SEXP sy;
 
-    if (LENGTH(sa) == 1) { /* scalar operation, including on static boxes */
+    if (LENGTH(sa) == 1) { /* scalar operation, including on scalar stack. */
 
         WAIT_UNTIL_COMPUTED(sa);
 
@@ -1664,14 +1665,16 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
                 NaN_warningcall(call);
         }
 
+        if (ON_SCALAR_STACK(sa0)) POP_SCALAR_STACK(1);
+
         if (local_assign || NAMEDCNT_EQ_0(sa)) {
             sy = sa;
             *REAL(sy) = res;
         }
-        else if ((variant & VARIANT_SCALAR_STACK_OK & 0) && (!HAS_ATTRIB(sa)
-                   || ((variant & VARIANT_ANY_ATTR) && !isObject(sa)))) {
-/*            sy = R_ScalarRealBox;
-            *REAL(sy) = res; */
+        else if ((variant & VARIANT_SCALAR_STACK_OK) && SCALAR_STACK_SPACE() &&
+         (!HAS_ATTRIB(sa) || ((variant & VARIANT_ANY_ATTR) && !isObject(sa)))) {
+            sy = PUSH_SCALAR_STACK(REALSXP);
+            *REAL(sy) = res;
         }
         else {
             PROTECT(sy = ScalarReal(res));

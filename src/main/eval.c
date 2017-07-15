@@ -645,11 +645,12 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
     R_EvalDepth -= 1;
 
-#   if 0  /* Enable for debug output after typing SCALAR.STACK.DEBUG */
+#   if 1  /* Enable for debug output after typing SCALAR.STACK.DEBUG */
 
     if (ON_SCALAR_STACK(res) 
-         && installed_already("SCALAR.STACK.DEBUG") != R_No_object)
-    { REprintf("SCALAR STACK VALUE RETURNED: %s %f\n",
+         && installed_already("SCALAR.STACK.DEBUG") != R_NoObject)
+    { REprintf("SCALAR STACK VALUE RETURNED: %llx %s %f\n",
+        (long long) res,
         TYPEOF(res)==INTSXP ? "int" : "real",
         TYPEOF(res)==INTSXP ? (double)*INTEGER(res) : *REAL(res));
     }
