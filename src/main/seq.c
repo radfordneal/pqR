@@ -1069,7 +1069,7 @@ static SEXP do_fast_seq_len (SEXP call, SEXP op, SEXP arg, SEXP rho,
 	warningcall(call, _("first element used of '%s' argument"),
 		    "length.out");
 
-    if (ON_SCALAR_STACK(arg)) POP_SCALAR_STACK(1);
+    if (ON_SCALAR_STACK(arg)) POP_SCALAR_STACK(arg);
 
     return make_seq (1, len, variant, 0);
 }

@@ -207,21 +207,26 @@ extern0 SEXP	R_UnderscoreString;   /* "_", as a CHARSXP */
 
 #if USE_COMPRESSED_POINTERS
 # define SCALAR_STACK_ENTRY(n) (R_scalar_stack_start+(n))
-# define POP_SCALAR_STACK(n) (R_scalar_stack -= (n))
+# define SCALAR_STACK_OFFSET(n) (R_scalar_stack-(n))
+# define POP_SCALAR_STACK(x) \
+   (SCALAR_STACK_OFFSET(1) != (x) ? (void) abort() : \
+    (void) (R_scalar_stack -= 1))
 # define PUSH_SCALAR_STACK(type) \
-   ((TYPEOF(R_scalar_stack) = (type)), (R_scalar_stack += 1), R_scalar_stack-1)
-# define SCALAR_STACK(n) (R_scalar_stack-(n))
+   ((TYPEOF(R_scalar_stack) = (type)), \
+    (R_scalar_stack += 1), \
+    SCALAR_STACK_OFFSET(1))
 #else
 # define SCALAR_STACK_ENTRY(n) \
    ((SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack_start)+(n)))
-# define POP_SCALAR_STACK(n) \
-   (R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-(n)))
+# define SCALAR_STACK_OFFSET(n) \
+   ((SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-(n)))
+# define POP_SCALAR_STACK(x) \
+   (SCALAR_STACK_OFFSET(1) != (x) ? (void) abort() : \
+    (void) (R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-1)))
 # define PUSH_SCALAR_STACK(type) \
    ((TYPEOF(R_scalar_stack) = (type)), \
     (R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)+1)), \
-    (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-1))
-# define SCALAR_STACK(n) \
-   ((SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-(n)))
+    SCALAR_STACK_OFFSET(1))
 #endif
 
 #define SCALAR_STACK_SPACE() (R_scalar_stack <= SCALAR_STACK_ENTRY(31))

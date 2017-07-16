@@ -580,7 +580,7 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
     }
 
     else if (typeof_e == LANGSXP) {
-
+/******/SEXP sv_stack = R_scalar_stack;
         SEXP fn = CAR(e), args = CDR(e);
 
         if (TYPEOF(fn) == SYMSXP)
@@ -616,6 +616,13 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
             CHECK_STACK_BALANCE(op, save);
             VMAXSET(vmax);
+        }
+/******/if (variant & VARIANT_SCALAR_STACK_OK) {
+            if (R_scalar_stack != sv_stack
+             && (res!=sv_stack || SCALAR_STACK_OFFSET(1)!=sv_stack)) abort();
+        }
+        else {
+            if (R_scalar_stack != sv_stack) abort();
         }
     }
 
@@ -1311,7 +1318,7 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     SEXP condval = evalv (Cond, rho, VARIANT_SCALAR_STACK_OK);
     int condlogical = asLogicalNoNA (condval, call);
-    if (ON_SCALAR_STACK(condval)) POP_SCALAR_STACK(1);
+    if (ON_SCALAR_STACK(condval)) POP_SCALAR_STACK(condval);
 
     if (!condlogical) {
         /* go to else part */
@@ -1651,7 +1658,7 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
         for (;;) {
             SEXP condval = evalv (CAR(args), rho, VARIANT_SCALAR_STACK_OK);
             int condlogical = asLogicalNoNA (condval, call);
-            if (ON_SCALAR_STACK(condval)) POP_SCALAR_STACK(1);
+            if (ON_SCALAR_STACK(condval)) POP_SCALAR_STACK(condval);
             if (!condlogical) 
                 break;
 	    DO_LOOP_RDEBUG(call, op, body, rho, bgn);
@@ -2305,7 +2312,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 if (NAMEDCNT_EQ_0(v))
                     SET_NAMEDCNT_1(v);
                 if (ON_SCALAR_STACK(rhs))
-                    POP_SCALAR_STACK(1);
+                    POP_SCALAR_STACK(rhs);
                 else {
                     helpers_wait_until_not_in_use(v);
                     WAIT_UNTIL_COMPUTED(v);
@@ -2321,9 +2328,9 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 goto done;
             }
             if (ON_SCALAR_STACK(rhs)) {
+                POP_SCALAR_STACK(rhs);
                 rhs = TYPEOF(rhs) == INTSXP ? ScalarInteger(*INTEGER(rhs))
                                             : ScalarReal(*REAL(rhs));
-                POP_SCALAR_STACK(1);
             }
             if (R_binding_cell != R_NilValue) {
                 DEC_NAMEDCNT_AND_PRVALUE(v);

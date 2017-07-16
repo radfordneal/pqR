@@ -894,7 +894,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
             suppress_drop[i] = CAR(r) == R_MissingArg ? MISSING(r) == 2
                                 : whether_suppress_drop(CAR(r));
         PROTECT (subv[i] = arraySubscript (i, CAR(r), xdims, getAttrib,
-                                       (STRING_ELT), x));
+                                           (STRING_ELT), x));
         subs[i] = INTEGER(subv[i]);
 	nsubs[i] = LENGTH(subv[i]);
         n *= nsubs[i];
@@ -1364,7 +1364,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             int seq = 0;
             int avar = 
               remargs == R_NilValue 
-                ? VARIANT_SEQ /* | VARIANT_SCALAR_STACK_OK */
+                ? VARIANT_SEQ | VARIANT_SCALAR_STACK_OK
                               | VARIANT_MISSING_OK 
                               | VARIANT_PENDING_OK :
               CDR(remargs) == R_NilValue 
@@ -1385,8 +1385,10 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 SET_MISSING (args, R_isMissing(CAR(ixlist),rho));
             wait_until_arguments_computed(args);
             UNPROTECT(3);  /* args, array, idx */
-            return do_subset_dflt_seq (call, op, array, args, rho, 
-                                       variant, seq);
+            SEXP r = do_subset_dflt_seq (call, op, array, args, rho, 
+                                         variant, seq);
+            if (ON_SCALAR_STACK(idx)) POP_SCALAR_STACK(idx);
+            return r;
         }
     }
 

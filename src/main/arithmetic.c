@@ -332,14 +332,14 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
 #   if 1  /* may be enabled for debugging purposes */
         if (ON_SCALAR_STACK(arg1)) {
+            POP_SCALAR_STACK(arg1);
             arg1 = duplicate(arg1); 
             UNPROTECT(2); PROTECT2(arg1,arg2); 
-            POP_SCALAR_STACK(1); 
         }
         if (ON_SCALAR_STACK(arg2)) {
+            POP_SCALAR_STACK(arg2);
             arg2 = duplicate(arg2); 
             UNPROTECT(2); PROTECT2(arg1,arg2); 
-            POP_SCALAR_STACK(1); 
         }
 #   endif
 
@@ -1676,7 +1676,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
                 NaN_warningcall(call);
         }
 
-        if (ON_SCALAR_STACK(sa0)) POP_SCALAR_STACK(1);
+        if (ON_SCALAR_STACK(sa0)) POP_SCALAR_STACK(sa0);
 
         if (local_assign || NAMEDCNT_EQ_0(sa)) {
             sy = sa;
@@ -1826,7 +1826,7 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
 {   
     SEXP s;
 
-    if (ON_SCALAR_STACK(x)) POP_SCALAR_STACK(1);
+    if (ON_SCALAR_STACK(x)) POP_SCALAR_STACK(x);
 
     if (TYPEOF(x) == INTSXP || TYPEOF(x) == LGLSXP) {
 	/* integer or logical ==> return integer,
