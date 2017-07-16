@@ -2272,7 +2272,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         /* Evaluate the right hand side, asking for it on the scalar stack. */
 
         rhs = EVALV (rhs, rho, 
-               local_assign | VARIANT_PENDING_OK/* | VARIANT_SCALAR_STACK_OK*/);
+               local_assign | VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK);
 
         /* See if the assignment was done by the rhs operator. */
 
