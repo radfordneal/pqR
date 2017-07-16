@@ -656,8 +656,10 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
     if (ON_SCALAR_STACK(res) 
          && installed_already("SCALAR.STACK.DEBUG") != R_NoObject)
-    { REprintf("SCALAR STACK VALUE RETURNED: %llx %s %f\n",
-        (long long) res,
+    { REprintf("SCALAR STACK VALUE RETURNED: %llx %llx %llx %s %f\n",
+        (long long) R_scalar_stack_start,
+        (long long) res, 
+        (long long) R_scalar_stack,
         TYPEOF(res)==INTSXP ? "int" : "real",
         TYPEOF(res)==INTSXP ? (double)*INTEGER(res) : *REAL(res));
     }
