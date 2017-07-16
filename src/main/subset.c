@@ -1387,7 +1387,12 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             UNPROTECT(3);  /* args, array, idx */
             SEXP r = do_subset_dflt_seq (call, op, array, args, rho, 
                                          variant, seq);
-            if (ON_SCALAR_STACK(idx)) POP_SCALAR_STACK(idx);
+            if (ON_SCALAR_STACK(idx)) {
+                if (ON_SCALAR_STACK(r))
+                    r = SLIDE_SCALAR_STACK(idx,r);
+                else
+                    POP_SCALAR_STACK(idx);
+            }
             return r;
         }
     }
