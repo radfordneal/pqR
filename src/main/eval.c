@@ -580,7 +580,11 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
     }
 
     else if (typeof_e == LANGSXP) {
-/******/SEXP sv_stack = R_scalar_stack;
+
+#       if 0
+        SEXP sv_stack = R_scalar_stack;
+#       endif
+
         SEXP fn = CAR(e), args = CDR(e);
 
         if (TYPEOF(fn) == SYMSXP)
@@ -617,13 +621,16 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             CHECK_STACK_BALANCE(op, save);
             VMAXSET(vmax);
         }
-/******/if (variant & VARIANT_SCALAR_STACK_OK) {
+
+#       if 0
+        if (variant & VARIANT_SCALAR_STACK_OK) {
             if (R_scalar_stack != sv_stack
              && (res!=sv_stack || SCALAR_STACK_OFFSET(1)!=sv_stack)) abort();
         }
         else {
             if (R_scalar_stack != sv_stack) abort();
         }
+#       endif
     }
 
     else if (typeof_e == PROMSXP) {
@@ -652,7 +659,7 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
     R_EvalDepth -= 1;
 
-#   if 1  /* Enable for debug output after typing SCALAR.STACK.DEBUG */
+#   if 0  /* Enable for debug output after typing SCALAR.STACK.DEBUG */
 
     if (ON_SCALAR_STACK(res) 
          && installed_already("SCALAR.STACK.DEBUG") != R_NoObject)

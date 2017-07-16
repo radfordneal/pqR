@@ -1271,15 +1271,15 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
       scalar_stack_eval2 (args, &x, &y, &objx, &objy, env, call, variant));
     PROTECT2(x,y);
 
-#   if 1  /* may be enabled for debugging purposes */
-        if (ON_SCALAR_STACK(x)) {
-            POP_SCALAR_STACK(x);
-            x = duplicate(x); 
-            UNPROTECT(2); PROTECT2(x,y); 
-        }
+#   if 0  /* may be enabled for debugging purposes */
         if (ON_SCALAR_STACK(y)) {
             POP_SCALAR_STACK(y);
             y = duplicate(y); 
+            UNPROTECT(2); PROTECT2(x,y); 
+        }
+        if (ON_SCALAR_STACK(x)) {
+            POP_SCALAR_STACK(x);
+            x = duplicate(x); 
             UNPROTECT(2); PROTECT2(x,y); 
         }
 #   endif
@@ -1302,8 +1302,8 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        the scalar stack, but if so are popped off here (but retain their
        values if eval is not called). */
 
-    if (ON_SCALAR_STACK(x)) POP_SCALAR_STACK(x);
     if (ON_SCALAR_STACK(y)) POP_SCALAR_STACK(y);
+    if (ON_SCALAR_STACK(x)) POP_SCALAR_STACK(x);
 
     ans = R_relop (call, op, x, y, objx, objy, env, variant);
 

@@ -330,15 +330,15 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
       scalar_stack_eval2(args, &arg1, &arg2, &obj1, &obj2, env, call, variant));
     PROTECT2(arg1,arg2);
 
-#   if 1  /* may be enabled for debugging purposes */
-        if (ON_SCALAR_STACK(arg1)) {
-            POP_SCALAR_STACK(arg1);
-            arg1 = duplicate(arg1); 
-            UNPROTECT(2); PROTECT2(arg1,arg2); 
-        }
+#   if 0  /* may be enabled for debugging purposes */
         if (ON_SCALAR_STACK(arg2)) {
             POP_SCALAR_STACK(arg2);
             arg2 = duplicate(arg2); 
+            UNPROTECT(2); PROTECT2(arg1,arg2); 
+        }
+        if (ON_SCALAR_STACK(arg1)) {
+            POP_SCALAR_STACK(arg1);
+            arg1 = duplicate(arg1); 
             UNPROTECT(2); PROTECT2(arg1,arg2); 
         }
 #   endif
@@ -362,42 +362,45 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         errorcall(call, _("%d argument passed to '%s' which requires %d"),
                         1, PRIMNAME(op), 2);
 
-    /* Arguments are now in arg1 and arg2, and are protected. 
-       They may be on the scalar stack. */
+    /* Arguments are now in arg1 and arg2, and are protected. They may
+       be on the scalar stack. */
 
     /* We quickly do real arithmetic and integer plus/minus on scalars with 
        no attributes (as will be the case for scalar stack values).  We don't
        bother trying local assignment, since returning the result on the
        scalar stack should be about as fast. */
 
-    int type = TYPEOF(arg1);
+    int type = TYPEOF(arg1), type2 = TYPEOF(arg2);
 
     if ((type==REALSXP || type==INTSXP) && LENGTH(arg1) == 1
                                         && NO_ATTRIBUTES_OK (variant, arg1)) {
+
+        /* Remove args from scalar stack now, though may still be referenced. 
+           Note that result might be on top of one of them - OK since after
+           storing into it, the args won't be accessed again. */
+
+        if (ON_SCALAR_STACK(arg2)) POP_SCALAR_STACK(arg2);
+        if (ON_SCALAR_STACK(arg1)) POP_SCALAR_STACK(arg1);
+
         if (CDR(argsevald)==R_NilValue) { /* Unary operation */
-            switch (opcode) {
-            case PLUSOP:
-                ans = arg1;
-                goto ret;
-            case MINUSOP: ;
-                if (type==REALSXP) {
-                    ans = NAMEDCNT_EQ_0(arg1) ? arg1
-                        : variant & VARIANT_SCALAR_STACK_OK & 0 ? 0
-                        :   allocVector1REAL();
-                    WAIT_UNTIL_COMPUTED(arg1);
-                    *REAL(ans) = - *REAL(arg1);
-                }
-                else { /* INTSXP */
-                    ans = NAMEDCNT_EQ_0(arg1) ? arg1 
-                        : variant & VARIANT_SCALAR_STACK_OK & 0 ? 0
-                        :   allocVector1INT();
-                    WAIT_UNTIL_COMPUTED(arg1);
-                    *INTEGER(ans) = *INTEGER(arg1)==NA_INTEGER ? NA_INTEGER
-                                      : - *INTEGER(arg1);
-                }
-                goto ret;
-            default: abort();
+            if (type==REALSXP) {
+                ans = NAMEDCNT_EQ_0(arg1) ? arg1
+                    : variant & VARIANT_SCALAR_STACK_OK ?
+                        PUSH_SCALAR_STACK(REALSXP)
+                    :   allocVector1REAL();
+                WAIT_UNTIL_COMPUTED(arg1);
+                *REAL(ans) = opcode == PLUSOP ? *REAL(arg1) : -*REAL(arg1);
             }
+            else { /* INTSXP */
+                ans = NAMEDCNT_EQ_0(arg1) ? arg1 
+                    : variant & VARIANT_SCALAR_STACK_OK ? 
+                        PUSH_SCALAR_STACK(INTSXP)
+                    :   allocVector1INT();
+                WAIT_UNTIL_COMPUTED(arg1);
+                *INTEGER(ans) = *INTEGER(arg1)==NA_INTEGER ? NA_INTEGER
+                  : opcode == PLUSOP ? *INTEGER(arg1) : -*INTEGER(arg1);
+            }
+            goto ret;
         }
         else if (TYPEOF(arg2)==type && LENGTH(arg2)==1
                                     && NO_ATTRIBUTES_OK (variant, arg2)) {
@@ -405,7 +408,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
                 ans = NAMEDCNT_EQ_0(arg2) ? arg2
                     : NAMEDCNT_EQ_0(arg1) ? arg1
-                    : variant & VARIANT_SCALAR_STACK_OK & 0 ? 0
+                    : variant & VARIANT_SCALAR_STACK_OK ?
+                        PUSH_SCALAR_STACK(REALSXP)
                     :   allocVector1REAL();
 
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
@@ -448,7 +452,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
                 ans = NAMEDCNT_EQ_0(arg2) ? arg2
                     : NAMEDCNT_EQ_0(arg1) ? arg1 
-                    : variant & VARIANT_SCALAR_STACK_OK & 0 ? 0
+                    : variant & VARIANT_SCALAR_STACK_OK ?
+                        PUSH_SCALAR_STACK(INTSXP)
                     :   allocVector1INT();
 
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
@@ -479,7 +484,10 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
     }
 
-    /* Otherwise, handle the general case (and won't be on the scalar stack). */
+    /* Otherwise, handle the general case. */
+
+    if (ON_SCALAR_STACK(arg2)) POP_SCALAR_STACK(arg2);
+    if (ON_SCALAR_STACK(arg1)) POP_SCALAR_STACK(arg1);
 
     ans = CDR(argsevald)==R_NilValue 
            ? R_unary (call, op, arg1, obj1, env, variant) 
@@ -487,8 +495,6 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
   ret:
     UNPROTECT(3);
-    if (ON_SCALAR_STACK(ans) && (variant & VARIANT_SCALAR_STACK_OK & 0) == 0)
-        ans = duplicate(ans);
     return ans;
 }
 

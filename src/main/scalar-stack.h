@@ -55,12 +55,108 @@ static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
     SEXP x, y;
     int o1, o2;
 
-    argsevald = evalList (args, env);
-    x = CAR(argsevald);
-    y = CADR(argsevald);
-    o1 = isObject(x);
-    o2 = isObject(y);
+    o1 = o2 = 0;
 
+    x = CAR(args); 
+    y = CADR(args);
+
+    /* We evaluate by the general procedure if ... present or more than
+       two arguments, not trying to put arguments on the scalar stack. */
+
+    if (x==R_DotsSymbol || y==R_DotsSymbol || CDDR(args)!=R_NilValue) {
+        argsevald = evalList (args, env);
+        x = CAR(argsevald);
+        y = CADR(argsevald);
+        o1 = isObject(x);
+        o2 = isObject(y);
+        goto rtrn;
+    }
+
+    /* Otherwise, we try to put the first argument on the scalar stack,
+       and evaluate with VARIANT_UNCLASS. */
+
+    PROTECT(x = EVALV (x, env, 
+      VARIANT_SCALAR_STACK_OK | VARIANT_UNCLASS | VARIANT_PENDING_OK));
+
+    if (isObject(x)) {
+        if (R_variant_result & VARIANT_UNCLASS_FLAG)
+            R_variant_result = 0;
+        else
+            o1 = 1;
+    }
+
+    /* If first argument is an object, we evaluate the rest of the arguments
+       normally. */
+
+    if (o1) {
+        argsevald = evalList (CDR(args), env);
+        y = CAR(argsevald);
+        argsevald = cons_with_tag (x, argsevald, TAG(args));
+        UNPROTECT(1); /* x */
+        WAIT_UNTIL_COMPUTED(x);
+        goto rtrn;
+    }
+
+    /* If there's no second argument, we can return now. */
+
+    if (y == R_NilValue) {
+        UNPROTECT(1);
+        argsevald = args;
+        goto rtrn;
+    }
+
+    /* Now we evaluate the second argument, also allowing it to be on the
+       scalar stack, again with VARIANT_UNCLASS flag. */
+
+    y = EVALV (y, env, 
+               VARIANT_UNCLASS | VARIANT_SCALAR_STACK_OK | VARIANT_PENDING_OK);
+
+    if (isObject(y)) {
+        if (R_variant_result & VARIANT_UNCLASS_FLAG)
+            R_variant_result = 0;
+        else
+            o2 = 1;
+    }
+
+    /* If the second argument is an object, we have to duplicate the first
+       arg if it is on the scalar stack, or an unclassed object, and create 
+       the list of evaluated arguments. */
+
+    if (o2) {
+
+        if (ON_SCALAR_STACK(x) || isObject(x)) /* can't be both */ {
+            UNPROTECT(1); /* x */
+            PROTECT(y);
+            if (ON_SCALAR_STACK(x)) {
+                POP_SCALAR_STACK(x);
+                PROTECT(x = duplicate(x));
+            }
+            else { /* isObject(x) */
+                PROTECT(x = Rf_makeUnclassed(x));
+                o1 = 0;
+            }
+        }
+        else
+            PROTECT(y);
+
+        argsevald = evalList (CDDR(args), env);
+        argsevald = cons_with_tag (y, argsevald, TAG(CDR(args)));
+        argsevald = cons_with_tag (x, argsevald, TAG(args));
+        UNPROTECT(2); /* x & y */
+        WAIT_UNTIL_COMPUTED_2(x,y);
+        goto rtrn;
+    }
+
+    /* If neither of the first two arguments are an object, we
+       don't look at any possible remaining arguments.  The caller
+       is responsible for reporting an error if any are present,
+       but we assist by returning the unevaluated arguments, which
+       in this case (no ...) number the same as the actual arguments. */
+
+    UNPROTECT(1); /* x */
+    argsevald = args;
+
+  rtrn:
     *arg1 = x;
     *arg2 = y;
     *obj1 = o1;
