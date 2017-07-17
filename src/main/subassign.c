@@ -1060,7 +1060,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         PROTECT(y);
         if (a2 != R_NilValue && a3 == R_NilValue && TYPEOF(CAR(a2))==LANGSXP) {
             a2 = evalv (CAR(a2), rho, VARIANT_SEQ | VARIANT_SCALAR_STACK_OK);
-            if (ON_SCALAR_STACK(a2)) POP_SCALAR_STACK(a2);
+            POP_IF_TOP_OF_STACK(a2);
             seq = R_variant_result;
             R_variant_result = 0;
             args = CONS (a2, R_NilValue);
@@ -1069,7 +1069,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             args = evalListKeepMissing(a2,rho);
         }
         UNPROTECT(1);
-        if (ON_SCALAR_STACK(y)) POP_SCALAR_STACK(y);
+        POP_IF_TOP_OF_STACK(y);
         goto dflt_seq;
     }
     else {

@@ -330,19 +330,6 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
       scalar_stack_eval2(args, &arg1, &arg2, &obj1, &obj2, env, call, variant));
     PROTECT2(arg1,arg2);
 
-#   if 0  /* may be enabled for debugging purposes */
-        if (ON_SCALAR_STACK(arg2)) {
-            POP_SCALAR_STACK(arg2);
-            arg2 = duplicate(arg2); 
-            UNPROTECT(2); PROTECT2(arg1,arg2); 
-        }
-        if (ON_SCALAR_STACK(arg1)) {
-            POP_SCALAR_STACK(arg1);
-            arg1 = duplicate(arg1); 
-            UNPROTECT(2); PROTECT2(arg1,arg2); 
-        }
-#   endif
-
     /* Check for dispatch on S3 or S4 objects. */
 
     if (obj1 || obj2) {
@@ -379,8 +366,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
            Note that result might be on top of one of them - OK since after
            storing into it, the args won't be accessed again. */
 
-        if (ON_SCALAR_STACK(arg2)) POP_SCALAR_STACK(arg2);
-        if (ON_SCALAR_STACK(arg1)) POP_SCALAR_STACK(arg1);
+        POP_IF_TOP_OF_STACK(arg2);
+        POP_IF_TOP_OF_STACK(arg1);
 
         if (CDR(argsevald)==R_NilValue) { /* Unary operation */
             WAIT_UNTIL_COMPUTED(arg1);
@@ -1822,7 +1809,7 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
 {   
     SEXP s;
 
-    if (ON_SCALAR_STACK(x)) POP_SCALAR_STACK(x);
+    POP_IF_TOP_OF_STACK(x);
 
     if (TYPEOF(x) == INTSXP || TYPEOF(x) == LGLSXP) {
 	/* integer or logical ==> return integer,

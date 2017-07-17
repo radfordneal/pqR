@@ -2514,8 +2514,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
         }
         else {
             PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
-            SET_PRVALUE (rhsprom, 
-                         ON_SCALAR_STACK(rhs) ? DUP_STACK_VALUE(rhs) : rhs);
+            if (POP_IF_TOP_OF_STACK(rhs)) rhs = DUP_STACK_VALUE(rhs);
+            SET_PRVALUE (rhsprom, rhs);
             PROTECT (lhsprom = mkPROMISE(CADR(lhs), rho));
             SET_PRVALUE (lhsprom, varval);
             PROTECT(e = replaceCall (assgnfcn, lhsprom, CDDR(lhs), rhsprom));
@@ -2694,8 +2694,10 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             set_var_in_frame (var, newval, rho, TRUE, 3);
     }
 
-    if (variant & VARIANT_NULL)
+    if (variant & VARIANT_NULL) {
+        POP_IF_TOP_OF_STACK(rhs);
         return R_NilValue;
+    }
     else {
         DEC_NAMEDCNT(rhs);
         return rhs;

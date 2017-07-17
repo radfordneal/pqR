@@ -1362,7 +1362,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             if (idx == R_MissingArg && isSymbol(CAR(ixlist)))
                 SET_MISSING (args, R_isMissing(CAR(ixlist),rho));
             else 
-                if (ON_SCALAR_STACK(idx)) POP_SCALAR_STACK(idx);
+                POP_IF_TOP_OF_STACK(idx);
             wait_until_arguments_computed(args);
             UNPROTECT(3);  /* args, array, idx */
             SEXP r = do_subset_dflt_seq (call, op, array, args, rho, 

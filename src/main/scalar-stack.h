@@ -91,24 +91,24 @@
 #else
 #   define POP_IF_TOP_OF_STACK(x) \
      ((x) != SCALAR_STACK_OFFSET(1) ? 0 : \
-      (REprintf("POP TOP %llx %s %d\n", \
-                 (long long)(x),__FILE__,__LINE__), \
+      (/* REprintf("POP TOP %llx %s %d\n", \
+                 (long long)(x),__FILE__,__LINE__), */ \
        (R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-1)), 1))
 #   define POP_SCALAR_STACK(x) \
-     (REprintf("POP %llx %s %d\n", \
-                   (long long)(x),__FILE__,__LINE__), \
+     (/* REprintf("POP %llx %s %d\n", \
+                   (long long)(x),__FILE__,__LINE__), */ \
       SCALAR_STACK_OFFSET(1) != (x) ? (void) abort() : \
       (void) (R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-1)))
 #   define PUSH_SCALAR_INTEGER(v) \
-     (REprintf("PUSH INTEGER %llx %d %s %d\n", \
-                (long long)R_scalar_stack,v,__FILE__,__LINE__), \
+     (/* REprintf("PUSH INTEGER %llx %d %s %d\n", \
+                (long long)R_scalar_stack,v,__FILE__,__LINE__), */ \
       (TYPEOF(R_scalar_stack) = INTSXP), \
       (*INTEGER(R_scalar_stack) = (v)), \
       (R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)+1)), \
       SCALAR_STACK_OFFSET(1))
 #   define PUSH_SCALAR_REAL(v) \
-     (REprintf("PUSH REAL %llx %f %s %d\n", \
-                (long long)R_scalar_stack,v,__FILE__,__LINE__), \
+     (/* REprintf("PUSH REAL %llx %f %s %d\n", \
+                (long long)R_scalar_stack,v,__FILE__,__LINE__), */ \
       (TYPEOF(R_scalar_stack) = REALSXP), \
       (*REAL(R_scalar_stack) = (v)), \
       (R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)+1)), \
