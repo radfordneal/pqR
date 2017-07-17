@@ -1548,10 +1548,11 @@ ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS];
 
 #define SCALAR_STACK_SIZE 32  /* Number of values on the scalar stack */
 
+ConstExtern VECTOR_SEXPREC_C R_scalar_stack_space[SCALAR_STACK_SIZE];
+
 #if USE_COMPRESSED_POINTERS
 #define R_scalar_stack_start ((SEXP) SGGC_CPTR_VAL(R_SGGC_SCALAR_STACK_INDEX,0))
 #else
-ConstExtern VECTOR_SEXPREC_C R_scalar_stack_space[SCALAR_STACK_SIZE];
 #define R_scalar_stack_start ((SEXP) &R_scalar_stack_space[0])
 #endif
 

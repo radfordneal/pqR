@@ -69,7 +69,7 @@
 #define SCALAR_STACK_HAS_SPACE() \
   (R_scalar_stack <= SCALAR_STACK_ENTRY(SCALAR_STACK_SIZE-1))
 
-/* Macros to push, pop, and slide. */
+/* Macros to push and pop. */
 
 #if USE_COMPRESSED_POINTERS
 #   define POP_IF_TOP_OF_STACK(x) \
@@ -115,8 +115,18 @@
       SCALAR_STACK_OFFSET(1))
 #endif
 
-#define DUP_STACK_VALUE(x) \
-  (TYPEOF(x) == INTSXP ? ScalarInteger(*INTEGER(x)) : ScalarReal(*REAL(x)))
+
+/* Macro to duplicate top of stack as a regular object. */
+
+#if USE_COMPRESSED_POINTERS
+#    define DUP_STACK_VALUE(x) \
+      (TYPEOF(x)==INTSXP \
+       ? ScalarInteger (R_scalar_stack_space[(x)-R_scalar_stack_start].data.i) \
+       : ScalarReal (R_scalar_stack_space[(x)-R_scalar_stack_start].data.d))
+#else
+#    define DUP_STACK_VALUE(x) \
+      (TYPEOF(x) == INTSXP ? ScalarInteger(*INTEGER(x)) : ScalarReal(*REAL(x)))
+#endif
 
 
 /* Inline function used by operators that can take operands on the

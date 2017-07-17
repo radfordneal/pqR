@@ -119,6 +119,9 @@
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 
+#include "scalar-stack.h"
+
+
 /* R_run_onexits - runs the conexit/cend code for all contexts from
    R_GlobalContext down to but not including the argument context.
    This routine does not stop at a CTXT_TOPLEVEL--the code that
@@ -201,6 +204,9 @@ void attribute_hidden R_restore_globals(RCNTXT *cptr)
 static R_NORETURN void jumpfun(RCNTXT * cptr, int mask, SEXP val)
 {
     Rboolean savevis = R_Visible;
+
+    if (ON_SCALAR_STACK(val))
+        val = DUP_STACK_VALUE(val);
 
     /* run onexit/cend code for all contexts down to but not including
        the jump target */

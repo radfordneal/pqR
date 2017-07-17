@@ -2514,7 +2514,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
         }
         else {
             PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
-            if (POP_IF_TOP_OF_STACK(rhs)) rhs = DUP_STACK_VALUE(rhs);
+            if (POP_IF_TOP_OF_STACK(rhs)) 
+                rhs = DUP_STACK_VALUE(rhs);
             SET_PRVALUE (rhsprom, rhs);
             PROTECT (lhsprom = mkPROMISE(CADR(lhs), rho));
             SET_PRVALUE (lhsprom, varval);
