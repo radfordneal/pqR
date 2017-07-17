@@ -330,7 +330,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
       scalar_stack_eval2(args, &arg1, &arg2, &obj1, &obj2, env, call, variant));
     PROTECT2(arg1,arg2);
 
-#   if 1  /* may be enabled for debugging purposes */
+#   if 0  /* may be enabled for debugging purposes */
         if (ON_SCALAR_STACK(arg2)) {
             POP_SCALAR_STACK(arg2);
             arg2 = duplicate(arg2); 
@@ -383,22 +383,19 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         if (ON_SCALAR_STACK(arg1)) POP_SCALAR_STACK(arg1);
 
         if (CDR(argsevald)==R_NilValue) { /* Unary operation */
+            WAIT_UNTIL_COMPUTED(arg1);
             if (type==REALSXP) {
-                ans = NAMEDCNT_EQ_0(arg1) ? arg1
-                    : CAN_USE_SCALAR_STACK(variant) ?
-                        PUSH_SCALAR_STACK(REALSXP)
-                    :   allocVector1REAL();
-                WAIT_UNTIL_COMPUTED(arg1);
-                *REAL(ans) = opcode == PLUSOP ? *REAL(arg1) : -*REAL(arg1);
+                double val = opcode == PLUSOP ? *REAL(arg1) : -*REAL(arg1);
+                ans = NAMEDCNT_EQ_0(arg1) ? (*REAL(arg1) = val, arg1)
+                    : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_REAL(val)
+                    :   ScalarReal(val);
             }
             else { /* INTSXP */
-                ans = NAMEDCNT_EQ_0(arg1) ? arg1 
-                    : CAN_USE_SCALAR_STACK(variant) ? 
-                        PUSH_SCALAR_STACK(INTSXP)
-                    :   allocVector1INT();
-                WAIT_UNTIL_COMPUTED(arg1);
-                *INTEGER(ans) = *INTEGER(arg1)==NA_INTEGER ? NA_INTEGER
-                  : opcode == PLUSOP ? *INTEGER(arg1) : -*INTEGER(arg1);
+                int val  = *INTEGER(arg1)==NA_INTEGER ? NA_INTEGER
+                         : opcode == PLUSOP ? *INTEGER(arg1) : -*INTEGER(arg1);
+                ans = NAMEDCNT_EQ_0(arg1) ? (*INTEGER(arg1) = val, arg1)
+                    : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_INTEGER(val)
+                    :   ScalarInteger(val);
             }
             goto ret;
         }
@@ -406,78 +403,74 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                                     && NO_ATTRIBUTES_OK (variant, arg2)) {
             if (type==REALSXP) {
 
-                ans = NAMEDCNT_EQ_0(arg2) ? arg2
-                    : NAMEDCNT_EQ_0(arg1) ? arg1
-                    : CAN_USE_SCALAR_STACK(variant) ?
-                        PUSH_SCALAR_STACK(REALSXP)
-                    :   allocVector1REAL();
-
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
     
-                double a1 = *REAL(arg1), a2 = *REAL(arg2);
+                double a1 = *REAL(arg1), a2 = *REAL(arg2), val;
         
                 switch (opcode) {
                 case PLUSOP:
-                    *REAL(ans) = a1 + a2;
-                    goto ret;
+                    val = a1 + a2;
+                    break;
                 case MINUSOP:
-                    *REAL(ans) = a1 - a2;
-                    goto ret;
+                    val = a1 - a2;
+                    break;
                 case TIMESOP:
-                    *REAL(ans) = a1 * a2;
-                    goto ret;
+                    val = a1 * a2;
+                    break;
                 case DIVOP:
-                    *REAL(ans) = a1 / a2;
-                    goto ret;
+                    val = a1 / a2;
+                    break;
                 case POWOP:
-                    if (a2 == 2.0)       *REAL(ans) = a1 * a1;
-                    else if (a2 == 1.0)  *REAL(ans) = a1;
-                    else if (a2 == 0.0)  *REAL(ans) = 1.0;
-                    else if (a2 == -1.0) *REAL(ans) = 1.0 / a1;
-                    else                 *REAL(ans) = R_pow(a1,a2);
-                    goto ret;
+                    if (a2 == 2.0)       val = a1 * a1;
+                    else if (a2 == 1.0)  val = a1;
+                    else if (a2 == 0.0)  val = 1.0;
+                    else if (a2 == -1.0) val = 1.0 / a1;
+                    else                 val = R_pow(a1,a2);
+                    break;
                 case MODOP:
-                    PROTECT(ans);
-                    *REAL(ans) = myfmod(a1,a2);
-                    UNPROTECT(1);
-                    goto ret;
+                    val = myfmod(a1,a2);
+                    break;
                 case IDIVOP:
-                    *REAL(ans) = myfloor(a1,a2);
-                    goto ret;
+                    val = myfloor(a1,a2);
+                    break;
                 default: abort();
                 }
+
+                ans = NAMEDCNT_EQ_0(arg2) ? (*REAL(arg2) = val, arg2)
+                    : NAMEDCNT_EQ_0(arg1) ? (*REAL(arg1) = val, arg1)
+                    : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_REAL(val)
+                    :   ScalarReal(val);
+
+                goto ret;
             }
             else if (opcode==PLUSOP || opcode==MINUSOP || opcode==TIMESOP) {
                 /* type==INTSXP */
 
-                ans = NAMEDCNT_EQ_0(arg2) ? arg2
-                    : NAMEDCNT_EQ_0(arg1) ? arg1 
-                    : CAN_USE_SCALAR_STACK(variant) ?
-                        PUSH_SCALAR_STACK(INTSXP)
-                    :   allocVector1INT();
-
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
 
                 int a1 = *INTEGER(arg1), a2 = *INTEGER(arg2);
+                int_fast64_t val;
 
-                if (a1==NA_INTEGER || a2==NA_INTEGER) {
-                    *INTEGER(ans) = NA_INTEGER;
-                    goto ret;
-                }
-
-                int_fast64_t val = 
-                  opcode==PLUSOP  ? (int_fast64_t) a1 + (int_fast64_t) a2 :
-                  opcode==MINUSOP ? (int_fast64_t) a1 - (int_fast64_t) a2 :
-                                    (int_fast64_t) a1 * (int_fast64_t) a2;
-
-                if (val >= R_INT_MIN && val <= R_INT_MAX)
-                    *INTEGER(ans) = val;
+                if (a1==NA_INTEGER || a2==NA_INTEGER)
+                    val = NA_INTEGER;
                 else {
-                    PROTECT(ans);
-                    warningcall(call, _("NAs produced by integer overflow"));
-                    UNPROTECT(1);
-                    *INTEGER(ans) = NA_INTEGER;  /* set _after_ warning */
+                    val = 
+                      opcode==PLUSOP  ? (int_fast64_t) a1 + (int_fast64_t) a2 :
+                      opcode==MINUSOP ? (int_fast64_t) a1 - (int_fast64_t) a2 :
+                                        (int_fast64_t) a1 * (int_fast64_t) a2;
+
+                      if (val < R_INT_MIN || val > R_INT_MAX) {
+                          val = NA_INTEGER;
+                          warningcall (call, 
+                                       _("NAs produced by integer overflow"));
+                      }
                 }
+
+                ans = NAMEDCNT_EQ_0(arg2) ? (*INTEGER(arg2) = (int) val, arg2)
+                    : NAMEDCNT_EQ_0(arg1) ? (*INTEGER(arg1) = (int) val, arg1)
+                    : CAN_USE_SCALAR_STACK(variant) ? 
+                        PUSH_SCALAR_INTEGER((int)val)
+                    :   ScalarInteger((int)val);
 
                 goto ret;
             }
@@ -486,8 +479,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     /* Otherwise, handle the general case. */
 
-    if (ON_SCALAR_STACK(arg2)) POP_SCALAR_STACK(arg2);
-    if (ON_SCALAR_STACK(arg1)) POP_SCALAR_STACK(arg1);
+    POP_IF_TOP_OF_STACK(arg2);
+    POP_IF_TOP_OF_STACK(arg1);
 
     ans = CDR(argsevald)==R_NilValue 
            ? R_unary (call, op, arg1, obj1, env, variant) 
@@ -1682,17 +1675,14 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
                 NaN_warningcall(call);
         }
 
-        if (ON_SCALAR_STACK(sa0)) POP_SCALAR_STACK(sa0);
+        POP_IF_TOP_OF_STACK(sa0);
 
         if (local_assign || NAMEDCNT_EQ_0(sa)) {
             sy = sa;
             *REAL(sy) = res;
         }
-        else if (CAN_USE_SCALAR_STACK(variant)
-                  && NO_ATTRIBUTES_OK(variant,sa)) {
-            sy = PUSH_SCALAR_STACK(REALSXP);
-            *REAL(sy) = res;
-        }
+        else if (CAN_USE_SCALAR_STACK(variant) && NO_ATTRIBUTES_OK(variant,sa))
+            sy = PUSH_SCALAR_REAL(res);
         else {
             PROTECT(sy = ScalarReal(res));
             maybe_dup_attributes (sy, sa, variant);
@@ -1839,12 +1829,15 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
 	   factor was covered by Math.factor. */
         int n = LENGTH(x);
         if (n == 1) {
-            s = NAMEDCNT_EQ_0(x) && TYPEOF(x) == INTSXP ? x 
-              : CAN_USE_SCALAR_STACK(variant) && NO_ATTRIBUTES_OK(variant,x)
-                  ? PUSH_SCALAR_STACK(INTSXP) : allocVector1INT();
             WAIT_UNTIL_COMPUTED(x);
-            int v = *INTEGER(x);
-            *INTEGER(s) = v==NA_INTEGER ? NA_INTEGER : v<0 ? -v : v;
+            int v;
+            v = *INTEGER(x);
+            v = v==NA_INTEGER ? NA_INTEGER : v<0 ? -v : v;
+            s = NAMEDCNT_EQ_0(x) && TYPEOF(x) == INTSXP ? 
+                  (*INTEGER(x) = v, x)
+              : CAN_USE_SCALAR_STACK(variant) && NO_ATTRIBUTES_OK(variant,x) ?
+                  PUSH_SCALAR_INTEGER(v)
+              :   ScalarInteger(v);
         }
         else {
             s = NAMEDCNT_EQ_0(x) && TYPEOF(x) == INTSXP ? x 
@@ -1867,11 +1860,13 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
             return s;
         }
         else if (n == 1) {
-            s = NAMEDCNT_EQ_0(x) ? x 
-              : CAN_USE_SCALAR_STACK(variant) && NO_ATTRIBUTES_OK(variant,x)
-                  ? PUSH_SCALAR_STACK(REALSXP) : allocVector1REAL();
             WAIT_UNTIL_COMPUTED(x);
-            *REAL(s) = fabs(*REAL(x));
+            double v = fabs(*REAL(x));
+            s = NAMEDCNT_EQ_0(x) && TYPEOF(x) == REALSXP ? 
+                  (*REAL(x) = v, x)
+              : CAN_USE_SCALAR_STACK(variant) && NO_ATTRIBUTES_OK(variant,x) ?
+                  PUSH_SCALAR_REAL(v)
+              :   ScalarReal(v);
         }
         else { /* x won't be on scalar stack, since n != 1 */
             s = NAMEDCNT_EQ_0(x) ? x : allocVector(REALSXP, n);

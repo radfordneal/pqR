@@ -1328,7 +1328,7 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     SEXP condval = evalv (Cond, rho, VARIANT_SCALAR_STACK_OK);
     int condlogical = asLogicalNoNA (condval, call);
-    if (ON_SCALAR_STACK(condval)) POP_SCALAR_STACK(condval);
+    POP_IF_TOP_OF_STACK(condval);
 
     if (!condlogical) {
         /* go to else part */
@@ -1668,7 +1668,7 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
         for (;;) {
             SEXP condval = evalv (CAR(args), rho, VARIANT_SCALAR_STACK_OK);
             int condlogical = asLogicalNoNA (condval, call);
-            if (ON_SCALAR_STACK(condval)) POP_SCALAR_STACK(condval);
+            POP_IF_TOP_OF_STACK(condval);
             if (!condlogical) 
                 break;
 	    DO_LOOP_RDEBUG(call, op, body, rho, bgn);
@@ -2321,9 +2321,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                  && LEVELS(v) == LEVELS(rhs) && !NAMEDCNT_GT_1(v)) {
                 if (NAMEDCNT_EQ_0(v))
                     SET_NAMEDCNT_1(v);
-                if (ON_SCALAR_STACK(rhs))
-                    POP_SCALAR_STACK(rhs);
-                else {
+                if (!POP_IF_TOP_OF_STACK(rhs)) {
                     helpers_wait_until_not_in_use(v);
                     WAIT_UNTIL_COMPUTED(v);
                 }
@@ -2337,11 +2335,8 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 rhs = v; /* for return value */
                 goto done;
             }
-            if (ON_SCALAR_STACK(rhs)) {
-                POP_SCALAR_STACK(rhs);
-                rhs = TYPEOF(rhs) == INTSXP ? ScalarInteger(*INTEGER(rhs))
-                                            : ScalarReal(*REAL(rhs));
-            }
+            if (POP_IF_TOP_OF_STACK(rhs))
+                rhs = DUP_STACK_VALUE(rhs);
             if (R_binding_cell != R_NilValue) {
                 DEC_NAMEDCNT_AND_PRVALUE(v);
                 SETCAR(R_binding_cell, rhs);
@@ -2519,7 +2514,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
         }
         else {
             PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
-            SET_PRVALUE(rhsprom, ON_SCALAR_STACK(rhs) ? duplicate(rhs) : rhs);
+            SET_PRVALUE (rhsprom, 
+                         ON_SCALAR_STACK(rhs) ? DUP_STACK_VALUE(rhs) : rhs);
             PROTECT (lhsprom = mkPROMISE(CADR(lhs), rho));
             SET_PRVALUE (lhsprom, varval);
             PROTECT(e = replaceCall (assgnfcn, lhsprom, CDDR(lhs), rhsprom));

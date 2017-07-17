@@ -1177,27 +1177,15 @@ static inline SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
         }
         switch (typeofx) {
         case LGLSXP:  
-            if (CAN_USE_SCALAR_STACK(variant)) {
-                r = PUSH_SCALAR_STACK(LGLSXP);
-                *LOGICAL(r) = LOGICAL(x)[ix];
-                return r;
-            }
-            else
-                return ScalarLogicalMaybeConst (LOGICAL(x)[ix]);
+            return ScalarLogicalMaybeConst (LOGICAL(x)[ix]);
         case INTSXP:  
-            if (CAN_USE_SCALAR_STACK(variant)) {
-                r = PUSH_SCALAR_STACK(INTSXP);
-                *INTEGER(r) = INTEGER(x)[ix];
-                return r;
-            }
+            if (CAN_USE_SCALAR_STACK(variant))
+                return PUSH_SCALAR_INTEGER(INTEGER(x)[ix]);
             else
                 return ScalarIntegerMaybeConst(INTEGER(x)[ix]);
         case REALSXP: 
-            if (CAN_USE_SCALAR_STACK(variant)) {
-                r = PUSH_SCALAR_STACK(REALSXP);
-                *REAL(r) = REAL(x)[ix];
-                return r;
-            }
+            if (CAN_USE_SCALAR_STACK(variant))
+                return PUSH_SCALAR_REAL(REAL(x)[ix]);
             else
                 return ScalarRealMaybeConst(REAL(x)[ix]);
         case RAWSXP:  
@@ -1293,27 +1281,15 @@ static inline SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2,
 
     switch (TYPEOF(x)) {
     case LGLSXP:  
-        if (CAN_USE_SCALAR_STACK(variant)) {
-            r = PUSH_SCALAR_STACK(LGLSXP);
-            *LOGICAL(r) = LOGICAL(x)[e];
-            return r;
-        }
-        else
-            return ScalarLogicalMaybeConst (LOGICAL(x)[e]);
+        return ScalarLogicalMaybeConst (LOGICAL(x)[e]);
     case INTSXP:  
-        if (CAN_USE_SCALAR_STACK(variant)) {
-            r = PUSH_SCALAR_STACK(INTSXP);
-            *INTEGER(r) = INTEGER(x)[e];
-            return r;
-        }
+        if (CAN_USE_SCALAR_STACK(variant))
+            return PUSH_SCALAR_INTEGER(INTEGER(x)[e]);
         else
             return ScalarIntegerMaybeConst(INTEGER(x)[e]);
     case REALSXP: 
-        if (CAN_USE_SCALAR_STACK(variant)) {
-            r = PUSH_SCALAR_STACK(REALSXP);
-            *REAL(r) = REAL(x)[e];
-            return r;
-        }
+        if (CAN_USE_SCALAR_STACK(variant))
+            return PUSH_SCALAR_REAL(REAL(x)[e]);
         else
             return ScalarRealMaybeConst(REAL(x)[e]);
     case RAWSXP:  
