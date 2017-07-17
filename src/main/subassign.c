@@ -1259,6 +1259,7 @@ static SEXP do_subassign_dflt_seq
     UNPROTECT(3);
     if (!isList(x)) SET_NAMEDCNT_0(x);
     if(S4) SET_S4_OBJECT(x);
+
     return x;
 }
 

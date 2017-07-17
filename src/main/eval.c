@@ -47,7 +47,7 @@
 #include <helpers/helpers-app.h>
 
 
-#define SCALAR_STACK_DEBUG 1
+#define SCALAR_STACK_DEBUG 0
 
 
 /* Inline version of findFun, meant to be fast when a special symbol is found 
@@ -2698,10 +2698,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             set_var_in_frame (var, newval, rho, TRUE, 3);
     }
 
-    if (variant & VARIANT_NULL) {
-        if (ON_SCALAR_STACK(rhs)) POP_SCALAR_STACK(rhs);
+    if (variant & VARIANT_NULL)
         return R_NilValue;
-    }
     else {
         DEC_NAMEDCNT(rhs);
         return rhs;

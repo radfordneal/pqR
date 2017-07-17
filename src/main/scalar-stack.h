@@ -88,19 +88,21 @@
       SCALAR_STACK_OFFSET(1))
 #else
 #   define POP_SCALAR_STACK(x) \
-     (/* SCALAR_STACK_OFFSET(1) != (x) ? (void) abort() : */ \
-      /* REprintf("POP %llx\n",(long long)(x)), */ \
+     (/* REprintf("POP %llx %s %d\n", \
+                   (long long)(x),__FILE__,__LINE__), */ \
+      SCALAR_STACK_OFFSET(1) != (x) ? (void) abort() : \
       (void) (R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-1)))
 #   define SLIDE_SCALAR_STACK(x,y) \
-     (/* SCALAR_STACK_OFFSET(2) != (x) || SCALAR_STACK_OFFSET(1) != (y) */ \
-      /* ? (abort(), 0) : */ \
+     (SCALAR_STACK_OFFSET(2) != (x) || SCALAR_STACK_OFFSET(1) != (y) \
+       ? (abort(), 0) : \
        (*(((VECTOR_SEXPREC_C*)R_scalar_stack)-1) = \
                *((VECTOR_SEXPREC_C*)R_scalar_stack), \
         R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-1), \
         SCALAR_STACK_OFFSET(1)))
 #   define PUSH_SCALAR_STACK(type) \
-     ((TYPEOF(R_scalar_stack) = (type)), \
-      /* REprintf("PUSH %llx\n",(long long)R_scalar_stack), */ \
+     (/* REprintf("PUSH %llx %s %d\n", \
+                (long long)R_scalar_stack,__FILE__,__LINE__), */ \
+      (TYPEOF(R_scalar_stack) = (type)), \
       (R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)+1)), \
       SCALAR_STACK_OFFSET(1))
 #endif
