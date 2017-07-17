@@ -1457,18 +1457,18 @@ struct R_local_protect {
 
 #ifdef SGGC_NO_OBJECT_ZERO
 #define R_SGGC_NIL_INDEX 1
-#define R_SGGC_SCALAR_STACK_INDEX 2
-#define R_SGGC_ENV_INDEX 3
-#define R_SGGC_SYM_INDEX 4
-#define R_SGGC_NUM_INDEX 5
-#define R_SGGC_LIST1_INDEX 6
-#else
-#define R_SGGC_NIL_INDEX 0
-#define R_SGGC_SCALAR_STACK_INDEX 1
 #define R_SGGC_ENV_INDEX 2
 #define R_SGGC_SYM_INDEX 3
 #define R_SGGC_NUM_INDEX 4
 #define R_SGGC_LIST1_INDEX 5
+#define R_SGGC_SCALAR_STACK_INDEX 6
+#else
+#define R_SGGC_NIL_INDEX 0
+#define R_SGGC_ENV_INDEX 1
+#define R_SGGC_SYM_INDEX 2
+#define R_SGGC_NUM_INDEX 3
+#define R_SGGC_LIST1_INDEX 4
+#define R_SGGC_SCALAR_STACK_INDEX 5
 #endif
 
 #define R_N_NUM_CONSTS (3+12+3)     /* # of numerical constants in const-objs */
@@ -1546,10 +1546,12 @@ ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS];
 
 /* Start of scalar stack. */
 
+#define SCALAR_STACK_SIZE 32  /* Number of values on the scalar stack */
+
 #if USE_COMPRESSED_POINTERS
 #define R_scalar_stack_start ((SEXP) SGGC_CPTR_VAL(R_SGGC_SCALAR_STACK_INDEX,0))
 #else
-ConstExtern VECTOR_SEXPREC_C R_scalar_stack_space[32];
+ConstExtern VECTOR_SEXPREC_C R_scalar_stack_space[SCALAR_STACK_SIZE];
 #define R_scalar_stack_start ((SEXP) &R_scalar_stack_space[0])
 #endif
 

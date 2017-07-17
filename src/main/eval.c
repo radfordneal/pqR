@@ -41,9 +41,13 @@
 #include <Rinterface.h>
 #include <Fileio.h>
 
+#include "scalar-stack.h"
 #include "arithmetic.h"
 
 #include <helpers/helpers-app.h>
+
+
+#define SCALAR_STACK_DEBUG 1
 
 
 /* Inline version of findFun, meant to be fast when a special symbol is found 
@@ -581,8 +585,8 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
     else if (typeof_e == LANGSXP) {
 
-#       if 0
-        SEXP sv_stack = R_scalar_stack;
+#       if SCALAR_STACK_DEBUG
+            SEXP sv_stack = R_scalar_stack;
 #       endif
 
         SEXP fn = CAR(e), args = CDR(e);
@@ -606,7 +610,6 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
             R_Visible = TRUE;
 
-            /* op is protected by PrimCache (see mkPRIMSXP). */
             if (TYPEOF(op) == SPECIALSXP)
                 res = CALL_PRIMFUN (e, op, args, rho, variant);
             else if (TYPEOF(op) == BUILTINSXP)
@@ -622,14 +625,14 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             VMAXSET(vmax);
         }
 
-#       if 0
-        if (variant & VARIANT_SCALAR_STACK_OK) {
-            if (R_scalar_stack != sv_stack
-             && (res!=sv_stack || SCALAR_STACK_OFFSET(1)!=sv_stack)) abort();
-        }
-        else {
-            if (R_scalar_stack != sv_stack) abort();
-        }
+#       if SCALAR_STACK_DEBUG
+            if (variant & VARIANT_SCALAR_STACK_OK) {
+                if (R_scalar_stack != sv_stack && (res != sv_stack 
+                      || SCALAR_STACK_OFFSET(1) != sv_stack)) abort();
+            }
+            else {
+                if (R_scalar_stack != sv_stack) abort();
+            }
 #       endif
     }
 
@@ -659,18 +662,16 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
     R_EvalDepth -= 1;
 
-#   if 0  /* Enable for debug output after typing SCALAR.STACK.DEBUG */
-
-    if (ON_SCALAR_STACK(res) 
-         && installed_already("SCALAR.STACK.DEBUG") != R_NoObject)
-    { REprintf("SCALAR STACK VALUE RETURNED: %llx %llx %llx %s %f\n",
-        (long long) R_scalar_stack_start,
-        (long long) res, 
-        (long long) R_scalar_stack,
-        TYPEOF(res)==INTSXP ? "int" : "real",
-        TYPEOF(res)==INTSXP ? (double)*INTEGER(res) : *REAL(res));
-    }
-
+#   if SCALAR_STACK_DEBUG /* Get debug output after typing SCALAR.STACK.DEBUG */
+        if (ON_SCALAR_STACK(res) 
+             && installed_already("SCALAR.STACK.DEBUG") != R_NoObject)
+        { REprintf("SCALAR STACK VALUE RETURNED: %llx %llx %llx %s %f\n",
+            (long long) R_scalar_stack_start,
+            (long long) res, 
+            (long long) R_scalar_stack,
+            TYPEOF(res)==INTSXP ? "int" : "real",
+            TYPEOF(res)==INTSXP ? (double)*INTEGER(res) : *REAL(res));
+        }
 #   endif
 
     return res;
@@ -2064,7 +2065,7 @@ static SEXP installAssignFcnName(SEXP fun)
     /* Handle "[", "[[", and "$" specially for speed. */
 
     if (fun == R_BracketSymbol)
-        return R_SubAssignSymbol;
+       return R_SubAssignSymbol;
 
     if (fun == R_Bracket2Symbol)
         return R_SubSubAssignSymbol;
@@ -2415,19 +2416,6 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                                     assgnfcn == R_DollarAssignSymbol ||
                                     assgnfcn == R_SubSubAssignSymbol);
 
-    /* We evaluate the right hand side now, asking for it on the scalar stack
-       if we (tentatively) will be using the fast interface (unless
-       value needed for return), and otherwise for pending computation. */
-
-    SEXP rhs_uneval = rhs;  /* save unevaluated rhs */
-
-    if (maybe_fast) {
-        PROTECT(rhs = EVALV (rhs, rho, 
-                  (variant & VARIANT_NULL & 0) ? VARIANT_SCALAR_STACK_OK : 0));
-    }
-    else
-        PROTECT(rhs = EVALV (rhs, rho, VARIANT_PENDING_OK));
-
     /* Debugging/comparison aid:  Can be enabled one way or the other below,
        then activated by typing `switch to old` or `switch to new` at the
        prompt. */
@@ -2435,6 +2423,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 #   if 0
         if (1 && installed_already("switch to new") == R_NoObect
          || 0 && installed_already("switch to old") != R_NoObject) {
+
+            PROTECT(rhs = EVALV (rhs, rho, VARIANT_PENDING_OK));
 
             if ( ! (variant & VARIANT_NULL))
                 INC_NAMEDCNT(rhs);
@@ -2448,6 +2438,20 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             goto done;
         }
 #   endif
+
+    /* We evaluate the right hand side now, asking for it on the scalar stack
+       if we (tentatively) will be using the fast interface (unless
+       value needed for return), and otherwise for pending computation. */
+
+    SEXP rhs_uneval = rhs;  /* save unevaluated rhs */
+
+    if (maybe_fast) {
+        PROTECT(rhs = EVALV (rhs, rho, 
+          (variant & (VARIANT_SCALAR_STACK_OK | VARIANT_NULL)) ? 
+             VARIANT_SCALAR_STACK_OK : 0));
+    }
+    else
+        PROTECT(rhs = EVALV (rhs, rho, VARIANT_PENDING_OK));
 
     /* Increment NAMEDCNT temporarily if rhs will be needed as the value,
        to protect it from being modified by the assignment, or otherwise. */
@@ -2694,10 +2698,14 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             set_var_in_frame (var, newval, rho, TRUE, 3);
     }
 
-    if ( ! (variant & VARIANT_NULL))
+    if (variant & VARIANT_NULL) {
+        if (ON_SCALAR_STACK(rhs)) POP_SCALAR_STACK(rhs);
+        return R_NilValue;
+    }
+    else {
         DEC_NAMEDCNT(rhs);
-
-    return rhs;
+        return rhs;
+    }
 }
 
 

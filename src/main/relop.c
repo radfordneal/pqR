@@ -1271,7 +1271,7 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
       scalar_stack_eval2 (args, &x, &y, &objx, &objy, env, call, variant));
     PROTECT2(x,y);
 
-#   if 0  /* may be enabled for debugging purposes */
+#   if 1  /* may be enabled for debugging purposes */
         if (ON_SCALAR_STACK(y)) {
             POP_SCALAR_STACK(y);
             y = duplicate(y); 

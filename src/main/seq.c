@@ -37,6 +37,8 @@
 #include <float.h>  /* for DBL_EPSILON */
 #include <Rmath.h>
 
+#include "scalar-stack.h"
+
 #include <helpers/helpers-app.h>
 
 #include "RBufferUtils.h"

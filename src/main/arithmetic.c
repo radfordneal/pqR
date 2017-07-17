@@ -330,7 +330,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
       scalar_stack_eval2(args, &arg1, &arg2, &obj1, &obj2, env, call, variant));
     PROTECT2(arg1,arg2);
 
-#   if 0  /* may be enabled for debugging purposes */
+#   if 1  /* may be enabled for debugging purposes */
         if (ON_SCALAR_STACK(arg2)) {
             POP_SCALAR_STACK(arg2);
             arg2 = duplicate(arg2); 
@@ -385,7 +385,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         if (CDR(argsevald)==R_NilValue) { /* Unary operation */
             if (type==REALSXP) {
                 ans = NAMEDCNT_EQ_0(arg1) ? arg1
-                    : variant & VARIANT_SCALAR_STACK_OK ?
+                    : CAN_USE_SCALAR_STACK(variant) ?
                         PUSH_SCALAR_STACK(REALSXP)
                     :   allocVector1REAL();
                 WAIT_UNTIL_COMPUTED(arg1);
@@ -393,7 +393,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             }
             else { /* INTSXP */
                 ans = NAMEDCNT_EQ_0(arg1) ? arg1 
-                    : variant & VARIANT_SCALAR_STACK_OK ? 
+                    : CAN_USE_SCALAR_STACK(variant) ? 
                         PUSH_SCALAR_STACK(INTSXP)
                     :   allocVector1INT();
                 WAIT_UNTIL_COMPUTED(arg1);
@@ -408,7 +408,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
                 ans = NAMEDCNT_EQ_0(arg2) ? arg2
                     : NAMEDCNT_EQ_0(arg1) ? arg1
-                    : variant & VARIANT_SCALAR_STACK_OK ?
+                    : CAN_USE_SCALAR_STACK(variant) ?
                         PUSH_SCALAR_STACK(REALSXP)
                     :   allocVector1REAL();
 
@@ -452,7 +452,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
                 ans = NAMEDCNT_EQ_0(arg2) ? arg2
                     : NAMEDCNT_EQ_0(arg1) ? arg1 
-                    : variant & VARIANT_SCALAR_STACK_OK ?
+                    : CAN_USE_SCALAR_STACK(variant) ?
                         PUSH_SCALAR_STACK(INTSXP)
                     :   allocVector1INT();
 

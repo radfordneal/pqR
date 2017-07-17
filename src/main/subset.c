@@ -53,6 +53,8 @@
 #define USE_FAST_PROTECT_MACROS
 #include "Defn.h"
 
+#include "scalar-stack.h"
+
 #include <helpers/helpers-app.h>
 
 /* JMC convinced MM that this was not a good idea: */
@@ -1383,16 +1385,12 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             PROTECT(args = CONS(idx,remargs));
             if (idx == R_MissingArg && isSymbol(CAR(ixlist)))
                 SET_MISSING (args, R_isMissing(CAR(ixlist),rho));
+            else 
+                if (ON_SCALAR_STACK(idx)) POP_SCALAR_STACK(idx);
             wait_until_arguments_computed(args);
             UNPROTECT(3);  /* args, array, idx */
             SEXP r = do_subset_dflt_seq (call, op, array, args, rho, 
                                          variant, seq);
-            if (ON_SCALAR_STACK(idx)) {
-                if (ON_SCALAR_STACK(r))
-                    r = SLIDE_SCALAR_STACK(idx,r);
-                else
-                    POP_SCALAR_STACK(idx);
-            }
             return r;
         }
     }

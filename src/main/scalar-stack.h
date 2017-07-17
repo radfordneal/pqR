@@ -26,14 +26,94 @@
  */
 
 
+/* These macros and inline functions manage the stack of scalar values
+   that can be used to quickly return a numeric scalar value (LGLSXP,
+   INTSXP, or REALSXP) without the overhead of heap allocation, if the
+   caller is prepared to handle this (in particular, remove it from
+   the stack), as signaled by calling evalv with VARIANT_SCALAR_STACK_OK.
+
+   These values may be referenced as SEXPs, but must never be put in a
+   data structure (eg, a list) that will survive as a long-term
+   reference.  It is allowed to call eval while keeping values on the
+   stack, since further uses will be stacked.  The stack is restored
+   back when an error exit occurs.  Overflow of the stack is handled
+   by stopping using it (as if VARIANT_SCALAR_STACK_OK was not set). */
+
+/* Macros to get the n'th entry on the scalar stack (0 = bottom), or
+   the n'th from the top (1 = top).  For compressed pointers, uses the
+   fact that the stack consists of consecutive compressed pointers (in
+   consecutive segments, if more than one used), which relies on an
+   entry occupying only one chunk.  For uncompressed pointers, uses
+   the locations allocated in const-objs.c. */
+
+#if USE_COMPRESSED_POINTERS
+#   define SCALAR_STACK_ENTRY(n) (R_scalar_stack_start+(n))
+#   define SCALAR_STACK_OFFSET(n) (R_scalar_stack-(n))
+#else
+#   define SCALAR_STACK_ENTRY(n) ((SEXP) &R_scalar_stack_start[n])
+#   define SCALAR_STACK_OFFSET(n) \
+     ((SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-(n)))
+#endif
+
+/* Test if object is on the scalar stack (set up in const-objs.c). */
+
+#define ON_SCALAR_STACK(x) \
+  (SGGC_SEGMENT_INDEX(CPTR_FROM_SEXP(x)) == R_SGGC_SCALAR_STACK_INDEX)
+
+/* See if a value can be put on the scalar stack, based on variant, and on
+   whether there is space. */
+
+#define CAN_USE_SCALAR_STACK(v) \
+/*  (((v) & VARIANT_SCALAR_STACK_OK) && SCALAR_STACK_HAS_SPACE()) */ 0
+
+#define SCALAR_STACK_HAS_SPACE() \
+  (R_scalar_stack <= SCALAR_STACK_ENTRY(SCALAR_STACK_SIZE-1))
+
+/* Macros to push, pop, and slide. */
+
+#if USE_COMPRESSED_POINTERS
+#   define POP_SCALAR_STACK(x) \
+     (/* SCALAR_STACK_OFFSET(1) != (x) ? (void) abort() : */ \
+      (void) (R_scalar_stack -= 1))
+#   define SLIDE_SCALAR_STACK(x,y) \
+     (/* SCALAR_STACK_OFFSET(2) != (x) || SCALAR_STACK_OFFSET(1) != (y) */ \
+      /* ? (abort(), 0) : */ \
+      (*(VECTOR_SEXPREC_C*)SGGC_DATA(R_scalar_stack-1) = \
+               *(VECTOR_SEXPREC_C*)SGGC_DATA(R_scalar_stack), \
+       R_scalar_stack -= 1, \
+       SCALAR_STACK_OFFSET(1)))
+#   define PUSH_SCALAR_STACK(type) \
+     ((TYPEOF(R_scalar_stack) = (type)), \
+      (R_scalar_stack += 1), \
+      SCALAR_STACK_OFFSET(1))
+#else
+#   define POP_SCALAR_STACK(x) \
+     (/* SCALAR_STACK_OFFSET(1) != (x) ? (void) abort() : */ \
+      /* REprintf("POP %llx\n",(long long)(x)), */ \
+      (void) (R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-1)))
+#   define SLIDE_SCALAR_STACK(x,y) \
+     (/* SCALAR_STACK_OFFSET(2) != (x) || SCALAR_STACK_OFFSET(1) != (y) */ \
+      /* ? (abort(), 0) : */ \
+       (*(((VECTOR_SEXPREC_C*)R_scalar_stack)-1) = \
+               *((VECTOR_SEXPREC_C*)R_scalar_stack), \
+        R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-1), \
+        SCALAR_STACK_OFFSET(1)))
+#   define PUSH_SCALAR_STACK(type) \
+     ((TYPEOF(R_scalar_stack) = (type)), \
+      /* REprintf("PUSH %llx\n",(long long)R_scalar_stack), */ \
+      (R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)+1)), \
+      SCALAR_STACK_OFFSET(1))
+#endif
+
+
 /* Inline function used by operators that can take operands on the
    scalar stack and can handle unclassed objects (VARIANT_UNCLASS_FLAG).
 
    Evaluates two arguments that may be put on the scalar stack.  These
    two arguments are returned in arg1 and arg2, and whether they are
    objects (accounting for VARIANT_UNCLASS_FLAG) in obj1 and obj2.  
-   A list of the evaluated arguments is returned as the value of the
-   function, if one of the first two is an object, so that dispatch
+   If one of the first two arguments is an object, a list of the evaluated
+   arguments is returned as the value of the function, so that dispatch
    must be attempted (note that the argument count in this case may
    not be two).  If neither is an object, a list with the correct
    number of arguments is returned, but they may (or may not) be the
@@ -106,7 +186,7 @@ static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
     }
 
     /* Now we evaluate the second argument, also allowing it to be on the
-       scalar stack, again with VARIANT_UNCLASS flag. */
+       scalar stack, again with VARIANT_UNCLASS. */
 
     y = EVALV (y, env, 
                VARIANT_UNCLASS | VARIANT_SCALAR_STACK_OK | VARIANT_PENDING_OK);
