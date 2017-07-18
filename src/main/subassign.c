@@ -1034,12 +1034,8 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
         y = R_fast_sub_value;  /* may be on scalar stack */
         x = R_fast_sub_into;
-        if (ON_SCALAR_STACK(y)) {
-            if (!isVectorAtomic(x)) {
-                /* don't want a scalar stack value to end up in a list */
-                y = duplicate(y);
-            }
-        }
+        if (!isVectorAtomic(x) && ON_SCALAR_STACK(y))
+            y = DUP_STACK_VALUE(y); /* avoid scalar stack value in a list */
         a2 = args;
         a3 = CDR(a2);
     }
@@ -1069,7 +1065,6 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             args = evalListKeepMissing(a2,rho);
         }
         UNPROTECT(1);
-        POP_IF_TOP_OF_STACK(y);
         goto dflt_seq;
     }
     else {

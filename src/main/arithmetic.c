@@ -326,6 +326,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     /* Evaluate arguments, maybe putting them on the scalar stack. */
 
+    SEXP sv_scalar_stack = R_scalar_stack;
+
     PROTECT (argsevald = 
       scalar_stack_eval2(args, &arg1, &arg2, &obj1, &obj2, env, call, variant));
     PROTECT2(arg1,arg2);
@@ -366,8 +368,10 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
            Note that result might be on top of one of them - OK since after
            storing into it, the args won't be accessed again. */
 
-        POP_IF_TOP_OF_STACK(arg2);
-        POP_IF_TOP_OF_STACK(arg1);
+        /* Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
+           but faster. */
+
+        R_scalar_stack = sv_scalar_stack;
 
         if (CDR(argsevald)==R_NilValue) { /* Unary operation */
             WAIT_UNTIL_COMPUTED(arg1);
@@ -466,8 +470,10 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     /* Otherwise, handle the general case. */
 
-    POP_IF_TOP_OF_STACK(arg2);
-    POP_IF_TOP_OF_STACK(arg1);
+    /* Below does same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
+       but faster. */
+
+    R_scalar_stack = sv_scalar_stack;
 
     ans = CDR(argsevald)==R_NilValue 
            ? R_unary (call, op, arg1, obj1, env, variant) 

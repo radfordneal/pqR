@@ -2316,15 +2316,14 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                   || BINDING_IS_LOCKED((R_binding_cell = LASTSYMBINDING(lhs)))
                   || (v = CAR(R_binding_cell)) == R_UnboundValue)
                 v = findVarInFrame3_nolast (rho, lhs, 7);
-            if (v != R_UnboundValue  && TYPEOF(v) == rhs_type && LENGTH(v) == 1
+            if (v != R_UnboundValue && TYPEOF(v) == rhs_type && LENGTH(v) == 1
                  && ATTRIB(v) == ATTRIB(rhs) && TRUELENGTH(v) == TRUELENGTH(rhs)
                  && LEVELS(v) == LEVELS(rhs) && !NAMEDCNT_GT_1(v)) {
                 if (NAMEDCNT_EQ_0(v))
                     SET_NAMEDCNT_1(v);
-                if (!POP_IF_TOP_OF_STACK(rhs)) {
-                    helpers_wait_until_not_in_use(v);
-                    WAIT_UNTIL_COMPUTED(v);
-                }
+                POP_IF_TOP_OF_STACK(rhs);
+                helpers_wait_until_not_in_use(v);
+                WAIT_UNTIL_COMPUTED(v);
                 switch (rhs_type) {
                 case LGLSXP:  *LOGICAL(v) = *LOGICAL(rhs); break;
                 case INTSXP:  *INTEGER(v) = *INTEGER(rhs); break;
@@ -2434,9 +2433,10 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
         }
 #   endif
 
-    /* We evaluate the right hand side now, asking for it on the scalar stack
-       if we (tentatively) will be using the fast interface (unless
-       value needed for return), and otherwise for pending computation. */
+    /* We evaluate the right hand side now, asking for it on the
+       scalar stack if we (tentatively) will be using the fast
+       interface (unless value needed for return, and not allowed on
+       scalar stack), and otherwise for pending computation. */
 
     SEXP rhs_uneval = rhs;  /* save unevaluated rhs */
 
@@ -2616,6 +2616,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
            The new value at the outermost level is the rhs value. */
         
         PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
+        if (POP_IF_TOP_OF_STACK(rhs)) 
+            rhs = DUP_STACK_VALUE(rhs);
         SET_PRVALUE(rhsprom, rhs);
         s[0].in_next = 0;
 

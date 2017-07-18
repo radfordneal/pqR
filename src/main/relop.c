@@ -1267,6 +1267,8 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     /* Evaluate arguments, maybe putting them on the scalar stack. */
 
+    SEXP sv_scalar_stack = R_scalar_stack;
+
     PROTECT(argsevald = 
       scalar_stack_eval2 (args, &x, &y, &objx, &objy, env, call, variant));
     PROTECT2(x,y);
@@ -1289,8 +1291,10 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        the scalar stack, but if so are popped off here (but retain their
        values if eval is not called). */
 
-    POP_IF_TOP_OF_STACK(y);
-    POP_IF_TOP_OF_STACK(x);
+    /* Below does same as POP_IF_TOP_OF_STACK(y); POP_IF_TOP_OF_STACK(x);
+       but faster. */
+
+    R_scalar_stack = sv_scalar_stack;
 
     ans = R_relop (call, op, x, y, objx, objy, env, variant);
 
