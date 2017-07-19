@@ -56,6 +56,12 @@
 
   \subsection{BUG FIXES}{
   \itemize{
+  \item The documentation on \code{debug} and \code{debugonce} has been
+        fixed to remove mention of the \code{text} and \code{condition} 
+        arguments. These arguments were documented in R-2.10.0, and in 
+        subsequent R Core versions to at least R-3.4.1, but they have never 
+        been implemented as documented, but rather have always been 
+        completely ignored.
   \item Previously, \code{length(plist)<-n} did not work when \code{plist}
         was a pairlist, but it does now.  This bug also exists in R Core
         versions to at least R-3.4.0.
