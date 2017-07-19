@@ -144,6 +144,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
             if (a) Rprintf(","); Rprintf("TR"); a = 1; 
         }
         if (RSTEP(v)) { if (a) Rprintf(","); Rprintf("STP"); a = 1; }
+        if (!SYM_NO_DOTS(v)) { if (a) Rprintf(","); Rprintf(".."); a = 1; }
         if (TYPEOF(v)==ENVSXP && IS_BASE(v)) { 
             if (a) Rprintf(","); Rprintf("BC"); a = 1; 
         }

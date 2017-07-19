@@ -1703,6 +1703,7 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 #   endif
 
     SET_DDVAL(c, isDDName(name));
+    SYM_NO_DOTS(c) = !DDVAL(c) && strcmp(CHAR(name),"...") != 0;
 
     return c;
 }

@@ -226,13 +226,14 @@ struct sxpinfo_struct {
     /* Miscellaneous flags, some with multiple meanings depending on type */
 
     unsigned int debug : 1;       /* Function/Environment: is being debugged */
-    unsigned int rstep : 1;       /* Function: is to be debugged just once */
+    unsigned int rstep_pname : 1; /* Function: is to be debugged just once */
+                                  /* CHARSXP: is used as a symbol's printname */
     unsigned int trace_base : 1;  /* Function: is being traced,
                                      Symbol: has base binding in global cache,
                                      Environment: R_BaseEnv or R_BaseNamespace*/
     unsigned int has_attrib : 1;  /* Set to 1 iff ATTRIB != R_NilValue, except
                                      not used when ATTRIB isn't normal attrib */
-    unsigned int is_printname : 1;/* CHARSXP: is used as a symbol's printname */
+    unsigned int sym_no_dots : 1; /* Is a symbol, but not ..., ..1, ..2, etc. */
 
     /* Object flag */
     unsigned int obj : 1;     /* set if this is an S3 or S4 object */
@@ -783,8 +784,9 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 #define ATTRIB(x)       NOT_LVALUE(TYPEOF(x)==SYMSXP ? R_NilValue : ATTRIB_W(x))
 
-#define IS_PRINTNAME(x) (UPTR_FROM_SEXP(x)->sxpinfo.is_printname)
+#define IS_PRINTNAME(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
 #define HAS_ATTRIB(x)   NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.has_attrib)
+#define SYM_NO_DOTS(x)  NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.sym_no_dots)
 #define OBJECT(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.obj)
 #define RTRACE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_base)
 #define LEVELS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)
@@ -851,8 +853,8 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define CLOENV(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->u.closxp.env)
 #define RDEBUG(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.debug)
 #define SET_RDEBUG(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.debug=(v))
-#define RSTEP(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep)
-#define SET_RSTEP(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.rstep=(v))
+#define RSTEP(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
+#define SET_RSTEP(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname=(v))
 
 /* Symbol Access Macros */
 #define PRINTNAME(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->pname)

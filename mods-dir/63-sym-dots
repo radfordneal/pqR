@@ -1,0 +1,3 @@
+Speed up check in eval for ..., ..1, ..2, etc., by dedicating
+a bit in sxpinfo to flagging symbols that are not ..., ..1, etc.
+
