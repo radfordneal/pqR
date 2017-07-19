@@ -41,7 +41,7 @@
 # undef __LIBM_PRIVATE
 #endif
 
-#include "static-boxes.h"  /* for inline static_box_eval2 function */
+#include "scalar-stack.h"
 
 
 static inline void maybe_dup_attributes (SEXP to, SEXP from, int variant)
@@ -324,11 +324,13 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     int opcode = PRIMVAL(op), obj1, obj2;
     SEXP argsevald, ans, arg1, arg2;
 
-    /* Evaluate arguments, maybe putting them in static boxes. */
+    /* Evaluate arguments, maybe putting them on the scalar stack. */
 
-    argsevald = 
-      static_box_eval2 (args, &arg1, &arg2, &obj1, &obj2, env, call, variant);
-    PROTECT3(argsevald,arg1,arg2);
+    SEXP sv_scalar_stack = R_scalar_stack;
+
+    PROTECT (argsevald = 
+      scalar_stack_eval2(args, &arg1, &arg2, &obj1, &obj2, env, call, variant));
+    PROTECT2(arg1,arg2);
 
     /* Check for dispatch on S3 or S4 objects. */
 
@@ -349,126 +351,129 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         errorcall(call, _("%d argument passed to '%s' which requires %d"),
                         1, PRIMNAME(op), 2);
 
-    /* Arguments are now in arg1 and arg2, and are protected. 
-       They may be in static boxes. */
+    /* Arguments are now in arg1 and arg2, and are protected. They may
+       be on the scalar stack. */
 
     /* We quickly do real arithmetic and integer plus/minus on scalars with 
-       no attributes (as will be the case for static boxes).  We don't
-       bother trying local assignment, since returning the result in a
-       static box should be about as fast. */
+       no attributes (as will be the case for scalar stack values).  We don't
+       bother trying local assignment, since returning the result on the
+       scalar stack should be about as fast. */
 
-    int type = TYPEOF(arg1);
+    int type = TYPEOF(arg1), type2 = TYPEOF(arg2);
 
-    if ((type==REALSXP || type==INTSXP) && LENGTH(arg1)==1 &&
-         (!HAS_ATTRIB(arg1) || !isObject(arg1) && (variant&VARIANT_ANY_ATTR))) {
+    if ((type==REALSXP || type==INTSXP) && LENGTH(arg1) == 1
+                                        && NO_ATTRIBUTES_OK (variant, arg1)) {
+
+        /* Remove args from scalar stack now, though may still be referenced. 
+           Note that result might be on top of one of them - OK since after
+           storing into it, the args won't be accessed again. */
+
+        /* Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
+           but faster. */
+
+        R_scalar_stack = sv_scalar_stack;
 
         if (CDR(argsevald)==R_NilValue) { /* Unary operation */
-            switch (opcode) {
-            case PLUSOP:
-                ans = arg1;
-                goto ret;
-            case MINUSOP: ;
-                if (type==REALSXP) {
-                    ans = NAMEDCNT_EQ_0(arg1) ? arg1
-                        : variant & VARIANT_STATIC_BOX_OK ? R_ScalarRealBox
-                        :   allocVector1REAL();
-                    WAIT_UNTIL_COMPUTED(arg1);
-                    *REAL(ans) = - *REAL(arg1);
-                }
-                else { /* INTSXP */
-                    ans = NAMEDCNT_EQ_0(arg1) ? arg1 
-                        : variant & VARIANT_STATIC_BOX_OK ? R_ScalarIntegerBox
-                        :   allocVector1INT();
-                    WAIT_UNTIL_COMPUTED(arg1);
-                    *INTEGER(ans) = *INTEGER(arg1)==NA_INTEGER ? NA_INTEGER
-                                      : - *INTEGER(arg1);
-                }
-                goto ret;
-            default: abort();
-            }
-        }
-        else if (TYPEOF(arg2)==type && LENGTH(arg2)==1 &&
-         (!HAS_ATTRIB(arg2) || !isObject(arg2) && (variant&VARIANT_ANY_ATTR))) {
-
+            WAIT_UNTIL_COMPUTED(arg1);
             if (type==REALSXP) {
-
-                ans = NAMEDCNT_EQ_0(arg2) ? arg2
-                    : NAMEDCNT_EQ_0(arg1) ? arg1
-                    : variant & VARIANT_STATIC_BOX_OK ? R_ScalarRealBox
-                    :   allocVector1REAL();
+                double val = opcode == PLUSOP ? *REAL(arg1) : -*REAL(arg1);
+                ans = NAMEDCNT_EQ_0(arg1) ? (*REAL(arg1) = val, arg1)
+                    : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_REAL(val)
+                    :   ScalarReal(val);
+            }
+            else { /* INTSXP */
+                int val  = *INTEGER(arg1)==NA_INTEGER ? NA_INTEGER
+                         : opcode == PLUSOP ? *INTEGER(arg1) : -*INTEGER(arg1);
+                ans = NAMEDCNT_EQ_0(arg1) ? (*INTEGER(arg1) = val, arg1)
+                    : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_INTEGER(val)
+                    :   ScalarInteger(val);
+            }
+            goto ret;
+        }
+        else if (TYPEOF(arg2)==type && LENGTH(arg2)==1
+                                    && NO_ATTRIBUTES_OK (variant, arg2)) {
+            if (type==REALSXP) {
 
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
     
-                double a1 = *REAL(arg1), a2 = *REAL(arg2);
+                double a1 = *REAL(arg1), a2 = *REAL(arg2), val;
         
                 switch (opcode) {
                 case PLUSOP:
-                    *REAL(ans) = a1 + a2;
-                    goto ret;
+                    val = a1 + a2;
+                    break;
                 case MINUSOP:
-                    *REAL(ans) = a1 - a2;
-                    goto ret;
+                    val = a1 - a2;
+                    break;
                 case TIMESOP:
-                    *REAL(ans) = a1 * a2;
-                    goto ret;
+                    val = a1 * a2;
+                    break;
                 case DIVOP:
-                    *REAL(ans) = a1 / a2;
-                    goto ret;
+                    val = a1 / a2;
+                    break;
                 case POWOP:
-                    if (a2 == 2.0)       *REAL(ans) = a1 * a1;
-                    else if (a2 == 1.0)  *REAL(ans) = a1;
-                    else if (a2 == 0.0)  *REAL(ans) = 1.0;
-                    else if (a2 == -1.0) *REAL(ans) = 1.0 / a1;
-                    else                 *REAL(ans) = R_pow(a1,a2);
-                    goto ret;
+                    if (a2 == 2.0)       val = a1 * a1;
+                    else if (a2 == 1.0)  val = a1;
+                    else if (a2 == 0.0)  val = 1.0;
+                    else if (a2 == -1.0) val = 1.0 / a1;
+                    else                 val = R_pow(a1,a2);
+                    break;
                 case MODOP:
-                    PROTECT(ans);
-                    *REAL(ans) = myfmod(a1,a2);
-                    UNPROTECT(1);
-                    goto ret;
+                    val = myfmod(a1,a2);
+                    break;
                 case IDIVOP:
-                    *REAL(ans) = myfloor(a1,a2);
-                    goto ret;
+                    val = myfloor(a1,a2);
+                    break;
                 default: abort();
                 }
+
+                ans = NAMEDCNT_EQ_0(arg2) ? (*REAL(arg2) = val, arg2)
+                    : NAMEDCNT_EQ_0(arg1) ? (*REAL(arg1) = val, arg1)
+                    : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_REAL(val)
+                    :   ScalarReal(val);
+
+                goto ret;
             }
             else if (opcode==PLUSOP || opcode==MINUSOP || opcode==TIMESOP) {
                 /* type==INTSXP */
 
-                ans = NAMEDCNT_EQ_0(arg2) ? arg2
-                    : NAMEDCNT_EQ_0(arg1) ? arg1 
-                    : variant & VARIANT_STATIC_BOX_OK ? R_ScalarIntegerBox
-                    :   allocVector1INT();
-
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
 
                 int a1 = *INTEGER(arg1), a2 = *INTEGER(arg2);
+                int_fast64_t val;
 
-                if (a1==NA_INTEGER || a2==NA_INTEGER) {
-                    *INTEGER(ans) = NA_INTEGER;
-                    goto ret;
-                }
-
-                int_fast64_t val = 
-                  opcode==PLUSOP  ? (int_fast64_t) a1 + (int_fast64_t) a2 :
-                  opcode==MINUSOP ? (int_fast64_t) a1 - (int_fast64_t) a2 :
-                                    (int_fast64_t) a1 * (int_fast64_t) a2;
-
-                if (val >= R_INT_MIN && val <= R_INT_MAX)
-                    *INTEGER(ans) = val;
+                if (a1==NA_INTEGER || a2==NA_INTEGER)
+                    val = NA_INTEGER;
                 else {
-                    PROTECT(ans);
-                    warningcall(call, _("NAs produced by integer overflow"));
-                    UNPROTECT(1);
-                    *INTEGER(ans) = NA_INTEGER;  /* set _after_ warning */
+                    val = 
+                      opcode==PLUSOP  ? (int_fast64_t) a1 + (int_fast64_t) a2 :
+                      opcode==MINUSOP ? (int_fast64_t) a1 - (int_fast64_t) a2 :
+                                        (int_fast64_t) a1 * (int_fast64_t) a2;
+
+                      if (val < R_INT_MIN || val > R_INT_MAX) {
+                          val = NA_INTEGER;
+                          warningcall (call, 
+                                       _("NAs produced by integer overflow"));
+                      }
                 }
+
+                ans = NAMEDCNT_EQ_0(arg2) ? (*INTEGER(arg2) = (int) val, arg2)
+                    : NAMEDCNT_EQ_0(arg1) ? (*INTEGER(arg1) = (int) val, arg1)
+                    : CAN_USE_SCALAR_STACK(variant) ? 
+                        PUSH_SCALAR_INTEGER((int)val)
+                    :   ScalarInteger((int)val);
 
                 goto ret;
             }
         }
     }
 
-    /* Otherwise, handle the general case (but won't be a static box). */
+    /* Otherwise, handle the general case. */
+
+    /* Below does same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
+       but faster. */
+
+    R_scalar_stack = sv_scalar_stack;
 
     ans = CDR(argsevald)==R_NilValue 
            ? R_unary (call, op, arg1, obj1, env, variant) 
@@ -476,8 +481,6 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
   ret:
     UNPROTECT(3);
-    if (IS_STATIC_BOX(ans) && (variant & VARIANT_STATIC_BOX_OK) == 0)
-        ans = duplicate(ans);
     return ans;
 }
 
@@ -1328,13 +1331,13 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         if (oper>TIMESOP) threshold >>= 1;
 
         if (n >= threshold && (variant & VARIANT_PENDING_OK)) {
-            if (IS_STATIC_BOX(x) && IS_STATIC_BOX(y)) {
+            if (ON_SCALAR_STACK(x) && ON_SCALAR_STACK(y)) {
                 PROTECT(x = duplicate(x));
                 y = duplicate(y);
                 UNPROTECT(1);
             }
-            else if (IS_STATIC_BOX(x)) x = duplicate(x);
-            else if (IS_STATIC_BOX(y)) y = duplicate(y);
+            else if (ON_SCALAR_STACK(x)) x = duplicate(x);
+            else if (ON_SCALAR_STACK(y)) y = duplicate(y);
         }
         DO_NOW_OR_LATER2 (variant, n>=threshold, flags, task, oper, ans, x, y);
 
@@ -1627,7 +1630,7 @@ void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
 #define T_math1 THRESHOLD_ADJUST(5)
 
 static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
-                  /* Note:  sa may be a static box. */
+                  /* Note:  sa may be on the scalar stack. */
 {
     if (opcode == 10003) /* horrible kludge for log */
         opcode = 13;
@@ -1638,6 +1641,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
 
     int local_assign = 0;
     int n = LENGTH(sa);
+    SEXP sa0 = sa;
 
     if (TYPEOF(sa) != REALSXP)
         sa = coerceVector(sa, REALSXP); /* coercion can lose the object bit */
@@ -1649,7 +1653,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
 
     SEXP sy;
 
-    if (LENGTH(sa) == 1) { /* scalar operation, including on static boxes */
+    if (LENGTH(sa) == 1) { /* scalar operation, including on scalar stack. */
 
         WAIT_UNTIL_COMPUTED(sa);
 
@@ -1664,15 +1668,14 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
                 NaN_warningcall(call);
         }
 
+        POP_IF_TOP_OF_STACK(sa0);
+
         if (local_assign || NAMEDCNT_EQ_0(sa)) {
             sy = sa;
             *REAL(sy) = res;
         }
-        else if ((variant & VARIANT_STATIC_BOX_OK) && (!HAS_ATTRIB(sa)
-                   || ((variant & VARIANT_ANY_ATTR) && !isObject(sa)))) {
-            sy = R_ScalarRealBox;
-            *REAL(sy) = res;
-        }
+        else if (CAN_USE_SCALAR_STACK(variant) && NO_ATTRIBUTES_OK(variant,sa))
+            sy = PUSH_SCALAR_REAL(res);
         else {
             PROTECT(sy = ScalarReal(res));
             maybe_dup_attributes (sy, sa, variant);
@@ -1812,17 +1815,22 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
 {   
     SEXP s;
 
+    POP_IF_TOP_OF_STACK(x);
+
     if (TYPEOF(x) == INTSXP || TYPEOF(x) == LGLSXP) {
 	/* integer or logical ==> return integer,
 	   factor was covered by Math.factor. */
         int n = LENGTH(x);
         if (n == 1) {
-            s = NAMEDCNT_EQ_0(x) && TYPEOF(x) == INTSXP ? x 
-              : (variant&VARIANT_STATIC_BOX_OK) != 0 && !HAS_ATTRIB(x) 
-                  ? R_ScalarIntegerBox : allocVector1INT();
-            int v = *INTEGER(x);
             WAIT_UNTIL_COMPUTED(x);
-            *INTEGER(s) = v==NA_INTEGER ? NA_INTEGER : v<0 ? -v : v;
+            int v;
+            v = *INTEGER(x);
+            v = v==NA_INTEGER ? NA_INTEGER : v<0 ? -v : v;
+            s = NAMEDCNT_EQ_0(x) && TYPEOF(x) == INTSXP ? 
+                  (*INTEGER(x) = v, x)
+              : CAN_USE_SCALAR_STACK(variant) && NO_ATTRIBUTES_OK(variant,x) ?
+                  PUSH_SCALAR_INTEGER(v)
+              :   ScalarInteger(v);
         }
         else {
             s = NAMEDCNT_EQ_0(x) && TYPEOF(x) == INTSXP ? x 
@@ -1845,28 +1853,30 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
             return s;
         }
         else if (n == 1) {
-            s = NAMEDCNT_EQ_0(x) ? x 
-              : (variant&VARIANT_STATIC_BOX_OK) != 0 && !HAS_ATTRIB(x)
-                  ? R_ScalarRealBox : allocVector1REAL();
             WAIT_UNTIL_COMPUTED(x);
-            *REAL(s) = fabs(*REAL(x));
+            double v = fabs(*REAL(x));
+            s = NAMEDCNT_EQ_0(x) && TYPEOF(x) == REALSXP ? 
+                  (*REAL(x) = v, x)
+              : CAN_USE_SCALAR_STACK(variant) && NO_ATTRIBUTES_OK(variant,x) ?
+                  PUSH_SCALAR_REAL(v)
+              :   ScalarReal(v);
         }
-        else { /* x won't be a static box, since n != 1 */
+        else { /* x won't be on scalar stack, since n != 1 */
             s = NAMEDCNT_EQ_0(x) ? x : allocVector(REALSXP, n);
             DO_NOW_OR_LATER1 (variant, n >= T_abs,
                               HELPERS_PIPE_IN01_OUT, task_abs, 0, s, x);
         }
+
     } else if (isComplex(x)) {
         WAIT_UNTIL_COMPUTED(x);
         s = do_fast_cmathfuns (call, op, x, env, variant);
+
     } else
         non_numeric_errorcall(call);
 
-    if (x!=s) {
-        PROTECT(s);
-        DUPLICATE_ATTRIB(s, x);
-        UNPROTECT(1);
-    }
+    PROTECT(s);
+    maybe_dup_attributes (s, x, variant);
+    UNPROTECT(1);
 
     return s;
 }
@@ -2168,7 +2178,7 @@ SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
         SEXP arg, ans;
         arg = evalv (CAR(args), env, 
-                     VARIANT_PENDING_OK | VARIANT_STATIC_BOX_OK);
+                     VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK);
         if (isObject(arg)) {
             WAIT_UNTIL_COMPUTED(arg);
             args = CONS(arg, R_NilValue);
@@ -2902,8 +2912,8 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 
 attribute_hidden FASTFUNTAB R_FastFunTab_arithmetic[] = {
 /*slow func	fast func,     code or -1   dsptch  variant */
-{ do_math1,	do_fast_math1,	-1,             1,  VARIANT_STATIC_BOX_OK },
-{ do_trunc,	do_fast_trunc,	-1,		1,  VARIANT_STATIC_BOX_OK },
-{ do_abs,	do_fast_abs,	-1,		1,  VARIANT_STATIC_BOX_OK },
+{ do_math1,	do_fast_math1,	-1,             1,  VARIANT_SCALAR_STACK_OK },
+{ do_trunc,	do_fast_trunc,	-1,		1,  VARIANT_SCALAR_STACK_OK },
+{ do_abs,	do_fast_abs,	-1,		1,  VARIANT_SCALAR_STACK_OK },
 { 0,		0,		0,		0,  0 }
 };

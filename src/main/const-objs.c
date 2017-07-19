@@ -49,7 +49,7 @@
 
 
 #define NEED_SGGC_FUNCTIONS
-#include "Defn.h"    /* Includes Rinternals.h, which defines R_CONST */
+#include "Defn.h"          /* Includes Rinternals.h, which defines R_CONST */
 #include <complex.h>
 
 
@@ -101,24 +101,38 @@ R_CONST SEXPREC R_NilValue_const = { \
 };
 
 
-/* Statically allocated boxes for return when VARIANT_STATIC_BOX_OK is used.
-   These are not actually constant, since the data they contain is changed,
-   but are allocated similarly. */
+/* Scalar stack, on which values may be returned when VARIANT_SCALAR_STACK_OK
+   is used.  These objects are not actually constant, since the data they 
+   contain is changed, but are allocated similarly.  Types are initialized
+   to RAWSXP, which is never used, so the high-water mark will be visible
+   for debugging and tuning. */
 
 #if USE_COMPRESSED_POINTERS
-#define SCALAR_BOX(typ,offset) { \
-    CONST_HEADER(typ,R_SGGC_STATIC_BOXES_INDEX,NUM_OFFSET(offset)) }
+#define SCALAR_STACK_VALUE(offset) { \
+    CONST_HEADER(RAWSXP,R_SGGC_SCALAR_STACK_INDEX,NUM_OFFSET(offset)) }
 #else
-#define SCALAR_BOX(typ,offset) { \
-    CONST_HEADER(typ,R_SGGC_STATIC_BOXES_INDEX,NUM_OFFSET(offset)), \
+#define SCALAR_STACK_VALUE(offset) { \
+    CONST_HEADER(RAWSXP,R_SGGC_SCALAR_STACK_INDEX,NUM_OFFSET(offset)), \
     LENGTH1 }
 #endif
 
-VECTOR_SEXPREC_C R_ScalarBox_space[4] = {
-    SCALAR_BOX(INTSXP,0),
-    SCALAR_BOX(INTSXP,1),
-    SCALAR_BOX(REALSXP,2),
-    SCALAR_BOX(REALSXP,3)
+VECTOR_SEXPREC_C R_scalar_stack_space[SCALAR_STACK_SIZE] = {
+    SCALAR_STACK_VALUE(0),   SCALAR_STACK_VALUE(1),
+    SCALAR_STACK_VALUE(2),   SCALAR_STACK_VALUE(3),
+    SCALAR_STACK_VALUE(4),   SCALAR_STACK_VALUE(5),
+    SCALAR_STACK_VALUE(6),   SCALAR_STACK_VALUE(7),
+    SCALAR_STACK_VALUE(8),   SCALAR_STACK_VALUE(9),
+    SCALAR_STACK_VALUE(10),  SCALAR_STACK_VALUE(11),
+    SCALAR_STACK_VALUE(12),  SCALAR_STACK_VALUE(13),
+    SCALAR_STACK_VALUE(14),  SCALAR_STACK_VALUE(15),
+    SCALAR_STACK_VALUE(16),  SCALAR_STACK_VALUE(17),
+    SCALAR_STACK_VALUE(18),  SCALAR_STACK_VALUE(19),
+    SCALAR_STACK_VALUE(20),  SCALAR_STACK_VALUE(21),
+    SCALAR_STACK_VALUE(22),  SCALAR_STACK_VALUE(23),
+    SCALAR_STACK_VALUE(24),  SCALAR_STACK_VALUE(25),
+    SCALAR_STACK_VALUE(26),  SCALAR_STACK_VALUE(27),
+    SCALAR_STACK_VALUE(28),  SCALAR_STACK_VALUE(29),
+    SCALAR_STACK_VALUE(20),  SCALAR_STACK_VALUE(31)
 };
 
 
@@ -254,7 +268,7 @@ SEXP attribute_hidden MaybeConstList1(SEXP car)
 }
 
 
-/* Initialize constants (and static boxes). */
+/* Initialize constants (and scalar stack). */
 
 #if USE_COMPRESSED_POINTERS || USE_AUX_FOR_ATTRIB
 
@@ -299,22 +313,6 @@ void Rf_constant_init(void)
                       );
 
     if (SGGC_SEGMENT_INDEX(p) != R_SGGC_NIL_INDEX) abort();
-
-    /* Static boxes.  Uses same segment for integers and reals. */
-
-    if (R_type_to_sggc_type[INTSXP] != R_type_to_sggc_type[REALSXP]) abort();
-
-    p = sggc_constant (R_type_to_sggc_type[INTSXP],
-                       R_type_to_sggc_type[INTSXP]+SGGC_N_TYPES,
-                       4, (char *) R_ScalarBox_space
-#if USE_COMPRESSED_POINTERS
-                       , (char *) sggc_length1, (char *) nilattrib
-#elif USE_AUX_FOR_ATTRIB
-                       , (char *) nilattrib
-#endif
-                      );
-
-    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_STATIC_BOXES_INDEX) abort();
 
     /* Environment constant. */
 
@@ -375,6 +373,22 @@ void Rf_constant_init(void)
                       );
 
     if (SGGC_SEGMENT_INDEX(p) != R_SGGC_LIST1_INDEX) abort();
+
+    /* Scalar stack space.  Uses same segment for integers and reals. */
+
+    if (R_type_to_sggc_type[INTSXP] != R_type_to_sggc_type[REALSXP]) abort();
+
+    p = sggc_constant (R_type_to_sggc_type[REALSXP],
+                       R_type_to_sggc_type[REALSXP]+SGGC_N_TYPES,
+                       32, (char *) R_scalar_stack_space
+#if USE_COMPRESSED_POINTERS
+                       , (char *) sggc_length1, (char *) nilattrib
+#elif USE_AUX_FOR_ATTRIB
+                       , (char *) nilattrib
+#endif
+                      );
+
+    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_SCALAR_STACK_INDEX) abort();
 
 }
 

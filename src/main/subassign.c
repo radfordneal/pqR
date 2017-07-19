@@ -33,6 +33,8 @@
 #include "Defn.h"
 #include <R_ext/RS.h> /* for test of S4 objects */
 
+#include "scalar-stack.h"
+
 
 /* EnlargeVector() takes a vector "x" and changes its length to
    "newlen".  This allows to assign values "past the end" of the
@@ -1026,25 +1028,14 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans, x, a2, a3, y;
     int argsevald = 0, seq = 0;
-    R_static_box_contents y_contents;
 
     /* See if we are using the fast interface or not. */
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
-        y = R_fast_sub_value;  /* may be a static box */
+        y = R_fast_sub_value;  /* may be on scalar stack */
         x = R_fast_sub_into;
-        if (IS_STATIC_BOX(y)) {
-            if (!isVectorAtomic(x)) {
-                /* don't want a static box to end up in a list */
-                y = duplicate(y);
-            }
-            else {
-                /* Switch to other box, since original may be used for index.
-                   Save value here on stack, since may be used in later evals.*/
-                SAVE_STATIC_BOX_CONTENTS(y,&y_contents);
-                SWITCH_TO_BOX0(&y);
-            }
-        }
+        if (!isVectorAtomic(x) && ON_SCALAR_STACK(y))
+            y = DUP_STACK_VALUE(y); /* avoid scalar stack value in a list */
         a2 = args;
         a3 = CDR(a2);
     }
@@ -1058,14 +1049,14 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* If we can easily determine that this will be handled by subassign_dflt
        and has exactly one index argument, evaluate that index with 
        VARIANT_SEQ so it may come as a range rather than a vector, and include
-       VARIANT_STATIC_BOX_OK as well if using the fast interface, as there
-       will be not other evaluation before the index is used. */
+       VARIANT_SCALAR_STACK_OK as well if using the fast interface */
 
     if (y != R_NoObject) {
         /* Fast interface: object assigned into (x) comes already evaluated */
         PROTECT(y);
         if (a2 != R_NilValue && a3 == R_NilValue && TYPEOF(CAR(a2))==LANGSXP) {
-            a2 = evalv (CAR(a2), rho, VARIANT_SEQ | VARIANT_STATIC_BOX_OK);
+            a2 = evalv (CAR(a2), rho, VARIANT_SEQ | VARIANT_SCALAR_STACK_OK);
+            POP_IF_TOP_OF_STACK(a2);
             seq = R_variant_result;
             R_variant_result = 0;
             args = CONS (a2, R_NilValue);
@@ -1115,11 +1106,6 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* Call the internal function directly, since known not to be an object. */
 
 dflt_seq:
-
-    /* Restore saved value to static box, if using one. */
-
-    if (y != R_NoObject && IS_STATIC_BOX(y))
-        RESTORE_STATIC_BOX_CONTENTS(y,&y_contents);
 
     return do_subassign_dflt_seq (call, x, args, rho, y, seq);
 }
@@ -1268,6 +1254,7 @@ static SEXP do_subassign_dflt_seq
     UNPROTECT(3);
     if (!isList(x)) SET_NAMEDCNT_0(x);
     if(S4) SET_S4_OBJECT(x);
+
     return x;
 }
 
@@ -1278,20 +1265,12 @@ static SEXP do_subassign2_dflt_int
 
 static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    R_static_box_contents y_contents;
     SEXP ans;
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
-        SEXP y = R_fast_sub_value; /* may be a static box */
+        SEXP y = R_fast_sub_value; /* may be on the scalar stack */
         SEXP x = R_fast_sub_into;
-        if (IS_STATIC_BOX(y)) {
-            /* save value here on stack, since box may be used in later evals */
-            SAVE_STATIC_BOX_CONTENTS(y,&y_contents);
-        }
         args = evalList(args,rho);
-        if (IS_STATIC_BOX(y)) {
-            RESTORE_STATIC_BOX_CONTENTS(y,&y_contents);
-        }
         return do_subassign2_dflt_int (call, x, args, rho, y);
     }
 
@@ -1325,7 +1304,7 @@ static SEXP do_subassign2_dflt_int
     PROTECT(x);
     if (y == R_NoObject)
         SubAssignArgs (&subs, &y, call);
-    else if (IS_STATIC_BOX(y) && TYPEOF(y) != TYPEOF(x))
+    else if (ON_SCALAR_STACK(y) && TYPEOF(y) != TYPEOF(x))
         y = duplicate(y);
     PROTECT(y);
 
@@ -1570,7 +1549,7 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     int argsevald = 0;
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
-        value = R_fast_sub_value; /* may be a static box */
+        value = R_fast_sub_value; /* may be on scalar stack */
         into = R_fast_sub_into;
         what = CAR(args);
         if (args == R_NilValue || CDR(args) != R_NilValue)
@@ -1660,7 +1639,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
     PROTECT_INDEX pvalidx, pxidx;
     Rboolean S4; SEXP xS4 = R_NilValue;
 
-    if (IS_STATIC_BOX(val))   /* currently, never puts value in atomic vector */
+    if (ON_SCALAR_STACK(val)) /* currently, never puts value in atomic vector */
         val = duplicate(val);
 
     WAIT_UNTIL_COMPUTED(x);

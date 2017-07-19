@@ -111,6 +111,9 @@ static SEXP applyMethod (SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho,
                          int variant)
 {
     SEXP ans;
+
+    variant &= ~ VARIANT_SCALAR_STACK_OK;
+
     if (TYPEOF(op) == SPECIALSXP) {
 	int save = R_PPStackTop;
 	const void *vmax = VMAXGET();

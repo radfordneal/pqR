@@ -200,20 +200,6 @@ extern0 SEXP	R_UnderscoreString;   /* "_", as a CHARSXP */
 /* Test whether this is a constant object (defined in const-objs.c). */
 #define IS_CONSTANT(x) (sggc_is_constant(CPTR_FROM_SEXP(x)))
 
-/* Test if this is a static box object (which are defined in const-objs.c). */
-
-#define IS_STATIC_BOX(x) \
-  (SGGC_SEGMENT_INDEX(CPTR_FROM_SEXP(x)) == R_SGGC_STATIC_BOXES_INDEX)
-
-/* Stuff for saving static boxes, if doing another eval */
-typedef union { int i; double r; } R_static_box_contents;
-#define SAVE_STATIC_BOX_CONTENTS(x,c) \
-  (TYPEOF(x) == INTSXP ? ((c)->i = *INTEGER(x)) : ((c)->r = *REAL(x)))
-#define RESTORE_STATIC_BOX_CONTENTS(x,c) \
-  (TYPEOF(x) == INTSXP ? (*INTEGER(x) = (c)->i) : (*REAL(x) = (c)->r))
-#define SWITCH_TO_BOX0(x) \
-  (*(x) == R_ScalarIntegerBox ? (*(x) = R_ScalarIntegerBox0) : \
-   *(x) == R_ScalarRealBox ? (*(x) = R_ScalarRealBox0) : R_NoObject)
 
 #ifdef USE_RINTERNALS
 # define IS_BYTES(x) (UPTR_FROM_SEXP(x)->sxpinfo.gp & BYTES_MASK)
@@ -624,11 +610,11 @@ typedef struct {
                                      Usually OR with VARIANT_PENDING_OK. Will OR
                                      R_variant_result with VARIANT_RTN_FLAG. */
 
-#define VARIANT_STATIC_BOX_OK 0x0800 /* May return the result in a statically
-                                        allocated SEXPREC that is used for all
-                                        returns of values of its type.  Value
-                                        in box never has computation pending.
-                                        Does not set R_variant_result. */
+#define VARIANT_SCALAR_STACK_OK 0x0800 /* May return the result on the scalar
+                                          stack; caller is responsible for 
+                                          removing it. Values on the stack never
+                                          have their computation pending.
+                                          Does not set R_variant_result. */
 
 #define VARIANT_ANY_ATTR 0x1000  /* May return any (or no) attributes, since the
                                     attributes will be ignored by the caller,
@@ -829,6 +815,7 @@ typedef struct RCNTXT {
 #endif
     SEXP srcref;	        /* The source line in effect */
     const struct R_local_protect *local_pr;  /* linked list of protected vars */
+    SEXP scalar_stack;          /* Next unused position on scalar stack */
 } RCNTXT, *context;
 
 /* The Various Context Types.
@@ -981,6 +968,9 @@ LibExtern int	R_Is_Running;	    /* for Windows memory manager */
 #define R_PPStackSize R_high_frequency_globals.PPStackSize
 #define R_PPStackTop R_high_frequency_globals.PPStackTop
 #define R_PPStack R_high_frequency_globals.PPStack
+
+/* The scalar stack. */
+#define R_scalar_stack R_high_frequency_globals.scalar_stack
 
 /* Evaluation Environment */
 LibExtern SEXP	R_CurrentExpr;	    /* Currently evaluating expression */
@@ -1981,6 +1971,11 @@ static inline int SEQL(SEXP a, SEXP b)
     return result;
 }
 
+
+/* Macros to assist with primitive functions. */
+
+#define NO_ATTRIBUTES_OK(v,o) \
+  (!HAS_ATTRIB(o) || (((v) & VARIANT_ANY_ATTR) && !isObject(o)))
 
 /* Macro to quickly handle special case of no alloc for R_AllocStringBuffer. */
 

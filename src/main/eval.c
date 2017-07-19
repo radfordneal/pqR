@@ -41,9 +41,13 @@
 #include <Rinterface.h>
 #include <Fileio.h>
 
+#include "scalar-stack.h"
 #include "arithmetic.h"
 
 #include <helpers/helpers-app.h>
+
+
+#define SCALAR_STACK_DEBUG 0
 
 
 /* Inline version of findFun, meant to be fast when a special symbol is found 
@@ -579,6 +583,10 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
     else if ((typeof_e = TYPEOF(e)) == LANGSXP) {
 
+#       if SCALAR_STACK_DEBUG
+            SEXP sv_stack = R_scalar_stack;
+#       endif
+
         SEXP fn = CAR(e), args = CDR(e);
 
         if (TYPEOF(fn) == SYMSXP)
@@ -600,7 +608,6 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
             R_Visible = TRUE;
 
-            /* op is protected by PrimCache (see mkPRIMSXP). */
             if (TYPEOF(op) == SPECIALSXP)
                 res = CALL_PRIMFUN (e, op, args, rho, variant);
             else if (TYPEOF(op) == BUILTINSXP)
@@ -615,6 +622,16 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             CHECK_STACK_BALANCE(op, save);
             VMAXSET(vmax);
         }
+
+#       if SCALAR_STACK_DEBUG
+            if (variant & VARIANT_SCALAR_STACK_OK) {
+                if (R_scalar_stack != sv_stack && (res != sv_stack 
+                      || SCALAR_STACK_OFFSET(1) != sv_stack)) abort();
+            }
+            else {
+                if (R_scalar_stack != sv_stack) abort();
+            }
+#       endif
     }
 
     else if (typeof_e == SYMSXP) {  /* Must be ... or ..1, ..2, etc. */
@@ -655,15 +672,16 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
     R_EvalDepth -= 1;
 
-#   if 0  /* Enable for debug output after typing STATIC.BOX.DEBUG */
-
-    if (IS_STATIC_BOX(res) 
-         && installed_already("STATIC.BOX.DEBUG") != R_No_object)
-    { REprintf("STATIC BOX RETURNED: %s %f\n",
-        TYPEOF(res)==INTSXP ? "int" : "real",
-        TYPEOF(res)==INTSXP ? (double)*INTEGER(res) : *REAL(res));
-    }
-
+#   if SCALAR_STACK_DEBUG /* Get debug output after typing SCALAR.STACK.DEBUG */
+        if (ON_SCALAR_STACK(res) 
+             && installed_already("SCALAR.STACK.DEBUG") != R_NoObject)
+        { REprintf("SCALAR STACK VALUE RETURNED: %llx %llx %llx %s %f\n",
+            (long long) R_scalar_stack_start,
+            (long long) res, 
+            (long long) R_scalar_stack,
+            TYPEOF(res)==INTSXP ? "int" : "real",
+            TYPEOF(res)==INTSXP ? (double)*INTEGER(res) : *REAL(res));
+        }
 #   endif
 
     return res;
@@ -1318,7 +1336,11 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     Cond = CAR(args); args = CDR(args);
     Stmt = CAR(args); args = CDR(args);
 
-    if (!asLogicalNoNA (evalv(Cond,rho,VARIANT_STATIC_BOX_OK), call)) {
+    SEXP condval = evalv (Cond, rho, VARIANT_SCALAR_STACK_OK);
+    int condlogical = asLogicalNoNA (condval, call);
+    POP_IF_TOP_OF_STACK(condval);
+
+    if (!condlogical) {
         /* go to else part */
         if (args != R_NilValue)
             Stmt = CAR(args);
@@ -1653,8 +1675,12 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 		 R_NilValue);
 
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) { /* <- back here for "next" */
-	while (asLogicalNoNA 
-                 (evalv (CAR(args), rho, VARIANT_STATIC_BOX_OK), call)) {
+        for (;;) {
+            SEXP condval = evalv (CAR(args), rho, VARIANT_SCALAR_STACK_OK);
+            int condlogical = asLogicalNoNA (condval, call);
+            POP_IF_TOP_OF_STACK(condval);
+            if (!condlogical) 
+                break;
 	    DO_LOOP_RDEBUG(call, op, body, rho, bgn);
 	    evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
 	}
@@ -2051,7 +2077,7 @@ static SEXP installAssignFcnName(SEXP fun)
     /* Handle "[", "[[", and "$" specially for speed. */
 
     if (fun == R_BracketSymbol)
-        return R_SubAssignSymbol;
+       return R_SubAssignSymbol;
 
     if (fun == R_Bracket2Symbol)
         return R_SubSubAssignSymbol;
@@ -2272,10 +2298,10 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 local_assign = VARIANT_LOCAL_ASSIGN2;
         }
 
-        /* Evaluate the right hand side, asking for it in a static box. */
+        /* Evaluate the right hand side, asking for it on the scalar stack. */
 
         rhs = EVALV (rhs, rho, 
-                     local_assign | VARIANT_PENDING_OK | VARIANT_STATIC_BOX_OK);
+               local_assign | VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK);
 
         /* See if the assignment was done by the rhs operator. */
 
@@ -2284,12 +2310,13 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             goto done;
         }
 
-        /* Try to copy the value, not assign the object, if the rhs is scalar
-           and doesn't have zero NAMEDCNT (for which assignment would be free). 
-           This will copy from a static box, which must be replaced by a regular
-           value if the copy can't be done.  If the copy can't be done, but 
-           a binding cell was found here, the assignment is done directly into
-           the binding cell, avoiding overhead of calling set_var_in_frame.
+        /* Try to copy the value, not assign the object, if the rhs is
+           scalar and doesn't have zero NAMEDCNT (for which assignment
+           would be free).  This will copy from the scalar stack,
+           which must be replaced by a regular value if the copy can't
+           be done.  If the copy can't be done, but a binding cell was
+           found here, the assignment is done directly into the binding 
+           cell, avoiding overhead of calling set_var_in_frame.
 
            Avoid accessing NAMEDCNT in a way that will cause unnecessary waits
            for task completion. */
@@ -2301,10 +2328,11 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                   || BINDING_IS_LOCKED((R_binding_cell = LASTSYMBINDING(lhs)))
                   || (v = CAR(R_binding_cell)) == R_UnboundValue)
                 v = findVarInFrame3_nolast (rho, lhs, 7);
-            if (v != R_UnboundValue  && TYPEOF(v) == rhs_type && LENGTH(v) == 1
+            if (v != R_UnboundValue && TYPEOF(v) == rhs_type && LENGTH(v) == 1
                  && ATTRIB(v) == ATTRIB(rhs) && TRUELENGTH(v) == TRUELENGTH(rhs)
                  && LEVELS(v) == LEVELS(rhs) && !NAMEDCNT_GT_1(v)) {
                 SET_NAMEDCNT_NOT_0(v);
+                POP_IF_TOP_OF_STACK(rhs);
                 helpers_wait_until_not_in_use(v);
                 WAIT_UNTIL_COMPUTED(v);
                 switch (rhs_type) {
@@ -2317,9 +2345,8 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 rhs = v; /* for return value */
                 goto done;
             }
-            if (IS_STATIC_BOX(rhs)) 
-                rhs = rhs==R_ScalarIntegerBox ? ScalarInteger(*INTEGER(rhs))
-                                              : ScalarReal(*REAL(rhs));
+            if (POP_IF_TOP_OF_STACK(rhs))
+                rhs = DUP_STACK_VALUE(rhs);
             if (R_binding_cell != R_NilValue) {
                 DEC_NAMEDCNT_AND_PRVALUE(v);
                 SETCAR(R_binding_cell, rhs);
@@ -2394,24 +2421,6 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                                     assgnfcn == R_DollarAssignSymbol ||
                                     assgnfcn == R_SubSubAssignSymbol);
 
-    /* We evaluate the right hand side now, asking for it in a static 
-       box if we (tentatively) will be using the fast interface (unless
-       value needed for return), and otherwise for pending computation. */
-
-    SEXP rhs_uneval = rhs;  /* save unevaluated rhs */
-    R_static_box_contents rhs_contents;
-
-    if (maybe_fast) {
-        PROTECT(rhs = EVALV (rhs, rho, 
-                        (variant & VARIANT_NULL) ? VARIANT_STATIC_BOX_OK : 0));
-        if (IS_STATIC_BOX(rhs)) {
-            /* save in case evaluation of varval uses the same static box */
-            SAVE_STATIC_BOX_CONTENTS(rhs,&rhs_contents); 
-        }
-    }
-    else
-        PROTECT(rhs = EVALV (rhs, rho, VARIANT_PENDING_OK));
-
     /* Debugging/comparison aid:  Can be enabled one way or the other below,
        then activated by typing `switch to old` or `switch to new` at the
        prompt. */
@@ -2419,6 +2428,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 #   if 0
         if (1 && installed_already("switch to new") == R_NoObect
          || 0 && installed_already("switch to old") != R_NoObject) {
+
+            PROTECT(rhs = EVALV (rhs, rho, VARIANT_PENDING_OK));
 
             if ( ! (variant & VARIANT_NULL))
                 INC_NAMEDCNT(rhs);
@@ -2432,6 +2443,21 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             goto done;
         }
 #   endif
+
+    /* We evaluate the right hand side now, asking for it on the
+       scalar stack if we (tentatively) will be using the fast
+       interface (unless value needed for return, and not allowed on
+       scalar stack), and otherwise for pending computation. */
+
+    SEXP rhs_uneval = rhs;  /* save unevaluated rhs */
+
+    if (maybe_fast) {
+        PROTECT(rhs = EVALV (rhs, rho, 
+          (variant & (VARIANT_SCALAR_STACK_OK | VARIANT_NULL)) ? 
+             VARIANT_SCALAR_STACK_OK : 0));
+    }
+    else
+        PROTECT(rhs = EVALV (rhs, rho, VARIANT_PENDING_OK));
 
     /* Increment NAMEDCNT temporarily if rhs will be needed as the value,
        to protect it from being modified by the assignment, or otherwise. */
@@ -2486,9 +2512,6 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
         SEXP fn;
 
-        if (IS_STATIC_BOX(rhs))
-            RESTORE_STATIC_BOX_CONTENTS(rhs,&rhs_contents); 
-
         if (maybe_fast && !isObject(varval) && CADDR(lhs) != R_DotsSymbol
               && (fn = FINDFUN(assgnfcn,rho), 
                   TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
@@ -2502,7 +2525,9 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
         }
         else {
             PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
-            SET_PRVALUE(rhsprom, IS_STATIC_BOX(rhs) ? duplicate(rhs) : rhs);
+            if (POP_IF_TOP_OF_STACK(rhs)) 
+                rhs = DUP_STACK_VALUE(rhs);
+            SET_PRVALUE (rhsprom, rhs);
             PROTECT (lhsprom = mkPROMISE(CADR(lhs), rho));
             SET_PRVALUE (lhsprom, varval);
             PROTECT(e = replaceCall (assgnfcn, lhsprom, CDDR(lhs), rhsprom));
@@ -2601,6 +2626,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
            The new value at the outermost level is the rhs value. */
         
         PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
+        if (POP_IF_TOP_OF_STACK(rhs)) 
+            rhs = DUP_STACK_VALUE(rhs);
         SET_PRVALUE(rhsprom, rhs);
         s[0].in_next = 0;
 
@@ -2679,10 +2706,14 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             set_var_in_frame (var, newval, rho, TRUE, 3);
     }
 
-    if ( ! (variant & VARIANT_NULL))
+    if (variant & VARIANT_NULL) {
+        POP_IF_TOP_OF_STACK(rhs);
+        return R_NilValue;
+    }
+    else {
         DEC_NAMEDCNT(rhs);
-
-    return rhs;
+        return rhs;
+    }
 }
 
 

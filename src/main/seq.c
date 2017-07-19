@@ -37,6 +37,8 @@
 #include <float.h>  /* for DBL_EPSILON */
 #include <Rmath.h>
 
+#include "scalar-stack.h"
+
 #include <helpers/helpers-app.h>
 
 #include "RBufferUtils.h"
@@ -1069,6 +1071,8 @@ static SEXP do_fast_seq_len (SEXP call, SEXP op, SEXP arg, SEXP rho,
 	warningcall(call, _("first element used of '%s' argument"),
 		    "length.out");
 
+    POP_IF_TOP_OF_STACK(arg);
+
     return make_seq (1, len, variant, 0);
 }
 
@@ -1103,6 +1107,6 @@ attribute_hidden FUNTAB R_FunTab_seq[] =
 attribute_hidden FASTFUNTAB R_FastFunTab_seq[] = {
 /*slow func	fast func,     code or -1   dsptch  variant */
 
-{ do_seq_len,	do_fast_seq_len,-1,		0,  VARIANT_STATIC_BOX_OK },
+{ do_seq_len,	do_fast_seq_len,-1,		0,  VARIANT_SCALAR_STACK_OK },
 { 0,		0,		0,		0,  0 }
 };

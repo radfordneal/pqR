@@ -36,7 +36,7 @@
 
 #include <helpers/helpers-app.h>
 
-#include "static-boxes.h"  /* for inline static_box_eval2 function */
+#include "scalar-stack.h"
 
 
 /* MACROS FOR BUILDING PROCEDURES THAT DO THE RELATIONAL OPERATIONS.  
@@ -927,7 +927,7 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 }
 
 
-/* MAIN PART OF IMPLMENTATION OF RELATIONAL OPERATORS.  Called from
+/* MAIN PART OF IMPLEMENTATION OF RELATIONAL OPERATORS.  Called from
    do_relop below, and from elsewhere. */
 
 #define T_relop THRESHOLD_ADJUST(24) 
@@ -984,12 +984,14 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
     int ny = (ATOMIC_VECTOR_TYPES >> typeof_y) & 1 ? LENGTH(y) : length(y);
     int n = nx>ny ? nx : ny;
 
-    /* Handle integer/logical/real vectors that have no attributes quickly. */ 
+    /* Handle integer/logical/real vectors that have no attributes (or whose
+       attributes we will ignore) quickly. */ 
 
     if ((typeof_x == REALSXP || typeof_x == INTSXP)
           && (typeof_y == REALSXP || typeof_y == INTSXP)
-          && !HAS_ATTRIB(x) && !HAS_ATTRIB(y) 
-          && nx > 0 && ny > 0) {
+          && nx > 0 && ny > 0
+          && ((variant & VARIANT_ANY_ATTR) != 0
+                || !HAS_ATTRIB(x) && !HAS_ATTRIB(y))) {
 
         /* Handle scalars even quicker using ScalarLogicalMaybeConst. */
     
@@ -1201,13 +1203,13 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
             return ans;
         case VARIANT_SUM:
             PROTECT(ans = allocVector1INT());
-            if (IS_STATIC_BOX(x) && IS_STATIC_BOX(y)) {
+            if (ON_SCALAR_STACK(x) && ON_SCALAR_STACK(y)) {
                 PROTECT(x = duplicate(x));
                 y = duplicate(y);
                 UNPROTECT(1);
             }
-            else if (IS_STATIC_BOX(x)) x = duplicate(x);
-            else if (IS_STATIC_BOX(y)) y = duplicate(y);
+            else if (ON_SCALAR_STACK(x)) x = duplicate(x);
+            else if (ON_SCALAR_STACK(y)) y = duplicate(y);
             DO_NOW_OR_LATER2 (variant, n >= T_relop, 0, task_relop_sum, codeop, 
                               ans, x, y);
             if (xts || yts) UNPROTECT(2);
@@ -1215,13 +1217,13 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
             return ans;
         default:
             PROTECT(ans = allocVector(LGLSXP,n));
-            if (IS_STATIC_BOX(x) && IS_STATIC_BOX(y)) {
+            if (ON_SCALAR_STACK(x) && ON_SCALAR_STACK(y)) {
                 PROTECT(x = duplicate(x));
                 y = duplicate(y);
                 UNPROTECT(1);
             }
-            else if (IS_STATIC_BOX(x)) x = duplicate(x);
-            else if (IS_STATIC_BOX(y)) y = duplicate(y);
+            else if (ON_SCALAR_STACK(x)) x = duplicate(x);
+            else if (ON_SCALAR_STACK(y)) y = duplicate(y);
             DO_NOW_OR_LATER2 (variant, n >= T_relop, 0, task_relop, codeop, 
                               ans, x, y);
             break;
@@ -1230,22 +1232,24 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
 
     /* Tack on dims, names, ts stuff, if necessary. */
 
-    if (dims != R_NilValue) {
-        setAttrib(ans, R_DimSymbol, dims);
-        if (xnames != R_NilValue)
-            setAttrib(ans, R_DimNamesSymbol, xnames);
-        else if (ynames != R_NilValue)
-            setAttrib(ans, R_DimNamesSymbol, ynames);
-    }
-    else if (xnames != R_NilValue && LENGTH(ans) == LENGTH(xnames))
-        setAttrib(ans, R_NamesSymbol, xnames);
-    else if (ynames != R_NilValue && LENGTH(ans) == LENGTH(ynames))
-        setAttrib(ans, R_NamesSymbol, ynames);
-
-    if (xts || yts) {
-        setAttrib(ans, R_TspSymbol, tsp);
-        setAttrib(ans, R_ClassSymbol, klass);
-        UNPROTECT(2);
+    if (! (variant & VARIANT_ANY_ATTR)) {
+        if (dims != R_NilValue) {
+            setAttrib(ans, R_DimSymbol, dims);
+            if (xnames != R_NilValue)
+                setAttrib(ans, R_DimNamesSymbol, xnames);
+            else if (ynames != R_NilValue)
+                setAttrib(ans, R_DimNamesSymbol, ynames);
+        }
+        else if (xnames != R_NilValue && LENGTH(ans) == LENGTH(xnames))
+            setAttrib(ans, R_NamesSymbol, xnames);
+        else if (ynames != R_NilValue && LENGTH(ans) == LENGTH(ynames))
+            setAttrib(ans, R_NamesSymbol, ynames);
+    
+        if (xts || yts) {
+            setAttrib(ans, R_TspSymbol, tsp);
+            setAttrib(ans, R_ClassSymbol, klass);
+            UNPROTECT(2);
+        }
     }
 
     UNPROTECT(6);
@@ -1261,10 +1265,12 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXP argsevald, ans, x, y;
     int objx, objy;
 
-    /* Evaluate arguments, maybe putting them in static boxes. */
+    /* Evaluate arguments, maybe putting them on the scalar stack. */
+
+    SEXP sv_scalar_stack = R_scalar_stack;
 
     PROTECT(argsevald = 
-      static_box_eval2 (args, &x, &y, &objx, &objy, env, call, variant));
+      scalar_stack_eval2 (args, &x, &y, &objx, &objy, env, call, variant));
     PROTECT2(x,y);
 
     /* Check for dispatch on S3 or S4 objects. */
@@ -1281,8 +1287,14 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     checkArity(op,argsevald);
 
-    /* Arguments are now in x and y, and are protected.  They may be static
-       boxes. */
+    /* Arguments are now in x and y, and are protected.  They may be on
+       the scalar stack, but if so are popped off here (but retain their
+       values if eval is not called). */
+
+    /* Below does same as POP_IF_TOP_OF_STACK(y); POP_IF_TOP_OF_STACK(x);
+       but faster. */
+
+    R_scalar_stack = sv_scalar_stack;
 
     ans = R_relop (call, op, x, y, objx, objy, env, variant);
 

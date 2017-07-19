@@ -53,6 +53,8 @@
 #define USE_FAST_PROTECT_MACROS
 #include "Defn.h"
 
+#include "scalar-stack.h"
+
 #include <helpers/helpers-app.h>
 
 /* JMC convinced MM that this was not a good idea: */
@@ -894,7 +896,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
             suppress_drop[i] = CAR(r) == R_MissingArg ? MISSING(r) == 2
                                 : whether_suppress_drop(CAR(r));
         PROTECT (subv[i] = arraySubscript (i, CAR(r), xdims, getAttrib,
-                                       (STRING_ELT), x));
+                                           (STRING_ELT), x));
         subs[i] = INTEGER(subv[i]);
 	nsubs[i] = LENGTH(subv[i]);
         n *= nsubs[i];
@@ -1142,14 +1144,18 @@ static R_INLINE R_len_t simple_index (SEXP s)
 /* Look for the simple case of subscripting an atomic vector with one 
    valid integer or real subscript that is positive or negative (not zero, 
    NA, or out of bounds), with no dim attribute.  Returns the result, or 
-   R_NilValue if it's not so simple.  The arguments x and s do not need to 
-   be protected before this function is called.  It's OK for x to still be 
-   being computed. The variant for the return result is the last argument. */
+   R_NilValue if it's not so simple.  Return result may be on scalar stack,
+   if variant allows.
+
+   The arguments x and s do not need to be protected before this
+   function is called.  It's OK for x to still be being computed. The
+   variant for the return result is the last argument. */
 
 static inline SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
 {
     R_len_t ix, n;
     int typeofx;
+    SEXP r;
 
     typeofx = TYPEOF(x);
 
@@ -1173,17 +1179,13 @@ static inline SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
         case LGLSXP:  
             return ScalarLogicalMaybeConst (LOGICAL(x)[ix]);
         case INTSXP:  
-            if (variant & VARIANT_STATIC_BOX_OK) {
-                *INTEGER(R_ScalarIntegerBox) = INTEGER(x)[ix];
-                return R_ScalarIntegerBox;
-            }
+            if (CAN_USE_SCALAR_STACK(variant))
+                return PUSH_SCALAR_INTEGER(INTEGER(x)[ix]);
             else
                 return ScalarIntegerMaybeConst(INTEGER(x)[ix]);
         case REALSXP: 
-            if (variant & VARIANT_STATIC_BOX_OK) {
-                *REAL(R_ScalarRealBox) = REAL(x)[ix];
-                return R_ScalarRealBox;
-            }
+            if (CAN_USE_SCALAR_STACK(variant))
+                return PUSH_SCALAR_REAL(REAL(x)[ix]);
             else
                 return ScalarRealMaybeConst(REAL(x)[ix]);
         case RAWSXP:  
@@ -1198,7 +1200,6 @@ static inline SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
     else { /* ix < 0 */
 
         R_len_t ex;
-        SEXP r;
 
         WAIT_UNTIL_COMPUTED(x);
         PROTECT(x);
@@ -1256,6 +1257,7 @@ static inline SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2,
                                           int variant)
 {
     R_len_t ix1, ix2, nrow, ncol, avail, e;
+    SEXP r;
 
     if (!isVectorAtomic(x))
         return R_NilValue;
@@ -1281,17 +1283,13 @@ static inline SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2,
     case LGLSXP:  
         return ScalarLogicalMaybeConst (LOGICAL(x)[e]);
     case INTSXP:  
-        if (variant & VARIANT_STATIC_BOX_OK) {
-            *INTEGER(R_ScalarIntegerBox) = INTEGER(x)[e];
-            return R_ScalarIntegerBox;
-        }
+        if (CAN_USE_SCALAR_STACK(variant))
+            return PUSH_SCALAR_INTEGER(INTEGER(x)[e]);
         else
             return ScalarIntegerMaybeConst(INTEGER(x)[e]);
     case REALSXP: 
-        if (variant & VARIANT_STATIC_BOX_OK) {
-            *REAL(R_ScalarRealBox) = REAL(x)[e];
-            return R_ScalarRealBox;
-        }
+        if (CAN_USE_SCALAR_STACK(variant))
+            return PUSH_SCALAR_REAL(REAL(x)[e]);
         else
             return ScalarRealMaybeConst(REAL(x)[e]);
     case RAWSXP:  
@@ -1320,9 +1318,8 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
        and has one or two index arguments in total, evaluate the first index
        with VARIANT_SEQ, so it may come as a range rather than a vector, and 
        evaluate the array with VARIANT_PENDING_OK.  If there is just one
-       index, evaluate it with VARIANT_STATIC_BOX, so if scalar it can
-       arrive in a static box.  (We don't do this if evaluation of the remaining
-       arguments might also use this static box.) */
+       index, evaluate it with VARIANT_SCALAR_STACK, so if scalar it can
+       arrive on the scalar stack. */
 
     if (args != R_NilValue && CAR(args) != R_DotsSymbol) {
         SEXP array = CAR(args);
@@ -1345,7 +1342,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             int seq = 0;
             int avar = 
               remargs == R_NilValue 
-                ? VARIANT_SEQ | VARIANT_STATIC_BOX_OK 
+                ? VARIANT_SEQ | VARIANT_SCALAR_STACK_OK
                               | VARIANT_MISSING_OK 
                               | VARIANT_PENDING_OK :
               CDR(remargs) == R_NilValue 
@@ -1364,10 +1361,13 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             PROTECT(args = CONS(idx,remargs));
             if (idx == R_MissingArg && isSymbol(CAR(ixlist)))
                 SET_MISSING (args, R_isMissing(CAR(ixlist),rho));
+            else 
+                POP_IF_TOP_OF_STACK(idx);
             wait_until_arguments_computed(args);
             UNPROTECT(3);  /* args, array, idx */
-            return do_subset_dflt_seq (call, op, array, args, rho, 
-                                       variant, seq);
+            SEXP r = do_subset_dflt_seq (call, op, array, args, rho, 
+                                         variant, seq);
+            return r;
         }
     }
 

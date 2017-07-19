@@ -50,7 +50,7 @@ OBJECTS = $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o) @LIBOBJS@ @ALLOCA@
 HEADERS = \
 	RBufferUtils.h Rstrptime.h \
 	arithmetic.h \
-	static-boxes.h \
+	scalar-stack.h \
 	basedecl.h \
 	gzio.h \
 	par-common.c \

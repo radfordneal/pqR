@@ -58,6 +58,7 @@
  *	vmax		the current setting of the R_alloc stack
  *	srcref		the srcref at the time of the call
  *	local_pr        saved value of R_local_protect_start
+ *	scalar_stack    saved value of R_scalar_stack
  *
  *  Context types can be one of:
  *
@@ -117,6 +118,9 @@
 #define USE_FAST_PROTECT_MACROS
 #define R_USE_SIGNALS 1
 #include <Defn.h>
+
+#include "scalar-stack.h"
+
 
 /* R_run_onexits - runs the conexit/cend code for all contexts from
    R_GlobalContext down to but not including the argument context.
@@ -191,6 +195,7 @@ void attribute_hidden R_restore_globals(RCNTXT *cptr)
     R_BCIntStackTop = cptr->intstack;
 #endif
     R_local_protect_start = cptr->local_pr;
+    R_scalar_stack = cptr->scalar_stack;
 }
 
 
@@ -199,6 +204,9 @@ void attribute_hidden R_restore_globals(RCNTXT *cptr)
 static R_NORETURN void jumpfun(RCNTXT * cptr, int mask, SEXP val)
 {
     Rboolean savevis = R_Visible;
+
+    if (ON_SCALAR_STACK(val))
+        val = DUP_STACK_VALUE(val);
 
     /* run onexit/cend code for all contexts down to but not including
        the jump target */
@@ -258,6 +266,7 @@ void begincontext(RCNTXT * cptr, int flags,
 #endif
     cptr->srcref = R_Srcref;
     cptr->local_pr = R_local_protect_start;
+    cptr->scalar_stack = R_scalar_stack;
     R_GlobalContext = cptr;
 }
 
