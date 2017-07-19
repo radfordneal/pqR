@@ -34,37 +34,36 @@
 
 static SEXP do_debug(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans = R_NilValue;
-
     checkArity(op,args);
-#define find_char_fun \
-    if (isValidString(CAR(args))) {				\
-	SEXP s;							\
-	PROTECT(s = install(translateChar(STRING_ELT(CAR(args), 0))));	\
-	SETCAR(args, findFun(s, rho));				\
-	UNPROTECT(1);						\
-    }
-    find_char_fun
 
-    if (TYPEOF(CAR(args)) != CLOSXP && TYPEOF(CAR(args)) != SPECIALSXP 
-         &&  TYPEOF(CAR(args)) != BUILTINSXP )
-	errorcall(call, _("argument must be a closure"));
+    SEXP ans = R_NilValue;
+    SEXP fn = CAR(args);
+
+    if (isValidString(fn))
+        fn = findFun (install(translateChar(STRING_ELT(fn,0))), rho);
+
+    if (TYPEOF(fn) != CLOSXP && TYPEOF(fn) != SPECIALSXP 
+                             &&  TYPEOF(fn) != BUILTINSXP )
+        errorcall(call, _("argument must be a closure"));
+
     switch(PRIMVAL(op)) {
     case 0:
-	SET_RDEBUG(CAR(args), 1);
-	break;
+        SET_RDEBUG(fn, 1);
+        break;
     case 1:
-	if( RDEBUG(CAR(args)) != 1 )
-	    warningcall(call, "argument is not being debugged");
-	SET_RDEBUG(CAR(args), 0);
-	break;
+        if (RDEBUG(fn) == 0)
+            warningcall(call, _("argument is not being debugged"));
+        else
+            SET_RDEBUG(fn, 0);
+        break;
     case 2:
-        ans = ScalarLogical(RDEBUG(CAR(args)));
+        ans = ScalarLogical(RDEBUG(fn));
         break;
     case 3:
-        SET_RSTEP(CAR(args), 1);
+        SET_RSTEP(fn, 1);
         break;
     }
+
     return ans;
 }
 
@@ -72,22 +71,23 @@ static SEXP do_debug(SEXP call, SEXP op, SEXP args, SEXP rho)
 static SEXP do_trace(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
-    check1arg_x (args, call);
 
-    find_char_fun
+    SEXP fn = CAR(args);
 
-    if (TYPEOF(CAR(args)) != CLOSXP &&
-	TYPEOF(CAR(args)) != BUILTINSXP &&
-	TYPEOF(CAR(args)) != SPECIALSXP)
-	    errorcall(call, _("argument must be a function"));
+    if (isValidString(fn))
+        fn = findFun (install(translateChar(STRING_ELT(fn,0))), rho);
+
+    if (TYPEOF(fn) != CLOSXP && TYPEOF(fn) != BUILTINSXP
+                             && TYPEOF(fn) != SPECIALSXP)
+        error(_("argument must be a function"));
 
     switch(PRIMVAL(op)) {
     case 0:
-	SET_RTRACE(CAR(args), 1);
-	break;
+        SET_RTRACE(fn, 1);
+        break;
     case 1:
-	SET_RTRACE(CAR(args), 0);
-	break;
+        SET_RTRACE(fn, 0);
+        break;
     }
 
     R_Visible = FALSE;
@@ -160,10 +160,10 @@ attribute_hidden FUNTAB R_FunTab_debug[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"debug",	do_debug,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	  0}},
+{"debug",	do_debug,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {"undebug",	do_debug,	1,	111,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {"isdebugged",	do_debug,	2,	11,	1,	{PP_FUNCALL, PREC_FN,	  0}},
-{"debugonce",	do_debug,	3,	111,	3,	{PP_FUNCALL, PREC_FN,	  0}},
+{"debugonce",	do_debug,	3,	111,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {".primTrace",	do_trace,	0,	101,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {".primUntrace",do_trace,	1,	101,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {"tracemem",    do_tracemem,    0,      1,	1,      {PP_FUNCALL, PREC_FN,	0}},
