@@ -542,16 +542,15 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
     __asm__ ( "fninit" );
 #endif
 
-    SEXPTYPE typeof_e = TYPEOF(e);
+    SEXPTYPE typeof_e;
 
-    if (typeof_e == SYMSXP) {
-
-	if (e == R_DotsSymbol)
-	    dotdotdot_error();
+    if (SYM_NO_DOTS(e)) {
 
         R_Visible = TRUE;  /* May be set FALSE by active binding / lazy eval */
 
-	res = DDVAL(e) ? ddfindVar(e,rho) : FIND_VAR_PENDING_OK (e, rho);
+	res = FIND_VAR_PENDING_OK (e, rho);
+
+      symbol:  /* can also get here for ..1, ..2, etc., from below */
 
 	if (res == R_UnboundValue)
             unbound_var_error(e);
@@ -572,14 +571,13 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
            somewhere, or from a save/load sequence (since loaded values in
            promises have NAMEDCNT of 0), so fix up here... */
 
-        if (NAMEDCNT_EQ_0(res))
-            SET_NAMEDCNT_1(res);
+        SET_NAMEDCNT_NOT_0(res);
 
         if ( ! (variant & VARIANT_PENDING_OK))
             WAIT_UNTIL_COMPUTED(res);
     }
 
-    else if (typeof_e == LANGSXP) {
+    else if ((typeof_e = TYPEOF(e)) == LANGSXP) {
 
         SEXP fn = CAR(e), args = CDR(e);
 
@@ -617,6 +615,18 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
             CHECK_STACK_BALANCE(op, save);
             VMAXSET(vmax);
         }
+    }
+
+    else if (typeof_e == SYMSXP) {  /* Must be ... or ..1, ..2, etc. */
+
+	if (e == R_DotsSymbol)
+	    dotdotdot_error();
+
+        R_Visible = TRUE;  /* May be set FALSE by active binding / lazy eval */
+
+	res = ddfindVar(e,rho);
+
+        goto symbol;
     }
 
     else if (typeof_e == PROMSXP) {
@@ -1706,7 +1716,9 @@ static R_NORETURN SEXP do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
    Care is taken to allow (...) when ... is bound to exactly one argument, 
    though it is debatable whether this should be considered valid. 
 
-   The eval variant requested is passed on to the inner expression. */
+   The eval variant requested is passed on to the inner expression. 
+
+   EVALV is not used because expr in parents unlikely to be const or symbol. */
 
 static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
@@ -1719,7 +1731,7 @@ static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (args == R_NilValue || CDR(args) != R_NilValue)
         checkArity(op, args);
 
-    return EVALV (CAR(args), rho, VARIANT_PASS_ON(variant));
+    return evalv (CAR(args), rho, VARIANT_PASS_ON(variant));
 }
 
 /* Curly brackets.  Passes on the eval variant to the last expression.  For
@@ -2234,7 +2246,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         /* Handle <<- without trying the optimizations done below. */
 
         if (opval == 2) {
-            rhs = EVALV (rhs, rho, VARIANT_PENDING_OK);
+            rhs = evalv (rhs, rho, VARIANT_PENDING_OK);
             set_var_nonlocal (lhs, rhs, ENCLOS(rho), 3);
             goto done;
         }
@@ -2292,8 +2304,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             if (v != R_UnboundValue  && TYPEOF(v) == rhs_type && LENGTH(v) == 1
                  && ATTRIB(v) == ATTRIB(rhs) && TRUELENGTH(v) == TRUELENGTH(rhs)
                  && LEVELS(v) == LEVELS(rhs) && !NAMEDCNT_GT_1(v)) {
-                if (NAMEDCNT_EQ_0(v))
-                    SET_NAMEDCNT_1(v);
+                SET_NAMEDCNT_NOT_0(v);
                 helpers_wait_until_not_in_use(v);
                 WAIT_UNTIL_COMPUTED(v);
                 switch (rhs_type) {
@@ -2445,8 +2456,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             }
         }
     }
-    if (NAMEDCNT_EQ_0(varval)) /* may sometime happen - should mean 1 */
-        SET_NAMEDCNT_1(varval);
+
+    SET_NAMEDCNT_NOT_0(varval); /* 0 may sometime happen - should mean 1 */
 
     SEXP bcell = R_binding_cell;
     PROTECT(bcell);
@@ -2566,8 +2577,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                later (even if the increment is later undone).  Making sure
                that NAMEDCNT isn't zero seems to be sufficient. */
 
-            if (NAMEDCNT_EQ_0(s[d+1].value)) 
-                SET_NAMEDCNT_1(s[d+1].value);
+            SET_NAMEDCNT_NOT_0(s[d+1].value);
 
             e = LCONS (CAR(s[d].expr), CONS (prom, s[d].fetch_args));
             PROTECT(e);
@@ -2660,8 +2670,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
     if (bcell != R_NilValue && CAR(bcell) == newval) {
         SET_MISSING(bcell,0);
         /* The replacement function might have changed NAMEDCNT to 0. */
-        if (NAMEDCNT_EQ_0(varval))
-            SET_NAMEDCNT_1(varval);
+        SET_NAMEDCNT_NOT_0(varval);
     }
     else {
         if (opval == 2) /* <<- */
@@ -2707,7 +2716,7 @@ SEXP attribute_hidden evalList_v(SEXP el, SEXP rho, int variant)
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
-                    ev = cons_with_tag (EVALV (CAR(h), rho, variant),
+                    ev = cons_with_tag (evalv (CAR(h), rho, variant),
                                         R_NilValue, TAG(h));
                     if (head==R_NilValue)
                         head = ev;
@@ -2786,8 +2795,7 @@ static inline SEXP eval_unshared (SEXP e, SEXP rho, int variant)
                 SETCAR (R_binding_cell, res);
                 /* DON'T clear MISSING, though may not get here if it matters */
             }
-            if (NAMEDCNT_EQ_0(res))
-                SET_NAMEDCNT_1(res);
+            SET_NAMEDCNT_NOT_0(res);
         }
     }
 
@@ -4361,8 +4369,7 @@ static R_INLINE SEXP getddvar(SEXP symbol, SEXP rho, Rboolean keepmiss)
     if (value == R_MissingArg && !keepmiss)
 	arg_missing_error(symbol);
 
-    if (NAMEDCNT_EQ_0(value))
-	SET_NAMEDCNT_1(value);
+    SET_NAMEDCNT_NOT_0(value);
 
     return value;
 }
@@ -4397,8 +4404,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho, Rboolean keepmiss,
     if (value == R_MissingArg && !keepmiss)
 	arg_missing_error(symbol);
 
-    if (NAMEDCNT_EQ_0(value))
-	SET_NAMEDCNT_1(value);
+    SET_NAMEDCNT_NOT_0(value);
 
     return value;
 }
@@ -4425,9 +4431,8 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho, Rboolean keepmiss,
 	case REALSXP: \
 	case INTSXP: \
 	case LGLSXP: \
-	    /* may be ok to skip this test: */ \
-	    if (NAMEDCNT_EQ_0(value)) \
-		SET_NAMEDCNT_1(value); \
+	    /* may be ok to skip this: */ \
+	    SET_NAMEDCNT_NOT_0(value); \
 	    R_Visible = TRUE; \
 	    BCNPUSH(value); \
 	    NEXT(); \
@@ -4443,8 +4448,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho, Rboolean keepmiss,
 		    }							\
 		    else value = pv;					\
 		}							\
-		else if (NAMEDCNT_EQ_0(value))				\
-		    SET_NAMEDCNT_1(value);				\
+		SET_NAMEDCNT_NOT_0(value);				\
 		R_Visible = TRUE;					\
 		BCNPUSH(value);						\
 		NEXT();							\

@@ -1,3 +1,7 @@
 Speed up check in eval for ..., ..1, ..2, etc., by dedicating
 a bit in sxpinfo to flagging symbols that are not ..., ..1, etc.
 
+Also, defines and uses SET_NAMEDCNT_NOT_0 to set to 1 if 0 without
+waiting to not be used by helpers.
+
+Uses EVALV more sparingly.

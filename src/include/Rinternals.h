@@ -637,8 +637,14 @@ extern void helpers_wait_until_not_in_use(SEXP);
 ( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt > 1 ? 1 : !helpers_is_in_use(x) ? 0 \
     : (helpers_wait_until_not_in_use(x), 0) )
 
-#define SET_NAMEDCNT_0(x)    (UPTR_FROM_SEXP(x)->sxpinfo.nmcnt = 0)
-#define SET_NAMEDCNT_1(x)    (UPTR_FROM_SEXP(x)->sxpinfo.nmcnt = 1)
+#define SET_NAMEDCNT_0(x)     (UPTR_FROM_SEXP(x)->sxpinfo.nmcnt = 0)
+#define SET_NAMEDCNT_1(x)     (UPTR_FROM_SEXP(x)->sxpinfo.nmcnt = 1)
+
+#define SET_NAMEDCNT_NOT_0(x) do { /* if 0, change to 1, without waiting */ \
+    SEXPREC *_p_ = UPTR_FROM_SEXP(x); \
+    if (_p_->sxpinfo.nmcnt == 0) \
+        _p_->sxpinfo.nmcnt = 1; \
+  } while (0)
 
 /* Be careful not to write to an object with NAMEDCNT equal to MAX_NAMEDCNT, 
    even if the new value is also MAX_NAMEDCNT, since it might be a constant 

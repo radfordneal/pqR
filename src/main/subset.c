@@ -1624,8 +1624,7 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho,
             else {
                 if (TYPEOF(ans) == PROMSXP)
                     ans = forcePromise(ans);
-                if (NAMEDCNT_EQ_0(ans))
-                    SET_NAMEDCNT_1(ans);
+                SET_NAMEDCNT_NOT_0(ans);
             }
         }
         UNPROTECT(2);
@@ -1714,8 +1713,8 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho,
         SET_NAMEDCNT_MAX(ans);
     } else if (isVectorList(x)) {
 	ans = VECTOR_ELT(x, offset);
-	if (max_named > 0 && NAMEDCNT_EQ_0(ans))
-            SET_NAMEDCNT_1(ans);
+	if (max_named > 0)
+            SET_NAMEDCNT_NOT_0(ans);
         if (VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET 
              && max_named <= 1 && !NAMEDCNT_GT_1(ans))
             R_variant_result = 1;
@@ -1942,8 +1941,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
              if (TYPEOF(y) == PROMSXP)
                  y = forcePromise(y);
              else {
-                 if (NAMEDCNT_EQ_0(y))
-                     SET_NAMEDCNT_1(y);
+                 SET_NAMEDCNT_NOT_0(y);
                  if (VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET
                        && !NAMEDCNT_GT_1(y))
                      R_variant_result = R_binding_cell == R_NilValue ? 2 : 1;

@@ -1800,14 +1800,13 @@ static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
 
 #       if (R_EVAL_TWEAKS/100)%10 > 1
 
-            if (TYPEOF(e) == SYMSXP && e != R_DotsSymbol && !DDVAL(e)) {
+            if (SYM_NO_DOTS(e)) {
                 if (LASTSYMENV(e) == SEXP32_FROM_SEXP(rho)) {
                     SEXP res = CAR(LASTSYMBINDING(e));
                     if (TYPEOF(res) == PROMSXP) 
                         res = PRVALUE_PENDING_OK(res);
                     if (res != R_MissingArg && res != R_UnboundValue) {
-                        if (NAMEDCNT_EQ_0(res))
-                            SET_NAMEDCNT_1(res);
+                        SET_NAMEDCNT_NOT_0(res);
                         if ( ! (variant & VARIANT_PENDING_OK))
                             WAIT_UNTIL_COMPUTED(res);
                         R_Visible = TRUE;

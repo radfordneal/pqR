@@ -2133,8 +2133,7 @@ static SEXP do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (TYPEOF(rval) == PROMSXP)
 	    rval = forcePromise(rval);
 
-	if (NAMEDCNT_EQ_0(rval))
-	    SET_NAMEDCNT_1(rval);
+	SET_NAMEDCNT_NOT_0(rval);
 	return rval;
     }
     else /* exists(.) */
@@ -2163,8 +2162,7 @@ static SEXP gfind(const char *name, SEXP env, SEXPTYPE mode,
 
     /* We need to evaluate if it is a promise */
     if (TYPEOF(rval) == PROMSXP) rval = forcePromise(rval);
-    if (NAMEDCNT_EQ_0(rval)) 
-        SET_NAMEDCNT_1(rval);
+    SET_NAMEDCNT_NOT_0(rval);
     return rval;
 }
 
