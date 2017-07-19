@@ -14,10 +14,8 @@
 #  A copy of the GNU General Public License is available at
 #  http://www.r-project.org/Licenses/
 
-debug <- function(fun, text="", condition=NULL)
-    .Internal(debug(fun, text, condition))
-debugonce <- function(fun, text="", condition=NULL)
-    .Internal(debugonce(fun, text, condition))
+debug <- function(fun) .Internal(debug(fun))
+debugonce <- function(fun) .Internal(debugonce(fun))
 undebug <- function(fun) .Internal(undebug(fun))
 isdebugged <- function(fun) .Internal(isdebugged(fun))
 
