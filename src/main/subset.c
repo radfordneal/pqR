@@ -1338,25 +1338,22 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                                        variant, 0);
         }
         else {
+            SEXP sv_scalar_stack = R_scalar_stack;
             SEXP remargs = CDR(ixlist);
             int seq = 0;
-            int avar = 
-              remargs == R_NilValue 
-                ? VARIANT_SEQ | VARIANT_SCALAR_STACK_OK
-                              | VARIANT_MISSING_OK 
-                              | VARIANT_PENDING_OK :
-              CDR(remargs) == R_NilValue 
-                ? VARIANT_SEQ | VARIANT_MISSING_OK
-                              | VARIANT_PENDING_OK
-                : VARIANT_MISSING_OK;
             SEXP idx;
-            PROTECT (idx = evalv (CAR(ixlist), rho, avar));
+            PROTECT (idx = evalv (CAR(ixlist), rho, 
+                     CDR(remargs) == R_NilValue /* no more than two arguments */
+                       ? VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
+                         VARIANT_MISSING_OK | VARIANT_PENDING_OK
+                       : VARIANT_SCALAR_STACK_OK | 
+                         VARIANT_MISSING_OK | VARIANT_PENDING_OK));
             if (R_variant_result) {
                 seq = 1;
                 R_variant_result = 0;
             }
             if (remargs != R_NilValue)
-                remargs = evalList_v (remargs, rho,
+                remargs = evalList_v (remargs, rho, VARIANT_SCALAR_STACK_OK |
                                       VARIANT_PENDING_OK | VARIANT_MISSING_OK);
             if (idx == R_MissingArg && isSymbol(CAR(ixlist))) {
                 PROTECT(remargs = CONS(idx,remargs));
@@ -1365,11 +1362,11 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 UNPROTECT(3);  /* remargs, idx, array */
             }
             else {
-                POP_IF_TOP_OF_STACK(idx);
                 UNPROTECT(2);  /* idx, array */
                 WAIT_UNTIL_COMPUTED(idx);
             }
             wait_until_arguments_computed(remargs);
+            R_scalar_stack = sv_scalar_stack;
             SEXP r = do_subset_dflt_seq (call, op, array, idx, remargs, rho, 
                                          variant, seq);
             return r;
