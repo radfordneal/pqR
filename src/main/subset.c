@@ -1306,8 +1306,8 @@ static inline SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2,
 /* The "[" subset operator.
  * This provides the most general form of subsetting. */
 
-static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP array, SEXP args, 
-                                SEXP rho, int variant, int seq);
+static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP sb1, 
+                                SEXP subs, SEXP rho, int variant, int seq);
 
 static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
@@ -1334,7 +1334,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                                       || CAR(ixlist) == R_DotsSymbol) {
             args = evalListKeepMissing(ixlist,rho);
             UNPROTECT(1);  /* array */
-            return do_subset_dflt_seq (call, op, array, args, rho, 
+            return do_subset_dflt_seq (call, op, array, R_NoObject, args, rho, 
                                        variant, 0);
         }
         else {
@@ -1358,14 +1358,19 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             if (remargs != R_NilValue)
                 remargs = evalList_v (remargs, rho,
                                       VARIANT_PENDING_OK | VARIANT_MISSING_OK);
-            PROTECT(args = CONS(idx,remargs));
-            if (idx == R_MissingArg && isSymbol(CAR(ixlist)))
-                SET_MISSING (args, R_isMissing(CAR(ixlist),rho));
-            else 
+            if (idx == R_MissingArg && isSymbol(CAR(ixlist))) {
+                PROTECT(remargs = CONS(idx,remargs));
+                SET_MISSING (remargs, R_isMissing(CAR(ixlist),rho));
+                idx = R_NoObject;
+                UNPROTECT(3);  /* remargs, idx, array */
+            }
+            else {
                 POP_IF_TOP_OF_STACK(idx);
-            wait_until_arguments_computed(args);
-            UNPROTECT(3);  /* args, array, idx */
-            SEXP r = do_subset_dflt_seq (call, op, array, args, rho, 
+                UNPROTECT(2);  /* idx, array */
+                WAIT_UNTIL_COMPUTED(idx);
+            }
+            wait_until_arguments_computed(remargs);
+            SEXP r = do_subset_dflt_seq (call, op, array, idx, remargs, rho, 
                                          variant, seq);
             return r;
         }
@@ -1386,7 +1391,8 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     /* Method dispatch has failed, we now */
     /* run the generic internal code. */
-    return do_subset_dflt_seq (call, op, CAR(ans), CDR(ans), rho, variant, 0);
+    return do_subset_dflt_seq (call, op, CAR(ans), R_NoObject, CDR(ans), rho, 
+                               variant, 0);
 }
 
 
@@ -1396,26 +1402,28 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    return do_subset_dflt_seq (call, op, CAR(args), CDR(args), rho, 0, 0);
+    return do_subset_dflt_seq (call, op, CAR(args), R_NoObject, CDR(args), rho,
+                               0, 0);
 }
 
 /* The "seq" argument below is 1 if the first subscript is a sequence spec
    (a variant result).  The first argument (the array, x) is passed separately
-   rather than as part of an argument list, for efficiency. 
+   rather than as part of an argument list, for efficiency.  If sb1 is not
+   R_NoObject, it is the first subscript, which has no tag, and subs is the
+   list of remaining subscripts/args; otherwise subs has all subscripts.
 
-   Note:  x and subs may not be protected on entry. */
+   Note:  x, sb1, and subs may not be protected on entry. */
 
-static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP subs,
-                                SEXP rho, int variant, int seq)
+static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP sb1, 
+                                SEXP subs, SEXP rho, int variant, int seq)
 {
-    SEXP cdr_subs = CDR(subs);
     int drop, i, nsubs, type;
     SEXP ans, ax, px;
 
-    if (!seq && x!=R_NilValue && subs!=R_NilValue && TAG(subs)==R_NilValue) {
+    if (!seq && x != R_NilValue && sb1 != R_NoObject) {
 
         /* Check for one subscript, handling simple cases like this */
-        if (cdr_subs == R_NilValue) { 
+        if (subs == R_NilValue) { 
             SEXP attr = ATTRIB(x);
             if (attr != R_NilValue) {
                 if (TAG(attr) == R_DimSymbol && CDR(attr) == R_NilValue) {
@@ -1425,22 +1433,22 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP subs,
                 }
             }
             if (attr == R_NilValue) {
-                SEXP r = one_vector_subscript (x, CAR(subs), variant);
+                SEXP r = one_vector_subscript (x, sb1, variant);
                 if (r != R_NilValue)
                     return r;
             }
         }
 
         /* Check for two subscripts, handling simple cases like this */
-        else if (cdr_subs != R_NilValue && CDR(cdr_subs) == R_NilValue
-	          && TAG(cdr_subs) == R_NilValue) { /* two subscripts */
+        else if (subs != R_NilValue && CDR(subs) == R_NilValue
+	          && TAG(subs) == R_NilValue) { /* two subscripts */
             SEXP attr = ATTRIB(x);
             if (TAG(attr) == R_DimSymbol && CDR(attr) == R_NilValue) {
                 SEXP dim = CAR(attr);
                 if (TYPEOF(dim) == INTSXP && LENGTH(dim) == 2) {
                     /* x is a matrix */
-                    SEXP r = two_matrix_subscripts (x, dim, CAR(subs),
-                                                    CAR(cdr_subs), variant);
+                    SEXP r = two_matrix_subscripts (x, dim, sb1, CAR(subs),
+                                                    variant);
                     if (r != R_NilValue)
                         return r;
                 }
@@ -1455,8 +1463,12 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP subs,
 	return x;
 
     PROTECT(x);
+
     drop = ExtractDropArg(&subs);
+    if (sb1 != R_NoObject) 
+        subs = CONS (sb1, subs);
     PROTECT(subs);
+
     WAIT_UNTIL_COMPUTED(x);
 
     nsubs = length(subs);

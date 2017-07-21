@@ -1204,12 +1204,12 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
         case VARIANT_SUM:
             PROTECT(ans = allocVector1INT());
             if (ON_SCALAR_STACK(x) && ON_SCALAR_STACK(y)) {
-                PROTECT(x = duplicate(x));
-                y = duplicate(y);
+                PROTECT(x = DUP_STACK_VALUE(x));
+                y = DUP_STACK_VALUE(y);
                 UNPROTECT(1);
             }
-            else if (ON_SCALAR_STACK(x)) x = duplicate(x);
-            else if (ON_SCALAR_STACK(y)) y = duplicate(y);
+            else if (ON_SCALAR_STACK(x)) x = DUP_STACK_VALUE(x);
+            else if (ON_SCALAR_STACK(y)) y = DUP_STACK_VALUE(y);
             DO_NOW_OR_LATER2 (variant, n >= T_relop, 0, task_relop_sum, codeop, 
                               ans, x, y);
             if (xts || yts) UNPROTECT(2);
@@ -1218,12 +1218,12 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
         default:
             PROTECT(ans = allocVector(LGLSXP,n));
             if (ON_SCALAR_STACK(x) && ON_SCALAR_STACK(y)) {
-                PROTECT(x = duplicate(x));
-                y = duplicate(y);
+                PROTECT(x = DUP_STACK_VALUE(x));
+                y = DUP_STACK_VALUE(y);
                 UNPROTECT(1);
             }
-            else if (ON_SCALAR_STACK(x)) x = duplicate(x);
-            else if (ON_SCALAR_STACK(y)) y = duplicate(y);
+            else if (ON_SCALAR_STACK(x)) x = DUP_STACK_VALUE(x);
+            else if (ON_SCALAR_STACK(y)) y = DUP_STACK_VALUE(y);
             DO_NOW_OR_LATER2 (variant, n >= T_relop, 0, task_relop, codeop, 
                               ans, x, y);
             break;

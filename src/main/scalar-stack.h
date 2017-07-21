@@ -50,7 +50,7 @@
 #   define SCALAR_STACK_ENTRY(n) (R_scalar_stack_start+(n))
 #   define SCALAR_STACK_OFFSET(n) (R_scalar_stack-(n))
 #else
-#   define SCALAR_STACK_ENTRY(n) ((SEXP) &R_scalar_stack_start[n])
+#   define SCALAR_STACK_ENTRY(n) ((SEXP) &R_scalar_stack_space[n])
 #   define SCALAR_STACK_OFFSET(n) \
      ((SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-(n)))
 #endif
