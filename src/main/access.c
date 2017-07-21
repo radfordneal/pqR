@@ -729,6 +729,10 @@ void Rf_code_gen_test_func2 (void)
   R_tobj_y = CDR(R_tobj_b);
   R_tobj_z = TAG(R_tobj_b);
 
+  if (ATTRIB(R_tobj_c) == R_NilValue) REprintf("yy1\n");
+  if (HAS_ATTRIB(R_tobj_c)) REprintf("yy2\n");
+
+  if (LENGTH(R_tobj_c) == 1) REprintf("yy3\n");
 }
 
 #endif

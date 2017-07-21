@@ -663,14 +663,23 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
     R_EvalDepth -= 1;
 
 #   if SCALAR_STACK_DEBUG /* Get debug output after typing SCALAR.STACK.DEBUG */
-        if (ON_SCALAR_STACK(res) 
-             && installed_already("SCALAR.STACK.DEBUG") != R_NoObject)
-        { REprintf("SCALAR STACK VALUE RETURNED: %llx %llx %llx %s %f\n",
-            (long long) R_scalar_stack_start,
-            (long long) res, 
-            (long long) R_scalar_stack,
-            TYPEOF(res)==INTSXP ? "int" : "real",
-            TYPEOF(res)==INTSXP ? (double)*INTEGER(res) : *REAL(res));
+        if (installed_already("SCALAR.STACK.DEBUG") != R_NoObject) {
+            if (ON_SCALAR_STACK(res)) {
+                REprintf("SCALAR STACK VALUE RETURNED: %llx %llx %llx %s %f\n",
+                 (long long) R_scalar_stack_start,
+                 (long long) res, 
+                 (long long) R_scalar_stack,
+                 TYPEOF(res)==INTSXP ? "int" : "real",
+                 TYPEOF(res)==INTSXP ? (double)*INTEGER(res) : *REAL(res));
+            }
+#           if 0
+                REprintf("STACK:\n");
+                for (int i = 0; i < 6; i++) {
+                    if (SCALAR_STACK_ENTRY(i)==R_scalar_stack) REprintf("@@\n");
+                    R_inspect(SCALAR_STACK_ENTRY(i));
+                }
+                REprintf("END\n");
+#           endif
         }
 #   endif
 
