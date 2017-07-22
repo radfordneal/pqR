@@ -359,7 +359,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        bother trying local assignment, since returning the result on the
        scalar stack should be about as fast. */
 
-    int type = TYPEOF(arg1), type2 = TYPEOF(arg2);
+    int type = TYPEOF(arg1);
 
     if ((type==REALSXP || type==INTSXP) && LENGTH(arg1) == 1
                                         && NO_ATTRIBUTES_OK (variant, arg1)) {
@@ -390,8 +390,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             }
             goto ret;
         }
-        else if (TYPEOF(arg2)==type && LENGTH(arg2)==1
-                                    && NO_ATTRIBUTES_OK (variant, arg2)) {
+        else if (TYPEOF(arg2) == type && LENGTH(arg2) == 1
+                                      && NO_ATTRIBUTES_OK (variant, arg2)) {
             if (type==REALSXP) {
 
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
