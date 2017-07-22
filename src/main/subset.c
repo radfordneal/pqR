@@ -1318,9 +1318,9 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
        subset_dflt and has one or two index arguments in total, try to
        evaluate the first index with VARIANT_SEQ, so it may come as a
        range rather than a vector.  Also, evaluate the array with
-       VARIANT_PENDING_OK, and perhaps evaluate indexes with
-       VARIANT_SCALAR_STACK (should be safe, since there will be no
-       later call of eval). */
+       VARIANT_UNCLASS and VARIANT_PENDING_OK, and perhaps evaluate
+       indexes with VARIANT_SCALAR_STACK (should be safe, since there
+       will be no later call of eval). */
 
     if (args != R_NilValue && CAR(args) != R_DotsSymbol) {
         SEXP array = CAR(args);
@@ -1585,17 +1585,89 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
 
 
 /* The [[ subset operator.  It needs to be fast. */
-/* The arguments to this call are evaluated on entry. */
+
+static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
+                               SEXP subs, SEXP rho, int variant);
 
 static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP ans;
+    int argsevald = 0;
 
-    /* If the first argument is an object and there is */
-    /* an approriate method, we dispatch to that method, */
-    /* otherwise we evaluate the arguments and fall */
-    /* through to the generic code below.  Note that */
-    /* evaluation retains any missing argument indicators. */
+    /* If we can easily determine that this will be handled by
+       subset2_dflt, evaluate the array with VARIANT_UNCLASS and
+       VARIANT_PENDING_OK, and perhaps evaluate indexes with
+       VARIANT_SCALAR_STACK (should be safe, since there will be no
+       later call of eval). */
+
+    if (args != R_NilValue && CAR(args) != R_DotsSymbol) {
+        SEXP array = CAR(args);
+        SEXP ixlist = CDR(args);
+        PROTECT(array = evalv (array, rho, VARIANT_UNCLASS | 
+                                           VARIANT_PENDING_OK));
+        int obj = isObject(array);
+        if (R_variant_result) {
+            obj = 0;
+            R_variant_result = 0;
+        }
+        if (obj) {
+            args = CONS(array,ixlist);
+            argsevald = -1;
+            UNPROTECT(1);  /* array */
+        }
+        else if (ixlist == R_NilValue || TAG(ixlist) != R_NilValue 
+                                      || CAR(ixlist) == R_DotsSymbol) {
+            args = evalListKeepMissing(ixlist,rho);
+            UNPROTECT(1);  /* array */
+            return do_subset2_dflt_x (call, op, array, R_NoObject, R_NoObject,
+                                      args, rho, variant);
+        }
+        else {
+            SEXP sv_scalar_stack = R_scalar_stack;
+            SEXP ixlist2 = CDR(ixlist);
+            SEXP sb1;
+            PROTECT (sb1 = evalv (CAR(ixlist), rho, VARIANT_SCALAR_STACK_OK | 
+                             VARIANT_MISSING_OK | VARIANT_PENDING_OK));
+            SEXP remargs = ixlist2;
+            SEXP sb2 = R_NoObject;
+            if (sb1 == R_MissingArg && isSymbol(CAR(ixlist))) {
+                UNPROTECT(1);
+                PROTECT(remargs = CONS(sb1,remargs));
+                SET_MISSING (remargs, R_isMissing(CAR(ixlist),rho));
+                sb1 = R_NoObject;
+            }
+            else if (ixlist2 != R_NilValue && TAG(ixlist2) == R_NilValue 
+                                      && CAR(ixlist2) != R_DotsSymbol) {
+                PROTECT (sb2 = evalv (CAR(ixlist2), rho,
+                                 VARIANT_SCALAR_STACK_OK | VARIANT_MISSING_OK));
+                remargs = CDR(ixlist2);
+            }
+            if (remargs != R_NilValue)
+                remargs = evalList_v (remargs, rho, VARIANT_SCALAR_STACK_OK |
+                                      VARIANT_PENDING_OK | VARIANT_MISSING_OK);
+            PROTECT(remargs);
+            if (sb2 == R_MissingArg && isSymbol(CAR(ixlist2))) {
+                UNPROTECT(2);  /* remargs, sb2 */
+                PROTECT(remargs = CONS(sb2,remargs));
+                SET_MISSING (remargs, R_isMissing(CAR(ixlist2),rho));
+                sb2 = R_NoObject;
+            }
+            if (sb1 != R_NoObject)
+                WAIT_UNTIL_COMPUTED(sb1);
+            UNPROTECT (3 + (sb2 != R_NoObject));  /* remargs, sb2, sb1, array */
+            wait_until_arguments_computed(remargs);
+            R_scalar_stack = sv_scalar_stack;
+            SEXP r = do_subset2_dflt_x (call, op, array, sb1, sb2,
+                                        remargs, rho, variant);
+            return r;
+        }
+    }
+
+    /* If the first argument is an object and there is an */
+    /* appropriate method, we dispatch to that method, */
+    /* otherwise we evaluate the arguments and fall through */
+    /* to the generic code below.  Note that evaluation */
+    /* retains any missing argument indicators. */
 
     if(DispatchOrEval(call, op, "[[", args, rho, &ans, 0, 0)) {
 /*     if(DispatchAnyOrEval(call, op, "[[", args, rho, &ans, 0, 0)) */
@@ -1604,22 +1676,62 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	return(ans);
     }
 
-    /* Method dispatch has failed. */
-    /* We now run the generic internal code. */
+    /* Method dispatch has failed, we now */
+    /* run the generic internal code. */
+    SEXP x = CAR(ans);
+    args = CDR(ans);
 
-    return do_subset2_dflt(call, op, ans, rho, variant);
+    if (args == R_NilValue || TAG(args) != R_NilValue)
+        return do_subset2_dflt_x (call, op, x, R_NoObject, R_NoObject, 
+                                  args, rho, variant);
+    else if (CDR(args) == R_NilValue || TAG(CDR(args)) != R_NilValue)
+        return do_subset2_dflt_x (call, op, x, CAR(args), R_NoObject,
+                                  CDR(args), rho, variant);
+    else
+        return do_subset2_dflt_x (call, op, x, CAR(args), CADR(args),
+                                  CDDR(args), rho, variant);
 }
 
-SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho,
-                                      int variant)
+SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans, dims, dimnames, indx, subs, x;
-    int i, ndims, nsubs, offset = 0;
+    SEXP x = CAR(args);
+    args = CDR(args);
+    
+    if (args == R_NilValue || TAG(args) != R_NilValue)
+        return do_subset2_dflt_x (call, op, x, R_NoObject, R_NoObject, 
+                                  args, rho, 0);
+    else if (CDR(args) == R_NilValue || TAG(CDR(args)) != R_NilValue)
+        return do_subset2_dflt_x (call, op, x, CAR(args), R_NoObject,
+                                  CDR(args), rho, 0);
+    else
+        return do_subset2_dflt_x (call, op, x, CAR(args), CADR(args),
+                                  CDDR(args), rho, 0);
+}
+
+static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
+                               SEXP subs, SEXP rho, int variant)
+{
+    SEXP ans, dims, dimnames, indx;
+    int i, drop, ndims, nsubs, offset = 0;
     int pok, exact = -1;
 
-    (void) ExtractDropArg(&args);  /* a "drop" arg is tolerated, but ignored */
-    exact = ExtractExactArg(&args);
-    PROTECT(args);
+    /* This was intended for compatibility with S, */
+    /* but in fact S does not do this. */
+
+    if (x == R_NilValue)
+	return x;
+
+    PROTECT(x);
+
+    drop = ExtractDropArg(&subs);  /* a "drop" arg is tolerated, but ignored */
+    exact = ExtractExactArg(&subs);
+    if (sb2 != R_NoObject) 
+        subs = CONS (sb2, subs);
+    if (sb1 != R_NoObject) 
+        subs = CONS (sb1, subs);
+    PROTECT(subs);
+
+    WAIT_UNTIL_COMPUTED(x);
 
     /* Is partial matching ok?  When the exact arg is NA, a warning is
        issued if partial matching occurs.
@@ -1629,20 +1741,9 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho,
     else
 	pok = !exact;
 
-    PROTECT(x = CAR(args));
-
-    /* This code was intended for compatibility with S, */
-    /* but in fact S does not do this.	Will anyone notice? */
-
-    if (x == R_NilValue) {
-	UNPROTECT(2);
-	return x;
-    }
-
     /* Get the subscripting and dimensioning information */
     /* and check that any array subscripting is compatible. */
 
-    subs = CDR(args);
     nsubs = length(subs);
     if (nsubs == 0)
 	errorcall(call, _("no index specified"));
@@ -2022,7 +2123,7 @@ attribute_hidden FUNTAB R_FunTab_subset[] =
 {"$",		do_subset3,	3,	1000,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
 
 {".subset",	do_subset_dflt,	1,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
-{".subset2",	do_subset2_dflt,2,	1001,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
+{".subset2",	do_subset2_dflt,2,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };

@@ -1,6 +1,7 @@
 % File src/library/base/man/base-internal.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2012 R Core Team
+% Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{base-internal}
@@ -115,11 +116,13 @@ lazyLoadDBfetch(key, file, compressed, hook)
 \details{
   The functions \code{.subset} and \code{.subset2} are essentially
   equivalent to the \code{\link{[}} and \code{\link{[[}} operators,
-  except that methods dispatch does not take place.  This is to avoid
-  expensive unclassing when applying the default method to an object.  They
-  should not normally be invoked by end users.  Note that unlike the
-  operators they are builtins and not specials (all arguments are
-  evaluated) and hence do not allow missing arguments.
+  except that methods dispatch does not take place, and missing
+  arguments are not allowed.  They were meant to avoid expensive
+  unclassing when applying the default method to an object.  However,
+  \code{unclass(obj)[1]} and \code{unclass(obj)[[1]]} are now almost
+  as fast as \code{.subset(obj,1)} and \code{.subset2(obj,1)}, so
+  there is no longer any reason to use \code{.subset} or
+  \code{.subset2}.
 
   \code{.getRequiredPackages2} attaches all the packages mentioned in the
   \code{Depends} field: failure to find a package is an error.  It also

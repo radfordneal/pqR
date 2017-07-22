@@ -127,7 +127,7 @@ SEXP do_subassign2_dflt(SEXP, SEXP, SEXP, SEXP);
 SEXP do_subassigndf(SEXP, SEXP, SEXP, SEXP);
 SEXP do_subassigndf2(SEXP, SEXP, SEXP, SEXP);
 SEXP do_subset_dflt(SEXP, SEXP, SEXP, SEXP);
-SEXP do_subset2_dflt(SEXP, SEXP, SEXP, SEXP, int);
+SEXP do_subset2_dflt(SEXP, SEXP, SEXP, SEXP);
 SEXP do_subsetdf(SEXP, SEXP, SEXP, SEXP);
 SEXP do_subsetdf2(SEXP, SEXP, SEXP, SEXP);
 SEXP do_surface(SEXP, SEXP, SEXP, SEXP);

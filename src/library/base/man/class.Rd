@@ -1,6 +1,7 @@
 % File src/library/base/man/class.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2010 R Core Team
+% Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{class}
@@ -61,7 +62,18 @@ oldClass(x) <- value
 
   \code{unclass} returns (a copy of) its argument with its class
   attribute removed.  (It is not allowed for objects which cannot be
-  copied, namely environments and external pointers.)
+  copied, namely environments and external pointers.)  When \code{unclass}
+  is combined with certain operations, an actual copy is avoided.  This
+  is the case for operations such as the following:
+\preformatted{    x <- length(unclass(obj))
+    x <- unclass(obj)[1]
+    x <- unclass(obj)[[1]]
+    for (i along unclass(obj)) ...
+    for (i across unclass(obj)) ...
+    for (i down unclass(obj)) ...
+    x <- unclass(obj) + 1
+    x <- unclass(obj) > 0
+}
 
   \code{inherits} indicates whether its first argument inherits from any
   of the classes specified in the \code{what} argument.  If \code{which}
@@ -91,8 +103,8 @@ oldClass(x) <- value
   packages \pkg{methods} which is attached by default.  For objects
   which have a formal class, its name is returned by \code{class}
   as a character vector of length one and method dispatch can happen on
-  \emph{several} arguments, instead of only the first. However, S3 method selection
-  attempts to treat objects from an S4 class as if they had the
+  \emph{several} arguments, instead of only the first. However, S3 method 
+  selection attempts to treat objects from an S4 class as if they had the
   appropriate S3 class attribute, as does \code{inherits}.  Therefore,
   S3 methods can be defined for S4 classes.  See the \sQuote{\link{Classes}}
   and \sQuote{\link{Methods}} help pages for details.

@@ -554,22 +554,22 @@ data.frame <-
 
     if (missing(i)) { # df[, j] or df[ , ]
         if (length(x) == 1L && missing(j) && can_drop_j)
-            return(.subset2(x, 1L))
+            return(unclass(x)[[1L]])
         nm <- names(x); if(is.null(nm)) nm <- character()
         if (!missing(j) && !is.character(j) && any(is.na(nm))) {
             ## less efficient version
             names(nm) <- names(x) <- seq_along(x)
-            y <- .subset(x, j)
+            y <- unclass(x)[j]
             cols <- names(y)
             if(any(is.na(cols))) stop("undefined columns selected")
             cols <- names(y) <- nm[cols]
         } else {
-            y <- if (missing(j)) x else .subset(x, j)
+            y <- if (missing(j)) x else unclass(x)[j]
             cols <- names(y)
             if(any(is.na(cols))) stop("undefined columns selected")
         }
         if (length(y) == 1L && can_drop_j)
-            return(.subset2(y, 1L))
+            return(unclass(y)[[1L]])
         if(anyDuplicated(cols)) names(y) <- make.unique(cols)
         nrow <- .row_names_info(x, 2L)
         if (nrow == 1L && !missing(drop) && drop)
@@ -602,9 +602,9 @@ data.frame <-
                 i <- pmatch(i, rows, duplicates.ok = TRUE)
             }
             ## need to figure which col was selected:
-            ## cannot use .subset2 directly as that may
+            ## cannot use [[ directly as that may
             ## use recursive selection for a logical index.
-            xj <- .subset2(.subset(xx, j), 1L)
+            xj <- unclass(xx)[j][[1L]]
             return(if(length(dim(xj)) != 2L) xj[i] else xj[i, , drop = FALSE])
         }
         if(any(is.na(cols))) stop("undefined columns selected")
@@ -670,16 +670,15 @@ data.frame <-
         warning("named arguments other than 'exact' are discouraged")
 
     if(na < 3L)
-	(function(x, i, exact)
-	  if(is.matrix(i)) as.matrix(x)[[i]]
- 	  else .subset2(x, i, exact=exact))(x, ..., exact=exact)
+	(function(x, i, exact) if (is.matrix(i)) as.matrix(x) [[i]]
+                               else unclass(x) [[i, exact=exact]]
+        ) (x, ..., exact=exact)
     else {
-        col <- .subset2(x, ..2, exact=exact)
+        col <- unclass(x) [[..2, exact=exact]]
         i <- if(is.character(..1))
             pmatch(..1, row.names(x), duplicates.ok = TRUE)
         else ..1
-        ## we do want to dispatch on methods for a column.
-        ## .subset2(col, i, exact=exact)
+        ## do we want to dispatch on methods for a column?
         col[[i, exact = exact]]
     }
 }

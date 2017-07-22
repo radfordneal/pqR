@@ -70,6 +70,15 @@
         memory is sometimes allocated at the end of a vector to allow
         expansion without reallocation.  This improvement mirrors a
         recent improvement in R-3.4.0, but applies in more situations.
+  \item Subsetting an unclassed object now does not cause a copy of
+        the object to be made.  For example, the following do not
+        require copying \code{obj}:
+\preformatted{    x <- unclass(obj)[-1]; y <- unclass(obj)[[1]]
+}
+        \code{help(unclass)} now documents what operations on 
+        \code{unclass(obj)} do not require copying.  Note that with
+        this improvement, there is now no reason to use \code{.subset}
+        or \code{.subset2}.
   \item Relational operators are now faster, and may sometimes be done in 
         helper threads (though currently without pipelining of data).
         Computations such as \code{sum(vec>0)} are now done with a
