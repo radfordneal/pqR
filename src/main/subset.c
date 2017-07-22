@@ -1399,8 +1399,15 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    return do_subset_dflt_seq (call, op, CAR(args), R_NoObject, CDR(args), rho,
-                               0, 0);
+    SEXP x = CAR(args);
+    args = CDR(args);
+    
+    if (args == R_NilValue || TAG(args) != R_NilValue)
+        return do_subset_dflt_seq (call, op, x, R_NoObject, args, rho, 
+                                   0, 0);
+    else
+        return do_subset_dflt_seq (call, op, x, CAR(args), CDR(args), rho,
+                                   0, 0);
 }
 
 /* The "seq" argument below is 1 if the first subscript is a sequence spec
