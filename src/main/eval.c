@@ -4598,7 +4598,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
 #define DO_DFLTDISPATCH0(fun, symbol) do { \
   SEXP call = GETSTACK(-3); \
   SEXP args = GETSTACK(-2); \
-  value = fun(call, symbol, args, rho, 0); \
+  value = fun(call, symbol, args, rho); \
   R_BCNodeStackTop -= 3; \
   SETSTACK(-1, value); \
   NEXT(); \
