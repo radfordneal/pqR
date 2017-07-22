@@ -1325,8 +1325,14 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (args != R_NilValue && CAR(args) != R_DotsSymbol) {
         SEXP array = CAR(args);
         SEXP ixlist = CDR(args);
-        PROTECT(array = evalv(array,rho,VARIANT_PENDING_OK));
-        if (isObject(array)) {
+        PROTECT(array = evalv (array, rho, VARIANT_UNCLASS | 
+                                           VARIANT_PENDING_OK));
+        int obj = isObject(array);
+        if (R_variant_result) {
+            obj = 0;
+            R_variant_result = 0;
+        }
+        if (obj) {
             args = CONS(array,ixlist);
             argsevald = -1;
             UNPROTECT(1);  /* array */
