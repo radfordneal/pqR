@@ -109,7 +109,9 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
     case REALSXP:
 	dblind = REAL(s)[pos];
 	if (!ISNAN(dblind))
-	    indx = integerOneIndex((int)dblind, len, call);
+            indx = dblind > R_LEN_T_MAX ? R_LEN_T_MAX
+                 : dblind < -R_LEN_T_MAX ? -R_LEN_T_MAX
+                 : integerOneIndex((int)dblind, len, call);
 	break;
 
     case STRSXP:

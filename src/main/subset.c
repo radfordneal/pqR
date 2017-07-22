@@ -1711,15 +1711,51 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
                                SEXP subs, SEXP rho, int variant)
 {
-    SEXP ans, dims, dimnames, indx;
-    int i, drop, ndims, nsubs, offset = 0;
+    int offset;
+    SEXP ans;
+
+    if (isVector(x) && sb1 != R_NoObject) {
+
+        /* Check for one subscript, handling simple cases.  Doesn't handle
+           simple cases with two subscripts here yet. */
+
+        if (sb2 == R_NoObject && subs == R_NilValue 
+              && isVectorAtomic(sb1) && LENGTH(sb1) == 1) { 
+            int str_sym_sub = isString(sb1) || isSymbol(sb1);
+            offset = get1index(sb1, 
+                          str_sym_sub ? getAttrib(x,R_NamesSymbol) : R_NilValue,
+                          LENGTH(x), 0/*exact*/, 0, call);
+            if (offset >= 0 && offset < LENGTH(x)) {  /* not out of bounds */
+                if (isVectorList(x)) {
+                    ans = VECTOR_ELT(x, offset);
+                    if (NAMEDCNT_GT_0(x))
+                        SET_NAMEDCNT_NOT_0(ans);
+                    if (VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET 
+                         && !NAMEDCNT_GT_1(x) && !NAMEDCNT_GT_1(ans))
+                        R_variant_result = 1;
+                }
+                else if (TYPEOF(x) == INTSXP && CAN_USE_SCALAR_STACK(variant))
+                    ans = PUSH_SCALAR_INTEGER (INTEGER(x)[offset]);
+                else if (TYPEOF(x) == REALSXP && CAN_USE_SCALAR_STACK(variant))
+                    ans = PUSH_SCALAR_REAL (REAL(x)[offset]);
+                else {
+                    ans = allocVector(TYPEOF(x), 1);
+                    copy_elements (ans, 0, 0, x, offset, 0, 1);
+                }
+                return ans;
+            }
+        }
+    }
+
+    SEXP dims, dimnames, indx;
+    int i, drop, ndims, nsubs;
     int pok, exact = -1;
 
     /* This was intended for compatibility with S, */
     /* but in fact S does not do this. */
 
     if (x == R_NilValue)
-	return x;
+        return x;
 
     PROTECT(x);
 
@@ -1788,18 +1824,19 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
 
     int max_named = NAMEDCNT(x);
 
-    if(nsubs == 1) { /* vector indexing */
+    if (nsubs == 1) { /* simple or vector indexing */
 
-	SEXP thesub = CAR(subs);
-        int str_sym_sub = isString(thesub) || isSymbol(thesub);
-	int len = length(thesub);
+	sb1 = CAR(subs);
+
+        int str_sym_sub = isString(sb1) || isSymbol(sb1);
+	int len = length(sb1);
         int i, lenx;
 
         for (i = 1; i < len; i++) {
             if (!isVectorList(x) && !isPairList(x))
                 errorcall(call,_("recursive indexing failed at level %d\n"),i);
             lenx = length(x);
-            offset = get1index(thesub, 
+            offset = get1index(sb1, 
                        str_sym_sub ? getAttrib(x, R_NamesSymbol) : R_NilValue,
                        lenx, pok, i-1, call);
             if (offset < 0 || offset >= lenx)
@@ -1817,7 +1854,7 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
         }
 
         lenx = length(x);
-	offset = get1index(thesub, 
+	offset = get1index(sb1, 
                    str_sym_sub ? getAttrib(x, R_NamesSymbol) : R_NilValue,
                    lenx, pok, len > 1 ? len-1 : -1, call);
 	if (offset < 0 || offset >= lenx) {
@@ -1862,14 +1899,20 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
     if (isPairList(x)) {
 	ans = CAR(nthcdr(x, offset));
         SET_NAMEDCNT_MAX(ans);
-    } else if (isVectorList(x)) {
+    }
+    else if (isVectorList(x)) {
 	ans = VECTOR_ELT(x, offset);
 	if (max_named > 0)
             SET_NAMEDCNT_NOT_0(ans);
         if (VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET 
              && max_named <= 1 && !NAMEDCNT_GT_1(ans))
             R_variant_result = 1;
-    } else {
+    }
+    else if (TYPEOF(x) == INTSXP && CAN_USE_SCALAR_STACK(variant))
+        ans = PUSH_SCALAR_INTEGER (INTEGER(x)[offset]);
+    else if (TYPEOF(x) == REALSXP && CAN_USE_SCALAR_STACK(variant))
+        ans = PUSH_SCALAR_REAL (REAL(x)[offset]);
+    else {
 	ans = allocVector(TYPEOF(x), 1);
         copy_elements (ans, 0, 0, x, offset, 0, 1);
     }
