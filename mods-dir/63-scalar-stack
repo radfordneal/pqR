@@ -1,1 +1,4 @@
-Switch from using static boxes to using a scalar stack.
+Switch from using static boxes to using a scalar stack. 
+
+Also makes general improvements to do_subset.
+
