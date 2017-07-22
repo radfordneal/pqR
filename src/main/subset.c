@@ -1363,12 +1363,8 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             }
             else if (ixlist2 != R_NilValue && TAG(ixlist2) == R_NilValue 
                                       && CAR(ixlist2) != R_DotsSymbol) {
-                PROTECT (sb2 = evalv (CAR(ixlist2), rho, 
-                         CDR(ixlist2)==R_NilValue /*no more than two arguments*/
-                           ? VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
-                             VARIANT_MISSING_OK
-                           : VARIANT_SCALAR_STACK_OK | 
-                             VARIANT_MISSING_OK));
+                PROTECT (sb2 = evalv (CAR(ixlist2), rho,
+                                 VARIANT_SCALAR_STACK_OK | VARIANT_MISSING_OK));
                 remargs = CDR(ixlist2);
             }
             if (remargs != R_NilValue)
