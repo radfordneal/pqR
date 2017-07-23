@@ -807,14 +807,12 @@ SEXP attribute_hidden do_c_dflt(SEXP call, SEXP op, SEXP args, SEXP env)
         R_len_t len = 0;
         for (t = args; t != R_NilValue; t = CDR(t)) {
             SEXP a = CAR(t);
-            R_len_t olen;
             if (usenames && HAS_ATTRIB(a) /* quick pre-test */
                          && getAttrib(a,R_NamesSymbol) != R_NilValue) 
                 break;
-            olen = len;
-            len += LENGTH(a);
-            if (len < olen) /* overflow */
+            if (len > R_LEN_T_MAX - LENGTH(a)) /* would overflow */
                 break;
+            len += LENGTH(a);
         }
 
         if (t == R_NilValue) { /* no arg with names, and no overflow with len */
