@@ -1048,22 +1048,25 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     /* If we can easily determine that this will be handled by subassign_dflt
        and has exactly one index argument, evaluate that index with 
-       VARIANT_SEQ so it may come as a range rather than a vector, and include
-       VARIANT_SCALAR_STACK_OK as well if using the fast interface */
+       VARIANT_SEQ so it may come as a range rather than a vector.  
+       Evaluate with VARIANT_SCALAR_STACK_OK if using the fast interface. */
 
     if (y != R_NoObject) {
         /* Fast interface: object assigned into (x) comes already evaluated */
+        SEXP sv_scalar_stack = R_scalar_stack;
         PROTECT(y);
         if (a2 != R_NilValue && a3 == R_NilValue && TYPEOF(CAR(a2))==LANGSXP) {
-            a2 = evalv (CAR(a2), rho, VARIANT_SEQ | VARIANT_SCALAR_STACK_OK);
-            POP_IF_TOP_OF_STACK(a2);
+            a2 = evalv (CAR(a2), rho, VARIANT_SEQ | VARIANT_SCALAR_STACK_OK
+                                                  | VARIANT_MISSING_OK);
             seq = R_variant_result;
             R_variant_result = 0;
             args = CONS (a2, R_NilValue);
         }
         else {
-            args = evalListKeepMissing(a2,rho);
+            args = evalList_v (a2, rho, VARIANT_SCALAR_STACK_OK |
+                                        VARIANT_MISSING_OK);
         }
+        R_scalar_stack = sv_scalar_stack;
         UNPROTECT(1);
         goto dflt_seq;
     }
@@ -1270,7 +1273,10 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
         SEXP y = R_fast_sub_value; /* may be on the scalar stack */
         SEXP x = R_fast_sub_into;
-        args = evalList(args,rho);
+        SEXP scalar_stack_sv = R_scalar_stack;
+        args = evalList_v (args, rho, VARIANT_SCALAR_STACK_OK | 
+                                      VARIANT_MISSING_OK);
+        R_scalar_stack = scalar_stack_sv;
         return do_subassign2_dflt_int (call, x, args, rho, y);
     }
 
@@ -1304,8 +1310,8 @@ static SEXP do_subassign2_dflt_int
     PROTECT(x);
     if (y == R_NoObject)
         SubAssignArgs (&subs, &y, call);
-    else if (ON_SCALAR_STACK(y) && TYPEOF(y) != TYPEOF(x))
-        y = duplicate(y);
+    else if (ON_SCALAR_STACK(y) && !isVectorAtomic(x))
+        y = DUP_STACK_VALUE(y);
     PROTECT(y);
 
     WAIT_UNTIL_COMPUTED(x);
@@ -1640,7 +1646,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
     Rboolean S4; SEXP xS4 = R_NilValue;
 
     if (ON_SCALAR_STACK(val)) /* currently, never puts value in atomic vector */
-        val = duplicate(val);
+        val = DUP_STACK_VALUE(val); 
 
     WAIT_UNTIL_COMPUTED(x);
 
