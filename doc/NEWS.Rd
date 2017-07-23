@@ -13,14 +13,27 @@
   \item This release has several signficicant performance improvements.
         It also has some feature changes and bug fixes, including some
         features from later R Core versions.
+
+        With the performance improvements in this release, it is
+        generally no longer desirable to use the byte code compiler.
+        Defaults during configuration and use have therefore been
+        changed so that the bytecode compiler, and byte-compiled code,
+        will not be used unless very deliberately enabled.
+
+        Platforms on which pqR is used must now correctly implement
+        64-bit IEEE floating-point arithmetic.  This is a preliminary to future
+        changes aimed at improving reproducibility of numerical results.
   }}
 
-  \subsection{FEATURE CHANGES}{
+  \subsection{INSTALLATION}{
   \itemize{
   \item Byte compilation is now discouraged, because on the whole it 
         makes performance worse rather than better, since it does not
-        support some pqR performance improvements, and because it does not
+        support some pqR performance improvements, and also because it does not
         implement some pqR language extensions.
+
+        When pqR is configured, \code{--disable-byte-compiled-packages}
+        is now the default.
 
         It is still possible to enable byte compilation, but this is
         meant only for research purposes, to compare performance of
@@ -34,25 +47,6 @@
 
         The JIT feature is now never enabled, regardless of any attempt
         to do so.
-  \item It is now allowed to set the length of an ``expression''
-        object with \code{length(e)<-len}, as for other vector
-        types.  Any extra elements are set to \code{NULL}.
-  \item Attempts to set attributes on a symbol are now silently ignored,
-        both at the R level, with \code{attr} and \code{attributes}, and
-        at the C API level, with \code{SET_ATTRIB}.  Getting the attributes
-        of a symbol returns NULL.  Previously (and also in R-3.4.0),
-        attributes could be attached to symbols, but they were lost
-        when a workspace was saved and restored.
-  \item There is no longer a \code{SET_PRINTNAME} function available in
-        the C API.  Setting the print name of a symbol has never been
-        a safe or reasonable thing to do.
-  \item The default \code{size} for \code{new.env} is now \code{NA}, which
-        gives an internal default, which now varies depending on the
-        platform and configuration options.
-  }}
-
-  \subsection{INSTALLATION}{
-  \itemize{
   \item A platform on which pqR is installed must now
         implement correct 64-bit IEEE floating-point arithmetic for the C 
         "double" type.  In particular, this means that pqR is not supported
@@ -94,24 +88,33 @@
         allow better optimization.
   \item The \code{\%\%} and \code{\%/\%} operators are now faster when 
         their operands are real vectors that contain integer values.
+  \item General interpretive overhead has been reduced in some contexts,
+        particularly when subsetting with \code{[.]} and \code{[[.]]}.
   }}
 
-  \subsection{BUG FIXES}{
+  \subsection{FEATURE CHANGES}{
   \itemize{
-  \item The documentation on \code{debug} and \code{debugonce} has been
-        fixed to remove mention of the \code{text} and \code{condition} 
-        arguments. These arguments were documented in R-2.10.0, and in 
-        subsequent R Core versions to at least R-3.4.1, but they have never 
-        been implemented as documented, but rather have always been 
-        completely ignored.
-  \item Previously, \code{length(plist)<-n} did not work when \code{plist}
-        was a pairlist, but it does now.  This bug also exists in R Core
-        versions to at least R-3.4.0.
-  \item Fixed a bug illustrated by the following:
-\preformatted{    a <- as.integer(NA); e <- new.env(size=a); print(a)
-}
-        The value printed was previously 0 rather than NA.
-        This bug also exists in R Core versions to at least R-3.4.0.
+  \item The old serialization format, used prior to December 2001, is 
+        no longer supported in pqR.  Code to support it would need to
+        be changed to accomodate recent changes in pqR, and meaningful
+        testing of such changes seems like it would require excessive
+        efforts.
+  \item It is now allowed to set the length of an ``expression''
+        object with \code{length(e)<-len}, as for other vector
+        types.  Any extra elements are set to \code{NULL}.
+  \item Attempts to set attributes on a symbol are now silently ignored,
+        both at the R level, with \code{attr} and \code{attributes}, and
+        at the C API level, with \code{SET_ATTRIB}.  Getting the attributes
+        of a symbol returns NULL.  Previously (and also in R-3.4.0),
+        attributes could be attached to symbols, but they were lost
+        when a workspace was saved and restored.
+  \item There is no longer a \code{SET_PRINTNAME} function available in
+        the C API (even if internal header files are used).  Setting the 
+        print name of a symbol has never been
+        a safe or reasonable thing to do.
+  \item The default \code{size} for \code{new.env} is now \code{NA}, which
+        gives an internal default, which now varies depending on the
+        platform and configuration options.
   }}
 
   \subsection{NEW FEATURES FROM R CORE RELEASES}{
@@ -142,7 +145,24 @@
         which uses the basic C function \code{strcmp} and so collates
         strings byte-by-byte in numerical order.
   }}  
->>>>>>> 62-collate
+
+  \subsection{BUG FIXES}{
+  \itemize{
+  \item The documentation on \code{debug} and \code{debugonce} has been
+        fixed to remove mention of the \code{text} and \code{condition} 
+        arguments. These arguments were documented in R-2.10.0, and in 
+        subsequent R Core versions to at least R-3.4.1, but they have never 
+        been implemented as documented, but rather have always been 
+        completely ignored.
+  \item Previously, \code{length(plist)<-n} did not work when \code{plist}
+        was a pairlist, but it does now.  This bug also exists in R Core
+        versions to at least R-3.4.0.
+  \item Fixed a bug illustrated by the following:
+\preformatted{    a <- as.integer(NA); e <- new.env(size=a); print(a)
+}
+        The value printed was previously 0 rather than NA.
+        This bug also exists in R Core versions to at least R-3.4.0.
+  }}
 }
 
 
