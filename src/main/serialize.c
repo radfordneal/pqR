@@ -669,7 +669,7 @@ static R_INLINE int PackFlags(int type, int levs, int isobj, int hasattr,
        Also make sure the former HASHASH bit (1) is not written out.
     */
     int val;
-    if (type == CHARSXP) levs &= (~(CACHED_MASK | 1));
+    if (type == CHARSXP) levs &= (~(CACHED_MASK | 1 /* was HASHASH */));
     val = type | ENCODE_LEVELS(levs);
     if (isobj) val |= IS_OBJECT_BIT_MASK;
     if (hasattr) val |= HAS_ATTR_BIT_MASK;

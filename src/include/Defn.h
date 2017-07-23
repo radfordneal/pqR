@@ -811,7 +811,7 @@ typedef struct RCNTXT {
     struct RPRSTACK *prstack;   /* stack of pending promises */
     SEXP *nodestack;
 #ifdef BC_INT_STACK
-    IStackval *intstack;
+    IStackval *intstack;        /* BC_INT_STACK seems to never be defined */
 #endif
     SEXP srcref;	        /* The source line in effect */
     const struct R_local_protect *local_pr;  /* linked list of protected vars */
