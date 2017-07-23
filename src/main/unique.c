@@ -700,7 +700,7 @@ static SEXP match_transform(SEXP s, SEXP env)
 
 SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
 {
-    SEXP ans, x, table;
+    SEXP ans;
     SEXPTYPE type;
     HashData data;
     int i, n;
