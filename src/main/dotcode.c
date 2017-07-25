@@ -47,9 +47,6 @@
 #include <helpers/helpers-app.h>
 
 
-static SEXP evaluated_args; /* Evaluated argument list for .Call and .External*/
-
-
 /* Trim special arguments from argument list for .Call, .External, .C
    or .Fortran.  These arguments are removed (destructively) from the
    argument list.  The second argument is 1 for .C/.Fortran, 0 for
@@ -174,7 +171,7 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
    and look there. 
 
    Sets *fun to the routine.  Symbol info is passed in *symbol, which
-   is updated with info for .C. 
+   may be updated.
 
    Reports an error if nargs is wrong. */
 
@@ -205,9 +202,9 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
 
         *fun = NULL;
 
-        if (R_ExternalPtrTag(op) == R_NativeSymbolSymbol)
+        if (R_ExternalPtrTag(op) == R_NativeSymbolSymbol) {
            *fun = R_ExternalPtrAddrFn(op);
-
+        }
         else if (R_ExternalPtrTag(op) == R_RegisteredNativeSymbolSymbol) {
             R_RegisteredNativeSymbol *tmp
                           = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(op);
@@ -438,10 +435,16 @@ SEXP attribute_hidden do_isloaded(SEXP call, SEXP op, SEXP args, SEXP env)
 
 typedef SEXP (*R_ExternalRoutine)(SEXP);
 
+static SEXP do_External_e (SEXP call, SEXP op, SEXP args, SEXP env);
+
 SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    PROTECT (args = evalListUnshared (args, env)); 
-    evaluated_args = args;  /* used by do_Externalgr */
+    return do_External_e (call, op, evalListUnshared (args, env), env);
+}
+
+static SEXP do_External_e (SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    PROTECT(args);  
 
     RCNTXT cntxt;
     beginbuiltincontext (&cntxt, call);
@@ -476,10 +479,17 @@ typedef SEXP (*VarFun)();
 #endif
 
 /* .Call(name, <args>) */
-SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
+
+static SEXP do_dotcall_e (SEXP call, SEXP op, SEXP args, SEXP env);
+
+SEXP attribute_hidden do_dotcall (SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    PROTECT (args = evalListUnshared (args, env)); 
-    evaluated_args = args;  /* used by do_dotcallgr */
+    return do_dotcall_e (call, op, evalListUnshared (args, env), env);
+}
+
+static SEXP do_dotcall_e (SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    PROTECT(args);
 
     RCNTXT cntxt;
     beginbuiltincontext (&cntxt, call);
@@ -1192,14 +1202,17 @@ SEXP attribute_hidden do_Externalgr(SEXP call, SEXP op, SEXP args, SEXP env)
     pGEDevDesc dd = GEcurrentDevice();
     Rboolean record = dd->recordGraphics;
     dd->recordGraphics = FALSE;
-    PROTECT(retval = do_External(call, op, args, env));
-    PROTECT(args = evaluated_args);  /* set by do_External */
+
+    PROTECT(args = evalListUnshared (args, env));
+    PROTECT(retval = do_External_e (call, op, args, env));
+
     dd->recordGraphics = record;
     if (GErecording(call, dd)) { // which is record && call != R_NilValue
 	if (!GEcheckState(dd))
 	    errorcall(call, _("Invalid graphics state"));
 	GErecordGraphicOperation(op, args, dd);
     }
+
     UNPROTECT(2);
     return retval;
 }
@@ -1210,14 +1223,17 @@ SEXP attribute_hidden do_dotcallgr(SEXP call, SEXP op, SEXP args, SEXP env)
     pGEDevDesc dd = GEcurrentDevice();
     Rboolean record = dd->recordGraphics;
     dd->recordGraphics = FALSE;
-    PROTECT(retval = do_dotcall(call, op, args, env));
-    PROTECT(args = evaluated_args);  /* set by do_dotcall */
+
+    PROTECT(args = evalListUnshared (args, env));
+    PROTECT(retval = do_dotcall_e (call, op, args, env));
+
     dd->recordGraphics = record;
     if (GErecording(call, dd)) {
 	if (!GEcheckState(dd))
 	    errorcall(call, _("Invalid graphics state"));
 	GErecordGraphicOperation(op, args, dd);
     }
+
     UNPROTECT(2);
     return retval;
 }
