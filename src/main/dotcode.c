@@ -165,104 +165,92 @@ static DL_FUNC
 R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
 			  R_RegisteredNativeSymbol *symbol, SEXP env);
 
+/* This is the routine that is called by do_dotCode, do_dotcall and
+   do_External to find the DL_FUNC to invoke. It handles processing
+   the PACKAGE argument, if present, and also takes care of
+   the cases where we are given a NativeSymbolInfo object, an
+   address directly, and if the DLL is specified. If no PACKAGE is
+   provided, we check whether the calling function is in a namespace
+   and look there. 
 
-/* Called from resolveNativeRoutine.
+   Sets *fun to the routine.  Symbol info is passed in *symbol, which
+   is updated with info for .C. 
 
-  Checks whether the specified object correctly identifies a native routine.
-  op is the supplied value for .NAME.  This can be
-   a) a string (when this does nothing).
-   b) an external pointer giving the address of the routine
-      (e.g. getNativeSymbolInfo("foo")$address)
-   c) or a NativeSymbolInfo itself  (e.g. getNativeSymbolInfo("foo"))
+   Reports an error if nargs is wrong. */
 
-   It copies the symbol name to buf.
-
-   NB: in the last two cases it sets fun and symbol as well!
- */
-static void processSymbolId (SEXP op, SEXP call, DL_FUNC *fun,
-                             R_RegisteredNativeSymbol *symbol, char *buf)
-{
-    if (isValidString(op))
-        return;
-
-    if (TYPEOF(op) != EXTPTRSXP && inherits(op, "NativeSymbolInfo"))
-        op = VECTOR_ELT(op,1);
-
-    if (TYPEOF(op) == EXTPTRSXP) {
-	char *p = NULL;
-        *fun = NULL;
-	if (R_ExternalPtrTag(op) == R_NativeSymbolSymbol)
-	   *fun = R_ExternalPtrAddrFn(op);
-	else if(R_ExternalPtrTag(op) == R_RegisteredNativeSymbolSymbol) {
-	   R_RegisteredNativeSymbol *tmp;
-	   tmp = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(op);
-	   if(tmp) {
-	      if(symbol->type != R_ANY_SYM && symbol->type != tmp->type)
-		 errorcall(call, _("NULL value passed as symbol address"));
-		/* Check the type of the symbol. */
-	      switch(symbol->type) {
-	      case R_C_SYM:
-		  *fun = tmp->symbol.c->fun;
-		  p = tmp->symbol.c->name;
-		  break;
-	      case R_CALL_SYM:
-		  *fun = tmp->symbol.call->fun;
-		  p = tmp->symbol.call->name;
-		  break;
-	      case R_FORTRAN_SYM:
-		  *fun = tmp->symbol.fortran->fun;
-		  p = tmp->symbol.fortran->name;
-		  break;
-	      case R_EXTERNAL_SYM:
-		  *fun = tmp->symbol.external->fun;
-		  p = tmp->symbol.external->name;
-		  break;
-	      default:
-		 /* Something unintended has happened if we get here. */
-		  errorcall(call, 
-                            _("Unimplemented type %d in createRSymbolObject"),
-			    symbol->type);
-	      }
-	      *symbol = *tmp;
-	   }
-	}
-
-	if(*fun == NULL)
-	    errorcall(call, _("NULL value passed as symbol address"));
-
-	/* copy the symbol name. */
-	if (p) {
-            if (!copy_1_string(buf,MaxSymbolBytes,p))
-		error(_("symbol '%s' is too long"), p);
-	}
-
-	return;
-    }
-
-    errorcall(call,
-     _("first argument must be a string (of length 1) or native symbol reference"));
-}
-
-
-/*
-  This is the routine that is called by do_dotCode, do_dotcall and
-  do_External to find the DL_FUNC to invoke. It handles processing
-  the PACKAGE argument, if present, and also takes care of
-  the cases where we are given a NativeSymbolInfo object, an
-  address directly, and if the DLL is specified. If no PACKAGE is
-  provided, we check whether the calling function is in a namespace
-  and look there.
-*/
-
-//#define CHECK_NAMSPACE_RESOLUTION 1
+#define CHECK_NAMSPACE_RESOLUTION 0
 
 static void
 resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
-                     SEXP pkg, char *buf, SEXP call, SEXP env)
+                     SEXP pkg, int nargs, SEXP call, SEXP env)
 {
     SEXP op;
-    char *q;
-    const char *p, *name; 
+
+    op = CAR(args);  /* value of .NAME = */
+
+    /* For NativeSymbolInfo, get the address field. */
+
+    if (TYPEOF(op) == VECSXP && LENGTH(op) > 0
+          && inherits (op, "NativeSymbolInfo"))
+        op = VECTOR_ELT(op,1);
+
+    /* Must be a string naming the routine, or an external pointer giving
+       its address. */
+
+    if (!isValidString(op) && TYPEOF(op) != EXTPTRSXP)
+        errorcall(call,
+          _("first argument must be a string (of length 1) or native symbol reference"));
+
+    if (TYPEOF(op) == EXTPTRSXP) {
+
+        *fun = NULL;
+
+        if (R_ExternalPtrTag(op) == R_NativeSymbolSymbol)
+           *fun = R_ExternalPtrAddrFn(op);
+
+        else if (R_ExternalPtrTag(op) == R_RegisteredNativeSymbolSymbol) {
+            R_RegisteredNativeSymbol *tmp
+                          = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(op);
+            if (tmp == NULL || symbol->type != tmp->type)
+                errorcall(call, _("bad value passed as symbol address"));
+
+            *symbol = *tmp;
+
+            switch (symbol->type) {
+            case R_C_SYM:
+                *fun = symbol->symbol.c->fun;
+                break;
+            case R_CALL_SYM:
+                *fun = symbol->symbol.call->fun;
+                break;
+            case R_FORTRAN_SYM:
+                *fun = symbol->symbol.fortran->fun;
+                break;
+            case R_EXTERNAL_SYM:
+                *fun = symbol->symbol.external->fun;
+                break;
+            default:
+               /* Something unintended has happened if we get here. */
+                errorcall (call, 
+                           _("Unimplemented type %d in resolveNativeRoutine"),
+                           symbol->type);
+            }
+        }
+
+        if (*fun == NULL)
+            errorcall(call, _("bad value passed as symbol address"));
+    }
+
+    /* We were given a symbol (or an address), so we are (almost) done. */
+
+    if (*fun) 
+        goto chk_nargs;
+
+    /* Need to look up from string. */
+
+    if (TYPEOF(op) != STRSXP) abort();
+
+    char buf[MaxSymbolBytes+1];
 
     DllReference dll;
     /* Null string for DLLname is shorthand for 'all' in R_FindSymbol, but
@@ -271,15 +259,11 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
     dll.dll = NULL; 
     dll.obj = R_NoObject;
     dll.type = NOT_DEFINED;
-    
-    op = CAR(args);  // value of .NAME =
-
-    processSymbolId(op, call, fun, symbol, buf); /* May set fun, symbol, buf */
 
     if (TYPEOF(pkg) == STRSXP) {
         if (LENGTH(pkg) != 1)
-	    error(_("PACKAGE argument must be a single character string"));
-        name = translateChar (STRING_ELT (pkg,0));
+            error(_("PACKAGE argument must be a single character string"));
+        const char *name = translateChar (STRING_ELT (pkg,0));
         /* allow the package: form of the name, as returned by find */
         if(strncmp(name, "package:", 8) == 0) name += 8;
         if (!copy_1_string (dll.DLLname, PATH_MAX, name))
@@ -301,42 +285,39 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
             dll.dll = (HINSTANCE) R_ExternalPtrAddr(VECTOR_ELT(pkg, 4));
         } else 
             error("incorrect type (%s) of PACKAGE argument\n",
-        	  type2char(TYPEOF(pkg)));
+                  type2char(TYPEOF(pkg)));
     }
 
-    /* We were given a symbol (or an address), so we are done. */
-    if (*fun) 
-        return;
+    /* Find if we were called from a namespace. */
 
-    // find if we were called from a namespace
     SEXP env2 = ENCLOS(env);
     const char *ns = "";
     if(R_IsNamespaceEnv(env2))
-	ns = CHAR(STRING_ELT(R_NamespaceEnvSpec(env2), 0));
+        ns = CHAR(STRING_ELT(R_NamespaceEnvSpec(env2), 0));
     else
         env2 = R_NilValue;
 
     /* Make up the load symbol */
-    if(TYPEOF(op) == STRSXP) {
-	p = translateChar(STRING_ELT(op, 0));
-	if (!copy_1_string(buf,MaxSymbolBytes,p))
-	    error(_("symbol '%s' is too long"), p);
-        if (symbol->type == R_FORTRAN_SYM)
-            for (q = buf; *q; q++) *q = (char) tolower(*q);
+
+    const char *p = translateChar(STRING_ELT(op, 0));
+    if (!copy_1_string (buf, MaxSymbolBytes, p))
+        error(_("symbol '%s' is too long"), p);
+    if (symbol->type == R_FORTRAN_SYM) {
+        char *q;
+        for (q = buf; *q; q++) *q = (char) tolower(*q);
     }
 
     if (dll.type != FILENAME && *ns != 0) {
-	/* no PACKAGE= arg, so see if we can identify a DLL
-	   from the namespace defining the function */
-	*fun = R_FindNativeSymbolFromDLL(buf, &dll, symbol, env2);
-	if (*fun) 
+        /* no PACKAGE= arg, so see if we can identify a DLL
+           from the namespace defining the function */
+        *fun = R_FindNativeSymbolFromDLL(buf, &dll, symbol, env2);
+        if (*fun) 
             return;
-#ifdef CHECK_NAMSPACE_RESOLUTION
-	warningcall(call, 
-		    "\"%s\" not resolved from current namespace (%s)",
-		    buf, ns);
-#endif
-	/* need to continue if the namespace search failed */
+#       if CHECK_NAMSPACE_RESOLUTION
+            warningcall(call, "\"%s\" not resolved from current namespace (%s)",
+                              buf, ns);
+#       endif
+        /* need to continue if the namespace search failed */
     }
 
     /* NB: the actual conversion to the symbol is done in
@@ -345,10 +326,12 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
     */
 
     *fun = R_FindSymbol(buf, dll.DLLname, symbol);
-    if (*fun)
-        return;
 
-    /* so we've failed and bail out */
+    if (*fun)
+        goto chk_nargs;
+
+    /* We've failed, and bail out. */
+
     if (*dll.DLLname != 0) {
 	switch(symbol->type) {
 	case R_C_SYM:
@@ -377,9 +360,42 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
 		      "C/Fortran", buf, dll.DLLname);
 	    break;
 	}
-    } else
+    } 
+    else
 	errorcall(call, _("%s symbol name \"%s\" not in load table"),
 		  symbol->type == R_FORTRAN_SYM ? "Fortran" : "C", buf);
+
+
+  chk_nargs: ; /* Return after checking argument count. */
+
+    char *symname;
+    int eargs;
+
+    switch (symbol->type) {
+    case R_C_SYM:
+        if (symbol->symbol.c == NULL) return;
+        symname = symbol->symbol.c->name;
+        eargs = symbol->symbol.c->numArgs;
+        break;
+    case R_CALL_SYM:
+        if (symbol->symbol.call == NULL) return;
+        symname = symbol->symbol.call->name;
+        eargs = symbol->symbol.call->numArgs;
+        break;
+    case R_FORTRAN_SYM:
+        if (symbol->symbol.fortran == NULL) return;
+        symname = symbol->symbol.fortran->name;
+        eargs = symbol->symbol.c->numArgs;
+        break;
+    default:
+        return;
+    }
+
+    if (eargs > -1 && eargs != nargs) {
+        errorcall(call, 
+                 _("Incorrect number of arguments (%d), expecting %d for '%s'"),
+                  nargs, eargs, symname);
+    }
 }
 
 
@@ -435,13 +451,12 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP retval;
     R_RegisteredNativeSymbol symbol = {R_EXTERNAL_SYM, {NULL}, NULL};
     const void *vmax = VMAXGET();
-    char buf[MaxSymbolBytes];
     struct special_args spa;
 
-    (void) trimargs (args, 0, &spa, call);
+    int nargs = trimargs (args, 0, &spa, call);
 
     PROTECT(spa.pkg);
-    resolveNativeRoutine (args, &fun0, &symbol, spa.pkg, buf, call, env);
+    resolveNativeRoutine (args, &fun0, &symbol, spa.pkg, nargs, call, env);
     fun = (R_ExternalRoutine) fun0;
     UNPROTECT(1);
 
@@ -476,7 +491,6 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     R_RegisteredNativeSymbol symbol = {R_CALL_SYM, {NULL}, NULL};
     int nargs, i;
     const void *vmax = VMAXGET();
-    char buf[MaxSymbolBytes];
     struct special_args spa;
 
     nargs = trimargs (args, 0, &spa, call);
@@ -485,7 +499,7 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
         errorcall(call, _("too many arguments in foreign function call"));
 
     PROTECT(spa.pkg);
-    resolveNativeRoutine(args, &fun0, &symbol, spa.pkg, buf, call, env);
+    resolveNativeRoutine(args, &fun0, &symbol, spa.pkg, nargs, call, env);
     ofun = (SEXP (*)(void)) fun0;
     fun = (VarFun) fun0;
     args = CDR(args);
@@ -495,13 +509,6 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 
     for (pargs = args, i = 0; pargs != R_NilValue; pargs = CDR(pargs), i++)
 	cargs[i] = CAR(pargs);
-
-    if(symbol.symbol.call && symbol.symbol.call->numArgs > -1) {
-	if(symbol.symbol.call->numArgs != nargs)
-	    errorcall(call,
-		      _("Incorrect number of arguments (%d), expecting %d for '%s'"),
-		      nargs, symbol.symbol.call->numArgs, buf);
-    }
 
     switch (nargs) {
     case 0:
@@ -2149,7 +2156,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     R_RegisteredNativeSymbol symbol = {R_C_SYM, {NULL}, NULL};
     R_NativePrimitiveArgType *checkTypes = NULL;
     void *vmax;
-    char symName[MaxSymbolBytes], encname[101];
+    char encname[101];
 
     vmax = VMAXGET();
     Fort = PRIMVAL(op);
@@ -2174,7 +2181,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
         warning("ENCODING is deprecated");
     }
 
-    resolveNativeRoutine (args, &ofun, &symbol, spa.pkg, symName, call, env);
+    resolveNativeRoutine (args, &ofun, &symbol, spa.pkg, nargs, call, env);
     dotCode_fun = (VarFun) ofun;
     args = CDR(args);
 
@@ -2190,11 +2197,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
         }
     }
 
-    if(symbol.symbol.c && symbol.symbol.c->numArgs > -1) {
-	if(symbol.symbol.c->numArgs != nargs)
-	    errorcall (call,
-              _("Incorrect number of arguments (%d), expecting %d for '%s'"),
-              nargs, symbol.symbol.c->numArgs, symName);
+    if (symbol.symbol.c && symbol.symbol.c->numArgs > -1) {
 	checkTypes = symbol.symbol.c->types;
 	argStyles = symbol.symbol.c->styles;
     }
@@ -2221,8 +2224,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
                           || targetType == SINGLESXP 
                               && asLogical (getAttrib(s,R_CSingSymbol)) == TRUE;
             if (!typesMatch)
-                errorcall(call, _("Wrong type for argument %d in call to %s"),
-                          na+1, symName);
+                errorcall(call, _("Wrong type for argument %d in call"), na+1);
 	}
 
         /* Start with return value a copy of the inputs, as that is what is 
