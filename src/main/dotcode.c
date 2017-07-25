@@ -178,13 +178,9 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
 #define CHECK_NAMSPACE_RESOLUTION 0
 
 static void
-resolveNativeRoutine(SEXP args, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
+resolveNativeRoutine(SEXP op, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
                      SEXP pkg, int nargs, SEXP call, SEXP env)
 {
-    SEXP op;
-
-    op = CAR(args);  /* value of .NAME = */
-
     /* For NativeSymbolInfo, get the address field. */
 
     if (TYPEOF(op) == VECSXP && LENGTH(op) > 0
@@ -459,7 +455,7 @@ static SEXP do_External_e (SEXP call, SEXP op, SEXP args, SEXP env)
     int nargs = trimargs (args, 0, &spa, call);
 
     PROTECT(spa.pkg);
-    resolveNativeRoutine (args, &fun0, &symbol, spa.pkg, nargs, call, env);
+    resolveNativeRoutine (CAR(args), &fun0, &symbol, spa.pkg, nargs, call, env);
     fun = (R_ExternalRoutine) fun0;
     UNPROTECT(1);
 
@@ -509,7 +505,7 @@ static SEXP do_dotcall_e (SEXP call, SEXP op, SEXP args, SEXP env)
         errorcall(call, _("too many arguments in foreign function call"));
 
     PROTECT(spa.pkg);
-    resolveNativeRoutine(args, &fun0, &symbol, spa.pkg, nargs, call, env);
+    resolveNativeRoutine (CAR(args), &fun0, &symbol, spa.pkg, nargs, call, env);
     ofun = (SEXP (*)(void)) fun0;
     fun = (VarFun) fun0;
     args = CDR(args);
@@ -2197,7 +2193,7 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
         warning("ENCODING is deprecated");
     }
 
-    resolveNativeRoutine (args, &ofun, &symbol, spa.pkg, nargs, call, env);
+    resolveNativeRoutine (CAR(args), &ofun, &symbol, spa.pkg, nargs, call, env);
     dotCode_fun = (VarFun) ofun;
     args = CDR(args);
 
