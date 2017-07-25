@@ -336,15 +336,14 @@ struct sxpinfo_struct @{
     /* Miscellaneous flags, some with multiple meanings depending on type */
 
     unsigned int debug : 1;       /* Function/Environment: is being debugged */
-    unsigned int rstep_spec : 1;  /* Function: is to be debugged just once,
-                                     Symbol: this is a "special" symbol,
-                                     Environment: has no special symbols */
+    unsigned int rstep_pname : 1; /* Function: is to be debugged just once */
+                                  /* CHARSXP: is used as a symbol's printname */
     unsigned int trace_base : 1;  /* Function: is being traced,
                                      Symbol: has base binding in global cache,
                                      Environment: R_BaseEnv or R_BaseNamespace*/
     unsigned int has_attrib : 1;  /* Set to 1 iff ATTRIB != R_NilValue, except
                                      not used when ATTRIB isn't normal attrib */
-    unsigned int unused : 1;
+    unsigned int sym_no_dots : 1; /* Is a symbol, but not ..., ..1, ..2, etc. */
 
     /* Object flag */
     unsigned int obj : 1;     /* set if this is an S3 or S4 object */
@@ -365,19 +364,12 @@ indicates that evaluations of the function should be run under the
 browser.  For environments it indicates whether the browsing is in
 single-step mode.
 
-@findex rstep_spec bit
+@findex rstep_pname bit
 @findex RSTEP
-@findex SPEC_SYM
-@findex NO_SPEC_SYM
-The @code{rstep_spec} bit is used for closures to indicate
-"debugonce".  It is used for symbols to indicate (with @code{SPEC_SYM}) 
-that it is one of a set of special symbols (eg, @code{+} and @code{if}) 
-for which an attempt is made to have function lookup be faster.  It is
-used for environments (with @code{NO_SPEC_SYM}) to indicate that the
-environment has no symbols with the @code{SPEC_SYM} flag set (and has
-never had such a symbol), so that it can be bypassed in searches for
-such symbols.  Currently, this bit is maintained only for unhashed
-environments (always set to zero for hashed environments).
+The @code{rstep_pname} bit is used for closures to indicate
+"debugonce".  It is used for CHARSXP objects to mark those that are used as
+the printname of a symbol, and hence should never be garbage collected
+(since symbols are never collected). 
 
 @findex trace_base bit
 The @code{trace_base} bit is used for functions for @code{trace()}.  For
@@ -386,14 +378,17 @@ the base environment and namespace, and used to slightly speed up the
 check for whether an environment is one of these, which is done in
 time-critical code.  For symbols, it is used for the @code{BASE_CACHE}
 flag, that indicates that the symbol is in the global cache with a
-binding in the base environment, allowing its value to be obtained
-directly without looking in the hash table. (Currently done only for
-non-active bindings that are functions.)
+binding in the base environment.
 
 @findex has_attrib bit
 The @code{has_attrib} bit is used to flag an object that does not
 have @code{R_NilValue} for @code{ATTRIB}, allowing a slightly faster
 check of this.
+
+@findex sym_no_dots bit
+The @code{sym_no_dots} bit is set in objects that are symbols, but
+not @code{...} or one of @code{..1}, @code{..2}, etc.  This speeds
+up the check for a regular symbol in time-critical code.
 
 @findex nmcnt field
 @findex named field
@@ -438,7 +433,7 @@ used as described below (mainly from detective work on the sources).
 @findex SETLEVELS
 The bits can be accessed and set by the @code{LEVELS} and
 @code{SETLEVELS} macros, which names appear to date back to the internal
-factor and ordered types and are now used in only a few places in the
+factor and ordered types now used in only a few (no?) places in the
 code.  The @code{gp} field is serialized/unserialized for the
 @code{SEXPTYPE}s other than @code{NILSXP}, @code{SYMSXP} and
 @code{ENVSXP}.
@@ -476,7 +471,7 @@ Bit 0 is used for @code{PRSEEN}, a flag to indicate if a promise has
 already been seen during the evaluation of the promise (and so to avoid
 recursive loops).
 
-Bit 0 is used for @code{HASHASH}, on the @code{PRINTNAME} of the
+Bit 0 was formerly used for @code{HASHASH}, on the @code{PRINTNAME} of the
 @code{TAG} of the frame of an environment. (This bit is not serialized
 for @code{CHARSXP} objects.)
 
@@ -494,10 +489,10 @@ a set of bytes, not necessarily representing a character in any known
 encoding.  Bits 2, 3 and 6 are used to indicate that it is known to be
 in Latin-1, UTF-8 or ASCII respectively.
 
-Bit 5 for a @code{CHARSXP} indicates that it is hashed by its address,
-that is @code{NA_STRING} or is in the @code{CHARSXP} cache (this is not
-serialized).  Only exceptionally is a @code{CHARSXP} not hashed, and
-this should never happen in end-user code.
+Bit 5 for a @code{CHARSXP} indicates that it is @code{NA_STRING} or is
+in the @code{CHARSXP} cache; it is not serialized.  Only exceptionally
+(never?) is a @code{CHARSXP} not set, and this should never happen in
+end-user code.
 
 Bits 5 to 15 of the gp field are used for the table offset in a
 @code{BUILTINSXP} or @code{SPECIALSXP}.  This offset is found again
@@ -513,7 +508,6 @@ node) and the node data, a union
 @example
 union @{
     struct listsxp_struct listsxp;
-    struct envsxp_struct envsxp;
     struct closxp_struct closxp;
     struct promsxp_struct promsxp;
 @} u;
@@ -522,8 +516,8 @@ union @{
 @noindent
 All of these alternatives consist of three SEXP values.
 
-The data for vectors, symbols, and primitives (builtin and special) is
-held in different structures.
+The data for vectors, environments, symbols, and primitives (builtin
+and special) is held in different structures.
 
 @cindex vector type
 The vector types are @code{RAWSXP}, @code{CHARSXP}, @code{LGLSXP},
@@ -550,37 +544,49 @@ There is only one object of type @code{NILSXP}, @code{R_NilValue}, with
 no data.  However, asking for the @code{CAR}, @code{CDR}, or @code{TAG}
 of @code{R_NilValue} will actually return @code{R_NilValue} without error.
 Note that since there is only one @code{NILSXP}, the tests 
-@code{s==R_NilValue} and @code{isNull(s)} should be equivalent.
+@code{s==R_NilValue} and @code{isNull(s)}, which checks whether TYPEOF(s)
+is NILSXP, should be equivalent.
 
 @item SYMSXP
 Contains a pointer to the 
 @code{PRINTNAME} (a @code{CHARSXP}) and the value in the base environment
-(@code{SYMVALUE}).  Internal primitives were previously held here also,
-but are now recorded elsewhere.
+(@code{SYMVALUE}).  Internal functions were previously held here also,
+but are now recorded elsewhere.  The ``attribute'' for a symbol is
+used to hold its binding in the global cache, if this binding is not
+for the base environment, or R_NilValue if no such binding is currently
+recorded.
 
-There is also a pointer to the next symbol in the global hash table of symbols.
-It is not used outside routines for maintaining this table.  Note
-that currently symbols are never removed from this table, and hence
-never garbage collected, and this is sometimes relied upon in C code,
-making it difficult to change the scheme so that space for unused
-symbols can be recovered.  Accepting this, pqR now treats symbos as
-uncollectable objects in the garbage collector.
+Note that currently symbols are never garbage collected, and this is
+sometimes relied upon in C code, making it difficult to change the
+scheme so that space for unused symbols can be recovered.  Accepting
+this, pqR now treats symbos as uncollectable objects in the garbage
+collector.
 
-There are three further pointers, used to record the last
-binding of the symbol that was found in an unhashed environment,
-and the last environment in which the symbol was not found (in a
-lookup for a function).
-See the next section on @ref{Environments and variable lookup}.
+There are three further pointers, used to record the last binding of
+the symbol that was found in an unhashed environment, and the last
+environment in which the symbol was not found (in a lookup for a
+function).  See the next section on @ref{Environments and variable
+lookup}.
 
-Finally, the hash value used for lookups in hashed environments is recorded.
+The @code{symbits} field stores a 32-bit pattern with only a few 1s,
+fixed when the symbol is created, which is used to sometimes quickly
+determine that the symbol is not in an environment, in the style of a
+``Bloom filter''.
+
+Finally, the hash value of the printname is redundantly recorded
+(except when compressed pointers are used), just to make access to it
+be faster.
 
 @item CLOSXP
 Pointers to the formals (a pairlist), the body and the environment.
 
 @item ENVSXP
-Pointers to the frame, enclosing environment and hash table (@code{R_NilValue} or a
-@code{VECSXP}).  A frame is a tagged pairlist with tag the symbol and
-CAR the bound value.
+Contains pointers to the frame, enclosing environment, and hash table
+(@code{R_NilValue} or a @code{VECSXP}).  A frame is a tagged pairlist
+with tag the symbol and CAR the bound value.  Also contains 
+the logical OR of the @code{symbits} fields of all symbols that
+have ever been stored in the environment, allowing quick determination
+that some symbols cannot be in the environment.
 
 @item PROMSXP
 Pointers to the value, expression and environment (in which to evaluate
@@ -962,7 +968,8 @@ can work and reasonable information can be produced on error conditions
 functions).
 
 Execution contexts are a stack of C @code{structs}. The exact declaration
-as below is used by RStudio, which breaks (when debugging) if it is changed: 
+as below is used by RStudio, which breaks (when debugging) if it is changed
+(except by adding fields at the end): 
 
 @example
 typedef struct RCNTXT @{
@@ -979,7 +986,7 @@ typedef struct RCNTXT @{
     SEXP conexit;		/* @r{Interpreted "on.exit" code} */
     void (*cend)(void *);	/* @r{C "on.exit" thunk} */
     void *cenddata;		/* @r{data for C "on.exit" thunk} */
-    void *vmax;		        /* @r{top of R_alloc stack} */
+    void *vmax;		        /* @r{top of R_alloc stack (should really be SEXP)} */
     int intsusp;                /* @r{interrupts are suspended} */
     SEXP handlerstack;          /* @r{condition handler stack} */
     SEXP restartstack;          /* @r{stack of available restarts} */
@@ -990,6 +997,7 @@ typedef struct RCNTXT @{
 #endif
     SEXP srcref;	        /* @r{The source line in effect} */
     const struct R_local_protect *local_pr;  /* linked list of protected vars */
+    SEXP scalar_stack;          /* Next unused position on scalar stack */
 @} RCNTXT, *context;
 @end example
 
@@ -1318,7 +1326,22 @@ These functions are also set up with tables in the various source
 files and initialization code in @code{names.c}.  For details, see
 @code{names.c}, the documentation in the code for @code{evalv}, and
 the definitions for PRIMFUN_FAST and related macros in
-@file{Rinternals.h}.
+@file{Rinternals.h}.  
+
+Alternatively, creation of a pairlist of evaluated arguments may be
+avoided by marking the primitive as @code{SPECIAL}, even if it will
+always eventually evaluate its arguments, so that the arguments may be
+stored in local variables without creating a pairlist.  
+
+Some primitives use a ``scalar stack'' that may contain @code{INTSXP}
+or @code{REALSXP} vectors of length one, with no attributes.  Values
+may be returned on this stack if the @code{VARIANT_SCALAR_STACK_OK}
+bit in the variant is set, and if so returned, must be popped off by
+the caller.  Such values must never be allowed to appear in persistent
+data structures.  It is permitted, but unnecessary, for them to be
+``protected'' from garbage collection.  See the source file
+src/main/scalar-stack.h for details.
+
 
 @node Reference counts and the nmcnt field, The write barrier, The eval function, R Internal Structures
 @section Reference counts and the nmcnt field
@@ -1522,8 +1545,7 @@ and @code{readRDS} can read @command{gzip}, @command{bzip2} and
 @command{gzip} compression when reading from a connection.
 
 @R{} has used the same serialization format since @R{} 1.4.0 in December
-2001.  Earlier formats are still supported via @code{load} and
-@code{save} but such formats are not described here. The current
+2001.  Earlier formats are no longer supported in pqR. The current
 serialization format is called `version 2', and has been expanded in
 back-compatible ways since @R{} 1.4.0, for example to support additional
 @code{SEXPTYPE}s.

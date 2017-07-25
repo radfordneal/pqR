@@ -626,13 +626,6 @@ void (SET_PRVALUE)(SEXP x, SEXP v)
 void (SET_PRCODE)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); PRCODE(x) = v; }
 void (SET_PRSEEN)(SEXP x, int v) { SET_PRSEEN(Rf_chk_valid_SEXP(x), v); }
 
-/* Hashing Accessors */
-int (HASHASH)(SEXP x) { return HASHASH(Rf_chk_valid_SEXP(x)); }
-int (HASHVALUE)(SEXP x) { return HASHVALUE(Rf_chk_valid_SEXP(x)); }
-
-void (SET_HASHASH)(SEXP x, int v) { SET_HASHASH(Rf_chk_valid_SEXP(x), v); }
-void (SET_HASHVALUE)(SEXP x, int v) { SET_HASHVALUE(Rf_chk_valid_SEXP(x), v); }
-
 /* Test functions */
 Rboolean Rf_isNull(SEXP s) { return isNull(s); }
 Rboolean Rf_isRaw(SEXP s) { return isRaw(s); }
