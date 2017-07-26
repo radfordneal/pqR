@@ -4,4 +4,6 @@ features, and for performance improvement.
 Includes putting ICU in "capabilities()", the new icuGetCollate function,
 and changes to icuSetCollate.
 
-Also improvement to looping in string_relop.
+Also improvement to looping in string_relop, and stash pointer to
+improve performance with compressed pointers.
+
