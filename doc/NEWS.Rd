@@ -115,6 +115,12 @@
   \item The default \code{size} for \code{new.env} is now \code{NA}, which
         gives an internal default, which now varies depending on the
         platform and configuration options.
+  \item A warning is no longer generated when the first argument of
+        \code{.C}, \code{.Fortran}, \code{.Call}, or \code{.External} is
+        given its proper name of \code{.NAME}.  Passing more than one
+        \code{PACKAGE}, \code{NAOK}, \code{DUP}, \code{HELPERS}, or
+        \code{ENCODING} argument now results in an error rather than a
+        warning. 
   }}
 
   \subsection{NEW FEATURES FROM R CORE RELEASES}{
