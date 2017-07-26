@@ -188,9 +188,12 @@ void attribute_hidden InitArithmetic()
  */
 static inline double myfmod(double x1, double x2)
 {
-    int i1 = (int)x1, i2 = (int)x2;
-    if ((double)i1 == x1 && i1 >= 0 && (double)i2 == x2 && i2 > 0)
-        return (double) (i1 % i2);
+    int i1 = (int) x1;
+    if ((double)i1 == x1 && i1 >= 0) {
+        int i2 = (int) x2;
+        if ((double)i2 == x2 && i2 > 0)
+            return (double) (i1 % i2);
+    }
 
     double q = x1 / x2, tmp;
 
@@ -204,9 +207,12 @@ static inline double myfmod(double x1, double x2)
 
 static inline double myfloor(double x1, double x2)
 {
-    int i1 = (int)x1, i2 = (int)x2;
-    if ((double)i1 == x1 && i1 >= 0 && (double)i2 == x2 && i2 > 0)
-        return (double) (i1 / i2);
+    int i1 = (int) x1;
+    if ((double)i1 == x1 && i1 >= 0) {
+        int i2 = (int) x2;
+        if ((double)i2 == x2 && i2 > 0)
+            return (double) (i1 / i2);
+    }
 
     double q = x1 / x2, tmp;
 
@@ -694,7 +700,6 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                 INTEGER(ans)[i] = NA_INTEGER;
             else {
                 INTEGER(ans)[i] = /* till 0.63.2: x1 % x2 */
-                    (x1 >= 0 && x2 > 0) ? x1 % x2 :
                     (int)myfmod((double)x1,(double)x2);
             }
         }
