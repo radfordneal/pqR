@@ -2796,11 +2796,12 @@ SEXP attribute_hidden evalList_v(SEXP el, SEXP rho, int variant)
    are unshared, if they are atomic scalars without attributes, by
    assigning a duplicate to them if necessary.
 
-   Used in .External and .Call as a defensive measure against argument 
-   abuse.  Waits for arguments to be computed.  Does not allow missing 
+   Used in .External (with .Call using eval_unshared directly) as a
+   defensive measure against argument abuse.  evalListUnshared waits
+   for arguments to be computed, and does not allow missing
    arguments. */
 
-static inline SEXP eval_unshared (SEXP e, SEXP rho, int variant)
+SEXP attribute_hidden eval_unshared (SEXP e, SEXP rho, int variant)
 {
     SEXP res;
 

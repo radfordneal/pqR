@@ -1,6 +1,7 @@
 % File src/library/base/man/Foreign.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2012 R Core Team
+% Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{CallExternal}
@@ -48,7 +49,7 @@
   variable number of arguments.
   
   These functions are \link{primitive}, and \code{.NAME} is always
-  matched to the first argument supplied (which if named must partially
+  matched to the first argument supplied (which if named must exactly
   match \code{.NAME}).  For clarity, avoid using names in the
   arguments passed to \code{\dots} that match or partially match
   \code{.NAME}.  

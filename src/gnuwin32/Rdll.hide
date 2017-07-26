@@ -347,8 +347,10 @@
  Rf_dpptr
  Rf_evalList
  Rf_evalListKeepMissing
+ Rf_evalListUnshared
  Rf_evalList_v
  Rf_evalv2
+ Rf_eval_unshared
  Rf_findFun_nospecsym
  Rf_findVar1
  Rf_findcontext

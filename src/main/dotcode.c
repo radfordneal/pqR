@@ -74,8 +74,9 @@ static int trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
 
     if (args == R_NilValue)
         errorcall(call, _("'.NAME' is missing"));
-    if (TAG(args) != R_NilValue)
-        warningcall(call, "the first argument should not be named");
+    if (TAG(args) != R_NilValue 
+          && strcmp (CHAR(PRINTNAME(TAG(args))), ".NAME") != 0)
+        errorcall(call,_("the first argument should be .NAME or not be named"));
 
     r->naok = FALSE;
     r->dup = TRUE;
@@ -89,7 +90,7 @@ static int trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
 
         if (TAG(s) == R_PkgSymbol) {
             r->pkg = CAR(s);
-            if (pkgused) warningcall(call,_("PACKAGE used more than once"));
+            if (pkgused) errorcall(call,_("PACKAGE used more than once"));
             pkgused = 1;
             goto remove;
         }
@@ -99,7 +100,7 @@ static int trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
             if (TAG(s) == R_EncSymbol) {
                 r->encoding = CAR(s);
                 if (encused) 
-                    warningcall(call,_("ENCODING used more than once"));
+                    errorcall(call,_("ENCODING used more than once"));
                 encused = 1;
                 goto remove;
             }
@@ -107,7 +108,7 @@ static int trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
             if (TAG(s) == R_NaokSymbol) {
                 r->naok = asLogical(CAR(s));
                 if (naokused) 
-                    warningcall(call,_("NAOK used more than once"));
+                    errorcall(call,_("NAOK used more than once"));
                 naokused = 1;
                 goto remove;
             }
@@ -115,7 +116,7 @@ static int trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
             if (TAG(s) == R_DupSymbol) {
                 r->dup = asLogical(CAR(s));
                 if (dupused) 
-                    warningcall(call,_("DUP used more than once"));
+                    errorcall(call,_("DUP used more than once"));
                 dupused = 1;
                 goto remove;
             }
@@ -123,7 +124,7 @@ static int trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
             if (TAG(s) == R_HelperSymbol) {
                 r->helper = asLogical(CAR(s));
                 if (helperused) 
-                    warningcall(call,_("HELPER used more than once"));
+                    errorcall(call,_("HELPER used more than once"));
                 helperused = 1;
                 goto remove;
             }
@@ -487,34 +488,49 @@ static SEXP do_dotcall_e (SEXP call, SEXP op, SEXP args, SEXP env)
 {
     PROTECT(args);
 
+    const void *vmax = VMAXGET();
+
     RCNTXT cntxt;
     beginbuiltincontext (&cntxt, call);
 
     DL_FUNC fun0 = NULL;
     SEXP (*ofun)(void);
     VarFun fun;
-    SEXP retval, pargs;
     R_RegisteredNativeSymbol symbol = {R_CALL_SYM, {NULL}, NULL};
-    int nargs, i;
-    const void *vmax = VMAXGET();
-    struct special_args spa;
+    SEXP retval, pargs;
+    SEXP cargs[MAX_ARGS];
+    int nargs;
 
-    nargs = trimargs (args, 0, &spa, call);
+    if (args == R_NilValue)
+        errorcall(call, _("'.NAME' is missing"));
+    if (TAG(args) != R_NilValue 
+          && strcmp (CHAR(PRINTNAME(TAG(args))), ".NAME") != 0)
+        errorcall(call,_("the first argument should be .NAME or not be named"));
+    SEXP what = CAR(args);
 
-    if (nargs > MAX_ARGS)
-        errorcall(call, _("too many arguments in foreign function call"));
+    SEXP pkg = R_NoObject;
+    nargs = 0;
+    for (pargs = CDR(args); pargs != R_NilValue; pargs = CDR(pargs)) {
+        SEXP a = CAR(pargs);
+        if (TAG(pargs) == R_PkgSymbol) {
+            if (pkg != R_NoObject)
+                 errorcall (call, _("PACKAGE used more than once"));
+            pkg = a;
+        }
+        else {
+            if (nargs == MAX_ARGS)
+                errorcall (call, 
+                           _("too many arguments in foreign function call"));
+            cargs[nargs] = a;
+            nargs += 1;
+       }
+    }
 
-    PROTECT(spa.pkg);
-    resolveNativeRoutine (CAR(args), &fun0, &symbol, spa.pkg, nargs, call, env);
+    if (pkg == R_NoObject) pkg = R_NilValue;
+
+    resolveNativeRoutine (what, &fun0, &symbol, pkg, nargs, call, env);
     ofun = (SEXP (*)(void)) fun0;
     fun = (VarFun) fun0;
-    args = CDR(args);
-    UNPROTECT(1);
-
-    SEXP cargs [nargs>0 ? nargs : 1]; /* 0-length arrays not allowed in C99 */
-
-    for (pargs = args, i = 0; pargs != R_NilValue; pargs = CDR(pargs), i++)
-	cargs[i] = CAR(pargs);
 
     switch (nargs) {
     case 0:

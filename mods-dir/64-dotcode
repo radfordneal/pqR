@@ -1,5 +1,7 @@
-Cleanup and performance improvements in dotcode.c
+Cleanup and performance improvements in dotcode.c.  Also minor
+feature changes regarding errors/warnings.
 
 Also defines inherits_CHAR.  Preallocates "factor", "ordered", and
 "NativeSymbolInfo", and uses them with inherits_CHAR in many places.
 
+Makes eval_unshared in eval.c non-static.
