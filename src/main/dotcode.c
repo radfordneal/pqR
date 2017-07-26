@@ -477,41 +477,64 @@ typedef SEXP (*VarFun)();
 
 /* .Call(name, <args>) */
 
-static SEXP do_dotcall_e (SEXP call, SEXP op, SEXP args, SEXP env);
+static SEXP do_dotcall_e (SEXP call, SEXP op, SEXP args, SEXP env, int evald);
 
 SEXP attribute_hidden do_dotcall (SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    return do_dotcall_e (call, op, evalListUnshared (args, env), env);
+    return do_dotcall_e (call, op, args, env, 0);
 }
 
-static SEXP do_dotcall_e (SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_dotcall_e (SEXP call, SEXP op, SEXP args, SEXP env, int evald)
 {
-    PROTECT(args);
-
     const void *vmax = VMAXGET();
 
     RCNTXT cntxt;
     beginbuiltincontext (&cntxt, call);
 
+    PROTECT(args);
+
     DL_FUNC fun0 = NULL;
     SEXP (*ofun)(void);
     VarFun fun;
     R_RegisteredNativeSymbol symbol = {R_CALL_SYM, {NULL}, NULL};
-    SEXP retval, pargs;
+    SEXP what, retval, pargs;
     SEXP cargs[MAX_ARGS];
-    int nargs;
+    int nargs, nprotect, wait;
+
+    if (!evald && CAR(args) == R_DotsSymbol) {
+        args = evalListUnshared (args, env);
+        UNPROTECT(1);
+        PROTECT(args);
+        evald = 1;
+    }
 
     if (args == R_NilValue)
         errorcall(call, _("'.NAME' is missing"));
     if (TAG(args) != R_NilValue 
           && strcmp (CHAR(PRINTNAME(TAG(args))), ".NAME") != 0)
         errorcall(call,_("the first argument should be .NAME or not be named"));
-    SEXP what = CAR(args);
+
+    PROTECT (what = evald ? CAR(args) : eval(CAR(args),env));
 
     SEXP pkg = R_NoObject;
     nargs = 0;
+    nprotect = 0;
+    wait = 0;
+
     for (pargs = CDR(args); pargs != R_NilValue; pargs = CDR(pargs)) {
-        SEXP a = CAR(pargs);
+        SEXP a;
+        if (!evald && CAR(pargs) == R_DotsSymbol) {
+            PROTECT (pargs = evalListUnshared (pargs, env)); 
+            nprotect += 1;
+            evald = 1;
+        }
+        if (evald)
+            a = CAR(pargs);
+        else {
+            PROTECT (a = eval_unshared (CAR(pargs), env, VARIANT_PENDING_OK));
+            nprotect += 1;
+            wait = 1;
+        }
         if (TAG(pargs) == R_PkgSymbol) {
             if (pkg != R_NoObject)
                  errorcall (call, _("PACKAGE used more than once"));
@@ -531,6 +554,10 @@ static SEXP do_dotcall_e (SEXP call, SEXP op, SEXP args, SEXP env)
     resolveNativeRoutine (what, &fun0, &symbol, pkg, nargs, call, env);
     ofun = (SEXP (*)(void)) fun0;
     fun = (VarFun) fun0;
+
+    if (wait) {
+        for (int i = 0; i < nargs; i++) WAIT_UNTIL_COMPUTED(cargs[i]);
+    }
 
     switch (nargs) {
     case 0:
@@ -1185,10 +1212,11 @@ static SEXP do_dotcall_e (SEXP call, SEXP op, SEXP args, SEXP env)
     default:
 	errorcall(call, _("too many arguments, sorry"));
     }
+
+    UNPROTECT(nprotect + 2);  /* ..., what, args - before endcontext */
+    endcontext (&cntxt);
     VMAXSET(vmax);
 
-    endcontext (&cntxt);
-    UNPROTECT(1);  /* args - must be after endcontext */
     return retval;
 }
 
@@ -1237,7 +1265,7 @@ SEXP attribute_hidden do_dotcallgr(SEXP call, SEXP op, SEXP args, SEXP env)
     dd->recordGraphics = FALSE;
 
     PROTECT(args = evalListUnshared (args, env));
-    PROTECT(retval = do_dotcall_e (call, op, args, env));
+    PROTECT(retval = do_dotcall_e (call, op, args, env, 1));
 
     dd->recordGraphics = record;
     if (GErecording(call, dd)) {
