@@ -56,7 +56,6 @@
 #define INT_FETCH(s,i)  INTEGER(s)[i]
 #define REAL_FETCH(s,i) REAL(s)[i]
 #define CPLX_FETCH(s,i) COMPLEX(s)[i]
-#define STR_FETCH(s,i)  STRING_ELT(s,i)
 
 #define RELOP_MACRO(FETCH,NANCHK1,NANCHK2,COMPARE) do { \
  \
@@ -545,6 +544,8 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
     void *vmax = VMAXGET();
     int i, i1, i2, n, n1, n2, res;
     SEXP ans, x1, x2;
+    const SEXP *e1 = STRING_PTR(s1);
+    const SEXP *e2 = STRING_PTR(s2);
     int T = !F;
 
     n1 = LENGTH(s1);
@@ -554,33 +555,33 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 
     if (code == EQOP) {
         if (n2 == 1) {
-            x2 = STRING_ELT(s2,0);
+            x2 = e2[0];
             for (i = 0; i<n; i++) {
-                x1 = STRING_ELT(s1,i);
+                x1 = e1[i];
                 LOGICAL(ans)[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
                                 : SEQL(x1, x2) ? T : F;
             }
         }
         else if (n1 == 1) {
-            x1 = STRING_ELT(s1,0);
+            x1 = e1[0];
             for (i = 0; i<n; i++) {
-                x2 = STRING_ELT(s2,i);
+                x2 = e2[i];
                 LOGICAL(ans)[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
                                 : SEQL(x1, x2) ? T : F;
             }
         }
         else if (n1 == n2) {
             for (i = 0; i<n; i++) {
-	        x1 = STRING_ELT(s1,i);
-                x2 = STRING_ELT(s2,i);
+	        x1 = e1[i];
+                x2 = e2[i];
                 LOGICAL(ans)[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
                                 : SEQL(x1, x2) ? T : F;
             }
         }
         else {
 	    mod_iterate(n1, n2, i1, i2) {
-	        x1 = STRING_ELT(s1,i1);
-                x2 = STRING_ELT(s2,i2);
+	        x1 = e1[i1];
+                x2 = e2[i2];
                 LOGICAL(ans)[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
                                 : SEQL(x1, x2) ? T : F;
             }
@@ -588,9 +589,9 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
     }
     else { /* LTOP */
         if (n2 == 1) {
-            x2 = STRING_ELT(s2,0);
+            x2 = e2[0];
             for (i = 0; i<n; i++) {
-                x1 = STRING_ELT(s1,i);
+                x1 = e1[i];
                 if (x1 == NA_STRING || x2 == NA_STRING)
                     LOGICAL(ans)[i] = NA_LOGICAL;
                 else if (x1 == x2)
@@ -604,9 +605,9 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             }
         }
         else if (n1 == 1) {
-            x1 = STRING_ELT(s1,0);
+            x1 = e1[0];
             for (i = 0; i<n; i++) {
-                x2 = STRING_ELT(s2,i);
+                x2 = e2[i];
                 if (x1 == NA_STRING || x2 == NA_STRING)
                     LOGICAL(ans)[i] = NA_LOGICAL;
                 else if (x1 == x2)
@@ -621,8 +622,8 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
         }
         else if (n1 == n2) {
             for (i = 0; i<n; i++) {
-	        x1 = STRING_ELT(s1,i);
-                x2 = STRING_ELT(s2,i);
+	        x1 = e1[i];
+                x2 = e2[i];
                 if (x1 == NA_STRING || x2 == NA_STRING)
                     LOGICAL(ans)[i] = NA_LOGICAL;
                 else if (x1 == x2)
@@ -637,8 +638,8 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
         }
         else {
             mod_iterate(n1, n2, i1, i2) {
-                x1 = STRING_ELT(s1,i1);
-                x2 = STRING_ELT(s2,i2);
+                x1 = e1[i1];
+                x2 = e2[i2];
                 if (x1 == NA_STRING || x2 == NA_STRING)
                     LOGICAL(ans)[i] = NA_LOGICAL;
                 else if (x1 == x2)
@@ -661,6 +662,8 @@ static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
     int i, i1, i2, n, n1, n2, res;
     SEXP x1, x2;
+    const SEXP *e1 = STRING_PTR(s1);
+    const SEXP *e2 = STRING_PTR(s2);
     int T = !F;
     int ans;
 
@@ -672,12 +675,12 @@ static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 
     if (code == EQOP) {
         if (n2 == 1) {
-            x2 = STRING_ELT(s2,0);
+            x2 = e2[0];
             if (x2 == NA_STRING)
                 ans = NA_LOGICAL;
             else
                 for (i = 0; i<n; i++) {
-                    x1 = STRING_ELT(s1,i);
+                    x1 = e1[i];
                     if (x1==NA_STRING)
                         ans = NA_LOGICAL;
                     else if (SEQL(x1, x2) ? F : T)
@@ -685,12 +688,12 @@ static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             }
         }
         else if (n1 == 1) {
-            x1 = STRING_ELT(s1,0);
+            x1 = e1[0];
             if (x1 == NA_STRING)
                 ans = NA_LOGICAL;
             else
                 for (i = 0; i<n; i++) {
-                    x2 = STRING_ELT(s2,i);
+                    x2 = e2[i];
                     if (x2==NA_STRING)
                         ans = NA_LOGICAL;
                     else if (SEQL(x1, x2) ? F : T)
@@ -699,8 +702,8 @@ static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
         }
         else if (n1 == n2) {
             for (i = 0; i<n; i++) {
-	        x1 = STRING_ELT(s1,i);
-                x2 = STRING_ELT(s2,i);
+	        x1 = e1[i];
+                x2 = e2[i];
                 if (x1==NA_STRING || x2==NA_STRING)
                     ans = NA_LOGICAL;
                 else if (SEQL(x1, x2) ? F : T)
@@ -709,8 +712,8 @@ static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
         }
         else {
 	    mod_iterate(n1, n2, i1, i2) {
-	        x1 = STRING_ELT(s1,i1);
-                x2 = STRING_ELT(s2,i2);
+	        x1 = e1[i1];
+                x2 = e2[i2];
                 if (x1==NA_STRING || x2==NA_STRING)
                     ans = NA_LOGICAL;
                 else if (SEQL(x1, x2) ? F : T)
@@ -720,8 +723,8 @@ static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
     }
     else { /* LTOP */
 	for (i = 0; i < n; i++) {
-	    x1 = STRING_ELT(s1, i % n1);
-	    x2 = STRING_ELT(s2, i % n2);
+	    x1 = e1[i % n1];
+	    x2 = e2[i % n2];
 	    if (x1 == NA_STRING || x2 == NA_STRING)
 		ans = NA_LOGICAL;
 	    else if (x1 == x2)
@@ -749,6 +752,8 @@ static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
     int i, i1, i2, n, n1, n2, res;
     SEXP x1, x2;
+    const SEXP *e1 = STRING_PTR(s1);
+    const SEXP *e2 = STRING_PTR(s2);
     int T = !F;
     int ans;
 
@@ -760,12 +765,12 @@ static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 
     if (code == EQOP) {
         if (n2 == 1) {
-            x2 = STRING_ELT(s2,0);
+            x2 = e2[0];
             if (x2 == NA_STRING)
                 ans = NA_LOGICAL;
             else
                 for (i = 0; i<n; i++) {
-                    x1 = STRING_ELT(s1,i);
+                    x1 = e1[i];
                     if (x1==NA_STRING)
                         ans = NA_LOGICAL;
                     else if (SEQL(x1, x2) ? T : F)
@@ -773,12 +778,12 @@ static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             }
         }
         else if (n1 == 1) {
-            x1 = STRING_ELT(s1,0);
+            x1 = e1[0];
             if (x1 == NA_STRING)
                 ans = NA_LOGICAL;
             else
                 for (i = 0; i<n; i++) {
-                    x2 = STRING_ELT(s2,i);
+                    x2 = e2[i];
                     if (x2==NA_STRING)
                         ans = NA_LOGICAL;
                     else if (SEQL(x1, x2) ? T : F)
@@ -787,8 +792,8 @@ static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
         }
         else if (n1 == n2) {
             for (i = 0; i<n; i++) {
-	        x1 = STRING_ELT(s1,i);
-                x2 = STRING_ELT(s2,i);
+	        x1 = e1[i];
+                x2 = e2[i];
                 if (x1==NA_STRING || x2==NA_STRING)
                     ans = NA_LOGICAL;
                 else if (SEQL(x1, x2) ? T : F)
@@ -797,8 +802,8 @@ static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
         }
         else {
 	    mod_iterate(n1, n2, i1, i2) {
-	        x1 = STRING_ELT(s1,i1);
-                x2 = STRING_ELT(s2,i2);
+	        x1 = e1[i1];
+                x2 = e2[i2];
                 if (x1==NA_STRING || x2==NA_STRING)
                     ans = NA_LOGICAL;
                 else if (SEQL(x1, x2) ? T : F)
@@ -808,8 +813,8 @@ static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
     }
     else { /* LTOP */
 	for (i = 0; i < n; i++) {
-	    x1 = STRING_ELT(s1, i % n1);
-	    x2 = STRING_ELT(s2, i % n2);
+	    x1 = e1[i % n1];
+	    x2 = e2[i % n2];
 	    if (x1 == NA_STRING || x2 == NA_STRING)
 		ans = NA_LOGICAL;
 	    else if (x1 != x2) {
@@ -835,6 +840,8 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
     int i, i1, i2, n, n1, n2, res;
     SEXP x1, x2;
+    const SEXP *e1 = STRING_PTR(s1);
+    const SEXP *e2 = STRING_PTR(s2);
     int T = !F;
     int ans;
 
@@ -846,12 +853,12 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 
     if (code == EQOP) {
         if (n2 == 1) {
-            x2 = STRING_ELT(s2,0);
+            x2 = e2[0];
             if (x2 == NA_STRING)
                 ans = NA_INTEGER;
             else
                 for (i = 0; i<n; i++) {
-                    x1 = STRING_ELT(s1,i);
+                    x1 = e1[i];
                     if (x1==NA_STRING) {
                         ans = NA_INTEGER;
                         break;
@@ -861,12 +868,12 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             }
         }
         else if (n1 == 1) {
-            x1 = STRING_ELT(s1,0);
+            x1 = e1[0];
             if (x1 == NA_STRING)
                 ans = NA_INTEGER;
             else
                 for (i = 0; i<n; i++) {
-                    x2 = STRING_ELT(s2,i);
+                    x2 = e2[i];
                     if (x2==NA_STRING) {
                         ans = NA_INTEGER;
                         break;
@@ -877,8 +884,8 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
         }
         else if (n1 == n2) {
             for (i = 0; i<n; i++) {
-	        x1 = STRING_ELT(s1,i);
-                x2 = STRING_ELT(s2,i);
+	        x1 = e1[i];
+                x2 = e2[i];
                 if (x1==NA_STRING || x2==NA_STRING) {
                     ans = NA_INTEGER;
                     break;
@@ -889,8 +896,8 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
         }
         else {
 	    mod_iterate(n1, n2, i1, i2) {
-	        x1 = STRING_ELT(s1,i1);
-                x2 = STRING_ELT(s2,i2);
+	        x1 = e1[i1];
+                x2 = e2[i2];
                 if (x1==NA_STRING || x2==NA_STRING) {
                     ans = NA_INTEGER;
                     break;
@@ -902,8 +909,8 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
     }
     else { /* LTOP */
 	for (i = 0; i < n; i++) {
-	    x1 = STRING_ELT(s1, i % n1);
-	    x2 = STRING_ELT(s2, i % n2);
+	    x1 = e1[i % n1];
+	    x2 = e2[i % n2];
 	    if (x1 == NA_STRING || x2 == NA_STRING) {
 		ans = NA_INTEGER;
                 break;
