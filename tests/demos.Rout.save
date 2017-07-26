@@ -1,10 +1,10 @@
 
-pqR version 2.15.0 (2015-00-00), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.1 (2017-00-00), based on R 2.15.0 (2012-03-30)
 
 R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 
-Modifications to R in pqR are Copyright (C) 2013-2015 Radford M. Neal
+Modifications to R in pqR are Copyright (C) 2013-2017 Radford M. Neal
 
 Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
@@ -23,7 +23,7 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 Type 'q()' to quit R.
 
 
-5 helper threads, task merging enabled.
+No helper threads, task merging enabled, uncompressed pointers.
 
 > #### Run all demos that do not depend on tcl and other specials.
 > .ptime <- proc.time()
@@ -122,8 +122,8 @@ List of 2
 +     "\n\t starting with 'is.' :\t  ",
 +     sum(grepl("^is\\.", ls.base[base.is.f])), "\n", sep = "")
 
-Number of base objects:		1255
-Number of functions in base:	1224
+Number of base objects:		1257
+Number of functions in base:	1226
 	 starting with 'is.' :	  50
 
 > ## 0.14  : 31
@@ -1515,5 +1515,5 @@ sm     3    3    3    3    4    4    4    4    2     2     2
 > par(op)
 > 
 > cat("Time elapsed: ", proc.time() - .ptime, "\n")
-Time elapsed:  1.192 0.024 1.143 0 0 
+Time elapsed:  0.76 0.032 0.792 0 0 
 > 
