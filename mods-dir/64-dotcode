@@ -1,1 +1,5 @@
 Cleanup and performance improvements in dotcode.c
+
+Also defines inherits_CHAR.  Preallocates "factor", "ordered", and
+"NativeSymbolInfo", and uses them with inherits_CHAR in many places.
+

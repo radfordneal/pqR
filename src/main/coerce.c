@@ -1282,7 +1282,7 @@ SEXP asCharacterFactor(SEXP x)
     SEXP ans;
 
     PROTECT(x);
-    if( !inherits(x, "factor") )
+    if( !inherits_CHAR (x, R_factor_CHARSXP) )
         error(_("attempting to coerce non-factor"));
 
     int i, n = LENGTH(x);
@@ -1699,7 +1699,7 @@ static SEXP do_fast_is(SEXP call, SEXP op, SEXP arg, SEXP rho, int variant)
 	break;
     case INTSXP:	/* is.integer */
 	log_ans = (TYPEOF(arg) == INTSXP)
-	    && !inherits(arg, "factor");
+	    && !inherits_CHAR (arg, R_factor_CHARSXP);
 	break;
     case REALSXP:	/* is.double == is.real */
 	log_ans = (TYPEOF(arg) == REALSXP);

@@ -683,7 +683,7 @@ static SEXP HashLookup(SEXP table, SEXP x, HashData *d)
 static SEXP match_transform(SEXP s, SEXP env)
 {
     if(OBJECT(s)) {
-	if(inherits(s, "factor"))
+	if (inherits_CHAR (s, R_factor_CHARSXP))
 	    return asCharacterFactor(s);
 	else if(inherits(s, "POSIXlt")) { /* and maybe more classes in the future:
 					   * Call R's (generic)  as.character(s) : */

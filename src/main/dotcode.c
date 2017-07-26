@@ -184,7 +184,7 @@ resolveNativeRoutine(SEXP op, DL_FUNC *fun, R_RegisteredNativeSymbol *symbol,
     /* For NativeSymbolInfo, get the address field. */
 
     if (TYPEOF(op) == VECSXP && LENGTH(op) > 0
-          && inherits (op, "NativeSymbolInfo"))
+          && inherits_CHAR (op, R_NativeSymbolInfo_CHARSXP))
         op = VECTOR_ELT(op,1);
 
     /* Must be a string naming the routine, or an external pointer giving

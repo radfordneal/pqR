@@ -250,6 +250,24 @@ INLINE_FUN Rboolean inherits(SEXP s, const char *name)
     return FALSE;
 }
 
+/* Like inherits, but with name as a CHARSXP. */
+INLINE_FUN Rboolean inherits_CHAR(SEXP s, SEXP name)
+{
+    SEXP klass;
+    int i, nclass;
+    if (OBJECT(s)) {
+	klass = getAttrib(s, R_ClassSymbol);
+        if (klass == R_NilValue)
+            return FALSE;
+	nclass = LENGTH(klass);
+	for (i = 0; i < nclass; i++) {
+	    if (STRING_ELT(klass,i) == name)
+		return TRUE;
+	}
+    }
+    return FALSE;
+}
+
 INLINE_FUN Rboolean isValidString(SEXP x)
 {
     return TYPEOF(x) == STRSXP && LENGTH(x) > 0 && TYPEOF(STRING_ELT(x, 0)) != NILSXP;
@@ -361,12 +379,12 @@ INLINE_FUN Rboolean isTs(SEXP s)
 
 INLINE_FUN Rboolean isInteger(SEXP s)
 {
-    return (TYPEOF(s) == INTSXP && !inherits(s, "factor"));
+    return TYPEOF(s) == INTSXP && !inherits_CHAR (s, R_factor_CHARSXP);
 }
 
 INLINE_FUN Rboolean isFactor(SEXP s)
 {
-    return (TYPEOF(s) == INTSXP  && inherits(s, "factor"));
+    return TYPEOF(s) == INTSXP  && inherits_CHAR (s, R_factor_CHARSXP);
 }
 
 INLINE_FUN int nlevels(SEXP f)
@@ -380,14 +398,14 @@ INLINE_FUN int nlevels(SEXP f)
 
 INLINE_FUN Rboolean isNumeric(SEXP s)
 {
-    return TYPEOF(s) == INTSXP ? !inherits(s,"factor")
+    return TYPEOF(s) == INTSXP ? !inherits_CHAR (s, R_factor_CHARSXP)
                                : ((NUMERIC_TYPES >> TYPEOF(s)) & 1);
 }
 
 /** Is an object a number, including both "numeric" and "complex"? */
 INLINE_FUN Rboolean isNumber(SEXP s)
 {
-    return TYPEOF(s) == INTSXP ? !inherits(s,"factor")
+    return TYPEOF(s) == INTSXP ? !inherits_CHAR (s, R_factor_CHARSXP)
                                : ((NUMBER_TYPES >> TYPEOF(s)) & 1);
 }
 

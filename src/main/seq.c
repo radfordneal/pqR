@@ -203,7 +203,8 @@ static SEXP do_colon(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     checkArity(op, args);
 
-    if (inherits(x, "factor") && inherits(y, "factor")) {
+    if (inherits_CHAR (x, R_factor_CHARSXP) 
+     && inherits_CHAR (y, R_factor_CHARSXP)) {
         ans = cross_colon (call, x, y);
     }
     else {
@@ -597,15 +598,17 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
 #endif
 
-    if (inherits(s, "factor")) {
+    if (inherits_CHAR (s, R_factor_CHARSXP)) {
 	SEXP tmp;
-	if(inherits(s, "ordered")) {
+	if (inherits_CHAR (s, R_ordered_CHARSXP)) {
 	    PROTECT(tmp = allocVector(STRSXP, 2));
-	    SET_STRING_ELT(tmp, 0, mkChar("ordered"));
-	    SET_STRING_ELT(tmp, 1, mkChar("factor"));
+	    SET_STRING_ELT(tmp, 0, R_ordered_CHARSXP);
+	    SET_STRING_ELT(tmp, 1, R_factor_CHARSXP);
 	} 
-        else 
-            PROTECT(tmp = mkString("factor"));
+        else {
+	    PROTECT(tmp = allocVector(STRSXP, 1));
+	    SET_STRING_ELT(tmp, 0, R_factor_CHARSXP);
+        }
 	setAttrib(a, R_ClassSymbol, tmp);
 	UNPROTECT(1 + (ncopy!=(helpers_var_ptr)0));
 	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
@@ -823,13 +826,17 @@ static SEXP do_rep_len(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
 #endif
 
-    if (inherits(s, "factor")) {
+    if (inherits_CHAR (s, R_factor_CHARSXP)) {
 	SEXP tmp;
-	if(inherits(s, "ordered")) {
+	if (inherits_CHAR (s, R_ordered_CHARSXP)) {
 	    PROTECT(tmp = allocVector(STRSXP, 2));
-	    SET_STRING_ELT(tmp, 0, mkChar("ordered"));
-	    SET_STRING_ELT(tmp, 1, mkChar("factor"));
-	} else PROTECT(tmp = mkString("factor"));
+	    SET_STRING_ELT(tmp, 0, R_ordered_CHARSXP);
+	    SET_STRING_ELT(tmp, 1, R_factor_CHARSXP);
+	} 
+        else {
+	    PROTECT(tmp = allocVector(STRSXP, 1));
+	    SET_STRING_ELT(tmp, 0, R_factor_CHARSXP);
+        }
 	setAttrib(a, R_ClassSymbol, tmp);
 	UNPROTECT(1);
 	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));

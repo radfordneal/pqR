@@ -720,6 +720,11 @@ void InitNames()
     strcpy(CHAR_RW(NA_STRING), "NA");
     R_print.na_string = NA_STRING;
 
+    /* Some CHARSXP constants, protected by making them symbol printnames. */
+    (void)installChar (R_factor_CHARSXP = mkChar("factor"));
+    (void)installChar (R_ordered_CHARSXP = mkChar("ordered"));
+    (void)installChar (R_NativeSymbolInfo_CHARSXP = mkChar("NativeSymbolInfo"));
+
     /* Set up a set of globals so that a symbol table search can be
        avoided when matching something like dim or dimnames. */
     SymbolShortcuts();

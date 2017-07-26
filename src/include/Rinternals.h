@@ -1630,6 +1630,10 @@ LibExtern SEXP R_CSingSymbol;	    /* "Csingle" */
 LibExtern SEXP R_NativeSymbolSymbol;            /* "native symbol" */
 LibExtern SEXP R_RegisteredNativeSymbolSymbol;  /* "registered native symbol" */
 
+LibExtern SEXP R_factor_CHARSXP;     /* some CHARSXP's that are useful */
+LibExtern SEXP R_ordered_CHARSXP;    /*   for inherits_CHARSXP         */
+LibExtern SEXP R_NativeSymbolInfo_CHARSXP;
+
 /* Missing Values - others from Arith.h */
 #define NA_STRING	R_NaString
 LibExtern SEXP	R_NaString;	    /* NA_STRING as a CHARSXP */
@@ -2112,6 +2116,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define GetRowNames		Rf_GetRowNames
 #define gsetVar			Rf_gsetVar
 #define inherits		Rf_inherits
+#define inherits_CHAR		Rf_inherits_CHAR
 #define integer_to_string	Rf_integer_to_string
 #define install			Rf_install
 #define installChar		Rf_installChar
@@ -2324,6 +2329,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 Rboolean Rf_conformable(SEXP, SEXP);
 SEXP	 Rf_elt(SEXP, int);
 Rboolean Rf_inherits(SEXP, const char *);
+Rboolean Rf_inherits_CHAR(SEXP, SEXP);
 Rboolean Rf_isArray(SEXP);
 Rboolean Rf_isFactor(SEXP);
 Rboolean Rf_isFrame(SEXP);

@@ -41,15 +41,15 @@
 static R_INLINE Rboolean isUnordered_int(SEXP s)
 {
     return (TYPEOF(s) == INTSXP
-	    && inherits(s, "factor")
-	    && !inherits(s, "ordered"));
+	    && inherits_CHAR (s, R_factor_CHARSXP)
+	    && !inherits_CHAR (s, R_ordered_CHARSXP));
 }
 
 static R_INLINE Rboolean isOrdered_int(SEXP s)
 {
     return (TYPEOF(s) == INTSXP
-	    && inherits(s, "factor")
-	    && inherits(s, "ordered"));
+	    && inherits_CHAR (s, R_factor_CHARSXP)
+	    && inherits_CHAR (s, R_ordered_CHARSXP));
 }
 
 

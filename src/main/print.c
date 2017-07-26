@@ -350,7 +350,7 @@ static void PrintGenericVector(SEXP s, SEXP env)
 		break;
 	    case INTSXP:
 		/* factors are stored as integers */
-		if (inherits(tmp, "factor")) {
+		if (inherits_CHAR (tmp, R_factor_CHARSXP)) {
 		    snprintf(pbuf, 115, "factor,%d", LENGTH(tmp));
 		} else {
 		    if (LENGTH(tmp) == 1) {
@@ -852,7 +852,7 @@ static void printAttributes(SEXP s, SEXP env, Rboolean useSlots)
 		   TAG(a) == R_DimNamesSymbol)
 		    goto nextattr;
 	    }
-	    if(inherits(s, "factor")) {
+	    if (inherits_CHAR (s, R_factor_CHARSXP)) {
 		if(TAG(a) == R_LevelsSymbol)
 		    goto nextattr;
 		if(TAG(a) == R_ClassSymbol)
