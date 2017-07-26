@@ -1,6 +1,6 @@
 % File src/library/base/man/Foreign.Rd
 % Part of the R package, http://www.R-project.org
-% Modifications for pqR Copyright (c) 2014 Radford M. Neal.
+% Modifications for pqR Copyright (c) 2014, 2017 Radford M. Neal.
 % This documentation file is derived from the one in R-2.15.2.
 % Copyright 1995-2012 R Core Team
 % Distributed under GPL 2 or later
@@ -64,12 +64,11 @@
   encoding.  This is deprecated: convert code to use \code{\link{iconv}}.
   
   These functions are \link{primitive}, and \code{.NAME} is always
-  matched to the first argument supplied (which should not be named and
-  there will be a warning if it is---and an error in future.).
-  The other named arguments follow \code{\dots} and so cannot be
-  abbreviated.  For clarity, should avoid using names in the arguments
-  passed to \code{\dots} that match or partially match \code{.NAME}.
-}
+  matched to the first argument supplied (which if named must exactly
+  match \code{.NAME}).  The other named arguments follow \code{\dots}
+  and so cannot be abbreviated.  For clarity, avoid using names
+  in the arguments passed to \code{\dots} that match or partially
+  match \code{.NAME}.  }
 
 \value{
   A list similar to the \code{\dots} list of arguments passed in
@@ -132,7 +131,7 @@
   works, and even if it works at all, depends on the C and Fortran
   compilers and the platform.)
   
-  Lists, functions are other \R objects can (for historical reasons)
+  Lists, functions, and other \R objects can (for historical reasons)
   be passed to \code{.C}, but the \code{\link{.Call}} interface is
   much preferred.  All inputs apart from atomic vectors should be
   regarded as read-only, and use of any inputs other that vectors
@@ -208,8 +207,8 @@
   should only call other routines that are themselves thread-safe.
   Whether some operations, such as creation, use, and deletion of a
   scratch file with a unique name, are thread-safe may depend on the
-  compiler and operating system used.  It is also desirable to set
-  \code{HELPER} to \code{FALSE} if the time for the routine to execute
+  compiler and operating system used.  It is also not desirable to set
+  \code{HELPER} to \code{TRUE} if the time for the routine to execute
   is so small that the overhead of scheduling it is not worthwhile.
 
   Even if \code{HELPER} is \code{TRUE}, the routine will be scheduled
