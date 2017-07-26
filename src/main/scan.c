@@ -1780,7 +1780,7 @@ static SEXP do_writetable(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    xj = VECTOR_ELT(x, j);
 	    if(LENGTH(xj) != nr)
 		error(_("corrupt data frame -- length of column %d does not not match nrows"), j+1);
-	    if(inherits(xj, "factor")) {
+	    if (inherits_CHAR (xj, R_factor_CHARSXP)) {
 		levels[j] = getAttrib(xj, R_LevelsSymbol);
 	    } else levels[j] = R_NilValue;
 	}

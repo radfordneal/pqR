@@ -1510,7 +1510,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
         /* Deal with the case where we are iterating over a factor.
            We need to coerce to character, then iterate */
 
-        if (inherits (val, "factor"))
+        if (inherits_CHAR (val, R_factor_CHARSXP))
             REPROTECT(val = asCharacterFactor(val), valpi);
 
         n = length(val);
@@ -5158,7 +5158,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	int label = GETOP();
 
 	/* if we are iterating over a factor, coerce to character first */
-	if (inherits(seq, "factor")) {
+	if (inherits_CHAR (seq, R_factor_CHARSXP)) {
 	    seq = asCharacterFactor(seq);
 	    SETSTACK(-1, seq);
 	}
@@ -5681,7 +5681,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(ISLOGICAL, 0): DO_ISTYPE(LGLSXP);
     OP(ISINTEGER, 0): {
 	SEXP arg = GETSTACK(-1);
-	Rboolean test = (TYPEOF(arg) == INTSXP) && ! inherits(arg, "factor");
+	Rboolean test = (TYPEOF(arg) == INTSXP) 
+                          && !inherits_CHAR (arg, R_factor_CHARSXP);
 	SETSTACK(-1, test ? mkTrue() : mkFalse());
 	NEXT();
       }
