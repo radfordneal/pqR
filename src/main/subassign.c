@@ -1357,7 +1357,8 @@ static SEXP do_subassign2_dflt_int
     if( TYPEOF(x) == ENVSXP) {
 	if( nsubs!=1 || !isString(CAR(subs)) || length(CAR(subs)) != 1 )
 	    errorcall(call,_("wrong args for environment subassignment"));
-	defineVar(install(translateChar(STRING_ELT(CAR(subs), 0))), y, x);
+        SEXP name = install (translateChar (STRING_ELT (CAR(subs), 0)));
+	set_var_in_frame (name, y, x, TRUE, 3);
 	UNPROTECT(3);
 	return(S4 ? xOrig : x);
     }
