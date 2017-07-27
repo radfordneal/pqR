@@ -105,6 +105,10 @@
         subsequent R Core versions to at least R-3.4.1, but they have never 
         been implemented as documented, but rather have always been 
         completely ignored.
+  \item Fixed a pqR bug illustrated by the following:
+\preformatted{    a <- c(2,3); e <- new.env(); e[["x"]] <- a; a[2] <- 9; e$x[2]
+}
+        The value printed was 9 rather than 3.
   \item Previously, \code{length(plist)<-n} did not work when \code{plist}
         was a pairlist, but it does now.  This bug also exists in R Core
         versions to at least R-3.4.0.
