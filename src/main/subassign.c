@@ -1413,17 +1413,20 @@ static SEXP do_subassign2_dflt_int
             x = dup_top_level(x);
     }
 
-    /* Special fast handling of one numeric index for a vector object,
-       with no complications. */
+    /* Special fast handling of one numeric or string index for a vector object,
+       with no complications.  Any possible error conditions are handled by
+       just falling through for the code below to handle it. */
 
     if (nsubs == 1 && ndims <= 1 && !S4
-        && (TYPEOF(sb1) == REALSXP || TYPEOF(sb1) == INTSXP) && LENGTH(sb1) == 1
+        && (TYPEOF(sb1) == REALSXP || TYPEOF(sb1) == INTSXP 
+                                   || TYPEOF(sb1) == STRSXP) && LENGTH(sb1) == 1
         && (isVectorAtomic(x) && TYPEOF(x) == TYPEOF(y) && LENGTH(y) == 1
               || isVectorList(x) && y != R_NilValue)) {
+        R_len_t lenx = LENGTH(x);
         R_len_t ix = 0;
         if (TYPEOF(sb1) == INTSXP)
             ix = INTEGER(sb1)[0];
-        else {
+        else if (TYPEOF(sb1) == REALSXP) {
             double d = REAL(sb1)[0];
             if (!ISNAN(d)) {
                 ix = (int) d;
@@ -1431,7 +1434,22 @@ static SEXP do_subassign2_dflt_int
                     ix = 0;
             }
         }
-        if (ix > 0 && ix <= LENGTH(x)) {
+        else { /* string */
+            SEXP names = getAttrib (x, R_NamesSymbol);
+            if (TYPEOF(names) == STRSXP) {
+                SEXP se = STRING_ELT(sb1,0);
+                if (se != NA_STRING && CHAR(se)[0] != 0) {
+                    for (int i = 0; i < lenx; i++) {
+                        if (STRING_ELT(names,i) != NA_STRING 
+                             && SEQL (STRING_ELT(names,i), se)) {
+                            ix = i + 1;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        if (ix > 0 && ix <= lenx) {
             ix -= 1;
             if (isVectorList(x)) {
                 DEC_NAMEDCNT (VECTOR_ELT (x, ix));
