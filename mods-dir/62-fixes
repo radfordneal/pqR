@@ -1,1 +1,3 @@
 Fixed documentation of non-existent arguments to debug and debugonce.
+
+Fixed a bug in [[<- for environments.
