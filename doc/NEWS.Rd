@@ -90,7 +90,8 @@
   \item The \code{\%\%} and \code{\%/\%} operators are now faster when 
         their operands are real vectors that contain integer values.
   \item General interpretive overhead has been reduced in some contexts,
-        particularly when subsetting with \code{[.]} and \code{[[.]]}.
+        particularly when extracting or replacing subsets with 
+        \code{[.]} or \code{[[.]]}.
   }}
 
   \subsection{FEATURE CHANGES}{
@@ -161,10 +162,11 @@
         subsequent R Core versions to at least R-3.4.1, but they have never 
         been implemented as documented, but rather have always been 
         completely ignored.
-  \item Fixed a pqR bug illustrated by the following:
+  \item Fixed two pqR bugs illustrated by the following:
 \preformatted{    a <- c(2,3); e <- new.env(); e[["x"]] <- a; a[2] <- 9; e$x[2]
+    L <- list(1,2); y <- list(2+1); L[2] <- y; y[[1]][1] <- 9; L[[2]]
 }
-        The value printed was 9 rather than 3.
+        For both lines above, the value printed was 9 rather than 3.
   \item Previously, \code{length(plist)<-n} did not work when \code{plist}
         was a pairlist, but it does now.  This bug also exists in R Core
         versions to at least R-3.4.0.
