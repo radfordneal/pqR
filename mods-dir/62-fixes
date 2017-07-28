@@ -1,3 +1,6 @@
 Fixed documentation of non-existent arguments to debug and debugonce.
 
 Fixed a bug in [[<- for environments.
+
+Fix GC strategy to check regularly, avoiding constant expansion of
+memory.
