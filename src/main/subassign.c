@@ -624,6 +624,23 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     return x;
 }
 
+/* Handle positive scalar real and integer subscripts specially, and
+   otherwise call arraySubscript. */
+
+static inline SEXP array_sub (SEXP sb, SEXP dim, int i, SEXP x)
+{
+    int nn = INTEGER(dim)[i];
+
+    if (TYPEOF(sb) == INTSXP  && LENGTH(sb) == 1 
+                               && *INTEGER(sb) > 0 && *INTEGER(sb) <= nn
+     || TYPEOF(sb) == REALSXP && LENGTH(sb) == 1 
+                               && *REAL(sb) > 0 && *REAL(sb) <= nn)
+        return ScalarInteger (TYPEOF(sb) == INTSXP ? *INTEGER(sb)
+                                                   : (int) *REAL(sb));
+    else
+        return arraySubscript (i, sb, dim, getAttrib, (STRING_ELT), x);
+}
+
 static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 {
     int i, j, ii, jj, ij, iy, k;
@@ -641,10 +658,10 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
     dim = getAttrib(x, R_DimSymbol);
     nr = INTEGER(dim)[0];
 
-    PROTECT (sr = arraySubscript (0, sb1, dim, getAttrib, (STRING_ELT), x));
+    PROTECT (sr = array_sub (sb1, dim, 0, x));
     nrs = LENGTH(sr);
 
-    PROTECT (sc = arraySubscript (1, sb2, dim, getAttrib, (STRING_ELT), x));
+    PROTECT (sc = array_sub (sb2, dim, 1, x));
     ncs = LENGTH(sc);
 
     /* Do assignment of a single atomic element with matching type specially. */
@@ -885,7 +902,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     n = 1;
     for (i = 0; i < k; i++) {
-        PROTECT(tmp = arraySubscript (i,CAR(s),dims,getAttrib,(STRING_ELT),x));
+        PROTECT(tmp = array_sub (CAR(s), dims, i, x));
         subs[i] = INTEGER(tmp);
 	bound[i] = LENGTH(tmp);
         n *= bound[i];
