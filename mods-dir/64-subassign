@@ -1,1 +1,5 @@
 Improvements to subassignment operators.
+
+Added array_sub inline function for faster handling of scalar
+subscripts.  Also used in subset.c.
+

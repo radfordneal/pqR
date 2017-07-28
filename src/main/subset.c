@@ -773,10 +773,12 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int seq)
             nrs = end - start + 1;
     }
 
+    SEXP sv_scalar_stack = R_scalar_stack;
+
     if (s0 != R_NoObject) {
         if (drop == NA_LOGICAL) 
             suppress_drop_row = whether_suppress_drop(s0);
-        PROTECT (sr = arraySubscript(0, s0, dim, getAttrib, (STRING_ELT), x));
+        PROTECT (sr = array_sub (s0, dim, 0, x));
         nprotect++;
         nrs = LENGTH(sr);
     }
@@ -785,9 +787,11 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int seq)
         suppress_drop_col = s1 == R_MissingArg ? MISSING(CDR(subs)) == 2 
                                                : whether_suppress_drop(s1);
 
-    PROTECT (sc = arraySubscript(1, s1, dim, getAttrib, (STRING_ELT), x));
+    PROTECT (sc = array_sub (s1, dim, 1, x));
     nprotect++;
     ncs = LENGTH(sc);
+
+    R_scalar_stack = sv_scalar_stack;  /* Pop off; OK since eval not called */
 
     if (nrs < 0 || ncs < 0)
         abort();  /* shouldn't happen, but code was conditional before... */
@@ -890,19 +894,22 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
     int *subs[k], indx[k], nsubs[k], offset[k], suppress_drop[k];
     SEXP subv[k];
 
+    SEXP sv_scalar_stack = R_scalar_stack;
+
     n = 1; r = s;
     for (i = 0; i < k; i++) {
         if (drop==NA_LOGICAL) 
             suppress_drop[i] = CAR(r) == R_MissingArg ? MISSING(r) == 2
                                 : whether_suppress_drop(CAR(r));
-        PROTECT (subv[i] = arraySubscript (i, CAR(r), xdims, getAttrib,
-                                           (STRING_ELT), x));
+        PROTECT (subv[i] = array_sub (CAR(r), xdims, i, x));
         subs[i] = INTEGER(subv[i]);
 	nsubs[i] = LENGTH(subv[i]);
         n *= nsubs[i];
         indx[i] = 0;
 	r = CDR(r);
     }
+
+    R_scalar_stack = sv_scalar_stack;  /* Pop off; OK since eval not called */
 
     offset[1] = INTEGER(xdims)[0];  /* offset[0] is not used */
     for (i = 2; i < k; i++)

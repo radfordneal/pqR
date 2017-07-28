@@ -128,6 +128,24 @@
       (TYPEOF(x) == INTSXP ? ScalarInteger(*INTEGER(x)) : ScalarReal(*REAL(x)))
 #endif
 
+/* Inline function to handle positive scalar real and integer
+   subscripts specially, putting them on the scalar stack, and
+   otherwise call arraySubscript. */
+
+static inline SEXP array_sub (SEXP sb, SEXP dim, int i, SEXP x)
+{
+    int nn = INTEGER(dim)[i];
+
+    if (TYPEOF(sb) == INTSXP  && LENGTH(sb) == 1 
+                               && *INTEGER(sb) > 0 && *INTEGER(sb) <= nn
+     || TYPEOF(sb) == REALSXP && LENGTH(sb) == 1 
+                               && *REAL(sb) > 0 && *REAL(sb) <= nn)
+        return PUSH_SCALAR_INTEGER (TYPEOF(sb) == INTSXP ? *INTEGER(sb)
+                                                         : (int) *REAL(sb));
+    else
+        return arraySubscript (i, sb, dim, getAttrib, (STRING_ELT), x);
+}
+
 
 /* Inline function used by operators that can take operands on the
    scalar stack and can handle unclassed objects (VARIANT_UNCLASS_FLAG).
