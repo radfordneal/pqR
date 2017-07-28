@@ -80,6 +80,9 @@
                                       sharing of logicals FALSE, TRUE, and NA,
                                       which is done in Rinlinedfuns.h */
 
+#define COUNTDOWN 300           /* Allocations done between strategy decisions*/
+
+
 /* DEBUGGING OPTIONS.
 
    The 'testvalgrind' function invoked with .Internal is always present.
@@ -163,7 +166,7 @@ static unsigned int char_hash_mask = STRHASHINITSIZE-1;
 
 /* Variables recording information used for GC strategy and info display. */
 
-static int gc_countdown = 100;  /* Collections before next strategic decision */
+static int gc_countdown = COUNTDOWN;  /* Coll. before next strategic decision */
 
 static long long int gc_count = 0;     /* Number of garbage collections done */
 static long long int gc_count1 = 0;    /*   - at level 1 */
@@ -1098,7 +1101,7 @@ static void gc_strategy (sggc_nchunks_t nch)
     const size_t total_big_chunks = sggc_info.gen0_big_chunks 
       + sggc_info.gen1_big_chunks + sggc_info.gen2_big_chunks;
 
-    gc_countdown = 100;
+    gc_countdown = COUNTDOWN;
 
     /* See if a garbage collection should be done based on the size of the
        object being allocated. */
@@ -1134,7 +1137,7 @@ static void gc_strategy (sggc_nchunks_t nch)
        and if so at which level. */
 
     if (sggc_info.gen0_count * recovery_frac0 
-           > 1.1 * (sggc_info.gen1_count + sggc_info.gen2_count)) {
+           > 1.4 * (sggc_info.gen1_count + sggc_info.gen2_count)) {
         if ((gc_count-gc_count_last_full) * recovery_frac2 > 4.0) {
             if (DEBUG_STRATEGY) REprintf("GC from counts level 2\n");
             gc_next_level = 2;
@@ -1203,7 +1206,12 @@ static void update_strategy_data (struct sggc_info old_sggc_info)
     }
 }
 
-/* Macro to wrap allocation statement in code to do garbage collections. */
+/* Macro to wrap allocation statement in code to do garbage collections. 
+
+   alloc_stmt should set variable cp to a newly allocated object, or
+   to SGGC_NO_OBJECT if it can't.  fail_stmt is done if alloc_stmt
+   fails again after a GC.  nch is the number of chunks being
+   allocated. */
 
 #define ALLOC_WITH_COLLECT(alloc_stmt,fail_stmt,nch) do { \
     if (gc_force_wait > 0) { \
@@ -1214,7 +1222,7 @@ static void update_strategy_data (struct sggc_info old_sggc_info)
         } \
     } \
     gc_countdown -= 1; \
-    if (gc_countdown <= 0 || nch > 100000) gc_strategy(nch); \
+    if (gc_countdown <= 0 || nch > 5000) gc_strategy(nch); \
     alloc_stmt; \
     while (cp == SGGC_NO_OBJECT) { \
         if (gc_last_level < 2 && gc_next_level < gc_last_level + 1) { \
@@ -1325,6 +1333,8 @@ static inline SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
 
     if (cp == SGGC_NO_OBJECT)
         return R_NoObject;
+
+    gc_countdown -= 1;
 
     SEXP r = SEXP_FROM_CPTR (cp);
 
@@ -1703,6 +1713,7 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 #   endif
 
     SET_DDVAL(c, isDDName(name));
+    SYM_NO_DOTS(c) = !DDVAL(c) && strcmp(CHAR(name),"...") != 0;
 
     return c;
 }
@@ -2840,7 +2851,6 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
     }
     if (is_ascii) SET_ASCII(val);
     CHAR_HASH(val) = full_hash;
-    SET_CACHED(val);  /* Mark it */
 
     /* add the new value to the cache */
     
@@ -2990,23 +3000,10 @@ R_FreeStringBufferL(R_StringBuffer *buf)
 
 /* ======== These need direct access to gp field for efficiency ======== */
 
-/* This has NA_STRING = NA_STRING.  Inlined version is SEQL. */
+/* This has NA_STRING = NA_STRING.  Uses inlined version from Defn.h. */
 int Seql(SEXP a, SEXP b)
 {
-    /* The only case where pointer comparisons do not suffice is where
-      we have two strings in different encodings (which must be
-      non-ASCII strings). Note that one of the strings could be marked
-      as unknown. */
-    if (a == b) return 1;
-    /* Leave this to compiler to optimize */
-    if (IS_CACHED(a) && IS_CACHED(b) && ENC_KNOWN(a) == ENC_KNOWN(b))
-	return 0;
-    else {
-    	SEXP vmax = R_VStack;
-    	int result = !strcmp(translateCharUTF8(a), translateCharUTF8(b));
-    	R_VStack = vmax; /* discard any memory used by translateCharUTF8 */
-    	return result;
-    }
+    return SEQL(a,b);
 }
 
 
