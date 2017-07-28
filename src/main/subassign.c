@@ -373,28 +373,36 @@ static SEXP VectorAssignSeq
    vector (possibly newly allocated) with any NAs removed, updating "n"
    to its new length. */
 
-static SEXP NA_check_remove (SEXP call, SEXP indx, int *n, int err)
+static SEXP NA_rem_err (SEXP call, SEXP indx, int *n, int err, int ii);
+
+static inline SEXP NA_check_remove (SEXP call, SEXP indx, int *n, int err)
 {
-    int ii, i;
+    int ii;
 
     for (ii = 0; ii < *n && INTEGER(indx)[ii] != NA_INTEGER; ii++) ;
 
-    if (ii < *n) {
-        if (err)
-            errorcall(call,_("NAs are not allowed in subscripted assignments"));
-        if (NAMEDCNT_GT_0(indx))
-            indx = duplicate(indx);
-        for (i = ii + 1 ; i < *n; i++) {
-            if (INTEGER(indx)[i] != NA_INTEGER) {
-                INTEGER(indx)[ii] = INTEGER(indx)[i];
-                ii += 1;
-            }
+    return ii == *n ? indx : NA_rem_err (call, indx, n, err, ii);
+}
+
+static SEXP NA_rem_err (SEXP call, SEXP indx, int *n, int err, int ii)
+{
+    int i;
+
+    if (err)
+        errorcall(call,_("NAs are not allowed in subscripted assignments"));
+    if (NAMEDCNT_GT_0(indx))
+        indx = duplicate(indx);
+    for (i = ii + 1 ; i < *n; i++) {
+        if (INTEGER(indx)[i] != NA_INTEGER) {
+            INTEGER(indx)[ii] = INTEGER(indx)[i];
+            ii += 1;
         }
-        *n = ii;
     }
+    *n = ii;
 
     return indx;
 }
+
 
 static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 {
@@ -618,7 +626,8 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
 static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 {
-    int i, j, ii, jj, ij, iy, k, n;
+    int i, j, ii, jj, ij, iy, k;
+    int_fast64_t n;
     double ry;
     int nr, ny;
     int nrs, ncs;
@@ -627,19 +636,51 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
     if (!isMatrix(x))
 	errorcall(call,_("incorrect number of subscripts on matrix"));
 
-    nr = nrows(x);
     ny = LENGTH(y);
 
     dim = getAttrib(x, R_DimSymbol);
+    nr = INTEGER(dim)[0];
 
     PROTECT (sr = arraySubscript (0, sb1, dim, getAttrib, (STRING_ELT), x));
     nrs = LENGTH(sr);
-    sr = NA_check_remove (call, sr, &nrs, ny > 1);
-    UNPROTECT(1);
-    PROTECT(sr);
 
     PROTECT (sc = arraySubscript (1, sb2, dim, getAttrib, (STRING_ELT), x));
     ncs = LENGTH(sc);
+
+    /* Do assignment of a single atomic element with matching type specially. */
+
+    if (nrs == 1 && ncs == 1 && ny == 1 && isVectorAtomic(x) 
+                                        && TYPEOF(x) == TYPEOF(y)) {
+        if (*INTEGER(sr) != NA_INTEGER && *INTEGER(sc) != NA_INTEGER) {
+            R_len_t isub = (*INTEGER(sr)-1) + (*INTEGER(sc)-1) * nr;
+            switch (TYPEOF(x)) {
+            case RAWSXP: 
+                RAW(x)[isub] = *RAW(y);
+                break;
+            case LGLSXP: 
+                LOGICAL(x)[isub] = *LOGICAL(y);
+                break;
+            case INTSXP: 
+                INTEGER(x)[isub] = *INTEGER(y);
+                break;
+            case REALSXP: 
+                REAL(x)[isub] = *REAL(y);
+                break;
+            case CPLXSXP: 
+                COMPLEX(x)[isub] = *COMPLEX(y);
+                break;
+            case STRSXP:
+                SET_STRING_ELT (x, isub, STRING_ELT(y,0));
+                break;
+            }
+        }
+        UNPROTECT(2);
+        return x;
+    }
+
+    sr = NA_check_remove (call, sr, &nrs, ny > 1);
+    UNPROTECT(1);
+    PROTECT(sr);
     sc = NA_check_remove (call, sc, &ncs, ny > 1);
     UNPROTECT(1);
     PROTECT(sc);
@@ -1030,37 +1071,30 @@ static SEXP do_subassign_dflt_seq
 
 static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
+    SEXP sv_scalar_stack = R_scalar_stack;
+
     SEXP ans, x, sb1, subs, y;
     int argsevald = 0, seq = 0;
 
-    /* See if we are using the fast interface or not. */
+    /* See if we are using the fast interface. */
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
+
+        /* Fast interface: object assigned into (x) comes already
+           evaluated.  Evaluate indexes using VARIANT_SCALAR_STACK_OK,
+           and evaluate a single index with VARIANT_SEQ so it may come
+           as a range rather than a vector.  */
+
         y = R_fast_sub_value;  /* may be on scalar stack */
         x = R_fast_sub_into;
         if (!isVectorAtomic(x) && ON_SCALAR_STACK(y))
             y = DUP_STACK_VALUE(y); /* avoid scalar stack value in a list */
         sb1 = CAR(args);
         subs = CDR(args);
-    }
-    else {
-        y = R_NoObject;  /* found later after other arguments */
-        x = CAR(args);   /* args are (x, indexes..., y) */
-        sb1 = R_NoObject;
-        subs = CDR(args);
-    }
 
-    SEXP sv_scalar_stack = R_scalar_stack;
-
-    /* If we can easily determine that this will be handled by
-       subassign_dflt evaluate a single index with VARIANT_SEQ so it
-       may come as a range rather than a vector.  Also, evaluate
-       indexes using VARIANT_SCALAR_STACK_OK. */
-
-    if (y != R_NoObject) {
-        /* Fast interface: object assigned into (x) comes already evaluated */
         PROTECT(y);
-        if (subs == R_NilValue && TYPEOF(sb1) == LANGSXP) {
+
+        if (subs == R_NilValue) {
             sb1 = evalv (sb1, rho, VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
                                                  VARIANT_MISSING_OK);
             seq = R_variant_result;
@@ -1076,35 +1110,42 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 UNPROTECT(1);
             }
         }
-        UNPROTECT(1);
+
+        UNPROTECT(1); /* y */
         goto dflt_seq;
     }
-    else {
-        if (x != R_DotsSymbol) {
-            /* Mostly called from do_set, with first arg an evaluated promise */
-            PROTECT (x = TYPEOF(x) == PROMSXP && PRVALUE(x) != R_UnboundValue
-                            ? PRVALUE(x) : eval(x,rho));
-            if (isObject(x)) {
-                args = CONS(x,subs);
-                UNPROTECT(1);
-                argsevald = -1;
-            }
-            else if (TYPEOF(CAR(subs)) != LANGSXP || CDR(subs) != R_NilValue) {
-                /* in particular, CAR(subs) might be missing or ... */
-                subs = evalList_v (subs, rho, VARIANT_SCALAR_STACK_OK |
-                                              VARIANT_MISSING_OK);
-                UNPROTECT(1);
-                goto dflt_seq;
-            }
-            else {
-                PROTECT(sb1 = evalv (CAR(subs), rho, VARIANT_SEQ |
-                                VARIANT_SCALAR_STACK_OK | VARIANT_MISSING_OK));
-                seq = R_variant_result;
-                R_variant_result = 0;
-                subs = R_NilValue;
-                UNPROTECT(2);
-                goto dflt_seq;
-            }
+
+    y = R_NoObject;  /* found later after other arguments */
+    x = CAR(args);   /* args are (x, indexes..., y) */
+    sb1 = R_NoObject;
+    subs = CDR(args);
+
+    if (x != R_DotsSymbol) {
+
+        /* Mostly called from do_set, with first arg an evaluated promise. */
+
+        PROTECT (x = TYPEOF(x) == PROMSXP && PRVALUE(x) != R_UnboundValue
+                        ? PRVALUE(x) : eval(x,rho));
+        if (isObject(x)) {
+            args = CONS(x,subs);
+            UNPROTECT(1);
+            argsevald = -1;
+        }
+        else if (TYPEOF(CAR(subs)) != LANGSXP || CDR(subs) != R_NilValue) {
+            /* in particular, CAR(subs) might be missing or ... */
+            subs = evalList_v (subs, rho, VARIANT_SCALAR_STACK_OK |
+                                          VARIANT_MISSING_OK);
+            UNPROTECT(1);
+            goto dflt_seq;
+        }
+        else {
+            PROTECT(sb1 = evalv (CAR(subs), rho, VARIANT_SEQ |
+                            VARIANT_SCALAR_STACK_OK | VARIANT_MISSING_OK));
+            seq = R_variant_result;
+            R_variant_result = 0;
+            subs = R_NilValue;
+            UNPROTECT(2);
+            goto dflt_seq;
         }
     }
 
@@ -1115,12 +1156,12 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if(DispatchOrEval(call, op, "[<-", args, rho, &ans, 0, argsevald))
         return(ans);
 
-    return do_subassign_dflt(call, op, ans, rho);
+    return do_subassign_dflt_seq
+             (call, CAR(ans), R_NoObject, CDR(ans), rho, R_NoObject, 0);
 
-    /* Call the internal function directly, since known not to be an object. */
+    /* ... path that bypasses DispatchOrEval ... */
 
-dflt_seq:
-
+  dflt_seq:
     R_scalar_stack = sv_scalar_stack;
 
     return do_subassign_dflt_seq (call, x, sb1, subs, rho, y, seq);
@@ -1235,11 +1276,12 @@ static SEXP do_subassign_dflt_seq
                         case CPLXSXP: 
                             COMPLEX(x)[isub] = *COMPLEX(y);
                             break;
-                        case VECSXP: case EXPRSXP:
-                            SET_VECTOR_ELT (x, isub, VECTOR_ELT(y,0));
-                            break;
                         case STRSXP:
                             SET_STRING_ELT (x, isub, STRING_ELT(y,0));
+                            break;
+                        case VECSXP: case EXPRSXP:
+                            DEC_NAMEDCNT (VECTOR_ELT (x, isub));
+                            SET_VECTOR_ELEMENT_FROM_VECTOR (x, isub, y, 0);
                             break;
                     }
                     goto out;
@@ -1451,12 +1493,29 @@ static SEXP do_subassign2_dflt_int
         }
         if (ix > 0 && ix <= lenx) {
             ix -= 1;
-            if (isVectorList(x)) {
-                DEC_NAMEDCNT (VECTOR_ELT (x, ix));
-                SET_VECTOR_ELEMENT_TO_VALUE (x, ix, y);
-            }
-            else {
-                copy_elements (x, ix, 1, y, 0, 1, 1);
+            switch (TYPEOF(x)) {
+                case RAWSXP:
+                    RAW(x)[ix] = *RAW(y);
+                    break;
+                case LGLSXP:
+                    LOGICAL(x)[ix] = *LOGICAL(y);
+                    break;
+                case INTSXP:
+                    INTEGER(x)[ix] = *INTEGER(y);
+                    break;
+                case REALSXP:
+                    REAL(x)[ix] = *REAL(y);
+                    break;
+                case CPLXSXP:
+                    COMPLEX(x)[ix] = *COMPLEX(y);
+                    break;
+                case STRSXP:
+                    SET_STRING_ELT (x, ix, STRING_ELT(y,0));
+                    break;
+                case VECSXP: case EXPRSXP:
+                    DEC_NAMEDCNT (VECTOR_ELT (x, ix));
+                    SET_VECTOR_ELEMENT_TO_VALUE (x, ix, y);
+                break;
             }
             UNPROTECT(4);
             return x;
