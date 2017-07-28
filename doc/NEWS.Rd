@@ -89,7 +89,8 @@
   \item The \code{\%\%} and \code{\%/\%} operators are now faster when 
         their operands are real vectors that contain integer values.
   \item General interpretive overhead has been reduced in some contexts,
-        particularly when subsetting with \code{[.]} and \code{[[.]]}.
+        particularly when extracting or replacing subsets with 
+        \code{[.]} or \code{[[.]]}.
   }}
 
   \subsection{FEATURE CHANGES}{
