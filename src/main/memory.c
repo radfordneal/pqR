@@ -1331,10 +1331,10 @@ static inline SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
 
     cp = sggc_alloc_small_kind_quickly (kind);
 
-    if (cp == SGGC_NO_OBJECT)
+    if (cp == SGGC_NO_OBJECT) {
+        gc_countdown = 0;
         return R_NoObject;
-
-    gc_countdown -= 1;
+    }
 
     SEXP r = SEXP_FROM_CPTR (cp);
 
