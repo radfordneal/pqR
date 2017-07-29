@@ -649,8 +649,6 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
     PROTECT (sc = array_sub (sb2, dim, 1, x));
     ncs = LENGTH(sc);
 
-    R_scalar_stack = sv_scalar_stack;  /* Pop off; OK since eval not called */
-
     /* Do assignment of a single atomic element with matching type specially. */
 
     if (nrs == 1 && ncs == 1 && ny == 1 && isVectorAtomic(x) 
@@ -679,6 +677,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
             }
         }
         UNPROTECT(2);
+        R_scalar_stack = sv_scalar_stack;
         return x;
     }
 
@@ -700,6 +699,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
     SubassignTypeFix(&x, &y, 0, 1, call);
     if (n == 0) {
         UNPROTECT(2);
+        R_scalar_stack = sv_scalar_stack;
         return x;
     }
 
@@ -868,6 +868,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 	warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
     }
     UNPROTECT(4);
+    R_scalar_stack = sv_scalar_stack;
     return x;
 }
 
@@ -899,8 +900,6 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	s = CDR(s);
     }
 
-    R_scalar_stack = sv_scalar_stack;  /* Pop off; OK since eval not called */
-
     if (n > 0 && ny == 0)
 	errorcall(call,_("replacement has length zero"));
     if (n > 0 && n % ny)
@@ -926,6 +925,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     if (n == 0) {
 	UNPROTECT(k+1);
+        R_scalar_stack = sv_scalar_stack;
 	return(x);
     }
 
@@ -1047,6 +1047,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
   done:
     UNPROTECT(k+3);
+    R_scalar_stack = sv_scalar_stack;
     return x;
 }
 
@@ -1169,10 +1170,12 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     /* ... path that bypasses DispatchOrEval ... */
 
-  dflt_seq:
-    R_scalar_stack = sv_scalar_stack;
+  dflt_seq: ;
 
-    return do_subassign_dflt_seq (call, x, sb1, subs, rho, y, seq);
+    SEXP r = do_subassign_dflt_seq (call, x, sb1, subs, rho, y, seq);
+
+    R_scalar_stack = sv_scalar_stack;
+    return r;
 }
 
 /* N.B.  do_subassign_dflt is called directly from elsewhere. */
@@ -1359,8 +1362,9 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 UNPROTECT(1);
             }
         }
+        SEXP r = do_subassign2_dflt_int (call, x, sb1, args, rho, y);
         R_scalar_stack = scalar_stack_sv;
-        return do_subassign2_dflt_int (call, x, sb1, args, rho, y);
+        return r;
     }
 
     if(DispatchOrEval(call, op, "[[<-", args, rho, &ans, 0, 0))

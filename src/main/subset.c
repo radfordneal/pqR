@@ -791,8 +791,6 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int seq)
     nprotect++;
     ncs = LENGTH(sc);
 
-    R_scalar_stack = sv_scalar_stack;  /* Pop off; OK since eval not called */
-
     if (nrs < 0 || ncs < 0)
         abort();  /* shouldn't happen, but code was conditional before... */
 
@@ -881,6 +879,7 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int seq)
     }
 
     UNPROTECT(nprotect);
+    R_scalar_stack = sv_scalar_stack;
     return result;
 }
 
@@ -908,8 +907,6 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
         indx[i] = 0;
 	r = CDR(r);
     }
-
-    R_scalar_stack = sv_scalar_stack;  /* Pop off; OK since eval not called */
 
     offset[1] = INTEGER(xdims)[0];  /* offset[0] is not used */
     for (i = 2; i < k; i++)
@@ -1056,6 +1053,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
         DropDimsNotSuppressed(result,suppress_drop);
 
     UNPROTECT(k+1);
+    R_scalar_stack = sv_scalar_stack;
     return result;
 }
 
@@ -1394,10 +1392,10 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 WAIT_UNTIL_COMPUTED(sb1);
             UNPROTECT (3 + (sb2 != R_NoObject));  /* remargs, sb2, sb1, array */
             wait_until_arguments_computed(remargs);
-            R_scalar_stack = sv_scalar_stack;
             SEXP r = do_subset_dflt_seq (call, op, array, sb1, sb2,
                                          remargs, rho, variant, seq);
-            return r;
+            R_scalar_stack = sv_scalar_stack;
+            return ON_SCALAR_STACK(r) ? PUSH_SCALAR(r) : r;
         }
     }
 
@@ -1457,7 +1455,9 @@ SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
    R_NoObject, it is the first subscript, which has no tag, and subs is the
    list of remaining subscripts/args; otherwise subs has all subscripts.
 
-   Note:  x, sb1, and subs may not be protected on entry. */
+   May return its result on the scalar stack, depending on variant.
+
+   Note:  x, sb1, and subs need not be protected on entry. */
 
 static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
                                 SEXP subs, SEXP rho, int variant, int seq)
@@ -1663,10 +1663,10 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 WAIT_UNTIL_COMPUTED(sb1);
             UNPROTECT (3 + (sb2 != R_NoObject));  /* remargs, sb2, sb1, array */
             wait_until_arguments_computed(remargs);
-            R_scalar_stack = sv_scalar_stack;
             SEXP r = do_subset2_dflt_x (call, op, array, sb1, sb2,
                                         remargs, rho, variant);
-            return r;
+            R_scalar_stack = sv_scalar_stack;
+            return ON_SCALAR_STACK(r) ? PUSH_SCALAR(r) : r;
         }
     }
 
