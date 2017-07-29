@@ -6,7 +6,7 @@
     ## bootstrapping definitions so we can load base
     ##
     glue <- function (..., sep = " ", collapse = NULL)
-        .Internal(paste(list(...), sep, collapse))
+        .Internal (paste (sep, collapse, ...))
     readRDS <- function (file) {
         halt <- function (message) .Internal(stop(TRUE, message))
         gzfile <- function (description, open)
@@ -83,7 +83,7 @@
     existsInBase <- function (x)
         .Internal(exists(x, .BaseNamespaceEnv, "any", TRUE))
     glue <- function (..., sep = " ", collapse = NULL)
-        .Internal(paste(list(...), sep, collapse))
+        .Internal (paste (sep, collapse, ...))
 
     basedb <- glue(.Internal(R.home()), "library", "base", "R",
                    "base", sep= .Platform$file.sep)
