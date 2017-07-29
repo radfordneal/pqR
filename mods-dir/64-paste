@@ -1,4 +1,6 @@
 Performance improvements to paste/paste0.
 
 Speed up by changing .Internal interface, avoiding list(...), and
-internally by having an array of string vectors rather than a pairlist.
+internally by having an array of string vectors rather than a pairlist,
+plus not concatenating single things.
+

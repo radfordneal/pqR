@@ -79,6 +79,8 @@
         \code{unclass(obj)} do not require copying.  Note that with
         this improvement, there is now no reason to use \code{.subset}
         or \code{.subset2}.
+  \item The \code{paste} and \code{paste0} functions have been sped up,
+        substantially in some cases.
   \item Relational operators are now faster, and may sometimes be done in 
         helper threads (though currently without pipelining of data).
         Computations such as \code{sum(vec>0)} are now done with a

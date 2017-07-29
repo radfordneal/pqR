@@ -95,22 +95,22 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
     /* Look at remaining arguments. */
 
     SEXP xpl = CDDR(args);
-
-    if (xpl == R_NilValue)
-        return !isNull(collapse) ? mkString("") : allocVector(STRSXP, 0);
-
     int nx = length(xpl);
 
-    /* Find aximum argument length, coerce if needed.  Also store string
+    if (nx == 0)
+        return !isNull(collapse) ? mkString("") : allocVector(STRSXP, 0);
+
+    /* Find maximum argument length, coerce if needed.  Also store string
        vectors in xa. */
 
-    SEXP xa [nx];  /* Array of string vectors to paste */
+    SEXP xa[nx];           /* Array of string vectors to paste */
+    const char *chr[nx];   /* Space to store pointers to the strings */
 
     maxlen = 0;
     for (j = 0; j < nx; j++) {
 
         SEXP xj;
-        xj = xa[j] = CAR(xpl);
+        xj = CAR(xpl);
         xpl = CDR(xpl);
 
         if (!isString(xj)) {
@@ -118,21 +118,21 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
             if (OBJECT(xj)) { /* method dispatch */
                 SEXP call;
                 PROTECT(call = lang2(install("as.character"), xj));
-                xa[j] = eval(call, env);
+                xj = eval(call, env);
                 UNPROTECT(1);
             } 
             else if (isSymbol(xj))
-                xa[j] = ScalarString(PRINTNAME(xj));
+                xj = ScalarString(PRINTNAME(xj));
             else if (!isString(xj))
-                xa[j] = coerceVector(xj, STRSXP);
-            xj = xa[j];
+                xj = coerceVector(xj, STRSXP);
             if (!isString(xj))
                 error(_("non-string argument to Internal paste"));
         }
 
-        PROTECT(xj);
         if (LENGTH(xj) > maxlen)
             maxlen = LENGTH(xj);
+
+        PROTECT(xa[j] = xj);
     }
 
     if (maxlen == 0) {
@@ -140,117 +140,132 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
         return (!isNull(collapse)) ? mkString("") : allocVector(STRSXP, 0);
     }
 
-    PROTECT(ans = allocVector(STRSXP, maxlen));
+    if (nx == 1) {
 
-    for (i = 0; i < maxlen; i++) {
-        /* Strategy for marking the encoding: if all inputs (including
-         * the separator) are ASCII, so is the output and we don't
-         * need to mark.  Otherwise if all non-ASCII inputs are of
-         * declared encoding, we should mark.
-         * Need to be careful only to include separator if it is used.
-         */
+        /* If only one argument, just turn NA into "NA". */
 
-        Rboolean use_Bytes, use_UTF8, any_known, declare_encoding;
+        PROTECT(ans = xa[0]);
 
-        if (nx > 1) { 
-            use_Bytes = sepBytes; 
-            use_UTF8 = sepUTF8; 
-            any_known = sepKnown;
+        SEXP NA = mkChar(CHAR(NA_STRING));  /* will not be the same thing! */
+        for (i = 0; i < maxlen; i++) {
+            if (STRING_ELT(ans,i) == NA_STRING)
+                SET_STRING_ELT (ans, i, NA);
         }
-        else
-            use_Bytes = use_UTF8 = any_known = FALSE;
+    }
+    else {
 
-        for (j = 0; j < nx && !use_Bytes; j++) {
-            SEXP xj = xa[j];
-            k = LENGTH(xj);
-            if (k > 0) {
-                SEXP cs = STRING_ELT(xj, i % k);
-                if (IS_BYTES(cs))
-                    use_Bytes = TRUE;
-                else if (IS_UTF8(cs))
-                    use_UTF8 = TRUE;
-                else if (ENC_KNOWN(cs) > 0)
-                    any_known = TRUE;
+        /* Concatenate, if more than one argument. */
+
+        PROTECT (ans = allocVector(STRSXP, maxlen));
+
+        for (i = 0; i < maxlen; i++) {
+            /* Strategy for marking the encoding: if all inputs (including
+             * the separator) are ASCII, so is the output and we don't
+             * need to mark.  Otherwise if all non-ASCII inputs are of
+             * declared encoding, we should mark.
+             * Need to be careful only to include separator if it is used.
+             */
+    
+            Rboolean use_Bytes, use_UTF8, any_known, declare_encoding;
+    
+            if (nx > 1) { 
+                use_Bytes = sepBytes; 
+                use_UTF8 = sepUTF8; 
+                any_known = sepKnown;
             }
-        }
-
-        if (use_Bytes) 
-            use_UTF8 = FALSE;
-
-        declare_encoding = any_known && (known_to_be_latin1||known_to_be_utf8);
-
-        vmax = VMAXGET();
-        pwidth = 0;
-        for (j = 0; j < nx; j++) {
-            SEXP xj = xa[j];
-            k = LENGTH(xj);
-            if (k > 0) {
-                SEXP cs = STRING_ELT(xj, i % k);
-                if (use_Bytes)
-                    s = CHAR(cs);
-                else if (use_UTF8)
-                    s = translateCharUTF8(cs);
-                else {
-                    s = translateChar(cs);
-                    if (declare_encoding && ENC_KNOWN(cs)==0 && !strIsASCII(s))
-                        declare_encoding = FALSE;
+            else
+                use_Bytes = use_UTF8 = any_known = FALSE;
+    
+            for (j = 0; j < nx && !use_Bytes; j++) {
+                SEXP xj = xa[j];
+                k = LENGTH(xj);
+                if (k > 0) {
+                    SEXP cs = STRING_ELT(xj, i % k);
+                    if (IS_BYTES(cs))
+                        use_Bytes = TRUE;
+                    else if (IS_UTF8(cs))
+                        use_UTF8 = TRUE;
+                    else if (ENC_KNOWN(cs) > 0)
+                        any_known = TRUE;
                 }
-                pwidth += strlen(s);
-                VMAXSET(vmax);
             }
-        }
-        if (use_UTF8 && !u_csep) {
-            u_csep = translateCharUTF8(sep);
-            u_sepw = strlen(u_csep);
-        }
-        pwidth += (nx - 1) * (use_UTF8 ? u_sepw : sepw);
-        cbuf = buf = ALLOC_STRING_BUFF(pwidth,&cbuff);
-        vmax = VMAXGET();
-        for (j = 0; j < nx; j++) {
-            SEXP xj = xa[j];
-            k = LENGTH(xj);
-            if (k > 0) {
-                SEXP cs = STRING_ELT(xj, i % k);
-                if(use_Bytes)
-                    s = CHAR(cs);
-                else if (use_UTF8)
-                    s = translateCharUTF8(cs);
-                else
-                    s = translateChar(cs);
-                strcpy(buf, s);
-                buf += strlen(s);
+    
+            if (use_Bytes) 
+                use_UTF8 = FALSE;
+    
+            declare_encoding = any_known 
+                                && (known_to_be_latin1 || known_to_be_utf8);
+    
+            vmax = VMAXGET();
+            pwidth = 0;
+            for (j = 0; j < nx; j++) {
+                SEXP xj = xa[j];
+                k = LENGTH(xj);
+                if (k > 0) {
+                    SEXP cs = STRING_ELT(xj, i % k);
+                    if (use_Bytes)
+                        chr[j] = CHAR(cs);
+                    else if (use_UTF8)
+                        chr[j] = translateCharUTF8(cs);
+                    else {
+                        chr[j] = translateChar(cs);
+                        if (declare_encoding && !ENC_KNOWN(cs) 
+                                             && !strIsASCII(s))
+                            declare_encoding = FALSE;
+                    }
+                    pwidth += strlen(chr[j]);
+                }
             }
-            if (sepw != 0 && j != nx - 1) {
-                if (use_UTF8) {
-                    strcpy(buf, u_csep);
-                    buf += u_sepw;
-                } 
-                else {
-                    strcpy(buf, csep);
-                    buf += sepw;
+            if (use_UTF8 && !u_csep) {
+                u_csep = translateCharUTF8(sep);
+                u_sepw = strlen(u_csep);
+            }
+            pwidth += (nx - 1) * (use_UTF8 ? u_sepw : sepw);
+    
+            cbuf = buf = ALLOC_STRING_BUFF(pwidth,&cbuff);
+    
+            for (j = 0; j < nx; j++) {
+                SEXP xj = xa[j];
+                k = LENGTH(xj);
+                if (k > 0) {
+                    strcpy (buf, chr[j]);
+                    buf += strlen(chr[j]);
+                }
+                if (sepw != 0 && j != nx - 1) {
+                    if (use_UTF8) {
+                        strcpy(buf, u_csep);
+                        buf += u_sepw;
+                    } 
+                    else {
+                        strcpy(buf, csep);
+                        buf += sepw;
+                    }
                 }
             }
             VMAXSET(vmax);
+    
+            ienc = CE_NATIVE;
+            if (use_UTF8) 
+                ienc = CE_UTF8;
+            else if (use_Bytes)
+                ienc = CE_BYTES;
+            else if (declare_encoding) {
+                if(known_to_be_latin1) ienc = CE_LATIN1;
+                if(known_to_be_utf8) ienc = CE_UTF8;
+            }
+    
+            SET_STRING_ELT(ans, i, mkCharCE(cbuf, ienc));
         }
-
-        ienc = CE_NATIVE;
-        if (use_UTF8) 
-            ienc = CE_UTF8;
-        else if (use_Bytes)
-            ienc = CE_BYTES;
-        else if (declare_encoding) {
-            if(known_to_be_latin1) ienc = CE_LATIN1;
-            if(known_to_be_utf8) ienc = CE_UTF8;
-        }
-
-        SET_STRING_ELT(ans, i, mkCharCE(cbuf, ienc));
     }
 
+    VMAXSET(vmax0);
     UNPROTECT(nx);
 
     /* Now collapse, if required. */
 
-    if(collapse != R_NilValue && (nx = LENGTH(ans)) > 0) {
+    int na = LENGTH(ans);
+
+    if (collapse != R_NilValue && na > 1) {
 
         Rboolean use_Bytes, use_UTF8, any_known, declare_encoding;
 
@@ -259,7 +274,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
         use_Bytes = IS_BYTES(sep);
         any_known = ENC_KNOWN(sep) > 0;
 
-        for (i = 0; i < nx && !use_Bytes; i++) {
+        for (i = 0; i < na && !use_Bytes; i++) {
             SEXP cs = STRING_ELT(ans,i);
             if (IS_BYTES(cs))
                 use_Bytes = TRUE;
@@ -284,7 +299,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 
         pwidth = 0;
         vmax = VMAXGET();
-        for (i = 0; i < nx; i++) {
+        for (i = 0; i < na; i++) {
             SEXP cs = STRING_ELT(ans,i);
             if (use_Bytes)
                 s = CHAR(cs);
@@ -293,17 +308,18 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
             else {
                 /* no translation needed - done already */
                 s = CHAR(cs);
-                if (declare_encoding && ENC_KNOWN(cs) == 0 && !strIsASCII(s))
+                if (declare_encoding && !ENC_KNOWN(cs) 
+                                     && !strIsASCII(s))
                     declare_encoding = FALSE;
             }
             pwidth += strlen(s);
             VMAXSET(vmax);
         }
 
-        pwidth += (nx - 1) * sepw;
+        pwidth += (na - 1) * sepw;
         cbuf = buf = ALLOC_STRING_BUFF(pwidth,&cbuff);
         vmax = VMAXGET();
-        for (i = 0; i < nx; i++) {
+        for (i = 0; i < na; i++) {
             SEXP cs = STRING_ELT(ans,i);
             if (use_Bytes)
                 s = CHAR(cs);
@@ -334,9 +350,9 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
         PROTECT(ans = allocVector(STRSXP, 1));
         SET_STRING_ELT(ans, 0, mkCharCE(cbuf, ienc));
     }
+    VMAXSET(vmax0);
 
     R_FreeStringBufferL(&cbuff);
-    VMAXSET(vmax0);
     UNPROTECT(1);
     return ans;
 }
