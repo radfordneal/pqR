@@ -1,6 +1,7 @@
 % File src/library/base/man/file.path.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
+% Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{file.path}
@@ -18,11 +19,9 @@ file.path(\dots, fsep = .Platform$file.sep)
   \item{fsep}{the path separator to use.}
 }
 \details{
-  The implementation is designed to be fast (faster than
-  \code{\link{paste}}) as this function is used extensively in \R itself.
-
-  It can also be used for environment paths such as \env{PATH} and
-  \env{R_LIBS} with \code{fsep = .Platform$path.sep}.
+  This function can also be used for environment variables 
+  representing sets of paths such as \env{PATH} and
+  \env{R_LIBS}, with \code{fsep = .Platform$path.sep}.
 }
 \value{
   A character vector of the arguments concatenated term-by-term and
