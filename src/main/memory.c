@@ -2883,14 +2883,13 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 }
 
 /* mkCharMulti - make a character (CHARSXP) variable from multiple 
-   null-terminated strings. */
+   strings (not necessarily null-terminated) with specified lengths. 
+   The end of the set of strings is marked by names[i] being NULL.  */
 
-SEXP attribute_hidden Rf_mkCharMulti (const char **names, cetype_t enc)
+SEXP attribute_hidden Rf_mkCharMulti (const char **strings, const int *lengths,
+                                      cetype_t enc)
 {
-    int need_enc;
-    int is_ascii = TRUE;
-    const char **n, *p;
-    int len;
+    int i, j;
 
     switch(enc){
     case CE_NATIVE:
@@ -2904,17 +2903,23 @@ SEXP attribute_hidden Rf_mkCharMulti (const char **names, cetype_t enc)
 	error(_("unknown encoding: %d"), enc);
     }
 
-    len = 0;
-    for (n = names; *n != NULL; n++) {
-        for (p = *n; *p != 0; p++) {
-            if (len == INT_MAX)
-                error("R character strings are limited to 2^31-1 bytes");
-            len += 1;
-            if (*p > 127)
-                is_ascii = FALSE;
-        }
+    int is_ascii = TRUE;
+    int len = 0;
+
+    for (i = 0; strings[i] != NULL; i++) {
+        const char *p = strings[i];
+        int l = lengths[i];
+        if (l > INT_MAX-len)
+            error("R character strings are limited to 2^31-1 bytes");
+        len += l;
+        char or = 0;
+        for (j = 0; j < l; j++)
+            or |= p[j];
+        if ((or >> 7) != 0)
+            is_ascii = FALSE;
     }
 
+    int need_enc;
     if (enc && is_ascii) enc = CE_NATIVE;
     switch(enc) {
     case CE_UTF8: need_enc = UTF8_MASK; break;
@@ -2923,11 +2928,15 @@ SEXP attribute_hidden Rf_mkCharMulti (const char **names, cetype_t enc)
     default: need_enc = 0;
     }
 
-    unsigned int full_hash = Rf_char_hash (*names == NULL ? "" : *names);
+    unsigned int full_hash;
+    if (strings[0] == NULL) 
+        full_hash = Rf_char_hash("");
+    else
+        full_hash = Rf_char_hash_len (strings[0], lengths[0]);
 
-    if (*names != NULL) {
-        for (n = names+1; *n != NULL; n++)
-            full_hash = Rf_char_hash_more (full_hash, *n);
+    if (strings[0] != NULL) {
+        for (i = 1; strings[i] != NULL; i++)
+            full_hash = Rf_char_hash_more (full_hash, strings[i], lengths[i]);
     }
 
     unsigned int hashcode = full_hash & char_hash_mask;
@@ -2942,11 +2951,10 @@ SEXP attribute_hidden Rf_mkCharMulti (const char **names, cetype_t enc)
 	if (need_enc == (ENC_KNOWN(val) | IS_BYTES(val))) {
             if (full_hash == CHAR_HASH(val) && LENGTH(val) == len) {
                 const char *q = CHAR(val);
-                for (n = names; *n != NULL; n++) {
-                    for (p = *n; *p != 0; p++) {
-                        if (*q++ != *p)
-                            goto nxt;
-                    }
+                for (i = 0; strings[i] != NULL; i++) {
+                    if (memcmp(q,strings[i],lengths[i]) != 0)
+                        goto nxt;
+                    q += lengths[i];
                 }
                 return val;
             }
@@ -2960,9 +2968,10 @@ SEXP attribute_hidden Rf_mkCharMulti (const char **names, cetype_t enc)
     char *q;
 
     q = CHAR_RW(val);
-    for (n = names; *n != NULL; n++)
-        for (p = *n; *p != 0; p++)
-            *q++ = *p;
+    for (i = 0; strings[i] != NULL; i++) {
+        memcpy(q,strings[i],lengths[i]);
+        q += lengths[i];
+    }
     *q = 0;
     
     switch(enc) {
