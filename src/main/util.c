@@ -613,15 +613,26 @@ attribute_hidden int Rf_char_hash_len (const char *s, int len)
     return h & 0x7fffffff;
 }
 
-attribute_hidden int Rf_char_hash_more (unsigned h, const char *s)
+attribute_hidden int Rf_char_hash_more (unsigned h, const char *s, int len)
 {
     /* Hash function due to Dan Bernstein, called "djb2" at
-       http://www.cse.yorku.ca/~oz/hash.html */
+       http://www.cse.yorku.ca/~oz/hash.html 
 
-    unsigned int t;
+       Basic idea is to iterate h = ((h << 5) + h) + *s++, but here
+       this is unrolled, allowing some merging of operations to be
+       done (though we actually end up doing more shifts and adds),
+       and more scope for instruction-level parallelism. */
 
-    while ((t = *s++) != 0) {
-        h = (h << 5) + h + t;
+    if (len & 1) {
+        h = (h << 5) + h + *s++;
+        len -= 1;
+    }
+    while (len > 0) {
+        unsigned int t;
+        t = *s++;
+        t = (t << 5) + t + *s++;
+        h = (h << 10) + (h << 6) + h + t;
+        len -= 2;
     }
 
     return h & 0x7fffffff;
