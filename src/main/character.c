@@ -282,7 +282,6 @@ static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
     size_t slen;
     cetype_t ienc;
     const char *ss;
-    char *buf;
 
     checkArity(op, args);
     x = CAR(args);
@@ -312,18 +311,15 @@ static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
 	    slen = LENGTH(el);
 	    if (start < 1) start = 1;
 	    if (start > stop)
-                buf = "";
+                SET_STRING_ELT (s, i, R_BlankString);
 	    else {
                 size_t beginning, end;
 		(void) find_substr (ss, slen, ienc, start, stop, 
                                     &beginning, &end);
-                buf = ALLOC_STRING_BUFF (end-beginning,&cbuff);
-                memcpy (buf, ss+beginning, end-beginning);
-                buf[end-beginning] = 0;
+                SET_STRING_ELT (s, i, 
+                  mkCharLenCE (ss+beginning, (int)(end-beginning), ienc));
             }
-	    SET_STRING_ELT(s, i, mkCharCE(buf, ienc));
 	}
-	R_FreeStringBufferL(&cbuff);
     }
     DUPLICATE_ATTRIB(s, x);
     /* This copied the class, if any */
@@ -338,8 +334,10 @@ static SEXP do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
     size_t slen;
     cetype_t ienc, venc;
     const char *ss, *v_ss;
-    char *buf;
     const void *vmax;
+
+    const char *strings[4];  /* for interface to mkCharMulti */
+    int lengths[3];
 
     checkArity(op, args);
     x = CAR(args);
@@ -403,15 +401,20 @@ static SEXP do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
             size_t new_len = slen - (ss_e-ss_b) + v_ss_e;
             if (new_len > INT_MAX) 
                 error(_("new string is too long"));
-            buf = ALLOC_STRING_BUFF (new_len,&cbuff);
-            if (ss_b > 0) memcpy (buf, ss, ss_b);
-            memcpy (buf+ss_b, v_ss, v_ss_e);
-            if (ss_e < slen) memcpy (buf+ss_b+v_ss_e, ss+ss_e, slen-ss_e);
-            buf[new_len] = 0;
-            SET_STRING_ELT(s, i, mkCharCE(buf, ienc2));
+
+            strings[0] = ss;    lengths[0] = (int) ss_b;
+            strings[1] = v_ss;  lengths[1] = (int) v_ss_e;
+            if (ss_e < slen) { 
+                strings[2] = ss+ss_e;  lengths[2] = (int) (slen-ss_e);
+                strings[3] = NULL;
+            }
+            else 
+                strings[2] = NULL;
+
+            SET_STRING_ELT(s, i, Rf_mkCharMulti(strings, lengths, ienc2));
+
             VMAXSET(vmax);
         }
-	R_FreeStringBufferL(&cbuff);
     }
     UNPROTECT(1);
     return s;
