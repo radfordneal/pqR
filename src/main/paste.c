@@ -58,12 +58,11 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP ans, collapse, sep;
     int i, j, k, maxlen, pwidth, sepw, u_sepw, ienc;
     const char *s, *cbuf, *csep=NULL, *u_csep=NULL;
-    const void *vmax0, *vmax;
     char *buf;
 
     Rboolean sepUTF8=FALSE, sepBytes=FALSE, sepKnown=FALSE;
 
-    vmax0 = VMAXGET();
+    const void *vmax0 = VMAXGET();
 
     /* Handle sep argument */
 
@@ -137,6 +136,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (maxlen == 0) {
         UNPROTECT(nx);
+        VMAXSET(vmax0);
         return (!isNull(collapse)) ? mkString("") : allocVector(STRSXP, 0);
     }
 
@@ -159,6 +159,9 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
         PROTECT (ans = allocVector(STRSXP, maxlen));
 
         for (i = 0; i < maxlen; i++) {
+
+            const void *vmax = VMAXGET();
+
             /* Strategy for marking the encoding: if all inputs (including
              * the separator) are ASCII, so is the output and we don't
              * need to mark.  Otherwise if all non-ASCII inputs are of
@@ -196,7 +199,6 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
             declare_encoding = any_known 
                                 && (known_to_be_latin1 || known_to_be_utf8);
     
-            vmax = VMAXGET();
             pwidth = 0;
             for (j = 0; j < nx; j++) {
                 SEXP xj = xa[j];
@@ -242,7 +244,6 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
                     }
                 }
             }
-            VMAXSET(vmax);
     
             ienc = CE_NATIVE;
             if (use_UTF8) 
@@ -255,11 +256,13 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
             }
     
             SET_STRING_ELT(ans, i, mkCharCE(cbuf, ienc));
+
+            VMAXSET(vmax);
         }
     }
 
-    VMAXSET(vmax0);
-    UNPROTECT(nx);
+    UNPROTECT(nx+1);
+    PROTECT(ans);
 
     /* Now collapse, if required. */
 
@@ -268,6 +271,10 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
     if (collapse != R_NilValue && na > 1) {
 
         Rboolean use_Bytes, use_UTF8, any_known, declare_encoding;
+
+        const char *aa[2*15];
+        const char **as = na <= 15 ? aa
+                        : (const char **) R_alloc (2*na, sizeof (const char *));
 
         sep = STRING_ELT(collapse, 0);
         use_UTF8 = IS_UTF8(sep);
@@ -293,48 +300,24 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
         else
             csep = translateChar(sep);
 
-        sepw = strlen(csep);
-
         declare_encoding = any_known && (known_to_be_latin1||known_to_be_utf8);
 
-        pwidth = 0;
-        vmax = VMAXGET();
         for (i = 0; i < na; i++) {
             SEXP cs = STRING_ELT(ans,i);
             if (use_Bytes)
-                s = CHAR(cs);
+                as[2*i] = CHAR(cs);
             else if (use_UTF8)
-                s = translateCharUTF8(cs);
+                as[2*i] = translateCharUTF8(cs);
             else {
                 /* no translation needed - done already */
-                s = CHAR(cs);
+                as[2*i] = CHAR(cs);
                 if (declare_encoding && !ENC_KNOWN(cs) 
                                      && !strIsASCII(s))
                     declare_encoding = FALSE;
             }
-            pwidth += strlen(s);
-            VMAXSET(vmax);
+            as[2*i+1] = csep;
         }
-
-        pwidth += (na - 1) * sepw;
-        cbuf = buf = ALLOC_STRING_BUFF(pwidth,&cbuff);
-        vmax = VMAXGET();
-        for (i = 0; i < na; i++) {
-            SEXP cs = STRING_ELT(ans,i);
-            if (use_Bytes)
-                s = CHAR(cs);
-            else if (use_UTF8)
-                s = translateCharUTF8(cs);
-            else /* no translation needed - done already */
-                s = CHAR(cs);
-            if (i > 0) {
-                strcpy(buf, csep);
-                buf += sepw;
-            }
-            strcpy(buf, s);
-            while (*buf) buf++;
-            VMAXSET(vmax);
-        }
+        as[2*na-1] = NULL;
 
         ienc = CE_NATIVE;
         if (use_UTF8) 
@@ -348,12 +331,12 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 
         UNPROTECT(1);
         PROTECT(ans = allocVector(STRSXP, 1));
-        SET_STRING_ELT(ans, 0, mkCharCE(cbuf, ienc));
+        SET_STRING_ELT (ans, 0, Rf_mkCharMulti (as, ienc));
     }
-    VMAXSET(vmax0);
 
     R_FreeStringBufferL(&cbuff);
     UNPROTECT(1);
+    VMAXSET(vmax0);
     return ans;
 }
 
