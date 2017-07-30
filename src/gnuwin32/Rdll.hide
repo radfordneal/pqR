@@ -332,6 +332,7 @@
  Rf_builtin_op
  Rf_char_hash
  Rf_char_hash_len
+ Rf_char_hash_more
  Rf_chebyshev_eval
  Rf_chebyshev_init
  Rf_check1arg
@@ -377,6 +378,7 @@
  Rf_matchPar
  Rf_mbtoucs
  Rf_mkCLOSXP
+ Rf_mkCharMulti
  Rf_mkPROMISE
  Rf_mkSYMSXP
  Rf_name2col

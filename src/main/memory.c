@@ -2757,16 +2757,41 @@ static void R_StringHash_resize(unsigned int newsize)
 #endif
 }
 
-/* mkCharCE - make a character (CHARSXP) variable and set its
+/* Add a CHARSXP value, with hash already set, to the cache. */
+
+static void add_char_to_cache (SEXP val)
+{    
+    unsigned int hashcode = CHAR_HASH(val) & char_hash_mask;
+
+    if (VECTOR_ELT(R_StringHash, hashcode) == R_NilValue)
+        SET_HASHSLOTSUSED(R_StringHash, HASHSLOTSUSED(R_StringHash) + 1);
+
+    /* The modifications below should NOT do the old-to-new check, since
+       the table should not be looked at in the initial GC scan. */
+    ATTRIB_W(val) = VECTOR_ELT(R_StringHash, hashcode);    /* not SET_ATTRIB! */
+    VECTOR_ELT(R_StringHash, hashcode) = val;          /* not SET_VECTOR_ELT! */
+
+    /* Resize the hash table if desirable and possible. */
+    if (HASHSLOTSUSED(R_StringHash) > 0.85 * LENGTH(R_StringHash)
+         && 2*char_hash_size <= STRHASHMAXSIZE) {
+        /* NOTE!  Must protect val here, since it is NOT protected by
+           its presence in the hash table. */
+        PROTECT(val);
+        R_StringHash_resize (2*char_hash_size);
+        UNPROTECT(1);
+    }
+}
+
+/* mkCharLenCE - make a character (CHARSXP) variable and set its
    encoding bit.  If a CHARSXP with the same string already exists in
    the global CHARSXP cache, R_StringHash, it is returned.  Otherwise,
    a new CHARSXP is created, added to the cache and then returned. 
 
-   Note:  'name' has the specified length, but may not be null-terminated. */
+   Note:  'name' has the specified length, but may not be null-terminated.
 
-
-/* Because allocCharsxp allocates len+1 bytes and zeros the last,
+   Because allocCharsxp allocates len+1 bytes and zeros the last,
    this will always zero-terminate */
+
 SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 {
     int need_enc;
@@ -2850,27 +2875,115 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
         error("unknown encoding mask: %d", enc);
     }
     if (is_ascii) SET_ASCII(val);
+
     CHAR_HASH(val) = full_hash;
+    add_char_to_cache(val);
 
-    /* add the new value to the cache */
-    
-    if (VECTOR_ELT(R_StringHash, hashcode) == R_NilValue)
-        SET_HASHSLOTSUSED(R_StringHash, HASHSLOTSUSED(R_StringHash) + 1);
+    return val;
+}
 
-    /* The modifications below should NOT do the old-to-new check, since
-       the table should not be looked at in the initial GC scan. */
-    ATTRIB_W(val) = VECTOR_ELT(R_StringHash, hashcode);    /* not SET_ATTRIB! */
-    VECTOR_ELT(R_StringHash, hashcode) = val;          /* not SET_VECTOR_ELT! */
+/* mkCharMulti - make a character (CHARSXP) variable from multiple 
+   null-terminated strings. */
 
-    /* Resize the hash table if desirable and possible. */
-    if (HASHSLOTSUSED(R_StringHash) > 0.85 * LENGTH(R_StringHash)
-         && 2*char_hash_size <= STRHASHMAXSIZE) {
-        /* NOTE!  Must protect val here, since it is NOT protected by
-           its presence in the hash table. */
-        PROTECT(val);
-        R_StringHash_resize (2*char_hash_size);
-        UNPROTECT(1);
+SEXP attribute_hidden Rf_mkCharMulti (const char **names, cetype_t enc)
+{
+    int need_enc;
+    int is_ascii = TRUE;
+    const char **n, *p;
+    int len;
+
+    switch(enc){
+    case CE_NATIVE:
+    case CE_UTF8:
+    case CE_LATIN1:
+    case CE_BYTES:
+    case CE_SYMBOL:
+    case CE_ANY:
+	break;
+    default:
+	error(_("unknown encoding: %d"), enc);
     }
+
+    len = 0;
+    for (n = names; *n != NULL; n++) {
+        for (p = *n; *p != 0; p++) {
+            if (len == INT_MAX)
+                error("R character strings are limited to 2^31-1 bytes");
+            len += 1;
+            if (*p > 127)
+                is_ascii = FALSE;
+        }
+    }
+
+    if (enc && is_ascii) enc = CE_NATIVE;
+    switch(enc) {
+    case CE_UTF8: need_enc = UTF8_MASK; break;
+    case CE_LATIN1: need_enc = LATIN1_MASK; break;
+    case CE_BYTES: need_enc = BYTES_MASK; break;
+    default: need_enc = 0;
+    }
+
+    unsigned int full_hash = Rf_char_hash (*names == NULL ? "" : *names);
+
+    if (*names != NULL) {
+        for (n = names+1; *n != NULL; n++)
+            full_hash = Rf_char_hash_more (full_hash, *n);
+    }
+
+    unsigned int hashcode = full_hash & char_hash_mask;
+
+    SEXP val;
+
+    /* Search for a cached value */
+
+    for (val = VECTOR_ELT(R_StringHash, hashcode); 
+         val != R_NilValue; 
+         val = ATTRIB_W(val)) {
+	if (need_enc == (ENC_KNOWN(val) | IS_BYTES(val))) {
+            if (full_hash == CHAR_HASH(val) && LENGTH(val) == len) {
+                const char *q = CHAR(val);
+                for (n = names; *n != NULL; n++) {
+                    for (p = *n; *p != 0; p++) {
+                        if (*q++ != *p)
+                            goto nxt;
+                    }
+                }
+                return val;
+            }
+	}
+      nxt: ;
+    }
+
+    /* no cached value; need to allocate one and add to the cache */
+
+    val = allocCharsxp(len);
+    char *q;
+
+    q = CHAR_RW(val);
+    for (n = names; *n != NULL; n++)
+        for (p = *n; *p != 0; p++)
+            *q++ = *p;
+    *q = 0;
+    
+    switch(enc) {
+    case 0:
+        break;          /* don't set encoding */
+    case CE_UTF8:
+        SET_UTF8(val);
+        break;
+    case CE_LATIN1:
+        SET_LATIN1(val);
+        break;
+    case CE_BYTES:
+        SET_BYTES(val);
+        break;
+    default:
+        error("unknown encoding mask: %d", enc);
+    }
+    if (is_ascii) SET_ASCII(val);
+
+    CHAR_HASH(val) = full_hash;
+    add_char_to_cache(val);
 
     return val;
 }

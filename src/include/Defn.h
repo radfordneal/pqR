@@ -1505,6 +1505,8 @@ SEXP R_LoadFromFile(FILE*, int);
 SEXP R_NewHashedEnv(SEXP, SEXP);
 int Rf_char_hash(const char *);
 int Rf_char_hash_len(const char *, int len);
+int Rf_char_hash_more(unsigned, const char *);
+SEXP Rf_mkCharMulti (const char **, cetype_t);
 FILE* R_OpenLibraryFile(const char *);
 SEXP R_Primitive(const char *);
 void R_RestoreGlobalEnv(void);
