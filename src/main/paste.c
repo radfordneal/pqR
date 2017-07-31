@@ -219,6 +219,8 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
                 this_sepw = u_sepw;
             }
 
+            unsigned first_hash = 0;
+
             if (*this_csep == 0) {
                 for (j = 0; j < nx; j++) {
                     SEXP xj = xa[j];
@@ -240,6 +242,8 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
                                 declare_encoding = FALSE;
                         }
                         len[j] = chr[j]==CHAR(cs) ? LENGTH(cs) : strlen(chr[j]);
+                        if (j == 0 && chr[j] == CHAR(cs)) 
+                            first_hash = CHAR_HASH(cs);
                     }
                 }
                 chr[nx] = NULL;
@@ -266,13 +270,15 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
                         }
                         len[2*j] = chr[2*j]==CHAR(cs) ? LENGTH(cs) 
                                                       : strlen(chr[j]);
+                        if (j == 0 && chr[2*j] == CHAR(cs)) 
+                            first_hash = CHAR_HASH(cs);
                     }
                     chr[2*j+1] = this_csep;
                     len[2*j+1] = this_sepw;
                 }
                 chr[2*nx-1] = NULL;
             }
-    
+
             ienc = CE_NATIVE;
             if (use_UTF8) 
                 ienc = CE_UTF8;
@@ -283,7 +289,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
                 if(known_to_be_utf8) ienc = CE_UTF8;
             }
     
-            SET_STRING_ELT(ans, i, Rf_mkCharMulti (chr, len, ienc));
+            SET_STRING_ELT(ans, i, Rf_mkCharMulti (chr, len, first_hash, ienc));
 
             VMAXSET(vmax2);
         }
@@ -355,6 +361,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
                 len[i] = as[i] == CHAR(cs) ? LENGTH(cs) : strlen(as[i]);
             }
             as[na] = NULL;
+           
         }
         else {
             for (i = 0; i < na; i++) {
@@ -377,6 +384,12 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
             as[2*na-1] = NULL;
         }
 
+        unsigned first_hash = as[0] != CHAR (STRING_ELT(ans,0)) ? 0
+                               : CHAR_HASH (STRING_ELT(ans,0));
+
+        UNPROTECT(1);
+        PROTECT(ans = allocVector(STRSXP, 1));
+
         ienc = CE_NATIVE;
         if (use_UTF8) 
             ienc = CE_UTF8;
@@ -387,9 +400,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
             if(known_to_be_utf8) ienc = CE_UTF8;
         }
 
-        UNPROTECT(1);
-        PROTECT(ans = allocVector(STRSXP, 1));
-        SET_STRING_ELT (ans, 0, Rf_mkCharMulti (as, len, ienc));
+        SET_STRING_ELT (ans, 0, Rf_mkCharMulti (as, len, first_hash, ienc));
     }
 
     UNPROTECT(1);

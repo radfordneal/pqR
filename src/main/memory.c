@@ -2884,10 +2884,12 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 
 /* mkCharMulti - make a character (CHARSXP) variable from multiple 
    strings (not necessarily null-terminated) with specified lengths. 
-   The end of the set of strings is marked by names[i] being NULL.  */
+   The end of the set of strings is marked by names[i] being NULL.
+   If non-zero, first_hash is the hash of the first string.  The
+   encoding to use is also specified. */
 
 SEXP attribute_hidden Rf_mkCharMulti (const char **strings, const int *lengths,
-                                      cetype_t enc)
+                                      unsigned first_hash, cetype_t enc)
 {
     int i, j;
 
@@ -2932,7 +2934,8 @@ SEXP attribute_hidden Rf_mkCharMulti (const char **strings, const int *lengths,
     if (strings[0] == NULL) 
         full_hash = Rf_char_hash("");
     else
-        full_hash = Rf_char_hash_len (strings[0], lengths[0]);
+        full_hash = first_hash != 0 ? first_hash
+                  : Rf_char_hash_len (strings[0], lengths[0]);
 
     if (strings[0] != NULL) {
         for (i = 1; strings[i] != NULL; i++)
