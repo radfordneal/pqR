@@ -358,30 +358,29 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                         1, PRIMNAME(op), 2);
 
     /* Arguments are now in arg1 and arg2, and are protected. They may
-       be on the scalar stack. */
+       be on the scalar stack, but if so, are removed now, though they
+       may still be referenced.  Note that result might be on top of
+       one of them - OK since after storing into it, the args won't be
+       accessed again.
 
-    /* We quickly do real arithmetic and integer plus/minus on scalars with 
-       no attributes (as will be the case for scalar stack values).  We don't
-       bother trying local assignment, since returning the result on the
+       Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
+       but faster. */
+
+    R_scalar_stack = sv_scalar_stack;
+
+    /* We quickly do real arithmetic and integer plus/minus/times on scalars 
+       with no attributes (as will be the case for scalar stack values).  We
+       don't bother trying local assignment, since returning the result on the
        scalar stack should be about as fast. */
 
-    int type = TYPEOF(arg1);
+    int type1 = TYPEOF(arg1);
 
-    if ((type==REALSXP || type==INTSXP) && LENGTH(arg1) == 1
-                                        && NO_ATTRIBUTES_OK (variant, arg1)) {
-
-        /* Remove args from scalar stack now, though may still be referenced. 
-           Note that result might be on top of one of them - OK since after
-           storing into it, the args won't be accessed again. */
-
-        /* Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
-           but faster. */
-
-        R_scalar_stack = sv_scalar_stack;
+    if ((type1==REALSXP || type1==INTSXP) && LENGTH(arg1) == 1
+                                          && NO_ATTRIBUTES_OK (variant, arg1)) {
 
         if (CDR(argsevald)==R_NilValue) { /* Unary operation */
             WAIT_UNTIL_COMPUTED(arg1);
-            if (type==REALSXP) {
+            if (type1==REALSXP) {
                 double val = opcode == PLUSOP ? *REAL(arg1) : -*REAL(arg1);
                 ans = NAMEDCNT_EQ_0(arg1) ? (*REAL(arg1) = val, arg1)
                     : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_REAL(val)
@@ -396,14 +395,72 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             }
             goto ret;
         }
-        else if (TYPEOF(arg2) == type && LENGTH(arg2) == 1
-                                      && NO_ATTRIBUTES_OK (variant, arg2)) {
-            if (type==REALSXP) {
 
-                WAIT_UNTIL_COMPUTED_2(arg1,arg2);
+        int type2 = TYPEOF(arg2);
+
+        if ((type2 == REALSXP || type2 == INTSXP) && LENGTH(arg2) == 1 
+                                       && NO_ATTRIBUTES_OK (variant, arg2)) {
+
+            if (type1 == INTSXP && type2 == INTSXP) {
+
+                if (opcode==PLUSOP || opcode==MINUSOP || opcode==TIMESOP) {
+
+                    WAIT_UNTIL_COMPUTED_2(arg1,arg2);
     
-                double a1 = *REAL(arg1), a2 = *REAL(arg2), val;
-        
+                    int a1 = *INTEGER(arg1), a2 = *INTEGER(arg2);
+                    int_fast64_t val;
+    
+                    if (a1==NA_INTEGER || a2==NA_INTEGER)
+                        val = NA_INTEGER;
+                    else {
+                        val = 
+                         opcode==PLUSOP  ? (int_fast64_t)a1 + (int_fast64_t)a2 :
+                         opcode==MINUSOP ? (int_fast64_t)a1 - (int_fast64_t)a2 :
+                                           (int_fast64_t)a1 * (int_fast64_t)a2;
+    
+                          if (val < R_INT_MIN || val > R_INT_MAX) {
+                              val = NA_INTEGER;
+                              warningcall (call, 
+                                         _("NAs produced by integer overflow"));
+                          }
+                    }
+    
+                    int ival = (int) val;
+
+                    ans = NAMEDCNT_EQ_0(arg2) ?
+                            (*INTEGER(arg2) = ival, arg2)
+                        : NAMEDCNT_EQ_0(arg1) ?
+                            (*INTEGER(arg1) = ival, arg1)
+                        : CAN_USE_SCALAR_STACK(variant) ? 
+                            PUSH_SCALAR_INTEGER(ival)
+                        :   ScalarInteger(ival);
+  
+                    goto ret;
+                }
+                else {
+                    /* fall through to general code below */
+                }
+            }
+
+            else { /* not both INTSXP, so at least one is REALSXP */
+
+                double a1, a2, val;
+    
+                WAIT_UNTIL_COMPUTED_2(arg1,arg2);
+
+                if (type1 == INTSXP) {
+                    a1 = (double) *INTEGER(arg1);
+                    a2 = *REAL(arg2);
+                }
+                else if (type2 == INTSXP) {
+                    a1 = *REAL(arg1);
+                    a2 = (double) *INTEGER(arg2);
+                }
+                else {
+                    a1 = *REAL(arg1);
+                    a2 = *REAL(arg2);
+                }
+            
                 switch (opcode) {
                 case PLUSOP:
                     val = a1 + a2;
@@ -433,41 +490,13 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 default: abort();
                 }
 
-                ans = NAMEDCNT_EQ_0(arg2) ? (*REAL(arg2) = val, arg2)
-                    : NAMEDCNT_EQ_0(arg1) ? (*REAL(arg1) = val, arg1)
-                    : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_REAL(val)
-                    :   ScalarReal(val);
-
-                goto ret;
-            }
-            else if (opcode==PLUSOP || opcode==MINUSOP || opcode==TIMESOP) {
-                /* type==INTSXP */
-
-                WAIT_UNTIL_COMPUTED_2(arg1,arg2);
-
-                int a1 = *INTEGER(arg1), a2 = *INTEGER(arg2);
-                int_fast64_t val;
-
-                if (a1==NA_INTEGER || a2==NA_INTEGER)
-                    val = NA_INTEGER;
-                else {
-                    val = 
-                      opcode==PLUSOP  ? (int_fast64_t) a1 + (int_fast64_t) a2 :
-                      opcode==MINUSOP ? (int_fast64_t) a1 - (int_fast64_t) a2 :
-                                        (int_fast64_t) a1 * (int_fast64_t) a2;
-
-                      if (val < R_INT_MIN || val > R_INT_MAX) {
-                          val = NA_INTEGER;
-                          warningcall (call, 
-                                       _("NAs produced by integer overflow"));
-                      }
-                }
-
-                ans = NAMEDCNT_EQ_0(arg2) ? (*INTEGER(arg2) = (int) val, arg2)
-                    : NAMEDCNT_EQ_0(arg1) ? (*INTEGER(arg1) = (int) val, arg1)
+                ans = NAMEDCNT_EQ_0(arg2) && type2 == REALSXP ?
+                        (*REAL(arg2) = val, arg2)
+                    : NAMEDCNT_EQ_0(arg1) && type1 == REALSXP ?
+                        (*REAL(arg1) = val, arg1)
                     : CAN_USE_SCALAR_STACK(variant) ? 
-                        PUSH_SCALAR_INTEGER((int)val)
-                    :   ScalarInteger((int)val);
+                        PUSH_SCALAR_REAL(val)
+                    :   ScalarReal(val);
 
                 goto ret;
             }
@@ -475,11 +504,6 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     }
 
     /* Otherwise, handle the general case. */
-
-    /* Below does same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
-       but faster. */
-
-    R_scalar_stack = sv_scalar_stack;
 
     ans = CDR(argsevald)==R_NilValue 
            ? R_unary (call, op, arg1, obj1, env, variant) 
