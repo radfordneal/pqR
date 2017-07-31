@@ -411,7 +411,7 @@ static SEXP do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
             else 
                 strings[2] = NULL;
 
-            SET_STRING_ELT(s, i, Rf_mkCharMulti(strings, lengths, ienc2));
+            SET_STRING_ELT(s, i, Rf_mkCharMulti(strings, lengths, 0, ienc2));
 
             VMAXSET(vmax);
         }
