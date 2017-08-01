@@ -7,6 +7,7 @@
 \name{base-internal}
 \alias{.subset}
 \alias{.subset2}
+\alias{.el.methods}
 \alias{.getRequiredPackages}
 \alias{.getRequiredPackages2}
 \alias{testPlatformEquivalence}
@@ -40,6 +41,8 @@
 \usage{
 .subset(x, \dots)
 .subset2(x, \dots)
+
+.el.methods(x, \dots)
 
 .getRequiredPackages(file = "DESCRIPTION", lib.loc = NULL,
                      quietly = FALSE, useImports = FALSE)
@@ -123,6 +126,11 @@ lazyLoadDBfetch(key, file, compressed, hook)
   as fast as \code{.subset(obj,1)} and \code{.subset2(obj,1)}, so
   there is no longer any reason to use \code{.subset} or
   \code{.subset2}.
+
+  The \code{.el.methods} primitive function is almost the same as \code{[[}, 
+  except that \code{NULL} is returned for elements beyond the end of
+  a vector, rather than an error being signaled.  It is used by the
+  methods package.
 
   \code{.getRequiredPackages2} attaches all the packages mentioned in the
   \code{Depends} field: failure to find a package is an error.  It also

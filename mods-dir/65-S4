@@ -1,0 +1,3 @@
+Improvements to S4 class operations.
+
+Defined .el.methods as a primitive, used for el in methods package.

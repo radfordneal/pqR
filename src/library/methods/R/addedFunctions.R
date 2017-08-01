@@ -66,12 +66,11 @@ getFunction <- function(name, generic = TRUE, mustFind = TRUE,
 }
 
 el <-
-  function(object, where)
   ## element of a vector; numeric index only.
   ##
   ## the definition allows indexing beyond current length of vector
   ## (consistent with [[]] in S but not in R).
-  object[where][[1L]]
+  .Primitive(".el.methods")
 
 "el<-" <-
   ## set the element of a vector; numeric index only.
