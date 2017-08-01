@@ -107,8 +107,8 @@ static SEXP GetObject(RCNTXT *cptr)
     return(s);
 }
 
-static SEXP applyMethod (SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho,
-                         int variant)
+static SEXP applyMethod (SEXP call, SEXP op, SEXP args, SEXP rho, 
+                         SEXP *supplied, int variant)
 {
     SEXP ans;
 
@@ -144,7 +144,7 @@ static SEXP applyMethod (SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newrho,
 	VMAXSET(vmax);
     }
     else if (TYPEOF(op) == CLOSXP) {
-	ans = applyClosure_v(call, op, args, rho, newrho, variant);
+	ans = applyClosure_v(call, op, args, rho, supplied, variant);
     }
     else
 	ans = R_NilValue;  /* for -Wall */
@@ -332,13 +332,16 @@ found: ;
 
     if (RDEBUG(op) || RSTEP(op)) SET_RSTEP(sxp, 1);
 
-    SEXP newrho = R_NilValue;  /* not used for primitives */
+    SEXP supplied[11];
+    supplied[0] = R_NilValue;
+    int nprotect = 0;
 
     if (TYPEOF(sxp) == CLOSXP) {
 
         SEXP genstr, methstr;
         PROTECT(genstr = mkString(generic));
         PROTECT(methstr = ScalarString(PRINTNAME(method)));
+        nprotect += 2;
 
         SEXP bindings = R_NilValue;
 
@@ -364,25 +367,25 @@ found: ;
                     bindings = cons_with_tag (CAR(s), bindings, TAG(s));
               next: ;
             }
+            PROTECT(bindings);
+            nprotect += 1;
         }
 
-        bindings = cons_with_tag (setcl,   bindings, R_dot_Class);
-        bindings = cons_with_tag (genstr,  bindings, R_dot_Generic);
-        bindings = cons_with_tag (methstr, bindings, R_dot_Method);
-        bindings = cons_with_tag (callrho, bindings, R_dot_GenericCallEnv);
-        bindings = cons_with_tag (defrho,  bindings, R_dot_GenericDefEnv);
+        int i = 0;
 
-        newrho = NewEnvironment (R_NilValue, bindings, R_NilValue);
+        supplied[i++] = R_dot_Class;          supplied[i++] = setcl;
+        supplied[i++] = R_dot_Generic;        supplied[i++] = genstr;
+        supplied[i++] = R_dot_Method;         supplied[i++] = methstr;
+        supplied[i++] = R_dot_GenericCallEnv; supplied[i++] = callrho;
+        supplied[i++] = R_dot_GenericDefEnv;  supplied[i++] = defrho;
 
-        UNPROTECT(2);
+        supplied[i] = bindings;
     }
 
-    PROTECT(newrho);
-
-    *ans = applyMethod(newcall, sxp, matchedarg, rho, newrho, variant);
+    *ans = applyMethod(newcall, sxp, matchedarg, rho, supplied, variant);
 
     R_GlobalContext->callflag = CTXT_RETURN;
-    UNPROTECT(6);
+    UNPROTECT(nprotect+5);
     return 1;
 }
 
@@ -811,7 +814,9 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
     }
     PROTECT(nextfun);
 
-    SEXP m = R_NilValue;  /* m not used for primitives */
+    SEXP supplied[13];
+    supplied[0] = R_NilValue;
+    int nprotect = 0;
 
     if (TYPEOF(nextfun) == CLOSXP) {
 
@@ -832,25 +837,26 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
         } else
             PROTECT(method = mkString(buf));
 
-        SEXP bindings = R_NilValue;
-        bindings = cons_with_tag (s,       bindings, R_dot_Class);
-        bindings = cons_with_tag (method,  bindings, R_dot_Method);
-        bindings = cons_with_tag (callenv, bindings, R_dot_GenericCallEnv);
-        bindings = cons_with_tag (defenv,  bindings, R_dot_GenericDefEnv);
-        bindings = cons_with_tag (generic, bindings, R_dot_Generic);
-        bindings = cons_with_tag (group,   bindings, R_dot_Group);
-        m = NewEnvironment (R_NilValue, bindings, R_NilValue);
+        nprotect = 3;
 
-        UNPROTECT(3);
+        int i = 0;
+
+        supplied[i++] = R_dot_Class;          supplied[i++] = s;
+        supplied[i++] = R_dot_Generic;        supplied[i++] = generic;
+        supplied[i++] = R_dot_Method;         supplied[i++] = method;
+        supplied[i++] = R_dot_GenericCallEnv; supplied[i++] = callenv;
+        supplied[i++] = R_dot_GenericDefEnv;  supplied[i++] = defenv;
+        supplied[i++] = R_dot_Group;          supplied[i++] = group;
+
+        supplied[i] = R_NilValue;
     }
 
-    PROTECT(m);
     
     SETCAR(newcall, install(buf));
 
-    ans = applyMethod(newcall, nextfun, matchedarg, env, m, variant);
+    ans = applyMethod(newcall, nextfun, matchedarg, env, supplied, variant);
 
-    UNPROTECT(8);
+    UNPROTECT(nprotect+7);
     return(ans);
 }
 
@@ -1516,11 +1522,11 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 	    /* found a method, call it with promised args */
 	    if(!promisedArgs) {
 		PROTECT(s = promiseArgsWithValues(CDR(call), rho, args));
-		value =  applyClosure(call, value, s, rho, R_NoObject);
+		value =  applyClosure(call, value, s, rho, NULL);
 		UNPROTECT(1);
 		return value;
 	    } else
-		return applyClosure(call, value, args, rho, R_NoObject);
+		return applyClosure(call, value, args, rho, NULL);
 	}
 	/* else, need to perform full method search */
     }
@@ -1532,10 +1538,10 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
        error in method search */
     if(!promisedArgs) {
 	PROTECT(s = promiseArgsWithValues(CDR(call), rho, args));
-	value = applyClosure(call, fundef, s, rho, R_NoObject);
+	value = applyClosure(call, fundef, s, rho, NULL);
 	UNPROTECT(1);
     } else
-	value = applyClosure(call, fundef, args, rho, R_NoObject);
+	value = applyClosure(call, fundef, args, rho, NULL);
     prim_methods[offset] = current;
     if(value == deferred_default_object)
 	return R_NoObject;

@@ -599,7 +599,7 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 	if (TYPEOF(op) == CLOSXP) {
             PROTECT(op);
 	    res = applyClosure_v (e, op, promiseArgs(args,rho), rho, 
-                                  R_NoObject, variant);
+                                  NULL, variant);
             UNPROTECT(1);
         }
 	else {
@@ -955,8 +955,12 @@ static void start_browser (SEXP call, SEXP op, SEXP stmt, SEXP env)
     do_browser(call, op, R_NilValue, env);
 }
 
+/* 'supplied' is an array of SEXP values, first a set of pairs of tag and
+   value, then a pairlist of tagged values (or R_NilValue).  If NULL, no
+   extras supplied. */
+
 SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
-                                     SEXP suppliedenv, int variant)
+                                     SEXP *supplied, int variant)
 {
     int vrnt = VARIANT_PENDING_OK | VARIANT_DIRECT_RETURN 
                  | VARIANT_PASS_ON(variant);
@@ -1020,8 +1024,12 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     /*  Fix up any extras that were supplied by usemethod. */
 
-    if (suppliedenv != R_NoObject) {
-	for (SEXP t = FRAME(suppliedenv); t != R_NilValue; t = CDR(t)) {
+    if (supplied != NULL) {
+        while (TYPEOF(*supplied) == SYMSXP) {
+            set_var_in_frame (*supplied, *(supplied+1), newrho, TRUE, 3);
+            supplied += 2;
+        }
+	for (SEXP t = *supplied; t != R_NilValue; t = CDR(t)) {
 	    for (a = actuals; a != R_NilValue; a = CDR(a))
 		if (TAG(a) == TAG(t))
 		    break;
@@ -1120,9 +1128,10 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 }
 
 SEXP applyClosure (SEXP call, SEXP op, SEXP arglist, SEXP rho, 
-                   SEXP suppliedenv)
+                   SEXP *supplied)
 {
-  return applyClosure_v (call, op, arglist, rho, suppliedenv, 0);
+    if (supplied != NULL) error("Last argument to applyClosure must be NULL");
+    return applyClosure_v (call, op, arglist, rho, NULL, 0);
 }
 
 /* **** FIXME: This code is factored out of applyClosure.  If we keep
@@ -3266,7 +3275,7 @@ static SEXP do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(s = eval(CAR(cptr->call), cptr->sysparent));
     if (TYPEOF(s) != CLOSXP) 
     	error(_("'Recall' called from outside a closure"));
-    ans = applyClosure_v(cptr->call, s, args, cptr->sysparent, R_NoObject, 0);
+    ans = applyClosure_v(cptr->call, s, args, cptr->sysparent, NULL, 0);
     UNPROTECT(1);
     return ans;
 }
@@ -3521,8 +3530,8 @@ attribute_hidden
 int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 		  SEXP *ans)
 {
-    int i, j, nargs, lwhich, rwhich, set;
-    SEXP lclass, s, t, m, lmeth, lsxp, lgr, newrho;
+    int nargs, lwhich, rwhich, set;
+    SEXP lclass, s, t, m, lmeth, lsxp, lgr;
     SEXP rclass, rmeth, rgr, rsxp, value;
     char *generic;
     Rboolean useS4 = TRUE, isOps = FALSE;
@@ -3661,7 +3670,8 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 
     /* we either have a group method or a class method */
 
-    PROTECT(newrho = allocSExp(ENVSXP));
+    int i, j;
+
     PROTECT(m = allocVector(STRSXP,nargs));
     s = args;
     for (i = 0 ; i < nargs ; i++) {
@@ -3683,18 +3693,26 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	s = CDR(s);
     }
 
-    defineVar(R_dot_Method, m, newrho);
-    UNPROTECT(1);
-    PROTECT(t = mkString(generic));
-    defineVar(R_dot_Generic, t, newrho);
-    UNPROTECT(1);
-    defineVar(R_dot_Group, lgr, newrho);
+    SEXP genstr = PROTECT(mkString(generic));
+
     set = length(lclass) - lwhich;
-    t = allocVector(STRSXP, set);
+    PROTECT(t = allocVector(STRSXP, set));
     copy_string_elements (t, 0, lclass, lwhich, set);
-    defineVar(R_dot_Class, t, newrho);
-    defineVar(R_dot_GenericCallEnv, rho, newrho);
-    defineVar(R_dot_GenericDefEnv, R_BaseEnv, newrho);
+
+    SEXP supplied[13];
+    supplied[0] = R_NilValue;
+
+    i = 0;
+
+    supplied[i++] = R_dot_Class;          supplied[i++] = t;
+    supplied[i++] = R_dot_Generic;        supplied[i++] = genstr;
+    supplied[i++] = R_dot_Method;         supplied[i++] = m;
+    supplied[i++] = R_dot_GenericCallEnv; supplied[i++] = rho;
+    supplied[i++] = R_dot_GenericDefEnv;  supplied[i++] = R_BaseEnv;
+    supplied[i++] = R_dot_Group;          supplied[i++] = lgr;
+
+
+    supplied[i] = R_NilValue;
 
     PROTECT(t = LCONS(lmeth, CDR(call)));
 
@@ -3709,8 +3727,9 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
             SET_TAG(m, R_NilValue);
     }
 
-    *ans = applyClosure_v(t, lsxp, s, rho, newrho, 0);
-    UNPROTECT(7);
+    *ans = applyClosure_v (t, lsxp, s, rho, supplied, 0);
+
+    UNPROTECT(9);
     return 1;
 }
 
@@ -5490,7 +5509,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case CLOSXP:
-	  value = applyClosure_v(call, fun, args, rho, R_NoObject, 0);
+	  value = applyClosure_v(call, fun, args, rho, NULL, 0);
 	  break;
 	default: bad_function_error();
 	}
@@ -5834,7 +5853,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  args = GETSTACK(-2);
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = applyClosure_v(call, fun, args, rho, R_NoObject, 0);
+	  value = applyClosure_v(call, fun, args, rho, NULL, 0);
 	  break;
 	default: bad_function_error();
 	}
@@ -5878,7 +5897,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  args = GETSTACK(-2);
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = applyClosure_v(call, fun, args, rho, R_NoObject, 0);
+	  value = applyClosure_v(call, fun, args, rho, NULL, 0);
 	  break;
 	default: bad_function_error();
 	}
