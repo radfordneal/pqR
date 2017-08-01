@@ -857,7 +857,7 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
 SEXP attribute_hidden Rf_makeUnclassed (SEXP a)
 {
     if (isObject(a)) {
-        PROTECT(a = duplicate(a));
+        PROTECT(a = dup_top_level(a));
         setAttrib(a, R_ClassSymbol, R_NilValue);
         UNPROTECT(1);
     }
@@ -873,22 +873,23 @@ static SEXP do_unclass(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     SEXP a = CAR(args);
 
-    switch(TYPEOF(a)) {
-    case ENVSXP:
-	errorcall(call, _("cannot unclass an environment"));
-	break;
-    case EXTPTRSXP:
-	errorcall(call, _("cannot unclass an external pointer"));
-	break;
-    default:
-	break;
-    }
     if (isObject(a)) {
-        if (variant & VARIANT_UNCLASS)
-            R_variant_result = VARIANT_UNCLASS_FLAG;
-        else
-            a = Rf_makeUnclassed (a);
+        switch(TYPEOF(a)) {
+        case ENVSXP:
+            errorcall(call, _("cannot unclass an environment"));
+            break;
+        case EXTPTRSXP:
+            errorcall(call, _("cannot unclass an external pointer"));
+            break;
+        default:
+            if (variant & VARIANT_UNCLASS)
+                R_variant_result = VARIANT_UNCLASS_FLAG;
+            else
+                a = Rf_makeUnclassed(a);
+            break;
+        }
     }
+
     if (! (variant & VARIANT_PENDING_OK))
         WAIT_UNTIL_COMPUTED(a);
     return a;
