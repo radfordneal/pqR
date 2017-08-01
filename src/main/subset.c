@@ -1866,14 +1866,16 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
                    lenx, pok, len > 1 ? len-1 : -1, call);
 	if (offset < 0 || offset >= lenx) {
 	    /* a bold attempt to get the same behaviour for $ and [[ */
-	    if (offset < 0 && (isNewList(x) ||
+	    if (offset >= lenx && PRIMVAL(op) == 0 /* .el.methods */
+             || offset < 0 && (isNewList(x) ||
 			       isExpression(x) ||
 			       isList(x) ||
 			       isLanguage(x))) {
 		UNPROTECT(2);
 		return R_NilValue;
 	    }
-	    else out_of_bounds_error(call);
+	    else
+                out_of_bounds_error(call);
 	}
     } else { /* matrix indexing */
 	/* Here we use the fact that: */
@@ -2168,6 +2170,7 @@ attribute_hidden FUNTAB R_FunTab_subset[] =
 
 {"[",		do_subset,	1,	1000,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
 {"[[",		do_subset2,	2,	1000,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
+{".el.methods",	do_subset2,	0,	1000,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
 {"$",		do_subset3,	3,	1000,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
 
 {".subset",	do_subset_dflt,	1,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
