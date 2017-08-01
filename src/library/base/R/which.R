@@ -15,11 +15,9 @@
 #  http://www.r-project.org/Licenses/
 
 which <- function(x, arr.ind = FALSE, useNames = TRUE)
-{
-    wh <- .Internal(which(x))
     if (arr.ind && !is.null(d <- dim(x)))
-	arrayInd(wh, d, dimnames(x), useNames=useNames) else wh
-}
+        arrayInd(.Internal(which(x)), d, dimnames(x), useNames=useNames) else
+          .Internal(which(x))
 
 arrayInd <- function(ind, .dim, .dimnames = NULL, useNames = FALSE) {
     ##-- return a matrix  length(ind) x rank == length(ind) x length(.dim)
