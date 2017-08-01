@@ -5,3 +5,5 @@ is never used.
 
 Do %% and %/% on real operands that are integers same as for integer 
 operands.
+
+Speed up "which" a bit by tweaking the R code.
