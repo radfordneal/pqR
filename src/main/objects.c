@@ -324,34 +324,57 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 
 found: ;
 
-    SEXP newrho, matchedarg, newcall;
-
-    /* Create a new environment without any */
-    /* of the formals to the generic in it. */
-
-    PROTECT(newrho = allocSExp(ENVSXP));
-
-    if (TYPEOF(op) == CLOSXP) {
-        SEXP formals, t;
-	formals = FORMALS(op);
-	for (s = FRAME(cptr->cloenv); s != R_NilValue; s = CDR(s)) {
-	    for (t = formals; t != R_NilValue && TAG(t) != TAG(s); t = CDR(t)) ;
-	    if (t == R_NilValue) 
-                defineVar (TAG(s), CAR(s), newrho);
-	}
-    }
-
-    PROTECT(matchedarg = cptr->promargs);
+    SEXP matchedarg, newcall;
     PROTECT(newcall = duplicate(cptr->call));
-
-    if (RDEBUG(op) || RSTEP(op)) SET_RSTEP(sxp, 1);
-    defineVar(R_dot_Class, setcl, newrho);
-    defineVar(R_dot_Generic, mkString(generic), newrho);
-    defineVar(R_dot_Method, ScalarString(PRINTNAME(method)), newrho);
-    defineVar(R_dot_GenericCallEnv, callrho, newrho);
-    defineVar(R_dot_GenericDefEnv, defrho, newrho);
+    PROTECT(matchedarg = cptr->promargs);
     SETCAR(newcall, method);
     cptr->callflag = CTXT_GENERIC;
+
+    if (RDEBUG(op) || RSTEP(op)) SET_RSTEP(sxp, 1);
+
+    SEXP newrho = R_NilValue;  /* not used for primitives */
+
+    if (TYPEOF(sxp) == CLOSXP) {
+
+        SEXP genstr, methstr;
+        PROTECT(genstr = mkString(generic));
+        PROTECT(methstr = ScalarString(PRINTNAME(method)));
+
+        SEXP bindings = R_NilValue;
+
+        if (TYPEOF(op) == CLOSXP) {
+            SEXP formals, t;
+            formals = FORMALS(op);
+            for (s = FRAME(cptr->cloenv); s != R_NilValue; s = CDR(s)) {
+                for (t = formals; t!=R_NilValue && TAG(t)!=TAG(s); t = CDR(t)) ;
+                if (t == R_NilValue) 
+                    bindings = cons_with_tag (CAR(s), bindings, TAG(s));
+            }
+        }
+
+        newrho = NewEnvironment (R_NilValue, bindings, R_NilValue);
+
+        defineVar (R_dot_Class,          setcl,   newrho);
+        defineVar (R_dot_Generic,        genstr,  newrho);
+        defineVar (R_dot_Method,         methstr, newrho);
+        defineVar (R_dot_GenericCallEnv, callrho, newrho);
+        defineVar (R_dot_GenericDefEnv,  defrho,  newrho);
+ /*
+        bindings = cons_with_tag (setcl,   bindings, R_dot_Class);
+        bindings = cons_with_tag (genstr,  bindings, R_dot_Generic);
+        bindings = cons_with_tag (methstr, bindings, R_dot_Method);
+        bindings = cons_with_tag (callrho, bindings, R_dot_GenericCallEnv);
+        bindings = cons_with_tag (defrho,  bindings, R_dot_GenericDefEnv);
+ */
+ /*
+        if (installed_already("DBG.S3"))
+        { REprintf("USEMETHOD:\n"); R_inspect(cptr->cloenv); 
+          REprintf("---------\n");  R_inspect(newrho); }
+ */
+        UNPROTECT(2);
+    }
+
+    PROTECT(newrho);
 
     *ans = applyMethod(newcall, sxp, matchedarg, rho, newrho, variant);
 
@@ -511,7 +534,7 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
     char buf[512], b[512], bb[512], tbuf[14];
     const char *sb, *sg, *sk;
     SEXP ans, s, t, klass, method, matchedarg, generic, nextfun;
-    SEXP sysp, m, formals, actuals, tmp, newcall;
+    SEXP sysp, formals, actuals, tmp, newcall;
     SEXP a, group, basename;
     SEXP callenv, defenv;
     RCNTXT *cptr;
@@ -578,6 +601,7 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
         }
     }
     if(i) {   /* we need to expand out the dots */
+        SEXP m;
 	PROTECT(t = allocList(i+length(actuals)-1));
 	for(s = actuals, m = t; s != R_NilValue; s = CDR(s)) {
 	    if(TYPEOF(CAR(s)) == DOTSXP && i!=0) {
@@ -611,7 +635,7 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
 	SET_TAG(t, TAG(s));
     }
     for (t = matchedarg; t != R_NilValue; t = CDR(t)) {
-	for (m = actuals; m != R_NilValue; m = CDR(m))
+	for (SEXP m = actuals; m != R_NilValue; m = CDR(m))
 	    if (CAR(m) == CAR(t))  {
 		if (CAR(m) == R_MissingArg) {
 		    tmp = findVarInFrame3(cptr->cloenv, TAG(m), TRUE);
@@ -783,37 +807,47 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
 	}
     }
     PROTECT(nextfun);
-    PROTECT(klass = duplicate(klass));
-    PROTECT(s = allocVector(STRSXP, len_klass - i));
-    PROTECT(m = allocSExp(ENVSXP));
-    copy_string_elements (s, 0, klass, i, LENGTH(s));
-    setAttrib(s, install("previous"), klass);
-    defineVar(R_dot_Class, s, m);
-    /* It is possible that if a method was called directly that
-	'method' is unset */
-    if (method != R_UnboundValue) {
-	/* for Ops we need `method' to be a vector */
-	PROTECT(method = duplicate(method));
-        int len_method = length(method);
-	for(j = 0; j < len_method; j++) {
-	    if (CHAR(STRING_ELT(method,j))[0] != 0) /* not empty string */
-		SET_STRING_ELT(method, j,  mkChar(buf));
-	}
-    } else
-	PROTECT(method = mkString(buf));
-    defineVar(R_dot_Method, method, m);
-    defineVar(R_dot_GenericCallEnv, callenv, m);
-    defineVar(R_dot_GenericDefEnv, defenv, m);
 
-    method = install(buf);
+    SEXP m = R_NilValue;  /* m not used for primitives */
 
-    defineVar(R_dot_Generic, generic, m);
+    if (TYPEOF(nextfun) == CLOSXP) {
 
-    defineVar(R_dot_Group, group, m);
+        PROTECT(klass = duplicate(klass));
+        PROTECT(s = allocVector(STRSXP, len_klass - i));
+        copy_string_elements (s, 0, klass, i, LENGTH(s));
+        setAttrib(s, install("previous"), klass);
+        /* It is possible that if a method was called directly that
+            'method' is unset */
+        if (method != R_UnboundValue) {
+            /* for Ops we need `method' to be a vector */
+            PROTECT(method = duplicate(method));
+            int len_method = length(method);
+            for(j = 0; j < len_method; j++) {
+                if (CHAR(STRING_ELT(method,j))[0] != 0) /* not empty string */
+                    SET_STRING_ELT(method, j,  mkChar(buf));
+            }
+        } else
+            PROTECT(method = mkString(buf));
 
-    SETCAR(newcall, method);
+        SEXP bindings = R_NilValue;
+        bindings = cons_with_tag (s,       bindings, R_dot_Class);
+        bindings = cons_with_tag (method,  bindings, R_dot_Method);
+        bindings = cons_with_tag (callenv, bindings, R_dot_GenericCallEnv);
+        bindings = cons_with_tag (defenv,  bindings, R_dot_GenericDefEnv);
+        bindings = cons_with_tag (generic, bindings, R_dot_Generic);
+        bindings = cons_with_tag (group,   bindings, R_dot_Group);
+        m = NewEnvironment (R_NilValue, bindings, R_NilValue);
+
+        UNPROTECT(3);
+    }
+
+    PROTECT(m);
+    
+    SETCAR(newcall, install(buf));
+
     ans = applyMethod(newcall, nextfun, matchedarg, env, m, variant);
-    UNPROTECT(11);
+
+    UNPROTECT(8);
     return(ans);
 }
 
