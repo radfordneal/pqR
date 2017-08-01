@@ -267,7 +267,7 @@ int isBasicClass(const char *ss) {
     return findVarInFrame3(s_S3table, install(ss), FALSE) != R_UnboundValue;
 }
 
-
+SEXP strngsv;
 
 int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	      SEXP rho, SEXP callrho, SEXP defrho, int variant, SEXP *ans)
@@ -343,34 +343,37 @@ found: ;
         SEXP bindings = R_NilValue;
 
         if (TYPEOF(op) == CLOSXP) {
-            SEXP formals, t;
-            formals = FORMALS(op);
+            SEXP formals = FORMALS(op);
+            /* Optimize for the typical case where tags of formals same as s. */
+            SEXP t, u;
+            u = formals;
             for (s = FRAME(cptr->cloenv); s != R_NilValue; s = CDR(s)) {
-                for (t = formals; t!=R_NilValue && TAG(t)!=TAG(s); t = CDR(t)) ;
-                if (t == R_NilValue) 
+                if (TAG(s) == TAG(u)) {
+                    u = CDR(u);
+                    goto next;
+                }
+                for (t = formals; t != R_NilValue; t = CDR(t)) {
+                    if (TAG(s) == TAG(t)) {
+                        u = CDR(t);
+                        goto next;
+                    }
+                }
+                if (TAG(s) != R_dot_Class  && TAG(s) != R_dot_Generic
+                 && TAG(s) != R_dot_Method && TAG(s) != R_dot_GenericCallEnv
+                 && TAG(s) != R_dot_GenericDefEnv)
                     bindings = cons_with_tag (CAR(s), bindings, TAG(s));
+              next: ;
             }
         }
 
-        newrho = NewEnvironment (R_NilValue, bindings, R_NilValue);
-
-        defineVar (R_dot_Class,          setcl,   newrho);
-        defineVar (R_dot_Generic,        genstr,  newrho);
-        defineVar (R_dot_Method,         methstr, newrho);
-        defineVar (R_dot_GenericCallEnv, callrho, newrho);
-        defineVar (R_dot_GenericDefEnv,  defrho,  newrho);
- /*
         bindings = cons_with_tag (setcl,   bindings, R_dot_Class);
         bindings = cons_with_tag (genstr,  bindings, R_dot_Generic);
         bindings = cons_with_tag (methstr, bindings, R_dot_Method);
         bindings = cons_with_tag (callrho, bindings, R_dot_GenericCallEnv);
         bindings = cons_with_tag (defrho,  bindings, R_dot_GenericDefEnv);
- */
- /*
-        if (installed_already("DBG.S3"))
-        { REprintf("USEMETHOD:\n"); R_inspect(cptr->cloenv); 
-          REprintf("---------\n");  R_inspect(newrho); }
- */
+
+        newrho = NewEnvironment (R_NilValue, bindings, R_NilValue);
+
         UNPROTECT(2);
     }
 
