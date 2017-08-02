@@ -1357,9 +1357,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                        : VARIANT_SCALAR_STACK_OK | 
                          VARIANT_MISSING_OK | VARIANT_PENDING_OK));
             if (R_variant_result) {
-                seq = ((int64_t)R_variant_seq_from << 32) 
-                        | ((int64_t)R_variant_seq_len << 1)
-                        | R_variant_seq_dotdot;
+                seq = R_variant_seq_spec;
                 R_variant_result = 0;
             }
             SEXP remargs = ixlist2;

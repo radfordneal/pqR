@@ -1108,9 +1108,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             sb1 = evalv (sb1, rho, VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
                                                  VARIANT_MISSING_OK);
             if (R_variant_result) {
-                seq = ((int64_t)R_variant_seq_from << 32) 
-                        | ((int64_t)R_variant_seq_len << 1)
-                        | R_variant_seq_dotdot;
+                seq = R_variant_seq_spec;
                 R_variant_result = 0;
             }
         }
@@ -1156,9 +1154,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             PROTECT(sb1 = evalv (CAR(subs), rho, VARIANT_SEQ |
                             VARIANT_SCALAR_STACK_OK | VARIANT_MISSING_OK));
             if (R_variant_result) {
-                seq = ((int64_t)R_variant_seq_from << 32) 
-                        | ((int64_t)R_variant_seq_len << 1)
-                        | R_variant_seq_dotdot;
+                seq = R_variant_seq_spec;
                 R_variant_result = 0;
             }
             subs = R_NilValue;

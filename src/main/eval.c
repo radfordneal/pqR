@@ -1495,8 +1495,8 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if (R_variant_result) {  /* variant "in" value */
         R_variant_result = 0;
         is_seq = 1;
-        seq_start = R_variant_seq_from;
-        n = R_variant_seq_len;
+        seq_start = R_variant_seq_spec >> 32;
+        n = (R_variant_seq_spec >> 1) & 0x7fffffff;
         val_type = INTSXP;
     }
     else { /* non-variant "in" value */

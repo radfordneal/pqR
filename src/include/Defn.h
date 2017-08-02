@@ -945,9 +945,11 @@ LibExtern SEXP R_fast_sub_value;  /* Value assigned */
 
 #define R_variant_result R_high_frequency_globals.variant_result
 
-LibExtern int R_variant_seq_from;    /* Starting value for VARIANT_SEQ result */
-LibExtern int R_variant_seq_len;     /* Length of VARIANT_SEQ result */
-LibExtern int R_variant_seq_dotdot; /* 1 if sequence is from .. (1D dim) */
+/* Sequence specification that may be set with VARIANT_SEA.  Upper 32 bits
+   is start of sequence, next 31 bits is length, low bit is 1 if from ..
+   (ie, 1D array). */
+
+LibExtern int64_t R_variant_seq_spec;
 
 LibExtern Rboolean R_interrupts_suspended INI_as(FALSE);
 LibExtern int R_interrupts_pending INI_as(0);
