@@ -78,40 +78,36 @@ SEXP attribute_hidden Rf_VectorFromRange (int rng0, int rng1)
     return vec;
 }
 
-/* Take a pointer to a range, check for validity, and either extract
-   a range (possibly empty) of positive subscripts into start and end
-   and return R_NoObject, or convert the range to a vector of negative
-   integer subscripts that is returned. */
+/* Take a range (in seq) and either extract a range (possibly empty)
+   of positive subscripts into start and end and return R_NoObject, or
+   convert the range to a vector of negative integer subscripts that
+   is returned. */
 
-SEXP attribute_hidden Rf_DecideVectorOrRange (SEXP rng, int *start, int *end, 
-                                              SEXP call)
+SEXP attribute_hidden Rf_DecideVectorOrRange(int64_t seq, int *start, int *end,
+                                             SEXP call)
 {
-    int rng0, rng1;
+    int from, len;
 
-    if (TYPEOF(rng)!=INTSXP || LENGTH(rng)!=2) /* shouldn't happen*/
-        errorcall(call, "internal inconsistency subsetting with VARIANT_SEQ!");
+    from = seq >> 32;
+    len = (seq >> 1) & 0x7fffffff;
 
-    rng0 = INTEGER(rng)[0];
-    rng1 = INTEGER(rng)[1];
-
-    if (rng0==0) rng0 = 1; /* get rid of 0 subscript at beginning or end */
-    if (rng1==0) rng1 = -1;
-
-    if (rng1<rng0) { /* make any null range be 1:0 (avoid overflow, etc) */
-        rng0 = 1; 
-        rng1 = 0; 
+    if (from==0) {                     /* get rid of 0 subscript at beginning */
+        from = 1;
+        len -= 1;
     }
+    if (from < 0 && from+(len-1) == 0) /* get rid of 0 subscript at end */
+        len -= 1;
 
-    if (rng0<0 && rng1>0) 
+    if (from < 0 && from+(len-1) > 0) 
         errorcall(call, _("only 0's may be mixed with negative subscripts"));
 
-    if (rng0>0) {
-        *start = rng0;
-        *end = rng1;
+    if (from > 0) {
+        *start = from;
+        *end = from+(len-1);
         return R_NoObject;
     }
     else {
-        return Rf_VectorFromRange(rng0,rng1);
+        return Rf_VectorFromRange (from, from+(len-1));
     }
 }
 
@@ -316,7 +312,7 @@ static inline int whether_suppress_drop (SEXP sb)
 
 /* This is for all cases with a single index, including 1D arrays and
    matrix indexing of arrays */
-static SEXP VectorSubset(SEXP x, SEXP subs, int seq, int drop, SEXP call)
+static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
 {
     SEXP sb = subs == R_NilValue ? R_MissingArg : CAR(subs);
     SEXP indx = R_NilValue;
@@ -346,8 +342,8 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int seq, int drop, SEXP call)
        be converted to a vector to be handled as other vectors. */
 
     if (seq) {
-        suppress_drop = LEVELS(sb);  /* get flag for seq having a dim attr */
-        REPROTECT(sb = Rf_DecideVectorOrRange(sb,&start,&end,call), spi);
+        suppress_drop = (seq>>1) & 1;  /* get flag for seq having a dim attr */
+        REPROTECT(sb = Rf_DecideVectorOrRange(seq,&start,&end,call), spi);
         if (sb == R_NoObject)
             n = end - start + 1;
     }
@@ -741,7 +737,7 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
 
 /* Subset for a vector with dim attribute specifying two dimensions. */
 
-static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int seq)
+static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
 {
     SEXP s0 = CAR(subs), s1 = CADR(subs);
     SEXP dims, result, sr, sc;
@@ -766,8 +762,8 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int seq)
         s0 = R_NoObject;
     }
     else if (seq) {
-        suppress_drop_row = LEVELS(s0);
-        PROTECT(s0 = Rf_DecideVectorOrRange(s0,&start,&end,call));
+        suppress_drop_row = (seq >> 1) & 1;
+        PROTECT(s0 = Rf_DecideVectorOrRange(seq,&start,&end,call));
         nprotect++;
         if (s0 == R_NoObject)
             nrs = end - start + 1;
@@ -1312,7 +1308,7 @@ static inline SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2,
  * This provides the most general form of subsetting. */
 
 static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
-                                SEXP subs, SEXP rho, int variant, int seq);
+                                SEXP subs, SEXP rho, int variant, int64_t seq);
 
 static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
@@ -1353,7 +1349,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             SEXP sv_scalar_stack = R_scalar_stack;
             SEXP ixlist2 = CDR(ixlist);
             SEXP sb1;
-            int seq = 0;
+            int64_t seq = 0;
             PROTECT (sb1 = evalv (CAR(ixlist), rho, 
                      CDR(ixlist2) == R_NilValue /* no more than two arguments */
                        ? VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
@@ -1361,7 +1357,9 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                        : VARIANT_SCALAR_STACK_OK | 
                          VARIANT_MISSING_OK | VARIANT_PENDING_OK));
             if (R_variant_result) {
-                seq = 1;
+                seq = ((int64_t)R_variant_seq_from << 32) 
+                        | ((int64_t)R_variant_seq_len << 1)
+                        | R_variant_seq_dotdot;
                 R_variant_result = 0;
             }
             SEXP remargs = ixlist2;
@@ -1449,23 +1447,26 @@ SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
                                    CDDR(args), rho, 0, 0);
 }
 
-/* The "seq" argument below is 1 if the first subscript is a sequence spec
-   (a variant result).  The first argument (the array, x) is passed separately
-   rather than as part of an argument list, for efficiency.  If sb1 is not
-   R_NoObject, it is the first subscript, which has no tag, and subs is the
-   list of remaining subscripts/args; otherwise subs has all subscripts.
+/* The "seq" argument below is non-zero if the first subscript is a sequence
+   specification (a variant result), in which case it encodes the start, 
+   length, and whether .. properties of the sequence.
+
+    The first argument (the array, x) is passed separately rather than
+   as part of an argument list, for efficiency.  If sb1 is not R_NoObject, 
+   it is the first subscript, which has no tag, and subs is the list
+   of remaining subscripts/args; otherwise subs has all subscripts.
 
    May return its result on the scalar stack, depending on variant.
 
    Note:  x, sb1, and subs need not be protected on entry. */
 
 static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
-                                SEXP subs, SEXP rho, int variant, int seq)
+                                SEXP subs, SEXP rho, int variant, int64_t seq)
 {
     int drop, i, nsubs, type;
     SEXP ans, ax, px;
 
-    if (!seq && x != R_NilValue && sb1 != R_NoObject) {
+    if (seq == 0 && x != R_NilValue && sb1 != R_NoObject) {
 
         /* Check for one subscript, handling simple cases like this */
         if (sb2 == R_NoObject && subs == R_NilValue) { 

@@ -945,6 +945,10 @@ LibExtern SEXP R_fast_sub_value;  /* Value assigned */
 
 #define R_variant_result R_high_frequency_globals.variant_result
 
+LibExtern int R_variant_seq_from;    /* Starting value for VARIANT_SEQ result */
+LibExtern int R_variant_seq_len;     /* Length of VARIANT_SEQ result */
+LibExtern int R_variant_seq_dotdot; /* 1 if sequence is from .. (1D dim) */
+
 LibExtern Rboolean R_interrupts_suspended INI_as(FALSE);
 LibExtern int R_interrupts_pending INI_as(0);
 
@@ -1405,7 +1409,7 @@ void copyMostAttribNoTs(SEXP, SEXP);
 void CustomPrintValue(SEXP, SEXP);
 void DataFrameClass(SEXP);
 SEXP ddfindVar(SEXP, SEXP);
-SEXP Rf_DecideVectorOrRange (SEXP, int *, int *, SEXP);
+SEXP Rf_DecideVectorOrRange (int64_t, int *, int *, SEXP);
 SEXP deparse1(SEXP,Rboolean,int);
 SEXP deparse1line(SEXP,Rboolean);
 SEXP deparse1s(SEXP call);
