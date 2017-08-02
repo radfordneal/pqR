@@ -1076,14 +1076,15 @@ static void SubAssignArgs(SEXP *subs, SEXP *y, SEXP call)
 /* The [<- operator. */
 
 static SEXP do_subassign_dflt_seq 
-            (SEXP call, SEXP x, SEXP sb1, SEXP subs, SEXP rho, SEXP y, int seq);
+       (SEXP call, SEXP x, SEXP sb1, SEXP subs, SEXP rho, SEXP y, int64_t seq);
 
 static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP sv_scalar_stack = R_scalar_stack;
 
     SEXP ans, x, sb1, subs, y;
-    int argsevald = 0, seq = 0;
+    int argsevald = 0;
+    int64_t seq = 0;
 
     /* See if we are using the fast interface. */
 
@@ -1106,8 +1107,12 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (subs == R_NilValue) {
             sb1 = evalv (sb1, rho, VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
                                                  VARIANT_MISSING_OK);
-            seq = R_variant_result;
-            R_variant_result = 0;
+            if (R_variant_result) {
+                seq = ((int64_t)R_variant_seq_from << 32) 
+                        | ((int64_t)R_variant_seq_len << 1)
+                        | R_variant_seq_dotdot;
+                R_variant_result = 0;
+            }
         }
         else {
             sb1 = evalv (sb1, rho, VARIANT_SCALAR_STACK_OK |
@@ -1150,8 +1155,12 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         else {
             PROTECT(sb1 = evalv (CAR(subs), rho, VARIANT_SEQ |
                             VARIANT_SCALAR_STACK_OK | VARIANT_MISSING_OK));
-            seq = R_variant_result;
-            R_variant_result = 0;
+            if (R_variant_result) {
+                seq = ((int64_t)R_variant_seq_from << 32) 
+                        | ((int64_t)R_variant_seq_len << 1)
+                        | R_variant_seq_dotdot;
+                R_variant_result = 0;
+            }
             subs = R_NilValue;
             UNPROTECT(2);
             goto dflt_seq;
@@ -1186,11 +1195,11 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
              (call, CAR(args), R_NoObject, CDR(args), rho, R_NoObject, 0);
 }
 
-/* The last "seq" argument below is 1 if the first subscript is a sequence spec
-   (a variant result). */
+/* The last "seq" argument below is non-zero if the first subscript is a 
+   sequence spec (a variant result). */
 
 static SEXP do_subassign_dflt_seq
-             (SEXP call, SEXP x, SEXP sb1, SEXP subs, SEXP rho, SEXP y, int seq)
+       (SEXP call, SEXP x, SEXP sb1, SEXP subs, SEXP rho, SEXP y, int64_t seq)
 {
     if (y == R_NoObject)
         SubAssignArgs (&subs, &y, call);
@@ -1249,7 +1258,7 @@ static SEXP do_subassign_dflt_seq
         /* 1 subscript argument */
         if (seq) {
             int start, end;
-            sb1 = Rf_DecideVectorOrRange (sb1, &start, &end, call);
+            sb1 = Rf_DecideVectorOrRange (seq, &start, &end, call);
             if (sb1 == R_NoObject) {
                 R_len_t leny;
                 if (start < 0 || y != R_NilValue && (leny = length(y)) != 1

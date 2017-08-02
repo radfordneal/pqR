@@ -109,13 +109,12 @@ static SEXP make_seq (int from, int len, int variant, int dotdot)
     SEXP ans;
     int *p;
 
-    if (VARIANT_KIND(variant) == VARIANT_SEQ) {
-        ans = allocVector (INTSXP, 2);
-        SETLEVELS(ans,dotdot);
-        p = INTEGER(ans);
-        p[0] = from;
-        p[1] = from + len - 1;
+    if (VARIANT_KIND(variant) == VARIANT_SEQ && (from|len|dotdot) != 0) {
+        R_variant_seq_from = from;
+        R_variant_seq_len = len;
+        R_variant_seq_dotdot = dotdot;
         R_variant_result = 1;
+        ans = R_NilValue;
     }
     else {
         ans = allocVector (INTSXP, len);

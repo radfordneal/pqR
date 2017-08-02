@@ -1495,10 +1495,8 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if (R_variant_result) {  /* variant "in" value */
         R_variant_result = 0;
         is_seq = 1;
-        if (TYPEOF(val)!=INTSXP || LENGTH(val)!=2) /* shouldn't happen*/
-            errorcall(call, "internal inconsistency with variant op in for!");
-        seq_start = INTEGER(val)[0];
-        n = INTEGER(val)[1] - INTEGER(val)[0] + 1;
+        seq_start = R_variant_seq_from;
+        n = R_variant_seq_len;
         val_type = INTSXP;
     }
     else { /* non-variant "in" value */
