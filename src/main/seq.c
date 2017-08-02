@@ -100,9 +100,11 @@ static SEXP cross_colon(SEXP call, SEXP s, SEXP t)
 }
 
 /* Create a simple integer sequence, or as variant, a description of it. 
-   Sets R_variant_result to 1 if a sequence description is returned. 
-   If dotdot is true, attaches 1D dim attribute, or for variant result,
-   sets the gp field (LEVELS) to 1. */
+   Sets R_variant_result to 1 if a sequence description is returned in
+   R_variant_seq_spec (with R_NilValue being the returned SEXP).  Won't
+   put all zeros in R_variant_seq_spec.
+
+   If dotdot is true, attaches 1D dim attribute (or spec says to do so). */
 
 static SEXP make_seq (int from, int len, int variant, int dotdot)
 {
@@ -110,9 +112,7 @@ static SEXP make_seq (int from, int len, int variant, int dotdot)
     int *p;
 
     if (VARIANT_KIND(variant) == VARIANT_SEQ && (from|len|dotdot) != 0) {
-        R_variant_seq_from = from;
-        R_variant_seq_len = len;
-        R_variant_seq_dotdot = dotdot;
+        R_variant_seq_spec = ((int64_t)from<<32) | ((int64_t)len<<1) | dotdot;
         R_variant_result = 1;
         ans = R_NilValue;
     }
@@ -144,9 +144,10 @@ static SEXP seq_colon(double n1, double n2, int dotdot, SEXP call, int variant)
     else  /* : */
         r = fabs (n2 - n1);
 
-    if(r >= INT_MAX) errorcall(call,_("result would be too long a vector"));
+    if (r + FLT_EPSILON >= INT_MAX) 
+        errorcall(call,_("result would be too long a vector"));
 
-    n = r + 1 + FLT_EPSILON;
+    n = (int) (r + FLT_EPSILON) + 1;
 
     in1 = (int)(n1);
     useInt = (n1 == in1);
