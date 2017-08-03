@@ -355,6 +355,7 @@
  Rf_findFun_nospecsym
  Rf_findVar1
  Rf_findcontext
+ Rf_find_binding_in_frame
  Rf_forcePromiseUnbound
  Rf_framedepth
  Rf_gamma_cody

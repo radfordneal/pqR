@@ -875,7 +875,7 @@ static SEXP RemoveFromList(SEXP thing, SEXP list, SEXP *value)
 
 /*----------------------------------------------------------------------
 
-  findVarLocInFrame
+  find_binding_in_frame
 
   Look up the location of the value of a symbol in a single
   environment frame.  Returns the binding cell rather than the value
@@ -885,7 +885,8 @@ static SEXP RemoveFromList(SEXP thing, SEXP list, SEXP *value)
   Callers set *canCache = TRUE or NULL
 */
 
-static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
+SEXP attribute_hidden Rf_find_binding_in_frame (SEXP rho, SEXP symbol, 
+                                                Rboolean *canCache)
 {
     SEXP loc;
 
@@ -917,7 +918,7 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
     }
 
     else if (IS_BASE(rho))
-	error("'findVarLocInFrame' cannot be used on the base environment");
+	error("'find_binding_in_frame' cannot be used on the base environment");
 
     else if (!isEnvironment(rho))  /* somebody does this... */
 	return R_NilValue;
@@ -957,7 +958,7 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
 
 R_varloc_t R_findVarLocInFrame(SEXP rho, SEXP symbol)
 {
-    SEXP binding = findVarLocInFrame(rho, symbol, NULL);
+    SEXP binding = Rf_find_binding_in_frame(rho, symbol, NULL);
     return binding == R_NilValue ? R_NoObject : (R_varloc_t) binding;
 }
 
@@ -1211,7 +1212,7 @@ static inline SEXP findGlobalVar(SEXP symbol)
             }
         }
         else {
-	    vl = findVarLocInFrame(rho, symbol, &canCache);
+	    vl = Rf_find_binding_in_frame(rho, symbol, &canCache);
 	    if (vl != R_NilValue) {
 		if(canCache)
 		    R_AddGlobalCacheNonBase(symbol, vl);
@@ -2303,7 +2304,7 @@ static int isMissing_recursive(SEXP symbol, SEXP rho, struct detectcycle *dc)
     if (rho == R_BaseEnv || rho == R_BaseNamespace)
 	return 0;
 
-    vl = findVarLocInFrame(rho, s, NULL);
+    vl = Rf_find_binding_in_frame(rho, s, NULL);
     if (vl != R_NilValue) {
         SEXP vlv = CAR(vl);
 	if (DDVAL(symbol)) {
@@ -2381,7 +2382,7 @@ static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
     else
         s = sym;
 
-    t = findVarLocInFrame (rho, s, NULL);
+    t = Rf_find_binding_in_frame (rho, s, NULL);
 
     if (t == R_NilValue)  /* no error for local variables, despite msg below */
 	errorcall(call, _("'missing' can only be used for arguments"));
@@ -3263,7 +3264,7 @@ void R_LockBinding(SEXP sym, SEXP env)
 	   R_UnboundSymbol */
 	LOCK_BINDING(sym);
     else {
-	SEXP binding = findVarLocInFrame(env, sym, NULL);
+	SEXP binding = Rf_find_binding_in_frame(env, sym, NULL);
 	if (binding == R_NilValue)
 	    error(_("no binding for \"%s\""), CHAR(PRINTNAME(sym)));
 	LOCK_BINDING(binding);
@@ -3284,7 +3285,7 @@ void R_unLockBinding(SEXP sym, SEXP env)
 	   R_UnboundSymbol */
 	UNLOCK_BINDING(sym);
     else {
-	SEXP binding = findVarLocInFrame(env, sym, NULL);
+	SEXP binding = Rf_find_binding_in_frame(env, sym, NULL);
 	if (binding == R_NilValue)
 	    error(_("no binding for \"%s\""), CHAR(PRINTNAME(sym)));
 	UNLOCK_BINDING(binding);
@@ -3313,10 +3314,10 @@ void R_MakeActiveBinding(SEXP sym, SEXP fun, SEXP env)
 	   a regular binding cannot be changed */
     }
     else {
-	SEXP binding = findVarLocInFrame(env, sym, NULL);
+	SEXP binding = Rf_find_binding_in_frame(env, sym, NULL);
 	if (binding == R_NilValue) {
 	    defineVar(sym, fun, env); /* fails if env is locked */
-	    binding = findVarLocInFrame(env, sym, NULL);
+	    binding = Rf_find_binding_in_frame(env, sym, NULL);
 	    SET_ACTIVE_BINDING_BIT(binding);
 	}
 	else if (! IS_ACTIVE_BINDING(binding))
@@ -3342,7 +3343,7 @@ Rboolean R_BindingIsLocked(SEXP sym, SEXP env)
 	   R_UnboundSymbol */
 	return BINDING_IS_LOCKED(sym) != 0;
     else {
-	SEXP binding = findVarLocInFrame(env, sym, NULL);
+	SEXP binding = Rf_find_binding_in_frame(env, sym, NULL);
 	if (binding == R_NilValue)
 	    error(_("no binding for \"%s\""), CHAR(PRINTNAME(sym)));
 	return BINDING_IS_LOCKED(binding) != 0;
@@ -3363,7 +3364,7 @@ Rboolean R_BindingIsActive(SEXP sym, SEXP env)
 	   R_UnboundSymbol */
 	return IS_ACTIVE_BINDING(sym) != 0;
     else {
-	SEXP binding = findVarLocInFrame(env, sym, NULL);
+	SEXP binding = Rf_find_binding_in_frame(env, sym, NULL);
 	if (binding == R_NilValue)
 	    error(_("no binding for \"%s\""), CHAR(PRINTNAME(sym)));
 	return IS_ACTIVE_BINDING(binding) != 0;
@@ -3689,7 +3690,7 @@ static SEXP do_importIntoEnv(SEXP call, SEXP op, SEXP args, SEXP rho)
 		if (SYMVALUE(expsym) != R_UnboundValue)
 		    binding = expsym;
 	    } else
-		binding = findVarLocInFrame(env, expsym, NULL);
+		binding = Rf_find_binding_in_frame(env, expsym, NULL);
 	if (binding == R_NilValue)
 	    binding = expsym;
 
