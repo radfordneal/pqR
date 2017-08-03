@@ -126,9 +126,13 @@ next
 
   \code{for}, \code{while} and \code{repeat} return \code{NULL} invisibly.
 
-  \code{for} leaves the variables it controls set to the values they had
-  at the end of the last iteration of the loop, or to \code{NULL} if the loop
-  was done zero times.
+  \code{for} leaves the variables it controls set to the values they
+  had at the end of the last iteration of the loop.  If the loop was
+  done zero times, the variable is set to \code{NULL} with the
+  \code{in} form, the variable is set to zero with the \code{across}
+  and \code{down} forms, and the variables are set to the size of the
+  corresponding dimension with the \code{along} form (at least one
+  of these sizes will of course be zero).
 
   \code{break} and \code{next} do not return a value as they transfer
   control within the loop.  When \code{break} terminates a \code{for} loop,

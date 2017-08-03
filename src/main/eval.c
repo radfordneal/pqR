@@ -1398,7 +1398,7 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (!bgn && RDEBUG(rho)) start_browser (call, op, body, rho); \
     } while (0)
 
-static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     /* Need to declare volatile variables whose values are relied on
        after for_next or for_break longjmps and that might change between
@@ -1526,18 +1526,26 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
         val_type = TYPEOF(val);
     }
 
-    /* If no iterations, just set all variables to R_NilValue and return. */
+    /* If no iterations, just set all variable(s) to R_NilValue or the 
+       sizes of the dimensions and then return. */
 
     if (n == 0) {
+        if (nsyms == 1)
+            set_var_in_frame (sym, in ? R_NilValue : ScalarIntegerMaybeConst(0),
+                              rho, TRUE, 3);
+        else {
+            int i;
+            for (i = 0; i < nsyms; i++) {
+                set_var_in_frame (CAR(syms), 
+                                  ScalarIntegerMaybeConst(INTEGER(dims)[i]),
+                                  rho, TRUE, 3);
+                syms = CDR(syms);
+            }
+        }
         if (nsyms != 1)
             UNPROTECT(4);  /* dims, indexes, ixvals, bcells */
         if (in && !is_seq)
             DEC_NAMEDCNT(val);
-        while (nsyms > 0) {
-            set_var_in_frame (CAR(syms), R_NilValue, rho, TRUE, 3);
-            syms = CDR(syms);
-            nsyms -= 1;
-        }
         UNPROTECT(3);      /* args, rho, val */
         R_Visible = FALSE;
         return R_NilValue;
@@ -1549,7 +1557,6 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
         PROTECT_WITH_INDEX (bcell = Rf_find_binding_in_frame (rho, sym, NULL),
                             &bix);
         PROTECT_WITH_INDEX (v = CAR(bcell), &vpi);
-            v = bcell = R_NilValue;
     }
     else { 
         for (j = 0, s = syms; j < nsyms; j++, s = CDR(s)) {

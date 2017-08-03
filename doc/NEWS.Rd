@@ -102,6 +102,11 @@
 
   \subsection{FEATURE CHANGES}{
   \itemize{
+  \item The \code{along}, \code{across}, and \code{down} forms of 
+        the \code{for} statement (introduced in pqR-2016-06-24 and
+        pqR-2016-10-05) now set the loop variable(s) to the
+        corresponding length or dimension size when the loop is done
+        zero times, rather than to \code{NULL}.
   \item The old serialization format, used prior to December 2001, is 
         no longer supported in pqR.  Code to support it would need to
         be changed to accomodate recent changes in pqR, and meaningful
