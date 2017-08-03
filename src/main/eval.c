@@ -1540,7 +1540,6 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
         PROTECT_WITH_INDEX (bcell = Rf_find_binding_in_frame (rho, sym, NULL),
                             &bix);
         PROTECT_WITH_INDEX (v = CAR(bcell), &vpi);
-            v = bcell = R_NilValue;
     }
     else { 
         for (j = 0, s = syms; j < nsyms; j++, s = CDR(s)) {
