@@ -1075,14 +1075,14 @@ static void SubAssignArgs(SEXP *subs, SEXP *y, SEXP call)
 
 /* The [<- operator. */
 
-static SEXP do_subassign_dflt_seq 
-       (SEXP call, SEXP x, SEXP sb1, SEXP subs, SEXP rho, SEXP y, int64_t seq);
+static SEXP do_subassign_dflt_seq (SEXP call, SEXP x, SEXP sb1, SEXP sb2, 
+                                   SEXP subs, SEXP rho, SEXP y, int64_t seq);
 
 static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP sv_scalar_stack = R_scalar_stack;
 
-    SEXP ans, x, sb1, subs, y;
+    SEXP ans, x, sb1, sb2, subs, y;
     int argsevald = 0;
     int64_t seq = 0;
 
@@ -1111,16 +1111,23 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 seq = R_variant_seq_spec;
                 R_variant_result = 0;
             }
+            sb2 = R_NoObject;
         }
         else {
             sb1 = evalv (sb1, rho, VARIANT_SCALAR_STACK_OK |
                                    VARIANT_MISSING_OK);
+            sb2 = CAR(subs);
+            subs = CDR(subs);
+            PROTECT(sb1);
+            sb2 = evalv (sb2, rho, VARIANT_SCALAR_STACK_OK |
+                                   VARIANT_MISSING_OK);
             if (subs != R_NilValue) {
-                PROTECT(sb1);
+                PROTECT(sb2);
                 subs = evalList_v (subs, rho, VARIANT_SCALAR_STACK_OK |
                                               VARIANT_MISSING_OK);
                 UNPROTECT(1);
             }
+            UNPROTECT(1);
         }
 
         UNPROTECT(1); /* y */
@@ -1130,6 +1137,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     y = R_NoObject;  /* found later after other arguments */
     x = CAR(args);   /* args are (x, indexes..., y) */
     sb1 = R_NoObject;
+    sb2 = R_NoObject;
     subs = CDR(args);
 
     if (x != R_DotsSymbol) {
@@ -1171,13 +1179,13 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         return(ans);
 
     return do_subassign_dflt_seq
-             (call, CAR(ans), R_NoObject, CDR(ans), rho, R_NoObject, 0);
+       (call, CAR(ans), R_NoObject, R_NoObject, CDR(ans), rho, R_NoObject, 0);
 
     /* ... path that bypasses DispatchOrEval ... */
 
   dflt_seq: ;
 
-    SEXP r = do_subassign_dflt_seq (call, x, sb1, subs, rho, y, seq);
+    SEXP r = do_subassign_dflt_seq (call, x, sb1, sb2, subs, rho, y, seq);
 
     R_scalar_stack = sv_scalar_stack;
     return r;
@@ -1188,14 +1196,14 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     return do_subassign_dflt_seq 
-             (call, CAR(args), R_NoObject, CDR(args), rho, R_NoObject, 0);
+      (call, CAR(args), R_NoObject, R_NoObject, CDR(args), rho, R_NoObject, 0);
 }
 
 /* The last "seq" argument below is non-zero if the first subscript is a 
    sequence spec (a variant result). */
 
-static SEXP do_subassign_dflt_seq
-       (SEXP call, SEXP x, SEXP sb1, SEXP subs, SEXP rho, SEXP y, int64_t seq)
+static SEXP do_subassign_dflt_seq (SEXP call, SEXP x, SEXP sb1, SEXP sb2, 
+                                   SEXP subs, SEXP rho, SEXP y, int64_t seq)
 {
     if (y == R_NoObject)
         SubAssignArgs (&subs, &y, call);
@@ -1207,7 +1215,15 @@ static SEXP do_subassign_dflt_seq
         }
     }
 
+    if (sb2 == R_NoObject) {
+        if (subs != R_NilValue) {
+            sb2 = CAR(subs);
+            subs = CDR(subs);
+        }
+    }
+
     PROTECT(sb1 == R_NoObject ? R_NilValue : sb1);
+    PROTECT(sb2 == R_NoObject ? R_NilValue : sb2);
     PROTECT3(y,x,subs);
 
     Rboolean S4 = IS_S4_OBJECT(x);
@@ -1225,7 +1241,7 @@ static SEXP do_subassign_dflt_seq
     }
     else if (x == R_NilValue) {
 	if (length(y) == 0) {
-	    UNPROTECT(4);
+	    UNPROTECT(5);
 	    return x;
 	}
         x = coerceVector(x, TYPEOF(y));
@@ -1233,7 +1249,7 @@ static SEXP do_subassign_dflt_seq
     else if (isVector(x)) {
         if (LENGTH(x) == 0) {
             if (length(y) == 0) {
-                UNPROTECT(4);
+                UNPROTECT(5);
                 return x;
             }
 	}
@@ -1250,7 +1266,7 @@ static SEXP do_subassign_dflt_seq
         /* 0 subscript arguments */
         x = VectorAssign(call, x, R_MissingArg, y);
     }
-    else if (subs == R_NilValue) { 
+    else if (sb2 == R_NoObject) {
         /* 1 subscript argument */
         if (seq) {
             int start, end;
@@ -1306,14 +1322,14 @@ static SEXP do_subassign_dflt_seq
             x = VectorAssign (call, x, sb1, y);
         }
     }
-    else if (CDR(subs) == R_NilValue) {
+    else if (subs == R_NilValue) {
         /* 2 subscript arguments */
-        x = MatrixAssign(call, x, sb1, CAR(subs), y);
+        x = MatrixAssign(call, x, sb1, sb2, y);
     }
     else {
         /* More than 2 subscript arguments */
         UNPROTECT(1); /* subs */
-        PROTECT (subs = CONS(sb1,subs));
+        PROTECT (subs = CONS(sb1,CONS(sb2,subs)));
         x = ArrayAssign(call, x, subs, y);
     }
 
@@ -1333,7 +1349,7 @@ static SEXP do_subassign_dflt_seq
     /* will be multiple reference problems if "[<-" is used */
     /* in a naked fashion. */
 
-    UNPROTECT(4);
+    UNPROTECT(5);
     if (!isList(x)) SET_NAMEDCNT_0(x);
     if(S4) SET_S4_OBJECT(x);
 
