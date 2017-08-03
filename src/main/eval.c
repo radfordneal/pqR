@@ -1413,14 +1413,14 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     int dbg, val_type;
     SEXP a, syms, sym, body, dims;
     RCNTXT cntxt;
-    PROTECT_INDEX valpi, vpi, bix;
+    PROTECT_INDEX vpi, bix;
     int is_seq, seq_start;
     int along = 0, across = 0, down = 0, in = 0;
     int nsyms;
+    SEXP s;
+    int j;
 
     R_Visible = FALSE;
-
-    PROTECT(args);
 
     /* Count how many variables there are before the argument after the "in",
        "across", "down", or "along" keyword.  Set 'a' to the cell for the 
@@ -1447,7 +1447,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* Sometimes handled by bytecode... */
 
     if (in && nsyms == 1 && R_jit_enabled > 2 && ! R_PendingPromises) {
-	R_compileAndExecute(call, rho); 
+        R_compileAndExecute(call, rho);
 	return R_NilValue;
     }
 
@@ -1457,7 +1457,7 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     body = CADR(a);
     sym = CAR(syms);
 
-    PROTECT(rho);
+    PROTECT2(args,rho);
 
     PROTECT(val = evalv(val, rho, in    ? VARIANT_SEQ | VARIANT_ANY_ATTR :
                                   along ? VARIANT_UNCLASS | VARIANT_ANY_ATTR :
@@ -1510,27 +1510,57 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     else { /* non-variant "in" value */
 
-        PROTECT_WITH_INDEX (val, &valpi);
         INC_NAMEDCNT(val);  /* increment NAMEDCNT to avoid mods by loop code */
         nval = val;  /* for scanning pairlist */
 
         /* Deal with the case where we are iterating over a factor.
            We need to coerce to character, then iterate */
 
-        if (inherits_CHAR (val, R_factor_CHARSXP))
-            REPROTECT(val = asCharacterFactor(val), valpi);
+        if (inherits_CHAR (val, R_factor_CHARSXP)) {
+            val = asCharacterFactor(val);
+            UNPROTECT(1);
+            PROTECT(val);
+        }
 
         n = length(val);
         val_type = TYPEOF(val);
     }
 
+    /* If no iterations, just set all variables to R_NilValue and return. */
+
+    if (n == 0) {
+        if (nsyms != 1)
+            UNPROTECT(4);  /* dims, indexes, ixvals, bcells */
+        if (in && !is_seq)
+            DEC_NAMEDCNT(val);
+        while (nsyms > 0) {
+            set_var_in_frame (CAR(syms), R_NilValue, rho, TRUE, 3);
+            syms = CDR(syms);
+            nsyms -= 1;
+        }
+        UNPROTECT(3);      /* args, rho, val */
+        R_Visible = FALSE;
+        return R_NilValue;
+    }
+
+    /* Initialize record of binding cells for variables. */
+
+    if (nsyms == 1) { 
+        PROTECT_WITH_INDEX (bcell = Rf_find_binding_in_frame (rho, sym, NULL),
+                            &bix);
+        PROTECT_WITH_INDEX (v = CAR(bcell), &vpi);
+            v = bcell = R_NilValue;
+    }
+    else { 
+        for (j = 0, s = syms; j < nsyms; j++, s = CDR(s)) {
+            bcell = Rf_find_binding_in_frame (rho, CAR(s), NULL);
+            SET_VECTOR_ELT (bcells, j, bcell);
+            SET_VECTOR_ELT (ixvals, j, CAR(bcell));
+        }
+    }
+
     dbg = RDEBUG(rho);
     bgn = BodyHasBraces(body);
-
-    if (nsyms == 1) {
-        PROTECT_WITH_INDEX(v = R_NilValue, &vpi);
-        PROTECT_WITH_INDEX(bcell = R_NilValue, &bix);
-    }
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
@@ -1538,14 +1568,6 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     switch (SETJMP(cntxt.cjmpbuf)) {
     case CTXT_BREAK: goto for_break;
     case CTXT_NEXT: goto for_next;
-    }
-
-    /* Loop variables are initialized to R NULL. */
-
-    int j;
-    SEXP s;
-    for (j = 0, s = syms; j < nsyms; j++, s = CDR(s)) { 
-        set_var_in_frame (CAR(s), R_NilValue, rho, TRUE, 3);
     }
 
     /* MAIN LOOP. */
@@ -1569,7 +1591,8 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
             for (j = 0, s = syms; j < nsyms; j++, s = CDR(s)) {
                 SEXP v = VECTOR_ELT(ixvals,j);
-                if (v==R_NilValue || NAMEDCNT_GT_1(v) || HAS_ATTRIB(v)){
+                if (TYPEOF(v) != INTSXP || LENGTH(v) != 1 || HAS_ATTRIB(v)
+                                        || NAMEDCNT_GT_1(v)) {
                     v = allocVector(INTSXP,1);
                     SET_VECTOR_ELT(ixvals,j,v);
                 }
@@ -1603,10 +1626,11 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 	default:
 
             /* Allocate new space for the loop variable value when the value has
-               been assigned to another variable (NAMEDCNT(v) > 1), and when an
-               attribute has been attached to it. */
+               been assigned to another variable (NAMEDCNT(v) > 1), or when an
+               attribute has been attached to it, etc. */
 
-            if (v == R_NilValue || NAMEDCNT_GT_1(v) || HAS_ATTRIB(v))
+            if (TYPEOF(v) != val_type || LENGTH(v) != 1 || HAS_ATTRIB(v)
+                                      || NAMEDCNT_GT_1(v))
                 REPROTECT(v = allocVector(val_type, 1), vpi);
 
             switch (val_type) {
@@ -1651,10 +1675,8 @@ static SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
  for_break:
     endcontext(&cntxt);
-    if (in && !is_seq) {
+    if (in && !is_seq)
         DEC_NAMEDCNT(val);
-        UNPROTECT(1);  /* val */
-    }
     if (nsyms == 1)
         UNPROTECT(2);  /* v, bcell */
     else 

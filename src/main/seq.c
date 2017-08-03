@@ -147,7 +147,7 @@ static SEXP seq_colon(double n1, double n2, int dotdot, SEXP call, int variant)
     if (r + FLT_EPSILON >= INT_MAX) 
         errorcall(call,_("result would be too long a vector"));
 
-    n = (int) (r + FLT_EPSILON) + 1;
+    n = r + 1 + FLT_EPSILON;
 
     in1 = (int)(n1);
     useInt = (n1 == in1);
