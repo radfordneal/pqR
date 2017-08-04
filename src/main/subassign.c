@@ -1097,12 +1097,8 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         y = R_fast_sub_value;  /* may be on scalar stack */
         x = R_fast_sub_into;
-        if (!isVectorAtomic(x) && ON_SCALAR_STACK(y))
-            y = DUP_STACK_VALUE(y); /* avoid scalar stack value in a list */
         sb1 = CAR(args);
         subs = CDR(args);
-
-        PROTECT(y);
 
         if (subs == R_NilValue) {
             sb1 = evalv (sb1, rho, VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
@@ -1133,7 +1129,6 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             UNPROTECT(1); /* sb1 */
         }
 
-        UNPROTECT(1); /* y */
         goto dflt_seq;
     }
 
@@ -1178,8 +1173,8 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* We evaluate the first argument and attempt to dispatch on it. */
     /* If the dispatch fails, we "drop through" to the default code below. */
 
-    if(DispatchOrEval(call, op, "[<-", args, rho, &ans, 0, argsevald))
-        return(ans);
+    if (DispatchOrEval(call, op, "[<-", args, rho, &ans, 0, argsevald))
+        return ans;
 
     return do_subassign_dflt_seq
        (call, CAR(ans), R_NoObject, R_NoObject, CDR(ans), rho, R_NoObject, 0);
@@ -1210,6 +1205,8 @@ static SEXP do_subassign_dflt_seq (SEXP call, SEXP x, SEXP sb1, SEXP sb2,
 {
     if (y == R_NoObject)
         SubAssignArgs (&subs, &y, call);
+    else if (ON_SCALAR_STACK(y) && !isVectorAtomic(x))
+        y = DUP_STACK_VALUE(y);
 
     if (sb1 == R_NoObject) {
         if (subs != R_NilValue) {
@@ -1366,12 +1363,10 @@ static SEXP do_subassign2_dflt_int
 
 static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    SEXP ans;
-
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
+        SEXP scalar_stack_sv = R_scalar_stack;
         SEXP y = R_fast_sub_value; /* may be on the scalar stack */
         SEXP x = R_fast_sub_into;
-        SEXP scalar_stack_sv = R_scalar_stack;
         SEXP sb1;
         if (args == R_NilValue)
             sb1 = R_NoObject;
@@ -1386,13 +1381,16 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 UNPROTECT(1);
             }
         }
+
         SEXP r = do_subassign2_dflt_int (call, x, sb1, args, rho, y);
         R_scalar_stack = scalar_stack_sv;
         return r;
     }
 
-    if(DispatchOrEval(call, op, "[[<-", args, rho, &ans, 0, 0))
-        return(ans);
+    SEXP ans;
+
+    if (DispatchOrEval(call, op, "[[<-", args, rho, &ans, 0, 0))
+        return ans;
 
     return do_subassign2_dflt_int 
              (call, CAR(ans), R_NoObject, CDR(ans), rho, R_NoObject);
