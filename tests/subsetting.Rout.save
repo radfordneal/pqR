@@ -241,6 +241,47 @@ No helper threads, task merging enabled, uncompressed pointers.
 > stopifnot(identical(L,pairlist(3,2)))
 > 
 > 
+> # Tests with ...
+> 
+> M <- matrix(101:112,3,4)
+> 
+> f <- function (w,...) stopifnot(identical(M[...],w))
+> f(104L,4)
+> f(104L,1,2)
+> f(105L,2,2)
+> f(M[])
+> 
+> f <- function (w,x,...) stopifnot(identical(M[x,...],w))
+> f(104L,4)
+> f(104L,1,2)
+> f(105L,2,2)
+> 
+> f <- function (w,...) stopifnot(identical(M[[...]],w))
+> f(104L,4)
+> f(104L,1,2)
+> f(105L,2,2)
+> 
+> f <- function (w,x,...) stopifnot(identical(M[[x,...]],w))
+> f(104L,4)
+> f(104L,1,2)
+> f(105L,2,2)
+> 
+> M2 <- M
+> M2[2,3] <- 9L
+> 
+> f <- function (M,W,...) { M[...] <- 9L; stopifnot(identical(M,W)) }
+> f(M,M2,2,3)
+> 
+> f <- function (M,W,x,...) { M[x,...] <- 9L; stopifnot(identical(M,W)) }
+> f(M,M2,2,3)
+> 
+> f <- function (M,W,...) { M[[...]] <- 9L; stopifnot(identical(M,W)) }
+> f(M,M2,2,3)
+> 
+> f <- function (M,W,x,...) { M[[x,...]] <- 9L; stopifnot(identical(M,W)) }
+> f(M,M2,2,3)
+> 
+> 
 > # Check that name after $ gets dispatched as a string.
 > 
 > a <- list(p=3,q=4)
