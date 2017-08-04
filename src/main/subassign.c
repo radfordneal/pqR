@@ -1116,18 +1116,21 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         else {
             sb1 = evalv (sb1, rho, VARIANT_SCALAR_STACK_OK |
                                    VARIANT_MISSING_OK);
-            sb2 = CAR(subs);
-            subs = CDR(subs);
             PROTECT(sb1);
-            sb2 = evalv (sb2, rho, VARIANT_SCALAR_STACK_OK |
-                                   VARIANT_MISSING_OK);
+            if (TAG(subs) != R_NilValue || CAR(subs) == R_DotsSymbol)
+                sb2 = R_NoObject;
+            else {
+                sb2 = evalv (CAR(subs), rho, VARIANT_SCALAR_STACK_OK |
+                                             VARIANT_MISSING_OK);
+                subs = CDR(subs);
+            }
             if (subs != R_NilValue) {
                 PROTECT(sb2);
                 subs = evalList_v (subs, rho, VARIANT_SCALAR_STACK_OK |
                                               VARIANT_MISSING_OK);
-                UNPROTECT(1);
+                UNPROTECT(1); /* sb2 */
             }
-            UNPROTECT(1);
+            UNPROTECT(1); /* sb1 */
         }
 
         UNPROTECT(1); /* y */
