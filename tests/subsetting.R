@@ -228,3 +228,20 @@ a$q <- a$q + 1
 stopifnot(identical(a,structure(list(p=3,q=5),class="fred")))
 
 cat("DONE\n")
+
+
+# Check how dimnames are converted to names when result is a vector.
+
+M <- matrix(3,2,2)
+rownames(M) <- c("a","b")
+stopifnot(identical(M[2,2],c(b=3)))
+colnames(M) <- c("x","y")
+stopifnot(identical(M[2,2],3))
+stopifnot(identical(M[array(2),2],c(b=3)))
+stopifnot(identical(M[2,array(2)],c(y=3)))
+A <- M[1..1,_]
+stopifnot(identical(A[,2],3))
+stopifnot(identical(A[_,2],c(a=3)))
+A <- M[_,1..1]
+stopifnot(identical(A[2,],3))
+stopifnot(identical(A[2,_],c(x=3)))
