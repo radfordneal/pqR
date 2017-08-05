@@ -1555,14 +1555,11 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
     if (x == R_NilValue)
 	return x;
 
-    PROTECT(x);
+    PROTECT3(x,sb1,sb2);
 
     drop = ExtractDropArg(&subs);
-    if (sb2 != R_NoObject) {
-        PROTECT(sb1);
+    if (sb2 != R_NoObject)
         subs = CONS (sb2, subs);
-        UNPROTECT(1);
-    }
     if (sb1 != R_NoObject) 
         subs = CONS (sb1, subs);
     PROTECT(subs);
@@ -1638,7 +1635,7 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
 #endif
 	    setAttrib(ans, R_ClassSymbol, R_NilValue);
     }
-    UNPROTECT(4);
+    UNPROTECT(6);
 
     return ans;
 }
