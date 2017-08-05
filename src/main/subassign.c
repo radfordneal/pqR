@@ -1361,22 +1361,29 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         SEXP y = R_fast_sub_value; /* may be on the scalar stack */
         SEXP x = R_fast_sub_into;
         SEXP sb1, sb2, subs;
-        if (args == R_NilValue)
-            sb1 = R_NoObject;
-        else {
-            sb1 = evalv (CAR(args), rho, VARIANT_SCALAR_STACK_OK | 
-                                         VARIANT_MISSING_OK);
-            args = CDR(args);
-            if (args != R_NilValue) {
-                PROTECT(sb1);
-                args = evalList_v (args, rho, VARIANT_SCALAR_STACK_OK | 
-                                              VARIANT_MISSING_OK);
-                UNPROTECT(1);
-            }
-        }
-        sb2 = R_NoObject;
 
-        SEXP r = do_subassign2_dflt_int (call, x, sb1, sb2, args, rho, y);
+        sb1 = evalv (CAR(args), rho, VARIANT_SCALAR_STACK_OK | 
+                                     VARIANT_MISSING_OK);
+        subs = CDR(args);
+
+        PROTECT(sb1);
+        if (subs == R_NilValue || TAG(subs) != R_NilValue 
+                               || CAR(subs) == R_DotsSymbol)
+            sb2 = R_NoObject;
+        else {
+            sb2 = evalv (CAR(subs), rho, VARIANT_SCALAR_STACK_OK |
+                                         VARIANT_MISSING_OK);
+            subs = CDR(subs);
+        }
+        if (subs != R_NilValue) {
+            PROTECT(sb2);
+            subs = evalList_v (subs, rho, VARIANT_SCALAR_STACK_OK |
+                                          VARIANT_MISSING_OK);
+            UNPROTECT(1); /* sb2 */
+        }
+        UNPROTECT(1); /* sb1 */
+
+        SEXP r = do_subassign2_dflt_int (call, x, sb1, sb2, subs, rho, y);
         R_scalar_stack = scalar_stack_sv;
         return r;
     }
@@ -1418,35 +1425,33 @@ static SEXP do_subassign2_dflt_int
     else if (ON_SCALAR_STACK(y) && !isVectorAtomic(x))
         y = DUP_STACK_VALUE(y);
 
-    if (sb1 == R_NoObject) {
+    nsubs = 0;
+
+    if (sb1 != R_NoObject)
+        nsubs += 1;
+    else {
         if (subs != R_NilValue) {
             sb1 = CAR(subs);
             subs = CDR(subs);
+            nsubs += 1;
         }
     }
 
-    if (0 && sb2 == R_NoObject) {
+    if (sb2 != R_NoObject)
+        nsubs += 1;
+    else {
         if (subs != R_NilValue) {
             sb2 = CAR(subs);
             subs = CDR(subs);
+            nsubs += 1;
         }
     }
 
-    if (sb1 != R_NoObject) {
-        nsubs = 1;
-        if (subs != R_NilValue) {
-            nsubs += length(subs);
-            subs = CONS(sb1,subs);
-        }
-    }
-    else {
-        nsubs = length(subs);
-        sb1 = CAR(subs);
-    }
+    if (subs != R_NilValue)
+        nsubs += length(subs);
 
-    /* At this point, nsubs will be the number of indexes, sb1 will be the 
-       first index, and if nsubs > 1, subs will be a pairlist of all indexes.
-       (Hence, subs should be referenced only if nsubs > 1.) */
+    /* At this point, nsubs will be the number of indexes, sb1 will be the first
+       index, sb2 the second, subs will be a pairlist of remaining indexes. */
 
     WAIT_UNTIL_COMPUTED(x);
 
@@ -1639,9 +1644,10 @@ static SEXP do_subassign2_dflt_int
         names = getAttrib(x, R_DimNamesSymbol);
         offset = 0;
         for (i = ndims-1; i >= 0; i--) {
-            R_len_t ix = get1index (CAR(nthcdr(subs,i)),
-                           names==R_NilValue ? R_NilValue : VECTOR_ELT(names,i),
-                           INTEGER(dims)[i],/*partial ok*/ FALSE, -1, call);
+            R_len_t ix = 
+              get1index (i==0 ? sb1 : i==1 ? sb2 : CAR(nthcdr(subs,i-2)),
+                         names==R_NilValue ? R_NilValue : VECTOR_ELT(names,i),
+                         INTEGER(dims)[i],/*partial ok*/ FALSE, -1, call);
             if (ix < 0 || ix >= INTEGER(dims)[i])
                 errorcall(call,_("[[ ]] subscript out of bounds"));
             offset += ix;
