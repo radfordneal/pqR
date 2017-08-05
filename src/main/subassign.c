@@ -1203,6 +1203,9 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 static SEXP do_subassign_dflt_seq (SEXP call, SEXP x, SEXP sb1, SEXP sb2, 
                                    SEXP subs, SEXP rho, SEXP y, int64_t seq)
 {
+    BEGIN_PROTECT0 ();
+    ALSO_PROTECT5 (x, sb1, sb2, subs, y);
+
     if (y == R_NoObject)
         SubAssignArgs (&subs, &y, call);
     else if (ON_SCALAR_STACK(y) && !isVectorAtomic(x))
@@ -1222,45 +1225,35 @@ static SEXP do_subassign_dflt_seq (SEXP call, SEXP x, SEXP sb1, SEXP sb2,
         }
     }
 
-    PROTECT(sb1 == R_NoObject ? R_NilValue : sb1);
-    PROTECT(sb2 == R_NoObject ? R_NilValue : sb2);
-    PROTECT3(y,x,subs);
-
     Rboolean S4 = IS_S4_OBJECT(x);
     int oldtype = NILSXP;
 
     WAIT_UNTIL_COMPUTED(x);
 
     if (TYPEOF(x) == LISTSXP || TYPEOF(x) == LANGSXP) {
-	oldtype = TYPEOF(x);
+        oldtype = TYPEOF(x);
         SEXP ox = x;
-	PROTECT(x = PairToVectorList(x));
+        x = PairToVectorList(x);
         setAttrib (x, R_DimSymbol, getAttrib (ox, R_DimSymbol));
         setAttrib (x, R_DimNamesSymbol, getAttrib (ox, R_DimNamesSymbol));
-        UNPROTECT(1);
     }
     else if (x == R_NilValue) {
-	if (length(y) == 0) {
-	    UNPROTECT(5);
-	    return x;
-	}
+        if (length(y) == 0) {
+            RETURN_SEXP_INSIDE_PROTECT(x);
+        }
         x = coerceVector(x, TYPEOF(y));
     }
     else if (isVector(x)) {
         if (LENGTH(x) == 0) {
             if (length(y) == 0) {
-                UNPROTECT(5);
-                return x;
+                RETURN_SEXP_INSIDE_PROTECT(x);
             }
-	}
+        }
         else if (NAMEDCNT_GT_1(x))
             x = dup_top_level(x);
     }
     else
         nonsubsettable_error(call,x);
-
-    UNPROTECT(2); /* x, subs */
-    PROTECT2(x,subs);
 
     if (sb1 == R_NoObject) {
         /* 0 subscript arguments */
@@ -1328,15 +1321,14 @@ static SEXP do_subassign_dflt_seq (SEXP call, SEXP x, SEXP sb1, SEXP sb2,
     }
     else {
         /* More than 2 subscript arguments */
-        UNPROTECT(1); /* subs */
-        PROTECT (subs = CONS(sb1,CONS(sb2,subs)));
+        subs = CONS(sb1,CONS(sb2,subs));
         x = ArrayAssign(call, x, subs, y);
     }
 
   out:
     if (oldtype == LANGSXP) {
-	if (LENGTH(x)==0)
-	    errorcall(call,
+        if (LENGTH(x)==0)
+            errorcall(call,
               _("result is zero-length and so cannot be a language object"));
         x = VectorToPairList(x);
         SET_TYPEOF (x, LANGSXP);
@@ -1349,25 +1341,26 @@ static SEXP do_subassign_dflt_seq (SEXP call, SEXP x, SEXP sb1, SEXP sb2,
     /* will be multiple reference problems if "[<-" is used */
     /* in a naked fashion. */
 
-    UNPROTECT(5);
     if (!isList(x)) SET_NAMEDCNT_0(x);
     if(S4) SET_S4_OBJECT(x);
 
-    return x;
+    RETURN_SEXP_INSIDE_PROTECT(x);
+    END_PROTECT;
 }
 
 /* The [[<- operator; should be fast. */
 
 static SEXP do_subassign2_dflt_int
-                     (SEXP call, SEXP x, SEXP sb1, SEXP subs, SEXP rho, SEXP y);
+        (SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP subs, SEXP rho, SEXP y);
 
 static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
+
         SEXP scalar_stack_sv = R_scalar_stack;
         SEXP y = R_fast_sub_value; /* may be on the scalar stack */
         SEXP x = R_fast_sub_into;
-        SEXP sb1;
+        SEXP sb1, sb2, subs;
         if (args == R_NilValue)
             sb1 = R_NoObject;
         else {
@@ -1381,8 +1374,9 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 UNPROTECT(1);
             }
         }
+        sb2 = R_NoObject;
 
-        SEXP r = do_subassign2_dflt_int (call, x, sb1, args, rho, y);
+        SEXP r = do_subassign2_dflt_int (call, x, sb1, sb2, args, rho, y);
         R_scalar_stack = scalar_stack_sv;
         return r;
     }
@@ -1393,7 +1387,7 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         return ans;
 
     return do_subassign2_dflt_int 
-             (call, CAR(ans), R_NoObject, CDR(ans), rho, R_NoObject);
+            (call, CAR(ans), R_NoObject, R_NoObject, CDR(ans), rho, R_NoObject);
 }
 
 /* Also called directly from elsewhere. */
@@ -1402,34 +1396,47 @@ SEXP attribute_hidden do_subassign2_dflt
                                (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     return do_subassign2_dflt_int 
-             (call, CAR(args), R_NoObject, CDR(args), rho, R_NoObject);
+         (call, CAR(args), R_NoObject, R_NoObject, CDR(args), rho, R_NoObject);
 }
 
 static SEXP do_subassign2_dflt_int
-                      (SEXP call, SEXP x, SEXP sb1, SEXP subs, SEXP rho, SEXP y)
+         (SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP subs, SEXP rho, SEXP y)
 {
-    SEXP dims, names, newname, xtop, xup;
+    SEXP dims, newname, xup;
     int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch;
     Rboolean S4, recursed;
     R_len_t length_x;
     int intreal_x;
 
-    SEXP xOrig = R_NilValue;
+    BEGIN_PROTECT2 (names, xtop);
+    ALSO_PROTECT5 (x, sb1, sb2, subs, y);
 
-    PROTECT3(x,sb1,subs);
+    SEXP xOrig = R_NilValue;
 
     if (y == R_NoObject)
         SubAssignArgs (&subs, &y, call);
     else if (ON_SCALAR_STACK(y) && !isVectorAtomic(x))
         y = DUP_STACK_VALUE(y);
-    PROTECT(y);
+
+    if (sb1 == R_NoObject) {
+        if (subs != R_NilValue) {
+            sb1 = CAR(subs);
+            subs = CDR(subs);
+        }
+    }
+
+    if (0 && sb2 == R_NoObject) {
+        if (subs != R_NilValue) {
+            sb2 = CAR(subs);
+            subs = CDR(subs);
+        }
+    }
 
     if (sb1 != R_NoObject) {
         nsubs = 1;
         if (subs != R_NilValue) {
             nsubs += length(subs);
-            UNPROTECT(1);
-            PROTECT(subs = CONS(sb1,subs));
+            subs = CONS(sb1,subs);
         }
     }
     else {
@@ -1452,20 +1459,19 @@ static SEXP do_subassign2_dflt_int
 
     /* code to allow classes to extend ENVSXP */
     if(TYPEOF(x) == S4SXP) {
-	xOrig = x; /* will be an S4 object */
+        xOrig = x; /* will be an S4 object */
         x = R_getS4DataSlot(x, ANYSXP);
-	if(TYPEOF(x) != ENVSXP)
-	  errorcall(call, _("[[<- defined for objects of type \"S4\" only for subclasses of environment"));
+        if(TYPEOF(x) != ENVSXP)
+          errorcall(call, _("[[<- defined for objects of type \"S4\" only for subclasses of environment"));
     }
 
     /* ENVSXP special case first; requires that nsubs be 1. */
     if( TYPEOF(x) == ENVSXP) {
-	if (nsubs != 1 || !isString(sb1) || length(sb1) != 1)
-	    errorcall(call,_("wrong args for environment subassignment"));
+        if (nsubs != 1 || !isString(sb1) || length(sb1) != 1)
+            errorcall(call,_("wrong args for environment subassignment"));
         SEXP name = install (translateChar (STRING_ELT (sb1, 0)));
-	set_var_in_frame (name, y, x, TRUE, 3);
-	UNPROTECT(4);
-	return(S4 ? xOrig : x);
+        set_var_in_frame (name, y, x, TRUE, 3);
+        RETURN_SEXP_INSIDE_PROTECT (S4 ? xOrig : x);
     }
 
     if (x == R_NilValue) {
@@ -1473,14 +1479,13 @@ static SEXP do_subassign2_dflt_int
            just return NULL, otherwise replace x by a zero length list 
            (VECSXP) or vector of type of y (if y of length one).  (This
            dependence on the length of y is of dubious wisdom!) */
-	if (y == R_NilValue) {
-	    UNPROTECT(4);
-	    return R_NilValue;
-	}
-	if (length(y) == 1)
-	    x = allocVector(TYPEOF(y), 0);
-	else
-	    x = allocVector(VECSXP, 0);
+        if (y == R_NilValue) {
+            RETURN_SEXP_INSIDE_PROTECT (R_NilValue);
+        }
+        if (length(y) == 1)
+            x = allocVector(TYPEOF(y), 0);
+        else
+            x = allocVector(VECSXP, 0);
     }
     else if (isPairList(x))
         x = duplicate(x);
@@ -1551,21 +1556,19 @@ static SEXP do_subassign2_dflt_int
                     SET_VECTOR_ELEMENT_TO_VALUE (x, ix, y);
                 break;
             }
-            UNPROTECT(4);
-            return x;
+            RETURN_SEXP_INSIDE_PROTECT (x);
         }
     }
 
     xtop = xup = x; /* x will contain the element which is assigned to; */
                     /*   xup may contain x; xtop is what is returned.  */ 
-    PROTECT(xtop);
 
     recursed = FALSE;
 
     R_len_t len;
 
     if (nsubs == 1) { /* One vector index for a list. */
-	len = length(sb1);
+        len = length(sb1);
         if (len > 1) {
             int str_sym_sub = isString(sb1) || isSymbol(sb1);
             for (int i = 0; i < len-1; i++) {
@@ -1599,13 +1602,13 @@ static SEXP do_subassign2_dflt_int
 
     if (isVector(x)) {
         R_len_t length_y = length(y);
-	if (!isVectorList(x) && length_y == 0)
-	    errorcall(call,_("replacement has length zero"));
-	if (!isVectorList(x) && length_y > 1)
-	    errorcall(call,
+        if (!isVectorList(x) && length_y == 0)
+            errorcall(call,_("replacement has length zero"));
+        if (!isVectorList(x) && length_y > 1)
+            errorcall(call,
                _("more elements supplied than there are to replace"));
-	if (nsubs == 0 || sb1 == R_MissingArg)
-	    errorcall(call,_("[[ ]] with missing subscript"));
+        if (nsubs == 0 || sb1 == R_MissingArg)
+            errorcall(call,_("[[ ]] with missing subscript"));
     }
 
     stretch = 0;
@@ -1649,7 +1652,7 @@ static SEXP do_subassign2_dflt_int
     if (isVector(x)) {
 
         if (nsubs == 1 && isVectorList(x) && y == R_NilValue) {
-            PROTECT(x = DeleteListElementsSeq (x, offset+1, offset+1));
+            x = DeleteListElementsSeq (x, offset+1, offset+1);
         }
         else {
 
@@ -1657,8 +1660,6 @@ static SEXP do_subassign2_dflt_int
     
             if (NAMEDCNT_GT_1(x) || x == y)
                 x = dup_top_level(x);
-    
-            PROTECT(x);
     
             if (isVectorAtomic(x))
                 copy_elements_coerced (x, offset, 0, y, 0, 0, 1);
@@ -1678,10 +1679,9 @@ static SEXP do_subassign2_dflt_int
             if (stretch && newname != R_NilValue) {
                 names = getNamesAttrib(x);
                 if (names == R_NilValue) {
-                    PROTECT(names = allocVector(STRSXP, LENGTH(x)));
+                    names = allocVector(STRSXP, LENGTH(x));
                     SET_STRING_ELT(names, offset, newname);
                     setAttrib(x, R_NamesSymbol, names);
-                    UNPROTECT(1);
                 }
                 else
                     SET_STRING_ELT(names, offset, newname);
@@ -1692,12 +1692,12 @@ static SEXP do_subassign2_dflt_int
     else if (isPairList(x)) {
 
         SET_NAMEDCNT_MAX(y);
-	if (nsubs == 1) {
-	    if (y == R_NilValue)
-		x = with_no_nth(x,offset+1);
-	    else if (!stretch)
-		x = with_changed_nth(x,offset+1,y);
-	    else {
+        if (nsubs == 1) {
+            if (y == R_NilValue)
+                x = with_no_nth(x,offset+1);
+            else if (!stretch)
+                x = with_changed_nth(x,offset+1,y);
+            else {
                 SEXP append = 
                   cons_with_tag (y, R_NilValue, newname == R_NilValue ? 
                                   R_NilValue : install(translateChar(newname)));
@@ -1705,12 +1705,11 @@ static SEXP do_subassign2_dflt_int
                     append = CONS(R_NilValue,append);
                 x = with_pairlist_appended(x,append);
             }
-	}
-	else {
+        }
+        else {
             SEXP nth = nthcdr(x,offset);
-	    SETCAR(nth,y);
-	}
-        PROTECT(x);
+            SETCAR(nth,y);
+        }
     }
 
     else 
@@ -1720,9 +1719,9 @@ static SEXP do_subassign2_dflt_int
        extension, so we need to update the reference to it. */
 
     if (recursed) {
-	if (isVectorList(xup))
-	    SET_VECTOR_ELT(xup, off, x);
-	else {
+        if (isVectorList(xup))
+            SET_VECTOR_ELT(xup, off, x);
+        else {
             SETCAR(nthcdr(xup,off),x); /* xup was duplicated, so this is safe */
             SET_NAMEDCNT_MAX(x);
         }
@@ -1733,8 +1732,8 @@ static SEXP do_subassign2_dflt_int
     if (!isList(xtop)) SET_NAMEDCNT_0(xtop);
     if(S4) SET_S4_OBJECT(xtop);
 
-    UNPROTECT(6);
-    return xtop;
+    RETURN_SEXP_INSIDE_PROTECT (xtop);
+    END_PROTECT;
 }
 
 /* $<-(x, elt, val), and elt does not get evaluated it gets matched.
@@ -1776,7 +1775,7 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     else if (isString(what) && LENGTH(what) > 0)
         schar = STRING_ELT(what,0);
     else
-	errorcall(call, _("invalid subscript type '%s'"), 
+        errorcall(call, _("invalid subscript type '%s'"), 
                         type2char(TYPEOF(what)));
 
     /* Handle the fast case, for which 'into' and 'value' have been evaluated,
@@ -1820,7 +1819,7 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     if (DispatchOrEval (ncall, op, "$<-", args, env, &ans, 0, argsevald)) {
         UNPROTECT(3);
-	return ans;
+        return ans;
     }
 
     PROTECT(ans);
