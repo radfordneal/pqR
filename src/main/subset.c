@@ -744,8 +744,10 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
     int start = 1, end = 0;
     int nr, nc, nrs = 0, ncs = 0;
     int suppress_drop_row = 0, suppress_drop_col = 0;
-    int nprotect = 0;
     int ii;
+
+    PROTECT2(x,subs);
+    int nprotect = 2;
 
     SEXP dim = getAttrib(x, R_DimSymbol);
 
@@ -906,6 +908,8 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 
     SEXP sv_scalar_stack = R_scalar_stack;
 
+    PROTECT3(x,s,xdims);
+
     n = 1; r = s;
     for (i = 0; i < k; i++) {
         if (drop == TRUE)
@@ -1036,23 +1040,23 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 
     /* Set up dimnames for result, but don't attach to result yet. */
 
-    SEXP xdimnames;
+    SEXP newdimnames;
     PROTECT(dimnames = getAttrib(x, R_DimNamesSymbol));
     PROTECT(dimnamesnames = getAttrib(dimnames, R_NamesSymbol));
     if (TYPEOF(dimnames) == VECSXP) { /* broken code for others in R-2.15.0 */
-        PROTECT(xdimnames = allocVector(VECSXP, k));
+        PROTECT(newdimnames = allocVector(VECSXP, k));
         for (i = 0; i < k ; i++) {
             if (nsubs[i] > 0 && VECTOR_ELT(dimnames,i) != R_NilValue) {
-                SET_VECTOR_ELT(xdimnames, i, allocVector(STRSXP, nsubs[i]));
-                ExtractSubset (VECTOR_ELT(dimnames, i), VECTOR_ELT(xdimnames,i),
-                               subv[i], call);
+                SET_VECTOR_ELT(newdimnames, i, allocVector(STRSXP, nsubs[i]));
+                ExtractSubset(VECTOR_ELT(dimnames,i), VECTOR_ELT(newdimnames,i),
+                              subv[i], call);
             } 
             /* else leave as NULL for 0-length dims */
         }
-        setAttrib(xdimnames, R_NamesSymbol, dimnamesnames);
+        setAttrib(newdimnames, R_NamesSymbol, dimnamesnames);
     }
     else
-        PROTECT(xdimnames = R_NilValue);
+        PROTECT(newdimnames = R_NilValue);
 
     /* See if dropping down to a vector. */
 
@@ -1063,10 +1067,10 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
     }
 
     if (rdims <= 1) { /* result is vector without dims, but maybe with names */
-        if (xdimnames != R_NilValue) {
+        if (newdimnames != R_NilValue) {
             int w = -1;   /* which dimension to take names from, -1 if none */
             for (i = 0; i < k; i++) {
-                if (VECTOR_ELT(xdimnames,i) != R_NilValue) {
+                if (VECTOR_ELT(newdimnames,i) != R_NilValue) {
                     if (w < 0 || nsubs[i] != 1 || suppress_drop[i])
                         w = i;
                     else if (!suppress_drop[w]) {
@@ -1076,24 +1080,26 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
                 }
             }
             if (w >= 0)
-                setAttrib (result, R_NamesSymbol, VECTOR_ELT(xdimnames,w));
+                setAttrib (result, R_NamesSymbol, VECTOR_ELT(newdimnames,w));
         }
     }
 
     else { /* not dropping down to a vector */
-        PROTECT (xdims = allocVector(INTSXP, k));
-        for(i = 0 ; i < k ; i++)
-            INTEGER(xdims)[i] = nsubs[i];
-        setAttrib (result, R_DimSymbol, xdims);
-        setAttrib (result, R_DimNamesSymbol, xdimnames);
+        SEXP newdims;
+        PROTECT (newdims = allocVector(INTSXP, k));
+        for (i = 0 ; i < k ; i++)
+            INTEGER(newdims)[i] = nsubs[i];
+        setAttrib (result, R_DimSymbol, newdims);
+        setAttrib (result, R_DimNamesSymbol, newdimnames);
         if (drop == TRUE)
             DropDims(result);
         else if (drop == NA_LOGICAL)
             DropDimsNotSuppressed(result,suppress_drop);
-        UNPROTECT(1); /* xdims */
+        UNPROTECT(1); /* newdims */
     }
 
-    UNPROTECT(k+4); /* ... + result, dimnames, dimnamesnames, xdimnames */
+    UNPROTECT(k+7); /* ... + result, dimnames, dimnamesnames, newdimnames,
+                             x, s, xdims */
 
     R_scalar_stack = sv_scalar_stack;
     return result;
@@ -1392,56 +1398,54 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                                        args, rho, variant, 0);
         }
         else {
+            SEXP r;
+            BEGIN_PROTECT3 (sb1, sb2, remargs);
             SEXP sv_scalar_stack = R_scalar_stack;
             SEXP ixlist2 = CDR(ixlist);
-            SEXP sb1;
             int64_t seq = 0;
-            PROTECT (sb1 = evalv (CAR(ixlist), rho, 
-                       CDR(ixlist2) == R_NilValue /* no more than 2 arguments */
-                        ? VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
-                           VARIANT_MISSING_OK | VARIANT_PENDING_OK
-                         : VARIANT_SCALAR_STACK_OK | 
-                           VARIANT_MISSING_OK | VARIANT_PENDING_OK));
+            sb1 = evalv (CAR(ixlist), rho, 
+                         CDR(ixlist2)==R_NilValue /* no more than 2 arguments */
+                          ? VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
+                            VARIANT_MISSING_OK | VARIANT_PENDING_OK
+                          : VARIANT_SCALAR_STACK_OK | 
+                            VARIANT_MISSING_OK | VARIANT_PENDING_OK);
             if (R_variant_result) {
                 seq = R_variant_seq_spec;
                 R_variant_result = 0;
             }
-            SEXP remargs = ixlist2;
-            SEXP sb2 = R_NoObject;
+            remargs = ixlist2;
+            sb2 = R_NoObject;
             if (ixlist2 != R_NilValue && TAG(ixlist2) == R_NilValue 
-                                           && CAR(ixlist2) != R_DotsSymbol) {
-                PROTECT (sb2 = evalv (CAR(ixlist2), rho,
-                                 VARIANT_SCALAR_STACK_OK | VARIANT_MISSING_OK));
+                                      && CAR(ixlist2) != R_DotsSymbol) {
+                sb2 = evalv (CAR(ixlist2), rho,
+                             VARIANT_SCALAR_STACK_OK | VARIANT_MISSING_OK);
                 remargs = CDR(ixlist2);
             }
             if (remargs != R_NilValue)
                 remargs = evalList_v (remargs, rho, VARIANT_SCALAR_STACK_OK |
                                       VARIANT_PENDING_OK | VARIANT_MISSING_OK);
-            PROTECT(remargs);
             if (sb2 == R_MissingArg && isSymbol(CAR(ixlist2))) {
-                UNPROTECT(2);  /* remargs, sb2 */
-                PROTECT(remargs = CONS(sb2,remargs));
+                remargs = CONS(sb2,remargs);
                 SET_MISSING (remargs, R_isMissing(CAR(ixlist2),rho));
                 sb2 = R_NoObject;
             }
             if (sb1 == R_MissingArg && isSymbol(CAR(ixlist))) {
-                UNPROTECT(1); /* remargs */
                 if (sb2 != R_NoObject) {
                     remargs = CONS(sb2,remargs);
                     sb2 = R_NoObject;
-                    UNPROTECT(1); /* sb2 */
                 }
-                PROTECT(remargs = CONS(sb1,remargs));
+                remargs = CONS(sb1,remargs);
                 SET_MISSING (remargs, R_isMissing(CAR(ixlist),rho));
                 sb1 = R_NoObject;
             }
             else if (sb1 != R_NoObject)
                 WAIT_UNTIL_COMPUTED(sb1);
-            UNPROTECT (3 + (sb2 != R_NoObject));  /* remargs, sb2, sb1, array */
             wait_until_arguments_computed(remargs);
-            SEXP r = do_subset_dflt_seq (call, op, array, sb1, sb2,
-                                         remargs, rho, variant, seq);
+            r = do_subset_dflt_seq (call, op, array, sb1, sb2,
+                                    remargs, rho, variant, seq);
             R_scalar_stack = sv_scalar_stack;
+            END_PROTECT;
+            UNPROTECT(1); /* array */
             return ON_SCALAR_STACK(r) ? PUSH_SCALAR(r) : r;
         }
     }
@@ -1597,9 +1601,9 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
     /* This is the actual subsetting code. */
     /* The separation of arrays and matrices is purely an optimization. */
 
-    if(nsubs < 2) {
+    if(nsubs < 2)
 	PROTECT(ans = VectorSubset(ax, subs, seq, drop, call));
-    } else {
+    else {
         SEXP xdims = getAttrib(x, R_DimSymbol);
 	if (nsubs != length(xdims))
 	    errorcall(call, _("incorrect number of dimensions"));
@@ -1680,42 +1684,41 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                                       args, rho, variant);
         }
         else {
+            SEXP r;
+            BEGIN_PROTECT3 (sb1, sb2, remargs);
             SEXP sv_scalar_stack = R_scalar_stack;
             SEXP ixlist2 = CDR(ixlist);
-            SEXP sb1;
-            PROTECT (sb1 = evalv (CAR(ixlist), rho, VARIANT_SCALAR_STACK_OK | 
-                             VARIANT_MISSING_OK | VARIANT_PENDING_OK));
-            SEXP remargs = ixlist2;
-            SEXP sb2 = R_NoObject;
+            sb1 = evalv (CAR(ixlist), rho, VARIANT_SCALAR_STACK_OK | 
+                         VARIANT_MISSING_OK | VARIANT_PENDING_OK);
+            remargs = ixlist2;
+            sb2 = R_NoObject;
             if (sb1 == R_MissingArg && isSymbol(CAR(ixlist))) {
-                UNPROTECT(1);
-                PROTECT(remargs = CONS(sb1,remargs));
+                remargs = CONS(sb1,remargs);
                 SET_MISSING (remargs, R_isMissing(CAR(ixlist),rho));
                 sb1 = R_NoObject;
             }
             else if (ixlist2 != R_NilValue && TAG(ixlist2) == R_NilValue 
                                       && CAR(ixlist2) != R_DotsSymbol) {
-                PROTECT (sb2 = evalv (CAR(ixlist2), rho,
-                                 VARIANT_SCALAR_STACK_OK | VARIANT_MISSING_OK));
+                sb2 = evalv (CAR(ixlist2), rho,
+                             VARIANT_SCALAR_STACK_OK | VARIANT_MISSING_OK);
                 remargs = CDR(ixlist2);
             }
             if (remargs != R_NilValue)
                 remargs = evalList_v (remargs, rho, VARIANT_SCALAR_STACK_OK |
                                       VARIANT_PENDING_OK | VARIANT_MISSING_OK);
-            PROTECT(remargs);
             if (sb2 == R_MissingArg && isSymbol(CAR(ixlist2))) {
-                UNPROTECT(2);  /* remargs, sb2 */
-                PROTECT(remargs = CONS(sb2,remargs));
+                remargs = CONS(sb2,remargs);
                 SET_MISSING (remargs, R_isMissing(CAR(ixlist2),rho));
                 sb2 = R_NoObject;
             }
             if (sb1 != R_NoObject)
                 WAIT_UNTIL_COMPUTED(sb1);
-            UNPROTECT (3 + (sb2 != R_NoObject));  /* remargs, sb2, sb1, array */
             wait_until_arguments_computed(remargs);
-            SEXP r = do_subset2_dflt_x (call, op, array, sb1, sb2,
-                                        remargs, rho, variant);
+            r = do_subset2_dflt_x (call, op, array, sb1, sb2,
+                                   remargs, rho, variant);
             R_scalar_stack = sv_scalar_stack;
+            END_PROTECT;
+            UNPROTECT(1);  /* array */
             return ON_SCALAR_STACK(r) ? PUSH_SCALAR(r) : r;
         }
     }
