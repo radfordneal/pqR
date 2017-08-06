@@ -1062,7 +1062,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 
     int rdims = 0;
     for (i = 0; i < k; i++) {
-        if (nsubs[i] != 1 || suppress_drop[k])
+        if (nsubs[i] != 1 || suppress_drop[i])
             rdims += 1;
     }
 
