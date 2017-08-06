@@ -1643,14 +1643,23 @@ static SEXP do_subassign2_dflt_int
             errorcall(call,_("[[ ]] improper number of subscripts"));
         names = getAttrib(x, R_DimNamesSymbol);
         offset = 0;
+        SEXP s = subs;
         for (i = ndims-1; i >= 0; i--) {
-            R_len_t ix = 
-              get1index (i==0 ? sb1 : i==1 ? sb2 : CAR(nthcdr(subs,i-2)),
-                         names==R_NilValue ? R_NilValue : VECTOR_ELT(names,i),
-                         INTEGER(dims)[i],/*partial ok*/ FALSE, -1, call);
-            if (ix < 0 || ix >= INTEGER(dims)[i])
+            SEXP ix;
+            if (i == 0)
+                ix = sb1;
+            else if (i == 1)
+                ix = sb2;
+            else {
+                ix = CAR(s);
+                s = CDR(s);
+            }
+            R_len_t ii = 
+             get1index(ix, names==R_NilValue ? R_NilValue : VECTOR_ELT(names,i),
+                       INTEGER(dims)[i], /*partial ok*/ FALSE, -1, call);
+            if (ii < 0 || ii >= INTEGER(dims)[i])
                 errorcall(call,_("[[ ]] subscript out of bounds"));
-            offset += ix;
+            offset += ii;
             if (i > 0) offset *= INTEGER(dims)[i-1];
         }
     }
