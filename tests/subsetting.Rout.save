@@ -1,5 +1,5 @@
 
-pqR version 2.15.1 (2017-06-09), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.1 (2017-00-00), based on R 2.15.0 (2012-03-30)
 
 R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
@@ -23,7 +23,7 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 Type 'q()' to quit R.
 
 
-No helper threads, task merging enabled, uncompressed pointers.
+1 helper threads, task merging enabled, uncompressed pointers.
 
 > # Test possible bugs involving subset and subassign.
 > #
@@ -297,4 +297,21 @@ No helper threads, task merging enabled, uncompressed pointers.
 > 
 > cat("DONE\n")
 DONE
+> 
+> 
+> # Check how dimnames are converted to names when result is a vector.
+> 
+> M <- matrix(3,2,2)
+> rownames(M) <- c("a","b")
+> stopifnot(identical(M[2,2],c(b=3)))
+> colnames(M) <- c("x","y")
+> stopifnot(identical(M[2,2],3))
+> stopifnot(identical(M[array(2),2],c(b=3)))
+> stopifnot(identical(M[2,array(2)],c(y=3)))
+> A <- M[1..1,_]
+> stopifnot(identical(A[,2],3))
+> stopifnot(identical(A[_,2],c(a=3)))
+> A <- M[_,1..1]
+> stopifnot(identical(A[2,],3))
+> stopifnot(identical(A[2,_],c(x=3)))
 > 

@@ -107,6 +107,15 @@
         pqR-2016-10-05) now set the loop variable(s) to the
         corresponding length or dimension size when the loop is done
         zero times, rather than to \code{NULL}.
+  \item Previously, when a scalar was extracted from a matrix or array 
+        with \code{[]}, a name derived from a dimension name was attached
+        to it only if a single dimension had names (though this was not 
+        correctly documented by \code{help("[")}, and is not correctly
+        documented in R Core versions to at least R-3.4.0).  This behaviour has
+        been changed in pqR so that a name is attached when two dimensions
+        have names provided one of these dimensions had dropping suppressed.
+        This gives reliable results when matrices happen to have only one
+        row or column, as illustrated by the last example in \code{help("[")}.
   \item The old serialization format, used prior to December 2001, is 
         no longer supported in pqR.  Code to support it would need to
         be changed to accomodate recent changes in pqR, and meaningful

@@ -175,9 +175,12 @@ x$i <- value
   Unmatched indices as well as the empty string (\code{""}) are not
   allowed and will result in an error.
 
-  A vector obtained by matrix indexing will be unnamed unless \code{x}
-  is one-dimensional when the row names (if any) will be indexed to
-  provide names for the result.
+  A vector obtained by matrix indexing will be have names taken from
+  the dimension along which the vector was extracted.  If the result is
+  a vector of length one, the result will be unnamed if names for
+  more than one dimension exist, unless one named dimension is singled
+  out by having dropping suppressed (because its index is a 1D array,
+  or is \code{'_'}).
 }
 \section{Recursive (list-like) objects}{
   Indexing by \code{[} is similar to atomic vectors and selects a list
