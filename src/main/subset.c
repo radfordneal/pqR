@@ -1821,14 +1821,15 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
 
     drop = ExtractDropArg(&subs);  /* a "drop" arg is tolerated, but ignored */
     exact = ExtractExactArg(&subs);
-    if (sb2 != R_NoObject) {
-        PROTECT(sb1);
-        subs = CONS (sb2, subs);
-        UNPROTECT(1);
-    }
-    if (sb1 != R_NoObject) 
-        subs = CONS (sb1, subs);
     PROTECT(subs);
+    if (sb1 == R_NoObject && subs != R_NilValue) {
+        sb1 = CAR(subs);
+        subs = CDR(subs);
+    }
+    if (sb2 == R_NoObject && subs != R_NilValue) {
+        sb2 = CAR(subs);
+        subs = CDR(subs);
+    }
 
     WAIT_UNTIL_COMPUTED(x);
 
@@ -1843,7 +1844,7 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
     /* Get the subscripting and dimensioning information */
     /* and check that any array subscripting is compatible. */
 
-    nsubs = length(subs);
+    nsubs = length(subs) + (sb1 != R_NoObject) + (sb2 != R_NoObject);
     if (nsubs == 0)
 	errorcall(call, _("no index specified"));
     dims = getAttrib(x, R_DimSymbol);
@@ -1862,9 +1863,9 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
 
     /* split out ENVSXP for now */
     if( TYPEOF(x) == ENVSXP ) {
-        if (nsubs != 1 || !isString(CAR(subs)) || length(CAR(subs)) != 1)
+        if (nsubs != 1 || !isString(sb1) || length(sb1) != 1)
             errorcall(call, _("wrong arguments for subsetting an environment"));
-        SEXP sym = installed_already (translateChar (STRING_ELT(CAR(subs),0)));
+        SEXP sym = installed_already (translateChar (STRING_ELT(sb1,0)));
         if (sym == R_NoObject)
             ans = R_NilValue;
         else {
@@ -1888,8 +1889,6 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
     int max_named = NAMEDCNT(x);
 
     if (nsubs == 1) { /* simple or vector indexing */
-
-	sb1 = CAR(subs);
 
         int str_sym_sub = isString(sb1) || isSymbol(sb1);
 	int len = length(sb1);
@@ -1935,8 +1934,6 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
 	}
     } else { /* matrix or array indexing */
 
-	/* We use CAR(R_NilValue)==R_NilValue and CDR(R_NilValue)==R_NilValue */
-
 	dimnames = getAttrib(x, R_DimNamesSymbol);
 
 	int ndn = length(dimnames); /* Number of dimnames. Unlikely anything
@@ -1944,10 +1941,17 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
         R_len_t indx[nsubs];
 
 	for (i = 0; i < nsubs; i++) {
-	    indx[i] = get1index (CAR(subs),
-                                 i < ndn ? VECTOR_ELT(dimnames, i) : R_NilValue,
-			         INTEGER(dims)[i], pok, -1, call);
-	    subs = CDR(subs);
+            SEXP ix;
+            if (i == 0)
+                ix = sb1;
+            else if (i == 1)
+                ix = sb2;
+            else {
+                ix = CAR(subs);
+                subs = CDR(subs);
+            }
+	    indx[i] = get1index(ix, i<ndn ? VECTOR_ELT(dimnames,i) : R_NilValue,
+			        INTEGER(dims)[i], pok, -1, call);
 	    if (indx[i] < 0 || indx[i] >= INTEGER(dims)[i])
 		out_of_bounds_error(call);
 	}

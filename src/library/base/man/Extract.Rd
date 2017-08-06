@@ -360,6 +360,14 @@ e1[["a"]]
 e1[["b"]] <- 20
 e1$b
 ls(e1)
+
+## names from dimnames
+M2 <- matrix (1:4, 2, 2, dimnames=list(c("a","b"),c("x","y")))
+M1 <- matrix (1:2, 2, 1, dimnames=list(c("a","b"),c("x")))
+M2[1,]    # Names taken from column names
+M2[1,_]
+M1[1,]    # Column name lost with M1[1,]
+M1[1,_]   #   but not with M1[1,_]
 }
 \keyword{array}
 \keyword{list}
