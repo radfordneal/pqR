@@ -1807,7 +1807,7 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
         }
     }
 
-    SEXP dims, dimnames, indx;
+    SEXP dims, dimnames;
     int i, drop, ndims, nsubs;
     int pok, exact = -1;
 
@@ -1934,31 +1934,27 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
                 out_of_bounds_error(call);
 	}
     } else { /* matrix or array indexing */
-	/* Here we use the fact that: */
-	/* CAR(R_NilValue) = R_NilValue */
-	/* CDR(R_NilValue) = R_NilValue */
 
-	int ndn; /* Number of dimnames. Unlikely to be anything but
-		    0 or nsubs, but just in case... */
+	/* We use CAR(R_NilValue)==R_NilValue and CDR(R_NilValue)==R_NilValue */
 
-	PROTECT(indx = allocVector(INTSXP, nsubs));
 	dimnames = getAttrib(x, R_DimNamesSymbol);
-	ndn = length(dimnames);
+
+	int ndn = length(dimnames); /* Number of dimnames. Unlikely anything
+                                       but or 0 or nsubs, but just in case... */
+        R_len_t indx[nsubs];
+
 	for (i = 0; i < nsubs; i++) {
-	    INTEGER(indx)[i] =
-		get1index(CAR(subs),
-                          (i < ndn) ? VECTOR_ELT(dimnames, i) : R_NilValue,
-			  INTEGER(indx)[i], pok, -1, call);
+	    indx[i] = get1index (CAR(subs),
+                                 i < ndn ? VECTOR_ELT(dimnames, i) : R_NilValue,
+			         INTEGER(dims)[i], pok, -1, call);
 	    subs = CDR(subs);
-	    if (INTEGER(indx)[i] < 0 ||
-		INTEGER(indx)[i] >= INTEGER(dims)[i])
+	    if (indx[i] < 0 || indx[i] >= INTEGER(dims)[i])
 		out_of_bounds_error(call);
 	}
 	offset = 0;
-	for (i = (nsubs - 1); i > 0; i--)
-	    offset = (offset + INTEGER(indx)[i]) * INTEGER(dims)[i - 1];
-	offset += INTEGER(indx)[0];
-	UNPROTECT(1);
+	for (i = nsubs-1; i > 0; i--)
+	    offset = (offset + indx[i]) * INTEGER(dims)[i-1];
+	offset += indx[0];
     }
 
     if (isPairList(x)) {
