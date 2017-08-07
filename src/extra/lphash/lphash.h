@@ -20,6 +20,12 @@
 /* See lphash-doc for general information on the lphash library. */
 
 
+#ifdef LPHASH_STATIC
+#define LPHASH_FUN static
+#else
+#define LPHASH_FUN
+#endif
+
 #include <stdlib.h>
 
 
@@ -49,15 +55,17 @@ typedef struct
 
 /* PROTOTYPES FOR FUNCTIONS PROVIDED BY LPHASH TO THE APPLICATION. */
 
-lphash_table_t *lphash_create (int initial_size);
+LPHASH_FUN lphash_table_t *lphash_create (int initial_size);
 
-lphash_bucket_t *lphash_key_lookup (lphash_table_t *table, lphash_hash_t hash,
-                                    lphash_key_t key);
+LPHASH_FUN lphash_bucket_t *lphash_key_lookup (lphash_table_t *table, 
+                                               lphash_hash_t hash,
+                                               lphash_key_t key);
 
-lphash_bucket_t *lphash_insert (lphash_table_t *table, lphash_hash_t hash,
-                                lphash_key_t key);
+LPHASH_FUN lphash_bucket_t *lphash_insert (lphash_table_t *table, 
+                                           lphash_hash_t hash,
+                                           lphash_key_t key);
 
-void lphash_destroy (lphash_table_t *table);
+LPHASH_FUN void lphash_destroy (lphash_table_t *table);
 
 
 /* INLINE FUNCTIONS PROVIDED BY LPHASH TO THE APPLICATION. */
@@ -127,17 +135,17 @@ static inline lphash_bucket_t *lphash_next_bucket (lphash_table_t *table,
    the application has defined them as macros (in lphash-app.h). */
 
 #ifndef lphash_match 
-int lphash_match (lphash_bucket_t *bucket, lphash_key_t key);
+LPHASH_FUN int lphash_match (lphash_bucket_t *bucket, lphash_key_t key);
 #endif
 
 #ifndef lphash_setup_bucket
-void lphash_setup_bucket (lphash_bucket_t *bucket, lphash_key_t key);
+LPHASH_FUN void lphash_setup_bucket (lphash_bucket_t *bucket, lphash_key_t key);
 #endif
 
 #ifndef lphash_malloc
-void *lphash_malloc (size_t size);
+LPHASH_FUN void *lphash_malloc (size_t size);
 #endif
 
 #ifndef lphash_free
-void lphash_free (void *ptr);
+LPHASH_FUN void lphash_free (void *ptr);
 #endif

@@ -91,7 +91,7 @@ static int allocate_buckets (lphash_table_t *table, int size)
 
 /* CREATE A HASH TABLE. */
 
-lphash_table_t *lphash_create (int initial_size)
+LPHASH_FUN lphash_table_t *lphash_create (int initial_size)
 {
   int size = 8;
 
@@ -126,7 +126,7 @@ lphash_table_t *lphash_create (int initial_size)
 
 /* DESTROY A HASH TABLE. */
 
-void lphash_destroy (lphash_table_t *table)
+LPHASH_FUN void lphash_destroy (lphash_table_t *table)
 {
   lphash_free ((char *)table->buckets - table->buckets_offset);
   lphash_free (table);
@@ -242,8 +242,9 @@ static void expand_table (lphash_table_t *table)
 
 /* INSERT AN ENTRY IN A HASH TABLE. */
 
-lphash_bucket_t *lphash_insert (lphash_table_t *table, lphash_hash_t hash,
-                                lphash_key_t key)
+LPHASH_FUN lphash_bucket_t *lphash_insert (lphash_table_t *table, 
+                                           lphash_hash_t hash,
+                                           lphash_key_t key)
 {
   lphash_bucket_t *b;
 
@@ -273,8 +274,9 @@ lphash_bucket_t *lphash_insert (lphash_table_t *table, lphash_hash_t hash,
 
 /* SEARCH THE HASH TABLE BY KEY. */
 
-lphash_bucket_t *lphash_key_lookup (lphash_table_t *table, lphash_hash_t hash,
-                                    lphash_key_t key)
+LPHASH_FUN lphash_bucket_t *lphash_key_lookup (lphash_table_t *table, 
+                                               lphash_hash_t hash,
+                                               lphash_key_t key)
 {
   lphash_bucket_t *b = key_search (table, hash, key);
 
