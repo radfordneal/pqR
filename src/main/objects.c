@@ -684,7 +684,7 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
     if (klass == R_UnboundValue) {
 	s = GetObject(cptr);
 	if (!isObject(s)) error(_("object not specified"));
-	klass = getAttrib(s, R_ClassSymbol);
+	klass = getClassAttrib(s);
     }
     len_klass = length(klass);
 
@@ -992,7 +992,7 @@ static SEXP do_inherits(SEXP call, SEXP op, SEXP args, SEXP env)
 int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
 {
     int ans;
-    SEXP cl = PROTECT(asChar(getAttrib(x, R_ClassSymbol)));
+    SEXP cl = PROTECT(asChar(getClassAttrib(x)));
     const char *class = CHAR(cl);
     for (ans = 0; ; ans++) {
 	if (valid[ans][0]==0) /* empty string */
@@ -1053,7 +1053,7 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
 int R_check_class_etc(SEXP x, const char **valid)
 {
     static SEXP meth_classEnv = R_NoObject;
-    SEXP cl = getAttrib(x, R_ClassSymbol), rho = R_GlobalEnv, pkg;
+    SEXP cl = getClassAttrib(x), rho = R_GlobalEnv, pkg;
     if (meth_classEnv == R_NoObject)
 	meth_classEnv = install(".classEnv");
 
@@ -1614,7 +1614,7 @@ Rboolean attribute_hidden R_seemsOldStyleS4Object(SEXP object)
     if(!isObject(object) || IS_S4_OBJECT(object)) return FALSE;
     /* We want to know about S4SXPs with no S4 bit */
     /* if(TYPEOF(object) == S4SXP) return FALSE; */
-    klass = getAttrib(object, R_ClassSymbol);
+    klass = getClassAttrib(object);
     return (klass != R_NilValue && LENGTH(klass) == 1 &&
 	    getAttrib(klass, R_PackageSymbol) != R_NilValue) ? TRUE: FALSE;
 }

@@ -492,7 +492,7 @@ static void PrintGenericVector(SEXP s, SEXP env)
 	    const char *className = NULL;
 	    SEXP klass;
 	    if(isObject(s) && isMethodsDispatchOn()) {
-		klass = getAttrib(s, R_ClassSymbol);
+		klass = getClassAttrib(s);
 		if(length(klass) == 1) {
 		    /* internal version of isClass() */
 		    char str[201];
@@ -692,7 +692,7 @@ void attribute_hidden PrintValueRec(SEXP s, SEXP env)
     WinCheckUTF8();
 #endif
     if(!isMethodsDispatchOn() && (IS_S4_OBJECT(s) || TYPEOF(s) == S4SXP) ) {
-	SEXP cl = getAttrib(s, R_ClassSymbol);
+	SEXP cl = getClassAttrib(s);
 	if(isNull(cl)) {
 	    /* This might be a mistaken S4 bit set */
 	    if(TYPEOF(s) == S4SXP)

@@ -43,7 +43,34 @@
 #include <string.h> /* for strlen, strcmp */
 #include <complex.h>
 
-/* define inline-able functions */
+
+/* ATTRIBUTE FETCHING */
+
+/* The 00 version of getAttrib can be called when it is known that "name"
+   is a symbol (not a string) and is not one that is handled specially. */
+
+INLINE_FUN SEXP getAttrib00 (SEXP vec, SEXP name)
+{
+    SEXP s;
+    for (s = ATTRIB(vec); s != R_NilValue; s = CDR(s)) {
+	if (TAG(s) == name) {
+	    SET_NAMEDCNT_MAX(CAR(s));
+	    return CAR(s);
+	}
+    }
+    return R_NilValue;
+}
+
+INLINE_FUN SEXP getDimAttrib (SEXP vec)
+{
+    return getAttrib00 (vec, R_DimSymbol);
+}
+
+INLINE_FUN SEXP getClassAttrib (SEXP vec)
+{
+    return getAttrib00 (vec, R_ClassSymbol);
+}
+
 
 /* from list.c */
 
@@ -238,7 +265,7 @@ INLINE_FUN Rboolean inherits(SEXP s, const char *name)
     SEXP klass;
     int i, nclass;
     if (OBJECT(s)) {
-	klass = getAttrib(s, R_ClassSymbol);
+	klass = getClassAttrib(s);
         if (klass == R_NilValue)
             return FALSE;
 	nclass = LENGTH(klass);
@@ -256,7 +283,7 @@ INLINE_FUN Rboolean inherits_CHAR(SEXP s, SEXP name)
     SEXP klass;
     int i, nclass;
     if (OBJECT(s)) {
-	klass = getAttrib(s, R_ClassSymbol);
+	klass = getClassAttrib(s);
         if (klass == R_NilValue)
             return FALSE;
 	nclass = LENGTH(klass);
@@ -507,34 +534,6 @@ INLINE_FUN Rboolean isVectorizable(SEXP s)
 	return TRUE;
     }
     else return FALSE;
-}
-
-
-/* ATTRIBUTE FETCHING */
-
-/* The 00 version of getAttrib can be called when it is known that "name"
-   is a symbol (not a string) and is not one that is handled specially. */
-
-INLINE_FUN SEXP getAttrib00 (SEXP vec, SEXP name)
-{
-    SEXP s;
-    for (s = ATTRIB(vec); s != R_NilValue; s = CDR(s)) {
-	if (TAG(s) == name) {
-	    SET_NAMEDCNT_MAX(CAR(s));
-	    return CAR(s);
-	}
-    }
-    return R_NilValue;
-}
-
-INLINE_FUN SEXP getDimAttrib (SEXP vec)
-{
-    return getAttrib00 (vec, R_DimSymbol);
-}
-
-INLINE_FUN SEXP getClassAttrib (SEXP vec)
-{
-    return getAttrib00 (vec, R_ClassSymbol);
 }
 
 

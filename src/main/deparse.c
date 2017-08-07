@@ -1230,7 +1230,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 	d->sourceable = FALSE;
 	d->isS4 = TRUE;
 	print2buff("<S4 object of class ", d);
-	deparse2buff(getAttrib(s, R_ClassSymbol), d);
+	deparse2buff(getClassAttrib(s), d);
 	print2buff(">", d);
       break;
     default:

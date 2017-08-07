@@ -3620,12 +3620,12 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     generic = PRIMNAME(op);
 
     lclass = IS_S4_OBJECT(CAR(args)) ? R_data_class2(CAR(args))
-              : getAttrib00(CAR(args), R_ClassSymbol);
+              : getClassAttrib(CAR(args));
     PROTECT(lclass);
 
     if( nargs == 2 )
 	rclass = IS_S4_OBJECT(CADR(args)) ? R_data_class2(CADR(args))
-                  : getAttrib00(CADR(args), R_ClassSymbol);
+                  : getClassAttrib(CADR(args));
     else
 	rclass = R_NilValue;
     PROTECT(rclass);
@@ -3703,7 +3703,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     s = args;
     for (i = 0 ; i < nargs ; i++) {
 	t = IS_S4_OBJECT(CAR(s)) ? R_data_class2(CAR(s))
-	  : getAttrib00(CAR(s), R_ClassSymbol);
+	  : getClassAttrib(CAR(s));
 	set = 0;
 	if (isString(t)) {
 	    for (j = 0 ; j < LENGTH(t) ; j++) {

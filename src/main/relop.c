@@ -1119,19 +1119,19 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
                 if (!tsConform(x, y))
                     errorcall(call, _("non-conformable time series"));
                 PROTECT(tsp = getAttrib(x, R_TspSymbol));
-                PROTECT(klass = !objx ? R_NilValue :getAttrib(x,R_ClassSymbol));
+                PROTECT(klass = !objx ? R_NilValue :getClassAttrib(x));
             }
             else if (xts) {
                 if (length(x) < length(y))
                     ErrorMessage(call, ERROR_TSVEC_MISMATCH);
                 PROTECT(tsp = getAttrib(x, R_TspSymbol));
-                PROTECT(klass = !objx ? R_NilValue :getAttrib(x,R_ClassSymbol));
+                PROTECT(klass = !objx ? R_NilValue :getClassAttrib(x));
             }
             else /*(yts)*/ {
                 if (length(y) < length(x))
             	ErrorMessage(call, ERROR_TSVEC_MISMATCH);
                 PROTECT(tsp = getAttrib(y, R_TspSymbol));
-                PROTECT(klass = !objy ? R_NilValue :getAttrib(y,R_ClassSymbol));
+                PROTECT(klass = !objy ? R_NilValue :getClassAttrib(y));
             }
         }
 
