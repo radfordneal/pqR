@@ -162,7 +162,7 @@ static SEXP do_prmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isNull(collab) && !isString(collab))
 	error(_("invalid column labels"));
 
-    printMatrix(x, 0, getAttrib(x, R_DimSymbol), quote, R_print.right,
+    printMatrix(x, 0, getDimAttrib(x), quote, R_print.right,
 		rowlab, collab, rowname, colname);
     PrintDefaults(); /* reset, as na.print.etc may have been set */
     return x;
@@ -330,7 +330,7 @@ static void PrintGenericVector(SEXP s, SEXP env)
     char pbuf[115], *ptag, save[TAGBUFLEN + 5];
 
     ns = length(s);
-    if((dims = getAttrib(s, R_DimSymbol)) != R_NilValue && length(dims) > 1) {
+    if((dims = getDimAttrib(s)) != R_NilValue && length(dims) > 1) {
 	PROTECT(dims);
 	PROTECT(t = allocArray(STRSXP, dims));
 	/* FIXME: check (ns <= R_print.max +1) ? ns : R_print.max; */
@@ -526,7 +526,7 @@ static void printList(SEXP s, SEXP env)
     char pbuf[101], *ptag;
     const char *rn, *cn;
 
-    if ((dims = getAttrib(s, R_DimSymbol)) != R_NilValue && length(dims) > 1) {
+    if ((dims = getDimAttrib(s)) != R_NilValue && length(dims) > 1) {
         SEXP original_s = s;
 	PROTECT(dims);
 	PROTECT(t = allocArray(STRSXP, dims));
@@ -761,7 +761,7 @@ void attribute_hidden PrintValueRec(SEXP s, SEXP env)
     case STRSXP:
     case CPLXSXP:
     case RAWSXP:
-	PROTECT(t = getAttrib(s, R_DimSymbol));
+	PROTECT(t = getDimAttrib(s));
 	if (TYPEOF(t) == INTSXP) {
 	    if (LENGTH(t) == 1) {
 		PROTECT(t = getAttrib(s, R_DimNamesSymbol));

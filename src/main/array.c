@@ -261,7 +261,7 @@ SEXP DropDimsNotSuppressed (SEXP x, int *suppress_drop)
     int i, n, ndims;
 
     PROTECT(x);
-    dims = getAttrib(x, R_DimSymbol);
+    dims = getDimAttrib(x);
 
     /* Check that dropping will actually do something. */
     /* (1) Check that there is a "dim" attribute. */
@@ -374,7 +374,7 @@ static SEXP do_drop(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     checkArity(op, args);
     x = CAR(args);
-    if ((xdims = getAttrib(x, R_DimSymbol)) != R_NilValue) {
+    if ((xdims = getDimAttrib(x)) != R_NilValue) {
 	n = LENGTH(xdims);
 	shorten = 0;
 	for (i = 0; i < n; i++)
@@ -863,8 +863,8 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
        the dimensions of the result (nrows and ncols) and the number of
        elements in the sums of products (k). */
 
-    SEXP xdims = getAttrib(x, R_DimSymbol);
-    SEXP ydims = same ? xdims : getAttrib(y, R_DimSymbol);
+    SEXP xdims = getDimAttrib(x);
+    SEXP ydims = same ? xdims : getDimAttrib(y);
 
     int ldx = length(xdims);
     int ldy = same ? ldx : length(ydims);
@@ -1397,7 +1397,7 @@ static SEXP do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     if (!isVector(a)) goto not_matrix;
 
-    dims = getAttrib(a, R_DimSymbol);
+    dims = getDimAttrib(a);
     ldim = length(dims); /* not LENGTH, since could be null */
 
     if (ldim > 2) goto not_matrix;
@@ -1513,7 +1513,7 @@ static SEXP do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isArray(a))
 	error(_("invalid first argument, must be an array"));
 
-    PROTECT(dimsa = getAttrib(a, R_DimSymbol));
+    PROTECT(dimsa = getDimAttrib(a));
     n = LENGTH(dimsa);
     int *isa = INTEGER(dimsa);
 

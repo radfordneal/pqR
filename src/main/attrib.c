@@ -109,21 +109,6 @@ static SEXP stripAttrib(SEXP tag, SEXP lst)
     return lst;
 }
 
-/* The 00 version of getAttrib can be called when it is known that "name"
-   is a symbol (not a string) and is not one that is handled specially. */
-
-SEXP attribute_hidden getAttrib00(SEXP vec, SEXP name)
-{
-    SEXP s;
-    for (s = ATTRIB(vec); s != R_NilValue; s = CDR(s)) {
-	if (TAG(s) == name) {
-	    SET_NAMEDCNT_MAX(CAR(s));
-	    return CAR(s);
-	}
-    }
-    return R_NilValue;
-}
-
 /* Get the "names" attribute, and don't change its NAMEDCNT unless
    it's really taken from another attribute.  Used directly in
    subassign.c, and in getAttrib0 below. */
@@ -700,7 +685,7 @@ SEXP R_data_class(SEXP obj, Rboolean singleString)
     if(n == 1 || (n > 0 && !singleString))
 	return(klass);
     if(n == 0) {
-	SEXP dim = getAttrib(obj, R_DimSymbol);
+	SEXP dim = getDimAttrib(obj);
 	int nd = length(dim);
 	if(nd > 0) {
 	    if(nd == 2)
@@ -951,7 +936,7 @@ SEXP namesgets(SEXP vec, SEXP val)
     /* Special treatment for one dimensional arrays */
 
     if (isVector(vec) || isList(vec) || isLanguage(vec)) {
-	s = getAttrib(vec, R_DimSymbol);
+	s = getDimAttrib(vec);
 	if (TYPEOF(s) == INTSXP && length(s) == 1) {
 	    PROTECT(val = CONS(val, R_NilValue));
 	    setAttrib(vec, R_DimNamesSymbol, val);
@@ -1051,7 +1036,7 @@ SEXP dimnamesgets(SEXP vec, SEXP val)
     /* There are, when this gets used as names<- for 1-d arrays */
     if (!isPairList(val) && !isNewList(val))
 	error(_("'dimnames' must be a list"));
-    dims = getAttrib(vec, R_DimSymbol);
+    dims = getDimAttrib(vec);
     if ((k = LENGTH(dims)) < length(val))
 	error(_("length of 'dimnames' [%d] must match that of 'dims' [%d]"),
 	      length(val), k);

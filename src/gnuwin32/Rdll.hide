@@ -668,7 +668,6 @@
  gcontextFromGP
  getActive
  getActiveSink
- getAttrib00
  getConnection
  getConnection_no_err
  getDefaults
