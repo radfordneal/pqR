@@ -1,5 +1,9 @@
 The stable versions of lphash below are tagged in source code repository.
 
+Version 2017-08-06
+
+  Added LPHASH_STATIC option.
+
 Version 2017-06-21
 
   Added scanning functions, some functions now static inline.
