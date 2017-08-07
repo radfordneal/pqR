@@ -210,7 +210,7 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
     R_FreeStringBufferL(&cbuff);
     if ((d = getAttrib(x, R_NamesSymbol)) != R_NilValue)
 	setAttrib(s, R_NamesSymbol, d);
-    if ((d = getAttrib(x, R_DimSymbol)) != R_NilValue)
+    if ((d = getDimAttrib(x)) != R_NilValue)
 	setAttrib(s, R_DimSymbol, d);
     if ((d = getAttrib(x, R_DimNamesSymbol)) != R_NilValue)
 	setAttrib(s, R_DimNamesSymbol, d);

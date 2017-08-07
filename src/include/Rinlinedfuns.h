@@ -510,6 +510,34 @@ INLINE_FUN Rboolean isVectorizable(SEXP s)
 }
 
 
+/* ATTRIBUTE FETCHING */
+
+/* The 00 version of getAttrib can be called when it is known that "name"
+   is a symbol (not a string) and is not one that is handled specially. */
+
+INLINE_FUN SEXP getAttrib00 (SEXP vec, SEXP name)
+{
+    SEXP s;
+    for (s = ATTRIB(vec); s != R_NilValue; s = CDR(s)) {
+	if (TAG(s) == name) {
+	    SET_NAMEDCNT_MAX(CAR(s));
+	    return CAR(s);
+	}
+    }
+    return R_NilValue;
+}
+
+INLINE_FUN SEXP getDimAttrib (SEXP vec)
+{
+    return getAttrib00 (vec, R_DimSymbol);
+}
+
+INLINE_FUN SEXP getClassAttrib (SEXP vec)
+{
+    return getAttrib00 (vec, R_ClassSymbol);
+}
+
+
 /**
  * Create a named vector of type TYP
  *

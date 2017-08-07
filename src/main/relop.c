@@ -1097,13 +1097,13 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
             if (xarray && yarray) {
                 if (!conformable(x, y))
                     errorcall(call, _("non-conformable arrays"));
-                PROTECT(dims = getAttrib(x, R_DimSymbol));
+                PROTECT(dims = getDimAttrib(x));
             }
             else if (xarray) {
-                PROTECT(dims = getAttrib(x, R_DimSymbol));
+                PROTECT(dims = getDimAttrib(x));
             }
             else /*(yarray)*/ {
-                PROTECT(dims = getAttrib(y, R_DimSymbol));
+                PROTECT(dims = getDimAttrib(y));
             }
             PROTECT(xnames = getAttrib(x, R_DimNamesSymbol));
             PROTECT(ynames = getAttrib(y, R_DimNamesSymbol));

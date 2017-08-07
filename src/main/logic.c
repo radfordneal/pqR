@@ -104,13 +104,13 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
 	if (xarray && yarray) {
 	    if (!conformable(x, y))
 		error(_("binary operation on non-conformable arrays"));
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    PROTECT(dims = getDimAttrib(x));
 	}
 	else if (xarray) {
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    PROTECT(dims = getDimAttrib(x));
 	}
 	else /*(yarray)*/ {
-	    PROTECT(dims = getAttrib(y, R_DimSymbol));
+	    PROTECT(dims = getDimAttrib(y));
 	}
 	PROTECT(xnames = getAttrib(x, R_DimNamesSymbol));
 	PROTECT(ynames = getAttrib(y, R_DimNamesSymbol));
@@ -215,7 +215,7 @@ static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     /* The general case... */
 
     PROTECT(names = getAttrib(arg, R_NamesSymbol));
-    PROTECT(dim = getAttrib(arg, R_DimSymbol));
+    PROTECT(dim = getDimAttrib(arg));
     PROTECT(dimnames = getAttrib(arg, R_DimNamesSymbol));
     PROTECT(x = allocVector(isRaw(arg) ? RAWSXP : LGLSXP, len));
     switch(TYPEOF(arg)) {
