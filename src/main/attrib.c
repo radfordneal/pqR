@@ -109,21 +109,6 @@ static SEXP stripAttrib(SEXP tag, SEXP lst)
     return lst;
 }
 
-/* The 00 version of getAttrib can be called when it is known that "name"
-   is a symbol (not a string) and is not one that is handled specially. */
-
-SEXP attribute_hidden getAttrib00(SEXP vec, SEXP name)
-{
-    SEXP s;
-    for (s = ATTRIB(vec); s != R_NilValue; s = CDR(s)) {
-	if (TAG(s) == name) {
-	    SET_NAMEDCNT_MAX(CAR(s));
-	    return CAR(s);
-	}
-    }
-    return R_NilValue;
-}
-
 /* Get the "names" attribute, and don't change its NAMEDCNT unless
    it's really taken from another attribute.  Used directly in
    subassign.c, and in getAttrib0 below. */
@@ -179,7 +164,7 @@ SEXP attribute_hidden getNamesAttrib (SEXP vec)
    processing for R_RowNamesSymbol is not desired).  (Currently static,
    so not callable outside this module.) */
 
-SEXP attribute_hidden getAttrib0(SEXP vec, SEXP name)
+static SEXP getAttrib0(SEXP vec, SEXP name)
 {
     SEXP s;
     int len, i, any;
