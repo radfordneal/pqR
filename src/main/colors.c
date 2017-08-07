@@ -433,7 +433,7 @@ static SEXP do_RGB2hsv(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(rgb = coerceVector(CAR(args),REALSXP)); args = CDR(args);
     if(!isMatrix(rgb))
 	error(_("rgb is not a matrix (internally)"));
-    dd = getAttrib(rgb, R_DimSymbol);
+    dd = getDimAttrib(rgb);
     if(INTEGER(dd)[0] != 3)
 	error(_("rgb must have 3 rows (internally)"));
     n = INTEGER(dd)[1];

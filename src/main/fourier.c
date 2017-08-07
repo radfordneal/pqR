@@ -72,7 +72,7 @@ static SEXP do_fft(SEXP call, SEXP op, SEXP args, SEXP env)
 	inv = 2;
 
     if (LENGTH(z) > 1) {
-	if (isNull(d = getAttrib(z, R_DimSymbol))) {  /* temporal transform */
+	if (isNull(d = getDimAttrib(z))) {  /* temporal transform */
 	    n = length(z);
 	    fft_factor(n, &maxf, &maxp);
 	    if (maxf == 0)
@@ -133,7 +133,7 @@ static SEXP do_mvfft(SEXP call, SEXP op, SEXP args, SEXP env)
 
     z = CAR(args);
 
-    d = getAttrib(z, R_DimSymbol);
+    d = getDimAttrib(z);
     if (d == R_NilValue || length(d) > 2)
 	error(_("vector-valued (multivariate) series required"));
     n = INTEGER(d)[0];

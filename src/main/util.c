@@ -188,7 +188,7 @@ int nrows(SEXP s)
 {
     SEXP t;
     if (isVector(s) || isList(s)) {
-	t = getAttrib(s, R_DimSymbol);
+	t = getDimAttrib(s);
 	if (t == R_NilValue) return LENGTH(s);
 	return INTEGER(t)[0];
     }
@@ -204,7 +204,7 @@ int ncols(SEXP s)
 {
     SEXP t;
     if (isVector(s) || isList(s)) {
-	t = getAttrib(s, R_DimSymbol);
+	t = getDimAttrib(s);
 	if (t == R_NilValue) return 1;
 	if (LENGTH(t) >= 2) return INTEGER(t)[1];
 	/* This is a 1D (or possibly 0D array) */

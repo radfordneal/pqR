@@ -258,7 +258,7 @@ SEXP attribute_hidden strmat2intmat(SEXP s, SEXP dnamelist, SEXP call)
     SEXP dnames, snames, si, sicol, s_elt;
     PROTECT(snames = allocVector(STRSXP, nr));
     PROTECT(si = allocVector(INTSXP, length(s)));
-    dimgets(si, getAttrib(s, R_DimSymbol));
+    dimgets(si, getDimAttrib(s));
     for (i = 0; i < length(dnamelist); i++) {
         dnames = VECTOR_ELT(dnamelist, i);
         for (j = 0; j < nr; j++) {

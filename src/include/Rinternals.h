@@ -1725,7 +1725,6 @@ SEXP Rf_findVarInFrame3(SEXP, SEXP, int);
 SEXP Rf_findVarInFrame3_nolast(SEXP, SEXP, int);
 SEXP Rf_fixup_NaRm(SEXP);
 SEXP Rf_getAttrib(SEXP, SEXP);
-SEXP Rf_getAttrib00(SEXP, SEXP);
 SEXP Rf_getNamesAttrib(SEXP);
 SEXP Rf_GetArrayDimnames(SEXP);
 SEXP Rf_GetColNames(SEXP);

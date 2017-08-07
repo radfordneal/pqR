@@ -305,7 +305,7 @@ static inline int whether_suppress_drop (SEXP sb)
     SEXP d;
     return TYPEOF(sb) != LGLSXP 
              && HAS_ATTRIB(sb)
-             && (d = getAttrib(sb,R_DimSymbol)) != R_NilValue
+             && (d = getDimAttrib(sb)) != R_NilValue
              && LENGTH(d) == 1;
 }
 
@@ -334,7 +334,7 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
         return duplicate(x);
 
     PROTECT_WITH_INDEX (sb, &spi);
-    dims = getAttrib(x, R_DimSymbol);
+    dims = getDimAttrib(x);
     ndim = length(dims);
 
     /* Check for variant result, which will be a range rather than a vector, 
@@ -747,7 +747,7 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
     int nprotect = 0;
     int ii;
 
-    SEXP dim = getAttrib(x, R_DimSymbol);
+    SEXP dim = getDimAttrib(x);
 
     nr = INTEGER(dim)[0];
     nc = INTEGER(dim)[1];
@@ -1123,7 +1123,7 @@ static int ExtractExactArg(SEXP *args_ptr)
 
 static R_INLINE R_len_t simple_index (SEXP s)
 {
-    if (HAS_ATTRIB(s) && getAttrib(s,R_DimSymbol) != R_NilValue)
+    if (HAS_ATTRIB(s) && getDimAttrib(s) != R_NilValue)
         return 0;
 
     switch (TYPEOF(s)) {
@@ -1525,7 +1525,7 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
     if (isVector(x))
 	PROTECT(ax);
     else if (isPairList(x)) {
-	SEXP dim = getAttrib(x, R_DimSymbol);
+	SEXP dim = getDimAttrib(x);
 	int ndim = length(dim);
 	if (ndim > 1) {
 	    PROTECT(ax = allocArray(VECSXP, dim));
@@ -1549,7 +1549,7 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
     if(nsubs < 2) {
 	PROTECT(ans = VectorSubset(ax, subs, seq, drop, call));
     } else {
-        SEXP xdims = getAttrib(x, R_DimSymbol);
+        SEXP xdims = getDimAttrib(x);
 	if (nsubs != length(xdims))
 	    errorcall(call, _("incorrect number of dimensions"));
 	if (nsubs == 2)
@@ -1568,7 +1568,7 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
 	    SET_TYPEOF(ans, LANGSXP);
             for (px = ans, i = 0 ; px != R_NilValue ; px = CDR(px))
                 SETCAR(px, VECTOR_ELT(ax, i++));
-            setAttrib(ans, R_DimSymbol, getAttrib(ax, R_DimSymbol));
+            setAttrib(ans, R_DimSymbol, getDimAttrib(ax));
             setAttrib(ans, R_DimNamesSymbol, getAttrib(ax, R_DimNamesSymbol));
             setAttrib(ans, R_NamesSymbol, getAttrib(ax, R_NamesSymbol));
             SET_NAMEDCNT_MAX(ans);
@@ -1789,7 +1789,7 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
     nsubs = length(subs);
     if (nsubs == 0)
 	errorcall(call, _("no index specified"));
-    dims = getAttrib(x, R_DimSymbol);
+    dims = getDimAttrib(x);
     ndims = length(dims);
     if(nsubs > 1 && nsubs != ndims)
 	errorcall(call, _("incorrect number of subscripts"));
