@@ -1106,7 +1106,7 @@ static SEXP do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(obj = eval(CAR(a), env));
 	if (isObject(obj)) {
 	    int i, len_classlist;
-	    classlist = getAttrib(obj, R_ClassSymbol);
+	    classlist = getClassAttrib(obj);
             len_classlist = length(classlist);
 	    for (i = 0; i < len_classlist; i++) {
 		classname = STRING_ELT(classlist, i);

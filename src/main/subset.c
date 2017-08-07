@@ -425,7 +425,7 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
        an invalid object of the S4 class! JMC 3/3/09 */
 #ifdef _S4_subsettable
     if(IS_S4_OBJECT(x)) { /* e.g. contains = "list" */
-        setAttrib(result, R_ClassSymbol, getAttrib(x, R_ClassSymbol));
+        setAttrib(result, R_ClassSymbol, getClassAttrib(x));
         SET_S4_OBJECT(result);
     }
 #endif

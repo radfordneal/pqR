@@ -643,7 +643,7 @@ static SEXP do_class(SEXP call, SEXP op, SEXP args, SEXP env)
             return s3class;
         }
     } 
-    return getAttrib00(x, R_ClassSymbol);
+    return getClassAttrib(x);
 }
 
 /* character elements corresponding to the syntactic types in the
@@ -680,7 +680,7 @@ static SEXP lang2str(SEXP obj, SEXPTYPE t)
  */
 SEXP R_data_class(SEXP obj, Rboolean singleString)
 {
-    SEXP value, klass = getAttrib00(obj, R_ClassSymbol);
+    SEXP value, klass = getClassAttrib(obj);
     int n = length(klass);
     if(n == 1 || (n > 0 && !singleString))
 	return(klass);
@@ -769,7 +769,7 @@ static SEXP S4_extends(SEXP klass) {
 /* Version for S3-dispatch */
 SEXP attribute_hidden R_data_class2 (SEXP obj)
 {
-    SEXP klass = getAttrib00(obj, R_ClassSymbol);
+    SEXP klass = getClassAttrib(obj);
       if(length(klass) > 0) {
 	if(IS_S4_OBJECT(obj))
 	    return S4_extends(klass);
@@ -1657,7 +1657,7 @@ SEXP R_do_slot(SEXP obj, SEXP name) {
 	        return value;
 	    if(isSymbol(name) ) {
 		PROTECT(input = ScalarString(PRINTNAME(name)));
-		classString = getAttrib(obj, R_ClassSymbol);
+		classString = getClassAttrib(obj);
 		if(isNull(classString))
 		    error(_("cannot get a slot (\"%s\") from an object of type \"%s\""),
 			  translateChar(asChar(input)),
@@ -1777,7 +1777,7 @@ static SEXP do_AT(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(object = eval(CAR(args), env));
     if(!s_dot_Data) init_slot_handling();
     if(nlist != s_dot_Data && !IS_S4_OBJECT(object)) {
-	klass = getAttrib00(object, R_ClassSymbol);
+	klass = getClassAttrib(object);
 	if(length(klass) == 0)
 	    error(_("trying to get slot \"%s\" from an object of a basic class (\"%s\") with no slots"),
 		  CHAR(PRINTNAME(nlist)),

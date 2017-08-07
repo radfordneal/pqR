@@ -593,7 +593,7 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 #ifdef _S4_rep_keepClass
     if(IS_S4_OBJECT(s)) { /* e.g. contains = "list" */
-	setAttrib(a, R_ClassSymbol, getAttrib(s, R_ClassSymbol));
+	setAttrib(a, R_ClassSymbol, getClassAttrib(s));
 	SET_S4_OBJECT(a);
     }
 #endif
@@ -765,7 +765,7 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 #ifdef _S4_rep_keepClass
     if(IS_S4_OBJECT(x)) { /* e.g. contains = "list" */
-	setAttrib(a, R_ClassSymbol, getAttrib(x, R_ClassSymbol));
+	setAttrib(a, R_ClassSymbol, getClassAttrib(x));
 	SET_S4_OBJECT(a);
     }
 #endif
@@ -821,7 +821,7 @@ static SEXP do_rep_len(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 #ifdef _S4_rep_keepClass
     if(IS_S4_OBJECT(s)) { /* e.g. contains = "list" */
-	setAttrib(a, R_ClassSymbol, getAttrib(s, R_ClassSymbol));
+	setAttrib(a, R_ClassSymbol, getClassAttrib(s));
 	SET_S4_OBJECT(a);
     }
 #endif
