@@ -890,6 +890,7 @@ case "${ac_cv_sizeof_int}" in
     AC_DEFINE(INT_32_BITS, 1, [Define if you have 32 bit ints.])
     ;;
 esac
+## This is tested in src/main/arithmetic.c and gives a compile error if false
 AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(double)
@@ -2009,6 +2010,7 @@ if test "${use_internal_tzcode}" != yes; then
 fi
 
 R_C99_COMPLEX
+R_FUNC_CTANH
 
 ## BSD extensions
 AC_CACHE_CHECK([whether 'struct tm' includes tm_zone],

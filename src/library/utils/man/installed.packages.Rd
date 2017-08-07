@@ -1,6 +1,6 @@
 % File src/library/utils/man/installed.packages.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2010 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{installed.packages}
@@ -47,8 +47,7 @@ installed.packages(lib.loc = NULL, priority = NULL,
   specified \code{fields} argument, and updated only if the top-level
   library directory has been altered, for example by installing or
   removing a package.  If the cached information becomes confused, it
-  can be refreshed by running \code{installed.packages(noCache =
-  TRUE)}.
+  can be avoided by running \code{installed.packages(noCache = TRUE)}.
 }
 \value{
   A matrix with one row per package, row names the package names and

@@ -319,9 +319,18 @@ in_do_curlGetHeaders(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     char errbuf[CURL_ERROR_SIZE];
     curl_easy_setopt(hnd, CURLOPT_ERRORBUFFER, errbuf);
+    // libcurl does not initialize this
+    errbuf[0] = '\0';
     CURLcode ret = curl_easy_perform(hnd);
-    if (ret != CURLE_OK)
-	error(_("libcurl error code %d\n\t%s\n"), ret, errbuf);
+    if (ret != CURLE_OK) {
+	if (errbuf[0]) 
+	    error(_("libcurl error code %d:\n\t%s\n"), ret, errbuf);
+	else if(ret == 77)
+	    error(_("libcurl error code %d:\n\t%s\n"), ret, 
+		  "unable to access SSL/TLS CA certificates");
+	else // rare case, error but no message
+	    error("libcurl error code %d\n", ret);
+    }
     long http_code = 0;
     curl_easy_getinfo (hnd, CURLINFO_RESPONSE_CODE, &http_code);
     curl_easy_cleanup(hnd);
@@ -601,7 +610,7 @@ in_do_curlDownload(SEXP call, SEXP op, SEXP args, SEXP rho)
     } while(still_running);
     R_Busy(0);
 #ifdef Win32
-    if (R_Interactive && !quiet) {
+    if (R_Interactive && !quiet && nurls<=1) {
 	endcontext(&(pbar.cntxt));
 	doneprogressbar(&pbar);
     } else if (total > 0.) {

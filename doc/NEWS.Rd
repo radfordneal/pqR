@@ -5,6 +5,63 @@
 \title{R News}
 \encoding{UTF-8}
 
+\section{\Rlogo CHANGES IN R 3.4.1}{
+
+  \subsection{INSTALLATION on a UNIX-ALIKE}{
+    \itemize{
+      \item The deprecated support for PCRE versions older than 8.20
+      has been removed.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{getParseData()} gave incorrect column information when
+      code contained multi-byte characters.  (\PR{17254})
+
+      \item Asking for help using expressions like \code{?stats::cor()}
+      did not work.  (\PR{17250})
+
+      \item \code{readRDS(url(....))} now works.
+
+      \item \command{R CMD Sweave} again returns \samp{status = 0} on
+      successful completion.
+
+      \item Vignettes listed in \file{.Rbuildignore} were not being
+      ignored properly.  (\PR{17246})
+
+      \item \code{file.mtime()} no longer returns NA on Windows when the
+      file or directory is being used by another process.  This affected
+      \code{installed.packages()}, which is now protected against this.
+
+      \item \command{R CMD INSTALL} Windows .zip file obeys \code{--lock}
+      and \code{--pkglock} flags.
+
+      \item (Windows only)  The \code{choose.files()} function could
+      return incorrect results when called with \code{multi = FALSE}.
+      (\PR{17270})
+
+      \item \code{aggregate(<data.frame>, drop = FALSE)} now also works in
+      case of near-equal numbers in \code{by}.  (\PR{16918})
+
+      \item \code{fourfoldplot()} could encounter integer overflow when
+      calculating the odds ratio. (\PR{17286})
+
+      \item \code{parse()} no longer gives spurious warnings when
+      extracting srcrefs from a file not encoded in the current locale.
+
+      This was seen from \command{R CMD check} with \file{inst/doc/*.R}
+      files, and \code{check} has some additional protection for such files.
+
+      \item \code{print.noquote(x)} now always returns its argument
+      \code{x} (invisibly).
+
+      \item Non-UTF-8 multibyte character sets were not handled properly
+      in source references.  (\PR{16732})
+    }
+  }
+}
+
 \section{\Rlogo CHANGES IN R 3.4.0}{
 
   \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
@@ -78,13 +135,6 @@
       accumulators where available).  \code{"blas"} calls BLAS directly
       for best speed, but usually with undefined behavior for inputs
       with \code{NaN}/\code{Inf}.
-
-      \item \code{factor()} now uses \code{order()} to sort its levels,
-      not \code{sort.list()}. This makes \code{factor()} support custom
-      vector-like objects if methods for the appropriate generics are
-      defined. This change has the side effect of making \code{factor()}
-      succeed on empty or length-one non-atomic vector(-like) types (e.g.,
-      list), where it failed before.
     }
   }
 
@@ -1704,12 +1754,12 @@
       \item The deprecated header \file{Rdefines.h} is now compatible
       with defining \code{R_NO_REMAP}.
 
-      \item The connections API now includes a function
+      \item The connections interface now includes a function
       \code{R_GetConnection()} which allows packages implementing
       connections to convert R \code{connection} objects to
-      \code{Rconnection} handles used in the API. Code which previously
+      \code{Rconnection} handles. Code which previously
       used the low-level R-internal \code{getConnection()} entry point
-      should switch to the official API.
+      should switch.
     }
   }
 

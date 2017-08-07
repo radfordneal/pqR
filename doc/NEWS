@@ -1,5 +1,53 @@
 R News
 
+CHANGES IN R 3.4.1:
+
+  INSTALLATION on a UNIX-ALIKE:
+
+    * The deprecated support for PCRE versions older than 8.20 has been
+      removed.
+
+  BUG FIXES:
+
+    * getParseData() gave incorrect column information when code
+      contained multi-byte characters.  (PR#17254)
+
+    * Asking for help using expressions like ?stats::cor() did not
+      work.  (PR#17250)
+
+    * readRDS(url(....)) now works.
+
+    * R CMD Sweave again returns status = 0 on successful completion.
+
+    * Vignettes listed in .Rbuildignore were not being ignored
+      properly.  (PR#17246)
+
+    * file.mtime() no longer returns NA on Windows when the file or
+      directory is being used by another process.  This affected
+      installed.packages(), which is now protected against this.
+
+    * R CMD INSTALL Windows .zip file obeys --lock and --pkglock flags.
+
+    * (Windows only) The choose.files() function could return incorrect
+      results when called with multi = FALSE.  (PR#17270)
+
+    * aggregate(<data.frame>, drop = FALSE) now also works in case of
+      near-equal numbers in by.  (PR#16918)
+
+    * fourfoldplot() could encounter integer overflow when calculating
+      the odds ratio. (PR#17286)
+
+    * parse() no longer gives spurious warnings when extracting srcrefs
+      from a file not encoded in the current locale.
+
+      This was seen from R CMD check with inst/doc/*.R files, and check
+      has some additional protection for such files.
+
+    * print.noquote(x) now always returns its argument x (invisibly).
+
+    * Non-UTF-8 multibyte character sets were not handled properly in
+      source references.  (PR#16732)
+
 CHANGES IN R 3.4.0:
 
   SIGNIFICANT USER-VISIBLE CHANGES:
@@ -71,13 +119,6 @@ CHANGES IN R 3.4.0:
       accumulators where available).  "blas" calls BLAS directly for
       best speed, but usually with undefined behavior for inputs with
       NaN/Inf.
-
-    * factor() now uses order() to sort its levels, not sort.list().
-      This makes factor() support custom vector-like objects if methods
-      for the appropriate generics are defined. This change has the
-      side effect of making factor() succeed on empty or length-one
-      non-atomic vector(-like) types (e.g., list), where it failed
-      before.
 
   NEW FEATURES:
 
@@ -1513,11 +1554,11 @@ CHANGES IN R 3.3.0:
     * The deprecated header Rdefines.h is now compatible with defining
       R_NO_REMAP.
 
-    * The connections API now includes a function R_GetConnection()
-      which allows packages implementing connections to convert R
-      connection objects to Rconnection handles used in the API. Code
+    * The connections interface now includes a function
+      R_GetConnection() which allows packages implementing connections
+      to convert R connection objects to Rconnection handles. Code
       which previously used the low-level R-internal getConnection()
-      entry point should switch to the official API.
+      entry point should switch.
 
   BUG FIXES:
 

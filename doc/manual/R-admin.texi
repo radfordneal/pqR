@@ -1170,8 +1170,9 @@ and use a UTF-8 or Latin-1 locale.
 
 The @file{bin/windows} directory of a @acronym{CRAN} site contains
 binaries for a base distribution and a large number of add-on packages
-from @acronym{CRAN} to run on 32- or 64-bit Windows (XP or later) on
-@cputype{ix86} and @cputype{x86_64} @acronym{CPU}s.
+from @acronym{CRAN} to run on 32- or 64-bit Windows (Windows 7 and later 
+are tested; XP is known to fail some tests) on @cputype{ix86} and 
+@cputype{x86_64} @acronym{CPU}s.
 
 Your file system must allow long file names (as is likely except
 perhaps for some network-mounted systems).  If it doesn't also support
@@ -2954,13 +2955,13 @@ below under specific OSes).  For most a 32-bit version is the default,
 but for some (e.g., @cputype{x86_64} Linux and macOS >= 10.6)
 64-bit is.
 
-All current versions of @R{} use 32-bit integers and
-@acronym{ISO}/@acronym{IEC}@tie{}60559@footnote{also known as
-@acronym{IEEE}@tie{}754} double-precision reals, and so compute to
-the same precision@footnote{at least when storing quantities: the on-FPU
-precision is allowed to vary} and with the same limits on the sizes of
-numerical quantities.  The principal difference is in the size of the
-pointers.
+All current versions of @R{} use 32-bit integers (this is enforced in
+the build) and @acronym{ISO}/@acronym{IEC}@tie{}60559@footnote{also
+known as @acronym{IEEE}@tie{}754} double-precision reals, and so compute
+to the same precision@footnote{at least when storing quantities: the
+on-FPU precision is allowed to vary} and with the same limits on the
+sizes of numerical quantities.  The principal difference is in the size
+of the pointers.
 
 64-bit builds have both advantages and disadvantages:
 @itemize
@@ -3327,17 +3328,16 @@ later are required.
 @c and that is supported until Apr 2019.
 @c Debian Wheezy has 8.30, Ubuntu 12.04LTS has 8.12
 PCRE@footnote{sometimes known as PCRE1, and not PCRE2 which started at
-version 10.0.} (version 8.32 or later, although versions 8.10--8.31 will
+version 10.0.} (version 8.32 or later, although versions 8.20--8.31 will
 be accepted with a deprecation warning) is required (or just its library
 and headers if packaged separately).  Only the `8-bit' interface is used
 (and only that is built by default when installing from sources).  PCRE
 must be built with UTF-8 support (not the default, and checked by
 @command{configure}) and support for Unicode properties is assumed by
-some @R{} packages.  JIT support (optionally available from 8.20) is
-desirable for the best performance: support for this and Unicode
-properties can be checked at run-time by calling @code{pcre_config()}.
-If building PCRE for use with @R{} a suitable @command{configure}
-command might be
+some @R{} packages.  JIT support (optionally available) is desirable for
+the best performance: support for this and Unicode properties can be
+checked at run-time by calling @code{pcre_config()}.  If building PCRE
+for use with @R{} a suitable @command{configure} command might be
 @example
 ./configure --enable-utf --enable-unicode-properties --enable-jit --disable-cpp
 @end example
@@ -4665,7 +4665,7 @@ see in the @command{configure} summary
 
 @example
   Interfaces supported:      X11, tcltk
-  External libraries:        readline, zlib, bzlib, lzma, PCRE, curl
+  External libraries:        readline, curl
   Additional capabilities:   PNG, JPEG, TIFF, NLS, cairo, ICU
 @end example
 
@@ -4728,10 +4728,17 @@ may also be necessary to set the @command{pkg-config} path, e.g.@: by
 @example
 export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib/pkgconfig
 @end example
+@noindent
+The 32-bit system @code{libcurl} did not work with the system CA
+certificates: this is worked around in @R{}'s test suite.
 
 64-bit versions of Linux are built with support for files > 2Gb, and
 32-bit versions will be if possible unless @option{--disable-largefile}
 is specified.
+
+Note that 32-bit @code{glibc} currently uses a 32-bit @code{time_t}
+type, so to pass all the date-time checks needs @R{} built with flag
+@option{--with-internal-tzcode}.
 
 To build a 64-bit version of @R{} on @cputype{ppc64} (also known as
 @cputype{powerpc64}) with @command{gcc}@tie{}4.1.1, Ei-ji Nakama used
@@ -5012,10 +5019,10 @@ The @TeX{} implementation used by the developers is MacTeX
 (@uref{https://www.tug.org/mactex/}): the full installation is about
 5GB, but a smaller version (`Basic TeX') is available at
 @uref{https://www.tug.org/mactex/morepackages.html} to which you will
-need to add some packages, e.g.@: for the 2016 version we needed to
+need to add some packages, e.g.@: for the 2017 version we needed to
 add@footnote{E.g.@: @emph{via} @command{tlmgr install cm-super helvetic
 inconsolata texinfo} .}  @pkg{cm-super}, @pkg{helvetic},
-@pkg{inconsolata} and @pkg{texinfo} which brought this to about 410MB.
+@pkg{inconsolata} and @pkg{texinfo} which brought this to about 310MB.
 @samp{TeX Live Utility} (available @emph{via} the MacTeX front page)
 provides a graphical means to manage @TeX{} packages.
 
@@ -5087,18 +5094,22 @@ tclvalue(.Tcl("tk windowingsystem"))  # "x11" or "aqua"
 @subsection Java
 
 The situation with Java support on macOS is messy.@footnote{For more
-details see @uref{http://www.macstrategy.com/@/article.php?3}.}
+details see @uref{http://www.macstrategy.com/@/article.php?3}.}  As from
+@R{} 3.4.0 the @acronym{CRAN} distribution of @CRANpkg{rJava} requires
+Java 8 (aka 1.8).
 
 macOS no longer comes with an installed Java runtime (JRE), and a macOS
 upgrade may remove one if already installed: it is intended to be
 installed at first use.  Check if a JRE is installed by running
 @command{java -version} in a @command{Terminal} window: if Java is not
-installed this should prompt you to install it.  You can also install
-directly the latest Java from Oracle (currently from
+installed@footnote{In the unlikely event that the version reported does
+not start with @code{1.8.0} you need to update your Java.} this should
+prompt you to install it.  You can also install directly the latest Java
+from Oracle (currently from
 @uref{http://www.oracle.com/@/technetwork/@/java/@/javase/@/downloads/@/index.html}).
 
 Binary distributions of @R{} are built against a specific version (e.g.@:
-1.8.0_121) of Oracle Java so @command{sudo R CMD javareconf} may be
+1.8.0_131) of Oracle Java so @command{sudo R CMD javareconf} may be
 needed before using Java-using packages.
 
 @c You may need to install what Apple calls `legacy Java'@footnote{e.g.@:
@@ -5121,7 +5132,7 @@ The build process tries to fathom out what JRE/JDK to use, but it may
 need some help, e.g.@: by setting @env{JAVA_HOME}.  The Oracle JDK can
 be specified explicitly by something like
 @example
-JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_121.jdk/Contents/Home
+JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_131.jdk/Contents/Home
 JAVA_CPPFLAGS="-I/$@{JAVA_HOME@}/include -I/$@{JAVA_HOME@}/include/darwin"
 JAVA_LD_LIBRARY_PATH="$@{JAVA_HOME@}/jre/lib/server"
 JAVA_LIBS="-L/$@{JAVA_HOME@}/jre/lib/server -ljvm" 
@@ -5288,7 +5299,7 @@ CXXSTD="-library=stlport4"
 CXXFLAGS=-O
 FC=$F77
 FCFLAGS=$FFLAGS
-FCLIBS="-lfsu -lfui"
+FCLIBS=-lfsu
 R_LD_LIBRARY_PATH="/opt/developerstudio12.5/lib:/usr/local/lib:/opt/csw/lib"
 @end example
 
@@ -5300,8 +5311,12 @@ A peculiarity of the Fortran compiler is that when asked to link a
 shared object it does not link against the Fortran runtime libraries.
 In @R{} this is only used for packages with F9x code, hence the
 @code{FCLIBS} definition (which sufficed for @acronym{CRAN} packages
-with 12.5).
-@c -lfui is needed for quantre's use of ETIME
+with 12.5, but on one system needed to be
+@example
+FCLIBS="-lfsu /opt/developerstudio12.5/lib/libfui.so.2"
+@end example
+@noindent
+.)
 
 You can target specific Sparc architectures for (slightly) higher
 performance: @option{-xtarget=native} (in @code{CFLAGS} etc) tunes the

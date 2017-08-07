@@ -7,6 +7,86 @@
 
 <h2>R News</h2>
 
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.4.1</h3>
+
+
+
+<h4>INSTALLATION on a UNIX-ALIKE</h4>
+
+
+<ul>
+<li><p> The deprecated support for PCRE versions older than 8.20
+has been removed.
+</p>
+</li></ul>
+
+
+
+
+<h4>BUG FIXES</h4>
+
+
+<ul>
+<li> <p><code>getParseData()</code> gave incorrect column information when
+code contained multi-byte characters.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17254">PR#17254</a>)
+</p>
+</li>
+<li><p> Asking for help using expressions like <code>?stats::cor()</code>
+did not work.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17250">PR#17250</a>)
+</p>
+</li>
+<li> <p><code>readRDS(url(....))</code> now works.
+</p>
+</li>
+<li> <p><code>R CMD Sweave</code> again returns <span class="samp">status = 0</span> on
+successful completion.
+</p>
+</li>
+<li><p> Vignettes listed in &lsquo;<span class="file">.Rbuildignore</span>&rsquo; were not being
+ignored properly.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17246">PR#17246</a>)
+</p>
+</li>
+<li> <p><code>file.mtime()</code> no longer returns NA on Windows when the
+file or directory is being used by another process.  This affected
+<code>installed.packages()</code>, which is now protected against this.
+</p>
+</li>
+<li> <p><code>R CMD INSTALL</code> Windows .zip file obeys <code>--lock</code>
+and <code>--pkglock</code> flags.
+</p>
+</li>
+<li><p> (Windows only)  The <code>choose.files()</code> function could
+return incorrect results when called with <code>multi = FALSE</code>.
+(<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17270">PR#17270</a>)
+</p>
+</li>
+<li> <p><code>aggregate(&lt;data.frame&gt;, drop = FALSE)</code> now also works in
+case of near-equal numbers in <code>by</code>.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16918">PR#16918</a>)
+</p>
+</li>
+<li> <p><code>fourfoldplot()</code> could encounter integer overflow when
+calculating the odds ratio. (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17286">PR#17286</a>)
+</p>
+</li>
+<li> <p><code>parse()</code> no longer gives spurious warnings when
+extracting srcrefs from a file not encoded in the current locale.
+</p>
+<p>This was seen from <code>R CMD check</code> with &lsquo;<span class="file">inst/doc/*.R</span>&rsquo;
+files, and <code>check</code> has some additional protection for such files.
+</p>
+</li>
+<li> <p><code>print.noquote(x)</code> now always returns its argument
+<code>x</code> (invisibly).
+</p>
+</li>
+<li><p> Non-UTF-8 multibyte character sets were not handled properly
+in source references.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16732">PR#16732</a>)
+</p>
+</li></ul>
+
+
+
+
 <h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.4.0</h3>
 
 
@@ -91,14 +171,6 @@ precision with other summations in R (using <code>long double</code>
 accumulators where available).  <code>"blas"</code> calls BLAS directly
 for best speed, but usually with undefined behavior for inputs
 with <code>NaN</code>/<code>Inf</code>.
-</p>
-</li>
-<li> <p><code>factor()</code> now uses <code>order()</code> to sort its levels,
-not <code>sort.list()</code>. This makes <code>factor()</code> support custom
-vector-like objects if methods for the appropriate generics are
-defined. This change has the side effect of making <code>factor()</code>
-succeed on empty or length-one non-atomic vector(-like) types (e.g.,
-list), where it failed before.
 </p>
 </li></ul>
 
@@ -2164,12 +2236,12 @@ platforms, and so gives a compilation error on all.
 with defining <code>R_NO_REMAP</code>.
 </p>
 </li>
-<li><p> The connections API now includes a function
+<li><p> The connections interface now includes a function
 <code>R_GetConnection()</code> which allows packages implementing
 connections to convert R <code>connection</code> objects to
-<code>Rconnection</code> handles used in the API. Code which previously
+<code>Rconnection</code> handles. Code which previously
 used the low-level R-internal <code>getConnection()</code> entry point
-should switch to the official API.
+should switch.
 </p>
 </li></ul>
 
