@@ -39,8 +39,22 @@ USING LPHASH IN AN APPLICATION
 To use lphash, an application should create an lphash-app.h file,
 which must define the types and constants below and then include the
 lphash.h file.  The lphash-app.h file must be included by application
-modules that use the lphash library, and is also included in the C
-source file for the lphash library routines.
+modules that use the lphash library, and is also included in lphash.c,
+the C source file for the lphash library routines.
+
+If only a single table will be used, lphash.c may be compiled as a
+separate module, linked to modules that use lphash.  The lphash-app.h
+file should be included in modules that use routines in lphash.c, or
+that define routines needed by lphash.c.
+
+Alternatively, lphash.c can be included in a module that uses the
+lphash facility, in which case lphash-app.h should not be directly
+included (it will be indirectly included via lphash.c).  If the symbol
+LPHASH_STATIC is defined (as anything) before including lphash.c, all
+the lphash functions will be defined as static.  Entirely separate
+tables can be maintained by separate instances of the lphash facility
+if this is done in more than one module (which may include different
+versions of lphash-app.h, existing in different directories).
 
 The following types must be defined in lphash-app.h:
 
