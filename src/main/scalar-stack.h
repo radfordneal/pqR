@@ -139,22 +139,27 @@
 
 static inline SEXP array_sub (SEXP sb, SEXP dim, int i, SEXP x)
 {
-    int nn = INTEGER(dim)[i];
+    if ( (((1<<INTSXP) + (1<<REALSXP)) >> TYPEOF(sb)) & 1 ) {
+        if (LENGTH(sb) == 1) {
+            R_len_t dm, ix;
+            dm = INTEGER(dim)[i];
+            if (TYPEOF(sb) == REALSXP) {
+                if (ISNAN(*REAL(sb)) || *REAL(sb) < 1 || *REAL(sb) > dm)
+                    goto fallback;
+                ix = (int) *REAL(sb);
+            }
+            else {
+                ix = *INTEGER(sb);
+                if (ix < 1 || ix > dm)
+                    goto fallback;
+            }
+            return SCALAR_STACK_HAS_SPACE() ? PUSH_SCALAR_INTEGER(ix)
+                                            : ScalarInteger(ix);
+        }
+    }
 
-    if (TYPEOF(sb) == INTSXP  && LENGTH(sb) == 1 
-                              && *INTEGER(sb) > 0 && *INTEGER(sb) <= nn
-     || TYPEOF(sb) == REALSXP && LENGTH(sb) == 1 
-                              && *REAL(sb) > 0 && *REAL(sb) <= nn)
-
-        return SCALAR_STACK_HAS_SPACE()
-                ? (PUSH_SCALAR_INTEGER (TYPEOF(sb) == INTSXP ? *INTEGER(sb) 
-                                                             : (int)*REAL(sb)))
-                : (ScalarInteger (TYPEOF(sb) == INTSXP ? *INTEGER(sb)
-                                                       : (int) *REAL(sb)));
-
-    else
-
-        return arraySubscript (i, sb, dim, getAttrib, (STRING_ELT), x);
+  fallback:
+    return arraySubscript (i, sb, dim, getAttrib, (STRING_ELT), x);
 }
 
 

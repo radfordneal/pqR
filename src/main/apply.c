@@ -113,7 +113,7 @@ static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     commonLen = length(value);
     commonType = TYPEOF(value);
-    dim_v = getAttrib(value, R_DimSymbol);
+    dim_v = getDimAttrib(value);
     array_value = TYPEOF(dim_v) == INTSXP && LENGTH(dim_v) >= 1;
     PROTECT(ans = allocVector(commonType, n*commonLen));
     if (useNames) {

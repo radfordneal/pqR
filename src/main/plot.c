@@ -2012,7 +2012,7 @@ static SEXP do_raster(SEXP call, SEXP op, SEXP args, SEXP env)
 
     raster = CAR(args); args = CDR(args);
     n = LENGTH(raster);
-    dim = getAttrib(raster, R_DimSymbol);
+    dim = getDimAttrib(raster);
 
     vmax = VMAXGET();
     /* raster is rather inefficient so allow a native representation as
@@ -3809,7 +3809,7 @@ static Rboolean SymbolRange(double *x, int n, double *xmax, double *xmin)
 
 static void CheckSymbolPar(SEXP call, SEXP p, int *nr, int *nc)
 {
-    SEXP dim = getAttrib(p, R_DimSymbol);
+    SEXP dim = getDimAttrib(p);
     switch(length(dim)) {
     case 0:
 	*nr = LENGTH(p);

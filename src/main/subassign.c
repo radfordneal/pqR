@@ -419,7 +419,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     /* If so, we manufacture a real subscript vector. */
 
     if (isMatrix(s) && isArray(x)) {
-        SEXP dim = getAttrib(x, R_DimSymbol);
+        SEXP dim = getDimAttrib(x);
         if (ncols(s) == LENGTH(dim)) {
             if (isString(s)) {
 		SEXP dnames = PROTECT(GetArrayDimnames(x));
@@ -638,7 +638,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 
     ny = LENGTH(y);
 
-    dim = getAttrib(x, R_DimSymbol);
+    dim = getDimAttrib(x);
     nr = INTEGER(dim)[0];
 
     SEXP sv_scalar_stack = R_scalar_stack;
@@ -880,7 +880,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     SEXP dims, tmp;
     double ry;
 
-    PROTECT(dims = getAttrib(x, R_DimSymbol));
+    PROTECT(dims = getDimAttrib(x));
     if (dims == R_NilValue || (k = LENGTH(dims)) != length(s))
 	errorcall(call,_("incorrect number of subscripts"));
 
@@ -1428,7 +1428,7 @@ static SEXP do_subassign2_dflt_int
 
     S4 = IS_S4_OBJECT(x);
 
-    dims = getAttrib(x, R_DimSymbol);
+    dims = getDimAttrib(x);
     ndims = dims==R_NilValue ? 1 : LENGTH(dims);
 
     /* Note: below, no duplication is necessary for environments. */

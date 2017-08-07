@@ -1915,7 +1915,7 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
                                && VARIANT_KIND(variant)!=VARIANT_OR) {
         PROTECT(ans = allocVector(LGLSXP, n));
         if (isVector(x)) {
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    PROTECT(dims = getDimAttrib(x));
 	    PROTECT(names = 
               getAttrib (x, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol));
         }
@@ -2110,7 +2110,7 @@ static SEXP do_fast_isnan (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
          && VARIANT_KIND(variant) != VARIANT_OR) {
         PROTECT(ans = allocVector(LGLSXP, n));
         if (isVector(x)) {
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    PROTECT(dims = getDimAttrib(x));
 	    PROTECT(names = 
               getAttrib (x, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol));
         }
@@ -2212,7 +2212,7 @@ static SEXP do_fast_isfinite (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
          && VARIANT_KIND(variant) != VARIANT_OR) {
         PROTECT(ans = allocVector(LGLSXP, n));
         if (isVector(x)) {
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    PROTECT(dims = getDimAttrib(x));
 	    PROTECT(names = 
               getAttrib (x, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol));
         }
@@ -2329,7 +2329,7 @@ static SEXP do_fast_isinfinite (SEXP call, SEXP op, SEXP x, SEXP rho,
          && VARIANT_KIND(variant) != VARIANT_OR) {
         PROTECT(ans = allocVector(LGLSXP, n));
         if (isVector(x)) {
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    PROTECT(dims = getDimAttrib(x));
 	    PROTECT(names = 
               getAttrib (x, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol));
         }
@@ -2758,15 +2758,15 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
 	/* the next 2 special cases mirror the special code in
 	 * R_data_class */
 	else if(!strcmp("matrix", valueString)) {
-	    if(length(getAttrib(obj, R_DimSymbol)) != 2)
+	    if(length(getDimAttrib(obj)) != 2)
 		errorcall(call,_("invalid to set the class to matrix unless the dimension attribute is of length 2 (was %d)"),
-		 length(getAttrib(obj, R_DimSymbol)));
+		 length(getDimAttrib(obj)));
 	    setAttrib(obj, R_ClassSymbol, R_NilValue);
 	    if(IS_S4_OBJECT(obj))
                 do_unsetS4(obj, value);
 	}
 	else if(!strcmp("array", valueString)) {
-	    if(length(getAttrib(obj, R_DimSymbol)) <= 0)
+	    if(length(getDimAttrib(obj)) <= 0)
 		errorcall(call,
                    _("cannot set class to \"array\" unless the dimension attribute has length > 0"));
 	    setAttrib(obj, R_ClassSymbol, R_NilValue);
