@@ -179,7 +179,7 @@ SEXP attribute_hidden getNamesAttrib (SEXP vec)
    processing for R_RowNamesSymbol is not desired).  (Currently static,
    so not callable outside this module.) */
 
-static SEXP getAttrib0(SEXP vec, SEXP name)
+SEXP attribute_hidden getAttrib0(SEXP vec, SEXP name)
 {
     SEXP s;
     int len, i, any;
