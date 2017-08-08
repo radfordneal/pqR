@@ -886,28 +886,48 @@ static SEXP do_match(SEXP call, SEXP op, SEXP args, SEXP env)
     int nomatch, nargs = length(args);
     SEXP incomp;
 
-    /* checkArity(op, args); too many packages have captured 3 from R < 2.7.0 */
-    if (nargs < 3 || nargs > 4)
-	error("%d arguments passed to .Internal(%s) which requires %d",
-	      length(args), PRIMNAME(op), PRIMARITY(op));
-    if (nargs == 3)
-	warning("%d arguments passed to .Internal(%s) which requires %d",
-		length(args), PRIMNAME(op), PRIMARITY(op));
+    if (PRIMVAL(op) == 0) { /* match */
+        /* checkArity(op, args); too many packages have 3 from R < 2.7.0 */
+        if (nargs < 3 || nargs > 4)
+            error("%d arguments passed to .Internal(%s) which requires %d",
+                  length(args), PRIMNAME(op), PRIMARITY(op));
+        if (nargs == 3)
+            warning("%d arguments passed to .Internal(%s) which requires %d",
+                    length(args), PRIMNAME(op), PRIMARITY(op));
+    
+        if ((!isVector(CAR(args)) && !isNull(CAR(args)))
+            || (!isVector(CADR(args)) && !isNull(CADR(args))))
+            error(_("'match' requires vector arguments"));
+    
+        nomatch = asInteger(CADDR(args));
+        incomp = nargs < 4 ? R_NilValue : CADDDR(args);
+    }
+    else { /* %in% */
+        checkArity (op, args);
+        if ((!isVector(CAR(args)) && !isNull(CAR(args)))
+            || (!isVector(CADR(args)) && !isNull(CADR(args))))
+            error(_("'match' requires vector arguments"));
+        nomatch = 0;
+        incomp = R_NilValue;
+    }
 
-    if ((!isVector(CAR(args)) && !isNull(CAR(args)))
-	|| (!isVector(CADR(args)) && !isNull(CADR(args))))
-	error(_("'match' requires vector arguments"));
-
-    nomatch = asInteger(CADDR(args));
-    if (nargs < 4) return matchE(CADR(args), CAR(args), nomatch, env);
-
-    incomp = CADDDR(args);
-
-    if(length(incomp) && /* S has FALSE to mean empty */
-       !(isLogical(incomp) && length(incomp) == 1 && LOGICAL(incomp)[0] == 0))
-	return match5(CADR(args), CAR(args), nomatch, incomp, env);
+    SEXP r;
+    if (length(incomp) && /* S has FALSE to mean empty */
+         !(isLogical(incomp) && length(incomp) == 1 && LOGICAL(incomp)[0] == 0))
+        r = match5(CADR(args), CAR(args), nomatch, incomp, env);
     else
-	return matchE(CADR(args), CAR(args), nomatch, env);
+        r = matchE(CADR(args), CAR(args), nomatch, env);
+
+    if (PRIMVAL(op) == 1) { /* %in% */
+        R_len_t i, l;
+        l = LENGTH(r);
+        for (i = 0; i < l; i++) {
+            if (INTEGER(r)[i] != 0) INTEGER(r)[i] = 1;
+        }
+        SET_TYPEOF(r,LGLSXP);
+    }
+    
+    return r;
 }
 
 /* Partial Matching of Strings */
@@ -1711,6 +1731,7 @@ attribute_hidden FUNTAB R_FunTab_unique[] =
 {"unique",	do_duplicated,	1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"anyDuplicated",do_duplicated,	2,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"match",	do_match,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"%in%",	do_match,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"pmatch",	do_pmatch,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"charmatch",	do_charmatch,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"match.call",	do_matchcall,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
