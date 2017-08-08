@@ -736,14 +736,15 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
     /* Special case scalar of x -- for speed only.
        Taken from R-3.3.0 (cleaned up and modified). */
 
-    if (LENGTH(x) == 1 && !incomp) {
-        ans = ScalarInteger(nmatch);
+    if (LENGTH(x) == 1 && incomp == R_NoObject) {
+        R_len_t ilen = LENGTH(itable);
+        int result = nmatch;
         switch (type) {
         case STRSXP: {
             SEXP x_val = STRING_ELT(x,0);
-            for (int i = 0; i < LENGTH(itable); i++) {
-                if (Seql(STRING_ELT(table,i), x_val)) {
-                    INTEGER(ans)[0] = i + 1;
+            for (int i = 0; i < ilen; i++) {
+                if (SEQL(STRING_ELT(table,i), x_val)) {
+                    result = i + 1;
                     break;
                 }
             }
@@ -751,13 +752,17 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
         }
         case LGLSXP:
         case INTSXP: {
-            int x_val = INTEGER(x)[0],
-                *table_p = INTEGER(table);
-            for (int i=0; i < LENGTH(itable); i++) {
-                if (table_p[i] == x_val) {
-                    INTEGER(ans)[0] = i + 1; 
-                    break;
-                }
+            int x_val = INTEGER(x)[0];
+            int *table_p = INTEGER(table);
+            if ((ilen & 1) && table_p[0] == x_val) {
+                result = 1;
+                break;
+            }
+            for (int i = ilen & 1; i < ilen; i += 2) {
+                int a = table_p[i];
+                int b = table_p[i+1];
+                if (a == x_val) { result = i+1; break; }
+                if (b == x_val) { result = i+2; break; }
             }
             break;
         }
@@ -766,27 +771,31 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
             double *table_p = REAL(table);
             /* we want all NaNs except NA equal, and all NAs equal */
             if (R_IsNA(x_val)) {
-                for (int i = 0; i < LENGTH(itable); i++) {
+                for (int i = 0; i < ilen; i++) {
                     if (R_IsNA(table_p[i])) {
-                        INTEGER(ans)[0] = i + 1;
+                        result = i + 1;
                         break;
                     }
                 }
             }
             else if (R_IsNaN(x_val)) {
-                for (int i = 0; i < LENGTH(itable); i++) {
+                for (int i = 0; i < ilen; i++) {
                     if (R_IsNaN(table_p[i])) {
-                        INTEGER(ans)[0] = i + 1; 
+                        result = i + 1; 
                         break;
                     }
                 }
             }
             else {
-                for (int i = 0; i < LENGTH(itable); i++) {
-                    if (table_p[i] == x_val) {
-                        INTEGER(ans)[0] = i + 1;
-                        break;
-                    }
+                if ((ilen & 1) && table_p[0] == x_val) {
+                    result = 1;
+                    break;
+                }
+                for (int i = ilen & 1; i < ilen; i += 2) {
+                    double a = table_p[i];
+                    double b = table_p[i+1];
+                    if (a == x_val) { result = i+1; break; }
+                    if (b == x_val) { result = i+2; break; }
                 }
             }
             break;
@@ -794,9 +803,9 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
         case CPLXSXP: {
             Rcomplex x_val = COMPLEX(x)[0];
             Rcomplex *table_p = COMPLEX(table);
-            for (int i = 0; i < LENGTH(itable); i++) {
+            for (int i = 0; i < ilen; i++) {
                 if (cplx_eq(table_p[i], x_val)) {
-                    INTEGER(ans)[0] = i + 1;
+                    result = i + 1;
                     break;
                 }
             }
@@ -805,16 +814,15 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
         case RAWSXP: {
             Rbyte x_val = RAW(x)[0];
             Rbyte *table_p = RAW(table);
-            for (int i = 0; i < LENGTH(itable); i++) {
+            for (int i = 0; i < ilen; i++) {
                 if (table_p[i] == x_val) {
-                    INTEGER(ans)[0] = i + 1;
+                    result = i + 1;
                     break;
                 }
             }
             break;
         }}
-
-	RETURN_SEXP_INSIDE_PROTECT (ans);
+	RETURN_SEXP_INSIDE_PROTECT (ScalarInteger(result));
     }
 
     if (incomp != R_NoObject) 
