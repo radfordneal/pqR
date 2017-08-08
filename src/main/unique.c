@@ -186,21 +186,22 @@ static int requal(SEXP x, int i, SEXP y, int j)
     else return 0;
 }
 
-static int cequal(SEXP x, int i, SEXP y, int j)
+static int cplx_eq(Rcomplex x, Rcomplex y)
 {
-    if (i < 0 || j < 0) return 0;
-    if (!ISNAN(COMPLEX(x)[i].r) && !ISNAN(COMPLEX(x)[i].i)
-       && !ISNAN(COMPLEX(y)[j].r) && !ISNAN(COMPLEX(y)[j].i))
-	return COMPLEX(x)[i].r == COMPLEX(y)[j].r &&
-	    COMPLEX(x)[i].i == COMPLEX(y)[j].i;
-    else if ((R_IsNA(COMPLEX(x)[i].r) || R_IsNA(COMPLEX(x)[i].i))
-	    && (R_IsNA(COMPLEX(y)[j].r) || R_IsNA(COMPLEX(y)[j].i)))
+    if (!ISNAN(x.r) && !ISNAN(x.i) && !ISNAN(y.r) && !ISNAN(y.i))
+	return x.r == y.r &&  x.i == y.i;
+    else if ((R_IsNA(x.r) || R_IsNA(x.i)) && (R_IsNA(y.r) || R_IsNA(y.i)))
 	return 1;
-    else if ((R_IsNaN(COMPLEX(x)[i].r) || R_IsNaN(COMPLEX(x)[i].i))
-	    && (R_IsNaN(COMPLEX(y)[j].r) || R_IsNaN(COMPLEX(y)[j].i)))
+    else if ((R_IsNaN(x.r) || R_IsNaN(x.i)) && (R_IsNaN(y.r) || R_IsNaN(y.i)))
 	return 1;
     else
 	return 0;
+}
+
+static int cequal(SEXP x, int i, SEXP y, int j)
+{
+    if (i < 0 || j < 0) return 0;
+    return cplx_eq(COMPLEX(x)[i], COMPLEX(y)[j]);
 }
 
 static int sequal(SEXP x, int i, SEXP y, int j)
@@ -700,13 +701,12 @@ static SEXP match_transform(SEXP s, SEXP env)
 
 SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
 {
-    SEXP ans;
     SEXPTYPE type;
     HashData data;
     int i, n;
 
     data.HashTable = R_NoObject;
-    BEGIN_PROTECT2 (x, table);
+    BEGIN_PROTECT3 (x, table, ans);
     ALSO_PROTECT2 (incomp, data.HashTable);
 
     n = length(ix);
@@ -732,6 +732,91 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
     else type = TYPEOF(x) < TYPEOF(table) ? TYPEOF(table) : TYPEOF(x);
     x = coerceVector (x, type); 
     table = coerceVector (table, type);
+
+    /* Special case scalar of x -- for speed only.
+       Taken from R-3.3.0 (cleaned up and modified). */
+
+    if (LENGTH(x) == 1 && !incomp) {
+        ans = ScalarInteger(nmatch);
+        switch (type) {
+        case STRSXP: {
+            SEXP x_val = STRING_ELT(x,0);
+            for (int i = 0; i < LENGTH(itable); i++) {
+                if (Seql(STRING_ELT(table,i), x_val)) {
+                    INTEGER(ans)[0] = i + 1;
+                    break;
+                }
+            }
+            break;
+        }
+        case LGLSXP:
+        case INTSXP: {
+            int x_val = INTEGER(x)[0],
+                *table_p = INTEGER(table);
+            for (int i=0; i < LENGTH(itable); i++) {
+                if (table_p[i] == x_val) {
+                    INTEGER(ans)[0] = i + 1; 
+                    break;
+                }
+            }
+            break;
+        }
+        case REALSXP: {
+            double x_val = REAL(x)[0]==0 ? 0 : REAL(x)[0];/* handles signed 0 */
+            double *table_p = REAL(table);
+            /* we want all NaNs except NA equal, and all NAs equal */
+            if (R_IsNA(x_val)) {
+                for (int i = 0; i < LENGTH(itable); i++) {
+                    if (R_IsNA(table_p[i])) {
+                        INTEGER(ans)[0] = i + 1;
+                        break;
+                    }
+                }
+            }
+            else if (R_IsNaN(x_val)) {
+                for (int i = 0; i < LENGTH(itable); i++) {
+                    if (R_IsNaN(table_p[i])) {
+                        INTEGER(ans)[0] = i + 1; 
+                        break;
+                    }
+                }
+            }
+            else {
+                for (int i = 0; i < LENGTH(itable); i++) {
+                    if (table_p[i] == x_val) {
+                        INTEGER(ans)[0] = i + 1;
+                        break;
+                    }
+                }
+            }
+            break;
+        }
+        case CPLXSXP: {
+            Rcomplex x_val = COMPLEX(x)[0];
+            Rcomplex *table_p = COMPLEX(table);
+            for (int i = 0; i < LENGTH(itable); i++) {
+                if (cplx_eq(table_p[i], x_val)) {
+                    INTEGER(ans)[0] = i + 1;
+                    break;
+                }
+            }
+            break;
+        }
+        case RAWSXP: {
+            Rbyte x_val = RAW(x)[0];
+            Rbyte *table_p = RAW(table);
+            for (int i = 0; i < LENGTH(itable); i++) {
+                if (table_p[i] == x_val) {
+                    INTEGER(ans)[0] = i + 1;
+                    break;
+                }
+            }
+            break;
+        }}
+
+	RETURN_SEXP_INSIDE_PROTECT (ans);
+    }
+
     if (incomp != R_NoObject) 
         incomp = coerceVector(incomp, type);
     data.nomatch = nmatch;
@@ -772,8 +857,8 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
     if (incomp != R_NoObject) UndoHashing(incomp, table, &data);
     ans = HashLookup(table, x, &data);
 
+    RETURN_SEXP_INSIDE_PROTECT (ans);
     END_PROTECT;
-    return ans;
 }
 
 SEXP matchE(SEXP itable, SEXP ix, int nmatch, SEXP env)
