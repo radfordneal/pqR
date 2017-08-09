@@ -17,25 +17,26 @@
  *  http://www.r-project.org/Licenses/
  */
 
-#ifndef LPHASH_APP_H_
-#define LPHASH_APP_H_
 
-typedef unsigned lphash_entry_t;    /* SEXP32 pointer to symbol object */
-typedef char *lphash_key_t;         /* Symbol's print name */
-typedef int lphash_hash_t;          /* Character/symbol hash as stored in symbol
-                                       and in PRINTNAME(symbol) */
+/* This header file is for the application of lphash for match, in unique.c. */
+
+
+typedef int lphash_entry_t;       /* Index of first occurence of element, or
+                                     0 for no entry, -index for incomparable */
+typedef unsigned lphash_hash_t;   /* Hash value computed from table element */
+typedef void *phash_key_t;        /* Pointer to element */
+
+#define LPHASH_NO_ENTRY 0         /* R_NoObject */
 
 /* Structure of bucket in hash table. */
 
 typedef struct {
-    lphash_entry_t entry;           /* SEXP32 pointer to symbol object */
-    lphash_hash_t hash;             /* Character/symbol hash */
+    lphash_entry_t entry;
+    lphash_hash_t hash;
 } lphash_bucket_t;
 
-#define LPHASH_NO_ENTRY 0           /* R_NoObject */
+#define lphash_free 0             /* Nothing need be done */
 
-#define lphash_free free            /* lphash_malloc is in memory.c */
-
-#include "lphash.h"
+#include <lphash/lphash.h>
 
 #endif

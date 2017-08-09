@@ -33,26 +33,25 @@
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 
+#define LPHASH_STATIC
+#include <lphash/lphash.c>
+
 #define NIL -1
 #define ARGUSED(x) LEVELS(x)
 #define SET_ARGUSED(x,v) SETLEVELS(x,v)
 
 /* Hash function and equality test for keys */
-typedef struct _HashData HashData;
 
-struct _HashData {
-    int K, M;
-    int (*hash)(SEXP, int, HashData *);
+typedef struct {
+    unsigned (*hash)(SEXP, int)
     int (*equal)(SEXP, int, SEXP, int);
-    SEXP HashTable;
-
+    lphash_table_t *table;
     int nomatch;
     Rboolean useUTF8;
-};
+} HashData;
 
 
-/*
-   Integer keys are hashed via a random number generator
+/* Integer keys are hashed via a random number generator
    based on Knuth's recommendations.  The high order K bits
    are used as the hash code.
 
@@ -63,23 +62,21 @@ struct _HashData {
    but the tables are small in that case.
 */
 
-static int scatter(unsigned int key, HashData *d)
+static unsigned scatter(unsigned int key, HashData *d)
 {
     return 3141592653U * key >> (32 - d->K);
 }
 
-static int lhash(SEXP x, int indx, HashData *d)
+static unsigned lhash(SEXP x, int indx)
 {
     if (LOGICAL(x)[indx] == NA_LOGICAL)
 	return 2;
     return LOGICAL(x)[indx];
 }
 
-static int ihash(SEXP x, int indx, HashData *d)
+static unsigned ihash(SEXP x, int indx)
 {
-    if (INTEGER(x)[indx] == NA_INTEGER)
-	return 0;
-    return scatter((unsigned int) (INTEGER(x)[indx]), d);
+    return INTEGER(x)[indx];
 }
 
 /* We use unions here because Solaris gcc -O2 has trouble with
@@ -91,7 +88,7 @@ union foo {
     unsigned int u[2];
 };
 
-static int rhash(SEXP x, int indx, HashData *d)
+static unsigned rhash(SEXP x, int indx)
 {
     /* There is a problem with signed 0s under IEEE */
     double tmp = (REAL(x)[indx] == 0.0) ? 0.0 : REAL(x)[indx];
@@ -99,18 +96,13 @@ static int rhash(SEXP x, int indx, HashData *d)
     /* we want all NaNs except NA equal, and all NAs equal */
     if (R_IsNA(tmp)) tmp = NA_REAL;
     else if (R_IsNaN(tmp)) tmp = R_NaN;
-#if 2*SIZEOF_INT == SIZEOF_DOUBLE
-    {
-	union foo tmpu;
-	tmpu.d = tmp;
-	return scatter(tmpu.u[0] + tmpu.u[1], d);
-    }
-#else
-    return scatter(*((unsigned int *) (&tmp)), d);
-#endif
+
+    union foo tmpu;
+    tmpu.d = tmp;
+    return tmpu.u[0] + tmpu.u[1];
 }
 
-static int chash(SEXP x, int indx, HashData *d)
+static unsigned chash(SEXP x, int indx)
 {
     Rcomplex tmp;
     unsigned int u;
@@ -121,34 +113,24 @@ static int chash(SEXP x, int indx, HashData *d)
     else if (R_IsNaN(tmp.r)) tmp.r = R_NaN;
     if (R_IsNA(tmp.i)) tmp.i = NA_REAL;
     else if (R_IsNaN(tmp.i)) tmp.i = R_NaN;
-#if 2*SIZEOF_INT == SIZEOF_DOUBLE
-    {
-	union foo tmpu;
-	tmpu.d = tmp.r;
-	u = tmpu.u[0] ^ tmpu.u[1];
-	tmpu.d = tmp.i;
-	u ^= tmpu.u[0] ^ tmpu.u[1];
-	return scatter(u, d);
-    }
-#else
-	return scatter((*((unsigned int *)(&tmp.r)) ^
-			(*((unsigned int *)(&tmp.i)))), d);
-#endif
+
+    union foo tmpu;
+    tmpu.d = tmp.r;
+    u = tmpu.u[0] + tmpu.u[1];
+    tmpu.d = tmp.i;
+    return tmpu.u[0] + tmpu.u[1];
 }
 
 /* Hash CHARSXP by address.  Hash values are int, For 64bit pointers,
  * we do (upper ^ lower) */
-static int cshash(SEXP x, int indx, HashData *d)
+static unsigned cshash(SEXP x, int indx, HashData *d)
 {
-    intptr_t z = (intptr_t) STRING_ELT(x, indx);
-    unsigned int z1 = z & 0xffffffff, z2 = 0;
-#if SIZEOF_LONG == 8
-    z2 = z/0x100000000L;
-#endif
-    return scatter(z1 ^ z2, d);
+    uint64_t z = (uintptr_t) STRING_ELT(x, indx);
+    unsigned int z1 = z & 0xffffffff, z2 = z >> 32;
+    return z1 ^ z2;
 }
 
-static int shash(SEXP x, int indx, HashData *d)
+static unsigned shash(SEXP x, int indx)
 {
     unsigned int k;
     const char *p;
@@ -159,7 +141,70 @@ static int shash(SEXP x, int indx, HashData *d)
     while (*p++)
 	    k = 11 * k + *p; /* was 8 but 11 isn't a power of 2 */
     VMAXSET(vmax); /* discard any memory used by translateChar */
-    return scatter(k, d);
+    return k;
+}
+
+static unsigned rawhash(SEXP x, int indx)
+{
+    return RAW(x)[indx];
+}
+
+static unsigned vhash(SEXP x, int indx)
+{
+    int i;
+    unsigned int key;
+    SEXP this = VECTOR_ELT(x, indx);
+
+    key = OBJECT(_this) + 2*TYPEOF(_this) + 100*length(_this);
+    /* maybe we should also look at attributes, but that slows us down */
+    switch (TYPEOF(this)) {
+    case LGLSXP:
+	/* This is not too clever: pack into 32-bits and then scatter? */
+	for(i = 0; i < LENGTH(_this); i++) {
+	    key ^= lhash(_this, i, d);
+	    key *= 97;
+	}
+	break;
+    case INTSXP:
+	for(i = 0; i < LENGTH(_this); i++) {
+	    key ^= ihash(_this, i, d);
+	    key *= 97;
+	}
+	break;
+    case REALSXP:
+	for(i = 0; i < LENGTH(_this); i++) {
+	    key ^= rhash(_this, i, d);
+	    key *= 97;
+	}
+	break;
+    case CPLXSXP:
+	for(i = 0; i < LENGTH(_this); i++) {
+	    key ^= chash(_this, i, d);
+	    key *= 97;
+	}
+	break;
+    case STRSXP:
+	for(i = 0; i < LENGTH(_this); i++) {
+	    key ^= shash(_this, i, d);
+	    key *= 97;
+	}
+	break;
+    case RAWSXP:
+	for(i = 0; i < LENGTH(_this); i++) {
+	    key ^= scatter(rawhash(_this, i, d), d);
+	    key *= 97;
+	}
+	break;
+    case VECSXP:
+	for(i = 0; i < LENGTH(_this); i++) {
+	    key ^= vhash(_this, i, d);
+	    key *= 97;
+	}
+	break;
+    default:
+	break;
+    }
+    return key;
 }
 
 static int lequal(SEXP x, int i, SEXP y, int j)
@@ -216,73 +261,10 @@ static int sequal(SEXP x, int i, SEXP y, int j)
     return SEQL(STRING_ELT(x, i), STRING_ELT(y, j));
 }
 
-static int rawhash(SEXP x, int indx, HashData *d)
-{
-    return RAW(x)[indx];
-}
-
 static int rawequal(SEXP x, int i, SEXP y, int j)
 {
     if (i < 0 || j < 0) return 0;
     return (RAW(x)[i] == RAW(y)[j]);
-}
-
-static int vhash(SEXP x, int indx, HashData *d)
-{
-    int i;
-    unsigned int key;
-    SEXP _this = VECTOR_ELT(x, indx);
-
-    key = OBJECT(_this) + 2*TYPEOF(_this) + 100*length(_this);
-    /* maybe we should also look at attributes, but that slows us down */
-    switch (TYPEOF(_this)) {
-    case LGLSXP:
-	/* This is not too clever: pack into 32-bits and then scatter? */
-	for(i = 0; i < LENGTH(_this); i++) {
-	    key ^= lhash(_this, i, d);
-	    key *= 97;
-	}
-	break;
-    case INTSXP:
-	for(i = 0; i < LENGTH(_this); i++) {
-	    key ^= ihash(_this, i, d);
-	    key *= 97;
-	}
-	break;
-    case REALSXP:
-	for(i = 0; i < LENGTH(_this); i++) {
-	    key ^= rhash(_this, i, d);
-	    key *= 97;
-	}
-	break;
-    case CPLXSXP:
-	for(i = 0; i < LENGTH(_this); i++) {
-	    key ^= chash(_this, i, d);
-	    key *= 97;
-	}
-	break;
-    case STRSXP:
-	for(i = 0; i < LENGTH(_this); i++) {
-	    key ^= shash(_this, i, d);
-	    key *= 97;
-	}
-	break;
-    case RAWSXP:
-	for(i = 0; i < LENGTH(_this); i++) {
-	    key ^= scatter(rawhash(_this, i, d), d);
-	    key *= 97;
-	}
-	break;
-    case VECSXP:
-	for(i = 0; i < LENGTH(_this); i++) {
-	    key ^= vhash(_this, i, d);
-	    key *= 97;
-	}
-	break;
-    default:
-	break;
-    }
-    return scatter(key, d);
 }
 
 static int vequal(SEXP x, int i, SEXP y, int j)
@@ -291,73 +273,51 @@ static int vequal(SEXP x, int i, SEXP y, int j)
     return R_compute_identical(VECTOR_ELT(x, i), VECTOR_ELT(y, j), 0);
 }
 
-/*
-  Choose M to be the smallest power of 2
-  not less than 2*n and set K = log2(M).
-  Need K >= 1 and hence M >= 2, and 2^M <= 2^31 -1, hence n <= 2^30.
-
-  Dec 2004: modified from 4*n to 2*n, since in the worst case we have
-  a 50% full table, and that is still rather efficient -- see
-  R. Sedgewick (1998) Algorithms in C++ 3rd edition p.606.
-*/
-static void MKsetup(int n, HashData *d)
-{
-    int n2 = 2 * n;
-
-    if(n < 0 || n > 1073741824) /* protect against overflow to -ve */
-	error(_("length %d is too large for hashing"), n);
-    d->M = 2;
-    d->K = 1;
-    while (d->M < n2) {
-	d->M *= 2;
-	d->K += 1;
-    }
-}
-
 static void HashTableSetup(SEXP x, HashData *d)
 {
+    if (!isVector(x))
+        UNIMPLEMENTED_TYPE("HashTableSetup", x);
+
+    int tbl_size = 2 * LENGTH(x);
     d->useUTF8 = FALSE;
+
     switch (TYPEOF(x)) {
     case LGLSXP:
-	d->hash = lhash;
-	d->equal = lequal;
-	MKsetup(3, d);
-	break;
+        d->hash = lhash;
+        d->equal = lequal;
+        tbl_size = 4;
+        break;
     case INTSXP:
-	d->hash = ihash;
-	d->equal = iequal;
-	MKsetup(LENGTH(x), d);
-	break;
+        d->hash = ihash;
+        d->equal = iequal;
+        break;
     case REALSXP:
-	d->hash = rhash;
-	d->equal = requal;
-	MKsetup(LENGTH(x), d);
-	break;
+        d->hash = rhash;
+        d->equal = requal;
+        break;
     case CPLXSXP:
-	d->hash = chash;
-	d->equal = cequal;
-	MKsetup(LENGTH(x), d);
-	break;
+        d->hash = chash;
+        d->equal = cequal;
+        break;
     case STRSXP:
-	d->hash = shash;
-	d->equal = sequal;
-	MKsetup(LENGTH(x), d);
-	break;
+        d->hash = shash;
+        d->equal = sequal;
+        break;
     case RAWSXP:
-	d->hash = rawhash;
-	d->equal = rawequal;
-	d->M = 256;
-	d->K = 8; /* unused */
-	break;
+        d->hash = rawhash;
+        d->equal = rawequal;
+        if (tbl_size > 512)
+            tbl_size = 512;  /* needs one empty, so can't be 256 */
+        break;
     case VECSXP:
-	d->hash = vhash;
-	d->equal = vequal;
-	MKsetup(LENGTH(x), d);
-	break;
+    case EXPRSXP:
+        d->hash = vhash;
+        d->equal = vequal;
+        break;
     default:
-	UNIMPLEMENTED_TYPE("HashTableSetup", x);
     }
-    d->HashTable = allocVector(INTSXP, d->M);
+
+    d->table = lphash_create (tbl_size);
 }
 
 /* Open address hashing */
@@ -394,46 +354,47 @@ static void removeEntry(SEXP table, SEXP x, int indx, HashData *d)
     }
 }
 
+#define DUPLICATED_INIT						\
+    const void *vmax = VMAXGET();				\
+    int i, n;							\
+    HashData data;						\
+        							\
+    if (!isVector(x))						\
+        error(_("'duplicated' applies only to vectors"));	\
+        							\
+    n = LENGTH(x);						\
+    HashTableSetup(x, &data);					\
+    if (TYPEOF(x) == STRSXP) {					\
+        data.useUTF8 = FALSE; 					\
+        for (i = 0; i < n; i++) {				\
+            if (IS_BYTES(STRING_ELT(x, i))) {			\
+        	data.useUTF8 = FALSE;				\
+                break;						\
+            }                                                   \
+    	    if (ENC_KNOWN(STRING_ELT(x, i))) {			\
+        	data.useUTF8 = TRUE;                            \
+            }							\
+        }							\
+    }
+
 SEXP duplicated(SEXP x, Rboolean from_last)
 {
     SEXP ans;
     int *v;
-#define DUPLICATED_INIT						\
-    int *h, i, n;						\
-    HashData data;						\
-								\
-    if (!isVector(x))						\
-	error(_("'duplicated' applies only to vectors"));	\
-								\
-    n = LENGTH(x);						\
-    HashTableSetup(x, &data);					\
-    h = INTEGER(data.HashTable);				\
-    if(TYPEOF(x) == STRSXP) {					\
-	data.useUTF8 = FALSE; 					\
-	for(i = 0; i < LENGTH(x); i++) {			\
-	    if(IS_BYTES(STRING_ELT(x, i))) {			\
-		data.useUTF8 = FALSE; break;			\
-	    }                                                   \
-    	    if(ENC_KNOWN(STRING_ELT(x, i))) {                   \
-		data.useUTF8 = TRUE;                            \
-	    }							\
-	}							\
-    }
 
     DUPLICATED_INIT;
 
-    PROTECT(data.HashTable);
     PROTECT(ans = allocVector(LGLSXP, n));
 
     v = LOGICAL(ans);
 
-    for (i = 0; i < data.M; i++) h[i] = NIL;
     if(from_last)
 	for (i = n-1; i >= 0; i--) v[i] = isDuplicated(x, i, &data);
     else
 	for (i = 0; i < n; i++) v[i] = isDuplicated(x, i, &data);
 
-    UNPROTECT(2);
+    UNPROTECT(1);
+    VMAXSET(vmax);
     return ans;
 }
 
@@ -442,15 +403,19 @@ int any_duplicated(SEXP x, Rboolean from_last)
 {
     int result = 0;
     DUPLICATED_INIT;
-    PROTECT(data.HashTable);
 
-    for (i = 0; i < data.M; i++) h[i] = NIL;
-    if(from_last) {
-	for (i = n-1; i >= 0; i--) if(isDuplicated(x, i, &data)) { result = ++i; break; }
-    } else {
-	for (i = 0; i < n; i++)    if(isDuplicated(x, i, &data)) { result = ++i; break; }
+    if (from_last) {
+        for (i = n-1; i >= 0; i--) {
+            if (isDuplicated(x, i, &data)) { result = i+1; break; }
+        }
     }
-    UNPROTECT(1);
+    else {
+        for (i = 0; i < n; i++) {
+            if (isDuplicated(x, i, &data)) { result = i+1; break; }
+        }
+    }
+
+    VMAXSET(vmax);
     return result;
 }
 
@@ -461,28 +426,28 @@ SEXP duplicated3(SEXP x, SEXP incomp, Rboolean from_last)
 
     DUPLICATED_INIT;
 
-    PROTECT(data.HashTable);
     PROTECT(ans = allocVector(LGLSXP, n));
 
     v = LOGICAL(ans);
 
-    for (i = 0; i < data.M; i++) h[i] = NIL;
-    if(from_last)
-	for (i = n-1; i >= 0; i--) v[i] = isDuplicated(x, i, &data);
+    if (from_last)
+        for (i = n-1; i >= 0; i--) v[i] = isDuplicated(x, i, &data);
     else
-	for (i = 0; i < n; i++) v[i] = isDuplicated(x, i, &data);
+        for (i = 0; i < n; i++) v[i] = isDuplicated(x, i, &data);
 
-    if(length(incomp)) {
-	PROTECT(incomp = coerceVector(incomp, TYPEOF(x)));
-	m = length(incomp);
-	for (i = 0; i < n; i++)
-	    if(v[i]) {
-		for(j = 0; j < m; j++)
-		    if(data.equal(x, i, incomp, j)) {v[i] = 0; break;}
-	    }
-	UNPROTECT(1);
+    if (length(incomp)) {
+        PROTECT(incomp = coerceVector(incomp, TYPEOF(x)));
+        m = length(incomp);
+        for (i = 0; i < n; i++) {
+            if (v[i]) {
+                for (j = 0; j < m; j++)
+                    if (data.equal(x, i, incomp, j)) { v[i] = 0; break; }
+            }
+        }
+        UNPROTECT(1);
     }
-    UNPROTECT(2);
+    UNPROTECT(1);
+    VMAXSET(vmax);
     return ans;
 }
 
@@ -492,7 +457,6 @@ int any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last)
     int j, m = length(incomp);
 
     DUPLICATED_INIT;
-    PROTECT(data.HashTable);
 
     if(!m)
 	error(_("any_duplicated3(., <0-length incomp>)"));
@@ -501,7 +465,7 @@ int any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last)
     m = length(incomp);
 
     for (i = 0; i < data.M; i++) h[i] = NIL;
-    if(from_last)
+    if (from_last)
 	for (i = n-1; i >= 0; i--) {
 #define IS_DUPLICATED_CHECK				\
 	    if(isDuplicated(x, i, &data)) {		\
@@ -511,8 +475,9 @@ int any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last)
 			isDup = FALSE; break;		\
 		    }					\
 		if(isDup) {				\
-		    UNPROTECT(2);			\
-		    return ++i;				\
+		    UNPROTECT(1);			\
+                    VMAXSET(vmax);			\
+		    return i+1;				\
  	        }					\
 		/* else continue */			\
 	    }
@@ -523,7 +488,8 @@ int any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last)
             IS_DUPLICATED_CHECK;
     }
 
-    UNPROTECT(2);
+    UNPROTECT(1);
+    VMAXSET(vmax);
     return 0;
 }
 
@@ -564,7 +530,7 @@ static SEXP do_duplicated(SEXP call, SEXP op, SEXP args, SEXP env)
     if(length(incomp) && /* S has FALSE to mean empty */
        !(isLogical(incomp) && length(incomp) == 1 && LOGICAL(incomp)[0] == 0)) {
 	if(PRIMVAL(op) == 2) /* return R's 1-based index :*/
-	    return ScalarIntegerMaybeConst(any_duplicated3(x, incomp, fromLast));
+	    return ScalarIntegerMaybeConst (any_duplicated3(x,incomp,fromLast));
 	else
 	    dup = duplicated3(x, incomp, fromLast);
     }
@@ -683,19 +649,20 @@ static SEXP HashLookup(SEXP table, SEXP x, HashData *d)
 
 static SEXP match_transform(SEXP s, SEXP env)
 {
-    if(OBJECT(s)) {
-	if (inherits_CHAR (s, R_factor_CHARSXP))
-	    return asCharacterFactor(s);
-	else if(inherits(s, "POSIXlt")) { /* and maybe more classes in the future:
-					   * Call R's (generic)  as.character(s) : */
-	    SEXP call, r;
-	    PROTECT(call = lang2(install("as.character"), s));
-	    PROTECT(r = eval(call, env));
-	    UNPROTECT(2);
-	    return r;
-	}
-    }
-    /* else */
+    if (!OBJECT(s))
+        return duplicate(s);
+
+    if (inherits_CHAR (s, R_factor_CHARSXP))
+        return asCharacterFactor(s);
+
+    if (inherits(s, "POSIXlt")) { /* and maybe more classes in the future:
+       				     Call R's (generic)  as.character(s) : */
+        SEXP call, r;
+        PROTECT(call = lang2(install("as.character"), s));
+        PROTECT(r = eval(call, env));
+        UNPROTECT(2);
+        return r;
+
     return duplicate(s);
 }
 
@@ -733,8 +700,8 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
     x = coerceVector (x, type); 
     table = coerceVector (table, type);
 
-    /* Special case scalar of x -- for speed only.
-       Taken from R-3.3.0 (cleaned up and modified). */
+    /* Special case scalar of x -- for speed only.  Taken from R-3.3.0
+       (then cleaned up and modified). */
 
     if (LENGTH(x) == 1 && incomp == R_NoObject) {
         R_len_t ilen = LENGTH(itable);
@@ -1011,7 +978,8 @@ static SEXP do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
 	for(j = 0; j < n_target; j++)
 	    tar[j] = translateCharUTF8(STRING_ELT(target, j));
-    } else {
+    }
+    else {
 	for(i = 0; i < n_input; i++) {
 	    in[i] = translateChar(STRING_ELT(input, i));
 	    ians[i] = 0;
@@ -1019,6 +987,7 @@ static SEXP do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env)
 	for(j = 0; j < n_target; j++)
 	    tar[j] = translateChar(STRING_ELT(target, j));
     }
+
     /* First pass, exact matching */
     if(no_dups) {
 	for (i = 0; i < n_input; i++) {
@@ -1034,16 +1003,18 @@ static SEXP do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env)
 		}
 	    }
 	}
-    } else {
+    }
+    else {
 	/* only worth hashing if enough lookups will be done:
 	   since the tradeoff involves memory as well as time
 	   it is not really possible to optimize there.
 	 */
-	if((n_target > 100) && (10*n_input > n_target)) {
+	if ((n_target > 100) && (10*n_input > n_target)) {
 	    /* <FIXME>
 	       Currently no hashing when using bytes.
 	       </FIXME>
 	    */
+            void *vmax = VMAXGET();
 	    HashData data;
 	    HashTableSetup(target, &data);
 	    data.useUTF8 = useUTF8;
@@ -1055,6 +1026,7 @@ static SEXP do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env)
 		ians[i] = Lookup(target, input, i, &data);
 		if(ians[i]) nexact++;
 	    }
+            VMAXSET(vmax);
 	} else {
 	    for (i = 0; i < n_input; i++) {
 		const char *ss = in[i];
@@ -1069,7 +1041,7 @@ static SEXP do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
     }
 
-    if(nexact < n_input) {
+    if (nexact < n_input) {
 	/* Second pass, partial matching */
 	for (i = 0; i < n_input; i++) {
 	    const char *ss;
@@ -1239,6 +1211,7 @@ static SEXP ExpandDots(SEXP s, int expdots)
     SETCDR(s, ExpandDots(CDR(s), expdots));
     return s;
 }
+
 static SEXP subDots(SEXP rho)
 {
     SEXP rval, dots, a, b, t;
@@ -1449,6 +1422,8 @@ Rrowsum_matrix(SEXP x, SEXP ncol, SEXP g, SEXP uniqueg, SEXP snarm)
     HashData data;
     data.nomatch = 0;
 
+    void *vmax = VMAXGET();
+
     n = LENGTH(g);
     p = INTEGER(ncol)[0];
     ng = length(uniqueg);
@@ -1456,7 +1431,6 @@ Rrowsum_matrix(SEXP x, SEXP ncol, SEXP g, SEXP uniqueg, SEXP snarm)
     if(narm == NA_LOGICAL) error("'na.rm' must be TRUE or FALSE");
 
     HashTableSetup(uniqueg, &data);
-    PROTECT(data.HashTable);
     DoHashing(uniqueg, &data);
     PROTECT(matches = HashLookup(uniqueg, g, &data));
 
@@ -1503,8 +1477,8 @@ Rrowsum_matrix(SEXP x, SEXP ncol, SEXP g, SEXP uniqueg, SEXP snarm)
 	error(_("non-numeric matrix in rowsum(): this cannot happen"));
     }
 
-    UNPROTECT(2); /*HashTable, matches*/
-    UNPROTECT(1); /*ans*/
+    UNPROTECT(2); /* ans, matches*/
+    VMAXSET(vmax);
     return ans;
 }
 
@@ -1516,6 +1490,8 @@ Rrowsum_df(SEXP x, SEXP ncol, SEXP g, SEXP uniqueg, SEXP snarm)
     HashData data;
     data.nomatch = 0;
 
+    void *vmax = VMAXGET();
+
     n = LENGTH(g);
     p = INTEGER(ncol)[0];
     ng = length(uniqueg);
@@ -1523,7 +1499,6 @@ Rrowsum_df(SEXP x, SEXP ncol, SEXP g, SEXP uniqueg, SEXP snarm)
     if(narm == NA_LOGICAL) error("'na.rm' must be TRUE or FALSE");
 
     HashTableSetup(uniqueg, &data);
-    PROTECT(data.HashTable);
     DoHashing(uniqueg, &data);
     PROTECT(matches = HashLookup(uniqueg, g, &data));
 
@@ -1569,8 +1544,8 @@ Rrowsum_df(SEXP x, SEXP ncol, SEXP g, SEXP uniqueg, SEXP snarm)
     }
     namesgets(ans, getAttrib(x, R_NamesSymbol));
 
-    UNPROTECT(2); /*HashTable, matches*/
-    UNPROTECT(1); /*ans*/
+    UNPROTECT(2); /*ans, matches*/
+    VMAXSET(vmax);
     return ans;
 }
 
@@ -1590,25 +1565,6 @@ static int isDuplicated2(SEXP x, int indx, HashData *d)
     return 0;
 }
 
-static SEXP duplicated2(SEXP x, HashData *d)
-{
-    SEXP ans;
-    int *h, *v;
-    int i, n;
-
-    n = LENGTH(x);
-    HashTableSetup(x, d);
-    PROTECT(d->HashTable);
-    PROTECT(ans = allocVector(INTSXP, n));
-
-    h = INTEGER(d->HashTable);
-    v = INTEGER(ans);
-    for (i = 0; i < d->M; i++) h[i] = NIL;
-    for (i = 0; i < n; i++) v[i] = isDuplicated2(x, i, d);
-    UNPROTECT(2);
-    return ans;
-}
-
 static SEXP do_makeunique(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP names, sep, ans, dup, newx;
@@ -1616,65 +1572,79 @@ static SEXP do_makeunique(SEXP call, SEXP op, SEXP args, SEXP env)
     R_len_t n, len, maxlen = 0;
     HashData data;
     const char *csep, *ss;
-    void *vmax;
+
+    void *vmax0 = VMAXGET();
 
     checkArity(op, args);
     names = CAR(args);
     if(!isString(names))
-	error(_("'names' must be a character vector"));
+        error(_("'names' must be a character vector"));
     n = LENGTH(names);
     sep = CADR(args);
     if(!isString(sep) || LENGTH(sep) != 1)
-	error(_("'sep' must be a character string"));
+        error(_("'sep' must be a character string"));
     csep = translateChar(STRING_ELT(sep, 0));
+
     PROTECT(ans = allocVector(STRSXP, n));
-    vmax = VMAXGET();
+
     for(i = 0; i < n; i++) {
-	SET_STRING_ELT(ans, i, STRING_ELT(names, i));
-	len = (R_len_t) strlen(translateChar(STRING_ELT(names, i)));
-	if(len > maxlen) maxlen = len;
-	VMAXSET(vmax);
+        SET_STRING_ELT(ans, i, STRING_ELT(names, i));
+        len = (R_len_t) strlen(translateChar(STRING_ELT(names, i)));
+        if(len > maxlen) maxlen = len;
+        VMAXSET(vmax0);
     }
-    if(n > 1) {
-	/* +20 for terminator and biggest number that could possibly be added */
-	char buf[maxlen + (R_len_t) strlen(csep) + 20];
-	if(n < 10000) {
-	    cnts = (int *) alloca(((size_t) n) * sizeof(int));
-	} else {
-	    /* This is going to be slow so use expensive allocation
-	       that will be recovered if interrupted. */
-	    cnts = (int *) R_alloc((size_t) n,  sizeof(int));
-	}
-	R_CHECKSTACK();
-	for(i = 0; i < n; i++) cnts[i] = 1;
-	data.nomatch = 0;
-	PROTECT(newx = allocVector(STRSXP, 1));
-	PROTECT(dup = duplicated2(names, &data));
-	PROTECT(data.HashTable);
-        char csep_len = strlen(csep);
-        vmax = VMAXGET();
-        for(i = 1; i < n; i++) { /* first cannot be a duplicate */
-            dp = INTEGER(dup)[i]; /* 1-based number of first occurrence */
-            if(dp == 0) continue;
-            ss = translateChar(STRING_ELT(names, i));
-            strcpy(buf,ss);
-            if (strlen(ss)<csep_len || strcmp(csep,ss+strlen(ss)-csep_len)!=0)
-                strcat(buf,csep);
-            char *end = buf + strlen(buf);
-            /* Try appending 1,2,3, ..., n-1 until it is not already in use */
-            for(cnt = cnts[dp-1]; ; cnt++) {
-                sprintf(end, "%d", cnt);
-                SET_STRING_ELT(newx, 0, mkChar(buf));
-                if(Lookup(ans, newx, 0, &data) == data.nomatch) break;
-            }
-            SET_STRING_ELT(ans, i, STRING_ELT(newx, 0));
-            /* insert it */ (void) isDuplicated(ans, i, &data);
-            cnts[dp-1] = cnt+1; /* cache the first unused cnt value */
-            VMAXSET(vmax);
+    if (n <= 1) {
+        UNPROTECT(1);
+        VMAXSET(vmax0);
+        return ans;
+    }
+
+    /* +20 for terminator and biggest number that could possibly be added */
+    char buf[maxlen + (R_len_t) strlen(csep) + 20];
+    if (n < 10000)
+        cnts = (int *) alloca(((size_t) n) * sizeof(int));
+    else {
+        /* This is going to be slow so use expensive allocation
+           that will be recovered if interrupted. */
+        cnts = (int *) R_alloc((size_t) n,  sizeof(int));
+    }
+    R_CHECKSTACK();
+    for (i = 0; i < n; i++) cnts[i] = 1;
+    data.nomatch = 0;
+    PROTECT(newx = allocVector(STRSXP, 1));
+
+    SEXP dup;
+
+    HashTableSetup(names, &data);
+    PROTECT(dup = allocVector(INTSXP, n));
+    int *v = INTEGER(dup);
+    for (i = 0; i < n; i++) v[i] = isDuplicated2(x, i, &data);
+
+    char csep_len = strlen(csep);
+    void * vmax = VMAXGET();
+    for (i = 1; i < n; i++) { /* first cannot be a duplicate */
+        dp = INTEGER(dup)[i]; /* 1-based number of first occurrence */
+        if (dp == 0)
+            continue;
+        ss = translateChar(STRING_ELT(names, i));
+        strcpy(buf,ss);
+        if (strlen(ss)<csep_len || strcmp(csep,ss+strlen(ss)-csep_len)!=0)
+            strcat(buf,csep);
+        char *end = buf + strlen(buf);
+        /* Try appending 1,2,3, ..., n-1 until it is not already in use */
+        for(cnt = cnts[dp-1]; ; cnt++) {
+            sprintf(end, "%d", cnt);
+            SET_STRING_ELT(newx, 0, mkChar(buf));
+            if(Lookup(ans, newx, 0, &data) == data.nomatch) break;
         }
-        UNPROTECT(3);
+        SET_STRING_ELT(ans, i, STRING_ELT(newx, 0));
+        /* insert it */ (void) isDuplicated(ans, i, &data);
+        cnts[dp-1] = cnt+1; /* cache the first unused cnt value */
+        VMAXSET(vmax);
     }
-    UNPROTECT(1);
+
+    UNPROTECT(3);
+    VMAXSET(vmax0);
     return ans;
 }
 
@@ -1690,8 +1660,7 @@ static void HashTableSetup1(SEXP x, HashData *d)
 {
     d->hash = cshash;
     d->equal = csequal;
-    MKsetup(LENGTH(x), d);
-    d->HashTable = allocVector(INTSXP, d->M);
+    d->table = lphash_create (2 * LENGTH(x));
 }
 
 SEXP attribute_hidden csduplicated(SEXP x)
@@ -1700,24 +1669,23 @@ SEXP attribute_hidden csduplicated(SEXP x)
     int *h, *v;
     int i, n;
     HashData data;
+    const void *vmax = VMAXGET();
 
     if(TYPEOF(x) != STRSXP)
-	error(_("csduplicated not called on a STRSXP"));
-    n = LENGTH(x);
+        error(_("csduplicated not called on a STRSXP"));
+
     HashTableSetup1(x, &data);
-    PROTECT(data.HashTable);
+
+    n = LENGTH(x);
     PROTECT(ans = allocVector(LGLSXP, n));
 
-    h = INTEGER(data.HashTable);
     v = LOGICAL(ans);
-
-    for (i = 0; i < data.M; i++)
-	h[i] = NIL;
 
     for (i = 0; i < n; i++)
 	v[i] = isDuplicated(x, i, &data);
 
-    UNPROTECT(2);
+    UNPROTECT(1);
+    VMAXSET(vmax);
     return ans;
 }
 

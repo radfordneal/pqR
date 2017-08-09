@@ -51,6 +51,7 @@ HEADERS = \
 	RBufferUtils.h Rstrptime.h \
 	arithmetic.h \
 	scalar-stack.h \
+	lphash-app.h \
 	basedecl.h \
 	gzio.h \
 	par-common.c \
