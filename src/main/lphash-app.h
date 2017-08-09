@@ -20,11 +20,15 @@
 
 /* This header file is for the application of lphash for match, in unique.c. */
 
+#define LPHASH_MAX_LOAD 0.9999999 /* Will figure out the desired size, so don't
+                                     want it expanded automatically */
 
 typedef int lphash_entry_t;       /* Index of first occurence of element, or
                                      0 for no entry, -index for incomparable */
+
 typedef unsigned lphash_hash_t;   /* Hash value computed from table element */
-typedef void *phash_key_t;        /* Pointer to element */
+
+typedef struct HashData *lphash_key_t;  /* Pointer to struct containing key */
 
 #define LPHASH_NO_ENTRY 0         /* R_NoObject */
 
@@ -35,7 +39,7 @@ typedef struct {
     lphash_hash_t hash;
 } lphash_bucket_t;
 
-#define lphash_free 0             /* Nothing need be done */
+#define lphash_free (void)0       /* Nothing need be done - freed by VMAXSET */
 
 #include <lphash/lphash.h>
 
