@@ -1,0 +1,49 @@
+pqR version 2.15.1 (2017-06-09), based on R 2.15.0 (2012-03-30)
+
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
+ISBN 3-900051-07-0
+
+Modifications to R in pqR are Copyright (C) 2013-2017 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
+
+Platform: x86_64-unknown-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+
+No helper threads, task merging enabled, uncompressed pointers.
+
+> # Test possible bugs involving 'match', '%in%', 'duplicated', etc.
+> #
+> # Added for pqR, 2017, Radford M. Neal.
+> 
+> a <- c("abc","def","hij")
+> 
+> print(match("def",a))
+[1] 2
+> print(match("xyz",a))
+[1] NA
+> print(match("xyz",a,nomatch=77))
+[1] 77
+> print(match("def",a,incomparables=c("q","def")))
+[1] NA
+> 
+> b <- c("xyz","def","abc","q")
+> print(match(b,a))
+[1] NA  2  1 NA
+> print(match(b,a,nomatch=77))
+[1] 77  2  1 77
+> print(match(b,a,nomatch=77,incomparables=c("q","def")))
+[1] 77 77  1 77
+> 
