@@ -46,9 +46,6 @@ x \%in\% table
   \code{FALSE} and never \code{NA}.
 }
 \details{
-  \code{\%in\%} is currently defined as \cr
-  \code{"\%in\%" <- function(x, table) match(x, table, nomatch = 0) > 0}
-
   Factors, raw vectors and lists are converted to character vectors, and
   then \code{x} and \code{table} are coerced to a common type (the later
   of the two types in \R's ordering, logical < integer < numeric <
