@@ -37,6 +37,7 @@
 /* LPHASH INTERFACE. */
 
 #define LPHASH_STATIC
+#include "lphash-app.h"
 #include <lphash/lphash.c>
 
 /* Hash function and equality test for keys */
@@ -120,16 +121,13 @@ static unsigned chash(SEXP x, int indx)
     return tmpu.u[0] + tmpu.u[1];
 }
 
-static unsigned cshash(SEXP x, int indx)
+static unsigned shash(SEXP x, int indx)
 {
     return CHAR_HASH (STRING_ELT (x, indx));
 }
 
-static unsigned shash(SEXP x, int indx)
+static unsigned shash_UTF8(SEXP x, int indx)
 {
-    if (!d->useUTF8)
-        return cshash(x, indx);
-
     const void *vmax = VMAXGET();
     const char *p = translateCharUTF8(STRING_ELT(x,indx));
     unsigned k = Rf_char_hash(p);
@@ -374,6 +372,7 @@ static void removeEntry(SEXP x, int indx, HashData *d)
         	data.useUTF8 = TRUE;                            \
             }							\
         }							\
+        if (data.useUTF8) data.hash = shash_UTF8;		\
     }
 
 #define DUPLICATED_FINI VMAXSET(vmax)
@@ -824,6 +823,7 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
             }
         }
 	data.useUTF8 = useUTF8;
+        if (data.useUTF8) data.hash = shash_UTF8;
     }
 
     DoHashing(table, &data);
@@ -1654,12 +1654,12 @@ static int csequal (SEXP x, int i, SEXP y, int j)
 
 static void HashTableSetup1 (SEXP x, HashData *d)
 {
-    d->hash = cshash;
+    d->hash = shash;
     d->equal = csequal;
     d->table = lphash_create ((int) (2.3 * LENGTH(x)));
     d->matchvec = x;
     d->nomatch = 0;
-    d->useUTF8 = 0;
+    d->useUTF8 = FALSE;
 }
 
 SEXP attribute_hidden csduplicated (SEXP x)

@@ -20,6 +20,11 @@
 
 /* This header file is for the application of lphash for match, in unique.c. */
 
+
+#ifndef LPHASH_APP_H_
+#define LPHASH_APP_H_
+
+
 #define LPHASH_MAX_LOAD 0.9999999 /* Will figure out the desired size, so don't
                                      want it expanded automatically */
 
@@ -39,7 +44,7 @@ typedef struct {
     lphash_hash_t hash;
 } lphash_bucket_t;
 
-#define lphash_free (void)0       /* Nothing need be done - freed by VMAXSET */
+#define lphash_free(ptr) ((void)0) /* Nothing need be done - freed by VMAXSET */
 
 #include <lphash/lphash.h>
 
