@@ -664,7 +664,7 @@ static SEXP match_transform(SEXP s, SEXP env)
     return duplicate(s);
 }
 
-SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
+SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
 {
     SEXPTYPE type;
     HashData data;
@@ -680,7 +680,7 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
         RETURN_SEXP_INSIDE_PROTECT (allocVector(INTSXP, 0));
     if (length(itable) == 0) {
 	ans = allocVector(INTSXP, n);
-	for (i = 0; i < n; i++) INTEGER(ans)[i] = nmatch;
+	for (i = 0; i < n; i++) INTEGER(ans)[i] = nomatch;
 	RETURN_SEXP_INSIDE_PROTECT (ans);
     }
 
@@ -702,7 +702,7 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
 
     if (LENGTH(x) == 1 && incomp == R_NoObject) {
         R_len_t ilen = LENGTH(itable);
-        int result = nmatch;
+        int result = nomatch;
         switch (type) {
         case STRSXP: {
             SEXP x_val = STRING_ELT(x,0);
@@ -791,9 +791,9 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
 
     if (incomp != R_NoObject) 
         incomp = coerceVector(incomp, type);
-    data.nomatch = nmatch;
 
     HashTableSetup(table, &data);
+    data.nomatch = nomatch;
 
     if(type == STRSXP) {
 	Rboolean useBytes = FALSE;
@@ -834,15 +834,15 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
     END_PROTECT;
 }
 
-SEXP matchE(SEXP itable, SEXP ix, int nmatch, SEXP env)
+SEXP matchE(SEXP itable, SEXP ix, int nomatch, SEXP env)
 {
-    return match5(itable, ix, nmatch, R_NoObject, env);
+    return match5(itable, ix, nomatch, R_NoObject, env);
 }
 
 /* used from other code, not here: */
-SEXP match(SEXP itable, SEXP ix, int nmatch)
+SEXP match(SEXP itable, SEXP ix, int nomatch)
 {
-    return match5(itable, ix, nmatch, R_NoObject, R_BaseEnv);
+    return match5(itable, ix, nomatch, R_NoObject, R_BaseEnv);
 }
 
 
@@ -863,7 +863,6 @@ static SEXP do_match(SEXP call, SEXP op, SEXP args, SEXP env)
         if ((!isVector(CAR(args)) && !isNull(CAR(args)))
             || (!isVector(CADR(args)) && !isNull(CADR(args))))
             error(_("'match' requires vector arguments"));
-    
         nomatch = asInteger(CADDR(args));
         incomp = nargs < 4 ? R_NilValue : CADDDR(args);
     }
