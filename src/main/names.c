@@ -37,6 +37,7 @@
 #include "arithmetic.h" /* for do_math[1234], do_cmathfuns */
 
 #include <Rinterface.h>
+#include <lphash/lphash-app.h>
 
 
 /* Table of .Internal(.) and .Primitive(.) R functions
