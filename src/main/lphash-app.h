@@ -24,6 +24,7 @@
 #ifndef LPHASH_APP_H_
 #define LPHASH_APP_H_
 
+/* #define LPHASH_STATS */
 
 #define LPHASH_MAX_LOAD 0.9999999 /* Will figure out the desired size, so don't
                                      want it expanded automatically */
