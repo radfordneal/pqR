@@ -76,7 +76,7 @@ static void *lphash_malloc (size_t size)
 /* HASH FUNCTIONS FOR VARIOUS TYPES.  Arguments are vector and index (from 0)
    of element to hash. */
 
-#define FIDDLEU(u) ((u) + ((u) >> 5) + ((u) << 3))
+#define HASH32U(u) ( ((u) + ((u) >> 5)) + (((u) << 3) + ((u) >> 16)) )
 
 static unsigned lhash(SEXP x, int indx)
 {
@@ -86,7 +86,7 @@ static unsigned lhash(SEXP x, int indx)
 static unsigned ihash(SEXP x, int indx)
 {
     unsigned u = INTEGER(x)[indx];
-    return FIDDLEU(u);
+    return HASH32U(u);
 }
 
 union foo { double d; unsigned int u[2]; };
@@ -103,7 +103,7 @@ static unsigned rhash(SEXP x, int indx)
     union foo tmpu;
     tmpu.d = tmp;
     unsigned u = tmpu.u[0] + tmpu.u[1];
-    return FIDDLEU(u);
+    return HASH32U(u);
 }
 
 static unsigned chash(SEXP x, int indx)
@@ -123,7 +123,7 @@ static unsigned chash(SEXP x, int indx)
     u = tmpu.u[0] + tmpu.u[1];
     tmpu.d = tmp.i;
     u ^= tmpu.u[0] + tmpu.u[1];
-    return FIDDLEU(u);
+    return HASH32U(u);
 }
 
 static unsigned shash(SEXP x, int indx)
@@ -139,7 +139,7 @@ static unsigned shash(SEXP x, int indx)
 #else
     unsigned u = CPTR_FROM_SEXP (STRING_ELT(x,indx));
 #endif
-    return FIDDLEU(u);
+    return HASH32U(u);
 }
 
 static unsigned shash_UTF8(SEXP x, int indx)
@@ -149,7 +149,7 @@ static unsigned shash_UTF8(SEXP x, int indx)
     unsigned u = Rf_char_hash(p);
     VMAXSET(vmax); /* discard any memory used by translateChar */
 
-    return FIDDLEU(u);
+    return HASH32U(u);
 }
 
 static unsigned rawhash(SEXP x, int indx)
