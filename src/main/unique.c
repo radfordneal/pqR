@@ -76,6 +76,8 @@ static void *lphash_malloc (size_t size)
 /* HASH FUNCTIONS FOR VARIOUS TYPES.  Arguments are vector and index (from 0)
    of element to hash. */
 
+#define FIDDLEU(u) ((u) + ((u) >> 5) + ((u) << 3))
+
 static unsigned lhash(SEXP x, int indx)
 {
     return LOGICAL(x)[indx] == NA_LOGICAL ? 2 :  LOGICAL(x)[indx];
@@ -83,7 +85,8 @@ static unsigned lhash(SEXP x, int indx)
 
 static unsigned ihash(SEXP x, int indx)
 {
-    return INTEGER(x)[indx];
+    unsigned u = INTEGER(x)[indx];
+    return FIDDLEU(u);
 }
 
 union foo { double d; unsigned int u[2]; };
@@ -99,13 +102,13 @@ static unsigned rhash(SEXP x, int indx)
 
     union foo tmpu;
     tmpu.d = tmp;
-    return tmpu.u[0] + tmpu.u[1];
+    unsigned u = tmpu.u[0] + tmpu.u[1];
+    return FIDDLEU(u);
 }
 
 static unsigned chash(SEXP x, int indx)
 {
     Rcomplex tmp;
-    unsigned int u;
     tmp.r = (COMPLEX(x)[indx].r == 0.0) ? 0.0 : COMPLEX(x)[indx].r;
     tmp.i = (COMPLEX(x)[indx].i == 0.0) ? 0.0 : COMPLEX(x)[indx].i;
     /* we want all NaNs except NA equal, and all NAs equal */
@@ -116,24 +119,37 @@ static unsigned chash(SEXP x, int indx)
 
     union foo tmpu;
     tmpu.d = tmp.r;
+    unsigned u;
     u = tmpu.u[0] + tmpu.u[1];
     tmpu.d = tmp.i;
-    return tmpu.u[0] + tmpu.u[1];
+    u ^= tmpu.u[0] + tmpu.u[1];
+    return FIDDLEU(u);
 }
 
 static unsigned shash(SEXP x, int indx)
 {
-    return CHAR_HASH (STRING_ELT (x, indx));
+#if 1
+    unsigned u;
+    if (sizeof(SEXP) == 4)
+        u = (unsigned) (uintptr_t) STRING_ELT(x,indx);
+    else {
+        uint64_t u64 = (uint64_t) (uintptr_t) STRING_ELT(x,indx);
+        u = (unsigned) (u64 >> 32) + (unsigned) (u64 & 0xffffffff);
+    }
+#else
+    unsigned u = CPTR_FROM_SEXP (STRING_ELT(x,indx));
+#endif
+    return FIDDLEU(u);
 }
 
 static unsigned shash_UTF8(SEXP x, int indx)
 {
     const void *vmax = VMAXGET();
     const char *p = translateCharUTF8(STRING_ELT(x,indx));
-    unsigned k = Rf_char_hash(p);
+    unsigned u = Rf_char_hash(p);
     VMAXSET(vmax); /* discard any memory used by translateChar */
 
-    return k;
+    return FIDDLEU(u);
 }
 
 static unsigned rawhash(SEXP x, int indx)
@@ -206,21 +222,18 @@ static unsigned vhash(SEXP x, int indx)
 
 static int lequal(SEXP x, int i, SEXP y, int j)
 {
-    if (i < 0 || j < 0) return 0;
-    return (LOGICAL(x)[i] == LOGICAL(y)[j]);
+    return LOGICAL(x)[i] == LOGICAL(y)[j];
 }
 
 
 static int iequal(SEXP x, int i, SEXP y, int j)
 {
-    if (i < 0 || j < 0) return 0;
-    return (INTEGER(x)[i] == INTEGER(y)[j]);
+    return INTEGER(x)[i] == INTEGER(y)[j];
 }
 
 /* BDR 2002-1-17  We don't want NA and other NaNs to be equal */
 static int requal(SEXP x, int i, SEXP y, int j)
 {
-    if (i < 0 || j < 0) return 0;
     if (!ISNAN(REAL(x)[i]) && !ISNAN(REAL(y)[j]))
 	return (REAL(x)[i] == REAL(y)[j]);
     else if (R_IsNA(REAL(x)[i]) && R_IsNA(REAL(y)[j])) return 1;
@@ -242,13 +255,11 @@ static int cplx_eq(Rcomplex x, Rcomplex y)
 
 static int cequal(SEXP x, int i, SEXP y, int j)
 {
-    if (i < 0 || j < 0) return 0;
     return cplx_eq(COMPLEX(x)[i], COMPLEX(y)[j]);
 }
 
 static int sequal(SEXP x, int i, SEXP y, int j)
 {
-    if (i < 0 || j < 0) return 0;
     /* Two strings which have the same address must be the same,
        so avoid looking at the contents */
     if (STRING_ELT(x, i) == STRING_ELT(y, j)) return 1;
@@ -260,13 +271,11 @@ static int sequal(SEXP x, int i, SEXP y, int j)
 
 static int rawequal(SEXP x, int i, SEXP y, int j)
 {
-    if (i < 0 || j < 0) return 0;
-    return (RAW(x)[i] == RAW(y)[j]);
+    return RAW(x)[i] == RAW(y)[j];
 }
 
 static int vequal(SEXP x, int i, SEXP y, int j)
 {
-    if (i < 0 || j < 0) return 0;
     return R_compute_identical(VECTOR_ELT(x, i), VECTOR_ELT(y, j), 0);
 }
 
@@ -277,6 +286,7 @@ static void HashTableSetup(SEXP x, HashData *d)
         UNIMPLEMENTED_TYPE("HashTableSetup", x);
 
     int tbl_size = (int) (2.3 * LENGTH(x));
+    if (tbl_size < 256) tbl_size = 256;
 
     switch (TYPEOF(x)) {
     case LGLSXP:
@@ -829,6 +839,16 @@ SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
     DoHashing(table, &data);
     if (incomp != R_NoObject) UndoHashing(incomp, table, &data);
     ans = HashLookup (x, &data);
+
+#   ifdef LPHASH_STATS
+        if (installed_already("LPHASH_STATS")) {
+            REprintf("LPHASH_STATS: size %d, occupied %d\n",
+                        data.table->size, data.table->occupied);
+            REprintf("  searches %d, not_found %d, probes %d, matches %d\n",
+                        data.table->searches, data.table->not_found, 
+                        data.table->probes, data.table->matches);
+        }
+#   endif
 
     RETURN_SEXP_INSIDE_PROTECT (ans);
     END_PROTECT;
