@@ -43,11 +43,11 @@
 /* Hash function and equality test for keys */
 
 typedef struct HashData {
-    unsigned (*hash)(SEXP,int);     /* function for computing hashes */
-    int (*equal)(SEXP,int,SEXP,int);/* function for comparing elements */
+    unsigned (*hash)(void*,int);    /* function for computing hashes */
+    int (*equal)(void*,int,void*,int); /* function for comparing elements */
     lphash_table_t *table;          /* hash table */
-    SEXP matchvec;                  /* vector with elements matched against */
-    SEXP keyvec;                    /* vector with elements used as keys */
+    void *matchvec;                 /* array of elements matched against */
+    void *keyvec;                   /* array of elements used as keys */
     int keyindx;                    /* index of key element in keyvec (from 0)*/
     int nomatch;                    /* index value for "no match" */
     Rboolean useUTF8;               /* compare strings as UTF8? */
@@ -76,41 +76,49 @@ static void *lphash_malloc (size_t size)
 /* HASH FUNCTIONS FOR VARIOUS TYPES.  Arguments are vector and index (from 0)
    of element to hash. */
 
-#define FIDDLEU(u) ((u) + ((u) >> 5) + ((u) << 3))
+#define HASH32U(u) ( ((u) + ((u) >> 5)) + (((u) << 3) + ((u) >> 16)) )
 
-static unsigned lhash(SEXP x, int indx)
+static unsigned lhash (void *data, int indx)
 {
-    return LOGICAL(x)[indx] == NA_LOGICAL ? 2 :  LOGICAL(x)[indx];
+    int *x = data;
+    return x[indx] == NA_LOGICAL ? 2 : x[indx];
 }
 
-static unsigned ihash(SEXP x, int indx)
+static unsigned ihash (void *data, int indx)
 {
-    unsigned u = INTEGER(x)[indx];
-    return FIDDLEU(u);
+    int *x = data;
+    unsigned u = x[indx];
+    return HASH32U(u);
 }
 
 union foo { double d; unsigned int u[2]; };
 
-static unsigned rhash(SEXP x, int indx)
+static unsigned rhash (void *data, int indx)
 {
+    double *x = data;
+
     /* There is a problem with signed 0s under IEEE */
-    double tmp = (REAL(x)[indx] == 0.0) ? 0.0 : REAL(x)[indx];
-    /* need to use both 32-byte chunks or endianness is an issue */
+    double tmp = x[indx] == 0.0 ? 0.0 : x[indx];
+
     /* we want all NaNs except NA equal, and all NAs equal */
     if (R_IsNA(tmp)) tmp = NA_REAL;
     else if (R_IsNaN(tmp)) tmp = R_NaN;
 
+    /* need to use both 32-byte chunks or endianness is an issue */
     union foo tmpu;
     tmpu.d = tmp;
     unsigned u = tmpu.u[0] + tmpu.u[1];
-    return FIDDLEU(u);
+    return HASH32U(u);
 }
 
-static unsigned chash(SEXP x, int indx)
+static unsigned chash (void *data, int indx)
 {
+    Rcomplex *x = data;
+
     Rcomplex tmp;
-    tmp.r = (COMPLEX(x)[indx].r == 0.0) ? 0.0 : COMPLEX(x)[indx].r;
-    tmp.i = (COMPLEX(x)[indx].i == 0.0) ? 0.0 : COMPLEX(x)[indx].i;
+    tmp.r = x[indx].r == 0.0 ? 0.0 : x[indx].r;
+    tmp.i = x[indx].i == 0.0 ? 0.0 : x[indx].i;
+
     /* we want all NaNs except NA equal, and all NAs equal */
     if (R_IsNA(tmp.r)) tmp.r = NA_REAL;
     else if (R_IsNaN(tmp.r)) tmp.r = R_NaN;
@@ -123,45 +131,46 @@ static unsigned chash(SEXP x, int indx)
     u = tmpu.u[0] + tmpu.u[1];
     tmpu.d = tmp.i;
     u ^= tmpu.u[0] + tmpu.u[1];
-    return FIDDLEU(u);
+    return HASH32U(u);
 }
 
-static unsigned shash(SEXP x, int indx)
+static unsigned shash (void *data, int indx)
 {
-#if 1
-    unsigned u;
+    SEXP *x = data;
+    uint32_t u;
     if (sizeof(SEXP) == 4)
-        u = (unsigned) (uintptr_t) STRING_ELT(x,indx);
+        u = (uint32_t) x[indx];
     else {
-        uint64_t u64 = (uint64_t) (uintptr_t) STRING_ELT(x,indx);
-        u = (unsigned) (u64 >> 32) + (unsigned) (u64 & 0xffffffff);
+        uint64_t u64 = (uint64_t) (uintptr_t) x[indx];
+        u = (uint32_t) (u64 >> 32) + (uint32_t) u64;
     }
-#else
-    unsigned u = CPTR_FROM_SEXP (STRING_ELT(x,indx));
-#endif
-    return FIDDLEU(u);
+    return HASH32U(u);
 }
 
-static unsigned shash_UTF8(SEXP x, int indx)
+static unsigned shash_UTF8 (void *data, int indx)
 {
+    SEXP *x = data;
     const void *vmax = VMAXGET();
-    const char *p = translateCharUTF8(STRING_ELT(x,indx));
+    const char *p = translateCharUTF8(x[indx]);
     unsigned u = Rf_char_hash(p);
     VMAXSET(vmax); /* discard any memory used by translateChar */
 
-    return FIDDLEU(u);
+    return HASH32U(u);
 }
 
-static unsigned rawhash(SEXP x, int indx)
+static unsigned rawhash (void *data, int indx)
 {
-    return RAW(x)[indx];
+    Rbyte *x = data;
+    return x[indx];
 }
 
-static unsigned vhash(SEXP x, int indx)
+static unsigned vhash (void *dat, int indx)
 {
     int i;
     unsigned int key;
-    SEXP this = VECTOR_ELT(x, indx);
+    SEXP *x = dat;
+    SEXP this = x[indx];
+    void *data = DATAPTR(this);
 
     key = OBJECT(this) + 2*TYPEOF(this) + 100*length(this);
     /* maybe we should also look at attributes, but that slows us down */
@@ -169,44 +178,44 @@ static unsigned vhash(SEXP x, int indx)
     case LGLSXP:
 	/* This is not too clever: pack into 32-bits and then scatter? */
 	for(i = 0; i < LENGTH(this); i++) {
-	    key ^= lhash(this, i);
+	    key ^= lhash (data, i);
 	    key *= 97;
 	}
 	break;
     case INTSXP:
 	for(i = 0; i < LENGTH(this); i++) {
-	    key ^= ihash(this, i);
+	    key ^= ihash (data, i);
 	    key *= 97;
 	}
 	break;
     case REALSXP:
 	for(i = 0; i < LENGTH(this); i++) {
-	    key ^= rhash(this, i);
+	    key ^= rhash (data, i);
 	    key *= 97;
 	}
 	break;
     case CPLXSXP:
 	for(i = 0; i < LENGTH(this); i++) {
-	    key ^= chash(this, i);
+	    key ^= chash (data, i);
 	    key *= 97;
 	}
 	break;
     case STRSXP:
 	for(i = 0; i < LENGTH(this); i++) {
-	    key ^= shash(this, i);
+	    key ^= shash (data, i);
 	    key *= 97;
 	}
 	break;
     case RAWSXP:
 	for(i = 0; i < LENGTH(this); i++) {
-	    key ^= rawhash(this, i);
+	    key ^= rawhash (data, i);
 	    key *= 97;
 	}
 	break;
     case VECSXP:
     case EXPRSXP:
 	for(i = 0; i < LENGTH(this); i++) {
-	    key ^= vhash(this, i);
+	    key ^= vhash (data, i);
 	    key *= 97;
 	}
 	break;
@@ -220,25 +229,31 @@ static unsigned vhash(SEXP x, int indx)
 /* EQUALITY COMPARISON FOR VARIOUS TYPES.  Arguments are two vectors and
    two indexes (from 0) within them of the elements to compare. */
 
-static int lequal(SEXP x, int i, SEXP y, int j)
+static int lequal (void *di, int i, void *dj, int j)
 {
-    return LOGICAL(x)[i] == LOGICAL(y)[j];
+    int *x = di, *y = dj;
+    return x[i] == y[j];
 }
 
 
-static int iequal(SEXP x, int i, SEXP y, int j)
+static int iequal (void *di, int i, void *dj, int j)
 {
-    return INTEGER(x)[i] == INTEGER(y)[j];
+    int *x = di, *y = dj;
+    return x[i] == y[j];
 }
 
 /* BDR 2002-1-17  We don't want NA and other NaNs to be equal */
-static int requal(SEXP x, int i, SEXP y, int j)
+static int requal (void *di, int i, void *dj, int j)
 {
-    if (!ISNAN(REAL(x)[i]) && !ISNAN(REAL(y)[j]))
-	return (REAL(x)[i] == REAL(y)[j]);
-    else if (R_IsNA(REAL(x)[i]) && R_IsNA(REAL(y)[j])) return 1;
-    else if (R_IsNaN(REAL(x)[i]) && R_IsNaN(REAL(y)[j])) return 1;
-    else return 0;
+    double *x = di, *y = dj;
+    if (!ISNAN(x[i]) && !ISNAN(y[j]))
+	return x[i] == y[j];
+    else if (R_IsNA(x[i]) && R_IsNA(y[j]))
+        return 1;
+    else if (R_IsNaN(x[i]) && R_IsNaN(y[j]))
+        return 1;
+    else
+        return 0;
 }
 
 static int cplx_eq(Rcomplex x, Rcomplex y)
@@ -253,30 +268,37 @@ static int cplx_eq(Rcomplex x, Rcomplex y)
 	return 0;
 }
 
-static int cequal(SEXP x, int i, SEXP y, int j)
+static int cequal (void *di, int i, void *dj, int j)
 {
-    return cplx_eq(COMPLEX(x)[i], COMPLEX(y)[j]);
+    Rcomplex *x = di, *y = dj;
+    return cplx_eq(x[i], y[j]);
 }
 
-static int sequal(SEXP x, int i, SEXP y, int j)
+static int sequal (void *di, int i, void *dj, int j)
 {
+    SEXP *x = di, *y = dj;
+    SEXP xs = x[i];
+    SEXP ys = y[j];
     /* Two strings which have the same address must be the same,
        so avoid looking at the contents */
-    if (STRING_ELT(x, i) == STRING_ELT(y, j)) return 1;
+    if (xs == ys)
+        return 1;
     /* Then if either is NA the other cannot be */
-    if (STRING_ELT(x, i) == NA_STRING || STRING_ELT(y, j) == NA_STRING)
+    if (xs == NA_STRING || ys == NA_STRING)
 	return 0;
-    return SEQL(STRING_ELT(x, i), STRING_ELT(y, j));
+    return SEQL(xs,ys);
 }
 
-static int rawequal(SEXP x, int i, SEXP y, int j)
+static int rawequal (void *di, int i, void *dj, int j)
 {
-    return RAW(x)[i] == RAW(y)[j];
+    Rbyte *x = di, *y = dj;
+    return x[i] == y[j];
 }
 
-static int vequal(SEXP x, int i, SEXP y, int j)
+static int vequal (void *di, int i, void *dj, int j)
 {
-    return R_compute_identical(VECTOR_ELT(x, i), VECTOR_ELT(y, j), 0);
+    SEXP *x = di, *y = dj;
+    return R_compute_identical (x[i], y[j], 0);
 }
 
 
@@ -326,7 +348,7 @@ static void HashTableSetup(SEXP x, HashData *d)
     }
 
     d->table = lphash_create (tbl_size);
-    d->matchvec = x;
+    d->matchvec = DATAPTR(x);
     d->nomatch = 0;
     d->useUTF8 = FALSE;
 }
@@ -334,11 +356,12 @@ static void HashTableSetup(SEXP x, HashData *d)
 
 static int isDuplicated (SEXP x, int indx, HashData *d)
 {
+    void *data = DATAPTR(x);
     lphash_bucket_t *b;
     lphash_hash_t h;
 
-    h = d->hash (x, indx);
-    d->keyvec = x;
+    h = d->hash (data, indx);
+    d->keyvec = data;
     d->keyindx = indx;
 
     b = lphash_insert (d->table, h, d);
@@ -348,11 +371,12 @@ static int isDuplicated (SEXP x, int indx, HashData *d)
 
 static void removeEntry(SEXP x, int indx, HashData *d)
 {
+    void *data = DATAPTR(x);
     lphash_bucket_t *b;
     lphash_hash_t h;
 
-    h = d->hash (x, indx);
-    d->keyvec = x;
+    h = d->hash (data, indx);
+    d->keyvec = data;
     d->keyindx = indx;
 
     b = lphash_key_lookup (d->table, h, d);
@@ -451,7 +475,10 @@ SEXP duplicated3(SEXP x, SEXP incomp, Rboolean from_last)
         for (i = 0; i < n; i++) {
             if (v[i]) {
                 for (j = 0; j < m; j++)
-                    if (data.equal(x, i, incomp, j)) { v[i] = 0; break; }
+                    if (data.equal (DATAPTR(x), i, DATAPTR(incomp), j)) { 
+                        v[i] = 0;
+                        break;
+                    }
             }
         }
         UNPROTECT(1);
@@ -481,8 +508,9 @@ int any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last)
 	    if (isDuplicated (x, i, &data)) {		\
 		Rboolean isDup = TRUE;			\
 		for (j = 0; j < m; j++)			\
-		    if (data.equal(x, i, incomp, j)) {	\
-			isDup = FALSE; break;		\
+		    if (data.equal (DATAPTR(x), i, DATAPTR(incomp), j)) { \
+			isDup = FALSE;			\
+                        break;				\
 		    }					\
 		if (isDup) {				\
 		    UNPROTECT(1);			\
@@ -627,11 +655,12 @@ static void UndoHashing(SEXP x, SEXP table, HashData *d)
 
 static int Lookup (SEXP x, int indx, HashData *d)
 {
+    void *data = DATAPTR(x);
     lphash_bucket_t *b;
     lphash_hash_t h;
 
-    h = d->hash (x, indx);
-    d->keyvec = x;
+    h = d->hash (data, indx);
+    d->keyvec = data;
     d->keyindx = indx;
 
     b = lphash_key_lookup (d->table, h, d);
@@ -1568,11 +1597,12 @@ Rrowsum_df(SEXP x, SEXP ncol, SEXP g, SEXP uniqueg, SEXP snarm)
 /* returns 1-based duplicate no */
 static int isDuplicated2 (SEXP x, int indx, HashData *d)
 {
+    void *data = DATAPTR(x);
     lphash_bucket_t *b;
     lphash_hash_t h;
 
-    h = d->hash (x, indx);
-    d->keyvec = x;
+    h = d->hash (data, indx);
+    d->keyvec = data;
     d->keyindx = indx;
 
     b = lphash_insert (d->table, h, d);
@@ -1666,9 +1696,10 @@ static SEXP do_makeunique(SEXP call, SEXP op, SEXP args, SEXP env)
 /* Use hashing to improve object.size. Here we want equal CHARSXPs,
    not equal contents. */
 
-static int csequal (SEXP x, int i, SEXP y, int j)
+static int csequal (void *di, int i, void *dj, int j)
 {
-    return STRING_ELT(x, i) == STRING_ELT(y, j);
+    SEXP *x = di, *y = dj;
+    return x[i] == y[j];
 }
 
 static void HashTableSetup1 (SEXP x, HashData *d)
@@ -1676,7 +1707,7 @@ static void HashTableSetup1 (SEXP x, HashData *d)
     d->hash = shash;
     d->equal = csequal;
     d->table = lphash_create ((int) (2.3 * LENGTH(x)));
-    d->matchvec = x;
+    d->matchvec = DATAPTR(x);
     d->nomatch = 0;
     d->useUTF8 = FALSE;
 }
