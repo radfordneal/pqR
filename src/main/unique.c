@@ -129,12 +129,12 @@ static unsigned chash(SEXP x, int indx)
 static unsigned shash(SEXP x, int indx)
 {
 #if 1
-    unsigned u;
+    uint32_t u;
     if (sizeof(SEXP) == 4)
-        u = (unsigned) (uintptr_t) STRING_ELT(x,indx);
+        u = (uint32_t) STRING_ELT(x,indx);
     else {
         uint64_t u64 = (uint64_t) (uintptr_t) STRING_ELT(x,indx);
-        u = (unsigned) (u64 >> 32) + (unsigned) (u64 & 0xffffffff);
+        u = (uint32_t) (u64 >> 32) + (uint32_t) u64;
     }
 #else
     unsigned u = CPTR_FROM_SEXP (STRING_ELT(x,indx));
@@ -260,13 +260,16 @@ static int cequal(SEXP x, int i, SEXP y, int j)
 
 static int sequal(SEXP x, int i, SEXP y, int j)
 {
+    SEXP xs = STRING_ELT(x,i);
+    SEXP ys = STRING_ELT(y,j);
     /* Two strings which have the same address must be the same,
        so avoid looking at the contents */
-    if (STRING_ELT(x, i) == STRING_ELT(y, j)) return 1;
+    if (xs == ys)
+        return 1;
     /* Then if either is NA the other cannot be */
-    if (STRING_ELT(x, i) == NA_STRING || STRING_ELT(y, j) == NA_STRING)
+    if (xs == NA_STRING || ys == NA_STRING)
 	return 0;
-    return SEQL(STRING_ELT(x, i), STRING_ELT(y, j));
+    return SEQL(xs,ys);
 }
 
 static int rawequal(SEXP x, int i, SEXP y, int j)
