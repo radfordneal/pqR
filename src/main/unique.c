@@ -401,6 +401,22 @@ static inline int isDuplicated (SEXP x, int indx, HashData *d)
     return b->entry - 1 != indx;
 }
 
+/* returns 1-based duplicate no */
+static int isDuplicated2 (SEXP x, int indx, HashData *d)
+{
+    void *data = DATAPTR(x);
+    lphash_bucket_t *b;
+    lphash_hash_t h;
+
+    h = d->hash (data, indx);
+    d->keyvec = data;
+    d->keyindx = indx;
+
+    b = lphash_insert (d->table, h, d);
+
+    return b->entry - 1 != indx ? b->entry : 0;
+}
+
 static void removeEntry(SEXP x, int indx, HashData *d)
 {
     void *data = DATAPTR(x);
@@ -670,7 +686,7 @@ static void DoHashing(SEXP table, HashData *d)
 }
 
 /* invalidate entries */
-static void UndoHashing(SEXP x, SEXP table, HashData *d)
+static void UndoHashing (SEXP x, HashData *d)
 {
     for (int i = 0; i < LENGTH(x); i++) removeEntry (x, i, d);
 }
@@ -759,11 +775,12 @@ SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
     else type = TYPEOF(x) < TYPEOF(table) ? TYPEOF(table) : TYPEOF(x);
     x = coerceVector (x, type); 
     table = coerceVector (table, type);
+    n = LENGTH(x);
 
     /* Special case scalar of x -- for speed only.  Taken from R-3.3.0
        (then cleaned up and modified). */
 
-    if (LENGTH(x) == 1 && incomp == R_NoObject) {
+    if (n == 1 && incomp == R_NoObject) {
         R_len_t ilen = LENGTH(itable);
         int result = nomatch;
         switch (type) {
@@ -855,17 +872,44 @@ SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
     if (incomp != R_NoObject) 
         incomp = coerceVector(incomp, type);
 
-    HashTableSetup(table, &data);
-    data.nomatch = nomatch;
-    check_UTF8 (x, &data.useBytes, &data.useUTF8);
-    check_UTF8 (table, &data.useBytes, &data.useUTF8);
-    if (data.useUTF8)
-        data.hash = shash_UTF8;
-
-    DoHashing(table, &data);
-    if (incomp != R_NoObject) UndoHashing(incomp, table, &data);
-    ans = HashLookup (x, &data);
-
+    if (LENGTH(table) < LENGTH(x)) {  /* 'table' is hashed, 'x' looked up */
+        HashTableSetup (table, &data);
+        data.nomatch = nomatch;
+        check_UTF8 (x, &data.useBytes, &data.useUTF8);
+        check_UTF8 (table, &data.useBytes, &data.useUTF8);
+        if (data.useUTF8)
+            data.hash = shash_UTF8;
+        DoHashing (table, &data);
+        if (incomp != R_NoObject)
+            UndoHashing (incomp, &data);
+        ans = HashLookup (x, &data);
+    }
+    else {  /* 'x' is hashed, 'table' looked up */
+        HashTableSetup(x, &data);
+        data.nomatch = 0;  /* NOT nomatch */
+        check_UTF8 (x, &data.useBytes, &data.useUTF8);
+        check_UTF8 (table, &data.useBytes, &data.useUTF8);
+        if (data.useUTF8)
+            data.hash = shash_UTF8;
+        ans = allocVector (INTSXP, LENGTH(x));
+        int *ansi = INTEGER(ans);
+        for (i = 0; i < n; i++) 
+            ansi[i] = isDuplicated2 (x, i, &data);
+        if (incomp != R_NoObject)
+            UndoHashing (incomp, &data);
+        R_len_t tl = LENGTH(table);
+        for (i = 0; i < tl; i++) {
+            int j = Lookup (table, i, &data);
+            if (j != 0 && ansi[j-1] == 0)
+                ansi[j-1] = -(i+1);
+        }
+        for (i = 0; i < n; i++) {
+            ansi[i] = ansi[i] == 0 ? nomatch
+                    : ansi[i] > 0  ? ansi[ansi[i]-1]
+                    :                -ansi[i];
+        }
+    }
+    
 #   ifdef LPHASH_STATS
         if (installed_already("LPHASH_STATS")) {
             REprintf("LPHASH_STATS: size %d, occupied %d\n",
@@ -1553,22 +1597,6 @@ Rrowsum_df(SEXP x, SEXP ncol, SEXP g, SEXP uniqueg, SEXP snarm)
     UNPROTECT(2); /*ans, matches*/
     VMAXSET(vmax);
     return ans;
-}
-
-/* returns 1-based duplicate no */
-static int isDuplicated2 (SEXP x, int indx, HashData *d)
-{
-    void *data = DATAPTR(x);
-    lphash_bucket_t *b;
-    lphash_hash_t h;
-
-    h = d->hash (data, indx);
-    d->keyvec = data;
-    d->keyindx = indx;
-
-    b = lphash_insert (d->table, h, d);
-
-    return b->entry - 1 != indx ? b->entry : 0;
 }
 
 static SEXP do_makeunique(SEXP call, SEXP op, SEXP args, SEXP env)
