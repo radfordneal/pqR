@@ -36,6 +36,8 @@
 
 /* LPHASH INTERFACE. */
 
+/* #define LPHASH_STATS */
+
 #define LPHASH_STATIC
 #include "lphash-app.h"
 #include <lphash/lphash.c>
@@ -50,6 +52,7 @@ typedef struct HashData {
     void *keyvec;                   /* array of elements used as keys */
     int keyindx;                    /* index of key element in keyvec (from 0)*/
     int nomatch;                    /* index value for "no match" */
+    Rboolean useBytes;              /* some string marked as bytes? */
     Rboolean useUTF8;               /* compare strings as UTF8? */
 } HashData;
 
@@ -138,12 +141,15 @@ static unsigned shash (void *data, int indx)
 {
     SEXP *x = data;
     uint32_t u;
-    if (sizeof(SEXP) == 4)
+#   if USE_COMPRESSED_POINTERS
         u = (uint32_t) x[indx];
-    else {
-        uint64_t u64 = (uint64_t) (uintptr_t) x[indx];
+#   elif  SIZEOF_CHAR_P == 4
+        u = ((uint32_t) x[indx]) >> 5;
+#   else
+    {   uint64_t u64 = ((uint64_t) (uintptr_t) x[indx]) >> 5;
         u = (uint32_t) (u64 >> 32) + (uint32_t) u64;
     }
+#   endif
     return HASH32U(u);
 }
 
@@ -302,7 +308,7 @@ static int vequal (void *di, int i, void *dj, int j)
 }
 
 
-static void HashTableSetup(SEXP x, HashData *d)
+static void HashTableSetup (SEXP x, HashData *d)
 {
     if (!isVector(x))
         UNIMPLEMENTED_TYPE("HashTableSetup", x);
@@ -350,7 +356,30 @@ static void HashTableSetup(SEXP x, HashData *d)
     d->table = lphash_create (tbl_size);
     d->matchvec = DATAPTR(x);
     d->nomatch = 0;
+    d->useBytes = FALSE;
     d->useUTF8 = FALSE;
+}
+
+
+static void check_UTF8 (SEXP x, Rboolean *useBytes, Rboolean *useUTF8)
+{
+    if (TYPEOF(x) != STRSXP || *useBytes)
+        return;
+
+    R_len_t len_x = LENGTH(x);
+    R_len_t i;
+
+    for (i = 0; i < len_x; i++) {
+        SEXP s = STRING_ELT(x, i);
+        if (IS_BYTES(s)) {
+            *useBytes = TRUE;
+            *useUTF8 = FALSE;
+            return;
+        }
+        if (ENC_KNOWN(s)) {
+            *useUTF8 = TRUE;
+        }
+    }
 }
 
 
@@ -395,19 +424,9 @@ static void removeEntry(SEXP x, int indx, HashData *d)
         							\
     n = LENGTH(x);						\
     HashTableSetup(x, &data);					\
-    if (TYPEOF(x) == STRSXP) {					\
-        data.useUTF8 = FALSE; 					\
-        for (i = 0; i < n; i++) {				\
-            if (IS_BYTES(STRING_ELT(x, i))) {			\
-        	data.useUTF8 = FALSE;				\
-                break;						\
-            }                                                   \
-    	    if (ENC_KNOWN(STRING_ELT(x, i))) {			\
-        	data.useUTF8 = TRUE;                            \
-            }							\
-        }							\
-        if (data.useUTF8) data.hash = shash_UTF8;		\
-    }
+    check_UTF8(x, &data.useBytes, &data.useUTF8);		\
+    if (data.useUTF8)						\
+        data.hash = shash_UTF8;					\
 
 #define DUPLICATED_FINI VMAXSET(vmax)
 
@@ -833,37 +852,10 @@ SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
 
     HashTableSetup(table, &data);
     data.nomatch = nomatch;
-
-    if(type == STRSXP) {
-	Rboolean useBytes = FALSE;
-	Rboolean useUTF8 = FALSE;
-        int len_x = length(x);
-	for(i = 0; i < len_x; i++) {
-            SEXP s = STRING_ELT(x, i);
-	    if(IS_BYTES(s)) {
-		useBytes = TRUE;
-		useUTF8 = FALSE;
-		break;
-	    }
-	    if(ENC_KNOWN(s)) {
-		useUTF8 = TRUE;
-	    }
-        }
-        int len_table = length(table);
-        for(i = 0; i < len_table; i++) {
-            SEXP s = STRING_ELT(table, i);
-            if(IS_BYTES(s)) {
-                useBytes = TRUE;
-                useUTF8 = FALSE;
-                break;
-            }
-            if(ENC_KNOWN(s)) {
-                useUTF8 = TRUE;
-            }
-        }
-	data.useUTF8 = useUTF8;
-        if (data.useUTF8) data.hash = shash_UTF8;
-    }
+    check_UTF8 (x, &data.useBytes, &data.useUTF8);
+    check_UTF8 (table, &data.useBytes, &data.useUTF8);
+    if (data.useUTF8)
+        data.hash = shash_UTF8;
 
     DoHashing(table, &data);
     if (incomp != R_NoObject) UndoHashing(incomp, table, &data);
@@ -984,26 +976,8 @@ static SEXP do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env)
 	for (j = 0; j < n_target; j++) used[j] = 0;
     }
 
-    for(i = 0; i < n_input; i++) {
-	if(IS_BYTES(STRING_ELT(input, i))) {
-	    useBytes = TRUE;
-	    useUTF8 = FALSE;
-	    break;
-	} else if(ENC_KNOWN(STRING_ELT(input, i))) {
-	    useUTF8 = TRUE;
-	}
-    }
-    if(!useBytes) {
-	for(i = 0; i < n_target; i++) {
-	    if(IS_BYTES(STRING_ELT(target, i))) {
-		useBytes = TRUE;
-		useUTF8 = FALSE;
-		break;
-	    } else if(ENC_KNOWN(STRING_ELT(target, i))) {
-		useUTF8 = TRUE;
-	    }
-	}
-    }
+    check_UTF8 (input, &useBytes, &useUTF8);
+    check_UTF8 (target, &useBytes, &useUTF8);
 
     in = (const char **) R_alloc((size_t) n_input, sizeof(char *));
     tar = (const char **) R_alloc((size_t) n_target, sizeof(char *));
@@ -1141,26 +1115,8 @@ static SEXP do_charmatch(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("argument is not of mode character"));
     no_match = asInteger(CADDR(args));
 
-    for(i = 0; i < n_input; i++) {
-	if(IS_BYTES(STRING_ELT(input, i))) {
-	    useBytes = TRUE;
-	    useUTF8 = FALSE;
-	    break;
-	} else if(ENC_KNOWN(STRING_ELT(input, i))) {
-	    useUTF8 = TRUE;
-	}
-    }
-    if(!useBytes) {
-	for(i = 0; i < n_target; i++) {
-	    if(IS_BYTES(STRING_ELT(target, i))) {
-		useBytes = TRUE;
-		useUTF8 = FALSE;
-		break;
-	    } else if(ENC_KNOWN(STRING_ELT(target, i))) {
-		useUTF8 = TRUE;
-	    }
-	}
-    }
+    check_UTF8 (input, &useBytes, &useUTF8);
+    check_UTF8 (target, &useBytes, &useUTF8);
 
     PROTECT(ans = allocVector(INTSXP, n_input));
     ians = INTEGER(ans);
@@ -1709,6 +1665,7 @@ static void HashTableSetup1 (SEXP x, HashData *d)
     d->table = lphash_create ((int) (2.3 * LENGTH(x)));
     d->matchvec = DATAPTR(x);
     d->nomatch = 0;
+    d->useBytes = FALSE;
     d->useUTF8 = FALSE;
 }
 
