@@ -900,7 +900,7 @@ SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
         R_len_t tl = LENGTH(table);
         for (i = 0; i < tl; i++) {
             int j = Lookup (table, i, &data);
-            if (j != 0)
+            if (j != 0 && ansi[j-1] == 0)
                 ansi[j-1] = -(i+1);
         }
         for (i = 0; i < n; i++) {
