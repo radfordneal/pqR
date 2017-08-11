@@ -76,8 +76,8 @@ static void *lphash_malloc (size_t size)
 }
 
 
-/* HASH FUNCTIONS FOR VARIOUS TYPES.  Arguments are vector and index (from 0)
-   of element to hash. */
+/* HASH FUNCTIONS FOR VARIOUS TYPES.  Arguments are pointer to data array
+   index (from 0) of element to hash. */
 
 #define HASH32U(u) ( ((u) + ((u) >> 5)) + (((u) << 3) + ((u) >> 16)) )
 
@@ -232,8 +232,9 @@ static unsigned vhash (void *dat, int indx)
 }
 
 
-/* EQUALITY COMPARISON FOR VARIOUS TYPES.  Arguments are two vectors and
-   two indexes (from 0) within them of the elements to compare. */
+/* EQUALITY COMPARISON FOR VARIOUS TYPES.  Arguments are two pointers to
+   data arrays and two indexes (from 0) within them of the elements to 
+   compare. */
 
 static int lequal (void *di, int i, void *dj, int j)
 {
@@ -307,6 +308,8 @@ static int vequal (void *di, int i, void *dj, int j)
     return R_compute_identical (x[i], y[j], 0);
 }
 
+
+/* HASH TABLE INITIALIZATION. */
 
 static void HashTableSetup (SEXP x, HashData *d)
 {
@@ -383,7 +386,7 @@ static void check_UTF8 (SEXP x, Rboolean *useBytes, Rboolean *useUTF8)
 }
 
 
-static int isDuplicated (SEXP x, int indx, HashData *d)
+static inline int isDuplicated (SEXP x, int indx, HashData *d)
 {
     void *data = DATAPTR(x);
     lphash_bucket_t *b;
@@ -672,7 +675,7 @@ static void UndoHashing(SEXP x, SEXP table, HashData *d)
     for (int i = 0; i < LENGTH(x); i++) removeEntry (x, i, d);
 }
 
-static int Lookup (SEXP x, int indx, HashData *d)
+static inline int Lookup (SEXP x, int indx, HashData *d)
 {
     void *data = DATAPTR(x);
     lphash_bucket_t *b;
@@ -690,14 +693,16 @@ static int Lookup (SEXP x, int indx, HashData *d)
 /* Now do the table lookup */
 static SEXP HashLookup (SEXP x, HashData *d)
 {
+    R_len_t i, n;
     SEXP ans;
-    int i, n;
 
     n = LENGTH(x);
     PROTECT(ans = allocVector(INTSXP, n));
+
     for (i = 0; i < n; i++) {
 	INTEGER(ans)[i] = Lookup (x, i, d);
     }
+
     UNPROTECT(1);
     return ans;
 }
