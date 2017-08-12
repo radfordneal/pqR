@@ -33,47 +33,25 @@
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 
-
-/* LPHASH INTERFACE. */
-
-/* #define LPHASH_STATS */
-
-#define LPHASH_STATIC
-#include "lphash-app.h"
-#include <lphash/lphash.c>
-
-/* Hash function and equality test for keys */
+#define HASH_STATS 0
 
 typedef struct HashData {
     unsigned (*hash)(void*,int);    /* function for computing hashes */
     int (*equal)(void*,int,void*,int); /* function for comparing elements */
-    lphash_table_t *table;          /* hash table */
+    int *table;                     /* hash table */
+    size_t size;                    /* size of hash table */
     void *matchvec;                 /* array of elements matched against */
     void *keyvec;                   /* array of elements used as keys */
     int keyindx;                    /* index of key element in keyvec (from 0)*/
     int nomatch;                    /* index value for "no match" */
     Rboolean useBytes;              /* some string marked as bytes? */
     Rboolean useUTF8;               /* compare strings as UTF8? */
+#if HASH_STATS
+    unsigned occupied;              /* number of occupied buckets */
+    unsigned searches;              /* number of searches done */
+    unsigned probs;                 /* number of buckets looked at in searches*/
+#endif
 } HashData;
-
-
-static int lphash_match (lphash_bucket_t *bucket, lphash_key_t key)
-{
-    int e = bucket->entry;
-    if (e < 0) e = -e;
-
-    return key->equal (key->matchvec, e-1, key->keyvec, key->keyindx);
-}
-
-static void lphash_setup_bucket (lphash_bucket_t *bucket, lphash_key_t key)
-{
-    bucket->entry = key->keyindx + 1;
-}
-
-static void *lphash_malloc (size_t size)
-{
-    return R_alloc (size, 1);
-}
 
 
 /* HASH FUNCTIONS FOR VARIOUS TYPES.  Arguments are pointer to data array
@@ -311,19 +289,25 @@ static int vequal (void *di, int i, void *dj, int j)
 
 /* HASH TABLE INITIALIZATION. */
 
+static size_t hash_size (R_len_t len)
+{
+    size_t i = 32;  /* minimum size (unless overridden later) */
+    while (i < len) i <<= 1;
+    return (i<<1) == 0 ? i : i<<1;
+}
+
 static void HashTableSetup (SEXP x, HashData *d)
 {
     if (!isVector(x))
         UNIMPLEMENTED_TYPE("HashTableSetup", x);
 
-    int tbl_size = (int) (2.3 * LENGTH(x));
-    if (tbl_size < 256) tbl_size = 256;
+    d->size = hash_size(LENGTH(x));
 
     switch (TYPEOF(x)) {
     case LGLSXP:
         d->hash = lhash;
         d->equal = lequal;
-        tbl_size = 4;
+        d->size = 4;
         break;
     case INTSXP:
         d->hash = ihash;
@@ -344,8 +328,6 @@ static void HashTableSetup (SEXP x, HashData *d)
     case RAWSXP:
         d->hash = rawhash;
         d->equal = rawequal;
-        if (tbl_size > 512)
-            tbl_size = 512;  /* needs one empty, so can't be 256 */
         break;
     case VECSXP:
     case EXPRSXP:
@@ -356,7 +338,9 @@ static void HashTableSetup (SEXP x, HashData *d)
         abort();
     }
 
-    d->table = lphash_create (tbl_size);
+    d->table = (int *) R_alloc (d->size, sizeof *d->table);
+    for (unsigned i = 0; i < d->size; i++) d->table[i] = 0;
+
     d->matchvec = DATAPTR(x);
     d->nomatch = 0;
     d->useBytes = FALSE;
@@ -386,51 +370,116 @@ static void check_UTF8 (SEXP x, Rboolean *useBytes, Rboolean *useUTF8)
 }
 
 
+static inline int hash_insert (HashData *d)
+{
+    int indx = d->keyindx;
+    void *vec = d->keyvec;
+    void *tbl = d->matchvec;
+    unsigned i;
+
+#   if HASH_STATS
+        d->searches += 1;
+#   endif
+    i = d->hash (vec, indx);
+    for (;;) {
+        i &= d->size-1;
+#       if HASH_STATS
+            d->probes += 1;
+            if (d->table[i] == 0) d->occupied += 1;
+#       endif
+        if (d->table[i] <= 0) {
+            d->table[i] = indx + 1;
+            return indx + 1;
+        }
+        if (d->equal (tbl, d->table[i]-1, vec, indx)) {
+            return d->table[i];
+        }
+        i += 1;
+    }
+}
+
+
+static inline int hash_lookup (HashData *d)
+{
+    int indx = d->keyindx;
+    void *vec = d->keyvec;
+    void *tbl = d->matchvec;
+    unsigned i;
+
+#   if HASH_STATS
+        d->searches += 1;
+#   endif
+    i = d->hash (vec, indx);
+    for (;;) {
+        i &= d->size-1;
+#       if HASH_STATS
+            d->probes += 1;
+#       endif
+        if (d->table[i] == 0) {
+            return 0;
+        }
+        if (d->table[i] > 0 && d->equal (tbl, d->table[i]-1, vec, indx)) {
+            return d->table[i];
+        }
+        i += 1;
+    }
+}
+
+
+static inline void hash_remove (HashData *d)
+{
+    int indx = d->keyindx;
+    void *vec = d->keyvec;
+    void *tbl = d->matchvec;
+    unsigned i;
+
+#   if HASH_STATS
+        d->searches += 1;
+#   endif
+    i = d->hash (vec, indx);
+    for (;;) {
+        i &= d->size-1;
+#       if HASH_STATS
+            d->probes += 1;
+#       endif
+        if (d->table[i] == 0)
+            return;
+        if (d->table[i] > 0 && d->equal (tbl, d->table[i]-1, vec, indx)) {
+            d->table[i] = -d->table[i];
+            return;
+        }
+        i += 1;
+    }
+}
+
+
 static inline int isDuplicated (SEXP x, int indx, HashData *d)
 {
-    void *data = DATAPTR(x);
-    lphash_bucket_t *b;
-    lphash_hash_t h;
-
-    h = d->hash (data, indx);
-    d->keyvec = data;
+    d->keyvec = DATAPTR(x);
     d->keyindx = indx;
 
-    b = lphash_insert (d->table, h, d);
-
-    return b->entry - 1 != indx;
+    return hash_insert(d) - 1 != indx;
 }
 
 /* returns 1-based duplicate no */
 static int isDuplicated2 (SEXP x, int indx, HashData *d)
 {
-    void *data = DATAPTR(x);
-    lphash_bucket_t *b;
-    lphash_hash_t h;
+    int i;
 
-    h = d->hash (data, indx);
-    d->keyvec = data;
+    d->keyvec = DATAPTR(x);
     d->keyindx = indx;
 
-    b = lphash_insert (d->table, h, d);
+    i = hash_insert(d);
 
-    return b->entry - 1 != indx ? b->entry : 0;
+    return i-1 != indx ? i : 0;
 }
 
 static void removeEntry(SEXP x, int indx, HashData *d)
 {
-    void *data = DATAPTR(x);
-    lphash_bucket_t *b;
-    lphash_hash_t h;
-
-    h = d->hash (data, indx);
-    d->keyvec = data;
+    d->keyvec = DATAPTR(x);
     d->keyindx = indx;
 
-    b = lphash_key_lookup (d->table, h, d);
-    if (b != NULL) {
-        if (b->entry > 0) b->entry = -b->entry;
-    }
+    hash_remove(d);
 }
 
 #define DUPLICATED_INIT						\
@@ -693,17 +742,14 @@ static void UndoHashing (SEXP x, HashData *d)
 
 static inline int Lookup (SEXP x, int indx, HashData *d)
 {
-    void *data = DATAPTR(x);
-    lphash_bucket_t *b;
-    lphash_hash_t h;
+    int i;
 
-    h = d->hash (data, indx);
-    d->keyvec = data;
+    d->keyvec = DATAPTR(x);
     d->keyindx = indx;
 
-    b = lphash_key_lookup (d->table, h, d);
+    i = hash_lookup(d);
 
-    return b == NULL || b->entry < 0 ? d->nomatch : b->entry;
+    return i <= 0 ? d->nomatch : i;
 }
 
 /* Now do the table lookup */
@@ -872,7 +918,7 @@ SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
     if (incomp != R_NoObject) 
         incomp = coerceVector(incomp, type);
 
-    if (LENGTH(table) < LENGTH(x)) {  /* 'table' is hashed, 'x' looked up */
+    if (LENGTH(table) < 1.2*LENGTH(x)) {  /* 'table' is hashed, 'x' looked up */
         HashTableSetup (table, &data);
         data.nomatch = nomatch;
         check_UTF8 (x, &data.useBytes, &data.useUTF8);
@@ -910,13 +956,11 @@ SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
         }
     }
     
-#   ifdef LPHASH_STATS
-        if (installed_already("LPHASH_STATS")) {
-            REprintf("LPHASH_STATS: size %d, occupied %d\n",
-                        data.table->size, data.table->occupied);
-            REprintf("  searches %d, not_found %d, probes %d, matches %d\n",
-                        data.table->searches, data.table->not_found, 
-                        data.table->probes, data.table->matches);
+#   if HASH_STATS
+        if (installed_already("HASH_STATS")) {
+            REprintf(
+              "HASH_STATS: size %d, occupied %d\, searches %d, probes %d\n",
+               data.size, data.occupied, data.searches, data.probes);
         }
 #   endif
 
@@ -1695,7 +1739,12 @@ static void HashTableSetup1 (SEXP x, HashData *d)
 {
     d->hash = shash;
     d->equal = csequal;
-    d->table = lphash_create ((int) (2.3 * LENGTH(x)));
+
+    d->size = hash_size(LENGTH(x));
+
+    d->table = (int *) R_alloc (d->size, sizeof *d->table);
+    for (unsigned i = 0; i < d->size; i++) d->table[i] = 0;
+
     d->matchvec = DATAPTR(x);
     d->nomatch = 0;
     d->useBytes = FALSE;
