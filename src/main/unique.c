@@ -731,7 +731,7 @@ static SEXP HashLookup (SEXP x, HashData *d)
 static SEXP match_transform(SEXP s, SEXP env)
 {
     if (!OBJECT(s))
-        return duplicate(s);
+        return s;
 
     if (inherits_CHAR (s, R_factor_CHARSXP))
         return asCharacterFactor(s);
@@ -745,7 +745,7 @@ static SEXP match_transform(SEXP s, SEXP env)
         return r;
     }
 
-    return duplicate(s);
+    return s;
 }
 
 SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
