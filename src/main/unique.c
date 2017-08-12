@@ -33,6 +33,9 @@
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 
+
+/* STRUCTURE WITH HASH TABLE INFORMATION. */
+
 #define HASH_STATS 0
 
 typedef struct HashData {
@@ -41,8 +44,6 @@ typedef struct HashData {
     int *table;                     /* hash table */
     size_t size;                    /* size of hash table */
     void *matchvec;                 /* array of elements matched against */
-    void *keyvec;                   /* array of elements used as keys */
-    int keyindx;                    /* index of key element in keyvec (from 0)*/
     int nomatch;                    /* index value for "no match" */
     Rboolean useBytes;              /* some string marked as bytes? */
     Rboolean useUTF8;               /* compare strings as UTF8? */
@@ -370,10 +371,11 @@ static void check_UTF8 (SEXP x, Rboolean *useBytes, Rboolean *useUTF8)
 }
 
 
-static inline int hash_insert (HashData *d)
+/* HASH TABLE OPERATIONS. */
+
+static inline int hash_insert (SEXP x, int indx, HashData *d)
 {
-    int indx = d->keyindx;
-    void *vec = d->keyvec;
+    void *vec = DATAPTR(x);
     void *tbl = d->matchvec;
     unsigned i;
 
@@ -389,7 +391,7 @@ static inline int hash_insert (HashData *d)
 #       endif
         if (d->table[i] <= 0) {
             d->table[i] = indx + 1;
-            return indx + 1;
+            return 0;
         }
         if (d->equal (tbl, d->table[i]-1, vec, indx)) {
             return d->table[i];
@@ -399,10 +401,9 @@ static inline int hash_insert (HashData *d)
 }
 
 
-static inline int hash_lookup (HashData *d)
+static inline int hash_lookup (SEXP x, int indx, HashData *d)
 {
-    int indx = d->keyindx;
-    void *vec = d->keyvec;
+    void *vec = DATAPTR(x);
     void *tbl = d->matchvec;
     unsigned i;
 
@@ -416,7 +417,7 @@ static inline int hash_lookup (HashData *d)
             d->probes += 1;
 #       endif
         if (d->table[i] == 0) {
-            return 0;
+            return d->nomatch;
         }
         if (d->table[i] > 0 && d->equal (tbl, d->table[i]-1, vec, indx)) {
             return d->table[i];
@@ -426,10 +427,9 @@ static inline int hash_lookup (HashData *d)
 }
 
 
-static inline void hash_remove (HashData *d)
+static inline void hash_remove (SEXP x, int indx, HashData *d)
 {
-    int indx = d->keyindx;
-    void *vec = d->keyvec;
+    void *vec = DATAPTR(x);
     void *tbl = d->matchvec;
     unsigned i;
 
@@ -452,35 +452,6 @@ static inline void hash_remove (HashData *d)
     }
 }
 
-
-static inline int isDuplicated (SEXP x, int indx, HashData *d)
-{
-    d->keyvec = DATAPTR(x);
-    d->keyindx = indx;
-
-    return hash_insert(d) - 1 != indx;
-}
-
-/* returns 1-based duplicate no */
-static int isDuplicated2 (SEXP x, int indx, HashData *d)
-{
-    int i;
-
-    d->keyvec = DATAPTR(x);
-    d->keyindx = indx;
-
-    i = hash_insert(d);
-
-    return i-1 != indx ? i : 0;
-}
-
-static void removeEntry(SEXP x, int indx, HashData *d)
-{
-    d->keyvec = DATAPTR(x);
-    d->keyindx = indx;
-
-    hash_remove(d);
-}
 
 #define DUPLICATED_INIT						\
     const void *vmax = VMAXGET();				\
@@ -510,9 +481,9 @@ SEXP duplicated(SEXP x, Rboolean from_last)
     v = LOGICAL(ans);
 
     if(from_last)
-	for (i = n-1; i >= 0; i--) v[i] = isDuplicated(x, i, &data);
+	for (i = n-1; i >= 0; i--) v[i] = hash_insert (x, i, &data) != 0;
     else
-	for (i = 0; i < n; i++) v[i] = isDuplicated(x, i, &data);
+	for (i = 0; i < n; i++) v[i] = hash_insert (x, i, &data) != 0;
 
     UNPROTECT(1);
     DUPLICATED_FINI;
@@ -527,12 +498,12 @@ int any_duplicated(SEXP x, Rboolean from_last)
 
     if (from_last) {
         for (i = n-1; i >= 0; i--) {
-            if (isDuplicated(x, i, &data)) { result = i+1; break; }
+            if (hash_insert (x, i, &data)) { result = i+1; break; }
         }
     }
     else {
         for (i = 0; i < n; i++) {
-            if (isDuplicated(x, i, &data)) { result = i+1; break; }
+            if (hash_insert (x, i, &data)) { result = i+1; break; }
         }
     }
 
@@ -552,9 +523,9 @@ SEXP duplicated3(SEXP x, SEXP incomp, Rboolean from_last)
     v = LOGICAL(ans);
 
     if (from_last)
-        for (i = n-1; i >= 0; i--) v[i] = isDuplicated(x, i, &data);
+        for (i = n-1; i >= 0; i--) v[i] = hash_insert (x, i, &data) != 0;
     else
-        for (i = 0; i < n; i++) v[i] = isDuplicated(x, i, &data);
+        for (i = 0; i < n; i++) v[i] = hash_insert (x, i, &data) != 0;
 
     if (length(incomp)) {
         PROTECT(incomp = coerceVector(incomp, TYPEOF(x)));
@@ -592,7 +563,7 @@ int any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last)
     if (from_last)
 	for (i = n-1; i >= 0; i--) {
 #define IS_DUPLICATED_CHECK				\
-	    if (isDuplicated (x, i, &data)) {		\
+	    if (hash_insert (x, i, &data)) {		\
 		Rboolean isDup = TRUE;			\
 		for (j = 0; j < m; j++)			\
 		    if (data.equal (DATAPTR(x), i, DATAPTR(incomp), j)) { \
@@ -731,25 +702,13 @@ static void DoHashing(SEXP table, HashData *d)
     n = LENGTH(table);
 
     for (i = 0; i < n; i++)
-	(void) isDuplicated(table, i, d);
+	(void) hash_insert (table, i, d);
 }
 
 /* invalidate entries */
 static void UndoHashing (SEXP x, HashData *d)
 {
-    for (int i = 0; i < LENGTH(x); i++) removeEntry (x, i, d);
-}
-
-static inline int Lookup (SEXP x, int indx, HashData *d)
-{
-    int i;
-
-    d->keyvec = DATAPTR(x);
-    d->keyindx = indx;
-
-    i = hash_lookup(d);
-
-    return i <= 0 ? d->nomatch : i;
+    for (int i = 0; i < LENGTH(x); i++) hash_remove (x, i, d);
 }
 
 /* Now do the table lookup */
@@ -762,7 +721,7 @@ static SEXP HashLookup (SEXP x, HashData *d)
     PROTECT(ans = allocVector(INTSXP, n));
 
     for (i = 0; i < n; i++) {
-	INTEGER(ans)[i] = Lookup (x, i, d);
+	INTEGER(ans)[i] = hash_lookup (x, i, d);
     }
 
     UNPROTECT(1);
@@ -940,12 +899,12 @@ SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
         ans = allocVector (INTSXP, LENGTH(x));
         int *ansi = INTEGER(ans);
         for (i = 0; i < n; i++) 
-            ansi[i] = isDuplicated2 (x, i, &data);
+            ansi[i] = hash_insert (x, i, &data);
         if (incomp != R_NoObject)
             UndoHashing (incomp, &data);
         R_len_t tl = LENGTH(table);
         for (i = 0; i < tl; i++) {
-            int j = Lookup (table, i, &data);
+            int j = hash_lookup (table, i, &data);
             if (j != 0 && ansi[j-1] == 0)
                 ansi[j-1] = -(i+1);
         }
@@ -1134,7 +1093,7 @@ static SEXP do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env)
 	    for (i = 0; i < n_input; i++) {
 		/* we don't want to lookup "" */
 		if (strlen(in[i]) == 0) continue;
-		ians[i] = Lookup (input, i, &data);
+		ians[i] = hash_lookup (input, i, &data);
 		if(ians[i]) nexact++;
 	    }
             VMAXSET(vmax);
@@ -1696,7 +1655,7 @@ static SEXP do_makeunique(SEXP call, SEXP op, SEXP args, SEXP env)
     HashTableSetup(names, &data);
     PROTECT(dup = allocVector(INTSXP, n));
     int *v = INTEGER(dup);
-    for (i = 0; i < n; i++) v[i] = isDuplicated2 (names, i, &data);
+    for (i = 0; i < n; i++) v[i] = hash_insert (names, i, &data);
 
     char csep_len = strlen(csep);
     void * vmax = VMAXGET();
@@ -1713,10 +1672,10 @@ static SEXP do_makeunique(SEXP call, SEXP op, SEXP args, SEXP env)
         for(cnt = cnts[dp-1]; ; cnt++) {
             sprintf(end, "%d", cnt);
             SET_STRING_ELT(newx, 0, mkChar(buf));
-            if (Lookup (newx, 0, &data) == data.nomatch) break;
+            if (hash_lookup (newx, 0, &data) == data.nomatch) break;
         }
         SET_STRING_ELT(ans, i, STRING_ELT(newx, 0));
-        /* insert it */ (void) isDuplicated(ans, i, &data);
+        /* insert it */ (void) hash_insert (ans, i, &data);
         cnts[dp-1] = cnt+1; /* cache the first unused cnt value */
         VMAXSET(vmax);
     }
@@ -1770,7 +1729,7 @@ SEXP attribute_hidden csduplicated (SEXP x)
     v = LOGICAL(ans);
 
     for (i = 0; i < n; i++)
-	v[i] = isDuplicated(x, i, &data);
+	v[i] = hash_insert (x, i, &data) != 0;
 
     UNPROTECT(1);
     VMAXSET(vmax);
