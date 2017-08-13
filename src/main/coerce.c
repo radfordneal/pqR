@@ -715,6 +715,14 @@ int copy_elements_coerced
         do {
             COMPLEX(x)[i] = ComplexFromInteger(INTEGER(v)[j],&w);
             i += s; j += t;
+            COMPLEX(x)[i] = ComplexFromInteger(INTEGER(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
+        break;
+    case (CPLXSXP<<5) + REALSXP:
+        do {
+            COMPLEX(x)[i] = ComplexFromReal(REAL(v)[j],&w);
+            i += s; j += t;
             COMPLEX(x)[i] = ComplexFromReal(REAL(v)[j],&w);
             i += s; j += t;
         } while (j != e);
@@ -773,7 +781,6 @@ int copy_elements_coerced
     }
 
     UNPROTECT(2);
-
     return w;
 }
 
