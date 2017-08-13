@@ -424,10 +424,114 @@ int copy_elements_coerced
         return 0;
     }
 
+    int e = j + n*t;
     int w = 0;
 
     PROTECT(x); 
     PROTECT(v);
+
+    if (n & 1) {
+        switch ((typx<<5) + typv) {
+        case (RAWSXP<<5) + LGLSXP:
+            RAW(x)[i] = RawFromLogical(LOGICAL(v)[j],&w);
+            break;
+        case (RAWSXP<<5) + INTSXP:
+            RAW(x)[i] = RawFromInteger(INTEGER(v)[j],&w);
+            break;
+        case (RAWSXP<<5) + REALSXP:
+            RAW(x)[i] = RawFromReal(REAL(v)[j],&w);
+            break;
+        case (RAWSXP<<5) + CPLXSXP:
+            RAW(x)[i] = RawFromComplex(COMPLEX(v)[j],&w);
+            break;
+        case (RAWSXP<<5) + STRSXP:
+            RAW(x)[i] = RawFromString(STRING_ELT(v,j),&w);
+            break;
+        case (LGLSXP<<5) + RAWSXP:
+            LOGICAL(x)[i] = LogicalFromRaw(RAW(v)[j],&w);
+            break;
+        case (LGLSXP<<5) + INTSXP:
+            LOGICAL(x)[i] = LogicalFromInteger(INTEGER(v)[j],&w);
+            break;
+        case (LGLSXP<<5) + REALSXP:
+            LOGICAL(x)[i] = LogicalFromReal(REAL(v)[j],&w);
+            break;
+        case (LGLSXP<<5) + CPLXSXP:
+            LOGICAL(x)[i] = LogicalFromComplex(COMPLEX(v)[j],&w);
+            break;
+        case (LGLSXP<<5) + STRSXP:
+            LOGICAL(x)[i] = LogicalFromString(STRING_ELT(v,j),&w);
+            break;
+        case (INTSXP<<5) + RAWSXP:
+            INTEGER(x)[i] = IntegerFromRaw(RAW(v)[j],&w);
+            break;
+        case (INTSXP<<5) + LGLSXP:
+            INTEGER(x)[i] = IntegerFromLogical(LOGICAL(v)[j],&w);
+            break;
+        case (INTSXP<<5) + REALSXP:
+            INTEGER(x)[i] = IntegerFromReal(REAL(v)[j],&w);
+            break;
+        case (INTSXP<<5) + CPLXSXP:
+            INTEGER(x)[i] = IntegerFromComplex(COMPLEX(v)[j],&w);
+            break;
+        case (INTSXP<<5) + STRSXP:
+            INTEGER(x)[i] = IntegerFromString(STRING_ELT(v,j),&w);
+            break;
+        case (REALSXP<<5) + RAWSXP:
+            REAL(x)[i] = RealFromRaw(RAW(v)[j],&w);
+            break;
+        case (REALSXP<<5) + LGLSXP:
+            REAL(x)[i] = RealFromLogical(LOGICAL(v)[j],&w);
+            break;
+        case (REALSXP<<5) + INTSXP:
+            REAL(x)[i] = RealFromInteger(INTEGER(v)[j],&w);
+            break;
+        case (REALSXP<<5) + CPLXSXP:
+            REAL(x)[i] = RealFromComplex(COMPLEX(v)[j],&w);
+            break;
+        case (REALSXP<<5) + STRSXP:
+            REAL(x)[i] = RealFromString(STRING_ELT(v,j),&w);
+            break;
+        case (CPLXSXP<<5) + RAWSXP:
+            COMPLEX(x)[i] = ComplexFromRaw(RAW(v)[j],&w);
+            break;
+        case (CPLXSXP<<5) + LGLSXP:
+            COMPLEX(x)[i] = ComplexFromLogical(LOGICAL(v)[j],&w);
+            break;
+        case (CPLXSXP<<5) + INTSXP:
+            COMPLEX(x)[i] = ComplexFromInteger(INTEGER(v)[j],&w);
+            break;
+        case (CPLXSXP<<5) + REALSXP:
+            COMPLEX(x)[i] = ComplexFromReal(REAL(v)[j],&w);
+            break;
+        case (CPLXSXP<<5) + STRSXP:
+            COMPLEX(x)[i] = ComplexFromString(STRING_ELT(v,j),&w);
+            break;
+        case (STRSXP<<5) + RAWSXP:
+            SET_STRING_ELT (x, i, StringFromRaw(RAW(v)[j],&w)); 
+            break;
+        case (STRSXP<<5) + LGLSXP:
+            SET_STRING_ELT (x, i, StringFromLogical(LOGICAL(v)[j],&w)); 
+            break;
+        case (STRSXP<<5) + INTSXP:
+            SET_STRING_ELT (x, i, StringFromInteger(INTEGER(v)[j],&w)); 
+            break;
+        case (STRSXP<<5) + REALSXP:
+            SET_STRING_ELT (x, i, StringFromReal(REAL(v)[j],&w)); 
+            break;
+        case (STRSXP<<5) + CPLXSXP:
+            SET_STRING_ELT (x, i, StringFromComplex(COMPLEX(v)[j],&w)); 
+            break;
+        default:
+            UNIMPLEMENTED_TYPE("copy_elements_coerced", x);
+        }
+        i += s; j += t;
+    }
+
+    if (n == 1) {
+        UNPROTECT(2);
+        return w;
+    }
 
     switch ((typx<<5) + typv) {
 
@@ -435,181 +539,233 @@ int copy_elements_coerced
         do {
             RAW(x)[i] = RawFromLogical(LOGICAL(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            RAW(x)[i] = RawFromLogical(LOGICAL(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (RAWSXP<<5) + INTSXP:
         do {
             RAW(x)[i] = RawFromInteger(INTEGER(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            RAW(x)[i] = RawFromInteger(INTEGER(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (RAWSXP<<5) + REALSXP:
         do {
             RAW(x)[i] = RawFromReal(REAL(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            RAW(x)[i] = RawFromReal(REAL(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (RAWSXP<<5) + CPLXSXP:
         do {
             RAW(x)[i] = RawFromComplex(COMPLEX(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            RAW(x)[i] = RawFromComplex(COMPLEX(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (RAWSXP<<5) + STRSXP:
         do {
             RAW(x)[i] = RawFromString(STRING_ELT(v,j),&w);
             i += s; j += t;
-        } while (--n>0);
+            RAW(x)[i] = RawFromString(STRING_ELT(v,j),&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (LGLSXP<<5) + RAWSXP:
         do {
             LOGICAL(x)[i] = LogicalFromRaw(RAW(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            LOGICAL(x)[i] = LogicalFromRaw(RAW(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (LGLSXP<<5) + INTSXP:
         do {
             LOGICAL(x)[i] = LogicalFromInteger(INTEGER(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            LOGICAL(x)[i] = LogicalFromInteger(INTEGER(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (LGLSXP<<5) + REALSXP:
         do {
             LOGICAL(x)[i] = LogicalFromReal(REAL(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            LOGICAL(x)[i] = LogicalFromReal(REAL(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (LGLSXP<<5) + CPLXSXP:
         do {
             LOGICAL(x)[i] = LogicalFromComplex(COMPLEX(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            LOGICAL(x)[i] = LogicalFromComplex(COMPLEX(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (LGLSXP<<5) + STRSXP:
         do {
             LOGICAL(x)[i] = LogicalFromString(STRING_ELT(v,j),&w);
             i += s; j += t;
-        } while (--n>0);
+            LOGICAL(x)[i] = LogicalFromString(STRING_ELT(v,j),&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (INTSXP<<5) + RAWSXP:
         do {
             INTEGER(x)[i] = IntegerFromRaw(RAW(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            INTEGER(x)[i] = IntegerFromRaw(RAW(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (INTSXP<<5) + LGLSXP:
         do {
             INTEGER(x)[i] = IntegerFromLogical(LOGICAL(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            INTEGER(x)[i] = IntegerFromLogical(LOGICAL(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (INTSXP<<5) + REALSXP:
         do {
             INTEGER(x)[i] = IntegerFromReal(REAL(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            INTEGER(x)[i] = IntegerFromReal(REAL(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (INTSXP<<5) + CPLXSXP:
         do {
             INTEGER(x)[i] = IntegerFromComplex(COMPLEX(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            INTEGER(x)[i] = IntegerFromComplex(COMPLEX(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (INTSXP<<5) + STRSXP:
         do {
             INTEGER(x)[i] = IntegerFromString(STRING_ELT(v,j),&w);
             i += s; j += t;
-        } while (--n>0);
+            INTEGER(x)[i] = IntegerFromString(STRING_ELT(v,j),&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (REALSXP<<5) + RAWSXP:
         do {
             REAL(x)[i] = RealFromRaw(RAW(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            REAL(x)[i] = RealFromRaw(RAW(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (REALSXP<<5) + LGLSXP:
         do {
             REAL(x)[i] = RealFromLogical(LOGICAL(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            REAL(x)[i] = RealFromLogical(LOGICAL(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (REALSXP<<5) + INTSXP:
         do {
             REAL(x)[i] = RealFromInteger(INTEGER(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            REAL(x)[i] = RealFromInteger(INTEGER(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (REALSXP<<5) + CPLXSXP:
         do {
             REAL(x)[i] = RealFromComplex(COMPLEX(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            REAL(x)[i] = RealFromComplex(COMPLEX(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (REALSXP<<5) + STRSXP:
         do {
             REAL(x)[i] = RealFromString(STRING_ELT(v,j),&w);
             i += s; j += t;
-        } while (--n>0);
+            REAL(x)[i] = RealFromString(STRING_ELT(v,j),&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (CPLXSXP<<5) + RAWSXP:
         do {
             COMPLEX(x)[i] = ComplexFromRaw(RAW(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            COMPLEX(x)[i] = ComplexFromRaw(RAW(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (CPLXSXP<<5) + LGLSXP:
         do {
             COMPLEX(x)[i] = ComplexFromLogical(LOGICAL(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+            COMPLEX(x)[i] = ComplexFromLogical(LOGICAL(v)[j],&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (CPLXSXP<<5) + INTSXP:
         do {
             COMPLEX(x)[i] = ComplexFromInteger(INTEGER(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
-        break;
-    case (CPLXSXP<<5) + REALSXP:
-        do {
             COMPLEX(x)[i] = ComplexFromReal(REAL(v)[j],&w);
             i += s; j += t;
-        } while (--n>0);
+        } while (j != e);
         break;
     case (CPLXSXP<<5) + STRSXP:
         do {
             COMPLEX(x)[i] = ComplexFromString(STRING_ELT(v,j),&w);
             i += s; j += t;
-        } while (--n>0);
+            COMPLEX(x)[i] = ComplexFromString(STRING_ELT(v,j),&w);
+            i += s; j += t;
+        } while (j != e);
         break;
     case (STRSXP<<5) + RAWSXP:
         do {
             SET_STRING_ELT (x, i, StringFromRaw(RAW(v)[j],&w)); 
             i += s; j += t;
-        } while (--n>0);
+            SET_STRING_ELT (x, i, StringFromRaw(RAW(v)[j],&w)); 
+            i += s; j += t;
+        } while (j != e);
         break;
     case (STRSXP<<5) + LGLSXP:
         do {
             SET_STRING_ELT (x, i, StringFromLogical(LOGICAL(v)[j],&w)); 
             i += s; j += t;
-        } while (--n>0);
+            SET_STRING_ELT (x, i, StringFromLogical(LOGICAL(v)[j],&w)); 
+            i += s; j += t;
+        } while (j != e);
         break;
     case (STRSXP<<5) + INTSXP:
         do {
             SET_STRING_ELT (x, i, StringFromInteger(INTEGER(v)[j],&w)); 
             i += s; j += t;
-        } while (--n>0);
+            SET_STRING_ELT (x, i, StringFromInteger(INTEGER(v)[j],&w)); 
+            i += s; j += t;
+        } while (j != e);
         break;
     case (STRSXP<<5) + REALSXP:
         do {
             SET_STRING_ELT (x, i, StringFromReal(REAL(v)[j],&w)); 
             i += s; j += t;
-        } while (--n>0);
+            SET_STRING_ELT (x, i, StringFromReal(REAL(v)[j],&w)); 
+            i += s; j += t;
+        } while (j != e);
         break;
     case (STRSXP<<5) + CPLXSXP:
         do {
             SET_STRING_ELT (x, i, StringFromComplex(COMPLEX(v)[j],&w)); 
             i += s; j += t;
-        } while (--n>0);
+            SET_STRING_ELT (x, i, StringFromComplex(COMPLEX(v)[j],&w)); 
+            i += s; j += t;
+        } while (j != e);
         break;
 
     default:
