@@ -45,11 +45,8 @@
  *  promises requires that the promises be forced and
  *  the value duplicated.  */
 
-/* This macro pulls out the common code in copying an atomic vector.
-   The special handling of the scalar case (__n__ == 1) seems to make
-   a small but measurable difference, at least for some cases.
-   <FIXME>: surely memcpy would be faster here?
-*/
+/* This macro pulls out the common code in copying an atomic vector. */
+
 #define DUPLICATE_ATOMIC_VECTOR(type, fun, to, from) do {\
   int __n__ = LENGTH(from);\
   PROTECT(from); \
@@ -58,8 +55,7 @@
   else { \
     int __i__; \
     type *__fp__ = fun(from), *__tp__ = fun(to); \
-    for (__i__ = 0; __i__ < __n__; __i__++) \
-      __tp__[__i__] = __fp__[__i__]; \
+    memcpy (__tp__, __fp__, __n__ * sizeof(type)); \
   } \
   DUPLICATE_ATTRIB(to, from);		\
   SET_TRUELENGTH(to, TRUELENGTH(from)); \
@@ -192,11 +188,11 @@ static SEXP duplicate1(SEXP s)
 	SET_TRUELENGTH(t, TRUELENGTH(s));
 	UNPROTECT(2);
 	break;
-    case LGLSXP: DUPLICATE_ATOMIC_VECTOR(int, LOGICAL, t, s); break;
-    case INTSXP: DUPLICATE_ATOMIC_VECTOR(int, INTEGER, t, s); break;
+    case LGLSXP:  DUPLICATE_ATOMIC_VECTOR(int, LOGICAL, t, s); break;
+    case INTSXP:  DUPLICATE_ATOMIC_VECTOR(int, INTEGER, t, s); break;
     case REALSXP: DUPLICATE_ATOMIC_VECTOR(double, REAL, t, s); break;
     case CPLXSXP: DUPLICATE_ATOMIC_VECTOR(Rcomplex, COMPLEX, t, s); break;
-    case RAWSXP: DUPLICATE_ATOMIC_VECTOR(Rbyte, RAW, t, s); break;
+    case RAWSXP:  DUPLICATE_ATOMIC_VECTOR(Rbyte, RAW, t, s); break;
     case STRSXP:
 	/* direct copying and bypassing the write barrier is OK since
 	   t was just allocated and so it cannot be older than any of
@@ -216,7 +212,7 @@ static SEXP duplicate1(SEXP s)
 	UNIMPLEMENTED_TYPE("duplicate", s);
 	t = s;/* for -Wall */
     }
-    if(TYPEOF(t) == TYPEOF(s) ) { /* surely it only makes sense in this case*/
+    if (TYPEOF(t) == TYPEOF(s) ) { /* surely it only makes sense in this case*/
 	SET_OBJECT(t, OBJECT(s));
 	if (IS_S4_OBJECT(s)) SET_S4_OBJECT(t); else UNSET_S4_OBJECT(t);
     }
