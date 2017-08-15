@@ -408,7 +408,8 @@ SEXP attribute_hidden StringFromComplex(Rcomplex x, int *warn)
    vector x (starting at i, stepping by s), which is not necessarily of the 
    same type.  The value returned is the OR of all warning flags produced 
    as a result of conversions, zero if no warnings.  The arguments x and v 
-   are protected within this procedure. */
+   are protected within this procedure.  Note: t may be zero, s should not
+   be zero. */
 
 int copy_elements_coerced
   (SEXP x, int i, int s, SEXP v, int j, int t, int n)
@@ -424,7 +425,7 @@ int copy_elements_coerced
         return 0;
     }
 
-    int e = j + n*t;
+    int e = i + n*s;
     int w = 0;
 
     PROTECT(x); 
@@ -541,7 +542,7 @@ int copy_elements_coerced
             i += s; j += t;
             RAW(x)[i] = RawFromLogical(LOGICAL(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (RAWSXP<<5) + INTSXP:
         do {
@@ -549,7 +550,7 @@ int copy_elements_coerced
             i += s; j += t;
             RAW(x)[i] = RawFromInteger(INTEGER(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (RAWSXP<<5) + REALSXP:
         do {
@@ -557,7 +558,7 @@ int copy_elements_coerced
             i += s; j += t;
             RAW(x)[i] = RawFromReal(REAL(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (RAWSXP<<5) + CPLXSXP:
         do {
@@ -565,7 +566,7 @@ int copy_elements_coerced
             i += s; j += t;
             RAW(x)[i] = RawFromComplex(COMPLEX(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (RAWSXP<<5) + STRSXP:
         do {
@@ -573,7 +574,7 @@ int copy_elements_coerced
             i += s; j += t;
             RAW(x)[i] = RawFromString(STRING_ELT(v,j),&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (LGLSXP<<5) + RAWSXP:
         do {
@@ -581,7 +582,7 @@ int copy_elements_coerced
             i += s; j += t;
             LOGICAL(x)[i] = LogicalFromRaw(RAW(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (LGLSXP<<5) + INTSXP:
         do {
@@ -589,7 +590,7 @@ int copy_elements_coerced
             i += s; j += t;
             LOGICAL(x)[i] = LogicalFromInteger(INTEGER(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (LGLSXP<<5) + REALSXP:
         do {
@@ -597,7 +598,7 @@ int copy_elements_coerced
             i += s; j += t;
             LOGICAL(x)[i] = LogicalFromReal(REAL(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (LGLSXP<<5) + CPLXSXP:
         do {
@@ -605,7 +606,7 @@ int copy_elements_coerced
             i += s; j += t;
             LOGICAL(x)[i] = LogicalFromComplex(COMPLEX(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (LGLSXP<<5) + STRSXP:
         do {
@@ -613,7 +614,7 @@ int copy_elements_coerced
             i += s; j += t;
             LOGICAL(x)[i] = LogicalFromString(STRING_ELT(v,j),&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (INTSXP<<5) + RAWSXP:
         do {
@@ -621,7 +622,7 @@ int copy_elements_coerced
             i += s; j += t;
             INTEGER(x)[i] = IntegerFromRaw(RAW(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (INTSXP<<5) + LGLSXP:
         do {
@@ -629,7 +630,7 @@ int copy_elements_coerced
             i += s; j += t;
             INTEGER(x)[i] = IntegerFromLogical(LOGICAL(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (INTSXP<<5) + REALSXP:
         do {
@@ -637,7 +638,7 @@ int copy_elements_coerced
             i += s; j += t;
             INTEGER(x)[i] = IntegerFromReal(REAL(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (INTSXP<<5) + CPLXSXP:
         do {
@@ -645,7 +646,7 @@ int copy_elements_coerced
             i += s; j += t;
             INTEGER(x)[i] = IntegerFromComplex(COMPLEX(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (INTSXP<<5) + STRSXP:
         do {
@@ -653,7 +654,7 @@ int copy_elements_coerced
             i += s; j += t;
             INTEGER(x)[i] = IntegerFromString(STRING_ELT(v,j),&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (REALSXP<<5) + RAWSXP:
         do {
@@ -661,7 +662,7 @@ int copy_elements_coerced
             i += s; j += t;
             REAL(x)[i] = RealFromRaw(RAW(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (REALSXP<<5) + LGLSXP:
         do {
@@ -669,7 +670,7 @@ int copy_elements_coerced
             i += s; j += t;
             REAL(x)[i] = RealFromLogical(LOGICAL(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (REALSXP<<5) + INTSXP:
         do {
@@ -677,7 +678,7 @@ int copy_elements_coerced
             i += s; j += t;
             REAL(x)[i] = RealFromInteger(INTEGER(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (REALSXP<<5) + CPLXSXP:
         do {
@@ -685,7 +686,7 @@ int copy_elements_coerced
             i += s; j += t;
             REAL(x)[i] = RealFromComplex(COMPLEX(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (REALSXP<<5) + STRSXP:
         do {
@@ -693,7 +694,7 @@ int copy_elements_coerced
             i += s; j += t;
             REAL(x)[i] = RealFromString(STRING_ELT(v,j),&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (CPLXSXP<<5) + RAWSXP:
         do {
@@ -701,7 +702,7 @@ int copy_elements_coerced
             i += s; j += t;
             COMPLEX(x)[i] = ComplexFromRaw(RAW(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (CPLXSXP<<5) + LGLSXP:
         do {
@@ -709,7 +710,7 @@ int copy_elements_coerced
             i += s; j += t;
             COMPLEX(x)[i] = ComplexFromLogical(LOGICAL(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (CPLXSXP<<5) + INTSXP:
         do {
@@ -717,7 +718,7 @@ int copy_elements_coerced
             i += s; j += t;
             COMPLEX(x)[i] = ComplexFromInteger(INTEGER(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (CPLXSXP<<5) + REALSXP:
         do {
@@ -725,7 +726,7 @@ int copy_elements_coerced
             i += s; j += t;
             COMPLEX(x)[i] = ComplexFromReal(REAL(v)[j],&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (CPLXSXP<<5) + STRSXP:
         do {
@@ -733,7 +734,7 @@ int copy_elements_coerced
             i += s; j += t;
             COMPLEX(x)[i] = ComplexFromString(STRING_ELT(v,j),&w);
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (STRSXP<<5) + RAWSXP:
         do {
@@ -741,7 +742,7 @@ int copy_elements_coerced
             i += s; j += t;
             SET_STRING_ELT (x, i, StringFromRaw(RAW(v)[j],&w)); 
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (STRSXP<<5) + LGLSXP:
         do {
@@ -749,7 +750,7 @@ int copy_elements_coerced
             i += s; j += t;
             SET_STRING_ELT (x, i, StringFromLogical(LOGICAL(v)[j],&w)); 
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (STRSXP<<5) + INTSXP:
         do {
@@ -757,7 +758,7 @@ int copy_elements_coerced
             i += s; j += t;
             SET_STRING_ELT (x, i, StringFromInteger(INTEGER(v)[j],&w)); 
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (STRSXP<<5) + REALSXP:
         do {
@@ -765,7 +766,7 @@ int copy_elements_coerced
             i += s; j += t;
             SET_STRING_ELT (x, i, StringFromReal(REAL(v)[j],&w)); 
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
     case (STRSXP<<5) + CPLXSXP:
         do {
@@ -773,7 +774,7 @@ int copy_elements_coerced
             i += s; j += t;
             SET_STRING_ELT (x, i, StringFromComplex(COMPLEX(v)[j],&w)); 
             i += s; j += t;
-        } while (j != e);
+        } while (i != e);
         break;
 
     default:
