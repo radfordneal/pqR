@@ -1,0 +1,2 @@
+Sometimes avoid allocation in 'c' by expanding space used by 
+first argument.

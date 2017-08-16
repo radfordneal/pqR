@@ -807,8 +807,8 @@ SEXP attribute_hidden do_c_dflt(SEXP call, SEXP op, SEXP args, SEXP env)
         R_len_t len = 0;
         for (t = args; t != R_NilValue; t = CDR(t)) {
             SEXP a = CAR(t);
-            if (usenames && HAS_ATTRIB(a) /* quick pre-test */
-                         && getAttrib(a,R_NamesSymbol) != R_NilValue) 
+            if (usenames && HAS_ATTRIB(a) /* quick pre-test (not LISTSXP) */
+                         && getNamesAttrib(a) != R_NilValue) 
                 break;
             if (len > R_LEN_T_MAX - LENGTH(a)) /* would overflow */
                 break;
@@ -817,12 +817,22 @@ SEXP attribute_hidden do_c_dflt(SEXP call, SEXP op, SEXP args, SEXP env)
 
         if (t == R_NilValue) { /* no arg with names, and no overflow with len */
             R_len_t i = 0;
-            ans = allocVector (allsametype, len);
-            for (t = args; t != R_NilValue; t = CDR(t)) {
-                SEXP a = CAR(t);
+            SEXP a;
+            t = args;
+            a = CAR(t);
+            if (NAMEDCNT_GT_0(a))
+                ans = allocVector (allsametype, len);
+            else {
+                i += LENGTH(a);
+                t = CDR(t);
+                ans = reallocVector (a, len);
+            }
+            while (t != R_NilValue) {
+                a = CAR(t);
                 R_len_t ln = LENGTH(a);
                 copy_elements (ans, i, 1, a, 0, 1, ln);
                 i += ln;
+                t = CDR(t);
             }
             UNPROTECT(1); /* args */
             return ans;
@@ -1106,7 +1116,7 @@ static SEXP do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(obj = eval(CAR(a), env));
 	if (isObject(obj)) {
 	    int i, len_classlist;
-	    classlist = getAttrib(obj, R_ClassSymbol);
+	    classlist = getClassAttrib(obj);
             len_classlist = length(classlist);
 	    for (i = 0; i < len_classlist; i++) {
 		classname = STRING_ELT(classlist, i);
