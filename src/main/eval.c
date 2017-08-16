@@ -4645,7 +4645,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
 #define DO_DFLTDISPATCH0(fun, symbol) do { \
   SEXP call = GETSTACK(-3); \
   SEXP args = GETSTACK(-2); \
-  value = fun(call, symbol, args, rho); \
+  value = fun(call, symbol, args, rho, 0); \
   R_BCNodeStackTop -= 3; \
   SETSTACK(-1, value); \
   NEXT(); \
@@ -5668,9 +5668,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(DFLTSUBASSIGN, 0):
       DO_DFLT_ASSIGN_DISPATCH(do_subassign_dflt, R_SubAssignSymbol);
     OP(STARTC, 2): DO_STARTDISPATCH("c");
-    OP(DFLTC, 0): DO_DFLTDISPATCH(do_c_dflt, R_CSymbol);
+    OP(DFLTC, 0): DO_DFLTDISPATCH0(do_c_dflt, R_CSymbol);
     OP(STARTSUBSET2, 2): DO_STARTDISPATCH("[[");
-    OP(DFLTSUBSET2, 0): DO_DFLTDISPATCH0(do_subset2_dflt, R_Bracket2Symbol);
+    OP(DFLTSUBSET2, 0): DO_DFLTDISPATCH(do_subset2_dflt, R_Bracket2Symbol);
     OP(STARTSUBASSIGN2, 2): DO_START_ASSIGN_DISPATCH("[[<-");
     OP(DFLTSUBASSIGN2, 0):
       DO_DFLT_ASSIGN_DISPATCH(do_subassign2_dflt, R_SubSubAssignSymbol);

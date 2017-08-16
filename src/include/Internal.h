@@ -95,7 +95,7 @@ SEXP do_anydf(SEXP, SEXP, SEXP, SEXP);
 SEXP do_asmatrixdf(SEXP, SEXP, SEXP, SEXP);
 SEXP do_AT_assign(SEXP call, SEXP op, SEXP args, SEXP env);
 SEXP do_browser(SEXP, SEXP, SEXP, SEXP);
-SEXP do_c_dflt(SEXP, SEXP, SEXP, SEXP);
+SEXP do_c_dflt(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_dataentry(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dataframe(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dataviewer(SEXP, SEXP, SEXP, SEXP);

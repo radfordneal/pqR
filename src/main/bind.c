@@ -51,7 +51,6 @@ struct BindData {
  int  ans_length;
  SEXP ans_names;
  int  ans_nnames;
-/* int  deparse_level; Initialize to 1. */
 };
 
 static int HasNames(SEXP x)
@@ -693,7 +692,7 @@ static void NewExtractNames(SEXP v, SEXP base, SEXP tag, int recurse,
 
 /* Code to process arguments to c().  Returns an arg list with the keyword
    arguments 'recursive' and 'use.names' removed, as well as any NULL args. 
-   *recurse and *usenames are set top the keyword arg values, if they are
+   *recurse and *usenames are set to the keyword arg values, if they are
    present.  *anytags is set to whether any other args have tags.  *allsametype
    is set to a type if all args are the same type, and to -1 if types differ,
    and to NILSXP if there are no args other than the keyword args. */
@@ -764,7 +763,7 @@ static SEXP process_c_args (SEXP ans, SEXP call, int *recurse, int *usenames,
    argument.
 */
 
-static SEXP do_c(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_c (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP ans;
 
@@ -774,18 +773,17 @@ static SEXP do_c(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (DispatchOrEval(call, op, "c", args, env, &ans, 1, 1))
 	return(ans);
-    return do_c_dflt(call, op, ans, env);
+    return do_c_dflt(call, op, ans, env, variant);
 }
 
 /* function below is also called directly from eval.c */
-SEXP attribute_hidden do_c_dflt(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
+                                 int variant)
 {
     SEXP ans, t;
     int mode, recurse, usenames, anytags, allsametype;
     struct BindData data;
     struct NameData nameData;
-
-/*    data.deparse_level = 1;  Initialize this early. */
 
     /* Method dispatch has failed; run the default code. */
     /* By default we do not recurse, but this can be over-ridden */
@@ -816,17 +814,34 @@ SEXP attribute_hidden do_c_dflt(SEXP call, SEXP op, SEXP args, SEXP env)
         }
 
         if (t == R_NilValue) { /* no arg with names, and no overflow with len */
+
             R_len_t i = 0;
             SEXP a;
             t = args;
             a = CAR(t);
-            if (NAMEDCNT_GT_0(a))
+
+            int local_assign1 =
+                  VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1 &&
+                  !NAMEDCNT_GT_1(a) &&
+                  a == findVarInFrame3 (env, CADR(call), 7);
+
+            if (NAMEDCNT_GT_0(a) && !local_assign1)
                 ans = allocVector (allsametype, len);
             else {
                 i += LENGTH(a);
                 t = CDR(t);
                 ans = reallocVector (a, len);
+                if (ans == a) {
+                    SET_ATTRIB (ans, R_NilValue);
+                    SETLEVELS (ans, 0);
+                    SET_TRUELENGTH (ans, 0);
+                }
+                else {
+                    local_assign1 = 0;
+                    SET_NAMEDCNT_0(ans);
+                }
             }
+
             while (t != R_NilValue) {
                 a = CAR(t);
                 R_len_t ln = LENGTH(a);
@@ -834,7 +849,9 @@ SEXP attribute_hidden do_c_dflt(SEXP call, SEXP op, SEXP args, SEXP env)
                 i += ln;
                 t = CDR(t);
             }
+
             UNPROTECT(1); /* args */
+            R_variant_result = local_assign1;
             return ans;
         }
     }
@@ -930,7 +947,6 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
     struct BindData data;
     struct NameData nameData;
 
-/*    data.deparse_level = 1; */
     checkArity(op, args);
 
     /* Attempt method dispatch. */
@@ -1757,7 +1773,7 @@ attribute_hidden FUNTAB R_FunTab_bind[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"c",/* bind.c:*/do_c,		0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"c",		do_c,		0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"unlist",	do_unlist,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"cbind",	do_bind,	1,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rbind",	do_bind,	2,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
