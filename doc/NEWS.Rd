@@ -64,6 +64,11 @@
         memory is sometimes allocated at the end of a vector to allow
         expansion without reallocation.  This improvement mirrors a
         recent improvement in R-3.4.0, but applies in more situations.
+  \item The \code{c} function will sometimes use the space allocated to its
+        first argument for the result, after extending it in place.  
+  \itme The reports of memory allocation produced by \code{Rprofmemt}
+        will now note it the it is for a reallocation (which might have
+        extended/contracted in place, but didn't).
   \item Subsetting an unclassed object now does not cause a copy of
         the object to be made.  For example, the following do not
         require copying \code{obj}:

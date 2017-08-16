@@ -221,6 +221,7 @@ static FILE *R_MemReportingOutfile;
 static R_size_t R_MemReportingThreshold;
 static R_len_t R_MemReportingNElem;
 static void R_ReportAllocation (SEXP);
+static void R_ReportAllocationX (SEXP, R_len_t);
 
 
 R_size_t attribute_hidden R_GetMaxVSize(void)
@@ -1972,7 +1973,7 @@ SEXP reallocVector (SEXP vec, R_len_t length)
         ATTRIB_W(vec) = ATTRIB_W(old_vec);  /* might not be in SGGC_DATA */
         LENGTH(vec) = length;
 
-        if (R_IsMemReporting) R_ReportAllocation (vec);
+        if (R_IsMemReporting) R_ReportAllocationX (vec, curr_len);
     }
     else {
         LENGTH(vec) = length;
@@ -2561,7 +2562,12 @@ print_newline:
         REprintf ("\n");
 }
 
-static void R_ReportAllocation (SEXP s)
+static inline void R_ReportAllocation (SEXP s)
+{
+    R_ReportAllocationX(s,0);
+}
+
+static void R_ReportAllocationX (SEXP s, R_len_t re)
 {
     PROTECT(s);
 
@@ -2581,9 +2587,14 @@ static void R_ReportAllocation (SEXP s)
         }
         if (R_MemReportingToTerminal) {
             if (R_MemDetailsReporting)
-                REprintf ("RPROFMEM: %llu (%s %lu)",
-                  (unsigned long long) size, type2char(type),
-                  (unsigned long)length);
+                if (re == 0)
+                    REprintf("RPROFMEM: %llu (%s %lu)",
+                      (unsigned long long) size, type2char(type),
+                      (unsigned long)length);
+                else 
+                    REprintf("RPROFMEM: %llu (%s %lu) [reallocation from %llu]",
+                      (unsigned long long) size, type2char(type),
+                      (unsigned long)length, (unsigned long long)re);
             else
                 REprintf ("RPROFMEM: %llu ", 
                   (unsigned long long) size);
