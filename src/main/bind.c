@@ -154,16 +154,16 @@ AnswerType(SEXP x, int recurse, int usenames, struct BindData *data, SEXP call)
 }
 
 
-/* The following functions are used to coerce arguments to */
-/* the appropriate type for inclusion in the returned value. */
+/* Add elements to a list result.  For LISTSXP, VECSXP, and EXPRSXP, the
+   'recursive' argument controls how elements are copied:  0: just at top
+   level, -1: one level down, 1: recursively to any depth. */
 
 #define LIST_ASSIGN(x) do { \
   SET_VECTOR_ELT(data->ans_ptr, data->ans_length, x); \
   data->ans_length++; \
 } while (0) /* apparently defined as this in case SET_VECTOR_ELT is a macro */
 
-static void
-ListAnswer(SEXP x, int recurse, struct BindData *data, SEXP call)
+static void ListAnswer(SEXP x, int recursive, struct BindData *data)
 {
     int i;
 
@@ -196,25 +196,25 @@ ListAnswer(SEXP x, int recurse, struct BindData *data, SEXP call)
 	break;
     case VECSXP:
     case EXPRSXP:
-	if (recurse) {
+	if (recursive != 0) {
 	    for (i = 0; i < LENGTH(x); i++)
-		ListAnswer(VECTOR_ELT(x, i), recurse, data, call);
+		ListAnswer (VECTOR_ELT(x, i), recursive == 1, data);
 	}
 	else {
 	    for (i = 0; i < LENGTH(x); i++)
-		LIST_ASSIGN(duplicate(VECTOR_ELT(x, i)));
+		LIST_ASSIGN (duplicate(VECTOR_ELT(x, i)));
 	}
 	break;
     case LISTSXP:
-	if (recurse) {
+	if (recursive != 0) {
 	    while (x != R_NilValue) {
-		ListAnswer(CAR(x), recurse, data, call);
+		ListAnswer (CAR(x), recursive == 1, data);
 		x = CDR(x);
 	    }
 	}
 	else
 	    while (x != R_NilValue) {
-		LIST_ASSIGN(duplicate(CAR(x)));
+		LIST_ASSIGN (duplicate(CAR(x)));
 		x = CDR(x);
 	    }
 	break;
@@ -224,7 +224,10 @@ ListAnswer(SEXP x, int recurse, struct BindData *data, SEXP call)
     }
 }
 
-static void AtomicAnswer(SEXP x, struct BindData *data, SEXP call)
+
+/* Add elements to an atomic vector result. */
+
+static void AtomicAnswer(SEXP x, struct BindData *data)
 {
     int i, n;
     switch(TYPEOF(x)) {
@@ -232,7 +235,7 @@ static void AtomicAnswer(SEXP x, struct BindData *data, SEXP call)
 	break;
     case LISTSXP:
 	while (x != R_NilValue) {
-	    AtomicAnswer(CAR(x), data, call);
+	    AtomicAnswer(CAR(x), data);
 	    x = CDR(x);
 	}
 	break;
@@ -240,7 +243,7 @@ static void AtomicAnswer(SEXP x, struct BindData *data, SEXP call)
     case VECSXP:
 	n = LENGTH(x);
 	for (i = 0; i < n; i++)
-	    AtomicAnswer(VECTOR_ELT(x, i), data, call);
+	    AtomicAnswer(VECTOR_ELT(x, i), data);
 	break;
     default:
         copy_elements_coerced (data->ans_ptr, data->ans_length, 1,
@@ -646,21 +649,11 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
     PROTECT(ans = allocVector(mode, data.ans_length));
     data.ans_ptr = ans;
     data.ans_length = 0;
-    t = args;
 
-    if (mode == VECSXP || mode == EXPRSXP) {
-	if (!recurse) {
-	    while (args != R_NilValue) {
-		ListAnswer(CAR(args), 0, &data, call);
-		args = CDR(args);
-	    }
-	}
-	else ListAnswer(args, recurse, &data, call);
-	data.ans_length = length(ans);
-    }
+    if (mode == VECSXP || mode == EXPRSXP)
+	ListAnswer (args, recurse ? 1 : -1, &data);
     else
-	AtomicAnswer(args, &data, call);
-    args = t;
+	AtomicAnswer(args, &data);
 
     /* Build and attach the names attribute for the returned object. */
 
@@ -760,19 +753,11 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(ans = allocVector(mode, data.ans_length));
     data.ans_ptr = ans;
     data.ans_length = 0;
-    t = args;
 
-    if (mode == VECSXP || mode == EXPRSXP) {
-	if (!recurse) {
-	    for (i = 0; i < n; i++)
-		ListAnswer(VECTOR_ELT(args, i), 0, &data, call);
-	}
-	else ListAnswer(args, recurse, &data, call);
-	data.ans_length = length(ans);
-    }
+    if (mode == VECSXP || mode == EXPRSXP)
+	ListAnswer(args, recurse ? 1 : -1, &data);
     else
-	AtomicAnswer(args, &data, call);
-    args = t;
+	AtomicAnswer(args, &data);
 
     /* Build and attach the names attribute for the returned object. */
 
