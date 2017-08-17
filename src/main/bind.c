@@ -224,8 +224,7 @@ ListAnswer(SEXP x, int recurse, struct BindData *data, SEXP call)
     }
 }
 
-static void
-StringAnswer(SEXP x, struct BindData *data, SEXP call)
+static void AtomicAnswer(SEXP x, struct BindData *data, SEXP call)
 {
     int i, n;
     switch(TYPEOF(x)) {
@@ -233,7 +232,7 @@ StringAnswer(SEXP x, struct BindData *data, SEXP call)
 	break;
     case LISTSXP:
 	while (x != R_NilValue) {
-	    StringAnswer(CAR(x), data, call);
+	    AtomicAnswer(CAR(x), data, call);
 	    x = CDR(x);
 	}
 	break;
@@ -241,142 +240,7 @@ StringAnswer(SEXP x, struct BindData *data, SEXP call)
     case VECSXP:
 	n = LENGTH(x);
 	for (i = 0; i < n; i++)
-	    StringAnswer(VECTOR_ELT(x, i), data, call);
-	break;
-    default:
-        copy_elements_coerced (data->ans_ptr, data->ans_length, 1,
-                               x, 0, 1, LENGTH(x));
-        data->ans_length += LENGTH(x);
-        break;
-    }
-}
-
-static void
-LogicalAnswer(SEXP x, struct BindData *data, SEXP call)
-{
-    int i, n;
-    switch(TYPEOF(x)) {
-    case NILSXP:
-	break;
-    case LISTSXP:
-	while (x != R_NilValue) {
-	    LogicalAnswer(CAR(x), data, call);
-	    x = CDR(x);
-	}
-	break;
-    case EXPRSXP:
-    case VECSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    LogicalAnswer(VECTOR_ELT(x, i), data, call);
-	break;
-    default:
-        copy_elements_coerced (data->ans_ptr, data->ans_length, 1,
-                               x, 0, 1, LENGTH(x));
-        data->ans_length += LENGTH(x);
-        break;
-    }
-}
-
-static void
-IntegerAnswer(SEXP x, struct BindData *data, SEXP call)
-{
-    int i, n;
-    switch(TYPEOF(x)) {
-    case NILSXP:
-	break;
-    case LISTSXP:
-	while (x != R_NilValue) {
-	    IntegerAnswer(CAR(x), data, call);
-	    x = CDR(x);
-	}
-	break;
-    case EXPRSXP:
-    case VECSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    IntegerAnswer(VECTOR_ELT(x, i), data, call);
-	break;
-    default:
-        copy_elements_coerced (data->ans_ptr, data->ans_length, 1,
-                               x, 0, 1, LENGTH(x));
-        data->ans_length += LENGTH(x);
-        break;
-    }
-}
-
-static void
-RealAnswer(SEXP x, struct BindData *data, SEXP call)
-{
-    int i, n, xi;
-    switch(TYPEOF(x)) {
-    case NILSXP:
-	break;
-    case LISTSXP:
-	while (x != R_NilValue) {
-	    RealAnswer(CAR(x), data, call);
-	    x = CDR(x);
-	}
-	break;
-    case VECSXP:
-    case EXPRSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    RealAnswer(VECTOR_ELT(x, i), data, call);
-	break;
-    default:
-        copy_elements_coerced (data->ans_ptr, data->ans_length, 1,
-                               x, 0, 1, LENGTH(x));
-        data->ans_length += LENGTH(x);
-        break;
-    }
-}
-
-static void
-ComplexAnswer(SEXP x, struct BindData *data, SEXP call)
-{
-    int i, n, xi;
-    switch(TYPEOF(x)) {
-    case NILSXP:
-	break;
-    case LISTSXP:
-	while (x != R_NilValue) {
-	    ComplexAnswer(CAR(x), data, call);
-	    x = CDR(x);
-	}
-	break;
-    case EXPRSXP:
-    case VECSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    ComplexAnswer(VECTOR_ELT(x, i), data, call);
-	break;
-    default:
-        copy_elements_coerced (data->ans_ptr, data->ans_length, 1,
-                               x, 0, 1, LENGTH(x));
-        data->ans_length += LENGTH(x);
-        break;
-    }
-}
-
-static void
-RawAnswer(SEXP x, struct BindData *data, SEXP call)
-{
-    int i, n;
-    switch(TYPEOF(x)) {
-    case NILSXP:
-	break;
-    case LISTSXP:
-	while (x != R_NilValue) {
-	    RawAnswer(CAR(x), data, call);
-	    x = CDR(x);
-	}
-	break;
-    case EXPRSXP:
-    case VECSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    RawAnswer(VECTOR_ELT(x, i), data, call);
+	    AtomicAnswer(VECTOR_ELT(x, i), data, call);
 	break;
     default:
         copy_elements_coerced (data->ans_ptr, data->ans_length, 1,
@@ -796,18 +660,8 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
 	else ListAnswer(args, recurse, &data, call);
 	data.ans_length = length(ans);
     }
-    else if (mode == STRSXP)
-	StringAnswer(args, &data, call);
-    else if (mode == CPLXSXP)
-	ComplexAnswer(args, &data, call);
-    else if (mode == REALSXP)
-	RealAnswer(args, &data, call);
-    else if (mode == RAWSXP)
-	RawAnswer(args, &data, call);
-    else if (mode == LGLSXP)
-	LogicalAnswer(args, &data, call);
-    else /* integer */
-	IntegerAnswer(args, &data, call);
+    else
+	AtomicAnswer(args, &data, call);
     args = t;
 
     /* Build and attach the names attribute for the returned object. */
@@ -918,18 +772,8 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
 	else ListAnswer(args, recurse, &data, call);
 	data.ans_length = length(ans);
     }
-    else if (mode == STRSXP)
-	StringAnswer(args, &data, call);
-    else if (mode == CPLXSXP)
-	ComplexAnswer(args, &data, call);
-    else if (mode == REALSXP)
-	RealAnswer(args, &data, call);
-    else if (mode == RAWSXP)
-	RawAnswer(args, &data, call);
-    else if (mode == LGLSXP)
-	LogicalAnswer(args, &data, call);
-    else /* integer */
-	IntegerAnswer(args, &data, call);
+    else
+	AtomicAnswer(args, &data, call);
     args = t;
 
     /* Build and attach the names attribute for the returned object. */
