@@ -63,6 +63,25 @@ void F77_SYMBOL(rexitc)(char *msg, int *nchar);
 /* Many small functions are included from ../include/Rinlinedfuns.h */
 
 
+/* Find the higher of two atomic types, with respect to coercion ordering: 
+
+                  RAW < LGL < INT < REAL < CPLX < STR
+
+   NIL is before all of these.  Other types result in an error.
+*/
+
+SEXPTYPE Rf_higher_atomic_type (SEXPTYPE a, SEXPTYPE b)
+{
+    const short order[32] = { 
+       0, -1, -1, -1, -1, -1, -1, -1,   -1, -1,  2, -1, -1,  3,  4,  5,
+       6, -1, -1, -1, -1, -1, -1, -1,    1, -1, -1, -1, -1, -1, -1, -1
+    };
+
+    if (order[a] < 0 || order[b] < 0) abort();
+
+    return order[a] > order[b] ? a : b;
+}
+
 /* Copy one string from "from" to "to", with 0 terminator.  Returns FALSE 
    if the length of "from" is greater than "size" minus 1, in which case the 
    copy will be incomplete, and TRUE otherwise.  "size" must be at least 1. */
