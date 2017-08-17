@@ -244,12 +244,10 @@ StringAnswer(SEXP x, struct BindData *data, SEXP call)
 	    StringAnswer(VECTOR_ELT(x, i), data, call);
 	break;
     default:
-	PROTECT(x = coerceVector(x, STRSXP));
-	n = LENGTH(x);
-        copy_string_elements (data->ans_ptr, data->ans_length, x, 0, n);
-        data->ans_length += n;
-	UNPROTECT(1);
-	break;
+        copy_elements_coerced (data->ans_ptr, data->ans_length, 1,
+                               x, 0, 1, LENGTH(x));
+        data->ans_length += LENGTH(x);
+        break;
     }
 }
 
@@ -272,24 +270,11 @@ LogicalAnswer(SEXP x, struct BindData *data, SEXP call)
 	for (i = 0; i < n; i++)
 	    LogicalAnswer(VECTOR_ELT(x, i), data, call);
 	break;
-    case LGLSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    LOGICAL(data->ans_ptr)[data->ans_length++] = LOGICAL(x)[i];
-	break;
-    case INTSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    LOGICAL(data->ans_ptr)[data->ans_length++] = INTEGER(x)[i];
-	break;
-    case RAWSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    LOGICAL(data->ans_ptr)[data->ans_length++] = (int)RAW(x)[i];
-	break;
     default:
-	errorcall(call, _("type '%s' is unimplemented in '%s'"),
-		  type2char(TYPEOF(x)), "LogicalAnswer");
+        copy_elements_coerced (data->ans_ptr, data->ans_length, 1,
+                               x, 0, 1, LENGTH(x));
+        data->ans_length += LENGTH(x);
+        break;
     }
 }
 
@@ -312,24 +297,11 @@ IntegerAnswer(SEXP x, struct BindData *data, SEXP call)
 	for (i = 0; i < n; i++)
 	    IntegerAnswer(VECTOR_ELT(x, i), data, call);
 	break;
-    case LGLSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    INTEGER(data->ans_ptr)[data->ans_length++] = LOGICAL(x)[i];
-	break;
-    case INTSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    INTEGER(data->ans_ptr)[data->ans_length++] = INTEGER(x)[i];
-	break;
-    case RAWSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    INTEGER(data->ans_ptr)[data->ans_length++] = (int)RAW(x)[i];
-	break;
     default:
-	errorcall(call, _("type '%s' is unimplemented in '%s'"),
-		  type2char(TYPEOF(x)), "IntegerAnswer");
+        copy_elements_coerced (data->ans_ptr, data->ans_length, 1,
+                               x, 0, 1, LENGTH(x));
+        data->ans_length += LENGTH(x);
+        break;
     }
 }
 
@@ -352,37 +324,11 @@ RealAnswer(SEXP x, struct BindData *data, SEXP call)
 	for (i = 0; i < n; i++)
 	    RealAnswer(VECTOR_ELT(x, i), data, call);
 	break;
-    case REALSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    REAL(data->ans_ptr)[data->ans_length++] = REAL(x)[i];
-	break;
-    case LGLSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++) {
-	    xi = LOGICAL(x)[i];
-	    if (xi == NA_LOGICAL)
-		REAL(data->ans_ptr)[data->ans_length++] = NA_REAL;
-	    else REAL(data->ans_ptr)[data->ans_length++] = xi;
-	}
-	break;
-    case INTSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++) {
-	    xi = INTEGER(x)[i];
-	    if (xi == NA_INTEGER)
-		REAL(data->ans_ptr)[data->ans_length++] = NA_REAL;
-	    else REAL(data->ans_ptr)[data->ans_length++] = xi;
-	}
-	break;
-    case RAWSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    REAL(data->ans_ptr)[data->ans_length++] = (int)RAW(x)[i];
-	break;
     default:
-	errorcall(call, _("type '%s' is unimplemented in '%s'"),
-		  type2char(TYPEOF(x)), "RealAnswer");
+        copy_elements_coerced (data->ans_ptr, data->ans_length, 1,
+                               x, 0, 1, LENGTH(x));
+        data->ans_length += LENGTH(x);
+        break;
     }
 }
 
@@ -405,62 +351,11 @@ ComplexAnswer(SEXP x, struct BindData *data, SEXP call)
 	for (i = 0; i < n; i++)
 	    ComplexAnswer(VECTOR_ELT(x, i), data, call);
 	break;
-    case REALSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++) {
-	    COMPLEX(data->ans_ptr)[data->ans_length].r = REAL(x)[i];
-	    COMPLEX(data->ans_ptr)[data->ans_length].i = 0.0;
-	    data->ans_length++;
-	}
-	break;
-    case CPLXSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    COMPLEX(data->ans_ptr)[data->ans_length++] = COMPLEX(x)[i];
-	break;
-    case LGLSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++) {
-	    xi = LOGICAL(x)[i];
-	    if (xi == NA_LOGICAL) {
-		COMPLEX(data->ans_ptr)[data->ans_length].r = NA_REAL;
-		COMPLEX(data->ans_ptr)[data->ans_length].i = NA_REAL;
-	    }
-	    else {
-		COMPLEX(data->ans_ptr)[data->ans_length].r = xi;
-		COMPLEX(data->ans_ptr)[data->ans_length].i = 0.0;
-	    }
-	    data->ans_length++;
-	}
-	break;
-    case INTSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++) {
-	    xi = INTEGER(x)[i];
-	    if (xi == NA_INTEGER) {
-		COMPLEX(data->ans_ptr)[data->ans_length].r = NA_REAL;
-		COMPLEX(data->ans_ptr)[data->ans_length].i = NA_REAL;
-	    }
-	    else {
-		COMPLEX(data->ans_ptr)[data->ans_length].r = xi;
-		COMPLEX(data->ans_ptr)[data->ans_length].i = 0.0;
-	    }
-	    data->ans_length++;
-	}
-	break;
-
-    case RAWSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++) {
-	    COMPLEX(data->ans_ptr)[data->ans_length].r = (int)RAW(x)[i];
-	    COMPLEX(data->ans_ptr)[data->ans_length].i = 0.0;
-	    data->ans_length++;
-	}
-	break;
-
     default:
-	errorcall(call, _("type '%s' is unimplemented in '%s'"),
-		  type2char(TYPEOF(x)), "ComplexAnswer");
+        copy_elements_coerced (data->ans_ptr, data->ans_length, 1,
+                               x, 0, 1, LENGTH(x));
+        data->ans_length += LENGTH(x);
+        break;
     }
 }
 
@@ -483,14 +378,11 @@ RawAnswer(SEXP x, struct BindData *data, SEXP call)
 	for (i = 0; i < n; i++)
 	    RawAnswer(VECTOR_ELT(x, i), data, call);
 	break;
-    case RAWSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    RAW(data->ans_ptr)[data->ans_length++] = RAW(x)[i];
-	break;
     default:
-	errorcall(call, _("type '%s' is unimplemented in '%s'"),
-		  type2char(TYPEOF(x)), "RawAnswer");
+        copy_elements_coerced (data->ans_ptr, data->ans_length, 1,
+                               x, 0, 1, LENGTH(x));
+        data->ans_length += LENGTH(x);
+        break;
     }
 }
 
