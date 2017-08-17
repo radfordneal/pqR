@@ -46,63 +46,41 @@ static SEXP rbind(SEXP, SEXP, SEXPTYPE, SEXP, int);
 /* whether the returned object is to have a names attribute. */
 
 struct BindData {
- int  ans_flags;
- SEXP ans_ptr;
- int  ans_length;
- SEXP ans_names;
- int  ans_nnames;
+    int  ans_type;
+    SEXP ans_ptr;
+    int  ans_length;
+    SEXP ans_names;
+    int  ans_nnames;
 };
 
 static int HasNames(SEXP x)
 {
-    if(isVector(x)) {
-	if (!isNull(getAttrib(x, R_NamesSymbol)))
-	    return 1;
-    }
-    else if(isList(x)) {
-	while (!isNull(x)) {
-	    if (!isNull(TAG(x))) return 1;
+    if (isVector(x))
+        return getNamesAttrib(x) != R_NilValue;
+    else if (isList(x)) {
+	while (x != R_NilValue) {
+	    if (TAG(x) != R_NilValue)
+                return 1;
 	    x = CDR(x);
 	}
+        return 0;
     }
-    return 0;
 }
 
 static void
 AnswerType(SEXP x, int recurse, int usenames, struct BindData *data, SEXP call)
 {
-    switch (TYPEOF(x)) {
-    case NILSXP:
-	break;
-    case RAWSXP:
-	data->ans_flags |= 1;
-	data->ans_length += LENGTH(x);
-	break;
-    case LGLSXP:
-	data->ans_flags |= 2;
-	data->ans_length += LENGTH(x);
-	break;
-    case INTSXP:
-	data->ans_flags |= 16;
-	data->ans_length += LENGTH(x);
-	break;
-    case REALSXP:
-	data->ans_flags |= 32;
-	data->ans_length += LENGTH(x);
-	break;
-    case CPLXSXP:
-	data->ans_flags |= 64;
-	data->ans_length += LENGTH(x);
-	break;
-    case STRSXP:
-	data->ans_flags |= 128;
-	data->ans_length += LENGTH(x);
-	break;
-    case VECSXP:
-    case EXPRSXP:
+    R_len_t len;
+
+    if (isVectorAtomic(x)) {
+        if (data->ans_type != VECSXP && data->ans_type != EXPRSXP)
+            data->ans_type = Rf_higher_atomic_type (data->ans_type, TYPEOF(x));
+        len = LENGTH(x);
+    }
+    else if (isVectorList(x)) {
 	if (recurse) {
 	    int i, n;
-	    n = length(x);
+	    n = LENGTH(x);
 	    if (usenames && !data->ans_nnames &&
 		!isNull(getAttrib(x, R_NamesSymbol)))
 		data->ans_nnames = 1;
@@ -111,16 +89,15 @@ AnswerType(SEXP x, int recurse, int usenames, struct BindData *data, SEXP call)
 		    data->ans_nnames = HasNames(VECTOR_ELT(x, i));
 		AnswerType(VECTOR_ELT(x, i), recurse, usenames, data, call);
 	    }
+            len = 0;  /* nothing extra after recursive calls */
 	}
 	else {
-	    if (TYPEOF(x) == EXPRSXP)
-		data->ans_flags |= 512;
-	    else
-		data->ans_flags |= 256;
-	    data->ans_length += length(x);
+            if (data->ans_type != EXPRSXP)
+                data->ans_type = VECSXP;
+	    len = LENGTH(x);
 	}
-	break;
-    case LISTSXP:
+    }
+    else if (TYPEOF(x) == LISTSXP) {
 	if (recurse) {
 	    while (x != R_NilValue) {
 		if (usenames && !data->ans_nnames) {
@@ -130,27 +107,27 @@ AnswerType(SEXP x, int recurse, int usenames, struct BindData *data, SEXP call)
 		AnswerType(CAR(x), recurse, usenames, data, call);
 		x = CDR(x);
 	    }
+            len = 0;  /* nothing extra after recursive calls */
 	}
 	else {
-	    data->ans_flags |= 256;
-	    data->ans_length += length(x);
+            if (data->ans_type != EXPRSXP)
+                data->ans_type = VECSXP;
+	    len = length(x);
 	}
-	break;
-    default:
-	data->ans_flags |= 256;
-	data->ans_length += 1;
-	break;
+    }
+    else if (x == R_NilValue) {
+        len = 0;
+    }
+    else {
+	data->ans_type = VECSXP;
+	len = 1;
     }
 
-    /* check for overflow in ans_length. Objects are added one at a
-       time for each call to AnswerType so it is safe to check here.
-       Since sizes are signed, positive numbers, the overflow will
-       manifest itself as a negative result (both numbers will be
-       31-bit so we cannot overflow across the 32-bit boundary). If
-       our assumption (all lengths are signed) is violated, this won't
-       work so check when switching length types! */
-    if (data->ans_length < 0)
-	errorcall(call, _("resulting vector exceeds vector length limit in '%s'"), "AnswerType");
+    if (len > R_LEN_T_MAX - data->ans_length)
+       errorcall(call,_("resulting vector exceeds vector length limit in '%s'"),
+                 "AnswerType");
+
+    data->ans_length += len;
 }
 
 
@@ -540,7 +517,7 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
                                  int variant)
 {
     SEXP ans, t;
-    int mode, recurse, usenames, anytags, allsametype;
+    int recurse, usenames, anytags, allsametype;
     struct BindData data;
     struct NameData nameData;
 
@@ -617,7 +594,7 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
     /* The strategy here is appropriate because the */
     /* object being operated on is a pair based list. */
 
-    data.ans_flags  = 0;
+    data.ans_type  = NILSXP;
     data.ans_length = 0;
     data.ans_nnames = 0;
 
@@ -633,24 +610,16 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
     /* recursive is FALSE) then we must return a list.	Otherwise, */
     /* we use the natural coercion for vector types. */
 
-    mode = NILSXP;
-    if (data.ans_flags & 512)	   mode = EXPRSXP;
-    else if (data.ans_flags & 256) mode = VECSXP;
-    else if (data.ans_flags & 128) mode = STRSXP;
-    else if (data.ans_flags &  64) mode = CPLXSXP;
-    else if (data.ans_flags &  32) mode = REALSXP;
-    else if (data.ans_flags &  16) mode = INTSXP;
-    else if (data.ans_flags &	2) mode = LGLSXP;
-    else if (data.ans_flags &	1) mode = RAWSXP;
+    if (data.ans_type == NILSXP && data.ans_length != 0) abort();
 
     /* Allocate the return value and set up to pass through */
     /* the arguments filling in values of the returned object. */
 
-    PROTECT(ans = allocVector(mode, data.ans_length));
+    PROTECT(ans = allocVector(data.ans_type, data.ans_length));
     data.ans_ptr = ans;
     data.ans_length = 0;
 
-    if (mode == VECSXP || mode == EXPRSXP)
+    if (data.ans_type == VECSXP || data.ans_type == EXPRSXP || data.ans_type == NILSXP)
 	ListAnswer (args, recurse ? 1 : -1, &data);
     else
 	AtomicAnswer(args, &data);
@@ -679,7 +648,7 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
 static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, t;
-    int mode, recurse, usenames;
+    int recurse, usenames;
     int i, n;
     struct BindData data;
     struct NameData nameData;
@@ -703,7 +672,7 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
     /* The strategy here is appropriate because the */
     /* object being operated on is a generic vector. */
 
-    data.ans_flags  = 0;
+    data.ans_type  = NILSXP;
     data.ans_length = 0;
     data.ans_nnames = 0;
 
@@ -733,28 +702,17 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
 	else error(_("argument not a list"));
     }
 
-    /* If a non-vector argument was encountered (perhaps a list if */
-    /* recursive = F) then we must return a list.  Otherwise, we use */
-    /* the natural coercion for vector types. */
+    /* Allocate the return value and set up to pass through 
+       the arguments filling in values of the returned object.
+       If a non-vector argument was encountered (perhaps a list if 
+       recursive = F) then we must return a list.  Otherwise, we use 
+       the natural coercion for vector types. */
 
-    mode = NILSXP;
-    if      (data.ans_flags & 512) mode = EXPRSXP;
-    else if (data.ans_flags & 256) mode = VECSXP;
-    else if (data.ans_flags & 128) mode = STRSXP;
-    else if (data.ans_flags &  64) mode = CPLXSXP;
-    else if (data.ans_flags &  32) mode = REALSXP;
-    else if (data.ans_flags &  16) mode = INTSXP;
-    else if (data.ans_flags &	2) mode = LGLSXP;
-    else if (data.ans_flags &	1) mode = RAWSXP;
-
-    /* Allocate the return value and set up to pass through */
-    /* the arguments filling in values of the returned object. */
-
-    PROTECT(ans = allocVector(mode, data.ans_length));
+    PROTECT(ans = allocVector(data.ans_type, data.ans_length));
     data.ans_ptr = ans;
     data.ans_length = 0;
 
-    if (mode == VECSXP || mode == EXPRSXP)
+    if (data.ans_type == VECSXP || data.ans_type == EXPRSXP || data.ans_type == NILSXP)
 	ListAnswer(args, recurse ? 1 : -1, &data);
     else
 	AtomicAnswer(args, &data);
@@ -809,7 +767,7 @@ static SEXP do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP a, t, obj, classlist, classname, method, classmethod, rho;
     const char *generic;
-    int mode, deparse_level;
+    int deparse_level;
     Rboolean compatible = TRUE;
     struct BindData data;
     char buf[512];
@@ -896,7 +854,7 @@ static SEXP do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
     /* First, extract the evaluated arguments. */
 
     rho = env;
-    data.ans_flags = 0;
+    data.ans_type = NILSXP;
     data.ans_length = 0;
     data.ans_nnames = 0;
     for (t = args; t != R_NilValue; t = CDR(t))
@@ -904,22 +862,14 @@ static SEXP do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
                     0, 0, &data, call);
 
     /* zero-extent matrices shouldn't give NULL, but cbind(NULL) should: */
-    if (!data.ans_flags && !data.ans_length) {
+
+    if (data.ans_type == NILSXP) {
+        if (data.ans_length != 0) abort();
 	UNPROTECT(1);
 	return R_NilValue;
     }
 
-    mode = NILSXP;
-    if (data.ans_flags & 512)	   mode = EXPRSXP;
-    else if (data.ans_flags & 256) mode = VECSXP;
-    else if (data.ans_flags & 128) mode = STRSXP;
-    else if (data.ans_flags &  64) mode = CPLXSXP;
-    else if (data.ans_flags &  32) mode = REALSXP;
-    else if (data.ans_flags &  16) mode = INTSXP;
-    else if (data.ans_flags &	2) mode = LGLSXP;
-    else if (data.ans_flags &	1) mode = RAWSXP;
-
-    switch(mode) {
+    switch (data.ans_type) {
     case NILSXP:
     case LGLSXP:
     case INTSXP:
@@ -927,6 +877,7 @@ static SEXP do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
     case CPLXSXP:
     case STRSXP:
     case VECSXP:
+    case EXPRSXP:
     case RAWSXP:
 	break;
 	/* we don't handle expressions: we could, but coercion of a matrix
@@ -936,9 +887,9 @@ static SEXP do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     if (PRIMVAL(op) == 1)
-	a = cbind(call, args, mode, rho, deparse_level);
+	a = cbind(call, args, data.ans_type, rho, deparse_level);
     else
-	a = rbind(call, args, mode, rho, deparse_level);
+	a = rbind(call, args, data.ans_type, rho, deparse_level);
     UNPROTECT(1);
     return a;
 }

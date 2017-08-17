@@ -1735,6 +1735,7 @@ int Rf_GetOptionDigits(void);
 int Rf_GetOptionWidth(void);
 SEXP Rf_GetRowNames(SEXP);
 void Rf_gsetVar(SEXP, SEXP, SEXP);
+SEXPTYPE Rf_higher_atomic_type (SEXPTYPE, SEXPTYPE);
 SEXP Rf_install(const char *);
 SEXP Rf_installChar(SEXP);
 SEXP Rf_installed_already(const char *);
