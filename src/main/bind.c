@@ -587,12 +587,10 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
                 i += LENGTH(a);
                 t = CDR(t);
                 ans = reallocVector (a, len);
-                if (ans == a) {
-                    SET_ATTRIB (ans, R_NilValue);
-                    SETLEVELS (ans, 0);
-                    SET_TRUELENGTH (ans, 0);
-                }
-                else {
+                SET_ATTRIB (ans, R_NilValue);
+                SETLEVELS (ans, 0);
+                SET_TRUELENGTH (ans, 0);
+                if (ans != a) {
                     local_assign1 = 0;
                     SET_NAMEDCNT_0(ans);
                 }
