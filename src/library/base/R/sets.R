@@ -16,27 +16,28 @@
 
 ## See the help for why as.vector is used:
 ## it includes coercing factors.
-union <- function(x, y) unique(c(as.vector(x), as.vector(y)))
+
+union <- function(x, y) unique (c(as.vector(x), as.vector(y)))
 
 intersect <- function(x, y)
 {
     y <- as.vector(y)
-    unique(y[match(as.vector(x), y, 0L)])
+    unique (y [match(as.vector(x), y, 0L)])
 }
 
 setdiff <- function(x, y)
 {
     x <- as.vector(x)
-    y <- as.vector(y)
-    unique(if(length(x) || length(y)) x[match(x, y, 0L) == 0L] else x)
+    unique (x [!(x %in% as.vector(y))])
 }
-## Faster versions, see R-devel, Jan.4-6, 2000;  optimize later...
+
 setequal <- function(x, y)
 {
     x <- as.vector(x)
     y <- as.vector(y)
-    all(c(match(x, y, 0L) > 0L, match(y, x, 0L) > 0L))
+    all (x %in% y) && all (y %in% x)
 }
 
-##  same as %in% ( ./match.R ) but different arg names:
-is.element <- function(el, set) match(el, set, 0L) > 0L
+##  same as %in% but different arg names:
+
+is.element <- function(el, set) el %in% set
