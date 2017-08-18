@@ -436,18 +436,19 @@ static void NewExtractNames(SEXP v, SEXP base, SEXP tag, int recurse,
 /* Code to process arguments to c().  Returns an arg list with the keyword
    arguments 'recursive' and 'use.names' removed, as well as any NULL args. 
    *recurse and *usenames are set to the keyword arg values, if they are
-   present.  *anytags is set to whether any other args have tags.  *allsametype
-   is set to a type if all args are the same type, and to -1 if types differ,
-   and to NILSXP if there are no args other than the keyword args. */
+   present.  *anytags is set to whether any other args have tags.  *highesttype
+   is set to the highest type found in the hierarchy of Rf_highest_atomic_type,
+   or to NILSXP if there are no args other than the keyword args, or to -1
+   if there is a non-atomic type.  NULL arguments are removed. */
 
 static SEXP process_c_args (SEXP ans, SEXP call, int *recurse, int *usenames, 
-                            int *anytags, int *allsametype)
+                            int *anytags, int *highesttype)
 {
     SEXP a, n, last = R_NoObject, next = R_NoObject;
     int v, n_recurse = 0, n_usenames = 0;
 
     *anytags = 0;
-    *allsametype = NILSXP;
+    *highesttype = NILSXP;
 
     for (a = ans; a != R_NilValue; a = next) {
 	n = TAG(a);
@@ -483,10 +484,8 @@ static SEXP process_c_args (SEXP ans, SEXP call, int *recurse, int *usenames,
 	else {
             if (n != R_NilValue) 
                 *anytags = 1;
-            if (*allsametype == NILSXP) 
-                *allsametype = TYPEOF(CAR(a));
-            else if (*allsametype != TYPEOF(CAR(a)))
-                *allsametype = -1;
+            *highesttype = *highesttype == -1 || !isVectorAtomic(CAR(a)) ? -1
+                         : Rf_higher_atomic_type (*highesttype, TYPEOF(CAR(a)));
             last = a;
         }
     }
@@ -524,7 +523,7 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
                                  int variant)
 {
     SEXP ans, t;
-    int recurse, usenames, anytags, allsametype;
+    int recurse, usenames, anytags, highesttype;
     struct BindData data;
     struct NameData nameData;
 
@@ -536,14 +535,12 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
     recurse = 0;
 
     PROTECT(args = 
-      process_c_args(args, call, &recurse, &usenames, &anytags, &allsametype));
+      process_c_args(args, call, &recurse, &usenames, &anytags, &highesttype));
 
     /* Quickly do the simple case where names don't exist or are ignored,
        there's no recursion, and atomic with no type conversion needed. */
 
-    if (allsametype > NILSXP && !(usenames && anytags)
-         && ((ATOMIC_VECTOR_TYPES >> allsametype) & 1) != 0
-         && !recurse) {
+    if (highesttype > NILSXP && !(usenames && anytags) && !recurse) {
 
         R_len_t len = 0;
         for (t = args; t != R_NilValue; t = CDR(t)) {
@@ -565,11 +562,11 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
 
             int local_assign1 =
                   VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1 &&
-                  !NAMEDCNT_GT_1(a) &&
+                  TYPEOF(a) == highesttype && !NAMEDCNT_GT_1(a) &&
                   a == findVarInFrame3 (env, CADR(call), 7);
 
-            if (NAMEDCNT_GT_0(a) && !local_assign1)
-                ans = allocVector (allsametype, len);
+            if (TYPEOF(a) != highesttype || NAMEDCNT_GT_0(a) && !local_assign1)
+                ans = allocVector (highesttype, len);
             else {
                 i += LENGTH(a);
                 t = CDR(t);
@@ -586,7 +583,7 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
             while (t != R_NilValue) {
                 a = CAR(t);
                 R_len_t ln = LENGTH(a);
-                copy_elements (ans, i, 1, a, 0, 1, ln);
+                copy_elements_coerced (ans, i, 1, a, 0, 1, ln);
                 i += ln;
                 t = CDR(t);
             }
