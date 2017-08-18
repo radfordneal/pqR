@@ -81,8 +81,9 @@ AnswerType(SEXP x, int recurse, int usenames, struct BindData *data, SEXP call)
 	if (recurse) {
 	    int i, n;
 	    n = LENGTH(x);
-	    if (usenames && !data->ans_nnames &&
-		!isNull(getAttrib(x, R_NamesSymbol)))
+            if (usenames && !data->ans_nnames 
+                         && HAS_ATTRIB(x) /* quick pre-test */
+                         && getNamesAttrib(x) != R_NilValue)
 		data->ans_nnames = 1;
 	    for (i = 0; i < n; i++) {
 		if (usenames && !data->ans_nnames)
@@ -340,8 +341,8 @@ static void NewExtractNames(SEXP v, SEXP base, SEXP tag, int recurse,
     SEXP names, namei;
     int i, n, savecount=0, saveseqno, savefirstpos=0;
 
-    /* If we beneath a new tag, we reset the index */
-    /* sequence and create the new basename string. */
+    /* If we are beneath a new tag, we reset the index sequence and
+       create the new basename string. */
 
     if (tag != R_NilValue) {
 	PROTECT(base = NewBase(base, tag));
@@ -355,7 +356,7 @@ static void NewExtractNames(SEXP v, SEXP base, SEXP tag, int recurse,
     else saveseqno = 0;
 
     n = length(v);
-    PROTECT(names = getAttrib(v, R_NamesSymbol));
+    PROTECT(names = getNamesAttrib(v));
 
     switch(TYPEOF(v)) {
     case NILSXP:
@@ -590,9 +591,13 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
         }
     }
 
-    /* Determine the type of the returned value. */
-    /* The strategy here is appropriate because the */
-    /* object being operated on is a pair based list. */
+    /* Determine the type of the returned value.  The strategy here is
+       appropriate because the object being operated on is a pair
+       based list.
+
+       If a non-vector argument was encountered (perhaps a list if
+       recursive is FALSE) then we must return a list. Otherwise, we
+       use the natural coercion for vector types. */
 
     data.ans_type  = NILSXP;
     data.ans_length = 0;
@@ -606,20 +611,17 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
 	AnswerType(CAR(t), recurse, usenames, &data, call);
     }
 
-    /* If a non-vector argument was encountered (perhaps a list if */
-    /* recursive is FALSE) then we must return a list.	Otherwise, */
-    /* we use the natural coercion for vector types. */
-
     if (data.ans_type == NILSXP && data.ans_length != 0) abort();
 
-    /* Allocate the return value and set up to pass through */
-    /* the arguments filling in values of the returned object. */
+    /* Allocate the return value and set up to pass through 
+       the arguments filling in values of the returned object. */
 
     PROTECT(ans = allocVector(data.ans_type, data.ans_length));
     data.ans_ptr = ans;
     data.ans_length = 0;
 
-    if (data.ans_type == VECSXP || data.ans_type == EXPRSXP || data.ans_type == NILSXP)
+    if (data.ans_type == VECSXP || data.ans_type == EXPRSXP 
+                                || data.ans_type == NILSXP)
 	ListAnswer (args, recurse ? 1 : -1, &data);
     else
 	AtomicAnswer(args, &data);
@@ -679,7 +681,8 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
     n = 0;			/* -Wall */
     if (isNewList(args)) {
 	n = length(args);
-	if (usenames && getAttrib(args, R_NamesSymbol) != R_NilValue)
+	if (usenames && HAS_ATTRIB(args) /* quick pre-test */
+                     && getNamesAttrib(args) != R_NilValue)
 	    data.ans_nnames = 1;
 	for (i = 0; i < n; i++) {
 	    if (usenames && !data.ans_nnames)
@@ -712,7 +715,8 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
     data.ans_ptr = ans;
     data.ans_length = 0;
 
-    if (data.ans_type == VECSXP || data.ans_type == EXPRSXP || data.ans_type == NILSXP)
+    if (data.ans_type == VECSXP || data.ans_type == EXPRSXP 
+                                || data.ans_type == NILSXP)
 	ListAnswer(args, recurse ? 1 : -1, &data);
     else
 	AtomicAnswer(args, &data);
@@ -723,7 +727,7 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(data.ans_names = allocVector(STRSXP, data.ans_length));
 	if (!recurse) {
 	    if (TYPEOF(args) == VECSXP) {
-		SEXP names = getAttrib(args, R_NamesSymbol);
+		SEXP names = getNamesAttrib(args);
 		data.ans_nnames = 0;
 		nameData.seqno = 0;
 		nameData.firstpos = 0;
@@ -996,7 +1000,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		warned = TRUE;
 		warning("number of rows of result is not a multiple of vector length (arg %d)", n + 1);
 	    }
-	    PROTECT(dn = getAttrib (argval[n], R_NamesSymbol));
+	    PROTECT(dn = getNamesAttrib(argval[n]));
 	    if (k >= lenmin && (TAG(t) != R_NilValue ||
 				(deparse_level == 2) ||
 				((deparse_level == 1) &&
@@ -1127,7 +1131,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 			SET_STRING_ELT(nam, j++, R_BlankString);
 		}
 	    } else if (arg_len[n] >= lenmin) {
-		v = getAttrib(u, R_NamesSymbol);
+		v = getNamesAttrib(u);
 
 		if (have_rnames && GetRowNames(dn) == R_NilValue
 		    && v != R_NilValue && length(v) == rows)
@@ -1246,7 +1250,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		warned = TRUE;
 		warning("number of columns of result is not a multiple of vector length (arg %d)", n + 1);
 	    }
-	    PROTECT(dn = getAttrib (argval[n], R_NamesSymbol));
+	    PROTECT(dn = getNamesAttrib(argval[n]));
 	    if (k >= lenmin && (TAG(t) != R_NilValue ||
 				(deparse_level == 2) ||
 				((deparse_level == 1) &&
@@ -1406,7 +1410,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		}
 	    }
 	    else if (arg_len[n] >= lenmin) {
-		v = getAttrib(u, R_NamesSymbol);
+		v = getNamesAttrib(u);
 
 		if (have_cnames && GetColNames(dn) == R_NilValue
 		    && v != R_NilValue && length(v) == cols)
