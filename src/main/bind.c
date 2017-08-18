@@ -179,8 +179,11 @@ static void ListAnswer(SEXP x, int recursive, struct BindData *data)
 		ListAnswer (VECTOR_ELT(x, i), recursive == 1, data);
 	}
 	else {
-	    for (i = 0; i < LENGTH(x); i++)
-		LIST_ASSIGN (duplicate(VECTOR_ELT(x, i)));
+	    for (i = 0; i < LENGTH(x); i++) {
+                SET_VECTOR_ELEMENT_FROM_VECTOR (data->ans_ptr, data->ans_length,
+                                                x, i); 
+                data->ans_length += 1;
+            }
 	}
 	break;
     case LISTSXP:
@@ -192,7 +195,10 @@ static void ListAnswer(SEXP x, int recursive, struct BindData *data)
 	}
 	else
 	    while (x != R_NilValue) {
-		LIST_ASSIGN (duplicate(CAR(x)));
+                SET_VECTOR_ELT (data->ans_ptr, data->ans_length, 
+                                CAR(x));
+                SET_NAMEDCNT_MAX (CAR(x));
+                data->ans_length += 1;
 		x = CDR(x);
 	    }
 	break;
@@ -533,11 +539,11 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
       process_c_args(args, call, &recurse, &usenames, &anytags, &allsametype));
 
     /* Quickly do the simple case where names don't exist or are ignored,
-       there's no recursion, and no type conversions are needed. */
+       there's no recursion, and atomic with no type conversion needed. */
 
     if (allsametype > NILSXP && !(usenames && anytags)
-         && ((VECTOR_TYPES >> allsametype) & 1) != 0
-         && (!recurse || ((ATOMIC_VECTOR_TYPES >> allsametype) & 1) != 0)) {
+         && ((ATOMIC_VECTOR_TYPES >> allsametype) & 1) != 0
+         && !recurse) {
 
         R_len_t len = 0;
         for (t = args; t != R_NilValue; t = CDR(t)) {
