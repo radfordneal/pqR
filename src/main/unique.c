@@ -748,7 +748,8 @@ static SEXP match_transform(SEXP s, SEXP env)
     return s;
 }
 
-SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
+static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
+                      int inop)
 {
     SEXPTYPE type;
     HashData data;
@@ -871,13 +872,16 @@ SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
             }
             break;
         }}
-	RETURN_SEXP_INSIDE_PROTECT (ScalarInteger(result));
+        if (inop)
+            RETURN_SEXP_INSIDE_PROTECT (ScalarLogicalMaybeConst(result!=0));
+        else
+            RETURN_SEXP_INSIDE_PROTECT (ScalarInteger(result));
     }
 
     if (incomp != R_NoObject) 
         incomp = coerceVector(incomp, type);
 
-    if (LENGTH(table) < 1.2*LENGTH(x)) {  /* 'table' is hashed, 'x' looked up */
+    if (LENGTH(table) < 1.2*n) {  /* 'table' is hashed, 'x' looked up */
         HashTableSetup (table, &data);
         data.nomatch = nomatch;
         check_UTF8 (x, &data.useBytes, &data.useUTF8);
@@ -887,7 +891,17 @@ SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
         DoHashing (table, &data);
         if (incomp != R_NoObject)
             UndoHashing (incomp, &data);
-        ans = HashLookup (x, &data);
+        ans = allocVector (INTSXP, n);
+        int *ansi = INTEGER(ans);
+        if (inop) {
+            for (i = 0; i < n; i++)
+                ansi[i] = hash_lookup (x, i, &data) != 0;
+            TYPEOF(ans) = LGLSXP;
+        }
+        else {
+            for (i = 0; i < n; i++)
+                ansi[i] = hash_lookup (x, i, &data);
+        }
     }
     else {  /* 'x' is hashed, 'table' looked up */
         HashTableSetup(x, &data);
@@ -896,7 +910,7 @@ SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
         check_UTF8 (table, &data.useBytes, &data.useUTF8);
         if (data.useUTF8)
             data.hash = shash_UTF8;
-        ans = allocVector (INTSXP, LENGTH(x));
+        ans = allocVector (INTSXP, n);
         int *ansi = INTEGER(ans);
         for (i = 0; i < n; i++) 
             ansi[i] = hash_insert (x, i, &data);
@@ -908,10 +922,19 @@ SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
             if (j != 0 && ansi[j-1] == 0)
                 ansi[j-1] = -(i+1);
         }
-        for (i = 0; i < n; i++) {
-            ansi[i] = ansi[i] == 0 ? nomatch
-                    : ansi[i] > 0  ? ansi[ansi[i]-1]
-                    :                -ansi[i];
+        if (inop) {
+            for (i = 0; i < n; i++)
+                ansi[i] = ansi[i] == 0 ? 0
+                        : ansi[i] > 0  ? (ansi[ansi[i]-1] != 0)
+                        :                (ansi[i] != 0);
+            TYPEOF(ans) = LGLSXP;
+        }
+        else {
+            for (i = 0; i < n; i++) {
+                ansi[i] = ansi[i] == 0 ? nomatch
+                        : ansi[i] > 0  ? ansi[ansi[i]-1]
+                        :                -ansi[i];
+            }
         }
     }
     
@@ -927,15 +950,20 @@ SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
     END_PROTECT;
 }
 
+SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
+{ 
+    matchfun (itable, ix, nomatch, incomp, env, 0);
+}
+
 SEXP matchE(SEXP itable, SEXP ix, int nomatch, SEXP env)
 {
-    return match5(itable, ix, nomatch, R_NoObject, env);
+    return matchfun (itable, ix, nomatch, R_NoObject, env, 0);
 }
 
 /* used from other code, not here: */
 SEXP match(SEXP itable, SEXP ix, int nomatch)
 {
-    return match5(itable, ix, nomatch, R_NoObject, R_BaseEnv);
+    return matchfun (itable, ix, nomatch, R_NoObject, R_BaseEnv, 0);
 }
 
 
@@ -968,23 +996,13 @@ static SEXP do_match(SEXP call, SEXP op, SEXP args, SEXP env)
         incomp = R_NilValue;
     }
 
-    SEXP r;
-    if (length(incomp) && /* S has FALSE to mean empty */
-         !(isLogical(incomp) && length(incomp) == 1 && LOGICAL(incomp)[0] == 0))
-        r = match5(CADR(args), CAR(args), nomatch, incomp, env);
+    int inop = PRIMVAL(op) == 1;  /* is this for %in% operator? */
+    if (inop && length(incomp) 
+         && /* S has FALSE to mean empty */
+            !(isLogical(incomp) && length(incomp)==1 && LOGICAL(incomp)[0]==0))
+        return matchfun(CADR(args), CAR(args), nomatch, incomp, env, 0);
     else
-        r = matchE(CADR(args), CAR(args), nomatch, env);
-
-    if (PRIMVAL(op) == 1) { /* %in% */
-        R_len_t i, l;
-        l = LENGTH(r);
-        for (i = 0; i < l; i++) {
-            if (INTEGER(r)[i] != 0) INTEGER(r)[i] = 1;
-        }
-        SET_TYPEOF(r,LGLSXP);
-    }
-    
-    return r;
+        return matchfun(CADR(args), CAR(args), nomatch, R_NoObject, env, inop);
 }
 
 /* Partial Matching of Strings */
