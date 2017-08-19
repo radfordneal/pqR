@@ -761,12 +761,20 @@ static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
     n = length(ix);
 
     /* handle zero length arguments */
+
     if (n == 0) 
-        RETURN_SEXP_INSIDE_PROTECT (allocVector(INTSXP, 0));
+        RETURN_SEXP_INSIDE_PROTECT (allocVector (inop ? LGLSXP : INTSXP, 0));
+
     if (length(itable) == 0) {
-	ans = allocVector(INTSXP, n);
-	for (i = 0; i < n; i++) INTEGER(ans)[i] = nomatch;
-	RETURN_SEXP_INSIDE_PROTECT (ans);
+        if (inop) {
+            ans = allocVector (LGLSXP, n);
+            for (i = 0; i < n; i++) LOGICAL(ans)[i] = 0;
+        }
+        else {
+            ans = allocVector (INTSXP, n);
+            for (i = 0; i < n; i++) INTEGER(ans)[i] = nomatch;
+        }
+        RETURN_SEXP_INSIDE_PROTECT (ans);
     }
 
     x = match_transform (ix, env);
@@ -872,7 +880,9 @@ static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
             }
             break;
         }}
-        if (inop)
+        if (inop == 4) /* sum (x %in% y) */
+            RETURN_SEXP_INSIDE_PROTECT (ScalarInteger(result!=0));
+        else if (inop) /* %in%, not variant */
             RETURN_SEXP_INSIDE_PROTECT (ScalarLogicalMaybeConst(result!=0));
         else
             RETURN_SEXP_INSIDE_PROTECT (ScalarInteger(result));
@@ -891,17 +901,52 @@ static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
         DoHashing (table, &data);
         if (incomp != R_NoObject)
             UndoHashing (incomp, &data);
-        ans = allocVector (INTSXP, n);
-        int *ansi = INTEGER(ans);
-        if (inop) {
-            for (i = 0; i < n; i++)
-                ansi[i] = hash_lookup (x, i, &data) != 0;
-            TYPEOF(ans) = LGLSXP;
-        }
-        else {
+        switch (inop) {
+        case 0: { /* match */
+            ans = allocVector (INTSXP, n);
+            int *ansi = INTEGER(ans);
             for (i = 0; i < n; i++)
                 ansi[i] = hash_lookup (x, i, &data);
+            break;
         }
+        case 2: { /* all (x %in% y) */
+            int res = 1;
+            for (i = 0; i < n; i++) {
+                if (hash_lookup (x, i, &data) == 0) {
+                    res = 0;
+                    break;
+                }
+            }
+            ans = ScalarLogicalMaybeConst(res);
+            break;
+        }
+        case 3: { /* any (x %in% y) */
+            int res = 0;
+            for (i = 0; i < n; i++) {
+                if (hash_lookup (x, i, &data) != 0) {
+                    res = 1;
+                    break;
+                }
+            }
+            ans = ScalarLogicalMaybeConst(res);
+            break;
+        }
+        case 4: { /* sum (x %in% y) */
+            int res = 0;
+            for (i = 0; i < n; i++) {
+                if (hash_lookup (x, i, &data) != 0)
+                    res += 1;
+            }
+            ans = ScalarInteger(res);
+            break;
+        }
+        default: { /* %in%, not variant */
+            ans = allocVector (LGLSXP, n);
+            int *ansl = LOGICAL(ans);
+            for (i = 0; i < n; i++)
+                ansl[i] = hash_lookup (x, i, &data) != 0;
+            break;
+        }}
     }
     else {  /* 'x' is hashed, 'table' looked up */
         HashTableSetup(x, &data);
@@ -922,20 +967,51 @@ static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
             if (j != 0 && ansi[j-1] == 0)
                 ansi[j-1] = -(i+1);
         }
-        if (inop) {
+        switch (inop) {
+        case 0: { /* match */
             for (i = 0; i < n; i++)
-                ansi[i] = ansi[i] == 0 ? 0
-                        : ansi[i] > 0  ? (ansi[ansi[i]-1] != 0)
-                        :                (ansi[i] != 0);
-            TYPEOF(ans) = LGLSXP;
-        }
-        else {
-            for (i = 0; i < n; i++) {
                 ansi[i] = ansi[i] == 0 ? nomatch
                         : ansi[i] > 0  ? ansi[ansi[i]-1]
                         :                -ansi[i];
-            }
+            break;
         }
+        case 2: { /* all (x %in% y) */
+            int res = 1;
+            for (i = 0; i < n; i++) {
+                if (ansi[i] == 0 || ansi[i] > 0 && ansi[ansi[i]-1] == 0) {
+                    res = 0;
+                    break;
+                }
+            }
+            ans = ScalarLogicalMaybeConst(res);
+            break;
+        }
+        case 3: { /* any (x %in% y) */
+            int res = 0;
+            for (i = 0; i < n; i++) {
+                if (ansi[i] != 0 && (ansi[i] < 0 || ansi[ansi[i]-1] != 0)) {
+                    res = 1;
+                    break;
+                }
+            }
+            ans = ScalarLogicalMaybeConst(res);
+            break;
+        }
+        case 4: { /* sum (x %in% y) */
+            int res = 0;
+            for (i = 0; i < n; i++) {
+                if (ansi[i] != 0 && (ansi[i] < 0 || ansi[ansi[i]-1] != 0))
+                    res += 1;
+            }
+            ans = ScalarInteger(res);
+            break;
+        }
+        default: { /* %in%, not variant */
+            for (i = 0; i < n; i++)
+                ansi[i] = ansi[i]==0 ? 0 : ansi[i]<0 ? 1 : ansi[ansi[i]-1] != 0;
+            TYPEOF(ans) = LGLSXP;
+            break;
+        }}
     }
     
 #   if HASH_STATS
@@ -967,7 +1043,7 @@ SEXP match(SEXP itable, SEXP ix, int nomatch)
 }
 
 
-static SEXP do_match(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_match(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     int nomatch, nargs = length(args);
     SEXP incomp;
@@ -997,12 +1073,18 @@ static SEXP do_match(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     int inop = PRIMVAL(op) == 1;  /* is this for %in% operator? */
-    if (inop && length(incomp) 
+    if (inop == 0 && length(incomp) 
          && /* S has FALSE to mean empty */
             !(isLogical(incomp) && length(incomp)==1 && LOGICAL(incomp)[0]==0))
-        return matchfun(CADR(args), CAR(args), nomatch, incomp, env, 0);
-    else
-        return matchfun(CADR(args), CAR(args), nomatch, R_NoObject, env, inop);
+        return matchfun (CADR(args), CAR(args), nomatch, incomp, env, 0);
+    else {
+        int vk = VARIANT_KIND(variant);
+        return matchfun (CADR(args), CAR(args), nomatch, R_NoObject, env, 
+                         !inop ? 0 : vk == VARIANT_AND ? 2
+                                   : vk == VARIANT_OR ? 3
+                                   : vk == VARIANT_SUM ? 4
+                                   : 1);
+    }
 }
 
 /* Partial Matching of Strings */
@@ -1763,8 +1845,8 @@ attribute_hidden FUNTAB R_FunTab_unique[] =
 {"duplicated",	do_duplicated,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"unique",	do_duplicated,	1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"anyDuplicated",do_duplicated,	2,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"match",	do_match,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"%in%",	do_match,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"match",	do_match,	0,	1011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"%in%",	do_match,	1,	1011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"pmatch",	do_pmatch,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"charmatch",	do_charmatch,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"match.call",	do_matchcall,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
