@@ -8,11 +8,13 @@ Modifications to R in pqR are Copyright (C) 2013-2017 Radford M. Neal
 
 Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
-Platform: x86_64-unknown-linux-gnu (64-bit)
+Platform: x86_64-apple-darwin16.6.0 (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
 Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
 
 R is a collaborative project with many contributors.
 Type 'contributors()' for more information and
@@ -29,6 +31,8 @@ No helper threads, task merging enabled, uncompressed pointers.
 > #
 > # Added for pqR, 2017, Radford M. Neal.
 > 
+> # Tests with scalar first operand.
+> 
 > a <- c("abc","def","hij")
 > 
 > print(match("def",a))
@@ -44,6 +48,8 @@ No helper threads, task merging enabled, uncompressed pointers.
 [1] TRUE
 > print("xyz" %in% a)
 [1] FALSE
+> 
+> # Tests with non-scalar operands.
 > 
 > b <- c("xyz","def","abc","q")
 > 
@@ -71,6 +77,8 @@ No helper threads, task merging enabled, uncompressed pointers.
 > print(match(y,x))
  [1] NA  2  1 NA NA  2  1 NA NA  2  1 NA
 > 
+> # Tests of 'duplicated'.
+> 
 > print(duplicated(a))
 [1] FALSE FALSE FALSE
 > print(duplicated(x))
@@ -79,6 +87,8 @@ No helper threads, task merging enabled, uncompressed pointers.
 [1] FALSE FALSE FALSE FALSE
 > print(duplicated(y))
  [1] FALSE FALSE FALSE FALSE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE
+> 
+> # Tests with zero-length vector.
 > 
 > z <- character(0)
 > 
@@ -98,4 +108,53 @@ logical(0)
 > 
 > print(duplicated(z))
 logical(0)
+> 
+> # Tests of %in% with any, all, or sum.
+> 
+> print(any("def" %in% b))
+[1] TRUE
+> print(any("pqr" %in% b))
+[1] FALSE
+> print(all("def" %in% b))
+[1] TRUE
+> print(all("pqr" %in% b))
+[1] FALSE
+> print(sum("def" %in% b))
+[1] 1
+> print(sum("pqr" %in% b))
+[1] 0
+> 
+> print(any(a %in% y))
+[1] TRUE
+> print(all(a %in% y))
+[1] FALSE
+> print(sum(a %in% y))
+[1] 2
+> print(all(b %in% y))
+[1] TRUE
+> 
+> print(any(y %in% a))
+[1] TRUE
+> print(all(y %in% a))
+[1] FALSE
+> print(sum(y %in% a))
+[1] 6
+> print(all(y %in% b))
+[1] TRUE
+> 
+> ap <- paste0(a,"Q")
+> 
+> print(any(ap %in% y))
+[1] FALSE
+> print(all(ap %in% y))
+[1] FALSE
+> print(sum(ap %in% y))
+[1] 0
+> 
+> print(any(y %in% ap))
+[1] FALSE
+> print(all(y %in% ap))
+[1] FALSE
+> print(sum(y %in% ap))
+[1] 0
 > 
