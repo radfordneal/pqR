@@ -748,6 +748,11 @@ static SEXP match_transform(SEXP s, SEXP env)
     return s;
 }
 
+/* Main function used to implement 'match(x,table,nomatch,imcomp)' and
+   'x %in% table'.  The inop argument is 0 for match, 1 for %in% without
+   variant return, 2 for all(x %in% table), 3 for any(x %in% table),
+   and 4 for sum(x %in% table). */
+
 static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
                       int inop)
 {
@@ -891,7 +896,17 @@ static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
     if (incomp != R_NoObject) 
         incomp = coerceVector(incomp, type);
 
+    /* Choose between two aproaches depending on which of 'x' and 'table'
+       is smaller. */
+
     if (LENGTH(table) < 1.2*n) {  /* 'table' is hashed, 'x' looked up */
+
+        /* Create a hash table for 'table', then look up elements of 'x'
+           in this table to create the result.  A vector for results 
+           needn't be created for 'all', 'any', and 'sum' variants, and
+           lookups can stop once the result of 'all' or 'any' has been
+           determined. */
+
         HashTableSetup (table, &data);
         data.nomatch = nomatch;
         check_UTF8 (x, &data.useBytes, &data.useUTF8);
@@ -948,7 +963,21 @@ static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
             break;
         }}
     }
+
     else {  /* 'x' is hashed, 'table' looked up */
+
+        /* Create a hash table for 'x', then look up elements of
+           'table' to see which elements of 'x' exist in 'table'. 
+           A vector the length of 'x' must be created to record for
+           each duplicate element in 'x' the index of the first
+           instance.  When an element of 'table' is found in 'x', the
+           entry for the first instance of that element is set to
+           minus the index in 'table' (distinguising it from the
+           indexes for duplicates).  A final pass then links the
+           duplicate instances to the result for the first instance.
+           For the 'any' variant, TRUE can be returned when the first 
+           lookup succeeds. */
+
         HashTableSetup(x, &data);
         data.nomatch = 0;  /* NOT nomatch */
         check_UTF8 (x, &data.useBytes, &data.useUTF8);
@@ -961,12 +990,24 @@ static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
             ansi[i] = hash_insert (x, i, &data);
         if (incomp != R_NoObject)
             UndoHashing (incomp, &data);
+
         R_len_t tl = LENGTH(table);
-        for (i = 0; i < tl; i++) {
-            int j = hash_lookup (table, i, &data);
-            if (j != 0 && ansi[j-1] == 0)
-                ansi[j-1] = -(i+1);
+        if (inop == 3) {  /* any (x %in% y) */
+            for (i = 0; i < tl; i++) {
+                if (hash_lookup (table, i, &data) != 0) {
+                    ans = ScalarLogicalMaybeConst(TRUE);
+                    goto done;
+                }
+            }
         }
+        else {
+            for (i = 0; i < tl; i++) {
+                int j = hash_lookup (table, i, &data);
+                if (j != 0 && ansi[j-1] == 0)
+                    ansi[j-1] = -(i+1);
+            }
+        }
+
         switch (inop) {
         case 0: { /* match */
             for (i = 0; i < n; i++)
@@ -987,14 +1028,8 @@ static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
             break;
         }
         case 3: { /* any (x %in% y) */
-            int res = 0;
-            for (i = 0; i < n; i++) {
-                if (ansi[i] != 0 && (ansi[i] < 0 || ansi[ansi[i]-1] != 0)) {
-                    res = 1;
-                    break;
-                }
-            }
-            ans = ScalarLogicalMaybeConst(res);
+            /* If any are in y, TRUE would have been returned above. */
+            ans = ScalarLogicalMaybeConst(FALSE);
             break;
         }
         case 4: { /* sum (x %in% y) */
@@ -1013,6 +1048,8 @@ static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
             break;
         }}
     }
+
+  done: 
     
 #   if HASH_STATS
         if (installed_already("HASH_STATS")) {
