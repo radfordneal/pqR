@@ -2,6 +2,8 @@
 #
 # Added for pqR, 2017, Radford M. Neal.
 
+# Tests with scalar first operand.
+
 a <- c("abc","def","hij")
 
 print(match("def",a))
@@ -11,6 +13,8 @@ print(match("def",a,incomparables=c("q","def")))
 
 print("def" %in% a)
 print("xyz" %in% a)
+
+# Tests with non-scalar operands.
 
 b <- c("xyz","def","abc","q")
 
@@ -29,10 +33,14 @@ print(match(x,b))
 print(match(x,y))
 print(match(y,x))
 
+# Tests of 'duplicated'.
+
 print(duplicated(a))
 print(duplicated(x))
 print(duplicated(b))
 print(duplicated(y))
+
+# Tests with zero-length vector.
 
 z <- character(0)
 
@@ -45,3 +53,32 @@ print(a %in% z)
 print(z %in% z)
 
 print(duplicated(z))
+
+# Tests of %in% with any, all, or sum.
+
+print(any("def" %in% b))
+print(any("pqr" %in% b))
+print(all("def" %in% b))
+print(all("pqr" %in% b))
+print(sum("def" %in% b))
+print(sum("pqr" %in% b))
+
+print(any(a %in% y))
+print(all(a %in% y))
+print(sum(a %in% y))
+print(all(b %in% y))
+
+print(any(y %in% a))
+print(all(y %in% a))
+print(sum(y %in% a))
+print(all(y %in% b))
+
+ap <- paste0(a,"Q")
+
+print(any(ap %in% y))
+print(all(ap %in% y))
+print(sum(ap %in% y))
+
+print(any(y %in% ap))
+print(all(y %in% ap))
+print(sum(y %in% ap))
