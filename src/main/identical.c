@@ -327,7 +327,7 @@ attribute_hidden FUNTAB R_FunTab_identical[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"identical",	do_identical,	0,	11,	6,	{PP_FUNCALL, PREC_FN,	  0}},
+{"identical",	do_identical,	0,   1000011,	6,	{PP_FUNCALL, PREC_FN,	  0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };

@@ -1249,8 +1249,8 @@ attribute_hidden FUNTAB R_FunTab_summary[] =
 
 {"mean",	do_mean,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"range",	do_range,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"which.min",	do_first_min,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"which.max",	do_first_min,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"which.min",	do_first_min,	0,   1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"which.max",	do_first_min,	1,   1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"which",	do_which,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"complete.cases",do_compcases,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"pmin",	do_pmin,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},

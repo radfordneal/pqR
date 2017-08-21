@@ -2813,126 +2813,126 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 
 /* Mathematical Functions of Two Numeric (+ 1-2 int) Variables */
 
-{"atan2",	do_math2,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"atan2",	do_math2,	0,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"lbeta",	do_math2,	2,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"beta",	do_math2,	3,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"lchoose",	do_math2,	4,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"choose",	do_math2,	5,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"lbeta",	do_math2,	2,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"beta",	do_math2,	3,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"lchoose",	do_math2,	4,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"choose",	do_math2,	5,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dchisq",	do_math2,	6,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pchisq",	do_math2,	7,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qchisq",	do_math2,	8,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dchisq",	do_math2,	6,   1000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pchisq",	do_math2,	7,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qchisq",	do_math2,	8,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dexp",	do_math2,	9,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pexp",	do_math2,	10,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qexp",	do_math2,	11,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dexp",	do_math2,	9,   1000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pexp",	do_math2,	10,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qexp",	do_math2,	11,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dgeom",	do_math2,	12,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pgeom",	do_math2,	13,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qgeom",	do_math2,	14,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dgeom",	do_math2,	12,   1000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pgeom",	do_math2,	13,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qgeom",	do_math2,	14,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dpois",	do_math2,	15,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"ppois",	do_math2,	16,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qpois",	do_math2,	17,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dpois",	do_math2,	15,   1000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"ppois",	do_math2,	16,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qpois",	do_math2,	17,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dt",		do_math2,	18,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pt",		do_math2,	19,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qt",		do_math2,	20,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dt",		do_math2,	18,   1000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pt",		do_math2,	19,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qt",		do_math2,	20,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dsignrank",	do_math2,	21,	11,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"psignrank",	do_math2,	22,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qsignrank",	do_math2,	23,	11,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dsignrank",	do_math2,	21,   1000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"psignrank",	do_math2,	22,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qsignrank",	do_math2,	23,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"besselJ",	do_math2,	24,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"besselY",	do_math2,	25,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"besselJ",	do_math2,	24,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"besselY",	do_math2,	25,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"psigamma",	do_math2,	26,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"psigamma",	do_math2,	26,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 
 /* Mathematical Functions of Three Numeric (+ 1-2 int) Variables */
 
-{"dbeta",	do_math3,	1,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pbeta",	do_math3,	2,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qbeta",	do_math3,	3,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dbeta",	do_math3,	1,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pbeta",	do_math3,	2,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qbeta",	do_math3,	3,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dbinom",	do_math3,	4,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pbinom",	do_math3,	5,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qbinom",	do_math3,	6,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dbinom",	do_math3,	4,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pbinom",	do_math3,	5,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qbinom",	do_math3,	6,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dcauchy",	do_math3,	7,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pcauchy",	do_math3,	8,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qcauchy",	do_math3,	9,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dcauchy",	do_math3,	7,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pcauchy",	do_math3,	8,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qcauchy",	do_math3,	9,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"df",		do_math3,	10,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pf",		do_math3,	11,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qf",		do_math3,	12,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"df",		do_math3,	10,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pf",		do_math3,	11,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qf",		do_math3,	12,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dgamma",	do_math3,	13,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pgamma",	do_math3,	14,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qgamma",	do_math3,	15,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dgamma",	do_math3,	13,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pgamma",	do_math3,	14,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qgamma",	do_math3,	15,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dlnorm",	do_math3,	16,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"plnorm",	do_math3,	17,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qlnorm",	do_math3,	18,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dlnorm",	do_math3,	16,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"plnorm",	do_math3,	17,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qlnorm",	do_math3,	18,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dlogis",	do_math3,	19,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"plogis",	do_math3,	20,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qlogis",	do_math3,	21,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dlogis",	do_math3,	19,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"plogis",	do_math3,	20,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qlogis",	do_math3,	21,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dnbinom",	do_math3,	22,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnbinom",	do_math3,	23,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnbinom",	do_math3,	24,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dnbinom",	do_math3,	22,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnbinom",	do_math3,	23,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnbinom",	do_math3,	24,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"dnorm",	do_math3,	25,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnorm",	do_math3,	26,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnorm",	do_math3,	27,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnorm",	do_math3,	26,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnorm",	do_math3,	27,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dunif",	do_math3,	28,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"punif",	do_math3,	29,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qunif",	do_math3,	30,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dunif",	do_math3,	28,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"punif",	do_math3,	29,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qunif",	do_math3,	30,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dweibull",	do_math3,	31,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pweibull",	do_math3,	32,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qweibull",	do_math3,	33,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dweibull",	do_math3,	31,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pweibull",	do_math3,	32,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qweibull",	do_math3,	33,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dnchisq",	do_math3,	34,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnchisq",	do_math3,	35,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnchisq",	do_math3,	36,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dnchisq",	do_math3,	34,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnchisq",	do_math3,	35,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnchisq",	do_math3,	36,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dnt",		do_math3,	37,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnt",		do_math3,	38,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnt",		do_math3,	39,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dnt",		do_math3,	37,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnt",		do_math3,	38,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnt",		do_math3,	39,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dwilcox",	do_math3,	40,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pwilcox",	do_math3,	41,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qwilcox",	do_math3,	42,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dwilcox",	do_math3,	40,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pwilcox",	do_math3,	41,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qwilcox",	do_math3,	42,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"besselI",	do_math3,	43,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"besselK",	do_math3,	44,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"besselI",	do_math3,	43,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"besselK",	do_math3,	44,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dnbinom_mu",	do_math3,	45,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnbinom_mu",	do_math3,	46,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnbinom_mu",	do_math3,	47,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dnbinom_mu",	do_math3,	45,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnbinom_mu",	do_math3,	46,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnbinom_mu",	do_math3,	47,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 
 /* Mathematical Functions of Four Numeric (+ 1-2 int) Variables */
 
-{"dhyper",	do_math4,	1,	11,	4+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"phyper",	do_math4,	2,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qhyper",	do_math4,	3,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dhyper",	do_math4,	1,   1000011,	4+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"phyper",	do_math4,	2,   1000011,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qhyper",	do_math4,	3,   1000011,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dnbeta",	do_math4,	4,	11,	4+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnbeta",	do_math4,	5,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnbeta",	do_math4,	6,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dnbeta",	do_math4,	4,   1000011,	4+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnbeta",	do_math4,	5,   1000011,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnbeta",	do_math4,	6,   1000011,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dnf",		do_math4,	7,	11,	4+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnf",		do_math4,	8,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnf",		do_math4,	9,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dnf",		do_math4,	7,   1000011,	4+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnf",		do_math4,	8,   1000011,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnf",		do_math4,	9,   1000011,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dtukey",	do_math4,	10,	11,	4+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"ptukey",	do_math4,	11,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qtukey",	do_math4,	12,	11,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dtukey",	do_math4,	10,   1000011,	4+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"ptukey",	do_math4,	11,   1000011,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qtukey",	do_math4,	12,   1000011,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };

@@ -1879,15 +1879,15 @@ attribute_hidden FUNTAB R_FunTab_unique[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"duplicated",	do_duplicated,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"unique",	do_duplicated,	1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"anyDuplicated",do_duplicated,	2,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"match",	do_match,	0,	1011,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"%in%",	do_match,	1,	1011,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"pmatch",	do_pmatch,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"charmatch",	do_charmatch,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"duplicated",	do_duplicated,	0,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"unique",	do_duplicated,	1,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"anyDuplicated",do_duplicated,	2,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"match",	do_match,	0,   1001011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"%in%",	do_match,	1,   1001011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"pmatch",	do_pmatch,	0,   1000011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"charmatch",	do_charmatch,	0,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"match.call",	do_matchcall,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"make.unique",	do_makeunique,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"make.unique",	do_makeunique,	0,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };

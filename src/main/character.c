@@ -1381,16 +1381,16 @@ attribute_hidden FUNTAB R_FunTab_character[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {"nzchar",	do_nzchar,	1,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"nchar",	do_nchar,	1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"substr",	do_substr,	1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"substr<-",	do_substrgets,	1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"abbreviate",	do_abbrev,	1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"make.names",	do_makenames,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"tolower",	do_tolower,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"toupper",	do_tolower,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"chartr",	do_chartr,	1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"strtrim",	do_strtrim,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"strtoi",	do_strtoi,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"nchar",	do_nchar,	1,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"substr",	do_substr,	1,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"substr<-",	do_substrgets,	1,   1000011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"abbreviate",	do_abbrev,	1,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"make.names",	do_makenames,	0,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"tolower",	do_tolower,	0,   1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"toupper",	do_tolower,	1,   1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"chartr",	do_chartr,	1,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"strtrim",	do_strtrim,	0,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"strtoi",	do_strtoi,	0,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };

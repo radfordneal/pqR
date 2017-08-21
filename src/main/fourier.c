@@ -231,8 +231,8 @@ attribute_hidden FUNTAB R_FunTab_fourier[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"fft",		do_fft,		0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"mvfft",	do_mvfft,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"fft",		do_fft,		0,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"mvfft",	do_mvfft,	0,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"nextn",	do_nextn,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
