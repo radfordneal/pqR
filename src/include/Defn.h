@@ -639,6 +639,9 @@ typedef struct {
                                        R_MissingArg, rather than producing an
                                        error.  Does not set R_variant_result. */
 
+#define VARIANT_WHOLE_BODY 0x20000  /* Expression is the entire body of a 
+                                       function.  May allow optimizations. */
+
 /* Flags in R_variant_result. */
 
 #define VARIANT_RTN_FLAG 0x80000000     /* Bit flagging a direct return */
