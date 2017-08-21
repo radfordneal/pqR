@@ -67,7 +67,10 @@
  * offset:	the 'op' (offset pointer) above; used for C functions
  *		which deal with more than one R function...
  *
- * eval:	= UVWXYZ (six digits) --- where e.g. '1' means '000001'
+ * eval:	= TUVWXYZ (six digits) --- where e.g. '1' means '000001'
+ *              T=1 says do special processing for BUILTIN internal function
+ *                  when called with VARIANT_WHOLE_BODY
+ *              T=0 not what it says above
  *              U=1 says that this is a subassign primitive that is written to
  *                  be able to use the fast interface
  *              U=0 not what it says above
@@ -826,15 +829,26 @@ SEXP attribute_hidden do_internal (SEXP call, SEXP op, SEXP args, SEXP env,
 		  CHAR(PRINTNAME(fun)));
 
     args = CDR(s);
-    if (TYPEOF(ifun) == BUILTINSXP) {
-	args = evalList_v (args, env, PRIMFUN_PENDING_OK(ifun) 
-                                        ? VARIANT_PENDING_OK : 0);
-    }
+    if (TYPEOF(ifun) == BUILTINSXP)
+        args = evalList_v (args, env, PRIMFUN_PENDING_OK(ifun) 
+                                       ? VARIANT_PENDING_OK : 0);
     PROTECT(args);
 
     R_Visible = TRUE;
 
     ans = CALL_PRIMFUN(s, ifun, args, env, variant);
+
+    if (PRIMWHOLE(ifun)) {  /* should only be used for BUILTINs */
+        if ((variant & VARIANT_WHOLE_BODY) != 0) {
+            args = R_GlobalContext->promargs;
+            while (args != R_NilValue) {
+                SEXP a = CAR(args);
+                if (PRVALUE_PENDING_OK(a) != R_UnboundValue)
+                    DEC_NAMEDCNT(PRVALUE_PENDING_OK(a));
+                args = CDR(args);
+            }
+        }
+    }
 
     int flag = PRIMPRINT(ifun);
     if (flag == 0) R_Visible = TRUE;

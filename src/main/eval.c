@@ -962,7 +962,7 @@ static void start_browser (SEXP call, SEXP op, SEXP stmt, SEXP env)
 SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
                                      SEXP *supplied, int variant)
 {
-    int vrnt = VARIANT_PENDING_OK | VARIANT_DIRECT_RETURN 
+    int vrnt = VARIANT_PENDING_OK | VARIANT_DIRECT_RETURN | VARIANT_WHOLE_BODY
                  | VARIANT_PASS_ON(variant);
 
     SEXP formals, actuals, savedrho, savedsrcref;

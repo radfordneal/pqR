@@ -2884,7 +2884,7 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"pnbinom",	do_math3,	23,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qnbinom",	do_math3,	24,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dnorm",	do_math3,	25,	11,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"dnorm",	do_math3,	25,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
 {"pnorm",	do_math3,	26,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qnorm",	do_math3,	27,	11,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
