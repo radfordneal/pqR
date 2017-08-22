@@ -1,5 +1,6 @@
 #  File src/library/base/R/grep.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -21,57 +22,45 @@ function(x, split, fixed = FALSE, perl = FALSE, useBytes = FALSE)
 grep <-
 function(pattern, x, ignore.case = FALSE, perl = FALSE,
          value = FALSE, fixed = FALSE, useBytes = FALSE, invert = FALSE)
-{
     ## when value = TRUE we return names
-    if(!is.character(x)) x <- structure(as.character(x), names=names(x))
-    .Internal(grep(as.character(pattern), x, ignore.case, value,
-                   perl, fixed, useBytes, invert))
-}
+    .Internal(grep(as.character(pattern), 
+       if (is.character(x)) x else structure(as.character(x), names=names(x)),
+       ignore.case, value, perl, fixed, useBytes, invert))
 
 grepl <-
 function(pattern, x, ignore.case = FALSE, perl = FALSE,
          fixed = FALSE, useBytes = FALSE)
-{
-    if(!is.character(x)) x <- as.character(x)
-    .Internal(grepl(as.character(pattern), x, ignore.case, FALSE,
-                    perl, fixed, useBytes, FALSE))
-}
+    .Internal(grepl(as.character(pattern), 
+                    if (is.character(x)) x else as.character(x),
+                    ignore.case, FALSE, perl, fixed, useBytes, FALSE))
 
 sub <-
 function(pattern, replacement, x, ignore.case = FALSE,
          perl = FALSE, fixed = FALSE, useBytes = FALSE)
-{
-    if (!is.character(x)) x <- as.character(x)
-     .Internal(sub(as.character(pattern), as.character(replacement), x,
+    .Internal(sub(as.character(pattern), as.character(replacement),
+                  if (is.character(x)) x else as.character(x),
                   ignore.case, perl, fixed, useBytes))
-}
 
 gsub <-
 function(pattern, replacement, x, ignore.case = FALSE,
          perl = FALSE, fixed = FALSE, useBytes = FALSE)
-{
-    if (!is.character(x)) x <- as.character(x)
-    .Internal(gsub(as.character(pattern), as.character(replacement), x,
+    .Internal(gsub(as.character(pattern), as.character(replacement),
+                   if (is.character(x)) x else as.character(x),
                    ignore.case, perl, fixed, useBytes))
-}
 
 regexpr <-
 function(pattern, text, ignore.case = FALSE, perl = FALSE,
          fixed = FALSE, useBytes = FALSE)
-{
-    if (!is.character(text)) text <- as.character(text)
-    .Internal(regexpr(as.character(pattern), text,
+    .Internal(regexpr(as.character(pattern), 
+                      if (is.character(text)) text else as.character(text),
                       ignore.case, perl, fixed, useBytes))
-}
 
 gregexpr <-
 function(pattern, text, ignore.case = FALSE, perl = FALSE,
          fixed = FALSE, useBytes = FALSE)
-{
-    if (!is.character(text)) text <- as.character(text)
-    .Internal(gregexpr(as.character(pattern), text,
+    .Internal(gregexpr(as.character(pattern),
+                       if (is.character(text)) text else as.character(text),
                        ignore.case, perl, fixed, useBytes))
-}
 
 grepRaw <-
 function(pattern, x, offset = 1L, ignore.case = FALSE, value = FALSE,
