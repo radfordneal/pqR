@@ -843,8 +843,10 @@ SEXP attribute_hidden do_internal (SEXP call, SEXP op, SEXP args, SEXP env,
             args = R_GlobalContext->promargs;
             while (args != R_NilValue) {
                 SEXP a = CAR(args);
-                if (PRVALUE_PENDING_OK(a) != R_UnboundValue)
+                if (PRVALUE_PENDING_OK(a) != R_UnboundValue) {
                     DEC_NAMEDCNT(PRVALUE_PENDING_OK(a));
+                    SET_PRVALUE(a,R_NilValue);  /* precaution */
+                }
                 args = CDR(args);
             }
         }
