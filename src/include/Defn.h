@@ -644,7 +644,13 @@ typedef struct {
                                        error.  Does not set R_variant_result. */
 
 #define VARIANT_WHOLE_BODY 0x20000  /* Expression is the entire body of a 
-                                       function.  May allow optimizations. */
+                                       function.  Allows avoidance of increment
+                                       of NAMEDCNT in .Internal. */
+
+#define VARIANT_NOT_WHOLE_BODY 0x40000 /* Suppress use of VARIANT_WHOLE_BODY
+                                          in applyClosure_v.  Used when S4
+                                          method, or S3 method called via 
+                                          UseMethod that's not the whole body.*/
 
 /* Flags in R_variant_result. */
 

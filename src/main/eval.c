@@ -965,6 +965,9 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     int vrnt = VARIANT_PENDING_OK | VARIANT_DIRECT_RETURN | VARIANT_WHOLE_BODY
                  | VARIANT_PASS_ON(variant);
 
+    if (variant & VARIANT_NOT_WHOLE_BODY)
+        vrnt &= ~VARIANT_WHOLE_BODY;
+
     SEXP formals, actuals, savedrho, savedsrcref;
     volatile SEXP body, newrho;
     SEXP f, a, res;
@@ -1208,7 +1211,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    PROTECT(res = eval(body, newrho));
+	    PROTECT(res = evalv(body, newrho, VARIANT_NOT_WHOLE_BODY));
 	}
 	else {
 	    PROTECT(res = R_ReturnedValue);
