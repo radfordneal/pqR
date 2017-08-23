@@ -192,3 +192,9 @@ b <- a
 length(a) <- 4
 a[[1]][1] <- 99
 stopifnot(b[[1]]==11)
+
+# slightly out-of-place test involving VARIANT_WHOLE_BODY and .Internal.
+
+f <- function (...) { r <- paste(...,"x"); list(r,...) }
+r <- f("q")
+stopifnot (identical (r, list("q x","q")))

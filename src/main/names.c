@@ -838,14 +838,22 @@ SEXP attribute_hidden do_internal (SEXP call, SEXP op, SEXP args, SEXP env,
 
     ans = CALL_PRIMFUN(s, ifun, args, env, variant);
 
+    /* If this .Internal function is the whole body of a function, we
+       try to undo the incrementing of NAMEDCNT that was done for the
+       arguments of the function.  This should be OK, because with no
+       other statements in the function body, the function's environment
+       won't have been captured for other uses. */
+
     if (PRIMWHOLE(ifun)) {  /* should only be used for BUILTINs */
         if ((variant & VARIANT_WHOLE_BODY) != 0) {
             args = R_GlobalContext->promargs;
             while (args != R_NilValue) {
                 SEXP a = CAR(args);
-                if (PRVALUE_PENDING_OK(a) != R_UnboundValue) {
+                if (/* NAMEDCNT_EQ_0(a) && */ /* avoid if recycled promise? */
+                      PRVALUE_PENDING_OK(a) != R_UnboundValue) {
                     DEC_NAMEDCNT(PRVALUE_PENDING_OK(a));
-                    SET_PRVALUE(a,R_NilValue);  /* precaution */
+                    /* SET_PRVALUE(a,R_NilValue); */
+                       /* possible precaution - only if avoid when recycled */
                 }
                 args = CDR(args);
             }
