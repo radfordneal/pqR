@@ -33,11 +33,12 @@
 
 static void cumsum(SEXP x, SEXP s)
 {
-    R_len_t len = LENGTH(x);
-    long double sum = 0;
     int i;
+    R_len_t len = LENGTH(x);
     double *rx = REAL(x), *rs = REAL(s);
-    for (i = 0; i < len; i++) {
+    long double sum = rx[0];
+    rs[0] = rx[0];
+    for (i = 1; i < len; i++) {
         sum += rx[i];
         rs[i] = sum;
     }
@@ -52,10 +53,10 @@ static void cumsum(SEXP x, SEXP s)
 
 static void icumsum(SEXP x, SEXP s)
 {
-    R_len_t len = LENGTH(x);
-    int64_t sum = 0;
     int i;
+    R_len_t len = LENGTH(x);
     int *ix = INTEGER(x), *is = INTEGER(s);
+    int64_t sum = 0;
     for (i = 0; i < len; i++) {
         if (ix[i] == NA_INTEGER) break;
         sum += ix[i];
@@ -72,13 +73,12 @@ static void icumsum(SEXP x, SEXP s)
 
 static void ccumsum(SEXP x, SEXP s)
 {
-    R_len_t len = LENGTH(x);
-    Rcomplex sum;
     int i;
+    R_len_t len = LENGTH(x);
     Rcomplex *cx = COMPLEX(x), *cs = COMPLEX(s);
-    sum.r = 0;
-    sum.i = 0;
-    for (i = 0; i < len; i++) {
+    Rcomplex sum = cx[0];
+    cs[0] = cx[0];
+    for (i = 1; i < len; i++) {
         sum.r += cx[i].r;
         sum.i += cx[i].i;
         cs[i].r = sum.r;
@@ -88,11 +88,12 @@ static void ccumsum(SEXP x, SEXP s)
 
 static void cumprod(SEXP x, SEXP s)
 {
-    R_len_t len = LENGTH(x);
-    long double prod = 1;
     int i;
+    R_len_t len = LENGTH(x);
     double *rx = REAL(x), *rs = REAL(s);
-    for (i = 0; i < len; i++) {
+    long double prod = rx[0];
+    rs[0] = rx[0];
+    for (i = 1; i < len; i++) {
         prod *= rx[i];
         rs[i] = prod;
     }
@@ -107,14 +108,13 @@ static void cumprod(SEXP x, SEXP s)
 
 static void ccumprod(SEXP x, SEXP s)
 {
-    Rcomplex prod, tmp;
-    R_len_t len = LENGTH(x);
     int i;
+    R_len_t len = LENGTH(x);
     Rcomplex *cx = COMPLEX(x), *cs = COMPLEX(s);
-    prod.r = 1;
-    prod.i = 0;
-    for (i = 0; i < len; i++) {
-        tmp = prod;
+    Rcomplex prod = cx[0];  /* Note: initializing prod to 1+0i and then      */
+    cs[0] = cx[0] ;         /* multiplying by cx[0] gives a different result */
+    for (i = 1; i < len; i++) {
+        Rcomplex tmp = prod;
         R_from_C99_complex(&prod, 
                            C99_from_R_complex(&tmp) * C99_from_R_complex(cx+i));
         cs[i] = prod;

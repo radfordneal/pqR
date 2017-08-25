@@ -296,16 +296,23 @@ static double rprod(double *x, int n, Rboolean narm)
 static Rcomplex cprod(Rcomplex *x, int n, Rboolean narm)
 {
     Rcomplex s, t;
-    int i;
+    int i, first;
 
-    s.r = 1.0;
-    s.i = 0.0;
+    s.r = 1;
+    s.i = 0;
 
+    first = 1;
     for (i = 0; i < n; i++) {
 	if (!narm || (!ISNAN(x[i].r) && !ISNAN(x[i].i))) {
-	    t = s;
-            R_from_C99_complex (&s, C99_from_R_complex(&t)
-                                     * C99_from_R_complex(&x[i]));
+            if (first) {
+                s = x[i];  /* multiplying x[i] by 1+0i may not be the same */
+                first = 0;
+            }
+            else {
+                t = s;
+                R_from_C99_complex (&s, C99_from_R_complex(&t)
+                                         * C99_from_R_complex(&x[i]));
+            }
 	}
     }
 
@@ -455,7 +462,7 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
     double tmp = 0.0, s;
     Rcomplex z, ztmp, zcum={0.0, 0.0} /* -Wall */;
     int itmp = 0, icum=0, int_a, real_a, empty, warn = 0 /* dummy */;
-    int iop;
+    int iop, first;
     SEXPTYPE ans_type;/* only INTEGER, REAL, COMPLEX or STRSXP here */
 
     Rboolean narm;
@@ -516,6 +523,7 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 	ans_type = REALSXP;
 	zcum.r = 1.;
 	zcum.i = 0.;
+        first = 1;
 	break;
 
     default:
@@ -672,14 +680,19 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 		case CPLXSXP:
 		    ans_type = CPLXSXP;
 		    ztmp = cprod(COMPLEX(a), LENGTH(a), narm);
-		    z = zcum;
-                    R_from_C99_complex (&zcum, C99_from_R_complex(&z)
-                                                * C99_from_R_complex(&ztmp));
+                    if (first) 
+                        zcum = ztmp;
+                    else {
+                        z = zcum;
+                        R_from_C99_complex(&zcum, C99_from_R_complex(&z)
+                                                   * C99_from_R_complex(&ztmp));
+                    }
 		    break;
 		default:
 		    goto invalid_type;
 		}
 
+                first = 0;
 		break;/* prod() part */
 
 	    }/* switch(iop) */
