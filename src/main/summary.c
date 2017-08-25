@@ -295,24 +295,19 @@ static double rprod(double *x, int n, Rboolean narm)
 
 static Rcomplex cprod(Rcomplex *x, int n, Rboolean narm)
 {
-    long double sr, si, tr, ti;
-    Rcomplex s;
+    Rcomplex s, t;
     int i;
 
-    sr = 1.0;
-    si = 0.0;
+    s.r = 1.0;
+    s.i = 0.0;
 
     for (i = 0; i < n; i++) {
 	if (!narm || (!ISNAN(x[i].r) && !ISNAN(x[i].i))) {
-	    tr = sr;
-	    ti = si;
-	    sr = tr * x[i].r - ti * x[i].i;
-	    si = tr * x[i].i + ti * x[i].r;
+	    t = s;
+            R_from_C99_complex (&s, C99_from_R_complex(&t)
+                                     * C99_from_R_complex(&x[i]));
 	}
     }
-
-    s.r = sr;
-    s.i = si;
 
     return s;
 }
@@ -677,10 +672,9 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 		case CPLXSXP:
 		    ans_type = CPLXSXP;
 		    ztmp = cprod(COMPLEX(a), LENGTH(a), narm);
-		    z.r = zcum.r;
-		    z.i = zcum.i;
-		    zcum.r = z.r * ztmp.r - z.i * ztmp.i;
-		    zcum.i = z.r * ztmp.i + z.i * ztmp.r;
+		    z = zcum;
+                    R_from_C99_complex (&zcum, C99_from_R_complex(&z)
+                                                * C99_from_R_complex(&ztmp));
 		    break;
 		default:
 		    goto invalid_type;

@@ -121,6 +121,15 @@
         have names provided one of these dimensions had dropping suppressed.
         This gives reliable results when matrices happen to have only one
         row or column, as illustrated by the last example in \code{help("[")}.
+  \item The \code{cumsum} and \code{cumprod} functions now correctly propagate 
+        \code{NaN} and \code{NA} values that are encountered to all later
+        values, with \code{NA} taking precedence over \code{NaN}.  Previously,
+        \code{NaN} had been converted to \code{NA} in \code{cumsum}.  (In
+        R-3.4.1, the behaviour in this respect appears to be platform 
+        dependent.)
+  \item When applied to complex vectors, the \code{prod} and \code{cumprod}
+        functions now produce results matching those obtained with the
+        \code{*} operator.
   \item The old serialization format, used prior to December 2001, is 
         no longer supported in pqR.  Code to support it would need to
         be changed to accomodate recent changes in pqR, and meaningful

@@ -1,0 +1,7 @@
+Performance and features changes involving math.
+
+Changes to 'cumsum', affecting both performance and behaviour.
+Also changes to 'cumprod', affecting behaviour with complex vectors.
+Other more minor changes to other parts of cum.c.
+
+Change to 'prod' for complex vectors.
