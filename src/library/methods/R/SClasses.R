@@ -272,11 +272,10 @@ slot <-
   ## modifies the object without regard to whether it is shared, so this works
   ## only because subset assignment in eval.c always ensures that the object in
   ## a slot(object,a)<-v call is unshared, which it ought not to have to do.
-  function(object, name, check = TRUE, value) {
-      if(check)
-          value <- checkSlotAssignment(object, name, value)
-      .Internal (set_slot.internal(object, name, value))
-  }
+  function(object, name, check = TRUE, value)
+      .Internal (set_slot.internal (object, name,
+                   if (check) checkSlotAssignment (object, name, value)
+                   else value))
 
 ## ". - hidden" since one should typically rather use is(), extends() etc:
 .hasSlot <- function(object, name)
@@ -315,12 +314,10 @@ checkSlotAssignment <- function(obj, name, value)
 ##   .Internal(object@name)
 
 "@<-" <-
-   function(object, name, value) {
-     arg <- substitute(name)
-     if(is.name(arg))
-       name <- as.character(arg)
-     "slot<-"(object, name, TRUE, value)
-   }
+   function(object, name, value)
+     `slot<-` (object,
+                if (is.name(arg<-substitute(name))) as.character(arg) else name,
+                TRUE, value)
 
 ##  The names of the class's slots.  The argument is either the name
 ##  of a class, or an object from the relevant class.

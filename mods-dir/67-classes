@@ -1,0 +1,3 @@
+Performance improvements to S3 and S4 classes.
+
+Fiddles R def of slot<- and @<-.
