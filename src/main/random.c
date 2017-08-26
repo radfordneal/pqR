@@ -415,25 +415,104 @@ static void ProbSampleNoReplace(int n, double *p, int *perm,
 
 /* Equal probability sampling; with-replacement case */
 
-static void SampleReplace(int k, int n, int *y)
+static SEXP SampleReplace (int k, int n)
 {
+    SEXP r;
+    int *y;
     int i;
+    PROTECT(r = allocVector (INTSXP, k));
+    y = INTEGER(r);
     for (i = 0; i < k; i++)
 	y[i] = n * unif_rand() + 1;
+    UNPROTECT(1);
+    return r;
 }
 
 /* Equal probability sampling; without-replacement case */
 
-static void SampleNoReplace(int k, int n, int *y, int *x)
+static SEXP SampleNoReplace (int k, int n)
 {
-    int i, j;
-    for (i = 0; i < n; i++)
-	x[i] = i;
-    for (i = 0; i < k; i++) {
-	j = n * unif_rand();
-	y[i] = x[j] + 1;
-	x[j] = x[--n];
+    SEXP r;
+
+    if (k <= 2) {
+        if (k == 0)
+            return allocVector(INTSXP,0);
+
+        int i1 = 1 + (int) (n * unif_rand());
+        if (k == 1) 
+            return ScalarInteger (i1);
+
+        int i2 = 1 + (int) ((n-1) * unif_rand());
+        if (i2 == i1) i2 = n;
+        r = allocVector(INTSXP,2);
+        INTEGER(r)[0] = i1;
+        INTEGER(r)[1] = i2;
     }
+    else if (n < 100 || k > 0.6*n) {
+        r = allocVector(INTSXP,n);
+        int *y = INTEGER(r);
+        int i;
+        for (i = 0; i < n; i++)
+            y[i] = n-i;
+        for (i = 0; i < k; i++) {
+            int j = n - 1 - (int) ((n-i) * unif_rand());
+            int t = y[j];
+            y[j] = y[i];
+            y[i] = t;
+        }
+        if (k < n)
+            r = reallocVector(r,k);
+    }
+
+    else {
+        unsigned tblsize, mintblsize;
+        mintblsize = 1.5 * k;
+        tblsize = 32;
+        while (tblsize < 0x80000000U && tblsize < mintblsize)
+            tblsize <<= 1;
+        unsigned tblmask = tblsize - 1;
+
+        struct tblentry { int pos, val; } *tbl;
+        struct tblentry local [ tblsize < 1000 ? tblsize : 1 ];
+        void *vmax = VMAXGET();
+        tbl = tblsize < 1000 ? local 
+                             : (struct tblentry *) R_alloc(tblsize,sizeof *tbl);
+        memset (tbl, 0, tblsize * sizeof *tbl);
+
+        r = allocVector(INTSXP,k);
+        int *y = INTEGER(r);
+        int i;
+        for (i = 0; i < k; i++) {
+            int j = 1 + (int) ((n-i) * unif_rand());
+            unsigned h;
+            for (h = j & tblmask; ; h = (h+1) & tblmask) {
+                if (tbl[h].pos == 0) {
+                    tbl[h].pos = j;
+                    y[i] = j;
+                    break;
+                }
+                if (tbl[h].pos == j) {
+                    y[i] = tbl[h].val;
+                    break;
+                }
+            }
+            unsigned h2;
+            for (h2 = (n-i) & tblmask; ; h2 = (h2+1) & tblmask) {
+                if (tbl[h2].pos == 0) {
+                    tbl[h].val = h2;
+                    break;
+                }
+                if (tbl[h2].pos == n-i) {
+                    tbl[h].val = tbl[h2].val;
+                    break;
+                }
+            }
+        }
+        
+        VMAXSET(vmax);
+    }
+
+    return r;
 }
 
 void FixupProb(double *p, int n, int require_k, Rboolean replace)
@@ -484,8 +563,9 @@ static SEXP do_sample(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!replace && k > n)
 	error(_("cannot take a sample larger than the population when 'replace = FALSE'"));
     GetRNGstate();
-    PROTECT(y = allocVector(INTSXP, k));
+
     if (!isNull(prob)) {
+        PROTECT(y = allocVector(INTSXP, k));
 	prob = coerceVector(prob, REALSXP);
 	if (NAMEDCNT_GT_0(prob)) prob = duplicate(prob);
 	PROTECT(prob);
@@ -505,14 +585,11 @@ static SEXP do_sample(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    ProbSampleNoReplace(n, p, INTEGER(x), k, INTEGER(y));
 	UNPROTECT(2);
     }
-    else {
-	/* avoid allocation for a single sample */
-	if (replace || k < 2) SampleReplace(k, n, INTEGER(y));
-	else {
-	    x = allocVector(INTSXP, n);
-	    SampleNoReplace(k, n, INTEGER(y), INTEGER(x));
-	}
-    }
+    else if (replace)
+        PROTECT (y = SampleReplace(k,n));
+    else
+        PROTECT (y = SampleNoReplace(k,n));
+
     PutRNGstate();
     UNPROTECT(1);
     return y;

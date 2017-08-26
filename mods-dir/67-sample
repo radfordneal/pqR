@@ -1,0 +1,3 @@
+speed up sampling without replacement with 'sample'.  Uses a hash table
+sometimes, but in such a way as to produce the exact same results as
+the non-hash method.
