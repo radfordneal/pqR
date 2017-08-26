@@ -469,6 +469,8 @@ typedef struct {
         = (R_FunTab[setprim_value].eval/10000)&1; \
     setprim_ptr->primsxp.primsxp_fast_sub \
         = (R_FunTab[setprim_value].eval/100000)&1; \
+    setprim_ptr->primsxp.primsxp_whole \
+        = (R_FunTab[setprim_value].eval/1000000)&1; \
 } while (0)
 
 #define PRIMOFFSET(x) \
@@ -494,6 +496,8 @@ typedef struct {
   (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_variant)
 #define PRIMFASTSUB(x) \
   (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_fast_sub)
+#define PRIMWHOLE(x) \
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_whole)
 #define PRIMFOREIGN(x) \
   (R_FunTab[PRIMOFFSET(x)].gram.kind==PP_FOREIGN)
 #define PRIMNAME(x) \
@@ -638,6 +642,15 @@ typedef struct {
 #define VARIANT_MISSING_OK 0x10000  /* A missing value will be returned as 
                                        R_MissingArg, rather than producing an
                                        error.  Does not set R_variant_result. */
+
+#define VARIANT_WHOLE_BODY 0x20000  /* Expression is the entire body of a 
+                                       function.  Allows avoidance of increment
+                                       of NAMEDCNT in .Internal. */
+
+#define VARIANT_NOT_WHOLE_BODY 0x40000 /* Suppress use of VARIANT_WHOLE_BODY
+                                          in applyClosure_v.  Used when S4
+                                          method, or S3 method called via 
+                                          UseMethod that's not the whole body.*/
 
 /* Flags in R_variant_result. */
 

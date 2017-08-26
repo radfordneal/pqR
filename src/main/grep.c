@@ -2725,15 +2725,15 @@ attribute_hidden FUNTAB R_FunTab_grep[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"strsplit",	do_strsplit,	1,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
-{"grep",	do_grep,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
-{"grepl",	do_grep,	1,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
-{"grepRaw",	do_grepraw,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
-{"sub",		do_gsub,	0,	11,	7,	{PP_FUNCALL, PREC_FN,	0}},
-{"gsub",	do_gsub,	1,	11,	7,	{PP_FUNCALL, PREC_FN,	0}},
-{"regexpr",	do_regexpr,	0,	11,	6,	{PP_FUNCALL, PREC_FN,	0}},
-{"gregexpr",	do_regexpr,	1,	11,	6,	{PP_FUNCALL, PREC_FN,	0}},
-{"regexec",	do_regexec,	1,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"strsplit",	do_strsplit,	1,   1000011,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"grep",	do_grep,	0,   1000011,	8,	{PP_FUNCALL, PREC_FN,	0}},
+{"grepl",	do_grep,	1,   1000011,	8,	{PP_FUNCALL, PREC_FN,	0}},
+{"grepRaw",	do_grepraw,	0,   1000011,	8,	{PP_FUNCALL, PREC_FN,	0}},
+{"sub",		do_gsub,	0,   1000011,	7,	{PP_FUNCALL, PREC_FN,	0}},
+{"gsub",	do_gsub,	1,   1000011,	7,	{PP_FUNCALL, PREC_FN,	0}},
+{"regexpr",	do_regexpr,	0,   1000011,	6,	{PP_FUNCALL, PREC_FN,	0}},
+{"gregexpr",	do_regexpr,	1,   1000011,	6,	{PP_FUNCALL, PREC_FN,	0}},
+{"regexec",	do_regexec,	1,   1000011,	5,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };

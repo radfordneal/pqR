@@ -67,7 +67,10 @@
  * offset:	the 'op' (offset pointer) above; used for C functions
  *		which deal with more than one R function...
  *
- * eval:	= UVWXYZ (six digits) --- where e.g. '1' means '000001'
+ * eval:	= TUVWXYZ (six digits) --- where e.g. '1' means '000001'
+ *              T=1 says do special processing for BUILTIN internal function
+ *                  when called with VARIANT_WHOLE_BODY
+ *              T=0 not what it says above
  *              U=1 says that this is a subassign primitive that is written to
  *                  be able to use the fast interface
  *              U=0 not what it says above
@@ -826,15 +829,36 @@ SEXP attribute_hidden do_internal (SEXP call, SEXP op, SEXP args, SEXP env,
 		  CHAR(PRINTNAME(fun)));
 
     args = CDR(s);
-    if (TYPEOF(ifun) == BUILTINSXP) {
-	args = evalList_v (args, env, PRIMFUN_PENDING_OK(ifun) 
-                                        ? VARIANT_PENDING_OK : 0);
-    }
+    if (TYPEOF(ifun) == BUILTINSXP)
+        args = evalList_v (args, env, PRIMFUN_PENDING_OK(ifun) 
+                                       ? VARIANT_PENDING_OK : 0);
     PROTECT(args);
 
     R_Visible = TRUE;
 
     ans = CALL_PRIMFUN(s, ifun, args, env, variant);
+
+    /* If this .Internal function is the whole body of a function, we
+       try to undo the incrementing of NAMEDCNT that was done for the
+       arguments of the function.  This should be OK, because with no
+       other statements in the function body, the function's environment
+       won't have been captured for other uses. */
+
+    if (PRIMWHOLE(ifun)) {  /* should only be used for BUILTINs */
+        if ((variant & VARIANT_WHOLE_BODY) != 0) {
+            args = R_GlobalContext->promargs;
+            while (args != R_NilValue) {
+                SEXP a = CAR(args);
+                if (/* NAMEDCNT_EQ_0(a) && */ /* avoid if recycled promise? */
+                      PRVALUE_PENDING_OK(a) != R_UnboundValue) {
+                    DEC_NAMEDCNT(PRVALUE_PENDING_OK(a));
+                    /* SET_PRVALUE(a,R_NilValue); */
+                       /* possible precaution - only if avoid when recycled */
+                }
+                args = CDR(args);
+            }
+        }
+    }
 
     int flag = PRIMPRINT(ifun);
     if (flag == 0) R_Visible = TRUE;

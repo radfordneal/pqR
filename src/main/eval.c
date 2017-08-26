@@ -962,8 +962,11 @@ static void start_browser (SEXP call, SEXP op, SEXP stmt, SEXP env)
 SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
                                      SEXP *supplied, int variant)
 {
-    int vrnt = VARIANT_PENDING_OK | VARIANT_DIRECT_RETURN 
+    int vrnt = VARIANT_PENDING_OK | VARIANT_DIRECT_RETURN | VARIANT_WHOLE_BODY
                  | VARIANT_PASS_ON(variant);
+
+    if (variant & VARIANT_NOT_WHOLE_BODY)
+        vrnt &= ~VARIANT_WHOLE_BODY;
 
     SEXP formals, actuals, savedrho, savedsrcref;
     volatile SEXP body, newrho;
@@ -1208,7 +1211,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    PROTECT(res = eval(body, newrho));
+	    PROTECT(res = evalv(body, newrho, VARIANT_NOT_WHOLE_BODY));
 	}
 	else {
 	    PROTECT(res = R_ReturnedValue);
@@ -2972,9 +2975,10 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 
 	/* If we have a ... symbol, we look to see what it is bound to.
 	   If its binding is R_NilValue we just ignore it.  If it is bound
-           to a ... list of promises, we repromise all the promises and 
-           then splice the list of resulting values into the return value.
-	   Anything else bound to a ... symbol is an error. */
+           to a list, promises in the list (typical case) are re-used with
+           NAMEDCNT incremented, and non-promises have promises created for
+           them; the promise is then spliced into the list that is returned.
+           Anything else bound to a ... symbol is an error. */
 
 	if (a == R_DotsSymbol) {
 	    h = findVar(a, rho);

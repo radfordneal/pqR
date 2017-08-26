@@ -3008,7 +3008,7 @@ attribute_hidden FUNTAB R_FunTab_coerce[] =
 {"as.function.default",do_asfunction,0,	11,	2,	{PP_FUNCTION,PREC_FN,	  0}},
 {"as.call",	do_ascall,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"typeof",	do_typeof,	1,	10011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"typeof",	do_typeof,	1,    1010011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"is.null",	do_is,		NILSXP,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"is.logical",	do_is,		LGLSXP,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -3036,7 +3036,7 @@ attribute_hidden FUNTAB R_FunTab_coerce[] =
 {"is.function",	do_is,		302,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"is.single",	do_is,		999,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"is.vector",	do_isvector,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.vector",	do_isvector,	0,    1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"is.na",	do_isna,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"is.nan",	do_isnan,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},

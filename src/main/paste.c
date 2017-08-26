@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -787,10 +787,10 @@ attribute_hidden FUNTAB R_FunTab_paste[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"paste",	do_paste,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"file.path",	do_filepath,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"paste",	do_paste,	0,   1000011,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"file.path",	do_filepath,	0,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"format",	do_format,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
-{"format.info",	do_formatinfo,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"format.info",	do_formatinfo,	0,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };

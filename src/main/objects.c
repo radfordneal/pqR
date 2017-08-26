@@ -382,7 +382,9 @@ found: ;
         supplied[i] = bindings;
     }
 
-    *ans = applyMethod(newcall, sxp, matchedarg, rho, supplied, variant);
+    *ans = applyMethod (newcall, sxp, matchedarg, rho, supplied, 
+                        variant & VARIANT_WHOLE_BODY ? variant 
+                          : variant | VARIANT_NOT_WHOLE_BODY);
 
     R_GlobalContext->callflag = CTXT_RETURN;
     UNPROTECT(nprotect+5);
@@ -854,7 +856,8 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
     
     SETCAR(newcall, install(buf));
 
-    ans = applyMethod(newcall, nextfun, matchedarg, env, supplied, variant);
+    ans = applyMethod (newcall, nextfun, matchedarg, env, supplied, 
+                       variant & ~VARIANT_WHOLE_BODY);
 
     UNPROTECT(nprotect+7);
     return(ans);

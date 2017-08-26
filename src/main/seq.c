@@ -1099,8 +1099,8 @@ attribute_hidden FUNTAB R_FunTab_seq[] =
 
 {":",		do_colon,	0,	1000,	2,	{PP_BINARY2, PREC_COLON,  0}},
 {"..",		do_colon,	1,	1000,	2,	{PP_BINARY2, PREC_COLON,  0}},
-{"rep.int",	do_rep_int,	0,	1011,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"rep_len",	do_rep_len,	0,	1011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rep.int",	do_rep_int,	0,   1001011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rep_len",	do_rep_len,	0,   1001011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"rep",		do_rep,		0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq.int",	do_seq,		0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq_along",	do_seq_along,	0,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
