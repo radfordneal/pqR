@@ -1635,6 +1635,13 @@ LibExtern SEXP R_RegisteredNativeSymbolSymbol;  /* "registered native symbol" */
 LibExtern SEXP R_factor_CHARSXP;     /* some CHARSXP's that are useful */
 LibExtern SEXP R_ordered_CHARSXP;    /*   for inherits_CHARSXP         */
 LibExtern SEXP R_NativeSymbolInfo_CHARSXP;
+LibExtern SEXP R_matrix_CHARSXP;     /* .. or for class dispatch       */
+LibExtern SEXP R_array_CHARSXP;
+LibExtern SEXP R_integer_CHARSXP;
+LibExtern SEXP R_double_CHARSXP;
+LibExtern SEXP R_numeric_CHARSXP;
+LibExtern SEXP R_name_CHARSXP;
+LibExtern SEXP R_function_CHARSXP;
 
 /* Missing Values - others from Arith.h */
 #define NA_STRING	R_NaString
