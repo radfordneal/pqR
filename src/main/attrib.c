@@ -770,63 +770,63 @@ static SEXP S4_extends(SEXP klass) {
 SEXP attribute_hidden R_data_class2 (SEXP obj)
 {
     SEXP klass = getClassAttrib(obj);
-      if(length(klass) > 0) {
-	if(IS_S4_OBJECT(obj))
-	    return S4_extends(klass);
-	else
-	    return klass;
-      }
-      else { /* length(klass) == 0 */
-	SEXPTYPE t;
-	SEXP value, class0 = R_NilValue, dim = getAttrib0(obj, R_DimSymbol);
-	int n = length(dim);
-	if(n > 0) {
-	    if(n == 2)
-		class0 = mkChar("matrix");
-	    else
-		class0 = mkChar("array");
-	}
-	PROTECT(class0);
-	switch(t = TYPEOF(obj)) {
-	case CLOSXP: case SPECIALSXP: case BUILTINSXP:
-	    klass = mkChar("function");
-	    break;
-	case INTSXP:
-	case REALSXP:
-	    if(isNull(class0)) {
-		PROTECT(value = allocVector(STRSXP, 2));
-		SET_STRING_ELT(value, 0, type2str(t));
-		SET_STRING_ELT(value, 1, mkChar("numeric"));
-		UNPROTECT(2);
-	    }
-	    else {
-		PROTECT(value = allocVector(STRSXP, 3));
-		SET_STRING_ELT(value, 0, class0);
-		SET_STRING_ELT(value, 1, type2str(t));
-		SET_STRING_ELT(value, 2, mkChar("numeric"));
-		UNPROTECT(2);
-	    }
-	    return value;
-	    break;
-	case SYMSXP:
-	    klass = mkChar("name");
-	    break;
-	case LANGSXP:
-	    klass = lang2str(obj, t);
-	    break;
-	default:
-	    klass = type2str(t);
-	}
-	PROTECT(klass);
-	if(isNull(class0)) {
-	    value = ScalarString(klass);
-	} else {
-	    value = allocVector(STRSXP, 2);
-	    SET_STRING_ELT(value, 0, class0);
-	    SET_STRING_ELT(value, 1, klass);
-	}
-	UNPROTECT(2);
-	return value;
+    if(length(klass) > 0) {
+        if(IS_S4_OBJECT(obj))
+            return S4_extends(klass);
+        else
+            return klass;
+    }
+    else { /* length(klass) == 0 */
+        SEXPTYPE t;
+        SEXP value, class0 = R_NilValue, dim = getAttrib0(obj, R_DimSymbol);
+        int n = length(dim);
+        if(n > 0) {
+            if(n == 2)
+                class0 = mkChar("matrix");
+            else
+                class0 = mkChar("array");
+        }
+        PROTECT(class0);
+        switch(t = TYPEOF(obj)) {
+        case CLOSXP: case SPECIALSXP: case BUILTINSXP:
+            klass = mkChar("function");
+            break;
+        case INTSXP:
+        case REALSXP:
+            if(isNull(class0)) {
+                PROTECT(value = allocVector(STRSXP, 2));
+                SET_STRING_ELT(value, 0, type2str(t));
+                SET_STRING_ELT(value, 1, mkChar("numeric"));
+                UNPROTECT(2);
+            }
+            else {
+                PROTECT(value = allocVector(STRSXP, 3));
+                SET_STRING_ELT(value, 0, class0);
+                SET_STRING_ELT(value, 1, type2str(t));
+                SET_STRING_ELT(value, 2, mkChar("numeric"));
+                UNPROTECT(2);
+            }
+            return value;
+            break;
+        case SYMSXP:
+            klass = mkChar("name");
+            break;
+        case LANGSXP:
+            klass = lang2str(obj, t);
+            break;
+        default:
+            klass = type2str(t);
+        }
+        PROTECT(klass);
+        if(isNull(class0)) {
+            value = ScalarString(klass);
+        } else {
+            value = allocVector(STRSXP, 2);
+            SET_STRING_ELT(value, 0, class0);
+            SET_STRING_ELT(value, 1, klass);
+        }
+        UNPROTECT(2);
+        return value;
     }
 }
 
@@ -858,14 +858,14 @@ static SEXP do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	return(ans);
     /* Special case: removing non-existent names, to avoid a copy */
     if (CADR(args) == R_NilValue &&
-	getAttrib(CAR(args), R_NamesSymbol) == R_NilValue)
+	getNamesAttrib(CAR(args)) == R_NilValue)
 	return CAR(args);
     PROTECT(args = ans);
     if (NAMEDCNT_GT_1(CAR(args)))
 	SETCAR(args, dup_top_level(CAR(args)));
     if(IS_S4_OBJECT(CAR(args))) {
 	const char *klass = CHAR(STRING_ELT(R_data_class(CAR(args), FALSE), 0));
-	if(getAttrib(CAR(args), R_NamesSymbol) == R_NilValue) {
+	if(getNamesAttrib(CAR(args)) == R_NilValue) {
 	    /* S4 class w/o a names slot or attribute */
 	    if(TYPEOF(CAR(args)) == S4SXP)
 		errorcall(call,_("Class '%s' has no 'names' slot"), klass);
@@ -975,10 +975,10 @@ static SEXP do_names(SEXP call, SEXP op, SEXP args, SEXP env)
 	return(ans);
     PROTECT(args = ans);
     ans = CAR(args);
-    if (isVector(ans) || isList(ans) || isLanguage(ans) ||
-	IS_S4_OBJECT(ans))
-	ans = getAttrib(ans, R_NamesSymbol);
-    else ans =  R_NilValue;
+    if (isVector(ans) || isList(ans) || isLanguage(ans) || IS_S4_OBJECT(ans))
+	ans = getNamesAttrib(ans);
+    else 
+        ans = R_NilValue;
     UNPROTECT(1);
     return ans;
 }
@@ -1187,7 +1187,7 @@ static SEXP do_attributes(SEXP call, SEXP op, SEXP args, SEXP env)
     attrs = ATTRIB(CAR(args));
     nvalues = length(attrs);
     if (isList(CAR(args))) {
-	namesattr = getAttrib(CAR(args), R_NamesSymbol);
+	namesattr = getNamesAttrib(CAR(args));
 	if (namesattr != R_NilValue)
 	    nvalues++;
     }
@@ -1272,7 +1272,7 @@ static SEXP do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	errorcall(call,_("attributes must be a list or NULL"));
     nattrs = length(attrs);
     if (nattrs > 0) {
-	names = getAttrib(attrs, R_NamesSymbol);
+	names = getNamesAttrib(attrs);
 	if (names == R_NilValue)
 	    errorcall(call,_("attributes must be named"));
 	for (i = 1; i < nattrs; i++) {
@@ -1445,7 +1445,7 @@ static SEXP do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
 	       query is ambiguous and we return R_NilValue.  If there is no
 	       "names" attribute, then the partially matched one, which is
 	       the current value of tag, can be used. */
-	    if (getAttrib(s, R_NamesSymbol) != R_NilValue) {
+	    if (getNamesAttrib(s) != R_NilValue) {
 		UNPROTECT(1);
 		return R_NilValue;
 	    }
@@ -1515,7 +1515,7 @@ void GetMatrixDimnames(SEXP x, SEXP *rl, SEXP *cl,
     else {
 	*rl = VECTOR_ELT(dimnames, 0);
 	*cl = VECTOR_ELT(dimnames, 1);
-	nn = getAttrib(dimnames, R_NamesSymbol);
+	nn = getNamesAttrib(dimnames);
 	if (isNull(nn)) {
 	    *rn = NULL;
 	    *cn = NULL;
