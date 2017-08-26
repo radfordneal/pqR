@@ -1,3 +1,8 @@
 Performance improvements to S3 and S4 classes.
 
 Fiddles R def of slot<- and @<-.
+
+Speeds up R_data_class and R_data_class2 using pre-allocated CHARSXPs.
+
+Also, some more use of getNamesAttrb and getDimAttrib.
+

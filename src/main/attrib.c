@@ -115,12 +115,13 @@ static SEXP stripAttrib(SEXP tag, SEXP lst)
 
 static SEXP getAttrib0(SEXP vec, SEXP name);
 
-SEXP attribute_hidden getNamesAttrib (SEXP vec)
+/* Note:  getNamesAttrib won't always set NAMEDCNT of answer to maximum. */
+SEXP attribute_hidden getNamesAttrib (SEXP vec) 
 {
     SEXP s;
 
     if (isVector(vec) || isList(vec) || isLanguage(vec)) {
-        s = getAttrib00(vec, R_DimSymbol);
+        s = getDimAttrib(vec);
         if (TYPEOF(s) == INTSXP && LENGTH(s) == 1) {
             s = getAttrib0(vec, R_DimNamesSymbol);
             if (s != R_NilValue) {
@@ -689,21 +690,21 @@ SEXP R_data_class(SEXP obj, Rboolean singleString)
 	int nd = length(dim);
 	if(nd > 0) {
 	    if(nd == 2)
-		klass = mkChar("matrix");
+		klass = R_matrix_CHARSXP;
 	    else
-		klass = mkChar("array");
+		klass = R_array_CHARSXP;
 	}
 	else {
 	  SEXPTYPE t = TYPEOF(obj);
 	  switch(t) {
 	  case CLOSXP: case SPECIALSXP: case BUILTINSXP:
-	    klass = mkChar("function");
+	    klass = R_function_CHARSXP;
 	    break;
 	  case REALSXP:
-	    klass = mkChar("numeric");
+	    klass = R_numeric_CHARSXP;
 	    break;
 	  case SYMSXP:
-	    klass = mkChar("name");
+	    klass = R_name_CHARSXP;
 	    break;
 	  case LANGSXP:
 	    klass = lang2str(obj, t);
@@ -770,64 +771,75 @@ static SEXP S4_extends(SEXP klass) {
 SEXP attribute_hidden R_data_class2 (SEXP obj)
 {
     SEXP klass = getClassAttrib(obj);
-    if(length(klass) > 0) {
-        if(IS_S4_OBJECT(obj))
-            return S4_extends(klass);
-        else
-            return klass;
-    }
-    else { /* length(klass) == 0 */
-        SEXPTYPE t;
-        SEXP value, class0 = R_NilValue, dim = getAttrib0(obj, R_DimSymbol);
-        int n = length(dim);
-        if(n > 0) {
-            if(n == 2)
-                class0 = mkChar("matrix");
-            else
-                class0 = mkChar("array");
-        }
-        PROTECT(class0);
-        switch(t = TYPEOF(obj)) {
-        case CLOSXP: case SPECIALSXP: case BUILTINSXP:
-            klass = mkChar("function");
-            break;
-        case INTSXP:
-        case REALSXP:
-            if(isNull(class0)) {
-                PROTECT(value = allocVector(STRSXP, 2));
-                SET_STRING_ELT(value, 0, type2str(t));
-                SET_STRING_ELT(value, 1, mkChar("numeric"));
-                UNPROTECT(2);
-            }
-            else {
-                PROTECT(value = allocVector(STRSXP, 3));
-                SET_STRING_ELT(value, 0, class0);
-                SET_STRING_ELT(value, 1, type2str(t));
-                SET_STRING_ELT(value, 2, mkChar("numeric"));
-                UNPROTECT(2);
-            }
-            return value;
-            break;
-        case SYMSXP:
-            klass = mkChar("name");
-            break;
-        case LANGSXP:
-            klass = lang2str(obj, t);
-            break;
-        default:
-            klass = type2str(t);
-        }
-        PROTECT(klass);
+
+    if (klass != R_NilValue)
+        return IS_S4_OBJECT(obj) ? S4_extends(klass) : klass;
+
+    SEXP class0 = R_NilValue;
+
+    SEXP dim = getDimAttrib(obj);
+    if (dim == R_NilValue)
+        class0 = R_NilValue;
+    else if (LENGTH(dim) == 2)
+        class0 = R_matrix_CHARSXP;
+    else
+        class0 = R_array_CHARSXP;
+
+    SEXPTYPE t = TYPEOF(obj);
+    SEXP value;
+    switch (t) {
+    case INTSXP:
         if(isNull(class0)) {
-            value = ScalarString(klass);
-        } else {
-            value = allocVector(STRSXP, 2);
-            SET_STRING_ELT(value, 0, class0);
-            SET_STRING_ELT(value, 1, klass);
+            value = allocVector(STRSXP,2);
+            SET_STRING_ELT(value, 0, R_integer_CHARSXP);
+            SET_STRING_ELT(value, 1, R_numeric_CHARSXP);
         }
-        UNPROTECT(2);
+        else {
+            value = allocVector(STRSXP,3);
+            SET_STRING_ELT(value, 0, class0);
+            SET_STRING_ELT(value, 1, R_integer_CHARSXP);
+            SET_STRING_ELT(value, 2, R_numeric_CHARSXP);
+        }
         return value;
+    case REALSXP:
+        if(isNull(class0)) {
+            value = allocVector(STRSXP,2);
+            SET_STRING_ELT(value, 0, R_double_CHARSXP);
+            SET_STRING_ELT(value, 1, R_numeric_CHARSXP);
+        }
+        else {
+            value = allocVector(STRSXP,3);
+            SET_STRING_ELT(value, 0, class0);
+            SET_STRING_ELT(value, 1, R_double_CHARSXP);
+            SET_STRING_ELT(value, 2, R_numeric_CHARSXP);
+        }
+        return value;
+    case CLOSXP:
+    case SPECIALSXP:
+    case BUILTINSXP:
+        klass = R_function_CHARSXP;
+        break;
+    case SYMSXP:
+        klass = R_name_CHARSXP;
+        break;
+    case LANGSXP:
+        klass = lang2str(obj, t);
+        break;
+    default:
+        klass = type2str(t);
     }
+
+    PROTECT(klass);
+    if(isNull(class0)) {
+        value = ScalarString(klass);
+    } else {
+        value = allocVector(STRSXP, 2);
+        SET_STRING_ELT(value, 0, class0);
+        SET_STRING_ELT(value, 1, klass);
+    }
+    UNPROTECT(1);
+
+    return value;
 }
 
 /* class() : */
@@ -975,8 +987,10 @@ static SEXP do_names(SEXP call, SEXP op, SEXP args, SEXP env)
 	return(ans);
     PROTECT(args = ans);
     ans = CAR(args);
-    if (isVector(ans) || isList(ans) || isLanguage(ans) || IS_S4_OBJECT(ans))
+    if (isVector(ans) || isList(ans) || isLanguage(ans) || IS_S4_OBJECT(ans)) {
 	ans = getNamesAttrib(ans);
+        SET_NAMEDCNT_MAX(ans);
+    }
     else 
         ans = R_NilValue;
     UNPROTECT(1);
@@ -1101,7 +1115,7 @@ static SEXP do_dimnames(SEXP call, SEXP op, SEXP args, SEXP env)
 
 static SEXP do_fast_dim (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 {
-    return getAttrib (arg, R_DimSymbol);
+    return getDimAttrib(arg);
 }
 
 static SEXP do_dim(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
@@ -1188,8 +1202,10 @@ static SEXP do_attributes(SEXP call, SEXP op, SEXP args, SEXP env)
     nvalues = length(attrs);
     if (isList(CAR(args))) {
 	namesattr = getNamesAttrib(CAR(args));
-	if (namesattr != R_NilValue)
+	if (namesattr != R_NilValue) {
+            SET_NAMEDCNT_MAX(namesattr);
 	    nvalues++;
+        }
     }
     /* FIXME */
     if (nvalues <= 0)

@@ -724,6 +724,13 @@ void InitNames()
     /* Some CHARSXP constants, protected by making them symbol printnames. */
     (void)installChar (R_factor_CHARSXP = mkChar("factor"));
     (void)installChar (R_ordered_CHARSXP = mkChar("ordered"));
+    (void)installChar (R_matrix_CHARSXP = mkChar("matrix"));
+    (void)installChar (R_array_CHARSXP = mkChar("array"));
+    (void)installChar (R_integer_CHARSXP = mkChar("integer"));
+    (void)installChar (R_double_CHARSXP = mkChar("double"));
+    (void)installChar (R_numeric_CHARSXP = mkChar("numeric"));
+    (void)installChar (R_name_CHARSXP = mkChar("name"));
+    (void)installChar (R_function_CHARSXP = mkChar("function"));
     (void)installChar (R_NativeSymbolInfo_CHARSXP = mkChar("NativeSymbolInfo"));
 
     /* Set up a set of globals so that a symbol table search can be
