@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -293,29 +293,88 @@ static SEXP nullSubscript(int n)
 static SEXP logicalSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
 {
     int canstretch, count, i, nmax;
-    SEXP indx;
     canstretch = *stretch;
+    int *si = LOGICAL(s);
+    unsigned *su = (unsigned *)si;
+
+    if (ns == 0)
+	return allocVector(INTSXP, 0);
+
     if (!canstretch && ns > nx) {
 	ECALL(call, _("(subscript) logical subscript too long"));
     }
+
     nmax = (ns > nx) ? ns : nx;
     *stretch = (ns > nx) ? ns : 0;
-    if (ns == 0)
-	return(allocVector(INTSXP, 0));
-    count = 0;
-    for (i = 0; i < nmax; i++)
-	if (LOGICAL(s)[i%ns])
-	    count++;
-    indx = allocVector(INTSXP, count);
-    count = 0;
-    for (i = 0; i < nmax; i++)
-	if (LOGICAL(s)[i%ns]) {
-	    if (LOGICAL(s)[i%ns] == NA_LOGICAL)
-		INTEGER(indx)[count++] = NA_INTEGER;
-	    else
-		INTEGER(indx)[count++] = i + 1;
-	}
-    return indx;
+
+    /* Count the number of TRUE or NA values in s.  Adds together all the
+       values in s in a 64-bit unsigned accumulator, then adds portions of
+       this sum to get the desired count.  Need to then do more if subscript
+       is recycled... */
+
+    uint64_t ucount;
+    ucount = 0;
+    i = 0;
+    if (ns & 1) {
+        ucount += su[i++];
+    }
+    if (ns & 2) {
+        ucount += su[i++];
+        ucount += su[i++];
+    }
+    while (i < ns) {
+        ucount += su[i++];
+        ucount += su[i++];
+        ucount += su[i++];
+        ucount += su[i++];
+    }
+    count = (int)(ucount >> 31) + (int)(ucount & 0x7fffffff);
+    if (nmax > ns) {
+        count *= nmax / ns;
+        int rem = nmax % ns;
+        ucount = 0;
+        for (i = 0; i < rem; i++)
+            ucount += su[i];
+        count += (int)(ucount >> 31) + (int)(ucount & 0x7fffffff);
+    }
+
+    /* Create index vector, x, with NA or index values. */
+
+    SEXP x = allocVector (INTSXP, count);
+    int *xi = INTEGER(x);
+    int j = 0;
+
+    if (ns == nmax) {  /* Do common case quickly */
+        int v;
+        i = 0;
+        if (ns & 1) {
+            v = si[i++];
+            if (v != 0)
+                xi[j++] = v < 0 ? NA_INTEGER : i;
+        }
+        while (i < ns) {
+            v = si[i++];
+            if (v != 0)
+                xi[j++] = v < 0 ? NA_INTEGER : i;
+            v = si[i++];
+            if (v != 0)
+                xi[j++] = v < 0 ? NA_INTEGER : i;
+        }
+    }
+    else {  /* The general case */
+        int k = 0;
+        i = 0;
+        while (i < nmax) {
+            int v = si[k++];
+            i += 1;
+            if (k == ns)
+                k = 0;
+            if (v != 0)
+                xi[j++] = v < 0 ? NA_INTEGER : i;
+        }
+    }
+
+    return x;
 }
 
 static SEXP negativeSubscript(SEXP s, int ns, int nx, SEXP call)
