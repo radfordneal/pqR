@@ -428,13 +428,41 @@ static SEXP SampleReplace (int k, int n)
     return r;
 }
 
-/* Equal probability sampling; without-replacement case */
+/* Equal probability sampling; without-replacement case.
+
+   This version is written to produce the same result as earlier versions,
+   in which the algorithm was as follows (with x being temporary storage,
+   and y being the result):
+
+        for (i = 0; i < n; i++)
+            x[i] = i;
+        for (i = 0; i < k; i++) {
+            j = n * unif_rand();
+            y[i] = x[j] + 1;
+            x[j] = x[--n];
+        }
+
+   When k <= 2, special code is used, for speed.
+
+   When n is small or k is not much smaller than n, a modification of the 
+   above algorithm is used, which avoids the need for temporary storage - the
+   result is allocated as of length n, and then has its length reduced to k
+   (usually with no copy being done).
+
+   When k is much smaller than n, and n is not small, a hashing scheme is
+   used, in which hash entries record which elements of x in the above
+   algorithm would have been modified from their original setting in which
+   x[i] == i.
+ */
 
 static SEXP SampleNoReplace (int k, int n)
 {
     SEXP r;
 
     if (k <= 2) {
+   
+        /* Special code for k = 0, 1, or 2, mimicing effect of previous code. */
+
         if (k == 0)
             return allocVector(INTSXP,0);
 
@@ -449,6 +477,14 @@ static SEXP SampleNoReplace (int k, int n)
         INTEGER(r)[1] = i2;
     }
     else if (n < 100 || k > 0.6*n) {
+
+        /* Code similar to previous method, but with temporary storage avoided.
+           This reqires storing the initial sequence in decreasing rather than 
+           increasing order, and picking elements from the tail rather than the
+           head, so that the space no longer used after each choice can hold the
+           result, at the front of the vector.  Note:  Unlike the previous
+           code, the indexes in the sequences are from 1 to n, not 0 to n-1. */
+
         r = allocVector(INTSXP,n);
         int *y = INTEGER(r);
         int i;
@@ -465,6 +501,20 @@ static SEXP SampleNoReplace (int k, int n)
     }
 
     else {
+
+        /* Hash table implementation, producing same result as previous code.
+           Mimics previous code by using a hash table to record how 'x' would
+           have been changed.  At each iteration, it looks up x[j] in the
+           hash table (j from 1 up), taking its value to be j if it is not in 
+           the table, and using this value as the next sampled value.  Also
+           lookups up x[n-i], which is taken to be n-i if not present, and 
+           replaces/creates the entry for x[j] as having value x[n-i].  The
+           hash table is non-chaining, with linear search. */
+
+#       define HASH_STATS 1  /* may enable to get stats for tuning */
+
+        /* Decide on the size of the hash table. */
+        
         unsigned tblsize, mintblsize;
         mintblsize = 1.5 * k;
         tblsize = 32;
@@ -472,22 +522,31 @@ static SEXP SampleNoReplace (int k, int n)
             tblsize <<= 1;
         unsigned tblmask = tblsize - 1;
 
+        /* Allocate hash table, as auto variable if small, else with R_alloc. */
+
         struct tblentry { int pos, val; } *tbl;
         struct tblentry local [ tblsize < 1000 ? tblsize : 1 ];
         void *vmax = VMAXGET();
         tbl = tblsize < 1000 ? local 
                              : (struct tblentry *) R_alloc(tblsize,sizeof *tbl);
+
+        /* Clear all entries to zero.  Non-empty pos values start at 1. */
+
         memset (tbl, 0, tblsize * sizeof *tbl);
+
+        /* Allocate vector to hold result. */
 
         r = allocVector(INTSXP,k);
         int *y = INTEGER(r);
+
+        /* Do the sampling as described above. */
+
         int i;
         for (i = 0; i < k; i++) {
             int j = 1 + (int) ((n-i) * unif_rand());
             unsigned h;
             for (h = j & tblmask; ; h = (h+1) & tblmask) {
                 if (tbl[h].pos == 0) {
-                    tbl[h].pos = j;
                     y[i] = j;
                     break;
                 }
@@ -499,7 +558,7 @@ static SEXP SampleNoReplace (int k, int n)
             unsigned h2;
             for (h2 = (n-i) & tblmask; ; h2 = (h2+1) & tblmask) {
                 if (tbl[h2].pos == 0) {
-                    tbl[h].val = h2;
+                    tbl[h].val = n-i;
                     break;
                 }
                 if (tbl[h2].pos == n-i) {
@@ -507,8 +566,9 @@ static SEXP SampleNoReplace (int k, int n)
                     break;
                 }
             }
+            tbl[h].pos = j;  /* don't set until after search for entry n-i */
         }
-        
+
         VMAXSET(vmax);
     }
 
