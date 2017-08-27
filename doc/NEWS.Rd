@@ -66,6 +66,10 @@
         recent improvement in R-3.4.0, but applies in more situations.
   \item The \code{c} function will sometimes use the space allocated to its
         first argument for the result, after extending it in place.  
+        In assigments like \code{v<-c(v,x)}, the space for \code{v}
+        may be extended and \code{x} copied into it in place.
+        The copying needed by \code{c} may now sometimes be done in
+        parallel in a helper thread.
   \item Subsetting an unclassed object now does not cause a copy of
         the object to be made.  For example, the following do not
         require copying \code{obj}:
