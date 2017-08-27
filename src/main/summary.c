@@ -794,49 +794,135 @@ static SEXP do_range(SEXP call, SEXP op, SEXP args, SEXP env)
     UNPROTECT(3);
     return(ans);
 }
-
-/* which.min(x) : The index (starting at 1), of the first min(x) in x */
-static SEXP do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
+
+/* which.min(x) : The index (starting at 1), of the first min(x) in x
+   which.max(x) : The index (starting at 1), of the first max(x) in x
+
+   Uses some changes from R-3.2.3, but with substantial pqR improvements. */
+
+SEXP attribute_hidden do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP sx, ans;
-    double s, *r;
-    int i, n, indx;
+    SEXP sx = CAR(args), ans;
+    int nprot = 1;
+    R_xlen_t i, n, indx = -1;
 
     checkArity(op, args);
-    PROTECT(sx = coerceVector(CAR(args), REALSXP));
-    if (!isNumeric(sx))
-	error(_("non-numeric argument"));
-    r = REAL(sx);
-    n = LENGTH(sx);
-    indx = NA_INTEGER;
-
-    if(PRIMVAL(op) == 0) { /* which.min */
-	s = R_PosInf;
-	for (i = 0; i < n; i++)
-	    if ( !ISNAN(r[i]) && (r[i] < s || indx == NA_INTEGER) ) {
-		s = r[i]; indx = i;
-	    }
-    } else { /* which.max */
-	s = R_NegInf;
-	for (i = 0; i < n; i++)
-	    if ( !ISNAN(r[i]) && (r[i] > s || indx == NA_INTEGER) ) {
-		s = r[i]; indx = i;
-	    }
+    if (!isNumeric(sx)) {
+        PROTECT(sx = coerceVector(CAR(args), REALSXP)); nprot++;
     }
 
-    i = (indx != NA_INTEGER);
-    PROTECT(ans = allocVector(INTSXP, i ? 1 : 0));
-    if (i) {
-	INTEGER(ans)[0] = indx + 1;
-	if (getAttrib(sx, R_NamesSymbol) != R_NilValue) { /* preserve names */
-	    SEXP ansnam;
-	    PROTECT(ansnam =
-		    ScalarString(STRING_ELT(getAttrib(sx, R_NamesSymbol), indx)));
-	    setAttrib(ans, R_NamesSymbol, ansnam);
-	    UNPROTECT(1);
-	}
+    n = XLENGTH(sx);
+    switch(TYPEOF(sx)) {
+
+    case LGLSXP: 
+    {
+        /* We can stop once we've found FALSE for min or TRUE for max. */
+
+        int *r = LOGICAL(sx);
+        if (PRIMVAL(op) == 0) { /* which.min */
+            for (i = 0; i < n && r[i] == NA_LOGICAL; i++) ;
+            if (i == n) /* all NA */
+                break;
+            indx = i;
+            for ( ; i < n && r[i] != FALSE; i++) ;
+            if (i == n) /* all NA or TRUE */
+                break;
+            indx = i;
+        }
+        else { /* which.max */
+            for (i = 0; i < n && r[i] == NA_LOGICAL; i++) ;
+            if (i == n) /* all NA */
+                break;
+            indx = i;
+            for ( ; i < n && r[i] != TRUE; i++) ;
+            if (i == n) /* all NA or FALSE */
+                break;
+            indx = i;
+        }
+        break;
     }
-    UNPROTECT(2);
+
+    case INTSXP:
+    {
+        int s, *r = INTEGER(sx);
+        if (PRIMVAL(op) == 0) { /* which.min */
+            for (i = 0; i < n && r[i] == NA_INTEGER; i++) ;
+            if (i == n) /* all NA */
+                break;
+            indx = i;
+            s = r[i];
+            for ( ; i < n; i++) {
+                if (r[i] < s && r[i] != NA_INTEGER) {
+                    indx = i;
+                    s = r[i];
+                }
+            }
+        }
+        else { /* which.max */
+            for (i = 0; i < n && r[i] == NA_INTEGER; i++) ;
+            if (i == n) /* all NA */
+                break;
+            indx = i;
+            s = r[i];
+            for ( ; i < n; i++) {
+                if (r[i] > s) { /* no need to check NA_INTEGER, since never > */
+                    indx = i;
+                    s = r[i];
+                }
+            }
+        }
+        break;
+    }
+
+    case REALSXP:
+    {
+        double s, *r = REAL(sx);
+        if (PRIMVAL(op) == 0) { /* which.min */
+            for (i = 0; i < n && ISNAN(r[i]); i++) ;
+            if (i == n) /* all NA/NaN */
+                break;
+            indx = i;
+            s = r[i];
+            for ( ; i < n; i++) {
+                if (!ISNAN(r[i]) && r[i] < s) {
+                    indx = i;
+                    s = r[i]; 
+                }
+            }
+        }
+        else { /* which.max */
+            for (i = 0; i < n && ISNAN(r[i]); i++) ;
+            if (i == n) /* all NA/NaN */
+                break;
+            indx = i;
+            s = r[i];
+            for ( ; i < n; i++) {
+                if (!ISNAN(r[i]) && r[i] > s) {
+                    indx = i;
+                    s = r[i]; 
+                }
+            }
+        }
+        break;
+    }}
+
+    if (n > INT_MAX)  /* never happens when there are no large vectors */
+        ans = indx == -1 ? allocVector(REALSXP,0) : ScalarReal((double)indx+1);
+    else
+        ans = indx == -1 ? allocVector(INTSXP,0) : ScalarInteger(indx+1);
+    PROTECT(ans);
+
+    if (indx != -1) {
+        if (getAttrib(sx, R_NamesSymbol) != R_NilValue) { /* preserve names */
+            SEXP ansnam;
+            PROTECT(ansnam =
+                    ScalarString(STRING_ELT(getAttrib(sx,R_NamesSymbol),indx)));
+            setAttrib(ans, R_NamesSymbol, ansnam);
+            UNPROTECT(1);
+        }
+    }
+
+    UNPROTECT(nprot);
     return ans;
 }
 

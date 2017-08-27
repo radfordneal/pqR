@@ -90,6 +90,9 @@
         Computations such as \code{sum(vec>0)} are now done with a
         merged procedure that avoids creating \code{vec>0} as an intermediate
         value.
+  \item The \code{which.min}, and \code{which.max} functions have been
+        sped up, especially for logical and integer arguments (partially
+        using code from R-3.2.3, with improvements).
   \item The \code{rep} function is now often faster for string vectors,
         and for vectors of any type that have names.
   \item Improved methods for symbol lookup are now used, which increase

@@ -1,4 +1,5 @@
 # Test possible bugs involving 'match', '%in%', 'duplicated', etc.
+# and also which, which.min, and which.max.
 #
 # Added for pqR, 2017, Radford M. Neal.
 
@@ -82,3 +83,47 @@ print(sum(ap %in% y))
 print(any(y %in% ap))
 print(all(y %in% ap))
 print(sum(y %in% ap))
+
+# Tests of which.
+
+print(which(c(NA,TRUE,FALSE,FALSE,TRUE,NA,TRUE)))
+print(which(c(NA,NA,NA)))
+print(which(logical(0)))
+
+# Tests of which.min and which.max.
+
+print(which.min(c(TRUE,TRUE,FALSE,FALSE,TRUE)))
+print(which.min(c(NA,TRUE,TRUE,NA,FALSE,FALSE)))
+print(which.min(c(NA,TRUE,TRUE,NA,TRUE)))
+print(which.min(c(NA,NA,NA)))
+print(which.min(logical(0)))
+
+print(which.max(c(FALSE,FALSE,TRUE,TRUE,FALSE)))
+print(which.max(c(NA,FALSE,FALSE,NA,TRUE,TRUE)))
+print(which.max(c(NA,FALSE,FALSE,NA,FALSE)))
+print(which.max(c(NA,NA,NA)))
+print(which.max(logical(0)))
+
+print(which.min(c(7L,2L,-1L,8L)))
+print(which.min(c(NA,7L,2L,NA,-1L,8L)))
+print(which.min(as.integer(c(NA,NA,NA))))
+print(which.min(integer(0)))
+
+print(which.max(c(7L,2L,-1L,8L)))
+print(which.max(c(NA,7L,2L,NA,-1L,8L)))
+print(which.max(as.integer(c(NA,NA,NA))))
+print(which.max(integer(0)))
+
+print(which.min(c(7.1,2.1,-1.1,8.1)))
+print(which.min(c(NA,7.1,2.1,NA,-1.1,8.1)))
+print(which.min(as.integer(c(NA,NA,NA))))
+print(which.min(integer(0)))
+
+print(which.max(c(7.1,2.1,-1.1,8.1)))
+print(which.max(c(NA,7.1,2.1,NA,-1.1,8.1)))
+print(which.max(as.double(c(NA,NA,NA))))
+print(which.max(double(0)))
+
+print(which.min(c("55","66","22","33")))
+
+print(which.max(c("55","66","22","33")))
