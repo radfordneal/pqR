@@ -1,0 +1,1 @@
+Speed improvements to 'which' - loop unrolling, use of reallocVector.

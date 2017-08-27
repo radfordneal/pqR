@@ -107,6 +107,7 @@
   \item Improved methods for symbol lookup are now used, which increase
         speed in many contexts, and especially in functions that are
         defined in packages (rather than in the global workspace).
+  \item The speed of \code{which} has been improved.
   \item The speed of \code{.Call} has been improved.
   \item New versions of the C matrix multiply functions are now used,
         which may be faster due to use of the C "restrict" keyword to
