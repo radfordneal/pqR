@@ -1,7 +1,7 @@
 % File src/library/base/man/c.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2008 R Core Team
-% Modifications for pqR Copyright (c) 2014 Radford M. Neal.
+% Modifications for pqR Copyright (c) 2014, 2017 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{c}
@@ -46,6 +46,11 @@ c(\dots, recursive=FALSE)
   to the name from the call (with no "." separator).  Otherwise, there will
   be no name for the element (and there will be no names attribute for the
   result if all elements lack names for this reason).
+
+  Assignments like \code{v<-c(v,x)} may sometimes be done by extending
+  the space used by \code{v}, and then appending \code{x}, without 
+  \code{v} needing to be copied.  Necessary copies may sometimes be 
+  done in parallel using a helper thread.
   
   This is a \link{primitive} function.
 }
