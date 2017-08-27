@@ -1,6 +1,7 @@
 % File src/library/base/man/which.min.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2010 R Core Team
+% Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \newcommand{\CRANpkg}{\href{http://CRAN.R-project.org/package=#1}{\pkg{#1}}}
@@ -22,15 +23,18 @@ which.min(x)
 which.max(x)
 }
 \arguments{
-  \item{x}{numeric (integer or double) vector, whose
-    \code{\link{min}} or \code{\link{max}} is searched for.}
+  \item{x}{numeric (logical, integer, or double) vector, or an object
+    that can be coerced to numeric, whose \code{\link{min}} or 
+    \code{\link{max}} is searched for.}
+}
+\details{
+  \code{NA} and \code{NaN} values are discarded.  For logical
+  vectors, the result is based on \code{FALSE < TRUE}.
 }
 \value{
-  Missing and \code{NaN} values are discarded.
-
-  an \code{\link{integer}} of length 1 or 0 (iff \code{x} has no
-  non-\code{NA}s), giving the index of the \emph{first} minimum or
-  maximum respectively of \code{x}.
+  An \code{\link{integer}} of length 1 giving the index of the 
+  \emph{first} minimum or maximum respectively of \code{x}, 
+  or an integer vector of length 0 if \code{x} has only NA or NaN values.
 
   If this extremum is unique (or empty), the results are the same as
   (but more efficient than) \code{which(x == min(x))} or
