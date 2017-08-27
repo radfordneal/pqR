@@ -78,6 +78,15 @@
         \code{unclass(obj)} do not require copying.  Note that with
         this improvement, there is now no reason to use \code{.subset}
         or \code{.subset2}.
+  \item The \code{sample} (and \code{sample.int}) functions have been
+        sped up.  The improvement can be enormous when sampling a small 
+        number of items from a much larger set, without replacement,
+        due to use of a hashing scheme.  Hashing is done
+        automatically whenever it appears to be advantageous, and
+        does not change the result. (A somewhat similar hashing scheme 
+        was introduced in R Core versions from R-3.0.0, but it gives 
+        different results, and hence is enabled by default only for very 
+        large sets.)
   \item The \code{paste} and \code{paste0} functions have been sped up.
         They are now about two to six times
         faster than in R-3.4.0, and are usually faster than the 
