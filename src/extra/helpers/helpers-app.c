@@ -85,7 +85,7 @@ char *Rf_task_name (helpers_task_proc *task)
     TASK_NAME(piped_matprod_trans1);
     TASK_NAME(piped_matprod_trans2);
     /* t */
-    /* u */
+    TASK_NAME(copy_coerced);
     /* v */
     /* w */
     /* x */
