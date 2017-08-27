@@ -22,6 +22,7 @@ test-src-strict-1 = \
 	match.R \
 	extend-contract.R \
 	subsetting.R \
+	sample.R \
 	d-p-q-r-tests.R \
 	parse-deparse.R
 test-src-strict-auto =
