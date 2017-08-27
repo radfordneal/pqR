@@ -1,3 +1,6 @@
 Improvements in subscript.c.
 
-Speeds up subscripting with a logical vector.
+Speeds up subscripting with a logical vector.  Slight improvement
+for negative subscripts (in addition to what is inherited from
+logical vector subscripts).
+

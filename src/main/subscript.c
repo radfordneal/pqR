@@ -383,16 +383,30 @@ static SEXP negativeSubscript(SEXP s, int ns, int nx, SEXP call)
 {
     SEXP indx;
     int stretch = 0;
-    int i, ix;
     PROTECT(indx = allocVector(LGLSXP, nx));
-    for (i = 0; i < nx; i++)
-	LOGICAL(indx)[i] = 1;
+    int * restrict li = LOGICAL(indx);
+    int i;
+
+    /* Set all of indx to 1 (TRUE). */
+
+    for (i = 0; i < nx; i++) li[i] = 1;
+
+    /* Set elements of indx corresponding to negative indexes to 0 (FALSE). */
+
+    int * restrict si = INTEGER(s);
     for (i = 0; i < ns; i++) {
-	ix = INTEGER(s)[i];
-	if (ix != 0 && ix != NA_INTEGER && -ix <= nx)
-	    LOGICAL(indx)[-ix - 1] = 0;
+        int ix = si[i];
+        if (ix != NA_INTEGER) {
+            ix = -ix;
+            if (ix > 0 && ix <= nx)
+                li[ix-1] = 0;
+        }
     }
+
+    /* Handle as a logical subscript. */
+
     s = logicalSubscript(indx, nx, nx, &stretch, call);
+
     UNPROTECT(1);
     return s;
 }
@@ -402,18 +416,18 @@ static SEXP nonnegativeSubscript(SEXP s, int ns, int nx)
     SEXP indx;
     int i, zct = 0;
     for (i = 0; i < ns; i++) {
-	if (INTEGER(s)[i] == 0)
-	    zct++;
+        if (INTEGER(s)[i] == 0)
+            zct++;
     }
     if (zct) {
-	indx = allocVector(INTSXP, (ns - zct));
-	for (i = 0, zct = 0; i < ns; i++)
-	    if (INTEGER(s)[i] != 0)
-		INTEGER(indx)[zct++] = INTEGER(s)[i];
-	return indx;
+        indx = allocVector(INTSXP, (ns - zct));
+        for (i = 0, zct = 0; i < ns; i++)
+            if (INTEGER(s)[i] != 0)
+                INTEGER(indx)[zct++] = INTEGER(s)[i];
+        return indx;
     }
     else
-	return s;
+        return s;
 }
 
 static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
@@ -425,8 +439,8 @@ static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
     *stretch = 0;
 
     for (i = 0; i < ns; i++) {
-	ii = INTEGER(s)[i];
-	if (ii != NA_INTEGER) 
+        ii = INTEGER(s)[i];
+        if (ii != NA_INTEGER) 
             break;
     }
 
@@ -438,31 +452,32 @@ static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
     min = ii;
     max = ii;
     for (i = i+1; i < ns; i++) {
-	ii = INTEGER(s)[i];
-	if (ii == NA_INTEGER) 
+        ii = INTEGER(s)[i];
+        if (ii == NA_INTEGER) 
             isna = TRUE;
         else {
-	    if (ii > max)  /* checked first since more common than ii < min */
-		max = ii;
-	    else if (ii < min)
-		min = ii;
+            if (ii > max)  /* checked first since more common than ii < min */
+                max = ii;
+            else if (ii < min)
+                min = ii;
         }
     }
 
     if (max > nx) {
-	if(canstretch) *stretch = max;
-	else {
-	    ECALL(call, _("subscript out of bounds"));
-	}
+        if(canstretch) *stretch = max;
+        else {
+            ECALL(call, _("subscript out of bounds"));
+        }
     }
 
     if (min > 0) /* All positive (or NA) */
         return s;
     else if (min < 0) {
-	if (max <= 0 && !isna) return negativeSubscript(s, ns, nx, call);
-	else {
-	    ECALL(call, _("only 0's may be mixed with negative subscripts"));
-	}
+        if (max <= 0 && !isna) 
+            return negativeSubscript(s, ns, nx, call);
+        else {
+            ECALL(call, _("only 0's may be mixed with negative subscripts"));
+        }
     }
     else /* min == 0 */
         return nonnegativeSubscript(s, ns, nx);
