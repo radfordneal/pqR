@@ -163,6 +163,11 @@ rep, rep.int, rep_len \tab No
                    \tab If non-numeric \cr
 \tab\tab           \tab done by master\cr
 \tab\tab\tab\cr
+c                  \tab No
+                   \tab No
+                   \tab If non-numeric \cr
+\tab\tab           \tab done by master\cr
+\tab\tab\tab\cr
 row, col           \tab Yes
                    \tab N/A (ignored)
                    \tab \cr
