@@ -33,10 +33,33 @@
 
 #define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
+
+#include <helpers/helpers-app.h>
+
 #define imax2(x, y) ((x < y) ? y : x)
 
 #include "RBufferUtils.h"
 static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
+
+
+/* Task procedure for copying up to two vectors into another with possible
+   coercion.  The code gives the offset within the destination to start
+   copying to and the step from one element to the next in the destination.
+   The second input may be 0, if only one vector is to be copied.  The
+   is no pipelining in or out.  The coercion required must not involve
+   allocation (not to string, no warning possible). */
+
+void task_copy_coerced (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
+{
+    int indx = code >> 32;
+    int step = code & 0x7fffffff;
+
+    copy_elements_coerced(ans, indx, step, s1, 0, 1, LENGTH(s1));
+
+    if (s2 != 0)
+        copy_elements_coerced(ans, indx+LENGTH(s1), step, s2, 0, 1, LENGTH(s2));
+}
+
 
 static SEXP cbind(SEXP, SEXP, SEXPTYPE, SEXP, int);
 static SEXP rbind(SEXP, SEXP, SEXPTYPE, SEXP, int);
@@ -517,6 +540,8 @@ static SEXP do_c (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     return do_c_dflt(call, op, ans, env, variant);
 }
 
+#define T_c THRESHOLD_ADJUST(80)
+
 /* function below is also called directly from eval.c */
 SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
                                  int variant)
@@ -590,9 +615,23 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
 
         PROTECT(ansnames);
 
+        int use_helpers = TYPEOF(ans) != STRSXP && 
+                          has_names || (variant & VARIANT_PENDING_OK);
+
         while (t != R_NilValue) {
             a = CAR(t);
             R_len_t ln = LENGTH(a);
+            if (use_helpers && CDR(t)==R_NilValue && ln >= T_c) {
+                DO_NOW_OR_LATER1 (VARIANT_PENDING_OK, TRUE, 0,
+                  task_copy_coerced, ((helpers_op_t)i<<32)|1, ans, a);
+                break;
+            }
+            if (use_helpers && CDDR(t)==R_NilValue && ln >= T_c 
+                                                   && LENGTH(CADR(t)) >= T_c) {
+                DO_NOW_OR_LATER2 (VARIANT_PENDING_OK, TRUE, 0,
+                  task_copy_coerced, ((helpers_op_t)i<<32)|1, ans, a, CADR(t));
+                break;
+            }
             copy_elements_coerced (ans, i, 1, a, 0, 1, ln);
             i += ln;
             t = CDR(t);
@@ -625,6 +664,9 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
             }
             setAttrib (ans, R_NamesSymbol, ansnames);
         }
+
+        if (use_helpers && ! (variant & VARIANT_PENDING_OK))
+            WAIT_UNTIL_COMPUTED(ans);
 
         R_variant_result = local_assign1;
     }
