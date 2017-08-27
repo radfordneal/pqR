@@ -1841,7 +1841,7 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
     SEXP s;
     int i;
 
-    if (length < 0 )
+    if (length < 0)
         errorcall(R_GlobalContext->call,
                   _("negative length vectors are not allowed"));
 
@@ -1920,6 +1920,10 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 
 SEXP reallocVector (SEXP vec, R_len_t length)
 {
+    if (length < 0)
+        errorcall(R_GlobalContext->call,
+                  _("negative length vectors are not allowed"));
+
     sggc_nchunks_t curr_chunks = sggc_nchunks_allocated (CPTR_FROM_SEXP(vec));
     sggc_nchunks_t new_chunks = Rf_nchunks (TYPEOF(vec), length);
     R_len_t curr_len = LENGTH(vec);

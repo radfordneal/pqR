@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -293,45 +293,120 @@ static SEXP nullSubscript(int n)
 static SEXP logicalSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
 {
     int canstretch, count, i, nmax;
-    SEXP indx;
     canstretch = *stretch;
+    int *si = LOGICAL(s);
+    unsigned *su = (unsigned *)si;
+
     if (!canstretch && ns > nx) {
 	ECALL(call, _("(subscript) logical subscript too long"));
     }
+
     nmax = (ns > nx) ? ns : nx;
     *stretch = (ns > nx) ? ns : 0;
+
     if (ns == 0)
-	return(allocVector(INTSXP, 0));
-    count = 0;
-    for (i = 0; i < nmax; i++)
-	if (LOGICAL(s)[i%ns])
-	    count++;
-    indx = allocVector(INTSXP, count);
-    count = 0;
-    for (i = 0; i < nmax; i++)
-	if (LOGICAL(s)[i%ns]) {
-	    if (LOGICAL(s)[i%ns] == NA_LOGICAL)
-		INTEGER(indx)[count++] = NA_INTEGER;
-	    else
-		INTEGER(indx)[count++] = i + 1;
-	}
-    return indx;
+	return allocVector(INTSXP, 0);
+
+    /* Count the number of TRUE or NA values in s.  Adds together all the
+       values in s in a 64-bit unsigned accumulator, then adds portions of
+       this sum to get the desired count.  Need to then do more if subscript
+       is recycled... */
+
+    uint64_t ucount;
+    ucount = 0;
+    i = 0;
+    if (ns & 1) {
+        ucount += su[i++];
+    }
+    if (ns & 2) {
+        ucount += su[i++];
+        ucount += su[i++];
+    }
+    while (i < ns) {
+        ucount += su[i++];
+        ucount += su[i++];
+        ucount += su[i++];
+        ucount += su[i++];
+    }
+    count = (int)(ucount >> 31) + (int)(ucount & 0x7fffffff);
+    if (nmax > ns) {
+        count *= nmax / ns;
+        int rem = nmax % ns;
+        ucount = 0;
+        for (i = 0; i < rem; i++)
+            ucount += su[i];
+        count += (int)(ucount >> 31) + (int)(ucount & 0x7fffffff);
+    }
+
+    /* Create index vector, x, with NA or index values. */
+
+    SEXP x = allocVector (INTSXP, count);
+    int *xi = INTEGER(x);
+    int j = 0;
+
+    if (ns == nmax) {  /* Do common case quickly */
+        int v;
+        i = 0;
+        if (ns & 1) {
+            v = si[i++];
+            if (v != 0)
+                xi[j++] = v < 0 ? NA_INTEGER : i;
+        }
+        while (i < ns) {
+            v = si[i++];
+            if (v != 0)
+                xi[j++] = v < 0 ? NA_INTEGER : i;
+            v = si[i++];
+            if (v != 0)
+                xi[j++] = v < 0 ? NA_INTEGER : i;
+        }
+    }
+    else {  /* The general case */
+        int k = 0;
+        i = 0;
+        while (i < nmax) {
+            int v = si[k++];
+            i += 1;
+            if (k == ns)
+                k = 0;
+            if (v != 0)
+                xi[j++] = v < 0 ? NA_INTEGER : i;
+        }
+    }
+
+    if (j != count) abort();
+
+    return x;
 }
 
 static SEXP negativeSubscript(SEXP s, int ns, int nx, SEXP call)
 {
     SEXP indx;
     int stretch = 0;
-    int i, ix;
     PROTECT(indx = allocVector(LGLSXP, nx));
-    for (i = 0; i < nx; i++)
-	LOGICAL(indx)[i] = 1;
+    int * restrict li = LOGICAL(indx);
+    int i;
+
+    /* Set all of indx to 1 (TRUE). */
+
+    for (i = 0; i < nx; i++) li[i] = 1;
+
+    /* Set elements of indx corresponding to negative indexes to 0 (FALSE). */
+
+    int * restrict si = INTEGER(s);
     for (i = 0; i < ns; i++) {
-	ix = INTEGER(s)[i];
-	if (ix != 0 && ix != NA_INTEGER && -ix <= nx)
-	    LOGICAL(indx)[-ix - 1] = 0;
+        int ix = si[i];
+        if (ix != NA_INTEGER) {
+            ix = -ix;
+            if (ix > 0 && ix <= nx)
+                li[ix-1] = 0;
+        }
     }
+
+    /* Handle as a logical subscript. */
+
     s = logicalSubscript(indx, nx, nx, &stretch, call);
+
     UNPROTECT(1);
     return s;
 }
@@ -341,18 +416,18 @@ static SEXP nonnegativeSubscript(SEXP s, int ns, int nx)
     SEXP indx;
     int i, zct = 0;
     for (i = 0; i < ns; i++) {
-	if (INTEGER(s)[i] == 0)
-	    zct++;
+        if (INTEGER(s)[i] == 0)
+            zct++;
     }
     if (zct) {
-	indx = allocVector(INTSXP, (ns - zct));
-	for (i = 0, zct = 0; i < ns; i++)
-	    if (INTEGER(s)[i] != 0)
-		INTEGER(indx)[zct++] = INTEGER(s)[i];
-	return indx;
+        indx = allocVector(INTSXP, (ns - zct));
+        for (i = 0, zct = 0; i < ns; i++)
+            if (INTEGER(s)[i] != 0)
+                INTEGER(indx)[zct++] = INTEGER(s)[i];
+        return indx;
     }
     else
-	return s;
+        return s;
 }
 
 static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
@@ -364,8 +439,8 @@ static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
     *stretch = 0;
 
     for (i = 0; i < ns; i++) {
-	ii = INTEGER(s)[i];
-	if (ii != NA_INTEGER) 
+        ii = INTEGER(s)[i];
+        if (ii != NA_INTEGER) 
             break;
     }
 
@@ -377,31 +452,32 @@ static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
     min = ii;
     max = ii;
     for (i = i+1; i < ns; i++) {
-	ii = INTEGER(s)[i];
-	if (ii == NA_INTEGER) 
+        ii = INTEGER(s)[i];
+        if (ii == NA_INTEGER) 
             isna = TRUE;
         else {
-	    if (ii > max)  /* checked first since more common than ii < min */
-		max = ii;
-	    else if (ii < min)
-		min = ii;
+            if (ii > max)  /* checked first since more common than ii < min */
+                max = ii;
+            else if (ii < min)
+                min = ii;
         }
     }
 
     if (max > nx) {
-	if(canstretch) *stretch = max;
-	else {
-	    ECALL(call, _("subscript out of bounds"));
-	}
+        if(canstretch) *stretch = max;
+        else {
+            ECALL(call, _("subscript out of bounds"));
+        }
     }
 
     if (min > 0) /* All positive (or NA) */
         return s;
     else if (min < 0) {
-	if (max <= 0 && !isna) return negativeSubscript(s, ns, nx, call);
-	else {
-	    ECALL(call, _("only 0's may be mixed with negative subscripts"));
-	}
+        if (max <= 0 && !isna) 
+            return negativeSubscript(s, ns, nx, call);
+        else {
+            ECALL(call, _("only 0's may be mixed with negative subscripts"));
+        }
     }
     else /* min == 0 */
         return nonnegativeSubscript(s, ns, nx);

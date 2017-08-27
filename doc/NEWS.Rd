@@ -114,6 +114,7 @@
         allow better optimization.
   \item The \code{\%\%} and \code{\%/\%} operators are now faster when 
         their operands are real vectors that contain integer values.
+  \item Subscripting with a logical vector is now faster for long vectors.
   \item General interpretive overhead has been reduced in some contexts,
         particularly when extracting or replacing subsets with 
         \code{[.]} or \code{[[.]]}.
