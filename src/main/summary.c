@@ -891,7 +891,7 @@ SEXP attribute_hidden do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
             indx = i;
             s = r[i];
             for ( ; i < n; i++) {
-                if (!ISNAN(r[i]) && r[i] < s) {
+                if (r[i] < s && !ISNAN(r[i])) { /* !ISNAN unneeded in theory */
                     indx = i;
                     s = r[i]; 
                 }
@@ -904,7 +904,7 @@ SEXP attribute_hidden do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
             indx = i;
             s = r[i];
             for ( ; i < n; i++) {
-                if (!ISNAN(r[i]) && r[i] > s) {
+                if (r[i] > s && !ISNAN(r[i])) { /* !ISNAN unneeded in theory */
                     indx = i;
                     s = r[i]; 
                 }
