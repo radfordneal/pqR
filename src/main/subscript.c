@@ -297,15 +297,15 @@ static SEXP logicalSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
     int *si = LOGICAL(s);
     unsigned *su = (unsigned *)si;
 
-    if (ns == 0)
-	return allocVector(INTSXP, 0);
-
     if (!canstretch && ns > nx) {
 	ECALL(call, _("(subscript) logical subscript too long"));
     }
 
     nmax = (ns > nx) ? ns : nx;
     *stretch = (ns > nx) ? ns : 0;
+
+    if (ns == 0)
+	return allocVector(INTSXP, 0);
 
     /* Count the number of TRUE or NA values in s.  Adds together all the
        values in s in a 64-bit unsigned accumulator, then adds portions of
@@ -373,6 +373,8 @@ static SEXP logicalSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
                 xi[j++] = v < 0 ? NA_INTEGER : i;
         }
     }
+
+    if (j != count) abort();
 
     return x;
 }
