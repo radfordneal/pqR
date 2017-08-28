@@ -934,11 +934,20 @@ SEXP attribute_hidden do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* which(x) : indices of TRUE values in x (ignores NA) */
+
+/* Initially tries to store indices in a local array of length LEN0.  
+   When that's full, or when end is reached, copies contents to an
+   allocated INTSXP vector, to which more indices may be added.  
+   Reduces the length of this vector once done to give the final result. */
+
+#define LEN0 200  /* Minimum value is 7 */
+
 static SEXP do_which(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP v, v_nms, ans, ans_nms = R_NilValue;
-    int i, j, len;
+    R_len_t i, j, len, len0;
     int *vi, *ai;
+    int ai0[LEN0];
 
     checkArity(op, args);
     v = CAR(args);
@@ -946,21 +955,34 @@ static SEXP do_which(SEXP call, SEXP op, SEXP args, SEXP rho)
         error(_("argument to 'which' is not logical"));
 
     len = LENGTH(v);
-    ans = allocVector (INTSXP, len);
+    len0 = len < LEN0 ? len : LEN0;
     vi = LOGICAL(v);
-    ai = INTEGER(ans);
+    ai = ai0;
     j = 0;
+    i = 0;
 
-    if (len > 0) {
-        i = 0;
-        if (len & 1) {
+    /* Use unrolled loops. */
+
+    if (len & 1) {
+        if (vi[i++] > 0) ai[j++] = i;
+    }
+    if (len & 2) {
+        if (vi[i++] > 0) ai[j++] = i;
+        if (vi[i++] > 0) ai[j++] = i;
+    }
+    if (len & 4) {
+        if (vi[i++] > 0) ai[j++] = i;
+        if (vi[i++] > 0) ai[j++] = i;
+        if (vi[i++] > 0) ai[j++] = i;
+        if (vi[i++] > 0) ai[j++] = i;
+    }
+
+    if (len0 == LEN0) {
+        while (i < len && j < LEN0-7) {
             if (vi[i++] > 0) ai[j++] = i;
-        }
-        if (len & 2) {
             if (vi[i++] > 0) ai[j++] = i;
             if (vi[i++] > 0) ai[j++] = i;
-        }
-        while (i < len) {
+            if (vi[i++] > 0) ai[j++] = i;
             if (vi[i++] > 0) ai[j++] = i;
             if (vi[i++] > 0) ai[j++] = i;
             if (vi[i++] > 0) ai[j++] = i;
@@ -968,8 +990,25 @@ static SEXP do_which(SEXP call, SEXP op, SEXP args, SEXP rho)
         }
     }
 
+    ans = allocVector (INTSXP, j + (len-i));
+    ai = INTEGER(ans);
+    memcpy (ai, ai0, j * sizeof(int));
+
+    while (i < len) {
+        if (vi[i++] > 0) ai[j++] = i;
+        if (vi[i++] > 0) ai[j++] = i;
+        if (vi[i++] > 0) ai[j++] = i;
+        if (vi[i++] > 0) ai[j++] = i;
+        if (vi[i++] > 0) ai[j++] = i;
+        if (vi[i++] > 0) ai[j++] = i;
+        if (vi[i++] > 0) ai[j++] = i;
+        if (vi[i++] > 0) ai[j++] = i;
+    }
+
     len = j;
-    PROTECT (ans = reallocVector(ans,len));
+    if (LENGTH(ans) != len)
+        ans = reallocVector(ans,len);
+    PROTECT(ans);
 
     if ((v_nms = getNamesAttrib(v)) != R_NilValue) {
         PROTECT(ans_nms = allocVector(STRSXP, len));
