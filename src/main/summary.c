@@ -935,92 +935,158 @@ SEXP attribute_hidden do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* which(x) : indices of TRUE values in x (ignores NA) */
 
-/* Initially tries to store indices in a local array of length LEN0.  
-   When that's full, or when end is reached, copies contents to an
-   allocated INTSXP vector, to which more indices may be added.  
-   Reduces the length of this vector once done to give the final result. */
-
-#define LEN0 200  /* Minimum value is 7 */
-
 static SEXP do_which(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP v, v_nms, ans, ans_nms = R_NilValue;
-    R_len_t i, j, len, len0;
-    int *vi, *ai;
-    int ai0[LEN0];
+    SEXP s, s_nms, x, x_nms = R_NilValue;
+    int *xi;
+    R_len_t len, i, j;
 
     checkArity(op, args);
-    v = CAR(args);
-    if (!isLogical(v))
+    s = CAR(args);
+    if (!isLogical(s))
         error(_("argument to 'which' is not logical"));
 
-    len = LENGTH(v);
-    len0 = len < LEN0 ? len : LEN0;
-    vi = LOGICAL(v);
-    ai = ai0;
-    j = 0;
-    i = 0;
+    R_len_t ns = LENGTH(s);
+    int *si = LOGICAL(s);
 
-    /* Use unrolled loops. */
+    if (SIZEOF_CHAR_P <= 4) {  /* small address space */
 
-    if (len & 1) {
-        if (vi[i++] > 0) ai[j++] = i;
-    }
-    if (len & 2) {
-        if (vi[i++] > 0) ai[j++] = i;
-        if (vi[i++] > 0) ai[j++] = i;
-    }
-    if (len & 4) {
-        if (vi[i++] > 0) ai[j++] = i;
-        if (vi[i++] > 0) ai[j++] = i;
-        if (vi[i++] > 0) ai[j++] = i;
-        if (vi[i++] > 0) ai[j++] = i;
-    }
+        /* TWO-PASS IMPLEMENTATION.  Avoids allocating more memory than
+           necessary, hence preferred for systems with limited address space. */
 
-    if (len0 == LEN0) {
-        while (i < len && j < LEN0-7) {
-            if (vi[i++] > 0) ai[j++] = i;
-            if (vi[i++] > 0) ai[j++] = i;
-            if (vi[i++] > 0) ai[j++] = i;
-            if (vi[i++] > 0) ai[j++] = i;
-            if (vi[i++] > 0) ai[j++] = i;
-            if (vi[i++] > 0) ai[j++] = i;
-            if (vi[i++] > 0) ai[j++] = i;
-            if (vi[i++] > 0) ai[j++] = i;
+        /* Count the number of TRUE values in s.  Adds together all the
+           values in s in a 32-bit unsigned accumulator, then clears the
+           top bit of this sum to get the desired count. */
+    
+        unsigned *su = (unsigned *)si;
+        uint32_t ucount;
+        ucount = 0;
+        i = 0;
+        if (ns & 1) {
+            ucount += su[i++];
         }
+        if (ns & 2) {
+            ucount += su[i++];
+            ucount += su[i++];
+        }
+        while (i < ns) {
+            ucount += su[i++];
+            ucount += su[i++];
+            ucount += su[i++];
+            ucount += su[i++];
+        }
+        len = (int)(ucount & 0x7fffffff);
+    
+        /* Create index vector, x, with index values. */
+    
+        x = allocVector (INTSXP, len);
+        xi = INTEGER(x);
+
+        i = 0;
+        j = 0;
+        if (ns & 1) {
+            if (si[i++] > 0) xi[j++] = i;
+        }
+        if (ns & 2) {
+            if (si[i++] > 0) xi[j++] = i;
+            if (si[i++] > 0) xi[j++] = i;
+        }
+        while (i < ns) {
+            if (si[i++] > 0) xi[j++] = i;
+            if (si[i++] > 0) xi[j++] = i;
+            if (si[i++] > 0) xi[j++] = i;
+            if (si[i++] > 0) xi[j++] = i;
+        }
+    
+        if (j != len) abort();
     }
 
-    ans = allocVector (INTSXP, j + (len-i));
-    ai = INTEGER(ans);
-    memcpy (ai, ai0, j * sizeof(int));
+    else {  /* large address space */
 
-    while (i < len) {
-        if (vi[i++] > 0) ai[j++] = i;
-        if (vi[i++] > 0) ai[j++] = i;
-        if (vi[i++] > 0) ai[j++] = i;
-        if (vi[i++] > 0) ai[j++] = i;
-        if (vi[i++] > 0) ai[j++] = i;
-        if (vi[i++] > 0) ai[j++] = i;
-        if (vi[i++] > 0) ai[j++] = i;
-        if (vi[i++] > 0) ai[j++] = i;
+        /* ONE-PASS IMPLEMENTATION.  May allocate much more memory than
+           necessary, but unused portions are never accessed, and on many
+           systems will not be allocated physical memory.  But the allocation
+           does occupy address space, hence this is more suitable when
+           there's plenty of address space. */
+
+        /* Initially try to store indices in a local array, xi0, of length
+           LEN0.  When that's full, or when the end of s is reached, copy
+           contents to an allocated INTSXP vector, to which more indices
+           may be added.  Reduce the length of this vector once done to
+           give the final result. */
+
+#       define LEN0 300  /* Must be at least 7 */
+
+        R_len_t len0;
+        int xi0[LEN0];
+        len = ns;
+        len0 = len < LEN0 ? len : LEN0;
+        xi = xi0;
+
+        i = 0;
+        j = 0;
+
+        /* Use unrolled loops. */
+
+        if (len & 1) {
+            if (si[i++] > 0) xi[j++] = i;
+        }
+        if (len & 2) {
+            if (si[i++] > 0) xi[j++] = i;
+            if (si[i++] > 0) xi[j++] = i;
+        }
+        if (len & 4) {
+            if (si[i++] > 0) xi[j++] = i;
+            if (si[i++] > 0) xi[j++] = i;
+	if (si[i++] > 0) xi[j++] = i;
+            if (si[i++] > 0) xi[j++] = i;
+        }
+
+        if (len0 == LEN0) {
+            while (i < len && j < LEN0-7) {
+                if (si[i++] > 0) xi[j++] = i;
+                if (si[i++] > 0) xi[j++] = i;
+                if (si[i++] > 0) xi[j++] = i;
+                if (si[i++] > 0) xi[j++] = i;
+                if (si[i++] > 0) xi[j++] = i;
+                if (si[i++] > 0) xi[j++] = i;
+                if (si[i++] > 0) xi[j++] = i;
+                if (si[i++] > 0) xi[j++] = i;
+            }
+        }
+
+        x = allocVector (INTSXP, j + (len-i));
+        xi = INTEGER(x);
+        memcpy (xi, xi0, j * sizeof(int));
+
+        while (i < len) {
+            if (si[i++] > 0) xi[j++] = i;
+            if (si[i++] > 0) xi[j++] = i;
+            if (si[i++] > 0) xi[j++] = i;
+            if (si[i++] > 0) xi[j++] = i;
+            if (si[i++] > 0) xi[j++] = i;
+            if (si[i++] > 0) xi[j++] = i;
+            if (si[i++] > 0) xi[j++] = i;
+            if (si[i++] > 0) xi[j++] = i;
+        }
+
+        len = j;
+        if (LENGTH(x) != len)
+            x = reallocVector(x,len);
     }
 
-    len = j;
-    if (LENGTH(ans) != len)
-        ans = reallocVector(ans,len);
-    PROTECT(ans);
-
-    if ((v_nms = getNamesAttrib(v)) != R_NilValue) {
-        PROTECT(ans_nms = allocVector(STRSXP, len));
+    PROTECT(x);
+    if ((s_nms = getNamesAttrib(s)) != R_NilValue) {
+        PROTECT(x_nms = allocVector(STRSXP, len));
         for (i = 0; i < len; i++) {
-            SET_STRING_ELT (ans_nms, i, STRING_ELT(v_nms,ai[i]-1));
+            SET_STRING_ELT (x_nms, i, STRING_ELT(s_nms,xi[i]-1));
         }
-        setAttrib(ans, R_NamesSymbol, ans_nms);
+        setAttrib(x, R_NamesSymbol, x_nms);
         UNPROTECT(1);
     }
-
     UNPROTECT(1);
-    return ans;
+
+    return x;
 }
 
 /* complete.cases(.) */
