@@ -292,10 +292,13 @@ static SEXP nullSubscript(int n)
 
 static SEXP logicalSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
 {
-    int canstretch, count, i, nmax;
+    int canstretch, nmax;
     canstretch = *stretch;
     int *si = LOGICAL(s);
-    unsigned *su = (unsigned *)si;
+    R_len_t len, i, j;
+    int *xi;
+    SEXP x;
+    int v;
 
     if (!canstretch && ns > nx) {
 	ECALL(call, _("(subscript) logical subscript too long"));
@@ -307,74 +310,139 @@ static SEXP logicalSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
     if (ns == 0)
 	return allocVector(INTSXP, 0);
 
-    /* Count the number of TRUE or NA values in s.  Adds together all the
-       values in s in a 64-bit unsigned accumulator, then adds portions of
-       this sum to get the desired count.  Need to then do more if subscript
-       is recycled... */
+    if (ns != nmax || SIZEOF_CHAR_P <= 4) {  /* small address space */
 
-    uint64_t ucount;
-    ucount = 0;
-    i = 0;
-    if (ns & 1) {
-        ucount += su[i++];
-    }
-    if (ns & 2) {
-        ucount += su[i++];
-        ucount += su[i++];
-    }
-    while (i < ns) {
-        ucount += su[i++];
-        ucount += su[i++];
-        ucount += su[i++];
-        ucount += su[i++];
-    }
-    count = (int)(ucount >> 31) + (int)(ucount & 0x7fffffff);
-    if (nmax > ns) {
-        count *= nmax / ns;
-        int rem = nmax % ns;
+        /* TWO-PASS IMPLEMENTATION.  Avoids allocating more memory than
+           necessary, hence preferred for systems with limited address space.
+           Also used when short subscript is recycled for longer vector. */
+
+        /* Count the number of TRUE or NA values in s.  Adds together all the
+           values in s in a 64-bit unsigned accumulator, then adds portions of
+           this sum to get the desired count.  Need to then do more if subscript
+           is recycled... */
+    
+        unsigned *su = (unsigned *)si;
+        uint64_t ucount;
         ucount = 0;
-        for (i = 0; i < rem; i++)
-            ucount += su[i];
-        count += (int)(ucount >> 31) + (int)(ucount & 0x7fffffff);
-    }
-
-    /* Create index vector, x, with NA or index values. */
-
-    SEXP x = allocVector (INTSXP, count);
-    int *xi = INTEGER(x);
-    int j = 0;
-
-    if (ns == nmax) {  /* Do common case quickly */
-        int v;
         i = 0;
         if (ns & 1) {
-            v = si[i++];
-            if (v != 0)
-                xi[j++] = v < 0 ? NA_INTEGER : i;
+            ucount += su[i++];
+        }
+        if (ns & 2) {
+            ucount += su[i++];
+            ucount += su[i++];
         }
         while (i < ns) {
-            v = si[i++];
-            if (v != 0)
-                xi[j++] = v < 0 ? NA_INTEGER : i;
-            v = si[i++];
-            if (v != 0)
-                xi[j++] = v < 0 ? NA_INTEGER : i;
+            ucount += su[i++];
+            ucount += su[i++];
+            ucount += su[i++];
+            ucount += su[i++];
         }
-    }
-    else {  /* The general case */
-        int k = 0;
-        i = 0;
-        while (i < nmax) {
-            int v = si[k++];
-            i += 1;
-            if (k == ns)
-                k = 0;
-            if (v != 0)
-                xi[j++] = v < 0 ? NA_INTEGER : i;
+        len = (int)(ucount >> 31) + (int)(ucount & 0x7fffffff);
+        if (nmax > ns) {
+            len *= nmax / ns;
+            int rem = nmax % ns;
+            ucount = 0;
+            for (i = 0; i < rem; i++)
+                ucount += su[i];
+            len += (int)(ucount >> 31) + (int)(ucount & 0x7fffffff);
         }
+    
+        /* Create index vector, x, with NA or index values. */
+    
+        x = allocVector (INTSXP, len);
+        xi = INTEGER(x);
+        int j = 0;
+    
+        if (ns == nmax) {  /* Do common case quickly */
+            i = 0;
+            if (ns & 1) {
+                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+            }
+            if (ns & 2) {
+                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+            }
+            while (i < ns) {
+                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+            }
+        }
+        else {  /* The general case */
+            int k = 0;
+            i = 0;
+            while (i < nmax) {
+                v = si[k++];
+                i += 1;
+                if (k == ns)
+                    k = 0;
+                if (v != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+            }
+        }
+    
+        if (j != len) abort();
     }
 
-    if (j != count) abort();
+    else {  /* large address space */
+
+        /* ONE-PASS IMPLEMENTATION.  May allocate much more memory than
+           necessary, but unused portions are never accessed, and on many
+           systems will not be allocated physical memory.  But the allocation
+           does occupy address space, hence this is more suitable when
+           there's plenty of address space.  Does not handle recycling. */
+
+        /* Initially try to store indices in a local array, xi0, of length
+           LEN0.  When that's full, or when the end of s is reached, copy
+           contents to an allocated INTSXP vector, to which more indices
+           may be added.  Reduce the length of this vector once done to
+           give the final result (or expands it and copies if we're 
+           recycling). */
+
+#       define LEN0 300  /* Must be at least 3 */
+
+        R_len_t i, j, len, len0;
+        int xi0[LEN0];
+        len = ns;
+        len0 = len < LEN0 ? len : LEN0;
+        xi = xi0;
+        j = 0;
+        i = 0;
+
+        /* Use unrolled loops. */
+
+        if (len & 1) {
+            if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+        }
+        if (len & 2) {
+            if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+            if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+        }
+
+        if (len0 == LEN0) {
+            while (i < len && j < LEN0-3) {
+                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+            }
+        }
+
+        x = allocVector (INTSXP, j + (len-i));
+        xi = INTEGER(x);
+        memcpy (xi, xi0, j * sizeof(int));
+
+        while (i < len) {
+            if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+            if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+            if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+            if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+        }
+
+        if (LENGTH(x) != j)
+            x = reallocVector(x,j);
+    }
 
     return x;
 }
