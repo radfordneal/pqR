@@ -407,9 +407,12 @@ SEXP attribute_hidden StringFromComplex(Rcomplex x, int *warn)
    or string vector v (starting at j, stepping by t) to a numeric or string 
    vector x (starting at i, stepping by s), which is not necessarily of the 
    same type.  The value returned is the OR of all warning flags produced 
-   as a result of conversions, zero if no warnings.  The arguments x and v 
-   are protected within this procedure.  Note: t may be zero, s should not
-   be zero. */
+   as a result of conversions, zero if no warnings.  ote: t may be zero, 
+   s should not be zero. 
+
+   The arguments x and v are protected within this procedure if necessary,
+   but this will only be if at least one is of string type (allowing it to
+   be used in task procedures not involving strings). */
 
 int copy_elements_coerced
   (SEXP x, int i, int s, SEXP v, int j, int t, int n)
@@ -428,8 +431,8 @@ int copy_elements_coerced
     int e = i + n*s;
     int w = 0;
 
-    PROTECT(x); 
-    PROTECT(v);
+    int prot = typx == STRSXP || typv == STRSXP;
+    if (prot) PROTECT2(x,v); 
 
     if (n & 1) {
         switch ((typx<<5) + typv) {
@@ -530,7 +533,7 @@ int copy_elements_coerced
     }
 
     if (n == 1) {
-        UNPROTECT(2);
+        if (prot) UNPROTECT(2);
         return w;
     }
 
@@ -781,7 +784,7 @@ int copy_elements_coerced
        UNIMPLEMENTED_TYPE("copy_elements_coerced", x);
     }
 
-    UNPROTECT(2);
+    if (prot) UNPROTECT(2);
     return w;
 }
 
