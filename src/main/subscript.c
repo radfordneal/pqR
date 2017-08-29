@@ -447,35 +447,58 @@ static SEXP logicalSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
     return x;
 }
 
-static SEXP negativeSubscript(SEXP s, int ns, int nx, SEXP call)
+static SEXP negativeSubscript(SEXP s, int ns, int nx)
 {
-    SEXP indx;
-    int stretch = 0;
-    PROTECT(indx = allocVector(LGLSXP, nx));
-    int * restrict li = LOGICAL(indx);
-    int i;
+    void *vmax = VMAXGET();
 
-    /* Set all of indx to 1 (TRUE). */
+    int *si = INTEGER(s);
+    char *keep;
+    int dcnt;
+    int i, j;
 
-    for (i = 0; i < nx; i++) li[i] = 1;
+    /* Allocate 'keep' flags, and set them all to 1. */
 
-    /* Set elements of indx corresponding to negative indexes to 0 (FALSE). */
+    keep = R_alloc (nx, 1);
+    memset (keep, 1, nx);
 
-    int * restrict si = INTEGER(s);
+    /* Clear 'keep' flags of elements with negative indexes in subscript vector,
+       ignoring 0 and NA.  Count how many will be deleted. */
+
+    dcnt = 0;
     for (i = 0; i < ns; i++) {
-        int ix = si[i];
-        if (ix != NA_INTEGER) {
-            ix = -ix;
-            if (ix > 0 && ix <= nx)
-                li[ix-1] = 0;
+        unsigned u = ~(unsigned)si[i];  /* Map negative indexes from -1 to -nx
+                                           to 0 to nx-1 (unsigned) */
+        if (u < nx) {
+            dcnt += keep[u];
+            keep[u] = 0;
         }
     }
 
-    /* Handle as a logical subscript. */
+    /* Create vector of indexes of elements not deleted. */
 
-    s = logicalSubscript(indx, nx, nx, &stretch, call);
+    R_len_t len = nx - dcnt;
+    s = allocVector (INTSXP, len);
+    si = INTEGER(s);
 
-    UNPROTECT(1);
+    i = 0;
+    j = 0;
+    if (nx & 1) {
+        if (keep[j++]) si[i++] = j;
+    }
+    if (nx & 2) {
+        if (keep[j++]) si[i++] = j;
+        if (keep[j++]) si[i++] = j;
+    }
+    while (j < nx) {
+        if (keep[j++]) si[i++] = j;
+        if (keep[j++]) si[i++] = j;
+        if (keep[j++]) si[i++] = j;
+        if (keep[j++]) si[i++] = j;
+    }
+
+    if (i != len) abort();
+
+    VMAXSET(vmax);
     return s;
 }
 
@@ -542,7 +565,7 @@ static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
         return s;
     else if (min < 0) {
         if (max <= 0 && !isna) 
-            return negativeSubscript(s, ns, nx, call);
+            return negativeSubscript(s, ns, nx);
         else {
             ECALL(call, _("only 0's may be mixed with negative subscripts"));
         }
