@@ -129,22 +129,33 @@ static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 
 #endif
 
-/* Task procedure for copying up to two vectors into another with possible
-   coercion.  The code gives the offset within the destination to start
-   copying to and the step from one element to the next in the destination.
-   The second input may be 0, if only one vector is to be copied.  The
-   is no pipelining in or out.  The coercion required must not involve
-   allocation (not to string, no warning possible). */
+/* Task procedure for copying a vector into another vector with possible
+   coercion.  The code gives the offset within the output vector to start
+   copying to (in top 32 bits), and also indicates whether an initial 
+   portion (low bit 0) or a final portion (low bit 1) of the input should 
+   be copied, with remaining bits in low 32 giving the number of elements
+   copied.  
 
-void task_copy_coerced (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
+   In-out pipelining for the output is done, but only a large-scale level
+   suitable for combining several calls of this task procedure for parallel
+   computation of the result.
+
+   The coercion required must not involve allocation (not to string, no 
+   warning possible. */
+
+void task_copy_coerced (helpers_op_t code, SEXP out, SEXP in, SEXP in2)
 {
-    int indx = code >> 32;
-    int step = code & 0x7fffffff;
+    int pos = code >> 32;
+    int count = (code >> 1) & 0x7fffffff;
+    int start = code & 1 ? LENGTH(in)-count : 0;
 
-    copy_elements_coerced(ans, indx, step, s1, 0, 1, LENGTH(s1));
+    while (helpers_avail0(LENGTH(out)) < pos+count) ;
+    helpers_amount_out (pos);
 
-    if (s2 != 0)
-        copy_elements_coerced(ans, indx+LENGTH(s1), step, s2, 0, 1, LENGTH(s2));
+    copy_elements_coerced (out, pos, 1, in, start, 1, count);
+
+    helpers_amount_out (pos+count);
+    while (helpers_avail0(LENGTH(out)) < LENGTH(out)) ;
 }
 
 /* Check for case of only atomic vectors in c and unlist.  Return result, or
@@ -153,18 +164,22 @@ void task_copy_coerced (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
    names (if prsent) are to be used, and the variant (used to see if pending
    computation is OK). */
 
+#define T_c THRESHOLD_ADJUST(80)
+
 static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames, 
                                 int variant, SEXP call, SEXP env)
 {
     SEXPTYPE typ = NILSXP;
     SEXP ans, ansnames;
-    int add_names, realloc;
+    int add_names, realloc, largeone0, largeones;
     R_len_t i, len, len0, pos;
 
     /* Scan the objects to be concatenated, seeing whether this is a simple
        case, and if so, finding the type and length of the result. */
 
     add_names = 0;
+    largeone0 = 0;
+    largeones = 0;
     len = 0;
     for (i = 0; i < nobj; i++) {
         SEXP a = objs[i];
@@ -177,6 +192,10 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
             add_names = 1;
         typ = Rf_higher_atomic_type (typ, TYPEOF(a));
         len += LENGTH(a);
+        if (LENGTH(a) > T_c) {
+            if (i == 0) largeone0 = 1;
+            largeones += 1;
+        }
     }
 
     if (typ == NILSXP)
@@ -214,12 +233,19 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
             local_assign1 = 0;
             SET_NAMEDCNT_0(ans);
         }
+        largeones -= largeone0;
         realloc = 1;
     }
 
     PROTECT(ans);
 
-    /* Concatenate the contents of the vectors. */
+    /* Concatenate the contents of the vectors.  Done in two passes, 
+       first copying vectors directly, then (perhaps) scheduling tasks 
+       to copy other (big) ones. */
+
+    int use_helpers = largeones > 0 && typ != STRSXP
+                        && !helpers_not_multithreading_now 
+                        && (add_names || (variant & VARIANT_PENDING_OK));
 
     pos = 0;
     for (i = 0; i < nobj; i++) {
@@ -230,9 +256,27 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
             pos += len0;
         else {
             R_len_t ln = LENGTH(a);
-            WAIT_UNTIL_COMPUTED(a);
-            copy_elements_coerced (ans, pos, 1, a, 0, 1, ln);
+            if (!use_helpers || ln <= T_c) {
+                WAIT_UNTIL_COMPUTED(a);
+                copy_elements_coerced (ans, pos, 1, a, 0, 1, ln);
+            }
             pos += ln;
+        }
+    }
+
+    if (use_helpers) {
+        pos = len;
+        for (i = nobj-1; i >= realloc; i--) {
+            SEXP a = objs[i];
+            if (a == R_NilValue)
+                continue;
+            R_len_t ln = LENGTH(a);
+            pos -= ln;
+            if (ln > T_c) {
+                helpers_do_task (HELPERS_PIPE_IN0_OUT, task_copy_coerced,
+                  ((helpers_op_t)pos << 32) + ((helpers_op_t)ln << 1) + 0,
+                  ans, a, (helpers_var_ptr)0);
+            }
         }
     }
 
@@ -753,8 +797,6 @@ static SEXP do_c (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     return do_c_dflt(call, op, ans, env, variant);
 }
-
-#define T_c THRESHOLD_ADJUST(80)
 
 /* function below is also called directly from eval.c */
 
