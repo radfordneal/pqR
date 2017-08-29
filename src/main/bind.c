@@ -42,36 +42,117 @@
 static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 
 
-/* Check for case of only atomic vectors in c and unlist.  Return result or
-   R_NoObject if not so simple.  Arguments are a pointer to an array of
-   pointers to objects to be concatenated, the number of objects, and the
-   variant (used to see if pending computation is OK). */
+#if 0  /* older code that needs to be adapted below */
 
-static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int variant)
-{
-    SEXPTYPE typ = NILSXP;
-    R_len_t i, len;
-    SEXP ans;
-    len = 0;
-    for (i = 0; i < nobj; i++) {
-        SEXP a = objs[i];
-        if (!isVectorAtomic(a) || getNamesAttrib(a) != R_NilValue
-                               || LENGTH(a) > INT_MAX - len) 
-            return R_NoObject;
-        typ = Rf_higher_atomic_type (typ, TYPEOF(a));
-        len += LENGTH(a);
-    }
-    PROTECT (ans = allocVector (typ, len));
-    len = 0;
-    for (i = 0; i < nobj; i++) {
-        SEXP a = objs[i];
-        copy_elements_coerced (ans, len, 1, a, 0, 1, LENGTH(a));
-        len += LENGTH(a);
-    }
-    UNPROTECT(1);
-    return ans;
-}
+        /* Quickly do the simple case where result is atomic, there is
+           no recursion, and names do not need to be combined. */
 
+        R_len_t len = 0;
+        int has_names = 0;
+        for (t = args; t != R_NilValue; t = CDR(t)) {
+            SEXP a = CAR(t);
+            if (len > R_LEN_T_MAX - LENGTH(a)) /* would overflow */
+                errorcall (call,
+                           _("resulting vector exceeds vector length limit"));
+            if (usenames && !has_names && HAS_ATTRIB(a) /* quick pretest */
+                                       && getNamesAttrib(a) != R_NilValue)
+                has_names = 1;
+            len += LENGTH(a);
+        }
+
+        R_len_t i = 0;
+        SEXP ansnames = R_NilValue;
+        SEXP a;
+        t = args;
+        a = CAR(t);
+
+        R_len_t len0 = LENGTH(a);  /* Note: a may be extended below! */
+
+        int local_assign1 =
+              VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1 &&
+              TYPEOF(a) == highesttype && !NAMEDCNT_GT_1(a) &&
+              a == findVarInFrame3 (env, CADR(call), 7);
+
+        if (TYPEOF(a) != highesttype || NAMEDCNT_GT_0(a) && !local_assign1)
+            PROTECT(ans = allocVector (highesttype, len));
+        else {
+            i = len0;
+            t = CDR(t);
+            if (has_names && (NAMEDCNT_EQ_0(a) || local_assign1)) {
+                ansnames = getNamesAttrib(a);
+                if (NAMEDCNT_GT_1(ansnames) /* Enough?  But go on for now... */
+                     || NAMEDCNT_GT_0(ansnames) && !local_assign1)
+                    ansnames = R_NilValue;
+            }
+            PROTECT(ans = reallocVector (a, len));
+            SET_ATTRIB (ans, R_NilValue);
+            SETLEVELS (ans, 0);
+            SET_TRUELENGTH (ans, 0);
+            if (ans != a) {
+                local_assign1 = 0;
+                SET_NAMEDCNT_0(ans);
+            }
+        }
+
+        PROTECT(ansnames);
+
+        int use_helpers = TYPEOF(ans) != STRSXP && 
+                          has_names || (variant & VARIANT_PENDING_OK);
+
+        while (t != R_NilValue) {
+            a = CAR(t);
+            R_len_t ln = LENGTH(a);
+            if (use_helpers && CDR(t)==R_NilValue && ln >= T_c) {
+                DO_NOW_OR_LATER1 (VARIANT_PENDING_OK, TRUE, 0,
+                  task_copy_coerced, ((helpers_op_t)i<<32)|1, ans, a);
+                break;
+            }
+            if (use_helpers && CDDR(t)==R_NilValue && ln >= T_c 
+                                                   && LENGTH(CADR(t)) >= T_c) {
+                DO_NOW_OR_LATER2 (VARIANT_PENDING_OK, TRUE, 0,
+                  task_copy_coerced, ((helpers_op_t)i<<32)|1, ans, a, CADR(t));
+                break;
+            }
+            copy_elements_coerced (ans, i, 1, a, 0, 1, ln);
+            i += ln;
+            t = CDR(t);
+        }
+
+        UNPROTECT(1);
+
+        if (has_names) {
+            t = args;
+            i = 0;
+            if (ansnames == R_NilValue)
+                ansnames = allocVector (STRSXP, len);
+            else {
+                i = len0;
+                t = CDR(t);
+                ansnames = reallocVector (ansnames, len);
+            }
+            while (t != R_NilValue) {
+                a = CAR(t);
+                R_len_t ln = t == args ? len0 : LENGTH(a);
+                SEXP nms = getNamesAttrib(a);
+                if (nms != R_NilValue) {
+                    copy_elements (ansnames, i, 1, 
+                                   nms, 0, 1, ln); }
+                else
+                    copy_elements (ansnames, i, 1, 
+                                   R_BlankScalarString, 0, 0, ln);
+                i += ln;
+                t = CDR(t);
+            }
+            setAttrib (ans, R_NamesSymbol, ansnames);
+        }
+
+        if (use_helpers && ! (variant & VARIANT_PENDING_OK))
+            WAIT_UNTIL_COMPUTED(ans);
+
+        R_variant_result = local_assign1;
+    }
+
+#endif
 
 /* Task procedure for copying up to two vectors into another with possible
    coercion.  The code gives the offset within the destination to start
@@ -89,6 +170,49 @@ void task_copy_coerced (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
     if (s2 != 0)
         copy_elements_coerced(ans, indx+LENGTH(s1), step, s2, 0, 1, LENGTH(s2));
+}
+
+
+/* Check for case of only atomic vectors in c and unlist.  Return result or
+   R_NoObject if not so simple.  Arguments are a pointer to an array of
+   pointers to objects to be concatenated, the number of objects, and the
+   variant (used to see if pending computation is OK). */
+
+static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int variant)
+{
+    SEXPTYPE typ = NILSXP;
+    R_len_t i, len;
+    SEXP ans;
+
+    len = 0;
+    for (i = 0; i < nobj; i++) {
+        SEXP a = objs[i];
+        if (a == R_NilValue)
+            continue;
+        if (!isVectorAtomic(a) || getNamesAttrib(a) != R_NilValue
+                               || LENGTH(a) > INT_MAX - len) 
+            return R_NoObject;
+        typ = Rf_higher_atomic_type (typ, TYPEOF(a));
+        len += LENGTH(a);
+    }
+
+    if (typ == NILSXP)
+        return R_NoObject;
+
+    PROTECT (ans = allocVector (typ, len));
+
+    R_len_t pos = 0;
+    for (i = 0; i < nobj; i++) {
+        SEXP a = objs[i];
+        if (a == R_NilValue)
+            continue;
+        WAIT_UNTIL_COMPUTED(a);
+        copy_elements_coerced (ans, pos, 1, a, 0, 1, LENGTH(a));
+        pos += LENGTH(a);
+    }
+
+    UNPROTECT(1);
+    return ans;
 }
 
 
@@ -489,20 +613,16 @@ static void NewExtractNames(SEXP v, SEXP base, SEXP tag, int recurse,
 /* Code to process arguments to c().  Returns an argument list with the keyword
    arguments 'recursive' and 'use.names' removed, as well as any NULL args. 
    *recurse and *usenames are set to the keyword arg values, if they are
-   present.  *anytags is set to whether any other args have tags.  *highesttype
-   is set to the highest type found in the hierarchy of Rf_highest_atomic_type,
-   or to NILSXP if there are no args other than the keyword args, or to -1
-   if there is a non-atomic type.  *nargs is set to the length of the argument
-   list returned. */
+   present.  *anytags is set to whether any other args have tags.  *nargs is 
+   set to the length of the argument list returned. */
 
 static SEXP process_c_args (SEXP ans, SEXP call, int *recurse, int *usenames, 
-                            int *anytags, int *highesttype, R_len_t *nargs)
+                            int *anytags, R_len_t *nargs)
 {
     SEXP a, n, last = R_NoObject, next = R_NoObject;
     int v, n_recurse = 0, n_usenames = 0;
 
     *anytags = 0;
-    *highesttype = NILSXP;
     *nargs = 0;
 
     for (a = ans; a != R_NilValue; a = next) {
@@ -539,8 +659,6 @@ static SEXP process_c_args (SEXP ans, SEXP call, int *recurse, int *usenames,
 	else {
             if (n != R_NilValue) 
                 *anytags = 1;
-            *highesttype = *highesttype == -1 || !isVectorAtomic(CAR(a)) ? -1
-                         : Rf_higher_atomic_type (*highesttype, TYPEOF(CAR(a)));
             *nargs += 1;
             last = a;
         }
@@ -571,6 +689,7 @@ static SEXP do_c (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     if (DispatchOrEval(call, op, "c", args, env, &ans, 1, 1))
 	return(ans);
+
     return do_c_dflt(call, op, ans, env, variant);
 }
 
@@ -581,182 +700,81 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
                                  int variant)
 {
     SEXP ans, t;
-    R_len_t nargs;
+    R_len_t nobj;
     int recurse, usenames, anytags, highesttype;
     struct BindData data;
     struct NameData nameData;
-
-    /* Method dispatch has failed; run the default code. */
-    /* By default we do not recurse, but this can be over-ridden */
-    /* by an optional "recursive" argument. */
 
     usenames = 1;
     recurse = 0;
 
     PROTECT(args = process_c_args (args, call, &recurse, &usenames, 
-                                   &anytags, &highesttype, &nargs));
+                                   &anytags, &nobj));
 
-    if (highesttype > NILSXP && !(usenames && anytags) && !recurse) {
-
-        /* Quickly do the simple case where result is atomic, there is
-           no recursion, and names do not need to be combined. */
-
-        R_len_t len = 0;
-        int has_names = 0;
-        for (t = args; t != R_NilValue; t = CDR(t)) {
-            SEXP a = CAR(t);
-            if (len > R_LEN_T_MAX - LENGTH(a)) /* would overflow */
-                errorcall (call,
-                           _("resulting vector exceeds vector length limit"));
-            if (usenames && !has_names && HAS_ATTRIB(a) /* quick pretest */
-                                       && getNamesAttrib(a) != R_NilValue)
-                has_names = 1;
-            len += LENGTH(a);
-        }
-
-        R_len_t i = 0;
-        SEXP ansnames = R_NilValue;
+    if (!(usenames && anytags) && !recurse && nobj <= 30) {
+        SEXP objs[30];
         SEXP a;
-        t = args;
-        a = CAR(t);
-
-        R_len_t len0 = LENGTH(a);  /* Note: a may be extended below! */
-
-        int local_assign1 =
-              VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1 &&
-              TYPEOF(a) == highesttype && !NAMEDCNT_GT_1(a) &&
-              a == findVarInFrame3 (env, CADR(call), 7);
-
-        if (TYPEOF(a) != highesttype || NAMEDCNT_GT_0(a) && !local_assign1)
-            PROTECT(ans = allocVector (highesttype, len));
-        else {
-            i = len0;
-            t = CDR(t);
-            if (has_names && (NAMEDCNT_EQ_0(a) || local_assign1)) {
-                ansnames = getNamesAttrib(a);
-                if (NAMEDCNT_GT_1(ansnames) /* Enough?  But go on for now... */
-                     || NAMEDCNT_GT_0(ansnames) && !local_assign1)
-                    ansnames = R_NilValue;
-            }
-            PROTECT(ans = reallocVector (a, len));
-            SET_ATTRIB (ans, R_NilValue);
-            SETLEVELS (ans, 0);
-            SET_TRUELENGTH (ans, 0);
-            if (ans != a) {
-                local_assign1 = 0;
-                SET_NAMEDCNT_0(ans);
-            }
+        int i; 
+        a = args;
+        for (i = 0; i < nobj; i++) {
+            objs[i] = CAR(a);
+            a = CDR(a);
         }
-
-        PROTECT(ansnames);
-
-        int use_helpers = TYPEOF(ans) != STRSXP && 
-                          has_names || (variant & VARIANT_PENDING_OK);
-
-        while (t != R_NilValue) {
-            a = CAR(t);
-            R_len_t ln = LENGTH(a);
-            if (use_helpers && CDR(t)==R_NilValue && ln >= T_c) {
-                DO_NOW_OR_LATER1 (VARIANT_PENDING_OK, TRUE, 0,
-                  task_copy_coerced, ((helpers_op_t)i<<32)|1, ans, a);
-                break;
-            }
-            if (use_helpers && CDDR(t)==R_NilValue && ln >= T_c 
-                                                   && LENGTH(CADR(t)) >= T_c) {
-                DO_NOW_OR_LATER2 (VARIANT_PENDING_OK, TRUE, 0,
-                  task_copy_coerced, ((helpers_op_t)i<<32)|1, ans, a, CADR(t));
-                break;
-            }
-            copy_elements_coerced (ans, i, 1, a, 0, 1, ln);
-            i += ln;
-            t = CDR(t);
+        ans = simple_concatenate (objs, nobj, variant);
+        if (ans != R_NoObject) {
+            UNPROTECT(1);
+            return ans;
         }
-
-        UNPROTECT(1);
-
-        if (has_names) {
-            t = args;
-            i = 0;
-            if (ansnames == R_NilValue)
-                ansnames = allocVector (STRSXP, len);
-            else {
-                i = len0;
-                t = CDR(t);
-                ansnames = reallocVector (ansnames, len);
-            }
-            while (t != R_NilValue) {
-                a = CAR(t);
-                R_len_t ln = t == args ? len0 : LENGTH(a);
-                SEXP nms = getNamesAttrib(a);
-                if (nms != R_NilValue) {
-                    copy_elements (ansnames, i, 1, 
-                                   nms, 0, 1, ln); }
-                else
-                    copy_elements (ansnames, i, 1, 
-                                   R_BlankScalarString, 0, 0, ln);
-                i += ln;
-                t = CDR(t);
-            }
-            setAttrib (ans, R_NamesSymbol, ansnames);
-        }
-
-        if (use_helpers && ! (variant & VARIANT_PENDING_OK))
-            WAIT_UNTIL_COMPUTED(ans);
-
-        R_variant_result = local_assign1;
     }
 
-    else {
+    /* General case.  Determine the type of the returned value. 
+       If a non-vector argument was encountered (perhaps a list if
+       recursive is FALSE) then we must return a list. Otherwise, we
+       use the natural coercion for vector types. */
 
-        /* General case.  Determine the type of the returned value. 
-           If a non-vector argument was encountered (perhaps a list if
-           recursive is FALSE) then we must return a list. Otherwise, we
-           use the natural coercion for vector types. */
-    
-        data.ans_type  = NILSXP;
-        data.ans_length = 0;
+    data.ans_type  = NILSXP;
+    data.ans_length = 0;
+    data.ans_nnames = 0;
+
+    for (t = args; t != R_NilValue; t = CDR(t)) {
+        if (usenames && !data.ans_nnames) {
+            if (!isNull(TAG(t))) data.ans_nnames = 1;
+            else data.ans_nnames = HasNames(CAR(t));
+        }
+        AnswerType(CAR(t), recurse, usenames, &data, call);
+    }
+
+    if (data.ans_type == NILSXP && data.ans_length != 0) abort();
+
+    /* Allocate the return value and set up to pass through 
+       the arguments filling in values of the returned object. */
+
+    PROTECT(ans = allocVector(data.ans_type, data.ans_length));
+    data.ans_ptr = ans;
+    data.ans_length = 0;
+
+    if (data.ans_type == VECSXP || data.ans_type == EXPRSXP 
+                                || data.ans_type == NILSXP)
+        ListAnswer (args, recurse ? 1 : -1, &data);
+    else
+        AtomicAnswer(args, &data);
+
+    /* Build and attach the names attribute for the returned object. */
+
+    if (data.ans_nnames && data.ans_length > 0) {
+        PROTECT(data.ans_names = allocVector(STRSXP, data.ans_length));
         data.ans_nnames = 0;
-    
-        for (t = args; t != R_NilValue; t = CDR(t)) {
-            if (usenames && !data.ans_nnames) {
-                if (!isNull(TAG(t))) data.ans_nnames = 1;
-                else data.ans_nnames = HasNames(CAR(t));
-            }
-            AnswerType(CAR(t), recurse, usenames, &data, call);
+        while (args != R_NilValue) {
+            nameData.seqno = 0;
+            nameData.firstpos = 0;
+            nameData.count = 0;
+            NewExtractNames (CAR(args), R_NilValue, TAG(args), 
+                             recurse, &data, &nameData);
+            args = CDR(args);
         }
-    
-        if (data.ans_type == NILSXP && data.ans_length != 0) abort();
-    
-        /* Allocate the return value and set up to pass through 
-           the arguments filling in values of the returned object. */
-    
-        PROTECT(ans = allocVector(data.ans_type, data.ans_length));
-        data.ans_ptr = ans;
-        data.ans_length = 0;
-    
-        if (data.ans_type == VECSXP || data.ans_type == EXPRSXP 
-                                    || data.ans_type == NILSXP)
-            ListAnswer (args, recurse ? 1 : -1, &data);
-        else
-            AtomicAnswer(args, &data);
-
-        /* Build and attach the names attribute for the returned object. */
-    
-        if (data.ans_nnames && data.ans_length > 0) {
-            PROTECT(data.ans_names = allocVector(STRSXP, data.ans_length));
-            data.ans_nnames = 0;
-            while (args != R_NilValue) {
-                nameData.seqno = 0;
-                nameData.firstpos = 0;
-                nameData.count = 0;
-                NewExtractNames (CAR(args), R_NilValue, TAG(args), 
-                                 recurse, &data, &nameData);
-                args = CDR(args);
-            }
-            setAttrib(ans, R_NamesSymbol, data.ans_names);
-            R_FreeStringBufferL(&cbuff);
-            UNPROTECT(1);
-        }
+        setAttrib(ans, R_NamesSymbol, data.ans_names);
+        R_FreeStringBufferL(&cbuff);
+        UNPROTECT(1);
     }
 
     UNPROTECT(2);
@@ -780,8 +798,6 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 	return(ans);
 
     /* Method dispatch has failed; run the default code. */
-    /* By default we recurse, but this can be over-ridden */
-    /* by an optional "recursive" argument. */
 
     PROTECT(lst = CAR(ans));
     recurse = asLogical(CADR(ans));
