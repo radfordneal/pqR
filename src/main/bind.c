@@ -752,6 +752,35 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
     recurse = asLogical(CADR(ans));
     usenames = asLogical(CADDR(ans));
 
+    /* Check for simple and common case of a vector list, without names, that
+       has atomic vectors as elements, without names, and do that quickly. */
+
+    if (TYPEOF(args) == VECSXP && LENGTH(args) > 0 
+                               && getNamesAttrib(args) == R_NilValue) {
+        SEXPTYPE typ = NILSXP;
+        R_len_t len = 0;
+        n = LENGTH(args);
+        for (i = 0; i < n; i++) {
+            SEXP a = VECTOR_ELT (args, i);
+            if (!isVectorAtomic(a) || getNamesAttrib(a) != R_NilValue
+                                   || LENGTH(a) > INT_MAX - len) 
+                goto general_case;
+            typ = Rf_higher_atomic_type (typ, TYPEOF(a));
+            len += LENGTH(a);
+        }
+        PROTECT (ans = allocVector (typ, len));
+        len = 0;
+        for (i = 0; i < n; i++) {
+            SEXP a = VECTOR_ELT (args, i);
+            copy_elements_coerced (ans, len, 1, a, 0, 1, LENGTH(a));
+            len += LENGTH(a);
+        }
+        UNPROTECT(2);
+        return ans;
+    }
+
+  general_case: 
+
     /* Determine the type of the returned value. */
     /* The strategy here is appropriate because the */
     /* object being operated on is a generic vector. */
