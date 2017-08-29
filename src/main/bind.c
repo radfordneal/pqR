@@ -42,6 +42,37 @@
 static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 
 
+/* Check for case of only atomic vectors in c and unlist.  Return result or
+   R_NoObject if not so simple.  Arguments are a pointer to an array of
+   pointers to objects to be concatenated, the number of objects, and the
+   variant (used to see if pending computation is OK). */
+
+static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int variant)
+{
+    SEXPTYPE typ = NILSXP;
+    R_len_t i, len;
+    SEXP ans;
+    len = 0;
+    for (i = 0; i < nobj; i++) {
+        SEXP a = objs[i];
+        if (!isVectorAtomic(a) || getNamesAttrib(a) != R_NilValue
+                               || LENGTH(a) > INT_MAX - len) 
+            return R_NoObject;
+        typ = Rf_higher_atomic_type (typ, TYPEOF(a));
+        len += LENGTH(a);
+    }
+    PROTECT (ans = allocVector (typ, len));
+    len = 0;
+    for (i = 0; i < nobj; i++) {
+        SEXP a = objs[i];
+        copy_elements_coerced (ans, len, 1, a, 0, 1, LENGTH(a));
+        len += LENGTH(a);
+    }
+    UNPROTECT(1);
+    return ans;
+}
+
+
 /* Task procedure for copying up to two vectors into another with possible
    coercion.  The code gives the offset within the destination to start
    copying to and the step from one element to the next in the destination.
@@ -455,22 +486,24 @@ static void NewExtractNames(SEXP v, SEXP base, SEXP tag, int recurse,
     nameData->seqno = nameData->seqno + saveseqno;
 }
 
-/* Code to process arguments to c().  Returns an arg list with the keyword
+/* Code to process arguments to c().  Returns an argument list with the keyword
    arguments 'recursive' and 'use.names' removed, as well as any NULL args. 
    *recurse and *usenames are set to the keyword arg values, if they are
    present.  *anytags is set to whether any other args have tags.  *highesttype
    is set to the highest type found in the hierarchy of Rf_highest_atomic_type,
    or to NILSXP if there are no args other than the keyword args, or to -1
-   if there is a non-atomic type.  NULL arguments are removed. */
+   if there is a non-atomic type.  *nargs is set to the length of the argument
+   list returned. */
 
 static SEXP process_c_args (SEXP ans, SEXP call, int *recurse, int *usenames, 
-                            int *anytags, int *highesttype)
+                            int *anytags, int *highesttype, R_len_t *nargs)
 {
     SEXP a, n, last = R_NoObject, next = R_NoObject;
     int v, n_recurse = 0, n_usenames = 0;
 
     *anytags = 0;
     *highesttype = NILSXP;
+    *nargs = 0;
 
     for (a = ans; a != R_NilValue; a = next) {
 	n = TAG(a);
@@ -508,6 +541,7 @@ static SEXP process_c_args (SEXP ans, SEXP call, int *recurse, int *usenames,
                 *anytags = 1;
             *highesttype = *highesttype == -1 || !isVectorAtomic(CAR(a)) ? -1
                          : Rf_higher_atomic_type (*highesttype, TYPEOF(CAR(a)));
+            *nargs += 1;
             last = a;
         }
     }
@@ -547,6 +581,7 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
                                  int variant)
 {
     SEXP ans, t;
+    R_len_t nargs;
     int recurse, usenames, anytags, highesttype;
     struct BindData data;
     struct NameData nameData;
@@ -558,8 +593,8 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
     usenames = 1;
     recurse = 0;
 
-    PROTECT(args = 
-      process_c_args(args, call, &recurse, &usenames, &anytags, &highesttype));
+    PROTECT(args = process_c_args (args, call, &recurse, &usenames, 
+                                   &anytags, &highesttype, &nargs));
 
     if (highesttype > NILSXP && !(usenames && anytags) && !recurse) {
 
@@ -729,9 +764,9 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
 } /* do_c */
 
 
-static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
-    SEXP ans, t;
+    SEXP ans, lst, t;
     int recurse, usenames;
     int i, n;
     struct BindData data;
@@ -748,38 +783,19 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
     /* By default we recurse, but this can be over-ridden */
     /* by an optional "recursive" argument. */
 
-    PROTECT(args = CAR(ans));
+    PROTECT(lst = CAR(ans));
     recurse = asLogical(CADR(ans));
     usenames = asLogical(CADDR(ans));
 
-    /* Check for simple and common case of a vector list, without names, that
-       has atomic vectors as elements, without names, and do that quickly. */
+    SEXP topnames = usenames ? getNamesAttrib(lst) : R_NilValue;
 
-    if (TYPEOF(args) == VECSXP && LENGTH(args) > 0 
-                               && getNamesAttrib(args) == R_NilValue) {
-        SEXPTYPE typ = NILSXP;
-        R_len_t len = 0;
-        n = LENGTH(args);
-        for (i = 0; i < n; i++) {
-            SEXP a = VECTOR_ELT (args, i);
-            if (!isVectorAtomic(a) || getNamesAttrib(a) != R_NilValue
-                                   || LENGTH(a) > INT_MAX - len) 
-                goto general_case;
-            typ = Rf_higher_atomic_type (typ, TYPEOF(a));
-            len += LENGTH(a);
+    if (TYPEOF(lst) == VECSXP && LENGTH(lst) > 0 && topnames == R_NilValue) {
+        ans = simple_concatenate ((SEXP*)DATAPTR(lst), LENGTH(lst), variant);
+        if (ans != R_NoObject) {
+            UNPROTECT(1);
+            return ans;
         }
-        PROTECT (ans = allocVector (typ, len));
-        len = 0;
-        for (i = 0; i < n; i++) {
-            SEXP a = VECTOR_ELT (args, i);
-            copy_elements_coerced (ans, len, 1, a, 0, 1, LENGTH(a));
-            len += LENGTH(a);
-        }
-        UNPROTECT(2);
-        return ans;
     }
-
-  general_case: 
 
     /* Determine the type of the returned value. */
     /* The strategy here is appropriate because the */
@@ -790,19 +806,19 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
     data.ans_nnames = 0;
 
     n = 0;			/* -Wall */
-    if (isNewList(args)) {
-	n = length(args);
-	if (usenames && HAS_ATTRIB(args) /* quick pre-test */
-                     && getNamesAttrib(args) != R_NilValue)
+    if (isNewList(lst)) {
+	n = length(lst);
+	if (usenames && HAS_ATTRIB(lst) /* quick pre-test */
+                     && getNamesAttrib(lst) != R_NilValue)
 	    data.ans_nnames = 1;
 	for (i = 0; i < n; i++) {
 	    if (usenames && !data.ans_nnames)
-		data.ans_nnames = HasNames(VECTOR_ELT(args, i));
-	    AnswerType(VECTOR_ELT(args, i), recurse, usenames, &data, call);
+		data.ans_nnames = HasNames(VECTOR_ELT(lst, i));
+	    AnswerType(VECTOR_ELT(lst, i), recurse, usenames, &data, call);
 	}
     }
-    else if (isList(args)) {
-	for (t = args; t != R_NilValue; t = CDR(t)) {
+    else if (isList(lst)) {
+	for (t = lst; t != R_NilValue; t = CDR(t)) {
 	    if (usenames && !data.ans_nnames) {
 		if (!isNull(TAG(t))) data.ans_nnames = 1;
 		else data.ans_nnames = HasNames(CAR(t));
@@ -812,7 +828,7 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     else {
 	UNPROTECT(1);
-	if (isVector(args)) return args;
+	if (isVector(lst)) return lst;
 	else error(_("argument not a list"));
     }
 
@@ -828,35 +844,35 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (data.ans_type == VECSXP || data.ans_type == EXPRSXP 
                                 || data.ans_type == NILSXP)
-	ListAnswer(args, recurse ? 1 : -1, &data);
+	ListAnswer(lst, recurse ? 1 : -1, &data);
     else
-	AtomicAnswer(args, &data);
+	AtomicAnswer(lst, &data);
 
     /* Build and attach the names attribute for the returned object. */
 
     if (data.ans_nnames && data.ans_length > 0) {
 	PROTECT(data.ans_names = allocVector(STRSXP, data.ans_length));
 	if (!recurse) {
-	    if (TYPEOF(args) == VECSXP) {
-		SEXP names = getNamesAttrib(args);
+	    if (TYPEOF(lst) == VECSXP) {
+		SEXP names = getNamesAttrib(lst);
 		data.ans_nnames = 0;
 		nameData.seqno = 0;
 		nameData.firstpos = 0;
 		nameData.count = 0;
 		for (i = 0; i < n; i++) {
-		    NewExtractNames(VECTOR_ELT(args, i), R_NilValue,
+		    NewExtractNames(VECTOR_ELT(lst, i), R_NilValue,
 				    ItemName(names, i), recurse, &data, &nameData);
 		}
 	    }
-	    else if (TYPEOF(args) == LISTSXP) {
+	    else if (TYPEOF(lst) == LISTSXP) {
 		data.ans_nnames = 0;
 		nameData.seqno = 0;
 		nameData.firstpos = 0;
 		nameData.count = 0;
-		while (args != R_NilValue) {
-		    NewExtractNames(CAR(args), R_NilValue,
-				    TAG(args), recurse, &data, &nameData);
-		    args = CDR(args);
+		while (lst != R_NilValue) {
+		    NewExtractNames(CAR(lst), R_NilValue,
+				    TAG(lst), recurse, &data, &nameData);
+		    lst = CDR(lst);
 		}
 	    }
 	}
@@ -865,7 +881,7 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
 	    nameData.seqno = 0;
 	    nameData.firstpos = 0;
 	    nameData.count = 0;
-	    NewExtractNames(args, R_NilValue, R_NilValue, recurse, &data, &nameData);
+	    NewExtractNames(lst, R_NilValue, R_NilValue, recurse, &data, &nameData);
 	}
 	setAttrib(ans, R_NamesSymbol, data.ans_names);
 	UNPROTECT(1);
@@ -1559,7 +1575,7 @@ attribute_hidden FUNTAB R_FunTab_bind[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {"c",		do_c,		0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"unlist",	do_unlist,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"unlist",	do_unlist,	0,	1011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"cbind",	do_bind,	1,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rbind",	do_bind,	2,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
