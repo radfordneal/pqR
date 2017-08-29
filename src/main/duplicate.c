@@ -268,42 +268,63 @@ void copy_elements (SEXP x, int i, int s, SEXP v, int j, int t, int n)
 {
     if (n == 0) return;
 
-    switch (TYPEOF(x)) {
-    case RAWSXP:
-        do { RAW(x)[i] = RAW(v)[j]; i += s; j += t; } while (--n>0);
-        break;
-    case LGLSXP:
-        do { LOGICAL(x)[i] = LOGICAL(v)[j]; i += s; j += t; } while (--n>0);
-        break;
-    case INTSXP:
-        do { INTEGER(x)[i] = INTEGER(v)[j]; i += s; j += t; } while (--n>0);
-        break;
-    case REALSXP:
-        do { REAL(x)[i] = REAL(v)[j]; i += s; j += t; } while (--n>0);
-        break;
-    case CPLXSXP:
-        do { COMPLEX(x)[i] = COMPLEX(v)[j]; i += s; j += t; } while (--n>0);
-        break;
-    case STRSXP:
-        if (s==1 && t==1) 
+    if (n > 8 && s == 1 && t == 1 && isVectorAtomic(x)) {
+        switch (TYPEOF(x)) {
+        case RAWSXP:
+            memmove (RAW(x)+i, RAW(v)+j, n * sizeof(char));
+            break;
+        case LGLSXP:
+            memmove (LOGICAL(x)+i, LOGICAL(v)+j, n * sizeof(int));
+            break;
+        case INTSXP:
+            memmove (INTEGER(x)+i, INTEGER(v)+j, n * sizeof(int));
+            break;
+        case REALSXP:
+            memmove (REAL(x)+i, REAL(v)+j, n * sizeof(double));
+            break;
+        case CPLXSXP:
+            memmove (COMPLEX(x)+i, COMPLEX(v)+j, n * sizeof(Rcomplex));
+            break;
+        case STRSXP:
             copy_string_elements (x, i, v, j, n);
-        else
+            break;
+        }
+    }
+    else {
+        switch (TYPEOF(x)) {
+        case RAWSXP:
+            do { RAW(x)[i] = RAW(v)[j]; i += s; j += t; } while (--n>0);
+            break;
+        case LGLSXP:
+            do { LOGICAL(x)[i] = LOGICAL(v)[j]; i += s; j += t; } while (--n>0);
+            break;
+        case INTSXP:
+            do { INTEGER(x)[i] = INTEGER(v)[j]; i += s; j += t; } while (--n>0);
+            break;
+        case REALSXP:
+            do { REAL(x)[i] = REAL(v)[j]; i += s; j += t; } while (--n>0);
+            break;
+        case CPLXSXP:
+            do { COMPLEX(x)[i] = COMPLEX(v)[j]; i += s; j += t; } while (--n>0);
+            break;
+        case STRSXP:
             do { 
                 SET_STRING_ELT (x, i, STRING_ELT(v,j));
                 i += s; j += t; 
             } while (--n>0);
-        break;
-    case VECSXP:
-    case EXPRSXP:
-        PROTECT(x); PROTECT(v);
-        do { 
-            SET_VECTOR_ELT (x, i, duplicate(VECTOR_ELT(v,j)));
-            i += s; j += t; 
-        } while (--n>0);
-        UNPROTECT(2);
-        break;
-    default:
-	UNIMPLEMENTED_TYPE("copy_elements", x);
+            break;
+        case VECSXP:
+        case EXPRSXP:
+            PROTECT(x); PROTECT(v);
+            do { 
+                SET_VECTOR_ELT (x, i, duplicate(VECTOR_ELT(v,j)));
+                i += s; j += t; 
+            } while (--n>0);
+            UNPROTECT(2);
+            break;
+        default:
+            UNIMPLEMENTED_TYPE("copy_elements", x);
+        }
     }
 }
 
