@@ -120,31 +120,6 @@ static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 
         UNPROTECT(1);
 
-        if (has_names) {
-            t = args;
-            i = 0;
-            if (ansnames == R_NilValue)
-                ansnames = allocVector (STRSXP, len);
-            else {
-                i = len0;
-                t = CDR(t);
-                ansnames = reallocVector (ansnames, len);
-            }
-            while (t != R_NilValue) {
-                a = CAR(t);
-                R_len_t ln = t == args ? len0 : LENGTH(a);
-                SEXP nms = getNamesAttrib(a);
-                if (nms != R_NilValue) {
-                    copy_elements (ansnames, i, 1, 
-                                   nms, 0, 1, ln); }
-                else
-                    copy_elements (ansnames, i, 1, 
-                                   R_BlankScalarString, 0, 0, ln);
-                i += ln;
-                t = CDR(t);
-            }
-            setAttrib (ans, R_NamesSymbol, ansnames);
-        }
 
         if (use_helpers && ! (variant & VARIANT_PENDING_OK))
             WAIT_UNTIL_COMPUTED(ans);
@@ -172,26 +147,34 @@ void task_copy_coerced (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         copy_elements_coerced(ans, indx+LENGTH(s1), step, s2, 0, 1, LENGTH(s2));
 }
 
-
-/* Check for case of only atomic vectors in c and unlist.  Return result or
+/* Check for case of only atomic vectors in c and unlist.  Return result, or
    R_NoObject if not so simple.  Arguments are a pointer to an array of
-   pointers to objects to be concatenated, the number of objects, and the
-   variant (used to see if pending computation is OK). */
+   pointers to objects to be concatenated, the number of objects, whether 
+   names (if prsent) are to be used, and the variant (used to see if pending
+   computation is OK). */
 
-static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int variant)
+static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames, 
+                                int variant, SEXP call, SEXP env)
 {
     SEXPTYPE typ = NILSXP;
-    R_len_t i, len;
-    SEXP ans;
+    SEXP ans, ansnames;
+    int add_names, realloc;
+    R_len_t i, len, len0, pos;
 
+    /* Scan the objects to be concatenated, seeing whether this is a simple
+       case, and if so, finding the type and length of the result. */
+
+    add_names = 0;
     len = 0;
     for (i = 0; i < nobj; i++) {
         SEXP a = objs[i];
         if (a == R_NilValue)
             continue;
-        if (!isVectorAtomic(a) || getNamesAttrib(a) != R_NilValue
-                               || LENGTH(a) > INT_MAX - len) 
+        if (!isVectorAtomic(a) || LENGTH(a) > INT_MAX - len) 
             return R_NoObject;
+        if (usenames && HAS_ATTRIB(a) /* quick pretest */ 
+                     && getNamesAttrib(a) != R_NilValue)
+            add_names = 1;
         typ = Rf_higher_atomic_type (typ, TYPEOF(a));
         len += LENGTH(a);
     }
@@ -199,19 +182,97 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int variant)
     if (typ == NILSXP)
         return R_NoObject;
 
-    PROTECT (ans = allocVector (typ, len));
+    /* Allocate space for result.  May be a reallocation of the first
+       object to be concatenated.  Also sets ansnames, to either R_NilValue
+       or the names from the first object. */
 
-    R_len_t pos = 0;
+    int local_assign1 = VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1 &&
+                        TYPEOF(objs[0]) == typ && !NAMEDCNT_GT_1(objs[0]) &&
+                        objs[0] == findVarInFrame3 (env, CADR(call), 7);
+
+    if (TYPEOF(objs[0]) != typ 
+         || LENGTH(objs[0]) <= len/2 /* guards against repeats: v <- c(v,v) */
+         || NAMEDCNT_GT_0(objs[0]) && !local_assign1) {
+        ans = allocVector (typ, len);
+        ansnames = R_NilValue;
+        local_assign1 = 0;
+        realloc = 0;
+    }
+    else {
+        if (add_names && (NAMEDCNT_EQ_0(objs[0]) || local_assign1)) {
+            ansnames = getNamesAttrib(objs[0]);
+            if (NAMEDCNT_GT_1(ansnames) /* Enough?  But go on for now... */
+                 || NAMEDCNT_GT_0(ansnames) && !local_assign1)
+                ansnames = R_NilValue;
+        }
+        len0 = LENGTH(objs[0]);
+        ans = reallocVector (objs[0], len);
+        SET_ATTRIB (ans, R_NilValue);
+        SETLEVELS (ans, 0);
+        SET_TRUELENGTH (ans, 0);
+        if (ans != objs[0]) {
+            local_assign1 = 0;
+            SET_NAMEDCNT_0(ans);
+        }
+        realloc = 1;
+    }
+
+    PROTECT(ans);
+
+    /* Concatenate the contents of the vectors. */
+
+    pos = 0;
     for (i = 0; i < nobj; i++) {
         SEXP a = objs[i];
         if (a == R_NilValue)
             continue;
-        WAIT_UNTIL_COMPUTED(a);
-        copy_elements_coerced (ans, pos, 1, a, 0, 1, LENGTH(a));
-        pos += LENGTH(a);
+        if (i == 0 && realloc)
+            pos += len0;
+        else {
+            R_len_t ln = LENGTH(a);
+            WAIT_UNTIL_COMPUTED(a);
+            copy_elements_coerced (ans, pos, 1, a, 0, 1, ln);
+            pos += ln;
+        }
     }
 
+    /* Concatenate and attach the names, if they are present and used. */
+
+    if (add_names) {
+        if (ansnames == R_NilValue) {
+            ansnames = allocVector (STRSXP, len);
+            realloc = 0;
+        }
+        else {
+            ansnames = reallocVector (ansnames, len);
+            realloc = 1;
+        }
+        pos = 0;
+        for (i = 0; i < nobj; i++) {
+            SEXP a = objs[i];
+            if (a == R_NilValue)
+                continue;
+            R_len_t ln = LENGTH(a);
+            if (i == 0 && realloc)
+                pos += len0;
+            else {
+                SEXP nms = getNamesAttrib(a);
+                if (nms != R_NilValue) {
+                    copy_elements (ansnames, pos, 1, nms, 0, 1, ln); }
+                else
+                    copy_elements (ansnames, pos, 1, 
+                                   R_BlankScalarString, 0, 0, ln);
+                pos += ln;
+            }
+        }
+        setAttrib (ans, R_NamesSymbol, ansnames);
+    }
+
+    if (! (variant & VARIANT_PENDING_OK))
+        WAIT_UNTIL_COMPUTED(ans);
+
     UNPROTECT(1);
+    R_variant_result = local_assign1;
     return ans;
 }
 
@@ -696,6 +757,9 @@ static SEXP do_c (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 #define T_c THRESHOLD_ADJUST(80)
 
 /* function below is also called directly from eval.c */
+
+#define OBJ_ARRAY_SIZE 30  /* size of array holdings objs to be concatenated */
+
 SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
                                  int variant)
 {
@@ -711,8 +775,8 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
     PROTECT(args = process_c_args (args, call, &recurse, &usenames, 
                                    &anytags, &nobj));
 
-    if (!(usenames && anytags) && !recurse && nobj <= 30) {
-        SEXP objs[30];
+    if (!(usenames && anytags) && !recurse && nobj <= OBJ_ARRAY_SIZE) {
+        SEXP objs[OBJ_ARRAY_SIZE];
         SEXP a;
         int i; 
         a = args;
@@ -720,7 +784,7 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
             objs[i] = CAR(a);
             a = CDR(a);
         }
-        ans = simple_concatenate (objs, nobj, variant);
+        ans = simple_concatenate (objs, nobj, usenames, variant, call, env);
         if (ans != R_NoObject) {
             UNPROTECT(1);
             return ans;
@@ -806,7 +870,10 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXP topnames = usenames ? getNamesAttrib(lst) : R_NilValue;
 
     if (TYPEOF(lst) == VECSXP && LENGTH(lst) > 0 && topnames == R_NilValue) {
-        ans = simple_concatenate ((SEXP*)DATAPTR(lst), LENGTH(lst), variant);
+        if (NAMEDCNT_EQ_0(VECTOR_ELT(lst,0)))
+            SET_NAMEDCNT_1(VECTOR_ELT(lst,0));  /* so won't be reallocated */
+        ans = simple_concatenate ((SEXP*)DATAPTR(lst), LENGTH(lst), 
+                                  usenames, variant, call, env);
         if (ans != R_NoObject) {
             UNPROTECT(1);
             return ans;

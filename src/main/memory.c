@@ -1938,6 +1938,7 @@ SEXP reallocVector (SEXP vec, R_len_t length)
         if (length == curr_len)
             return vec;
         if (new_chunks >= (curr_chunks>>1) || curr_chunks - new_chunks < 4) {
+            WAIT_UNTIL_COMPUTED(vec);
             LENGTH(vec) = length;
             return vec;
         }
@@ -1966,6 +1967,7 @@ SEXP reallocVector (SEXP vec, R_len_t length)
 
         sggc_nchunks_t copy_chunks 
                         = new_chunks < curr_chunks ? new_chunks : curr_chunks;
+        WAIT_UNTIL_COMPUTED(old_vec);
         memcpy (SGGC_DATA(cp), SGGC_DATA(CPTR_FROM_SEXP(old_vec)), 
                 (size_t) copy_chunks * SGGC_CHUNK_SIZE);
 
@@ -1979,6 +1981,7 @@ SEXP reallocVector (SEXP vec, R_len_t length)
         if (R_IsMemReporting) R_ReportAllocation(vec);
     }
     else {
+        WAIT_UNTIL_COMPUTED(vec);
         LENGTH(vec) = length;
     }
 

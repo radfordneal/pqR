@@ -407,7 +407,7 @@ SEXP attribute_hidden StringFromComplex(Rcomplex x, int *warn)
    or string vector v (starting at j, stepping by t) to a numeric or string 
    vector x (starting at i, stepping by s), which is not necessarily of the 
    same type.  The value returned is the OR of all warning flags produced 
-   as a result of conversions, zero if no warnings.  ote: t may be zero, 
+   as a result of conversions, zero if no warnings.  Note: t may be zero, 
    s should not be zero. 
 
    The arguments x and v are protected within this procedure if necessary,
