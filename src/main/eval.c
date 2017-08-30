@@ -522,7 +522,7 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
         /* Evaluate constants quickly. */
         if (SELF_EVAL(TYPEOF(e))) {
             /* Make sure constants in expressions have maximum NAMEDCNT when
-	       used as values, so they won't be modified. */
+               used as values, so they won't be modified. */
             SET_NAMEDCNT_MAX(e);
             R_Visible = TRUE;
             return e;
@@ -534,8 +534,8 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
     R_EvalDepth += 1;
 
     if (R_EvalDepth > R_Expressions) {
-	R_Expressions = R_Expressions_keep + 500;
-	errorcall (R_NilValue /* avoids deparsing call in the error handler */,
+        R_Expressions = R_Expressions_keep + 500;
+        errorcall (R_NilValue /* avoids deparsing call in the error handler */,
          _("evaluation nested too deeply: infinite recursion / options(expressions=)?"));
     }
 
@@ -552,23 +552,24 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
         R_Visible = TRUE;  /* May be set FALSE by active binding / lazy eval */
 
-	res = FIND_VAR_PENDING_OK (e, rho);
+        res = FIND_VAR_PENDING_OK (e, rho);
 
       symbol:  /* can also get here for ..1, ..2, etc., from below */
 
-	if (res == R_UnboundValue)
-            unbound_var_error(e);
-
-        if (res == R_MissingArg) {
-            if ( ! (variant & VARIANT_MISSING_OK))
-                if (!DDVAL(e))  /* revert bug fix for the moment */
-                    arg_missing_error(e);
-        }
-        else if (TYPEOF(res) == PROMSXP) {
+        if (TYPEOF(res) == PROMSXP) {
             if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
                 res = forcePromiseUnbound(res,variant);
             else
                 res = PRVALUE_PENDING_OK(res);
+        }
+        else if (TYPEOF(res) == SYMSXP) {
+            if (res == R_MissingArg) {
+                if ( ! (variant & VARIANT_MISSING_OK))
+                    if (!DDVAL(e))  /* revert bug fix for the moment */
+                        arg_missing_error(e);
+            }
+            else if (res == R_UnboundValue)
+                unbound_var_error(e);
         }
 
         /* A NAMEDCNT of 0 might arise from an inadverently missing increment
@@ -594,15 +595,15 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
         else
             op = eval(fn,rho);
 
-	if (RTRACE(op)) R_trace_call(e,op);
+        if (RTRACE(op)) R_trace_call(e,op);
 
-	if (TYPEOF(op) == CLOSXP) {
+        if (TYPEOF(op) == CLOSXP) {
             PROTECT(op);
-	    res = applyClosure_v (e, op, promiseArgs(args,rho), rho, 
+            res = applyClosure_v (e, op, promiseArgs(args,rho), rho, 
                                   NULL, variant);
             UNPROTECT(1);
         }
-	else {
+        else {
             int save = R_PPStackTop;
             const void *vmax = VMAXGET();
 
@@ -636,19 +637,19 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
     else if (typeof_e == SYMSXP) {  /* Must be ... or ..1, ..2, etc. */
 
-	if (e == R_DotsSymbol)
-	    dotdotdot_error();
+        if (e == R_DotsSymbol)
+            dotdotdot_error();
 
         R_Visible = TRUE;  /* May be set FALSE by active binding / lazy eval */
 
-	res = ddfindVar(e,rho);
+        res = ddfindVar(e,rho);
 
         goto symbol;
     }
 
     else if (typeof_e == PROMSXP) {
 
-	if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
+        if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
             res = forcePromiseUnbound(e,variant);
         else
             res = PRVALUE_PENDING_OK(e);
@@ -661,7 +662,7 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 
     else if (typeof_e == BCODESXP) {
 
-	res = bcEval(e, rho, TRUE);
+        res = bcEval(e, rho, TRUE);
     }
 
     else if (typeof_e == DOTSXP)
@@ -2293,7 +2294,8 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP a;
 
-    if (args==R_NilValue || (a = CDR(args)) == R_NilValue || CDR(a)!=R_NilValue)
+    if ((a = CDR(args)) == R_NilValue /* includes case of args == R_NilValue */
+          || CDR(a) != R_NilValue)
         checkArity(op,args);
 
     SEXP lhs = CAR(args), rhs = CAR(a);
