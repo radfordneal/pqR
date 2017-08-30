@@ -176,6 +176,11 @@
 
   \subsection{NEW FEATURES FROM R CORE RELEASES}{
   \itemize{
+  \item From R-3.1.0: The way the unary operators (\code{+ - !}) handle
+        attributes is now more consistent.  If there is no coercion,
+        all attributes (including class) are copied from the input to
+        the result: otherwise only names, dims and dimnames are.
+
   \item From R-3.0.0: There is a new function \code{rep_len()} analogous to 
         \code{rep.int()} for when speed is required (and names are not).
 

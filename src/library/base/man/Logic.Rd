@@ -68,15 +68,20 @@ isTRUE(x)
   \code{NA}, but \code{NA & FALSE} evaluates to \code{FALSE}.  See the
   examples below.
 
-  See \link{Syntax} for the precedence of these operators: unlike many
-  other languages (including S) the AND and OR operators do not have the
-  same precedence (the AND operators are higher than the OR operators).
+  See \link{Syntax} for the precedence of these operators.  Note in
+  particular that AND has higher precedence than OR.
 }
 \value{
-  For \code{!}, a logical or raw vector of the same length as \code{x}:
-  names, dims and dimnames are copied from \code{x}.
+  The default methods for these operators produce a logical or raw vector
+  as their result.  A raw vector is produced only if the operand(s) are
+  raw.
 
-  For \code{|}, \code{&} and \code{xor} a logical or raw vector. The
+  For \code{!}, the result is a logical or raw vector of the same
+  length as \code{x}.  If no coercion is done, all attributes are
+  preserved; if \code{x} is coerced to logical, names, dims, and
+  dimnames (but not other attributes) are copied from \code{x}.
+
+  For \code{|}, \code{&} and \code{xor}, 
   elements of shorter vectors are recycled as necessary (with a
   \code{\link{warning}} when they are recycled only \emph{fractionally}).
   The rules for determining the attributes of the result are rather
@@ -89,7 +94,8 @@ isTRUE(x)
   used.  For arrays (and an array result) the dimensions and dimnames
   are taken from first argument if it is an array, otherwise the second.
 
-  For \code{||}, \code{&&} and \code{isTRUE}, a length-one logical vector.
+  For \code{||}, \code{&&} and \code{isTRUE}, the result is 
+  a length-one logical vector.
 }
 \section{S4 methods}{
   \code{!}, \code{&} and \code{|} are S4 generics, the latter two part

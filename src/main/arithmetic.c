@@ -1486,26 +1486,36 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int obj1,
 
     n = LENGTH(s1);
 
+    if (TYPEOF(s1) == LGLSXP) {
+        SEXP dim, dimnames, names;
+        ans = allocVector(LGLSXP,n);
+        PROTECT (names    = getAttrib (s1, R_NamesSymbol));
+        PROTECT (dim      = getDimAttrib(s1));
+        PROTECT (dimnames = getAttrib (s1, R_DimNamesSymbol));
+        if (names    != R_NilValue) setAttrib(ans,R_NamesSymbol,    names);
+        if (dim      != R_NilValue) setAttrib(ans,R_DimSymbol,      dim);
+        if (dimnames != R_NilValue) setAttrib(ans,R_DimNamesSymbol, dimnames);
+        UNPROTECT(3);
+    }
+
     if (operation==PLUSOP) {
         if (type != LGLSXP)
             ans = isObject(s1) && !obj1 ? Rf_makeUnclassed(s1) : s1;
         else {
-            ans = allocVector (INTSXP, n);
             WAIT_UNTIL_COMPUTED(s1);
             for (int i = 0; i<LENGTH(s1); i++) INTEGER(ans)[i] = LOGICAL(s1)[i];
         }
     }
     else if (operation==MINUSOP) {
         if (type == LGLSXP) 
-            ans = allocVector (INTSXP, n);
+            ; /* allocated above */
         else if (isObject(s1) && !obj1)
-            ans = allocVector(type,n);
+            ans = Rf_makeUnclassed(s1);
         else {
             if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1
               && !NAMEDCNT_GT_1(s1) && s1 == findVarInFrame3(env,CADR(call),7))
                 local_assign = 1;
-            ans = local_assign || NAMEDCNT_EQ_0(s1) ? s1 
-                    : allocVector(type,n);
+            ans = local_assign || NAMEDCNT_EQ_0(s1) ? s1 : duplicate(s1);
         }
         DO_NOW_OR_LATER1 (variant, n >= T_unary_minus,
           TYPEOF(s1)==REALSXP ? HELPERS_PIPE_IN01_OUT | HELPERS_MERGE_IN_OUT
@@ -1514,14 +1524,6 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int obj1,
     }
     else
         errorcall(call, _("invalid argument to unary operator"));
-
-    if (ans!=s1 && HAS_ATTRIB(s1) && (obj1 || !(variant & VARIANT_ANY_ATTR))) {
-        PROTECT(ans);
-        DUPLICATE_ATTRIB(ans,s1);
-        if (isObject(ans) && !obj1) 
-            ans = Rf_makeUnclassed(ans);
-        UNPROTECT(1);
-    }
 
     R_variant_result = local_assign;  /* do at end, just in case */
     return ans;
