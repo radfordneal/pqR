@@ -42,93 +42,6 @@
 static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 
 
-#if 0  /* older code that needs to be adapted below */
-
-        /* Quickly do the simple case where result is atomic, there is
-           no recursion, and names do not need to be combined. */
-
-        R_len_t len = 0;
-        int has_names = 0;
-        for (t = args; t != R_NilValue; t = CDR(t)) {
-            SEXP a = CAR(t);
-            if (len > R_LEN_T_MAX - LENGTH(a)) /* would overflow */
-                errorcall (call,
-                           _("resulting vector exceeds vector length limit"));
-            if (usenames && !has_names && HAS_ATTRIB(a) /* quick pretest */
-                                       && getNamesAttrib(a) != R_NilValue)
-                has_names = 1;
-            len += LENGTH(a);
-        }
-
-        R_len_t i = 0;
-        SEXP ansnames = R_NilValue;
-        SEXP a;
-        t = args;
-        a = CAR(t);
-
-        R_len_t len0 = LENGTH(a);  /* Note: a may be extended below! */
-
-        int local_assign1 =
-              VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1 &&
-              TYPEOF(a) == highesttype && !NAMEDCNT_GT_1(a) &&
-              a == findVarInFrame3 (env, CADR(call), 7);
-
-        if (TYPEOF(a) != highesttype || NAMEDCNT_GT_0(a) && !local_assign1)
-            PROTECT(ans = allocVector (highesttype, len));
-        else {
-            i = len0;
-            t = CDR(t);
-            if (has_names && (NAMEDCNT_EQ_0(a) || local_assign1)) {
-                ansnames = getNamesAttrib(a);
-                if (NAMEDCNT_GT_1(ansnames) /* Enough?  But go on for now... */
-                     || NAMEDCNT_GT_0(ansnames) && !local_assign1)
-                    ansnames = R_NilValue;
-            }
-            PROTECT(ans = reallocVector (a, len));
-            SET_ATTRIB (ans, R_NilValue);
-            SETLEVELS (ans, 0);
-            SET_TRUELENGTH (ans, 0);
-            if (ans != a) {
-                local_assign1 = 0;
-                SET_NAMEDCNT_0(ans);
-            }
-        }
-
-        PROTECT(ansnames);
-
-        int use_helpers = TYPEOF(ans) != STRSXP && 
-                          has_names || (variant & VARIANT_PENDING_OK);
-
-        while (t != R_NilValue) {
-            a = CAR(t);
-            R_len_t ln = LENGTH(a);
-            if (use_helpers && CDR(t)==R_NilValue && ln >= T_c) {
-                DO_NOW_OR_LATER1 (VARIANT_PENDING_OK, TRUE, 0,
-                  task_copy_coerced, ((helpers_op_t)i<<32)|1, ans, a);
-                break;
-            }
-            if (use_helpers && CDDR(t)==R_NilValue && ln >= T_c 
-                                                   && LENGTH(CADR(t)) >= T_c) {
-                DO_NOW_OR_LATER2 (VARIANT_PENDING_OK, TRUE, 0,
-                  task_copy_coerced, ((helpers_op_t)i<<32)|1, ans, a, CADR(t));
-                break;
-            }
-            copy_elements_coerced (ans, i, 1, a, 0, 1, ln);
-            i += ln;
-            t = CDR(t);
-        }
-
-        UNPROTECT(1);
-
-
-        if (use_helpers && ! (variant & VARIANT_PENDING_OK))
-            WAIT_UNTIL_COMPUTED(ans);
-
-        R_variant_result = local_assign1;
-    }
-
-#endif
-
 /* Task procedure for copying a vector into another vector with possible
    coercion.  The code gives the offset within the output vector to start
    copying to (in top 32 bits), and also indicates whether an initial 
@@ -243,9 +156,10 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
        first copying vectors directly, then (perhaps) scheduling tasks 
        to copy other (big) ones. */
 
-    int use_helpers = largeones > 0 && typ != STRSXP
-                        && !helpers_not_multithreading_now 
-                        && (add_names || (variant & VARIANT_PENDING_OK));
+    int use_helpers = 
+      largeones > 0 && typ != STRSXP
+        && !helpers_not_multithreading_now 
+        && (largeones > 1 || add_names || (variant & VARIANT_PENDING_OK));
 
     pos = 0;
     for (i = 0; i < nobj; i++) {
