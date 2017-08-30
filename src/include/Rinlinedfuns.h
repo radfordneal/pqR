@@ -471,6 +471,15 @@ INLINE_FUN Rboolean isNumber(SEXP s)
 # endif
 }
 
+INLINE_FUN Rboolean isNumberOrFactor(SEXP s)
+{
+# if R_TYPE_SETS_BY_SHIFT
+    return (NUMBER_TYPES >> TYPEOF(s)) & 1;
+# else
+    return R_type_flags[TYPEOF(s)] & NUMBER_TYPES_BITS;
+# endif
+}
+
 /* The ScalarXXX functions plus ScalarLogicalMaybeConst are here, the other 
    ScalarXXXMaybeConst functions are in memory.c. */
 

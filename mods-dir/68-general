@@ -1,0 +1,5 @@
+Various mods involving eval and other aspects of performance.
+
+Alternative scheme for type flags, selectable.
+
+Tweaks in arithmetic.c.
