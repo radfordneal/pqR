@@ -1160,14 +1160,6 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     }
 }
 
-#define FIXUP_NULL_AND_CHECK_TYPES(v, vpi) do { \
-    switch (TYPEOF(v)) { \
-    case NILSXP: REPROTECT(v = allocVector(REALSXP,0), vpi); break; \
-    case CPLXSXP: case REALSXP: case INTSXP: case LGLSXP: break; \
-    default: errorcall(call, _("non-numeric argument to binary operator")); \
-    } \
-} while (0)
-
 #define T_arithmetic THRESHOLD_ADJUST(24)  /* >= 8, further adjusted below */
 
 SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, 
@@ -1181,12 +1173,14 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
     ARITHOP_TYPE oper = (ARITHOP_TYPE) PRIMVAL(op);
     int threshold, flags, nprotect;
 
+    if (x == R_NilValue) x = allocVector(REALSXP,0);
     PROTECT_WITH_INDEX(x, &xpi);
+    if (y == R_NilValue) y = allocVector(REALSXP,0);
     PROTECT_WITH_INDEX(y, &ypi);
     nprotect = 2;
 
-    FIXUP_NULL_AND_CHECK_TYPES(x, xpi);
-    FIXUP_NULL_AND_CHECK_TYPES(y, ypi);
+    if (!isNumberOrFactor(x) || !isNumberOrFactor(y))
+        errorcall(call, _("non-numeric argument to binary operator")); \
 
     nx = LENGTH(x);
     if (HAS_ATTRIB(x)) {
