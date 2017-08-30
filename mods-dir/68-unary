@@ -1,0 +1,2 @@
+Change unary +, -, ! to match new behaviour in R-3.1.0.  Also
+improves performance of ! by sometimes reusing storage.

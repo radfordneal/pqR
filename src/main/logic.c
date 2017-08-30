@@ -214,30 +214,45 @@ static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 
     /* The general case... */
 
-    PROTECT(names = getAttrib(arg, R_NamesSymbol));
-    PROTECT(dim = getDimAttrib(arg));
-    PROTECT(dimnames = getAttrib(arg, R_DimNamesSymbol));
-    PROTECT(x = allocVector(isRaw(arg) ? RAWSXP : LGLSXP, len));
+    if (TYPEOF(arg) != LGLSXP && TYPEOF(arg) != RAWSXP) {
+        x = allocVector(LGLSXP,len);
+        if (!NO_ATTRIBUTES_OK(variant,arg)) {
+            PROTECT (names    = getAttrib (arg, R_NamesSymbol));
+            PROTECT (dim      = getDimAttrib(arg));
+            PROTECT (dimnames = getAttrib (arg, R_DimNamesSymbol));
+            if (names    != R_NilValue) setAttrib(x,R_NamesSymbol,    names);
+            if (dim      != R_NilValue) setAttrib(x,R_DimSymbol,      dim);
+            if (dimnames != R_NilValue) setAttrib(x,R_DimNamesSymbol, dimnames);
+            UNPROTECT(3);
+        }
+    }
+    else if (isObject(arg) || NAMEDCNT_GT_0(arg))
+        x = duplicate(arg);
+    else
+        x = arg;
+
+    PROTECT(x);
+
     switch(TYPEOF(arg)) {
     case LGLSXP:
 	for (i = 0; i < len; i++)
-	    LOGICAL(x)[i] = (LOGICAL(arg)[i] == NA_LOGICAL) ?
-		NA_LOGICAL : LOGICAL(arg)[i] == 0;
+	    LOGICAL(x)[i] = (LOGICAL(arg)[i] == NA_LOGICAL) ? NA_LOGICAL 
+                          : LOGICAL(arg)[i] == 0;
 	break;
     case INTSXP:
 	for (i = 0; i < len; i++)
-	    LOGICAL(x)[i] = (INTEGER(arg)[i] == NA_INTEGER) ?
-		NA_LOGICAL : INTEGER(arg)[i] == 0;
+	    LOGICAL(x)[i] = (INTEGER(arg)[i] == NA_INTEGER) ? NA_LOGICAL 
+                          : INTEGER(arg)[i] == 0;
 	break;
     case REALSXP:
 	for (i = 0; i < len; i++)
-	    LOGICAL(x)[i] = ISNAN(REAL(arg)[i]) ?
-		NA_LOGICAL : REAL(arg)[i] == 0;
+	    LOGICAL(x)[i] = ISNAN(REAL(arg)[i]) ? NA_LOGICAL 
+                          : REAL(arg)[i] == 0;
 	break;
     case CPLXSXP:
 	for (i = 0; i < len; i++)
-	    LOGICAL(x)[i] = (ISNAN(COMPLEX(arg)[i].r) || ISNAN(COMPLEX(arg)[i].i))
-		? NA_LOGICAL : (COMPLEX(arg)[i].r == 0. && COMPLEX(arg)[i].i == 0.);
+	    LOGICAL(x)[i] = ISNAN(COMPLEX(arg)[i].r) || ISNAN(COMPLEX(arg)[i].i)
+              ? NA_LOGICAL : (COMPLEX(arg)[i].r == 0 && COMPLEX(arg)[i].i == 0);
 	break;
     case RAWSXP:
 	for (i = 0; i < len; i++)
@@ -246,10 +261,8 @@ static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     default:
 	UNIMPLEMENTED_TYPE("do_fast_not", arg);
     }
-    if(names != R_NilValue) setAttrib(x, R_NamesSymbol, names);
-    if(dim != R_NilValue) setAttrib(x, R_DimSymbol, dim);
-    if(dimnames != R_NilValue) setAttrib(x, R_DimNamesSymbol, dimnames);
-    UNPROTECT(4);
+
+    UNPROTECT(1);
     return x;
 }
 

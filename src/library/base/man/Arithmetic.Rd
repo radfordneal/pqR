@@ -37,42 +37,9 @@ x \%/\% y
   \item{x, y}{numeric or complex vectors or objects which can be
     coerced to such, or other objects for which methods have been written.}
 }
-\value{
-  These operators return vectors containing the result of the element
-  by element operations.  The elements of shorter vectors are recycled
-  as necessary (with a \code{\link{warning}} when they are recycled only
-  \emph{fractionally}).  The operators are \code{+} for addition,
-  \code{-} for subtraction, \code{*} for multiplication, \code{/} for
-  division and \code{^} for exponentiation.
-
-  \code{\%\%} indicates \code{x mod y} and \code{\%/\%} indicates
-  integer division.  It is guaranteed that \code{x == (x \%\% y) + y * (
-  x \%/\% y )} (up to rounding error) unless \code{y == 0} where the
-  result of \code{\%\%} is \code{\link{NA_integer_}} or
-  \code{\link{NaN}} (depending on the \code{\link{typeof}} of the
-  arguments).
-
-  If either argument is complex the result will be complex, otherwise if
-  one or both arguments are numeric, the result will be numeric.  If
-  both arguments are of type \link{integer}, the type of the result of
-  \code{/} and \code{^} is \link{numeric} and for the other operators it
-  is integer (with overflow, which occurs at
-  \eqn{\pm(2^{31} - 1)}{+/- (2^31 - 1)},
-  returned as \code{NA_integer_} with a warning).
-
-  The rules for determining the attributes of the result are rather
-  complicated.  Most attributes are taken from the longer argument, the
-  first if they are of the same length.  Names will be copied from the
-  first if it is the same length as the answer, otherwise from the
-  second if that is.  For time series, these operations are allowed only
-  if the series are compatible, when the class and \code{\link{tsp}}
-  attribute of whichever is a time series (the same, if both are) are
-  used.  For arrays (and an array result) the dimensions and dimnames
-  are taken from first argument if it is an array, otherwise the second.
-}
 \details{
-  The binary arithmetic operators are generic functions: methods can be
-  written for them individually or via the
+  These unary and binary arithmetic operators are generic functions: 
+  methods can be written for them individually or via the
   \code{\link[=S3groupGeneric]{Ops}} group generic function.  (See
   \code{\link[=S3groupGeneric]{Ops}} for how dispatch is computed.)
 
@@ -113,6 +80,47 @@ x \%/\% y
   \sQuote{round to nearest, ties to even} mode, but this does depend on
   the compiler and FPU being set up correctly. 
 }
+\value{
+  The default methods for these operators return vectors containing the 
+  result of the element by element operations.  For the binary operators, 
+  the elements of shorter vectors are recycled
+  as necessary (with a \code{\link{warning}} when they are recycled only
+  \emph{fractionally}).  
+
+  The operators are \code{+} for addition,
+  \code{-} for subtraction, \code{*} for multiplication, \code{/} for
+  division and \code{^} for exponentiation.
+  \code{\%\%} indicates \code{x mod y} and \code{\%/\%} indicates
+  integer division.  It is guaranteed that \code{x == (x \%\% y) + y * (
+  x \%/\% y )} (up to rounding error) unless \code{y == 0} where the
+  result of \code{\%\%} is \code{\link{NA_integer_}} or
+  \code{\link{NaN}} (depending on the \code{\link{typeof}} of the
+  arguments).
+
+  If either argument is complex the result will be complex, otherwise if
+  one or both arguments are numeric, the result will be numeric.  If
+  both arguments are of type \link{integer}, the type of the result of
+  \code{/} and \code{^} is \link{numeric} and for the other operators it
+  is integer (with overflow, which occurs at
+  \eqn{\pm(2^{31} - 1)}{+/- (2^31 - 1)},
+  returned as \code{NA_integer_} with a warning).
+
+  Unary \code{+} and unary \code{-} return a numeric or complex vector.  All
+  attributes (including class) are preserved if there is no
+  coercion.  If \code{x} is logical, it is coerced to integer, and names, 
+  dims, and dimnames (but not other attributes) are preserved.
+
+  The rules for determining the attributes of the result for the binary
+  operators are rather
+  complicated.  Most attributes are taken from the longer argument, the
+  first if they are of the same length.  Names will be copied from the
+  first if it is the same length as the answer, otherwise from the
+  second if that is.  For time series, these operations are allowed only
+  if the series are compatible, when the class and \code{\link{tsp}}
+  attribute of whichever is a time series (the same, if both are) are
+  used.  For arrays (and an array result) the dimensions and dimnames
+  are taken from first argument if it is an array, otherwise the second.
+}
 \section{S4 methods}{
   These operators are members of the S4 \code{\link{Arith}} group generic,
   and so methods can be written for them individually as well as for the
@@ -123,11 +131,11 @@ x \%/\% y
   pqR now requires that floating-point arithmetic conform to the
   IEC 60559 (also known as IEEE 754) standard, and will complain and
   refuse to start if it detects that this is not so.  This includes
-  support for \emph{denormal numbers}
+  support for \emph{denormalized numbers}
   (non-zero numbers closer to zero than \code{.Machine$double.xmin}).
 
-  Another potential issue is signed zeroes: on IEC 60659 platforms there
-  are two zeroes with internal representations differing by sign.  Where
+  Another potential issue is signed zeroes: IEC 60659 includes
+  two zeroes with internal representations differing by sign.  Where
   possible \R treats them as the same, but for example direct output
   from C code often does not do so and may output \samp{-0.0} (and on
   Windows whether it does so or not depends on the version of Windows).
