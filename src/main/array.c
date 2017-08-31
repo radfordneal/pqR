@@ -38,6 +38,9 @@
 
 #include <helpers/helpers-app.h>
 #include <matprod/piped-matprod.h>
+
+#include "scalar-stack.h"
+
 /* ensure piped matprod routines are present when built as shared library. */
 helpers_task_proc *R_kludge = task_piped_matprod_mat_mat;
 
@@ -392,12 +395,11 @@ static SEXP do_drop(SEXP call, SEXP op, SEXP args, SEXP rho)
 static SEXP do_fast_length (SEXP call, SEXP op, SEXP arg, SEXP rho, int variant)
 {   
     R_len_t len = length(arg);
-    if (variant & VARIANT_SCALAR_STACK_OK & 0) {
-/*        *INTEGER(R_ScalarIntegerBox) = len;
-        return R_ScalarIntegerBox; */
-    }
+    if (len > INT_MAX) len = NA_INTEGER;
+    if (CAN_USE_SCALAR_STACK(variant))
+        return PUSH_SCALAR_INTEGER(len);
     else
-        return ScalarIntegerMaybeConst (len <= INT_MAX ? len : NA_INTEGER);
+        return ScalarIntegerMaybeConst(len);
 }
 
 static SEXP do_length(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
@@ -2056,6 +2058,6 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 
 attribute_hidden FASTFUNTAB R_FastFunTab_array[] = {
 /*slow func	fast func,     code or -1   dsptch  variant */
-{ do_length,	do_fast_length,	-1,		1,  VARIANT_UNCLASS|VARIANT_ANY_ATTR },	
+{ do_length,	do_fast_length,	-1,		1,  VARIANT_UNCLASS|VARIANT_ANY_ATTR|VARIANT_PENDING_OK },	
 { 0,		0,		0,		0,  0 }
 };

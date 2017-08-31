@@ -3,3 +3,6 @@ Various mods involving eval and other aspects of performance.
 Alternative scheme for type flags, selectable.
 
 Tweaks in arithmetic.c.
+
+Fixes some places where VARIANT_PENDING_OK wasn't being used when
+it should have been (and used to be).
