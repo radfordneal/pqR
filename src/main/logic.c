@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -234,11 +234,13 @@ static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     PROTECT(x);
 
     switch(TYPEOF(arg)) {
-    case LGLSXP:
-	for (i = 0; i < len; i++)
-	    LOGICAL(x)[i] = (LOGICAL(arg)[i] == NA_LOGICAL) ? NA_LOGICAL 
-                          : LOGICAL(arg)[i] == 0;
-	break;
+    case LGLSXP: {
+        for (i = 0; i < len; i++) {
+            uint32_t u = LOGICAL(arg)[i];
+            LOGICAL(x)[i] = u ^ 1 ^ (u >> 31);
+        }
+        break;
+    }
     case INTSXP:
 	for (i = 0; i < len; i++)
 	    LOGICAL(x)[i] = (INTEGER(arg)[i] == NA_INTEGER) ? NA_LOGICAL 
@@ -256,7 +258,7 @@ static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 	break;
     case RAWSXP:
 	for (i = 0; i < len; i++)
-	    RAW(x)[i] = 0xFF ^ RAW(arg)[i];
+	    RAW(x)[i] = ~ RAW(arg)[i];
 	break;
     default:
 	UNIMPLEMENTED_TYPE("do_fast_not", arg);
@@ -348,56 +350,30 @@ static SEXP binaryLogic(int code, SEXP s1, SEXP s2)
     case 1:  /* & : AND */
         if (n1 == n2) {
             for (i = 0; i<n; i++) {
-                x1 = LOGICAL(s1)[i];
-                x2 = LOGICAL(s2)[i];
-                if (x1 == 0 || x2 == 0)
-                    LOGICAL(ans)[i] = 0;
-                else if (x1 == NA_LOGICAL || x2 == NA_LOGICAL)
-                    LOGICAL(ans)[i] = NA_LOGICAL;
-                else
-                    LOGICAL(ans)[i] = 1;
+                uint32_t u1 = LOGICAL(s1)[i];
+                uint32_t u2 = LOGICAL(s2)[i];
+                LOGICAL(ans)[i] = (u1 & u2) | (u1 & (u2<<31)) | (u2 & (u1<<31));
             }
         }
         else {
             mod_iterate(n1,n2,i1,i2) {
-                x1 = LOGICAL(s1)[i1];
-                x2 = LOGICAL(s2)[i2];
-                if (x1 == 0 || x2 == 0)
-                    LOGICAL(ans)[i] = 0;
-                else if (x1 == NA_LOGICAL || x2 == NA_LOGICAL)
-                    LOGICAL(ans)[i] = NA_LOGICAL;
-                else
-                    LOGICAL(ans)[i] = 1;
+                uint32_t u1 = LOGICAL(s1)[i];
+                uint32_t u2 = LOGICAL(s2)[i];
+                LOGICAL(ans)[i] = (u1 & u2) | (u1 & (u2<<31)) | (u2 & (u1<<31));
             }
         }
         break;
     case 2:  /* | : OR */
         if (n1 == n2) {
             for (i = 0; i<n; i++) {
-                x1 = LOGICAL(s1)[i];
-                x2 = LOGICAL(s2)[i];
-                if (x1 == 0)
-                    LOGICAL(ans)[i] = 
-                      x2==0 ? 0 : x2==NA_LOGICAL ? NA_LOGICAL : 1;
-                else if (x1 == NA_LOGICAL)
-                    LOGICAL(ans)[i] = 
-                      x2==0 || x2==NA_LOGICAL ? NA_LOGICAL : 1;
-                else
-                    LOGICAL(ans)[i] = 1;
+                uint32_t u = LOGICAL(s1)[i] | LOGICAL(s2)[i];
+                LOGICAL(ans)[i] = u & ~ (u << 31);
             }
         }
         else {
             mod_iterate(n1,n2,i1,i2) {
-                x1 = LOGICAL(s1)[i1];
-                x2 = LOGICAL(s2)[i2];
-                if (x1 == 0)
-                    LOGICAL(ans)[i] = 
-                      x2==0 ? 0 : x2==NA_LOGICAL ? NA_LOGICAL : 1;
-                else if (x1 == NA_LOGICAL)
-                    LOGICAL(ans)[i] = 
-                      x2==0 || x2==NA_LOGICAL ? NA_LOGICAL : 1;
-                else
-                    LOGICAL(ans)[i] = 1;
+                uint32_t u = LOGICAL(s1)[i] | LOGICAL(s2)[i];
+                LOGICAL(ans)[i] = u & ~ (u << 31);
             }
         }
         break;
