@@ -2188,6 +2188,21 @@ static SEXP replaceCall(SEXP fun, SEXP varval, SEXP args, SEXP rhs)
     return first;
 }
 
+
+/* Macro used in promiseArgs and promiseArgsTwo. */
+
+#define MAKE_PROMISE(a,rho) do { \
+    if (TYPEOF(a) == PROMSXP) { \
+        INC_NAMEDCNT(a); \
+        SEXP p = PRVALUE_PENDING_OK(a); \
+        if (p != R_UnboundValue && NAMEDCNT_GT_0(p)) \
+            INC_NAMEDCNT(p); \
+    } \
+    else if (a != R_MissingArg && a != R_MissingUnder) \
+        a = mkPROMISE (a, rho); \
+} while (0)
+
+
 /* Create two lists of promises to evaluate each argument, with promises
    shared.  When an argument is evaluated in a call using one argument list,
    its value is then known without re-evaluation in a second call using 
@@ -2196,11 +2211,29 @@ static SEXP replaceCall(SEXP fun, SEXP varval, SEXP args, SEXP rhs)
 
 static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
 {
+    /* Handle 0 or 1 arguments (not ...) specially, for speed. */
+
+    if (CDR(el) == R_NilValue) {  /* Note that CDR(R_NilValue) == R_NilValue */
+        if (el == R_NilValue)
+            return;
+        SEXP a = CAR(el);
+        SEXP t = TAG(el);
+        if (a != R_DotsSymbol) {
+            MAKE_PROMISE(a,rho);
+            PROTECT (*a1 = cons_with_tag (a, *a1, t));
+            *a2 = cons_with_tag (a, *a2, t);
+            UNPROTECT(1);
+            return;
+        }
+    }
+
+    /* The general case (except el == R_NilValue handled above). */
+
     BEGIN_PROTECT6 (head1, tail1, head2, tail2, ev, h);
 
     head1 = head2 = R_NilValue;
 
-    while (el != R_NilValue) {
+    do {  /* el won't be R_NilValue, so we loop at least once */
 
         SEXP a = CAR(el);
 
@@ -2218,17 +2251,8 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
 	    else if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
                     a = CAR(h);
-                    if (TYPEOF(a) == PROMSXP) {
-                        INC_NAMEDCNT(a);
-                        INC_NAMEDCNT(a);
-                        SEXP p = PRVALUE_PENDING_OK(a);
-                        if (p != R_UnboundValue && NAMEDCNT_GT_0(p))
-                            INC_NAMEDCNT(p);
-                    }
-                    else if (a != R_MissingArg && a != R_MissingUnder) {
-                       a = mkPROMISE (a, rho);
-                       INC_NAMEDCNT(a);
-                    }
+                    MAKE_PROMISE(a,rho);
+                    INC_NAMEDCNT(a);
                     ev = cons_with_tag (a, R_NilValue, TAG(h));
                     if (head1==R_NilValue)
                         head1 = ev;
@@ -2248,17 +2272,8 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
 		dotdotdot_error();
 	}
         else {
-            if (TYPEOF(a) == PROMSXP) {
-                INC_NAMEDCNT(a);
-                INC_NAMEDCNT(a);
-                SEXP p = PRVALUE_PENDING_OK(a);
-                if (p != R_UnboundValue && NAMEDCNT_GT_0(p))
-                    INC_NAMEDCNT(p);
-            }
-            else if (a != R_MissingArg && a != R_MissingUnder) {
-               a = mkPROMISE (a, rho);
-               INC_NAMEDCNT(a);
-            }
+            MAKE_PROMISE(a,rho);
+            INC_NAMEDCNT(a);
             ev = cons_with_tag (a, R_NilValue, TAG(el));
             if (head1 == R_NilValue)
                 head1 = ev;
@@ -2272,8 +2287,10 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
                 SETCDR(tail2, ev);
             tail2 = ev;
         }
+
 	el = CDR(el);
-    }
+
+    } while (el != R_NilValue);
 
     if (head1 != R_NilValue) {
         if (*a1 != R_NilValue)
@@ -2286,6 +2303,7 @@ static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
 
     END_PROTECT;
 }
+
 
 /*  Assignment in its various forms. */
 
@@ -2777,18 +2795,29 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
    of missing arguments resulting from '_'.
 
    Used in eval and applyMethod (object.c) for builtin primitives,
-   do_internal (names.c) for builtin .Internals and in evalArgs.
- */
+   do_internal (names.c) for builtin .Internals and in evalArgs. */
 
-SEXP attribute_hidden evalList_v(SEXP el, SEXP rho, int variant)
+SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
 {
+    /* Handle 0 or 1 arguments (not ...) specially, for speed. */
+
+    if (CDR(el) == R_NilValue) { /* Note that CDR(R_NilValue) == R_NilValue */
+        if (el == R_NilValue)
+            return R_NilValue;
+        if (CAR(el) != R_DotsSymbol)
+            return cons_with_tag (EVALV (CAR(el), rho, variant), 
+                                  R_NilValue, TAG(el));
+    }
+
+    /* The general case (except for el == R_NilValue, handed above). */
+
     int varpend = variant | VARIANT_PENDING_OK;
 
     BEGIN_PROTECT4 (head, tail, ev, h);
 
     head = R_NilValue;
 
-    while (el != R_NilValue) {
+    do {  /* el won't be R_NilValue, so will loop at least once */
 
 	if (CAR(el) == R_DotsSymbol) {
             /* If we have a ... symbol, we look to see what it is bound to.
@@ -2830,7 +2859,8 @@ SEXP attribute_hidden evalList_v(SEXP el, SEXP rho, int variant)
 	}
 
 	el = CDR(el);
-    }
+
+    } while (el != R_NilValue);
 
     if (! (variant & VARIANT_PENDING_OK))
         WAIT_UNTIL_ARGUMENTS_COMPUTED(head);
@@ -2977,11 +3007,25 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 
 SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 {
+    /* Handle 0 or 1 arguments (not ...) specially, for speed. */
+
+    if (CDR(el) == R_NilValue) {  /* Note that CDR(R_NilValue) == R_NilValue */
+        if (el == R_NilValue)
+            return el;
+        SEXP a = CAR(el);
+        if (a != R_DotsSymbol) {
+            MAKE_PROMISE(a,rho);
+            return cons_with_tag (a, R_NilValue, TAG(el));
+        }
+    }
+
+    /* Handle the general case (except for el being R_NilValue, done above). */
+
     BEGIN_PROTECT4 (head, tail, ev, h);
 
     head = R_NilValue;
 
-    while (el != R_NilValue) {
+    do {  /* el == R_NilValue is handled above, so always loop at least once */
 
         SEXP a = CAR(el);
 
@@ -3000,14 +3044,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	    else if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
                     a = CAR(h);
-                    if (TYPEOF(a) == PROMSXP) {
-                        INC_NAMEDCNT(a);
-                        SEXP p = PRVALUE_PENDING_OK(a);
-                        if (p != R_UnboundValue && NAMEDCNT_GT_0(p))
-                            INC_NAMEDCNT(p);
-                    }
-                    else if (a != R_MissingArg && a != R_MissingUnder)
-                        a = mkPROMISE (a, rho);
+                    MAKE_PROMISE(a,rho);
                     ev = cons_with_tag (a, R_NilValue, TAG(h));
                     if (head==R_NilValue)
                         head = ev;
@@ -3021,14 +3058,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 		dotdotdot_error();
 	}
         else {
-            if (TYPEOF(a) == PROMSXP) {
-                INC_NAMEDCNT(a);
-                SEXP p = PRVALUE_PENDING_OK(a);
-                if (p != R_UnboundValue && NAMEDCNT_GT_0(p))
-                    INC_NAMEDCNT(p);
-            }
-            else if (a != R_MissingArg && a != R_MissingUnder)
-               a = mkPROMISE (a, rho);
+            MAKE_PROMISE(a,rho);
             ev = cons_with_tag (a, R_NilValue, TAG(el));
             if (head == R_NilValue)
                 head = ev;
@@ -3037,7 +3067,8 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
             tail = ev;
         }
 	el = CDR(el);
-    }
+
+    } while (el != R_NilValue);
 
     RETURN_SEXP_INSIDE_PROTECT (head);
     END_PROTECT;
