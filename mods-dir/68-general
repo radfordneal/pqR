@@ -6,3 +6,6 @@ Tweaks in arithmetic.c.
 
 Fixes some places where VARIANT_PENDING_OK wasn't being used when
 it should have been (and used to be).
+
+Special handling of 0 or 1 arguments in evalList_v, promiseArgs,
+and promiseArgsTwo.
