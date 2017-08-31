@@ -2299,7 +2299,7 @@ static const char *getLocale(void)
 }
 #endif
 
-SEXP attribute_hidden do_ICUset(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_ICUset(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP x;
     UErrorCode  status = U_ZERO_ERROR;
@@ -2360,7 +2360,7 @@ SEXP attribute_hidden do_ICUset(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-SEXP attribute_hidden do_ICUget(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_ICUget(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     const char *ans = "unknown", *res;
     checkArity(op, args);
@@ -2431,7 +2431,7 @@ static SEXP do_ICUset(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-SEXP attribute_hidden do_ICUget(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_ICUget(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
     return mkString("ICU not in use");
