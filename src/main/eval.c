@@ -712,8 +712,10 @@ static SEXP Rf_builtin_op_no_cntxt (SEXP op, SEXP e, SEXP rho, int variant)
 
     /* See if this may be a fast primitive.  All fast primitives
        should be BUILTIN.  We do a fast call only if there is exactly
-       one argument, with no tag, not missing or a ... argument.  
-       The argument is stored in arg1. */
+       one argument, with no tag, not missing or a ... argument; also
+       must not be an object if the fast primitive dispatches, unless
+       the argument was evaluated with VARIANT_UNCLASS and we got this
+       variant result.  The argument is stored in arg1. */
 
     if (args!=R_NilValue) {
         if (PRIMFUN_FAST(op) 
@@ -738,7 +740,7 @@ static SEXP Rf_builtin_op_no_cntxt (SEXP op, SEXP e, SEXP rho, int variant)
             res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
                      (e, op, arg1, rho, variant);
 
-            UNPROTECT(1);  /* arg1 */
+            UNPROTECT(1); /* arg1 */
             return res;
         }
 
@@ -2780,6 +2782,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
 SEXP attribute_hidden evalList_v(SEXP el, SEXP rho, int variant)
 {
+    int varpend = variant | VARIANT_PENDING_OK;
+
     BEGIN_PROTECT4 (head, tail, ev, h);
 
     head = R_NilValue;
@@ -2797,7 +2801,7 @@ SEXP attribute_hidden evalList_v(SEXP el, SEXP rho, int variant)
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
-                    ev = cons_with_tag (evalv (CAR(h), rho, variant),
+                    ev = cons_with_tag (evalv (CAR(h), rho, varpend),
                                         R_NilValue, TAG(h));
                     if (head==R_NilValue)
                         head = ev;
@@ -2813,7 +2817,9 @@ SEXP attribute_hidden evalList_v(SEXP el, SEXP rho, int variant)
 		dotdotdot_error();
 
 	} else {
-            ev = cons_with_tag(EVALV(CAR(el),rho,variant), R_NilValue, TAG(el));
+            if (CDR(el) == R_NilValue) 
+                varpend = variant;  /* don't defer pointlessly for last one */
+            ev = cons_with_tag(EVALV(CAR(el),rho,varpend), R_NilValue, TAG(el));
             if (head==R_NilValue)
                 head = ev;
             else
@@ -2825,6 +2831,9 @@ SEXP attribute_hidden evalList_v(SEXP el, SEXP rho, int variant)
 
 	el = CDR(el);
     }
+
+    if (! (variant & VARIANT_PENDING_OK))
+        WAIT_UNTIL_ARGUMENTS_COMPUTED(head);
 
     RETURN_SEXP_INSIDE_PROTECT (head);
     END_PROTECT;
@@ -2939,6 +2948,7 @@ SEXP attribute_hidden evalListUnshared(SEXP el, SEXP rho)
     }
 
     WAIT_UNTIL_ARGUMENTS_COMPUTED (head);
+
     RETURN_SEXP_INSIDE_PROTECT (head);
     END_PROTECT;
 

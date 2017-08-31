@@ -2935,8 +2935,8 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 
 attribute_hidden FASTFUNTAB R_FastFunTab_arithmetic[] = {
 /*slow func	fast func,     code or -1   dsptch  variant */
-{ do_math1,	do_fast_math1,	-1,             1,  VARIANT_SCALAR_STACK_OK },
-{ do_trunc,	do_fast_trunc,	-1,		1,  VARIANT_SCALAR_STACK_OK },
-{ do_abs,	do_fast_abs,	-1,		1,  VARIANT_SCALAR_STACK_OK },
+{ do_math1,	do_fast_math1,	-1,             1,  VARIANT_SCALAR_STACK_OK|VARIANT_PENDING_OK },
+{ do_trunc,	do_fast_trunc,	-1,		1,  VARIANT_SCALAR_STACK_OK|VARIANT_PENDING_OK },
+{ do_abs,	do_fast_abs,	-1,		1,  VARIANT_SCALAR_STACK_OK|VARIANT_PENDING_OK },
 { 0,		0,		0,		0,  0 }
 };

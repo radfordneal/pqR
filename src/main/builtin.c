@@ -70,8 +70,8 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
 {
     RCNTXT cntxt;
     SEXP args = CDR(e);
-    SEXP res;
     SEXP arg1;
+    SEXP res;
 
     /* See if this may be a fast primitive.  All fast primitives
        should be BUILTIN.  We do a fast call only if there is exactly
@@ -86,8 +86,8 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
               && (arg1 = CAR(args))!=R_DotsSymbol 
               && arg1!=R_MissingArg && arg1!=R_MissingUnder) {
 
-            PROTECT(arg1 = EVALV (arg1, rho, 
-                                  PRIMFUN_ARG1VAR(op) | VARIANT_PENDING_OK));
+            PROTECT(arg1 = EVALV (arg1, rho, PRIMFUN_ARG1VAR(op)
+              | VARIANT_PENDING_OK /* allow overlap with context creation */ ));
 
             if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
                 if ((PRIMFUN_ARG1VAR (op) & VARIANT_UNCLASS)
@@ -103,7 +103,7 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
     
             beginbuiltincontext (&cntxt, e);
 
-            if (!PRIMFUN_PENDING_OK(op)) {
+            if (! (PRIMFUN_ARG1VAR(op) & VARIANT_PENDING_OK)) {
                 WAIT_UNTIL_COMPUTED(arg1);
             }
 
@@ -114,7 +114,8 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
             endcontext(&cntxt);
             return res;
         }
-        args = evalList_v (args, rho, VARIANT_PENDING_OK);
+
+        args = evalList (args, rho);
     }
 
     PROTECT(args);
@@ -123,10 +124,9 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
        fast op, but if so, args has been set to the evaluated argument list. */
 
   not_fast: 
+
     beginbuiltincontext (&cntxt, e);
-    if (!PRIMFUN_PENDING_OK(op)) {
-        WAIT_UNTIL_ARGUMENTS_COMPUTED(args);
-    }
+
     res = CALL_PRIMFUN(e, op, args, rho, variant);
 
     UNPROTECT(1); /* args */

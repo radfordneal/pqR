@@ -411,17 +411,20 @@ static SEXP do_fast_sum (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
         return ScalarInteger (isum (INTEGER(arg), LENGTH(arg), 0, call));
 
     case INTSXP:  
-        if (LENGTH(arg) == 1 && !HAS_ATTRIB(arg)) break;
+        if (LENGTH(arg) == 1 && !HAS_ATTRIB(arg))
+            break;
         WAIT_UNTIL_COMPUTED(arg);
         return ScalarInteger (isum (INTEGER(arg), LENGTH(arg), 0, call));
 
     case REALSXP:
-        if (LENGTH(arg) == 1 && !HAS_ATTRIB(arg)) break;
+        if (LENGTH(arg) == 1 && !HAS_ATTRIB(arg)) 
+            break;
         WAIT_UNTIL_COMPUTED(arg);
         return ScalarReal (rsum (REAL(arg), LENGTH(arg), 0));
 
     case CPLXSXP:
-        if (LENGTH(arg) == 1 && !HAS_ATTRIB(arg)) break;
+        if (LENGTH(arg) == 1 && !HAS_ATTRIB(arg)) 
+            break;
         WAIT_UNTIL_COMPUTED(arg);
         return ScalarComplex (csum (COMPLEX(arg), LENGTH(arg), 0));
 
@@ -431,6 +434,7 @@ static SEXP do_fast_sum (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 
     if (! (variant & VARIANT_PENDING_OK) )
         WAIT_UNTIL_COMPUTED(arg);
+
     return arg;
 }
 
@@ -1481,7 +1485,7 @@ attribute_hidden FUNTAB R_FunTab_summary[] =
 
 attribute_hidden FASTFUNTAB R_FastFunTab_summary[] = {
 /*slow func	fast func,   code or -1  dsptch variant */
-{ do_summary,	do_fast_sum,	0,	    1,  VARIANT_ANY_ATTR|VARIANT_SUM },
+{ do_summary,	do_fast_sum,	0,	    1,  VARIANT_ANY_ATTR|VARIANT_SUM|VARIANT_PENDING_OK },
 { do_summary,	do_fast_prod,	4,	    1,  VARIANT_ANY_ATTR },
 { 0,		0,		0,	    0,  0 }
 };
