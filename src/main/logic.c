@@ -357,8 +357,8 @@ static SEXP binaryLogic(int code, SEXP s1, SEXP s2)
         }
         else {
             mod_iterate(n1,n2,i1,i2) {
-                uint32_t u1 = LOGICAL(s1)[i];
-                uint32_t u2 = LOGICAL(s2)[i];
+                uint32_t u1 = LOGICAL(s1)[i1];
+                uint32_t u2 = LOGICAL(s2)[i2];
                 LOGICAL(ans)[i] = (u1 & u2) | (u1 & (u2<<31)) | (u2 & (u1<<31));
             }
         }
@@ -372,7 +372,7 @@ static SEXP binaryLogic(int code, SEXP s1, SEXP s2)
         }
         else {
             mod_iterate(n1,n2,i1,i2) {
-                uint32_t u = LOGICAL(s1)[i] | LOGICAL(s2)[i];
+                uint32_t u = LOGICAL(s1)[i1] | LOGICAL(s2)[i2];
                 LOGICAL(ans)[i] = u & ~ (u << 31);
             }
         }
