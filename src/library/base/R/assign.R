@@ -1,5 +1,6 @@
 #  File src/library/base/R/assign.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -22,7 +23,5 @@ assign <-
 ## do_list2env in ../../../main/envir.c
 list2env <- function(x, envir = NULL, parent = parent.frame(),
 		     hash = (length(x) > 100), size = max(29L, length(x)))
-{
-    if (is.null(envir)) envir <- new.env(hash=hash, parent=parent, size=size)
-    .Internal(list2env(x, envir))
-}
+    .Internal (list2env (x, 
+     if (is.null(envir)) new.env(hash=hash,parent=parent,size=size) else envir))
