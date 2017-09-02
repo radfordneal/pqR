@@ -1,6 +1,6 @@
 #  File src/library/base/R/pmax.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2013, 2017 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -21,11 +21,15 @@ pmax.int <- function(..., na.rm = FALSE) .Internal(pmax(na.rm, ...))
 pmax <- function (..., na.rm = FALSE)
 {
     elts <- list(...)
-    if(length(elts) == 0L) stop("no arguments")
-    if(all(vapply(elts, function(x) is.atomic(x) && !is.object(x), NA))) {
+    if (length(elts) == 2 # The most typical case
+      && is.atomic(..1) && !is.object(..1) && is.atomic(..2) && !is.object(..2))
+        mmm <- .Internal(pmax(na.rm, ...))
+    else if (length(elts) == 0L) 
+        stop("no arguments")
+    else if (all(vapply(elts, function(x) is.atomic(x) && !is.object(x), NA)))
         ## NB: NULL passes is.atomic
         mmm <- .Internal(pmax(na.rm, ...))
-    } else {
+    else {
         mmm <- elts[[1L]]
         attr(mmm, "dim") <- NULL  # dim<- would drop names
         has.na <- FALSE
@@ -41,15 +45,16 @@ pmax <- function (..., na.rm = FALSE)
                     warning("an argument will be fractionally recycled")
                 each <- rep(each, length.out = l2)
             }
-            nas <- cbind(is.na(mmm), is.na(each))
-            if(has.na || (has.na <- any(nas))) {
-                mmm[nas[, 1L]] <- each[nas[, 1L]]
-                each[nas[, 2L]] <- mmm[nas[, 2L]]
+            nas.mmm <- is.na(mmm)
+            nas.each <- is.na(each)
+            if(has.na || (has.na <- any(nas.mmm) || any(nas.each))) {
+                mmm[nas.mmm] <- each[nas.mmm]
+                each[nas.each] <- mmm[nas.each]
             }
             change <- mmm < each
             change <- change & !is.na(change)
             mmm[change] <- each[change]
-            if (has.na && !na.rm) mmm[nas[, 1L] | nas[, 2L]] <- NA
+            if (has.na && !na.rm) mmm[nas.mmm | nas.each] <- NA
         }
     }
     if (!is.null(attributes(elts[[1L]])))
@@ -60,10 +65,14 @@ pmax <- function (..., na.rm = FALSE)
 pmin <- function (..., na.rm = FALSE)
 {
     elts <- list(...)
-    if(length(elts) == 0L) stop("no arguments")
-    if(all(vapply(elts, function(x) is.atomic(x) && !is.object(x), NA))) {
+    if (length(elts) == 2 # The most typical case
+      && is.atomic(..1) && !is.object(..1) && is.atomic(..2) && !is.object(..2))
         mmm <- .Internal(pmin(na.rm, ...))
-    } else {
+    else if (length(elts) == 0L) 
+        stop("no arguments")
+    else if (all(vapply(elts, function(x) is.atomic(x) && !is.object(x), NA)))
+        mmm <- .Internal(pmin(na.rm, ...))
+    else {
         mmm <- elts[[1L]]
         attr(mmm, "dim") <- NULL  # dim<- would drop names
         has.na <- FALSE
@@ -79,15 +88,16 @@ pmin <- function (..., na.rm = FALSE)
                     warning("an argument will be fractionally recycled")
                 each <- rep(each, length.out = l2)
             }
-            nas <- cbind(is.na(mmm), is.na(each))
-            if(has.na || (has.na <- any(nas))) {
-                mmm[nas[, 1L]] <- each[nas[, 1L]]
-                each[nas[, 2L]] <- mmm[nas[, 2L]]
+            nas.mmm <- is.na(mmm)
+            nas.each <- is.na(each)
+            if(has.na || (has.na <- any(nas.mmm) || any(nas.each))) {
+                mmm[nas.mmm] <- each[nas.mmm]
+                each[nas.each] <- mmm[nas.each]
             }
             change <- mmm > each
             change <- change & !is.na(change)
             mmm[change] <- each[change]
-            if (has.na && !na.rm) mmm[nas[, 1L] | nas[, 2L]] <- NA
+            if (has.na && !na.rm) mmm[nas.mmm | nas.each] <- NA
         }
     }
     if (!is.null(attributes(elts[[1L]])))
