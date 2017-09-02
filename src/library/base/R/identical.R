@@ -1,5 +1,6 @@
 #  File src/library/base/R/identical.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -19,4 +20,5 @@ identical <- function(x, y, num.eq = TRUE, single.NA = TRUE,
     .Internal(identical(x,y, num.eq, single.NA, attrib.as.set, 
                         ignore.bytecode))
 
-isTRUE <- function(x) identical(TRUE, x)
+isTRUE <- function(x)
+    .Internal(identical(TRUE,x,TRUE,TRUE,TRUE,TRUE))
