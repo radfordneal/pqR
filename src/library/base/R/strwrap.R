@@ -16,7 +16,7 @@
 #  http://www.r-project.org/Licenses/
 
 strtrim <- function(x, width)
-    .Internal (strtrim (if (is.character(x) x else as.character(x), width))
+    .Internal (strtrim (if (is.character(x)) x else as.character(x), width))
 
 strwrap <-
 function(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
