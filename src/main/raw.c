@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2001--2009 The R Core Team
@@ -379,14 +379,14 @@ attribute_hidden FUNTAB R_FunTab_raw[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"charToRaw",	do_charToRaw,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"rawToChar",	do_rawToChar,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"rawShift",	do_rawShift,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"rawToBits",	do_rawToBits,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"intToBits",	do_intToBits,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"packBits",	do_packBits,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"utf8ToInt",	do_utf8ToInt,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"intToUtf8",	do_intToUtf8,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"charToRaw",	do_charToRaw,	1,   1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"rawToChar",	do_rawToChar,	1,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rawShift",	do_rawShift,	1,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rawToBits",	do_rawToBits,	1,   1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"intToBits",	do_intToBits,	1,   1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"packBits",	do_packBits,	1,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"utf8ToInt",	do_utf8ToInt,	1,   1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"intToUtf8",	do_intToUtf8,	1,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
