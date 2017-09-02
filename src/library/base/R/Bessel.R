@@ -1,5 +1,6 @@
 #  File src/library/base/R/Bessel.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -15,13 +16,13 @@
 #  http://www.r-project.org/Licenses/
 
 besselI <- function(x, nu, expon.scaled = FALSE)
-{
+
     ## Oddly, this is passed as a double to fit Math3 semantics
     .Internal(besselI(x,nu, 1 + as.logical(expon.scaled)))
-}
+
 besselK <- function(x, nu, expon.scaled = FALSE)
-{
+
     .Internal(besselK(x,nu, 1 + as.logical(expon.scaled)))
-}
+
 besselJ <- function(x, nu) .Internal(besselJ(x,nu))
 besselY <- function(x, nu) .Internal(besselY(x,nu))
