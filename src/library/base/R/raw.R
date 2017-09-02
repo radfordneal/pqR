@@ -1,5 +1,6 @@
 #  File src/library/base/R/raw.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -27,10 +28,7 @@ rawToBits <- function(x) .Internal(rawToBits(x))
 intToBits <- function(x) .Internal(intToBits(x))
 
 packBits <- function(x, type=c("raw", "integer"))
-{
-    type <- match.arg(type)
-    .Internal(packBits(x, type))
-}
+    .Internal (packBits (x, match.arg(type)))
 
 utf8ToInt <- function(x) .Internal(utf8ToInt(x))
 intToUtf8 <- function(x, multiple=FALSE) .Internal(intToUtf8(x, multiple))
