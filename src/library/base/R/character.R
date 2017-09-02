@@ -96,11 +96,10 @@ make.unique <- function (names, sep = ".") .Internal(make.unique(names, sep))
 chartr <- function(old, new, x)
     .Internal (chartr(old, new, if (is.character(x)) x else as.character(x)))
 
-tolower <- function(x) {
-    if(!is.character(x)) x <- as.character(x)
-    .Internal(tolower(x))
-}
-toupper <- function(x) {
+tolower <- function(x)
+    .Internal (tolower (if (is.character(x)) x else as.character(x)))
+
+toupper <- function(x)
     .Internal (toupper (if (is.character(x)) x else as.character(x)))
 
 casefold <- function(x, upper = FALSE)
