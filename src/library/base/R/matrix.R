@@ -1,6 +1,6 @@
 #  File src/library/base/R/matrix.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2013, 2017 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -16,14 +16,14 @@
 #  http://www.r-project.org/Licenses/
 
 matrix <- function(data=NA, nrow=1, ncol=1, byrow=FALSE, dimnames=NULL)
-{
-    ## avoid copying to strip attributes in simple cases
-    if (is.object(data) || !is.atomic(data)) data <- as.vector(data)
+
     ## NB: the defaults are not really nrow=1, ncol=1: missing values
     ## are treated differently, using length(data).
-    .Internal(matrix(data, nrow, ncol, byrow, dimnames,
-                     missing(nrow), missing(ncol)))
-}
+
+    .Internal (matrix (
+      ## avoid copying to strip attributes in simple cases
+      if (is.object(data) || !is.atomic(data)) as.vector(data) else data,
+      nrow, ncol, byrow, dimnames, missing(nrow), missing(ncol)))
 
 nrow <- function(x) dim(x)[1L]
 ncol <- function(x) dim(x)[2L]
