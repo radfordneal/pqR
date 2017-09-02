@@ -1,5 +1,6 @@
 #  File src/library/base/R/strwrap.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -15,10 +16,7 @@
 #  http://www.r-project.org/Licenses/
 
 strtrim <- function(x, width)
-{
-    if(!is.character(x)) x <- as.character(x)
-    .Internal(strtrim(x, width))
-}
+    .Internal (strtrim (if (is.character(x) x else as.character(x), width))
 
 strwrap <-
 function(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,

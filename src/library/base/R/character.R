@@ -1,5 +1,6 @@
 #  File src/library/base/R/character.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -15,10 +16,8 @@
 #  http://www.r-project.org/Licenses/
 
 substr <- function(x, start, stop)
-{
-    if(!is.character(x)) x <- as.character(x)
-    .Internal(substr(x, as.integer(start), as.integer(stop)))
-}
+    .Internal (substr (if (is.character(x)) x else as.character(x),
+                       as.integer(start), as.integer(stop)))
 
 substring <- function(text, first, last=.Machine$integer.max)
 {
@@ -95,21 +94,17 @@ make.names <- function(names, unique = FALSE, allow_ = TRUE, no.. =
 make.unique <- function (names, sep = ".") .Internal(make.unique(names, sep))
 
 chartr <- function(old, new, x)
-{
-    if(!is.character(x)) x <- as.character(x)
-    .Internal(chartr(old, new, x))
-}
+    .Internal (chartr(old, new, if (is.character(x)) x else as.character(x)))
+
 tolower <- function(x) {
     if(!is.character(x)) x <- as.character(x)
     .Internal(tolower(x))
 }
 toupper <- function(x) {
-    if(!is.character(x)) x <- as.character(x)
-    .Internal(toupper(x))
-}
+    .Internal (toupper (if (is.character(x)) x else as.character(x)))
 
 casefold <- function(x, upper = FALSE)
-    if(upper) toupper(x) else tolower(x)
+    if (upper) toupper(x) else tolower(x)
 
 sQuote <- function(x) {
     before <- after <- "'"
@@ -177,8 +172,5 @@ dQuote <- function(x) {
     paste0(before, x, after)
 }
 
-strtoi <-
-function(x, base = 0L)
-{
+strtoi <- function(x, base = 0L)
     .Internal(strtoi(as.character(x), as.integer(base)))
-}
