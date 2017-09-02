@@ -308,7 +308,7 @@ SEXP attribute_hidden matchArgExact(SEXP tag, SEXP * list)
    and pass a pointer to an array of strings for "formal_names", along with 
    the number of formal names as "arg_count". 
 
-   In applyClosure some other routines, matchArgs is instead called with
+   In applyClosure and some other routines, matchArgs is instead called with
    "formals" being a pairlist having tags that are names of formal arguments.
    In this case, "formal_names" should be NULL, and "arg_count" should be 0.
    
@@ -336,6 +336,41 @@ SEXP attribute_hidden matchArgs (
 {
     SEXP b, last_positional, last_potential_match, actuals_list;
     int arg_i, dots, n_supplied, n_matched;
+
+
+    if (supplied == R_NilValue) {
+
+        /* Handle the case of zero supplied arguments and zero formal arguments
+           specially, for speed. */
+
+        if (formal_names == NULL ? formals == R_NilValue : arg_count == 0)
+            return R_NilValue;
+    }
+    else if (CDR(supplied) == R_NilValue && CAR(supplied) != R_DotsSymbol) {
+
+        /* Handle the case of a single actual argument (not ...) and a single 
+           formal argument (not ...) specially, for speed. */
+ 
+        SEXP a = CAR(supplied);
+        int missing = a == R_MissingArg || a == R_MissingUnder;
+        SEXP r;
+
+        if (formal_names != NULL) {
+            if (arg_count == 1 && strcmp(formal_names[0],"...") != 0) {
+                r = CONS (a, R_NilValue);
+                SET_MISSING (r, missing);
+                return r;
+            }
+        }
+        else {
+            if (formals != R_NilValue && CDR(formals) == R_NilValue
+                                      && TAG(formals) != R_DotsSymbol) {
+                r = cons_with_tag (a, R_NilValue, TAG(formals));
+                SET_MISSING (r, missing);
+                return r;
+            }
+        }
+    }
 
 #if 0  /* Enable for debugging output */
     if (installed_already("DEBUG.MATCHARGS") != R_NoObject) {
