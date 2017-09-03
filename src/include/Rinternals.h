@@ -957,7 +957,7 @@ SEXP (STRING_ELT)(SEXP x, int i);
 SEXP (VECTOR_ELT)(SEXP x, int i);
 void SET_STRING_ELT(SEXP x, int i, SEXP v);
 void copy_string_elements(SEXP x, int i, SEXP v, int j, int n);
-void rep_string_elements(SEXP x, int i, SEXP v, int n);
+void rep_string_elements(SEXP x, int i, int s, SEXP v, int n);
 SEXP SET_VECTOR_ELT(SEXP x, int i, SEXP v);
 void copy_vector_elements(SEXP x, int i, SEXP v, int j, int n);
 SEXP *(STRING_PTR)(SEXP x);
@@ -2363,7 +2363,10 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define SELF_EVAL_TYPES_BIT            0x8000  /* sign bit */
 
 
-extern int16_t R_type_flags[32]
+#ifndef __MAIN__
+extern
+#endif
+int16_t R_type_flags[32]
 #ifdef __MAIN__
 = {
    /* NILSXP */      SELF_EVAL_TYPES_BIT + NIL_TYPE_BITS,
@@ -2407,6 +2410,50 @@ extern int16_t R_type_flags[32]
 #else
 #define SELF_EVAL(t) (R_type_flags[t] < 0)
 #endif
+
+/* Sizes of vector type elements. */
+
+#ifndef __MAIN__
+extern
+#endif
+char R_vector_element_size[32]
+#ifdef __MAIN__
+= {
+   /* NILSXP */      0,
+   /* SYMSXP */      0,
+   /* LISTSXP */     0,
+   /* CLOSXP */      0,
+   /* ENVSXP */      0,
+   /* PROMSXP */     0,
+   /* LANGSXP */     0,
+   /* SPECIALSXP */  0,
+   /* BUILTINSXP */  0,
+   /* CHARSXP */     sizeof(char),
+   /* LGLSXP */      sizeof(int),
+   /* unused */      0,  
+   /* unused */      0,  
+   /* INTSXP */      sizeof(int),
+   /* REALSXP */     sizeof(double),
+   /* CPLXSXP */     sizeof(Rcomplex),
+   /* STRSXP */      sizeof(SEXP),
+   /* DOTSXP */      0,
+   /* unused */      0,  
+   /* VECSXP */      sizeof(SEXP),
+   /* EXPRSXP */     sizeof(SEXP),
+   /* BCODESXP */    0,
+   /* EXTPTRSXP */   0,
+   /* WEAKREFSXP */  0,
+   /* RAWSXP */      sizeof(Rbyte),
+   /* S4SXP */       0,
+   /* unused */      0,  
+   /* unused */      0,  
+   /* unused */      0,  
+   /* unused */      0,  
+   /* unused */      0,  
+   /* unused */      0  
+}
+#endif
+;
 
 
 #if defined(CALLED_FROM_DEFN_H) && !defined(__MAIN__) && (defined(COMPILING_R) || ( __GNUC__ && !defined(__INTEL_COMPILER) ))

@@ -1,0 +1,3 @@
+Speed up 'matrix' and 'array'.  Defines better copy functions.
+
+Fixes a bug in 'matrix'.

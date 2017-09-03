@@ -328,6 +328,190 @@ void copy_elements (SEXP x, int i, int s, SEXP v, int j, int t, int n)
     }
 }
 
+/* Copy n elements from vector v (starting at 0) to vector x (starting at i).
+   The vector v may be shorter than n, in which case its elements are recycled.
+   The vectors v and x must be of the same type, which may be numeric or 
+   non-numeric.  Elements of a VECSXP or EXPRSXP are duplicated.  If necessary,
+   x and v are protected. */
+
+void copy_elements_recycled (SEXP x, int i, int s, SEXP v, int n)
+{
+    if (n == 0)
+        return;
+
+    int vl = LENGTH(v);
+    if (vl == 0) abort();
+
+    if (vl >= n)
+        copy_elements (x, i, s, v, 0, 1, n);
+
+    else if (vl == 1) {
+        switch (TYPEOF(x)) {
+        case RAWSXP: {
+            Rbyte e = RAW(v)[0];
+            do { RAW(x)[i] = e; i += s; } while (--n>0);
+            break;
+        }
+        case LGLSXP: {
+            int e = LOGICAL(v)[0];
+            do { LOGICAL(x)[i] = e; i += s; } while (--n>0);
+            break;
+        }
+        case INTSXP: {
+            int e = INTEGER(v)[0];
+            do { INTEGER(x)[i] = e; i += s; } while (--n>0);
+            break;
+        }
+        case REALSXP: {
+            double e = REAL(v)[0];
+            do { REAL(x)[i] = e; i += s; } while (--n>0);
+            break;
+        }
+        case CPLXSXP: {
+            Rcomplex e = COMPLEX(v)[0];
+            do { COMPLEX(x)[i] = e; i += s; } while (--n>0);
+            break;
+        }
+        case STRSXP: {
+            rep_string_elements (x, i, s, v, n);
+            break;
+        }
+        case VECSXP:
+        case EXPRSXP: {
+            PROTECT(x); PROTECT(v);
+            SEXP e = VECTOR_ELT(v,0);
+            do { SET_VECTOR_ELT (x, i, duplicate(e)); i += s; } while (--n>0);
+            UNPROTECT(2);
+            break;
+        }
+        default:
+            UNIMPLEMENTED_TYPE("copy_elements_recycled", x);
+        }
+    }
+
+    else if (s == 1) {
+        copy_elements (x, i, 1, v, 0, 1, vl);
+        i += vl;
+        n -= vl;
+        switch (TYPEOF(x)) {
+        case RAWSXP: {
+            do {
+                RAW(x)[i] = RAW(v)[i-vl];
+                i += 1;
+            } while (--n>0);
+            break;
+        }
+        case LGLSXP: {
+            do {
+                LOGICAL(x)[i] = LOGICAL(v)[i-vl];
+                i += 1;
+            } while (--n>0);
+            break;
+        }
+        case INTSXP: {
+            do {
+                INTEGER(x)[i] = INTEGER(v)[i-vl];
+                i += 1;
+            } while (--n>0);
+            break;
+        }
+        case REALSXP: {
+            do {
+                REAL(x)[i] = REAL(v)[i-vl];
+                i += 1;
+            } while (--n>0);
+            break;
+        }
+        case CPLXSXP: {
+            do {
+                COMPLEX(x)[i] = COMPLEX(v)[i-vl];
+                i += 1;
+            } while (--n>0);
+            break;
+        }
+        case STRSXP: {
+            do { 
+                SET_STRING_ELT (x, i, STRING_ELT(v,i-vl));
+                i += 1;
+            } while (--n>0);
+            break;
+        }
+        case VECSXP:
+        case EXPRSXP: {
+            PROTECT(x); PROTECT(v);
+            do { 
+                SET_VECTOR_ELT (x, i, duplicate(VECTOR_ELT(v,i-vl)));
+                i += 1;
+            } while (--n>0);
+            UNPROTECT(2);
+            break;
+        }
+        default:
+            UNIMPLEMENTED_TYPE("copy_elements", x);
+        }
+    }
+
+    else {  /* s > 1 */
+        int j = 0;
+        switch (TYPEOF(x)) {
+        case RAWSXP: {
+            do {
+                RAW(x)[i] = RAW(v)[j];
+                i += s; if (++j == vl) j = 0; 
+            } while (--n>0);
+            break;
+        }
+        case LGLSXP: {
+            do {
+                LOGICAL(x)[i] = LOGICAL(v)[j];
+                i += s; if (++j == vl) j = 0; 
+            } while (--n>0);
+            break;
+        }
+        case INTSXP: {
+            do {
+                INTEGER(x)[i] = INTEGER(v)[j];
+                i += s; if (++j == vl) j = 0; 
+            } while (--n>0);
+            break;
+        }
+        case REALSXP: {
+            do {
+                REAL(x)[i] = REAL(v)[j];
+                i += s; if (++j == vl) j = 0; 
+            } while (--n>0);
+            break;
+        }
+        case CPLXSXP: {
+            do {
+                COMPLEX(x)[i] = COMPLEX(v)[j];
+                i += s; if (++j == vl) j = 0; 
+            } while (--n>0);
+            break;
+        }
+        case STRSXP: {
+            do { 
+                SET_STRING_ELT (x, i, STRING_ELT(v,j));
+                i += s; if (++j == vl) j = 0; 
+            } while (--n>0);
+            break;
+        }
+        case VECSXP:
+        case EXPRSXP: {
+            PROTECT(x); PROTECT(v);
+            do { 
+                SET_VECTOR_ELT (x, i, duplicate(VECTOR_ELT(v,j)));
+                i += s; if (++j == vl) j = 0; 
+            } while (--n>0);
+            UNPROTECT(2);
+            break;
+        }
+        default:
+            UNIMPLEMENTED_TYPE("copy_elements", x);
+        }
+    }
+}
+
 void copyVector(SEXP s, SEXP t)
 {
     int i, ns, nt;
@@ -415,15 +599,12 @@ void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
 
     nr = nrows(s);
     nc = ncols(s);
-    nt = LENGTH(t);
 
-    if (nt == 1 && TYPEOF(s) != VECSXP)
-        copy_elements (s, 0, 1, t, 0, 0, nr*nc);
-
-    else if (!byrow)
-        copyVector(s, t);
+    if (!byrow)
+        copy_elements_recycled (s, 0, 1, t, nr*nc);
 
     else { /* byrow */
+        int nt = LENGTH(t);
         int len_1 = nr*nc - 1;
         int nomod = nt > len_1;
         switch (TYPEOF(s)) {

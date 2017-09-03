@@ -223,12 +223,20 @@
         For both lines above, the value printed was 9 rather than 3.
   \item Previously, \code{length(plist)<-n} did not work when \code{plist}
         was a pairlist, but it does now.  This bug also exists in R Core
-        versions to at least R-3.4.0.
+        versions to at least R-3.4.1.
+  \item Fixed a bug illustrated by the following:
+\preformatted{    L <- list(c(3,4))
+    M <- matrix(L,2,2)
+    M[[1,1]][1] <- 9
+    L
+}
+        In the value printed for \code{L}, \code{L[[1]][1]} had changed to 9.
+        This bug also exists in R-3.4.1.
   \item Fixed a bug illustrated by the following:
 \preformatted{    a <- as.integer(NA); e <- new.env(size=a); print(a)
 }
         The value printed was previously 0 rather than NA.
-        This bug also exists in R Core versions to at least R-3.4.0.
+        This bug also exists in R Core versions to at least R-3.4.1.
   }}
 }
 
