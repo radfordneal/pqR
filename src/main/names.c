@@ -849,8 +849,9 @@ SEXP attribute_hidden do_internal (SEXP call, SEXP op, SEXP args, SEXP env,
             args = R_GlobalContext->promargs;
             while (args != R_NilValue) {
                 SEXP a = CAR(args);
-                if (/* NAMEDCNT_EQ_0(a) && */ /* avoid if recycled promise? */
-                      PRVALUE_PENDING_OK(a) != R_UnboundValue) {
+                if (TYPEOF(a) == PROMSXP &&
+                    /* NAMEDCNT_EQ_0(a) && */ /* avoid if recycled promise? */
+                       PRVALUE_PENDING_OK(a) != R_UnboundValue) {
                     DEC_NAMEDCNT(PRVALUE_PENDING_OK(a));
                     /* SET_PRVALUE(a,R_NilValue); */
                        /* possible precaution - only if avoid when recycled */
