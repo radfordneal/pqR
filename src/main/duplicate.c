@@ -248,8 +248,7 @@ void set_elements_to_NA_or_NULL (SEXP x, int i, int n)
     case STRSXP:
         do SET_STRING_ELT (x, i++, NA_STRING); while (i<ln);
         break;
-    case VECSXP:
-    case EXPRSXP:
+    case VECSXP: case EXPRSXP:
         do SET_VECTOR_ELT (x, i++, R_NilValue); while (i<ln);
         break;
     default:
@@ -313,8 +312,7 @@ void copy_elements (SEXP x, int i, int s, SEXP v, int j, int t, int n)
                 i += s; j += t; 
             } while (--n>0);
             break;
-        case VECSXP:
-        case EXPRSXP:
+        case VECSXP: case EXPRSXP:
             PROTECT(x); PROTECT(v);
             do { 
                 SET_VECTOR_ELT (x, i, duplicate(VECTOR_ELT(v,j)));
@@ -376,8 +374,7 @@ void copy_elements_recycled (SEXP x, int i, int s, SEXP v, int n)
             rep_string_elements (x, i, s, v, n);
             break;
         }
-        case VECSXP:
-        case EXPRSXP: {
+        case VECSXP: case EXPRSXP: {
             PROTECT(x); PROTECT(v);
             SEXP e = VECTOR_ELT(v,0);
             do { SET_VECTOR_ELT (x, i, duplicate(e)); i += s; } while (--n>0);
@@ -396,51 +393,47 @@ void copy_elements_recycled (SEXP x, int i, int s, SEXP v, int n)
         switch (TYPEOF(x)) {
         case RAWSXP: {
             do {
-                RAW(x)[i] = RAW(v)[i-vl];
+                RAW(x)[i] = RAW(x)[i-vl];
                 i += 1;
             } while (--n>0);
             break;
         }
         case LGLSXP: {
             do {
-                LOGICAL(x)[i] = LOGICAL(v)[i-vl];
+                LOGICAL(x)[i] = LOGICAL(x)[i-vl];
                 i += 1;
             } while (--n>0);
             break;
         }
         case INTSXP: {
             do {
-                INTEGER(x)[i] = INTEGER(v)[i-vl];
+                INTEGER(x)[i] = INTEGER(x)[i-vl];
                 i += 1;
             } while (--n>0);
             break;
         }
         case REALSXP: {
             do {
-                REAL(x)[i] = REAL(v)[i-vl];
+                REAL(x)[i] = REAL(x)[i-vl];
                 i += 1;
             } while (--n>0);
             break;
         }
         case CPLXSXP: {
             do {
-                COMPLEX(x)[i] = COMPLEX(v)[i-vl];
+                COMPLEX(x)[i] = COMPLEX(x)[i-vl];
                 i += 1;
             } while (--n>0);
             break;
         }
         case STRSXP: {
-            do { 
-                SET_STRING_ELT (x, i, STRING_ELT(v,i-vl));
-                i += 1;
-            } while (--n>0);
+            copy_string_elements (x, i, x, i-vl, n); /* done sequentially */
             break;
         }
-        case VECSXP:
-        case EXPRSXP: {
+        case VECSXP: case EXPRSXP: {
             PROTECT(x); PROTECT(v);
             do { 
-                SET_VECTOR_ELT (x, i, duplicate(VECTOR_ELT(v,i-vl)));
+                SET_VECTOR_ELT (x, i, duplicate(VECTOR_ELT(x,i-vl)));
                 i += 1;
             } while (--n>0);
             UNPROTECT(2);
@@ -496,8 +489,7 @@ void copy_elements_recycled (SEXP x, int i, int s, SEXP v, int n)
             } while (--n>0);
             break;
         }
-        case VECSXP:
-        case EXPRSXP: {
+        case VECSXP: case EXPRSXP: {
             PROTECT(x); PROTECT(v);
             do { 
                 SET_VECTOR_ELT (x, i, duplicate(VECTOR_ELT(v,j)));
@@ -525,13 +517,9 @@ void copyVector(SEXP s, SEXP t)
     }
 
     switch (TYPEOF(s)) {
-    case STRSXP:
+    case RAWSXP:
 	for (i = 0; i < ns; i++)
-	    SET_STRING_ELT(s, i, STRING_ELT(t, i % nt));
-	break;
-    case EXPRSXP:
-	for (i = 0; i < ns; i++)
-	    SET_VECTOR_ELT(s, i, VECTOR_ELT(t, i % nt));
+	    RAW(s)[i] = RAW(t)[i % nt];
 	break;
     case LGLSXP:
 	for (i = 0; i < ns; i++)
@@ -549,13 +537,13 @@ void copyVector(SEXP s, SEXP t)
 	for (i = 0; i < ns; i++)
 	    COMPLEX(s)[i] = COMPLEX(t)[i % nt];
 	break;
-    case VECSXP:
+    case STRSXP:
+	for (i = 0; i < ns; i++)
+	    SET_STRING_ELT(s, i, STRING_ELT(t, i % nt));
+	break;
+    case VECSXP: case EXPRSXP:
 	for (i = 0; i < ns; i++)
 	    SET_VECTOR_ELT(s, i, VECTOR_ELT(t, i % nt));
-	break;
-    case RAWSXP:
-	for (i = 0; i < ns; i++)
-	    RAW(s)[i] = RAW(t)[i % nt];
 	break;
     }
 }
@@ -595,18 +583,95 @@ void attribute_hidden copyListMatrix(SEXP s, SEXP t, Rboolean byrow)
 
 void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
 {
-    int i, j, nr, nc, nt;
+    SEXP dims = getDimAttrib(s);
+    int len = LENGTH(s);
+    int nt = LENGTH(t);
+    int nr, nc;
 
-    nr = nrows(s);
-    nc = ncols(s);
+    if (dims == R_NilValue || LENGTH(dims) < 2) {
+        nr = len;
+        nc = 1;
+    }
+    else {
+        nr = INTEGER(dims)[0];
+        nc = INTEGER(dims)[1];
+    }
 
-    if (!byrow)
-        copy_elements_recycled (s, 0, 1, t, nr*nc);
+    if (!byrow || nr == 1 || nt == 1) {  /* byrow=TRUE or byrow irrelevant */
+        copy_elements_recycled (s, 0, 1, t, len);
+    }
+    else if (nt == len) {  /* same as a transpose operation */
+        copy_transposed (s, t, nc, nr);  /* NOT nr, nc ! */
+    }
+    else if (nt <= nc) {  /* each column has repetitions of a single element */
+        int i, j, k;
+        i = j = k = 0;
+        switch (TYPEOF(s)) {
+        case RAWSXP:
+            while (j < len) {
+                Rbyte e = RAW(t)[k];
+                i = j; j += nr;
+                while (i < j) RAW(s)[i++] = e;
+                k += 1; if (k >= nt) k = 0;
+            }
+            break;
+        case LGLSXP:
+            while (j < len) {
+                int e = LOGICAL(t)[k];
+                i = j; j += nr;
+                while (i < j) LOGICAL(s)[i++] = e;
+                k += 1; if (k >= nt) k = 0;
+            }
+            break;
+        case INTSXP:
+            while (j < len) {
+                int e = INTEGER(t)[k];
+                i = j; j += nr;
+                while (i < j) INTEGER(s)[i++] = e;
+                k += 1; if (k >= nt) k = 0;
+            }
+            break;
+        case REALSXP:
+            while (j < len) {
+                double e = REAL(t)[k];
+                i = j; j += nr;
+                while (i < j) REAL(s)[i++] = e;
+                k += 1; if (k >= nt) k = 0;
+            }
+            break;
+        case CPLXSXP:
+            while (j < len) {
+                Rcomplex e = COMPLEX(t)[k];
+                i = j; j += nr;
+                while (i < j) COMPLEX(s)[i++] = e;
+                k += 1; if (k >= nt) k = 0;
+            }
+            break;
+        case STRSXP:
+            while (j < len) {
+                SEXP e = STRING_ELT(t,k);
+                i = j; j += nr;
+                while (i < j) SET_STRING_ELT(s,i++,e);
+                k += 1; if (k >= nt) k = 0;
+            }
+            break;
+        case VECSXP: case EXPRSXP:
+            while (j < len) {
+                SEXP e = VECTOR_ELT(t,k);
+                i = j; j += nr;
+                while (i < j) SET_VECTOR_ELT(s,i++,e);
+                k += 1; if (k >= nt) k = 0;
+            }
+            break;
+        default:
+            UNIMPLEMENTED_TYPE("copyMatrix", s);
+        }
+    }
 
-    else { /* byrow */
-        int nt = LENGTH(t);
-        int len_1 = nr*nc - 1;
+    else {  /* general case for byrow=TRUE */
+        int len_1 = len - 1;
         int nomod = nt > len_1;
+        int i, j;
         switch (TYPEOF(s)) {
         case RAWSXP:
             for (i = 0, j = 0; i <= len_1; i++, j += nc) {
@@ -644,7 +709,7 @@ void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
                 SET_STRING_ELT (s, i, STRING_ELT (t, nomod ? j : j % nt));
             }
             break;
-        case VECSXP:
+        case VECSXP: case EXPRSXP:
             for (i = 0, j = 0; i <= len_1; i++, j += nc) {
                 if (j > len_1) j -= len_1;
                 SET_VECTOR_ELT (s, i, VECTOR_ELT (t, nomod ? j : j % nt));

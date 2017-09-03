@@ -1190,195 +1190,139 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     return ans;
 }
 
+void copy_transposed (SEXP r, SEXP a, int nrow, int ncol)
+{
+    /* Access successive pairs from two rows, and store in successive
+       positions in two columns (except perhaps for the first row &
+       column).  This improves memory access performance.
+
+       Keep in mind:  nrow & ncol are the number of rows and columns in
+                      the input (a) - this is swapped for the output! */
+
+    R_len_t len = LENGTH(a);
+    R_len_t l_2 = len-2;
+    int i, j;
+
+    switch (TYPEOF(a)) {
+
+    case RAWSXP:
+        i = 0;
+        if (nrow & 1) {
+            for (j = 0; i < ncol; j += nrow, i++) 
+                RAW(r)[i] = RAW(a)[j];
+        }
+        j = nrow & 1;
+        while (i < len) {
+            RAW(r)[i] = RAW(a)[j]; 
+            RAW(r)[i+ncol] = RAW(a)[j+1];
+            i += 1; j += nrow;
+            if (j >= len) { 
+                i += ncol; 
+                j -= l_2; 
+            }
+        }
+        break;
+
+    case LGLSXP:
+    case INTSXP:
+        i = 0;
+        if (nrow & 1) {
+            for (j = 0; i < ncol; j += nrow, i++) 
+                INTEGER(r)[i] = INTEGER(a)[j];
+        }
+        j = nrow & 1;
+        while (i < len) {
+            INTEGER(r)[i] = INTEGER(a)[j]; 
+            INTEGER(r)[i+ncol] = INTEGER(a)[j+1];
+            i += 1; j += nrow;
+            if (j >= len) { 
+                i += ncol; 
+                j -= l_2; 
+            }
+        }
+        break;
+
+    case REALSXP:
+        i = 0;
+        if (nrow & 1) {
+            for (j = 0; i < ncol; j += nrow, i++) 
+                REAL(r)[i] = REAL(a)[j];
+        }
+        j = nrow & 1;
+        while (i < len) {
+            REAL(r)[i] = REAL(a)[j]; 
+            REAL(r)[i+ncol] = REAL(a)[j+1];
+            i += 1; j += nrow;
+            if (j >= len) { 
+                i += ncol; 
+                j -= l_2; 
+            }
+        }
+        break;
+
+    case CPLXSXP:
+        i = 0;
+        if (nrow & 1) {
+            for (j = 0; i < ncol; j += nrow, i++) 
+                COMPLEX(r)[i] = COMPLEX(a)[j];
+        }
+        j = nrow & 1;
+        while (i < len) {
+            COMPLEX(r)[i] = COMPLEX(a)[j]; 
+            COMPLEX(r)[i+ncol] = COMPLEX(a)[j+1];
+            i += 1; j += nrow;
+            if (j >= len) { 
+                i += ncol; 
+                j -= l_2; 
+            }
+        }
+        break;
+
+    case STRSXP:
+        i = 0;
+        if (nrow & 1) {
+            for (j = 0; i < ncol; j += nrow, i++) 
+                SET_STRING_ELT (r, i, STRING_ELT(a,j));
+        }
+        j = nrow & 1;
+        while (i < len) {
+            SET_STRING_ELT (r, i, STRING_ELT(a,j));
+            SET_STRING_ELT (r, i+ncol, STRING_ELT(a,j+1));
+            i += 1; j += nrow;
+            if (j >= len) { 
+                i += ncol; 
+                j -= l_2; 
+            }
+        }
+        break;
+
+    case EXPRSXP:
+    case VECSXP:
+        i = 0;
+        if (nrow & 1) {
+            for (j = 0; i < ncol; j += nrow, i++) 
+                SET_VECTOR_ELEMENT_FROM_VECTOR(r, i, a, j);
+        }
+        j = nrow & 1;
+        while (i < len) {
+            SET_VECTOR_ELEMENT_FROM_VECTOR(r, i, a, j);
+            SET_VECTOR_ELEMENT_FROM_VECTOR(r, i+ncol, a, j+1);
+            i += 1; j += nrow;
+            if (j >= len) { 
+                i += ncol; 
+                j -= l_2; 
+            }
+        }
+        break;
+    }
+}
 
 void task_transpose (helpers_op_t op, SEXP r, SEXP a, SEXP ignored)
 {
     int nrow = EXTRACT_LENGTH1(op);
     int ncol = EXTRACT_LENGTH2(op);
-    R_len_t len = LENGTH(a);
-    R_len_t l_1 = len-1;
-    R_len_t l_2 = len-2;
-    unsigned i, j, k;
 
-    if (helpers_output_perhaps_pipelined()) {
-
-        HELPERS_SETUP_OUT (9);
-
-        switch (TYPEOF(a)) {
-
-        /* For LGL, INT, and REAL, access successive pairs from two rows, and 
-           store in successive positions in two columns (except perhaps for
-           the first row & column).  This improves memory access performance.
-
-           Keep in mind:  nrow & ncol are the number of rows and columns in
-                          the input - this is swapped for the output! */
-
-        case LGLSXP:
-        case INTSXP:
-            k = 0;
-            i = 0;
-            if (nrow & 1) {
-                for (j = 0; i < ncol; j += nrow, i++) 
-                    INTEGER(r)[i] = INTEGER(a)[j];
-                HELPERS_BLOCK_OUT(k,ncol);
-            }
-            j = nrow & 1;
-            while (i < len) {
-                INTEGER(r)[i] = INTEGER(a)[j]; 
-                INTEGER(r)[i+ncol] = INTEGER(a)[j+1];
-                i += 1; j += nrow;
-                if (j >= len) { 
-                    i += ncol; 
-                    j -= l_2; 
-                    HELPERS_BLOCK_OUT(k,2*ncol);
-                }
-            }
-            break;
-
-        case REALSXP:
-            k = 0;
-            i = 0;
-            if (nrow & 1) {
-                for (j = 0; i < ncol; j += nrow, i++) 
-                    REAL(r)[i] = REAL(a)[j];
-                HELPERS_BLOCK_OUT(k,ncol);
-            }
-            j = nrow & 1;
-            while (i < len) {
-                REAL(r)[i] = REAL(a)[j]; 
-                REAL(r)[i+ncol] = REAL(a)[j+1];
-                i += 1; j += nrow;
-                if (j >= len) { 
-                    i += ncol; 
-                    j -= l_2; 
-                    HELPERS_BLOCK_OUT(k,2*ncol);
-                }
-            }
-            break;
-
-        /* For less-used types below, just access by row, store by column. */
-
-        case CPLXSXP:
-            for (i = 0, j = 0; i < len; j += nrow) {
-                if (j > l_1) j -= l_1;
-                COMPLEX(r)[i] = COMPLEX(a)[j];
-                HELPERS_NEXT_OUT(i);
-            }
-            break;
-
-        case RAWSXP:
-            for (i = 0, j = 0; i < len; j += nrow) {
-                if (j > l_1) j -= l_1;
-                RAW(r)[i] = RAW(a)[j];
-                HELPERS_NEXT_OUT(i);
-            }
-            break;
-
-        /* These shouldn't happen here, but just in case... */
-
-        case STRSXP:
-            for (i = 0, j = 0; i < len; j += nrow) {
-                if (j > l_1) j -= l_1;
-                SET_STRING_ELT(r, i, STRING_ELT(a,j));
-                i += 1;
-            }
-            break;
-
-        case EXPRSXP:
-        case VECSXP:
-            for (i = 0, j = 0; i < len; j += nrow) {
-                if (j > l_1) j -= l_1;
-                SET_VECTOR_ELT(r, i, VECTOR_ELT(a,j));
-                i += 1;
-            }
-            break;
-        }
-    }
-
-    else { /* not pipelined */
-
-        switch (TYPEOF(a)) {
-
-        /* For LGL, INT, and REAL, access successive pairs from two rows, and 
-           store in successive positions in two columns (except perhaps for
-           the first row & column).  This improves memory access performance.
-
-           Keep in mind:  nrow & ncol are the number of rows and columns in
-                          the input - this is swapped for the output! */
-
-        case LGLSXP:
-        case INTSXP:
-            i = 0;
-            if (nrow & 1) {
-                for (j = 0; i < ncol; j += nrow, i++) 
-                    INTEGER(r)[i] = INTEGER(a)[j];
-            }
-            j = nrow & 1;
-            while (i < len) {
-                INTEGER(r)[i] = INTEGER(a)[j]; 
-                INTEGER(r)[i+ncol] = INTEGER(a)[j+1];
-                i += 1; j += nrow;
-                if (j >= len) { 
-                    i += ncol; 
-                    j -= l_2; 
-                }
-            }
-            break;
-
-        case REALSXP:
-            i = 0;
-            if (nrow & 1) {
-                for (j = 0; i < ncol; j += nrow, i++) 
-                    REAL(r)[i] = REAL(a)[j];
-            }
-            j = nrow & 1;
-            while (i < len) {
-                REAL(r)[i] = REAL(a)[j]; 
-                REAL(r)[i+ncol] = REAL(a)[j+1];
-                i += 1; j += nrow;
-                if (j >= len) { 
-                    i += ncol; 
-                    j -= l_2; 
-                }
-            }
-            break;
-
-        /* For less-used types below, just access by row, store by column. */
-
-        case CPLXSXP:
-            for (i = 0, j = 0; i < len; j += nrow) {
-                if (j > l_1) j -= l_1;
-                COMPLEX(r)[i] = COMPLEX(a)[j];
-                i += 1;
-            }
-            break;
-
-        case RAWSXP:
-            for (i = 0, j = 0; i < len; j += nrow) {
-                if (j > l_1) j -= l_1;
-                RAW(r)[i] = RAW(a)[j];
-                i += 1;
-            }
-            break;
-
-        case STRSXP:
-            for (i = 0, j = 0; i < len; j += nrow) {
-                if (j > l_1) j -= l_1;
-                SET_STRING_ELT(r, i, STRING_ELT(a,j));
-                i += 1;
-            }
-            break;
-
-        case EXPRSXP:
-        case VECSXP:
-            for (i = 0, j = 0; i < len; j += nrow) {
-                if (j > l_1) j -= l_1;
-                SET_VECTOR_ELT(r, i, VECTOR_ELT(a,j));
-                i += 1;
-            }
-            break;
-        }
-    }
+    copy_transposed (r, a, nrow, ncol);
 }
 
 
@@ -1420,7 +1364,7 @@ static SEXP do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
        garbage collector could read a garbage pointer if written in a helper. */
 
     DO_NOW_OR_LATER1 (variant, LENGTH(a) >= T_transpose,
-        isVectorNonpointer(a) ? HELPERS_PIPE_OUT : HELPERS_MASTER_ONLY, 
+        isVectorNonpointer(a) ? 0 : HELPERS_MASTER_ONLY, 
         task_transpose, COMBINE_LENGTHS(nrow,ncol), r, a);
 
     rnames = R_NilValue;

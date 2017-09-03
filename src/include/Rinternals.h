@@ -1710,6 +1710,7 @@ void Rf_copyMostAttrib(SEXP, SEXP);
 void Rf_copyVector(SEXP, SEXP);
 void Rf_copy_elements(SEXP, int, int, SEXP, int, int, int);
 int Rf_copy_elements_coerced(SEXP, int, int, SEXP, int, int, int);
+void Rf_copy_transposed(SEXP, SEXP, int, int);
 int Rf_countContexts(int, int);
 SEXP Rf_CreateTag(SEXP);
 void Rf_defineVar(SEXP, SEXP, SEXP);
@@ -2086,6 +2087,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define copyVector		Rf_copyVector
 #define copy_elements		Rf_copy_elements
 #define copy_elements_coerced	Rf_copy_elements_coerced
+#define copy_transposed		Rf_copy_transposed
 #define countContexts		Rf_countContexts
 #define CreateTag		Rf_CreateTag
 #define defineVar		Rf_defineVar

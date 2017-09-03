@@ -10,17 +10,17 @@
 
   \subsection{INTRODUCTION}{
   \itemize{ 
-  \item This release has several signficicant performance improvements.
+  \item This release has quite a few signficicant performance improvements.
         It also has some feature changes and bug fixes, including some
         features from later R Core versions.
 
-        With the performance improvements in this release, it is
+  \item With the performance improvements in this release, it is
         generally no longer desirable to use the byte code compiler.
         Defaults during configuration and use have therefore been
         changed so that the bytecode compiler, and byte-compiled code,
         will not be used unless very deliberately enabled.
 
-        Platforms on which pqR is used must now correctly implement
+  \item Platforms on which pqR is used must now correctly implement
         64-bit IEEE floating-point arithmetic.  This is a preliminary to future
         changes aimed at improving reproducibility of numerical results.
   }}
@@ -99,6 +99,7 @@
         Computations such as \code{sum(vec>0)} are now done with a
         merged procedure that avoids creating \code{vec>0} as an intermediate
         value.
+  \item Creation of matrices with \code{matrix} is now faster.
   \item The \code{which.min}, and \code{which.max} functions have been
         sped up, especially for logical and integer arguments (partially
         using code from R-3.2.3, with improvements).

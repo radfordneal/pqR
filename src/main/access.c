@@ -373,20 +373,20 @@ void copy_string_elements(SEXP x, int i, SEXP v, int j, int n)
     SEXP e;
     int k;
 
-    if(TYPEOF(x) != STRSXP)
+    if (TYPEOF(x) != STRSXP || TYPEOF(v) != STRSXP)
 	error("%s() can only be applied to a '%s', not a '%s'",
          "copy_string_elements", "character vector", type2char(TYPEOF(x)));
 
     if (sggc_youngest_generation(CPTR_FROM_SEXP(x)) || x == v) {
         /* x can't be older than anything, or just copying within x */
-        for (k = 0; k<n; k++) {
+        for (k = 0; k < n; k++) {
             e = STRING_ELT(v,j+k);
             STRING_ELT(x,i+k) = e;
         }
     }
     else {  
         /* need to check each time if x is older */
-        for (k = 0; k<n; k++) {
+        for (k = 0; k < n; k++) {
             e = STRING_ELT(v,j+k);
             CHECK_OLD_TO_NEW(x, e);
             STRING_ELT(x,i+k) = e;
