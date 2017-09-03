@@ -823,7 +823,8 @@ SEXP attribute_hidden do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     n = XLENGTH(sx);
-    switch(TYPEOF(sx)) {
+
+    switch (TYPEOF(sx)) {
 
     case LGLSXP: 
     {
@@ -924,10 +925,10 @@ SEXP attribute_hidden do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans);
 
     if (indx != -1) {
-        if (getAttrib(sx, R_NamesSymbol) != R_NilValue) { /* preserve names */
+        SEXP names = getNamesAttrib(sx);
+        if (names != R_NilValue) {
             SEXP ansnam;
-            PROTECT(ansnam =
-                    ScalarString(STRING_ELT(getAttrib(sx,R_NamesSymbol),indx)));
+            PROTECT(ansnam = ScalarString(STRING_ELT(names,indx)));
             setAttrib(ans, R_NamesSymbol, ansnam);
             UNPROTECT(1);
         }
