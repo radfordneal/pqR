@@ -141,7 +141,7 @@ digamma, trigramma \tab\tab\tab\cr
                    \tab only
                    \tab \cr
 \tab\tab\tab\cr
-t (transpose)      \tab If numeric
+t (transpose)      \tab No
                    \tab No
                    \tab If non-numeric \cr
 \tab\tab           \tab done by master\cr
