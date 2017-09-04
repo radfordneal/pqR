@@ -1948,11 +1948,14 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (nd == 0) error(_("'dims' cannot be of length 0"));
     double d = 1.0;
     for (int j = 0; j < nd; j++) d *= INTEGER(dims)[j];
-    if (d > INT_MAX) error(_("too many elements specified"));
+    if (d > INT_MAX) error(_("'dim' specifies too large an array"));
     nans = (R_len_t) d;
 
     PROTECT(ans = allocVector(TYPEOF(vals), nans));
-    copy_elements_recycled (ans, 0, 1, vals, nans);
+    if (lendat == 0)
+        set_elements_to_NA_or_NULL (ans, 0, nans);
+    else
+        copy_elements_recycled (ans, 0, 1, vals, nans);
 
     ans = dimgets(ans, dims);
     if (!isNull(dimnames) && length(dimnames) > 0)
