@@ -1969,6 +1969,133 @@ static SEXP do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 }
 
 
+/** Routines from R-3.2.0 and later for implementing the 'lengths' function **/
+
+SEXP attribute_hidden dispatch_subset2(SEXP x, R_xlen_t i, SEXP call, SEXP rho)
+{
+    static SEXP bracket_op = NULL;
+    SEXP args, x_elt;
+    if (isObject(x)) {
+        if (bracket_op == NULL)
+            bracket_op = R_Primitive("[[");
+        PROTECT(args = list2(x, ScalarReal(i + 1)));
+        x_elt = do_subset2(call, bracket_op, args, rho);
+        UNPROTECT(1);
+    } else {
+      // FIXME: throw error if not a list
+        x_elt = VECTOR_ELT(x, i);
+    }
+    return(x_elt);
+}
+
+R_len_t attribute_hidden dispatch_length(SEXP x, SEXP call, SEXP rho) {
+    R_xlen_t len = dispatch_xlength(x, call, rho);
+#ifdef LONG_VECTOR_SUPPORT
+    if (len > INT_MAX) return R_BadLongVector(x, __FILE__, __LINE__);
+#endif
+    return (R_len_t) len;
+}
+
+R_xlen_t attribute_hidden dispatch_xlength(SEXP x, SEXP call, SEXP rho) {
+    static SEXP length_op = NULL;
+    if (isObject(x)) {
+        SEXP len, args;
+        if (length_op == NULL)
+            length_op = R_Primitive("length");
+        PROTECT(args = list1(x));
+        if (DispatchOrEval(call, length_op, "length", args, rho, &len, 0, 1)) {
+            UNPROTECT(1);
+            return (R_xlen_t)
+                (TYPEOF(len) == REALSXP ? REAL(len)[0] : asInteger(len));
+        }
+        UNPROTECT(1);
+    }
+    return(xlength(x));
+}
+
+// auxiliary for do_lengths_*(), i.e., R's lengths()
+static R_xlen_t getElementLength(SEXP x, R_xlen_t i, SEXP call, SEXP rho) {
+    SEXP x_elt = dispatch_subset2(x, i, call, rho);
+    return(dispatch_xlength(x_elt, call, rho));
+}
+
+#ifdef LONG_VECTOR_SUPPORT
+static SEXP do_lengths_long(SEXP x, SEXP call, SEXP rho)
+{
+    SEXP ans;
+    R_xlen_t x_len, i;
+    double *ans_elt;
+
+    x_len = dispatch_xlength(x, call, rho);
+    PROTECT(ans = allocVector(REALSXP, x_len));
+    for (i = 0, ans_elt = REAL(ans); i < x_len; i++, ans_elt++)
+        *ans_elt = (double) getElementLength(x, i, call, rho);
+    UNPROTECT(1);
+    return ans;
+}
+#endif
+
+SEXP attribute_hidden do_lengths(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    checkArity(op, args);
+    SEXP x = CAR(args), ans;
+    R_xlen_t x_len, i;
+    int *ans_elt;
+    int useNames = asLogical(CADR(args));
+    if (useNames == NA_LOGICAL)
+	error(_("invalid '%s' value"), "use.names");
+
+    if (DispatchOrEval(call, op, "lengths", args, rho, &ans, 0, 1))
+      return(ans);
+
+    Rboolean isList = isVectorList(x) || isS4(x);
+    if(!isList) switch(TYPEOF(x)) {
+	case NILSXP:
+	case CHARSXP:
+	case LGLSXP:
+	case INTSXP:
+	case REALSXP:
+	case CPLXSXP:
+	case STRSXP:
+	case RAWSXP:
+	    break;
+	default:
+	    error(_("'%s' must be a list or atomic vector"), "x");
+    }
+    x_len = dispatch_xlength(x, call, rho);
+    PROTECT(ans = allocVector(INTSXP, x_len));
+    if(isList) {
+	for (i = 0, ans_elt = INTEGER(ans); i < x_len; i++, ans_elt++) {
+	    R_xlen_t x_elt_len = getElementLength(x, i, call, rho);
+#ifdef LONG_VECTOR_SUPPORT
+	    if (x_elt_len > INT_MAX) {
+		ans = do_lengths_long(x, call, rho);
+		UNPROTECT(1);
+		PROTECT(ans);
+		break;
+	    }
+#endif
+	    *ans_elt = (int)x_elt_len;
+	}
+    } else { // atomic: every element has length 1
+	for (i = 0, ans_elt = INTEGER(ans); i < x_len; i++, ans_elt++)
+	    *ans_elt = 1;
+    }
+    SEXP dim = getAttrib(x, R_DimSymbol);
+    if(!isNull(dim)) {
+        setAttrib(ans, R_DimSymbol, dim);
+    }
+    if(useNames) {
+	SEXP names = getAttrib(x, R_NamesSymbol);
+	if(!isNull(names)) setAttrib(ans, R_NamesSymbol, names);
+        SEXP dimnames = getAttrib(x, R_DimNamesSymbol);
+        if(!isNull(dimnames)) setAttrib(ans, R_DimNamesSymbol, dimnames);
+    }
+    UNPROTECT(1);
+    return ans;
+}
+
+
 /* Adapted from R-3.0.0, Copyright (C) 2012 The R Core Team. */
 
 SEXP attribute_hidden do_diag(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -2048,6 +2175,7 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 {"rowSums",	do_colsum,	2,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"rowMeans",	do_colsum,	3,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"diag",        do_diag,        0,      11,     3,      {PP_FUNCALL, PREC_FN,	0}},
+{"lengths",     do_lengths,     0,      11,     2,      {PP_FUNCALL, PREC_FN,   0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
