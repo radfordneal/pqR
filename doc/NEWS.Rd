@@ -100,6 +100,9 @@
         merged procedure that avoids creating \code{vec>0} as an intermediate
         value.
   \item Creation of matrices with \code{matrix} is now faster.
+  \item Creation of arrays with \code{array} is now usually done with
+        a faster internal routine, mimicking (with improvements) changes
+        in R-2.15.2 and later R Core versions.
   \item The \code{which.min}, and \code{which.max} functions have been
         sped up, especially for logical and integer arguments (partially
         using code from R-3.2.3, with improvements).
