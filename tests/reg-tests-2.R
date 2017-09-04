@@ -2612,7 +2612,6 @@ fit <- smooth.spline(aa, seq_along(aa), tol = 0.1)
 # actual output is too unstable to diff.
 ## Better message from R 2.14.2
 
-
 ## PR#14840
 d <- data.frame(x = 1:9,
                 y = 1:9 + 0.1*c(1, 2, -1, 0, 1, 1000, 0, 1, -1),
@@ -2621,3 +2620,14 @@ fit <- lm(y ~ x, data=d, weights=w)
 summary(fit)
 ## issue is how the 5-number summary is labelled
 ## (also seem in example(case.names))
+
+
+## Test from R-3.4.0:
+## The difference between sort.list and order
+z <- c(4L, NA, 2L, 3L, NA, 1L)
+order(z, na.last = NA)
+sort.list(z, na.last = NA)
+sort.list(z, na.last = NA, method = "shell")
+sort.list(z, na.last = NA, method = "quick")
+sort.list(z, na.last = NA, method = "radix")
+## Differences first documented in R 2.15.2

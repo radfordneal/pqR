@@ -1,5 +1,7 @@
 #  File src/library/base/R/sort.R
-#  Part of the R package, http://www.R-project.org
+#  Part of the R package, https://www.R-project.org
+#
+#  Copyright (C) 1995-2016 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -12,7 +14,7 @@
 #  GNU General Public License for more details.
 #
 #  A copy of the GNU General Public License is available at
-#  http://www.r-project.org/Licenses/
+#  https://www.R-project.org/Licenses/
 
 sort <- function(x, decreasing = FALSE, ...)
 {
@@ -30,14 +32,36 @@ sort.default <- function(x, decreasing = FALSE, na.last = NA, ...)
 
 sort.int <-
     function(x, partial = NULL, na.last = NA, decreasing = FALSE,
-             method = c("shell", "quick"), index.return = FALSE)
+             method = c("auto", "shell", "quick", "radix"),
+             index.return = FALSE)
 {
+    method <- match.arg(method)
+    if (method == "auto" && is.null(partial) &&
+        (is.numeric(x) || is.factor(x) || is.logical(x)) &&
+        is.integer(length(x)))
+        method <- "radix"
+    if (method == "radix") {
+        if (!is.null(partial)) {
+            stop("'partial' sorting not supported by radix method")
+        }
+        if (index.return && is.na(na.last)) {
+            x <- x[!is.na(x)]
+            na.last <- TRUE
+        }
+        o <- order(x, na.last = na.last, decreasing = decreasing,
+                   method = "radix")
+        y <- x[o]
+        return(if (index.return) list(x = y, ix = o) else y)
+    }
+    else if (method == "auto" || !is.numeric(x))
+          method <- "shell" # explicitly prevent 'quick' for non-numeric data
+
     if(isfact <- is.factor(x)) {
         if(index.return) stop("'index.return' only for non-factors")
 	lev <- levels(x)
 	nlev <- nlevels(x)
  	isord <- is.ordered(x)
-        x <- c(x)
+        x <- c(x) # drop attributes
     } else if(!is.atomic(x))
         stop("'x' must be atomic")
 
@@ -48,7 +72,7 @@ sort.int <-
     if(index.return && !is.na(na.last))
         stop("'index.return' only for 'na.last = NA'")
     if(!is.null(partial)) {
-        if(index.return || decreasing || isfact || !missing(method))
+        if(index.return || decreasing || isfact || method != "shell")
 	    stop("unsupported options for partial sorting")
         if(!all(is.finite(partial))) stop("non-finite 'partial'")
         y <- if(length(partial) <= 10L) {
@@ -56,11 +80,9 @@ sort.int <-
             .Internal(psort(x, partial))
         } else if (is.double(x)) .Internal(qsort(x, FALSE))
         else .Internal(sort(x, FALSE))
-    }
-    else {
+    } else {
         nms <- names(x)
-        method <- if(is.numeric(x)) match.arg(method) else "shell"
-        switch(method,
+	switch(method,
                "quick" = {
                    if(!is.null(nms)) {
                        if(decreasing) x <- -x
@@ -79,7 +101,6 @@ sort.int <-
                    if(index.return || !is.null(nms)) {
                        o <- sort.list(x, decreasing = decreasing)
                        y <- if (index.return) list(x = x[o], ix = o) else x[o]
-                       ## names(y) <- nms[o] # pointless!
                    }
                    else
                        y <- .Internal(sort(x, decreasing))
@@ -88,37 +109,58 @@ sort.int <-
     if(!is.na(na.last) && has.na)
 	y <- if(!na.last) c(nas, y) else c(y, nas)
     if(isfact)
-        y <- (if (isord) ordered else factor)(y, levels=seq_len(nlev),
-                                              labels=lev)
+        y <- (if (isord) ordered else factor)(y, levels = seq_len(nlev),
+                                              labels = lev)
     y
 }
 
-order <- function(..., na.last = TRUE, decreasing = FALSE)
+order <- function(..., na.last = TRUE, decreasing = FALSE,
+                  method = c("auto", "shell", "radix"))
 {
     z <- list(...)
+
+    method <- match.arg(method)
+    if (method == "auto") {
+        useRadix <- all(vapply(z, function(x) {
+            (is.numeric(x) || is.factor(x) || is.logical(x)) &&
+                is.integer(length(x))
+        }, logical(1L)))
+        method <- if (useRadix) "radix" else "shell"
+    }
+
     if(any(unlist(lapply(z, is.object)))) {
-        z <- lapply(z, function(x) if(is.object(x)) xtfrm(x) else x)
-        if(!is.na(na.last))
-            return(do.call("order", c(z, na.last=na.last,
-                                      decreasing=decreasing)))
-    } else if(!is.na(na.last))
+        z <- lapply(z, function(x) if(is.object(x)) as.vector(xtfrm(x)) else x)
+        if(method == "radix" || !is.na(na.last))
+            return(do.call("order", c(z, na.last = na.last,
+                                      decreasing = decreasing,
+                                      method = method)))
+    } else if(method != "radix" && !is.na(na.last)) {
         return(.Internal(order(na.last, decreasing, ...)))
-    ## remove nas
-    if(any(diff(l.z <- vapply(z, length, 1L)) != 0L))
+    }
+
+    if (method == "radix") {
+        decreasing <- rep_len(as.logical(decreasing), length(z))
+        return(.Internal(radixsort(na.last, decreasing, FALSE, TRUE, ...)))
+    }
+
+    ## na.last = NA case: remove nas
+    if(any(diff((l.z <- lengths(z)) != 0L)))
         stop("argument lengths differ")
-    ans <- vapply(z, is.na, rep.int(NA, l.z[1L]))
-    ok <- if(is.matrix(ans)) !apply(ans, 1, any) else !any(ans)
+    na <- vapply(z, is.na, rep.int(NA, l.z[1L]))
+    ok <- if(is.matrix(na)) rowSums(na) == 0L else !any(na)
     if(all(!ok)) return(integer())
     z[[1L]][!ok] <- NA
-    ans <- do.call("order", c(z, decreasing=decreasing))
-    keep <- seq_along(ok)[ok]
-    ans[ans %in% keep]
+    ans <- do.call("order", c(z, decreasing = decreasing))
+    ans[ok[ans]]
 }
 
 sort.list <- function(x, partial = NULL, na.last = TRUE, decreasing = FALSE,
-                      method = c("shell", "quick", "radix"))
+                      method = c("auto", "shell", "quick", "radix"))
 {
     method <- match.arg(method)
+    if (method == "auto" && (is.numeric(x) || is.factor(x) || is.logical(x)) &&
+        is.integer(length(x)))
+        method <- "radix"
     if(!is.atomic(x))
         stop("'x' must be atomic for 'sort.list'\nHave you called 'sort' on a list?")
     if(!is.null(partial))
@@ -128,32 +170,31 @@ sort.list <- function(x, partial = NULL, na.last = TRUE, decreasing = FALSE,
         if(is.numeric(x))
             return(sort(x, na.last = na.last, decreasing = decreasing,
                         method = "quick", index.return = TRUE)$ix)
-        else stop("method=\"quick\" is only for numeric 'x'")
+        else stop("method = \"quick\" is only for numeric 'x'")
+    }
+    if (is.na(na.last)) {
+        x <- x[!is.na(x)]
+        na.last <- TRUE
     }
     if(method == "radix") {
-        if(!typeof(x) == "integer") # do want to allow factors here
-            stop("method=\"radix\" is only for integer 'x'")
-        if(is.na(na.last))
-            return(.Internal(radixsort(x[!is.na(x)], TRUE, decreasing)))
-        else
-            return(.Internal(radixsort(x, na.last, decreasing)))
+        return(order(x, na.last=na.last, decreasing=decreasing, method="radix"))
     }
     ## method == "shell"
-    if(is.na(na.last)) .Internal(order(TRUE, decreasing, x[!is.na(x)]))
-    else .Internal(order(na.last, decreasing, x))
+    .Internal(order(na.last, decreasing, x))
 }
 
 
 ## xtfrm is now primitive
 ## xtfrm <- function(x) UseMethod("xtfrm")
 xtfrm.default <- function(x)
-    if(is.numeric(x)) unclass(x) else as.vector(rank(x, ties.method="min", na.last="keep"))
+    if(is.numeric(x)) unclass(x) else as.vector(rank(x, ties.method = "min",
+                                                     na.last = "keep"))
 xtfrm.factor <- function(x) as.integer(x) # primitive, so needs a wrapper
 xtfrm.Surv <- function(x)
-    if(ncol(x) == 2L) order(x[,1L], x[,2L]) else order(x[,1L], x[,2L], x[,3L]) # needed by 'party'
+    order(if(ncol(x) == 2L) order(x[,1L], x[,2L]) else order(x[,1L], x[,2L], x[,3L])) # needed by 'party'
 xtfrm.AsIs <- function(x)
 {
-    if(length(cl<- class(x)) > 1) oldClass(x) <- cl[-1L]
+    if(length(cl <- class(x)) > 1) oldClass(x) <- cl[-1L]
     NextMethod("xtfrm")
 }
 
@@ -169,4 +210,17 @@ xtfrm.AsIs <- function(x)
 {
     n <- length(x)
     if(strictly) !all(x[-1L] > x[-n]) else !all(x[-1L] >= x[-n])
+}
+
+grouping <- function(...) {
+    z <- list(...)
+    if(any(vapply(z, is.object, logical(1L)))) {
+        z <- lapply(z, function(x) if(is.object(x)) as.vector(xtfrm(x)) else x)
+        return(do.call("grouping", z))
+    }
+    nalast <- TRUE
+    decreasing <- rep_len(FALSE, length(z))
+    group <- TRUE
+    sortStr <- FALSE
+    return(.Internal(radixsort(nalast, decreasing, group, sortStr, ...)))
 }
