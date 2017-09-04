@@ -1914,6 +1914,53 @@ static SEXP do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     return ans;
 }
 
+/* Internal version of array(data, dim, dimnames).  Skeleton adapted from 
+   R-3.4.1 (original version from R-2.15.2), but with the substantive part
+   replaced. */
+
+SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    SEXP vals, ans, dims, dimnames;
+    R_len_t lendat, i, nans;
+
+    checkArity(op, args);
+    vals = CAR(args);
+    /* at least NULL can get here */
+    switch(TYPEOF(vals)) {
+	case LGLSXP:
+	case INTSXP:
+	case REALSXP:
+	case CPLXSXP:
+	case STRSXP:
+	case RAWSXP:
+	case EXPRSXP:
+	case VECSXP:
+	    break;
+	default:
+	    error(_("'data' must be of a vector type, was '%s'"),
+		type2char(TYPEOF(vals)));
+    }
+    lendat = XLENGTH(vals);
+    dims = CADR(args);
+    dimnames = CADDR(args);
+    PROTECT(dims = coerceVector(dims, INTSXP));
+    int nd = LENGTH(dims);
+    if (nd == 0) error(_("'dims' cannot be of length 0"));
+    double d = 1.0;
+    for (int j = 0; j < nd; j++) d *= INTEGER(dims)[j];
+    if (d > INT_MAX) error(_("too many elements specified"));
+    nans = (R_len_t) d;
+
+    PROTECT(ans = allocVector(TYPEOF(vals), nans));
+    copy_elements_recycled (ans, 0, 1, vals, nans);
+
+    ans = dimgets(ans, dims);
+    if (!isNull(dimnames) && length(dimnames) > 0)
+	ans = dimnamesgets(ans, dimnames);
+
+    UNPROTECT(2);
+    return ans;
+}
 
 /* Adapted from R-3.0.0, Copyright (C) 2012 The R Core Team. */
 
@@ -1982,6 +2029,7 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 /* Internal */
 
 {"matrix",	do_matrix,	0,    1000011,	7,	{PP_FUNCALL, PREC_FN,	0}},
+{"array",	do_array,	0,    1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"drop",	do_drop,	0,    1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"row",		do_rowscols,	1,    1011011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"col",		do_rowscols,	2,    1011011,	1,	{PP_FUNCALL, PREC_FN,	0}},

@@ -1,6 +1,6 @@
 #  File src/library/base/R/array.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2013, 2017 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -15,22 +15,34 @@
 #  A copy of the GNU General Public License is available at
 #  http://www.r-project.org/Licenses/
 
-array <-
-function(data = NA, dim = length(data), dimnames = NULL)
+array <- function(data = NA, dim = length(data), dimnames = NULL)
 {
-    data <- as.vector(data)
-    dim <- as.integer(dim)
-    vl <- prod(dim)
-    if(length(data) != vl) {
-        if(vl > .Machine$integer.max)
-            stop("'dim' specifies too large an array")
-        data <- rep(data, length.out=vl)
+    ## Changed as in R-3.4.1, except for use of get_rm.
+
+    ## allow for as.vector.factor (converts to character)
+    if (is.atomic(data) && !is.object(data))
+        .Internal (array (data, dim, dimnames))
+    else {
+        data <- as.vector(data)
+        ## package rv has as.vector() method that leaves this as a classed list
+        if (is.object(data)) {
+            data <- as.vector(data)
+            dim <- as.integer(dim)
+            vl <- prod(dim)
+            if(length(data) != vl) {
+                if(vl > .Machine$integer.max)
+                    stop("'dim' specifies too large an array")
+                data <- rep(data, length.out=vl)
+            }
+            if(length(dim))
+        	dim(data) <- dim
+            if(is.list(dimnames) && length(dimnames))
+        	dimnames(data) <- dimnames
+            get_rm(data)
+        }
+        else
+            .Internal (array (data, dim, dimnames))
     }
-    if(length(dim))
-	dim(data) <- dim
-    if(is.list(dimnames) && length(dimnames))
-	dimnames(data) <- dimnames
-    get_rm(data)
 }
 
 slice.index <-
