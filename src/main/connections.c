@@ -3295,15 +3295,13 @@ static void con_cleanup(void *data)
 }
 
 /* readLines(con = stdin(), n = 1, ok = TRUE, warn = TRUE) */
-#define BUF_SIZE 1000
+
 static SEXP do_readLines(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP ans = R_NilValue, ans2;
-    int i, n, nn, nnn, ok, warn, nread, c, nbuf, buf_size = BUF_SIZE;
+    int ok, warn, n;
     int oenc = CE_NATIVE;
     Rconnection con = NULL;
     Rboolean wasopen;
-    char *buf;
     const char *encoding;
     RCNTXT cntxt;
 
@@ -3348,65 +3346,72 @@ static SEXP do_readLines(SEXP call, SEXP op, SEXP args, SEXP env)
     if(con->UTF8out || streql(encoding, "UTF-8")) oenc = CE_UTF8;
     else if(streql(encoding, "latin1")) oenc = CE_LATIN1;
 
-    buf = (char *) malloc(buf_size);
-    if(!buf)
-	error(_("cannot allocate buffer in readLines"));
-    nn = (n < 0) ? 1000 : n; /* initially allocate space for 1000 lines */
-    nnn = (n < 0) ? INT_MAX : n;
-    PROTECT(ans = allocVector(STRSXP, nn));
-    for(nread = 0; nread < nnn; nread++) {
-	if(nread >= nn) {
-	    ans2 = allocVector(STRSXP, 2*nn);
-	    for(i = 0; i < nn; i++)
-		SET_STRING_ELT(ans2, i, STRING_ELT(ans, i));
-	    nn *= 2;
-	    UNPROTECT(1); /* old ans */
-	    PROTECT(ans = ans2);
-	}
-	nbuf = 0;
-	while ((c = Rconn_fgetc(con)) != R_EOF && c != '\n') {
-	    if (nbuf == buf_size-1) {  /* need space for the null */
-		buf_size *= 2;
-		char *tmp = (char *) realloc(buf, buf_size);
-		if (tmp == NULL) {
-		    free(buf);
-		    error(_("cannot allocate buffer in readLines"));
-		} 
-                else 
-                    buf = tmp;
-	    }
-	    buf[nbuf++] = c;
-	}
-	buf[nbuf] = '\0';
-	SET_STRING_ELT(ans, nread, mkCharCE(buf, oenc));
-	if(c == R_EOF) goto no_more_lines;
+    int nn = (n < 0) ? 1000 : n;   /* initially allocate space for 1000 lines */
+    int nnn = (n < 0) ? INT_MAX : n;
+    int buf_size = 1000;      /* initially allow for lines of up to 999 chars */
+    SEXP ans, buf;
+
+    PROTECT(ans = allocVector (STRSXP, nn));
+    PROTECT(buf = allocVector (RAWSXP, buf_size));
+
+    int nread, nbuf, c;
+
+    for (nread = 0; nread < nnn; nread++) {
+
+        nbuf = 0;
+        while ((c = Rconn_fgetc(con)) != R_EOF && c != '\n') {
+            if (nbuf == buf_size-1) {  /* need space for the null */
+                if (buf_size == INT_MAX)
+                    error(_("R character strings are limited to 2^31-1 bytes"));
+                buf_size = buf_size > INT_MAX/2 ? INT_MAX : 2*buf_size;
+                buf = reallocVector (buf, buf_size);
+                UNPROTECT(2); PROTECT2(ans,buf);
+            }
+            RAW(buf)[nbuf++] = c;
+        }
+        RAW(buf)[nbuf] = '\0';
+
+        if (nread >= nn) {
+            if (nn == INT_MAX)
+                error(_("Maximum number of lines that can be read is 2^31-1"));
+            nn = nn > INT_MAX/2 ? INT_MAX : 2*nn;
+            ans = reallocVector (ans, nn);
+            UNPROTECT(2); PROTECT2(ans,buf);
+        }
+
+        SET_STRING_ELT (ans, nread, mkCharCE (RAW(buf), oenc));
+
+        if (c == R_EOF) goto no_more_lines;
     }
-    if(!wasopen) {endcontext(&cntxt); con->close(con);}
-    UNPROTECT(1);
-    free(buf);
-    return ans;
-no_more_lines:
-    if(!wasopen) {endcontext(&cntxt); con->close(con);}
-    if(nbuf > 0) { /* incomplete last line */
-	if(con->text && !con->blocking) {
-	    /* push back the rest */
-	    con_pushback(con, 0, buf);
-	    con->incomplete = TRUE;
-	} else {
-	    nread++;
-	    if(warn)
-		warning(_("incomplete final line found on '%s'"),
-			con->description);
-	}
-    }
-    free(buf);
-    if(nread < nnn && !ok)
-	error(_("too few lines read in readLines"));
-    PROTECT(ans2 = allocVector(STRSXP, nread));
-    for(i = 0; i < nread; i++)
-	SET_STRING_ELT(ans2, i, STRING_ELT(ans, i));
+
+    if (!wasopen) { endcontext(&cntxt); con->close(con); }
     UNPROTECT(2);
-    return ans2;
+    return ans;
+
+no_more_lines:
+
+    if (!wasopen) { endcontext(&cntxt); con->close(con); }
+
+    if (nbuf > 0) { /* incomplete last line */
+        if (wasopen && con->text && !con->blocking) {
+            /* push back the rest */
+            con_pushback(con, 0, RAW(buf));
+            con->incomplete = TRUE;
+        }
+        else {
+            nread += 1;
+            if (warn) warning(_("incomplete final line found on '%s'"),
+                              con->description);
+        }
+    }
+
+    if (nread < nnn && !ok)
+        error(_("too few lines read in readLines"));
+
+    ans = reallocVector (ans, nread);
+
+    UNPROTECT(2);
+    return ans;
 }
 
 /* writeLines(text, con = stdout(), sep = "\n", useBytes) */

@@ -99,14 +99,28 @@ static SEXP insertString(char *str, LocalData *l)
 
 static R_INLINE Rboolean Rspace(unsigned int c)
 {
-    if (c == ' ' || c == '\t' || c == '\n' || c == '\r') return TRUE;
-#ifdef Win32
-    /* 0xa0 is NBSP in all 8-bit Windows locales */
-    if(!mbcslocale && c == 0xa0) return TRUE;
-#else
-     /* 0xa0 is NBSP in Latin-1 */
-    if(known_to_be_latin1 && c == 0xa0) return TRUE;
-#endif
+    if (c == ' ') {
+        return TRUE;
+    }
+
+    else if (c > ' ') {
+
+#       ifdef Win32
+            /* 0xa0 is NBSP in all 8-bit Windows locales */
+            if (!mbcslocale && c == 0xa0)
+                return TRUE;
+#       else
+            /* 0xa0 is NBSP in Latin-1 */
+            if (known_to_be_latin1 && c == 0xa0)
+                return TRUE;
+#       endif
+
+    }
+
+    else if (c == '\n' || c == '\t' || c == '\r') {
+        return TRUE;
+    }
+
     return FALSE;
 }
 
@@ -443,8 +457,8 @@ fillBuffer(SEXPTYPE type, int strip, int *bch, LocalData *d,
  donefill:
     /* strip trailing white space, if desired and if item is non-null */
     bufp = &buffer->data[m];
-   if (strip && m > mm) {
-	do {c = (int)*--bufp;} while(m-- > mm && Rspace(c));
+    if (strip && m > mm) {
+	do { c = (int)*--bufp; } while (m-- > mm && Rspace(c));
 	bufp++;
     }
     *bufp = '\0';
@@ -541,7 +555,7 @@ static void extractItem(char *buffer, SEXP ans, int i, LocalData *d)
 static SEXP scanVector(SEXPTYPE type, int maxitems, int maxlines,
 		       int flush, SEXP stripwhite, int blskip, LocalData *d)
 {
-    SEXP ans, bns;
+    SEXP ans;
     int blocksize, c, i, n, linesread, nprev,strip, bch;
     char *buffer;
     R_StringBuffer strBuf = {NULL, 0, MAXELTSIZE};
@@ -573,12 +587,9 @@ static SEXP scanVector(SEXPTYPE type, int maxitems, int maxlines,
 	}
 	if (n == blocksize) {
 	    /* enlarge the vector*/
-	    bns = ans;
 	    blocksize = 2 * blocksize;
-	    ans = allocVector(type, blocksize);
-	    UNPROTECT(1);
-	    PROTECT(ans);
-	    copyVector(ans, bns);
+	    ans = reallocVector(ans, blocksize);
+	    UNPROTECT(1); PROTECT(ans);
 	}
 	buffer = fillBuffer(type, strip, &bch, d, &strBuf);
 	if (nprev == n && strlen(buffer)==0 &&
@@ -615,35 +626,10 @@ static SEXP scanVector(SEXPTYPE type, int maxitems, int maxlines,
 	return ans;
     }
 
-    bns = allocVector(type, n);
-    switch (type) {
-    case LGLSXP:
-    case INTSXP:
-	for (i = 0; i < n; i++)
-	    INTEGER(bns)[i] = INTEGER(ans)[i];
-	break;
-    case REALSXP:
-	for (i = 0; i < n; i++)
-	    REAL(bns)[i] = REAL(ans)[i];
-	break;
-    case CPLXSXP:
-	for (i = 0; i < n; i++)
-	    COMPLEX(bns)[i] = COMPLEX(ans)[i];
-	break;
-    case STRSXP:
-	for (i = 0; i < n; i++)
-	    SET_STRING_ELT(bns, i, STRING_ELT(ans, i));
-	break;
-    case RAWSXP:
-	for (i = 0; i < n; i++)
-	    RAW(bns)[i] = RAW(ans)[i];
-	break;
-    default:
-	UNIMPLEMENTED_TYPEt("scanVector", type);
-    }
+    ans = reallocVector(ans, n);
     UNPROTECT(1);
     R_FreeStringBuffer(&strBuf);
-    return bns;
+    return ans;
 }
 
 
