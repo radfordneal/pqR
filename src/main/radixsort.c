@@ -1926,7 +1926,7 @@ attribute_hidden FUNTAB R_FunTab_radixsort[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"radixsortnew",	do_radixsort,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"radixsort",	do_radixsort,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
