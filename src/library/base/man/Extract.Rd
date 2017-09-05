@@ -41,10 +41,11 @@ x$i <- value
     object from which to extract element(s) or in which to replace element(s).
   }
   \item{i, j, \dots}{
-    indices specifying elements to extract or replace.  Indices are
-    \code{numeric} or \code{character} vectors, or are missing (either
-    from an empty argument or a \code{_} argument), or are
-    \code{NULL}.  Numeric values are coerced to integer as by
+    indices specifying elements to extract or replace.  Indices are typically
+    \code{numeric} or \code{character} vectors, or are 
+    missing (either from an empty argument or a \code{_} argument).
+    (Additional possibilities are mentioned below.)
+    Numeric values are coerced to integer as by
     \code{\link{as.integer}} (and hence truncated towards zero).
     Character vectors will be matched to the \code{\link{names}} of the
     object (or for matrices/arrays, the \code{\link{dimnames}}):
@@ -60,6 +61,10 @@ x$i <- value
     matrix with as many columns as there are dimensions of \code{x}; the
     result is then a vector with elements corresponding to the sets of
     indices in each row of \code{i}.
+
+    For \code{[[}-indexing only: \code{i}, \code{j}, \code{\dots} can
+    be a symbol (after evaluation), with effect equivalent to indexing
+    with the print name of the symbol.
 
     An index value of \code{NULL} is treated as if it were \code{integer(0)}.
   }
