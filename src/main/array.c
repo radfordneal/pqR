@@ -2005,10 +2005,10 @@ static R_len_t dispatch_length(SEXP x, SEXP rho) {
 // auxiliary for do_lengths_*(), i.e., R's lengths()
 static R_xlen_t getElementLength(SEXP x, R_xlen_t i, SEXP rho) {
     extern SEXP dispatch_subset2(SEXP, R_xlen_t, SEXP, SEXP);
-    SEXP call, x_elt, r;
+    SEXP call, x_elt;
     PROTECT (call = lang2(install("[["),install("i")));
     PROTECT (x_elt = dispatch_subset2(x, i, call, rho));
-    r = dispatch_xlength(x_elt, rho);
+    R_xlen_t r = dispatch_xlength(x_elt, rho);
     UNPROTECT(2);
     return r;
 }
