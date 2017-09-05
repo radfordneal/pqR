@@ -35,7 +35,8 @@ sort.int <-
              method = c("auto", "shell", "quick", "radix"),
              index.return = FALSE)
 {
-    method <- match.arg(method)
+    method <- if (missing(method)) "auto" 
+              else match.arg (method, c("auto", "shell", "quick", "radix"))
     if (method == "auto" && is.null(partial) &&
         (is.numeric(x) || is.factor(x) || is.logical(x)) &&
         is.integer(length(x)))
@@ -119,7 +120,8 @@ order <- function(..., na.last = TRUE, decreasing = FALSE,
 {
     z <- list(...)
 
-    method <- match.arg(method)
+    method <- if (missing(method)) "auto" 
+              else match.arg (method, c("auto", "shell", "radix"))
     if (method == "auto") {
         useRadix <- all(vapply(z, function(x) {
             (is.numeric(x) || is.factor(x) || is.logical(x)) &&
@@ -157,7 +159,8 @@ order <- function(..., na.last = TRUE, decreasing = FALSE,
 sort.list <- function(x, partial = NULL, na.last = TRUE, decreasing = FALSE,
                       method = c("auto", "shell", "quick", "radix"))
 {
-    method <- match.arg(method)
+    method <- if (missing(method)) "auto" 
+              else match.arg (method, c("auto", "shell", "quick", "radix"))
     if (method == "auto" && (is.numeric(x) || is.factor(x) || is.logical(x)) &&
         is.integer(length(x)))
         method <- "radix"
