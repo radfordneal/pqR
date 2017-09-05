@@ -1965,7 +1965,127 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-/* Adapted from R-3.0.0, Copyright (C) 2012 The R Core Team. */
+/** Routines from R-3.2.0 and later for implementing the 'lengths' function,
+ ** slightly modified.  Long vector stuff not actually used.  Also, see 
+ ** dispatch_subset2 in subset.c.
+ **/
+
+static R_xlen_t dispatch_xlength(SEXP x, SEXP rho) {
+    static SEXP length_op = NULL;
+    if (isObject(x)) {
+        SEXP len, args, call;
+        if (length_op == NULL)
+            length_op = R_Primitive("length");
+        PROTECT(args = list1(x));
+        PROTECT(call = list2(install("length"),install("x")));
+        if (DispatchOrEval(call, length_op, "length", args, rho, &len, 0, 1)) {
+            UNPROTECT(2);
+            return (R_xlen_t)
+                (TYPEOF(len) == REALSXP ? REAL(len)[0] : asInteger(len));
+        }
+        UNPROTECT(2);
+    }
+    return(xlength(x));
+}
+
+static R_len_t dispatch_length(SEXP x, SEXP rho) {
+    R_xlen_t len = dispatch_xlength(x, rho);
+#ifdef LONG_VECTOR_SUPPORT
+    if (len > INT_MAX) return R_BadLongVector(x, __FILE__, __LINE__);
+#endif
+    return (R_len_t) len;
+}
+
+// auxiliary for do_lengths_*(), i.e., R's lengths()
+static R_xlen_t getElementLength(SEXP x, R_xlen_t i, SEXP rho) {
+    extern SEXP dispatch_subset2(SEXP, R_xlen_t, SEXP, SEXP);
+    SEXP call, x_elt, r;
+    PROTECT (call = lang2(install("[["),install("i")));
+    PROTECT (x_elt = dispatch_subset2(x, i, call, rho));
+    r = dispatch_xlength(x_elt, rho);
+    UNPROTECT(2);
+    return r;
+}
+
+#ifdef LONG_VECTOR_SUPPORT
+static SEXP do_lengths_long(SEXP x, SEXP call, SEXP rho)
+{
+    SEXP ans;
+    R_xlen_t x_len, i;
+    double *ans_elt;
+
+    x_len = dispatch_xlength(x, rho);
+    PROTECT(ans = allocVector(REALSXP, x_len));
+    for (i = 0, ans_elt = REAL(ans); i < x_len; i++, ans_elt++)
+        *ans_elt = (double) getElementLength(x, i, rho);
+    UNPROTECT(1);
+    return ans;
+}
+#endif
+
+SEXP attribute_hidden do_lengths(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    checkArity(op, args);
+    SEXP x = CAR(args), ans;
+    R_xlen_t x_len, i;
+    int *ans_elt;
+    int useNames = asLogical(CADR(args));
+    if (useNames == NA_LOGICAL)
+	error(_("invalid '%s' value"), "use.names");
+
+    if (DispatchOrEval(call, op, "lengths", args, rho, &ans, 0, 1))
+      return(ans);
+
+    Rboolean isList = isVectorList(x) || isS4(x);
+    if(!isList) switch(TYPEOF(x)) {
+	case NILSXP:
+	case CHARSXP:
+	case LGLSXP:
+	case INTSXP:
+	case REALSXP:
+	case CPLXSXP:
+	case STRSXP:
+	case RAWSXP:
+	    break;
+	default:
+	    error(_("'%s' must be a list or atomic vector"), "x");
+    }
+    x_len = dispatch_xlength(x, rho);
+    PROTECT(ans = allocVector(INTSXP, x_len));
+    if(isList) {
+	for (i = 0, ans_elt = INTEGER(ans); i < x_len; i++, ans_elt++) {
+	    R_xlen_t x_elt_len = getElementLength(x, i, rho);
+#ifdef LONG_VECTOR_SUPPORT
+	    if (x_elt_len > INT_MAX) {
+		ans = do_lengths_long(x, call, rho);
+		UNPROTECT(1);
+		PROTECT(ans);
+		break;
+	    }
+#endif
+	    *ans_elt = (int)x_elt_len;
+	}
+    } else { // atomic: every element has length 1
+	for (i = 0, ans_elt = INTEGER(ans); i < x_len; i++, ans_elt++)
+	    *ans_elt = 1;
+    }
+    SEXP dim = getAttrib(x, R_DimSymbol);
+    if(!isNull(dim)) {
+        setAttrib(ans, R_DimSymbol, dim);
+    }
+    if(useNames) {
+	SEXP names = getAttrib(x, R_NamesSymbol);
+	if(!isNull(names)) setAttrib(ans, R_NamesSymbol, names);
+        SEXP dimnames = getAttrib(x, R_DimNamesSymbol);
+        if(!isNull(dimnames)) setAttrib(ans, R_DimNamesSymbol, dimnames);
+    }
+    UNPROTECT(1);
+    return ans;
+}
+
+
+/** Internal 'diag' routine. Adapted from R-3.0.0, (C) 2012 The R Core Team 
+ **/
 
 SEXP attribute_hidden do_diag(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -2045,6 +2165,7 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 {"rowSums",	do_colsum,	2,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"rowMeans",	do_colsum,	3,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"diag",        do_diag,        0,      11,     3,      {PP_FUNCALL, PREC_FN,	0}},
+{"lengths",     do_lengths,     0,      11,     2,      {PP_FUNCALL, PREC_FN,   0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
