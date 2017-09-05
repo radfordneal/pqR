@@ -1985,6 +1985,25 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
     return ans;
 }
 
+/* Below is used to implement 'lengths'. */
+SEXP attribute_hidden dispatch_subset2(SEXP x, R_xlen_t i, SEXP call, SEXP rho)
+{
+    static SEXP bracket_op = NULL;
+    SEXP args, x_elt;
+    if (isObject(x)) {
+	if (bracket_op == NULL)
+            bracket_op = R_Primitive("[[");
+        PROTECT(args = list2(x, ScalarReal(i + 1)));
+        x_elt = do_subset2(call, bracket_op, args, rho, 0);
+        UNPROTECT(1);
+    } else {
+      // FIXME: throw error if not a list
+	x_elt = VECTOR_ELT(x, i);
+    }
+    return(x_elt);
+}
+
+
 /* The $ subset operator.
    We need to be sure to only evaluate the first argument.
    The second will be a symbol that needs to be matched, not evaluated.

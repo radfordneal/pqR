@@ -208,7 +208,22 @@
   \item From R-3.1.3: \code{icuSetCollate()} now accepts \code{locale = "ASCII"}
         which uses the basic C function \code{strcmp} and so collates
         strings byte-by-byte in numerical order.
-  }}  
+
+  \item The \code{lengths} function has been ported from R Core releases
+        which had NEWS items as below:
+
+        R-3.2.0: New \code{lengths()} function for getting the lengths
+        of all elements in a list.
+
+        R-3.2.1: \code{lengths(x)} now also works (trivially) for
+        atomic \code{x} and hence can be used more generally as an
+        efficient replacement of \code{sapply(x, length)} and similar.
+
+        R-3.3.0: \code{lengths()} considers methods for \code{length}
+        and \code{[[} on \code{x}, so it should work automatically on
+        any objects for which appropriate methods on those generics
+        are defined.
+}}
 
   \subsection{BUG FIXES}{
   \itemize{
