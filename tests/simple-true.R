@@ -182,3 +182,15 @@ identical(x+b,structure(c(16000,41000,29000),class="fred"))
 identical(a+y,structure(c(33000,21000,42000),class="fred"))
 identical(x<y,c(TRUE,FALSE,FALSE))
 identical(b<x,c(FALSE,TRUE,TRUE))
+
+# The 'lengths' function.
+
+identical(lengths(2:4),c(1L,1L,1L))
+identical(lengths(list(9,x=2:4,list("a","b"))),c(1L,x=3L,2L))
+identical(lengths(list(9,x=2:4,list("a","b")),FALSE),c(1L,3L,2L))
+
+A <- list()
+class(A)<-"fred"
+`length.fred` <- function (x) 7
+`[[.fred` <- function(x,i) 1:(i+10)
+identical(lengths(A),11:17)
