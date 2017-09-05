@@ -1969,54 +1969,46 @@ static SEXP do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 }
 
 
-/** Routines from R-3.2.0 and later for implementing the 'lengths' function **/
+/** Routines from R-3.2.0 and later for implementing the 'lengths' function,
+ ** slightly modified.  Long vector stuff not actually used.  Also, see 
+ ** dispatch_subset2 in subset.c.
+ **/
 
-SEXP attribute_hidden dispatch_subset2(SEXP x, R_xlen_t i, SEXP call, SEXP rho)
-{
-    static SEXP bracket_op = NULL;
-    SEXP args, x_elt;
+static R_xlen_t dispatch_xlength(SEXP x, SEXP rho) {
+    static SEXP length_op = NULL;
     if (isObject(x)) {
-        if (bracket_op == NULL)
-            bracket_op = R_Primitive("[[");
-        PROTECT(args = list2(x, ScalarReal(i + 1)));
-        x_elt = do_subset2(call, bracket_op, args, rho);
-        UNPROTECT(1);
-    } else {
-      // FIXME: throw error if not a list
-        x_elt = VECTOR_ELT(x, i);
+        SEXP len, args, call;
+        if (length_op == NULL)
+            length_op = R_Primitive("length");
+        PROTECT(args = list1(x));
+        PROTECT(call = list2(install("length"),install("x")));
+        if (DispatchOrEval(call, length_op, "length", args, rho, &len, 0, 1)) {
+            UNPROTECT(2);
+            return (R_xlen_t)
+                (TYPEOF(len) == REALSXP ? REAL(len)[0] : asInteger(len));
+        }
+        UNPROTECT(2);
     }
-    return(x_elt);
+    return(xlength(x));
 }
 
-R_len_t attribute_hidden dispatch_length(SEXP x, SEXP call, SEXP rho) {
-    R_xlen_t len = dispatch_xlength(x, call, rho);
+static R_len_t dispatch_length(SEXP x, SEXP rho) {
+    R_xlen_t len = dispatch_xlength(x, rho);
 #ifdef LONG_VECTOR_SUPPORT
     if (len > INT_MAX) return R_BadLongVector(x, __FILE__, __LINE__);
 #endif
     return (R_len_t) len;
 }
 
-R_xlen_t attribute_hidden dispatch_xlength(SEXP x, SEXP call, SEXP rho) {
-    static SEXP length_op = NULL;
-    if (isObject(x)) {
-        SEXP len, args;
-        if (length_op == NULL)
-            length_op = R_Primitive("length");
-        PROTECT(args = list1(x));
-        if (DispatchOrEval(call, length_op, "length", args, rho, &len, 0, 1)) {
-            UNPROTECT(1);
-            return (R_xlen_t)
-                (TYPEOF(len) == REALSXP ? REAL(len)[0] : asInteger(len));
-        }
-        UNPROTECT(1);
-    }
-    return(xlength(x));
-}
-
 // auxiliary for do_lengths_*(), i.e., R's lengths()
-static R_xlen_t getElementLength(SEXP x, R_xlen_t i, SEXP call, SEXP rho) {
-    SEXP x_elt = dispatch_subset2(x, i, call, rho);
-    return(dispatch_xlength(x_elt, call, rho));
+static R_xlen_t getElementLength(SEXP x, R_xlen_t i, SEXP rho) {
+    extern SEXP dispatch_subset2(SEXP, R_xlen_t, SEXP, SEXP);
+    SEXP call, x_elt, r;
+    PROTECT (call = lang2(install("[["),install("i")));
+    PROTECT (x_elt = dispatch_subset2(x, i, call, rho));
+    r = dispatch_xlength(x_elt, rho);
+    UNPROTECT(2);
+    return r;
 }
 
 #ifdef LONG_VECTOR_SUPPORT
@@ -2026,10 +2018,10 @@ static SEXP do_lengths_long(SEXP x, SEXP call, SEXP rho)
     R_xlen_t x_len, i;
     double *ans_elt;
 
-    x_len = dispatch_xlength(x, call, rho);
+    x_len = dispatch_xlength(x, rho);
     PROTECT(ans = allocVector(REALSXP, x_len));
     for (i = 0, ans_elt = REAL(ans); i < x_len; i++, ans_elt++)
-        *ans_elt = (double) getElementLength(x, i, call, rho);
+        *ans_elt = (double) getElementLength(x, i, rho);
     UNPROTECT(1);
     return ans;
 }
@@ -2062,11 +2054,11 @@ SEXP attribute_hidden do_lengths(SEXP call, SEXP op, SEXP args, SEXP rho)
 	default:
 	    error(_("'%s' must be a list or atomic vector"), "x");
     }
-    x_len = dispatch_xlength(x, call, rho);
+    x_len = dispatch_xlength(x, rho);
     PROTECT(ans = allocVector(INTSXP, x_len));
     if(isList) {
 	for (i = 0, ans_elt = INTEGER(ans); i < x_len; i++, ans_elt++) {
-	    R_xlen_t x_elt_len = getElementLength(x, i, call, rho);
+	    R_xlen_t x_elt_len = getElementLength(x, i, rho);
 #ifdef LONG_VECTOR_SUPPORT
 	    if (x_elt_len > INT_MAX) {
 		ans = do_lengths_long(x, call, rho);
@@ -2096,7 +2088,8 @@ SEXP attribute_hidden do_lengths(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-/* Adapted from R-3.0.0, Copyright (C) 2012 The R Core Team. */
+/** Internal 'diag' routine. Adapted from R-3.0.0, (C) 2012 The R Core Team 
+ **/
 
 SEXP attribute_hidden do_diag(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
