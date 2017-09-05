@@ -30,27 +30,41 @@ pmatch <- function(x, table, nomatch = NA_integer_, duplicates.ok = FALSE)
 match.arg <- function (arg, choices, several.ok = FALSE)
 {
     if (missing(choices)) {
-	formal.args <- formals(sys.function(sys.parent()))
-	choices <- eval(formal.args[[deparse(substitute(arg))]])
+        formal.args <- formals(sys.function(sys.parent()))
+        choices <- eval(formal.args[[substitute(arg)]])
     }
-    if (is.null(arg)) return(choices[1L])
-    else if(!is.character(arg))
-	stop("'arg' must be NULL or a character vector")
-    if (!several.ok) { # most important (default) case:
-        ## the arg can be the whole of choices as a default argument.
-        if(identical(arg, choices)) return(arg[1L])
-        if(length(arg) > 1L) stop("'arg' must be of length 1")
-    } else if(length(arg) == 0L) stop("'arg' must be of length >= 1")
+    if (is.null(arg))
+        return(choices[1L])
+    if (!is.character(arg))
+        stop("'arg' must be NULL or a character vector")
 
-    ## handle each element of arg separately
-    i <- pmatch(arg, choices, nomatch = 0L, duplicates.ok = TRUE)
-    if (all(i == 0L))
-	stop(gettextf("'arg' should be one of %s",
-                      paste(dQuote(choices), collapse = ", ")),
-             domain = NA)
-    i <- i[i > 0L]
-    if (!several.ok && length(i) > 1)
-        stop("there is more than one match in 'match.arg'")
+    if (several.ok) {
+        if (length(arg) == 0L) 
+            stop("'arg' must be of length >= 1")
+        i <- pmatch (arg, choices, nomatch = 0L, duplicates.ok = TRUE)
+        i <- i[i > 0L]
+        if (length(i) == 0)
+            stop(gettextf("'arg' should be one of %s",
+                          paste(dQuote(choices), collapse = ", ")),
+                 domain = NA)
+    }
+    else { # !several.ok - most important (default) case
+        ## the arg can be the whole of choices as a default argument.
+        if (identical (arg, choices))
+            return(arg[1L])
+        if (length(arg) != 1L)
+            stop("'arg' must be of length 1")
+        i <- pmatch (arg, choices, nomatch = 0L, duplicates.ok = TRUE)
+        if (sum(i > 0L) != 1) {
+            if (all(i==0L))
+                stop(gettextf("'arg' should be one of %s",
+                              paste(dQuote(choices), collapse = ", ")),
+                     domain = NA)
+            else
+                stop("there is more than one match in 'match.arg'")
+        }
+    }
+
     choices[i]
 }
 
