@@ -1,10 +1,10 @@
 
-pqR version 2.15.0 (2015-00-00), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.1 (2017-00-00), based on R 2.15.0 (2012-03-30)
 
 R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 
-Modifications to R in pqR are Copyright (C) 2013-2015 Radford M. Neal
+Modifications to R in pqR are Copyright (C) 2013-2017 Radford M. Neal
 
 Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
@@ -23,7 +23,7 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 Type 'q()' to quit R.
 
 
-No helper threads, task merging enabled.
+No helper threads, task merging enabled, uncompressed pointers.
 
 > ## Regression tests for which the printed output is the issue
 > ### _and_ must work (no Recommended packages, please)
@@ -6381,15 +6381,15 @@ function ()
 > print.function
 function (x, ...)  
  - attr(*, "srcref")=Class 'srcref'  atomic [1:8] 1 19 1 63 19 63 1 1
-  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x34d3a30> 
+  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 2ae0e7d0a5c0> 
 > f
 function ()  
  - attr(*, "srcref")=Class 'srcref'  atomic [1:8] 1 17 1 28 17 28 1 1
-  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x34c2270> 
+  .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 2ae0e7d11680> 
  - attr(*, "note")= chr "just a note"
  - attr(*, "yada")=function ()  
   ..- attr(*, "srcref")=Class 'srcref'  atomic [1:8] 2 24 2 48 24 48 2 2
-  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 0x34c2270> 
+  .. .. ..- attr(*, "srcfile")=Classes 'srcfilecopy', 'srcfile' <environment: 2ae0e7d11680> 
 > rm(print.function)
 > ## auto-printing and printing differed up to R 2.9.x
 > 
@@ -6837,7 +6837,6 @@ Error in smooth.spline(aa, seq_along(aa)) :
 > # actual output is too unstable to diff.
 > ## Better message from R 2.14.2
 > 
-> 
 > ## PR#14840
 > d <- data.frame(x = 1:9,
 +                 y = 1:9 + 0.1*c(1, 2, -1, 0, 1, 1000, 0, 1, -1),
@@ -6865,4 +6864,20 @@ F-statistic:  4412 on 1 and 6 DF,  p-value: 7.834e-10
 
 > ## issue is how the 5-number summary is labelled
 > ## (also seem in example(case.names))
+> 
+> 
+> ## Test from R-3.4.0:
+> ## The difference between sort.list and order
+> z <- c(4L, NA, 2L, 3L, NA, 1L)
+> order(z, na.last = NA)
+[1] 6 3 4 1
+> sort.list(z, na.last = NA)
+[1] 4 2 3 1
+> sort.list(z, na.last = NA, method = "shell")
+[1] 4 2 3 1
+> sort.list(z, na.last = NA, method = "quick")
+[1] 4 2 3 1
+> sort.list(z, na.last = NA, method = "radix")
+[1] 4 2 3 1
+> ## Differences first documented in R 2.15.2
 > 
