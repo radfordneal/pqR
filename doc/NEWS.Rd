@@ -58,6 +58,20 @@
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
+  \item The radix sorting procedure introduced in R-3.3.1 is now used,
+        for which NEWS entry was as follows:
+
+        The radix sort algorithm and implementation from
+        \CRANpkg{data.table} (\code{forder}) replaces the previous
+        radix (counting) sort and adds a new method for
+        \code{order()}.  Contributed by Matt Dowle and Arun
+        Srinivasan, the new algorithm supports logical, integer (even
+        with large values), real, and character vectors.  It
+        outperforms all other methods, but there are some caveats (see
+        \code{?sort}).
+
+        Other changes in \code{sort} and \code{order} from later R Core
+        releases (to R-3.4.1) have also been incorporated.
   \item Operations that increase or decrease the length of a vector
         (including lists) now often make changes in place, rather than
         allocating a new vector.  A small amount of additional
