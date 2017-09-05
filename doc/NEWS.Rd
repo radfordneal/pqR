@@ -156,6 +156,9 @@
         \code{NaN} had been converted to \code{NA} in \code{cumsum}.  (In
         R-3.4.1, the behaviour in this respect appears to be platform 
         dependent.)
+  \item Indexes used with \code{[[} can be symbols, with effect equivalent 
+        to indexing with the symbol's print name.  This has actually been
+        true since pqR-2013-07-22, but wasn't documented.
   \item When applied to complex vectors, the \code{prod} and \code{cumprod}
         functions now produce results matching those obtained with the
         \code{*} operator.
