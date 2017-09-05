@@ -1,10 +1,10 @@
 
-pqR version 2.15.1 (2016-00-00), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.1 (2017-00-00), based on R 2.15.0 (2012-03-30)
 
 R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 
-Modifications to R in pqR are Copyright (C) 2013-2016 Radford M. Neal
+Modifications to R in pqR are Copyright (C) 2013-2017 Radford M. Neal
 
 Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
@@ -23,7 +23,7 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 Type 'q()' to quit R.
 
 
-No helper threads, task merging enabled.
+No helper threads, task merging enabled, uncompressed pointers.
 
 > ###---- ALL tests here should return  TRUE !
 > ###
@@ -292,5 +292,21 @@ Error in parse(text = "12iL") : <text>:1:4: unexpected symbol
 > identical(x<y,c(TRUE,FALSE,FALSE))
 [1] TRUE
 > identical(b<x,c(FALSE,TRUE,TRUE))
+[1] TRUE
+> 
+> # The 'lengths' function.
+> 
+> identical(lengths(2:4),c(1L,1L,1L))
+[1] TRUE
+> identical(lengths(list(9,x=2:4,list("a","b"))),c(1L,x=3L,2L))
+[1] TRUE
+> identical(lengths(list(9,x=2:4,list("a","b")),FALSE),c(1L,3L,2L))
+[1] TRUE
+> 
+> A <- list()
+> class(A)<-"fred"
+> `length.fred` <- function (x) 7
+> `[[.fred` <- function(x,i) 1:(i+10)
+> identical(lengths(A),11:17)
 [1] TRUE
 > 
