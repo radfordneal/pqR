@@ -701,11 +701,11 @@ static int listgreater(int i, int j, SEXP key, Rboolean nalast,
     if (c == 0 && i < j) return 0; else return 1;
 }
 
-/* Needs indx set to 0, 1, ..., n-1 initially */
 static void orderVector (int *indx, int n, SEXP key, Rboolean nalast,
     Rboolean decreasing, int greater_sub(int, int, SEXP, Rboolean, Rboolean))
 {
     int t;
+    for (int i = 0; i < n; i++) indx[i] = i;
     for (t = 0; incs[t] > n; t++) ;
     for (int h = incs[t]; h != 0; h = incs[++t])
         for (int i = h; i < n; i++) {
@@ -739,7 +739,7 @@ void attribute_hidden
 orderVector1(int *indx, int n, SEXP key, Rboolean nalast, Rboolean decreasing,
              SEXP rho)
 {
-    int c, i, j, k, l, t, lo = 0, hi = n-1;
+    int c, i, j, k, l, t;
     int *ix = NULL /* -Wall */;
     double *x = NULL /* -Wall */;
     Rcomplex *cx = NULL /* -Wall */;
@@ -761,11 +761,16 @@ orderVector1(int *indx, int n, SEXP key, Rboolean nalast, Rboolean decreasing,
         break;
     }
 
+    int lo, hi;
     int e;
+
     if (rho != R_NilValue) {  /* NAs not an issue, just initialize to 0..n-1 */
         for (i = 0; i < n; i++) indx[i] = i;
         e = n;
+        lo = 0;
+        hi = n-1;
     }
+
     else if (nalast) { /* Initialize sequentially but with all NAs at end */
         e = 0;
         switch (TYPEOF(key)) {
@@ -789,7 +794,10 @@ orderVector1(int *indx, int n, SEXP key, Rboolean nalast, Rboolean decreasing,
         default:
             UNIMPLEMENTED_TYPE("orderVector1", key);
         }
+        lo = 0;
+        hi = e-1;
     }
+
     else { /* Initialize sequentially but with all NAs at beginning */
         e = 0;
         switch (TYPEOF(key)) {
@@ -813,20 +821,30 @@ orderVector1(int *indx, int n, SEXP key, Rboolean nalast, Rboolean decreasing,
         default:
             UNIMPLEMENTED_TYPE("orderVector1", key);
         }
+        lo = e;
+        hi = n-1;
     }
 
-    /* indx is initialized as needed from 0 to e; put missing indexes after */
+    /* Now indx is initialized as needed from 0 to e.  Put the missing indexes
+       after this, in order. */
 
-    j = e;
-    l = e == 0 ? n : indx[0];
-    for (k = 0; k < l; k++) 
-        indx[j++] = k;
-    for (i = 1; i < e && j < n; i++) {
-        l = indx[i];
-        for (k = indx[i-1] + 1; k < l; k++)
+    if (e == 0) {
+        for (i = 0; i < n; i++) indx[i] = i;
+    }
+    else {
+        j = e;
+        l = indx[0];
+        for (k = 0; k < l; k++) 
             indx[j++] = k;
+        for (i = 1; i < e && j < n; i++) {
+            l = indx[i];
+            for (k = indx[i-1] + 1; k < l; k++)
+                indx[j++] = k;
+        }
+        for (k = indx[e-1] + 1; k < n; k++) 
+            indx[j++] = k;
+        if (j != n) abort();
     }
-
     for (t = 0; incs[t] > hi-lo+1; t++) ;
     
     if (isObject(key) && !isNull(rho)) {
@@ -926,10 +944,8 @@ static SEXP do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if(narg == 1)
 	    orderVector1(INTEGER(ans), n, CAR(args), nalast, decreasing, 
 			 R_NilValue);
-	else {
-            for (i = 0; i < n; i++) INTEGER(ans)[i] = i;
+	else
             orderVector(INTEGER(ans), n, args, nalast, decreasing, listgreater);
-        }
 	for (i = 0; i < n; i++) INTEGER(ans)[i]++;
     }
     UNPROTECT(1);
