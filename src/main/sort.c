@@ -702,48 +702,44 @@ static int listgreater(int i, int j, SEXP key, Rboolean nalast,
 }
 
 /* Needs indx set to 0, 1, ..., n-1 initially */
-static void orderVector(int *indx, int n, SEXP key, Rboolean nalast,
-			Rboolean decreasing, int greater_sub(int, int, SEXP, Rboolean, Rboolean))
+static void orderVector (int *indx, int n, SEXP key, Rboolean nalast,
+    Rboolean decreasing, int greater_sub(int, int, SEXP, Rboolean, Rboolean))
 {
-    int i, j, h, t;
-    int itmp;
-
-    for (t = 0; incs[t] > n; t++);
-    for (h = incs[t]; h != 0; h = incs[++t])
-	for (i = h; i < n; i++) {
-	    itmp = indx[i];
-	    j = i;
-	    while (j >= h &&
-		   greater_sub(indx[j - h], itmp, key, nalast^decreasing,
-			       decreasing)) {
-		indx[j] = indx[j - h];
-		j -= h;
-	    }
-	    indx[j] = itmp;
-	}
+    int t;
+    for (t = 0; incs[t] > n; t++) ;
+    for (int h = incs[t]; h != 0; h = incs[++t])
+        for (int i = h; i < n; i++) {
+            int itmp = indx[i];
+            int j = i;
+            while (j >= h &&
+                   greater_sub(indx[j - h], itmp, key, nalast^decreasing,
+                               decreasing)) {
+                indx[j] = indx[j - h];
+                j -= h;
+            }
+            indx[j] = itmp;
+        }
 }
 
 #define sort2_with_index \
-	    for (h = incs[t]; h != 0; h = incs[++t]) \
-		for (i = lo + h; i <= hi; i++) { \
-		    itmp = indx[i]; \
-		    j = i; \
-		    while (j >= lo + h && less(indx[j - h], itmp)) { \
-			indx[j] = indx[j - h]; j -= h; } \
-		    indx[j] = itmp; \
-		}
+    for (int h = incs[t]; h != 0; h = incs[++t]) \
+        for (int i = lo + h; i <= hi; i++) { \
+            int itmp = indx[i]; \
+            int j = i; \
+            while (j >= lo + h && less(indx[j - h], itmp)) { \
+                indx[j] = indx[j - h]; j -= h; } \
+            indx[j] = itmp; \
+        }
 
-
-/* Needs indx set to 0, 1, ..., n-1 initially.
+/* Returns indexes (from 0) for sorted order.
    Also used by do_options, src/gnuwin32/extra.c
    Called with rho != R_NilValue only from do_rank, when NAs are not involved.
  */
 void attribute_hidden
 orderVector1(int *indx, int n, SEXP key, Rboolean nalast, Rboolean decreasing,
-	     SEXP rho)
+             SEXP rho)
 {
-    int c, i, j, h, t, lo = 0, hi = n-1;
-    int itmp, *isna = NULL, numna = 0;
+    int c, i, j, k, l, t, lo = 0, hi = n-1;
     int *ix = NULL /* -Wall */;
     double *x = NULL /* -Wall */;
     Rcomplex *cx = NULL /* -Wall */;
@@ -752,66 +748,99 @@ orderVector1(int *indx, int n, SEXP key, Rboolean nalast, Rboolean decreasing,
     switch (TYPEOF(key)) {
     case LGLSXP:
     case INTSXP:
-	ix = INTEGER(key);
-	break;
+        ix = INTEGER(key);
+        break;
     case REALSXP:
-	x = REAL(key);
-	break;
+        x = REAL(key);
+        break;
     case STRSXP:
-	sx = STRING_PTR(key);
-	break;
+        sx = STRING_PTR(key);
+        break;
     case CPLXSXP:
-	cx = COMPLEX(key);
-	break;
+        cx = COMPLEX(key);
+        break;
     }
 
-    if(isNull(rho)) {
-	/* First sort NAs to one end */
-	isna = Calloc(n, int);
-	switch (TYPEOF(key)) {
-	case LGLSXP:
-	case INTSXP:
-	    for (i = 0; i < n; i++) isna[i] = (ix[i] == NA_INTEGER);
-	    break;
-	case REALSXP:
-	    for (i = 0; i < n; i++) isna[i] = ISNAN(x[i]);
-	    break;
-	case STRSXP:
-	    for (i = 0; i < n; i++) isna[i] = (sx[i] == NA_STRING);
-	    break;
-	case CPLXSXP:
-	    for (i = 0; i < n; i++) isna[i] = ISNAN(cx[i].r) || ISNAN(cx[i].i);
-	    break;
-	default:
-	    UNIMPLEMENTED_TYPE("orderVector1", key);
-	}
-	for (i = 0; i < n; i++) numna += isna[i];
-
-	if(numna)
-	    switch (TYPEOF(key)) {
-	    case LGLSXP:
-	    case INTSXP:
-	    case REALSXP:
-	    case STRSXP:
-	    case CPLXSXP:
-		if (!nalast) for (i = 0; i < n; i++) isna[i] = !isna[i];
-		for (t = 0; incs[t] > n; t++);
-#define less(a, b) (isna[a] > isna[b] || (isna[a] == isna[b] && a > b))
-		sort2_with_index
-#undef less
-		    if(nalast) hi -= numna; else lo += numna;
-	    }
+    int e;
+    if (rho != R_NilValue) {  /* NAs not an issue, just initialize to 0..n-1 */
+        for (i = 0; i < n; i++) indx[i] = i;
+        e = n;
     }
-    
-    /* Shell sort isn't stable, so add test on index */
-    for (t = 0; incs[t] > hi-lo+1; t++);
+    else if (nalast) { /* Initialize sequentially but with all NAs at end */
+        e = 0;
+        switch (TYPEOF(key)) {
+        case LGLSXP:
+        case INTSXP:
+            for (i = 0; i < n; i++) 
+                if (ix[i] != NA_INTEGER) indx[e++] = i;
+            break;
+        case REALSXP:
+            for (i = 0; i < n; i++) 
+                if (!ISNAN(x[i])) indx[e++] = i;
+            break;
+        case STRSXP:
+            for (i = 0; i < n; i++) 
+                if (sx[i] != NA_STRING) indx[e++] = i;
+            break;
+        case CPLXSXP:
+            for (i = 0; i < n; i++) 
+                if (!ISNAN(cx[i].r) && !ISNAN(cx[i].i)) indx[e++] = i;
+            break;
+        default:
+            UNIMPLEMENTED_TYPE("orderVector1", key);
+        }
+    }
+    else { /* Initialize sequentially but with all NAs at beginning */
+        e = 0;
+        switch (TYPEOF(key)) {
+        case LGLSXP:
+        case INTSXP:
+            for (i = 0; i < n; i++) 
+                if (ix[i] == NA_INTEGER) indx[e++] = i;
+            break;
+        case REALSXP:
+            for (i = 0; i < n; i++) 
+                if (ISNAN(x[i])) indx[e++] = i;
+            break;
+        case STRSXP:
+            for (i = 0; i < n; i++) 
+                if (sx[i] == NA_STRING) indx[e++] = i;
+            break;
+        case CPLXSXP:
+            for (i = 0; i < n; i++) 
+                if (ISNAN(cx[i].r) || ISNAN(cx[i].i)) indx[e++] = i;
+            break;
+        default:
+            UNIMPLEMENTED_TYPE("orderVector1", key);
+        }
+    }
+
+    /* indx is initialized as needed from 0 to e; put missing indexes after */
+
+    j = e;
+    l = e == 0 ? n : indx[0];
+    for (k = 0; k < l; k++) 
+        indx[j++] = k;
+    for (i = 1; i < e && j < n; i++) {
+        l = indx[i];
+        for (k = indx[i-1] + 1; k < l; k++)
+            indx[j++] = k;
+    }
+
+    for (t = 0; incs[t] > hi-lo+1; t++) ;
     
     if (isObject(key) && !isNull(rho)) {
-/* only reached from do_rank */
+
+        /* Only reached from do_rank. */
+
 #define less(a, b) greater(a, b, key, nalast^decreasing, decreasing, rho)
-	    sort2_with_index
+            sort2_with_index
 #undef less
-    } else {
+    }
+    else {
+    
+        /* Shell sort isn't stable, so add test on index */
+
 	switch (TYPEOF(key)) {
 	case LGLSXP:
 	case INTSXP:
@@ -863,7 +892,6 @@ orderVector1(int *indx, int n, SEXP key, Rboolean nalast, Rboolean decreasing,
 #undef less
 	}
     }
-    if(isna) Free(isna);
 }
 
 /* FUNCTION order(...) */
@@ -895,12 +923,13 @@ static SEXP do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* NB: collation functions such as Scollate might allocate */
     PROTECT(ans = allocVector(INTSXP, n));
     if (n != 0) {
-	for (i = 0; i < n; i++) INTEGER(ans)[i] = i;
 	if(narg == 1)
 	    orderVector1(INTEGER(ans), n, CAR(args), nalast, decreasing, 
 			 R_NilValue);
-	else
-	    orderVector(INTEGER(ans), n, args, nalast, decreasing, listgreater);
+	else {
+            for (i = 0; i < n; i++) INTEGER(ans)[i] = i;
+            orderVector(INTEGER(ans), n, args, nalast, decreasing, listgreater);
+        }
 	for (i = 0; i < n; i++) INTEGER(ans)[i]++;
     }
     UNPROTECT(1);
@@ -939,7 +968,6 @@ static SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     if (n > 0) {
 	in = INTEGER(indx);
-	for (i = 0; i < n; i++) in[i] = i;
 	orderVector1(in, n, x, TRUE, FALSE, rho);
 	for (i = 0; i < n; i = j+1) {
 	    j = i;
