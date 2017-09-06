@@ -665,7 +665,78 @@ static int greater(int i, int j, SEXP x, Rboolean nalast, Rboolean decreasing,
     if (c > 0 || (c == 0 && j < i)) return 1; else return 0;
 }
 
-/* listgreater(): used as greater_sub in orderVector() in do_order(...) */
+/* Merge sort with multiple keys.  Returns indexes (from 1) for sorted order. */
+
+#undef  merge_sort
+#define merge_sort merge_sort_key
+#undef  merge_value
+#define merge_value int
+#undef  merge_greater
+#define merge_greater merge_greater_key
+
+static SEXP merge_key;     /* Parameters of comparison, for merge_greater_key */
+static int  merge_nalast;
+static int  merge_decreasing;
+
+static int merge_greater_key (int i, int j)
+{
+    SEXP key = merge_key;
+    int nalast = merge_nalast;
+    int decreasing = merge_decreasing;
+
+    int c = -1;
+
+    while (key != R_NilValue) {
+        SEXP x = CAR(key);
+        switch (TYPEOF(x)) {
+        case LGLSXP:
+        case INTSXP:
+            c = icmp(INTEGER(x)[i-1], INTEGER(x)[j-1], nalast);
+            break;
+        case REALSXP:
+            c = rcmp(REAL(x)[i-1], REAL(x)[j-1], nalast);
+            break;
+        case CPLXSXP:
+            c = ccmp(COMPLEX(x)[i-1], COMPLEX(x)[j-1], nalast);
+            break;
+        case STRSXP:
+            c = scmp(STRING_ELT(x, i-1), STRING_ELT(x, j-1), nalast);
+            break;
+        default:
+            UNIMPLEMENTED_TYPE("merge_greater", x);
+        }
+        if (decreasing) c = -c;
+        if (c > 0)
+            return 1;
+        if (c < 0)
+            return 0;
+        key = CDR(key);
+    }
+    if (c == 0 && i < j) return 0; else return 1;
+}
+
+#include "merge-sort.c"
+
+static void orderMerge (int *indx, int n, SEXP key,
+                        Rboolean nalast, Rboolean decreasing)
+{
+    void *vmax = VMAXGET();
+
+    int *ti;
+    ti = (int *) R_alloc (n, sizeof *ti);
+    for (int i = 0; i < n; i++) ti[i] = i+1;
+
+    merge_key = key;
+    merge_nalast = nalast^decreasing;
+    merge_decreasing = decreasing;
+    merge_sort_key (indx, ti, n);
+
+    VMAXSET(vmax);
+}
+
+
+/* Shell sort with multiple keys.  Returns indexes (from 1) for sorted order. */
+
 static int listgreater(int i, int j, SEXP key, Rboolean nalast,
 		       Rboolean decreasing)
 {
@@ -701,112 +772,8 @@ static int listgreater(int i, int j, SEXP key, Rboolean nalast,
     if (c == 0 && i < j) return 0; else return 1;
 }
 
-/* Merge sort with multiple keys.  Returns indexes (from 1) for sorted order. */
-
-static void orderMerge (int *indx, int n, SEXP key, Rboolean nalast,
-    Rboolean decreasing, int greater_sub(int, int, SEXP, Rboolean, Rboolean))
-{
-    if (n == 0)
-        return;
-
-    if (n == 1) {
-        indx[0] = 1;
-        return;
-    }
-
-    void *vmax = VMAXGET();
-
-    int *ti;
-    ti = (int *) R_alloc (n, sizeof *ti);
-
-    /* Set up array of tasks to do, mimicking recursion. */
-
-    struct { int len, stp; int *src, *dst; } todo[50]; /* more than enough */
-    int top;
-
-    for (int i = 0; i < n; i++) ti[i] = i+1;
-
-    todo[0].src = ti;
-    todo[0].dst = indx;
-    todo[0].len = n;
-    todo[0].stp = 0;
-    top = 0;
-#if 0
-REprintf("merge: %d %p %p\n",n,ti,indx);
-#endif
-    /* Do tasks until original task is done. */
-
-    for (;;) {
-#if 0
-REprintf("step: %d %d %d %p %p\n",
-top,todo[top].len,todo[top].stp,todo[top].src,todo[top].dst);
-for (int i = 0; i < n; i++) REprintf(" %d",ti[i]); REprintf("\n");
-for (int i = 0; i < n; i++) REprintf(" %d",indx[i]); REprintf("\n");
-#endif
-        int n1 = (todo[top].len + 1) / 2;
-        int n2 = todo[top].len - n1;
-
-        switch (todo[top].stp) {
-        case 0: {
-            todo[top].stp = 1;
-            if (n1 == 1) {
-                *(todo[top].dst+n2) = *todo[top].src;
-                break;
-            }
-            todo[top+1].len = n1;
-            todo[top+1].stp = 0;
-            todo[top+1].src = todo[top].src;
-            todo[top+1].dst = todo[top].dst + n2;
-            top += 1;
-            break;
-        }
-        case 1: {
-            todo[top].stp = 2;
-            if (n2 == 1) {
-                *todo[top].src = *(todo[top].src+n1);
-                break;
-            }
-            todo[top+1].len = n2;
-            todo[top+1].stp = 0;
-            todo[top+1].src = todo[top].src + n1;
-            todo[top+1].dst = todo[top].src;
-            top += 1;
-            break;
-        }
-        case 2: {
-            int *i1 = todo[top].dst + n2;
-            int *i2 = todo[top].src;
-            int *j = todo[top].dst;
-            while (n1 + n2 > 0) {
-                if (n1 == 0 || n2 != 0 && greater_sub (*i1 - 1, *i2 - 1, key, 
-                                              nalast^decreasing, decreasing)) {
-                    *j++ = *i2++;
-                    n2 -= 1;
-                }
-                else {
-                    *j++ = *i1++;
-                    n1 -= 1;
-                }
-            }
-#if 0
-REprintf("after merge:\n");
-for (int i = 0; i < n; i++) REprintf(" %d",ti[i]); REprintf("\n");
-for (int i = 0; i < n; i++) REprintf(" %d",indx[i]); REprintf("\n");
-#endif
-            if (top == 0) {
-                VMAXSET(vmax);
-                return;
-            }
-            top -= 1;
-            break;
-        }}
-    }
-}
-
-/* Shell sort with multiple keys.  Returns indexes (from 1) for sorted order. */
-
 static void orderVector (int *indx, int n, SEXP key, Rboolean nalast,
-    Rboolean decreasing, int greater_sub(int, int, SEXP, Rboolean, Rboolean))
+                         Rboolean decreasing)
 {
     int t;
     for (int i = 0; i < n; i++) indx[i] = i+1;
@@ -815,7 +782,7 @@ static void orderVector (int *indx, int n, SEXP key, Rboolean nalast,
         for (int i = h; i < n; i++) {
             int itmp = indx[i];
             int j = i;
-            while (j >= h && greater_sub (indx[j-h] - 1, itmp - 1, key, 
+            while (j >= h && listgreater (indx[j-h] - 1, itmp - 1, key, 
                                           nalast^decreasing, decreasing)) {
                 indx[j] = indx[j-h];
                 j -= h;
@@ -963,7 +930,7 @@ void attribute_hidden orderVector1 (int *indx, int n, SEXP key,
     
         /* Shell sort isn't stable, so add test on index */
 
-	switch (TYPEOF(key)) {
+        switch (TYPEOF(key)) {
 	case LGLSXP:
 	case INTSXP:
 	    if (decreasing) {
@@ -1049,8 +1016,7 @@ static SEXP do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    orderVector1 (INTEGER(ans), n, CAR(args), nalast, decreasing, 
 			  R_NilValue);
 	else
-            orderVector (INTEGER(ans), n, args, nalast, decreasing,
-                         listgreater);
+            orderVector (INTEGER(ans), n, args, nalast, decreasing);
     }
     UNPROTECT(1);
     return ans;
@@ -1093,11 +1059,9 @@ static SEXP do_order2(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    orderVector1 (INTEGER(ans), n, CAR(args), nalast, decreasing, 
 			  R_NilValue);
 	else if (merge)
-            orderMerge (INTEGER(ans), n, args, nalast, decreasing,
-                         listgreater);
+            orderMerge (INTEGER(ans), n, args, nalast, decreasing);
         else
-            orderVector (INTEGER(ans), n, args, nalast, decreasing,
-                         listgreater);
+            orderVector (INTEGER(ans), n, args, nalast, decreasing);
     }
     UNPROTECT(1);
     return ans;
