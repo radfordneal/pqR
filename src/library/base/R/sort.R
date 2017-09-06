@@ -138,7 +138,7 @@ order <- function(..., na.last = TRUE, decreasing = FALSE,
                                       decreasing = decreasing,
                                       method = method)))
     } else if(method != "radix" && !is.na(na.last)) {
-        return (.Internal (order2 (method=="merge", na.last, decreasing, ...)))
+        return (.Internal (order (method, na.last, decreasing, ...)))
     }
 
     if (method == "radix") {
