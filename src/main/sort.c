@@ -983,56 +983,29 @@ void attribute_hidden orderVector1 (int *indx, int n, SEXP key,
     }
 }
 
-/* FUNCTION order(...) */
+/* Internal 'order' function.  New form has "merge" or "shell" as first
+   argument.  Accomodate any possible calls assuming old form. */
+
 static SEXP do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    SEXP ap, ans;
-    int i, n = -1, narg = 0;
-    int nalast, decreasing;
-
-    nalast = asLogical(CAR(args));
-    if(nalast == NA_LOGICAL)
-	error(_("invalid '%s' value"), "na.last");
-    args = CDR(args);
-    decreasing = asLogical(CAR(args));
-    if(decreasing == NA_LOGICAL)
-	error(_("'decreasing' must be TRUE or FALSE"));
-    args = CDR(args);
-    if (args == R_NilValue)
-	return R_NilValue;
-
-    if (isVector(CAR(args)))
-	n = LENGTH(CAR(args));
-    for (ap = args; ap != R_NilValue; ap = CDR(ap), narg++) {
-	if (!isVector(CAR(ap)))
-	    error(_("argument %d is not a vector"), narg + 1);
-	if (LENGTH(CAR(ap)) != n)
-	    error(_("argument lengths differ"));
-    }
-    /* NB: collation functions such as Scollate might allocate */
-    PROTECT(ans = allocVector(INTSXP, n));
-    if (n != 0) {
-	if (narg == 1)
-	    orderVector1 (INTEGER(ans), n, CAR(args), nalast, decreasing, 
-			  R_NilValue);
-	else
-            orderVector (INTEGER(ans), n, args, nalast, decreasing);
-    }
-    UNPROTECT(1);
-    return ans;
-}
-
-/* FUNCTION order(...) */
-static SEXP do_order2(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ap, ans;
     int i, n = -1, narg = 0;
     int nalast, decreasing, merge;
 
-    merge = asLogical(CAR(args));
-    if (merge == NA_LOGICAL)
-	error(_("invalid '%s' value"), "merge");
-    args = CDR(args);
+    /* Check for "merge" or "shell" as first argument. */
+    if (TYPEOF(CAR(args)) == STRSXP && LENGTH(CAR(args)) == 1) {
+        SEXP chr = CHAR(STRING_ELT(CAR(args),0));
+        if (strcmp(chr,"merge") == 0) 
+            merge = TRUE;
+        else if (strcmp(chr,"shell") == 0) 
+            merge = FALSE;
+        else
+            error(_("invalid '%s' value"), "method");
+        args = CDR(args);
+    }
+    else 
+        merge = FALSE;
+
     nalast = asLogical(CAR(args));
     if (nalast == NA_LOGICAL)
 	error(_("invalid '%s' value"), "na.last");
@@ -1209,7 +1182,6 @@ attribute_hidden FUNTAB R_FunTab_sort[] =
 {"sort",	do_sort,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"psort",	do_psort,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"order",	do_order,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"order2",	do_order2,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rank",	do_rank,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"radixsortold",do_radixsort,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"xtfrm",	do_xtfrm,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
