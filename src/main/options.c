@@ -405,13 +405,12 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    options = CDR(options); i++;
 	}
 	PROTECT(sind = allocVector(INTSXP, n));  indx = INTEGER(sind);
-	for (i = 0; i < n; i++) indx[i] = i;
 	orderVector1(indx, n, names, TRUE, FALSE, R_NilValue);
 	PROTECT(value2 = allocVector(VECSXP, n));
 	PROTECT(names2 = allocVector(STRSXP, n));
 	for(i = 0; i < n; i++) {
-	    SET_STRING_ELT(names2, i, STRING_ELT(names, indx[i]));
-	    SET_VECTOR_ELT(value2, i, VECTOR_ELT(value, indx[i]));
+	    SET_STRING_ELT(names2, i, STRING_ELT(names, indx[i]-1));
+	    SET_VECTOR_ELT(value2, i, VECTOR_ELT(value, indx[i]-1));
 	}
 	setAttrib(value2, R_NamesSymbol, names2);
 	UNPROTECT(5);
