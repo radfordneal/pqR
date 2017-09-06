@@ -701,20 +701,21 @@ static int listgreater(int i, int j, SEXP key, Rboolean nalast,
     if (c == 0 && i < j) return 0; else return 1;
 }
 
+/* Returns indexes (from 1) for sorted order. */
+
 static void orderVector (int *indx, int n, SEXP key, Rboolean nalast,
     Rboolean decreasing, int greater_sub(int, int, SEXP, Rboolean, Rboolean))
 {
     int t;
-    for (int i = 0; i < n; i++) indx[i] = i;
+    for (int i = 0; i < n; i++) indx[i] = i+1;
     for (t = 0; incs[t] > n; t++) ;
     for (int h = incs[t]; h != 0; h = incs[++t])
         for (int i = h; i < n; i++) {
             int itmp = indx[i];
             int j = i;
-            while (j >= h &&
-                   greater_sub(indx[j - h], itmp, key, nalast^decreasing,
-                               decreasing)) {
-                indx[j] = indx[j - h];
+            while (j >= h && greater_sub (indx[j-h] - 1, itmp - 1, key, 
+                                          nalast^decreasing, decreasing)) {
+                indx[j] = indx[j-h];
                 j -= h;
             }
             indx[j] = itmp;
@@ -726,18 +727,19 @@ static void orderVector (int *indx, int n, SEXP key, Rboolean nalast,
         for (int i = lo + h; i <= hi; i++) { \
             int itmp = indx[i]; \
             int j = i; \
-            while (j >= lo + h && less(indx[j - h], itmp)) { \
-                indx[j] = indx[j - h]; j -= h; } \
+            while (j >= lo + h && less(indx[j-h]-1, itmp-1)) { \
+                indx[j] = indx[j-h]; \
+                j -= h; \
+            } \
             indx[j] = itmp; \
         }
 
-/* Returns indexes (from 0) for sorted order.
+/* Returns indexes (from 1) for sorted order.
    Also used by do_options, src/gnuwin32/extra.c
-   Called with rho != R_NilValue only from do_rank, when NAs are not involved.
- */
-void attribute_hidden
-orderVector1(int *indx, int n, SEXP key, Rboolean nalast, Rboolean decreasing,
-             SEXP rho)
+   Called with rho!=R_NilValue only from do_rank, when NAs are not involved. */
+
+void attribute_hidden orderVector1 (int *indx, int n, SEXP key, 
+                        Rboolean nalast, Rboolean decreasing, SEXP rho)
 {
     int c, i, j, k, l, t;
     int *ix = NULL /* -Wall */;
@@ -764,8 +766,8 @@ orderVector1(int *indx, int n, SEXP key, Rboolean nalast, Rboolean decreasing,
     int lo, hi;
     int e;
 
-    if (rho != R_NilValue) {  /* NAs not an issue, just initialize to 0..n-1 */
-        for (i = 0; i < n; i++) indx[i] = i;
+    if (rho != R_NilValue) {  /* NAs not an issue, just initialize to 1..n */
+        for (i = 0; i < n; i++) indx[i] = i+1;
         e = n;
         lo = 0;
         hi = n-1;
@@ -777,19 +779,19 @@ orderVector1(int *indx, int n, SEXP key, Rboolean nalast, Rboolean decreasing,
         case LGLSXP:
         case INTSXP:
             for (i = 0; i < n; i++) 
-                if (ix[i] != NA_INTEGER) indx[e++] = i;
+                if (ix[i] != NA_INTEGER) indx[e++] = i+1;
             break;
         case REALSXP:
             for (i = 0; i < n; i++) 
-                if (!ISNAN(x[i])) indx[e++] = i;
+                if (!ISNAN(x[i])) indx[e++] = i+1;
             break;
         case STRSXP:
             for (i = 0; i < n; i++) 
-                if (sx[i] != NA_STRING) indx[e++] = i;
+                if (sx[i] != NA_STRING) indx[e++] = i+1;
             break;
         case CPLXSXP:
             for (i = 0; i < n; i++) 
-                if (!ISNAN(cx[i].r) && !ISNAN(cx[i].i)) indx[e++] = i;
+                if (!ISNAN(cx[i].r) && !ISNAN(cx[i].i)) indx[e++] = i+1;
             break;
         default:
             UNIMPLEMENTED_TYPE("orderVector1", key);
@@ -804,19 +806,19 @@ orderVector1(int *indx, int n, SEXP key, Rboolean nalast, Rboolean decreasing,
         case LGLSXP:
         case INTSXP:
             for (i = 0; i < n; i++) 
-                if (ix[i] == NA_INTEGER) indx[e++] = i;
+                if (ix[i] == NA_INTEGER) indx[e++] = i+1;
             break;
         case REALSXP:
             for (i = 0; i < n; i++) 
-                if (ISNAN(x[i])) indx[e++] = i;
+                if (ISNAN(x[i])) indx[e++] = i+1;
             break;
         case STRSXP:
             for (i = 0; i < n; i++) 
-                if (sx[i] == NA_STRING) indx[e++] = i;
+                if (sx[i] == NA_STRING) indx[e++] = i+1;
             break;
         case CPLXSXP:
             for (i = 0; i < n; i++) 
-                if (ISNAN(cx[i].r) || ISNAN(cx[i].i)) indx[e++] = i;
+                if (ISNAN(cx[i].r) || ISNAN(cx[i].i)) indx[e++] = i+1;
             break;
         default:
             UNIMPLEMENTED_TYPE("orderVector1", key);
@@ -829,20 +831,20 @@ orderVector1(int *indx, int n, SEXP key, Rboolean nalast, Rboolean decreasing,
        after this, in order. */
 
     if (e == 0) {
-        for (i = 0; i < n; i++) indx[i] = i;
+        for (i = 0; i < n; i++) indx[i] = i+1;
     }
     else {
         j = e;
         l = indx[0];
-        for (k = 0; k < l; k++) 
+        for (k = 1; k < l; k++) 
             indx[j++] = k;
         for (i = 1; i < e && j < n; i++) {
             l = indx[i];
             for (k = indx[i-1] + 1; k < l; k++)
                 indx[j++] = k;
         }
-        for (k = indx[e-1] + 1; k < n; k++) 
-            indx[j++] = k;
+        for (k = indx[e-1]; k < n; k++) /* avoid k ever being > n (overflow) */
+            indx[j++] = k+1;
         if (j != n) abort();
     }
     for (t = 0; incs[t] > hi-lo+1; t++) ;
@@ -941,12 +943,12 @@ static SEXP do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* NB: collation functions such as Scollate might allocate */
     PROTECT(ans = allocVector(INTSXP, n));
     if (n != 0) {
-	if(narg == 1)
-	    orderVector1(INTEGER(ans), n, CAR(args), nalast, decreasing, 
-			 R_NilValue);
+	if (narg == 1)
+	    orderVector1 (INTEGER(ans), n, CAR(args), nalast, decreasing, 
+			  R_NilValue);
 	else
-            orderVector(INTEGER(ans), n, args, nalast, decreasing, listgreater);
-	for (i = 0; i < n; i++) INTEGER(ans)[i]++;
+            orderVector (INTEGER(ans), n, args, nalast, decreasing,
+                         listgreater);
     }
     UNPROTECT(1);
     return ans;
@@ -984,18 +986,19 @@ static SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     if (n > 0) {
 	in = INTEGER(indx);
-	orderVector1(in, n, x, TRUE, FALSE, rho);
+	orderVector1 (in, n, x, TRUE, FALSE, rho);
 	for (i = 0; i < n; i = j+1) {
 	    j = i;
-	    while ((j < n - 1) && equal(in[j], in[j + 1], x, TRUE, rho)) j++;
-	    switch(ties_kind) {
+	    while (j < n-1 && equal(in[j]-1, in[j+1]-1, x, TRUE, rho))
+                j += 1;
+	    switch (ties_kind) {
 	    case AVERAGE:
 		for (k = i; k <= j; k++)
-		    rk[in[k]] = (i + j + 2) / 2.; break;
+		    rk[in[k]-1] = (i + j + 2) / 2.0; break;
 	    case MAX:
-		for (k = i; k <= j; k++) ik[in[k]] = j+1; break;
+		for (k = i; k <= j; k++) ik[in[k]-1] = j+1; break;
 	    case MIN:
-		for (k = i; k <= j; k++) ik[in[k]] = i+1; break;
+		for (k = i; k <= j; k++) ik[in[k]-1] = i+1; break;
 	    }
 	}
     }
