@@ -53,6 +53,7 @@ HEADERS = \
 	scalar-stack.h \
 	basedecl.h \
 	gzio.h \
+	merge-sort.c \
 	par-common.c \
 	qsort-body.c \
 	rlocale_data.h \
