@@ -701,7 +701,109 @@ static int listgreater(int i, int j, SEXP key, Rboolean nalast,
     if (c == 0 && i < j) return 0; else return 1;
 }
 
-/* Returns indexes (from 1) for sorted order. */
+/* Merge sort with multiple keys.  Returns indexes (from 1) for sorted order. */
+
+static void orderMerge (int *indx, int n, SEXP key, Rboolean nalast,
+    Rboolean decreasing, int greater_sub(int, int, SEXP, Rboolean, Rboolean))
+{
+    if (n == 0)
+        return;
+
+    if (n == 1) {
+        indx[0] = 1;
+        return;
+    }
+
+    void *vmax = VMAXGET();
+
+    int *ti;
+    ti = (int *) R_alloc (n, sizeof *ti);
+
+    /* Set up array of tasks to do, mimicking recursion. */
+
+    struct { int len, stp; int *src, *dst; } todo[50]; /* more than enough */
+    int top;
+
+    for (int i = 0; i < n; i++) ti[i] = i+1;
+
+    todo[0].src = ti;
+    todo[0].dst = indx;
+    todo[0].len = n;
+    todo[0].stp = 0;
+    top = 0;
+#if 0
+REprintf("merge: %d %p %p\n",n,ti,indx);
+#endif
+    /* Do tasks until original task is done. */
+
+    for (;;) {
+#if 0
+REprintf("step: %d %d %d %p %p\n",
+top,todo[top].len,todo[top].stp,todo[top].src,todo[top].dst);
+for (int i = 0; i < n; i++) REprintf(" %d",ti[i]); REprintf("\n");
+for (int i = 0; i < n; i++) REprintf(" %d",indx[i]); REprintf("\n");
+#endif
+        int n1 = (todo[top].len + 1) / 2;
+        int n2 = todo[top].len - n1;
+
+        switch (todo[top].stp) {
+        case 0: {
+            todo[top].stp = 1;
+            if (n1 == 1) {
+                *(todo[top].dst+n2) = *todo[top].src;
+                break;
+            }
+            todo[top+1].len = n1;
+            todo[top+1].stp = 0;
+            todo[top+1].src = todo[top].src;
+            todo[top+1].dst = todo[top].dst + n2;
+            top += 1;
+            break;
+        }
+        case 1: {
+            todo[top].stp = 2;
+            if (n2 == 1) {
+                *todo[top].src = *(todo[top].src+n1);
+                break;
+            }
+            todo[top+1].len = n2;
+            todo[top+1].stp = 0;
+            todo[top+1].src = todo[top].src + n1;
+            todo[top+1].dst = todo[top].src;
+            top += 1;
+            break;
+        }
+        case 2: {
+            int *i1 = todo[top].dst + n2;
+            int *i2 = todo[top].src;
+            int *j = todo[top].dst;
+            while (n1 + n2 > 0) {
+                if (n1 == 0 || n2 != 0 && greater_sub (*i1 - 1, *i2 - 1, key, 
+                                              nalast^decreasing, decreasing)) {
+                    *j++ = *i2++;
+                    n2 -= 1;
+                }
+                else {
+                    *j++ = *i1++;
+                    n1 -= 1;
+                }
+            }
+#if 0
+REprintf("after merge:\n");
+for (int i = 0; i < n; i++) REprintf(" %d",ti[i]); REprintf("\n");
+for (int i = 0; i < n; i++) REprintf(" %d",indx[i]); REprintf("\n");
+#endif
+            if (top == 0) {
+                VMAXSET(vmax);
+                return;
+            }
+            top -= 1;
+            break;
+        }}
+    }
+}
+
+/* Shell sort with multiple keys.  Returns indexes (from 1) for sorted order. */
 
 static void orderVector (int *indx, int n, SEXP key, Rboolean nalast,
     Rboolean decreasing, int greater_sub(int, int, SEXP, Rboolean, Rboolean))
@@ -954,6 +1056,53 @@ static SEXP do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
+/* FUNCTION order(...) */
+static SEXP do_order2(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    SEXP ap, ans;
+    int i, n = -1, narg = 0;
+    int nalast, decreasing, merge;
+
+    merge = asLogical(CAR(args));
+    if (merge == NA_LOGICAL)
+	error(_("invalid '%s' value"), "merge");
+    args = CDR(args);
+    nalast = asLogical(CAR(args));
+    if (nalast == NA_LOGICAL)
+	error(_("invalid '%s' value"), "na.last");
+    args = CDR(args);
+    decreasing = asLogical(CAR(args));
+    if (decreasing == NA_LOGICAL)
+	error(_("'decreasing' must be TRUE or FALSE"));
+    args = CDR(args);
+    if (args == R_NilValue)
+	return R_NilValue;
+
+    if (isVector(CAR(args)))
+	n = LENGTH(CAR(args));
+    for (ap = args; ap != R_NilValue; ap = CDR(ap), narg++) {
+	if (!isVector(CAR(ap)))
+	    error(_("argument %d is not a vector"), narg + 1);
+	if (LENGTH(CAR(ap)) != n)
+	    error(_("argument lengths differ"));
+    }
+    /* NB: collation functions such as Scollate might allocate */
+    PROTECT(ans = allocVector(INTSXP, n));
+    if (n != 0) {
+	if (narg == 1)
+	    orderVector1 (INTEGER(ans), n, CAR(args), nalast, decreasing, 
+			  R_NilValue);
+	else if (merge)
+            orderMerge (INTEGER(ans), n, args, nalast, decreasing,
+                         listgreater);
+        else
+            orderVector (INTEGER(ans), n, args, nalast, decreasing,
+                         listgreater);
+    }
+    UNPROTECT(1);
+    return ans;
+}
+
 /* FUNCTION: rank(x) */
 static SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -1096,6 +1245,7 @@ attribute_hidden FUNTAB R_FunTab_sort[] =
 {"sort",	do_sort,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"psort",	do_psort,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"order",	do_order,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"order2",	do_order2,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rank",	do_rank,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"radixsortold",do_radixsort,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"xtfrm",	do_xtfrm,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},

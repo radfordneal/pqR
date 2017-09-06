@@ -1,5 +1,6 @@
 #  File src/library/base/R/sort.R
 #  Part of the R package, https://www.R-project.org
+#  Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 #
 #  Copyright (C) 1995-2016 The R Core Team
 #
@@ -116,12 +117,12 @@ sort.int <-
 }
 
 order <- function(..., na.last = TRUE, decreasing = FALSE,
-                  method = c("auto", "shell", "radix"))
+                  method = c("auto", "merge", "shell", "radix"))
 {
     z <- list(...)
 
     method <- if (missing(method)) "auto" 
-              else match.arg (method, c("auto", "shell", "radix"))
+              else match.arg (method, c("auto", "merge", "shell", "radix"))
     if (method == "auto") {
         useRadix <- all(vapply(z, function(x) {
             (is.numeric(x) || is.factor(x) || is.logical(x)) &&
@@ -137,7 +138,7 @@ order <- function(..., na.last = TRUE, decreasing = FALSE,
                                       decreasing = decreasing,
                                       method = method)))
     } else if(method != "radix" && !is.na(na.last)) {
-        return(.Internal(order(na.last, decreasing, ...)))
+        return (.Internal (order2 (method=="merge", na.last, decreasing, ...)))
     }
 
     if (method == "radix") {

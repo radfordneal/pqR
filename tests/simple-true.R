@@ -194,3 +194,32 @@ class(A)<-"fred"
 `length.fred` <- function (x) 7
 `[[.fred` <- function(x,i) 1:(i+10)
 identical(lengths(A),11:17)
+
+# Some tests of 'order' and 'sort':
+
+set.seed(123456)
+n <- 10000
+a <- sample(c("aa","bb","cc"),n,replace=TRUE)
+b <- sample(200000,n,replace=TRUE)
+c <- b + 0.1
+
+for (w in c("a","b","c")) {
+    for (m in c("radix","shell")) {
+        cat("sorting",w,"by",m,"method\n")
+        d <- get(w)
+        s <- sort(d,method=m)
+        o <- order(d,method=m)
+        print(!is.unsorted(s))
+        print(identical(s,d[o]))
+        print(identical(table(d,dnn=NULL),table(s,dnn=NULL)))
+    }
+}
+
+o <- order(a,b,method="shell")
+!is.unsorted(a[o])
+identical(table(a,dnn=NULL),table(a[o],dnn=NULL))
+identical(table(b,dnn=NULL),table(b[o],dnn=NULL))
+for (w in c("aa","bb","cc")) {
+    print(!is.unsorted(b[o[a[o]==w]]))
+}
+
