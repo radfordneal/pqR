@@ -319,17 +319,20 @@ Error in parse(text = "12iL") : <text>:1:4: unexpected symbol
 > c <- b + 0.1
 > 
 > for (w in c("a","b","c")) {
-+     for (m in c("radix","shell")) {
++     d <- get(w)
++     oo <- order(d)
++     for (m in c("radix","shell","merge")) {
 +         cat("sorting",w,"by",m,"method\n")
-+         d <- get(w)
-+         s <- sort(d,method=m)
-+         o <- order(d,method=m)
++         s <- sort  (d, method = if (m=="merge") "radix" else m)
++         o <- order (d, method = m)
 +         print(!is.unsorted(s))
 +         print(identical(s,d[o]))
 +         print(identical(table(d,dnn=NULL),table(s,dnn=NULL)))
++         print(identical(o,oo))
 +     }
 + }
 sorting a by radix method
+[1] TRUE
 [1] TRUE
 [1] TRUE
 [1] TRUE
@@ -337,7 +340,14 @@ sorting a by shell method
 [1] TRUE
 [1] TRUE
 [1] TRUE
+[1] TRUE
+sorting a by merge method
+[1] TRUE
+[1] TRUE
+[1] TRUE
+[1] TRUE
 sorting b by radix method
+[1] TRUE
 [1] TRUE
 [1] TRUE
 [1] TRUE
@@ -345,11 +355,24 @@ sorting b by shell method
 [1] TRUE
 [1] TRUE
 [1] TRUE
+[1] TRUE
+sorting b by merge method
+[1] TRUE
+[1] TRUE
+[1] TRUE
+[1] TRUE
 sorting c by radix method
 [1] TRUE
 [1] TRUE
 [1] TRUE
+[1] TRUE
 sorting c by shell method
+[1] TRUE
+[1] TRUE
+[1] TRUE
+[1] TRUE
+sorting c by merge method
+[1] TRUE
 [1] TRUE
 [1] TRUE
 [1] TRUE
@@ -368,4 +391,7 @@ sorting c by shell method
 [1] TRUE
 [1] TRUE
 > 
+> o2 <- order(a,b,method="merge")
+> identical(o,o2)
+[1] TRUE
 > 

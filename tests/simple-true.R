@@ -204,14 +204,16 @@ b <- sample(200000,n,replace=TRUE)
 c <- b + 0.1
 
 for (w in c("a","b","c")) {
-    for (m in c("radix","shell")) {
+    d <- get(w)
+    oo <- order(d)
+    for (m in c("radix","shell","merge")) {
         cat("sorting",w,"by",m,"method\n")
-        d <- get(w)
-        s <- sort(d,method=m)
-        o <- order(d,method=m)
+        s <- sort  (d, method = if (m=="merge") "radix" else m)
+        o <- order (d, method = m)
         print(!is.unsorted(s))
         print(identical(s,d[o]))
         print(identical(table(d,dnn=NULL),table(s,dnn=NULL)))
+        print(identical(o,oo))
     }
 }
 
@@ -223,3 +225,5 @@ for (w in c("aa","bb","cc")) {
     print(!is.unsorted(b[o[a[o]==w]]))
 }
 
+o2 <- order(a,b,method="merge")
+identical(o,o2)
