@@ -665,29 +665,32 @@ static int greater(int i, int j, SEXP x, Rboolean nalast, Rboolean decreasing,
     if (c > 0 || (c == 0 && j < i)) return 1; else return 0;
 }
 
-/* Merge sort with multiple keys.  Returns indexes (from 1) for sorted order. */
+/* Parameters of comparison, for various merge sort procedures. */
+
+static SEXP merge_key;
+static int  merge_nalast;
+static int  merge_decreasing;
+static SEXP merge_rho;
+
+
+/** Merge sort with multiple keys. Returns indexes (from 1) for sorted order **/
 
 #undef  merge_sort
 #define merge_sort merge_sort_key
 #undef  merge_value
 #define merge_value int
 #undef  merge_greater
-#define merge_greater merge_greater_key
+#define merge_greater merge_greater_multi
 
-static SEXP merge_key;     /* Parameters of comparison, for merge_greater_key */
-static int  merge_nalast;
-static int  merge_decreasing;
-
-static int merge_greater_key (int i, int j)
+static int merge_greater_multi (int i, int j)
 {
     SEXP key = merge_key;
     int nalast = merge_nalast;
     int decreasing = merge_decreasing;
 
-    int c = -1;
-
     while (key != R_NilValue) {
         SEXP x = CAR(key);
+        int c;
         switch (TYPEOF(x)) {
         case LGLSXP:
         case INTSXP:
@@ -705,14 +708,14 @@ static int merge_greater_key (int i, int j)
         default:
             UNIMPLEMENTED_TYPE("merge_greater", x);
         }
-        if (decreasing) c = -c;
         if (c > 0)
-            return 1;
+            return !decreasing;
         if (c < 0)
-            return 0;
+            return decreasing;
         key = CDR(key);
     }
-    if (c == 0 && i < j) return 0; else return 1;
+
+    return i > j;
 }
 
 #include "merge-sort.c"
@@ -729,13 +732,14 @@ static void orderMerge (int *indx, int n, SEXP key,
     merge_key = key;
     merge_nalast = nalast^decreasing;
     merge_decreasing = decreasing;
+
     merge_sort_key (indx, ti, n);
 
     VMAXSET(vmax);
 }
 
 
-/* Shell sort with multiple keys.  Returns indexes (from 1) for sorted order. */
+/** Shell sort with multiple keys. Returns indexes (from 1) for sorted order **/
 
 static int listgreater(int i, int j, SEXP key, Rboolean nalast,
 		       Rboolean decreasing)
@@ -762,7 +766,7 @@ static int listgreater(int i, int j, SEXP key, Rboolean nalast,
 	default:
 	    UNIMPLEMENTED_TYPE("listgreater", x);
 	}
-	if (decreasing) c = -c;
+
 	if (c > 0)
 	    return 1;
 	if (c < 0)
@@ -791,109 +795,82 @@ static void orderVector (int *indx, int n, SEXP key, Rboolean nalast,
         }
 }
 
-#define sort2_with_index \
-    for (int h = incs[t]; h != 0; h = incs[++t]) \
-        for (int i = lo + h; i <= hi; i++) { \
-            int itmp = indx[i]; \
-            int j = i; \
-            while (j >= lo + h && less(indx[j-h]-1, itmp-1)) { \
-                indx[j] = indx[j-h]; \
-                j -= h; \
-            } \
-            indx[j] = itmp; \
-        }
 
-/* Returns indexes (from 1) for sorted order.
-   Also used by do_options, src/gnuwin32/extra.c
-   Called with rho!=R_NilValue only from do_rank, when NAs are not involved. */
+/* Initialize to sequence from 1 up, but with NA at beginning/end. */
 
-void attribute_hidden orderVector1 (int *indx, int n, SEXP key, 
-                        Rboolean nalast, Rboolean decreasing, SEXP rho)
+static void init_seq_NA (SEXP key, int *indx, int n, int nalast, 
+                         int *lo, int *hi)
 {
-    int c, i, j, k, l, t;
-    int *ix = NULL /* -Wall */;
-    double *x = NULL /* -Wall */;
-    Rcomplex *cx = NULL /* -Wall */;
-    SEXP *sx = NULL /* -Wall */;
+    int i, j, k, l, e;
 
-    switch (TYPEOF(key)) {
-    case LGLSXP:
-    case INTSXP:
-        ix = INTEGER(key);
-        break;
-    case REALSXP:
-        x = REAL(key);
-        break;
-    case STRSXP:
-        sx = STRING_PTR(key);
-        break;
-    case CPLXSXP:
-        cx = COMPLEX(key);
-        break;
-    }
-
-    int lo, hi;
-    int e;
-
-    if (rho != R_NilValue) {  /* NAs not an issue, just initialize to 1..n */
-        for (i = 0; i < n; i++) indx[i] = i+1;
-        e = n;
-        lo = 0;
-        hi = n-1;
-    }
-
-    else if (nalast) { /* Initialize sequentially but with all NAs at end */
+    if (nalast) { /* Initialize sequentially but with all NAs at end */
         e = 0;
         switch (TYPEOF(key)) {
         case LGLSXP:
-        case INTSXP:
+        case INTSXP: {
+            int *ix = INTEGER(key);
             for (i = 0; i < n; i++) 
                 if (ix[i] != NA_INTEGER) indx[e++] = i+1;
             break;
-        case REALSXP:
+        }
+        case REALSXP: {
+            double *x = REAL(key);
             for (i = 0; i < n; i++) 
                 if (!ISNAN(x[i])) indx[e++] = i+1;
             break;
-        case STRSXP:
+        }
+        case STRSXP: {
+            SEXP *sx = STRING_PTR(key);
             for (i = 0; i < n; i++) 
                 if (sx[i] != NA_STRING) indx[e++] = i+1;
             break;
-        case CPLXSXP:
+        }
+        case CPLXSXP: {
+            Rcomplex *cx = COMPLEX(key);
             for (i = 0; i < n; i++) 
                 if (!ISNAN(cx[i].r) && !ISNAN(cx[i].i)) indx[e++] = i+1;
             break;
-        default:
-            UNIMPLEMENTED_TYPE("orderVector1", key);
         }
-        lo = 0;
-        hi = e-1;
+        default: {
+            UNIMPLEMENTED_TYPE("orderVector1", key);
+        }}
+        *lo = 0;
+        *hi = e-1;
     }
 
     else { /* Initialize sequentially but with all NAs at beginning */
         e = 0;
         switch (TYPEOF(key)) {
         case LGLSXP:
-        case INTSXP:
+        case INTSXP: {
+            int *ix = INTEGER(key);
             for (i = 0; i < n; i++) 
                 if (ix[i] == NA_INTEGER) indx[e++] = i+1;
             break;
-        case REALSXP:
+        }
+        case REALSXP: {
+            double *x = REAL(key);
             for (i = 0; i < n; i++) 
                 if (ISNAN(x[i])) indx[e++] = i+1;
             break;
-        case STRSXP:
+        }
+        case STRSXP: {
+            SEXP *sx = STRING_PTR(key);
             for (i = 0; i < n; i++) 
                 if (sx[i] == NA_STRING) indx[e++] = i+1;
             break;
-        case CPLXSXP:
+        }
+        case CPLXSXP: {
+            Rcomplex *cx = COMPLEX(key);
             for (i = 0; i < n; i++) 
                 if (ISNAN(cx[i].r) || ISNAN(cx[i].i)) indx[e++] = i+1;
             break;
-        default:
-            UNIMPLEMENTED_TYPE("orderVector1", key);
         }
-        lo = e;
-        hi = n-1;
+        default: {
+            UNIMPLEMENTED_TYPE("orderVector1", key);
+        }}
+        *lo = e;
+        *hi = n-1;
     }
 
     /* Now indx is initialized as needed from 0 to e.  Put the missing indexes
@@ -916,6 +893,170 @@ void attribute_hidden orderVector1 (int *indx, int n, SEXP key,
             indx[j++] = k+1;
         if (j != n) abort();
     }
+}
+
+/** Merge sort with single key. **/
+
+#undef  merge_value
+#define merge_value int
+
+#undef  merge_sort
+#define merge_sort merge_sort_int_inc
+#undef  merge_greater
+#define merge_greater(i,j) (INTEGER(merge_key)[i-1] > INTEGER(merge_key)[j-1])
+
+#include "merge-sort.c"
+
+#undef  merge_sort
+#define merge_sort merge_sort_int_dec
+#undef  merge_greater
+#define merge_greater(i,j) (INTEGER(merge_key)[i-1] < INTEGER(merge_key)[j-1])
+
+#include "merge-sort.c"
+
+#undef  merge_sort
+#define merge_sort merge_sort_real_inc
+#undef  merge_greater
+#define merge_greater(i,j) (REAL(merge_key)[i-1] > REAL(merge_key)[j-1])
+
+#include "merge-sort.c"
+
+#undef  merge_sort
+#define merge_sort merge_sort_real_dec
+#undef  merge_greater
+#define merge_greater(i,j) (REAL(merge_key)[i-1] < REAL(merge_key)[j-1])
+
+#include "merge-sort.c"
+
+#undef  merge_sort
+#define merge_sort merge_sort_complex_inc
+#undef  merge_greater
+#define merge_greater(ii,jj) \
+          (COMPLEX(merge_key)[ii-1].r > COMPLEX(merge_key)[jj-1].r ? 1 : \
+           COMPLEX(merge_key)[ii-1].r < COMPLEX(merge_key)[jj-1].r ? 0 : \
+           COMPLEX(merge_key)[ii-1].i > COMPLEX(merge_key)[jj-1].i)
+
+#include "merge-sort.c"
+
+#undef  merge_sort
+#define merge_sort merge_sort_complex_dec
+#undef  merge_greater
+#define merge_greater(ii,jj) \
+          (COMPLEX(merge_key)[ii-1].r < COMPLEX(merge_key)[jj-1].r ? 1 : \
+           COMPLEX(merge_key)[ii-1].r > COMPLEX(merge_key)[jj-1].r ? 0 : \
+           COMPLEX(merge_key)[ii-1].i < COMPLEX(merge_key)[jj-1].i)
+
+#include "merge-sort.c"
+
+#undef  merge_sort
+#define merge_sort merge_sort_string_inc
+#undef  merge_greater
+#define merge_greater(i,j) \
+          (Scollate(STRING_ELT(merge_key,i-1),STRING_ELT(merge_key,j-1)) > 0)
+
+#include "merge-sort.c"
+
+#undef  merge_sort
+#define merge_sort merge_sort_string_dec
+#undef  merge_greater
+#define merge_greater(i,j) \
+          (Scollate(STRING_ELT(merge_key,i-1),STRING_ELT(merge_key,j-1)) < 0)
+
+#include "merge-sort.c"
+
+#undef  merge_sort
+#define merge_sort merge_sort_general
+#undef  merge_greater
+#define merge_greater(i,j) \
+        greater (i-1, j-1, merge_key, merge_nalast, merge_decreasing, merge_rho)
+
+#include "merge-sort.c"
+
+/* Returns indexes (from 1) for sorted order.
+   Called with rho!=R_NilValue only from do_rank, when NAs are not involved. */
+
+static void orderMerge1 (int *indx, int n, SEXP key,
+                         Rboolean nalast, Rboolean decreasing, SEXP rho)
+{
+    void *vmax = VMAXGET();
+    int lo, hi, i;
+    int *ti;
+
+    ti = (int *) R_alloc (n, sizeof *ti);
+
+    if (rho != R_NilValue) {  /* NAs not an issue, just initialize to 1..n */
+        for (i = 0; i < n; i++) ti[i] = i+1;
+        lo = 0;
+        hi = n-1;
+    }
+    else {
+        init_seq_NA (key, ti, n, nalast, &lo, &hi);
+        for (i = 0; i < lo; i++) indx[i] = ti[i];
+        for (i = hi+1; i < n; i++) indx[i] = ti[i];
+    }
+
+    merge_key = key;
+    merge_nalast = nalast^decreasing;
+    merge_decreasing = decreasing;
+    merge_rho = rho;
+
+    switch (TYPEOF(key)) {
+    case LGLSXP:
+    case INTSXP:
+        if (decreasing) merge_sort_int_dec (indx+lo, ti+lo, hi-lo+1);
+        else            merge_sort_int_inc (indx+lo, ti+lo, hi-lo+1);
+        break;
+    case REALSXP:
+        if (decreasing) merge_sort_real_dec (indx+lo, ti+lo, hi-lo+1);
+        else            merge_sort_real_inc (indx+lo, ti+lo, hi-lo+1);
+        break;
+    case CPLXSXP:
+        if (decreasing) merge_sort_complex_dec (indx+lo, ti+lo, hi-lo+1);
+        else            merge_sort_complex_inc (indx+lo, ti+lo, hi-lo+1);
+        break;
+    case STRSXP:
+        if (decreasing) merge_sort_string_dec (indx+lo, ti+lo, hi-lo+1);
+        else            merge_sort_string_inc (indx+lo, ti+lo, hi-lo+1);
+        break;
+    default: 
+        merge_sort_general (indx+lo, ti+lo, hi-lo+1);
+    }
+
+    VMAXSET(vmax);
+}
+
+/** Shell sort with single key. **/
+
+#define sort2_with_index \
+    for (int h = incs[t]; h != 0; h = incs[++t]) \
+        for (int i = lo + h; i <= hi; i++) { \
+            int itmp = indx[i]; \
+            int j = i; \
+            while (j >= lo + h && less(indx[j-h]-1, itmp-1)) { \
+                indx[j] = indx[j-h]; \
+                j -= h; \
+            } \
+            indx[j] = itmp; \
+        }
+
+/* Returns indexes (from 1) for sorted order.
+   Also used by do_options, src/gnuwin32/extra.c
+   Called with rho!=R_NilValue only from do_rank, when NAs are not involved. */
+
+void attribute_hidden orderVector1 (int *indx, int n, SEXP key, 
+                        Rboolean nalast, Rboolean decreasing, SEXP rho)
+{
+    int lo, hi;
+    int i, c, t;
+
+    if (rho != R_NilValue) {  /* NAs not an issue, just initialize to 1..n */
+        for (i = 0; i < n; i++) indx[i] = i+1;
+        lo = 0;
+        hi = n-1;
+    }
+    else
+        init_seq_NA (key, indx, n, nalast, &lo, &hi);
+
     for (t = 0; incs[t] > hi-lo+1; t++) ;
     
     if (isObject(key) && !isNull(rho)) {
@@ -932,7 +1073,8 @@ void attribute_hidden orderVector1 (int *indx, int n, SEXP key,
 
         switch (TYPEOF(key)) {
 	case LGLSXP:
-	case INTSXP:
+	case INTSXP: {
+            int *ix = INTEGER(key);
 	    if (decreasing) {
 #define less(a, b) (ix[a] < ix[b] || (ix[a] == ix[b] && a > b))
 		sort2_with_index
@@ -943,7 +1085,9 @@ void attribute_hidden orderVector1 (int *indx, int n, SEXP key,
 #undef less
 	    }
 	    break;
-	case REALSXP:
+        }
+	case REALSXP: {
+            double *x = REAL(key);
 	    if (decreasing) {
 #define less(a, b) (x[a] < x[b] || (x[a] == x[b] && a > b))
 		sort2_with_index
@@ -954,7 +1098,9 @@ void attribute_hidden orderVector1 (int *indx, int n, SEXP key,
 #undef less
 	    }
 	    break;
-	case CPLXSXP:
+        }
+	case CPLXSXP: {
+            Rcomplex *cx = COMPLEX(key);
 	    if (decreasing) {
 #define less(a, b) (ccmp(cx[a], cx[b], 0) < 0 || (cx[a].r == cx[b].r && cx[a].i == cx[b].i && a > b))
 		sort2_with_index
@@ -965,7 +1111,9 @@ void attribute_hidden orderVector1 (int *indx, int n, SEXP key,
 #undef less
 	    }
 	    break;
-	case STRSXP:
+        }
+	case STRSXP: {
+            SEXP *sx = STRING_PTR(key);
 	    if (decreasing)
 #define less(a, b) (c=Scollate(sx[a], sx[b]), c < 0 || (c == 0 && a > b))
 		sort2_with_index
@@ -975,11 +1123,13 @@ void attribute_hidden orderVector1 (int *indx, int n, SEXP key,
 		sort2_with_index
 #undef less
 	    break;
-    	default:  /* only reached from do_rank */
+        }
+    	default: { /* only reached from do_rank */
 #define less(a, b) greater(a, b, key, nalast^decreasing, decreasing, rho)
 	    sort2_with_index
 #undef less
-	}
+            break;
+	}}
     }
 }
 
@@ -994,7 +1144,7 @@ static SEXP do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* Check for "merge" or "shell" as first argument. */
     if (TYPEOF(CAR(args)) == STRSXP && LENGTH(CAR(args)) == 1) {
-        SEXP chr = CHAR(STRING_ELT(CAR(args),0));
+        const char *chr = CHAR(STRING_ELT(CAR(args),0));
         if (strcmp(chr,"merge") == 0) 
             merge = TRUE;
         else if (strcmp(chr,"shell") == 0) 
@@ -1028,13 +1178,20 @@ static SEXP do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* NB: collation functions such as Scollate might allocate */
     PROTECT(ans = allocVector(INTSXP, n));
     if (n != 0) {
-	if (narg == 1)
-	    orderVector1 (INTEGER(ans), n, CAR(args), nalast, decreasing, 
-			  R_NilValue);
-	else if (merge)
-            orderMerge (INTEGER(ans), n, args, nalast, decreasing);
-        else
-            orderVector (INTEGER(ans), n, args, nalast, decreasing);
+	if (narg == 1) {
+            if (merge)
+                orderMerge1 (INTEGER(ans), n, CAR(args), nalast, decreasing,
+                             R_NilValue);
+            else
+                orderVector1 (INTEGER(ans), n, CAR(args), nalast, decreasing, 
+                              R_NilValue);
+        }
+	else {
+            if (merge)
+                orderMerge (INTEGER(ans), n, args, nalast, decreasing);
+            else
+                orderVector (INTEGER(ans), n, args, nalast, decreasing);
+        }
     }
     UNPROTECT(1);
     return ans;
@@ -1062,6 +1219,7 @@ static SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if(!strcmp(ties_str, "max"))	ties_kind = MAX;
     else if(!strcmp(ties_str, "min"))	ties_kind = MIN;
     else error(_("invalid ties.method for rank() [should never happen]"));
+
     PROTECT(indx = allocVector(INTSXP, n));
     if (ties_kind == AVERAGE) {
 	PROTECT(rank = allocVector(REALSXP, n));
@@ -1070,9 +1228,12 @@ static SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(rank = allocVector(INTSXP, n));
 	ik = INTEGER(rank);
     }
+
     if (n > 0) {
 	in = INTEGER(indx);
+
 	orderVector1 (in, n, x, TRUE, FALSE, rho);
+
 	for (i = 0; i < n; i = j+1) {
 	    j = i;
 	    while (j < n-1 && equal(in[j]-1, in[j+1]-1, x, TRUE, rho))
