@@ -308,23 +308,39 @@ static SEXP do_sort(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans;
     int decreasing;
-
-    checkArity(op, args);
+    int merge = FALSE;
 
     decreasing = asLogical(CADR(args));
     if(decreasing == NA_LOGICAL)
 	error(_("'decreasing' must be TRUE or FALSE"));
+
+    if (CADDR(args) != R_NilValue) {
+        const char *chr = CHAR(asChar(CADDR(args)));
+        if (strcmp(chr,"merge") == 0) 
+            merge = TRUE;
+        else if (strcmp(chr,"shell") == 0) 
+            merge = FALSE;
+        else
+            error(_("invalid '%s' value"), "method");
+    }
+
     if(CAR(args) == R_NilValue) return R_NilValue;
     if(!isVectorAtomic(CAR(args)))
 	error(_("only atomic vectors can be sorted"));
     if(TYPEOF(CAR(args)) == RAWSXP)
 	error(_("raw vectors cannot be sorted"));
+
     /* we need consistent behaviour here, including dropping attibutes,
        so as from 2.3.0 we always duplicate. */
     PROTECT(ans = duplicate(CAR(args)));
     SET_ATTRIB(ans, R_NilValue);  /* this is never called with names */
     SET_OBJECT(ans, 0);		  /* we may have just stripped off the class */
-    sortVector(ans, decreasing);
+
+    if (merge)
+        sortVector(ans, decreasing);
+    else
+        sortVector(ans, decreasing);
+
     UNPROTECT(1);
     return(ans);
 }
@@ -1140,11 +1156,12 @@ static SEXP do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ap, ans;
     int i, n = -1, narg = 0;
-    int nalast, decreasing, merge;
+    int nalast, decreasing;
+    int merge = FALSE;
 
     /* Check for "merge" or "shell" as first argument. */
     if (TYPEOF(CAR(args)) == STRSXP && LENGTH(CAR(args)) == 1) {
-        const char *chr = CHAR(STRING_ELT(CAR(args),0));
+        const char *chr = CHAR(asChar(CAR(args)));
         if (strcmp(chr,"merge") == 0) 
             merge = TRUE;
         else if (strcmp(chr,"shell") == 0) 
@@ -1153,8 +1170,6 @@ static SEXP do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
             error(_("invalid '%s' value"), "method");
         args = CDR(args);
     }
-    else 
-        merge = FALSE;
 
     nalast = asLogical(CAR(args));
     if (nalast == NA_LOGICAL)
@@ -1197,7 +1212,8 @@ static SEXP do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-/* FUNCTION: rank(x) */
+/* Internal: rank(x,ties.method,method). Final arg (sorting method) may
+   be absent in possible old calls. */
 static SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP rank, indx, x;
@@ -1206,8 +1222,8 @@ static SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
     int i, j, k, n;
     const char *ties_str;
     enum {AVERAGE, MAX, MIN} ties_kind = AVERAGE;
+    int merge = FALSE;
 
-    checkArity(op, args);
     if (args == R_NilValue)
 	return R_NilValue;
     x = CAR(args);
@@ -1219,6 +1235,16 @@ static SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if(!strcmp(ties_str, "max"))	ties_kind = MAX;
     else if(!strcmp(ties_str, "min"))	ties_kind = MIN;
     else error(_("invalid ties.method for rank() [should never happen]"));
+
+    if (CADDR(args) != R_NilValue) {
+        const char *chr = CHAR(asChar(CADDR(args)));
+        if (strcmp(chr,"merge") == 0) 
+            merge = TRUE;
+        else if (strcmp(chr,"shell") == 0) 
+            merge = FALSE;
+        else
+            error(_("invalid '%s' value"), "method");
+    }
 
     PROTECT(indx = allocVector(INTSXP, n));
     if (ties_kind == AVERAGE) {
@@ -1232,7 +1258,10 @@ static SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (n > 0) {
 	in = INTEGER(indx);
 
-	orderVector1 (in, n, x, TRUE, FALSE, rho);
+        if (merge)
+            orderMerge1 (in, n, x, TRUE, FALSE, rho);
+        else
+            orderVector1 (in, n, x, TRUE, FALSE, rho);
 
 	for (i = 0; i < n; i = j+1) {
 	    j = i;
@@ -1340,10 +1369,10 @@ attribute_hidden FUNTAB R_FunTab_sort[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {"is.unsorted",	do_isunsorted,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"sort",	do_sort,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"sort",	do_sort,	1,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"psort",	do_psort,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"order",	do_order,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"rank",	do_rank,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rank",	do_rank,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"radixsortold",do_radixsort,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"xtfrm",	do_xtfrm,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
