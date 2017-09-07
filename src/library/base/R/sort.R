@@ -44,9 +44,11 @@ sort.int <-
              && (is.numeric(x) || is.factor(x) || is.logical(x))
              && is.integer(length(x)))
             method <- "radix"
-        else if (method == "auto" || !is.numeric(x))
-            method <- "shell" # explicitly prevent 'quick' for non-numeric data
+        else
+            method <- "shell"
     }
+    else if (method == "quick" && !is.numeric(x))
+        method = "shell" # explicitly prevent 'quick' for non-numeric data
 
     if (method == "radix") {
         if (!is.null(partial)) {

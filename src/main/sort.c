@@ -34,7 +34,8 @@
 #include <Rmath.h>
 #include <R_ext/RS.h>  /* for Calloc/Free */
 
-			/*--- Part I: Comparison Utilities ---*/
+/* -------------------------------------------------------------------------- */
+/*                          Comparison utilities                              */
 
 static int icmp(int x, int y, Rboolean nalast)
 {
@@ -85,6 +86,10 @@ static int scmp(SEXP x, SEXP y, Rboolean nalast)
     if (x == y) return 0;  /* same string in cache */
     return Scollate(x, y);
 }
+
+
+/* -------------------------------------------------------------------------- */
+/*             Unsorted test (for use here and in a .Internal)                */
 
 Rboolean isUnsorted(SEXP x, Rboolean strictly)
 {
@@ -182,170 +187,273 @@ static SEXP do_isunsorted(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-			/*--- Part II: Complete (non-partial) Sorting ---*/
+/* -------------------------------------------------------------------------- */
+/*                         Partial sorting                                    */
 
 
-/* SHELLsort -- corrected from R. Sedgewick `Algorithms in C'
- *		(version of BDR's lqs():*/
-#define sort_body					\
-    Rboolean nalast=TRUE;				\
-    int i, j, h;					\
-							\
-    for (h = 1; h <= n / 9; h = 3 * h + 1);		\
-    for (; h > 0; h /= 3)				\
-	for (i = h; i < n; i++) {			\
-	    v = x[i];					\
-	    j = i;					\
-	    while (j >= h && TYPE_CMP(x[j - h], v, nalast) > 0)	\
-		 { x[j] = x[j - h]; j -= h; }		\
-	    x[j] = v;					\
-	}
+/* Partial sort so that x[k] is in the correct place, smaller to left,
+   larger to right
 
-void R_isort(int *x, int n)
+   NOTA BENE:  k < n  required, and *not* checked here but in do_psort();
+	       -----  infinite loop possible otherwise! */
+
+#define psort_body						\
+    Rboolean nalast=TRUE;					\
+    int L, R, i, j;						\
+								\
+    for (L = lo, R = hi; L < R; ) {				\
+	v = x[k];						\
+	for(i = L, j = R; i <= j;) {				\
+	    while (TYPE_CMP(x[i], v, nalast) < 0) i++;			\
+	    while (TYPE_CMP(v, x[j], nalast) < 0) j--;			\
+	    if (i <= j) { w = x[i]; x[i++] = x[j]; x[j--] = w; }\
+	}							\
+	if (j < k) L = i;					\
+	if (k < i) R = j;					\
+    }
+
+
+static void iPsort2(int *x, int lo, int hi, int k)
 {
-    int v;
+    int v, w;
 #define TYPE_CMP icmp
-    sort_body
+    psort_body
 #undef TYPE_CMP
 }
 
-void R_rsort(double *x, int n)
+static void rPsort2(double *x, int lo, int hi, int k)
 {
-    double v;
+    double v, w;
 #define TYPE_CMP rcmp
-    sort_body
+    psort_body
 #undef TYPE_CMP
 }
 
-void R_csort(Rcomplex *x, int n)
+static void cPsort2(Rcomplex *x, int lo, int hi, int k)
 {
-    Rcomplex v;
+    Rcomplex v, w;
 #define TYPE_CMP ccmp
-    sort_body
+    psort_body
 #undef TYPE_CMP
 }
 
 
-/* used in platform.c */
-void attribute_hidden ssort(SEXP *x, int n)
+static void sPsort2(SEXP *x, int lo, int hi, int k)
 {
-    SEXP v;
+    SEXP v, w;
 #define TYPE_CMP scmp
-    sort_body
+    psort_body
 #undef TYPE_CMP
 }
 
-void rsort_with_index(double *x, int *indx, int n)
+/* elements of ind are 1-based, lo and hi are 0-based */
+
+static void Psort(SEXP x, int lo, int hi, int k)
 {
-    double v;
-    int i, j, h, iv;
-
-    for (h = 1; h <= n / 9; h = 3 * h + 1);
-    for (; h > 0; h /= 3)
-	for (i = h; i < n; i++) {
-	    v = x[i]; iv = indx[i];
-	    j = i;
-	    while (j >= h && rcmp(x[j - h], v, TRUE) > 0)
-		 { x[j] = x[j - h]; indx[j] = indx[j-h]; j -= h; }
-	    x[j] = v; indx[j] = iv;
-	}
-}
-
-void revsort(double *a, int *ib, int n)
-{
-/* Sort a[] into descending order by "heapsort";
- * sort ib[] alongside;
- * if initially, ib[] = 1...n, it will contain the permutation finally
- */
-
-    int l, j, ir, i;
-    double ra;
-    int ii;
-
-    if (n <= 1) return;
-
-    a--; ib--;
-
-    l = (n >> 1) + 1;
-    ir = n;
-
-    for (;;) {
-	if (l > 1) {
-	    l = l - 1;
-	    ra = a[l];
-	    ii = ib[l];
-	}
-	else {
-	    ra = a[ir];
-	    ii = ib[ir];
-	    a[ir] = a[1];
-	    ib[ir] = ib[1];
-	    if (--ir == 1) {
-		a[1] = ra;
-		ib[1] = ii;
-		return;
-	    }
-	}
-	i = l;
-	j = l << 1;
-	while (j <= ir) {
-	    if (j < ir && a[j] > a[j + 1]) ++j;
-	    if (ra > a[j]) {
-		a[i] = a[j];
-		ib[i] = ib[j];
-		j += (i = j);
-	    }
-	    else
-		j = ir + 1;
-	}
-	a[i] = ra;
-	ib[i] = ii;
+    /* Rprintf("looking for index %d in (%d, %d)\n", k, lo, hi);*/
+    switch (TYPEOF(x)) {
+    case LGLSXP:
+    case INTSXP:
+	iPsort2(INTEGER(x), lo, hi, k);
+	break;
+    case REALSXP:
+	rPsort2(REAL(x), lo, hi, k);
+	break;
+    case CPLXSXP:
+	cPsort2(COMPLEX(x), lo, hi, k);
+	break;
+    case STRSXP:
+	sPsort2(STRING_PTR(x), lo, hi, k);
+	break;
+    default:
+	UNIMPLEMENTED_TYPE("Psort", x);
     }
 }
 
-
-static SEXP do_sort(SEXP call, SEXP op, SEXP args, SEXP rho)
+static void Psort0(SEXP x, int lo, int hi, int *ind, int k)
 {
-    SEXP ans;
-    int decreasing;
-    int merge = FALSE;
-
-    decreasing = asLogical(CADR(args));
-    if(decreasing == NA_LOGICAL)
-	error(_("'decreasing' must be TRUE or FALSE"));
-
-    if (CADDR(args) != R_NilValue) {
-        const char *chr = CHAR(asChar(CADDR(args)));
-        if (strcmp(chr,"merge") == 0) 
-            merge = TRUE;
-        else if (strcmp(chr,"shell") == 0) 
-            merge = FALSE;
-        else
-            error(_("invalid '%s' value"), "method");
+    if(k < 1 || hi-lo < 1) return;
+    if(k <= 1)
+	Psort(x, lo, hi, ind[0]-1);
+    else {
+    /* Look for index nearest the centre of the range */
+	int i, This = 0, mid = (lo+hi)/2, z;
+	for(i = 0; i < k; i++)
+	    if(ind[i]-1 <= mid) This = i;
+	z = ind[This]-1;
+	Psort(x, lo, hi, z);
+	Psort0(x, lo, z-1, ind, This);
+	Psort0(x, z+1, hi, ind + This + 1, k - This -1);
     }
+}
 
-    if(CAR(args) == R_NilValue) return R_NilValue;
-    if(!isVectorAtomic(CAR(args)))
+/* Needed for mistaken decision to put these in the API */
+void iPsort(int *x, int n, int k)
+{
+    iPsort2(x, 0, n-1, k);
+}
+
+void rPsort(double *x, int n, int k)
+{
+    rPsort2(x, 0, n-1, k);
+}
+
+void cPsort(Rcomplex *x, int n, int k)
+{
+    cPsort2(x, 0, n-1, k);
+}
+
+
+/* .Internal function psort (x, indices), called from R level in sort.int. */
+
+static SEXP do_psort(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    int i, k, n;
+    int *l;
+    checkArity(op, args);
+
+    if (!isVectorAtomic(CAR(args)))
 	error(_("only atomic vectors can be sorted"));
     if(TYPEOF(CAR(args)) == RAWSXP)
 	error(_("raw vectors cannot be sorted"));
-
-    /* we need consistent behaviour here, including dropping attibutes,
-       so as from 2.3.0 we always duplicate. */
-    PROTECT(ans = duplicate(CAR(args)));
-    SET_ATTRIB(ans, R_NilValue);  /* this is never called with names */
-    SET_OBJECT(ans, 0);		  /* we may have just stripped off the class */
-
-    if (merge)
-        sortVector(ans, decreasing);
-    else
-        sortVector(ans, decreasing);
-
-    UNPROTECT(1);
-    return(ans);
+    n = LENGTH(CAR(args));
+    SETCADR(args, coerceVector(CADR(args), INTSXP));
+    l = INTEGER(CADR(args));
+    k = LENGTH(CADR(args));
+    for (i = 0; i < k; i++) {
+	if (l[i] == NA_INTEGER)
+	    error(_("NA index"));
+	if (l[i] < 1 || l[i] > n)
+	    error(_("index %d outside bounds"), l[i]);
+    }
+    SETCAR(args, duplicate(CAR(args)));
+    SET_ATTRIB(CAR(args), R_NilValue);  /* remove all attributes */
+    SET_OBJECT(CAR(args), 0);           /* and the object bit    */
+    Psort0(CAR(args), 0, n - 1, l, k);
+    return CAR(args);
 }
 
-/* faster versions of shellsort, following Sedgewick (1986) */
+
+/* -------------------------------------------------------------------------- */
+/*                Sorting of data values (not via indexes)                    */
+
+/* Versions of merge sort for different data types and increasing/decreasing. */
+
+#undef  merge_sort
+#define merge_sort merge_sort_idata_inc
+#undef  merge_value
+#define merge_value int
+#undef  merge_greater
+#define merge_greater(x,y) ((x) > (y))
+
+#include "merge-sort.c"
+
+#undef  merge_sort
+#define merge_sort merge_sort_idata_dec
+#undef  merge_value
+#define merge_value int
+#undef  merge_greater
+#define merge_greater(x,y) ((x) < (y))
+
+#include "merge-sort.c"
+
+#undef  merge_sort
+#define merge_sort merge_sort_rdata_inc
+#undef  merge_value
+#define merge_value double
+#undef  merge_greater
+#define merge_greater(x,y) ((x) > (y))
+
+#include "merge-sort.c"
+
+#undef  merge_sort
+#define merge_sort merge_sort_rdata_dec
+#undef  merge_value
+#define merge_value double
+#undef  merge_greater
+#define merge_greater(x,y) ((x) < (y))
+
+#include "merge-sort.c"
+
+#undef  merge_sort
+#define merge_sort merge_sort_cdata_inc
+#undef  merge_value
+#define merge_value Rcomplex
+#undef  merge_greater
+#define merge_greater(x,y) \
+          ((x).r > (y).r ? 1 : (x).r < (y).r ? 0 : (x).i > (y).i)
+
+#include "merge-sort.c"
+
+#undef  merge_sort
+#define merge_sort merge_sort_cdata_dec
+#undef  merge_value
+#define merge_value Rcomplex
+#undef  merge_greater
+#define merge_greater(x,y) \
+          ((x).r < (y).r ? 1 : (x).r > (y).r ? 0 : (x).i < (y).i)
+
+#include "merge-sort.c"
+
+#undef  merge_sort
+#define merge_sort merge_sort_sdata_inc
+#undef  merge_value
+#define merge_value SEXP
+#undef  merge_greater
+#define merge_greater(x,y) (Scollate(x,y) > 0)
+
+#include "merge-sort.c"
+
+#undef  merge_sort
+#define merge_sort merge_sort_sdata_dec
+#undef  merge_value
+#define merge_value SEXP
+#undef  merge_greater
+#define merge_greater(x,y) (Scollate(x,y) < 0)
+
+#include "merge-sort.c"
+
+
+static void sortMerge (SEXP dst, SEXP src, Rboolean decreasing)
+{
+    int n = LENGTH(src);
+
+    if (n >= 2 && (decreasing || isUnsorted(src, FALSE))) {
+
+        switch (TYPEOF(src)) {
+        case LGLSXP:
+        case INTSXP:
+            if (decreasing)
+                merge_sort_idata_dec (INTEGER(dst), INTEGER(src), n);
+            else
+                merge_sort_idata_inc (INTEGER(dst), INTEGER(src), n);
+            break;
+        case REALSXP:
+            if (decreasing)
+                merge_sort_rdata_dec (REAL(dst), REAL(src), n);
+            else
+                merge_sort_rdata_inc (REAL(dst), REAL(src), n);
+            break;
+        case CPLXSXP:
+            if (decreasing)
+                merge_sort_cdata_dec (COMPLEX(dst), COMPLEX(src), n);
+            else
+                merge_sort_cdata_inc (COMPLEX(dst), COMPLEX(src), n);
+            break;
+        case STRSXP:
+            if (decreasing)
+                merge_sort_sdata_dec (STRING_PTR(dst), STRING_PTR(src), n);
+            else
+                merge_sort_sdata_inc (STRING_PTR(dst), STRING_PTR(src), n);
+            break;
+        default:
+            UNIMPLEMENTED_TYPE("sortVector", src);
+        }
+    }
+}
+
+
+/* Versions of shellsort, following Sedgewick (1986). */
 
 static const int incs[] = {1073790977, 268460033, 67121153, 16783361, 4197377,
 		       1050113, 262913, 65921, 16577, 4193, 1073, 281, 77,
@@ -458,154 +566,57 @@ void sortVector(SEXP s, Rboolean decreasing)
 	}
 }
 
+static SEXP do_sort(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    int decreasing;
+    int merge = FALSE;
 
-			/*--- Part III: Partial Sorting ---*/
+    decreasing = asLogical(CADR(args));
+    if(decreasing == NA_LOGICAL)
+	error(_("'decreasing' must be TRUE or FALSE"));
 
-/*
-   Partial sort so that x[k] is in the correct place, smaller to left,
-   larger to right
-
-   NOTA BENE:  k < n  required, and *not* checked here but in do_psort();
-	       -----  infinite loop possible otherwise!
- */
-#define psort_body						\
-    Rboolean nalast=TRUE;					\
-    int L, R, i, j;						\
-								\
-    for (L = lo, R = hi; L < R; ) {				\
-	v = x[k];						\
-	for(i = L, j = R; i <= j;) {				\
-	    while (TYPE_CMP(x[i], v, nalast) < 0) i++;			\
-	    while (TYPE_CMP(v, x[j], nalast) < 0) j--;			\
-	    if (i <= j) { w = x[i]; x[i++] = x[j]; x[j--] = w; }\
-	}							\
-	if (j < k) L = i;					\
-	if (k < i) R = j;					\
+    if (CADDR(args) != R_NilValue) {
+        const char *chr = CHAR(asChar(CADDR(args)));
+        if (strcmp(chr,"merge") == 0) 
+            merge = TRUE;
+        else if (strcmp(chr,"shell") == 0) 
+            merge = FALSE;
+        else
+            error(_("invalid '%s' value"), "method");
     }
 
+    SEXP data = CAR(args);
 
-static void iPsort2(int *x, int lo, int hi, int k)
-{
-    int v, w;
-#define TYPE_CMP icmp
-    psort_body
-#undef TYPE_CMP
-}
-
-static void rPsort2(double *x, int lo, int hi, int k)
-{
-    double v, w;
-#define TYPE_CMP rcmp
-    psort_body
-#undef TYPE_CMP
-}
-
-static void cPsort2(Rcomplex *x, int lo, int hi, int k)
-{
-    Rcomplex v, w;
-#define TYPE_CMP ccmp
-    psort_body
-#undef TYPE_CMP
-}
-
-
-static void sPsort2(SEXP *x, int lo, int hi, int k)
-{
-    SEXP v, w;
-#define TYPE_CMP scmp
-    psort_body
-#undef TYPE_CMP
-}
-
-/* elements of ind are 1-based, lo and hi are 0-based */
-
-static void Psort(SEXP x, int lo, int hi, int k)
-{
-    /* Rprintf("looking for index %d in (%d, %d)\n", k, lo, hi);*/
-    switch (TYPEOF(x)) {
-    case LGLSXP:
-    case INTSXP:
-	iPsort2(INTEGER(x), lo, hi, k);
-	break;
-    case REALSXP:
-	rPsort2(REAL(x), lo, hi, k);
-	break;
-    case CPLXSXP:
-	cPsort2(COMPLEX(x), lo, hi, k);
-	break;
-    case STRSXP:
-	sPsort2(STRING_PTR(x), lo, hi, k);
-	break;
-    default:
-	UNIMPLEMENTED_TYPE("Psort", x);
-    }
-}
-
-static void Psort0(SEXP x, int lo, int hi, int *ind, int k)
-{
-    if(k < 1 || hi-lo < 1) return;
-    if(k <= 1)
-	Psort(x, lo, hi, ind[0]-1);
-    else {
-    /* Look for index nearest the centre of the range */
-	int i, This = 0, mid = (lo+hi)/2, z;
-	for(i = 0; i < k; i++)
-	    if(ind[i]-1 <= mid) This = i;
-	z = ind[This]-1;
-	Psort(x, lo, hi, z);
-	Psort0(x, lo, z-1, ind, This);
-	Psort0(x, z+1, hi, ind + This + 1, k - This -1);
-    }
-}
-
-/* Needed for mistaken decision to put these in the API */
-void iPsort(int *x, int n, int k)
-{
-    iPsort2(x, 0, n-1, k);
-}
-
-void rPsort(double *x, int n, int k)
-{
-    rPsort2(x, 0, n-1, k);
-}
-
-void cPsort(Rcomplex *x, int n, int k)
-{
-    cPsort2(x, 0, n-1, k);
-}
-
-
-
-/* FUNCTION psort(x, indices) */
-static SEXP do_psort(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    int i, k, n;
-    int *l;
-    checkArity(op, args);
-
-    if (!isVectorAtomic(CAR(args)))
+    if (data == R_NilValue)
+        return R_NilValue;
+    if (!isVectorAtomic(data))
 	error(_("only atomic vectors can be sorted"));
-    if(TYPEOF(CAR(args)) == RAWSXP)
+    if (TYPEOF(data) == RAWSXP)
 	error(_("raw vectors cannot be sorted"));
-    n = LENGTH(CAR(args));
-    SETCADR(args, coerceVector(CADR(args), INTSXP));
-    l = INTEGER(CADR(args));
-    k = LENGTH(CADR(args));
-    for (i = 0; i < k; i++) {
-	if (l[i] == NA_INTEGER)
-	    error(_("NA index"));
-	if (l[i] < 1 || l[i] > n)
-	    error(_("index %d outside bounds"), l[i]);
+
+    R_len_t n = LENGTH(data);
+    SEXP ans;
+    PROTECT(ans = allocVector (TYPEOF(data), n));
+
+    if (merge) {
+        SEXP src;
+        PROTECT(src = allocVector (TYPEOF(data), n));
+        copy_elements (src, 0, 1, data, 0, 1, n);
+        sortMerge (ans, src, decreasing);
+        UNPROTECT(1);
     }
-    SETCAR(args, duplicate(CAR(args)));
-    SET_ATTRIB(CAR(args), R_NilValue);  /* remove all attributes */
-    SET_OBJECT(CAR(args), 0);           /* and the object bit    */
-    Psort0(CAR(args), 0, n - 1, l, k);
-    return CAR(args);
+    else {
+        copy_elements (ans, 0, 1, data, 0, 1, n);
+        sortVector (ans, decreasing);
+    }
+
+    UNPROTECT(1);
+    return(ans);
 }
 
 
-			/*--- Part IV : Rank & Order ---*/
+/* -------------------------------------------------------------------------- */
+/*                        Sorting with indexes                                */
 
 static int equal(int i, int j, SEXP x, Rboolean nalast, SEXP rho)
 {
@@ -1149,6 +1160,7 @@ void attribute_hidden orderVector1 (int *indx, int n, SEXP key,
     }
 }
 
+
 /* Internal 'order' function.  New form has "merge" or "shell" as first
    argument.  Accomodate any possible calls assuming old form. */
 
@@ -1212,8 +1224,10 @@ static SEXP do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-/* Internal: rank(x,ties.method,method). Final arg (sorting method) may
-   be absent in possible old calls. */
+
+/* Internal function rank (x, ties.method, method). Final arg (sorting method)
+   may be absent in possible old calls. */
+
 static SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP rank, indx, x;
@@ -1282,68 +1296,9 @@ static SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
     return rank;
 }
 
-#include <R_ext/RS.h>
 
-static SEXP do_radixsort(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    SEXP x, ans;
-    int nalast, decreasing;
-    R_len_t i, n;
-    int tmp, xmax = NA_INTEGER, xmin = NA_INTEGER, off, napos;
-
-    checkArity(op, args);
-
-    x = CAR(args);
-    nalast = asLogical(CADR(args));
-    if(nalast == NA_LOGICAL)
-	error(_("invalid '%s' value"), "na.last");
-    decreasing = asLogical(CADDR(args));
-    if(decreasing == NA_LOGICAL)
-	error(_("'decreasing' must be TRUE or FALSE"));
-    off = nalast^decreasing ? 0 : 1;
-    n = LENGTH(x);
-    PROTECT(ans = allocVector(INTSXP, n));
-    for(i = 0; i < n; i++) {
-	tmp = INTEGER(x)[i];
-	if(tmp == NA_INTEGER) continue;
-	if(tmp < 0) error(_("negative value in 'x'"));
-	if(xmax == NA_INTEGER || tmp > xmax) xmax = tmp;
-	if(xmin == NA_INTEGER || tmp < xmin) xmin = tmp;
-    }
-    if(xmin == NA_INTEGER) {  /* all NAs, so nothing to do */
-	for(i = 0; i < n; i++) INTEGER(ans)[i] = i+1;
-	UNPROTECT(1);
-	return ans;
-    }
-
-    xmax -= xmin;
-    if(xmax > 100000) error(_("too large a range of values in 'x'"));
-    napos = off ? 0 : xmax + 1;
-    off -= xmin;
-    /* automatic allocation is fine here: we know this is small */
-    int cnts[xmax+2];
-
-    for(i = 0; i <= xmax+1; i++) cnts[i] = 0;
-    for(i = 0; i < n; i++) {
-	if(INTEGER(x)[i] == NA_INTEGER) cnts[napos]++;
-	else cnts[off+INTEGER(x)[i]]++;
-    }
-
-    for(i = 1; i <= xmax+1; i++) cnts[i] += cnts[i-1];
-    if(decreasing)
-	for(i = 0; i < n; i++){
-	    tmp = INTEGER(x)[i];
-	    INTEGER(ans)[n-(cnts[(tmp==NA_INTEGER) ? napos : off+tmp]--)] = i+1;
-	}
-    else
-	for(i = n-1; i >= 0; i--) {
-	    tmp = INTEGER(x)[i];
-	    INTEGER(ans)[--cnts[(tmp==NA_INTEGER) ? napos : off+tmp]] = i+1;
-	}
-
-    UNPROTECT(1);
-    return ans;
-}
+/* -------------------------------------------------------------------------- */
+/*           Primitive routine that assigns numeric values to objects         */
 
 static SEXP do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -1362,6 +1317,130 @@ static SEXP do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
     
 }
 
+
+/* -------------------------------------------------------------------------- */
+/*              Sorting routines used elsewhere, some in C API                */
+
+void rsort_with_index(double *x, int *indx, int n)
+{
+    double v;
+    int i, j, h, iv;
+
+    for (h = 1; h <= n / 9; h = 3 * h + 1);
+    for (; h > 0; h /= 3)
+	for (i = h; i < n; i++) {
+	    v = x[i]; iv = indx[i];
+	    j = i;
+	    while (j >= h && rcmp(x[j - h], v, TRUE) > 0)
+		 { x[j] = x[j - h]; indx[j] = indx[j-h]; j -= h; }
+	    x[j] = v; indx[j] = iv;
+	}
+}
+
+void revsort(double *a, int *ib, int n)
+{
+/* Sort a[] into descending order by "heapsort";
+ * sort ib[] alongside;
+ * if initially, ib[] = 1...n, it will contain the permutation finally
+ */
+
+    int l, j, ir, i;
+    double ra;
+    int ii;
+
+    if (n <= 1) return;
+
+    a--; ib--;
+
+    l = (n >> 1) + 1;
+    ir = n;
+
+    for (;;) {
+	if (l > 1) {
+	    l = l - 1;
+	    ra = a[l];
+	    ii = ib[l];
+	}
+	else {
+	    ra = a[ir];
+	    ii = ib[ir];
+	    a[ir] = a[1];
+	    ib[ir] = ib[1];
+	    if (--ir == 1) {
+		a[1] = ra;
+		ib[1] = ii;
+		return;
+	    }
+	}
+	i = l;
+	j = l << 1;
+	while (j <= ir) {
+	    if (j < ir && a[j] > a[j + 1]) ++j;
+	    if (ra > a[j]) {
+		a[i] = a[j];
+		ib[i] = ib[j];
+		j += (i = j);
+	    }
+	    else
+		j = ir + 1;
+	}
+	a[i] = ra;
+	ib[i] = ii;
+    }
+}
+
+/* SHELLsort -- corrected from R. Sedgewick `Algorithms in C'
+ *		(version of BDR's lqs():*/
+#define sort_body					\
+    Rboolean nalast=TRUE;				\
+    int i, j, h;					\
+							\
+    for (h = 1; h <= n / 9; h = 3 * h + 1);		\
+    for (; h > 0; h /= 3)				\
+	for (i = h; i < n; i++) {			\
+	    v = x[i];					\
+	    j = i;					\
+	    while (j >= h && TYPE_CMP(x[j - h], v, nalast) > 0)	\
+		 { x[j] = x[j - h]; j -= h; }		\
+	    x[j] = v;					\
+	}
+
+void R_isort(int *x, int n)
+{
+    int v;
+#define TYPE_CMP icmp
+    sort_body
+#undef TYPE_CMP
+}
+
+void R_rsort(double *x, int n)
+{
+    double v;
+#define TYPE_CMP rcmp
+    sort_body
+#undef TYPE_CMP
+}
+
+void R_csort(Rcomplex *x, int n)
+{
+    Rcomplex v;
+#define TYPE_CMP ccmp
+    sort_body
+#undef TYPE_CMP
+}
+
+/* used in platform.c */
+void attribute_hidden ssort(SEXP *x, int n)
+{
+    SEXP v;
+#define TYPE_CMP scmp
+    sort_body
+#undef TYPE_CMP
+}
+
+
+/* -------------------------------------------------------------------------- */
+
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
 
 attribute_hidden FUNTAB R_FunTab_sort[] =
@@ -1373,7 +1452,6 @@ attribute_hidden FUNTAB R_FunTab_sort[] =
 {"psort",	do_psort,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"order",	do_order,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rank",	do_rank,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"radixsortold",do_radixsort,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"xtfrm",	do_xtfrm,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
