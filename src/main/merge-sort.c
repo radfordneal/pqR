@@ -36,6 +36,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define R_CheckUserInterrupt() 0
+
 #define merge_value int
 #define merge_greater(a,b) ((a) > (b))
 
@@ -88,27 +90,32 @@ int main (int argc, char **argv)
    to an element of Y will happen only after that element is no longer
    needed.  Some writes may not be needed, because the last elements
    merged are already in place.  If n is small, the above procedure 
-   is replaced by a simple insertion sort. */
+   is replaced by a simple insertion sort. 
 
-#if 1   /* Simple recursive version */
+   Two versions are defined below, selectable by #if.  They have the
+   same behaviour with respect to what comparisons are done.  There is
+   surprisingly little difference when compiled with gcc 7.1 at -O3,
+   for a 64-bit Intel platform. */
+
+#if 1   /* Recursive version */
 
 static void merge_sort (merge_value *dst, merge_value *src, int n)
 {
-    if (n <= 10) {
+    if (n <= 2) {
 
         if (n == 0)
             return;
-
-        dst[0] = src[0];
-
-        int i, j;
-        for (i = 1; i < n; i++) {
-            j = i;
-            while (j > 0 && merge_greater(dst[j-1],src[i])) {
-                dst[j] = dst[j-1];
-                j = j - 1;
+        if (n == 1)
+            dst[0] = src[0];
+        else {
+            if (merge_greater (src[0], src[1])) {
+                dst[0] = src[1];
+                dst[1] = src[0];
             }
-            dst[j] = src[i];
+            else {
+                dst[0] = src[0];
+                dst[1] = src[1];
+            }
         }
     }
     else {
@@ -135,6 +142,13 @@ static void merge_sort (merge_value *dst, merge_value *src, int n)
             else {
                 *j++ = *i1++;
                 n1 -= 1;
+                /* Periodically check for a big block that can be copied. */
+                /* This helps when the data is partially sorted already.  */
+                const int mask = 0xf;
+                if ((n1 & mask) == 0 && n1 != 0
+                                     && merge_greater (*i2, *(i1+mask))) {
+                    do { *j++ = *i1++; n1 -= 1; } while (n1 & mask);
+                }
                 if (n1 == 0) {
                     /* no need for copy - already there */
                     break;
@@ -181,27 +195,25 @@ static void merge_sort (merge_value *dst, merge_value *src, int n)
 
         int n0 = top[0].n;
 
-        if (n0 > 2) {
+        while (n0 > 2) {
 
             /* Create a task to sort one half or the other. */
 
             int n1 = n0 / 2;
 
-            if (top[0].halves_done) {
-                top[1].n = n1;
-                top[1].src = top[0].src;
-                top[1].dst = top[0].src + n1;
-            }
-            else {
-                top[1].n = n0 - n1;
+            if (top[0].halves_done == 0) {
+                top[1].n = n0 = n0 - n1;
                 top[1].src = top[0].src + n1;
                 top[1].dst = top[0].dst + n1;
+            }
+            else {
+                top[1].n = n0 = n1;
+                top[1].src = top[0].src;
+                top[1].dst = top[0].src + n1;
             }
 
             top[1].halves_done = 0;
             top += 1;
-
-            continue;
         }
 
         /* Sort one or two elements directly. */
@@ -210,15 +222,15 @@ static void merge_sort (merge_value *dst, merge_value *src, int n)
         merge_value *d = top[0].dst;
 
         if (n0 == 1)
-            *d = *s;
+            d[0] = s[0];
         else {
-            if (merge_greater(*s,*(s+1))) {
-                *d = *(s+1);
-                *(d+1) = *s;
+            if (merge_greater(s[0],s[1])) {
+                d[0] = s[1];
+                d[1] = s[0];
             }
             else {
-                *d = *s;
-                *(d+1) = *(s+1);
+                d[0] = s[0];
+                d[1] = s[1];
             }
         }
 
@@ -260,6 +272,13 @@ static void merge_sort (merge_value *dst, merge_value *src, int n)
                 else {
                     *j++ = *i1++;
                     n1 -= 1;
+                    /* Periodically check for a big block that can be copied. */
+                    /* This helps when the data is partially sorted already.  */
+                    const int mask = 0xf;
+                    if ((n1 & mask) == 0 && n1 != 0
+                                         && merge_greater (*i2, *(i1+mask))) {
+                        do { *j++ = *i1++; n1 -= 1; } while (n1 & mask);
+                    }
                     if (n1 == 0) {
                         /* no need for copy - data already there */
                         break;
