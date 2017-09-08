@@ -418,8 +418,9 @@ static void sortMerge (SEXP dst, SEXP src, Rboolean decreasing)
 {
     int n = LENGTH(src);
 
-    if (n >= 2 && (decreasing || isUnsorted(src, FALSE))) {
-
+    if (n < 2 || !decreasing && !isUnsorted(src,FALSE))
+        copy_elements (dst, 0, 1, src, 0, 1, n);
+    else {
         switch (TYPEOF(src)) {
         case LGLSXP:
         case INTSXP:
