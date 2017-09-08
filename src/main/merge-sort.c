@@ -26,6 +26,38 @@
  */
 
 
+/* Standalone test program.  Test merge_sort with
+
+       cc -DTEST_MERGE_SORT merge-sort.c; a.out n1 n2 n3 ...
+*/
+
+#ifdef TEST_MERGE_SORT
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define merge_value int
+#define merge_greater(a,b) ((a) > (b))
+
+static void merge_sort (merge_value *dst, merge_value *src, int n);
+
+int main (int argc, char **argv)
+{
+    int n = argc - 1;
+    merge_value d[n], s[n];
+    int i;
+    
+    for (i = 0; i < n; i++) s[i] = atoi(argv[i+1]);
+    merge_sort (d, s, n);
+    for (i = 0; i < n; i++) printf(" %d",d[i]);
+    printf("\n");
+
+    return 0;
+}
+
+#endif
+
+
 /* Template for a merge sort procedure, which sorts 'n' items in
    'src', storing the sorted list in 'dst'.  The data in 'src' may be
    destroyed during the sort.  The sort is stable.
@@ -40,22 +72,81 @@
    These symbols can all be undefined, then redefined before including
    merge-sort.h again, to make another sort procedure. 
 
-   The algorithm used can be visualized recursively, though the
-   recursion is not explicit in the code.  The operation can be viewed
-   in terms of halves of src and dst, as follows:
+   The algorithm is recursive.  It can be viewed in terms of halves of
+   src and dst, as follows:
 
            src = [ A | B ]     SORT->      dst = [ X | Y ]
 
    This is implemented as follows:
 
-                A      SORT->    Y      (A destroyed)
-                B      SORT->    A      (B destroyed)
-               A,Y    MERGE->   dst
+                B      SORT->    Y      (B destroyed)
+                A      SORT->    B      (A destroyed)
+               B,Y    MERGE->   dst
 	       
-   If src is of odd length, A is one bigger than B, and Y is one
-   bigger than X.  The merge of A and Y will overwrite Y, but a write
+   If src is of odd length, B is one bigger than A, and Y is one
+   bigger than X.  The merge of B and Y will overwrite Y, but a write
    to an element of Y will happen only after that element is no longer
-   needed. */
+   needed.  Some writes may not be needed, because the last elements
+   merged are already in place.  If n is small, the above procedure 
+   is replaced by a simple insertion sort. */
+
+#if 1   /* Simple recursive version */
+
+static void merge_sort (merge_value *dst, merge_value *src, int n)
+{
+    if (n <= 10) {
+
+        if (n == 0)
+            return;
+
+        dst[0] = src[0];
+
+        int i, j;
+        for (i = 1; i < n; i++) {
+            j = i;
+            while (j > 0 && merge_greater(dst[j-1],src[i])) {
+                dst[j] = dst[j-1];
+                j = j - 1;
+            }
+            dst[j] = src[i];
+        }
+    }
+    else {
+
+        int n1 = n / 2;
+        int n2 = n - n1;
+
+        merge_sort (dst + n1, src + n1, n2);
+        merge_sort (src + n1, src, n1);
+
+        merge_value *i1 = src + n1;
+        merge_value *i2 = dst + n1;
+        merge_value *j = dst;
+
+        for (;;) {
+            if (merge_greater (*i1, *i2)) {
+                *j++ = *i2++;
+                n2 -= 1;
+                if (n2 == 0) {
+                    do { *j++ = *i1++; n1 -= 1; } while (n1 > 0);
+                    break;
+                }
+            }
+            else {
+                *j++ = *i1++;
+                n1 -= 1;
+                if (n1 == 0) {
+                    /* no need for copy - already there */
+                    break;
+                }
+            }
+        }
+
+        return;
+    }
+}
+
+#else  /* Version that's not explicitly recursive */
 
 static void merge_sort (merge_value *dst, merge_value *src, int n)
 {
@@ -67,144 +158,116 @@ static void merge_sort (merge_value *dst, merge_value *src, int n)
         return;
     }
 
-    /* Set up array of tasks to do, mimicking recursion. 50 should be enough. */
+    /* Array of tasks to do, mimicking recursion. 50 should be enough. */
 
     struct todo { 
+        int n;             /* Number of elements in source/destination */
         merge_value *src;  /* Pointer to first element in source array */
         merge_value *dst;  /* Pointer to first element in destination array */
-        int n1;            /* Number of elements in first half of source */
-        int n2;            /* Number of elements in second half of source */
-        int fhs;           /* Has first half been sorted? */
+        int halves_done;   /* Number of halves that have been sorted */
     } todo[50]; 
 
     struct todo *top;      /* Top value in todo */
 
     top = todo;
+    top[0].n = n;
     top[0].src = src;
     top[0].dst = dst;
-    top[0].n1 = (n + 1) / 2;
-    top[0].n2 = n - top[0].n1;
-    top[0].fhs = 0;
+    top[0].halves_done = 0;
 
     /* Do and create tasks until original task is done. */
 
-    goto enter;
-
     for (;;) {
 
-        /* At this point, the top task will have its first half sorted. */
+        int n0 = top[0].n;
 
-        if (top[0].n2 > 2) {
+        if (n0 > 2) {
 
-            /* Create a task to sort the second half. */
+            /* Create a task to sort one half or the other. */
 
-            top[1].src = top[0].src + top[0].n1;
-            top[1].dst = top[0].src;
-            top[1].n1 = (top[0].n2 + 1) / 2;
-            top[1].n2 = top[0].n2 / 2;
-            top[1].fhs = 0;
-            top += 1;
-        }
+            int n1 = n0 / 2;
 
-        else { 
-
-            /* Do simple operation of sorting a second half with <= 2 elements.*/
-
-            merge_value *s2 = top[0].src + top[0].n1;
-            if (top[0].n2 > 1) {
-                if (merge_greater(*s2,*(s2+1))) {
-                    *top[0].src = *(s2+1);
-                    *(top[0].src+1) = *s2;
-                }
-                else {
-                    *top[0].src = *s2;
-                    *(top[0].src+1) = *(s2+1);
-                }
-            }
-            else
-                *top[0].src = *s2;
-
-            /* After a second half has been sorted, it will be possible to merge
-               it with the first half.  If the merged result was a second half,
-               it also can be merged, etc. */
-
-            do {
-
-                /* Merge first and second halves. */
-
-                int n1 = top[0].n1;
-                int n2 = top[0].n2;
-
-                merge_value *i1 = top[0].dst + n2;
-                merge_value *i2 = top[0].src;
-                merge_value *j = top[0].dst;
-
-                for (;;) {
-                    if (merge_greater (*i1, *i2)) {
-                        *j++ = *i2++;
-                        n2 -= 1;
-                        if (n2 == 0) {
-                            while (n1 > 0) { *j++ = *i1++; n1 -= 1; }
-                            break;
-                        }
-                    }
-                    else {
-                        *j++ = *i1++;
-                        n1 -= 1;
-                        if (n1 == 0) {
-                            while (n2 > 0) { *j++ = *i2++; n2 -= 1; }
-                            break;
-                        }
-                    }
-                }
-
-                /* Check whether everything is now done! */
-
-                if (top == todo)
-                    return;
-
-                /* Go on to the next task. */
-
-                top -= 1;        
-
-            } while (top[0].fhs);
-
-            top[0].fhs = 1;
-        }
-
-      enter:
-
-        if (!top[0].fhs) {
-
-           /* Create tasks to sort first half, first half of first half, etc.,
-              until this reaches the point of sorting <= 2 elements. */
-
-            while (top[0].n1 > 2) {
+            if (top[0].halves_done) {
+                top[1].n = n1;
                 top[1].src = top[0].src;
-                top[1].dst = top[0].dst + top[0].n2;
-                top[1].n1 = (top[0].n1 + 1) / 2;
-                top[1].n2 = top[0].n1 / 2;
-                top[1].fhs = 0;
-                top += 1;
+                top[1].dst = top[0].src + n1;
+            }
+            else {
+                top[1].n = n0 - n1;
+                top[1].src = top[0].src + n1;
+                top[1].dst = top[0].dst + n1;
             }
 
-            /* Do simple operation of sorting a first half with <= 2 elements. */
+            top[1].halves_done = 0;
+            top += 1;
 
-            merge_value *d1 = top[0].dst + top[0].n2;
-            if (top[0].n1 > 1) {
-                if (merge_greater(*top[0].src,*(top[0].src+1))) {
-                    *d1 = *(top[0].src+1);
-                    *(d1+1) = *top[0].src;
+            continue;
+        }
+
+        /* Sort one or two elements directly. */
+
+        merge_value *s = top[0].src;
+        merge_value *d = top[0].dst;
+
+        if (n0 == 1)
+            *d = *s;
+        else {
+            if (merge_greater(*s,*(s+1))) {
+                *d = *(s+1);
+                *(d+1) = *s;
+            }
+            else {
+                *d = *s;
+                *(d+1) = *(s+1);
+            }
+        }
+
+        /* Do as many merges as possible. */
+
+        for (;;) {
+
+            /* Check whether we're all done. */
+
+            if (top == todo)
+                return;
+
+            /* Pop to next remaining task, see if can do merge for it. */
+
+            top -= 1;
+            top[0].halves_done += 1;
+            if (top[0].halves_done != 2)
+                break;
+
+            /* Both halves have been sorted, so we can merge. */
+
+            int n0 = top[0].n;
+            int n1 = n0 / 2;
+            int n2 = n0 - n1;
+
+            merge_value *i1 = top[0].src + n1;
+            merge_value *i2 = top[0].dst + n1;
+            merge_value *j = top[0].dst;
+
+            for (;;) {
+                if (merge_greater (*i1, *i2)) {
+                    *j++ = *i2++;
+                    n2 -= 1;
+                    if (n2 == 0) {
+                        do { *j++ = *i1++; n1 -= 1; } while (n1 > 0);
+                        break;
+                    }
                 }
                 else {
-                    *d1 = *top[0].src;
-                    *(d1+1) = *(top[0].src+1);
+                    *j++ = *i1++;
+                    n1 -= 1;
+                    if (n1 == 0) {
+                        /* no need for copy - data already there */
+                        break;
+                    }
                 }
             }
-            else
-                *d1 = *top[0].src;
-
-            top[0].fhs = 1;
         }
     }
 }
+
+#endif
