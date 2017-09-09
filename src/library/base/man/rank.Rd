@@ -1,7 +1,7 @@
 % File src/library/base/man/rank.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2008 R Core Team
-% Modifications for pqR Copyright (c) 2013 Radford M. Neal.
+% Modifications for pqR Copyright (c) 2013, 2017 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{rank}
@@ -13,7 +13,8 @@
 }
 \usage{
 rank(x, na.last = TRUE,
-     ties.method = c("average", "first", "random", "max", "min"))
+     ties.method = c("average", "first", "random", "max", "min"),
+     method = c("merge","shell"))
 }
 \arguments{
   \item{x}{a numeric, complex, character or logical vector, or an
@@ -27,6 +28,8 @@ rank(x, na.last = TRUE,
     \code{"keep"} they are kept with rank \code{NA}.}
   \item{ties.method}{a character string specifying how ties are treated,
     see \sQuote{Details}; can be abbreviated.}
+  \item{method}{the sorting method to use (for \code{"average"}, \code{"min"},  
+    or \code{"max"} only). See \code{sort}. Defaults to \code{"merge"}.}
 }
 \references{
   Becker, R. A., Chambers, J. M. and Wilks, A. R. (1988)
@@ -58,8 +61,9 @@ rank(x, na.last = TRUE,
 \value{
   A numeric vector of the same length as \code{x} with names copied from
   \code{x} (unless \code{na.last = NA}, when missing values are
-  removed).  The vector is of integer type unless \code{ties.method =
-    "average"} when it is of double type (whether or not there are any ties).
+  removed).  The vector is of integer type unless 
+  \code{ties.method = "average"} when it is of double type 
+  (whether or not there are any ties).
 }
 \seealso{
   \code{\link{order}} and \code{\link{sort}}.

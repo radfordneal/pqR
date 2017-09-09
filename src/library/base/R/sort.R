@@ -45,10 +45,10 @@ sort.int <-
              && is.integer(length(x)))
             method <- "radix"
         else
-            method <- "shell"
+            method <- "merge"
     }
     else if (method == "quick" && !is.numeric(x))
-        method = "shell" # explicitly prevent 'quick' for non-numeric data
+        method = "merge" # explicitly prevent 'quick' for non-numeric data
 
     if (method == "radix") {
         if (!is.null(partial)) {
@@ -83,14 +83,15 @@ sort.int <-
         stop("'index.return' only for 'na.last = NA'")
 
     if (!is.null(partial)) {
-        if(index.return || decreasing || isfact || method != "shell")
+        if (index.return || decreasing || isfact
+                         || method != "shell" && method != "merge")
 	    stop("unsupported options for partial sorting")
-        if(!all(is.finite(partial))) stop("non-finite 'partial'")
-        y <- if(length(partial) <= 10L) {
-            partial <- .Internal(qsort(partial, FALSE))
-            .Internal(psort(x, partial))
-        } else if (is.double(x)) .Internal(qsort(x, FALSE))
-        else .Internal(sort(x, FALSE))
+        if (!all(is.finite(partial))) stop("non-finite 'partial'")
+        y <- if (length(partial) <= 10L) {
+                partial <- .Internal(qsort(partial, FALSE))
+               .Internal(psort(x, partial))
+             } else if (is.double(x)) .Internal(qsort(x, FALSE))
+             else .Internal (sort (x, FALSE, method))
     }
     else { # not partial
         nms <- names(x)
@@ -140,7 +141,7 @@ order <- function(..., na.last = TRUE, decreasing = FALSE,
                            (is.numeric(x) || is.factor(x) || is.logical(x)) &&
                             is.integer(length(x)),
                           logical(1L)))
-        method <- if (useRadix) "radix" else "shell"
+        method <- if (useRadix) "radix" else "merge"
     }
 
     if(any(unlist(lapply(z, is.object)))) {
@@ -179,7 +180,7 @@ sort.list <- function(x, partial = NULL, na.last = TRUE, decreasing = FALSE,
              is.integer(length(x)))
             method <- "radix"
         else
-            method <- "shell"
+            method <- "merge"
     }
     if(!is.atomic(x))
         stop("'x' must be atomic for 'sort.list'\nHave you called 'sort' on a list?")

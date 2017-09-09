@@ -60,7 +60,7 @@
   \itemize{
   \item The radix sorting procedure introduced in R-3.3.1 is now used,
         for which NEWS entry was as follows:
-
+      
         The radix sort algorithm and implementation from
         \CRANpkg{data.table} (\code{forder}) replaces the previous
         radix (counting) sort and adds a new method for
@@ -70,8 +70,15 @@
         outperforms all other methods, but there are some caveats (see
         \code{?sort}).
 
-        Other changes in \code{sort} and \code{order} from later R Core
+        Some other changes in \code{sort} and \code{order} from later R Core
         releases (to R-3.4.1) have also been incorporated.
+
+        A new merge sort procedure has been implemented, and is used by 
+        default in those cases where radix sort is not suitable.  The
+        previous shellshort procedure is still available, but is it generally
+        slower than merge sort, though it does have the advantage
+        of not allocating any auxiliary storage.  Whether to use
+        merge sort or shellsort can now be specified for \code{rank}.
   \item Operations that increase or decrease the length of a vector
         (including lists) now often make changes in place, rather than
         allocating a new vector.  A small amount of additional
