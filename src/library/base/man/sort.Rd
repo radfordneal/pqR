@@ -1,6 +1,7 @@
 % File src/library/base/man/sort.Rd
 % Part of the R package, https://www.R-project.org
 % Copyright 1995-2014 R Core Team
+% Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{sort}
@@ -20,7 +21,8 @@ sort(x, decreasing = FALSE, \dots)
 \method{sort}{default}(x, decreasing = FALSE, na.last = NA, \dots)
 
 sort.int(x, partial = NULL, na.last = NA, decreasing = FALSE,
-         method = c("auto", "shell", "quick", "radix"), index.return = FALSE)
+         method = c("auto", "merge", "shell", "quick", "radix"),
+         index.return = FALSE)
 }
 \arguments{
   \item{x}{for \code{sort} an \R object with a class or a numeric,
@@ -36,8 +38,8 @@ sort.int(x, partial = NULL, na.last = NA, decreasing = FALSE,
     If \code{TRUE}, missing values in the data are put last; if
     \code{FALSE}, they are put first; if \code{NA}, they are removed.}
   \item{partial}{\code{NULL} or a  vector of indices for partial sorting.}
-  \item{method}{character string specifying the algorithm used.  Not
-    available for partial sorting.  Can be abbreviated.}
+  \item{method}{character string specifying the algorithm used.  
+    Can be abbreviated.}
   \item{index.return}{logical indicating if the ordering index vector should
     be returned as well. Supported by \code{method == "radix"} for any
     \code{na.last} mode and data type, and the other methods when
@@ -56,16 +58,55 @@ sort.int(x, partial = NULL, na.last = NA, decreasing = FALSE,
   Complex values are sorted first by the real part, then the imaginary
   part.
 
-  The \code{"auto"} method selects \code{"radix"} for short (less than
-  \eqn{2^{31}}{2^31} elements) numeric vectors, integer vectors, logical
-  vectors and factors; otherwise, \code{"shell"}.
+  The \code{"auto"} method selects \code{"radix"} for numeric vectors,
+  integer vectors, logical vectors and factors, and otherwise
+  \code{"merge"}.
   
-  Except for method \code{"radix"},
-  the sort order for character vectors will depend on the collating
-  sequence of the locale in use: see \code{\link{Comparison}}.
-  The sort order for factors is the order of their levels (which is
-  particularly appropriate for ordered factors).
+  All methods except \code{"quick"} are stable, leaving the order unchanged
+  for elements that are equal.  For numeric vectors, this is observable only
+  when the vector has names, or \code{index.return} is used.
 
+  Except for method \code{"radix"}, the sort order for character
+  vectors will depend on the collating sequence of the locale in use:
+  see \code{\link{Comparison}}.  The sort order for factors is the
+  order of their levels (which is particularly appropriate for ordered
+  factors).
+
+  Method \code{"merge"} uses a merge sort, which is an \eqn{O(n log
+  n)} algorithm.  It requires auxiliary space proportional to the
+  number of items, but this is likely to be an issue only on 32-bit
+  platforms.
+
+  Method \code{"shell"} uses Shellsort (an \eqn{O(n^{4/3})} variant from
+  Sedgewick (1986)), which requires no auxiliary space, but is generally
+  slower than merge sort. 
+
+  Method \code{"quick"} uses Singleton (1969)'s implementation of
+  Hoare's Quicksort method and is only available when \code{x} is
+  numeric (double or integer) and \code{partial} is \code{NULL}.  (For
+  other types of \code{x} merge sort is used, silently.)  It requires
+  no auxiliary storage, and is normally somewhat faster than Shellsort
+  (perhaps 50\% faster on vectors of length a million and twice as
+  fast at a billion) but has poor performance in the rare worst case.
+  (Peto's modification using a pseudo-random midpoint is used to make
+  the worst case rarer.)  This is not a stable sort, so ties may be
+  reordered.
+  
+  Method \code{"radix"} relies on simple hashing to scale time linearly
+  with the input size, i.e., its asymptotic time complexity is O(n). The
+  specific variant and its implementation originated from the data.table
+  package and are due to Matt Dowle and Arun Srinivasan.  For small
+  inputs (< 200), the implementation uses an insertion sort (O(n^2))
+  that operates in-place to avoid the allocation overhead of the radix
+  sort. For integer vectors of range less than 100,000, it switches to a
+  simpler and faster linear time counting sort. It is the default method
+  for integer vectors and factors.
+
+  The \code{"radix"} method generally outperforms the other methods,
+  especially for small integers and character vectors.  However,
+  If \code{x} is a character vector, all elements must share
+  the same encoding, only UTF-8 (including ASCII) and Latin-1
+  encodings are supported, and collation always follows the "C" locale.
 
   If \code{partial} is not \code{NULL}, it is taken to contain indices
   of elements of the result which are to be placed in their correct
@@ -76,55 +117,9 @@ sort.int(x, partial = NULL, na.last = NA, decreasing = FALSE,
   sorted array.  (This is included for efficiency, and many of the
   options are not available for partial sorting.  It is only
   substantially more efficient if \code{partial} has a handful of
-  elements, and a full sort is done (a Quicksort if possible) if there
-  are more than 10.)  Names are discarded for partial sorting.
-
-  Method \code{"shell"} uses Shellsort (an \eqn{O(n^{4/3})} variant from
-  Sedgewick (1986)).  If \code{x} has names a stable modification is
-  used, so ties are not reordered.  (This only matters if names are
-  present.)
-
-  Method \code{"quick"} uses Singleton (1969)'s implementation of
-  Hoare's Quicksort method and is only available when \code{x} is
-  numeric (double or integer) and \code{partial} is \code{NULL}.  (For
-  other types of \code{x} Shellsort is used, silently.)  It is normally
-  somewhat faster than Shellsort (perhaps 50\% faster on vectors of
-  length a million and twice as fast at a billion) but has poor
-  performance in the rare worst case.  (Peto's modification using a
-  pseudo-random midpoint is used to make the worst case rarer.)  This is
-  not a stable sort, and ties may be reordered.
-  
-  Method \code{"radix"} relies on simple hashing to scale time linearly
-  with the input size, i.e., its asymptotic time complexity is O(n). The
-  specific variant and its implementation originated from the data.table
-  package and are due to Matt Dowle and Arun Srinivasan.  For small
-  inputs (< 200), the implementation uses an insertion sort (O(n^2))
-  that operates in-place to avoid the allocation overhead of the radix
-  sort. For integer vectors of range less than 100,000, it switches to a
-  simpler and faster linear time counting sort. In all cases, the sort
-  is stable; the order of ties is preserved. It is the default method
-  for integer vectors and factors.
-
-  The \code{"radix"} method generally outperforms the other methods,
-  especially for character vectors and small integers. Compared to quick
-  sort, it is slightly faster for vectors with large integer or real
-  values (but unlike quick sort, radix is stable and supports all
-  \code{na.last} options). The implementation is orders of magnitude
-  faster than shell sort for character vectors, in part thanks to clever
-  use of the internal \code{CHARSXP} table.
-
-  However, there are some caveats with the radix sort:
-  \itemize{
-    \item{
-      If \code{x} is a \code{character} vector, all elements must share
-      the same encoding. Only UTF-8 (including ASCII) and Latin-1
-      encodings are supported. Collation always follows the "C" locale.
-    }
-    \item{
-      Long vectors (with more than 2^32 elements) and \code{complex}
-      vectors are not supported yet.
-    }
-  }
+  elements, and a full sort is done (a Quicksort if possible, otherwise
+  the specified method, which must be \code{"merge"} or \code{"shell"})
+  if there are more than 10.)  Names are discarded for partial sorting.
 }
 
 \value{
@@ -140,7 +135,7 @@ sort.int(x, partial = NULL, na.last = NA, decreasing = FALSE,
   \code{index.return} is true, when the result is a list with components
   named \code{x} and \code{ix} containing the sorted numbers and the
   ordering index vector.  In the latter case, if \code{method ==
-    "quick"} ties may be reversed in the ordering (unlike
+  "quick"} ties may be reversed in the ordering (unlike
   \code{sort.list}) as quicksort is not stable.  For \code{method ==
   "radix"}, \code{index.return} is supported for all \code{na.last}
   modes. The other methods only support \code{index.return}
@@ -149,7 +144,7 @@ sort.int(x, partial = NULL, na.last = NA, decreasing = FALSE,
   \code{\link{order}} if you want the original element numbers.
 
   All attributes are removed from the return value (see Becker \emph{et
-    al}, 1988, p.146) except names, which are sorted.  (If
+  al}, 1988, p.146) except names, which are sorted.  (If
   \code{partial} is specified even the names are removed.)  Note that
   this means that the returned value has no class, except for factors
   and ordered factors (which are treated specially and whose result is

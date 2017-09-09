@@ -567,6 +567,9 @@ void sortVector(SEXP s, Rboolean decreasing)
 	}
 }
 
+/* Internal 'sort' function: sort(data,decreasing,method).  The 'method' 
+   argument may be absent, for compatibility with possible old calls. */
+
 static SEXP do_sort(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     int decreasing;

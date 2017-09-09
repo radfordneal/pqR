@@ -1,6 +1,7 @@
 % File src/library/base/man/order.Rd
 % Part of the R package, https://www.R-project.org
 % Copyright 1995-2017 R Core Team
+% Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{order}
@@ -17,10 +18,10 @@
 }
 \usage{
 order(\dots, na.last = TRUE, decreasing = FALSE,
-      method = c("auto", "shell", "radix"))
+      method = c("auto", "merge", "shell", "radix"))
 
 sort.list(x, partial = NULL, na.last = TRUE, decreasing = FALSE,
-          method = c("auto", "shell", "quick", "radix"))
+          method = c("auto", "merge", "shell", "quick", "radix"))
 }
 \arguments{
   \item{\dots}{a sequence of numeric, complex, character or logical
@@ -39,10 +40,9 @@ sort.list(x, partial = NULL, na.last = TRUE, decreasing = FALSE,
   \item{method}{the method to be used: partial matches are allowed.  The
     default (\code{"auto"}) implies \code{"radix"} for short numeric vectors,
     integer vectors, logical vectors and factors.
-    Otherwise, it implies \code{"shell"}.
-    For details of methods \code{"shell"}, 
-    \code{"quick"}, and \code{"radix"},
-    see the help for \code{\link{sort}}.}
+    Otherwise, it implies \code{"merge"}.
+    For details of methods \code{"merge"}, \code{"shell"},
+    \code{"quick"}, and \code{"radix"}, see the help for \code{\link{sort}}.}
 }
 \details{
   In the case of ties in the first vector, values in the second are used
@@ -58,7 +58,8 @@ sort.list(x, partial = NULL, na.last = TRUE, decreasing = FALSE,
   will depend on the collating sequence of the locale in use: see
   \code{\link{Comparison}}.
 
-  The \code{"shell"} method is generally the safest bet and is the
+  The \code{"merge"} method is generally the safest bet (though it does
+  allocate auxiliary temporary storage) and is the
   default method, except for short factors, numeric vectors,
   integer vectors and logical vectors, where \code{"radix"} is assumed.
   Method \code{"radix"} stably sorts logical,
@@ -81,7 +82,7 @@ sort.list(x, partial = NULL, na.last = TRUE, decreasing = FALSE,
 
 \value{
   An integer vector unless any of the inputs has \eqn{2^{31}}{2^31} or
-  more elements, when it is a double vector.
+  more elements (never for pqR at present), when it is a double vector.
 }
 
 \section{Warning}{
@@ -106,9 +107,6 @@ sort.list(x, partial = NULL, na.last = TRUE, decreasing = FALSE,
    zz <- x[!is.na(x)]; zz[sort.list(x, na.last = NA)]
 }
   both sort the non-\code{NA} values of \code{x}.
-
-  Prior to \R 3.3.0 \code{method = "radix"} was only supported for
-  integers of range less than 100,000.
 }
 
 \references{

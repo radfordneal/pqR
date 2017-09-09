@@ -1,6 +1,6 @@
 #  File src/library/base/R/rank.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2013 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2013, 2017 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ rank <- function(x, na.last = TRUE,
 		 ties.method=c("average", "first", "random", "max", "min"),
                  method=c("merge","shell"))
 {
-    method <- if (missing(method)) "shell" else match.arg(method)
+    method <- if (missing(method)) "merge" else match.arg(method)
     if (is.data.frame(x)) x <- unlist(x)
     nas <- is.na(x)
     not.nas <- !nas
