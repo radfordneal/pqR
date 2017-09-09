@@ -78,7 +78,9 @@
         previous shellshort procedure is still available, but is it generally
         slower than merge sort, though it does have the advantage
         of not allocating any auxiliary storage.  Whether to use
-        merge sort or shellsort can now be specified for \code{rank}.
+        merge sort or shellsort can now be specified for \code{rank},
+        and \code{"merge"} is now an option for the method arguments of
+        \code{order}, \code{sort.int}, and \code{sort.list}.
   \item Operations that increase or decrease the length of a vector
         (including lists) now often make changes in place, rather than
         allocating a new vector.  A small amount of additional

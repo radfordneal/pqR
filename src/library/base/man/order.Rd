@@ -169,26 +169,29 @@ z <- cbind(a, b)
 (o <- order(a, b, na.last = NA)); z[o, ]
 
 \donttest{
-##  speed examples on an average laptop for long vectors:
+set.seed(1)
+##  speed examples for long vectors:
 ##  factor/small-valued integers:
 x <- factor(sample(letters, 1e7, replace = TRUE))
-system.time(o <- sort.list(x, method = "quick", na.last = NA)) # 0.1 sec
+system.time(o <- sort.list(x, method = "quick", na.last = NA))
 stopifnot(!is.unsorted(x[o]))
-system.time(o <- sort.list(x, method = "radix")) # 0.05 sec, 2X faster
+system.time(o <- sort.list(x, method = "radix"))
 stopifnot(!is.unsorted(x[o]))
 ##  large-valued integers:
 xx <- sample(1:200000, 1e7, replace = TRUE)
-system.time(o <- sort.list(xx, method = "quick", na.last = NA)) # 0.3 sec
-system.time(o <- sort.list(xx, method = "radix")) # 0.2 sec
+system.time(o <- sort.list(xx, method = "quick", na.last = NA))
+system.time(o <- sort.list(xx, method = "radix"))
 ##  character vectors:
 xx <- sample(state.name, 1e6, replace = TRUE)
-system.time(o <- sort.list(xx, method = "shell")) # 2 sec
-system.time(o <- sort.list(xx, method = "radix")) # 0.007 sec, 300X faster
+system.time(o <- sort.list(xx, method = "shell"))
+system.time(o <- sort.list(xx, method = "merge"))
+system.time(o <- sort.list(xx, method = "radix"))
 ##  double vectors:
 xx <- rnorm(1e6)
-system.time(o <- sort.list(xx, method = "shell")) # 0.4 sec
-system.time(o <- sort.list(xx, method = "quick", na.last = NA)) # 0.1 sec
-system.time(o <- sort.list(xx, method = "radix")) # 0.05 sec, 2X faster
+system.time(o <- sort.list(xx, method = "shell"))
+system.time(o <- sort.list(xx, method = "merge"))
+system.time(o <- sort.list(xx, method = "quick", na.last = NA))
+system.time(o <- sort.list(xx, method = "radix"))
 }}
 \keyword{univar}
 \keyword{manip}
