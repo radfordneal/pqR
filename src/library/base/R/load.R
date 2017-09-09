@@ -29,7 +29,7 @@ load <- function (file, envir = parent.frame())
             ## a check while we still know the call to load()
             if(grepl("RD[ABX][12]\r", magic))
                 stop("input has been corrupted, with LF replaced by CR")
-            error("Use of save versions prior to 2 is no longer allowed")
+            stop("Use of save versions prior to 2 is no longer allowed")
         }
     } else if (inherits(file, "connection")) {
         con <- if(inherits(file, "gzfile") || inherits(file, "gzcon")) file
@@ -52,7 +52,7 @@ save <- function(..., list = character(),
         ascii <- opts$ascii
     if (missing(version)) version <- opts$version
     if (!is.null(version) && version < 2)
-        error("Use of save versions prior to 2 is no longer allowed")
+        stop("Use of save versions prior to 2 is no longer allowed")
 
     if(missing(list) && !length(list(...)))
 	warning("nothing specified to be save()d")
