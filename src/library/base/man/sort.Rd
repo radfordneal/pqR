@@ -194,6 +194,7 @@ is.unsorted(x)                  # FALSE: is sorted
 is.unsorted(x, strictly = TRUE) # TRUE : is not (and cannot be)
                                 # sorted strictly
 \dontrun{
+set.seed(1)
 ## Small speed comparison simulation:
 N <- 2000
 Sim <- 20
@@ -206,16 +207,18 @@ for(is in seq_len(Sim)){
   stopifnot(sort(x, method = "shell") == sort(x, method = "quick"))
 }
 rbind(ShellSort = c1, QuickSort = c2)
-cat("Speedup factor of quick sort():\n")
+cat("Speedup factor of quicksort over shellshort:\n")
 summary({qq <- c1 / c2; qq[is.finite(qq)]})
 
 ## A larger test
 x <- rnorm(1e7)
 system.time(x1 <- sort(x, method = "shell"))
+system.time(x3 <- sort(x, method = "merge"))
 system.time(x2 <- sort(x, method = "quick"))
-system.time(x3 <- sort(x, method = "radix"))
+system.time(x4 <- sort(x, method = "radix"))
 stopifnot(identical(x1, x2))
 stopifnot(identical(x1, x3))
+stopifnot(identical(x1, x4))
 }}
 \keyword{univar}
 \keyword{manip}
