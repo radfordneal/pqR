@@ -41,9 +41,8 @@ sort.int <-
 
     if (method == "auto") {
         if (is.null(partial) 
-             && (is.numeric(x) || is.factor(x) || is.logical(x))
-             && is.integer(length(x)))
-            method <- "radix"
+             && (is.numeric(x) || is.factor(x) || is.logical(x)))
+            method <- if (length(x) < 200) "shell" else "radix"
         else
             method <- "merge"
     }
@@ -136,12 +135,17 @@ order <- function(..., na.last = TRUE, decreasing = FALSE,
     method <- if (missing(method)) "auto" 
               else match.arg (method, c("auto", "merge", "shell", "radix"))
     if (method == "auto") {
-        useRadix <- all (vapply (z, 
-                          function (x)
-                           (is.numeric(x) || is.factor(x) || is.logical(x)) &&
-                            is.integer(length(x)),
-                          logical(1L)))
-        method <- if (useRadix) "radix" else "merge"
+        method <- "merge"
+        if (length(z) == 1) {
+            x <- z[[1]]
+            if (is.numeric(x) || is.factor(x) || is.logical(x))
+                method <- if (length(x) < 200) "shell" else "radix"
+        }
+        else
+            if (all (vapply (z, 
+                 function (x) is.numeric(x) || is.factor(x) || is.logical(x),
+                 TRUE)))
+                method <- "radix"
     }
 
     if(any(unlist(lapply(z, is.object)))) {
@@ -176,9 +180,8 @@ sort.list <- function(x, partial = NULL, na.last = TRUE, decreasing = FALSE,
     method <- if (missing(method)) "auto" 
       else match.arg (method, c("auto", "merge", "shell", "quick", "radix"))
     if (method == "auto") {
-        if ((is.numeric(x) || is.factor(x) || is.logical(x)) &&
-             is.integer(length(x)))
-            method <- "radix"
+        if (is.numeric(x) || is.factor(x) || is.logical(x))
+            method <- if (length(x) < 200) "shell" else "radix"
         else
             method <- "merge"
     }
