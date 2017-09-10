@@ -58,8 +58,8 @@
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
-  \item The radix sorting procedure introduced in R-3.3.1 is now used,
-        for which NEWS entry was as follows:
+  \item The radix sorting procedure introduced in R-3.3.1 is now available
+        in pqR.  The R-3.3.1 NEWS entry regarding this was as follows:
       
         The radix sort algorithm and implementation from
         \CRANpkg{data.table} (\code{forder}) replaces the previous
@@ -75,9 +75,10 @@
 
         A new merge sort procedure has been implemented, and is used by 
         default in those cases where radix sort is not suitable.  The
-        previous shellshort procedure is still available, but is it generally
-        slower than merge sort, though it does have the advantage
-        of not allocating any auxiliary storage.  Whether to use
+        previous shellshort procedure is still available, and is used by
+        default for short numerical vectors.  Shellsort is generally
+        slower than merge sort for longer vectors, though it does have 
+        the advantage of not allocating any auxiliary storage.  Whether to use
         merge sort or shellsort can now be specified for \code{rank},
         and \code{"merge"} is now an option for the method arguments of
         \code{order}, \code{sort.int}, and \code{sort.list}.

@@ -1,5 +1,7 @@
-Updates to 'sort' and 'order'.
+Updates to 'sort', 'order', 'rank', and related functions.
 
 Adds the new radixsort internal from later R Core versions.
 
 Adds a newly-written merge sort.
+
+Tweaks other aspects for performance.

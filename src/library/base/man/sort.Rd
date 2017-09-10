@@ -59,8 +59,9 @@ sort.int(x, partial = NULL, na.last = NA, decreasing = FALSE,
   part.
 
   The \code{"auto"} method selects \code{"radix"} for numeric vectors,
-  integer vectors, logical vectors and factors, and otherwise
-  \code{"merge"}.
+  integer vectors, logical vectors, and factors, except that \code{"shell"}
+  is used for vector with length less than 200.  In other cases, method
+  \code{"merge"} is used.
   
   All methods except \code{"quick"} are stable, leaving the order unchanged
   for elements that are equal.  For numeric vectors, this is observable only
