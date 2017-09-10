@@ -57,6 +57,10 @@ int main (int argc, char **argv)
     return 0;
 }
 
+#else
+
+extern void R_CheckUserInterrupt(void);
+
 #endif
 
 
@@ -95,9 +99,10 @@ int main (int argc, char **argv)
    Two versions are defined below, selectable by #if.  They have the
    same behaviour with respect to what comparisons are done.  There is
    surprisingly little difference when compiled with gcc 7.1 at -O3,
-   for a 64-bit Intel platform. */
+   for a 64-bit Intel platform, but the non-recursive version may be
+   less sensitive to variation in compiler quality. */
 
-#if 1   /* Recursive version */
+#if 0   /* Recursive version */
 
 static void merge_sort (merge_value *dst, merge_value *src, int n)
 {
@@ -119,6 +124,8 @@ static void merge_sort (merge_value *dst, merge_value *src, int n)
         }
     }
     else {
+
+        if (n > 10000) R_CheckUserInterrupt();
 
         int n1 = n / 2;
         int n2 = n - n1;
@@ -172,14 +179,14 @@ static void merge_sort (merge_value *dst, merge_value *src, int n)
         return;
     }
 
-    /* Array of tasks to do, mimicking recursion. 50 should be enough. */
+    /* Array of tasks to do, mimicking recursion. 45 should be enough. */
 
     struct todo { 
         int n;             /* Number of elements in source/destination */
         merge_value *src;  /* Pointer to first element in source array */
         merge_value *dst;  /* Pointer to first element in destination array */
         int halves_done;   /* Number of halves that have been sorted */
-    } todo[50]; 
+    } todo[45]; 
 
     struct todo *top;      /* Top value in todo */
 
@@ -237,6 +244,8 @@ static void merge_sort (merge_value *dst, merge_value *src, int n)
         /* Do as many merges as possible. */
 
         for (;;) {
+
+            if (n > 10000) R_CheckUserInterrupt();
 
             /* Check whether we're all done. */
 
