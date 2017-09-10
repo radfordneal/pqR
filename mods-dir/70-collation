@@ -1,3 +1,5 @@
 Changes SCollate to handle vmax itself, and to consistently call
 'error' on error, rather than set errno.  Changed sort.c and relop.c
 to match.
+
+Also tweaks translateChar.

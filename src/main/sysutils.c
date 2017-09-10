@@ -788,14 +788,19 @@ const char *translateChar(SEXP x)
     char *outbuf, *p;
     size_t inb, outb, res;
 
-    if(TYPEOF(x) != CHARSXP)
+    if (TYPEOF(x) != CHARSXP)
 	error(_("'%s' must be called on a CHARSXP"), "translateChar");
-    if(x == NA_STRING || !(ENC_KNOWN(x))) return ans;
-    if(IS_BYTES(x))
+
+    if (IS_ASCII(x))
+        return ans;
+    if (!ENC_KNOWN(x))
+        return ans;  /* includes NA_STRING */
+    if (IS_BYTES(x))
 	error(_("translating strings with \"bytes\" encoding is not allowed"));
-    if(utf8locale && IS_UTF8(x)) return ans;
-    if(latin1locale && IS_LATIN1(x)) return ans;
-    if(IS_ASCII(x)) return ans;
+    if (utf8locale && IS_UTF8(x))
+        return ans;
+    if (latin1locale && IS_LATIN1(x))
+        return ans;
 
     if(IS_LATIN1(x)) {
 	if(!latin1_obj) {
@@ -832,11 +837,13 @@ const char *translateChar(SEXP x)
     cetype_t ienc = getCharCE(x);
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
     R_AllocStringBuffer(0, &cbuff);
+
 top_of_loop:
     inbuf = ans; inb = strlen(inbuf);
     outbuf = cbuff.data; outb = cbuff.bufsize - 1;
     /* First initialize output */
     Riconv (obj, NULL, NULL, &outbuf, &outb);
+
 next_char:
     /* Then convert input  */
     res = Riconv(obj, &inbuf , &inb, &outbuf, &outb);
@@ -879,9 +886,11 @@ next_char:
 	}
 	goto next_char;
     }
+
     *outbuf = '\0';
     res = strlen(cbuff.data) + 1;
     p = R_alloc(res, 1);
+
     memcpy(p, cbuff.data, res);
     R_FreeStringBuffer(&cbuff);
     return p;
