@@ -2230,7 +2230,10 @@ void uloc_setDefault(const char* localeID, UErrorCode* status);
 #include <unicode/uiter.h>
 #endif
 
+/* NULL if not using ICU. */
 static UCollator *collator = NULL;
+
+/* 0 - not set, 1 = use strcoll if not ICU, 2 = use ASCII if not ICU. */
 static int collationLocaleSet = 0;
 
 /* called from platform.c */
@@ -2318,10 +2321,11 @@ static SEXP do_ICUset(SEXP call, SEXP op, SEXP args, SEXP rho)
 		ucol_close(collator);
 		collator = NULL;
 	    }
-	    if(streql(s, "ASCII")) {
+	    if (streql(s, "ASCII")) {
 		collationLocaleSet = 2;
-	    } else {
-		if(strcmp(s, "none")) {
+	    } 
+            else {
+		if (strcmp(s,"none") != 0) {
 		    if(streql(s, "default"))
 			uloc_setDefault(getLocale(), &status);
 		    else uloc_setDefault(s, &status);
@@ -2365,19 +2369,22 @@ static SEXP do_ICUget(SEXP call, SEXP op, SEXP args, SEXP rho)
     const char *ans = "unknown", *res;
     checkArity(op, args);
 
-    if (collationLocaleSet == 2) {
+    if (collationLocaleSet == 2)
 	ans = "ASCII";
-    } else if(collator) {
+    else if (collator == NULL)
+        ans = "ICU not in use";
+    else {
 	UErrorCode  status = U_ZERO_ERROR;
 	int type = asInteger(CAR(args));
 	if (type < 1 || type > 2)
 	    error(_("invalid '%s' value"), "type");
 
-	res = ucol_getLocaleByType(collator,
-				   type == 1 ? ULOC_ACTUAL_LOCALE : ULOC_VALID_LOCALE,
-				   &status);
+	res = ucol_getLocaleByType (collator,
+                  type == 1 ? ULOC_ACTUAL_LOCALE : ULOC_VALID_LOCALE,
+                  &status);
 	if(!U_FAILURE(status) && res) ans = res;
-    } else ans = "ICU not in use";
+    } 
+
     return mkString(ans);
 }
 
@@ -2390,7 +2397,7 @@ attribute_hidden int Scollate(SEXP a, SEXP b)
     void *vmax = VMAXGET();
     int result;
 
-    if (!collationLocaleSet) {
+    if (collationLocaleSet == 0) {
         collationLocaleSet = 1;
 #ifndef Win32
         if (strcmp("C", getLocale()) ) {
@@ -2409,12 +2416,15 @@ attribute_hidden int Scollate(SEXP a, SEXP b)
             }
         }
     }
+
     if (collator == NULL) {
-        if (collationLocaleSet == 2)
-            result = strcmp (translateChar(a), translateChar(b));
+        const char *at = translateChar(a);
+        const char *bt = translateChar(b);
+        if (collationLocaleSet != 1)
+            result = strcmp (at, bt);
         else {
             errno = 0;
-            result = strcoll(translateChar(a), translateChar(b));
+            result = strcoll (at, bt);
             if (errno != 0)
                 error("could not collate using strcoll");
         }

@@ -778,32 +778,46 @@ int Riconv_close (void *cd)
     return iconv_close((iconv_t) cd);
 }
 
-static void *latin1_obj = NULL, *utf8_obj=NULL, *ucsmb_obj=NULL,
-    *ucsutf8_obj=NULL;
+static void *latin1_obj = NULL, *utf8_obj = NULL, 
+            *ucsmb_obj = NULL,  *ucsutf8_obj = NULL;
 
-const char *translateChar(SEXP x)
+const char *Rf_translateChar_nontrivial (SEXP x);
+
+const char *translateChar (SEXP x)
 {
-    void * obj;
-    const char *inbuf, *ans = CHAR(x);
-    char *outbuf, *p;
-    size_t inb, outb, res;
-
     if (TYPEOF(x) != CHARSXP)
 	error(_("'%s' must be called on a CHARSXP"), "translateChar");
 
+    const char *ans = CHAR(x);
+
     if (IS_ASCII(x))
         return ans;
-    if (!ENC_KNOWN(x))
-        return ans;  /* includes NA_STRING */
+
+    if (!ENC_KNOWN(x))  /* includes NA_STRING */
+        return ans;
+
     if (IS_BYTES(x))
 	error(_("translating strings with \"bytes\" encoding is not allowed"));
+
     if (utf8locale && IS_UTF8(x))
         return ans;
+
     if (latin1locale && IS_LATIN1(x))
         return ans;
 
-    if(IS_LATIN1(x)) {
-	if(!latin1_obj) {
+    return Rf_translateChar_nontrivial(x);
+}
+
+/* Would be static except want to discourage compiler from inlining it. */
+attribute_hidden const char *Rf_translateChar_nontrivial (SEXP x)
+{
+    void * obj;
+    const char *inbuf;
+    char *outbuf, *p;
+    size_t inb, outb, res;
+
+    if (IS_LATIN1(x)) {
+	if (!latin1_obj) {
 	    obj = Riconv_open("", "latin1");
 	    /* should never happen */
 	    if(obj == (void *)(-1))
@@ -817,7 +831,8 @@ const char *translateChar(SEXP x)
 	    latin1_obj = obj;
 	}
 	obj = latin1_obj;
-    } else {
+    } 
+    else {
 	if(!utf8_obj) {
 	    obj = Riconv_open("", "UTF-8");
 	    /* should never happen */
@@ -839,7 +854,7 @@ const char *translateChar(SEXP x)
     R_AllocStringBuffer(0, &cbuff);
 
 top_of_loop:
-    inbuf = ans; inb = strlen(inbuf);
+    inbuf = CHAR(x); inb = strlen(inbuf);
     outbuf = cbuff.data; outb = cbuff.bufsize - 1;
     /* First initialize output */
     Riconv (obj, NULL, NULL, &outbuf, &outb);
