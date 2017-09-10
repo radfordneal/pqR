@@ -2381,45 +2381,57 @@ static SEXP do_ICUget(SEXP call, SEXP op, SEXP args, SEXP rho)
     return mkString(ans);
 }
 
-/* Caller has to manage the R_alloc stack */
-/* NB: strings can have equal collation weight without being identical */
-attribute_hidden
-int Scollate(SEXP a, SEXP b)
-{
-    if (!collationLocaleSet) {
-	int errsv = errno;      /* OSX may set errno in the operations below. */
-	collationLocaleSet = 1;
-#ifndef Win32
-	if (strcmp("C", getLocale()) ) {
-#else
-	const char *p = getenv("R_ICU_LOCALE");
-	if(p && p[0]) {
-#endif
-	    UErrorCode status = U_ZERO_ERROR;
-	    uloc_setDefault(getLocale(), &status);
-	    if(U_FAILURE(status))
-		error("failed to set ICU locale (%d)", status);
-	    collator = ucol_open(NULL, &status);
-	    if (U_FAILURE(status)) {
-		collator = NULL;
-		error("failed to open ICU collator (%d)", status);
-	    }
-	}
-	errno = errsv;
-    }
-    if (collator == NULL)
-	return collationLocaleSet == 2 ?
-	    strcmp(translateChar(a), translateChar(b)) :
-	    strcoll(translateChar(a), translateChar(b));
+/* Calls 'error' if can't collate.
 
-    UCharIterator aIter, bIter;
-    const char *as = translateCharUTF8(a), *bs = translateCharUTF8(b);
-    int len1 = (int) strlen(as), len2 = (int) strlen(bs);
-    uiter_setUTF8(&aIter, as, len1);
-    uiter_setUTF8(&bIter, bs, len2);
-    UErrorCode status = U_ZERO_ERROR;
-    int result = ucol_strcollIter(collator, &aIter, &bIter, &status);
-    if (U_FAILURE(status)) error("could not collate using ICU");
+   NB: strings can have equal collation weight without being identical */
+
+attribute_hidden int Scollate(SEXP a, SEXP b)
+{
+    void *vmax = VMAXGET();
+    int result;
+
+    if (!collationLocaleSet) {
+        collationLocaleSet = 1;
+#ifndef Win32
+        if (strcmp("C", getLocale()) ) {
+#else
+        const char *p = getenv("R_ICU_LOCALE");
+        if(p && p[0]) {
+#endif
+            UErrorCode status = U_ZERO_ERROR;
+            uloc_setDefault(getLocale(), &status);
+            if(U_FAILURE(status))
+                error("failed to set ICU locale (%d)", status);
+            collator = ucol_open(NULL, &status);
+            if (U_FAILURE(status)) {
+                collator = NULL;
+                error("failed to open ICU collator (%d)", status);
+            }
+        }
+    }
+    if (collator == NULL) {
+        if (collationLocaleSet == 2)
+            result = strcmp (translateChar(a), translateChar(b));
+        else {
+            errno = 0;
+            result = strcoll(translateChar(a), translateChar(b));
+            if (errno != 0)
+                error("could not collate using strcoll");
+        }
+    }
+    else {    
+        UCharIterator aIter, bIter;
+        const char *as = translateCharUTF8(a), *bs = translateCharUTF8(b);
+        int len1 = (int) strlen(as), len2 = (int) strlen(bs);
+        uiter_setUTF8(&aIter, as, len1);
+        uiter_setUTF8(&bIter, bs, len2);
+        UErrorCode status = U_ZERO_ERROR;
+        result = ucol_strcollIter(collator, &aIter, &bIter, &status);
+        if (U_FAILURE(status)) 
+            error("could not collate using ICU");
+    }
+
+    VMAXSET(vmax);
     return result;
 }
 

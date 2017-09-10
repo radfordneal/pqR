@@ -754,8 +754,6 @@ static int merge_greater_multi (int i, int j)
 static void orderMerge (int *indx, int n, SEXP key,
                         Rboolean nalast, Rboolean decreasing)
 {
-    void *vmax = VMAXGET();
-
     int *ti;
     ti = (int *) R_alloc (n, sizeof *ti);
     for (int i = 0; i < n; i++) ti[i] = i+1;
@@ -766,7 +764,6 @@ static void orderMerge (int *indx, int n, SEXP key,
 
     merge_sort_key (indx, ti, n);
 
-    VMAXSET(vmax);
 }
 
 
@@ -1009,7 +1006,6 @@ static void init_seq_NA (SEXP key, int *indx, int n, int nalast,
 static void orderMerge1 (int *indx, int n, SEXP key,
                          Rboolean nalast, Rboolean decreasing, SEXP rho)
 {
-    void *vmax = VMAXGET();
     int lo, hi, i;
     int *ti;
 
@@ -1052,8 +1048,6 @@ static void orderMerge1 (int *indx, int n, SEXP key,
     default: 
         merge_sort_general (indx+lo, ti+lo, hi-lo+1);
     }
-
-    VMAXSET(vmax);
 }
 
 /** Shell sort with single key. **/

@@ -32,7 +32,6 @@
 #define USE_FAST_PROTECT_MACROS
 #include <Defn.h>
 #include <Rmath.h>
-#include <errno.h>
 
 #include <helpers/helpers-app.h>
 
@@ -541,7 +540,6 @@ void task_relop_sum (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    void *vmax = VMAXGET();
     int i, i1, i2, n, n1, n2, res;
     SEXP ans, x1, x2;
     const SEXP *e1 = STRING_PTR(s1);
@@ -596,12 +594,8 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
                     LOGICAL(ans)[i] = NA_LOGICAL;
                 else if (x1 == x2)
                     LOGICAL(ans)[i] = F;
-                else {
-                    errno = 0; /* POSIX may use when outside collation domain */
-                    res = Scollate(x1, x2);
-                    LOGICAL(ans)[i] = errno ? NA_LOGICAL : res < 0 ? T : F;
-                    VMAXSET(vmax);  /* release storage mabye used by Scollate */
-                }
+                else
+                    LOGICAL(ans)[i] = Scollate(x1, x2) < 0 ? T : F;
             }
         }
         else if (n1 == 1) {
@@ -612,12 +606,8 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
                     LOGICAL(ans)[i] = NA_LOGICAL;
                 else if (x1 == x2)
                     LOGICAL(ans)[i] = F;
-                else {
-                    errno = 0; /* POSIX may use when outside collation domain */
-                    res = Scollate(x1, x2);
-                    LOGICAL(ans)[i] = errno ? NA_LOGICAL : res < 0 ? T : F;
-                    VMAXSET(vmax);  /* release storage mabye used by Scollate */
-                }
+                else
+                    LOGICAL(ans)[i] = Scollate(x1, x2) < 0 ? T : F;
             }
         }
         else if (n1 == n2) {
@@ -628,12 +618,8 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
                     LOGICAL(ans)[i] = NA_LOGICAL;
                 else if (x1 == x2)
                     LOGICAL(ans)[i] = F;
-                else {
-                    errno = 0; /* POSIX may use when outside collation domain */
-                    res = Scollate(x1, x2);
-                    LOGICAL(ans)[i] = errno ? NA_LOGICAL : res < 0 ? T : F;
-                    VMAXSET(vmax);  /* release storage mabye used by Scollate */
-                }
+                else
+                    LOGICAL(ans)[i] = Scollate(x1, x2) < 0 ? T : F;
             }
         }
         else {
@@ -644,12 +630,8 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
                     LOGICAL(ans)[i] = NA_LOGICAL;
                 else if (x1 == x2)
                     LOGICAL(ans)[i] = F;
-                else {
-                    errno = 0; /* POSIX may use when outside collation domain */
-                    res = Scollate(x1, x2);
-                    LOGICAL(ans)[i] = errno ? NA_LOGICAL : res < 0 ? T : F;
-                    VMAXSET(vmax);  /* release storage mabye used by Scollate */
-                }
+                else
+                    LOGICAL(ans)[i] = Scollate(x1, x2) < 0 ? T : F;
             }
         }
     }
@@ -730,13 +712,7 @@ static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	    else if (x1 == x2)
 		goto false;
 	    else {
-                /* POSIX allows EINVAL when one of the strings contains
-                   characters outside the collation domain. */
-		errno = 0;
-		res = Scollate(x1, x2);
-                if (errno)
-                    ans = NA_LOGICAL;
-                else if (res < 0 ? F : T)
+                if (Scollate(x1, x2) < 0 ? F : T)
                     goto false;
 	    }
 	}
@@ -818,13 +794,7 @@ static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	    if (x1 == NA_STRING || x2 == NA_STRING)
 		ans = NA_LOGICAL;
 	    else if (x1 != x2) {
-                /* POSIX allows EINVAL when one of the strings contains
-                   characters outside the collation domain. */
-		errno = 0;
-		res = Scollate(x1, x2);
-                if (errno)
-                    ans = NA_LOGICAL;
-                else if (res < 0 ? T : F)
+                if (Scollate(x1, x2) < 0 ? T : F)
                     goto true;
 	    }
 	}
@@ -916,15 +886,7 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
                 break;
             }
 	    else if (x1 != x2) {
-                /* POSIX allows EINVAL when one of the strings contains
-                   characters outside the collation domain. */
-		errno = 0;
-		res = Scollate(x1, x2);
-                if (errno) {
-                    ans = NA_INTEGER;
-                    break;
-                }
-                else if (res < 0 ? T : F)
+                if (Scollate(x1, x2) < 0 ? T : F)
                     ans += 1;
 	    }
 	}
