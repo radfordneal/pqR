@@ -205,6 +205,12 @@
         \code{PACKAGE}, \code{NAOK}, \code{DUP}, \code{HELPERS}, or
         \code{ENCODING} argument now results in an error rather than a
         warning. 
+  \item [ Following changes from R Core releases described below: ]
+        ICU is not used by default for collation if the initial locale 
+        is \code{"C"} or \code{"POSIX"}; the C \code{strcmp} function
+        is used instead, as when \code{icuSetCollate(locale="ASCII")} 
+        has been called.  This default may of course be changed using
+        \code{icuSetCollate}.
   }}
 
   \subsection{NEW FEATURES FROM R CORE RELEASES}{

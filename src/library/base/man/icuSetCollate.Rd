@@ -62,18 +62,20 @@ icuGetCollate(type = c("actual", "valid"))
   Only the first three are likely to be of interest except to those with a
   detailed understanding of collation and specialized requirements.
 
-  Some special values are accepted for \code{locale}:
+  A locale is obtained at the start of the session, by consulting the
+  OS, or instead from the environment variable \env{R_ICU_LOCALE} if
+  it is set to a non-empty value.  This initial locale affects some
+  of the special values for \code{locale}, which are as follows:
   \describe{
-    \item{\code{"none"}:}{ICU is not used for collation: the OS's
-      collation services are used instead.}
     \item{\code{"ASCII"}:}{ICU is not used for collation: the C function
       \code{strcmp} is used instead, which should sort byte-by-byte in
       (unsigned) numerical order.}
-    \item{\code{"default"}:}{
-      obtains the locale from the OS as is done at the start of the
-      session.  If environment variable \env{R_ICU_LOCALE} is set to a
-      non-empty value, its value is used rather than consulting the OS.
-    }
+    \item{\code{"none"}:}{ICU is not used for collation: the OS's
+      collation services are used instead, unless the initial locale is
+      \code{"C"} or \code{"POSIX"}, in which case \code{"none"} has the same
+      effect as \code{"ASCII"}.
+    \item{\code{"default"}:}{The initial locale is used, as it was at the
+      start of the session.}
     \item{\code{""}, \code{"root"}:}{
       the \sQuote{root} collation: see
       \url{http://www.unicode.org/reports/tr35/tr35-collation.html#Root_Collation}.
@@ -109,7 +111,8 @@ icuGetCollate(type = c("actual", "valid"))
   likely to report \code{"root"}.
 }
 \note{
-  ICU is used by default wherever it is available: this include macOS,
+  ICU is used by default (except for \code{"C"} or \code{"POSIX"} locale)
+  wherever it is available: this include macOS,
   Solaris and many Linux installations.  As it works internally in
   UTF-8, it will be most efficient in UTF-8 locales.
 

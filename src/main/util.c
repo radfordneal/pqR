@@ -2233,7 +2233,7 @@ void uloc_setDefault(const char* localeID, UErrorCode* status);
 /* NULL if not using ICU. */
 static UCollator *collator = NULL;
 
-/* 0 - not set, 1 = use strcoll if not ICU, 2 = use ASCII if not ICU. */
+/* 0 - not set, 1 = use strcoll if not ICU, 2 = use strcmp if not ICU. */
 static int collationLocaleSet = 0;
 
 /* called from platform.c */
@@ -2308,57 +2308,64 @@ static SEXP do_ICUset(SEXP call, SEXP op, SEXP args, SEXP rho)
     UErrorCode  status = U_ZERO_ERROR;
 
     for (; args != R_NilValue; args = CDR(args)) {
-	if (isNull(TAG(args))) error(_("all arguments must be named"));
-	const char *this = CHAR(PRINTNAME(TAG(args)));
-	const char *s;
+        if (isNull(TAG(args))) error(_("all arguments must be named"));
+        const char *this = CHAR(PRINTNAME(TAG(args)));
+        const char *s;
 
-	x = CAR(args);
-	if (!isString(x) || LENGTH(x) != 1)
-	    error(_("invalid '%s' argument"), this);
-	s = CHAR(STRING_ELT(x, 0));
-	if (streql(this, "locale")) {
-	    if (collator) {
-		ucol_close(collator);
-		collator = NULL;
-	    }
-	    if (streql(s, "ASCII")) {
-		collationLocaleSet = 2;
-	    } 
+        x = CAR(args);
+        if (!isString(x) || LENGTH(x) != 1)
+            error(_("invalid '%s' argument"), this);
+        s = CHAR(STRING_ELT(x, 0));
+        if (streql(this, "locale")) {
+            if (collator) {
+                ucol_close(collator);
+                collator = NULL;
+            }
+            if (streql(s, "ASCII")) {
+                collationLocaleSet = 2;
+            } 
             else {
-		if (strcmp(s,"none") != 0) {
-		    if(streql(s, "default"))
-			uloc_setDefault(getLocale(), &status);
-		    else uloc_setDefault(s, &status);
-		    if(U_FAILURE(status))
-			error("failed to set ICU locale %s (%d)", s, status);
-		    collator = ucol_open(NULL, &status);
-		    if (U_FAILURE(status)) {
-			collator = NULL;
-			error("failed to open ICU collator (%d)", status);
-		    }
-		}
-		collationLocaleSet = 1;
-	    }
-	} else {
-	    int i, at = -1, val = -1;
-	    for (i = 0; ATtable[i].str; i++)
-		if (streql(this, ATtable[i].str)) {
-		    at = ATtable[i].val;
-		    break;
-		}
-	    for (i = 0; ATtable[i].str; i++)
-		if (streql(s, ATtable[i].str)) {
-		    val = ATtable[i].val;
-		    break;
-		}
-	    if (collator && at == 999 && val >= 0) {
-		ucol_setStrength(collator, val);
-	    } else if (collator && at >= 0 && val >= 0) {
-		ucol_setAttribute(collator, at, val, &status);
-		if (U_FAILURE(status))
-		    error("failed to set ICU collator attribute");
-	    }
-	}
+                const char *loc = getLocale();
+                if (strcmp(loc,"C") == 0 || strcmp(loc,"POSIX") == 0)
+                    collationLocaleSet = 2;
+                else
+                    collationLocaleSet = 1;
+                if (strcmp(s,"none") != 0) {
+                    collationLocaleSet = 1;
+                    if (streql(s, "default"))
+                        uloc_setDefault(getLocale(), &status);
+                    else 
+                        uloc_setDefault(s, &status);
+                    if (U_FAILURE(status))
+                        error("failed to set ICU locale %s (%d)", s, status);
+                    collator = ucol_open(NULL, &status);
+                    if (U_FAILURE(status)) {
+                        collator = NULL;
+                        error("failed to open ICU collator (%d)", status);
+                    }
+                }
+            }
+        }
+        else {
+            int i, at = -1, val = -1;
+            for (i = 0; ATtable[i].str; i++)
+                if (streql(this, ATtable[i].str)) {
+                    at = ATtable[i].val;
+                    break;
+                }
+            for (i = 0; ATtable[i].str; i++)
+                if (streql(s, ATtable[i].str)) {
+                    val = ATtable[i].val;
+                    break;
+                }
+            if (collator && at == 999 && val >= 0) {
+                ucol_setStrength(collator, val);
+            } else if (collator && at >= 0 && val >= 0) {
+                ucol_setAttribute(collator, at, val, &status);
+                if (U_FAILURE(status))
+                    error("failed to set ICU collator attribute");
+            }
+        }
     }
 
     return R_NilValue;
@@ -2370,19 +2377,19 @@ static SEXP do_ICUget(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
 
     if (collationLocaleSet == 2)
-	ans = "ASCII";
+        ans = "ASCII";
     else if (collator == NULL)
         ans = "ICU not in use";
     else {
-	UErrorCode  status = U_ZERO_ERROR;
-	int type = asInteger(CAR(args));
-	if (type < 1 || type > 2)
-	    error(_("invalid '%s' value"), "type");
+        UErrorCode  status = U_ZERO_ERROR;
+        int type = asInteger(CAR(args));
+        if (type < 1 || type > 2)
+            error(_("invalid '%s' value"), "type");
 
-	res = ucol_getLocaleByType (collator,
+        res = ucol_getLocaleByType (collator,
                   type == 1 ? ULOC_ACTUAL_LOCALE : ULOC_VALID_LOCALE,
                   &status);
-	if(!U_FAILURE(status) && res) ans = res;
+        if(!U_FAILURE(status) && res) ans = res;
     } 
 
     return mkString(ans);
@@ -2398,21 +2405,26 @@ attribute_hidden int Scollate(SEXP a, SEXP b)
     int result;
 
     if (collationLocaleSet == 0) {
-        collationLocaleSet = 1;
-#ifndef Win32
-        if (strcmp("C", getLocale()) ) {
-#else
-        const char *p = getenv("R_ICU_LOCALE");
-        if(p && p[0]) {
+        const char *loc = getLocale();
+        collator = NULL;
+        if (strcmp(loc,"C") == 0 || strcmp(loc,"POSIX") == 0)
+            collationLocaleSet = 2;
+        else {
+            collationLocaleSet = 1;
+#ifdef Win32
+            const char *p = getenv("R_ICU_LOCALE");
+            if (p && p[0])
 #endif
-            UErrorCode status = U_ZERO_ERROR;
-            uloc_setDefault(getLocale(), &status);
-            if(U_FAILURE(status))
-                error("failed to set ICU locale (%d)", status);
-            collator = ucol_open(NULL, &status);
-            if (U_FAILURE(status)) {
-                collator = NULL;
-                error("failed to open ICU collator (%d)", status);
+            {
+                UErrorCode status = U_ZERO_ERROR;
+                uloc_setDefault(getLocale(), &status);
+                if (U_FAILURE(status))
+                    error("failed to set ICU locale (%d)", status);
+                collator = ucol_open(NULL, &status);
+                if (U_FAILURE(status)) {
+                    collator = NULL;
+                    error("failed to open ICU collator (%d)", status);
+               }
             }
         }
     }
