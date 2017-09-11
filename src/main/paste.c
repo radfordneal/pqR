@@ -45,7 +45,7 @@ static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 
 /* .Internal(paste (sep, collapse, ...))
 
-    Note that NA_STRING is implicitly coerces it to "NA". */
+    Note that NA_STRING is implicitly coerced to "NA". */
 
 #define N_AUTO 15  /* Size limit of arrays as auto vars rather than R_alloc */
 
@@ -110,7 +110,6 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
         xpl = CDR(xpl);
 
         if (!isString(xj)) {
-            /* formerly in R code: moved to C for speed */
             if (OBJECT(xj)) { /* method dispatch */
                 SEXP call;
                 PROTECT(call = lang2(install("as.character"), xj));
@@ -119,10 +118,12 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
             } 
             else if (isSymbol(xj))
                 xj = ScalarString(PRINTNAME(xj));
-            else if (!isString(xj))
+            else if (TYPEOF(xj) == INTSXP)
+                ; /* will be handled directly below */
+            else if (TYPEOF(xj) != STRSXP)
                 xj = coerceVector(xj, STRSXP);
-            if (!isString(xj))
-                error(_("non-string argument to Internal paste"));
+            if (TYPEOF(xj) != STRSXP && TYPEOF(xj) != INTSXP)
+                error(_("argument to .Internal paste not string or integer"));
         }
 
         if (LENGTH(xj) > maxlen)
@@ -139,14 +140,18 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (nx == 1) {
 
-        /* If only one argument, just turn NA into "NA". */
+        /* If only one argument, just turn NA into "NA" for strings, or
+           convert from integer to string. */
 
-        PROTECT(ans = xa[0]);
-
-        SEXP NA = mkChar(CHAR(NA_STRING));  /* will not be the same thing! */
-        for (i = 0; i < maxlen; i++) {
-            if (STRING_ELT(ans,i) == NA_STRING)
-                SET_STRING_ELT (ans, i, NA);
+        if (TYPEOF(xa[0]) == INTSXP)
+            PROTECT (ans = coerceVector (xa[0], STRSXP));
+        else {
+            PROTECT(ans = xa[0]);
+            SEXP NA = mkChar(CHAR(NA_STRING)); /* will not be the same thing! */
+            for (i = 0; i < maxlen; i++) {
+                if (STRING_ELT(ans,i) == NA_STRING)
+                    SET_STRING_ELT (ans, i, NA);
+            }
         }
     }
     else {
@@ -155,13 +160,21 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 
         const void *vmax1 = VMAXGET();
 
-        const char *chra[2*N_AUTO];
-        const char **chr = /* Space to store pointers to the strings + NULL */
-          nx <= N_AUTO ? chra : (const char **) R_alloc (2*nx, sizeof(char*));
+        char *chra[2*N_AUTO];
+        char **chr = /* Space to store pointers to the strings + NULL */
+          nx <= N_AUTO ? chra : (char **) R_alloc (2*nx, sizeof(char*));
 
         int lena[2*N_AUTO];
         int *len =         /* Space to store lengths of strings */
           nx <= N_AUTO ? lena : (int *) R_alloc (2*nx, sizeof(int));
+
+        /* Allocate space to put character conversions of integer arguments. */
+
+        for (j = 0; j < nx; j++)
+            if (TYPEOF(xa[j]) == INTSXP)
+                chra [sepw == 0 ? j : 2*j] = R_alloc(12,1);
+
+        /* Create the string vector result. */
 
         PROTECT (ans = allocVector(STRSXP, maxlen));
 
@@ -169,12 +182,12 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 
             const void *vmax2 = VMAXGET();
 
-            /* Strategy for marking the encoding: if all inputs (including
-             * the separator) are ASCII, so is the output and we don't
-             * need to mark.  Otherwise if all non-ASCII inputs are of
-             * declared encoding, we should mark.
-             * Need to be careful only to include separator if it is used.
-             */
+            /* Strategy for marking the encoding:  If all inputs
+               (including the separator) are ASCII, so is the output
+               and we don't need to mark.  (Note that integers are
+               converted to ASCII.)  Otherwise if all non-ASCII inputs
+               are of declared encoding, we should mark.  Need to be
+               careful only to include separator if it is used. */
     
             Rboolean use_Bytes, use_UTF8, any_known, declare_encoding;
     
@@ -188,9 +201,11 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
     
             for (j = 0; j < nx && !use_Bytes; j++) {
                 SEXP xj = xa[j];
+                if (TYPEOF(xj) == INTSXP)
+                    continue;
                 k = LENGTH(xj);
                 if (k > 0) {
-                    SEXP cs = STRING_ELT(xj, i % k);
+                    SEXP cs = STRING_ELT (xj, k==1 ? 0 : k==maxlen ? i : i % k);
                     if (IS_BYTES(cs))
                         use_Bytes = TRUE;
                     else if (IS_UTF8(cs))
@@ -221,7 +236,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 
             unsigned first_hash = 0;
 
-            if (*this_csep == 0) {
+            if (sepw == 0) {
                 for (j = 0; j < nx; j++) {
                     SEXP xj = xa[j];
                     k = LENGTH(xj);
@@ -229,14 +244,20 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
                         chr[j] = "";
                         len[j] = 0;
                     }
+                    else if (TYPEOF(xj) == INTSXP) {
+                        integer_to_string (chr[j], 
+                          INTEGER(xj) [k==1 ? 0 : k==maxlen ? i : i % k]);
+                        len[j] = strlen(chr[j]);
+                    }
                     else {
-                        SEXP cs = STRING_ELT(xj, i % k);
+                        SEXP cs;
+                        cs = STRING_ELT (xj, k==1 ? 0 : k==maxlen ? i : i % k);
                         if (use_Bytes)
-                            chr[j] = CHAR(cs);
+                            chr[j] = (char *) CHAR(cs);
                         else if (use_UTF8)
-                            chr[j] = translateCharUTF8(cs);
+                            chr[j] = (char *) translateCharUTF8(cs);
                         else {
-                            chr[j] = translateChar(cs);
+                            chr[j] = (char *) translateChar(cs);
                             if (declare_encoding && !ENC_KNOWN(cs) 
                                                  && !strIsASCII(s))
                                 declare_encoding = FALSE;
@@ -256,14 +277,20 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
                         chr[2*j] = "";
                         len[2*j] = 0;
                     }
+                    else if (TYPEOF(xj) == INTSXP) {
+                        integer_to_string (chr[2*j], 
+                          INTEGER(xj) [k==1 ? 0 : k==maxlen ? i : i % k]);
+                        len[2*j] = strlen(chr[2*j]);
+                    }
                     else {
-                        SEXP cs = STRING_ELT(xj, i % k);
+                        SEXP cs;
+                        cs = STRING_ELT (xj, k==1 ? 0 : k==maxlen ? i : i % k);
                         if (use_Bytes)
-                            chr[2*j] = CHAR(cs);
+                            chr[2*j] = (char *) CHAR(cs);
                         else if (use_UTF8)
-                            chr[2*j] = translateCharUTF8(cs);
+                            chr[2*j] = (char *) translateCharUTF8(cs);
                         else {
-                            chr[2*j] = translateChar(cs);
+                            chr[2*j] = (char *) translateChar(cs);
                             if (declare_encoding && !ENC_KNOWN(cs) 
                                                  && !strIsASCII(s))
                                 declare_encoding = FALSE;
@@ -273,7 +300,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
                         if (j == 0 && chr[2*j] == CHAR(cs)) 
                             first_hash = CHAR_HASH(cs);
                     }
-                    chr[2*j+1] = this_csep;
+                    chr[2*j+1] = (char *) this_csep;
                     len[2*j+1] = this_sepw;
                 }
                 chr[2*nx-1] = NULL;
@@ -289,7 +316,8 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
                 if(known_to_be_utf8) ienc = CE_UTF8;
             }
     
-            SET_STRING_ELT(ans, i, Rf_mkCharMulti (chr, len, first_hash, ienc));
+            SET_STRING_ELT(ans, i, Rf_mkCharMulti ((const char **) chr, 
+                                                   len, first_hash, ienc));
 
             VMAXSET(vmax2);
         }
