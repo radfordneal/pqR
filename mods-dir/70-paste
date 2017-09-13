@@ -1,0 +1,2 @@
+More improvements to 'paste', especially speeding up
+pasting with integer vectors.

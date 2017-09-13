@@ -116,7 +116,9 @@
         They are now about two to six times
         faster than in R-3.4.0, and are usually faster than the 
         \code{stri_paste} function from the \code{stringi} package.
-        Substring extraction and replacement with \code{substr} or
+        Pasting with an integer vector is now done without converting
+        it to an intermediate string vector.
+  \item Substring extraction and replacement with \code{substr} or
         \code{substring} has also been sped up for long strings.
   \item Relational operators are now faster, and may sometimes be done in 
         helper threads (though currently without pipelining of data).
