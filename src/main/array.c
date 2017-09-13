@@ -1190,14 +1190,15 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     return ans;
 }
 
+
+/* Do transposed copy.  Note: nrow & ncol are the number of rows and
+   columns in the input (a) - this is swapped for the output! */
+
 void copy_transposed (SEXP r, SEXP a, int nrow, int ncol)
 {
     /* Access successive pairs from two rows, and store in successive
        positions in two columns (except perhaps for the first row &
-       column).  This improves memory access performance.
-
-       Keep in mind:  nrow & ncol are the number of rows and columns in
-                      the input (a) - this is swapped for the output! */
+       column).  This improves memory access performance. */
 
     R_len_t len = LENGTH(a);
     R_len_t l_2 = len-2;
@@ -1205,16 +1206,18 @@ void copy_transposed (SEXP r, SEXP a, int nrow, int ncol)
 
     switch (TYPEOF(a)) {
 
-    case RAWSXP:
+    case RAWSXP: {
+        Rbyte * restrict rp = RAW(r);
+        Rbyte * restrict ap = RAW(a);
         i = 0;
         if (nrow & 1) {
             for (j = 0; i < ncol; j += nrow, i++) 
-                RAW(r)[i] = RAW(a)[j];
+                rp[i] = ap[j];
         }
         j = nrow & 1;
         while (i < len) {
-            RAW(r)[i] = RAW(a)[j]; 
-            RAW(r)[i+ncol] = RAW(a)[j+1];
+            rp[i] = ap[j]; 
+            rp[i+ncol] = ap[j+1];
             i += 1; j += nrow;
             if (j >= len) { 
                 i += ncol; 
@@ -1222,18 +1225,20 @@ void copy_transposed (SEXP r, SEXP a, int nrow, int ncol)
             }
         }
         break;
-
+    }
     case LGLSXP:
-    case INTSXP:
+    case INTSXP: {
+        int * restrict rp = INTEGER(r);
+        int * restrict ap = INTEGER(a);
         i = 0;
         if (nrow & 1) {
             for (j = 0; i < ncol; j += nrow, i++) 
-                INTEGER(r)[i] = INTEGER(a)[j];
+                rp[i] = ap[j];
         }
         j = nrow & 1;
         while (i < len) {
-            INTEGER(r)[i] = INTEGER(a)[j]; 
-            INTEGER(r)[i+ncol] = INTEGER(a)[j+1];
+            rp[i] = ap[j]; 
+            rp[i+ncol] = ap[j+1];
             i += 1; j += nrow;
             if (j >= len) { 
                 i += ncol; 
@@ -1241,17 +1246,19 @@ void copy_transposed (SEXP r, SEXP a, int nrow, int ncol)
             }
         }
         break;
-
-    case REALSXP:
+    }
+    case REALSXP: {
+        double * restrict rp = REAL(r);
+        double * restrict ap = REAL(a);
         i = 0;
         if (nrow & 1) {
             for (j = 0; i < ncol; j += nrow, i++) 
-                REAL(r)[i] = REAL(a)[j];
+                rp[i] = ap[j];
         }
         j = nrow & 1;
         while (i < len) {
-            REAL(r)[i] = REAL(a)[j]; 
-            REAL(r)[i+ncol] = REAL(a)[j+1];
+            rp[i] = ap[j]; 
+            rp[i+ncol] = ap[j+1];
             i += 1; j += nrow;
             if (j >= len) { 
                 i += ncol; 
@@ -1259,17 +1266,19 @@ void copy_transposed (SEXP r, SEXP a, int nrow, int ncol)
             }
         }
         break;
-
-    case CPLXSXP:
+    }
+    case CPLXSXP: {
+        Rcomplex * restrict rp = COMPLEX(r);
+        Rcomplex * restrict ap = ap;
         i = 0;
         if (nrow & 1) {
             for (j = 0; i < ncol; j += nrow, i++) 
-                COMPLEX(r)[i] = COMPLEX(a)[j];
+                rp[i] = ap[j];
         }
         j = nrow & 1;
         while (i < len) {
-            COMPLEX(r)[i] = COMPLEX(a)[j]; 
-            COMPLEX(r)[i+ncol] = COMPLEX(a)[j+1];
+            rp[i] = ap[j]; 
+            rp[i+ncol] = ap[j+1];
             i += 1; j += nrow;
             if (j >= len) { 
                 i += ncol; 
@@ -1277,8 +1286,8 @@ void copy_transposed (SEXP r, SEXP a, int nrow, int ncol)
             }
         }
         break;
-
-    case STRSXP:
+    }
+    case STRSXP: {
         i = 0;
         if (nrow & 1) {
             for (j = 0; i < ncol; j += nrow, i++) 
@@ -1295,9 +1304,9 @@ void copy_transposed (SEXP r, SEXP a, int nrow, int ncol)
             }
         }
         break;
-
+    }
     case EXPRSXP:
-    case VECSXP:
+    case VECSXP: {
         i = 0;
         if (nrow & 1) {
             for (j = 0; i < ncol; j += nrow, i++) 
@@ -1314,7 +1323,7 @@ void copy_transposed (SEXP r, SEXP a, int nrow, int ncol)
             }
         }
         break;
-    }
+    }}
 }
 
 void task_transpose (helpers_op_t op, SEXP r, SEXP a, SEXP ignored)
