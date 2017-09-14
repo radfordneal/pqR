@@ -583,7 +583,7 @@ attribute_hidden FUNTAB R_FunTab_logic[] =
 
 attribute_hidden FASTFUNTAB R_FastFunTab_logic[] = {
 /*slow func	fast func,     code or -1   dsptch  variant */
-{ do_not,	do_fast_not,	-1,		1,  0 },
+{ do_not,	do_fast_not,	-1,		1,  VARIANT_PENDING_OK },
 { do_allany,	do_fast_allany,	OP_ALL,		1,  VARIANT_AND },
 { do_allany,	do_fast_allany,	OP_ANY,		1,  VARIANT_OR },
 { 0,		0,		0,		0,  0 }
