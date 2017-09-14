@@ -1269,7 +1269,7 @@ void copy_transposed (SEXP r, SEXP a, int nrow, int ncol)
     }
     case CPLXSXP: {
         Rcomplex * restrict rp = COMPLEX(r);
-        Rcomplex * restrict ap = ap;
+        Rcomplex * restrict ap = COMPLEX(a);
         i = 0;
         if (nrow & 1) {
             for (j = 0; i < ncol; j += nrow, i++) 
