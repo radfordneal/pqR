@@ -111,6 +111,10 @@ Functions \tab Output piped? \tab Input piped? \tab Remarks\cr
                    \tab 
                    \tab done by master\cr
 \tab\tab\tab\cr
+&, |, !            \tab No
+                   \tab No
+                   \tab \cr 
+\tab\tab\tab\cr
 \%\%               \tab No
                    \tab If real op
                    \tab Done by master\cr

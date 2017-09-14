@@ -125,6 +125,9 @@
         Computations such as \code{sum(vec>0)} are now done with a
         merged procedure that avoids creating \code{vec>0} as an intermediate
         value.
+  \item The speed of the logical operators (\code{!}, \code{&}, and \code{|})
+        has been improved for long vectors, and they may now be done
+        in a helper thread (though currently without pipelining of data).
   \item Creation of matrices with \code{matrix} is now faster.
   \item Creation of arrays with \code{array} is now usually done with
         a faster internal routine, mimicking (with improvements) changes
@@ -138,8 +141,6 @@
         speed in many contexts, and especially in functions that are
         defined in packages (rather than in the global workspace).
   \item The speed of \code{which} has been improved.
-  \item The speed of the logical operators (\code{!}, \code{&}, and \code{|})
-        has been improved for long vectors.
   \item The speed of \code{.Call} has been improved.
   \item New versions of the C matrix multiply functions are now used,
         which may be faster due to use of the C "restrict" keyword to

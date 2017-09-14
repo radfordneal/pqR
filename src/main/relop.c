@@ -280,11 +280,11 @@
 } while (0)
 
 
-/* TASK PROCEDURES FOR RELATIONAL OPERATIONS NOT ON STRINGS.  Note that
-   the string operations may require translation, which involves memory
-   allocation, and hence cannot be done in a procedure exectured in a 
-   helper thread.  There are task procedures for non-variant operations
-   and for and, or, and sum variants. */
+/* TASK PROCEDURES FOR RELATIONAL OPERATIONS NOT ON STRINGS.  Note
+   that the string operations may require translation, which involves
+   memory allocation, and hence cannot be done in a procedure executed
+   in a helper thread.  There are task procedures for non-variant
+   operations and for AND, OR, and SUM variants. */
 
 void task_relop (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
@@ -1239,7 +1239,7 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXP sv_scalar_stack = R_scalar_stack;
 
     PROTECT(argsevald = 
-      scalar_stack_eval2 (args, &x, &y, &objx, &objy, env, call, variant));
+              scalar_stack_eval2 (args, &x, &y, &objx, &objy, env));
     PROTECT2(x,y);
 
     /* Check for dispatch on S3 or S4 objects. */

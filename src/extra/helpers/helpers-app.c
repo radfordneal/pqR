@@ -57,6 +57,8 @@ char *Rf_task_name (helpers_task_proc *task)
     TASK_NAME(relop_and);
     TASK_NAME(relop_or);
     TASK_NAME(relop_sum);
+    TASK_NAME(and_or);
+    TASK_NAME(not);
     /* i */
     TASK_NAME(rep);
     /* k */
