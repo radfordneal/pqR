@@ -186,7 +186,7 @@ static inline SEXP array_sub (SEXP sb, SEXP dim, int i, SEXP x)
    The args and env arguments must be protected by the caller. */
 
 static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
-                     int *obj1, int *obj2, SEXP env, SEXP call, int variant)
+                                       int *obj1, int *obj2, SEXP env)
 {
     SEXP argsevald;
     SEXP x, y;

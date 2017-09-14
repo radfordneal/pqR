@@ -31,12 +31,67 @@
 #define USE_FAST_PROTECT_MACROS
 #include "Defn.h"
 
+#include <helpers/helpers-app.h>
 
-static SEXP binaryLogic(int code, SEXP s1, SEXP s2);
+
 static SEXP binaryLogic2(int code, SEXP s1, SEXP s2);
 
 
+/* i1 = i % n1; i2 = i % n2;
+ * this macro is quite a bit faster than having real modulo calls
+ * in the loop (tested on Intel and Sparc)
+ */
+#define mod_iterate(n1,n2,i1,i2) for (i=i1=i2=0; i<n; \
+	i1 = (++i1 == n1) ? 0 : i1,\
+	i2 = (++i2 == n2) ? 0 : i2,\
+	++i)
+
+void task_and_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
+{
+    int i, i1, i2, n, n1, n2;
+
+    n1 = LENGTH(s1);
+    n2 = LENGTH(s2);
+    n = LENGTH(ans);
+
+    switch (code) {
+    case 1:  /* & : AND */
+        if (n1 == n2) {
+            for (i = 0; i<n; i++) {
+                uint32_t u1 = LOGICAL(s1)[i];
+                uint32_t u2 = LOGICAL(s2)[i];
+                LOGICAL(ans)[i] = (u1 & u2) | (u1 & (u2<<31)) | (u2 & (u1<<31));
+            }
+        }
+        else {
+            mod_iterate(n1,n2,i1,i2) {
+                uint32_t u1 = LOGICAL(s1)[i1];
+                uint32_t u2 = LOGICAL(s2)[i2];
+                LOGICAL(ans)[i] = (u1 & u2) | (u1 & (u2<<31)) | (u2 & (u1<<31));
+            }
+        }
+        break;
+    case 2:  /* | : OR */
+        if (n1 == n2) {
+            for (i = 0; i<n; i++) {
+                uint32_t u = LOGICAL(s1)[i] | LOGICAL(s2)[i];
+                LOGICAL(ans)[i] = u & ~ (u << 31);
+            }
+        }
+        else {
+            mod_iterate(n1,n2,i1,i2) {
+                uint32_t u = LOGICAL(s1)[i1] | LOGICAL(s2)[i2];
+                LOGICAL(ans)[i] = u & ~ (u << 31);
+            }
+        }
+        break;
+    }
+}
+
+
 /* & | */
+
+#define T_and_or THRESHOLD_ADJUST(25)
 
 SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env, 
                                int variant)
@@ -58,8 +113,8 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
         args_evald = 1;
     }
     else {
-        PROTECT(x = eval(x,env));
-        PROTECT(y = eval(y,env));
+        PROTECT(x = evalv (x, env, VARIANT_PENDING_OK));
+        PROTECT(y = evalv (y, env, VARIANT_PENDING_OK));
         args_evald = 0;
     }
 
@@ -67,9 +122,11 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
        of "args" to length of original (number of args in "call"). */
 
     if (isObject(x) || isObject(y)) {
-        if (!args_evald) 
+        if (!args_evald) {
             args = CDR(args)!=R_NilValue ? CONS(x,CONS(y,R_NilValue)) 
                                          : CONS(x,R_NilValue);
+            WAIT_UNTIL_COMPUTED_2(x,y);
+        }
         PROTECT(args);
         if (DispatchGroup("Ops", call, op, args, env, &ans)) {
             UNPROTECT(3);
@@ -87,13 +144,12 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
        in args may not be protected, and is not used below. */
 
     SEXP dims, tsp, klass, xnames, ynames;
-    int mismatch, nx, ny, xarray, yarray, xts, yts;
-    mismatch = 0;
-    if (isRaw(x) && isRaw(y)) {
-    }
-    else if (!isNumber(x) || !isNumber(y))
-        errorcall(call,
-          _("operations are possible only for numeric, logical or complex types"));
+    int xarray, yarray, xts, yts;
+
+    if (! (isRaw(x) && isRaw(y)) && ! (isNumber(x) && isNumber(y)))
+        errorcall (call,
+       _("operations are possible only for numeric, logical or complex types"));
+
     tsp = R_NilValue;		/* -Wall */
     klass = R_NilValue;		/* -Wall */
     xarray = isArray(x);
@@ -120,12 +176,7 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
 	PROTECT(xnames = getAttrib(x, R_NamesSymbol));
 	PROTECT(ynames = getAttrib(y, R_NamesSymbol));
     }
-    nx = length(x);
-    ny = length(y);
-    if(nx > 0 && ny > 0) {
-	if(nx > ny) mismatch = nx % ny;
-	else mismatch = ny % nx;
-    }
+
     if (xts || yts) {
 	if (xts && yts) {
 	    if (!tsConform(x, y))
@@ -146,101 +197,76 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
 	    PROTECT(klass = getClassAttrib(y));
 	}
     }
-    if(mismatch)
-	warningcall(call,
-		    _("longer object length is not a multiple of shorter object length"));
 
-    if (isLogical(x) && isLogical(y))
-	PROTECT(x = binaryLogic(PRIMVAL(op), x, y));
-    else if (isRaw(x) && isRaw(y))
-	PROTECT(x = binaryLogic2(PRIMVAL(op), x, y));
+    R_len_t nx = LENGTH(x);
+    R_len_t ny = LENGTH(y);
+
+    if (nx > 0 && ny > 0 && (nx > ny ? nx % ny : ny % nx))
+        warningcall(call,
+         _("longer object length is not a multiple of shorter object length"));
+
+    if (isRaw(x) && isRaw(y)) {
+        WAIT_UNTIL_COMPUTED_2(x,y);
+        PROTECT(ans = binaryLogic2(PRIMVAL(op), x, y));
+    }
     else {
-	if (!isNumber(x) || !isNumber(y))
-	    errorcall(call,
-              _("operations are possible only for numeric, logical or complex types"));
-	PROTECT(x = coerceVector(x, LGLSXP));
-	PROTECT(y = coerceVector(y, LGLSXP));
-	x = binaryLogic(PRIMVAL(op), x, y);
-        UNPROTECT(2);
-        PROTECT(x);
+
+        if (nx == 0 || ny == 0) {
+            ans = allocVector (LGLSXP, 0);
+            UNPROTECT(5);
+            return ans;
+        }
+
+        R_len_t n = (nx > ny) ? nx : ny;
+        PROTECT(ans = allocVector (LGLSXP, n));
+
+        if (!isLogical(x) || !isLogical(y)) {
+            WAIT_UNTIL_COMPUTED_2(x,y);
+            PROTECT(x = coerceVector(x, LGLSXP));
+            y = coerceVector(y, LGLSXP);
+            UNPROTECT(1);
+        }
+
+        DO_NOW_OR_LATER2 (variant, n >= T_and_or, 
+                          0, task_and_or, PRIMVAL(op), ans, x, y);
     }
 
     if (dims != R_NilValue) {
-	setAttrib(x, R_DimSymbol, dims);
-	if(xnames != R_NilValue)
-	    setAttrib(x, R_DimNamesSymbol, xnames);
-	else if(ynames != R_NilValue)
-	    setAttrib(x, R_DimNamesSymbol, ynames);
+	setAttrib (ans, R_DimSymbol, dims);
+	if (xnames != R_NilValue)
+	    setAttrib(ans, R_DimNamesSymbol, xnames);
+	else if (ynames != R_NilValue)
+	    setAttrib(ans, R_DimNamesSymbol, ynames);
     }
     else {
-	if(length(x) == length(xnames))
-	    setAttrib(x, R_NamesSymbol, xnames);
-	else if(length(x) == length(ynames))
-	    setAttrib(x, R_NamesSymbol, ynames);
+	if (LENGTH(ans) == length(xnames))
+	    setAttrib (ans, R_NamesSymbol, xnames);
+	else if (LENGTH(ans) == length(ynames))
+	    setAttrib (ans, R_NamesSymbol, ynames);
     }
 
     if (xts || yts) {
-	setAttrib(x, R_TspSymbol, tsp);
-	setAttrib(x, R_ClassSymbol, klass);
+	setAttrib(ans, R_TspSymbol, tsp);
+	setAttrib(ans, R_ClassSymbol, klass);
 	UNPROTECT(2);
     }
 
     UNPROTECT(6);
-    return x;
+    return ans;
 }
 
-/* Handles the ! operator. */
-
-static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
+void task_not (helpers_op_t code, SEXP x, SEXP arg, SEXP unused)
 {
-    SEXP x, dim, dimnames, names;
-    int i, len;
-
-    if (!isLogical(arg) && !isNumber(arg) && !isRaw(arg)) {
-	/* For back-compatibility */
-	if (length(arg)==0) 
-            return allocVector(LGLSXP, 0);
-	else
-            errorcall(call, _("invalid argument type"));
-    }
-    len = LENGTH(arg);
-
-    /* Quickly do scalar operation on logical with no attributes. */
-
-    if (len==1 && isLogical(arg) && !HAS_ATTRIB(arg)) {
-        int v = LOGICAL(arg)[0];
-        return ScalarLogicalMaybeConst (v==NA_LOGICAL ? v : !v);
-    }
-
-    /* The general case... */
-
-    if (TYPEOF(arg) != LGLSXP && TYPEOF(arg) != RAWSXP) {
-        x = allocVector(LGLSXP,len);
-        if (!NO_ATTRIBUTES_OK(variant,arg)) {
-            PROTECT (names    = getAttrib (arg, R_NamesSymbol));
-            PROTECT (dim      = getDimAttrib(arg));
-            PROTECT (dimnames = getAttrib (arg, R_DimNamesSymbol));
-            if (names    != R_NilValue) setAttrib(x,R_NamesSymbol,    names);
-            if (dim      != R_NilValue) setAttrib(x,R_DimSymbol,      dim);
-            if (dimnames != R_NilValue) setAttrib(x,R_DimNamesSymbol, dimnames);
-            UNPROTECT(3);
-        }
-    }
-    else if (isObject(arg) || NAMEDCNT_GT_0(arg))
-        x = duplicate(arg);
-    else
-        x = arg;
-
-    PROTECT(x);
+    int len = LENGTH(arg);
+    int i;
 
     switch(TYPEOF(arg)) {
-    case LGLSXP: {
+    case LGLSXP:
         for (i = 0; i < len; i++) {
             uint32_t u = LOGICAL(arg)[i];
             LOGICAL(x)[i] = u ^ 1 ^ (u >> 31);
         }
         break;
-    }
     case INTSXP:
 	for (i = 0; i < len; i++)
 	    LOGICAL(x)[i] = (INTEGER(arg)[i] == NA_INTEGER) ? NA_LOGICAL 
@@ -260,11 +286,61 @@ static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 	for (i = 0; i < len; i++)
 	    RAW(x)[i] = ~ RAW(arg)[i];
 	break;
-    default:
-	UNIMPLEMENTED_TYPE("do_fast_not", arg);
+    }
+}
+
+/* Handles the ! operator. */
+
+#define T_not THRESHOLD_ADJUST(40)
+
+static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
+{
+    SEXP x, dim, dimnames, names;
+    int len;
+
+    if (!isLogical(arg) && !isNumber(arg) && !isRaw(arg)) {
+	/* For back-compatibility */
+	if (length(arg)==0) 
+            return allocVector(LGLSXP, 0);
+	else
+            errorcall(call, _("invalid argument type"));
+    }
+    len = LENGTH(arg);
+
+    /* Quickly do scalar operation on logical with no attributes. */
+
+    if (len==1 && isLogical(arg) && !HAS_ATTRIB(arg)) {
+        int v = LOGICAL(arg)[0];
+        return ScalarLogicalMaybeConst (v==NA_LOGICAL ? v : !v);
     }
 
-    UNPROTECT(1);
+    /* The general case... */
+
+    if (TYPEOF(arg) != LGLSXP && TYPEOF(arg) != RAWSXP)
+        x = allocVector(LGLSXP,len);
+    else if (isObject(arg) || NAMEDCNT_GT_0(arg))
+        x = duplicate(arg);
+    else
+        x = arg;
+
+    if (!isVectorAtomic(arg) || TYPEOF(arg) == STRSXP)
+	UNIMPLEMENTED_TYPE("do_fast_not", arg);
+
+    DO_NOW_OR_LATER1 (variant, len >= T_not, 0, task_not, 0, x, arg);
+
+    if (TYPEOF(arg) != LGLSXP && TYPEOF(arg) != RAWSXP) {
+        if (!NO_ATTRIBUTES_OK(variant,arg)) {
+            PROTECT(x);
+            PROTECT (names    = getAttrib (arg, R_NamesSymbol));
+            PROTECT (dim      = getDimAttrib(arg));
+            PROTECT (dimnames = getAttrib (arg, R_DimNamesSymbol));
+            if (names    != R_NilValue) setAttrib(x,R_NamesSymbol,    names);
+            if (dim      != R_NilValue) setAttrib(x,R_DimSymbol,      dim);
+            if (dimnames != R_NilValue) setAttrib(x,R_DimNamesSymbol, dimnames);
+            UNPROTECT(4);
+        }
+    }
+
     return x;
 }
 
@@ -320,68 +396,6 @@ SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env)
         return ScalarLogicalMaybeConst (x2==TRUE ? TRUE
                                   : x1==FALSE && x2==FALSE ? FALSE
                                   : NA_LOGICAL);
-}
-
-/* i1 = i % n1; i2 = i % n2;
- * this macro is quite a bit faster than having real modulo calls
- * in the loop (tested on Intel and Sparc)
- */
-#define mod_iterate(n1,n2,i1,i2) for (i=i1=i2=0; i<n; \
-	i1 = (++i1 == n1) ? 0 : i1,\
-	i2 = (++i2 == n2) ? 0 : i2,\
-	++i)
-
-static SEXP binaryLogic(int code, SEXP s1, SEXP s2)
-{
-    int i, i1, i2, n, n1, n2;
-    int x1, x2;
-    SEXP ans;
-
-    n1 = LENGTH(s1);
-    n2 = LENGTH(s2);
-    n = (n1 > n2) ? n1 : n2;
-    if (n1 == 0 || n2 == 0) {
-	ans = allocVector(LGLSXP, 0);
-	return ans;
-    }
-    ans = allocVector(LGLSXP, n);
-
-    switch (code) {
-    case 1:  /* & : AND */
-        if (n1 == n2) {
-            for (i = 0; i<n; i++) {
-                uint32_t u1 = LOGICAL(s1)[i];
-                uint32_t u2 = LOGICAL(s2)[i];
-                LOGICAL(ans)[i] = (u1 & u2) | (u1 & (u2<<31)) | (u2 & (u1<<31));
-            }
-        }
-        else {
-            mod_iterate(n1,n2,i1,i2) {
-                uint32_t u1 = LOGICAL(s1)[i1];
-                uint32_t u2 = LOGICAL(s2)[i2];
-                LOGICAL(ans)[i] = (u1 & u2) | (u1 & (u2<<31)) | (u2 & (u1<<31));
-            }
-        }
-        break;
-    case 2:  /* | : OR */
-        if (n1 == n2) {
-            for (i = 0; i<n; i++) {
-                uint32_t u = LOGICAL(s1)[i] | LOGICAL(s2)[i];
-                LOGICAL(ans)[i] = u & ~ (u << 31);
-            }
-        }
-        else {
-            mod_iterate(n1,n2,i1,i2) {
-                uint32_t u = LOGICAL(s1)[i1] | LOGICAL(s2)[i2];
-                LOGICAL(ans)[i] = u & ~ (u << 31);
-            }
-        }
-        break;
-    case 3:
-        error(_("Unary operator `!' called with two arguments"));
-        break;
-    }
-    return ans;
 }
 
 static SEXP binaryLogic2(int code, SEXP s1, SEXP s2)
