@@ -73,7 +73,7 @@ icuGetCollate(type = c("actual", "valid"))
     \item{\code{"none"}:}{ICU is not used for collation: the OS's
       collation services are used instead, unless the initial locale is
       \code{"C"} or \code{"POSIX"}, in which case \code{"none"} has the same
-      effect as \code{"ASCII"}.
+      effect as \code{"ASCII"}.}
     \item{\code{"default"}:}{The initial locale is used, as it was at the
       start of the session.}
     \item{\code{""}, \code{"root"}:}{
