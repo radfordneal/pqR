@@ -1,0 +1,2 @@
+Revisions to set_subassing in eval.c, to make it faster by using the
+fast interface for the outermost level of a complex assignment.
