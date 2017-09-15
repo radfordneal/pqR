@@ -351,20 +351,20 @@ typedef struct ENV_SEXPREC {
 
 struct primsxp_struct {    /* table offset of this and other info is in gp  */
     /* The two function pointers below can't use SEXP, since not defined yet*/
-    void *(*primsxp_cfun)();   /* c-code address for prim fun, from table   */
-    void *(*primsxp_fast_cfun)(); /* c-code addr for fast interface, or NULL*/
-    unsigned short var1;       /* variant for eval of unary primitive arg */
-    short primsxp_code;        /* operation code, from table                */
-    signed char primsxp_arity; /* function arity (-1 for any), from table   */
-    unsigned char pending_ok;  /* whether args can have computation pending */
-    unsigned int primsxp_print:2;   /* print/invisible indicator, from table*/
-    unsigned int primsxp_variant:1; /* pass variant to cfun, from table     */
-    unsigned int primsxp_internal:1;/* call with .Internal flag, from table */
-    unsigned int primsxp_fast_sub:1;/* subassign fn that can use fast method*/
-    unsigned int primsxp_dsptch1:1; /* might dispatch on 1st argument (only
-                                       for when fast_cfun != NULL */
-    unsigned int primsxp_whole:1;   /* Do special processing for .Internal
-                                       when VARIANT_WHOLE_BODY (BUILTIN only) */
+    void *(*cfun)();          /* c-code address for prim fun, from table   */
+    void *(*fast_cfun)();     /* c-code addr for fast interface, or NULL*/
+    unsigned short var1;      /* variant for eval of unary primitive arg */
+    short code;               /* operation code, from table                */
+    signed char arity;        /* function arity (-1 for any), from table   */
+    unsigned char pending_ok; /* whether args can have computation pending */
+    unsigned int print:2;     /* print/invisible indicator, from table*/
+    unsigned int variant:1;   /* pass variant to cfun, from table     */
+    unsigned int internal:1;  /* call with .Internal flag, from table */
+    unsigned int fast_sub:1;  /* subassign fn that can use fast method*/
+    unsigned int dsptch1:1;   /* might dispatch on 1st argument (only
+                                 for when fast_cfun != NULL) */
+    unsigned int whole:1;     /* Do special processing for .Internal
+                                 when VARIANT_WHOLE_BODY (BUILTIN only) */
 #if USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
     int32_t padding1, padding2;
 #endif

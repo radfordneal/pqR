@@ -446,7 +446,7 @@ typedef struct {
 
 /* Set offset of primitive in table, and copy some of the information
    from the table into the primsxp structure for fast access.  Note that 
-   primsxp_fast_cfun will (possibly) be set in SetupBuiltins in names.c. */
+   fast_cfun will (possibly) be set in SetupBuiltins in names.c. */
 
 #define SET_PRIMOFFSET(x,v) do { \
     PRIM_SEXPREC *setprim_ptr = (PRIM_SEXPREC *) UPTR_FROM_SEXP(x); \
@@ -454,22 +454,22 @@ typedef struct {
     /* special fudge because the S4 bit is actually looked at some places */ \
     setprim_ptr->sxpinfo.gp = (setprim_ptr->sxpinfo.gp & (2*S4_OBJECT_MASK-1)) \
                                | (setprim_value << (S4_OBJECT_BIT_POS+1)); \
-    setprim_ptr->primsxp.primsxp_cfun = \
+    setprim_ptr->primsxp.cfun = \
       (void *(*)()) R_FunTab[setprim_value].cfun; \
-    setprim_ptr->primsxp.primsxp_fast_cfun = 0; \
-    setprim_ptr->primsxp.primsxp_code   = R_FunTab[setprim_value].code; \
-    setprim_ptr->primsxp.primsxp_arity  = R_FunTab[setprim_value].arity; \
-    setprim_ptr->primsxp.primsxp_internal \
+    setprim_ptr->primsxp.fast_cfun = 0; \
+    setprim_ptr->primsxp.code   = R_FunTab[setprim_value].code; \
+    setprim_ptr->primsxp.arity  = R_FunTab[setprim_value].arity; \
+    setprim_ptr->primsxp.internal \
         = (R_FunTab[setprim_value].eval/10)&1; \
-    setprim_ptr->primsxp.primsxp_print \
+    setprim_ptr->primsxp.print \
         = (R_FunTab[setprim_value].eval/100)%10; \
-    setprim_ptr->primsxp.primsxp_variant \
+    setprim_ptr->primsxp.variant \
         = (R_FunTab[setprim_value].eval/1000)&1; \
     setprim_ptr->primsxp.pending_ok \
         = (R_FunTab[setprim_value].eval/10000)&1; \
-    setprim_ptr->primsxp.primsxp_fast_sub \
+    setprim_ptr->primsxp.fast_sub \
         = (R_FunTab[setprim_value].eval/100000)&1; \
-    setprim_ptr->primsxp.primsxp_whole \
+    setprim_ptr->primsxp.whole \
         = (R_FunTab[setprim_value].eval/1000000)&1; \
 } while (0)
 
@@ -477,27 +477,29 @@ typedef struct {
   (((PRIMSEXP)UPTR_FROM_SEXP(x))->sxpinfo.gp >> (S4_OBJECT_BIT_POS+1))
 
 #define PRIMFUN(x) \
-  ((CCODE)(((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_cfun))
+  ((CCODE)(((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.cfun))
 #define PRIMFUNV(x) \
-  ((CCODEV)(((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_cfun))
+  ((CCODEV)(((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.cfun))
 #define SET_PRIMFUN(x,f) \
-  ( ((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_cfun = \
+  ( ((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.cfun = \
       (void *(*)()) (R_FunTab[PRIMOFFSET(x)].cfun = (SEXP (*)()) (f)), \
-    ((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_fast_cfun = 0 )
+    ((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.fast_cfun = 0 )
 #define PRIMVAL(x) \
-  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_code)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.code)
 #define PRIMARITY(x) \
-  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_arity)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.arity)
 #define PRIMPRINT(x) \
-  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_print)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.print)
 #define PRIMINTERNAL(x) \
-  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_internal)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.internal)
 #define PRIMVARIANT(x) \
-  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_variant)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.variant)
+#define PRIMPENDINGOK(x) \
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.pending_ok)
 #define PRIMFASTSUB(x) \
-  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_fast_sub)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.fast_sub)
 #define PRIMWHOLE(x) \
-  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_whole)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.whole)
 #define PRIMFOREIGN(x) \
   (R_FunTab[PRIMOFFSET(x)].gram.kind==PP_FOREIGN)
 #define PRIMNAME(x) \
@@ -509,15 +511,15 @@ typedef struct {
   (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.pending_ok)
 
 #define PRIMFUN_FAST(x) \
-  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_fast_cfun)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.fast_cfun)
 #define PRIMFUN_DSPTCH1(x) \
-  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_dsptch1)
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.dsptch1)
 #define PRIMFUN_ARG1VAR(x) \
   (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.var1)
 
-#define SET_PRIMFUN_FAST_UNARY(x,f,dsptch1,v1) do { \
-  ((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_fast_cfun = (void*(*)())(f);\
-  ((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.primsxp_dsptch1 = (dsptch1); \
+#define SET_PRIMFUN_FAST_UNARY(x,f,disptch1,v1) do { \
+  ((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.fast_cfun = (void*(*)())(f);\
+  ((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.dsptch1 = (disptch1); \
   ((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.var1 = (v1); \
 } while (0)
 

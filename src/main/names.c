@@ -75,7 +75,8 @@
  *                  be able to use the fast interface
  *              U=0 not what it says above
  *              V=1 says that the (builtin) primitive can handle operands
- *                  whose computation by a task may be pending
+ *                  whose computation by a task may be pending.  Currently
+ *                  effective only for internal functions
  *              V=0 says must not be passed operands still being computed
  *              W=1 says pass a "variant" argument to the c-entry procedure
  *              W=0 says don't pass a "variant" argument
@@ -622,8 +623,10 @@ static void SetupBuiltins(void)
         PROTECT(prim = mkPRIMSXP(i, R_FunTab[i].eval % 10));
 
         if (0) { /* enable to display info */
-            Rprintf ("SETUP: %s, internal %d, visible %d\n",
-                     PRIMNAME(prim), PRIMINTERNAL(prim), PRIMPRINT(prim));
+            Rprintf (
+              "SETUP: %s, builtin %d, internal %d, visible %d, pending_ok %d\n",
+                      PRIMNAME(prim), TYPEOF(prim) == BUILTINSXP,
+                      PRIMINTERNAL(prim), PRIMPRINT(prim), PRIMPENDINGOK(prim));
         }
 
         SEXP sym = install(R_FunTab[i].name);
