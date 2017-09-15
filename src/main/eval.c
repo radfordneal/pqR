@@ -2487,9 +2487,9 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
     SEXP assgnfcn = installAssignFcnName(CAR(lhs));
 
-    int maybe_fast = depth == 1 && (assgnfcn == R_SubAssignSymbol ||
-                                    assgnfcn == R_DollarAssignSymbol ||
-                                    assgnfcn == R_SubSubAssignSymbol);
+    int maybe_fast = assgnfcn == R_SubAssignSymbol ||
+                     assgnfcn == R_DollarAssignSymbol ||
+                     assgnfcn == R_SubSubAssignSymbol;
 
     /* Debugging/comparison aid:  Can be enabled one way or the other below,
        then activated by typing `switch to old` or `switch to new` at the
@@ -2521,7 +2521,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
     SEXP rhs_uneval = rhs;  /* save unevaluated rhs */
 
-    if (maybe_fast) {
+    if (maybe_fast && depth == 1) {
         PROTECT(rhs = EVALV (rhs, rho, 
           (variant & (VARIANT_SCALAR_STACK_OK | VARIANT_NULL)) ? 
              VARIANT_SCALAR_STACK_OK : 0));
@@ -2688,55 +2688,35 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             PROTECT(e);
         }
 
-        /* Call the replacement functions at levels 1 to depth, changing the
+        /* Call the replacement function at level 1. */
+
+        PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
+        if (POP_IF_TOP_OF_STACK(rhs)) 
+            rhs = DUP_STACK_VALUE(rhs);
+        SET_PRVALUE(rhsprom, rhs);
+
+        PROTECT (lhsprom = mkPROMISE(s[1].expr, rho));
+        SET_PRVALUE (lhsprom, s[1].value);
+        /* original args, no value cell at end, assgnfcn set above*/
+        PROTECT(e = replaceCall (assgnfcn, lhsprom, 
+                                 s[0].store_args, rhsprom));
+        newval = eval(e,rho);
+
+        /* Unprotect e, lhsprom, rhsprom, and s[1].value from the
+           previous loop, which went from depth-1 to 1 in the 
+           opposite order as this one (plus unprotect one more from
+           before that).  Note: e used later, but no alloc before. */
+
+        UNPROTECT(4);
+
+        /* Call the replacement functions at levels 2 to depth, changing the
            values at each level, using the fetched value at that level 
            (was perhaps duplicated), and the new value after replacement at 
            the lower level.  Except we don't do that if it's not necessary
            because the new value is already part of the larger object.
            The new value at the outermost level is the rhs value. */
         
-        PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
-        if (POP_IF_TOP_OF_STACK(rhs)) 
-            rhs = DUP_STACK_VALUE(rhs);
-        SET_PRVALUE(rhsprom, rhs);
-        s[0].in_next = 0;
-
-        for (d = 1; ; d++) {
-
-            if (s[d-1].in_next == 1) { /* don't need to do replacement */
-                newval = s[d].value;
-                UNPROTECT(1);  /* s[d].value protected in previous loop */
-            }
-
-            else {
-
-                PROTECT (lhsprom = mkPROMISE(s[d].expr, rho));
-                SET_PRVALUE (lhsprom, s[d].value);
-                if (d == 1) {
-                    /* original args, no value cell at end, assgnfcn set above*/
-                    PROTECT(e = replaceCall (assgnfcn, lhsprom, 
-                                             s[d-1].store_args, rhsprom));
-                }
-                else { 
-                    assgnfcn = installAssignFcnName(CAR(s[d-1].expr));
-                    SETCAR (s[d-1].value_arg, rhsprom);
-                    PROTECT(e = LCONS (assgnfcn, CONS (lhsprom,
-                                                   s[d-1].store_args)));
-                }
-
-                newval = eval(e,rho);
-
-                /* Unprotect e, lhsprom, rhsprom, and s[d].value from the
-                   previous loop, which went from depth-1 to 1 in the 
-                   opposite order as this one (plus unprotect one more from
-                   before that).  Note: e used below; no alloc before. */
-
-                UNPROTECT(4);
-            }
-
-            /* See if we're done, with the final value in newval. */
-
-            if (d == depth) break;
+        for (d = 1; d < depth; d++) {
 
             /* If the replacement function returned a different object, 
                that new object won't be part of the object at the next
@@ -2745,15 +2725,37 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             if (s[d].value != newval)
                 s[d].in_next = 0;
 
-            /* Create a rhs promise if this value needs to be put into
-               the next-higher object. */
+            if (s[d].in_next == 1) { 
 
-            if (s[d].in_next != 1) {
+                /* Don't need to do replacement. */
+
+                newval = s[d+1].value;
+                UNPROTECT(1);  /* s[d+1].value protected in previous loop */
+            }
+            else {
+
+                /* Put value into the next-higher object. */
+
                 PROTECT(newval);
                 rhsprom = mkPROMISE (e, rho);
                 SET_PRVALUE (rhsprom, newval);
                 UNPROTECT(1);
                 PROTECT(rhsprom);
+
+                PROTECT (lhsprom = mkPROMISE(s[d+1].expr, rho));
+                SET_PRVALUE (lhsprom, s[d+1].value);
+                assgnfcn = installAssignFcnName(CAR(s[d].expr));
+                SETCAR (s[d].value_arg, rhsprom);
+                PROTECT(e = LCONS (assgnfcn, CONS(lhsprom,s[d].store_args)));
+
+                newval = eval(e,rho);
+
+                /* Unprotect e, lhsprom, rhsprom, and s[d+1].value from the
+                   previous loop, which went from depth-1 to 1 in the 
+                   opposite order as this one (plus unprotect one more from
+                   before that).  Note: e used later, but no alloc before. */
+
+                UNPROTECT(4);
             }
         }
 
