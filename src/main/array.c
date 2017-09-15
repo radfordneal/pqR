@@ -744,8 +744,8 @@ static SEXP do_transpose (SEXP, SEXP, SEXP, SEXP, int);
 
 /* "%*%" (op = 0), crossprod (op = 1) or tcrossprod (op = 2).  For op = 0,
    it is set up as a SPECIAL so that it can evaluate its arguments requesting
-    a VARIANT_TRANS result (produced by "t"), though it doesn't want both
-    arguments to be transposed.   */
+   a VARIANT_TRANS result (produced by "t"), though it doesn't want both
+   arguments to be transposed.   */
 
 static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
@@ -2155,8 +2155,8 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 
 /* Primitive */
 
-{"length",	do_length,	0,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"%*%",		do_matprod,	0,	11000,	2,	{PP_BINARY,  PREC_PERCENT,0}},
+{"length",	do_length,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"%*%",		do_matprod,	0,	1000,	2,	{PP_BINARY,  PREC_PERCENT,0}},
 
 /* Internal */
 

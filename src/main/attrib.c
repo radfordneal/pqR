@@ -1871,21 +1871,21 @@ attribute_hidden FUNTAB R_FunTab_attrib[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"class",	R_do_data_class,0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"class",	R_do_data_class,0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {".cache_class",R_do_data_class,1,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"comment",	do_comment,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"comment<-",	do_commentgets,	0,	11,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"oldClass",	do_class,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"oldClass",	do_class,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"oldClass<-",	do_classgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT, 1}},
-{"names",	do_names,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"names",	do_names,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"names<-",	do_namesgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"dimnames",	do_dimnames,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"dimnames",	do_dimnames,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"dimnames<-",	do_dimnamesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"dim",		do_dim,		0,	11001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"dim",		do_dim,		0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"dim<-",	do_dimgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"attributes",	do_attributes,	0,	10001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"attributes",	do_attributes,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"attributes<-",do_attributesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"attr",	do_attr,	0,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"attr",	do_attr,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"attr<-",	do_attrgets,	0,	1,	3,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"levels<-",	do_levelsgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 
