@@ -1,5 +1,7 @@
-Revisions to set_subassing in eval.c, to make it faster by using the
-fast interface for the outermost level of a complex assignment.
+Revisions to set_subassign in eval.c, to make it faster by using the
+fast interface for the outermost level of a complex assignment (not
+just for simple assignments).
 
 Also tightens up some things involving NAMEDCNT that might perhaps
-cause bugs.
+cause bugs.  And fixes a performance bug.
+

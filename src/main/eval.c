@@ -2616,8 +2616,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             SEXP value_arg;       /* Last cell in store_args, for value */
             SEXP expr;            /* Expression at this level */
             SEXP value;           /* Value of expr, may later change */
-            int in_next;          /* 1 or 2 if value is unshared part */
-        } s[depth+1];             /*   of value at next level, else 0 */
+            int in_top;           /* 1 or 2 if value is an unshared part */
+        } s[depth+1];             /*   of the value at top level, else 0 */
 
         SEXP v;
         int d;
@@ -2652,12 +2652,12 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
         /* For each level except the outermost, evaluate and save the value
            of the expression as it is before the assignment.  Also, ask if
-           it is an unshared subset of the next larger expression.  If it
-           is not known to be part of the next larger expression, we do a
-           top-level duplicate of it. */
+           it is an unshared subset of the next larger expression (and all
+           larger ones).  If it is not known to be part of the larger 
+           expressions, we do a top-level duplicate of it. */
 
         s[depth].value = varval;
-        s[depth].in_next = 1;  /* pretend value for deepest */
+        s[depth].in_top = 1;
 
         for (d = depth-1; d > 0; d--) {
 
@@ -2677,13 +2677,11 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             PROTECT(e);
             e = evalv (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
             UNPROTECT(1);
-            s[d].in_next = R_variant_result;  /* 0, 1, or 2 */
+            s[d].in_top = 
+              s[d+1].in_top == 1 ? R_variant_result : 0;  /* 0, 1, or 2 */
             R_variant_result = 0;
-            if (s[d+1].in_next == 0)
-                s[d].in_next = 0;
-            if (s[d].in_next == 0)
+            if (s[d].in_top == 0)
                 e = dup_top_level(e);
-
             s[d].value = e;
             PROTECT(e);
         }
@@ -2734,7 +2732,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                we have to replace, since that new object won't be part 
                of the object at the next level, even if the old one was. */
 
-            if (s[d].in_next == 1 && s[d].value == newval) { 
+            if (s[d].in_top == 1 && s[d].value == newval) { 
 
                 /* Don't need to do replacement. */
 
