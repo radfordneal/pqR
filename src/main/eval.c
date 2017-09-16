@@ -2464,7 +2464,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                                         int variant, int opval)
 {
-    SEXP var, varval, newval, rhsprom, lhsprom, e;
+    SEXP var, varval, newval, rhsprom, lhsprom, e, fn;
 
     /* Find the variable ultimately assigned to, and its depth.
        The depth is 1 for a variable within one replacement function
@@ -2521,7 +2521,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
     SEXP rhs_uneval = rhs;  /* save unevaluated rhs */
 
-    if (maybe_fast && depth == 1) {
+    if (maybe_fast) {
         PROTECT(rhs = EVALV (rhs, rho, 
           (variant & (VARIANT_SCALAR_STACK_OK | VARIANT_NULL)) ? 
              VARIANT_SCALAR_STACK_OK : 0));
@@ -2579,10 +2579,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
        general code below should also work when depth is 1. */
 
     if (depth == 1) {
-
-        SEXP fn;
-
-        if (maybe_fast && !isObject(varval) && CADDR(lhs) != R_DotsSymbol
+        if (maybe_fast && !isObject(varval)
+              && CADDR(lhs) != R_DotsSymbol
               && (fn = FINDFUN(assgnfcn,rho), 
                   TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
             /* Use the fast interface.  No need to wait for rhs, since
@@ -2656,9 +2654,10 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
            of the expression as it is before the assignment.  Also, ask if
            it is an unshared subset of the next larger expression.  If it
            is not known to be part of the next larger expression, we do a
-           top-level duplicate of it, unless it has NAMEDCNT of 0. */
+           top-level duplicate of it. */
 
         s[depth].value = varval;
+        s[depth].in_next = 1;  /* pretend value for deepest */
 
         for (d = depth-1; d > 0; d--) {
 
@@ -2679,28 +2678,42 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             e = evalv (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
             UNPROTECT(1);
             s[d].in_next = R_variant_result;  /* 0, 1, or 2 */
-
-            if (R_variant_result == 0 && NAMEDCNT_GT_0(e)) 
-                e = dup_top_level(e);
             R_variant_result = 0;
+            if (s[d+1].in_next == 0)
+                s[d].in_next = 0;
+            if (s[d].in_next == 0)
+                e = dup_top_level(e);
 
             s[d].value = e;
             PROTECT(e);
         }
 
-        /* Call the replacement function at level 1. */
+        /* Call the replacement function at level 1, perhaps using the
+           fast interface. */
 
-        PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
-        if (POP_IF_TOP_OF_STACK(rhs)) 
-            rhs = DUP_STACK_VALUE(rhs);
-        SET_PRVALUE(rhsprom, rhs);
-
-        PROTECT (lhsprom = mkPROMISE(s[1].expr, rho));
-        SET_PRVALUE (lhsprom, s[1].value);
-        /* original args, no value cell at end, assgnfcn set above*/
-        PROTECT(e = replaceCall (assgnfcn, lhsprom, 
-                                 s[0].store_args, rhsprom));
-        newval = eval(e,rho);
+        if (maybe_fast && !isObject(s[1].value) 
+              && CAR(s[0].store_args) != R_DotsSymbol
+              && (fn = FINDFUN(assgnfcn,rho), 
+                  TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
+            R_fast_sub_into = s[1].value;
+            R_fast_sub_value = rhs;
+            PROTECT3(R_fast_sub_value,R_fast_sub_into,fn);
+            newval = CALL_PRIMFUN (call, fn, s[0].store_args, rho, 
+                                   VARIANT_FAST_SUBASSIGN);
+            e = R_NilValue;
+        }
+        else {
+            PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
+            if (POP_IF_TOP_OF_STACK(rhs)) 
+                rhs = DUP_STACK_VALUE(rhs);
+            SET_PRVALUE(rhsprom, rhs);
+            PROTECT (lhsprom = mkPROMISE(s[1].expr, rho));
+            SET_PRVALUE (lhsprom, s[1].value);
+            /* original args, no value cell at end, assgnfcn set above*/
+            PROTECT(e = replaceCall (assgnfcn, lhsprom, 
+                                     s[0].store_args, rhsprom));
+            newval = eval(e,rho);
+        }
 
         /* Unprotect e, lhsprom, rhsprom, and s[1].value from the
            previous loop, which went from depth-1 to 1 in the 
@@ -2713,19 +2726,15 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
            values at each level, using the fetched value at that level 
            (was perhaps duplicated), and the new value after replacement at 
            the lower level.  Except we don't do that if it's not necessary
-           because the new value is already part of the larger object.
-           The new value at the outermost level is the rhs value. */
+           because the new value is already part of the larger object. */
         
         for (d = 1; d < depth; d++) {
 
             /* If the replacement function returned a different object, 
-               that new object won't be part of the object at the next
-               level, even if the old one was. */
+               we have to replace, since that new object won't be part 
+               of the object at the next level, even if the old one was. */
 
-            if (s[d].value != newval)
-                s[d].in_next = 0;
-
-            if (s[d].in_next == 1) { 
+            if (s[d].in_next == 1 && s[d].value == newval) { 
 
                 /* Don't need to do replacement. */
 

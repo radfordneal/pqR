@@ -1851,7 +1851,7 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
 SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 {
-    PROTECT_INDEX pvalidx, pxidx;
+   PROTECT_INDEX pvalidx, pxidx;
     Rboolean S4; SEXP xS4 = R_NilValue;
 
     if (ON_SCALAR_STACK(val)) /* currently, never puts value in atomic vector */

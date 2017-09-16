@@ -2161,8 +2161,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
 	havematch = 0;
 	for (i = 0 ; i < n ; i = i + 1) {
             str_elt = STRING_ELT (nlist, i);
-            ctarg = TYPEOF(str_elt)==CHARSXP ? translateChar(str_elt)/*always?*/
-                                             : CHAR(PRINTNAME(str_elt));
+            ctarg = translateChar(str_elt);
 	    mtch = ep_match_strings(ctarg, cinp);
             if (mtch>0) /* exact */ {
 		y = VECTOR_ELT(x, i);
@@ -2170,17 +2169,11 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
             }
 	    else if (mtch<0) /* partial */ {
 		havematch++;
-		if (havematch == 1) {
-		    /* partial matches can cause aliasing in eval.c:evalseq
-		       This is overkill, but alternative ways to prevent
-		       the aliasing appear to be even worse */
-		    SET_NAMEDCNT_MAX(VECTOR_ELT(x,i));
-		}
 		imatch = i;
 	    }
 	}
-	if(havematch == 1) { /* unique partial match */
-	    if(R_warn_partial_match_dollar) {
+	if (havematch == 1) { /* unique partial match */
+	    if (R_warn_partial_match_dollar) {
                 str_elt = STRING_ELT (nlist, imatch);
                 ctarg = TYPEOF(str_elt)==CHARSXP ? translateChar(str_elt)
                                                  : CHAR(PRINTNAME(str_elt));
@@ -2188,6 +2181,13 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
 			    cinp, ctarg);
 	    }
 	    y = VECTOR_ELT(x, imatch);
+
+            /* OLD COMMENT: Partial matches can cause aliasing in
+               eval.c:evalseq This is overkill, but alternative ways
+               to prevent the aliasing appear to be even worse.
+               SHOULD REVISIT. */
+            SET_NAMEDCNT_MAX(y);
+
 	    goto found_veclist;
 	}
 
@@ -2200,6 +2200,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
         if (VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET 
              && !NAMEDCNT_GT_1(x) && !NAMEDCNT_GT_1(y))
             R_variant_result = 1;
+
         UNPROTECT(1);
         return y;
     }
