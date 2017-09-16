@@ -1561,6 +1561,7 @@ static SEXP do_subassign2_dflt_int
                     SET_VECTOR_ELEMENT_TO_VALUE (x, ix, y);
                 break;
             }
+            SET_NAMEDCNT_0(x);
             RETURN_SEXP_INSIDE_PROTECT (x);
         }
     }

@@ -1658,8 +1658,8 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* If we can easily determine that this will be handled by
        subset2_dflt, evaluate the array with VARIANT_UNCLASS and
        VARIANT_PENDING_OK, and perhaps evaluate indexes with
-       VARIANT_SCALAR_STACK (should be safe, since there will be no
-       later call of eval). */
+       VARIANT_SCALAR_STACK_OK (should be safe, since there will be
+       no later call of eval). */
 
     if (args != R_NilValue && CAR(args) != R_DotsSymbol) {
         SEXP array = CAR(args);
