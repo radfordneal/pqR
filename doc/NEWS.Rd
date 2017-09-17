@@ -118,6 +118,11 @@
         \code{stri_paste} function from the \code{stringi} package.
         Substring extraction and replacement with \code{substr} or
         \code{substring} has also been sped up for long strings.
+  \item From R-3.0.0: 
+        The \code{@<-} operator is now implemented as a primitive, which should
+        reduce some copying of objects when used.  Note that the operator
+        object must now be in package base: do not try to import it
+        explicitly from package methods.
   \item Relational operators are now faster, and may sometimes be done in 
         helper threads (though currently without pipelining of data).
         Computations such as \code{sum(vec>0)} are now done with a
