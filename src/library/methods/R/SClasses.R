@@ -1,6 +1,6 @@
 #  File src/library/methods/R/SClasses.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2014 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2014, 2017 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -307,17 +307,27 @@ checkSlotAssignment <- function(obj, name, value)
        as(value, slotClass, strict=FALSE, ext = ok)
 }
 
-
-
-## "@" <-
-##   function(object, name)
-##   .Internal(object@name)
-
-"@<-" <-
-   function(object, name, value)
-     `slot<-` (object,
-                if (is.name(arg<-substitute(name))) as.character(arg) else name,
-                TRUE, value)
+## slightly simpler verison to be called from do_attrgets(), from R-3.0.0.
+checkAtAssignment <- function(cl, name, valueClass)
+{
+    ClassDef <- getClass(cl) # fails if cl not a defined class (!)
+    slotClass <- ClassDef@slots[[name]]
+    if(is.null(slotClass))
+        stop(gettextf("%s is not a slot in class %s",
+                      sQuote(name), dQuote(cl)),
+             domain = NA)
+    if(.identC(slotClass, valueClass))
+       return(TRUE)
+    ## check the value, but be careful to use the definition of the slot's class from
+    ## the class environment of obj (change validObject too if a better way is found)
+    ok <- possibleExtends(valueClass, slotClass,
+                          ClassDef2 = getClassDef(slotClass, where = .classEnv(ClassDef)))
+    if(identical(ok, FALSE))
+       stop(gettextf("assignment of an object of class %s is not valid for @%s in an object of class %s; is(value, \"%s\") is not TRUE",
+		     dQuote(valueClass), sQuote(name), dQuote(cl), slotClass),
+            domain = NA)
+    TRUE
+}
 
 ##  The names of the class's slots.  The argument is either the name
 ##  of a class, or an object from the relevant class.
