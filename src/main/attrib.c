@@ -1500,24 +1500,26 @@ static void check_slot_assign(SEXP obj, SEXP input, SEXP value, SEXP env)
     UNPROTECT(3);
 }
 
-/* Implements      attr(obj, which = "<name>")  <-  value    (op == 0)  
-   and             obj @ <name>                 <-  value    (op == 1)       */
+/* Implements   attr(obj, which = "<name>")  <-  value    (op == 0, BUILTIN) 
+   and          obj @ <name>                 <-  value    (op == 1, SPECIAL)  */
 
 static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    if (PRIMVAL(op) == 1) { /* @<-, code taken from R-3.0.0 */
+    if (PRIMVAL(op) == 1) { /* @<-, code adapted from R-3.0.0 */
 
-        SEXP obj, name, input, nlist, ans, value;
+        SEXP obj, name, input, ans, value;
         PROTECT(input = allocVector(STRSXP, 1));
 
-        nlist = CADR(args);
-        if (isSymbol(nlist))
-            SET_STRING_ELT(input, 0, PRINTNAME(nlist));
-        else if(isString(nlist) )
-            SET_STRING_ELT(input, 0, STRING_ELT(nlist, 0));
+        name = CADR(args);
+        if (TYPEOF(name) == PROMSXP)
+            name = PRCODE(name);
+        if (isSymbol(name))
+            SET_STRING_ELT(input, 0, PRINTNAME(name));
+        else if(isString(name) )
+            SET_STRING_ELT(input, 0, STRING_ELT(name, 0));
         else {
             error(_("invalid type '%s' for slot name"),
-                  type2char(TYPEOF(nlist)));
+                  type2char(TYPEOF(name)));
             return R_NilValue; /*-Wall*/
         }
 
@@ -1942,7 +1944,7 @@ attribute_hidden FUNTAB R_FunTab_attrib[] =
 {"attributes<-",do_attributesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"attr",	do_attr,	0,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"attr<-",	do_attrgets,	0,	1,	3,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"new_at<-",		do_attrgets,	1,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+{"@<-",		do_attrgets,	1,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 {"levels<-",	do_levelsgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 
 {"@",		do_AT,		0,	0,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
