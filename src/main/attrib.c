@@ -1465,35 +1465,93 @@ static SEXP do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
+static void check_slot_assign(SEXP obj, SEXP input, SEXP value, SEXP env)
+{
+    SEXP
+	valueClass = PROTECT(R_data_class(value, FALSE)),
+	objClass   = PROTECT(R_data_class(obj, FALSE));
+    static SEXP checkAt = NULL;
+    /* 'methods' may *not* be in search() ==> do as if calling 
+        methods::checkAtAssignment(..) */
+    if(!isMethodsDispatchOn()) { // needed?
+	SEXP e = PROTECT(lang1(install("initMethodDispatch")));
+	eval(e, R_MethodsNamespace); // only works with methods loaded
+	UNPROTECT(1);
+    }
+    if(checkAt == NULL)
+	checkAt = findFun(install("checkAtAssignment"), R_MethodsNamespace);
+    SEXP e = PROTECT(lang4(checkAt, objClass, input, valueClass));
+    eval(e, env);
+    UNPROTECT(3);
+}
+
+/* Implements   attr(obj, which = "<name>")  <-  value    (op == 0, BUILTIN) 
+   and          obj @ <name>                 <-  value    (op == 1, SPECIAL)  */
+
 static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    /*  attr(x, which = "<name>")  <-  value  */
-    SEXP obj, name, argList;
-    static char *ap[3] = { "x", "which", "value" };
+    if (PRIMVAL(op) == 1) { /* @<-, code adapted from R-3.0.0 */
 
-    checkArity(op, args);
+        SEXP obj, name, input, ans, value;
+        PROTECT(input = allocVector(STRSXP, 1));
 
-    obj = CAR(args);
-    if (NAMEDCNT_GT_1(obj))
-	PROTECT(obj = dup_top_level(obj));
-    else
-	PROTECT(obj);
+        name = CADR(args);
+        if (TYPEOF(name) == PROMSXP)
+            name = PRCODE(name);
+        if (isSymbol(name))
+            SET_STRING_ELT(input, 0, PRINTNAME(name));
+        else if(isString(name) )
+            SET_STRING_ELT(input, 0, STRING_ELT(name, 0));
+        else {
+            error(_("invalid type '%s' for slot name"),
+                  type2char(TYPEOF(name)));
+            return R_NilValue; /*-Wall*/
+        }
 
-    /* argument matching */
-    argList = matchArgs(R_NilValue, ap, 3, args, call);
+        /* replace the second argument with a string */
+        SETCADR(args, input);
+        UNPROTECT(1); // 'input' is now protected
 
-    PROTECT(argList);
+        if(DispatchOrEval(call, op, "@<-", args, env, &ans, 0, 0))
+            return(ans);
 
-    name = CADR(argList);
-    if (!isValidString(name) || STRING_ELT(name, 0) == NA_STRING)
-	errorcall(call,_("'name' must be non-null character string"));
-    /* TODO?  if (isFactor(obj) && !strcmp(asChar(name), "levels"))
-     * ---         if(any_duplicated(CADDR(args)))
-     *                  error(.....)
-     */
-    setAttrib(obj, name, CADDR(args));
-    UNPROTECT(2);
-    return obj;
+        PROTECT(obj = CAR(ans));
+        PROTECT(value = CADDR(ans));
+        check_slot_assign(obj, input, value, env);
+        value = R_do_slot_assign(obj, input, value);
+        UNPROTECT(2);
+        return value;
+    }
+
+    else { /*  attr(x, which = "<name>")  <-  value  */
+
+        SEXP obj, name, argList;
+        static char *ap[3] = { "x", "which", "value" };
+    
+        checkArity(op, args);
+    
+        obj = CAR(args);
+        if (NAMEDCNT_GT_1(obj))
+            PROTECT(obj = dup_top_level(obj));
+        else
+            PROTECT(obj);
+    
+        /* argument matching */
+        argList = matchArgs(R_NilValue, ap, 3, args, call);
+    
+        PROTECT(argList);
+    
+        name = CADR(argList);
+        if (!isValidString(name) || STRING_ELT(name, 0) == NA_STRING)
+            errorcall(call,_("'name' must be non-null character string"));
+        /* TODO?  if (isFactor(obj) && !strcmp(asChar(name), "levels"))
+         * ---         if(any_duplicated(CADDR(args)))
+         *                  error(.....)
+         */
+        setAttrib(obj, name, CADDR(args));
+        UNPROTECT(2);
+        return obj;
+    }
 }
 
 
@@ -1501,7 +1559,7 @@ static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 /* the dimnames for matrices and arrays in a standard form. */
 
 void GetMatrixDimnames(SEXP x, SEXP *rl, SEXP *cl,
-		       const char **rn, const char **cn)
+        	       const char **rn, const char **cn)
 {
     SEXP dimnames = getAttrib(x, R_DimNamesSymbol);
     SEXP nn;
@@ -1871,6 +1929,7 @@ attribute_hidden FUNTAB R_FunTab_attrib[] =
 {"attributes<-",do_attributesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"attr",	do_attr,	0,	10001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"attr<-",	do_attrgets,	0,	1,	3,	{PP_FUNCALL, PREC_LEFT,	1}},
+{"@<-",		do_attrgets,	1,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 {"levels<-",	do_levelsgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 
 {"@",		do_AT,		0,	0,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
