@@ -536,11 +536,11 @@ void task_relop_sum (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 
 /* PROCEDURES FOR RELATIONAL OPERATIONS ON STRINGS.  Separate versions
-   for non-variant operations, and for and, or, and sum variants. */
+   for non-variant operations, and for AND, OR, and SUM variants. */
 
 static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    int i, i1, i2, n, n1, n2, res;
+    int i, i1, i2, n, n1, n2;
     SEXP ans, x1, x2;
     const SEXP *e1 = STRING_PTR(s1);
     const SEXP *e2 = STRING_PTR(s2);
@@ -549,39 +549,41 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
     n1 = LENGTH(s1);
     n2 = LENGTH(s2);
     n = (n1 > n2) ? n1 : n2;
+
     PROTECT(ans = allocVector(LGLSXP, n));
+    int *lp = LOGICAL(ans);
 
     if (code == EQOP) {
         if (n2 == 1) {
             x2 = e2[0];
             for (i = 0; i<n; i++) {
                 x1 = e1[i];
-                LOGICAL(ans)[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
-                                : SEQL(x1, x2) ? T : F;
+                lp[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
+                      : SEQL(x1, x2) ? T : F;
             }
         }
         else if (n1 == 1) {
             x1 = e1[0];
             for (i = 0; i<n; i++) {
                 x2 = e2[i];
-                LOGICAL(ans)[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
-                                : SEQL(x1, x2) ? T : F;
+                lp[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
+                      : SEQL(x1, x2) ? T : F;
             }
         }
         else if (n1 == n2) {
             for (i = 0; i<n; i++) {
 	        x1 = e1[i];
                 x2 = e2[i];
-                LOGICAL(ans)[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
-                                : SEQL(x1, x2) ? T : F;
+                lp[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
+                      : SEQL(x1, x2) ? T : F;
             }
         }
         else {
 	    mod_iterate(n1, n2, i1, i2) {
 	        x1 = e1[i1];
                 x2 = e2[i2];
-                LOGICAL(ans)[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
-                                : SEQL(x1, x2) ? T : F;
+                lp[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
+                      : SEQL(x1, x2) ? T : F;
             }
 	}
     }
@@ -591,11 +593,11 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             for (i = 0; i<n; i++) {
                 x1 = e1[i];
                 if (x1 == NA_STRING || x2 == NA_STRING)
-                    LOGICAL(ans)[i] = NA_LOGICAL;
+                    lp[i] = NA_LOGICAL;
                 else if (x1 == x2)
-                    LOGICAL(ans)[i] = F;
+                    lp[i] = F;
                 else
-                    LOGICAL(ans)[i] = Scollate(x1, x2) < 0 ? T : F;
+                    lp[i] = Scollate(x1, x2) < 0 ? T : F;
             }
         }
         else if (n1 == 1) {
@@ -603,11 +605,11 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             for (i = 0; i<n; i++) {
                 x2 = e2[i];
                 if (x1 == NA_STRING || x2 == NA_STRING)
-                    LOGICAL(ans)[i] = NA_LOGICAL;
+                    lp[i] = NA_LOGICAL;
                 else if (x1 == x2)
-                    LOGICAL(ans)[i] = F;
+                    lp[i] = F;
                 else
-                    LOGICAL(ans)[i] = Scollate(x1, x2) < 0 ? T : F;
+                    lp[i] = Scollate(x1, x2) < 0 ? T : F;
             }
         }
         else if (n1 == n2) {
@@ -615,11 +617,11 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	        x1 = e1[i];
                 x2 = e2[i];
                 if (x1 == NA_STRING || x2 == NA_STRING)
-                    LOGICAL(ans)[i] = NA_LOGICAL;
+                    lp[i] = NA_LOGICAL;
                 else if (x1 == x2)
-                    LOGICAL(ans)[i] = F;
+                    lp[i] = F;
                 else
-                    LOGICAL(ans)[i] = Scollate(x1, x2) < 0 ? T : F;
+                    lp[i] = Scollate(x1, x2) < 0 ? T : F;
             }
         }
         else {
@@ -627,11 +629,11 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
                 x1 = e1[i1];
                 x2 = e2[i2];
                 if (x1 == NA_STRING || x2 == NA_STRING)
-                    LOGICAL(ans)[i] = NA_LOGICAL;
+                    lp[i] = NA_LOGICAL;
                 else if (x1 == x2)
-                    LOGICAL(ans)[i] = F;
+                    lp[i] = F;
                 else
-                    LOGICAL(ans)[i] = Scollate(x1, x2) < 0 ? T : F;
+                    lp[i] = Scollate(x1, x2) < 0 ? T : F;
             }
         }
     }
@@ -953,11 +955,12 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
     int ny = (ATOMIC_VECTOR_TYPES >> typeof_y) & 1 ? LENGTH(y) : length(y);
     int n = nx>ny ? nx : ny;
 
-    /* Handle integer/logical/real vectors that have no attributes (or whose
+    /* Handle integer/real/string vectors that have no attributes (or whose
        attributes we will ignore) quickly. */ 
 
-    if ((typeof_x == REALSXP || typeof_x == INTSXP)
-          && (typeof_y == REALSXP || typeof_y == INTSXP)
+    if ((typeof_x == REALSXP || typeof_x == INTSXP || typeof_x == STRSXP)
+          && (typeof_y == typeof_x || typeof_x != STRSXP 
+                                 && (typeof_y == REALSXP || typeof_y == INTSXP))
           && nx > 0 && ny > 0
           && ((variant & VARIANT_ANY_ATTR) != 0
                 || !HAS_ATTRIB(x) && !HAS_ATTRIB(y))) {
@@ -966,18 +969,30 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
     
         if (nx==1 && ny==1) {
 
-            WAIT_UNTIL_COMPUTED_2(x,y);
+            int result;
 
-            /* Assumes integers can be represented to full precision as reals */
+            if (typeof_x == STRSXP) {
 
-            double x1 = typeof_x == REALSXP ? REAL(x)[0]
-               : INTEGER(x)[0]!=NA_INTEGER ? INTEGER(x)[0] : NA_REAL;
+                SEXP x1 = STRING_ELT(x,0), y1 = STRING_ELT(y,0);
+                result = x1==NA_STRING || y1==NA_STRING ? NA_LOGICAL
+                          : code == EQOP ? SEQL(x1,y1) 
+                          : /* LTOP */ x1 == y1 ? FALSE : Scollate(x1,y1) < 0;
+            }
+            else {  /* INTSXP or REALSXP */
 
-            double y1 = typeof_y == REALSXP ? REAL(y)[0]
-               : INTEGER(y)[0]!=NA_INTEGER ? INTEGER(y)[0] : NA_REAL;
+                WAIT_UNTIL_COMPUTED_2(x,y);
 
-            int result = ISNAN(x1) || ISNAN(y1) ? NA_LOGICAL
-                       : code == EQOP ? x1 == y1 : /* LTOP */ x1 < y1;
+                /* Assumes ints can be represented to full precision as reals */
+
+                double x1 = typeof_x == REALSXP ? REAL(x)[0]
+                   : INTEGER(x)[0]!=NA_INTEGER ? INTEGER(x)[0] : NA_REAL;
+
+                double y1 = typeof_y == REALSXP ? REAL(y)[0]
+                   : INTEGER(y)[0]!=NA_INTEGER ? INTEGER(y)[0] : NA_REAL;
+
+                result = ISNAN(x1) || ISNAN(y1) ? NA_LOGICAL
+                           : code == EQOP ? x1 == y1 : /* LTOP */ x1 < y1;
+            }
 
             return ScalarLogicalMaybeConst (negate && result != NA_LOGICAL 
                                              ? !result : result);
