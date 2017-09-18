@@ -61,28 +61,28 @@
     if (n2 == 1) { \
         x2 = FETCH(s2,0); \
         if (NANCHK2) \
-            for (i = 0; i<n; i++) LOGICAL(ans)[i] = NA_LOGICAL; \
+            for (i = 0; i<n; i++) lp[i] = NA_LOGICAL; \
         else \
             for (i = 0; i<n; i++) { \
                 x1 = FETCH(s1,i); \
-                LOGICAL(ans)[i] = NANCHK1 ? NA_LOGICAL : COMPARE ? T : F; \
+                lp[i] = NANCHK1 ? NA_LOGICAL : COMPARE ? T : F; \
             } \
     } \
     else if (n1 == 1) { \
         x1 = FETCH(s1,0); \
         if (NANCHK1) \
-            for (i = 0; i<n; i++) LOGICAL(ans)[i] = NA_LOGICAL; \
+            for (i = 0; i<n; i++) lp[i] = NA_LOGICAL; \
         else \
             for (i = 0; i<n; i++) { \
                 x2 = FETCH(s2,i); \
-                LOGICAL(ans)[i] = NANCHK2 ? NA_LOGICAL : COMPARE ? T : F; \
+                lp[i] = NANCHK2 ? NA_LOGICAL : COMPARE ? T : F; \
             } \
     } \
     else if (n1 == n2) { \
         for (i = 0; i<n; i++) { \
             x1 = FETCH(s1,i); \
             x2 = FETCH(s2,i); \
-            LOGICAL(ans)[i] = \
+            lp[i] = \
               NANCHK1 || NANCHK2 ? NA_LOGICAL : COMPARE ? T : F; \
         } \
     } \
@@ -90,7 +90,7 @@
         mod_iterate(n1, n2, i1, i2) { \
             x1 = FETCH(s1,i1); \
             x2 = FETCH(s2,i2); \
-            LOGICAL(ans)[i] = \
+            lp[i] = \
               NANCHK1 || NANCHK2 ? NA_LOGICAL : COMPARE ? T : F; \
         } \
     } \
@@ -288,6 +288,7 @@
 
 void task_relop (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
+    int * restrict lp = LOGICAL(ans);
     int F = code & 1;
     int T = !F;
 
@@ -551,7 +552,7 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
     n = (n1 > n2) ? n1 : n2;
 
     PROTECT(ans = allocVector(LGLSXP, n));
-    int *lp = LOGICAL(ans);
+    int * restrict lp = LOGICAL(ans);
 
     if (code == EQOP) {
         if (n2 == 1) {

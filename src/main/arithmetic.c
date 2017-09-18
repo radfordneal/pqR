@@ -634,6 +634,8 @@ static int integer_overflow;  /* Set by task_integer_arithmetic on overflow
 
 void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
+    int *ians = INTEGER(ans);
+
     int i, i1, i2, n, n1, n2;
     int x1, x2;
 
@@ -647,14 +649,14 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
             if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-                INTEGER(ans)[i] = NA_INTEGER;
+                ians[i] = NA_INTEGER;
             else {
                 int_fast64_t val = (int_fast64_t) x1 + (int_fast64_t) x2;
                 if (val >= R_INT_MIN && val <= R_INT_MAX)
-                    INTEGER(ans)[i] = val;
+                    ians[i] = val;
                 else {
                     integer_overflow = TRUE;
-                    INTEGER(ans)[i] = NA_INTEGER;
+                    ians[i] = NA_INTEGER;
                 }
             }
         }
@@ -664,14 +666,14 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
             if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-                INTEGER(ans)[i] = NA_INTEGER;
+                ians[i] = NA_INTEGER;
             else {
                 int_fast64_t val = (int_fast64_t) x1 - (int_fast64_t) x2;
                 if (val >= R_INT_MIN && val <= R_INT_MAX)
-                    INTEGER(ans)[i] = val;
+                    ians[i] = val;
                 else {
                     integer_overflow = TRUE;
-                    INTEGER(ans)[i] = NA_INTEGER;
+                    ians[i] = NA_INTEGER;
                 }
             }
         }
@@ -681,14 +683,14 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
             if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-                INTEGER(ans)[i] = NA_INTEGER;
+                ians[i] = NA_INTEGER;
             else {
                 int_fast64_t val = (int_fast64_t) x1 * (int_fast64_t) x2;
                 if (val >= R_INT_MIN && val <= R_INT_MAX)
-                    INTEGER(ans)[i] = val;
+                    ians[i] = val;
                 else {
                     integer_overflow = TRUE;
-                    INTEGER(ans)[i] = NA_INTEGER;
+                    ians[i] = NA_INTEGER;
                 }
             }
         }
@@ -721,9 +723,9 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
             if (x1 == NA_INTEGER || x2 == NA_INTEGER || x2 == 0)
-                INTEGER(ans)[i] = NA_INTEGER;
+                ians[i] = NA_INTEGER;
             else {
-                INTEGER(ans)[i] = /* till 0.63.2: x1 % x2 */
+                ians[i] = /* till 0.63.2: x1 % x2 */
                     (int)myfmod((double)x1,(double)x2);
             }
         }
@@ -735,9 +737,9 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             /* This had x %/% 0 == 0 prior to 2.14.1, but
                it seems conventionally to be undefined */
             if (x1 == NA_INTEGER || x2 == NA_INTEGER || x2 == 0)
-                INTEGER(ans)[i] = NA_INTEGER;
+                ians[i] = NA_INTEGER;
             else
-                INTEGER(ans)[i] = floor((double)x1 / (double)x2);
+                ians[i] = floor((double)x1 / (double)x2);
         }
         break;
     }
@@ -745,6 +747,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
+    double *rans = REAL(ans);
     unsigned n, n1, n2;
 
     n1 = LENGTH(s1);
@@ -756,35 +759,35 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     switch (code) {
     case PLUSOP:
         if (TYPEOF(s1) != REALSXP)
-            PIPEARITH(double,add_func,REAL(ans),n,RIFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,add_func,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2);
         else if (TYPEOF(s2) != REALSXP)
-            PIPEARITH(double,add_func,REAL(ans),n,RFETCH,s1,n1,RIFETCH,s2,n2);
+            PIPEARITH(double,add_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
         else
-            PIPEARITH(double,add_func,REAL(ans),n,RFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,add_func,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
         break;
     case MINUSOP:
         if (TYPEOF(s1) != REALSXP)
-            PIPEARITH(double,sub_func,REAL(ans),n,RIFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,sub_func,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2);
         else if (TYPEOF(s2) != REALSXP)
-            PIPEARITH(double,sub_func,REAL(ans),n,RFETCH,s1,n1,RIFETCH,s2,n2);
+            PIPEARITH(double,sub_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
         else
-            PIPEARITH(double,sub_func,REAL(ans),n,RFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,sub_func,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
         break;
     case TIMESOP:
         if (TYPEOF(s1) != REALSXP)
-            PIPEARITH(double,mul_func,REAL(ans),n,RIFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,mul_func,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2);
         else if (TYPEOF(s2) != REALSXP)
-            PIPEARITH(double,mul_func,REAL(ans),n,RFETCH,s1,n1,RIFETCH,s2,n2);
+            PIPEARITH(double,mul_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
         else
-            PIPEARITH(double,mul_func,REAL(ans),n,RFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,mul_func,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
         break;
     case DIVOP:
         if (TYPEOF(s1) != REALSXP)
-            PIPEARITH(double,div_func,REAL(ans),n,RIFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,div_func,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2);
         else if (TYPEOF(s2) != REALSXP)
-            PIPEARITH(double,div_func,REAL(ans),n,RFETCH,s1,n1,RIFETCH,s2,n2);
+            PIPEARITH(double,div_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
         else
-            PIPEARITH(double,div_func,REAL(ans),n,RFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,div_func,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
         break;
     case POWOP:
         if (TYPEOF(s1) == REALSXP && n2 == 1) {
@@ -798,7 +801,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                         R_len_t u = HELPERS_UP_TO(i,a);
                         do {
                             double tmp2 = RFETCH(s1,i);
-                            REAL(ans)[i] = tmp2 * tmp2;
+                            rans[i] = tmp2 * tmp2;
                             i += 1;
                         } while (i<=u);
                         helpers_amount_out(i);
@@ -810,7 +813,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                     do {
                         R_len_t u = HELPERS_UP_TO(i,a);
                         do {
-                            REAL(ans)[i] = RFETCH(s1,i);
+                            rans[i] = RFETCH(s1,i);
                             i += 1;
                         } while (i<=u);
                         helpers_amount_out(i);
@@ -822,7 +825,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                     do {
                         R_len_t u = HELPERS_UP_TO(i,a);
                         do {
-                            REAL(ans)[i] = 1.0;
+                            rans[i] = 1.0;
                             i += 1;
                         } while (i<=u);
                         helpers_amount_out(i);
@@ -834,7 +837,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                     do {
                         R_len_t u = HELPERS_UP_TO(i,a);
                         do {
-                            REAL(ans)[i] = 1.0 / RFETCH(s1,i);
+                            rans[i] = 1.0 / RFETCH(s1,i);
                             i += 1;
                         } while (i<=u);
                         helpers_amount_out(i);
@@ -846,7 +849,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                     do {
                         R_len_t u = HELPERS_UP_TO(i,a);
                         do {
-                            REAL(ans)[i] = R_pow (RFETCH(s1,i), tmp);
+                            rans[i] = R_pow (RFETCH(s1,i), tmp);
                             i += 1;
                         } while (i<=u);
                         helpers_amount_out(i);
@@ -854,27 +857,27 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                 }
         }
         else if (TYPEOF(s1) != REALSXP)
-            PIPEARITH(double,R_POW,REAL(ans),n,RIFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,R_POW,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2);
         else if (TYPEOF(s2) != REALSXP)
-            PIPEARITH(double,R_POW,REAL(ans),n,RFETCH,s1,n1,RIFETCH,s2,n2);
+            PIPEARITH(double,R_POW,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
         else
-            PIPEARITH(double,R_POW,REAL(ans),n,RFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,R_POW,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
         break;
     case MODOP:
         if (TYPEOF(s1) != REALSXP)
-            PIPEARITH(double,myfmod,REAL(ans),n,RIFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,myfmod,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2);
         else if (TYPEOF(s2) != REALSXP)
-            PIPEARITH(double,myfmod,REAL(ans),n,RFETCH,s1,n1,RIFETCH,s2,n2);
+            PIPEARITH(double,myfmod,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
         else
-            PIPEARITH(double,myfmod,REAL(ans),n,RFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,myfmod,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
         break;
     case IDIVOP:
         if (TYPEOF(s1) != REALSXP)
-            PIPEARITH(double,myfloor,REAL(ans),n,RIFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,myfloor,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2);
         else if (TYPEOF(s2) != REALSXP)
-            PIPEARITH(double,myfloor,REAL(ans),n,RFETCH,s1,n1,RIFETCH,s2,n2);
+            PIPEARITH(double,myfloor,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
         else
-            PIPEARITH(double,myfloor,REAL(ans),n,RFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,myfloor,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
         break;
     }
 }
