@@ -48,6 +48,8 @@ static SEXP binaryLogic2(int code, SEXP s1, SEXP s2);
 
 void task_and_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
+    int * restrict lans = LOGICAL(ans);
+
     int i, i1, i2, n, n1, n2;
 
     n1 = LENGTH(s1);
@@ -60,14 +62,14 @@ void task_and_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             for (i = 0; i<n; i++) {
                 uint32_t u1 = LOGICAL(s1)[i];
                 uint32_t u2 = LOGICAL(s2)[i];
-                LOGICAL(ans)[i] = (u1 & u2) | (u1 & (u2<<31)) | (u2 & (u1<<31));
+                lans[i] = (u1 & u2) | (u1 & (u2<<31)) | (u2 & (u1<<31));
             }
         }
         else {
             mod_iterate(n1,n2,i1,i2) {
                 uint32_t u1 = LOGICAL(s1)[i1];
                 uint32_t u2 = LOGICAL(s2)[i2];
-                LOGICAL(ans)[i] = (u1 & u2) | (u1 & (u2<<31)) | (u2 & (u1<<31));
+                lans[i] = (u1 & u2) | (u1 & (u2<<31)) | (u2 & (u1<<31));
             }
         }
         break;
@@ -75,13 +77,13 @@ void task_and_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         if (n1 == n2) {
             for (i = 0; i<n; i++) {
                 uint32_t u = LOGICAL(s1)[i] | LOGICAL(s2)[i];
-                LOGICAL(ans)[i] = u & ~ (u << 31);
+                lans[i] = u & ~ (u << 31);
             }
         }
         else {
             mod_iterate(n1,n2,i1,i2) {
                 uint32_t u = LOGICAL(s1)[i1] | LOGICAL(s2)[i2];
-                LOGICAL(ans)[i] = u & ~ (u << 31);
+                lans[i] = u & ~ (u << 31);
             }
         }
         break;
@@ -440,31 +442,53 @@ static SEXP binaryLogic2(int code, SEXP s1, SEXP s2)
 #define OP_ALL 1
 #define OP_ANY 2
 
-static int checkValues(int op, int na_rm, int *x, int n)
+static int any_all_check (int op, int na_rm, int *x, int n)
 {
-    int has_na = 0;
+    if (na_rm) {
 
-    if (op == OP_ANY) {
-        for (int i = 0; i<n; i++) {
-            if (x[i]!=FALSE) {
-                if (x[i]==TRUE) 
+        if (op == OP_ANY) {
+            unsigned res = 0;
+            for (int i = 0; i<n; i++) {
+                res |= x[i];
+                if (res & 1)
                     return TRUE;
-                else 
-                    has_na = 1;
             }
+            return FALSE;
         }
-        return has_na && !na_rm ? NA_LOGICAL : FALSE;
-    }
-    else { /* OP_ALL */
-        for (int i = 0; i<n; i++) {
-            if (x[i]!=TRUE) {
-                if (x[i]==FALSE) 
+        else { /* OP_ALL */
+            unsigned res = 1;
+            for (int i = 0; i<n; i++) {
+                res &= x[i] | (x[i]>>31);
+                if (! (res & 1))
                     return FALSE;
-                else 
-                    has_na = 1;
             }
+            return TRUE;
         }
-        return has_na && !na_rm ? NA_LOGICAL : TRUE;
+
+    }
+    else { /* !na_rm */
+
+        if (op == OP_ANY) {
+            unsigned res = 0;
+            for (int i = 0; i<n; i++) {
+                res |= x[i];
+                if (res & 1)
+                    return TRUE;
+            }
+            return res>>31 ? NA_LOGICAL : FALSE;
+        }
+        else { /* OP_ALL */
+            unsigned res = 1;
+            unsigned na = 0;
+            for (int i = 0; i<n; i++) {
+                res &= x[i] | (x[i]>>31);
+                if (! (res & 1))
+                    return FALSE;
+                na |= x[i];
+            }
+            return na>>31 ? NA_LOGICAL : TRUE;
+        }
+
     }
 }
 
@@ -496,7 +520,7 @@ static SEXP do_fast_allany (SEXP call, SEXP op, SEXP arg, SEXP env,
         if (LENGTH(arg) == 1) /* includes variant return of AND or OR of vec */
             val = LOGICAL(arg)[0];
         else
-            val = checkValues (PRIMVAL(op), FALSE, LOGICAL(arg), LENGTH(arg));
+            val = any_all_check (PRIMVAL(op), FALSE, LOGICAL(arg), LENGTH(arg));
     }
 
     return ScalarLogicalMaybeConst(val);
@@ -541,7 +565,7 @@ static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
 			    type2char(TYPEOF(t)));
 	    t = coerceVector(t, LGLSXP);
 	}
-	val = checkValues(PRIMVAL(op), narm, LOGICAL(t), LENGTH(t));
+	val = any_all_check (PRIMVAL(op), narm, LOGICAL(t), LENGTH(t));
         if (val == NA_LOGICAL)
             has_na = 1;
         else {
