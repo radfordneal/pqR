@@ -1635,27 +1635,60 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
     int i, j;                 /* Row and column indexes */
     int k;                    /* Index going sequentially through whole matrix*/
 
+    if (p == 0) 
+        return;
+
     HELPERS_SETUP_OUT (n>500 ? 4 : n>50 ? 5 : 6);
 
     if (TYPEOF(x) == REALSXP) {
         double *rx = REAL(x);
-        long double sum;
+        int e;
         k = 0;
         j = 0;
         if (keepNA) {
-            while (j < p) {
-                if (avail < k+n) HELPERS_WAIT_IN1 (avail, k+n-1, np);
+            if (p & 1) {  /* sum first column if there are an odd number */
+                long double sum;
+                e = k + n;
+                if (avail < e) HELPERS_WAIT_IN1 (avail, e-1, np);
                 sum = (n & 1) ? rx[k++] : 0.0;
-                for (i = n - (n & 1); i > 0; i -= 2) { 
+                while (k < e) {
                     sum += rx[k++];
                     sum += rx[k++];
                 }
                 a[j] = !Means ? sum : sum/n;
                 HELPERS_NEXT_OUT (j);
             }
+            while (j < p) {  /* sum pairs of columns */
+                long double sum, sum2;
+                e = k + 2*n;
+                if (avail < e) HELPERS_WAIT_IN1 (avail, e-1, np);
+                if (n & 1) {
+                    sum = rx[k];
+                    sum2 = rx[k+n];
+                    k += 1;
+                }
+                else {
+                    sum = 0;
+                    sum2 = 0;
+                }
+                while (k+n < e) {
+                    sum += rx[k];
+                    sum2 += rx[k+n];
+                    k += 1;
+                    sum += rx[k];
+                    sum2 += rx[k+n];
+                    k += 1;
+                }
+                k = e;
+                a[j] = !Means ? sum : sum/n;
+                HELPERS_NEXT_OUT (j);
+                a[j] = !Means ? sum2 : sum2/n;
+                HELPERS_NEXT_OUT (j);
+            }
         }
         else { /* ! keepNA */
             if (!Means) {
+                long double sum;
                 while (j < p) {
                     if (avail < k+n) HELPERS_WAIT_IN1 (avail, k+n-1, np);
                     for (sum = 0.0, i = n; i > 0; i--, k++)
@@ -1665,6 +1698,7 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
                 }
             }
             else {
+                long double sum;
                 while (j < p) {
                     if (avail < k+n) HELPERS_WAIT_IN1 (avail, k+n-1, np);
                     for (cnt = 0, sum = 0.0, i = n; i > 0; i--, k++)
@@ -1745,10 +1779,11 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
     if (TYPEOF(x) == REALSXP) {
 
         i = 0;
-        while (i < n) {
+        while (i < n) { /* sums up to rowSums_together rows each time around */
 
             long double sums[rowSums_together];
             int cnts[rowSums_together];
+
             double *rx, *rx2;
             long double *s;
             int k, u;
@@ -1759,30 +1794,46 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
             if (u > rowSums_together) u = rowSums_together;
 
             if (keepNA) { /* uses unwrapped loop to sum two columns at once */
+
                 if (p & 1) {
-                    for (k = u, s = sums, rx2 = rx; k > 0; k--, s++, rx2++) 
-                        *s = *rx2;
+                    for (k = 0, s = sums; k < u; k++, s++) *s = rx[k];
                     rx += n;
                 }
                 else
-                    for (k = u, s = sums; k > 0; k--, s++) 
-                        *s = 0.0;
+                    for (k = 0, s = sums; k < u; k++, s++) *s = 0.0;
+
                 for (j = p - (p & 1); j > 0; j -= 2) {
-                    for (k = u, s = sums, rx2 = rx; k > 0; k--, s++, rx2++) {
+                    rx2 = rx;
+                    s = sums;
+                    if (u & 1) {
                         *s += *rx2;
                         *s += *(rx2+n);
+                        rx2 += 1;
+                        s += 1;
+                    } 
+                    for (k = u & 1; k < u; k += 2) {
+                        long double t0 = *s;
+                        long double t1 = *(s+1);
+                        t0 += *rx2;
+                        t1 += *(rx2+1);
+                        t0 += *(rx2+n);
+                        t1 += *(rx2+n+1);
+                        *s = t0;
+                        *(s+1) = t1;
+                        rx2 += 2;
+                        s += 2;
                     }
                     rx += 2*n;
                 }
+
                 if (!Means)
-                    for (k = u, s = sums; k > 0; k--, a++, s++) 
-                        *a = *s;
+                    for (k = 0, s = sums; k < u; k++, s++) *a++ = *s;
                 else
-                    for (k = u, s = sums; k > 0; k--, a++, s++)
-                        *a = (*s)/p;
+                    for (k = 0, s = sums; k < u; k++, s++) *a++ = *s / p;
             }
 
             else { /* ! keepNA */
+
                 if (!Means) {
                     s = sums;
                     for (k = u; k > 0; k--, s++) 
