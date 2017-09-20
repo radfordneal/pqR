@@ -2587,6 +2587,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                not evaluated with PENDING_OK */
             R_fast_sub_into = varval;
             R_fast_sub_value = rhs;
+            R_variant_result = 0;
             newval = CALL_PRIMFUN (call, fn, CDDR(lhs), rho, 
                                    VARIANT_FAST_SUBASSIGN);
             UNPROTECT(3);
@@ -2643,26 +2644,31 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
         }
         s[depth].expr = var;
 
-        /* Note: In code below, promises with the value already filled in
-                 are used to 'quote' values passsed as arguments, so they 
-                 will not be changed when the arguments are evaluated, and 
-                 so deparsed error messages will have the source expression.
-                 These promises should not be recycled, since they may be 
-                 saved in warning messages stored for later display.  */
+        /* Note: In code below, promises with the value already filled
+                 in are used to 'quote' values passsed as arguments,
+                 so they will not be changed when the arguments are
+                 evaluated, and so deparsed error messages will have
+                 the source expression.  These promises should not be
+                 recycled, since they may be saved in warning messages
+                 stored for later display.  */
 
-        /* For each level except the outermost, evaluate and save the value
-           of the expression as it is before the assignment.  Also, ask if
-           it is an unshared subset of the next larger expression (and all
-           larger ones).  If it is not known to be part of the larger 
-           expressions, we do a top-level duplicate of it. */
+        /* For each level except the outermost, evaluate and save the
+           value of the expression as it is before the assignment.
+           Also, ask if it is an unshared subset of the next larger
+           expression (and all larger ones).  If it is not known to be
+           part of the larger expressions, we do a top-level duplicate
+           of it.
+
+           For efficiency, if $ for [[ is defined as a special
+           primitive, it is done specially, without going through
+           'eval', and for $ without creating a promise for the value
+           subsetted if it is self-evaluating (see do_subset3 for
+           further info). */
 
         s[depth].value = varval;
         s[depth].in_top = 1;
 
         for (d = depth-1; d > 0; d--) {
-
-            SEXP prom = mkPROMISE(s[d+1].expr,rho);
-            SET_PRVALUE(prom,s[d+1].value);
 
             /* We'll need this value for the subsequent replacement
                operation, so make sure it doesn't change.  Incrementing
@@ -2673,10 +2679,37 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
             SET_NAMEDCNT_NOT_0(s[d+1].value);
 
-            e = LCONS (CAR(s[d].expr), CONS (prom, s[d].fetch_args));
-            PROTECT(e);
+            SEXP op = CAR(s[d].expr);
+            SEXP prom;
+
+            if (op == R_DollarSymbol || op == R_Bracket2Symbol) {
+                fn = FINDFUN (op, rho);
+                if (TYPEOF(fn) == SPECIALSXP && !RTRACE(fn)) {
+                    SEXP args;
+                    if (op == R_DollarSymbol && SELF_EVAL(TYPEOF(s[d+1].value)))
+                        args = CONS (s[d+1].value, s[d].fetch_args);
+                    else {
+                        prom = mkPROMISE(s[d+1].expr,rho);
+                        SET_PRVALUE(prom,s[d+1].value);
+                        args = CONS (prom, s[d].fetch_args);
+                    }
+                    PROTECT(args);
+                    R_variant_result = 0;
+                    e = CALL_PRIMFUN (call, fn, args, rho, 
+                                      VARIANT_QUERY_UNSHARED_SUBSET);
+                    UNPROTECT(1);
+                    goto evald;
+                }
+                UNPROTECT(1);
+            }
+
+            prom = mkPROMISE(s[d+1].expr,rho);
+            SET_PRVALUE(prom,s[d+1].value);
+            PROTECT (e = LCONS (op, CONS (prom, s[d].fetch_args)));
             e = evalv (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
             UNPROTECT(1);
+
+          evald:
             s[d].in_top = 
               s[d+1].in_top == 1 ? R_variant_result : 0;  /* 0, 1, or 2 */
             R_variant_result = 0;

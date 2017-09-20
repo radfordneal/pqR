@@ -2034,7 +2034,14 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        overhead of allocation and calling of DispatchOrEval. */
 
     if (from != R_DotsSymbol) {
-        from = evalv (from, env, VARIANT_ONE_NAMED | VARIANT_UNCLASS);
+
+        /* Evaluate 'from', but bypassing eval if it is self-evaluating,
+           which occurs when called from set_subset for things like
+           L$a[2] <- 3.  Bypassing eval is faster, and more importantly,
+           avoids setting NAMEDCNT to its maximum. */
+
+        from = SELF_EVAL(TYPEOF(from)) ? from 
+                : evalv (from, env, VARIANT_ONE_NAMED | VARIANT_UNCLASS);
         if (isObject(from) && ! (R_variant_result & VARIANT_UNCLASS_FLAG)) {
             PROTECT(from);
             argsevald = 1;
