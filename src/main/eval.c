@@ -2085,8 +2085,7 @@ static void applydefine (SEXP call, SEXP op, SEXP expr, SEXP rhs, SEXP rho)
 		  PRIMVAL(op)==1 || PRIMVAL(op)==3, tmploc);
 
     PROTECT(lhs);
-    PROTECT(rhsprom = mkPROMISE(CADDR(call), rho));
-    SET_PRVALUE(rhsprom, rhs);
+    PROTECT(rhsprom = mkValuePROMISE(CADDR(call), rhs));
     WAIT_UNTIL_COMPUTED(rhs);
 
     while (isLanguage(CADR(expr))) {
@@ -2593,12 +2592,10 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             UNPROTECT(3);
         }
         else {
-            PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
             if (POP_IF_TOP_OF_STACK(rhs)) 
                 rhs = DUP_STACK_VALUE(rhs);
-            SET_PRVALUE (rhsprom, rhs);
-            PROTECT (lhsprom = mkPROMISE(CADR(lhs), rho));
-            SET_PRVALUE (lhsprom, varval);
+            PROTECT (rhsprom = mkValuePROMISE(rhs_uneval, rhs));
+            PROTECT (lhsprom = mkValuePROMISE(CADR(lhs), varval));
             PROTECT(e = replaceCall (assgnfcn, lhsprom, CDDR(lhs), rhsprom));
             newval = eval(e,rho);
             UNPROTECT(6);
@@ -2689,8 +2686,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                     if (op == R_DollarSymbol && SELF_EVAL(TYPEOF(s[d+1].value)))
                         args = CONS (s[d+1].value, s[d].fetch_args);
                     else {
-                        prom = mkPROMISE(s[d+1].expr,rho);
-                        SET_PRVALUE(prom,s[d+1].value);
+                        prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
                         args = CONS (prom, s[d].fetch_args);
                     }
                     PROTECT(args);
@@ -2703,8 +2699,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                 UNPROTECT(1);
             }
 
-            prom = mkPROMISE(s[d+1].expr,rho);
-            SET_PRVALUE(prom,s[d+1].value);
+            prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
             PROTECT (e = LCONS (op, CONS (prom, s[d].fetch_args)));
             e = evalv (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
             UNPROTECT(1);
@@ -2734,12 +2729,10 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             e = R_NilValue;
         }
         else {
-            PROTECT(rhsprom = mkPROMISE(rhs_uneval, rho));
             if (POP_IF_TOP_OF_STACK(rhs)) 
                 rhs = DUP_STACK_VALUE(rhs);
-            SET_PRVALUE(rhsprom, rhs);
-            PROTECT (lhsprom = mkPROMISE(s[1].expr, rho));
-            SET_PRVALUE (lhsprom, s[1].value);
+            PROTECT(rhsprom = mkValuePROMISE(rhs_uneval, rhs));
+            PROTECT (lhsprom = mkValuePROMISE(s[1].expr, s[1].value));
             /* original args, no value cell at end, assgnfcn set above*/
             PROTECT(e = replaceCall (assgnfcn, lhsprom, 
                                      s[0].store_args, rhsprom));
@@ -2776,14 +2769,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
                 /* Put value into the next-higher object. */
 
-                PROTECT(newval);
-                rhsprom = mkPROMISE (e, rho);
-                SET_PRVALUE (rhsprom, newval);
-                UNPROTECT(1);
-                PROTECT(rhsprom);
-
-                PROTECT (lhsprom = mkPROMISE(s[d+1].expr, rho));
-                SET_PRVALUE (lhsprom, s[d+1].value);
+                PROTECT (rhsprom = mkValuePROMISE (e, newval));
+                PROTECT (lhsprom = mkValuePROMISE (s[d+1].expr, s[d+1].value));
                 assgnfcn = installAssignFcnName(CAR(s[d].expr));
                 SETCAR (s[d].value_arg, rhsprom);
                 PROTECT(e = LCONS (assgnfcn, CONS(lhsprom,s[d].store_args)));

@@ -382,6 +382,7 @@
  Rf_mkCharMulti
  Rf_mkPROMISE
  Rf_mkSYMSXP
+ Rf_mkValuePROMISE
  Rf_name2col
  Rf_nonsubsettable_error
  Rf_no_dim_attributes

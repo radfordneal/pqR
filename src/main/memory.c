@@ -1570,10 +1570,10 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
     return (newrho);
 }
 
+
 /* mkPROMISE protects its arguments.
 
-   NAMEDCNT for the new promise is set to 1, and 'expr' has its NAMEDCNT
-   set to the maximum. */
+   NAMEDCNT for 'expr' is set to set to the maximum. */
 
 SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 {
@@ -1586,11 +1586,39 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     }
 
     SET_NAMEDCNT_MAX(expr);
-    /* SET_NAMEDCNT_1(s); */
 
     UPTR_FROM_SEXP(s)->u.promsxp.value = R_UnboundValue;
     PRCODE(s) = Rf_chk_valid_SEXP(expr);
     PRENV(s) = Rf_chk_valid_SEXP(rho);
+    PRSEEN(s) = 0;
+
+    return s;
+}
+
+
+/* mkValuePROMISE protects its arguments.  This creates a promise with
+   value already filled in, and the environment set to R_NilValues (as
+   is done when a promise is forced).  It is suitable when the purpose
+   is to "quote" the value (with respect to later evaluation of the
+   promise).
+
+   NAMEDCNT for 'expr' is set to set to the maximum. */
+
+SEXP attribute_hidden mkValuePROMISE(SEXP expr, SEXP value)
+{
+    SEXP s;
+
+    if ((s = alloc_fast(SGGC_PROM_KIND,PROMSXP)) == R_NoObject) {
+        PROTECT2(expr,value);
+        s = alloc_obj(PROMSXP,1);
+        UNPROTECT(2);
+    }
+
+    SET_NAMEDCNT_MAX(expr);
+
+    UPTR_FROM_SEXP(s)->u.promsxp.value = Rf_chk_valid_SEXP(value);
+    PRCODE(s) = Rf_chk_valid_SEXP(expr);
+    PRENV(s) = R_NilValue;
     PRSEEN(s) = 0;
 
     return s;
