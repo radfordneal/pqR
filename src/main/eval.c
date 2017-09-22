@@ -2604,7 +2604,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
     else {  /* the general case, for any depth */
 
-        SEXP v, op, prom, fetch_args;
+        SEXP v, b, op, prom, fetch_args;
         int d;
 
         /* Structure recording information on expressions at all levels of 
@@ -2660,10 +2660,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
         for (d = depth-1; d > 0; d--) {
 
             fetch_args = R_NilValue;
-            PROTECT (s[d].store_args =
-                      cons_with_tag (R_NilValue, R_NilValue, R_ValueSymbol));
+            s[d].store_args = R_NilValue;
             promiseArgsTwo(CDDR(s[d].expr), rho, &fetch_args, &s[d].store_args);
-            UNPROTECT(1);
             PROTECT(s[d].store_args);
             PROTECT(fetch_args);
 
@@ -2763,9 +2761,14 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                 PROTECT (rhsprom = mkValuePROMISE (e, newval));
                 PROTECT (lhsprom = mkValuePROMISE (s[d+1].expr, s[d+1].value));
                 assgnfcn = installAssignFcnName(CAR(s[d].expr));
-                for (v = s[d].store_args; CDR(v) != R_NilValue; v = CDR(v)) ;
-                SETCAR (v, rhsprom);
-                PROTECT(e = LCONS (assgnfcn, CONS(lhsprom,s[d].store_args)));
+                b = cons_with_tag (rhsprom, R_NilValue, R_ValueSymbol);
+                if (s[d].store_args == R_NilValue)
+                    s[d].store_args = b;
+                else {
+                    for (v = s[d].store_args; CDR(v)!=R_NilValue; v = CDR(v)) ;
+                    SETCDR(v, b);
+                }
+                PROTECT(e = LCONS (assgnfcn, CONS(lhsprom, s[d].store_args)));
 
                 newval = eval(e,rho);
 
