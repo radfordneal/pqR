@@ -346,6 +346,8 @@
  Rf_deparse1s
  Rf_dotdotdot_error
  Rf_dpptr
+ Rf_dup_arg_list
+ Rf_dup_top_level
  Rf_evalList
  Rf_evalListKeepMissing
  Rf_evalListUnshared

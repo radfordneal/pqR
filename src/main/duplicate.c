@@ -722,7 +722,7 @@ void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
 }
 
 
-/* Duplicates object, including attributes, except that a LISTSXP or EXPRSXP 
+/* Duplicates object, including attributes, except that a VECSXP or EXPRSXP 
    is duplicated at the top level only, and the NAMEDCNT field of each element 
    is incremented to account for the extra reference.  The argument needn't be 
    protected by the caller. */
@@ -744,5 +744,46 @@ SEXP attribute_hidden dup_top_level (SEXP x)
     DUPLICATE_ATTRIB(r,x);
     UNPROTECT(2);
 
+    return r;
+}
+
+
+/* Duplicate an argument list.  Does not adjust NAMEDCNT, and does not
+   duplicate any attributes of binding cells. */
+
+SEXP attribute_hidden dup_arg_list (SEXP x)
+{
+    SEXP r;
+
+    if (x == R_NilValue)
+        return x;
+
+    PROTECT(x);
+
+    if (CDR(x) == R_NilValue) 
+
+        r = cons_with_tag (CAR(x), R_NilValue, TAG(x));
+
+    else if (CDDR(x) == R_NilValue)
+
+        r = cons_with_tag (CAR(x), 
+                           cons_with_tag (CADR(x), R_NilValue, TAG(CDR(x))),
+                           TAG(x));
+    else {
+
+        SEXP s, t, u;
+        PROTECT (r = cons_with_tag (CAR(x), R_NilValue, TAG(x)));
+        t = r;
+        s = CDR(x);
+        do { 
+            u = cons_with_tag (CAR(s), R_NilValue, TAG(s));
+            SETCDR(t,u);
+            t = u;
+            s = CDR(s);
+        } while (s != R_NilValue);
+        UNPROTECT(1);
+    }
+
+    UNPROTECT(1);
     return r;
 }

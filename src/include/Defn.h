@@ -1223,6 +1223,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define DispatchGroup		Rf_DispatchGroup
 # define DispatchOrEval		Rf_DispatchOrEval
 # define dotdotdot_error	Rf_dotdotdot_error
+# define dup_arg_list		Rf_dup_arg_list
 # define dup_top_level		Rf_dup_top_level
 # define dynamicfindVar		Rf_dynamicfindVar
 # define EncodeRaw              Rf_EncodeRaw
@@ -1437,6 +1438,7 @@ SEXP deparse1s(SEXP call);
 int DispatchAnyOrEval(SEXP, SEXP, const char *, SEXP, SEXP, SEXP*, int, int);
 int DispatchOrEval(SEXP, SEXP, const char *, SEXP, SEXP, SEXP*, int, int);
 int DispatchGroup(const char *, SEXP,SEXP,SEXP,SEXP,SEXP*);
+SEXP dup_arg_list(SEXP);
 SEXP dup_top_level(SEXP);
 SEXP duplicated(SEXP, Rboolean);
 SEXP duplicated3(SEXP, SEXP, Rboolean);

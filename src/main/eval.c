@@ -2612,11 +2612,15 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
            whole lhs expression. */
 
         struct { 
-            SEXP store_args;  /* Arg list for store, shares promises w. fetch */
             SEXP expr;        /* Expression at this level */
             SEXP value;       /* Value of expr, may later change */
-            char in_top;      /* 1 or 2 if value is an unshared part */
-        } s[depth+1];         /*   of the value at top level, else 0 */
+            SEXP store_args;  /* Arg list for store; depth 0 special, else  */
+                              /*   LISTSXP or NILSXP - pairlist of promises */
+                              /*   PROMSXP - promise for single argument    */
+                              /*   R_NoObject - take args from CDDR(expr)   */
+            int in_top;       /* 1 or 2 if value is an unshared part of the */
+                              /*   value at top level, else 0               */
+        } s[depth+1];         
 
         /* For each level from 1 to depth, store the lhs expression at that
            level. */
@@ -2659,9 +2663,11 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
         for (d = depth-1; d > 0; d--) {
 
-            fetch_args = R_NilValue;
-            s[d].store_args = R_NilValue;
-            promiseArgsTwo(CDDR(s[d].expr), rho, &fetch_args, &s[d].store_args);
+            fetch_args = promiseArgs (CDDR(s[d].expr), rho);
+            if (CDR(fetch_args) == R_NilValue && TAG(fetch_args) == R_NilValue)
+                s[d].store_args = CAR(fetch_args);
+            else
+                s[d].store_args = dup_arg_list (fetch_args);
             PROTECT(s[d].store_args);
             PROTECT(fetch_args);
 
@@ -2764,6 +2770,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                 b = cons_with_tag (rhsprom, R_NilValue, R_ValueSymbol);
                 if (s[d].store_args == R_NilValue)
                     s[d].store_args = b;
+                else if (TYPEOF(s[d].store_args) != LISTSXP) /* one arg */
+                    s[d].store_args = CONS (s[d].store_args, b);
                 else {
                     for (v = s[d].store_args; CDR(v)!=R_NilValue; v = CDR(v)) ;
                     SETCDR(v, b);
