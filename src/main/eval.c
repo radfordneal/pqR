@@ -2605,7 +2605,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
     else {  /* the general case, for any depth */
 
         SEXP v, b, op, prom, fetch_args;
-        int d;
+        int d, fast;
 
         /* Structure recording information on expressions at all levels of 
            the lhs.  Level 'depth' is the ultimate variable; level 0 is the
@@ -2617,7 +2617,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             SEXP store_args;  /* Arg list for store; depth 0 special, else  */
                               /*   LISTSXP or NILSXP - pairlist of promises */
                               /*   PROMSXP - promise for single argument    */
-                              /*   R_NoObject - take args from CDDR(expr)   */
+                              /*   R_NoObject - one arg from CADDR(expr)    */
             int in_top;       /* 1 or 2 if value is an unshared part of the */
                               /*   value at top level, else 0               */
         } s[depth+1];         
@@ -2663,11 +2663,28 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
         for (d = depth-1; d > 0; d--) {
 
-            fetch_args = promiseArgs (CDDR(s[d].expr), rho);
-            if (CDR(fetch_args) == R_NilValue && TAG(fetch_args) == R_NilValue)
-                s[d].store_args = CAR(fetch_args);
-            else
-                s[d].store_args = dup_arg_list (fetch_args);
+            op = CAR(s[d].expr);
+
+            fast = 0;
+            if (op == R_DollarSymbol || op == R_Bracket2Symbol) {
+                fn = FINDFUN (op, rho);
+                fast = TYPEOF(fn)==SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn);
+            }
+
+            if (fast && op == R_DollarSymbol 
+                     && CDDR(s[d].expr) != R_NilValue 
+                     && CDR(CDDR(s[d].expr)) == R_NilValue) {
+                fetch_args = CDDR(s[d].expr);
+                s[d].store_args = R_NoObject;
+            }
+            else {
+                fetch_args = promiseArgs (CDDR(s[d].expr), rho);
+                if (CDR(fetch_args)==R_NilValue && TAG(fetch_args)==R_NilValue)
+                    s[d].store_args = CAR(fetch_args);
+                else
+                    s[d].store_args = dup_arg_list (fetch_args);
+            }
+
             PROTECT(s[d].store_args);
             PROTECT(fetch_args);
 
@@ -2680,26 +2697,20 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
             SET_NAMEDCNT_NOT_0(s[d+1].value);
 
-            op = CAR(s[d].expr);
-
-            if (op == R_DollarSymbol || op == R_Bracket2Symbol) {
-                fn = FINDFUN (op, rho);
-                if (TYPEOF(fn)==SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn)) {
-                    R_fast_sub_var = s[d+1].value;
-                    R_variant_result = 0;
-                    e = CALL_PRIMFUN (call, fn, fetch_args, rho, 
-                          VARIANT_FAST_SUB /* implies QUERY_UNSHARED_SUBSET */);
-                    UNPROTECT(1);  /* fetch_args */
-                    goto evald;
-                }
+            if (fast) {
+                R_fast_sub_var = s[d+1].value;
+                R_variant_result = 0;
+                e = CALL_PRIMFUN (call, fn, fetch_args, rho, 
+                      VARIANT_FAST_SUB /* implies QUERY_UNSHARED_SUBSET */);
+                UNPROTECT(1);  /* fetch_args */
+            }
+            else {
+                prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
+                PROTECT (e = LCONS (op, CONS (prom, fetch_args)));
+                e = evalv (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
+                UNPROTECT(2);  /* e, fetch_args */
             }
 
-            prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
-            PROTECT (e = LCONS (op, CONS (prom, fetch_args)));
-            e = evalv (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
-            UNPROTECT(2);  /* e, fetch_args */
-
-          evald:
             s[d].in_top = 
               s[d+1].in_top == 1 ? R_variant_result : 0;  /* 0, 1, or 2 */
             R_variant_result = 0;
@@ -2768,7 +2779,9 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                 PROTECT (lhsprom = mkValuePROMISE (s[d+1].expr, s[d+1].value));
                 assgnfcn = installAssignFcnName(CAR(s[d].expr));
                 b = cons_with_tag (rhsprom, R_NilValue, R_ValueSymbol);
-                if (s[d].store_args == R_NilValue)
+                if (s[d].store_args == R_NoObject)
+                    s[d].store_args = CONS (CADDR(s[d].expr), b);
+                else if (s[d].store_args == R_NilValue)
                     s[d].store_args = b;
                 else if (TYPEOF(s[d].store_args) != LISTSXP) /* one arg */
                     s[d].store_args = CONS (s[d].store_args, b);
