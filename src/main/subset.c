@@ -1652,25 +1652,38 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
 
 static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    SEXP ans;
+    int fast_sub = VARIANT_KIND(variant) == VARIANT_FAST_SUB;
     int argsevald = 0;
-
+    SEXP ans;
+        
     /* If we can easily determine that this will be handled by
        subset2_dflt, evaluate the array with VARIANT_UNCLASS and
        VARIANT_PENDING_OK, and perhaps evaluate indexes with
        VARIANT_SCALAR_STACK_OK (should be safe, since there will be
        no later call of eval). */
 
-    if (args != R_NilValue && CAR(args) != R_DotsSymbol) {
-        SEXP array = CAR(args);
-        SEXP ixlist = CDR(args);
-        PROTECT(array = evalv (array, rho, VARIANT_UNCLASS | 
-                                           VARIANT_PENDING_OK));
-        int obj = isObject(array);
-        if (R_variant_result) {
-            obj = 0;
-            R_variant_result = 0;
+    if (fast_sub || args != R_NilValue && CAR(args) != R_DotsSymbol) {
+
+        SEXP array, ixlist;
+        int obj;
+
+        if (fast_sub) {
+            ixlist = args;
+            PROTECT(array = R_fast_sub_var);
+            obj = isObject(array);
         }
+        else {
+            ixlist = CDR(args);
+            array = CAR(args);
+            PROTECT(array = evalv (array, rho, VARIANT_UNCLASS | 
+                                               VARIANT_PENDING_OK));
+            obj = isObject(array);
+            if (R_variant_result) {
+                obj = 0;
+                R_variant_result = 0;
+            }
+        }
+
         if (obj) {
             args = CONS(array,ixlist);
             argsevald = -1;
@@ -1722,6 +1735,14 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             return ON_SCALAR_STACK(r) ? PUSH_SCALAR(r) : r;
         }
     }
+    else {
+        if (fast_sub) {
+            args = CONS (R_fast_sub_var, args);
+            argsevald = -1;
+        }
+    }
+
+    PROTECT(args);
 
     /* If the first argument is an object and there is an */
     /* appropriate method, we dispatch to that method, */
@@ -1733,23 +1754,31 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 /*     if(DispatchAnyOrEval(call, op, "[[", args, rho, &ans, 0, 0)) */
 	if (NAMEDCNT_GT_0(ans))
 	    SET_NAMEDCNT_MAX(ans);    /* IS THIS NECESSARY? */
-	return(ans);
+    }
+    else {
+
+        /* Method dispatch has failed, we now */
+        /* run the generic internal code. */
+
+        UNPROTECT(1);
+        PROTECT(ans);
+
+        SEXP x = CAR(ans);
+        args = CDR(ans);
+    
+        if (args == R_NilValue || TAG(args) != R_NilValue)
+            ans = do_subset2_dflt_x (call, op, x, R_NoObject, R_NoObject, 
+                                     args, rho, variant);
+        else if (CDR(args) == R_NilValue || TAG(CDR(args)) != R_NilValue)
+            ans = do_subset2_dflt_x (call, op, x, CAR(args), R_NoObject,
+                                     CDR(args), rho, variant);
+        else
+            ans = do_subset2_dflt_x (call, op, x, CAR(args), CADR(args),
+                                     CDDR(args), rho, variant);
     }
 
-    /* Method dispatch has failed, we now */
-    /* run the generic internal code. */
-    SEXP x = CAR(ans);
-    args = CDR(ans);
-
-    if (args == R_NilValue || TAG(args) != R_NilValue)
-        return do_subset2_dflt_x (call, op, x, R_NoObject, R_NoObject, 
-                                  args, rho, variant);
-    else if (CDR(args) == R_NilValue || TAG(CDR(args)) != R_NilValue)
-        return do_subset2_dflt_x (call, op, x, CAR(args), R_NoObject,
-                                  CDR(args), rho, variant);
-    else
-        return do_subset2_dflt_x (call, op, x, CAR(args), CADR(args),
-                                  CDDR(args), rho, variant);
+    UNPROTECT(1);
+    return ans;
 }
 
 SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -1790,7 +1819,8 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
                     ans = VECTOR_ELT(x, offset);
                     if (NAMEDCNT_GT_0(x))
                         SET_NAMEDCNT_NOT_0(ans);
-                    if (VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET 
+                    if ((VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET 
+                          || VARIANT_KIND(variant) == VARIANT_FAST_SUB)
                          && !NAMEDCNT_GT_1(x) && !NAMEDCNT_GT_1(ans))
                         R_variant_result = 1;
                 }
@@ -1969,7 +1999,8 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
 	ans = VECTOR_ELT(x, offset);
 	if (max_named > 0)
             SET_NAMEDCNT_NOT_0(ans);
-        if (VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET 
+        if ((VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET 
+              || VARIANT_KIND(variant) == VARIANT_FAST_SUB)
              && max_named <= 1 && !NAMEDCNT_GT_1(ans))
             R_variant_result = 1;
     }
@@ -2016,9 +2047,26 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXP name = R_NilValue;
     int argsevald = 0;
 
-    checkArity(op, args);
-    from = CAR(args);
-    what = CADR(args);
+    if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
+
+        /* Fast interface: object to be subsetted comes already evaluated. */
+
+        what = CAR(args);
+        from = R_fast_sub_var;
+        argsevald = 1;
+    }
+
+    else {  /* regular SPECIAL interface */
+
+        checkArity(op, args);
+        what = CADR(args);
+        from = CAR(args);
+
+        if (from != R_DotsSymbol) {
+            from = evalv (from, env, VARIANT_ONE_NAMED | VARIANT_UNCLASS);
+            argsevald = 1;
+        }
+    }
 
     if (TYPEOF(what) == PROMSXP)
         what = PRCODE(what);
@@ -2030,22 +2078,10 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 	errorcall(call, _("invalid subscript type '%s'"), 
                         type2char(TYPEOF(what)));
 
-    /* Handle usual case with no "..." and not from an object quickly, without
-       overhead of allocation and calling of DispatchOrEval. */
-
-    if (from != R_DotsSymbol) {
-
-        /* Evaluate 'from', but bypassing eval if it is self-evaluating,
-           which occurs when called from set_subset for things like
-           L$a[2] <- 3.  Bypassing eval is faster, and more importantly,
-           avoids setting NAMEDCNT to its maximum. */
-
-        from = SELF_EVAL(TYPEOF(from)) ? from 
-                : evalv (from, env, VARIANT_ONE_NAMED | VARIANT_UNCLASS);
-        if (isObject(from) && ! (R_variant_result & VARIANT_UNCLASS_FLAG)) {
+    if (argsevald) {
+        if (isObject(from) && ! (R_variant_result & VARIANT_UNCLASS_FLAG))
             PROTECT(from);
-            argsevald = 1;
-        } else {
+        else {
             R_variant_result = 0;
             return R_subset3_dflt (from, string, name, call, variant);
         }
@@ -2204,7 +2240,8 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
       found_veclist:
         if (NAMEDCNT_GT_0(x) && NAMEDCNT_EQ_0(y))
             SET_NAMEDCNT(y,1);
-        if (VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET 
+        if ((VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET 
+               || VARIANT_KIND(variant) == VARIANT_FAST_SUB) 
              && !NAMEDCNT_GT_1(x) && !NAMEDCNT_GT_1(y))
             R_variant_result = 1;
 
@@ -2228,8 +2265,9 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
                  y = forcePromise(y);
              else {
                  SET_NAMEDCNT_NOT_0(y);
-                 if (VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET
-                       && !NAMEDCNT_GT_1(y))
+                 if ((VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET 
+                        || VARIANT_KIND(variant) == VARIANT_FAST_SUB) 
+                      && !NAMEDCNT_GT_1(y))
                      R_variant_result = R_binding_cell == R_NilValue ? 2 : 1;
              }
         }
@@ -2252,9 +2290,9 @@ attribute_hidden FUNTAB R_FunTab_subset[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {"[",		do_subset,	1,	1000,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
-{"[[",		do_subset2,	2,	1000,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
-{".el.methods",	do_subset2,	0,	1000,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
-{"$",		do_subset3,	3,	1000,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
+{"[[",		do_subset2,	2,	101000,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
+{".el.methods",	do_subset2,	0,	101000,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
+{"$",		do_subset3,	3,	101000,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
 
 {".subset",	do_subset_dflt,	1,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
 {".subset2",	do_subset2_dflt,2,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},

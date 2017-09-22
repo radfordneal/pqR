@@ -594,9 +594,12 @@ typedef struct {
                                        the first argument.  If set to 2, any
                                        change still must be propagated upwards*/
 
-#define VARIANT_FAST_SUBASSIGN 0x40 /* Call of a subassign primitive using the
-                                       fast interface (value, into, indexes...),
-                                       'value' and 'into' already evaluated */
+#define VARIANT_FAST_SUB 0x40 /* Call of a subassign/subset primitive using the
+                                 fast interface:  var value in R_fast_sub_var;
+                                 indexes as args; for subassign, replacement
+                                 value (evaluated) in R_fast_sub_replacement.
+                                 When used for subsetting, VARIANT_FAST_SUB
+                                 implies VARIANT_QUERY_UNSHARED_SUBSET */
 
 /* Variant flags that are passed on. */
 
@@ -944,11 +947,12 @@ static inline SEXP INTERNAL_fun (SEXP x)
 
 
 /* Fast interface for subassign primitives.  These variables are set in
-   do_set as a fast way of passing information to the fast versions of
-   the subassign primitives (eg, [<-).  They are NOT automatically protected. */
+   set_subassign as a fast way of passing information to the fast versions of
+   the subassign primitives ([<-, [[<-, $<-), and to $ subset used in complex
+   assignments.  They are NOT automatically protected. */
 
-LibExtern SEXP R_fast_sub_into;   /* Object that assignment is into */
-LibExtern SEXP R_fast_sub_value;  /* Value assigned */
+LibExtern SEXP R_fast_sub_var;  /* Value of variable assigned to or subsetted */
+LibExtern SEXP R_fast_sub_replacement;    /* Replacement value, for subassign */
 
 
 #define R_binding_cell R_high_frequency_globals.binding_cell
@@ -958,7 +962,7 @@ LibExtern SEXP R_fast_sub_value;  /* Value assigned */
 
 #define R_variant_result R_high_frequency_globals.variant_result
 
-/* Sequence specification that may be set with VARIANT_SEA.  Upper 32 bits
+/* Sequence specification that may be set with VARIANT_SEQ.  Upper 32 bits
    is start of sequence, next 31 bits is length, low bit is 1 if from ..
    (ie, 1D array). */
 

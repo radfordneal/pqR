@@ -360,7 +360,7 @@ struct primsxp_struct {    /* table offset of this and other info is in gp  */
     unsigned int print:2;     /* print/invisible indicator, from table*/
     unsigned int variant:1;   /* pass variant to cfun, from table     */
     unsigned int internal:1;  /* call with .Internal flag, from table */
-    unsigned int fast_sub:1;  /* subassign fn that can use fast method*/
+    unsigned int fast_sub:1;  /* subassign/subset fn that can use fast method*/
     unsigned int dsptch1:1;   /* might dispatch on 1st argument (only
                                  for when fast_cfun != NULL) */
     unsigned int whole:1;     /* Do special processing for .Internal

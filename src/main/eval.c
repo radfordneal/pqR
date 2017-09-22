@@ -2584,11 +2584,11 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                   TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
             /* Use the fast interface.  No need to wait for rhs, since
                not evaluated with PENDING_OK */
-            R_fast_sub_into = varval;
-            R_fast_sub_value = rhs;
+            R_fast_sub_var = varval;
+            R_fast_sub_replacement = rhs;
             R_variant_result = 0;
             newval = CALL_PRIMFUN (call, fn, CDDR(lhs), rho, 
-                                   VARIANT_FAST_SUBASSIGN);
+                                   VARIANT_FAST_SUB);
             UNPROTECT(3);
         }
         else {
@@ -2656,11 +2656,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
            part of the larger expressions, we do a top-level duplicate
            of it.
 
-           For efficiency, if $ for [[ is defined as a special
-           primitive, it is done specially, without going through
-           'eval', and for $ without creating a promise for the value
-           subsetted if it is self-evaluating (see do_subset3 for
-           further info). */
+           For efficiency, $ and [[ are handled with VARIANT_FAST_SUB. */
 
         s[depth].value = varval;
         s[depth].in_top = 1;
@@ -2677,29 +2673,19 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             SET_NAMEDCNT_NOT_0(s[d+1].value);
 
             SEXP op = CAR(s[d].expr);
-            SEXP prom;
 
             if (op == R_DollarSymbol || op == R_Bracket2Symbol) {
                 fn = FINDFUN (op, rho);
-                if (TYPEOF(fn) == SPECIALSXP && !RTRACE(fn)) {
-                    SEXP args;
-                    if (op == R_DollarSymbol && SELF_EVAL(TYPEOF(s[d+1].value)))
-                        args = CONS (s[d+1].value, s[d].fetch_args);
-                    else {
-                        prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
-                        args = CONS (prom, s[d].fetch_args);
-                    }
-                    PROTECT(args);
+                if (TYPEOF(fn)==SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn)) {
+                    R_fast_sub_var = s[d+1].value;
                     R_variant_result = 0;
-                    e = CALL_PRIMFUN (call, fn, args, rho, 
-                                      VARIANT_QUERY_UNSHARED_SUBSET);
-                    UNPROTECT(1);
+                    e = CALL_PRIMFUN (call, fn, s[d].fetch_args, rho, 
+                          VARIANT_FAST_SUB /* implies QUERY_UNSHARED_SUBSET */);
                     goto evald;
                 }
-                UNPROTECT(1);
             }
 
-            prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
+            SEXP prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
             PROTECT (e = LCONS (op, CONS (prom, s[d].fetch_args)));
             e = evalv (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
             UNPROTECT(1);
@@ -2721,11 +2707,11 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
               && CAR(s[0].store_args) != R_DotsSymbol
               && (fn = FINDFUN(assgnfcn,rho), 
                   TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
-            R_fast_sub_into = s[1].value;
-            R_fast_sub_value = rhs;
-            PROTECT3(R_fast_sub_value,R_fast_sub_into,fn);
+            R_fast_sub_var = s[1].value;
+            R_fast_sub_replacement = rhs;
+            PROTECT3(R_fast_sub_replacement,R_fast_sub_var,fn);
             newval = CALL_PRIMFUN (call, fn, s[0].store_args, rho, 
-                                   VARIANT_FAST_SUBASSIGN);
+                                   VARIANT_FAST_SUB);
             e = R_NilValue;
         }
         else {

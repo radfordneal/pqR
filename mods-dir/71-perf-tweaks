@@ -4,3 +4,5 @@ Used saved data pointers in several routines - may help with compressed
 pointers.
 
 Improved any/all loops.
+
+Improved subassign operations, especially with [[ and $, using VARIANT_FAST_SUB.

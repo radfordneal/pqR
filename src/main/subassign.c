@@ -1088,15 +1088,15 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     /* See if we are using the fast interface. */
 
-    if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
+    if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
 
         /* Fast interface: object assigned into (x) comes already
            evaluated.  Evaluate indexes using VARIANT_SCALAR_STACK_OK,
            and evaluate a single index with VARIANT_SEQ so it may come
            as a range rather than a vector.  */
 
-        y = R_fast_sub_value;  /* may be on scalar stack */
-        x = R_fast_sub_into;
+        y = R_fast_sub_replacement;  /* may be on scalar stack */
+        x = R_fast_sub_var;
         sb1 = CAR(args);
         subs = CDR(args);
 
@@ -1355,11 +1355,11 @@ static SEXP do_subassign2_dflt_int
 
 static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
+    if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
 
         SEXP scalar_stack_sv = R_scalar_stack;
-        SEXP y = R_fast_sub_value; /* may be on the scalar stack */
-        SEXP x = R_fast_sub_into;
+        SEXP y = R_fast_sub_replacement; /* may be on the scalar stack */
+        SEXP x = R_fast_sub_var;
         SEXP sb1, sb2, subs;
 
         sb1 = evalv (CAR(args), rho, VARIANT_SCALAR_STACK_OK | 
@@ -1764,9 +1764,9 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXP name = R_NilValue;
     int argsevald = 0;
 
-    if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
-        value = R_fast_sub_value; /* may be on scalar stack */
-        into = R_fast_sub_into;
+    if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
+        value = R_fast_sub_replacement; /* may be on scalar stack */
+        into = R_fast_sub_var;
         what = CAR(args);
         if (args == R_NilValue || CDR(args) != R_NilValue)
             errorcall (call, _("%d arguments passed to '%s' which requires %d"),
@@ -1797,7 +1797,7 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* Handle the fast case, for which 'into' and 'value' have been evaluated,
        and 'into' is not an object. */
 
-    if (VARIANT_KIND(variant) == VARIANT_FAST_SUBASSIGN) {
+    if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
         if (name == R_NilValue) name = install(translateChar(schar));
         return R_subassign3_dflt (call, into, name, value);
     }
