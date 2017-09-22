@@ -2604,39 +2604,26 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
     else {  /* the general case, for any depth */
 
+        SEXP v, op, prom, fetch_args;
+        int d;
+
         /* Structure recording information on expressions at all levels of 
            the lhs.  Level 'depth' is the ultimate variable; level 0 is the
            whole lhs expression. */
 
         struct { 
-            SEXP fetch_args;      /* Arguments lists, sharing promises */
-            SEXP store_args;
-            SEXP value_arg;       /* Last cell in store_args, for value */
-            SEXP expr;            /* Expression at this level */
-            SEXP value;           /* Value of expr, may later change */
-            int in_top;           /* 1 or 2 if value is an unshared part */
-        } s[depth+1];             /*   of the value at top level, else 0 */
-
-        SEXP v;
-        int d;
+            SEXP store_args;  /* Arg list for store, shares promises w. fetch */
+            SEXP value_arg;   /* Last cell in store_args, for value */
+            SEXP expr;        /* Expression at this level */
+            SEXP value;       /* Value of expr, may later change */
+            char in_top;      /* 1 or 2 if value is an unshared part */
+        } s[depth+1];         /*   of the value at top level, else 0 */
 
         /* For each level from 1 to depth, store the lhs expression at that
-           level.  For each level except the final variable and outermost 
-           level, which only does a store, save argument lists for the 
-           fetch/store functions that share promises, so that they are
-           evaluated only once.  The store argument list has a "value"
-           cell at the end to fill in the stored value. */
+           level. */
 
         s[0].expr = lhs;
-        s[0].store_args = CDDR(lhs);  /* original args, no value cell */
         for (v = CADR(lhs), d = 1; d < depth; v = CADR(v), d++) {
-            s[d].fetch_args = R_NilValue;
-            PROTECT (s[d].value_arg = s[d].store_args =
-                cons_with_tag (R_NilValue, R_NilValue, R_ValueSymbol));
-            promiseArgsTwo (CDDR(v), rho, &s[d].fetch_args, 
-                                          &s[d].store_args);
-            UNPROTECT(1);
-            PROTECT2 (s[d].fetch_args, s[d].store_args);
             s[d].expr = v;
         }
         s[depth].expr = var;
@@ -2656,12 +2643,29 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
            part of the larger expressions, we do a top-level duplicate
            of it.
 
-           For efficiency, $ and [[ are handled with VARIANT_FAST_SUB. */
+           Also, for each level except the final variable and outermost 
+           level, which only does a store, save argument lists for the 
+           fetch/store functions that share promises, so that they are
+           evaluated only once.  The store argument list has a "value"
+           cell at the end to fill in the stored value.
+
+           For efficiency, $ and [[ are handled with VARIANT_FAST_SUB,
+           and for $, no promise is created for its argument. */
 
         s[depth].value = varval;
         s[depth].in_top = 1;
 
+        s[0].store_args = CDDR(lhs);  /* original args, no value cell */
+
         for (d = depth-1; d > 0; d--) {
+
+            fetch_args = R_NilValue;
+            PROTECT (s[d].value_arg = s[d].store_args =
+                cons_with_tag (R_NilValue, R_NilValue, R_ValueSymbol));
+            promiseArgsTwo(CDDR(s[d].expr), rho, &fetch_args, &s[d].store_args);
+            UNPROTECT(1);
+            PROTECT(s[d].store_args);
+            PROTECT(fetch_args);
 
             /* We'll need this value for the subsequent replacement
                operation, so make sure it doesn't change.  Incrementing
@@ -2672,23 +2676,24 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
             SET_NAMEDCNT_NOT_0(s[d+1].value);
 
-            SEXP op = CAR(s[d].expr);
+            op = CAR(s[d].expr);
 
             if (op == R_DollarSymbol || op == R_Bracket2Symbol) {
                 fn = FINDFUN (op, rho);
                 if (TYPEOF(fn)==SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn)) {
                     R_fast_sub_var = s[d+1].value;
                     R_variant_result = 0;
-                    e = CALL_PRIMFUN (call, fn, s[d].fetch_args, rho, 
+                    e = CALL_PRIMFUN (call, fn, fetch_args, rho, 
                           VARIANT_FAST_SUB /* implies QUERY_UNSHARED_SUBSET */);
+                    UNPROTECT(1);  /* fetch_args */
                     goto evald;
                 }
             }
 
-            SEXP prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
-            PROTECT (e = LCONS (op, CONS (prom, s[d].fetch_args)));
+            prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
+            PROTECT (e = LCONS (op, CONS (prom, fetch_args)));
             e = evalv (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
-            UNPROTECT(1);
+            UNPROTECT(2);  /* e, fetch_args */
 
           evald:
             s[d].in_top = 
@@ -2772,7 +2777,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             }
         }
 
-        UNPROTECT(2*(depth-1)+2);  /* fetch_args, store_args + two more */
+        UNPROTECT(depth-1+2);  /* store_args + two more */
     }
 
     /* Assign the final result after the top level replacement.  We
