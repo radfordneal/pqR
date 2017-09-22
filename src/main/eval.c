@@ -2613,7 +2613,6 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
         struct { 
             SEXP store_args;  /* Arg list for store, shares promises w. fetch */
-            SEXP value_arg;   /* Last cell in store_args, for value */
             SEXP expr;        /* Expression at this level */
             SEXP value;       /* Value of expr, may later change */
             char in_top;      /* 1 or 2 if value is an unshared part */
@@ -2643,11 +2642,12 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
            part of the larger expressions, we do a top-level duplicate
            of it.
 
-           Also, for each level except the final variable and outermost 
-           level, which only does a store, save argument lists for the 
-           fetch/store functions that share promises, so that they are
-           evaluated only once.  The store argument list has a "value"
-           cell at the end to fill in the stored value.
+           Also, for each level except the final variable and
+           outermost level, which only does a store, save argument
+           lists for the fetch/store functions that are built with
+           shared promises, so that they are evaluated only once.  The
+           store argument list has a "value" cell at the end to fill
+           in the stored value.
 
            For efficiency, $ and [[ are handled with VARIANT_FAST_SUB,
            and for $, no promise is created for its argument. */
@@ -2660,8 +2660,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
         for (d = depth-1; d > 0; d--) {
 
             fetch_args = R_NilValue;
-            PROTECT (s[d].value_arg = s[d].store_args =
-                cons_with_tag (R_NilValue, R_NilValue, R_ValueSymbol));
+            PROTECT (s[d].store_args =
+                      cons_with_tag (R_NilValue, R_NilValue, R_ValueSymbol));
             promiseArgsTwo(CDDR(s[d].expr), rho, &fetch_args, &s[d].store_args);
             UNPROTECT(1);
             PROTECT(s[d].store_args);
@@ -2763,7 +2763,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                 PROTECT (rhsprom = mkValuePROMISE (e, newval));
                 PROTECT (lhsprom = mkValuePROMISE (s[d+1].expr, s[d+1].value));
                 assgnfcn = installAssignFcnName(CAR(s[d].expr));
-                SETCAR (s[d].value_arg, rhsprom);
+                for (v = s[d].store_args; CDR(v) != R_NilValue; v = CDR(v)) ;
+                SETCAR (v, rhsprom);
                 PROTECT(e = LCONS (assgnfcn, CONS(lhsprom,s[d].store_args)));
 
                 newval = eval(e,rho);
