@@ -107,15 +107,13 @@ static void SubassignTypeFix (SEXP *x, SEXP *y, int stretch, int level,
 {
     Rboolean x_is_object = OBJECT(*x);  /* coercion can lose the object bit */
 
-    const int type_x = TYPEOF(*x), 
-              type_y = TYPEOF(*y);
-    const int atom_x = isVectorAtomic(*x),
-              atom_y = isVectorAtomic(*y);
+    const int type_x = TYPEOF(*x), type_y = TYPEOF(*y);
+    int atom_x;
 
     if (type_x == type_y || type_y == NILSXP) {
         /* nothing to do */
     }
-    else if (atom_x && atom_y) { 
+    else if ((atom_x = isVectorAtomic(*x)) && isVectorAtomic(*y)) { 
         /* Follow STR > CPLX > REAL > INT > LGL > RAW conversion hierarchy, 
            which never produces warnings. */
         if (type_x == CPLXSXP
@@ -629,16 +627,15 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
     int i, j, ii, jj, ij, iy, k;
     int_fast64_t n;
     double ry;
-    int nr, ny;
+    int nr;
     int nrs, ncs;
     SEXP sr, sc, dim;
 
-    if (!isMatrix(x))
+    dim = getDimAttrib(x);
+
+    if (dim == R_NilValue || LENGTH(dim) != 2)
 	errorcall(call,_("incorrect number of subscripts on matrix"));
 
-    ny = LENGTH(y);
-
-    dim = getDimAttrib(x);
     nr = INTEGER(dim)[0];
 
     SEXP sv_scalar_stack = R_scalar_stack;
@@ -651,8 +648,8 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 
     /* Do assignment of a single atomic element with matching type specially. */
 
-    if (nrs == 1 && ncs == 1 && ny == 1 && isVectorAtomic(x) 
-                                        && TYPEOF(x) == TYPEOF(y)) {
+    if (nrs == 1 && ncs == 1 && isVectorAtomic(x) 
+                             && TYPEOF(x) == TYPEOF(y) && LENGTH(y) == 1) {
         if (*INTEGER(sr) != NA_INTEGER && *INTEGER(sc) != NA_INTEGER) {
             R_len_t isub = (*INTEGER(sr)-1) + (*INTEGER(sc)-1) * nr;
             switch (TYPEOF(x)) {
@@ -680,6 +677,8 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
         R_scalar_stack = sv_scalar_stack;
         return x;
     }
+
+    R_len_t ny = length(y);
 
     sr = NA_check_remove (call, sr, &nrs, ny > 1);
     UNPROTECT(1);
@@ -875,7 +874,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 
 static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 {
-    int i, j, ii, iy, jj, k=0, n, ny;
+    int i, j, ii, iy, jj, k=0, ny;
     int rep_assign = 0; /* 1 if elements assigned repeatedly into list array */
     SEXP dims, tmp;
     double ry;
@@ -884,50 +883,10 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     if (dims == R_NilValue || (k = LENGTH(dims)) != length(s))
 	errorcall(call,_("incorrect number of subscripts"));
 
-    int *subs[k], indx[k], bound[k], offset[k];
-
-    ny = LENGTH(y);
-
-    SEXP sv_scalar_stack = R_scalar_stack;
-
-    n = 1;
-    for (i = 0; i < k; i++) {
-        PROTECT(tmp = array_sub (CAR(s), dims, i, x));
-        subs[i] = INTEGER(tmp);
-	bound[i] = LENGTH(tmp);
-        n *= bound[i];
-        indx[i] = 0;
-	s = CDR(s);
-    }
-
-    if (n > 0 && ny == 0)
-	errorcall(call,_("replacement has length zero"));
-    if (n > 0 && n % ny)
-	errorcall(call,
-       _("number of items to replace is not a multiple of replacement length"));
-
-    if (ny > 1) { /* check for NAs in indices */
-	for (i = 0; i < k; i++)
-	    for (j = 0; j < bound[i]; j++)
-		if (subs[i][j] == NA_INTEGER)
-		    errorcall(call,
-                      _("NAs are not allowed in subscripted assignments"));
-    }
-
-    offset[1] = INTEGER(dims)[0];  /* offset[0] is not used */
-    for (i = 2; i < k; i++)
-        offset[i] = offset[i-1] * INTEGER(dims)[i-1];
-
     /* Here we make sure that the LHS has been coerced into */
     /* a form which can accept elements from the RHS. */
 
     SubassignTypeFix(&x, &y, 0, 1, call);
-
-    if (n == 0) {
-	UNPROTECT(k+1);
-        R_scalar_stack = sv_scalar_stack;
-	return(x);
-    }
 
     PROTECT(x);
 
@@ -940,6 +899,46 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	PROTECT(y = duplicate(y));
     else
 	PROTECT(y);
+
+    ny = length(y);
+
+    int *subs[k], indx[k], bound[k], offset[k];
+    SEXP sv_scalar_stack = R_scalar_stack;
+
+    int nmod = 1, zero = 0;
+    for (i = 0; i < k; i++) {
+        PROTECT(tmp = array_sub (CAR(s), dims, i, x));
+        subs[i] = INTEGER(tmp);
+	bound[i] = LENGTH(tmp);
+        if (bound[i] == 0) zero = 1;
+        if (ny > 0) nmod = ((int_fast64_t)nmod * bound[i]) % ny;
+        indx[i] = 0;
+	s = CDR(s);
+    }
+
+    if (!zero && ny == 0)
+	errorcall(call,_("replacement has length zero"));
+    if (!zero && nmod != 0)
+	errorcall(call,
+       _("number of items to replace is not a multiple of replacement length"));
+
+    if (ny > 1) { /* check for NAs in indices */
+	for (i = 0; i < k; i++)
+	    for (j = 0; j < bound[i]; j++)
+		if (subs[i][j] == NA_INTEGER)
+		    errorcall(call,
+                      _("NAs are not allowed in subscripted assignments"));
+    }
+
+    if (zero) {
+	UNPROTECT(k+3);
+        R_scalar_stack = sv_scalar_stack;
+	return x;
+    }
+
+    offset[1] = INTEGER(dims)[0];  /* offset[0] is not used */
+    for (i = 2; i < k; i++)
+        offset[i] = offset[i-1] * INTEGER(dims)[i-1];
 
     /* Do the actual assignment... Note that assignments to string vectors
        from non-string vectors and from raw vectors to non-raw vectors are
@@ -1230,7 +1229,16 @@ static SEXP do_subassign_dflt_seq (SEXP call, SEXP x, SEXP sb1, SEXP sb2,
 
     WAIT_UNTIL_COMPUTED(x);
 
-    if (TYPEOF(x) == LISTSXP || TYPEOF(x) == LANGSXP) {
+    if (isVector(x)) {
+        if (LENGTH(x) == 0) {
+            if (length(y) == 0) {
+                RETURN_SEXP_INSIDE_PROTECT(x);
+            }
+        }
+        else if (NAMEDCNT_GT_1(x))
+            x = dup_top_level(x);
+    }
+    else if (TYPEOF(x) == LISTSXP || TYPEOF(x) == LANGSXP) {
         oldtype = TYPEOF(x);
         SEXP ox = x;
         x = PairToVectorList(x);
@@ -1242,15 +1250,6 @@ static SEXP do_subassign_dflt_seq (SEXP call, SEXP x, SEXP sb1, SEXP sb2,
             RETURN_SEXP_INSIDE_PROTECT(x);
         }
         x = coerceVector(x, TYPEOF(y));
-    }
-    else if (isVector(x)) {
-        if (LENGTH(x) == 0) {
-            if (length(y) == 0) {
-                RETURN_SEXP_INSIDE_PROTECT(x);
-            }
-        }
-        else if (NAMEDCNT_GT_1(x))
-            x = dup_top_level(x);
     }
     else
         nonsubsettable_error(call,x);

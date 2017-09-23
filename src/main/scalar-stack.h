@@ -146,7 +146,7 @@ static inline SEXP array_sub (SEXP sb, SEXP dim, int i, SEXP x)
             if (TYPEOF(sb) == REALSXP) {
                 if (ISNAN(*REAL(sb)) || *REAL(sb) < 1 || *REAL(sb) > dm)
                     goto fallback;
-                ix = (int) *REAL(sb);
+                ix = (R_len_t) *REAL(sb);
             }
             else {
                 ix = *INTEGER(sb);
