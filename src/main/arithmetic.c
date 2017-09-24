@@ -1044,11 +1044,43 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                     HELPERS_WAIT_IN1 (a, i, n);
                     do {
                         R_len_t u = HELPERS_UP_TO(i,a);
-                        do {
-                            double tmp2 = RFETCH(s1,i);
-                            rans[i] = tmp2 * tmp2;
+#                       if __AVX__ && !defined(DISABLE_AVX_CODE)
+                        /* do individual ops until rans+i is 32-byte aligned */
+                        if (((uintptr_t)(rans+i) & 0x1f) != 0) {
+                            double op = RFETCH(s1,i);
+                            rans[i] = op * op;
                             i += 1;
-                        } while (i<=u);
+                            if (((uintptr_t)(rans+i) & 0x1f) != 0 && i <= u) {
+                                double op = RFETCH(s1,i);
+                                rans[i] = op * op;
+                                i += 1;
+                            }
+                        }
+                        while (i+3 <= u) {
+                            __m256d res_pd;
+                            res_pd = _mm256_loadu_pd (&RFETCH(s1,i));
+                            res_pd = _mm256_mul_pd (res_pd, res_pd);
+                            _mm256_store_pd (rans+i, res_pd);
+                            i += 4;
+                        }
+#                       else
+                        while (i+3 <= u) {
+                            double op0 = RFETCH(s1,i);
+                            double op1 = RFETCH(s1,i+1);
+                            double op2 = RFETCH(s1,i+2);
+                            double op3 = RFETCH(s1,i+3);
+                            rans[i] = op0 * op0;
+                            rans[i+1] = op1 * op1;
+                            rans[i+2] = op2 * op2;
+                            rans[i+3] = op3 * op3;
+                            i += 4;
+                        }
+#                       endif
+                        while (i <= u) {
+                            double op = RFETCH(s1,i);
+                            rans[i] = op * op;
+                            i += 1;
+                        }
                         helpers_amount_out(i);
                     } while (i<a);
                 }
@@ -1428,7 +1460,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
     nprotect = 2;
 
     if (!isNumberOrFactor(x) || !isNumberOrFactor(y))
-        errorcall(call, _("non-numeric argument to binary operator")); \
+        errorcall(call, _("non-numeric argument to binary operator"));
 
     nx = LENGTH(x);
     if (HAS_ATTRIB(x)) {
