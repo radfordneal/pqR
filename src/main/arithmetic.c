@@ -529,6 +529,11 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 #define mul_func(a,b) ((a)*(b))
 #define div_func(a,b) ((a)/(b))
 
+#define add_func_mm(a,b) _mm256_add_pd((a),(b))
+#define sub_func_mm(a,b) _mm256_sub_pd((a),(b))
+#define mul_func_mm(a,b) _mm256_mul_pd((a),(b))
+#define div_func_mm(a,b) _mm256_div_pd((a),(b))
+
 /* Macro for pipelined arithmetic computation.  Arguments are as follows:
 
        type     type of the result
@@ -624,6 +629,134 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             } \
         } \
     } while (0)
+
+/* A version of PIPEARITH using AVX intrinsics (for x86 platforms) may
+   be defined.  The function name passed must have a version with _mm 
+   appended that does the AVX256 operation. */
+
+#if !__AVX__ || defined(DISABLE_AVX_CODE)
+
+#define MM_PIPEARITH PIPEARITH
+
+#else
+
+#include <immintrin.h>
+
+#define MM_PIPEARITH(type,func,result,n,fetch1,s1,n1,fetch2,s2,n2) \
+    do { \
+        R_len_t i, i1, i2, a, a1, a2; \
+        i = 0; \
+        if (n2 == 1) { \
+            type tmp = fetch2(s2,0); \
+            __m256d tmp_pd = _mm256_set_pd(tmp,tmp,tmp,tmp); \
+            while (i<n) { \
+                HELPERS_WAIT_IN1 (a, i, n); \
+                do { \
+                    R_len_t u = HELPERS_UP_TO(i,a); \
+                    while (i <= u && ((uintptr_t)(result+i) & 0x1f) != 0) { \
+                        result[i] = func(fetch1(s1,i),tmp); \
+                        i += 1; \
+                    } \
+                    while (i+3 <= u) { \
+                        __m256d res_pd; \
+                        res_pd = _mm256_loadu_pd (&fetch1(s1,i)); \
+                        res_pd = func ## _mm (res_pd, tmp_pd); \
+                        _mm256_store_pd (result+i, res_pd); \
+                        i += 4; \
+                    } \
+                    while (i <= u) { \
+                        result[i] = func(fetch1(s1,i),tmp); \
+                        i += 1; \
+                    } \
+                    helpers_amount_out(i); \
+                } while (i<a); \
+            } \
+        } \
+        else if (n1 == 1) { \
+            type tmp = fetch1(s1,0); \
+            __m256d tmp_pd = _mm256_set_pd(tmp,tmp,tmp,tmp); \
+            while (i<n) { \
+                HELPERS_WAIT_IN2 (a, i, n); \
+                do { \
+                    R_len_t u = HELPERS_UP_TO(i,a); \
+                    while (i <= u && ((uintptr_t)(result+i) & 0x1f) != 0) { \
+                        result[i] = func(tmp,fetch2(s2,i)); \
+                        i += 1; \
+                    } \
+                    while (i+3 <= u) { \
+                        __m256d res_pd; \
+                        res_pd = _mm256_loadu_pd (&fetch2(s2,i)); \
+                        res_pd = func ## _mm (tmp_pd, res_pd); \
+                        _mm256_store_pd (result+i, res_pd); \
+                        i += 4; \
+                    } \
+                    while (i <= u) { \
+                        result[i] = func(tmp,fetch2(s2,i)); \
+                        i += 1; \
+                    } \
+                    helpers_amount_out(i); \
+                } while (i<a); \
+            } \
+        } \
+        else if (n1 == n2) { \
+            while (i<n) { \
+                HELPERS_WAIT_IN1 (a1, i, n); \
+                HELPERS_WAIT_IN2 (a2, i, n); \
+                do { \
+                    R_len_t u = HELPERS_UP_TO2(i,a1,a2); \
+                    while (i <= u && ((uintptr_t)(result+i) & 0x1f) != 0) { \
+                        result[i] = func(fetch1(s1,i),fetch2(s2,i)); \
+                        i += 1; \
+                    } \
+                    while (i+3 <= u) { \
+                        __m256d res_pd, op2_pd; \
+                        res_pd = _mm256_loadu_pd (&fetch1(s1,i)); \
+                        op2_pd = _mm256_loadu_pd (&fetch2(s2,i)); \
+                        res_pd = func ## _mm (res_pd, op2_pd); \
+                        _mm256_store_pd (result+i, res_pd); \
+                        i += 4; \
+                    } \
+                    while (i <= u) { \
+                        result[i] = func(fetch1(s1,i),fetch2(s2,i)); \
+                        i += 1; \
+                    } \
+                    helpers_amount_out(i); \
+                } while (i<a1 && i<a2); \
+            } \
+        } \
+        else if (n1 > n2) { \
+            i2 = 0; \
+            while (i<n) { \
+                HELPERS_WAIT_IN1 (a, i, n); \
+                do { \
+                    R_len_t u = HELPERS_UP_TO(i,a); \
+                    do { \
+                        result[i] = func(fetch1(s1,i),fetch2(s2,i2)); \
+                        if (++i2 == n2) i2 = 0; \
+                        i += 1; \
+                    } while (i<=u); \
+                    helpers_amount_out(i); \
+                } while (i<a); \
+            } \
+        } \
+        else { /* n1 < n2 */ \
+            i1 = 0; \
+            while (i<n) { \
+                HELPERS_WAIT_IN2 (a, i, n); \
+                do { \
+                    R_len_t u = HELPERS_UP_TO(i,a); \
+                    do { \
+                        result[i] = func(fetch1(s1,i1),fetch2(s2,i)); \
+                        if (++i1 == n1) i1 = 0; \
+                        i += 1; \
+                    } while (i<=u); \
+                    helpers_amount_out(i); \
+                } while (i<a); \
+            } \
+        } \
+    } while (0)
+
+#endif
 
 #define RFETCH(_s_,_i_) (REAL(_s_)[_i_])
 #define RIFETCH(_s_,_i_) \
@@ -763,7 +896,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         else if (TYPEOF(s2) != REALSXP)
             PIPEARITH(double,add_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
         else
-            PIPEARITH(double,add_func,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
+            MM_PIPEARITH(double,add_func,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
         break;
     case MINUSOP:
         if (TYPEOF(s1) != REALSXP)
@@ -771,7 +904,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         else if (TYPEOF(s2) != REALSXP)
             PIPEARITH(double,sub_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
         else
-            PIPEARITH(double,sub_func,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
+            MM_PIPEARITH(double,sub_func,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
         break;
     case TIMESOP:
         if (TYPEOF(s1) != REALSXP)
@@ -779,7 +912,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         else if (TYPEOF(s2) != REALSXP)
             PIPEARITH(double,mul_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
         else
-            PIPEARITH(double,mul_func,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
+            MM_PIPEARITH(double,mul_func,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
         break;
     case DIVOP:
         if (TYPEOF(s1) != REALSXP)
@@ -787,7 +920,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         else if (TYPEOF(s2) != REALSXP)
             PIPEARITH(double,div_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
         else
-            PIPEARITH(double,div_func,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
+            MM_PIPEARITH(double,div_func,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
         break;
     case POWOP:
         if (TYPEOF(s1) == REALSXP && n2 == 1) {
