@@ -204,9 +204,8 @@ SEXP attribute_hidden mat2indsub(SEXP dims, SEXP s, SEXP call)
     int tdim, j, i, k, nrs = nrows(s);
     SEXP rvec;
 
-    if (ncols(s) != LENGTH(dims)) {
+    if (ncols(s) != LENGTH(dims))
 	ECALL(call, _("incorrect number of columns in matrix subscript"));
-    }
 
     PROTECT(rvec = allocVector(INTSXP, nrs));
     s = coerceVector(s, INTSXP);
@@ -218,20 +217,19 @@ SEXP attribute_hidden mat2indsub(SEXP dims, SEXP s, SEXP call)
 	   in the output here) */
 	for (j = 0; j < LENGTH(dims); j++) {
 	    k = INTEGER(s)[i + j * nrs];
-	    if(k == NA_INTEGER) {
+	    if (k == NA_INTEGER) {
 		INTEGER(rvec)[i] = NA_INTEGER;
 		break;
 	    }
-	    if(k < 0) {
-		ECALL(call, _("negative values are not allowed in a matrix subscript"));
-	    }
-	    if(k == 0) {
+	    if (k < 0)
+		ECALL(call, 
+                  _("negative values are not allowed in a matrix subscript"));
+	    if (k == 0) {
 		INTEGER(rvec)[i] = -1;
 		break;
 	    }
-	    if (k > INTEGER(dims)[j]) {
+	    if (k > INTEGER(dims)[j])
 		ECALL(call, _("subscript out of bounds"));
-	    }
 	    INTEGER(rvec)[i] += (k - 1) * tdim;
 	    tdim *= INTEGER(dims)[j];
 	}
@@ -300,9 +298,8 @@ static SEXP logicalSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
     SEXP x;
     int v;
 
-    if (!canstretch && ns > nx) {
+    if (!canstretch && ns > nx)
 	ECALL(call, _("(subscript) logical subscript too long"));
-    }
 
     nmax = (ns > nx) ? ns : nx;
     *stretch = (ns > nx) ? ns : 0;
@@ -555,10 +552,10 @@ static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
     }
 
     if (max > nx) {
-        if(canstretch) *stretch = max;
-        else {
+        if (canstretch) 
+            *stretch = max;
+        else
             ECALL(call, _("subscript out of bounds"));
-        }
     }
 
     if (min > 0) /* All positive (or NA) */
@@ -566,9 +563,8 @@ static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
     else if (min < 0) {
         if (max <= 0 && !isna) 
             return negativeSubscript(s, ns, nx);
-        else {
+        else
             ECALL(call, _("only 0's may be mixed with negative subscripts"));
-        }
     }
     else /* min == 0 */
         return nonnegativeSubscript(s, ns, nx);
@@ -732,9 +728,8 @@ int_arraySubscript(int dim, SEXP s, SEXP dims, AttrGetter dng,
 	return tmp;
     case STRSXP:
 	dnames = dng(x, R_DimNamesSymbol);
-	if (dnames == R_NilValue) {
+	if (dnames == R_NilValue)
 	    ECALL(call, _("no 'dimnames' attribute for array"));
-	}
 	dnames = VECTOR_ELT(dnames, dim);
 	return stringSubscript(s, ns, nd, dnames, strg, &stretch, call);
     case SYMSXP:
@@ -777,9 +772,9 @@ arraySubscript(int dim, SEXP s, SEXP dims, AttrGetter dng,
    This is used to reduce how often the subscript vector needs to be
    duplicated.
 
-   The value returned may have a R_UseNamesSymbol attribute containing
-   new names to use.  The caller should look for this only if the subscripts
-   were strings.
+   The value returned is an integer vector, which may have a
+   R_UseNamesSymbol attribute containing new names to use.  The caller
+   should look for this only if the subscripts were strings.
 
    The arguments x and s are protected within this function.
 */
@@ -790,10 +785,8 @@ SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call,
     int nx, ns;
     SEXP ans, tmp;
 
-    if (!isVector(x) && !isList(x) && !isLanguage(x)) {
+    if (!isVector(x) && !isList(x) && !isLanguage(x))
 	ECALL(call, _("subscripting on non-vector"));
-        return R_NilValue;
-    }
 
     nx = length(x);
     ns = length(s);

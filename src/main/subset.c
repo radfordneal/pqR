@@ -382,7 +382,7 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
         SEXP d;
         if (drop == NA_LOGICAL) suppress_drop = whether_suppress_drop(sb);
         PROTECT(indx = makeSubscript(x, sb, &stretch, call, 0));
-        n = length(indx);
+        n = LENGTH(indx);
     }
 
     /* Allocate and extract the result. */
