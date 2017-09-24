@@ -562,10 +562,21 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 HELPERS_WAIT_IN1 (a, i, n); \
                 do { \
                     R_len_t u = HELPERS_UP_TO(i,a); \
-                    do { \
+                    while (i+3 <= u) { \
+                        type op10 = fetch1(s1,i); \
+                        type op11 = fetch1(s1,i+1); \
+                        type op12 = fetch1(s1,i+2); \
+                        type op13 = fetch1(s1,i+3); \
+                        result[i] = func(op10,tmp); \
+                        result[i+1] = func(op11,tmp); \
+                        result[i+2] = func(op12,tmp); \
+                        result[i+3] = func(op13,tmp); \
+                        i += 4; \
+                    } \
+                    while (i <= u) { \
                         result[i] = func(fetch1(s1,i),tmp); \
                         i += 1; \
-                    } while (i<=u); \
+                    } \
                     helpers_amount_out(i); \
                 } while (i<a); \
             } \
@@ -576,10 +587,21 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 HELPERS_WAIT_IN2 (a, i, n); \
                 do { \
                     R_len_t u = HELPERS_UP_TO(i,a); \
-                    do { \
+                    while (i+3 <= u) { \
+                        type op20 = fetch2(s2,i); \
+                        type op21 = fetch2(s2,i+1); \
+                        type op22 = fetch2(s2,i+2); \
+                        type op23 = fetch2(s2,i+3); \
+                        result[i] = func(tmp,op20); \
+                        result[i+1] = func(tmp,op21); \
+                        result[i+2] = func(tmp,op22); \
+                        result[i+3] = func(tmp,op23); \
+                        i += 4; \
+                    } \
+                    while (i <= u) { \
                         result[i] = func(tmp,fetch2(s2,i)); \
                         i += 1; \
-                    } while (i<=u); \
+                    } \
                     helpers_amount_out(i); \
                 } while (i<a); \
             } \
@@ -590,10 +612,21 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 HELPERS_WAIT_IN2 (a2, i, n); \
                 do { \
                     R_len_t u = HELPERS_UP_TO2(i,a1,a2); \
-                    do { \
+                    while (i+3 <= u) { \
+                        type op10 = fetch1(s1,i), op20 = fetch2(s2,i); \
+                        type op11 = fetch1(s1,i+1), op21 = fetch2(s2,i+1); \
+                        type op12 = fetch1(s1,i+2), op22 = fetch2(s2,i+2); \
+                        type op13 = fetch1(s1,i+3), op23 = fetch2(s2,i+3); \
+                        result[i] = func(op10,op20); \
+                        result[i+1] = func(op11,op21); \
+                        result[i+2] = func(op12,op22); \
+                        result[i+3] = func(op13,op23); \
+                        i += 4; \
+                    } \
+                    while (i <= u) { \
                         result[i] = func(fetch1(s1,i),fetch2(s2,i)); \
                         i += 1; \
-                    } while (i<=u); \
+                    } \
                     helpers_amount_out(i); \
                 } while (i<a1 && i<a2); \
             } \
@@ -630,9 +663,18 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         } \
     } while (0)
 
-/* A version of PIPEARITH using AVX intrinsics (for x86 platforms) may
-   be defined.  The function name passed must have a version with _mm 
-   appended that does the AVX256 operation. */
+/* A version of PIPEARITH using AVX intrinsics (for x86 platforms),
+   which may be used.  The function name passed must have a version
+   with _mm appended that does the AVX256 operation.
+
+   On an Intel Skylake processor, using gcc 7.2, the AVX code below
+   gives little or no speed improvement on microbenchmarks, compared
+   to the unwrapped loops above, but some of the code produced is
+   smaller, so it may have better performance in a larger context.
+   Note that here we can take advantage of knowledge that operations
+   are done element-by-element, with any possible aliasing of s1, s2,
+   and result being irrelevant, as long as only final values are
+   stored in result. */
 
 #if !__AVX__ || defined(DISABLE_AVX_CODE)
 
@@ -653,9 +695,14 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 HELPERS_WAIT_IN1 (a, i, n); \
                 do { \
                     R_len_t u = HELPERS_UP_TO(i,a); \
-                    while (i <= u && ((uintptr_t)(result+i) & 0x1f) != 0) { \
+                    /* do ops individually until result+i is 32-byte aligned */\
+                    if (((uintptr_t)(result+i) & 0x1f) != 0) { \
                         result[i] = func(fetch1(s1,i),tmp); \
                         i += 1; \
+                        if (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
+                            result[i] = func(fetch1(s1,i),tmp); \
+                            i += 1; \
+                        } \
                     } \
                     while (i+3 <= u) { \
                         __m256d res_pd; \
@@ -679,9 +726,14 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 HELPERS_WAIT_IN2 (a, i, n); \
                 do { \
                     R_len_t u = HELPERS_UP_TO(i,a); \
-                    while (i <= u && ((uintptr_t)(result+i) & 0x1f) != 0) { \
+                    /* do ops individually until result+i is 32-byte aligned */\
+                    if (((uintptr_t)(result+i) & 0x1f) != 0) { \
                         result[i] = func(tmp,fetch2(s2,i)); \
                         i += 1; \
+                        if (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
+                            result[i] = func(tmp,fetch2(s2,i)); \
+                            i += 1; \
+                        } \
                     } \
                     while (i+3 <= u) { \
                         __m256d res_pd; \
@@ -704,9 +756,14 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 HELPERS_WAIT_IN2 (a2, i, n); \
                 do { \
                     R_len_t u = HELPERS_UP_TO2(i,a1,a2); \
-                    while (i <= u && ((uintptr_t)(result+i) & 0x1f) != 0) { \
+                    /* do ops individually until result+i is 32-byte aligned */\
+                    if (((uintptr_t)(result+i) & 0x1f) != 0) { \
                         result[i] = func(fetch1(s1,i),fetch2(s2,i)); \
                         i += 1; \
+                        if (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
+                            result[i] = func(fetch1(s1,i),fetch2(s2,i)); \
+                            i += 1; \
+                        } \
                     } \
                     while (i+3 <= u) { \
                         __m256d res_pd, op2_pd; \
@@ -730,11 +787,39 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 HELPERS_WAIT_IN1 (a, i, n); \
                 do { \
                     R_len_t u = HELPERS_UP_TO(i,a); \
-                    do { \
+                    /* do ops individually until result+i is 32-byte aligned */\
+                    if (((uintptr_t)(result+i) & 0x1f) != 0) { \
                         result[i] = func(fetch1(s1,i),fetch2(s2,i2)); \
                         if (++i2 == n2) i2 = 0; \
                         i += 1; \
-                    } while (i<=u); \
+                        if (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
+                            result[i] = func(fetch1(s1,i),fetch2(s2,i2)); \
+                            if (++i2 == n2) i2 = 0; \
+                            i += 1; \
+                        } \
+                    } \
+                    while (i+3 <= u) { \
+                        __m256d res_pd, op2_pd; \
+                        res_pd = _mm256_loadu_pd (&fetch1(s1,i)); \
+                        type __attribute__ ((aligned (32))) op[4]; \
+                        op[0] = fetch2(s2,i2); \
+                        if (++i2 == n2) i2 = 0; \
+                        op[1] = fetch2(s2,i2); \
+                        if (++i2 == n2) i2 = 0; \
+                        op[2] = fetch2(s2,i2); \
+                        if (++i2 == n2) i2 = 0; \
+                        op[3] = fetch2(s2,i2); \
+                        if (++i2 == n2) i2 = 0; \
+                        op2_pd = _mm256_load_pd (op); \
+                        res_pd = func ## _mm (res_pd, op2_pd); \
+                        _mm256_store_pd (result+i, res_pd); \
+                        i += 4; \
+                    } \
+                    while (i <= u) { \
+                        result[i] = func(fetch1(s1,i),fetch2(s2,i2)); \
+                        if (++i2 == n2) i2 = 0; \
+                        i += 1; \
+                    } \
                     helpers_amount_out(i); \
                 } while (i<a); \
             } \
@@ -745,12 +830,39 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 HELPERS_WAIT_IN2 (a, i, n); \
                 do { \
                     R_len_t u = HELPERS_UP_TO(i,a); \
-                    do { \
+                    /* do ops individually until result+i is 32-byte aligned */\
+                    if (((uintptr_t)(result+i) & 0x1f) != 0) { \
                         result[i] = func(fetch1(s1,i1),fetch2(s2,i)); \
                         if (++i1 == n1) i1 = 0; \
                         i += 1; \
-                    } while (i<=u); \
-                    helpers_amount_out(i); \
+                        if (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
+                            result[i] = func(fetch1(s1,i1),fetch2(s2,i)); \
+                            if (++i1 == n1) i1 = 0; \
+                            i += 1; \
+                        } \
+                    } \
+                    while (i+3 <= u) { \
+                        __m256d res_pd, op1_pd; \
+                        res_pd = _mm256_loadu_pd (&fetch2(s2,i)); \
+                        type __attribute__ ((aligned (32))) op[4]; \
+                        op[0] = fetch1(s1,i1); \
+                        if (++i1 == n1) i1 = 0; \
+                        op[1] = fetch1(s1,i1); \
+                        if (++i1 == n1) i1 = 0; \
+                        op[2] = fetch1(s1,i1); \
+                        if (++i1 == n1) i1 = 0; \
+                        op[3] = fetch1(s1,i1); \
+                        if (++i1 == n1) i1 = 0; \
+                        op1_pd = _mm256_load_pd (op); \
+                        res_pd = func ## _mm (op1_pd, res_pd); \
+                        _mm256_store_pd (result+i, res_pd); \
+                        i += 4; \
+                    } \
+                    while (i <= u) { \
+                        result[i] = func(fetch1(s1,i1),fetch2(s2,i)); \
+                        if (++i1 == n1) i1 = 0; \
+                        i += 1; \
+                    } \
                 } while (i<a); \
             } \
         } \
