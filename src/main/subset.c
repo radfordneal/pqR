@@ -199,7 +199,9 @@ static void ExtractRange(SEXP x, SEXP result, int start, int end, SEXP call)
    according to the integer subscripts given in "indx". The caller will
    have allocated "result" to be at least the required length, and
    for VECSXP and EXPRSXP, the entries will be R_NilValue (done by
-   allocVector).
+   allocVector).  
+
+   Out of bound indexes (including 0 and NA) give NA.
 
    Arguments x and result must be protected by the caller. */
 
@@ -335,7 +337,7 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
 
     PROTECT_WITH_INDEX (sb, &spi);
     dims = getDimAttrib(x);
-    ndim = length(dims);
+    ndim = dims==R_NilValue ? 0 : LENGTH(dims);
 
     /* Check for variant result, which will be a range rather than a vector, 
        and if we have a range, see whether it can be used directly, or must
@@ -379,9 +381,10 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
 
     if (sb != R_NoObject) {
         int stretch = 1;  /* allow out of bounds, not for assignment */
+        int hasna;
         SEXP d;
         if (drop == NA_LOGICAL) suppress_drop = whether_suppress_drop(sb);
-        PROTECT(indx = makeSubscript(x, sb, &stretch, call, 0));
+        PROTECT(indx = makeSubscript(x, sb, &stretch, &hasna, call, 0));
         n = LENGTH(indx);
     }
 

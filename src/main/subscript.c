@@ -278,13 +278,16 @@ SEXP attribute_hidden strmat2intmat(SEXP s, SEXP dnamelist, SEXP call)
     return si;
 }
 
-static SEXP nullSubscript(int n)
+static SEXP nullSubscript (int n)
 {
-    int i;
-    SEXP indx;
-    indx = allocVector(INTSXP, n);
-    for (i = 0; i < n; i++)
-	INTEGER(indx)[i] = i + 1;
+    SEXP indx = allocVector(INTSXP, n);
+    int *ix = INTEGER(indx) - 1;
+
+    unsigned i;     /* unsigned avoids overflow issue */
+    unsigned m = n;
+
+    for (i = 1; i <= m; i++) ix[i] = i;
+
     return indx;
 }
 
@@ -518,10 +521,10 @@ static SEXP nonnegativeSubscript(SEXP s, int ns, int nx)
         return s;
 }
 
-static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
+static SEXP integerSubscript (SEXP s, int ns, int nx, int *stretch, int *hasna,
+                              SEXP call)
 {
     int i, ii, min, max, canstretch;
-    Rboolean isna;
 
     canstretch = *stretch;
     *stretch = 0;
@@ -535,14 +538,14 @@ static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
     if (i==ns) /* all NA, or ns==0 */
         return s;
 
-    isna = i>0;
+    *hasna = i>0;
 
     min = ii;
     max = ii;
     for (i = i+1; i < ns; i++) {
         ii = INTEGER(s)[i];
         if (ii == NA_INTEGER) 
-            isna = TRUE;
+            *hasna = TRUE;
         else {
             if (ii > max)  /* checked first since more common than ii < min */
                 max = ii;
@@ -561,7 +564,7 @@ static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
     if (min > 0) /* All positive (or NA) */
         return s;
     else if (min < 0) {
-        if (max <= 0 && !isna) 
+        if (max <= 0 && !*hasna) 
             return negativeSubscript(s, ns, nx);
         else
             ECALL(call, _("only 0's may be mixed with negative subscripts"));
@@ -589,9 +592,8 @@ typedef SEXP (*StringEltGetter)(SEXP x, int i);
 
 #define na_or_empty_string(strelt) ((strelt)==NA_STRING || CHAR((strelt))[0]==0)
 
-static SEXP
-stringSubscript(SEXP s, int ns, int nx, SEXP names,
-		StringEltGetter strg, int *stretch, SEXP call)
+static SEXP stringSubscript (SEXP s, int ns, int nx, SEXP names,
+                             StringEltGetter strg, int *stretch, SEXP call)
 {
     SEXP indx, indexnames;
     int i, j, k, nnames, sub, extra;
@@ -603,7 +605,7 @@ stringSubscript(SEXP s, int ns, int nx, SEXP names,
 
     PROTECT(s);
     PROTECT(names);
-    indexnames = 0;
+    indexnames = R_NoObject;
     nnames = names==R_NilValue ? 0 : nx;
     extra = nx;
 
@@ -657,7 +659,7 @@ stringSubscript(SEXP s, int ns, int nx, SEXP names,
         for (i = 0; i < ns; i++) {
             if (INTEGER(indx)[i] == 0) {
                 SEXP sbe_i = STRING_ELT(s,i);
-                if (indexnames==0) { /* first non-matching index */
+                if (indexnames == R_NoObject) { /* first non-matching index */
                     PROTECT (indexnames = allocVector(VECSXP, ns));
                     for (k = 0; k < ns; k++) 
                         if (INTEGER(indx)[k] != 0)
@@ -682,15 +684,18 @@ stringSubscript(SEXP s, int ns, int nx, SEXP names,
             }
         }
     }
+    else {
+        /* We just leave any zeros in the returned index vector */
+    }
 
     /* We return the new names as the names attribute of the returned
        subscript vector. */
-    if (indexnames != 0)
+    if (indexnames != R_NoObject)
         setAttrib(indx, R_UseNamesSymbol, indexnames);
     if (canstretch)
         *stretch = extra==nx ? 0 : extra;
 
-    UNPROTECT (3+(indexnames!=0));
+    UNPROTECT (3+(indexnames!=R_NoObject));
 
     return indx;
 }
@@ -705,11 +710,10 @@ stringSubscript(SEXP s, int ns, int nx, SEXP names,
 
 typedef SEXP AttrGetter(SEXP x, SEXP data);
 
-static SEXP
-int_arraySubscript(int dim, SEXP s, SEXP dims, AttrGetter dng,
-                   StringEltGetter strg, SEXP x, SEXP call)
+static SEXP int_arraySubscript (int dim, SEXP s, SEXP dims, AttrGetter dng,
+                                StringEltGetter strg, SEXP x, SEXP call)
 {
-    int nd, ns, stretch = 0;
+    int nd, ns, hasna, stretch = 0;
     SEXP dnames, tmp;
     ns = length(s);
     nd = INTEGER(dims)[dim];
@@ -720,10 +724,10 @@ int_arraySubscript(int dim, SEXP s, SEXP dims, AttrGetter dng,
     case LGLSXP:
 	return logicalSubscript(s, ns, nd, &stretch, call);
     case INTSXP:
-	return integerSubscript(s, ns, nd, &stretch, call);
+	return integerSubscript(s, ns, nd, &stretch, &hasna, call);
     case REALSXP:
 	PROTECT(tmp = coerceVector(s, INTSXP));
-	tmp = integerSubscript(tmp, ns, nd, &stretch, call);
+	tmp = integerSubscript(tmp, ns, nd, &stretch, &hasna, call);
 	UNPROTECT(1);
 	return tmp;
     case STRSXP:
@@ -747,9 +751,8 @@ int_arraySubscript(int dim, SEXP s, SEXP dims, AttrGetter dng,
 
 /* This is used by packages arules and cba. Seems dangerous as the
    typedef is not exported */
-SEXP
-arraySubscript(int dim, SEXP s, SEXP dims, AttrGetter dng,
-	       StringEltGetter strg, SEXP x)
+SEXP arraySubscript (int dim, SEXP s, SEXP dims, AttrGetter dng,
+                     StringEltGetter strg, SEXP x)
 {
     return int_arraySubscript(dim, s, dims, dng, strg, x, R_NilValue);
 }
@@ -776,14 +779,18 @@ arraySubscript(int dim, SEXP s, SEXP dims, AttrGetter dng,
    R_UseNamesSymbol attribute containing new names to use.  The caller
    should look for this only if the subscripts were strings.
 
+   The hasna argument is set to 1 if the result has any NAs, 0 if not.
+
    The arguments x and s are protected within this function.
 */
 
-SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call, 
-                                    int used_to_replace)
+SEXP attribute_hidden makeSubscript (SEXP x, SEXP s, int *stretch, int *hasna,
+                                     SEXP call, int used_to_replace)
 {
     int nx, ns;
     SEXP ans, tmp;
+
+    *hasna = 0;
 
     if (!isVector(x) && !isList(x) && !isLanguage(x))
 	ECALL(call, _("subscripting on non-vector"));
@@ -793,7 +800,7 @@ SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call,
 
     /* Handle single positive index (real or integer), not out of bounds.
        Note that we don't have to worry about a length one subscript being
-       modified in a replace operation, since even if it is,  we don't use
+       modified in a replace operation, since even if it is, we don't use
        it anymore after the modification.  Since it is of length one, we
        can return a vector that is in use (caller shouldn't modify it). */
 
@@ -826,11 +833,11 @@ SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call,
 	ans = logicalSubscript(s, ns, nx, stretch, call);
 	break;
     case INTSXP:
-	ans = integerSubscript(s, ns, nx, stretch, call);
+	ans = integerSubscript(s, ns, nx, stretch, &hasna, call);
 	break;
     case REALSXP:
 	PROTECT(tmp = coerceVector(s, INTSXP));
-	ans = integerSubscript(tmp, ns, nx, stretch, call);
+	ans = integerSubscript(tmp, ns, nx, stretch, &hasna, call);
 	UNPROTECT(1);
 	break;
     case STRSXP: {
@@ -845,6 +852,7 @@ SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call,
 	    ans = nullSubscript(nx);
 	    break;
 	}
+        /* fall through */
     default:
 	if (call == R_NilValue)
 	    error(_("invalid subscript type '%s'"), type2char(TYPEOF(s)));

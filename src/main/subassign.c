@@ -435,7 +435,9 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     int stretch = -1; /* allow out of bounds, for assignment */
     int pindx;
-    PROTECT_WITH_INDEX(indx = makeSubscript(x, s, &stretch, call, 1), &pindx);
+    int hasna;
+    PROTECT_WITH_INDEX (indx = makeSubscript(x, s, &stretch, &hasna, call, 1),
+                        &pindx);
     n = LENGTH(indx);
 
     /* Here we make sure that the LHS has */
