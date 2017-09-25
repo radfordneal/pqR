@@ -696,13 +696,9 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 do { \
                     R_len_t u = HELPERS_UP_TO(i,a); \
                     /* do ops individually until result+i is 32-byte aligned */\
-                    if (((uintptr_t)(result+i) & 0x1f) != 0) { \
+                    while (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
                         result[i] = func(fetch1(s1,i),tmp); \
                         i += 1; \
-                        if (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
-                            result[i] = func(fetch1(s1,i),tmp); \
-                            i += 1; \
-                        } \
                     } \
                     while (i+3 <= u) { \
                         __m256d res_pd; \
@@ -727,13 +723,9 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 do { \
                     R_len_t u = HELPERS_UP_TO(i,a); \
                     /* do ops individually until result+i is 32-byte aligned */\
-                    if (((uintptr_t)(result+i) & 0x1f) != 0) { \
+                    while (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
                         result[i] = func(tmp,fetch2(s2,i)); \
                         i += 1; \
-                        if (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
-                            result[i] = func(tmp,fetch2(s2,i)); \
-                            i += 1; \
-                        } \
                     } \
                     while (i+3 <= u) { \
                         __m256d res_pd; \
@@ -757,13 +749,9 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 do { \
                     R_len_t u = HELPERS_UP_TO2(i,a1,a2); \
                     /* do ops individually until result+i is 32-byte aligned */\
-                    if (((uintptr_t)(result+i) & 0x1f) != 0) { \
+                    while (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
                         result[i] = func(fetch1(s1,i),fetch2(s2,i)); \
                         i += 1; \
-                        if (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
-                            result[i] = func(fetch1(s1,i),fetch2(s2,i)); \
-                            i += 1; \
-                        } \
                     } \
                     while (i+3 <= u) { \
                         __m256d res_pd, op2_pd; \
@@ -788,15 +776,10 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 do { \
                     R_len_t u = HELPERS_UP_TO(i,a); \
                     /* do ops individually until result+i is 32-byte aligned */\
-                    if (((uintptr_t)(result+i) & 0x1f) != 0) { \
+                    while (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
                         result[i] = func(fetch1(s1,i),fetch2(s2,i2)); \
                         if (++i2 == n2) i2 = 0; \
                         i += 1; \
-                        if (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
-                            result[i] = func(fetch1(s1,i),fetch2(s2,i2)); \
-                            if (++i2 == n2) i2 = 0; \
-                            i += 1; \
-                        } \
                     } \
                     while (i+3 <= u) { \
                         __m256d res_pd, op2_pd; \
@@ -831,15 +814,10 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 do { \
                     R_len_t u = HELPERS_UP_TO(i,a); \
                     /* do ops individually until result+i is 32-byte aligned */\
-                    if (((uintptr_t)(result+i) & 0x1f) != 0) { \
+                    while (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
                         result[i] = func(fetch1(s1,i1),fetch2(s2,i)); \
                         if (++i1 == n1) i1 = 0; \
                         i += 1; \
-                        if (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
-                            result[i] = func(fetch1(s1,i1),fetch2(s2,i)); \
-                            if (++i1 == n1) i1 = 0; \
-                            i += 1; \
-                        } \
                     } \
                     while (i+3 <= u) { \
                         __m256d res_pd, op1_pd; \
@@ -1046,15 +1024,10 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                         R_len_t u = HELPERS_UP_TO(i,a);
 #                       if __AVX__ && !defined(DISABLE_AVX_CODE)
                         /* do individual ops until rans+i is 32-byte aligned */
-                        if (((uintptr_t)(rans+i) & 0x1f) != 0) {
+                        while (((uintptr_t)(rans+i) & 0x1f) != 0 && i <= u) {
                             double op = RFETCH(s1,i);
                             rans[i] = op * op;
                             i += 1;
-                            if (((uintptr_t)(rans+i) & 0x1f) != 0 && i <= u) {
-                                double op = RFETCH(s1,i);
-                                rans[i] = op * op;
-                                i += 1;
-                            }
                         }
                         while (i+3 <= u) {
                             __m256d res_pd;
