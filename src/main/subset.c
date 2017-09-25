@@ -207,6 +207,7 @@ static void ExtractRange(SEXP x, SEXP result, int start, int end, SEXP call)
 
 static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
 {
+    int *ix = INTEGER(indx);
     int n = LENGTH(indx);
     int nx = LENGTH(x);
     int i, ii;
@@ -214,28 +215,28 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
     switch (TYPEOF(x)) {
     case LGLSXP:
         for (i = 0; i<n; i++)
-            if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx)
+            if ((ii = ix[i]) <= 0 || ii > nx)
                 LOGICAL(result)[i] = NA_LOGICAL;
             else
                 LOGICAL(result)[i] = LOGICAL(x)[ii-1];
         break;
     case INTSXP:
         for (i = 0; i<n; i++)
-            if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx)
+            if ((ii = ix[i]) <= 0 || ii > nx)
                 INTEGER(result)[i] = NA_INTEGER;
             else
                 INTEGER(result)[i] = INTEGER(x)[ii-1];
         break;
     case REALSXP:
         for (i = 0; i<n; i++)
-            if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx)
+            if ((ii = ix[i]) <= 0 || ii > nx)
                 REAL(result)[i] = NA_REAL;
             else
                 REAL(result)[i] = REAL(x)[ii-1];
         break;
     case CPLXSXP:
         for (i = 0; i<n; i++)
-            if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx) {
+            if ((ii = ix[i]) <= 0 || ii > nx) {
                 COMPLEX(result)[i].r = NA_REAL;
                 COMPLEX(result)[i].i = NA_REAL; 
             }
@@ -244,7 +245,7 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
         break;
     case STRSXP:
         for (i = 0; i<n; i++)
-            if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx)
+            if ((ii = ix[i]) <= 0 || ii > nx)
                 SET_STRING_ELT(result, i, NA_STRING);
             else
                 SET_STRING_ELT(result, i, STRING_ELT(x, ii-1));
@@ -253,7 +254,7 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
     case EXPRSXP:
         if (NAMEDCNT_EQ_0(x)) {
             for (i = 0; i<n; i++)
-                if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx)
+                if ((ii = ix[i]) <= 0 || ii > nx)
                     /* nothing, already R_NilValue */ ;
                 else {
                     SEXP ve = VECTOR_ELT(x, ii-1);
@@ -263,7 +264,7 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
         }
         else {
             for (i = 0; i<n; i++)
-                if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx)
+                if ((ii = ix[i]) <= 0 || ii > nx)
                     /* nothing, already R_NilValue */ ;
                 else 
                     SET_VECTOR_ELEMENT_FROM_VECTOR(result, i, x, ii-1);
@@ -275,7 +276,7 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
         SEXP tmp, tmp2;
         tmp = result;
         for (i = 0; i<n; i++) {
-            if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx)
+            if ((ii = ix[i]) <= 0 || ii > nx)
                 SETCAR(tmp, R_NilValue);
             else {
                 tmp2 = nthcdr(x, ii-1);
@@ -287,7 +288,7 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
         break;
     case RAWSXP:
         for (i = 0; i<n; i++)
-            if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx)
+            if ((ii = ix[i]) <= 0 || ii > nx)
                 RAW(result)[i] = (Rbyte) 0;
             else
                 RAW(result)[i] = RAW(x)[ii-1];
@@ -683,37 +684,38 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
 
         /* Loops over row indexes, except skips NA row indexes, done above. */
 
+        int *sri = INTEGER(sr);
         jjnr = (jj-1) * nr;
         switch (TYPEOF(x)) {
         case LGLSXP:
             for (i = 0; i < nrs; i++, ij++) 
-                if ((ii = INTEGER(sr)[i]) != NA_INTEGER) 
+                if ((ii = sri[i]) != NA_INTEGER) 
                     LOGICAL(result)[ij] = LOGICAL(x)[(ii-1)+jjnr];
             break;
         case INTSXP:
             for (i = 0; i < nrs; i++, ij++) 
-                if ((ii = INTEGER(sr)[i]) != NA_INTEGER) 
+                if ((ii = sri[i]) != NA_INTEGER) 
                     INTEGER(result)[ij] = INTEGER(x)[(ii-1)+jjnr];
             break;
         case REALSXP:
             for (i = 0; i < nrs; i++, ij++) 
-                if ((ii = INTEGER(sr)[i]) != NA_INTEGER) 
+                if ((ii = sri[i]) != NA_INTEGER) 
                     REAL(result)[ij] = REAL(x)[(ii-1)+jjnr];
             break;
         case CPLXSXP:
             for (i = 0; i < nrs; i++, ij++) 
-                if ((ii = INTEGER(sr)[i]) != NA_INTEGER) 
+                if ((ii = sri[i]) != NA_INTEGER) 
                     COMPLEX(result)[ij] = COMPLEX(x)[(ii-1)+jjnr];
             break;
         case STRSXP:
             for (i = 0; i < nrs; i++, ij++) 
-                if ((ii = INTEGER(sr)[i]) != NA_INTEGER) 
+                if ((ii = sri[i]) != NA_INTEGER) 
                     SET_STRING_ELT(result, ij, STRING_ELT(x, (ii-1)+jjnr));
             break;
         case VECSXP:
             if (!DUPVE || NAMEDCNT_EQ_0(x)) {
                 for (i = 0; i < nrs; i++, ij++) 
-                    if ((ii = INTEGER(sr)[i]) != NA_INTEGER) {
+                    if ((ii = sri[i]) != NA_INTEGER) {
                         SEXP ve = VECTOR_ELT(x, (ii-1)+jjnr);
                         SET_VECTOR_ELT (result, ij, ve);
                         INC_NAMEDCNT_0_AS_1(ve);
@@ -721,14 +723,14 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
             }
             else {
                 for (i = 0; i < nrs; i++, ij++) 
-                    if ((ii = INTEGER(sr)[i]) != NA_INTEGER) 
+                    if ((ii = sri[i]) != NA_INTEGER) 
                         SET_VECTOR_ELT (result, ij, 
                           duplicate(VECTOR_ELT(x,(ii-1)+jjnr)));
             }
             break;
         case RAWSXP:
             for (i = 0; i < nrs; i++, ij++) 
-                if ((ii = INTEGER(sr)[i]) != NA_INTEGER) 
+                if ((ii = sri[i]) != NA_INTEGER) 
                     RAW(result)[ij] = RAW(x)[(ii-1)+jjnr];
             break;
         default:

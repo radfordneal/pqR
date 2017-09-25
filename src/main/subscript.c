@@ -291,7 +291,8 @@ static SEXP nullSubscript (int n)
     return indx;
 }
 
-static SEXP logicalSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
+static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch, 
+                              int *hasna, SEXP call)
 {
     int canstretch, nmax;
     canstretch = *stretch;
@@ -306,11 +307,12 @@ static SEXP logicalSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
 
     nmax = (ns > nx) ? ns : nx;
     *stretch = (ns > nx) ? ns : 0;
+    *hasna = 0;
 
     if (ns == 0)
 	return allocVector(INTSXP, 0);
 
-    if (ns != nmax || SIZEOF_CHAR_P <= 4) {  /* small address space */
+    if (1 || ns != nmax || SIZEOF_CHAR_P <= 4) {  /* small address space */
 
         /* TWO-PASS IMPLEMENTATION.  Avoids allocating more memory than
            necessary, hence preferred for systems with limited address space.
@@ -338,8 +340,12 @@ static SEXP logicalSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
             ucount += su[i++];
             ucount += su[i++];
         }
-        len = (int)(ucount >> 31) + (int)(ucount & 0x7fffffff);
-        if (nmax > ns) {
+
+        int NA_count = ucount >> 31;
+        int TRUE_count = ucount & 0x7fffffff;
+        len = NA_count + TRUE_count;
+
+        if (nmax > ns) {  /* adjust for replication, perhaps partial */
             len *= nmax / ns;
             int rem = nmax % ns;
             ucount = 0;
@@ -353,35 +359,68 @@ static SEXP logicalSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
         x = allocVector (INTSXP, len);
         xi = INTEGER(x);
         int j = 0;
-    
-        if (ns == nmax) {  /* Do common case quickly */
-            i = 0;
-            if (ns & 1) {
-                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+
+        if (NA_count == 0) {  /* don't need to handle NA */
+            if (ns == nmax) {  /* Do common case quickly */
+                i = 0;
+                if (ns & 1) {
+                    if ((v = si[i++]) != 0) xi[j++] = i;
+                }
+                if (ns & 2) {
+                    if ((v = si[i++]) != 0) xi[j++] = i;
+                    if ((v = si[i++]) != 0) xi[j++] = i;
+                }
+                while (i < ns) {
+                    if ((v = si[i++]) != 0) xi[j++] = i;
+                    if ((v = si[i++]) != 0) xi[j++] = i;
+                    if ((v = si[i++]) != 0) xi[j++] = i;
+                    if ((v = si[i++]) != 0) xi[j++] = i;
+                }
             }
-            if (ns & 2) {
-                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
-                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
-            }
-            while (i < ns) {
-                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
-                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
-                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
-                if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+            else {  /* The general case */
+                int k = 0;
+                i = 0;
+                while (i < nmax) {
+                    v = si[k++];
+                    i += 1;
+                    if (k == ns)
+                        k = 0;
+                    if (v != 0) xi[j++] = i;
+                }
             }
         }
-        else {  /* The general case */
-            int k = 0;
-            i = 0;
-            while (i < nmax) {
-                v = si[k++];
-                i += 1;
-                if (k == ns)
-                    k = 0;
-                if (v != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+        else {  /* do need to handle NA */
+            if (ns == nmax) {  /* Do common case quickly */
+                i = 0;
+                if (ns & 1) {
+                    if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+                }
+                if (ns & 2) {
+                    if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+                    if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+                }
+                while (i < ns) {
+                    if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+                    if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+                    if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+                    if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+                }
             }
+            else {  /* The general case */
+                int k = 0;
+                i = 0;
+                while (i < nmax) {
+                    v = si[k++];
+                    i += 1;
+                    if (k == ns)
+                        k = 0;
+                    if (v != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
+                }
+            }
+            for (i = 0; xi[i] >= 0; i++) ;  /* find first NA */
+            *hasna = i+1;
         }
-    
+
         if (j != len) abort();
     }
 
@@ -544,8 +583,9 @@ static SEXP integerSubscript (SEXP s, int ns, int nx, int *stretch, int *hasna,
     max = ii;
     for (i = i+1; i < ns; i++) {
         ii = INTEGER(s)[i];
-        if (ii == NA_INTEGER) 
-            *hasna = TRUE;
+        if (ii == NA_INTEGER) {
+            if (!*hasna) *hasna = i+1;
+        }
         else {
             if (ii > max)  /* checked first since more common than ii < min */
                 max = ii;
@@ -722,7 +762,7 @@ static SEXP int_arraySubscript (int dim, SEXP s, SEXP dims, AttrGetter dng,
     case NILSXP:
 	return allocVector(INTSXP, 0);
     case LGLSXP:
-	return logicalSubscript(s, ns, nd, &stretch, call);
+	return logicalSubscript(s, ns, nd, &stretch, &hasna, call);
     case INTSXP:
 	return integerSubscript(s, ns, nd, &stretch, &hasna, call);
     case REALSXP:
@@ -779,7 +819,8 @@ SEXP arraySubscript (int dim, SEXP s, SEXP dims, AttrGetter dng,
    R_UseNamesSymbol attribute containing new names to use.  The caller
    should look for this only if the subscripts were strings.
 
-   The hasna argument is set to 1 if the result has any NAs, 0 if not.
+   The hasna argument is set to the index (from 1) of the first NA
+   subscript, or 0 if there are none.
 
    The arguments x and s are protected within this function.
 */
@@ -830,14 +871,14 @@ SEXP attribute_hidden makeSubscript (SEXP x, SEXP s, int *stretch, int *hasna,
 	ans = allocVector(INTSXP, 0);
 	break;
     case LGLSXP:
-	ans = logicalSubscript(s, ns, nx, stretch, call);
+	ans = logicalSubscript(s, ns, nx, stretch, hasna, call);
 	break;
     case INTSXP:
-	ans = integerSubscript(s, ns, nx, stretch, &hasna, call);
+	ans = integerSubscript(s, ns, nx, stretch, hasna, call);
 	break;
     case REALSXP:
 	PROTECT(tmp = coerceVector(s, INTSXP));
-	ans = integerSubscript(tmp, ns, nx, stretch, &hasna, call);
+	ans = integerSubscript(tmp, ns, nx, stretch, hasna, call);
 	UNPROTECT(1);
 	break;
     case STRSXP: {

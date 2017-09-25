@@ -366,12 +366,34 @@ static SEXP VectorAssignSeq
     return x;
 }
 
+/* Remove NA indexes from indx, whose length is *n, with first NA at
+   index (from 1) first_na.  Returns possibly new index vector, and
+   updates *n to number of indexes. */
+
+static SEXP NA_rem (SEXP indx, int *n, int first_na)
+{
+    int i, j;
+
+    if (NAMEDCNT_GT_0(indx))
+        indx = duplicate(indx);
+
+    j = first_na - 1;
+    for (i = j+1; i < *n; i++) {
+        if (INTEGER(indx)[i] != NA_INTEGER) {
+            INTEGER(indx)[j] = INTEGER(indx)[i];
+            j += 1;
+        }
+    }
+
+    *n = j;
+
+    return indx;
+}
+
 /* If "err" is 1, raise an error if any NAs are present in "indx", and
    otherwise return "indx" unchanged.  If "err" is 0, return an index
    vector (possibly newly allocated) with any NAs removed, updating "n"
    to its new length. */
-
-static SEXP NA_rem_err (SEXP call, SEXP indx, int *n, int err, int ii);
 
 static inline SEXP NA_check_remove (SEXP call, SEXP indx, int *n, int err)
 {
@@ -379,26 +401,13 @@ static inline SEXP NA_check_remove (SEXP call, SEXP indx, int *n, int err)
 
     for (ii = 0; ii < *n && INTEGER(indx)[ii] != NA_INTEGER; ii++) ;
 
-    return ii == *n ? indx : NA_rem_err (call, indx, n, err, ii);
-}
-
-static SEXP NA_rem_err (SEXP call, SEXP indx, int *n, int err, int ii)
-{
-    int i;
+    if (ii == *n)
+        return indx;
 
     if (err)
         errorcall(call,_("NAs are not allowed in subscripted assignments"));
-    if (NAMEDCNT_GT_0(indx))
-        indx = duplicate(indx);
-    for (i = ii + 1 ; i < *n; i++) {
-        if (INTEGER(indx)[i] != NA_INTEGER) {
-            INTEGER(indx)[ii] = INTEGER(indx)[i];
-            ii += 1;
-        }
-    }
-    *n = ii;
 
-    return indx;
+    return NA_rem (indx, n, ii+1);
 }
 
 
@@ -456,7 +465,11 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     int oldn = n;
 
-    REPROTECT (indx = NA_check_remove (call, indx, &n, length(y) > 1), pindx);
+    if (hasna) {
+        if (length(y) > 1)
+            errorcall(call,_("NAs are not allowed in subscripted assignments"));
+        REPROTECT (indx = NA_rem (indx, &n, hasna), pindx);
+    }
 
     if ((TYPEOF(x) != VECSXP && TYPEOF(x) != EXPRSXP) || y != R_NilValue) {
 	if (oldn > 0 && ny == 0)
