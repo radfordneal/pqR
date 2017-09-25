@@ -214,59 +214,59 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
     switch (TYPEOF(x)) {
     case LGLSXP:
         for (i = 0; i<n; i++)
-            if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+            if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx)
                 LOGICAL(result)[i] = NA_LOGICAL;
             else
-                LOGICAL(result)[i] = LOGICAL(x)[ii];
+                LOGICAL(result)[i] = LOGICAL(x)[ii-1];
         break;
     case INTSXP:
         for (i = 0; i<n; i++)
-            if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+            if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx)
                 INTEGER(result)[i] = NA_INTEGER;
             else
-                INTEGER(result)[i] = INTEGER(x)[ii];
+                INTEGER(result)[i] = INTEGER(x)[ii-1];
         break;
     case REALSXP:
         for (i = 0; i<n; i++)
-            if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+            if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx)
                 REAL(result)[i] = NA_REAL;
             else
-                REAL(result)[i] = REAL(x)[ii];
+                REAL(result)[i] = REAL(x)[ii-1];
         break;
     case CPLXSXP:
         for (i = 0; i<n; i++)
-            if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx) {
+            if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx) {
                 COMPLEX(result)[i].r = NA_REAL;
                 COMPLEX(result)[i].i = NA_REAL; 
             }
             else
-                COMPLEX(result)[i] = COMPLEX(x)[ii];
+                COMPLEX(result)[i] = COMPLEX(x)[ii-1];
         break;
     case STRSXP:
         for (i = 0; i<n; i++)
-            if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+            if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx)
                 SET_STRING_ELT(result, i, NA_STRING);
             else
-                SET_STRING_ELT(result, i, STRING_ELT(x, ii));
+                SET_STRING_ELT(result, i, STRING_ELT(x, ii-1));
         break;
     case VECSXP:
     case EXPRSXP:
         if (NAMEDCNT_EQ_0(x)) {
             for (i = 0; i<n; i++)
-                if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+                if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx)
                     /* nothing, already R_NilValue */ ;
                 else {
-                    SEXP ve = VECTOR_ELT(x, ii);
+                    SEXP ve = VECTOR_ELT(x, ii-1);
                     SET_VECTOR_ELT(result, i, ve);
                     if (i > 0) INC_NAMEDCNT_0_AS_1(ve);
                 }
         }
         else {
             for (i = 0; i<n; i++)
-                if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+                if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx)
                     /* nothing, already R_NilValue */ ;
                 else 
-                    SET_VECTOR_ELEMENT_FROM_VECTOR(result, i, x, ii);
+                    SET_VECTOR_ELEMENT_FROM_VECTOR(result, i, x, ii-1);
         }
         break;
     case LISTSXP:
@@ -275,10 +275,10 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
         SEXP tmp, tmp2;
         tmp = result;
         for (i = 0; i<n; i++) {
-            if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+            if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx)
                 SETCAR(tmp, R_NilValue);
             else {
-                tmp2 = nthcdr(x, ii);
+                tmp2 = nthcdr(x, ii-1);
                 SETCAR(tmp, CAR(tmp2));
                 SET_TAG(tmp, TAG(tmp2));
             }
@@ -287,10 +287,10 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
         break;
     case RAWSXP:
         for (i = 0; i<n; i++)
-            if ((ii=INTEGER(indx)[i]) == NA_INTEGER || --ii < 0 || ii >= nx)
+            if ((ii=INTEGER(indx)[i]) <= 0 || ii > nx)
                 RAW(result)[i] = (Rbyte) 0;
             else
-                RAW(result)[i] = RAW(x)[ii];
+                RAW(result)[i] = RAW(x)[ii-1];
         break;
     default:
         nonsubsettable_error(call,x);
