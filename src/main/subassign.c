@@ -923,18 +923,25 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     ny = length(y);
 
-    int *subs[k], indx[k], bound[k], offset[k];
+    int *subs[k], indx[k], bound[k], offset[k], hasna[k];
     SEXP sv_scalar_stack = R_scalar_stack;
 
-    int nmod = 1, zero = 0;
+    int nmod = ny > 1;
+    int zero = 0;
     for (i = 0; i < k; i++) {
-        int hasna;
-        PROTECT(tmp = array_sub (CAR(s), dims, i, x, &hasna));
-        if (hasna) any_hasna = 1;
-        subs[i] = INTEGER(tmp);
+        PROTECT(tmp = array_sub (CAR(s), dims, i, x, &hasna[i]));
 	bound[i] = LENGTH(tmp);
+        if (hasna[i]) {
+            any_hasna = 1;
+            if (ny <= 1) {
+                tmp = NA_rem (tmp, &bound[i], hasna[i]);
+                UNPROTECT(1);
+                PROTECT(tmp);
+            }
+        }
+        subs[i] = INTEGER(tmp);
         if (bound[i] == 0) zero = 1;
-        if (ny > 0) nmod = ((int_fast64_t)nmod * bound[i]) % ny;
+        if (ny > 1) nmod = ((int_fast64_t)nmod * bound[i]) % ny;
         indx[i] = 0;
 	s = CDR(s);
     }
@@ -945,13 +952,8 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	errorcall(call,
        _("number of items to replace is not a multiple of replacement length"));
 
-    if (ny > 1 && any_hasna) { /* check for NAs in indices */
-	for (i = 0; i < k; i++)
-	    for (j = 0; j < bound[i]; j++)
-		if (subs[i][j] == NA_INTEGER)
-		    errorcall(call,
-                      _("NAs are not allowed in subscripted assignments"));
-    }
+    if (any_hasna && ny > 1)
+        errorcall (call, _("NAs are not allowed in subscripted assignments"));
 
     if (zero) {
 	UNPROTECT(k+3);
