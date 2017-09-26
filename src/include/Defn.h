@@ -1267,6 +1267,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define IntegerFromLogical	Rf_IntegerFromLogical
 # define IntegerFromReal	Rf_IntegerFromReal
 # define IntegerFromString	Rf_IntegerFromString
+# define internalArraySubscript	Rf_internalArraySubscript
 # define internalTypeCheck	Rf_internalTypeCheck
 # define isValidName		Rf_isValidName
 # define ItemName		Rf_ItemName
@@ -1479,6 +1480,7 @@ void InitStringHash(void);
 void Init_R_Variables(SEXP);
 void InitTempDir(void);
 void initStack(void);
+SEXP internalArraySubscript(int, SEXP, SEXP, SEXP, int *);
 void internalTypeCheck(SEXP, SEXP, SEXPTYPE);
 Rboolean isMethodsDispatchOn(void);
 int isValidName(const char *);

@@ -746,6 +746,7 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
 {
     SEXP s0 = CAR(subs), s1 = CADR(subs);
     SEXP dims, result, sr, sc;
+    int rhasna = 0, chasna = 0;
     int start = 1, end = 0;
     int nr, nc, nrs = 0, ncs = 0;
     int suppress_drop_row = 0, suppress_drop_col = 0;
@@ -781,7 +782,7 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
     if (s0 != R_NoObject) {
         if (drop == NA_LOGICAL) 
             suppress_drop_row = whether_suppress_drop(s0);
-        PROTECT (sr = array_sub (s0, dim, 0, x));
+        PROTECT (sr = array_sub (s0, dim, 0, x, &rhasna));
         nprotect++;
         nrs = LENGTH(sr);
     }
@@ -793,7 +794,7 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
     if (drop == FALSE)
         suppress_drop_row = suppress_drop_col = 1;
 
-    PROTECT (sc = array_sub (s1, dim, 1, x));
+    PROTECT (sc = array_sub (s1, dim, 1, x, &chasna));
     nprotect++;
     ncs = LENGTH(sc);
 
@@ -907,6 +908,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
     int i, j, ii, jj, n;
     SEXP dimnames, dimnamesnames, r, result;
     int mode = TYPEOF(x);
+    int any_hasna = 0;
 
     int *subs[k], indx[k], nsubs[k], offset[k], suppress_drop[k];
     SEXP subv[k];
@@ -917,6 +919,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 
     n = 1; r = s;
     for (i = 0; i < k; i++) {
+        int hasna;
         if (drop == TRUE)
             suppress_drop[i] = 0;
         else if (drop == FALSE)
@@ -924,7 +927,8 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
         else /* drop == NA_LOGICAL */ 
             suppress_drop[i] = CAR(r) == R_MissingArg ? MISSING(r) == 2
                                 : whether_suppress_drop(CAR(r));
-        PROTECT (subv[i] = array_sub (CAR(r), xdims, i, x));
+        PROTECT (subv[i] = array_sub (CAR(r), xdims, i, x, &hasna));
+        if (hasna) any_hasna = 1;
         subs[i] = INTEGER(subv[i]);
 	nsubs[i] = LENGTH(subv[i]);
         n *= nsubs[i];
@@ -954,9 +958,11 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 
     PROTECT(result = allocVector(mode, n));
 
+    if (n == 0) goto done;
+
     /* Transfer the subset elements from "x" to "a". */
 
-    if (n > 0) for (i = 0; ; i++) {
+    for (i = 0; ; i++) {
 
         jj = subs[0][indx[0]];
         if (jj != NA_INTEGER) {

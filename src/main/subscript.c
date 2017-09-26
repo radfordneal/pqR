@@ -31,7 +31,8 @@
  *
  *  makeSubscript()   -- for "[" and "[<-" in ./subset.c and ./subassign.c,
  *			 and "[[<-" with a scalar in ./subassign.c
- *  arraySubscript()  -- for "[i,j,..." and "[<-..." in ./subset.c, ./subassign.c
+ *  internalArraySubscript()  -- for "[i,j,..." and "[<-..." 
+ *                               in ./subset.c, ./subassign.c
  */
 
 #ifdef HAVE_CONFIG_H
@@ -766,15 +767,59 @@ static SEXP stringSubscript (SEXP s, int ns, int nx, SEXP names,
     dim is the dimension (0 to k-1)
     s is the subscript list,
     dims is the dimensions of x
-    dng is a function (usually getAttrib) that obtains the dimnames
     x is the array to be subscripted.
+    hasna is set to index of first NA index, 0 if none
 */
+
+SEXP attribute_hidden internalArraySubscript
+                        (int dim, SEXP s, SEXP dims, SEXP x, int *hasna)
+{
+    SEXP call = R_NilValue;
+    int nd, ns, stretch = 0;
+    SEXP dnames, tmp;
+    ns = length(s);
+    nd = INTEGER(dims)[dim];
+
+    *hasna = 0;
+
+    switch (TYPEOF(s)) {
+    case NILSXP:
+	return allocVector(INTSXP, 0);
+    case LGLSXP:
+	return logicalSubscript(s, ns, nd, &stretch, hasna, call);
+    case INTSXP:
+	return integerSubscript(s, ns, nd, &stretch, hasna, call);
+    case REALSXP:
+	PROTECT(tmp = coerceVector(s, INTSXP));
+	tmp = integerSubscript(tmp, ns, nd, &stretch, hasna, call);
+	UNPROTECT(1);
+	return tmp;
+    case STRSXP:
+	dnames = getAttrib(x, R_DimNamesSymbol);
+	if (dnames == R_NilValue)
+	    ECALL(call, _("no 'dimnames' attribute for array"));
+	dnames = VECTOR_ELT(dnames, dim);
+	return stringSubscript(s, ns, nd, dnames, (STRING_ELT), &stretch, call);
+    case SYMSXP:
+	if (s == R_MissingArg)
+	    return nullSubscript(nd);
+        /* fall through */
+    default:
+        error(_("invalid subscript type '%s'"), type2char(TYPEOF(s)));
+    }
+}
+
+/* Function similar to internalArraySubscript, used by packages
+   arules and cba. Seems dangerous as the typedef is not exported.
+
+   dng is a function (usually getAttrib) that obtains the dimnames. */
 
 typedef SEXP AttrGetter(SEXP x, SEXP data);
 
-static SEXP int_arraySubscript (int dim, SEXP s, SEXP dims, AttrGetter dng,
-                                StringEltGetter strg, SEXP x, SEXP call)
+SEXP arraySubscript (int dim, SEXP s, SEXP dims, AttrGetter dng,
+                     StringEltGetter strg, SEXP x)
 {
+    SEXP call = R_NilValue;
     int nd, ns, hasna, stretch = 0;
     SEXP dnames, tmp;
     ns = length(s);
@@ -808,15 +853,6 @@ static SEXP int_arraySubscript (int dim, SEXP s, SEXP dims, AttrGetter dng,
 	    errorcall(call, _("invalid subscript type '%s'"),
 		      type2char(TYPEOF(s)));
     }
-    return R_NilValue;
-}
-
-/* This is used by packages arules and cba. Seems dangerous as the
-   typedef is not exported */
-SEXP arraySubscript (int dim, SEXP s, SEXP dims, AttrGetter dng,
-                     StringEltGetter strg, SEXP x)
-{
-    return int_arraySubscript(dim, s, dims, dng, strg, x, R_NilValue);
 }
 
 /* Subscript creation.  x is the object being subscripted; s is the 

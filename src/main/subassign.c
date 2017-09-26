@@ -640,6 +640,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 {
     int i, j, ii, jj, ij, iy, k;
+    int rhasna, chasna;
     int_fast64_t n;
     double ry;
     int nr;
@@ -655,10 +656,10 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 
     SEXP sv_scalar_stack = R_scalar_stack;
 
-    PROTECT (sr = array_sub (sb1, dim, 0, x));
+    PROTECT (sr = array_sub (sb1, dim, 0, x, &rhasna));
     nrs = LENGTH(sr);
 
-    PROTECT (sc = array_sub (sb2, dim, 1, x));
+    PROTECT (sc = array_sub (sb2, dim, 1, x, &chasna));
     ncs = LENGTH(sc);
 
     /* Do assignment of a single atomic element with matching type specially. */
@@ -695,12 +696,16 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 
     R_len_t ny = length(y);
 
-    sr = NA_check_remove (call, sr, &nrs, ny > 1);
-    UNPROTECT(1);
-    PROTECT(sr);
-    sc = NA_check_remove (call, sc, &ncs, ny > 1);
-    UNPROTECT(1);
-    PROTECT(sc);
+    if (rhasna) {
+        sr = NA_check_remove (call, sr, &nrs, ny > 1);
+        UNPROTECT(2);
+        PROTECT2(sr,sc);
+    }
+    if (chasna) {
+        sc = NA_check_remove (call, sc, &ncs, ny > 1);
+        UNPROTECT(2);
+        PROTECT2(sr,sc);
+    }
 
     n = nrs * ncs;
 
@@ -891,6 +896,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 {
     int i, j, ii, iy, jj, k=0, ny;
     int rep_assign = 0; /* 1 if elements assigned repeatedly into list array */
+    int any_hasna = 0;
     SEXP dims, tmp;
     double ry;
 
@@ -922,7 +928,9 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     int nmod = 1, zero = 0;
     for (i = 0; i < k; i++) {
-        PROTECT(tmp = array_sub (CAR(s), dims, i, x));
+        int hasna;
+        PROTECT(tmp = array_sub (CAR(s), dims, i, x, &hasna));
+        if (hasna) any_hasna = 1;
         subs[i] = INTEGER(tmp);
 	bound[i] = LENGTH(tmp);
         if (bound[i] == 0) zero = 1;
@@ -937,7 +945,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	errorcall(call,
        _("number of items to replace is not a multiple of replacement length"));
 
-    if (ny > 1) { /* check for NAs in indices */
+    if (ny > 1 && any_hasna) { /* check for NAs in indices */
 	for (i = 0; i < k; i++)
 	    for (j = 0; j < bound[i]; j++)
 		if (subs[i][j] == NA_INTEGER)

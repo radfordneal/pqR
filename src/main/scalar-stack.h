@@ -135,9 +135,9 @@
 
 /* Inline function to handle positive scalar real and integer
    subscripts specially, putting them on the scalar stack, and
-   otherwise call arraySubscript. */
+   otherwise call internalArraySubscript. */
 
-static inline SEXP array_sub (SEXP sb, SEXP dim, int i, SEXP x)
+static inline SEXP array_sub (SEXP sb, SEXP dim, int i, SEXP x, int *hasna)
 {
     if ( (((1<<INTSXP) + (1<<REALSXP)) >> TYPEOF(sb)) & 1 ) {
         if (LENGTH(sb) == 1) {
@@ -153,13 +153,14 @@ static inline SEXP array_sub (SEXP sb, SEXP dim, int i, SEXP x)
                 if (ix < 1 || ix > dm)
                     goto fallback;
             }
+            *hasna = 0;
             return SCALAR_STACK_HAS_SPACE() ? PUSH_SCALAR_INTEGER(ix)
                                             : ScalarInteger(ix);
         }
     }
 
   fallback:
-    return arraySubscript (i, sb, dim, getAttrib, (STRING_ELT), x);
+    return internalArraySubscript (i, sb, dim, x, hasna);
 }
 
 
