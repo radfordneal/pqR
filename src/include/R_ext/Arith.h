@@ -162,7 +162,7 @@ static inline int ISNAN_value (double x)
 {
   union { double d; uint64_t u; } un;
   un.d = x;
-  return (un.u ^ ((un.u & (un.u-1)) + ((uint64_t)1 << 52))) >> 63;
+  return ((un.u & (un.u-1) & ~((uint64_t)1<<63)) + ((uint64_t)1<<52)) >> 63;
 }
 
 #define ISNA(x) (ISNA_inline_fun(x))
