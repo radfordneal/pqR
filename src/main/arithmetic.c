@@ -254,7 +254,7 @@ double R_pow(double x, double y) /* = x ^ y */
             return pow(x, y);
     }
 
-    if (ISNAN(x) || ISNAN(y))
+    if (MAY_BE_NAN2(x,y) && (ISNAN(x) || ISNAN(y)))
 	return(x + y);
     if(!R_FINITE(x)) {
 	if(x > 0)		/* Inf ^ y */
@@ -2201,7 +2201,7 @@ static void setup_Math2
     mod_iterate(na, nb, ia, ib) { \
         ai = a[ia]; \
         bi = b[ib]; \
-        if (ISNAN(ai+bi)) { \
+        if (MAY_BE_NAN2(ai,bi)) { \
             if (ISNA(ai) || ISNA(bi)) { \
                 y[i] = NA_REAL; \
                 continue; \
@@ -2558,7 +2558,7 @@ static void setup_Math3
         ai = a[ia]; \
         bi = b[ib]; \
         ci = c[ic]; \
-        if (ISNAN(ai+bi+ci)) { \
+        if (MAY_BE_NAN3(ai,bi,ci)) { \
             if (ISNA(ai) || ISNA(bi) || ISNA(ci)) { \
                 y[i] = NA_REAL; \
                 continue; \
@@ -2765,7 +2765,7 @@ static void setup_Math4 (SEXP *sa, SEXP *sb, SEXP *sc, SEXP *sd, SEXP *sy,
         bi = b[ib]; \
         ci = c[ic]; \
         di = d[id]; \
-        if (ISNAN(ai+bi+ci+di)) { \
+        if (MAY_BE_NAN4(ai,bi,ci,di)) { \
             if (ISNA(ai) || ISNA(bi) || ISNA(ci) || ISNA(di)) { \
                 y[i] = NA_REAL; \
                 continue; \

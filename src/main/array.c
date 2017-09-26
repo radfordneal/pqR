@@ -988,7 +988,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             if ((lenx&1) != 0 && ISNAN(rx[0]))
                 goto done_BLAS_check;
             for (int ix = lenx&1; ix < lenx; ix += 2) {
-                if (ISNAN(rx[ix]+rx[ix+1]) 
+                if (MAY_BE_NAN2 (rx[ix], rx[ix+1]) 
                       && (ISNAN(rx[ix]) || ISNAN(rx[ix+1])))
                     goto done_BLAS_check;
             }
@@ -998,7 +998,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 if ((leny&1) != 0 && ISNAN(ry[0]))
                     goto done_BLAS_check;
                 for (int iy = leny&1; iy < leny; iy += 2) {
-                    if (ISNAN(ry[iy]+ry[iy+1])
+                    if (MAY_BE_NAN2 (ry[iy], ry[iy+1])
                           && (ISNAN(ry[iy]) || ISNAN(ry[iy+1])))
                         goto done_BLAS_check;
                 }

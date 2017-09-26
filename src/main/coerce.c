@@ -2067,7 +2067,8 @@ static SEXP do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
 {
-    SEXP ans, dims, names;
+    SEXP dims, names, ans;
+
     int i, ret;
 
 #ifdef stringent_is
@@ -2077,15 +2078,17 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
 #endif
 
     int n = length(x);
+    int * restrict lans;
 
-    if (!isVectorAtomic(x) || VARIANT_KIND(variant)!=VARIANT_AND 
-                               && VARIANT_KIND(variant)!=VARIANT_OR) {
+    if (!isVectorAtomic(x) || VARIANT_KIND(variant) != VARIANT_AND 
+                               && VARIANT_KIND(variant) != VARIANT_OR) {
         PROTECT(ans = allocVector(LGLSXP, n));
         if (isVector(x)) {
 	    PROTECT(dims = getDimAttrib(x));
 	    PROTECT(names = 
               getAttrib (x, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol));
         }
+        lans = LOGICAL(ans);
     }
 
     switch (TYPEOF(x)) {
@@ -2101,7 +2104,7 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
             ret = FALSE; goto vret;
         }
         for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = (LOGICAL(x)[i] == NA_LOGICAL);
+	    lans[i] = (LOGICAL(x)[i] == NA_LOGICAL);
 	break;
     case INTSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
@@ -2115,7 +2118,7 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
             ret = FALSE; goto vret;
         }
 	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = (INTEGER(x)[i] == NA_INTEGER);
+	    lans[i] = (INTEGER(x)[i] == NA_INTEGER);
 	break;
     case REALSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
@@ -2124,27 +2127,28 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
             ret = TRUE; goto vret;
         }
         if (VARIANT_KIND(variant) == VARIANT_OR) {
-            int i = 0;
+            i = 0;
             if (n&1) {
                 if (ISNAN(REAL(x)[i])) { ret = TRUE; goto vret; }
                 i += 1;
             }
             if (n&2) {
-                if (ISNAN(REAL(x)[i]+REAL(x)[i+1]) 
-                  && (ISNAN(REAL(x)[i])
-                       || ISNAN(REAL(x)[i+1]))) { ret = TRUE; goto vret; }
+                if (MAY_BE_NAN2 (REAL(x)[i], REAL(x)[i+1]) 
+                     && (ISNAN (REAL(x)[i])
+                          || ISNAN (REAL(x)[i+1]))) { ret = TRUE; goto vret; }
                 i += 2;
             }
             for ( ; i < n; i += 4)
-                if (ISNAN((REAL(x)[i]+REAL(x)[i+1])+(REAL(x)[i+2]+REAL(x)[i+3]))
-                  && (ISNAN(REAL(x)[i]) 
-                       || ISNAN(REAL(x)[i+1]) 
-                       || ISNAN(REAL(x)[i+2]) 
-                       || ISNAN(REAL(x)[i+3]))) { ret = TRUE; goto vret; }
+                if (MAY_BE_NAN4 (REAL(x)[i], REAL(x)[i+1],
+                                 REAL(x)[i+2], REAL(x)[i+3])
+                     && (ISNAN (REAL(x)[i]) 
+                          || ISNAN (REAL(x)[i+1]) 
+                          || ISNAN (REAL(x)[i+2]) 
+                          || ISNAN (REAL(x)[i+3]))) { ret = TRUE; goto vret; }
             ret = FALSE; goto vret;
         }
 	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = ISNAN(REAL(x)[i]);
+	    lans[i] = ISNAN_value (REAL(x)[i]);
 	break;
     case CPLXSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
@@ -2160,8 +2164,8 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
             ret = FALSE; goto vret;
         }
 	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = (ISNAN(COMPLEX(x)[i].r) ||
-			       ISNAN(COMPLEX(x)[i].i));
+	    lans[i] = (ISNAN_value(COMPLEX(x)[i].r) |
+			       ISNAN_value(COMPLEX(x)[i].i));
 	break;
     case STRSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
@@ -2175,38 +2179,38 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
             ret = FALSE; goto vret;
         }
 	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = (STRING_ELT(x, i) == NA_STRING);
+	    lans[i] = (STRING_ELT(x, i) == NA_STRING);
 	break;
     case RAWSXP:
 	/* no such thing as a raw NA */
         if (VARIANT_KIND(variant) == VARIANT_AND) { ret = n==0;  goto vret; }
         if (VARIANT_KIND(variant) == VARIANT_OR)  { ret = FALSE; goto vret; }
 	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = 0;
+	    lans[i] = 0;
 	break;
 
 /* Same code for LISTSXP and VECSXP : */
 #define LIST_VEC_NA(s)							\
 	if (!isVector(s) || length(s) != 1)				\
-		LOGICAL(ans)[i] = 0;					\
+		lans[i] = 0;						\
 	else {								\
 		switch (TYPEOF(s)) {					\
 		case LGLSXP:						\
 		case INTSXP:						\
-		    LOGICAL(ans)[i] = (INTEGER(s)[0] == NA_INTEGER);	\
+		    lans[i] = (INTEGER(s)[0] == NA_INTEGER);		\
 		    break;						\
 		case REALSXP:						\
-		    LOGICAL(ans)[i] = ISNAN(REAL(s)[0]);		\
+		    lans[i] = ISNAN(REAL(s)[0]);			\
 		    break;						\
 		case STRSXP:						\
-		    LOGICAL(ans)[i] = (STRING_ELT(s, 0) == NA_STRING);	\
+		    lans[i] = (STRING_ELT(s, 0) == NA_STRING);		\
 		    break;						\
 		case CPLXSXP:						\
-		    LOGICAL(ans)[i] = (ISNAN(COMPLEX(s)[0].r)		\
+		    lans[i] = (ISNAN(COMPLEX(s)[0].r)			\
 				       || ISNAN(COMPLEX(s)[0].i));	\
 		    break;						\
 		default:						\
-		    LOGICAL(ans)[i] = 0;				\
+		    lans[i] = 0;					\
 		}							\
 	}
 
@@ -2226,7 +2230,7 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
 	warningcall(call, _("%s() applied to non-(list or vector) of type '%s'"),
 		    "is.na", type2char(TYPEOF(x)));
 	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = 0;
+	    lans[i] = 0;
     }
 
     if (isVector(x)) {

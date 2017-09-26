@@ -91,7 +91,14 @@ int R_isnancpp(double); /* in arithmetic.c */
 
 /* We need to keep ISNAN, etc. macros, since some packages do things like
    "#ifndef ISNAN"  There are also uses like "if ISNAN(x)" that are OK
-   without parentheses if ISNAN is defined to have parentheses. */
+   without parentheses if ISNAN is defined to have parentheses. 
+
+   ISNAN_value does the same thing as ISNAN, but may be faster when
+   the value is used as data, rather than for a conditional branch. 
+
+   MAY_BE_NAN4(x0,x1,x2,x3) will return TRUE if any of its arguments is
+   a NaN.  If none are NaN, it typically returns FALSE, but will sometimes
+   return TRUE.  Similarly for MAY_BE_NAN3 and MAY_BE_NAN2. */
 
 #include <stdint.h>
 
@@ -101,6 +108,61 @@ static inline int ISNAN_inline_fun (double x)
   union { double d; uint64_t u; } un;
   un.d = x;
   return (un.u << 1) > ((uint64_t)0x7ff << 53);
+}
+
+#if 0  /* two implementations, selectable based on performance tests */
+
+static inline int MAY_BE_NAN2 (double x0, double x1)
+{
+  union { double d[2]; uint64_t u[2]; } un;
+  un.d[0] = x0;
+  un.d[1] = x1;
+  return ((un.u[0] | un.u[1]) << 1) > ((uint64_t)0x7ff << 53);
+}
+
+static inline int MAY_BE_NAN3 (double x0, double x1, double x2)
+{
+  union { double d[3]; uint64_t u[3]; } un;
+  un.d[0] = x0;
+  un.d[1] = x1;
+  un.d[2] = x2;
+  return ((un.u[0] | un.u[1] | un.u[2]) << 1) > ((uint64_t)0x7ff << 53);
+}
+
+static inline int MAY_BE_NAN4 (double x0, double x1, double x2, double x3)
+{
+  union { double d[4]; uint64_t u[4]; } un;
+  un.d[0] = x0;
+  un.d[1] = x1;
+  un.d[2] = x2;
+  un.d[3] = x2;
+  return ((un.u[0] | un.u[1] | un.u[2] | un.u[3]) << 1) > ((uint64_t)0x7ff<<53);
+}
+
+#else
+
+static inline int MAY_BE_NAN2 (double x0, double x1)
+{
+  return ISNAN(x0+x1);
+}
+
+static inline int MAY_BE_NAN3 (double x0, double x1, double x2)
+{
+  return ISNAN(x0+x1+x2);
+}
+
+static inline int MAY_BE_NAN4 (double x0, double x1, double x2, double x3)
+{
+  return ISNAN(x0+x1+x2+x3);
+}
+
+#endif
+
+static inline int ISNAN_value (double x)
+{
+  union { double d; uint64_t u; } un;
+  un.d = x;
+  return (un.u ^ ((un.u & (un.u-1)) + ((uint64_t)1 << 52))) >> 63;
 }
 
 #define ISNA(x) (ISNA_inline_fun(x))
