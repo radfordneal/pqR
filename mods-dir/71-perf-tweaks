@@ -1,4 +1,4 @@
-Fairly minor performance tweaks.
+Various performance tweaks.
 
 Used saved data pointers in several routines - may help with compressed
 pointers.
@@ -6,3 +6,7 @@ pointers.
 Improved any/all loops.
 
 Improved subassign operations, especially with [[ and $, using VARIANT_FAST_SUB.
+Also improved interfact to subscript.c, avoiding some NaN checks.
+
+Put in special AVX code for some operations, used when AVX available,
+which can be disabled by defining DISABLE_AVX_CODE.
