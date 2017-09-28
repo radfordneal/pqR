@@ -1399,10 +1399,18 @@ static Rboolean RunFinalizers(void)
     for (s = R_weak_refs, last = R_NilValue; s != R_NilValue;) {
 	SEXP next = WEAKREF_NEXT(s);
 	if (IS_READY_TO_FINALIZE(s)) {
+	    /**** use R_ToplevelExec here? */
 	    RCNTXT thiscontext;
 	    RCNTXT * volatile saveToplevelContext;
 	    volatile int savestack;
-	    volatile SEXP topExp;
+	    volatile SEXP topExp, oldHStack, oldRStack, oldRVal;
+	    volatile Rboolean oldvis;
+	    PROTECT(oldHStack = R_HandlerStack);
+	    PROTECT(oldRStack = R_RestartStack);
+	    PROTECT(oldRVal = R_ReturnedValue);
+	    oldvis = R_Visible;
+	    R_HandlerStack = R_NilValue;
+	    R_RestartStack = R_NilValue;
 
 	    finalizer_run = TRUE;
 
@@ -1436,7 +1444,11 @@ static Rboolean RunFinalizers(void)
 	    R_ToplevelContext = saveToplevelContext;
 	    R_PPStackTop = savestack;
 	    R_CurrentExpr = topExp;
-	    UNPROTECT(1);
+	    R_HandlerStack = oldHStack;
+	    R_RestartStack = oldRStack;
+	    R_ReturnedValue = oldRVal;
+	    R_Visible = oldvis;
+	    UNPROTECT(4);/* topExp, oldRVal, oldRStack, oldHStack */
 	}
 	else last = s;
 	s = next;
@@ -1974,9 +1986,7 @@ SEXP attribute_hidden do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
     reset_max = asLogical(CADR(args));
     num_old_gens_to_collect = NUM_OLD_GENERATIONS;
     R_gc();
-#ifndef IMMEDIATE_FINALIZERS
-    R_RunPendingFinalizers();
-#endif
+
     gc_reporting = ogc;
     /*- now return the [used , gc trigger size] for cells and heap */
     PROTECT(value = allocVector(REALSXP, 14));
@@ -2859,6 +2869,9 @@ SEXP allocFormalsList6(SEXP sym1, SEXP sym2, SEXP sym3, SEXP sym4,
 void R_gc(void)
 {
     R_gc_internal(0);
+#ifndef IMMEDIATE_FINALIZERS
+    R_RunPendingFinalizers();
+#endif
 }
 
 static void R_gc_full(R_size_t size_needed)

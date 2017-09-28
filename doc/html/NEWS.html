@@ -7,6 +7,196 @@
 
 <h2>R News</h2>
 
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.4.2</h3>
+
+
+
+<h4>NEW FEATURES</h4>
+
+
+<ul>
+<li><p> Setting the <code>LC_ALL</code> category in <code>Sys.setlocale()</code>
+invalidates any cached locale-specific day/month names and the
+AM/PM indicator for <code>strptime()</code> (as setting <code>LC_TIME</code>
+has since <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span> 3.1.0).
+</p>
+</li>
+<li><p> The version of LAPACK included in the sources has been
+updated to 3.7.1, a bug-fix release.
+</p>
+</li>
+<li><p> The default for <code>tools::write_PACKAGES(rds_compress=)</code>
+has been changed to <code>"xz"</code> to match the compression used by
+<acronym><span class="acronym">CRAN</span></acronym>.
+</p>
+</li>
+<li> <p><code>c()</code> and <code>unlist()</code> are now more efficient in
+constructing the <code>names(.)</code> of their return value, thanks to
+a proposal by Suharto Anggono.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17284">PR#17284</a>)
+</p>
+</li></ul>
+
+
+
+
+<h4>UTILITIES</h4>
+
+
+<ul>
+<li> <p><code>R CMD check</code> checks for and <code>R CMD build</code>
+corrects CRLF line endings in shell scripts <code>configure</code>
+and <code>cleanup</code> (even on Windows).
+</p>
+</li></ul>
+
+
+
+
+<h4>INSTALLATION on a UNIX-ALIKE</h4>
+
+
+<ul>
+<li><p> The order of selection of OpenMP flags has been changed:
+Oracle Developer Studio 12.5 accepts <span class="option">-fopenmp</span> and
+<span class="option">-xopenmp</span> but only the latter enables OpenMP so it is now
+tried first.
+</p>
+</li></ul>
+
+
+
+
+<h4>BUG FIXES</h4>
+
+
+<ul>
+<li> <p><code>within(List, rm(x1, x2))</code> works correctly again,
+including when <code>List[["x2"]]</code> is <code>NULL</code>.
+</p>
+</li>
+<li> <p><code>regexec(pattern, text, *)</code> now applies
+<code>as.character(.)</code> to its first two arguments, as documented.
+</p>
+</li>
+<li> <p><code>write.table()</code> and related functions,
+<code>writeLines()</code>, and perhaps other functions writing text to
+connections did not signal errors when the writes failed,
+e.g. due to a disk being full.  Errors will now be
+signalled if detected during the write, warnings if detected when
+the connection is closed.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17243">PR#17243</a>)
+</p>
+</li>
+<li> <p><code>rt()</code> assumed the <code>ncp</code> parameter was a scalar.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17306">PR#17306</a>)
+</p>
+</li>
+<li> <p><code>menu(choices)</code> with more than 10 choices which easily
+fit into one <code>getOption("width")</code>-line no longer erroneously
+repeats choices.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17312">PR#17312</a>)
+</p>
+</li>
+<li> <p><code>length()&lt;-</code> on a pairlist succeeds.
+(<a href="https://stat.ethz.ch/pipermail/r-devel/2017-July/074680.html">https://stat.ethz.ch/pipermail/r-devel/2017-July/074680.html</a>)
+</p>
+</li>
+<li><p> Language objects such as <code>quote(("\n"))</code> or <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span>
+functions are correctly printed again, where <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span> 3.4.1 accidentally
+duplicated the backslashes.
+</p>
+</li>
+<li><p> Construction of <code>names()</code> for very large objects in
+<code>c()</code> and <code>unlist()</code> now works, thanks to Suharto
+Anggono's patch proposals in <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17292">PR#17292</a>.
+</p>
+</li>
+<li><p> Resource leaks (and similar) reported by Steve Grubb fixed.
+(<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17314">PR#17314</a>, <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17316">PR#17316</a>, <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17317">PR#17317</a>, <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17318">PR#17318</a>, <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17319">PR#17319</a>, <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17320">PR#17320</a>)
+</p>
+</li>
+<li> <p><code>model.matrix(~1, mf)</code> now gets the row names from
+<code>mf</code> also when they differ from <code>1:nrow(mf)</code>, fixing
+<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=14992">PR#14992</a> thanks to the suggestion by Sebastian Meyer.
+</p>
+</li>
+<li> <p><code>sigma(fm)</code> now takes the correct denominator degrees
+of freedom for a fitted model with <code>NA</code> coefficients.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17313">PR#17313</a>)
+</p>
+</li>
+<li> <p><code>hist(x, "FD")</code> no longer &ldquo;dies&rdquo; with a somewhat
+cryptic error message when <code>x</code> has extreme outliers or
+<code>IQR()</code> zero:  <code>nclass.FD(x)</code> tries harder to find a
+robust bin width <i>h</i> in the latter case, and
+<code>hist.default(*, breaks)</code> now checks and corrects a too large
+<code>breaks</code> number.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17274">PR#17274</a>)
+</p>
+</li>
+<li> <p><code>callNextMethod()</code> works for <code>...</code> methods.
+</p>
+</li>
+<li> <p><code>qr.coef(qd, y)</code> now has correct names also when
+<code>qd</code> is a complex QR or stems from <code>qr(*, LAPACK=TRUE)</code>.
+</p>
+</li>
+<li><p> Setting <code>options(device = *)</code> to an invalid function no
+longer segfaults when plotting is initiated.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=15883">PR#15883</a>)
+</p>
+</li>
+<li> <p><code>encodeString(&lt;very large string&gt;)</code> no longer
+segfaults.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=15885">PR#15885</a>)
+</p>
+</li>
+<li><p> It is again possible to use <code>configure
+	--enable-maintainer-mode</code> without having installed
+<code>notangle</code> (it was required in <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span> 3.4.[01]).
+</p>
+</li>
+<li><p> S4 method dispatch on <code>...</code> calls the method by name
+instead of <code>.Method</code> (for consistency with default dispatch),
+and only attempts to pass non-missing arguments from the generic.
+</p>
+</li>
+<li> <p><code>readRDS(textConnection(.))</code> works again.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17325">PR#17325</a>)
+</p>
+</li>
+<li> <p><code>(1:n)[-n]</code> no longer segfaults for <code>n &lt;- 2.2e9</code>
+(on a platform with enough RAM).
+</p>
+</li>
+<li> <p><code>x &lt;- 1:2; tapply(x, list(x, x), function(x) "")[1,2]</code>
+now correctly returns <code>NA</code>.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17333">PR#17333</a>)
+</p>
+</li>
+<li><p> Running of finalizers after explicit GC request moved from
+the <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span> interface <code>do_gc</code> to the <code>C</code> interface
+<code>R_gc</code>.  This helps with reclaiming inaccessible connections.
+</p>
+</li>
+<li> <p><code>help.search(topic)</code> and <code>??topic</code> matching topics
+in vignettes with multiple file name extensions (e.g.,
+&lsquo;<span class="file">*.md.rsp</span>&rsquo; but not &lsquo;<span class="file">*.Rmd</span>&rsquo;) failed with an error
+when using <code>options(help_type = "html")</code>.
+</p>
+</li>
+<li><p> The X11 device no longer uses the Xlib backing store (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16497">PR#16497</a>).
+</p>
+</li>
+<li> <p><code>array(character(), 1)</code> now gives (a 1D array with)
+<code>NA</code> as has been documented for a long time as in the other
+cases of zero-length array initialization and also compatibly with
+<code>matrix(character(), *)</code>.  As mentioned there, this also
+fixes <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17333">PR#17333</a>.
+</p>
+</li>
+<li> <p><code>splineDesign(.., derivs = 4)</code> no longer segfaults.
+</p>
+</li>
+<li> <p><code>fisher.test(*, hybrid=TRUE)</code> now (again) will use the
+hybrid method when Cochran's conditions are met, fixing <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16654">PR#16654</a>.
+</p>
+</li></ul>
+
+
+
+
 <h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.4.1</h3>
 
 

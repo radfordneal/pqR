@@ -5,6 +5,146 @@
 \title{R News}
 \encoding{UTF-8}
 
+\section{\Rlogo CHANGES IN R 3.4.2}{
+
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item Setting the \code{LC_ALL} category in \code{Sys.setlocale()}
+      invalidates any cached locale-specific day/month names and the
+      AM/PM indicator for \code{strptime()} (as setting \code{LC_TIME}
+      has since \R 3.1.0).
+
+      \item The version of LAPACK included in the sources has been
+      updated to 3.7.1, a bug-fix release.
+
+      \item The default for \code{tools::write_PACKAGES(rds_compress=)}
+      has been changed to \code{"xz"} to match the compression used by
+      \acronym{CRAN}.
+
+      \item \code{c()} and \code{unlist()} are now more efficient in
+      constructing the \code{names(.)} of their return value, thanks to
+      a proposal by Suharto Anggono.  (\PR{17284})
+    }
+  }
+
+  \subsection{UTILITIES}{
+    \itemize{
+      \item \command{R CMD check} checks for and \command{R CMD build}
+      corrects CRLF line endings in shell scripts \command{configure}
+      and \command{cleanup} (even on Windows).
+    }
+  }
+
+  \subsection{INSTALLATION on a UNIX-ALIKE}{
+    \itemize{
+      \item The order of selection of OpenMP flags has been changed:
+      Oracle Developer Studio 12.5 accepts \option{-fopenmp} and
+      \option{-xopenmp} but only the latter enables OpenMP so it is now
+      tried first.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{within(List, rm(x1, x2))} works correctly again,
+      including when \code{List[["x2"]]} is \code{NULL}.
+
+      \item \code{regexec(pattern, text, *)} now applies
+      \code{as.character(.)} to its first two arguments, as documented.
+
+      \item \code{write.table()} and related functions,
+      \code{writeLines()}, and perhaps other functions writing text to
+      connections did not signal errors when the writes failed,
+      e.g.\sspace{}due to a disk being full.  Errors will now be
+      signalled if detected during the write, warnings if detected when
+      the connection is closed.  (\PR{17243})
+
+      \item \code{rt()} assumed the \code{ncp} parameter was a scalar.  (\PR{17306})
+
+      \item \code{menu(choices)} with more than 10 choices which easily
+      fit into one \code{getOption("width")}-line no longer erroneously
+      repeats choices.  (\PR{17312})
+
+      \item \code{length()<-} on a pairlist succeeds.
+      (\url{https://stat.ethz.ch/pipermail/r-devel/2017-July/074680.html})
+
+      \item Language objects such as \code{quote(("\n"))} or \R
+      functions are correctly printed again, where \R 3.4.1 accidentally
+      duplicated the backslashes.
+
+      \item Construction of \code{names()} for very large objects in
+      \code{c()} and \code{unlist()} now works, thanks to Suharto
+      Anggono's patch proposals in \PR{17292}.
+
+      \item Resource leaks (and similar) reported by Steve Grubb fixed.
+      (\PR{17314}, \PR{17316}, \PR{17317}, \PR{17318}, \PR{17319}, \PR{17320})
+
+      \item \code{model.matrix(~1, mf)} now gets the row names from
+      \code{mf} also when they differ from \code{1:nrow(mf)}, fixing
+      \PR{14992} thanks to the suggestion by Sebastian Meyer.
+
+      \item \code{sigma(fm)} now takes the correct denominator degrees
+      of freedom for a fitted model with \code{NA} coefficients.  (\PR{17313})
+
+      \item \code{hist(x, "FD")} no longer \dQuote{dies} with a somewhat
+      cryptic error message when \code{x} has extreme outliers or
+      \code{IQR()} zero:  \code{nclass.FD(x)} tries harder to find a
+      robust bin width \eqn{h} in the latter case, and
+      \code{hist.default(*, breaks)} now checks and corrects a too large
+      \code{breaks} number.  (\PR{17274})
+
+      \item \code{callNextMethod()} works for \code{\dots} methods.
+
+      \item \code{qr.coef(qd, y)} now has correct names also when
+      \code{qd} is a complex QR or stems from \code{qr(*, LAPACK=TRUE)}.
+
+      \item Setting \code{options(device = *)} to an invalid function no
+      longer segfaults when plotting is initiated.  (\PR{15883})
+
+      \item \code{encodeString(<very large string>)} no longer
+      segfaults.  (\PR{15885})
+
+      \item It is again possible to use \command{configure
+	--enable-maintainer-mode} without having installed
+      \command{notangle} (it was required in \R 3.4.[01]).
+      
+      \item S4 method dispatch on \code{\dots} calls the method by name
+      instead of \code{.Method} (for consistency with default dispatch),
+      and only attempts to pass non-missing arguments from the generic.
+
+      \item \code{readRDS(textConnection(.))} works again.  (\PR{17325})
+
+      \item \code{(1:n)[-n]} no longer segfaults for \code{n <- 2.2e9}
+      (on a platform with enough RAM).
+
+      \item \code{x <- 1:2; tapply(x, list(x, x), function(x) "")[1,2]}
+      now correctly returns \code{NA}.  (\PR{17333})
+
+      \item Running of finalizers after explicit GC request moved from
+      the \R interface \code{do_gc} to the \code{C} interface
+      \code{R_gc}.  This helps with reclaiming inaccessible connections.
+
+      \item \code{help.search(topic)} and \code{??topic} matching topics
+      in vignettes with multiple file name extensions (e.g.,
+      \file{*.md.rsp} but not \file{*.Rmd}) failed with an error
+      when using \code{options(help_type = "html")}.
+
+      \item The X11 device no longer uses the Xlib backing store (\PR{16497}).
+
+      \item \code{array(character(), 1)} now gives (a 1D array with)
+      \code{NA} as has been documented for a long time as in the other
+      cases of zero-length array initialization and also compatibly with
+      \code{matrix(character(), *)}.  As mentioned there, this also
+      fixes \PR{17333}.
+
+      \item \code{splineDesign(.., derivs = 4)} no longer segfaults.
+
+      \item \code{fisher.test(*, hybrid=TRUE)} now (again) will use the
+      hybrid method when Cochran's conditions are met, fixing \PR{16654}.
+    }
+  }
+}
+
 \section{\Rlogo CHANGES IN R 3.4.1}{
 
   \subsection{INSTALLATION on a UNIX-ALIKE}{

@@ -337,7 +337,7 @@ see file @file{tests/README} and @ref{Testing a Unix-alike Installation}
 for the possibilities of doing this in parallel.  Note that these checks
 are only run completely if the recommended packages are installed.
 
-If the command @command{configure} and @command{make} commands execute
+If the @command{configure} and @command{make} commands execute
 successfully, a shell-script front-end called @file{R} will be created
 and copied to @file{@var{R_HOME}/bin}.  You can link or copy this script
 to a place where users can invoke it, for example to
@@ -1748,7 +1748,7 @@ Windows' CRLF line endings.
 The front page of a @acronym{CRAN} site has a link `Download R for OS
 X'. Click on that, then download the file @file{R-@value{VERSIONno}.pkg}
 and install it. This runs on macOS 10.11 and later (El Capitan, Sierra,
-@dots{}).
+High Sierra, @dots{}).
 
 Installers for R-patched and R-devel are usually available from
 @uref{https://r.research.att.com}.  (Some of these packages are
@@ -1778,7 +1778,7 @@ installer is clever enough to try to upgrade the last-installed version
 of the application where you installed it (which may not be where you
 want this time @dots{}).
 
-Various parts of the build require XQuartz to be installed: : see
+Various parts of the build require XQuartz to be installed: see
 @uref{https://xquartz.macosforge.org/}.  These include the @pkg{tcltk}
 package and the @code{X11} device: attempting to use these without
 XQuartz will remind you.  Also the cairographics-based devices (which
@@ -1787,6 +1787,10 @@ are not often used on macOS) such as @code{png(type = "cairo")}.
 If you update your macOS version, you should re-install @R{} (and
 perhaps XQuartz): the installer may tailor the installation to the
 current version of the OS.
+
+When running under High Sierra (10.13), @R{} may not be able to deduce
+the system timezone, in which case you will need to set the environment
+variable @env{TZ}: see @code{?Sys.timezone}.
 
 For building @R{} from source, see @ref{macOS}.
 
@@ -2319,7 +2323,7 @@ appropriate version at the time of writing was
 @uref{https://r.research.att.com/@/libs/@/GTK_2.24.17-X11.pkg}
 
 The default compilers specified are shown in file
-@file{/Library/Frameworks/R.framework/Resources/etc/Makeconf}.  At the
+@file{/Library/Frameworks/@/R.framework/@/Resources/etc/Makeconf}.  At the
 time of writing these setting assumed that the C, Fortran and C++
 compilers were on the path, and @command{gfortan} 6.1.0 (see
 @ref{macOS}).  The settings can be changed, either by editing that file
@@ -2952,7 +2956,7 @@ Almost all current @acronym{CPU}s have both 32- and 64-bit sets of
 instructions.  Most OSes running on such @acronym{CPU}s offer the choice
 of building a 32-bit or a 64-bit version of @R{} (and details are given
 below under specific OSes).  For most a 32-bit version is the default,
-but for some (e.g., @cputype{x86_64} Linux and macOS >= 10.6)
+but for some (e.g., @cputype{x86_64} Linux and macOS @geq{} 10.6)
 64-bit is.
 
 All current versions of @R{} use 32-bit integers (this is enforced in
@@ -3542,7 +3546,7 @@ environment variable @env{R_GSCMD} at that time.
 @node Tcl/Tk, Java support, Useful libraries and programs, Useful libraries and programs
 @subsection Tcl/Tk
 
-The @pkg{tcltk} package needs Tcl/Tk >= 8.4 installed: the sources are
+The @pkg{tcltk} package needs Tcl/Tk @geq{} 8.4 installed: the sources are
 available at @uref{https://@/www.tcl.tk/}.  To specify the locations of the
 Tcl/Tk files you may need the configuration options
 
@@ -4482,12 +4486,15 @@ build directory.  This requires other tools to be installed, discussed
 in the rest of this section.
 
 File @file{configure} is created from @file{configure.ac} and the files
-under @file{m4} by @command{autoconf} and @command{aclocal}.  There is a
-formal version requirement on @command{autoconf} of 2.62 or later, but
-it is unlikely that anything other than the most recent versions have
-been thoroughly tested.
+under @file{m4} by @command{autoconf} and @command{aclocal} (part of the
+@pkg{automake} package).  There is a formal version requirement on
+@command{autoconf} of 2.62 or later, but it is unlikely that anything
+other than the most recent versions@footnote{at the time of revsion of
+this para in 2017, @pkg{autoconf-2.69} from 2012 and @pkg{automake-1.15}
+from 2015.} have been thoroughly tested.
 
-File @file{src/include/config.h} is created by @command{autoheader}.
+File @file{src/include/config.h} is created by @command{autoheader}
+(part of @pkg{autoconf}).
 
 Grammar files @file{*.y} are converted to C sources by an implementation
 of @command{yacc}, usually @command{bison -y}: these are found in
@@ -4500,9 +4507,13 @@ The ultimate sources for package @pkg{compiler} are in its @file{noweb}
 directory.  To re-create the sources from
 @file{src/library/compiler/noweb/compiler.nw}, the command
 @command{notangle} is required.  Some Linux distributions include this
-command in package @pkg{noweb}.  It can also be installed from the sources
-at @url{https://www.cs.tufts.edu/~nr/noweb/} (and can also be found on
-CTAN).  The package sources are only re-created even in maintainer mode if
+command in package @pkg{noweb}.  It can also be installed from the
+sources at @url{https://www.cs.tufts.edu/~nr/noweb/}@footnote{The links
+there have proved difficult to access, in which case either point an FTP
+client at @uref{ftp://www.eecs.harvard.edu/pub/nr/} or grab the copy
+made available at
+@uref{http://developer.r-project.org/noweb-2.11b.tgz}.}.  The package
+sources are only re-created even in maintainer mode if
 @file{src/library/compiler/noweb/compiler.nw} has been updated.
 
 It is likely that in future creating @code{configure} will need the GNU
@@ -4527,8 +4538,9 @@ recent reports.
 
 C macros to select particular platforms can be tricky to track down
 (there is a fair amount of misinformation on the Web).  The Wiki
-(currently) at @uref{http://sourceforge.net/@/p/@/predef/@/wiki/@/Home/} can be
-helpful.  The @R{} sources currently use
+(currently) at @uref{http://sourceforge.net/@/p/@/predef/@/wiki/@/Home/}
+can be helpful.  The @R{} sources have used (often in included software
+under @file{src/extra})
 @example
 AIX: _AIX
 Cygwin: __CYGWIN__
@@ -4692,7 +4704,7 @@ the best possible performance on the machine on which @R{} is being
 installed: if the compilation is for a site-wide installation, it may
 still be desirable to use something like
 @option{-mtume=core2}.@footnote{or @code{-mtune=corei7} for Intel Core
-i3/15/17 with @command{gcc >= 4.6.0}.} It is also possible to increase the
+i3/15/17 with @command{gcc} @geq{} 4.6.0.} It is also possible to increase the
 optimization levels to @option{-O3}: however for many versions of the
 compilers this has caused problems in at least one @acronym{CRAN}
 package.
@@ -4923,7 +4935,7 @@ FC = $F77
 FLIBS = -L/usr/local/gfortran/lib/gcc/x86_64-apple-darwin15/6.1.0
   -L/usr/local/gfortran/lib -lgfortran -lquadmath -lm
 @end example
-or (Sierra)
+or (Sierra or High Sierra)
 @example
 F77 = /usr/local/gfortran/bin/gfortran
 FC = $F77
@@ -4935,8 +4947,9 @@ FLIBS = -L/usr/local/gfortran/lib/gcc/x86_64-apple-darwin16/6.3.0
 
 More recent and complete distributions of @command{clang} are often
 available from @uref{http://llvm.org/releases/}: for example at the time
-of writing for 4.0.0, built for Sierra.  In particular, these should
-include support for OpenMP. Another build of clang 4.0.0 is available at
+of writing for 4.0.1, built for Sierra or later.  In particular, these
+should include support for OpenMP.  Another build of clang 4.0.0 is
+available at
 @uref{https://r.research.att.com/@/libs/@/clang-4.0.0-darwin15.6-Release.tar.gz}.
 Suppose one of these distributions is installed under
 @file{/usr/local/clang4}.  Then @R{} could be configured by something
@@ -5038,13 +5051,29 @@ some upgrades but not others).
 
 
 @menu
+* High Sierra::                 
 * Tcl/Tk headers and libraries::  
 * Java (macOS)::                
 * Frameworks::                  
 * Building R.app::              
 @end menu
 
-@node Tcl/Tk headers and libraries, Java (macOS), macOS, macOS
+
+@node High Sierra, Tcl/Tk headers and libraries, macOS, macOS
+@subsection High Sierra
+
+Default builds@footnote{This is not the case if the non-default
+@command{configure} option @option{--without-internal-tzcode} was used
+-- but @R{} then does not pass its checks.} of @R{} on High Sierra fail
+to detect the system time zone, as it gets reported something like
+@example
+  unknown timezone 'default/Europe/London'
+@end example
+@noindent
+which is not a standard form.  This can be circumvented by setting the
+environment variable @env{TZ} (in the example, to @samp{Europe/London}.
+
+@node Tcl/Tk headers and libraries, Java (macOS), High Sierra, macOS
 @subsection Tcl/Tk headers and libraries
 
 If you plan to use the @code{tcltk} package for @R{}, you need to
@@ -5221,20 +5250,21 @@ in the @file{/Applications} folder.
 * Using gcc::                   
 @end menu
 
-@R{} has been built successfully on Solaris 10 (both Sparc and
-@cputype{x86}) using the (zero cost) Oracle Developer
-Studio@footnote{Oracle Solaris Studio prior to 2016, and previously Sun
-Studio.} compilers: there has been some success with
+@R{} has been built successfully on Solaris 10 using the (zero cost)
+Oracle Developer Studio@footnote{Oracle Solaris Studio prior to 2016,
+and previously Sun Studio.} compilers: there has been some success with
 @command{gcc}/@command{gfortran}.  (Recent Sun machines are AMD Opterons
 or Intel Xeons (@cputype{amd64}) rather than @cputype{x86}, but 32-bit
 @cputype{x86} executables are the default.)  How these compilers
 identify@footnote{using the @option{-V} flag.} themselves is slightly
-confusing: Solaris Studio versions 12.3 and 12.4 report C++ 5.12
-and 5.13, and Developer Studio 12.5 reports C++ 5.14.  We will only consider
+confusing: Solaris Studio versions 12.3 and 12.4 report C++ 5.12 and
+5.13, and Developer Studio 12.5 reports C++ 5.14.  We will only consider
 12.5 (May 2016): instructions for 12.3 can be found in versions of this
 manual for @R{} 3.3.x.
 
 There have been few reports on Solaris 11, with no known extra issues.
+
+Solaris was last tested on Sparc machines in June 2017.
 
 The Solaris versions of several of the tools needed to build @R{}
 (e.g.@: @command{make}, @command{ar} and @command{ld}) are in
@@ -5299,7 +5329,7 @@ CXXSTD="-library=stlport4"
 CXXFLAGS=-O
 FC=$F77
 FCFLAGS=$FFLAGS
-FCLIBS=-lfsu
+FCLIBS="-lfsu /opt/developerstudio12.5/lib/libfui.so.2"
 R_LD_LIBRARY_PATH="/opt/developerstudio12.5/lib:/usr/local/lib:/opt/csw/lib"
 @end example
 
@@ -5311,20 +5341,10 @@ A peculiarity of the Fortran compiler is that when asked to link a
 shared object it does not link against the Fortran runtime libraries.
 In @R{} this is only used for packages with F9x code, hence the
 @code{FCLIBS} definition (which sufficed for @acronym{CRAN} packages
-with 12.5, but on one system needed to be
-@example
-FCLIBS="-lfsu /opt/developerstudio12.5/lib/libfui.so.2"
-@end example
-@noindent
-.)
-
-You can target specific Sparc architectures for (slightly) higher
-performance: @option{-xtarget=native} (in @code{CFLAGS} etc) tunes the
-compilation to the current machine.
+with 12.5).
 
 Using @code{-xlibmil} in @code{CFLAGS} or @code{-xlibmil} in
 @code{FFLAGS} allows more system mathematical functions to be inlined.
-
 
 On @cputype{x86} you will get marginally higher performance @emph{via}
 
@@ -5402,11 +5422,10 @@ and use something like @code{LDFLAGS=-L/usr/local/lib/amd64} or
 @code{LDFLAGS=-L/usr/local/lib/sparcv9} as appropriate (and other 64-bit
 library directories if used, e.g.@: @code{-L/opt/csw/lib/arm64}).
 It will also be necessary to point @command{pkg-config} at the 64-bit
-directories, e.g.@: something like one of
+directories, e.g.@: by something like
 
 @example
-PKG_CONFIG_PATH=/opt/csw/lib/amd64/pkgconfig:/usr/lib/amd64/pkgconfig
-PKG_CONFIG_PATH=/opt/csw/lib/sparcv9/pkgconfig:/usr/lib/sparcv9/pkgconfig
+PKG_CONFIG_PATH=/opt/csw/lib/64/pkgconfig:/usr/lib/64/pkgconfig
 @end example
 
 @noindent
@@ -5418,35 +5437,6 @@ JAVA_LD_LIBRARY_PATH=$@{JAVA_HOME@}/lib/amd64/server
 JAVA_LIBS="-L$@{JAVA_HOME@}/lib/amd64/server \
   -R$@{JAVA_HOME@}/lib/amd64/server -ljvm"
 @end example
-
-@noindent
-(In most cases the @file{64} directory is a link to @file{amd64} or
-@file{sparcv9} as appropriate.)
-
-Using PCRE with JIT enabled on 64-bit Sparc led to segfaults.
-
-
-@c Builds of @cputype{amd64} and @cputype{sparcv9} did not work with
-@c Solaris Studio 12.3 and 12.4: @file{libRblas.so} and @file{lapack.so}
-@c were generated with code that causes relocation errors (code which is
-@c being linked in from the Fortran libraries).  This means that building
-@c 64-bit @R{} as a shared library may be impossible.  For a standard build
-@c a trick seems to be to manually set @code{FLIBS} to avoid the
-@c troublesome libraries.  For example, on @cputype{amd64} set in
-@c @file{config.site} something like (for 12.3):
-@c @example
-@c FLIBS_IN_SO="-R/opt/solarisstudio12.3/lib/amd64
-@c   /opt/solarisstudio12.3/lib/amd64/libfui.so
-@c   /opt/solarisstudio12.3/lib/amd64/libfsu.so"
-@c @end example
-@c @noindent
-@c For 64-bit Sparc, set in @file{config.site} something like (for 12.3)
-@c @example
-@c FLIBS="-R/opt/solarisstudio12.3/prod/lib/sparc/64
-@c  -lifai -lsunimath -lfai -lfai2 -lfsumai -lfprodai -lfminlai -lfmaxlai
-@c  -lfminvai -lfmaxvai -lfui -lsunmath -lmtsk
-@c  /opt/solarisstudio12.3/prod/lib/sparc/64/libfsu.so.1"
-@c @end example
 
 @node Using gcc,  , 64-bit builds, Solaris
 @subsection Using gcc
@@ -5498,38 +5488,6 @@ Note that paths such as @file{/opt/csw/lib}, @file{/usr/local/lib/amd64}
 and @file{/opt/csw/lib/amd64} may need to be in the
 @enindex LD_LIBRARY_PATH
 @env{LD_LIBRARY_PATH} during configuration.
-
-
-Compilation for a 32-bit Sparc target with @command{gcc}@tie{}4.9.2 or
-@command{gcc}@tie{}5.2.0 needed
-
-@example
-CC="gcc -m32"
-CPPFLAGS="-I/opt/csw/include -I/usr/local/include"
-F77="gfortran -m32"
-CXX="g++ -m32"
-FC=$F77
-LDFLAGS="-L/opt/csw/lib -L/usr/local/lib"
-@end example
-
-@noindent
-and for a 64-bit Sparc target
-@example
-CC="gcc -m64"
-CPPFLAGS="-I/opt/csw/include -I/usr/local/include"
-F77="gfortran -m64"
-CXX="g++ -m64"
-FC=$F77
-LDFLAGS="-L/opt/csw/lib/sparcv9 -L/usr/local/lib/sparcv9"
-@end example
-
-Note that paths such as @file{/opt/csw/lib}, @file{/usr/local/lib/sparcv9} or
-@file{/opt/csw/lib/sparcv9} may need to be in the
-@enindex LD_LIBRARY_PATH
-@env{LD_LIBRARY_PATH} during configuration.
-
-The compilation can be tuned to a particular cpu: the @acronym{CRAN}
-check Sparc system uses @code{-mcpu=niagara2}.
 
 
 @node AIX, FreeBSD, Solaris, Platform notes

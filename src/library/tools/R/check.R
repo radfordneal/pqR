@@ -1502,6 +1502,7 @@ setRlibs <-
     check_R_files <- function(is_rec_pkg)
     {
         checkingLog(Log, "R code for possible problems")
+        t1 <- proc.time()
         if (!is_base_pkg) {
             Rcmd <- paste("options(warn=1)\n",
                           sprintf("tools:::.check_package_code_shlib(dir = \"%s\")\n",
@@ -1612,6 +1613,8 @@ setRlibs <-
                               sprintf("tools:::.check_depdef(dir = \"%s\", WINDOWS = %s)\n", pkgdir, win))
             out8 <- R_runR2(Rcmd, "R_DEFAULT_PACKAGES=")
         }
+        t2 <- proc.time()
+        print_time(t1, t2, Log)
 
         if (length(out1) || length(out2) || length(out3) ||
             length(out4) || length(out5) || length(out6) ||
@@ -2283,6 +2286,28 @@ setRlibs <-
 
     check_src_dir <- function(desc)
     {
+        ## Added in R 3.4.2: check line endings for shell scripts:
+        ## for Unix CRLF line endings are fatal but these are not used
+        ## on Windows and hence this is not detected.
+        ## Packages could have arbitrary scripts, so we could
+        ## extend this to look for scripts at top level or elsewhere.
+        scripts <- dir(".", pattern = "^(configure|configure.in|configure.ac|cleanup)$")
+        if(length(scripts)) {
+            checkingLog(Log, "line endings in shell scripts")
+            bad_files <- character()
+            for(f in scripts) {
+                contents <- readChar(f, file.size(f), useBytes = TRUE)
+                if (grepl("\r", contents, fixed = TRUE, useBytes = TRUE))
+                    bad_files <- c(bad_files, f)
+            }
+            if (length(bad_files)) {
+                warningLog(Log, "Found the following shell script(s) with CR or CRLF line endings:")
+                printLog0(Log, .format_lines_with_indent(bad_files), "\n")
+                printLog(Log, "Non-Windows OSes require LF line endings.\n")
+            } else resultLog(Log, "OK")
+       }
+
+
         ## Check C/C++/Fortran sources/headers for CRLF line endings.
         ## <FIXME>
         ## Does ISO C really require LF line endings?  (Reference?)
@@ -3818,6 +3843,9 @@ setRlibs <-
                                   lines, invert = TRUE, value = TRUE, useBytes = TRUE)
                     lines <- grep("warning: *ISO C forbids.*function pointer",
                                   lines, invert = TRUE, value = TRUE, useBytes = TRUE)
+                    if (WINDOWS) 
+                        lines <- grep("warning: *ISO C does not support.*ms_printf length modifier",
+                                      lines, invert = TRUE, value = TRUE, useBytes = TRUE)
                 }
 
                 ## Warnings spotted by gcc with

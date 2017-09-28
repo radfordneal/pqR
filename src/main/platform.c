@@ -1745,6 +1745,7 @@ SEXP attribute_hidden do_setlocale(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    resetICUcollator();
 	    setlocale(LC_MONETARY, l);
 	    setlocale(LC_TIME, l);
+	    dt_invalidate_locale();
 	    /* Need to return value of LC_ALL */
 	    p = setlocale(cat, NULL);
 	}
@@ -2441,6 +2442,12 @@ SEXP attribute_hidden do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 #else
 
+/* Only 10.13 (High Sierra) has this, but the headers in Xcode 9
+   declare it, for some people.  As it is optional, disable it for now. */
+#ifdef __APPLE__
+# undef HAVE_UTIMENSAT
+#endif
+
 #if defined(HAVE_UTIMENSAT)
 # include <fcntl.h>
 # include <sys/stat.h>
@@ -2540,6 +2547,7 @@ static int do_copy(const char* from, const char* name, const char* to,
 		    continue;
 		if (strlen(name) + strlen(de->d_name) + 1 >= PATH_MAX) {
 		    warning(_("over-long path length"));
+		    closedir(dir);
 		    return 1;
 		}
 		snprintf(p, PATH_MAX+1, "%s/%s", name, de->d_name);

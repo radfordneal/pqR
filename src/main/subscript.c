@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
+ *  Copyright (C) 1997--2017  The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2015  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -107,7 +107,7 @@ OneIndex(SEXP x, SEXP s, R_xlen_t len, int partial, SEXP *newname,
 		    break;
 		}
 	    }
-	    /* Try for partial match */
+	    // Try for partial match -- not ever used in current R (partial is 0)
 	    if (partial && indx < 0) {
 		size_t l = strlen(translateChar(STRING_ELT(s, pos)));
 		for(i = 0; i < nx; i++) {
@@ -274,6 +274,7 @@ get1index(SEXP s, SEXP names, R_xlen_t len, int pok, int pos, SEXP call)
 		vmaxset(vmax);
 		break;
 	    }
+	break;
     default:
 	ECALL3(call, _("invalid subscript type '%s'"), type2char(TYPEOF(s)));
     }
@@ -716,7 +717,7 @@ realSubscript(SEXP s, R_xlen_t ns, R_xlen_t nx, R_xlen_t *stretch, SEXP call)
 	    for (i = 0; i < ns; i++) {
 		dx = REAL(s)[i];
 		if (R_FINITE(dx) && dx != 0  && -dx <= nx) {
-		    ix = (int)(-dx - 1);
+		    ix = (R_xlen_t)(-dx - 1);
 		    LOGICAL(indx)[ix] = 0;
 		}
 	    }
