@@ -639,7 +639,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
 static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 {
-    int i, j, ii, jj, ij, iy, k;
+    int i, j, ii, jj, ij, iy;
     int rhasna, chasna;
     int_fast64_t n;
     double ry;
@@ -738,154 +738,370 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
        from non-string vectors and from raw vectors to non-raw vectors are
        not handled here, but are avoided by coercion in SubassignTypeFix. */
 
-    k = 0;
-    switch ((TYPEOF(x)<<5) + TYPEOF(y)) {
+    int * restrict scix = INTEGER(sc);
+    int * restrict srix = INTEGER(sr);
+    int colix;
 
-    case (LGLSXP<<5) + LGLSXP:
-    case (INTSXP<<5) + LGLSXP:
-    case (INTSXP<<5) + INTSXP:
-	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j] - 1;
-	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i] - 1;
-		ij = ii + jj * nr;
-		INTEGER(x)[ij] = INTEGER(y)[k];
-		if (++k == ny) k = 0;
-	    }
-	}
-	break;
+    if (ny == 1) {
 
-    case (REALSXP<<5) + LGLSXP:
-    case (REALSXP<<5) + INTSXP:
-	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j] - 1;
-	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i] - 1;
-		ij = ii + jj * nr;
-		iy = INTEGER(y)[k];
-		if (iy == NA_INTEGER)
-		    REAL(x)[ij] = NA_REAL;
-		else
-		    REAL(x)[ij] = iy;
-		if (++k == ny) k = 0;
-	    }
-	}
-	break;
+        int k = 0;
 
-    case (REALSXP<<5) + REALSXP:
-	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j] -1 ;
-	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i] -1 ;
-		ij = ii + jj * nr;
-		REAL(x)[ij] = REAL(y)[k];
-		if (++k == ny) k = 0;
-	    }
-	}
-	break;
+        switch ((TYPEOF(x)<<5) + TYPEOF(y)) {
 
-    case (CPLXSXP<<5) + LGLSXP:
-    case (CPLXSXP<<5) + INTSXP:
-	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j] - 1;
-	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i] - 1;
-		ij = ii + jj * nr;
-		iy = INTEGER(y)[k];
-		if (iy == NA_INTEGER) {
-		    COMPLEX(x)[ij].r = NA_REAL;
-		    COMPLEX(x)[ij].i = NA_REAL;
-		}
-		else {
-		    COMPLEX(x)[ij].r = iy;
-		    COMPLEX(x)[ij].i = 0.0;
-		}
-		if (++k == ny) k = 0;
-	    }
-	}
-	break;
-
-    case (CPLXSXP<<5) + REALSXP:
-	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j] - 1;
-	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i] - 1;
-		ij = ii + jj * nr;
-		ry = REAL(y)[k];
-		if (ISNA(ry)) {
-		    COMPLEX(x)[ij].r = NA_REAL;
-		    COMPLEX(x)[ij].i = NA_REAL;
-		}
-		else {
-		    COMPLEX(x)[ij].r = ry;
-		    COMPLEX(x)[ij].i = 0.0;
-		}
-		if (++k == ny) k = 0;
-	    }
-	}
-	break;
-
-    case (CPLXSXP<<5) + CPLXSXP:
-	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j] - 1;
-	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i] - 1;
-		ij = ii + jj * nr;
-		COMPLEX(x)[ij] = COMPLEX(y)[k];
-		if (++k == ny) k = 0;
-	    }
-	}
-	break;
-
-    case (STRSXP<<5) + STRSXP:
-	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j] - 1;
-	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i] - 1;
-		ij = ii + jj * nr;
-		SET_STRING_ELT(x, ij, STRING_ELT(y, k));
-		if (++k == ny) k = 0;
-	    }
-	}
-	break;
-
-    case (RAWSXP<<5) + RAWSXP:
-	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j] - 1;
-	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i] - 1;
-		ij = ii + jj * nr;
-		RAW(x)[ij] = RAW(y)[k];
-		if (++k == ny) k = 0;
-	    }
-	}
-	break;
-
-    case (EXPRSXP<<5) + VECSXP:
-    case (EXPRSXP<<5) + EXPRSXP:
-    case (VECSXP<<5)  + EXPRSXP:
-    case (VECSXP<<5)  + VECSXP:
-	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j] - 1;
-	    for (i = 0; i < nrs; i++) {
-		ii = INTEGER(sr)[i] - 1;
-		ij = ii + jj * nr;
-                if (k < ny) {
-                    SET_VECTOR_ELEMENT_FROM_VECTOR(x, ij, y, k);
+        case (LGLSXP<<5) + LGLSXP:
+        case (INTSXP<<5) + LGLSXP:
+        case (INTSXP<<5) + INTSXP: {
+            int tmp = INTEGER(y)[0];
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++)
+                    INTEGER(x) [srix[i] - 1 + colix] = tmp;
+            }
+            break;
+        }
+        case (REALSXP<<5) + LGLSXP:
+        case (REALSXP<<5) + INTSXP:
+        case (REALSXP<<5) + REALSXP: {
+            double tmp = TYPEOF(y) == REALSXP ? REAL(y)[0] 
+                       : INTEGER(y)[0] == NA_INTEGER ? NA_REAL : INTEGER(y)[0];
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++)
+                    REAL(x) [srix[i] - 1 + colix] = tmp;
+            }
+            break;
+        }
+        case (CPLXSXP<<5) + LGLSXP:
+        case (CPLXSXP<<5) + INTSXP: 
+        case (CPLXSXP<<5) + REALSXP:
+        case (CPLXSXP<<5) + CPLXSXP: {
+            Rcomplex tmp;
+            if (TYPEOF(y) == CPLXSXP) 
+                tmp = COMPLEX(y)[0];
+            else if (TYPEOF(y) == REALSXP) {
+                if (ISNAN(REAL(y)[0])) tmp.r = tmp.i = NA_REAL;
+                else { tmp.r = REAL(y)[0]; tmp.i = 0; }
+            }
+            else { /* INT or LGL */
+                if (INTEGER(y)[0] == NA_INTEGER) tmp.r = tmp.i = NA_REAL;
+                else { tmp.r = INTEGER(y)[0]; tmp.i = 0; }
+            }
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++)
+                    COMPLEX(x) [srix[i] - 1 + colix] = tmp;
+            }
+            break;
+        }
+        case (STRSXP<<5) + STRSXP: {
+            SEXP tmp = STRING_ELT (y, 0);
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++)
+                    SET_STRING_ELT (x, srix[i] - 1 + colix, tmp);
+            }
+            break;
+        }
+        case (RAWSXP<<5) + RAWSXP: {
+            Rbyte tmp = RAW(y)[0];
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++)
+                    RAW(x) [srix[i] - 1 + colix] = tmp;
+            }
+            break;
+        }
+        case (EXPRSXP<<5) + VECSXP:
+        case (EXPRSXP<<5) + EXPRSXP:
+        case (VECSXP<<5)  + EXPRSXP:
+        case (VECSXP<<5)  + VECSXP: {
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    SET_VECTOR_ELEMENT_FROM_VECTOR (x, srix[i]-1+colix, y, 0);
+                    if (i+j>0 && NAMEDCNT_EQ_0 (VECTOR_ELT(x,srix[i]-1+colix)))
+                        SET_NAMEDCNT (VECTOR_ELT (x, srix[i]-1+colix), 2);
                 }
-                else {
-                    SET_VECTOR_ELEMENT_FROM_VECTOR(x, ij, y, k % ny);
-                    if (NAMEDCNT_EQ_0(VECTOR_ELT(x,ij)))
-                        SET_NAMEDCNT(VECTOR_ELT(x,ij),2);
-                }
-		k += 1;
-	    }
-	}
-	break;
-
-    default:
-	warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
+            }
+            break;
+        }
+        default:
+            warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
+        }
     }
+    else if (ny >= nrs * ncs) {
+
+        int k = 0;
+
+        switch ((TYPEOF(x)<<5) + TYPEOF(y)) {
+
+        case (LGLSXP<<5) + LGLSXP:
+        case (INTSXP<<5) + LGLSXP:
+        case (INTSXP<<5) + INTSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    INTEGER(x) [srix[i] - 1 + colix] = INTEGER(y)[k];
+                    k += 1;
+                }
+            }
+            break;
+
+        case (REALSXP<<5) + LGLSXP:
+        case (REALSXP<<5) + INTSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    iy = INTEGER(y)[k];
+                    if (iy == NA_INTEGER)
+                        REAL(x) [srix[i] - 1 + colix] = NA_REAL;
+                    else
+                        REAL(x) [srix[i] - 1 + colix] = iy;
+                    k += 1;
+                }
+            }
+            break;
+
+        case (REALSXP<<5) + REALSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    REAL(x) [srix[i] - 1 + colix] = REAL(y)[k];
+                    k += 1;
+                }
+            }
+            break;
+
+        case (CPLXSXP<<5) + LGLSXP:
+        case (CPLXSXP<<5) + INTSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    iy = INTEGER(y)[k];
+                    if (iy == NA_INTEGER) {
+                        COMPLEX(x) [srix[i] - 1 + colix].r = NA_REAL;
+                        COMPLEX(x) [srix[i] - 1 + colix].i = NA_REAL;
+                    }
+                    else {
+                        COMPLEX(x) [srix[i] - 1 + colix].r = iy;
+                        COMPLEX(x) [srix[i] - 1 + colix].i = 0.0;
+                    }
+                    k += 1;
+                }
+            }
+            break;
+
+        case (CPLXSXP<<5) + REALSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    ry = REAL(y)[k];
+                    if (ISNA(ry)) {
+                        COMPLEX(x) [srix[i] - 1 + colix].r = NA_REAL;
+                        COMPLEX(x) [srix[i] - 1 + colix].i = NA_REAL;
+                    }
+                    else {
+                        COMPLEX(x) [srix[i] - 1 + colix].r = ry;
+                        COMPLEX(x) [srix[i] - 1 + colix].i = 0.0;
+                    }
+                    k += 1;
+                }
+            }
+            break;
+
+        case (CPLXSXP<<5) + CPLXSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    COMPLEX(x) [srix[i] - 1 + colix] = COMPLEX(y)[k];
+                    k += 1;
+                }
+            }
+            break;
+
+        case (STRSXP<<5) + STRSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    SET_STRING_ELT(x, srix[i] - 1 + colix, STRING_ELT(y, k));
+                    k += 1;
+                }
+            }
+            break;
+
+        case (RAWSXP<<5) + RAWSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    RAW(x) [srix[i] - 1 + colix] = RAW(y)[k];
+                    k += 1;
+                }
+            }
+            break;
+
+        case (EXPRSXP<<5) + VECSXP:
+        case (EXPRSXP<<5) + EXPRSXP:
+        case (VECSXP<<5)  + EXPRSXP:
+        case (VECSXP<<5)  + VECSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    if (k < ny) {
+                        SET_VECTOR_ELEMENT_FROM_VECTOR (x, srix[i] - 1 + colix,
+                                                        y, k);
+                    }
+                    else {
+                        SET_VECTOR_ELEMENT_FROM_VECTOR (x, srix[i] - 1 + colix,
+                                                        y, k%ny);
+                        if (NAMEDCNT_EQ_0 (VECTOR_ELT (x, srix[i] - 1 + colix)))
+                            SET_NAMEDCNT(VECTOR_ELT(x, srix[i] - 1 + colix), 2);
+                    }
+                    k += 1;
+                }
+            }
+            break;
+
+        default:
+            warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
+        }
+    }
+    else {  /* y is recycled, and is not of length 1 */
+
+        int k = 0;
+
+        switch ((TYPEOF(x)<<5) + TYPEOF(y)) {
+
+        case (LGLSXP<<5) + LGLSXP:
+        case (INTSXP<<5) + LGLSXP:
+        case (INTSXP<<5) + INTSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    INTEGER(x) [srix[i] - 1 + colix] = INTEGER(y)[k];
+                    if (++k == ny) k = 0;
+                }
+            }
+            break;
+
+        case (REALSXP<<5) + LGLSXP:
+        case (REALSXP<<5) + INTSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    iy = INTEGER(y)[k];
+                    if (iy == NA_INTEGER)
+                        REAL(x) [srix[i] - 1 + colix] = NA_REAL;
+                    else
+                        REAL(x) [srix[i] - 1 + colix] = iy;
+                    if (++k == ny) k = 0;
+                }
+            }
+            break;
+
+        case (REALSXP<<5) + REALSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    REAL(x) [srix[i] - 1 + colix] = REAL(y)[k];
+                    if (++k == ny) k = 0;
+                }
+            }
+            break;
+
+        case (CPLXSXP<<5) + LGLSXP:
+        case (CPLXSXP<<5) + INTSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    iy = INTEGER(y)[k];
+                    if (iy == NA_INTEGER) {
+                        COMPLEX(x) [srix[i] - 1 + colix].r = NA_REAL;
+                        COMPLEX(x) [srix[i] - 1 + colix].i = NA_REAL;
+                    }
+                    else {
+                        COMPLEX(x) [srix[i] - 1 + colix].r = iy;
+                        COMPLEX(x) [srix[i] - 1 + colix].i = 0.0;
+                    }
+                    if (++k == ny) k = 0;
+                }
+            }
+            break;
+
+        case (CPLXSXP<<5) + REALSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    ry = REAL(y)[k];
+                    if (ISNA(ry)) {
+                        COMPLEX(x) [srix[i] - 1 + colix].r = NA_REAL;
+                        COMPLEX(x) [srix[i] - 1 + colix].i = NA_REAL;
+                    }
+                    else {
+                        COMPLEX(x) [srix[i] - 1 + colix].r = ry;
+                        COMPLEX(x) [srix[i] - 1 + colix].i = 0.0;
+                    }
+                    if (++k == ny) k = 0;
+                }
+            }
+            break;
+
+        case (CPLXSXP<<5) + CPLXSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    COMPLEX(x) [srix[i] - 1 + colix] = COMPLEX(y)[k];
+                    if (++k == ny) k = 0;
+                }
+            }
+            break;
+
+        case (STRSXP<<5) + STRSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    SET_STRING_ELT(x, srix[i] - 1 + colix, STRING_ELT(y, k));
+                    if (++k == ny) k = 0;
+                }
+            }
+            break;
+
+        case (RAWSXP<<5) + RAWSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    RAW(x) [srix[i] - 1 + colix] = RAW(y)[k];
+                    if (++k == ny) k = 0;
+                }
+            }
+            break;
+
+        case (EXPRSXP<<5) + VECSXP:
+        case (EXPRSXP<<5) + EXPRSXP:
+        case (VECSXP<<5)  + EXPRSXP:
+        case (VECSXP<<5)  + VECSXP:
+            for (j = 0; j < ncs; j++) {
+                colix = (scix[j] - 1) * nr;
+                for (i = 0; i < nrs; i++) {
+                    if (k < ny) {
+                        SET_VECTOR_ELEMENT_FROM_VECTOR (x, srix[i] - 1 + colix,
+                                                        y, k);
+                    }
+                    else {
+                        SET_VECTOR_ELEMENT_FROM_VECTOR (x, srix[i] - 1 + colix,
+                                                        y, k%ny);
+                        if (NAMEDCNT_EQ_0 (VECTOR_ELT (x, srix[i] - 1 + colix)))
+                            SET_NAMEDCNT(VECTOR_ELT(x, srix[i] - 1 + colix), 2);
+                    }
+                    k += 1;
+                }
+            }
+            break;
+
+        default:
+            warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
+        }
+    }
+
     UNPROTECT(4);
     R_scalar_stack = sv_scalar_stack;
     return x;
