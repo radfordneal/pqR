@@ -1623,7 +1623,8 @@ static SEXP do_radixsort(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     SEXP ans = PROTECT(allocVector(INTSXP, n));
     o = INTEGER(ans);
-    o[0] = -1;
+    if (n > 0)
+        o[0] = -1;
     xd = DATAPTR(x);
 
     stackgrps = narg > 1 || retGrp;
