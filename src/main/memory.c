@@ -2805,6 +2805,12 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
     int need_enc;
     Rboolean embedNul = FALSE, is_ascii = TRUE;
 
+#   if 1
+        if (installed_already("DBG_MKCHAR")) {
+            REprintf("mkCharLenCE: %.*s\n",len,name);
+        }
+#   endif
+
     switch(enc){
     case CE_NATIVE:
     case CE_UTF8:
@@ -2892,7 +2898,7 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 
 /* mkCharMulti - make a character (CHARSXP) variable from multiple 
    strings (not necessarily null-terminated) with specified lengths. 
-   The end of the set of strings is marked by names[i] being NULL.
+   The end of the set of strings is marked by strings[i] being NULL.
    If non-zero, first_hash is the hash of the first string.  The
    encoding to use is also specified. */
 
@@ -2900,6 +2906,12 @@ SEXP attribute_hidden Rf_mkCharMulti (const char **strings, const int *lengths,
                                       unsigned first_hash, cetype_t enc)
 {
     int i, j;
+
+#   if 1
+        if (installed_already("DBG_MKCHAR")) {
+            REprintf("mkCharMulti\n");
+        }
+#   endif
 
     switch(enc){
     case CE_NATIVE:

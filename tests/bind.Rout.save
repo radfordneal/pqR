@@ -1,0 +1,87 @@
+
+pqR version 2.15.1 (2017-00-00), based on R 2.15.0 (2012-03-30)
+
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
+ISBN 3-900051-07-0
+
+Modifications to R in pqR are Copyright (C) 2013-2017 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
+
+Platform: x86_64-unknown-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+
+No helper threads, task merging enabled, uncompressed pointers.
+
+> # Tests of c / unlist / rbind / cbind.
+> 
+> # Currently concentrates on handling of names in unlist.
+> 
+> # Added for pqR, 2017, Radford M. Neal.
+> 
+> 
+> unlist(list(FALSE,10,20,30L))
+[1]  0 10 20 30
+> unlist(list(FALSE,10,list(20,21),30L))
+[1]  0 10 20 21 30
+> unlist(list(FALSE,10,list(20,21i),30L))
+[1]  0+ 0i 10+ 0i 20+ 0i  0+21i 30+ 0i
+> unlist(list(FALSE,10,list(20,21i),30L,"xx"))
+[1] "FALSE" "10"    "20"    "0+21i" "30"    "xx"   
+> 
+> unlist(list(1,a=list(3,4)))
+   a1 a2 
+ 1  3  4 
+> unlist(list(1,list(3,4),b=9))
+      b 
+1 3 4 9 
+> unlist(list(a=list(x=1),b=list(3,4)))
+a.x  b1  b2 
+  1   3   4 
+> unlist(list(a=list(x=1),b=list(x=3,4,5)))
+a.x b.x  b2  b3 
+  1   3   4   5 
+> unlist(list(a=list(x=1),b=list(x=3,4)))  # desirabliltiy of result is debatable
+a.x b.x   b 
+  1   3   4 
+> unlist(list(a=list(x=1),b=list(3,y=4)))                       # ditto
+a.x   b b.y 
+  1   3   4 
+> unlist(list(a=list(3,list(c(x=1,y=2,z=3)),4,list(c(x=10)))))  # ditto
+ a1 a.x a.y a.z  a5 a.x 
+  3   1   2   3   4  10 
+> unlist(list(3,xx=list(a="p","q","r"),yy=list(list(),4,5),zz=list(),5))
+     xx.a  xx2  xx3  yy1  yy2      
+ "3"  "p"  "q"  "r"  "4"  "5"  "5" 
+> 
+> 
+> c(1,2,3)
+[1] 1 2 3
+> c(1,c(x=3,y=4))
+  x y 
+1 3 4 
+> c(1,a=c(3,4))
+   a1 a2 
+ 1  3  4 
+> 
+> rbind(a=c(x=1,y=2),b=2:3)
+  x y
+a 1 2
+b 2 3
+> cbind(a=c(x=1,y=2),b=2:3)
+  a b
+x 1 2
+y 2 3
+> 
