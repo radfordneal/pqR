@@ -19,6 +19,7 @@ unlist(list(a=list(x=1),b=list(3,y=4)))                       # ditto
 unlist(list(a=list(3,list(c(x=1,y=2,z=3)),4,list(c(x=10)))))  # ditto
 unlist(list(3,xx=list(a="p","q","r"),yy=list(list(),4,5),zz=list(),5))
 
+unlist(pairlist(a=3,b=pairlist(x="p","q",y="r"),c=pairlist(TRUE,FALSE)))
 
 c(1,2,3)
 c(1,c(x=3,y=4))

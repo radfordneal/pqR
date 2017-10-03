@@ -38,6 +38,18 @@
 #include <Print.h>
 
 
+static SEXP ItemName(SEXP names, int i)
+{
+  /* return  names[i]  if it is a character (>= 1 char), or NULL otherwise */
+    if (names != R_NilValue &&
+	STRING_ELT(names, i) != R_NilValue &&
+	CHAR(STRING_ELT(names, i))[0] != '\0') /* length test */
+	return STRING_ELT(names, i);
+    else
+	return R_NilValue;
+}
+
+
 /* This section of code handles type conversion for elements */
 /* of data vectors.  Type coercion throughout R should use these */
 /* routines to ensure consistency. */
