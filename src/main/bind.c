@@ -630,7 +630,6 @@ static void MakeSeqName (SEXP names, R_len_t *nix, SEXP base, R_len_t seq_start,
     *nix += 1;
 }
 
-
 static SEXP CombineNames (SEXP str1, SEXP str2)
 {
     const char *strings[4];
@@ -810,6 +809,7 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
         setAttrib (ans, R_NamesSymbol, names);
         CreateNames (args, recurse ? INT_MAX : 1, names, &nix, 
                      R_BlankString, 0, &first_in_seq);
+        if (nix - 1 != LENGTH(names)) abort();
     }
 
     UNPROTECT(2);
@@ -828,14 +828,14 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     /* Attempt method dispatch. */
 
-    if (DispatchOrEval(call, op, "unlist", args, env, &ans, 0, 1))
-	return(ans);
+    if (DispatchOrEval(call, op, "unlist", args, env, &args, 0, 1))
+	return(args);
 
     /* Method dispatch has failed; run the default code. */
 
-    PROTECT(lst = CAR(ans));
-    recurse = asLogical(CADR(ans));
-    usenames = asLogical(CADDR(ans));
+    PROTECT(lst = CAR(args));
+    recurse = asLogical(CADR(args));
+    usenames = asLogical(CADDR(args));
 
     SEXP topnames = usenames ? getNamesAttrib(lst) : R_NilValue;
 
@@ -908,8 +908,9 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         R_len_t first_in_seq = 0;
         R_len_t nix = 1;
 	setAttrib(ans, R_NamesSymbol, names);
-        CreateNames (lst, recurse ? INT_MAX : 0, names, &nix,
+        CreateNames (lst, recurse ? INT_MAX : 1, names, &nix,
                      R_BlankString, 0, &first_in_seq);
+        if (nix - 1 != LENGTH(names))  abort();
     }
 
     UNPROTECT(2);
