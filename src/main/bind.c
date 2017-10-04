@@ -431,13 +431,14 @@ static void AtomicAnswer(SEXP x, struct BindData *data)
 
 
 /* CreateNames stores names to be associated with 'unlist' of 'obj' in
-   the string vector 'names', starting at element 'nix' (indexing from 1).
-  'obj' is looked at recursively to depth 'rdepth' (0 means top-level
-   only).  CreateNames is also used for 'c'.
+   the string vector 'names', starting at element '*nix' (indexing
+   from 1), which is incremented by the number of names stored.  'obj'
+   is looked at recursively to depth 'rdepth' (0 means top-level only).
+   CreateNames is also used for 'c'.
 
    The names begin with the characters in the CHARSXP 'base', to which
    may be appended inner names, or sequence numbers.  The sequence
-   number for a name stored at 'nix' will be 'seq_start' minus 'nix'
+   number for a name stored at '*nix' will be 'seq_start' minus '*nix'
    plus 1.  Initially, the first name using a sequence number does not
    have the actual number appended (it will just be 'base').  The index 
    (from 1) of this name in 'names' is stored in '*first_in_seq',
@@ -458,10 +459,12 @@ static void AtomicAnswer(SEXP x, struct BindData *data)
         0   1   2 
 */
 
-static void MakeSeqName (SEXP names, R_len_t nix, SEXP base, R_len_t seq_start, 
+static void MakeSeqName (SEXP names, R_len_t *nix, SEXP base, R_len_t seq_start,
                          R_len_t *first_in_seq);
 
-static void CreateNames (SEXP obj, int rdepth, SEXP names, R_len_t nix, 
+static SEXP CombineNames (SEXP str1, SEXP str2);
+
+static void CreateNames (SEXP obj, int rdepth, SEXP names, R_len_t *nix, 
                          SEXP base, R_len_t seq_start, R_len_t *first_in_seq)
 {
     if (obj == R_NilValue) {
@@ -474,71 +477,53 @@ static void CreateNames (SEXP obj, int rdepth, SEXP names, R_len_t nix,
         R_len_t i;
         if (nms == R_NilValue) {
             for (i = 0; i < len; i++)
-                CreateNames (VECTOR_ELT(obj,i), rdepth-1, names, nix+i, 
+                CreateNames (VECTOR_ELT(obj,i), rdepth-1, names, nix, 
                              base, seq_start, first_in_seq);
         }
         else {
-            const void *vmax = VMAXGET();
             for (i = 0; i < len; i++) {
                 SEXP nm = STRING_ELT (nms, i);
-                if (CHAR(nm)[0] == 0)
-                    CreateNames (VECTOR_ELT(obj,i), rdepth-1, names, nix+i, 
+                if (CHAR(nm)[0] == 0) {
+                    CreateNames (VECTOR_ELT(obj,i), rdepth-1, names, nix, 
                                  base, seq_start, first_in_seq);
-                else if (CHAR(base)[0] == 0)
-                    CreateNames (VECTOR_ELT(obj,i), rdepth-1, names, nix+i, 
-                                 nm, seq_start, first_in_seq);
+                }
+                else if (CHAR(base)[0] == 0) {
+                    R_len_t new_first_in_seq = 0;
+                    CreateNames (VECTOR_ELT(obj,i), rdepth-1, names, nix, 
+                                 nm, *nix, &new_first_in_seq);
+                }
                 else {
                     R_len_t new_first_in_seq = 0;
-                    const char *strings[4];
-                    int lengths[3];
-                    SEXP new_base;
-                    strings[0] = translateCharUTF8(base);
-                    strings[1] = ".";
-                    strings[2] = translateCharUTF8(nm);
-                    strings[3] = NULL;
-                    lengths[0] = strlen(strings[0]);
-                    lengths[1] = 1;
-                    lengths[2] = strlen(strings[2]);
-                    new_base = Rf_mkCharMulti (strings, lengths, 0, CE_UTF8);
+                    SEXP new_base = CombineNames (base, nm);
                     PROTECT(new_base);
-                    CreateNames (VECTOR_ELT(obj,i), rdepth-1, names, nix+i, 
-                                 new_base, nix+i, &new_first_in_seq);
+                    CreateNames (VECTOR_ELT(obj,i), rdepth-1, names, nix, 
+                                 new_base, *nix, &new_first_in_seq);
                     UNPROTECT(1);
-                    VMAXSET(vmax);
                 }
             }
         }
     }
 
-    else if (rdepth > 0 && TYPEOF(obj) == LISTSXP /* but not LANGSXP *) {
-        const void *vmax = VMAXGET();
+    else if (rdepth > 0 && TYPEOF(obj) == LISTSXP /* but not LANGSXP */) {
         SEXP pos = obj;
         int i = 0;
         do {
-            if (TAG(pos) == R_NilValue)
-                CreateNames (CAR(pos), rdepth-1, names, nix+i, 
+            if (TAG(pos) == R_NilValue) {
+                CreateNames (CAR(pos), rdepth-1, names, nix, 
                              base, seq_start, first_in_seq);
-            else if (CHAR(base)[0] == 0)
-                CreateNames (VECTOR_ELT(obj,i), rdepth-1, names, nix+i, 
-                             PRINTNAME(TAG(pos)), seq_start, first_in_seq);
+            }
+            else if (CHAR(base)[0] == 0) {
+                R_len_t new_first_in_seq = 0;
+                CreateNames (CAR(pos), rdepth-1, names, nix, 
+                             PRINTNAME(TAG(pos)), *nix, &new_first_in_seq);
+            }
             else {
                 R_len_t new_first_in_seq = 0;
-                const char *strings[4];
-                int lengths[3];
-                SEXP new_base;
-                strings[0] = translateCharUTF8(base);
-                strings[1] = ".";
-                strings[2] = translateCharUTF8(PRINTNAME(TAG(pos)));
-                strings[3] = NULL;
-                lengths[0] = strlen(strings[0]);
-                lengths[1] = 1;
-                lengths[2] = strlen(strings[2]);
-                new_base = Rf_mkCharMulti (strings, lengths, 0, CE_UTF8);
+                SEXP new_base = CombineNames (base, PRINTNAME(TAG(pos)));
                 PROTECT(new_base);
-                CreateNames (CAR(pos), rdepth-1, names, nix+i, 
-                             new_base, nix+i, &new_first_in_seq);
+                CreateNames (CAR(pos), rdepth-1, names, nix, 
+                             new_base, *nix, &new_first_in_seq);
                 UNPROTECT(1);
-                VMAXSET(vmax);
             }
             pos = CDR(pos);
             i += 1;
@@ -551,59 +536,43 @@ static void CreateNames (SEXP obj, int rdepth, SEXP names, R_len_t nix,
         R_len_t i;
         if (nms == R_NilValue) {
             for (i = 0; i < len; i++)
-                MakeSeqName (names, nix+i, base, seq_start, first_in_seq);
+                MakeSeqName (names, nix, base, seq_start, first_in_seq);
         }
         else {
-            const void *vmax = VMAXGET();
             for (i = 0; i < len; i++) {
                 SEXP nm = STRING_ELT (nms, i);
                 if (CHAR(nm)[0] == 0)
-                    MakeSeqName (names, nix+i, base, seq_start, first_in_seq);
-                else if (CHAR(base)[0] == 0)
-                    MakeSeqName (names, nix+i, nm, seq_start, first_in_seq);
+                    MakeSeqName (names, nix, base, seq_start, first_in_seq);
+                else if (CHAR(base)[0] == 0) {
+                    if (*nix > LENGTH(names)) abort();
+                    SET_STRING_ELT (names, *nix - 1, nm);
+                    *nix += 1;
+                }
                 else {
-                    const char *strings[4];
-                    int lengths[3];
-                    strings[0] = translateCharUTF8(base);
-                    strings[1] = ".";
-                    strings[2] = translateCharUTF8(nm);
-                    strings[3] = NULL;
-                    lengths[0] = strlen(strings[0]);
-                    lengths[1] = 1;
-                    lengths[2] = strlen(strings[2]);
-                    if (nix + i > LENGTH(names)) abort();
-                    SET_STRING_ELT (names, nix + i - 1, 
-                                    Rf_mkCharMulti(strings,lengths,0,CE_UTF8));
-                    VMAXSET(vmax);
+                    if (*nix > LENGTH(names)) abort();
+                    SET_STRING_ELT (names, *nix - 1, CombineNames(base,nm));
+                    *nix += 1;
                 }
             }
         }
     }
 
     else if (TYPEOF(obj) == LISTSXP /* but not LANGSXP */) {
-        const void *vmax = VMAXGET();
         SEXP pos = obj;
         int i = 0;
         do {
-            if (TAG(pos) == R_NilValue)
-                MakeSeqName (names, nix+i, base, seq_start, first_in_seq);
-            else if (CHAR(base)[0] == 0)
-                MakeSeqName (names, nix+i, PRINTNAME(TAG(pos)), seq_start, 
-                             first_in_seq);
+            if (TAG(pos) == R_NilValue || CHAR(PRINTNAME(TAG(pos)))[0] == 0)
+                MakeSeqName (names, nix, base, seq_start, first_in_seq);
+            else if (CHAR(base)[0] == 0) {
+                if (*nix > LENGTH(names)) abort();
+                SET_STRING_ELT (names, *nix - 1, PRINTNAME(TAG(pos)));
+                *nix += 1;
+            }
             else {
-                const char *strings[4];
-                int lengths[3];
-                strings[0] = translateCharUTF8(base);
-                strings[1] = ".";
-                strings[2] = translateCharUTF8(PRINTNAME(TAG(pos)));
-                strings[3] = NULL;
-                lengths[0] = strlen(strings[0]);
-                lengths[1] = 1;
-                lengths[2] = strlen(strings[2]);
-                if (nix + i > LENGTH(names)) abort();
-                SET_STRING_ELT (names, nix + i - 1, 
-                                Rf_mkCharMulti(strings,lengths,0,CE_UTF8));
-                VMAXSET(vmax);
+                if (*nix > LENGTH(names)) abort();
+                SET_STRING_ELT (names, *nix - 1, 
+                                CombineNames (base, PRINTNAME(TAG(pos))));
+                *nix += 1;
             }
             pos = CDR(pos);
             i += 1;
@@ -615,15 +584,16 @@ static void CreateNames (SEXP obj, int rdepth, SEXP names, R_len_t nix,
     }
 }
 
-static void MakeSeqName (SEXP names, R_len_t nix, SEXP base, R_len_t seq_start, 
+static void MakeSeqName (SEXP names, R_len_t *nix, SEXP base, R_len_t seq_start,
                          R_len_t *first_in_seq)
 {
-    if (seq_start == 0)
-        SET_STRING_ELT (names, nix - 1, base);
+    if (seq_start == 0) {
+        SET_STRING_ELT (names, *nix - 1, base);
+    }
 
     else if (*first_in_seq == 0) {
-        SET_STRING_ELT (names, nix - 1, base);
-        *first_in_seq = nix;
+        SET_STRING_ELT (names, *nix - 1, base);
+        *first_in_seq = *nix;
     }
 
     else {
@@ -631,22 +601,24 @@ static void MakeSeqName (SEXP names, R_len_t nix, SEXP base, R_len_t seq_start,
         const char *strings[3];
         R_len_t lengths[2];
         char sno[31];
+
         const void *vmax = VMAXGET();
 
-        integer_to_string (sno, nix - seq_start + 1);
+        integer_to_string (sno, *nix - seq_start + 1);
         strings[0] = translateCharUTF8(base);
         strings[1] = sno;
         strings[2] = NULL;
         lengths[0] = strlen(strings[0]);
         lengths[1] = strlen(strings[1]);
-        if (nix > LENGTH(names)) abort();
-        SET_STRING_ELT (names, nix - 1, 
+        if (*nix > LENGTH(names)) abort();
+        SET_STRING_ELT (names, *nix - 1, 
                         Rf_mkCharMulti (strings, lengths, 0, CE_UTF8));
 
         if (*first_in_seq > 0) {
-            if (*first_in_seq >= nix) abort();
-            strings[1] = "1";
-            lengths[1] = 1;
+            if (*first_in_seq >= *nix) abort();
+            integer_to_string (sno, *first_in_seq - seq_start + 1);
+            strings[1] = sno;
+            lengths[1] = strlen(strings[1]);
             SET_STRING_ELT (names, *first_in_seq - 1, 
                             Rf_mkCharMulti (strings, lengths, 0, CE_UTF8));
             *first_in_seq = -1;
@@ -654,6 +626,29 @@ static void MakeSeqName (SEXP names, R_len_t nix, SEXP base, R_len_t seq_start,
 
         VMAXSET(vmax);
     }
+
+    *nix += 1;
+}
+
+
+static SEXP CombineNames (SEXP str1, SEXP str2)
+{
+    const char *strings[4];
+    int lengths[3];
+
+    const void *vmax = VMAXGET();
+
+    strings[0] = translateCharUTF8(str1);
+    strings[1] = ".";
+    strings[2] = translateCharUTF8(str2);
+    strings[3] = NULL;
+    lengths[0] = strlen(strings[0]);
+    lengths[1] = 1;
+    lengths[2] = strlen(strings[2]);
+
+    VMAXSET(vmax);
+
+    return Rf_mkCharMulti(strings,lengths,0,CE_UTF8);
 }
 
 
@@ -811,8 +806,9 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
     if (data.ans_nnames && data.ans_length > 0) {
         SEXP names = allocVector (STRSXP, data.ans_length);
         R_len_t first_in_seq = 0;
+        R_len_t nix = 1;
         setAttrib (ans, R_NamesSymbol, names);
-        CreateNames (args, recurse ? INT_MAX : 0, names, 1, 
+        CreateNames (args, recurse ? INT_MAX : 1, names, &nix, 
                      R_BlankString, 0, &first_in_seq);
     }
 
@@ -910,8 +906,9 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     if (data.ans_nnames && data.ans_length > 0) {
         SEXP names = allocVector(STRSXP, data.ans_length);
         R_len_t first_in_seq = 0;
+        R_len_t nix = 1;
 	setAttrib(ans, R_NamesSymbol, names);
-        CreateNames (lst, recurse ? INT_MAX : 0, names, 1,
+        CreateNames (lst, recurse ? INT_MAX : 0, names, &nix,
                      R_BlankString, 0, &first_in_seq);
     }
 
