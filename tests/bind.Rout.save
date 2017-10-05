@@ -53,22 +53,42 @@ a.x  b1  b2
 > unlist(list(a=list(x=1),b=list(x=3,4,5)))
 a.x b.x  b2  b3 
   1   3   4   5 
-> unlist(list(a=list(x=1),b=list(x=3,4)))  # desirabliltiy of result is debatable
+> unlist(list(a=list(x=1),b=list(x=3,4)))
 a.x b.x   b 
   1   3   4 
-> unlist(list(a=list(x=1),b=list(3,y=4)))                       # ditto
+> unlist(list(a=list(x=1),b=list(3,y=4)))
 a.x   b b.y 
   1   3   4 
-> unlist(list(a=list(3,list(c(x=1,y=2,z=3)),4,list(c(x=10)))))  # ditto
+> unlist(list(a=list(3,list(c(x=1,y=2,z=3)),4,list(c(x=10)))))
  a1 a.x a.y a.z  a5 a.x 
   3   1   2   3   4  10 
 > unlist(list(3,xx=list(a="p","q","r"),yy=list(list(),4,5),zz=list(),5))
      xx.a  xx2  xx3  yy1  yy2      
  "3"  "p"  "q"  "r"  "4"  "5"  "5" 
 > 
+> unlist (list(a=list(x=0,1,y=2,3)))
+a.x  a2 a.y  a4 
+  0   1   2   3 
+> unlist (list(a=list(x=0,1,y=2)))
+a.x   a a.y 
+  0   1   2 
+> 
+> unlist(list(x=list(2,a=3)))
+  x x.a 
+  2   3 
+> unlist(list(x=c(2,a=3)))
+  x x.a 
+  2   3 
+> 
 > unlist(pairlist(a=3,b=pairlist(x="p","q",y="r"),c=pairlist(TRUE,FALSE)))
       a     b.x       b     b.y      c1      c2 
     "3"     "p"     "q"     "r"  "TRUE" "FALSE" 
+> 
+> unlist(function (x) 0)
+function (x) 
+0
+> unlist(c(a=1,b=2),use.names=FALSE)
+[1] 1 2
 > 
 > c(1,2,3)
 [1] 1 2 3
@@ -78,6 +98,9 @@ a.x   b b.y
 > c(1,a=c(3,4))
    a1 a2 
  1  3  4 
+> c(x=c(2,a=3))
+  x x.a 
+  2   3 
 > 
 > rbind(a=c(x=1,y=2),b=2:3)
   x y

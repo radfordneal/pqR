@@ -819,17 +819,16 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
 
 static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
-    SEXP ans, lst, t;
-    int recurse, usenames;
-    int i, n;
     struct BindData data;
+    int recurse, usenames;
+    SEXP ans, lst;
 
     checkArity(op, args);
 
     /* Attempt method dispatch. */
 
     if (DispatchOrEval(call, op, "unlist", args, env, &args, 0, 1))
-	return(args);
+        return(args);
 
     /* Method dispatch has failed; run the default code. */
 
@@ -837,7 +836,23 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     recurse = asLogical(CADR(args));
     usenames = asLogical(CADDR(args));
 
+    /* Return object unchanged if not a vector or list. */
+
+    if (!isVector(lst) && TYPEOF(lst) != LISTSXP) {
+        UNPROTECT(1);
+        return lst;
+    }
+
+    /* Return atomic vector unchanged if it has no names, or we keep names. */
+
+    if (isVectorAtomic(lst) && (usenames || getNamesAttrib(lst)==R_NilValue)) {
+        UNPROTECT(1);
+        return lst;
+    }
+
     SEXP topnames = usenames ? getNamesAttrib(lst) : R_NilValue;
+
+    /* Try to handle simple cases quickly. */
 
     if (TYPEOF(lst) == VECSXP && LENGTH(lst) > 0 && topnames == R_NilValue) {
         if (NAMEDCNT_EQ_0(VECTOR_ELT(lst,0)))
@@ -858,31 +873,31 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     data.ans_length = 0;
     data.ans_nnames = 0;
 
-    n = 0;			/* -Wall */
-    if (isNewList(lst)) {
-	n = length(lst);
-	if (usenames && HAS_ATTRIB(lst) /* quick pre-test */
+    if (isVector(lst)) {
+        if (usenames && HAS_ATTRIB(lst) /* quick pre-test */
                      && getNamesAttrib(lst) != R_NilValue)
-	    data.ans_nnames = 1;
-	for (i = 0; i < n; i++) {
-	    if (usenames && !data.ans_nnames)
-		data.ans_nnames = HasNames(VECTOR_ELT(lst, i));
-	    AnswerType(VECTOR_ELT(lst, i), recurse, usenames, &data, call);
-	}
+            data.ans_nnames = 1;
+        if (isVectorAtomic(lst))
+            AnswerType (lst, recurse, usenames, &data, call);
+        else { 
+            R_len_t n = LENGTH(lst);
+            R_len_t i;
+            for (i = 0; i < n; i++) {
+                if (usenames && !data.ans_nnames)
+                    data.ans_nnames = HasNames (VECTOR_ELT (lst, i));
+                AnswerType (VECTOR_ELT(lst, i), recurse, usenames, &data, call);
+            }
+        }
     }
     else if (isList(lst)) {
-	for (t = lst; t != R_NilValue; t = CDR(t)) {
-	    if (usenames && !data.ans_nnames) {
-		if (!isNull(TAG(t))) data.ans_nnames = 1;
-		else data.ans_nnames = HasNames(CAR(t));
-	    }
-	    AnswerType(CAR(t), recurse, usenames, &data, call);
-	}
-    }
-    else {
-	UNPROTECT(1);
-	if (isVector(lst)) return lst;
-	else error(_("argument not a list"));
+        SEXP t;
+        for (t = lst; t != R_NilValue; t = CDR(t)) {
+            if (usenames && !data.ans_nnames) {
+                if (!isNull(TAG(t))) data.ans_nnames = 1;
+                else data.ans_nnames = HasNames(CAR(t));
+            }
+            AnswerType(CAR(t), recurse, usenames, &data, call);
+        }
     }
 
     /* Allocate the return value and set up to pass through 
@@ -897,9 +912,9 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     if (data.ans_type == VECSXP || data.ans_type == EXPRSXP 
                                 || data.ans_type == NILSXP)
-	ListAnswer(lst, recurse ? 1 : -1, &data);
+        ListAnswer(lst, recurse ? 1 : -1, &data);
     else
-	AtomicAnswer(lst, &data);
+        AtomicAnswer(lst, &data);
 
     /* Build and attach the names attribute for the returned object. */
 
@@ -907,7 +922,7 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         SEXP names = allocVector(STRSXP, data.ans_length);
         R_len_t first_in_seq = 0;
         R_len_t nix = 1;
-	setAttrib(ans, R_NamesSymbol, names);
+        setAttrib(ans, R_NamesSymbol, names);
         CreateNames (lst, recurse ? INT_MAX : 1, names, &nix,
                      R_BlankString, 0, &first_in_seq);
         if (nix - 1 != LENGTH(names))  abort();

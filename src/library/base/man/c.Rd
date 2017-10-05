@@ -43,9 +43,9 @@ c(\dots, recursive=FALSE)
   from the objects concatenated (if present), with the two parts separated
   by "." if both are present.  If an argument has a name in the call but 
   the object has no names, and is not scalar, integers from 1 up are appended
-  to the name from the call (with no "." separator).  Otherwise, there will
-  be no name for the element (and there will be no names attribute for the
-  result if all elements lack names for this reason).
+  to the name from the call (with no "." separator).  More complex cases
+  are handled as for \code{unlist}.  If no elements acquire names in this
+  way, there will be no names attribute for the result.
 
   Assignments like \code{v<-c(v,x)} may sometimes be done by extending
   the space used by \code{v}, and then appending \code{x}, without 
