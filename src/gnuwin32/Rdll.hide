@@ -298,7 +298,6 @@
  Rf_IntegerFromLogical
  Rf_IntegerFromReal
  Rf_IntegerFromString
- Rf_ItemName
  Rf_LogicalFromComplex
  Rf_LogicalFromInteger
  Rf_LogicalFromReal

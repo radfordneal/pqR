@@ -282,7 +282,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
 		unsigned int i = 0;
 		while (i<LENGTH(v) && i < pvec) {
                     pp(pre+2); Rprintf("[[%d]]\n",i);
-                    inspect_tree(pre+2, VECTOR_ELT(v, i), 1 /* deep - 1 */, pvec, prom);
+                    inspect_tree(pre+2, VECTOR_ELT(v, i), deep - 1, pvec, prom);
 		    i++;
 		}
 		if (i<LENGTH(v)) { pp(pre+2); Rprintf("...\n"); }
@@ -316,13 +316,13 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
                         Rprintf ("%s\n", TYPEOF(lc)==LISTSXP ? ""
                                           : TYPEOF(lc)==LANGSXP ? "L" : "?");
                     }
-		    if (TAG(lc) && TAG(lc) != R_NilValue) {
+		    if (TAG(lc) != R_NilValue) {
 			pp(pre + 2);
-			Rprintf("TAG: "); /* TAG should be a one-liner since it's a symbol so we don't put it on an extra line*/
+			Rprintf("TAG: "); /*  one line, since symbol, so no extra line */
 			inspect_tree(0, TAG(lc), deep - 1, pvec, prom);
-		    }		  
-		    inspect_tree(pre + 2, CAR(lc), deep - 1, pvec, prom);
-		    lc=CDR(lc);
+		    }
+		    inspect_tree (pre + 2, CAR(lc), deep - 1, pvec, prom);
+		    lc = CDR(lc);
 		}
 	    }
 	    break;

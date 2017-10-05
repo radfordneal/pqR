@@ -1270,7 +1270,6 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define internalArraySubscript	Rf_internalArraySubscript
 # define internalTypeCheck	Rf_internalTypeCheck
 # define isValidName		Rf_isValidName
-# define ItemName		Rf_ItemName
 # define jump_to_toplevel	Rf_jump_to_toplevel
 # define KillAllDevices		Rf_KillAllDevices
 # define levelsgets		Rf_levelsgets
@@ -1588,9 +1587,6 @@ SEXP R_sysfunction(int,RCNTXT*);
 void R_run_onexits(RCNTXT *);
 void R_restore_globals(RCNTXT *);
 #endif
-
-/* ../main/bind.c */
-SEXP ItemName(SEXP, int);
 
 /* ../main/errors.c : */
 void ErrorMessage(SEXP, int, ...);

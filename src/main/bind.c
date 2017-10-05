@@ -38,9 +38,6 @@
 
 #define imax2(x, y) ((x < y) ? y : x)
 
-#include "RBufferUtils.h"
-static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
-
 
 /* Task procedure for copying a vector into another vector with possible
    coercion.  The code gives the offset within the output vector to start
@@ -246,7 +243,6 @@ struct BindData {
     int  ans_type;
     SEXP ans_ptr;
     int  ans_length;
-    SEXP ans_names;
     int  ans_nnames;
 };
 
@@ -433,201 +429,227 @@ static void AtomicAnswer(SEXP x, struct BindData *data)
     }
 }
 
-static SEXP NewBase(SEXP base, SEXP tag)
+
+/* CreateNames stores names to be associated with 'unlist' of 'obj' in
+   the string vector 'names', starting at element '*nix' (indexing
+   from 1), which is incremented by the number of names stored.  'obj'
+   is looked at recursively to depth 'rdepth' (0 means top-level only).
+   CreateNames is also used for 'c'.
+
+   The names begin with the characters in the CHARSXP 'base', to which
+   may be appended inner names, or sequence numbers.  The sequence
+   number for a name stored at '*nix' will be 'seq_start' minus '*nix'
+   plus 1.  Initially, the first name using a sequence number does not
+   have the actual number appended (it will just be 'base').  The index 
+   (from 1) of this name in 'names' is stored in '*first_in_seq',
+   which is 0 if no name using a sequence number for this base has
+   been created yet.  If and when a second name using a sequence
+   number for the same base is created, the name at index '*first_in_seq' 
+   will be updated to have its actual sequence number appended, and
+   '*first_in_seq' will be changed to -1, so that this will not be
+   done again.
+
+   Examples:
+
+      > unlist (list(a=list(x=0,1,y=2,3)))  # 'a2' was initially just 'a'
+      a.x  a2 a.y  a4 
+        0   1   2   3 
+      > unlist (list(a=list(x=0,1,y=2)))    # the initial 'a' is never changed
+      a.x   a a.y 
+        0   1   2 
+*/
+
+static void MakeSeqName (SEXP names, R_len_t *nix, SEXP base, R_len_t seq_start,
+                         R_len_t *first_in_seq);
+
+static SEXP CombineNames (SEXP str1, SEXP str2);
+
+static void CreateNames (SEXP obj, int rdepth, SEXP names, R_len_t *nix, 
+                         SEXP base, R_len_t seq_start, R_len_t *first_in_seq)
 {
-    SEXP ans;
-    char *cbuf;
-    base = EnsureString(base);
-    tag = EnsureString(tag);
-    if (*CHAR(base) && *CHAR(tag)) { /* test of length */
-	const void *vmax = VMAXGET();
-	const char *sb = translateCharUTF8(base), *st = translateCharUTF8(tag);
-        size_t alloc_len = strlen(st) + strlen(sb) + 1;
-	cbuf = ALLOC_STRING_BUFF(alloc_len,&cbuff);
-        (void) copy_3_strings (cbuf, alloc_len+1, sb, ".", st);
-	/* This isn't strictly correct as we do not know that all the
-	   components of the name were correctly translated. */
-	ans = mkCharCE(cbuf, CE_UTF8);
+    if (obj == R_NilValue) {
+        /* nothing */
+    }
+
+    else if (rdepth > 0 && isVectorList(obj)) {
+        SEXP nms = getNamesAttrib(obj);
+        R_len_t len = LENGTH(obj);
+        R_len_t i;
+        if (nms == R_NilValue) {
+            for (i = 0; i < len; i++)
+                CreateNames (VECTOR_ELT(obj,i), rdepth-1, names, nix, 
+                             base, seq_start, first_in_seq);
+        }
+        else {
+            for (i = 0; i < len; i++) {
+                SEXP nm = STRING_ELT (nms, i);
+                if (CHAR(nm)[0] == 0) {
+                    CreateNames (VECTOR_ELT(obj,i), rdepth-1, names, nix, 
+                                 base, seq_start, first_in_seq);
+                }
+                else if (CHAR(base)[0] == 0) {
+                    R_len_t new_first_in_seq = 0;
+                    CreateNames (VECTOR_ELT(obj,i), rdepth-1, names, nix, 
+                                 nm, *nix, &new_first_in_seq);
+                }
+                else {
+                    R_len_t new_first_in_seq = 0;
+                    SEXP new_base = CombineNames (base, nm);
+                    PROTECT(new_base);
+                    CreateNames (VECTOR_ELT(obj,i), rdepth-1, names, nix, 
+                                 new_base, *nix, &new_first_in_seq);
+                    UNPROTECT(1);
+                }
+            }
+        }
+    }
+
+    else if (rdepth > 0 && TYPEOF(obj) == LISTSXP /* but not LANGSXP */) {
+        SEXP pos = obj;
+        int i = 0;
+        do {
+            if (TAG(pos) == R_NilValue) {
+                CreateNames (CAR(pos), rdepth-1, names, nix, 
+                             base, seq_start, first_in_seq);
+            }
+            else if (CHAR(base)[0] == 0) {
+                R_len_t new_first_in_seq = 0;
+                CreateNames (CAR(pos), rdepth-1, names, nix, 
+                             PRINTNAME(TAG(pos)), *nix, &new_first_in_seq);
+            }
+            else {
+                R_len_t new_first_in_seq = 0;
+                SEXP new_base = CombineNames (base, PRINTNAME(TAG(pos)));
+                PROTECT(new_base);
+                CreateNames (CAR(pos), rdepth-1, names, nix, 
+                             new_base, *nix, &new_first_in_seq);
+                UNPROTECT(1);
+            }
+            pos = CDR(pos);
+            i += 1;
+        } while (pos != R_NilValue);
+    }
+
+    else if (isVector(obj)) {
+        SEXP nms = getNamesAttrib(obj);
+        R_len_t len = LENGTH(obj);
+        R_len_t i;
+        if (nms == R_NilValue) {
+            for (i = 0; i < len; i++)
+                MakeSeqName (names, nix, base, seq_start, first_in_seq);
+        }
+        else {
+            for (i = 0; i < len; i++) {
+                SEXP nm = STRING_ELT (nms, i);
+                if (CHAR(nm)[0] == 0)
+                    MakeSeqName (names, nix, base, seq_start, first_in_seq);
+                else if (CHAR(base)[0] == 0) {
+                    if (*nix > LENGTH(names)) abort();
+                    SET_STRING_ELT (names, *nix - 1, nm);
+                    *nix += 1;
+                }
+                else {
+                    if (*nix > LENGTH(names)) abort();
+                    SET_STRING_ELT (names, *nix - 1, CombineNames(base,nm));
+                    *nix += 1;
+                }
+            }
+        }
+    }
+
+    else if (TYPEOF(obj) == LISTSXP /* but not LANGSXP */) {
+        SEXP pos = obj;
+        int i = 0;
+        do {
+            if (TAG(pos) == R_NilValue || CHAR(PRINTNAME(TAG(pos)))[0] == 0)
+                MakeSeqName (names, nix, base, seq_start, first_in_seq);
+            else if (CHAR(base)[0] == 0) {
+                if (*nix > LENGTH(names)) abort();
+                SET_STRING_ELT (names, *nix - 1, PRINTNAME(TAG(pos)));
+                *nix += 1;
+            }
+            else {
+                if (*nix > LENGTH(names)) abort();
+                SET_STRING_ELT (names, *nix - 1, 
+                                CombineNames (base, PRINTNAME(TAG(pos))));
+                *nix += 1;
+            }
+            pos = CDR(pos);
+            i += 1;
+        } while (pos != R_NilValue);
+    }
+
+    else {
+        MakeSeqName (names, nix, base, seq_start, first_in_seq);
+    }
+}
+
+static void MakeSeqName (SEXP names, R_len_t *nix, SEXP base, R_len_t seq_start,
+                         R_len_t *first_in_seq)
+{
+    if (seq_start == 0) {
+        SET_STRING_ELT (names, *nix - 1, base);
+    }
+
+    else if (*first_in_seq == 0) {
+        SET_STRING_ELT (names, *nix - 1, base);
+        *first_in_seq = *nix;
+    }
+
+    else {
+
+        const char *strings[3];
+        R_len_t lengths[2];
+        char sno[31];
+
+        const void *vmax = VMAXGET();
+
+        integer_to_string (sno, *nix - seq_start + 1);
+        strings[0] = translateCharUTF8(base);
+        strings[1] = sno;
+        strings[2] = NULL;
+        lengths[0] = strlen(strings[0]);
+        lengths[1] = strlen(strings[1]);
+        if (*nix > LENGTH(names)) abort();
+        SET_STRING_ELT (names, *nix - 1, 
+                        Rf_mkCharMulti (strings, lengths, 0, CE_UTF8));
+
+        if (*first_in_seq > 0) {
+            if (*first_in_seq >= *nix) abort();
+            integer_to_string (sno, *first_in_seq - seq_start + 1);
+            strings[1] = sno;
+            lengths[1] = strlen(strings[1]);
+            SET_STRING_ELT (names, *first_in_seq - 1, 
+                            Rf_mkCharMulti (strings, lengths, 0, CE_UTF8));
+            *first_in_seq = -1;
+        }
+
         VMAXSET(vmax);
     }
-    else if (*CHAR(tag)) {
-	ans = tag;
-    }
-    else if (*CHAR(base)) {
-	ans = base;
-    }
-    else ans = R_BlankString;
-    return ans;
+
+    *nix += 1;
 }
 
-static SEXP NewName(SEXP base, SEXP tag, int seqno)
+static SEXP CombineNames (SEXP str1, SEXP str2)
 {
-/* Construct a new Name/Tag, using
- *	base.tag
- *	base<seqno>	or
- *	tag
- *
- */
+    const char *strings[4];
+    int lengths[3];
 
-    SEXP ans;
-    char *cbuf;
     const void *vmax = VMAXGET();
-    base = EnsureString(base);
-    tag = EnsureString(tag);
-    if (*CHAR(base) && *CHAR(tag)) {
-	const char *sb = translateCharUTF8(base), *st = translateCharUTF8(tag);
-        size_t alloc_len = strlen(sb) + strlen(st) + 1;
-	cbuf = ALLOC_STRING_BUFF(alloc_len,&cbuff);
-        (void) copy_3_strings (cbuf, alloc_len+1, sb, ".", st);
-	ans = mkCharCE(cbuf, CE_UTF8);
-    }
-    else if (*CHAR(base)) {
-	const char *sb = translateChar(base);
-        char sn[31];
-        integer_to_string(sn,seqno);
-        size_t alloc_len = strlen(sb) + strlen(sn);
-	cbuf = ALLOC_STRING_BUFF(alloc_len,&cbuff);
-        (void) copy_2_strings (cbuf, alloc_len+1, sb, sn);
-	ans = mkCharCE(cbuf, CE_UTF8);
-    }
-    else if (*CHAR(tag)) {
-	if(tag == NA_STRING) ans = NA_STRING;
-	else {
-	    const char *st = translateCharUTF8(tag);
-            if (st == CHAR(tag))
-                ans = tag;
-            else {
-                size_t alloc_len = strlen(st);
-                cbuf = ALLOC_STRING_BUFF(alloc_len,&cbuff);
-                strcpy(cbuf,st);
-                ans = mkCharCE(cbuf, CE_UTF8);
-            }
-	}
-    }
-    else 
-        ans = R_BlankString;
+
+    strings[0] = translateCharUTF8(str1);
+    strings[1] = ".";
+    strings[2] = translateCharUTF8(str2);
+    strings[3] = NULL;
+    lengths[0] = strlen(strings[0]);
+    lengths[1] = 1;
+    lengths[2] = strlen(strings[2]);
+
     VMAXSET(vmax);
-    return ans;
+
+    return Rf_mkCharMulti(strings,lengths,0,CE_UTF8);
 }
 
-/* also used in coerce.c */
-SEXP attribute_hidden ItemName(SEXP names, int i)
-{
-  /* return  names[i]  if it is a character (>= 1 char), or NULL otherwise */
-    if (names != R_NilValue &&
-	STRING_ELT(names, i) != R_NilValue &&
-	CHAR(STRING_ELT(names, i))[0] != '\0') /* length test */
-	return STRING_ELT(names, i);
-    else
-	return R_NilValue;
-}
-
-/* NewExtractNames(v, base, tag, recurse):  For c() and	 unlist().
- * On entry, "base" is the naming component we have acquired by
- * recursing down from above.
- *	If we have a list and we are recursing, we append a new tag component
- * to the base tag (either by using the list tags, or their offsets),
- * and then we do the recursion.
- *	If we have a vector, we just create the tags for each element. */
-
-struct NameData {
- int count;
- int seqno;
- int firstpos;
-};
-
-
-static void NewExtractNames(SEXP v, SEXP base, SEXP tag, int recurse,
-			     struct BindData *data, struct NameData *nameData)
-{
-    SEXP names, namei;
-    int i, n, savecount=0, saveseqno, savefirstpos=0;
-
-    /* If we are beneath a new tag, we reset the index sequence and
-       create the new basename string. */
-
-    if (tag != R_NilValue) {
-	PROTECT(base = NewBase(base, tag));
-	savefirstpos = nameData->firstpos;
-	saveseqno = nameData->seqno;
-	savecount = nameData->count;
-	nameData->count = 0;
-	nameData->seqno = 0;
-	nameData->firstpos = -1;
-    }
-    else saveseqno = 0;
-
-    n = length(v);
-    PROTECT(names = getNamesAttrib(v));
-
-    switch(TYPEOF(v)) {
-    case NILSXP:
-	break;
-    case LISTSXP:
-	for (i = 0; i < n; i++) {
-	    PROTECT(namei = ItemName(names, i));
-	    if (recurse) {
-		NewExtractNames(CAR(v), base, namei, recurse, data, nameData);
-	    }
-	    else {
-		if (namei == R_NilValue && nameData->count == 0)
-		    nameData->firstpos = data->ans_nnames;
-		nameData->count++;
-		namei = NewName(base, namei, ++(nameData->seqno));
-		SET_STRING_ELT(data->ans_names, (data->ans_nnames)++, namei);
-	    }
-	    v = CDR(v);
-	    UNPROTECT(1); /*namei*/
-	}
-	break;
-    case VECSXP:
-    case EXPRSXP:
-	for (i = 0; i < n; i++) {
-	    namei = ItemName(names, i);
-	    if (recurse) {
-		NewExtractNames(VECTOR_ELT(v, i), base, namei, recurse, data, nameData);
-	    }
-	    else {
-		if (namei == R_NilValue && nameData->count == 0)
-		    nameData->firstpos = data->ans_nnames;
-		nameData->count++;
-		namei = NewName(base, namei, ++(nameData->seqno));
-		SET_STRING_ELT(data->ans_names, (data->ans_nnames)++, namei);
-	    }
-	}
-	break;
-    case LGLSXP:
-    case INTSXP:
-    case REALSXP:
-    case CPLXSXP:
-    case STRSXP:
-    case RAWSXP:
-	for (i = 0; i < n; i++) {
-	    namei = ItemName(names, i);
-	    if (namei == R_NilValue && nameData->count == 0)
-		nameData->firstpos = data->ans_nnames;
-	    nameData->count++;
-	    namei = NewName(base, namei, ++(nameData->seqno));
-	    SET_STRING_ELT(data->ans_names, (data->ans_nnames)++, namei);
-	}
-	break;
-    default:
-	if (nameData->count == 0)
-	    nameData->firstpos = data->ans_nnames;
-	nameData->count++;
-	namei = NewName(base, R_NilValue, ++(nameData->seqno));
-	SET_STRING_ELT(data->ans_names, (data->ans_nnames)++, namei);
-    }
-    if (tag != R_NilValue) {
-	if (nameData->firstpos >= 0 && nameData->count == 1)
-	    SET_STRING_ELT(data->ans_names, nameData->firstpos, base);
-	nameData->firstpos = savefirstpos;
-	nameData->count = savecount;
-	UNPROTECT(1);
-    }
-    UNPROTECT(1); /*names*/
-    nameData->seqno = nameData->seqno + saveseqno;
-}
 
 /* Code to process arguments to c().  Returns an argument list with the keyword
    arguments 'recursive' and 'use.names' removed, as well as any NULL args. 
@@ -723,7 +745,6 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
     R_len_t nobj;
     int recurse, usenames, anytags, highesttype;
     struct BindData data;
-    struct NameData nameData;
 
     usenames = 1;
     recurse = 0;
@@ -782,19 +803,13 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
     /* Build and attach the names attribute for the returned object. */
 
     if (data.ans_nnames && data.ans_length > 0) {
-        PROTECT(data.ans_names = allocVector(STRSXP, data.ans_length));
-        data.ans_nnames = 0;
-        while (args != R_NilValue) {
-            nameData.seqno = 0;
-            nameData.firstpos = 0;
-            nameData.count = 0;
-            NewExtractNames (CAR(args), R_NilValue, TAG(args), 
-                             recurse, &data, &nameData);
-            args = CDR(args);
-        }
-        setAttrib(ans, R_NamesSymbol, data.ans_names);
-        R_FreeStringBufferL(&cbuff);
-        UNPROTECT(1);
+        SEXP names = allocVector (STRSXP, data.ans_length);
+        R_len_t first_in_seq = 0;
+        R_len_t nix = 1;
+        setAttrib (ans, R_NamesSymbol, names);
+        CreateNames (args, recurse ? INT_MAX : 1, names, &nix, 
+                     R_BlankString, 0, &first_in_seq);
+        if (nix - 1 != LENGTH(names)) abort();
     }
 
     UNPROTECT(2);
@@ -804,26 +819,40 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
 
 static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
-    SEXP ans, lst, t;
-    int recurse, usenames;
-    int i, n;
     struct BindData data;
-    struct NameData nameData;
+    int recurse, usenames;
+    SEXP ans, lst;
 
     checkArity(op, args);
 
     /* Attempt method dispatch. */
 
-    if (DispatchOrEval(call, op, "unlist", args, env, &ans, 0, 1))
-	return(ans);
+    if (DispatchOrEval(call, op, "unlist", args, env, &args, 0, 1))
+        return(args);
 
     /* Method dispatch has failed; run the default code. */
 
-    PROTECT(lst = CAR(ans));
-    recurse = asLogical(CADR(ans));
-    usenames = asLogical(CADDR(ans));
+    PROTECT(lst = CAR(args));
+    recurse = asLogical(CADR(args));
+    usenames = asLogical(CADDR(args));
+
+    /* Return object unchanged if not a vector or list. */
+
+    if (!isVector(lst) && TYPEOF(lst) != LISTSXP) {
+        UNPROTECT(1);
+        return lst;
+    }
+
+    /* Return atomic vector unchanged if it has no names, or we keep names. */
+
+    if (isVectorAtomic(lst) && (usenames || getNamesAttrib(lst)==R_NilValue)) {
+        UNPROTECT(1);
+        return lst;
+    }
 
     SEXP topnames = usenames ? getNamesAttrib(lst) : R_NilValue;
+
+    /* Try to handle simple cases quickly. */
 
     if (TYPEOF(lst) == VECSXP && LENGTH(lst) > 0 && topnames == R_NilValue) {
         if (NAMEDCNT_EQ_0(VECTOR_ELT(lst,0)))
@@ -844,31 +873,31 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     data.ans_length = 0;
     data.ans_nnames = 0;
 
-    n = 0;			/* -Wall */
-    if (isNewList(lst)) {
-	n = length(lst);
-	if (usenames && HAS_ATTRIB(lst) /* quick pre-test */
+    if (isVector(lst)) {
+        if (usenames && HAS_ATTRIB(lst) /* quick pre-test */
                      && getNamesAttrib(lst) != R_NilValue)
-	    data.ans_nnames = 1;
-	for (i = 0; i < n; i++) {
-	    if (usenames && !data.ans_nnames)
-		data.ans_nnames = HasNames(VECTOR_ELT(lst, i));
-	    AnswerType(VECTOR_ELT(lst, i), recurse, usenames, &data, call);
-	}
+            data.ans_nnames = 1;
+        if (isVectorAtomic(lst))
+            AnswerType (lst, recurse, usenames, &data, call);
+        else { 
+            R_len_t n = LENGTH(lst);
+            R_len_t i;
+            for (i = 0; i < n; i++) {
+                if (usenames && !data.ans_nnames)
+                    data.ans_nnames = HasNames (VECTOR_ELT (lst, i));
+                AnswerType (VECTOR_ELT(lst, i), recurse, usenames, &data, call);
+            }
+        }
     }
     else if (isList(lst)) {
-	for (t = lst; t != R_NilValue; t = CDR(t)) {
-	    if (usenames && !data.ans_nnames) {
-		if (!isNull(TAG(t))) data.ans_nnames = 1;
-		else data.ans_nnames = HasNames(CAR(t));
-	    }
-	    AnswerType(CAR(t), recurse, usenames, &data, call);
-	}
-    }
-    else {
-	UNPROTECT(1);
-	if (isVector(lst)) return lst;
-	else error(_("argument not a list"));
+        SEXP t;
+        for (t = lst; t != R_NilValue; t = CDR(t)) {
+            if (usenames && !data.ans_nnames) {
+                if (!isNull(TAG(t))) data.ans_nnames = 1;
+                else data.ans_nnames = HasNames(CAR(t));
+            }
+            AnswerType(CAR(t), recurse, usenames, &data, call);
+        }
     }
 
     /* Allocate the return value and set up to pass through 
@@ -883,50 +912,23 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     if (data.ans_type == VECSXP || data.ans_type == EXPRSXP 
                                 || data.ans_type == NILSXP)
-	ListAnswer(lst, recurse ? 1 : -1, &data);
+        ListAnswer(lst, recurse ? 1 : -1, &data);
     else
-	AtomicAnswer(lst, &data);
+        AtomicAnswer(lst, &data);
 
     /* Build and attach the names attribute for the returned object. */
 
     if (data.ans_nnames && data.ans_length > 0) {
-	PROTECT(data.ans_names = allocVector(STRSXP, data.ans_length));
-	if (!recurse) {
-	    if (TYPEOF(lst) == VECSXP) {
-		SEXP names = getNamesAttrib(lst);
-		data.ans_nnames = 0;
-		nameData.seqno = 0;
-		nameData.firstpos = 0;
-		nameData.count = 0;
-		for (i = 0; i < n; i++) {
-		    NewExtractNames(VECTOR_ELT(lst, i), R_NilValue,
-				    ItemName(names, i), recurse, &data, &nameData);
-		}
-	    }
-	    else if (TYPEOF(lst) == LISTSXP) {
-		data.ans_nnames = 0;
-		nameData.seqno = 0;
-		nameData.firstpos = 0;
-		nameData.count = 0;
-		while (lst != R_NilValue) {
-		    NewExtractNames(CAR(lst), R_NilValue,
-				    TAG(lst), recurse, &data, &nameData);
-		    lst = CDR(lst);
-		}
-	    }
-	}
-	else {
-	    data.ans_nnames = 0;
-	    nameData.seqno = 0;
-	    nameData.firstpos = 0;
-	    nameData.count = 0;
-	    NewExtractNames(lst, R_NilValue, R_NilValue, recurse, &data, &nameData);
-	}
-	setAttrib(ans, R_NamesSymbol, data.ans_names);
-	UNPROTECT(1);
+        SEXP names = allocVector(STRSXP, data.ans_length);
+        R_len_t first_in_seq = 0;
+        R_len_t nix = 1;
+        setAttrib(ans, R_NamesSymbol, names);
+        CreateNames (lst, recurse ? INT_MAX : 1, names, &nix,
+                     R_BlankString, 0, &first_in_seq);
+        if (nix - 1 != LENGTH(names))  abort();
     }
+
     UNPROTECT(2);
-    R_FreeStringBufferL(&cbuff);
     return ans;
 } /* do_unlist */
 

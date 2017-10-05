@@ -26,8 +26,8 @@ unlist(x, recursive = TRUE, use.names = TRUE)
   and note, e.g., \code{\link{relist}} with the \code{unlist} method
   for \code{relistable} objects.
 
-  If \code{recursive = FALSE}, the function will not recurse beyond the
-  first level items in \code{x}.
+  If \code{recursive = FALSE}, unlisting will not be applied recursively
+  beyond the first level items in \code{x}.
 
   Factors are treated specially.  If all non-list elements of \code{x}
   are factors (or ordered factors) then the result will be a factor with
@@ -36,12 +36,26 @@ unlist(x, recursive = TRUE, use.names = TRUE)
   all the elements have the same level set, that is the level set of the
   result).
 
-  \code{x} can be an atomic vector, but then \code{unlist} does nothing useful,
-  not even drop names.
+  If \code{x} is an atomic vector, it will be returned unchanged if
+  \code{use.names} is \code{TRUE} or it has no names (retaining other
+  attributes); otherwise, a duplicate with names and other attributes
+  removed will be returned.
 
-  By default, \code{unlist} tries to retain the naming
-  information present in \code{x}.  If \code{use.names = FALSE} all
-  naming information is dropped.
+  When \code{x} is a list, \code{unlist} tries to retain the naming
+  information present in \code{x} if \code{use.names} is \code{TRUE}.
+  When \code{use.names} is \code{FALSE}, naming information is dropped.
+
+  Names for elements of the result are created by combining names 
+  on the path from the top level of \code{x} to the element, with
+  components separated by \code{"."}.  For example, the name for the
+  single element of \code{unlist(list(a=list(b=1)))} is \code{a.b}.  Unnamed
+  components on the path to the element are ignored, except that if there
+  are one or more unnamed components on the path after the last name,
+  a sequence number is appended (unless only one element would have
+  such a sequence number).  For example, the elements of 
+  \code{unlist(list(abc=list(1,2)))} have names \code{abc1} and \code{abc2},
+  whereas the single element of \code{unlist(list(abc=list(1)))} has name
+  \code{abc}.
 
   Where possible the list elements are coerced to a common mode during
   the unlisting, and so the result often ends up as a character

@@ -945,7 +945,7 @@ SEXP namesgets(SEXP vec, SEXP val)
 
     checkNames(vec, val);
 
-    /* Special treatment for one dimensional arrays */
+   /* Special treatment for one dimensional arrays */
 
     if (isVector(vec) || isList(vec) || isLanguage(vec)) {
 	s = getDimAttrib(vec);
