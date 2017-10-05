@@ -174,6 +174,14 @@
         have names provided one of these dimensions had dropping suppressed.
         This gives reliable results when matrices happen to have only one
         row or column, as illustrated by the last example in \code{help("[")}.
+  \item When \code{unlist} is applied to an atomic vector, names are now removed
+        if \code{use.names} is \code{FALSE} (not the default).
+  \item When the \code{unlist} and \code{c} functions create names for their
+        result, the situations in which a sequence number is appended to a 
+        name are now the same for atomic vectors and lists.  For example, 
+        \code{unlist(list(x=list(2,a=3)))} and \code{unlist(list(x=c(2,a=3)))}
+        now return the same result (in which the name for the first element 
+        is \code{x}, not \code{x1}).
   \item The \code{cumsum} and \code{cumprod} functions now correctly propagate 
         \code{NaN} and \code{NA} values that are encountered to all later
         values, with \code{NA} taking precedence over \code{NaN}.  Previously,
