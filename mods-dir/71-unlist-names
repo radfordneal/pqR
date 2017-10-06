@@ -1,3 +1,4 @@
 Modify how names are added in unlist and c.  Addresses a performance
 issue also addressed in R-3.4.2, but with a rewrite of the code that
-also improves it in other respects.
+also improves it in other respects (both performance and cleanliness).
+

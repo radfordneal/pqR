@@ -246,75 +246,65 @@ struct BindData {
     int  ans_nnames;
 };
 
-static int HasNames(SEXP x)
+static void AnswerType (SEXP x, int recurse, int usenames, 
+                        struct BindData *data, SEXP call)
 {
-    if (isVector(x))
-        return getNamesAttrib(x) != R_NilValue;
-    else if (isList(x)) {
-	while (x != R_NilValue) {
-	    if (TAG(x) != R_NilValue)
-                return 1;
-	    x = CDR(x);
-	}
-        return 0;
-    }
-}
+    R_len_t len, i;
 
-static void
-AnswerType(SEXP x, int recurse, int usenames, struct BindData *data, SEXP call)
-{
-    R_len_t len;
+    if (isVector(x)) {
 
-    if (isVectorAtomic(x)) {
-        if (data->ans_type != VECSXP && data->ans_type != EXPRSXP)
-            data->ans_type = Rf_higher_atomic_type (data->ans_type, TYPEOF(x));
         len = LENGTH(x);
-    }
-    else if (isVectorList(x)) {
-	if (recurse) {
-	    int i, n;
-	    n = LENGTH(x);
-            if (usenames && !data->ans_nnames 
-                         && HAS_ATTRIB(x) /* quick pre-test */
-                         && getNamesAttrib(x) != R_NilValue)
-		data->ans_nnames = 1;
-	    for (i = 0; i < n; i++) {
-		if (usenames && !data->ans_nnames)
-		    data->ans_nnames = HasNames(VECTOR_ELT(x, i));
-		AnswerType(VECTOR_ELT(x, i), recurse, usenames, data, call);
-	    }
+        if (usenames && !data->ans_nnames 
+                     && HAS_ATTRIB(x) /* quick pre-test */
+                     && getNamesAttrib(x) != R_NilValue)
+            data->ans_nnames = 1;
+
+        if (isVectorAtomic(x)) {
+            if (data->ans_type != VECSXP && data->ans_type != EXPRSXP)
+                data->ans_type = 
+                  Rf_higher_atomic_type (data->ans_type, TYPEOF(x));
+        }
+        else if (recurse > 0) {
+            for (i = 0; i < len; i++)
+                AnswerType (VECTOR_ELT(x, i), recurse-1, usenames, data, call);
             len = 0;  /* nothing extra after recursive calls */
-	}
-	else {
+        }
+        else {
             if (data->ans_type != EXPRSXP)
                 data->ans_type = VECSXP;
-	    len = LENGTH(x);
-	}
+        }
     }
+
     else if (TYPEOF(x) == LISTSXP) {
-	if (recurse) {
-	    while (x != R_NilValue) {
-		if (usenames && !data->ans_nnames) {
-		    if (!isNull(TAG(x))) data->ans_nnames = 1;
-		    else data->ans_nnames = HasNames(CAR(x));
-		}
-		AnswerType(CAR(x), recurse, usenames, data, call);
-		x = CDR(x);
-	    }
+
+        SEXP t;
+
+        if (recurse > 0) {
+            for (t = x; t != R_NilValue; t = CDR(t)) {
+                if (usenames && !data->ans_nnames && TAG(t) != R_NilValue)
+                    data->ans_nnames = 1;
+                AnswerType (CAR(t), recurse-1, usenames, data, call);
+            }
             len = 0;  /* nothing extra after recursive calls */
-	}
-	else {
+        }
+        else {
             if (data->ans_type != EXPRSXP)
                 data->ans_type = VECSXP;
-	    len = length(x);
-	}
+            for (t = x; t != R_NilValue; t = CDR(t)) {
+                if (usenames && !data->ans_nnames && TAG(t) != R_NilValue)
+                    data->ans_nnames = 1;
+            }
+            len = length(x);
+        }
     }
+
     else if (x == R_NilValue) {
         len = 0;
     }
+
     else {
-	data->ans_type = VECSXP;
-	len = 1;
+        data->ans_type = VECSXP;
+        len = 1;
     }
 
     if (len > R_LEN_T_MAX - data->ans_length)
@@ -328,75 +318,80 @@ AnswerType(SEXP x, int recurse, int usenames, struct BindData *data, SEXP call)
    'recursive' argument controls how elements are copied:  0: just at top
    level, -1: one level down, 1: recursively to any depth. */
 
-#define LIST_ASSIGN(x) do { \
-  SET_VECTOR_ELT(data->ans_ptr, data->ans_length, x); \
-  data->ans_length++; \
-} while (0) /* apparently defined as this in case SET_VECTOR_ELT is a macro */
-
 static void ListAnswer(SEXP x, int recursive, struct BindData *data)
 {
-    int i;
+    SEXP dptr = data->ans_ptr;
+    R_len_t len, i;
 
     switch(TYPEOF(x)) {
     case NILSXP:
-	break;
+        break;
     case LGLSXP:
-	for (i = 0; i < LENGTH(x); i++)
-	    LIST_ASSIGN(ScalarLogicalMaybeConst(LOGICAL(x)[i]));
-	break;
+        len = LENGTH(x);
+        for (i = 0; i < len; i++)
+            SET_VECTOR_ELT (dptr, data->ans_length++,
+                            ScalarLogicalMaybeConst(LOGICAL(x)[i]));
+        break;
     case RAWSXP:
-	for (i = 0; i < LENGTH(x); i++)
-	    LIST_ASSIGN(ScalarRawMaybeConst(RAW(x)[i]));
-	break;
+        len = LENGTH(x);
+        for (i = 0; i < len; i++)
+            SET_VECTOR_ELT (dptr, data->ans_length++,
+                            ScalarRawMaybeConst(RAW(x)[i]));
+        break;
     case INTSXP:
-	for (i = 0; i < LENGTH(x); i++)
-	    LIST_ASSIGN(ScalarIntegerMaybeConst(INTEGER(x)[i]));
-	break;
+        len = LENGTH(x);
+        for (i = 0; i < len; i++)
+            SET_VECTOR_ELT (dptr, data->ans_length++,
+                            ScalarIntegerMaybeConst(INTEGER(x)[i]));
+        break;
     case REALSXP:
-	for (i = 0; i < LENGTH(x); i++)
-	    LIST_ASSIGN(ScalarRealMaybeConst(REAL(x)[i]));
-	break;
+        len = LENGTH(x);
+        for (i = 0; i < len; i++)
+            SET_VECTOR_ELT (dptr, data->ans_length++,
+                            ScalarRealMaybeConst(REAL(x)[i]));
+        break;
     case CPLXSXP:
-	for (i = 0; i < LENGTH(x); i++)
-	    LIST_ASSIGN(ScalarComplexMaybeConst(COMPLEX(x)[i]));
-	break;
+        len = LENGTH(x);
+        for (i = 0; i < len; i++)
+            SET_VECTOR_ELT (dptr, data->ans_length++,
+                            ScalarComplexMaybeConst(COMPLEX(x)[i]));
+        break;
     case STRSXP:
-	for (i = 0; i < LENGTH(x); i++)
-	    LIST_ASSIGN(ScalarStringMaybeConst(STRING_ELT(x, i)));
-	break;
+        len = LENGTH(x);
+        for (i = 0; i < len; i++)
+            SET_VECTOR_ELT (dptr, data->ans_length++,
+                            ScalarStringMaybeConst(STRING_ELT(x, i)));
+        break;
     case VECSXP:
     case EXPRSXP:
-	if (recursive != 0) {
-	    for (i = 0; i < LENGTH(x); i++)
-		ListAnswer (VECTOR_ELT(x, i), recursive == 1, data);
-	}
-	else {
-	    for (i = 0; i < LENGTH(x); i++) {
-                SET_VECTOR_ELEMENT_FROM_VECTOR (data->ans_ptr, data->ans_length,
-                                                x, i); 
-                data->ans_length += 1;
-            }
-	}
-	break;
+        len = LENGTH(x);
+        if (recursive != 0) {
+            for (i = 0; i < len; i++)
+                ListAnswer (VECTOR_ELT(x, i), recursive == 1, data);
+        }
+        else {
+            for (i = 0; i < len; i++)
+                SET_VECTOR_ELEMENT_FROM_VECTOR (dptr, data->ans_length++, x, i);
+        }
+        break;
     case LISTSXP:
-	if (recursive != 0) {
-	    while (x != R_NilValue) {
-		ListAnswer (CAR(x), recursive == 1, data);
-		x = CDR(x);
-	    }
-	}
-	else
-	    while (x != R_NilValue) {
-                SET_VECTOR_ELT (data->ans_ptr, data->ans_length, 
-                                CAR(x));
+        if (recursive != 0) {
+            while (x != R_NilValue) {
+                ListAnswer (CAR(x), recursive == 1, data);
+                x = CDR(x);
+            }
+        }
+        else
+            while (x != R_NilValue) {
+                SET_VECTOR_ELT (dptr, data->ans_length++, CAR(x));
                 SET_NAMEDCNT_MAX (CAR(x));
-                data->ans_length += 1;
-		x = CDR(x);
-	    }
-	break;
+                x = CDR(x);
+            }
+        break;
     default:
-	LIST_ASSIGN(duplicate(x));
-	break;
+        SET_VECTOR_ELT (dptr, data->ans_length++,
+                        duplicate(x));
+        break;
     }
 }
 
@@ -408,19 +403,19 @@ static void AtomicAnswer(SEXP x, struct BindData *data)
     int i, n;
     switch(TYPEOF(x)) {
     case NILSXP:
-	break;
+        break;
     case LISTSXP:
-	while (x != R_NilValue) {
-	    AtomicAnswer(CAR(x), data);
-	    x = CDR(x);
-	}
-	break;
+        while (x != R_NilValue) {
+            AtomicAnswer(CAR(x), data);
+            x = CDR(x);
+        }
+        break;
     case EXPRSXP:
     case VECSXP:
-	n = LENGTH(x);
-	for (i = 0; i < n; i++)
-	    AtomicAnswer(VECTOR_ELT(x, i), data);
-	break;
+        n = LENGTH(x);
+        for (i = 0; i < n; i++)
+            AtomicAnswer(VECTOR_ELT(x, i), data);
+        break;
     default:
         copy_elements_coerced (data->ans_ptr, data->ans_length, 1,
                                x, 0, 1, LENGTH(x));
@@ -777,15 +772,7 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
     data.ans_length = 0;
     data.ans_nnames = 0;
 
-    for (t = args; t != R_NilValue; t = CDR(t)) {
-        if (usenames && !data.ans_nnames) {
-            if (!isNull(TAG(t))) data.ans_nnames = 1;
-            else data.ans_nnames = HasNames(CAR(t));
-        }
-        AnswerType(CAR(t), recurse, usenames, &data, call);
-    }
-
-    if (data.ans_type == NILSXP && data.ans_length != 0) abort();
+    AnswerType (args, recurse ? INT_MAX : 1, usenames, &data, call);
 
     /* Allocate the return value and set up to pass through 
        the arguments filling in values of the returned object. */
@@ -850,11 +837,10 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         return lst;
     }
 
-    SEXP topnames = usenames ? getNamesAttrib(lst) : R_NilValue;
-
     /* Try to handle simple cases quickly. */
 
-    if (TYPEOF(lst) == VECSXP && LENGTH(lst) > 0 && topnames == R_NilValue) {
+    if (TYPEOF(lst) == VECSXP && LENGTH(lst) > 0 
+         && (!usenames || getNamesAttrib(lst) == R_NilValue)) {
         if (NAMEDCNT_EQ_0(VECTOR_ELT(lst,0)))
             SET_NAMEDCNT_1(VECTOR_ELT(lst,0));  /* so won't be reallocated */
         ans = simple_concatenate ((SEXP*)DATAPTR(lst), LENGTH(lst), 
@@ -873,32 +859,7 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     data.ans_length = 0;
     data.ans_nnames = 0;
 
-    if (isVector(lst)) {
-        if (usenames && HAS_ATTRIB(lst) /* quick pre-test */
-                     && getNamesAttrib(lst) != R_NilValue)
-            data.ans_nnames = 1;
-        if (isVectorAtomic(lst))
-            AnswerType (lst, recurse, usenames, &data, call);
-        else { 
-            R_len_t n = LENGTH(lst);
-            R_len_t i;
-            for (i = 0; i < n; i++) {
-                if (usenames && !data.ans_nnames)
-                    data.ans_nnames = HasNames (VECTOR_ELT (lst, i));
-                AnswerType (VECTOR_ELT(lst, i), recurse, usenames, &data, call);
-            }
-        }
-    }
-    else if (isList(lst)) {
-        SEXP t;
-        for (t = lst; t != R_NilValue; t = CDR(t)) {
-            if (usenames && !data.ans_nnames) {
-                if (!isNull(TAG(t))) data.ans_nnames = 1;
-                else data.ans_nnames = HasNames(CAR(t));
-            }
-            AnswerType(CAR(t), recurse, usenames, &data, call);
-        }
-    }
+    AnswerType (lst, recurse ? INT_MAX : 1, usenames, &data, call);
 
     /* Allocate the return value and set up to pass through 
        the arguments filling in values of the returned object.
