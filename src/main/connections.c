@@ -3364,7 +3364,7 @@ static SEXP do_readLines(SEXP call, SEXP op, SEXP args, SEXP env)
                 if (buf_size == INT_MAX)
                     error(_("R character strings are limited to 2^31-1 bytes"));
                 buf_size = buf_size > INT_MAX/2 ? INT_MAX : 2*buf_size;
-                buf = reallocVector (buf, buf_size);
+                buf = reallocVector (buf, buf_size, 1);
                 UNPROTECT(2); PROTECT2(ans,buf);
             }
             RAW(buf)[nbuf++] = c;
@@ -3375,7 +3375,7 @@ static SEXP do_readLines(SEXP call, SEXP op, SEXP args, SEXP env)
             if (nn == INT_MAX)
                 error(_("Maximum number of lines that can be read is 2^31-1"));
             nn = nn > INT_MAX/2 ? INT_MAX : 2*nn;
-            ans = reallocVector (ans, nn);
+            ans = reallocVector (ans, nn, 1);
             UNPROTECT(2); PROTECT2(ans,buf);
         }
 
@@ -3408,7 +3408,7 @@ no_more_lines:
     if (nread < nnn && !ok)
         error(_("too few lines read in readLines"));
 
-    ans = reallocVector (ans, nread);
+    ans = reallocVector (ans, nread, 1);
 
     UNPROTECT(2);
     return ans;

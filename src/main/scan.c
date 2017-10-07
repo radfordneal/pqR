@@ -588,7 +588,7 @@ static SEXP scanVector(SEXPTYPE type, int maxitems, int maxlines,
 	if (n == blocksize) {
 	    /* enlarge the vector*/
 	    blocksize = 2 * blocksize;
-	    ans = reallocVector(ans, blocksize);
+	    ans = reallocVector (ans, blocksize, 1);
 	    UNPROTECT(1); PROTECT(ans);
 	}
 	buffer = fillBuffer(type, strip, &bch, d, &strBuf);
@@ -626,7 +626,7 @@ static SEXP scanVector(SEXPTYPE type, int maxitems, int maxlines,
 	return ans;
     }
 
-    ans = reallocVector(ans, n);
+    ans = reallocVector (ans, n, 1);
     UNPROTECT(1);
     R_FreeStringBuffer(&strBuf);
     return ans;

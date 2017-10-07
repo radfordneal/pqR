@@ -501,7 +501,7 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
         }
 
         if (LENGTH(x) != j)
-            x = reallocVector(x,j);
+            x = reallocVector(x,j,1);
 
         *hasna = first_na;
     }

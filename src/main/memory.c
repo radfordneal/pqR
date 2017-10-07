@@ -1941,12 +1941,20 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 }
 
 
-/* Reallocate a vector with different length, returning the same storage
-   if possible/reasonable, and otherwise new storage, after copying contents
-   up to new length and initializing any new elements to NA, or R_NilValue,
-   or raw 0.  Protects its argument. */
+/* Reallocate a vector with different length, returning the same
+   storage if possible and reasonable, and otherwise new storage.  
+   The last argument controls what happens if new storage is allocated: 
+   If 'init' is 1, or the type of the vector is STRSXP, VECSXP, or
+   EXPRSXP (the types with pointer elements), the old contents are
+   copied to the new storage; otherwise the contents are left
+   uninitialized.  If the new length is greater than the old length,
+   new STRSXP, VECSXP, and EXPRSXP elements are set to NA or
+   R_NilValue, and if 'init' is 1, new elements for other types are
+   set to NA or raw 0 (but left uninitialized if 'init' is 0).
 
-SEXP reallocVector (SEXP vec, R_len_t length)
+   Protects its first argument if necessary. */
+
+SEXP reallocVector (SEXP vec, R_len_t length, int init)
 {
     if (length < 0)
         errorcall(R_GlobalContext->call,
@@ -1967,6 +1975,7 @@ SEXP reallocVector (SEXP vec, R_len_t length)
             return vec;
         if (new_chunks >= (curr_chunks>>1) || curr_chunks - new_chunks < 4) {
             WAIT_UNTIL_COMPUTED(vec);
+            helpers_wait_until_not_in_use(vec);
             LENGTH(vec) = length;
             return vec;
         }
@@ -1993,29 +2002,32 @@ SEXP reallocVector (SEXP vec, R_len_t length)
                            mem_error(), new_chunks);
         UNPROTECT(1);
 
-        sggc_nchunks_t copy_chunks 
-                        = new_chunks < curr_chunks ? new_chunks : curr_chunks;
-        WAIT_UNTIL_COMPUTED(old_vec);
-        memcpy (SGGC_DATA(cp), SGGC_DATA(CPTR_FROM_SEXP(old_vec)), 
-                (size_t) copy_chunks * SGGC_CHUNK_SIZE);
+        if (init || !isVectorNonpointer(vec)) {
+            sggc_nchunks_t copy_chunks 
+              = new_chunks < curr_chunks ? new_chunks : curr_chunks;
+            WAIT_UNTIL_COMPUTED(old_vec);
+            memcpy (SGGC_DATA(cp), SGGC_DATA(CPTR_FROM_SEXP(old_vec)), 
+                    (size_t) copy_chunks * SGGC_CHUNK_SIZE);
+        }
 
         vec = SEXP_FROM_CPTR(cp);
 #if !USE_COMPRESSED_POINTERS
         vec->cptr = cp;
 #endif
-        ATTRIB_W(vec) = ATTRIB_W(old_vec);  /* might not be in SGGC_DATA */
+        ATTRIB_W(vec) = ATTRIB_W(old_vec); /* these might not be in SGGC_DATA */
         LENGTH(vec) = length;
 
         if (R_IsMemReporting) R_ReportAllocation(vec);
     }
     else {
         WAIT_UNTIL_COMPUTED(vec);
+        helpers_wait_until_not_in_use(vec);
         LENGTH(vec) = length;
     }
 
     /* See if we need to initialize new elements. */
 
-    if (length > curr_len) {
+    if (length > curr_len && (init || !isVectorNonpointer(vec))) {
 
         R_len_t i;
 

@@ -135,7 +135,7 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
                 ansnames = R_NilValue;
         }
         len0 = LENGTH(objs[0]);
-        ans = reallocVector (objs[0], len);
+        ans = reallocVector (objs[0], len, 1);
         SET_ATTRIB (ans, R_NilValue);
         SETLEVELS (ans, 0);
         SET_TRUELENGTH (ans, 0);
@@ -199,7 +199,7 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
             realloc = 0;
         }
         else {
-            ansnames = reallocVector (ansnames, len);
+            ansnames = reallocVector (ansnames, len, 1);
             realloc = 1;
         }
         pos = 0;
