@@ -1043,7 +1043,7 @@ static SEXP do_which(SEXP call, SEXP op, SEXP args, SEXP rho)
         if (len & 4) {
             if (si[i++] > 0) xi[j++] = i;
             if (si[i++] > 0) xi[j++] = i;
-	if (si[i++] > 0) xi[j++] = i;
+            if (si[i++] > 0) xi[j++] = i;
             if (si[i++] > 0) xi[j++] = i;
         }
 
@@ -1077,7 +1077,7 @@ static SEXP do_which(SEXP call, SEXP op, SEXP args, SEXP rho)
 
         len = j;
         if (LENGTH(x) != len)
-            x = reallocVector(x,len);
+            x = reallocVector(x,len,1);
     }
 
     PROTECT(x);

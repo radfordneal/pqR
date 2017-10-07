@@ -497,7 +497,7 @@ static SEXP SampleNoReplace (int k, int n)
             y[i] = t;
         }
         if (k < n)
-            r = reallocVector(r,k);
+            r = reallocVector(r,k,1);
     }
 
     else {

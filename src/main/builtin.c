@@ -996,13 +996,13 @@ static SEXP do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho)
                                       len > old_len ? old_len : len);
             }
             else {
-                xnames = reallocVector (xnames, len);
+                xnames = reallocVector (xnames, len, 1);
                 for (i = old_len; i < len; i++) 
                     SET_STRING_ELT (xnames, i, R_BlankString);
             }
         }
         PROTECT(xnames);
-        PROTECT(x = reallocVector (x, len));
+        PROTECT(x = reallocVector (x, len, 1));
         ATTRIB_W(x) = R_NilValue;
         if (xnames != R_NilValue)
             setAttrib (x, R_NamesSymbol, xnames);

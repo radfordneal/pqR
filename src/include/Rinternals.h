@@ -1691,7 +1691,7 @@ SEXP Rf_allocVector1RAW(void);
 SEXP Rf_allocVector1LGL(void);
 SEXP Rf_allocVector1INT(void);
 SEXP Rf_allocVector1REAL(void);
-SEXP Rf_reallocVector(SEXP, R_len_t);
+SEXP Rf_reallocVector(SEXP, R_len_t, int);
 int  Rf_any_duplicated(SEXP x, Rboolean from_last);
 int  Rf_any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last);
 SEXP Rf_applyClosure(SEXP, SEXP, SEXP, SEXP, SEXP *);

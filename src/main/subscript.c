@@ -441,7 +441,7 @@ static SEXP logicalSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
         }
 
         if (LENGTH(x) != j)
-            x = reallocVector(x,j);
+            x = reallocVector(x,j,1);
     }
 
     return x;

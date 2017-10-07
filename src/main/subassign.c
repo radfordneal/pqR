@@ -66,13 +66,13 @@ static SEXP EnlargeVector(SEXP call, SEXP x, R_len_t new_len)
             copy_string_elements (new_xnames, 0, xnames, 0, old_len);
         }
         else
-            new_xnames = reallocVector (xnames, new_len);
+            new_xnames = reallocVector (xnames, new_len, 1);
         for (i = old_len; i < new_len; i++)
             SET_STRING_ELT (new_xnames, i, R_BlankString);
     }
 
     PROTECT(new_xnames);
-    PROTECT(new_x = reallocVector (x, new_len));
+    PROTECT(new_x = reallocVector (x, new_len, 1));
     no_dim_attributes(new_x);
     if (xnames != R_NilValue && new_xnames != xnames)
         setAttrib (new_x, R_NamesSymbol, new_xnames);
@@ -190,7 +190,7 @@ static SEXP DeleteListElementsSeq (SEXP x, R_len_t start, R_len_t end)
             DEC_NAMEDCNT (VECTOR_ELT (x, i-1));
         if (end<len) 
             copy_vector_elements (x, start-1, x, end, len-end);
-        PROTECT(xnew = reallocVector(x, len-(end-start+1)));
+        PROTECT(xnew = reallocVector (x, len-(end-start+1), 1));
         no_dim_attributes(xnew);
     }
 
@@ -206,7 +206,7 @@ static SEXP DeleteListElementsSeq (SEXP x, R_len_t start, R_len_t end)
         else {
             if (end < len)
                 copy_string_elements(xnames, start-1, xnames, end, len-end);
-            PROTECT(xnewnames = reallocVector(xnames,len-(end-start+1)));
+            PROTECT(xnewnames = reallocVector (xnames, len-(end-start+1), 1));
         }
         if (xnew != x || xnewnames != xnames) 
             setAttrib(xnew, R_NamesSymbol, xnewnames);
@@ -1960,7 +1960,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
                 if (x == R_NilValue)
                     PROTECT (ans = allocVector (VECSXP, 1));
                 else
-                    PROTECT (ans = reallocVector (x, nx+1));
+                    PROTECT (ans = reallocVector (x, nx+1, 1));
                 if (names == R_NilValue || NAMEDCNT_GT_1(names)) {
                     R_len_t i;
                     PROTECT(ansnames = allocVector (STRSXP, nx+1));
@@ -1968,7 +1968,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
                         copy_string_elements (ansnames, 0, names, 0, nx);
                 }
                 else {
-                    PROTECT(ansnames = reallocVector (names, nx+1));
+                    PROTECT(ansnames = reallocVector (names, nx+1, 1));
                 }
 		SET_VECTOR_ELEMENT_TO_VALUE (ans, nx, val);
 		SET_STRING_ELT (ansnames, nx, pname);
