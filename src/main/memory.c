@@ -1952,7 +1952,8 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
    R_NilValue, and if 'init' is 1, new elements for other types are
    set to NA or raw 0 (but left uninitialized if 'init' is 0).
 
-   Protects its first argument if necessary. */
+   Protects its first argument if necessary.  Also waits until it
+   is not being computed, and is not in use by a helper. */
 
 SEXP reallocVector (SEXP vec, R_len_t length, int init)
 {
@@ -2002,10 +2003,12 @@ SEXP reallocVector (SEXP vec, R_len_t length, int init)
                            mem_error(), new_chunks);
         UNPROTECT(1);
 
+        WAIT_UNTIL_COMPUTED(old_vec);
+        helpers_wait_until_not_in_use(vec);
+
         if (init || !isVectorNonpointer(vec)) {
             sggc_nchunks_t copy_chunks 
               = new_chunks < curr_chunks ? new_chunks : curr_chunks;
-            WAIT_UNTIL_COMPUTED(old_vec);
             memcpy (SGGC_DATA(cp), SGGC_DATA(CPTR_FROM_SEXP(old_vec)), 
                     (size_t) copy_chunks * SGGC_CHUNK_SIZE);
         }
