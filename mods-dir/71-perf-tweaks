@@ -12,3 +12,5 @@ Put in special AVX code for some operations, used when AVX available,
 which can be disabled by defining DISABLE_AVX_CODE.
 
 Revised ISNAN checks.
+
+Improved logicalSubscript for recycling cases.

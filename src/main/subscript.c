@@ -298,7 +298,7 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
     int canstretch, nmax;
     canstretch = *stretch;
     int *si = LOGICAL(s);
-    R_len_t len, i, j;
+    R_len_t i, j;
     int *xi;
     SEXP x;
     int v;
@@ -343,7 +343,7 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
 
         int NA_count = ucount >> 31;
         int TRUE_count = ucount & 0x7fffffff;
-        len = NA_count + TRUE_count;
+        int len = NA_count + TRUE_count;
 
         if (nmax > ns) {  /* adjust for replication, perhaps partial */
             len *= nmax / ns;
@@ -357,11 +357,13 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
         /* Create index vector, x, with NA or index values. */
     
         x = allocVector (INTSXP, len);
-        xi = INTEGER(x);
-        int j = 0;
 
-        if (NA_count == 0) {  /* don't need to handle NA */
-            if (ns == nmax) {  /* Do common case quickly */
+        if (len > 0) {
+
+            xi = INTEGER(x);
+            j = 0;
+    
+            if (NA_count == 0) {  /* don't need to handle NA */
                 i = 0;
                 if (ns & 1) {
                     if ((v = si[i++]) != 0) xi[j++] = i;
@@ -376,22 +378,9 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
                     if ((v = si[i++]) != 0) xi[j++] = i;
                     if ((v = si[i++]) != 0) xi[j++] = i;
                 }
+                *hasna = 0;
             }
-            else {  /* The general case */
-                int k = 0;
-                i = 0;
-                while (i < nmax) {
-                    v = si[k++];
-                    i += 1;
-                    if (k == ns)
-                        k = 0;
-                    if (v != 0) xi[j++] = i;
-                }
-            }
-            *hasna = 0;
-        }
-        else {  /* do need to handle NA */
-            if (ns == nmax) {  /* Do common case quickly */
+            else {  /* do need to handle NA */
                 i = 0;
                 if (ns & 1) {
                     if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
@@ -406,23 +395,33 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
                     if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
                     if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
                 }
+                for (i = 0; xi[i] >= 0; i++) ;  /* find first NA */
+                *hasna = i+1;
             }
-            else {  /* The general case */
-                int k = 0;
-                i = 0;
-                while (i < nmax) {
-                    v = si[k++];
-                    i += 1;
-                    if (k == ns)
-                        k = 0;
-                    if (v != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
-                }
-            }
-            for (i = 0; xi[i] >= 0; i++) ;  /* find first NA */
-            *hasna = i+1;
-        }
 
-        if (j != len) abort();
+            int t0, t1, t2, t3;
+            int k = 0;
+            if ((len - j) & 1) {
+                t0 = xi[k++];
+                xi[j++] = t0 < 0 ? NA_INTEGER : t0 + ns;
+            }
+            if ((len - j) & 2) {
+                int t0 = xi[k++];
+                int t1 = xi[k++];
+                xi[j++] = t0 < 0 ? NA_INTEGER : t0 + ns;
+                xi[j++] = t1 < 0 ? NA_INTEGER : t1 + ns;
+            }
+            while (j < len) {
+                int t0 = xi[k++];
+                int t1 = xi[k++];
+                int t2 = xi[k++];
+                int t3 = xi[k++];
+                xi[j++] = t0 < 0 ? NA_INTEGER : t0 + ns;
+                xi[j++] = t1 < 0 ? NA_INTEGER : t1 + ns;
+                xi[j++] = t2 < 0 ? NA_INTEGER : t2 + ns;
+                xi[j++] = t3 < 0 ? NA_INTEGER : t3 + ns;
+            }
+        }
     }
 
     else {  /* large address space */
@@ -442,9 +441,8 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
 
 #       define LEN0 300  /* Must be at least 3 */
 
-        R_len_t i, j, len, first_na;
+        R_len_t i, j, first_na;
         int xi0[LEN0];
-        len = ns;
         first_na = 0;
         xi = xi0;
         j = 0;
@@ -452,27 +450,12 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
 
         /* Use unrolled loops. */
 
-        if (len & 1) {
+        if (ns & 1) {
             if ((v = si[i++]) != 0) 
                 if (v > 0) xi[j++] = i;
                 else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
         }
-        if (len & 2) {
-            if ((v = si[i++]) != 0) 
-                if (v > 0) xi[j++] = i;
-                else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
-            if ((v = si[i++]) != 0) 
-                if (v > 0) xi[j++] = i;
-                else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
-        }
-
-        while (i < len && j < LEN0-3) {
-            if ((v = si[i++]) != 0) 
-                if (v > 0) xi[j++] = i;
-                else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
-            if ((v = si[i++]) != 0) 
-                if (v > 0) xi[j++] = i;
-                else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
+        if (ns & 2) {
             if ((v = si[i++]) != 0) 
                 if (v > 0) xi[j++] = i;
                 else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
@@ -481,11 +464,26 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
                 else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
         }
 
-        x = allocVector (INTSXP, j + (len-i));
+        while (i < ns && j < LEN0-3) {
+            if ((v = si[i++]) != 0) 
+                if (v > 0) xi[j++] = i;
+                else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
+            if ((v = si[i++]) != 0) 
+                if (v > 0) xi[j++] = i;
+                else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
+            if ((v = si[i++]) != 0) 
+                if (v > 0) xi[j++] = i;
+                else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
+            if ((v = si[i++]) != 0) 
+                if (v > 0) xi[j++] = i;
+                else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
+        }
+
+        x = allocVector (INTSXP, j + (ns-i));
         xi = INTEGER(x);
         memcpy (xi, xi0, j * sizeof(int));
 
-        while (i < len) {
+        while (i < ns) {
             if ((v = si[i++]) != 0) 
                 if (v > 0) xi[j++] = i;
                 else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
