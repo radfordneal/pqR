@@ -298,7 +298,7 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
     int canstretch, nmax;
     canstretch = *stretch;
     int *si = LOGICAL(s);
-    R_len_t i, j;
+    R_len_t i, j, k;
     int *xi;
     SEXP x;
     int v;
@@ -378,6 +378,24 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
                     if ((v = si[i++]) != 0) xi[j++] = i;
                     if ((v = si[i++]) != 0) xi[j++] = i;
                 }
+                if (j <= 1) {
+                    int t = xi[0];
+                    while (j < len) { t += ns; xi[j++] = t; }
+                }
+                else {  /* unrolled loop that requires j > 1 */
+                    int t0, t1;
+                    k = 0;
+                    if ((len-j) & 1) {
+                        int t0 = xi[k++];
+                        xi[j++] = t0 + ns;
+                    }
+                    while (j < len) {
+                        int t0 = xi[k++];
+                        int t1 = xi[k++];
+                        xi[j++] = t0 + ns;
+                        xi[j++] = t1 + ns;
+                    }
+                }
                 *hasna = 0;
             }
             else {  /* do need to handle NA */
@@ -395,31 +413,32 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
                     if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
                     if ((v = si[i++]) != 0) xi[j++] = v < 0 ? NA_INTEGER : i;
                 }
+                if (ns == 1) {  /* sole index must be NA */
+                    while (j < len) xi[j++] = NA_INTEGER;
+                }
+                if (j <= 1) {
+                    int t = xi[0];
+                    if (t == NA_INTEGER)
+                        while (j < len) xi[j++] = NA_INTEGER;
+                    else
+                        while (j < len) { t += ns; xi[j++] = t; }
+                }
+                else {  /* unrolled loop that requires j > 1 */
+                    int t0, t1;
+                    k = 0;
+                    if ((len-j) & 1) {
+                        int t0 = xi[k++];
+                        xi[j++] = t0 < 0 ? NA_INTEGER : t0 + ns;
+                    }
+                    while (j < len) {
+                        int t0 = xi[k++];
+                        int t1 = xi[k++];
+                        xi[j++] = t0 < 0 ? NA_INTEGER : t0 + ns;
+                        xi[j++] = t1 < 0 ? NA_INTEGER : t1 + ns;
+                    }
+                }
                 for (i = 0; xi[i] >= 0; i++) ;  /* find first NA */
                 *hasna = i+1;
-            }
-
-            int t0, t1, t2, t3;
-            int k = 0;
-            if ((len - j) & 1) {
-                t0 = xi[k++];
-                xi[j++] = t0 < 0 ? NA_INTEGER : t0 + ns;
-            }
-            if ((len - j) & 2) {
-                int t0 = xi[k++];
-                int t1 = xi[k++];
-                xi[j++] = t0 < 0 ? NA_INTEGER : t0 + ns;
-                xi[j++] = t1 < 0 ? NA_INTEGER : t1 + ns;
-            }
-            while (j < len) {
-                int t0 = xi[k++];
-                int t1 = xi[k++];
-                int t2 = xi[k++];
-                int t3 = xi[k++];
-                xi[j++] = t0 < 0 ? NA_INTEGER : t0 + ns;
-                xi[j++] = t1 < 0 ? NA_INTEGER : t1 + ns;
-                xi[j++] = t2 < 0 ? NA_INTEGER : t2 + ns;
-                xi[j++] = t3 < 0 ? NA_INTEGER : t3 + ns;
             }
         }
     }
