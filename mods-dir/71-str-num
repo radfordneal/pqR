@@ -1,2 +1,5 @@
 Performance improvements to conversions from strings to numbers and
 vice versa.
+
+Also fix bugs in which as.numeric("0x1.1.1p0") didn't give an error,
+as.numeric("0x1fffffffffffff.7ffp0") gave an incorrectly-rounded result.
