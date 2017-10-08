@@ -2118,8 +2118,8 @@ int attribute_hidden Rf_AdobeSymbol2ucs2(int n)
 double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
 {
     double ans;  /* NOT long double - try to avoid double rounding */
+    int n, sign, expn;
     const char *p;
-    int sign;
 
     /* Skip any initial whitespace. */
 
@@ -2140,73 +2140,8 @@ double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
         break;
     }
 
-#if 0  /* Disabled: gain for simple case is small, and general case is slower */
-
-    /* Quickly handle a simple integer or decimal fraction (with optional '-')
-       that's small enough that there are no overflow/precision issues. */
-
-    const char *q, *r;
-    const char *decptr = NULL;
-    for (q = p; *q != 0; q++) {
-        if (*q == dec) {
-            if (decptr != NULL) 
-                goto general_case; /* error, handle below */
-            decptr = q;
-        }
-        else if (*q < '0' || *q > '9')
-            goto general_case; /* non-digit, not handled here */
-    }
-
-    if (q - p >= 1 + (decptr != NULL)) {  /* has at least one digit */
-        double div;
-        if (decptr == NULL) decptr = q;
-        ans = 0; div = 1;
-        for (r = p; *r != 0; r++) {
-            if (*r != dec) {
-                ans = 10*ans + (*r - '0');
-                if (ans > 1e14) 
-                    goto general_case; /* too big, don't handle here */
-                if (r > decptr) {
-                    if (div > 1e14)
-                        goto general_case; /* too many after decimal point */
-                    div *= 10;
-                }
-            }
-        }
-        ans /= div;
-        p = r;
-        goto done;
-    }
-
-  general_case: ;
-
-#elif 0
-
-    /* Quickly handle a simple unsigned integer that's small enough that there
-       are no overflow/precision issues. */
-
-    const char *q;
-    for (q = p; *q != 0; q++) {
-        if (*q < '0' || *q > '9')
-            goto general_case; /* non-digit, not handled here */
-    }
-
-    if (q > p) {  /* has at least one digit */
-        ans = 0;
-        while (*p != 0) {
-            ans = 10*ans + (*p - '0');
-            if (ans > 1e14) 
-                goto general_case; /* too big, don't handle here */
-            p += 1;
-        }
-        goto done;
-    }
-
-  general_case: ;
-
-#endif
-
-    int n, expn;
+    /* Look for special "NA", "NaN", "infinity", "Inf" possibilities.  Also for
+       hex values. */
 
     switch (*p) {
 
