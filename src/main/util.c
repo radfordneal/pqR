@@ -158,6 +158,8 @@ Rboolean copy_3_strings(char *to, int size, const char *from1,
    There must be space for at least 12 characters in the string.  NA is put
    in as "NA". */
 
+#if 0  /* can select one of three implementations here */
+
 void integer_to_string (char *s, int i)
 {
     int m;
@@ -187,6 +189,145 @@ void integer_to_string (char *s, int i)
 
     *s = 0;
 }
+
+#elif 0
+
+void integer_to_string (char *s, int i)
+{
+    static int pow10[10] = { 1, 10, 100, 1000, 10000, 100000, 1000000, 
+                             10000000, 100000000, 1000000000 };
+    int m, j;
+
+    if (i == NA_INTEGER) {
+        *s++ = 'N'; 
+        *s++ = 'A';
+        *s++ = 0;
+        return;
+    }
+    
+    if (i < 0) {
+        *s++ = '-';
+        i = -i;
+    }
+
+    if (i >= 10) {
+
+        j = 10;
+        do {
+            j -= 1;
+            m = pow10[j];
+        } while (m > i);
+
+        for (;;) {
+            char c = '0';
+            int M = m << 2;
+            if (i >= M) 
+            { c += 4; 
+              i -= M;
+              if (i >= M) 
+              { c += 4; 
+                i -= M; 
+              }
+            }
+            M >>= 1;
+            if (i >= M) 
+            { c += 2; 
+              i -= M; 
+            }
+            if (i >= m)
+            { c += 1;
+              i -= m;
+            }
+            *s++ = c;
+            j -= 1;
+            if (j == 0) break;
+            m = pow10[j];
+        }
+    }
+
+    *s++ = '0' + i;
+    *s = 0;
+}
+
+#else
+
+/* The implementation below assumes that integer multiplication is
+   much faster than integer division, and that division by a constant
+   can be converted by the compiler to a multiplication. */
+
+void integer_to_string (char *s, int i)
+{
+    int d;
+
+    if (i == NA_INTEGER) {
+        *s++ = 'N'; 
+        *s++ = 'A';
+        *s++ = 0;
+        return;
+    }
+    
+    if (i < 0) {
+        *s++ = '-';
+        i = -i;
+    }
+
+    if (i >= 100000) {
+        if (i >= 1000000000) goto GE_1000000000;
+        if (i >= 100000000) goto GE_100000000;
+        if (i >= 10000000) goto GE_10000000;
+        if (i >= 1000000) goto GE_1000000;
+        goto GE_100000;
+    }
+    else {
+        if (i >= 10000) goto GE_10000;
+        if (i >= 1000) goto GE_1000;
+        if (i >= 100) goto GE_100;
+        if (i >= 10) goto GE_10;
+        goto GE_0;
+    }
+
+  GE_1000000000:
+    d = i / 1000000000;
+    *s++ = '0' + d;
+    i -= d*1000000000;
+  GE_100000000:
+    d = i / 100000000;
+    *s++ = '0' + d;
+    i -= d*100000000;
+  GE_10000000:
+    d = i / 10000000;
+    *s++ = '0' + d;
+    i -= d*10000000;
+  GE_1000000:
+    d = i / 1000000;
+    *s++ = '0' + d;
+    i -= d*1000000;
+  GE_100000:
+    d = i / 100000;
+    *s++ = '0' + d;
+    i -= d*100000;
+  GE_10000:
+    d = i / 10000;
+    *s++ = '0' + d;
+    i -= d*10000;
+  GE_1000:
+    d = i / 1000;
+    *s++ = '0' + d;
+    i -= d*1000;
+  GE_100:
+    d = i / 100;
+    *s++ = '0' + d;
+    i -= d*100;
+  GE_10:
+    d = i / 10;
+    *s++ = '0' + d;
+    i -= d*10;
+  GE_0:
+    *s++ = '0' + i;
+    *s = 0;
+}
+
+#endif
 
 Rboolean tsConform(SEXP x, SEXP y)
 {
