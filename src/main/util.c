@@ -2118,8 +2118,8 @@ int attribute_hidden Rf_AdobeSymbol2ucs2(int n)
 double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
 {
     double ans;  /* NOT long double - try to avoid double rounding */
+    int n, sign, expn;
     const char *p;
-    int sign;
 
     /* Skip any initial whitespace. */
 
@@ -2140,73 +2140,8 @@ double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
         break;
     }
 
-#if 0  /* Disabled: gain for simple case is small, and general case is slower */
-
-    /* Quickly handle a simple integer or decimal fraction (with optional '-')
-       that's small enough that there are no overflow/precision issues. */
-
-    const char *q;
-    const char *decptr = NULL;
-    for (q = p; *q != 0; q++) {
-        if (*q == dec) {
-            if (decptr != NULL) 
-                goto general_case; /* error, handle below */
-            decptr = q;
-        }
-        else if (*q < '0' || *q > '9')
-            goto general_case; /* non-digit, not handled here */
-    }
-
-    if (q - p >= 1 + (decptr != NULL)) {  /* has at least one digit */
-        double div;
-        if (decptr == NULL) decptr = q;
-        ans = 0; div = 1;
-        while (*p != 0) {
-            if (*p != dec) {
-                ans = 10*ans + (*p - '0');
-                if (ans > 1e14) 
-                    goto general_case; /* too big, don't handle here */
-                if (r > decptr) {
-                    if (div > 1e14)
-                        goto general_case; /* too many after decimal point */
-                    div *= 10;
-                }
-            }
-            p += 1;
-        }
-        ans /= div;
-        goto done;
-    }
-
-  general_case:
-
-#elif 0
-
-    /* Quickly handle a simple unsigned integer that's small enough that there
-       are no overflow/precision issues. */
-
-    const char *q;
-    for (q = p; *q != 0; q++) {
-        if (*q < '0' || *q > '9')
-            goto general_case; /* non-digit, not handled here */
-    }
-
-    if (q > p) {  /* has at least one digit */
-        ans = 0;
-        while (*p != 0) {
-            ans = 10*ans + (*p - '0');
-            if (ans > 1e14) 
-                goto general_case; /* too big, don't handle here */
-            p += 1;
-        }
-        goto done;
-    }
-
-  general_case:
-
-#endif
-
-    int n, expn;
+    /* Look for special "NA", "NaN", "infinity", "Inf" possibilities.  Also for
+       hex values. */
 
     switch (*p) {
 
@@ -2293,29 +2228,50 @@ double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
 
     /* NEEDS FIXING.  Code below doesn't always do exactly-correct rounding. */
 
-    long double lans = 0.0, p10 = 10.0, fac = 1.0;
+    long double lans = 0.0;
     int ndigits = 0;
-    expn = 0;
 
-    for ( ; *p >= '0' && *p <= '9'; p++, ndigits++) 
+    for ( ; *p >= '0' && *p <= '9'; p++) {
         lans = 10*lans + (*p - '0');
-    if (*p == dec)
-        for (p++; *p >= '0' && *p <= '9'; p++, ndigits++, expn--)
+        ndigits += 1;
+    }
+
+    if (*p == 0 && ndigits > 0) {  /* quick exit for integers */
+        ans = (double) lans;
+        goto done;
+    }
+
+    expn = 0;
+    if (*p == dec) {
+        p += 1;
+        for ( ; *p >= '0' && *p <= '9'; p++) {
             lans = 10*lans + (*p - '0');
+            ndigits += 1;
+            expn -= 1;
+        }
+    }
+
     if (ndigits == 0) {
-        lans = NA_REAL;
         p = str; /* back out */
+        ans = NA_REAL;
         goto done;
     }
 
     if (*p == 'e' || *p == 'E') {
+        p += 1;
         int expsign = 1;
-        switch(*++p) {
-        case '-': expsign = -1;
-        case '+': p++;
-        default: ;
+        switch (*p) {
+        case '-': 
+            expsign = -1;
+            /* fall through */
+        case '+': 
+            p += 1;
+            break;
+        default:
+            break;
         }
-        for (n = 0; *p >= '0' && *p <= '9'; p++) {
+        n = 0;
+        for ( ; *p >= '0' && *p <= '9'; p++) {
             n = n * 10 + (*p - '0');
             if (n > MAX_EXPONENT_PREFIX) n = MAX_EXPONENT_PREFIX;
         }
@@ -2323,6 +2279,7 @@ double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
     }
 
     /* avoid unnecessary underflow for large negative exponents */
+    long double p10 = 10.0, fac = 1.0;
     if (expn + ndigits < -300) {
         for (n = 0; n < ndigits; n++) lans /= 10.0;  /* inaccurate */
         expn += ndigits;
