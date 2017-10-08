@@ -146,9 +146,10 @@ int attribute_hidden LogicalFromComplex(Rcomplex x, int *warn)
 
 int attribute_hidden LogicalFromString(SEXP x, int *warn)
 {
+    const char *cx = CHAR(x);
     if (x != R_NaString) {
-	if (StringTrue(CHAR(x))) return 1;
-	if (StringFalse(CHAR(x))) return 0;
+	if (StringTrue(cx)) return 1;
+	if (StringFalse(cx)) return 0;
     }
     return NA_LOGICAL;
 }
@@ -189,10 +190,11 @@ int attribute_hidden IntegerFromComplex(Rcomplex x, int *warn)
 
 int attribute_hidden IntegerFromString(SEXP x, int *warn)
 {
+    const char *cx = CHAR(x);
     double xdouble;
     char *endp;
-    if (x != R_NaString && !isBlankString(CHAR(x))) { /* ASCII */
-	xdouble = R_strtod(CHAR(x), &endp); /* ASCII */
+    if (x != R_NaString && !isBlankString(cx)) { /* ASCII */
+	xdouble = R_strtod(cx, &endp); /* ASCII */
 	if (isBlankString(endp)) {
 	    if (xdouble > INT_MAX) {
 		*warn |= WARN_INACC;
@@ -239,10 +241,11 @@ double attribute_hidden RealFromComplex(Rcomplex x, int *warn)
 
 double attribute_hidden RealFromString(SEXP x, int *warn)
 {
+    const char *cx = CHAR(x);
     double xdouble;
     char *endp;
-    if (x != R_NaString && !isBlankString(CHAR(x))) { /* ASCII */
-	xdouble = R_strtod(CHAR(x), &endp); /* ASCII */
+    if (x != R_NaString && !isBlankString(cx)) { /* ASCII */
+	xdouble = R_strtod(cx, &endp); /* ASCII */
 	if (isBlankString(endp))
 	    return xdouble;
 	else
@@ -311,12 +314,12 @@ Rcomplex attribute_hidden ComplexFromString(SEXP x, int *warn)
 {
     double xr, xi;
     Rcomplex z;
-    const char *xx = CHAR(x); /* ASCII */
+    const char *cx = CHAR(x); /* ASCII */
     char *endp;
 
     z.r = z.i = NA_REAL;
-    if (x != R_NaString && !isBlankString(xx)) {
-	xr = R_strtod(xx, &endp);
+    if (x != R_NaString && !isBlankString(cx)) {
+	xr = R_strtod(cx, &endp);
 	if (isBlankString(endp)) {
 	    z.r = xr;
 	    z.i = 0.0;
