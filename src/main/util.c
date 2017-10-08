@@ -158,6 +158,8 @@ Rboolean copy_3_strings(char *to, int size, const char *from1,
    There must be space for at least 12 characters in the string.  NA is put
    in as "NA". */
 
+#if 0  /* can select one of three implementations here */
+
 void integer_to_string (char *s, int i)
 {
     int m;
@@ -187,6 +189,145 @@ void integer_to_string (char *s, int i)
 
     *s = 0;
 }
+
+#elif 0
+
+void integer_to_string (char *s, int i)
+{
+    static int pow10[10] = { 1, 10, 100, 1000, 10000, 100000, 1000000, 
+                             10000000, 100000000, 1000000000 };
+    int m, j;
+
+    if (i == NA_INTEGER) {
+        *s++ = 'N'; 
+        *s++ = 'A';
+        *s++ = 0;
+        return;
+    }
+    
+    if (i < 0) {
+        *s++ = '-';
+        i = -i;
+    }
+
+    if (i >= 10) {
+
+        j = 10;
+        do {
+            j -= 1;
+            m = pow10[j];
+        } while (m > i);
+
+        for (;;) {
+            char c = '0';
+            int M = m << 2;
+            if (i >= M) 
+            { c += 4; 
+              i -= M;
+              if (i >= M) 
+              { c += 4; 
+                i -= M; 
+              }
+            }
+            M >>= 1;
+            if (i >= M) 
+            { c += 2; 
+              i -= M; 
+            }
+            if (i >= m)
+            { c += 1;
+              i -= m;
+            }
+            *s++ = c;
+            j -= 1;
+            if (j == 0) break;
+            m = pow10[j];
+        }
+    }
+
+    *s++ = '0' + i;
+    *s = 0;
+}
+
+#else
+
+/* The implementation below assumes that integer multiplication is
+   much faster than integer division, and that division by a constant
+   can be converted by the compiler to a multiplication. */
+
+void integer_to_string (char *s, int i)
+{
+    int d;
+
+    if (i == NA_INTEGER) {
+        *s++ = 'N'; 
+        *s++ = 'A';
+        *s++ = 0;
+        return;
+    }
+    
+    if (i < 0) {
+        *s++ = '-';
+        i = -i;
+    }
+
+    if (i >= 100000) {
+        if (i >= 1000000000) goto GE_1000000000;
+        if (i >= 100000000) goto GE_100000000;
+        if (i >= 10000000) goto GE_10000000;
+        if (i >= 1000000) goto GE_1000000;
+        goto GE_100000;
+    }
+    else {
+        if (i >= 10000) goto GE_10000;
+        if (i >= 1000) goto GE_1000;
+        if (i >= 100) goto GE_100;
+        if (i >= 10) goto GE_10;
+        goto GE_0;
+    }
+
+  GE_1000000000:
+    d = i / 1000000000;
+    *s++ = '0' + d;
+    i -= d*1000000000;
+  GE_100000000:
+    d = i / 100000000;
+    *s++ = '0' + d;
+    i -= d*100000000;
+  GE_10000000:
+    d = i / 10000000;
+    *s++ = '0' + d;
+    i -= d*10000000;
+  GE_1000000:
+    d = i / 1000000;
+    *s++ = '0' + d;
+    i -= d*1000000;
+  GE_100000:
+    d = i / 100000;
+    *s++ = '0' + d;
+    i -= d*100000;
+  GE_10000:
+    d = i / 10000;
+    *s++ = '0' + d;
+    i -= d*10000;
+  GE_1000:
+    d = i / 1000;
+    *s++ = '0' + d;
+    i -= d*1000;
+  GE_100:
+    d = i / 100;
+    *s++ = '0' + d;
+    i -= d*100;
+  GE_10:
+    d = i / 10;
+    *s++ = '0' + d;
+    i -= d*10;
+  GE_0:
+    *s++ = '0' + i;
+    *s = 0;
+}
+
+#endif
 
 Rboolean tsConform(SEXP x, SEXP y)
 {
@@ -1976,130 +2117,234 @@ int attribute_hidden Rf_AdobeSymbol2ucs2(int n)
 
 double R_strtod4(const char *str, char **endptr, char dec, Rboolean NA)
 {
-    long double ans = 0.0, p10 = 10.0, fac = 1.0;
-    int n, expn = 0, sign = 1, ndigits = 0, exph = -1;
-    const char *p = str;
+    double ans;  /* NOT long double - try to avoid double rounding */
+    const char *p;
+    int sign;
 
-    /* optional whitespace */
-    while (isspace(*p)) p++;
+    /* Skip any initial whitespace. */
 
-    if (NA && strncmp(p, "NA", 2) == 0) {
-	ans = NA_REAL;
-	p += 2;
-	goto done;
-    }
+    for (p = str; isspace(*p); p++) ;
 
-    /* optional sign */
+    /* Look for a sign. */
+
+    sign = 1;
     switch (*p) {
-    case '-': sign = -1;
-    case '+': p++;
-    default: ;
+    case '-': 
+        sign = -1;
+        /* fall through */
+    case '+': 
+        p += 1;
+        NA = FALSE;  /* don't allow NA after sign */
+        break;
+    default:
+        break;
     }
 
-    if (strncasecmp(p, "NaN", 3) == 0) {
-	ans = R_NaN;
-	p += 3;
-	goto done;
-    /* C99 specifies this: must come first to avoid 'inf' match */
-    } else if (strncasecmp(p, "infinity", 8) == 0) {
-        ans = R_PosInf;
-        p += 8;
+#if 0  /* Disabled: gain for simple case is small, and general case is slower */
+
+    /* Quickly handle a simple integer or decimal fraction (with optional '-')
+       that's small enough that there are no overflow/precision issues. */
+
+    const char *q;
+    const char *decptr = NULL;
+    for (q = p; *q != 0; q++) {
+        if (*q == dec) {
+            if (decptr != NULL) 
+                goto general_case; /* error, handle below */
+            decptr = q;
+        }
+        else if (*q < '0' || *q > '9')
+            goto general_case; /* non-digit, not handled here */
+    }
+
+    if (q - p >= 1 + (decptr != NULL)) {  /* has at least one digit */
+        double div;
+        if (decptr == NULL) decptr = q;
+        ans = 0; div = 1;
+        while (*p != 0) {
+            if (*p != dec) {
+                ans = 10*ans + (*p - '0');
+                if (ans > 1e14) 
+                    goto general_case; /* too big, don't handle here */
+                if (r > decptr) {
+                    if (div > 1e14)
+                        goto general_case; /* too many after decimal point */
+                    div *= 10;
+                }
+            }
+            p += 1;
+        }
+        ans /= div;
         goto done;
-    } else if (strncasecmp(p, "Inf", 3) == 0) {
-	ans = R_PosInf;
-	p += 3;
-	goto done;
     }
 
-    if(strlen(p) > 2 && p[0] == '0' && (p[1] == 'x' || p[1] == 'X')) {
-	/* This will overflow to Inf if appropriate */
-	for(p += 2; p; p++) {
-	    if('0' <= *p && *p <= '9') ans = 16*ans + (*p -'0');
-	    else if('a' <= *p && *p <= 'f') ans = 16*ans + (*p -'a' + 10);
-	    else if('A' <= *p && *p <= 'F') ans = 16*ans + (*p -'A' + 10);
-	    else if(*p == dec) {exph = 0; continue;}
-	    else break;
-	    if (exph >= 0) exph += 4;
-	}
-	if (*p == 'p' || *p == 'P') {
-	    int expsign = 1;
-	    switch(*++p) {
-	    case '-': expsign = -1;
-	    case '+': p++;
-	    default: ;
-	    }
-	    /* The test for n is in response to PR#16358; for large exponents,
+  general_case:
+
+#elif 0
+
+    /* Quickly handle a simple unsigned integer that's small enough that there
+       are no overflow/precision issues. */
+
+    const char *q;
+    for (q = p; *q != 0; q++) {
+        if (*q < '0' || *q > '9')
+            goto general_case; /* non-digit, not handled here */
+    }
+
+    if (q > p) {  /* has at least one digit */
+        ans = 0;
+        while (*p != 0) {
+            ans = 10*ans + (*p - '0');
+            if (ans > 1e14) 
+                goto general_case; /* too big, don't handle here */
+            p += 1;
+        }
+        goto done;
+    }
+
+  general_case:
+
+#endif
+
+    int n, expn;
+
+    switch (*p) {
+
+    case 'n': case 'N':
+        if (NA && strncmp(p,"NA",2) == 0) {
+            ans = NA_REAL;
+            p += 2;
+            goto done;
+        }
+        if (strncasecmp(p,"NaN",3) == 0) {
+            ans = R_NaN;
+            p += 3;
+            goto done;
+        }
+        break;
+
+    case 'i': case 'I':
+        /* C99 specifies this; must come first to avoid 'inf' match */
+        if (strncasecmp(p,"infinity",8) == 0) {
+            ans = R_PosInf;
+            p += 8;
+            goto done;
+        } 
+        if (strncasecmp(p,"Inf",3) == 0) {
+            ans = R_PosInf;
+            p += 3;
+            goto done;
+        }
+        break;
+
+    case '0':  /* possible hex value */
+
+        if (p[1] != 'x' && p[1] != 'X' || p[2] == 0)  /* not hex after all... */
+            break;
+
+        /* This should produce the correctly-rounded result, and overflow to
+           Inf if appropriate */
+
+        int exph = -1;
+        ans = 0;
+        for (p = p+2; ; p++) {
+            if (*p == dec) {
+                if (exph >= 0) break;  /* second decimal point */
+                exph = 0;
+                continue;
+            }
+            if ('0' <= *p && *p <= '9') 
+                ans = 16*ans + (*p -'0');
+            else if ('a' <= *p && *p <= 'f')
+                ans = 16*ans + (*p -'a' + 10);
+            else if ('A' <= *p && *p <= 'F')
+                ans = 16*ans + (*p -'A' + 10);
+            else 
+                break;
+            if (exph >= 0) exph += 4;
+        }
+        if (*p == 'p' || *p == 'P') {
+            int expsign = 1;
+            switch(*++p) {
+            case '-': expsign = -1;
+            case '+': p++;
+            default: ;
+            }
+            /* The test for n is in response to PR#16358; for large exponents,
                later underflow or overflow will produce 0 or Inf. */
             for (n = 0; *p >= '0' && *p <= '9'; p++) {
                 n = n * 10 + (*p - '0');
                 if (n > MAX_EXPONENT_PREFIX) n = MAX_EXPONENT_PREFIX;
             }
-            expn += expsign * n;
-	}
-        if (ans != 0.0) { /* PR#15976:  allow big exponents on 0 */
-	    double p2 = 2.0;
-            if(exph > 0) expn -= exph;
-            if (expn < 0) {
-                for (n = -expn, fac = 1.0; n; n >>= 1, p2 *= p2)
-                    if (n & 1) fac *= p2;
-                ans /= fac;
-            } else {
-                for (n = expn, fac = 1.0; n; n >>= 1, p2 *= p2)
-                    if (n & 1) fac *= p2;
-                ans *= fac;
-            }
+            expn = expsign * n;
         }
-	goto done;
+        else
+            expn = 0;
+        if (exph > 0) expn -= exph;
+        while (expn >= 10)  { ans *= 1<<10;       expn -= 10; }
+        while (expn <= -10) { ans *= 1.0/(1<<10); expn += 10; }
+        while (expn >= 1)   { ans *= 2;           expn -= 1; }
+        while (expn <= -1)  { ans *= 0.5;         expn += 1; }
+        goto done;
+
+    default:
+        break;
     }
+
+    /* NEEDS FIXING.  Code below doesn't always do exactly-correct rounding. */
+
+    long double lans = 0.0, p10 = 10.0, fac = 1.0;
+    int ndigits = 0;
+    expn = 0;
 
     for ( ; *p >= '0' && *p <= '9'; p++, ndigits++) 
-        ans = 10*ans + (*p - '0');
+        lans = 10*lans + (*p - '0');
     if (*p == dec)
-	for (p++; *p >= '0' && *p <= '9'; p++, ndigits++, expn--)
-	    ans = 10*ans + (*p - '0');
+        for (p++; *p >= '0' && *p <= '9'; p++, ndigits++, expn--)
+            lans = 10*lans + (*p - '0');
     if (ndigits == 0) {
-	ans = NA_REAL;
-	p = str; /* back out */
-	goto done;
+        lans = NA_REAL;
+        p = str; /* back out */
+        goto done;
     }
 
-
     if (*p == 'e' || *p == 'E') {
-	int expsign = 1;
-	switch(*++p) {
-	case '-': expsign = -1;
-	case '+': p++;
-	default: ;
-	}
+        int expsign = 1;
+        switch(*++p) {
+        case '-': expsign = -1;
+        case '+': p++;
+        default: ;
+        }
         for (n = 0; *p >= '0' && *p <= '9'; p++) {
             n = n * 10 + (*p - '0');
             if (n > MAX_EXPONENT_PREFIX) n = MAX_EXPONENT_PREFIX;
         }
-	expn += expsign * n;
+        expn += expsign * n;
     }
 
     /* avoid unnecessary underflow for large negative exponents */
     if (expn + ndigits < -300) {
-	for (n = 0; n < ndigits; n++) ans /= 10.0;
-	expn += ndigits;
+        for (n = 0; n < ndigits; n++) lans /= 10.0;  /* inaccurate */
+        expn += ndigits;
     }
     if (expn < -307) { /* use underflow, not overflow */
-	for (n = -expn, fac = 1.0; n; n >>= 1, p10 *= p10)
-	    if (n & 1) fac /= p10;
-	ans *= fac;
-    } else if (expn < 0) { /* positive powers are exact */
-	for (n = -expn, fac = 1.0; n; n >>= 1, p10 *= p10)
-	    if (n & 1) fac *= p10;
-	ans /= fac;
-    } else if (ans != 0.0) { /* PR#15976:  allow big exponents on 0, e.g. 0E4933 */
-	for (n = expn, fac = 1.0; n; n >>= 1, p10 *= p10)
-	    if (n & 1) fac *= p10;
-	ans *= fac;
+        for (n = -expn, fac = 1.0; n; n >>= 1, p10 *= p10)
+            if (n & 1) fac /= p10;  /* inaccurate */
+        lans *= fac;
+    } else if (expn < 0) { /* positive powers are exact (up to a point...) */
+        for (n = -expn, fac = 1.0; n; n >>= 1, p10 *= p10)
+            if (n & 1) fac *= p10;
+        lans /= fac;
+    } else if (lans != 0.0) {  /* PR#15976:  allow big exponents on 0 */
+        for (n = expn, fac = 1.0; n; n >>= 1, p10 *= p10)
+            if (n & 1) fac *= p10;
+        lans *= fac;
     }
+    ans = (double) lans;  /* double rounding problem here */
 
 done:
     if (endptr) *endptr = (char *) p;
-    return sign * (double) ans;
+    return sign * ans;
 }
 
 double R_strtod(const char *str, char **endptr)

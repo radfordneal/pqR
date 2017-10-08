@@ -280,6 +280,10 @@
 
   \subsection{BUG FIXES}{
   \itemize{
+  \item Fixed bugs in which \code{as.numeric("0x1.1.1p0")} didn't give an error,
+        and \code{as.numeric("0x1fffffffffffff.7ffp0")} gave an 
+        incorrectly-rounded result.  Both bugs (and related ones previously
+        fixed in pqR) exist in R-3.4.2.
   \item The documentation on \code{debug} and \code{debugonce} has been
         fixed to remove mention of the \code{text} and \code{condition} 
         arguments. These arguments were documented in R-2.10.0, and in 
