@@ -120,6 +120,8 @@
         it to an intermediate string vector.
   \item Substring extraction and replacement with \code{substr} or
         \code{substring} has also been sped up for long strings.
+  \item Conversion of integer, double, and logical values to strings,
+        and vice versa, has been sped up, in some cases enormously.
   \item From R-3.0.0: 
         The \code{@<-} operator is now implemented as a primitive, which should
         reduce some copying of objects when used.  Note that the operator
@@ -276,9 +278,9 @@
         and \code{as.numeric("0x1fffffffffffff.7ffp0")} gave an 
         incorrectly-rounded result.  Both bugs (and related ones previously
         fixed in pqR) exist in R-3.4.2.
-  \item Fixed a bug in which, for example,
-        \code{print(c(F,NA,NA,F),na.print="abcdef")}
-        produced incorrectly-formatted output.  This bug also exists in
+  \item Fixed a bug that caused
+        \code{print(c(F,NA,NA,F),na.print="abcdef")} to
+        produce incorrectly-formatted output.  This bug also exists in
         R Core versions to at least R-3.4.2.
   \item The documentation on \code{debug} and \code{debugonce} has been
         fixed to remove mention of the \code{text} and \code{condition} 
