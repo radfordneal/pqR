@@ -284,6 +284,10 @@
         and \code{as.numeric("0x1fffffffffffff.7ffp0")} gave an 
         incorrectly-rounded result.  Both bugs (and related ones previously
         fixed in pqR) exist in R-3.4.2.
+  \item Fixed a bug in which, for example,
+        \code{print(c(F,NA,NA,F),na.print="abcdef")}
+        produced incorrectly-formatted output.  This bug also exists in
+        R Core versions to at least R-3.4.2.
   \item The documentation on \code{debug} and \code{debugonce} has been
         fixed to remove mention of the \code{text} and \code{condition} 
         arguments. These arguments were documented in R-2.10.0, and in 
