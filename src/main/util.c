@@ -164,6 +164,13 @@ void double_to_string (char *s, double x)
     int w, d, e;
     const char *p;
 
+    /* Handle integers quickly. */
+
+    if (x <= INT_MAX && x >= -INT_MAX && (int)x == x) {
+        integer_to_string (s, (int)x);
+        return;
+    }
+
     formatReal(&x, 1, &w, &d, &e, 0);
     p = EncodeReal (x, w, d, e, OutDec);
 
