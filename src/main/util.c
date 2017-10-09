@@ -154,6 +154,32 @@ Rboolean copy_3_strings(char *to, int size, const char *from1,
     return TRUE;
 }
 
+/* Put the ASCII representation of a double in a string, with 0 termination.
+   There must be space for at least 32 characters in the string (no extra
+   needed for 0 termination).  Uses the global variable OutDec for the 
+   decimal point. */
+
+void double_to_string (char *s, double x)
+{
+    int w, d, e;
+    const char *p;
+
+    formatReal(&x, 1, &w, &d, &e, 0);
+    p = EncodeReal (x, w, d, e, OutDec);
+
+    /* Copy, removing trailing zeros in digits after decimal point. */
+
+    if (OutDec=='0') OutDec = 0; /* don't crash in this ridiculous situation */
+    while (*p != 0 && *p != OutDec) *s++ = *p++;
+    if (*p != 0) {
+        *s++ = *p++;  /* copy OutDec */
+        while (*p >= '0' && *p <= '9') *s++ = *p++;
+        while (*(s-1) == '0') s -= 1;
+        while (*p != 0) *s++ = *p++;
+    }
+    *s = 0;
+}
+
 /* Put the ASCII representation of an integer in a string, with 0 termination.
    There must be space for at least 12 characters in the string.  NA is put
    in as "NA". */
@@ -329,6 +355,8 @@ void integer_to_string (char *s, int i)
 
 #endif
 
+
+
 Rboolean tsConform(SEXP x, SEXP y)
 {
     if ((x = getAttrib(x, R_TspSymbol)) != R_NilValue &&
@@ -391,17 +419,17 @@ void attribute_hidden internalTypeCheck(SEXP call, SEXP s, SEXPTYPE type)
 }
 
 const static char * const truenames[] = {
+    "TRUE",
     "T",
     "True",
-    "TRUE",
     "true",
     (char *) NULL,
 };
 
 const static char * const falsenames[] = {
+    "FALSE",
     "F",
     "False",
-    "FALSE",
     "false",
     (char *) NULL,
 };
@@ -711,8 +739,10 @@ Rboolean StringBlank(SEXP x)
 Rboolean StringTrue(const char *name)
 {
     int i;
-    for (i = 0; truenames[i]; i++)
-	if (!strcmp(name, truenames[i]))
+    if (*name != 'T' && *name != 't') 
+        return FALSE;
+    for (i = 0; truenames[i] != NULL; i++)
+	if (strcmp (name, truenames[i]) == 0)
 	    return TRUE;
     return FALSE;
 }
@@ -720,8 +750,10 @@ Rboolean StringTrue(const char *name)
 Rboolean StringFalse(const char *name)
 {
     int i;
-    for (i = 0; falsenames[i]; i++)
-	if (!strcmp(name, falsenames[i]))
+    if (*name != 'F' && *name != 'f')
+        return FALSE;
+    for (i = 0; falsenames[i] != NULL; i++)
+	if (strcmp (name, falsenames[i]) == 0)
 	    return TRUE;
     return FALSE;
 }
