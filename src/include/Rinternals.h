@@ -1642,6 +1642,8 @@ LibExtern SEXP R_double_CHARSXP;
 LibExtern SEXP R_numeric_CHARSXP;
 LibExtern SEXP R_name_CHARSXP;
 LibExtern SEXP R_function_CHARSXP;
+LibExtern SEXP R_TRUE_CHARSXP;
+LibExtern SEXP R_FALSE_CHARSXP;
 
 /* Missing Values - others from Arith.h */
 #define NA_STRING	R_NaString
@@ -1701,6 +1703,7 @@ SEXP Rf_arraySubscript(int, SEXP, SEXP, SEXP (*)(SEXP,SEXP),
 SEXP Rf_classgets(SEXP, SEXP);
 SEXP Rf_cons_with_tag(SEXP, SEXP, SEXP);
 SEXP Rf_cons(SEXP, SEXP);
+void Rf_double_to_string(char *, double);
 void Rf_integer_to_string(char *, int);
 Rboolean Rf_copy_1_string(char *, int, const char *);
 Rboolean Rf_copy_2_strings(char *, int, const char *, const char *);
@@ -2095,6 +2098,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define defineVar		Rf_defineVar
 #define dimgets			Rf_dimgets
 #define dimnamesgets		Rf_dimnamesgets
+#define double_to_string	Rf_double_to_string
 #define DropDims                Rf_DropDims
 #define DropDimsNotSuppressed   Rf_DropDimsNotSuppressed
 #define duplicate		Rf_duplicate

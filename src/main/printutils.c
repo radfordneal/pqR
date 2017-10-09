@@ -121,9 +121,12 @@ R_size_t R_Decode2Long(char *p, int *ierr)
 const char *EncodeLogical(int x, int w)
 {
     static char buff[NB];
-    if(x == NA_LOGICAL) snprintf(buff, NB, "%*s", w, CHAR(R_print.na_string));
-    else if(x) snprintf(buff, NB, "%*s", w, "TRUE");
-    else snprintf(buff, NB, "%*s", w, "FALSE");
+    if (x == NA_LOGICAL) 
+        snprintf(buff, NB, "%*s", w, CHAR(R_print.na_string));
+    else if (x) 
+        snprintf(buff, NB, "%*s", w, "TRUE");
+    else 
+        snprintf(buff, NB, "%*s", w, "FALSE");
     buff[NB-1] = '\0';
     return buff;
 }
@@ -131,8 +134,10 @@ const char *EncodeLogical(int x, int w)
 const char *EncodeInteger(int x, int w)
 {
     static char buff[NB];
-    if(x == NA_INTEGER) snprintf(buff, NB, "%*s", w, CHAR(R_print.na_string));
-    else snprintf(buff, NB, "%*d", w, x);
+    if (x == NA_INTEGER) 
+        snprintf(buff, NB, "%*s", w, CHAR(R_print.na_string));
+    else 
+        snprintf(buff, NB, "%*d", w, x);
     buff[NB-1] = '\0';
     return buff;
 }

@@ -146,11 +146,21 @@ int attribute_hidden LogicalFromComplex(Rcomplex x, int *warn)
 
 int attribute_hidden LogicalFromString(SEXP x, int *warn)
 {
+
+    if (x == R_TRUE_CHARSXP)
+        return TRUE;
+    if (x == R_FALSE_CHARSXP)
+        return FALSE;
+
+    if (x == R_NaString) 
+        return NA_LOGICAL;
+    
     const char *cx = CHAR(x);
-    if (x != R_NaString) {
-	if (StringTrue(cx)) return 1;
-	if (StringFalse(cx)) return 0;
-    }
+    if (StringTrue(cx))
+        return TRUE;
+    if (StringFalse(cx))
+        return FALSE;
+
     return NA_LOGICAL;
 }
 
@@ -346,64 +356,41 @@ static SEXP StringFromRaw(Rbyte x, int *warn)
 
 SEXP attribute_hidden StringFromLogical(int x, int *warn)
 {
-    if (x == NA_LOGICAL) 
-        return NA_STRING;
-    else 
-        return mkChar(x ? "TRUE" : "FALSE");
+    return x==NA_LOGICAL ? NA_STRING : x ? R_TRUE_CHARSXP : R_FALSE_CHARSXP;
 }
 
 SEXP attribute_hidden StringFromInteger(int x, int *warn)
 {
-    char s[12];
     if (x == NA_INTEGER) 
         return NA_STRING;
     else {
+        char s[12];
         integer_to_string(s,x);
         return mkChar(s);
     }
 }
 
-static const char* dropTrailing0(char *s, char cdec)
-{
-    /* Note that  's'  is modified */
-    char *p = s;
-    for (p = s; *p; p++) {
-	if(*p == cdec) {
-	    char *replace = p++;
-	    while ('0' <= *p  &&  *p <= '9')
-		if(*(p++) != '0')
-		    replace = p;
-	    if(replace != p)
-		while((*(replace++) = *(p++)))
-		    ;
-	    break;
-	}
-    }
-    return s;
-}
-
 SEXP attribute_hidden StringFromReal(double x, int *warn)
 {
-    int w, d, e;
-    formatReal(&x, 1, &w, &d, &e, 0);
-    if (ISNA(x)) return NA_STRING;
+    if (ISNA(x))
+        return NA_STRING;
     else {
-	/* Note that we recast EncodeReal()'s value to possibly modify it
-	 * destructively; this is harmless here (in a sequential
-	 * environment), as mkChar() creates a copy */
-	/* Do it this way to avoid (3x) warnings in gcc 4.2.x */
-	char * tmp = (char *)EncodeReal(x, w, d, e, OutDec);
-	return mkChar(dropTrailing0(tmp, OutDec));
+        char s[32];
+        double_to_string(s,x);
+        return mkChar(s);
     }
 }
 
 SEXP attribute_hidden StringFromComplex(Rcomplex x, int *warn)
 {
-    int wr, dr, er, wi, di, ei;
-    formatComplex(&x, 1, &wr, &dr, &er, &wi, &di, &ei, 0);
-    if (ISNA(x.r) || ISNA(x.i)) return NA_STRING;
-    else /* EncodeComplex has its own anti-trailing-0 care :*/
+    if (ISNA(x.r) || ISNA(x.i))
+        return NA_STRING;
+    else {
+        int wr, dr, er, wi, di, ei;
+        formatComplex(&x, 1, &wr, &dr, &er, &wi, &di, &ei, 0);
+        /* EncodeComplex has its own anti-trailing-0 care */
 	return mkChar(EncodeComplex(x, wr, dr, er, wi, di, ei, OutDec));
+    }
 }
 
 /* Copy n elements from a numeric (raw, logical, integer, real, or complex) 

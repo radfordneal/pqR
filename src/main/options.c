@@ -597,7 +597,7 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 	    else if (streql(CHAR(namei), "OutDec")) {
 		if (TYPEOF(argi) != STRSXP || LENGTH(argi) != 1 ||
-		    strlen(CHAR(STRING_ELT(argi, 0))) !=1)
+		    strlen(CHAR(STRING_ELT(argi, 0))) != 1)
 		    error(_("invalid value for '%s'"), CHAR(namei));
 		OutDec = CHAR(STRING_ELT(argi, 0))[0];
 		SET_VECTOR_ELT(value, i, SetOption(tag, duplicate(argi)));

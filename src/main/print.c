@@ -363,9 +363,7 @@ static void PrintGenericVector(SEXP s, SEXP env)
 		break;
 	    case REALSXP:
 		if (LENGTH(tmp) == 1) {
-		    formatReal(REAL(tmp), 1, &w, &d, &e, 0);
-		    snprintf(pbuf, 115, "%s",
-			     EncodeReal(REAL(tmp)[0], w, d, e, OutDec));
+                    double_to_string (pbuf, REAL(tmp)[0]);
 		} else
 		    snprintf(pbuf, 115, "Numeric,%d", LENGTH(tmp));
 		break;

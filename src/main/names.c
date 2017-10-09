@@ -729,7 +729,9 @@ void InitNames()
     strcpy(CHAR_RW(NA_STRING), "NA");
     R_print.na_string = NA_STRING;
 
-    /* Some CHARSXP constants, protected by making them symbol printnames. */
+    /* Some CHARSXP constants, protected by making them symbol printnames
+       (most are used as printnames anyways, so little waste with this). */
+
     (void)installChar (R_factor_CHARSXP = mkChar("factor"));
     (void)installChar (R_ordered_CHARSXP = mkChar("ordered"));
     (void)installChar (R_matrix_CHARSXP = mkChar("matrix"));
@@ -740,6 +742,8 @@ void InitNames()
     (void)installChar (R_name_CHARSXP = mkChar("name"));
     (void)installChar (R_function_CHARSXP = mkChar("function"));
     (void)installChar (R_NativeSymbolInfo_CHARSXP = mkChar("NativeSymbolInfo"));
+    (void)installChar (R_TRUE_CHARSXP = mkChar("TRUE"));
+    (void)installChar (R_FALSE_CHARSXP = mkChar("FALSE"));
 
     /* Set up a set of globals so that a symbol table search can be
        avoided when matching something like dim or dimnames. */
