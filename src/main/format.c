@@ -73,21 +73,31 @@ void formatString(SEXP *x, int n, int *fieldwidth, int quote)
 
 void formatLogical(int *x, int n, int *fieldwidth)
 {
-    int i;
+    const int mxw = R_print.na_width <= 5 ? 5 : R_print.na_width;
+    int i, fw;
 
-    *fieldwidth = 1;
-    for(i = 0 ; i < n; i++) {
-	if (x[i] == NA_LOGICAL) {
-	    if(*fieldwidth < R_print.na_width)
-		*fieldwidth =  R_print.na_width;
-	} else if (x[i] != 0 && *fieldwidth < 4) {
-	    *fieldwidth = 4;
-	} else if (x[i] == 0 && *fieldwidth < 5 ) {
-	    *fieldwidth = 5;
-	    break;
-	    /* this is the widest it can be,  so stop */
-	}
+    fw = 1;
+    for (i = 0 ; i < n; i++) {
+        if (x[i] == NA_LOGICAL) {  /* NA */
+            if (fw < R_print.na_width) {
+                fw = R_print.na_width;
+                if (fw >= mxw)
+                    break;
+            }
+        }
+        else if (x[i] != 0) {      /* TRUE */
+            if (fw < 4)
+                fw = 4;
+        }
+        else {                     /* FALSE */
+            if (fw < 5 ) {
+                fw = 5;
+                if (fw >= mxw)
+                    break;
+            }
+        }
     }
+    *fieldwidth = fw;
 }
 
 void formatInteger(int *x, int n, int *fieldwidth)
