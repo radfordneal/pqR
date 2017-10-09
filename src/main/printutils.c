@@ -167,34 +167,24 @@ const char *EncodeEnvironment(SEXP x)
 const char *EncodeReal(double x, int w, int d, int e, char cdec)
 {
     static char buff[NB];
-    char *p, fmt[20];
+    char *p;
 
-    /* IEEE allows signed zeros (yuck!) */
-    if (x == 0.0) x = 0.0;
-    if (!R_FINITE(x)) {
-	if(ISNA(x)) snprintf(buff, NB, "%*s", w, CHAR(R_print.na_string));
-	else if(ISNAN(x)) snprintf(buff, NB, "%*s", w, "NaN");
-	else if(x > 0) snprintf(buff, NB, "%*s", w, "Inf");
-	else snprintf(buff, NB, "%*s", w, "-Inf");
+    if (x == 0.0) 
+        x = 0.0;  /* IEEE allows signed zeros (yuck!) */
+    else if (!R_FINITE(x)) {
+        snprintf(buff, NB, "%*s", w, 
+          ISNA(x)  ?  CHAR(R_print.na_string) :
+          ISNAN(x) ?  "NaN" :
+          x > 0    ?  "Inf" :  "-Inf");
+        buff[NB-1] = 0;
+        return buff;
     }
-    else if (e) {
-	if(d) {
-	    sprintf(fmt,"%%#%d.%de", w, d);
-	    snprintf(buff, NB, fmt, x);
-	}
-	else {
-	    sprintf(fmt,"%%%d.%de", w, d);
-	    snprintf(buff, NB, fmt, x);
-	}
-    }
-    else { /* e = 0 */
-	sprintf(fmt,"%%%d.%df", w, d);
-	snprintf(buff, NB, fmt, x);
-    }
-    buff[NB-1] = '\0';
 
-    if(cdec != '.')
-      for(p = buff; *p; p++) if(*p == '.') *p = cdec;
+    snprintf (buff, NB, (e==0 ? "%*.*f" : d==0 ? "%*.*e" : "%#*.*e"), w, d, x);
+    buff[NB-1] = 0;
+
+    if (cdec != '.')
+      for (p = buff; *p != 0; p++) if (*p == '.') *p = cdec;
 
     return buff;
 }
