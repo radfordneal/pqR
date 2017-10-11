@@ -254,6 +254,9 @@
         which uses the basic C function \code{strcmp} and so collates
         strings byte-by-byte in numerical order.
 
+  \item From R-3.2.0: New function \code{trimws()} for removing leading/trailing
+        whitespace.
+
   \item The \code{lengths} function has been ported from R Core releases
         which had NEWS items as below:
 
