@@ -1,0 +1,4 @@
+Various features from R Core releases.
+
+Added trimws from R-3.2.0, modified to slightly improve performance.
+
