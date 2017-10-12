@@ -729,7 +729,7 @@ static SEXP do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP pat, text, ind, ans;
     regex_t reg;
-    int i, j, n, nmatches = 0, ov[3], rc;
+    int i, j, n, ov[3], rc;
     int igcase_opt, value_opt, perl_opt, fixed_opt, useBytes, invert;
     const char *spat = NULL;
     pcre *re_pcre = NULL /* -Wall */;
@@ -771,7 +771,7 @@ static SEXP do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
     n = LENGTH(text);
     if (STRING_ELT(pat, 0) == NA_STRING) {
 	if (value_opt) {
-	    SEXP nmold = PROTECT(getAttrib(text, R_NamesSymbol));
+	    SEXP nmold = PROTECT(getNamesAttrib(text));
 	    PROTECT(ans = allocVector(STRSXP, n));
 	    for (i = 0; i < n; i++)  SET_STRING_ELT(ans, i, NA_STRING);
 	    if (!isNull(nmold))
@@ -864,10 +864,14 @@ static SEXP do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
 	if (rc) reg_report(rc, &reg, spat);
     }
 
-    PROTECT(ind = allocVector(LGLSXP, n));
+    int grepl = PRIMVAL(op);
+    R_len_t nmatches = 0;
+    int match;
+
+    PROTECT (ind = allocVector (grepl ? LGLSXP : INTSXP, n));
     vmax = VMAXGET();
     for (i = 0 ; i < n ; i++) {
-	LOGICAL(ind)[i] = 0;
+        match = 0;
 	if (STRING_ELT(text, i) != NA_STRING) {
 	    const char *s = NULL;
 	    if (useBytes)
@@ -882,30 +886,36 @@ static SEXP do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
 	    } else {
 		s = translateChar(STRING_ELT(text, i));
 		if (mbcslocale && !mbcsValid(s)) {
-		    warning(_("input string %d is invalid in this locale"), i+1);
+		    warning(_("input string %d is invalid in this locale"),i+1);
 		    continue;
 		}
 	    }
 
 	    if (fixed_opt)
-		LOGICAL(ind)[i] = fgrep_one(spat, s, useBytes, use_UTF8, NULL) >= 0;
+		match = fgrep_one(spat, s, useBytes, use_UTF8, NULL) >= 0;
 	    else if (perl_opt) {
 		if (pcre_exec(re_pcre, re_pe, s, strlen(s), 0, 0, ov, 0) >= 0)
-		    INTEGER(ind)[i] = 1;
+		    match = 1;
 	    } else {
 		if (!use_WC)
-		    rc = tre_regexecb(&reg, s, 0, NULL, 0);
+		    match = tre_regexecb(&reg, s, 0, NULL, 0) == 0;
 		else
-		    rc = tre_regwexec(&reg, wtransChar(STRING_ELT(text, i)),
-				      0, NULL, 0);
-		if (rc == 0) LOGICAL(ind)[i] = 1;
+		    match = tre_regwexec(&reg, wtransChar(STRING_ELT(text, i)),
+                                         0, NULL, 0) == 0;
 	    }
 	}
 	VMAXSET(vmax);
-	if (invert ^ LOGICAL(ind)[i]) nmatches++;
+        if (invert) 
+            match = !match;
+        if (grepl) 
+            LOGICAL(ind)[i] = match;
+	else if (match)
+            INTEGER(ind)[nmatches] = i+1;
+        nmatches += match;
     }
 
-    if (fixed_opt);
+    if (fixed_opt)
+        ;
     else if (perl_opt) {
 	if (re_pe) pcre_free(re_pe);
 	pcre_free(re_pcre);
@@ -913,32 +923,27 @@ static SEXP do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
     } else
 	tre_regfree(&reg);
 
-    if (PRIMVAL(op)) {/* grepl case */
-	UNPROTECT(1); /* ind */
-	return ind;
-    }
-
-    if (value_opt) {
-	SEXP nmold = PROTECT(getAttrib(text, R_NamesSymbol)), nm;
+    if (grepl)
+        ans = ind;
+    else if (value_opt) {
+	SEXP nmold, nm;
+        PROTECT(nmold = getNamesAttrib(text));
 	PROTECT(ans = allocVector(STRSXP, nmatches));
-	for (i = 0, j = 0; i < n ; i++)
-	    if (invert ^ LOGICAL(ind)[i])
-		SET_STRING_ELT(ans, j++, STRING_ELT(text, i));
-	/* copy across names and subset */
-	if (!isNull(nmold)) {
-	    nm = allocVector(STRSXP, nmatches);
-	    for (i = 0, j = 0; i < n ; i++)
-		if (invert ^ LOGICAL(ind)[i])
-		    SET_STRING_ELT(nm, j++, STRING_ELT(nmold, i));
-	    setAttrib(ans, R_NamesSymbol, nm);
-	}
+        if (nmold != R_NilValue) {
+            nm = allocVector(STRSXP, nmatches);
+            setAttrib (ans, R_NamesSymbol, nm);
+        }
+	for (i = 0; i < nmatches ; i++) {
+            R_len_t ix = INTEGER(ind)[i] - 1;
+            SET_STRING_ELT (ans, i, STRING_ELT(text,ix));
+            if (nmold != R_NilValue)
+                SET_STRING_ELT (nm, i, STRING_ELT(nmold,ix));
+        }
 	UNPROTECT(2); /* ans, nmold */
-    } else {
-	ans = allocVector(INTSXP, nmatches);
-	j = 0;
-	for (i = 0 ; i < n ; i++)
-	    if (invert ^ LOGICAL(ind)[i]) INTEGER(ans)[j++] = i + 1;
-    }
+    } 
+    else
+	ans = reallocVector (ind, nmatches, 1);
+
     UNPROTECT(1); /* ind */
     return ans;
 }
