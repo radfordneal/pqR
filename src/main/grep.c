@@ -1649,7 +1649,7 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	}
         else if (perl_opt) {
-	   int ncap, maxrep, ovector[30], eflag;
+	   int ncap, ovector[30], eflag;
 	   memset(ovector, 0, 30*sizeof(int)); /* zero for unknown patterns */
 	   ns = strlen(s);
            nns = ns + replen + 100;  /* wild initial guess at result length */
@@ -1719,7 +1719,6 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	   }	
         } 
         else if (!use_WC) {
-	    int maxrep;
 	    /* extended regexp in bytes */
 	    ns = strlen(s);
             nns = ns + replen + 100;  /* wild initial guess at result length */
@@ -1775,7 +1774,6 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	    /* extended regexp in wchar_t */
 	    const wchar_t *s = wtransChar(STRING_ELT(text, i));
 	    wchar_t *u, *cbuf;
-	    int maxrep;
 	    ns = wcslen(s);
             nns = ns + replen + 100;  /* wild initial guess at result length */
 	    cbuf = ALLOC_STRING_BUFF (nns * sizeof(wchar_t), &cbuff);
