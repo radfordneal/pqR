@@ -66,6 +66,11 @@ strsplit grep [g]sub [g]regexpr
 #include <wchar.h>
 #include <wctype.h>    /* for wctrans_t */
 
+#include "RBufferUtils.h"
+
+static R_StringBuffer cbuff = { NULL, 0, 4096 };
+
+
 /* As from TRE 0.8.0, tre.h replaces regex.h */
 #include <tre/tre.h>
 
@@ -1650,7 +1655,8 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
                         slen -= sst+patlen;
 		    } while((sst = fgrep_one_bytes(spat, ss, slen, useBytes, use_UTF8)) >= 0);
 		} else nr = 1;
-		cbuf = u = Calloc(ns + nr*(replen - patlen) + 1, char);
+		cbuf = ALLOC_STRING_BUFF (ns + nr*(replen-patlen) + 1, &cbuff);
+                u = cbuf;
 		*u = '\0';
                 slen = ns;
 		do {
@@ -1660,7 +1666,8 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
                     slen -= st+patlen;
 		    strncpy(u, srep, replen);
                     u += replen;
-		} while(global && (st = fgrep_one_bytes(spat, s, slen, useBytes, use_UTF8)) >= 0);
+		} while (global && 
+                    (st = fgrep_one_bytes(spat,s,slen,useBytes,use_UTF8)) >= 0);
 		strcpy(u, s);
 		if (useBytes)
 		    SET_STRING_ELT(ans, i, mkChar(cbuf));
@@ -1668,7 +1675,6 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 		    SET_STRING_ELT(ans, i, mkCharCE(cbuf, CE_UTF8));
 		else
 		    SET_STRING_ELT(ans, i, markKnown(cbuf, STRING_ELT(text, i)));
-		Free(cbuf);
 	    }
 	} else if (perl_opt) {
 	   int ncap, maxrep, ovector[30], eflag;
@@ -1684,7 +1690,8 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	       if (dnns > 10000) dnns = 2*ns + replen + 1000;
 	       nns = dnns;
 	   } else nns = ns + maxrep + 1000;
-	   u = cbuf = Calloc(nns, char);
+	   cbuf = ALLOC_STRING_BUFF (nns, &cbuff);
+           u = cbuf;
 	   offset = 0; nmatch = 0; eflag = 0; last_end = -1;
 	   /* ncap is one more than the number of capturing patterns */
 	   while ((ncap = pcre_exec(re_pcre, re_pe, s, ns, offset, eflag,
@@ -1718,7 +1725,7 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 		   char *tmp;
 		   if (nns > INT_MAX/2) error(_("result string is too long"));
 		   nns *= 2;
-		   tmp = Realloc(cbuf, nns, char);
+                   tmp = R_AllocStringBuffer (nns, &cbuff);
 		   u = tmp + (u - cbuf);
 		   cbuf = tmp;
 	       }
@@ -1734,7 +1741,7 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 		   char *tmp;
 		   if (nns > INT_MAX/2) error(_("result string is too long"));
 		   nns *= 2;
-		   tmp = Realloc(cbuf, nns, char);
+                   tmp = R_AllocStringBuffer (nns, &cbuff);
 		   u = tmp + (u - cbuf);
 		   cbuf = tmp;
 	       }
@@ -1747,7 +1754,6 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	       else
 		   SET_STRING_ELT(ans, i, markKnown(cbuf, STRING_ELT(text, i)));
 	   }	
-	   Free(cbuf);
        } else if (!use_WC) {
 	    int maxrep;
 	    /* extended regexp in bytes */
@@ -1762,7 +1768,8 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 		if (dnns > 10000) dnns = 2*ns + replen + 1000;
 		nns = dnns;
 	    } else nns = ns + maxrep + 1000;
-	    u = cbuf = Calloc(nns, char);
+	    cbuf = ALLOC_STRING_BUFF (nns, &cbuff);
+            u = cbuf;
 	    offset = 0; nmatch = 0; eflags = 0; last_end = -1;
 	    while (tre_regexecb(&reg, s+offset, 10, regmatch, eflags) == 0) {
 		/* printf("%s, %d %d\n", &s[offset],
@@ -1782,7 +1789,7 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 		    char *tmp;
 		    if (nns > INT_MAX/2) error(_("result string is too long"));
 		    nns *= 2;
-		    tmp = Realloc(cbuf, nns, char);
+		    tmp = R_AllocStringBuffer (nns, &cbuff);
 		    u = tmp + (u - cbuf);
 		    cbuf = tmp;
 		}
@@ -1798,7 +1805,7 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 		    char *tmp;
 		    if (nns > INT_MAX/2) error(_("result string is too long"));
 		    nns *= 2;
-		    tmp = Realloc(cbuf, nns, char);
+		    tmp = R_AllocStringBuffer (nns, &cbuff);
 		    u = tmp + (u - cbuf);
 		    cbuf = tmp;
 		}
@@ -1807,9 +1814,8 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 		if (useBytes)
 		    SET_STRING_ELT(ans, i, mkChar(cbuf));
 		else
-		    SET_STRING_ELT(ans, i, markKnown(cbuf, STRING_ELT(text, i)));
+		    SET_STRING_ELT(ans, i, markKnown(cbuf, STRING_ELT(text,i)));
 	    }
-	    Free(cbuf);
 	} else  {
 	    /* extended regexp in wchar_t */
 	    const wchar_t *s = wtransChar(STRING_ELT(text, i));
@@ -1825,7 +1831,8 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 		if (dnns > 10000) dnns = 2*ns + maxrep + 1000;
 		nns = dnns;
 	    } else nns = ns + maxrep + 1000;
-	    u = cbuf = Calloc(nns, wchar_t);
+	    cbuf = ALLOC_STRING_BUFF (nns * sizeof(wchar_t), &cbuff);
+            u = cbuf;
 	    offset = 0; nmatch = 0; eflags = 0; last_end = -1;
 	    while (tre_regwexec(&reg, s+offset, 10, regmatch, eflags) == 0) {
 		nmatch++;
@@ -1845,7 +1852,7 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 		       it is merely an integer overflow check */
 		    if (nns > INT_MAX/2) error(_("result string is too long"));
 		    nns *= 2;
-		    tmp = Realloc(cbuf, nns, wchar_t);
+		    tmp = R_AllocStringBuffer (nns * sizeof(wchar_t), &cbuff);
 		    u = tmp + (u - cbuf);
 		    cbuf = tmp;
 		}
@@ -1861,7 +1868,7 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 		    wchar_t *tmp;
 		    if (nns > INT_MAX/2) error(_("result string is too long"));
 		    nns *= 2;
-		    tmp = Realloc(cbuf, nns, wchar_t);
+                    tmp = R_AllocStringBuffer (nns * sizeof(wchar_t), &cbuff);
 		    u = tmp + (u - cbuf);
 		    cbuf = tmp;
 		}
@@ -1869,7 +1876,6 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 		*u = L'\0';
 		SET_STRING_ELT(ans, i, mkCharW(cbuf));
 	    }
-	    Free(cbuf);
 	}
 	VMAXSET(vmax);
     }
@@ -1883,6 +1889,7 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
     DUPLICATE_ATTRIB(ans, text);
     /* This copied the class, if any */
     UNPROTECT(1);
+    R_FreeStringBufferL(&cbuff);
     return ans;
 }
 

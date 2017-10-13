@@ -3129,7 +3129,9 @@ void do_write_cache()
 
 #include "RBufferUtils.h"
 
-/* Allocate at least blen+1 bytes, enough to hold a string of length blen. */
+/* Allocate at least blen+1 bytes, enough to hold a string of length blen. 
+   If called again with a different blen, without free in between, will 
+   reallocate with old data preserved. */
 
 attribute_hidden void *R_AllocStringBuffer(size_t blen, R_StringBuffer *buf)
 {
