@@ -164,9 +164,10 @@ void double_to_string (char *s, double x)
     int w, d, e;
     const char *p;
 
-    /* Handle integers quickly. */
+    /* Handle small integers quickly.  The size limit derives from the 
+       requirement that 100000 be converted to "1e+05". */
 
-    if (x <= INT_MAX && x >= -INT_MAX && (int)x == x) {
+    if (x < 100000 && x > -100000 && (int)x == x) {
         integer_to_string (s, (int)x);
         return;
     }
