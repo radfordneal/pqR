@@ -1343,21 +1343,6 @@ static char *string_adj(char *target, const char *orig, const char *repl,
     return t;
 }
 
-/* used for single-byte locales, and UTF-8 for perl = TRUE */
-static int count_subs(const char *repl)
-{
-    int i = 0;
-    const char *p = repl;
-    while (*p) {
-	if (*p == '\\') {
-	    if ('1' <= p[1] && p[1] <= '9') {i++; p += 2;}
-	    else if (p[1] == 0) p++; else p += 2;
-	}
-	else p++;
-    }
-    return i;
-}
-
 /* FIXME: use UCP for upper/lower conversion */
 static 
 char *pcre_string_adj(char *target, const char *orig, const char *repl,
@@ -1439,20 +1424,6 @@ static wchar_t *wstring_adj(wchar_t *target, const wchar_t *orig,
 	else *t++ = *p++;
     }
     return t;
-}
-
-static int wcount_subs(const wchar_t *repl)
-{
-    int i = 0;
-    const wchar_t *p = repl;
-    while (*p) {
-	if (*p == '\\') {
-	    if ('1' <= p[1] && p[1] <= '9') {i++; p += 2;}
-	    else if (p[1] == 0) p++; else p += 2;
-	}
-	else p++;
-    }
-    return i;
 }
 
 
@@ -1676,20 +1647,12 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 		else
 		    SET_STRING_ELT(ans, i, markKnown(cbuf, STRING_ELT(text, i)));
 	    }
-	} else if (perl_opt) {
+	}
+        else if (perl_opt) {
 	   int ncap, maxrep, ovector[30], eflag;
 	   memset(ovector, 0, 30*sizeof(int)); /* zero for unknown patterns */
 	   ns = strlen(s);
-	   /* worst possible scenario is to put a copy of the
-	      replacement after every character, unless there are
-	      backrefs */
-	   maxrep = replen + (ns-2) * count_subs(srep);
-	   if (global) {
-	       /* Integer overflow has been seen */
-	       double dnns = ns * (maxrep + 1.) + 1000;
-	       if (dnns > 10000) dnns = 2*ns + replen + 1000;
-	       nns = dnns;
-	   } else nns = ns + maxrep + 1000;
+           nns = ns + replen + 100;  /* wild initial guess at result length */
 	   cbuf = ALLOC_STRING_BUFF (nns, &cbuff);
            u = cbuf;
 	   offset = 0; nmatch = 0; eflag = 0; last_end = -1;
@@ -1754,20 +1717,12 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	       else
 		   SET_STRING_ELT(ans, i, markKnown(cbuf, STRING_ELT(text, i)));
 	   }	
-       } else if (!use_WC) {
+        } 
+        else if (!use_WC) {
 	    int maxrep;
 	    /* extended regexp in bytes */
-
 	    ns = strlen(s);
-	    /* worst possible scenario is to put a copy of the
-	       replacement after every character, unless there are
-	       backrefs */
-	    maxrep = replen + (ns-2) * count_subs(srep);
-	    if (global) {
-		double dnns = ns * (maxrep + 1.) + 1000;
-		if (dnns > 10000) dnns = 2*ns + replen + 1000;
-		nns = dnns;
-	    } else nns = ns + maxrep + 1000;
+            nns = ns + replen + 100;  /* wild initial guess at result length */
 	    cbuf = ALLOC_STRING_BUFF (nns, &cbuff);
             u = cbuf;
 	    offset = 0; nmatch = 0; eflags = 0; last_end = -1;
@@ -1821,16 +1776,8 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	    const wchar_t *s = wtransChar(STRING_ELT(text, i));
 	    wchar_t *u, *cbuf;
 	    int maxrep;
-
 	    ns = wcslen(s);
-	    maxrep = replen + (ns-2) * wcount_subs(wrep);
-	    if (global) {
-		/* worst possible scenario is to put a copy of the
-		   replacement after every character */
-		double dnns = ns * (maxrep + 1.) + 1000;
-		if (dnns > 10000) dnns = 2*ns + maxrep + 1000;
-		nns = dnns;
-	    } else nns = ns + maxrep + 1000;
+            nns = ns + replen + 100;  /* wild initial guess at result length */
 	    cbuf = ALLOC_STRING_BUFF (nns * sizeof(wchar_t), &cbuff);
             u = cbuf;
 	    offset = 0; nmatch = 0; eflags = 0; last_end = -1;
