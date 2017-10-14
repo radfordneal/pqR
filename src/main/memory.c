@@ -3133,23 +3133,25 @@ void do_write_cache()
    If called again with a different blen, without free in between, will 
    reallocate with old data preserved. */
 
-attribute_hidden void *R_AllocStringBuffer(size_t blen, R_StringBuffer *buf)
+attribute_hidden char *R_AllocStringBuffer (size_t blen, R_StringBuffer *buf)
 {
-    size_t blen1, bsize = buf->defaultSize;
+    size_t bsize = buf->defaultSize;
+    size_t blen1;
 
     /* for backwards compatibility, probably no longer needed */
-    if(blen == (size_t)-1) {
+    if (blen == (size_t)-1) {
 	warning("R_AllocStringBuffer(-1) used: please report");
 	R_FreeStringBufferL(buf);
 	return NULL;
     }
 
-    if (blen < buf->bufsize) return buf->data;
+    if (blen < buf->bufsize)
+        return buf->data;
     blen1 = blen = (blen + 1);
     blen = (blen / bsize) * bsize;
     if (blen < blen1) blen += bsize;
 
-    if(buf->data == NULL) {
+    if (buf->data == NULL) {
 	buf->data = (char *) malloc(blen);
         if (buf->data) buf->data[0] = 0;
     }
@@ -3167,8 +3169,7 @@ attribute_hidden void *R_AllocStringBuffer(size_t blen, R_StringBuffer *buf)
     return buf->data;
 }
 
-void attribute_hidden
-R_FreeStringBuffer(R_StringBuffer *buf)
+void attribute_hidden R_FreeStringBuffer(R_StringBuffer *buf)
 {
     if (buf->data != NULL) {
 	free(buf->data);
@@ -3177,8 +3178,7 @@ R_FreeStringBuffer(R_StringBuffer *buf)
     }
 }
 
-void attribute_hidden
-R_FreeStringBufferL(R_StringBuffer *buf)
+void attribute_hidden R_FreeStringBufferL(R_StringBuffer *buf)
 {
     if (buf->bufsize > buf->defaultSize) {
 	free(buf->data);

@@ -1333,8 +1333,7 @@ static SEXP do_grepraw(SEXP call, SEXP op, SEXP args, SEXP env)
 
 #define STORE_WCHAR(c,t) do { \
     size_t u = (char*)(t) - cbuff.data; \
-    if (u >= cbuff.bufsize) \
-REprintf("realloc %d\n",2*cbuff.bufsize-1), \
+    if (u > cbuff.bufsize - sizeof(wchar_t)) \
         (t) = (wchar_t*)(R_AllocStringBuffer (2*cbuff.bufsize-1, &cbuff) + u); \
     *(t)++ = (c); \
 } while (0)
@@ -1485,7 +1484,6 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
     regmatch_t regmatch[10];
     int i, j, n, ns, nns, nmatch, offset, rc;
     int global, igcase_opt, perl_opt, fixed_opt, useBytes, eflags, last_end;
-    char *t, *cbuf;
     const char *spat = NULL, *srep = NULL, *s = NULL;
     int patlen = 0, replen = 0;
     Rboolean use_UTF8 = FALSE, use_WC = FALSE;
@@ -1493,6 +1491,7 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
     pcre *re_pcre = NULL;
     pcre_extra *re_pe  = NULL;
     const unsigned char *tables = NULL;
+    char *t;
 
     checkArity(op, args);
 
@@ -1683,8 +1682,7 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
                         slen -= sst+patlen;
                     } while((sst = fgrep_one_bytes(spat, ss, slen, useBytes, use_UTF8)) >= 0);
                 } else nr = 1;
-                cbuf = ALLOC_STRING_BUFF (ns + nr*(replen-patlen) + 1, &cbuff);
-                t = cbuf;
+                t = ALLOC_STRING_BUFF (ns + nr*(replen-patlen) + 1, &cbuff);
                 *t = '\0';
                 slen = ns;
                 do {
@@ -1698,19 +1696,19 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
                     (st = fgrep_one_bytes(spat,s,slen,useBytes,use_UTF8)) >= 0);
                 strcpy (t, s);
                 if (useBytes)
-                    SET_STRING_ELT(ans, i, mkChar(cbuf));
+                    SET_STRING_ELT (ans, i, mkChar(cbuff.data));
                 else if (use_UTF8)
-                    SET_STRING_ELT(ans, i, mkCharCE(cbuf, CE_UTF8));
+                    SET_STRING_ELT (ans, i, mkCharCE(cbuff.data, CE_UTF8));
                 else
-                    SET_STRING_ELT(ans, i, markKnown(cbuf, STRING_ELT(text, i)));
+                    SET_STRING_ELT (ans, i, 
+                                    markKnown(cbuff.data, STRING_ELT(text, i)));
             }
         }
         else if (perl_opt) {
             int ncap, ovector[30], eflag;
             memset(ovector, 0, 30*sizeof(int)); /* zero for unknown patterns */
             ns = strlen(s);
-            cbuf = ALLOC_STRING_BUFF (cbuff.defaultSize-1, &cbuff);
-            t = cbuf;
+            t = ALLOC_STRING_BUFF (cbuff.defaultSize-1, &cbuff);
             offset = 0; nmatch = 0; eflag = 0; last_end = -1;
             /* ncap is one more than the number of capturing patterns */
             while ((ncap = pcre_exec(re_pcre, re_pe, s, ns, offset, eflag,
@@ -1756,24 +1754,24 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
                     STORE_CHAR (s[j], t);
                 } while (s[j++] != 0);
                 if (useBytes)
-                    SET_STRING_ELT(ans, i, mkChar(cbuf));
+                    SET_STRING_ELT(ans, i, mkChar(cbuff.data));
                 else if (use_UTF8)
-                    SET_STRING_ELT(ans, i, mkCharCE(cbuf, CE_UTF8));
+                    SET_STRING_ELT (ans, i, mkCharCE(cbuff.data, CE_UTF8));
                 else
-                    SET_STRING_ELT(ans, i, markKnown(cbuf, STRING_ELT(text,i)));
+                    SET_STRING_ELT (ans, i, 
+                                    markKnown(cbuff.data, STRING_ELT(text,i)));
             }        
         } 
         else if (!use_WC) {
             /* extended regexp in bytes */
             ns = strlen(s);
-            cbuf = ALLOC_STRING_BUFF (cbuff.defaultSize-1, &cbuff);
-            t = cbuf;
+            t = ALLOC_STRING_BUFF (cbuff.defaultSize-1, &cbuff);
             offset = 0; nmatch = 0; eflags = 0; last_end = -1;
             while (tre_regexecb(&reg, s+offset, 10, regmatch, eflags) == 0) {
                 /* printf("%s, %d %d\n", &s[offset],
                    regmatch[0].rm_so, regmatch[0].rm_eo); */
                 nmatch++;
-                for (j = 0; j < regmatch[0].rm_so ; j++)
+                for (j = 0; j < regmatch[0].rm_so; j++)
                     STORE_CHAR (s[offset+j], t);
                 if (offset+regmatch[0].rm_eo > last_end) {
                     t = string_adj (t, s+offset, srep, regmatch);
@@ -1797,19 +1795,18 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
                     STORE_CHAR (s[j], t);
                 } while (s[j++] != 0);
                 if (useBytes)
-                    SET_STRING_ELT(ans, i, mkChar(cbuf));
+                    SET_STRING_ELT (ans, i, mkChar(cbuff.data));
                 else
-                    SET_STRING_ELT(ans, i, markKnown(cbuf, STRING_ELT(text,i)));
+                    SET_STRING_ELT (ans, i, 
+                                    markKnown (cbuff.data, STRING_ELT(text,i)));
             }
         } 
         else  {
-REprintf("WCHAR FOR GSUB\n");
             /* extended regexp in wchar_t */
             const wchar_t *s = wtransChar (STRING_ELT (text,i));
-            wchar_t *t, *cbuf;
+            wchar_t *t;
             ns = wcslen(s);
-            cbuf = ALLOC_STRING_BUFF (cbuff.defaultSize-1, &cbuff);
-            t = cbuf;
+            t = (wchar_t *) ALLOC_STRING_BUFF (cbuff.defaultSize-1, &cbuff);
             offset = 0; nmatch = 0; eflags = 0; last_end = -1;
             while (tre_regwexec(&reg, s+offset, 10, regmatch, eflags) == 0) {
                 nmatch++;
@@ -1836,7 +1833,7 @@ REprintf("WCHAR FOR GSUB\n");
                 do {
                     STORE_WCHAR (s[j], t);
                 } while (s[j++] != 0);
-                SET_STRING_ELT(ans, i, mkCharW(cbuf));
+                SET_STRING_ELT(ans, i, mkCharW((wchar_t*)cbuff.data));
             }
         }
         VMAXSET(vmax);

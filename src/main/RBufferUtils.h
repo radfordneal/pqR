@@ -35,7 +35,7 @@ typedef struct {
 
 /* code in ./memory.c : */
 /* Note that R_StringBuffer *buf needs to be initialized before call */
-void *R_AllocStringBuffer(size_t blen, R_StringBuffer *buf);
+char *R_AllocStringBuffer(size_t blen, R_StringBuffer *buf);
 void R_FreeStringBuffer(R_StringBuffer *buf);
 void R_FreeStringBufferL(R_StringBuffer *buf);
 
