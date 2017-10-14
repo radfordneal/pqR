@@ -3147,7 +3147,7 @@ attribute_hidden void *R_AllocStringBuffer(size_t blen, R_StringBuffer *buf)
     if (blen < buf->bufsize) return buf->data;
     blen1 = blen = (blen + 1);
     blen = (blen / bsize) * bsize;
-    if(blen < blen1) blen += bsize;
+    if (blen < blen1) blen += bsize;
 
     if(buf->data == NULL) {
 	buf->data = (char *) malloc(blen);
