@@ -690,11 +690,19 @@ static int fgrep_one (const char *pat, int plen,
         }
     }
     else {
-        for (i = 0; i <= lendiff; i++)
-            if (memcmp(pat, target+i, plen) == 0) {
-                if (next != NULL) *next = i + plen;
-                return i;
+#       if 1
+            char *p = strstr (target, pat);
+            if (p != NULL) {
+                if (next != NULL) *next = p - target + plen;
+                return p - target;
             }
+#       else
+            for (i = 0; i <= lendiff; i++)
+                if (memcmp(pat, target+i, plen) == 0) {
+                    if (next != NULL) *next = i + plen;
+                    return i;
+                }
+#       endif
     }
     return -1;
 }
@@ -752,11 +760,17 @@ static int fgrep_one_bytes (const char *pat, int plen,
         }
     }
     else {
-        for (i = 0; i <= lendiff; i++) {
-            if (memcmp(pat, target+i, plen) == 0) {
-                return i;
+#       if 1
+            char *p = strstr (target, pat);
+            if (p != NULL) {
+                return p - target;
             }
-        }
+#       else
+            for (i = 0; i <= lendiff; i++)
+                if (memcmp(pat, target+i, plen) == 0) {
+                    return i;
+                }
+#       endif
     }
     return -1;
 }
@@ -814,7 +828,8 @@ static SEXP do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
             if (!isNull(nmold))
                 setAttrib(ans, R_NamesSymbol, duplicate(nmold));
             UNPROTECT(2); /* ans, nmold */
-        } else {
+        }
+        else {
             ans = allocVector(INTSXP, n);
             for (i = 0; i < n; i++)  INTEGER(ans)[i] = NA_INTEGER;
         }
@@ -823,36 +838,39 @@ static SEXP do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (!useBytes) {
         Rboolean onlyASCII = IS_ASCII(STRING_ELT(pat, 0));
-        if (onlyASCII)
+        if (onlyASCII) {
             for (i = 0; i < n; i++)
                 if (!IS_ASCII(STRING_ELT(text, i))) {
                     onlyASCII = FALSE;
                     break;
                 }
+        }
         useBytes = onlyASCII;
     }
     if (!useBytes) {
         Rboolean haveBytes = IS_BYTES(STRING_ELT(pat, 0));
-        if (!haveBytes)
+        if (!haveBytes) {
             for (i = 0; i < n; i++)
                 if (IS_BYTES(STRING_ELT(text, i))) {
                     haveBytes = TRUE;
                     break;
                 }
+        }
         if(haveBytes) {
             useBytes = TRUE;
         }
     }
     if (!useBytes) {
         /* As from R 2.10.0 we use UTF-8 mode in PCRE in all MBCS locales */
-        if (perl_opt && mbcslocale) use_UTF8 = TRUE;
-        else if (IS_UTF8(STRING_ELT(pat, 0))) use_UTF8 = TRUE;
-        if (!use_UTF8)
+        if (perl_opt && mbcslocale || IS_UTF8(STRING_ELT(pat, 0)))
+            use_UTF8 = TRUE;
+        else if (!use_UTF8) {
             for (i = 0; i < n; i++)
                 if (IS_UTF8(STRING_ELT(text, i))) {
                     use_UTF8 = TRUE;
                     break;
                 }
+        }
     }
 
     if (!fixed_opt && !perl_opt) {
