@@ -639,7 +639,7 @@ static SEXP do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
    *next (if not NULL) is set to the index (from 1) of the character
    following the match.*/
 
-static int fgrep_one (const char *pat, int plen, 
+static int fgrep_one (const char *pat, int plen,
                       const char *target, int tlen,
                       Rboolean useBytes, Rboolean use_UTF8, int *next)
 {
@@ -671,8 +671,9 @@ static int fgrep_one (const char *pat, int plen,
                 if (next != NULL) *next = ib + plen;
                 return i;
             }
-            used = Mbrtowc(NULL,  target+ib, MB_CUR_MAX, &mb_st);
-            if (used <= 0) break;
+            used = Mbrtowc(NULL, target+ib, MB_CUR_MAX, &mb_st);
+            if (used <= 0)
+                break;
             ib += used;
         }
     }
@@ -687,12 +688,14 @@ static int fgrep_one (const char *pat, int plen,
             if (used <= 0) break;
             ib += used;
         }
-    } else
+    }
+    else {
         for (i = 0; i <= lendiff; i++)
             if (memcmp(pat, target+i, plen) == 0) {
                 if (next != NULL) *next = i + plen;
                 return i;
             }
+    }
     return -1;
 }
 
@@ -706,14 +709,16 @@ static int fgrep_one_bytes (const char *pat, int plen,
 {
     int i;
 
-    if (plen == 0)
+    if (plen == 0) {
         return 0;
+    }
 
     if (plen == 1 && (useBytes || !(mbcslocale || use_UTF8))) {
         /* a single byte is a common case */
         for (i = 0; i < tlen; i++) {
-            if (target[i] == pat[0])
+            if (target[i] == pat[0]) {
                 return i;
+            }
         }
         return -1;
     }
@@ -725,8 +730,9 @@ static int fgrep_one_bytes (const char *pat, int plen,
         int ib, used;
         mbs_init(&mb_st);
         for (ib = 0, i = 0; ib <= lendiff; i++) {
-            if (memcmp(pat, target+ib, plen) == 0)
+            if (memcmp(pat, target+ib, plen) == 0) {
                 return ib;
+            }
             used = Mbrtowc(NULL, target+ib, MB_CUR_MAX, &mb_st);
             if (used <= 0)
                 break;
@@ -736,18 +742,20 @@ static int fgrep_one_bytes (const char *pat, int plen,
     else if (!useBytes && use_UTF8) { /* not really needed - ??? why? */
         int ib, used;
         for (ib = 0, i = 0; ib <= lendiff; i++) {
-            if (memcmp(pat, target+ib, plen) == 0)
+            if (memcmp(pat, target+ib, plen) == 0) {
                 return ib;
+            }
             used = utf8clen(target[ib]);
-            if (used <= 0) 
+            if (used <= 0)
                 break;
             ib += used;
         }
     }
     else {
         for (i = 0; i <= lendiff; i++) {
-            if (memcmp(pat, target+i, plen) == 0)
+            if (memcmp(pat, target+i, plen) == 0) {
                 return i;
+            }
         }
     }
     return -1;
