@@ -696,37 +696,52 @@ static int fgrep_one(const char *pat, const char *target,
 static int fgrep_one_bytes(const char *pat, const char *target, int len,
 			   Rboolean useBytes, Rboolean use_UTF8)
 {
-    int i = -1, plen=strlen(pat);
+    int plen=strlen(pat);
     const char *p;
+    int i;
 
-    if (plen == 0) return 0;
+    if (plen == 0)
+        return 0;
+
     if (plen == 1 && (useBytes || !(mbcslocale || use_UTF8))) {
-	/* a single byte is a common case */
-	for (i = 0, p = target; *p; p++, i++)
-	    if (*p == pat[0]) return i;
-	return -1;
+        /* a single byte is a common case */
+        for (i = 0, p = target; *p; p++, i++) {
+            if (*p == pat[0])
+                return i;
+        }
+        return -1;
     }
+
     if (!useBytes && mbcslocale) { /* skip along by chars */
-	mbstate_t mb_st;
-	int ib, used;
-	mbs_init(&mb_st);
-	for (ib = 0, i = 0; ib <= len-plen; i++) {
-	    if (strncmp(pat, target+ib, plen) == 0) return ib;
-	    used = Mbrtowc(NULL, target+ib, MB_CUR_MAX, &mb_st);
-	    if (used <= 0) break;
-	    ib += used;
-	}
-    } else if (!useBytes && use_UTF8) { /* not really needed */
-	int ib, used;
-	for (ib = 0, i = 0; ib <= len-plen; i++) {
-	    if (strncmp(pat, target+ib, plen) == 0) return ib;
-	    used = utf8clen(target[ib]);
-	    if (used <= 0) break;
-	    ib += used;
-	}
-    } else
-	for (i = 0; i <= len-plen; i++)
-	    if (strncmp(pat, target+i, plen) == 0) return i;
+        mbstate_t mb_st;
+        int ib, used;
+        mbs_init(&mb_st);
+        for (ib = 0, i = 0; ib <= len-plen; i++) {
+            if (strncmp(pat, target+ib, plen) == 0)
+                return ib;
+            used = Mbrtowc(NULL, target+ib, MB_CUR_MAX, &mb_st);
+            if (used <= 0)
+                break;
+            ib += used;
+        }
+    }
+    else if (!useBytes && use_UTF8) { /* not really needed - ??? why? */
+        int ib, used;
+        for (ib = 0, i = 0; ib <= len-plen; i++) {
+            if (strncmp(pat, target+ib, plen) == 0)
+                return ib;
+            used = utf8clen(target[ib]);
+            if (used <= 0) 
+                break;
+            ib += used;
+        }
+    }
+    else {
+        for (i = 0; i <= len-plen; i++) {
+            if (strncmp(pat, target+i, plen) == 0)
+                return i;
+        }
+    }
     return -1;
 }
 
@@ -881,7 +896,8 @@ static SEXP do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
 	    const char *s = NULL;
 	    if (useBytes)
 		s = CHAR(STRING_ELT(text, i));
-	    else if (use_WC) ;
+	    else if (use_WC) 
+                ;
 	    else if (use_UTF8) {
 		s = translateCharUTF8(STRING_ELT(text, i));
 		if (!utf8Valid(s)) {
@@ -901,7 +917,8 @@ static SEXP do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
 	    else if (perl_opt) {
 		if (pcre_exec(re_pcre, re_pe, s, strlen(s), 0, 0, ov, 0) >= 0)
 		    match = 1;
-	    } else {
+	    } 
+            else {
 		if (!use_WC)
 		    match = tre_regexecb(&reg, s, 0, NULL, 0) == 0;
 		else
