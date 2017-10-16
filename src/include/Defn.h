@@ -1527,6 +1527,7 @@ int Rf_char_hash(const char *);
 int Rf_char_hash_len(const char *, int len);
 int Rf_char_hash_more(unsigned, const char *, int);
 SEXP Rf_mkCharMulti (const char **, const int *, unsigned, cetype_t);
+SEXP Rf_mkCharRep (const char *, int, int, cetype_t);
 FILE* R_OpenLibraryFile(const char *);
 SEXP R_Primitive(const char *);
 void R_RestoreGlobalEnv(void);

@@ -257,6 +257,10 @@
   \item From R-3.2.0: New function \code{trimws()} for removing leading/trailing
         whitespace.  The pqR version is modified to slightly improve speed.
 
+  \item From R-3.3.0: New function \code{strrep()} for repeating the elements
+        of a character vector.  The pqR version has a significantly faster
+        implementation.
+
   \item The \code{lengths} function has been ported from R Core releases
         which had NEWS items as below:
 

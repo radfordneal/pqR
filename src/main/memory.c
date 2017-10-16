@@ -2790,10 +2790,10 @@ static void add_char_to_cache (SEXP val)
     }
 }
 
-/* mkCharLenCE - make a character (CHARSXP) variable and set its
+/* mkCharLenCE - make a character (CHARSXP) object and set its
    encoding bit.  If a CHARSXP with the same string already exists in
    the global CHARSXP cache, R_StringHash, it is returned.  Otherwise,
-   a new CHARSXP is created, added to the cache and then returned. 
+   a new CHARSXP is created, added to the cache and then returned.
 
    Note:  'name' has the specified length, but may not be null-terminated.
 
@@ -2890,7 +2890,7 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
     return val;
 }
 
-/* mkCharMulti - make a character (CHARSXP) variable from multiple 
+/* mkCharMulti - make a character (CHARSXP) object from multiple 
    strings (not necessarily null-terminated) with specified lengths. 
    The end of the set of strings is marked by names[i] being NULL.
    If non-zero, first_hash is the hash of the first string.  The
@@ -2985,6 +2985,117 @@ SEXP attribute_hidden Rf_mkCharMulti (const char **strings, const int *lengths,
     }
     *q = 0;
     
+    switch(enc) {
+    case 0:
+        break;          /* don't set encoding */
+    case CE_UTF8:
+        SET_UTF8(val);
+        break;
+    case CE_LATIN1:
+        SET_LATIN1(val);
+        break;
+    case CE_BYTES:
+        SET_BYTES(val);
+        break;
+    default:
+        error("unknown encoding mask: %d", enc);
+    }
+    if (is_ascii) SET_ASCII(val);
+
+    CHAR_HASH(val) = full_hash;
+    add_char_to_cache(val);
+
+    return val;
+}
+
+/* mkCharRep - make a character (CHARSXP) object from repetitions
+   of a string (not necessarily null-terminated) with specified length. 
+   The encoding to use is also specified. */
+
+SEXP attribute_hidden Rf_mkCharRep (const char *string, int len, int rep, 
+                                    cetype_t enc)
+{
+    int i, j;
+
+    if ((uint64_t)len * rep > INT_MAX)
+        error("R character strings are limited to 2^31-1 bytes");
+
+    switch(enc){
+    case CE_NATIVE:
+    case CE_UTF8:
+    case CE_LATIN1:
+    case CE_BYTES:
+    case CE_SYMBOL:
+    case CE_ANY:
+	break;
+    default:
+	error(_("unknown encoding: %d"), enc);
+    }
+
+    int is_ascii = TRUE;
+    char or = 0;
+    for (j = 0; j < len; j++)
+        or |= string[j];
+    if ((or >> 7) != 0)
+        is_ascii = FALSE;
+
+    int need_enc;
+    if (enc && is_ascii) enc = CE_NATIVE;
+    switch(enc) {
+    case CE_UTF8: need_enc = UTF8_MASK; break;
+    case CE_LATIN1: need_enc = LATIN1_MASK; break;
+    case CE_BYTES: need_enc = BYTES_MASK; break;
+    default: need_enc = 0;
+    }
+
+    /* Find the hash of the repeated string.  This could be done
+       faster by exploiting the details of the hash algorithm, but 
+       not for now... */
+
+    unsigned int full_hash;
+    if (rep == 0)
+        full_hash = Rf_char_hash("");
+    else
+        full_hash = Rf_char_hash_len (string, len);
+    for (i = 1; i < rep; i++)
+        full_hash = Rf_char_hash_more (full_hash, string, len);
+
+    unsigned int hashcode = full_hash & char_hash_mask;
+
+    int lenrep = len * rep;
+    SEXP val;
+
+    /* Search for a cached value */
+
+    for (val = VECTOR_ELT(R_StringHash, hashcode); 
+         val != R_NilValue; 
+         val = ATTRIB_W(val)) {
+	if (need_enc == (ENC_KNOWN(val) | IS_BYTES(val))) {
+            if (full_hash == CHAR_HASH(val) && LENGTH(val) == lenrep) {
+                const char *q = CHAR(val);
+                for (i = 0; i < rep; i++) {
+                    if (memcmp(q,string,len) != 0)
+                        goto nxt;
+                    q += len;
+                }
+                return val;
+            }
+	}
+      nxt: ;
+    }
+
+    /* no cached value; need to allocate one and add to the cache */
+
+    val = allocCharsxp(lenrep);
+    char *q;
+
+    q = CHAR_RW(val);
+    for (i = 0; i < rep; i++) {
+        memcpy(q,string,len);
+        q += len;
+    }
+    *q = 0;
+
     switch(enc) {
     case 0:
         break;          /* don't set encoding */

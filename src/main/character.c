@@ -1374,6 +1374,58 @@ static SEXP do_strtoi(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
+/* From R-3.3.0 / R-3.4.2, with substantial modifications for pqR. */
+
+SEXP attribute_hidden do_strrep(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    SEXP d, s, x, n, el;
+    R_xlen_t is, ix, in, ns, nx, nn;
+    const char *xi;
+    int j, ni, nc;
+    const char *cbuf;
+    char *buf;
+
+    checkArity(op, args);
+
+    x = CAR(args); args = CDR(args);
+    n = CAR(args);
+
+    nx = XLENGTH(x);
+    nn = XLENGTH(n);
+    if((nx == 0) || (nn == 0))
+        return allocVector(STRSXP, 0);
+
+    ns = (nx > nn) ? nx : nn;
+
+    PROTECT(s = allocVector(STRSXP, ns));
+
+    ix = in = 0;
+    for (is = 0; is < ns; is++) {
+        el = STRING_ELT(x, ix);
+        ni = INTEGER(n)[in];
+        if (el == NA_STRING || ni == NA_INTEGER) {
+            SET_STRING_ELT(s, is, NA_STRING);
+        }
+        else {
+            if (ni < 0)
+                error(_("invalid '%s' value"), "times");
+            xi = CHAR(el);
+            nc = (int) strlen(xi);
+            SET_STRING_ELT (s, is, Rf_mkCharRep (xi, nc, ni, getCharCE(el)));
+        }
+        ix = ++ix == nx ? 0 : ix;
+        in = ++in == nn ? 0 : in;
+    }
+
+    /* Copy names if not recycled. */
+
+    if (ns == nx && (d = getAttrib(x,R_NamesSymbol)) != R_NilValue)
+        setAttrib(s, R_NamesSymbol, d);
+
+    UNPROTECT(1);
+    return s;
+}
+
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
 
 attribute_hidden FUNTAB R_FunTab_character[] =
@@ -1391,6 +1443,7 @@ attribute_hidden FUNTAB R_FunTab_character[] =
 {"chartr",	do_chartr,	1,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"strtrim",	do_strtrim,	0,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"strtoi",	do_strtoi,	0,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"strrep",	do_strrep,	0,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
