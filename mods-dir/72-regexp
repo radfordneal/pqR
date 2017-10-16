@@ -1,1 +1,1 @@
-Speed improvements to grep, sub, and gsub.
+Speed improvements to grep, grepl, sub, and gsub.
