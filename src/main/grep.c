@@ -811,9 +811,9 @@ static SEXP do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
         perl_opt = 0;
     }
 
-    if (!isString(pat) || length(pat) < 1)
+    if (!isString(pat) || LENGTH(pat) < 1)
         error(_("invalid '%s' argument"), "pattern");
-    if (length(pat) > 1)
+    if (LENGTH(pat) > 1)
         warning(_("argument '%s' has length > 1 and only the first element will be used"), "pattern");
 
     if (!isString(text))
@@ -1586,13 +1586,13 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
         perl_opt = 0;
     }
 
-    if (!isString(pat) || length(pat) < 1)
+    if (!isString(pat) || LENGTH(pat) < 1)
         error(_("invalid '%s' argument"), "pattern");
-    if (length(pat) > 1)
+    if (LENGTH(pat) > 1)
         warning(_("argument '%s' has length > 1 and only the first element will be used"), "pattern");
-    if (!isString(rep) || length(rep) < 1)
+    if (!isString(rep) || LENGTH(rep) < 1)
         error(_("invalid '%s' argument"), "replacement");
-    if (length(rep) > 1)
+    if (LENGTH(rep) > 1)
         warning(_("argument '%s' has length > 1 and only the first element will be used"), "replacement");
 
     if (!isString(text))
@@ -2376,9 +2376,9 @@ static SEXP do_regexpr(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     /* Note that excluding NAs differs from grep/sub */
-    if (!isString(pat) || length(pat) < 1 || STRING_ELT(pat, 0) == NA_STRING)
+    if (!isString(pat) || LENGTH(pat) < 1 || STRING_ELT(pat, 0) == NA_STRING)
 	error(_("invalid '%s' argument"), "pattern");
-    if (length(pat) > 1)
+    if (LENGTH(pat) > 1)
 	warning(_("argument '%s' has length > 1 and only the first element will be used"), "pattern");
 
     if (!isString(text))
@@ -2673,11 +2673,9 @@ static SEXP do_regexec(SEXP call, SEXP op, SEXP args, SEXP env)
     if(opt_fixed) cflags |= REG_LITERAL;
     if(opt_icase) cflags |= REG_ICASE;
 
-    if(!isString(pat) ||
-       (length(pat) < 1) ||
-       (STRING_ELT(pat, 0) == NA_STRING))
+    if (!isString(pat) || LENGTH(pat) < 1 || STRING_ELT(pat,0) == NA_STRING)
 	error(_("invalid '%s' argument"), "pattern");
-    if(length(pat) > 1)
+    if (LENGTH(pat) > 1)
 	warning(_("argument '%s' has length > 1 and only the first element will be used"), "pattern");
     
     if(!isString(vec))
