@@ -1711,66 +1711,80 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
     const void *vmax = VMAXGET();
 
     for (i = 0 ; i < n ; i++) {
+
+        SEXP text_elt = STRING_ELT(text,i);
+        SEXP elt;
+
         /* NA pattern was handled above */
-        if (STRING_ELT(text,i) == NA_STRING) {
+        if (text_elt == NA_STRING) {
             SET_STRING_ELT(ans, i, NA_STRING);
             continue;
         }
 
         if (useBytes)
-            s = CHAR(STRING_ELT(text, i));
+            s = CHAR(text_elt);
         else if (use_WC) 
             ;
         else if (use_UTF8) {
-            s = translateCharUTF8(STRING_ELT(text, i));
+            s = translateCharUTF8(text_elt);
             if (!utf8Valid(s)) error(("input string %d is invalid UTF-8"), i+1);
         } 
         else {
-            s = translateChar(STRING_ELT(text, i));
+            s = translateChar(text_elt);
             if (mbcslocale && !mbcsValid(s))
                 error(("input string %d is invalid in this locale"), i+1);
         }
 
         if (fixed_opt) {
-            int st, nr, slen = strlen(s);
-            ns = slen;
-            st = fgrep_one_bytes (spat, spatlen, s, ns, useBytes, use_UTF8);
+            int slen = strlen(s);
+            int st;
+            st = fgrep_one_bytes (spat, spatlen, s, slen, useBytes, use_UTF8);
             if (st < 0)
-                SET_STRING_ELT(ans, i, STRING_ELT(text, i));
-            else if (STRING_ELT(rep, 0) == NA_STRING)
-                SET_STRING_ELT(ans, i, NA_STRING);
+                elt = text_elt;
+            else if (STRING_ELT(rep,0) == NA_STRING)
+                elt = NA_STRING;
+            else if (!global) {
+                int ienc = CE_NATIVE;
+                if (useBytes)
+                    ;
+                else if (use_UTF8)
+                    ienc = CE_UTF8;
+                else if (ENC_KNOWN(text_elt)) {
+                    if (known_to_be_latin1) ienc = CE_LATIN1;
+                    if (known_to_be_utf8) ienc = CE_UTF8;
+                }
+                const char *strings[4] = 
+                                 { s,  srep,   s + st + patlen,   NULL };
+                int lengths[3] = { st, replen, slen - st - patlen };
+                elt = Rf_mkCharMulti (strings, lengths, 0, ienc);
+            }
             else {
-                if (global) { /* need to find max number of matches */
-                    const char *ss= s;
-                    int sst = st;
-                    nr = 0;
-                    do {
-                        nr++;
-                        ss += sst+patlen;
-                        slen -= sst+patlen;
-                    } while ((sst = fgrep_one_bytes (spat, spatlen, ss, slen,
-                                      useBytes, use_UTF8)) >= 0);
-                } else nr = 1;
-                t = ALLOC_STRING_BUFF (ns + nr*(replen-patlen) + 1, &cbuff);
-                *t = '\0';
-                slen = ns;
+                t = ALLOC_STRING_BUFF (cbuff.defaultSize-1, &cbuff);
                 do {
-                    strncpy (t, s, st);
-                    t += st;
-                    s += st+patlen;
-                    slen -= st+patlen;
-                    strncpy (t, srep, replen);
-                    t += replen;
+                    const char *e, *p;
+                    e = s + st;
+                    while (s < e) {
+                        STORE_CHAR (*s, t);
+                        slen -= 1;
+                        s += 1;
+                    }
+                    slen -= patlen;
+                    s += patlen;
+                    p = srep;
+                    e = srep + replen;
+                    while (p < e) {
+                        STORE_CHAR (*p, t);
+                        p += 1;
+                    }
                 } while (global && (st = fgrep_one_bytes(spat, spatlen, s, slen,
                                            useBytes,use_UTF8)) >= 0);
                 strcpy (t, s);
                 if (useBytes)
-                    SET_STRING_ELT (ans, i, mkChar(cbuff.data));
+                    elt = mkChar (cbuff.data);
                 else if (use_UTF8)
-                    SET_STRING_ELT (ans, i, mkCharCE(cbuff.data, CE_UTF8));
+                    elt = mkCharCE (cbuff.data, CE_UTF8);
                 else
-                    SET_STRING_ELT (ans, i, 
-                                    markKnown(cbuff.data, STRING_ELT(text, i)));
+                    elt = markKnown (cbuff.data, text_elt);
             }
         }
         else if (perl_opt) {
@@ -1813,9 +1827,9 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
                 eflag = PCRE_NOTBOL;  /* probably not needed */
             }
             if (nmatch == 0)
-                SET_STRING_ELT(ans, i, STRING_ELT(text, i));
+                elt = text_elt;
             else if (STRING_ELT(rep, 0) == NA_STRING)
-                SET_STRING_ELT(ans, i, NA_STRING);
+                elt = NA_STRING;
             else {
                 /* copy the tail */
                 j = offset;
@@ -1823,12 +1837,11 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
                     STORE_CHAR (s[j], t);
                 } while (s[j++] != 0);
                 if (useBytes)
-                    SET_STRING_ELT(ans, i, mkChar(cbuff.data));
+                    elt = mkChar(cbuff.data);
                 else if (use_UTF8)
-                    SET_STRING_ELT (ans, i, mkCharCE(cbuff.data, CE_UTF8));
+                    elt = mkCharCE(cbuff.data, CE_UTF8);
                 else
-                    SET_STRING_ELT (ans, i, 
-                                    markKnown(cbuff.data, STRING_ELT(text,i)));
+                    elt = markKnown(cbuff.data, text_elt);
             }        
         } 
         else if (!use_WC) {
@@ -1854,9 +1867,9 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
                 eflags = REG_NOTBOL;
             }
             if (nmatch == 0)
-                SET_STRING_ELT(ans, i, STRING_ELT(text, i));
+                elt =text_elt;
             else if (STRING_ELT(rep, 0) == NA_STRING)
-                SET_STRING_ELT(ans, i, NA_STRING);
+                elt = NA_STRING;
             else {
                 /* copy the tail */
                 j = offset;
@@ -1864,10 +1877,9 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
                     STORE_CHAR (s[j], t);
                 } while (s[j++] != 0);
                 if (useBytes)
-                    SET_STRING_ELT (ans, i, mkChar(cbuff.data));
+                    elt = mkChar(cbuff.data);
                 else
-                    SET_STRING_ELT (ans, i, 
-                                    markKnown (cbuff.data, STRING_ELT(text,i)));
+                    elt = markKnown (cbuff.data, text_elt);
             }
         } 
         else  {
@@ -1893,18 +1905,19 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
                 eflags = REG_NOTBOL;
             }
             if (nmatch == 0)
-                SET_STRING_ELT(ans, i, STRING_ELT(text, i));
+                elt = text_elt;
             else if (STRING_ELT(rep, 0) == NA_STRING)
-                SET_STRING_ELT(ans, i, NA_STRING);
+                elt = NA_STRING;
             else {
                 /* copy the tail */
                 j = offset;
                 do {
                     STORE_WCHAR (s[j], t);
                 } while (s[j++] != 0);
-                SET_STRING_ELT(ans, i, mkCharW((wchar_t*)cbuff.data));
+                elt = mkCharW((wchar_t*)cbuff.data);
             }
         }
+        SET_STRING_ELT (ans, i, elt);
         VMAXSET(vmax);
     }
 
@@ -1917,8 +1930,10 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     else 
         tre_regfree(&reg);
+
     DUPLICATE_ATTRIB(ans, text);
     /* This copied the class, if any */
+
     UNPROTECT(1);
     R_FreeStringBufferL(&cbuff);
     return ans;

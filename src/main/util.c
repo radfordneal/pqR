@@ -1738,7 +1738,7 @@ static SEXP do_setencoding(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 SEXP attribute_hidden markKnown(const char *s, SEXP ref)
 {
-    int ienc = 0;
+    cetype_t ienc = CE_NATIVE;
     if(ENC_KNOWN(ref)) {
 	if(known_to_be_latin1) ienc = CE_LATIN1;
 	if(known_to_be_utf8) ienc = CE_UTF8;
