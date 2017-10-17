@@ -272,18 +272,17 @@ SEXP strngsv;
 int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	      SEXP rho, SEXP callrho, SEXP defrho, int variant, SEXP *ans)
 {
-    SEXP klass, method, sxp, setcl, s, op;
+    SEXP klass, method, sxp, setcl, s;
     int i, nclass;
-    RCNTXT *cptr;
     char buf[512];
 
-    /* Get the context which UseMethod was called from. */
+    RCNTXT *cptr = R_GlobalContext;  /* Context from which UseMethod called */
 
-    cptr = R_GlobalContext;
-    op = cptr->callfun;
     PROTECT(klass = R_data_class2(obj));
+    if (TYPEOF(klass) != STRSXP)
+        goto not_found;
+    nclass = LENGTH(klass);
 
-    nclass = length(klass);
     for (i = 0; i < nclass; i++) {
         const char *ss = translateChar(STRING_ELT(klass, i));
         if (!copy_3_strings (buf, sizeof buf, generic, ".", ss))
@@ -307,6 +306,8 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
         }
     }
 
+not_found: ;
+
     if (!copy_2_strings (buf, sizeof buf, generic, ".default"))
 	error(_("class name too long in '%s'"), generic);
     if ((method = installed_already(buf)) != R_NoObject) {
@@ -324,10 +325,13 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 
 found: ;
 
+    SEXP op = cptr->callfun;
+
     SEXP matchedarg, newcall;
-    PROTECT(newcall = duplicate(cptr->call));
-    PROTECT(matchedarg = cptr->promargs);
-    SETCAR(newcall, method);
+    newcall = LCONS(method,CDR(cptr->call)); /* used to duplicate... but why? */
+    matchedarg = cptr->promargs;
+    PROTECT2(newcall,matchedarg);
+
     cptr->callflag = CTXT_GENERIC;
 
     if (RDEBUG(op) || RSTEP(op)) SET_RSTEP(sxp, 1);

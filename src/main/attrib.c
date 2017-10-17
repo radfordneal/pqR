@@ -775,18 +775,14 @@ SEXP attribute_hidden R_data_class2 (SEXP obj)
     if (klass != R_NilValue)
         return IS_S4_OBJECT(obj) ? S4_extends(klass) : klass;
 
-    SEXP class0 = R_NilValue;
-
     SEXP dim = getDimAttrib(obj);
-    if (dim == R_NilValue)
-        class0 = R_NilValue;
-    else if (LENGTH(dim) == 2)
-        class0 = R_matrix_CHARSXP;
-    else
-        class0 = R_array_CHARSXP;
+    SEXP class0 = dim == R_NilValue ? R_NilValue
+                : LENGTH(dim) == 2  ? R_matrix_CHARSXP
+                : R_array_CHARSXP;
 
     SEXPTYPE t = TYPEOF(obj);
     SEXP value;
+
     switch (t) {
     case INTSXP:
         if(isNull(class0)) {
