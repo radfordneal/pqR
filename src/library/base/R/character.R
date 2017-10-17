@@ -173,3 +173,9 @@ dQuote <- function(x) {
 
 strtoi <- function(x, base = 0L)
     .Internal(strtoi(as.character(x), as.integer(base)))
+
+# From R-3.3.0, slightly tweaked for efficiency in pqR.
+
+strrep <- function (x, times)
+    .Internal (strrep (if (is.character(x)) x else as.character(x), 
+                       as.integer(times)))
