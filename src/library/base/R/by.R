@@ -1,5 +1,6 @@
 #  File src/library/base/R/by.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2017 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -60,7 +61,7 @@ print.by <- function(x, ..., vsep)
     dn <- dimnames(x)
     dnn <- names(dn)
     if(missing(vsep))
-        vsep <- paste(rep("-", 0.75*getOption("width")), collapse = "")
+        vsep <- strrep ("-", 0.75*getOption("width"))
     lapply(X = seq_along(x), FUN = function(i, x, vsep, ...) {
         if(i != 1L && !is.null(vsep)) cat(vsep, "\n")
         ii <- i - 1L
