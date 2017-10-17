@@ -681,19 +681,18 @@ static SEXP lang2str(SEXP obj, SEXPTYPE t)
  */
 SEXP R_data_class(SEXP obj, Rboolean singleString)
 {
-    SEXP value, klass = getClassAttrib(obj);
-    int n = length(klass);
-    if(n == 1 || (n > 0 && !singleString))
-	return(klass);
-    if(n == 0) {
+    SEXP klass = getClassAttrib(obj);
+    int n = 0;
+
+    if (TYPEOF(klass) == STRSXP && (n = LENGTH(klass)) > 0 
+                                && (n == 1 || !singleString))
+        return klass;
+
+    if (n == 0) {
+	int nd;
 	SEXP dim = getDimAttrib(obj);
-	int nd = length(dim);
-	if(nd > 0) {
-	    if(nd == 2)
-		klass = R_matrix_CHARSXP;
-	    else
-		klass = R_array_CHARSXP;
-	}
+	if (dim != R_NilValue && (nd = LENGTH(dim)) > 0)
+	    klass = nd==2 ? R_matrix_CHARSXP : R_array_CHARSXP;
 	else {
 	  SEXPTYPE t = TYPEOF(obj);
 	  switch(t) {
@@ -710,14 +709,15 @@ SEXP R_data_class(SEXP obj, Rboolean singleString)
 	    klass = lang2str(obj, t);
 	    break;
 	  default:
-	    klass = type2str(t);
+	    return type2rstr(t);
 	  }
 	}
     }
     else
 	klass = asChar(klass);
+
     PROTECT(klass);
-    value = ScalarString(klass);
+    SEXP value = ScalarString(klass);
     UNPROTECT(1);
     return value;
 }
@@ -785,7 +785,7 @@ SEXP attribute_hidden R_data_class2 (SEXP obj)
 
     switch (t) {
     case INTSXP:
-        if(isNull(class0)) {
+        if (class0 == R_NilValue) {
             value = allocVector(STRSXP,2);
             SET_STRING_ELT(value, 0, R_integer_CHARSXP);
             SET_STRING_ELT(value, 1, R_numeric_CHARSXP);
@@ -798,7 +798,7 @@ SEXP attribute_hidden R_data_class2 (SEXP obj)
         }
         return value;
     case REALSXP:
-        if(isNull(class0)) {
+        if (class0 == R_NilValue) {
             value = allocVector(STRSXP,2);
             SET_STRING_ELT(value, 0, R_double_CHARSXP);
             SET_STRING_ELT(value, 1, R_numeric_CHARSXP);
@@ -822,13 +822,16 @@ SEXP attribute_hidden R_data_class2 (SEXP obj)
         klass = lang2str(obj, t);
         break;
     default:
+        if (class0 == R_NilValue)
+            return type2rstr(t);
         klass = type2str(t);
     }
 
     PROTECT(klass);
-    if(isNull(class0)) {
+    if (class0 == R_NilValue) {
         value = ScalarString(klass);
-    } else {
+    }
+    else {
         value = allocVector(STRSXP, 2);
         SET_STRING_ELT(value, 0, class0);
         SET_STRING_ELT(value, 1, klass);

@@ -882,6 +882,9 @@ void setup_Rmainloop(void)
     InitArithmetic();
     InitColors();
     InitGraphics();
+    InitTypeTables();
+    PrintDefaults();
+
     R_Is_Running = 1;
     R_check_locale();
 

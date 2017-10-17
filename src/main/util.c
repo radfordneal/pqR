@@ -499,10 +499,15 @@ Rboolean isOrdered(SEXP s)
 }
 
 
+/* -------------------------------------------------------------------------- */
+/* TYPE ID <-> TYPE NAME CONVERSION.  Updated version taken from R-3.4.2,     */
+/*                                    modified a bit for pqR.                 */
+
 const static struct {
     const char * const str;
     const int type;
 }
+
 TypeTable[] = {
     { "NULL",		NILSXP	   },  /* real types */
     { "symbol",		SYMSXP	   },
@@ -536,68 +541,144 @@ TypeTable[] = {
 };
 
 
-SEXPTYPE str2type(const char *s)
+SEXPTYPE str2type (const char *s)
 {
     int i;
     for (i = 0; TypeTable[i].str; i++) {
-	if (!strcmp(s, TypeTable[i].str))
-	    return (SEXPTYPE) TypeTable[i].type;
+        if (!strcmp(s, TypeTable[i].str))
+            return (SEXPTYPE) TypeTable[i].type;
     }
+
     /* SEXPTYPE is an unsigned int, so the compiler warns us w/o the cast. */
     return (SEXPTYPE) -1;
 }
 
+static struct {
+    const char *cstrName;
+    SEXP rcharName;
+    SEXP rstrName;
+    SEXP rsymName;
+} Type2Table[MAX_NUM_SEXPTYPE];
 
-SEXP type2str(SEXPTYPE t)
-{
-    int i;
 
-    for (i = 0; TypeTable[i].str; i++) {
-	if (TypeTable[i].type == t)
-	    return mkChar(TypeTable[i].str);
-    }
-    error(_("type %d is unimplemented in '%s'"), t, "type2str");
+static int findTypeInTypeTable (SEXPTYPE t)
+ {
+    for (int i = 0; TypeTable[i].str; i++)
+        if (TypeTable[i].type == t) return i;
+
+    return -1;
 }
 
-const char *type2char(SEXPTYPE t)
-{
-    int i;
+/* Called from main.c to initialize Type2Table. */
 
-    for (i = 0; TypeTable[i].str; i++) {
-	if (TypeTable[i].type == t)
-	    return TypeTable[i].str;
+attribute_hidden
+void InitTypeTables (void) {
+
+    for (int type = 0; type < MAX_NUM_SEXPTYPE; type++) {
+
+        int j = findTypeInTypeTable(type);
+
+        if (j != -1) {
+            const char *cstr = TypeTable[j].str;
+            SEXP rsym = install(cstr);
+            SEXP rchar = PRINTNAME(rsym);
+            SEXP rstr = ScalarString(rchar);
+            SET_NAMEDCNT_MAX(rstr);
+            R_PreserveObject(rstr);
+            Type2Table[type].cstrName = cstr;
+            Type2Table[type].rcharName = rchar;
+            Type2Table[type].rstrName = rstr;
+            Type2Table[type].rsymName = rsym;
+        }
+        else {
+            Type2Table[type].cstrName = NULL;
+            Type2Table[type].rcharName = R_NoObject;
+            Type2Table[type].rstrName = R_NoObject;
+            Type2Table[type].rsymName = R_NoObject;
+        }
     }
-    error(_("type %d is unimplemented in '%s'"), t, "type2char");
 }
 
-SEXP type2symbol(SEXPTYPE t)
+SEXP type2str_nowarn (SEXPTYPE t)   /* returns a CHARSXP */
 {
-    int i;
-    /* for efficiency, a hash table set up to index TypeTable, and
-       with TypeTable pointing to both the
-       character string and to the symbol would be better */
-    for (i = 0; TypeTable[i].str; i++) {
-	if (TypeTable[i].type == t)
-	    return install((const char *)&TypeTable[i].str);
+    if (t < MAX_NUM_SEXPTYPE) {     /* FIXME: branch not really needed */
+        SEXP res = Type2Table[t].rcharName;
+        if (res != R_NoObject)
+            return res;
     }
+
+    return R_NilValue;
+}
+
+SEXP type2str (SEXPTYPE t)          /* returns a CHARSXP */
+{
+    SEXP s = type2str_nowarn(t);
+    if (s != R_NilValue)
+        return s;
+
+    warning(_("type %d is unimplemented in '%s'"), t, "type2str");
+    char buf[50];
+    snprintf(buf, 50, "unknown type #%d", t);
+    return mkChar(buf);
+}
+
+SEXP type2rstr (SEXPTYPE t)         /* returns a STRSXP */
+{
+    if (t < MAX_NUM_SEXPTYPE) { /* FIXME: branch not really needed */
+        SEXP res = Type2Table[t].rstrName;
+        if (res != R_NoObject)
+            return res;
+    }
+
+    error(_("type %d is unimplemented in '%s'"), t, "type2rstr");
+}
+
+const char *type2char (SEXPTYPE t)  /* returns a C char * */
+{
+    if (t < MAX_NUM_SEXPTYPE) { /* FIXME: branch not really needed */
+        const char * res = Type2Table[t].cstrName;
+        if (res != NULL)
+            return res;
+    }
+
+    warning(_("type %d is unimplemented in '%s'"), t, "type2char");
+    static char buf[50];
+    snprintf(buf, 50, "unknown type #%d", t);
+    return buf;
+}
+
+attribute_hidden
+SEXP type2symbol (SEXPTYPE t)
+{
+    if (t >= 0 && t < MAX_NUM_SEXPTYPE) { /* FIXME: branch not really needed */
+        SEXP res = Type2Table[t].rsymName;
+        if (res != R_NoObject)
+            return res;
+    }
+
     error(_("type %d is unimplemented in '%s'"), t, "type2symbol");
 }
 
-R_NORETURN void UNIMPLEMENTED_TYPEt(const char *s, SEXPTYPE t)
+attribute_hidden
+void R_NORETURN UNIMPLEMENTED_TYPEt (const char *s, SEXPTYPE t)
 {
     int i;
 
     for (i = 0; TypeTable[i].str; i++) {
-	if (TypeTable[i].type == t)
-	    error(_("unimplemented type '%s' in '%s'\n"), TypeTable[i].str, s);
+        if (TypeTable[i].type == t)
+            error(_("unimplemented type '%s' in '%s'\n"), TypeTable[i].str, s);
     }
+
     error(_("unimplemented type (%d) in '%s'\n"), t, s);
 }
 
-R_NORETURN void UNIMPLEMENTED_TYPE(const char *s, SEXP x)
+void R_NORETURN UNIMPLEMENTED_TYPE (const char *s, SEXP x)
 {
     UNIMPLEMENTED_TYPEt(s, TYPEOF(x));
 }
+
+/* -------------------------------------------------------------------------- */
+
 
 R_NORETURN void attribute_hidden dotdotdot_error(void)
 { 

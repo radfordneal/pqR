@@ -129,6 +129,7 @@ typedef int R_xlen_t;
 
 typedef unsigned int SEXPTYPE;  /* used in serialize.c for things that aren't
                                    actual types */
+#define MAX_NUM_SEXPTYPE 32
 
 #define NILSXP	     0	  /* nil = NULL */
 #define SYMSXP	     1	  /* symbols */
@@ -1797,6 +1798,9 @@ const char * Rf_translateChar(SEXP);
 const char * Rf_translateChar0(SEXP);
 const char * Rf_translateCharUTF8(SEXP);
 const char * Rf_type2char(SEXPTYPE);
+SEXP Rf_type2rstr(SEXPTYPE);
+SEXP Rf_type2str(SEXPTYPE);
+SEXP Rf_type2str_nowarn(SEXPTYPE);
 SEXP Rf_type2str(SEXPTYPE);
 void Rf_unprotect(int);
 void Rf_unprotect_ptr(SEXP);
@@ -2242,7 +2246,9 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define translateChar0		Rf_translateChar0
 #define translateCharUTF8      	Rf_translateCharUTF8
 #define type2char		Rf_type2char
-#define type2str		Rf_type2str
+#define type2rstr               Rf_type2rstr
+#define type2str                Rf_type2str
+#define type2str_nowarn         Rf_type2str_nowarn
 #define unprotect		Rf_unprotect
 #define unprotect_ptr		Rf_unprotect_ptr
 #define VectorToPairList	Rf_VectorToPairList
