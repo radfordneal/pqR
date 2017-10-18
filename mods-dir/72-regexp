@@ -1,0 +1,4 @@
+Speed improvements to grep, grepl, sub, and gsub.
+
+Includes tweaks replacing length with LENGTH as in R-3.3.0.
+

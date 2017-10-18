@@ -1,3 +1,5 @@
+## Added extra test for pqR, Radford M. Neal, 2017.
+
 ## This can only be done in a locale that extends Latin-1
 (inf <- l10n_info())
 if(!(inf$`UTF-8` || inf$`Latin-1`)) {
@@ -166,3 +168,25 @@ testit(agrep(x, x, max.distance=0.5))
 
 ## this is used in QC to check dependencies and was broken intermittently by TRE changes
 stopifnot(isTRUE(grepl('^[[:space:]]*(R|[[:alpha:]][[:alnum:].]*[[:alnum:]])([[:space:]]*\\(([^) ]+)[[:space:]]+([^) ]+)\\))?[[:space:]]*$', ' R (>= 2.13.0) ')))
+
+a<-paste(rep("xxx|yyyabcd",10000),collapse="")
+b<-paste(rep("xxx|yyyQ||Qcd",10000),collapse="")
+as <- gsub("ab","Q||Q",a)
+stopifnot(identical(as,b))
+
+as <- gsub("ab","Q||Q",a,fixed=TRUE)
+stopifnot(identical(as,b))
+
+as <- gsub("ab","Q||Q",a,perl=TRUE)
+stopifnot(identical(as,b))
+
+a<-paste(rep("xxx\uE7yyyabcd",10000),collapse="")
+b<-paste(rep("xxx\uE7yyyQ\uE7\uE7Qcd",10000),collapse="")
+as <- gsub("ab","Q\uE7\uE7Q",a)
+stopifnot(identical(as,b))
+
+as <- gsub("ab","Q\uE7\uE7Q",a,perl=TRUE)
+stopifnot(identical(as,b))
+
+as <- gsub("ab","Q\uE7\uE7Q",a,fixed=TRUE)
+stopifnot(identical(as,b))

@@ -155,6 +155,8 @@
   \item The \code{\%\%} and \code{\%/\%} operators are now faster when 
         their operands are real vectors that contain integer values.
   \item Subscripting with a logical vector is now faster for long vectors.
+  \item The \code{grep}, \code{grepl}, \code{sub}, and \code{gsub} functions
+        have been speeded up, substantially in some situations.
   \item General interpretive overhead has been reduced in some contexts,
         particularly when extracting or replacing subsets with 
         \code{[.]} or \code{[[.]]}.
