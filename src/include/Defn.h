@@ -1260,6 +1260,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define InitMemory		Rf_InitMemory
 # define InitNames		Rf_InitNames
 # define InitOptions		Rf_InitOptions
+# define InitS3DefaultTypes     Rf_InitS3DefaultTypes
 # define InitStringHash		Rf_InitStringHash
 # define InitTempDir		Rf_InitTempDir
 # define InitTypeTables         Rf_InitTypeTables
@@ -1476,6 +1477,7 @@ void InitGraphics(void);
 void InitMemory(void);
 void InitNames(void);
 void InitOptions(void);
+void InitS3DefaultTypes(void);
 void InitStringHash(void);
 void Init_R_Variables(SEXP);
 void InitTempDir(void);

@@ -882,7 +882,8 @@ void setup_Rmainloop(void)
     InitArithmetic();
     InitColors();
     InitGraphics();
-    InitTypeTables();
+    InitTypeTables(); /* must be before InitS3DefaultTypes */
+    InitS3DefaultTypes();
     PrintDefaults();
 
     R_Is_Running = 1;
