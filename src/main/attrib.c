@@ -716,10 +716,7 @@ SEXP R_data_class(SEXP obj, Rboolean singleString)
     else
 	klass = asChar(klass);
 
-    PROTECT(klass);
-    SEXP value = ScalarString(klass);
-    UNPROTECT(1);
-    return value;
+    return ScalarString(klass);
 }
 
 static SEXP s_dot_S3Class = 0;
@@ -827,17 +824,15 @@ SEXP attribute_hidden R_data_class2 (SEXP obj)
         klass = type2str(t);
     }
 
-    PROTECT(klass);
-    if (class0 == R_NilValue) {
+    if (class0 == R_NilValue)
         value = ScalarString(klass);
-    }
     else {
+        PROTECT(klass);
         value = allocVector(STRSXP, 2);
         SET_STRING_ELT(value, 0, class0);
         SET_STRING_ELT(value, 1, klass);
+        UNPROTECT(1);
     }
-    UNPROTECT(1);
-
     return value;
 }
 

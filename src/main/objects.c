@@ -104,7 +104,8 @@ static SEXP GetObject(RCNTXT *cptr)
 	else
 	    s = PRVALUE_PENDING_OK(s);
     }
-    return(s);
+
+    return s;
 }
 
 static SEXP applyMethod (SEXP call, SEXP op, SEXP args, SEXP rho, 
@@ -143,11 +144,11 @@ static SEXP applyMethod (SEXP call, SEXP op, SEXP args, SEXP rho,
 	check_stack_balance(op, save);
 	VMAXSET(vmax);
     }
-    else if (TYPEOF(op) == CLOSXP) {
+    else if (TYPEOF(op) == CLOSXP)
 	ans = applyClosure_v(call, op, args, rho, supplied, variant);
-    }
     else
-	ans = R_NilValue;  /* for -Wall */
+	ans = R_NilValue;
+
     return ans;
 }
 
@@ -158,7 +159,7 @@ static SEXP applyMethod (SEXP call, SEXP op, SEXP args, SEXP rho,
 /* two resulting lists are appended and returned. */
 /* S claims to do this (white book) but doesn't seem to. */
 
-static SEXP newintoold(SEXP _new, SEXP old)
+static inline SEXP newintoold(SEXP _new, SEXP old)
 {
     if (_new == R_NilValue) return R_NilValue;
     SETCDR(_new, newintoold(CDR(_new),old));
@@ -172,7 +173,7 @@ static SEXP newintoold(SEXP _new, SEXP old)
     return _new;
 }
 
-static SEXP matchmethargs(SEXP oldargs, SEXP newargs)
+static inline SEXP matchmethargs(SEXP oldargs, SEXP newargs)
 {
     newargs = newintoold(newargs, oldargs);
     return listAppend(oldargs, newargs);
@@ -412,37 +413,42 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
 
     PROTECT(argList =  matchArgs(R_NilValue, ap, 2, args, call));
     if (CAR(argList) == R_MissingArg)
-	errorcall(call, _("there must be a 'generic' argument"));
+        errorcall(call, _("there must be a 'generic' argument"));
     else
-	PROTECT(generic = eval(CAR(argList), env));
-    if(!isString(generic) || LENGTH(generic) != 1)
-	errorcall(call, _("'generic' argument must be a character string"));
+        generic = CAR(argList);
 
+    if (TYPEOF(generic) == STRSXP)
+        ;  /* the usual case, no eval needed */
+    else
+        generic = eval (generic, env);
+    if (TYPEOF(generic) != STRSXP || LENGTH(generic) != 1)
+        errorcall(call, _("'generic' argument must be a character string"));
+    PROTECT(generic);
 
     /* get environments needed for dispatching.
        callenv = environment from which the generic was called
        defenv = environment where the generic was defined */
     cptr = R_GlobalContext;
     if ( !(cptr->callflag & CTXT_FUNCTION) || cptr->cloenv != env)
-	errorcall(call, _("'UseMethod' used in an inappropriate fashion"));
+        errorcall(call, _("'UseMethod' used in an inappropriate fashion"));
     callenv = cptr->sysparent;
+
     /* We need to find the generic to find out where it is defined.
        This is set up to avoid getting caught by things like
 
-	mycoef <- function(x)
-       {
-	   mycoef <- function(x) stop("not this one")
-	   UseMethod("mycoef")
-       }
+          mycoef <- function(x)
+          {  mycoef <- function(x) stop("not this one")
+             UseMethod("mycoef")
+          }
 
-	The generic need not be a closure (Henrik Bengtsson writes
-	UseMethod("$"), although only functions are documented.)
+        The generic need not be a closure (Henrik Bengtsson writes
+        UseMethod("$"), although only functions are documented.)
     */
 
     SEXP generic_name = STRING_ELT(generic, 0);
 
     if (CHAR(generic_name)[0] == 0)
-	errorcall(call, _("first argument must be a generic name"));
+        errorcall(call, _("first argument must be a generic name"));
 
     const char *generic_trans = translateChar(generic_name);
     SEXP generic_symbol = generic_trans == CHAR(generic_name)
@@ -452,37 +458,36 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
 
     defenv = TYPEOF(val) == CLOSXP ? CLOENV(val) : R_BaseNamespace;
 
-    if (CADR(argList) != R_MissingArg)
-	PROTECT(obj = eval(CADR(argList), env));
-    else
-	PROTECT(obj = GetObject(cptr));
+    obj = CADR(argList) == R_MissingArg ? GetObject(cptr)
+                                        : eval (CADR(argList), env);
+    PROTECT (obj);
 
-    if (usemethod(generic_trans, obj, call, CDR(args),
-		  env, callenv, defenv, variant, &ans) == 1) {
-	UNPROTECT(3); /* obj, generic, argList */
-	findcontext(CTXT_RETURN, env, ans); /* does not return */
-    }
-    else {  /* SHOULD FIX THIS TO PROTECT AGAINST BUFFER OVERFLOW */
-	SEXP klass;
-	int nclass;
-	char cl[1000];
-	PROTECT(klass = R_data_class2(obj));
-	nclass = length(klass);
-	if (nclass == 1)
-	    strcpy(cl, translateChar(STRING_ELT(klass, 0)));
-	else {
-	    int i;
-	    strcpy(cl, "c('");
-	    for (i = 0; i < nclass; i++) {
-		if (i > 0) strcat(cl, "', '");
-		strcat(cl, translateChar(STRING_ELT(klass, i)));
-	    }
-	    strcat(cl, "')");
-	}
+    if (!usemethod(generic_trans, obj, call, CDR(args),
+                   env, callenv, defenv, variant, &ans)) {
+        /* SHOULD FIX THIS TO PROTECT AGAINST BUFFER OVERFLOW */
+        SEXP klass;
+        int nclass;
+        char cl[1000];
+        PROTECT(klass = R_data_class2(obj));
+        nclass = length(klass);
+        if (nclass == 1)
+            strcpy(cl, translateChar(STRING_ELT(klass, 0)));
+        else {
+            int i;
+            strcpy(cl, "c('");
+            for (i = 0; i < nclass; i++) {
+                if (i > 0) strcat(cl, "', '");
+                strcat(cl, translateChar(STRING_ELT(klass, i)));
+            }
+            strcat(cl, "')");
+        }
 	errorcall(call,
         _("no applicable method for '%s' applied to an object of class \"%s\""),
            generic_trans, cl);
     }
+
+    UNPROTECT(3); /* obj, generic, argList  - but unnecessary? because... */
+    findcontext (CTXT_RETURN, env, ans);  /*              does not return */
 }
 
 /*
@@ -491,7 +496,7 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
    them if they are not already there
 */
 
-static SEXP fixcall(SEXP call, SEXP args)
+static inline SEXP fixcall(SEXP call, SEXP args)
 {
     SEXP s, t;
     int found;
