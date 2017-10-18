@@ -3002,7 +3002,8 @@ SEXP attribute_hidden Rf_mkCharMulti (const char **strings, const int *lengths,
 
     if (strings[0] != NULL) {
         for (i = 1; strings[i] != NULL; i++)
-            full_hash = Rf_char_hash_more (full_hash, strings[i], lengths[i]);
+            full_hash = 
+              Rf_char_hash_more_len (full_hash, strings[i], lengths[i]);
     }
 
     unsigned int hashcode = full_hash & char_hash_mask;
@@ -3113,7 +3114,7 @@ SEXP attribute_hidden Rf_mkCharRep (const char *string, int len, int rep,
     else
         full_hash = Rf_char_hash_len (string, len);
     for (i = 1; i < rep; i++)
-        full_hash = Rf_char_hash_more (full_hash, string, len);
+        full_hash = Rf_char_hash_more_len (full_hash, string, len);
 
     unsigned int hashcode = full_hash & char_hash_mask;
 
