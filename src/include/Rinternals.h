@@ -1754,6 +1754,7 @@ SEXPTYPE Rf_higher_atomic_type (SEXPTYPE, SEXPTYPE);
 SEXP Rf_install(const char *);
 SEXP Rf_installChar(SEXP);
 SEXP Rf_installed_already(const char *);
+SEXP Rf_installed_already_with_hash(const char *, int);
 Rboolean Rf_isFree(SEXP);
 Rboolean Rf_isOrdered(SEXP);
 Rboolean Rf_isUnordered(SEXP);
@@ -2142,6 +2143,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define install			Rf_install
 #define installChar		Rf_installChar
 #define installed_already	Rf_installed_already
+#define installed_already_with_hash	Rf_installed_already_with_hash
 #define isArray			Rf_isArray
 #define isBasicClass            Rf_isBasicClass
 #define isComplex		Rf_isComplex

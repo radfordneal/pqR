@@ -822,6 +822,20 @@ SEXP installed_already(const char *name)
     return bucket == NULL ? R_NoObject : SEXP_FROM_SEXP32 (bucket->entry);
 }
 
+/* Lookup up a symbol, returning it if it exists already, but not creating
+   it if it doesn't already exist, returning R_NoObject instead.  This
+   version takes the hashcode of the name as an argument (useful if the
+   caller can compute it faster than the direct way). */
+
+SEXP installed_already_with_hash (const char *name, int hashcode)
+{
+    lphash_bucket_t *bucket;
+
+    bucket = lphash_key_lookup (R_lphashSymTbl, hashcode, (char *) name);
+
+    return bucket == NULL ? R_NoObject : SEXP_FROM_SEXP32 (bucket->entry);
+}
+
 
 /*  do_internal - This is the code for .Internal(). */
 

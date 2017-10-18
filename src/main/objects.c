@@ -275,7 +275,6 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 {
     SEXP klass, method, sxp, setcl, s;
     int i, nclass;
-    char buf[512];
 
     RCNTXT *cptr = R_GlobalContext;  /* Context from which UseMethod called */
 
@@ -284,14 +283,34 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
         goto not_found;
     nclass = LENGTH(klass);
 
+    char buf[512];
+    int len;
+    for (len = 0; generic[len] != 0; len++) {
+        buf[len] = generic[len];
+        if (len >= (sizeof buf) - 2)
+            error(_("class name too long in '%s'"), generic);
+    }
+    buf[len++] = '.';
+    int hash = Rf_char_hash_len (buf, len);
+    const void *vmax = VMAXGET();
+
     for (i = 0; i < nclass; i++) {
-        const char *ss = translateChar(STRING_ELT(klass, i));
-        if (!copy_3_strings (buf, sizeof buf, generic, ".", ss))
-	    error(_("class name too long in '%s'"), generic);
-	if ((method = installed_already(buf)) != R_NoObject) {
-            sxp = R_LookupMethod(method, rho, callrho, defrho);
+        SEXP elt = STRING_ELT (klass, i);
+        const char *ss = translateChar(elt);
+        int l;
+        for (l = 0; ; l++) {
+            if (len+l >= sizeof buf)
+                error(_("class name too long in '%s'"), generic);
+            buf[len+l] = ss[l];
+            if (ss[l] == 0) 
+                break;
+        }
+        method = installed_already_with_hash 
+                   (buf, Rf_char_hash_more_len(hash,ss,l));
+        if (method != R_NoObject) {
+            sxp = R_LookupMethod (method, rho, callrho, defrho);
             if (sxp != R_UnboundValue) {
-                if(method == R_sort_list && CLOENV(sxp) == R_BaseNamespace)
+                if (method == R_sort_list && CLOENV(sxp) == R_BaseNamespace)
                     continue; /* kludge because sort.list is not a method */
                 PROTECT(sxp);
                 if (i > 0) {
@@ -305,13 +324,17 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
                 goto found;
             }
         }
+        VMAXSET(vmax);
     }
 
 not_found: ;
 
-    if (!copy_2_strings (buf, sizeof buf, generic, ".default"))
-	error(_("class name too long in '%s'"), generic);
-    if ((method = installed_already(buf)) != R_NoObject) {
+    if (len + 7 >= sizeof buf)  /* 7 = number of characters in "default" */
+        error(_("class name too long in '%s'"), generic);
+    strcpy (buf+len, "default");
+    method = installed_already_with_hash
+               (buf, Rf_char_hash_more_len(hash,"default",7));
+    if (method != R_NoObject) {
         sxp = R_LookupMethod(method, rho, callrho, defrho);
         if (sxp != R_UnboundValue) {
             setcl = R_NilValue;
@@ -481,7 +504,7 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
             }
             strcat(cl, "')");
         }
-	errorcall(call,
+        errorcall(call,
         _("no applicable method for '%s' applied to an object of class \"%s\""),
            generic_trans, cl);
     }
