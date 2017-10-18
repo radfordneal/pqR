@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -764,7 +764,95 @@ static SEXP S4_extends(SEXP klass) {
     return(val);
 }
 
-/* Version for S3-dispatch */
+
+/* -------------------------------------------------------------------------- */
+/* PRE-ALLOCATED DEFAULT CLASS ATTRIBUTES.  Taken from R-3.2.0 (or later),    */
+/*                                          modified a bit for pqR.           */
+
+static struct {
+    SEXP vector;
+    SEXP matrix;
+    SEXP array;
+} Type2DefaultClass[MAX_NUM_SEXPTYPE];
+
+
+static SEXP createDefaultClass(SEXP part1, SEXP part2, SEXP part3)
+{
+    int size = 0;
+    if (part1 != R_NilValue) size++;
+    if (part2 != R_NilValue) size++;
+    if (part3 != R_NilValue) size++;
+
+    if (size == 0 || part2 == R_NilValue) return R_NilValue;
+
+    SEXP res = allocVector(STRSXP, size);
+    R_PreserveObject(res);
+
+    int i = 0;
+    if (part1 != R_NilValue) SET_STRING_ELT(res, i++, part1);
+    if (part2 != R_NilValue) SET_STRING_ELT(res, i++, part2);
+    if (part3 != R_NilValue) SET_STRING_ELT(res, i, part3);
+
+    SET_NAMEDCNT_MAX(res);
+    return res;
+}
+
+attribute_hidden
+void InitS3DefaultTypes()
+{
+    for(int type = 0; type < MAX_NUM_SEXPTYPE; type++) {
+
+	SEXP part2 = R_NilValue;
+	SEXP part3 = R_NilValue;
+	int nprotected = 0;
+
+	switch(type) {
+	    case CLOSXP:
+	    case SPECIALSXP:
+	    case BUILTINSXP:
+		part2 = PROTECT(mkChar("function"));
+		nprotected++;
+		break;
+	    case INTSXP:
+	    case REALSXP:
+		part2 = PROTECT(type2str_nowarn(type));
+		part3 = PROTECT(mkChar("numeric"));
+		nprotected += 2;
+		break;
+	    case LANGSXP:
+		/* part2 remains R_NilValue: default type cannot be
+		   pre-allocated, as it depends on the object value */
+		break;
+	    case SYMSXP:
+		part2 = PROTECT(mkChar("name"));
+		nprotected++;
+		break;
+	    default:
+		part2 = PROTECT(type2str_nowarn(type));
+		nprotected++;
+	}
+
+	Type2DefaultClass[type].vector =
+	    createDefaultClass(R_NilValue, part2, part3);
+
+	SEXP part1;
+	PROTECT(part1 = mkChar("matrix"));
+	Type2DefaultClass[type].matrix =
+	    createDefaultClass(part1, part2, part3);
+	UNPROTECT(1);
+
+	PROTECT(part1 = mkChar("array"));
+	Type2DefaultClass[type].array =
+	    createDefaultClass(part1, part2, part3);
+	UNPROTECT(1);
+
+	UNPROTECT(nprotected);
+    }
+}
+
+
+/* Version for S3-dispatch.  Some parts adapted from R-3.2.0 (or later). */
+
 SEXP attribute_hidden R_data_class2 (SEXP obj)
 {
     SEXP klass = getClassAttrib(obj);
@@ -772,68 +860,34 @@ SEXP attribute_hidden R_data_class2 (SEXP obj)
     if (klass != R_NilValue)
         return IS_S4_OBJECT(obj) ? S4_extends(klass) : klass;
 
-    SEXP dim = getDimAttrib(obj);
-    SEXP class0 = dim == R_NilValue ? R_NilValue
-                : LENGTH(dim) == 2  ? R_matrix_CHARSXP
-                : R_array_CHARSXP;
-
     SEXPTYPE t = TYPEOF(obj);
-    SEXP value;
+    SEXP dim = getDimAttrib(obj);
+    SEXP defaultClass;
+    int n;
 
-    switch (t) {
-    case INTSXP:
-        if (class0 == R_NilValue) {
-            value = allocVector(STRSXP,2);
-            SET_STRING_ELT(value, 0, R_integer_CHARSXP);
-            SET_STRING_ELT(value, 1, R_numeric_CHARSXP);
-        }
+    defaultClass = dim == R_NilValue      ? Type2DefaultClass[t].vector
+                 : (n = LENGTH(dim)) == 2 ? Type2DefaultClass[t].matrix
+                 :                          Type2DefaultClass[t].array;
+
+    if (defaultClass == R_NilValue) {
+
+        /* now t == LANGSXP, but check to make sure */
+        if (t != LANGSXP)
+            error("type must be LANGSXP at this point");
+
+        if (n == 0)
+            defaultClass = ScalarString (lang2str(obj,t));
         else {
-            value = allocVector(STRSXP,3);
-            SET_STRING_ELT(value, 0, class0);
-            SET_STRING_ELT(value, 1, R_integer_CHARSXP);
-            SET_STRING_ELT(value, 2, R_numeric_CHARSXP);
+            PROTECT (defaultClass = allocVector(STRSXP,2));
+            SET_STRING_ELT (defaultClass, 0, 
+                            n == 2 ? R_matrix_CHARSXP : R_array_CHARSXP);
+            SET_STRING_ELT (defaultClass, 1, 
+                            lang2str(obj, t));
+            UNPROTECT(1);
         }
-        return value;
-    case REALSXP:
-        if (class0 == R_NilValue) {
-            value = allocVector(STRSXP,2);
-            SET_STRING_ELT(value, 0, R_double_CHARSXP);
-            SET_STRING_ELT(value, 1, R_numeric_CHARSXP);
-        }
-        else {
-            value = allocVector(STRSXP,3);
-            SET_STRING_ELT(value, 0, class0);
-            SET_STRING_ELT(value, 1, R_double_CHARSXP);
-            SET_STRING_ELT(value, 2, R_numeric_CHARSXP);
-        }
-        return value;
-    case CLOSXP:
-    case SPECIALSXP:
-    case BUILTINSXP:
-        klass = R_function_CHARSXP;
-        break;
-    case SYMSXP:
-        klass = R_name_CHARSXP;
-        break;
-    case LANGSXP:
-        klass = lang2str(obj, t);
-        break;
-    default:
-        if (class0 == R_NilValue)
-            return type2rstr(t);
-        klass = type2str(t);
     }
 
-    if (class0 == R_NilValue)
-        value = ScalarString(klass);
-    else {
-        PROTECT(klass);
-        value = allocVector(STRSXP, 2);
-        SET_STRING_ELT(value, 0, class0);
-        SET_STRING_ELT(value, 1, klass);
-        UNPROTECT(1);
-    }
-    return value;
+    return defaultClass;
 }
 
 /* class() : */
