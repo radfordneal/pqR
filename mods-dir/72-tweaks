@@ -1,0 +1,6 @@
+Fairly minor tweaks.
+
+Made ep_match_strings an inline function, with special check for
+identical string pointers.
+
+

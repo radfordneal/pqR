@@ -34,7 +34,8 @@
  *  ep_match_strings (const char *f, const char *t)
  *      Returns 0 if f and t do not match at all, 1 if they match exactly,
  *      and -1 if t is a prefix of f, but does not match exactly.  Note that 
- *      the empty string is a prefix of any string.
+ *      the empty string is a prefix of any string.  NOW AN INLINE FUNCTION
+ *      (in src/include/Rinlinedfuns.h).
  *
  *  ep_match_exprs (SEXP formal, SEXP tag)
  *      Like ep_match_strings but for strings specified as SEXPs, which
@@ -99,22 +100,6 @@ SEXP fixup_NaRm(SEXP args)
     }
 
     return args;
-}
-
-/*  Exact or partial string match.  Returns 0 if f and t do not match at all, 
-    1 if they match exactly, and -1 if t is a prefix of f, but does not match 
-    exactly.  Note that the empty string is a prefix of any string. */
-
-int ep_match_strings (const char *f, const char *t)
-{
-    while (*t) {
-        if (*t != *f)
-            return 0;
-        t++;
-        f++;
-    }
-
-    return *f==0 ? 1 : -1;
 }
 
 /*  Exact or partial match for strings given by SEXPs.  Returned value

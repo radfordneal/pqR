@@ -614,4 +614,27 @@ INLINE_FUN SEXP mkString(const char *s)
     return ScalarString (mkChar(s));
 }
 
+
+/* String matching - moved from match.c, where related functions still are. */
+
+/*  Exact or partial string match.  Returns 0 if f and t do not match at all, 
+    1 if they match exactly, and -1 if t is a prefix of f, but does not match 
+    exactly.  Note that the empty string is a prefix of any string. */
+
+static inline int Rf_ep_match_strings (const char *f, const char *t)
+{
+    if (f == t)
+        return 1;
+
+    while (*t) {
+        if (*t != *f)
+            return 0;
+        t++;
+        f++;
+    }
+
+    return *f==0 ? 1 : -1;
+}
+
+
 #endif /* R_INLINES_H_ */
