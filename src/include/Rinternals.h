@@ -1725,7 +1725,6 @@ SEXP Rf_DropDims(SEXP);
 SEXP Rf_DropDimsNotSuppressed(SEXP,int*);
 SEXP Rf_duplicate(SEXP);
 SEXP Rf_duplicated(SEXP, Rboolean);
-int Rf_ep_match_strings(const char *, const char *);
 int Rf_ep_match_exprs(SEXP, SEXP);
 int Rf_ep_match_string_expr(const char *, SEXP);
 SEXP Rf_eval(SEXP, SEXP);
