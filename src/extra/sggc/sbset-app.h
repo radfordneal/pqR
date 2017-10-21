@@ -50,19 +50,18 @@
    segments, but the first few fields are the same for both kinds (and
    may be referenced either way). */
 
-#define SGGC_CHUNK_BITS 31 /* Bits used to record the number of chunks */
-
 #define SBSET_EXTRA_INFO \
   union \
   { struct                 /* For big segments... */ \
-    { unsigned char kind;     /* The kind of segment (equal to type if big) */ \
+    { unsigned char kind;     /* The kind of segment                        */ \
       unsigned constant : 1;  /* 1 for a constant segment                   */ \
+      unsigned align_off : 2; /* Offset added to address to align >> 3      */ \
       unsigned big : 1;       /* 1 for a big segment with one large object  */ \
       unsigned huge : 1;      /* 1 if maximum cnunks not less than 2^21     */ \
-      unsigned alloc_chunks : 21; /* Chunks that fit in allocated space, if */ \
-    } Big;                     /* huge is 0, else that >> by HUGE_SHIFT     */ \
+      unsigned alloc_chunks : 19; /* Chunks that fit in allocated space, if */ \
+    } Big;                    /* huge is 0, else that >> by SGGC_HUGE_SHIFT */ \
     struct                 /* For small segments... */ \
-    { unsigned char kind;     /* The kind of segment (equal to type if big) */ \
+    { unsigned char kind;     /* The kind of segment                        */ \
       unsigned constant : 1;  /* 1 for a constant segment                   */ \
       unsigned big : 1;       /* 1 for a big segment with one large object  */ \
       unsigned unused : 6;    /* Bits not currently in use                  */ \

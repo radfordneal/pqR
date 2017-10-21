@@ -241,6 +241,25 @@ An application may optionally define the following in sggc-app.h:
                         sggc_mem_alloc.  Defaults to the symbol
                         'free', the C library function.
 
+The alignment requirements above ensure that data areas for objects
+are allocated with at least 8-byte alignment.  This alignment may be
+increased by defining the following symbol:
+
+  SGGC_DATA_ALIGNMENT   If defined (as a power of two, no larger than
+                        32), the data areas of large objects and the
+                        shared data areas for small objects will have
+                        addresses divisible by SGGC_DATA_ALIGNMENT
+                        (unless the data area is smaller than this).
+
+If SGGC_DATA_ALIGNMENT is defined, data areas for all objects will be
+guaranteed to have this alignment, _except_ for objects of small kinds
+for which the number of chunks specified with SGGC_KIND_CHUNKS results
+in a size in bytes that is not divisible by SGGC_DATA_ALIGNMENT.  
+
+Note that an alternative to defining SGGC_DATA_ALIGNMENT is to define
+sggc_mem_alloc and sggc_mem_alloc_zero macros that return data blocks
+aligned more strictly than the 8-byte alignment required above.
+
 The sggc.h file should be included after the above have been defined,
 at the end of sggc-app.h.  It will define the following types:
 
@@ -289,7 +308,8 @@ Constants are not included in any of the counts or sizes above, except
 for n_segments.  Shared read-only auxiliary information areas are also
 not counted.  The total memory usage estimate is for physical memory,
 and assumes that virtual memory space that has not been used will not
-have been assigned physical memory.
+have been assigned physical memory.  It will not include overhead for
+malloc or from ensuring alignment according to SGGC_DATA_ALIGNMENT.
 
 The sggc.h file will also declare the array initialized with the
 application's definition of SGGC_KIND_CHUNKS in sggc-app.h, as
@@ -304,6 +324,11 @@ application for use by SGGC.
 
 See sggc-imp for how to control some aspects of the implementation,
 for which the best choice might depend on the system used.
+
+Invalid values for the constants mentioned above may sometimes be
+detected at run-time, in which case the C library "abort" function
+will be called.  (It might also be called due to failure of internal
+checks, indicative of a bug in the SGGC code.)
 
 
 TYPES, LENGTHS, AND KINDS
@@ -334,6 +359,10 @@ small segments, and the number of chunks allocated for objects if they
 are of a small kind, are determined by the value for SGGC_KIND_CHUNKS
 that the application provides, which gives the numbers of chunks for
 each kind, with zero indicating that the kind uses big segments.
+
+If SGGC_DATA_ALIGNMENT is defined, SGGC_KIND_CHUNKS must be such that
+objects with data areas with at least SGGC_DATA_ALIGNMENT bytes have
+data areas whose size in bytes is a multiple of SGGC_DATA_ALIGNMENT.
 
 The application provides a function (or macro) sggc_kind that
 determines the kind of an object from its type and length.  The kind
@@ -405,15 +434,17 @@ directly refer to an object.
 
 Root pointers would, for example, include compressed pointers stored
 in global variables used by the application.  If the application also
-uses regular pointers (to data areas) as roots, sggc_find_root_ptrs
-must be called with the corresponding compressed pointer, which the
-application must somehow be able to find (eg, by storing a compressed
-pointer to itself at the start of the data area for every object).
+uses regular pointers (to data areas) as roots, sggc_look_at (or
+sggc_mark) must be called with the corresponding compressed pointer,
+which the application must somehow be able to find (eg, by storing a
+compressed pointer to itself at the start of the data area for every
+object).
 
 An application may also store root pointers in the local variables of
 functions.  The application will need to implement some scheme for
-finding all such local variables, and calling sggc_find_root_ptrs for
-each of them, passing the compressed pointer for the reference.
+finding all such local variables, and calling sggc_look_at (or
+sggc_mark) for each of them, passing the compressed pointer for the
+reference.
 
 Secondly, the application must provide an sggc_find_object_ptrs
 procedure, which is passed a compressed pointer to an object, and

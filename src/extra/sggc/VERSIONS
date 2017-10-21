@@ -1,5 +1,9 @@
 The stable versions of SGGC below are tagged in the source code repository.
 
+Version 2017-10-21
+
+  Added optional data alignment specification.  Other minor tweaks.
+
 Version 2017-06-09
 
   Added sggc_nchunks_allocated to API.  Fixed typos in sggc-doc.
