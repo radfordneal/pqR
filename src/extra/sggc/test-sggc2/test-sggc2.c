@@ -19,12 +19,13 @@
 
 
 /* This test program uses compressed pointers, both big and small
-   segments, and no auxiliary data.  Optional garbage collections are
-   done according to a simple scheme based just on number of
-   allocations done.  It is run with its first program argument giving
-   the maximum number of segments (default 5, the minimum for not
-   running out of space), and its second giving the number of
-   iterations of the test loop (default 50). */
+   segments, and no auxiliary data.  Alignment to 16 bytes may be
+   forced, if compiled with -DSGGC_DATA_ALIGNMENT=16.  Optional
+   garbage collections are done according to a simple scheme based
+   just on number of allocations done.  It is run with its first
+   program argument giving the maximum number of segments (default 5,
+   the minimum for not running out of space), and its second giving
+   the number of iterations of the test loop (default 50). */
 
 
 #include <stdlib.h>

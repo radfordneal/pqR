@@ -350,16 +350,16 @@ that use big segments.  These objects have auxiliary information
 already allocated (which is the same for all kinds, and cannot be
 read-only), but do not have a data area allocated - one is allocated
 using sggc_mem_alloc_zero when the segment becomes used.  If 'unused'
-is empty, sggc_mem_alloc_zero is used to allocate a new segment, data,
-and auxiliary information (if a partial block is not already
-allocated).
+is empty, sggc_mem_alloc_zero is used to allocate a new segment,
+sggc_mem_alloc_data is used to allocate data, and sggc_mem_alloc is
+used to allocate auxiliary information (if a partial block is not
+already allocated).
 
 Objects of an uncollected kind are allocated in the same way, except
 that there will never be more than one segment of free objects, which
-will have recently been created with sggc_mem_alloc_zero, since
-allocated objects of this kind never become free.  Uncollected objects
-of kind k are added to the 'uncollected[k]' set when allocated, not to
-'free_or_new[k]'.
+will have recently been created, since allocated objects of this kind
+never become free.  Uncollected objects of kind k are added to the
+'uncollected[k]' set when allocated, not to 'free_or_new[k]'.
 
 The sggc_alloc_small_kind_quickly function uses a bit vector, called
 'SGGC_next_free_bits[k]', to represent the free objects of kind k in
@@ -578,8 +578,13 @@ SGGC_SEG_BLOCKING is ignored if SGGC_SEG_DIRECT is defined.
 
 SGGC_SMALL_DATA_AREA_BLOCKING may be defined as an integer greater
 than 1 to enable allocation of data areas for small segments in blocks
-of that number.  SGGC_SMALL_DATA_AREA_ALIGN may also be defined (as a
-power of two) to a boundary to which data areas should be aligned.
+of that number.  
+
+SGGC_SMALL_DATA_AREA_ALIGN may be defined (as a power of two) to align
+small data areas.  If SGGC_DATA_ALIGNMENT is defined to be greater
+than 8, SGGC_SMALL_DATA_AREA_ALIGN will be automatically defined to be
+equal to SGGC_DATA_ALIGNMENT, if it is not already defined to be at
+least that large.
 
 SGGC_HUGE_SHIFT is used when the number of chunks asked for for a big
 segment is too large to fit in 21 bits.  In this case, the number of

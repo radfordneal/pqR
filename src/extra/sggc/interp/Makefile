@@ -10,7 +10,7 @@ all:	interp interp-db interp-pg interp-no-offset interp-no-sbset-static \
 	interp-find-obj-ret \
 	interpmod.o
 
-CC=gcc
+CC=gcc -std=c99
 
 interpmod.o:	interpmod.c sggc.c sbset.c sggc-app.h sggc.h sbset-app.h sbset.h
 	$(CC) -c -Wall interpmod.c

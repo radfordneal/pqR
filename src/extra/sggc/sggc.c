@@ -52,10 +52,18 @@
 #endif
 
 
-/* BLOCKING FOR SMALL DATA AREAS. */
+/* BLOCKING/ALIGNMENT FOR DATA AREAS. */
 
 #ifndef SGGC_SMALL_DATA_AREA_BLOCKING
-#define SGGC_SMALL_DATA_AREA_BLOCKING 1
+# define SGGC_SMALL_DATA_AREA_BLOCKING 1
+#endif
+
+#if defined(SGGC_DATA_ALIGNMENT) && SGGC_DATA_ALIGNMENT > 8
+# if !defined(SGGC_SMALL_DATA_AREA_ALIGN) \
+       || SGGC_SMALL_DATA_AREA_ALIGN < SGGC_DATA_ALIGNMENT
+# undef SGGC_SMALL_DATA_AREA_ALIGN
+# define SGGC_SMALL_DATA_AREA_ALIGN SGGC_DATA_ALIGNMENT
+# endif
 #endif
 
 
@@ -294,10 +302,10 @@ static int do_not_reuse_memory;  /* Non-zero to suppress reuse */
    so that the maximum number of chunks can be recorded in the available 
    space after shifting it right by SGGC_HUGE_SHIFT bits. */
 
-#define HUGE_CHUNKS (1 << 21)  /* Number of chunks where object becomes huge */
+#define HUGE_CHUNKS (1 << 19)  /* Number of chunks where object becomes huge */
 
 #ifndef SGGC_HUGE_SHIFT
-#define SGGC_HUGE_SHIFT 11     /* Amount to shift to try to get # in range */
+#define SGGC_HUGE_SHIFT 13     /* Amount to shift to try to get # in range */
 #endif
 
 
@@ -714,6 +722,7 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
 
   char *data;                /* pointer to data area for segment used */
   size_t data_size = 0;      /* size of data area, if allocated here, else 0 */
+  int align_offset = 0;      /* offset added to data to make it aligned */
 
   sbset_index_t index;       /* index of segment that object will be in */
   struct sbset_segment *seg; /* ptr to struct for seg object goes in */
@@ -752,11 +761,23 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
     }
 
     data_size = (size_t) SGGC_CHUNK_SIZE * nch;
-    data = sggc_mem_alloc_data (data_size);
+#   if !defined(SGGC_DATA_ALIGNMENT) || SGGC_DATA_ALIGNMENT <= 8
+      data = sggc_mem_alloc_data (data_size);
+#   else
+    { char *d = sggc_mem_alloc_data (data_size + SGGC_DATA_ALIGNMENT - 1);
+      data = (char *) (((uintptr_t)d + SGGC_DATA_ALIGNMENT - 1) 
+                          & ~ ((uintptr_t)SGGC_DATA_ALIGNMENT - 1));
+      align_offset = data - d;
+    }
+#   endif
+
     if (SGGC_DEBUG) 
     { printf (
        "sggc_alloc: called mem_alloc_data for data (big %d, %d chunks):: %p\n", 
         kind, (int)nch, data);
+#     if defined(SGGC_DATA_ALIGNMENT)
+        printf ("sggc_alloc: alignment offset of %d was added\n",align_offset);
+#     endif
     }
 
     big = 1;
@@ -984,6 +1005,7 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
     { seg->X.Big.alloc_chunks = nch >> SGGC_HUGE_SHIFT;
       seg->X.Big.huge = 1;
     }
+    seg->X.Big.align_off = align_offset >> 3;
 #ifdef SGGC_KIND_UNCOLLECTED
     if (sggc_kind_uncollected[kind])
     { sggc_info.uncol_big_chunks += nch;
@@ -1012,7 +1034,7 @@ fail:
   { if (v != SGGC_NO_OBJECT) 
     { sbset_add (&unused, v);
     }
-    sggc_mem_free(data);
+    sggc_mem_free (data - align_offset);
   }
   else
   { small_data_area_next -= SMALL_DATA_AREA_SIZE;
@@ -1785,7 +1807,8 @@ void sggc_collect_remove_free_big (void)
         { printf ("sggc_collect: calling free for data for %x:: %p\n", 
                    v, SGGC_DATA(v));
         }
-        sggc_mem_free ((char *) SGGC_DATA(v));
+        struct sbset_segment *seg = SBSET_SEGMENT (SBSET_VAL_INDEX(v));
+        sggc_mem_free (((char *) SGGC_DATA(v)) - (seg->X.Big.align_off << 3));
         sggc_info.total_mem_usage -= (size_t) SGGC_CHUNK_SIZE * nch;
 
         /* Put it in 'unused', for later re-use. */
