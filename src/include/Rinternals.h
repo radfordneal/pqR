@@ -485,6 +485,19 @@ typedef struct VECTOR_SEXPREC_C {
 
 #define DATAPTR(x)	(((SEXPREC_ALIGN *) UPTR_FROM_SEXP(x)) + 1)
 
+/* Use gcc's facility for specifying alignment if present.  This may
+   assert an incorrect assumption about alignment in the case of
+   scalars - since they may be constants, or may be held in one chunk
+   when compressed pointers are used.  But it's difficult to see how
+   that could cause a problem in practice... */
+
+#ifdef __GNUC__ 
+#define DATAPTR_WITH_ALIGNMENT(x) __builtin_assume_aligned \
+            (DATAPTR(x), SGGC_DATA_ALIGNMENT, SGGC_DATA_ALIGNMENT_OFFSET)
+#else
+#define DATAPTR_WITH_ALIGNMENT(x) DATAPTR(x)
+#endif
+
 
 /* Pairlist and data access macros / static inline functions that are now 
    used everywhere (rather than non-inline functions, though those still
@@ -499,11 +512,11 @@ typedef struct VECTOR_SEXPREC_C {
 
 #define TYPEOF(x)  /*NOT_LVALUE*/(UPTR_FROM_SEXP(x)->sxpinfo.type)
 
-#define LOGICAL(x) ((int *) DATAPTR(x))
-#define INTEGER(x) ((int *) DATAPTR(x))
-#define RAW(x)     ((Rbyte *) DATAPTR(x))
-#define COMPLEX(x) ((Rcomplex *) DATAPTR(x))
-#define REAL(x)    ((double *) DATAPTR(x))
+#define LOGICAL(x) ((int *) DATAPTR_WITH_ALIGNMENT(x))
+#define INTEGER(x) ((int *) DATAPTR_WITH_ALIGNMENT(x))
+#define RAW(x)     ((Rbyte *) DATAPTR_WITH_ALIGNMENT(x))
+#define COMPLEX(x) ((Rcomplex *) DATAPTR_WITH_ALIGNMENT(x))
+#define REAL(x)    ((double *) DATAPTR_WITH_ALIGNMENT(x))
 
 #if USE_COMPRESSED_POINTERS
 #define LENGTH(x)  NOT_LVALUE(* (R_len_t *) SGGC_AUX1(x))
@@ -526,27 +539,27 @@ static inline SEXPTYPE TYPEOF (SEXP x)
 extern R_NORETURN void Rf_LOGICAL_error(SEXP);
 static inline int *LOGICAL(SEXP x) 
 {   if (TYPEOF(x) != LGLSXP) Rf_LOGICAL_error(x);
-    return (int *) DATAPTR(x);
+    return (int *) DATAPTR_WITH_ALIGNMENT(x);
 }
 extern R_NORETURN void Rf_INTEGER_error(SEXP);
 static inline int *INTEGER(SEXP x) /* allows logical too, due to common usage */
 {   if (TYPEOF(x) != INTSXP && TYPEOF(x) != LGLSXP) Rf_INTEGER_error(x);
-    return (int *) DATAPTR(x);
+    return (int *) DATAPTR_WITH_ALIGNMENT(x);
 }
 extern R_NORETURN void Rf_RAW_error(SEXP);
 static inline Rbyte *RAW(SEXP x) 
 {   if (TYPEOF(x) != RAWSXP) Rf_RAW_error(x);
-    return (Rbyte *) DATAPTR(x);
+    return (Rbyte *) DATAPTR_WITH_ALIGNMENT(x);
 }
 extern R_NORETURN void Rf_COMPLEX_error(SEXP);
 static inline Rcomplex *COMPLEX(SEXP x) 
 {   if (TYPEOF(x) != CPLXSXP) Rf_COMPLEX_error(x);
-    return (Rcomplex *) DATAPTR(x);
+    return (Rcomplex *) DATAPTR_WITH_ALIGNMENT(x);
 }
 extern R_NORETURN void Rf_REAL_error(SEXP);
 static inline double *REAL(SEXP x) 
 {   if (TYPEOF(x) != REALSXP) Rf_REAL_error(x);
-    return (double *) DATAPTR(x);
+    return (double *) DATAPTR_WITH_ALIGNMENT(x);
 }
 
 #if USE_COMPRESSED_POINTERS
