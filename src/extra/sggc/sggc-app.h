@@ -41,8 +41,10 @@
    needed, only present on 64-bit systems).
 
    Note that some small objects may end up not aligned anyway, if of
-   kinds with unaligned size.  The sizes for kinds in the schemes below
-   ensure the specified alignment for numeric vectors (SGGC type 1). */
+   kinds with unaligned size.  The sizes for kinds in the schemes
+   below ensure the specified alignment for vectors (SGGC type 1) of
+   double type with length greater than one and complex type with
+   length greater than zero. */
 
 #if SIZEOF_CHAR_P == 8
 #   define SGGC_DATA_ALIGNMENT 32
@@ -105,7 +107,7 @@ typedef int sggc_length_t;      /* Type for holding an object length, which
    These SGGC types are as follows:
 
        0  No pointers to follow (NILSXP, CHARSXP)
-       1  Only attribute pointer to follow (eg, INTSXP)
+       1  Only attribute pointer to follow (eg, INTSXP, REALSXP, CPLXSXP)
        2  Attribute pointer plus three others (eg, LISTSXP)
        3  Attribute plus vector of pointers (VECSXP, EXPRSXP, STRSXP)
        4  Attribute pointer plus one or two others (EXTPTRSXP, S4SXP)
@@ -147,7 +149,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
 
-#define SGGC_DATA_ALIGNMENT_OFFSET 8 /* Data 8 bytes past 32/64-byte boundary */
+#define SGGC_DATA_ALIGNMENT_OFFSET 8 /* Data 8 bytes past 16/32-byte boundary */
 
 #define SGGC_AUX1_SIZE 4        /* Lengths of objects */
 #define SGGC_AUX1_BLOCK_SIZE 4  /* So blocks are the same size as data blocks */
@@ -322,7 +324,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
       Symbol:             Primitive:         Environment:    External pointer:
         info, cptr          info, cptr         info, cptr      info, cptr
         pname               C-function         frame           external ptr
-        value               fast-C-function    enlcos          prot
+        value               fast-C-function    enclos          prot
         lastbinding         64 bits of info    hashtab         tag
         lastenv, lastenf    = 32 bytes         hashlen, tcnts  = 32 bytes
         symbits               (2 chunks)       envsymbits        (2 chunks)
