@@ -1,0 +1,2 @@
+Establish alignment of numeric vectors, which can also be declared
+when using gcc (or gcc look-alike), for possibly-better code generation. 
