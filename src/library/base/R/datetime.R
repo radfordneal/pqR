@@ -23,8 +23,10 @@ Sys.timezone <- function(location = TRUE)
 {
     tz <- Sys.getenv("TZ", names = FALSE)
     if(!location || nzchar(tz)) return(Sys.getenv("TZ", unset = NA_character_))
-    lt <- normalizePath("/etc/localtime") # Linux, macOS, ...
-    if (grepl(pat <- "^/usr/share/zoneinfo/", lt)) sub(pat, "", lt)
+    lt <- normalizePath("/etc/localtime") # most Linux, macOS, ...
+    if (grepl(pat <- "^/usr/share/zoneinfo/", lt) ||
+        grepl(pat <- "^/usr/share/zoneinfo.default/", lt)) sub(pat, "", lt)
+    else if(grepl(pat <- ".*/zoneinfo/(.*)", lt))  sub(pat, "\\1", lt)
     else if (lt == "/etc/localtime" && file.exists("/etc/timezone") &&
 	     dir.exists("/usr/share/zoneinfo") &&
 	     { # Debian etc.
@@ -1064,6 +1066,10 @@ OlsonNames <- function()
     if(.Platform$OS.type == "windows")
         tzdir <- Sys.getenv("TZDIR", file.path(R.home("share"), "zoneinfo"))
     else {
+        ## Try known locations in turn.
+        ## The list is not exhaustive (mac OS 10.13's real location is
+        ## /usr/share/zoneinfo.default) and there is a risk that
+        ## the wrong one is found.
         tzdirs <- c(Sys.getenv("TZDIR"),
                     file.path(R.home("share"), "zoneinfo"),
                     "/usr/share/zoneinfo", # Linux, macOS, FreeBSD
@@ -1075,9 +1081,11 @@ OlsonNames <- function()
         if (!length(tzdirs)) {
             warning("no Olson database found")
             return(character())
-        } else tzdir <- tzdirs[1]
+        } else tzdir <- tzdirs[1L]
     }
     x <- list.files(tzdir, recursive = TRUE)
-    ## all auxiliary files are l/case.
+    ## some databases have VERSION, some +VERSION, some neither
+    x <- setdiff(x, "VERSION")
+    ## all other auxiliary files are l/case.
     grep("^[ABCDEFGHIJKLMNOPQRSTUVWXYZ]", x, value = TRUE)
 }

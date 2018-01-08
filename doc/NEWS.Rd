@@ -5,6 +5,51 @@
 \title{R News}
 \encoding{UTF-8}
 
+\section{\Rlogo CHANGES IN R 3.4.3}{
+
+  \subsection{INSTALLATION on a UNIX-ALIKE}{
+    \itemize{
+      \item A workaround has been added for the changes in location of
+      time-zone files in macOS 10.13 \sQuote{High Sierra} and
+      again in 10.13.1, so the default time zone is deduced
+      correctly from the system setting when \R is configured with
+      \option{--with-internal-tzcode} (the default on macOS).
+
+      \item \command{R CMD javareconf} has been updated to recognize the
+      use of a Java 9 SDK on macOS.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{raw(0) & raw(0)} and \code{raw(0) | raw(0)}
+      again return \code{raw(0)} (rather than \code{logical(0)}).
+
+      \item \code{intToUtf8()} converts integers corresponding to
+      surrogate code points to \code{NA} rather than invalid UTF-8, as
+      well as values larger than the current Unicode maximum of
+      \code{0x10FFFF}.  (This aligns with the current RFC3629.)
+
+      \item Fix calling of methods on S4 generics that dispatch on
+      \code{\dots} when the call contains \code{\dots}.
+
+      \item Following Unicode \sQuote{Corrigendum 9}, the UTF-8
+      representations of U+FFFE and U+FFFF are now regarded as valid by
+      \code{utf8ToInt()}.
+
+      \item \code{range(c(TRUE, NA), finite = TRUE)} and similar no longer
+      return \code{NA}. (Reported by Lukas Stadler.)
+
+      \item The self starting function \code{attr(SSlogis, "initial")}
+      now also works when the y values have exact minimum zero and is
+      slightly changed in general, behaving symmetrically in the y range.
+
+      \item The printing of named raw vectors is now formatted nicely as
+      for other such atomic vectors, thanks to Lukas Stadler.
+    }
+  }
+}
+
 \section{\Rlogo CHANGES IN R 3.4.2}{
 
   \subsection{NEW FEATURES}{
@@ -107,7 +152,7 @@
       \item It is again possible to use \command{configure
 	--enable-maintainer-mode} without having installed
       \command{notangle} (it was required in \R 3.4.[01]).
-      
+
       \item S4 method dispatch on \code{\dots} calls the method by name
       instead of \code{.Method} (for consistency with default dispatch),
       and only attempts to pass non-missing arguments from the generic.
@@ -365,7 +410,7 @@
       \code{tol} in the result, and optionally parts of the internal
       matrix computations.
 
-      \item \code{addNA()} is faster now, e.g.{} when applied twice.
+      \item \code{addNA()} is faster now, e.g.\sspace{}when applied twice.
       (Part of \PR{16895}.)
 
       \item New option \code{rstandard(<lm>, type = "predicted")}

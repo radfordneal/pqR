@@ -738,8 +738,10 @@ combined @emph{via} @samp{,} (see below for an example).  For versioned
 licenses, one can also specify the name followed by the version, or
 combine an existing abbreviation and the version with a @samp{-}.
 
-Abbreviations @code{GPL} and @code{LGPL} are ambiguous and usually taken
-to mean any version of the license: but it is better not to use them.
+Abbreviations @code{GPL} and @code{LGPL} are ambiguous and
+usually@footnote{@acronym{CRAN} expands them to e.g.@: @code{GPL-2
+| GPL-3}.} taken to mean any version of the license: but it is better
+not to use them.
 @item
 One of the strings @samp{file LICENSE} or @samp{file LICENCE} referring
 to a file named @file{LICENSE} or @file{LICENCE} in the package (source
@@ -2478,9 +2480,9 @@ features which are not otherwise implemented in C++, and C++ compilers
 commonly accept C99 extensions to C++98.  A minor update@footnote{The
 changes are linked from
 @uref{https://isocpp.org/@/std/@/standing-documents/@/sd-6-sg10-feature-test-recommendations}.}
-to C++11 (C++14) was published in December 2014.  The next standard has
-been sent to ISO and is likely to be approved in 2017: it is informally
-known as C++17.
+to C++11 (C++14) was published in December 2014.  The next standard
+(C++17) was approved in Sept 2017 and will be published by ISO in due
+course.
 
 What standard a C++ compiler aims to support can be hard to determine:
 the value@footnote{Values @code{199711}, @code{201103L} and
@@ -2495,7 +2497,8 @@ native@footnote{Some distributions, notably Debian, have supplied a
 build of @command{clang} with @command{g++}'s headers and library.
 Conversely, Apple's command named @command{g++} is based on
 @command{clang} using @code{libc++}.}  @code{libc++} headers and library
-includes many C++11 features, and does not support TR1.
+includes most C++14 features, and does not support TR1.  As from version
+6.0.0, @command{clang} is expected to default to C++14.
 
 Since version 3.1.0, @R{} has provided support for C++11 in packages in
 addition to C++98.  This support is not uniform across platforms as it
@@ -2625,7 +2628,7 @@ SystemRequirements: C++14
 @end example
 @noindent
 in the @file{DESCRIPTION} file. Finally, the C++14 compiler can be
-used systematically by setting the environment variable @env{USE_CXX17}.
+used systematically by setting the environment variable @env{USE_CXX14}.
 
 Note that code written for C++11 that emulates features of C++14 will
 not necessarily compile under a C++14 compiler@footnote{As from @R{}
@@ -4380,7 +4383,8 @@ interfaces to @R{}'s RNGs described in @ref{Random numbers}.  In
 particular, if more than one package initializes the system RNG (e.g.@:
 @emph{via} @code{srand}), they will interfere with each other.
 
-Nor should the C++11 random number library be used.
+Nor should the C++11 random number library be used, nor any other
+third-party random number generators such as those in GSL.
 
 @item
 Errors in memory allocation and reading/writing outside arrays are very
@@ -4528,9 +4532,13 @@ suitable test for packages using @CRANpkg{rJava} would be
 @example
 .jinit()
 jv <- .jcall("java/lang/System", "S", "getProperty", "java.runtime.version")
-jvn <- as.numeric(paste0(strsplit(jv, "[.]")[[1L]][1:2], collapse = "."))
-if(jvn < 1.8) stop("Java 8 is needed for this package but not available")
+if(substr(jv, 1L, 1L) == "1") @{
+  jvn <- as.numeric(paste0(strsplit(jv, "[.]")[[1L]][1:2], collapse = "."))
+  if(jvn < 1.8) stop("Java 8 is needed for this package but not available")
+@}
 @end example
+@noindent
+(Java 9 changed the format of this string.)
 
 Some packages have stated a requirement on a particular JDK, but a
 package should only be requiring a JRE unless providing its own Java
@@ -8411,6 +8419,17 @@ Recent versions@footnote{including @command{gcc} 7.1 and @command{clang}
 added the flag @option{-fsanitize-address-use-after-scope}: see
 @uref{https://github.com/@/google/@/sanitizers/@/wiki/@/AddressSanitizerUseAfterScope}.
 
+One of the checks done by ASAN is that @code{malloc/free} and in C++
+@code{new/delete} and @code{new[]/delete[]} are used consistently
+(rather than say @code{free} being used to dealloc memory allocated by
+@code{new[]}).  This matters on some systems but not all: unfortunately
+on some of those where it does not matter, system libraries@footnote{for
+example, X11/GL libraries on Linux, seen when checking package
+@CRANpkg{rgl} and some others using it---a workaround is to set
+environment variable @env{RGL_USE_NULL=true}.} are not consistent.  The
+check can be suppressed by including @samp{alloc_dealloc_mismatch=0} in
+@env{ASAN_OPTIONS}.
+
 @menu
 * Using Leak Sanitizer::        
 @end menu
@@ -8439,7 +8458,8 @@ and as the parser retains some memory to the end of the process, if @R{}
 itself was built against ASan, all runs will have a failure error status
 (which may include running @R{} as part of building @R{} itself).
 
-To disable both this and some strict checking use
+To disable this, allocation-mismatch checking and some strict C++
+checking use
 
 @example
 setenv ASAN_OPTIONS 'alloc_dealloc_mismatch=0:detect_leaks=0:detect_odr_violation=0'
@@ -8515,7 +8535,7 @@ See
 Instrumentation Options') for the options supported by GCC: 6 and 7 support
 @example
 -fsanitize=alignment,bool,bounds,enum,integer-divide-by-zero,
-nonnull-attribute,null,object-size, return,returns-nonnull-attribute,
+nonnull-attribute,null,object-size,return,returns-nonnull-attribute,
 shift,signed-integer-overflow,unreachable,vla-bound,vptr
 @end example
 @noindent
@@ -8531,8 +8551,10 @@ where @code{float-divide-by-zero} is not desirable for @R{} uses and
 @c and @code{vptr} checks produced many warnings on GCC's own C++ headers,
 @c so should be disabled.
 
-From GCC 8 @code{signed-integer-overflow} will no longer be a default part
-of @option{-fsanitize=undefined}, but can be specified separately.
+From GCC 8 @code{signed-integer-overflow} will no longer be a default
+part of @option{-fsanitize=undefined}, but can be specified separately.
+It adds options @option{-fsanitize=pointer-overflow} an
+@option{-fsanitize=builtin}.
 
 Other useful flags include
 @example
@@ -8560,6 +8582,11 @@ For more details on the topic see
 @uref{http://blog.regehr.org/archives/213} and
 @uref{http://blog.llvm.org/@/2011/@/05/@/what-every-c-programmer-should-know.html}
 (which has 3 parts).
+
+It may or may not be possible to build @R{} itself with
+@option{-fsanitize=undefined}: when last tried it worked with
+@command{clang} but there were problems with OpenMP-using code with
+@command{gcc}.
 
 
 @node Other analyses with `clang', Using `Dr. Memory', Using Undefined Behaviour Sanitizer, Checking memory access
@@ -8777,9 +8804,7 @@ Continue execution of @R{} by typing @kbd{signal 0@key{RET}}.
 @end itemize
 
 Under Windows signals may not be able to be used, and if so the procedure is
-more complicated.  See the rw-FAQ and
-@uref{http://www.stats.uwo.ca/faculty/murdoch/software/debuggingR/gdb.shtml,
-@code{www.stats.uwo.ca/faculty/murdoch/@/software/@/debuggingR/@/gdb.shtml}}.
+more complicated.  See the rw-FAQ.
 
 
 @node Inspecting R objects,  , Finding entry points, Debugging compiled code
@@ -10021,9 +10046,8 @@ Under Windows the same commands work, but @file{Makevars.win} will be
 used in preference to @file{Makevars}, and only @file{src/Makefile.win}
 will be used by @code{R CMD INSTALL} with @file{src/Makefile} being
 ignored.  For past experiences of building DLLs with a variety of
-compilers, see file @samp{README.packages} and
-@uref{http://www.stats.uwo.ca/@/faculty/@/murdoch/@/software/@/compilingDLLs/}
-.  Under Windows you can supply an exports definitions file called
+compilers, see file @samp{README.packages}.  
+Under Windows you can supply an exports definitions file called
 @file{@var{dllname}-win.def}: otherwise all entry points in objects (but
 not libraries) supplied to @code{R CMD SHLIB} will be exported from the
 DLL.  An example is @file{stats-win.def} for the @pkg{stats} package: a

@@ -7,6 +7,69 @@
 
 <h2>R News</h2>
 
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.4.3</h3>
+
+
+
+<h4>INSTALLATION on a UNIX-ALIKE</h4>
+
+
+<ul>
+<li><p> A workaround has been added for the changes in location of
+time-zone files in macOS 10.13 &lsquo;High Sierra&rsquo; and
+again in 10.13.1, so the default time zone is deduced
+correctly from the system setting when <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span> is configured with
+<span class="option">--with-internal-tzcode</span> (the default on macOS).
+</p>
+</li>
+<li> <p><code>R CMD javareconf</code> has been updated to recognize the
+use of a Java 9 SDK on macOS.
+</p>
+</li></ul>
+
+
+
+
+<h4>BUG FIXES</h4>
+
+
+<ul>
+<li> <p><code>raw(0) &amp; raw(0)</code> and <code>raw(0) | raw(0)</code>
+again return <code>raw(0)</code> (rather than <code>logical(0)</code>).
+</p>
+</li>
+<li> <p><code>intToUtf8()</code> converts integers corresponding to
+surrogate code points to <code>NA</code> rather than invalid UTF-8, as
+well as values larger than the current Unicode maximum of
+<code>0x10FFFF</code>.  (This aligns with the current RFC3629.)
+</p>
+</li>
+<li><p> Fix calling of methods on S4 generics that dispatch on
+<code>...</code> when the call contains <code>...</code>.
+</p>
+</li>
+<li><p> Following Unicode &lsquo;Corrigendum 9&rsquo;, the UTF-8
+representations of U+FFFE and U+FFFF are now regarded as valid by
+<code>utf8ToInt()</code>.
+</p>
+</li>
+<li> <p><code>range(c(TRUE, NA), finite = TRUE)</code> and similar no longer
+return <code>NA</code>. (Reported by Lukas Stadler.)
+</p>
+</li>
+<li><p> The self starting function <code>attr(SSlogis, "initial")</code>
+now also works when the y values have exact minimum zero and is
+slightly changed in general, behaving symmetrically in the y range.
+</p>
+</li>
+<li><p> The printing of named raw vectors is now formatted nicely as
+for other such atomic vectors, thanks to Lukas Stadler.
+</p>
+</li></ul>
+
+
+
+
 <h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.4.2</h3>
 
 

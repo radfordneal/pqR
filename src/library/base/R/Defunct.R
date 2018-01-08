@@ -18,8 +18,8 @@
 
 .Defunct <- function(new, package=NULL, msg) {
     if (missing(msg)) {
-	msg <- gettextf("'%s' is defunct.\n",
-			as.character(sys.call(sys.parent())[[1L]]))
+        fname <- as.character(sys.call(sys.parent())[[1L]])
+	msg <- gettextf("'%s' is defunct.\n", fname[length(fname)])
 	if(!missing(new))
 	    msg <- c(msg, gettextf("Use '%s' instead.\n", new))
 	msg <- c(msg,

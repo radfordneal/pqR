@@ -1,5 +1,5 @@
 
-R version 3.4.1 Patched (2017-07-19 r72930) -- "Single Candle"
+R version 3.4.2 Patched (2017-11-17 r73741) -- "Short Summer"
 Copyright (C) 2017 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -665,9 +665,6 @@ An object of class "foo"
 + 	      TRUE)
 + }
 Loading required package: Matrix
-Note: method with signature 'numeric#dMatrix' chosen for function '>',
- target signature 'numeric#ddiMatrix'.
- "ANY#ddiMatrix" would also be valid
 <sparse>[ <logic> ] : .M.sub.i.logical() maybe inefficient
 > 
 > 
@@ -1279,4 +1276,8 @@ Also defined by 'package2'
 [1] "f"
 > stopifnot(identical(f(1, 2, 3), 3L))
 > stopifnot(identical(f("a", "b", "c"), 3L))
+> 
+> ## ensure forwarding works correctly for dots dispatch
+> f2 <- function(...) f(...)
+> stopifnot(identical(f2(a=1L), 1L))
 > 

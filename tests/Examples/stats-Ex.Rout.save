@@ -1,5 +1,5 @@
 
-R version 3.4.1 Patched (2017-07-19 r72930) -- "Single Candle"
+R version 3.4.2 Patched (2017-11-17 r73741) -- "Short Summer"
 Copyright (C) 2017 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -1473,6 +1473,13 @@ Residual standard error: 0.02684 on 13 degrees of freedom
 > ## Don't show: 
 > require(graphics)
 > 
+> dwlg1 <- data.frame(Prop = c(rep(0,5), 2, 5, rep(9, 9)), end = 1:16)
+> iPar <- getInitial(Prop ~ SSlogis(end, Asym, xmid, scal), data = dwlg1)
+> ## failed in R <= 3.4.2 (because of the '0's in 'Prop')
+> stopifnot(all.equal(tol = 1e-6,
++    iPar, c(Asym = 9.0678, xmid = 6.79331, scal = 0.499934)))
+> 
+> ## Visualize the SSlogis()  model  parametrization :
 >   xx <- seq(-0.5, 5, len = 101)
 >   yy <- 5 / ( 1 + exp((2-xx)))
 >   par(mar = c(0, 0, 3.5, 0))
@@ -3797,7 +3804,7 @@ sigma^2 estimated as 0.4566:  log likelihood = -101.2,  aic = 212.4
 > 
 > asOneSidedFormula("age")
 ~age
-<environment: 0x4944850>
+<environment: 0x42cdd48>
 > asOneSidedFormula(~ age)
 ~age
 > 
@@ -4782,7 +4789,7 @@ function (V)
     r[cbind(1L:p, 1L:p)] <- 1
     r
 }
-<bytecode: 0x6655678>
+<bytecode: 0x2d97190>
 <environment: namespace:stats>
 > stopifnot(all.equal(Cl, cov2cor(cov(longley))),
 +           all.equal(cor(longley, method = "kendall"),
@@ -7338,7 +7345,7 @@ attr(,".Environment")
 > environment(as.formula("y ~ x"))
 <environment: R_GlobalEnv>
 > environment(as.formula("y ~ x", env = new.env()))
-<environment: 0x63faa68>
+<environment: 0x4d2eda0>
 > 
 > 
 > ## Create a formula for a model with a large number of variables:
@@ -11948,14 +11955,14 @@ attr(,"class")
 $linkfun
 function (mu) 
 mu^lambda
-<bytecode: 0x576af78>
-<environment: 0x57636c0>
+<bytecode: 0x50daff0>
+<environment: 0x50e1b20>
 
 $linkinv
 function (eta) 
 pmax(eta^(1/lambda), .Machine$double.eps)
-<bytecode: 0x576b0c8>
-<environment: 0x57636c0>
+<bytecode: 0x50daea0>
+<environment: 0x50e1b20>
 
 > 
 > 
@@ -16035,8 +16042,8 @@ Step function with continuity 'f'= 0.2 ,  3 knots at
 > unclass(sfun0)
 function (v) 
 .approxfun(x, y, v, method, yleft, yright, f)
-<bytecode: 0x58f64c0>
-<environment: 0x6bf9798>
+<bytecode: 0x408d7c8>
+<environment: 0x46268b0>
 attr(,"call")
 stepfun(1:3, y0, f = 0)
 > ls(envir = environment(sfun0))
@@ -18360,7 +18367,7 @@ Number of Fisher Scoring iterations: 6
 > ###
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  5.019 0.085 5.124 0 0 
+Time elapsed:  6.89 0.187 7.11 0 0 
 > grDevices::dev.off()
 null device 
           1 
