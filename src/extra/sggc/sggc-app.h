@@ -35,15 +35,29 @@
 #endif
 
 
-/* BLOCKING FOR SMALL DATA AREAS.  Alignment may best be omitted if large
-   blocks are used and the calloc supplied always allocates such to an
-   aligned section of the address space. */
+/* DATA AREA ALIGNMENT.  Force 32-byte alignment for 64-bit systems,
+   and 16-byte for 32-bit systems.  This accomodates requirements on
+   Intel/AMD processors for SSE2 (16-byte needed) and AVX (32-byte
+   needed, only present on 64-bit systems).
+
+   Note that some small objects may end up not aligned anyway, if of
+   kinds with unaligned size.  The sizes for kinds in the schemes
+   below ensure the specified alignment for vectors (SGGC type 1) of
+   double type with length greater than one and complex type with
+   length greater than zero. */
+
+#if SIZEOF_CHAR_P == 8
+#   define SGGC_DATA_ALIGNMENT 32
+#else
+#   define SGGC_DATA_ALIGNMENT 16
+#endif
+
+
+/* BLOCKING FOR SMALL DATA AREAS. */
 
 #define SGGC_SMALL_DATA_AREA_BLOCKING 128
 
-#if 1
 #define SGGC_SMALL_DATA_AREA_ALIGN 64   /* Typical cache line size */
-#endif
 
 
 /* DEFINE SGGC_MAX_SEGMENTS APPROPRIATELY.  Has separate defaults 
@@ -93,7 +107,7 @@ typedef int sggc_length_t;      /* Type for holding an object length, which
    These SGGC types are as follows:
 
        0  No pointers to follow (NILSXP, CHARSXP)
-       1  Only attribute pointer to follow (eg, INTSXP)
+       1  Only attribute pointer to follow (eg, INTSXP, REALSXP, CPLXSXP)
        2  Attribute pointer plus three others (eg, LISTSXP)
        3  Attribute plus vector of pointers (VECSXP, EXPRSXP, STRSXP)
        4  Attribute pointer plus one or two others (EXTPTRSXP, S4SXP)
@@ -135,6 +149,8 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
 
+#define SGGC_DATA_ALIGNMENT_OFFSET 8 /* Data 8 bytes past 16/32-byte boundary */
+
 #define SGGC_AUX1_SIZE 4        /* Lengths of objects */
 #define SGGC_AUX1_BLOCK_SIZE 4  /* So blocks are the same size as data blocks */
 
@@ -154,10 +170,10 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 { 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
   1,   1,   1,   1,   1,   2, /* Smallest sizes for the SGGC types */ \
   2,   2,   2,   2,   2,   2, /* 2nd smallest sizes */ \
-  3,   4,   2,   4,   2,   2, /* 3rd smallest sizes, unused for types 2,4&5 */ \
-  5,   8,   2,   8,   2,   2, /* 4th smallest sizes, unused for types 2,4&5 */ \
-  8,  16,   2,  16,   2,   2, /* 5th smallest sizes, unused for types 2,4&5 */ \
- 16,  32,   2,  32,   2,   2, /* 6th smallest sizes, unused for types 2,4&5 */ \
+  3,   4,   2,   4,   2,   2, /* 3rd smallest sizes, unused for types 2,4,5 */ \
+  5,   8,   2,   8,   2,   2, /* 4th smallest sizes, unused for types 2,4,5 */ \
+  8,  16,   2,  16,   2,   2, /* 5th smallest sizes, unused for types 2,4,5 */ \
+ 16,  32,   2,  32,   2,   2, /* 6th smallest sizes, unused for types 2,4,5 */ \
  32,  32,   2,  32,   2,   2  /* 7th smallest sizes, only for type 0 */ \
 }
 
@@ -234,6 +250,8 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
 
+#define SGGC_DATA_ALIGNMENT_OFFSET 24  /* Data 24 bytes past 32-byte boundary */
+
 #define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus 7 small */
 
 /* Note: chunks in non-vector types are given by second row below, except
@@ -242,11 +260,11 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 #define SGGC_KIND_CHUNKS \
 { 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
   2,   2,   3,   2,   3,   3, /* Smallest sizes for the SGGC types */ \
-  3,   3,   4,   3,   3,   4, /* 2nd smallest sizes, unused for type 4 */ \
-  4,   5,   4,   5,   3,   4, /* 3rd smallest sizes, unused for types 2,4&5 */ \
-  5,   8,   4,   8,   3,   4, /* 4th smallest sizes, unused for types 2,4&5 */ \
-  8,  16,   4,  16,   3,   4, /* 5th smallest sizes, unused for types 2,4&5 */ \
- 16,  32,   4,  32,   3,   4, /* 6th smallest sizes, unused for types 2,4&5 */ \
+  3,   4,   4,   3,   3,   4, /* 2nd smallest sizes, unused for type 4 */ \
+  4,   8,   4,   5,   3,   4, /* 3rd smallest sizes, unused for types 2,4,5 */ \
+  5,  16,   4,   8,   3,   4, /* 4th smallest sizes, unused for types 2,4,5 */ \
+  8,  32,   4,  16,   3,   4, /* 5th smallest sizes, unused for types 2,4,5 */ \
+ 16,  32,   4,  32,   3,   4, /* 6th smallest sizes, unused for types 1,2,4,5*/\
  32,  32,   4,  32,   3,   4  /* 7th smallest sizes, only for type 0 */ \
 }
 
@@ -306,7 +324,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
       Symbol:             Primitive:         Environment:    External pointer:
         info, cptr          info, cptr         info, cptr      info, cptr
         pname               C-function         frame           external ptr
-        value               fast-C-function    enlcos          prot
+        value               fast-C-function    enclos          prot
         lastbinding         64 bits of info    hashtab         tag
         lastenv, lastenf    = 32 bytes         hashlen, tcnts  = 32 bytes
         symbits               (2 chunks)       envsymbits        (2 chunks)
@@ -316,6 +334,8 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
       No room in symbol for hash (uses hash from printname). */
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
+
+#define SGGC_DATA_ALIGNMENT_OFFSET 16  /* Data 16 bytes past 32-byte boundary */
 
 #define SGGC_AUX1_SIZE 8        /* Attribute, as uncompressed pointer */
 #define SGGC_AUX1_BLOCK_SIZE 2  /* So blocks are the same size as data blocks */
@@ -328,11 +348,11 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 #define SGGC_KIND_CHUNKS \
 { 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
   2,   2,   2,   2,   2,   2, /* Smallest sizes for the SGGC types */ \
-  3,   3,   3,   3,   2,   3, /* 2nd smallest sizes, unused for type 4 */ \
-  4,   5,   3,   5,   2,   3, /* 3rd smallest sizes, unused for types 2,4&5 */ \
-  5,   8,   3,   8,   2,   3, /* 4th smallest sizes, unused for types 2,4&5 */ \
-  8,  16,   3,  16,   2,   3, /* 5th smallest sizes, unused for types 2,4&5 */ \
- 16,  32,   3,  32,   2,   3, /* 6th smallest sizes, unused for types 2,4&5 */ \
+  3,   4,   3,   3,   2,   3, /* 2nd smallest sizes, unused for type 4 */ \
+  4,   8,   3,   5,   2,   3, /* 3rd smallest sizes, unused for types 2,4,5 */ \
+  5,  16,   3,   8,   2,   3, /* 4th smallest sizes, unused for types 2,4,5 */ \
+  8,  32,   3,  16,   2,   3, /* 5th smallest sizes, unused for types 2,4,5 */ \
+ 16,  32,   3,  32,   2,   3, /* 6th smallest sizes, unused for types 1,2,4,5*/\
  32,  32,   3,  32,   2,   3  /* 7th smallest sizes, only for type 0 */ \
 }
 
@@ -400,6 +420,8 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 
 #define SGGC_CHUNK_SIZE 16      /* Number of bytes in a data chunk */
 
+#define SGGC_DATA_ALIGNMENT_OFFSET 8   /* Data 8 bytes past 16-byte boundary */
+
 #define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus 7 small */
 
 /* Note: chunks in non-vector types are given by second row below, except
@@ -408,11 +430,11 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 #define SGGC_KIND_CHUNKS \
 { 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
   2,   2,   2,   2,   2,   2, /* Smallest sizes for the SGGC types */ \
-  3,   3,   3,   3,   2,   3, /* 2nd smallest sizes, unused for type 4 */ \
-  4,   5,   3,   5,   2,   3, /* 3rd smallest sizes, unused for types 2,4&5 */ \
-  5,   8,   3,   8,   2,   3, /* 4th smallest sizes, unused for types 2,4&5 */ \
-  8,  16,   3,  16,   2,   3, /* 5th smallest sizes, unused for types 2,4&5 */ \
- 16,  32,   3,  32,   2,   3, /* 6th smallest sizes, unused for types 2,4&5 */ \
+  3,   4,   3,   3,   2,   3, /* 2nd smallest sizes, unused for type 4 */ \
+  4,   8,   3,   5,   2,   3, /* 3rd smallest sizes, unused for types 2,4,5 */ \
+  5,  16,   3,   8,   2,   3, /* 4th smallest sizes, unused for types 2,4,5 */ \
+  8,  32,   3,  16,   2,   3, /* 5th smallest sizes, unused for types 2,4,5 */ \
+ 16,  32,   3,  32,   2,   3, /* 6th smallest sizes, unused for types 1,2,4,5*/\
  32,  32,   3,  32,   2,   3  /* 7th smallest sizes, only for type 0 */ \
 }
 
