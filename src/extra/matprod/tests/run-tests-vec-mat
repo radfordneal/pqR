@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION
-#           Shell File to Run a Series of Tests
+#           Shell File to Run a Series of Tests (for vec_mat)
 #
 # Copyright (c) 2013, 2017, 2018 Radford M. Neal.
 # 
@@ -20,21 +20,32 @@
 #   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-# Usage:
-#
-#     run-tests program
-#
-# Uses the given test program (with -test appended) for a variety of
-# tests, displaying timing information, along with some headers.
+prog=$1-test
 
-../run-tests-scalar-vec $1
-../run-tests-vec-vec $1
-../run-tests-vec-mat $1
-../run-tests-mat-vec $1
-../run-tests-outer $1
-../run-tests-mat-mat $1
-../run-tests-trans1 $1
-../run-tests-trans2 $1
-../run-tests-trans12 $1
-../run-tests-special $1
-../run-tests-seq $1
+echo " "; echo VEC_MAT
+
+echo " "; time $prog 300000$Z v 2 2222
+echo " "; time $prog 30000$Z v 2 12345
+
+echo " "; time $prog 300000$Z v 3 2222
+echo " "; time $prog 30000$Z v 3 12345
+
+echo " "; time $prog 100000$Z v 2222 2
+echo " "; time $prog 20000$Z v 12345 2
+
+echo " "; time $prog 100000$Z v 2022 3
+echo " "; time $prog 20000$Z v 10345 3
+
+echo " "; time $prog 10000000$Z v 4 4
+echo " "; time $prog 10000000$Z v 12 13
+echo " "; time $prog 4000000$Z v 21 30
+echo " "; time $prog 20000$Z v 400 400
+
+echo " "; time $prog 4000$Z v 2222 301
+echo " "; time $prog 400$Z v 12345 280
+
+echo " "; time $prog 4000$Z v 301 2222
+echo " "; time $prog 400$Z v 280 12345
+
+echo " "; time $prog 200$Z v 39 123456
+echo " "; time $prog 200$Z v 123456 39

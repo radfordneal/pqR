@@ -1,0 +1,4 @@
+#!/bin/bash
+
+rm -f old/*
+cp *.out *.tim *-test Commit old

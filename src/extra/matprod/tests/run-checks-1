@@ -1,9 +1,9 @@
 #!/bin/bash
 #
 # MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION
-#           Shell File to Run a Series of Tests
+#           Shell File to Run Checks of One Multiplication
 #
-# Copyright (c) 2013, 2017 Radford M. Neal.
+# Copyright (c) 2018 Radford M. Neal.
 # 
 #   The matprod library is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -20,23 +20,24 @@
 #   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-# one-tests n k m
-#
-# Run tests with matprod-test and par-matprod-test on a pair of 
-# matrices of size n x k and k x m.
+prog=$1-test
 
-n=$1
-k=$2
-m=$3
+lower=$2
+upper=$3
 
-matprod-test 1 $n $k $m >/tmp/x$$
+export CHECK=T
 
-for prog in matprod-test par-matprod-test; do
-  echo $prog A; $prog 1 $n $k $m | cmp - /tmp/x$$
-  echo $prog B; $prog 1 t $n $k $m | cmp - /tmp/x$$
-  echo $prog C; $prog 1 $n $k $m t | cmp - /tmp/x$$
-  if [ $n == $m ]; then
-    echo $prog D; $prog 1 T $n $k $m | cmp - /tmp/x$$
-    echo $prog E; $prog 1 $n $k $m T | cmp - /tmp/x$$
-  fi
+for n in `seq $lower $upper`; do
+  for k in `seq $lower $upper`; do
+    for m in `seq $lower $upper`; do
+      echo -- $n $k $m --
+      $prog 2 $n $k $m
+      $prog 2 t $n $k $m
+      $prog 2 $n t $k $m
+      $prog 2 t $n t $k $m
+    done
+    echo -- symmetric $n $k $n --
+    $prog 2 T $n $k $n
+    $prog 2 $n T $k $n
+  done
 done

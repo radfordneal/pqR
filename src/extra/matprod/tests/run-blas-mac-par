@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Run the BLAS tests on macOS with multiple threads.
+
+for thr in $@; do
+  export VECLIB_MAXIMUM_THREADS=$thr
+  echo RUNNING TESTS FOR blas4 WITH $thr THREADS
+  ../run-tests blas4 >& blas4-$thr.out
+  ../tim blas4-$thr
+done

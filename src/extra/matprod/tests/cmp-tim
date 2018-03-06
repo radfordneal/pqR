@@ -2,6 +2,7 @@
 
 # cmp-time file1 file2
 #
-# Prints file1 and file2 in side-by-side columns to assist time comparisons.
+# Prints file1.tim and file2.tim in side-by-side columns to assist time
+# comparisons.
 
-pr -m -t -l10000 $1 $2
+pr -m -t -l10000 $1.tim $2.tim

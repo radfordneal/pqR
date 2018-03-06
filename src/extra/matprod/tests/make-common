@@ -1,0 +1,264 @@
+# MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION
+#           Common Part of Makefile for Compiling Test Programs
+#
+# Copyright (c) 2013, 2017, 2018 Radford M. Neal.
+# 
+#   The matprod library is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 2 of the License, or
+#   (at your option) any later version.
+# 
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+# 
+#   You should have received a copy of the GNU General Public License along
+#   with this program; if not, write to the Free Software Foundation, Inc.,
+#   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+# -----------------------------------------------------------------------------
+
+# A Makefile that includes this file must set the following as appropriate
+# (with examples shown):
+#
+# CC=gcc-7                # Compiler to use, must be gcc look-alike for CFLAGS
+#
+# CFLAGS=$(CFLAGSavx)     # Set to one of those below (or custom) as appropriate
+#
+# ALIGN=-DALIGN=32        # Typically 32 for AVX, 16 for SSE2
+# ALOFF=-DALIGN_OFFSET=8  # If ALIGN is 32, could test with 16 and 24 as well
+#
+# and optionally may set the following:
+#
+# OPT=...                 # Possibly set to something different than below.
+# matprod-extra-progs=... # Possibly set to a subset of those below.
+#
+# The Makefile is assumed to be run in a subdirectory of matprod/tests.
+
+OPT?=-O3   # Default optimization level, can override before including this file
+
+CFLAGSgen=-g -std=gnu99 $(OPT) -ffp-contract=off # Generic processor
+CFLAGSi32=-g -std=gnu99 $(OPT) -ffp-contract=off  -msse2 -mfpmath=sse
+CFLAGSi64=-g -std=gnu99 $(OPT) -ffp-contract=off  -msse3 -mtune=core2
+CFLAGSavx=-g -std=gnu99 $(OPT) -ffp-contract=off  -mavx  -mtune=ivybridge
+CFLAGSavx2=-g -std=gnu99 $(OPT) -ffp-contract=off -mavx2 -mtune=skylake
+
+II=-I.. -I../..         # Directories above with header files
+
+# Default set of additional programs. May want to remove some/all if no SSE/AVX.
+
+matprod-extra-progs?=matprod-nosimd-test matprod-off-nosimd-test \
+               matprod-noalign-nosimd-test matprod-off-noalign-nosimd-test \
+               matprod-noavx-test matprod-off-noavx-test \
+               matprod-noalign-noavx-test matprod-off-noalign-noavx-test \
+               matprod-allavx-test matprod-off-allavx-test \
+               matprod-noalign-allavx-test matprod-off-noalign-allavx-test
+
+# -----------------------------------------------------------------------------
+
+matprod-progs=matprod-test matprod-off-test \
+              matprod-noalign-test matprod-off-noalign-test \
+              par-matprod-test par-matprod-off-test \
+              par-matprod-nohelpers-test
+
+matprod-norestrict-progs=matprod-norestrict-test par-matprod-norestrict-test
+
+blas-progs=blas0-test blas1-test blas1-off-test blas2-test blas2-off-test
+blas-linux-progs=blas3-test blas3-off-test
+blas-mac-progs=blas4-test blas4-off-test
+
+default:	$(matprod-progs) $(matprod-extra-progs) Commit
+	true
+
+norestrict:	$(matprod-norestrict-progs) Commit
+	true
+
+blas-linux:	$(blas-progs) $(blas-linux-progs) Commit
+	true
+
+blas-mac:	$(blas-progs) $(blas-mac-progs) Commit
+	true
+
+Commit:	Makefile ../make-common \
+	  ../../matprod.c ../../par-matprod.c \
+	  ../../matprod.h ../../par-matprod.h \
+	  ../test.h ../test.c ../matprod-test.c ../blas-test.c
+	echo $(CC) $(CFLAGS) >Commit
+	echo " " >>Commit
+	git log -1 >>Commit
+	git diff ../../matprod.c ../../par-matprod.c >>Commit
+
+# -----------------------------------------------------------------------------
+
+matprod-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) ../test.c ../matprod-test.c ../../matprod.c \
+		-o matprod-test
+
+matprod-off-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) $(ALOFF) \
+		../test.c ../matprod-test.c ../../matprod.c \
+		-o matprod-off-test
+
+matprod-noalign-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) -c ../test.c
+	$(CC) $(II) $(CFLAGS) test.o ../matprod-test.c ../../matprod.c \
+		-o matprod-noalign-test
+	rm test.o
+
+matprod-off-noalign-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) $(ALOFF) -c ../test.c
+	$(CC) $(II) $(CFLAGS) test.o ../matprod-test.c ../../matprod.c \
+		-o matprod-off-noalign-test
+	rm test.o
+
+matprod-nosimd-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) -DDISABLE_SIMD_CODE \
+		../test.c ../matprod-test.c ../../matprod.c \
+		-o matprod-nosimd-test
+
+matprod-off-nosimd-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) $(ALOFF) -DDISABLE_SIMD_CODE \
+		../test.c ../matprod-test.c ../../matprod.c \
+		-o matprod-off-nosimd-test
+
+matprod-noalign-nosimd-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) -c ../test.c
+	$(CC) $(II) $(CFLAGS) -DDISABLE_SIMD_CODE \
+		test.o ../matprod-test.c ../../matprod.c \
+		-o matprod-noalign-nosimd-test
+	rm test.o
+
+matprod-off-noalign-nosimd-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) $(ALOFF) -c ../test.c
+	$(CC) $(II) $(CFLAGS) -DDISABLE_SIMD_CODE \
+		test.o ../matprod-test.c ../../matprod.c \
+		-o matprod-off-noalign-nosimd-test
+	rm test.o
+
+matprod-noavx-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) -DDISABLE_AVX_CODE \
+		../test.c ../matprod-test.c ../../matprod.c \
+		-o matprod-noavx-test
+
+matprod-off-noavx-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) $(ALOFF) -DDISABLE_AVX_CODE \
+		../test.c ../matprod-test.c ../../matprod.c \
+		-o matprod-off-noavx-test
+
+matprod-noalign-noavx-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) -c ../test.c
+	$(CC) $(II) $(CFLAGS) -DDISABLE_AVX_CODE \
+		test.o ../matprod-test.c ../../matprod.c \
+		-o matprod-noalign-noavx-test
+	rm test.o
+
+matprod-off-noalign-noavx-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) $(ALOFF) -c ../test.c
+	$(CC) $(II) $(CFLAGS) -DDISABLE_AVX_CODE \
+		test.o ../matprod-test.c ../../matprod.c \
+		-o matprod-off-noalign-noavx-test
+	rm test.o
+
+matprod-allavx-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) -DENABLE_ALL_AVX_CODE \
+		../test.c ../matprod-test.c ../../matprod.c \
+		-o matprod-allavx-test
+
+matprod-off-allavx-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) $(ALOFF) -DENABLE_ALL_AVX_CODE \
+		../test.c ../matprod-test.c ../../matprod.c \
+		-o matprod-off-allavx-test
+
+matprod-noalign-allavx-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) -c ../test.c
+	$(CC) $(II) $(CFLAGS) -DENABLE_ALL_AVX_CODE \
+		test.o ../matprod-test.c ../../matprod.c \
+		-o matprod-noalign-allavx-test
+	rm test.o
+
+matprod-off-noalign-allavx-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) $(ALOFF) -c ../test.c
+	$(CC) $(II) $(CFLAGS) -DENABLE_ALL_AVX_CODE \
+		test.o ../matprod-test.c ../../matprod.c \
+		-o matprod-off-noalign-allavx-test
+	rm test.o
+
+matprod-norestrict-test:	../test.h ../test.c ../matprod-test.c ../../matprod.h ../../matprod.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) -DMATPROD_NO_RESTRICT \
+		../test.c ../matprod-test.c ../../matprod.c \
+		-o matprod-norestrict-test
+
+# -----------------------------------------------------------------------------
+
+par-matprod-test:	../test.h ../test.c ../par-matprod-test.c ../../par-matprod.h ../../matprod.c \
+			../../par-matprod.c ../helpers-app.h ../helpers.h ../helpers.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) -fopenmp \
+		../test.c ../par-matprod-test.c ../../par-matprod.c ../helpers.c \
+		-lm -o par-matprod-test
+
+par-matprod-off-test:	../test.h ../test.c ../par-matprod-test.c ../../par-matprod.h ../../matprod.c \
+			../../par-matprod.c ../helpers-app.h ../helpers.h ../helpers.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) $(ALOFF) -fopenmp \
+		../test.c ../par-matprod-test.c ../../par-matprod.c ../helpers.c \
+		-lm -o par-matprod-off-test
+
+par-matprod-nohelpers-test:	../test.h ../test.c ../par-matprod-test.c ../../par-matprod.h ../../matprod.c \
+			../../par-matprod.c ../helpers-app.h ../helpers.h ../helpers.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) -fopenmp -DHELPERS_DISABLED \
+		../test.c ../par-matprod-test.c ../../par-matprod.c ../helpers.c \
+		-lm -o par-matprod-nohelpers-test
+
+par-matprod-norestrict-test:	../test.h ../test.c ../par-matprod-test.c ../../par-matprod.h ../../matprod.c \
+			../../par-matprod.c ../helpers-app.h ../helpers.h ../helpers.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) -fopenmp -DMATPROD_NO_RESTRICT \
+		../test.c ../par-matprod-test.c ../../par-matprod.c ../helpers.c \
+		-lm -o par-matprod-norestrict-test
+
+# -----------------------------------------------------------------------------
+
+blas0-test:		../test.h ../test.c ../../matprod.c ../blas-test.c \
+			../ddot.f ../dgemm.f ../dgemv.f ../dsyrk.f ../lsame.f
+	$(CC) $(II) $(CFLAGS) $(ALIGN) \
+		../test.c ../../matprod.c ../blas-test.c \
+		../ddot.f ../dgemm.f ../dgemv.f ../dsyrk.f ../lsame.f \
+		-o blas0-test
+
+blas1-test:		../test.h ../test.c ../../matprod.c ../blas-test.c ../blas1.f
+	$(CC) $(II) $(CFLAGS) $(ALIGN) ../test.c ../../matprod.c ../blas-test.c ../blas1.f \
+		-lm -o blas1-test
+
+blas1-off-test:		../test.h ../test.c ../../matprod.c ../blas-test.c ../blas1.f
+	$(CC) $(II) $(CFLAGS) $(ALIGN) $(ALOFF) ../test.c ../../matprod.c ../blas-test.c ../blas1.f \
+		-lm -o blas1-off-test
+
+blas2-test:		../test.h ../test.c ../../matprod.c ../blas-test.c ../blas2.f
+	$(CC) $(II) $(CFLAGS) $(ALIGN) ../test.c ../../matprod.c ../blas-test.c ../blas2.f \
+		-lm -o blas2-test
+
+blas2-off-test:		../test.h ../test.c ../../matprod.c ../blas-test.c ../blas2.f
+	$(CC) $(II) $(CFLAGS) $(ALIGN) $(ALOFF) ../test.c ../../matprod.c ../blas-test.c ../blas2.f \
+		-lm -o blas2-off-test
+
+blas3-test:		../test.h ../test.c ../../matprod.c ../blas-test.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) ../test.c ../../matprod.c ../blas-test.c \
+		/usr/lib/libblas.so.3 \
+		-lm -o blas3-test
+
+blas3-off-test:		../test.h ../test.c ../../matprod.c ../blas-test.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) $(ALOFF) ../test.c ../../matprod.c ../blas-test.c \
+		/usr/lib/libblas.so.3 \
+		-lm -o blas3-off-test
+
+blas4-test:		../test.h ../test.c ../../matprod.c ../blas-test.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) ../test.c ../../matprod.c ../blas-test.c \
+		-framework Accelerate \
+		-lm -o blas4-test
+
+blas4-off-test:		../test.h ../test.c ../../matprod.c ../blas-test.c
+	$(CC) $(II) $(CFLAGS) $(ALIGN) $(ALOFF) ../test.c ../../matprod.c ../blas-test.c \
+		-framework Accelerate \
+		-lm -o blas4-off-test
+
+clean:
+	rm -f $(progs) $(blas-progs) $(blas-linux-progs) $(blas-mac-progs) test.o

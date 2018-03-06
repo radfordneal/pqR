@@ -1,0 +1,348 @@
+MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION
+          Implementation Documentation 
+
+Copyright (C) 2017, 2018 Radford M. Neal.
+
+  The matprod library is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along
+  with this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+The routines in the matprod library have been written to be reasonably
+fast.  However, compared to the matrix multiply routines in optimized
+BLAS libraries (DGEMM, DGEMV, and DDOT), the speed of the matprod
+routines is limited by the requirement that they produce the same
+results as the naive algorithms, by the requirement that no
+substantial temporary storage be used, and by the lesser amount of
+effort that has been expended in trying to make them fast.  The
+general implementation strategy for matprod is described here, along
+with some details of the implementation.
+
+
+General algorithmic approaches.
+
+This section describes the general algorithms used when computations
+are done in a single thread, the matrices are small enough that the
+computation is not split into parts to improve cache performance, and
+special case code for small values of n, k, or m does not apply.
+
+VEC_VEC... The matprod_vec_vec procedure uses what is essentially the
+naive algorithm, successively adding products of elements, since any
+reordering of additions could change the result.
+
+MAT_MAT... When matprod_mat_mat multiplies matrices x and y to produce
+result z, it computes columns of z in succession.  To compute a column
+of z, the column is first set to the sum of the products of the first
+two columns of x and the first two elements of the column of y
+corresponding to that of z.  Then, the product of another column of x
+with another element of y is added to this column of z - this being
+done for two columns of x together (unless only one column remains),
+in order to reduce accesses to elements of z.  Two columns of z are
+computed concurrently by this method (unless only one remains) so that
+the data fetched from the columns of x can be used twice.  When this
+approach is applied to a small matrix, two columns of z will fit in
+the L1 data cache, and so will be quickly accessible when products
+with columns of x are added repeatedly to it (even if not all of x, y,
+and z fit in the L1 cache).  Note that this should generally be faster
+than the naive method of computing each element of the result as a dot
+product of a row of x and column of y, since the naive method accesses
+elements of the row of x non-sequentially, with worse cache behaviour.
+
+OUTER... For matprod_outer, there is only one column of x, which is
+multiplied by successive elements of y to give successive columns of
+z.  This is presently done one column at a time.  (It is not clear
+that doing two columns concurrently would be faster.)
+
+MAT_VEC... The matprod_mat_vec procedure uses the same method as
+matprod_mat_mat, with y having only a single column.
+
+VEC_MAT... A different approach is used for matprod_vec_mat, for which
+columns of x and z have only one element.  Successive elements of the
+result are computed as dot products of x with successive columns of y.
+To allow use of SIMD instructions (or other instruction-level
+parallelism), and to reuse data fetched from x, four such dot products
+are computed concurrently (except when fewer than four columns of y
+remain).
+
+TRANS1... The method for matprod_trans1 is similar to that for
+matprod_vec_mat, except that eight dot products are computed
+concurrently for four columns of x and two columns of y, which produce
+eight elements of z in a four-by-two block.
+
+TRANS2... The method for matprod_trans2 is similar to that for
+matprod_mat_mat, except that the elements multiplying columns of x are
+taken from rows of y (rather than columns of y).
+
+TRANS12... The implementation of matprod_trans12 is based on the fact
+that the product of the transposes of two matrices is the transpose of
+the product of these matrices with operands swapped.  The same
+procedures used for matprod_mat_mat are used here, storing the result
+in a local variable (on the stack), the transpose of which is then
+copied to z.  For large matrices, this is done repeatedly for portions
+of z, in order to limit the amount of stack space used to no more than
+TRANS12_ZELEM doubles (each 8 bytes in size), both for cache
+performance reasons and because stack space may be limited in some
+environments.
+
+
+Special cases.
+
+Special code is used to handle some cases in which n, k, or m is small
+(for multiplication of an n x k matrix by a k x m matrix).  This can
+reduce overhead when what would otherwise be the innermost loop would
+be done only a small number of times.  Other special tricks may also
+be possible - for example, when columns have only two elements, AVX
+instructions can operate on all elements in two columns at once.
+
+The scalar-vector, vector-vector, matrix-vector, vector-matrix, and
+outer product routines are instances of such special-case optimization
+that are made visible in the API, but other special cases are handled
+by non-visible routines (including special cases of the matrix-vector,
+vector-matrix, and outer product operations).
+
+
+Optimizing for cache behaviour.
+
+The code is written assuming that the processor has an L1 data cache
+of 32K bytes (or more) and an L2 cache of 256K bytes (or more).  The
+size of a cache line is assumed to be 64 bytes.  If these assumptions
+are not true, the code will of course still work correctly, but
+perhaps more slowly than it might with some other assumptions.  Note
+that 4K 8-byte double values fit in the L1 data cache, but it is best
+to rely only on somewhat fewer fitting, since the L1 cache will
+contain some other values (eg, top entries in the stack) as well.
+
+A last-level cache holding at least DOUBLES_IN_LLC doubles is also
+assumed to possibly exist (though perhaps be the same as the L2
+cache).  If such a large last-level cache does not exist, there is
+only a small penalty for using the code that assumes it does exist.
+
+VEC_VEC... For matprod_vec_vec, there is no apparent way of improving
+on the obvious method that accesses memory sequentially.
+
+VEC_MAT... For matprod_vec_mat, if y has more than VEC_MAT_YROWS rows,
+the operation is done on successive parts of the matrix, each
+consisting of at most VEC_MAT_YROWS of the rows.  The second and later
+parts add to the result found by earlier parts.  The value for
+VEC_MAT_YROWS is designed to keep the relevant part of the vector x in
+the L1 cache, given that this part of x and of four columns of y (all
+of length VEC_MAT_YROWS) are accessed within the main loop.
+
+MAT_VEC... For matprod_mat_vec, if x has more than MAT_VEC_XROWS rows,
+the operation is done on successive parts of the matrix, each
+consisting of at most MAT_VEC_XROWS of the rows.  The definition of
+MAT_VEC_XROWS is designed to keep that part of the vector z in the L1
+cache, given that that part of z and of two columns of x (all of
+length MAT_VEC_XROWS) are accessed within the main loop.
+
+OUTER... For matprod_outer, if x has more than OUTER_ROWS elements
+(and hence z has more than OUTER_ROWS rows), the operation is done on
+successive parts of x, each consisting of at most OUTER_ROWS elements.
+The definition of OUTER_ROWS is designed to keep that part of x in the
+L1 cache, given that it and the corresponding part of a column of z
+are accessed within the main loop.
+
+MAT_MAT... For matprod_mat_mat, if x has more than MAT_MAT_XROWS rows,
+the operation is done on successive groups of rows of the matrix, each
+consisting of at most MAT_MAT_XROWS of the rows.  Furthermore,
+operations on each set of up to MAT_MAT_XROWS may be split into parts
+by columns of x, with all except for the first of these split
+operations adding to the sum from the operations on previous columns.
+
+The definition of MAT_MAT_XROWS is designed to keep two columns of z
+in the L1 cache, given that two columns of z and two columns of x (all
+of length MAT_MAT_XROWS) are accessed within the outer loop over
+columns of y and z.
+
+The splitting according to columns of x is designed to keep the
+sub-matrix of x that is multiplied repeatedly by columns of y in the
+L2 cache.  If the sub-matrix has the maximum MAT_MAT_XROWS, the number
+of columns will be MAT_MAT_XCOLS.  If the number of rows is less than
+MAT_MAT_XROWS, the number of columns may be larger, while limiting the
+number of elements to MAT_MAT_XCOLS*MAT_MAT_XROWS.
+
+If y is large, and rows of x will be split, matprod_mat_mat accesses
+columns of y, and computes corresponding columns of z, in groups,
+whose size is designed to keep these columns of y and z in a
+last-level cache that can hold DOUBLES_IN_LLC doubles.
+
+TRANS1... For matprod_trans1, if x has more than TRANS1_XROWS rows,
+the operation is done on successive groups of rows of the matrix, each
+consisting of at most MAT_MAT_XROWS of the rows.  For all but the
+first of these groups of rows, the products of elements of x and y are
+added to the sums from the previous groups of row.  Furthermore,
+operations on each set of up to MAT_MAT_XROWS may be split into parts
+by columns of x.
+
+The definition of TRANS1_XROWS is designed to keep two columns of y in
+the L1 cache, given that parts of two columns of y and of four columns
+of x (all of length TRANS1_XROWS) are accessed within the loop
+computing (or adding to) elements of z.
+
+The splitting according to columns of x is designed to keep the
+sub-matrix of x that is multiplied repeatedly by columns of y in the
+L2 cache.  If the sub-matrix has the maximum TRANS1_XROWS, the number
+of columns will be TRANS1_XCOLS.  If the number of rows is less than
+TRANS1_XROWS, the number of columns may be larger, while limiting the
+number of elements to TRANS1_XCOLS*TRANS1_XROWS.
+
+As for matprod_mat_mat, if y is large, and rows of x will be split,
+matprod_trans1 accesses columns of y, and computes corresponding
+columns of z, in groups, whose size is designed to keep these columns
+of y and z in a last-level cache that can hold DOUBLES_IN_LLC doubles.
+
+TRANS2... For matprod_trans2, sub-matrices of x are operated on
+analogously to matprod_mat_mat, with the definitions of TRANS2_XROWS
+and TRANS2_XCOLS currently being the same as those of MAT_MAT_XROWS
+and MAT_MAT_XCOLS.  If x is split by row, columns of z are similarly
+computed in groups, which however correspond to groups of rows of y,
+rather than columns, with the aim of keeping these parts of y and z in
+a last-level cache.
+
+
+Symmetric cases for trans1 and trans2.
+
+When the operands for the trans1 or trans2 operations are identical
+(same pointers, and same dimensions), the result is a symmetrical
+matrix, only half (including diagonal) of which needs to be computed,
+with the remainder being copied from the other half.  This is not done
+for small matrices, or when k is very small, however, since ignoring
+the symmetry in such cases may be faster.
+
+Columns of the result are computed sequentially, so that output
+pipelining can be done.  Elements at and below the diagonal are
+computed, and their values are then copied to the symmetric elements,
+ensuring that the elements of a column above the diagonal have already
+been computed when the elements below the diagonal are computed.  The
+bad cache behaviour for these non-sequential copies is somewhat
+reduced by two columns being computed at once, which results in two
+adjacent doubles being stored when copying.
+
+
+SIMD instructions and alignment.
+
+For Intel/AMD processors, the matprod routines can be compiled so that
+some code sections use the SSE2, SSE3, AVX, and AVX2 instrinsics
+provided by gcc.  Other compilers may also provide such intrinsics;
+their availability is assumed to be given by whether the symbols
+__SSE2__, __SSE3__, __AVX__, or __AVX2__ are defined.  For all
+operations, code written in standard C is provided, for use on
+non-Intel/AMD processors, or when the intrinsics are not available, or
+when use of the intrinsics is disabled.  There are often code sections
+for more than one of __SSE2__, __SSE3__, etc, with the most
+powerful/recent option used when the routine is compiled for a
+processor for which it is available.  Sometimes only SSE2 or SSE3 code
+is provided, because there is no advantage to using AVX, or only AVX
+code is provided, because trying to do it with SSE2 or SSE3 does not
+work well.  (Or, of course, suitable AVX or SSE2/SSE3 code may just
+not have been written yet.)
+
+Optional specification of alignment of arguments is allowed (ie, of
+the element of the matrix in the first row and column).  Both the
+alignment boundary (8, 16, or 32 bytes) and a possible offset from
+this boundary (a multiple of 8) may be specified.  
+
+Some code may be generated conditionally on the alignment, for example
+to do some operations before a loop so that the loop operations are
+aligned at good boundaries.  For gcc and gcc look-alikes, alignment is
+sometimes declared using the __builtin_assume_aligned function
+provided in gcc, which may allow the compiler to generate better code.
+In particular, gcc will convert some SSE or AVX intrinsics that
+specify unaligned accesses to ones specifying aligned acccesses if it
+knows the operand always aligned.  Nevertheless, selection of aligned
+versus unaligned operations is often done explicitly in the code (via
+some macros that are defined, such as _mm_loadA_pd).
+
+Sometimes, rows or columns are stepped through by multiples of 4,
+since this preserves whatever aligment (up to 32 bytes) and offset
+were present for the first element of the matrix.
+
+In some places, alignment is checked at run-time - for example, when
+aligment of the start of a matrix column depends on whether the number
+of rows in the matrix is even or odd.  
+
+It is intended that even if no explicit SIMD instructions are used,
+and no alignment information is specified, the matprod routines should
+still be substantially faster than a naive implementation.
+
+
+Parallel operation and pipelining.
+
+For most of the procedures, parallelization is done by splitting the
+operation to be done according to columns of the results matrix, z,
+with the first task scheduled doing the first group of columns, and so
+forth.  Except for the trans2 and trans12 operations, this also
+corresponds to splitting according to columns of the second operand.
+Except for trans12, operations parallelized by columns of the result
+also pipeline the output by column (but do not necessarily make data
+available immediately after every column is computed).
+
+To allow the parallel/pipelined routines to access the non-visible
+procedures in matprod.c for operating on parts of matrices, the
+par-matprod.c source file includes the matprod.c source file (rather
+than linking to it).  This also allows the apparatus for output
+pipelining to be implemented in the procedures in matprod.c using
+macros that are defined to do nothing when matprod.c is compiled
+separately - eliminating any overhead for pipelining when it is not
+releant.  There are also macros that allow the matprod procedures to
+have additional arguments relating to pipelining, which are not
+present when matprod.c is compiled on its own.
+
+When included in par-matprod.c, the normally-visible procedures in
+maptrod.c are made "static", allowing them to co-exist with procedures
+of the same name obtained by compiling matprod.c separately (which
+will not have the pipelining code, and could perhaps have other
+alignment settings).
+
+VEC_VEC... For the vec_vec operation, parallelization of the additions
+is not possible, if the round-off behaviour of simple sequential
+summation is to be preserved.  Parallelizing just the multiplications
+and/or fetches does not seem helpful, so no parallelization is done.
+
+MAT_VEC... For the mat_vec operation, the second operand is a single
+column, so parallelization is done over groups of rows of the first
+operand, which correspond to groups of elements of the result,
+allowing pipelining for the result.  The group boundaries are adjusted
+to correspond to cache lines, to avoid slowdowns due to "false
+sharing" in the result vector when two threads store into the same
+cache line.
+
+
+Avoidance of overflow.
+
+The numbers of rows and columns in a matrix have the C "int" type,
+which is typically 32 bits in size, allowing a maximum of 2^31-1 for
+the number of rows or columns.  However, the number of elements in a
+matrix (the product of the number of rows and the number of columns)
+may be greater than 2^32-1.  Care is therefore required to avoid
+overflow when accessing an element.
+
+If an index into a matrix is computed from a row and column index, it
+is necessary to cast the "int" values to "size_t" values - for
+example, if x is a matrix with n rows, and i and j are row and column
+indexes, element i,j should be accessed as x[i+(size_t)j*n], not as
+x[i+j*n].  This form of access is usually avoided, however, in favour
+of accesses using pointers into the matrix.  For example, if p points
+to the first element in a column of x, then p[i] can be used to access
+the element of that column in row i.  The element in row i of the next
+column can be accessed as (p+n)[i], which should not be rewritten as
+p[n+i], since n+i might overflow.
+
+Note also that p += 2*n is not safe, but p += n; p += n; will be safe.
+Similarly, p + 2*n is unsafe, but p + n + n, which means the same as
+(p + n) + n, is safe.
+
+Since the result of overflow with signed arithmetic is undefined in C,
+it is possible that the unsafe code will actually work when overflow
+happens.  But of course this cannot be relied on.  (The possibility of
+code that is unsafe actually working does make testing difficult.)

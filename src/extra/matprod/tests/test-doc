@@ -1,0 +1,203 @@
+MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION
+          Documentation for Test Programs
+
+Copyright (C) 2013, 2014, 2017, 2018 Radford M. Neal.
+
+  The matprod library is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along
+  with this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+Test programs are provided for the matprod and par-matprod routines,
+in the directory "tests", which share a common framework, and which
+can also be used to test matrix multiply routines in a BLAS or other
+library.  These test programs can perform checks on correctness, but
+are mainly meant for testing speed.  If ALIGN and/or ALIGN_OFFSET is
+defined, the test program will allocate matrices with the specfied
+alignment.
+
+
+Running the programs.
+
+These programs are invoked by a command such as the following:
+
+    matprod-test rep A B C D
+
+Where the arguments are either positive integers (or "v" or "V", as
+discussed below), or "t" or "T".  In this example, three matrices of
+dimensions AxB, BxC, and CxD are created, and the product of the first
+of these matrices with the product of the second and third matrices is
+computed (note the right associativity), with this computation
+repeated rep times (with identical results each time, one hopes).  The
+first, second, second-to-last, and last elements of the result are
+then printed on standard output, except that fewer elements are
+printed when only fewer exist.  If the environment variable PRINTWHOLE
+is defined (as anything), the entire result matrix is also printed.
+If the environment variable PRINTNEG is defined (as anything), a list
+of negative values and their locations is printed (which will indicate
+values left unchanged from their initialization).
+
+If an argument after "rep" is "t" or "T", the matrix whose dimensions
+follow is stored in transposed form, and the trans1, trans2, or
+trans12 form of the multiply routine is called (or a call with
+analogous options is done for BLAS tests).
+
+In general, n>2 arguments (other than "t" or "T") follow the rep
+argument, defining the dimensions of n-1 matrices, which are used as
+operands in n-2 matrix multiplication operations, which associate to
+the right.  The result of each of these products will be a matrix with
+number of rows equal to the first argument and number of columns equal
+to the last argument.
+
+The "T" argument can be used only for one of the last two matrices,
+and results in the two last matrices being identical (sharing the same
+memory).  This is possible only if the number of rows of the first is
+the same as the number of columns of the second.  The result of the
+multiply will be symmetric, and hence may perhaps be computed faster.
+
+An argument after rep with the value "1" may be replaced with the
+argument "v" or "V", which has the same effect as "1", except that the
+appropriate scalar_vec, vec_vec, vec_mat, mat_vec, or outer procedure
+is used for some or all products, rather than the general matrix
+multiplication procedure.  This applies both to the vectors specified
+in this way, and the vectors that result from multiplying such a
+vector by a matrix.  For example, if the last argument is "v", all the
+products will use the mat_vec procedure, except if the first operand
+was also specified using "v" or "V", in which case the vec_vec
+procedure will be used.  The scalar_vec procedure is used when both
+dimensions of the left operand are specified with "v".
+
+The matrices created by the test programs have elements that are set
+to 0.1 times the sum of the number of rows and columns in the matrix,
+plus 0.01 times the product of the number of rows and columns in the
+matrix, plus 0.01 times the product of the row and column indexes for
+each element.  A matrix whose transpose will be used as an operand
+will be initialized so that this is its value after transposition, so
+the results obtained should be the same with or without the "t"
+option, on either the left or right.  Since the initialization is
+invariant to transposition, the result with "T" instead of "t" is also
+
+If the last argument to par-matprod-test (see below) is "V" (only,
+not "v"), the final matrix (a column vector) will be supplied as
+pipelined output from a task procedure that delivers elements in
+groups of 17 (or fewer for the last group), with variable time lags.
+This allows pipelining to be tested for the mat_vec and vec_vec
+procedures, for which pipelined input cannot otherwise be arranged.
+(Of course, this is slower than just accessing the already-initialized
+matrix.)
+the same.
+
+If the environment variable CHECK is defined (as anything), the
+results are checked against simple code implementing the naive
+algorithm, resulting in either "Check OK" being printed, or an error
+message followed by an abort.  Note that these checks take time, and
+so should not be done when running the test programs for performance
+evaluation.
+
+
+Makefile for compiling program versions.
+
+Several test programs can be compiled using the supplied Makefile,
+including the following (some other versions are also compiled, see
+make-common for details):
+
+    matprod-test
+
+      Uses the procedures in matprod.c.  A number of other versions of
+      this test program are also compiled, with varying alignment
+      options, etc.  See the Makefile for details.
+
+    par-matprod-test
+
+      Uses the procedures in par-matprod.c, and the helpers library.
+      The number of helper threads used is given by the environment
+      variable HELPERS (default 0).  The amount of splitting to do is
+      given by the environment variable SPLIT (default 1).  If SPLIT
+      is 0, and the environment variable MIN exists and is not 0, the
+      split will be set to HELPERS plus 1 if the number of multiplies
+      is at least MIN; otherwise 0 for SPLIT results in the operation
+      being done directly in the master thread.  Pipelining will be
+      done if possible unless the environment variable NOPIPE is
+      defined (as anything).
+
+      See below for the special role of a last argument of "V".
+
+      If an environment variable TRACE is defined, trace output from
+      the helpers library is enabled.  
+
+    blas0-test
+
+      Uses BLAS routines in the following FORTRAN source files:
+
+          ddot.f  dgemv.f  dgemm.f  dsyrk.f  lsame.f
+
+      A xerbla routine for BLAS error reporting is provided as part of 
+      the test program.  The dsyrk routine is used when the "T" option 
+      is specified, along with a C routine for filling in the lower 
+      triangle of the matrix from the upper triangle.  
+
+      The versions of these files distributed here were downloaded on
+      2018-02-24 from www.netlib.org/blas (BLAS-3.8.0).  They are
+      known as the "reference BLAS" routines.
+
+    blas1-test
+
+      Like blas-test, except that all BLAS routines are taken from one
+      file called blas1.f.  The version of blas1.f distributed is the
+      one used in R-2.15.0, which is a modifed version of those in the
+      reference BLAS.
+
+    blas2-test
+
+      Like blas-test, except that all BLAS routines are taken from one
+      file called blas2.f.  The vesion of blas2.f distributed is the
+      modified version of the one from R-2.15.0 that is used in pqR.
+
+    blas3-test
+
+      Like blas-test, except that BLAS routines are taken from the
+      Linux library /usr/lib/libblas.so.3, which can be set to various
+      BLAS implementations (eg, by using "update-alternatives").  The
+      location of this library may be different on some Linux systems.
+
+    blas4-test
+
+      Like blas-test, except that BLAS routines are taken from the Mac
+      "Accelerate" framework (also known as "VecLib").
+
+The blas test programs are not compiled by default, but are compiled
+by "make blas-linux" (builds blas3-test) or "make blas-mac" (builds
+blas4-test).
+
+The helpers procedures that are used in the par-matprod test
+programs can be obtained from github.com/radfordneal/helpers.
+Versions of the required helpers.c and helpers.h files are included in
+the tests directory here, but the helpers repository should be
+consulted for documentation, and to check for the most recent version.
+
+
+Facilities for running programs and looking at the results.
+
+The shell file run-tests runs a series of tests, with the test program
+specified by its first argument (eg, "matprod", for matprod-test).
+For more details on the testing framework, look at the Makefile and
+shell files in the tests directory, and the subdirectories in it that
+record results on various systems used for testing.
+
+The output is normally stored in a file with extension .out, with just
+the times extracted into a .tim file.  Ratios of times from two .tim
+files can be compared with cmp-tim, or plotted with plt-tim (using
+xgraph).
+
+The plt-mat-tim shell file plots times for the analogous tests done
+using the mat_mat, trans1, trans2, and trans12 procedures.

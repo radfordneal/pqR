@@ -1,0 +1,66 @@
+#!/bin/bash
+#
+# MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION
+#           Shell File to Run a Series of Tests (for special cases)
+#
+# Copyright (c) 2013, 2017, 2018 Radford M. Neal.
+# 
+#   The matprod library is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 2 of the License, or
+#   (at your option) any later version.
+# 
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+# 
+#   You should have received a copy of the GNU General Public License along
+#   with this program; if not, write to the Free Software Foundation, Inc.,
+#   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+prog=$1-test
+
+echo " "; echo SPECIAL
+
+echo " "; time $prog 30000000$Z 1 1 v
+echo " "; time $prog 30000000$Z v 1 1
+echo " "; time $prog 30000000$Z v 1 v
+echo " "; time $prog 1000000$Z 2222 1 v
+echo " "; time $prog 1000000$Z v 1 2222
+echo " "; time $prog 500000$Z 1 901 v
+echo " "; time $prog 500000$Z v 901 1
+
+echo " "; time $prog 30000000$Z 1 1 1
+echo " "; time $prog 1000000$Z 2222 1 1
+echo " "; time $prog 1000000$Z 1 1 2222
+echo " "; time $prog 500000$Z 1 901 1
+echo " "; time $prog 3000$Z 301 2222 1
+echo " "; time $prog 3000$Z 1 2222 301
+
+echo " "; time $prog 30000000$Z t 1 1 1
+echo " "; time $prog 1000000$Z t 2222 1 1
+echo " "; time $prog 1000000$Z t 1 1 2222
+echo " "; time $prog 500000$Z t 1 901 1
+echo " "; time $prog 3000$Z t 301 2222 1
+echo " "; time $prog 3000$Z t 1 2222 301
+
+echo " "; time $prog 30000000$Z 1 t 1 1
+echo " "; time $prog 1000000$Z 2222 t 1 1
+echo " "; time $prog 1000000$Z 1 t 1 2222
+echo " "; time $prog 500000$Z 1 t 901 1
+echo " "; time $prog 3000$Z 301 t 2222 1
+echo " "; time $prog 3000$Z 1 t 2222 301
+
+echo " "; time $prog 30000000$Z t 1 t 1 1
+echo " "; time $prog 1000000$Z t 2222 t 1 1
+echo " "; time $prog 1000000$Z t 1 t 1 2222
+echo " "; time $prog 500000$Z t 1 t 901 1
+echo " "; time $prog 3000$Z t 301 t 2222 1
+echo " "; time $prog 3000$Z t 1 t 2222 301
+
+echo " "; time $prog 5000$Z 500 1 500
+echo " "; time $prog 5000$Z 500 t 1 500
+echo " "; time $prog 5000$Z t 500 1 500
+echo " "; time $prog 5000$Z t 500 t 1 500

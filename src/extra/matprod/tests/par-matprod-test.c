@@ -1,7 +1,7 @@
 /* MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
              Test Program for Matrix Multiplicaton With Pipelining
 
-   Copyright (c) 2013, 2014, 2017 Radford M. Neal.
+   Copyright (c) 2013, 2014, 2017, 2018 Radford M. Neal.
 
    The matprod library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 #include "helpers-app.h"
 
 
-char *prog_name = "piped-matprod-test";
+char *prog_name = "par-matprod-test";
 
 char * my_var_name (helpers_var_ptr v)
 { char *name = malloc(13);
@@ -32,15 +32,23 @@ char * my_var_name (helpers_var_ptr v)
   return name;
 }  
 
+static int helpers;
 static int repeat;
+static int split;
+static int min;
 
 void do_test (int rep)
 {
   char *h = getenv("HELPERS");
   char *t = getenv("TRACE");
+  char *s = getenv("SPLIT");
+  char *m = getenv("MIN");
   repeat = rep;
+  split = s==0 ? 1 : atoi(s);
+  min = m==0 ? 0 : atoi(m);
+  helpers = h==0 ? 0 : atoi(h);
   helpers_trace (t!=0);
-  helpers_startup (h==0 ? 0 : atoi(h));
+  helpers_startup (helpers);
 }
 
 volatile int vola;
@@ -69,43 +77,64 @@ void task_output_vector (helpers_op_t op, helpers_var_ptr out,
 void helpers_master (void)
 {
   int r, i, v;
+  int pipe = getenv("NOPIPE") == 0;
 
   for (r = 0; r<repeat; r++)
   { 
-    if (last_V)
+    if (vec[nmat]>1)
     { helpers_do_task (HELPERS_PIPE_OUT, task_output_vector, 0, nmat, 0, 0);
     }
 
     v = vec[nmat];
     for (i = nmat-2; i>=0; i--)
-    { v |= vec[i+1];
-      if (vec[i] && v && matrows[i]==1 && matcols[nmat-1]==1) 
-      { helpers_do_task (HELPERS_PIPE_IN2, task_piped_matprod_vec_vec,
-                         0, -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
+    { int n = matrows[i];
+      int k = matcols[i];
+      int op0 = -(i+1);
+      int op1 = i+1;
+      int op2 = i+2==nmat ? nmat : -(i+2);
+      int split0 = split;
+      if (split0 == 0 && min != 0)
+      { if ((double)n * k * matcols[nmat-1] >= min) split0 = helpers+1;
       }
-      else if (v && matcols[nmat-1]==1)
-      { helpers_do_task (HELPERS_PIPE_IN2, task_piped_matprod_mat_vec,
-                         0, -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
+      v |= vec[i+1];
+      if (vec[i] && vec[i+1])
+      { par_matprod_scalar_vec (op0, op1, op2, split0, pipe);
+      }
+      else if (vec[i] && v && matrows[i]==1 && matcols[nmat-1]==1) 
+      { par_matprod_vec_vec (op0, op1, op2, split0, pipe);
       }
       else if (vec[i] && matrows[i]==1)
-      { helpers_do_task (HELPERS_PIPE_IN2_OUT, task_piped_matprod_vec_mat,
-                         0, -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
+      { par_matprod_vec_mat (op0, op1, op2, split0, pipe);
       }
-      else if (i==0 && trans1)
-      { helpers_do_task (HELPERS_PIPE_IN2_OUT, task_piped_matprod_trans1, 
-                         matcols[i], -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
+      else if (v && matcols[nmat-1]==1)
+      { par_matprod_mat_vec (op0, op1, op2, split0, pipe);
       }
-      else if (i==nmat-2 && trans2)
-      { helpers_do_task (HELPERS_PIPE_OUT, task_piped_matprod_trans2, 
-                         matcols[i], -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
+      else if (vec[i+1] && matcols[i]==1 && matrows[i+1]==1)
+      { par_matprod_outer (op0, op1, op2, split0, pipe);
       }
-      else
-      { helpers_do_task (HELPERS_PIPE_IN2_OUT, task_piped_matprod_mat_mat,
-                         matcols[i], -(i+1), i+1, i+2==nmat ? nmat : -(i+2));
+      else 
+      { int t1 = trans[i];
+        int t2 = i==nmat-2 ? trans[i+1] : 0;
+        if (t1 && t2)
+        { par_matprod_trans12 (op0, op1, op2, k, split0, pipe);
+        }
+        else if (t1)
+        { par_matprod_trans1 (op0, op1, op2, k, split0, pipe);
+        }
+        else if (t2)
+        { par_matprod_trans2 (op0, op1, op2, k, split0, pipe);
+        }
+        else
+        { par_matprod_mat_mat (op0, op1, op2, k, split0, pipe);
+        }
       }
     }
     helpers_wait_for_all();
   }  
 
   print_result();
+
+  if (do_check)
+  { check_results();
+  }
 }

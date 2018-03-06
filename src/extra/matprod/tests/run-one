@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Run tests for one program.
+
+echo RUNNING TESTS FOR $1
+run-tests $1 >& $1.out
+tim $1

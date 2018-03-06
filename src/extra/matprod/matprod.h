@@ -1,7 +1,7 @@
-/* MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
-             Interface to Procedures Without Pipelining
+/* MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION
+             Interface to Single-Thread Procedures 
 
-   Copyright (c) 2013, 2014, 2017 Radford M. Neal.
+   Copyright (c) 2013, 2014, 2017, 2018 Radford M. Neal.
 
    The matprod library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -30,35 +30,57 @@
 #define MATPROD_RESTRICT restrict
 #endif
 
+void matprod_scalar_vec (double x, double * MATPROD_RESTRICT y,
+          double * MATPROD_RESTRICT z, int m);
 
 double matprod_vec_vec (double * MATPROD_RESTRICT x,
           double * MATPROD_RESTRICT y,
           int k);
+
 void matprod_vec_mat (double * MATPROD_RESTRICT x,
           double * MATPROD_RESTRICT y,
           double * MATPROD_RESTRICT z,
           int k,
           int m);
+
 void matprod_mat_vec (double * MATPROD_RESTRICT x,
           double * MATPROD_RESTRICT y,
           double * MATPROD_RESTRICT z,
           int n,
           int k);
+
 void matprod_mat_mat (double * MATPROD_RESTRICT x,
           double * MATPROD_RESTRICT y,
           double * MATPROD_RESTRICT z,
           int n,
           int k,
           int m);
+
+void matprod_outer (double * MATPROD_RESTRICT x,
+          double * MATPROD_RESTRICT y,
+          double * MATPROD_RESTRICT z,
+          int n,
+          int m);
+
 void matprod_trans1 (double * MATPROD_RESTRICT x,
           double * MATPROD_RESTRICT y,
           double * MATPROD_RESTRICT z,
           int n,
           int k,
           int m);
+
 void matprod_trans2 (double * MATPROD_RESTRICT x,
           double * MATPROD_RESTRICT y,
           double * MATPROD_RESTRICT z,
           int n,
           int k,
           int m);
+
+void matprod_trans12 (double * MATPROD_RESTRICT x,
+          double * MATPROD_RESTRICT y,
+          double * MATPROD_RESTRICT z,
+          int n,
+          int k,
+          int m);
+
+void matprod_fill_lower (double * MATPROD_RESTRICT z, int n);

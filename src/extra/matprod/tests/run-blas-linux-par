@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Run the BLAS tests for OPENBLAS on Linux with multiple threads.
+
+for thr in $@; do
+  export OPENBLAS_NUM_THREADS=$thr
+  export OMP_NUM_THREADS=$thr
+  echo RUNNING TESTS FOR blas3 WITH $thr THREADS
+  ../run-tests blas3 >& blas3-$thr.out
+  ../tim blas3-$thr
+done

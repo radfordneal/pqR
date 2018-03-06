@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Run the BLAS tests on macOS.
+
+export VECLIB_MAXIMUM_THREADS=1
+
+for i in blas0 blas1 blas1-off blas2 blas2-off blas4 blas4-off; do
+  echo RUNNING TESTS FOR $i
+  ../run-tests $i >& $i.out
+  ../tim $i
+done

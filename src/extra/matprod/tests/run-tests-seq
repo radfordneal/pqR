@@ -1,0 +1,52 @@
+#!/bin/bash
+#
+# MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION
+#           Shell File to Run a Series of Tests (for sequence of operations)
+#
+# Copyright (c) 2013, 2017, 2018 Radford M. Neal.
+# 
+#   The matprod library is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 2 of the License, or
+#   (at your option) any later version.
+# 
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+# 
+#   You should have received a copy of the GNU General Public License along
+#   with this program; if not, write to the Free Software Foundation, Inc.,
+#   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+prog=$1-test
+
+
+echo " "; echo SEQUENCE
+
+echo " "; time $prog 40000$Z 2 2 40 381
+
+echo " "; time $prog 20000$Z 25 36 38 29 28
+echo " "; time $prog 2000$Z 50 300 8 12 200
+echo " "; time $prog 1000$Z 55 145 81 93
+
+echo " "; time $prog 30$Z 215 201 308 270 230
+echo " "; time $prog 6$Z 487 691 570 399
+echo " "; time $prog 1$Z 1287 1201 670 499
+
+echo " "; time $prog 2$Z t 1287 1201 t 670 499
+echo " "; time $prog 2$Z t 1287 t 1201 670 499
+
+echo " "; time $prog 1$Z 1287 1201 444 499 670 499
+echo " "; time $prog 1$Z t 1287 t 1201 t 444 499 t 670 499
+echo " "; time $prog 1$Z t 1287 t 1201 t 444 t 499 670 499
+echo " "; time $prog 1$Z t 1287 t 1201 t 444 t 499 t 670 499
+echo " "; time $prog 1$Z t 1287 t 1201 t 444 499 T 670 499
+echo " "; time $prog 1$Z t 1287 t 1201 t 444 T 499 670 499
+
+echo " "; time $prog 20000$Z v 25 36 38 29 28
+echo " "; time $prog 1000$Z v 55 145 81 93
+
+echo " "; time $prog 300000$Z 25 36 38 29 28 v
+echo " "; time $prog 50000$Z 55 145 81 93 v

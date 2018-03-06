@@ -1,0 +1,16 @@
+#!/bin/bash
+
+(echo 0.Color: rgb:a/0/0; \
+ echo 1.Color: rgb:0/9/0; \
+ echo 2.Color: rgb:0/0/a; \
+ echo 3.Color: rgb:9/8/0; \
+ echo 4.Color: rgb:0/7/7; \
+ echo 5.Color: rgb:8/0/8; \
+ echo 6.Color: rgb:b/5/5; \
+ echo 7.Color: rgb:3/6/2; \
+ (echo "i<--5"; pr -s+ -m -t -l10000 $1.tim $2.tim \
+   | sed "s/[A-Z].*//" | sed "s/+/ )\\/(/" \
+   | sed "s/m/*60+/g" \
+   | sed "s/^./cat(i<-i+1,(&/" | sed "s/.$/&),'\\\\n')/" \
+   | sed "s/^$/i<-(i+9)%\\/%5\\*5;cat('\\\\n')/") | R --slave --vanilla \
+ ) | xgraph -zw 0 -gw 1 -lf fixed -tf fixed -nl -P -lny =900x450

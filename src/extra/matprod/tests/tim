@@ -1,9 +1,12 @@
 #!/bin/bash
 
-# tim prefix [ N ]
+# tim prefix ...
 #
-# Creates prefix.timN from prefix.outN by extracting elpased time information,
+# Creates prefix.tim from prefix.out by extracting elapased time information,
 # plus headers.
 
-grep "^[a-zA-Z]" $1.out$2 | fgrep -v "user" | fgrep -v "sys" \
-  | sed "s/real *//" | sed "s/0m//" | sed "s/s//" >$1.tim$2
+for i in $@; do
+  j=`echo $i | sed s/\\.out//`
+  grep "^[a-zA-Z]" $j.out | fgrep -v "user" | fgrep -v "sys"| fgrep -v "Check" \
+    | sed "s/real *//" | sed "s/0m//" | sed "s/s//" >$j.tim
+done

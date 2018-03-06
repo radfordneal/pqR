@@ -1,9 +1,9 @@
 #!/bin/bash
 #
 # MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION
-#           Shell File to Run a Series of Tests
+#           Shell File to Run a Series of Tests (for outer)
 #
-# Copyright (c) 2013, 2017 Radford M. Neal.
+# Copyright (c) 2013, 2017, 2018 Radford M. Neal.
 # 
 #   The matprod library is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -20,23 +20,21 @@
 #   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-# one-tests n k m
+# run-tests program
 #
-# Run tests with matprod-test and par-matprod-test on a pair of 
-# matrices of size n x k and k x m.
+# Uses the given test program for a variety of tests, displaying timing
+# information, along with some headers.
 
-n=$1
-k=$2
-m=$3
 
-matprod-test 1 $n $k $m >/tmp/x$$
+prog=$1-test
 
-for prog in matprod-test par-matprod-test; do
-  echo $prog A; $prog 1 $n $k $m | cmp - /tmp/x$$
-  echo $prog B; $prog 1 t $n $k $m | cmp - /tmp/x$$
-  echo $prog C; $prog 1 $n $k $m t | cmp - /tmp/x$$
-  if [ $n == $m ]; then
-    echo $prog D; $prog 1 T $n $k $m | cmp - /tmp/x$$
-    echo $prog E; $prog 1 $n $k $m T | cmp - /tmp/x$$
-  fi
-done
+echo " "; echo OUTER
+
+echo " "; time $prog 500000$Z 2 v 2789
+echo " "; time $prog 500000$Z 3 v 2000
+echo " "; time $prog 500000$Z 4 v 1555
+echo " "; time $prog 2000000$Z 300 v 3
+echo " "; time $prog 2000000$Z 23 v 34
+echo " "; time $prog 20000$Z 230 v 341
+echo " "; time $prog 100$Z 2231 v 3201
+echo " "; time $prog 200$Z 7031 v 320

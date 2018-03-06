@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Run the BLAS tests for a Linux system with OpenBLAS.
+
+export OPENBLAS_NUM_THREADS=1
+export OMP_NUM_THREADS=1
+
+for i in blas0 blas1 blas1-off blas2 blas2-off blas3 blas3-off; do
+  echo RUNNING TESTS FOR $i
+  ../run-tests $i >& $i.out
+  ../tim $i
+done

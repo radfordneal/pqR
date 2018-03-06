@@ -1,0 +1,3 @@
+Changes to use a new version of the matprod library, that allows for
+parallelizing operations, and with substantial other performance
+improvements, as well as API changes.

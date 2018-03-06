@@ -1,6 +1,6 @@
-MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION WITH OPTIONAL PIPELINING
+MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION
 
-Files in this directory are Copyright (C) 2013, 2014 Radford M. Neal.  
+Files in this directory are Copyright 2013, 2014, 2017, 2018 Radford M. Neal.  
 
   The matprod library is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -20,23 +20,30 @@ The file COPYING contains the text of the GNU General Public License,
 version 2.
 
 
-The matprod library contains procedures for vector-vector,
-matrix-vector, vector-matrix, and matrix-matrix multiplication (plus
-version of matrix-matrix multiplication where one operand is
-transposed).  The file matprod.c (interface defined in matprod.h)
-contains conventional versions of these procedures.  The file
-piped-matprod.c (interface defined in piped-matprod.h) contains
-versions that are structured as task procedures for use with the
-"helpers" library for parallel execution of tasks, with pipelining.
+The matprod library contains procedures for doing scalar-vector,
+vector-vector, matrix-vector, vector-matrix, vector outer product, and
+matrix-matrix multiplication, plus version of matrix-matrix
+multiplication where one or both operands are transposed.  These
+procedures are written to produce exactly the same result as the naive
+procedures that sum products sequentially.  Subject to this
+restriction, they are written to be reasonably fast, and can take
+advantage of SIMD instructions on Intel/AMD processors.
 
-The directory "tests" contains some test programs.
+The file matprod.c (interface defined in matprod.h) contains direct
+versions of these procedures.  The file par-matprod.c (interface
+defined in par-matprod.h) contains versions that are structured as
+task procedures for use with the "helpers" library for parallel
+execution of tasks, with optional pipelining.
 
-See matprod-doc and comments in the source files for further
-documentation.
+The application interface to these procedures is documented in api-doc.
+Some notes on the implementation are in imp-doc.
+
+The directory "tests" contains some test programs, documented in
+test-doc.
 
 This software is available at github.com/radfordneal/matprod.  The
 helpers library is available from github.com/radfordneal/helpers.
 
-Radford Neal may be contacted at radfordneal@gmail.com.
+See VERSIONS for a list of stable versions of the software.
 
-This is the version of 2017-06-23.
+Radford Neal may be contacted at radfordneal@gmail.com.

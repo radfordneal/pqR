@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Plot comparison of times for mat_mat, trans1, trans2, and trans12.
+
+(echo 0.Color: rgb:a/0/0;
+ echo 1.Color: rgb:0/9/0;
+ echo 2.Color: rgb:0/0/a;
+ echo 3.Color: rgb:9/8/0;
+ echo 4.Color: rgb:0/7/7;
+ echo 5.Color: rgb:8/0/8;
+ echo 6.Color: rgb:b/5/5;
+ echo 7.Color: rgb:3/6/2;
+ ( sed < $1.tim -e "1,/MAT_MAT/d" -e "/TRANS1/,\$d" \
+    | sed "s/m/*60+/g" | R --vanilla --slave | grep -n .
+   echo " "
+   sed < $1.tim -e "1,/TRANS1/d" -e "/TRANS2/,\$d" \
+    | sed "s/m/*60+/g" | R --vanilla --slave | grep -n .
+   echo " "
+   sed < $1.tim -e "1,/TRANS2/d" -e "/TRANS12/,\$d" \
+    | sed "s/m/*60+/g" | R --vanilla --slave | grep -n .
+   echo " "
+   sed < $1.tim -e "1,/TRANS12/d" -e "/SPECIAL/,\$d" \
+    | sed "s/m/*60+/g" | R --vanilla --slave | grep -n .
+ ) 
+) | sed "s/:\[1\]//" | xgraph -zw 0 -gw 1 -lf fixed -tf fixed -P -lny =900x450

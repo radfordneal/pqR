@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Run par-matprod tests with helpers, splitting operations, no pipelining.
+
+for thr in $@; do
+  export HELPERS=`expr $thr - 1`
+  export SPLIT=$thr
+  export NOPIPE=T
+  unset MIN
+  for i in par-matprod par-matprod-off; do
+    echo RUNNING TESTS FOR $i WITH $HELPERS HELPERS, \
+         SPLIT BY $SPLIT, NO PIPELINING
+    ../run-tests $i >& $i-nop$thr.out
+    ../tim $i-nop$thr
+  done
+done
