@@ -14,9 +14,9 @@ include $(top_builddir)/Makeconf
 MATPROD_CPPFLAGS = -I$(srcdir) -I$(srcdir)/../helpers
 ALL_CPPFLAGS = $(MATPROD_CPPFLAGS) $(R_XTRA_CPPFLAGS) $(CPPFLAGS) $(DEFS)
 
-SOURCES = matprod.c piped-matprod.c
+SOURCES = matprod.c par-matprod.c
 
-HEADERS = matprod.h piped-matprod.h
+HEADERS = matprod.h par-matprod.h
 
 DEPENDS = $(SOURCES:.c=.d)
 OBJECTS = $(SOURCES:.c=.o)

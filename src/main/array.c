@@ -37,12 +37,12 @@
 #include <R_ext/Applic.h> /* for dgemm */
 
 #include <helpers/helpers-app.h>
-#include <matprod/piped-matprod.h>
+#include <matprod/par-matprod.h>
 
 #include "scalar-stack.h"
 
-/* ensure piped matprod routines are present when built as shared library. */
-helpers_task_proc *R_kludge = task_piped_matprod_mat_mat;
+/* ensure parallel matprod routines are present when built as shared library. */
+helpers_task_proc *R_kludge = task_par_matprod_mat_mat;
 
 /* "GetRowNames" and "GetColNames" are utility routines which
  * locate and return the row names and column names from the
@@ -1028,7 +1028,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             else if (no_pipelining)
                 task_proc = task_matprod_vec_vec;
             else {
-                task_proc = task_piped_matprod_vec_vec;
+                task_proc = task_par_matprod_vec_vec;
                 flags = HELPERS_PIPE_IN2;
             }
         }
@@ -1042,7 +1042,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 else if (no_pipelining)
                     task_proc = task_matprod_mat_vec;
                 else {
-                    task_proc = task_piped_matprod_mat_vec;
+                    task_proc = task_par_matprod_mat_vec;
                     flags = HELPERS_PIPE_IN2;
                 }
             }
@@ -1054,7 +1054,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 else if (no_pipelining)
                     task_proc = task_matprod_vec_mat;
                 else {
-                    task_proc = task_piped_matprod_vec_mat;
+                    task_proc = task_par_matprod_vec_mat;
                     flags = HELPERS_PIPE_IN2_OUT;
                 }
             }
@@ -1066,7 +1066,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 else if (no_pipelining)
                     task_proc = task_matprod_mat_mat;
                 else {
-                    task_proc = task_piped_matprod_mat_mat;
+                    task_proc = task_par_matprod_mat_mat;
                     flags = HELPERS_PIPE_IN2_OUT;
                 }
             }
@@ -1083,7 +1083,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     else if (no_pipelining)
                         task_proc = task_matprod_vec_mat;
                     else {
-                        task_proc = task_piped_matprod_vec_mat;
+                        task_proc = task_par_matprod_vec_mat;
                         flags = HELPERS_PIPE_IN2_OUT;
                     }
                 }
@@ -1096,7 +1096,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     else if (no_pipelining)
                         task_proc = task_matprod_mat_vec;
                     else {
-                        task_proc = task_piped_matprod_mat_vec;
+                        task_proc = task_par_matprod_mat_vec;
                         flags = HELPERS_PIPE_IN2;
                     }
                 }
@@ -1112,11 +1112,11 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                                           : task_matprod_trans2;
                 else {
                     if (primop==1) {
-                        task_proc = task_piped_matprod_trans1;
+                        task_proc = task_par_matprod_trans1;
                         flags = HELPERS_PIPE_IN2_OUT;
                     }
                     else {
-                        task_proc = task_piped_matprod_trans2;
+                        task_proc = task_par_matprod_trans2;
                         flags = HELPERS_PIPE_OUT;
                     }
                 }

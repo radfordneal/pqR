@@ -73,10 +73,10 @@ char *Rf_task_name (helpers_task_proc *task)
     TASK_NAME(matprod_mat_mat_BLAS);
     TASK_NAME(cfill_zeros);
     TASK_NAME(cmatprod);
-    TASK_NAME(piped_matprod_vec_vec);
-    TASK_NAME(piped_matprod_mat_vec);
-    TASK_NAME(piped_matprod_vec_mat);
-    TASK_NAME(piped_matprod_mat_mat);
+    TASK_NAME(par_matprod_vec_vec);
+    TASK_NAME(par_matprod_mat_vec);
+    TASK_NAME(par_matprod_vec_mat);
+    TASK_NAME(par_matprod_mat_mat);
     /* s */
     TASK_NAME(matprod_trans1);
     TASK_NAME(matprod_trans2);
@@ -84,8 +84,8 @@ char *Rf_task_name (helpers_task_proc *task)
     TASK_NAME(matprod_trans2_BLAS);
     TASK_NAME(cmatprod_trans1);
     TASK_NAME(cmatprod_trans2);
-    TASK_NAME(piped_matprod_trans1);
-    TASK_NAME(piped_matprod_trans2);
+    TASK_NAME(par_matprod_trans1);
+    TASK_NAME(par_matprod_trans2);
     /* t */
     TASK_NAME(copy_coerced);
     /* v */
