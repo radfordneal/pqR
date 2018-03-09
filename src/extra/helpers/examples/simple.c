@@ -1,7 +1,7 @@
 /* HELPERS - A LIBRARY SUPPORTING COMPUTATIONS USING HELPER THREADS
              Simple Example Program
 
-   Copyright (c) 2013 Radford M. Neal.
+   Copyright (c) 2013, 2018 Radford M. Neal.
 
    The helpers library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -46,9 +46,11 @@ static int trace;           /* Trace last repetition? */
 void sequence 
   (helpers_op_t op, helpers_var_ptr o, helpers_var_ptr i1, helpers_var_ptr i2)
 { helpers_size_t i;
+  helpers_debug("Started sequence.");
   for (i = 0; i<size; i++) 
   { o[i] = exp ((double)i / size);
   }
+  helpers_debug("  Finished sequence.");
 }
 
 
@@ -57,9 +59,11 @@ void sequence
 void sin_cos
   (helpers_op_t op, helpers_var_ptr o, helpers_var_ptr i1, helpers_var_ptr i2)
 { helpers_size_t i;
+  helpers_debug("Started sin_cos, op = %d.",(int)op);
   for (i = 0; i<size; i++)
   { o[i] = op ? sin(i1[i]) : cos(i1[i]);
   }
+  helpers_debug("  Finished sin_cos.");
 }
 
 
@@ -68,11 +72,13 @@ void sin_cos
 void ave_sqr 
   (helpers_op_t op, helpers_var_ptr o, helpers_var_ptr i1, helpers_var_ptr i2)
 { helpers_size_t i;
+  helpers_debug("\n  Started ave_sqr.");
   double sum = 0;
   for (i = 0; i<size; i++) 
   { sum += i1[i]*i1[i] + i2[i]*i2[i];
   }
   *o = sum/size;
+  helpers_debug("\n  Finished ave_sqr, sum = %f, ave = %f.",sum,sum/size);
 }
 
 
@@ -140,7 +146,14 @@ int main (int argc, char **argv)
    || sscanf(argv[1],"%d%c",&n,&junk)!=1 || n<0
    || sscanf(argv[2],"%d%c",&s,&junk)!=1 || s<0
    || sscanf(argv[3],"%d%c",&rep,&junk)!=1 || rep<1)
-  { fprintf (stderr, "Usage:  simple [ -t ] n-helpers vec-size repetitions\n");
+  { 
+#   if ENABLE_DEBUG
+    fprintf (stderr, 
+             "Usage:  simmple-debug [ -t ] n-helpers vec-size repetitions\n");
+#   else
+    fprintf (stderr, 
+             "Usage:  simmple [ -t ] n-helpers vec-size repetitions\n");
+#   endif
     exit(1);
   }
 
