@@ -1,7 +1,7 @@
 /* HELPERS - A LIBRARY SUPPORTING COMPUTATIONS USING HELPER THREADS
              Interface to C Procedures Called by Application Programs
 
-   Copyright (c) 2013, 2014, 2015 Radford M. Neal.
+   Copyright (c) 2013, 2014, 2015, 2018 Radford M. Neal.
 
    The helpers library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License version 2, as 
@@ -215,7 +215,8 @@ void helpers_no_pipelining (int);    /* Disable/re-enable pipelining */
 #define helpers_not_merging 1
 #define helpers_not_merging_now 1
 
-#define helpers_startup(n)           (helpers_master())
+#define helpers_startup(n) \
+  do { helpers_master(); exit(0); } while (0)
 
 #define helpers_do_task(_flags_,_proc_,_op_,_out_,_in1_,_in2_) \
   ((_proc_)((_op_),(_out_),(_in1_),(_in2_)))
@@ -239,6 +240,24 @@ static helpers_var_ptr helpers_var_list_null[1] = { (helpers_var_ptr) 0 };
 
 #define HELPERS_NOW_OR_LATER(_c1_,_c2_,_flags_,_proc_,_op_,_out_,_in1_,_in2_) \
   ((_proc_)((_op_),(_out_),(_in1_),(_in2_)))
+
+
+/* Debug output. */
+
+#if ENABLE_DEBUG
+
+#ifdef helpers_printf
+#define helpers_debug(...) helpers_printf(__VA_ARGS__)
+#else
+#include <stdio.h>
+#define helpers_debug(...) printf(__VA_ARGS__)
+#endif
+
+#else
+
+#define helpers_debug(...) do { } while (0)
+
+#endif
 
 
 #else
@@ -297,5 +316,35 @@ void helpers_no_merging (int);       /* Disable/re-enable task merging */
   (_c2_)? helpers_do_task((_flags_) | HELPERS_MASTER_NOW, \
                                     (_proc_),(_op_),(_out_),(_in1_),(_in2_)) : \
           ((_proc_)((_op_),(_out_),(_in1_),(_in2_))))
+
+/* Debug output. */
+
+#if ENABLE_DEBUG
+
+#   ifdef helpers_printf
+#      define helpers_debug_printf helpers_printf
+#   else
+#      include <stdio.h>
+#      define helpers_debug_printf printf
+#   endif
+
+#   include <string.h>
+
+#   define helpers_debug(...) do { \
+      extern char helpers_debug_output [256] [1024]; \
+      extern int helpers_task_number_internal(void); \
+      int tn = helpers_task_number_internal(); \
+      if (tn == 0) helpers_debug_printf(__VA_ARGS__); \
+      else { \
+          char *str = helpers_debug_output[tn]; \
+          snprintf (str + strlen(str), 1024 - strlen(str), __VA_ARGS__); \
+      } \
+    } while (0)
+
+#else
+
+#   define helpers_debug(...) do { } while (0)
+
+#endif
 
 #endif

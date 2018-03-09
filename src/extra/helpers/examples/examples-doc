@@ -1,7 +1,7 @@
 HELPERS - A LIBRARY SUPPORTING COMPUTATIONS USING HELPER THREADS
           Documention on the Example Programs Demonstrating the Helpers Library
 
-Copyright (c) 2013 Radford M. Neal.
+Copyright (c) 2013, 2018 Radford M. Neal.
 
   The helpers library is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -18,13 +18,15 @@ Copyright (c) 2013 Radford M. Neal.
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-For example programs are provided that demonstrate the helpers
+Several example programs are provided that demonstrate the helpers
 facility.  The program "example" has many options for exercising
 different features.  There is a simplified version of it called
 "simple", which is better for a first look at how to write a program
-using the helpers facility.  A version of it that parallelizes
-individual computations is called "parex".  Finally, there is a
-separate program called "merge" that tests the ability to merge tasks.
+using the helpers facility (and which also illustrates the
+helpers_debug facility, enabled when made as simple-debug).  A
+variation on the simple program which parallelizes individual
+computations is called "parex".  Finally, there is a separate program
+called "merge" that tests the ability to merge tasks.
 
 All these programs except "merge" perform the following four-step
 computation on vector variables A, B, and C, and scalar variable D:
@@ -163,7 +165,7 @@ next repetitions.
 A version of the example program called "simple" is also provided,
 which is the same as "example" except that the only option that it
 implements is -t.  It is a more easily-read illustration of basic use
-of the helpers facility.
+of the helpers facility, and also illustrates helpers_debug.
 
 The program "parex" is a modified version of "example" that allows the
 sin and cos computations (steps (2) and (3) above) to be done with

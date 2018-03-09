@@ -1,7 +1,7 @@
 HELPERS - A LIBRARY SUPPORTING COMPUTATIONS USING HELPER THREADS
           Example Programs Using the Helpers Library
 
-Copyright (c) 2013 Radford M. Neal.
+Copyright (c) 2013, 2018 Radford M. Neal.
 
   The helpers library is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -39,7 +39,8 @@ set up to use gcc, but it can be modified to use a different compiler.
 (Options suitable for a SPARC system not using gcc are in the Makefile
 but disabled.)  The program "example-d" is "example" compiled with
 helpers disabled.  The program "example-m" is "example" compiled with
-multithreading disabled.
+multithreading disabled.  The program "simple-debug" is "simple"
+compiled with output from helpers_debug enabled.
 
 The shell file "doit" runs "example" and "parex" with various numbers
 of helpers, with and without pipelining.
