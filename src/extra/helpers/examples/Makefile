@@ -18,13 +18,15 @@
 #   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-COMPILE=gcc -fopenmp -g -O2                     # command for gcc/Intel
-COMPILE_NO_OPENMP=gcc -g -O2
+WARN=  # -Wall -Wno-parentheses -Wno-unused-value
+COMPILE=gcc -fopenmp -g ${WARN} -O2                     # command for gcc/Intel
+COMPILE_NO_OPENMP=gcc -g ${WARN} -O2
 
 #COMPILE=cc -xopenmp -DASSUME_ATOMIC_READ_CHAR  # command for cc/SPARC
 #COMPILE_NO_OPENMP=cc
 
-all:		example example-d example-m simple merge parex parex-d
+all:		example example-d example-m simple simple-debug \
+		merge parex parex-d
 
 example:	example.c helpers-app.h ../helpers.c ../helpers.h
 	${COMPILE} -I.. -I. example.c ../helpers.c -lm -o example
@@ -40,6 +42,10 @@ example-m:	example.c helpers-app.h ../helpers.c ../helpers.h
 simple:		simple.c helpers-app.h ../helpers.c ../helpers.h
 	${COMPILE} -I.. -I. simple.c ../helpers.c -lm -o simple
 
+simple-debug:	simple.c helpers-app.h ../helpers.c ../helpers.h
+	${COMPILE} -I.. -I. -DENABLE_DEBUG=1 simple.c ../helpers.c -lm \
+	           -o simple-debug
+
 merge:		merge.c helpers-app.h ../helpers.c ../helpers.h
 	${COMPILE} -I.. -I. -DMERGE merge.c ../helpers.c -lm -o merge
 
@@ -50,4 +56,5 @@ parex-d:	parex.c helpers-app.h ../helpers.c ../helpers.h
 	${COMPILE} -I.. -I. -DHELPERS_DISABLED parex.c -lm -o parex-d
 
 clean:
-	rm -f example example-d example-m simple merge parex parex-d
+	rm -f example example-d example-m simple simple-debug \
+	      merge parex parex-d
