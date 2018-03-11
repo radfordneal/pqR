@@ -43,15 +43,18 @@
 
 #define SCOPE static
 
-#define EXTRAD , double *start_z, double *last_z, int input_first
-#define EXTRAZ , 0, 0, 0
-#define EXTRAN , start_z, last_z, input_first
+#define EXTRA(start_z,last_z,input_first) \
+               , start_z, last_z, input_first, LENGTH(sz)
+#define EXTRAD , double *start_z, double *last_z, int input_first, size_t s_sz
+#define EXTRAZ , 0, 0, 0, 0
+#define EXTRAN , start_z, last_z, input_first, s_sz
 
 #define THRESH 64
 
 #define AMTOUT(_z_) \
   do \
   { if (start_z == 0) break; \
+    assert ((_z_) - start_z <= s_sz); \
     if (input_first) \
     { helpers_size_t a = helpers_avail0 (last_z - start_z); \
       if (a == 0) break; \
@@ -98,7 +101,7 @@
 /* Scalar-vector product, with pipelining of input y and output z. */
 
 void task_par_matprod_scalar_vec (helpers_op_t op, helpers_var_ptr sz,
-                                    helpers_var_ptr sx, helpers_var_ptr sy)
+                                  helpers_var_ptr sx, helpers_var_ptr sy)
 {
   double x = *REAL(sx);
   double * MATPROD_RESTRICT y = REAL(sy);
@@ -127,7 +130,7 @@ void task_par_matprod_scalar_vec (helpers_op_t op, helpers_var_ptr sz,
       if (a > t1) a = t1;
       else if (a < t1) a &= ~3;
 
-      matprod_scalar_vec (x, y+oa, z+oa, a-oa, z, z+oa, w);
+      matprod_scalar_vec (x, y+oa, z+oa, a-oa EXTRA (z, z+oa, w));
     }
 
     if (w != 0) WAIT_FOR_EARLIER_TASKS(sz);
@@ -144,7 +147,7 @@ void task_par_matprod_scalar_vec (helpers_op_t op, helpers_var_ptr sz,
       HELPERS_WAIT_IN2 (a, na-1, m);
       if (a < m) a &= ~3;
 
-      matprod_scalar_vec (x, y+oa, z+oa, a-oa, z, z+oa, 0);
+      matprod_scalar_vec (x, y+oa, z+oa, a-oa EXTRA (z, z+oa, 0));
     }
   }
 }
@@ -153,7 +156,7 @@ void task_par_matprod_scalar_vec (helpers_op_t op, helpers_var_ptr sz,
 /* Dot product of two vectors, with pipelining of input y. */
 
 void task_par_matprod_vec_vec (helpers_op_t op, helpers_var_ptr sz,
-                                 helpers_var_ptr sx, helpers_var_ptr sy)
+                               helpers_var_ptr sx, helpers_var_ptr sy)
 {
   double * MATPROD_RESTRICT x = REAL(sx);
   double * MATPROD_RESTRICT y = REAL(sy);
@@ -184,7 +187,7 @@ void task_par_matprod_vec_vec (helpers_op_t op, helpers_var_ptr sz,
    in z, with pipelining of the input y and of the output. */
 
 void task_par_matprod_vec_mat (helpers_op_t op, helpers_var_ptr sz,
-                                 helpers_var_ptr sx, helpers_var_ptr sy)
+                               helpers_var_ptr sx, helpers_var_ptr sy)
 {
   double * MATPROD_RESTRICT x = REAL(sx);
   double * MATPROD_RESTRICT y = REAL(sy);
@@ -212,7 +215,7 @@ void task_par_matprod_vec_mat (helpers_op_t op, helpers_var_ptr sz,
 
   if (k == 0)
   { if (w == s-1)  /* do in only the last thread */
-    { matprod_vec_mat (x, y, z, k, m, z, z, 0);
+    { matprod_vec_mat (x, y, z, k, m EXTRA (z, z, 0));
     }
     return;
   }
@@ -236,7 +239,7 @@ void task_par_matprod_vec_mat (helpers_op_t op, helpers_var_ptr sz,
         d = a/k;
         if (d < m) d &= ~3;
 
-        matprod_vec_mat (x, y+od*k, z+od, k, d-od, z, z+od, w);
+        matprod_vec_mat (x, y+od*k, z+od, k, d-od EXTRA (z, z+od, w));
       }
     }
 
@@ -256,7 +259,7 @@ void task_par_matprod_vec_mat (helpers_op_t op, helpers_var_ptr sz,
       d = a/k;
       if (d < m) d &= ~3;
 
-      matprod_vec_mat (x, y+od*k, z+od, k, d-od, z, z+od, 0);
+      matprod_vec_mat (x, y+od*k, z+od, k, d-od EXTRA (z, z+od, 0));
     }
   }
 }
@@ -266,7 +269,7 @@ void task_par_matprod_vec_mat (helpers_op_t op, helpers_var_ptr sz,
    stored in z, with pipelining of input y. */
 
 void task_par_matprod_mat_vec (helpers_op_t op, helpers_var_ptr sz,
-                                 helpers_var_ptr sx, helpers_var_ptr sy)
+                               helpers_var_ptr sx, helpers_var_ptr sy)
 {
   double * MATPROD_RESTRICT x = REAL(sx);
   double * MATPROD_RESTRICT y = REAL(sy);
@@ -361,7 +364,7 @@ void task_par_matprod_mat_vec (helpers_op_t op, helpers_var_ptr sz,
    in z, with pipelining of the input y and the output (by column). */
 
 void task_par_matprod_outer (helpers_op_t op, helpers_var_ptr sz,
-                               helpers_var_ptr sx, helpers_var_ptr sy)
+                             helpers_var_ptr sx, helpers_var_ptr sy)
 {
   double * MATPROD_RESTRICT x = REAL(sx);
   double * MATPROD_RESTRICT y = REAL(sy);
@@ -406,7 +409,7 @@ void task_par_matprod_outer (helpers_op_t op, helpers_var_ptr sz,
       if (d < m) d &= ~3;
       if (d > d1) d = d1;
 
-      matprod_outer (x, y+od, z+od*n, n, d-od, z, z+od*n, w);
+      matprod_outer (x, y+od, z+od*n, n, d-od EXTRA (z, z+od*n, w));
     }
 
     if (w != 0) WAIT_FOR_EARLIER_TASKS(sz);
@@ -425,7 +428,7 @@ void task_par_matprod_outer (helpers_op_t op, helpers_var_ptr sz,
       d = a;
       if (d < m) d &= ~3;
 
-      matprod_outer (x, y+od, z+od*n, n, d-od, z, z+od*n, 0);
+      matprod_outer (x, y+od, z+od*n, n, d-od EXTRA (z, z+od*n, 0));
     }
   }
 }
@@ -435,7 +438,7 @@ void task_par_matprod_outer (helpers_op_t op, helpers_var_ptr sz,
    in z, with pipelining of the input y and the output (by column). */
 
 void task_par_matprod_mat_mat (helpers_op_t op, helpers_var_ptr sz,
-                                 helpers_var_ptr sx, helpers_var_ptr sy)
+                               helpers_var_ptr sx, helpers_var_ptr sy)
 {
   double * MATPROD_RESTRICT x = REAL(sx);
   double * MATPROD_RESTRICT y = REAL(sy);
@@ -472,7 +475,7 @@ void task_par_matprod_mat_mat (helpers_op_t op, helpers_var_ptr sz,
 
   if (k == 0)
   { if (w == s-1)  /* do in only the last thread */
-    { matprod_mat_mat (x, y, z, n, k, m, z, z, 0);
+    { matprod_mat_mat (x, y, z, n, k, m EXTRA (z, z, 0));
     }
     return;
   }
@@ -496,7 +499,7 @@ void task_par_matprod_mat_mat (helpers_op_t op, helpers_var_ptr sz,
       if (d < m) d &= ~3;
       if (d > d1) d = d1;
 
-      matprod_mat_mat (x, y+od*k, z+od*n, n, k, d-od, z, z+od*n, w);
+      matprod_mat_mat (x, y+od*k, z+od*n, n, k, d-od EXTRA (z, z+od*n, w));
     }
 
     if (w != 0) WAIT_FOR_EARLIER_TASKS(sz);
@@ -515,7 +518,7 @@ void task_par_matprod_mat_mat (helpers_op_t op, helpers_var_ptr sz,
       d = a/k;
       if (d < m) d &= ~3;
 
-      matprod_mat_mat (x, y+od*k, z+od*n, n, k, d-od, z, z+od*n, 0);
+      matprod_mat_mat (x, y+od*k, z+od*n, n, k, d-od EXTRA (z, z+od*n, 0));
     }
   }
 }
@@ -526,7 +529,7 @@ void task_par_matprod_mat_mat (helpers_op_t op, helpers_var_ptr sz,
    (by column). */
 
 void task_par_matprod_trans1 (helpers_op_t op, helpers_var_ptr sz,
-                                helpers_var_ptr sx, helpers_var_ptr sy)
+                              helpers_var_ptr sx, helpers_var_ptr sy)
 {
   double * MATPROD_RESTRICT x = REAL(sx);
   double * MATPROD_RESTRICT y = REAL(sy);
@@ -563,7 +566,7 @@ void task_par_matprod_trans1 (helpers_op_t op, helpers_var_ptr sz,
 
   if (k == 0)
   { if (w == s-1)  /* do in only the last thread */
-    { matprod_trans1 (x, y, z, n, k, m, z, z, 0);
+    { matprod_trans1 (x, y, z, n, k, m EXTRA (z, z, 0));
     }
     return;
   }
@@ -598,7 +601,8 @@ void task_par_matprod_trans1 (helpers_op_t op, helpers_var_ptr sz,
 
       double *sym = dosym ? z+od*n+od : 0;
 
-      matprod_trans1_sub (x, y+od*k, z+od*n, n, k, d-od, sym, z, z+od*n, w);
+      matprod_trans1_sub (x, y+od*k, z+od*n, n, k, d-od, sym
+                          EXTRA (z, z+od*n, w));
     }
 
     if (w != 0) WAIT_FOR_EARLIER_TASKS(sz);
@@ -619,7 +623,8 @@ void task_par_matprod_trans1 (helpers_op_t op, helpers_var_ptr sz,
 
       double *sym = dosym ? z+od*n+od : 0;
 
-      matprod_trans1_sub (x, y+od*k, z+od*n, n, k, d-od, sym, z, z+od*n, 0);
+      matprod_trans1_sub (x, y+od*k, z+od*n, n, k, d-od, sym
+                          EXTRA (z, z+od*n, 0));
     }
   }
 }
@@ -629,7 +634,7 @@ void task_par_matprod_trans1 (helpers_op_t op, helpers_var_ptr sz,
    with result stored in z, with pipelining of the output (by column). */
 
 void task_par_matprod_trans2 (helpers_op_t op, helpers_var_ptr sz,
-                                helpers_var_ptr sx, helpers_var_ptr sy)
+                              helpers_var_ptr sx, helpers_var_ptr sy)
 {
   double * MATPROD_RESTRICT x = REAL(sx);
   double * MATPROD_RESTRICT y = REAL(sy);
@@ -666,7 +671,7 @@ void task_par_matprod_trans2 (helpers_op_t op, helpers_var_ptr sz,
 
   if (k == 0)
   { if (w == s-1)  /* do in only the last thread */
-    { matprod_trans2 (x, y, z, n, k, m, z, z, 0);
+    { matprod_trans2 (x, y, z, n, k, m EXTRA (z, z, 0));
     }
     return;
   }
@@ -692,7 +697,8 @@ void task_par_matprod_trans2 (helpers_op_t op, helpers_var_ptr sz,
 
     if (d > od)
     { double *sym = dosym ? z+od*n+od : 0;
-      matprod_trans2_sub (x, y+od, z+od*n, n, k, m, d-od, sym, z, z+od*n, w);
+      matprod_trans2_sub (x, y+od, z+od*n, n, k, m, d-od, sym
+                          EXTRA (z, z+od*n, w));
     }
 
     if (w != 0) WAIT_FOR_EARLIER_TASKS(sz);
@@ -702,7 +708,8 @@ void task_par_matprod_trans2 (helpers_op_t op, helpers_var_ptr sz,
   { 
     double *sym = dosym ? z : 0;
 
-    matprod_trans2_sub (x, y, z, n, k, m, m, sym, z, z, 0);
+    matprod_trans2_sub (x, y, z, n, k, m, m, sym
+                        EXTRA (z, z, 0));
   }
 }
 
@@ -712,7 +719,7 @@ void task_par_matprod_trans2 (helpers_op_t op, helpers_var_ptr sz,
    of inputs or output. */
 
 void task_par_matprod_trans12 (helpers_op_t op, helpers_var_ptr sz,
-                                 helpers_var_ptr sx, helpers_var_ptr sy)
+                               helpers_var_ptr sx, helpers_var_ptr sy)
 {
   double * MATPROD_RESTRICT x = REAL(sx);
   double * MATPROD_RESTRICT y = REAL(sy);

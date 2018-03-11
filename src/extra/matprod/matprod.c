@@ -2603,7 +2603,7 @@ static void matprod_outer_sub (double * MATPROD_RESTRICT x,
     }
 #   endif
 
-    AMTOUT(z+n);
+    AMTOUT(z+rows);
 
     z += n;
     j += 1;
@@ -4574,7 +4574,7 @@ static void matprod_trans1_sub_xrowscols (double * MATPROD_RESTRICT x,
       xs += k; xs += k; xs += k; xs += k;
       nn -= 4;
 
-      AMTOUT(z);
+      AMTOUT(z+n);
     }
 
     /* Compute the remaining elements of the columns here. */
@@ -5188,7 +5188,7 @@ static void matprod_trans2_sub_xrows (double * MATPROD_RESTRICT x,
   if (k <= TRANS2_XCOLS
    || k <= (chunk = (TRANS2_XCOLS*TRANS2_XROWS/xrows) & ~7))
   { matprod_trans2_sub_xrowscols (x, y, z, n, k, m,
-                                  xrows, yrows, k, 0, 1, sym EXTRAZ);
+                                  xrows, yrows, k, 0, 1, sym EXTRAN);
     return;
   }
 
@@ -5489,14 +5489,14 @@ static void matprod_trans2_sub_xrowscols (double * MATPROD_RESTRICT x,
       }
     }
 
+    AMTOUT(ez+n+1);
+
     /* Move forward by two, to the next column of the result and the
        next row of y. */
 
     z += n; z += n;
     y += 2;
     m2 -= 2;
-
-    AMTOUT(z);
 
     if (sym) 
     { sym += n; sym += n;
