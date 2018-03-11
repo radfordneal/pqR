@@ -319,11 +319,12 @@ static union task_entry
 } task[MAX_TASKS+1];
 
 
-/* ARRAY OF TASK ENTRIES CURRENTLY USED AND UNUSED.  Read and written only 
-   by the master thread.  The "used" array always contains all the task
-   indexes from 1 to MAX_TASKS, in some order.  The first "n_used" of these
-   are currently being used, and are in the order they were scheduled.  The
-   remaining entries are unused, and in arbitrary order. */
+/* ARRAY OF TASK ENTRIES CURRENTLY USED AND UNUSED.  Read and written
+   only by the master thread.  The "used" array always contains all
+   the task indexes from 1 to MAX_TASKS, in some order.  The first
+   "helpers_tasks" of these are currently being used, and are in the
+   order they were scheduled.  The remaining entries are unused, and
+   in arbitrary order. */
 
 static mtix used[MAX_TASKS]; /* All task indexes; first helpers_tasks in use */
 int helpers_tasks = 0;       /* Number of tasks outstanding = indexes in use */
@@ -2029,7 +2030,7 @@ out_of_merge:
 
   if (helpers_tasks>0)
   { 
-    uh = &used[helpers_tasks];
+    uh = &used[helpers_tasks-1];
 
     if (in1==out) info->pipe[1] = pipe0;
     if (in2==out) info->pipe[2] = pipe0;
@@ -2047,8 +2048,8 @@ out_of_merge:
     { goto search_in1;
     }
 	
-    do
-    { mtix uhi = *--uh;
+    for (;;)
+    { mtix uhi = *uh;
       if (task[uhi].info.var[0]==in1)
       { info->pipe[1] = uhi;
         task[uhi].info.out_used = 1;
@@ -2059,31 +2060,43 @@ out_of_merge:
         task[uhi].info.out_used = 1;
         goto search_in1;
       }
-    } while (uh>used);
+      if (uh==used) 
+      { break;
+      }
+      uh -= 1;
+    }
 
     goto search_done;
 
   search_in1:
-    do
-    { mtix uhi = *--uh;
+    for (;;)
+    { mtix uhi = *uh;
       if (task[uhi].info.var[0]==in1)
       { info->pipe[1] = uhi;
         task[uhi].info.out_used = 1;
         goto search_done;
       }
-    } while (uh>used);
+      if (uh==used) 
+      { break;
+      }
+      uh -= 1;
+    }
 
     goto search_done;
 
   search_in2:
-    do
-    { mtix uhi = *--uh;
+    for (;;)
+    { mtix uhi = *uh;
       if (task[uhi].info.var[0]==in2)
       { info->pipe[2] = uhi;
         task[uhi].info.out_used = 1;
         goto search_done;
       }
-    } while (uh>used);
+      if (uh==used) 
+      { break;
+      }
+      uh -= 1;
+    }
 
   search_done: ;
   }
