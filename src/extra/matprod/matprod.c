@@ -59,14 +59,14 @@
 
 
 /* SETUP TO FACILITATE INCLUSION AND USE OF MATPROD.C IN PIPED-MATPROD.C.
-   If PIPED_MATPROD is defined, SCOPE, AMTOUT, EXTRAD, and EXTRAN will
+   If PAR_MATPROD is defined, SCOPE, AMTOUT, EXTRAD, and EXTRAN will
    be defined before matprod.c is included.  Otherwise, they are
    defined here as nothing.
 
    Also, matprod.h and perhaps matprod-app.h are included only if
-   PIPED_MATPROD is not defined. */
+   PAR_MATPROD is not defined. */
 
-#ifndef PIPED_MATPROD
+#ifndef PAR_MATPROD
 
 # ifdef MATPROD_APP_INCLUDED
 #   include "matprod-app.h"
@@ -88,7 +88,7 @@
 #define DEBUG_PRINTF 0     /* Set to 1 to enable printf of procedure args */
 
 #if DEBUG_PRINTF
-# ifdef PIPED_MATPROD
+# ifdef PAR_MATPROD
 #   define debug_printf helpers_debug
 # else
 #   include <stdio.h>
@@ -376,7 +376,7 @@ SCOPE void matprod_scalar_vec (double x, double * MATPROD_RESTRICT y,
 
 #   if CAN_USE_AVX
     { 
-#     ifdef PIPED_MATPROD
+#     ifdef PAR_MATPROD
       { while (i < m-SCALAR_VEC_THRESH)
         { int e = i+SCALAR_VEC_THRESH;
           while (i < e)
@@ -394,7 +394,7 @@ SCOPE void matprod_scalar_vec (double x, double * MATPROD_RESTRICT y,
     }
 #   else  /* CAN_USE_SSE2 */
     { 
-#     ifdef PIPED_MATPROD
+#     ifdef PAR_MATPROD
       { while (i < m-SCALAR_VEC_THRESH)
         { int e = i+SCALAR_VEC_THRESH;
           while (i < e)
@@ -428,7 +428,7 @@ SCOPE void matprod_scalar_vec (double x, double * MATPROD_RESTRICT y,
 
 # else  /* non-SIMD code */
   {
-#   ifdef PIPED_MATPROD
+#   ifdef PAR_MATPROD
     { while (i < m-SCALAR_VEC_THRESH)
       { int e = i+SCALAR_VEC_THRESH;
         while (i < e)
@@ -4573,8 +4573,6 @@ static void matprod_trans1_sub_xrowscols (double * MATPROD_RESTRICT x,
       z += 4;
       xs += k; xs += k; xs += k; xs += k;
       nn -= 4;
-
-      AMTOUT(z+n);
     }
 
     /* Compute the remaining elements of the columns here. */
@@ -4777,6 +4775,10 @@ static void matprod_trans1_sub_xrowscols (double * MATPROD_RESTRICT x,
         s += n;
         t += 1;
       }
+    }
+
+    if (final)
+    { AMTOUT(z+n);
     }
 
     /* Go on to next two columns of y and z. */
@@ -5489,7 +5491,9 @@ static void matprod_trans2_sub_xrowscols (double * MATPROD_RESTRICT x,
       }
     }
 
-    AMTOUT(ez+n+1);
+    if (final)
+    { AMTOUT(ez+n+1);
+    }
 
     /* Move forward by two, to the next column of the result and the
        next row of y. */

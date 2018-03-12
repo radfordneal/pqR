@@ -39,7 +39,7 @@
 
 /* -------------------------------------------------------------------------- */
 
-#define PIPED_MATPROD  /* Tell matprod.c it's being included from here */
+#define PAR_MATPROD  /* Tell matprod.c it's being included from here */
 
 #define SCOPE static
 
