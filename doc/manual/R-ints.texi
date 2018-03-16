@@ -163,7 +163,7 @@ manual.
 Memory allocation and garbage collection in pqR are done using the
 Segmented Generational Garbage Collection (SGGC) facility written by
 Radford M. Neal, and stored in src/extra/sggc.  See the
-@file{sggc-doc}, @file{sggc-imp}, and @file{set-doc} files there for
+@file{sggc-doc}, @file{sggc-imp}, and @file{sbset-doc} files there for
 documentation on this facility.  This directory also contains the
 files @file{sggc-app.h} and @file{sggc-app.c}, which specify how
 SGGC is used by the pqR interpreter.
