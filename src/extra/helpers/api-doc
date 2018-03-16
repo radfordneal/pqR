@@ -1,7 +1,7 @@
 HELPERS - A LIBRARY SUPPORTING COMPUTATIONS USING HELPER THREADS
           Application Program Interface Documentation
 
-Copyright (c) 2013, 2014, 2015 Radford M. Neal.
+Copyright (c) 2013, 2014, 2015, 2018 Radford M. Neal.
 
   The helpers library is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -729,7 +729,8 @@ independent computations, and for concurrent execution of computations
 in which one computation pipelines data to another.  It is also
 possible, by applying the pipelining facilities, to perform a single
 element-by-element vector computation using several tasks, which
-operate on different parts of the vector.
+operate on different parts of the vector.  Two ways of doing this will
+be described here.
 
 To see one way that this can be done, consider a function F(v) that
 takes a vector argument and returns the vector obtained by applying
@@ -758,9 +759,49 @@ previous task in the pipeline), and the last task in the pipeline can
 be written to produce pipelined output of the final result.
 
 For more details on how to do this, see the "parex" example program,
-and its documentation in examples-doc.  It is possible that a future
-version of the helpers facility will provide a more convenient and
-efficient way of parallelizing a single computation.
+and its documentation in examples-doc.
+
+Another way of parallelizing a computation among up to K threads is to
+schedule K tasks, each of which will compute a consecutive block
+containing approximately 1/K of the elements.  The first task
+scheduled computes the first block, writing to its output variable,
+which will be assumed to not also be an input (ie, not being pipelined
+in).  The second task scheduled computes the second block, with its
+output being pipelined from the output of the first task, and so forth
+for later blocks.  Each task can begin computing its block immediately
+(assuming it needn't wait for elements of other input variables to be
+computed), without waiting for the task computing earlier portions of
+the output to complete.  Note that this requires that all tasks but
+the last be scheduled with output pipelining, and that all tasks but
+the first be scheduled with input pipelining of the output variable.
+When tasks other than the first finish their computation, they must
+wait for earlier portions of the output to be computed before
+terminating, which can be done using HELPERS_WAIT_IN0.
+
+If the output of the final task is to be pipelined into some further
+task, the final task should be scheduled with output pipelining.  All
+tasks should occasionally call helpers_amount_out to indicate how much
+of the computation has been completed (though perhaps not after every
+element is computed, since the overhead of this might be too large).
+
+For the first task, the argument of helpers_amount_out should be the
+number of elements of the first block that have been computed so far.
+For tasks other than the first, helpers_amount_out should be called
+only after helpers_avail0 has been called, to see how many elements
+have been computed before the block this task is computing.  If the
+number of elements is less than the number before the start of this
+task's block, helpers_amount_out should be called with this number as
+its argument.  If helpers_avail0 instead indicates that all elements
+before the start of this task's block have been computed, then
+helpers_amount_out should be called with the number of previous
+elements plus the number of elements of this task's block that have
+been computed so far.  (Note that once helpers_avail0 indicates that
+all previous elements have been computed, it will not be necessary to
+call it again.)
+
+It is possible that a future version of the helpers facility will
+provide a more convenient and efficient way of parallelizing a single
+computation.
 
 
 TASK MERGING
@@ -920,15 +961,15 @@ variables within this array is arbitrary.  A variable may appear more
 than once in the array.
 
 
-TRACE AND STATISTICS OUTPUT
+TRACE, DEBUG, AND STATISTICS OUTPUT
 
 If the helpers_trace procedure is called with argument 1, a trace of
 tasks scheduled, of tasks completed, of calls to wait procedures, and
 of calls that enable or disable features of the helpers facility will
-be written to standard output.  Tracing may later be disabled by
-calling the helpers_trace procedure with argument 0.  Tracing is
-disabled initially, but may be enabled before helpers_startup is
-called.
+be written (by default, to standard output).  Tracing may later be
+disabled by calling the helpers_trace procedure with argument 0.
+Tracing is disabled initially, but may be enabled before
+helpers_startup is called.
 
 All trace output is produced in the master thread, by calling the
 helpers_printf procedure, which may be defined (as a macro with no
@@ -943,6 +984,20 @@ helpers_var_ptr or helpers_task_proc, and return a pointer to a
 null-terminated name.  If either of these macros is not defined in
 helpers-app.h, it will default to a macro that always returns "?".
 These macros will never be called with a null argument.
+
+A task procedure may produce output for debugging (or other) purposes
+by calling helpers_debug, with a format string and other arguments as
+appropriate for helpers_printg (see above).  If the helpers facility
+was compiled with ENABLE_DEBUG defined as 1 (perhaps in
+helpers-app.h), output from calls of helpers_debug during the
+execution of a task procedure (in either a helper or the master) will
+be saved, and displayed by the master thread when the task has
+finished (up to a maximum of 1024 characters of output) in a message
+beginning with "HELPERS: Task <n> debug output:", which will be
+printed using helpers_printf.  If ENABLE_DEBUG is 0 or undefined,
+calls of helpers_debug do nothing (with no overhead).  Defining
+ENABLE_DEBUG as 1 results in a small performance penalty even if no
+calls of helpers_debug are made.
 
 Calling helpers_stats (with no arguments) from the master thread
 prints a report (using helpers_printf) containing statistics such as
@@ -1159,6 +1214,8 @@ along with the context in which they may be called.
 
   helpers_stats     void           void                  master
   helpers_trace     void           int                   master or init
+  helpers_debug     void           char *, ...           task
+
   helpers_disable   void           int                   master or init
   helpers_no_multithreading                              master
                     void           int
@@ -1272,6 +1329,10 @@ options when building the helpers facility:
 
   HELPERS_DISABLED
   HELPERS_NO_MULTITHREADING
+
+  ENABLE_DEBUG
+  ENABLE_TRACE
+  ENABLE_STATS
 
 Note that the task merging facility is disabled if the application
 does not define the helpers_can_merge macro.

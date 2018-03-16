@@ -1,7 +1,7 @@
 COPYRIGHT STATUS OF pqR.
  
 The modifications made to the source of R-2.15.0 to create pqR are
-Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal.
+Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal.
 
 The library in src/extra/sggc is Copyright 2016, 2017 Radford M. Neal,
 and licensed under GPL2 or later.
@@ -13,7 +13,7 @@ The library in src/extra/matprod is Copyright 2013, 2014, 2017 Radford M. Neal,
 and licensed under GPL2 or later.
 
 The library in src/extra/helpers is 
-Copyright (C) 2013, 2014, 2015 Radford M. Neal, and licensed under 
+Copyright (C) 2013, 2014, 2015, 2018 Radford M. Neal, and licensed under 
 GPL2 or later.
 
 Some modules, bug fixes, and other features are taken from R-2.15.1

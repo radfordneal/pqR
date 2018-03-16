@@ -1,7 +1,7 @@
 /* HELPERS - A LIBRARY SUPPORTING COMPUTATIONS USING HELPER THREADS
              C Procedures Implementing the Facility
 
-   Copyright (c) 2013, 2014, 2015 Radford M. Neal.
+   Copyright (c) 2013, 2014, 2015, 2016, 2018 Radford M. Neal.
 
    The helpers library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -28,26 +28,6 @@
 
 #ifndef HELPERS_NO_MULTITHREADING
 #include <omp.h>
-#endif
-
-
-#ifdef __MINGW64__
-
-/* KLUDGE TO BYPASS A PROBLEM WITH OPENMP IN THE 64-BIT VERSION OF RTOOLS.
-
-   The omp.h file for 32-bit systems gets used for 64-bit builds too.
-   This results in omp_lock_t being too small.  We replace it with a
-   type with extra padding (4 bytes seems like it would be enough, but
-   more is used just in case), also ensuring 8-byte alignment just in
-   case that matters. 
-
-   Lots of compiler warnings result, but it works, and should continue
-   to work even if the bug is fixed. */
-
-typedef union { omp_lock_t lock; void *pad[2]; } my_omp_lock_t;
-
-#define omp_lock_t my_omp_lock_t
-
 #endif
 
 
@@ -94,6 +74,23 @@ typedef union { omp_lock_t lock; void *pad[2]; } my_omp_lock_t;
 
 #ifndef SPIN_EMPTY    /* Allow value from compile option to override below's */
 #define SPIN_EMPTY 1000
+
+#endif
+
+
+/* ----------------------------  OMP SETUP ---------------------------------- */
+
+/* MODIFY LOCK STRUCTURE.  Here, my_lock_t is defined as a union of
+   the omp lock structure and eight doubles (64 bytes) for two
+   reasons.  One is to try to avoid false cache invalidation when two
+   locks are near each other.  The other is to guard against the
+   possibility that the omp_lock_t type in omp.h is not the correct
+   size, which is known to sometimes happen due to confusion between
+   versions of omp.h meant for 32-bit vs. 64-bit platforms. */
+
+#ifndef HELPERS_NO_MULTITHREADING
+
+typedef union { omp_lock_t lock; double pad[8]; } my_lock_t;
 
 #endif
 
@@ -308,7 +305,7 @@ static union task_entry
 
     tix pipe_at_start[3];          /* Value of "pipe" when task is started */
     helpers_size_t first_amt[3];   /* First non-zero value from helpers_availN*/
-    helpers_size_t last_amt[3];    /* Last value from helpers_amount_out */
+    helpers_size_t last_amt[3];    /* Last value from helpers_availN */
 
     /* The fields below are used only when ENABLE_TRACE is 3 or more. */
 
@@ -322,11 +319,12 @@ static union task_entry
 } task[MAX_TASKS+1];
 
 
-/* ARRAY OF TASK ENTRIES CURRENTLY USED AND UNUSED.  Read and written only 
-   by the master thread.  The "used" array always contains all the task
-   indexes from 1 to MAX_TASKS, in some order.  The first "n_used" of these
-   are currently being used, and are in the order they were scheduled.  The
-   remaining entries are unused, and in arbitrary order. */
+/* ARRAY OF TASK ENTRIES CURRENTLY USED AND UNUSED.  Read and written
+   only by the master thread.  The "used" array always contains all
+   the task indexes from 1 to MAX_TASKS, in some order.  The first
+   "helpers_tasks" of these are currently being used, and are in the
+   order they were scheduled.  The remaining entries are unused, and
+   in arbitrary order. */
 
 static mtix used[MAX_TASKS]; /* All task indexes; first helpers_tasks in use */
 int helpers_tasks = 0;       /* Number of tasks outstanding = indexes in use */
@@ -357,7 +355,7 @@ static tix untaken[QSize], untaken_in, untaken_out;
 
 #ifndef HELPERS_NO_MULTITHREADING
 
-static omp_lock_t untaken_lock;   /* Lock to set for accessing untaken queue */
+static my_lock_t untaken_lock;  /* Lock to set for accessing untaken queue */
 
 #endif
 
@@ -368,7 +366,7 @@ static omp_lock_t untaken_lock;   /* Lock to set for accessing untaken queue */
 
 #ifndef HELPERS_NO_MULTITHREADING
 
-static omp_lock_t start_lock;  /* Lock set by thread looking for task to start*/
+static my_lock_t start_lock;   /* Lock set by thread looking for task to start*/
 
 #endif
 
@@ -379,7 +377,7 @@ static omp_lock_t start_lock;  /* Lock set by thread looking for task to start*/
 
 static hix suspended;      /* Helper that has suspended, or 0 if none */
 
-static omp_lock_t suspend_lock[2];/* Locks used alternately to suspend helper */
+static my_lock_t suspend_lock[2]; /* Locks used alternately to suspend helper */
 
 static int which_suspends; /* Which lock a helper sets to suspend itself */
 static int which_wakes;    /* Which lock the master unsets to wake helper */
@@ -443,6 +441,21 @@ static char trace = 0;    /* Are we printing trace information now? */
 
 static double init_wtime; /* Wall clock time when helpers_startup called, set
                              and used only if ENABLE_TRACE is 3 */
+
+
+/* DEBUG OUTPUT FOR TASKS.  Saved on a per-task basis in the array
+   below, for printing when the task finishes.  The array is global,
+   since it needs to be accessible from application procedures calling
+   helpers_debug.  The helpers_task_number_internal procedure is
+   similarly needed to provide global access to this_task from an
+   application. */
+
+#if ENABLE_DEBUG
+
+char helpers_debug_output [256] [1024];
+int helpers_task_number_internal (void) { return this_task; }
+
+#endif
 
 
 /* STATISTICS ON HELPERS AND MASTER.  The tasks_done field in the zeroth entry 
@@ -539,6 +552,10 @@ static void trace_task_list (void)
                                               (int) info->pipe_at_start[0],
                                               (int) info->pipe_at_start[1],
                                               (int) info->pipe_at_start[2]);
+      helpers_printf("  first_amt[]: %d %d %d\n",
+                                              (int) info->first_amt[0],
+                                              (int) info->first_amt[1],
+                                              (int) info->first_amt[2]);
       helpers_printf("  last_amt[]: %d %d %d\n",
                                               (int) info->last_amt[0],
                                               (int) info->last_amt[1],
@@ -658,6 +675,14 @@ static void trace_merged
 }
 
 #endif
+
+
+/* TRACE OUTPUT FOR BEGINNING EXECUTION OF A TASK IN THE MASTER. */
+
+static void trace_begun_in_master (tix t)
+{
+  helpers_printf ("HELPERS: Task %d begun in master\n", t);
+}
 
 
 /* TRACE OUTPUT FOR COMPLETION OF A TASK. */
@@ -858,6 +883,9 @@ static void run_this_task (void)
     this_task_info->first_amt[0] = 0;
     this_task_info->first_amt[1] = 0;
     this_task_info->first_amt[2] = 0;
+    this_task_info->last_amt[0] = 0;
+    this_task_info->last_amt[1] = 0;
+    this_task_info->last_amt[2] = 0;
     if (ENABLE_TRACE>2)
     { this_task_info->start_wtime = WTIME();
     }
@@ -1157,22 +1185,13 @@ static void notice_completed_proc (void)
       { for (j = i+1; j<helpers_tasks; j++)
         { struct task_info *ninfo = &task[used[j]].info;
           if (ninfo->pipe[2]==t) 
-          { if (ENABLE_TRACE>1)
-            { ATOMIC_READ_SIZE (ninfo->last_amt[2] = info->amt_out);
-            }
-            ATOMIC_WRITE_CHAR (ninfo->pipe[2] = 0);
+          { ATOMIC_WRITE_CHAR (ninfo->pipe[2] = 0);
           }
           if (ninfo->pipe[1]==t) 
-          { if (ENABLE_TRACE>1)
-            { ATOMIC_READ_SIZE (ninfo->last_amt[1] = info->amt_out);
-            }
-            ATOMIC_WRITE_CHAR (ninfo->pipe[1] = 0);
+          { ATOMIC_WRITE_CHAR (ninfo->pipe[1] = 0);
           }
           if (ninfo->pipe[0]==t) 
-          { if (ENABLE_TRACE>1)
-            { ATOMIC_READ_SIZE (ninfo->last_amt[0] = info->amt_out);
-            }
-            ATOMIC_WRITE_CHAR (ninfo->pipe[0] = 0);
+          { ATOMIC_WRITE_CHAR (ninfo->pipe[0] = 0);
             still_being_computed = 1;
             break;
           }
@@ -1186,9 +1205,19 @@ static void notice_completed_proc (void)
   
       if (ENABLE_STATS) stats[info->helper].tasks_done += 1;
   
-      /* Write trace output showing task completion, if trace enabled. */
+      /* Write trace output showing task completion, if trace enabled. 
+         Also write debug output, if any was produced. */
   
       if (trace) trace_completed(t);
+
+#     if ENABLE_DEBUG
+      { if (helpers_debug_output[t][0] != 0)
+        { helpers_printf ("HELPERS: Task %d debug output: %s\n", t,
+                           helpers_debug_output[t]);
+          helpers_debug_output[t][0] = 0;  /* just in case - set when started */
+        }
+      }
+#     endif
   
       /* Unset the being-computed flag as appropriate, if the application 
          defined the required macro. */
@@ -1346,15 +1375,15 @@ static void do_task_in_master (int only_needed)
 
     if (!helpers_not_multithreading_now)
     { 
-      if (!omp_test_lock (&start_lock))
+      if (!omp_test_lock (&start_lock.lock))
       { 
         /* See if a helper is supended - it shouldn't be! - and wake it up
            if it is. */
 
         if (h>0)
-        { omp_set_lock (&suspend_lock[1-which_wakes]);
+        { omp_set_lock (&suspend_lock[1-which_wakes].lock);
           suspended = 0;
-          omp_unset_lock (&suspend_lock[which_wakes]);
+          omp_unset_lock (&suspend_lock[which_wakes].lock);
           which_wakes = 1-which_wakes;
           if (ENABLE_STATS) stats[h].times_woken += 1;
           helpers_printf("HELPER WAS SUSPENDED WHEN IT SHOULDN'T HAVE BEEN!\n");
@@ -1371,7 +1400,7 @@ static void do_task_in_master (int only_needed)
 #   ifndef HELPERS_NO_MULTITHREADING
 
     if (!helpers_not_multithreading_now)
-    { omp_unset_lock (&start_lock);
+    { omp_unset_lock (&start_lock.lock);
     }
 
 #   endif
@@ -1382,6 +1411,8 @@ static void do_task_in_master (int only_needed)
   }
 
   /* Do the task in the master. */
+
+  if (trace) trace_begun_in_master (this_task);
 
   this_task_info = &task[this_task].info;
   this_task_info->helper = 0;
@@ -1406,7 +1437,7 @@ static void helper_proc (void)
 {
   /* Set lock for becoming the helper that looks for a task to start. */
 
-  omp_set_lock (&start_lock);
+  omp_set_lock (&start_lock.lock);
 
   /* Loop, each time waiting for a non-empty untaken queue, looking for a 
      runnable task to start, doing it, and flagging its completion. */
@@ -1435,7 +1466,7 @@ static void helper_proc (void)
          with the lock set, so the master won't be putting a task in at 
          the same time. */
 
-      omp_set_lock (&untaken_lock);
+      omp_set_lock (&untaken_lock.lock);
 
       ATOMIC_READ_CHAR (u_in = untaken_in);
       if (u_in==untaken_out || helpers_not_multithreading_now)
@@ -1443,7 +1474,7 @@ static void helper_proc (void)
         will_suspend = 1;
       }
 
-      omp_unset_lock (&untaken_lock);
+      omp_unset_lock (&untaken_lock.lock);
 
       /* If we decided to suspend, do that now. */
 
@@ -1457,8 +1488,8 @@ static void helper_proc (void)
            a task in the untaken queue (when multithreading hasn't been 
            disabled). */
 
-        omp_set_lock (&suspend_lock[which_suspends]);
-        omp_unset_lock (&suspend_lock[which_suspends]);
+        omp_set_lock (&suspend_lock[which_suspends].lock);
+        omp_unset_lock (&suspend_lock[which_suspends].lock);
         which_suspends = 1-which_suspends;
 
         /* Go back to the start of the main loop, looking again at whether
@@ -1481,11 +1512,11 @@ static void helper_proc (void)
     this_task_info = &task[this_task].info;
     ATOMIC_WRITE_CHAR (this_task_info->helper = this_thread);
 
-    omp_unset_lock (&start_lock);  /* implies a flush */
+    omp_unset_lock (&start_lock.lock);  /* implies a flush */
 
     run_this_task();
 
-    omp_set_lock (&start_lock);  /* implies a flush */
+    omp_set_lock (&start_lock.lock);  /* implies a flush */
   }
 }
 
@@ -1534,14 +1565,14 @@ void helpers_do_task
 
   if ((flags & HELPERS_MERGE_IN) && helpers_tasks>0 
         && out!=null && helpers_is_being_computed(out))
-  { uh = &used[helpers_tasks-1];
+  { uh = &used[helpers_tasks];
     pipe0 = 0;
     do
-    { if (task[*uh].info.var[0]==out)
+    { if (task[*--uh].info.var[0]==out)
       { pipe0 = *uh;
         break;
       }
-    } while (--uh>=used);
+    } while (uh>used);
   }
   else
   { pipe0 = -1; /* look later */
@@ -1593,7 +1624,7 @@ void helpers_do_task
              is an untaken task, but it may be set for a prolonged time if no
              untaken task can be run until some master-only task has run. */
 
-          while (!omp_test_lock (&start_lock))
+          while (!omp_test_lock (&start_lock.lock))
           { ATOMIC_READ_CHAR (h = m->helper);
             if (h!=-1)
             { goto out_of_merge;
@@ -1723,7 +1754,7 @@ void helpers_do_task
   
 #     ifndef HELPERS_NO_MULTITHREADING
       if (locked)
-      { omp_unset_lock (&start_lock);
+      { omp_unset_lock (&start_lock.lock);
       }
 #     endif
 
@@ -1974,13 +2005,13 @@ out_of_merge:
   if (pipe0==-1) 
   { pipe0 = 0;
     if (out!=null && helpers_tasks>0)
-    { uh = &used[helpers_tasks-1];
+    { uh = &used[helpers_tasks];
       do
-      { if (task[*uh].info.var[0]==out)
+      { if (task[*--uh].info.var[0]==out)
         { pipe0 = *uh;
           break;
         }
-      } while (--uh>=used);
+      } while (uh>used);
     }
   }
 
@@ -2017,7 +2048,7 @@ out_of_merge:
     { goto search_in1;
     }
 	
-    do
+    for (;;)
     { mtix uhi = *uh;
       if (task[uhi].info.var[0]==in1)
       { info->pipe[1] = uhi;
@@ -2029,31 +2060,43 @@ out_of_merge:
         task[uhi].info.out_used = 1;
         goto search_in1;
       }
-    } while (--uh>=used);
+      if (uh==used) 
+      { break;
+      }
+      uh -= 1;
+    }
 
     goto search_done;
 
   search_in1:
-    do
+    for (;;)
     { mtix uhi = *uh;
       if (task[uhi].info.var[0]==in1)
       { info->pipe[1] = uhi;
         task[uhi].info.out_used = 1;
         goto search_done;
       }
-    } while (--uh>=used);
+      if (uh==used) 
+      { break;
+      }
+      uh -= 1;
+    }
 
     goto search_done;
 
   search_in2:
-    do
+    for (;;)
     { mtix uhi = *uh;
       if (task[uhi].info.var[0]==in2)
       { info->pipe[2] = uhi;
         task[uhi].info.out_used = 1;
         goto search_done;
       }
-    } while (--uh>=used);
+      if (uh==used) 
+      { break;
+      }
+      uh -= 1;
+    }
 
   search_done: ;
   }
@@ -2087,6 +2130,11 @@ out_of_merge:
 
   if (trace) trace_started (t, flags0, task_to_do, op, out, in1, in2);
 
+# if ENABLE_DEBUG
+  { helpers_debug_output[t][0] = 0;
+  }
+# endif
+
   /* If this is a master-only task, just put it in the master_only queue. */
 
   if (flags & HELPERS_MASTER_ONLY)
@@ -2119,20 +2167,20 @@ out_of_merge:
   { 
     tix new_u_in;
 
-    omp_set_lock (&untaken_lock);    /* does an implicit FLUSH */
+    omp_set_lock (&untaken_lock.lock);    /* does an implicit FLUSH */
     h = suspended;
 
     new_u_in = (untaken_in + 1) & QMask;
     ATOMIC_WRITE_CHAR (untaken_in = new_u_in);
 
-    omp_unset_lock (&untaken_lock);  /* does an implicit FLUSH */
+    omp_unset_lock (&untaken_lock.lock);  /* does an implicit FLUSH */
 
     /* Wake the suspended helper, if there is one. */
 
     if (h!=0)
-    { omp_set_lock (&suspend_lock[1-which_wakes]);
+    { omp_set_lock (&suspend_lock[1-which_wakes].lock);
       suspended = 0;
-      omp_unset_lock (&suspend_lock[which_wakes]);
+      omp_unset_lock (&suspend_lock[which_wakes].lock);
       which_wakes = 1-which_wakes;
       if (ENABLE_STATS) stats[h].times_woken += 1;
     }
@@ -2148,6 +2196,11 @@ direct:
 
   if (trace) trace_started (0, flags0, task_to_do, op, out, in1, in2);
 
+# if ENABLE_DEBUG
+  { helpers_debug_output[0][0] = 0; 
+  }
+# endif
+
   /* Code below is like in run_this_task, except this procedure's arguments
      are used without their being stored in the task info structure, and
      there's no need to set the 'done' flag. */
@@ -2159,6 +2212,9 @@ direct:
     this_task_info->first_amt[0] = 0;
     this_task_info->first_amt[1] = 0;
     this_task_info->first_amt[2] = 0;
+    this_task_info->last_amt[0] = 0;
+    this_task_info->last_amt[1] = 0;
+    this_task_info->last_amt[2] = 0;
     if (ENABLE_TRACE>2)
     { this_task_info->start_wtime = WTIME();
     }
@@ -2166,11 +2222,21 @@ direct:
 
   task_to_do (op, out, in1, in2);
 
-  if (ENABLE_TRACE>2) 
+  if (ENABLE_TRACE>2)
   { this_task_info->done_wtime = WTIME();
   }
 
   if (trace) trace_completed (0);
+
+# if ENABLE_DEBUG
+  { if (helpers_debug_output[0][0] != 0)
+    { helpers_printf ("HELPERS: Task %d debug output: %s\n", 0,
+                       helpers_debug_output[0]);
+      helpers_debug_output[0][0] = 0;  /* just in case, also set when started */
+    }
+  }
+# endif
+  
 
   /* Update stats on tasks done in master. */
 
@@ -2576,6 +2642,7 @@ helpers_size_t helpers_avail0 (helpers_size_t mx)
 
   if (ENABLE_TRACE>1)
   { if (info->first_amt[0]==0) info->first_amt[0] = n;
+    info->last_amt[0] = n;
   }
 
   return n;
@@ -2604,6 +2671,7 @@ helpers_size_t helpers_avail1 (helpers_size_t mx)
 
   if (ENABLE_TRACE>1)
   { if (info->first_amt[1]==0) info->first_amt[1] = n;
+    info->last_amt[1] = n;
   }
 
   return n;
@@ -2632,6 +2700,7 @@ helpers_size_t helpers_avail2 (helpers_size_t mx)
 
   if (ENABLE_TRACE>1)
   { if (info->first_amt[2]==0) info->first_amt[2] = n;
+    info->last_amt[2] = n;
   }
 
   return n;
@@ -2964,10 +3033,10 @@ void helpers_startup (int n)
 
   /* Initialize all locks. */
 
-  omp_init_lock (&untaken_lock);
-  omp_init_lock (&start_lock);
-  omp_init_lock (&suspend_lock[0]);
-  omp_init_lock (&suspend_lock[1]);
+  omp_init_lock (&untaken_lock.lock);
+  omp_init_lock (&start_lock.lock);
+  omp_init_lock (&suspend_lock[0].lock);
+  omp_init_lock (&suspend_lock[1].lock);
   
   which_suspends = which_wakes = 0;
   suspend_initialized = 0;
@@ -2995,7 +3064,7 @@ void helpers_startup (int n)
 
       /* Set suspend_lock[0] so helpers will be able to suspend themselves. */
 
-      omp_set_lock (&suspend_lock[0]);
+      omp_set_lock (&suspend_lock[0].lock);
 
       ATOMIC_WRITE_CHAR (suspend_initialized = 1);
       FLUSH;
