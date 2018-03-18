@@ -863,7 +863,7 @@ SEXP attribute_hidden R_data_class2 (SEXP obj)
     SEXPTYPE t = TYPEOF(obj);
     SEXP dim = getDimAttrib(obj);
     SEXP defaultClass;
-    int n;
+    int n = 0;
 
     defaultClass = dim == R_NilValue      ? Type2DefaultClass[t].vector
                  : (n = LENGTH(dim)) == 2 ? Type2DefaultClass[t].matrix
