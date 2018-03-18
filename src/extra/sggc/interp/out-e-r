@@ -11,6 +11,8 @@
 11 \ l
 12 \ ((O I) (I I) (I O I) (I I I) (I I O I) (I O I I) (I O O O I) (I I O O I) (I I I O I) (I O I I I) (I I I I I) (I O I O O I) (I O O I O I) (I I O I O I) (I I I I O I) (I O I O I I) (I I O I I I) (I O I I I I) (I I O O O O I) (I I I O O O I) (I O O I O O I) (I I I I O O I) (I I O O I O I) (I O O I I O I) (I O O O O I I) (I O I O O I I) (I I I O O I I) (I I O I O I I) (I O I I O I I) (I O O O I I I) (I I I I I I I))
 Allocated objects: 63485
-Counts... Gen0: 86, Gen1: 93, Gen2: 750, Uncollected: 0
-Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
+Counts... Gen0: 86, Gen1: 93, Gen2: 621, Uncollected: 129
+Big chunks... Gen0: 0, Gen1: 0, Gen2: 0, Uncollected: 1
 Number of segments: 35,  Total memory usage: 21555 bytes
+Number of allocatons: 63485,  At time of last GC: 63399
+GC counts: 508 95 32,  Since last lev 2: 12 2,  Since lev 1/2: 4

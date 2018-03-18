@@ -14,3 +14,5 @@ Allocated objects: 35583735
 Counts... Gen0: 36, Gen1: 300, Gen2: 5035, Uncollected: 0
 Big chunks... Gen0: 0, Gen1: 0, Gen2: 1, Uncollected: 0
 Number of segments: 472,  Total memory usage: 291872 bytes
+Number of allocatons: 35583735,  At time of last GC: 35583699
+GC counts: 284670 53376 17792,  Since last lev 2: 14 3,  Since lev 1/2: 2

@@ -1,3 +1,6 @@
 Changes to use a new version of the matprod library, that allows for
 parallelizing operations, and with substantial other performance
 improvements, as well as API changes.
+
+Also includes a new version of SGGC, which records more info of use
+for debugging (and other uses).

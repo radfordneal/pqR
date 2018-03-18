@@ -1,7 +1,7 @@
 /* SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION.
           Simple interpreter used to test SGGC
 
-   Copyright (c) 2016, 2017 Radford M. Neal.
+   Copyright (c) 2016, 2017, 2018 Radford M. Neal.
 
    The SGGC library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -774,6 +774,16 @@ static void end_prog (void)
    (unsigned) sggc_info.gen2_big_chunks, (unsigned) sggc_info.uncol_big_chunks);
   printf("Number of segments: %u,  Total memory usage: %llu bytes\n",
           sggc_info.n_segments, (unsigned long long) sggc_info.total_mem_usage);
+  printf("Number of allocations: %llu,  At time of last GC: %llu\n",
+          (unsigned long long) sggc_info.allocations, 
+          (unsigned long long) sggc_info.allocations_at_last_gc);
+  printf("GC counts: %u %u %u,  Since last lev 2: %u %u,  Since lev 1/2: %u\n",
+          (unsigned) sggc_info.gc_count[0],
+          (unsigned) sggc_info.gc_count[1], 
+          (unsigned) sggc_info.gc_count[2],
+          (unsigned) sggc_info.gc_since_lev2[0],
+          (unsigned) sggc_info.gc_since_lev2[1], 
+          (unsigned) sggc_info.gc_since_lev12);
 # if CALL_NEWLY_FREED
     printf("Number of freed objects: %u\n",freed_count);
     total =  sggc_info.gen0_count + sggc_info.gen1_count + sggc_info.gen2_count

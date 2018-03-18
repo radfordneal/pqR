@@ -302,6 +302,13 @@ garbage collection:
     unsigned n_segments;     /* Number of segments in use */
     size_t total_mem_usage;  /* Approximate total memory usage (in bytes) */
 
+    uint64_t allocations;    /* Number of objects allocated since startup */
+    uint64_t allocations_at_last_gc;  /* # of allocations at time of last GC */
+
+    uint64_t gc_count[3];    /* Counts of collections done at levels 0, 1, 2 */
+    uint64_t gc_since_lev12; /* Collections at lev 0 since last at lev 1 or 2 */
+    uint64_t gc_since_lev2[2]; /* Collections at levs 0, 1 since last at lev 2*/
+
   } sggc_info;
 
 Constants are not included in any of the counts or sizes above, except
@@ -580,7 +587,7 @@ macros) below, which have (if functions) prototypes as shown:
 
     Returns the number of chunks actually allocated for the data area
     of the given object, which may be greater than what was asked for
-    (indirectly) in the the call of sggc_alloc (or related functions).
+    (indirectly) in the call of sggc_alloc (or related functions).
     The entirety of this allocated can be used by the application.
 
   void sggc_collect (int level)

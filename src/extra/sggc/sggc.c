@@ -1,7 +1,7 @@
 /* SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION.
           Segmented generational garbage collection - function definitions
 
-   Copyright (c) 2016, 2017 Radford M. Neal.
+   Copyright (c) 2016, 2017, 2018 Radford M. Neal.
 
    The SGGC library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -526,6 +526,16 @@ int sggc_init (unsigned max_segments)
   sggc_info.n_segments = 0;
   sggc_info.total_mem_usage = 0;
 
+  sggc_info.allocations = 0;
+  sggc_info.allocations_at_last_gc = 0;
+
+  sggc_info.gc_count[0] = 0;
+  sggc_info.gc_count[1] = 0;
+  sggc_info.gc_count[2] = 0;
+  sggc_info.gc_since_lev12 = 0;
+  sggc_info.gc_since_lev2[0] = 0;
+  sggc_info.gc_since_lev2[1] = 0;
+
   return 0;
 }
 
@@ -1022,6 +1032,8 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
   OFFSET(sggc_data,index,SGGC_CHUNK_SIZE);
 
   /* Return newly allocated object. */
+
+  sggc_info.allocations += 1;
 
   return v;
 
@@ -1830,9 +1842,31 @@ void sggc_collect (int level)
   if (SGGC_DEBUG) printf("sggc_collect: level %d\n",level);
   if (SGGC_DEBUG) collect_debug();
 
+  if (sbset_first(&to_look_at, 0) != SBSET_NO_VALUE) abort();
+
   collect_level = level;
 
-  if (sbset_first(&to_look_at, 0) != SBSET_NO_VALUE) abort();
+  /* Record allocation count at this collection. */
+
+  sggc_info.allocations_at_last_gc = sggc_info.allocations;
+
+  /* Update counts of how many collections have been done. */
+
+  sggc_info.gc_count[level] += 1;
+
+  if (level == 2)
+  { sggc_info.gc_since_lev2[0] = 0;
+    sggc_info.gc_since_lev2[1] = 0;
+    sggc_info.gc_since_lev12 = 0;
+  }
+  else if (level == 1)
+  { sggc_info.gc_since_lev12 = 0;
+    sggc_info.gc_since_lev2[1] += 1;
+  }
+  else
+  { sggc_info.gc_since_lev2[0] += 1;
+    sggc_info.gc_since_lev12 += 1;
+  }
 
   /* Do preliminary update of big chunk counts, which will be modified 
      later when some big objects are found to be free. */
