@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1381,9 +1381,7 @@ SEXP attribute_hidden do_strrep(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP d, s, x, n, el;
     R_xlen_t is, ix, in, ns, nx, nn;
     const char *xi;
-    int j, ni, nc;
-    const char *cbuf;
-    char *buf;
+    int ni, nc;
 
     checkArity(op, args);
 

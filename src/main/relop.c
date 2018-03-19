@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -645,7 +645,7 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 
 static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    int i, i1, i2, n, n1, n2, res;
+    int i, i1, i2, n, n1, n2;
     SEXP x1, x2;
     const SEXP *e1 = STRING_PTR(s1);
     const SEXP *e2 = STRING_PTR(s2);
@@ -729,7 +729,7 @@ false:
 
 static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    int i, i1, i2, n, n1, n2, res;
+    int i, i1, i2, n, n1, n2;
     SEXP x1, x2;
     const SEXP *e1 = STRING_PTR(s1);
     const SEXP *e2 = STRING_PTR(s2);
@@ -811,7 +811,7 @@ true:
 
 static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    int i, i1, i2, n, n1, n2, res;
+    int i, i1, i2, n, n1, n2;
     SEXP x1, x2;
     const SEXP *e1 = STRING_PTR(s1);
     const SEXP *e2 = STRING_PTR(s2);

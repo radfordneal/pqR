@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -779,7 +779,7 @@ static SEXP do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP pat, text, ind, ans;
     regex_t reg;
-    int i, j, n, ov[3], rc;
+    int i, n, ov[3], rc;
     int igcase_opt, value_opt, perl_opt, fixed_opt, useBytes, invert;
     const char *spat = NULL;
     int spatlen = 0;
@@ -1420,7 +1420,6 @@ static char *string_adj (char *target, const char *orig, const char *repl,
 {
     const char *p = repl; 
     char *t = target;
-    size_t u;
     int i, k;
 
     while (*p) {
@@ -1519,7 +1518,6 @@ static wchar_t *wstring_adj (wchar_t *target, const wchar_t *orig,
 {
     const wchar_t *p = repl; 
     wchar_t *t = target;
-    size_t u;
     int i, k;
 
     while (*p) {
@@ -1893,7 +1891,6 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
         else  {
             /* extended regexp in wchar_t */
             const wchar_t *s = wtransChar (STRING_ELT (text,i));
-            int ns = wcslen(s);
             wchar_t *t;
             t = (wchar_t *) ALLOC_STRING_BUFF (cbuff.defaultSize-1, &cbuff);
             offset = 0; nmatch = 0; eflags = 0; last_end = -1;

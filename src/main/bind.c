@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -119,11 +119,12 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
                         TYPEOF(objs[0]) == typ && !NAMEDCNT_GT_1(objs[0]) &&
                         objs[0] == findVarInFrame3 (env, CADR(call), 7);
 
+    ansnames = R_NilValue;
+
     if (TYPEOF(objs[0]) != typ 
          || LENGTH(objs[0]) <= len/2 /* guards against repeats: v <- c(v,v) */
          || NAMEDCNT_GT_0(objs[0]) && !local_assign1) {
         ans = allocVector (typ, len);
-        ansnames = R_NilValue;
         local_assign1 = 0;
         realloc = 0;
     }
@@ -736,9 +737,9 @@ static SEXP do_c (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
                                  int variant)
 {
-    SEXP ans, t;
+    SEXP ans;
     R_len_t nobj;
-    int recurse, usenames, anytags, highesttype;
+    int recurse, usenames, anytags;
     struct BindData data;
 
     usenames = 1;

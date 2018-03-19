@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -383,7 +383,6 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
                     while (j < len) { t += ns; xi[j++] = t; }
                 }
                 else {  /* unrolled loop that requires j > 1 */
-                    int t0, t1;
                     k = 0;
                     if ((len-j) & 1) {
                         int t0 = xi[k++];
@@ -424,7 +423,6 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
                         while (j < len) { t += ns; xi[j++] = t; }
                 }
                 else {  /* unrolled loop that requires j > 1 */
-                    int t0, t1;
                     k = 0;
                     if ((len-j) & 1) {
                         int t0 = xi[k++];

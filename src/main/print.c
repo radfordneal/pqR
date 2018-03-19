@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995-1998	Robert Gentleman and Ross Ihaka.
@@ -325,7 +325,7 @@ static SEXP do_printdefault(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 static void PrintGenericVector(SEXP s, SEXP env)
 {
-    int i, taglen, ns, w, d, e, wr, dr, er, wi, di, ei;
+    int i, taglen, ns, w, wr, dr, er, wi, di, ei;
     SEXP dims, t, names, newcall, tmp;
     char pbuf[115], *ptag, save[TAGBUFLEN + 5];
 

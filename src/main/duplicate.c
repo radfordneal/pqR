@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -53,7 +53,6 @@
   PROTECT(to = allocVector(TYPEOF(from), __n__)); \
   if (__n__ == 1) fun(to)[0] = fun(from)[0]; \
   else { \
-    int __i__; \
     type *__fp__ = fun(from), *__tp__ = fun(to); \
     memcpy (__tp__, __fp__, __n__ * sizeof(type)); \
   } \
