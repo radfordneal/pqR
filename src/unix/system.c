@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2016, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -175,10 +175,10 @@ int Rf_initialize_R1(int ac, char **av, void *stackstart)
 #if defined(HAVE_SYS_RESOURCE_H) && defined(HAVE_GETRLIMIT)
 
     extern int R_stack_growth_direction (uintptr_t);
-    int tmp;
 
 #   ifndef R_CStackDir
-      R_CStackDir = R_stack_growth_direction ((uintptr_t)&tmp); /* +1 is down */
+        int tmp;
+        R_CStackDir = R_stack_growth_direction((uintptr_t)&tmp); /* +1 is down*/
 #   endif
 
     struct rlimit rlim;

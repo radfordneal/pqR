@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1165,7 +1165,7 @@ void attribute_hidden orderVector1 (int *indx, int n, SEXP key,
 static SEXP do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ap, ans;
-    int i, n = -1, narg = 0;
+    int n = -1, narg = 0;
     int nalast, decreasing;
     int merge = FALSE;
 
@@ -1281,12 +1281,14 @@ static SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
                 j += 1;
 	    switch (ties_kind) {
 	    case AVERAGE:
-		for (k = i; k <= j; k++)
-		    rk[in[k]-1] = (i + j + 2) / 2.0; break;
+		for (k = i; k <= j; k++) rk[in[k]-1] = (i + j + 2) / 2.0;
+                break;
 	    case MAX:
-		for (k = i; k <= j; k++) ik[in[k]-1] = j+1; break;
+		for (k = i; k <= j; k++) ik[in[k]-1] = j+1;
+                break;
 	    case MIN:
-		for (k = i; k <= j; k++) ik[in[k]-1] = i+1; break;
+		for (k = i; k <= j; k++) ik[in[k]-1] = i+1;
+                break;
 	    }
 	}
     }

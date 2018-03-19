@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -639,7 +639,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
 static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 {
-    int i, j, ii, jj, ij, iy;
+    int i, j, iy;
     int rhasna, chasna;
     int_fast64_t n;
     double ry;
@@ -743,8 +743,6 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
     int colix;
 
     if (ny == 1) {
-
-        int k = 0;
 
         switch ((TYPEOF(x)<<5) + TYPEOF(y)) {
 
@@ -1681,7 +1679,6 @@ static SEXP do_subassign2_dflt_int
     int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch;
     Rboolean S4, recursed;
     R_len_t length_x;
-    int intreal_x;
 
     BEGIN_PROTECT2 (names, xtop);
     ALSO_PROTECT5 (x, sb1, sb2, subs, y);
@@ -2230,7 +2227,6 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
                 else
                     PROTECT (ans = reallocVector (x, nx+1, 1));
                 if (names == R_NilValue || NAMEDCNT_GT_1(names)) {
-                    R_len_t i;
                     PROTECT(ansnames = allocVector (STRSXP, nx+1));
                     if (names != R_NilValue)
                         copy_string_elements (ansnames, 0, names, 0, nx);

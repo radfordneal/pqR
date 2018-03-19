@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2016 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2016, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1999-2012  The R Core Team
@@ -693,7 +693,7 @@ void nmmin(int n, double *Bvec, double *X, double *Fmin, optimfn fminfn,
     double oldsize;
     double **P;
     double size, step, temp, trystep;
-    char tstr[6];
+    char tstr[11];
     double VH, VL, VR;
 
     if (maxit <= 0) {

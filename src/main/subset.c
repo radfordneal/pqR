@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -383,7 +383,6 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
     if (sb != R_NoObject) {
         int stretch = 1;  /* allow out of bounds, not for assignment */
         int hasna;
-        SEXP d;
         if (drop == NA_LOGICAL) suppress_drop = whether_suppress_drop(sb);
         PROTECT(indx = makeSubscript(x, sb, &stretch, &hasna, call, 0));
         n = LENGTH(indx);
@@ -436,7 +435,6 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
 
     UNPROTECT(2 + (sb!=R_NoObject));
 
-  done:
     /* One-dimensional arrays should have their dimensions dropped only 
        if the result has length one and drop TRUE or is NA_INTEGER without
        the drop being suppressed by the index being a 1D array. */
@@ -445,7 +443,7 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
         int len = length(result);
 
         if (len > 1 || drop == FALSE || drop == NA_INTEGER && suppress_drop) {
-            SEXP attr, nm;
+            SEXP attr;
             PROTECT(result);
             PROTECT(attr = allocVector1INT());
             INTEGER(attr)[0] = len;
@@ -908,7 +906,6 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
     int i, j, ii, jj, n;
     SEXP dimnames, dimnamesnames, r, result;
     int mode = TYPEOF(x);
-    int any_hasna = 0;
 
     int *subs[k], indx[k], nsubs[k], offset[k], suppress_drop[k];
     SEXP subv[k];
@@ -928,7 +925,6 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
             suppress_drop[i] = CAR(r) == R_MissingArg ? MISSING(r) == 2
                                 : whether_suppress_drop(CAR(r));
         PROTECT (subv[i] = array_sub (CAR(r), xdims, i, x, &hasna));
-        if (hasna) any_hasna = 1;
         subs[i] = INTEGER(subv[i]);
 	nsubs[i] = LENGTH(subv[i]);
         n *= nsubs[i];
@@ -1321,7 +1317,6 @@ static inline SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2,
                                           int variant)
 {
     R_len_t ix1, ix2, nrow, ncol, avail, e;
-    SEXP r;
 
     if (!isVectorAtomic(x))
         return R_NilValue;
@@ -1664,7 +1659,6 @@ static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
 static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     int fast_sub = VARIANT_KIND(variant) == VARIANT_FAST_SUB;
-    int argsevald = 0;
     SEXP ans;
         
     /* If we can easily determine that this will be handled by
@@ -1697,7 +1691,6 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         if (obj) {
             args = CONS(array,ixlist);
-            argsevald = -1;
             UNPROTECT(1);  /* array */
         }
         else if (ixlist == R_NilValue || TAG(ixlist) != R_NilValue 
@@ -1749,7 +1742,6 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     else {
         if (fast_sub) {
             args = CONS (R_fast_sub_var, args);
-            argsevald = -1;
         }
     }
 

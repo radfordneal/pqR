@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -53,8 +53,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, collapse, sep;
     int i, j, k, maxlen, sepw, u_sepw, ienc;
-    const char *s, *cbuf, *csep, *u_csep;
-    char *buf;
+    const char *s, *csep, *u_csep;
 
     const void *vmax0 = VMAXGET();
 
