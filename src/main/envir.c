@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -517,7 +517,7 @@ SEXP attribute_hidden R_HashRehashOld (SEXP table)
 
 static SEXP R_HashResize(SEXP table)
 {
-    SEXP new_table, chain, new_chain, tmp_chain;
+    SEXP new_table, chain, tmp_chain;
     int new_size, counter, new_hashcode;
 #if DEBUG_OUTPUT
     Rprintf("\nABOUT TO RESIZE HASH TABLE %llu/%u\n",
@@ -624,7 +624,7 @@ static R_INLINE int R_HashSizeCheck(SEXP table)
 static void R_HashFrame(SEXP rho)
 {
     int hashcode;
-    SEXP frame, chain, tmp_chain, table;
+    SEXP frame, tmp_chain, table;
 
     /* Do some checking */
     if (TYPEOF(rho) != ENVSXP)
@@ -1556,7 +1556,6 @@ SEXP attribute_hidden findFun_nospecsym(SEXP symbol, SEXP rho)
 
 SEXP findFunMethod(SEXP symbol, SEXP rho)
 {
-    SEXP32 last_sym_not_found = LASTENVNOTFOUND(symbol);
     SEXP last_unhashed_env_nf = R_NoObject;
 
     for (rho = SKIP_USING_SYMBITS(rho,symbol); 

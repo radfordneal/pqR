@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1065,7 +1065,7 @@ static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
 
 SEXP match5(SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env)
 { 
-    matchfun (itable, ix, nomatch, incomp, env, 0);
+    return matchfun (itable, ix, nomatch, incomp, env, 0);
 }
 
 SEXP matchE(SEXP itable, SEXP ix, int nomatch, SEXP env)
@@ -1850,7 +1850,7 @@ static void HashTableSetup1 (SEXP x, HashData *d)
 SEXP attribute_hidden csduplicated (SEXP x)
 {
     SEXP ans;
-    int *h, *v;
+    int *v;
     int i, n;
     HashData data;
     const void *vmax = VMAXGET();

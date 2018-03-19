@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -278,20 +278,26 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 
     RCNTXT *cptr = R_GlobalContext;  /* Context from which UseMethod called */
 
+    char buf[512];
+    int hash;
+    int len;
+
     PROTECT(klass = R_data_class2(obj));
-    if (TYPEOF(klass) != STRSXP)
+    if (TYPEOF(klass) != STRSXP) {
+        hash = 0;
+        len = 0;
         goto not_found;
+    }
+
     nclass = LENGTH(klass);
 
-    char buf[512];
-    int len;
     for (len = 0; generic[len] != 0; len++) {
         buf[len] = generic[len];
         if (len >= (sizeof buf) - 2)
             error(_("class name too long in '%s'"), generic);
     }
     buf[len++] = '.';
-    int hash = Rf_char_hash_len (buf, len);
+    hash = Rf_char_hash_len (buf, len);
     const void *vmax = VMAXGET();
 
     for (i = 0; i < nclass; i++) {

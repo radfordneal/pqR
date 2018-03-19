@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -556,7 +556,7 @@ static SEXP scanVector(SEXPTYPE type, int maxitems, int maxlines,
 		       int flush, SEXP stripwhite, int blskip, LocalData *d)
 {
     SEXP ans;
-    int blocksize, c, i, n, linesread, nprev,strip, bch;
+    int blocksize, c, n, linesread, nprev,strip, bch;
     char *buffer;
     R_StringBuffer strBuf = {NULL, 0, MAXELTSIZE};
 
@@ -573,7 +573,7 @@ static SEXP scanVector(SEXPTYPE type, int maxitems, int maxlines,
     strip = asLogical(stripwhite);
 
     for (;;) {
-	if(n % 10000 == 9999) R_CheckUserInterrupt();
+	if ((n & 0xfff) == 0xfff) R_CheckUserInterrupt();
 	if (bch == R_EOF) {
 	    if (d->ttyflag) R_ClearerrConsole();
 	    break;
