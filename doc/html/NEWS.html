@@ -7,6 +7,108 @@
 
 <h2>R News</h2>
 
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.4.4</h3>
+
+
+
+<h4>NEW FEATURES</h4>
+
+
+<ul>
+<li> <p><code>Sys.timezone()</code> tries more heuristics on Unix-alikes and so
+is more likely to succeed (especially on Linux).  For the slowest
+method, a warning is given recommending that <span class="env">TZ</span> is set to
+avoid the search.
+</p>
+</li>
+<li><p> The version of LAPACK included in the sources has been
+updated to 3.8.0 (for the routines used by <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span>, a very minor bug-fix
+change).
+</p>
+</li>
+<li> <p><code>parallel::detectCores(logical = FALSE)</code> is ignored on
+Linux systems, since the information is not available with
+virtualized OSes.
+</p>
+</li></ul>
+
+
+
+
+<h4>INSTALLATION on a UNIX-ALIKE</h4>
+
+
+<ul>
+<li> <p><code>configure</code> will use <code>pkg-config</code> to find the
+flags to link to <code>jpeg</code> if available (as it should be for the
+recently-released <code>jpeg-9c</code> and <code>libjpeg-turbo</code>).  (This
+amends the code added in <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span> 3.3.0 as the module name in
+<code>jpeg-9c</code> is not what that tested for.)
+</p>
+</li></ul>
+
+
+
+
+<h4>DEPRECATED AND DEFUNCT</h4>
+
+
+<ul>
+<li> <p><code>Sys.timezone(location = FALSE)</code> (which was a stop-gap
+measure for Windows long ago) is deprecated.  It no longer returns
+the value of environment variable <span class="env">TZ</span> (usually a location).
+</p>
+</li>
+<li><p> Legacy support of <code>make</code> macros such as <span class="samp">CXX1X</span>
+is formally deprecated: use the <span class="samp">CXX11</span> forms instead.
+</p>
+</li></ul>
+
+
+
+
+<h4>BUG FIXES</h4>
+
+
+<ul>
+<li> <p><code>power.prop.test()</code> now warns when it cannot solve the
+problem, typically because of impossible constraints. (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17345">PR#17345</a>)
+</p>
+</li>
+<li> <p><code>removeSource()</code> no longer erroneously removes
+<code>NULL</code> in certain cases, thanks to Dénes Tóth.
+</p>
+</li>
+<li> <p><code>nls(`NO [mol/l]` ~ f(t))</code> and <code>nls(y ~ a)</code> now
+work.  (Partly from <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17367">PR#17367</a>)
+</p>
+</li>
+<li> <p><code>R CMD build</code> checks for GNU <code>cp</code> rather
+than assuming Linux has it.  (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17370">PR#17370</a> says &lsquo;Alpine
+Linux&rsquo; does not.)
+</p>
+</li>
+<li><p> Non-UTF-8 multibyte character handling fixed more
+permanently (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16732">PR#16732</a>).
+</p>
+</li>
+<li> <p><code>sum(&lt;large ints&gt;, &lt;stuff&gt;)</code> is more consistent.
+(<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17372">PR#17372</a>)
+</p>
+</li>
+<li> <p><code>rf()</code> and <code>rbeta()</code> now also work correctly when
+<code>ncp</code> is not scalar, notably when (partly) <code>NA</code>.
+(<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17375">PR#17375</a>)
+</p>
+</li>
+<li> <p><code>R CMD INSTALL</code> now correctly sets C++ compiler flags
+when all source files are in sub-directories of &lsquo;<span class="file">src</span>&rsquo;.
+</p>
+</li></ul>
+
+
+
+
 <h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.4.3</h3>
 
 
@@ -963,7 +1065,7 @@ the same behaviour on Linux distributions with long-term support.
 </li>
 <li><p> An alternative compiler for C++11 is now specified with
 <span class="samp">CXX11</span>, not <span class="samp">CXX1X</span>. Likewise C++11 flags are specified
-with <span class="samp">CXX11FLAGS</span> and the standard (e.g., <span class="samp">-std=gnu++11</span>
+with <span class="samp">CXX11FLAGS</span> and the standard (e.g., <span class="samp">-std=gnu++11</span>)
 is specified with <span class="samp">CXX11STD</span>.
 </p>
 </li>
@@ -3299,7 +3401,7 @@ environment.
 returns class <code>"poly"</code> just like <code>poly()</code> which gets a
 new <code>simple=FALSE</code> option.  They now lead to correct
 <code>predict()</code>ions, e.g., on subsets of the original data.
-
+(<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16239">PR#16239</a>)
 </p>
 </li>
 <li> <p><code>rhyper(nn, &lt;large&gt;)</code> now works correctly. (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16489">PR#16489</a>)

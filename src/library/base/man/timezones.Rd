@@ -1,6 +1,6 @@
 % File src/library/base/man/timezones.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2016 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{timezones}
@@ -28,40 +28,47 @@ OlsonNames()
 \arguments{
   \item{location}{logical: should an attempt be made to find the
     location name as used in the Olson/IANA database?
-    (See \sQuote{Time zone names} below.)}
+    (See \sQuote{Time zone names} below.)
+    
+    \code{location = FALSE} is deprecated.
+  }
 }
 
 \details{
   Time zones are a system-specific topic, but these days almost all \R
   platforms use similar underlying code, used by Linux, macOS, Solaris,
-  AIX, FreeBSD, Sun Java >= 1.4 and Tcl >= 8.5, and installed with \R on
-  Windows.  Unfortunately there are many system-specific errors in the
-  implementations.  It is possible to use \R's own version of the code
-  on Unix-alikes as well as on Windows: this is the default for macOS and
-  recommended for Solaris.
+  AIX and FreeBSD, and installed with \R on Windows.  (Unfortunately
+  there are many system-specific errors in the implementations.)  It is
+  possible to use the \R sources' version of the code on Unix-alikes as
+  well as on Windows: this is the default for macOS and recommended for
+  Solaris.
 
-  It should be possible to set the time zone via the environment
+  It should be possible to set the current time zone via the environment
   variable \env{TZ}: see the section on \sQuote{Time zone names} for
   suitable values.  \code{Sys.timezone()} will return the value of
   \env{TZ} if set (and on some OSes it is always set), otherwise it will
-  try to retrieve a value which if set for \env{TZ} would give the
-  current time zone.  This is not in general possible, and
-  \code{Sys.timezone(FALSE)} on Windows will retrieve the abbreviation
-  used for the current time.
+  try to retrieve from the OS a value which if set for \env{TZ} would
+  select the system's idea of the time zone.  This is not in general
+  possible, and \code{Sys.timezone(FALSE)} on Windows will retrieve the
+  abbreviation used for the current time.
 
-  If \env{TZ} is set but empty or invalid, most platforms default to
-  \samp{UTC}, the time zone colloquially known as \samp{GMT} (see
-  \url{https://en.wikipedia.org/wiki/Coordinated_Universal_Time}).  (Some
-  but not all platforms will give a warning for invalid time zones.)
+  %% glibc silently uses UTC but uses the invalid name as the
+  %% abbreviations.  tzcode as used by R warns and uses UTC.
+  If \env{TZ} is set but invalid, most platforms default to \samp{UTC},
+  the time zone colloquially known as \samp{GMT} (see
+  \url{https://en.wikipedia.org/wiki/Coordinated_Universal_Time}).
+  (Some but not all platforms will give a warning for invalid values.)
+  If it is unset or empty the \emph{system} time zone is used.
 
   Time zones did not come into use until the second half of the
   nineteenth century and were not widely adopted until the twentieth,
   and \emph{daylight saving time} (DST, also known as \emph{summer
   time}) was first introduced in the early twentieth century, most
-  widely in 1916. Over the last 100 years places have changed their
+  widely in 1916.  Over the last 100 years places have changed their
   affiliation between major time zones, have opted out of (or in to) DST
-  in various years or adopted DST rule changes late or not at all.
-  
+  in various years or adopted DST rule changes late or not at all.  (The
+  UK experimented with DST throughout 1971, only.)
+
   A quite common system implementation of \code{POSIXct} is as signed
   32-bit integers and so only goes back to the end of 1901: on such
   systems \R assumes that dates prior to that are in the same time zone
@@ -79,8 +86,16 @@ OlsonNames()
   \code{NA} or an empty string (which on some OSes means \samp{UTC}).
   For the default \code{location = TRUE} this will be a location such as
   \code{"Europe/London"} if one can be ascertained.  For \code{location
-  = FALSE} this may be an abbreviation such as \code{"EST"} or
-  \code{"CEST"} on Windows.
+  = FALSE} it will be an abbreviation such as \code{"EST"} or
+  \code{"CEST"} on Windows but \code{NA} on other platforms
+
+  A time zone region may be known by several names: for example
+  \samp{"Europe/London"} is also known as \samp{GB}, \samp{GB-Eire},
+  \samp{Europe/Belfast}, \samp{Europe/Guernsey},
+  \samp{Europe/Isle_of_Man} and \samp{Europe/Jersey}.  A few regions
+  are also known by a summary of their time zone,
+  e.g.\sspace{}\samp{PST8PDT} is an alias for
+  \samp{America/Los_Angeles}.
 
   \code{OlsonNames} returns a character vector.
 }
@@ -101,19 +116,20 @@ OlsonNames()
   compiled by Arthur David Olson and now managed by IANA, in which the
   preferred way to refer to a time zone is by a location (typically of a
   city), e.g., \code{Europe/London}, \code{America/Los_Angeles},
-  \code{Pacific/Easter}.  Some traditional designations are also allowed
-  such as \code{EST5EDT} or \code{GB}.  (Beware that some of these
-  designations may not be what you expect: in particular \code{EST} is a
-  time zone used in Canada \emph{without} daylight saving time, and not
-  \code{EST5EDT} nor (Australian) Eastern Standard Time.)  The
-  designation can also be an optional colon prepended to the path to a
-  file giving complied zone information (and the examples above are all
-  files in a system-specific location).  See
-  \url{http://www.twinsun.com/tz/tz-link.htm} for more details and
-  references.  By convention, regions with a unique time-zone history
-  since 1970 have specific names in the database, but those with
-  different earlier histories may not.  Each time zone has one or two
-  (the second for DST) \emph{abbreviations} used when formatting times.
+  \code{Pacific/Easter} within a \sQuote{time zone region}.  Some
+  traditional designations are also allowed such as \code{EST5EDT} or
+  \code{GB}.  (Beware that some of these designations may not be what
+  you expect: in particular \code{EST} is a time zone used in Canada
+  \emph{without} daylight saving time, and not \code{EST5EDT} nor
+  (Australian) Eastern Standard Time.)  The designation can also be an
+  optional colon prepended to the path to a file giving complied zone
+  information (and the examples above are all files in a system-specific
+  location).  See \url{http://www.twinsun.com/tz/tz-link.htm} for more
+  details and references.  By convention, regions with a unique
+  time-zone history since 1970 have specific names in the database, but
+  those with different earlier histories may not.  Each time zone has
+  one or two (the second for DST) \emph{abbreviations} used when
+  formatting times.
 
   The abbreviations used have changed over the years: for example France
   used \samp{PMT} (\sQuote{Paris Mean Time}) from 1891 to 1911 then
@@ -121,15 +137,20 @@ OlsonNames()
   all time zones the abbreviations have been stable since 1970.)  The
   POSIX standard allows only one or two abbreviations per time zone, so
   you may see the current abbreviation(s) used for older times.
-  
+
+  For some time zones abbreviations are like \samp{-03} and
+  \samp{+0845}: this is done when there is no official abbreviation.
+  (Negative values are behind (West of) UTC, as for the \code{"\%z"}
+  format for \code{\link{strftime}}.)
+
   The function \code{OlsonNames} returns the time-zone names known to
-  the Olson/IANA database on the current system. The system-specific
-  location in the file system varies, e.g.\sspace{}\file{/usr/share/zoneinfo}
-  (Linux, macOS, FreeBSD), \file{/usr/share/lib/zoneinfo} (Solaris, AIX),
-  \ldots.  It is likely that there is a file named something like
-  \file{zone.tab} under that directory listing the locations known as
-  time-zone names (but not for example \code{EST5EDT}): this is read by
-  \code{OlsonNames}.  See also
+  the currently selected Olson/IANA database.  The system-specific
+  location in the file system varies,
+  e.g.\sspace{}\file{/usr/share/zoneinfo} (Linux, macOS, FreeBSD),
+  \file{/usr/share/lib/zoneinfo} (Solaris, AIX), \ldots.  It is likely
+  that there is a file named something like \file{zone.tab} under that
+  directory listing the locations known as time-zone names (but not for
+  example \code{EST5EDT}).  See also
   \url{https://en.wikipedia.org/wiki/Zone.tab}.
 
   Where \R was configured with option \option{--with-internal-tzcode}
@@ -137,8 +158,15 @@ OlsonNames()
   \code{file.path(R.home("share"), "zoneinfo")} is used by default: file
   \file{VERSION} in that directory states the version.  Environment
   variable \env{TZDIR} can be used to point to a different
-  \file{zoneinfo} directory: this is also supported by the native
-  services on some OSes, e.g.\sspace{}Linux).
+  \file{zoneinfo} database: this is also supported by the native
+  services on some OSes, e.g.\sspace{}Linux using \code{glibc} except in
+  secure modes.
+  %% But not Linux with musl
+  
+  Time zones given by name (\emph{via} environment variable \env{TZ}, in
+  \code{tz} arguments to functions such as \code{\link{as.POSIXlt}} and
+  perhaps the system time zone) are loaded from the currently selected
+  \file{zoneinfo} database.
 #ifdef windows
 
   An attempt is made (once only per session) to map Windows' idea of the
@@ -149,12 +177,13 @@ OlsonNames()
   before any date-times are used in the session.
 #endif
 
-  Most platforms support time zones of the form \samp{GMT+n} and
-  \samp{GMT-n}, which assume at a fixed offset from UTC (hence no DST).
-  Contrary to some expectations (but consistent with names such as
-  \samp{PST8PDT}), negative offsets are times ahead of (east of) UTC,
-  positive offsets are times behind (west of) UTC.
-  
+  Most platforms support time zones of the form \samp{Etc/GMT+n} and
+  \samp{Etc/GMT-n} (possibly also without prefix \samp{Etc/}), which
+  assume a fixed offset from UTC (hence no DST).  Contrary to some
+  expectations (but consistent with names such as \samp{PST8PDT}),
+  negative offsets are times ahead of (east of) UTC, positive offsets
+  are times behind (west of) UTC.
+
   Immediately prior to the advent of legislated time zones, most people
   used time based on their longitude (or that of a nearby town), known
   as \sQuote{Local Mean Time} and abbreviated as \samp{LMT} in the
@@ -165,7 +194,10 @@ OlsonNames()
 
   %% it is a ksh script so could well pop up elsewhere.
   Some systems (notably Linux) have a \command{tzselect} command which
-  allows the interactive selection of a supported time zone name.
+  allows the interactive selection of a supported time zone name.  On
+  systems using \command{systemd} (notably Linux), the OS command
+  \command{timedatectl list-timezones} will list all available time zone
+  names.
 }
 
 \section{Warning}{
@@ -214,12 +246,15 @@ OlsonNames()
 
   \url{https://en.wikipedia.org/wiki/Time_zone} and
   \url{http://www.twinsun.com/tz/tz-link.htm} for extensive sets of links.
+
+  \url{https://data.iana.org/time-zones/theory.html} for the
+  \sQuote{rules} of the Olson/IANA database.
 }
 
 \examples{
 Sys.timezone()
 
-str(OlsonNames()) ## a few hundred names
+str(OlsonNames()) ## around six hundred names
 }
 \keyword{utilities}
 \keyword{chron}

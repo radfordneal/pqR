@@ -5,6 +5,77 @@
 \title{R News}
 \encoding{UTF-8}
 
+\section{\Rlogo CHANGES IN R 3.4.4}{
+
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item \code{Sys.timezone()} tries more heuristics on Unix-alikes and so
+      is more likely to succeed (especially on Linux).  For the slowest
+      method, a warning is given recommending that \env{TZ} is set to
+      avoid the search.
+
+      \item The version of LAPACK included in the sources has been
+      updated to 3.8.0 (for the routines used by \R, a very minor bug-fix
+      change).
+
+      \item \code{parallel::detectCores(logical = FALSE)} is ignored on
+      Linux systems, since the information is not available with
+      virtualized OSes.
+    }
+  }
+
+  \subsection{INSTALLATION on a UNIX-ALIKE}{
+    \itemize{
+      \item \command{configure} will use \command{pkg-config} to find the
+      flags to link to \code{jpeg} if available (as it should be for the
+      recently-released \code{jpeg-9c} and \code{libjpeg-turbo}).  (This
+      amends the code added in \R 3.3.0 as the module name in
+      \code{jpeg-9c} is not what that tested for.)
+    }
+  }
+
+  \subsection{DEPRECATED AND DEFUNCT}{
+    \itemize{
+      \item \code{Sys.timezone(location = FALSE)} (which was a stop-gap
+      measure for Windows long ago) is deprecated.  It no longer returns
+      the value of environment variable \env{TZ} (usually a location).
+
+      \item Legacy support of \command{make} macros such as \samp{CXX1X}
+      is formally deprecated: use the \samp{CXX11} forms instead.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{power.prop.test()} now warns when it cannot solve the
+      problem, typically because of impossible constraints. (\PR{17345})
+
+      \item \code{removeSource()} no longer erroneously removes
+      \code{NULL} in certain cases, thanks to Dénes Tóth.
+
+      \item \code{nls(`NO [mol/l]` ~ f(t))} and \code{nls(y ~ a)} now
+      work.  (Partly from \PR{17367})
+
+      \item \command{R CMD build} checks for GNU \command{cp} rather
+      than assuming Linux has it.  (\PR{17370} says \sQuote{Alpine
+	Linux} does not.)
+
+      \item Non-UTF-8 multibyte character handling fixed more
+      permanently (\PR{16732}).
+
+      \item \code{sum(<large ints>, <stuff>)} is more consistent.
+      (\PR{17372})
+
+      \item \code{rf()} and \code{rbeta()} now also work correctly when
+      \code{ncp} is not scalar, notably when (partly) \code{NA}.
+      (\PR{17375})
+
+      \item \command{R CMD INSTALL} now correctly sets C++ compiler flags
+      when all source files are in sub-directories of \file{src}.
+    }
+  }
+}
+
 \section{\Rlogo CHANGES IN R 3.4.3}{
 
   \subsection{INSTALLATION on a UNIX-ALIKE}{
@@ -762,7 +833,7 @@
 
       \item An alternative compiler for C++11 is now specified with
       \samp{CXX11}, not \samp{CXX1X}. Likewise C++11 flags are specified
-      with \samp{CXX11FLAGS} and the standard (e.g., \samp{-std=gnu++11}
+      with \samp{CXX11FLAGS} and the standard (e.g., \samp{-std=gnu++11})
       is specified with \samp{CXX11STD}.
 
       \item \command{configure} now tests for a C++14-compliant compiler
@@ -2551,7 +2622,7 @@
       returns class \code{"poly"} just like \code{poly()} which gets a
       new \code{simple=FALSE} option.  They now lead to correct
       \code{predict()}ions, e.g., on subsets of the original data.
-      %% see https://stat.ethz.ch/pipermail/r-devel/2015-July/071532.html
+      (\PR{16239})
 
       \item \code{rhyper(nn, <large>)} now works correctly. (\PR{16489})
 

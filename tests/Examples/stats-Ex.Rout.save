@@ -1,6 +1,6 @@
 
-R version 3.4.2 Patched (2017-11-17 r73741) -- "Short Summer"
-Copyright (C) 2017 The R Foundation for Statistical Computing
+R version 3.4.4 RC (2018-03-08 r74371) -- "Someone to Lean On"
+Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -341,7 +341,7 @@ lm2  6 336.3417
 > all.equal(df(x^2, 1, 5), dt(x, 5)/x)
 [1] TRUE
 > 
-> ## Identity:  qf(2*p - 1, 1, df)) == qt(p, df)^2)  for  p >= 1/2
+> ## Identity:  qf(2*p - 1, 1, df) == qt(p, df)^2  for  p >= 1/2
 > p <- seq(1/2, .99, length = 50); df <- 10
 > rel.err <- function(x, y) ifelse(x == y, 0, abs(x-y)/mean(abs(c(x,y))))
 > 
@@ -3804,7 +3804,7 @@ sigma^2 estimated as 0.4566:  log likelihood = -101.2,  aic = 212.4
 > 
 > asOneSidedFormula("age")
 ~age
-<environment: 0x42cdd48>
+<environment: 0x49dd250>
 > asOneSidedFormula(~ age)
 ~age
 > 
@@ -4789,7 +4789,7 @@ function (V)
     r[cbind(1L:p, 1L:p)] <- 1
     r
 }
-<bytecode: 0x2d97190>
+<bytecode: 0x556ffb8>
 <environment: namespace:stats>
 > stopifnot(all.equal(Cl, cov2cor(cov(longley))),
 +           all.equal(cor(longley, method = "kendall"),
@@ -7345,7 +7345,7 @@ attr(,".Environment")
 > environment(as.formula("y ~ x"))
 <environment: R_GlobalEnv>
 > environment(as.formula("y ~ x", env = new.env()))
-<environment: 0x4d2eda0>
+<environment: 0x5474a48>
 > 
 > 
 > ## Create a formula for a model with a large number of variables:
@@ -11642,7 +11642,7 @@ Warning in xy.coords(x, y, xlabel, ylabel, log) :
 > require(graphics)
 > 
 > rock1 <- within(rock, { area1 <- area/10000; peri1 <- peri/10000 })
-> par(mfrow = c(3,2)) # maybe: , pty = "s")
+> par(mfrow = c(3,2)) # maybe: , pty = "s"
 > rock.ppr <- ppr(log(perm) ~ area1 + peri1 + shape,
 +                 data = rock1, nterms = 2, max.terms = 5)
 > plot(rock.ppr, main = "ppr(log(perm)~ ., nterms=2, max.terms=5)")
@@ -11955,14 +11955,14 @@ attr(,"class")
 $linkfun
 function (mu) 
 mu^lambda
-<bytecode: 0x50daff0>
-<environment: 0x50e1b20>
+<bytecode: 0x58b57c0>
+<environment: 0x58bbfe0>
 
 $linkinv
 function (eta) 
 pmax(eta^(1/lambda), .Machine$double.eps)
-<bytecode: 0x50daea0>
-<environment: 0x50e1b20>
+<bytecode: 0x58b5670>
+<environment: 0x58bbfe0>
 
 > 
 > 
@@ -12112,6 +12112,37 @@ NOTE: n is number in *each* group
 NOTE: n is number in *each* group
 
 >                                                  ## => n = 10451937
+> try(
++  power.prop.test(n=30, p1=0.90, p2=NULL, power=0.8)
++ ) # a warning  (which may become an error)
+Warning in power.prop.test(n = 30, p1 = 0.9, p2 = NULL, power = 0.8) :
+  No p2 in in [p1, 1] can be found to achieve the desired power
+
+     Two-sample comparison of proportions power calculation 
+
+              n = 30
+             p1 = 0.9
+             p2 = 1.030182
+      sig.level = 0.05
+          power = 0.8
+    alternative = two.sided
+
+NOTE: n is number in *each* group
+
+> ## Reason:
+> power.prop.test(      p1=0.90, p2= 1.0, power=0.8) ##-> n = 73.37
+
+     Two-sample comparison of proportions power calculation 
+
+              n = 73.37427
+             p1 = 0.9
+             p2 = 1
+      sig.level = 0.05
+          power = 0.8
+    alternative = two.sided
+
+NOTE: n is number in *each* group
+
 > 
 > 
 > 
@@ -16042,8 +16073,8 @@ Step function with continuity 'f'= 0.2 ,  3 knots at
 > unclass(sfun0)
 function (v) 
 .approxfun(x, y, v, method, yleft, yright, f)
-<bytecode: 0x408d7c8>
-<environment: 0x46268b0>
+<bytecode: 0x4816958>
+<environment: 0x559e158>
 attr(,"call")
 stepfun(1:3, y0, f = 0)
 > ls(envir = environment(sfun0))
@@ -18367,7 +18398,7 @@ Number of Fisher Scoring iterations: 6
 > ###
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  6.89 0.187 7.11 0 0 
+Time elapsed:  6.49 0.178 6.726 0 0 
 > grDevices::dev.off()
 null device 
           1 

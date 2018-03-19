@@ -1,6 +1,6 @@
 
-R version 3.4.2 Patched (2017-11-17 r73741) -- "Short Summer"
-Copyright (C) 2017 The R Foundation for Statistical Computing
+R version 3.4.4 RC (2018-03-08 r74371) -- "Someone to Lean On"
+Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -408,4 +408,4 @@ log(u)       0.015569 0.00033659  46.256 5.7704e-10
 > 
 > proc.time()
    user  system elapsed 
-  0.335   0.045   0.362 
+  0.290   0.034   0.306 

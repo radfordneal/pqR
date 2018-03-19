@@ -1,6 +1,6 @@
 
-R version 3.4.2 Patched (2017-11-17 r73741) -- "Short Summer"
-Copyright (C) 2017 The R Foundation for Statistical Computing
+R version 3.4.4 RC (2018-03-08 r74371) -- "Someone to Lean On"
+Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -2074,7 +2074,7 @@ N
 > points.default # to see how it calls "plot.xy(xy.coords(x, y), ...)"
 function (x, y = NULL, type = "p", ...) 
 plot.xy(xy.coords(x, y), type = type, ...)
-<bytecode: 0x38cb148>
+<bytecode: 0x3a50458>
 <environment: namespace:graphics>
 > 
 > 
@@ -2355,7 +2355,7 @@ Warning in matrix(0:1, ncol = 5, nrow = 3) :
 > rect(125+j, 360+j,   141+j, 405+j/2, col = c(NA,0),
 +      border = "gold", lwd = 2)
 > rect(125+j, 296+j/2, 141+j, 331+j/5, col = c(NA,"midnightblue"))
-> mtext("+  2 x 6 rect(*, col = c(NA,0)) and  col = c(NA,\"m..blue\"))")
+> mtext("+  2 x 6 rect(*, col = c(NA,0)) and  col = c(NA,\"m..blue\")")
 > 
 > ## an example showing colouring and shading
 > plot(c(100, 200), c(300, 450), type= "n", xlab = "", ylab = "")
@@ -2944,7 +2944,7 @@ function (xy = 1, warn.log = TRUE)
     u <- par("usr")
     xy * c(u[2L] - u[1L], u[4L] - u[3L])/par("pin")
 }
-<bytecode: 0x453b198>
+<bytecode: 0x464b320>
 <environment: namespace:graphics>
 > 
 > ## plot labels offset 0.12 inches to the right
@@ -3024,7 +3024,7 @@ function (xy = 1, warn.log = TRUE)
 > ###
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  2.929 0.069 3.014 0 0 
+Time elapsed:  2.669 0.049 2.733 0 0 
 > grDevices::dev.off()
 null device 
           1 

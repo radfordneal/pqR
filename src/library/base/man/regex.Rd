@@ -20,7 +20,7 @@
   strings.  Two types of regular expressions are used in \R,
   \emph{extended} regular expressions (the default) and
   \emph{Perl-like} regular expressions used by \code{perl = TRUE}.
-  There is a also \code{fixed = TRUE} which can be considered to use a
+  There is also \code{fixed = TRUE} which can be considered to use a
   \emph{literal} regular expression.
 
   Other functions which use regular expressions (often via the use of
@@ -37,7 +37,7 @@
 }
 \section{Extended Regular Expressions}{
   This section covers the regular expressions allowed in the default
-  mode of \code{grep}, \code{grep}, \code{regexpr}, \code{gregexpr},
+  mode of \code{grep}, \code{grepl}, \code{regexpr}, \code{gregexpr},
   \code{sub}, \code{gsub}, \code{regexec} and \code{strsplit}.  They use
   an implementation of the POSIX 1003.2 standard: that allows some scope
   for interpretation and the interpretations here are those currently
@@ -206,7 +206,7 @@
 
   For complete details please consult the man pages for PCRE (and not
   PCRE2), especially \command{man pcrepattern} and \command{man
-  pcreapi}), on your system or from the sources at
+  pcreapi}, on your system or from the sources at
   \url{http://www.pcre.org}.  (The version in use can be found by
   calling \code{\link{extSoftVersion}}.  It need not be the version
   described in the system's man page.  As PCRE has been feature-frozen
@@ -336,7 +336,7 @@
   \code{\link{ls}} and \code{\link{strsplit}}.
 
   The TRE documentation at
-  \url{http://laurikari.net/tre/documentation/regex-syntax/}).
+  \url{http://laurikari.net/tre/documentation/regex-syntax/}.
 
   The POSIX 1003.2 standard at
   \url{http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html}
