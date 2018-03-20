@@ -1846,28 +1846,6 @@ void sggc_collect (int level)
 
   collect_level = level;
 
-  /* Record allocation count at this collection. */
-
-  sggc_info.allocations_at_last_gc = sggc_info.allocations;
-
-  /* Update counts of how many collections have been done. */
-
-  sggc_info.gc_count[level] += 1;
-
-  if (level == 2)
-  { sggc_info.gc_since_lev2[0] = 0;
-    sggc_info.gc_since_lev2[1] = 0;
-    sggc_info.gc_since_lev12 = 0;
-  }
-  else if (level == 1)
-  { sggc_info.gc_since_lev12 = 0;
-    sggc_info.gc_since_lev2[1] += 1;
-  }
-  else
-  { sggc_info.gc_since_lev2[0] += 1;
-    sggc_info.gc_since_lev12 += 1;
-  }
-
   /* Do preliminary update of big chunk counts, which will be modified 
      later when some big objects are found to be free. */
 
@@ -1929,7 +1907,29 @@ void sggc_collect (int level)
     }
   }
 
-  /* Update counts in the info structure (big chunks already updated). */
+  /* Record allocation count at this collection. */
+
+  sggc_info.allocations_at_last_gc = sggc_info.allocations;
+
+  /* Update counts of how many collections have been done. */
+
+  sggc_info.gc_count[level] += 1;
+
+  if (level == 2)
+  { sggc_info.gc_since_lev2[0] = 0;
+    sggc_info.gc_since_lev2[1] = 0;
+    sggc_info.gc_since_lev12 = 0;
+  }
+  else if (level == 1)
+  { sggc_info.gc_since_lev12 = 0;
+    sggc_info.gc_since_lev2[1] += 1;
+  }
+  else
+  { sggc_info.gc_since_lev2[0] += 1;
+    sggc_info.gc_since_lev12 += 1;
+  }
+
+  /* Update object counts in the info structure (big chunks already updated). */
 
   sggc_info.gen0_count = 0;
 
