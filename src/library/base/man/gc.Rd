@@ -13,8 +13,8 @@ gcinfo(verbose)
 \alias{gc}
 \alias{gcinfo}
 \arguments{
-  \item{verbose}{logical; if \code{TRUE}, the garbage collection prints
-    statistics about numbers of objects and space used.}
+  \item{verbose}{logical; if \code{TRUE}, this (or each) garbage collection
+     prints statistics about space used.}
   \item{reset}{logical; if \code{TRUE} the values for maximum counts and
     space used are reset to the current values.}
   \item{level}{integer; the level of garbage collection to do.}

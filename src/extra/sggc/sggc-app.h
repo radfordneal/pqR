@@ -34,8 +34,8 @@
 #define SGGC_CLEAR_AUX1_BYTE 0xbf
 #define SGGC_CLEAR_AUX2_BYTE 0xcf
 
-//#define CHECK_VALID_WHEN_LOOKING  /* Define to check ptr/obj validity when
-                                       looking at a pointer during collection */
+//#define CHECK_VALID_WHEN_LOOKING  /* Define to check ptr/obj validity when  */
+                                    /* looking at a pointer during collection */
 
 
 /* USE ALTERNATIVE INTERFACE FOR SGGC_FIND_OBJECT_PTRS. */

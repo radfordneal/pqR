@@ -887,14 +887,15 @@ static void init_gctorture(void)
     char *arg = getenv("R_GCTORTURE");
     if (arg != NULL) {
         int gap, wait, inhibit;
-        gap = wait = inhibit = 0;
-	int gap = atoi(arg);
+        wait = inhibit = 0;
+	gap = atoi(arg);
 	if (gap > 0) {
 	    wait = gap;
 	    arg = getenv("R_GCTORTURE_WAIT");
 	    if (arg != NULL) wait = atoi(arg);
 	    arg = getenv("R_GCTORTURE_INHIBIT_RELEASE");
-	    if (arg != NULL) inhibit = atoi(arg);
+	    if (arg != NULL) 
+                inhibit = arg[0]=='T' || arg[0]=='t' ? 1 : atoi(arg);
 	}
         R_gc_torture(gap, wait, inhibit);
     }

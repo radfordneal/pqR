@@ -45,7 +45,7 @@ gctorture2(step, wait = step, inhibit_release = FALSE)
 
   Environment variables can also be used to turn on GC torture:
   \code{R_GCTORTURE} corresponds to the \code{step} argument to
-  \code{gctorture}, \code{R_GCTORTURE_WAIT} to \code{wait}, and
+  \code{gctorture2}, \code{R_GCTORTURE_WAIT} to \code{wait}, and
   \code{R_GCTORTURE_INHIBIT_RELEASE} to \code{inhibit_release}.
 }
 
