@@ -1,6 +1,6 @@
 /*
  *  pqR : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2016, 2017 Radford M. Neal
+ *  Copyright (C) 2016, 2017, 2018 Radford M. Neal
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,6 +21,21 @@
 #define SGGC_APP_H_
 
 #include <Rconfig.h>
+
+
+/* DEBUGGING OPTIONS.  For best performance, these definitions should
+   be commented out. */
+
+//#define SGGC_DATA_ALLOC_ZERO   /* Define to initialize data areas to zeros */
+
+//#define SGGC_CLEAR_FREE        /* Define to clear freed data & aux info */
+
+#define SGGC_CLEAR_DATA_BYTE 0xaf   /* Bytes to use for clearing data / aux */
+#define SGGC_CLEAR_AUX1_BYTE 0xbf
+#define SGGC_CLEAR_AUX2_BYTE 0xcf
+
+//#define CHECK_VALID_WHEN_LOOKING  /* Define to check ptr/obj validity when
+                                       looking at a pointer during collection */
 
 
 /* USE ALTERNATIVE INTERFACE FOR SGGC_FIND_OBJECT_PTRS. */

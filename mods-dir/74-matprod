@@ -3,4 +3,6 @@ parallelizing operations, and with substantial other performance
 improvements, as well as API changes.
 
 Also includes a new version of SGGC, which records more info of use
-for debugging (and other uses).
+for debugging (and other uses).  Other refinements to debugging
+facilities are also made.
+

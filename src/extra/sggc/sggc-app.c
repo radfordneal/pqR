@@ -1,6 +1,6 @@
 /*
  *  pqR : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2016 Radford M. Neal
+ *  Copyright (C) 2016, 2018 Radford M. Neal
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -237,11 +237,23 @@ sggc_nchunks_t Rf_nchunks (int type, unsigned length)
 #if USE_COMPRESSED_POINTERS
 #define CHK_NO_OBJECT(x) 1  /* since checked in sggc_look_at */
 #else
-#define CHK_NO_OBJECT(x) ((x) != R_NoObject, 1)
+#define CHK_NO_OBJECT(x) ((x) != R_NoObject)
+#endif
+
+#if defined(CHECK_VALID_WHEN_LOOKING) && !USE_COMPRESSED_POINTERS
+#define GET_CPTR(p) \
+    ((p) != SEXP_FROM_CPTR(CPTR_FROM_SEXP(p)) ? abort() : (void)0, \
+     CPTR_FROM_SEXP(p))
+#else
+#define GET_CPTR(p) CPTR_FROM_SEXP(p)
 #endif
 
 sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
 {
+#ifdef CHECK_VALID_WHEN_LOOKING
+    sggc_check_valid_cptr (cptr);
+#endif
+
     sggc_type_t sggctype = SGGC_TYPE(cptr);
 
     /* No references to follow:  NILSXP, CHARSXP. */
@@ -263,13 +275,13 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
     /* Only attribute:  INTSXP, REALSXP, and other non-pointer vectors. */
 
     if (sggctype == 1)
-        return a != R_NilValue && CHK_NO_OBJECT(a) ? CPTR_FROM_SEXP(a) 
+        return a != R_NilValue && CHK_NO_OBJECT(a) ? GET_CPTR(a) 
                                                    : SGGC_NO_OBJECT;
 
     /* Follow attribute reference. */
 
     if (a != R_NilValue && CHK_NO_OBJECT(a))
-        sggc_look_at(CPTR_FROM_SEXP(a));
+        sggc_look_at(GET_CPTR(a));
 
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && USE_AUX_FOR_ATTRIB
     n = SEXP_FROM_CPTR(cptr);
@@ -280,12 +292,12 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
     if (sggctype == 2) {
         SEXP car = CAR(n), cdr = CDR(n), tag = TAG(n);
         if (tag != R_NilValue && CHK_NO_OBJECT(tag)) 
-            sggc_look_at(CPTR_FROM_SEXP(tag));
+            sggc_look_at(GET_CPTR(tag));
         if (cdr == R_NilValue)
-            return CHK_NO_OBJECT(car) ? CPTR_FROM_SEXP(car) : SGGC_NO_OBJECT;
+            return CHK_NO_OBJECT(car) ? GET_CPTR(car) : SGGC_NO_OBJECT;
         if (CHK_NO_OBJECT(car))
-            sggc_look_at(CPTR_FROM_SEXP(car));
-        return CHK_NO_OBJECT(cdr) ? CPTR_FROM_SEXP(cdr) : SGGC_NO_OBJECT;
+            sggc_look_at(GET_CPTR(car));
+        return CHK_NO_OBJECT(cdr) ? GET_CPTR(cdr) : SGGC_NO_OBJECT;
     }
 
     /* Vectors of pointers (+ attribute):  VECSXP, EXPRSXP, STRSXP. */
@@ -296,28 +308,28 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
             return SGGC_NO_OBJECT;
         SEXP *ptr = &STRING_ELT(n,0);
         if (len == 1)
-            return CPTR_FROM_SEXP(*ptr);
+            return GET_CPTR(*ptr);
         SEXP *last = &STRING_ELT(n,len-1);
         do {
-            sggc_look_at(CPTR_FROM_SEXP(*ptr));
+            sggc_look_at(GET_CPTR(*ptr));
             ptr += 1;
         } while (ptr != last);
-        return CPTR_FROM_SEXP(*last);
+        return GET_CPTR(*last);
     }
 
     /* Two-pointer (+ attribute) objects:  EXTPTRSXP, S4SXP. */
 
     if (sggctype == 4) {
         if (CHK_NO_OBJECT(CDR(n)))
-            sggc_look_at(CPTR_FROM_SEXP(CDR(n)));
-        return CHK_NO_OBJECT(TAG(n)) ? CPTR_FROM_SEXP(TAG(n)) : SGGC_NO_OBJECT;
+            sggc_look_at(GET_CPTR(CDR(n)));
+        return CHK_NO_OBJECT(TAG(n)) ? GET_CPTR(TAG(n)) : SGGC_NO_OBJECT;
     }
 
     /* Uncollected with only attribute, done last since they shouldn't really
        be encountered here. */
 
     if (sggctype == 5)
-        return CHK_NO_OBJECT(a) ? CPTR_FROM_SEXP(a) : SGGC_NO_OBJECT;
+        return CHK_NO_OBJECT(a) ? GET_CPTR(a) : SGGC_NO_OBJECT;
 
     abort();
 }
