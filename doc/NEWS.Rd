@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2017-00-00}{
+\section{CHANGES IN VERSION RELEASED 2018-00-00}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -58,6 +58,8 @@
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
+  \item New versions of the C matrix multiply functions are now used...
+        NEED MORE HERE
   \item The radix sorting procedure introduced in R-3.3.1 is now available
         in pqR.  The R-3.3.1 NEWS entry regarding this was as follows:
       
@@ -149,9 +151,6 @@
         defined in packages (rather than in the global workspace).
   \item The speed of \code{which} has been improved.
   \item The speed of \code{.Call} has been improved.
-  \item New versions of the C matrix multiply functions are now used,
-        which may be faster due to use of the C "restrict" keyword to
-        allow better optimization.
   \item The \code{\%\%} and \code{\%/\%} operators are now faster when 
         their operands are real vectors that contain integer values.
   \item Subscripting with a logical vector is now faster for long vectors.
@@ -186,6 +185,10 @@
         \code{unlist(list(x=list(2,a=3)))} and \code{unlist(list(x=c(2,a=3)))}
         now return the same result (in which the name for the first element 
         is \code{x}, not \code{x1}).
+  \item The \code{inhibit_release} argument to the \code{gctorture2} function,
+        and the \code{R_GCTORTURE_INHIBIT_RELEASE} environment variable,
+        can now (as earlier, and in R Core versions of R) be used to prevent 
+        freed objects from being reused.
   \item The \code{cumsum} and \code{cumprod} functions now correctly propagate 
         \code{NaN} and \code{NA} values that are encountered to all later
         values, with \code{NA} taking precedence over \code{NaN}.  Previously,

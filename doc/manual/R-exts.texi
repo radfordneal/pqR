@@ -6525,10 +6525,11 @@ It is possible to run all the examples, tests and vignettes covered by
 
 The function @code{gctorture2} provides more refined control over the GC
 torture process.  Its arguments @code{step}, @code{wait} and
-@code{inhibit_release} are documented on its help page.  Environment
-variables can also be used to turn on GC torture: @env{R_GCTORTURE}
-corresponds to the @code{step} argument to @code{gctorture},
-@env{R_GCTORTURE_WAIT} to @code{wait}, and
+@code{inhibit_release} are documented on its help page.  
+
+Environment variables can also be used to turn on GC torture:
+@env{R_GCTORTURE} corresponds to the @code{step} argument to
+@code{gctorture2}, @env{R_GCTORTURE_WAIT} to @code{wait}, and
 @env{R_GCTORTURE_INHIBIT_RELEASE} to @code{inhibit_release}.
 
 

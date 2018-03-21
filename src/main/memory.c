@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -102,7 +102,9 @@
        compiler on a supported architecture if it has different
        syntax for inline assembly language from gcc.
 
-   Other debug options are set by the definitions below. */
+   Other debug options are set by the definitions below. 
+
+   See also src/extra/sggc/sggc-app.h. */
 
 #define DEBUG_GLOBAL_STRING_HASH 0
 
@@ -199,17 +201,6 @@ static int gc_reporting = 0;           /* Should message be printed on GC? */
 static int gc_force_wait = 0;
 static int gc_force_gap = 0;
 static Rboolean gc_inhibit_release = FALSE;
-
-#define GC_PROT(X) do { \
-    int __wait__ = gc_force_wait; \
-    int __gap__ = gc_force_gap;			   \
-    Rboolean __release__ = gc_inhibit_release;	   \
-    X;						   \
-    gc_force_wait = __wait__;			   \
-    gc_force_gap = __gap__;			   \
-    gc_inhibit_release = __release__;		   \
-}  while(0)
-
 
 /* Declarations relating to Rprofmem */
 
@@ -847,13 +838,13 @@ void R_gc_torture(int gap, int wait, Rboolean inhibit)
 	if (wait != NA_INTEGER && wait > 0)
 	    gc_force_wait = wait;
     }
-#ifdef PROTECTCHECK
     if (gap > 0) {
 	if (inhibit != NA_LOGICAL)
 	    gc_inhibit_release = inhibit;
     }
     else gc_inhibit_release = FALSE;
-#endif
+
+    sggc_no_reuse (gc_inhibit_release);
 }
 
 static SEXP do_gctorture(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -878,8 +869,7 @@ static SEXP do_gctorture(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 static SEXP do_gctorture2(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    int gap, wait;
-    Rboolean inhibit;
+    int gap, wait, inhibit;
     int old = gc_force_gap;
 
     checkArity(op, args);
@@ -896,24 +886,17 @@ static void init_gctorture(void)
 {
     char *arg = getenv("R_GCTORTURE");
     if (arg != NULL) {
+        int gap, wait, inhibit;
+        gap = wait = inhibit = 0;
 	int gap = atoi(arg);
 	if (gap > 0) {
-	    gc_force_wait = gc_force_gap = gap;
+	    wait = gap;
 	    arg = getenv("R_GCTORTURE_WAIT");
-	    if (arg != NULL) {
-		int wait = atoi(arg);
-		if (wait > 0)
-		    gc_force_wait = wait;
-	    }
-#ifdef PROTECTCHECK
+	    if (arg != NULL) wait = atoi(arg);
 	    arg = getenv("R_GCTORTURE_INHIBIT_RELEASE");
-	    if (arg != NULL) {
-		int inhibit = atoi(arg);
-		if (inhibit > 0) gc_inhibit_release = TRUE;
-		else gc_inhibit_release = FALSE;
-	    }
-#endif
+	    if (arg != NULL) inhibit = atoi(arg);
 	}
+        R_gc_torture(gap, wait, inhibit);
     }
 }
 

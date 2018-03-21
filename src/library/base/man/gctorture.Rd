@@ -1,6 +1,7 @@
 % File src/library/base/man/gctorture.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2007 R Core Team
+% Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{gctorture}
@@ -27,23 +28,27 @@ gctorture2(step, wait = step, inhibit_release = FALSE)
 }
 \details{
   Calling \code{gctorture(TRUE)} instructs the memory manager to force a
-  full GC on every allocation. \code{gctorture2} provides a more refined
-  interface that allows the start of the GC torture to be deferred and
-  also gives the option of running a GC only every \code{step}
-  allocations.
+  full GC on every allocation. 
 
-  The third argument to \code{gctorture2} is only used if R has been
-  configured with a strict write barrier enabled.  When this is
-  the case all garbage collections are full collections, and the memory
-  manager marks free nodes and enables checks in many situations that
-  signal an error when a free node is used.  This can greatly help in
-  isolating unprotected values in C code.  It does not detect the case
-  where a node becomes free and is reallocated.  The
-  \code{inhibit_release} argument can be used to prevent such
-  reallocation.  This will cause memory to grow and should be used with
-  caution and in conjunction with operating system facilities to monitor
-  and limit process memory use.
+  \code{gctorture2} provides a more refined interface that allows the
+  start of the GC torture to be deferred and also gives the option of
+  running a GC only every \code{step} allocations.  
+
+  A \code{TRUE} value for the \code{inhibit_release} argument of
+  \code{gctorture2} prevents free objects from being re-used.  This
+  will cause memory to grow and should be used with caution and in
+  conjunction with operating system facilities to monitor and limit
+  process memory use.  It is most useful if options have been set when
+  building pqR that cause memory in freed objects to be overwritten
+  with values that are likely to cause an error if the object is
+  mistakenly referenced after being freed.
+
+  Environment variables can also be used to turn on GC torture:
+  \code{R_GCTORTURE} corresponds to the \code{step} argument to
+  \code{gctorture}, \code{R_GCTORTURE_WAIT} to \code{wait}, and
+  \code{R_GCTORTURE_INHIBIT_RELEASE} to \code{inhibit_release}.
 }
+
 \value{
   Previous value of first argument.
 }
