@@ -23,19 +23,22 @@
 #include <Rconfig.h>
 
 
-/* DEBUGGING OPTIONS.  For best performance, these definitions should
-   be commented out. */
+/* DEBUGGING OPTIONS.  Enabling these options will result in a significant,
+   but not extreme, decrease in performance. */
 
-//#define SGGC_DATA_ALLOC_ZERO   /* Define to initialize data areas to zeros */
+#if ENABLE_SGGC_DEBUG
 
-//#define SGGC_CLEAR_FREE        /* Define to clear freed data & aux info */
+#define SGGC_DATA_ALLOC_ZERO      /* Define to initialize data areas to zeros */
 
-#define SGGC_CLEAR_DATA_BYTE 0xaf   /* Bytes to use for clearing data / aux */
-#define SGGC_CLEAR_AUX1_BYTE 0xbf
-#define SGGC_CLEAR_AUX2_BYTE 0xcf
+#define SGGC_CLEAR_FREE           /* Define to clear freed data & aux info */
 
-//#define CHECK_VALID_WHEN_LOOKING  /* Define to check ptr/obj validity when  */
-                                    /* looking at a pointer during collection */
+#define SGGC_CLEAR_DATA_BYTE 0xfa /* Bytes to use for clearing data / aux */
+#define SGGC_CLEAR_AUX1_BYTE 0xfb
+#define SGGC_CLEAR_AUX2_BYTE 0xfc
+
+#define CHECK_VALID_WHEN_LOOKING  /* Define to check ptr/obj validity when  */
+                                  /* looking at a pointer during collection */
+#endif
 
 
 /* USE ALTERNATIVE INTERFACE FOR SGGC_FIND_OBJECT_PTRS. */

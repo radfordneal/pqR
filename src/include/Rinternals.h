@@ -159,7 +159,7 @@ typedef unsigned int SEXPTYPE;  /* used in serialize.c for things that aren't
 #define S4SXP       25    /* S4, non-vector */
 
 /* used for detecting PROTECT issues in memory.c */
-#define NEWSXP      30    /* fresh node creaed in new page */
+
 #define FREESXP     31    /* node released by GC */
 
 #define FUNSXP      99    /* Closure or Builtin or Special */
@@ -219,10 +219,8 @@ struct sxpinfo_struct {
 
     /* Type and namedcnt in first byte */
     unsigned int nmcnt : 3;   /* count of "names" referring to object */
-    unsigned int type : 5;    /* ==> (FUNSXP == 99) %% 2^5 == 3 == CLOSXP
-                                 -> warning: `type' is narrower than values
-                                              of its type
-                                 when SEXPTYPE was an enum */
+    unsigned int type : 5;    /* warning: this is narrower than SEXPTYPE */
+                              /* note that FUNSXP %% 2^5 == 3 == CLOSXP */
 
     /* Miscellaneous flags, some with multiple meanings depending on type */
 
