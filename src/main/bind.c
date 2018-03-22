@@ -71,7 +71,7 @@ void task_copy_coerced (helpers_op_t code, SEXP out, SEXP in, SEXP in2)
 /* Check for case of only atomic vectors in c and unlist.  Return result, or
    R_NoObject if not so simple.  Arguments are a pointer to an array of
    pointers to objects to be concatenated, the number of objects, whether 
-   names (if prsent) are to be used, and the variant (used to see if pending
+   names (if present) are to be used, and the variant (used to see if pending
    computation is OK). */
 
 #define T_c THRESHOLD_ADJUST(80)
@@ -654,7 +654,7 @@ static SEXP CombineNames (SEXP str1, SEXP str2)
    set to the length of the argument list returned. */
 
 static SEXP process_c_args (SEXP ans, SEXP call, int *recurse, int *usenames, 
-                            int *anytags, R_len_t *nargs)
+                            int *anytags, unsigned *nargs)
 {
     SEXP a, n, last = R_NoObject, next = R_NoObject;
     int v, n_recurse = 0, n_usenames = 0;
@@ -738,7 +738,7 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
                                  int variant)
 {
     SEXP ans;
-    R_len_t nobj;
+    unsigned nobj;
     int recurse, usenames, anytags;
     struct BindData data;
 
