@@ -110,7 +110,7 @@ not currently implemented).
 With this scheme, the maximum amount of memory that can be occupied by
 the data for small segments is 2^26-1 times 64 times SGGC_CHUNK_SIZE
 (less if there are also some big segments).  A typical value for
-SGGC_CHUNK_SIZE might be 16, which would give a limit of about 32
+SGGC_CHUNK_SIZE might be 16, which would give a limit of about 64
 Gigabytes of data in small segments.
 
 With this scheme for assigning offsets to objects, finding the address

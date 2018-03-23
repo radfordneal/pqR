@@ -536,6 +536,12 @@ int sggc_init (unsigned max_segments)
   sggc_info.gc_since_lev2[0] = 0;
   sggc_info.gc_since_lev2[1] = 0;
 
+  /* Initialize traced cptr count. */
+
+#ifdef SGGC_TRACE_CPTR
+  sggc_trace_cptr_count = 0;
+#endif
+
   return 0;
 }
 
@@ -1031,9 +1037,20 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
 
   OFFSET(sggc_data,index,SGGC_CHUNK_SIZE);
 
-  /* Return newly allocated object. */
+  /* Update allocation counts. */
 
   sggc_info.allocations += 1;
+
+#ifdef SGGC_TRACE_CPTR
+  if (v == SGGC_TRACE_CPTR)
+  { sggc_trace_cptr_count += 1;
+#ifdef SGGC_TRACE_ALLOC_TRAP
+    if (sggc_trace_cptr_count == SGGC_TRACE_ALLOC_TRAP) abort();
+#endif
+  }
+#endif
+
+  /* Return newly allocated object. */
 
   return v;
 
@@ -1525,9 +1542,16 @@ void sggc_collect_remove_free_small (void)
          and are now allocating from a single newly-created segment.)
          If one of these newly-freed objects is in an old generation,
          we remove it now (but note that this doesn't get all free
-         objects, so we still need the scan done below). */
+         objects, so we still need the scan done below). 
+ 
+         If SGGC_TRACE_FREE_TRAP is being used, we always have to do
+         this scan. */
 
+#ifdef SGGC_TRACE_FREE_TRAP
+      if ((v = sbset_first (&free_or_new[k], 0)) != SGGC_NO_OBJECT)
+#else
       if (call && (v = sbset_first (&free_or_new[k], 0)) != SGGC_NO_OBJECT)
+#endif
       {
         sggc_cptr_t next_free = sggc_next_free_val[k];
 
@@ -1554,7 +1578,7 @@ void sggc_collect_remove_free_small (void)
           /* Call the function to call for a newly-freed object of this kind.
              If it returns a non-zero value, don't free the object after all. */
   
-          if ((*call)(ov))
+          if (call && (*call)(ov))
           { if (SGGC_DEBUG) 
             { printf ("sggc_collect: not freeing %x after all\n", (unsigned)ov);
             }
@@ -1580,6 +1604,17 @@ void sggc_collect_remove_free_small (void)
               (void) sbset_remove (&old_to_new, ov);
             }
           }
+
+          /* Abort if indicated by SGGC_TRACE_FREE_TRAP. */
+
+#ifdef SGGC_TRACE_CPTR
+#ifdef SGGC_TRACE_FREE_TRAP
+          if (ov == SGGC_TRACE_CPTR
+                && sggc_trace_cptr_count == SGGC_TRACE_FREE_TRAP)
+          { abort();
+          }
+#endif
+#endif
         }
       }
 
@@ -1588,7 +1623,11 @@ void sggc_collect_remove_free_small (void)
          objects were allocated but not used for long, and hence are
          in the free sets. */
 
+#ifdef SGGC_TRACE_FREE_TRAP
+      if (1)
+#else
       if (!SGGC_SEGMENT_AT_A_TIME || call_for_newly_freed[k])
+#endif
       { 
         /* Do it one object at a time. */
 
@@ -1611,6 +1650,15 @@ void sggc_collect_remove_free_small (void)
               { printf("sggc_collect: %x in old_gen2 now free\n",
                         (unsigned) ov);
               }
+
+#ifdef SGGC_TRACE_CPTR
+#ifdef SGGC_TRACE_FREE_TRAP
+              if (ov == SGGC_TRACE_CPTR
+                    && sggc_trace_cptr_count == SGGC_TRACE_FREE_TRAP)
+              { abort();
+              }
+#endif
+#endif
               sbset_remove (&old_to_new, ov);
               sbset_remove (&old_gen2[k], ov);
             }
@@ -1636,6 +1684,15 @@ void sggc_collect_remove_free_small (void)
               { printf("sggc_collect: %x in old_gen1 now free\n",
                         (unsigned) ov);
               }
+
+#ifdef SGGC_TRACE_CPTR
+#ifdef SGGC_TRACE_FREE_TRAP
+              if (ov == SGGC_TRACE_CPTR
+                    && sggc_trace_cptr_count == SGGC_TRACE_FREE_TRAP)
+              { abort();
+              }
+#endif
+#endif
               sbset_remove (&old_to_new, ov);
               sbset_remove (&old_gen1[k], ov);
             }
@@ -1755,6 +1812,17 @@ void sggc_collect_remove_free_big (void)
           put_in_right_old_gen(v);
           continue;
         }
+
+        /* Abort if indicated by SGGC_TRACE_FREE_TRAP. */
+
+#ifdef SGGC_TRACE_CPTR
+#ifdef SGGC_TRACE_FREE_TRAP
+        if (v == SGGC_TRACE_CPTR
+              && sggc_trace_cptr_count == SGGC_TRACE_FREE_TRAP)
+        { abort();
+        }
+#endif
+#endif
 
         /* Find the number of chunks used by the object. */
 

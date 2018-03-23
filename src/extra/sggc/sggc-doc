@@ -875,3 +875,55 @@ before sggc.h is included):
     collection (0, 1, or 2) and the number of previous times that
     sggc_after_marking was called for this collection (zero the first
     time).
+
+
+DEBUGGING
+
+Very obscure, hard to reproduce, hard to isolate, and highly damaging
+bugs can easily arise in a program using SGGC (as in any similar
+garbage collection scheme) if the sggc_find_root_ptrs and
+sggc_find_object_ptrs functions provided by the application do not
+actually find all objects that can still be referenced.  Memory for
+objects still in use may then be collected, and reused for other
+objects (or it may perhaps become unmapped).
+
+SGGC_CLEAR_FREE and related facilities above are one aid to finding
+and isolating such bugs, as is sggc_no_reuse.  
+
+One advantage of SGGC's use of compressed pointers is that minor
+changes to a program that do not change allocation behaviour (such as
+the addition of print statements for debugging) do not change the
+compressed pointers that reference objects, whereas the regular
+pointers to the object's data area may change, even when re-running
+the program without change (for example, due to "address space layout
+randomization").  Accordingly, if a bug is revealed in some run to
+relate in some way to an object with a given compressed pointer (which
+might have been viewed in a debugger), this object can be investigated
+in further runs via this same compressed pointer reference.
+
+To facilitate this investigation, a particular compressed pointer may
+be traced by defining the following symbol, in sggc-app.h, or via a
+compiler option:
+
+  SGGC_TRACE_CPTR       If defined as an integer, count how many times
+                        an object that ends up being referenced by
+                        this compressed pointer has been allocated.
+                        This count will be kept in the global variable
+                        sggc_trace_cptr_count (which might be viewed
+                        in a debugger).
+
+The compressed pointer identified by SGGC_TRACE_CPTR may be further
+investigated by defining one of the following symbols:
+
+  SGGC_TRACE_ALLOC_TRAP If defined as an integer, call "abort" when an
+                        object that becomes associated with the
+                        compressed pointer given by SGGC_TRACE_CPTR
+                        has been allocated this number of times.  (If
+                        undefined or 0, no alloc trapping is done.)
+
+  SGGC_TRACE_FREE_TRAP  If defined as an integer, call "abort" when an
+                        object that is referenced by the compressed
+                        pointer given by SGGC_TRACE_CPTR has been
+                        freed this number of times.  The abort is done
+                        before any clearing of the object's data area.
+                        (If undefined or 0, no free trapping is done.)

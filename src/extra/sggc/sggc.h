@@ -234,6 +234,15 @@ SGGC_EXTERN struct sggc_info
 } sggc_info;
 
 
+/* COUNT OF ALLOCATIONS FOR TRACED COMPRESSED POINTER. */
+
+#ifdef SGGC_TRACE_CPTR
+
+SGGC_EXTERN unsigned sggc_trace_cptr_count;
+
+#endif
+
+
 /* FUNCTIONS PROVIDED BY THE APPLICATION.  Prototypes are declared here only
    if they haven't been defined as macros. */
 
@@ -411,6 +420,15 @@ static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
   }
 
   sggc_info.allocations += 1;
+
+#ifdef SGGC_TRACE_CPTR
+  if (nfv == SGGC_TRACE_CPTR)
+  { sggc_trace_cptr_count += 1;
+#ifdef SGGC_TRACE_ALLOC_TRAP
+    if (sggc_trace_cptr_count == SGGC_TRACE_ALLOC_TRAP) abort();
+#endif
+  }
+#endif
 
   return nfv;
 }
