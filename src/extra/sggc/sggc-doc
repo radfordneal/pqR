@@ -158,29 +158,6 @@ dynamically allocated (for a possible speed advantage in data access):
                         defined), and the argument to sggc_init can
                         only reduce this limit, not increase it.
 
-The symbols below may be defined if the application wishes bytes of
-memory for objects found to be free after a garbage collection to be
-set to some value, as a measure to make errors in which freed memory
-is still referenced more apparent.  There is a fairly large, but not
-extreme, performance penalty for doing this.  Note that sometimes
-freed memory will cease to be mapped into the address space, in which
-case accessing it will cause a program crash.  Note also that memory
-for freed objets may be reused for other objects, unless the program
-calls sggc_no_reuse (see below).
-
-  SGGC_CLEAR_FREE       If defined (as anything), bytes in the data
-                        area and the auxiliary information (if not
-                        read-only) for an object are set to constants
-                        when it becomes free.
-
-  SGGC_CLEAR_DATA_BYTE  The byte to set free data areas to; default 0.
-
-  SGGC_CLEAR_AUX1_BYTE  The byte to set free auxiliary information 1
-                        to, if it is not read-only; default 0.
-
-  SGGC_CLEAR_AUX2_BYTE  The byte to set free auxiliary information 2 
-                        to, if it is not read-only; default 0.
-
 The following may be defined to change the bit pattern used to
 represent SGGC_NO_OBJECT:
 
@@ -203,6 +180,9 @@ to zeros:
                         functions) will be initialized to all zero
                         bits.  Otherwise, the contents of the data
                         area for a new object are undefined.
+
+Some additional constants that may be defined are described in the
+"debugging" section below.
 
 The following types must be defined in sggc-app.h:
 
@@ -483,7 +463,8 @@ sggc_check_old_to_new (as long as sggc_collect is not called).
 FUNCTIONS PROVIDED BY SGGC TO THE APPLICATION
 
 The SGGC library provides an application with the functions (or
-macros) below, which have (if functions) prototypes as shown:
+macros) below, which have (if functions) prototypes as shown.  Some
+additional functions are described in the "debugging" section below.
 
   sggc_type_t SGGC_TYPE (sggc_cptr_t cptr)
 
@@ -772,26 +753,6 @@ macros) below, which have (if functions) prototypes as shown:
     If 'fun' is 0, any previous set up of a function to call is
     cancelled.
 
-  void sggc_no_reuse (int enable)
-  
-    If 'enable' is non-zero, newly-freed objects will no longer have
-    their data and auxiliary information reused for new objects.  This
-    is meant for use as a desparate measure to try to find a bug.  It
-    obviously may result in extremely high memory usage.  Calling this
-    function with zero for 'enable' will restore normal behaviour for
-    the future, but will not recover memory for objects freed when
-    'enable' was non-zero.
-
-  sggc_cptr_t sggc_check_valid_cptr (sggc_cptr_t cptr)
-
-    Attempts to cause a program crash if 'cptr' is not a valid
-    compressed pointer, to an object that has not been freed.  This is
-    done on a "best effort" basis, with no guarantee that all invalid
-    pointers cause a crash.  The nature of the crash may vary (eg, a
-    memory fault or a call of 'abort').  If 'cptr' is valid, it is
-    returned as the value of this function, and this will take a
-    fairly small, though not trivial, amount of time.
-
 
 FUNCTIONS THE APPLICATION MUST PROVIDE TO SGGC
 
@@ -885,10 +846,39 @@ garbage collection scheme) if the sggc_find_root_ptrs and
 sggc_find_object_ptrs functions provided by the application do not
 actually find all objects that can still be referenced.  Memory for
 objects still in use may then be collected, and reused for other
-objects (or it may perhaps become unmapped).
+objects (or it may perhaps become unmapped, so referencing it causes a
+program crash).
 
-SGGC_CLEAR_FREE and related facilities above are one aid to finding
-and isolating such bugs, as is sggc_no_reuse.  
+The symbols below may be defined if the application wishes bytes of
+memory for objects found to be free after a garbage collection to be
+set to some value, as a measure to make errors in which freed memory
+is still referenced more apparent.  There is a fairly large, but not
+extreme, performance penalty for doing this.
+
+  SGGC_CLEAR_FREE       If defined (as anything), when an object is
+                        found to be free after a garbage collection,
+                        bytes in its data area (except as noted below
+                        regarding SGGC_KEEP_CPTR) and its auxiliary
+                        information (if not read-only) are set to
+                        constants (as specified by symbols below).
+
+  SGGC_KEEP_CPTR        If defined, gives a byte offset within
+                        objects' data areas at which a compressed
+                        pointer to the object is stored, which is not
+                        cleared even if SGGC_CLEAR_FREE is defined.
+                        Also, if SGGC_CLEAR_FREE and SGGC_KEEP_CPTR
+                        are both defined, when an object is freed, a
+                        check is made that the correct compressed
+                        pointer is indeed stored at this offset; if
+                        not, the program is aborted.
+
+  SGGC_CLEAR_DATA_BYTE  The byte to set free data areas to; default 0.
+
+  SGGC_CLEAR_AUX1_BYTE  The byte to set free auxiliary information 1
+                        to, if it is not read-only; default 0.
+
+  SGGC_CLEAR_AUX2_BYTE  The byte to set free auxiliary information 2 
+                        to, if it is not read-only; default 0.
 
 One advantage of SGGC's use of compressed pointers is that minor
 changes to a program that do not change allocation behaviour (such as
@@ -927,3 +917,26 @@ investigated by defining one of the following symbols:
                         freed this number of times.  The abort is done
                         before any clearing of the object's data area.
                         (If undefined or 0, no free trapping is done.)
+
+The following procedures may also be of use for debugging:
+
+  void sggc_no_reuse (int enable)
+  
+    If 'enable' is non-zero, newly-freed objects will no longer have
+    their data and auxiliary information reused for new objects.  This
+    is meant for use as a desparate measure to try to find a bug.  It
+    obviously may result in extremely high memory usage, and also slow
+    the program quite a bit, due to poor cache behaviour.  Calling
+    this function with zero for 'enable' will restore normal behaviour
+    for the future, but will not recover memory for objects freed when
+    'enable' was non-zero.
+
+  sggc_cptr_t sggc_check_valid_cptr (sggc_cptr_t cptr)
+
+    Attempts to cause a program crash if 'cptr' is not a valid
+    compressed pointer, to an object that has not been freed.  This is
+    done on a "best effort" basis, with no guarantee that all invalid
+    pointers cause a crash.  The nature of the crash may vary (eg, a
+    memory fault or a call of 'abort').  If 'cptr' is valid, it is
+    returned as the value of this function, and this will take a
+    fairly small, though not trivial, amount of time.

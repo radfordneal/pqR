@@ -349,8 +349,9 @@ existing segment in the 'unused' set, which is shared by all the kinds
 that use big segments.  These objects have auxiliary information
 already allocated (which is the same for all kinds, and cannot be
 read-only), but do not have a data area allocated - one is allocated
-using sggc_mem_alloc_zero when the segment becomes used.  If 'unused'
-is empty, sggc_mem_alloc_zero is used to allocate a new segment,
+using sggc_mem_alloc_data (which is either sggc_mem_alloc or
+sggc_mem_alloc_zero) when the segment becomes used.  If 'unused' is
+empty, sggc_mem_alloc_zero is used to allocate a new segment,
 sggc_mem_alloc_data is used to allocate data, and sggc_mem_alloc is
 used to allocate auxiliary information (if a partial block is not
 already allocated).

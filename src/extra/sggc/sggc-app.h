@@ -28,6 +28,12 @@
 
 #if ENABLE_SGGC_DEBUG
 
+//#define SGGC_TRACE_CPTR 1424
+//#define SGGC_TRACE_ALLOC_TRAP 1
+
+#define CHECK_VALID_WHEN_LOOKING  /* Define to check ptr/obj validity when  */
+                                  /* looking at a pointer during collection */
+
 #define SGGC_DATA_ALLOC_ZERO      /* Define to initialize data areas to zeros */
 
 #define SGGC_CLEAR_FREE           /* Define to clear freed data & aux info */
@@ -36,8 +42,13 @@
 #define SGGC_CLEAR_AUX1_BYTE 0xfb
 #define SGGC_CLEAR_AUX2_BYTE 0xfc
 
-#define CHECK_VALID_WHEN_LOOKING  /* Define to check ptr/obj validity when  */
-                                  /* looking at a pointer during collection */
+#if !USE_COMPRESSED_POINTERS
+
+#define SGGC_KEEP_CPTR 4          /* Keep the compressed pointer in data area
+                                     when clearing freed objects */
+
+#endif
+
 #endif
 
 

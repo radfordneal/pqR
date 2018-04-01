@@ -49,6 +49,14 @@
 #endif
 
 
+/* DEBUGGING FLAG.  Set to 1 to enable debug output.  May be set by a compiler
+   flag, in which case it isn't overridden here. */
+
+#ifndef SGGC_DEBUG
+#define SGGC_DEBUG 0
+#endif
+
+
 /* COMPRESSED POINTER (INDEX, OFFSET) TYPE, AND NO OBJECT CONSTANT. */
 
 typedef sbset_value_t sggc_cptr_t; /* Type of compressed pointer, index+offset*/
@@ -425,7 +433,14 @@ static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
   if (nfv == SGGC_TRACE_CPTR)
   { sggc_trace_cptr_count += 1;
 #ifdef SGGC_TRACE_ALLOC_TRAP
-    if (sggc_trace_cptr_count == SGGC_TRACE_ALLOC_TRAP) abort();
+    if (sggc_trace_cptr_count == SGGC_TRACE_ALLOC_TRAP)
+    { if (SGGC_DEBUG) 
+      { printf(
+        "sggc_alloc_small_kind_quickly: abort on alloc %d of traced cptr %d\n",
+         sggc_trace_cptr_count, SGGC_TRACE_CPTR);
+      }
+      abort();
+    }
 #endif
   }
 #endif
