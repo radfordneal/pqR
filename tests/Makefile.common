@@ -8,6 +8,7 @@ test-src-gct = \
 	simple-true.R \
 	arith-true.R \
 	arith.R \
+	vec-alloc.R \
 	lm-tests.R \
 	ok-errors.R \
 	method-dispatch.R \

@@ -1,0 +1,166 @@
+
+pqR version 2.15.1 (2017-00-00), based on R 2.15.0 (2012-03-30)
+
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
+ISBN 3-900051-07-0
+
+Modifications to R in pqR are Copyright (C) 2013-2017 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
+
+Platform: x86_64-apple-darwin16.7.0 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+
+No helper threads, task merging enabled, uncompressed pointers.
+
+> # Test possible bugs involving allocation and use of vectors, such as 
+> # incorrect computation of required memory.
+> #
+> # Added for pqR, 2018, Radford M. Neal.
+> 
+> lengths <- c(0..17, 28..33, 60..65, 124..129, 252..257)
+> types <- c("integer","numeric","complex","character","list")
+> 
+> R <- list()
+> 
+> for (r in 1..10) {
++ 
++     cat("Repetition",r,"\n")
++ 
++     for (i in 1..length(lengths)) {
++         R[[i]] <- list()
++         for (j in 1..length(types)) {
++             V <- vector(types[j],lengths[i])
++             for (k in 1..lengths[i]) V[k] <- as.integer(10000*i + 1000*j + k)
++             R[[i]][[j]] <- V
++         }
++     }
++ 
++     if (r == 1) { cat ("\n"); print(R[[3]]) }
++     
++     for (i in 1..length(lengths)) {
++         for (j in 1..length(types)) {
++             for (k in 1..lengths[i]) {
++                 stopifnot (as.integer(R[[i]][[j]][[k]])
++                   == as.integer(10000*i + 1000*j + k))
++                 R[[i]][[j]][[k]] <- as.integer(R[[i]][[j]][[k]]) +
++                          as.integer(1000000000*(i%%2) + 100000000*j + 300000*k)
++             }
++         }
++     }
++ 
++     if (r == 1) { cat ("\n"); print(R[[3]]) }
++     
++     for (i in 1..length(lengths)) {
++         for (j in 1..length(types)) {
++             for (k in 1..lengths[i]) {
++                 stopifnot (as.integer(R[[i]][[j]][[k]])
++                   == as.integer(10000*i + 1000*j + k)
++                       + as.integer(1000000000*(i%%2) + 100000000*j + 300000*k))
++             }
++         }
++     }
++ 
++     if (r == 1) { cat ("\n"); print(R[[3]]); print(lapply(R[[4]],typeof)) }
++ }
+Repetition 1 
+
+[[1]]
+[1] 31001 31002
+
+[[2]]
+[1] 32001 32002
+
+[[3]]
+[1] 33001+0i 33002+0i
+
+[[4]]
+[1] "34001" "34002"
+
+[[5]]
+[[5]][[1]]
+[1] 35001
+
+[[5]][[2]]
+[1] 35002
+
+
+
+[[1]]
+[1] 1100331001 1100631002
+
+[[2]]
+[1] 1200332001 1200632002
+
+[[3]]
+[1] 1300333001+0i 1300633002+0i
+
+[[4]]
+[1] "1400334001" "1400634002"
+
+[[5]]
+[[5]][[1]]
+[1] 1500335001
+
+[[5]][[2]]
+[1] 1500635002
+
+
+
+[[1]]
+[1] 1100331001 1100631002
+
+[[2]]
+[1] 1200332001 1200632002
+
+[[3]]
+[1] 1300333001+0i 1300633002+0i
+
+[[4]]
+[1] "1400334001" "1400634002"
+
+[[5]]
+[[5]][[1]]
+[1] 1500335001
+
+[[5]][[2]]
+[1] 1500635002
+
+
+[[1]]
+[1] "integer"
+
+[[2]]
+[1] "double"
+
+[[3]]
+[1] "complex"
+
+[[4]]
+[1] "character"
+
+[[5]]
+[1] "list"
+
+Repetition 2 
+Repetition 3 
+Repetition 4 
+Repetition 5 
+Repetition 6 
+Repetition 7 
+Repetition 8 
+Repetition 9 
+Repetition 10 
+> 
