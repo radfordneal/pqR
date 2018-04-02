@@ -1,1 +1,6 @@
-Add more tests.
+Added the vec-alloc test.
+
+Also corrected documentation on showConnections and getConnection,
+and changed examples, eliminating an example that (correctly) failed
+when gctorture was enabled.
+
