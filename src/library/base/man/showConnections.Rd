@@ -1,6 +1,7 @@
 % File src/library/base/man/showConnections.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
+% Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{showConnections}
@@ -32,7 +33,8 @@ isatty(con)
     and the standard ones are displayed.  If false only open user-created
     connections are included.}
 
-  \item{what}{integer: a row number of the table given by
+  \item{what}{integer: A number or a string (having the form of a number)
+    giving the name of a row in the table produced by
     \code{showConnections}.}
 
   \item{con}{a connection.}
@@ -50,17 +52,19 @@ isatty(con)
   The encoding for \code{\link{stdin}()} when redirected can
   be set by the command-line flag \option{--encoding}.
 
-  \code{showConnections} returns a matrix of information.  If a
-  connection object has been lost or forgotten, \code{getConnection}
-  will take a row number from the table and return a connection object
-  for that connection, which can be used to close the connection,
-  for example.  However, if there is no \R level object referring to the
-  connection it will be closed automatically at the next garbage
-  collection (except for \code{\link{gzcon}} connections).
-
   \code{closeAllConnections} closes (and destroys) all user
   connections, restoring all \code{\link{sink}} diversions as it does
   so.
+
+  If there is no \R level object referring to the
+  connection, it will be closed automatically at the next garbage
+  collection (except for \code{\link{gzcon}} connections).
+
+  \code{showConnections} returns a matrix of information, with named
+  rows that correspond to connections.  \code{getConnection} takes the
+  name in this table of a row (or a number that converts to such a
+  name) and returns a connection object for the connection in that
+  row, which can be used, for example, to close the connection.
 
   \code{isatty} returns true if the connection is one of the class
   \code{"terminal"} connections and it is apparently connected to a
@@ -93,16 +97,12 @@ isatty(con)
 \examples{
 showConnections(all = TRUE)
 
-textConnection(letters)
-# oops, I forgot to record that one
-showConnections()
-#  class     description      mode text   isopen   can read can write
-#3 "letters" "textConnection" "r"  "text" "opened" "yes"    "no"     
-\dontrun{close(getConnection(3))}
-\dontshow{try({r <- as.numeric(row.names(showConnections()))
-close(getConnection(r))})}
+txtc <- textConnection(letters)
 showConnections()
 
-c(isatty(stdin()), isatty(stdout()), isatty(stderr()))
+c(isatty(stdin()), isatty(stdout()), isatty(stderr()), isatty(txtc))
+
+rm(txtc); gc()
+showConnections(all = TRUE)
 }
 \keyword{connection}
