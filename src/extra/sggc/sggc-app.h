@@ -28,8 +28,7 @@
 
 #if ENABLE_SGGC_DEBUG
 
-//#define SGGC_TRACE_CPTR 1424
-//#define SGGC_TRACE_ALLOC_TRAP 1
+#define SGGC_TRACE_CPTR           /* Enable possible tracing of cptr from env */
 
 #define CHECK_VALID_WHEN_LOOKING  /* Define to check ptr/obj validity when  */
                                   /* looking at a pointer during collection */
