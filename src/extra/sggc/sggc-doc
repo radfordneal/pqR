@@ -891,32 +891,44 @@ relate in some way to an object with a given compressed pointer (which
 might have been viewed in a debugger), this object can be investigated
 in further runs via this same compressed pointer reference.
 
-To facilitate this investigation, a particular compressed pointer may
-be traced by defining the following symbol, in sggc-app.h, or via a
-compiler option:
+To facilitate this investigation, a facility for tracing a particular
+compressed pointer may be enabled by defining the following symbol, in
+sggc-app.h, or via a compiler option:
 
-  SGGC_TRACE_CPTR       If defined as an integer, count how many times
-                        an object that ends up being referenced by
-                        this compressed pointer has been allocated.
-                        This count will be kept in the global variable
-                        sggc_trace_cptr_count (which might be viewed
-                        in a debugger).
+  SGGC_TRACE_CPTR       If defined (as anything), a compressed
+                        pointer may be traced, as specified by
+                        environment variables.  There is some (not
+                        extreme) overhead to this, even if the
+                        environment variables to enable tracing 
+                        are not defined.
 
-The compressed pointer identified by SGGC_TRACE_CPTR may be further
-investigated by defining one of the following symbols:
+The following environment variables are used to enable and control
+tracing:
 
-  SGGC_TRACE_ALLOC_TRAP If defined as an integer, call "abort" when an
-                        object that becomes associated with the
-                        compressed pointer given by SGGC_TRACE_CPTR
+  SGGC_TRACE_CPTR       An integer (decimal, octal, or hex, by usual
+                        C conventions), giving the compressed pointer
+                        to trace.  No tracing is done if this
+                        environment variable is not defined.  If it is
+                        defined, a count is kept of how many times an
+                        object is allocated that becomes associated
+                        with this compressed pointer, in the global
+                        variable sggc_trace_cptr_count.  The value of
+                        this global variable may then be accessable
+                        when debugging after a program crash.
+
+  SGGC_TRACE_ALLOC_TRAP If defined as an integer, "abort" is called 
+                        when an object that becomes associated with
+                        the compressed pointer given by SGGC_TRACE_CPTR
                         has been allocated this number of times.  (If
                         undefined or 0, no alloc trapping is done.)
 
-  SGGC_TRACE_FREE_TRAP  If defined as an integer, call "abort" when an
-                        object that is referenced by the compressed
-                        pointer given by SGGC_TRACE_CPTR has been
-                        freed this number of times.  The abort is done
-                        before any clearing of the object's data area.
-                        (If undefined or 0, no free trapping is done.)
+  SGGC_TRACE_FREE_TRAP  If defined as an integer, "abort" is called 
+                        when an object that becomes associated with
+                        the compressed pointer given by SGGC_TRACE_CPTR
+                        has been freed this number of times.  The
+                        abort is done before any clearing of the
+                        object's data area.  (If undefined or 0, no
+                        free trapping is done.)
 
 The following procedures may also be of use for debugging:
 

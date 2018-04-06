@@ -528,10 +528,33 @@ int sggc_init (unsigned max_segments)
   sggc_info.gc_since_lev2[0] = 0;
   sggc_info.gc_since_lev2[1] = 0;
 
-  /* Initialize traced cptr count. */
+  /* Initialize traced cptr info. */
 
 # ifdef SGGC_TRACE_CPTR
+  { char *env, *end;
+    sggc_trace_cptr = SGGC_NO_OBJECT;
     sggc_trace_cptr_count = 0;
+    sggc_trace_alloc_trap = 0;
+    sggc_trace_free_trap = 0;
+    env = getenv("SGGC_TRACE_CPTR");
+    if (env && *env != 0)
+    { long cptr = strtol (env, &end, 0);
+      if (*end == 0)
+      { sggc_trace_cptr = cptr;
+      }
+    }
+    if (sggc_trace_cptr != SGGC_NO_OBJECT)
+    { env = getenv("SGGC_TRACE_ALLOC_TRAP");
+      if (env && *env != 0)
+      { sggc_trace_alloc_trap = atoi(env);
+      }
+      env = getenv("SGGC_TRACE_FREE_TRAP");
+      if (env && *env != 0)
+      { sggc_trace_free_trap = atoi(env);
+      }
+printf("tracing %u %x - %u %u\n",sggc_trace_cptr,sggc_trace_cptr,sggc_trace_alloc_trap,sggc_trace_free_trap);
+    }
+  }
 # endif
 
   return 0;
@@ -1034,18 +1057,16 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
   sggc_info.allocations += 1;
 
 # ifdef SGGC_TRACE_CPTR
-    if (v == SGGC_TRACE_CPTR)
+    if (v == sggc_trace_cptr)
     { sggc_trace_cptr_count += 1;
-#     ifdef SGGC_TRACE_ALLOC_TRAP
-        if (sggc_trace_cptr_count == SGGC_TRACE_ALLOC_TRAP)
-        { if (SGGC_DEBUG) 
-          { printf(
+      if (sggc_trace_cptr_count == sggc_trace_alloc_trap)
+      { if (SGGC_DEBUG) 
+        { printf(
            "sggc_alloc_kind_type_length: abort on alloc %d of traced cptr %x\n",
-             sggc_trace_cptr_count, SGGC_TRACE_CPTR);
-          }
-          abort();
+            sggc_trace_cptr_count, sggc_trace_cptr);
         }
-#     endif
+        abort();
+      }
     }
 # endif
 
@@ -1329,19 +1350,17 @@ static inline int object_now_free (sggc_cptr_t v, int (*call)(sggc_cptr_t))
     return 0;
   }
 
-  /* Abort if indicated by SGGC_TRACE_FREE_TRAP. */
+  /* Abort if indicated by sggc_trace_free_trap. */
 
 # ifdef SGGC_TRACE_CPTR
-# ifdef SGGC_TRACE_FREE_TRAP
-    if (v == SGGC_TRACE_CPTR && sggc_trace_cptr_count == SGGC_TRACE_FREE_TRAP)
+    if (v == sggc_trace_cptr && sggc_trace_cptr_count == sggc_trace_free_trap)
     { if (SGGC_DEBUG)
       { printf("sggc_collect: abort on free %d of traced cptr %x\n",
-                sggc_trace_cptr_count, SGGC_TRACE_CPTR);
+                sggc_trace_cptr_count, sggc_trace_cptr);
       }
       abort();
     }
 # endif
-#endif
 
   /* Clear freed data and aux areas if asked to do so. */
 
@@ -1617,14 +1636,15 @@ void sggc_collect_remove_free_small (void)
          we remove it now (but note that this doesn't get all free
          objects, so we still need the scan done below). 
  
-         If SGGC_TRACE_FREE_TRAP is being used, we always have to do
+         If sggc_trace_free_trap is being used, we always have to do
          this scan. */
 
-#ifdef SGGC_TRACE_FREE_TRAP
-      if ((v = sbset_first (&free_or_new[k], 0)) != SGGC_NO_OBJECT)
+#ifdef SGGC_TRACE_CPTR
+      if ((sggc_trace_free_trap || call)
 #else
-      if (call && (v = sbset_first (&free_or_new[k], 0)) != SGGC_NO_OBJECT)
+      if (call 
 #endif
+           && (v = sbset_first (&free_or_new[k], 0)) != SGGC_NO_OBJECT)
       {
         sggc_cptr_t next_free = sggc_next_free_val[k];
 
@@ -1683,8 +1703,10 @@ void sggc_collect_remove_free_small (void)
          of objects were allocated but not used for long, and hence
          are in the free sets. */
 
-#if defined(SGGC_TRACE_FREE_TRAP) || defined(SGGC_CLEAR_FREE)
+#if defined(SGGC_CLEAR_FREE)
       if (1)
+#elif defined(SGGC_TRACE_CPTR)
+      if (sggc_trace_free_trap)
 #else
       if (!SGGC_SEGMENT_AT_A_TIME || call_for_newly_freed[k])
 #endif

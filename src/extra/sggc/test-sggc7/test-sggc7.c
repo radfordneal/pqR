@@ -1,7 +1,7 @@
 /* SGGC - A LIBRARY SUPPORTING SEGMENTED GENERATIONAL GARBAGE COLLECTION.
           Test program #7 - main program
 
-   Copyright (c) 2016, 2017 Radford M. Neal.
+   Copyright (c) 2016, 2017, 2018 Radford M. Neal.
 
    The SGGC library is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -190,7 +190,12 @@ int main (int argc, char **argv)
 
   printf(
    "FINAL SEQNUMS:  nil %3llu, a %3llu, b %3llu, c %3llu, d %3llu, e %3llu\n",
-    SEQNUM(nil), SEQNUM(a), SEQNUM(b), SEQNUM(c), SEQNUM(d), SEQNUM(e));
+    (long long unsigned) SEQNUM(nil),
+    (long long unsigned) SEQNUM(a),
+    (long long unsigned) SEQNUM(b),
+    (long long unsigned) SEQNUM(c),
+    (long long unsigned) SEQNUM(d),
+    (long long unsigned) SEQNUM(e));
 
   printf("\nCOLLECTING EVERYTHING EXCEPT nil\n\n");
   a = b = c = d = e = nil;

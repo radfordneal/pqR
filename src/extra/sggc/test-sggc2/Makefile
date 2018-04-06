@@ -1,4 +1,4 @@
-all:	test-sggc2 test-sggc2a test-sggc2d
+all:	test-sggc2 test-sggc2a test-sggc2d test-sggc2t
 
 test-sggc2:	test-sggc2.c sggc.c sbset.c sggc-app.h sbset.h sggc.h sbset-app.h sbset.h \
 		test-common.h test-calloc.c test-calloc.h
@@ -15,25 +15,7 @@ test-sggc2d:	test-sggc2.c sggc.c sbset.c sggc-app.h sggc.h sbset-app.h sbset.h \
 	gcc -std=c99 -g -O0 -DSGGC_DEBUG=1 -DSET_DEBUG=1 -DSGGC_CLEAR_FREE \
 		test-sggc2.c sggc.c sbset.c test-calloc.c -o test-sggc2d
 
-
-# Below not made by default, need settings of environment vars CPTR and TRAP.
-
 test-sggc2t:	test-sggc2.c sggc.c sbset.c sggc-app.h sbset.h sggc.h sbset-app.h sbset.h \
 		test-common.h test-calloc.c test-calloc.h
-	gcc -std=c99 -g -O0 -DSGGC_DEBUG=1 -DSET_DEBUG=1 \
-                            -DSGGC_TRACE_CPTR=$(CPTR) \
+	gcc -std=c99 -g -O0 -DSGGC_DEBUG=1 -DSET_DEBUG=1 -DSGGC_TRACE_CPTR \
 		test-sggc2.c sggc.c sbset.c test-calloc.c -o test-sggc2t
-
-test-sggc2ta:	test-sggc2.c sggc.c sbset.c sggc-app.h sbset.h sggc.h sbset-app.h sbset.h \
-		test-common.h test-calloc.c test-calloc.h
-	gcc -std=c99 -g -O0 -DSGGC_DEBUG=1 -DSET_DEBUG=1 \
-                            -DSGGC_TRACE_CPTR=$(CPTR) \
-                            -DSGGC_TRACE_ALLOC_TRAP=$(TRAP) \
-		test-sggc2.c sggc.c sbset.c test-calloc.c -o test-sggc2ta
-
-test-sggc2tf:	test-sggc2.c sggc.c sbset.c sggc-app.h sbset.h sggc.h sbset-app.h sbset.h \
-		test-common.h test-calloc.c test-calloc.h
-	gcc -std=c99 -g -O0 -DSGGC_DEBUG=1 -DSET_DEBUG=1 \
-                            -DSGGC_TRACE_CPTR=$(CPTR) \
-                            -DSGGC_TRACE_FREE_TRAP=$(TRAP) \
-		test-sggc2.c sggc.c sbset.c test-calloc.c -o test-sggc2tf

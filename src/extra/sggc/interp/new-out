@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Move "o" files in interp director to "out" (used for future diffs).
+
+mv o-e-i out-e-i
+mv o-e-i-big out-e-i-big
+mv o-e-i-bigger out-e-i-bigger
+mv o-e-r out-e-r
+mv o-e-r-big out-e-r-big
+mv o-e-r-bigger out-e-r-bigger
+mv o-o-n out-o-n
