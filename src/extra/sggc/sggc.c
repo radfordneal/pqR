@@ -552,7 +552,9 @@ int sggc_init (unsigned max_segments)
       if (env && *env != 0)
       { sggc_trace_free_trap = atoi(env);
       }
-printf("tracing %u %x - %u %u\n",sggc_trace_cptr,sggc_trace_cptr,sggc_trace_alloc_trap,sggc_trace_free_trap);
+      /* printf("tracing %u %x - %u %u\n",
+                 sggc_trace_cptr,sggc_trace_cptr,
+                 sggc_trace_alloc_trap,sggc_trace_free_trap); */
     }
   }
 # endif
