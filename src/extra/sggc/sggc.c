@@ -533,6 +533,7 @@ int sggc_init (unsigned max_segments)
 # ifdef SGGC_TRACE_CPTR
   { char *env, *end;
     sggc_trace_cptr = SGGC_NO_OBJECT;
+    sggc_trace_cptr_in_use = 0;
     sggc_trace_cptr_count = 0;
     sggc_trace_alloc_trap = 0;
     sggc_trace_free_trap = 0;
@@ -1061,6 +1062,8 @@ static sggc_cptr_t sggc_alloc_kind_type_length (sggc_kind_t kind,
 # ifdef SGGC_TRACE_CPTR
     if (v == sggc_trace_cptr)
     { sggc_trace_cptr_count += 1;
+      if (sggc_trace_cptr_in_use) abort();
+      sggc_trace_cptr_in_use = 1;
       if (sggc_trace_cptr_count == sggc_trace_alloc_trap)
       { if (SGGC_DEBUG) 
         { printf(
@@ -1352,15 +1355,23 @@ static inline int object_now_free (sggc_cptr_t v, int (*call)(sggc_cptr_t))
     return 0;
   }
 
-  /* Abort if indicated by sggc_trace_free_trap. */
-
 # ifdef SGGC_TRACE_CPTR
-    if (v == sggc_trace_cptr && sggc_trace_cptr_count == sggc_trace_free_trap)
-    { if (SGGC_DEBUG)
-      { printf("sggc_collect: abort on free %d of traced cptr %x\n",
-                sggc_trace_cptr_count, sggc_trace_cptr);
+    if (v == sggc_trace_cptr)
+    {
+      /* Clear in_use flag for traced ctpr. */
+
+      if (!sggc_trace_cptr_in_use) abort();
+      sggc_trace_cptr_in_use = 0;
+
+      /* Abort if indicated by sggc_trace_free_trap. */
+
+      if (sggc_trace_cptr_count == sggc_trace_free_trap)
+      { if (SGGC_DEBUG)
+        { printf("sggc_collect: abort on free %d of traced cptr %x\n",
+                  sggc_trace_cptr_count, sggc_trace_cptr);
+        }
+        abort();
       }
-      abort();
     }
 # endif
 
@@ -1638,11 +1649,10 @@ void sggc_collect_remove_free_small (void)
          we remove it now (but note that this doesn't get all free
          objects, so we still need the scan done below). 
  
-         If sggc_trace_free_trap is being used, we always have to do
-         this scan. */
+         If a cptr is being traced, we always have to do this scan. */
 
 #ifdef SGGC_TRACE_CPTR
-      if ((sggc_trace_free_trap || call)
+      if ((sggc_trace_cptr != SGGC_NO_OBJECT || call)
 #else
       if (call 
 #endif
@@ -1708,7 +1718,7 @@ void sggc_collect_remove_free_small (void)
 #if defined(SGGC_CLEAR_FREE)
       if (1)
 #elif defined(SGGC_TRACE_CPTR)
-      if (sggc_trace_free_trap)
+      if (sggc_trace_cptr != SGGC_NO_OBJECT)
 #else
       if (!SGGC_SEGMENT_AT_A_TIME || call_for_newly_freed[k])
 #endif
@@ -2198,9 +2208,9 @@ void sggc_no_reuse (int enable)
 /* TRY TO CRASH IF COMPRESSED POINTER IS NOT VALID. 
 
    Currently, doesn't try to distinguish free from recently-allocated
-   objects in UNUSED_FREE_NEW.  This might be possible without huge
-   effort using a flag in a segment saying whether any objects in it
-   are free. */
+   objects in UNUSED_FREE_NEW (except for a traced cptr).  This might
+   be possible without huge effort using a flag in a segment saying
+   whether any objects in it are free. */
 
 sggc_cptr_t sggc_check_valid_cptr (sggc_cptr_t cptr)
 {
@@ -2215,6 +2225,12 @@ sggc_cptr_t sggc_check_valid_cptr (sggc_cptr_t cptr)
    && !sbset_chain_contains(SGGC_OLD_GEN2_UNCOL,cptr))
   { abort();
   }
+
+# ifdef SGGC_TRACE_CPTR
+    if (cptr == sggc_trace_cptr && !sggc_trace_cptr_in_use)
+    { abort();
+    }
+# endif
 
   return cptr;
 }

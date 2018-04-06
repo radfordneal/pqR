@@ -247,6 +247,7 @@ SGGC_EXTERN struct sggc_info
 #ifdef SGGC_TRACE_CPTR
 
 SGGC_EXTERN sggc_cptr_t sggc_trace_cptr;     /* pointer being traced */
+SGGC_EXTERN int sggc_trace_cptr_in_use;      /* 1 if pointer currently in use */
 SGGC_EXTERN unsigned sggc_trace_cptr_count;  /* count of allocations of ptr */
 SGGC_EXTERN unsigned sggc_trace_alloc_trap;  /* when to trap on allocation */
 SGGC_EXTERN unsigned sggc_trace_free_trap;   /* when to trap on free */
@@ -435,6 +436,8 @@ static inline sggc_cptr_t sggc_alloc_small_kind_quickly (sggc_kind_t kind)
 # ifdef SGGC_TRACE_CPTR
     if (nfv == sggc_trace_cptr)
     { sggc_trace_cptr_count += 1;
+      if (sggc_trace_cptr_in_use) abort();
+      sggc_trace_cptr_in_use = 1;
       if (sggc_trace_cptr_count == sggc_trace_alloc_trap)
       { if (SGGC_DEBUG) 
         { printf(

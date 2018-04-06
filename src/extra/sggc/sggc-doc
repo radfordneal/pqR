@@ -892,8 +892,8 @@ might have been viewed in a debugger), this object can be investigated
 in further runs via this same compressed pointer reference.
 
 To facilitate this investigation, a facility for tracing a particular
-compressed pointer may be enabled by defining the following symbol, in
-sggc-app.h, or via a compiler option:
+compressed pointer may be enabled at compile time, by defining the
+following symbol, in sggc-app.h, or via a compiler option:
 
   SGGC_TRACE_CPTR       If defined (as anything), a compressed
                         pointer may be traced, as specified by
@@ -908,13 +908,24 @@ tracing:
   SGGC_TRACE_CPTR       An integer (decimal, octal, or hex, by usual
                         C conventions), giving the compressed pointer
                         to trace.  No tracing is done if this
-                        environment variable is not defined.  If it is
-                        defined, a count is kept of how many times an
+                        environment variable is not defined, or is not
+                        a possible compressed pointer.  If it is
+                        validly defined, its value will be stored in
+                        the global variable sggc_trace_cptr, which 
+                        will otherwise be SGGC_NO_OBJECT.
+
+                        A count is kept in the global variable
+                        sggc_trace_cptr_count of how many times an
                         object is allocated that becomes associated
-                        with this compressed pointer, in the global
-                        variable sggc_trace_cptr_count.  The value of
-                        this global variable may then be accessable
-                        when debugging after a program crash.
+                        with this traced compressed pointer.  The
+                        value of this global variable may be accessed
+                        when debugging after a program crash.  
+
+                        Also, the global variable sggc_trace_cptr_in_use
+                        is set to 1 (rather than 0) at times when an
+                        object that is associated with the traced
+                        compressed pointer has been allocated and not
+                        yet collected as garbage.
 
   SGGC_TRACE_ALLOC_TRAP If defined as an integer, "abort" is called 
                         when an object that becomes associated with
@@ -929,6 +940,24 @@ tracing:
                         abort is done before any clearing of the
                         object's data area.  (If undefined or 0, no
                         free trapping is done.)
+
+A typical use of this facility would be as follows:
+
+  1) After a program crash, use the debugger to find a compressed
+     pointer associated with the crash.
+
+  2) Do another run with SGGC_TRACE_CPTR set to this compressed
+     pointer, and use the debugger to find the number of allocations
+     of this pointer at the crash, from sggc_trace_cptr_count.
+
+  3) Do a third run with SGGC_TRACE_CPTR set to this pointer, and with
+     SGGC_TRACE_ALLOC_TRAP set to the number of allocations of this
+     pointer at the crash, as found above.
+
+  4) If, as expected, the SGGC_TRACE_ALLOC_TRAP is activated (before
+     the previous crash would have occurred), use the debugger to
+     examine the program state at this time, which is when the object
+     associated with the crash was allocated.
 
 The following procedures may also be of use for debugging:
 
@@ -952,3 +981,9 @@ The following procedures may also be of use for debugging:
     memory fault or a call of 'abort').  If 'cptr' is valid, it is
     returned as the value of this function, and this will take a
     fairly small, though not trivial, amount of time.
+
+Finally, note that since calls of sggc_collect are under the control
+of the application, it can be provide a debugging option to do garbage
+collections more or less frequently then normal (including before
+every allocation, albeit at a large performance cost), which may also
+help identify problems of not identifying all active pointers.

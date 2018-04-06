@@ -135,8 +135,10 @@
   { printf ("\nSGGC_TRACE_CPTR: none\n");
   }
   else
-  { printf ("\nSGGC_TRACE_CPTR: %x (%u), sggc_trace_cptr_count: %u\n",
-               sggc_trace_cptr, sggc_trace_cptr, sggc_trace_cptr_count);
+  { printf (
+     "\nSGGC_TRACE_CPTR: %x (%u), sggc_trace_cptr_count: %u, in use: %d\n",
+        sggc_trace_cptr, sggc_trace_cptr, 
+        sggc_trace_cptr_count, sggc_trace_cptr_in_use);
   }
 #endif
 
