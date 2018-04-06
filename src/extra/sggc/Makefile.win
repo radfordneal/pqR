@@ -10,7 +10,9 @@ all:
 	$(MAKE) -f Makefile.win makeMakedeps
 	$(MAKE) -f Makefile.win libsggc.a
 
-CSOURCES = sggc.c sggc-app.c
+# NOTE: sggc.c is not in CSOURCES because it is now included in memory.c
+
+CSOURCES = sggc-app.c
 
 OBJS = $(CSOURCES:.c=.o)
 libsggc.a: $(OBJS)
