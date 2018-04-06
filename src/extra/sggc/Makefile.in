@@ -18,7 +18,7 @@ ALL_CPPFLAGS = $(SGGC_CPPFLAGS) $(R_XTRA_CPPFLAGS) $(CPPFLAGS) $(DEFS)
 
 SOURCES = sggc-app.c
 
-HEADERS = sggc.h sggc-app.h set.h set-app.h set.c sggc.c
+HEADERS = sggc.h sggc-app.h sbset.h sbset-app.h sbset.c sggc.c
 
 DEPENDS = $(SOURCES:.c=.d)
 OBJECTS = $(SOURCES:.c=.o)

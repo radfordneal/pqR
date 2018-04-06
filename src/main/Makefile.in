@@ -47,6 +47,10 @@ EXTRA_SOURCES_C = \
 DEPENDS = $(SOURCES_C:.c=.d) $(EXTRA_SOURCES_C:.c=.d)
 SOURCES = $(SOURCES_C) $(SOURCES_F)
 OBJECTS = $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o) @LIBOBJS@ @ALLOCA@
+
+# Should these be below too?
+#	../extra/sggc/sggc-app.h ../extra/sggc/sggc.h ../extra/sggc/sggc.c \
+#	../extra/sggc/sbset-app.h ../extra/sggc/sbset.h ../extra/sggc/sbset.c \
 HEADERS = \
 	RBufferUtils.h Rstrptime.h \
 	arithmetic.h \
