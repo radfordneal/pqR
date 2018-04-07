@@ -256,15 +256,20 @@ void set_elements_to_NA_or_NULL (SEXP x, int i, int n)
 }
 
 
-/* Copy n elements from vector v (starting at j, stepping by t) to 
-   vector x (starting at i, stepping by s).  The vectors x and v must 
-   be of the same type, which may be numeric or non-numeric.  Elements 
-   of a VECSXP or EXPRSXP are duplicated.  If necessary, x and v are 
-   protected. */
+/* Copy n elements from vector v (starting at j, stepping by t) to
+   vector x (starting at i, stepping by s).  The vectors x and v must
+   be of the same type (unless n is zero), which may be numeric or
+   non-numeric.  Elements of a VECSXP or EXPRSXP are duplicated.  If
+   necessary, x and v are protected. */
 
 void copy_elements (SEXP x, int i, int s, SEXP v, int j, int t, int n)
 {
     if (n == 0) return;
+
+    if (TYPEOF(x) != TYPEOF(v)) abort();
+
+    if (i >= LENGTH(x) - (n-1)*s) abort();
+    if (j >= LENGTH(v) - (n-1)*t) abort();
 
     if (n > 8 && s == 1 && t == 1 && isVectorAtomic(x)) {
         switch (TYPEOF(x)) {

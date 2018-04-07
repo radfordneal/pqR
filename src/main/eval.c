@@ -694,6 +694,25 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
         }
 #   endif
 
+#   ifdef ENABLE_EVAL_DEBUG
+    {
+        sggc_cptr_t cptr = CPTR_FROM_SEXP(res);
+        sggc_check_valid_cptr (cptr);
+        if (SEXP_FROM_CPTR(cptr) != res) abort();
+        if (res != R_NilValue && TYPEOF(res) == NILSXP) abort();
+        if (TYPEOF(res) == FREESXP) abort();
+
+#       ifdef ENABLE_SGGC_DEBUG
+            if (sggc_trace_cptr_in_use) {
+                sggc_check_valid_cptr (sggc_trace_cptr);
+                SEXP trp = SEXP_FROM_CPTR (sggc_trace_cptr);
+                if (trp != R_NilValue && TYPEOF(trp) == NILSXP) abort();
+                if (TYPEOF(trp) == FREESXP) abort();
+            }
+#       endif
+    }
+#   endif
+
     return res;
 }
 
