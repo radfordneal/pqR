@@ -82,7 +82,7 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
     SEXPTYPE typ = NILSXP;
     SEXP ans, ansnames;
     int add_names, realloc, largeone0, largeones;
-    R_len_t i, len, len0, pos;
+    R_len_t i, len, pos;
 
     /* Scan the objects to be concatenated, seeing whether this is a simple
        case, and if so, finding the type and length of the result. */
@@ -111,6 +111,8 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
     if (typ == NILSXP)
         return R_NoObject;
 
+    R_len_t len0 = LENGTH(objs[0]);
+
     /* Allocate space for result.  May be a reallocation of the first
        object to be concatenated.  Also sets ansnames, to either R_NilValue
        or the names from the first object. */
@@ -135,7 +137,6 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
                  || NAMEDCNT_GT_0(ansnames) && !local_assign1)
                 ansnames = R_NilValue;
         }
-        len0 = LENGTH(objs[0]);
         ans = reallocVector (objs[0], len, 1);
         SET_ATTRIB (ans, R_NilValue);
         SETLEVELS (ans, 0);
@@ -164,16 +165,14 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
         SEXP a = objs[i];
         if (a == R_NilValue)
             continue;
-        if (i == 0 && realloc)
-            pos += len0;
-        else {
-            R_len_t ln = LENGTH(a);
+        R_len_t ln = i == 0 ? len0 : LENGTH(a);
+        if (i > 0 || !realloc) {
             if (!use_helpers || ln <= T_c) {
                 WAIT_UNTIL_COMPUTED(a);
                 copy_elements_coerced (ans, pos, 1, a, 0, 1, ln);
             }
-            pos += ln;
         }
+        pos += ln;
     }
 
     if (use_helpers) {
@@ -182,7 +181,7 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
             SEXP a = objs[i];
             if (a == R_NilValue)
                 continue;
-            R_len_t ln = LENGTH(a);
+            R_len_t ln = i == 0 ? len0 : LENGTH(a);
             pos -= ln;
             if (ln > T_c) {
                 helpers_do_task (HELPERS_PIPE_IN0_OUT, task_copy_coerced,
@@ -203,25 +202,28 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
             ansnames = reallocVector (ansnames, len, 1);
             realloc = 1;
         }
+        PROTECT(ansnames);
         pos = 0;
         for (i = 0; i < nobj; i++) {
             SEXP a = objs[i];
             if (a == R_NilValue)
                 continue;
-            R_len_t ln = LENGTH(a);
-            if (i == 0 && realloc)
-                pos += len0;
-            else {
+            R_len_t ln = i == 0 ? len0 : LENGTH(a);
+            if (i > 0 || !realloc) {
                 SEXP nms = getNamesAttrib(a);
                 if (nms != R_NilValue) {
-                    copy_elements (ansnames, pos, 1, nms, 0, 1, ln); }
-                else
+                    if (LENGTH(nms) != ln) abort();
+                    copy_elements (ansnames, pos, 1, nms, 0, 1, ln);
+                }
+                else {
                     copy_elements (ansnames, pos, 1, 
                                    R_BlankScalarString, 0, 0, ln);
-                pos += ln;
+                }
             }
+            pos += ln;
         }
         setAttrib (ans, R_NamesSymbol, ansnames);
+        UNPROTECT(1);
     }
 
     if (! (variant & VARIANT_PENDING_OK))
