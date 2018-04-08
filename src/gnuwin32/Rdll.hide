@@ -265,6 +265,8 @@
  R_wfopen
  Rconsolesetwidth
  Rf_AdobeSymbol2ucs2
+ Rf_bcEval
+ Rf_bytecodeExpr
  Rf_CheckFormals
  Rf_CoercionWarning
  Rf_ComplexFromInteger

@@ -44,12 +44,48 @@
 #include <complex.h>
 
 
+/* USED IN EVAL AND BYTECODE. */
+
+/* Caller needn't protect the s arg below */
+
+extern void Rf_asLogicalNoNA_warning(SEXP s, SEXP call);
+extern R_NORETURN void Rf_asLogicalNoNA_error(SEXP s, SEXP call);
+
+static inline Rboolean asLogicalNoNA(SEXP s, SEXP call)
+{
+    int len, cond;
+
+    switch(TYPEOF(s)) { /* common cases done here for efficiency */
+    case INTSXP:  /* assume logical and integer are the same */
+    case LGLSXP:
+        len = LENGTH(s);
+        if (len == 0 || LOGICAL(s)[0] == NA_LOGICAL) goto error;
+        cond = LOGICAL(s)[0];
+        break;
+    default:
+        len = length(s);
+        if (len == 0) goto error;
+        cond = asLogical(s);
+        break;
+    }
+
+    if (cond == NA_LOGICAL) goto error;
+
+    if (len > 1) Rf_asLogicalNoNA_warning (s, call);
+
+    return cond;
+
+  error:
+    Rf_asLogicalNoNA_error (s, call);
+}
+
+
 /* ATTRIBUTE FETCHING */
 
 /* The 00 version of getAttrib can be called when it is known that "name"
    is a symbol (not a string) and is not one that is handled specially. */
 
-INLINE_FUN SEXP getAttrib00 (SEXP vec, SEXP name)
+static inline SEXP getAttrib00 (SEXP vec, SEXP name)
 {
     SEXP s;
     for (s = ATTRIB(vec); s != R_NilValue; s = CDR(s)) {

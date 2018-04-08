@@ -725,7 +725,7 @@ void attribute_hidden PRSEEN_error_or_warning(SEXP e)
          _("restarting interrupted promise evaluation"));
 }
 
-R_NORETURN void attribute_hidden asLogicalNoNA_error (SEXP s, SEXP call)
+R_NORETURN void attribute_hidden Rf_asLogicalNoNA_error (SEXP s, SEXP call)
 {
     errorcall (call, 
       length(s) == 0 ? _("argument is of length zero") :
@@ -733,7 +733,7 @@ R_NORETURN void attribute_hidden asLogicalNoNA_error (SEXP s, SEXP call)
                        _("argument is not interpretable as logical"));
 }
 
-void attribute_hidden asLogicalNoNA_warning (SEXP s, SEXP call)
+void attribute_hidden Rf_asLogicalNoNA_warning (SEXP s, SEXP call)
 {
     PROTECT(s);
     warningcall (call,
