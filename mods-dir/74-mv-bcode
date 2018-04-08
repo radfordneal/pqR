@@ -1,0 +1,2 @@
+Moves bytecode stuff from eval.c into a new bytecode.c source file.
+Removes some now-disabled JIT stuff.
