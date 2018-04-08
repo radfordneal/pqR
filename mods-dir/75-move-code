@@ -1,0 +1,8 @@
+Code movement.  May have performance impact, not just cosmetic, since
+compiler can optimize calls within a file.
+
+Move code into eval.c from envir.c.
+
+Move code out of eval.c to builtin.c.
+
+Other cosmetic changes.

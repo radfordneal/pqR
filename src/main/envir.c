@@ -1827,78 +1827,6 @@ void gsetVar(SEXP symbol, SEXP value, SEXP rho)
 
 /*----------------------------------------------------------------------
 
-  get environment from a subclass if possible; else return NULL. */
-
-#define simple_as_environment(arg) \
-  (IS_S4_OBJECT(arg) && (TYPEOF(arg) == S4SXP) ? R_getS4DataSlot(arg, ENVSXP) \
-                                               : R_NilValue)
-	    
-
-/*----------------------------------------------------------------------
-
-  do_assign : .Internal(assign(x, value, envir, inherits))
-
-*/
-static SEXP do_assign(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    SEXP name=R_NilValue, val, aenv;
-    int ginherits = 0;
-    checkArity(op, args);
-
-    if (!isString(CAR(args)) || length(CAR(args)) == 0)
-	error(_("invalid first argument"));
-    else {
-	if (length(CAR(args)) > 1)
-	    warning(_("only the first element is used as variable name"));
-	name = install(translateChar(STRING_ELT(CAR(args), 0)));
-    }
-    PROTECT(val = CADR(args));
-    aenv = CADDR(args);
-    if (TYPEOF(aenv) == NILSXP)
-	error(_("use of NULL environment is defunct"));
-    if (TYPEOF(aenv) != ENVSXP &&
-	TYPEOF((aenv = simple_as_environment(aenv))) != ENVSXP)
-	error(_("invalid '%s' argument"), "envir");
-    ginherits = asLogical(CADDDR(args));
-    if (ginherits == NA_LOGICAL)
-	error(_("invalid '%s' argument"), "inherits");
-    if (ginherits)
-	set_var_nonlocal (name, val, aenv, 3);
-    else
-	set_var_in_frame (name, val, aenv, TRUE, 3);
-    UNPROTECT(1);
-    return val;
-}
-
-
-/**
- * do_list2env : .Internal(list2env(x, envir))
-  */
-static SEXP do_list2env(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    SEXP x, xnms, envir;
-    int n;
-    checkArity(op, args);
-
-    if (TYPEOF(CAR(args)) != VECSXP)
-	error(_("first argument must be a named list"));
-    x = CAR(args);
-    n = LENGTH(x);
-    xnms = getAttrib(x, R_NamesSymbol);
-    if (TYPEOF(xnms) != STRSXP || LENGTH(xnms) != n)
-	error(_("names(x) must be a character vector of the same length as x"));
-    envir = CADR(args);
-    if (TYPEOF(envir) != ENVSXP)
-	error(_("'envir' argument must be an environment"));
-
-    for(int i = 0; i < LENGTH(x) ; i++) {
-	SEXP name = install(translateChar(STRING_ELT(xnms, i)));
-	defineVar(name, VECTOR_ELT(x, i), envir);
-    }
-
-    return envir;
-}
-
 /* Remove variable and return its previous value, or R_NoObject if it
    didn't exist.  For a user database, R_NilValue is returned when the
    variable exists, rather than the value. */
@@ -1956,17 +1884,86 @@ SEXP attribute_hidden RemoveVariable(SEXP name, SEXP env)
     return value;
 }
 
+
 /*----------------------------------------------------------------------
 
+  get environment from a subclass if possible; else return NULL. */
+
+#define simple_as_environment(arg) \
+  (IS_S4_OBJECT(arg) && (TYPEOF(arg) == S4SXP) ? R_getS4DataSlot(arg, ENVSXP) \
+                                               : R_NilValue)
+	    
+
+/*----------------------------------------------------------------------
+  do_assign : .Internal(assign(x, value, envir, inherits)) */
+
+static SEXP do_assign(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    SEXP name=R_NilValue, val, aenv;
+    int ginherits = 0;
+    checkArity(op, args);
+
+    if (!isString(CAR(args)) || length(CAR(args)) == 0)
+	error(_("invalid first argument"));
+    else {
+	if (length(CAR(args)) > 1)
+	    warning(_("only the first element is used as variable name"));
+	name = install(translateChar(STRING_ELT(CAR(args), 0)));
+    }
+    PROTECT(val = CADR(args));
+    aenv = CADDR(args);
+    if (TYPEOF(aenv) == NILSXP)
+	error(_("use of NULL environment is defunct"));
+    if (TYPEOF(aenv) != ENVSXP &&
+	TYPEOF((aenv = simple_as_environment(aenv))) != ENVSXP)
+	error(_("invalid '%s' argument"), "envir");
+    ginherits = asLogical(CADDDR(args));
+    if (ginherits == NA_LOGICAL)
+	error(_("invalid '%s' argument"), "inherits");
+    if (ginherits)
+	set_var_nonlocal (name, val, aenv, 3);
+    else
+	set_var_in_frame (name, val, aenv, TRUE, 3);
+    UNPROTECT(1);
+    return val;
+}
+
+
+/* do_list2env : .Internal(list2env(x, envir)) */
+
+static SEXP do_list2env(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    SEXP x, xnms, envir;
+    int n;
+    checkArity(op, args);
+
+    if (TYPEOF(CAR(args)) != VECSXP)
+	error(_("first argument must be a named list"));
+    x = CAR(args);
+    n = LENGTH(x);
+    xnms = getAttrib(x, R_NamesSymbol);
+    if (TYPEOF(xnms) != STRSXP || LENGTH(xnms) != n)
+	error(_("names(x) must be a character vector of the same length as x"));
+    envir = CADR(args);
+    if (TYPEOF(envir) != ENVSXP)
+	error(_("'envir' argument must be an environment"));
+
+    for(int i = 0; i < LENGTH(x) ; i++) {
+	SEXP name = install(translateChar(STRING_ELT(xnms, i)));
+	defineVar(name, VECTOR_ELT(x, i), envir);
+    }
+
+    return envir;
+}
+
+/*----------------------------------------------------------------------
   do_remove
 
   There are three arguments to do_remove; a list of names to remove,
   an optional environment (if missing set it to R_GlobalEnv) and
   inherits, a logical indicating whether to look in the parent env if
   a symbol is not found in the supplied env.  This is ignored if
-  environment is not specified.
-
-*/
+  environment is not specified. */
 
 static SEXP do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -2014,11 +2011,9 @@ static SEXP do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /*----------------------------------------------------------------------
-
  do_get_rm - get value of variable and then remove the variable, decrementing
-             NAMEDCNT when possible.  If return of pending value is allowed,
-             will pass on pending value in the variable without waiting for it.
-*/
+             NAMEDCNT when possible. If return of pending value is allowed, will
+             pass on pending value in the variable without waiting for it. */
 
 static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
@@ -2054,7 +2049,6 @@ static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 }
 
 /*----------------------------------------------------------------------
-
   do_get
 
   This function returns the SEXP associated with the character
@@ -2063,9 +2057,7 @@ static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
       get(x, envir, mode, inherits)
       exists(x, envir, mode, inherits)
-
 */
-
 
 static SEXP do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -2166,13 +2158,12 @@ static SEXP gfind(const char *name, SEXP env, SEXPTYPE mode,
     return rval;
 }
 
-
 /** mget(): get multiple values from an environment
  *
  * .Internal(mget(x, envir, mode, ifnotfound, inherits))
  *
- * @return  a list of the same length as x, a character vector (of names).
- */
+ * returns a list of the same length as x, a character vector (of names). */
+
 static SEXP do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, env, x, mode, ifnotfound, ifnfnd;
@@ -2414,12 +2405,9 @@ static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /*----------------------------------------------------------------------
-
   do_globalenv
 
-  Returns the current global environment.
-*/
-
+  Returns the current global environment. */
 
 static SEXP do_globalenv(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -2428,13 +2416,9 @@ static SEXP do_globalenv(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /*----------------------------------------------------------------------
-
   do_baseenv
 
-  Returns the current base environment.
-
-*/
-
+  Returns the current base environment. */
 
 static SEXP do_baseenv(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -2443,13 +2427,9 @@ static SEXP do_baseenv(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /*----------------------------------------------------------------------
-
   do_emptyenv
 
-  Returns the current empty environment.
-
-*/
-
+  Returns the current empty environment. */
 
 static SEXP do_emptyenv(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -2457,16 +2437,12 @@ static SEXP do_emptyenv(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_EmptyEnv;
 }
 
-
 /*----------------------------------------------------------------------
-
   do_attach
 
   To attach a list we make up an environment and insert components
   of the list in as the values of this env and install the tags from
-  the list as the names.
-
-*/
+  the list as the names. */
 
 static SEXP do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 {
@@ -2569,16 +2545,11 @@ static SEXP do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
     return s;
 }
 
-
-
 /*----------------------------------------------------------------------
-
   do_detach
 
   detach the specified environment.  Detachment only takes place by
-  position.
-
-*/
+  position. */
 
 static SEXP do_detach(SEXP call, SEXP op, SEXP args, SEXP env)
 {
@@ -2624,15 +2595,10 @@ static SEXP do_detach(SEXP call, SEXP op, SEXP args, SEXP env)
     return s;
 }
 
-
-
 /*----------------------------------------------------------------------
-
   do_search
 
-  Print out the current search path.
-
-*/
+  Print out the current search path. */
 
 static SEXP do_search(SEXP call, SEXP op, SEXP args, SEXP env)
 {
@@ -2660,15 +2626,11 @@ static SEXP do_search(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-
 /*----------------------------------------------------------------------
-
   do_ls
 
   This code implements the functionality of the "ls" and "objects"
-  functions.  [ ls(envir, all.names) ]
-
-*/
+  functions.  [ ls(envir, all.names) ] */
 
 static int FrameSize(SEXP frame, int all)
 {
@@ -2762,8 +2724,7 @@ static int BuiltinSize(int all, int intern)
     return count;
 }
 
-static void
-BuiltinNames(int all, int intern, SEXP names, int *indx)
+static void BuiltinNames(int all, int intern, SEXP names, int *indx)
 {
     sggc_cptr_t nxt;
 
@@ -2784,8 +2745,7 @@ BuiltinNames(int all, int intern, SEXP names, int *indx)
     }
 }
 
-static void
-BuiltinValues(int all, int intern, SEXP values, int *indx)
+static void BuiltinValues(int all, int intern, SEXP values, int *indx)
 {
     sggc_cptr_t nxt;
 
@@ -2838,6 +2798,7 @@ static SEXP do_ls(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* takes an environment and a boolean indicating whether to get all names */
+
 SEXP R_lsInternal(SEXP env, Rboolean all)
 {
     int  k;
@@ -2929,12 +2890,12 @@ static SEXP do_env2list(SEXP call, SEXP op, SEXP args, SEXP rho)
     return(ans);
 }
 
-/*
- * apply a function to all objects in an environment and return the
- * results in a list.
- * Equivalent to lapply(as.list(env, all.names=all.names), FUN, ...)
- */
-/* This is a special .Internal */
+/* apply a function to all objects in an environment and return the
+   results in a list.
+   Equivalent to lapply(as.list(env, all.names=all.names), FUN, ...)
+
+   This is a special .Internal */
+
 static SEXP do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP env, ans, R_fcall, FUN, tmp2, End;
@@ -3025,13 +2986,10 @@ int envlength(SEXP rho)
 }
 
 /*----------------------------------------------------------------------
-
   do_builtins
 
   Return the names of all the built in functions.  These are fetched
-  directly from the symbol table.
-
-*/
+  directly from the symbol table. */
 
 static SEXP do_builtins(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -3050,7 +3008,6 @@ static SEXP do_builtins(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 
 /*----------------------------------------------------------------------
-
   do_pos2env
 
   This function returns the environment at a specified position in the
@@ -3060,9 +3017,8 @@ static SEXP do_builtins(SEXP call, SEXP op, SEXP args, SEXP rho)
 
   When pos = -1 the environment of the closure that pos2env is
   evaluated in is obtained. Note: this relies on pos.to.env being
-  a primitive.
+  a primitive. */
 
- */
 static SEXP pos2env(int pos, SEXP call)
 {
     SEXP env;
@@ -3714,7 +3670,6 @@ static SEXP do_importIntoEnv(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-
 static SEXP do_envprofile(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     /* Return a list containing profiling information given a hashed
@@ -3728,6 +3683,7 @@ static SEXP do_envprofile(SEXP call, SEXP op, SEXP args, SEXP rho)
     else
 	error("argument must be a hashed environment");
 }
+
 
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
 
