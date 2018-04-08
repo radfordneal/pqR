@@ -2,6 +2,7 @@ Code movement.  May have performance impact, not just cosmetic, since
 compiler can optimize calls within a file.
 
 Move all code from logic.c into eval.c (deleting logic.c).
+Move do_relop from relop.c into eval.c (R_relop stays in relop.c).
 
 Move some code out of eval.c to builtin.c.
 

@@ -38,6 +38,9 @@
 #include "scalar-stack.h"
 
 
+/***  NOTE:  do_relop itself is in eval.c, calling R_relop here.  ***/
+
+
 /* MACROS FOR BUILDING PROCEDURES THAT DO THE RELATIONAL OPERATIONS.  
    Separate macros are defined for non-variant operations, and for
    the and, or, and sum variants. */
@@ -1242,52 +1245,6 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
 }
 
 
-/* RELATIONAL OPERATORS.  May dispatch by class; otherwise implemented 
-   by R_relop. */
-
-static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
-{
-    SEXP argsevald, ans, x, y;
-    int objx, objy;
-
-    /* Evaluate arguments, maybe putting them on the scalar stack. */
-
-    SEXP sv_scalar_stack = R_scalar_stack;
-
-    PROTECT(argsevald = 
-              scalar_stack_eval2 (args, &x, &y, &objx, &objy, env));
-    PROTECT2(x,y);
-
-    /* Check for dispatch on S3 or S4 objects. */
-
-    if (objx || objy) {
-        if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
-            UNPROTECT(3);
-            return ans;
-        }
-    }
-
-    /* Check argument count now (after dispatch, since other methods may allow
-       other argument count). */
-
-    checkArity(op,argsevald);
-
-    /* Arguments are now in x and y, and are protected.  They may be on
-       the scalar stack, but if so are popped off here (but retain their
-       values if eval is not called). */
-
-    /* Below does same as POP_IF_TOP_OF_STACK(y); POP_IF_TOP_OF_STACK(x);
-       but faster. */
-
-    R_scalar_stack = sv_scalar_stack;
-
-    ans = R_relop (call, op, x, y, objx, objy, env, variant);
-
-    UNPROTECT(3);
-    return ans;
-}
-
-
 /* BITWISE INTEGER OPERATORS.  Used for "octmode" versions of the !,
    &, |, and xor operator, defined in 'base' (not for the operations
    on raw bytes). */
@@ -1326,23 +1283,3 @@ SEXP bitwiseXor(SEXP a, SEXP b)
 	INTEGER(ans)[i] = INTEGER(a)[i%m] ^ INTEGER(b)[i%n];
     return ans;
 }
-
-
-/* FUNTAB entries defined in this source file. See names.c for documentation. */
-
-attribute_hidden FUNTAB R_FunTab_relop[] =
-{
-/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
-
-/* Relational Operators, all primitives */
-/* these are group generic and so need to eval args (inside, as special) */
-
-{"==",		do_relop,	EQOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
-{"!=",		do_relop,	NEOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
-{"<",		do_relop,	LTOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
-{"<=",		do_relop,	LEOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
-{">=",		do_relop,	GEOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
-{">",		do_relop,	GTOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
-
-{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
-};

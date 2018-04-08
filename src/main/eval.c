@@ -4007,29 +4007,51 @@ static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
     return ScalarLogicalMaybeConst (has_na ? NA_LOGICAL : val);
 }
 
-/* FUNTAB entries defined in this source file. See names.c for documentation. */
+/* -------------------------------------------------------------------------- */
+/* RELATIONAL OPERATORS.  May dispatch by class; otherwise implemented 
+   by R_relop. */
 
-attribute_hidden FUNTAB R_FunTab_logic[] =
+static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
-/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
+    SEXP argsevald, ans, x, y;
+    int objx, objy;
 
-/* Logical Operators, all primitives */
+    /* Evaluate arguments, maybe putting them on the scalar stack. */
 
-/* these are group generic and so need to eval args (as builtin or themselves)*/
-{"&",		do_andor,	1,	1000,	2,	{PP_BINARY,  PREC_AND,	  0}},
-{"|",		do_andor,	2,	1000,	2,	{PP_BINARY,  PREC_OR,	  0}},
-{"!",		do_not,		1,	1001,	1,	{PP_UNARY,   PREC_NOT,	  0}},
+    SEXP sv_scalar_stack = R_scalar_stack;
 
-/* specials as conditionally evaluate second arg */
-{"&&",		do_andor2,	1,	0,	2,	{PP_BINARY,  PREC_AND,	  0}},
-{"||",		do_andor2,	2,	0,	2,	{PP_BINARY,  PREC_OR,	  0}},
+    PROTECT(argsevald = 
+              scalar_stack_eval2 (args, &x, &y, &objx, &objy, env));
+    PROTECT2(x,y);
 
-/* these are group generic and so need to eval args */
-{"all",		do_allany,	1,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
-{"any",		do_allany,	2,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
+    /* Check for dispatch on S3 or S4 objects. */
 
-{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
-};
+    if (objx || objy) {
+        if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
+            UNPROTECT(3);
+            return ans;
+        }
+    }
+
+    /* Check argument count now (after dispatch, since other methods may allow
+       other argument count). */
+
+    checkArity(op,argsevald);
+
+    /* Arguments are now in x and y, and are protected.  They may be on
+       the scalar stack, but if so are popped off here (but retain their
+       values if eval is not called). */
+
+    /* Below does same as POP_IF_TOP_OF_STACK(y); POP_IF_TOP_OF_STACK(x);
+       but faster. */
+
+    R_scalar_stack = sv_scalar_stack;
+
+    ans = R_relop (call, op, x, y, objx, objy, env, variant);
+
+    UNPROTECT(3);
+    return ans;
+}
 
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
 
@@ -4060,8 +4082,8 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 {"withVisible", do_withVisible,	1,	10,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* Logical Operators, all primitives */
-
 /* these are group generic and so need to eval args (as builtin or themselves)*/
+
 {"&",		do_andor,	1,	1000,	2,	{PP_BINARY,  PREC_AND,	  0}},
 {"|",		do_andor,	2,	1000,	2,	{PP_BINARY,  PREC_OR,	  0}},
 {"!",		do_not,		1,	1001,	1,	{PP_UNARY,   PREC_NOT,	  0}},
@@ -4073,6 +4095,16 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 /* these are group generic and so need to eval args */
 {"all",		do_allany,	1,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
 {"any",		do_allany,	2,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
+
+/* Relational Operators, all primitives */
+/* these are group generic and so need to eval args (inside, as special) */
+
+{"==",		do_relop,	EQOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{"!=",		do_relop,	NEOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{"<",		do_relop,	LTOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{"<=",		do_relop,	LEOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{">=",		do_relop,	GEOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{">",		do_relop,	GTOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
 };
