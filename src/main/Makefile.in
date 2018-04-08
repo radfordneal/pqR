@@ -25,7 +25,7 @@ SOURCES_C = \
 	format.c fourier.c \
 	gevents.c gram-ex.c gramLatex.c gramRd.c graphics.c grep.c \
 	identical.c inlined.c inspect.c internet.c iosupport.c \
-	lapack.c list.c localecharset.c logic.c \
+	lapack.c list.c localecharset.c \
 	main.c mapply.c match.c memory.c merged-ops.c model.c \
 	names.c \
 	objects.c optim.c optimize.c options.c \

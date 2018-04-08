@@ -1,8 +1,8 @@
 Code movement.  May have performance impact, not just cosmetic, since
 compiler can optimize calls within a file.
 
-Move code into eval.c from envir.c.
+Move all code from logic.c into eval.c (deleting logic.c).
 
-Move code out of eval.c to builtin.c.
+Move some code out of eval.c to builtin.c.
 
 Other cosmetic changes.

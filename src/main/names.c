@@ -119,7 +119,6 @@ extern FUNTAB
     R_FunTab_arithmetic[], 
     R_FunTab_complex[], 
     R_FunTab_relop[], 
-    R_FunTab_logic[], 
     R_FunTab_array[], 
     R_FunTab_summary[], 
     R_FunTab_seq[], 
@@ -197,7 +196,6 @@ static FUNTAB *FunTab_ptrs[] = {
     R_FunTab_arithmetic, 
     R_FunTab_complex, 
     R_FunTab_relop,
-    R_FunTab_logic,
     R_FunTab_array,
     R_FunTab_summary,
     R_FunTab_seq,
@@ -278,7 +276,7 @@ static FUNTAB *FunTab_ptrs[] = {
 extern FASTFUNTAB 
     R_FastFunTab_arithmetic[],
     R_FastFunTab_complex[],
-    R_FastFunTab_logic[],
+    R_FastFunTab_eval[],
     R_FastFunTab_array[],
     R_FastFunTab_summary[],
     R_FastFunTab_seq[],
@@ -288,7 +286,7 @@ extern FASTFUNTAB
 static FASTFUNTAB *FastFunTab_ptrs[] = { 
     R_FastFunTab_arithmetic, 
     R_FastFunTab_complex, 
-    R_FastFunTab_logic,
+    R_FastFunTab_eval,
     R_FastFunTab_array,
     R_FastFunTab_summary,
     R_FastFunTab_seq,
