@@ -3502,29 +3502,6 @@ static SEXP do_savefile(SEXP call, SEXP op, SEXP args, SEXP env)
     return R_NilValue;
 }
 
-static SEXP do_setnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    int old = R_num_math_threads, new;
-    checkArity(op, args);
-    new = asInteger(CAR(args));
-    if (new >= 0 && new <= R_max_num_math_threads)
-	R_num_math_threads = new;
-    return ScalarIntegerMaybeConst(old);
-}
-
-static SEXP do_setmaxnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    int old = R_max_num_math_threads, new;
-    checkArity(op, args);
-    new = asInteger(CAR(args));
-    if (new >= 0) {
-	R_max_num_math_threads = new;
-	if (R_num_math_threads > R_max_num_math_threads)
-	    R_num_math_threads = R_max_num_math_threads;
-    }
-    return ScalarIntegerMaybeConst(old);
-}
-
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
 
 attribute_hidden FUNTAB R_FunTab_eval[] =
@@ -3552,9 +3529,6 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 
 {"Rprof",	do_Rprof,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"withVisible", do_withVisible,	1,	10,	1,	{PP_FUNCALL, PREC_FN,	0}},
-
-{"setNumMathThreads", do_setnumthreads,      0, 11, 1,  {PP_FUNCALL, PREC_FN, 0}},
-{"setMaxNumMathThreads", do_setmaxnumthreads,0, 11, 1,  {PP_FUNCALL, PREC_FN, 0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
 };

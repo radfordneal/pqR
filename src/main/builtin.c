@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995-1998  Robert Gentleman and Ross Ihaka
@@ -1153,6 +1153,29 @@ static SEXP do_switch(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
+static SEXP do_setnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    int old = R_num_math_threads, new;
+    checkArity(op, args);
+    new = asInteger(CAR(args));
+    if (new >= 0 && new <= R_max_num_math_threads)
+	R_num_math_threads = new;
+    return ScalarIntegerMaybeConst(old);
+}
+
+static SEXP do_setmaxnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    int old = R_max_num_math_threads, new;
+    checkArity(op, args);
+    new = asInteger(CAR(args));
+    if (new >= 0) {
+	R_max_num_math_threads = new;
+	if (R_num_math_threads > R_max_num_math_threads)
+	    R_num_math_threads = R_max_num_math_threads;
+    }
+    return ScalarIntegerMaybeConst(old);
+}
+
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
 
 attribute_hidden FUNTAB R_FunTab_builtin[] =
@@ -1178,6 +1201,9 @@ attribute_hidden FUNTAB R_FunTab_builtin[] =
 {"vector",	do_makevector,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"length<-",	do_lengthgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"switch",	do_switch,	0,	200,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
+
+{"setNumMathThreads", do_setnumthreads,      0, 11, 1,  {PP_FUNCALL, PREC_FN, 0}},
+{"setMaxNumMathThreads", do_setmaxnumthreads,0, 11, 1,  {PP_FUNCALL, PREC_FN, 0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
