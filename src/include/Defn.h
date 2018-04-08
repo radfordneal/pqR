@@ -1196,10 +1196,10 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define alloc_or_reuse		Rf_alloc_or_reuse
 # define apply_non_functon_error Rf_apply_non_function_error
 # define arg_missing_error	Rf_arg_missing_error
-# define asLogicalNoNA_error	Rf_asLogicalNoNA_error
-# define asLogicalNoNA_warning	Rf_asLogicalNoNA_warning
+# define bcEval			Rf_bcEval
 # define beginbuiltincontext	Rf_beginbuiltincontext
 # define begincontext		Rf_begincontext
+# define bytecodeExpr		Rf_bytecodeExpr
 # define check_stack_balance	Rf_check_stack_balance
 # define check1arg		Rf_check1arg
 # define check1arg_x_error	Rf_check1arg_x_error
@@ -1420,6 +1420,8 @@ SEXP Rf_EnsureString(SEXP);
 SEXP Rf_allocCharsxp(R_len_t);
 SEXP alloc_or_reuse (SEXP, SEXP, SEXPTYPE, int, int, int);
 SEXP Rf_append(SEXP, SEXP); /* apparently unused now */
+SEXP bcEval(SEXP, SEXP, Rboolean);
+SEXP bytecodeExpr(SEXP);
 void check1arg(SEXP, SEXP, const char *);
 R_NORETURN void check1arg_x_error(SEXP, SEXP);
 void Rf_checkArityCall(SEXP, SEXP, SEXP);
@@ -1641,11 +1643,9 @@ R_NORETURN void UNIMPLEMENTED_TYPEt(const char *s, SEXPTYPE t);
 R_NORETURN void dotdotdot_error(void);
 R_NORETURN void apply_non_function_error(void);
 R_NORETURN void arg_missing_error(SEXP sym);
-R_NORETURN void asLogicalNoNA_error(SEXP s, SEXP call);
 R_NORETURN void unbound_var_error(SEXP sym);
 R_NORETURN void out_of_bounds_error(SEXP call);
 R_NORETURN void nonsubsettable_error(SEXP call, SEXP x);
-void asLogicalNoNA_warning(SEXP s, SEXP call);
 void PRSEEN_error_or_warning(SEXP e);
 Rboolean Rf_strIsASCII(const char *str);
 int utf8clen(char c);

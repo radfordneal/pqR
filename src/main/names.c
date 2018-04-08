@@ -115,6 +115,7 @@ attribute_hidden FUNTAB R_FunTab[R_MAX_FUNTAB_ENTRIES+1];
 
 extern FUNTAB 
     R_FunTab_eval[], 
+    R_FunTab_bytecode[],
     R_FunTab_arithmetic[], 
     R_FunTab_complex[], 
     R_FunTab_relop[], 
@@ -192,6 +193,7 @@ extern FUNTAB
 
 static FUNTAB *FunTab_ptrs[] = { 
     R_FunTab_eval,
+    R_FunTab_bytecode,
     R_FunTab_arithmetic, 
     R_FunTab_complex, 
     R_FunTab_relop,
