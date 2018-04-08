@@ -1,0 +1,2 @@
+Get rid of the old defunct / disabled "applydefine" code in eval.c that is
+superceded by the new scheme for subsetted assignment.
