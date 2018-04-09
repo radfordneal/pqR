@@ -115,10 +115,6 @@ Functions \tab Output piped? \tab Input piped? \tab Remarks\cr
                    \tab No
                    \tab \cr 
 \tab\tab\tab\cr
-\%\%               \tab No
-                   \tab If real op
-                   \tab Done by master\cr
-\tab\tab\tab\cr
 abs, floor, ceil,  \tab Yes
                    \tab Yes
                    \tab \cr
