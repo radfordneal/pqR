@@ -113,8 +113,10 @@
  R_HTTPDCreate
  R_HTTPDStop
  R_HandlerStack
+ R_HashFrame
  R_HashRehash
  R_HashRehashOld
+ R_HashResize
  R_HiddenFile
  R_InitialData
  R_InsertRestartHandlers
@@ -131,6 +133,7 @@
  R_LoadFromFile
  R_LoadRconsole
  R_Log10
+ R_NewHashTable
  R_NHeap
  R_NShowCalls
  R_NSize
@@ -357,6 +360,7 @@
  Rf_eval_unshared
  Rf_findFun_nospecsym
  Rf_findVar1
+ Rf_findVar1mode
  Rf_findcontext
  Rf_find_binding_in_frame
  Rf_forcePromiseUnbound

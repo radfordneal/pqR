@@ -181,11 +181,6 @@ extern0 SEXP	R_UnderscoreString;   /* "_", as a CHARSXP */
 /* Symbol and string hash table declarations. */
 #define HASHMINSIZE	     (32 - SGGC_ENV_HASH_HEAD)
 #define HASHMAXSIZE          ((1 << 20) - SGGC_ENV_HASH_HEAD)
-#define HASHLEN(x)           (((ENV_SEXPREC*)UPTR_FROM_SEXP(x))->hashlen)
-#define SET_HASHLEN(x,v)     (((ENV_SEXPREC*)UPTR_FROM_SEXP(x))->hashlen = (v))
-#define HASHSLOTSUSED(x)     TRUELENGTH(x)
-#define SET_HASHSLOTSUSED(x,v) SET_TRUELENGTH(x,v)
-#define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
 #if SYM_HASH_IN_SYM
 #define SYM_HASH(x)     (((SYM_SEXPREC*)UPTR_FROM_SEXP(x))->sym_hash)
@@ -759,6 +754,10 @@ typedef struct {
   (UPTR_FROM_SEXP(b)->sxpinfo.gp |= BINDING_LOCK_MASK)
 #define UNLOCK_BINDING(b) \
   (UPTR_FROM_SEXP(b)->sxpinfo.gp &= (~BINDING_LOCK_MASK))
+#define FRAME_LOCK_MASK (1<<14)
+#define FRAME_IS_LOCKED(e) (ENVFLAGS(e) & FRAME_LOCK_MASK)
+#define LOCK_FRAME(e) SET_ENVFLAGS(e, ENVFLAGS(e) | FRAME_LOCK_MASK)
+/*#define UNLOCK_FRAME(e) SET_ENVFLAGS(e, ENVFLAGS(e) & (~ FRAME_LOCK_MASK))*/
 
 #define check1arg_x(args,call) \
     do { \
@@ -779,7 +778,6 @@ void (SET_PRIMOFFSET)(SEXP x, int v);
 #define PPINFO(x)	(R_FunTab[PRIMOFFSET(x)].gram)
 #define PRIMPRINT(x)	(((R_FunTab[PRIMOFFSET(x)].eval)/100)%10)
 #define PRIMINTERNAL(x) (((R_FunTab[PRIMOFFSET(x)].eval)%100)/10)
-
 
 Rboolean (IS_ACTIVE_BINDING)(SEXP b);
 Rboolean (BINDING_IS_LOCKED)(SEXP b);
@@ -1241,6 +1239,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define findcontext		Rf_findcontext
 # define findFun_nospecsym	Rf_findFun_nospecsym
 # define findVar1		Rf_findVar1
+# define findVar1mode		Rf_findVar1mode
 # define forcePromise		Rf_forcePromise
 # define forcePromiseUnbound	Rf_forcePromiseUnbound
 # define FrameClassFix		Rf_FrameClassFix
@@ -1458,6 +1457,7 @@ int factorsConform(SEXP, SEXP);
 void R_NORETURN findcontext(int, SEXP, SEXP);
 SEXP findFun_nospecsym(SEXP, SEXP);
 SEXP findVar1(SEXP, SEXP, SEXPTYPE, int);
+SEXP findVar1mode(SEXP, SEXP, SEXPTYPE, int, Rboolean);
 SEXP forcePromise(SEXP);
 SEXP forcePromiseUnbound(SEXP,int);
 void FrameClassFix(SEXP);
@@ -1533,11 +1533,14 @@ void Rcons_vprintf(const char *, va_list);
 SEXP RemoveVariable(SEXP, SEXP);
 SEXP R_data_class(SEXP , Rboolean);
 SEXP R_data_class2(SEXP);
+void R_HashFrame(SEXP);
 void R_HashRehash(SEXP);
 SEXP R_HashRehashOld(SEXP);
+SEXP R_HashResize(SEXP);
 char *R_LibraryFileName(const char *, char *, size_t);
 SEXP R_LoadFromFile(FILE*, int);
 SEXP R_NewHashedEnv(SEXP, SEXP);
+SEXP R_NewHashTable(int);
 int Rf_char_hash(const char *);
 int Rf_char_hash_len(const char *, int len);
 int Rf_char_hash_more(unsigned, const char *);

@@ -44,7 +44,7 @@
 #include <complex.h>
 
 
-/* Used in eval.c and bytecode.c */
+/* USED IN EVAL.C, BYTECODE.C, ENVIR.C, ETC. */
 
 extern void Rf_asLogicalNoNA_warning(SEXP s, SEXP call);
 extern R_NORETURN void Rf_asLogicalNoNA_error(SEXP s, SEXP call);
@@ -113,6 +113,59 @@ static inline double myfloor(double x1, double x2)
     double f = floor(q);
     double tmp = x1 - f * x2;
     return f + floor(tmp/x2);
+}
+
+/* ddVal:  a function to take a name and determine if it is of the form
+   ..x where x is an integer; if so x is returned otherwise 0 is returned. */
+
+static inline int ddVal(SEXP symbol)
+{
+    const char *buf;
+    char *endp;
+    int rval;
+
+    buf = CHAR(PRINTNAME(symbol));
+    if( !strncmp(buf,"..",2) && strlen(buf) > 2 ) {
+	buf += 2;
+	rval = strtol(buf, &endp, 10);
+	if( *endp != '\0')
+	    return 0;
+	else
+	    return rval;
+    }
+    return 0;
+}
+
+/* Hash table size rechecking function. Looks at the fraction of table
+   entries that have one or more symbols, comparing to a threshold value.
+   Returns true if the table needs to be resized.  Does NOT check whether 
+   resizing shouldn't be done because HASHMAXSIZE would then be exceeded. */
+
+static inline int R_HashSizeCheck(SEXP table)
+{
+
+#if DEBUG_CHECK
+
+    if (TYPEOF(table) != VECSXP)
+	error("argument not of type VECSXP, R_HashSizeCheck");
+
+    int slotsused = 0;
+    int i;
+    for (i = 0; i<LENGTH(table); i++) {
+        if (VECTOR_ELT(table,i) != R_NilValue) {
+            if (TYPEOF(VECTOR_ELT(table,i)) != LISTSXP) abort();
+            slotsused += 1;
+        }
+    }
+    if (HASHSLOTSUSED(table) != slotsused) {
+        REprintf("WRONG SLOTSUSED IN HASH TABLE! %d %d\n",
+                HASHSLOTSUSED(table), slotsused);
+        abort();
+    }
+
+#endif
+
+    return HASHSLOTSUSED(table) > 0.5 * LENGTH(table);
 }
 
 
