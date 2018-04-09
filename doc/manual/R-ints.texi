@@ -679,10 +679,15 @@ in @R{} to mean @emph{either} the frame of an @code{ENVSXP} (a pairlist
 of symbol-value pairs) @emph{or} an @code{ENVSXP}, a frame plus an
 enclosure.
 
-Some bindings of variables are `active bindings', for
-which fetching and storing activate user-supplied functions.  They
-are created by @code{makeActiveBinding}.  See the help on that function
-and comments in file @file{src/main/envir.c} for details.
+Some bindings of variables are `active bindings', for which fetching
+and storing activate user-supplied functions.  They are created by
+@code{makeActiveBinding}.  Active bindings contain a function in their
+value cell.  Getting the value of an active binding calls this
+function with no arguments and returns the result.  Assigning to an
+active binding calls this function with one argument, the new value.
+Active bindings may be useful for mapping external variables, such as
+C variables or data base entries, to R variables.  They may also be
+useful for making some globals thread-safe.
 
 Bindings and environments can be locked against change.  See the
 help for @code{lockBinding} and @code{lockEnvironment}.
@@ -1588,14 +1593,17 @@ using function @code{WriteItem} in file @file{src/main/serialize.c}.
 Some objects are written as if they were @code{SEXPTYPE}s: such
 pseudo-@code{SEXPTYPE}s cover @code{R_NilValue}, @code{R_EmptyEnv},
 @code{R_BaseEnv}, @code{R_GlobalEnv}, @code{R_UnboundValue},
-@code{R_MissingArg} and @code{R_BaseNamespace}.  In the current version
-of pqR, objects stored as shared constants (probably in read-only memory) 
-are written with a flag bit saying they are constants.  This flag will be 
-ignored by earlier versions of pqR or R that didn't have such constants,
-but will cause the current version of pqR to unserialize them as the
-same constants.  (A check is done that other aspects of the object 
-match the constant, for compatibility with future versions that might
-have a wider variety of such constants.)
+@code{R_MissingArg} and @code{R_BaseNamespace}.  
+
+In the current version of pqR, objects stored as shared constants
+(probably in read-only memory) are written with a flag bit saying they
+are constants (unless this is disabled with the @code{nosharing} argument
+of @code{serialize}).  This flag will be ignored by earlier versions of pqR
+or R that didn't have such constants, but will cause the current
+version of pqR to unserialize them as the same constants.  (A check is
+done that other aspects of the object match the constant, for
+compatibility with future versions that might have a wider variety of
+such constants.)
 
 For all @code{SEXPTYPE}s except @code{NILSXP}, @code{SYMSXP} and
 @code{ENVSXP} serialization starts with an integer with the
