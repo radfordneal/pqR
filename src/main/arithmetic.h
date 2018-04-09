@@ -20,6 +20,9 @@
  *  http://www.r-project.org/Licenses/
  */
 
+#define R_INT_MAX INT_MAX
+#define R_INT_MIN (-INT_MAX)  /* Excludes INT_MIN, which is NA_INTEGER */
+
 SEXP do_fast_cmathfuns(SEXP, SEXP, SEXP, SEXP, int);
 
 SEXP complex_math1(SEXP, SEXP, SEXP, SEXP);

@@ -97,7 +97,7 @@
 \tabular{lllll}{
 Functions \tab Output piped? \tab Input piped? \tab Remarks\cr
 \tab\tab\tab\cr
-+, -, *, /, ^, \%/\% \tab If real op
++, -, *, /, ^, \%/\%, \%\% \tab If real op
                    \tab If real op
                    \tab Integer +,-,*\cr
                    \tab
@@ -191,7 +191,7 @@ write.table        \tab N/A (NULL)
 \tab\tab           \tab help(.Fortran)
 }
 
-For +, -, *, /, ^, and \%\/\%, pipelining is done only for real
+For +, -, *, /, ^, \%\/\%, and \%\% pipelining is done only for real
 operations, in which at least one operand is real, and neither
 operand is complex (but one may be integer or logical), and only
 for operands whose length is equal to the length of the result.

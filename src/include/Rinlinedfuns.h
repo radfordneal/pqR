@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -44,12 +44,12 @@
 #include <complex.h>
 
 
-/* USED IN EVAL AND BYTECODE. */
-
-/* Caller needn't protect the s arg below */
+/* Used in eval.c and bytecode.c */
 
 extern void Rf_asLogicalNoNA_warning(SEXP s, SEXP call);
 extern R_NORETURN void Rf_asLogicalNoNA_error(SEXP s, SEXP call);
+
+/* Caller needn't protect the s arg below */
 
 static inline Rboolean asLogicalNoNA(SEXP s, SEXP call)
 {
@@ -77,6 +77,42 @@ static inline Rboolean asLogicalNoNA(SEXP s, SEXP call)
 
   error:
     Rf_asLogicalNoNA_error (s, call);
+}
+
+/* Keep myfmod and myfloor in step. */
+
+static inline double myfmod(double x1, double x2)
+{
+    int i1 = (int) x1;
+    if ((double)i1 == x1 && i1 >= 0) {
+        int i2 = (int) x2;
+        if ((double)i2 == x2 && i2 > 0)
+            return (double) (i1 % i2);
+    }
+
+    if (x2 == 0.0) return R_NaN;
+
+    double q = x1 / x2;
+    double f = floor(q);
+    double tmp = x1 - f * x2;
+    return tmp - floor(tmp/x2) * x2;
+}
+
+static inline double myfloor(double x1, double x2)
+{
+    int i1 = (int) x1;
+    if ((double)i1 == x1 && i1 >= 0) {
+        int i2 = (int) x2;
+        if ((double)i2 == x2 && i2 > 0)
+            return (double) (i1 / i2);
+    }
+
+    if (x2 == 0.0) return R_NaN;
+
+    double q = x1 / x2;
+    double f = floor(q);
+    double tmp = x1 - f * x2;
+    return f + floor(tmp/x2);
 }
 
 
