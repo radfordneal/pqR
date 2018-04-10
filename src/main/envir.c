@@ -24,7 +24,6 @@
  *  http://www.r-project.org/Licenses/
  */
 
-
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -36,6 +35,9 @@
 #include <R_ext/Callbacks.h>
 
 #include <helpers/helpers-app.h>
+
+static SEXP NAMESPACE_name = R_NoObject;  /* Initialized when first needed */
+static SEXP spec_name = R_NoObject;
 
 #define DEBUG_OUTPUT 0          /* 0 to 2 for increasing debug output */
 #define DEBUG_CHECK 0           /* 1 to enable debug check of HASHSLOTSUSED */
@@ -184,6 +186,7 @@ void attribute_hidden set_symbits_in_env (SEXP env)
     SET_ENVSYMBITS (env, bits);
 }
 
+
 /*----------------------------------------------------------------------
 
   Hash Tables
@@ -198,7 +201,6 @@ void attribute_hidden set_symbits_in_env (SEXP env)
 
 
 /*----------------------------------------------------------------------
-
   R_HashAddEntry 
 
   Adds an entry to the chain at index i in a hash table, keeping the
@@ -241,14 +243,11 @@ static void R_HashAddEntry (SEXP table, int i, SEXP entry)
 
 
 /*----------------------------------------------------------------------
-
   R_HashGet
 
   Hashtable get function.  Returns 'value' from 'table' indexed by
   'symbol'.  'hashcode' must be provided by user.  Returns
-  'R_UnboundValue' if value is not present.
-
-*/
+  'R_UnboundValue' if value is not present. */
 
 static SEXP R_HashGet(SEXP env, int hashcode, SEXP symbol, SEXP table)
 {
@@ -275,16 +274,12 @@ found:
 }
 
 
-
 /*----------------------------------------------------------------------
-
   R_HashGetLoc
 
   Hashtable get location function. Just like R_HashGet, but returns
   location of variable, rather than its value. Returns R_NilValue
-  if not found.
-
-*/
+  if not found. */
 
 static inline SEXP R_HashGetLoc(SEXP env, int hashcode, SEXP symbol, SEXP table)
 {
@@ -296,13 +291,10 @@ static inline SEXP R_HashGetLoc(SEXP env, int hashcode, SEXP symbol, SEXP table)
 }
 
 
-
 /*----------------------------------------------------------------------
-
   R_NewHashTable
 
-  Hash table initialisation function.  Creates a table of size 'size'. 
-*/
+  Hash table initialisation function.  Creates a table of size 'size'. */
 
 static inline SEXP R_NewHashTable(int size)
 {
@@ -316,13 +308,12 @@ static inline SEXP R_NewHashTable(int size)
     return table;
 }
 
-/*----------------------------------------------------------------------
 
+/*----------------------------------------------------------------------
   R_NewHashedEnv
 
   Returns a new environment with a hash table initialized with specified
-  size.  The only non-static hash table function.
-*/
+  size.  The only non-static hash table function. */
 
 SEXP R_NewHashedEnv(SEXP enclos, SEXP size)
 {
@@ -338,7 +329,6 @@ SEXP R_NewHashedEnv(SEXP enclos, SEXP size)
 
 
 /*----------------------------------------------------------------------
-
   R_HashRehash
 
   Redo the hashing in the table, since it may have been done with a
@@ -397,8 +387,8 @@ static int R_Newhashpjw(const char *s)
     return h;
 }
 
-/*----------------------------------------------------------------------
 
+/*----------------------------------------------------------------------
   R_HashRehashOld
 
   Return a new version of the table, rehashed with the old hash function.
@@ -441,16 +431,13 @@ SEXP attribute_hidden R_HashRehashOld (SEXP table)
 }
 
 
-
-
 /*----------------------------------------------------------------------
-
   R_HashResize
 
   Hash table resizing function. Increases the size of the hash table
   by a factor of two (accounting for header). The vector is
   reallocated, but the lists within the hash table have their pointers
-  shuffled around so that they are not reallocated.  */
+  shuffled around so that they are not reallocated. */
 
 static SEXP R_HashResize(SEXP table)
 {
@@ -507,19 +494,16 @@ static SEXP R_HashResize(SEXP table)
 #endif
 
     return new_table;
-} /* end R_HashResize */
-
+}
 
 
 /*----------------------------------------------------------------------
-
   R_HashSizeCheck
 
   Hash table size rechecking function.	Looks at the fraction of table
   entries that have one or more symbols, comparing to a threshold value.
   Returns true if the table needs to be resized.  Does NOT check whether 
-  resizing shouldn't be done because HASHMAXSIZE would then be exceeded.
-*/
+  resizing shouldn't be done because HASHMAXSIZE would then be exceeded. */
 
 static R_INLINE int R_HashSizeCheck(SEXP table)
 {
@@ -549,14 +533,11 @@ static R_INLINE int R_HashSizeCheck(SEXP table)
 }
 
 
-
 /*----------------------------------------------------------------------
-
   R_HashFrame
 
   Hashing for environment frames.  This function ensures that the
-  frame in the given environment has been hashed.	 
-*/
+  frame in the given environment has been hashed. */
 
 static void R_HashFrame(SEXP rho)
 {
@@ -642,7 +623,6 @@ static SEXP R_HashProfile(SEXP table)
 }
 
 
-
 /*----------------------------------------------------------------------
 
   Environments
@@ -719,11 +699,10 @@ static void R_FlushGlobalCacheFromTable(SEXP table)
     }
 }
 
-/**
- Flush the cache based on the names provided by the user defined
- table, specifically returned from calling objects() for that
- table.
- */
+
+/* Flush the cache based on the names provided by the user defined
+   table, specifically returned from calling objects() for that table. */
+
 static void R_FlushGlobalCacheFromUserTable(SEXP udb)
 {
     int n, i;
@@ -1174,8 +1153,7 @@ static inline SEXP findGlobalVar(SEXP symbol)
 
      Like findVar, but doesn't wait for the value to be computed.
 
-  These set R_binding_cell as for findVarInFrame3.
-*/
+  These set R_binding_cell as for findVarInFrame3. */
 
 SEXP findVar(SEXP symbol, SEXP rho)
 {
@@ -1234,13 +1212,10 @@ SEXP findVarPendingOK(SEXP symbol, SEXP rho)
 
 
 /*----------------------------------------------------------------------
-
   findVar1
 
   Look up a symbol in an environment.  Ignore any values which are
-  not of the specified type.
-
-*/
+  not of the specified type. */
 
 SEXP attribute_hidden
 findVar1(SEXP symbol, SEXP rho, SEXPTYPE mode, int inherits)
@@ -1264,9 +1239,7 @@ findVar1(SEXP symbol, SEXP rho, SEXPTYPE mode, int inherits)
     return (R_UnboundValue);
 }
 
-/*
- *  ditto, but check *mode* not *type*
- */
+/* ditto, but check *mode* not *type* */
 
 static SEXP
 findVar1mode(SEXP symbol, SEXP rho, SEXPTYPE mode, int inherits,
@@ -1302,11 +1275,9 @@ findVar1mode(SEXP symbol, SEXP rho, SEXPTYPE mode, int inherits,
 }
 
 
-/*
-   ddVal:
-   a function to take a name and determine if it is of the form
-   ..x where x is an integer; if so x is returned otherwise 0 is returned
-*/
+/* ddVal:  a function to take a name and determine if it is of the form
+   ..x where x is an integer; if so x is returned otherwise 0 is returned. */
+
 static int ddVal(SEXP symbol)
 {
     const char *buf;
@@ -1325,6 +1296,7 @@ static int ddVal(SEXP symbol)
     return 0;
 }
 
+
 /*----------------------------------------------------------------------
   ddfindVar
 
@@ -1340,9 +1312,7 @@ static int ddVal(SEXP symbol)
   If no value is obtained we return R_UnboundValue.
 
   It is an error to specify a .. index longer than the length of the
-  ... object the value is sought in.
-
-*/
+  ... object the value is sought in. */
 
 SEXP ddfindVar(SEXP symbol, SEXP rho)
 {
@@ -1366,18 +1336,14 @@ SEXP ddfindVar(SEXP symbol, SEXP rho)
 }
 
 
-
 /*----------------------------------------------------------------------
-
   dynamicFindVar
 
   This function does a variable lookup, but uses dynamic scoping rules
   rather than the lexical scoping rules used in findVar.
 
   Return R_UnboundValue if the symbol isn't located and the calling
-  function needs to handle the errors.
-
-*/
+  function needs to handle the errors. */
 
 SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
 {
@@ -1392,7 +1358,6 @@ SEXP dynamicfindVar(SEXP symbol, RCNTXT *cptr)
 
     return R_UnboundValue;
 }
-
 
 
 /*----------------------------------------------------------------------
@@ -1529,6 +1494,7 @@ SEXP findFunMethod(SEXP symbol, SEXP rho)
         LASTENVNOTFOUND(symbol) = SEXP32_FROM_SEXP(last_unhashed_env_nf);
     return R_UnboundValue;
 }
+
 
 /*----------------------------------------------------------------------
 
@@ -1738,7 +1704,6 @@ void setVar(SEXP symbol, SEXP value, SEXP rho)
 
 
 /*----------------------------------------------------------------------
-
   gsetVar
 
   Assignment directly into the base environment.  
@@ -1764,9 +1729,9 @@ void gsetVar(SEXP symbol, SEXP value, SEXP rho)
 
 /*----------------------------------------------------------------------
 
-/* Remove variable and return its previous value, or R_NoObject if it
-   didn't exist.  For a user database, R_NilValue is returned when the
-   variable exists, rather than the value. */
+  Remove variable and return its previous value, or R_NoObject if it
+  didn't exist.  For a user database, R_NilValue is returned when the
+  variable exists, rather than the value. */
 
 SEXP attribute_hidden RemoveVariable(SEXP name, SEXP env)
 {
@@ -1824,15 +1789,16 @@ SEXP attribute_hidden RemoveVariable(SEXP name, SEXP env)
 
 /*----------------------------------------------------------------------
 
-  get environment from a subclass if possible; else return NULL. */
+  get environment from a subclass if possible; else return NULL.        */
 
 #define simple_as_environment(arg) \
   (IS_S4_OBJECT(arg) && (TYPEOF(arg) == S4SXP) ? R_getS4DataSlot(arg, ENVSXP) \
                                                : R_NilValue)
 	    
-
 /*----------------------------------------------------------------------
-  do_assign : .Internal(assign(x, value, envir, inherits)) */
+  do_assign 
+
+  .Internal(assign(x, value, envir, inherits)) */
 
 static SEXP do_assign(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -1866,7 +1832,7 @@ static SEXP do_assign(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-/* do_list2env : .Internal(list2env(x, envir)) */
+/*  do_list2env : .Internal(list2env(x, envir)) */
 
 static SEXP do_list2env(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -1892,6 +1858,7 @@ static SEXP do_list2env(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     return envir;
 }
+
 
 /*----------------------------------------------------------------------
   do_remove
@@ -1947,6 +1914,7 @@ static SEXP do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
+
 /*----------------------------------------------------------------------
  do_get_rm - get value of variable and then remove the variable, decrementing
              NAMEDCNT when possible. If return of pending value is allowed, will
@@ -1984,6 +1952,7 @@ static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     return value;
 }
+
 
 /*----------------------------------------------------------------------
   do_get
@@ -2095,11 +2064,12 @@ static SEXP gfind(const char *name, SEXP env, SEXPTYPE mode,
     return rval;
 }
 
-/** mget(): get multiple values from an environment
- *
- * .Internal(mget(x, envir, mode, ifnotfound, inherits))
- *
- * returns a list of the same length as x, a character vector (of names). */
+
+/* mget(): get multiple values from an environment
+
+  .Internal(mget(x, envir, mode, ifnotfound, inherits))
+ 
+  Returns  a list of the same length as x, a character vector (of names). */
 
 static SEXP do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -2186,6 +2156,7 @@ static SEXP do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
     return(ans);
 }
 
+
 /* R_isMissing is called on the not-yet-evaluated (or sometimes evaluated)
    value of an argument, if this is a symbol, as it could be a missing 
    argument that has been passed down.  So 'symbol' is the promise value, 
@@ -2199,8 +2170,7 @@ static SEXP do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
 
    Cycles in promises checked are detected by looking at each previous one.
    This takes quadratic time, but the number of promises looked at should
-   normally be very small.
-*/
+   normally be very small. */
 
 struct detectcycle { struct detectcycle *next; SEXP prom; };
 
@@ -2273,7 +2243,6 @@ static int isMissing_recursive(SEXP symbol, SEXP rho, struct detectcycle *dc)
 
 
 /*----------------------------------------------------------------------
-
   do_missing and do_missing_from_underline
 
   This function tests whether the symbol passed as its first argument
@@ -2341,6 +2310,7 @@ static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ScalarLogicalMaybeConst(TRUE);
 }
 
+
 /*----------------------------------------------------------------------
   do_globalenv
 
@@ -2352,6 +2322,7 @@ static SEXP do_globalenv(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_GlobalEnv;
 }
 
+
 /*----------------------------------------------------------------------
   do_baseenv
 
@@ -2362,6 +2333,7 @@ static SEXP do_baseenv(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     return R_BaseEnv;
 }
+
 
 /*----------------------------------------------------------------------
   do_emptyenv
@@ -2482,6 +2454,7 @@ static SEXP do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
     return s;
 }
 
+
 /*----------------------------------------------------------------------
   do_detach
 
@@ -2531,6 +2504,7 @@ static SEXP do_detach(SEXP call, SEXP op, SEXP args, SEXP env)
     UNPROTECT(1);
     return s;
 }
+
 
 /*----------------------------------------------------------------------
   do_search
@@ -2827,9 +2801,10 @@ static SEXP do_env2list(SEXP call, SEXP op, SEXP args, SEXP rho)
     return(ans);
 }
 
-/* apply a function to all objects in an environment and return the
+/* Apply a function to all objects in an environment and return the
    results in a list.
-   Equivalent to lapply(as.list(env, all.names=all.names), FUN, ...)
+
+   Equivalent to lapply(as.list(env, all.names=all.names), FUN, ...) 
 
    This is a special .Internal */
 
@@ -2921,6 +2896,7 @@ int envlength(SEXP rho)
     else
 	return FrameSize(FRAME(rho), 1);
 }
+
 
 /*----------------------------------------------------------------------
   do_builtins
@@ -3373,36 +3349,21 @@ void R_RestoreHashCount(SEXP rho)
     }
 }
 
-Rboolean R_IsPackageEnv(SEXP rho)
-{
-    if (TYPEOF(rho) == ENVSXP) {
-	SEXP name = getAttrib(rho, R_NameSymbol);
-	char *packprefix = "package:";
-	int pplen = strlen(packprefix);
-	if(isString(name) && length(name) > 0 &&
-	   ! strncmp(packprefix, CHAR(STRING_ELT(name, 0)), pplen)) /* ASCII */
-	    return TRUE;
-	else
-	    return FALSE;
-    }
-    else
-	return FALSE;
-}
-
 SEXP R_PackageEnvName(SEXP rho)
 {
     if (TYPEOF(rho) == ENVSXP) {
 	SEXP name = getAttrib(rho, R_NameSymbol);
-	char *packprefix = "package:";
-	int pplen = strlen(packprefix);
-	if(isString(name) && length(name) > 0 &&
-	   ! strncmp(packprefix, CHAR(STRING_ELT(name, 0)), pplen)) /* ASCII */
+	if (isString(name) && LENGTH(name) > 0 &&
+	      strncmp (CHAR(STRING_ELT(name, 0)), "package:", 8) == 0)
 	    return name;
-	else
-	    return R_NilValue;
     }
-    else
-	return R_NilValue;
+
+    return R_NilValue;
+}
+
+Rboolean R_IsPackageEnv(SEXP rho)
+{
+    return R_PackageEnvName(rho) != R_NilValue;
 }
 
 SEXP R_FindPackageEnv(SEXP info)
@@ -3420,21 +3381,23 @@ Rboolean R_IsNamespaceEnv(SEXP rho)
 {
     if (rho == R_BaseNamespace)
 	return TRUE;
-    else if (TYPEOF(rho) == ENVSXP) {
-	SEXP info = findVarInFrame3(rho, install(".__NAMESPACE__."), TRUE);
+
+    if (TYPEOF(rho) == ENVSXP) {
+        if (NAMESPACE_name == R_NoObject)
+            NAMESPACE_name = install(".__NAMESPACE__.");
+        if (spec_name == R_NoObject)
+            spec_name = install("spec");
+	SEXP info = findVarInFrame3 (rho, NAMESPACE_name, TRUE);
 	if (info != R_UnboundValue && TYPEOF(info) == ENVSXP) {
             PROTECT(info);
-	    SEXP spec = findVarInFrame3(info, install("spec"), TRUE);
+	    SEXP spec = findVarInFrame3 (info, spec_name, TRUE);
             UNPROTECT(1);
-	    if (spec != R_UnboundValue &&
-		TYPEOF(spec) == STRSXP && LENGTH(spec) > 0)
+	    if (spec!=R_UnboundValue && TYPEOF(spec)==STRSXP && LENGTH(spec)>0)
 		return TRUE;
-	    else
-		return FALSE;
 	}
-	else return FALSE;
     }
-    else return FALSE;
+
+    return FALSE;
 }
 
 static SEXP do_isNSEnv(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -3449,23 +3412,32 @@ SEXP R_NamespaceEnvSpec(SEXP rho)
        namespace.  The first element is the namespace name.  The
        second element, if present, is the namespace version.  Further
        elements may be added later. */
-    if (rho == R_BaseNamespace)
+
+    if (rho == R_BaseNamespace) {
+        static SEXP R_BaseNamespaceName = R_NoObject;
+        if (R_BaseNamespaceName == R_NoObject) {
+            R_BaseNamespaceName = ScalarString(mkChar("base"));
+            R_PreserveObject(R_BaseNamespaceName);
+        }
 	return R_BaseNamespaceName;
-    else if (TYPEOF(rho) == ENVSXP) {
-	SEXP info = findVarInFrame3(rho, install(".__NAMESPACE__."), TRUE);
+    }
+
+    if (TYPEOF(rho) == ENVSXP) {
+        if (NAMESPACE_name == R_NoObject)
+            NAMESPACE_name = install(".__NAMESPACE__.");
+        if (spec_name == R_NoObject)
+            spec_name = install("spec");
+	SEXP info = findVarInFrame3 (rho, NAMESPACE_name, TRUE);
 	if (info != R_UnboundValue && TYPEOF(info) == ENVSXP) {
             PROTECT(info);
-	    SEXP spec = findVarInFrame3(info, install("spec"), TRUE);
+	    SEXP spec = findVarInFrame3 (info, spec_name, TRUE);
             UNPROTECT(1);
-	    if (spec != R_UnboundValue &&
-		TYPEOF(spec) == STRSXP && LENGTH(spec) > 0)
+	    if (spec!=R_UnboundValue && TYPEOF(spec)==STRSXP && LENGTH(spec)>0)
 		return spec;
-	    else
-		return R_NilValue;
 	}
-	else return R_NilValue;
     }
-    else return R_NilValue;
+
+    return R_NilValue;
 }
 
 SEXP R_FindNamespace(SEXP info)
