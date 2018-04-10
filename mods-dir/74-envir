@@ -1,0 +1,3 @@
+Some cleanup and performance tweaks in envir.c.  Moves some info in comments
+in envir.c to R-ints.texi.
+
