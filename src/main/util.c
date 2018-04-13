@@ -727,6 +727,7 @@ void attribute_hidden PRSEEN_error_or_warning(SEXP e)
 
 R_NORETURN void attribute_hidden Rf_asLogicalNoNA_error (SEXP s, SEXP call)
 {
+    PROTECT(s);
     errorcall (call, 
       length(s) == 0 ? _("argument is of length zero") :
       isLogical(s) ?   _("missing value where TRUE/FALSE needed") :

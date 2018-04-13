@@ -1,0 +1,3 @@
+Revise how the "evalv" function is written, along with the "EVALV"
+macro, to reduce overheads and maybe make branch prediction work
+better.

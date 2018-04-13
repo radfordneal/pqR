@@ -59,14 +59,19 @@ static inline Rboolean asLogicalNoNA(SEXP s, SEXP call)
     case INTSXP:  /* assume logical and integer are the same */
     case LGLSXP:
         len = LENGTH(s);
-        if (len == 0 || LOGICAL(s)[0] == NA_LOGICAL) goto error;
+        if (len == 0) goto error;
         cond = LOGICAL(s)[0];
         break;
-    default:
-        len = length(s);
+    case REALSXP:
+    case CPLXSXP:
+    case STRSXP:
+    case RAWSXP:
+        len = LENGTH(s);
         if (len == 0) goto error;
         cond = asLogical(s);
         break;
+    default:
+        goto error;
     }
 
     if (cond == NA_LOGICAL) goto error;

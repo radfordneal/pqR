@@ -431,98 +431,34 @@ SEXP forcePromise (SEXP e) /* e protected here if necessary */
 /* The "evalv" function returns the value of "e" evaluated in "rho",
    with given variant.  The caller must ensure that both SEXP
    arguments are protected.  The "eval" function is just like "evalv"
-   with 0 for the variant return argument.
+   with 0 for the variant return argument. */
 
-   The "Rf_evalv2" function, if it exists, is the main part of
-   "evalv", split off so that constants may be evaluated with less
-   overhead within "eval" or "evalv".  It may also be used in the
-   EVALV macro in Defn.h. 
-
-   Some optional tweaks can be done here, controlled by R_EVAL_TWEAKS,
-   set to decimal integer XYZ.  If XYZ is zero, no tweaks are done.
-   Otherwise, the meanings are
-
-       Z = 1      Enable and use Rf_evalv2 (also done if X or Y is non-zero)
-       Y = 1      Have eval do its own prelude, rather than just calling evalv
-       X = 0      Have EVALV in Defn.h just call evalv here
-           1      Have EVALV do its own prelude, then call evalv2
-           2      Have EVALV do its own prelude and easy symbol stuff, then
-                  call evalv2
- */
-
-SEXP Rf_evalv2(SEXP,SEXP,int);
 SEXP Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant);
 
 #define evalcount R_high_frequency_globals.evalcount
 
-#define EVAL_PRELUDE do { \
-\
-    R_variant_result = 0; \
-\
-    /* Evaluate constants quickly, without the overhead that's necessary when \
-       the computation might be complex.  This code is repeated in evalv2 \
-       for when evalcount < 0.  That way we avoid calling any procedure \
-       other than evalv2 in this procedure, possibly reducing overhead \
-       for constant evaluation. */ \
-\
-    if (SELF_EVAL(TYPEOF(e)) && --evalcount >= 0) { \
-	/* Make sure constants in expressions have maximum NAMEDCNT when \
-	   used as values, so they won't be modified. */ \
-        SET_NAMEDCNT_MAX(e); \
-        R_Visible = TRUE; \
-        return e; \
-    } \
-} while (0)
 
-SEXP eval(SEXP e, SEXP rho)
+SEXP eval (SEXP e, SEXP rho)
 {
-#   if (R_EVAL_TWEAKS/10)%10 == 0
-        return Rf_evalv(e,rho,0);
-#   else
-        EVAL_PRELUDE;
-        return Rf_evalv2(e,rho,0);
-#   endif
+    return evalv (e, rho, 0);
 }
 
-SEXP evalv(SEXP e, SEXP rho, int variant)
+SEXP evalv (SEXP e, SEXP rho, int variant)
 {
-    if (0) {
-        /* THE "IF" CONDITION ABOVE IS NORMALLY 0; CAN SET TO 1 FOR DEBUGGING.
-           Enabling this zeroing of variant will test that callers who normally
-           get a variant result can actually handle an ordinary result. */
-        variant = 0;
-    }
-
-    EVAL_PRELUDE;
-
-#if R_EVAL_TWEAKS > 0
-
-    return Rf_evalv2(e,rho,variant);
-}
-
-SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
-{
-
-#endif
-
-    /* Handle check for user interrupt.  When negative, repeats check for 
-       SELF_EVAL which may have already been done, but not acted on since
-       evalcount went negative. */
+    R_Visible = TRUE;
+    
+    /* Handle check for user interrupt. */
 
     if (--evalcount < 0) {
         R_CheckUserInterrupt();
         evalcount = 1000;
-        /* Evaluate constants quickly. */
-        if (SELF_EVAL(TYPEOF(e))) {
-            /* Make sure constants in expressions have maximum NAMEDCNT when
-               used as values, so they won't be modified. */
-            SET_NAMEDCNT_MAX(e);
-            R_Visible = TRUE;
-            return e;
-        }
     }
 
-    SEXP op, res;
+    /* Check for stack overflow. */
+
+    R_CHECKSTACK();
+
+    /* Handle check for too deep expression nesting. */
 
     R_EvalDepth += 1;
 
@@ -532,137 +468,9 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
          _("evaluation nested too deeply: infinite recursion / options(expressions=)?"));
     }
 
-    R_CHECKSTACK();
+    /* Do evaluation as for fast eval macro. */
 
-#ifdef Win32
-    /* This resets the precision, rounding and exception modes of a ix86 fpu. */
-    __asm__ ( "fninit" );
-#endif
-
-    SEXPTYPE typeof_e;
-
-    if (SYM_NO_DOTS(e)) {
-
-        R_Visible = TRUE;  /* May be set FALSE by active binding / lazy eval */
-
-        res = FIND_VAR_PENDING_OK (e, rho);
-
-      symbol:  /* can also get here for ..1, ..2, etc., from below */
-
-        if (TYPEOF(res) == PROMSXP) {
-            if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
-                res = forcePromiseUnbound(res,variant);
-            else
-                res = PRVALUE_PENDING_OK(res);
-        }
-        else if (TYPEOF(res) == SYMSXP) {
-            if (res == R_MissingArg) {
-                if ( ! (variant & VARIANT_MISSING_OK))
-                    if (!DDVAL(e))  /* revert bug fix for the moment */
-                        arg_missing_error(e);
-            }
-            else if (res == R_UnboundValue)
-                unbound_var_error(e);
-        }
-
-        /* A NAMEDCNT of 0 might arise from an inadverently missing increment
-           somewhere, or from a save/load sequence (since loaded values in
-           promises have NAMEDCNT of 0), so fix up here... */
-
-        SET_NAMEDCNT_NOT_0(res);
-
-        if ( ! (variant & VARIANT_PENDING_OK))
-            WAIT_UNTIL_COMPUTED(res);
-    }
-
-    else if ((typeof_e = TYPEOF(e)) == LANGSXP) {
-
-#       if SCALAR_STACK_DEBUG
-            SEXP sv_stack = R_scalar_stack;
-#       endif
-
-        SEXP fn = CAR(e), args = CDR(e);
-
-        if (TYPEOF(fn) == SYMSXP)
-            op = FINDFUN(fn,rho);
-        else
-            op = eval(fn,rho);
-
-        if (RTRACE(op)) R_trace_call(e,op);
-
-        if (TYPEOF(op) == CLOSXP) {
-            PROTECT(op);
-            res = applyClosure_v (e, op, promiseArgs(args,rho), rho, 
-                                  NULL, variant);
-            UNPROTECT(1);
-        }
-        else {
-            int save = R_PPStackTop;
-            const void *vmax = VMAXGET();
-
-            R_Visible = TRUE;
-
-            if (TYPEOF(op) == SPECIALSXP)
-                res = CALL_PRIMFUN (e, op, args, rho, variant);
-            else if (TYPEOF(op) == BUILTINSXP)
-                res = R_Profiling ? Rf_builtin_op(op, e, rho, variant)
-                                  : Rf_builtin_op_no_cntxt(op, e, rho, variant);
-            else
-                apply_non_function_error();
-
-            if (!R_Visible && PRIMPRINT(op) == 0)
-                R_Visible = TRUE;
-
-            CHECK_STACK_BALANCE(op, save);
-            VMAXSET(vmax);
-        }
-
-#       if SCALAR_STACK_DEBUG
-            if (variant & VARIANT_SCALAR_STACK_OK) {
-                if (R_scalar_stack != sv_stack && (res != sv_stack 
-                      || SCALAR_STACK_OFFSET(1) != sv_stack)) abort();
-            }
-            else {
-                if (R_scalar_stack != sv_stack) abort();
-            }
-#       endif
-    }
-
-    else if (typeof_e == SYMSXP) {  /* Must be ... or ..1, ..2, etc. */
-
-        if (e == R_DotsSymbol)
-            dotdotdot_error();
-
-        R_Visible = TRUE;  /* May be set FALSE by active binding / lazy eval */
-
-        res = ddfindVar(e,rho);
-
-        goto symbol;
-    }
-
-    else if (typeof_e == PROMSXP) {
-
-        if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
-            res = forcePromiseUnbound(e,variant);
-        else
-            res = PRVALUE_PENDING_OK(e);
-
-        if ( ! (variant & VARIANT_PENDING_OK))
-            WAIT_UNTIL_COMPUTED(res);
-
-        R_Visible = TRUE;
-    }
-
-    else if (typeof_e == BCODESXP) {
-
-        res = bcEval(e, rho, TRUE);
-    }
-
-    else if (typeof_e == DOTSXP)
-        dotdotdot_error();
-
-    else
-        UNIMPLEMENTED_TYPE("eval", e);
+    SEXP res = EVALV (e, rho, variant);
 
     R_EvalDepth -= 1;
 
@@ -705,6 +513,168 @@ SEXP attribute_hidden Rf_evalv2(SEXP e, SEXP rho, int variant)
 #       endif
     }
 #   endif
+
+    return res;
+}
+
+SEXP Rf_evalv_lang (SEXP e, SEXP rho, int variant)
+{
+    SEXP op, res;
+
+#   ifdef Win32
+        /* Reset the precision, rounding and exception modes of an ix86 fpu. */
+        __asm__ ( "fninit" );
+#   endif
+
+#   if SCALAR_STACK_DEBUG
+        SEXP sv_stack = R_scalar_stack;
+#   endif
+
+    SEXP fn = CAR(e), args = CDR(e);
+
+    if (TYPEOF(fn) == SYMSXP)
+        op = FINDFUN(fn,rho);
+    else
+        op = eval(fn,rho);
+
+    if (RTRACE(op)) R_trace_call(e,op);
+
+    if (TYPEOF(op) == CLOSXP) {
+        PROTECT(op);
+        res = applyClosure_v (e, op, promiseArgs(args,rho), rho, 
+                              NULL, variant);
+        UNPROTECT(1);
+    }
+    else {
+        int save = R_PPStackTop;
+        const void *vmax = VMAXGET();
+
+        R_Visible = TRUE;
+
+        if (TYPEOF(op) == SPECIALSXP)
+            res = CALL_PRIMFUN (e, op, args, rho, variant);
+        else if (TYPEOF(op) == BUILTINSXP)
+            res = R_Profiling ? Rf_builtin_op(op, e, rho, variant)
+                              : Rf_builtin_op_no_cntxt(op, e, rho, variant);
+        else
+            apply_non_function_error();
+
+        if (!R_Visible && PRIMPRINT(op) == 0)
+            R_Visible = TRUE;
+
+        CHECK_STACK_BALANCE(op, save);
+        VMAXSET(vmax);
+    }
+
+#   if SCALAR_STACK_DEBUG
+        if (variant & VARIANT_SCALAR_STACK_OK) {
+            if (R_scalar_stack != sv_stack && (res != sv_stack 
+                  || SCALAR_STACK_OFFSET(1) != sv_stack)) abort();
+        }
+        else {
+            if (R_scalar_stack != sv_stack) abort();
+        }
+#   endif
+
+    return res;
+}
+
+SEXP Rf_evalv_sym (SEXP e, SEXP rho, int variant)
+{
+    SEXP res;
+
+    res = FIND_VAR_PENDING_OK (e, rho);
+
+    if (TYPEOF(res) == PROMSXP) {
+        if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
+            res = forcePromiseUnbound(res,variant);
+        else
+            res = PRVALUE_PENDING_OK(res);
+    }
+    else if (TYPEOF(res) == SYMSXP) {
+        if (res == R_MissingArg) {
+            if ( ! (variant & VARIANT_MISSING_OK))
+                if (!DDVAL(e))  /* revert bug fix for the moment */
+                    arg_missing_error(e);
+        }
+        else if (res == R_UnboundValue)
+            unbound_var_error(e);
+    }
+
+    /* A NAMEDCNT of 0 might arise from an inadverently missing increment
+       somewhere, or from a save/load sequence (since loaded values in
+       promises have NAMEDCNT of 0), so fix up here... */
+
+    SET_NAMEDCNT_NOT_0(res);
+
+    if ( ! (variant & VARIANT_PENDING_OK))
+        WAIT_UNTIL_COMPUTED(res);
+
+    return res;
+}
+
+SEXP Rf_evalv_other (SEXP e, SEXP rho, int variant)
+{
+    SEXP res;
+
+    if (TYPEOF(e) == SYMSXP) {  /* Must be ... or ..1, ..2, etc. */
+
+        if (e == R_DotsSymbol)
+            dotdotdot_error();
+
+        R_Visible = TRUE;  /* May be set FALSE by active binding / lazy eval */
+
+        res = ddfindVar(e,rho);
+
+        if (TYPEOF(res) == PROMSXP) {
+            if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
+                res = forcePromiseUnbound(res,variant);
+            else
+                res = PRVALUE_PENDING_OK(res);
+        }
+        else if (TYPEOF(res) == SYMSXP) {
+            if (res == R_MissingArg) {
+                if ( ! (variant & VARIANT_MISSING_OK))
+                    if (!DDVAL(e))  /* revert bug fix for the moment */
+                        arg_missing_error(e);
+            }
+            else if (res == R_UnboundValue)
+                unbound_var_error(e);
+        }
+
+        /* A NAMEDCNT of 0 might arise from an inadverently missing increment
+           somewhere, or from a save/load sequence (since loaded values in
+           promises have NAMEDCNT of 0), so fix up here... */
+
+        SET_NAMEDCNT_NOT_0(res);
+
+        if ( ! (variant & VARIANT_PENDING_OK))
+            WAIT_UNTIL_COMPUTED(res);
+    }
+
+    else if (TYPEOF(e) == PROMSXP) {
+
+        if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
+            res = forcePromiseUnbound(e,variant);
+        else
+            res = PRVALUE_PENDING_OK(e);
+
+        if ( ! (variant & VARIANT_PENDING_OK))
+            WAIT_UNTIL_COMPUTED(res);
+
+        R_Visible = TRUE;
+    }
+
+    else if (TYPEOF(e) == BCODESXP) {
+
+        res = bcEval(e, rho, TRUE);
+    }
+
+    else if (TYPEOF(e) == DOTSXP)
+        dotdotdot_error();
+
+    else
+        UNIMPLEMENTED_TYPE("eval", e);
 
     return res;
 }
@@ -1178,7 +1148,7 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     Cond = CAR(args); args = CDR(args);
     Stmt = CAR(args); args = CDR(args);
 
-    SEXP condval = evalv (Cond, rho, VARIANT_SCALAR_STACK_OK);
+    SEXP condval = EVALV (Cond, rho, VARIANT_SCALAR_STACK_OK);
     int condlogical = asLogicalNoNA (condval, call);
     POP_IF_TOP_OF_STACK(condval);
 
@@ -1276,7 +1246,7 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT2(args,rho);
 
-    PROTECT(val = evalv(val, rho, in    ? VARIANT_SEQ | VARIANT_ANY_ATTR :
+    PROTECT(val = EVALV(val, rho, in    ? VARIANT_SEQ | VARIANT_ANY_ATTR :
                                   along ? VARIANT_UNCLASS | VARIANT_ANY_ATTR :
                                     VARIANT_UNCLASS | VARIANT_ANY_ATTR_EX_DIM));
     dims = R_NilValue;
@@ -1533,7 +1503,7 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) { /* <- back here for "next" */
         for (;;) {
-            SEXP condval = evalv (CAR(args), rho, VARIANT_SCALAR_STACK_OK);
+            SEXP condval = EVALV (CAR(args), rho, VARIANT_SCALAR_STACK_OK);
             int condlogical = asLogicalNoNA (condval, call);
             POP_IF_TOP_OF_STACK(condval);
             if (!condlogical) 
@@ -1594,9 +1564,7 @@ static R_NORETURN SEXP do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
    Care is taken to allow (...) when ... is bound to exactly one argument, 
    though it is debatable whether this should be considered valid. 
 
-   The eval variant requested is passed on to the inner expression. 
-
-   EVALV is not used because expr in parents unlikely to be const or symbol. */
+   The eval variant requested is passed on to the inner expression. */
 
 static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
@@ -1642,14 +1610,14 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             start_browser (call, op, arg, rho);
         if (args == R_NilValue)
             break;
-        s = evalv (arg, rho, vrnt);
+        s = EVALV (arg, rho, vrnt);
         if (R_variant_result & VARIANT_RTN_FLAG) {
             R_Srcref = savedsrcref;
             return s;
         }
     }
 
-    s = EVALV (arg, rho, variant);
+    s = evalv (arg, rho, variant);
     R_Srcref = savedsrcref;
     return s;
 }
@@ -1662,7 +1630,7 @@ static SEXP do_return(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (args == R_NilValue) /* zero arguments provided */
 	v = R_NilValue;
     else if (CDR(args) == R_NilValue) /* one argument */
-	v = EVALV (CAR(args), rho, ! (variant & VARIANT_DIRECT_RETURN) ? 0
+	v = evalv (CAR(args), rho, ! (variant & VARIANT_DIRECT_RETURN) ? 0
                     : VARIANT_PASS_ON(variant) & ~ VARIANT_NULL);
     else
 	errorcall(call, _("multi-argument returns are not permitted"));
@@ -1914,7 +1882,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         /* Handle <<- without trying the optimizations done below. */
 
         if (opval == 2) {
-            rhs = evalv (rhs, rho, VARIANT_PENDING_OK);
+            rhs = EVALV (rhs, rho, VARIANT_PENDING_OK);
             set_var_nonlocal (lhs, rhs, ENCLOS(rho), 3);
             goto done;
         }
@@ -1923,7 +1891,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
            any special optimizations. */
 
         if (IS_BASE(rho) || IS_USER_DATABASE(rho)) {
-            rhs = evalv (rhs, rho, VARIANT_PENDING_OK);
+            rhs = EVALV (rhs, rho, VARIANT_PENDING_OK);
             set_var_in_frame (lhs, rhs, rho, TRUE, 3);
             goto done;
         }
@@ -2257,7 +2225,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             else {
                 prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
                 PROTECT (e = LCONS (op, CONS (prom, fetch_args)));
-                e = evalv (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
+                R_variant_result = 0;
+                e = Rf_evalv_lang (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
                 UNPROTECT(2);  /* e, fetch_args */
             }
 
@@ -2425,7 +2394,7 @@ SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
-                    ev = cons_with_tag (evalv (CAR(h), rho, varpend),
+                    ev = cons_with_tag (EVALV (CAR(h), rho, varpend),
                                         R_NilValue, TAG(h));
                     if (head==R_NilValue)
                         head = ev;
@@ -2481,7 +2450,7 @@ SEXP attribute_hidden eval_unshared (SEXP e, SEXP rho, int variant)
     SEXP res;
 
     if (!isSymbol(e) || e == R_DotsSymbol || DDVAL(e)) {
-        res = evalv (e, rho, variant);
+        res = EVALV (e, rho, variant);
     }
     else {
 
@@ -3544,8 +3513,8 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
         args_evald = 1;
     }
     else {
-        PROTECT(x = evalv (x, env, VARIANT_PENDING_OK));
-        PROTECT(y = evalv (y, env, VARIANT_PENDING_OK));
+        PROTECT(x = EVALV (x, env, VARIANT_PENDING_OK));
+        PROTECT(y = EVALV (y, env, VARIANT_PENDING_OK));
         args_evald = 0;
     }
 

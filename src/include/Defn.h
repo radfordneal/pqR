@@ -1792,62 +1792,21 @@ static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
 }
 
 
-/* Eval tweaks, using R_EVAL_TWEAKS, and inline version of evalv,
-   called EVALV, which may do inline check for SELF_EVAL and/or for
-   cached symbol binding.  EVALV also does not decrement evalcount,
-   and so must not be used in a context where this might result in an
-   uninterruptable loop.  See comments before eval in eval.c. */
+/* Fast eval macro.  Does not set R_Visible, so should not be used if
+   it's needed.  Does not check evaluation count, so should not be
+   used if a loop without such a check might result.  Does not check
+   expression depth or stack overflow, so should not be used if
+   infinite recursion could result. */
 
-#ifndef R_EVAL_TWEAKS
-#define R_EVAL_TWEAKS 201  /* Default to current idea of what might be best */
-#endif
-
-extern SEXP Rf_evalv2 (SEXP, SEXP, int);
-
-static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
-{
-#   if (R_EVAL_TWEAKS/100)%10 == 0
-
-        return Rf_evalv (e, rho, variant);
-
-#   else
-
-        /* The following is like EVAL_PRELUDE except for no evalcount */
-
-        R_variant_result = 0;
-   
-        if (SELF_EVAL(TYPEOF(e))) {
-            /* Make sure constants in expressions have maximum NAMEDCNT when
-               used as values, so they won't be modified. */
-            SET_NAMEDCNT_MAX(e);
-            R_Visible = TRUE;
-            return e;
-        }
-
-#       if (R_EVAL_TWEAKS/100)%10 > 1
-
-            if (SYM_NO_DOTS(e)) {
-                if (LASTSYMENV(e) == SEXP32_FROM_SEXP(rho)) {
-                    SEXP res = CAR(LASTSYMBINDING(e));
-                    if (TYPEOF(res) == PROMSXP) 
-                        res = PRVALUE_PENDING_OK(res);
-                    if (res != R_MissingArg && res != R_UnboundValue) {
-                        SET_NAMEDCNT_NOT_0(res);
-                        if ( ! (variant & VARIANT_PENDING_OK))
-                            WAIT_UNTIL_COMPUTED(res);
-                        R_Visible = TRUE;
-                        return res;
-                    }
-                }
-            }
-
-#       endif
-
-        return Rf_evalv2 (e, rho, variant);
-
-#   endif
-
-}
+#define EVALV(e, rho, variant) ( \
+    R_variant_result = 0, \
+    SELF_EVAL(TYPEOF(e)) ? \
+       (UPTR_FROM_SEXP(e)->sxpinfo.nmcnt == MAX_NAMEDCNT ? e \
+         : (UPTR_FROM_SEXP(e)->sxpinfo.nmcnt = MAX_NAMEDCNT, e)) \
+     : TYPEOF(e) == LANGSXP ? Rf_evalv_lang  (e, rho, variant) \
+     : SYM_NO_DOTS(e)       ? Rf_evalv_sym   (e, rho, variant) \
+     :                        Rf_evalv_other (e, rho, variant) \
+)
 
 
 /* Macro version of SETCAR.  Currently just calls function. */
