@@ -1728,13 +1728,73 @@ void gsetVar(SEXP symbol, SEXP value, SEXP rho)
 
 
 /*----------------------------------------------------------------------
-  get environment from a subclass if possible; else return NULL.         */
+
+  Remove variable and return its previous value, or R_NoObject if it
+  didn't exist.  For a user database, R_NilValue is returned when the
+  variable exists, rather than the value. */
+
+SEXP attribute_hidden RemoveVariable(SEXP name, SEXP env)
+{
+    SEXP list, value;
+
+    if (TYPEOF(name) != SYMSXP) abort();
+
+    if (env == R_BaseNamespace)
+	error(_("cannot remove variables from base namespace"));
+    if (env == R_BaseEnv)
+	error(_("cannot remove variables from the base environment"));
+    if (env == R_EmptyEnv)
+	error(_("cannot remove variables from the empty environment"));
+    if (FRAME_IS_LOCKED(env))
+	error(_("cannot remove bindings from a locked environment"));
+
+    if(IS_USER_DATABASE(env)) {
+	R_ObjectTable *table;
+	table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(env));
+	if(table->remove == NULL)
+	    error(_("cannot remove variables from this database"));
+	return table->remove(CHAR(PRINTNAME(name)), table) 
+                 ? R_NilValue : R_NoObject;
+    }
+
+    if (IS_HASHED(env)) {
+	SEXP hashtab = HASHTAB(env);
+        int hashcode = SYM_HASH(name);
+	int idx = hashcode % HASHLEN(env);
+	list = RemoveFromList(name, VECTOR_ELT(hashtab, idx), &value);
+	if (value != R_NoObject) {
+	    SET_VECTOR_ELT(hashtab, idx, list);
+            if (list == R_NilValue)
+                SET_HASHSLOTSUSED(hashtab,HASHSLOTSUSED(hashtab)-1);
+        }
+    }
+    else {
+	list = RemoveFromList(name, FRAME(env), &value);
+	if (value != R_NoObject)
+	    SET_FRAME(env, list);
+    }
+
+    if (value != R_NoObject) {
+        if(env == R_GlobalEnv) R_DirtyImage = 1;
+	if (IS_GLOBAL_FRAME(env)) {
+            PROTECT(value);
+            R_FlushGlobalCache(name);
+            UNPROTECT(1);
+        }
+    }
+
+    return value;
+}
+
+
+/*----------------------------------------------------------------------
+
+  get environment from a subclass if possible; else return NULL.        */
 
 #define simple_as_environment(arg) \
   (IS_S4_OBJECT(arg) && (TYPEOF(arg) == S4SXP) ? R_getS4DataSlot(arg, ENVSXP) \
                                                : R_NilValue)
 	    
-
 /*----------------------------------------------------------------------
   do_assign 
 
@@ -1800,64 +1860,6 @@ static SEXP do_list2env(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-/* Remove variable and return its previous value, or R_NoObject if it
-   didn't exist.  For a user database, R_NilValue is returned when the
-   variable exists, rather than the value. */
-
-SEXP attribute_hidden RemoveVariable(SEXP name, SEXP env)
-{
-    SEXP list, value;
-
-    if (TYPEOF(name) != SYMSXP) abort();
-
-    if (env == R_BaseNamespace)
-	error(_("cannot remove variables from base namespace"));
-    if (env == R_BaseEnv)
-	error(_("cannot remove variables from the base environment"));
-    if (env == R_EmptyEnv)
-	error(_("cannot remove variables from the empty environment"));
-    if (FRAME_IS_LOCKED(env))
-	error(_("cannot remove bindings from a locked environment"));
-
-    if(IS_USER_DATABASE(env)) {
-	R_ObjectTable *table;
-	table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(env));
-	if(table->remove == NULL)
-	    error(_("cannot remove variables from this database"));
-	return table->remove(CHAR(PRINTNAME(name)), table) 
-                 ? R_NilValue : R_NoObject;
-    }
-
-    if (IS_HASHED(env)) {
-	SEXP hashtab = HASHTAB(env);
-        int hashcode = SYM_HASH(name);
-	int idx = hashcode % HASHLEN(env);
-	list = RemoveFromList(name, VECTOR_ELT(hashtab, idx), &value);
-	if (value != R_NoObject) {
-	    SET_VECTOR_ELT(hashtab, idx, list);
-            if (list == R_NilValue)
-                SET_HASHSLOTSUSED(hashtab,HASHSLOTSUSED(hashtab)-1);
-        }
-    }
-    else {
-	list = RemoveFromList(name, FRAME(env), &value);
-	if (value != R_NoObject)
-	    SET_FRAME(env, list);
-    }
-
-    if (value != R_NoObject) {
-        if(env == R_GlobalEnv) R_DirtyImage = 1;
-	if (IS_GLOBAL_FRAME(env)) {
-            PROTECT(value);
-            R_FlushGlobalCache(name);
-            UNPROTECT(1);
-        }
-    }
-
-    return value;
-}
-
-
 /*----------------------------------------------------------------------
   do_remove
 
@@ -1915,9 +1917,8 @@ static SEXP do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /*----------------------------------------------------------------------
  do_get_rm - get value of variable and then remove the variable, decrementing
-             NAMEDCNT when possible.  If return of pending value is allowed,
-             will pass on pending value in the variable without waiting for it.
-*/
+             NAMEDCNT when possible. If return of pending value is allowed, will
+             pass on pending value in the variable without waiting for it. */
 
 static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
@@ -2345,7 +2346,6 @@ static SEXP do_emptyenv(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_EmptyEnv;
 }
 
-
 /*----------------------------------------------------------------------
   do_attach
 
@@ -2536,7 +2536,6 @@ static SEXP do_search(SEXP call, SEXP op, SEXP args, SEXP env)
     UNPROTECT(1);
     return ans;
 }
-
 
 /*----------------------------------------------------------------------
   do_ls
@@ -3580,7 +3579,6 @@ static SEXP do_importIntoEnv(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-
 static SEXP do_envprofile(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     /* Return a list containing profiling information given a hashed
@@ -3594,6 +3592,7 @@ static SEXP do_envprofile(SEXP call, SEXP op, SEXP args, SEXP rho)
     else
 	error("argument must be a hashed environment");
 }
+
 
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
 

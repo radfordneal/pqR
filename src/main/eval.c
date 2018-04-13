@@ -24,15 +24,8 @@
  *  http://www.r-project.org/Licenses/
  */
 
-
-#undef HASHING
-
 #ifdef HAVE_CONFIG_H
 # include <config.h>
-#endif
-
-#ifdef HAVE_ALLOCA_H
-# include <alloca.h>
 #endif
 
 #define USE_FAST_PROTECT_MACROS
@@ -42,6 +35,7 @@
 #include <Fileio.h>
 
 #include "scalar-stack.h"
+#include <Rmath.h>
 #include "arithmetic.h"
 
 #include <helpers/helpers-app.h>
@@ -968,25 +962,6 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	UNPROTECT(1);
     }
 
-    /*  It isn't completely clear that this is the right place to do
-	this, but maybe (if the matchArgs above reverses the
-	arguments) it might just be perfect.
-
-	This will not currently work as the entry points in envir.c
-	are static.
-    */
-
-#ifdef  HASHING
-    {
-	SEXP R_NewHashTable(int);
-	SEXP R_HashFrame(SEXP);
-	int nargs = length(arglist);
-	HASHTAB(newrho) = R_NewHashTable(nargs);
-	newrho = R_HashFrame(newrho);
-    }
-#endif
-#undef  HASHING
-
     /*  Set a longjmp target which will catch any explicit returns
 	from the function body.  */
 
@@ -1078,22 +1053,6 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	R_Srcref = savesrcref;
 	UNPROTECT(1);
     }
-
-    /*  It isn't completely clear that this is the right place to do
-	this, but maybe (if the matchArgs above reverses the
-	arguments) it might just be perfect.  */
-
-#ifdef  HASHING
-#define HASHTABLEGROWTHRATE  1.2
-    {
-	SEXP R_NewHashTable(int, double);
-	SEXP R_HashFrame(SEXP);
-	int nargs = length(arglist);
-	HASHTAB(newrho) = R_NewHashTable(nargs, HASHTABLEGROWTHRATE);
-	newrho = R_HashFrame(newrho);
-    }
-#endif
-#undef  HASHING
 
     /*  Set a longjmp target which will catch any explicit returns
 	from the function body.  */
@@ -3502,27 +3461,792 @@ static SEXP do_savefile(SEXP call, SEXP op, SEXP args, SEXP env)
     return R_NilValue;
 }
 
-static SEXP do_setnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
+/* -------------------------------------------------------------------------- */
+/*                         LOGICAL OPERATORS                                  */
+
+static SEXP binaryLogic2(int code, SEXP s1, SEXP s2);
+
+/* i1 = i % n1; i2 = i % n2;
+ * this macro is quite a bit faster than having real modulo calls
+ * in the loop (tested on Intel and Sparc)
+ */
+#define mod_iterate(n1,n2,i1,i2) for (i=i1=i2=0; i<n; \
+	i1 = (++i1 == n1) ? 0 : i1,\
+	i2 = (++i2 == n2) ? 0 : i2,\
+	++i)
+
+void task_and_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
-    int old = R_num_math_threads, new;
-    checkArity(op, args);
-    new = asInteger(CAR(args));
-    if (new >= 0 && new <= R_max_num_math_threads)
-	R_num_math_threads = new;
-    return ScalarIntegerMaybeConst(old);
+    int * restrict lans = LOGICAL(ans);
+
+    int i, i1, i2, n, n1, n2;
+
+    n1 = LENGTH(s1);
+    n2 = LENGTH(s2);
+    n = LENGTH(ans);
+
+    switch (code) {
+    case 1:  /* & : AND */
+        if (n1 == n2) {
+            for (i = 0; i<n; i++) {
+                uint32_t u1 = LOGICAL(s1)[i];
+                uint32_t u2 = LOGICAL(s2)[i];
+                lans[i] = (u1 & u2) | (u1 & (u2<<31)) | (u2 & (u1<<31));
+            }
+        }
+        else {
+            mod_iterate(n1,n2,i1,i2) {
+                uint32_t u1 = LOGICAL(s1)[i1];
+                uint32_t u2 = LOGICAL(s2)[i2];
+                lans[i] = (u1 & u2) | (u1 & (u2<<31)) | (u2 & (u1<<31));
+            }
+        }
+        break;
+    case 2:  /* | : OR */
+        if (n1 == n2) {
+            for (i = 0; i<n; i++) {
+                uint32_t u = LOGICAL(s1)[i] | LOGICAL(s2)[i];
+                lans[i] = u & ~ (u << 31);
+            }
+        }
+        else {
+            mod_iterate(n1,n2,i1,i2) {
+                uint32_t u = LOGICAL(s1)[i1] | LOGICAL(s2)[i2];
+                lans[i] = u & ~ (u << 31);
+            }
+        }
+        break;
+    }
 }
 
-static SEXP do_setmaxnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
+
+/* & | */
+
+#define T_and_or THRESHOLD_ADJUST(25)
+
+SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env, 
+                               int variant)
 {
-    int old = R_max_num_math_threads, new;
-    checkArity(op, args);
-    new = asInteger(CAR(args));
-    if (new >= 0) {
-	R_max_num_math_threads = new;
-	if (R_num_math_threads > R_max_num_math_threads)
-	    R_num_math_threads = R_max_num_math_threads;
+    SEXP ans, x, y;
+    int args_evald;
+
+    /* Evaluate arguments, setting x to first argument and y to
+       second argument.  The whole argument list is in args, already 
+       evaluated if args_evald is 1. */
+
+    x = CAR(args); 
+    y = CADR(args);
+
+    if (x==R_DotsSymbol || y==R_DotsSymbol || CDDR(args)!=R_NilValue) {
+        args = evalList (args, env);
+        PROTECT(x = CAR(args)); 
+        PROTECT(y = CADR(args));
+        args_evald = 1;
     }
-    return ScalarIntegerMaybeConst(old);
+    else {
+        PROTECT(x = evalv (x, env, VARIANT_PENDING_OK));
+        PROTECT(y = evalv (y, env, VARIANT_PENDING_OK));
+        args_evald = 0;
+    }
+
+    /* Check for dispatch on S3 or S4 objects.  Takes care to match length
+       of "args" to length of original (number of args in "call"). */
+
+    if (isObject(x) || isObject(y)) {
+        if (!args_evald) {
+            args = CDR(args)!=R_NilValue ? CONS(x,CONS(y,R_NilValue)) 
+                                         : CONS(x,R_NilValue);
+            WAIT_UNTIL_COMPUTED_2(x,y);
+        }
+        PROTECT(args);
+        if (DispatchGroup("Ops", call, op, args, env, &ans)) {
+            UNPROTECT(3);
+            return ans;
+        }
+        UNPROTECT(1);
+    }
+
+    /* Check argument count now (after dispatch, since other methods may allow
+       other argument count). */
+
+    checkArity(op,args);
+
+    /* Arguments are now in x and y, and are protected.  The value 
+       in args may not be protected, and is not used below. */
+
+    SEXP dims, tsp, klass, xnames, ynames;
+    int xarray, yarray, xts, yts;
+
+    if (! (isRaw(x) && isRaw(y)) && ! (isNumber(x) && isNumber(y)))
+        errorcall (call,
+       _("operations are possible only for numeric, logical or complex types"));
+
+    tsp = R_NilValue;		/* -Wall */
+    klass = R_NilValue;		/* -Wall */
+    xarray = isArray(x);
+    yarray = isArray(y);
+    xts = isTs(x);
+    yts = isTs(y);
+    if (xarray || yarray) {
+	if (xarray && yarray) {
+	    if (!conformable(x, y))
+		error(_("binary operation on non-conformable arrays"));
+	    PROTECT(dims = getDimAttrib(x));
+	}
+	else if (xarray) {
+	    PROTECT(dims = getDimAttrib(x));
+	}
+	else /*(yarray)*/ {
+	    PROTECT(dims = getDimAttrib(y));
+	}
+	PROTECT(xnames = getAttrib(x, R_DimNamesSymbol));
+	PROTECT(ynames = getAttrib(y, R_DimNamesSymbol));
+    }
+    else {
+	PROTECT(dims = R_NilValue);
+	PROTECT(xnames = getAttrib(x, R_NamesSymbol));
+	PROTECT(ynames = getAttrib(y, R_NamesSymbol));
+    }
+
+    if (xts || yts) {
+	if (xts && yts) {
+	    if (!tsConform(x, y))
+		errorcall(call, _("non-conformable time series"));
+	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
+	    PROTECT(klass = getClassAttrib(x));
+	}
+	else if (xts) {
+	    if (length(x) < length(y))
+		ErrorMessage(call, ERROR_TSVEC_MISMATCH);
+	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
+	    PROTECT(klass = getClassAttrib(x));
+	}
+	else /*(yts)*/ {
+	    if (length(y) < length(x))
+		ErrorMessage(call, ERROR_TSVEC_MISMATCH);
+	    PROTECT(tsp = getAttrib(y, R_TspSymbol));
+	    PROTECT(klass = getClassAttrib(y));
+	}
+    }
+
+    R_len_t nx = LENGTH(x);
+    R_len_t ny = LENGTH(y);
+
+    if (nx > 0 && ny > 0 && (nx > ny ? nx % ny : ny % nx))
+        warningcall(call,
+         _("longer object length is not a multiple of shorter object length"));
+
+    if (isRaw(x) && isRaw(y)) {
+        WAIT_UNTIL_COMPUTED_2(x,y);
+        PROTECT(ans = binaryLogic2(PRIMVAL(op), x, y));
+    }
+    else {
+
+        if (nx == 0 || ny == 0) {
+            ans = allocVector (LGLSXP, 0);
+            UNPROTECT(5);
+            return ans;
+        }
+
+        R_len_t n = (nx > ny) ? nx : ny;
+        PROTECT(ans = allocVector (LGLSXP, n));
+
+        if (!isLogical(x) || !isLogical(y)) {
+            WAIT_UNTIL_COMPUTED_2(x,y);
+            PROTECT(x = coerceVector(x, LGLSXP));
+            y = coerceVector(y, LGLSXP);
+            UNPROTECT(1);
+        }
+
+        DO_NOW_OR_LATER2 (variant, n >= T_and_or, 
+                          0, task_and_or, PRIMVAL(op), ans, x, y);
+    }
+
+    if (dims != R_NilValue) {
+	setAttrib (ans, R_DimSymbol, dims);
+	if (xnames != R_NilValue)
+	    setAttrib(ans, R_DimNamesSymbol, xnames);
+	else if (ynames != R_NilValue)
+	    setAttrib(ans, R_DimNamesSymbol, ynames);
+    }
+    else {
+	if (LENGTH(ans) == length(xnames))
+	    setAttrib (ans, R_NamesSymbol, xnames);
+	else if (LENGTH(ans) == length(ynames))
+	    setAttrib (ans, R_NamesSymbol, ynames);
+    }
+
+    if (xts || yts) {
+	setAttrib(ans, R_TspSymbol, tsp);
+	setAttrib(ans, R_ClassSymbol, klass);
+	UNPROTECT(2);
+    }
+
+    UNPROTECT(6);
+    return ans;
+}
+
+void task_not (helpers_op_t code, SEXP x, SEXP arg, SEXP unused)
+{
+    int len = LENGTH(arg);
+    int i;
+
+    switch(TYPEOF(arg)) {
+    case LGLSXP:
+        for (i = 0; i < len; i++) {
+            uint32_t u = LOGICAL(arg)[i];
+            LOGICAL(x)[i] = u ^ 1 ^ (u >> 31);
+        }
+        break;
+    case INTSXP:
+	for (i = 0; i < len; i++)
+	    LOGICAL(x)[i] = (INTEGER(arg)[i] == NA_INTEGER) ? NA_LOGICAL 
+                          : INTEGER(arg)[i] == 0;
+	break;
+    case REALSXP:
+	for (i = 0; i < len; i++)
+	    LOGICAL(x)[i] = ISNAN(REAL(arg)[i]) ? NA_LOGICAL 
+                          : REAL(arg)[i] == 0;
+	break;
+    case CPLXSXP:
+	for (i = 0; i < len; i++)
+	    LOGICAL(x)[i] = ISNAN(COMPLEX(arg)[i].r) || ISNAN(COMPLEX(arg)[i].i)
+              ? NA_LOGICAL : (COMPLEX(arg)[i].r == 0 && COMPLEX(arg)[i].i == 0);
+	break;
+    case RAWSXP:
+	for (i = 0; i < len; i++)
+	    RAW(x)[i] = ~ RAW(arg)[i];
+	break;
+    }
+}
+
+/* Handles the ! operator. */
+
+#define T_not THRESHOLD_ADJUST(40)
+
+static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
+{
+    SEXP x, dim, dimnames, names;
+    int len;
+
+    if (!isLogical(arg) && !isNumber(arg) && !isRaw(arg)) {
+	/* For back-compatibility */
+	if (length(arg)==0) 
+            return allocVector(LGLSXP, 0);
+	else
+            errorcall(call, _("invalid argument type"));
+    }
+    len = LENGTH(arg);
+
+    /* Quickly do scalar operation on logical with no attributes. */
+
+    if (len==1 && isLogical(arg) && !HAS_ATTRIB(arg)) {
+        int v = LOGICAL(arg)[0];
+        return ScalarLogicalMaybeConst (v==NA_LOGICAL ? v : !v);
+    }
+
+    /* The general case... */
+
+    if (TYPEOF(arg) != LGLSXP && TYPEOF(arg) != RAWSXP)
+        x = allocVector(LGLSXP,len);
+    else if (isObject(arg) || NAMEDCNT_GT_0(arg))
+        x = duplicate(arg);
+    else
+        x = arg;
+
+    if (!isVectorAtomic(arg) || TYPEOF(arg) == STRSXP)
+	UNIMPLEMENTED_TYPE("do_fast_not", arg);
+
+    DO_NOW_OR_LATER1 (variant, len >= T_not, 0, task_not, 0, x, arg);
+
+    if (TYPEOF(arg) != LGLSXP && TYPEOF(arg) != RAWSXP) {
+        if (!NO_ATTRIBUTES_OK(variant,arg)) {
+            PROTECT(x);
+            PROTECT (names    = getAttrib (arg, R_NamesSymbol));
+            PROTECT (dim      = getDimAttrib(arg));
+            PROTECT (dimnames = getAttrib (arg, R_DimNamesSymbol));
+            if (names    != R_NilValue) setAttrib(x,R_NamesSymbol,    names);
+            if (dim      != R_NilValue) setAttrib(x,R_DimSymbol,      dim);
+            if (dimnames != R_NilValue) setAttrib(x,R_DimNamesSymbol, dimnames);
+            UNPROTECT(4);
+        }
+    }
+
+    return x;
+}
+
+/* ! */
+
+SEXP attribute_hidden do_not(SEXP call, SEXP op, SEXP args, SEXP env, 
+                             int variant)
+{
+    SEXP ans;
+
+    if (DispatchGroup("Ops", call, op, args, env, &ans))
+	return ans;
+
+    checkArity (op, args);
+
+    return do_fast_not (call, op, CAR(args), env, variant);
+}
+
+/* Does && (op 1) and || (op 2). */
+
+SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    SEXP s1, s2;
+    int x1, x2;
+
+    if (length(args) != 2)
+	error(_("'%s' operator requires 2 arguments"),
+	      PRIMVAL(op) == 1 ? "&&" : "||");
+
+    s1 = eval(CAR(args), env);
+    if (!isNumber(s1))
+	errorcall(call, _("invalid 'x' type in 'x %s y'"),
+		  PRIMVAL(op) == 1 ? "&&" : "||");
+    x1 = asLogical(s1);
+
+    if (PRIMVAL(op)==1 && x1==FALSE)  /* FALSE && ... */
+        return ScalarLogicalMaybeConst(FALSE);
+
+    if (PRIMVAL(op)==2 && x1==TRUE)   /* TRUE || ... */
+        return ScalarLogicalMaybeConst(TRUE);
+    
+    s2  = eval(CADR(args), env);
+    if (!isNumber(s2))	
+        errorcall(call, _("invalid 'y' type in 'x %s y'"),
+	          PRIMVAL(op) == 1 ? "&&" : "||");		
+    x2 = asLogical(s2);
+
+    if (PRIMVAL(op)==1) /* ... && ... */
+        return ScalarLogicalMaybeConst (x2==FALSE ? FALSE
+                                  : x1==TRUE && x2==TRUE ? TRUE
+                                  : NA_LOGICAL);
+    else /* ... || ... */
+        return ScalarLogicalMaybeConst (x2==TRUE ? TRUE
+                                  : x1==FALSE && x2==FALSE ? FALSE
+                                  : NA_LOGICAL);
+}
+
+static SEXP binaryLogic2(int code, SEXP s1, SEXP s2)
+{
+    int i, i1, i2, n, n1, n2;
+    SEXP ans;
+
+    n1 = LENGTH(s1);
+    n2 = LENGTH(s2);
+    n = (n1 > n2) ? n1 : n2;
+    if (n1 == 0 || n2 == 0) {
+	ans = allocVector(RAWSXP, 0);
+	return ans;
+    }
+    ans = allocVector(RAWSXP, n);
+
+    switch (code) {
+    case 1:  /* & : AND */
+        if (n1 == n2) {
+            for (i = 0; i<n; i++)
+                RAW(ans)[i] = RAW(s1)[i] & RAW(s2)[i];
+        }
+        else {
+            mod_iterate(n1,n2,i1,i2)
+                RAW(ans)[i] = RAW(s1)[i1] & RAW(s2)[i2];
+        }
+	break;
+    case 2:  /* | : OR */
+        if (n1 == n2) {
+            for (i = 0; i<n; i++)
+                RAW(ans)[i] = RAW(s1)[i] | RAW(s2)[i];
+        }
+        else {
+            mod_iterate(n1,n2,i1,i2)
+                RAW(ans)[i] = RAW(s1)[i1] | RAW(s2)[i2];
+        }
+	break;
+    }
+    return ans;
+}
+
+#define OP_ALL 1
+#define OP_ANY 2
+
+static int any_all_check (int op, int na_rm, int *x, int n)
+{
+    if (na_rm) {
+
+        if (op == OP_ANY) {
+            unsigned res = 0;
+            for (int i = 0; i<n; i++) {
+                res |= x[i];
+                if (res & 1)
+                    return TRUE;
+            }
+            return FALSE;
+        }
+        else { /* OP_ALL */
+            unsigned res = 1;
+            for (int i = 0; i<n; i++) {
+                res &= x[i] | (x[i]>>31);
+                if (! (res & 1))
+                    return FALSE;
+            }
+            return TRUE;
+        }
+
+    }
+    else { /* !na_rm */
+
+        if (op == OP_ANY) {
+            unsigned res = 0;
+            for (int i = 0; i<n; i++) {
+                res |= x[i];
+                if (res & 1)
+                    return TRUE;
+            }
+            return res>>31 ? NA_LOGICAL : FALSE;
+        }
+        else { /* OP_ALL */
+            unsigned res = 1;
+            unsigned na = 0;
+            for (int i = 0; i<n; i++) {
+                res &= x[i] | (x[i]>>31);
+                if (! (res & 1))
+                    return FALSE;
+                na |= x[i];
+            }
+            return na>>31 ? NA_LOGICAL : TRUE;
+        }
+
+    }
+}
+
+
+/* fast version handles only one unnamed argument, so narm is FALSE. */
+
+static SEXP do_fast_allany (SEXP call, SEXP op, SEXP arg, SEXP env, 
+                            int variant)
+{
+    int val;
+
+    if (length(arg) == 0)
+        /* Avoid memory waste from coercing empty inputs, and also
+           avoid warnings with empty lists coming from sapply */
+        val = PRIMVAL(op) == OP_ALL ? TRUE : FALSE;
+
+    else {
+	if (TYPEOF(arg) != LGLSXP) {
+	    /* Coercion of integers seems reasonably safe, but for
+	       other types it is more often than not an error.
+	       One exception is perhaps the result of lapply, but
+	       then sapply was often what was intended. */
+	    if (TYPEOF(arg) != INTSXP)
+		warningcall(call,
+			    _("coercing argument of type '%s' to logical"),
+			    type2char(TYPEOF(arg)));
+	    arg = coerceVector(arg, LGLSXP);
+	}
+        if (LENGTH(arg) == 1) /* includes variant return of AND or OR of vec */
+            val = LOGICAL(arg)[0];
+        else
+            val = any_all_check (PRIMVAL(op), FALSE, LOGICAL(arg), LENGTH(arg));
+    }
+
+    return ScalarLogicalMaybeConst(val);
+}
+
+static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    SEXP ans, s, t, call2;
+    int narm, has_na = 0;
+    /* initialize for behavior on empty vector
+       all(logical(0)) -> TRUE
+       any(logical(0)) -> FALSE
+     */
+    int val = PRIMVAL(op) == OP_ALL ? TRUE : FALSE;
+
+    PROTECT(args = fixup_NaRm(args));
+    PROTECT(call2 = LCONS(CAR(call),args));
+
+    if (DispatchGroup("Summary", call2, op, args, env, &ans)) {
+	UNPROTECT(2);
+	return(ans);
+    }
+
+    ans = matchArgExact(R_NaRmSymbol, &args);
+    narm = asLogical(ans);
+
+    for (s = args; s != R_NilValue; s = CDR(s)) {
+	t = CAR(s);
+	/* Avoid memory waste from coercing empty inputs, and also
+	   avoid warnings with empty lists coming from sapply */
+	if(length(t) == 0) continue;
+	/* coerceVector protects its argument so this actually works
+	   just fine */
+	if (TYPEOF(t) != LGLSXP) {
+	    /* Coercion of integers seems reasonably safe, but for
+	       other types it is more often than not an error.
+	       One exception is perhaps the result of lapply, but
+	       then sapply was often what was intended. */
+	    if(TYPEOF(t) != INTSXP)
+		warningcall(call,
+			    _("coercing argument of type '%s' to logical"),
+			    type2char(TYPEOF(t)));
+	    t = coerceVector(t, LGLSXP);
+	}
+	val = any_all_check (PRIMVAL(op), narm, LOGICAL(t), LENGTH(t));
+        if (val == NA_LOGICAL)
+            has_na = 1;
+        else {
+            if (PRIMVAL(op) == OP_ANY && val || PRIMVAL(op) == OP_ALL && !val) {
+                has_na = 0;
+                break;
+            }
+        } 
+    }
+    UNPROTECT(2);
+    return ScalarLogicalMaybeConst (has_na ? NA_LOGICAL : val);
+}
+
+/* -------------------------------------------------------------------------- */
+/*                        ARITHMETIC OPERATORS.                               */
+/*                                                                            */
+/* All but simple cases are handled in R_unary and R_binary in arithmetic.c.  */
+
+static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+{
+    int opcode = PRIMVAL(op), obj1, obj2;
+    SEXP argsevald, ans, arg1, arg2;
+
+    /* Evaluate arguments, maybe putting them on the scalar stack. */
+
+    SEXP sv_scalar_stack = R_scalar_stack;
+
+    PROTECT (argsevald = 
+               scalar_stack_eval2(args, &arg1, &arg2, &obj1, &obj2, env));
+    PROTECT2(arg1,arg2);
+
+    /* Check for dispatch on S3 or S4 objects. */
+
+    if (obj1 || obj2) {
+        if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
+            UNPROTECT(3);
+            return ans;
+        }
+    }
+
+    /* Check for argument count error (not before dispatch, since other
+       methods may have different requirements). */
+
+    if (argsevald==R_NilValue || CDDR(argsevald)!=R_NilValue)
+	errorcall(call,_("operator needs one or two arguments"));
+
+    if (CDR(argsevald)==R_NilValue && opcode!=MINUSOP && opcode!=PLUSOP)
+        errorcall(call, _("%d argument passed to '%s' which requires %d"),
+                        1, PRIMNAME(op), 2);
+
+    /* Arguments are now in arg1 and arg2, and are protected. They may
+       be on the scalar stack, but if so, are removed now, though they
+       may still be referenced.  Note that result might be on top of
+       one of them - OK since after storing into it, the args won't be
+       accessed again.
+
+       Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
+       but faster. */
+
+    R_scalar_stack = sv_scalar_stack;
+
+    /* We quickly do real arithmetic and integer plus/minus/times on scalars 
+       with no attributes (as will be the case for scalar stack values).  We
+       don't bother trying local assignment, since returning the result on the
+       scalar stack should be about as fast. */
+
+    int type1 = TYPEOF(arg1);
+
+    if ((type1==REALSXP || type1==INTSXP) && LENGTH(arg1) == 1
+                                          && NO_ATTRIBUTES_OK (variant, arg1)) {
+
+        if (CDR(argsevald)==R_NilValue) { /* Unary operation */
+            WAIT_UNTIL_COMPUTED(arg1);
+            if (type1==REALSXP) {
+                double val = opcode == PLUSOP ? *REAL(arg1) : -*REAL(arg1);
+                ans = NAMEDCNT_EQ_0(arg1) ? (*REAL(arg1) = val, arg1)
+                    : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_REAL(val)
+                    :   ScalarReal(val);
+            }
+            else { /* INTSXP */
+                int val  = *INTEGER(arg1)==NA_INTEGER ? NA_INTEGER
+                         : opcode == PLUSOP ? *INTEGER(arg1) : -*INTEGER(arg1);
+                ans = NAMEDCNT_EQ_0(arg1) ? (*INTEGER(arg1) = val, arg1)
+                    : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_INTEGER(val)
+                    :   ScalarInteger(val);
+            }
+            goto ret;
+        }
+
+        int type2 = TYPEOF(arg2);
+
+        if ((type2 == REALSXP || type2 == INTSXP) && LENGTH(arg2) == 1 
+                                       && NO_ATTRIBUTES_OK (variant, arg2)) {
+
+            if (type1 == INTSXP && type2 == INTSXP) {
+
+                if (opcode==PLUSOP || opcode==MINUSOP || opcode==TIMESOP) {
+
+                    WAIT_UNTIL_COMPUTED_2(arg1,arg2);
+    
+                    int a1 = *INTEGER(arg1), a2 = *INTEGER(arg2);
+                    int_fast64_t val;
+    
+                    if (a1==NA_INTEGER || a2==NA_INTEGER)
+                        val = NA_INTEGER;
+                    else {
+                        val = 
+                         opcode==PLUSOP  ? (int_fast64_t)a1 + (int_fast64_t)a2 :
+                         opcode==MINUSOP ? (int_fast64_t)a1 - (int_fast64_t)a2 :
+                                           (int_fast64_t)a1 * (int_fast64_t)a2;
+    
+                          if (val < R_INT_MIN || val > R_INT_MAX) {
+                              val = NA_INTEGER;
+                              warningcall (call, 
+                                         _("NAs produced by integer overflow"));
+                          }
+                    }
+    
+                    int ival = (int) val;
+
+                    ans = NAMEDCNT_EQ_0(arg2) ?
+                            (*INTEGER(arg2) = ival, arg2)
+                        : NAMEDCNT_EQ_0(arg1) ?
+                            (*INTEGER(arg1) = ival, arg1)
+                        : CAN_USE_SCALAR_STACK(variant) ? 
+                            PUSH_SCALAR_INTEGER(ival)
+                        :   ScalarInteger(ival);
+  
+                    goto ret;
+                }
+                else {
+                    /* fall through to general code below */
+                }
+            }
+
+            else { /* not both INTSXP, so at least one is REALSXP */
+
+                double a1, a2, val;
+    
+                WAIT_UNTIL_COMPUTED_2(arg1,arg2);
+
+                if (type1 == INTSXP) {
+                    a1 = (double) *INTEGER(arg1);
+                    a2 = *REAL(arg2);
+                }
+                else if (type2 == INTSXP) {
+                    a1 = *REAL(arg1);
+                    a2 = (double) *INTEGER(arg2);
+                }
+                else {
+                    a1 = *REAL(arg1);
+                    a2 = *REAL(arg2);
+                }
+            
+                switch (opcode) {
+                case PLUSOP:
+                    val = a1 + a2;
+                    break;
+                case MINUSOP:
+                    val = a1 - a2;
+                    break;
+                case TIMESOP:
+                    val = a1 * a2;
+                    break;
+                case DIVOP:
+                    val = a1 / a2;
+                    break;
+                case POWOP:
+                    if (a2 == 2.0)       val = a1 * a1;
+                    else if (a2 == 1.0)  val = a1;
+                    else if (a2 == 0.0)  val = 1.0;
+                    else if (a2 == -1.0) val = 1.0 / a1;
+                    else                 val = R_pow(a1,a2);
+                    break;
+                case MODOP:
+                    val = myfmod(a1,a2);
+                    break;
+                case IDIVOP:
+                    val = myfloor(a1,a2);
+                    break;
+                default: abort();
+                }
+
+                ans = NAMEDCNT_EQ_0(arg2) && type2 == REALSXP ?
+                        (*REAL(arg2) = val, arg2)
+                    : NAMEDCNT_EQ_0(arg1) && type1 == REALSXP ?
+                        (*REAL(arg1) = val, arg1)
+                    : CAN_USE_SCALAR_STACK(variant) ? 
+                        PUSH_SCALAR_REAL(val)
+                    :   ScalarReal(val);
+
+                goto ret;
+            }
+        }
+    }
+
+    /* Otherwise, handle the general case. */
+
+    ans = CDR(argsevald)==R_NilValue 
+           ? R_unary (call, op, arg1, obj1, env, variant) 
+           : R_binary (call, op, arg1, arg2, obj1, obj2, env, variant);
+
+  ret:
+    UNPROTECT(3);
+    return ans;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                       RELATIONAL OPERATORS.                                */
+/*                                                                            */
+/* Main work is done in R_relop, in relop.c.                                  */
+
+static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+{
+    SEXP argsevald, ans, x, y;
+    int objx, objy;
+
+    /* Evaluate arguments, maybe putting them on the scalar stack. */
+
+    SEXP sv_scalar_stack = R_scalar_stack;
+
+    PROTECT(argsevald = 
+              scalar_stack_eval2 (args, &x, &y, &objx, &objy, env));
+    PROTECT2(x,y);
+
+    /* Check for dispatch on S3 or S4 objects. */
+
+    if (objx || objy) {
+        if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
+            UNPROTECT(3);
+            return ans;
+        }
+    }
+
+    /* Check argument count now (after dispatch, since other methods may allow
+       other argument count). */
+
+    checkArity(op,argsevald);
+
+    /* Arguments are now in x and y, and are protected.  They may be on
+       the scalar stack, but if so are popped off here (but retain their
+       values if eval is not called). */
+
+    /* Below does same as POP_IF_TOP_OF_STACK(y); POP_IF_TOP_OF_STACK(x);
+       but faster. */
+
+    R_scalar_stack = sv_scalar_stack;
+
+    ans = R_relop (call, op, x, y, objx, objy, env, variant);
+
+    UNPROTECT(3);
+    return ans;
 }
 
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
@@ -3553,8 +4277,50 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 {"Rprof",	do_Rprof,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"withVisible", do_withVisible,	1,	10,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"setNumMathThreads", do_setnumthreads,      0, 11, 1,  {PP_FUNCALL, PREC_FN, 0}},
-{"setMaxNumMathThreads", do_setmaxnumthreads,0, 11, 1,  {PP_FUNCALL, PREC_FN, 0}},
+/* Logical Operators, all primitives */
+/* these are group generic and so need to eval args (as builtin or themselves)*/
+
+{"&",		do_andor,	1,	1000,	2,	{PP_BINARY,  PREC_AND,	  0}},
+{"|",		do_andor,	2,	1000,	2,	{PP_BINARY,  PREC_OR,	  0}},
+{"!",		do_not,		1,	1001,	1,	{PP_UNARY,   PREC_NOT,	  0}},
+
+/* specials as conditionally evaluate second arg */
+{"&&",		do_andor2,	1,	0,	2,	{PP_BINARY,  PREC_AND,	  0}},
+{"||",		do_andor2,	2,	0,	2,	{PP_BINARY,  PREC_OR,	  0}},
+
+/* these are group generic and so need to eval args */
+{"all",		do_allany,	1,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
+{"any",		do_allany,	2,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
+
+/* Arithmetic Operators, all primitives, now special, though always eval args */
+
+{"+",		do_arith,	PLUSOP,	1000,	2,	{PP_BINARY,  PREC_SUM,	  0}},
+{"-",		do_arith,	MINUSOP,1000,	2,	{PP_BINARY,  PREC_SUM,	  0}},
+{"*",		do_arith,	TIMESOP,1000,	2,	{PP_BINARY,  PREC_PROD,	  0}},
+{"/",		do_arith,	DIVOP,	1000,	2,	{PP_BINARY2, PREC_PROD,	  0}},
+{"^",		do_arith,	POWOP,	1000,	2,	{PP_BINARY2, PREC_POWER,  1}},
+{"%%",		do_arith,	MODOP,	1000,	2,	{PP_BINARY2, PREC_PERCENT,0}},
+{"%/%",		do_arith,	IDIVOP,	1000,	2,	{PP_BINARY2, PREC_PERCENT,0}},
+
+/* Relational Operators, all primitives */
+/* these are group generic and so need to eval args (inside, as special) */
+
+{"==",		do_relop,	EQOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{"!=",		do_relop,	NEOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{"<",		do_relop,	LTOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{"<=",		do_relop,	LEOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{">=",		do_relop,	GEOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
+{">",		do_relop,	GTOP,	1000,	2,	{PP_BINARY,  PREC_COMPARE,0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
+};
+
+/* Fast built-in functions in this file. See names.c for documentation */
+
+attribute_hidden FASTFUNTAB R_FastFunTab_eval[] = {
+/*slow func	fast func,     code or -1   dsptch  variant */
+{ do_not,	do_fast_not,	-1,		1,  VARIANT_PENDING_OK },
+{ do_allany,	do_fast_allany,	OP_ALL,		1,  VARIANT_AND },
+{ do_allany,	do_fast_allany,	OP_ANY,		1,  VARIANT_OR },
+{ 0,		0,		0,		0,  0 }
 };

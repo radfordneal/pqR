@@ -24,9 +24,6 @@
  *  http://www.r-project.org/Licenses/
  */
 
-
-#undef HASHING
-
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif

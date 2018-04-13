@@ -1,0 +1,13 @@
+Code movement.  May have performance impact, not just cosmetic, since
+compiler can optimize calls within a file.
+
+Move all code from logic.c into eval.c (deleting logic.c).
+Move do_relop from relop.c into eval.c (R_relop stays in relop.c).
+
+Move do_arith from arithemtic.c to eval.c, with some other mods, 
+including removal of "probable complete loss of accuracy in modulus"
+warning from myfmod.
+
+Move some code out of eval.c to builtin.c.
+
+Other cosmetic changes.

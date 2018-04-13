@@ -43,6 +43,7 @@
 
 #include "scalar-stack.h"
 
+/*** NOTE: do_arith itself is in eval.c, calling R_unary and R_binary here. ***/
 
 static inline void maybe_dup_attributes (SEXP to, SEXP from, int variant)
 {
@@ -128,9 +129,6 @@ int matherr(struct exception *exc)
 #endif
 #endif
 
-#define R_INT_MAX INT_MAX
-#define R_INT_MIN (-INT_MAX)  /* Excludes INT_MIN, which is NA_INTEGER */
-
 /* Hack to avoid possibly-incorrect constant folding. */
 volatile double R_Zero_Hack = 0.0;
 
@@ -178,47 +176,6 @@ void attribute_hidden InitArithmetic()
     R_PosInf = 1.0/R_Zero_Hack;
     R_NegInf = -1.0/R_Zero_Hack;
     R_NaN_cast_to_int = (int) R_NaN;
-}
-
-/* Keep these two in step */
-/* FIXME: consider using
-    tmp = (long double)x1 - floor(q) * (long double)x2;
-    
-   WARNING:  myfmod may call "warning", and hence may allocate storage.
- */
-static inline double myfmod(double x1, double x2)
-{
-    int i1 = (int) x1;
-    if ((double)i1 == x1 && i1 >= 0) {
-        int i2 = (int) x2;
-        if ((double)i2 == x2 && i2 > 0)
-            return (double) (i1 % i2);
-    }
-
-    double q = x1 / x2, tmp;
-
-    if (x2 == 0.0) return R_NaN;
-    tmp = x1 - floor(q) * x2;
-    if(R_FINITE(q) && (fabs(q) > 1/R_AccuracyInfo.eps))
-	warning(_("probable complete loss of accuracy in modulus"));
-    q = floor(tmp/x2);
-    return tmp - q * x2;
-}
-
-static inline double myfloor(double x1, double x2)
-{
-    int i1 = (int) x1;
-    if ((double)i1 == x1 && i1 >= 0) {
-        int i2 = (int) x2;
-        if ((double)i2 == x2 && i2 > 0)
-            return (double) (i1 / i2);
-    }
-
-    double q = x1 / x2, tmp;
-
-    if (x2 == 0.0) return q;
-    tmp = x1 - floor(q) * x2;
-    return floor(q) + floor(tmp/x2);
 }
 
 /* some systems get this wrong, possibly depend on what libs are loaded */
@@ -323,197 +280,6 @@ static double logbase(double x, double base)
 #endif
     return R_log(x) / R_log(base);
 }
-
-
-static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
-{
-    int opcode = PRIMVAL(op), obj1, obj2;
-    SEXP argsevald, ans, arg1, arg2;
-
-    /* Evaluate arguments, maybe putting them on the scalar stack. */
-
-    SEXP sv_scalar_stack = R_scalar_stack;
-
-    PROTECT (argsevald = 
-               scalar_stack_eval2(args, &arg1, &arg2, &obj1, &obj2, env));
-    PROTECT2(arg1,arg2);
-
-    /* Check for dispatch on S3 or S4 objects. */
-
-    if (obj1 || obj2) {
-        if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
-            UNPROTECT(3);
-            return ans;
-        }
-    }
-
-    /* Check for argument count error (not before dispatch, since other
-       methods may have different requirements). */
-
-    if (argsevald==R_NilValue || CDDR(argsevald)!=R_NilValue)
-	errorcall(call,_("operator needs one or two arguments"));
-
-    if (CDR(argsevald)==R_NilValue && opcode!=MINUSOP && opcode!=PLUSOP)
-        errorcall(call, _("%d argument passed to '%s' which requires %d"),
-                        1, PRIMNAME(op), 2);
-
-    /* Arguments are now in arg1 and arg2, and are protected. They may
-       be on the scalar stack, but if so, are removed now, though they
-       may still be referenced.  Note that result might be on top of
-       one of them - OK since after storing into it, the args won't be
-       accessed again.
-
-       Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
-       but faster. */
-
-    R_scalar_stack = sv_scalar_stack;
-
-    /* We quickly do real arithmetic and integer plus/minus/times on scalars 
-       with no attributes (as will be the case for scalar stack values).  We
-       don't bother trying local assignment, since returning the result on the
-       scalar stack should be about as fast. */
-
-    int type1 = TYPEOF(arg1);
-
-    if ((type1==REALSXP || type1==INTSXP) && LENGTH(arg1) == 1
-                                          && NO_ATTRIBUTES_OK (variant, arg1)) {
-
-        if (CDR(argsevald)==R_NilValue) { /* Unary operation */
-            WAIT_UNTIL_COMPUTED(arg1);
-            if (type1==REALSXP) {
-                double val = opcode == PLUSOP ? *REAL(arg1) : -*REAL(arg1);
-                ans = NAMEDCNT_EQ_0(arg1) ? (*REAL(arg1) = val, arg1)
-                    : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_REAL(val)
-                    :   ScalarReal(val);
-            }
-            else { /* INTSXP */
-                int val  = *INTEGER(arg1)==NA_INTEGER ? NA_INTEGER
-                         : opcode == PLUSOP ? *INTEGER(arg1) : -*INTEGER(arg1);
-                ans = NAMEDCNT_EQ_0(arg1) ? (*INTEGER(arg1) = val, arg1)
-                    : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_INTEGER(val)
-                    :   ScalarInteger(val);
-            }
-            goto ret;
-        }
-
-        int type2 = TYPEOF(arg2);
-
-        if ((type2 == REALSXP || type2 == INTSXP) && LENGTH(arg2) == 1 
-                                       && NO_ATTRIBUTES_OK (variant, arg2)) {
-
-            if (type1 == INTSXP && type2 == INTSXP) {
-
-                if (opcode==PLUSOP || opcode==MINUSOP || opcode==TIMESOP) {
-
-                    WAIT_UNTIL_COMPUTED_2(arg1,arg2);
-    
-                    int a1 = *INTEGER(arg1), a2 = *INTEGER(arg2);
-                    int_fast64_t val;
-    
-                    if (a1==NA_INTEGER || a2==NA_INTEGER)
-                        val = NA_INTEGER;
-                    else {
-                        val = 
-                         opcode==PLUSOP  ? (int_fast64_t)a1 + (int_fast64_t)a2 :
-                         opcode==MINUSOP ? (int_fast64_t)a1 - (int_fast64_t)a2 :
-                                           (int_fast64_t)a1 * (int_fast64_t)a2;
-    
-                          if (val < R_INT_MIN || val > R_INT_MAX) {
-                              val = NA_INTEGER;
-                              warningcall (call, 
-                                         _("NAs produced by integer overflow"));
-                          }
-                    }
-    
-                    int ival = (int) val;
-
-                    ans = NAMEDCNT_EQ_0(arg2) ?
-                            (*INTEGER(arg2) = ival, arg2)
-                        : NAMEDCNT_EQ_0(arg1) ?
-                            (*INTEGER(arg1) = ival, arg1)
-                        : CAN_USE_SCALAR_STACK(variant) ? 
-                            PUSH_SCALAR_INTEGER(ival)
-                        :   ScalarInteger(ival);
-  
-                    goto ret;
-                }
-                else {
-                    /* fall through to general code below */
-                }
-            }
-
-            else { /* not both INTSXP, so at least one is REALSXP */
-
-                double a1, a2, val;
-    
-                WAIT_UNTIL_COMPUTED_2(arg1,arg2);
-
-                if (type1 == INTSXP) {
-                    a1 = (double) *INTEGER(arg1);
-                    a2 = *REAL(arg2);
-                }
-                else if (type2 == INTSXP) {
-                    a1 = *REAL(arg1);
-                    a2 = (double) *INTEGER(arg2);
-                }
-                else {
-                    a1 = *REAL(arg1);
-                    a2 = *REAL(arg2);
-                }
-            
-                switch (opcode) {
-                case PLUSOP:
-                    val = a1 + a2;
-                    break;
-                case MINUSOP:
-                    val = a1 - a2;
-                    break;
-                case TIMESOP:
-                    val = a1 * a2;
-                    break;
-                case DIVOP:
-                    val = a1 / a2;
-                    break;
-                case POWOP:
-                    if (a2 == 2.0)       val = a1 * a1;
-                    else if (a2 == 1.0)  val = a1;
-                    else if (a2 == 0.0)  val = 1.0;
-                    else if (a2 == -1.0) val = 1.0 / a1;
-                    else                 val = R_pow(a1,a2);
-                    break;
-                case MODOP:
-                    val = myfmod(a1,a2);
-                    break;
-                case IDIVOP:
-                    val = myfloor(a1,a2);
-                    break;
-                default: abort();
-                }
-
-                ans = NAMEDCNT_EQ_0(arg2) && type2 == REALSXP ?
-                        (*REAL(arg2) = val, arg2)
-                    : NAMEDCNT_EQ_0(arg1) && type1 == REALSXP ?
-                        (*REAL(arg1) = val, arg1)
-                    : CAN_USE_SCALAR_STACK(variant) ? 
-                        PUSH_SCALAR_REAL(val)
-                    :   ScalarReal(val);
-
-                goto ret;
-            }
-        }
-    }
-
-    /* Otherwise, handle the general case. */
-
-    ans = CDR(argsevald)==R_NilValue 
-           ? R_unary (call, op, arg1, obj1, env, variant) 
-           : R_binary (call, op, arg1, arg2, obj1, obj2, env, variant);
-
-  ret:
-    UNPROTECT(3);
-    return ans;
-}
-
 
 /* i1 = i % n1; i2 = i % n2;
  * this macro is quite a bit faster than having real modulo calls
@@ -1565,8 +1331,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
             }
         }
         else if (oper == MODOP)
-            flags = HELPERS_PIPE_IN0 |
-                    HELPERS_MASTER_NOW; /* since it can produce a warning msg */
+            flags = HELPERS_PIPE_IN0_OUT;
         if (n>1) {
             if (nx==n) flags |= HELPERS_PIPE_IN1;
             if (ny==n) flags |= HELPERS_PIPE_IN2;
@@ -1581,11 +1346,11 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
             ans = alloc_or_reuse(x, y, INTSXP, n, local_assign1, local_assign2);
         task = task_integer_arithmetic;
 
-       /* Only ^, /, and %/% can be done in helpers at present - others must be
-          in the master because of possible integer overflow or myfmod warning.
+       /* Only ^, /, %/%, and %% can be done in helpers at present - others
+          must be in the master because of possible integer overflow.
           Not bothering with pipelining yet. */
 
-        flags = oper == POWOP || oper == DIVOP || oper == IDIVOP ? 0 
+        flags = oper==POWOP || oper==DIVOP || oper==IDIVOP || oper==MODOP ? 0 
               : HELPERS_MASTER_NOW;
     }
 
@@ -3011,15 +2776,6 @@ CCODE R_get_arith_function(int which)
 attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
-
-/* Binary Operators, all primitives, now special, though they always eval args*/
-{"+",		do_arith,	PLUSOP,	1000,	2,	{PP_BINARY,  PREC_SUM,	  0}},
-{"-",		do_arith,	MINUSOP,1000,	2,	{PP_BINARY,  PREC_SUM,	  0}},
-{"*",		do_arith,	TIMESOP,1000,	2,	{PP_BINARY,  PREC_PROD,	  0}},
-{"/",		do_arith,	DIVOP,	1000,	2,	{PP_BINARY2, PREC_PROD,	  0}},
-{"^",		do_arith,	POWOP,	1000,	2,	{PP_BINARY2, PREC_POWER,  1}},
-{"%%",		do_arith,	MODOP,	1000,	2,	{PP_BINARY2, PREC_PERCENT,0}},
-{"%/%",		do_arith,	IDIVOP,	1000,	2,	{PP_BINARY2, PREC_PERCENT,0}},
 
 /* Mathematical Functions */
 /* primitives: these are group generic and so need to eval args (possibly internally) */
