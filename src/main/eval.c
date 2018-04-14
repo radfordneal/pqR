@@ -3950,32 +3950,33 @@ SEXP attribute_hidden do_not(SEXP call, SEXP op, SEXP args, SEXP env,
 
 SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env)
 {
+    int ov = PRIMVAL(op);
+
     SEXP s1, s2;
     int x1, x2;
 
-    if (length(args) != 2)
-	error(_("'%s' operator requires 2 arguments"),
-	      PRIMVAL(op) == 1 ? "&&" : "||");
+    if (args==R_NilValue || CDR(args)==R_NilValue || CDDR(args)!=R_NilValue)
+	error(_("'%s' operator requires 2 arguments"), ov == 1 ? "&&" : "||");
 
-    s1 = eval(CAR(args), env);
+    s1 = EVALV (CAR(args), env, 0);
     if (!isNumber(s1))
-	errorcall(call, _("invalid 'x' type in 'x %s y'"),
-		  PRIMVAL(op) == 1 ? "&&" : "||");
-    x1 = asLogical(s1);
+	errorcall(call, _("invalid 'x' type in 'x %s y'"), ov==1 ? "&&" : "||");
 
-    if (PRIMVAL(op)==1 && x1==FALSE)  /* FALSE && ... */
+    x1 = TYPEOF(s1) == LGLSXP && LENGTH(s1) == 1 ? *LOGICAL(s1) : asLogical(s1);
+
+    if (ov==1 && x1==FALSE)  /* FALSE && ... */
         return ScalarLogicalMaybeConst(FALSE);
 
-    if (PRIMVAL(op)==2 && x1==TRUE)   /* TRUE || ... */
+    if (ov==2 && x1==TRUE)   /* TRUE || ... */
         return ScalarLogicalMaybeConst(TRUE);
     
-    s2  = eval(CADR(args), env);
+    s2  = EVALV (CADR(args), env, 0);
     if (!isNumber(s2))	
-        errorcall(call, _("invalid 'y' type in 'x %s y'"),
-	          PRIMVAL(op) == 1 ? "&&" : "||");		
-    x2 = asLogical(s2);
+        errorcall(call, _("invalid 'y' type in 'x %s y'"), ov==1 ? "&&" : "||");
 
-    if (PRIMVAL(op)==1) /* ... && ... */
+    x2 = TYPEOF(s2) == LGLSXP && LENGTH(s2) == 1 ? *LOGICAL(s2) : asLogical(s2);
+
+    if (ov==1) /* ... && ... */
         return ScalarLogicalMaybeConst (x2==FALSE ? FALSE
                                   : x1==TRUE && x2==TRUE ? TRUE
                                   : NA_LOGICAL);
