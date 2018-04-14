@@ -353,7 +353,8 @@
  Rf_evalListKeepMissing
  Rf_evalListUnshared
  Rf_evalList_v
- Rf_evalv2
+ Rf_evalv_other
+ Rf_evalv_sym
  Rf_eval_unshared
  Rf_findFun_nospecsym
  Rf_findVar1

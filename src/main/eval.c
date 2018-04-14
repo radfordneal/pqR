@@ -44,6 +44,24 @@
 #define SCALAR_STACK_DEBUG 0
 
 
+/* Inline version of findVarPendingOK, for speed when symbol is found
+   from LASTSYMBINDING.  Doesn't necessarily set R_binding_cell. */
+
+static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
+{
+    rho = SKIP_USING_SYMBITS (rho, sym);
+
+    if (LASTSYMENV(sym) == SEXP32_FROM_SEXP(rho)) {
+        SEXP b = CAR(LASTSYMBINDING(sym));
+        if (b != R_UnboundValue)
+            return b;
+        LASTSYMENV(sym) = R_NoObject32;
+    }
+
+    return findVarPendingOK(sym,rho);
+}
+
+
 /* Inline version of findFun, meant to be fast when a special symbol is found 
    in the base environmet. */
 
@@ -370,62 +388,25 @@ void attribute_hidden wait_until_arguments_computed (SEXP args)
         helpers_wait_until_not_being_computed (wait_for);
 }
 
-/* e is protected here */
-SEXP attribute_hidden forcePromiseUnbound (SEXP e, int variant)
-{
-    RPRSTACK prstack;
-    SEXP val;
 
-    PROTECT(e);
+/* Fast eval macro.  Does not set R_Visible, so should not be used if
+   that is needed.  Does not check evaluation count, so should not be
+   used if a loop without such a check might result.  Does not check
+   expression depth or stack overflow, so should not be used if
+   infinite recursion could result. */
 
-    if (PRSEEN(e)) PRSEEN_error_or_warning(e);
+static SEXP evalv_lang  (SEXP, SEXP, int);
+static SEXP evalv_sym   (SEXP, SEXP, int);
+static SEXP evalv_other (SEXP, SEXP, int);
 
-    /* Mark the promise as under evaluation and push it on a stack
-       that can be used to unmark pending promises if a jump out
-       of the evaluation occurs. */
-
-    prstack.promise = e;
-    prstack.next = R_PendingPromises;
-    R_PendingPromises = &prstack;
-
-    SET_PRSEEN(e, 1);
-
-    val = EVALV (PRCODE(e), PRENV(e), 
-                 (variant & VARIANT_PENDING_OK) | VARIANT_MISSING_OK);
-
-    /* Pop the stack, unmark the promise and set its value field. */
-
-    R_PendingPromises = prstack.next;
-    SET_PRSEEN(e, 0);
-    SET_PRVALUE(e, val);
-    INC_NAMEDCNT(val);
-
-    /* Attempt to mimic past behaviour... */
-    if (val == R_MissingArg) {
-        if ( ! (variant & VARIANT_MISSING_OK) && TYPEOF(PRCODE(e)) == SYMSXP 
-                  && R_isMissing (PRCODE(e), PRENV(e)))
-            arg_missing_error(PRCODE(e));
-    }
-    else {
-        /* Set the environment to R_NilValue to allow GC to
-           reclaim the promise environment (unless value is R_MissingArg);
-           this is also useful for fancy games with delayedAssign() */
-        SET_PRENV(e, R_NilValue);
-    }
-
-    UNPROTECT(1);
-
-    return val;
-}
-
-SEXP forcePromise (SEXP e) /* e protected here if necessary */
-{
-    if (PRVALUE(e) == R_UnboundValue) {
-        return forcePromiseUnbound(e,0);
-    }
-    else
-        return PRVALUE(e);
-}
+#define EVALV(e, rho, variant) ( \
+    R_variant_result = 0, \
+    SELF_EVAL(TYPEOF(e)) ? \
+       (UPTR_FROM_SEXP(e)->sxpinfo.nmcnt == MAX_NAMEDCNT ? e \
+         : (UPTR_FROM_SEXP(e)->sxpinfo.nmcnt = MAX_NAMEDCNT, e)) \
+     : SYM_NO_DOTS(e)       ? Rf_evalv_sym   (e, rho, variant) \
+     :                        Rf_evalv_other (e, rho, variant) \
+)
 
 
 /* The "evalv" function returns the value of "e" evaluated in "rho",
@@ -517,69 +498,7 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
     return res;
 }
 
-SEXP Rf_evalv_lang (SEXP e, SEXP rho, int variant)
-{
-    SEXP op, res;
-
-#   ifdef Win32
-        /* Reset the precision, rounding and exception modes of an ix86 fpu. */
-        __asm__ ( "fninit" );
-#   endif
-
-#   if SCALAR_STACK_DEBUG
-        SEXP sv_stack = R_scalar_stack;
-#   endif
-
-    SEXP fn = CAR(e), args = CDR(e);
-
-    if (TYPEOF(fn) == SYMSXP)
-        op = FINDFUN(fn,rho);
-    else
-        op = eval(fn,rho);
-
-    if (RTRACE(op)) R_trace_call(e,op);
-
-    if (TYPEOF(op) == CLOSXP) {
-        PROTECT(op);
-        res = applyClosure_v (e, op, promiseArgs(args,rho), rho, 
-                              NULL, variant);
-        UNPROTECT(1);
-    }
-    else {
-        int save = R_PPStackTop;
-        const void *vmax = VMAXGET();
-
-        R_Visible = TRUE;
-
-        if (TYPEOF(op) == SPECIALSXP)
-            res = CALL_PRIMFUN (e, op, args, rho, variant);
-        else if (TYPEOF(op) == BUILTINSXP)
-            res = R_Profiling ? Rf_builtin_op(op, e, rho, variant)
-                              : Rf_builtin_op_no_cntxt(op, e, rho, variant);
-        else
-            apply_non_function_error();
-
-        if (!R_Visible && PRIMPRINT(op) == 0)
-            R_Visible = TRUE;
-
-        CHECK_STACK_BALANCE(op, save);
-        VMAXSET(vmax);
-    }
-
-#   if SCALAR_STACK_DEBUG
-        if (variant & VARIANT_SCALAR_STACK_OK) {
-            if (R_scalar_stack != sv_stack && (res != sv_stack 
-                  || SCALAR_STACK_OFFSET(1) != sv_stack)) abort();
-        }
-        else {
-            if (R_scalar_stack != sv_stack) abort();
-        }
-#   endif
-
-    return res;
-}
-
-SEXP Rf_evalv_sym (SEXP e, SEXP rho, int variant)
+SEXP attribute_hidden Rf_evalv_sym (SEXP e, SEXP rho, int variant)
 {
     SEXP res;
 
@@ -613,11 +532,69 @@ SEXP Rf_evalv_sym (SEXP e, SEXP rho, int variant)
     return res;
 }
 
-SEXP Rf_evalv_other (SEXP e, SEXP rho, int variant)
+SEXP attribute_hidden Rf_evalv_other (SEXP e, SEXP rho, int variant)
 {
-    SEXP res;
+    SEXP op, res;
 
-    if (TYPEOF(e) == SYMSXP) {  /* Must be ... or ..1, ..2, etc. */
+    if (TYPEOF(e) == LANGSXP) {
+
+#       ifdef Win32
+            /* Reset precision, rounding and exception modes of an ix86 fpu. */
+            __asm__ ( "fninit" );
+#       endif
+
+#       if SCALAR_STACK_DEBUG
+            SEXP sv_stack = R_scalar_stack;
+#       endif
+
+        SEXP fn = CAR(e), args = CDR(e);
+
+        if (TYPEOF(fn) == SYMSXP)
+            op = FINDFUN(fn,rho);
+        else
+            op = eval(fn,rho);
+
+        if (RTRACE(op)) R_trace_call(e,op);
+
+        if (TYPEOF(op) == CLOSXP) {
+            PROTECT(op);
+            res = applyClosure_v (e, op, promiseArgs(args,rho), rho, 
+                                  NULL, variant);
+            UNPROTECT(1);
+        }
+        else {
+            int save = R_PPStackTop;
+            const void *vmax = VMAXGET();
+
+            R_Visible = TRUE;
+
+            if (TYPEOF(op) == SPECIALSXP)
+                res = CALL_PRIMFUN (e, op, args, rho, variant);
+            else if (TYPEOF(op) == BUILTINSXP)
+                res = R_Profiling ? Rf_builtin_op(op, e, rho, variant)
+                                  : Rf_builtin_op_no_cntxt(op, e, rho, variant);
+            else
+                apply_non_function_error();
+
+            if (!R_Visible && PRIMPRINT(op) == 0)
+                R_Visible = TRUE;
+
+            CHECK_STACK_BALANCE(op, save);
+            VMAXSET(vmax);
+        }
+
+#       if SCALAR_STACK_DEBUG
+            if (variant & VARIANT_SCALAR_STACK_OK) {
+                if (R_scalar_stack != sv_stack && (res != sv_stack 
+                      || SCALAR_STACK_OFFSET(1) != sv_stack)) abort();
+            }
+            else {
+                if (R_scalar_stack != sv_stack) abort();
+            }
+#       endif
+    }
+
+    else if (TYPEOF(e) == SYMSXP) {  /* Must be ... or ..1, ..2, etc. */
 
         if (e == R_DotsSymbol)
             dotdotdot_error();
@@ -677,6 +654,63 @@ SEXP Rf_evalv_other (SEXP e, SEXP rho, int variant)
         UNIMPLEMENTED_TYPE("eval", e);
 
     return res;
+}
+
+/* e is protected here */
+SEXP attribute_hidden forcePromiseUnbound (SEXP e, int variant)
+{
+    RPRSTACK prstack;
+    SEXP val;
+
+    PROTECT(e);
+
+    if (PRSEEN(e)) PRSEEN_error_or_warning(e);
+
+    /* Mark the promise as under evaluation and push it on a stack
+       that can be used to unmark pending promises if a jump out
+       of the evaluation occurs. */
+
+    prstack.promise = e;
+    prstack.next = R_PendingPromises;
+    R_PendingPromises = &prstack;
+
+    SET_PRSEEN(e, 1);
+
+    val = EVALV (PRCODE(e), PRENV(e), 
+                 (variant & VARIANT_PENDING_OK) | VARIANT_MISSING_OK);
+
+    /* Pop the stack, unmark the promise and set its value field. */
+
+    R_PendingPromises = prstack.next;
+    SET_PRSEEN(e, 0);
+    SET_PRVALUE(e, val);
+    INC_NAMEDCNT(val);
+
+    /* Attempt to mimic past behaviour... */
+    if (val == R_MissingArg) {
+        if ( ! (variant & VARIANT_MISSING_OK) && TYPEOF(PRCODE(e)) == SYMSXP 
+                  && R_isMissing (PRCODE(e), PRENV(e)))
+            arg_missing_error(PRCODE(e));
+    }
+    else {
+        /* Set the environment to R_NilValue to allow GC to
+           reclaim the promise environment (unless value is R_MissingArg);
+           this is also useful for fancy games with delayedAssign() */
+        SET_PRENV(e, R_NilValue);
+    }
+
+    UNPROTECT(1);
+
+    return val;
+}
+
+SEXP forcePromise (SEXP e) /* e protected here if necessary */
+{
+    if (PRVALUE(e) == R_UnboundValue) {
+        return forcePromiseUnbound(e,0);
+    }
+    else
+        return PRVALUE(e);
 }
 
 
@@ -1246,8 +1280,8 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT2(args,rho);
 
-    PROTECT(val = EVALV(val, rho, in    ? VARIANT_SEQ | VARIANT_ANY_ATTR :
-                                  along ? VARIANT_UNCLASS | VARIANT_ANY_ATTR :
+    PROTECT(val = EVALV (val, rho, in    ? VARIANT_SEQ | VARIANT_ANY_ATTR :
+                                   along ? VARIANT_UNCLASS | VARIANT_ANY_ATTR :
                                     VARIANT_UNCLASS | VARIANT_ANY_ATTR_EX_DIM));
     dims = R_NilValue;
 
@@ -1911,7 +1945,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         /* Evaluate the right hand side, asking for it on the scalar stack. */
 
         rhs = EVALV (rhs, rho, 
-               local_assign | VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK);
+                local_assign | VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK);
 
         /* See if the assignment was done by the rhs operator. */
 
@@ -2040,8 +2074,8 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
     if (maybe_fast) {
         PROTECT(rhs = EVALV (rhs, rho, 
-          (variant & (VARIANT_SCALAR_STACK_OK | VARIANT_NULL)) ? 
-             VARIANT_SCALAR_STACK_OK : 0));
+                       (variant & (VARIANT_SCALAR_STACK_OK | VARIANT_NULL)) ? 
+                         VARIANT_SCALAR_STACK_OK : 0));
     }
     else
         PROTECT(rhs = EVALV (rhs, rho, VARIANT_PENDING_OK));
@@ -2226,7 +2260,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                 prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
                 PROTECT (e = LCONS (op, CONS (prom, fetch_args)));
                 R_variant_result = 0;
-                e = Rf_evalv_lang (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
+                e = Rf_evalv_other (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
                 UNPROTECT(2);  /* e, fetch_args */
             }
 
@@ -3429,6 +3463,150 @@ static SEXP do_savefile(SEXP call, SEXP op, SEXP args, SEXP env)
     fclose(fp);
     return R_NilValue;
 }
+
+
+
+/* --------------------------------------------------------------------------
+
+   Inline function used by operators that can take operands on the
+   scalar stack and can handle unclassed objects (VARIANT_UNCLASS_FLAG).
+
+   Evaluates two arguments that may be put on the scalar stack.  These
+   two arguments are returned in arg1 and arg2, and whether they are
+   objects (accounting for VARIANT_UNCLASS_FLAG) in obj1 and obj2.  
+   If one of the first two arguments is an object, a list of the evaluated
+   arguments is returned as the value of the function, so that dispatch
+   must be attempted (note that the argument count in this case may
+   not be two).  If neither is an object, a list with the correct
+   number of arguments is returned, but they may (or may not) be the
+   unevaluated arguments.
+
+   If an argument is an object, all arguments will have been computed
+   before return from this function, but evaluation of arguments may 
+   be pending if neither operand is an object.
+
+   Note that if there are less than two arguments, the missing ones will
+   appear here to be R_NilValue (since CAR(R_NilValue) is R_NilValue).
+
+   The args and env arguments must be protected by the caller. */
+
+static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
+                                       int *obj1, int *obj2, SEXP env)
+{
+    SEXP argsevald;
+    SEXP x, y;
+    int o1, o2;
+
+    o1 = o2 = 0;
+
+    x = CAR(args); 
+    y = CADR(args);
+
+    /* We evaluate by the general procedure if ... present or more than
+       two arguments, not trying to put arguments on the scalar stack. */
+
+    if (x==R_DotsSymbol || y==R_DotsSymbol || CDDR(args)!=R_NilValue) {
+        argsevald = evalList (args, env);
+        x = CAR(argsevald);
+        y = CADR(argsevald);
+        o1 = isObject(x);
+        o2 = isObject(y);
+        goto rtrn;
+    }
+
+    /* Otherwise, we try to put the first argument on the scalar stack,
+       and evaluate with VARIANT_UNCLASS. */
+
+    PROTECT(x = EVALV (x, env, 
+             VARIANT_SCALAR_STACK_OK | VARIANT_UNCLASS | VARIANT_PENDING_OK));
+
+    if (isObject(x)) {
+        if (R_variant_result & VARIANT_UNCLASS_FLAG)
+            R_variant_result = 0;
+        else
+            o1 = 1;
+    }
+
+    /* If first argument is an object, we evaluate the rest of the arguments
+       normally. */
+
+    if (o1) {
+        argsevald = evalList (CDR(args), env);
+        y = CAR(argsevald);
+        argsevald = cons_with_tag (x, argsevald, TAG(args));
+        UNPROTECT(1); /* x */
+        WAIT_UNTIL_COMPUTED(x);
+        goto rtrn;
+    }
+
+    /* If there's no second argument, we can return now. */
+
+    if (y == R_NilValue) {
+        UNPROTECT(1);
+        argsevald = args;
+        goto rtrn;
+    }
+
+    /* Now we evaluate the second argument, also allowing it to be on the
+       scalar stack, again with VARIANT_UNCLASS. */
+
+    y = EVALV (y, env, 
+                VARIANT_UNCLASS | VARIANT_SCALAR_STACK_OK | VARIANT_PENDING_OK);
+
+    if (isObject(y)) {
+        if (R_variant_result & VARIANT_UNCLASS_FLAG)
+            R_variant_result = 0;
+        else
+            o2 = 1;
+    }
+
+    /* If the second argument is an object, we have to duplicate the first
+       arg if it is on the scalar stack, or an unclassed object, and create 
+       the list of evaluated arguments. */
+
+    if (o2) {
+
+        if (ON_SCALAR_STACK(x) || isObject(x)) /* can't be both */ {
+            UNPROTECT(1); /* x */
+            PROTECT(y);
+            if (ON_SCALAR_STACK(x)) {
+                POP_SCALAR_STACK(x);
+                PROTECT(x = duplicate(x));
+            }
+            else { /* isObject(x) */
+                PROTECT(x = Rf_makeUnclassed(x));
+                o1 = 0;
+            }
+        }
+        else
+            PROTECT(y);
+
+        argsevald = evalList (CDDR(args), env);
+        argsevald = cons_with_tag (y, argsevald, TAG(CDR(args)));
+        argsevald = cons_with_tag (x, argsevald, TAG(args));
+        UNPROTECT(2); /* x & y */
+        WAIT_UNTIL_COMPUTED_2(x,y);
+        goto rtrn;
+    }
+
+    /* If neither of the first two arguments are an object, we
+       don't look at any possible remaining arguments.  The caller
+       is responsible for reporting an error if any are present,
+       but we assist by returning the unevaluated arguments, which
+       in this case (no ...) number the same as the actual arguments. */
+
+    UNPROTECT(1); /* x */
+    argsevald = args;
+
+  rtrn:
+    *arg1 = x;
+    *arg2 = y;
+    *obj1 = o1;
+    *obj2 = o2;
+
+    return argsevald;
+}
+
 
 /* -------------------------------------------------------------------------- */
 /*                         LOGICAL OPERATORS                                  */

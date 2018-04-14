@@ -1774,41 +1774,6 @@ static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
 }
 
 
-/* Inline version of findVarPendingOK, for speed when symbol is found
-   from LASTSYMBINDING.  Doesn't necessarily set R_binding_cell. */
-
-static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
-{
-    rho = SKIP_USING_SYMBITS (rho, sym);
-
-    if (LASTSYMENV(sym) == SEXP32_FROM_SEXP(rho)) {
-        SEXP b = CAR(LASTSYMBINDING(sym));
-        if (b != R_UnboundValue)
-            return b;
-        LASTSYMENV(sym) = R_NoObject32;
-    }
-
-    return findVarPendingOK(sym,rho);
-}
-
-
-/* Fast eval macro.  Does not set R_Visible, so should not be used if
-   it's needed.  Does not check evaluation count, so should not be
-   used if a loop without such a check might result.  Does not check
-   expression depth or stack overflow, so should not be used if
-   infinite recursion could result. */
-
-#define EVALV(e, rho, variant) ( \
-    R_variant_result = 0, \
-    SELF_EVAL(TYPEOF(e)) ? \
-       (UPTR_FROM_SEXP(e)->sxpinfo.nmcnt == MAX_NAMEDCNT ? e \
-         : (UPTR_FROM_SEXP(e)->sxpinfo.nmcnt = MAX_NAMEDCNT, e)) \
-     : TYPEOF(e) == LANGSXP ? Rf_evalv_lang  (e, rho, variant) \
-     : SYM_NO_DOTS(e)       ? Rf_evalv_sym   (e, rho, variant) \
-     :                        Rf_evalv_other (e, rho, variant) \
-)
-
-
 /* Macro version of SETCAR.  Currently just calls function. */
 
 #define SETCAR(x,y) \

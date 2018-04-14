@@ -86,7 +86,7 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
               && (arg1 = CAR(args))!=R_DotsSymbol 
               && arg1!=R_MissingArg && arg1!=R_MissingUnder) {
 
-            PROTECT(arg1 = EVALV (arg1, rho, PRIMFUN_ARG1VAR(op)
+            PROTECT(arg1 = evalv (arg1, rho, PRIMFUN_ARG1VAR(op)
               | VARIANT_PENDING_OK /* allow overlap with context creation */ ));
 
             if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {

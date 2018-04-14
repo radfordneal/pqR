@@ -1740,7 +1740,6 @@ int Rf_ep_match_exprs(SEXP, SEXP);
 int Rf_ep_match_string_expr(const char *, SEXP);
 SEXP Rf_eval(SEXP, SEXP);
 SEXP Rf_evalv(SEXP, SEXP, int);
-SEXP Rf_evalv_lang(SEXP, SEXP, int);
 SEXP Rf_evalv_sym(SEXP, SEXP, int);
 SEXP Rf_evalv_other(SEXP, SEXP, int);
 SEXP Rf_findFun(SEXP, SEXP);
