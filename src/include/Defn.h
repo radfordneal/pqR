@@ -725,6 +725,7 @@ extern void helpers_wait_until_not_being_computed2 (SEXP, SEXP);
 #define PRVALUE_PENDING_OK(x) (UPTR_FROM_SEXP(x)->u.promsxp.value)
 #define PRCODE(x)	(UPTR_FROM_SEXP(x)->u.promsxp.expr)
 #define PRENV(x)	(UPTR_FROM_SEXP(x)->u.promsxp.env)
+#define SET_PRENV_NIL(x)(UPTR_FROM_SEXP(x)->u.promsxp.env = R_NilValue)
 #define PRSEEN(x)	(UPTR_FROM_SEXP(x)->sxpinfo.gp)
 #define SET_PRSEEN(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.gp = (v))
 
@@ -1774,10 +1775,19 @@ static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
 }
 
 
-/* Macro version of SETCAR.  Currently just calls function. */
+/* Macro version of SETCAR.  Currently just calls the function. */
 
-#define SETCAR(x,y) \
-  ((SETCAR)((x),(y)))
+#define SETCAR(x,y) ((SETCAR)((x),(y)))
+
+
+/* Versions of CONS cell and list field setting for R_NilValue that avoid the
+   unneeded old-to-new check. */
+
+#define SETCAR_NIL(x) (UPTR_FROM_SEXP(x)->u.listsxp.carval = R_NilValue)
+#define SETCDR_NIL(x) (UPTR_FROM_SEXP(x)->u.listsxp.cdrval = R_NilValue)
+#define SETTAG_NIL(x) (UPTR_FROM_SEXP(x)->u.listsxp.tagval = R_NilValue)
+
+#define SET_VECTOR_ELT_NIL(x,i) (((SEXP *) DATAPTR(x))[i] = R_NilValue)
 
 
 /* Macro for fast stack checking.  Calls R_CheckStack to do the actual

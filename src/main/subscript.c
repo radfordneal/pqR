@@ -741,7 +741,7 @@ static SEXP stringSubscript (SEXP s, int ns, int nx, SEXP names,
                     PROTECT (indexnames = allocVector(VECSXP, ns));
                     for (k = 0; k < ns; k++) 
                         if (INTEGER(indx)[k] != 0)
-                            SET_VECTOR_ELT (indexnames, k, R_NilValue);
+                            SET_VECTOR_ELT_NIL (indexnames, k);
                 }
                 SET_VECTOR_ELT (indexnames, i, sbe_i);
                 extra += 1;

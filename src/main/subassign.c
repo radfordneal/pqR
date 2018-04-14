@@ -1335,7 +1335,7 @@ static void SubAssignArgs(SEXP *subs, SEXP *y, SEXP call)
 	while (CDDR(args) != R_NilValue)
 	    args = CDR(args);
 	*y = CADR(args);
-	SETCDR(args, R_NilValue);
+	SETCDR_NIL(args);
     }
 }
 

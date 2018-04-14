@@ -2041,7 +2041,7 @@ SEXP reallocVector (SEXP vec, R_len_t length, int init)
         case VECSXP:
         case EXPRSXP:
             for (i = curr_len; i < length; i++)
-                SET_VECTOR_ELT(vec, i, R_NilValue);
+                SET_VECTOR_ELT_NIL (vec, i);
             break;
         case RAWSXP:
             for (i = curr_len; i < length; i++)

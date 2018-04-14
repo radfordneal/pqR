@@ -705,7 +705,7 @@ SEXP attribute_hidden forcePromiseUnbound (SEXP e, int variant)
            promise environment (unless value is R_MissingArg); this is
            also useful for fancy games with delayedAssign() */
 
-        SET_PRENV(e, R_NilValue);
+        SET_PRENV_NIL(e);
     }
 
     INC_NAMEDCNT(val);

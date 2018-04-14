@@ -248,7 +248,7 @@ void set_elements_to_NA_or_NULL (SEXP x, int i, int n)
         do SET_STRING_ELT (x, i++, NA_STRING); while (i<ln);
         break;
     case VECSXP: case EXPRSXP:
-        do SET_VECTOR_ELT (x, i++, R_NilValue); while (i<ln);
+        do SET_VECTOR_ELT_NIL (x, i++); while (i<ln);
         break;
     default:
 	UNIMPLEMENTED_TYPE("set_elements_to_NA_or_NULL", x);
