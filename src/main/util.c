@@ -715,14 +715,10 @@ R_NORETURN void attribute_hidden apply_non_function_error(void)
     error(_("attempt to apply non-function"));
 }
 
-void attribute_hidden PRSEEN_error_or_warning(SEXP e)
+R_NORETURN void attribute_hidden PRSEEN_error(SEXP e)
 {
-    if (PRSEEN(e) == 1)
-        errorcall(R_GlobalContext->call,
-         _("promise already under evaluation: recursive default argument reference or earlier problems?"));
-    else 
-        warningcall(R_GlobalContext->call,
-         _("restarting interrupted promise evaluation"));
+    errorcall (R_GlobalContext->call,
+     _("promise already under evaluation: recursive default argument reference or earlier problems?"));
 }
 
 R_NORETURN void attribute_hidden Rf_asLogicalNoNA_error (SEXP s, SEXP call)

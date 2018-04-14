@@ -1312,7 +1312,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define PrintVersion_part_1	Rf_PrintVersion_part_1
 # define PrintVersionString    	Rf_PrintVersionString
 # define PrintWarnings		Rf_PrintWarnings
-# define PRSEEN_error_or_warning Rf_PRSEEN_error_or_warning
+# define PRSEEN_error		Rf_PRSEEN_error
 # define promiseArgs		Rf_promiseArgs
 # define promiseArgsWithValues	Rf_promiseArgsWithValues
 # define promiseArgsWith1Value	Rf_promiseArgsWith1Value
@@ -1646,7 +1646,7 @@ R_NORETURN void arg_missing_error(SEXP sym);
 R_NORETURN void unbound_var_error(SEXP sym);
 R_NORETURN void out_of_bounds_error(SEXP call);
 R_NORETURN void nonsubsettable_error(SEXP call, SEXP x);
-void PRSEEN_error_or_warning(SEXP e);
+R_NORETURN void PRSEEN_error(SEXP e);
 Rboolean Rf_strIsASCII(const char *str);
 int utf8clen(char c);
 

@@ -659,47 +659,56 @@ SEXP attribute_hidden Rf_evalv_other (SEXP e, SEXP rho, int variant)
 /* e is protected here */
 SEXP attribute_hidden forcePromiseUnbound (SEXP e, int variant)
 {
-    RPRSTACK prstack;
     SEXP val;
 
-    PROTECT(e);
+    val = PRCODE(e);
 
-    if (PRSEEN(e)) PRSEEN_error_or_warning(e);
+    if ( ! SELF_EVAL(TYPEOF(val)) ) {
 
-    /* Mark the promise as under evaluation and push it on a stack
-       that can be used to unmark pending promises if a jump out
-       of the evaluation occurs. */
+        RPRSTACK prstack;
 
-    prstack.promise = e;
-    prstack.next = R_PendingPromises;
-    R_PendingPromises = &prstack;
+        if (PRSEEN(e) == 1) PRSEEN_error(e);
 
-    SET_PRSEEN(e, 1);
+        /* Mark the promise as under evaluation and push it on a stack
+           that can be used to unmark pending promises if a jump out
+           of the evaluation occurs. */
 
-    val = EVALV (PRCODE(e), PRENV(e), 
-                 (variant & VARIANT_PENDING_OK) | VARIANT_MISSING_OK);
+        prstack.promise = e;
+        prstack.next = R_PendingPromises;
+        R_PendingPromises = &prstack;
 
-    /* Pop the stack, unmark the promise and set its value field. */
+        SET_PRSEEN(e, 1);
 
-    R_PendingPromises = prstack.next;
-    SET_PRSEEN(e, 0);
+        PROTECT(e);
+
+        val = EVALV (val, PRENV(e), 
+                     (variant & VARIANT_PENDING_OK) | VARIANT_MISSING_OK);
+
+        UNPROTECT(1);
+
+        /* Pop the stack, unmark the promise and set its value field. */
+
+        R_PendingPromises = prstack.next;
+        SET_PRSEEN(e, 0);
+    }
+
     SET_PRVALUE(e, val);
-    INC_NAMEDCNT(val);
-
-    /* Attempt to mimic past behaviour... */
-    if (val == R_MissingArg) {
-        if ( ! (variant & VARIANT_MISSING_OK) && TYPEOF(PRCODE(e)) == SYMSXP 
+    
+    if (val == R_MissingArg) {  /* Attempt to mimic past behaviour... */
+        if ( ! (variant & VARIANT_MISSING_OK) && TYPEOF(PRCODE(e)) == SYMSXP
                   && R_isMissing (PRCODE(e), PRENV(e)))
             arg_missing_error(PRCODE(e));
     }
     else {
-        /* Set the environment to R_NilValue to allow GC to
-           reclaim the promise environment (unless value is R_MissingArg);
-           this is also useful for fancy games with delayedAssign() */
+
+        /* Set the environment to R_NilValue to allow GC to reclaim the
+           promise environment (unless value is R_MissingArg); this is
+           also useful for fancy games with delayedAssign() */
+
         SET_PRENV(e, R_NilValue);
     }
 
-    UNPROTECT(1);
+    INC_NAMEDCNT(val);
 
     return val;
 }

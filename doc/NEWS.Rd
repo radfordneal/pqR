@@ -185,6 +185,8 @@
         \code{unlist(list(x=list(2,a=3)))} and \code{unlist(list(x=c(2,a=3)))}
         now return the same result (in which the name for the first element 
         is \code{x}, not \code{x1}).
+  \item The warning message "restarting interrupted promise evaluation" is
+        no longer produced.
   \item The \code{\%\%} operator can no longer produce a warning of
         "probable complete loss of accuracy in modulus", the possiblity
         of which had prevented it being done in parallel in a helper thread.

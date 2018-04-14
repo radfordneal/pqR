@@ -304,7 +304,7 @@
  Rf_LogicalFromInteger
  Rf_LogicalFromReal
  Rf_LogicalFromString
- Rf_PRSEEN_error_or_warning
+ Rf_PRSEEN_error
  Rf_PrintDefaults
  Rf_PrintGreeting
  Rf_PrintValueEnv
