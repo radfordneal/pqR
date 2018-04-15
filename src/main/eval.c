@@ -668,7 +668,13 @@ SEXP attribute_hidden forcePromiseUnbound (SEXP e, int variant)
 
     val = PRCODE(e);
 
-    if ( ! SELF_EVAL(TYPEOF(val)) ) {
+    if (SELF_EVAL(TYPEOF(val)) ) {
+
+        /* Just copy code to value - avoids old-to-new check. */
+
+        SET_PRVALUE_TO_PRCODE (e);
+    }
+    else {
 
         RPRSTACK prstack;
 
@@ -682,7 +688,7 @@ SEXP attribute_hidden forcePromiseUnbound (SEXP e, int variant)
         prstack.next = R_PendingPromises;
         R_PendingPromises = &prstack;
 
-        SET_PRSEEN(e, 1);
+        SET_PRSEEN (e, 1);
 
         PROTECT(e);
 
@@ -694,10 +700,10 @@ SEXP attribute_hidden forcePromiseUnbound (SEXP e, int variant)
         /* Pop the stack, unmark the promise and set its value field. */
 
         R_PendingPromises = prstack.next;
-        SET_PRSEEN(e, 0);
-    }
+        SET_PRSEEN (e, 0);
 
-    SET_PRVALUE_MACRO(e, val);
+        SET_PRVALUE_MACRO (e, val);
+    }
     
     if (val == R_MissingArg) {  /* Attempt to mimic past behaviour... */
         if ( ! (variant & VARIANT_MISSING_OK) && TYPEOF(PRCODE(e)) == SYMSXP

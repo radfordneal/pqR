@@ -1775,13 +1775,23 @@ static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
 }
 
 
-/* Macro version of SET_PRVALUE, returning void.  Produces a fair amount 
-   of code, but this shouldn't be used much anyway. */
+/* Macro version of SET_PRVALUE, returning void.  Should not be used
+   indiscriminantly, since it produces a fair amount of code. */
 
 #define SET_PRVALUE_MACRO(x,y) do { \
     SEXP __x__ = (x), __y__ = (y); \
     sggc_old_to_new_check(CPTR_FROM_SEXP(__x__),CPTR_FROM_SEXP(__y__)); \
     UPTR_FROM_SEXP(__x__)->u.promsxp.value = __y__; \
+} while (0)
+
+
+/* SET_PRVALUE_TO_PRCODE copies the code field of a promise to the
+   value field, as appropriate for self-evaluating code. This does not
+   require an old-to-new check. */
+
+#define SET_PRVALUE_TO_PRCODE(x) do { \
+    SEXP __x__ = (x); \
+    UPTR_FROM_SEXP(__x__)->u.promsxp.value = PRCODE(__x__); \
 } while (0)
 
 
