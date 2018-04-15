@@ -10,12 +10,12 @@
 
   \subsection{INTRODUCTION}{
   \itemize{ 
-  \item This release has quite a few signficicant performance improvements.
+  \item This release has quite a few significant performance improvements.
         It also has some feature changes and bug fixes, including some
         features from later R Core versions.
 
   \item With the performance improvements in this release, it is
-        generally no longer desirable to use the byte code compiler.
+        generally no longer desirable to use the bytecode compiler.
         Defaults during configuration and use have therefore been
         changed so that the bytecode compiler, and byte-compiled code,
         will not be used unless very deliberately enabled.
@@ -299,14 +299,19 @@
 
   \subsection{BUG FIXES}{
   \itemize{
+  \item Fixed a bug that caused the following to fail with an error,
+        rather than print the square root of two:
+\preformatted{    f <- function (...) ..1(2); f(sqrt)
+}
+        This bug also exists in R Core versions to at least R-3.4.4.
   \item Fixed bugs in which \code{as.numeric("0x1.1.1p0")} didn't give an error,
         and \code{as.numeric("0x1fffffffffffff.7ffp0")} gave an 
         incorrectly-rounded result.  Both bugs (and related ones previously
-        fixed in pqR) exist in R-3.4.2.
+        fixed in pqR) exist in R-3.4.4.
   \item Fixed a bug that caused
         \code{print(c(F,NA,NA,F),na.print="abcdef")} to
         produce incorrectly-formatted output.  This bug also exists in
-        R Core versions to at least R-3.4.2.
+        R Core versions to at least R-3.4.4.
   \item The documentation on \code{debug} and \code{debugonce} has been
         fixed to remove mention of the \code{text} and \code{condition} 
         arguments. These arguments were documented in R-2.10.0, and in 
@@ -319,8 +324,8 @@
 }
         For both lines above, the value printed was 9 rather than 3.
   \item Previously, \code{length(plist)<-n} did not work when \code{plist}
-        was a pairlist, but it does now.  This bug also exists in R Core
-        versions to at least R-3.4.1.
+        was a pairlist, but it does now.  This bug was also fixed independently
+        in R-3.4.3.
   \item Fixed a bug illustrated by the following:
 \preformatted{    L <- list(c(3,4))
     M <- matrix(L,2,2)
@@ -328,12 +333,12 @@
     L
 }
         In the value printed for \code{L}, \code{L[[1]][1]} had changed to 9.
-        This bug also exists in R-3.4.1.
+        This bug also exists in R Core versions to at least R-3.4.4.
   \item Fixed a bug illustrated by the following:
 \preformatted{    a <- as.integer(NA); e <- new.env(size=a); print(a)
 }
         The value printed was previously 0 rather than NA.
-        This bug also exists in R Core versions to at least R-3.4.1.
+        This bug also exists in R Core versions to at least R-3.4.4.
   }}
 }
 

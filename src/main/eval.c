@@ -498,6 +498,8 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
     return res;
 }
 
+/* Evaluate an expression that is a symbol other than ..., ..1, ..2, etc. */
+
 SEXP attribute_hidden Rf_evalv_sym (SEXP e, SEXP rho, int variant)
 {
     SEXP res;
@@ -532,6 +534,9 @@ SEXP attribute_hidden Rf_evalv_sym (SEXP e, SEXP rho, int variant)
     return res;
 }
 
+/* Evaluate an expression that is not self-evaluating and not a symbol
+   (other than ..., ..1, ..2, etc.). */
+
 SEXP attribute_hidden Rf_evalv_other (SEXP e, SEXP rho, int variant)
 {
     SEXP op, res;
@@ -549,7 +554,7 @@ SEXP attribute_hidden Rf_evalv_other (SEXP e, SEXP rho, int variant)
 
         SEXP fn = CAR(e), args = CDR(e);
 
-        if (TYPEOF(fn) == SYMSXP)
+        if (SYM_NO_DOTS(fn))
             op = FINDFUN(fn,rho);
         else
             op = eval(fn,rho);

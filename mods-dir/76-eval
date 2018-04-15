@@ -5,3 +5,7 @@ better.
 Improve performance of && and ||.
 
 Also other performance improvements, including new SETCAR_NIL, etc.
+
+Also fixes bug illustrated by f <- function (...) ..1(2); f(sqrt),
+which previously produced an error rather than the square root of 2.
+
