@@ -703,23 +703,25 @@ SEXP attribute_hidden forcePromiseUnbound (SEXP e, int variant)
         SET_PRSEEN (e, 0);
 
         SET_PRVALUE_MACRO (e, val);
-    }
     
-    if (val == R_MissingArg) {  /* Attempt to mimic past behaviour... */
-        if ( ! (variant & VARIANT_MISSING_OK) && TYPEOF(PRCODE(e)) == SYMSXP
-                  && R_isMissing (PRCODE(e), PRENV(e)))
-            arg_missing_error(PRCODE(e));
-    }
-    else {
+        if (val == R_MissingArg) {
 
-        /* Set the environment to R_NilValue to allow GC to reclaim the
-           promise environment (unless value is R_MissingArg); this is
-           also useful for fancy games with delayedAssign() */
+            /* Attempt to mimic past behaviour... */
+            if ( ! (variant & VARIANT_MISSING_OK) && TYPEOF(PRCODE(e)) == SYMSXP
+                      && R_isMissing (PRCODE(e), PRENV(e)))
+                arg_missing_error(PRCODE(e));
 
-        SET_PRENV_NIL(e);
+            return val;
+        }
     }
 
     INC_NAMEDCNT(val);
+
+    /* Set the environment to R_NilValue to allow GC to reclaim the
+       promise environment (unless value is R_MissingArg); this is
+       also useful for fancy games with delayedAssign() */
+
+    SET_PRENV_NIL(e);
 
     return val;
 }
