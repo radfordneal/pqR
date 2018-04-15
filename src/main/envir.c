@@ -64,7 +64,7 @@ static SEXP spec_name = R_NoObject;
   if (IS_ACTIVE_BINDING(__b__)) \
     setActiveValue(CAR(__b__), __val__); \
   else \
-    SETCAR(__b__, __val__); \
+    SETCAR_MACRO(__b__, __val__); \
 } while (0)
 
 #define SET_SYMBOL_BINDING_VALUE(sym, val) do { \

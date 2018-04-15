@@ -697,7 +697,7 @@ SEXP attribute_hidden forcePromiseUnbound (SEXP e, int variant)
         SET_PRSEEN(e, 0);
     }
 
-    SET_PRVALUE(e, val);
+    SET_PRVALUE_MACRO(e, val);
     
     if (val == R_MissingArg) {  /* Attempt to mimic past behaviour... */
         if ( ! (variant & VARIANT_MISSING_OK) && TYPEOF(PRCODE(e)) == SYMSXP
@@ -2464,7 +2464,7 @@ SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
             if (head==R_NilValue)
                 head = ev;
             else
-                SETCDR(tail, ev);
+                SETCDR_MACRO(tail, ev);
             tail = ev;
             if (CAR(ev) == R_MissingArg && isSymbol(CAR(el)))
                 SET_MISSING (ev, R_isMissing(CAR(el),rho));
@@ -2675,7 +2675,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
             if (head == R_NilValue)
                 head = ev;
             else
-                SETCDR(tail, ev);
+                SETCDR_MACRO(tail, ev);
             tail = ev;
         }
 	el = CDR(el);

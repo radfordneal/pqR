@@ -1775,9 +1775,41 @@ static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
 }
 
 
-/* Macro version of SETCAR.  Currently just calls the function. */
+/* Macro version of SET_PRVALUE, returning void.  Produces a fair amount 
+   of code, but this shouldn't be used much anyway. */
 
-#define SETCAR(x,y) ((SETCAR)((x),(y)))
+#define SET_PRVALUE_MACRO(x,y) do { \
+    SEXP __x__ = (x), __y__ = (y); \
+    sggc_old_to_new_check(CPTR_FROM_SEXP(__x__),CPTR_FROM_SEXP(__y__)); \
+    UPTR_FROM_SEXP(__x__)->u.promsxp.value = __y__; \
+} while (0)
+
+
+/* Macro versions of SETCAR and SETCDR, returning void.  Should not be
+   used indiscriminantly, since they produce a fair amount of code. */
+
+#define SETCAR_MACRO(x,y) do { \
+    SEXP __x__ = (x), __y__ = (y); \
+    sggc_old_to_new_check(CPTR_FROM_SEXP(__x__),CPTR_FROM_SEXP(__y__)); \
+    UPTR_FROM_SEXP(__x__)->u.listsxp.carval = __y__; \
+} while (0)
+
+#define SETCDR_MACRO(x,y) do { \
+    SEXP __x__ = (x), __y__ = (y); \
+    sggc_old_to_new_check(CPTR_FROM_SEXP(__x__),CPTR_FROM_SEXP(__y__)); \
+    UPTR_FROM_SEXP(__x__)->u.listsxp.cdrval = __y__; \
+} while (0)
+
+
+/* Macro version of SET_TAG, suitable for general use in the interpreter. */
+
+#define SET_TAG(x,y) do { \
+    SEXP __x__ = (x), __y__ = (y); \
+    if (TYPEOF(__y__) == NILSXP || TYPEOF(__y__) == SYMSXP) \
+        UPTR_FROM_SEXP(__x__)->u.listsxp.tagval = __y__; \
+    else \
+        (SET_TAG)(__x__,__y__); \
+} while (0)
 
 
 /* Versions of CONS cell and list field setting for R_NilValue that avoid the

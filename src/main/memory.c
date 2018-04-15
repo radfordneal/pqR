@@ -238,10 +238,6 @@ void R_SetPPSize(R_size_t size)
 }
 
 
-#define CHECK_OLD_TO_NEW(x,y) \
-    sggc_old_to_new_check(CPTR_FROM_SEXP(x),CPTR_FROM_SEXP(y))
-
-
 /* Finalization and Weak References */
 
 /* The design of this mechanism is very close to the one described in
