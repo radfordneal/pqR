@@ -835,7 +835,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 SEXP value, s;
                 /* Remove argument names to ensure positional matching */
                 for (s = args; s != R_NilValue; s = CDR(s)) 
-                    SET_TAG(s, R_NilValue);
+                    SET_TAG_NIL(s);
                 wait_until_arguments_computed(args);
                 value = R_possible_dispatch(call, op, args, rho, FALSE);
                 if (value != R_NoObject) {

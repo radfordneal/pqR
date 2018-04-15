@@ -3241,7 +3241,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     if(useS4) {
 	/* Remove argument names to ensure positional matching */
 	if(isOps)
-	    for(s = args; s != R_NilValue; s = CDR(s)) SET_TAG(s, R_NilValue);
+	    for(s = args; s != R_NilValue; s = CDR(s)) SET_TAG_NIL(s);
 	if(R_has_methods(op)) {
 	    value = R_possible_dispatch(call, op, args, rho, FALSE);
             if (value != R_NoObject) {
@@ -3410,7 +3410,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     if (isOps) {
         /* ensure positional matching for operators */
         for (m = s; m != R_NilValue; m = CDR(m))
-            SET_TAG(m, R_NilValue);
+            SET_TAG_NIL(m);
     }
 
     *ans = applyClosure_v (t, lsxp, s, rho, supplied, 0);

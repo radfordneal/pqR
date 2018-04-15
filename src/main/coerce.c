@@ -1646,7 +1646,7 @@ static SEXP do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (names != R_NilValue && *CHAR(STRING_ELT(names, i)) != '\0') /* ASCII */
 	    SET_TAG(pargs, install(translateChar(STRING_ELT(names, i))));
 	else
-	    SET_TAG(pargs, R_NilValue);
+	    SET_TAG_NIL(pargs);
 	pargs = CDR(pargs);
     }
     CheckFormals(args);
@@ -1702,7 +1702,7 @@ static SEXP do_ascall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	ans = R_NilValue;
     }
     SET_TYPEOF(ans, LANGSXP);
-    SET_TAG(ans, R_NilValue);
+    SET_TAG_NIL(ans);
     return ans;
 }
 

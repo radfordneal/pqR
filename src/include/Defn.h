@@ -1805,7 +1805,7 @@ static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
 
 #define SET_TAG(x,y) do { \
     SEXP __x__ = (x), __y__ = (y); \
-    if (TYPEOF(__y__) == NILSXP || TYPEOF(__y__) == SYMSXP) \
+    if (TYPEOF(__y__) == SYMSXP) \
         UPTR_FROM_SEXP(__x__)->u.listsxp.tagval = __y__; \
     else \
         (SET_TAG)(__x__,__y__); \
@@ -1817,7 +1817,7 @@ static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
 
 #define SETCAR_NIL(x) (UPTR_FROM_SEXP(x)->u.listsxp.carval = R_NilValue)
 #define SETCDR_NIL(x) (UPTR_FROM_SEXP(x)->u.listsxp.cdrval = R_NilValue)
-#define SETTAG_NIL(x) (UPTR_FROM_SEXP(x)->u.listsxp.tagval = R_NilValue)
+#define SET_TAG_NIL(x) (UPTR_FROM_SEXP(x)->u.listsxp.tagval = R_NilValue)
 
 #define SET_VECTOR_ELT_NIL(x,i) (((SEXP *) DATAPTR(x))[i] = R_NilValue)
 

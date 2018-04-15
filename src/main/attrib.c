@@ -456,7 +456,7 @@ static SEXP removeAttrib(SEXP vec, SEXP name)
 	error("cannot set attribute on a CHARSXP");
     if (name == R_NamesSymbol && isList(vec)) {
 	for (t = vec; t != R_NilValue; t = CDR(t))
-	    SET_TAG(t, R_NilValue);
+	    SET_TAG_NIL(t);
 	return R_NilValue;
     }
     else if (ATTRIB(vec) != R_NilValue || OBJECT(vec)) { 
@@ -1013,7 +1013,7 @@ SEXP namesgets(SEXP vec, SEXP val)
 		&& *CHAR(STRING_ELT(val, i)) != 0) /* test of length */
 		SET_TAG(s, install(translateChar(STRING_ELT(val, i))));
 	    else
-		SET_TAG(s, R_NilValue);
+		SET_TAG_NIL(s);
     }
     else if (isVector(vec) || IS_S4_OBJECT(vec))
 	/* Normal case */
