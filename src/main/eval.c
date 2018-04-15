@@ -4225,20 +4225,20 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     int type1 = TYPEOF(arg1);
 
-    if ((type1==REALSXP || type1==INTSXP) && LENGTH(arg1) == 1
-                                          && NO_ATTRIBUTES_OK (variant, arg1)) {
+    if ((type1 == REALSXP || type1 == INTSXP || type1 == LGLSXP)
+          && LENGTH(arg1) == 1 && NO_ATTRIBUTES_OK (variant, arg1)) {
 
-        if (CDR(argsevald)==R_NilValue) { /* Unary operation */
+        if (CDR(argsevald) == R_NilValue) { /* Unary operation */
             WAIT_UNTIL_COMPUTED(arg1);
-            if (type1==REALSXP) {
+            if (type1 == REALSXP) {
                 double val = opcode == PLUSOP ? *REAL(arg1) : -*REAL(arg1);
                 ans = NAMEDCNT_EQ_0(arg1) ? (*REAL(arg1) = val, arg1)
                     : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_REAL(val)
                     :   ScalarReal(val);
             }
-            else { /* INTSXP */
-                int val  = *INTEGER(arg1)==NA_INTEGER ? NA_INTEGER
-                         : opcode == PLUSOP ? *INTEGER(arg1) : -*INTEGER(arg1);
+            else { /* INTSXP or LGLSXP */
+                int val = *INTEGER(arg1) == NA_INTEGER ? NA_INTEGER
+                        : opcode == PLUSOP ? *INTEGER(arg1) : -*INTEGER(arg1);
                 ans = NAMEDCNT_EQ_0(arg1) ? (*INTEGER(arg1) = val, arg1)
                     : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_INTEGER(val)
                     :   ScalarInteger(val);
@@ -4248,10 +4248,10 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
         int type2 = TYPEOF(arg2);
 
-        if ((type2 == REALSXP || type2 == INTSXP) && LENGTH(arg2) == 1 
-                                       && NO_ATTRIBUTES_OK (variant, arg2)) {
+        if ((type2 == REALSXP || type2 == INTSXP || type2 == LGLSXP)
+              && LENGTH(arg2) == 1 && NO_ATTRIBUTES_OK(variant, arg2)) {
 
-            if (type1 == INTSXP && type2 == INTSXP) {
+            if (type1 != REALSXP && type2 != REALSXP) {
 
                 if (opcode==PLUSOP || opcode==MINUSOP || opcode==TIMESOP) {
 
@@ -4292,17 +4292,17 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 }
             }
 
-            else { /* not both INTSXP, so at least one is REALSXP */
+            else { /* not both INTSXP or LGLSXP, so at least one is REALSXP */
 
                 double a1, a2, val;
     
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
 
-                if (type1 == INTSXP) {
+                if (type1 != REALSXP) {
                     a1 = (double) *INTEGER(arg1);
                     a2 = *REAL(arg2);
                 }
-                else if (type2 == INTSXP) {
+                else if (type2 != REALSXP) {
                     a1 = *REAL(arg1);
                     a2 = (double) *INTEGER(arg2);
                 }
