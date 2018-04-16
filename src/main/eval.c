@@ -4268,30 +4268,28 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                     int a1 = *INTEGER(arg1), a2 = *INTEGER(arg2);
                     int_fast64_t val;
     
-                    if (a1==NA_INTEGER || a2==NA_INTEGER)
+                    if (a1==NA_INTEGER || a2==NA_INTEGER) {
+                        ans = R_ScalarIntegerNA;
+                        goto ret;
+                    }
+
+                    val = 
+                      opcode==PLUSOP  ? (int_fast64_t)a1 + (int_fast64_t)a2 :
+                      opcode==MINUSOP ? (int_fast64_t)a1 - (int_fast64_t)a2 :
+                                        (int_fast64_t)a1 * (int_fast64_t)a2;
+
+                    if (val < R_INT_MIN || val > R_INT_MAX) {
                         val = NA_INTEGER;
-                    else {
-                        val = 
-                         opcode==PLUSOP  ? (int_fast64_t)a1 + (int_fast64_t)a2 :
-                         opcode==MINUSOP ? (int_fast64_t)a1 - (int_fast64_t)a2 :
-                                           (int_fast64_t)a1 * (int_fast64_t)a2;
-    
-                          if (val < R_INT_MIN || val > R_INT_MAX) {
-                              val = NA_INTEGER;
-                              warningcall (call, 
-                                         _("NAs produced by integer overflow"));
-                          }
+                        warningcall (call, 
+                                     _("NAs produced by integer overflow"));
                     }
     
                     int ival = (int) val;
 
-                    ans = NAMEDCNT_EQ_0(arg2) ?
-                            (*INTEGER(arg2) = ival, arg2)
-                        : NAMEDCNT_EQ_0(arg1) ?
-                            (*INTEGER(arg1) = ival, arg1)
-                        : CAN_USE_SCALAR_STACK(variant) ? 
-                            PUSH_SCALAR_INTEGER(ival)
-                        :   ScalarInteger(ival);
+                    ans = NAMEDCNT_EQ_0(arg2) ? (*INTEGER(arg2) = ival, arg2)
+                        : NAMEDCNT_EQ_0(arg1) ? (*INTEGER(arg1) = ival, arg1)
+                        : CAN_USE_SCALAR_STACK(variant) 
+                           ? PUSH_SCALAR_INTEGER(ival) : ScalarInteger(ival);
   
                     goto ret;
                 }
@@ -4307,12 +4305,20 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
 
                 if (type1 != REALSXP) {
+                    if (*INTEGER(arg1) == NA_INTEGER) {
+                        ans = R_ScalarRealNA;
+                        goto ret;
+                    }
                     a1 = (double) *INTEGER(arg1);
                     a2 = *REAL(arg2);
                 }
                 else if (type2 != REALSXP) {
-                    a1 = *REAL(arg1);
+                    if (*INTEGER(arg2) == NA_INTEGER) {
+                        ans = R_ScalarRealNA;
+                        goto ret;
+                    }
                     a2 = (double) *INTEGER(arg2);
+                    a1 = *REAL(arg1);
                 }
                 else {
                     a1 = *REAL(arg1);
