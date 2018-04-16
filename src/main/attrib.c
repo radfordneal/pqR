@@ -139,7 +139,7 @@ SEXP attribute_hidden getNamesAttrib (SEXP vec)
         PROTECT(s = allocVector(STRSXP, len));
         for ( ; vec != R_NilValue; vec = CDR(vec), i++) {
             if (TAG(vec) == R_NilValue)
-                SET_STRING_ELT(s, i, R_BlankString);
+                SET_STRING_ELT_BLANK(s, i);
             else if (isSymbol(TAG(vec))) {
                 any = 1;
                 SET_STRING_ELT(s, i, PRINTNAME(TAG(vec)));
@@ -1275,7 +1275,7 @@ static SEXP do_attributes(SEXP call, SEXP op, SEXP args, SEXP env)
 	else
 	    SET_VECTOR_ELT(value, nvalues, CAR(attrs));
 	if (TAG(attrs) == R_NilValue)
-	    SET_STRING_ELT(names, nvalues, R_BlankString);
+	    SET_STRING_ELT_BLANK(names, nvalues);
 	else
 	    SET_STRING_ELT(names, nvalues, PRINTNAME(TAG(attrs)));
 	attrs = CDR(attrs);

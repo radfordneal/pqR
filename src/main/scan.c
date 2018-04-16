@@ -534,7 +534,7 @@ static void extractItem(char *buffer, SEXP ans, int i, LocalData *d)
 	break;
     case STRSXP:
 	if (isNAstring(buffer, 1, d))
-	    SET_STRING_ELT(ans, i, NA_STRING);
+	    SET_STRING_ELT_NA(ans, i);
 	else
 	    SET_STRING_ELT(ans, i, insertString(buffer, d));
 	break;
@@ -1320,7 +1320,7 @@ static SEXP do_typecvt(SEXP call, SEXP op, SEXP args, SEXP env)
 	    PROTECT(rval = duplicate(cvec));
 	    for (i = 0; i < len; i++)
 		if(isNAstring(CHAR(STRING_ELT(rval, i)), 1, &data))
-		    SET_STRING_ELT(rval, i, NA_STRING);
+		    SET_STRING_ELT_NA(rval, i);
 	}
 	else {
 	    PROTECT(dup = duplicated(cvec, FALSE));

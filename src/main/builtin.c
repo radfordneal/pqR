@@ -935,7 +935,7 @@ SEXP lengthgets(SEXP x, R_len_t len)
     case STRSXP:
         copy_string_elements (rval, 0, x, 0, len > lenx ? lenx : len);
 	for (i = lenx; i < len; i++)
-	    SET_STRING_ELT(rval, i, NA_STRING);
+	    SET_STRING_ELT_NA(rval, i);
 	break;
     case VECSXP:
         copy_vector_elements (rval, 0, x, 0, len > lenx ? lenx : len);
@@ -998,7 +998,7 @@ static SEXP do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho)
             else {
                 xnames = reallocVector (xnames, len, 1);
                 for (i = old_len; i < len; i++) 
-                    SET_STRING_ELT (xnames, i, R_BlankString);
+                    SET_STRING_ELT_BLANK (xnames, i);
             }
         }
         PROTECT(xnames);

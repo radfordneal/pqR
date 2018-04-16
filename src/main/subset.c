@@ -155,7 +155,7 @@ static void ExtractRange(SEXP x, SEXP result, int start, int end, SEXP call)
         break;
     case STRSXP:
         copy_string_elements (result, 0, x, start, m);
-        for (i = m; i<n; i++) SET_STRING_ELT(result, i, NA_STRING);
+        for (i = m; i<n; i++) SET_STRING_ELT_NA(result, i);
         break;
     case VECSXP:
     case EXPRSXP:
@@ -246,7 +246,7 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
     case STRSXP:
         for (i = 0; i<n; i++)
             if ((ii = ix[i]) <= 0 || ii > nx)
-                SET_STRING_ELT(result, i, NA_STRING);
+                SET_STRING_ELT_NA(result, i);
             else
                 SET_STRING_ELT(result, i, STRING_ELT(x, ii-1));
         break;
@@ -494,7 +494,7 @@ static void set_row_or_col_to_na (SEXP result, int start, int step, int end,
         break;
     case STRSXP:
         for (i = start; i<end; i += step)
-            SET_STRING_ELT(result, i, NA_STRING);
+            SET_STRING_ELT_NA(result, i);
         break;
     case VECSXP:
         for (i = start; i<end; i += step)
@@ -1020,7 +1020,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
                 COMPLEX(result)[i].i = NA_REAL;
                 break;
             case STRSXP:
-                SET_STRING_ELT(result, i, NA_STRING);
+                SET_STRING_ELT_NA(result, i);
                 break;
             case VECSXP:
                 SET_VECTOR_ELT_NIL(result, i);

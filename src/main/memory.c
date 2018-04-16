@@ -2032,7 +2032,7 @@ SEXP reallocVector (SEXP vec, R_len_t length, int init)
             break;
         case STRSXP:
             for (i = curr_len; i < length; i++)
-                SET_STRING_ELT(vec, i, NA_STRING);
+                SET_STRING_ELT_NA(vec, i);
             break;
         case VECSXP:
         case EXPRSXP:

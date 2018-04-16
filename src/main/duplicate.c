@@ -245,7 +245,7 @@ void set_elements_to_NA_or_NULL (SEXP x, int i, int n)
         do { COMPLEX(x)[i].r = COMPLEX(x)[i].i = NA_REAL; i++; } while (i<ln);
         break;
     case STRSXP:
-        do SET_STRING_ELT (x, i++, NA_STRING); while (i<ln);
+        do SET_STRING_ELT_NA (x, i++); while (i<ln);
         break;
     case VECSXP: case EXPRSXP:
         do SET_VECTOR_ELT_NIL (x, i++); while (i<ln);

@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2002--2011  The R Core Team
@@ -165,7 +165,7 @@ static SEXP do_agrep(SEXP call, SEXP op, SEXP args, SEXP env)
 	if(opt_value) {
 	    PROTECT(ans = allocVector(STRSXP, n));
 	    for(i = 0; i < n; i++)
-		SET_STRING_ELT(ans, i, NA_STRING);
+		SET_STRING_ELT_NA(ans, i);
 	    SEXP nms = getAttrib(vec, R_NamesSymbol);
 	    if(!isNull(nms))
 		setAttrib(ans, R_NamesSymbol, nms);
@@ -386,7 +386,7 @@ adist_full(SEXP x, SEXP y, double *costs, Rboolean opt_counts)
 			    for(m = 0; m < 3; m++) {
 				COUNTS(i, j, m) = NA_INTEGER;
 			    }
-			    SET_STRING_ELT(trafos, i + nx * j, NA_STRING);
+			    SET_STRING_ELT_NA(trafos, i + nx * j);
 			} else {
 			    nins = ndel = nsub = 0;
 			    k = nxi; l = nyj; m = k + l; nz = m;

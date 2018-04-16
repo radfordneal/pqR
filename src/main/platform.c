@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -976,10 +976,10 @@ static SEXP do_fileinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    INTEGER(gid)[i] = (int) sb.st_gid;
 	    stpwd = getpwuid(sb.st_uid);
 	    if (stpwd) SET_STRING_ELT(uname, i, mkChar(stpwd->pw_name));
-	    else SET_STRING_ELT(uname, i, NA_STRING);
+	    else SET_STRING_ELT_NA(uname, i);
 	    stgrp = getgrgid(sb.st_gid);
 	    if (stgrp) SET_STRING_ELT(grname, i, mkChar(stgrp->gr_name));
-	    else SET_STRING_ELT(grname, i, NA_STRING);
+	    else SET_STRING_ELT_NA(grname, i);
 #endif
 #ifdef Win32
 	    {
@@ -1016,11 +1016,11 @@ static SEXP do_fileinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
 #ifdef UNIX_EXTRAS
 	    INTEGER(uid)[i] = NA_INTEGER;
 	    INTEGER(gid)[i] = NA_INTEGER;
-	    SET_STRING_ELT(uname, i, NA_STRING);
-	    SET_STRING_ELT(grname, i, NA_STRING);
+	    SET_STRING_ELT_NA(uname, i);
+	    SET_STRING_ELT_NA(grname, i);
 #endif
 #ifdef Win32
-	    SET_STRING_ELT(exe, i, NA_STRING);
+	    SET_STRING_ELT_NA(exe, i);
 #endif
 	}
     }
@@ -2735,7 +2735,7 @@ static SEXP do_readlink(SEXP call, SEXP op, SEXP args, SEXP env)
 		       buf, PATH_MAX);
 	if (res >= 0) SET_STRING_ELT(ans, i, mkChar(buf));
 	else if (errno == EINVAL) SET_STRING_ELT(ans, i, mkChar(""));
-	else SET_STRING_ELT(ans, i,  NA_STRING);
+	else SET_STRING_ELT_NA(ans, i);
     }
 #endif
     UNPROTECT(1);

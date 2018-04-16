@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -773,7 +773,7 @@ na_answer: /* only INTSXP case currently used */
     case INTSXP:   INTEGER(ans)[0] = NA_INTEGER; break;
     case REALSXP:  REAL(ans)[0] = NA_REAL; break;
     case CPLXSXP:  COMPLEX(ans)[0].r = COMPLEX(ans)[0].i = NA_REAL; break;
-    case STRSXP:   SET_STRING_ELT(ans, 0, NA_STRING); break;
+    case STRSXP:   SET_STRING_ELT_NA(ans, 0); break;
     }
     UNPROTECT(1);  /* args */
     return ans;

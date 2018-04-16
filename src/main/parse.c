@@ -2883,7 +2883,7 @@ static int KeywordLookup(const char *s)
                     break;
                 case 8:
                     ps->next_token_val = allocVector(STRSXP, 1);
-                    SET_STRING_ELT(ps->next_token_val, 0, NA_STRING);
+                    SET_STRING_ELT_NA(ps->next_token_val, 0);
                     break;
                 case 9:
                     ps->next_token_val = allocVector(CPLXSXP, 1);

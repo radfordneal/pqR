@@ -824,7 +824,7 @@ static SEXP do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
         if (value_opt) {
             SEXP nmold = PROTECT(getNamesAttrib(text));
             PROTECT(ans = allocVector(STRSXP, n));
-            for (i = 0; i < n; i++)  SET_STRING_ELT(ans, i, NA_STRING);
+            for (i = 0; i < n; i++)  SET_STRING_ELT_NA(ans, i);
             if (!isNull(nmold))
                 setAttrib(ans, R_NamesSymbol, duplicate(nmold));
             UNPROTECT(2); /* ans, nmold */
@@ -1600,7 +1600,7 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
     /* This contradicts the code below that has NA matching NA */
     if (STRING_ELT(pat, 0) == NA_STRING) {
         PROTECT(ans = allocVector(STRSXP, n));
-        for (i = 0; i < n; i++)  SET_STRING_ELT(ans, i, NA_STRING);
+        for (i = 0; i < n; i++)  SET_STRING_ELT_NA(ans, i);
         UNPROTECT(1);
         return ans;
     }
@@ -1722,7 +1722,7 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 
         /* NA pattern was handled above */
         if (text_elt == NA_STRING) {
-            SET_STRING_ELT(ans, i, NA_STRING);
+            SET_STRING_ELT_NA(ans, i);
             continue;
         }
 

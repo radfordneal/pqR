@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2001-11   The R Core Team.
@@ -300,7 +300,7 @@ static SEXP allocMatrixNA(SEXPTYPE mode, int nrow, int ncol)
 
     PROTECT(retval = allocMatrix(mode, nrow, ncol));
     for(k = 0; k < LENGTH(retval); k++)
-	SET_STRING_ELT(retval, k, NA_STRING);
+	SET_STRING_ELT_NA(retval, k);
     UNPROTECT(1);
     return(retval);
 }

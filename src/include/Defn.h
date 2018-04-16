@@ -1832,6 +1832,13 @@ static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
 #define SET_VECTOR_ELT_NIL(x,i) (((SEXP *) DATAPTR(x))[i] = R_NilValue)
 
 
+/* Versions of SET_STRING_ELT setting element to NA_String or R_BlankString,
+   for which an old-to-new check is not necessary. */
+
+#define SET_STRING_ELT_NA(x,i)    (((SEXP *) DATAPTR(x))[i] = NA_STRING)
+#define SET_STRING_ELT_BLANK(x,i) (((SEXP *) DATAPTR(x))[i] = R_BlankString)
+
+
 /* Macro for fast stack checking.  Calls R_CheckStack to do the actual
    work if there is stack overflow. */
 

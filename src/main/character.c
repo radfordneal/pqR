@@ -303,7 +303,7 @@ static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
 	    stop = INTEGER(so)[i % l];
 	    el = STRING_ELT(x,i);
 	    if (el == NA_STRING || start == NA_INTEGER || stop == NA_INTEGER) {
-		SET_STRING_ELT(s, i, NA_STRING);
+		SET_STRING_ELT_NA(s, i);
 		continue;
 	    }
 	    ienc = getCharCE(el);
@@ -311,7 +311,7 @@ static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
 	    slen = LENGTH(el);
 	    if (start < 1) start = 1;
 	    if (start > stop)
-                SET_STRING_ELT (s, i, R_BlankString);
+                SET_STRING_ELT_BLANK (s, i);
 	    else {
                 size_t beginning, end;
 		(void) find_substr (ss, slen, ienc, start, stop, 
@@ -366,7 +366,7 @@ static SEXP do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	    stop = INTEGER(so)[i % l];
 	    if (el == NA_STRING || v_el == NA_STRING ||
 		start == NA_INTEGER || stop == NA_INTEGER) {
-		SET_STRING_ELT(s, i, NA_STRING);
+		SET_STRING_ELT_NA(s, i);
 		continue;
 	    }
 	    ienc = getCharCE(el);
@@ -564,7 +564,7 @@ static SEXP do_abbrev(SEXP call, SEXP op, SEXP args, SEXP env)
     vmax = VMAXGET();
     for (i = 0 ; i < len ; i++) {
 	if (STRING_ELT(x, i) == NA_STRING)
-	    SET_STRING_ELT(ans, i, NA_STRING);
+	    SET_STRING_ELT_NA(ans, i);
 	else {
 	    s = translateChar(STRING_ELT(x, i));
 	    warn = warn | !strIsASCII(s);
@@ -740,7 +740,7 @@ static SEXP do_tolower(SEXP call, SEXP op, SEXP args, SEXP env)
 	/* the translated string need not be the same length in bytes */
 	for (i = 0; i < n; i++) {
 	    el = STRING_ELT(x, i);
-	    if (el == NA_STRING) SET_STRING_ELT(y, i, NA_STRING);
+	    if (el == NA_STRING) SET_STRING_ELT_NA(y, i);
 	    else {
 		const char *xi;
 		ienc = getCharCE(el);
@@ -784,7 +784,7 @@ static SEXP do_tolower(SEXP call, SEXP op, SEXP args, SEXP env)
 	vmax = VMAXGET();
 	for (i = 0; i < n; i++) {
 	    if (STRING_ELT(x, i) == NA_STRING)
-		SET_STRING_ELT(y, i, NA_STRING);
+		SET_STRING_ELT_NA(y, i);
 	    else {
 		xi = CallocCharBuf(strlen(CHAR(STRING_ELT(x, i))));
 		strcpy(xi, translateChar(STRING_ELT(x, i)));
@@ -1175,7 +1175,7 @@ static SEXP do_chartr(SEXP call, SEXP op, SEXP args, SEXP env)
 	for (i = 0; i < n; i++) {
 	    el = STRING_ELT(x,i);
 	    if (el == NA_STRING)
-		SET_STRING_ELT(y, i, NA_STRING);
+		SET_STRING_ELT_NA(y, i);
 	    else {
 		ienc = getCharCE(el);
 		if (use_UTF8 && ienc == CE_UTF8) {
@@ -1257,7 +1257,7 @@ static SEXP do_chartr(SEXP call, SEXP op, SEXP args, SEXP env)
 	vmax = VMAXGET();
 	for (i = 0; i < n; i++) {
 	    if (STRING_ELT(x,i) == NA_STRING)
-		SET_STRING_ELT(y, i, NA_STRING);
+		SET_STRING_ELT_NA(y, i);
 	    else {
 		const char *xi = translateChar(STRING_ELT(x, i));
 		cbuf = CallocCharBuf(strlen(xi));
@@ -1402,7 +1402,7 @@ SEXP attribute_hidden do_strrep(SEXP call, SEXP op, SEXP args, SEXP env)
         el = STRING_ELT(x, ix);
         ni = INTEGER(n)[in];
         if (el == NA_STRING || ni == NA_INTEGER) {
-            SET_STRING_ELT(s, is, NA_STRING);
+            SET_STRING_ELT_NA(s, is);
         }
         else {
             if (ni < 0)

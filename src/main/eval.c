@@ -3383,7 +3383,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	    }
 	}
 	if( !set )
-	    SET_STRING_ELT(m, i, R_BlankString);
+	    SET_STRING_ELT_BLANK(m, i);
 	s = CDR(s);
     }
 

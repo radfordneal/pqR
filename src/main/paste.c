@@ -679,7 +679,7 @@ static SEXP do_format(SEXP call, SEXP op, SEXP args, SEXP env)
 	    PROTECT(y = allocVector(STRSXP, n));
 	    for (i = 0; i < n; i++) {
 		if(!na && STRING_ELT(xx, i) == NA_STRING) {
-		    SET_STRING_ELT(y, i, NA_STRING);
+		    SET_STRING_ELT_NA(y, i);
 		} else {
 		    q = buff;
 		    if(STRING_ELT(xx, i) == NA_STRING) s0 = R_print.na_string;

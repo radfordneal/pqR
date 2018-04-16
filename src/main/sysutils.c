@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995-1996   Robert Gentleman and Ross Ihaka
@@ -649,14 +649,14 @@ static SEXP do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if (isRawlist) {
 		si = VECTOR_ELT(x, i);
 		if (TYPEOF(si) == NILSXP) {
-		    if (!toRaw) SET_STRING_ELT(ans, i, NA_STRING);
+		    if (!toRaw) SET_STRING_ELT_NA(ans, i);
 		    continue;
 		} else if (TYPEOF(si) != RAWSXP)
 		    error(_("'x' must be a list of NULL or raw vectors"));
 	    } else {
 		si = STRING_ELT(x, i);
 		if (si == NA_STRING) {
-		    if(!toRaw) SET_STRING_ELT(ans, i, NA_STRING);
+		    if(!toRaw) SET_STRING_ELT_NA(ans, i);
 		    continue;
 		}
 	    }
@@ -715,7 +715,7 @@ static SEXP do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 			else if(isUTF8) ienc = CE_UTF8;
 		    }
 		    SET_STRING_ELT(ans, i, mkCharLenCE(cbuff.data, nout, ienc));
-		} else SET_STRING_ELT(ans, i, NA_STRING);
+		} else SET_STRING_ELT_NA(ans, i);
 	    }
 	}
 	Riconv_close(obj);

@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995,1996  Robert Gentleman, Ross Ihaka
@@ -810,7 +810,7 @@ SEXP PairToVectorList(SEXP x)
 	PROTECT(xnames = allocVector(STRSXP, len));
 	for (i = 0, xptr = x; i < len; i++, xptr = CDR(xptr)) {
 	    if(TAG(xptr) == R_NilValue)
-		SET_STRING_ELT(xnames, i, R_BlankString);
+		SET_STRING_ELT_BLANK(xnames, i);
 	    else
 		SET_STRING_ELT(xnames, i, PRINTNAME(TAG(xptr)));
 	}
