@@ -3497,13 +3497,13 @@ static SEXP do_savefile(SEXP call, SEXP op, SEXP args, SEXP env)
 
    Evaluates two arguments that may be put on the scalar stack.  These
    two arguments are returned in arg1 and arg2, and whether they are
-   objects (accounting for VARIANT_UNCLASS_FLAG) in obj1 and obj2.  
-   If one of the first two arguments is an object, a list of the evaluated
-   arguments is returned as the value of the function, so that dispatch
-   must be attempted (note that the argument count in this case may
-   not be two).  If neither is an object, a list with the correct
-   number of arguments is returned, but they may (or may not) be the
-   unevaluated arguments.
+   objects (accounting for VARIANT_UNCLASS_FLAG) in the two lowest
+   bits of obj.  If one of the first two arguments is an object, a
+   list of the evaluated arguments is returned as the value of the
+   function, so that dispatch must be attempted (note that the
+   argument count in this case may not be two).  If neither is an
+   object, a list with the correct number of arguments is returned,
+   but they may (or may not) be the unevaluated arguments.
 
    If an argument is an object, all arguments will have been computed
    before return from this function, but evaluation of arguments may 
@@ -3515,13 +3515,13 @@ static SEXP do_savefile(SEXP call, SEXP op, SEXP args, SEXP env)
    The args and env arguments must be protected by the caller. */
 
 static SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
-                                int *obj1, int *obj2, SEXP env)
+                                int *obj, SEXP env)
 {
     SEXP argsevald;
     SEXP x, y;
-    int o1, o2;
+    int ob;
 
-    o1 = o2 = 0;
+    ob = 0;
 
     x = CAR(args); 
     y = CADR(args);
@@ -3533,8 +3533,8 @@ static SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
         argsevald = evalList (args, env);
         x = CAR(argsevald);
         y = CADR(argsevald);
-        o1 = isObject(x);
-        o2 = isObject(y);
+        if (isObject(x)) ob = 1;
+        if (isObject(y)) ob |= 2;
         goto rtrn;
     }
 
@@ -3545,22 +3545,21 @@ static SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
              VARIANT_SCALAR_STACK_OK | VARIANT_UNCLASS | VARIANT_PENDING_OK));
 
     if (isObject(x)) {
-        if (R_variant_result & VARIANT_UNCLASS_FLAG)
-            R_variant_result = 0;
-        else
-            o1 = 1;
-    }
 
-    /* If first argument is an object, we evaluate the rest of the arguments
-       normally. */
+        if (! (R_variant_result & VARIANT_UNCLASS_FLAG)) {
 
-    if (o1) {
-        argsevald = evalList (CDR(args), env);
-        y = CAR(argsevald);
-        argsevald = cons_with_tag (x, argsevald, TAG(args));
-        UNPROTECT(1); /* x */
-        WAIT_UNTIL_COMPUTED(x);
-        goto rtrn;
+            /* If first argument is an object, we evaluate the rest of
+               the arguments (actually, at most one) normally. */
+
+            ob = 1;
+            argsevald = evalList (CDR(args), env);
+            y = CAR(argsevald);
+            if (isObject(y)) ob |= 2;
+            argsevald = cons_with_tag (x, argsevald, TAG(args));
+            UNPROTECT(1); /* x */
+            WAIT_UNTIL_COMPUTED(x);
+            goto rtrn;
+        }
     }
 
     /* If there's no second argument, we can return now. */
@@ -3578,39 +3577,36 @@ static SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
                 VARIANT_UNCLASS | VARIANT_SCALAR_STACK_OK | VARIANT_PENDING_OK);
 
     if (isObject(y)) {
-        if (R_variant_result & VARIANT_UNCLASS_FLAG)
-            R_variant_result = 0;
-        else
-            o2 = 1;
-    }
 
-    /* If the second argument is an object, we have to duplicate the first
-       arg if it is on the scalar stack, or an unclassed object, and create 
-       the list of evaluated arguments. */
+        if (! (R_variant_result & VARIANT_UNCLASS_FLAG)) {
 
-    if (o2) {
+            /* If the second argument is an object, we have to
+               duplicate the first arg if it is on the scalar stack,
+               or an unclassed object, and create the list of
+               evaluated arguments. */
 
-        if (ON_SCALAR_STACK(x) || isObject(x)) /* can't be both */ {
-            UNPROTECT(1); /* x */
-            PROTECT(y);
-            if (ON_SCALAR_STACK(x)) {
-                POP_SCALAR_STACK(x);
-                PROTECT(x = duplicate(x));
+            ob = 2;
+            if (ON_SCALAR_STACK(x) || isObject(x)) /* can't be both */ {
+                UNPROTECT(1); /* x */
+                PROTECT(y);
+                if (ON_SCALAR_STACK(x)) {
+                    POP_SCALAR_STACK(x);
+                    PROTECT(x = duplicate(x));
+                }
+                else { /* isObject(x) */
+                    PROTECT(x = Rf_makeUnclassed(x));
+                }
             }
-            else { /* isObject(x) */
-                PROTECT(x = Rf_makeUnclassed(x));
-                o1 = 0;
-            }
+            else
+                PROTECT(y);
+
+            /* should not be any more arguments */
+            argsevald = cons_with_tag (y, R_NilValue, TAG(CDR(args)));
+            argsevald = cons_with_tag (x, argsevald, TAG(args));
+            UNPROTECT(2); /* x & y */
+            WAIT_UNTIL_COMPUTED_2(x,y);
+            goto rtrn;
         }
-        else
-            PROTECT(y);
-
-        argsevald = evalList (CDDR(args), env);
-        argsevald = cons_with_tag (y, argsevald, TAG(CDR(args)));
-        argsevald = cons_with_tag (x, argsevald, TAG(args));
-        UNPROTECT(2); /* x & y */
-        WAIT_UNTIL_COMPUTED_2(x,y);
-        goto rtrn;
     }
 
     /* If neither of the first two arguments are an object, we
@@ -3623,10 +3619,13 @@ static SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
     argsevald = args;
 
   rtrn:
+
+    R_variant_result = 0;
+
     *arg1 = x;
     *arg2 = y;
-    *obj1 = o1;
-    *obj2 = o2;
+
+    *obj = ob;
 
     return argsevald;
 }
@@ -4187,20 +4186,20 @@ static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
 
 static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
-    int opcode = PRIMVAL(op), obj1, obj2;
     SEXP argsevald, ans, arg1, arg2;
+    int opcode = PRIMVAL(op);
+    int obj;
 
     /* Evaluate arguments, maybe putting them on the scalar stack. */
 
     SEXP sv_scalar_stack = R_scalar_stack;
 
-    PROTECT (argsevald = 
-               scalar_stack_eval2(args, &arg1, &arg2, &obj1, &obj2, env));
+    PROTECT (argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env));
     PROTECT2(arg1,arg2);
 
     /* Check for dispatch on S3 or S4 objects. */
 
-    if (obj1 || obj2) {
+    if (obj) {
         if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
             UNPROTECT(3);
             return ans;
@@ -4372,8 +4371,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* Otherwise, handle the general case. */
 
     ans = CDR(argsevald)==R_NilValue 
-           ? R_unary (call, op, arg1, obj1, env, variant) 
-           : R_binary (call, op, arg1, arg2, obj1, obj2, env, variant);
+           ? R_unary (call, op, arg1, obj, env, variant) 
+           : R_binary (call, op, arg1, arg2, obj&1, obj>>1, env, variant);
 
   ret:
     UNPROTECT(3);
@@ -4388,19 +4387,18 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP argsevald, ans, x, y;
-    int objx, objy;
+    int obj;
 
     /* Evaluate arguments, maybe putting them on the scalar stack. */
 
     SEXP sv_scalar_stack = R_scalar_stack;
 
-    PROTECT(argsevald = 
-              scalar_stack_eval2 (args, &x, &y, &objx, &objy, env));
+    PROTECT(argsevald = scalar_stack_eval2 (args, &x, &y, &obj, env));
     PROTECT2(x,y);
 
     /* Check for dispatch on S3 or S4 objects. */
 
-    if (objx || objy) {
+    if (obj) {
         if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
             UNPROTECT(3);
             return ans;
@@ -4421,7 +4419,7 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     R_scalar_stack = sv_scalar_stack;
 
-    ans = R_relop (call, op, x, y, objx, objy, env, variant);
+    ans = R_relop (call, op, x, y, obj&1, obj>>1, env, variant);
 
     UNPROTECT(3);
     return ans;
