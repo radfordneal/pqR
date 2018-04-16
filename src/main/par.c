@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1158,7 +1158,7 @@ static SEXP do_par(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	    else {
 		SET_VECTOR_ELT(value, i, R_NilValue);
-		SET_STRING_ELT(newnames, i, R_BlankString);
+		SET_STRING_ELT_BLANK(newnames, i);
 	    }
 	}
 	setAttrib(value, R_NamesSymbol, newnames);

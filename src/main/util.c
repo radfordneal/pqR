@@ -715,18 +715,15 @@ R_NORETURN void attribute_hidden apply_non_function_error(void)
     error(_("attempt to apply non-function"));
 }
 
-void attribute_hidden PRSEEN_error_or_warning(SEXP e)
+R_NORETURN void attribute_hidden PRSEEN_error(SEXP e)
 {
-    if (PRSEEN(e) == 1)
-        errorcall(R_GlobalContext->call,
-         _("promise already under evaluation: recursive default argument reference or earlier problems?"));
-    else 
-        warningcall(R_GlobalContext->call,
-         _("restarting interrupted promise evaluation"));
+    errorcall (R_GlobalContext->call,
+     _("promise already under evaluation: recursive default argument reference or earlier problems?"));
 }
 
 R_NORETURN void attribute_hidden Rf_asLogicalNoNA_error (SEXP s, SEXP call)
 {
+    PROTECT(s);
     errorcall (call, 
       length(s) == 0 ? _("argument is of length zero") :
       isLogical(s) ?   _("missing value where TRUE/FALSE needed") :
@@ -1496,7 +1493,7 @@ static SEXP do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans = allocVector(STRSXP, n = LENGTH(s)));
     for(i = 0; i < n; i++) {
 	if (STRING_ELT(s, i) == NA_STRING)
-	    SET_STRING_ELT(ans, i, NA_STRING);
+	    SET_STRING_ELT_NA(ans, i);
 	else {
 	    pp = filenameToWchar(STRING_ELT(s, i), TRUE);
 	    if (wcslen(pp) > PATH_MAX - 1) error(_("path too long"));
@@ -1530,7 +1527,7 @@ static SEXP do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans = allocVector(STRSXP, n = LENGTH(s)));
     for(i = 0; i < n; i++) {
 	if (STRING_ELT(s, i) == NA_STRING)
-	    SET_STRING_ELT(ans, i, NA_STRING);
+	    SET_STRING_ELT_NA(ans, i);
 	else {
 	    pp = R_ExpandFileName(translateChar(STRING_ELT(s, i)));
 	    if (strlen(pp) > PATH_MAX - 1)
@@ -1571,7 +1568,7 @@ SEXP attribute_hidden do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans = allocVector(STRSXP, n = LENGTH(s)));
     for(i = 0; i < n; i++) {
 	if (STRING_ELT(s, i) == NA_STRING)
-	    SET_STRING_ELT(ans, i, NA_STRING);
+	    SET_STRING_ELT_NA(ans, i);
 	else {
 	    memset(sp, 0, 4*PATH_MAX);
 	    pp = filenameToWchar(STRING_ELT(s, i), TRUE);
@@ -1613,7 +1610,7 @@ SEXP attribute_hidden do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans = allocVector(STRSXP, n = LENGTH(s)));
     for(i = 0; i < n; i++) {
 	if (STRING_ELT(s, i) == NA_STRING)
-	    SET_STRING_ELT(ans, i, NA_STRING);
+	    SET_STRING_ELT_NA(ans, i);
 	else {
 	    pp = R_ExpandFileName(translateChar(STRING_ELT(s, i)));
 	    if (strlen(pp) > PATH_MAX - 1)

@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995  Robert Gentleman and Ross Ihaka
@@ -2112,7 +2112,7 @@ void task_dotCode (helpers_op_t scalars, SEXP ans1, SEXP rawfun, SEXP args)
         /* Replace input-only arguments by R_NilValue, to release space. */
 
         if (dotCode_spa_dup && arg_styles && arg_styles[na] == R_ARG_IN) {
-            SET_VECTOR_ELT(args, na, R_NilValue);
+            SET_VECTOR_ELT_NIL (args, na);
             continue;
         }
 

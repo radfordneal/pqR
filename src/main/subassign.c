@@ -68,7 +68,7 @@ static SEXP EnlargeVector(SEXP call, SEXP x, R_len_t new_len)
         else
             new_xnames = reallocVector (xnames, new_len, 1);
         for (i = old_len; i < new_len; i++)
-            SET_STRING_ELT (new_xnames, i, R_BlankString);
+            SET_STRING_ELT_BLANK (new_xnames, i);
     }
 
     PROTECT(new_xnames);
@@ -1335,7 +1335,7 @@ static void SubAssignArgs(SEXP *subs, SEXP *y, SEXP call)
 	while (CDDR(args) != R_NilValue)
 	    args = CDR(args);
 	*y = CADR(args);
-	SETCDR(args, R_NilValue);
+	SETCDR_NIL(args);
     }
 }
 

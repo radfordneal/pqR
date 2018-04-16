@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1021,7 +1021,8 @@ static SEXP do_termsform(SEXP call, SEXP op, SEXP args, SEXP rho)
 			}
 		}
 	    }
-	    else SETCAR(t, R_NilValue);
+	    else
+                SETCAR_NIL(t);
 	}
 	SETCAR(a, v);
 	SET_TAG(a, install("specials"));
@@ -1077,7 +1078,7 @@ static SEXP do_termsform(SEXP call, SEXP op, SEXP args, SEXP rho)
     SET_TAG(a, install("class"));
     SET_OBJECT(ans, 1);
 
-    SETCDR(a, R_NilValue);  /* truncate if necessary */
+    SETCDR_NIL(a);  /* truncate if necessary */
 
     UNPROTECT(4);
     return ans;

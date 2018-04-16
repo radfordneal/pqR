@@ -1260,7 +1260,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		}
 		else if (have_cnames) {
 		    for (i = 0; i < ncols(u); i++)
-			SET_STRING_ELT(nam, j++, R_BlankString);
+			SET_STRING_ELT_BLANK(nam, j++);
 		}
 	    } else if (arg_len[n] >= lenmin) {
 		v = getNamesAttrib(u);
@@ -1281,7 +1281,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 				       STRING_ELT(deparse1line(expr, TRUE), 0));
 			UNPROTECT(1); /* expr */
 		    } else if (have_cnames)
-			SET_STRING_ELT(nam, j++, R_BlankString);
+			SET_STRING_ELT_BLANK(nam, j++);
 		}
 	    }
 	}
@@ -1537,7 +1537,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
                     }
 		    else {
 			for (i = 0; i < matrows[n]; i++)
-			    SET_STRING_ELT(nam, j++, R_BlankString);
+			    SET_STRING_ELT_BLANK(nam, j++);
 		    }
 		}
 	    }
@@ -1560,7 +1560,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 				       STRING_ELT(deparse1line(expr, TRUE), 0));
 			UNPROTECT(1); /* expr */
 		    } else if (have_rnames)
-			SET_STRING_ELT(nam, j++, R_BlankString);
+			SET_STRING_ELT_BLANK(nam, j++);
 		}
 	    }
 	}

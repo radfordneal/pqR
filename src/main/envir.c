@@ -64,7 +64,7 @@ static SEXP spec_name = R_NoObject;
   if (IS_ACTIVE_BINDING(__b__)) \
     setActiveValue(CAR(__b__), __val__); \
   else \
-    SETCAR(__b__, __val__); \
+    SETCAR_MACRO(__b__, __val__); \
 } while (0)
 
 #define SET_SYMBOL_BINDING_VALUE(sym, val) do { \
@@ -215,7 +215,7 @@ static void R_HashAddEntry (SEXP table, int i, SEXP entry)
     if (next == R_NilValue) {
         SET_HASHSLOTSUSED (table, HASHSLOTSUSED(table) + 1);
         SET_VECTOR_ELT (table, i, entry);
-        SETCDR (entry, R_NilValue);
+        SETCDR_NIL (entry);
     }
     else {
         int entry_hash = SYM_HASH(TAG(entry));
@@ -348,7 +348,7 @@ void attribute_hidden R_HashRehash (SEXP table)
     for (i = 0; i < size; i++) {
         SEXP e;
         e = VECTOR_ELT (table, i);
-        SET_VECTOR_ELT (table, i, R_NilValue);
+        SET_VECTOR_ELT_NIL (table, i);
         while (e != R_NilValue) {
             int j = SYM_HASH(TAG(e)) % size;
             SEXP f = CDR(e);

@@ -238,10 +238,6 @@ void R_SetPPSize(R_size_t size)
 }
 
 
-#define CHECK_OLD_TO_NEW(x,y) \
-    sggc_old_to_new_check(CPTR_FROM_SEXP(x),CPTR_FROM_SEXP(y))
-
-
 /* Finalization and Weak References */
 
 /* The design of this mechanism is very close to the one described in
@@ -2036,12 +2032,12 @@ SEXP reallocVector (SEXP vec, R_len_t length, int init)
             break;
         case STRSXP:
             for (i = curr_len; i < length; i++)
-                SET_STRING_ELT(vec, i, NA_STRING);
+                SET_STRING_ELT_NA(vec, i);
             break;
         case VECSXP:
         case EXPRSXP:
             for (i = curr_len; i < length; i++)
-                SET_VECTOR_ELT(vec, i, R_NilValue);
+                SET_VECTOR_ELT_NIL (vec, i);
             break;
         case RAWSXP:
             for (i = curr_len; i < length; i++)

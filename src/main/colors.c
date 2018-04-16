@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1997-2009  The R Core Team
@@ -252,7 +252,7 @@ static SEXP do_hcl(SEXP call, SEXP op, SEXP args, SEXP env)
 	ig = 255 * g + .5;
 	ib = 255 * b + .5;
 	if (FixupColor(&ir, &ig, &ib) && !fixup)
-	    SET_STRING_ELT(ans, i, NA_STRING);
+	    SET_STRING_ELT_NA(ans, i);
 	else
 	    SET_STRING_ELT(ans, i, mkChar(RGBA2rgb(ir, ig, ib,
 					  ScaleAlpha(A))));

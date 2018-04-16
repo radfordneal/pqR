@@ -1,0 +1,16 @@
+Revise how the "evalv" function is written, along with the "EVALV"
+macro, to reduce overheads and maybe make branch prediction work
+better.
+
+New SETCAR_NIL, etc. and SETCAR_MACRO, etc.  Also revised SET_TAG.
+
+Improve performance of && and ||.
+
+Improve scalar real performance of relational ops, use VARIANT_ANY_ATTR
+there and if "if" and "while".
+
+Other performance improvements too.
+
+Also fixes bug illustrated by f <- function (...) ..1(2); f(sqrt),
+which previously produced an error rather than the square root of 2.
+

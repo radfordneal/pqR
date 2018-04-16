@@ -155,7 +155,7 @@ static void ExtractRange(SEXP x, SEXP result, int start, int end, SEXP call)
         break;
     case STRSXP:
         copy_string_elements (result, 0, x, start, m);
-        for (i = m; i<n; i++) SET_STRING_ELT(result, i, NA_STRING);
+        for (i = m; i<n; i++) SET_STRING_ELT_NA(result, i);
         break;
     case VECSXP:
     case EXPRSXP:
@@ -181,7 +181,7 @@ static void ExtractRange(SEXP x, SEXP result, int start, int end, SEXP call)
             tmp = CDR(tmp);
         }
         for ( ; i<n; i++) {
-            SETCAR(tmp, R_NilValue);
+            SETCAR_NIL(tmp);
             tmp = CDR(tmp);
         }
         break;
@@ -246,7 +246,7 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
     case STRSXP:
         for (i = 0; i<n; i++)
             if ((ii = ix[i]) <= 0 || ii > nx)
-                SET_STRING_ELT(result, i, NA_STRING);
+                SET_STRING_ELT_NA(result, i);
             else
                 SET_STRING_ELT(result, i, STRING_ELT(x, ii-1));
         break;
@@ -277,7 +277,7 @@ static void ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
         tmp = result;
         for (i = 0; i<n; i++) {
             if ((ii = ix[i]) <= 0 || ii > nx)
-                SETCAR(tmp, R_NilValue);
+                SETCAR_NIL(tmp);
             else {
                 tmp2 = nthcdr(x, ii-1);
                 SETCAR(tmp, CAR(tmp2));
@@ -451,8 +451,7 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
                 /* reinstate dimnames, include names of dimnames, which
                    should be in the names attribute at this point. */
                 PROTECT(attrib = dup_top_level(attrib));
-                SET_VECTOR_ELT(attrib, 0,
-                               getAttrib(result, R_NamesSymbol));
+                SET_VECTOR_ELT(attrib, 0, getAttrib(result, R_NamesSymbol));
                 setAttrib(result, R_DimSymbol, attr);
                 setAttrib(result, R_DimNamesSymbol, attrib);
                 setAttrib(result, R_NamesSymbol, R_NilValue);
@@ -495,11 +494,11 @@ static void set_row_or_col_to_na (SEXP result, int start, int step, int end,
         break;
     case STRSXP:
         for (i = start; i<end; i += step)
-            SET_STRING_ELT(result, i, NA_STRING);
+            SET_STRING_ELT_NA(result, i);
         break;
     case VECSXP:
         for (i = start; i<end; i += step)
-            SET_VECTOR_ELT(result, i, R_NilValue);
+            SET_VECTOR_ELT_NIL(result, i);
         break;
     case RAWSXP:
         for (i = start; i<end; i += step)
@@ -1021,10 +1020,10 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
                 COMPLEX(result)[i].i = NA_REAL;
                 break;
             case STRSXP:
-                SET_STRING_ELT(result, i, NA_STRING);
+                SET_STRING_ELT_NA(result, i);
                 break;
             case VECSXP:
-                SET_VECTOR_ELT(result, i, R_NilValue);
+                SET_VECTOR_ELT_NIL(result, i);
                 break;
             case RAWSXP:
                 RAW(result)[i] = (Rbyte) 0;

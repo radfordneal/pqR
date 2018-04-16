@@ -86,7 +86,7 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
               && (arg1 = CAR(args))!=R_DotsSymbol 
               && arg1!=R_MissingArg && arg1!=R_MissingUnder) {
 
-            PROTECT(arg1 = EVALV (arg1, rho, PRIMFUN_ARG1VAR(op)
+            PROTECT(arg1 = evalv (arg1, rho, PRIMFUN_ARG1VAR(op)
               | VARIANT_PENDING_OK /* allow overlap with context creation */ ));
 
             if (isObject(arg1) && PRIMFUN_DSPTCH1(op)) {
@@ -942,7 +942,7 @@ SEXP lengthgets(SEXP x, R_len_t len)
     case STRSXP:
         copy_string_elements (rval, 0, x, 0, len > lenx ? lenx : len);
 	for (i = lenx; i < len; i++)
-	    SET_STRING_ELT(rval, i, NA_STRING);
+	    SET_STRING_ELT_NA(rval, i);
 	break;
     case VECSXP:
         copy_vector_elements (rval, 0, x, 0, len > lenx ? lenx : len);
@@ -1005,7 +1005,7 @@ static SEXP do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho)
             else {
                 xnames = reallocVector (xnames, len, 1);
                 for (i = old_len; i < len; i++) 
-                    SET_STRING_ELT (xnames, i, R_BlankString);
+                    SET_STRING_ELT_BLANK (xnames, i);
             }
         }
         PROTECT(xnames);

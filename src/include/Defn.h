@@ -725,6 +725,7 @@ extern void helpers_wait_until_not_being_computed2 (SEXP, SEXP);
 #define PRVALUE_PENDING_OK(x) (UPTR_FROM_SEXP(x)->u.promsxp.value)
 #define PRCODE(x)	(UPTR_FROM_SEXP(x)->u.promsxp.expr)
 #define PRENV(x)	(UPTR_FROM_SEXP(x)->u.promsxp.env)
+#define SET_PRENV_NIL(x)(UPTR_FROM_SEXP(x)->u.promsxp.env = R_NilValue)
 #define PRSEEN(x)	(UPTR_FROM_SEXP(x)->sxpinfo.gp)
 #define SET_PRSEEN(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.gp = (v))
 
@@ -1312,7 +1313,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define PrintVersion_part_1	Rf_PrintVersion_part_1
 # define PrintVersionString    	Rf_PrintVersionString
 # define PrintWarnings		Rf_PrintWarnings
-# define PRSEEN_error_or_warning Rf_PRSEEN_error_or_warning
+# define PRSEEN_error		Rf_PRSEEN_error
 # define promiseArgs		Rf_promiseArgs
 # define promiseArgsWithValues	Rf_promiseArgsWithValues
 # define promiseArgsWith1Value	Rf_promiseArgsWith1Value
@@ -1646,7 +1647,7 @@ R_NORETURN void arg_missing_error(SEXP sym);
 R_NORETURN void unbound_var_error(SEXP sym);
 R_NORETURN void out_of_bounds_error(SEXP call);
 R_NORETURN void nonsubsettable_error(SEXP call, SEXP x);
-void PRSEEN_error_or_warning(SEXP e);
+R_NORETURN void PRSEEN_error(SEXP e);
 Rboolean Rf_strIsASCII(const char *str);
 int utf8clen(char c);
 
@@ -1774,86 +1775,68 @@ static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
 }
 
 
-/* Inline version of findVarPendingOK, for speed when symbol is found
-   from LASTSYMBINDING.  Doesn't necessarily set R_binding_cell. */
+/* Macro version of SET_PRVALUE, returning void.  Should not be used
+   indiscriminantly, since it produces a fair amount of code. */
 
-static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
-{
-    rho = SKIP_USING_SYMBITS (rho, sym);
-
-    if (LASTSYMENV(sym) == SEXP32_FROM_SEXP(rho)) {
-        SEXP b = CAR(LASTSYMBINDING(sym));
-        if (b != R_UnboundValue)
-            return b;
-        LASTSYMENV(sym) = R_NoObject32;
-    }
-
-    return findVarPendingOK(sym,rho);
-}
+#define SET_PRVALUE_MACRO(x,y) do { \
+    SEXP __x__ = (x), __y__ = (y); \
+    sggc_old_to_new_check(CPTR_FROM_SEXP(__x__),CPTR_FROM_SEXP(__y__)); \
+    UPTR_FROM_SEXP(__x__)->u.promsxp.value = __y__; \
+} while (0)
 
 
-/* Eval tweaks, using R_EVAL_TWEAKS, and inline version of evalv,
-   called EVALV, which may do inline check for SELF_EVAL and/or for
-   cached symbol binding.  EVALV also does not decrement evalcount,
-   and so must not be used in a context where this might result in an
-   uninterruptable loop.  See comments before eval in eval.c. */
+/* SET_PRVALUE_TO_PRCODE copies the code field of a promise to the
+   value field, as appropriate for self-evaluating code. This does not
+   require an old-to-new check. */
 
-#ifndef R_EVAL_TWEAKS
-#define R_EVAL_TWEAKS 201  /* Default to current idea of what might be best */
-#endif
-
-extern SEXP Rf_evalv2 (SEXP, SEXP, int);
-
-static inline SEXP EVALV (SEXP e, SEXP rho, int variant)
-{
-#   if (R_EVAL_TWEAKS/100)%10 == 0
-
-        return Rf_evalv (e, rho, variant);
-
-#   else
-
-        /* The following is like EVAL_PRELUDE except for no evalcount */
-
-        R_variant_result = 0;
-   
-        if (SELF_EVAL(TYPEOF(e))) {
-            /* Make sure constants in expressions have maximum NAMEDCNT when
-               used as values, so they won't be modified. */
-            SET_NAMEDCNT_MAX(e);
-            R_Visible = TRUE;
-            return e;
-        }
-
-#       if (R_EVAL_TWEAKS/100)%10 > 1
-
-            if (SYM_NO_DOTS(e)) {
-                if (LASTSYMENV(e) == SEXP32_FROM_SEXP(rho)) {
-                    SEXP res = CAR(LASTSYMBINDING(e));
-                    if (TYPEOF(res) == PROMSXP) 
-                        res = PRVALUE_PENDING_OK(res);
-                    if (res != R_MissingArg && res != R_UnboundValue) {
-                        SET_NAMEDCNT_NOT_0(res);
-                        if ( ! (variant & VARIANT_PENDING_OK))
-                            WAIT_UNTIL_COMPUTED(res);
-                        R_Visible = TRUE;
-                        return res;
-                    }
-                }
-            }
-
-#       endif
-
-        return Rf_evalv2 (e, rho, variant);
-
-#   endif
-
-}
+#define SET_PRVALUE_TO_PRCODE(x) do { \
+    SEXP __x__ = (x); \
+    UPTR_FROM_SEXP(__x__)->u.promsxp.value = PRCODE(__x__); \
+} while (0)
 
 
-/* Macro version of SETCAR.  Currently just calls function. */
+/* Macro versions of SETCAR and SETCDR, returning void.  Should not be
+   used indiscriminantly, since they produce a fair amount of code. */
 
-#define SETCAR(x,y) \
-  ((SETCAR)((x),(y)))
+#define SETCAR_MACRO(x,y) do { \
+    SEXP __x__ = (x), __y__ = (y); \
+    sggc_old_to_new_check(CPTR_FROM_SEXP(__x__),CPTR_FROM_SEXP(__y__)); \
+    UPTR_FROM_SEXP(__x__)->u.listsxp.carval = __y__; \
+} while (0)
+
+#define SETCDR_MACRO(x,y) do { \
+    SEXP __x__ = (x), __y__ = (y); \
+    sggc_old_to_new_check(CPTR_FROM_SEXP(__x__),CPTR_FROM_SEXP(__y__)); \
+    UPTR_FROM_SEXP(__x__)->u.listsxp.cdrval = __y__; \
+} while (0)
+
+
+/* Macro version of SET_TAG, suitable for general use in the interpreter. */
+
+#define SET_TAG(x,y) do { \
+    SEXP __x__ = (x), __y__ = (y); \
+    if (TYPEOF(__y__) == SYMSXP) \
+        UPTR_FROM_SEXP(__x__)->u.listsxp.tagval = __y__; \
+    else \
+        (SET_TAG)(__x__,__y__); \
+} while (0)
+
+
+/* Versions of CONS cell and list field setting for R_NilValue that avoid the
+   unneeded old-to-new check. */
+
+#define SETCAR_NIL(x) (UPTR_FROM_SEXP(x)->u.listsxp.carval = R_NilValue)
+#define SETCDR_NIL(x) (UPTR_FROM_SEXP(x)->u.listsxp.cdrval = R_NilValue)
+#define SET_TAG_NIL(x) (UPTR_FROM_SEXP(x)->u.listsxp.tagval = R_NilValue)
+
+#define SET_VECTOR_ELT_NIL(x,i) (((SEXP *) DATAPTR(x))[i] = R_NilValue)
+
+
+/* Versions of SET_STRING_ELT setting element to NA_String or R_BlankString,
+   for which an old-to-new check is not necessary. */
+
+#define SET_STRING_ELT_NA(x,i)    (((SEXP *) DATAPTR(x))[i] = NA_STRING)
+#define SET_STRING_ELT_BLANK(x,i) (((SEXP *) DATAPTR(x))[i] = R_BlankString)
 
 
 /* Macro for fast stack checking.  Calls R_CheckStack to do the actual

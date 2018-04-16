@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2001--2009 The R Core Team
@@ -333,7 +333,7 @@ static SEXP do_intToUtf8(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(ans = allocVector(STRSXP, nc));
 	for (i = 0; i < nc; i++) {
 	    if (INTEGER(x)[i] == NA_INTEGER)
-		SET_STRING_ELT(ans, i, NA_STRING);
+		SET_STRING_ELT_NA(ans, i);
 	    else {
 		used = inttomb(buf, INTEGER(x)[i]);
 		buf[used] = '\0';
@@ -350,7 +350,7 @@ static SEXP do_intToUtf8(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
 	if (haveNA) {
 	    PROTECT(ans = allocVector(STRSXP, 1));
-	    SET_STRING_ELT(ans, 0, NA_STRING);
+	    SET_STRING_ELT_NA(ans, 0);
 	    UNPROTECT(2);
 	    return ans;
 	}

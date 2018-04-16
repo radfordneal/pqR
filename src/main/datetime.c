@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2015, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2000-2012  The R Core Team.
@@ -876,9 +876,9 @@ static SEXP do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 	if(!R_FINITE(secs) || tm.tm_min == NA_INTEGER ||
 	   tm.tm_hour == NA_INTEGER || tm.tm_mday == NA_INTEGER ||
 	   tm.tm_mon == NA_INTEGER || tm.tm_year == NA_INTEGER) {
-	    SET_STRING_ELT(ans, i, NA_STRING);
+	    SET_STRING_ELT_NA(ans, i);
 	} else {
-	    if(validate_tm(&tm) < 0) SET_STRING_ELT(ans, i, NA_STRING);
+	    if(validate_tm(&tm) < 0) SET_STRING_ELT_NA(ans, i);
 	    else {
 		const char *q = CHAR(STRING_ELT(sformat, i%m));
 		int n = strlen(q) + 50;
