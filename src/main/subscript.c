@@ -478,7 +478,7 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
                 if (v > 0) xi[j++] = i;
                 else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
             }
-            if ((v = si[i++]) != 0) 
+            if ((v = si[i++]) != 0) {
                 if (v > 0) xi[j++] = i;
                 else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
             }
