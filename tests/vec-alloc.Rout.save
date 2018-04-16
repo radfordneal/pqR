@@ -183,6 +183,26 @@ vector allocation test, repetition 10
 +     rvalsn <- rvals
 +     names(rvalsn) <- paste0("N",ivals)
 + 
++     ivals2 <- 1:(n+2)
++     rvals2 <- ivals2 + c(rep(0.1,n/5-1),rep(0,4*n/5+3))
++ 
++     ivals2n <- ivals2
++     names(ivals2n) <- paste0("N",ivals2)
++     rvals2n <- rvals2
++     names(rvals2n) <- paste0("N",ivals2)
++ 
++     stopifnot (identical (c(ivals,n+1L,n+2L), ivals2))
++     stopifnot (identical (c(ivals,c(n+1L,n+2L)), ivals2))
++     stopifnot (identical (c(rvals,n+1,n+2L), rvals2))
++     stopifnot (identical (c(rvals,c(n+1L,n+2)), rvals2))
++ 
++     if (n == 100) {
++         stopifnot (identical (c(ivalsn,N101=n+1L,N102=n+2L), ivals2n))
++         stopifnot (identical (c(ivalsn,c(N101=n+1L,N102=n+2L)), ivals2n))
++         stopifnot (identical (c(rvalsn,N101=n+1,N102=n+2), rvals2n))
++         stopifnot (identical (c(rvalsn,c(N101=n+1L,N102=n+2L)), rvals2n))
++     }
++ 
 +     stopifnot (identical (c(ivals,ivals), rep(ivals,times=2)))
 +     stopifnot (identical (c(rvals,rvals), rep(rvals,times=2)))
 +     stopifnot (identical (c(ivalsn,ivalsn), rep(ivalsn,times=2)))
