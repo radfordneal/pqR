@@ -1206,7 +1206,8 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     Cond = CAR(args); args = CDR(args);
     Stmt = CAR(args); args = CDR(args);
 
-    SEXP condval = EVALV (Cond, rho, VARIANT_SCALAR_STACK_OK);
+    SEXP condval = EVALV (Cond, rho, 
+                          VARIANT_SCALAR_STACK_OK | VARIANT_ANY_ATTR);
     int condlogical = asLogicalNoNA (condval, call);
     POP_IF_TOP_OF_STACK(condval);
 
@@ -1561,7 +1562,8 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) { /* <- back here for "next" */
         for (;;) {
-            SEXP condval = EVALV (CAR(args), rho, VARIANT_SCALAR_STACK_OK);
+            SEXP condval = EVALV (CAR(args), rho, 
+                                  VARIANT_SCALAR_STACK_OK | VARIANT_ANY_ATTR);
             int condlogical = asLogicalNoNA (condval, call);
             POP_IF_TOP_OF_STACK(condval);
             if (!condlogical) 
@@ -4382,7 +4384,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 /* -------------------------------------------------------------------------- */
 /*                       RELATIONAL OPERATORS.                                */
 /*                                                                            */
-/* Main work is done in R_relop, in relop.c.                                  */
+/* Main work (except for simple scalar reals) is done in R_relop, in relop.c. */
 
 static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
@@ -4419,7 +4421,33 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     R_scalar_stack = sv_scalar_stack;
 
-    ans = R_relop (call, op, x, y, obj&1, obj>>1, env, variant);
+    /* Handle scalar reals specially for speed. */
+
+    if (TYPEOF(x) == REALSXP && TYPEOF(y) == REALSXP
+          && LENGTH(x) == 1 && LENGTH(y) == 1
+          && ((variant & VARIANT_ANY_ATTR) != 0
+                || !HAS_ATTRIB(x) && !HAS_ATTRIB(y))) {
+
+        double xv = *REAL(x), yv = *REAL(y);
+        int res;
+        if (ISNAN(xv) || ISNAN(yv)) 
+            res = NA_LOGICAL;
+        else {
+            switch (PRIMVAL(op)) {
+            case EQOP: res = xv == yv; break;
+            case NEOP: res = xv != yv; break;
+            case LTOP: res = xv < yv; break;
+            case GTOP: res = xv > yv; break;
+            case LEOP: res = xv <= yv; break;
+            case GEOP: res = xv >= yv; break;
+            }
+        }
+        ans = ScalarLogicalMaybeConst (res);
+    }
+    else {  /* the general case */
+
+        ans = R_relop (call, op, x, y, obj&1, obj>>1, env, variant);
+    }
 
     UNPROTECT(3);
     return ans;
