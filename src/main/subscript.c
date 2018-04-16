@@ -468,32 +468,39 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
         /* Use unrolled loops. */
 
         if (ns & 1) {
-            if ((v = si[i++]) != 0) 
+            if ((v = si[i++]) != 0) {
                 if (v > 0) xi[j++] = i;
                 else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
+            }
         }
         if (ns & 2) {
+            if ((v = si[i++]) != 0) {
+                if (v > 0) xi[j++] = i;
+                else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
+            }
             if ((v = si[i++]) != 0) 
                 if (v > 0) xi[j++] = i;
                 else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
-            if ((v = si[i++]) != 0) 
-                if (v > 0) xi[j++] = i;
-                else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
+            }
         }
 
         while (i < ns && j < LEN0-3) {
-            if ((v = si[i++]) != 0) 
+            if ((v = si[i++]) != 0) {
                 if (v > 0) xi[j++] = i;
                 else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
-            if ((v = si[i++]) != 0) 
+            }
+            if ((v = si[i++]) != 0) {
                 if (v > 0) xi[j++] = i;
                 else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
-            if ((v = si[i++]) != 0) 
+            }
+            if ((v = si[i++]) != 0) {
                 if (v > 0) xi[j++] = i;
                 else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
-            if ((v = si[i++]) != 0) 
+            }
+            if ((v = si[i++]) != 0) {
                 if (v > 0) xi[j++] = i;
                 else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
+            }
         }
 
         x = allocVector (INTSXP, j + (ns-i));
@@ -501,18 +508,22 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
         memcpy (xi, xi0, j * sizeof(int));
 
         while (i < ns) {
-            if ((v = si[i++]) != 0) 
+            if ((v = si[i++]) != 0) {
                 if (v > 0) xi[j++] = i;
                 else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
-            if ((v = si[i++]) != 0) 
+            }
+            if ((v = si[i++]) != 0) {
                 if (v > 0) xi[j++] = i;
                 else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
-            if ((v = si[i++]) != 0) 
+            }
+            if ((v = si[i++]) != 0) {
                 if (v > 0) xi[j++] = i;
                 else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
-            if ((v = si[i++]) != 0) 
+            }
+            if ((v = si[i++]) != 0) {
                 if (v > 0) xi[j++] = i;
                 else { xi[j++] = NA_INTEGER; if (first_na == 0) first_na = j; }
+            }
         }
 
         if (LENGTH(x) != j)

@@ -137,48 +137,55 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
 
 static R_len_t asVecSize(SEXP call, SEXP x)
 {
-    if (TYPEOF(x) != INTSXP && TYPEOF(x) != REALSXP || LENGTH(x) != 1)
+    if (TYPEOF(x) != INTSXP && TYPEOF(x) != REALSXP || LENGTH(x) != 1) {
         if (call == R_NilValue)
             error(_("invalid '%s' argument"),"length");
         else
             errorcall(call,_("invalid value"));
+    }
 
     if (TYPEOF(x) == INTSXP) {
         int res = INTEGER(x)[0];
-        if (res == NA_INTEGER)
+        if (res == NA_INTEGER) {
             if (call == R_NilValue)
                 error(_("vector size cannot be NA"));
             else
                 errorcall(call,_("vector size cannot be NA"));
-        if (res < 0)
+        }
+        if (res < 0) {
             if (call == R_NilValue)
                 error(_("vector size cannot be negative"));
             else
                 errorcall(call,_("vector size cannot be negative"));
+        }
         return res;
     }
     else {  /* REALSXP */
         double d = REAL(x)[0];
-        if (ISNAN(d)) 
+        if (ISNAN(d)) {
             if (call == R_NilValue)
                 error(_("vector size cannot be NA/NaN"));
             else
                 errorcall(call,_("vector size cannot be NA/NaN"));
-        if (!R_FINITE(d))
+        }
+        if (!R_FINITE(d)) {
             if (call == R_NilValue)
                 error(_("vector size cannot be infinite"));
             else
                 errorcall(call,_("vector size cannot be infinite"));
-        if (d < 0)
+        }
+        if (d < 0) {
             if (call == R_NilValue)
                 error(_("vector size cannot be negative"));
             else
                 errorcall(call,_("vector size cannot be negative"));
-        if (d > R_LEN_T_MAX)
+        }
+        if (d > R_LEN_T_MAX) {
             if (call == R_NilValue)
                 error(_("vector size specified is too large"));
             else
                 errorcall(call,_("vector size specified is too large"));
+        }
         return (R_len_t) d;
     }
 }

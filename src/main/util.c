@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -650,7 +650,7 @@ const char *type2char (SEXPTYPE t)  /* returns a C char * */
 attribute_hidden
 SEXP type2symbol (SEXPTYPE t)
 {
-    if (t >= 0 && t < MAX_NUM_SEXPTYPE) { /* FIXME: branch not really needed */
+    if (t < MAX_NUM_SEXPTYPE) { /* FIXME: branch not really needed */
         SEXP res = Type2Table[t].rsymName;
         if (res != R_NoObject)
             return res;

@@ -830,7 +830,7 @@ static int free_charsxp (sggc_cptr_t cptr)
 
 
 /* public interface for controlling GC torture settings */
-void R_gc_torture(int gap, int wait, Rboolean inhibit)
+void R_gc_torture(int gap, int wait, int inhibit)
 {
     if (gap != NA_INTEGER && gap >= 0)
 	gc_force_wait = gc_force_gap = gap;
