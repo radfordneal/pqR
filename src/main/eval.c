@@ -673,6 +673,8 @@ SEXP attribute_hidden forcePromiseUnbound (SEXP e, int variant)
         /* Just copy code to value - avoids old-to-new check. */
 
         SET_PRVALUE_TO_PRCODE (e);
+
+        SET_NAMEDCNT_MAX (val);  /* mimic what would happen if eval'd */
     }
     else {
 
@@ -713,9 +715,9 @@ SEXP attribute_hidden forcePromiseUnbound (SEXP e, int variant)
 
             return val;
         }
-    }
 
-    INC_NAMEDCNT(val);
+        INC_NAMEDCNT(val);
+    }
 
     /* Set the environment to R_NilValue to allow GC to reclaim the
        promise environment (unless value is R_MissingArg); this is
