@@ -84,6 +84,7 @@ pid_t Rf_fork(void);
 #endif
 #include <R_ext/sggc-app.h>
 
+
 #define ConstExtern extern    /* Used for variables defined in const-objs.c */
 
 
@@ -95,12 +96,8 @@ pid_t Rf_fork(void);
 #define NOT_LVALUE(x) ((void)0,(x)) /* Make use on left of assignment an error*/
 
 
-/* Variables that need to be declared as firstprivate in omp parallel
-   constructs, since they're used in macros such as NA_REAL. */
-
-#define R_OMP_FIRSTPRIVATE_VARS R_NaReal,R_NaInt,R_NaN_cast_to_int
-
 typedef unsigned char Rbyte;
+
 
 /* Type for length of vectors, etc.  For compatibility with R-3.x.y, the
    "long vector" versions are also defined, same as the regular versions. */
