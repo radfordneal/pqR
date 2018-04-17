@@ -84,24 +84,20 @@ pid_t Rf_fork(void);
 #endif
 #include <R_ext/sggc-app.h>
 
-#define ConstExtern extern    /* These are defined in const-objs.c */
+
+#define ConstExtern extern    /* Used for variables defined in const-objs.c */
 
 
 /* The NOT_LVALUE macro is used to disallow assignment to CDR(s), etc.
- * even when USE_RINTERNALS is defined (SETCDR, etc. must be used instead
- * for GC old-to-new to work properly).  It can be redefined as the identity
- * function in those modules that actually need to assign (eg, memory.c).
- */
+   even when USE_RINTERNALS is defined (SETCDR, etc. must be used instead
+   for GC old-to-new to work properly).  It can be redefined as the identity
+   function in those modules that actually need to assign (eg, memory.c). */
 
-#define NOT_LVALUE(x) (0,(x)) /* Make use on left of assignment an error */
+#define NOT_LVALUE(x) ((void)0,(x)) /* Make use on left of assignment an error*/
 
-
-/* Variables that need to be declared as firstprivate in omp parallel
-   constructs, since they're used in macros such as NA_REAL. */
-
-#define R_OMP_FIRSTPRIVATE_VARS R_NaReal,R_NaInt,R_NaN_cast_to_int
 
 typedef unsigned char Rbyte;
+
 
 /* Type for length of vectors, etc.  For compatibility with R-3.x.y, the
    "long vector" versions are also defined, same as the regular versions. */

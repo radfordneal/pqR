@@ -27,7 +27,11 @@
 
 
 #ifndef SBSET_USE_BUILTINS
-#define SBSET_USE_BUILTINS (defined(__GNUC__) || defined(__clang__))
+# if defined(__GNUC__) || defined(__clang__)
+#   define SBSET_USE_BUILTINS 1
+# else
+#   define SBSET_USE_BUILTINS 0
+# endif
 #endif
 
 
