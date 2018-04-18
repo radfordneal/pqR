@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -211,12 +211,12 @@ void (SET_ATTRIB)(SEXP x, SEXP v) {
             return;  /* silently ignore attempt to set attribute on symbol */
         if (v == R_NilValue) {
             ATTRIB_W(x) = R_NilValue;
-            HAS_ATTRIB(x) = 0;
+            UNSET_HAS_ATTRIB(x);
         }
         else {
             CHECK_OLD_TO_NEW(x, v);
             ATTRIB_W(x) = v;
-            HAS_ATTRIB(x) = 1;
+            SET_HAS_ATTRIB(x);
         }
     }
 }
@@ -230,12 +230,12 @@ void SET_ATTRIB_TO_ANYTHING(SEXP x, SEXP v) {
             return;  /* silently ignore attempt to set attribute on symbol */
         if (v == R_NilValue) {
             ATTRIB_W(x) = R_NilValue;
-            HAS_ATTRIB(x) = 0;
+            UNSET_HAS_ATTRIB(x);
         }
         else {
             CHECK_OLD_TO_NEW(x, v);
             ATTRIB_W(x) = v;
-            HAS_ATTRIB(x) = 1;
+            SET_HAS_ATTRIB(x);
         }
     }
 }

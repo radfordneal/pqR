@@ -671,7 +671,8 @@ typedef struct {
    don't need "in use" anyway, since they'll never have lower NAMEDCNT). */
 
 #define helpers_is_being_computed(x) \
-  (UPTR_FROM_SEXP(x)->sxpinfo.being_computed)
+  ((UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
+     & TYPE_ET_CETERA_BEING_COMPUTED) != 0)
 
 #ifndef helpers_is_in_use
 #define helpers_is_in_use(x) \
@@ -686,9 +687,9 @@ typedef struct {
        ? UPTR_FROM_SEXP(v)->sxpinfo.in_use = 0 : 0)
 
 #define helpers_mark_being_computed(v) \
-    (UPTR_FROM_SEXP(v)->sxpinfo.being_computed = 1)
+   (UPTR_FROM_SEXP(v)->sxpinfo.type_et_cetera |= TYPE_ET_CETERA_BEING_COMPUTED)
 #define helpers_mark_not_being_computed(v) \
-    (UPTR_FROM_SEXP(v)->sxpinfo.being_computed = 0)
+   (UPTR_FROM_SEXP(v)->sxpinfo.type_et_cetera &= ~TYPE_ET_CETERA_BEING_COMPUTED)
 
 /* Macros to wait until variables(s) computed. */
 

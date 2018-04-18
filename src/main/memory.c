@@ -1244,7 +1244,7 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 #endif
 
     UPTR_FROM_SEXP(r)->sxpinfo = zero_sxpinfo;
-    TYPEOF(r) = type;
+    UPTR_FROM_SEXP(r)->sxpinfo.type_et_cetera = type;
     ATTRIB_W(r) = R_NilValue;
 
 #   if USE_COMPRESSED_POINTERS
@@ -1278,7 +1278,7 @@ static SEXP alloc_sym (void)
 #endif
 
     UPTR_FROM_SEXP(r)->sxpinfo = zero_sxpinfo;
-    TYPEOF(r) = SYMSXP;
+    UPTR_FROM_SEXP(r)->sxpinfo.type_et_cetera = SYMSXP;
     ATTRIB_W(r) = R_NilValue;
 
 #   if USE_COMPRESSED_POINTERS
@@ -1324,7 +1324,7 @@ static inline SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
 #endif
 
     UPTR_FROM_SEXP(r)->sxpinfo = zero_sxpinfo;
-    TYPEOF(r) = type;
+    UPTR_FROM_SEXP(r)->sxpinfo.type_et_cetera = type;
     ATTRIB_W(r) = R_NilValue;
 
 #   if USE_COMPRESSED_POINTERS
@@ -1721,8 +1721,9 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
         ((SYMSEXP)UPTR_FROM_SEXP(c))->sym_tunecnt2 = 0;
 #   endif
 
-    SET_DDVAL(c, isDDName(name));
-    SYM_NO_DOTS(c) = !DDVAL(c) && strcmp(CHAR(name),"...") != 0;
+    int dd = isDDName(name);
+    if (dd) SET_DDVAL_BIT(c);
+    if (dd || strcmp(CHAR(name),"...") == 0) SET_VEC_DOTS_BIT(c);
 
     return c;
 }
@@ -1863,7 +1864,7 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
     case LANGSXP:
         if (length == 0) return R_NilValue;
         s = allocList(length);
-        TYPEOF(s) = LANGSXP;
+        SET_TYPEOF0(s,LANGSXP);
         return s;
     case LISTSXP:
         return allocList(length);

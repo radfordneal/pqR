@@ -1044,7 +1044,7 @@ static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
         default: { /* %in%, not variant */
             for (i = 0; i < n; i++)
                 ansi[i] = ansi[i]==0 ? 0 : ansi[i]<0 ? 1 : ansi[ansi[i]-1] != 0;
-            TYPEOF(ans) = LGLSXP;
+            SET_TYPEOF0(ans,LGLSXP);
             break;
         }}
     }

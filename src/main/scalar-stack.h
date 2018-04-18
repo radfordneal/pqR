@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
@@ -79,12 +79,12 @@
      (/* SCALAR_STACK_OFFSET(1) != (x) ? (void) abort() : */ \
       (void) (R_scalar_stack -= 1))
 #   define PUSH_SCALAR_INTEGER(v) \
-     ((TYPEOF(R_scalar_stack) = INTSXP), \
+     (SET_TYPEOF0(R_scalar_stack,INTSXP), \
       (*INTEGER(R_scalar_stack) = (v)), \
       (R_scalar_stack += 1), \
       SCALAR_STACK_OFFSET(1))
 #   define PUSH_SCALAR_REAL(v) \
-     ((TYPEOF(R_scalar_stack) = REALSXP), \
+     (SET_TYPEOF0(R_scalar_stack,REALSXP), \
       (*REAL(R_scalar_stack) = (v)), \
       (R_scalar_stack += 1), \
       SCALAR_STACK_OFFSET(1))
@@ -102,14 +102,14 @@
 #   define PUSH_SCALAR_INTEGER(v) \
      (/* REprintf("PUSH INTEGER %llx %d %s %d\n", */ \
       /*           (long long)R_scalar_stack,v,__FILE__,__LINE__), */ \
-      (TYPEOF(R_scalar_stack) = INTSXP), \
+      SET_TYPEOF0(R_scalar_stack,INTSXP), \
       (*INTEGER(R_scalar_stack) = (v)), \
       (R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)+1)), \
       SCALAR_STACK_OFFSET(1))
 #   define PUSH_SCALAR_REAL(v) \
      (/* REprintf("PUSH REAL %llx %f %s %d\n", */ \
       /*           (long long)R_scalar_stack,v,__FILE__,__LINE__), */ \
-      (TYPEOF(R_scalar_stack) = REALSXP), \
+      SET_TYPEOF0(R_scalar_stack,REALSXP), \
       (*REAL(R_scalar_stack) = (v)), \
       (R_scalar_stack = (SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)+1)), \
       SCALAR_STACK_OFFSET(1))

@@ -211,21 +211,23 @@ typedef sggc_cptr_t SEXP32;
 
 struct sxpinfo_struct {
 
-    /* First byte:  whole of it allows a quick check for simple scalars. */
+    /* First byte:   Whole of it allows a quick check for simple scalars. 
+                     Parts give type and other information */
 
-    unsigned int type : 5;    /* warning: this is narrower than SEXPTYPE */
-                              /* note that FUNSXP %% 2^5 == 3 == CLOSXP */
+    unsigned int type_et_cetera : 8;   /* Bit fields as defined below... */
 
-    unsigned int being_computed : 1;  /* whether helper may be computing this */
+#   define TYPE_ET_CETERA_TYPE 0x1f /* Type of object, narrower than SEXPTYPE */
 
-    unsigned int has_attrib : 1;  /* Set to 1 iff ATTRIB != R_NilValue, except
-                                     not used when ATTRIB isn't normal attrib */
+#   define TYPE_ET_CETERA_BEING_COMPUTED 0x20 /* Obj being computed in helper?*/
 
-    unsigned int sym_no_dots : 1; /* Is a symbol, but not ..., ..1, ..2, etc. */
+#   define TYPE_ET_CETERA_VEC_DOTS 0x40 /* Symbol: one of ..., ..1, ..2, etc.
+                                           Vector: not scalar (length 1) */
 
+#   define TYPE_ET_CETERA_HAS_ATTR 0x80 /* Set to 1 if ATTRIB != R_NilValue, not
+                                           used when ATTRIB not normal attrib */
     /* Second byte. */
 
-    unsigned int obj : 1;     /* set if this is an S3 or S4 object */
+    unsigned int obj : 1;     /* Set if this is an S3 or S4 object */
 
     unsigned int in_use: 1;   /* whether contents may be in use by a helper */
 
@@ -236,7 +238,7 @@ struct sxpinfo_struct {
                                      Symbol: has base binding in global cache,
                                      Environment: R_BaseEnv or R_BaseNamespace*/
 
-    unsigned int nmcnt : 3;   /* count of "names" referring to object */
+    unsigned int nmcnt : 3;   /* Count of "names" referring to object */
 
     /* The "general purpose" field, used for miscellaneous purposes */
 
@@ -506,7 +508,8 @@ typedef struct VECTOR_SEXPREC_C {
 #define CAR(e)     NOT_LVALUE(UPTR_FROM_SEXP(e)->u.listsxp.carval)
 #define CDR(e)     NOT_LVALUE(UPTR_FROM_SEXP(e)->u.listsxp.cdrval)
 
-#define TYPEOF(x)  /*NOT_LVALUE*/(UPTR_FROM_SEXP(x)->sxpinfo.type)
+#define TYPEOF(x)  (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
+                     & TYPE_ET_CETERA_TYPE)
 
 #define LOGICAL(x) ((int *) DATAPTR_WITH_ALIGNMENT(x))
 #define INTEGER(x) ((int *) DATAPTR_WITH_ALIGNMENT(x))
@@ -530,7 +533,7 @@ static inline SEXP CDR (SEXP e)
   { return UPTR_FROM_SEXP(e)->u.listsxp.cdrval; }
 
 static inline SEXPTYPE TYPEOF (SEXP x) 
-  { return UPTR_FROM_SEXP(x)->sxpinfo.type; }
+  { return UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera & TYPE_ET_CETERA_TYPE; }
 
 extern R_NORETURN void Rf_LOGICAL_error(SEXP);
 static inline int *LOGICAL(SEXP x) 
@@ -803,8 +806,17 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define ATTRIB(x)       NOT_LVALUE(TYPEOF(x)==SYMSXP ? R_NilValue : ATTRIB_W(x))
 
 #define IS_PRINTNAME(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
-#define HAS_ATTRIB(x)   NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.has_attrib)
-#define SYM_NO_DOTS(x)  NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.sym_no_dots)
+#define HAS_ATTRIB(x)   ((UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
+                          & TYPE_ET_CETERA_HAS_ATTR) != 0)
+#define SET_HAS_ATTRIB(x)     (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
+                                 |= TYPE_ET_CETERA_HAS_ATTR)
+#define UNSET_HAS_ATTRIB(x)   (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
+                                 &= ~TYPE_ET_CETERA_HAS_ATTR)
+#define SYM_NO_DOTS(x)  (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera == SYMSXP)
+#define SET_VEC_DOTS_BIT(x)   (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
+                                 |= TYPE_ET_CETERA_VEC_DOTS)
+#define UNSET_VEC_DOTS_BIT(x) (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
+                                 &= ~TYPE_ET_CETERA_VEC_DOTS)
 #define OBJECT(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.obj)
 #define RTRACE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_base)
 #define LEVELS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)
@@ -817,8 +829,13 @@ extern void helpers_wait_until_not_in_use(SEXP);
   } while (0)
 #define SET_TYPEOF(x,v) do { \
     SEXPREC *_x_ = UPTR_FROM_SEXP(x); int _v_ = (v); \
-    if (_x_->sxpinfo.type!=_v_) _x_->sxpinfo.type = _v_; \
+    if ((_x_->sxpinfo.type_et_cetera & TYPE_ET_CETERA_TYPE) != _v_) \
+        _x_->sxpinfo.type_et_cetera = \
+          (_x_->sxpinfo.type_et_cetera & ~TYPE_ET_CETERA_TYPE) | _v_; \
   } while (0)
+#define SET_TYPEOF0(x,v) /* don't check if same as previous; expr not stmt */ \
+    (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera = \
+      (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera & ~TYPE_ET_CETERA_TYPE) | v)
 #define SET_RTRACE(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.trace_base=(v))
 #define SETLEVELS(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.gp=(v))
 
