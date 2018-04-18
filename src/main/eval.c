@@ -4236,9 +4236,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     int type1 = TYPEOF(arg1);
 
-    if ((type1 == REALSXP || type1 == INTSXP || type1 == LGLSXP)
-          && LENGTH(arg1) == 1 && NO_ATTRIBUTES_OK (variant, arg1)) {
-
+    if (isNumericOrFactor(arg1) && LENGTH(arg1) == 1 
+                                && NO_ATTRIBUTES_OK (variant, arg1)) {
         if (CDR(argsevald) == R_NilValue) { /* Unary operation */
             WAIT_UNTIL_COMPUTED(arg1);
             if (type1 == REALSXP) {
@@ -4259,9 +4258,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
         int type2 = TYPEOF(arg2);
 
-        if ((type2 == REALSXP || type2 == INTSXP || type2 == LGLSXP)
-              && LENGTH(arg2) == 1 && NO_ATTRIBUTES_OK(variant, arg2)) {
-
+        if (isNumericOrFactor(arg2) && LENGTH(arg2) == 1 
+                                    && NO_ATTRIBUTES_OK(variant, arg2)) {
             if (type1 != REALSXP && type2 != REALSXP) {
 
                 if (opcode==PLUSOP || opcode==MINUSOP || opcode==TIMESOP) {
@@ -4421,14 +4419,20 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     R_scalar_stack = sv_scalar_stack;
 
-    /* Handle scalar reals specially for speed. */
+    /* Handle numeric scalars specially for speed. */
 
-    if (TYPEOF(x) == REALSXP && TYPEOF(y) == REALSXP
+    if (isNumericOrFactor(x) && isNumericOrFactor(y)
           && LENGTH(x) == 1 && LENGTH(y) == 1
           && ((variant & VARIANT_ANY_ATTR) != 0
                 || !HAS_ATTRIB(x) && !HAS_ATTRIB(y))) {
 
-        double xv = *REAL(x), yv = *REAL(y);
+        WAIT_UNTIL_COMPUTED_2(x,y);
+
+        double xv = TYPEOF(x) == REALSXP ? *REAL(x) 
+                  : *INTEGER(x) == NA_INTEGER ? NA_REAL : *INTEGER(x);
+        double yv = TYPEOF(y) == REALSXP ? *REAL(y) 
+                  : *INTEGER(y) == NA_INTEGER ? NA_REAL : *INTEGER(y);
+
         int res;
         if (ISNAN(xv) || ISNAN(yv)) 
             res = NA_LOGICAL;
