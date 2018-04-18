@@ -99,7 +99,7 @@ pid_t Rf_fork(void);
 typedef unsigned char Rbyte;
 
 
-/* Type for length of vectors, etc.  For compatibility with R-3.x.y, the
+/* Type for length of vectors, etc.  For compatibility with R-3.0.0+, the
    "long vector" versions are also defined, same as the regular versions. */
 
 typedef int R_len_t;
@@ -108,20 +108,19 @@ typedef int R_xlen_t;
 #define R_LEN_T_MAX INT_MAX
 #define R_XLEN_T_MAX R_LEN_T_MAX
 
-/* Fundamental Data Types:  These are largely Lisp
- * influenced structures, with the exception of LGLSXP,
- * INTSXP, REALSXP, CPLXSXP and STRSXP which are the
- * element types for S-like data objects.
 
- * Note that the gap of 11 and 12 below is because of
- * the withdrawal of native "factor" and "ordered" types.
- *
- *			--> TypeTable[] in ../main/util.c for  typeof()
- */
+/* Fundamental Data Types: These are largely Lisp influenced
+   structures, with the exception of LGLSXP, INTSXP, REALSXP, CPLXSXP,
+   RAWSXP, and STRSXP which are the element types for S-like data
+   objects.
 
-/*  These exact numeric values are seldom used, but they are, e.g., in
- *  ../main/subassign.c
-*/
+   Note that the gap of 11 and 12 below is because of
+   the withdrawal of native "factor" and "ordered" types.
+
+   The exact numeric values are seldom used, but they are, e.g., in
+   ../main/subassign.c
+
+   See TypeTable[] in ../main/util.c for typeof() */
 
 typedef unsigned int SEXPTYPE;  /* used in serialize.c for things that aren't
                                    actual types */
@@ -208,17 +207,27 @@ typedef sggc_cptr_t SEXP32;
 #endif
 
 
-/* Flags.  Order may be fiddled to try to improve performance.  Total
-   size is 32 bits = 4 bytes. */
+/* Information in the header of every object.  Size is 32 bits = 4 bytes. */
 
 struct sxpinfo_struct {
 
-    /* Type and namedcnt in first byte */
-    unsigned int nmcnt : 3;   /* count of "names" referring to object */
+    /* First byte:  whole of it allows a quick check for simple scalars. */
+
     unsigned int type : 5;    /* warning: this is narrower than SEXPTYPE */
                               /* note that FUNSXP %% 2^5 == 3 == CLOSXP */
 
-    /* Miscellaneous flags, some with multiple meanings depending on type */
+    unsigned int being_computed : 1;  /* whether helper may be computing this */
+
+    unsigned int has_attrib : 1;  /* Set to 1 iff ATTRIB != R_NilValue, except
+                                     not used when ATTRIB isn't normal attrib */
+
+    unsigned int sym_no_dots : 1; /* Is a symbol, but not ..., ..1, ..2, etc. */
+
+    /* Second byte. */
+
+    unsigned int obj : 1;     /* set if this is an S3 or S4 object */
+
+    unsigned int in_use: 1;   /* whether contents may be in use by a helper */
 
     unsigned int debug : 1;       /* Function/Environment: is being debugged */
     unsigned int rstep_pname : 1; /* Function: is to be debugged just once */
@@ -226,18 +235,11 @@ struct sxpinfo_struct {
     unsigned int trace_base : 1;  /* Function: is being traced,
                                      Symbol: has base binding in global cache,
                                      Environment: R_BaseEnv or R_BaseNamespace*/
-    unsigned int has_attrib : 1;  /* Set to 1 iff ATTRIB != R_NilValue, except
-                                     not used when ATTRIB isn't normal attrib */
-    unsigned int sym_no_dots : 1; /* Is a symbol, but not ..., ..1, ..2, etc. */
 
-    /* Object flag */
-    unsigned int obj : 1;     /* set if this is an S3 or S4 object */
-
-    /* Flags to synchronize with helper threads */
-    unsigned int in_use: 1;   /* whether contents may be in use by a helper */
-    unsigned int being_computed : 1;  /* whether helper may be computing this */
+    unsigned int nmcnt : 3;   /* count of "names" referring to object */
 
     /* The "general purpose" field, used for miscellaneous purposes */
+
     unsigned int gp : 16;     /* The "general purpose" field */
 };
 

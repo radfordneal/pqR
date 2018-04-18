@@ -3523,8 +3523,6 @@ static SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
     SEXP x, y;
     int ob;
 
-    ob = 0;
-
     x = CAR(args); 
     y = CADR(args);
 
@@ -3535,10 +3533,11 @@ static SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
         argsevald = evalList (args, env);
         x = CAR(argsevald);
         y = CADR(argsevald);
-        if (isObject(x)) ob = 1;
-        if (isObject(y)) ob |= 2;
+        ob = isObject(x) | (isObject(y)<<1);
         goto rtrn;
     }
+
+    ob = 0;
 
     /* Otherwise, we try to put the first argument on the scalar stack,
        and evaluate with VARIANT_UNCLASS. */
@@ -3553,7 +3552,7 @@ static SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
             /* If first argument is an object, we evaluate the rest of
                the arguments (actually, at most one) normally. */
 
-            ob = 1;
+            ob = 1;  /* x is an object, not unclassed */
             argsevald = evalList (CDR(args), env);
             y = CAR(argsevald);
             if (isObject(y)) ob |= 2;
@@ -3587,7 +3586,7 @@ static SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
                or an unclassed object, and create the list of
                evaluated arguments. */
 
-            ob = 2;
+            ob = 2;  /* y is an object, not unclassed */
             if (ON_SCALAR_STACK(x) || isObject(x)) /* can't be both */ {
                 UNPROTECT(1); /* x */
                 PROTECT(y);
@@ -3611,11 +3610,12 @@ static SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
         }
     }
 
-    /* If neither of the first two arguments are an object, we
-       don't look at any possible remaining arguments.  The caller
-       is responsible for reporting an error if any are present,
-       but we assist by returning the unevaluated arguments, which
-       in this case (no ...) number the same as the actual arguments. */
+    /* If neither of the first two arguments are an object (or have
+       been unclassed), we don't look at any possible remaining
+       arguments.  The caller is responsible for reporting an error if
+       any are present, but we assist by returning the unevaluated
+       arguments, which in this case (no ...) number the same as the
+       actual arguments. */
 
     UNPROTECT(1); /* x */
     argsevald = args;
@@ -3692,7 +3692,7 @@ void task_and_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 }
 
 
-/* & | */
+/* Handles the & and | operators. */
 
 #define T_and_or THRESHOLD_ADJUST(25)
 
@@ -3962,7 +3962,7 @@ SEXP attribute_hidden do_not(SEXP call, SEXP op, SEXP args, SEXP env,
     return do_fast_not (call, op, CAR(args), env, variant);
 }
 
-/* Does && (op 1) and || (op 2). */
+/* Handles the && (op 1) and || (op 2) operators. */
 
 SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env)
 {
@@ -4201,7 +4201,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     /* Check for dispatch on S3 or S4 objects. */
 
-    if (obj) {
+    if (obj) { /* one or other or both operands are objects */
         if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
             UNPROTECT(3);
             return ans;
