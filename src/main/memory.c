@@ -1226,7 +1226,7 @@ static void mem_error(void)
 
 
 /* Allocate an object.  Sets all flags to zero, attribute to R_NilValue, and
-   type as passed.  Set LENGTH to 1 except if USE_AUX_FOR_ATTRIB enabled
+   type as passed.  Sets LENGTH as passed except if USE_AUX_FOR_ATTRIB enabled
    (since then LENGTH may not exist). */
 
 static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
@@ -1250,9 +1250,9 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 #   if USE_COMPRESSED_POINTERS
         /* LENGTH is in AUX1, which may be read-only. */
         if (!sggc_aux1_read_only (SGGC_KIND(cp)))
-            * (R_len_t *) SGGC_AUX1(cp) = 1;
+            * (R_len_t *) SGGC_AUX1(cp) = length;
 #   elif !USE_AUX_FOR_ATTRIB
-        LENGTH(r) = 1;
+        LENGTH(r) = length;
 #   endif
 
     if (0 && R_gc_abort_if_free == r) abort();  /* can enable as debug aid */
@@ -1278,6 +1278,7 @@ static SEXP alloc_sym (void)
 #endif
 
     UPTR_FROM_SEXP(r)->sxpinfo = zero_sxpinfo;
+
     UPTR_FROM_SEXP(r)->sxpinfo.type_et_cetera = SYMSXP;
     ATTRIB_W(r) = R_NilValue;
 
@@ -1300,8 +1301,8 @@ static SEXP alloc_sym (void)
    the sggc routine thought it wasn't easy), or if gctorture is enabled. 
    The caller must then call alloc_obj.  The caller must specify both 
    the R type and the correct corresponding SGGC kind, for the desired
-   length (if relevant).  The TYPE and ATTRIB fields are set here, but 
-   not LENGTH. */
+   length (if relevant).  The TYPE and ATTRIB fields are set here, and
+   LENGTH is set to 1, unless USE_AUX_FOR_ATTRIB is in effect. */
 
 static inline SEXP alloc_fast (sggc_kind_t kind, SEXPTYPE type)
 {
@@ -1894,8 +1895,17 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
         alloc_len += 10;
 
     s = alloc_obj(type,alloc_len);
-    LENGTH(s) = length;
+
     TRUELENGTH(s) = 0;
+
+#   if USE_AUX_FOR_ATTRIB  /* otherwise, LENGTH was already set in alloc_obj */
+        LENGTH(s) = length;
+#   endif
+
+    /* Mark non-scalars, enabling quicker identification of scalars. */
+
+    if (length != 1)
+        SET_VEC_DOTS_BIT(s);
 
 #if VALGRIND_LEVEL>0
     VALGRIND_MAKE_MEM_UNDEFINED(DATAPTR(s), actual_size);
@@ -1959,6 +1969,10 @@ SEXP reallocVector (SEXP vec, R_len_t length, int init)
             WAIT_UNTIL_COMPUTED(vec);
             helpers_wait_until_not_in_use(vec);
             LENGTH(vec) = length;
+            if (length == 1) 
+                UNSET_VEC_DOTS_BIT(vec);
+            else /* necessary since length might be zero */
+                SET_VEC_DOTS_BIT(vec);
             return vec;
         }
     }
@@ -2008,6 +2022,11 @@ SEXP reallocVector (SEXP vec, R_len_t length, int init)
         helpers_wait_until_not_in_use(vec);
         LENGTH(vec) = length;
     }
+
+    if (length == 1) 
+        UNSET_VEC_DOTS_BIT(vec);
+    else
+        SET_VEC_DOTS_BIT(vec);
 
     /* See if we need to initialize new elements. */
 

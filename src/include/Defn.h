@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -200,6 +200,9 @@ extern0 SEXP	R_UnderscoreString;   /* "_", as a CHARSXP */
 
 
 #ifdef USE_RINTERNALS
+
+# define TYPE_ETC(x) (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera)
+
 # define IS_BYTES(x) (UPTR_FROM_SEXP(x)->sxpinfo.gp & BYTES_MASK)
 # define SET_BYTES(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= BYTES_MASK)
 # define IS_LATIN1(x) (UPTR_FROM_SEXP(x)->sxpinfo.gp & LATIN1_MASK)
@@ -210,7 +213,9 @@ extern0 SEXP	R_UnderscoreString;   /* "_", as a CHARSXP */
 # define SET_UTF8(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= UTF8_MASK)
 # define ENC_KNOWN(x) (UPTR_FROM_SEXP(x)->sxpinfo.gp & (LATIN1_MASK|UTF8_MASK))
 # define IS_CACHED(x) 1  /* All strings are cached, except NA_STRING */
+
 #else /* USE_RINTERNALS */
+
 /* Needed only for write-barrier testing */
 int IS_BYTES(SEXP x);
 void SET_BYTES(SEXP x);
@@ -221,6 +226,7 @@ void SET_ASCII(SEXP x);
 int IS_UTF8(SEXP x);
 void SET_UTF8(SEXP x);
 int ENC_KNOWN(SEXP x);
+
 #endif /* USE_RINTERNALS */
 
 #include "Internal.h"		/* do_FOO */

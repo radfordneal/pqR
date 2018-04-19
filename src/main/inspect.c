@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2009,2011 The R Core Team.
@@ -129,12 +129,12 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
         Rprintf("R_NoObject\n");
         return;
     }
-    Rprintf("@%llx/%d.%d t%02d %s k%d c%d [", 
+    Rprintf("@%llx/%d.%d t%02d:%x %s k%d c%d [", 
              (long long) UPTR_FROM_SEXP(v), 
              SGGC_SEGMENT_INDEX(CPTR_FROM_SEXP(v)), 
              SGGC_SEGMENT_OFFSET(CPTR_FROM_SEXP(v)),
-             TYPEOF(v), typename(v), GCKIND(v),
-             sggc_nchunks_allocated(CPTR_FROM_SEXP(v)));
+             TYPEOF(v), UPTR_FROM_SEXP(v)->sxpinfo.type_et_cetera, typename(v),
+             GCKIND(v), sggc_nchunks_allocated(CPTR_FROM_SEXP(v)));
     if (OBJECT(v)) { Rprintf("OBJ"); a = 1; }
     if (IS_CONSTANT(v)) { if (a) Rprintf(","); Rprintf("CONST"); a = 1; }
     if (NAMEDCNT(v)) { if (a) Rprintf(","); Rprintf("NAM(%d)",NAMEDCNT(v)); a = 1; }
@@ -144,7 +144,6 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
             if (a) Rprintf(","); Rprintf("TR"); a = 1; 
         }
         if (RSTEP(v)) { if (a) Rprintf(","); Rprintf("STP"); a = 1; }
-        if (!SYM_NO_DOTS(v)) { if (a) Rprintf(","); Rprintf(".."); a = 1; }
         if (TYPEOF(v)==ENVSXP && IS_BASE(v)) { 
             if (a) Rprintf(","); Rprintf("BC"); a = 1; 
         }

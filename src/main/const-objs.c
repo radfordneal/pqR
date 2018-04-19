@@ -82,12 +82,12 @@
 #endif
 
 
-/* Header for a constant. */
+/* Header for a scalar constant. */
 
 #define CONST_HEADER(typ,index,offset) \
     CPTR_FIELD(index,offset) \
     NILATTRIB \
-    .sxpinfo = { .nmcnt = 7, .type_et_cetera = typ, } \
+    .sxpinfo = { .nmcnt = 7, .type_et_cetera = typ } \
 
 
 /* Definition of the R_NilValue constant, whose address when cast to SEXP is 

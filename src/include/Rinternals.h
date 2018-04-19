@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -211,7 +211,7 @@ typedef sggc_cptr_t SEXP32;
 
 struct sxpinfo_struct {
 
-    /* First byte:   Whole of it allows a quick check for simple scalars. 
+    /* First byte:   Whole of it allows quick checks for, eg, simple scalars. 
                      Parts give type and other information */
 
     unsigned int type_et_cetera : 8;   /* Bit fields as defined below... */
