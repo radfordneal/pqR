@@ -95,7 +95,6 @@ Rboolean isUnsorted(SEXP x, Rboolean strictly)
 {
     int n, i;
 
-REprintf("<<< "); R_inspect(x);
     if (!isVectorAtomic(x))
 	error(_("only atomic vectors can be tested to be sorted"));
     n = LENGTH(x);
@@ -561,9 +560,7 @@ void sortVector(SEXP s, Rboolean decreasing)
 	    R_csort2(COMPLEX(s), n, decreasing);
 	    break;
 	case STRSXP:
-REprintf("--- "); R_inspect(s);
 	    ssort2(STRING_PTR(s), n, decreasing);
-REprintf(">>> "); R_inspect(s);
 	    break;
 	default:
 	    UNIMPLEMENTED_TYPE("sortVector", s);

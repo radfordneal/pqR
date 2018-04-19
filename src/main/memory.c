@@ -1225,9 +1225,9 @@ static void mem_error(void)
 }
 
 
-/* Allocate an object.  Sets all flags to zero, attribute to R_NilValue, and
-   type as passed.  Sets LENGTH as passed except if USE_AUX_FOR_ATTRIB enabled
-   (since then LENGTH may not exist). */
+/* Allocate an object.  Sets all flags to zero, attribute to R_NilValue,
+   and type as passed.  Sets LENGTH to 1 (not 'length') except if
+   USE_AUX_FOR_ATTRIB enabled (since then LENGTH may not exist). */
 
 static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 {
@@ -1250,9 +1250,9 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
 #   if USE_COMPRESSED_POINTERS
         /* LENGTH is in AUX1, which may be read-only. */
         if (!sggc_aux1_read_only (SGGC_KIND(cp)))
-            * (R_len_t *) SGGC_AUX1(cp) = length;
+            * (R_len_t *) SGGC_AUX1(cp) = 1;
 #   elif !USE_AUX_FOR_ATTRIB
-        LENGTH(r) = length;
+        LENGTH(r) = 1;
 #   endif
 
     if (0 && R_gc_abort_if_free == r) abort();  /* can enable as debug aid */
@@ -1896,11 +1896,8 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 
     s = alloc_obj(type,alloc_len);
 
+    LENGTH(s) = length;
     TRUELENGTH(s) = 0;
-
-#   if USE_AUX_FOR_ATTRIB  /* otherwise, LENGTH was already set in alloc_obj */
-        LENGTH(s) = length;
-#   endif
 
     /* Mark non-scalars, enabling quicker identification of scalars. */
 

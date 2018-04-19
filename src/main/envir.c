@@ -2732,7 +2732,6 @@ SEXP R_lsInternal(SEXP env, Rboolean all)
 
     /* Step 2 : Allocate and Fill the Result */
     PROTECT(ans = allocVector(STRSXP, k));
-REprintf("*** "); R_inspect(ans);
     k = 0;
 
     if (IS_BASE(env))
@@ -2741,7 +2740,6 @@ REprintf("*** "); R_inspect(ans);
         HashTableNames(HASHTAB(env), all, ans, &k);
     else
         FrameNames(FRAME(env), all, ans, &k);
-REprintf("||| "); R_inspect(ans);
 
     sortVector(ans, FALSE);
     UNPROTECT(1);
