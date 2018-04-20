@@ -46,9 +46,10 @@ attr(x, which) <- value
   The extractor function allows (and does not match) empty and missing
   values of \code{which}: the replacement function does not.
 
-  An attempt at setting an attribute on \code{NULL} is an error; attempts
-  at setting an attribute on a symbol are silently ignored.  Fetching
-  an attribute from NULL or a symbol returns NULL.
+  Attempting to set an attribute on \code{NULL} is an error.
+  Attempts to set an attribute on a symbol or primitive function
+  are silently ignored.  Fetching an attribute from NULL, a symbol,
+  or a primitive function returns NULL.
   
   These are both \link{primitive} functions.
 }
