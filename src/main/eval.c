@@ -4234,13 +4234,13 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        don't bother trying local assignment, since returning the result on the
        scalar stack should be about as fast. */
 
-    int type1 = TYPEOF(arg1);
+    int typeplus1 = TYPE_ETC(arg1) & ~TYPE_ET_CETERA_HAS_ATTR;
 
-    if (isNumericOrFactor(arg1) && LENGTH(arg1) == 1 
-                                && NO_ATTRIBUTES_OK (variant, arg1)) {
+        /* Test if arg1 is scalar numeric, computation not pending, attr OK */
+    if ((typeplus1 == REALSXP || typeplus1 == INTSXP || typeplus1 == LGLSXP)
+          && NO_ATTRIBUTES_OK (variant, arg1)) {
         if (CDR(argsevald) == R_NilValue) { /* Unary operation */
-            WAIT_UNTIL_COMPUTED(arg1);
-            if (type1 == REALSXP) {
+            if (typeplus1 == REALSXP) {
                 double val = opcode == PLUSOP ? *REAL(arg1) : -*REAL(arg1);
                 ans = NAMEDCNT_EQ_0(arg1) ? (*REAL(arg1) = val, arg1)
                     : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_REAL(val)
@@ -4256,15 +4256,15 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             goto ret;
         }
 
-        int type2 = TYPEOF(arg2);
+        int typeplus2 = TYPE_ETC(arg2) & ~TYPE_ET_CETERA_HAS_ATTR;
 
-        if (isNumericOrFactor(arg2) && LENGTH(arg2) == 1 
-                                    && NO_ATTRIBUTES_OK(variant, arg2)) {
-            if (type1 != REALSXP && type2 != REALSXP) {
+           /* Test if arg2 is scalar numeric, computation not pending, attr OK*/
+        if ((typeplus2 == REALSXP || typeplus2 == INTSXP || typeplus2 == LGLSXP)
+              && NO_ATTRIBUTES_OK (variant, arg2)) {
+
+            if (typeplus1 != REALSXP && typeplus2 != REALSXP) {
 
                 if (opcode==PLUSOP || opcode==MINUSOP || opcode==TIMESOP) {
-
-                    WAIT_UNTIL_COMPUTED_2(arg1,arg2);
     
                     int a1 = *INTEGER(arg1), a2 = *INTEGER(arg2);
                     int_fast64_t val;
@@ -4305,7 +4305,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
 
-                if (type1 != REALSXP) {
+                if (typeplus1 != REALSXP) {
                     if (*INTEGER(arg1) == NA_INTEGER) {
                         ans = R_ScalarRealNA;
                         goto ret;
@@ -4313,7 +4313,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                     a1 = (double) *INTEGER(arg1);
                     a2 = *REAL(arg2);
                 }
-                else if (type2 != REALSXP) {
+                else if (typeplus2 != REALSXP) {
                     if (*INTEGER(arg2) == NA_INTEGER) {
                         ans = R_ScalarRealNA;
                         goto ret;
@@ -4355,9 +4355,9 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 default: abort();
                 }
 
-                ans = NAMEDCNT_EQ_0(arg2) && type2 == REALSXP ?
+                ans = NAMEDCNT_EQ_0(arg2) && typeplus2 == REALSXP ?
                         (*REAL(arg2) = val, arg2)
-                    : NAMEDCNT_EQ_0(arg1) && type1 == REALSXP ?
+                    : NAMEDCNT_EQ_0(arg1) && typeplus1 == REALSXP ?
                         (*REAL(arg1) = val, arg1)
                     : CAN_USE_SCALAR_STACK(variant) ? 
                         PUSH_SCALAR_REAL(val)
@@ -4421,16 +4421,21 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     /* Handle numeric scalars specially for speed. */
 
-    if (isNumericOrFactor(x) && isNumericOrFactor(y)
-          && LENGTH(x) == 1 && LENGTH(y) == 1
-          && ((variant & VARIANT_ANY_ATTR) != 0
-                || !HAS_ATTRIB(x) && !HAS_ATTRIB(y))) {
+    int typeplusx = TYPE_ETC(x);
+    int typeplusy = TYPE_ETC(y);
 
-        WAIT_UNTIL_COMPUTED_2(x,y);
+    if (variant & VARIANT_ANY_ATTR) {
+        typeplusx &= ~TYPE_ET_CETERA_HAS_ATTR;
+        typeplusy &= ~TYPE_ET_CETERA_HAS_ATTR;
+    }
 
-        double xv = TYPEOF(x) == REALSXP ? *REAL(x) 
+        /* Test if args are scalar numeric, computation not pending, attr OK */
+    if ((typeplusx == REALSXP || typeplusx == INTSXP || typeplusx == LGLSXP)
+     && (typeplusy == REALSXP || typeplusy == INTSXP || typeplusy == LGLSXP)) {
+
+        double xv = typeplusx == REALSXP ? *REAL(x) 
                   : *INTEGER(x) == NA_INTEGER ? NA_REAL : *INTEGER(x);
-        double yv = TYPEOF(y) == REALSXP ? *REAL(y) 
+        double yv = typeplusy == REALSXP ? *REAL(y) 
                   : *INTEGER(y) == NA_INTEGER ? NA_REAL : *INTEGER(y);
 
         int res;
