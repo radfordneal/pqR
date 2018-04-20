@@ -208,7 +208,7 @@ void (SET_ATTRIB)(SEXP x, SEXP v) {
         if (TYPEOF(x) == NILSXP || TYPEOF(x) == CHARSXP)
             abort();
         if (TYPEOF(x) == SYMSXP || TYPEOF(x) == BUILTINSXP 
-                                || TYPEOF(x) == SPECIAL_SXP) 
+                                || TYPEOF(x) == SPECIALSXP) 
             return;  /* silently ignore attempt to set attribute */
         if (v == R_NilValue) {
             ATTRIB_W(x) = R_NilValue;
@@ -228,7 +228,7 @@ void SET_ATTRIB_TO_ANYTHING(SEXP x, SEXP v) {
         if (TYPEOF(x) == NILSXP || TYPEOF(x) == CHARSXP)
             abort();
         if (TYPEOF(x) == SYMSXP || TYPEOF(x) == BUILTINSXP 
-                                || TYPEOF(x) == SPECIAL_SXP) 
+                                || TYPEOF(x) == SPECIALSXP) 
             return;  /* silently ignore attempt to set attribute */
         if (v == R_NilValue) {
             ATTRIB_W(x) = R_NilValue;
