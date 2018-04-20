@@ -207,8 +207,9 @@ void (SET_ATTRIB)(SEXP x, SEXP v) {
               v == R_NoObject ? "R_NoObject" : type2char(TYPEOF(x)));
         if (TYPEOF(x) == NILSXP || TYPEOF(x) == CHARSXP)
             abort();
-        if (TYPEOF(x) == SYMSXP) 
-            return;  /* silently ignore attempt to set attribute on symbol */
+        if (TYPEOF(x) == SYMSXP || TYPEOF(x) == BUILTINSXP 
+                                || TYPEOF(x) == SPECIAL_SXP) 
+            return;  /* silently ignore attempt to set attribute */
         if (v == R_NilValue) {
             ATTRIB_W(x) = R_NilValue;
             UNSET_HAS_ATTRIB(x);
@@ -226,8 +227,9 @@ void SET_ATTRIB_TO_ANYTHING(SEXP x, SEXP v) {
         if (v == R_NoObject) abort();
         if (TYPEOF(x) == NILSXP || TYPEOF(x) == CHARSXP)
             abort();
-        if (TYPEOF(x) == SYMSXP) 
-            return;  /* silently ignore attempt to set attribute on symbol */
+        if (TYPEOF(x) == SYMSXP || TYPEOF(x) == BUILTINSXP 
+                                || TYPEOF(x) == SPECIAL_SXP) 
+            return;  /* silently ignore attempt to set attribute */
         if (v == R_NilValue) {
             ATTRIB_W(x) = R_NilValue;
             UNSET_HAS_ATTRIB(x);

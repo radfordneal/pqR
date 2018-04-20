@@ -220,8 +220,9 @@ struct sxpinfo_struct {
 
 #   define TYPE_ET_CETERA_BEING_COMPUTED 0x20 /* Obj being computed in helper?*/
 
-#   define TYPE_ET_CETERA_VEC_DOTS 0x40 /* Symbol: one of ..., ..1, ..2, etc.
-                                           Vector: not scalar (length 1) */
+#   define TYPE_ET_CETERA_VEC_DOTS_TR 0x40 /* Symbol: one of ..., ..1, ..2, etc.
+                                              Vector: not scalar (length 1)
+                                              Function: is being traced */
 
 #   define TYPE_ET_CETERA_HAS_ATTR 0x80 /* Set to 1 if ATTRIB != R_NilValue, not
                                            used when ATTRIB not normal attrib */
@@ -813,10 +814,10 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define UNSET_HAS_ATTRIB(x)   (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                                  &= ~TYPE_ET_CETERA_HAS_ATTR)
 #define SYM_NO_DOTS(x)  (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera == SYMSXP)
-#define SET_VEC_DOTS_BIT(x)   (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
-                                 |= TYPE_ET_CETERA_VEC_DOTS)
-#define UNSET_VEC_DOTS_BIT(x) (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
-                                 &= ~TYPE_ET_CETERA_VEC_DOTS)
+#define SET_VEC_DOTS_TR_BIT(x)   (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
+                                   |= TYPE_ET_CETERA_VEC_DOTS_TR)
+#define UNSET_VEC_DOTS_TR_BIT(x) (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
+                                   &= ~TYPE_ET_CETERA_VEC_DOTS_TR)
 #define OBJECT(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.obj)
 #define RTRACE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_base)
 #define LEVELS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)

@@ -1724,7 +1724,7 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
 
     int dd = isDDName(name);
     if (dd) SET_DDVAL_BIT(c);
-    if (dd || strcmp(CHAR(name),"...") == 0) SET_VEC_DOTS_BIT(c);
+    if (dd || strcmp(CHAR(name),"...") == 0) SET_VEC_DOTS_TR_BIT(c);
 
     return c;
 }
@@ -1902,7 +1902,7 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
     /* Mark non-scalars, enabling quicker identification of scalars. */
 
     if (length != 1)
-        SET_VEC_DOTS_BIT(s);
+        SET_VEC_DOTS_TR_BIT(s);
 
 #if VALGRIND_LEVEL>0
     VALGRIND_MAKE_MEM_UNDEFINED(DATAPTR(s), actual_size);
@@ -1967,9 +1967,9 @@ SEXP reallocVector (SEXP vec, R_len_t length, int init)
             helpers_wait_until_not_in_use(vec);
             LENGTH(vec) = length;
             if (length == 1) 
-                UNSET_VEC_DOTS_BIT(vec);
+                UNSET_VEC_DOTS_TR_BIT(vec);
             else /* necessary since length might be zero */
-                SET_VEC_DOTS_BIT(vec);
+                SET_VEC_DOTS_TR_BIT(vec);
             return vec;
         }
     }
@@ -2021,9 +2021,9 @@ SEXP reallocVector (SEXP vec, R_len_t length, int init)
     }
 
     if (length == 1) 
-        UNSET_VEC_DOTS_BIT(vec);
+        UNSET_VEC_DOTS_TR_BIT(vec);
     else
-        SET_VEC_DOTS_BIT(vec);
+        SET_VEC_DOTS_TR_BIT(vec);
 
     /* See if we need to initialize new elements. */
 
