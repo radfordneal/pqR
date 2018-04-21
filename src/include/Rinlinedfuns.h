@@ -395,20 +395,12 @@ INLINE_FUN Rboolean isUserBinop(SEXP s)
 
 INLINE_FUN Rboolean isFunction(SEXP s)
 {
-# if R_TYPE_SETS_BY_SHIFT
     return (FUNCTION_TYPES >> TYPEOF(s)) & 1;
-# else
-    return R_type_flags[TYPEOF(s)] & FUNCTION_TYPES_BITS;
-# endif
 }
 
 INLINE_FUN Rboolean isPrimitive(SEXP s)
 {
-# if R_TYPE_SETS_BY_SHIFT
     return (PRIMITIVE_FUN_TYPES >> TYPEOF(s)) & 1;
-# else
-    return R_type_flags[TYPEOF(s)] & PRIMITIVE_FUN_TYPES_BITS;
-# endif
 }
 
 INLINE_FUN Rboolean isList(SEXP s)
@@ -423,47 +415,27 @@ INLINE_FUN Rboolean isNewList(SEXP s)
 
 INLINE_FUN Rboolean isPairList(SEXP s)
 {
-# if R_TYPE_SETS_BY_SHIFT
     return (PAIRLIST_TYPES >> TYPEOF(s)) & 1;
-# else
-    return R_type_flags[TYPEOF(s)] & PAIRLIST_TYPES_BITS;
-# endif
 }
 
 INLINE_FUN Rboolean isVectorList(SEXP s)
 {
-# if R_TYPE_SETS_BY_SHIFT
     return (NONATOMIC_VECTOR_TYPES >> TYPEOF(s)) & 1;
-# else
-    return R_type_flags[TYPEOF(s)] & NONATOMIC_VECTOR_TYPES_BITS;
-# endif
 }
 
 INLINE_FUN Rboolean isVectorAtomic(SEXP s)
 {
-# if R_TYPE_SETS_BY_SHIFT
     return (ATOMIC_VECTOR_TYPES >> TYPEOF(s)) & 1;
-# else
-    return R_type_flags[TYPEOF(s)] & ATOMIC_VECTOR_TYPES_BITS;
-# endif
 }
 
 INLINE_FUN Rboolean isVectorNonpointer(SEXP s)
 {
-# if R_TYPE_SETS_BY_SHIFT
     return (NONPOINTER_VECTOR_TYPES >> TYPEOF(s)) & 1;
-# else
-    return R_type_flags[TYPEOF(s)] & NONPOINTER_VECTOR_TYPES_BITS;
-# endif
 }
 
 INLINE_FUN Rboolean isVector(SEXP s)/* === isVectorList() or isVectorAtomic() */
 {
-# if R_TYPE_SETS_BY_SHIFT
     return (VECTOR_TYPES >> TYPEOF(s)) & 1;
-# else
-    return R_type_flags[TYPEOF(s)] & VECTOR_TYPES_BITS;
-# endif
 }
 
 INLINE_FUN Rboolean isFrame(SEXP s)
@@ -530,22 +502,14 @@ INLINE_FUN int nlevels(SEXP f)
 INLINE_FUN Rboolean isNumeric(SEXP s)
 {
     return TYPEOF(s) == INTSXP ? !inherits_CHAR (s, R_factor_CHARSXP) :
-# if R_TYPE_SETS_BY_SHIFT
                                  ((NUMERIC_TYPES >> TYPEOF(s)) & 1);
-# else
-                                 (R_type_flags[TYPEOF(s)] & NUMERIC_TYPES_BITS);
-# endif
 }
 
 /** Is an object a number, including both "numeric" and "complex"? */
 INLINE_FUN Rboolean isNumber(SEXP s)
 {
     return TYPEOF(s) == INTSXP ? !inherits_CHAR (s, R_factor_CHARSXP) :
-# if R_TYPE_SETS_BY_SHIFT
                                  ((NUMBER_TYPES >> TYPEOF(s)) & 1);
-# else
-                                 (R_type_flags[TYPEOF(s)] & NUMBER_TYPES_BITS);
-# endif
 }
 
 static inline Rboolean isNumericOrFactor(SEXP s)
@@ -559,11 +523,7 @@ static inline Rboolean isNumericOrFactor(SEXP s)
 
 INLINE_FUN Rboolean isNumberOrFactor(SEXP s)
 {
-# if R_TYPE_SETS_BY_SHIFT
     return (NUMBER_TYPES >> TYPEOF(s)) & 1;
-# else
-    return R_type_flags[TYPEOF(s)] & NUMBER_TYPES_BITS;
-# endif
 }
 
 /* The ScalarXXX functions plus ScalarLogicalMaybeConst are here, the other 
