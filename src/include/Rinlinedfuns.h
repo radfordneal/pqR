@@ -514,11 +514,7 @@ INLINE_FUN Rboolean isNumber(SEXP s)
 
 static inline Rboolean isNumericOrFactor(SEXP s)
 {
-# if R_TYPE_SETS_BY_SHIFT
     return (NUMERIC_TYPES >> TYPEOF(s)) & 1;
-# else
-    return R_type_flags[TYPEOF(s)] & NUMERIC_TYPES_BITS;
-# endif
 }
 
 INLINE_FUN Rboolean isNumberOrFactor(SEXP s)
