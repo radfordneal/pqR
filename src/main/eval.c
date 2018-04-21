@@ -3915,14 +3915,19 @@ void task_not (helpers_op_t code, SEXP x, SEXP arg, SEXP unused)
     }
 }
 
+
 /* Handles the ! operator. */
 
 #define T_not THRESHOLD_ADJUST(40)
 
 static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 {
-    SEXP x, dim, dimnames, names;
-    int len;
+    /* Quickly do scalar operation on logical with no attributes. */
+
+    if (TYPE_ETC(arg) == LGLSXP) {
+        int v = LOGICAL(arg)[0];
+        return ScalarLogicalMaybeConst (v==NA_LOGICAL ? NA_LOGICAL : !v);
+    }
 
     if (!isLogical(arg) && !isNumber(arg) && !isRaw(arg)) {
 	/* For back-compatibility */
@@ -3931,14 +3936,10 @@ static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 	else
             errorcall(call, _("invalid argument type"));
     }
-    len = LENGTH(arg);
 
-    /* Quickly do scalar operation on logical with no attributes. */
+    R_len_t len = LENGTH(arg);
 
-    if (len==1 && isLogical(arg) && !HAS_ATTRIB(arg)) {
-        int v = LOGICAL(arg)[0];
-        return ScalarLogicalMaybeConst (v==NA_LOGICAL ? v : !v);
-    }
+    SEXP x, dim, dimnames, names;
 
     /* The general case... */
 
@@ -3970,8 +3971,6 @@ static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     return x;
 }
 
-/* ! */
-
 SEXP attribute_hidden do_not(SEXP call, SEXP op, SEXP args, SEXP env, 
                              int variant)
 {
@@ -3984,6 +3983,7 @@ SEXP attribute_hidden do_not(SEXP call, SEXP op, SEXP args, SEXP env,
 
     return do_fast_not (call, op, CAR(args), env, variant);
 }
+
 
 /* Handles the && (op 1) and || (op 2) operators. */
 
