@@ -404,8 +404,9 @@ static SEXP evalv_other (SEXP, SEXP, int);
     SELF_EVAL(TYPEOF(e)) ? \
        (UPTR_FROM_SEXP(e)->sxpinfo.nmcnt == MAX_NAMEDCNT ? e \
          : (UPTR_FROM_SEXP(e)->sxpinfo.nmcnt = MAX_NAMEDCNT, e)) \
-     : SYM_NO_DOTS(e)       ? Rf_evalv_sym   (e, rho, variant) \
-     :                        Rf_evalv_other (e, rho, variant) \
+    : TYPE_ETC(e) == SYMSXP /* not ..., ..1, etc */ ? \
+       Rf_evalv_sym (e, rho, variant) \
+    :  Rf_evalv_other (e, rho, variant) \
 )
 
 
@@ -426,6 +427,7 @@ SEXP eval (SEXP e, SEXP rho)
 
 SEXP evalv (SEXP e, SEXP rho, int variant)
 {
+    R_variant_result = 0;
     R_Visible = TRUE;
     
     /* Handle check for user interrupt. */
@@ -433,6 +435,19 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
     if (--evalcount < 0) {
         R_CheckUserInterrupt();
         evalcount = 1000;
+    }
+
+    /* Quick return for self-evaluating constants. */
+
+    if (SELF_EVAL(TYPEOF(e))) {
+        SET_NAMEDCNT_MAX(e);
+        return e;
+    }
+
+    /* Handle symbol lookup without stack overflow or expression depth check */
+
+    if (TYPE_ETC(e) == SYMSXP /* symbol, but not ..., ..1, etc */) {
+        return Rf_evalv_sym (e, rho, variant);
     }
 
     /* Check for stack overflow. */
@@ -449,9 +464,9 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
          _("evaluation nested too deeply: infinite recursion / options(expressions=)?"));
     }
 
-    /* Do evaluation as for fast eval macro. */
+    /* Handle other evaluations, typically of LANGSXP. */
 
-    SEXP res = EVALV (e, rho, variant);
+    SEXP res =  Rf_evalv_other (e, rho, variant);
 
     R_EvalDepth -= 1;
 
@@ -559,9 +574,10 @@ SEXP attribute_hidden Rf_evalv_other (SEXP e, SEXP rho, int variant)
         else
             op = eval(fn,rho);
 
-        if (RTRACE(op)) R_trace_call(e,op);
+        int type_tr = TYPE_ETC(op) & ~TYPE_ET_CETERA_HAS_ATTR;
 
-        if (TYPEOF(op) == CLOSXP) {
+      redo:
+        if (type_tr == CLOSXP) {
             PROTECT(op);
             res = applyClosure_v (e, op, promiseArgs(args,rho), rho, 
                                   NULL, variant);
@@ -573,11 +589,18 @@ SEXP attribute_hidden Rf_evalv_other (SEXP e, SEXP rho, int variant)
 
             R_Visible = TRUE;
 
-            if (TYPEOF(op) == SPECIALSXP)
+            if (type_tr == SPECIALSXP) {
                 res = CALL_PRIMFUN (e, op, args, rho, variant);
-            else if (TYPEOF(op) == BUILTINSXP)
+            }
+            else if (type_tr == BUILTINSXP) {
                 res = R_Profiling ? Rf_builtin_op(op, e, rho, variant)
                                   : Rf_builtin_op_no_cntxt(op, e, rho, variant);
+            }
+            else if (type_tr & TYPE_ET_CETERA_VEC_DOTS_TR) {
+                R_trace_call(e,op);
+                type_tr &= ~TYPE_ET_CETERA_VEC_DOTS_TR;
+                goto redo;
+            }
             else
                 apply_non_function_error();
 

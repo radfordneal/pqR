@@ -235,9 +235,8 @@ struct sxpinfo_struct {
     unsigned int debug : 1;       /* Function/Environment: is being debugged */
     unsigned int rstep_pname : 1; /* Function: is to be debugged just once */
                                   /* CHARSXP: is used as a symbol's printname */
-    unsigned int trace_base : 1;  /* Function: is being traced,
-                                     Symbol: has base binding in global cache,
-                                     Environment: R_BaseEnv or R_BaseNamespace*/
+    unsigned int base_sym_env : 1;  /* Symbol: has base binding in global cache,
+                                       Envir: R_BaseEnv or R_BaseNamespace*/
 
     unsigned int nmcnt : 3;   /* Count of "names" referring to object */
 
@@ -819,7 +818,8 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define UNSET_VEC_DOTS_TR_BIT(x) (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                                    &= ~TYPE_ET_CETERA_VEC_DOTS_TR)
 #define OBJECT(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.obj)
-#define RTRACE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_base)
+#define RTRACE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
+                                                   & TYPE_ET_CETERA_VEC_DOTS_TR)
 #define LEVELS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)
   /* For SET_OBJECT and SET_TYPEOF, don't set if new value is the current value,
      to avoid crashing on an innocuous write to a constant that may be stored
@@ -837,7 +837,9 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define SET_TYPEOF0(x,v) /* don't check if same as previous; expr not stmt */ \
     (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera = \
       (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera & ~TYPE_ET_CETERA_TYPE) | v)
-#define SET_RTRACE(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.trace_base=(v))
+#define SET_RTRACE(x,v)	((v) ? \
+  (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera |= TYPE_ET_CETERA_VEC_DOTS_TR) \
+   : (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera &= ~TYPE_ET_CETERA_VEC_DOTS_TR))
 #define SETLEVELS(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.gp=(v))
 
 /* The TRUELENGTH is seldom used, and usually has no connection with length. */
@@ -905,9 +907,9 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SET_DDVAL_BIT(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= DDVAL_MASK)
 #define UNSET_DDVAL_BIT(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) &= ~DDVAL_MASK)
 #define SET_DDVAL(x,v) ((v) ? SET_DDVAL_BIT(x) : UNSET_DDVAL_BIT(x)) /* for ..1, ..2 etc */
-#define BASE_CACHE(x)  NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_base) /* 1 = base binding
+#define BASE_CACHE(x)  NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.base_sym_env) /* 1 = base binding
                                                                in global cache*/
-#define SET_BASE_CACHE(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.trace_base = (v))
+#define SET_BASE_CACHE(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.base_sym_env = (v))
 
 /* Environment Access Macros */
 #define FRAME(x)	NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->frame)
@@ -917,7 +919,7 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SET_ENVFLAGS(x,v)	((UPTR_FROM_SEXP(x)->sxpinfo.gp)=(v))
 #define ENVSYMBITS(x)   NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->envsymbits)
 #define SET_ENVSYMBITS(x,v)   (((ENVSEXP)UPTR_FROM_SEXP(x))->envsymbits=(v))
-#define IS_BASE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.trace_base)
+#define IS_BASE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.base_sym_env)
                            /* 1 = R_BaseEnv or R_BaseNamespace */
 #define IS_USER_DATABASE(rho) \
   ( OBJECT((rho)) && inherits((rho), "UserDefinedDatabase") )
