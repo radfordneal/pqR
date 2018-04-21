@@ -3,6 +3,9 @@ pending, non-scalar, and has-attribute bits as a single byte, for
 quickly checking all of these.  Eval and other things changed to
 exploit this.
 
+Fix things so that NA_LOGICAL and NA_INTEGER are constants in
+the inlined functions of Rinlinedfuns.h.
+
 Also at one point (still in the git history) eliminated setting of
 attributes on primitive functions, but after second thoughts this has
 been reverted (maybe should instead make this actually work properly,

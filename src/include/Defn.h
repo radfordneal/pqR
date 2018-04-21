@@ -101,6 +101,19 @@ Rcomplex Rf_ComplexFromLogical(int, int*);
 Rcomplex Rf_ComplexFromInteger(int, int*);
 Rcomplex Rf_ComplexFromReal(double, int*);
 
+
+/* Redefine NA_INTEGER and NA_LOGICAL to be constants.  Defined in Arith.h
+   to refer to R_NaInt, because the RcppEigen package needs them to be
+   variables, but they may be faster as constants inside the interpreter. 
+
+   Do before including Rinlinedfuns.h, via Rinternals.h, so that the 
+   faster version will be used there. */
+
+#undef NA_INTEGER
+#define NA_INTEGER INT_MIN
+#undef NA_LOGICAL
+#define NA_LOGICAL INT_MIN
+
 #define CALLED_FROM_DEFN_H 1
 #include <Rinternals.h>		/*-> Arith.h, Boolean.h, Complex.h, Error.h,
 				  Memory.h, PrtUtil.h, Utils.h */
@@ -1944,16 +1957,6 @@ static inline void Rf_protect3_inline (SEXP s1, SEXP s2, SEXP s3)
    at user level. */
 
 void SET_ATTRIB_TO_ANYTHING (SEXP, SEXP);
-
-
-/* Redefine NA_INTEGER and NA_LOGICAL to be constants.  Defined in Arith.h
-   to refer to R_NaInt, because the RcppEigen package needs them to be
-   variables, but they may be faster as constants inside the interpreter. */
-
-#undef NA_INTEGER
-#define NA_INTEGER INT_MIN
-#undef NA_LOGICAL
-#define NA_LOGICAL INT_MIN
 
 
 /* Define R_INFINITE and ISNAN_NOT_NA here as inline functions, using a 
