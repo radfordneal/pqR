@@ -67,7 +67,7 @@ SEXP R_getRegisteredRoutines(SEXP);
 SEXP R_isMethodsDispatchOn(SEXP);
 SEXP R_traceOnOff(SEXP);
 SEXP R_isS4Object(SEXP);
-SEXP R_setS4Object(SEXP, SEXP);
+SEXP R_setS4Object(SEXP, SEXP, SEXP);
 SEXP R_do_new_object(SEXP);
 
 SEXP Rrowsum_matrix(SEXP, SEXP, SEXP, SEXP, SEXP);
@@ -75,7 +75,7 @@ SEXP Rrowsum_df(SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP do_mapply(SEXP, SEXP, SEXP, SEXP);
 
 SEXP R_r2dtable(SEXP, SEXP, SEXP);
-SEXP R_shortRowNames(SEXP);
+SEXP R_shortRowNames(SEXP, SEXP);
 SEXP R_copyDFattr(SEXP, SEXP);
 
 void F77_SYMBOL(dchdc)(double *, int *, int *, double *, int *, int *, int *);

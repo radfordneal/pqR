@@ -1693,7 +1693,7 @@ R_addTaskCallback(SEXP f, SEXP data, SEXP useData, SEXP name)
 #ifndef Win32
 /* this is here solely to pull in xxxpr.o */
 #include <R_ext/RS.h>
-void F77_SYMBOL(intpr) (const char *, int *, int *, int *);
+void F77_SYMBOL(intpr) (char *, int *, int *, int *);
 void attribute_hidden dummy12345(void)
 {
     int i = 0;
