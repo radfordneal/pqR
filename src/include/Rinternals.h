@@ -2294,20 +2294,12 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 
 #endif
 
-/* Sets of SEXTYPES.  Done two ways.  One tests using code like 
+
+/* Sets of SEXTYPES.  One tests using code like 
 
        if ((SET >> type) & 1) ...  
 
-   The other tests using code like
-
-       if (R_type_flags[type] & SET_BITS) ...
-
    Used in inlined functions, and elsewhere. */
-
-#define R_TYPE_SETS_BY_SHIFT 1   /* 1 = use (SET >> type) & 1
-                                    0 = use R_type_flags[type] & SET_BITS */
-
-/* Sets for use with shift. */
 
 #define CONS_TYPES ( \
   (1<<LISTSXP) + (1<<LANGSXP) + (1<<DOTSXP) \
@@ -2380,82 +2372,8 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
   (1<<WEAKREFSXP) + \
   (1<<EXPRSXP) )
 
-/* Flag bits for use with R_type_flags. */
-
-#define NIL_TYPE_BITS                  0x0001
-#define CONS_TYPES_BITS                0x0002
-#define PAIRLIST_TYPES_BITS            (NIL_TYPE_BITS + CONS_TYPES_BITS)
-
-#define RAW_TYPE_BITS                  0x0004
-#define NUMERIC_TYPES_BITS             0x0008
-#define COMPLEX_TYPE_BITS              0x0010
-#define NUMBER_TYPES_BITS              (NUMERIC_TYPES_BITS + COMPLEX_TYPE_BITS)
-
-#define NONPOINTER_VECTOR_TYPES_BITS   (RAW_TYPE_BITS + NUMBER_TYPES_BITS)
-#define STRING_VECTOR_TYPE_BITS        0x0020
-#define ATOMIC_VECTOR_TYPES_BITS       (NONPOINTER_VECTOR_TYPES_BITS + \
-                                        STRING_VECTOR_TYPE_BITS)
-#define NONATOMIC_VECTOR_TYPES_BITS    0x0040
-#define VECTOR_TYPES_BITS              (ATOMIC_VECTOR_TYPES_BITS + \
-                                        NONATOMIC_VECTOR_TYPES_BITS)
-#define CHARSXP_TYPE_BITS              0x0080
-#define VECTOR_OR_CHAR_TYPES_BITS      (VECTOR_TYPES_BITS + CHARSXP_TYPE_BITS)
-
-#define PRIMITIVE_FUN_TYPES_BITS       0x0100
-#define CLOSURE_TYPE_BITS              0x0200
-#define FUNCTION_TYPES_BITS            (PRIMITIVE_FUN_TYPES_BITS + \
-                                        CLOSURE_TYPE_BITS)
-
-#define SELF_EVAL_TYPES_BIT            0x8000  /* sign bit */
-
-
-#ifndef __MAIN__
-extern
-#endif
-int16_t R_type_flags[32]
-#ifdef __MAIN__
-= {
-   /* NILSXP */      SELF_EVAL_TYPES_BIT + NIL_TYPE_BITS,
-   /* SYMSXP */                        0 + 0,  
-   /* LISTSXP */     SELF_EVAL_TYPES_BIT + CONS_TYPES_BITS,   
-   /* CLOSXP */      SELF_EVAL_TYPES_BIT + CLOSURE_TYPE_BITS,
-   /* ENVSXP */      SELF_EVAL_TYPES_BIT + 0,  
-   /* PROMSXP */                       0 + 0,   
-   /* LANGSXP */                       0 + CONS_TYPES_BITS,   
-   /* SPECIALSXP */  SELF_EVAL_TYPES_BIT + PRIMITIVE_FUN_TYPES_BITS,      
-   /* BUILTINSXP */  SELF_EVAL_TYPES_BIT + PRIMITIVE_FUN_TYPES_BITS,      
-   /* CHARSXP */                       0 + CHARSXP_TYPE_BITS,   
-   /* LGLSXP */      SELF_EVAL_TYPES_BIT + NUMERIC_TYPES_BITS,  
-   /* unused */   0,  
-   /* unused */   0,  
-   /* INTSXP */      SELF_EVAL_TYPES_BIT + NUMERIC_TYPES_BITS,  
-   /* REALSXP */     SELF_EVAL_TYPES_BIT + NUMERIC_TYPES_BITS,  
-   /* CPLXSXP */     SELF_EVAL_TYPES_BIT + COMPLEX_TYPE_BITS,
-   /* STRSXP */      SELF_EVAL_TYPES_BIT + STRING_VECTOR_TYPE_BITS,  
-   /* DOTSXP */                        0 + CONS_TYPES_BITS,  
-   /* unused */   0,  
-   /* VECSXP */      SELF_EVAL_TYPES_BIT + NONATOMIC_VECTOR_TYPES_BITS,  
-   /* EXPRSXP */     SELF_EVAL_TYPES_BIT + NONATOMIC_VECTOR_TYPES_BITS,  
-   /* BCODESXP */                      0 + 0,
-   /* EXTPTRSXP */   SELF_EVAL_TYPES_BIT + 0,     
-   /* WEAKREFSXP */  SELF_EVAL_TYPES_BIT + 0,      
-   /* RAWSXP */      SELF_EVAL_TYPES_BIT + RAW_TYPE_BITS,  
-   /* S4SXP */       SELF_EVAL_TYPES_BIT + 0, 
-   /* unused */   0,  
-   /* unused */   0,  
-   /* unused */   0,  
-   /* unused */   0,  
-   /* unused */   0,  
-   /* unused */   0  
-}
-#endif
-;
-
-#if R_TYPE_SETS_BY_SHIFT
 #define SELF_EVAL(t) ((SELF_EVAL_TYPES>>(t))&1)
-#else
-#define SELF_EVAL(t) (R_type_flags[t] < 0)
-#endif
+
 
 /* Sizes of vector type elements. */
 
