@@ -185,21 +185,6 @@
         \code{unlist(list(x=list(2,a=3)))} and \code{unlist(list(x=c(2,a=3)))}
         now return the same result (in which the name for the first element 
         is \code{x}, not \code{x1}).
-  \item Attempts to set attributes on primitive functions are now silently
-        ignored.  This never worked the same as for other functions, as
-        illustrated by the following output with pqR-2017-06-09 or R-3.4.4:
-\preformatted{    > a <- function () 0
-    > b <- a
-    > attr(a,"fred") <- 9
-    > attr(b,"fred")
-    NULL
-    > 
-    > a <- sqrt
-    > b <- a
-    > attr(a,"fred") <- 9
-    > attr(b,"fred")
-    [1] 9
-}
   \item The warning message "restarting interrupted promise evaluation" is
         no longer produced.
   \item The \code{\%\%} operator can no longer produce a warning of

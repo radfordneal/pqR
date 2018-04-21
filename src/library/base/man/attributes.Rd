@@ -25,7 +25,7 @@ mostattributes(obj) <- value
 }
 \details{
   As for \code{\link{attr}}, attempts to set attributes on a symbol
-  or primitive function are silently ignored.
+  are silently ignored.
   Unlike \code{\link{attr}} it is possible to set attributes on a
   \code{NULL} object: it will first be coerced to an empty list.
   
