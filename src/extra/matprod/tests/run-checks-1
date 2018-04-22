@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # MATPROD - A LIBRARY FOR MATRIX MULTIPLICATION
-#           Shell File to Run Checks of One Multiplication
+#           Shell File to Run Correctness Checks
 #
 # Copyright (c) 2018 Radford M. Neal.
 # 
