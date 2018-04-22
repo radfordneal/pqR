@@ -2243,7 +2243,7 @@ static void matprod_mat_vec_n3 (double * MATPROD_RESTRICT x,
 
     if (k >= 1)
     { __m128d B0 = _mm_set1_pd(y[0]);
-      S = _mm_add_pd (S, _mm_mul_pd (_mm_loadA_pd(x), B0));
+      S = _mm_add_pd (S, _mm_mul_pd (_mm_load_pd(x), B0));
       S2 = _mm_add_sd (S2, _mm_mul_sd (_mm_load_sd(x+2), B0));
     }
 
