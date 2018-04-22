@@ -1,1 +1,4 @@
 Improvements to variable lookup.
+
+Sets LASTSYMENV for a newly-created argument, unless it is missing.
+
