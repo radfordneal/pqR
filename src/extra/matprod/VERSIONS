@@ -1,7 +1,7 @@
 Stable versions of the matprod software, given by their commit ID at
 github.com/radfordneal/matprod:
 
-046ad811d171f479212fe170eafd0c4f6a687c70
+8f7c69f040ccfa0f7b42b9467698bfe99b737ee1
 
     Not really stable, but seems to work, and completely implements
     the revised scheme and API, including parallelization, so suitable
