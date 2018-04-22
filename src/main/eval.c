@@ -961,7 +961,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
             SEXP t = TAG(f);
             if (TYPE_ETC(t) == SYMSXP /* not ... */ ) {
                 LASTSYMENV(t) = SEXP32_FROM_SEXP(newrho);
-                LASTSYMBINDING(t) = CAR(a);
+                LASTSYMBINDING(t) = a;
             }
         }
 	f = CDR(f);
