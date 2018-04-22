@@ -331,9 +331,13 @@ void task_par_matprod_mat_vec (helpers_op_t op, helpers_var_ptr sz,
     while (a < k)
     { 
       helpers_size_t oa = a;
-      helpers_size_t na = k-a <= 4 ? k : a+4;
+      helpers_size_t na = k-a <= 5 ? k : a+4;
       HELPERS_WAIT_IN2 (a, na-1, k);
       if (a < k) a &= ~3;
+      if (k-a == 1)  /* matprod_mat_vec_sub_xrows0 can't handle single column */
+      { a = oa;
+        continue;
+      }
 
       matprod_mat_vec_sub_xrows0 (x+oa*n, y+oa, z0, n, a-oa, xrows, add);
       add = 1;
@@ -592,12 +596,16 @@ void task_par_matprod_trans1 (helpers_op_t op, helpers_var_ptr sz,
     while (d < d1)
     { 
       helpers_size_t od = d;
-      helpers_size_t na = d1-d <= 4 ? a1 : k*(d+4);
+      helpers_size_t na = d1-d <= 5 ? a1 : k*(d+4);
       HELPERS_WAIT_IN2 (a, na-1, a1);
 
       d = a/k;
-      if (d < m) d &= ~3;
+      if (d < d1) d &= ~3;
       if (d > d1) d = d1;
+      if (d1-d == 1)  /* matprod_trans1_sub can't handle just one column */
+      { d = od;
+        continue;
+      }
 
       double *sym = dosym ? z+od*n+od : 0;
 
@@ -616,10 +624,14 @@ void task_par_matprod_trans1 (helpers_op_t op, helpers_var_ptr sz,
     while (d < m)
     { 
       helpers_size_t od = d;
-      helpers_size_t na = m-d <= 4 ? k_times_m : k*(d+4);
+      helpers_size_t na = m-d <= 5 ? k_times_m : k*(d+4);
       HELPERS_WAIT_IN2 (a, na-1, k_times_m);
       d = a/k;
       if (d < m) d &= ~3;
+      if (m-d == 1)  /* matprod_trans1_sub can't handle just one column */
+      { d = od;
+        continue;
+      }
 
       double *sym = dosym ? z+od*n+od : 0;
 
