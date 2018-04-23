@@ -679,6 +679,14 @@ void R_NORETURN UNIMPLEMENTED_TYPE (const char *s, SEXP x)
 
 /* -------------------------------------------------------------------------- */
 
+R_NORETURN void too_deep_error(void)
+{
+    R_Expressions = R_Expressions_keep + 500;
+    errorcall (R_NilValue /* avoids deparsing call in the error handler */,
+   _("evaluation nested too deeply: infinite recursion / options(expressions=)?"
+    ));
+}
+
 
 R_NORETURN void attribute_hidden dotdotdot_error(void)
 { 

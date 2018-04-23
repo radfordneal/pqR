@@ -1336,6 +1336,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define StrToInternal		Rf_StrToInternal
 # define strmat2intmat		Rf_strmat2intmat
 # define substituteList		Rf_substituteList
+# define too_deep_error		Rf_too_deep_error
 # define tsConform		Rf_tsConform
 # define tspgets		Rf_tspgets
 # define type2symbol		Rf_type2symbol
@@ -1639,6 +1640,7 @@ SEXP R_subassign3_dflt(SEXP, SEXP, SEXP, SEXP);
 #include <wchar.h>
 
 /* main/util.c */
+R_NORETURN void too_deep_error(void);
 R_NORETURN void UNIMPLEMENTED_TYPE(const char *s, SEXP x);
 R_NORETURN void UNIMPLEMENTED_TYPEt(const char *s, SEXPTYPE t);
 R_NORETURN void dotdotdot_error(void);
