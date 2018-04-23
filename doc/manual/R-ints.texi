@@ -559,7 +559,7 @@ recorded.
 Note that currently symbols are never garbage collected, and this is
 sometimes relied upon in C code, making it difficult to change the
 scheme so that space for unused symbols can be recovered.  Accepting
-this, pqR now treats symbos as uncollectable objects in the garbage
+this, pqR now treats symbols as uncollectable objects in the garbage
 collector.
 
 There are three further pointers, used to record the last binding of
@@ -574,8 +574,9 @@ determine that the symbol is not in an environment, in the style of a
 ``Bloom filter''.
 
 Finally, the hash value of the printname is redundantly recorded
-(except when compressed pointers are used), just to make access to it
-be faster.
+(except when compressed pointers are used, or uncompressed pointers
+are used with attribute in auxiliary information), just to make access
+to it be faster.
 
 @item CLOSXP
 Pointers to the formals (a pairlist), the body and the environment.
