@@ -955,10 +955,19 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     f = formals;
     a = actuals;
     while (f != R_NilValue) {
-	if (MISSING(a) && CAR(f) != R_MissingArg) {
-	    SETCAR(a, mkPROMISE(CAR(f), newrho));
-	    SET_MISSING(a, 2);
-	}
+        if (MISSING(a)) {
+            if (CAR(f) != R_MissingArg) {
+                SETCAR(a, mkPROMISE(CAR(f), newrho));
+                SET_MISSING(a, 2);
+            }
+        }
+        else {
+            SEXP t = TAG(f);
+            if (TYPE_ETC(t) == SYMSXP /* not ... */ ) {
+                LASTSYMENV(t) = SEXP32_FROM_SEXP(newrho);
+                LASTSYMBINDING(t) = a;
+            }
+        }
 	f = CDR(f);
 	a = CDR(a);
     }
