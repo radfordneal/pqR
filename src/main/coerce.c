@@ -2616,6 +2616,7 @@ static SEXP do_call(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SETCAR(rest, eval(CAR(rest), rho));
     rfun = LCONS(rfun, evargs);
     UNPROTECT(3);
+    R_Visible = TRUE;
     return (rfun);
 }
 
@@ -2806,6 +2807,7 @@ static SEXP do_quote(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* Make sure expression has NAMED == 2 before being returning
        in to avoid modification of source code */
     SET_NAMEDCNT_MAX(val);
+    R_Visible = TRUE;
     return(val);
 }
 

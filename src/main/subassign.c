@@ -1464,11 +1464,13 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* The last "seq" argument below is non-zero if the first subscript is a 
-   sequence spec (a variant result). */
+   sequence spec (a variant result).  Sets R_Visible to TRUE. */
 
 static SEXP do_subassign_dflt_seq (SEXP call, SEXP x, SEXP sb1, SEXP sb2, 
                                    SEXP subs, SEXP rho, SEXP y, int64_t seq)
 {
+    R_Visible = TRUE;
+
     BEGIN_PROTECT0 ();
     ALSO_PROTECT5 (x, sb1, sb2, subs, y);
 
@@ -1672,6 +1674,7 @@ SEXP attribute_hidden do_subassign2_dflt
          (call, CAR(args), R_NoObject, R_NoObject, CDR(args), rho, R_NoObject);
 }
 
+/* Sets R_Visible to TRUE. */
 static SEXP do_subassign2_dflt_int
          (SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP subs, SEXP rho, SEXP y)
 {
@@ -1679,6 +1682,8 @@ static SEXP do_subassign2_dflt_int
     int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch;
     Rboolean S4, recursed;
     R_len_t length_x;
+
+    R_Visible = TRUE;
 
     BEGIN_PROTECT2 (names, xtop);
     ALSO_PROTECT5 (x, sb1, sb2, subs, y);
@@ -2111,23 +2116,25 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 }
 
 /* Also called directly from elsewhere.  Protects x and val; name should be
-   a symbol and hence not needing protection. */
+   a symbol and hence not needing protection.  Sets R_Visible to TRUE. */
 
 #define na_or_empty_string(strelt) ((strelt)==NA_STRING || CHAR((strelt))[0]==0)
 
 SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 {
-   PROTECT_INDEX pvalidx, pxidx;
+    PROTECT_INDEX pvalidx, pxidx;
     Rboolean S4; SEXP xS4 = R_NilValue;
+
+    R_Visible = TRUE;
 
     if (ON_SCALAR_STACK(val)) /* currently, never puts value in atomic vector */
         val = DUP_STACK_VALUE(val); 
 
-    WAIT_UNTIL_COMPUTED(x);
-
     PROTECT_WITH_INDEX(x, &pxidx);
     PROTECT_WITH_INDEX(val, &pvalidx);
     S4 = IS_S4_OBJECT(x);
+
+    WAIT_UNTIL_COMPUTED(x);
 
     /* code to allow classes to extend ENVSXP */
     if (TYPEOF(x) == S4SXP) {

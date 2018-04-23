@@ -810,6 +810,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 value = R_possible_dispatch(call, op, args, rho, FALSE);
                 if (value != R_NoObject) {
                     UNPROTECT(nprotect);
+                    R_Visible = TRUE;
                     return value;
                 }
             }
@@ -840,6 +841,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 value = R_possible_dispatch(call, op, args, rho, FALSE);
                 if (value != R_NoObject) {
                     UNPROTECT(nprotect);
+                    R_Visible = TRUE;
                     return value;
                 }
             }
@@ -1187,6 +1189,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
 
     UNPROTECT(5+nprotect);
+    R_Visible = TRUE;
     return ans;
 }
 

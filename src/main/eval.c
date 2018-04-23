@@ -1641,6 +1641,7 @@ static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
+/* "break" and "next" */
 static R_NORETURN SEXP do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     findcontext(PRIMVAL(op), rho, R_NilValue);
@@ -1664,7 +1665,10 @@ static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (args == R_NilValue || CDR(args) != R_NilValue)
         checkArity(op, args);
 
-    return evalv (CAR(args), rho, VARIANT_PASS_ON(variant));
+    SEXP res = evalv (CAR(args), rho, VARIANT_PASS_ON(variant));
+
+    R_Visible = TRUE;
+    return res;
 }
 
 /* Curly brackets.  Passes on the eval variant to the last expression.  For
@@ -1746,6 +1750,8 @@ static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
     srcref = CADDR(args);
     if (srcref != R_NilValue) 
         setAttrib(rval, R_SrcrefSymbol, srcref);
+
+    R_Visible = TRUE;
     return rval;
 }
 
@@ -3748,6 +3754,8 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
         args_evald = 0;
     }
 
+    R_Visible = TRUE;
+
     /* Check for dispatch on S3 or S4 objects.  Takes care to match length
        of "args" to length of original (number of args in "call"). */
 
@@ -4019,6 +4027,8 @@ SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env)
 
     x2 = TYPEOF(s2) == LGLSXP && LENGTH(s2) == 1 ? *LOGICAL(s2) : asLogical(s2);
 
+    R_Visible = TRUE;
+
     if (ov==1) /* ... && ... */
         return ScalarLogicalMaybeConst (x2==FALSE ? FALSE
                                   : x1==TRUE && x2==TRUE ? TRUE
@@ -4226,6 +4236,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     PROTECT (argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env));
     PROTECT2(arg1,arg2);
 
+    R_Visible = TRUE;
+
     /* Check for dispatch on S3 or S4 objects. */
 
     if (obj) { /* one or other or both operands are objects */
@@ -4422,6 +4434,8 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     PROTECT(argsevald = scalar_stack_eval2 (args, &x, &y, &obj, env));
     PROTECT2(x,y);
+
+    R_Visible = TRUE;
 
     /* Check for dispatch on S3 or S4 objects. */
 
