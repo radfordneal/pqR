@@ -107,6 +107,7 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
                 WAIT_UNTIL_COMPUTED(arg1);
             }
 
+            R_Visible = TRUE;
             res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
                      (e, op, arg1, rho, variant);
 
@@ -127,6 +128,7 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
 
     beginbuiltincontext (&cntxt, e);
 
+    R_Visible = TRUE;
     res = CALL_PRIMFUN(e, op, args, rho, variant);
 
     UNPROTECT(1); /* args */
@@ -259,8 +261,6 @@ static SEXP do_onexit(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP code, oldcode, tmp, argList;
     static char *ap[2] = { "expr", "add" };
     int addit = 0;
-
-    R_Visible = FALSE;
 
     PROTECT(argList =  matchArgs(R_NilValue, ap, 2, args, call));
     if (CAR(argList) == R_MissingArg) code = R_NilValue;

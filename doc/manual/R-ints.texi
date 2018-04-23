@@ -1235,11 +1235,11 @@ also on entry to every primitive or internal function, with subsequent
 behaviour depending on the setting in the @code{eval} column of the
 function's specification (obtained with the macro @code{PRIMPRINT}).
 For primitive functions, @code{R_Visible} should be modified if
-necessary in the code for that function, though if @code{PRIMPRINT} is
-0 it will be set back to @code{TRUE} in any case.  For internal
-functions, it may be modified, and this modification will be allowed
-to stand if @code{PRIMPRINT} is 2, but not if it is either 0 (set to
-TRUE) or 1 (set to FALSE).
+necessary in the code for that function, though for non-special
+primitives if @code{PRIMPRINT} is 0 it will be set back to @code{TRUE}
+in any case.  For internal functions, it may be modified, and this
+modification will be allowed to stand if @code{PRIMPRINT} is 2, but
+not if it is either 0 (set to TRUE) or 1 (set to FALSE).
 
 @findex invisible 
 

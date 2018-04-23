@@ -427,6 +427,8 @@ SEXP eval (SEXP e, SEXP rho)
 
 SEXP evalv (SEXP e, SEXP rho, int variant)
 {
+    SEXP res;
+
     R_variant_result = 0;
     R_Visible = TRUE;
     
@@ -447,26 +449,24 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
     /* Handle symbol lookup without stack overflow or expression depth check */
 
     if (TYPE_ETC(e) == SYMSXP /* symbol, but not ..., ..1, etc */) {
-        return Rf_evalv_sym (e, rho, variant);
+        res = Rf_evalv_sym (e, rho, variant);  /* may change R_Visible, but
+                                                  that seems to be desired... */
+        return res;
     }
 
-    /* Check for stack overflow. */
+    /* Handle other evaluations, typically of LANGSXP. */
 
-    R_CHECKSTACK();
-
-    /* Handle check for too deep expression nesting. */
+    R_CHECKSTACK();  /* Check for stack overflow. */
 
     R_EvalDepth += 1;
 
-    if (R_EvalDepth > R_Expressions) {
+    if (R_EvalDepth > R_Expressions) {  /* Check too deep expression nesting */
         R_Expressions = R_Expressions_keep + 500;
         errorcall (R_NilValue /* avoids deparsing call in the error handler */,
          _("evaluation nested too deeply: infinite recursion / options(expressions=)?"));
     }
 
-    /* Handle other evaluations, typically of LANGSXP. */
-
-    SEXP res =  Rf_evalv_other (e, rho, variant);
+    res =  Rf_evalv_other (e, rho, variant);
 
     R_EvalDepth -= 1;
 
@@ -587,25 +587,27 @@ SEXP attribute_hidden Rf_evalv_other (SEXP e, SEXP rho, int variant)
             int save = R_PPStackTop;
             const void *vmax = VMAXGET();
 
-            R_Visible = TRUE;
-
+            /* Note: If called from evalv, R_Visible will've been set to TRUE */
             if (type_tr == SPECIALSXP) {
                 res = CALL_PRIMFUN (e, op, args, rho, variant);
+                /* Note:  Special primitives are responsible for setting 
+                   R_Visible as desired themselves, with default of TRUE. */
             }
             else if (type_tr == BUILTINSXP) {
                 res = R_Profiling ? Rf_builtin_op(op, e, rho, variant)
                                   : Rf_builtin_op_no_cntxt(op, e, rho, variant);
+                if (PRIMPRINT(op) == 0)
+                    R_Visible = TRUE;
             }
             else if (type_tr & TYPE_ET_CETERA_VEC_DOTS_TR) {
+                PROTECT(op);
                 R_trace_call(e,op);
+                UNPROTECT(1);
                 type_tr &= ~TYPE_ET_CETERA_VEC_DOTS_TR;
                 goto redo;
             }
             else
                 apply_non_function_error();
-
-            if (!R_Visible && PRIMPRINT(op) == 0)
-                R_Visible = TRUE;
 
             CHECK_STACK_BALANCE(op, save);
             VMAXSET(vmax);
@@ -626,8 +628,6 @@ SEXP attribute_hidden Rf_evalv_other (SEXP e, SEXP rho, int variant)
 
         if (e == R_DotsSymbol)
             dotdotdot_error();
-
-        R_Visible = TRUE;  /* May be set FALSE by active binding / lazy eval */
 
         res = ddfindVar(e,rho);
 
@@ -655,6 +655,8 @@ SEXP attribute_hidden Rf_evalv_other (SEXP e, SEXP rho, int variant)
 
         if ( ! (variant & VARIANT_PENDING_OK))
             WAIT_UNTIL_COMPUTED(res);
+
+        R_Visible = TRUE;
     }
 
     else if (TYPEOF(e) == PROMSXP) {
@@ -800,6 +802,7 @@ static SEXP Rf_builtin_op_no_cntxt (SEXP op, SEXP e, SEXP rho, int variant)
                 }
             }
 
+            R_Visible = TRUE;
             res = ((SEXP(*)(SEXP,SEXP,SEXP,SEXP,int)) PRIMFUN_FAST(op)) 
                      (e, op, arg1, rho, variant);
 
@@ -817,6 +820,7 @@ static SEXP Rf_builtin_op_no_cntxt (SEXP op, SEXP e, SEXP rho, int variant)
 
   not_fast: 
 
+    R_Visible = TRUE;
     res = CALL_PRIMFUN(e, op, args, rho, variant);
 
     UNPROTECT(1); /* args */

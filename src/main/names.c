@@ -747,15 +747,10 @@ SEXP installed_already_with_hash (const char *name, int hashcode)
 static SEXP do_internal (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP s, fun, ifun, ans;
-    int save = R_PPStackTop;
-    const void *vmax = VMAXGET();
 
     checkArity(op, args);
     s = CAR(args);
-    if (!isPairList(s))
-	errorcall(call, _("invalid .Internal() argument"));
-    fun = CAR(s);
-    if (!isSymbol(fun))
+    if (!isPairList(s) || !isSymbol (fun = CAR(s)))
 	errorcall(call, _("invalid .Internal() argument"));
     ifun = INTERNAL(fun);
     if (ifun == R_NilValue)
@@ -800,9 +795,7 @@ static SEXP do_internal (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     }
 
     UNPROTECT(1);
-    check_stack_balance(ifun, save);
-    VMAXSET(vmax);
-    return (ans);
+    return ans;
 }
 
 

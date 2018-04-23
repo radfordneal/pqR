@@ -1,0 +1,4 @@
+Fiddle with how R_visible is set. 
+
+Also removes redundant stack balance and vmax checks in do_internal.
+
