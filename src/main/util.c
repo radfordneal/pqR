@@ -679,6 +679,19 @@ void R_NORETURN UNIMPLEMENTED_TYPE (const char *s, SEXP x)
 
 /* -------------------------------------------------------------------------- */
 
+void attribute_hidden check_stack_balance (SEXP op, int save)
+{
+    /* NEEDED: A fixup is needed in browser, because it can trap errors,
+       and currently does not reset the limit to the right value. */
+
+    if (save == R_PPStackTop) 
+        return;
+
+    REprintf ("Warning: stack imbalance in '%s', %d then %d\n",
+	       PRIMNAME(op), save, R_PPStackTop);
+}
+
+
 R_NORETURN void too_deep_error(void)
 {
     R_Expressions = R_Expressions_keep + 500;

@@ -44,47 +44,6 @@
 #define SCALAR_STACK_DEBUG 0
 
 
-/* Inline version of findVarPendingOK, for speed when symbol is found
-   from LASTSYMBINDING.  Doesn't necessarily set R_binding_cell. */
-
-static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
-{
-    rho = SKIP_USING_SYMBITS (rho, sym);
-
-    if (LASTSYMENV(sym) == SEXP32_FROM_SEXP(rho)) {
-        SEXP b = CAR(LASTSYMBINDING(sym));
-        if (b != R_UnboundValue)
-            return b;
-        LASTSYMENV(sym) = R_NoObject32;
-    }
-
-    return findVarPendingOK(sym,rho);
-}
-
-
-/* Inline version of findFun, meant to be fast when a special symbol is found 
-   in the base environmet. */
-
-static inline SEXP FINDFUN (SEXP symbol, SEXP rho)
-{
-    rho = SKIP_USING_SYMBITS (rho, symbol);
-
-    if (rho == R_GlobalEnv && BASE_CACHE(symbol)) {
-        SEXP res = SYMVALUE(symbol);
-        if (TYPEOF(res) == PROMSXP)
-            res = PRVALUE_PENDING_OK(res);
-        if (isFunction(res))
-            return res;
-    }
-
-    return findFun_nospecsym(symbol,rho);
-}
-
-
-#define ARGUSED(x) LEVELS(x)
-
-static SEXP Rf_builtin_op_no_cntxt (SEXP op, SEXP e, SEXP rho, int variant);
-
 /*#define BC_PROFILING*/
 #ifdef BC_PROFILING
 static Rboolean bc_profiling = FALSE;
@@ -332,19 +291,411 @@ static SEXP do_Rprof(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 #endif /* not R_PROFILING */
 
-/* NEEDED: A fixup is needed in browser, because it can trap errors,
- *	and currently does not reset the limit to the right value. */
+
+attribute_hidden void SrcrefPrompt(const char * prefix, SEXP srcref)
+{
+    /* If we have a valid srcref, use it */
+    if (srcref && srcref != R_NilValue) {
+        if (TYPEOF(srcref) == VECSXP) srcref = VECTOR_ELT(srcref, 0);
+	SEXP srcfile = getAttrib00(srcref, R_SrcfileSymbol);
+	if (TYPEOF(srcfile) == ENVSXP) {
+	    SEXP filename = findVar(install("filename"), srcfile);
+	    if (isString(filename) && length(filename)) {
+	    	Rprintf(_("%s at %s#%d: "), prefix, CHAR(STRING_ELT(filename, 0)), 
+	                                    asInteger(srcref));
+	        return;
+	    }
+	}
+    }
+    /* default: */
+    Rprintf("%s: ", prefix);
+}
+
+
+/* This function gets the srcref attribute from a statement block, 
+   and confirms it's in the expected format */
+   
+static inline void getBlockSrcrefs(SEXP call, SEXP **refs, int *len)
+{
+    SEXP srcrefs = getAttrib00(call, R_SrcrefSymbol);
+    if (TYPEOF(srcrefs) == VECSXP) {
+        *refs = (SEXP *) DATAPTR(srcrefs);
+        *len = LENGTH(srcrefs);
+    }
+    else
+    {   *len = 0;
+    }
+}
+
+
+/* This function extracts one srcref, and confirms the format.  It is 
+   passed an index and the array and length from getBlockSrcrefs. */
+
+static inline SEXP getSrcref(SEXP *refs, int len, int ind)
+{
+    if (ind < len) {
+        SEXP result = refs[ind];
+        if (TYPEOF(result) == INTSXP && LENGTH(result) >= 6)
+            return result;
+    }
+
+    return R_NilValue;
+}
+
+static void start_browser (SEXP call, SEXP op, SEXP stmt, SEXP env)
+{
+    SrcrefPrompt("debug", R_Srcref);
+    PrintValue(stmt);
+    do_browser(call, op, R_NilValue, env);
+}
+
+
+static void printcall (SEXP call, SEXP rho)
+{
+    int old_bl = R_BrowseLines;
+    int blines = asInteger(GetOption1(install("deparse.max.lines")));
+    if (blines != NA_INTEGER && blines > 0) R_BrowseLines = blines;
+    PrintValueRec(call,rho);
+    R_BrowseLines = old_bl;
+}
+
+
+static SEXP VectorToPairListNamed(SEXP x)
+{
+    SEXP xptr, xnew, xnames;
+    int i, len, len_x = length(x);
+
+    PROTECT(x);
+    PROTECT(xnames = getAttrib(x, R_NamesSymbol)); 
+                       /* isn't this protected via x?  Or could be concocted? */
+
+    len = 0;
+    if (xnames != R_NilValue) {
+	for (i = 0; i < len_x; i++)
+	    if (CHAR(STRING_ELT(xnames,i))[0] != 0) len += 1;
+    }
+
+    PROTECT(xnew = allocList(len));
+
+    if (len > 0) {
+	xptr = xnew;
+	for (i = 0; i < len_x; i++) {
+	    if (CHAR(STRING_ELT(xnames,i))[0] != 0) {
+		SETCAR (xptr, VECTOR_ELT(x,i));
+		SET_TAG (xptr, install (translateChar (STRING_ELT(xnames,i))));
+		xptr = CDR(xptr);
+	    }
+	}
+    } 
+
+    UNPROTECT(3);
+    return xnew;
+}
+
+#define simple_as_environment(arg) (IS_S4_OBJECT(arg) && (TYPEOF(arg) == S4SXP) ? R_getS4DataSlot(arg, ENVSXP) : R_NilValue)
+
+/* "eval" and "eval.with.vis" : Evaluate the first argument */
+/* in the environment specified by the second argument. */
+
+static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+{
+    SEXP encl, x, xptr;
+    volatile SEXP expr, env, tmp;
+
+    int frame;
+    RCNTXT cntxt;
+
+    checkArity(op, args);
+
+    expr = CAR(args);
+    env = CADR(args);
+    encl = CADDR(args);
+    if (isNull(encl)) {
+	/* This is supposed to be defunct, but has been kept here
+	   (and documented as such) */
+	encl = R_BaseEnv;
+    } else if ( !isEnvironment(encl) &&
+		!isEnvironment((encl = simple_as_environment(encl))) )
+	error(_("invalid '%s' argument"), "enclos");
+    if(IS_S4_OBJECT(env) && (TYPEOF(env) == S4SXP))
+	env = R_getS4DataSlot(env, ANYSXP); /* usually an ENVSXP */
+    switch(TYPEOF(env)) {
+    case NILSXP:
+	env = encl;     /* so eval(expr, NULL, encl) works */
+        break;
+    case ENVSXP:
+	break;
+    case LISTSXP:
+	/* This usage requires all the pairlist to be named */
+	env = NewEnvironment(R_NilValue, duplicate(CADR(args)), encl);
+        set_symbits_in_env(env);
+	break;
+    case VECSXP:
+	/* PR#14035 */
+	x = VectorToPairListNamed(CADR(args));
+	for (xptr = x ; xptr != R_NilValue ; xptr = CDR(xptr))
+	    SET_NAMEDCNT_MAX(CAR(xptr));
+	env = NewEnvironment(R_NilValue, x, encl);
+        set_symbits_in_env(env);
+	break;
+    case INTSXP:
+    case REALSXP:
+	if (length(env) != 1)
+	    error(_("numeric 'envir' arg not of length one"));
+	frame = asInteger(env);
+	if (frame == NA_INTEGER)
+	    error(_("invalid '%s' argument"), "envir");
+	env = R_sysframe(frame, R_GlobalContext);
+	break;
+    default:
+	error(_("invalid '%s' argument"), "envir");
+    }
+
+    PROTECT(env); /* may no longer be what was passed in arg */
+
+    /* isLanguage includes NILSXP, and that does not need to be evaluated,
+       so don't use isLanguage(expr) || isSymbol(expr) || isByteCode(expr) */
+    if (TYPEOF(expr) == LANGSXP || TYPEOF(expr) == SYMSXP || isByteCode(expr)) {
+	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
+	if (!SETJMP(cntxt.cjmpbuf))
+	    expr = evalv (expr, env, VARIANT_PASS_ON(variant));
+	else {
+	    expr = R_ReturnedValue;
+	    if (expr == R_RestartToken) {
+		cntxt.callflag = CTXT_RETURN;  /* turn restart off */
+		error(_("restarts not supported in 'eval'"));
+	    }
+            if ( ! (variant & VARIANT_PENDING_OK))
+                WAIT_UNTIL_COMPUTED(R_ReturnedValue);
+	}
+	UNPROTECT(1);
+	PROTECT(expr);
+	endcontext(&cntxt);
+    }
+    else if (TYPEOF(expr) == EXPRSXP) {
+	int i, n;
+        int len;
+        SEXP *srcrefs;
+        getBlockSrcrefs(expr,&srcrefs,&len);
+	n = LENGTH(expr);
+	tmp = R_NilValue;
+	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
+        SEXP savedsrcref = R_Srcref;
+	if (!SETJMP(cntxt.cjmpbuf)) {
+	    for (i = 0 ; i < n ; i++) {
+                R_Srcref = getSrcref (srcrefs, len, i); 
+		tmp = evalv (VECTOR_ELT(expr, i), env, 
+                        i==n-1 ? VARIANT_PASS_ON(variant) 
+                               : VARIANT_NULL | VARIANT_PENDING_OK);
+            }
+        }
+	else {
+	    tmp = R_ReturnedValue;
+	    if (tmp == R_RestartToken) {
+		cntxt.callflag = CTXT_RETURN;  /* turn restart off */
+		error(_("restarts not supported in 'eval'"));
+	    }
+            if ( ! (variant & VARIANT_PENDING_OK))
+                WAIT_UNTIL_COMPUTED(R_ReturnedValue);
+	}
+	UNPROTECT(1);
+	PROTECT(tmp);
+        R_Srcref = savedsrcref;
+	endcontext(&cntxt);
+	expr = tmp;
+    }
+    else if( TYPEOF(expr) == PROMSXP ) {
+	expr = forcePromise(expr);
+    } 
+    else 
+        ; /* expr is returned unchanged */
+
+    if (PRIMVAL(op)) { /* eval.with.vis(*) : */
+	PROTECT(expr);
+	PROTECT(env = allocVector(VECSXP, 2));
+	PROTECT(encl = allocVector(STRSXP, 2));
+	SET_STRING_ELT(encl, 0, mkChar("value"));
+	SET_STRING_ELT(encl, 1, mkChar("visible"));
+	SET_VECTOR_ELT(env, 0, expr);
+	SET_VECTOR_ELT(env, 1, ScalarLogicalMaybeConst(R_Visible));
+	setAttrib(env, R_NamesSymbol, encl);
+	expr = env;
+	UNPROTECT(3);
+    }
+
+    UNPROTECT(1);
+    return expr;
+}
+
+/* This is a special .Internal */
+static SEXP do_withVisible(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    SEXP x, nm, ret;
+
+    checkArity(op, args);
+    x = CAR(args);
+    x = eval(x, rho);
+    PROTECT(x);
+    PROTECT(ret = allocVector(VECSXP, 2));
+    PROTECT(nm = allocVector(STRSXP, 2));
+    SET_STRING_ELT(nm, 0, mkChar("value"));
+    SET_STRING_ELT(nm, 1, mkChar("visible"));
+    SET_VECTOR_ELT(ret, 0, x);
+    SET_VECTOR_ELT(ret, 1, ScalarLogicalMaybeConst(R_Visible));
+    setAttrib(ret, R_NamesSymbol, nm);
+    UNPROTECT(3);
+    return ret;
+}
+
+/* This is a special .Internal */
+static SEXP do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    RCNTXT *cptr;
+    SEXP s, ans ;
+    cptr = R_GlobalContext;
+    /* get the args supplied */
+    while (cptr != NULL) {
+	if (cptr->callflag == CTXT_RETURN && cptr->cloenv == rho)
+	    break;
+	cptr = cptr->nextcontext;
+    }
+    if (cptr != NULL) {
+	args = cptr->promargs;
+    }
+    /* get the env recall was called from */
+    s = R_GlobalContext->sysparent;
+    while (cptr != NULL) {
+	if (cptr->callflag == CTXT_RETURN && cptr->cloenv == s)
+	    break;
+	cptr = cptr->nextcontext;
+    }
+    if (cptr == NULL)
+	error(_("'Recall' called from outside a closure"));
+
+    /* If the function has been recorded in the context, use it
+       otherwise search for it by name or evaluate the expression
+       originally used to get it.
+    */
+    if (cptr->callfun != R_NilValue)
+	PROTECT(s = cptr->callfun);
+    else if( TYPEOF(CAR(cptr->call)) == SYMSXP)
+	PROTECT(s = findFun(CAR(cptr->call), cptr->sysparent));
+    else
+	PROTECT(s = eval(CAR(cptr->call), cptr->sysparent));
+    if (TYPEOF(s) != CLOSXP) 
+    	error(_("'Recall' called from outside a closure"));
+    ans = applyClosure_v(cptr->call, s, args, cptr->sysparent, NULL, 0);
+    UNPROTECT(1);
+    return ans;
+}
+
+static SEXP do_is_builtin_internal(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    SEXP symbol, i;
+
+    checkArity(op, args);
+    symbol = CAR(args);
+
+    if (!isSymbol(symbol))
+	errorcall(call, _("invalid symbol"));
+
+    if ((i = INTERNAL(symbol)) != R_NilValue && TYPEOF(i) == BUILTINSXP)
+	return R_ScalarLogicalTRUE;
+    else
+	return R_ScalarLogicalFALSE;
+}
+
+static SEXP do_loadfile(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    SEXP file, s;
+    FILE *fp;
+
+    checkArity(op, args);
+
+    PROTECT(file = coerceVector(CAR(args), STRSXP));
+
+    if (! isValidStringF(file))
+	errorcall(call, _("bad file name"));
+
+    fp = RC_fopen(STRING_ELT(file, 0), "rb", TRUE);
+    if (!fp)
+	errorcall(call, _("unable to open 'file'"));
+    s = R_LoadFromFile(fp, 0);
+    fclose(fp);
+
+    UNPROTECT(1);
+    return s;
+}
+
+static SEXP do_savefile(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    FILE *fp;
+
+    checkArity(op, args);
+
+    if (!isValidStringF(CADR(args)))
+	errorcall(call, _("'file' must be non-empty string"));
+    if (TYPEOF(CADDR(args)) != LGLSXP)
+	errorcall(call, _("'ascii' must be logical"));
+
+    fp = RC_fopen(STRING_ELT(CADR(args), 0), "wb", TRUE);
+    if (!fp)
+	errorcall(call, _("unable to open 'file'"));
+
+    R_SaveToFileV(CAR(args), fp, INTEGER(CADDR(args))[0], 0);
+
+    fclose(fp);
+    return R_NilValue;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/*              CORE EVAL PROCEDURES - KEEP TOGETHER FOR LOCALITY             */
+
+
+/* Inline version of findVarPendingOK, for speed when symbol is found
+   from LASTSYMBINDING.  Doesn't necessarily set R_binding_cell. */
+
+static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
+{
+    rho = SKIP_USING_SYMBITS (rho, sym);
+
+    if (LASTSYMENV(sym) == SEXP32_FROM_SEXP(rho)) {
+        SEXP b = CAR(LASTSYMBINDING(sym));
+        if (b != R_UnboundValue)
+            return b;
+        LASTSYMENV(sym) = R_NoObject32;
+    }
+
+    return findVarPendingOK(sym,rho);
+}
+
+
+/* Inline version of findFun, meant to be fast when a special symbol is found 
+   in the base environmet. */
+
+static inline SEXP FINDFUN (SEXP symbol, SEXP rho)
+{
+    rho = SKIP_USING_SYMBITS (rho, symbol);
+
+    if (rho == R_GlobalEnv && BASE_CACHE(symbol)) {
+        SEXP res = SYMVALUE(symbol);
+        if (TYPEOF(res) == PROMSXP)
+            res = PRVALUE_PENDING_OK(res);
+        if (isFunction(res))
+            return res;
+    }
+
+    return findFun_nospecsym(symbol,rho);
+}
+
+
+static SEXP Rf_builtin_op_no_cntxt (SEXP op, SEXP e, SEXP rho, int variant);
+
 
 #define CHECK_STACK_BALANCE(o,s) do { \
   if (s != R_PPStackTop) check_stack_balance(o,s); \
 } while (0)
-
-void attribute_hidden check_stack_balance(SEXP op, int save)
-{
-    if(save == R_PPStackTop) return;
-    REprintf("Warning: stack imbalance in '%s', %d then %d\n",
-	     PRIMNAME(op), save, R_PPStackTop);
-}
 
 
 /* Wait until no value in an argument list is still being computed by a task.
@@ -510,6 +861,7 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
     return res;
 }
 
+
 /* Evaluate an expression that is a symbol other than ..., ..1, ..2, etc. */
 
 SEXP attribute_hidden Rf_evalv_sym (SEXP e, SEXP rho, int variant)
@@ -545,6 +897,7 @@ SEXP attribute_hidden Rf_evalv_sym (SEXP e, SEXP rho, int variant)
 
     return res;
 }
+
 
 /* Evaluate an expression that is not self-evaluating and not a symbol
    (other than ..., ..1, ..2, etc.). */
@@ -682,6 +1035,7 @@ SEXP attribute_hidden Rf_evalv_other (SEXP e, SEXP rho, int variant)
 
     return res;
 }
+
 
 /* e is protected here */
 SEXP attribute_hidden forcePromiseUnbound (SEXP e, int variant)
@@ -824,73 +1178,6 @@ static SEXP Rf_builtin_op_no_cntxt (SEXP op, SEXP e, SEXP rho, int variant)
     return res;
 }
 
-
-attribute_hidden
-void SrcrefPrompt(const char * prefix, SEXP srcref)
-{
-    /* If we have a valid srcref, use it */
-    if (srcref && srcref != R_NilValue) {
-        if (TYPEOF(srcref) == VECSXP) srcref = VECTOR_ELT(srcref, 0);
-	SEXP srcfile = getAttrib00(srcref, R_SrcfileSymbol);
-	if (TYPEOF(srcfile) == ENVSXP) {
-	    SEXP filename = findVar(install("filename"), srcfile);
-	    if (isString(filename) && length(filename)) {
-	    	Rprintf(_("%s at %s#%d: "), prefix, CHAR(STRING_ELT(filename, 0)), 
-	                                    asInteger(srcref));
-	        return;
-	    }
-	}
-    }
-    /* default: */
-    Rprintf("%s: ", prefix);
-}
-
-
-/* This function gets the srcref attribute from a statement block, 
-   and confirms it's in the expected format */
-   
-static inline void getBlockSrcrefs(SEXP call, SEXP **refs, int *len)
-{
-    SEXP srcrefs = getAttrib00(call, R_SrcrefSymbol);
-    if (TYPEOF(srcrefs) == VECSXP) {
-        *refs = (SEXP *) DATAPTR(srcrefs);
-        *len = LENGTH(srcrefs);
-    }
-    else
-    {   *len = 0;
-    }
-}
-
-
-/* This function extracts one srcref, and confirms the format.  It is 
-   passed an index and the array and length from getBlockSrcrefs. */
-
-static inline SEXP getSrcref(SEXP *refs, int len, int ind)
-{
-    if (ind < len) {
-        SEXP result = refs[ind];
-        if (TYPEOF(result) == INTSXP && LENGTH(result) >= 6)
-            return result;
-    }
-
-    return R_NilValue;
-}
-
-static void printcall (SEXP call, SEXP rho)
-{
-    int old_bl = R_BrowseLines;
-    int blines = asInteger(GetOption1(install("deparse.max.lines")));
-    if (blines != NA_INTEGER && blines > 0) R_BrowseLines = blines;
-    PrintValueRec(call,rho);
-    R_BrowseLines = old_bl;
-}
-
-static void start_browser (SEXP call, SEXP op, SEXP stmt, SEXP env)
-{
-    SrcrefPrompt("debug", R_Srcref);
-    PrintValue(stmt);
-    do_browser(call, op, R_NilValue, env);
-}
 
 /* 'supplied' is an array of SEXP values, first a set of pairs of tag and
    value, then a pairlist of tagged values (or R_NilValue).  If NULL, no
@@ -1739,26 +2026,6 @@ static SEXP do_return(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     findcontext(CTXT_BROWSER | CTXT_FUNCTION, rho, v);
 }
 
-/* Declared with a variable number of args in names.c */
-static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    SEXP rval, srcref;
-
-    /* The following is as in 2.15.0, but it's not clear how it can happen. */
-    if (TYPEOF(op) == PROMSXP) {
-	op = forcePromise(op);
-	SET_NAMEDCNT_MAX(op);
-    }
-
-    CheckFormals(CAR(args));
-    rval = mkCLOSXP(CAR(args), CADR(args), rho);
-    srcref = CADDR(args);
-    if (srcref != R_NilValue) 
-        setAttrib(rval, R_SrcrefSymbol, srcref);
-
-    R_Visible = TRUE;
-    return rval;
-}
 
 #define ASSIGNBUFSIZ 32
 static SEXP installAssignFcnName(SEXP fun)
@@ -2771,252 +3038,6 @@ SEXP attribute_hidden promiseArgsWith1Value(SEXP el, SEXP rho, SEXP value)
 }
 
 
-/* Check that each formal is a symbol */
-
-/* used in coerce.c */
-void attribute_hidden CheckFormals(SEXP ls)
-{
-    if (isList(ls)) {
-	for (; ls != R_NilValue; ls = CDR(ls))
-	    if (TYPEOF(TAG(ls)) != SYMSXP)
-		goto err;
-	return;
-    }
- err:
-    error(_("invalid formal argument list for \"function\""));
-}
-
-
-static SEXP VectorToPairListNamed(SEXP x)
-{
-    SEXP xptr, xnew, xnames;
-    int i, len, len_x = length(x);
-
-    PROTECT(x);
-    PROTECT(xnames = getAttrib(x, R_NamesSymbol)); 
-                       /* isn't this protected via x?  Or could be concocted? */
-
-    len = 0;
-    if (xnames != R_NilValue) {
-	for (i = 0; i < len_x; i++)
-	    if (CHAR(STRING_ELT(xnames,i))[0] != 0) len += 1;
-    }
-
-    PROTECT(xnew = allocList(len));
-
-    if (len > 0) {
-	xptr = xnew;
-	for (i = 0; i < len_x; i++) {
-	    if (CHAR(STRING_ELT(xnames,i))[0] != 0) {
-		SETCAR (xptr, VECTOR_ELT(x,i));
-		SET_TAG (xptr, install (translateChar (STRING_ELT(xnames,i))));
-		xptr = CDR(xptr);
-	    }
-	}
-    } 
-
-    UNPROTECT(3);
-    return xnew;
-}
-
-#define simple_as_environment(arg) (IS_S4_OBJECT(arg) && (TYPEOF(arg) == S4SXP) ? R_getS4DataSlot(arg, ENVSXP) : R_NilValue)
-
-/* "eval" and "eval.with.vis" : Evaluate the first argument */
-/* in the environment specified by the second argument. */
-
-static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
-{
-    SEXP encl, x, xptr;
-    volatile SEXP expr, env, tmp;
-
-    int frame;
-    RCNTXT cntxt;
-
-    checkArity(op, args);
-
-    expr = CAR(args);
-    env = CADR(args);
-    encl = CADDR(args);
-    if (isNull(encl)) {
-	/* This is supposed to be defunct, but has been kept here
-	   (and documented as such) */
-	encl = R_BaseEnv;
-    } else if ( !isEnvironment(encl) &&
-		!isEnvironment((encl = simple_as_environment(encl))) )
-	error(_("invalid '%s' argument"), "enclos");
-    if(IS_S4_OBJECT(env) && (TYPEOF(env) == S4SXP))
-	env = R_getS4DataSlot(env, ANYSXP); /* usually an ENVSXP */
-    switch(TYPEOF(env)) {
-    case NILSXP:
-	env = encl;     /* so eval(expr, NULL, encl) works */
-        break;
-    case ENVSXP:
-	break;
-    case LISTSXP:
-	/* This usage requires all the pairlist to be named */
-	env = NewEnvironment(R_NilValue, duplicate(CADR(args)), encl);
-        set_symbits_in_env(env);
-	break;
-    case VECSXP:
-	/* PR#14035 */
-	x = VectorToPairListNamed(CADR(args));
-	for (xptr = x ; xptr != R_NilValue ; xptr = CDR(xptr))
-	    SET_NAMEDCNT_MAX(CAR(xptr));
-	env = NewEnvironment(R_NilValue, x, encl);
-        set_symbits_in_env(env);
-	break;
-    case INTSXP:
-    case REALSXP:
-	if (length(env) != 1)
-	    error(_("numeric 'envir' arg not of length one"));
-	frame = asInteger(env);
-	if (frame == NA_INTEGER)
-	    error(_("invalid '%s' argument"), "envir");
-	env = R_sysframe(frame, R_GlobalContext);
-	break;
-    default:
-	error(_("invalid '%s' argument"), "envir");
-    }
-
-    PROTECT(env); /* may no longer be what was passed in arg */
-
-    /* isLanguage includes NILSXP, and that does not need to be evaluated,
-       so don't use isLanguage(expr) || isSymbol(expr) || isByteCode(expr) */
-    if (TYPEOF(expr) == LANGSXP || TYPEOF(expr) == SYMSXP || isByteCode(expr)) {
-	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
-	if (!SETJMP(cntxt.cjmpbuf))
-	    expr = evalv (expr, env, VARIANT_PASS_ON(variant));
-	else {
-	    expr = R_ReturnedValue;
-	    if (expr == R_RestartToken) {
-		cntxt.callflag = CTXT_RETURN;  /* turn restart off */
-		error(_("restarts not supported in 'eval'"));
-	    }
-            if ( ! (variant & VARIANT_PENDING_OK))
-                WAIT_UNTIL_COMPUTED(R_ReturnedValue);
-	}
-	UNPROTECT(1);
-	PROTECT(expr);
-	endcontext(&cntxt);
-    }
-    else if (TYPEOF(expr) == EXPRSXP) {
-	int i, n;
-        int len;
-        SEXP *srcrefs;
-        getBlockSrcrefs(expr,&srcrefs,&len);
-	n = LENGTH(expr);
-	tmp = R_NilValue;
-	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
-        SEXP savedsrcref = R_Srcref;
-	if (!SETJMP(cntxt.cjmpbuf)) {
-	    for (i = 0 ; i < n ; i++) {
-                R_Srcref = getSrcref (srcrefs, len, i); 
-		tmp = evalv (VECTOR_ELT(expr, i), env, 
-                        i==n-1 ? VARIANT_PASS_ON(variant) 
-                               : VARIANT_NULL | VARIANT_PENDING_OK);
-            }
-        }
-	else {
-	    tmp = R_ReturnedValue;
-	    if (tmp == R_RestartToken) {
-		cntxt.callflag = CTXT_RETURN;  /* turn restart off */
-		error(_("restarts not supported in 'eval'"));
-	    }
-            if ( ! (variant & VARIANT_PENDING_OK))
-                WAIT_UNTIL_COMPUTED(R_ReturnedValue);
-	}
-	UNPROTECT(1);
-	PROTECT(tmp);
-        R_Srcref = savedsrcref;
-	endcontext(&cntxt);
-	expr = tmp;
-    }
-    else if( TYPEOF(expr) == PROMSXP ) {
-	expr = forcePromise(expr);
-    } 
-    else 
-        ; /* expr is returned unchanged */
-
-    if (PRIMVAL(op)) { /* eval.with.vis(*) : */
-	PROTECT(expr);
-	PROTECT(env = allocVector(VECSXP, 2));
-	PROTECT(encl = allocVector(STRSXP, 2));
-	SET_STRING_ELT(encl, 0, mkChar("value"));
-	SET_STRING_ELT(encl, 1, mkChar("visible"));
-	SET_VECTOR_ELT(env, 0, expr);
-	SET_VECTOR_ELT(env, 1, ScalarLogicalMaybeConst(R_Visible));
-	setAttrib(env, R_NamesSymbol, encl);
-	expr = env;
-	UNPROTECT(3);
-    }
-
-    UNPROTECT(1);
-    return expr;
-}
-
-/* This is a special .Internal */
-static SEXP do_withVisible(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    SEXP x, nm, ret;
-
-    checkArity(op, args);
-    x = CAR(args);
-    x = eval(x, rho);
-    PROTECT(x);
-    PROTECT(ret = allocVector(VECSXP, 2));
-    PROTECT(nm = allocVector(STRSXP, 2));
-    SET_STRING_ELT(nm, 0, mkChar("value"));
-    SET_STRING_ELT(nm, 1, mkChar("visible"));
-    SET_VECTOR_ELT(ret, 0, x);
-    SET_VECTOR_ELT(ret, 1, ScalarLogicalMaybeConst(R_Visible));
-    setAttrib(ret, R_NamesSymbol, nm);
-    UNPROTECT(3);
-    return ret;
-}
-
-/* This is a special .Internal */
-static SEXP do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    RCNTXT *cptr;
-    SEXP s, ans ;
-    cptr = R_GlobalContext;
-    /* get the args supplied */
-    while (cptr != NULL) {
-	if (cptr->callflag == CTXT_RETURN && cptr->cloenv == rho)
-	    break;
-	cptr = cptr->nextcontext;
-    }
-    if (cptr != NULL) {
-	args = cptr->promargs;
-    }
-    /* get the env recall was called from */
-    s = R_GlobalContext->sysparent;
-    while (cptr != NULL) {
-	if (cptr->callflag == CTXT_RETURN && cptr->cloenv == s)
-	    break;
-	cptr = cptr->nextcontext;
-    }
-    if (cptr == NULL)
-	error(_("'Recall' called from outside a closure"));
-
-    /* If the function has been recorded in the context, use it
-       otherwise search for it by name or evaluate the expression
-       originally used to get it.
-    */
-    if (cptr->callfun != R_NilValue)
-	PROTECT(s = cptr->callfun);
-    else if( TYPEOF(CAR(cptr->call)) == SYMSXP)
-	PROTECT(s = findFun(CAR(cptr->call), cptr->sysparent));
-    else
-	PROTECT(s = eval(CAR(cptr->call), cptr->sysparent));
-    if (TYPEOF(s) != CLOSXP) 
-    	error(_("'Recall' called from outside a closure"));
-    ans = applyClosure_v(cptr->call, s, args, cptr->sysparent, NULL, 0);
-    UNPROTECT(1);
-    return ans;
-}
-
-
 static SEXP evalArgs(SEXP el, SEXP rho, int dropmissing)
 {
     return dropmissing ? evalList(el,rho) : evalListKeepMissing(el,rho);
@@ -3469,65 +3490,40 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     return 1;
 }
 
-static SEXP do_is_builtin_internal(SEXP call, SEXP op, SEXP args, SEXP rho)
+/* Check that each formal is a symbol.  Also used in coerce.c */
+
+void attribute_hidden CheckFormals(SEXP ls)
 {
-    SEXP symbol, i;
-
-    checkArity(op, args);
-    symbol = CAR(args);
-
-    if (!isSymbol(symbol))
-	errorcall(call, _("invalid symbol"));
-
-    if ((i = INTERNAL(symbol)) != R_NilValue && TYPEOF(i) == BUILTINSXP)
-	return R_ScalarLogicalTRUE;
-    else
-	return R_ScalarLogicalFALSE;
+    if (isList(ls)) {
+	for (; ls != R_NilValue; ls = CDR(ls))
+	    if (TYPEOF(TAG(ls)) != SYMSXP)
+		goto err;
+	return;
+    }
+ err:
+    error(_("invalid formal argument list for \"function\""));
 }
 
-static SEXP do_loadfile(SEXP call, SEXP op, SEXP args, SEXP env)
+/* Declared with a variable number of args in names.c */
+static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP file, s;
-    FILE *fp;
+    SEXP rval, srcref;
 
-    checkArity(op, args);
+    /* The following is as in 2.15.0, but it's not clear how it can happen. */
+    if (TYPEOF(op) == PROMSXP) {
+	op = forcePromise(op);
+	SET_NAMEDCNT_MAX(op);
+    }
 
-    PROTECT(file = coerceVector(CAR(args), STRSXP));
+    CheckFormals(CAR(args));
+    rval = mkCLOSXP(CAR(args), CADR(args), rho);
+    srcref = CADDR(args);
+    if (srcref != R_NilValue) 
+        setAttrib(rval, R_SrcrefSymbol, srcref);
 
-    if (! isValidStringF(file))
-	errorcall(call, _("bad file name"));
-
-    fp = RC_fopen(STRING_ELT(file, 0), "rb", TRUE);
-    if (!fp)
-	errorcall(call, _("unable to open 'file'"));
-    s = R_LoadFromFile(fp, 0);
-    fclose(fp);
-
-    UNPROTECT(1);
-    return s;
+    R_Visible = TRUE;
+    return rval;
 }
-
-static SEXP do_savefile(SEXP call, SEXP op, SEXP args, SEXP env)
-{
-    FILE *fp;
-
-    checkArity(op, args);
-
-    if (!isValidStringF(CADR(args)))
-	errorcall(call, _("'file' must be non-empty string"));
-    if (TYPEOF(CADDR(args)) != LGLSXP)
-	errorcall(call, _("'ascii' must be logical"));
-
-    fp = RC_fopen(STRING_ELT(CADR(args), 0), "wb", TRUE);
-    if (!fp)
-	errorcall(call, _("unable to open 'file'"));
-
-    R_SaveToFileV(CAR(args), fp, INTEGER(CADDR(args))[0], 0);
-
-    fclose(fp);
-    return R_NilValue;
-}
-
 
 
 /* --------------------------------------------------------------------------
@@ -4511,6 +4507,7 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     UNPROTECT(3);
     return ans;
 }
+
 
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
 
