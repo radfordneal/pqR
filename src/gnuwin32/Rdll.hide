@@ -610,7 +610,6 @@
  do_if
  do_indexsearch
  do_int_unzip
- do_internal
  do_lazyLoadDBfetch
  do_libfixup
  do_loadRconsole
@@ -623,7 +622,6 @@
  do_memuntrace
  do_msgwindow
  do_pgsub
- do_primitive
  do_readClipboard
  do_readRegistry
  do_return
