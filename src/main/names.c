@@ -767,9 +767,10 @@ static SEXP do_internal (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     ans = CALL_PRIMFUN(s, ifun, args, env, variant);
 
-    int flag = PRIMPRINT(ifun);
-    if (flag == 0) R_Visible = TRUE;
-    else if (flag == 1) R_Visible = FALSE;
+    if (PRIMVISON(ifun))
+        R_Visible = TRUE;
+    else if (PRIMVISOFF(ifun))
+        R_Visible = FALSE;
 
     /* If this .Internal function is the whole body of a function, we
        try to undo the incrementing of NAMEDCNT that was done for the

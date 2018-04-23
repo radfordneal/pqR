@@ -356,7 +356,8 @@ struct primsxp_struct {    /* table offset of this and other info is in gp  */
     short code;               /* operation code, from table                */
     signed char arity;        /* function arity (-1 for any), from table   */
     unsigned char pending_ok; /* whether args can have computation pending */
-    unsigned int print:2;     /* print/invisible indicator, from table*/
+    unsigned int vis_on:1;    /* whether to force visibility on */
+    unsigned int vis_off:1;   /* whether to force vis off (internal only) */
     unsigned int variant:1;   /* pass variant to cfun, from table     */
     unsigned int internal:1;  /* call with .Internal flag, from table */
     unsigned int fast_sub:1;  /* subassign/subset fn that can use fast method*/
