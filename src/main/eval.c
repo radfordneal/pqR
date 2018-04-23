@@ -3763,8 +3763,6 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
         args_evald = 0;
     }
 
-    R_Visible = TRUE;
-
     /* Check for dispatch on S3 or S4 objects.  Takes care to match length
        of "args" to length of original (number of args in "call"). */
 
@@ -3777,6 +3775,7 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
         PROTECT(args);
         if (DispatchGroup("Ops", call, op, args, env, &ans)) {
             UNPROTECT(3);
+            R_Visible = TRUE;
             return ans;
         }
         UNPROTECT(1);
@@ -3789,6 +3788,8 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
 
     /* Arguments are now in x and y, and are protected.  The value 
        in args may not be protected, and is not used below. */
+
+    R_Visible = TRUE;
 
     SEXP dims, tsp, klass, xnames, ynames;
     int xarray, yarray, xts, yts;
@@ -3997,8 +3998,9 @@ SEXP attribute_hidden do_not(SEXP call, SEXP op, SEXP args, SEXP env,
 {
     SEXP ans;
 
-    if (DispatchGroup("Ops", call, op, args, env, &ans))
+    if (DispatchGroup("Ops", call, op, args, env, &ans)) {
 	return ans;
+    }
 
     checkArity (op, args);
 
@@ -4245,13 +4247,12 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     PROTECT (argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env));
     PROTECT2(arg1,arg2);
 
-    R_Visible = TRUE;
-
     /* Check for dispatch on S3 or S4 objects. */
 
     if (obj) { /* one or other or both operands are objects */
         if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
             UNPROTECT(3);
+            R_Visible = TRUE;
             return ans;
         }
     }
@@ -4274,6 +4275,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
        Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
        but faster. */
+
+    R_Visible = TRUE;
 
     R_scalar_stack = sv_scalar_stack;
 
@@ -4444,16 +4447,17 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     PROTECT(argsevald = scalar_stack_eval2 (args, &x, &y, &obj, env));
     PROTECT2(x,y);
 
-    R_Visible = TRUE;
-
     /* Check for dispatch on S3 or S4 objects. */
 
     if (obj) {
         if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
+            R_Visible = TRUE;
             UNPROTECT(3);
             return ans;
         }
     }
+
+    R_Visible = TRUE;
 
     /* Check argument count now (after dispatch, since other methods may allow
        other argument count). */

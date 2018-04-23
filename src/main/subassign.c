@@ -1439,8 +1439,10 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* We evaluate the first argument and attempt to dispatch on it. */
     /* If the dispatch fails, we "drop through" to the default code below. */
 
-    if (DispatchOrEval(call, op, "[<-", args, rho, &ans, 0, argsevald))
+    if (DispatchOrEval(call, op, "[<-", args, rho, &ans, 0, argsevald)) {
+        R_Visible = TRUE;
         return ans;
+    }
 
     return do_subassign_dflt_seq
        (call, CAR(ans), R_NoObject, R_NoObject, CDR(ans), rho, R_NoObject, 0);
@@ -1658,8 +1660,10 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     SEXP ans;
 
-    if (DispatchOrEval(call, op, "[[<-", args, rho, &ans, 0, 0))
+    if (DispatchOrEval(call, op, "[[<-", args, rho, &ans, 0, 0)) {
+        R_Visible = TRUE;
         return ans;
+    }
 
     return do_subassign2_dflt_int 
             (call, CAR(ans), R_NoObject, R_NoObject, CDR(ans), rho, R_NoObject);
@@ -2105,6 +2109,7 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     if (DispatchOrEval (ncall, op, "$<-", args, env, &ans, 0, argsevald)) {
         UNPROTECT(3);
+        R_Visible = TRUE;
         return ans;
     }
 
