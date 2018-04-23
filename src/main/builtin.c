@@ -841,6 +841,7 @@ static SEXP do_makelist(SEXP call, SEXP op, SEXP args, SEXP rho)
     else
         UNPROTECT(1);
 
+    R_Visible = TRUE;
     return list;
 }
 

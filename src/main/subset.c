@@ -1451,6 +1451,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             R_scalar_stack = sv_scalar_stack;
             END_PROTECT;
             UNPROTECT(1); /* array */
+            R_Visible = TRUE;
             return ON_SCALAR_STACK(r) ? PUSH_SCALAR(r) : r;
         }
     }
@@ -1516,6 +1517,8 @@ SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
 
    May return its result on the scalar stack, depending on variant.
 
+   Sets R_Visible to TRUE.
+
    Note:  x, sb1, and subs need not be protected on entry. */
 
 static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
@@ -1523,6 +1526,8 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
 {
     int drop, i, nsubs, type;
     SEXP ans, ax, px;
+
+    R_Visible = TRUE;
 
     if (seq == 0 && x != R_NilValue && sb1 != R_NoObject) {
 
@@ -1735,6 +1740,7 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             R_scalar_stack = sv_scalar_stack;
             END_PROTECT;
             UNPROTECT(1);  /* array */
+            R_Visible = TRUE;
             return ON_SCALAR_STACK(r) ? PUSH_SCALAR(r) : r;
         }
     }
@@ -1799,11 +1805,14 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
                                   CDDR(args), rho, 0);
 }
 
+/* Sets R_Visible to TRUE. */
 static SEXP do_subset2_dflt_x (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
                                SEXP subs, SEXP rho, int variant)
 {
     int offset;
     SEXP ans;
+
+    R_Visible = TRUE;
 
     if (isVector(x) && sb1 != R_NoObject) {
 
@@ -2129,7 +2138,9 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 }
 
 /* Used above and in eval.c.  The field to extract is specified by either 
-   the "input" argument or the "name" argument, or both.  Protects x. */
+   the "input" argument or the "name" argument, or both.  Protects x. 
+
+   Sets R_Visible to TRUE. */
 
 SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
                                      int variant)
@@ -2137,6 +2148,8 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
     const char *cinp, *ctarg;
     int mtch;
     SEXP y;
+
+    R_Visible = TRUE;
 
      /* The mechanism to allow  a class extending "environment" */
     if( IS_S4_OBJECT(x) && TYPEOF(x) == S4SXP ){

@@ -2180,7 +2180,9 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
 	res = do_math2(call, op, args, env);
     }
+
     UNPROTECT(nprotect);
+    R_Visible = TRUE;
     return res;
 }
 
@@ -2230,6 +2232,7 @@ SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             PROTECT(arg);
             ans = do_fast_math1 (call, op, arg, env, variant);
             UNPROTECT(1);
+            R_Visible = TRUE;
             return ans;
         }
     }
@@ -2284,7 +2287,9 @@ SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 	    error(_("%d arguments passed to 'log' which requires 1 or 2"), n);
 	}
     }
+
     UNPROTECT(1); /* call2 */
+    R_Visible = TRUE;
     return res;
 }
 

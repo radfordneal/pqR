@@ -1583,6 +1583,7 @@ static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
         check_slot_assign(obj, input, value, env);
         value = R_do_slot_assign(obj, input, value);
         UNPROTECT(2);
+        R_Visible = TRUE;
         return value;
     }
 
@@ -1911,6 +1912,7 @@ static SEXP do_AT(SEXP call, SEXP op, SEXP args, SEXP env)
 
     ans = R_do_slot(object, nlist);
     UNPROTECT(1);
+    R_Visible = TRUE;
     return ans;
 }
 

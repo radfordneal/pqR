@@ -1217,6 +1217,7 @@ static SEXP do_dotcall_e (SEXP call, SEXP op, SEXP args, SEXP env, int evald)
     endcontext (&cntxt);
     VMAXSET(vmax);
 
+    R_Visible = TRUE;
     return retval;
 }
 
@@ -2542,7 +2543,9 @@ SEXP attribute_hidden do_dotCode (SEXP call, SEXP op, SEXP args, SEXP env,
     UNPROTECT(3);  /* ans spa.pkg, spa.encoding */
     VMAXSET(vmax);
     endcontext(&cntxt);
+
     UNPROTECT(1);  /* args - must be after endcontext */
+    R_Visible = TRUE;
     return ans;
 }
 

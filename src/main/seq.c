@@ -201,6 +201,8 @@ static SEXP do_colon(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         PROTECT(y = eval(y,env));
     }
 
+    R_Visible = TRUE;
+
     checkArity(op, args);
 
     if (inherits_CHAR (x, R_factor_CHARSXP) 
@@ -639,6 +641,8 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* This has evaluated all the non-missing arguments into ans */
     PROTECT(args = ans);
     nprotect++;
+
+    R_Visible = TRUE;
 
     /* This is a primitive, and we have not dispatched to a method
        so we manage the argument matching ourselves.  We pretend this is
