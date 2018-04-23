@@ -458,11 +458,8 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
 
     R_EvalDepth += 1;
 
-    if (R_EvalDepth > R_Expressions) {
-        R_Expressions = R_Expressions_keep + 500;
-        errorcall (R_NilValue /* avoids deparsing call in the error handler */,
-         _("evaluation nested too deeply: infinite recursion / options(expressions=)?"));
-    }
+    if (R_EvalDepth > R_Expressions)
+        too_deep_error();
 
     /* Handle other evaluations, typically of LANGSXP. */
 
@@ -1710,13 +1707,12 @@ static SEXP do_return(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP v;
 
-    if (args == R_NilValue) /* zero arguments provided */
-	v = R_NilValue;
-    else if (CDR(args) == R_NilValue) /* one argument */
-	v = evalv (CAR(args), rho, ! (variant & VARIANT_DIRECT_RETURN) ? 0
-                    : VARIANT_PASS_ON(variant) & ~ VARIANT_NULL);
-    else
+    if (CDR(args) != R_NilValue)
 	errorcall(call, _("multi-argument returns are not permitted"));
+
+    v = evalv (CAR(args),  /* relies on CDR(R_NilValue) being R_NilValue. */
+               rho, ! (variant & VARIANT_DIRECT_RETURN) ? 0
+                        : VARIANT_PASS_ON(variant) & ~ VARIANT_NULL);
 
     if (variant & VARIANT_DIRECT_RETURN) {
         R_variant_result |= VARIANT_RTN_FLAG;
