@@ -1466,7 +1466,8 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 /*     if(DispatchAnyOrEval(call, op, "[", args, rho, &ans, 0, 0)) */
 	if (NAMEDCNT_GT_0(ans))
 	    SET_NAMEDCNT_MAX(ans);    /* IS THIS NECESSARY? */
-	return(ans);
+        R_Visible = TRUE;
+	return ans;
     }
 
     /* Method dispatch has failed, we now */
@@ -1786,6 +1787,7 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
 
     UNPROTECT(1);
+    R_Visible = TRUE;
     return ans;
 }
 
@@ -2129,6 +2131,7 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         UNPROTECT(2+argsevald);
 	if (NAMEDCNT_GT_0(ans))         /* IS THIS NECESSARY? */
 	    SET_NAMEDCNT_MAX(ans);
+        R_Visible = TRUE;
 	return ans;
     }
 
