@@ -480,8 +480,10 @@ typedef struct {
     setprim_ptr->primsxp.arity  = R_FunTab[setprim_value].arity; \
     setprim_ptr->primsxp.internal \
         = (R_FunTab[setprim_value].eval/10)&1; \
-    setprim_ptr->primsxp.print \
-        = (R_FunTab[setprim_value].eval/100)%10; \
+    setprim_ptr->primsxp.vis_on \
+        = (R_FunTab[setprim_value].eval/100)%10 == 0; \
+    setprim_ptr->primsxp.vis_off \
+        = (R_FunTab[setprim_value].eval/100)%10 == 1; \
     setprim_ptr->primsxp.variant \
         = (R_FunTab[setprim_value].eval/1000)&1; \
     setprim_ptr->primsxp.pending_ok \
@@ -508,7 +510,11 @@ typedef struct {
 #define PRIMARITY(x) \
   (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.arity)
 #define PRIMPRINT(x) \
-  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.print)
+  ((R_FunTab[PRIMOFFSET(x)].eval/100)%10)
+#define PRIMVISON(x) \
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.vis_on)
+#define PRIMVISOFF(x) \
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.vis_off)
 #define PRIMINTERNAL(x) \
   (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.internal)
 #define PRIMVARIANT(x) \

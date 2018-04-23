@@ -593,7 +593,7 @@ SEXP attribute_hidden Rf_evalv_other (SEXP e, SEXP rho, int variant)
             else if (type_tr == BUILTINSXP) {
                 res = R_Profiling ? Rf_builtin_op(op, e, rho, variant)
                                   : Rf_builtin_op_no_cntxt(op, e, rho, variant);
-                if (PRIMPRINT(op) == 0)
+                if (PRIMVISON(op))
                     R_Visible = TRUE;
             }
             else if (type_tr & TYPE_ET_CETERA_VEC_DOTS_TR) {

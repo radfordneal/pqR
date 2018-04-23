@@ -120,9 +120,10 @@ static SEXP applyMethod (SEXP call, SEXP op, SEXP args, SEXP rho,
 	const void *vmax = VMAXGET();
 	R_Visible = TRUE;
 	ans = CALL_PRIMFUN(call, op, args, rho, variant);
-        int flag = PRIMPRINT(op);
-        if (flag == 0) R_Visible = TRUE;
-        else if (flag == 1) R_Visible = FALSE;
+        if (PRIMVISON(op))
+            R_Visible = TRUE;
+        else if (PRIMVISOFF(op))
+            R_Visible = FALSE;
 	check_stack_balance(op, save);
 	VMAXSET(vmax);
     }
@@ -137,9 +138,10 @@ static SEXP applyMethod (SEXP call, SEXP op, SEXP args, SEXP rho,
 	PROTECT(args = evalList(args, rho));
 	R_Visible = TRUE;
 	ans = CALL_PRIMFUN(call, op, args, rho, variant);
-        int flag = PRIMPRINT(op);
-        if (flag == 0) R_Visible = TRUE;
-        else if (flag == 1) R_Visible = FALSE;
+        if (PRIMVISON(op))
+            R_Visible = TRUE;
+        else if (PRIMVISOFF(op))
+            R_Visible = FALSE;
 	UNPROTECT(1);
 	check_stack_balance(op, save);
 	VMAXSET(vmax);
