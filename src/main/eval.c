@@ -2245,21 +2245,17 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         /* -- ASSIGNMENT TO A SIMPLE VARIABLE -- */
 
-        /* Handle <<- without trying the optimizations done below. */
+        /* Handle <<- or assignment to base environment or user database
+           without trying the optimizations done below. */
 
-        if (opval == 2) {
-            rhs = EVALV (rhs, rho, VARIANT_PENDING_OK);
-            set_var_nonlocal (lhs, rhs, ENCLOS(rho), 3);
-            goto done;
-        }
-
-        /* Handle assignment into base and user database environments without
-           any special optimizations. */
-
-        if (IS_BASE(rho) || IS_USER_DATABASE(rho)) {
-            rhs = EVALV (rhs, rho, VARIANT_PENDING_OK);
-            set_var_in_frame (lhs, rhs, rho, TRUE, 3);
-            goto done;
+        if (opval == 2 || IS_BASE(rho) || IS_USER_DATABASE(rho)) {
+            rhs = evalv (rhs, rho, VARIANT_PENDING_OK);
+            if (opval == 2) {
+                set_var_nonlocal (lhs, rhs, ENCLOS(rho), 3);
+                goto done;
+            }
+            else
+                goto set_in_frame;
         }
 
         /* We decide whether we'll ask the right hand side evalutation to do
@@ -2338,6 +2334,8 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
 
         /* Assign rhs object to lhs symbol the usual way. */
+
+      set_in_frame:
 
         set_var_in_frame (lhs, rhs, rho, TRUE, 3);
     }
