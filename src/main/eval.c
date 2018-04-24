@@ -2286,31 +2286,34 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
 
         /* Try to copy the value, not assign the object, if the rhs is
-           scalar and doesn't have zero NAMEDCNT (for which assignment
-           would be free).  This will copy from the scalar stack,
-           which must be replaced by a regular value if the copy can't
-           be done.  If the copy can't be done, but a binding cell was
-           found here, the assignment is done directly into the binding 
-           cell, avoiding overhead of calling set_var_in_frame.
+           scalar (no attributes, not being computed) and doesn't have
+           zero NAMEDCNT (for which assignment would be free).  This
+           will copy from the scalar stack, which must be replaced by
+           a regular value if the copy can't be done.  If the copy
+           can't be done, but a binding cell was found here, the
+           assignment is done directly into the binding cell, avoiding
+           overhead of calling set_var_in_frame.
 
-           Avoid accessing NAMEDCNT in a way that will cause unnecessary waits
-           for task completion. */
+           Avoid accessing NAMEDCNT in a way that will cause unnecessary
+           waits for task completion. */
 
-        if (isVectorNonpointer(rhs) && LENGTH(rhs) == 1 && NAMEDCNT_GT_0(rhs)) {
-            SEXPTYPE rhs_type = TYPEOF(rhs);
+        int rhs_type_etc = TYPE_ETC(rhs);  /* type + vec + attr + b.c. */
+
+        if ((rhs_type_etc&~TYPE_ET_CETERA_TYPE)==0 /* scalar, no attr, n.b.c. */
+             && ((NONPOINTER_VECTOR_TYPES >> rhs_type_etc) & 1)
+             && NAMEDCNT_GT_0(rhs)) {
             SEXP v;
             if (SEXP32_FROM_SEXP(rho) != LASTSYMENV(lhs) 
                   || BINDING_IS_LOCKED((R_binding_cell = LASTSYMBINDING(lhs)))
                   || (v = CAR(R_binding_cell)) == R_UnboundValue)
                 v = findVarInFrame3_nolast (rho, lhs, 7);
-            if (v != R_UnboundValue && TYPEOF(v) == rhs_type && LENGTH(v) == 1
-                 && ATTRIB(v) == ATTRIB(rhs) && TRUELENGTH(v) == TRUELENGTH(rhs)
-                 && LEVELS(v) == LEVELS(rhs) && !NAMEDCNT_GT_1(v)) {
+            if (TYPE_ETC(v) == rhs_type_etc  /* won't be if R_UnboundValue */
+                 && TRUELENGTH(v) == TRUELENGTH(rhs) && LEVELS(v) == LEVELS(rhs)
+                 && !NAMEDCNT_GT_1(v)) {
                 SET_NAMEDCNT_NOT_0(v);
                 POP_IF_TOP_OF_STACK(rhs);
-                helpers_wait_until_not_in_use(v);
-                WAIT_UNTIL_COMPUTED(v);
-                switch (rhs_type) {
+                helpers_wait_until_not_in_use(v);  /* won't be being computed */
+                switch (rhs_type_etc) {
                 case LGLSXP:  *LOGICAL(v) = *LOGICAL(rhs); break;
                 case INTSXP:  *INTEGER(v) = *INTEGER(rhs); break;
                 case REALSXP: *REAL(v)    = *REAL(rhs);    break;
