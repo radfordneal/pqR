@@ -1593,6 +1593,8 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         if (HASHTAB(rho) == R_NilValue) {
             new = cons_with_tag (value, FRAME(rho), symbol);
             SET_FRAME(rho, new);
+            LASTSYMENV(symbol) = SEXP32_FROM_SEXP(rho);
+            LASTSYMBINDING(symbol) = new;
         }
         else {
             SEXP table = HASHTAB(rho);

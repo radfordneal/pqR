@@ -2,3 +2,4 @@ Improvements to variable lookup.
 
 Sets LASTSYMENV for a newly-created argument, unless it is missing.
 
+Also sets LASTSYMENV when a new variable is created in an unhashed environment.
