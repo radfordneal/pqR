@@ -2236,7 +2236,8 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     /* Convert lhs string to a symbol. */
 
-    if (TYPEOF(lhs) == STRSXP) {
+    if ((TYPE_ETC(lhs) & (TYPE_ET_CETERA_TYPE | TYPE_ET_CETERA_VEC_DOTS_TR))
+          == STRSXP) {  /* scalar string */
         lhs = install(translateChar(STRING_ELT(lhs, 0)));
     }
 

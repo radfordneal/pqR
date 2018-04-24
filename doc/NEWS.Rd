@@ -339,6 +339,10 @@
 }
         The value printed was previously 0 rather than NA.
         This bug also exists in R Core versions to at least R-3.4.4.
+  \item Fixed a bug that caused a crash (rather than an error message)
+        for code like the following:
+\preformatted{    a <- quote(r<-1); a[[2]] <- character(0); eval(a)
+}
   }}
 }
 
