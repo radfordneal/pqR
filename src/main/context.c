@@ -137,6 +137,8 @@ void attribute_hidden R_run_onexits(RCNTXT *cptr)
 	    RCNTXT* savecontext = R_ExitContext;
 	    R_ExitContext = c;
 	    c->conexit = R_NilValue; /* prevent recursion */
+	    /* we are in intermediate jump, so returnValue is undefined */
+	    c->returnValue = NULL;
 	    R_HandlerStack = c->handlerstack;
 	    R_RestartStack = c->restartstack;
 	    PROTECT(s);
@@ -148,7 +150,10 @@ void attribute_hidden R_run_onexits(RCNTXT *cptr)
 	       R_CheckStack. LT */
 	    R_Expressions = R_Expressions_keep + 500;
 	    R_CheckStack();
-	    eval(s, c->cloenv);
+	    for (; s != R_NilValue; s = CDR(s)) {
+		c->conexit = CDR(s);
+		eval(CAR(s), c->cloenv);
+	    }
 	    UNPROTECT(1);
 	    R_ExitContext = savecontext;
 	}
@@ -196,7 +201,8 @@ static RCNTXT *first_jump_target(RCNTXT *cptr, int mask)
     RCNTXT *c;
 
     for (c = R_GlobalContext; c && c != cptr; c = c->nextcontext) {
-	if (c->cloenv != R_NilValue && c->conexit != R_NilValue) {
+	if ((c->cloenv != R_NilValue && c->conexit != R_NilValue) ||
+	    c->callflag == CTXT_UNWIND) {
 	    c->jumptarget = cptr;
 	    c->jumpmask = mask;
 	    return c;
@@ -219,7 +225,6 @@ void attribute_hidden NORET R_jumpctxt(RCNTXT * targetcptr, int mask, SEXP val)
 
     /* run cend code for all contexts down to but not including
        the first jump target */
-    cptr->returnValue = val;/* in case the on.exit code wants to see it */
     R_run_onexits(cptr);
     R_Visible = savevis;
 
@@ -283,25 +288,36 @@ void begincontext(RCNTXT * cptr, int flags,
 
 void endcontext(RCNTXT * cptr)
 {
+    void R_FixupExitingHandlerResult(SEXP); /* defined in error.x */
     R_HandlerStack = cptr->handlerstack;
     R_RestartStack = cptr->restartstack;
+    RCNTXT *jumptarget = cptr->jumptarget;
     if (cptr->cloenv != R_NilValue && cptr->conexit != R_NilValue ) {
 	SEXP s = cptr->conexit;
 	Rboolean savevis = R_Visible;
 	RCNTXT* savecontext = R_ExitContext;
+	SEXP saveretval = R_ReturnedValue;
 	R_ExitContext = cptr;
 	cptr->conexit = R_NilValue; /* prevent recursion */
+	cptr->jumptarget = NULL; /* in case on.exit expr calls return() */
+	PROTECT(saveretval);
 	PROTECT(s);
-	eval(s, cptr->cloenv);
-	UNPROTECT(1);
+	R_FixupExitingHandlerResult(saveretval);
+	for (; s != R_NilValue; s = CDR(s)) {
+	    cptr->conexit = CDR(s);
+	    eval(CAR(s), cptr->cloenv);
+	}
+	R_ReturnedValue = saveretval;
+	UNPROTECT(2);
 	R_ExitContext = savecontext;
 	R_Visible = savevis;
     }
     if (R_ExitContext == cptr)
 	R_ExitContext = NULL;
     /* continue jumping if this was reached as an intermetiate jump */
-    if (cptr->jumptarget)
-	R_jumpctxt(cptr->jumptarget, cptr->jumpmask, cptr->returnValue);
+    if (jumptarget)
+	/* cptr->returnValue is undefined */
+	R_jumpctxt(jumptarget, cptr->jumpmask, R_ReturnedValue);
 
     R_GlobalContext = cptr->nextcontext;
 }
@@ -659,10 +675,15 @@ SEXP attribute_hidden do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
 	UNPROTECT(1);
 	return rval;
     case 7: /* sys.on.exit */
-	if( R_GlobalContext->nextcontext != NULL)
-	    return R_GlobalContext->nextcontext->conexit;
-	else
-	    return R_NilValue;
+	{
+	    SEXP conexit = cptr->conexit;
+	    if (conexit == R_NilValue)
+		return R_NilValue;
+	    else if (CDR(conexit) == R_NilValue)
+		return CAR(conexit);
+	    else
+		return LCONS(R_BraceSymbol, conexit);
+	}
     case 8: /* sys.parents */
 	nframe = framedepth(cptr);
 	rval = allocVector(INTSXP, nframe);
@@ -844,5 +865,71 @@ SEXP R_ExecWithCleanup(SEXP (*fun)(void *), void *data,
     cleanfun(cleandata);
 
     endcontext(&cntxt);
+    return result;
+}
+
+
+/* Unwind-protect mechanism to support C++ stack unwinding. */
+
+typedef struct {
+    int jumpmask;
+    RCNTXT *jumptarget;
+} unwind_cont_t;
+
+SEXP R_MakeUnwindCont()
+{
+    return CONS(R_NilValue, allocVector(RAWSXP, sizeof(unwind_cont_t)));
+}
+
+#define RAWDATA(x) ((void *) RAW0(x))
+
+void NORET R_ContinueUnwind(SEXP cont)
+{
+    SEXP retval = CAR(cont);
+    unwind_cont_t *u = RAWDATA(CDR(cont));
+    R_jumpctxt(u->jumptarget, u->jumpmask, retval);
+}
+
+SEXP R_UnwindProtect(SEXP (*fun)(void *data), void *data,
+		     void (*cleanfun)(void *data, Rboolean jump),
+		     void *cleandata, SEXP cont)
+{
+    RCNTXT thiscontext;
+    SEXP result;
+    Rboolean jump;
+
+    /* Allow simple usage with a NULL continuotion token. This _could_
+       result in a failure in allocation or exceeding the PROTECT
+       stack limit before calling fun(), so fun() and cleanfun should
+       be written accordingly. */
+    if (cont == NULL) {
+	PROTECT(cont = R_MakeUnwindCont());
+	result = R_UnwindProtect(fun, data, cleanfun, cleandata, cont);
+	UNPROTECT(1);
+	return result;
+    }
+
+    begincontext(&thiscontext, CTXT_UNWIND, R_NilValue, R_GlobalEnv,
+		 R_BaseEnv, R_NilValue, R_NilValue);
+    if (SETJMP(thiscontext.cjmpbuf)) {
+	jump = TRUE;
+	SETCAR(cont, R_ReturnedValue);
+	unwind_cont_t *u = RAWDATA(CDR(cont));
+	u->jumpmask = thiscontext.jumpmask;
+	u->jumptarget = thiscontext.jumptarget;
+	thiscontext.jumptarget = NULL;
+    }
+    else {
+	result = fun(data);
+	SETCAR(cont, result);
+	jump = FALSE;
+    }
+    endcontext(&thiscontext);
+
+    cleanfun(cleandata, jump);
+
+    if (jump)
+	R_ContinueUnwind(cont);	
+
     return result;
 }

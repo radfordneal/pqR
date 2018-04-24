@@ -1,7 +1,7 @@
 #  File src/library/base/R/New-Internal.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -32,8 +32,7 @@ try <- function(expr, silent = FALSE,
             dcall <- deparse(call)[1L]
             prefix <- paste("Error in", dcall, ": ")
             LONG <- 75L # to match value in errors.c
-            msg <- conditionMessage(e)
-            sm <- strsplit(msg, "\n")[[1L]]
+            sm <- strsplit(conditionMessage(e), "\n")[[1L]]
             w <- 14L + nchar(dcall, type="w") + nchar(sm[1L], type="w")
             ## this could be NA if any of this is invalid in a MBCS
             if(is.na(w))
@@ -46,7 +45,7 @@ try <- function(expr, silent = FALSE,
         ## Store the error message for legacy uses of try() with
         ## geterrmessage().
         .Internal(seterrmessage(msg[1L]))
-        if (! silent && identical(getOption("show.error.messages"), TRUE)) {
+        if (! silent && isTRUE(getOption("show.error.messages"))) {
             cat(msg, file = outFile)
             .Internal(printDeferredWarnings())
         }
@@ -91,38 +90,49 @@ cbind <- function(..., deparse.level = 1)
 rbind <- function(..., deparse.level = 1)
     .Internal(rbind(deparse.level, ...))
 
-## for methods:::bind_activation
-.__H__.cbind <- cbind
-.__H__.rbind <- rbind
+## methods:::bind_activation defunct as of 2018-02-05 (R >= 3.5.0)
+## Deprecating these aliases now
+.__H__.cbind <- function(..., deparse.level = 1) {
+    .Deprecated("base::cbind")
+    .Internal(cbind(deparse.level, ...))
+}
+.__H__.rbind <- function(..., deparse.level = 1) {
+    .Deprecated("base::rbind")
+    .Internal(rbind(deparse.level, ...))
+}
+
 
 
 # convert deparsing options to bitmapped integer
+..deparseOpts <-
+    ## the exact order of these is determined by the integer codes in
+    ## ../../../include/Defn.h
+    c("all",
+      "keepInteger", "quoteExpressions", "showAttributes", # 2,3,4
+      "useSource", "warnIncomplete", "delayPromises",      # 5,6,7
+      "keepNA", "S_compatible", "hexNumeric",              # 8,9,10
+      "digits17", "niceNames")                             # 11,12
 
 .deparseOpts <- function(control) {
-    opts <- pmatch(as.character(control),
-                   ## the exact order of these is determined by the integer codes in
-                   ## ../../../include/Defn.h
-                   c("all",
-                     "keepInteger", "quoteExpressions", "showAttributes",
-                     "useSource", "warnIncomplete", "delayPromises",
-                     "keepNA", "S_compatible", "hexNumeric", "digits17"))
+    if(!length(control)) return(0) # fast exit
+    opts <- pmatch(as.character(control), ..deparseOpts)
     if (anyNA(opts))
         stop(sprintf(ngettext(as.integer(sum(is.na(opts))),
                               "deparse option %s is not recognized",
                               "deparse options %s are not recognized"),
                      paste(sQuote(control[is.na(opts)]), collapse=", ")),
              call. = FALSE, domain = NA)
-    if (any(opts == 1L))
-        opts <- unique(c(opts[opts != 1L], 2L,3L,4L,5L,6L,8L)) # not (7,9:11)
+    if (any(opts == 1L)) # "all"
+        opts <- unique(c(opts[opts != 1L], 2L,3L,4L,5L,6L,8L, 12L)) # not (7,9:11)
     if(10L %in% opts && 11L %in% opts)
         stop('"hexNumeric" and "digits17" are mutually exclusive')
-    return(sum(2^(opts-2)))
+    sum(2^(opts-2))
 }
 
 deparse <-
     function(expr, width.cutoff = 60L,
 	     backtick = mode(expr) %in% c("call", "expression", "(", "function"),
-	     control = c("keepInteger", "showAttributes", "keepNA"),
+	     control = c("keepNA", "keepInteger", "niceNames", "showAttributes"),
              nlines = -1L)
     .Internal(deparse(expr, width.cutoff, backtick,
                       .deparseOpts(control), nlines))
@@ -141,9 +151,9 @@ drop <- function(x) .Internal(drop(x))
 format.info <- function(x, digits = NULL, nsmall = 0L)
     .Internal(format.info(x, digits, nsmall))
 
-gc <- function(verbose = getOption("verbose"),	reset=FALSE)
+gc <- function(verbose = getOption("verbose"),	reset=FALSE, full=TRUE)
 {
-    res <- .Internal(gc(verbose, reset))
+    res <- .Internal(gc(verbose, reset, full))
     res <- matrix(res, 2L, 7L,
 		  dimnames = list(c("Ncells","Vcells"),
 		  c("used", "(Mb)", "gc trigger", "(Mb)",

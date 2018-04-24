@@ -534,8 +534,13 @@ function(dir, drop = c("\\author", "\\references"),
         ## </FIXME>
     }
 
+    macros <- tools::loadPkgRdMacros(dir,
+                                     macros = file.path(R.home("share"), 
+                                                        "Rd", "macros",
+                                                        "system.Rd"))
+
     aspell(files,
-           filter = list("Rd", drop = drop),
+           filter = list("Rd", drop = drop, macros = macros),
            control = control,
            encoding = encoding,
            program = program,
@@ -766,6 +771,8 @@ function(file, encoding = "unknown")
     calls <- getParseText(pd, ids)
 
     table <- pd[pd$token == "STR_CONST", ]
+    ## Could have run into truncation ...
+    table$text <- getParseText(table, table$id)
     pos <- match(gpids(table$id), ids)
     ind <- !is.na(pos)
     table <- split(table[ind, ], factor(pos[ind], seq_along(ids)))
@@ -1061,6 +1068,28 @@ function(dir, ignore = character(),
     if(is.na(encoding <- meta["Encoding"]))
         encoding <- "unknown"
 
+    ## Allow providing package defaults but make this controllable via
+    ##   _R_ASPELL_USE_DEFAULTS_FOR_PACKAGE_DESCRIPTION_
+    ## to safeguard against possible mis-use for CRAN incoming checks.
+    defaults <-
+        Sys.getenv("_R_ASPELL_USE_DEFAULTS_FOR_PACKAGE_DESCRIPTION_",
+                   "TRUE")
+    defaults <- if(tools:::config_val_to_logical(defaults)) {
+                    .aspell_package_defaults(dir, encoding)$description
+                } else NULL
+    if(!is.null(defaults)) {
+        if(!is.null(d <- defaults$ignore))
+            ignore <- d
+        if(!is.null(d <- defaults$control))
+            control <- d
+        if(!is.null(d <- defaults$program))
+            program <- d
+        if(!is.null(d <- defaults$dictionaries)) {
+            dictionaries <-
+                aspell_find_dictionaries(d, file.path(dir, ".aspell"))
+        }
+    }
+    
     program <- aspell_find_program(program)
 
     aspell(files,
@@ -1071,6 +1100,48 @@ function(dir, ignore = character(),
            dictionaries = dictionaries)
 }
 
+## Spell-checking Markdown files.
+
+aspell_filter_db$md <-
+function(ifile, encoding = "UTF-8")
+{
+    x <- readLines(ifile, encoding = encoding, warn = FALSE)
+    n <- nchar(x)
+    y <- strrep(rep.int(" ", length(x)), n)
+    ## Determine positions of 'texts' along the lines of
+    ## spelling::parse_text_md () by Jeroen Ooms.
+    md <- commonmark::markdown_xml(x, extensions = TRUE,
+                                   sourcepos = TRUE)
+    doc <- xml2::xml_ns_strip(xml2::read_xml(md))
+    pos <- strsplit(xml2::xml_attr(xml2::xml_find_all(doc,
+                                                      "//text[@sourcepos]"),
+                                   "sourcepos"),
+                    "[:-]")
+    ## Now use the following idea.
+    ## Each elt of pos now has positions for l1:c1 to l2:c2.
+    ## If l1 < l2
+    ##   Lines in (l1, l2) are taken as a whole
+    ##   Line l1 from c1 to nchar for l1
+    ##   Line l2 from  1 to c1
+    ## otherwise
+    ##   Line l1 from c1 to c2.
+    for(p in pos) {
+        p <- as.integer(p)
+        ## Legibility ...
+        l1 <- p[1L]; c1 <- p[2L]; l2 <- p[3L]; c2 <- p[4L]
+        if(l1 < l2) {
+            w <- seq(l1 + 1L, l2 - 1L)
+            if(length(w))
+                y[w] <- x[w]
+            substring(y[l1], c1, n[l1]) <- substring(x[l1], c1, n[l1])
+            substring(y[l2], 1L, c2) <- substring(x[l2], 1L, c2)
+        } else {
+            substring(y[l1], c1, c2) <- substring(x[l1], c1, c2)
+        }
+    }
+    y
+}
+    
 ## For spell checking packages.
 
 aspell_package <-

@@ -1,6 +1,6 @@
 %{
 /*
- *  R : A Computer Langage for Statistical Data Analysis
+ *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1997--2017  The R Core Team
  *  Copyright (C) 2009--2011  Romain Francois
@@ -218,8 +218,9 @@ static int mbcs_get_next(int c, wchar_t *wc)
     if(utf8locale) {
 	clen = utf8clen((char) c);
 	for(i = 1; i < clen; i++) {
-	    s[i] = (char) xxgetc();
-	    if(s[i] == R_EOF) error(_("EOF whilst reading MBCS char at line %d"), ParseState.xxlineno);
+	    c = xxgetc();
+	    if(c == R_EOF) error(_("EOF whilst reading MBCS char at line %d"), ParseState.xxlineno);
+	    s[i] = (char) c;
 	}
 	s[clen] ='\0'; /* x86 Solaris requires this */
 	res = (int) mbrtowc(wc, s, clen, NULL);
@@ -2236,8 +2237,9 @@ static int mbcs_get_next2(int c, ucs_t *wc)
     if(utf8locale) {
 	clen = utf8clen(c);
 	for(i = 1; i < clen; i++) {
-	    s[i] = xxgetc();
-	    if(s[i] == R_EOF) error(_("EOF whilst reading MBCS char at line %d"), ParseState.xxlineno);
+	    c = xxgetc();
+	    if(c == R_EOF) error(_("EOF whilst reading MBCS char at line %d"), ParseState.xxlineno);
+	    s[i] = (char) c;
 	}
 	s[clen] ='\0'; /* x86 Solaris requires this */
 	res = mbtoucs(wc, s, clen);
@@ -2279,7 +2281,7 @@ static SEXP mkStringUTF8(const ucs_t *wcs, int cnt)
 #ifdef WC_NOT_UNICODE
     for(char *ss = s; *wcs; wcs++) ss += ucstoutf8(ss, *wcs);
 #else
-    wcstoutf8(s, wcs, nb);
+    wcstoutf8(s, wcs, sizeof(s));
 #endif
     PROTECT(t = allocVector(STRSXP, 1));
     SET_STRING_ELT(t, 0, mkCharCE(s, CE_UTF8));
@@ -2435,7 +2437,14 @@ static int StringValue(int c, Rboolean forSymbol)
 		    else CTEXT_PUSH(c);
 		}
 		if (!val)
-		    error(_("nul character not allowed (line %d)"), ParseState.xxlineno);		
+		    error(_("nul character not allowed (line %d)"), ParseState.xxlineno);
+#ifdef Win32
+		if (0x010000 <= val && val <= 0x10FFFF) {   /* Need surrogate pair in Windows */
+		    val = val - 0x010000;
+		    WTEXT_PUSH( 0xD800 | (val >> 10) );
+		    val = 0xDC00 | (val & 0x03FF);
+		}
+#endif
 		WTEXT_PUSH(val);
 		use_wcs = TRUE;
 		continue;

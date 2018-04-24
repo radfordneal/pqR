@@ -1,7 +1,7 @@
 #  File src/library/base/R/factor.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,25 +23,37 @@ factor <- function(x = character(), levels, labels = levels,
     nx <- names(x)
     if (missing(levels)) {
 	y <- unique(x, nmax = nmax)
-	ind <- sort.list(y) # or possibly order(x) which is more (too ?) tolerant
+	ind <- order(y)
 	levels <- unique(as.character(y)[ind])
     }
     force(ordered) # check if original x is an ordered factor
     if(!is.character(x))
 	x <- as.character(x)
-    ## levels could be a long vectors, but match will not handle that.
+    ## levels could be a long vector, but match will not handle that.
     levels <- levels[is.na(match(levels, exclude))]
     f <- match(x, levels)
     if(!is.null(nx))
 	names(f) <- nx
-    nl <- length(labels)
-    nL <- length(levels)
-    if(!any(nl == c(1L, nL)))
-	stop(gettextf("invalid 'labels'; length %d should be 1 or %d", nl, nL),
-	     domain = NA)
-    levels(f) <- ## nl == nL or 1
-	if (nl == nL) as.character(labels)
-	else paste0(labels, seq_along(levels))
+    if(missing(labels)) { ## default: labels := levels
+	levels(f) <- as.character(levels)
+    } else { ## labels specified explicitly
+	nlab <- length(labels)
+	if(nlab == length(levels)) { ## NB: duplicated labels should work
+	    ## a version of  f <- `levels<-.factor`(f, as.character(labels))
+	    ## ... but not dropping NA :
+	    nlevs <- unique(xlevs <- as.character(labels))
+	    at <- attributes(f)
+	    at$levels <- nlevs
+	    f <- match(xlevs, nlevs)[f]
+	    attributes(f) <- at
+	}
+	else if(nlab == 1L)
+	    levels(f) <- paste0(labels, seq_along(levels))
+	else ## nlab is neither 1 nor length(levels)
+	    stop(gettextf("invalid 'labels'; length %d should be 1 or %d",
+			  nlab, length(levels)),
+		 domain = NA)
+    }
     class(f) <- c(if(ordered) "ordered", "factor")
     f
 }
@@ -96,7 +108,7 @@ nlevels <- function(x) length(levels(x))
     nlevs <- unique(nlevs)
     at <- attributes(x)
     at$levels <- nlevs
-    y <- match(xlevs[x], nlevs)
+    y <- match(xlevs, nlevs)[x]
     attributes(y) <- at
     y
 }
@@ -189,7 +201,6 @@ Ops.factor <- function(e1, e2)
 	warning(gettextf("%s not meaningful for factors", sQuote(.Generic)))
 	return(rep.int(NA, max(length(e1), if(!missing(e2)) length(e2))))
     }
-    nas <- is.na(e1) | is.na(e2)
     ## Need this for NA *levels* as opposed to missing
     noNA.levels <- function(f) {
 	r <- levels(f)
@@ -201,10 +212,32 @@ Ops.factor <- function(e1, e2)
 	r
     }
     if (nzchar(.Method[1L])) { # e1 *is* a factor
+        ## fastpath for factor w/ no NA levels vs scalar character
+        if(!anyNA(levels(e1)) && is.character(e2) && length(e2) == 1L) {
+            if(.Generic == "==") {
+                ## if e1[i] OR e2 is NA then (leq[e1])[i] is NA
+                ## as desired
+                leq <- (levels(e1) == e2)
+                return(leq[e1])
+            } else { ## != case
+                leq <- (levels(e1) != e2)
+                return(leq[e1])
+            }
+        }
 	l1 <- noNA.levels(e1)
 	e1 <- l1[e1]
     }
     if (nzchar(.Method[2L])) { # e2 *is* a factor
+        ## fastpath for factor w/ no NA levels vs scalar character
+        if(!anyNA(levels(e2)) && is.character(e1) && length(e1) == 1L){
+            if(.Generic == "==") {
+                leq <- (levels(e2) == e1)
+                return(leq[e2])
+            } else {  ## != case
+                leq <- (levels(e2) != e1)
+                return(leq[e2])
+            }
+        }
 	l2 <- noNA.levels(e2)
 	e2 <- l2[e2]
     }
@@ -212,6 +245,7 @@ Ops.factor <- function(e1, e2)
 	(length(l1) != length(l2) || !all(sort.int(l2) == sort.int(l1))))
 	stop("level sets of factors are different")
     value <- NextMethod(.Generic)
+    nas <- is.na(e1) | is.na(e2)
     value[nas] <- NA
     value
 }

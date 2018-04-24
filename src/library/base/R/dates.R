@@ -1,7 +1,7 @@
 #  File src/library/base/R/dates.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ as.Date.POSIXct <- function(x, tz = "UTC", ...)
     if(tz == "UTC") {
         z <- floor(unclass(x)/86400)
         attr(z, "tzone") <- NULL
-        structure(z, class = "Date")
+        .Date(z)
     } else
         as.Date(as.POSIXlt(x, tz = tz))
 }
@@ -41,7 +41,9 @@ as.Date.POSIXlt <- function(x, ...) .Internal(POSIXlt2Date(x))
 as.Date.factor <- function(x, ...) as.Date(as.character(x), ...)
 
 
-as.Date.character <- function(x, format, ...)
+as.Date.character <- function(x, format,
+                              tryFormats = c("%Y-%m-%d", "%Y/%m/%d"),
+                              optional = FALSE, ...)
 {
     charToDate <- function(x) {
 	xx <- x[1L]
@@ -50,11 +52,17 @@ as.Date.character <- function(x, format, ...)
             while(is.na(xx) && (j <- j+1L) <= length(x)) xx <- x[j]
             if(is.na(xx)) f <- "%Y-%m-%d" # all NAs
         }
-	if(is.na(xx) ||
-	   !is.na(strptime(xx, f <- "%Y-%m-%d", tz="GMT")) ||
-	   !is.na(strptime(xx, f <- "%Y/%m/%d", tz="GMT"))
-           ) return(strptime(x, f))
-	stop("character string is not in a standard unambiguous format")
+	if(is.na(xx))
+            strptime(x, f)
+        else {
+            for(ff in tryFormats)
+                if(!is.na(strptime(xx, ff, tz="GMT")))
+                    return(strptime(x, ff))
+            ## no success :
+            if(optional)
+                as.Date.character(rep.int(NA_character_, length(x)), "%Y-%m-%d")
+            else stop("character string is not in a standard unambiguous format")
+        }
     }
     res <- if(missing(format)) charToDate(x) else strptime(x, format, tz="GMT")
     as.Date(res)
@@ -68,37 +76,39 @@ as.Date.numeric <- function(x, origin, ...)
 
 as.Date.default <- function(x, ...)
 {
-    if(inherits(x, "Date")) return(x)
-    if(is.logical(x) && all(is.na(x)))
-        return(structure(as.numeric(x), class = "Date"))
-    stop(gettextf("do not know how to convert '%s' to class %s",
-                  deparse(substitute(x)),
-                  dQuote("Date")),
-         domain = NA)
+    if(inherits(x, "Date"))
+	x
+    else if(is.logical(x) && all(is.na(x)))
+	.Date(as.numeric(x))
+    else
+	stop(gettextf("do not know how to convert '%s' to class %s",
+		      deparse(substitute(x)),
+		      dQuote("Date")),
+	     domain = NA)
 }
 
-## convert from package date
-as.Date.date <- function(x, ...)
-{
-    if(inherits(x, "date")) {
-        x <- (x - 3653) # origin 1960-01-01
-        return(structure(x, class = "Date"))
-    } else stop(gettextf("'%s' is not a \"date\" object",
-                         deparse(substitute(x)) ))
-}
+## ## Moved to package date
+## as.Date.date <- function(x, ...)
+## {
+##     if(inherits(x, "date")) {
+##         x <- (x - 3653) # origin 1960-01-01
+##         return(structure(x, class = "Date"))
+##     } else stop(gettextf("'%s' is not a \"date\" object",
+##                          deparse(substitute(x)) ))
+## }
 
-## convert from package chron
-as.Date.dates <- function(x, ...)
-{
-    if(inherits(x, "dates")) {
-        z <- attr(x, "origin")
-        x <- trunc(as.numeric(x))
-        if(length(z) == 3L && is.numeric(z))
-            x  <- x + as.numeric(as.Date(paste(z[3L], z[1L], z[2L], sep="/")))
-        return(structure(x, class = "Date"))
-    } else stop(gettextf("'%s' is not a \"dates\" object",
-                         deparse(substitute(x)) ))
-}
+## ## Moved to package chron
+## as.Date.dates <- function(x, ...)
+## {
+##     if(inherits(x, "dates")) {
+##         z <- attr(x, "origin")
+##         x <- trunc(as.numeric(x))
+##         if(length(z) == 3L && is.numeric(z))
+##             x  <- x + as.numeric(as.Date(paste(z[3L], z[1L], z[2L], sep="/")))
+##         return(structure(x, class = "Date"))
+##     } else stop(gettextf("'%s' is not a \"dates\" object",
+##                          deparse(substitute(x)) ))
+## }
 
 format.Date <- function(x, ...)
 {
@@ -107,7 +117,7 @@ format.Date <- function(x, ...)
     xx
 }
 
-## could handle arrays for max.print; cf print.POSIX?t() in ./datetime.R
+## could handle arrays for max.print \\ keep in sync with print.POSIX?t() in ./datetime.R
 print.Date <- function(x, max = NULL, ...)
 {
     if(is.null(max)) max <- getOption("max.print", 9999L)
@@ -115,21 +125,22 @@ print.Date <- function(x, max = NULL, ...)
 	print(format(x[seq_len(max)]), max=max, ...)
 	cat(' [ reached getOption("max.print") -- omitted',
 	    length(x) - max, 'entries ]\n')
-    } else print(if(length(x)) format(x) else paste(class(x)[1L], "of length 0"),
-		 max = max, ...)
+    } else if(length(x))
+	print(format(x), max = max, ...)
+    else
+	cat(class(x)[1L], "of length 0\n")
     invisible(x)
 }
 
 summary.Date <- function(object, digits = 12L, ...)
 {
     x <- summary.default(unclass(object), digits = digits, ...)
-    if(m <- match("NA's", names(x), 0)) {
+    if(m <- match("NA's", names(x), 0L)) {
         NAs <- as.integer(x[m])
         x <- x[-m]
         attr(x, "NAs") <- NAs
     }
-    class(x) <- c("summaryDefault", "table", oldClass(object))
-    x
+    .Date(x, c("summaryDefault", "table", oldClass(object)))
 }
 
 `+.Date` <- function(e1, e2)
@@ -140,13 +151,13 @@ summary.Date <- function(object, digits = 12L, ...)
                                secs = x/86400, mins = x/1440, hours = x/24,
                                days = x, weeks = 7*x)))
 
-    if (nargs() == 1) return(e1)
+    if (nargs() == 1L) return(e1)
     # only valid if one of e1 and e2 is a scalar.
     if(inherits(e1, "Date") && inherits(e2, "Date"))
         stop("binary + is not defined for \"Date\" objects")
     if (inherits(e1, "difftime")) e1 <- coerceTimeUnit(e1)
     if (inherits(e2, "difftime")) e2 <- coerceTimeUnit(e2)
-    structure(unclass(e1) + unclass(e2), class = "Date")
+    .Date(unclass(e1) + unclass(e2))
 }
 
 `-.Date` <- function(e1, e2)
@@ -157,17 +168,17 @@ summary.Date <- function(object, digits = 12L, ...)
                                days = x, weeks = 7*x)))
     if(!inherits(e1, "Date"))
         stop("can only subtract from \"Date\" objects")
-    if (nargs() == 1) stop("unary - is not defined for \"Date\" objects")
+    if (nargs() == 1L) stop("unary - is not defined for \"Date\" objects")
     if(inherits(e2, "Date")) return(difftime(e1, e2, units="days"))
     if (inherits(e2, "difftime")) e2 <- coerceTimeUnit(e2)
     if(!is.null(attr(e2, "class")))
         stop("can only subtract numbers from \"Date\" objects")
-    structure(unclass(as.Date(e1)) - e2, class = "Date")
+    .Date(unclass(as.Date(e1)) - e2)
 }
 
 Ops.Date <- function(e1, e2)
 {
-    if (nargs() == 1)
+    if (nargs() == 1L)
         stop(gettextf("unary %s not defined for \"Date\" objects", .Generic),
              domain = NA)
     boolean <- switch(.Generic, "<" =, ">" =, "==" =,
@@ -191,52 +202,41 @@ Summary.Date <- function (..., na.rm)
     ok <- switch(.Generic, max = , min = , range = TRUE, FALSE)
     if (!ok) stop(gettextf("%s not defined for \"Date\" objects", .Generic),
                   domain = NA)
-   val <- NextMethod(.Generic)
-    class(val) <- oldClass(list(...)[[1L]])
-    val
+    .Date(NextMethod(.Generic), oldClass(list(...)[[1L]]))
 }
 
 `[.Date` <- function(x, ..., drop = TRUE)
 {
-    cl <- oldClass(x)
-    class(x) <- NULL
-    val <- NextMethod("[")
-    class(val) <- cl
-    val
+    .Date(NextMethod("["), oldClass(x))
 }
 
 `[[.Date` <- function(x, ..., drop = TRUE)
 {
-    cl <- oldClass(x)
-    class(x) <- NULL
-    val <- NextMethod("[[")
-    class(val) <- cl
-    val
+    .Date(NextMethod("[["), oldClass(x))
 }
 
 `[<-.Date` <- function(x, ..., value)
 {
     if(!length(value)) return(x)
     value <- unclass(as.Date(value))
-    cl <- oldClass(x)
-    class(x) <- NULL
-    x <- NextMethod(.Generic)
-    class(x) <- cl
-    x
+    .Date(NextMethod(.Generic), oldClass(x))
 }
+
+`length<-.Date` <- function(x, value)
+    .Date(NextMethod(), oldClass(x))
 
 as.character.Date <- function(x, ...) format(x, ...)
 
 as.data.frame.Date <- as.data.frame.vector
 
 as.list.Date <- function(x, ...)
-    lapply(seq_along(x), function(i) x[i])
+    lapply(unclass(x), .Date, oldClass(x))
 
 c.Date <- function(..., recursive = FALSE)
-    structure(c(unlist(lapply(list(...), unclass))), class = "Date")
+    .Date(c(unlist(lapply(list(...), unclass))))
 
 mean.Date <- function (x, ...)
-    structure(mean(unclass(x), ...), class = "Date")
+    .Date(mean(unclass(x), ...))
 
 seq.Date <- function(from, to, by, length.out = NULL, along.with = NULL, ...)
 {
@@ -260,7 +260,7 @@ seq.Date <- function(from, to, by, length.out = NULL, along.with = NULL, ...)
         from <- unclass(as.Date(from))
         to <- unclass(as.Date(to))
         res <- seq.int(from, to, length.out = length.out)
-        return(structure(res, class = "Date"))
+        return(.Date(res))
     }
 
     if (length(by) != 1L) stop("'by' must be of length 1")
@@ -292,7 +292,7 @@ seq.Date <- function(from, to, by, length.out = NULL, along.with = NULL, ...)
             ## defeat test in seq.default
             res <- seq.int(0, to0 - from, by) + from
         }
-        res <- structure(res, class = "Date")
+        res <- .Date(res)
     } else {  # months or quarters or years
         r1 <- as.POSIXlt(from)
         if(valid == 5L) { # years
@@ -428,20 +428,16 @@ quarters.Date <- function(x, ...)
 ## These only make sense for negative digits, but still ...
 round.Date <- function(x, ...)
 {
-    cl <- oldClass(x)
-    class(x) <- NULL
-    val <- NextMethod()
-    class(val) <- cl
-    val
+    .Date(NextMethod(), oldClass(x))
 }
 
 ## must avoid truncating forwards dates prior to 1970-01-01.
-trunc.Date <- function(x, ...) round(x - 0.4999999)
+trunc.Date <- function(x, ...)
+    round(x - 0.4999999)
 
 rep.Date <- function(x, ...)
 {
-    y <- NextMethod()
-    structure(y, class="Date")
+    .Date(NextMethod(), oldClass(x))
 }
 
 diff.Date <- function (x, lag = 1L, differences = 1L, ...)
@@ -451,7 +447,7 @@ diff.Date <- function (x, lag = 1L, differences = 1L, ...)
     if (length(lag) != 1L || length(differences) > 1L || lag < 1L || differences < 1L)
         stop("'lag' and 'differences' must be integers >= 1")
     if (lag * differences >= xlen)
-        return(structure(numeric(), class="difftime", units="days"))
+        return(.difftime(numeric(), units="days"))
     r <- x
     i1 <- -seq_len(lag)
     if (ismat)
@@ -470,10 +466,15 @@ is.numeric.Date <- function(x) FALSE
 
 split.Date <- function(x, f, drop = FALSE, ...)
 {
-    oclass <- class(x)
-    y <- split.default(unclass(x), f, drop = drop, ...)
-    for(i in seq_along(y)) class(y[[i]]) <- oclass
-    y
+    lapply(split.default(unclass(x), f, drop = drop, ...),
+           .Date, oldClass(x))
 }
 
 xtfrm.Date <- function(x) as.numeric(x)
+
+## Added in 3.5.0.
+
+.Date <- function(xx, cl = "Date") {
+    class(xx) <- cl
+    xx
+}

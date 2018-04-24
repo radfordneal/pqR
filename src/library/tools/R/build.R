@@ -120,10 +120,10 @@ inRbuildignore <- function(files, pkgdir) {
 
     do_exit <-
 	if(no.q)
-	    function(status = 1L) (if(status) stop else message)(
+	    function(status) (if(status) stop else message)(
 		".build_packages() exit status ", status)
 	else
-	    function(status = 1L) q("no", status = status, runLast = FALSE)
+	    function(status) q("no", status = status, runLast = FALSE)
 
     ## Used for BuildVignettes, BuildManual, BuildKeepEmpty,
     ## and (character not logical) BuildResaveData
@@ -751,9 +751,8 @@ inRbuildignore <- function(files, pkgdir) {
         if(!dir.exists(ddir <- file.path(pkgname, "data")))
             return()
         ddir <- normalizePath(ddir)
-        dataFiles <- grep("\\.(rda|RData)$",
-                          list_files_with_type(ddir, "data"),
-                          invert = TRUE, value = TRUE)
+        dataFiles <- filtergrep("\\.(rda|RData)$",
+                                list_files_with_type(ddir, "data"))
         if (!length(dataFiles)) return()
         resaved <- character()
         on.exit(unlink(resaved))
@@ -890,7 +889,7 @@ inRbuildignore <- function(files, pkgdir) {
         args <- args[-1L]
     }
 
-    if(!compact_vignettes %in% c("no", "qpdf", "gs", "gs+qpdf", "both")) {
+    if(compact_vignettes %notin% c("no", "qpdf", "gs", "gs+qpdf", "both")) {
         warning(gettextf("invalid value for '--compact-vignettes', assuming %s",
                          "\"qpdf\""),
                 domain = NA)
@@ -972,12 +971,12 @@ inRbuildignore <- function(files, pkgdir) {
             ## Permissions are increased later.
             ## -L is to follow (de-reference) symlinks
             ## --preserve is GNU only: at least macOS, FreeBSD and Solaris
-            ##   have non-GNU cp's.
+            ##   have non-GNU cp's as it seems do some Linuxen.
             ver <- suppressWarnings(system2("cp", "--version", stdout = TRUE,
                                             stderr = FALSE))
             GNU_cp <- any(grepl("GNU coreutils", ver))
-	    cp_sw <- if(GNU_cp) "-LR --preserve=timestamps" else "-pR"
-            if (system(paste("cp", cp_sw, shQuote(pkgname), shQuote(Tdir)))) {
+	    cp_sw <- if(GNU_cp) "-LR --preserve=timestamps" else "-pLR"
+            if (system2("cp", c(cp_sw, shQuote(pkgname), shQuote(Tdir)))) {
                 errorLog(Log, "copying to build directory failed")
                 do_exit(1L)
             }
@@ -1083,6 +1082,34 @@ inRbuildignore <- function(files, pkgdir) {
                                                     resave_data, logical=FALSE)
             resave_data_others(pkgname, resave_data1)
             resave_data_rda(pkgname, resave_data1)
+        }
+
+        ## add dependency on R >= 3.5.0 to DESCRIPTION if there are files in
+        ## serialization version 3
+        desc <- .read_description(file.path(pkgname, "DESCRIPTION"))
+        Rdeps <- .split_description(desc)$Rdepends2
+        hasDep350 <- FALSE
+        for(dep in Rdeps) {
+            if(dep$op != '>=') next
+            if(dep$version >= "3.5.0") hasDep350 <- TRUE
+        }
+        if (!hasDep350) {
+            ## re-read files after exclusions have been applied
+            allfiles <- dir(".", all.files = TRUE, recursive = TRUE,
+                            full.names = TRUE, include.dirs = TRUE)
+            allfiles <- substring(allfiles, 3L)  # drop './'
+            vers  <- get_serialization_version(allfiles)
+            toonew <- names(vers[vers >= 3L])
+            if (length(toonew)) {
+                fixup_R_dep(pkgname, "3.5.0")
+                msg <- paste("WARNING: Added dependency on R >= 3.5.0 because",
+                             "serialized objects in serialize/load version 3",
+                             "cannot be read in older versions of R. File(s)",
+                             "containing such objects:",
+                             .pretty_format(sort(toonew)),
+                             "\n")
+                printLog(Log, strwrap(msg, indent = 2L, exdent = 2L), "\n")
+            }
         }
 
 	## add NAMESPACE if the author didn't write one

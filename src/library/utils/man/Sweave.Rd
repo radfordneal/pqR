@@ -1,6 +1,6 @@
 % File src/library/utils/man/Sweave.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2016 R Core Team
+% Copyright 1995-2018 R Core Team
 % Distributed under GPL 2 or later
 
 \name{Sweave}
@@ -68,11 +68,11 @@ Stangle(file, driver = Rtangle(),
   statement in a document.
 
   Non-ASCII source files must contain a line of the form
-\preformatted{\usepackage[foo]{inputenc}}
+\preformatted{  \usepackage[foo]{inputenc}}
   (where \samp{foo} is typically \samp{latin1}, \samp{latin2}, \samp{utf8} or
   \samp{cp1252} or \samp{cp1250}) or they will give an error.
-  Re-encoding can be turned off completely with argument \code{encoding
-    = "bytes"}.
+  Re-encoding can be turned off completely with argument
+  \code{encoding = "bytes"}.
 }
 
 \section{Syntax Definition}{
@@ -119,11 +119,12 @@ Stangle(file, driver = Rtangle(),
 
 \examples{
 testfile <- system.file("Sweave", "Sweave-test-1.Rnw", package = "utils")
+\dontshow{oldwd <- setwd(tempdir()) # so we will write only to a temp directory}
 
 ## enforce par(ask = FALSE)
 options(device.ask.default = FALSE)
 
-## create a LaTeX file
+## create a LaTeX file - in the current working directory, getwd():
 Sweave(testfile)
 
 ## This can be compiled to PDF by
@@ -143,6 +144,9 @@ Stangle(testfile)
 ## which can be sourced, e.g.
 source("Sweave-test-1.R")
 
-\dontshow{if(!interactive()) unlink("Sweave-test-1*")}
+\dontshow{
+if(!interactive()) unlink("Sweave-test-1*")
+setwd(oldwd)
+}
 }
 \keyword{utilities}

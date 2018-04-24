@@ -37,6 +37,10 @@ path.expand(path)
   The definition of the \sQuote{home} directory is in the \file{rw-FAQ}
   Q2.14: it is taken from the \env{R_USER} environment variable when
   \code{path.expand} is first called in a session.
+
+  The \sQuote{path names} need not exist nor be valid path names but
+  prior to \R{} 3.4.0 they needed to be representable in the session
+  encoding.
 }
 #endif
 \value{

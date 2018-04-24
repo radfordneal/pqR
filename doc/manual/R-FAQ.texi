@@ -4,8 +4,8 @@
 @setfilename R-FAQ.info
 @settitle R FAQ
 @setchapternewpage on
-@set FAQ_YEAR 2016
-@set FAQ_DATE @value{FAQ_YEAR}-06-06
+@set FAQ_YEAR 2017
+@set FAQ_DATE @value{FAQ_YEAR}-10-04
 @set FAQ_VERSION @value{FAQ_DATE}
 @documentlanguage en
 @documentencoding ISO-8859-1
@@ -756,12 +756,17 @@ the R mailing lists.
 The R Core Team can be reached at @email{R-core@@lists.R-project.org}
 for comments and reports.
 
-Many of the R project's mailing lists are also available via
-@url{http://gmane.org, Gmane}, from which they can be read with a web
-browser, using an NNTP news reader, or via RSS feeds.  See
-@uref{http://dir.gmane.org/@/index.php?prefix=gmane.comp.lang.r.}@: for
-the available mailing lists, and @uref{http://www.gmane.org/rss.php} for
-details on RSS feeds.
+@c <FIXME>
+@c As of 2017-10, accessing GMANE's gmane.comp.lang.r still says
+@c   Not all of Gmane is back yet ...
+@c Hence comment out for the time being.
+@c Many of the R project's mailing lists are also available via
+@c @url{http://gmane.org, Gmane}, from which they can be read with a web
+@c browser, using an NNTP news reader, or via RSS feeds.  See
+@c @uref{http://dir.gmane.org/@/index.php?prefix=gmane.comp.lang.r.}@: for
+@c the available mailing lists, and @uref{http://www.gmane.org/rss.php} for
+@c details on RSS feeds.
+@c </FIXME>
 
 @node What is CRAN?, Can I use R for commercial purposes?, What mailing lists exist for R?, R Basics
 @section What is @acronym{CRAN}?
@@ -1503,11 +1508,9 @@ currently beta testing a commercially supported version of R named R+
 (read R plus).
 
 @url{http://www.revolution-computing.com/, Revolution Analytics} has
-released
-@url{http://www.revolution-computing.com/products/revolution-r.php,
-REvolution R}, an enterprise-class statistical analysis system based on
-R, suitable for deployment in professional, commercial and regulated
-environments.
+released REvolution R, now available as Microsoft R (see
+@url{http://blog.revolutionanalytics.com/2016/01/microsoft-r-open.html}
+for more information).
 
 @c Now archived at <http://archive.today/WrgxY>
 @c @url{http://www.random-technologies-llc.com/, Random Technologies}
@@ -1538,13 +1541,14 @@ explanation of the different versions of Rweb and an overview of how
 Rweb works, was published in the Journal of Statistical Software
 (@url{http://www.jstatsoft.org/v04/i01/}).
 
-@email{ulfi@@cs.tu-berlin.de, Ulf Bartel} has developed
-@strong{R-Online}, a simple on-line programming environment for R which
-intends to make the first steps in statistical programming with R
-(especially with time series) as easy as possible.  There is no need for
-a local installation since the only requirement for the user is a
-JavaScript capable browser.  See @url{http://www.osvisions.com/r_online/}
-for more information.
+@c No longer works ...
+@c @email{ulfi@@cs.tu-berlin.de, Ulf Bartel} has developed
+@c @strong{R-Online}, a simple on-line programming environment for R which
+@c intends to make the first steps in statistical programming with R
+@c (especially with time series) as easy as possible.  There is no need for
+@c a local installation since the only requirement for the user is a
+@c JavaScript capable browser.  See @url{http://www.osvisions.com/r_online/}
+@c for more information.
 
 @strong{Rcgi} is a CGI WWW interface to R by @email{mjr@@dsl.pipex.com,
 MJ Ray}.  It had the ability to use ``embedded code'': you could mix

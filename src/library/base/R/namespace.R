@@ -299,7 +299,8 @@ loadNamespace <- function (package, lib.loc = NULL,
                                   function(sym) {
                                       varName <- paste0(fixes[1L], sym$name, fixes[2L])
                                       if(exists(varName, envir = env, inherits = FALSE))
-                                          warning(gettextf("failed to assign RegisteredNativeSymbol for %s to %s since %s is already defined in the %s namespace",
+                                          warning(gettextf(
+	"failed to assign RegisteredNativeSymbol for %s to %s since %s is already defined in the %s namespace",
                                                            sym$name, varName, varName, sQuote(package)),
                                                   domain = NA, call. = FALSE)
                                       else
@@ -323,11 +324,13 @@ loadNamespace <- function (package, lib.loc = NULL,
                        origVarName <- symNames[i]
                        if(exists(varName, envir = env, inherits = FALSE))
                            if(origVarName != varName)
-                               warning(gettextf("failed to assign NativeSymbolInfo for %s to %s since %s is already defined in the %s namespace",
+                               warning(gettextf(
+		"failed to assign NativeSymbolInfo for %s to %s since %s is already defined in the %s namespace",
                                                 origVarName, varName, varName, sQuote(package)),
                                        domain = NA, call. = FALSE)
                            else
-                               warning(gettextf("failed to assign NativeSymbolInfo for %s since %s is already defined in the %s namespace",
+                               warning(gettextf(
+		"failed to assign NativeSymbolInfo for %s since %s is already defined in the %s namespace",
                                                 origVarName, varName, sQuote(package)),
                                        domain = NA, call. = FALSE)
                        else
@@ -446,6 +449,31 @@ loadNamespace <- function (package, lib.loc = NULL,
                            "stats", "tools", "utils") &&
            isTRUE(getOption("checkPackageLicense", FALSE)))
             checkLicense(package, pkgInfo, pkgpath)
+
+        ## Check that the internals version used to build this package
+        ## matches the version of current R. Failure in this test
+        ## should only occur if the R version is an unreleased devel
+        ## version or the package was build with an unrelease devel
+        ## version.  Other mismatches should be caught earlier by the
+        ## version checks.
+        ## Meta will not exist when first building tools,
+        ## so pkgInfo was not created above.
+        if(dir.exists(file.path(pkgpath, "Meta"))) {
+            ffile <- file.path(pkgpath, "Meta", "features.rds")
+            features <- if (file.exists(ffile)) readRDS(ffile) else NULL
+            needsComp <- as.character(pkgInfo$DESCRIPTION["NeedsCompilation"])
+            if (identical(needsComp, "yes") ||
+                file.exists(file.path(pkgpath, "libs"))) {
+                internalsID <- features$internalsID
+                if (is.null(internalsID))
+                    ## the initial internalsID for packages installed
+                    ## prior to introducing features.rds in the meta data
+                    internalsID <- "0310d4b8-ccb1-4bb8-ba94-d36a55f60262"
+                if (internalsID != .Internal(internalsID()))
+                    stop(gettextf("package %s was installed by an R version with different internals; it needs to be reinstalled for use with this R version",
+                                  sQuote(package)), call. = FALSE, domain = NA)
+            }
+        }
 
         ns <- makeNamespace(package, version = version, lib = package.lib)
         on.exit(.Internal(unregisterNamespace(package)))
@@ -583,7 +611,9 @@ loadNamespace <- function (package, lib.loc = NULL,
             if( length(pClasses) ) {
                 good <- vapply(pClasses, methods::isClass, NA, where = ns)
                 if( !any(good) && length(nsInfo$exportClassPatterns))
-                    warning(gettextf("'exportClassPattern' specified in 'NAMESPACE' but no matching classes in package %s", sQuote(package)),
+                    warning(gettextf(
+				"'exportClassPattern' specified in 'NAMESPACE' but no matching classes in package %s",
+				sQuote(package)),
                             call. = FALSE, domain = NA)
                 expClasses <- c(expClasses, pClasses[good])
             }
@@ -626,8 +656,8 @@ loadNamespace <- function (package, lib.loc = NULL,
                         bad <- sort(unique(addGenerics[!ok]))
                         msg <-
                             ngettext(length(bad),
-                                     "Function found when exporting methods from the namespace %s which is not S4 generic: %s",
-                                     "Functions found when exporting methods from the namespace %s which are not S4 generic: %s")
+			"Function found when exporting methods from the namespace %s which is not S4 generic: %s",
+			"Functions found when exporting methods from the namespace %s which are not S4 generic: %s")
                         stop(sprintf(msg, sQuote(package),
                                      paste(sQuote(bad), collapse = ", ")),
                              domain = NA, call. = FALSE)
@@ -1008,7 +1038,7 @@ namespaceImportMethods <- function(self, ns, vars, from = NULL)
                         paste(sQuote(vars[!found]), collapse = ", "),
                         sQuote(getNamespaceName(self))),
                 domain = NA)
-        vars <- vars[vars %in% allFuns]
+        vars <- vars[found]
     }
     found <- vars %in% allFuns
     if(!all(found))
@@ -1044,9 +1074,10 @@ namespaceImportMethods <- function(self, ns, vars, from = NULL)
                 fun <- methods::getFunction(g, mustFind = FALSE, where = self)
                 if(is.primitive(fun) || methods::is(fun, "genericFunction")) {}
                 else
-                    warning(gettextf("No generic function %s found corresponding to requested imported methods from package %s when loading %s (malformed exports?)",
-                                 sQuote(g), sQuote(pkg), sQuote(from)),
-                        domain = NA, call. = FALSE)
+                    warning(gettextf(
+	"No generic function %s found corresponding to requested imported methods from package %s when loading %s (malformed exports?)",
+				     sQuote(g), sQuote(pkg), sQuote(from)),
+			    domain = NA, call. = FALSE)
             }
         }
     }
@@ -1555,7 +1586,9 @@ registerS3methods <- function(info, package, env)
                            domain = NA)
            message(sprintf(msg, package))
            colnames(overwrite) <- c("method", "from")
-           print(as.data.frame(overwrite), row.names = FALSE, right = FALSE)
+           m <- as.matrix(format(as.data.frame(overwrite)))
+           rownames(m) <- rep.int(" ", nrow(m))
+           print(m, right = FALSE, quote = FALSE)
        }
     }
 

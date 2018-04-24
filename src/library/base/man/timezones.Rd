@@ -12,6 +12,7 @@
 \alias{time zones}
 \alias{TZ}
 \alias{TZDIR}
+\alias{.sys.timezone}
 
 \title{Time Zones}
 \description{
@@ -22,16 +23,14 @@
 \usage{
 Sys.timezone(location = TRUE)
 
-OlsonNames()
+OlsonNames(tzdir = NULL)
 }
 
 \arguments{
-  \item{location}{logical: should an attempt be made to find the
-    location name as used in the Olson/IANA database?
-    (See \sQuote{Time zone names} below.)
-    
-    \code{location = FALSE} is deprecated.
-  }
+  \item{location}{logical: defunct: ignored, with a warning for false values.}
+  
+  \item{tzdir}{The time-zone database to be used: the default is to try
+    known locations until one is found.}
 }
 
 \details{
@@ -46,19 +45,22 @@ OlsonNames()
   It should be possible to set the current time zone via the environment
   variable \env{TZ}: see the section on \sQuote{Time zone names} for
   suitable values.  \code{Sys.timezone()} will return the value of
-  \env{TZ} if set (and on some OSes it is always set), otherwise it will
-  try to retrieve from the OS a value which if set for \env{TZ} would
-  select the system's idea of the time zone.  This is not in general
-  possible, and \code{Sys.timezone(FALSE)} on Windows will retrieve the
-  abbreviation used for the current time.
-
+  \env{TZ} if set initially (and on some OSes it is always set),
+  otherwise it will try to retrieve from the OS a value which if set for
+  \env{TZ} would give the initial time zone. (\sQuote{Initially} means
+  before any time-zone functions are used: if \env{TZ} is being set to
+  override the OS setting or if the \sQuote{try} does not get this
+  right, it should be set before the \R process is started or (probably
+  early enough) in file \code{\link{.Rprofile}}).
+  
   %% glibc silently uses UTC but uses the invalid name as the
   %% abbreviations.  tzcode as used by R warns and uses UTC.
   If \env{TZ} is set but invalid, most platforms default to \samp{UTC},
   the time zone colloquially known as \samp{GMT} (see
   \url{https://en.wikipedia.org/wiki/Coordinated_Universal_Time}).
   (Some but not all platforms will give a warning for invalid values.)
-  If it is unset or empty the \emph{system} time zone is used.
+  If it is unset or empty the \emph{system} time zone is used (the one
+  returned by \code{Sys.timezone}).
 
   Time zones did not come into use until the second half of the
   nineteenth century and were not widely adopted until the twentieth,
@@ -79,15 +81,17 @@ OlsonNames()
   (notably macOS) the database information is 32-bit and so only
   available for the range 1901--2038, and incompletely for the end
   years.
+
+  As from \R 3.5.0, when a time zone location is first found in a
+  session, its value is cached in object \code{.sys.timezone} in the
+  base environment.
 }
 
 \value{
   \code{Sys.timezone} returns an OS-specific character string, possibly
   \code{NA} or an empty string (which on some OSes means \samp{UTC}).
-  For the default \code{location = TRUE} this will be a location such as
-  \code{"Europe/London"} if one can be ascertained.  For \code{location
-  = FALSE} it will be an abbreviation such as \code{"EST"} or
-  \code{"CEST"} on Windows but \code{NA} on other platforms
+  This will be a location such as \code{"Europe/London"} if one can be
+  ascertained.
 
   A time zone region may be known by several names: for example
   \samp{"Europe/London"} is also known as \samp{GB}, \samp{GB-Eire},
@@ -97,7 +101,9 @@ OlsonNames()
   e.g.\sspace{}\samp{PST8PDT} is an alias for
   \samp{America/Los_Angeles}.
 
-  \code{OlsonNames} returns a character vector.
+  \code{OlsonNames} returns a character vector, see the examples for
+  typical cases.  It may have an attribute \code{"Version"}, something
+  like \samp{"2017c"}.
 }
 
 \section{Time zone names}{
@@ -241,6 +247,53 @@ OlsonNames()
 }
 % Unlike Tony Plate and John Pfuntner
 
+#ifdef unix
+\section{How the system time zone is found}{
+  This section is of background interest for users of a Unix-alike, but
+  may help if an \code{NA} value is returned unexpectedly.
+
+  Commercial Unixen such as Solaris and AIX set \env{TZ}, so the value
+  when \R is started is used.
+
+  All other common platforms (Linux, macOS, *BSD) use similar schemes,
+  either derived from \code{tzcode} (currently distributed from
+  \url{https://www.iana.org/time-zones}) or independently coded
+  (\code{glibc}, \code{musl-libc}).  Such systems read the time-zone
+  information from a file \file{localtime}, usually under \file{/etc}
+  (but possibly under \file{/usr/local/etc} or
+  \file{/usr/local/etc/zoneinfo}).  As the usual Linux manual page for
+  \code{localtime} says
+
+  \sQuote{Because the time zone identifier is extracted from the symlink
+    target name of \file{/etc/localtime}, this file may not be a normal
+    file or hardlink.}
+  
+  Nevertheless, some Linux distributions (including the one from which
+  that quote was taken) or sysadmins have chosen to copy a time-zone file
+  to \file{localtime}.  For a non-symlink, the ultimate fallback is to
+  compare that file to all files in the time-zone database.
+
+  Some Linux platforms provide two other mechanisms which are tried in
+  turn before looking at \file{/etc/localtime}.
+  \itemize{
+    \item \sQuote{Modern} Linux systems use \code{systemd} which
+    provides mechanisms to set and retrieve the time zone (amongst other
+    things).  There is a command \command{timedatectl} to give details.
+    (Unfortunately RHEL/Centos 6.x are not \sQuote{modern}.)
+
+    \item Debian-derived systems since \emph{ca} 2007 have supplied a
+    file \file{/etc/timezone}.  Its format is undocumented but it
+    empirically it contains a single line of text naming the time zone.
+  }
+  In each case a sanity check is performed that the time-zone name is the
+  name of a file in the time-zone database.  (The systems probably use
+  the time-zone file (symlinked to) \file{/etc/localtime}, but the
+  \code{Sys.timezone} code
+  does not check that is the same as the named file in the database.  This is deliberate
+  as they may be from different dates.)
+}
+#endif
+
 \seealso{
   \code{\link{Sys.time}}, \code{\link{as.POSIXlt}}.
 
@@ -254,7 +307,15 @@ OlsonNames()
 \examples{
 Sys.timezone()
 
-str(OlsonNames()) ## around six hundred names
+str(OlsonNames()) ## typically close to 600 hundred names,
+## typically some acronyms/aliases such as "UTC", "NZ", "MET", "Eire", ..., but
+## mostly pairs (and triplets) such as "Pacific/Auckland"
+table(sl <- grepl("/", OlsonNames()))
+OlsonNames()[ !sl ] # the simple ones
+head(Osl <- strsplit(OlsonNames()[sl], "/"))
+(tOS1 <- table(vapply(Osl, `[[`, "", 1))) # Continents, countries, ...
+table(lengths(Osl))# most are pairs, some triplets
+str(Osl[lengths(Osl) >= 3])# "America" South and North ...
 }
 \keyword{utilities}
 \keyword{chron}

@@ -1,5 +1,5 @@
 
-R version 3.4.4 RC (2018-03-08 r74371) -- "Someone to Lean On"
+R version 3.5.0 RC (2018-04-15 r74605) -- "Joy in Playing"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -220,6 +220,19 @@ factor> factor(z, exclude = "B") # ditto
 [1] C    <NA> A   
 Levels: A < C
 
+factor> ## Now, labels maybe duplicated:
+factor> ## factor() with duplicated labels allowing to "merge levels"
+factor> x <- c("Man", "Male", "Man", "Lady", "Female")
+
+factor> ## Map from 4 different values to only two levels:
+factor> (xf <- factor(x, levels = c("Male", "Man" , "Lady",   "Female"),
+factor+                  labels = c("Male", "Male", "Female", "Female")))
+[1] Male   Male   Male   Female Female
+Levels: Male Female
+
+factor> #> [1] Male   Male   Male   Female Female
+factor> #> Levels: Male Female
+factor> 
 factor> ## Using addNA()
 factor> Month <- airquality$Month
 
@@ -503,6 +516,16 @@ pckgDs> ##D
 pckgDs> ##D if(packageVersion("MASS") < "7.3.29")
 pckgDs> ##D   message("you need to update 'MASS'")
 pckgDs> ## End(No test)
+pckgDs> pu <- packageDate("utils")
+
+pckgDs> ## No test: 
+pckgDs> ##D str(pu)
+pckgDs> ## End(No test)
+pckgDs> stopifnot(identical(pu, packageDate(desc = packageDescription("utils"))),
+pckgDs+           identical(pu, packageDate("stats"))) # as "utils" and "stats" are
+
+pckgDs>                                    # both 'base R' and "Built" at same time
+pckgDs> 
 pckgDs> 
 pckgDs> 
 > 

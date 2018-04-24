@@ -1,7 +1,7 @@
 #  File src/library/base/R/dcf.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -71,7 +71,7 @@ function(file, fields = NULL, all = FALSE, keep.white = NULL)
     on.exit(Sys.setlocale("LC_CTYPE", ctype), add = TRUE)
     Sys.setlocale("LC_CTYPE", "C")
 
-    lines <- readLines(file)
+    lines <- readLines(file, skipNul = TRUE)
 
     ## Try to find out about invalid things: mostly, lines which do not
     ## start with blanks but have no ':' ...
@@ -99,9 +99,10 @@ function(file, fields = NULL, all = FALSE, keep.white = NULL)
     line_has_tag <- grepl("^[^[:blank:]][^:]*:", lines)
 
     ## Check that records start with tag lines.
-    ind <- which(!line_has_tag[which(diff(nums) > 0L) + 1L])
-    if(length(ind)) {
-        lines <- strtrim(lines[ind], 0.7 * getOption("width"))
+    pos <- which(diff(nums) > 0L) + 1L
+    ind <- !line_has_tag[pos]
+    if(any(ind)) {
+        lines <- strtrim(lines[pos[ind]], 0.7 * getOption("width"))
         stop(gettextf("Invalid DCF format.\nContinuation lines must not start a record.\nOffending lines start with:\n%s",
                       paste0("  ", lines, collapse = "\n")),
              domain = NA)
@@ -133,7 +134,7 @@ function(file, fields = NULL, all = FALSE, keep.white = NULL)
 }
 
 write.dcf <-
-function(x, file = "", append = FALSE,
+function(x, file = "", append = FALSE, useBytes = FALSE,
          indent = 0.1 * getOption("width"),
          width = 0.9 * getOption("width"),
          keep.white = NULL)
@@ -204,5 +205,5 @@ function(x, file = "", append = FALSE,
         ## Note that we do not write a trailing blank line.
         eor[ which(diff(c(col(out))[is_not_empty]) >= 1L) ] <- "\n"
     }
-    writeLines(paste0(c(out[is_not_empty]), eor), file)
+    writeLines(paste0(c(out[is_not_empty]), eor), file, useBytes=useBytes)
 }

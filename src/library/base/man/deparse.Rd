@@ -1,6 +1,6 @@
 % File src/library/base/man/deparse.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2014 R Core Team
+% Copyright 1995-2018 R Core Team
 % Distributed under GPL 2 or later
 
 \name{deparse}
@@ -11,9 +11,8 @@
 }
 \usage{
 deparse(expr, width.cutoff = 60L,
-        backtick = mode(expr) \%in\%
-            c("call", "expression", "(", "function"),
-        control = c("keepInteger", "showAttributes", "keepNA"),
+        backtick = mode(expr) \%in\% c("call", "expression", "(", "function"),
+        control = c("keepNA", "keepInteger", "niceNames", "showAttributes"),
         nlines = -1L)
 }
 \arguments{
@@ -22,8 +21,8 @@ deparse(expr, width.cutoff = 60L,
     (in bytes) at which line-breaking is tried.}
   \item{backtick}{logical indicating whether symbolic names should be
     enclosed in backticks if they do not follow the standard syntax.}
-  \item{control}{character vector of deparsing options.  See
-    \code{\link{.deparseOpts}}.}
+  \item{control}{character vector (or \code{NULL}) of deparsing options.
+    See \code{\link{.deparseOpts}}.}
   \item{nlines}{integer: the maximum number of lines to produce.
     Negative values indicate no limit.}
 }
@@ -93,7 +92,7 @@ deparse(e)
 deparse(e, backtick = TRUE)
 e <- quote(`foo bar`+1)
 deparse(e)
-deparse(e, control = "all")
+deparse(e, control = "all") # wraps it w/ quote( . )
 }
 \keyword{programming}
 \keyword{manip}

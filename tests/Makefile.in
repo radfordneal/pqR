@@ -30,7 +30,8 @@ DISTFILES = Makefile.in Makefile.win Makefile.install Makefile.common \
 	testit.tex.save testit-Ex.R.save \
 	ver20.Rd ver20.txt.save ver20.html.save ver20.tex.save ver20-Ex.R.save \
 	R-intro.Rout.save \
-	test-system.R test-system.Rout.save test-system2.c
+	test-system.R test-system.Rout.save test-system2.c \
+	reg-large.R utf8.R
 
 SUBDIRS = Embedding Examples
 SUBDIRS_WITH_NO_BUILD = Pkgs
@@ -90,18 +91,18 @@ clean:
 	-@rm -f FALSE* PACKAGES* .R .tex mirrors.html ./-package.Rd ex.gz
 	-@rm -f testit.txt testit.html testit.tex testit-Ex.R
 	-@rm -f ver20.txt ver20.html ver20.tex ver20-Ex.R
-	-@rm -rf anRpackage myTst* myLib
+	-@rm -Rf anRpackage myTst* myLib
 	-@rm -f *.tar.gz
 	-@rm -f keepsource.tex test-system2 test-system.Rout
 	-@rm -f *.log *.tsin *.trin
-	-@rm -f df0.Rd l0.Rd m0.Rd 'integer(0)-package.Rd'
+	-@rm -f df0.Rd l0.Rd m0.Rd 'integer(0)-package.Rd' .Rd .RData
 
 distclean: clean
 	-@for d in $(SUBDIRS); do \
 	  (cd $${d} && $(MAKE) $@); \
 	done
-	-@rm -f Makefile $(test-out) $(test-src-auto) .RData
-	-@rm -rf *.Rcheck RecPackages
+	-@rm -f Makefile $(test-out) $(test-src-auto) *.Rout.fail
+	-@rm -Rf *.Rcheck RecPackages
 	-@rm -f *.fail
 
 maintainer-clean: distclean
@@ -121,7 +122,7 @@ install-tests:
 
 uninstall-tests:
 	@$(ECHO) "uninstalling specific tests and removing results"
-	@rm -rf "$(DESTDIR)$(rhome)/tests"
+	@rm -Rf "$(DESTDIR)$(rhome)/tests"
 
 distdir: $(DISTFILES)
 	@for f in $(DISTFILES); do \

@@ -110,12 +110,12 @@ function(pattern, text, ignore.case = FALSE, perl = FALSE,
                  ignore.case = ignore.case, useBytes = useBytes,
                  perl = TRUE)
     y <- vector("list", length(text))
-    ind <- (m == -1L)
+    y[is.na(m)] <- list(match_data_from_pos_and_len(NA_integer_, NA_integer_))
+    ind <- !is.na(m) & (m == -1L)
     if(any(ind)) {
-        y[ind] <- rep.int(list(match_data_from_pos_and_len(-1L, -1L)),
-                          sum(ind))
+        y[ind] <- list(match_data_from_pos_and_len(-1L, -1L))
     }
-    ind <- !ind
+    ind <- !is.na(m) & !ind
     if(any(ind)) {
         pos <- cbind(m[ind],
                      attr(m, "capture.start")[ind, , drop = FALSE])
@@ -258,28 +258,28 @@ function(x, m, invert = FALSE)
     ili <- is.list(m)
 
     ## Handle useBytes/encoding issues.
-    ## For regexpr() and gregexpr(), we get useBytes as TRUE if useBytes
-    ## was given as TRUE, or all character string involved were ASCII.
-    ## Hence, if useBytes is TRUE, we need to convert non-ASCII strings
-    ## to a bytes encoding before computing match substrings.
+    ## Match positions from regexpr(), gregexpr() and regexec() are in
+    ## characters unless 'useBytes = TRUE' was given, now recorded via
+    ## the 'index.type' attribute (in addition to the 'useBytes' one
+    ## being TRUE when 'useBytes = TRUE' was given *or* all character
+    ## string involved were ASCII).
+    ## To convince substring() and nchar() used below accordingly that
+    ## match data positions are in bytes, we set the input encoding to
+    ## "bytes" for the former and call the latter with 'type = "bytes"'.
+    itype <- "chars"
     useBytes <- if(ili)
-        any(unlist(lapply(m, attr, "useBytes")))
+        any(unlist(lapply(m, attr, "index.type")) == "bytes")
     else
-        any(attr(m, "useBytes"))
+        any(attr(m, "index.type") == "bytes")
     if(useBytes) {
-        ## Cf. tools::showNonASCII():
-        asc <- iconv(x, "latin1", "ASCII")
-        ind <- is.na(asc) | (asc != x)
-        ## Alternatively, could do as in tools:::.is_ASCII().
-        if(any(ind))
-            Encoding(x[ind]) <- "bytes"
+        itype <- Encoding(x) <- "bytes"
     }
 
     ## For NA matches (from matching a non-NA pattern on an NA string),
     ## direct matches give nothing and inverse matches give NA (as
     ## nothing was matched).
 
-    if(!ili && identical(invert, FALSE)) {
+    if(!ili && isFALSE(invert)) {
         so <- m[ind <- (!is.na(m) & (m > -1L))]
         eo <- so + attr(m, "match.length")[ind] - 1L
         return(substring(x[ind], so, eo))
@@ -304,7 +304,7 @@ function(x, m, invert = FALSE)
                              domain = NA)
                 }
                 beg <- c(1L, c(rbind(so, eo + 1L)))
-                end <- c(c(rbind(so - 1L, eo)), nchar(u))
+                end <- c(c(rbind(so - 1L, eo)), nchar(u, itype))
                 substring(u, beg, end)
             },
             x, m,
@@ -332,7 +332,7 @@ function(x, m, invert = FALSE)
                 } else {
                     c(1L, so + ml)
                 }
-                end <- c(so - 1L, nchar(u))
+                end <- c(so - 1L, nchar(u, itype))
                 substring(u, beg, end)
             },
             x, m,

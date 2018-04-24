@@ -1,6 +1,6 @@
 % File src/library/base/man/files.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2017 R Core Team
+% Copyright 1995-2018 R Core Team
 % Distributed under GPL 2 or later
 
 \name{files}
@@ -162,29 +162,26 @@ Sys.junction(from, to)
   POSIX file systems do not exist on Windows: however, NTFS file systems
   support two similar concepts.
 
-  Windows 2000 and later have \sQuote{junctions} (or \sQuote{junction
-  points}), unfortunately without a public API.  They are a Windows
-  version of the Unix concept of mounting one directory on another.  One
-  way to create, list and delete junctions is \emph{via}
-  \file{junction.exe} from
-  \url{https://download.sysinternals.com/files/Junction.zip} (see
-  \url{https://technet.microsoft.com/en-us/sysinternals/bb896768}).  On
-  recent enough versions of Windows \command{mklink /J} can also be
-  used.  Function \code{Sys.junction} creates one or more junctions:
-  \code{to} should either specify a single existing directory or a set
-  of non-existent file paths of the same length as \code{from}.
+  There are \sQuote{junctions} (or \sQuote{junction points}),
+  unfortunately without a public API: a Windows version of the Unix
+  concept of mounting one directory on another. A junction can link
+  directories located on the same or different local volumes of the same
+  computer, but cannot link to a network drive. Function
+  \code{Sys.junction} creates one or more junctions: \code{to} should
+  either specify a single existing directory or a set of non-existent
+  file paths of the same length as \code{from}.  (Command
+  \command{mklink /J} can also be used to create junctions.)
 
   A version of symbolic linking to files/directories was implemented
-  starting with Vista, and \code{file.symlink} makes use of that
-  interface.  However, it has restrictions (apart from the OS version
-  restriction) which are crippling.  First, the user needs permission to
-  make symbolic links, and that permission is not normally granted
-  except to Administrator accounts (note: not users with Administrator
-  rights): further many users report that whereas the Policy Editor
-  appears to be able to grant such rights, the API still reports
-  insufficient permissions.  Second, the interface needs to know if
-  \code{from} is a file or a directory (and it need not yet exist): we
-  have implemented this to allow linking from a directory only if it
+  more recently, and \code{file.symlink} makes use of that interface.
+  However, it has restrictions which are crippling.  First, the user
+  needs permission to make symbolic links, and that permission is not
+  normally granted except to Administrator accounts (note: not users
+  with Administrator rights): further many users report that whereas the
+  Policy Editor appears to be able to grant such rights, the API still
+  reports insufficient permissions.  Second, the interface needs to know
+  if \code{from} is a file or a directory (and it need not yet exist):
+  we have implemented this to allow linking from a directory only if it
   currently exists.
 
   Care is needed with removing a junction (and most likely also a
@@ -221,23 +218,26 @@ Sys.junction(from, to)
 }
 
 \examples{
+\dontshow{oldwd <- setwd(tempdir())}
 cat("file A\n", file = "A")
 cat("file B\n", file = "B")
 file.append("A", "B")
-file.create("A")
+file.create("A") # (trashing previous)
 file.append("A", rep("B", 10))
-if(interactive()) file.show("A")
+if(interactive()) file.show("A") # -> the 10 lines from 'B'
 file.copy("A", "C")
 dir.create("tmp")
 file.copy(c("A", "B"), "tmp")
-list.files("tmp")
+list.files("tmp") # -> "A" and "B"
 #ifdef unix
 setwd("tmp")
-file.remove("B")
+file.remove("A") # the tmp/A file
 file.symlink(file.path("..", c("A", "B")), ".")
+                     # |--> (TRUE,FALSE) : ok for A but not B as it exists already
 setwd("..")
 #endif
 unlink("tmp", recursive = TRUE)
 file.remove("A", "B", "C")
+\dontshow{setwd(oldwd)}
 }
 \keyword{file}

@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1995-1998  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1998-2017  The R Core Team.
+ *  Copyright (C) 1995-1998  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -100,6 +100,9 @@ static SEXP seq_colon(double n1, double n2, SEXP call)
     if(r >= R_XLEN_T_MAX)
 	errorcall(call, _("result would be too long a vector"));
 
+    if (n1 == (R_xlen_t) n1 && n2 == (R_xlen_t) n2)
+	return R_compact_intrange((R_xlen_t) n1, (R_xlen_t) n2);
+
     SEXP ans;
     R_xlen_t n = (R_xlen_t)(r + 1 + FLT_EPSILON);
 
@@ -115,18 +118,10 @@ static SEXP seq_colon(double n1, double n2, SEXP call)
 	}
     }
     if (useInt) {
-	int in1 = (int)(n1);
-	ans = allocVector(INTSXP, n);
 	if (n1 <= n2)
-	    for (R_xlen_t i = 0; i < n; i++) {
-//		if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-		INTEGER(ans)[i] = (int)(in1 + i);
-	    }
+	    ans = R_compact_intrange((R_xlen_t) n1, (R_xlen_t)(n1 + n - 1));
 	else
-	    for (R_xlen_t i = 0; i < n; i++) {
-//		if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-		INTEGER(ans)[i] = (int)(in1 - i);
-	    }
+	    ans = R_compact_intrange((R_xlen_t) n1, (R_xlen_t)(n1 - n + 1));
     } else {
 	ans = allocVector(REALSXP, n);
 	if (n1 <= n2)
@@ -225,7 +220,7 @@ static SEXP rep2(SEXP s, SEXP ncopy)
 	    SEXP elt = lazy_duplicate(VECTOR_ELT(s, i)); \
 	    for (j = (R_xlen_t) it[i]; j > 0; j--) \
 		SET_VECTOR_ELT(a, n++, elt); \
-	    if (j > 1) SET_NAMED(elt, 2); \
+	    if (j > 1) ENSURE_NAMEDMAX(elt); \
 	} \
 	break; \
     case RAWSXP: \
@@ -680,7 +675,8 @@ SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    warningcall(call, "'x' is NULL so the result will be NULL");
 	SEXP a;
 	PROTECT(a = duplicate(x));
-	if(len != NA_INTEGER && len > 0) a = xlengthgets(a, len);
+	if(len != NA_INTEGER && len > 0 && x != R_NilValue)
+	    a = xlengthgets(a, len);
 	UNPROTECT(3);
 	return a;
     }
@@ -1026,30 +1022,14 @@ SEXP attribute_hidden do_seq_along(SEXP call, SEXP op, SEXP args, SEXP rho)
     else
 	len = xlength(CAR(args));
 
-#ifdef LONG_VECTOR_SUPPORT
-    if (len > INT_MAX) {
-	ans = allocVector(REALSXP, len);
-	double *p = REAL(ans);
-	for(R_xlen_t i = 0; i < len; i++) {
-//	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-	    p[i] = (double) (i+1);
-	}
-    } else
-#endif
-    {
-	ans = allocVector(INTSXP, len);
-	int *p = INTEGER(ans);
-	for(int i = 0; i < len; i++) {
-//	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-	    p[i] = i+1;
-	}
-    }
-    return ans;
+    if (len == 0)
+	return allocVector(INTSXP, 0);
+    else
+	return R_compact_intrange(1, len);
 }
 
 SEXP attribute_hidden do_seq_len(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans;
     R_xlen_t len;
 
     checkArity(op, args);
@@ -1069,23 +1049,8 @@ SEXP attribute_hidden do_seq_len(SEXP call, SEXP op, SEXP args, SEXP rho)
 	errorcall(call, _("argument must be coercible to non-negative integer"));
 #endif
 
- #ifdef LONG_VECTOR_SUPPORT
-    if (len > INT_MAX) {
-	ans = allocVector(REALSXP, len);
-	double *p = REAL(ans);
-	for(R_xlen_t i = 0; i < len; i++) {
-//	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-	    p[i] = (double) (i+1);
-	}
-    } else
-#endif
-    {
-	ans = allocVector(INTSXP, len);
-	int *p = INTEGER(ans);
-	for(int i = 0; i < len; i++) {
-//	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-	    p[i] = i+1;
-	}
-    }
-    return ans;
+    if (len == 0)
+	return allocVector(INTSXP, 0);
+    else
+	return R_compact_intrange(1, len);
 }

@@ -1,7 +1,7 @@
 #  File src/library/parallel/R/unix/mclapply.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2014 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -20,40 +20,42 @@
 
 mclapply <- function(X, FUN, ..., mc.preschedule = TRUE, mc.set.seed = TRUE,
                      mc.silent = FALSE, mc.cores = getOption("mc.cores", 2L),
-                     mc.cleanup = TRUE, mc.allow.recursive = TRUE)
+                     mc.cleanup = TRUE, mc.allow.recursive = TRUE,
+                     affinity.list = NULL)
 {
     cores <- as.integer(mc.cores)
-    if(is.na(cores) || cores < 1L) stop("'mc.cores' must be >= 1")
+    if((is.na(cores) || cores < 1L) && is.null(affinity.list))
+        stop("'mc.cores' must be >= 1")
     .check_ncores(cores)
 
     if (isChild() && !isTRUE(mc.allow.recursive))
         return(lapply(X = X, FUN = FUN, ...))
 
-    if(mc.set.seed) mc.reset.stream()
-    if(!length(X)) return(list())
-
-    jobs <- list()
-    cleanup <- function() {
-        ## kill children if cleanup is requested
-        if (length(jobs) && mc.cleanup) {
-            ## first take care of uncollected children
-            mccollect(children(jobs), FALSE)
-            mckill(children(jobs),
-                   if (is.integer(mc.cleanup)) mc.cleanup else tools::SIGTERM)
-            mccollect(children(jobs))
-        }
-        if (length(jobs)) {
-            ## just in case there are zombies
-            mccollect(children(jobs), FALSE)
-        }
-    }
-    on.exit(cleanup())
     ## Follow lapply
     if(!is.vector(X) || is.object(X)) X <- as.list(X)
+    if(!is.null(affinity.list) && length(affinity.list) < length(X))
+        stop("affinity.list and X must have the same length")
 
+    if(mc.set.seed) mc.reset.stream()
+    if(length(X) < 2) {
+        old.aff <- mcaffinity()
+        mcaffinity(affinity.list[[1]])
+        res <- lapply(X = X, FUN = FUN, ...)
+        mcaffinity(old.aff)
+        return(res)
+    }
+
+    if (length(X) < cores) cores <- length(X)
+    if (cores < 2L && is.null(affinity.list))
+	return(lapply(X = X, FUN = FUN, ...))
+
+    jobs <- list()
+    ## all processes created from now on will be terminated by cleanup
+    prepareCleanup()
+    on.exit(cleanup(mc.cleanup))
     if (!mc.preschedule) {              # sequential (non-scheduled)
         FUN <- match.fun(FUN)
-        if (length(X) <= cores) { # we can use one-shot parallel
+        if (length(X) <= cores && is.null(affinity.list)) { # we can use one-shot parallel
             jobs <- lapply(seq_along(X),
                            function(i) mcparallel(FUN(X[[i]], ...),
                                                   name = names(X)[i],
@@ -66,22 +68,48 @@ mclapply <- function(X, FUN, ..., mc.preschedule = TRUE, mc.set.seed = TRUE,
             sx <- seq_along(X)
             res <- vector("list", length(sx))
             names(res) <- names(X)
-            ent <- rep(FALSE, length(X)) # values entered (scheduled)
             fin <- rep(FALSE, length(X)) # values finished
-            jobid <- seq_len(cores)
+            if (!is.null(affinity.list)) {
+                ## build matrix for job mapping with affinity.list
+                ## entry i,j is true if item i is allowed to run on core j
+                cores <- max(unlist(x = affinity.list, recursive = TRUE))
+                d0 <- logical(cores)
+                cpu.map <- lapply(sx, function (i){
+                    data <- d0
+                    data[as.vector(affinity.list[[i]])] <- TRUE
+                    data
+                })
+                ava <- do.call(rbind, cpu.map)
+            } else {
+                ## build matrix for job mapping without affinity.list
+                ## all entries true
+                ava <- matrix(TRUE, nrow = length(X), ncol = cores)
+            }
+            jobid <- integer(cores)
+            ## choose first job for each core to start
+            for (i in 1:cores) {
+                jobid[i] <- match(TRUE, ava[,i]) # = which(ava[, i])[1]
+                ava[jobid[i],] <- FALSE
+            }
+            ## remove unused cores from matrix
+            if(anyNA(jobid)) {
+                unused <- which(is.na(jobid))
+                jobid <- jobid[-unused]
+                ava   <- ava[, -unused, drop = FALSE]
+            }
             jobs <- lapply(jobid,
                            function(i) mcparallel(FUN(X[[i]], ...),
                                                   mc.set.seed = mc.set.seed,
-                                                  silent = mc.silent))
+                                                  silent = mc.silent,
+                                                  mc.affinity = affinity.list[[i]]))
             jobsp <- processID(jobs)
-            ent[jobid] <- TRUE
             has.errors <- 0L
             while (!all(fin)) {
-                s <- selectChildren(jobs, 0.5)
-                if (is.null(s)) break   # no children -> no hope
+                s <- selectChildren(jobs[!is.na(jobsp)], -1)
+                if (is.null(s)) break   # no children -> no hope (should not happen)
                 if (is.integer(s))
                     for (ch in s) {
-                        ji <- which(jobsp == ch)[1]
+                        ji <- match(TRUE, jobsp == ch)
                         ci <- jobid[ji]
                         r <- readChild(ch)
                         if (is.raw(r)) {
@@ -93,15 +121,22 @@ mclapply <- function(X, FUN, ..., mc.preschedule = TRUE, mc.set.seed = TRUE,
                             if (!is.null(child.res)) res[[ci]] <- child.res
                         } else {
                             fin[ci] <- TRUE
-                            if (!all(ent)) { # still something to do,
-                                             # spawn a new job
-                                nexti <- which(!ent)[1]
-                                jobid[ji] <- nexti
-                                jobs[[ji]] <- mcparallel(FUN(X[[nexti]], ...),
-                                                         mc.set.seed = mc.set.seed,
-                                                         silent = mc.silent)
-                                jobsp[ji] <- processID(jobs[[ji]])
-                                ent[nexti] <- TRUE
+                            ## the job has finished, so we must not run
+                            ## select on its fds again
+                            jobsp[ji] <- jobid[ji] <- NA
+                            if (any(ava)) { # still something to do,
+                                ## look for first job which is allowed to
+                                ## run on the now idling core and spawn it
+                                nexti <- which.max(ava[, ji])
+                                if(!is.na(nexti)) {
+                                    jobid[ji] <- nexti
+                                    jobs[[ji]] <- mcparallel(FUN(X[[nexti]], ...),
+                                                             mc.set.seed = mc.set.seed,
+                                                             silent = mc.silent,
+                                                             mc.affinity = affinity.list[[nexti]])
+                                    jobsp[ji] <- processID(jobs[[ji]])
+                                    ava[nexti,] <- FALSE
+                                }
                             }
                         }
                     }
@@ -114,8 +149,8 @@ mclapply <- function(X, FUN, ..., mc.preschedule = TRUE, mc.set.seed = TRUE,
     }
 
     ## mc.preschedule = TRUE from here on.
-    if (length(X) < cores) cores <- length(X)
-    if (cores < 2L) return(lapply(X = X, FUN = FUN, ...))
+    if(!is.null(affinity.list))
+        warning("'mc.preschedule' must be false if 'affinity.list' is used")
     sindex <- lapply(seq_len(cores),
                      function(i) seq(i, length(X), by = cores))
     schedule <- lapply(seq_len(cores),
@@ -138,15 +173,15 @@ mclapply <- function(X, FUN, ..., mc.preschedule = TRUE, mc.set.seed = TRUE,
             mcexit(0L)
         }
         jobs[[core]] <<- ch[[core]] <<- f
-        cp[core] <<- f$pid
+        cp[core] <<- processID(f)
         NULL
     }
     job.res <- lapply(seq_len(cores), inner.do)
     ac <- cp[cp > 0]
     has.errors <- integer(0)
     while (!all(fin)) {
-        s <- selectChildren(ac, 1)
-        if (is.null(s)) break # no children -> no hope we get anything
+        s <- selectChildren(ac[!fin], -1)
+        if (is.null(s)) break # no children -> no hope we get anything (should not happen)
         if (is.integer(s))
             for (ch in s) {
                 a <- readChild(ch)
@@ -159,6 +194,10 @@ mclapply <- function(X, FUN, ..., mc.preschedule = TRUE, mc.set.seed = TRUE,
                     if (inherits(ijr, "try-error"))
                         has.errors <- c(has.errors, core)
                     dr[core] <- TRUE
+                } else if (is.null(a)) {
+                    # the child no longer exists (should not happen)
+                    core <- which(cp == ch)
+                    fin[core] <- TRUE
                 }
             }
     }
@@ -166,7 +205,7 @@ mclapply <- function(X, FUN, ..., mc.preschedule = TRUE, mc.set.seed = TRUE,
         this <- job.res[[i]]
         if (inherits(this, "try-error")) { ## length-1 result
             for (j in sindex[[i]]) res[[j]] <- this
-        } else 
+        } else
             ## we can't just assign it since a NULL
             ## assignment would remove it from the list
             if (!is.null(this)) res[sindex[[i]]] <- this

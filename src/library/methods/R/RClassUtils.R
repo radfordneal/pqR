@@ -1,7 +1,7 @@
 #  File src/library/methods/R/RClassUtils.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2015 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ testVirtual <-
         ## does the class extend a known non-virtual class?
         for(what in en) {
             enDef <- getClassDef(what, package=packageSlot(extends[[what]]))
-            if(!is.null(enDef) && identical(enDef@virtual, FALSE))
+            if(!is.null(enDef) && isFALSE(enDef@virtual))
                 return(FALSE)
         }
     }
@@ -79,7 +79,7 @@ makePrototypeFromClassDef <-
     for(i in seq_along(extends)) {
         what <- el(supers, i)
         exti <- extends[[i]]
-        if(identical(exti@simple, FALSE))
+        if(isFALSE(exti@simple))
             next ## only simple contains rel'ns give slots
         if(identical(what, "VIRTUAL")) {
             ## the class is virtual, and the prototype usually NULL
@@ -105,7 +105,8 @@ makePrototypeFromClassDef <-
                     else if(is.na(match(slotName, pnames))) {
                         ## possible that the prototype already had this slot specified
                         ## If not, add it now.
-                        attr(prototype, slotName) <- attr(pri, slotName)
+                        slot(prototype, slotName, check=FALSE) <-
+                            attr(pri, slotName)
                         pnames <- c(pnames, slotName)
                     }
                 }
@@ -143,7 +144,7 @@ makePrototypeFromClassDef <-
             }
             else
                 OK <- FALSE
-            if(identical(OK, FALSE))
+            if(isFALSE(OK))
                 stop(gettextf("in constructing the prototype for class %s: prototype has class %s, but the data part specifies class %s",
                               dQuote(className),
                               dQuote(.class1(prototype)),
@@ -465,10 +466,10 @@ selectSuperClasses <-
     if(directOnly) C <- addCond(quote(length(exti@by) == 0), C)
     if(simpleOnly) C <- addCond(quote(exti@simple), C)
     if(length(C)) {
-      F <- function(exti){}; body(F) <- C
-      ext <- ext[unlist(lapply(ext, F), use.names=FALSE)]
+	F <- function(exti){}; body(F) <- C
+	(if(namesOnly) names(ext) else ext)[vapply(ext, F, NA, USE.NAMES=FALSE)]
     }
-    if(namesOnly) names(ext) else ext
+    else if(namesOnly) names(ext) else ext
 }
 
 inheritedSlotNames <- function(Class, where = topenv(parent.frame()))
@@ -629,8 +630,8 @@ newBasic <-
                           value <- as(args[[1L]], Class)
                       }
                       else if(is.na(match(Class, .BasicClasses)))
-                          msg <- paste("Calling new() on an undefined and non-basic class (\"",
-                               Class, "\")", sep="")
+                          msg <- paste0("Calling new() on an undefined and non-basic class (\"",
+                                        Class, "\")")
                       else
                           msg <-
                               gettextf("initializing objects from class %s with these arguments is not supported",
@@ -696,7 +697,12 @@ reconcilePropertiesAndPrototype <-
               if(!is.null(thisDataPart)) {
                     dataPartClass <- thisDataPart
                     if(!is.null(clDef@prototype)) {
-                      newObject <- clDef@prototype
+                        protoClass <- class(clDef@prototype)
+                        newObject <-
+                            if (protoClass %in% .AbnormalTypes) {
+                                indirect <- .indirectAbnormalClasses[protoClass]
+                                getClassDef(indirect)@prototype
+                            } else clDef@prototype
                       dataPartValue <- TRUE
                     }
                   }
@@ -724,7 +730,7 @@ reconcilePropertiesAndPrototype <-
               }
               else {
                   if(extends(prototypeClass, "classPrototypeDef")) {
-                      hasDataPart <- identical(prototype@dataPart, TRUE)
+                      hasDataPart <- isTRUE(prototype@dataPart)
                       if(!hasDataPart) {
                           if(!dataPartValue) # didn't get a .Data object
                             newObject <- new(dataPartClass)
@@ -854,7 +860,7 @@ tryNew <-
     ClassDef <- getClassDef(Class, where)
     if(is.null(ClassDef))
         return(NULL)
-    else if(identical(ClassDef@virtual, TRUE))
+    else if(isTRUE(ClassDef@virtual))
         ClassDef@prototype
     else tryCatch(new(ClassDef),
                   error = function(e) {
@@ -881,7 +887,7 @@ showClass <-
         ClassDef <- getClass(Class)
     else
         ClassDef <- getClassDef(Class)
-    cat(if(identical(ClassDef@virtual, TRUE)) "Virtual ",
+    cat(if(isTRUE(ClassDef@virtual)) "Virtual ",
 	"Class ", .dQ(Class),
 	## Show the package if that is non-trivial:
 	if(nzchar(pkg <- ClassDef@package))
@@ -931,11 +937,11 @@ showExtends <-
                 if(length(eli@by))
 		    paste("by class", paste0("\"", eli@by, "\", distance ",
 					     eli@distance, collapse = ", "))
-                else if(identical(eli@dataPart, TRUE))
+                else if(isTRUE(eli@dataPart))
                     "from data part"
                 else "directly"
             if(!eli@simple) {
-                if(is.function(eli@test) && !identical(body(eli@test), TRUE)) {
+                if(is.function(eli@test) && !isTRUE(body(eli@test))) {
                     how[i] <-
                         paste0(how[i], if(is.function(eli@coerce))
                               ", with explicit test and coerce" else
@@ -946,7 +952,7 @@ showExtends <-
             }
         }
     }
-    if(identical(printTo, FALSE))
+    if(isFALSE(printTo))
         list(what = what, how = how)
     else if(all(!nzchar(how)) ||  all(how == "directly")) {
         what <- paste0('"', what, '"')
@@ -1431,7 +1437,7 @@ setDataPart <- function(object, value, check = TRUE) {
             value <- cl
         else if(extends(cl, "oldClass") && isVirtualClass(cl)) {
         }
-        else if(identical(ClassDef@virtual, TRUE) &&
+        else if(isTRUE(ClassDef@virtual) &&
                length(ClassDef@slots) == 0L &&
                length(ClassDef@subclasses) ) {
                 ## look for a union of basic classes
@@ -1555,8 +1561,8 @@ setDataPart <- function(object, value, check = TRUE) {
         toExpr <- body(f)
         byExpr <- body(byExt@test)
         ## process the test code
-        if(!identical(byExpr, TRUE)) {
-            if(!identical(toExpr, TRUE))
+        if(!isTRUE(byExpr)) {
+            if(!isTRUE(toExpr))
                 body(f, envir = environment(f)) <- substitute((BY) && (TO),
                               list(BY = byExpr, TO = toExpr))
             else
@@ -1610,18 +1616,19 @@ setDataPart <- function(object, value, check = TRUE) {
         if(is.null(packageSlot(toClass))) # is this possible?
             packageSlot(toClass) <- toDef@package
     }
+    chClass <- as.character(toClass) # dropping package attrib
     if(sameSlots)
 	substitute({class(from) <- CLASS; from}, list(CLASS = toClass))
     else if(length(toSlots) == 0L) {
 	## either a basic class or something with the same representation
-	if(is.na(match(toClass, .BasicClasses)))
+	if(is.na(match(chClass, .BasicClasses)))
 	    substitute({ attributes(from) <- NULL; class(from) <- CLASS; from},
 		       list(CLASS = toClass))
 	else if(isVirtualClass(toDef))
 	    quote(from)
 	else {
 	    ## a basic class; a vector type, matrix, array, or ts
-	    switch(toClass,
+	    switch(chClass,
 		   matrix = , array = {
 		       quote({.dm <- dim(from); .dn <- dimnames(from)
 			      attributes(from) <- NULL; dim(from) <- .dm
@@ -1640,7 +1647,7 @@ setDataPart <- function(object, value, check = TRUE) {
 		     for(what in TOSLOTS)
 			 slot(value, what) <- slot(from, what)
 		     value },
-		   list(CLASS = toClass, TOSLOTS = toSlots))
+		   list(CLASS = chClass, TOSLOTS = toSlots))
     }
 }
 
@@ -1806,7 +1813,7 @@ substituteFunctionArgs <-
     }
     if(is.environment(value))
         return(value)
-    topEnv <- options()$topLevelEnvironment
+    topEnv <- getOption("topLevelEnvironment")
     if(is.null(topEnv))
         topEnv <- .GlobalEnv
     if(!is.null(pkgN <- get0(".packageName", topEnv, inherits=TRUE)) &&
@@ -1934,7 +1941,7 @@ assign("#HAS_DUPLICATE_CLASS_NAMES", FALSE, envir = .classTable)
 }
 
 .cacheClass <- function(name, def, doSubclasses = FALSE, env) {
-    if(!identical(doSubclasses, FALSE))
+    if(!isFALSE(doSubclasses))
       .recacheSubclasses(def@className, def, doSubclasses, env)
     if(!is.null(prev <- .classTable[[name]])) {
 	newpkg <- def@package

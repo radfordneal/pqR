@@ -188,7 +188,8 @@ tapply(character(0), factor(letters)[FALSE], length)
 
 
 ## zero-length patterns in gregexpr
-expect <- structure(1:3, match.length=rep(0L, 3), useBytes = TRUE)
+expect <- structure(1:3, match.length=rep(0L, 3),
+                    index.type = "chars", useBytes = TRUE)
 stopifnot(identical(expect, gregexpr("", "abc")[[1]]))
 stopifnot(identical(expect, gregexpr("", "abc", fixed=TRUE)[[1]]))
 stopifnot(identical(expect, gregexpr("", "abc", perl=TRUE)[[1]]))
@@ -296,11 +297,14 @@ dimnames(n)[[1]] <- c("a", "b")
 ## glob2rx(pattern, .) with "(", "[" or "{" in pattern :
 nm <- "my(ugly[file{name"
 stopifnot(identical(regexpr(glob2rx("*[*"), nm),
-		    structure(1L, match.length = 8L, useBytes = TRUE)),
+		    structure(1L, match.length = 8L,
+                              index.type = "chars", useBytes = TRUE)),
 	  identical(regexpr(glob2rx("*{n*"), nm),
-		    structure(1L, match.length = 14L, useBytes = TRUE)),
+		    structure(1L, match.length = 14L,
+                              index.type = "chars", useBytes = TRUE)),
 	  identical(regexpr(glob2rx("*y(*{*"), nm),
-		    structure(1L, match.length = 13L, useBytes = TRUE))
+		    structure(1L, match.length = 13L,
+                              index.type = "chars", useBytes = TRUE))
 	  )
 ## gave 'Invalid regular expression' in R <= 2.7.0
 
@@ -723,7 +727,7 @@ levs <- c("A","A")
 local({
     assertError(gl(2,3, labels = levs))
     assertError(factor(levs, levels=levs))
-    assertError(factor(1:2,  labels=levs))
+    ## now valid: factor(1:2,  labels=levs)
     })
 ## failed in R < 2.10.0
 L <- c("no", "yes")
@@ -2074,7 +2078,7 @@ stopifnot(!is.na(z$tension))
 p <- file.path(R.home("share"),"texmf") # always exists, readable
 lfri <- list.files(p, recursive=TRUE, include.dirs=TRUE)
 subdirs <- c("bibtex", "tex")
-lfnd <- setdiff(list.files(p, all.files=TRUE, no..=TRUE), ".svn")
+lfnd <- setdiff(list.files(p, all.files=TRUE, no..=TRUE), c(".svn", ".DS_Store"))
 stopifnot(!is.na(match(subdirs, lfri)), identical(subdirs, lfnd))
 ## the first failed for a few days, unnoticed, in the development version of R
 

@@ -1,5 +1,5 @@
 /*
- *  R : A Computer Langage for Statistical Data Analysis
+ *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1998-2017   The R Core Team.
  *
@@ -396,6 +396,22 @@ SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
     }
     UNPROTECT(1);
     return(actuals);
+}
+
+/* Use matchArgs_RC if the result might escape into R. */
+SEXP attribute_hidden matchArgs_RC(SEXP formals, SEXP supplied, SEXP call)
+{
+    SEXP args = matchArgs(formals, supplied, call);
+    /* it would be better not to build this arglist with CONS_NR in
+       the first place */
+    for (SEXP a = args; a  != R_NilValue; a = CDR(a)) {
+	if (! TRACKREFS(a)) {
+	    ENABLE_REFCNT(a);
+	    INCREMENT_REFCNT(CAR(a));
+	    INCREMENT_REFCNT(CDR(a));
+	}
+    }
+    return args;
 }
 
 

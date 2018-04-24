@@ -18,6 +18,7 @@
 
 fisher.test <-
 function(x, y = NULL, workspace = 200000, hybrid = FALSE,
+         hybridPars = c(expect = 5, percent = 80, Emin = 1),
          control = list(), or = 1, alternative = "two.sided",
          conf.int = TRUE, conf.level = 0.95,
          simulate.p.value = FALSE, B = 2000)
@@ -102,8 +103,18 @@ function(x, y = NULL, workspace = 200000, hybrid = FALSE,
             ## PR#10558: STATISTIC is negative
 	    PVAL <- (1 + sum(tmp <= STATISTIC/almost.1)) / (B + 1)
         } else if(hybrid) {
-            ## Cochran condition for asym.chisq. decision:
-            PVAL <- .Call(C_Fexact, x, c(5, 80, 1), workspace, mult)
+            ## Cochran condition for asym.chisq. decision is
+            ## hybridPars = c(expect = 5, percent = 80, Emin = 1),
+            if(!is.null(nhP <- names(hybridPars)) &&
+               !identical(nhP, c("expect", "percent", "Emin")))
+                stop("names(hybridPars) should be NULL or be identical to the default's")
+            stopifnot(is.double(hypp <- as.double(hybridPars)),
+                      length(hypp) == 3L,
+                      hypp[1] > 0, hypp[3] >= 0,
+                      0 <= hypp[2], hypp[2] <= 100)
+            PVAL <- .Call(C_Fexact, x, hypp, workspace, mult)
+            METHOD <- paste(METHOD, sprintf("hybrid using asym.chisq. iff (exp=%g, perc=%g, Emin=%g)",
+					    hypp[1], hypp[2], hypp[3]))
          } else {
             ##  expect < 0 : exact
             PVAL <- .Call(C_Fexact, x, c(-1, 100, 0), workspace, mult)

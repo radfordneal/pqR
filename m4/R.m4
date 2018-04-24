@@ -57,7 +57,7 @@ else
   $1="${[$1]}${separator}$2"
 fi])# R_SH_VAR_ADD
 
-## R_MISSING_PROG(NAME, PROGRAM)
+## R_MISSING_PROG(NAME, PROGRAM, [ACTION-IF-MISSING])
 ## -----------------------------
 ## Simplified variant of AM_MISSING_PROG.
 ## Set NAME to PROGRAM if this is found and works (in the sense of
@@ -69,8 +69,9 @@ if ($2 --version) < /dev/null > /dev/null 2>&1; then
   $1=$2
   AC_MSG_RESULT([found])
 else
-  $1="\$(SHELL) \$(top_srcdir)/tools/missing $2"
+  $1="\$(SHELL) \"\$(abs_top_srcdir)/tools/missing\" $2"
   AC_MSG_RESULT([missing])
+  [$3]  
 fi
 AC_SUBST($1)
 ])# R_MISSING_PROG
@@ -368,7 +369,7 @@ if AC_TRY_EVAL(ac_try) \
 else
   r_cv_prog_cc_c_o_lo=no
 fi
-rm -rf conftest* TMP])
+rm -Rf conftest* TMP])
 ])# R_PROG_CC_C_O_LO
 
 ## R_PROG_CC_MAKEFRAG
@@ -994,7 +995,7 @@ if ${CC} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
   fi
 fi
 ])
-rm -rf conftest conftest.* conftestf.* core
+rm -Rf conftest conftest.* conftestf.* core
 if test -n "${r_cv_prog_f77_can_run}"; then
   AC_MSG_RESULT([yes])
 else
@@ -1083,7 +1084,7 @@ if ${CC} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
   fi
 fi
 ])
-rm -rf conftest conftest.* conftestf.* core
+rm -Rf conftest conftest.* conftestf.* core
 if test -n "${r_cv_prog_f77_cc_compat}"; then
   AC_MSG_RESULT([yes])
 else
@@ -1170,7 +1171,7 @@ if ${CC} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
   fi
 fi
 ])
-rm -rf conftest conftest.* conftestf.* core
+rm -Rf conftest conftest.* conftestf.* core
 if test -n "${r_cv_prog_f77_cc_compat_complex}"; then
   AC_MSG_RESULT([yes])
   AC_DEFINE(HAVE_FORTRAN_DOUBLE_COMPLEX, 1,
@@ -1417,7 +1418,7 @@ EOF
 echo "running: $1 -c conftest.mm ${CPPFLAGS} ${OBJCXXFLAGS}" >&AS_MESSAGE_LOG_FD
 if $1 -c conftest.mm ${CPPFLAGS} ${OBJCXXFLAGS} >&AS_MESSAGE_LOG_FD 2>&1; then
    AC_MSG_RESULT([yes])
-   rm -rf conftest conftest.* core
+   rm -Rf conftest conftest.* core
    m4_default([$2], OBJCXX=$1)
 else
    AC_MSG_RESULT([no])
@@ -2054,7 +2055,7 @@ BITMAP_LIBS=
 if test "${use_jpeglib}" = yes; then
    save_CPPFLAGS=${CPPFLAGS}
   ## IJG version 9c (Jan 2018) has support as libjpeg.
-  ## libjpeg-turbo has had this for a while.
+  ## libjpeg-turbo has had this for a wh	ile.
   if "${PKGCONF}" --exists libjpeg; then
     JPG_CPPFLAGS=`"${PKGCONF}" --cflags libjpeg`
     JPG_LIBS=`"${PKGCONF}" --libs libjpeg`
@@ -2798,7 +2799,7 @@ if ${CC} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
   fi
 fi
 ])
-  rm -rf conftest conftest.* conftestf.* core
+  rm -Rf conftest conftest.* conftestf.* core
   if test -n "${r_cv_zdotu_is_usable}"; then
     AC_MSG_RESULT([yes])
   else
@@ -3195,7 +3196,7 @@ if test "x${r_cv_have_pcre820}" != xyes; then
   have_pcre=no
   LIBS="${r_save_LIBS}"
 else
-AC_CACHE_CHECK([if PCRE version >= 8.32], [r_cv_have_pcre832],
+AC_CACHE_CHECK([if PCRE version >= 8.32], [r_cv_have_pcre_832],
 [AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #ifdef HAVE_PCRE_PCRE_H
 #include <pcre/pcre.h>
@@ -3211,7 +3212,7 @@ int main() {
   exit(1);
 #endif
 }
-]])], [r_cv_have_pcre832=yes], [r_cv_have_pcre832=no], [r_cv_have_pcre832=no])])
+]])], [r_cv_have_pcre_832=yes], [r_cv_have_pcre_832=no], [r_cv_have_pcre_832=no])])
 fi
 
 AC_MSG_CHECKING([whether PCRE support suffices])
@@ -3220,11 +3221,47 @@ if test "x${r_cv_have_pcre820}" != xyes; then
 else
   AC_MSG_RESULT([yes])
 fi
-if test "x${r_cv_have_pcre832}" != xyes; then
+if test "x${r_cv_have_pcre_832}" != xyes; then
   warn_pcre_version="pcre < 8.32 is deprecated"
   AC_MSG_WARN([${warn_pcre_version}])
 fi
 ])# R_PCRE
+
+## R_PCRE2
+## -------
+## Try finding pcre2 (8-bit) library and header.
+AC_DEFUN([R_PCRE2],
+[have_pcre2=no
+if "${PKGCONF}" --exists libpcre2-8; then
+  PCRE2_CPPFLAGS=`"${PKGCONF}" --cflags libpcre2-8`
+  PCRE2_LIBS=`"${PKGCONF}" --libs libpcre2-8`
+  have_pcre2=yes
+else
+  AC_PATH_PROG(PCRE2_CONFIG, pcre2-config)
+  if test -n "${PCRE2_CONFIG}"; then
+    PCRE2_CPPFLAGS=`"${PCRE2_CONFIG}" --cflags`
+    PCRE2_LIBS=`"${PCRE2_CONFIG}" --libs8`
+    have_pcre2=yes
+  fi
+fi
+if test "x${have_pcre2}" = "xyes"; then
+  r_save_CPPFLAGS="${CPPFLAGS}"
+  CPPFLAGS="${PCRE2_CPPFLAGS} ${CPPFLAGS}"
+  r_save_LIBS="${LIBS}"
+  LIBS="${PCRE2_LIBS} ${LIBS}"
+  AC_DEFINE([PCRE2_CODE_UNIT_WIDTH], [8], [PCRE2 code unit width wanted.])
+  AC_CHECK_HEADER(pcre2.h, [have_pcre2=yes], [have_pcre2=no])
+  if test "x${have_pcre2}" = "xyes"; then
+    AC_CHECK_LIB(pcre2-8, pcre2_compile_8, [have_pcre2=yes], [have_pcre2=no])
+  fi
+  if test "x${have_pcre2}" = "xyes"; then
+    AC_DEFINE(HAVE_PCRE2, 1, [Define if your system has pcre2.])
+  else
+    CPPFLAGS="${r_save_CPPFLAGS}"
+    LIBS="${r_save_LIBS}"
+  fi
+fi
+])# R_PCRE2
 
 ## R_BZLIB
 ## -------
@@ -3532,6 +3569,50 @@ int main () {
   esac
   if test "$r_cv_iconv_latin1" != yes; then
     AC_MSG_ERROR([a suitable iconv is essential])
+  fi
+
+  AC_CACHE_CHECK([whether iconv accepts "CP1252"],
+  [r_cv_iconv_cp1252],
+  [AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#include "confdefs.h"
+#include <stdlib.h>
+#ifdef HAVE_ICONV_H
+#include <iconv.h>
+#endif
+
+int main () {
+  iconv_t cd;
+  cd = iconv_open("CP1252","UTF-8");
+  if(cd == (iconv_t)(-1)) exit(1);
+  iconv_close(cd);
+  cd = iconv_open("UTF-8","CP1252");
+  if(cd == (iconv_t)(-1)) exit(1);
+  iconv_close(cd);
+  cd = iconv_open("CP1252", "");
+  if(cd == (iconv_t)(-1)) exit(1);
+  iconv_close(cd);
+  cd = iconv_open("","CP1252");
+  if(cd == (iconv_t)(-1)) exit(1);
+  iconv_close(cd);
+  cd = iconv_open("CP1252","latin1");
+  if(cd == (iconv_t)(-1)) exit(1);
+  iconv_close(cd);
+  cd = iconv_open("latin1","CP1252");
+  if(cd == (iconv_t)(-1)) exit(1);
+  iconv_close(cd);
+  exit(0);
+}
+  ]])], [r_cv_iconv_cp1252=yes], [r_cv_iconv_cp1252=no],
+    [r_cv_iconv_cp1252=yes])])
+
+  ## on Windows we supply iconv ourselves
+  case "${host_os}" in
+    mingw*)
+      r_cv_iconv_cp1252=yes
+      ;;
+  esac
+  if test "$r_cv_iconv_cp1252" = yes; then
+    AC_DEFINE(HAVE_ICONV_CP1252, 1, [Define if `iconv' accepts "CP1252".])
   fi
 fi
 ## if the iconv we are using was in libiconv we have already included -liconv
@@ -3886,7 +3967,7 @@ if test "${cross_compiling}" = yes; then
       fi
     done
   fi
-  rm -rf conftest conftest.* core
+  rm -Rf conftest conftest.* core
   if test "${build_cc_works}" = no; then
     AC_MSG_RESULT(none)
     AC_MSG_ERROR([Build C compiler doesn't work. Set BUILD_CC to a compiler capable of creating a binary native to the build machine.])
@@ -4032,12 +4113,19 @@ fi
 if test "${G77}" = yes; then
   R_SYSTEM_ABI="${R_SYSTEM_ABI},gfortran"
 else
-case "${host_os}" in
-  solaris*)
-  R_SYSTEM_ABI="${R_SYSTEM_ABI},solf95"
-  ;;
+case "${F77}" in
+  *flang)
+    R_SYSTEM_ABI="${R_SYSTEM_ABI},flang"
+    ;;
   *)
-  R_SYSTEM_ABI="${R_SYSTEM_ABI},?"
+    case "${host_os}" in
+      solaris*)
+      R_SYSTEM_ABI="${R_SYSTEM_ABI},solf95"
+      ;;
+      *)
+      R_SYSTEM_ABI="${R_SYSTEM_ABI},?"
+    esac
+    ;;
 esac
 fi
 ## Fortran 90/95: AC_PROG_FC does not seem to set a shell variable
@@ -4046,12 +4134,19 @@ fi
 if test "${ac_cv_fc_compiler_gnu}" = yes; then
   R_SYSTEM_ABI="${R_SYSTEM_ABI},gfortran"
 else
-case "${host_os}" in
-  solaris*)
-  R_SYSTEM_ABI="${R_SYSTEM_ABI},solf95"
-  ;;
+case "${F77}" in
+  *flang)
+    R_SYSTEM_ABI="${R_SYSTEM_ABI},flang"
+    ;;
   *)
-  R_SYSTEM_ABI="${R_SYSTEM_ABI},?"
+    case "${host_os}" in
+      solaris*)
+      R_SYSTEM_ABI="${R_SYSTEM_ABI},solf95"
+      ;;
+      *)
+      R_SYSTEM_ABI="${R_SYSTEM_ABI},?"
+    esac
+    ;;
 esac
 fi
 AC_SUBST(R_SYSTEM_ABI)
@@ -4323,6 +4418,15 @@ if test "x${r_cv_func_ctanh_works}" = xyes; then
             [Define if ctanh() exists and is working correctly.])
 fi
 ])# R_FUNC_CTANH
+
+## R_MNT_WARN(MSG)
+## --------------------------------------------------------
+## Prints a warning if in maintainer mode.
+AC_DEFUN([R_MNT_WARN],
+[if test "x${use_maintainer_mode}" = xyes; then
+  AC_MSG_WARN([$1])
+fi
+])# R_MNT_WARN
 
 ### Local variables: ***
 ### mode: outline-minor ***

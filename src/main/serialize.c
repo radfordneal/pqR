@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1995--2015  The R Core Team
+ *  Copyright (C) 1995--2018  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@
 #include <Rmath.h>
 #include <Fileio.h>
 #include <Rversion.h>
+#include <R_ext/Riconv.h>
 #include <R_ext/RS.h>           /* for CallocCharBuf, Free */
 #include <errno.h>
 #include <ctype.h>		/* for isspace */
@@ -56,10 +57,18 @@
  *    versions are stored as an integer packed by the R_Version macro
  *    from Rversion.h.  Some workspace formats may only exist
  *    temporarily in the development stage.  If readers are not
- *    provided in a release version, then these should specify the
+ *    provided in a released version, then these should specify the
  *    oldest reader R version as -1.
  */
-
+ 
+ /* It is now customary that the version (1, 2, 3) of the format is
+  * reflected also in magic numbers (such as RDX2, RDX3, ...), together with
+  * type (xdr/ascii/binary).  Adding a new serialization format thus now
+  * also requires adding a new set of magic numbers, yet in principle this
+  * could be changed in the future.  The code in this file does not need the
+  * magic numbers, it relies on version and type information in the
+  * serialization header (version 2 and 3).
+  */
 
 /* ----- V e r s i o n -- T w o -- S a v e / R e s t o r e ----- */
 
@@ -138,7 +147,7 @@
    consists of a function pointer and a data value.  The serialization
    function pointer is called with the reference object and the data
    value as arguments.  It should return R_NilValue for standard
-   handling and an STRSXP for special handling.  In an STRSXP is
+   handling and an STRSXP for special handling.  If an STRSXP is
    returned, then a special handing mark is written followed by the
    strings in the STRSXP (attributes are ignored).  On unserializing,
    any specially marked entry causes a call to the hook function with
@@ -153,6 +162,21 @@
    Java and other reference based languages where creation and
    initialization can be separated--we don't really have that option
    at the R level.  */
+
+/* ----- V e r s i o n -- T h r e e -- S a v e / R e s t o r e ----- */
+
+/* This format extends version 2 format by adding an identifier of the
+   current native encoding to the serialization header.  On deserialization,
+   strings without an encoding flag will be converted to the current native
+   encoding, if possible, or to (flagged) UTF-8.  The conversion may fail
+   when the original encoding is not supported by iconv (unlikely) or when
+   the string is not valid in its declared encoding, which unfortunately is
+   not uncommon.  The conversion code now deliberately does not check
+   whether strings are valid when no conversion is needed, but such check
+   could be added in the future without changing the format.
+
+   Version 3 also adds support for custom ALTREP serialization. Under
+   version 2 ALTREP objects are serialied like non-ALTREP ones. */
 
 /*
  * Forward Declarations
@@ -171,7 +195,22 @@ static SEXP ReadBC(SEXP ref_table, R_inpstream_t stream);
 /* The default version used when a stream Init function is called with
    version = 0 */
 
-static const int R_DefaultSerializeVersion = 2;
+static int defaultSerializeVersion()
+{
+    static int dflt = -1;
+
+    if (dflt < 0) {
+	char *valstr = getenv("R_DEFAULT_SERIALIZE_VERSION");
+	int val = -1;
+	if (valstr != NULL)
+	    val = atoi(valstr);
+	if (val == 2 || val == 3)
+	    dflt = val;
+	else
+	    dflt = 2; /* the default */
+    }
+    return dflt;
+}
 
 /*
  * Utility Functions
@@ -597,8 +636,8 @@ static void InFormat(R_inpstream_t stream)
 
 #define PTRHASH(obj) (((R_size_t) (obj)) >> 2)
 
-#define HASH_TABLE_COUNT(ht) TRUELENGTH(CDR(ht))
-#define SET_HASH_TABLE_COUNT(ht, val) SET_TRUELENGTH(CDR(ht), val)
+#define HASH_TABLE_COUNT(ht) ((int) TRUELENGTH(CDR(ht)))
+#define SET_HASH_TABLE_COUNT(ht, val) SET_TRUELENGTH(CDR(ht), ((int) (val)))
 
 #define HASH_TABLE_SIZE(ht) LENGTH(CDR(ht))
 
@@ -665,15 +704,17 @@ static int HashGet(SEXP item, SEXP ht)
 /* The following are needed to preserve attribute information on
    expressions in the constant pool of byte code objects. This is
    mainly for preserving source references attributes.  The original
-   implementation of the sharing-preserving writing and reading of yte
+   implementation of the sharing-preserving writing and reading of byte
    code objects did not account for the need to preserve attributes,
    so there is now a work-around using these SXP types to flag when
    the ATTRIB field has been written out. Object bits and S4 bits are
-   still not preserved.  It the long run in might be better to change
+   still not preserved.  In the long run it might be better to change
    to a scheme in which all sharing is preserved and byte code objects
    don't need to be handled as a special case.  LT */
 #define ATTRLANGSXP       240
 #define ATTRLISTSXP       239
+
+#define ALTREP_SXP	  238
 
 /*
  * Type/Flag Packing and Unpacking
@@ -978,6 +1019,22 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream)
 
  tailcall:
     R_CheckStack();
+    if (ALTREP(s) && stream->version >= 3) {
+	SEXP info = ALTREP_SERIALIZED_CLASS(s);
+	SEXP state = ALTREP_SERIALIZED_STATE(s);
+	if (info != NULL && state != NULL) {
+	    int flags = PackFlags(ALTREP_SXP, LEVELS(s), OBJECT(s), 0, 0);
+	    PROTECT(state);
+	    PROTECT(info);
+	    OutInteger(stream, flags);
+	    WriteItem(info, ref_table, stream);
+	    WriteItem(state, ref_table, stream);
+	    WriteItem(ATTRIB(s), ref_table, stream);
+	    UNPROTECT(2); /* state, info */
+	    return;
+	}
+	/* else fall through to standard processing */
+    }
     if ((t = GetPersistentName(stream, s)) != R_NilValue) {
 	R_assert(TYPEOF(t) == STRSXP && LENGTH(t) > 0);
 	PROTECT(t);
@@ -1311,6 +1368,17 @@ void R_Serialize(SEXP s, R_outpstream_t stream)
 	OutInteger(stream, R_VERSION);
 	OutInteger(stream, R_Version(2,3,0));
 	break;
+    case 3:
+    {
+	OutInteger(stream, version);
+	OutInteger(stream, R_VERSION);
+	OutInteger(stream, R_Version(3,5,0));
+	const char *natenc = R_nativeEncoding();
+	int nelen = (int) strlen(natenc);
+	OutInteger(stream, nelen);
+	OutString(stream, natenc, nelen);
+	break;
+    }
     default: error(_("version %d not supported"), version);
     }
 
@@ -1349,9 +1417,9 @@ static SEXP GetReadRef(SEXP table, int index)
 static void AddReadRef(SEXP table, SEXP value)
 {
     SEXP data = CAR(table);
-    int count = TRUELENGTH(data) + 1;
+    R_xlen_t count = TRUELENGTH(data) + 1;
     if (count >= LENGTH(data)) {
-	int i, len;
+	R_xlen_t i, len;
 	SEXP newdata;
 
 	PROTECT(value);
@@ -1495,6 +1563,136 @@ InComplexVec(R_inpstream_t stream, SEXP obj, R_xlen_t length)
     }
 }
 
+static int TryConvertString(void *obj, const char *inp, size_t inplen,
+                            char *buf, size_t *bufleft)
+{
+    if (Riconv(obj, NULL, NULL, &buf, bufleft) == -1)
+	return -1;
+    return (int) Riconv(obj, &inp, &inplen, &buf, bufleft);
+}
+
+static SEXP
+ConvertChar(void *obj, char *inp, size_t inplen, cetype_t enc)
+{
+    size_t buflen = inplen;
+
+    for(;;) {
+	size_t bufleft = buflen;
+	if (buflen < 1000) {
+	    char buf[buflen + 1];
+	    if (TryConvertString(obj, inp, inplen, buf, &bufleft) == -1) {
+		if (errno == E2BIG) {
+		    buflen *= 2;
+		    continue;
+		} else
+		    return R_NilValue;
+	    }
+	    return mkCharLenCE(buf, (int)(buflen - bufleft), enc);
+	} else {
+	    char *buf = CallocCharBuf(buflen);
+	    if (TryConvertString(obj, inp, inplen, buf, &bufleft) == -1) {
+		Free(buf);
+		if (errno == E2BIG) {
+		    buflen *= 2;
+		    continue;
+		} else
+		    return R_NilValue;
+	    }
+	    SEXP ans = mkCharLenCE(buf, (int)(buflen - bufleft), enc);
+	    Free(buf);
+	    return ans;
+	}
+    }
+}
+
+static char *native_fromcode(R_inpstream_t stream)
+{
+    char *from = stream->native_encoding;
+#ifdef HAVE_ICONV_CP1252
+    if (!strcmp(from, "ISO-8859-1"))
+	from = "CP1252";
+#endif
+    return from;
+}
+
+/* Read string into pre-allocated buffer, convert encoding if necessary, and
+   return a CHARSXP */
+static SEXP
+ReadChar(R_inpstream_t stream, char *buf, int length, int levs)
+{ 
+    InString(stream, buf, length);
+    buf[length] = '\0';
+    if (levs & UTF8_MASK)
+	return mkCharLenCE(buf, length, CE_UTF8);
+    if (levs & LATIN1_MASK)
+	return mkCharLenCE(buf, length, CE_LATIN1);
+    if (levs & BYTES_MASK)
+	return mkCharLenCE(buf, length, CE_BYTES);
+    if (levs & ASCII_MASK)
+	return mkCharLenCE(buf, length, CE_NATIVE);
+
+    /* native encoding, not ascii */
+    if (!stream->native_encoding[0] || /* original native encoding unknown */
+        (stream->nat2nat_obj == (void *)-1 && /* translation impossible or disabled */
+         stream->nat2utf8_obj == (void *)-1))
+	return mkCharLenCE(buf, length, CE_NATIVE);
+    /* try converting to native encoding */
+    if (!stream->nat2nat_obj &&
+        !strcmp(stream->native_encoding, R_nativeEncoding())) {
+	/* No translation needed. Performance optimization but also leaves
+	   invalid strings in their encoding undetected. */
+	stream->nat2nat_obj = (void *)-1;
+	stream->nat2utf8_obj = (void *)-1;
+#ifdef WARN_DESERIALIZE_INVALID_UTF8
+	if (known_to_be_utf8 && !utf8Valid(buf))
+	    warning(_("deserializing invalid UTF-8 string '%s'"), buf);
+#endif
+    }
+    if (!stream->nat2nat_obj) {
+	char *from = native_fromcode(stream);
+	stream->nat2nat_obj = Riconv_open("", from);
+	if (stream->nat2nat_obj == (void *)-1)
+	    warning(_("unsupported conversion from '%s' to '%s'"), from, "");
+    }
+    if (stream->nat2nat_obj != (void *)-1) {
+	cetype_t enc = CE_NATIVE;
+	if (known_to_be_utf8) enc = CE_UTF8;
+	else if (known_to_be_latin1) enc = CE_LATIN1;
+	SEXP ans = ConvertChar(stream->nat2nat_obj, buf, length, enc);
+	if (ans != R_NilValue)
+	    return ans;
+	if (known_to_be_utf8) {
+	    /* nat2nat_obj is converting to UTF-8, no need to use nat2utf8_obj */
+	    stream->nat2utf8_obj = (void *)-1;
+	    char *from = native_fromcode(stream);
+	    warning(_("input string '%s' cannot be translated to UTF-8, is it valid in '%s'?"),
+	            buf, from);
+	}
+    }
+    /* try converting to UTF-8 */
+    if (!stream->nat2utf8_obj) {
+	char *from = native_fromcode(stream);
+	stream->nat2utf8_obj = Riconv_open("UTF-8", from);
+	if (stream->nat2utf8_obj == (void *)-1) {
+	    /* very unlikely */
+	    warning(_("unsupported conversion from '%s' to '%s'"),
+	            from, "UTF-8");
+	    warning(_("strings not representable in native encoding will not be translated"));
+	} else
+	    warning(_("strings not representable in native encoding will be translated to UTF-8"));	
+    }
+    if (stream->nat2utf8_obj != (void *)-1) {
+	SEXP ans = ConvertChar(stream->nat2utf8_obj, buf, length, CE_UTF8);
+	if (ans != R_NilValue)
+	    return ans;
+	char *from = native_fromcode(stream);
+	warning(_("input string '%s' cannot be translated to UTF-8, is it valid in '%s' ?"),
+	        buf, from);
+    }
+    /* no translation possible */
+    return mkCharLenCE(buf, length, CE_NATIVE); 
+}
+
 static R_xlen_t ReadLENGTH (R_inpstream_t stream)
 {
     int len = InInteger(stream);
@@ -1562,6 +1760,17 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	UNPROTECT(1);
 	AddReadRef(ref_table, s);
 	return s;
+    case ALTREP_SXP:
+	{
+	    R_ReadItemDepth++;
+	    SEXP info = PROTECT(ReadItem(ref_table, stream));
+	    SEXP state = PROTECT(ReadItem(ref_table, stream));
+	    SEXP attr = PROTECT(ReadItem(ref_table, stream));
+	    s = ALTREP_UNSERIALIZE_EX(info, state, attr, objf, levs);
+	    UNPROTECT(3); /* info, state, attr */
+	    R_ReadItemDepth--;
+	    return s;
+	}
     case SYMSXP:
 	R_ReadItemDepth++;
 	PROTECT(s = ReadItem(ref_table, stream)); /* print name */
@@ -1686,22 +1895,11 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    if (length == -1)
 		PROTECT(s = NA_STRING);
 	    else if (length < 1000) {
-		int enc = CE_NATIVE;
 		char cbuf[length+1];
-		InString(stream, cbuf, length);
-		cbuf[length] = '\0';
-		if (levs & UTF8_MASK) enc = CE_UTF8;
-		else if (levs & LATIN1_MASK) enc = CE_LATIN1;
-		else if (levs & BYTES_MASK) enc = CE_BYTES;
-		PROTECT(s = mkCharLenCE(cbuf, length, enc));
+		PROTECT(s = ReadChar(stream, cbuf, length, levs));
 	    } else {
-		int enc = CE_NATIVE;
 		char *cbuf = CallocCharBuf(length);
-		InString(stream, cbuf, length);
-		if (levs & UTF8_MASK) enc = CE_UTF8;
-		else if (levs & LATIN1_MASK) enc = CE_LATIN1;
-		else if (levs & BYTES_MASK) enc = CE_BYTES;
-		PROTECT(s = mkCharLenCE(cbuf, length, enc));
+		PROTECT(s = ReadChar(stream, cbuf, length, levs));
 		Free(cbuf);
 	    }
 	    break;
@@ -1908,7 +2106,7 @@ static void DecodeVersion(int packed, int *v, int *p, int *s)
 SEXP R_Unserialize(R_inpstream_t stream)
 {
     int version;
-    int writer_version, release_version;
+    int writer_version, min_reader_version;
     SEXP obj, ref_table;
 
     InFormat(stream);
@@ -1916,18 +2114,29 @@ SEXP R_Unserialize(R_inpstream_t stream)
     /* Read the version numbers */
     version = InInteger(stream);
     writer_version = InInteger(stream);
-    release_version = InInteger(stream);
+    min_reader_version = InInteger(stream); 
     switch (version) {
     case 2: break;
+    case 3:
+    {
+	int nelen = InInteger(stream);
+	char nbuf[nelen + 1];
+	InString(stream, nbuf, nelen);
+	nbuf[nelen] = '\0';
+	nelen = nelen < (R_CODESET_MAX + 1) ? nelen : (R_CODESET_MAX + 1);
+	strncpy(stream->native_encoding, nbuf, nelen);
+	stream->native_encoding[nelen] = '\0';
+	break;
+    }
     default:
-	if (version != 2) {
+	{
 	    int vw, pw, sw;
 	    DecodeVersion(writer_version, &vw, &pw, &sw);
-	    if (release_version < 0)
+	    if (min_reader_version < 0)
 		error(_("cannot read unreleased workspace version %d written by experimental R %d.%d.%d"), version, vw, pw, sw);
 	    else {
 		int vm, pm, sm;
-		DecodeVersion(release_version, &vm, &pm, &sm);
+		DecodeVersion(min_reader_version, &vm, &pm, &sm);
 		error(_("cannot read workspace version %d written by R %d.%d.%d; need R %d.%d.%d or newer"),
 		      version, vw, pw, sw, vm, pm, sm);
 	    }
@@ -1937,11 +2146,83 @@ SEXP R_Unserialize(R_inpstream_t stream)
     /* Read the actual object back */
     PROTECT(ref_table = MakeReadRefTable());
     obj =  ReadItem(ref_table, stream);
+
+    if (version == 3) {
+	if (stream->nat2nat_obj && stream->nat2nat_obj != (void *)-1) {
+	    Riconv_close(stream->nat2nat_obj);
+	    stream->nat2nat_obj = NULL;
+	}
+	if (stream->nat2utf8_obj && stream->nat2utf8_obj != (void *)-1) {
+	    Riconv_close(stream->nat2utf8_obj);
+	    stream->nat2utf8_obj = NULL;
+	}
+    }
     UNPROTECT(1);
 
     return obj;
 }
 
+SEXP R_SerializeInfo(R_inpstream_t stream)
+{
+    int version;
+    int writer_version, min_reader_version, vv, vp, vs;
+    int anslen = 4;
+    SEXP ans, names;
+    char buf[128];
+
+    InFormat(stream);
+
+    /* Read the version numbers */
+    version = InInteger(stream);
+    if (version == 3)
+	anslen++;
+    writer_version = InInteger(stream);
+    min_reader_version = InInteger(stream);
+
+    PROTECT(ans = allocVector(VECSXP, anslen));
+    PROTECT(names = allocVector(STRSXP, anslen));
+    SET_STRING_ELT(names, 0, mkChar("version"));
+    SET_VECTOR_ELT(ans, 0, ScalarInteger(version));
+    SET_STRING_ELT(names, 1, mkChar("writer_version"));
+    DecodeVersion(writer_version, &vv, &vp, &vs);
+    snprintf(buf, 128, "%d.%d.%d", vv, vp, vs); 
+    SET_VECTOR_ELT(ans, 1, mkString(buf));
+    SET_STRING_ELT(names, 2, mkChar("min_reader_version"));
+    if (min_reader_version < 0)
+	/* unreleased version of R */
+	SET_VECTOR_ELT(ans, 2, ScalarString(NA_STRING));
+    else { 
+	DecodeVersion(min_reader_version, &vv, &vp, &vs);
+	snprintf(buf, 128, "%d.%d.%d", vv, vp, vs);
+	SET_VECTOR_ELT(ans, 2, mkString(buf));
+    }
+    SET_STRING_ELT(names, 3, mkChar("format"));
+    switch(stream->type) {
+    case R_pstream_ascii_format:
+	SET_VECTOR_ELT(ans, 3, mkString("ascii"));
+	break;
+    case R_pstream_binary_format:
+	SET_VECTOR_ELT(ans, 3, mkString("binary"));
+	break;
+    case R_pstream_xdr_format:
+	SET_VECTOR_ELT(ans, 3, mkString("xdr"));
+	break;
+    default:
+	error(_("unknown input format"));
+    }
+    if (version == 3) {
+	SET_STRING_ELT(names, 4, mkChar("native_encoding"));
+	int nelen = InInteger(stream);
+	char nbuf[nelen + 1];
+	InString(stream, nbuf, nelen);
+	nbuf[nelen] = '\0';
+	SET_VECTOR_ELT(ans, 4, mkString(nbuf));
+    }
+    setAttrib(ans, R_NamesSymbol, names);
+    UNPROTECT(2); /* ans, names */
+
+    return ans;
+}
 
 /*
  * Generic Persistent Stream Initializers
@@ -1960,6 +2241,9 @@ R_InitInPStream(R_inpstream_t stream, R_pstream_data_t data,
     stream->InBytes = inbytes;
     stream->InPersistHookFunc = phook;
     stream->InPersistHookData = pdata;
+    stream->native_encoding[0] = 0;
+    stream->nat2nat_obj = NULL;
+    stream->nat2utf8_obj = NULL; 
 }
 
 void
@@ -1971,7 +2255,7 @@ R_InitOutPStream(R_outpstream_t stream, R_pstream_data_t data,
 {
     stream->data = data;
     stream->type = type;
-    stream->version = version != 0 ? version : R_DefaultSerializeVersion;
+    stream->version = version != 0 ? version : defaultSerializeVersion();
     stream->OutChar = outchar;
     stream->OutBytes = outbytes;
     stream->OutPersistHookFunc = phook;
@@ -2065,10 +2349,10 @@ static void InBytesConn(R_inpstream_t stream, void *buf, int length)
 	if (stream->type == R_pstream_ascii_format) {
 	    char linebuf[4];
 	    unsigned char *p = buf;
-	    int i, ncread;
+	    int i;
 	    unsigned int res;
 	    for (i = 0; i < length; i++) {
-		ncread = Rconn_getline(con, linebuf, 3);
+		size_t ncread = Rconn_getline(con, linebuf, 3);
 		if (ncread != 2)
 		    error(_("error reading from ascii connection"));
 		if (!sscanf(linebuf, "%02x", &res))
@@ -2199,7 +2483,7 @@ do_serializeToConn(SEXP call, SEXP op, SEXP args, SEXP env)
     else type = R_pstream_xdr_format;
 
     if (CADDDR(args) == R_NilValue)
-	version = R_DefaultSerializeVersion;
+	version = defaultSerializeVersion();
     else
 	version = asInteger(CADDDR(args));
     if (version == NA_INTEGER || version <= 0)
@@ -2239,13 +2523,14 @@ do_serializeToConn(SEXP call, SEXP op, SEXP args, SEXP env)
     return R_NilValue;
 }
 
-/* Used from readRDS().
-   This became public in R 2.13.0, and that version added support for
+/* unserializeFromConn(conn, hook) used from readRDS().
+   It became public in R 2.13.0, and that version added support for
    connections internally */
 SEXP attribute_hidden
 do_unserializeFromConn(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    /* unserializeFromConn(conn, hook) */
+    /* 0 .. unserializeFromConn(conn, hook) */
+    /* 1 .. serializeInfoFromConn(conn) */
 
     struct R_inpstream_st in;
     Rconnection con;
@@ -2257,9 +2542,6 @@ do_unserializeFromConn(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
 
     con = getConnection(asInteger(CAR(args)));
-
-    fun = CADR(args);
-    hook = fun != R_NilValue ? CallHook : NULL;
 
     /* Now we need to do some sanity checking of the arguments.
        A filename will already have been opened, so anything
@@ -2280,13 +2562,18 @@ do_unserializeFromConn(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     if(!con->canread) error(_("connection not open for reading"));
 
+    fun = PRIMVAL(op) == 0 ? CADR(args) : R_NilValue;
+    hook = fun != R_NilValue ? CallHook : NULL;
     R_InitConnInPStream(&in, con, R_pstream_any_format, hook, fun);
-    PROTECT(ans = R_Unserialize(&in)); /* paranoia about next line */
-    if(!wasopen) {endcontext(&cntxt); con->close(con);}
-    UNPROTECT(1);
+    ans = PRIMVAL(op) == 0 ? R_Unserialize(&in) : R_SerializeInfo(&in);    
+    if(!wasopen) {
+	PROTECT(ans); /* paranoia about next line */
+	endcontext(&cntxt);
+	con->close(con);
+	UNPROTECT(1);
+    }
     return ans;
 }
-
 
 /*
  * Persistent Buffered Binary Connection Streams
@@ -2353,7 +2640,7 @@ R_serializeb(SEXP object, SEXP icon, SEXP xdr, SEXP Sversion, SEXP fun)
     int version;
 
     if (Sversion == R_NilValue)
-	version = R_DefaultSerializeVersion;
+	version = defaultSerializeVersion();
     else version = asInteger(Sversion);
     if (version == NA_INTEGER || version <= 0)
 	error(_("bad version value"));
@@ -2502,7 +2789,7 @@ R_serialize(SEXP object, SEXP icon, SEXP ascii, SEXP Sversion, SEXP fun)
     int version;
 
     if (Sversion == R_NilValue)
-	version = R_DefaultSerializeVersion;
+	version = defaultSerializeVersion();
     else version = asInteger(Sversion);
     if (version == NA_INTEGER || version <= 0)
 	error(_("bad version value"));
@@ -2781,11 +3068,10 @@ static SEXP R_getVarsFromFrame(SEXP vars, SEXP env, SEXP forcesxp)
 	if (force && TYPEOF(tmp) == PROMSXP) {
 	    PROTECT(tmp);
 	    tmp = eval(tmp, R_GlobalEnv);
-	    SET_NAMED(tmp, 2);
+	    ENSURE_NAMEDMAX(tmp);
 	    UNPROTECT(1);
 	}
-	else if (TYPEOF(tmp) != NILSXP && NAMED(tmp) < 1)
-	    SET_NAMED(tmp, 1);
+	else ENSURE_NAMED(tmp); /* should not really be needed - LT */
 	SET_VECTOR_ELT(val, i, tmp);
     }
     setAttrib(val, R_NamesSymbol, vars);
@@ -2860,7 +3146,7 @@ do_lazyLoadDBfetch(SEXP call, SEXP op, SEXP args, SEXP env)
     if (TYPEOF(val) == PROMSXP) {
 	REPROTECT(val, vpi);
 	val = eval(val, R_GlobalEnv);
-	SET_NAMED(val, 2);
+	ENSURE_NAMEDMAX(val);
     }
     UNPROTECT(1);
     return val;

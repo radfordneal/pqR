@@ -1,6 +1,6 @@
 % File src/library/parallel/man/makePSOCKcluster.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 2003-2014 R Core Team
+% Copyright 2003-2018 R Core Team
 % Distributed under GPL 2 or later
 
 \name{makeCluster}
@@ -9,6 +9,7 @@
 \alias{makeForkCluster}
 \alias{stopCluster}
 \alias{setDefaultCluster}
+\alias{getDefaultCluster}
 \alias{R_PARALLEL_PORT}
 
 \title{
@@ -26,6 +27,7 @@ makeForkCluster(nnodes = getOption("mc.cores", 2L), ...)
 stopCluster(cl = NULL)
 
 setDefaultCluster(cl = NULL)
+getDefaultCluster()
 }
 \arguments{
   \item{spec}{A specification appropriate to the type of cluster.}
@@ -66,9 +68,14 @@ setDefaultCluster(cl = NULL)
     \item{\code{port}}{The port number for the socket connection,
       default taken from the environment variable \env{R_PARALLEL_PORT},
       then a randomly chosen port in the range \code{11000:11999}.}
-    \item{\code{timeout}}{The timeout in seconds for that port.  Default
-      30 days (and the POSIX standard only requires values up to 31 days
-      to be supported).}
+    \item{\code{setup_timeout}}{The maximum number of seconds a worker
+      attempts to connect to master before failing.  Default is 2
+      minutes.  The waiting time before the next attempt starts at
+      0.1 seconds and is incremented 50\% after each retry.}
+    \item{\code{timeout}}{The timeout in seconds for that port.  This is
+      the maximum time of zero communication between master and worker
+      before failing. Default is 30 days (and the POSIX standard only
+      requires values up to 31 days to be supported).}
     \item{\code{outfile}}{Where to direct the \code{\link{stdout}} and
       \code{\link{stderr}} connection output from the workers.
       \code{""} indicates no redirection (which may only be useful for
@@ -121,7 +128,11 @@ setDefaultCluster(cl = NULL)
 }
 
 \value{
-  An object of class \code{c("SOCKcluster", "cluster")}.
+  For the cluster creators, an object of class
+  \code{c("SOCKcluster", "cluster")}.
+
+  For the default cluster setter and getter, the registered default
+  cluster or \code{NULL} if there is no such cluster.
 }
 
 \author{

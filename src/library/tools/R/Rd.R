@@ -398,10 +398,10 @@ function(dir = NULL, files = NULL,
         ## Files in the db in need of updating:
         indf <- (files %in% db_names) & file_test("-nt", files, db_file)
         ## Also files not in the db:
-        indf <- indf | !(files %in% db_names)
+        indf <- indf | (files %notin% db_names)
 
         ## Db elements missing from files:
-        ind <- !(db_names %in% files) | (db_names %in% files[indf])
+        ind <- (db_names %notin% files) | (db_names %in% files[indf])
 	if(any(ind))
             db <- db[!ind]
 	files <- files[indf]
@@ -829,7 +829,7 @@ function(filebase, key = NULL)
             lazyLoadDBfetch(vals[key][[1L]], datafile, compressed, envhook)
 
         if(length(key)) {
-            if(! key %in% vars)
+            if(key %notin% vars)
                 stop(gettextf("No help on %s found in RdDB %s",
                               sQuote(key), sQuote(filebase)),
                      domain = NA)
@@ -887,10 +887,15 @@ initialRdMacros <- function(pkglist = NULL,
     	others <- trimws(unlist(strsplit(pkglist, ",")))
 
     	for (p in others) {
-    	    if (dir.exists(system.file("help/macros", package = p)))
+            if((fp <- system.file(package = p)) == "")
+                warning(gettextf("Rd macro package '%s' is not installed.",
+                                 p),
+                        call. = FALSE)
+            else if(dir.exists(file.path(fp, "help", "macros")))
     	    	macros <- loadPkgRdMacros(system.file(package = p), macros)
     	    else
-    	    	warning(gettextf("No Rd macros in package '%s'.", p), call. = FALSE)
+    	    	warning(gettextf("No Rd macros in package '%s'.", p),
+                        call. = FALSE)
         }
     } else if (is.character(macros))
     	macros <- loadRdMacros(file = macros)

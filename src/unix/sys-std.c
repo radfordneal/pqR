@@ -1009,6 +1009,18 @@ Rstd_ReadConsole(const char *prompt, unsigned char *buf, int len,
 		// introduced in readline 4.0: only used for >= 6.3
 #ifdef HAVE_RL_RESIZE_TERMINAL
 		rl_resize_terminal();
+		static int oldwidth;
+		int height, width;
+		rl_get_screen_size(&height,&width);
+		if (oldwidth >= 0 && oldwidth != width) {
+		    static SEXP opsym = NULL;
+		    if (! opsym)
+			opsym = install("setWidthOnResize");
+		    Rboolean setOK = asLogical(GetOption1(opsym));
+		    oldwidth = width;
+		    if (setOK != NA_LOGICAL && setOK)
+			R_SetOptionWidth(width);
+		}
 #endif
             }
 #endif
@@ -1117,11 +1129,12 @@ void R_CleanTempDir(void)
     char buf[1024];
 
     if((Sys_TempDir)) {
-#if defined(sun) || defined(__sun)
+// Only __sun is neeed on Solaris >= 10 (2005).
+#if defined(__sun) || defined(sun)
 	/* On Solaris the working directory must be outside this one */
 	chdir(R_HomeDir());
 #endif
-	snprintf(buf, 1024, "rm -rf %s", Sys_TempDir);
+	snprintf(buf, 1024, "rm -Rf %s", Sys_TempDir);
 	buf[1023] = '\0';
 	R_system(buf);
     }
@@ -1256,6 +1269,8 @@ Rstd_ShowFiles(int nfile,		/* number of files */
 	}
 	snprintf(buf, 1024, "'%s' < '%s'", pager, filename); //might contain spaces
 	res = R_system(buf);
+	if (res == 127)
+	    warningcall(R_NilValue, _("error in running command"));
 	unlink(filename);
 	free(filename);
 	return (res != 0);

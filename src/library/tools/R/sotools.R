@@ -114,6 +114,17 @@ so_symbol_names_table <-
       "linux, Fortran, gfortran, stop, _gfortran_stop_numeric_f08",
       "linux, Fortran, gfortran, stop, _gfortran_stop_string",
       "linux, Fortran, gfortran, rand, _gfortran_rand",
+      "linux, Fortran, flang, open, f90io_open03",
+      "linux, Fortran, flang, open, f90io_open2003",
+      "linux, Fortran, flang, close, f90io_close",
+      "linux, Fortran, flang, rewind, f90io_rewind",
+      "linux, Fortran, flang, write, f90io_print_init",
+      "linux, Fortran, flang, print, f90io_print_init",
+      "linux, Fortran, flang, read, f90io_fmt_read",
+      "linux, Fortran, flang, write, f90io_fmt_write",
+      "linux, Fortran, flang, stop, f90_stop",
+      "linux, Fortran, flang, stop, f90_stop08",
+      "linux, Fortran, flang, rand, rand",
 
       "osx, C, gcc, abort, _abort",
       "osx, C, gcc, assert, ___assert_rtn",
@@ -827,8 +838,10 @@ function(calls, dir = NULL, character_only = TRUE)
     nrdb <- do.call(rbind, nrdb)
     nrdb <- as.data.frame(unique(nrdb), stringsAsFactors = FALSE)
 
-    if(NROW(nrdb) == 0L || length(nrdb) != 3L)
-        stop("no native symbols were extracted")
+    if(NROW(nrdb) == 0L || length(nrdb) != 3L) {
+        message("no native symbols were extracted")
+        return(NULL)
+    }
     nrdb[, 3L] <- as.numeric(nrdb[, 3L])
     nrdb <- nrdb[order(nrdb[, 1L], nrdb[, 2L], nrdb[, 3L]), ]
     nms <- nrdb[, "s"]

@@ -1,7 +1,7 @@
 #  File src/library/tools/R/utils.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -342,18 +342,16 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
         if(file_test("-f", log)) {
             lines <- .get_LaTeX_errors_from_log_file(log)
             if(length(lines))
-                errors <- paste("LaTeX errors:",
-                                paste(lines, collapse = "\n"),
-                                sep = "\n")
+                errors <- paste0("LaTeX errors:\n",
+                                 paste(lines, collapse = "\n"))
         }
         ## BibTeX errors.
         log <- paste0(file_path_sans_ext(file), ".blg")
         if(file_test("-f", log)) {
             lines <- .get_BibTeX_errors_from_blg_file(log)
             if(length(lines))
-                errors <- paste("BibTeX errors:",
-                                paste(lines, collapse = "\n"),
-                                sep = "\n")
+                errors <- paste0("BibTeX errors:\n",
+                                 paste(lines, collapse = "\n"))
         }
 
         msg <- ""
@@ -475,8 +473,8 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
             if(sys2(latex, ltxargs)) {
                 lines <- .get_LaTeX_errors_from_log_file(paste0(base, ".log"))
                 errors <- if(length(lines))
-                    paste("LaTeX errors:",
-                          paste(lines, collapse = "\n"), sep = "\n")
+                    paste0("LaTeX errors:\n",
+                           paste(lines, collapse = "\n"))
                 else character()
                 stop(paste(gettextf("unable to run %s on '%s'", latex, file),
                            errors, sep = "\n"),
@@ -497,7 +495,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
 ### ** .BioC_version_associated_with_R_version
 
 .BioC_version_associated_with_R_version <-
-    function() numeric_version(Sys.getenv("R_BIOC_VERSION", "3.6"))
+    function() numeric_version(Sys.getenv("R_BIOC_VERSION", "3.7"))
 ## Things are more complicated from R-2.15.x with still two BioC
 ## releases a year, so we do need to set this manually.
 ## Wierdly, 3.0 is the second version (after 2.14) for the 3.1.x series.
@@ -534,6 +532,11 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
       ".project", ".seed", ".settings", ".tm_properties")
 
 ### * Internal utility functions.
+
+### ** filtergrep
+
+filtergrep <- function(pattern, x, ...) grep(pattern, x, invert = TRUE, value = TRUE, ...)
+
 
 ### ** %notin%
 
@@ -607,10 +610,10 @@ function(x)
 .canonicalize_quotes <-
 function(txt)
 {
-    txt <- gsub("(\xe2\x80\x98|\xe2\x80\x99)", "'", txt,
-                perl = TRUE, useBytes = TRUE)
-    txt <- gsub("(\xe2\x80\x9c|\xe2\x80\x9d)", '"', txt,
-                perl = TRUE, useBytes = TRUE)
+    txt <- gsub(paste0("(", intToUtf8(0x2018), "|", intToUtf8(0x2019), ")"),
+                "'", txt, perl = TRUE, useBytes = TRUE)
+    txt <- gsub(paste0("(", intToUtf8(0x201c), "|", intToUtf8(0x201d), ")"),
+                "'", txt, perl = TRUE, useBytes = TRUE)
     txt
 }
 
@@ -931,7 +934,7 @@ function()
 .get_requires_from_package_db <-
 function(db,
          category = c("Depends", "Imports", "LinkingTo", "VignetteBuilder",
-         "Suggests", "Enhances"))
+         "Suggests", "Enhances", "RdMacros"))
 {
     category <- match.arg(category)
     if(category %in% names(db)) {
@@ -1290,8 +1293,8 @@ function(x)
 {
     ## Determine whether the strings in a character vector could be in
     ## some ISO 8859 character set or not.
-    raw_ub <- charToRaw("\x7f")
-    raw_lb <- charToRaw("\xa0")
+    raw_ub <- as.raw(0x7f)
+    raw_lb <- as.raw(0xa0)
     vapply(as.character(x), function(txt) {
         raw <- charToRaw(txt)
         all(raw <= raw_ub | raw >= raw_lb)
@@ -1404,7 +1407,7 @@ function(package, lib.loc)
             pos <- match(paste0("package:", package), search())
             if(!is.na(pos)) {
                 detach(pos = pos,
-                       unload = ! package %in% c("tcltk", "tools"))
+                       unload = package %notin% c("tcltk", "tools"))
             }
             library(package, lib.loc = lib.loc, character.only = TRUE,
                     verbose = FALSE)
@@ -1587,6 +1590,53 @@ nonS3methods <- function(package)
     if(!length(thisPkg)) character() else thisPkg
 }
 
+### ** .make_S3_methods_table_for_base
+
+.make_S3_methods_table_for_base <-
+function()
+{
+    env <- baseenv()
+    objects <- ls(env, all.names = TRUE)
+    ind <- vapply(objects,
+                  function(o) .is_S3_generic(o, env),
+                  FALSE)
+    generics <- sort(unique(c(objects[ind],
+                              .get_S3_group_generics(),
+                              .get_internal_S3_generics())))
+    ind <- grepl("^[[:alpha:]]", generics)
+    generics <- c(generics[!ind], generics[ind])
+    ## The foo.bar objects in base:
+    objects <- grep("[^.]+[.]", objects, value = TRUE)
+    ## Make our lives easier ...
+    objects <- setdiff(objects, nonS3methods("base"))
+    ## Find the ones matching GENERIC.CLASS from the list of generics.
+    methods <-
+        lapply(generics,
+               function(e) objects[startsWith(objects, paste0(e, "."))])
+    names(methods) <- generics
+    ## Need to separate all from all.equal:
+    methods$all <- methods$all[!startsWith(methods$all, "all.equal")]
+    methods <- Filter(length, methods)
+    classes <- Map(substring, methods, nchar(names(methods)) + 2L)
+
+    cbind(generic = rep.int(names(classes), lengths(classes)),
+          class = unlist(classes, use.names = FALSE))
+}
+
+.deparse_S3_methods_table_for_base <-
+function()
+{
+    mdb <- .make_S3_methods_table_for_base()
+    n <- nrow(mdb)
+    c(sprintf("%s\"%s\", \"%s\"%s",
+              c("matrix(c(", rep.int("         ", n - 1L)),
+              mdb[, 1L],
+              mdb[, 2L],
+              c(rep.int(",", n - 1L), "),")),
+      "       ncol = 2L, byrow = TRUE,",
+      "       dimnames = list(NULL, c(\"generic\", \"class\")))")
+}
+
 ### ** .package_apply
 
 .package_apply <-
@@ -1630,7 +1680,7 @@ function(file, encoding = NA, keep.source = getOption("keep.source"))
     suppressWarnings({
         if(!is.na(encoding) &&
            (encoding != "unknown") &&
-           !(Sys.getlocale("LC_CTYPE") %in% c("C", "POSIX"))) {
+           (Sys.getlocale("LC_CTYPE") %notin% c("C", "POSIX"))) {
             ## Previous use of con <- file(file, encoding = encoding)
             ## was intolerant so do something similar to what
             ## .install_package_code_files() does.  Do not use a #line
@@ -1766,6 +1816,7 @@ function(x, dfile)
         if(!identical(asc, x)) {
             warning(gettext("Unknown encoding with non-ASCII data: converting to ASCII"),
                     domain = NA)
+	    ind <- is.na(asc) | (asc != x)
             x[ind] <- iconv(x[ind], "latin1", "ASCII", sub = "byte")
         }
     }
@@ -1865,11 +1916,11 @@ function(file, envir, enc = NA)
     ##                        ls(pattern = "^set[A-Z]", pos = "package:methods"))
     assignmentSymbols <- c("<-", "=")
 ### </FIXME>
-    con <-
-	if(!is.na(enc) && !(Sys.getlocale("LC_CTYPE") %in% c("C", "POSIX"))) {
-	    on.exit(close(con), add = TRUE)
-	    file(file, encoding = enc)
-	} else file
+    con <- if(!is.na(enc) &&
+              (Sys.getlocale("LC_CTYPE") %notin% c("C", "POSIX"))) {
+               on.exit(close(con), add = TRUE)
+               file(file, encoding = enc)
+           } else file
     exprs <- parse(n = -1L, file = con)
     exprs <- exprs[lengths(exprs) > 0L]
     for(e in exprs) {
@@ -1971,7 +2022,7 @@ function(x)
 
 .system_with_capture <-
 function(command, args = character(), env = character(),
-         stdin = "", input = NULL)
+         stdin = "", input = NULL, timeout = 0)
 {
     ## Invoke a system command and capture its status, stdout and stderr
     ## into separate components.
@@ -1981,7 +2032,8 @@ function(command, args = character(), env = character(),
     on.exit(unlink(c(outfile, errfile)))
     status <- system2(command, args, env = env,
                       stdout = outfile, stderr = errfile,
-                      stdin = stdin, input = input)
+                      stdin = stdin, input = input,
+                      timeout = timeout)
     list(status = status,
          stdout = readLines(outfile, warn = FALSE),
          stderr = readLines(errfile, warn = FALSE))
@@ -2058,10 +2110,10 @@ function(args, msg)
         paste("argument", sQuote(args), msg)
     else
         paste("arguments",
-              paste(c(rep.int("", len - 1L), "and "),
-                    sQuote(args),
-                    c(rep.int(", ", len - 1L), ""),
-                    sep = "", collapse = ""),
+              paste0(c(rep.int("", len - 1L), "and "),
+                     sQuote(args),
+                     c(rep.int(", ", len - 1L), ""),
+                     collapse = ""),
               msg)
 }
 
@@ -2120,6 +2172,7 @@ toTitleCase <- function(text)
                        tolower(substring(x, 3L)))
             else paste0(toupper(x1), tolower(substring(x, 2L)))
         }
+        if(is.na(x)) return(NA_character_)
         xx <- .Call(C_splitString, x, ' -/"()\n')
         ## for 'alone' we could insist on that exact capitalization
         alone <- xx %in% c(alone, either)
@@ -2159,19 +2212,19 @@ path_and_libPath <- function(...)
 ### ** str_parse_logic
 
 ##' @param otherwise: can be call, such as quote(errmesg(...))
-str_parse_logic <- function(ch, default = TRUE, otherwise = default) {
+str_parse_logic <- function(ch, default = TRUE, otherwise = default, n = 1L) {
     if (is.na(ch)) default
     else switch(ch,
                 "yes"=, "Yes" =, "true" =, "True" =, "TRUE" = TRUE,
                 "no" =, "No" =, "false" =, "False" =, "FALSE" = FALSE,
-                eval(otherwise))
+                eval.parent(otherwise, n=n))
 }
 
 ### ** str_parse
 
-str_parse <- function(ch, default = TRUE, logical = TRUE, otherwise = default) {
+str_parse <- function(ch, default = TRUE, logical = TRUE, otherwise = default, n = 2L) {
     if(logical)
-        str_parse_logic(ch, default=default, otherwise=otherwise)
+        str_parse_logic(ch, default=default, otherwise=otherwise, n = n)
     else if(is.na(ch))
         default
     else

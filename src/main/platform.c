@@ -216,6 +216,12 @@ int static R_strieql(const char *a, const char *b)
 # include <langinfo.h>
 #endif
 
+static char native_enc[R_CODESET_MAX + 1];
+const char attribute_hidden *R_nativeEncoding(void)
+{
+    return native_enc;
+}
+
 /* retrieves information about the current locale and
    sets the corresponding variables (known_to_be_utf8,
    known_to_be_latin1, utf8locale, latin1locale and mbcslocale) */
@@ -224,7 +230,9 @@ void attribute_hidden R_check_locale(void)
     known_to_be_utf8 = utf8locale = FALSE;
     known_to_be_latin1 = latin1locale = FALSE;
     mbcslocale = FALSE;
+    strcpy(native_enc, "ASCII");
 #ifdef HAVE_LANGINFO_CODESET
+    /* not on Windows */
     {
 	char  *p = nl_langinfo(CODESET);
 	/* more relaxed due to Darwin: CODESET is case-insensitive and
@@ -238,6 +246,14 @@ void attribute_hidden R_check_locale(void)
 	if (*p == 0 && MB_CUR_MAX == 6)
 	    known_to_be_utf8 = utf8locale = TRUE;
 # endif
+	if (utf8locale)
+	    strcpy(native_enc, "UTF-8");
+	else if (latin1locale)
+	    strcpy(native_enc, "ISO-8859-1");
+	else {
+	    strncpy(native_enc, p, R_CODESET_MAX);
+	    native_enc[R_CODESET_MAX] = 0;
+	}
     }
 #endif
     mbcslocale = MB_CUR_MAX > 1;
@@ -248,10 +264,16 @@ void attribute_hidden R_check_locale(void)
 	if (p && isdigit(p[1])) localeCP = atoi(p+1); else localeCP = 0;
 	/* Not 100% correct, but CP1252 is a superset */
 	known_to_be_latin1 = latin1locale = (localeCP == 1252);
+	if (localeCP) {
+	    /* CP1252 when latin1locale is true */
+	    snprintf(native_enc, R_CODESET_MAX, "CP%d", localeCP);
+	    native_enc[R_CODESET_MAX] = 0;
+	}
     }
 #endif
 #if defined(SUPPORT_UTF8_WIN32) /* never at present */
     utf8locale = mbcslocale = TRUE;
+    strcpy(native_enc, "UTF-8");
 #endif
 }
 
@@ -1896,7 +1918,13 @@ SEXP attribute_hidden do_pathexpand(SEXP call, SEXP op, SEXP args, SEXP rho)
     for (i = 0; i < n; i++) {
 	SEXP tmp = STRING_ELT(fn, i);
 	if (tmp != NA_STRING) {
+#ifndef Win32
 	    tmp = markKnown(R_ExpandFileName(translateChar(tmp)), tmp);
+#else
+/* Windows can have files and home directories that aren't representable in the native encoding (e.g. latin1), so
+   we need to translate everything to UTF8.  */
+	    tmp = mkCharCE(R_ExpandFileNameUTF8(translateCharUTF8(tmp)), CE_UTF8);
+#endif
 	}
 	SET_STRING_ELT(ans, i, tmp);
     }
@@ -2186,7 +2214,7 @@ SEXP attribute_hidden do_dircreate(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP  path;
     wchar_t *p, dir[MAX_PATH];
-    int res, show, recursive, serrno = 0;
+    int res, show, recursive, serrno = 0, maybeshare;
 
     checkArity(op, args);
     path = CAR(args);
@@ -2207,18 +2235,22 @@ SEXP attribute_hidden do_dircreate(SEXP call, SEXP op, SEXP args, SEXP env)
     while (*p == L'\\' && wcslen(dir) > 1 && *(p-1) != L':') *p-- = L'\0';
     if (recursive) {
 	p = dir;
-	/* skip leading \\share */
+	maybeshare = 0;
+	/* skip leading \\server\\share, \\share */
+	/* FIXME: is \\share (still) possible? */
 	if (*p == L'\\' && *(p+1) == L'\\') {
 	    p += 2;
 	    p = wcschr(p, L'\\');
+	    maybeshare = 1; /* the next element may be a share name */
 	}
 	while ((p = wcschr(p+1, L'\\'))) {
 	    *p = L'\0';
 	    if (*(p-1) != L':') {
 		res = _wmkdir(dir);
 		serrno = errno;
-		if (res && serrno != EEXIST) goto end;
+		if (res && serrno != EEXIST && !maybeshare) goto end;
 	    }
+	    maybeshare = 0;
 	    *p = L'\\';
 	}
     }
@@ -2634,12 +2666,13 @@ SEXP attribute_hidden do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 	dates = asLogical(CAR(args));
 	if (dates == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "copy.dates");
-	strncpy(dir,
-		R_ExpandFileName(translateChar(STRING_ELT(to, 0))),
-		PATH_MAX);
+	const char* q = R_ExpandFileName(translateChar(STRING_ELT(to, 0)));
+	if(strlen(q) > PATH_MAX - 2) // allow for '/' and terminator
+	    error(_("invalid '%s' argument"), "to");
+	strncpy(dir, q, PATH_MAX);
 	dir[PATH_MAX - 1] = '\0';
 	if (*(dir + (strlen(dir) - 1)) !=  '/')
-	    strncat(dir, "/", PATH_MAX);
+	    strcat(dir, "/");
 	for (i = 0; i < nfiles; i++) {
 	    if (STRING_ELT(fn, i) != NA_STRING) {
 		strncpy(from,
@@ -2794,26 +2827,23 @@ SEXP attribute_hidden do_sysumask(SEXP call, SEXP op, SEXP args, SEXP env)
 
 SEXP attribute_hidden do_readlink(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP paths, ans;
-    int n;
-#ifdef HAVE_READLINK
-    char buf[PATH_MAX+1];
-    ssize_t res;
-    int i;
-#endif
-
     checkArity(op, args);
-    paths = CAR(args);
+    SEXP paths = CAR(args);
     if(!isString(paths))
 	error(_("invalid '%s' argument"), "paths");
-    n = LENGTH(paths);
-    PROTECT(ans = allocVector(STRSXP, n));
+    int n = LENGTH(paths);
+    SEXP ans = PROTECT(allocVector(STRSXP, n));
 #ifdef HAVE_READLINK
-    for (i = 0; i < n; i++) {
+    char buf[PATH_MAX+1];
+    for (int i = 0; i < n; i++) {
 	memset(buf, 0, PATH_MAX+1);
-	res = readlink(R_ExpandFileName(translateChar(STRING_ELT(paths, i))),
-		       buf, PATH_MAX);
-	if (res >= 0) SET_STRING_ELT(ans, i, mkChar(buf));
+	ssize_t res = 
+	    readlink(R_ExpandFileName(translateChar(STRING_ELT(paths, i))),
+		     buf, PATH_MAX);
+	if (res == PATH_MAX) {
+	    SET_STRING_ELT(ans, i, mkChar(buf));
+	    warning("possible truncation of value for element %d", i + 1);
+	} else if (res >= 0) SET_STRING_ELT(ans, i, mkChar(buf));
 	else if (errno == EINVAL) SET_STRING_ELT(ans, i, mkChar(""));
 	else SET_STRING_ELT(ans, i,  NA_STRING);
     }

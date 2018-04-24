@@ -30,7 +30,10 @@
   front-end is convenient for writing \samp{#!} scripts since it is an
   executable and takes \code{file} directly as an argument.  Options
   \option{--slave --no-restore} are always supplied: these imply
-  \option{--no-save}.  (The standard Windows command line has no concept
+  \option{--no-save}. Arguments that contain spaces cannot be specified
+  directly on the \samp{#!} line, because spaces and tabs are interpreted as
+  delimiters and there is no way to protect them from this interpretation on
+  the \samp{#!} line. (The standard Windows command line has no concept
   of \samp{#!} scripts, but Cygwin shells do.)
 
   \emph{Either} one or more \option{-e} options or \code{file} should
@@ -44,14 +47,17 @@
     \item{\option{--default-packages=list}}{where \code{list} is a
       comma-separated list of package names or \code{NULL}.  Sets the
       environment variable \env{R_DEFAULT_PACKAGES} which determines the
-      packages loaded on startup.  The default for \command{Rscript}
-      omits \pkg{methods} as it takes about 60\% of the startup time.
+      packages loaded on startup.
     }
   }
 
   Spaces are allowed in \code{expression} and \code{file} (but will need
   to be protected from the shell in use, if any, for example by
   enclosing the argument in quotes).
+
+  If \option{--default-packages} is not used, then \command{Rscript}
+  checks the environment variable \env{R_SCRIPT_DEFAULT_PACKAGES}. If
+  this is set, then it takes precedence over \env{R_DEFAULT_PACKAGES}.
 
 #ifdef unix
   Normally the version of \R is determined at installation, but this can

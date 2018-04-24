@@ -1,7 +1,7 @@
 #  File src/library/tools/R/install.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 # NB: also copyright dates in Usages.
 #
@@ -28,7 +28,26 @@
 ## be what commandArgs(TRUE) would return, that is a character vector
 ## of (space-delimited) terms that would be passed to R CMD INSTALL.  E.g.
 ##
-## tools:::.install_packages(c("--preclean", "--no-multiarch", "tree"))
+if(FALSE) {
+    tools:::.install_packages(c("--preclean", "--no-multiarch",
+				"tree"))
+    ## or
+
+    status <- tryCatch(
+	tools:::.install_packages(c("--no-clean-on-error", "--no-multiarch",
+				    "tree"), no.q = TRUE)
+      , error = function(e) as.numeric(sub(".* exit status *", "",
+					   conditionMessage(e))))
+    ## or
+
+    debugonce(tools:::.install_packages)
+    tools:::.install_packages(c("-c", "--debug", "--no-clean-on-error", "--no-multiarch",
+                                "tree"))
+    ## and then (after about 40 x [Enter]) when do_install is defined:
+    debug(do_install) ## and 'c'
+}
+
+
 
 ##' @return ...
 .install_packages <- function(args = NULL, no.q = interactive())
@@ -50,9 +69,9 @@
 
     do_exit <-
 	if(no.q)
-	    function(status = 1L) stop(".install_packages() exit status ", status)
+	    function(status) stop(".install_packages() exit status ", status)
 	else
-	    function(status = 1L) q("no", status = status, runLast = FALSE)
+	    function(status) q("no", status = status, runLast = FALSE)
 
     do_exit_on_error <- function(status = 1L)
     {
@@ -229,7 +248,7 @@
     }
 
     ## used for LazyData, KeepSource, ByteCompile, Biarch
-    parse_description_field <- function(desc, field, default = TRUE)
+    parse_description_field <- function(desc, field, default)
 	str_parse_logic(desc[field], default = default,
 			otherwise = quote(
 			    errmsg("invalid value of ", field, " field in DESCRIPTION")))
@@ -740,7 +759,7 @@
                     message("  running 'src/Makefile.win' ...", domain = NA)
                     res <- system(paste("make --no-print-directory",
                                         paste("-f", shQuote(makefiles), collapse = " ")))
-                    if (res == 0) shlib_install(instdir, rarch)
+                    if (res == 0L) shlib_install(instdir, rarch)
                     else has_error <- TRUE
                 } else { ## no src/Makefile.win
                     srcs <- dir(pattern = "\\.([cfmM]|cc|cpp|f90|f95|mm)$",
@@ -758,18 +777,16 @@
                         ## for now, hardcode some exceptions
                         ## These are packages which have arch-independent
                         ## code in configure.win
-                        if(!pkg_name %in% c("AnalyzeFMRI", "CORElearn",
-                                            "PearsonDS", "PKI", "RGtk2",
-                                            "RNetCDF", "RODBC", "RSclient",
-                                            "Rcpp", "Runuran", "SQLiteMap",
-                                            "XML", "arulesSequences",
-                                            "cairoDevice", "diversitree",
-                                            "foreign", "fastICA", "glmnet",
-                                            "gstat", "igraph", "jpeg", "png",
-                                            "proj4", "randtoolbox", "rgdal",
-                                            "rngWELL", "rphast", "rtfbs",
-                                            "sparsenet", "tcltk2", "tiff",
-                                            "udunits2"))
+                        if(pkg_name %notin%
+                           c("AnalyzeFMRI", "CORElearn", "PearsonDS",
+                             "PKI", "RGtk2", "RNetCDF", "RODBC",
+                             "RSclient", "Rcpp", "Runuran", "SQLiteMap",
+                             "XML", "arulesSequences", "cairoDevice",
+                             "diversitree", "foreign", "fastICA",
+                             "glmnet", "gstat", "igraph", "jpeg", "png",
+                             "proj4", "randtoolbox", "rgdal", "rngWELL",
+                             "rphast", "rtfbs", "sparsenet", "tcltk2",
+                             "tiff", "udunits2"))
                             one_only <- sum(nchar(readLines("../configure.win", warn = FALSE), "bytes")) > 0
                         if(one_only && !force_biarch) {
                             if(parse_description_field(desc, "Biarch", FALSE))
@@ -816,7 +833,7 @@
                                    makevars_user())
                     res <- system(paste(MAKE,
                                         paste("-f", shQuote(makefiles), collapse = " ")))
-                    if (res == 0) shlib_install(instdir, rarch)
+                    if (res == 0L) shlib_install(instdir, rarch)
                     else has_error <- TRUE
                     setwd(owd)
                 } else { ## no src/Makefile
@@ -829,7 +846,7 @@
                     archs <- Sys.glob("*")
                     setwd(wd2)
                     if (length(allfiles)) {
-                        ## if there is a configure script we install only the main
+                        ## if there is an executable configure script we install only the main
                         ## sub-architecture
                         if (!multiarch || length(archs) <= 1 ||
                             file_test("-x", "../configure")) {
@@ -875,8 +892,7 @@
             if (length(dirs)) {
                 descfile <- file.path(instdir, "DESCRIPTION")
                 olddesc <- readLines(descfile, warn = FALSE)
-                olddesc <- grep("^Archs:", olddesc,
-                                invert = TRUE, value = TRUE, useBytes = TRUE)
+                olddesc <- filtergrep("^Archs:", olddesc, useBytes = TRUE)
                 newdesc <- c(olddesc,
                              paste("Archs:", paste(dirs, collapse = ", "))
                              )
@@ -1045,8 +1061,7 @@
             length(dir("inst", all.files = TRUE)) > 2L) {
 	    starsmsg(stars, "inst")
             i_dirs <- list.dirs("inst")[-1L] # not inst itself
-            i_dirs <- grep(.vc_dir_names_re, i_dirs,
-                           invert = TRUE, value = TRUE)
+            i_dirs <- filtergrep(.vc_dir_names_re, i_dirs)
             ## This ignores any restrictive permissions in the source
             ## tree, since the later .Call(C_dirchmod) call will
             ## fix the permissions.
@@ -1058,27 +1073,22 @@
                 ignore[nzchar(ignore)]
             } else character()
             for(e in ignore)
-                i_dirs <- grep(e, i_dirs, perl = TRUE, invert = TRUE,
-                               value = TRUE, ignore.case = TRUE)
+                i_dirs <- filtergrep(e, i_dirs, perl = TRUE, ignore.case = TRUE)
             lapply(gsub("^inst", instdir, i_dirs),
                    function(p) dir.create(p, FALSE, TRUE)) # be paranoid
             i_files <- list.files("inst", all.files = TRUE,
                                   full.names = TRUE, recursive = TRUE)
-            i_files <- grep(.vc_dir_names_re, i_files,
-                            invert = TRUE, value = TRUE)
+            i_files <- filtergrep(.vc_dir_names_re, i_files)
             for(e in ignore)
-                i_files <- grep(e, i_files, perl = TRUE, invert = TRUE,
-                                value = TRUE, ignore.case = TRUE)
+                i_files <- filtergrep(e, i_files, perl = TRUE, ignore.case = TRUE)
             i_files <- i_files %w/o% c("inst/doc/Rplots.pdf",
                                        "inst/doc/Rplots.ps")
-            i_files <- grep("inst/doc/.*[.](log|aux|bbl|blg|dvi)$",
-                            i_files, perl = TRUE, invert = TRUE,
-                            value = TRUE, ignore.case = TRUE)
+            i_files <- filtergrep("inst/doc/.*[.](log|aux|bbl|blg|dvi)$",
+                                  i_files, perl = TRUE, ignore.case = TRUE)
             ## Temporary kludge
-            if (!dir.exists("vignettes") && ! pkgname %in% c("RCurl"))
-                i_files <- grep("inst/doc/.*[.](png|jpg|jpeg|gif|ps|eps)$",
-                                i_files, perl = TRUE, invert = TRUE,
-                                value = TRUE, ignore.case = TRUE)
+            if (!dir.exists("vignettes") && pkgname %notin% c("RCurl"))
+                i_files <- filtergrep("inst/doc/.*[.](png|jpg|jpeg|gif|ps|eps)$",
+                                      i_files, perl = TRUE, ignore.case = TRUE)
             i_files <- i_files %w/o% "Makefile"
             i2_files <- gsub("^inst", instdir, i_files)
             file.copy(i_files, i2_files)
@@ -1108,7 +1118,7 @@
 	if (install_R && dir.exists("R") && length(dir("R"))) {
             BC <- if (!is.na(byte_compile)) byte_compile
                   else
-                      parse_description_field(desc, "ByteCompile", default = FALSE)
+                      parse_description_field(desc, "ByteCompile", default = TRUE)
             rcps <- Sys.getenv("R_COMPILE_PKGS")
             rcp <- switch(rcps,
                           "TRUE"=, "true"=, "True"=, "yes"=, "Yes"= 1,
@@ -1125,6 +1135,7 @@
                 compiler::compilePKGS(1L)
                 compiler::setCompilerOptions(suppressAll = FALSE)
                 compiler::setCompilerOptions(suppressUndefined = TRUE)
+                compiler::setCompilerOptions(suppressNoSuperAssignVar = TRUE)
             } else
                 starsmsg(stars, "preparing package for lazy loading")
             keep.source <-
@@ -1229,12 +1240,14 @@
             deps_only <-
                 config_val_to_logical(Sys.getenv("_R_CHECK_INSTALL_DEPENDS_", "FALSE"))
             env <- if (deps_only) setRlibs(lib0, self = TRUE, quote = TRUE) else ""
+            tlim <- get_timeout(Sys.getenv("_R_INSTALL_TEST_LOAD_ELAPSED_TIMEOUT_"))
             if (length(test_archs) > 1L) {
                 msgs <- character()
                 opts <- "--no-save --slave"
                 for (arch in test_archs) {
                     starsmsg("***", "arch - ", arch)
-                    out <- R_runR(cmd, opts, env = env, arch = arch)
+                    out <- R_runR(cmd, opts, env = env, arch = arch,
+                                  timeout = tlim)
                     if(length(attr(out, "status")))
                         msgs <- c(msgs, arch)
                     if(length(out))
@@ -1248,7 +1261,7 @@
             } else {
                 opts <- paste(if(deps_only) "--vanilla" else "--no-save",
                               "--slave")
-                out <- R_runR(cmd, opts, env = env)
+                out <- R_runR(cmd, opts, env = env, timeout = tlim)
                 if(length(out))
                     cat(paste(c(out, ""), collapse = "\n"))
                 if(length(attr(out, "status")))
@@ -1257,7 +1270,7 @@
         }
     }
 
-    options(showErrorCalls=FALSE)
+    options(showErrorCalls = FALSE)
     pkgs <- character()
     if (is.null(args)) {
         args <- commandArgs(TRUE)
@@ -1593,7 +1606,7 @@
             res <- try(dir.create(fn, showWarnings = FALSE))
             if (inherits(res, "try-error") || !res) ok <- FALSE
             else unlink(fn, recursive = TRUE)
-        } else ok <- file.access(lib, 2L) == 0
+        } else ok <- file.access(lib, 2L) == 0L
     }
     if (!ok)
         stop("ERROR: no permission to install to directory ",
@@ -1869,17 +1882,20 @@
             cxxstd <- gsub(" *", "", cxxstd)
             if (cxxstd == "CXX17") {
                 use_cxx17 <- TRUE
+                with_cxx <- TRUE
             }
             else if (cxxstd == "CXX14") {
                 use_cxx14 <- TRUE
+                with_cxx <- TRUE
             }
             else if (cxxstd == "CXX11") {
                 use_cxx11 <- TRUE
+                with_cxx <- TRUE
             }
             else if (cxxstd == "CXX98") {
                 use_cxx98 <- TRUE
+                with_cxx <- TRUE
             }
-            with_cxx <- TRUE
         }
     } else if (file.exists("Makevars")) {
         makefiles <- c("Makevars", makefiles)
@@ -1892,17 +1908,20 @@
             cxxstd <- gsub(" *", "", cxxstd)
             if (cxxstd == "CXX17") {
                 use_cxx17 <- TRUE
+                with_cxx <- TRUE
             }
             else if (cxxstd == "CXX14") {
                 use_cxx14 <- TRUE
+                with_cxx <- TRUE
             }
             else if (cxxstd == "CXX11") {
                 use_cxx11 <- TRUE
+                with_cxx <- TRUE
             }
             else if (cxxstd == "CXX98") {
                 use_cxx98 <- TRUE
+                with_cxx <- TRUE
             }
-            with_cxx <- TRUE
         }
     }
     if (!use_cxx11 && !use_cxx14 && !use_cxx17 && !use_cxx98) {
@@ -1937,7 +1956,6 @@
                 use_cxx98 <- TRUE
             }
         }
-        with_cxx <- TRUE
     }
 
     if (with_cxx) {

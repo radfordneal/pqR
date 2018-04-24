@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2015  The R Core Team
+ *  Copyright (C) 1997--2018  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -40,6 +40,7 @@
 #define _WIN32_WINNT 0x0500     /* for MEMORYSTATUSEX */
 #endif
 #include <windows.h>		/* for CreateEvent,.. */
+#include <shlobj.h>		/* for SHGetFolderPath */
 #include <process.h>		/* for _beginthread,... */
 #include <io.h>			/* for isatty, chdir */
 #ifdef _MSC_VER  /* for chdir */
@@ -533,7 +534,7 @@ extern size_t Rf_utf8towcs(wchar_t *wc, const char *s, size_t n);
 int R_ShowFiles(int nfile, const char **file, const char **headers,
 		const char *wtitle, Rboolean del, const char *pager)
 {
-    int   i;
+    int   i, ll;
     char  buf[1024];
 
     if (nfile > 0) {
@@ -569,7 +570,8 @@ int R_ShowFiles(int nfile, const char **file, const char **headers,
 			snprintf(buf, 1024, "\"%s\" \"%s\"", pager, file[i]);
 		    else
 			snprintf(buf, 1024, "%s \"%s\"", pager, file[i]);
-		    runcmd(buf, CE_NATIVE, 0, 1, NULL, NULL, NULL);
+		    ll = runcmd(buf, CE_NATIVE, 0, 1, NULL, NULL, NULL);
+		    if (ll == NOLAUNCH) warning(runerror());
 		}
 	    } else {
 		snprintf(buf, 1024,
@@ -600,7 +602,7 @@ int R_ShowFiles(int nfile, const char **file, const char **headers,
 int R_EditFiles(int nfile, const char **file, const char **title,
 		const char *editor)
 {
-    int   i;
+    int   i, ll;
     char  buf[1024];
 
     if (nfile > 0) {
@@ -615,7 +617,8 @@ int R_EditFiles(int nfile, const char **file, const char **title,
 		    snprintf(buf, 1024, "\"%s\" \"%s\"", editor, file[i]);
 		else
 		    snprintf(buf, 1024, "%s \"%s\"", editor, file[i]);
-		runcmd(buf, CE_UTF8, 0, 1, NULL, NULL, NULL);
+		ll = runcmd(buf, CE_UTF8, 0, 1, NULL, NULL, NULL);
+		if (ll == NOLAUNCH) warning(runerror());
 	    }
 
 	}
@@ -704,6 +707,20 @@ void R_SetWin32(Rstart Rp)
 	/* printf("stackbase %lx, size %lx\n", top, top-bottom); */
 	R_CStackStart = top;
 	R_CStackLimit = top - bottom;
+
+	/* The stack detection above is not precise, in fact the stack will
+	   not be able to grow that large. As documented, at least one page
+	   from the space will be used as a guard page. Starting from the
+	   top (high address), the stack is formed by committed area, the
+	   guard page, and reserved area. The guard is used for on-demand
+	   growing of the committed area and shrinking of the reserve.
+	   Experiments show that the reserve would not shrink to less than
+	   2 pages (Win7, 32bit). This is not documented and was not tested 
+	   in other versions of Windows.*/
+	if (R_CStackLimit > 4*4096)
+	    R_CStackLimit -= 4*4096;
+
+	/* setup_Rmainloop includes (disabled) code to test stack detection */
     }
 
     R_CStackDir = 1;
@@ -720,7 +737,8 @@ void R_SetWin32(Rstart Rp)
 	strcpy(UserRHome, "HOME=");
 	strcat(UserRHome, getRUser());
 	putenv(UserRHome);
-    }    
+    }
+    putenv("MSYS2_ENV_CONV_EXCL=R_ARCH");
 
     
     /* This is here temporarily while the GCC version is chosen */
@@ -987,7 +1005,16 @@ int cmdlineoptions(int ac, char **av)
 	    if (!strcmp(*av, "--help") || !strcmp(*av, "-h")) {
 		R_ShowMessage(PrintUsage());
 		exit(0);
-	    }else if (!strcmp(*av, "--no-environ")) {
+	    } else if (!strcmp(*av, "--cd-to-userdocs")) {
+		/* This is used in shortcuts created by the installer. Previously, the
+		   installer resolved the user documents folder at installation time,
+		   but that is not good for installation under SCCM/system context where
+		   it resolved to documents folder in systemprofile. */
+		TCHAR mydocs[MAX_PATH + 1];
+		if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PERSONAL|CSIDL_FLAG_CREATE,
+		                              NULL, 0, mydocs))) 
+		    SetCurrentDirectory(mydocs);
+	    } else if (!strcmp(*av, "--no-environ")) {
 		Rp->NoRenviron = TRUE;
 	    } else if (!strcmp(*av, "--ess")) {
 /* Assert that we are interactive even if input is from a file */
@@ -1186,3 +1213,10 @@ int R_GetFDLimit()
     long limit = 16L*1024L*1024L;
     return (limit > INT_MAX) ? INT_MAX : limit;
 }
+
+int R_EnsureFDLimit(int desired)
+{
+    long limit = 16L*1024L*1024L;
+    return (desired <= limit) ? desired : (int)limit;
+}
+

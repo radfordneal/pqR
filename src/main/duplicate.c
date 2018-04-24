@@ -1,5 +1,5 @@
 /*
- *  R : A Computer Langage for Statistical Data Analysis
+ *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *            (C) 2004  The R Foundation
  *  Copyright (C) 1998-2015 The R Core Team.
@@ -193,7 +193,7 @@ SEXP lazy_duplicate(SEXP s) {
     case RAWSXP:
     case STRSXP:
     case S4SXP:
-	SET_NAMED(s, 2);
+	ENSURE_NAMEDMAX(s);
 	break;
     default:
 	UNIMPLEMENTED_TYPE("lazy_duplicate", s);
@@ -277,6 +277,14 @@ static SEXP duplicate1(SEXP s, Rboolean deep)
 {
     SEXP t;
     R_xlen_t i, n;
+
+    if (ALTREP(s)) {
+	PROTECT(s); /* the methods should protect, but ... */
+	SEXP ans = ALTREP_DUPLICATE_EX(s, deep);
+	UNPROTECT(1);
+	if (ans != NULL)
+	    return ans;
+    }
 
     switch (TYPEOF(s)) {
     case NILSXP:

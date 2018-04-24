@@ -1,6 +1,6 @@
 % File src/library/stats/man/lm.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2014 R Core Team
+% Copyright 1995-2018 R Core Team
 % Distributed under GPL 2 or later
 
 \name{lm}
@@ -102,14 +102,18 @@ lm(formula, data, subset, weights, na.action,
   \code{y ~ x - 1} or \code{y ~ 0 + x}.  See \code{\link{formula}} for
   more details of allowed formulae.
 
-  Non-\code{NULL} \code{weights} can be used to indicate that different
-  observations have different variances (with the values in
+  Non-\code{NULL} \code{weights} can be used to indicate that
+  different observations have different variances (with the values in
   \code{weights} being inversely proportional to the variances); or
   equivalently, when the elements of \code{weights} are positive
   integers \eqn{w_i}, that each response \eqn{y_i} is the mean of
-  \eqn{w_i} unit-weight observations (including the case that there are
-  \eqn{w_i} observations equal to \eqn{y_i} and the data have been
-  summarized).
+  \eqn{w_i} unit-weight observations (including the case that there
+  are \eqn{w_i} observations equal to \eqn{y_i} and the data have been
+  summarized). However, in the latter case, notice that within-group
+  variation is not used.  Therefore, the sigma estimate and residual
+  degrees of freedom may be suboptimal; in the case of replication
+  weights, even wrong. Hence, standard errors and analysis of variance
+  tables should be treated with care.
 
   \code{lm} calls the lower level functions \code{\link{lm.fit}}, etc,
   see below, for the actual numerical computations.  For programming
@@ -205,9 +209,10 @@ lm(formula, data, subset, weights, na.action,
   Chapter 4 of \emph{Statistical Models in S}
   eds J. M. Chambers and T. J. Hastie, Wadsworth & Brooks/Cole.
 
-  Wilkinson, G. N. and Rogers, C. E. (1973)
+  Wilkinson, G. N. and Rogers, C. E. (1973).
   Symbolic descriptions of factorial models for analysis of variance.
-  \emph{Applied Statistics}, \bold{22}, 392--9.
+  \emph{Applied Statistics}, \bold{22}, 392--399.
+  \doi{10.2307/2346786}.
 }
 \author{
   The design was inspired by the S function of the same name described

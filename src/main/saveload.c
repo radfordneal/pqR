@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1997--2017  The R Core Team
+ *  Copyright (C) 1997--2018  The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -58,6 +58,9 @@
  *    oldest reader R version as -1.
  */
 
+#define R_MAGIC_ASCII_V3   3001
+#define R_MAGIC_BINARY_V3  3002
+#define R_MAGIC_XDR_V3     3003
 #define R_MAGIC_ASCII_V2   2001
 #define R_MAGIC_BINARY_V2  2002
 #define R_MAGIC_XDR_V2     2003
@@ -827,8 +830,8 @@ static SEXP NewLoadSpecialHook (SEXPTYPE type)
 #define HASH_TABLE_KEYS_LIST(ht) CAR(ht)
 #define SET_HASH_TABLE_KEYS_LIST(ht, v) SETCAR(ht, v)
 
-#define HASH_TABLE_COUNT(ht) TRUELENGTH(CDR(ht))
-#define SET_HASH_TABLE_COUNT(ht, val) SET_TRUELENGTH(CDR(ht), val)
+#define HASH_TABLE_COUNT(ht) ((int) TRUELENGTH(CDR(ht)))
+#define SET_HASH_TABLE_COUNT(ht, val) SET_TRUELENGTH(CDR(ht), ((int) (val)))
 
 #define HASH_TABLE_SIZE(ht) LENGTH(CDR(ht))
 
@@ -1765,14 +1768,23 @@ static void R_WriteMagic(FILE *fp, int number)
     case R_MAGIC_XDR_V1:     /* Version 1 - R Data, XDR Binary Format */
 	strcpy((char*)buf, "RDX1");
 	break;
-    case R_MAGIC_ASCII_V2:   /* Version >=2 - R Data, ASCII Format */
+    case R_MAGIC_ASCII_V2:   /* Version 2 - R Data, ASCII Format */
 	strcpy((char*)buf, "RDA2");
 	break;
-    case R_MAGIC_BINARY_V2:  /* Version >=2 - R Data, Binary Format */
+    case R_MAGIC_BINARY_V2:  /* Version 2 - R Data, Binary Format */
 	strcpy((char*)buf, "RDB2");
 	break;
-    case R_MAGIC_XDR_V2:     /* Version >=2 - R Data, XDR Binary Format */
+    case R_MAGIC_XDR_V2:     /* Version 2 - R Data, XDR Binary Format */
 	strcpy((char*)buf, "RDX2");
+	break;
+    case R_MAGIC_ASCII_V3:   /* Version >=3 - R Data, ASCII Format */
+	strcpy((char*)buf, "RDA3");
+	break;
+    case R_MAGIC_BINARY_V3:  /* Version >=3 - R Data, Binary Format */
+	strcpy((char*)buf, "RDB3");
+	break;
+    case R_MAGIC_XDR_V3:     /* Version >=3 - R Data, XDR Binary Format */
+	strcpy((char*)buf, "RDX3");
 	break;
     default:
 	buf[0] = (unsigned char)((number/1000) % 10 + '0');
@@ -1817,6 +1829,15 @@ static int R_ReadMagic(FILE *fp)
     else if (strncmp((char*)buf, "RDX2\n", 5) == 0) {
 	return R_MAGIC_XDR_V2;
     }
+    if (strncmp((char*)buf, "RDA3\n", 5) == 0) {
+	return R_MAGIC_ASCII_V3;
+    }
+    else if (strncmp((char*)buf, "RDB3\n", 5) == 0) {
+	return R_MAGIC_BINARY_V3;
+    }
+    else if (strncmp((char*)buf, "RDX3\n", 5) == 0) {
+	return R_MAGIC_XDR_V3;
+    }
     else if (strncmp((char *)buf, "RD", 2) == 0)
 	return R_MAGIC_MAYBE_TOONEW;
 
@@ -1828,7 +1849,22 @@ static int R_ReadMagic(FILE *fp)
     return d1 + 10 * d2 + 100 * d3 + 1000 * d4;
 }
 
-static int R_DefaultSaveFormatVersion = 2;
+static int defaultSaveVersion()
+{
+    static int dflt = -1;
+
+    if (dflt < 0) {
+	char *valstr = getenv("R_DEFAULT_SAVE_VERSION");
+	int val = -1;
+	if (valstr != NULL)
+	    val = atoi(valstr);
+	if (val == 2 || val == 3)
+	    dflt = val;
+	else
+	    dflt = 2; /* the default */
+    }
+    return dflt;
+}
 
 /* ----- E x t e r n a l -- I n t e r f a c e s ----- */
 
@@ -1849,12 +1885,13 @@ void attribute_hidden R_SaveToFileV(SEXP obj, FILE *fp, int ascii, int version)
 	struct R_outpstream_st out;
 	R_pstream_format_t type;
 	int magic;
+	/* version == 0 means R_DefaultSerializeVersion, currently 3 */
 	if (ascii) {
-	    magic = R_MAGIC_ASCII_V2;
+	    magic = (version == 2) ? R_MAGIC_ASCII_V2 : R_MAGIC_ASCII_V3;
 	    type = R_pstream_ascii_format;
 	}
 	else {
-	    magic = R_MAGIC_XDR_V2;
+	    magic = (version == 2) ? R_MAGIC_XDR_V2 : R_MAGIC_XDR_V3;
 	    type = R_pstream_xdr_format;
 	}
 	R_WriteMagic(fp, magic);
@@ -1865,7 +1902,7 @@ void attribute_hidden R_SaveToFileV(SEXP obj, FILE *fp, int ascii, int version)
 
 void attribute_hidden R_SaveToFile(SEXP obj, FILE *fp, int ascii)
 {
-    R_SaveToFileV(obj, fp, ascii, R_DefaultSaveFormatVersion);
+    R_SaveToFileV(obj, fp, ascii, defaultSaveVersion());
 }
 
     /* different handling of errors */
@@ -1897,12 +1934,15 @@ SEXP attribute_hidden R_LoadFromFile(FILE *fp, int startup)
     case R_MAGIC_XDR_V1:
 	return_and_free(NewXdrLoad(fp, &data));
     case R_MAGIC_ASCII_V2:
+    case R_MAGIC_ASCII_V3:
 	R_InitFileInPStream(&in, fp, R_pstream_ascii_format, NULL, NULL);
 	return_and_free(R_Unserialize(&in));
     case R_MAGIC_BINARY_V2:
+    case R_MAGIC_BINARY_V3:
 	R_InitFileInPStream(&in, fp, R_pstream_binary_format, NULL, NULL);
 	return_and_free(R_Unserialize(&in));
     case R_MAGIC_XDR_V2:
+    case R_MAGIC_XDR_V3:
 	R_InitFileInPStream(&in, fp, R_pstream_xdr_format, NULL, NULL);
 	return_and_free(R_Unserialize(&in));
     default:
@@ -1945,7 +1985,7 @@ SEXP attribute_hidden do_save(SEXP call, SEXP op, SEXP args, SEXP env)
     if (TYPEOF(CADDR(args)) != LGLSXP)
 	error(_("'ascii' must be logical"));
     if (CADDDR(args) == R_NilValue)
-	version = R_DefaultSaveFormatVersion;
+	version = defaultSaveVersion();
     else
 	version = asInteger(CADDDR(args));
     if (version == NA_INTEGER || version <= 0)
@@ -2207,7 +2247,7 @@ static void con_cleanup(void *data)
 /* Ideally it should be possible to do this entirely in R code with
    something like
 
-	magic <- if (ascii) "RDA2\n" else ...
+	magic <- if (ascii) "RDA3\n" else ...
 	writeChar(magic, con, eos = NULL)
 	val <- lapply(list, get, envir = envir)
 	names(val) <- list
@@ -2231,7 +2271,7 @@ SEXP attribute_hidden do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
     Rconnection con;
     struct R_outpstream_st out;
     R_pstream_format_t type;
-    char *magic;
+    char magic[6];
     RCNTXT cntxt;
 
     checkArity(op, args);
@@ -2247,7 +2287,7 @@ SEXP attribute_hidden do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
     ascii = INTEGER(CADDR(args))[0];
 
     if (CADDDR(args) == R_NilValue)
-	version = R_DefaultSaveFormatVersion;
+	version = defaultSaveVersion();
     else
 	version = asInteger(CADDDR(args));
     if (version == NA_INTEGER || version <= 0)
@@ -2278,17 +2318,20 @@ SEXP attribute_hidden do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!con->canwrite)
 	error(_("connection not open for writing"));
 
+    strcpy(magic, "RD??\n");
     if (ascii) {
-	magic = "RDA2\n";
+	magic[2] = 'A';
 	type = (ascii == NA_LOGICAL) ?
 	    R_pstream_asciihex_format : R_pstream_ascii_format;
     }
     else {
 	if (con->text)
 	    error(_("cannot save XDR format to a text-mode connection"));
-	magic = "RDX2\n";
+	magic[2] = 'X';
 	type = R_pstream_xdr_format;
     }
+    /* if version is too high, R_Serialize will fail with error */
+    magic[3] = (char)('0' + version);
 
     if (con->text)
 	Rconn_printf(con, "%s", magic);
@@ -2328,11 +2371,12 @@ SEXP attribute_hidden do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
 
 SEXP attribute_hidden do_loadFromConn2(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    /* loadFromConn2(conn, environment, verbose) */
+    /* 0 .. loadFromConn2(conn, environment, verbose) */
+    /* 1 .. loadInfoFromConn2(conn) */
 
     struct R_inpstream_st in;
     Rconnection con;
-    SEXP aenv, res = R_NilValue;
+    SEXP aenv = R_NilValue, res = R_NilValue;
     unsigned char buf[6];
     size_t count;
     Rboolean wasopen;
@@ -2359,11 +2403,13 @@ SEXP attribute_hidden do_loadFromConn2(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!con->canread) error(_("connection not open for reading"));
     if(con->text) error(_("can only load() from a binary connection"));
 
-    aenv = CADR(args);
-    if (TYPEOF(aenv) == NILSXP)
-	error(_("use of NULL environment is defunct"));
-    else if (TYPEOF(aenv) != ENVSXP)
-	error(_("invalid '%s' argument"), "envir");
+    if (PRIMVAL(op) == 0) {
+	aenv = CADR(args);
+	if (TYPEOF(aenv) == NILSXP)
+	    error(_("use of NULL environment is defunct"));
+	else if (TYPEOF(aenv) != ENVSXP)
+	    error(_("invalid '%s' argument"), "envir");
+    }
 
     /* check magic */
     memset(buf, 0, 6);
@@ -2371,15 +2417,26 @@ SEXP attribute_hidden do_loadFromConn2(SEXP call, SEXP op, SEXP args, SEXP env)
     if (count == 0) error(_("no input is available"));
     if (strncmp((char*)buf, "RDA2\n", 5) == 0 ||
 	strncmp((char*)buf, "RDB2\n", 5) == 0 ||
-	strncmp((char*)buf, "RDX2\n", 5) == 0) {
+	strncmp((char*)buf, "RDX2\n", 5) == 0 ||
+	strncmp((char*)buf, "RDA3\n", 5) == 0 ||
+	strncmp((char*)buf, "RDB3\n", 5) == 0 ||
+	strncmp((char*)buf, "RDX3\n", 5) == 0) {
 	R_InitConnInPStream(&in, con, R_pstream_any_format, NULL, NULL);
-	/* PROTECT is paranoia: some close() method might allocate */
-	R_InitReadItemDepth = R_ReadItemDepth = -asInteger(CADDR(args));
-	PROTECT(res = RestoreToEnv(R_Unserialize(&in), aenv));
-	R_ReadItemDepth = 0;
-	if(!wasopen) {endcontext(&cntxt); con->close(con);}
-	UNPROTECT(1);
+	if (PRIMVAL(op) == 0) {
+	    R_InitReadItemDepth = R_ReadItemDepth = -asInteger(CADDR(args));
+	    res = RestoreToEnv(R_Unserialize(&in), aenv);
+	    R_ReadItemDepth = 0;
+	} else 
+	    res = R_SerializeInfo(&in);
+	if(!wasopen) {
+	    /* PROTECT is paranoia: some close() method might allocate */
+	    PROTECT(res);
+	    endcontext(&cntxt);
+	    con->close(con);
+	    UNPROTECT(1);
+	}
     } else
 	error(_("the input does not start with a magic number compatible with loading from a connection"));
     return res;
 }
+

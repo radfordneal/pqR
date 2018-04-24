@@ -1,6 +1,6 @@
 % File src/library/base/man/connections.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2017 R Core Team
+% Copyright 1995-2018 R Core Team
 % Distributed under GPL 2 or later
 
 \name{connections}
@@ -370,6 +370,29 @@ isIncomplete(con)
   encoding, that is the internal encoding of the current locale and
   hence no translation is done.
 
+  When writing to a text connection, the connections code always assumes its
+  input is in native encoding, so e.g.  \code{\link{writeLines}} has to
+  convert text to native encoding.  \code{\link{writeLines}} does not do the
+  conversion when \code{useBytes=TRUE} (for expert use only), but the
+  connections code still behaves as if the text was in native encoding, so
+  any attempt to convert encoding (\code{encoding} argument other than
+  \code{""} and \code{"native.enc"}) in connections will produce incorrect
+  results.
+
+  When reading from a text connection, the connections code, after
+  re-encoding based on the \code{encoding} argument, returns text that is
+  assumed to be in native encoding; an encoding mark is only added by
+  functions that read from the connection, so e.g.  \code{\link{readLines}}
+  can be instructed to mark the text as \code{"UTF-8"} or \code{"latin1"},
+  but \code{\link{readLines}} does no further conversion.  To allow reading
+  text in \code{"UTF-8"} on a system that cannot represent all such
+  characters in native encoding (currently only Windows), a connection can
+  be internally configured to return the read text in UTF-8 even though it
+  is not the native encoding; currently \code{\link{readLines}} and
+  \code{\link{scan}} use this feature when given a connection that is not
+  yet open and, when using the feature, they unconditionally mark the text
+  as \code{"UTF-8"}.
+
   Re-encoding only works for connections in text mode: reading from a
   connection with re-encoding specified in binary mode will read the
   stream of bytes, but mixing text and binary mode reads (e.g., mixing
@@ -389,10 +412,6 @@ isIncomplete(con)
   the \sQuote{Supplementary Planes} which need surrogate pairs is very
   rare so \code{"UCS-2LE"} is an appropriate first choice (as it is more
   widely implemented).
-
-  One caveat:  \R's implementation of \code{"UCS-2LE"} and similar for
-  output does not currently work on Windows, and on Unix it will default
-  to Unix-style line endings.  We recommend use of \code{UTF-8} instead.
 
   As from \R 3.0.0 the encoding \code{"UTF-8-BOM"} is accepted for
   reading and will remove a Byte Order Mark if present (which it often
@@ -542,36 +561,40 @@ isIncomplete(con)
   \code{\link{extSoftVersion}} for the versions of the \code{zlib} (for
   \code{gzfile}), \code{bzip2} and \code{xz} libraries in use.
 
-  To flush output to the Windows and maOS consoles, see
+  To flush output to the Windows and macOS consoles, see
   \code{\link{flush.console}}.
 }
 
 \examples{
-zz <- file("ex.data", "w")  # open an output file connection
+zzfil <- tempfile(fileext=".data")
+zz <- file(zzfil, "w")  # open an output file connection
 cat("TITLE extra line", "2 3 5 7", "", "11 13 17", file = zz, sep = "\n")
 cat("One more line\n", file = zz)
 close(zz)
-readLines("ex.data")
-unlink("ex.data")
+readLines(zzfil)
+unlink(zzfil)
 
-zz <- gzfile("ex.gz", "w")  # compressed file
+zzfil <- tempfile(fileext=".gz")
+zz <- gzfile(zzfil, "w")  # compressed file
 cat("TITLE extra line", "2 3 5 7", "", "11 13 17", file = zz, sep = "\n")
 close(zz)
-readLines(zz <- gzfile("ex.gz"))
+readLines(zz <- gzfile(zzfil))
 close(zz)
-unlink("ex.gz")
+unlink(zzfil)
 zz # an invalid connection
 
-zz <- bzfile("ex.bz2", "w")  # bzip2-ed file
+zzfil <- tempfile(fileext=".bz2")
+zz <- bzfile(zzfil, "w")  # bzip2-ed file
 cat("TITLE extra line", "2 3 5 7", "", "11 13 17", file = zz, sep = "\n")
 close(zz)
 zz # print() method: invalid connection
-print(readLines(zz <- bzfile("ex.bz2")))
+print(readLines(zz <- bzfile(zzfil)))
 close(zz)
-unlink("ex.bz2")
+unlink(zzfil)
 
 ## An example of a file open for reading and writing
-Tfile <- file("test1", "w+")
+Tpath <- tempfile("test")
+Tfile <- file(Tpath, "w+")
 c(isOpen(Tfile, "r"), isOpen(Tfile, "w")) # both TRUE
 cat("abc\ndef\n", file = Tfile)
 readLines(Tfile)
@@ -582,7 +605,7 @@ readLines(Tfile)
 Tfile # -> print() :  "valid" connection
 close(Tfile)
 Tfile # -> print() :  "invalid" connection
-unlink("test1")
+unlink(Tpath)
 
 ## We can do the same thing with an anonymous file.
 Tfile <- file()
@@ -592,11 +615,12 @@ close(Tfile)
 
 \dontrun{## fifo example -- may hang even with OS support for fifos
 if(capabilities("fifo")) {
-  zz <- fifo("foo-fifo", "w+")
+  zzfil <- tempfile(fileext="-fifo")
+  zz <- fifo(zzfil, "w+")
   writeLines("abc", zz)
   print(readLines(zz))
   close(zz)
-  unlink("foo-fifo")
+  unlink(zzfil)
 }}
 #ifdef unix
 \donttest{
@@ -607,6 +631,7 @@ readLines(pipe("ls -1"))
 
 # remove trailing commas.  Suppose
 \dontshow{
+oldwd <- setwd(tempdir())
 writeLines(c("450, 390, 467, 654,  30, 542, 334, 432, 421,",
 "357, 497, 493, 550, 549, 467, 575, 578, 342,",
 "446, 547, 534, 495, 979, 479"), "data2_")}
@@ -616,14 +641,15 @@ writeLines(c("450, 390, 467, 654,  30, 542, 334, 432, 421,",
 446, 547, 534, 495, 979, 479}
 # Then read this by
 scan(pipe("sed -e s/,$// data2_"), sep = ",")
-\dontshow{unlink("data2_")}
+\dontshow{unlink("data2_"); setwd(oldwd)}
 
 # convert decimal point to comma in output: see also write.table
 # both R strings and (probably) the shell need \ doubled
-zz <- pipe(paste("sed s/\\\\\\\\./,/ >", "outfile"), "w")
+zzfil <- tempfile("outfile")
+zz <- pipe(paste("sed s/\\\\\\\\./,/ >", zzfil), "w")
 cat(format(round(stats::rnorm(48), 4)), fill = 70, file = zz)
 close(zz)
-file.show("outfile", delete.file = TRUE)
+file.show(zzfil, delete.file = TRUE)
 }
 \dontrun{
 ## example for a machine running a finger daemon

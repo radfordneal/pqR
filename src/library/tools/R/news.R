@@ -121,9 +121,9 @@ function(file)
     ## liberal.
     re_valid_package_name <- .standard_regexps()$valid_package_name
     re_v <- sprintf("^([[:space:]]*(%s)|(%s))(%s).*$",
-                    paste("CHANGES? *(IN|FOR).*VERSION *",
-                          "CHANGES? *(IN|FOR|TO) *",
-                          sep = "|"),
+                    paste0("CHANGES? *(IN|FOR).*VERSION *",
+                           "|",
+                           "CHANGES? *(IN|FOR|TO) *"),
                     sprintf(paste(## TeachingDemos pomp ouch
                                   "NEW IN .*",
                                   ## HyperbolicDist nls2 proto
@@ -356,8 +356,8 @@ function(f, pdf_file)
         "\\usepackage[utf8]{inputenc}\n",
         "\\usepackage{graphicx}\n",
         "\\setkeys{Gin}{width=0.7\\textwidth}\n",
-        "\\graphicspath{{", normalizePath(file.path(R.home("doc"), "html"), "/"),
-                            "/}}\n",
+        "\\graphicspath{{\"", normalizePath(file.path(R.home("doc"), "html"), "/"),
+                            "/\"}}\n",
         "\\hypersetup{pdfpagemode=None,pdfstartview=FitH}\n",
         "\\begin{document}\n",
         "\\chapter*{}\\sloppy\n",

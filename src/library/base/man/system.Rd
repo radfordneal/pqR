@@ -1,6 +1,6 @@
 % File src/library/base/man/system.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2014 R Core Team
+% Copyright 1995-2018 R Core Team
 % Distributed under GPL 2 or later
 
 \name{system}
@@ -16,7 +16,7 @@
 system(command, intern = FALSE,
        ignore.stdout = FALSE, ignore.stderr = FALSE,
        wait = TRUE, input = NULL, show.output.on.console = TRUE,
-       minimized = FALSE, invisible = TRUE)
+       minimized = FALSE, invisible = TRUE, timeout = 0)
 }
 \arguments{
   \item{command}{the system command to be invoked, as a character string.}
@@ -32,6 +32,9 @@ system(command, intern = FALSE,
   \item{input}{if a character vector is supplied, this is copied one
     string per line to a temporary file, and the standard input of
     \code{command} is redirected to the file.}
+  \item{timeout}{timeout in seconds, ignored if 0.  This is a limit for the
+    elapsed time running \code{command} in a separate process.  Fractions
+    of seconds are ignored.}
 #ifdef unix
   \item{show.output.on.console, minimized, invisible}{arguments
     that are accepted on Windows but ignored on this platform, with a
@@ -91,6 +94,23 @@ system(command, intern = FALSE,
   supported.
 #endif
 
+  When \code{timeout} is non-zero, the command is terminated after the given
+  number of seconds.  The termination works for typical commands, but is not
+  guaranteed: it is possible to write a program that would keep running
+  after the time is out.  Timeouts can only be set with \code{wait = TRUE}.
+
+#ifdef unix
+  Timeouts cannot be used with interactive commands: the command is run with
+  standard input redirected from \code{/dev/null} and it must not modify
+  terminal settings.  As long as tty \code{tostop} option is disabled, which
+  it usually is by default, the executed command may write to standard
+  output and standard error.  One cannot rely on that the execution time of
+  the child processes will be included into \code{user.child} and
+  \code{sys.child} element of \code{proc_time} returned by \code{proc.time}. 
+  For the time to be included, all child processes have to be waited for by
+  their parents, which has to be implemented in the parent applications.
+#endif
+
   The ordering of arguments after the first two has changed from time to
   time: it is recommended to name all arguments after the first.
 
@@ -109,14 +129,18 @@ system(command, intern = FALSE,
 #endif
   If \code{command} runs but gives a non-zero exit status this will be
   reported with a warning and in the attribute \code{"status"} of the
-  result: an attribute \code{"errmsg"} may also be available
+  result: an attribute \code{"errmsg"} may also be available.
 
   If \code{intern = FALSE}, the return value is an error code (\code{0}
   for success), given the invisible attribute (so needs to be printed
   explicitly).  If the command could not be run for any reason, the
-  value is \code{127}.  Otherwise if \code{wait = TRUE} the value is the
-  exit status returned by the command, and if \code{wait = FALSE} it is
-  \code{0} (the conventional success value).
+  value is \code{127} and a warning is issued (as from \R 3.5.0).
+  Otherwise if \code{wait = TRUE} the value is the exit status returned
+  by the command, and if \code{wait = FALSE} it is \code{0} (the
+  conventional success value).
+
+  If the command times out, a warning is reported and the exit status is
+  \code{124}.
 #ifdef windows
   Some Windows commands return out-of-range status values
   (e.g., \code{-1}) and so only the bottom 16 bits of the value are used.

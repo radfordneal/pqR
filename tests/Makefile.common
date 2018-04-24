@@ -38,11 +38,13 @@ test-src-demo = demos.R demos2.R
 test-src-internet = internet.R
 test-src-internet2 = internet2.R libcurl.R
 test-src-CRANtools = CRANtools.R
+test-src-large = reg-large.R
 test-src-isas = isas-tests.R
 test-src-primitive = primitives.R
 test-src-random = p-r-random-tests.R
 test-src-regexp = utf8-regex.R PCRE.R
 test-src-segfault = no-segfault.R
+test-src-tz = timezone.R
 
 test-src-reg-1 = array-subset.R \
   reg-tests-1a.R reg-tests-1b.R reg-tests-1c.R reg-tests-1d.R reg-tests-2.R \
@@ -54,7 +56,7 @@ test-src-reg-1e =
 test-src-reg = $(test-src-reg-1) $(test-src-reg-1e)
 ## overridden in Makefile if recommended packages are not installed.
 ## reg-S4 has to be a sloppy test, as output differs if Matrix is absent.
-test-src-reg3 = reg-tests-3.R reg-examples3.R reg-plot-latin1.R reg-S4.R 
+test-src-reg3 = reg-tests-3.R reg-examples3.R reg-plot-latin1.R reg-S4.R
 
 test-out-strict = $(test-src-strict:.R=.Rout)
 test-out-sloppy = $(test-src-sloppy:.R=.Rout)
@@ -69,19 +71,21 @@ test-out-internet = $(test-src-internet:.R=.Rout)
 test-out-internet2 = $(test-src-internet2:.R=.Rout)
 test-out-isas = $(test-src-isas:.R=.Rout)
 test-out-primitive = $(test-src-primitive:.R=.Rout)
+test-out-large = $(test-src-large:.R=.Rout)
 test-out-random = $(test-src-random:.R=.Rout)
 test-out-reg = $(test-src-reg:.R=.Rout)
 test-out-regexp = $(test-src-regexp:.R=.Rout)
 test-out-reg3 = $(test-src-reg3:.R=.Rout)
 test-out-segfault = $(test-src-segfault:.R=.Rout)
+test-out-tz = $(test-src-tz:.R=.Rout)
 
 ## This macro is used only for dependencies and for distclean
 test-out = $(test-src:.R=.Rout) $(test-out-demo) $(test-out-gct) \
 	$(test-out-internet) \
 	$(test-out-random) $(test-out-reg) $(test-out-reg3) \
 	$(test-out-segfault) $(test-out-isas) $(test-out-internet2) \
-	$(test-out-CRANtools) $(test-out-primitive) $(test-out-dt) \
-	utf8-regex.Rout PCRE.Rout
+	$(test-out-CRANtools) $(test-out-large) $(test-out-primitive) $(test-out-dt) \
+	utf8-regex.Rout PCRE.Rout utf8.Rout
 
 .SUFFIXES:
 .SUFFIXES: .R .Rin .Rout .Rout-gct .Rout-valgct .trin .tsin .log
@@ -187,6 +191,7 @@ test-Specific:
 	@$(MK) test-Specific-strict RVAL_IF_DIFF=1
 	@$(ECHO) "running sloppy specific tests"
 	@$(MK) test-Specific-sloppy RVAL_IF_DIFF=0
+	@$(MK) test-TimeZone
 
 test-Packages:
 	@if test -n "${TEST_MC_CORES}"; then \
@@ -235,6 +240,12 @@ test-DateTime:
 	@$(RM) -f $(test-out-dt)
 	@$(MK) $(test-out-dt) RVAL_IF_DIFF=0
 
+## This should be allowed to fail, visibly.
+test-TimeZone:
+	@$(ECHO) "checking Sys.timezone ..."
+	@$(RM) -f $(test-out-tz)
+	@$(MK) $(test-out-tz) || $(ECHO) "  Sys.timezone() appears unknown"
+
 test-Docs:
 	@$(ECHO) "running tests of documentation examples"
 	@cp ${top_srcdir}/doc/manual/*.R .
@@ -262,6 +273,10 @@ test-CRANtools:
 	@$(ECHO) "  (can be slow unless mirror is local)"
 	@$(MK) $(test-out-CRANtools) RVAL_IF_DIFF=0
 
+test-Large:
+	@$(ECHO) "running tests needing large amounts of processor memory"
+	@$(MK) $(test-out-large) RVAL_IF_DIFF=0
+
 test-Primitive:
 	@$(ECHO) "running tests of primitives"
 	@$(MK) $(test-out-primitive) RVAL_IF_DIFF=0
@@ -287,7 +302,12 @@ test-Regexp:
 test-Segfault:
 	@$(ECHO) "running tests to possibly trigger segfaults"
 	@$(MK) $(test-out-segfault) RVAL_IF_DIFF=0
-	-@rm -rf data dumpdata.R F.Rd c0.Rd df0.Rd l0.Rd m0.Rd Rprof.out Rplots* PACKAGES PACKAGES.gz FALSE-package.Rd FALSE.* ./-Ex.R
+	-@rm -Rf data dumpdata.R F.Rd c0.Rd df0.Rd l0.Rd m0.Rd Rprof.out Rplots* PACKAGES PACKAGES.gz FALSE-package.Rd FALSE.* ./-Ex.R
+
+## Not run by any other target
+test-UTF-8:
+	@$(ECHO) "running regression tests for UTF-8 <--> int conversion (slow)"
+	@$(R2) < $(srcdir)/utf8.R > utf8.Rout 2>&1 || (mv utf8.Rout utf8.Rout.fail && exit 1)
 
 ## Avoid site library, which could be very large
 no-segfault.Rout: no-segfault.R
@@ -423,7 +443,7 @@ test-Packages-Recommended:
 test-Packages1-Recommended:
 	@test -d RecPackages || mkdir RecPackages
 	@for p in $(R_PKGS_RECOMMENDED); do \
-	  rm -rf RecPackages/$${p}; \
+	  rm -Rf RecPackages/$${p}; \
 	  gzip -dc "$(top_srcdir)/src/library/Recommended/$${p}.tgz" | \
 	    (cd RecPackages && $(TAR) xf -) ; \
 	  $(ECHO) "checking package '$${p}'"; \
@@ -445,7 +465,7 @@ stamp-Packages2: $(PKG_ROBJECTS)
 
 .trin.log:
 	@p=`basename $@ .log`; \
-	rm -rf RecPackages/$${p}; \
+	rm -Rf RecPackages/$${p}; \
 	gzip -dc "$(top_srcdir)/src/library/Recommended/$${p}.tgz" | \
 	    (cd RecPackages && $(TAR) xf -) ; \
 	  $(ECHO) "begin checking package '$${p}'"; \
@@ -469,4 +489,5 @@ INSTFILES = README \
 	  reg-plot.pdf.save reg-tests-2.Rout.save reg-tests-3.Rout.save \
 	  reg-examples3.Rout.save reg-plot-latin1.pdf.save \
 	  encodings.R utf8-regex.R PCRE.R CRANtools.R \
+	  timezone.R \
 	  nanbug.rda WinUnicode.dat arima.rda EmbeddedNuls.csv

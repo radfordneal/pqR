@@ -1,7 +1,7 @@
 #  File src/library/base/R/attach.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@
     sprintf(txt, pkg, paste(objs, collapse="\n"))
 }
 
-attach <- function(what, pos = 2L, name = deparse(substitute(what)),
+attach <- function(what, pos = 2L, name = deparse(substitute(what), backtick=FALSE),
                    warn.conflicts = TRUE)
 {
     ## FIXME: ./library.R 's library() has *very* similar checkConflicts(), keep in sync
@@ -84,11 +84,8 @@ attach <- function(what, pos = 2L, name = deparse(substitute(what)),
         }
     }
 
-    if(pos == 1L) {
-        warning("*** 'pos=1' is not possible; setting 'pos=2' for now.\n",
-                "*** Note that 'pos=1' will give an error in the future")
-        pos <- 2L
-    }
+    if(pos == 1L)
+        stop("'pos=1' is not possible and has been warned about for years")
     if (is.character(what) && (length(what) == 1L)){
         if (!file.exists(what))
             stop(gettextf("file '%s' not found", what), domain = NA)

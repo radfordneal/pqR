@@ -1,6 +1,6 @@
 % File src/library/stats/man/optim.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2014 R Core Team
+% Copyright 1995-2018 R Core Team
 % Distributed under GPL 2 or later
 
 \name{optim}
@@ -41,7 +41,7 @@ optimHess(par, fn, gr = NULL, \dots, control = list())
  \item{method}{The method to be used. See \sQuote{Details}.  Can be abbreviated.}
  \item{lower, upper}{Bounds on the variables for the \code{"L-BFGS-B"}
    method, or bounds in which to \emph{search} for method \code{"Brent"}.}
- \item{control}{A list of control parameters. See \sQuote{Details}.}
+ \item{control}{a \code{\link{list}} of control parameters.  See \sQuote{Details}.}
  \item{hessian}{Logical. Should a numerically differentiated Hessian
    matrix be returned?}
 }
@@ -155,7 +155,12 @@ optimHess(par, fn, gr = NULL, \dots, control = list())
       \code{"L-BFGS-B"} and \code{"SANN"} methods if \code{control$trace}
       is positive. Defaults to every 10 iterations for \code{"BFGS"} and
       \code{"L-BFGS-B"}, or every 100 temperatures for \code{"SANN"}.}
-    \item{\code{type}}{for the conjugate-gradients method. Takes value
+    \item{\code{warn.1d.NelderMead}}{a \code{\link{logical}} indicating
+      if the (default) \code{"Nelder-Mean"} method should signal a
+      warning when used for one-dimensional minimization.  As the
+      warning is sometimes inappropriate, you can suppress it by setting
+      this option to false.}
+    \item{\code{type}}{for the conjugate-gradients method.  Takes value
       \code{1} for the Fletcher--Reeves update, \code{2} for
       Polak--Ribiere and \code{3} for Beale--Sorenson.}
     \item{\code{lmm}}{is an integer giving the number of BFGS updates
@@ -235,24 +240,34 @@ optimHess(par, fn, gr = NULL, \dots, control = list())
   The code for method \code{"SANN"} was contributed by A. Trapletti.
 }
 \references{
-  Belisle, C. J. P. (1992) Convergence theorems for a class of simulated
-  annealing algorithms on \eqn{R^d}{Rd}. \emph{J. Applied Probability},
-  \bold{29}, 885--895.
+  Belisle, C. J. P. (1992).
+  Convergence theorems for a class of simulated annealing algorithms on
+  \eqn{R^d}{Rd}.
+  \emph{Journal of Applied Probability}, \bold{29}, 885--895.
+  \doi{10.2307/3214721}.
 
-  Byrd, R. H., Lu, P., Nocedal, J. and Zhu, C.  (1995) A limited
-  memory algorithm for bound constrained optimization.
-  \emph{SIAM J. Scientific Computing}, \bold{16}, 1190--1208.
+  Byrd, R. H., Lu, P., Nocedal, J. and Zhu, C. (1995).
+  A limited memory algorithm for bound constrained optimization.
+  \emph{SIAM Journal on Scientific Computing}, \bold{16}, 1190--1208.
+  \doi{10.1137/0916069}.
 
-  Fletcher, R. and Reeves, C. M. (1964) Function minimization by
-  conjugate gradients. \emph{Computer Journal} \bold{7}, 148--154.
+  Fletcher, R. and Reeves, C. M. (1964).
+  Function minimization by conjugate gradients.
+  \emph{Computer Journal} \bold{7}, 148--154.
+  \doi{10.1093/comjnl/7.2.149}.
 
-  Nash, J. C. (1990) \emph{Compact Numerical Methods for
-    Computers. Linear Algebra and Function Minimisation.} Adam Hilger.
+  Nash, J. C. (1990).
+  \emph{Compact Numerical Methods for Computers. Linear Algebra and
+    Function Minimisation}.
+  Adam Hilger.
 
-  Nelder, J. A. and Mead, R. (1965) A simplex algorithm for function
-  minimization. \emph{Computer Journal} \bold{7}, 308--313.
+  Nelder, J. A. and Mead, R. (1965).
+  A simplex algorithm for function minimization.
+  \emph{Computer Journal}, \bold{7}, 308--313.
+  \doi{10.1093/comjnl/7.4.308}.
 
-  Nocedal, J. and Wright, S. J. (1999) \emph{Numerical Optimization}.
+  Nocedal, J. and Wright, S. J. (1999).
+  \emph{Numerical Optimization}.
   Springer.
 }
 
@@ -349,6 +364,14 @@ plot(x, y, type = "n", asp = 1, xlab = "", ylab = "",
 arrows(tspres[s,1], tspres[s,2], tspres[s+1,1], tspres[s+1,2],
        angle = 10, col = "red")
 text(x, y, labels(eurodist), cex = 0.8)
+
+## 1-D minimization: "Brent" or optimize() being preferred.. but NM may be ok and "unavoidable",
+## ----------------   so we can suppress the check+warning :
+system.time(rO <- optimize(function(x) (x-pi)^2, c(0, 10)))
+system.time(ro <- optim(1, function(x) (x-pi)^2, control=list(warn.1d.NelderMead = FALSE)))
+rO$minimum - pi # 0 (perfect), on one platform
+ro$par - pi     # ~= 1.9e-4    on one platform
+utils::str(ro)
 }}
 \keyword{nonlinear}
 \keyword{optimize}

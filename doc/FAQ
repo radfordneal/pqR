@@ -1,6 +1,6 @@
 R FAQ
 Frequently Asked Questions on R
-Version 2016-06-06
+Version 2017-10-04
 Kurt Hornik
 
 
@@ -123,7 +123,7 @@ questions about R.
 1.1 Legalese
 ============
 
-This document is copyright © 1998-2016 by Kurt Hornik.
+This document is copyright © 1998-2017 by Kurt Hornik.
 
    This document is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by the
@@ -156,13 +156,13 @@ CRAN site (*note What is CRAN?::).
 1.3 Citing this document
 ========================
 
-In publications, please refer to this FAQ as Hornik (2016), "The R FAQ",
+In publications, please refer to this FAQ as Hornik (2017), "The R FAQ",
 and give the above, _official_ URL:
 
      @Misc{,
        author        = {Kurt Hornik},
        title         = {{R} {FAQ}},
-       year          = {2016},
+       year          = {2017},
        url           = {https://CRAN.R-project.org/doc/FAQ/R-FAQ.html}
      }
 
@@ -604,13 +604,6 @@ R mailing lists.
 
    The R Core Team can be reached at <R-core@lists.R-project.org> for
 comments and reports.
-
-   Many of the R project's mailing lists are also available via Gmane
-(http://gmane.org), from which they can be read with a web browser,
-using an NNTP news reader, or via RSS feeds.  See
-<http://dir.gmane.org/index.php?prefix=gmane.comp.lang.r.> for the
-available mailing lists, and <http://www.gmane.org/rss.php> for details
-on RSS feeds.
 
 2.10 What is CRAN?
 ==================
@@ -1180,10 +1173,9 @@ currently beta testing a commercially supported version of R named R+
 (read R plus).
 
    Revolution Analytics (http://www.revolution-computing.com/) has
-released REvolution R
-(http://www.revolution-computing.com/products/revolution-r.php), an
-enterprise-class statistical analysis system based on R, suitable for
-deployment in professional, commercial and regulated environments.
+released REvolution R, now available as Microsoft R (see
+<http://blog.revolutionanalytics.com/2016/01/microsoft-r-open.html> for
+more information).
 
    See also
 <https://en.wikipedia.org/wiki/R_programming_language#Commercialized_versions_of_R>
@@ -1206,13 +1198,6 @@ if a URL is provided.
 detailed explanation of the different versions of Rweb and an overview
 of how Rweb works, was published in the Journal of Statistical Software
 (<http://www.jstatsoft.org/v04/i01/>).
-
-   Ulf Bartel <ulfi@cs.tu-berlin.de> has developed *R-Online*, a simple
-on-line programming environment for R which intends to make the first
-steps in statistical programming with R (especially with time series) as
-easy as possible.  There is no need for a local installation since the
-only requirement for the user is a JavaScript capable browser.  See
-<http://www.osvisions.com/r_online/> for more information.
 
    *Rcgi* is a CGI WWW interface to R by MJ Ray <mjr@dsl.pipex.com>.  It
 had the ability to use "embedded code": you could mix user input and

@@ -1,6 +1,6 @@
 % File src/library/stats/man/smooth.spline.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2016 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{smooth.spline}
@@ -35,7 +35,7 @@ smooth.spline(x, y = NULL, w = NULL, df, spar = NULL, lambda = NULL, cv = FALSE,
    fit (penalized log likelihood) criterion is a monotone function of
    \code{spar}, see the details below.  Alternatively \code{lambda} may
    be specified instead of the \emph{scale free} \code{spar}=\eqn{s}.}
- \item{lambda}{if desired, the internal design-dependent smoothing
+ \item{lambda}{if desired, the internal (design-dependent) smoothing
    parameter \eqn{\lambda} can be specified instead of \code{spar}.
    This may be desirable for resampling algorithms such as cross
    validation or the bootstrap.}
@@ -108,7 +108,7 @@ smooth.spline(x, y = NULL, w = NULL, df, spar = NULL, lambda = NULL, cv = FALSE,
   regarded as the same are replaced by the first of their values and the
   corresponding \code{y} and \code{w} are pooled accordingly.
 
-  Unless \code{lambda} has been specified instead of \code{lambda},
+  Unless \code{lambda} has been specified instead of \code{spar},
   the computational \eqn{\lambda} used (as a function of
   \eqn{s=spar}{\code{spar}}) is
   \eqn{\lambda = r * 256^{3 s - 1}}{\lambda = r * 256^(3*spar - 1)}
@@ -150,7 +150,7 @@ smooth.spline(x, y = NULL, w = NULL, df, spar = NULL, lambda = NULL, cv = FALSE,
 
   Note however that currently the results may become very unreliable
   for \code{spar} values smaller than about -1 or -2.  The same may
-  happen for values larger than 2 or so. Don't think of setting
+  happen for values larger than 2 or so.  Don't think of setting
   \code{spar} or the controls \code{low} and \code{high} outside such a
   safe range, unless you know what you are doing!
   Similarly, specifying \code{lambda} instead of \code{spar} is
@@ -290,6 +290,8 @@ abline(h = 0, col = "gray")
 ## consistency check:
 stopifnot(all.equal(cars$dist,
                     fitted(cars.spl) + residuals(cars.spl)))
+## The chosen inner knots in original x-scale :
+with(cars.spl$fit, min + range * knot[-c(1:3, nk+1 +1:3)]) # == unique(cars$speed)
 
 ## Visualize the behavior of  .nknots.smspl()
 nKnots <- Vectorize(.nknots.smspl) ; c.. <- adjustcolor("gray20",.5)
@@ -319,6 +321,11 @@ lines(predict(s02, xx), col = 3); mtext(deparse(s02$call), col = 3)
 (s2. <- smooth.spline(y18, lambda = s2$lambda, tol = s2$tol))
 
 \dontshow{
+stopifnot(identical(
+    with(s2$fit, min + range * knot[-c(1:3, nk+1+1:3)]),
+    as.numeric(1:18)),
+    with(cars.spl$fit, min + range * knot[-c(1:3, nk+1+1:3)]) == unique(cars$speed))
+
 nD <- c("spar", "ratio", "iparms", "call"); nn <- setdiff(names(s2), nD)
 stopifnot(all.equal(s2[nn], s2.[nn], tol = 7e-7), # seen 6.86e-8
           all.equal(predict(s02 , xx),

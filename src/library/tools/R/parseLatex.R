@@ -151,7 +151,10 @@ latexToUtf8 <- function(x)
 	            }
 		} else
 		    i <- j
-	    }
+	    } else if (i < length(x) 
+	                && attr(x[[i+1]], "latex_tag") != "BLOCK" 
+	                && grepl("^[[:alpha:]]", x[[i+1]])) # unrecognized macro followed by letters needs space
+	        x[[i]] <- latex_tag(paste0(x[[i]], " "), "MACRO")
 	} else if (tag == "BLOCK")
 	    x[[i]] <- latexToUtf8(a)
     }
@@ -231,5 +234,7 @@ makeLatexTable <- function(utf8table)
 	    index[1L] <- macro <- sub("^", "\\\\", index[1L])
 	}
     }
+    table[["\\textemdash"]] <- "\u2014"
+    latexArgCount[["\\textemdash"]] <<- 0
     table
 }

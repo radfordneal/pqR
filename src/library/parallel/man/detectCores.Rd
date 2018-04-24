@@ -24,10 +24,6 @@ detectCores(all.tests = FALSE, logical = TRUE)
   It has methods to do so for Linux, macOS, FreeBSD, OpenBSD, Solaris,
   Irix and Windows.  \code{detectCores(TRUE)} could be tried on other
   Unix-alike systems.
-
-  Prior to \R 3.3.0 the default was \code{logical = FALSE} except on
-  Windows, but \code{logical = TRUE} had an effect only on Sparc Solaris
-  and Windows (where it was the default).
 }
 \value{
   An integer, \code{NA} if the answer is unknown.

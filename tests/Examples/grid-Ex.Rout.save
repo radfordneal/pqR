@@ -1,5 +1,5 @@
 
-R version 3.4.4 RC (2018-03-08 r74371) -- "Someone to Lean On"
+R version 3.5.0 RC (2018-04-15 r74605) -- "Joy in Playing"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -23,6 +23,7 @@ Type 'q()' to quit R.
 > library('grid')
 > 
 > base::assign(".oldSearch", base::search(), pos = 'CheckExEnv')
+> base::assign(".old_wd", base::getwd(), pos = 'CheckExEnv')
 > cleanEx()
 > nameEx("Grid")
 > ### * Grid
@@ -1021,7 +1022,7 @@ grandparent::parent::child
 > 
 > ### ** Examples
 > 
-> if (interactive()) {
+> if (dev.interactive()) {
 +   ## Need to write a more sophisticated unit as.character method
 +   unittrim <- function(unit) {
 +     sub("^([0-9]+|[0-9]+[.][0-9])[0-9]*", "\\1", as.character(unit))
@@ -1039,9 +1040,14 @@ grandparent::parent::child
 +               click.locn$x + unit(2, "mm"), click.locn$y,
 +               just="left")
 +   }
++ 
++   grid.newpage() # (empty slate)
++   ## device
 +   do.click("inches")
++   Sys.sleep(1)
++ 
 +   pushViewport(viewport(width=0.5, height=0.5,
-+                          xscale=c(0, 100), yscale=c(0, 10)))
++                         xscale=c(0, 100), yscale=c(0, 10)))
 +   grid.rect()
 +   grid.xaxis()
 +   grid.yaxis()
@@ -2067,9 +2073,10 @@ vp1::vp2
 > 
 > ### * <FOOTER>
 > ###
+> cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  1.602 0.029 1.642 0 0 
+Time elapsed:  2.06 0.059 2.129 0 0 
 > grDevices::dev.off()
 null device 
           1 

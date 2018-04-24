@@ -130,11 +130,11 @@ person(given = NULL, family = NULL, middle = NULL,
     \item{\code{"com"}}{(Compiler) Use for persons who collected code
       (potentially in other languages) but did not make further
       substantial contributions to the package.}
+    \item{\code{"cph"}}{(Copyright holder) Use for all copyright holders.}
+    \item{\code{"cre"}}{(Creator) Use for the package maintainer.}
     \item{\code{"ctb"}}{(Contributor) Use for authors who have made
       smaller contributions (such as code patches etc.) but should not
       show up in the package citation.}
-    \item{\code{"cph"}}{(Copyright holder) Use for all copyright holders.}
-    \item{\code{"cre"}}{(Creator) Use for the package maintainer.}
     \item{\code{"ctr"}}{(Contractor) Use for authors who have been
       contracted to write (parts of) the package and hence do not own
       intellectual property.}
@@ -142,6 +142,8 @@ person(given = NULL, family = NULL, middle = NULL,
       contributed data sets for the package.}
     \item{\code{"fnd"}}{(Funder) Use for persons or organizations that
       furnished financial support for the development of the package.}
+    \item{\code{"rev"}}{(Reviewer) Use for persons or organizations
+      responsible for reviewing (parts of) the package.}
     \item{\code{"ths"}}{(Thesis advisor) If the package is part of a
       thesis, use for the thesis advisor.}
     \item{\code{"trl"}}{(Translator) If the R code is a translation from
@@ -153,6 +155,14 @@ person(given = NULL, family = NULL, middle = NULL,
   \code{personList()} for collections of these.  The new scheme employs
   a single class for information about an arbitrary positive number of
   persons, eliminating the need for the \code{personList} mechanism.
+
+  The \code{comment} field can be used for \dQuote{arbitrary} additional
+  information about persons.  Elements named \code{"ORCID"} will be
+  taken to give ORCID identifiers (see \url{https://orcid.org/} for more
+  information), and be displayed as the corresponding URIs by the
+  \code{print()} and \code{format()} methods (see \bold{Examples}
+  below).
+  
 }
 \seealso{
   \code{\link{citation}}
@@ -180,7 +190,7 @@ p[1]$email
 ## BR is the second author [aut], who translated the code to R [trl],
 ## and maintains the package [cre].
 b <- c(person("Angelo", "Canty", role = "aut", comment =
-         "S original, http://statwww.epfl.ch/davison/BMA/library.html"),
+         "S original, <http://statwww.epfl.ch/davison/BMA/library.html>"),
        person(c("Brian", "D."), "Ripley", role = c("aut", "trl", "cre"),
               comment = "R port", email = "ripley@stats.ox.ac.uk")
      )
@@ -194,4 +204,8 @@ format(b, include = c("family", "given", "role"),
 ## Conversion to BibTeX author field.
 paste(format(b, include = c("given", "family")), collapse = " and ")
 toBibtex(b)
+
+## ORCID identifiers.
+(p3 <- person("Achim", "Zeileis",
+              comment = c(ORCID = "0000-0003-0918-3766")))
 }

@@ -1,7 +1,7 @@
 #  File src/library/methods/R/methodsTable.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -674,7 +674,7 @@
 		   if(simpleOnly)
 		   function(x) (is.logical(x) && x) || x@simple
 		   else # eliminate conditional inheritance
-		   function(x) (is.logical(x) && x) || x@simple || identical(body(x@test), TRUE), NA)
+		   function(x) (is.logical(x) && x) || x@simple || isTRUE(body(x@test)), NA)
 	what[eligible]
     }
 }
@@ -1063,12 +1063,10 @@
     ## else: non-empty methods list
     doFun(f,p)
     for(m in mget(labels, table)) {
+        pkgs <- NULL
 	if(is.environment(m)) {  ## duplicate class case -- compare .findMethodInTable()
             pkgs <- names(m)
-            if(length(pkgs) == 1)
-                m <- m[[pkgs]]
-            else if(length(pkgs) > 1)
-                cf("  (", length(pkgs), " methods defined for this signature, with different packages)\n")
+            m <- m[[pkgs[1L]]]
         }
 	if( is(m, "MethodDefinition")) {
 	    t <- m@target
@@ -1083,6 +1081,8 @@
             if(!.identC(m@generic, f) && length(m@generic) == 1L &&
                nzchar(m@generic))
 		cf("    (definition from function \"", m@generic, "\")\n")
+            if(length(pkgs) > 1)
+                cf("  (", length(pkgs), " methods defined for this signature, with different packages)\n")
 	}
 	if(includeDefs && is(m, "function")) {
 	    if(is(m, "MethodDefinition"))
@@ -1243,14 +1243,18 @@ outerLabels <- function(labels, new) {
       sig <- c(as.character(sig), rep("ANY", more))
   }
   else if(n > nargs) { #reset table?
-    if(all(sig[(nargs+1):n] == "ANY"))
-      length(sig) <- length(pkgs) <- nargs
-    else {
+    if(all(sig[(nargs+1):n] == "ANY")) {
+        length(sig) <- nargs
+        if (!is.null(pkgs))
+            length(pkgs) <- nargs
+    } else {
       while(sig[[n]] == "ANY")
         n <- n-1
       if(reset)
         .resetSigLength(fdef, n)
-      length(sig) <- length(pkgs) <- n
+      length(sig) <- n
+      if (!is.null(pkgs))
+          length(pkgs) <- n
     }
   }
   packageSlot(sig) <- pkgs
@@ -1519,7 +1523,7 @@ testInheritedMethods <- function(f, signatures, test = TRUE,  virtual = FALSE,
       classDefs[[iAny]] <- getClassDef(".Other")
     }
     if(excludeVirtual)
-      classes <- classes[vapply(classDefs, function(def) identical(def@virtual, FALSE), NA)]
+      classes <- classes[vapply(classDefs, function(def) isFALSE(def@virtual), NA)]
     unique(c(classes, allSubs))
   }
   ## end of .relevantClasses

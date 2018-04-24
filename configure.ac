@@ -2,7 +2,7 @@
 ###
 ### Process this file with autoconf to produce a configure script.
 ###
-### Copyright (C) 1998-2017 R Core Team
+### Copyright (C) 1998-2018 R Core Team
 ###
 ### This file is part of R.
 ###
@@ -290,7 +290,7 @@ AC_ARG_ENABLE([BLAS-shlib],
 
 ## As from R 3.2.0 split up -L... and -lR
 if test "${want_R_shlib}" = yes; then
-  LIBR0="-L\$(R_HOME)/lib\$(R_ARCH)"
+  LIBR0="-L\"\$(R_HOME)/lib\$(R_ARCH)\""
   LIBR1=-lR
 else
   LIBR0=
@@ -436,7 +436,7 @@ AC_ARG_WITH([system-valgrind-headers],
 [use_system_valgrind=no])
 
 AC_ARG_WITH([internal-tzcode],
-[AS_HELP_STRING([--with-internal-tzcode],[use internal time-zone code @<:@no@:>@])],
+[AS_HELP_STRING([--with-internal-tzcode],[use internal time-zone code @<:@no, yes on macOS@:>@])],
 [use_internal_tzcode=${withval}],
 [use_internal_tzcode=default])
 
@@ -550,10 +550,10 @@ AC_ARG_VAR([R_SHELL],
 
 if test -z "${r_arch}"; then
   R_ARCH=
-  R_XTRA_CPPFLAGS2="-I\$(R_INCLUDE_DIR)"
+  R_XTRA_CPPFLAGS2="-I\"\$(R_INCLUDE_DIR)\""
 else
   R_ARCH="/${r_arch}"
-  R_XTRA_CPPFLAGS2="-I\$(R_INCLUDE_DIR) -I\$(R_INCLUDE_DIR)/${r_arch}"
+  R_XTRA_CPPFLAGS2="-I\"\$(R_INCLUDE_DIR)\" -I\"\$(R_INCLUDE_DIR)/${r_arch}\""
 fi
 AC_DEFINE_UNQUOTED(R_ARCH, "${r_arch}",
 [Define this to use architecture-dependent subdirectories of this name.])
@@ -574,12 +574,7 @@ AC_MSG_RESULT([${BUILDDIR_IS_SRCDIR}])
 
 ### * Checks for programs.
 
-R_MISSING_PROG(ACLOCAL, aclocal)
-R_MISSING_PROG(AUTOCONF, autoconf)
-R_MISSING_PROG(AUTOMAKE, automake)
-R_MISSING_PROG(AUTOHEADER, autoheader)
 AC_PROG_LN_S
-AC_PROG_YACC
 R_PROG_AR
 R_PROG_INSTALL
 
@@ -606,13 +601,29 @@ AC_PATH_PROGS(R_BZIPCMD, [${BZIP} bzip2], "")
 R_PROG_BROWSER
 ## PDF viewer
 R_PROG_PDFVIEWER
-## Noweb - used for maintainer mode only
+## Noweb (notangle), aclocal, autoconf, autoheader - maintainer mode only
+
+R_MISSING_PROG(ACLOCAL, aclocal,
+  R_MNT_WARN([[aclocal is missing - aclocal.m4 cannot be updated!]])
+)
+R_MISSING_PROG(AUTOCONF, autoconf,
+  R_MNT_WARN([[autoconf is missing - configure cannot be updated!]])
+)
+R_MISSING_PROG(AUTOHEADER, autoheader,
+  R_MNT_WARN([[autoheader is missing - header file templates like config.h.in cannot be updated!]])
+)
+AC_PROG_YACC
+if test "${YACC}" = yacc ; then
+  ## yacc is the default value even when yacc is not found
+  AC_CHECK_PROG(JUSTYACC, yacc, yes)
+  if test "x${JUSTYACC}" != xyes ; then
+    R_MNT_WARN([[yacc is missing - parsers cannot be updated!]])
+  fi
+fi
 AC_PATH_PROG(NOTANGLE, notangle, false)
 if test "${NOTANGLE}" = false ; then
-  if test "x${use_maintainer_mode}" = xyes; then
-    AC_MSG_WARN([notangle is missing - byte-code compiler source cannot be updated!])
-  fi
-  NOTANGLE=notangle
+  R_MNT_WARN([[notangle is missing - byte-code compiler source cannot be updated!]])
+  NOTANGLE=notangle    
 fi
 ## javareconf needs this
 AC_PATH_PROG(REALPATH, realpath, false)
@@ -1102,11 +1113,21 @@ case "${host_os}" in
     ;;
 esac
 
+## This was -ffloat-store on all gfortran/g77 platforms prior to 3.5.0
+## Suggestion adopted from https://gcc.gnu.org/wiki/FloatingPointMath
+## It was already the default on 32-bit macOS
 if test "${SAFE_FFLAGS+set}" != set; then
   if test "x${ac_cv_f77_compiler_gnu}" = xyes; then
-    SAFE_FFLAGS="${FFLAGS} -ffloat-store"
+    case "${host_cpu}" in
+      i*86|x86_64)
+      SAFE_FFLAGS="${FFLAGS} -msse2 -mfpmath=sse"
+      ;;
+    *)
+      SAFE_FFLAGS="${FFLAGS}"
+      ::
+    esac
   else
-    SAFE_FFLAGS=${FFLAGS}
+    SAFE_FFLAGS="${FFLAGS}"
   fi
 fi
 
@@ -1795,14 +1816,29 @@ AC_CHECK_DECLS([alloca], , ,
 
 ## C99 functions: 
 ## not all C99 runtimes are complete,
-## but we have substitutes for expm1 hypot log1p and (internally) nearbyint[l]
-## FreeBSD used to lack log1pl, but 10 seems to have it.
-## FreeBSD 8.2 lacks log2
-## FreeBSD 7.3 lacks nearbyintl/rintl (nearbyint appeared in 5.2)
-## Apparently rint was once broken on HP-UX: undefine HAVE_RINT for such platforms
-## Cygwin and FreeBSD lacked powl (FreeBSD 10 seems to have it).
+## but we had substitutes for expm1 hypot log1p and (internally) nearbyint[l]
+## FreeBSD used to lack log1pl, but 6.0 had it
+## FreeBSD 8.3 first had log2
+## FreeBSD 8.3 first had nearbyintl/rintl (from 2012)
+## https://www.freebsd.org/cgi/man.cgi?query=log&apropos=0&sektion=3&manpath=FreeBSD+11-current&format=html will give an overview.
+## Cygwin and FreeBSD lacked powl (FreeBSD 10.4 (2017-10) has it).
 ## Cygwin had rintl but not nearbyintl
-R_CHECK_FUNCS([expm1 hypot log1p log1pl log2 log10 nearbyint nearbyintl powl rint rintl], [#include <math.h>])
+## https://cygwin.com/cygwin-api/compatibility.html says it now has powl and nearbyintl .
+## powl nearbyintl and rintl are only used in format.c
+R_CHECK_FUNCS([expm1 hypot log1p log1pl log2 log10 nearbyint nearbyintl powl rintl], [#include <math.h>])
+## require these from R 3.5.0.
+if test "${ac_cv_have_decl_expm1}" = "no"; then
+   AC_MSG_ERROR([Building R requires the 'expm1' C99 function])
+fi
+if test "${ac_cv_have_decl_hypot}" = "no"; then
+   AC_MSG_ERROR([Building R requires the 'hypot' C99 function])
+fi
+if test "${ac_cv_have_decl_log1p}" = "no"; then
+   AC_MSG_ERROR([Building R requires the 'log1p' C99 function])
+fi
+if test "${ac_cv_have_decl_nearbyint}" = "no"; then
+   AC_MSG_ERROR([Building R requires the 'nearbyint' C99 function])
+fi
 ## va_copy is C99: required as from R 2.13.0
 R_CHECK_FUNCS([va_copy], [#include <stdarg.h>])
 if test "${ac_cv_have_decl_va_copy}" = "no"; then
@@ -1861,7 +1897,7 @@ case "${host_os}" in
 esac
 ## Windows has neither setenv nor unsetenv
 R_CHECK_FUNCS([setenv unsetenv], [#include <stdlib.h>])
-R_CHECK_FUNCS([getrlimit getrusage getpriority], [#include <sys/resource.h>])
+R_CHECK_FUNCS([getrlimit setrlimit getrusage getpriority], [#include <sys/resource.h>])
 R_CHECK_FUNCS([chmod mkfifo stat umask], [#include <sys/stat.h>])
 if test "${ac_cv_have_decl_stat}" = "no"; then
    AC_MSG_ERROR([Building R requires the 'stat' system call])
@@ -1919,6 +1955,11 @@ R_CHECK_FUNCS([glob], [#ifdef HAVE_GLOB_H
 AC_CHECK_FUNCS([dladdr dlsym])
 AC_CHECK_DECLS([dladdr,dlsym], , , [#include<dlfcn.h>])
 AC_CHECK_DECLS([RTLD_DEFAULT,RTLD_NEXT], , , [#include<dlfcn.h>])
+AC_CHECK_HEADERS([thread.h])
+R_CHECK_FUNCS([thr_stksegment], [
+#include <thread.h>
+#include <signal.h>
+])
 
 ## Lots of uses of getwd(), file.access(), Sys.glob().
 ## We don't need times() except as a fallback for getrusage and
@@ -1974,24 +2015,6 @@ AM_LANGINFO_CODESET
 ## a) that would comment out #undef statements in Rmath.h.in and
 ## b) Rmath.h should be a self-contained file for standalone Rmath use.
 ## </NOTE>
-if test "${ac_cv_have_decl_expm1}" = yes; then
-  RMATH_HAVE_EXPM1="# define HAVE_EXPM1 1"
-else
-  RMATH_HAVE_EXPM1="# undef HAVE_EXPM1"
-fi
-AC_SUBST(RMATH_HAVE_EXPM1)
-if test "${ac_cv_have_decl_hypot}" = yes; then
-  RMATH_HAVE_HYPOT="# define HAVE_HYPOT 1"
-else
-  RMATH_HAVE_HYPOT="# undef HAVE_HYPOT"
-fi
-AC_SUBST(RMATH_HAVE_HYPOT)
-if test "${ac_cv_have_decl_log1p}" = yes; then
-  RMATH_HAVE_LOG1P="# define HAVE_LOG1P 1"
-else
-  RMATH_HAVE_LOG1P="# undef HAVE_LOG1P"
-fi
-AC_SUBST(RMATH_HAVE_LOG1P)
 
 ## Do we need substitutes?
 ## mkdtemp is not on Solaris 10, added in POSIX 2008
@@ -2013,6 +2036,8 @@ if test "${ac_cv_have_decl_isfinite}" = "yes"; then
 R_FUNC_ISFINITE
 fi
 ## check accuracy of log1p
+## issues are probably ancient history: 
+## reported for NetBSD 1.6 and OpenBSD 3.2 (both 2002).
 R_FUNC_LOG1P
 R_FUNC_FTELL
 R_FUNC_SIGACTION
@@ -2103,7 +2128,7 @@ case "${host_os}" in
     ## resolve dylib dependencies, so libRblas will not be found unless
     ## we tell ld where it lives. I don't know of any more elegant solution :/
     if test "x${use_blas_shlib}" = xyes; then
-      LIBR="${LIBR} -dylib_file libRblas.dylib:\$(R_HOME)/lib\$(R_ARCH)/libRblas.dylib"
+      LIBR="${LIBR} -dylib_file libRblas.dylib:\"\$(R_HOME)/lib\$(R_ARCH)/libRblas.dylib\""
     fi
   ;;
 esac
@@ -2196,7 +2221,7 @@ AC_SUBST(BLAS_LIBS0)
 
 if test "${use_blas_shlib}" = yes; then
   ## set BLAS_LIBS to point at local version
-  BLAS_LIBS="-L\$(R_HOME)/lib\$(R_ARCH) -lRblas"
+  BLAS_LIBS="-L\"\$(R_HOME)/lib\$(R_ARCH)\" -lRblas"
 fi
 
 AM_CONDITIONAL(USE_VECLIB_G95FIX, [test "x${use_veclib_g95fix}" = xyes])
@@ -2209,7 +2234,7 @@ if test "${use_lapack}" = "yes"; then
   R_LAPACK_LIBS
 fi
 if test "${acx_lapack_ok}" != "yes"; then
-  LAPACK_LIBS="-L\$(R_HOME)/lib\$(R_ARCH) -lRlapack"
+  LAPACK_LIBS="-L\"\$(R_HOME)/lib\$(R_ARCH)\" -lRlapack"
 fi
 AC_SUBST(LAPACK_LIBS)
 AM_CONDITIONAL(USE_EXTERNAL_LAPACK, [test "${acx_lapack_ok}" = "yes"])
@@ -2298,6 +2323,9 @@ R_LZMA
 
 ## PCRE headers and libraries.
 R_PCRE
+
+## PCRE2 header and 8-bit library.
+R_PCRE2
 
 ## tre headers and libraries.
 R_TRE
@@ -2410,10 +2438,18 @@ custom_JAVA_HOME="${JAVA_HOME}"
 custom_JAVA_LIBS="${JAVA_LIBS}"
 custom_JAVA_CPPFLAGS="${JAVA_CPPFLAGS}"
 custom_JAVA_LD_LIBRARY_PATH="${JAVA_LD_LIBRARY_PATH}"
+custom_JAVA="${JAVA}"
+custom_JAVAC="${JAVAC}"
+custom_JAVAH="${JAVAH}"
+custom_JAR="${JAR}"
 AC_SUBST(custom_JAVA_HOME)
 AC_SUBST(custom_JAVA_CPPFLAGS)
 AC_SUBST(custom_JAVA_LIBS)
 AC_SUBST(custom_JAVA_LD_LIBRARY_PATH)
+AC_SUBST(custom_JAVA)
+AC_SUBST(custom_JAVAC)
+AC_SUBST(custom_JAVAH)
+AC_SUBST(custom_JAR)
 JAVA_LD_LIBRARY_PATH=
 AC_SUBST(JAVA)
 AC_SUBST(JAVAC)
@@ -2446,7 +2482,6 @@ AC_SUBST(FCLIBS)
 ## OpenMP package stuff (needs to come *after* configuration of all
 ## compilers).
 ## We allow the users to override this for packages only (for now)
-## FIXME: what if SHLIB_OPENMP_?FLAGS is set but empty? (could use -n "${VAR+set}")
 if test "x${shlib_ld_was_given}" = xno -a \
         "${SHLIB_LD}" = "\$(CC)" -a \
         "x${ac_cv_prog_c_openmp}" != "xunsupported" -a \

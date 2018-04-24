@@ -1,6 +1,6 @@
 % File src/library/stats/man/fisher.test.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2017 R Core Team
+% Copyright 1995-2018 R Core Team
 % Distributed under GPL 2 or later
 
 \name{fisher.test}
@@ -12,6 +12,7 @@
 }
 \usage{
 fisher.test(x, y = NULL, workspace = 200000, hybrid = FALSE,
+            hybridPars = c(expect = 5, percent = 80, Emin = 1),
             control = list(), or = 1, alternative = "two.sided",
             conf.int = TRUE, conf.level = 0.95,
             simulate.p.value = FALSE, B = 2000)
@@ -22,11 +23,17 @@ fisher.test(x, y = NULL, workspace = 200000, hybrid = FALSE,
   \item{y}{a factor object; ignored if \code{x} is a matrix.}
   \item{workspace}{an integer specifying the size of the workspace
     used in the network algorithm.  In units of 4 bytes.  Only used for
-    non-simulated p-values larger than \eqn{2 \times 2}{2 by 2} tables.}
-  \item{hybrid}{a logical. Only used for larger than \eqn{2 \times 2}{2 by 2}
+    non-simulated p-values larger than \eqn{2 \times 2}{2 by 2} tables.
+    Since \R version 3.5.0, this also increases the internal stack size
+    which allows larger problems to be solved, however sometimes needing
+    hours.  In such cases, \code{simulate.p.values=TRUE} may be more
+    reasonable.}
+    \item{hybrid}{a logical. Only used for larger than \eqn{2 \times 2}{2 by 2}
     tables, in which cases it indicates whether the exact probabilities
-    (default) or a hybrid approximation thereof should be computed.
-    See \sQuote{Details}.}
+    (default) or a hybrid approximation thereof should be computed.}
+  \item{hybridPars}{a numeric vector of length 3, by default describing
+    \dQuote{Cochran's conditions} for the validity of the chisquare
+    approximation, see \sQuote{Details}.}
   \item{control}{a list with named components for low level algorithm
     control.  At present the only one used is \code{"mult"}, a positive
     integer \eqn{\ge 2} with default 30 used only for larger than
@@ -105,68 +112,84 @@ fisher.test(x, y = NULL, workspace = 200000, hybrid = FALSE,
 
   For larger than \eqn{2 \times 2}{2 by 2} tables and \code{hybrid = TRUE},
   asymptotic chi-squared probabilities are only used if the
-  \sQuote{Cochran conditions} are satisfied, that is if no cell has
-  expected counts less than 1, and more than 80\% of the cells have
-  expected counts at least 5; otherwise the exact calculation is used.
+  \sQuote{Cochran conditions} (or modified version thereof) specified by
+  \code{hybridPars = c(expect = 5, percent = 80, Emin = 1)} are
+  satisfied, that is if no cell has expected counts less than
+  \code{1} (\code{= Emin}) and more than 80\% (\code{= percent}) of the
+  cells have expected counts at least 5 (\code{= expect}), otherwise
+  the exact calculation is used.  A corresponding \code{if()} decision
+  is made for all sub-tables considered.
   %
   Accidentally, \R has used \code{180} instead of \code{80} as
-  \code{percent} in \R versions between 3.0.0 and 3.4.1 (inclusive).
+  \code{percent}, i.e., \code{hybridPars[2]} in \R versions between
+  3.0.0 and 3.4.1 (inclusive), i.e., the 2nd of the \code{hybridPars}
+  (all of which used to be hard-coded previous to \R 3.5.0).
   Consequently, in these versions of \R, \code{hybrid=TRUE} never made a
   difference.
 
   In the \eqn{r \times c}{r x c} case with \eqn{r > 2} or \eqn{c > 2},
   internal tables can get too large for the exact test in which case an
-  error is signalled.  Using \code{simulate.p.value = TRUE} may then
-  often be sufficient and hence advisable.
+  error is signalled.  Apart from increasing \code{workspace}
+  sufficiently, which then may lead to very long running times, using
+  \code{simulate.p.value = TRUE} may then often be sufficient and hence
+  advisable.
 
   Simulation is done conditional on the row and column marginals, and
   works only if the marginals are strictly positive.  (A C translation
   of the algorithm of Patefield (1981) is used.)
 }
 \references{
-  Agresti, A. (1990)
+  Agresti, A. (1990).
   \emph{Categorical data analysis}.
   New York: Wiley.
   Pages 59--66.
 
-  Agresti, A. (2002)
+  Agresti, A. (2002).
   \emph{Categorical data analysis}. Second edition.
   New York: Wiley.
   Pages 91--101.
 
-  Fisher, R. A. (1935)
+  Fisher, R. A. (1935).
   The logic of inductive inference.
-  \emph{Journal of the Royal Statistical Society Series A} \bold{98},
+  \emph{Journal of the Royal Statistical Society Series A}, \bold{98},
   39--54.
+  \doi{10.2307/2342435}.
 
-  Fisher, R. A. (1962)
+  Fisher, R. A. (1962).
   Confidence limits for a cross-product ratio.
-  \emph{Australian Journal of Statistics} \bold{4}, 41.
+  \emph{Australian Journal of Statistics}, \bold{4}, 41.
+  \doi{10.1111/j.1467-842X.1962.tb00285.x}.
 
-  Fisher, R. A. (1970)
-  \emph{Statistical Methods for Research Workers.}  Oliver & Boyd.
+  Fisher, R. A. (1970).
+  \emph{Statistical Methods for Research Workers}.
+  Oliver & Boyd.
 
-  Mehta, Cyrus R. and Patel, Nitin R. (1983)
-  A network algorithm for performing Fisher's exact test in \eqn{r \times c}{r * c}
-  contingency tables.
-  \emph{Journal of the American Statistical Association} \bold{78}, 427--434.
+  Mehta, Cyrus R. and Patel, Nitin R. (1983).
+  A network algorithm for performing Fisher's exact test in \eqn{r
+  \times c}{r x c} contingency tables.
+  \emph{Journal of the American Statistical Association}, \bold{78},
+  427--434.
+  \doi{10.1080/01621459.1983.10477989}.
 
-  Mehta, C. R. and Patel, N. R. (1986)
-  Algorithm 643. FEXACT: A Fortran subroutine for Fisher's exact test
-  on unordered \eqn{r*c} contingency tables.
+  Mehta, C. R. and Patel, N. R. (1986).
+  Algorithm 643: FEXACT, a FORTRAN subroutine for Fisher's exact test
+  on unordered \eqn{r \times c}{r x c} contingency tables.
   \emph{ACM Transactions on Mathematical Software}, \bold{12},
   154--161.
+  \doi{10.1145/6497.214326}.
 
   Clarkson, D. B., Fan, Y. and Joe, H. (1993)
   A Remark on Algorithm 643: FEXACT: An Algorithm for Performing
   Fisher's Exact Test in \eqn{r \times c}{r x c} Contingency Tables.
   \emph{ACM Transactions on Mathematical Software}, \bold{19},
   484--488.
+  \doi{10.1145/168173.168412}.
 
-  Patefield, W. M. (1981)
-  Algorithm AS159.  An efficient method of generating r x c tables
+  Patefield, W. M. (1981).
+  Algorithm AS 159: An efficient method of generating r x c tables
   with given row and column totals.
-  \emph{Applied Statistics} \bold{30}, 91--97.
+  \emph{Applied Statistics}, \bold{30}, 91--97.
+  \doi{10.2307/2346669}.
 }
 \seealso{
   \code{\link{chisq.test}}
@@ -192,12 +215,10 @@ fisher.test(TeaTasting, alternative = "greater")
 ## => p = 0.2429, association could not be established
 
 ## Fisher (1962, 1970), Criminal convictions of like-sex twins
-Convictions <-
-matrix(c(2, 10, 15, 3),
-       nrow = 2,
-       dimnames =
-       list(c("Dizygotic", "Monozygotic"),
-            c("Convicted", "Not convicted")))
+Convictions <- matrix(c(2, 10, 15, 3), nrow = 2,
+	              dimnames =
+	       list(c("Dizygotic", "Monozygotic"),
+		    c("Convicted", "Not convicted")))
 Convictions
 fisher.test(Convictions, alternative = "less")
 fisher.test(Convictions, conf.int = FALSE)
@@ -206,9 +227,20 @@ fisher.test(Convictions, conf.level = 0.99)$conf.int
 
 ## A r x c table  Agresti (2002, p. 57) Job Satisfaction
 Job <- matrix(c(1,2,1,0, 3,3,6,1, 10,10,14,9, 6,7,12,11), 4, 4,
-dimnames = list(income = c("< 15k", "15-25k", "25-40k", "> 40k"),
-                satisfaction = c("VeryD", "LittleD", "ModerateS", "VeryS")))
-fisher.test(Job)
-fisher.test(Job, simulate.p.value = TRUE, B = 1e5)
+           dimnames = list(income = c("< 15k", "15-25k", "25-40k", "> 40k"),
+                     satisfaction = c("VeryD", "LittleD", "ModerateS", "VeryS")))
+fisher.test(Job) # 0.7827
+fisher.test(Job, simulate.p.value = TRUE, B = 1e5) # also close to 0.78
+
+## 6th example in Mehta & Patel's JASA paper
+MP6 <- rbind(
+        c(1,2,2,1,1,0,1),
+        c(2,0,0,2,3,0,0),
+        c(0,1,1,1,2,7,3),
+        c(1,1,2,0,0,0,1),
+        c(0,1,1,1,1,0,0))
+fisher.test(MP6)
+# Exactly the same p-value, as Cochran's conditions are never met:
+fisher.test(MP6, hybrid=TRUE)
 }
 \keyword{htest}

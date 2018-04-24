@@ -55,7 +55,7 @@ function(packages, results = NULL, details = NULL, issues = NULL)
 
     summarize_results <- function(p, r) {
         if(!NROW(r)) return(character())
-        tab <- table(r$Status)[c("ERROR", "WARN", "NOTE", "OK")]
+        tab <- table(r$Status)[c("FAIL", "ERROR", "WARN", "NOTE", "OK")]
         tab <- tab[!is.na(tab)]
         paste(c(sprintf("Current CRAN status: %s",
                         paste(sprintf("%s: %s", names(tab), tab),
@@ -132,10 +132,12 @@ function(packages, results = NULL, details = NULL, issues = NULL)
 
     summarize_issues <- function(i) {
         if(!length(i)) return(character())
-        ## No need for hyperrefs: these can be obtained from the package
-        ## check results page already pointed to by summarize_results().
-        sprintf("Additional issues: %s",
-                paste(unique(i$kind), collapse = " "))
+        ## In principle the hyperrefs can be obtained from the package
+        ## check results page already pointed to by summarize_results(),
+        ## but this is not convenient for plain text processing ...
+        paste(c("Additional issues:",
+                sprintf("  %s <%s>", i$kind, i$href)),
+              collapse = "\n")
     }
 
     summarize <- function(p, r, d, i) {
@@ -198,12 +200,12 @@ function()
 
     results <- CRAN_check_results()
     details <- CRAN_check_details()
-    mtnotes <- CRAN_memtest_notes()
+    issues <- CRAN_check_issues()
 
     split(format(summarize_CRAN_check_status(pdb[ind, "Package"],
                                              results,
                                              details,
-                                             mtnotes),
+                                             issues),
                  header = TRUE),
           maintainer[ind])
 }

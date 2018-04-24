@@ -160,7 +160,7 @@ install.packages(pkgs, lib, repos = getOption("repos"),
   \item{INSTALL_opts}{
     an optional character vector of additional option(s) to be passed to
     \command{R CMD INSTALL} for a source package install.  E.g.,
-    \code{c("--html", "--no-multiarch")}.
+    \code{c("--html", "--no-multiarch", "--no-test-load")}.
 
     Can also be a named list of character vectors to be used as
     additional options, with names the respective package names.
@@ -319,6 +319,26 @@ install.packages(pkgs, lib, repos = getOption("repos"),
   Bioconductor packages.
 }
 
+\section{Timeouts}{
+  A limit on the elapsed time for each call to \command{R CMD INSTALL}
+  (so for source installs) can be set \emph{via} environment variable
+  \env{_R_INSTALL_PACKAGES_ELAPSED_TIMEOUT_}: in seconds (or in minutes
+  or hours with optional suffix \samp{m} or \samp{h}, suffix \samp{s}
+  being allowed for the default seconds) with \code{0} meaning no limit.
+
+  For non-parallel installs this is implemented \emph{via} the
+  \code{timeout} argument of \code{\link{system2}}: for parallel
+  installs \emph{via} the OS's \command{timeout} command.  (The one
+  tested is from GNU \pkg{coreutils}, commonly available on Linux but
+  not other Unix-alikes.  If no such command is available the timeout
+  request is ignored, with a warning.)  For parallel installs a
+  \samp{Error 124} message from \command{make} indicates that timeout
+  occurred.
+
+  Timeouts during installation might leave lock directories behind and
+  not restore previous versions.
+}
+
 #ifdef unix
 \note{
   Some binary distributions of \R have \code{INSTALL} in a separate
@@ -353,7 +373,7 @@ install.packages(pkgs, lib, repos = getOption("repos"),
   other options to monitor file transfers.
 
   \code{\link{untar}} for manually unpacking source package tarballs.
-  
+
   \code{\link{INSTALL}}, \code{\link{REMOVE}}, \code{\link{remove.packages}},
   \code{\link{library}}, \code{\link{.packages}}, \code{\link{read.dcf}}
 

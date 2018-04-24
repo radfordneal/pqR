@@ -51,7 +51,7 @@ axis.POSIXct <- function(side, x, at, format, labels = TRUE, ...)
         if(missing(format)) format <- "%b %d"
     } else if(d < 1.1*60*60*24*365) { # months
         z <- .POSIXct(z,  attr(x, "tzone"))
-        zz <- as.POSIXlt(z)
+        zz <- unclass(as.POSIXlt(z))
         zz$mday <- zz$wday <- zz$yday <- 1
         zz$isdst <- -1; zz$hour <- zz$min <- zz$sec <- 0
         zz$mon <- pretty(zz$mon)
@@ -64,7 +64,7 @@ axis.POSIXct <- function(side, x, at, format, labels = TRUE, ...)
         if(missing(format)) format <- "%b"
     } else { # years
         z <- .POSIXct(z,  attr(x, "tzone"))
-        zz <- as.POSIXlt(z)
+        zz <- unclass(as.POSIXlt(z))
         zz$mday <- zz$wday <- zz$yday <- 1
         zz$isdst <- -1; zz$mon <- zz$hour <- zz$min <- zz$sec <- 0
         zz$year <- pretty(zz$year); M <- length(zz$year)
@@ -76,9 +76,9 @@ axis.POSIXct <- function(side, x, at, format, labels = TRUE, ...)
     keep <- z >= range[1L] & z <= range[2L]
     z <- z[keep]
     if (!is.logical(labels)) labels <- labels[keep]
-    else if (identical(labels, TRUE))
+    else if (isTRUE(labels))
 	labels <- format(z, format = format)
-    else if (identical(labels, FALSE))
+    else if (isFALSE(labels))
 	labels <- rep("", length(z)) # suppress labelling of ticks
     axis(side, at = z, labels = labels, ...)
 }
@@ -241,9 +241,9 @@ axis.Date <- function(side, x, at, format, labels = TRUE, ...)
     z <- z[keep]
     z <- sort(unique(z)); class(z) <- "Date"
     if (!is.logical(labels)) labels <- labels[keep]
-    else if (identical(labels, TRUE))
+    else if (isTRUE(labels))
 	labels <- format.Date(z, format = format)
-    else if (identical(labels, FALSE))
+    else if (isFALSE(labels))
 	labels <- rep("", length(z)) # suppress labelling of ticks
     axis(side, at = z, labels = labels, ...)
 }

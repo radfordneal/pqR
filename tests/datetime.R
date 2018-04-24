@@ -1,4 +1,4 @@
-#### Test 64-bit date-time functions.
+#### Test R's (64-bit) date-time functions .. output tested *sloppily*
 
 ## R's internal fixes are used on 32-bit platforms.
 ## macOS gets these wrong: see HAVE_WORKING_64BIT_MKTIME

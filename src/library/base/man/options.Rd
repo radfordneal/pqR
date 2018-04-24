@@ -73,6 +73,11 @@ getOption(x, default = NULL)
       many (simulated) smooths should be added.  This is currently only
       used by \code{\link{plot.lm}}.}
 
+    \item{\code{askYesNo}:}{a function (typically set by a front-end)
+      to ask the user binary response functions in a consistent way,
+      or a vector of strings used by \code{\link{askYesNo}} to use
+      as default responses for such questions.}      
+    
     \item{\code{browserNLdisabled}:}{logical: whether newline is
       disabled as a synonym for \code{"n"} in the browser.}
 
@@ -325,6 +330,10 @@ getOption(x, default = NULL)
       notation.  Positive values bias towards fixed and negative towards
       scientific notation: fixed notation will be preferred unless it is
       more than \code{scipen} digits wider.}
+
+    \item{\code{setWidthOnResize}:}{a logical. If set and \code{TRUE}, \R
+      run in a terminal using a recent \code{readline} library will set
+      the \code{width} option when the terminal is resized.}
 
     \item{\code{showWarnCalls}, \code{showErrorCalls}:}{a logical.
       Should warning and error messages show a summary of the call
@@ -622,7 +631,7 @@ getOption(x, default = NULL)
       for binary installs on macOS and Windows, but can be used in a
       startup file for source installs \emph{via}
       \command{R CMD \link{INSTALL}}.  For binary installs, can also be
-      the character string \code{"pkgloack"}.}
+      the character string \code{"pkglock"}.}
 
     \item{\code{internet.info}:}{The minimum level of information to be
       printed on URL downloads etc, using the \code{"internal"} and
@@ -709,9 +718,6 @@ getOption(x, default = NULL)
       used.
 #endif
     }
-
-    \item{\code{useHTTPS}:}{logical.  Used by \code{\link{chooseCRANmirror}}:
-      are secure mirrors preferred?  If not set, \code{TRUE} is assumed.}
   }
 }
 \section{Options set in package parallel}{

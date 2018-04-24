@@ -1182,33 +1182,31 @@ static SEXP La_qr(SEXP Ain)
 /* Real case of qr.coef */
 static SEXP qr_coef_real(SEXP Q, SEXP Bin)
 {
-    int n, nrhs, k, *Bdims;
-    SEXP B, qr = VECTOR_ELT(Q, 0), tau = VECTOR_ELT(Q, 2);
-    double *work, tmp;
-
-    k = LENGTH(tau);
     if (!isMatrix(Bin)) error(_("'b' must be a numeric matrix"));
 
-    B = PROTECT(isReal(Bin) ? duplicate(Bin) : coerceVector(Bin, REALSXP));
-
-    n = INTEGER(coerceVector(getAttrib(qr, R_DimSymbol), INTSXP))[0];
-    Bdims = INTEGER(coerceVector(getAttrib(B, R_DimSymbol), INTSXP));
+    SEXP B = PROTECT(isReal(Bin) ? duplicate(Bin) : coerceVector(Bin, REALSXP)),
+	qr  = VECTOR_ELT(Q, 0), // qr$qr
+	tau = VECTOR_ELT(Q, 2); // qr$qraux
+    int k = LENGTH(tau),
+	n =      INTEGER(coerceVector(getAttrib(qr, R_DimSymbol), INTSXP))[0],
+	*Bdims = INTEGER(coerceVector(getAttrib(B,  R_DimSymbol), INTSXP));
     if(Bdims[0] != n)
 	error(_("right-hand side should have %d not %d rows"), n, Bdims[0]);
-    nrhs = Bdims[1];
-    int lwork = -1, info;
+    int nrhs = Bdims[1],
+	lwork = -1, info;
+    double tmp;
     F77_CALL(dormqr)("L", "T", &n, &nrhs, &k,
 		     REAL(qr), &n, REAL(tau), REAL(B), &n,
 		     &tmp, &lwork, &info);
     if (info != 0)
-	error(_("error code %d from Lapack routine '%s'"), info, "dormqr");
+	error(_("error code %d from Lapack routine '%s'"), info, "dormqr [tmp]");
     lwork = (int) tmp;
-    work = (double *) R_alloc(lwork, sizeof(double));
+    double *work = (double *) R_alloc(lwork, sizeof(double));
     F77_CALL(dormqr)("L", "T", &n, &nrhs, &k,
 		     REAL(qr), &n, REAL(tau), REAL(B), &n,
 		     work, &lwork, &info);
     if (info != 0)
-	error(_("error code %d from Lapack routine '%s'"), info, "dormqr");
+	error(_("error code %d from Lapack routine '%s'"), info, "dormqr [work]");
     F77_CALL(dtrtrs)("U", "N", "N", &k, &nrhs,
 		     REAL(qr), &n, REAL(B), &n, &info);
     if (info != 0)
@@ -1375,7 +1373,8 @@ static SEXP mod_do_lapack(SEXP call, SEXP op, SEXP args, SEXP env)
     {
 #if defined(HAVE_DLADDR) && defined(HAVE_REALPATH)
 	Dl_info dl_info;
-	if (dladdr((const void *) F77_NAME(ilaver), &dl_info)) {
+	// dladdr has first arg void * on Solaris.  This is not POSIX.
+	if (dladdr((void *) F77_NAME(ilaver), &dl_info)) {
 	    char buf[PATH_MAX+1];
 	    char *res = realpath(dl_info.dli_fname, buf);
 	    if (res) {
@@ -1386,9 +1385,9 @@ static SEXP mod_do_lapack(SEXP call, SEXP op, SEXP args, SEXP env)
 #endif
 	ans = mkString(""); /* LAPACK library not known */
 	break;
+    }
 
-    }
-    }
+    }// switch
 
     return ans;
 }

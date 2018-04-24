@@ -931,12 +931,9 @@ involving times after 2037 or before 1916.  An alternative time-zone
 directory@footnote{How to prepare such a directory is described in file
 @file{src/extra/tzone/Notes} in the @R{} sources.} can be used, pointed
 to by environment variable @env{TZDIR}: this should contain files such
-as @file{Europe/London}.  On most OSes the system timezone was
+as @file{Europe/London}.  On all tested OSes the system timezone was
 deduced correctly, but if necessary it can be set as the value of
-environment variable @env{TZ}.  (OSes which do not follow the
-documentation of @file{/etc/localtime} as a symbolic link will have
-problems: this includes recent Debian-based Linuxen and RHEL/Centos 6
-(but not 7).)
+environment variable @env{TZ}.
 
 
 @menu
@@ -1829,7 +1826,7 @@ typed as commands like any other Unix-alike: see the next chapter of
 this manual.  There are some small differences which may surprise users
 of @R{} on other platforms, notably the default location of the personal
 library directory (under @file{~/Library/R},
-e.g. @file{~/Library/R/3.4/library}), and that warnings, messages and
+e.g. @file{~/Library/R/3.5/library}), and that warnings, messages and
 other output to @file{stderr} are highlighted in bold.
 
 @c https://stat.ethz.ch/pipermail/r-sig-mac/2014-October/011131.html
@@ -1924,17 +1921,17 @@ These are paths relative to @file{/}, the root of the file system.
 
 The installer will remove any previous version@footnote{More precisely,
 of the Apple package of the same name: this means that installing a package for
-3.3.x does not remove an installation for 3.4.x or later.} of
+3.3.x does not remove an installation for 3.4.x or 3.5.x.} of
 the @R{} framework which it finds installed.  This can be avoided by
 using @command{pkgutil --forget} (see the previous section).  However,
 note that different versions are installed under
-@file{/Library/Frameworks/R.framework/Versions} as @file{3.3},
-@file{3.4} and so on, so it is not possible to have different
+@file{/Library/Frameworks/R.framework/Versions} as @file{3.4},
+@file{3.5} and so on, so it is not possible to have different
 @samp{3.x.y} versions installed for the same @samp{x}.
 
 A version of @R{} can be run directly from the command-line as e.g.@:
 @example
-/Library/Frameworks/R.framework/Versions/3.4/Resources/bin/R
+/Library/Frameworks/R.framework/Versions/3.5/Resources/bin/R
 @end example
 
 @noindent
@@ -2041,9 +2038,11 @@ ensures that only package @pkg{base} is loaded.
 
 Changing the set of default packages is normally used to reduce the set
 for speed when scripting: in particular not using @pkg{methods} will
-reduce the start-up time by a factor of up to two (and this is done by
-@command{Rscript}).  But it can also be used to customize @R{}, e.g.@:
-for class use.
+reduce the start-up time by a factor of up to two.  But it can also be
+used to customize @R{}, e.g.@: for class use. @command{Rscript}
+also checks the environment variable @env{R_SCRIPT_DEFAULT_PACKAGES};
+@enindex R_SCRIPT_DEFAULT_PACKAGES
+if set, this takes precedence over @env{R_DEFAULT_PACKAGES}.
 
 
 @node Managing libraries, Installing packages, Default packages, Add-on packages
@@ -2303,7 +2302,7 @@ source versions of packages without compiled C/C++/Fortran code and offer
 to do so for those with, if @command{make} is available.
 
 Note that most binary packages including compiled code are tied to a
-particular series (e.g.@: @R{} 3.4.x or 3.3.x) of @R{}.
+particular series (e.g.@: @R{} 3.5.x or 3.4.x) of @R{}.
 
 Installing source packages which do not contain compiled code should
 work with no additional tools. For others you will need the
@@ -3044,7 +3043,7 @@ is the current working directory (in the build directory tree on a
 Unix-alike if that is separate from the sources).
 
 @file{Rmath.h} contains @samp{R_VERSION_STRING}, which is a character
-string containing the current @R{} version, for example @code{"3.4.4"}.
+string containing the current @R{} version, for example @code{"3.5.0"}.
 
 There is full access to @R{}'s handling of @code{NaN}, @code{Inf} and
 @code{-Inf} via special versions of the macros and functions
@@ -3313,13 +3312,15 @@ functionality of headers @file{wchar.h} and @file{wctype.h}, types
 @code{wctans_t} and @code{mbstate_t} and functions @code{mbrtowc},
 @code{mbstowcs}, @code{wcrtomb}, @code{wcscoll}, @code{wcstombs},
 @code{wctrans}, @code{wctype}, and @code{iswctype}.} for wide-character
-types: this is checked at configuration.  A small number of POSIX
-functions@footnote{including @code{opendir}, @code{readdir},
-@code{closedir}, @code{popen}, @code{stat}, @code{glob}, @code{access},
-@code{getcwd} and @code{chdir} system calls, @code{select} on a
-Unix-alike, and either @code{putenv} or @code{setenv}.} are essential,
-and others@footnote{such as @code{realpath}, @code{symlink}.} will be
-used if available.
+types: this is checked at configuration.  Some C99
+functions@footnote{including @code{expm1}, @code{hypot}, @code{log1p},
+@code{nearbyint} and @code{va_copy}.} are required and checked for at
+configuration.  A small number of POSIX functions@footnote{including
+@code{opendir}, @code{readdir}, @code{closedir}, @code{popen},
+@code{stat}, @code{glob}, @code{access}, @code{getcwd} and @code{chdir}
+system calls, @code{select} on a Unix-alike, and either @code{putenv} or
+@code{setenv}.} are essential, and others@footnote{such as
+@code{realpath}, @code{symlink}.} will be used if available.
 
 @c zlib 1.2.5 is from July 2010, bzip2 1.0.6 from Sept 2010
 @c xz 5.0.3 is from May 2011
@@ -4757,16 +4758,24 @@ exception of the ATLAS @acronym{BLAS} libraries.
 
 The default optimization settings chosen for @code{CFLAGS} etc are
 conservative.  It is likely that using @option{-mtune} will result in
-significant performance improvements on recent CPUs (especially for
-@cputype{ix86}): one possibility is to add @option{-mtune=native} for
-the best possible performance on the machine on which @R{} is being
-installed: if the compilation is for a site-wide installation, it may
-still be desirable to use something like
-@option{-mtume=core2}.@footnote{or @code{-mtune=corei7} for Intel Core
-i3/15/17 with @command{gcc} @geq{} 4.6.0.} It is also possible to increase the
-optimization levels to @option{-O3}: however for many versions of the
-compilers this has caused problems in at least one @acronym{CRAN}
-package.
+significant performance improvements on recent CPUs: one possibility is
+to add @option{-mtune=native} for the best possible performance on the
+machine on which @R{} is being installed.  It is also possible to
+increase the optimization levels to @option{-O3}: however for many
+versions of the compilers this has caused problems in at least one
+@acronym{CRAN} package.
+
+As from @command{g++} 6 the default C++ standard is C++14.
+Compatibility with earlier releases can be obtained by using
+
+@example
+CXXSTD=-std=gnu++98
+@end example
+
+@noindent
+in @file{config.site}.  This is desirable when checking packages, to
+ensure as far as possible that features from later C++ standards are not
+used unintentionally.
 
 For platforms with both 64- and 32-bit support, it is likely that
 
@@ -4830,9 +4839,9 @@ the additional flags being needed to resolve problems linking against
 @c suggestion of https://gcc.gnu.org/wiki/FloatingPointMath
 The setting of the macro @samp{SAFE_FFLAGS} may need some help.  It
 should not need additional flags on platforms other than @cputype{68000}
-(not likely to be encountered) and @cputype{ix86} (and not
-@cputype{x86_64}).  When the FORTRAN compiler is GNU (@command{gfortran}
-or possibly @command{g77}) the flags 
+(not likely to be encountered) and @cputype{ix86}.  For the latter, if
+the FORTRAN compiler is GNU (@command{gfortran} or possibly
+@command{g77}) the flags
 @example
 -msse2 -mfpmath=sse
 @end example
@@ -4861,11 +4870,25 @@ This has to be used in conjunction with a Fortran compiler: the
 @command{configure} code will remove @option{-lgcc} from @env{FLIBS},
 which is needed for some versions of @command{gfortran}.
 
-The current default for @command{clang++} is to use the C++ runtime from
-the installed @command{g++}.  Using the runtime from the @code{libc++}
-project (@url{http://libcxx.llvm.org/}, Fedora RPM @code{libcxx-devel})
-has also been tested: for some @R{} packages only the variant using
-@code{libcxxabi} was successful.
+The current out-of-the-box default for @command{clang++} is to use the
+C++ runtime from the installed @command{g++}.  Using the runtime from
+the @code{libc++} project (@url{http://libcxx.llvm.org/}, Fedora RPM
+@code{libcxx-devel}) @emph{via} @option{-stdlib=libc++} has also been
+tested.
+
+As from @command{clang++} 6.0.0 the default C++ standard is C++14, which
+@R{}'s configure also uses when C++11 is requested.  Compatibility with
+earlier releases can be obtained by using
+
+@example
+CXXSTD=-std=gnu++98
+CX11STD=-std=gnu++11
+@end example
+
+@noindent
+in @file{config.site}.  These are desirable when checking packages, to
+ensure as far as possible that features from later C++ standards are not
+used unintentionally.
 
 Recent versions have (optional when built) OpenMP support.@footnote{This
 also needs the OpenMP runtime which has sometimes been distributed
@@ -4899,7 +4922,7 @@ seems this conflicts with using OpenMP in @R{}.  So it may be necessary
 to disable the latter by configuring using @option{--without-openmp}.
 
 It is not clear what architectures @command{flang} intends to support:
-experiments were done on @cputype{x86_64}.
+our experiments were done on @cputype{x86_64}.
 
 
 @node Intel compilers,  , Clang, Linux
@@ -5225,10 +5248,11 @@ tclvalue(.Tcl("tk windowingsystem"))  # "x11" or "aqua"
 @node Java (macOS), Frameworks, Tcl/Tk headers and libraries, macOS
 @subsection Java
 
-The situation with Java support on macOS is messy.@footnote{For more
-details see @uref{http://www.macstrategy.com/@/article.php?3}.}  As from
-@R{} 3.4.0 the @acronym{CRAN} distribution of @CRANpkg{rJava} requires
-Java 8.
+The situation with Java support on macOS is messy,@footnote{For more
+details see @uref{http://www.macstrategy.com/@/article.php?3}.} and
+distribution of Java for all platforms is changing during 2018.  The
+@acronym{CRAN} distribution of @CRANpkg{rJava} currently requires Java
+8.
 
 macOS no longer comes with an installed Java runtime (JRE), and a macOS
 upgrade may remove one if already installed: it is intended to be
@@ -5239,19 +5263,16 @@ not start with @code{1.8.0} or @code{9} you need to update your Java.}
 this should prompt you to install it.  You can also install directly a
 recent Java from Oracle (currently from
 @uref{http://www.oracle.com/@/technetwork/@/java/@/javase/@/downloads/@/index.html}:
-note that Java 9 has a limited lifetime and at the time of writing
-@CRANpkg{rJava} did not install with Java 10).
+note that Java 9 and 10 have a limited lifetime and at the time of
+writing @CRANpkg{rJava}@footnote{the current version @code{0.9-9}.} did
+not install with Java 10).  Builds of OpenJDK may also be available,
+e.g.@: from @uref{http://jdk.java.net/}.
 
 Binary distributions of @R{} are built against a specific version (e.g.@:
 1.8.0_161) of Oracle Java so @command{sudo R CMD javareconf} may be
 needed before using Java-using packages.
 
-@c You may need to install what Apple calls `legacy Java'@footnote{e.g.@:
-@c @code{Java For OS X 2015-001} from
-@c @uref{https://support.apple.com/@/kb/@/DL1572}.} to suppress pop-up messages
-@c even if you have a current version installed.
-
-To see what compatible versions of Java are currently installed, run
+To see what compatible versions of Oracle Java are currently installed, run
 @command{/usr/libexec/java_home -V -a x86_64}.  If needed, set the
 environment variable @env{JAVA_HOME} to choose between these, both when
 @R{} is built from the sources and when @command{R CMD javareconf} is
@@ -5282,15 +5303,20 @@ JAVA_LIBS="-L/$@{JAVA_HOME@}/lib/server -ljvm"
 @noindent
 in @file{config.site}.
 
-(An Apple JRE, if available, can be specified explicitly by something
-like
+To use the builds of OpenJDK from  @uref{http://jdk.java.net/}, set
+@env{JAVA_HOME}:
 @example
-JAVA_HOME=/System/Library/Frameworks/JavaVM.framework/Home
-JAVA_CPPFLAGS="-I/System/Library/Frameworks/JavaVM.framework/Headers"
-JAVA_LD_LIBRARY_PATH=
-JAVA_LIBS="-framework JavaVM"
+JAVA_HOME=@var{/path/to/JDK}/jdk-10.jdk/Contents/Home
 @end example
-.)
+@noindent
+where @file{@var{/path/to/JDK}} is wherever the distribution tarball was
+unpacked.  Java 10 JDKs do not contain @command{javah}, but @R{}
+configuration / @command{R CMD javareconf} can use one from an earlier
+installation if @env{JAVAH} is set, e.g.,
+@example
+JAVAH=/Library/Java/JavaVirtualMachines/jdk1.8.0_161.jdk/Contents/Home/bin/javah
+@end example
+
 
 Note that it is necessary to set the environment variable @env{NOAWT} to
 @code{1} to install many of the Java-using packages.
@@ -5756,7 +5782,8 @@ environment can be found in the ``R on AIX'' project on R-Forge
 @cindex FreeBSD
 
 There have been few recent reports on FreeBSD: there is a `port' at
-@uref{https://www.freebsd.org/@/ports/@/math.html}.
+@uref{https://www.freebsd.org/@/ports/@/math.html}.  Recent versions of
+FreeBSD use Clang and the @code{libc++} C++ headers and runtime.
 
 Use of ICU for collation and the @command{configure} option
 @option{--with-internal-tzcode} are desirable workarounds.
@@ -5826,12 +5853,9 @@ build will use these options.
 It seems that @command{gcc}@tie{}3.4.x and later on @cputype{ix86} Linux
 defeat attempts by the LAPACK code to avoid computations entirely in
 extended-precision registers, so file @file{src/modules/lapack/dlamc.f}
-may need to be compiled without optimization.  Set the configure
-variable @env{SAFE_FFLAGS} to the flags to be used for this file.  If
-configure detects @acronym{GNU} FORTRAN it adds flag
-@option{-ffloat-store} to @env{FFLAGS}.  (Other settings are needed when
-using @command{icc} on @cputype{ix86} Linux, for example.  Using
-@option{-mpc64} is preferable on more recent GCC compilers.)
+may need to be compiled without optimization or with additional flags.
+Set the configure variable @env{SAFE_FFLAGS} to the flags to be used for
+this file.
 
 If you do manage to get @R{} running on a new platform please let us
 know about it so we can modify the configuration procedures to include

@@ -1,7 +1,7 @@
 #  File src/library/utils/R/packages.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -19,7 +19,9 @@
 available.packages <-
 function(contriburl = contrib.url(repos, type), method,
          fields = NULL, type = getOption("pkgType"),
-         filters = NULL, repos = getOption("repos"))
+         filters = NULL, repos = getOption("repos"),
+         ignore_repo_cache =  FALSE, max_repo_cache_age,
+         ...)
 {
     requiredFields <-
         c(tools:::.get_standard_repository_db_fields(), "File")
@@ -29,6 +31,11 @@ function(contriburl = contrib.url(repos, type), method,
 	stopifnot(is.character(fields))
 	fields <- unique(c(requiredFields, fields))
     }
+
+    if(missing(max_repo_cache_age))
+       max_repo_cache_age <- as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE", "3600"))
+
+    timestamp <- Sys.time()
 
     res <- matrix(NA_character_, 0L, length(fields) + 1L,
 		  dimnames = list(NULL, c(fields, "Repository")))
@@ -53,32 +60,46 @@ function(contriburl = contrib.url(repos, type), method,
             if(length(res0))
                 rownames(res0) <- res0[, "Package"]
         } else {
-            dest <- file.path(tempdir(),
-                              paste0("repos_", URLencode(repos, TRUE), ".rds"))
-            if(file.exists(dest)) {
-                res0 <- readRDS(dest)
-                ## Be defensive ...
-                if(length(res0)) rownames(res0) <- res0[, "Package"]
+            used_dest <- FALSE
+            if(ignore_repo_cache) {
+                dest <- tempfile()
             } else {
+                dest <- file.path(tempdir(),
+                                  paste0("repos_", URLencode(repos, TRUE), ".rds"))
+                if(file.exists(dest)) {
+                    age <- difftime(timestamp, file.mtime(dest), units = "secs")
+                    if(isTRUE(age < max_repo_cache_age)) {
+                        res0 <- readRDS(dest)
+                        used_dest <- TRUE
+                        ## Be defensive ...
+                        if(length(res0))
+                            rownames(res0) <- res0[, "Package"]
+                    }
+                    else
+                        unlink(dest)    # Cache too old.
+                }
+            }
+            if(!used_dest) {
                 ## Try .rds and readRDS(), and then .gz or plain DCF and
                 ## read.dcf(), catching problems from both missing or
                 ## invalid files.
                 need_dest <- FALSE
-                op <- options(warn = -1L)                
+                op <- options(warn = -1L)
                 z <- tryCatch({
                     download.file(url = paste0(repos, "/PACKAGES.rds"),
                                   destfile = dest, method = method,
                                   cacheOK = FALSE, quiet = TRUE, mode = "wb")
                 }, error = identity)
                 options(op)
-                if(!inherits(z, "error"))
-                    z <- res0 <- tryCatch(readRDS(dest),
-                                          error = identity)
-                
+                if(!inherits(z, "error")) {
+                    z <- res0 <- tryCatch(readRDS(dest), error = identity)
+                     if(ignore_repo_cache) unlink(dest)
+               }
+
                 if(inherits(z, "error")) {
                     ## Downloading or reading .rds failed, so try the
                     ## DCF variants.
-                    need_dest <- TRUE
+                    if(!ignore_repo_cache) need_dest <- TRUE
                     tmpf <- tempfile()
                     on.exit(unlink(tmpf))
                     op <- options(warn = -1L)
@@ -96,13 +117,13 @@ function(contriburl = contrib.url(repos, type), method,
                             download.file(url = paste0(repos, "/PACKAGES"),
                                           destfile = tmpf, method = method,
                                           cacheOK = FALSE, quiet = TRUE, mode = "wb")
-                        }, error=identity)
+                        }, error = identity)
                     options(op)
 
                     if (!inherits(z, "error"))
                         z <- res0 <- tryCatch(read.dcf(file = tmpf),
                                               error = identity)
-                    
+
                     unlink(tmpf)
                     on.exit()
                 }
@@ -111,17 +132,17 @@ function(contriburl = contrib.url(repos, type), method,
                     warning(gettextf("unable to access index for repository %s",
                                      repos),
                             ":\n  ", conditionMessage(z),
-                            call.=FALSE, immediate. = TRUE, domain = NA)
+                            call. = FALSE, immediate. = TRUE, domain = NA)
                     next
                 }
 
                 if(length(res0)) {
                     rownames(res0) <- res0[, "Package"]
-                    ## Do not cache empty results.
                     if(need_dest)
                         saveRDS(res0, dest, compress = TRUE)
                 } else if(!need_dest) {
                     ## download.file() gave an empty .rds
+                    ## Do not cache empty results.
                     unlink(dest)
                 }
             } # end of download vs cached
@@ -129,9 +150,9 @@ function(contriburl = contrib.url(repos, type), method,
         if (length(res0)) {
             missingFields <- fields[!(fields %in% colnames(res0))]
             if (length(missingFields)) {
-                toadd <- matrix(NA_character_, nrow=nrow(res0),
-                                ncol=length(missingFields),
-                                dimnames=list(NULL, missingFields))
+                toadd <- matrix(NA_character_, nrow = nrow(res0),
+                                ncol = length(missingFields),
+                                dimnames = list(NULL, missingFields))
                 res0 <- cbind(res0, toadd)
             }
             if ("Path" %in% colnames(res0)) {
@@ -140,7 +161,7 @@ function(contriburl = contrib.url(repos, type), method,
                 rp[!is.na(path)] <- paste(repos, path[!is.na(path)], sep = "/")
             } else rp <- repos
             res0 <- cbind(res0[, fields, drop = FALSE], Repository = rp)
-            res <- rbind(res, res0)
+            res <- rbind(res, res0, deparse.level = 0L)
         }
     }
 
@@ -154,7 +175,7 @@ function(contriburl = contrib.url(repos, type), method,
     if(is.list(filters)) {
         ## If filters is a list with an add = TRUE element, add the
         ## given filters to the default ones.
-        if(identical(filters$add, TRUE)) {
+        if(isTRUE(filters$add)) {
             filters$add <- NULL
             filters <- c(available_packages_filters_default, filters)
         }
@@ -347,12 +368,12 @@ update.packages <- function(lib.loc = NULL, repos = getOption("repos"),
                 "Version", old[k, "ReposVer"], "available at",
                 simplifyRepos(old[k, "Repository"], type))
             cat("\n")
-            answer <- substr(readline("Update (y/N/c)?  "), 1L, 1L)
-            if(answer == "c" | answer == "C") {
+            answer <- askYesNo("Update?")
+            if(is.na(answer)) {
                 cat("cancelled by user\n")
                 return(invisible())
             }
-            if(answer == "y" | answer == "Y")
+            if(isTRUE(answer))
                 update <- rbind(update, old[k,])
         }
         update
@@ -367,7 +388,7 @@ update.packages <- function(lib.loc = NULL, repos = getOption("repos"),
     }
     if(is.null(available)) {
         available <- available.packages(contriburl = contriburl,
-                                        method = method)
+                                        method = method, ...)
         if (missing(repos)) repos <- getOption("repos") # May have changed
     }
     if(!is.matrix(oldPkgs) && is.character(oldPkgs)) {
@@ -437,9 +458,9 @@ update.packages <- function(lib.loc = NULL, repos = getOption("repos"),
 
 old.packages <- function(lib.loc = NULL, repos = getOption("repos"),
                          contriburl = contrib.url(repos, type),
-                         instPkgs = installed.packages(lib.loc = lib.loc),
+                         instPkgs = installed.packages(lib.loc = lib.loc, ...),
                          method, available = NULL, checkBuilt = FALSE,
-                         type = getOption("pkgType"))
+                         ..., type = getOption("pkgType"))
 {
     if(is.null(lib.loc))
         lib.loc <- .libPaths()
@@ -451,7 +472,7 @@ old.packages <- function(lib.loc = NULL, repos = getOption("repos"),
     if(NROW(instPkgs) == 0L) return(NULL)
 
     available <- if(is.null(available))
-        available.packages(contriburl = contriburl, method = method)
+        available.packages(contriburl = contriburl, method = method, ...)
     else tools:::.remove_stale_dups(available)
 
     update <- NULL
@@ -491,7 +512,7 @@ old.packages <- function(lib.loc = NULL, repos = getOption("repos"),
 
 new.packages <- function(lib.loc = NULL, repos = getOption("repos"),
                          contriburl = contrib.url(repos, type),
-                         instPkgs = installed.packages(lib.loc = lib.loc),
+                         instPkgs = installed.packages(lib.loc = lib.loc, ...),
                          method, available = NULL, ask = FALSE,
                          ..., type = getOption("pkgType"))
 {
@@ -505,7 +526,7 @@ new.packages <- function(lib.loc = NULL, repos = getOption("repos"),
                       lib.loc), domain = NA)
     if(is.null(available))
         available <- available.packages(contriburl = contriburl,
-                                        method = method)
+                                        method = method, ...)
 
     installed <- unique(instPkgs[, "Package"])
 
@@ -597,7 +618,7 @@ new.packages <- function(lib.loc = NULL, repos = getOption("repos"),
 
 installed.packages <-
     function(lib.loc = NULL, priority = NULL, noCache = FALSE,
-             fields = NULL, subarch = .Platform$r_arch)
+             fields = NULL, subarch = .Platform$r_arch, ...)
 {
     if(is.null(lib.loc))
         lib.loc <- .libPaths()
@@ -613,7 +634,7 @@ installed.packages <-
     for(lib in lib.loc) {
         if(noCache) {
             ret0 <- .readPkgDesc(lib, fields)
-            if(length(ret0)) retval <- rbind(retval, ret0)
+            if(length(ret0)) retval <- rbind(retval, ret0, deparse.level = 0L)
         } else {
             ## Previously used URLencode for e.g. Windows paths with drives
             ## This version works for very long file names.
@@ -622,18 +643,19 @@ installed.packages <-
             ## it is actually 32-bit on some systems)
             enc <- sprintf("%d_%s", nchar(base), .Call(C_crc64, base))
             dest <- file.path(tempdir(), paste0("libloc_", enc, ".rds"))
-            test <- file.exists(dest) && file.mtime(dest) > file.mtime(lib) &&
+            test <- file.exists(dest) &&
+                file.mtime(dest) > file.mtime(lib) &&
                 (val <- readRDS(dest))$base == base
-            if(isTRUE(as.vector(test))) # strip attributes if any
+            if(isTRUE(as.vector(test)))
                 ## use the cache file
                 retval <- rbind(retval, val$value)
             else {
                 ret0 <- .readPkgDesc(lib, fields)
                 if(length(ret0)) {
-                    retval <- rbind(retval, ret0)
+                    retval <- rbind(retval, ret0, deparse.level = 0L)
                     ## save the cache file
                     saveRDS(list(base = base, value = ret0), dest)
-                }
+                } else unlink(dest)
             }
         }
     }
@@ -710,7 +732,8 @@ download.packages <- function(pkgs, destdir, available = NULL,
     type <- resolvePkgType(type)
 
     if(is.null(available))
-        available <- available.packages(contriburl=contriburl, method=method)
+        available <-
+            available.packages(contriburl = contriburl, method = method, ...)
 
     retval <- matrix(character(), 0L, 2L)
     for(p in unique(pkgs))
@@ -762,7 +785,8 @@ download.packages <- function(pkgs, destdir, available = NULL,
                 url <- paste(repos, fn, sep = "/")
                 destfile <- file.path(destdir, fn)
 
-                res <- try(download.file(url, destfile, method, mode="wb", ...))
+                res <- try(download.file(url, destfile, method, mode = "wb",
+                                         ...))
                 if(!inherits(res, "try-error") && res == 0L)
                     retval <- rbind(retval, c(p, destfile))
                 else
@@ -847,7 +871,7 @@ getCRANmirrors <- function(all = FALSE, local.only = FALSE)
                 all = all, local.only = local.only)
 }
 
-.chooseMirror <- function(m, label, graphics, ind, useHTTPS)
+.chooseMirror <- function(m, label, graphics, ind)
 {
     if(is.null(ind) && !interactive())
         stop("cannot choose a ", label, " mirror non-interactively")
@@ -860,26 +884,14 @@ getCRANmirrors <- function(all = FALSE, local.only = FALSE)
                           fixed = TRUE))
     	mHTTPS <- m[isHTTPS,]
     	mHTTP <- m[!isHTTPS,]
-    	if (useHTTPS) {
-    	    m <- mHTTPS
-    	    if (!nrow(m)) {
-    	    	useHTTPS <- FALSE
-    	    	m <- mHTTP
-    	    }
-    	}
-    	if (useHTTPS) {
-    	    httpsLabel <- paste("Secure", label, "mirrors")
-            httpLabel <- paste("Other", label, "mirrors")
-    	    res <- menu(c(m[, 1L], "(other mirrors)"), graphics, httpsLabel)
-    	    if (res > nrow(m)) {
-    	    	m <- mHTTP
-    	    	res <- menu(m[, 1L], graphics, httpLabel)
-    	    }
-    	} else {
-            httpLabel <- paste(label, "mirrors")
-    	    m <- mHTTP
-    	    res <- menu(m[, 1L], graphics, httpLabel)
-    	}
+        httpsLabel <- paste("Secure", label, "mirrors")
+        httpLabel <- paste("Other", label, "mirrors")
+        m <- mHTTPS
+        res <- menu(c(m[, 1L], "(other mirrors)"), graphics, httpsLabel)
+        if (res > nrow(m)) {
+            m <- mHTTP
+            res <- menu(m[, 1L], graphics, httpLabel)
+        }
     }
     if (res > 0L) {
         URL <- m[res, "URL"]
@@ -889,11 +901,10 @@ getCRANmirrors <- function(all = FALSE, local.only = FALSE)
 }
 
 chooseCRANmirror <- function(graphics = getOption("menu.graphics"), ind = NULL,
-                             useHTTPS = getOption("useHTTPS", TRUE),
                              local.only = FALSE)
 {
     m <- getCRANmirrors(all = FALSE, local.only = local.only)
-    url <- .chooseMirror(m, "CRAN", graphics, ind, useHTTPS)
+    url <- .chooseMirror(m, "CRAN", graphics, ind)
     if (length(url)) {
         repos <- getOption("repos")
         repos["CRAN"] <- url
@@ -903,13 +914,12 @@ chooseCRANmirror <- function(graphics = getOption("menu.graphics"), ind = NULL,
 }
 
 chooseBioCmirror <- function(graphics = getOption("menu.graphics"), ind = NULL,
-                             useHTTPS = getOption("useHTTPS", TRUE),
                              local.only = FALSE)
 {
     m <- .getMirrors("https://bioconductor.org/BioC_mirrors.csv",
                      file.path(R.home("doc"), "BioC_mirrors.csv"),
                      all = FALSE, local.only = local.only)
-    url <- .chooseMirror(m, "BioC", graphics, ind, useHTTPS)
+    url <- .chooseMirror(m, "BioC", graphics, ind)
     if (length(url))
         options(BioC_mirror = url)
     invisible()
@@ -941,7 +951,7 @@ setRepositories <-
         aa[aa == ""] <- repos[new][aa == ""]
         newa <- data.frame(menu_name=aa, URL=repos[new], default=TRUE)
         row.names(newa) <- aa
-        a <- rbind(a, newa)
+        a <- rbind(a, newa, deparse.level = 0L)
     }
 
     default <- a[["default"]]

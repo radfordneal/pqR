@@ -32,6 +32,8 @@ function(dir = ".", fields = NULL,
         paths <- list.dirs(".")
         setwd(owd)
         paths <- c("", paths[paths != "."])
+        ## now strip leading ./
+        paths <- sub("^[.]/", "", paths)
     } else if(is.character(subdirs)) paths <- c("", subdirs)
 
     ## Older versions created only plain text and gzipped DCF files with
@@ -230,7 +232,7 @@ function(pkgs, dependencies = c("Depends", "Imports", "LinkingTo"),
             c("Depends", "Imports", "LinkingTo", "Suggests")
 
     av <- installed[, dependencies, drop = FALSE]
-    rn <- row.names(installed)
+    rn <- as.character(installed[, "Package"])
     need <- apply(av, 1L, function(x)
                   any(pkgs %in% utils:::.clean_up_dependencies(x)) )
     uses <- rn[need]

@@ -48,60 +48,70 @@
 #endif
 
 #ifdef LONG_INT
-static Rboolean isum(int *x, R_xlen_t n, int *value, Rboolean narm, SEXP call)
+# define isum_INT LONG_INT
+static int isum(SEXP sx, isum_INT *value, Rboolean narm, SEXP call)
 {
     LONG_INT s = 0;  // at least 64-bit
-    Rboolean updated = FALSE;
+    int updated = 0;
 #ifdef LONG_VECTOR_SUPPORT
-    int ii = R_INT_MIN; // need > 2^32 entries to overflow.
+    int ii = R_INT_MIN; // need > 2^32 entries to overflow; checking earlier is a waste
+/* NOTE: cannot use 64-bit *value to pass NA_INTEGER: that is "regular" 64bit int
+ *      -> pass the NA information via return value ('updated').
+ * After the first 2^32 entries, only check every 1000th time (related to GET_REGION_BUFSIZE=512 ?)
+ * Assume LONG_INT_MAX >= 2^63-1 >=~ 9.223e18 >  (1000 * 9000..0L = 9 * 10^18)
+ */
+# define ISUM_OVERFLOW_CHECK do {					\
+	if (ii++ > 1000) {						\
+	    if (s > 9000000000000000L || s < -9000000000000000L) {	\
+		DbgP2("|OVERFLOW triggered: s=%ld|", s);		\
+		/* *value = s; no use, TODO continue from 'k' */	\
+		return 42; /* was overflow, NA; now switch to irsum()*/ \
+	    }								\
+	    ii = 0;							\
+	}								\
+    } while (0)
+#else
+# define ISUM_OVERFLOW_CHECK do { } while(0)
 #endif
 
-    for (R_xlen_t i = 0; i < n; i++) {
-	if (x[i] != NA_INTEGER) {
-	    if(!updated) updated = TRUE;
-	    s += x[i];
-#ifdef LONG_VECTOR_SUPPORT
-	    if (ii++ > 1000) {
-		ii = 0;
-		if (s > 9000000000000000L || s < -9000000000000000L) {
-		    if(!updated) updated = TRUE;
-		    *value = NA_INTEGER;
-		    warningcall(call, _("integer overflow - use sum(as.numeric(.))"));
-		    return updated;
+    /**** assumes INTEGER(sx) and LOGICAL(sx) are identical!! */
+    ITERATE_BY_REGION(sx, x, i, nbatch, int, INTEGER, {
+	    for (int k = 0; k < nbatch; k++) {
+		if (x[k] != NA_INTEGER) {
+		    if(!updated) updated = 1;
+		    s += x[k];
+		    ISUM_OVERFLOW_CHECK;
+		} else if (!narm) {
+		    // updated = NA_INTEGER;
+		    return NA_INTEGER;
 		}
 	    }
-#endif
-	} else if (!narm) {
-	    if(!updated) updated = TRUE;
-	    *value = NA_INTEGER;
-	    return updated;
-	}
-    }
-    if(s > INT_MAX || s < R_INT_MIN){
-	warningcall(call, _("integer overflow - use sum(as.numeric(.))"));
-	*value = NA_INTEGER;
-    }
-    else *value = (int) s;
-
+	});
+    *value = s;
     return updated;
+#undef ISUM_OVERFLOW_CHECK
 }
-#else
-/* Version from R 3.0.0: should never be used with a C99/C11 compiler */
-static Rboolean isum(int *x, R_xlen_t n, int *value, Rboolean narm, SEXP call)
+#else // no LONG_INT  : should never be used with a C99/C11 compiler
+# define isum_INT int
+static Rboolean isum(SEXP sx, isum_INT *value, Rboolean narm, SEXP call)
+/* Version from R 3.0.0 */
 {
     double s = 0.0;
     Rboolean updated = FALSE;
 
-    for (R_xlen_t i = 0; i < n; i++) {
-	if (x[i] != NA_INTEGER) {
-	    if(!updated) updated = TRUE;
-	    s += x[i];
-	} else if (!narm) {
-	    if(!updated) updated = TRUE;
-	    *value = NA_INTEGER;
-	    return updated;
-	}
-    }
+    /**** assumes INTEGER(sx) and LOGICAL(sx) are identical!! */
+    ITERATE_BY_REGION(sx, x, i, nbatch, int, INTEGER, {
+	    for (int k = 0; k < nbatch; k++) {
+		if (x[k] != NA_INTEGER) {
+		    if(!updated) updated = TRUE;
+		    s += x[k];
+		} else if (!narm) {
+		    if(!updated) updated = TRUE;
+		    *value = NA_INTEGER;
+		    return updated;
+		}
+	    }
+	});
     if(s > INT_MAX || s < R_INT_MIN){
 	warningcall(call, _("integer overflow - use sum(as.numeric(.))"));
 	*value = NA_INTEGER;
@@ -112,17 +122,25 @@ static Rboolean isum(int *x, R_xlen_t n, int *value, Rboolean narm, SEXP call)
 }
 #endif
 
-static Rboolean rsum(double *x, R_xlen_t n, double *value, Rboolean narm)
+// Used instead of isum() for large vectors when overflow would occur:
+static Rboolean risum(SEXP sx, double *value, Rboolean narm)
 {
     LDOUBLE s = 0.0;
     Rboolean updated = FALSE;
 
-    for (R_xlen_t i = 0; i < n; i++) {
-	if (!narm || !ISNAN(x[i])) {
-	    if(!updated) updated = TRUE;
-	    s += x[i];
-	}
-    }
+    /**** assumes INTEGER(sx) and LOGICAL(sx) are identical!! */
+    ITERATE_BY_REGION(sx, x, i, nbatch, int, INTEGER, {
+	    for (R_xlen_t k = 0; k < nbatch; k++) {
+		if (x[k] != NA_INTEGER) {
+		    if(!updated) updated = TRUE;
+		    s += (double) x[k];
+		} else if (!narm) {
+		    if(!updated) updated = TRUE;
+		    *value = NA_REAL;
+		    return updated;
+		}
+	    }
+	});
     if(s > DBL_MAX) *value = R_PosInf;
     else if (s < -DBL_MAX) *value = R_NegInf;
     else *value = (double) s;
@@ -130,16 +148,39 @@ static Rboolean rsum(double *x, R_xlen_t n, double *value, Rboolean narm)
     return updated;
 }
 
-static Rboolean csum(Rcomplex *x, R_xlen_t n, Rcomplex *value, Rboolean narm)
+
+static Rboolean rsum(SEXP sx, double *value, Rboolean narm)
 {
+    LDOUBLE s = 0.0;
+    Rboolean updated = FALSE;
+
+    ITERATE_BY_REGION(sx, x, i, nbatch, double, REAL, {
+	    for (R_xlen_t k = 0; k < nbatch; k++) {
+		if (!narm || !ISNAN(x[k])) {
+		    if(!updated) updated = TRUE;
+		    s += x[k];
+		}
+	    }
+	});
+    if(s > DBL_MAX) *value = R_PosInf;
+    else if (s < -DBL_MAX) *value = R_NegInf;
+    else *value = (double) s;
+
+    return updated;
+}
+
+static Rboolean csum(SEXP sx, Rcomplex *value, Rboolean narm)
+{
+    Rcomplex *x = COMPLEX(sx);
+    R_xlen_t n = XLENGTH(sx);
     LDOUBLE sr = 0.0, si = 0.0;
     Rboolean updated = FALSE;
 
-    for (R_xlen_t i = 0; i < n; i++) {
-	if (!narm || (!ISNAN(x[i].r) && !ISNAN(x[i].i))) {
+    for (R_xlen_t k = 0; k < n; k++) {
+	if (!narm || (!ISNAN(x[k].r) && !ISNAN(x[k].i))) {
 	    if(!updated) updated = TRUE;
-	    sr += x[i].r;
-	    si += x[i].i;
+	    sr += x[k].r;
+	    si += x[k].i;
 	}
     }
     value->r = (double) sr;
@@ -148,49 +189,50 @@ static Rboolean csum(Rcomplex *x, R_xlen_t n, Rcomplex *value, Rboolean narm)
     return updated;
 }
 
-static Rboolean imin(int *x, R_xlen_t n, int *value, Rboolean narm)
+static Rboolean imin(SEXP sx, int *value, Rboolean narm)
 {
-    int s = 0 /* -Wall */;
     Rboolean updated = FALSE;
+    int s = 0;
 
-    /* Used to set s = INT_MAX, but this ignored INT_MAX in the input */
-    for (R_xlen_t i = 0; i < n; i++) {
-	if (x[i] != NA_INTEGER) {
-	    if (!updated || s > x[i]) {
-		s = x[i];
-		if(!updated) updated = TRUE;
+    ITERATE_BY_REGION(sx, x, i, nbatch, int, INTEGER, {
+	    for (int k = 0; k < nbatch; k++) {
+		if (x[k] != NA_INTEGER) {
+		    if (!updated || s > x[k]) {
+			s = x[k];
+			if(!updated) updated = TRUE;
+		    }
+		}
+		else if (!narm) {
+		    *value = NA_INTEGER;
+		    return(TRUE);
+		}
 	    }
-	}
-	else if (!narm) {
-	    *value = NA_INTEGER;
-	    return(TRUE);
-	}
-    }
+	});
     *value = s;
-
     return updated;
 }
 
-static Rboolean rmin(double *x, R_xlen_t n, double *value, Rboolean narm)
+static Rboolean rmin(SEXP sx, double *value, Rboolean narm)
 {
     double s = 0.0; /* -Wall */
     Rboolean updated = FALSE;
 
     /* s = R_PosInf; */
-    for (R_xlen_t i = 0; i < n; i++) {
-	if (ISNAN(x[i])) {/* Na(N) */
-	    if (!narm) {
-		if(!ISNA(s)) s = x[i]; /* so any NA trumps all NaNs */
-		if(!updated) updated = TRUE;
+    ITERATE_BY_REGION(sx, x, i, nbatch, double, REAL, {
+	    for (R_xlen_t k = 0; k < nbatch; k++) {
+		if (ISNAN(x[k])) {/* Na(N) */
+		    if (!narm) {
+			if(!ISNA(s)) s = x[k]; /* so any NA trumps all NaNs */
+			if(!updated) updated = TRUE;
+		    }
+		}
+		else if (!updated || x[k] < s) { /* Never true if s is NA/NaN */
+		    s = x[k];
+		    if(!updated) updated = TRUE;
+		}
 	    }
-	}
-	else if (!updated || x[i] < s) {  /* Never true if s is NA/NaN */
-	    s = x[i];
-	    if(!updated) updated = TRUE;
-	}
-    }
+	});
     *value = s;
-
     return updated;
 }
 
@@ -219,46 +261,48 @@ static Rboolean smin(SEXP x, SEXP *value, Rboolean narm)
     return updated;
 }
 
-static Rboolean imax(int *x, R_xlen_t n, int *value, Rboolean narm)
+static Rboolean imax(SEXP sx, int *value, Rboolean narm)
 {
     int s = 0 /* -Wall */;
     Rboolean updated = FALSE;
 
-    for (R_xlen_t i = 0; i < n; i++) {
-	if (x[i] != NA_INTEGER) {
-	    if (!updated || s < x[i]) {
-		s = x[i];
-		if(!updated) updated = TRUE;
+    ITERATE_BY_REGION(sx, x, i, nbatch, int, INTEGER, {
+	    for (R_xlen_t k = 0; k < nbatch; k++) {
+		if (x[k] != NA_INTEGER) {
+		    if (!updated || s < x[k]) {
+			s = x[k];
+			if(!updated) updated = TRUE;
+		    }
+		} else if (!narm) {
+		    *value = NA_INTEGER;
+		    return(TRUE);
+		}
 	    }
-	} else if (!narm) {
-	    *value = NA_INTEGER;
-	    return(TRUE);
-	}
-    }
+	});
     *value = s;
-
     return updated;
 }
 
-static Rboolean rmax(double *x, R_xlen_t n, double *value, Rboolean narm)
+static Rboolean rmax(SEXP sx, double *value, Rboolean narm)
 {
     double s = 0.0 /* -Wall */;
     Rboolean updated = FALSE;
 
-    for (R_xlen_t i = 0; i < n; i++) {
-	if (ISNAN(x[i])) {/* Na(N) */
-	    if (!narm) {
-		if(!ISNA(s)) s = x[i]; /* so any NA trumps all NaNs */
-		if(!updated) updated = TRUE;
+    ITERATE_BY_REGION(sx, x, iii, nbatch, double, REAL, {
+	    for (R_xlen_t k = 0; k < nbatch; k++) {
+		if (ISNAN(x[k])) {/* Na(N) */
+		    if (!narm) {
+			if(!ISNA(s)) s = x[k]; /* so any NA trumps all NaNs */
+			if(!updated) updated = TRUE;
+		    }
+		}
+		else if (!updated || x[k] > s) { /* Never true if s is NA/NaN */
+		    s = x[k];
+		    if(!updated) updated = TRUE;
+		}
 	    }
-	}
-	else if (!updated || x[i] > s) {  /* Never true if s is NA/NaN */
-	    s = x[i];
-	    if(!updated) updated = TRUE;
-	}
-    }
+	});
     *value = s;
-
     return updated;
 }
 
@@ -287,27 +331,31 @@ static Rboolean smax(SEXP x, SEXP *value, Rboolean narm)
     return updated;
 }
 
-static Rboolean iprod(int *x, R_xlen_t n, double *value, Rboolean narm)
+static Rboolean iprod(SEXP sx, double *value, Rboolean narm)
 {
     LDOUBLE s = 1.0;
     Rboolean updated = FALSE;
 
-    for (R_xlen_t i = 0; i < n; i++) {
-	if (x[i] != NA_INTEGER) {
-	    s *= x[i];
-	    if(!updated) updated = TRUE;
-	}
-	else if (!narm) {
-	    if(!updated) updated = TRUE;
-	    *value = NA_REAL;
-	    return updated;
-	}
+    /**** assumes INTEGER(sx) and LOGICAL(sx) are identical!! */
+    ITERATE_BY_REGION(sx, x, i, nbatch, int, INTEGER, {
+	    for (int k = 0; k < nbatch; k++) {
+		if (x[k] != NA_INTEGER) {
+		    s *= x[k];
+		    if(!updated) updated = TRUE;
+		}
+		else if (!narm) {
+		    if(!updated) updated = TRUE;
+		    *value = NA_REAL;
+		    return updated;
+		}
 
-	if(ISNAN(s)) {  /* how can this happen? */
-	    *value = NA_REAL;
-	    return updated;
-	}
-    }
+		if(ISNAN(s)) {  /* how can this happen? */
+		    *value = NA_REAL;
+		    return updated;
+		}
+	    }
+	});
+
     // This could over/underflow (does in package POT)
     if(s > DBL_MAX) *value = R_PosInf;
     else if (s < -DBL_MAX) *value = R_NegInf;
@@ -316,17 +364,20 @@ static Rboolean iprod(int *x, R_xlen_t n, double *value, Rboolean narm)
     return updated;
 }
 
-static Rboolean rprod(double *x, R_xlen_t n, double *value, Rboolean narm)
+static Rboolean rprod(SEXP sx, double *value, Rboolean narm)
 {
     LDOUBLE s = 1.0;
     Rboolean updated = FALSE;
 
-    for (R_xlen_t i = 0; i < n; i++) {
-	if (!narm || !ISNAN(x[i])) {
-	    if(!updated) updated = TRUE;
-	    s *= x[i];
-	}
-    }
+    ITERATE_BY_REGION(sx, x, i, nbatch, double, REAL, {
+	    for (R_xlen_t k = 0; k < nbatch; k++) {
+		if (!narm || !ISNAN(x[k])) {
+		    if(!updated) updated = TRUE;
+		    s *= x[k];
+		}
+	    }
+	});
+
     if(s > DBL_MAX) *value = R_PosInf;
     else if (s < -DBL_MAX) *value = R_NegInf;
     else *value = (double) s;
@@ -334,16 +385,18 @@ static Rboolean rprod(double *x, R_xlen_t n, double *value, Rboolean narm)
     return updated;
 }
 
-static Rboolean cprod(Rcomplex *x, R_xlen_t n, Rcomplex *value, Rboolean narm)
+static Rboolean cprod(SEXP sx, Rcomplex *value, Rboolean narm)
 {
+    Rcomplex *x = COMPLEX(sx);
+    R_xlen_t n = XLENGTH(sx);
     LDOUBLE sr = 1.0, si = 0.0;
     Rboolean updated = FALSE;
-    for (R_xlen_t i = 0; i < n; i++) {
-	if (!narm || (!ISNAN(x[i].r) && !ISNAN(x[i].i))) {
+    for (R_xlen_t k = 0; k < n; k++) {
+	if (!narm || (!ISNAN(x[k].r) && !ISNAN(x[k].i))) {
 	    if(!updated) updated = TRUE;
 	    LDOUBLE tr = sr, ti = si;
-	    sr = tr * x[i].r - ti * x[i].i;
-	    si = tr * x[i].i + ti * x[i].r;
+	    sr = tr * x[k].r - ti * x[k].i;
+	    si = tr * x[k].i + ti * x[k].r;
 	}
     }
     value->r = (double) sr;
@@ -394,64 +447,93 @@ SEXP fixup_NaRm(SEXP args)
  * mean.default.
  */
 
+static R_INLINE SEXP logical_mean(SEXP x)
+{
+    R_xlen_t n = XLENGTH(x);
+    LDOUBLE s = 0.0;
+    for (R_xlen_t i = 0; i < n; i++) {
+	int xi = LOGICAL_ELT(x, i);
+	if(xi == NA_LOGICAL)
+	    return ScalarReal(R_NaReal);
+	s += xi;
+    }
+    return ScalarReal((double) (s/n));
+}
+
+static R_INLINE SEXP integer_mean(SEXP x)
+{
+    R_xlen_t n = XLENGTH(x);
+    LDOUBLE s = 0.0;
+    for (R_xlen_t i = 0; i < n; i++) {
+	int xi = INTEGER_ELT(x, i);
+	if(xi == NA_INTEGER)
+	    return ScalarReal(R_NaReal);
+	s += xi;
+    }
+    return ScalarReal((double) (s/n));
+}
+
+static R_INLINE SEXP real_mean(SEXP x)
+{
+    R_xlen_t n = XLENGTH(x);
+    LDOUBLE s = 0.0;
+    ITERATE_BY_REGION(x, dx, i, nbatch, double, REAL, {
+	    for (R_xlen_t k = 0; k < nbatch; k++)
+		s += dx[k];
+	});
+    s /= n;
+    if (R_FINITE((double) s)) {
+	LDOUBLE t = 0.0;
+	ITERATE_BY_REGION(x, dx, i, nbatch, double, REAL, {
+		for (R_xlen_t k = 0; k < nbatch; k++)
+		    t += (dx[k] - s);
+	    });
+	s += t/n;
+    }
+    return ScalarReal((double) s);
+}
+
+static R_INLINE SEXP complex_mean(SEXP x)
+{
+    R_xlen_t n = XLENGTH(x);
+    LDOUBLE s = 0.0, si = 0.0;
+    Rcomplex *px = COMPLEX(x);
+    for (R_xlen_t i = 0; i < n; i++) {
+	Rcomplex xi = px[i];
+	s += xi.r;
+	si += xi.i;
+    }
+    s /= n; si /= n;
+    if( R_FINITE((double)s) && R_FINITE((double)si) ) {
+	LDOUBLE t = 0.0, ti = 0.0;
+	for (R_xlen_t i = 0; i < n; i++) {
+	    Rcomplex xi = px[i];
+	    t += xi.r - s;
+	    ti += xi.i - si;
+	}
+	s += t/n; si += ti/n;
+    }
+    Rcomplex val = { (double)s, (double)si };
+    return ScalarComplex(val);
+}
+
 SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
-    SEXP ans;
     if(PRIMVAL(op) == 1) { /* mean */
-	LDOUBLE s = 0., si = 0., t = 0., ti = 0.;
-	R_xlen_t i, n = XLENGTH(CAR(args));
 	SEXP x = CAR(args);
 	switch(TYPEOF(x)) {
-	case LGLSXP:
-	case INTSXP:
-	    PROTECT(ans = allocVector(REALSXP, 1));
-	    for (i = 0; i < n; i++) {
-		if(INTEGER(x)[i] == NA_INTEGER) {
-		    REAL(ans)[0] = R_NaReal;
-		    UNPROTECT(1); /* ans */
-		    return ans;
-		}
-		s += INTEGER(x)[i];
-	    }
-	    REAL(ans)[0] = (double) (s/n);
-	    break;
-	case REALSXP:
-	    PROTECT(ans = allocVector(REALSXP, 1));
-	    for (i = 0; i < n; i++) s += REAL(x)[i];
-	    s /= n;
-	    if(R_FINITE((double)s)) {
-		for (i = 0; i < n; i++) t += (REAL(x)[i] - s);
-		s += t/n;
-	    }
-	    REAL(ans)[0] = (double) s;
-	    break;
-	case CPLXSXP:
-	    PROTECT(ans = allocVector(CPLXSXP, 1));
-	    for (i = 0; i < n; i++) {
-		s += COMPLEX(x)[i].r;
-		si += COMPLEX(x)[i].i;
-	    }
-	    s /= n; si /= n;
-	    if( R_FINITE((double)s) && R_FINITE((double)si) ) {
-		for (i = 0; i < n; i++) {
-		    t += COMPLEX(x)[i].r - s;
-		    ti += COMPLEX(x)[i].i - si;
-		}
-		s += t/n; si += ti/n;
-	    }
-	    COMPLEX(ans)[0].r = (double) s;
-	    COMPLEX(ans)[0].i = (double) si;
-	    break;
+	case LGLSXP:  return logical_mean(x);
+	case INTSXP:  return integer_mean(x);
+	case REALSXP: return real_mean(x);
+	case CPLXSXP: return complex_mean(x);
 	default:
 	    error(R_MSG_type, type2char(TYPEOF(x)));
-	    ans = R_NilValue; // -Wall on clang 4.2
+	    return R_NilValue; // -Wall on clang 4.2
 	}
-	UNPROTECT(1); /* ans */
-	return ans;
     }
 
-    SEXP call2;
+    SEXP ans, call2;
     /* match to foo(..., na.rm=FALSE) */
     PROTECT(args = fixup_NaRm(args));
     PROTECT(call2 = shallow_duplicate(call));
@@ -468,16 +550,52 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 #endif
 
     ans = matchArgExact(R_NaRmSymbol, &args);
+    Rboolean narm = asLogical(ans);
+
+    if (ALTREP(CAR(args)) && CDDR(args) == R_NilValue &&
+	(CDR(args) == R_NilValue || TAG(CDR(args)) == R_NaRmSymbol)) {
+	SEXP toret = NULL;
+	SEXP vec = CAR(args);
+	switch(PRIMVAL(op)) {
+	case 0:
+	    if(TYPEOF(vec) == INTSXP) 
+		toret = ALTINTEGER_SUM(vec, narm);
+	    else if (TYPEOF(vec) == REALSXP)
+		toret = ALTREAL_SUM(vec, narm);
+	    break; 
+	case 2:
+	    if(TYPEOF(vec) == INTSXP) 
+		toret = ALTINTEGER_MIN(vec, narm);
+	    else if (TYPEOF(vec) == REALSXP)
+		toret = ALTREAL_MIN(vec, narm);
+	    break;
+	case 3:
+	    if(TYPEOF(vec) == INTSXP) 
+		toret = ALTINTEGER_MAX(vec, narm);
+	    else if (TYPEOF(vec) == REALSXP)
+		toret = ALTREAL_MAX(vec, narm);
+	    break;
+	default:
+	    break;
+	}
+	if(toret != NULL) {
+	    UNPROTECT(1); /* args */
+	    return toret;
+	}
+    }
+
     Rboolean int_a, real_a, complex_a,
-	narm = asLogical(ans),
 	empty = TRUE;// <==> only zero-length arguments, or NA with na.rm=T
-    int updated = 0;
-	/* updated := 1 , as soon as (i)tmp (do_summary),
-	   or *value ([ir]min / max) is assigned */
+    int updated = 0; //
+	/* updated = NA_INTEGER if encountered NA,
+	   updated != 0 , as soon as (i)tmp (do_summary),
+	   or *value ([ir]min / max) is assigned;  */
     SEXP a;
     double tmp = 0.0, s;
     Rcomplex ztmp, zcum={0.0, 0.0} /* -Wall */;
     int itmp = 0, icum = 0, warn = 0 /* dummy */;
+    Rboolean use_isum = TRUE; // indicating if isum() should used; otherwise irsum()
+    isum_INT iLtmp = (isum_INT)0, iLcum = iLtmp; // for isum() only
     SEXPTYPE ans_type;/* only INTEGER, REAL, COMPLEX or STRSXP here */
 
     int iop = PRIMVAL(op);
@@ -511,8 +629,10 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
         } else if(real_a) {
             ans_type = REALSXP;
         } else {
-            ans_type = INTSXP;
+            ans_type = INTSXP; iLcum = (isum_INT)0;
         }
+	DbgP3("do_summary: sum(.. na.rm=%d): ans_type = %s\n",
+	      narm, type2char(ans_type));
 	zcum.r = zcum.i = 0.; icum = 0;
 	break;
 
@@ -562,8 +682,8 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 		case LGLSXP:
 		case INTSXP:
 		    int_a = TRUE;
-		    if (iop == 2) updated = imin(INTEGER(a), XLENGTH(a), &itmp, narm);
-		    else	  updated = imax(INTEGER(a), XLENGTH(a), &itmp, narm);
+		    if (iop == 2) updated = imin(a, &itmp, narm);
+		    else	  updated = imax(a, &itmp, narm);
 		    break;
 		case REALSXP:
 		    real_a = TRUE;
@@ -571,8 +691,8 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 			ans_type = REALSXP;
 			if(!empty) zcum.r = Int2Real(icum);
 		    }
-		    if (iop == 2) updated = rmin(REAL(a), XLENGTH(a), &tmp, narm);
-		    else	  updated = rmax(REAL(a), XLENGTH(a), &tmp, narm);
+		    if (iop == 2) updated = rmin(a, &tmp, narm);
+		    else	  updated = rmax(a, &tmp, narm);
 		    break;
 		case STRSXP:
 		    if(!empty && ans_type == INTSXP) {
@@ -640,32 +760,75 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 		break;/*--- end of  min() / max() ---*/
 
 	    case 0:/* sum */
-
 		switch(TYPEOF(a)) {
 		case LGLSXP:
 		case INTSXP:
-		    updated = isum(TYPEOF(a) == LGLSXP ?
-				   LOGICAL(a) :INTEGER(a), XLENGTH(a),
-				   &itmp, narm, call);
-		    if(updated) {
-			if(itmp == NA_INTEGER) goto na_answer;
+#ifdef LONG_INT
+		    updated = (use_isum ?
+			       isum(a, &iLtmp, narm, call) :
+			       risum(a,  &tmp, narm));
+		    DbgP2(" int|lgl: updated=%d ", updated);
+		    if(updated == NA_INTEGER)
+			goto na_answer;
+		    else if(use_isum && updated == 42) {
+			// impending integer overflow --> switch to irsum()
+			use_isum = FALSE;
+			if(ans_type == INTSXP) ans_type = REALSXP;
+			// re-sum() 'a' (a waste, rare; FIXME ?) :
+			risum(a, &tmp, narm);
+			zcum.r = (double) iLcum + tmp;
+			DbgP3(" .. switching type to REAL, tmp=%g, zcum.r=%g",
+			      tmp, zcum.r);
+		    }
+		    else if(updated) {
+			// iLtmp is LONG_INT i.e. at least 64bit
 			if(ans_type == INTSXP) {
-			    s = (double) icum + (double) itmp;
+			    s = (double) iLcum + (double) iLtmp;
+			    if(s > INT_MAX || s < R_INT_MIN ||
+			       iLtmp < -LONG_INT_MAX || LONG_INT_MAX < iLtmp) {
+				ans_type = REALSXP;
+				zcum.r = s;
+				DbgP2(" int_1 switch: zcum.r = s = %g\n", s);
+			    } else if(s < -LONG_INT_MAX || LONG_INT_MAX < s) {
+				use_isum = FALSE;
+				ans_type = REALSXP;
+				zcum.r = s;
+				DbgP2(" int_2 switch: zcum.r = s = %g\n", s);
+			    }
+			    else {
+				iLcum += iLtmp;
+				DbgP3(" int_3: (iLtmp,iLcum) = (%ld,%ld)\n",
+				      iLtmp, iLcum);
+			    }
+			} else { // dealt with NA_INTEGER already above
+			    zcum.r += use_isum ? (double)iLtmp : tmp;
+			    DbgP3(" dbl: (*tmp, zcum.r) = (%g,%g)\n",
+				  use_isum ? (double)iLtmp : tmp, zcum.r);
+			}
+		    }
+#else
+		    updated = isum(a, &iLtmp, narm, call);
+		    if(updated) {
+			if(iLtmp == NA_INTEGER) goto na_answer;
+			if(ans_type == INTSXP) {
+			    s = (double) icum + (double) iLtmp;
 			    if(s > INT_MAX || s < R_INT_MIN){
-				warningcall(call,_("Integer overflow - use sum(as.numeric(.))"));
+				warningcall(call,_(
+				  "Integer overflow - use sum(as.numeric(.))"));
 				goto na_answer;
 			    }
-			    else icum += itmp;
+			    else icum += iLtmp;
 			} else
-			    zcum.r += Int2Real(itmp);
+			    zcum.r += Int2Real(iLtmp);
 		    }
+#endif
 		    break;
 		case REALSXP:
 		    if(ans_type == INTSXP) {
 			ans_type = REALSXP;
-			if(!empty) zcum.r = Int2Real(icum);
+			if(!empty) zcum.r = Int2Real(iLcum);
 		    }
-		    updated = rsum(REAL(a), XLENGTH(a), &tmp, narm);
+		    updated = rsum(a, &tmp, narm);
 		    if(updated) {
 			zcum.r += tmp;
 		    }
@@ -673,10 +836,10 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 		case CPLXSXP:
 		    if(ans_type == INTSXP) {
 			ans_type = CPLXSXP;
-			if(!empty) zcum.r = Int2Real(icum);
+			if(!empty) zcum.r = Int2Real(iLcum);
 		    } else if (ans_type == REALSXP)
 			ans_type = CPLXSXP;
-		    updated = csum(COMPLEX(a), XLENGTH(a), &ztmp, narm);
+		    updated = csum(a, &ztmp, narm);
 		    if(updated) {
 			zcum.r += ztmp.r;
 			zcum.i += ztmp.i;
@@ -695,9 +858,9 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 		case INTSXP:
 		case REALSXP:
 		    if(TYPEOF(a) == REALSXP)
-			updated = rprod(REAL(a), XLENGTH(a), &tmp, narm);
+			updated = rprod(a, &tmp, narm);
 		    else
-			updated = iprod(INTEGER(a), XLENGTH(a), &tmp, narm);
+			updated = iprod(a, &tmp, narm);
 		    if(updated) {
 			zcum.r *= tmp;
 			zcum.i *= tmp;
@@ -705,7 +868,7 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 		    break;
 		case CPLXSXP:
 		    ans_type = CPLXSXP;
-		    updated = cprod(COMPLEX(a), XLENGTH(a), &ztmp, narm);
+		    updated = cprod(a, &ztmp, narm);
 		    if(updated) {
 			Rcomplex z;
 			z.r = zcum.r;
@@ -757,9 +920,9 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 		ans_type = TYPEOF(a);
 	    }
 	}
-	DbgP3(" .. upd.=%d, empty: old=%d", updated, (int)empty);
+	DbgP3(" .. upd.=%d, empty=%d", updated, (int)empty);
 	if(empty && updated) empty=FALSE;
-	DbgP2(", new=%d\n", (int)empty);
+	DbgP2(", new empty=%d\n", (int)empty);
 	args = CDR(args);
     } /*-- while(..) loop over args */
 
@@ -778,7 +941,7 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 
     ans = allocVector(ans_type, 1);
     switch(ans_type) {
-    case INTSXP:   INTEGER(ans)[0] = icum;break;
+    case INTSXP:   INTEGER(ans)[0] = (iop == 0) ? (int)iLcum : icum; break;
     case REALSXP:  REAL(ans)[0] = zcum.r; break;
     case CPLXSXP:  COMPLEX(ans)[0].r = zcum.r; COMPLEX(ans)[0].i = zcum.i;break;
     case STRSXP:   SET_STRING_ELT(ans, 0, scum); break;
@@ -934,8 +1097,9 @@ SEXP attribute_hidden do_which(SEXP call, SEXP op, SEXP args, SEXP rho)
     len = length(v);
     buf = (int *) R_alloc(len, sizeof(int));
 
+    int *pv = LOGICAL(v);
     for (i = 0; i < len; i++) {
-	if (LOGICAL(v)[i] == TRUE) {
+	if (pv[i] == TRUE) {
 	    buf[j] = i + 1;
 	    j++;
 	}
@@ -947,9 +1111,9 @@ SEXP attribute_hidden do_which(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if ((v_nms = getAttrib(v, R_NamesSymbol)) != R_NilValue) {
 	PROTECT(ans_nms = allocVector(STRSXP, len));
+	int *pa = INTEGER(ans);
 	for (i = 0; i < len; i++) {
-	    SET_STRING_ELT(ans_nms, i,
-			   STRING_ELT(v_nms, INTEGER(ans)[i] - 1));
+	    SET_STRING_ELT(ans_nms, i, STRING_ELT(v_nms, pa[i] - 1));
 	}
 	setAttrib(ans, R_NamesSymbol, ans_nms);
 	UNPROTECT(1);

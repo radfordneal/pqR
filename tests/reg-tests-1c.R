@@ -732,13 +732,12 @@ stopifnot(diff(sort(y)) > 0)
 ## order() and hence sort() failed here badly for a while around 2015-04-16
 
 
-## NAs in data frame names:
-dn <- list(c("r1", NA), c("V", NA))
+## NAs in data frame names (but *not* in row.names; that's really wrong):
+dn <- list(c("r1", "r2"), c("V", NA))
 d11 <- as.data.frame(matrix(c(1, 1, 1, 1), ncol = 2, dimnames = dn))
 stopifnot(identical(names(d11), dn[[2]]),
           identical(row.names(d11), dn[[1]]))
 ## as.data.frame() failed in R-devel for a couple of hours ..
-## note that format(d11) does fail currently, and hence print(), too
 
 
 ## Ensure  R -e ..  works on Unix
@@ -1036,7 +1035,7 @@ stopifnot(is.data.frame(d20), dim(d20) == c(2,2),
 stopifnot(identical(names(myD), names(format(head(myD)))),
 	  identical(names(myD), c("Variable.1", "", "stringsAsFactors")),
 	  identical(rbind.data.frame(2:1, 1:2), ## was wrong for some days
-		    data.frame(c.2L..1L. = c(2L, 1L), X1.2 = 1:2)))
+		    data.frame(X2.1 = 2:1, X1.2 = 1:2)))
 ## format.data.frame() did not show "stringsAsFactors" in R <= 3.2.2
 ## Follow up: the new as.data.frame.list() must be careful with 'AsIs' columns:
 desc <- structure( c("a", NA, "z"), .Names = c("A", NA, "Z"))
@@ -1531,19 +1530,22 @@ stopifnot(all.equal(Fn(t), t/5))
 
 
 ## tar() default (i.e. "no files") behaviour:
-dir.create(td <- tempfile("tar-experi"))
-setwd(td)
-dfil <- "base_Desc"
-file.copy(system.file("DESCRIPTION"), dfil)
-## tar w/o specified files
-tar("ex.tar")# all files, i.e. 'dfil'
-unlink(dfil)
-stopifnot(grepl(dfil, untar("ex.tar", list = TRUE)))
-untar("ex.tar")
-myF2 <- c(dfil, "ex.tar")
-stopifnot(identical(list.files(), myF2))
-unlink(myF2)
-## produced an empty tar file in R < 3.3.0, PR#16716
+doit <- function(...) {
+    dir.create(td <- tempfile("tar-experi"))
+    setwd(td)
+    dfil <- "base_Desc"
+    file.copy(system.file("DESCRIPTION"), dfil)
+    ## tar w/o specified files
+    tar("ex.tar", ... ) # all files, i.e. 'dfil'
+    unlink(dfil)
+    stopifnot(grepl(dfil, untar("ex.tar", list = TRUE)))
+    untar("ex.tar")
+    myF2 <- c(dfil, "ex.tar")
+    stopifnot(identical(list.files(), myF2))
+    unlink(myF2)
+}
+doit() # produced an empty tar file in R < 3.3.0, PR#16716
+if(nzchar(Sys.which("tar"))) doit(tar = "tar")
 
 
 ## format.POSIXlt() of Jan.1 if  1941 or '42 is involved:
