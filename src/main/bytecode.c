@@ -1934,20 +1934,18 @@ SEXP attribute_hidden bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP fun = GETSTACK(-3);
 	SEXP call = constants[GETOP()];
 	SEXP args = GETSTACK(-2);
-	int flag;
+        R_Visible = TRUE;
 	switch (ftype) {
 	case BUILTINSXP:
 	  checkForMissings(args, call);
-	  flag = PRIMPRINT(fun);
-	  R_Visible = flag != 1;
           value = CALL_PRIMFUN(call, fun, args, rho, 0);
-	  if (flag < 2) R_Visible = flag != 1;
+          if (PRIMVISON(fun))
+              R_Visible = TRUE;
+          else if (PRIMVISOFF(fun))
+              R_Visible = FALSE;
 	  break;
 	case SPECIALSXP:
-	  flag = PRIMPRINT(fun);
-	  R_Visible = flag != 1;
           value = CALL_PRIMFUN(call, fun, CDR(call), rho, 0);
-	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case CLOSXP:
 	  value = applyClosure_v(call, fun, args, rho, NULL, 0);
@@ -1964,14 +1962,15 @@ SEXP attribute_hidden bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP fun = GETSTACK(-3);
 	SEXP call = constants[GETOP()];
 	SEXP args = GETSTACK(-2);
-	int flag;
 	const void *vmax = VMAXGET();
 	if (TYPEOF(fun) != BUILTINSXP)
           error(_("not a BUILTIN function"));
-	flag = PRIMPRINT(fun);
-	R_Visible = flag != 1;
+	R_Visible = TRUE;
         value = CALL_PRIMFUN(call, fun, args, rho, 0);
-	if (flag < 2) R_Visible = flag != 1;
+        if (PRIMVISON(fun))
+            R_Visible = TRUE;
+        else if (PRIMVISOFF(fun))
+            R_Visible = FALSE;
 	VMAXSET(vmax);
 	R_BCNodeStackTop -= 2;
 	SETSTACK(-1, value);
@@ -1982,17 +1981,18 @@ SEXP attribute_hidden bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP call = constants[GETOP()];
 	SEXP symbol = CAR(call);
 	SEXP fun = getPrimitive(symbol, SPECIALSXP);
-	int flag;
 	const void *vmax = VMAXGET();
 	if (RTRACE(fun)) {
             Rprintf("trace: ");
             PrintValue(symbol);
 	}
 	BCNPUSH(fun);  /* for GC protection */
-	flag = PRIMPRINT(fun);
-	R_Visible = flag != 1;
+	R_Visible = TRUE;
         value = CALL_PRIMFUN(call, fun, CDR(call), rho, 0);
-	if (flag < 2) R_Visible = flag != 1;
+        if (PRIMVISON(fun))
+            R_Visible = TRUE;
+        else if (PRIMVISOFF(fun))
+            R_Visible = FALSE;
 	VMAXSET(vmax);
 	SETSTACK(-1, value); /* replaces fun on stack */
 	NEXT();
