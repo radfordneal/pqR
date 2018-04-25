@@ -1530,10 +1530,9 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
 
     R_Visible = TRUE;
 
-    if (seq == 0 && x != R_NilValue && sb1 != R_NoObject) {
+    if (seq == 0 && x != R_NilValue && sb1 != R_NoObject && subs==R_NilValue) {
 
-        /* Check for one subscript, handling simple cases like this */
-        if (sb2 == R_NoObject && subs == R_NilValue) { 
+        if (sb2 == R_NoObject) {  /* handle simples cases with one subscript */
             SEXP attr = ATTRIB(x);
             if (attr != R_NilValue) {
                 if (TAG(attr) == R_DimSymbol && CDR(attr) == R_NilValue) {
@@ -1549,8 +1548,7 @@ static SEXP do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, SEXP sb1, SEXP sb2,
             }
         }
 
-        /* Check for two subscripts, handling simple cases like this */
-        else if (sb2 != R_NoObject && subs == R_NilValue) {
+        else {  /* handle simple cases with two subscripts*/
             SEXP attr = ATTRIB(x);
             if (TAG(attr) == R_DimSymbol && CDR(attr) == R_NilValue) {
                 SEXP dim = CAR(attr);
