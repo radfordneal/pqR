@@ -2845,12 +2845,6 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
     int need_enc;
     Rboolean embedNul = FALSE, is_ascii = TRUE;
 
-#   if 1
-        if (installed_already("DBG_MKCHAR")) {
-            REprintf("mkCharLenCE: %.*s\n",len,name);
-        }
-#   endif
-
     switch(enc){
     case CE_NATIVE:
     case CE_UTF8:
@@ -2946,12 +2940,6 @@ SEXP attribute_hidden Rf_mkCharMulti (const char **strings, const int *lengths,
                                       unsigned first_hash, cetype_t enc)
 {
     int i, j;
-
-#   if 1
-        if (installed_already("DBG_MKCHAR")) {
-            REprintf("mkCharMulti\n");
-        }
-#   endif
 
     switch(enc){
     case CE_NATIVE:
