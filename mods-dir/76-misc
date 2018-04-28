@@ -3,3 +3,5 @@ Miscellaneous mods - eg, to avoid compiler warnings.
 Got rid of R_get_arith_function.
 
 Got rid of alternative way of doing type sets.
+
+Created attribute_noinline for later use.
