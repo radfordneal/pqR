@@ -1,4 +1,7 @@
 Improvements to readLines, scan, etc.
 
 Makes dummy_fgetc faster by making it smaller, by preventing inlining into it.
-This involves creating a general attribute_noinline attribute for functions.
+Other inline and other performance fiddles.
+
+Use the 25-byte buffer formerly used only for conversion as a performance
+aid as well, replacing getc with read.
