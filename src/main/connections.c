@@ -393,8 +393,7 @@ static attribute_noinline int iconv_navail_fgetc(Rconnection con)
     int c;
     Rboolean checkBOM = FALSE;
 
-    unsigned int i, inew = 0;
-    char *p, *ob;
+    char *ob;
     const char *ib;
     size_t inb, onb, res;
 
@@ -404,16 +403,14 @@ static attribute_noinline int iconv_navail_fgetc(Rconnection con)
 	con->inavail = 0;
 	checkBOM = TRUE;
     }
-    p = con->iconvbuff + con->inavail;
-    for (i = con->inavail; i < 25; i++) {
-	c = con->fgetc_internal(con);
-	if (c == R_EOF){ con->EOF_signalled = TRUE; break; }
-	*p++ = c;
-	con->inavail++;
-	inew++;
-    }
+
+    size_t inew = con->read (con->iconvbuff + con->inavail,
+                             sizeof(char), 25 - con->inavail, con);
     if (inew == 0)
-        return R_EOF;
+        con->EOF_signalled = TRUE;
+    else
+        con->inavail += inew;
+
     if (checkBOM && con->inavail >= 2 &&
        ((int)con->iconvbuff[0] & 0xff) == 255 &&
        ((int)con->iconvbuff[1] & 0xff) == 254) {
