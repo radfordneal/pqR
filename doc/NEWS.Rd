@@ -151,6 +151,9 @@
         defined in packages (rather than in the global workspace).
   \item The speed of \code{which} has been improved.
   \item The speed of \code{.Call} has been improved.
+  \itme Input and output have been sped up, sometimes considerably,
+        both with regard to low-level character io, and with respect to 
+        output formatting.
   \item The \code{\%\%} and \code{\%/\%} operators are now faster when 
         their operands are real vectors that contain integer values.
   \item Subscripting with a logical vector is now faster for long vectors.

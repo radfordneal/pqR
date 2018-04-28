@@ -5,3 +5,5 @@ Other inline and other performance fiddles.
 
 Use the 25-byte buffer formerly used only for conversion as a performance
 aid as well, replacing getc with read.
+
+Also speeds up output formatting by avoiding log in IndexWidth.
