@@ -50,6 +50,12 @@
 
 #define USE_RINTERNALS
 
+#if __GNUC__
+#define attribute_noinline __attribute__ ((noinline))
+#else
+#define attribute_noinline
+#endif
+
 #ifdef HAVE_VISIBILITY_ATTRIBUTE
 # define attribute_visible __attribute__ ((visibility ("default")))
 # define attribute_hidden __attribute__ ((visibility ("hidden")))
