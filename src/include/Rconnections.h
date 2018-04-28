@@ -57,10 +57,13 @@ struct Rconn {
     char encname[101];
     /* will be iconv_t, which is a pointer. NULL if not in use */
     void *inconv, *outconv;
-    /* The idea here is that no MBCS char will ever not fit */
+
+    /* Buffers used both for performance and for conversion.  It's assumed
+       that no MBCS char will ever not fit. */
     char iconvbuff[25], oconvbuff[50], *next, init_out[25];
     short navail, inavail;
     Rboolean EOF_signalled;
+
     Rboolean UTF8out;
     void *id;
     SEXP ex_ptr;

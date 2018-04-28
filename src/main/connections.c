@@ -273,14 +273,14 @@ void set_iconv(Rconnection con)
 	   streql(con->encname, "UTF-16LE")) con->inavail = -2;
     }
     if(con->canwrite) {
-	size_t onb = 25;
+	size_t onb = 25-1; /* note that we need space to store a null after */
 	char *ob = con->init_out;
 	tmp = Riconv_open(con->encname, "");
 	if(tmp != (void *)-1) con->outconv = tmp;
 	else set_iconv_error(con, con->encname, "");
 	/* initialize state, and prepare any initial bytes */
 	Riconv(tmp, NULL, NULL, &ob, &onb);
-	ob[25-onb] = '\0';
+	ob[25-1-onb] = '\0';
     }
 }
 
@@ -388,68 +388,79 @@ int dummy_vfprintf(Rconnection con, const char *format, va_list ap)
 /* Don't let it be inlined below, so that dummy_fgetc will be small,
    without big function preamble. */
 
-static attribute_noinline int iconv_navail_fgetc(Rconnection con)
+static attribute_noinline void buff_iconv (Rconnection con)
 {
     int c;
-    Rboolean checkBOM = FALSE;
-
-    char *ob;
-    const char *ib;
-    size_t inb, onb, res;
-
+    
     if (con->EOF_signalled)
-        return R_EOF;
-    if (con->inavail == -2) {
-	con->inavail = 0;
-	checkBOM = TRUE;
-    }
+        return;
 
-    size_t inew = con->read (con->iconvbuff + con->inavail,
-                             sizeof(char), 25 - con->inavail, con);
-    if (inew == 0)
-        con->EOF_signalled = TRUE;
-    else
+    do {
+
+        Rboolean checkBOM = FALSE;
+    
+        if (con->inavail == -2) {
+            con->inavail = 0;
+            checkBOM = TRUE;
+        }
+    
+        size_t inew = con->read (con->iconvbuff + con->inavail,
+                                 sizeof(char), 25 - con->inavail, con);
+
         con->inavail += inew;
+        if (inew == 0)
+            con->EOF_signalled = TRUE;
+    
+        if (checkBOM && con->inavail >= 2 &&
+           ((int)con->iconvbuff[0] & 0xff) == 255 &&
+           ((int)con->iconvbuff[1] & 0xff) == 254) {
+            con->inavail -= 2;
+            memmove(con->iconvbuff, con->iconvbuff+2, con->inavail);
+        }
+    
+        if (con->inconv) {
+            char *ob = con->oconvbuff;
+            size_t onb = 50;
+            const char *ib = con->iconvbuff;
+            size_t inb = con->inavail;
+            size_t res;
+            errno = 0;
+            res = Riconv(con->inconv, &ib, &inb, &ob, &onb);
+            con->inavail = inb;
+            if (res == (size_t)-1) { /* an error condition */
+                if (errno == EINVAL || errno == E2BIG) {
+                    /* incomplete input char or no space in output buffer */
+                    memmove(con->iconvbuff, ib, inb);
+                } else {/*  EILSEQ invalid input */
+                    warning(_("invalid input found on input connection '%s'"),
+                            con->description);
+                    con->inavail = 0;
+                    con->EOF_signalled = TRUE;
+                }
+            }
+            con->next = con->oconvbuff;
+            con->navail = 50 - onb;
+        }
+        else { /* !con->inconv */
+            con->next = con->iconvbuff;
+            con->navail = con->inavail;
+            con->inavail = 0;
+        }
 
-    if (checkBOM && con->inavail >= 2 &&
-       ((int)con->iconvbuff[0] & 0xff) == 255 &&
-       ((int)con->iconvbuff[1] & 0xff) == 254) {
-	con->inavail -= 2;
-	memmove(con->iconvbuff, con->iconvbuff+2, con->inavail);
-    }
-    ib = con->iconvbuff; inb = con->inavail;
-    ob = con->oconvbuff; onb = 50;
-    errno = 0;
-    res = Riconv(con->inconv, &ib, &inb, &ob, &onb);
-    con->inavail = inb;
-    if (res == (size_t)-1) { /* an error condition */
-	if (errno == EINVAL || errno == E2BIG) {
-	    /* incomplete input char or no space in output buffer */
-	    memmove(con->iconvbuff, ib, inb);
-	} else {/*  EILSEQ invalid input */
-	    warning(_("invalid input found on input connection '%s'"),
-		    con->description);
-	    con->inavail = 0;
-	    con->EOF_signalled = TRUE;
-	}
-    }
-    con->next = con->oconvbuff;
-    con->navail = 50 - onb;
-    return 0;
+    } while (con->navail == 0 && !con->EOF_signalled);
 }
 
 int dummy_fgetc(Rconnection con)
 {
-    if (con->inconv) {
-	while (con->navail <= 0) {
-            if (iconv_navail_fgetc(con) == R_EOF) 
-                return R_EOF;
-        }
-	con->navail--;
-	return *con->next++;
-    } 
-    else
-	return con->fgetc_internal(con);
+    if (con->navail <= 0) {
+        buff_iconv(con);
+        if (con->navail <= 0)
+            return R_EOF;
+    }
+
+    con->navail -= 1;
+
+    return *con->next++;
 }
 
 static int null_fgetc(Rconnection con)
@@ -508,6 +519,8 @@ void init_con(Rconnection new, const char *description, int enc,
     new->save = new->save2 = -1000;
     new->private = NULL;
     new->inconv = new->outconv = NULL;
+    new->navail = new->inavail = 0;
+    new->EOF_signalled = FALSE;
     new->UTF8out = FALSE;
     /* increment id, avoid NULL */
     current_id = (void *)((size_t) current_id+1);
@@ -3191,8 +3204,7 @@ static SEXP do_flush(SEXP call, SEXP op, SEXP args, SEXP env)
 
 /* ------------------- read, write  text --------------------- */
 
-/* Used only here, but not static to discourage compiler from inlining it. */
-attribute_hidden int Rf_Rconn_fgetc_pushback(Rconnection con)
+attribute_noinline int Rconn_fgetc_pushback(Rconnection con)
 {
     char *curLine;
     int c;
@@ -3216,30 +3228,38 @@ int Rconn_fgetc(Rconnection con)
     int c;
 
     if (con->save2 != -1000) {
-	c = con->save2;
-	con->save2 = -1000;
-	return c;
+        c = con->save2;
+        con->save2 = -1000;
+        return c;
     }
 
-    if(con->nPushBack <= 0) {
-	/* map CR or CRLF to LF */
-	if (con->save != -1000) {
-	    c = con->save;
-	    con->save = -1000;
-	    return c;
-	}
-	c = con->fgetc(con);
-	if (c == '\r') {
-	    c = con->fgetc(con);
-	    if (c != '\n') {
-		con->save = (c != '\r') ? c : '\n';
-		return('\n');
-	    }
-	}
-	return c;
+    if (con->nPushBack > 0)
+        return Rconn_fgetc_pushback(con);
+
+    /* map CR or CRLF to LF */
+    if (con->save != -1000) {
+        c = con->save;
+        con->save = -1000;
+        return c;
     }
 
-    return Rf_Rconn_fgetc_pushback(con);
+    /* Check explicitly for common case of con->fgetc being dummy_fgetc 
+       to allow it to be inlined here. */
+
+    if (con->fgetc == dummy_fgetc)
+        c = dummy_fgetc(con);
+    else
+        c = con->fgetc(con);
+
+    if (c == '\r') {
+        c = con->fgetc(con);
+        if (c != '\n') {
+            con->save = c=='\r' ? '\n' : c;
+            return '\n';
+        }
+    }
+
+    return c;
 }
 
 int Rconn_ungetc(int c, Rconnection con)
@@ -4391,8 +4411,8 @@ static SEXP do_writechar(SEXP call, SEXP op, SEXP args, SEXP env)
 
 
 /* used in readLines and scan */
-attribute_hidden
-void con_pushback(Rconnection con, Rboolean newLine, char *line)
+attribute_hidden void con_pushback (Rconnection con, Rboolean newLine, 
+                                    char *line)
 {
     int nexists = con->nPushBack;
     char **q;
