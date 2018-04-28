@@ -100,7 +100,7 @@ static SEXP GetObject(RCNTXT *cptr)
 
     if (TYPEOF(s) == PROMSXP) {
 	if (PRVALUE_PENDING_OK(s) == R_UnboundValue)
-	    s = forcePromiseUnbound(s,VARIANT_PENDING_OK);
+	    s = forcePromise_v(s,VARIANT_PENDING_OK);
 	else
 	    s = PRVALUE_PENDING_OK(s);
     }

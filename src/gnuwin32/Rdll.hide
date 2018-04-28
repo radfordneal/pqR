@@ -353,14 +353,12 @@
  Rf_evalListKeepMissing
  Rf_evalListUnshared
  Rf_evalList_v
- Rf_evalv_other
- Rf_evalv_sym
  Rf_eval_unshared
  Rf_findFun_nospecsym
  Rf_findVar1
  Rf_findcontext
  Rf_find_binding_in_frame
- Rf_forcePromiseUnbound
+ Rf_forcePromise_v
  Rf_framedepth
  Rf_gamma_cody
  Rf_gammalims

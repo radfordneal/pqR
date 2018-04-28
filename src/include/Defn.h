@@ -1275,7 +1275,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define findFun_nospecsym	Rf_findFun_nospecsym
 # define findVar1		Rf_findVar1
 # define forcePromise		Rf_forcePromise
-# define forcePromiseUnbound	Rf_forcePromiseUnbound
+# define forcePromise_v		Rf_forcePromise_v
 # define FrameClassFix		Rf_FrameClassFix
 # define framedepth		Rf_framedepth
 # define frameSubscript		Rf_frameSubscript
@@ -1493,7 +1493,7 @@ void R_NORETURN findcontext(int, SEXP, SEXP);
 SEXP findFun_nospecsym(SEXP, SEXP);
 SEXP findVar1(SEXP, SEXP, SEXPTYPE, int);
 SEXP forcePromise(SEXP);
-SEXP forcePromiseUnbound(SEXP,int);
+SEXP forcePromise_v(SEXP,int);
 void FrameClassFix(SEXP);
 SEXP frameSubscript(int, SEXP, SEXP);
 int get1index(SEXP, SEXP, int, int, int, SEXP);

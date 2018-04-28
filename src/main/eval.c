@@ -690,9 +690,6 @@ static inline SEXP FINDFUN (SEXP symbol, SEXP rho)
 }
 
 
-static SEXP Rf_builtin_op_no_cntxt (SEXP op, SEXP e, SEXP rho, int variant);
-
-
 #define CHECK_STACK_BALANCE(o,s) do { \
   if (s != R_PPStackTop) check_stack_balance(o,s); \
 } while (0)
@@ -746,9 +743,8 @@ void attribute_hidden wait_until_arguments_computed (SEXP args)
    expression depth or stack overflow, so should not be used if
    infinite recursion could result. */
 
-static SEXP evalv_lang  (SEXP, SEXP, int);
-static SEXP evalv_sym   (SEXP, SEXP, int);
-static SEXP evalv_other (SEXP, SEXP, int);
+static SEXP attribute_noinline evalv_sym   (SEXP, SEXP, int);
+static SEXP attribute_noinline evalv_other (SEXP, SEXP, int);
 
 #define EVALV(e, rho, variant) ( \
     R_variant_result = 0, \
@@ -756,8 +752,8 @@ static SEXP evalv_other (SEXP, SEXP, int);
        (UPTR_FROM_SEXP(e)->sxpinfo.nmcnt == MAX_NAMEDCNT ? e \
          : (UPTR_FROM_SEXP(e)->sxpinfo.nmcnt = MAX_NAMEDCNT, e)) \
     : TYPE_ETC(e) == SYMSXP /* not ..., ..1, etc */ ? \
-       Rf_evalv_sym (e, rho, variant) \
-    :  Rf_evalv_other (e, rho, variant) \
+       evalv_sym (e, rho, variant) \
+    :  evalv_other (e, rho, variant) \
 )
 
 
@@ -766,10 +762,12 @@ static SEXP evalv_other (SEXP, SEXP, int);
    arguments are protected.  The "eval" function is just like "evalv"
    with 0 for the variant return argument. */
 
+static SEXP attribute_noinline forcePromiseUnbound (SEXP e, int variant);
+static SEXP attribute_noinline Rf_builtin_op_no_cntxt (SEXP op, SEXP e, 
+                                                       SEXP rho, int variant);
 SEXP Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant);
 
 #define evalcount R_high_frequency_globals.evalcount
-
 
 SEXP eval (SEXP e, SEXP rho)
 {
@@ -800,8 +798,8 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
     /* Handle symbol lookup without stack overflow or expression depth check */
 
     if (TYPE_ETC(e) == SYMSXP /* symbol, but not ..., ..1, etc */) {
-        res = Rf_evalv_sym (e, rho, variant);  /* may change R_Visible, but
-                                                  that seems to be desired... */
+        res = evalv_sym (e, rho, variant);  /* may change R_Visible, but
+                                               that seems to be desired... */
         return res;
     }
 
@@ -814,7 +812,7 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
     if (R_EvalDepth > R_Expressions)
         too_deep_error();
 
-    res =  Rf_evalv_other (e, rho, variant);
+    res =  evalv_other (e, rho, variant);
 
     R_EvalDepth -= 1;
 
@@ -864,7 +862,7 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
 
 /* Evaluate an expression that is a symbol other than ..., ..1, ..2, etc. */
 
-SEXP attribute_hidden Rf_evalv_sym (SEXP e, SEXP rho, int variant)
+static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
 {
     SEXP res;
 
@@ -902,7 +900,7 @@ SEXP attribute_hidden Rf_evalv_sym (SEXP e, SEXP rho, int variant)
 /* Evaluate an expression that is not self-evaluating and not a symbol
    (other than ..., ..1, ..2, etc.). */
 
-SEXP attribute_hidden Rf_evalv_other (SEXP e, SEXP rho, int variant)
+static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
 {
     SEXP op, res;
 
@@ -1038,7 +1036,7 @@ SEXP attribute_hidden Rf_evalv_other (SEXP e, SEXP rho, int variant)
 
 
 /* e is protected here */
-SEXP attribute_hidden forcePromiseUnbound (SEXP e, int variant)
+static SEXP attribute_noinline forcePromiseUnbound (SEXP e, int variant)
 {
     SEXP val;
 
@@ -1113,6 +1111,16 @@ SEXP forcePromise (SEXP e) /* e protected here if necessary */
         return PRVALUE(e);
 }
 
+SEXP forcePromise_v (SEXP e, int variant) /* e protected here if necessary */
+{
+    if (PRVALUE(e) == R_UnboundValue) {
+        return forcePromiseUnbound(e,variant);
+    }
+    else
+        return variant & VARIANT_PENDING_OK ? PRVALUE_PENDING_OK(e)
+                                            : PRVALUE(e);
+}
+
 
 /* Like Rf_builtin_op (defined in builtin.c) except that no context is
    created.  Making this separate from Rf_builtin_op saves on stack
@@ -1120,7 +1128,8 @@ SEXP forcePromise (SEXP e) /* e protected here if necessary */
    time-consuming context creation is not done, there is no advantage
    to evaluating a single argument with pending OK. */
 
-static SEXP Rf_builtin_op_no_cntxt (SEXP op, SEXP e, SEXP rho, int variant)
+static SEXP attribute_noinline Rf_builtin_op_no_cntxt(SEXP op, SEXP e, SEXP rho,
+                                                      int variant)
 {
     SEXP args = CDR(e);
     SEXP arg1;
@@ -2593,7 +2602,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                 prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
                 PROTECT (e = LCONS (op, CONS (prom, fetch_args)));
                 R_variant_result = 0;
-                e = Rf_evalv_other (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
+                e = evalv_other (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
                 UNPROTECT(2);  /* e, fetch_args */
             }
 
