@@ -115,30 +115,32 @@ R_size_t R_Decode2Long(char *p, int *ierr)
     }
 }
 
-/* There is no documented (or enforced) limit on 'w' here,
-   so use snprintf */
+/* There is no documented (or enforced) limit on 'w', but it is reduced here 
+   to 999 (2000 for complex). */
+
 #define NB 1000
+
 const char *EncodeLogical(int x, int w)
 {
     static char buff[NB];
+    if (w >= NB) w = NB-1;
     if (x == NA_LOGICAL) 
-        snprintf(buff, NB, "%*s", w, CHAR(R_print.na_string));
+        sprintf(buff, "%*s", w, CHAR(R_print.na_string));
     else if (x) 
-        snprintf(buff, NB, "%*s", w, "TRUE");
+        sprintf(buff, "%*s", w, "TRUE");
     else 
-        snprintf(buff, NB, "%*s", w, "FALSE");
-    buff[NB-1] = '\0';
+        sprintf(buff, "%*s", w, "FALSE");
     return buff;
 }
 
 const char *EncodeInteger(int x, int w)
 {
     static char buff[NB];
+    if (w >= NB) w = NB-1;
     if (x == NA_INTEGER) 
-        snprintf(buff, NB, "%*s", w, CHAR(R_print.na_string));
+        sprintf(buff, "%*s", w, CHAR(R_print.na_string));
     else 
-        snprintf(buff, NB, "%*d", w, x);
-    buff[NB-1] = '\0';
+        sprintf(buff, "%*d", w, x);
     return buff;
 }
 
@@ -174,19 +176,19 @@ const char *EncodeReal(double x, int w, int d, int e, char cdec)
     static char buff[NB];
     char *p;
 
+    if (w >= NB) w = NB-1;
+
     if (x == 0.0) 
         x = 0.0;  /* IEEE allows signed zeros (yuck!) */
     else if (!R_FINITE(x)) {
-        snprintf(buff, NB, "%*s", w, 
+        sprintf(buff, "%*s", w, 
           ISNA(x)  ?  CHAR(R_print.na_string) :
           ISNAN(x) ?  "NaN" :
           x > 0    ?  "Inf" :  "-Inf");
-        buff[NB-1] = 0;
         return buff;
     }
 
-    snprintf (buff, NB, (e==0 ? "%*.*f" : d==0 ? "%*.*e" : "%#*.*e"), w, d, x);
-    buff[NB-1] = 0;
+    sprintf (buff, (e==0 ? "%*.*f" : d==0 ? "%*.*e" : "%#*.*e"), w, d, x);
 
     if (cdec != '.')
       for (p = buff; *p != 0; p++) if (*p == '.') *p = cdec;
@@ -198,31 +200,32 @@ attribute_hidden
 const char *EncodeReal2(double x, int w, int d, int e)
 {
     static char buff[NB];
-    char fmt[20];
+    char fmt[30];
+
+    if (w >= NB) w = NB-1;
 
     /* IEEE allows signed zeros (yuck!) */
     if (x == 0.0) x = 0.0;
     if (!R_FINITE(x)) {
-	if(ISNA(x)) snprintf(buff, NB, "%*s", w, CHAR(R_print.na_string));
-	else if(ISNAN(x)) snprintf(buff, NB, "%*s", w, "NaN");
-	else if(x > 0) snprintf(buff, NB, "%*s", w, "Inf");
-	else snprintf(buff, NB, "%*s", w, "-Inf");
+	if(ISNA(x)) sprintf(buff, "%*s", w, CHAR(R_print.na_string));
+	else if(ISNAN(x)) sprintf(buff, "%*s", w, "NaN");
+	else if(x > 0) sprintf(buff, "%*s", w, "Inf");
+	else sprintf(buff, "%*s", w, "-Inf");
     }
     else if (e) {
 	if(d) {
 	    sprintf(fmt,"%%#%d.%de", w, d);
-	    snprintf(buff, NB, fmt, x);
+	    sprintf(buff, fmt, x);
 	}
 	else {
 	    sprintf(fmt,"%%%d.%de", w, d);
-	    snprintf(buff, NB, fmt, x);
+	    sprintf(buff, fmt, x);
 	}
     }
     else { /* e = 0 */
 	sprintf(fmt,"%%#%d.%df", w, d);
-	snprintf(buff, NB, fmt, x);
+	sprintf(buff, fmt, x);
     }
-    buff[NB-1] = '\0';
     return buff;
 }
 
@@ -232,18 +235,21 @@ const char
 *EncodeComplex(Rcomplex x, int wr, int dr, int er, int wi, int di, int ei,
 	       char cdec)
 {
-    static char buff[NB];
+    static char buff[2*NB+2];
     char Re[NB];
     const char *Im, *tmp;
     int flagNegIm = 0;
     Rcomplex y;
+
+    if (wr >= NB) wr = NB-1;
+    if (wi >= NB) wi = NB-1;
 
     /* IEEE allows signed zeros; strip these here */
     if (x.r == 0.0) x.r = 0.0;
     if (x.i == 0.0) x.i = 0.0;
 
     if (ISNA(x.r) || ISNA(x.i)) {
-	snprintf(buff, NB,
+	sprintf(buff,
 		 "%*s", /* was "%*s%*s", R_print.gap, "", */
 		 wr+wi+2, CHAR(R_print.na_string));
     } else {
@@ -260,9 +266,9 @@ const char
 	if ( (flagNegIm = (x.i < 0)) ) x.i = -x.i;
 	if(y.i == 0.) Im = EncodeReal(y.i, wi, di, ei, cdec);
 	else Im = EncodeReal(x.i, wi, di, ei, cdec);
-	snprintf(buff, NB, "%s%s%si", Re, flagNegIm ? "-" : "+", Im);
+	sprintf(buff, "%s%s%si", Re, flagNegIm ? "-" : "+", Im);
     }
-    buff[NB-1] = '\0';
+
     return buff;
 }
 
