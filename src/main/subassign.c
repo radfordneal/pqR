@@ -662,10 +662,11 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
     PROTECT (sc = array_sub (sb2, dim, 1, x, &chasna));
     ncs = LENGTH(sc);
 
-    /* Do assignment of a single atomic element with matching type specially. */
+    /* Do assignment of a single atomic element with matching scalar type,
+       not being computed, specially. */
 
-    if (nrs == 1 && ncs == 1 && isVectorAtomic(x) 
-                             && TYPEOF(x) == TYPEOF(y) && LENGTH(y) == 1) {
+    if (nrs == 1 && ncs == 1 && isVectorAtomic(x)
+          && (TYPE_ETC(y) & ~TYPE_ET_CETERA_HAS_ATTR) == TYPEOF(x)) {
         if (*INTEGER(sr) != NA_INTEGER && *INTEGER(sc) != NA_INTEGER) {
             R_len_t isub = (*INTEGER(sr)-1) + (*INTEGER(sc)-1) * nr;
             switch (TYPEOF(x)) {
@@ -1544,12 +1545,15 @@ static SEXP do_subassign_dflt_seq (SEXP call, SEXP x, SEXP sb1, SEXP sb2,
             }
         }
         if (sb1 != R_NoObject) {
-            /* do simple scalar cases quickly */
-            if ((TYPEOF(sb1) == INTSXP || TYPEOF(sb1) == REALSXP)
-                  && TYPEOF(x) == TYPEOF(y) && LENGTH(sb1) == 1 
-                  && isVector(x) && LENGTH(y) == 1) {
+            /* Do simple scalar cases quickly, where x is a vector, sb1 is
+               scalar real or integer, y matches type of x and is scalar,
+               and subscript is not out of bounds. */
+            int type_plus_sb1 = TYPE_ETC(sb1) & ~TYPE_ET_CETERA_HAS_ATTR;
+            if ((type_plus_sb1 == INTSXP || type_plus_sb1 == REALSXP)
+                  && (TYPE_ETC(y) & ~TYPE_ET_CETERA_HAS_ATTR) == TYPEOF(x)
+                  && isVector(x)) {
                 double sub;
-                if (TYPEOF(sb1) == INTSXP)
+                if (type_plus_sb1 == INTSXP)
                     sub = *INTEGER(sb1) == NA_INTEGER ? 0 : *INTEGER(sb1);
                 else
                     sub = ISNAN(*REAL(sb1)) ? 0 : *REAL(sb1);
@@ -1582,6 +1586,7 @@ static SEXP do_subassign_dflt_seq (SEXP call, SEXP x, SEXP sb1, SEXP sb2,
                     goto out;
                 }
             }
+            /* Otherwise, the general case. */
             x = VectorAssign (call, x, sb1, y);
         }
     }
@@ -1778,65 +1783,67 @@ static SEXP do_subassign2_dflt_int
        just falling through for the code below to handle it. */
 
     if (nsubs == 1 && ndims <= 1 && !S4
-        && (TYPEOF(sb1) == REALSXP || TYPEOF(sb1) == INTSXP 
-                                   || TYPEOF(sb1) == STRSXP) && LENGTH(sb1) == 1
-        && (isVectorAtomic(x) && TYPEOF(x) == TYPEOF(y) && LENGTH(y) == 1
-              || isVectorList(x) && y != R_NilValue)) {
-        R_len_t lenx = LENGTH(x);
-        R_len_t ix = 0;
-        if (TYPEOF(sb1) == INTSXP)
-            ix = INTEGER(sb1)[0];
-        else if (TYPEOF(sb1) == REALSXP) {
-            double d = REAL(sb1)[0];
-            if (!ISNAN(d)) {
-                ix = (int) d;
-                if ((double) ix != d)
-                    ix = 0;
+         && (isVectorAtomic(x) || isVectorList(x) && y != R_NilValue)) {
+        int type_plus_sb1 = TYPE_ETC(sb1) & ~TYPE_ET_CETERA_HAS_ATTR;
+        if ((type_plus_sb1 == REALSXP || type_plus_sb1 == INTSXP 
+                || type_plus_sb1 == STRSXP) && 
+              (TYPE_ETC(y) & ~TYPE_ET_CETERA_HAS_ATTR) == TYPEOF(x)) {
+            R_len_t lenx = LENGTH(x);
+            R_len_t ix = 0;
+            if (type_plus_sb1 == INTSXP)
+                ix = INTEGER(sb1)[0];
+            else if (type_plus_sb1 == REALSXP) {
+                double d = REAL(sb1)[0];
+                if (!ISNAN(d)) {
+                    ix = (int) d;
+                    if ((double) ix != d)
+                        ix = 0;
+                }
             }
-        }
-        else { /* string */
-            SEXP names = getAttrib (x, R_NamesSymbol);
-            if (TYPEOF(names) == STRSXP) {
-                SEXP se = STRING_ELT(sb1,0);
-                if (se != NA_STRING && CHAR(se)[0] != 0) {
-                    for (int i = 0; i < lenx; i++) {
-                        if (STRING_ELT(names,i) != NA_STRING 
-                             && SEQL (STRING_ELT(names,i), se)) {
-                            ix = i + 1;
-                            break;
+            else { /* string */
+                SEXP names = getAttrib (x, R_NamesSymbol);
+                if (TYPEOF(names) == STRSXP) {
+                    SEXP se = STRING_ELT(sb1,0);
+                    if (se != NA_STRING && CHAR(se)[0] != 0) {
+                        for (int i = 0; i < lenx; i++) {
+                            if (STRING_ELT(names,i) != NA_STRING 
+                                 && SEQL (STRING_ELT(names,i), se)) {
+                                ix = i + 1;
+                                break;
+                            }
                         }
                     }
                 }
             }
-        }
-        if (ix > 0 && ix <= lenx) {
-            ix -= 1;
-            switch (TYPEOF(x)) {
-                case RAWSXP:
-                    RAW(x)[ix] = *RAW(y);
+            if (ix > 0 && ix <= lenx) {
+                ix -= 1;
+                switch (TYPEOF(x)) {
+                    case RAWSXP:
+                        RAW(x)[ix] = *RAW(y);
+                        break;
+                    case LGLSXP:
+                        LOGICAL(x)[ix] = *LOGICAL(y);
+                        break;
+                    case INTSXP:
+                        INTEGER(x)[ix] = *INTEGER(y);
+                        break;
+                    case REALSXP:
+                        REAL(x)[ix] = *REAL(y);
+                        break;
+                    case CPLXSXP:
+                        COMPLEX(x)[ix] = *COMPLEX(y);
+                        break;
+                    case STRSXP:
+                        SET_STRING_ELT (x, ix, STRING_ELT(y,0));
+                        break;
+                    case VECSXP: case EXPRSXP:
+                        DEC_NAMEDCNT (VECTOR_ELT (x, ix));
+                        SET_VECTOR_ELEMENT_TO_VALUE (x, ix, y);
                     break;
-                case LGLSXP:
-                    LOGICAL(x)[ix] = *LOGICAL(y);
-                    break;
-                case INTSXP:
-                    INTEGER(x)[ix] = *INTEGER(y);
-                    break;
-                case REALSXP:
-                    REAL(x)[ix] = *REAL(y);
-                    break;
-                case CPLXSXP:
-                    COMPLEX(x)[ix] = *COMPLEX(y);
-                    break;
-                case STRSXP:
-                    SET_STRING_ELT (x, ix, STRING_ELT(y,0));
-                    break;
-                case VECSXP: case EXPRSXP:
-                    DEC_NAMEDCNT (VECTOR_ELT (x, ix));
-                    SET_VECTOR_ELEMENT_TO_VALUE (x, ix, y);
-                break;
+                }
+                SET_NAMEDCNT_0(x);
+                RETURN_SEXP_INSIDE_PROTECT (x);
             }
-            SET_NAMEDCNT_0(x);
-            RETURN_SEXP_INSIDE_PROTECT (x);
         }
     }
 

@@ -1908,43 +1908,29 @@ extern R_NORETURN void Rf_protect_error (void);
 extern R_NORETURN void Rf_unprotect_error (void);
 
 #undef  PROTECT
-#define PROTECT(s) Rf_protect_inline(s)
-
-static inline SEXP Rf_protect_inline (SEXP s) 
-{ 
-    if (R_PPStackTop >= R_PPStackSize) Rf_protect_error();
-
-    R_PPStack[R_PPStackTop] = s;
-    R_PPStackTop += 1;
-    return s;
-}
+#define PROTECT(s) ( \
+    (R_PPStackTop >= R_PPStackSize ? Rf_protect_error() : (void) 0), \
+    (R_PPStack[R_PPStackTop++] = s)  /* has s as its value */ \
+)
 
 #undef  PROTECT2
-#define PROTECT2(s1,s2) Rf_protect2_inline(s1,s2)
-
-static inline void Rf_protect2_inline (SEXP s1, SEXP s2) 
-{ 
-    if (R_PPStackTop+1 >= R_PPStackSize) Rf_protect_error();
-
-    int top = R_PPStackTop;
-    R_PPStack[top] = s1;
-    R_PPStack[top+1] = s2;
-    R_PPStackTop += 2;
-}
+#define PROTECT2(s1,s2) ( \
+    (R_PPStackTop+1 >= R_PPStackSize ? Rf_protect_error() : (void) 0), \
+    (R_PPStack[R_PPStackTop] = s1), \
+    (R_PPStack[R_PPStackTop+1] = s2), \
+    (R_PPStackTop += 2), \
+    (void)0 \
+)
 
 #undef  PROTECT3
-#define PROTECT3(s1,s2,s3) Rf_protect3_inline(s1,s2,s3)
-
-static inline void Rf_protect3_inline (SEXP s1, SEXP s2, SEXP s3) 
-{ 
-    if (R_PPStackTop+2 >= R_PPStackSize) Rf_protect_error();
-
-    int top = R_PPStackTop;
-    R_PPStack[top] = s1;
-    R_PPStack[top+1] = s2;
-    R_PPStack[top+2] = s3;
-    R_PPStackTop += 3;
-}
+#define PROTECT3(s1,s2,s3) ( \
+    (R_PPStackTop+2 >= R_PPStackSize ? Rf_protect_error() : (void) 0), \
+    (R_PPStack[R_PPStackTop] = s1), \
+    (R_PPStack[R_PPStackTop+1] = s2), \
+    (R_PPStack[R_PPStackTop+2] = s3), \
+    (R_PPStackTop += 3), \
+    (void)0 \
+)
 
 #undef  UNPROTECT
 #if 0  /* enable for stack underflow checking */
