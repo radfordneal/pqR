@@ -1756,7 +1756,7 @@ static SEXP do_writetable(SEXP call, SEXP op, SEXP args, SEXP rho)
     cntxt.cend = &wt_cleanup;
     cntxt.cenddata = &wi;
 
-    if(isVectorList(x)) { /* A data frame */
+    if (isVectorList(x)) { /* A data frame */
 
         WAIT_UNTIL_COMPUTED(x);
 
@@ -1772,17 +1772,20 @@ static SEXP do_writetable(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 
 	for(i = 0; i < nr; i++) {
-	    if(i % 1000 == 999) R_CheckUserInterrupt();
-	    if(!isNull(rnames))
-		Rconn_printf(con, "%s%s",
-			     EncodeElement2(rnames, i, quote_rn, qmethod,
-					    &strBuf, cdec), csep);
+	    if (i % 1024 == 1023) R_CheckUserInterrupt();
+	    if (!isNull(rnames)) {
+                Rconn_printf (con, "%s",
+                              EncodeElement2(rnames, i, quote_rn, qmethod,
+                                             &strBuf, cdec));
+                Rconn_printf (con, "%s", csep);
+            }
 	    for(j = 0; j < nc; j++) {
 		xj = VECTOR_ELT(x, j);
 		if(j > 0) Rconn_printf(con, "%s", csep);
-		if(isna(xj, i)) tmp = cna;
+		if (isna (xj, i))
+                    tmp = cna;
 		else {
-		    if(!isNull(levels[j])) {
+		    if (!isNull(levels[j])) {
 			/* We cannot assume factors have integer levels */
 			if(TYPEOF(xj) == INTSXP)
 			    tmp = EncodeElement2(levels[j], INTEGER(xj)[i] - 1,
@@ -1794,7 +1797,8 @@ static SEXP do_writetable(SEXP call, SEXP op, SEXP args, SEXP rho)
 						 &strBuf, cdec);
 			else
 			    error("column %s claims to be a factor but does not have numeric codes", j+1);
-		    } else {
+		    }
+                    else {
 			tmp = EncodeElement2(xj, i, quote_col[j], qmethod,
 					     &strBuf, cdec);
 		    }
@@ -1804,8 +1808,9 @@ static SEXP do_writetable(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 	    Rconn_printf(con, "%s", ceol);
 	}
+    }
 
-    } else { /* A matrix */
+    else { /* A matrix */
 
         R_len_t len, avail;
 
@@ -1824,11 +1829,13 @@ static SEXP do_writetable(SEXP call, SEXP op, SEXP args, SEXP rho)
             avail = len;
 
 	for (i = 0; i < nr; i++) {
-	    if(i % 1000 == 999) R_CheckUserInterrupt();
-	    if(!isNull(rnames))
-		Rconn_printf(con, "%s%s",
-			     EncodeElement2(rnames, i, quote_rn, qmethod,
-					    &strBuf, cdec), csep);
+	    if (i % 1024 == 1023) R_CheckUserInterrupt();
+            if (!isNull(rnames)) {
+                Rconn_printf (con, "%s",
+                              EncodeElement2 (rnames, i, quote_rn, qmethod,
+                                              &strBuf, cdec));
+                Rconn_printf (con, "%s", csep);
+            }
 	    for (j = 0; j < nc; j++) {
                 R_len_t indx = i + j*nr;
                 if (avail <= indx)

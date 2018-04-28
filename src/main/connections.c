@@ -84,6 +84,7 @@
 /* #define USE_FAST_PROTECT_MACROS */ 
 #define R_USE_SIGNALS 1
 #include <Defn.h>
+#include <stdarg.h>
 #include <Fileio.h>
 #include <Rconnections.h>
 #include <R_ext/Complex.h>
@@ -658,17 +659,29 @@ static int file_vfprintf(Rconnection con, const char *format, va_list ap)
 {
     Rfileconn this = con->private;
 
-    if(!this->last_was_write) {
+    if (!this->last_was_write) {
 	this->rpos = f_tell(this->fp);
 	this->last_was_write = TRUE;
-	f_seek(this->fp, this->wpos, SEEK_SET);
+	f_seek (this->fp, this->wpos, SEEK_SET);
     }
-    if(con->outconv) return dummy_vfprintf(con, format, ap);
-    else return vfprintf(this->fp, format, ap);
+
+    if (con->outconv) {
+        return dummy_vfprintf(con, format, ap);
+    }
+    else if (strcmp(format,"%s") == 0) {  /* special case for speed */
+        va_list ap2;
+        va_copy (ap2, ap);
+        char *p = va_arg (ap2, char *);
+        size_t res = fwrite (p, sizeof(char), strlen(p), this->fp);
+        va_end (ap2);
+        return res;
+    }
+    else {
+        return vfprintf (this->fp, format, ap);
+    }
 }
 
-/* This is used only in this module, but isn't static to discourage inlining. */
-attribute_hidden void Rf_file_switch_to_read (Rfileconn this)
+static void attribute_noinline file_switch_to_read (Rfileconn this)
 {
     this->wpos = f_tell(this->fp);
     this->last_was_write = FALSE;
@@ -681,7 +694,7 @@ static int file_fgetc_internal(Rconnection con)
     int c;
 
     if (this->last_was_write)
-        Rf_file_switch_to_read(this);
+        file_switch_to_read(this);
 
     c = fgetc(this->fp);
     return c == EOF ? R_EOF : c;
@@ -2155,8 +2168,10 @@ static int stdin_fgetc(Rconnection con)
 
 static int stdout_vfprintf(Rconnection con, const char *format, va_list ap)
 {
-    if(R_Outputfile) vfprintf(R_Outputfile, format, ap);
-    else Rcons_vprintf(format, ap);
+    if (R_Outputfile) 
+        vfprintf(R_Outputfile, format, ap);
+    else 
+        Rcons_vprintf(format, ap);
     return 0;
 }
 
@@ -3480,22 +3495,26 @@ static SEXP do_writelines(SEXP call, SEXP op, SEXP args, SEXP env)
        It would be slightly simpler just to call Rvprintf if the
        connection was stdout(), but this way is more efficent */
     if(con_num == R_OutputCon) {
-	int j = 0;
-	Rconnection con0;
-	do {
-	    con0 = getConnection(con_num);
-	    for(i = 0; i < LENGTH(text); i++)
-		Rconn_printf(con0, "%s%s",
-			     useBytes ? CHAR(STRING_ELT(text, i)) :
-			     translateChar0(STRING_ELT(text, i)), ssep);
-	    con0->fflush(con0);
-	    con_num = getActiveSink(j++);
-	} while (con_num > 0);
+        int j = 0;
+        Rconnection con0;
+        do {
+            con0 = getConnection(con_num);
+            for(i = 0; i < LENGTH(text); i++) {
+                Rconn_printf (con0, "%s",
+                              useBytes ? CHAR(STRING_ELT(text, i))
+                                       : translateChar0(STRING_ELT(text, i)));
+                if (*ssep) Rconn_printf (con0, "%s", ssep);
+            }
+            con0->fflush(con0);
+            con_num = getActiveSink(j++);
+        } while (con_num > 0);
     } else {
-	for(i = 0; i < LENGTH(text); i++)
-	    Rconn_printf(con, "%s%s",
-			 useBytes ? CHAR(STRING_ELT(text, i)) :
-			 translateChar0(STRING_ELT(text, i)), ssep);
+        for(i = 0; i < LENGTH(text); i++) {
+            Rconn_printf (con, "%s",
+                          useBytes ? CHAR(STRING_ELT(text, i))
+                                   : translateChar0(STRING_ELT(text, i)));
+            if (*ssep) Rconn_printf (con, "%s", ssep);
+        }
     }
 
     if(!wasopen) {endcontext(&cntxt); con->close(con);}
