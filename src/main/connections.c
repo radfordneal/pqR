@@ -385,9 +385,10 @@ int dummy_vfprintf(Rconnection con, const char *format, va_list ap)
     return res;
 }
 
-/* This is used only in this module, but isn't static to discourage inlining. */
+/* Don't let it be inlined below, so that dummy_fgetc will be small,
+   without big function preamble. */
 
-attribute_hidden int Rf_iconv_navail_fgetc(Rconnection con)
+static attribute_noinline int iconv_navail_fgetc(Rconnection con)
 {
     int c;
     Rboolean checkBOM = FALSE;
@@ -444,7 +445,7 @@ int dummy_fgetc(Rconnection con)
 {
     if (con->inconv) {
 	while (con->navail <= 0) {
-            if (Rf_iconv_navail_fgetc(con) == R_EOF) 
+            if (iconv_navail_fgetc(con) == R_EOF) 
                 return R_EOF;
         }
 	con->navail--;
