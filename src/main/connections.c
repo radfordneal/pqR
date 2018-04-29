@@ -247,41 +247,50 @@ void set_iconv(Rconnection con)
 {
     void *tmp;
 
+    con->inavail = con->navail = con->EOF_signalled = 0;
+
     /* need to test if this is text, open for reading to writing or both,
        and set inconv and/or outconv */
-    if(!con->text || !strlen(con->encname) ||
-       strcmp(con->encname, "native.enc") == 0) {
-	con->UTF8out = FALSE;
-	return;
+
+    if (!con->text || strlen(con->encname) == 0
+         || strcmp(con->encname, "native.enc") == 0) {
+        con->UTF8out = FALSE;
+        return;
     }
-    if(con->canread) {
-	size_t onb = 50;
-	char *ob = con->oconvbuff;
-	/* UTF8out is set in readLines() and scan()
-	   Was Windows-only until 2.12.0, but we now require iconv.
-	 */
-	Rboolean useUTF8 = !utf8locale && con->UTF8out;
-	tmp = Riconv_open(useUTF8 ? "UTF-8" : "", con->encname);
-	if(tmp != (void *)-1) con->inconv = tmp;
-	else set_iconv_error(con, con->encname, useUTF8 ? "UTF-8" : "");
-	con->EOF_signalled = FALSE;
-	/* initialize state, and prepare any initial bytes */
-	Riconv(tmp, NULL, NULL, &ob, &onb);
-	con->navail = 50-onb; con->inavail = 0;
-	/* libiconv can handle BOM marks on Windows Unicode files, but
-	   glibc's iconv cannot. Aargh ... */
-	if(streql(con->encname, "UCS-2LE") || 
-	   streql(con->encname, "UTF-16LE")) con->inavail = -2;
+
+    if (con->canread) {
+        size_t onb = 50;
+        char *ob = con->oconvbuff;
+        /* UTF8out is set in readLines() and scan()
+           Was Windows-only until 2.12.0, but we now require iconv.
+         */
+        Rboolean useUTF8 = !utf8locale && con->UTF8out;
+        tmp = Riconv_open(useUTF8 ? "UTF-8" : "", con->encname);
+        if (tmp != (void *)-1)
+            con->inconv = tmp;
+        else 
+            set_iconv_error(con, con->encname, useUTF8 ? "UTF-8" : "");
+        con->EOF_signalled = FALSE;
+        /* initialize state, and prepare any initial bytes */
+        Riconv(tmp, NULL, NULL, &ob, &onb);
+        con->navail = 50-onb; con->inavail = 0;
+        /* libiconv can handle BOM marks on Windows Unicode files, but
+           glibc's iconv cannot. Aargh ... */
+        if(streql(con->encname, "UCS-2LE") || 
+           streql(con->encname, "UTF-16LE")) con->inavail = -2;
     }
-    if(con->canwrite) {
-	size_t onb = 25-1; /* note that we need space to store a null after */
-	char *ob = con->init_out;
-	tmp = Riconv_open(con->encname, "");
-	if(tmp != (void *)-1) con->outconv = tmp;
-	else set_iconv_error(con, con->encname, "");
-	/* initialize state, and prepare any initial bytes */
-	Riconv(tmp, NULL, NULL, &ob, &onb);
-	ob[25-1-onb] = '\0';
+
+    if (con->canwrite) {
+        size_t onb = 25-1; /* note that we need space to store a null after */
+        char *ob = con->init_out;
+        tmp = Riconv_open(con->encname, "");
+        if (tmp != (void *)-1)
+            con->outconv = tmp;
+        else
+            set_iconv_error(con, con->encname, "");
+        /* initialize state, and prepare any initial bytes */
+        Riconv(tmp, NULL, NULL, &ob, &onb);
+        ob[25-1-onb] = '\0';
     }
 }
 
@@ -391,6 +400,7 @@ int dummy_vfprintf(Rconnection con, const char *format, va_list ap)
 
 static attribute_noinline void buff_iconv (Rconnection con)
 {
+    size_t inew;
     int c;
     
     if (con->EOF_signalled)
@@ -404,13 +414,24 @@ static attribute_noinline void buff_iconv (Rconnection con)
             con->inavail = 0;
             checkBOM = TRUE;
         }
-    
-        size_t inew = con->read (con->iconvbuff + con->inavail,
-                                 sizeof(char), 25 - con->inavail, con);
 
-        con->inavail += inew;
-        if (inew == 0)
-            con->EOF_signalled = TRUE;
+        if (con->inconv) {  /* read only one char at a time, so seek works */
+            if (con->inavail < 25) {
+                c = con->fgetc_internal(con);
+                if (c == R_EOF)
+                    con->EOF_signalled = TRUE;
+                else
+                    con->iconvbuff[con->inavail++] = c;
+            }
+        }
+        else {
+            size_t new = con->read (con->iconvbuff + con->inavail,
+                                    sizeof(char), 25 - con->inavail, con);
+            if (new == 0)
+                con->EOF_signalled = TRUE;
+            else
+                con->inavail += new;
+        }
     
         if (checkBOM && con->inavail >= 2 &&
            ((int)con->iconvbuff[0] & 0xff) == 255 &&
@@ -428,11 +449,12 @@ static attribute_noinline void buff_iconv (Rconnection con)
             errno = 0;
             res = Riconv(con->inconv, &ib, &inb, &ob, &onb);
             con->inavail = inb;
-            if (res == (size_t)-1) { /* an error condition */
+            if (res == (size_t)-1) { /* error or need more input / more space */
                 if (errno == EINVAL || errno == E2BIG) {
                     /* incomplete input char or no space in output buffer */
                     memmove(con->iconvbuff, ib, inb);
-                } else {/*  EILSEQ invalid input */
+                }
+                else {/*  EILSEQ invalid input */
                     warning(_("invalid input found on input connection '%s'"),
                             con->description);
                     con->inavail = 0;
@@ -450,6 +472,12 @@ static attribute_noinline void buff_iconv (Rconnection con)
 
     } while (con->navail == 0 && !con->EOF_signalled);
 }
+
+/* This "fgetc" version allows for buffering for performance and for conversion
+   from other encodings.  If used for a connection, the "seek" operations, 
+   if implemented, must subtract (con->inconv ? con->inavail : con->navail)
+   from the position returned, and must set con->navail, con->inavail, and 
+   con->EOF_signalled to zero (if a seek is actually done). */
 
 int dummy_fgetc(Rconnection con)
 {
@@ -708,7 +736,7 @@ static double file_seek(Rconnection con, double where, int origin, int rw)
     int whence = SEEK_SET;
 
     /* make sure both positions are set */
-    pos = f_tell(fp);
+    pos = f_tell(fp) - (con->inconv ? con->inavail : con->navail);
     if(this->last_was_write) this->wpos = pos; else this->rpos = pos;
     if(rw == 1) {
 	if(!con->canread) error(_("connection is not open for reading"));
@@ -734,6 +762,7 @@ static double file_seek(Rconnection con, double where, int origin, int rw)
     default: whence = SEEK_SET;
     }
     f_seek(fp, where, whence);
+    con->inavail = con->navail = con->EOF_signalled = 0;
     if(this->last_was_write) this->wpos = f_tell(this->fp);
     else this->rpos = f_tell(this->fp);
     return pos;
@@ -1291,7 +1320,7 @@ static int gzfile_fgetc_internal(Rconnection con)
 static double gzfile_seek(Rconnection con, double where, int origin, int rw)
 {
     gzFile  fp = ((Rgzfileconn)(con->private))->fp;
-    Rz_off_t pos = R_gztell(fp);
+    Rz_off_t pos = R_gztell(fp) - (con->inconv ? con->inavail : con->navail);
     int res, whence = SEEK_SET;
 
     if (ISNA(where)) return (double) pos;
@@ -1302,6 +1331,7 @@ static double gzfile_seek(Rconnection con, double where, int origin, int rw)
     default: whence = SEEK_SET;
     }
     res = R_gzseek(fp, (z_off_t) where, whence);
+    con->inavail = con->navail = con->EOF_signalled = 0;
     if(res == -1)
 	warning(_("seek on a gzfile connection returned an internal error"));
     return (double) pos;
@@ -1999,7 +2029,7 @@ static int clp_fgetc_internal(Rconnection con)
 static double clp_seek(Rconnection con, double where, int origin, int rw)
 {
     Rclpconn this = con->private;
-    int newpos, oldpos = this->pos;
+    int newpos, oldpos = this->pos - (con->inconv ? con->inavail : con->navail);
 
     if(ISNA(where)) return oldpos;
 
@@ -2008,9 +2038,12 @@ static double clp_seek(Rconnection con, double where, int origin, int rw)
     case 3: newpos = this->last + (int)where; break;
     default: newpos = where;
     }
+
     if(newpos < 0 || newpos >= this->last)
 	error(_("attempt to seek outside the range of the clipboard"));
-    else this->pos = newpos;
+
+    this->pos = newpos;
+    con->inavail = con->navail = con->EOF_signalled = 0;
 
     return (double) oldpos;
 }
@@ -3354,8 +3387,10 @@ static SEXP do_readLines(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!isString(CAD4R(args)) || LENGTH(CAD4R(args)) != 1)
 	error(_("invalid '%s' value"), "encoding");
     encoding = CHAR(STRING_ELT(CAD4R(args), 0)); /* ASCII */
+
     wasopen = con->isopen;
-    if(!wasopen) {
+
+    if (!wasopen) {
 	char mode[5];
 	con->UTF8out = TRUE;  /* a request */
 	strcpy(mode, con->mode);
@@ -3367,14 +3402,23 @@ static SEXP do_readLines(SEXP call, SEXP op, SEXP args, SEXP env)
 		     R_NilValue, R_NilValue);
 	cntxt.cend = &con_cleanup;
 	cntxt.cenddata = con;
-	if(!con->canread) error(_("cannot read from this connection"));
-    } else { 
-	if(!con->canread) error(_("cannot read from this connection"));
-	/* for a non-blocking connection, more input may
-	   have become available, so re-position */
-	if(con->canseek && !con->blocking)
-	    con->seek(con, con->seek(con, -1, 1, 1), 1, 1);
+    } 
+
+    else { /* was already open */ 
+
+	/* For an open non-blocking connection that has reached EOF, more 
+           input may have become available, so seek to current position to
+           reset EOF flag, etc. while preserving any pushback. */
+
+	if (con->EOF_signalled && con->canseek && !con->blocking) {
+            int sv_nPushBack = con->nPushBack;
+            con->nPushBack = 0;  /* so seek won't free it */
+	    con->seek (con, 0, 2, 1);
+            con->nPushBack = sv_nPushBack;
+        }
     }
+
+    if (!con->canread) error(_("cannot read from this connection"));
     con->incomplete = FALSE;
     if(con->UTF8out || streql(encoding, "UTF-8")) oenc = CE_UTF8;
     else if(streql(encoding, "latin1")) oenc = CE_LATIN1;
@@ -4448,7 +4492,6 @@ attribute_hidden void con_pushback (Rconnection con, Rboolean newLine,
     if(!(*q)) error(_("could not allocate space for pushBack"));
     strcpy(*q, line);
     if(newLine) strcat(*q, "\n");
-    q++;
     con->posPushBack = 0;
     con->nPushBack++;
 }
