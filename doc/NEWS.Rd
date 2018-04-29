@@ -299,10 +299,10 @@
 
   \subsection{BUG FIXES}{
   \itemize{
-  \itme Fixed bugs illustrated by \code{format(3.1,width=9999)}, in which
+  \item Fixed bugs illustrated by \code{format(3.1,width=9999)}, in which
         large field widths are reduced to 999, but are filled with only spaces.
         The field widths are now automatically reduced to 999 (2000 for
-        complex values), but contain  correct data.  This bug was also
+        complex values), but contain correct data.  This bug was also
         fixed (differently) in R-3.1.3, except for complex values.
   \item Fixed a bug that caused the following to fail with an error,
         rather than print the square root of two:
