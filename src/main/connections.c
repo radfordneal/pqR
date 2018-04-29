@@ -406,14 +406,14 @@ static attribute_noinline void buff_iconv (Rconnection con)
     if (con->EOF_signalled)
         return;
 
-    do {
-
-        Rboolean checkBOM = FALSE;
+    Rboolean checkBOM = FALSE;
     
-        if (con->inavail == -2) {
-            con->inavail = 0;
-            checkBOM = TRUE;
-        }
+    if (con->inavail == -2) {
+        con->inavail = 0;
+        checkBOM = TRUE;
+    }
+
+    do {
 
         if (con->inconv) {  /* read only one char at a time, so seek works */
             if (con->inavail < 25) {
@@ -433,11 +433,15 @@ static attribute_noinline void buff_iconv (Rconnection con)
                 con->inavail += new;
         }
     
-        if (checkBOM && con->inavail >= 2 &&
-           ((int)con->iconvbuff[0] & 0xff) == 255 &&
-           ((int)con->iconvbuff[1] & 0xff) == 254) {
-            con->inavail -= 2;
-            memmove(con->iconvbuff, con->iconvbuff+2, con->inavail);
+        if (checkBOM) {
+            if (con->inavail < 2) 
+                continue;
+            if (((int)con->iconvbuff[0] & 0xff) == 255 &&
+                ((int)con->iconvbuff[1] & 0xff) == 254) {
+                con->inavail -= 2;
+                memmove(con->iconvbuff, con->iconvbuff+2, con->inavail);
+            }
+            checkBOM = FALSE;
         }
     
         if (con->inconv) {
@@ -487,9 +491,12 @@ int dummy_fgetc(Rconnection con)
             return R_EOF;
     }
 
+    int c = * (unsigned char*) (con->next);
+
+    con->next += 1;
     con->navail -= 1;
 
-    return *con->next++;
+    return c;
 }
 
 static int null_fgetc(Rconnection con)
