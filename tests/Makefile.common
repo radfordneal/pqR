@@ -109,7 +109,7 @@ FORCE:
 	  $(ECHO) "$(ECHO_T) OK"; \
 	fi
 
-## We could use Rdiff now this is in R.
+## We now use Rdiff since this is now in R.
 ## An attempt to use pdf(compress=FALSE) in Sept 2011 failed, as 
 ## Win32 gave sligtly different answers (rounding error).
 reg-plot.Rout: reg-plot.R
