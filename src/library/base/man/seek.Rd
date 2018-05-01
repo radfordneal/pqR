@@ -1,6 +1,7 @@
 % File src/library/base/man/seek.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
+% Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{seek}
@@ -74,8 +75,10 @@ truncate(con, \dots)
   implemented on all platforms: on others (including Windows) it will
   not work for large (> 2Gb) files.
   
-  None of these should be expected to work on text-mode connections with
-  re-encoding selected.
+  On text-mode connections with re-encoding selected, an attempt is
+  made to get \code{seek} to work (with positions defined before re-encoding),
+  but there may be anomalies, and the position returned by \code{seek}
+  will be \code{NA}.
 }
 \section{Warning}{
   Use of \code{seek} on Windows is discouraged.  We have found so many
@@ -85,10 +88,11 @@ truncate(con, \dots)
 }
 \value{
   \code{seek} returns the current position (before any move), as a
-  (numeric) byte offset from the origin, if relevant, or \code{0} if
-  not.  Note that the position can exceed the largest representable
-  number in an \R \code{integer} on 64-bit builds, and on some 32-bit
-  builds.
+  (numeric) byte offset from the origin, or \code{NA} if the position
+  is not available for a connection with re-encoding, or \code{0} if a
+  position is not meaningful for the type of connection.  Note that
+  the position can exceed the largest representable number in an \R
+  \code{integer} on 64-bit builds, and on some 32-bit builds.
 
   \code{truncate} returns \code{NULL}: it stops with an error if
   it fails (or is not implemented).

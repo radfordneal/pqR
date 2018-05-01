@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2000-12   The R Core Team.
@@ -22,6 +22,11 @@
  *  along with this program; if not, a copy is available at
  *  http://www.r-project.org/Licenses/
  */
+
+
+#define SEEK_WITH_ENCODING_OK 0  /* Set to 1 to make pos returned by seek be
+                                    meaningful for connections with encoding */
+
 
 /* Notes on so-called 'Large File Support':
 
@@ -415,7 +420,8 @@ static attribute_noinline void buff_iconv (Rconnection con)
 
     do {
 
-        if (con->inconv) {  /* read only one char at a time, so seek works */
+        if (SEEK_WITH_ENCODING_OK /* If enabled, on connections with encoding */
+              && con->inconv) {   /*   read one char at a time, so seek works */
             if (con->inavail < 25) {
                 c = con->fgetc_internal(con);
                 if (c == R_EOF)
@@ -788,8 +794,7 @@ static double file_seek(Rconnection con, double where, int origin, int rw)
         pos = file_pos_from_tell(con,this);
     }
 
-    if (ISNA(where))
-        return pos;
+    if (ISNAN(where)) goto ret;
 
     int whence;
 
@@ -802,7 +807,8 @@ static double file_seek(Rconnection con, double where, int origin, int rw)
     f_seek(fp, where, whence);
     con->inavail = con->navail = con->EOF_signalled = 0;
 
-    return pos;
+ret:
+    return con->inconv && !SEEK_WITH_ENCODING_OK ? NA_REAL : pos;
 }
 
 static void file_truncate(Rconnection con)
