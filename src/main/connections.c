@@ -478,10 +478,10 @@ static attribute_noinline void buff_iconv (Rconnection con)
 }
 
 /* This "fgetc" version allows for buffering for performance and for conversion
-   from other encodings.  If used for a connection, the "seek" operations, 
-   if implemented, must subtract (con->inconv ? con->inavail : con->navail)
-   from the position returned, and must set con->navail, con->inavail, and 
-   con->EOF_signalled to zero (if a seek is actually done). */
+   from other encodings.  If dummy_fgetc is used for a connection, to find
+   the read file position, subtract (con->inconv ?  con->inavail : con->navail)
+   from from the position returned by ftell.  Need to set con->navail, 
+   con->inavail, and con->EOF_signalled to 0 if a write may have been done. */
 
 int dummy_fgetc(Rconnection con)
 {
@@ -596,6 +596,46 @@ typedef struct fileconn {
 #endif
 } *Rfileconn;
 
+
+/* Return file position, accounting for buffering, and set wpos or rpos. */
+
+static OFF_T file_pos_from_tell (Rconnection con, Rfileconn this)
+{
+    OFF_T pos = f_tell(this->fp);
+
+    if (this->last_was_write) 
+        this->wpos = pos;
+    else {
+        pos -= (con->inconv ? con->inavail : con->navail);
+        this->rpos = pos;
+    }
+
+    return pos;
+}
+
+static void attribute_noinline file_switch_to_read (Rconnection con, 
+                                                    Rfileconn this)
+{
+    file_pos_from_tell (con, this);
+
+    if (this->last_was_write) {
+        this->last_was_write = FALSE;
+        f_seek(this->fp, this->rpos, SEEK_SET);
+        con->inavail = con->navail = con->EOF_signalled = 0;
+    }
+}
+
+static void attribute_noinline file_switch_to_write (Rconnection con, 
+                                                     Rfileconn this)
+{
+    file_pos_from_tell (con, this);
+
+    if (!this->last_was_write) {
+        this->last_was_write = TRUE;
+        f_seek(this->fp, this->wpos, SEEK_SET);
+    }
+}
+
 static Rboolean file_open(Rconnection con)
 {
     const char *name;
@@ -695,7 +735,7 @@ static int file_vfprintf(Rconnection con, const char *format, va_list ap)
     Rfileconn this = con->private;
 
     if (!this->last_was_write) {
-	this->rpos = f_tell(this->fp);
+        file_pos_from_tell (con, this);
 	this->last_was_write = TRUE;
 	f_seek (this->fp, this->wpos, SEEK_SET);
     }
@@ -716,20 +756,13 @@ static int file_vfprintf(Rconnection con, const char *format, va_list ap)
     }
 }
 
-static void attribute_noinline file_switch_to_read (Rfileconn this)
-{
-    this->wpos = f_tell(this->fp);
-    this->last_was_write = FALSE;
-    f_seek(this->fp, this->rpos, SEEK_SET);
-}
-
 static int file_fgetc_internal(Rconnection con)
 {
     Rfileconn this = con->private;
     int c;
 
     if (this->last_was_write)
-        file_switch_to_read(this);
+        file_switch_to_read(con,this);
 
     c = fgetc(this->fp);
     return c == EOF ? R_EOF : c;
@@ -740,38 +773,35 @@ static double file_seek(Rconnection con, double where, int origin, int rw)
     Rfileconn this = con->private;
     FILE *fp = this->fp;
     OFF_T pos;
-    int whence = SEEK_SET;
 
-    /* make sure both positions are set */
-    pos = f_tell(fp) - (con->inconv ? con->inavail : con->navail);
-    if(this->last_was_write) this->wpos = pos; else this->rpos = pos;
-    if(rw == 1) {
-	if(!con->canread) error(_("connection is not open for reading"));
+    if (rw == 1) {
+	if (!con->canread) error(_("connection is not open for reading"));
+        file_switch_to_read(con,this);
 	pos = this->rpos;
-	this->last_was_write = FALSE;
     }
-    if(rw == 2) {
-	if(!con->canwrite) error(_("connection is not open for writing"));
+    else if (rw == 2) {
+	if (!con->canwrite) error(_("connection is not open for writing"));
+        file_switch_to_write(con,this);
 	pos = this->wpos;
-	this->last_was_write = TRUE;
     }
-    if(ISNA(where)) return pos;
+    else {
+        pos = file_pos_from_tell(con,this);
+    }
+
+    if (ISNA(where))
+        return pos;
+
+    int whence;
 
     switch(origin) {
     case 2: whence = SEEK_CUR; break;
-    case 3: whence = SEEK_END;
-//#ifdef Win32
-	    /* work around a bug in MinGW runtime 3.8 fseeko64, PR#7896
-	       seems no longer to be needed */
-//	    if(con->canwrite) fflush(fp);
-//#endif
-	    break;
+    case 3: whence = SEEK_END; break;
     default: whence = SEEK_SET;
     }
+
     f_seek(fp, where, whence);
     con->inavail = con->navail = con->EOF_signalled = 0;
-    if(this->last_was_write) this->wpos = f_tell(this->fp);
-    else this->rpos = f_tell(this->fp);
+
     return pos;
 }
 
@@ -817,11 +847,9 @@ static size_t file_read(void *ptr, size_t size, size_t nitems,
     Rfileconn this = con->private;
     FILE *fp = this->fp;
 
-    if(this->last_was_write) {
-	this->wpos = f_tell(this->fp);
-	this->last_was_write = FALSE;
-	f_seek(this->fp, this->rpos, SEEK_SET);
-    }
+    if (this->last_was_write)
+        file_switch_to_read(con,this);
+
     return fread(ptr, size, nitems, fp);
 }
 
@@ -831,11 +859,9 @@ static size_t file_write(const void *ptr, size_t size, size_t nitems,
     Rfileconn this = con->private;
     FILE *fp = this->fp;
 
-    if(!this->last_was_write) {
-	this->rpos = f_tell(this->fp);
-	this->last_was_write = TRUE;
-	f_seek(this->fp, this->wpos, SEEK_SET);
-    }
+    if (!this->last_was_write)
+        file_switch_to_write(con,this);
+
     return fwrite(ptr, size, nitems, fp);
 }
 
@@ -3414,14 +3440,10 @@ static SEXP do_readLines(SEXP call, SEXP op, SEXP args, SEXP env)
     else { /* was already open */ 
 
 	/* For an open non-blocking connection that has reached EOF, more 
-           input may have become available, so seek to current position to
-           reset EOF flag, etc. while preserving any pushback. */
+           input may have become available, so reset EOF flag. */
 
-	if (con->EOF_signalled && con->canseek && !con->blocking) {
-            int sv_nPushBack = con->nPushBack;
-            con->nPushBack = 0;  /* so seek won't free it */
-	    con->seek (con, 0, 2, 1);
-            con->nPushBack = sv_nPushBack;
+	if (con->EOF_signalled && !con->blocking) {
+            con->EOF_signalled = 0;
         }
     }
 
