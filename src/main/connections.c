@@ -614,7 +614,7 @@ static OFF_T file_pos_from_tell (Rconnection con, Rfileconn this)
 }
 
 static void attribute_noinline file_switch_to_read (Rconnection con, 
-                                                    Rfileconn this)
+                                                   Rfileconn this)
 {
     file_pos_from_tell (con, this);
 
@@ -3439,12 +3439,7 @@ static SEXP do_readLines(SEXP call, SEXP op, SEXP args, SEXP env)
 
     else { /* was already open */ 
 
-	/* For an open non-blocking connection that has reached EOF, more 
-           input may have become available, so reset EOF flag. */
-
-	if (con->EOF_signalled && !con->blocking) {
-            con->EOF_signalled = 0;
-        }
+        con->EOF_signalled = 0; /* More input may have become available */
     }
 
     if (!con->canread) error(_("cannot read from this connection"));
