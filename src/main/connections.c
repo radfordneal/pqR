@@ -25,7 +25,8 @@
 
 
 #define SEEK_WITH_ENCODING_OK 0  /* Set to 1 to make pos returned by seek be
-                                    meaningful for connections with encoding */
+                                    meaningful for connections with encoding,
+                                    but at a large performance cost. */
 
 
 /* Notes on so-called 'Large File Support':
@@ -407,7 +408,7 @@ static attribute_noinline void buff_iconv (Rconnection con)
 {
     size_t inew;
     int c;
-    
+
     if (con->EOF_signalled)
         return;
 
@@ -612,7 +613,12 @@ static OFF_T file_pos_from_tell (Rconnection con, Rfileconn this)
     if (this->last_was_write) 
         this->wpos = pos;
     else {
-        pos -= (con->inconv ? con->inavail : con->navail);
+        if (con->inconv)
+            pos -= SEEK_WITH_ENCODING_OK 
+                    ? con->inavail /* OK if n-to-1 mapping, maybe if 1-to-n */
+                    : con->navail  /* wrong if not 1-to-1 mapping */;
+        else
+            pos -= con->navail;
         this->rpos = pos;
     }
 
@@ -627,7 +633,12 @@ static void attribute_noinline file_switch_to_read (Rconnection con,
     if (this->last_was_write) {
         this->last_was_write = FALSE;
         f_seek(this->fp, this->rpos, SEEK_SET);
-        con->inavail = con->navail = con->EOF_signalled = 0;
+        if (con->inconv && !SEEK_WITH_ENCODING_OK)
+            ; /* hope for the best - may work if no write in buffered area */
+        else
+            con->navail = 0;
+        con->inavail = 0;
+        con->EOF_signalled = 0;
     }
 }
 
@@ -639,6 +650,12 @@ static void attribute_noinline file_switch_to_write (Rconnection con,
     if (!this->last_was_write) {
         this->last_was_write = TRUE;
         f_seek(this->fp, this->wpos, SEEK_SET);
+        if (con->inconv && !SEEK_WITH_ENCODING_OK)
+            ; /* hope for the best - may work if no write in buffered area */
+        else
+            con->navail = 0;
+        con->inavail = 0;
+        con->EOF_signalled = 0;
     }
 }
 
@@ -740,11 +757,8 @@ static int file_vfprintf(Rconnection con, const char *format, va_list ap)
 {
     Rfileconn this = con->private;
 
-    if (!this->last_was_write) {
-        file_pos_from_tell (con, this);
-	this->last_was_write = TRUE;
-	f_seek (this->fp, this->wpos, SEEK_SET);
-    }
+    if (!this->last_was_write)
+        file_switch_to_write(con,this);
 
     if (con->outconv) {
         return dummy_vfprintf(con, format, ap);
