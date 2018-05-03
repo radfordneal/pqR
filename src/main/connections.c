@@ -767,7 +767,13 @@ static int file_vfprintf(Rconnection con, const char *format, va_list ap)
         va_list ap2;
         va_copy (ap2, ap);
         char *p = va_arg (ap2, char *);
-        size_t res = fwrite (p, sizeof(char), strlen(p), this->fp);
+        size_t res;
+        if (p[0] == 0)
+            res = 0;
+        else if (p[1] == 0)
+            res = fputc (p[0], this->fp) != EOF;
+        else
+            res = fwrite (p, sizeof(char), strlen(p), this->fp);
         va_end (ap2);
         return res;
     }
