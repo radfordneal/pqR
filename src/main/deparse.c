@@ -1394,7 +1394,7 @@ static void vector2buff(SEXP vector, LocalParseData *d)
 	    } else if (TYPEOF(vector) == REALSXP && (d->opts & S_COMPAT)) {
 		int w, d, e;
 		formatReal(&REAL(vector)[i], 1, &w, &d, &e, 0);
-		strp = EncodeReal2(REAL(vector)[i], w, d, e);
+		strp = EncodeReal(REAL(vector)[i], w, d, e, '.');
 	    } else if (TYPEOF(vector) == STRSXP) {
 		const char *ts = translateChar(STRING_ELT(vector, i));
 		/* versions of R < 2.7.0 cannot parse strings longer than 8192 chars */

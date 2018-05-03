@@ -124,8 +124,10 @@ const char *EncodeLogical(int x, int w)
 {
     static char buff[NB];
     if (w >= NB) w = NB-1;
-    if (x == NA_LOGICAL) 
-        sprintf(buff, "%*s", w, CHAR(R_print.na_string));
+    if (x == NA_LOGICAL) {
+        snprintf(buff, NB, "%*s", w, CHAR(R_print.na_string));
+        buff[NB-1] = 0;
+    }
     else if (x) 
         sprintf(buff, "%*s", w, "TRUE");
     else 
@@ -137,8 +139,10 @@ const char *EncodeInteger(int x, int w)
 {
     static char buff[NB];
     if (w >= NB) w = NB-1;
-    if (x == NA_INTEGER) 
-        sprintf(buff, "%*s", w, CHAR(R_print.na_string));
+    if (x == NA_INTEGER) {
+        snprintf(buff, NB, "%*s", w, CHAR(R_print.na_string));
+        buff[NB-1] = 0;
+    }
     else 
         sprintf(buff, "%*d", w, x);
     return buff;
@@ -181,10 +185,11 @@ const char *EncodeReal(double x, int w, int d, int e, char cdec)
     if (x == 0.0) 
         x = 0.0;  /* IEEE allows signed zeros (yuck!) */
     else if (!R_FINITE(x)) {
-        sprintf(buff, "%*s", w, 
+        snprintf(buff, NB, "%*s", w, 
           ISNA(x)  ?  CHAR(R_print.na_string) :
           ISNAN(x) ?  "NaN" :
           x > 0    ?  "Inf" :  "-Inf");
+        buff[NB-1] = 0;
         return buff;
     }
 
@@ -196,46 +201,13 @@ const char *EncodeReal(double x, int w, int d, int e, char cdec)
     return buff;
 }
 
-attribute_hidden
-const char *EncodeReal2(double x, int w, int d, int e)
-{
-    static char buff[NB];
-    char fmt[30];
-
-    if (w >= NB) w = NB-1;
-
-    /* IEEE allows signed zeros (yuck!) */
-    if (x == 0.0) x = 0.0;
-    if (!R_FINITE(x)) {
-	if(ISNA(x)) sprintf(buff, "%*s", w, CHAR(R_print.na_string));
-	else if(ISNAN(x)) sprintf(buff, "%*s", w, "NaN");
-	else if(x > 0) sprintf(buff, "%*s", w, "Inf");
-	else sprintf(buff, "%*s", w, "-Inf");
-    }
-    else if (e) {
-	if(d) {
-	    sprintf(fmt,"%%#%d.%de", w, d);
-	    sprintf(buff, fmt, x);
-	}
-	else {
-	    sprintf(fmt,"%%%d.%de", w, d);
-	    sprintf(buff, fmt, x);
-	}
-    }
-    else { /* e = 0 */
-	sprintf(fmt,"%%#%d.%df", w, d);
-	sprintf(buff, fmt, x);
-    }
-    return buff;
-}
-
 void z_prec_r(Rcomplex *r, Rcomplex *x, double digits);
 
 const char
 *EncodeComplex(Rcomplex x, int wr, int dr, int er, int wi, int di, int ei,
 	       char cdec)
 {
-    static char buff[2*NB+2];
+    static char buff[2*NB+1];
     char Re[NB];
     const char *Im, *tmp;
     int flagNegIm = 0;
@@ -249,9 +221,10 @@ const char
     if (x.i == 0.0) x.i = 0.0;
 
     if (ISNA(x.r) || ISNA(x.i)) {
-	sprintf(buff,
+	snprintf(buff, 2*NB+1,
 		 "%*s", /* was "%*s%*s", R_print.gap, "", */
 		 wr+wi+2, CHAR(R_print.na_string));
+        buff[2*NB] = 0;
     } else {
 	/* formatComplex rounded, but this does not, and we need to
 	   keep it that way so we don't get strange trailing zeros.
