@@ -175,6 +175,8 @@ const char *EncodeEnvironment(SEXP x)
     return ch;
 }
 
+/* cdec is the decimal point character, with 0 same as '.' except always 
+   there in non-exponential format. */
 const char *EncodeReal(double x, int w, int d, int e, char cdec)
 {
     static char buff[NB];
@@ -193,9 +195,11 @@ const char *EncodeReal(double x, int w, int d, int e, char cdec)
         return buff;
     }
 
-    sprintf (buff, (e==0 ? "%*.*f" : d==0 ? "%*.*e" : "%#*.*e"), w, d, x);
+    sprintf (buff, (e==0 ? (cdec == 0 ? "%#*.*f" : "%*.*f")
+                         : (d==0 ? "%*.*e" : "%#*.*e")), 
+                    w, d, x);
 
-    if (cdec != '.')
+    if (cdec != '.' && cdec != 0)
       for (p = buff; *p != 0; p++) if (*p == '.') *p = cdec;
 
     return buff;
