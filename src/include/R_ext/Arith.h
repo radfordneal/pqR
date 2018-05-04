@@ -165,12 +165,27 @@ static inline int MAY_BE_NAN4 (double x0, double x1, double x2, double x3)
 
 #endif
 
+
+#if 0  /* two implementations, selectable based on performance tests */
+
 static inline int ISNAN_value (double x)
 {
   union { double d; uint64_t u; } un;
   un.d = x;
   return ((un.u & (un.u-1) & ~((uint64_t)1<<63)) + ((uint64_t)1<<52)) >> 63;
 }
+
+#else  /* like in glibc's isnan */
+
+static inline int ISNAN_value (double x)
+{
+  union { double d; uint64_t u; } un;
+  un.d = x;
+  return (((uint64_t)0x7ff << 52) - (un.u & ~((uint64_t)1<<63))) >> 63;
+}
+
+#endif
+
 
 #define ISNA(x) (ISNA_inline_fun(x))
 static inline int ISNA_inline_fun (double x)
