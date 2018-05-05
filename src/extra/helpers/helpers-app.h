@@ -17,6 +17,9 @@
  *  http://www.r-project.org/Licenses/
  */
 
+#ifndef HELPERS_APP_H_
+#define HELPERS_APP_H_
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -175,3 +178,6 @@ extern char *Rf_var_name (helpers_var_ptr);
    a task, with the adjustment applying to all the thresholds set this way. */
 
 #define THRESHOLD_ADJUST(a) ((a)*10)
+
+
+#endif
