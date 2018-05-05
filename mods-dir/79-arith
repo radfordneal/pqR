@@ -1,0 +1,3 @@
+Improvements to arithmetic.
+
+Better versions of mod_iterate, used for integer and complex arithmetic.
