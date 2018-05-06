@@ -247,7 +247,7 @@ void task_merged_arith_abs (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     } while (0)
 
     op = ops>>16;
-    if (op != 0 && op != MERGED_OP_ABS) {
+    if (op != MERGED_OP_NULL && op != MERGED_OP_ABS) {
         c1 = *scp++;
         POW_SPECIAL(op,c1);
     }
@@ -255,14 +255,14 @@ void task_merged_arith_abs (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     ops &= 0xffff;
 
     op = ops >> 8;
-    if (op != MERGED_OP_ABS) {
+    if (op != MERGED_OP_ABS) { /* no MERGED_OP_NULL, but may be created below */
         c2 = *scp++;
         POW_SPECIAL(op,c2);
     }
     switch23 = op * N_MERGED_OPS;
 
     op = ops & 0xff;
-    if (op != MERGED_OP_ABS) {
+    if (op != MERGED_OP_ABS) { /* no MERGED_OP_NULL, but may be created below */
         c3 = *scp;
         POW_SPECIAL(op,c3);
     }
