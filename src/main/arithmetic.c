@@ -339,7 +339,7 @@ static double logbase(double x, double base)
                 HELPERS_WAIT_IN1 (a, i, n); \
                 do { \
                     R_len_t u = HELPERS_UP_TO(i,a); \
-                    while (i+3 <= u) { \
+                    while (i <= u-3) { \
                         type op10 = fetch1(s1,i); \
                         type op11 = fetch1(s1,i+1); \
                         type op12 = fetch1(s1,i+2); \
@@ -364,7 +364,7 @@ static double logbase(double x, double base)
                 HELPERS_WAIT_IN2 (a, i, n); \
                 do { \
                     R_len_t u = HELPERS_UP_TO(i,a); \
-                    while (i+3 <= u) { \
+                    while (i <= u-3) { \
                         type op20 = fetch2(s2,i); \
                         type op21 = fetch2(s2,i+1); \
                         type op22 = fetch2(s2,i+2); \
@@ -389,7 +389,7 @@ static double logbase(double x, double base)
                 HELPERS_WAIT_IN2 (a2, i, n); \
                 do { \
                     R_len_t u = HELPERS_UP_TO2(i,a1,a2); \
-                    while (i+3 <= u) { \
+                    while (i <= u-3) { \
                         type op10 = fetch1(s1,i), op20 = fetch2(s2,i); \
                         type op11 = fetch1(s1,i+1), op21 = fetch2(s2,i+1); \
                         type op12 = fetch1(s1,i+2), op22 = fetch2(s2,i+2); \
@@ -446,10 +446,6 @@ static double logbase(double x, double base)
    offset is assumed to be the same for both operands and the result
    (except that scalars can have any alignment).
 
-   On an Intel Skylake processor, using gcc 7.2, the AVX code below
-   gives little or no speed improvement on microbenchmarks, compared
-   to the unwrapped loops above, but some of the code produced is
-   smaller, so it may have better performance in a larger context.
    Note that here we can take advantage of knowledge that operations
    are done element-by-element, with any possible aliasing of s1, s2,
    and result being irrelevant, as long as only final values are
@@ -479,7 +475,7 @@ static double logbase(double x, double base)
                         result[i] = func(REAL(s1)[i],tmp); \
                         i += 1; \
                     } \
-                    while (i+3 <= u) { \
+                    while (i <= u-3) { \
                         __m256d res_pd; \
                         res_pd = _mm256_load_pd (REAL(s1)+i); \
                         res_pd = func ## _mm (res_pd, tmp_pd); \
@@ -506,7 +502,7 @@ static double logbase(double x, double base)
                         result[i] = func(tmp,REAL(s2)[i]); \
                         i += 1; \
                     } \
-                    while (i+3 <= u) { \
+                    while (i <= u-3) { \
                         __m256d res_pd; \
                         res_pd = _mm256_load_pd (REAL(s2)+i); \
                         res_pd = func ## _mm (tmp_pd, res_pd); \
@@ -532,7 +528,7 @@ static double logbase(double x, double base)
                         result[i] = func(REAL(s1)[i],REAL(s2)[i]); \
                         i += 1; \
                     } \
-                    while (i+3 <= u) { \
+                    while (i <= u-3) { \
                         __m256d res_pd, op2_pd; \
                         res_pd = _mm256_load_pd (REAL(s1)+i); \
                         op2_pd = _mm256_load_pd (REAL(s2)+i); \
@@ -560,7 +556,7 @@ static double logbase(double x, double base)
                         if (++i2 == n2) i2 = 0; \
                         i += 1; \
                     } \
-                    while (i+3 <= u) { \
+                    while (i <= u-3) { \
                         __m256d res_pd, op2_pd; \
                         res_pd = _mm256_load_pd (REAL(s1)+i); \
                         double __attribute__ ((aligned (32))) op[4]; \
@@ -598,7 +594,7 @@ static double logbase(double x, double base)
                         if (++i1 == n1) i1 = 0; \
                         i += 1; \
                     } \
-                    while (i+3 <= u) { \
+                    while (i <= u-3) { \
                         __m256d res_pd, op1_pd; \
                         res_pd = _mm256_load_pd (REAL(s2)+i); \
                         double __attribute__ ((aligned (32))) op[4]; \
@@ -771,7 +767,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
     double *rans = REAL(ans);
-    unsigned n, n1, n2;
+    R_len_t n, n1, n2;
 
     n1 = LENGTH(s1);
     n2 = LENGTH(s2);
@@ -829,7 +825,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                             rans[i] = op * op;
                             i += 1;
                         }
-                        while (i+3 <= u) {
+                        while (i <= u-3) {
                             __m256d res_pd;
                             res_pd = _mm256_load_pd (&RFETCH(s1,i));
                             res_pd = _mm256_mul_pd (res_pd, res_pd);
@@ -837,7 +833,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                             i += 4;
                         }
 #                       else
-                        while (i+3 <= u) {
+                        while (i <= u-3) {
                             double op0 = RFETCH(s1,i);
                             double op1 = RFETCH(s1,i+1);
                             double op2 = RFETCH(s1,i+2);
