@@ -291,12 +291,12 @@ static double logbase(double x, double base)
        i1 = (i1+1 == n1 ? 0 : i1+1), i2 = (i2+1 == n2 ? 0 : i2+1), ++i)
 
 #define mod_iterate_1(n1,n2,i1,i2) /* assumes n1 <= n2 */ \
-  for (R_len_t i = 0, \
-       i1 = i2 = 0; \
-       i2 < n2; i1 = (i1+1 == n1 ? 0 : i1+1), ++i2, i = i2)
+  for (R_len_t i = 0, i1 = i2 = 0; \
+       i2 < n2; \
+       i1 = (i1+1 == n1 ? 0 : i1+1), ++i2, i = i2)
 
 #define mod_iterate_2(n1,n2,i1,i2) /* assumes n2 <= n1 */ \
-  for (R_len_t i, i1 = i2 = 0; \
+  for (R_len_t i = 0, i1 = i2 = 0; \
        i1 < n1; \
        i2 = (i2+1 == n2 ? 0 : i2+1), ++i1, i = i1)
 
@@ -442,7 +442,9 @@ static double logbase(double x, double base)
 
 /* A version of PIPEARITH using AVX intrinsics (for x86 platforms),
    which may be used.  The function name passed must have a version
-   with _mm appended that does the AVX256 operation.
+   with _mm appended that does the AVX256 operation.  Alignment and
+   offset is assumed to be the same for both operands and the result
+   (except that scalars can have any alignment).
 
    On an Intel Skylake processor, using gcc 7.2, the AVX code below
    gives little or no speed improvement on microbenchmarks, compared
@@ -461,12 +463,12 @@ static double logbase(double x, double base)
 
 #include <immintrin.h>
 
-#define MM_PIPEARITH(type,func,result,n,fetch1,s1,n1,fetch2,s2,n2) \
+#define MM_PIPEARITH(func,result,n,s1,n1,s2,n2) \
     do { \
         R_len_t i, i1, i2, a, a1, a2; \
         i = 0; \
         if (n2 == 1) { \
-            type tmp = fetch2(s2,0); \
+            double tmp = REAL(s2)[0]; \
             __m256d tmp_pd = _mm256_set_pd(tmp,tmp,tmp,tmp); \
             while (i<n) { \
                 HELPERS_WAIT_IN1 (a, i, n); \
@@ -474,18 +476,18 @@ static double logbase(double x, double base)
                     R_len_t u = HELPERS_UP_TO(i,a); \
                     /* do ops individually until result+i is 32-byte aligned */\
                     while (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
-                        result[i] = func(fetch1(s1,i),tmp); \
+                        result[i] = func(REAL(s1)[i],tmp); \
                         i += 1; \
                     } \
                     while (i+3 <= u) { \
                         __m256d res_pd; \
-                        res_pd = _mm256_loadu_pd (&fetch1(s1,i)); \
+                        res_pd = _mm256_load_pd (REAL(s1)+i); \
                         res_pd = func ## _mm (res_pd, tmp_pd); \
                         _mm256_store_pd (result+i, res_pd); \
                         i += 4; \
                     } \
                     while (i <= u) { \
-                        result[i] = func(fetch1(s1,i),tmp); \
+                        result[i] = func(REAL(s1)[i],tmp); \
                         i += 1; \
                     } \
                     helpers_amount_out(i); \
@@ -493,7 +495,7 @@ static double logbase(double x, double base)
             } \
         } \
         else if (n1 == 1) { \
-            type tmp = fetch1(s1,0); \
+            double tmp = REAL(s1)[0]; \
             __m256d tmp_pd = _mm256_set_pd(tmp,tmp,tmp,tmp); \
             while (i<n) { \
                 HELPERS_WAIT_IN2 (a, i, n); \
@@ -501,18 +503,18 @@ static double logbase(double x, double base)
                     R_len_t u = HELPERS_UP_TO(i,a); \
                     /* do ops individually until result+i is 32-byte aligned */\
                     while (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
-                        result[i] = func(tmp,fetch2(s2,i)); \
+                        result[i] = func(tmp,REAL(s2)[i]); \
                         i += 1; \
                     } \
                     while (i+3 <= u) { \
                         __m256d res_pd; \
-                        res_pd = _mm256_loadu_pd (&fetch2(s2,i)); \
+                        res_pd = _mm256_load_pd (REAL(s2)+i); \
                         res_pd = func ## _mm (tmp_pd, res_pd); \
                         _mm256_store_pd (result+i, res_pd); \
                         i += 4; \
                     } \
                     while (i <= u) { \
-                        result[i] = func(tmp,fetch2(s2,i)); \
+                        result[i] = func(tmp,REAL(s2)[i]); \
                         i += 1; \
                     } \
                     helpers_amount_out(i); \
@@ -527,19 +529,19 @@ static double logbase(double x, double base)
                     R_len_t u = HELPERS_UP_TO2(i,a1,a2); \
                     /* do ops individually until result+i is 32-byte aligned */\
                     while (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
-                        result[i] = func(fetch1(s1,i),fetch2(s2,i)); \
+                        result[i] = func(REAL(s1)[i],REAL(s2)[i]); \
                         i += 1; \
                     } \
                     while (i+3 <= u) { \
                         __m256d res_pd, op2_pd; \
-                        res_pd = _mm256_loadu_pd (&fetch1(s1,i)); \
-                        op2_pd = _mm256_loadu_pd (&fetch2(s2,i)); \
+                        res_pd = _mm256_load_pd (REAL(s1)+i); \
+                        op2_pd = _mm256_load_pd (REAL(s2)+i); \
                         res_pd = func ## _mm (res_pd, op2_pd); \
                         _mm256_store_pd (result+i, res_pd); \
                         i += 4; \
                     } \
                     while (i <= u) { \
-                        result[i] = func(fetch1(s1,i),fetch2(s2,i)); \
+                        result[i] = func(REAL(s1)[i],REAL(s2)[i]); \
                         i += 1; \
                     } \
                     helpers_amount_out(i); \
@@ -554,21 +556,21 @@ static double logbase(double x, double base)
                     R_len_t u = HELPERS_UP_TO(i,a); \
                     /* do ops individually until result+i is 32-byte aligned */\
                     while (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
-                        result[i] = func(fetch1(s1,i),fetch2(s2,i2)); \
+                        result[i] = func(REAL(s1)[i],REAL(s2)[i2]); \
                         if (++i2 == n2) i2 = 0; \
                         i += 1; \
                     } \
                     while (i+3 <= u) { \
                         __m256d res_pd, op2_pd; \
-                        res_pd = _mm256_loadu_pd (&fetch1(s1,i)); \
-                        type __attribute__ ((aligned (32))) op[4]; \
-                        op[0] = fetch2(s2,i2); \
+                        res_pd = _mm256_load_pd (REAL(s1)+i); \
+                        double __attribute__ ((aligned (32))) op[4]; \
+                        op[0] = REAL(s2)[i2]; \
                         if (++i2 == n2) i2 = 0; \
-                        op[1] = fetch2(s2,i2); \
+                        op[1] = REAL(s2)[i2]; \
                         if (++i2 == n2) i2 = 0; \
-                        op[2] = fetch2(s2,i2); \
+                        op[2] = REAL(s2)[i2]; \
                         if (++i2 == n2) i2 = 0; \
-                        op[3] = fetch2(s2,i2); \
+                        op[3] = REAL(s2)[i2]; \
                         if (++i2 == n2) i2 = 0; \
                         op2_pd = _mm256_load_pd (op); \
                         res_pd = func ## _mm (res_pd, op2_pd); \
@@ -576,7 +578,7 @@ static double logbase(double x, double base)
                         i += 4; \
                     } \
                     while (i <= u) { \
-                        result[i] = func(fetch1(s1,i),fetch2(s2,i2)); \
+                        result[i] = func(REAL(s1)[i],REAL(s2)[i2]); \
                         if (++i2 == n2) i2 = 0; \
                         i += 1; \
                     } \
@@ -592,21 +594,21 @@ static double logbase(double x, double base)
                     R_len_t u = HELPERS_UP_TO(i,a); \
                     /* do ops individually until result+i is 32-byte aligned */\
                     while (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
-                        result[i] = func(fetch1(s1,i1),fetch2(s2,i)); \
+                        result[i] = func(REAL(s1)[i1],REAL(s2)[i]); \
                         if (++i1 == n1) i1 = 0; \
                         i += 1; \
                     } \
                     while (i+3 <= u) { \
                         __m256d res_pd, op1_pd; \
-                        res_pd = _mm256_loadu_pd (&fetch2(s2,i)); \
-                        type __attribute__ ((aligned (32))) op[4]; \
-                        op[0] = fetch1(s1,i1); \
+                        res_pd = _mm256_load_pd (REAL(s2)+i); \
+                        double __attribute__ ((aligned (32))) op[4]; \
+                        op[0] = REAL(s1)[i1]; \
                         if (++i1 == n1) i1 = 0; \
-                        op[1] = fetch1(s1,i1); \
+                        op[1] = REAL(s1)[i1]; \
                         if (++i1 == n1) i1 = 0; \
-                        op[2] = fetch1(s1,i1); \
+                        op[2] = REAL(s1)[i1]; \
                         if (++i1 == n1) i1 = 0; \
-                        op[3] = fetch1(s1,i1); \
+                        op[3] = REAL(s1)[i1]; \
                         if (++i1 == n1) i1 = 0; \
                         op1_pd = _mm256_load_pd (op); \
                         res_pd = func ## _mm (op1_pd, res_pd); \
@@ -614,7 +616,7 @@ static double logbase(double x, double base)
                         i += 4; \
                     } \
                     while (i <= u) { \
-                        result[i] = func(fetch1(s1,i1),fetch2(s2,i)); \
+                        result[i] = func(REAL(s1)[i1],REAL(s2)[i]); \
                         if (++i1 == n1) i1 = 0; \
                         i += 1; \
                     } \
@@ -646,7 +648,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     switch (code) {
     case PLUSOP:
         if (n1 > n2) { SEXP t = s1; s1 = s2; s2 = t; n1 = n2; n2 = n; }
-        mod_iterate_1(n1, n2, i1, i2) {
+        mod_iterate_1 (n1, n2, i1, i2) {
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
             if (x1 == NA_INTEGER || x2 == NA_INTEGER)
@@ -664,7 +666,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         break;
     case MINUSOP:
         if (n1 <= n2) {
-            mod_iterate_1(n1, n2, i1, i2) {
+            mod_iterate_1 (n1, n2, i1, i2) {
                 x1 = INTEGER(s1)[i1];
                 x2 = INTEGER(s2)[i2];
                 if (x1 == NA_INTEGER || x2 == NA_INTEGER)
@@ -681,7 +683,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
         }
         else {
-            mod_iterate_2(n1, n2, i1, i2) {
+            mod_iterate_2 (n1, n2, i1, i2) {
                 x1 = INTEGER(s1)[i1];
                 x2 = INTEGER(s2)[i2];
                 if (x1 == NA_INTEGER || x2 == NA_INTEGER)
@@ -700,7 +702,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         break;
     case TIMESOP:
         if (n1 > n2) { SEXP t = s1; s1 = s2; s2 = t; n1 = n2; n2 = n; }
-        mod_iterate_1(n1, n2, i1, i2) {
+        mod_iterate_1 (n1, n2, i1, i2) {
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
             if (x1 == NA_INTEGER || x2 == NA_INTEGER)
@@ -717,7 +719,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         }
         break;
     case DIVOP:
-        mod_iterate(n,n1, n2, i1, i2) {
+        mod_iterate (n, n1, n2, i1, i2) {
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
             if (x1 == NA_INTEGER || x2 == NA_INTEGER)
@@ -727,7 +729,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         }
         break;
     case POWOP:
-        mod_iterate(n,n1, n2, i1, i2) {
+        mod_iterate (n, n1, n2, i1, i2) {
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
             if (x1 == 1 || x2 == 0)
@@ -740,7 +742,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         }
         break;
     case MODOP:
-        mod_iterate(n,n1, n2, i1, i2) {
+        mod_iterate (n, n1, n2, i1, i2) {
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
             if (x1 == NA_INTEGER || x2 == NA_INTEGER || x2 == 0)
@@ -752,7 +754,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         }
         break;
     case IDIVOP:
-        mod_iterate(n,n1, n2, i1, i2) {
+        mod_iterate (n, n1, n2, i1, i2) {
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
             /* This had x %/% 0 == 0 prior to 2.14.1, but
@@ -784,7 +786,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         else if (TYPEOF(s2) != REALSXP)
             PIPEARITH(double,add_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
         else
-            MM_PIPEARITH(double,add_func,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
+            MM_PIPEARITH(add_func,rans,n,s1,n1,s2,n2);
         break;
     case MINUSOP:
         if (TYPEOF(s1) != REALSXP)
@@ -792,7 +794,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         else if (TYPEOF(s2) != REALSXP)
             PIPEARITH(double,sub_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
         else
-            MM_PIPEARITH(double,sub_func,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
+            MM_PIPEARITH(sub_func,rans,n,s1,n1,s2,n2);
         break;
     case TIMESOP:
         if (TYPEOF(s1) != REALSXP)
@@ -800,7 +802,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         else if (TYPEOF(s2) != REALSXP)
             PIPEARITH(double,mul_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
         else
-            MM_PIPEARITH(double,mul_func,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
+            MM_PIPEARITH(mul_func,rans,n,s1,n1,s2,n2);
         break;
     case DIVOP:
         if (TYPEOF(s1) != REALSXP)
@@ -808,7 +810,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         else if (TYPEOF(s2) != REALSXP)
             PIPEARITH(double,div_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
         else
-            MM_PIPEARITH(double,div_func,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
+            MM_PIPEARITH(div_func,rans,n,s1,n1,s2,n2);
         break;
     case POWOP:
         if (TYPEOF(s1) == REALSXP && n2 == 1) {
@@ -829,7 +831,7 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                         }
                         while (i+3 <= u) {
                             __m256d res_pd;
-                            res_pd = _mm256_loadu_pd (&RFETCH(s1,i));
+                            res_pd = _mm256_load_pd (&RFETCH(s1,i));
                             res_pd = _mm256_mul_pd (res_pd, res_pd);
                             _mm256_store_pd (rans+i, res_pd);
                             i += 4;
@@ -943,21 +945,21 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     if (TYPEOF(s1) == REALSXP) { /* s2 must be complex */
         switch (code) {
         case PLUSOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x2 = COMPLEX(s2)[i2];
                 COMPLEX(ans)[i].r = REAL(s1)[i1] + x2.r;
                 COMPLEX(ans)[i].i = x2.i;
             }
             break;
         case MINUSOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x2 = COMPLEX(s2)[i2];
                 COMPLEX(ans)[i].r = REAL(s1)[i1] - x2.r;
                 COMPLEX(ans)[i].i = -x2.i;
             }
             break;
         case TIMESOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 double x1 = REAL(s1)[i1];
                 Rcomplex x2 = COMPLEX(s2)[i2];
                 COMPLEX(ans)[i].r = x1 * x2.r;
@@ -965,7 +967,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case DIVOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1;
                 x1.r = REAL(s1)[i1];
                 x1.i = 0;
@@ -975,7 +977,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case POWOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1;
                 x1.r = REAL(s1)[i1];
                 x1.i = 0;
@@ -989,21 +991,21 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     else if (TYPEOF(s2) == REALSXP) { /* s1 must be complex */
         switch (code) {
         case PLUSOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 COMPLEX(ans)[i].r = x1.r + REAL(s2)[i2];
                 COMPLEX(ans)[i].i = x1.i;
             }
             break;
         case MINUSOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 COMPLEX(ans)[i].r = x1.r - REAL(s2)[i2];
                 COMPLEX(ans)[i].i = x1.i;
             }
             break;
         case TIMESOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 double x2 = REAL(s2)[i2];
                 COMPLEX(ans)[i].r = x1.r * x2;
@@ -1011,7 +1013,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case DIVOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 double x2 = REAL(s2)[i2];
                 COMPLEX(ans)[i].r = x1.r / x2;
@@ -1019,7 +1021,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case POWOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x2;
                 x2.r = REAL(s2)[i2];
                 x2.i = 0;
@@ -1033,7 +1035,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     else if (TYPEOF(s1) == INTSXP || TYPEOF(s1) == LGLSXP) { /* s2 complex */
         switch (code) {
         case PLUSOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 int x1 = INTEGER(s1)[i1];
                 Rcomplex x2 = COMPLEX(s2)[i2];
                 if (x1 == NA_INTEGER)
@@ -1045,7 +1047,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case MINUSOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 int x1 = INTEGER(s1)[i1];
                 Rcomplex x2 = COMPLEX(s2)[i2];
                 if (x1 == NA_INTEGER)
@@ -1057,7 +1059,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case TIMESOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 int x1 = INTEGER(s1)[i1];
                 Rcomplex x2 = COMPLEX(s2)[i2];
                 if (x1 == NA_INTEGER)
@@ -1069,7 +1071,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case DIVOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 int x1 = INTEGER(s1)[i1];
                 Rcomplex x2 = COMPLEX(s2)[i2];
                 if (x1 == NA_INTEGER)
@@ -1085,7 +1087,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case POWOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 int x1 = INTEGER(s1)[i1];
                 Rcomplex x2 = COMPLEX(s2)[i2];
                 if (x1 == NA_INTEGER)
@@ -1105,7 +1107,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     else if (TYPEOF(s2) == INTSXP || TYPEOF(s2) == LGLSXP) { /* s1 complex */
         switch (code) {
         case PLUSOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 int x2 = INTEGER(s2)[i2];
                 if (x2 == NA_INTEGER)
@@ -1117,7 +1119,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case MINUSOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 int x2 = INTEGER(s2)[i2];
                 if (x2 == NA_INTEGER)
@@ -1129,7 +1131,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case TIMESOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 int x2 = INTEGER(s2)[i2];
                 if (x2 == NA_INTEGER)
@@ -1141,7 +1143,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case DIVOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 int x2 = INTEGER(s2)[i2];
                 if (x2 == NA_INTEGER)
@@ -1153,7 +1155,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case POWOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 int x2 = INTEGER(s2)[i2];
                 if (x2 == NA_INTEGER)
@@ -1174,7 +1176,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         switch (code) {
         case PLUSOP:
             if (n1 > n2) { SEXP t = s1; s1 = s2; s2 = t; n1 = n2; n2 = n; }
-            mod_iterate_1(n1, n2, i1, i2) {
+            mod_iterate_1 (n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1], x2 = COMPLEX(s2)[i2];
                 COMPLEX(ans)[i].r = x1.r + x2.r;
                 COMPLEX(ans)[i].i = x1.i + x2.i;
@@ -1182,14 +1184,14 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             break;
         case MINUSOP:
             if (n1 <= n2) {
-                mod_iterate_1(n1, n2, i1, i2) {
+                mod_iterate_1 (n1, n2, i1, i2) {
                     Rcomplex x1 = COMPLEX(s1)[i1], x2 = COMPLEX(s2)[i2];
                     COMPLEX(ans)[i].r = x1.r - x2.r;
                     COMPLEX(ans)[i].i = x1.i - x2.i;
                 }
             }
             else {
-                mod_iterate_2(n1, n2, i1, i2) {
+                mod_iterate_2 (n1, n2, i1, i2) {
                     Rcomplex x1 = COMPLEX(s1)[i1], x2 = COMPLEX(s2)[i2];
                     COMPLEX(ans)[i].r = x1.r - x2.r;
                     COMPLEX(ans)[i].i = x1.i - x2.i;
@@ -1198,21 +1200,21 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             break;
         case TIMESOP:
             if (n1 > n2) { SEXP t = s1; s1 = s2; s2 = t; n1 = n2; n2 = n; }
-            mod_iterate_1(n1, n2, i1, i2) {
+            mod_iterate_1 (n1, n2, i1, i2) {
                 R_from_C99_complex (COMPLEX(ans)+i,
                                     C99_from_R_complex(COMPLEX(s1)+i1) 
                                      * C99_from_R_complex(COMPLEX(s2)+i2));
             }
             break;
         case DIVOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 R_from_C99_complex (COMPLEX(ans)+i,
                                     C99_from_R_complex(COMPLEX(s1)+i1) 
                                      / C99_from_R_complex(COMPLEX(s2)+i2));
             }
             break;
         case POWOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 R_from_C99_complex (COMPLEX(ans)+i,
                                     R_cpow(C99_from_R_complex(COMPLEX(s1)+i1),
                                            C99_from_R_complex(COMPLEX(s2)+i2)));
@@ -2005,8 +2007,8 @@ static void setup_Math2
 #define DO_MATH2(y,a,b,n,na,nb,fncall) do { \
     int naflag = 0; \
     double ai, bi; \
-    int i, ia, ib; \
-    mod_iterate(n,na, nb, ia, ib) { \
+    R_len_t ia, ib; \
+    mod_iterate (n, na, nb, ia, ib) { \
         ai = a[ia]; \
         bi = b[ib]; \
         if (MAY_BE_NAN2(ai,bi)) { \
