@@ -160,7 +160,7 @@ static inline int MAY_BE_NAN3 (double x0, double x1, double x2)
 
 static inline int MAY_BE_NAN4 (double x0, double x1, double x2, double x3)
 {
-  return ISNAN(x0+x1+x2+x3);
+  return ISNAN((x0+x1)+(x2+x3));
 }
 
 #endif
