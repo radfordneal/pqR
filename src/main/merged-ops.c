@@ -145,14 +145,15 @@ extern helpers_task_proc task_unary_minus, task_abs;
   SW_CASE(o*N_MERGED_OPS+MERGED_OP_V_DIV_C,   S; v = v / c3) \
   SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_POW_V,   S; v = R_pow(c3,v)) \
   SW_CASE(o*N_MERGED_OPS+MERGED_OP_V_POW_C,   S; v = R_pow(v,c3)) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_V_SQUARED, S; v = v * v) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_CONSTANT,  S; v = c3) \
   SW_CASE(o*N_MERGED_OPS+MERGED_OP_ABS,       S; v = fabs(v)) \
+  SW_CASE(o*N_MERGED_OPS+MERGED_OP_V_SQUARED, S; v = v * v) \
+  SW_CASE(o*N_MERGED_OPS+MERGED_OP_CONSTANT,  S; v = c3)
 
 #define PROC(o,S) \
 static void proc_##o (SEXP ans, double *vecp, int sw, int which, \
-                      double c1, double c2, double c3) \
+                      double *data) \
 { \
+    double c1 = data[2], c2 = data[1], c3 = data[0]; \
     double *ansp = REAL(ans); \
     R_len_t n = LENGTH(ans); \
     R_len_t i = 0; \
@@ -176,9 +177,9 @@ static void proc_##o (SEXP ans, double *vecp, int sw, int which, \
         SW_CASES(MERGED_OP_V_DIV_C,   S; v = v / c2) \
         SW_CASES(MERGED_OP_C_POW_V,   S; v = R_pow(c2,v)) \
         SW_CASES(MERGED_OP_V_POW_C,   S; v = R_pow(v,c2)) \
+        SW_CASES(MERGED_OP_ABS,       S; v = fabs(v)) \
         SW_CASES(MERGED_OP_V_SQUARED, S; v = v * v) \
         SW_CASES(MERGED_OP_CONSTANT,  S; v  = c2) \
-        SW_CASES(MERGED_OP_ABS,       S; v = fabs(v)) \
         default: abort(); \
         } \
     } \
@@ -195,9 +196,9 @@ PROC(MERGED_OP_C_DIV_V,   v = c1 / v)
 PROC(MERGED_OP_V_DIV_C,   v = v / c1)
 PROC(MERGED_OP_C_POW_V,   v = R_pow(c1,v))
 PROC(MERGED_OP_V_POW_C,   v = R_pow(v,c1))
+PROC(MERGED_OP_ABS,       v = fabs(v))
 PROC(MERGED_OP_V_SQUARED, v = v * v)
 PROC(MERGED_OP_CONSTANT,  v = c1)
-PROC(MERGED_OP_ABS,       v = fabs(v))
 
 static void (*proc_table[N_MERGED_OPS])() = {
     proc_MERGED_OP_NULL,
@@ -211,27 +212,20 @@ static void (*proc_table[N_MERGED_OPS])() = {
     proc_MERGED_OP_V_DIV_C,
     proc_MERGED_OP_C_POW_V,
     proc_MERGED_OP_V_POW_C,
+    proc_MERGED_OP_ABS,
     proc_MERGED_OP_V_SQUARED,
-    proc_MERGED_OP_CONSTANT,
-    proc_MERGED_OP_ABS
+    proc_MERGED_OP_CONSTANT
 };
 
 void task_merged_arith_abs (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
-    /* Record which is the vector operand. */
-
-    int which = code & 1;
-
-    /* Get vector to operate on and the pointer to scalar operands (if any). */
-
-    double *vecp = which ? REAL(s2) : REAL(s1);
-    double *scp = helpers_task_data();
+    int which = code & 1;  /* which is the vector operand? */
 
     /* Set up switch values encoding the first (possibly null) operation and
-       the 2nd and 3rd operations, and scalar constants used by these ops. */
+       the 2nd and 3rd operations. */
 
     int ops = code >> 8;
-    double c1, c2, c3;
+    double *data = helpers_task_data();
 
     int switch1;
     int switch23;
@@ -247,31 +241,23 @@ void task_merged_arith_abs (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     } while (0)
 
     op = ops>>16;
-    if (op != MERGED_OP_NULL && op != MERGED_OP_ABS) {
-        c1 = *scp++;
-        POW_SPECIAL(op,c1);
-    }
+    POW_SPECIAL(op,data[2]);
     switch1 = op;
     ops &= 0xffff;
 
     op = ops >> 8;
-    if (op != MERGED_OP_ABS) { /* no MERGED_OP_NULL, but may be created below */
-        c2 = *scp++;
-        POW_SPECIAL(op,c2);
-    }
+    POW_SPECIAL(op,data[1]);
     switch23 = op * N_MERGED_OPS;
 
     op = ops & 0xff;
-    if (op != MERGED_OP_ABS) { /* no MERGED_OP_NULL, but may be created below */
-        c3 = *scp;
-        POW_SPECIAL(op,c3);
-    }
+    POW_SPECIAL(op,data[0]);
     switch23 += op;
 
     /* Do the operations by calling a procedure indexed by the first
        operation, which will switch on the second and third operations. */
 
-    (*proc_table[switch1]) (ans, vecp, switch23, which, c1, c2, c3);
+    (*proc_table[switch1]) (ans, which ? REAL(s2) : REAL(s1), switch23, 
+                            which, data);
 }
 
 
@@ -300,8 +286,11 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
     if (*proc_B == task_merged_arith_abs) {
         which = *op_B & 1;
         ops = *op_B >> 8;
+        task_data[2] = task_data[1];
+        task_data[1] = task_data[0];
     }
-    else { /* create "merge" of just operation B */
+    else { 
+        task_data[2] = task_data[1] = 0.0;
         if (*proc_B == task_abs) {
             which = 0;
             ops = MERGED_OP_ABS;
@@ -309,15 +298,14 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
         else { /* binary or unary arithmetic operation */
             ops = MERGED_ARITH_OP (*proc_B, *op_B, *in1_B, *in2_B);
             if (*in2_B == 0) { /* unary minus */
-                task_data[0] = 0.0;
                 which = 0;
             }
             else if (LENGTH(*in2_B) == 1) {
-                task_data[0] = *REAL(*in2_B);
+                task_data[1] = *REAL(*in2_B);
                 which = 0;
             }
             else {
-                task_data[0] = *REAL(*in1_B);
+                task_data[1] = *REAL(*in1_B);
                 which = 1;
             }
         }
@@ -328,20 +316,13 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
 
     helpers_op_t newop;
 
+    task_data[0] = 0.0;
     if (proc_A == task_abs) {
         newop = MERGED_OP_ABS;  
     }
     else { /* binary or unary arithmetic operation */
-        double *p = task_data;
-#       if MAX_OPS_MERGED==3
-            if ((ops&0x80) == 0) p += 1;
-            if ((ops>>8) != 0 && (ops&0x8000) == 0) p += 1;
-#       else
-            for (helpers_op_t o = ops; o != 0; o >>= 8) {
-                if (! (o&0x80)) p += 1;
-            }
-#       endif
-        *p = in2_A==0 ? 0.0 : LENGTH(in2_A)==1 ? *REAL(in2_A) : *REAL(in1_A);
+        if (in2_A != 0)
+            task_data[0] = LENGTH(in2_A)==1 ? *REAL(in2_A) : *REAL(in1_A);
         newop = MERGED_ARITH_OP (proc_A, op_A, in1_A, in2_A);
     }
 
