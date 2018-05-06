@@ -288,7 +288,7 @@ static double logbase(double x, double base)
 #define mod_iterate(n,n1,n2,i1,i2) \
   for (R_len_t i = 0, i1 = i2 = 0; \
        i < n; \
-       i1 = (i1+1 == n1 ? 0 : i1+1), i2 = (i2+1 == n2 ? 0 : i2+1), ++i)
+       i1 = (++i1 == n1 ? 0 : i1), i2 = (++i2 == n2 ? 0 : i2), ++i)
 
 #define mod_iterate_1(n1,n2,i1,i2) /* assumes n1 <= n2 */ \
   for (R_len_t i = 0, i1 = i2 = 0; \
@@ -550,34 +550,11 @@ static double logbase(double x, double base)
                 HELPERS_WAIT_IN1 (a, i, n); \
                 do { \
                     R_len_t u = HELPERS_UP_TO(i,a); \
-                    /* do ops individually until result+i is 32-byte aligned */\
-                    while (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
+                    do { \
                         result[i] = func(REAL(s1)[i],REAL(s2)[i2]); \
                         if (++i2 == n2) i2 = 0; \
                         i += 1; \
-                    } \
-                    while (i <= u-3) { \
-                        __m256d res_pd, op2_pd; \
-                        res_pd = _mm256_load_pd (REAL(s1)+i); \
-                        double __attribute__ ((aligned (32))) op[4]; \
-                        op[0] = REAL(s2)[i2]; \
-                        if (++i2 == n2) i2 = 0; \
-                        op[1] = REAL(s2)[i2]; \
-                        if (++i2 == n2) i2 = 0; \
-                        op[2] = REAL(s2)[i2]; \
-                        if (++i2 == n2) i2 = 0; \
-                        op[3] = REAL(s2)[i2]; \
-                        if (++i2 == n2) i2 = 0; \
-                        op2_pd = _mm256_load_pd (op); \
-                        res_pd = func ## _mm (res_pd, op2_pd); \
-                        _mm256_store_pd (result+i, res_pd); \
-                        i += 4; \
-                    } \
-                    while (i <= u) { \
-                        result[i] = func(REAL(s1)[i],REAL(s2)[i2]); \
-                        if (++i2 == n2) i2 = 0; \
-                        i += 1; \
-                    } \
+                    } while (i<=u); \
                     helpers_amount_out(i); \
                 } while (i<a); \
             } \
@@ -588,34 +565,12 @@ static double logbase(double x, double base)
                 HELPERS_WAIT_IN2 (a, i, n); \
                 do { \
                     R_len_t u = HELPERS_UP_TO(i,a); \
-                    /* do ops individually until result+i is 32-byte aligned */\
-                    while (((uintptr_t)(result+i) & 0x1f) != 0 && i <= u) { \
+                    do { \
                         result[i] = func(REAL(s1)[i1],REAL(s2)[i]); \
                         if (++i1 == n1) i1 = 0; \
                         i += 1; \
-                    } \
-                    while (i <= u-3) { \
-                        __m256d res_pd, op1_pd; \
-                        res_pd = _mm256_load_pd (REAL(s2)+i); \
-                        double __attribute__ ((aligned (32))) op[4]; \
-                        op[0] = REAL(s1)[i1]; \
-                        if (++i1 == n1) i1 = 0; \
-                        op[1] = REAL(s1)[i1]; \
-                        if (++i1 == n1) i1 = 0; \
-                        op[2] = REAL(s1)[i1]; \
-                        if (++i1 == n1) i1 = 0; \
-                        op[3] = REAL(s1)[i1]; \
-                        if (++i1 == n1) i1 = 0; \
-                        op1_pd = _mm256_load_pd (op); \
-                        res_pd = func ## _mm (op1_pd, res_pd); \
-                        _mm256_store_pd (result+i, res_pd); \
-                        i += 4; \
-                    } \
-                    while (i <= u) { \
-                        result[i] = func(REAL(s1)[i1],REAL(s2)[i]); \
-                        if (++i1 == n1) i1 = 0; \
-                        i += 1; \
-                    } \
+                    } while (i<=u); \
+                    helpers_amount_out(i); \
                 } while (i<a); \
             } \
         } \
