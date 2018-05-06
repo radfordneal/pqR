@@ -2094,20 +2094,7 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
     }
 
     switch (TYPEOF(x)) {
-    case LGLSXP:
-        if (VARIANT_KIND(variant) == VARIANT_AND) {
-            for (i = 0; i < n; i++)
-                if (LOGICAL(x)[i] != NA_LOGICAL) { ret = FALSE; goto vret; }
-            ret = TRUE; goto vret;
-        }
-        if (VARIANT_KIND(variant) == VARIANT_OR) {
-            for (i = 0; i < n; i++)
-                if (LOGICAL(x)[i] == NA_LOGICAL) { ret = TRUE; goto vret; }
-            ret = FALSE; goto vret;
-        }
-        for (i = 0; i < n; i++)
-	    lans[i] = (LOGICAL(x)[i] == NA_LOGICAL);
-	break;
+    case LGLSXP:  /* assumes logical same as integer */
     case INTSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
             for (i = 0; i < n; i++)
