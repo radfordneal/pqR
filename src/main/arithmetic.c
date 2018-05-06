@@ -291,12 +291,12 @@ static double logbase(double x, double base)
        i1 = (i1+1 == n1 ? 0 : i1+1), i2 = (i2+1 == n2 ? 0 : i2+1), ++i)
 
 #define mod_iterate_1(n1,n2,i1,i2) /* assumes n1 <= n2 */ \
-  for (R_len_t i = 0, \
-       i1 = i2 = 0; \
-       i2 < n2; i1 = (i1+1 == n1 ? 0 : i1+1), ++i2, i = i2)
+  for (R_len_t i = 0, i1 = i2 = 0; \
+       i2 < n2; \
+       i1 = (i1+1 == n1 ? 0 : i1+1), ++i2, i = i2)
 
 #define mod_iterate_2(n1,n2,i1,i2) /* assumes n2 <= n1 */ \
-  for (R_len_t i, i1 = i2 = 0; \
+  for (R_len_t i = 0, i1 = i2 = 0; \
        i1 < n1; \
        i2 = (i2+1 == n2 ? 0 : i2+1), ++i1, i = i1)
 
@@ -646,7 +646,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     switch (code) {
     case PLUSOP:
         if (n1 > n2) { SEXP t = s1; s1 = s2; s2 = t; n1 = n2; n2 = n; }
-        mod_iterate_1(n1, n2, i1, i2) {
+        mod_iterate_1 (n1, n2, i1, i2) {
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
             if (x1 == NA_INTEGER || x2 == NA_INTEGER)
@@ -664,7 +664,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         break;
     case MINUSOP:
         if (n1 <= n2) {
-            mod_iterate_1(n1, n2, i1, i2) {
+            mod_iterate_1 (n1, n2, i1, i2) {
                 x1 = INTEGER(s1)[i1];
                 x2 = INTEGER(s2)[i2];
                 if (x1 == NA_INTEGER || x2 == NA_INTEGER)
@@ -681,7 +681,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
         }
         else {
-            mod_iterate_2(n1, n2, i1, i2) {
+            mod_iterate_2 (n1, n2, i1, i2) {
                 x1 = INTEGER(s1)[i1];
                 x2 = INTEGER(s2)[i2];
                 if (x1 == NA_INTEGER || x2 == NA_INTEGER)
@@ -700,7 +700,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         break;
     case TIMESOP:
         if (n1 > n2) { SEXP t = s1; s1 = s2; s2 = t; n1 = n2; n2 = n; }
-        mod_iterate_1(n1, n2, i1, i2) {
+        mod_iterate_1 (n1, n2, i1, i2) {
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
             if (x1 == NA_INTEGER || x2 == NA_INTEGER)
@@ -717,7 +717,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         }
         break;
     case DIVOP:
-        mod_iterate(n,n1, n2, i1, i2) {
+        mod_iterate (n, n1, n2, i1, i2) {
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
             if (x1 == NA_INTEGER || x2 == NA_INTEGER)
@@ -727,7 +727,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         }
         break;
     case POWOP:
-        mod_iterate(n,n1, n2, i1, i2) {
+        mod_iterate (n, n1, n2, i1, i2) {
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
             if (x1 == 1 || x2 == 0)
@@ -740,7 +740,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         }
         break;
     case MODOP:
-        mod_iterate(n,n1, n2, i1, i2) {
+        mod_iterate (n, n1, n2, i1, i2) {
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
             if (x1 == NA_INTEGER || x2 == NA_INTEGER || x2 == 0)
@@ -752,7 +752,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         }
         break;
     case IDIVOP:
-        mod_iterate(n,n1, n2, i1, i2) {
+        mod_iterate (n, n1, n2, i1, i2) {
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
             /* This had x %/% 0 == 0 prior to 2.14.1, but
@@ -943,21 +943,21 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     if (TYPEOF(s1) == REALSXP) { /* s2 must be complex */
         switch (code) {
         case PLUSOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x2 = COMPLEX(s2)[i2];
                 COMPLEX(ans)[i].r = REAL(s1)[i1] + x2.r;
                 COMPLEX(ans)[i].i = x2.i;
             }
             break;
         case MINUSOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x2 = COMPLEX(s2)[i2];
                 COMPLEX(ans)[i].r = REAL(s1)[i1] - x2.r;
                 COMPLEX(ans)[i].i = -x2.i;
             }
             break;
         case TIMESOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 double x1 = REAL(s1)[i1];
                 Rcomplex x2 = COMPLEX(s2)[i2];
                 COMPLEX(ans)[i].r = x1 * x2.r;
@@ -965,7 +965,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case DIVOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1;
                 x1.r = REAL(s1)[i1];
                 x1.i = 0;
@@ -975,7 +975,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case POWOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1;
                 x1.r = REAL(s1)[i1];
                 x1.i = 0;
@@ -989,21 +989,21 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     else if (TYPEOF(s2) == REALSXP) { /* s1 must be complex */
         switch (code) {
         case PLUSOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 COMPLEX(ans)[i].r = x1.r + REAL(s2)[i2];
                 COMPLEX(ans)[i].i = x1.i;
             }
             break;
         case MINUSOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 COMPLEX(ans)[i].r = x1.r - REAL(s2)[i2];
                 COMPLEX(ans)[i].i = x1.i;
             }
             break;
         case TIMESOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 double x2 = REAL(s2)[i2];
                 COMPLEX(ans)[i].r = x1.r * x2;
@@ -1011,7 +1011,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case DIVOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 double x2 = REAL(s2)[i2];
                 COMPLEX(ans)[i].r = x1.r / x2;
@@ -1019,7 +1019,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case POWOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x2;
                 x2.r = REAL(s2)[i2];
                 x2.i = 0;
@@ -1033,7 +1033,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     else if (TYPEOF(s1) == INTSXP || TYPEOF(s1) == LGLSXP) { /* s2 complex */
         switch (code) {
         case PLUSOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 int x1 = INTEGER(s1)[i1];
                 Rcomplex x2 = COMPLEX(s2)[i2];
                 if (x1 == NA_INTEGER)
@@ -1045,7 +1045,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case MINUSOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 int x1 = INTEGER(s1)[i1];
                 Rcomplex x2 = COMPLEX(s2)[i2];
                 if (x1 == NA_INTEGER)
@@ -1057,7 +1057,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case TIMESOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 int x1 = INTEGER(s1)[i1];
                 Rcomplex x2 = COMPLEX(s2)[i2];
                 if (x1 == NA_INTEGER)
@@ -1069,7 +1069,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case DIVOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 int x1 = INTEGER(s1)[i1];
                 Rcomplex x2 = COMPLEX(s2)[i2];
                 if (x1 == NA_INTEGER)
@@ -1085,7 +1085,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case POWOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 int x1 = INTEGER(s1)[i1];
                 Rcomplex x2 = COMPLEX(s2)[i2];
                 if (x1 == NA_INTEGER)
@@ -1105,7 +1105,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     else if (TYPEOF(s2) == INTSXP || TYPEOF(s2) == LGLSXP) { /* s1 complex */
         switch (code) {
         case PLUSOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 int x2 = INTEGER(s2)[i2];
                 if (x2 == NA_INTEGER)
@@ -1117,7 +1117,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case MINUSOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 int x2 = INTEGER(s2)[i2];
                 if (x2 == NA_INTEGER)
@@ -1129,7 +1129,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case TIMESOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 int x2 = INTEGER(s2)[i2];
                 if (x2 == NA_INTEGER)
@@ -1141,7 +1141,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case DIVOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 int x2 = INTEGER(s2)[i2];
                 if (x2 == NA_INTEGER)
@@ -1153,7 +1153,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             }
             break;
         case POWOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1];
                 int x2 = INTEGER(s2)[i2];
                 if (x2 == NA_INTEGER)
@@ -1174,7 +1174,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         switch (code) {
         case PLUSOP:
             if (n1 > n2) { SEXP t = s1; s1 = s2; s2 = t; n1 = n2; n2 = n; }
-            mod_iterate_1(n1, n2, i1, i2) {
+            mod_iterate_1 (n1, n2, i1, i2) {
                 Rcomplex x1 = COMPLEX(s1)[i1], x2 = COMPLEX(s2)[i2];
                 COMPLEX(ans)[i].r = x1.r + x2.r;
                 COMPLEX(ans)[i].i = x1.i + x2.i;
@@ -1182,14 +1182,14 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             break;
         case MINUSOP:
             if (n1 <= n2) {
-                mod_iterate_1(n1, n2, i1, i2) {
+                mod_iterate_1 (n1, n2, i1, i2) {
                     Rcomplex x1 = COMPLEX(s1)[i1], x2 = COMPLEX(s2)[i2];
                     COMPLEX(ans)[i].r = x1.r - x2.r;
                     COMPLEX(ans)[i].i = x1.i - x2.i;
                 }
             }
             else {
-                mod_iterate_2(n1, n2, i1, i2) {
+                mod_iterate_2 (n1, n2, i1, i2) {
                     Rcomplex x1 = COMPLEX(s1)[i1], x2 = COMPLEX(s2)[i2];
                     COMPLEX(ans)[i].r = x1.r - x2.r;
                     COMPLEX(ans)[i].i = x1.i - x2.i;
@@ -1198,21 +1198,21 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             break;
         case TIMESOP:
             if (n1 > n2) { SEXP t = s1; s1 = s2; s2 = t; n1 = n2; n2 = n; }
-            mod_iterate_1(n1, n2, i1, i2) {
+            mod_iterate_1 (n1, n2, i1, i2) {
                 R_from_C99_complex (COMPLEX(ans)+i,
                                     C99_from_R_complex(COMPLEX(s1)+i1) 
                                      * C99_from_R_complex(COMPLEX(s2)+i2));
             }
             break;
         case DIVOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 R_from_C99_complex (COMPLEX(ans)+i,
                                     C99_from_R_complex(COMPLEX(s1)+i1) 
                                      / C99_from_R_complex(COMPLEX(s2)+i2));
             }
             break;
         case POWOP:
-            mod_iterate(n,n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 R_from_C99_complex (COMPLEX(ans)+i,
                                     R_cpow(C99_from_R_complex(COMPLEX(s1)+i1),
                                            C99_from_R_complex(COMPLEX(s2)+i2)));
@@ -2005,8 +2005,8 @@ static void setup_Math2
 #define DO_MATH2(y,a,b,n,na,nb,fncall) do { \
     int naflag = 0; \
     double ai, bi; \
-    int i, ia, ib; \
-    mod_iterate(n,na, nb, ia, ib) { \
+    R_len_t ia, ib; \
+    mod_iterate (n, na, nb, ia, ib) { \
         ai = a[ia]; \
         bi = b[ib]; \
         if (MAY_BE_NAN2(ai,bi)) { \
