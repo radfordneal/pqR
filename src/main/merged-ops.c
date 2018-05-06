@@ -68,9 +68,9 @@ extern helpers_task_proc task_unary_minus, task_abs;
    always when one or both operands are NaN or NA, and we want exactly
    the same result as is obtained without merging operations.
 
-   Relies on PLUSOP ... POWOP being the integers from 1 to 5.  Code
-   0x80 is abs.  Code 0 is for empty slots.  Additional operation
-   codes are created internally.
+   Relies on PLUSOP ... POWOP being the integers from 1 to 5.  Code 6
+   is abs.  Code 0 is for empty slots.  Additional operation codes are
+   created internally.
 
    The opcode for the merged task procedure encodes two or more operations
    plus a flag saying which operand is scalar.  The flag is in the low-order
@@ -78,8 +78,7 @@ extern helpers_task_proc task_unary_minus, task_abs;
    the last operation in lowest position.  The code for the null operation 
    is zero, so null operations occur naturally in higher-order bytes.  The
    64 bits in task operations codes could accommodate up to seven merged
-   operations, but the limit for the fast procedure is three. 
-*/
+   operations, but the limit for the fast procedure is three. */
 
 #define MERGED_OP_NULL      0   /* No operation, either created or empty slot */
 
@@ -94,9 +93,10 @@ extern helpers_task_proc task_unary_minus, task_abs;
 #define MERGED_OP_C_POW_V   (2*POWOP - 1)
 #define MERGED_OP_V_POW_C   (2*POWOP)
 
-#define MERGED_OP_V_SQUARED 11  /* Created for V_POW_C when power is 2 */
-#define MERGED_OP_CONSTANT 12   /* Created for V_POW_C when power is 0 */
-#define MERGED_OP_ABS 13
+#define MERGED_OP_ABS       11
+
+#define MERGED_OP_V_SQUARED 12  /* Created for V_POW_C when power is 2 */
+#define MERGED_OP_CONSTANT  13  /* Created for V_POW_C when power is 0 */
 
 #define N_MERGED_OPS 14         /* Number of operation codes above */
 
@@ -247,40 +247,26 @@ void task_merged_arith_abs (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     } while (0)
 
     op = ops>>16;
-    if (op==0) {
-        switch1 = MERGED_OP_NULL;
+    if (op != 0 && op != MERGED_OP_ABS) {
+        c1 = *scp++;
+        POW_SPECIAL(op,c1);
     }
-    else {
-        ops &= 0xffff;
-        if (op & 0x80) {
-            switch1 = MERGED_OP_ABS;
-        }
-        else {
-            c1 = *scp++;
-            POW_SPECIAL(op,c1);
-            switch1 = op;
-        }
-    }
+    switch1 = op;
+    ops &= 0xffff;
 
     op = ops >> 8;
-    if (op & 0x80) {
-        switch23 = MERGED_OP_ABS * N_MERGED_OPS;
-    }
-    else {
+    if (op != MERGED_OP_ABS) {
         c2 = *scp++;
         POW_SPECIAL(op,c2);
-        switch23 = op * N_MERGED_OPS;
     }
+    switch23 = op * N_MERGED_OPS;
 
     op = ops & 0xff;
-    if (op & 0x80) {
-        switch23 += MERGED_OP_ABS;
-    }
-    else {
+    if (op != MERGED_OP_ABS) {
         c3 = *scp;
         POW_SPECIAL(op,c3);
-        switch23 += op;
     }
+    switch23 += op;
 
     /* Do the operations by calling a procedure indexed by the first
        operation, which will switch on the second and third operations. */
@@ -318,7 +304,7 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
     else { /* create "merge" of just operation B */
         if (*proc_B == task_abs) {
             which = 0;
-            ops = *op_B + 0x80;  /* just 0x80 would be OK, since only abs now */
+            ops = MERGED_OP_ABS;
         }
         else { /* binary or unary arithmetic operation */
             ops = MERGED_ARITH_OP (*proc_B, *op_B, *in1_B, *in2_B);
@@ -343,7 +329,7 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
     helpers_op_t newop;
 
     if (proc_A == task_abs) {
-        newop = op_A | 0x80;  /* just 0x80 would be OK, since only abs now */
+        newop = MERGED_OP_ABS;  
     }
     else { /* binary or unary arithmetic operation */
         double *p = task_data;
