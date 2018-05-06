@@ -4360,19 +4360,13 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 WAIT_UNTIL_COMPUTED_2(arg1,arg2);
 
                 if (typeplus1 != REALSXP) {
-                    if (*INTEGER(arg1) == NA_INTEGER) {
-                        ans = R_ScalarRealNA;
-                        goto ret;
-                    }
-                    a1 = (double) *INTEGER(arg1);
+                    a1 = *INTEGER(arg1) == NA_INTEGER ? NA_REAL 
+                           : (double) *INTEGER(arg1);
                     a2 = *REAL(arg2);
                 }
                 else if (typeplus2 != REALSXP) {
-                    if (*INTEGER(arg2) == NA_INTEGER) {
-                        ans = R_ScalarRealNA;
-                        goto ret;
-                    }
-                    a2 = (double) *INTEGER(arg2);
+                    a2 = *INTEGER(arg2) == NA_INTEGER ? NA_REAL 
+                           : (double) *INTEGER(arg2);
                     a1 = *REAL(arg1);
                 }
                 else {
