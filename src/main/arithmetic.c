@@ -1791,7 +1791,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
 
             DO_NOW_OR_LATER1 (variant,
                         LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] == 0,
-                        HELPERS_PIPE_IN01_OUT | HELPERS_MERGE_IN_OUT, 
+                        HELPERS_PIPE_IN01_OUT,
                         task_math1, opcode, sy, sa);
 
             maybe_dup_attributes (sy, sa, variant);
@@ -1948,7 +1948,8 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
         else { /* x won't be on scalar stack, since n != 1 */
             s = NAMEDCNT_EQ_0(x) ? x : allocVector(REALSXP, n);
             DO_NOW_OR_LATER1 (variant, n >= T_abs,
-                              HELPERS_PIPE_IN01_OUT, task_abs, 0, s, x);
+                              HELPERS_PIPE_IN01_OUT | HELPERS_MERGE_IN_OUT,
+                              task_abs, 0, s, x);
         }
 
     } else if (isComplex(x)) {

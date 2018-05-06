@@ -96,7 +96,7 @@ char *Rf_task_name (helpers_task_proc *task)
     /* z */
 
 # ifdef R_TASK_MERGING
-    TASK_NAME(merged_arith_math1);
+    TASK_NAME(merged_arith_abs);
 # endif
 
     return "?";
