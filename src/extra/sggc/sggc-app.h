@@ -504,6 +504,9 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 #endif
 
 
+#define SGGC_ALIGN_FORWARD \
+          ((32-SGGC_DATA_ALIGNMENT_OFFSET) % SGGC_DATA_ALIGNMENT)
+
 #define SGGC_AFTER_MARKING
 
 #define sggc_kind sggc_kind_inline

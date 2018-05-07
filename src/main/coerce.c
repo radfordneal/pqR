@@ -2067,6 +2067,10 @@ static SEXP do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ScalarLogicalMaybeConst(log_ans);
 }
 
+#if __AVX2__ && !defined(DISABLE_AVX_CODE)
+#include <immintrin.h>
+#endif
+
 static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
 {
     SEXP dims, names, ans;
@@ -2106,8 +2110,41 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
                 if (INTEGER(x)[i] == NA_INTEGER) { ret = TRUE; goto vret; }
             ret = FALSE; goto vret;
         }
-	for (i = 0; i < n; i++)
-	    lans[i] = (INTEGER(x)[i] == NA_INTEGER);
+#       if !__AVX2__ || defined(DISABLE_AVX_CODE)
+            for (i = 0; i < n; i++)
+                lans[i] = (INTEGER(x)[i] == NA_INTEGER);
+#       else
+        {
+            i = 0;
+            if ((SGGC_ALIGN_FORWARD & 8) && i < n-1) {
+                lans[i+0] = (INTEGER(x)[i+0] == NA_INTEGER);
+                lans[i+1] = (INTEGER(x)[i+1] == NA_INTEGER);
+                i += 2;
+            }
+            if ((SGGC_ALIGN_FORWARD & 16) && i < n-3) {
+                lans[i+0] = (INTEGER(x)[i+0] == NA_INTEGER);
+                lans[i+1] = (INTEGER(x)[i+1] == NA_INTEGER);
+                lans[i+2] = (INTEGER(x)[i+2] == NA_INTEGER);
+                lans[i+3] = (INTEGER(x)[i+3] == NA_INTEGER);
+                i += 4;
+            }
+            if (i < n-7) {
+                __m256i na = _mm256_set1_epi32 (NA_INTEGER);
+                __m256i mask = _mm256_set1_epi32 (1);
+                do {
+                    __m256i r = _mm256_load_si256 ((__m256i*)(INTEGER(x)+i));
+                    r = _mm256_cmpeq_epi32 (na, r);
+                    r = _mm256_and_si256 (mask, r);
+                    _mm256_store_si256 ((__m256i*)(lans+i), r);
+                    i += 8;
+                } while (i < n-7);
+            }
+            while (i < n) {
+                lans[i] = (INTEGER(x)[i] == NA_INTEGER);
+                i += 1;
+            }
+        }
+#       endif
 	break;
     case REALSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
@@ -2136,8 +2173,47 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
                           || ISNAN (REAL(x)[i+3]))) { ret = TRUE; goto vret; }
             ret = FALSE; goto vret;
         }
-	for (i = 0; i < n; i++)
-	    lans[i] = ISNAN_value (REAL(x)[i]);
+#       if !__AVX2__ || defined(DISABLE_AVX_CODE)
+            for (i = 0; i < n; i++)
+                lans[i] = ISNAN_value (REAL(x)[i]);
+#       else
+        {
+            i = 0;
+            if ((SGGC_ALIGN_FORWARD & 8) && i < n) {
+                lans[i] = ISNAN_value (REAL(x)[i]);
+                i += 1;
+            }
+            if ((SGGC_ALIGN_FORWARD & 16) && i < n-1) {
+                lans[i] = ISNAN_value (REAL(x)[i]);
+                lans[i+1] = ISNAN_value (REAL(x)[i+1]);
+                i += 2;
+            }
+            if (i < n-7) {
+                __m256i tmp1 = _mm256_set1_epi64x ((uint64_t)0x7ff << 52);
+                __m256i tmp2 = _mm256_set1_epi64x (~((uint64_t)1<<63));
+                do {
+                    __m256i r0 = _mm256_load_si256 ((__m256i*)(REAL(x)+i));
+                    r0 = _mm256_and_si256 (tmp2, r0);
+                    r0 = _mm256_sub_epi64 (tmp1, r0);
+                    r0 = _mm256_srli_epi64 (r0, 63);
+                    __m256i r1 = _mm256_load_si256 ((__m256i*)(REAL(x)+i+4));
+                    r1 = _mm256_and_si256 (tmp2, r1);
+                    r1 = _mm256_sub_epi64 (tmp1, r1);
+                    r1 = _mm256_andnot_si256 (tmp2, r1);
+                    r1 = _mm256_srli_epi64 (r1, 31);
+                    r0 = _mm256_or_si256 (r0, r1);
+                    r0 = _mm256_shuffle_epi32 (r0, 0xd8);
+                    r0 = _mm256_permute4x64_epi64 (r0, 0xd8);
+                    _mm256_storeu_si256 ((__m256i*)(lans+i), r0);
+                    i += 8;
+                } while (i < n-7);
+            }
+            while (i < n) {
+                lans[i] = ISNAN_value (REAL(x)[i]);
+                i += 1;
+            }
+        }
+#       endif
 	break;
     case CPLXSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
@@ -2167,8 +2243,79 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
                 if (STRING_ELT(x,i) == NA_STRING) { ret = TRUE; goto vret; }
             ret = FALSE; goto vret;
         }
-	for (i = 0; i < n; i++)
-	    lans[i] = (STRING_ELT(x, i) == NA_STRING);
+#       if !__AVX2__ || defined(DISABLE_AVX_CODE)
+            for (i = 0; i < n; i++)
+                lans[i] = (STRING_ELT(x, i) == NA_STRING);
+#       elif USE_COMPRESSED_POINTERS
+        {
+            i = 0;
+            if ((SGGC_ALIGN_FORWARD & 8) && i < n-1) {
+                lans[i+0] = (STRING_ELT (x, i+0) == NA_STRING);
+                lans[i+1] = (STRING_ELT (x, i+1) == NA_STRING);
+                i += 2;
+            }
+            if ((SGGC_ALIGN_FORWARD & 16) && i < n-3) {
+                lans[i+0] = (STRING_ELT (x, i+0) == NA_STRING);
+                lans[i+1] = (STRING_ELT (x, i+1) == NA_STRING);
+                lans[i+2] = (STRING_ELT (x, i+2) == NA_STRING);
+                lans[i+3] = (STRING_ELT (x, i+3) == NA_STRING);
+                i += 4;
+            }
+            if (i < n-7) {
+                __m256i na = _mm256_set1_epi32 ((uint32_t)NA_STRING);
+                __m256i mask = _mm256_set1_epi32 (1);
+                do {
+                    __m256i r = _mm256_load_si256
+                                  ((__m256i*)((SEXP*)DATAPTR(x)+i));
+                    r = _mm256_cmpeq_epi32 (na, r);
+                    r = _mm256_and_si256 (mask, r);
+                    _mm256_store_si256 ((__m256i*)(lans+i), r);
+                    i += 8;
+                } while (i < n-7);
+            }
+            while (i < n) {
+                lans[i] = (STRING_ELT (x, i) == NA_STRING);
+                i += 1;
+            }
+        }
+#       else  /* string elements are uncompressed 64-bit pointers */
+        {
+            i = 0;
+            if ((SGGC_ALIGN_FORWARD & 8) && i < n) {
+                lans[i] = (STRING_ELT (x, i) == NA_STRING);
+                i += 1;
+            }
+            if ((SGGC_ALIGN_FORWARD & 16) && i < n-1) {
+                lans[i+0] = (STRING_ELT (x, i+0) == NA_STRING);
+                lans[i+1] = (STRING_ELT (x, i+1) == NA_STRING);
+                i += 2;
+            }
+            if (i < n-7) {
+                __m256i na = _mm256_set1_epi64x ((uint64_t)NA_STRING);
+                __m256i mask0 = _mm256_set1_epi64x ((uint64_t)1);
+                __m256i mask1 = _mm256_set1_epi64x ((uint64_t)1<<32);
+                do {
+                    __m256i r0 = _mm256_load_si256 
+                                   ((__m256i*)((SEXP*)DATAPTR(x)+i));
+                    r0 = _mm256_cmpeq_epi64 (na, r0);
+                    r0 = _mm256_and_si256 (mask0, r0);
+                    __m256i r1 = _mm256_load_si256
+                                   ((__m256i*)((SEXP*)DATAPTR(x)+i+4));
+                    r1 = _mm256_cmpeq_epi64 (na, r1);
+                    r1 = _mm256_and_si256 (mask1, r1);
+                    r0 = _mm256_or_si256 (r0, r1);
+                    r0 = _mm256_shuffle_epi32 (r0, 0xd8);
+                    r0 = _mm256_permute4x64_epi64 (r0, 0xd8);
+                    _mm256_storeu_si256 ((__m256i*)(lans+i), r0);
+                    i += 8;
+                } while (i < n-7);
+            }
+            while (i < n) {
+                lans[i] = (STRING_ELT (x, i) == NA_STRING);
+                i += 1;
+            }
+        }
+#       endif
 	break;
     case RAWSXP:
 	/* no such thing as a raw NA */
