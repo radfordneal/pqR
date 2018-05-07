@@ -96,7 +96,7 @@
 # endif
 #endif
 
-//#define NDEBUG           /* Define to disable assertion check */
+#define NDEBUG           /* Define to disable assertion check */
 #include <assert.h>
 
 #define CHK_ALIGN(p) assert (((uintptr_t)(p)&(ALIGN-1)) == ALIGN_OFFSET)
