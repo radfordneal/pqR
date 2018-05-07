@@ -1824,10 +1824,16 @@ void task_abs (helpers_op_t op, SEXP s, SEXP x, SEXP ignored)
     HELPERS_SETUP_OUT(9);
     while (i < n) {
         HELPERS_WAIT_IN1 (a, i, n);
-        do {
+        while (i < a-1) {
             REAL(s)[i] = fabs(REAL(x)[i]);
             HELPERS_NEXT_OUT(i);
-        } while (i < a);
+            REAL(s)[i] = fabs(REAL(x)[i]);
+            HELPERS_NEXT_OUT(i);
+        }
+        if (i < a) {
+            REAL(s)[i] = fabs(REAL(x)[i]);
+            HELPERS_NEXT_OUT(i);
+        }
     }
 }
 
