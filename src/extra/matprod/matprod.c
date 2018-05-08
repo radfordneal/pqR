@@ -96,7 +96,7 @@
 # endif
 #endif
 
-//#define NDEBUG           /* Define to disable assertion check */
+#define NDEBUG           /* Define to disable assertion check */
 #include <assert.h>
 
 #define CHK_ALIGN(p) assert (((uintptr_t)(p)&(ALIGN-1)) == ALIGN_OFFSET)
@@ -2849,7 +2849,7 @@ static void matprod_outer_n2 (double * MATPROD_RESTRICT x,
 #   if CAN_USE_AVX
       __m256d X = _mm256_set_pd (x[1], x[0], x[1], x[0]);
 #   else  /* CAN_USE_SSE2 */
-      __m128d X = _mm_loadA_pd (x);
+      __m128d X = _mm_loadAA_pd (x);
 #   endif
 
 #   if ALIGN_FORWARD == 16
