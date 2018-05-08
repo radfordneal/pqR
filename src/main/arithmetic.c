@@ -453,7 +453,8 @@ static double logbase(double x, double base)
 
 #if !__AVX__ || defined(DISABLE_AVX_CODE)
 
-#define MM_PIPEARITH PIPEARITH
+#define MM_PIPEARITH(func,result,n,s1,n1,s2,n2) \
+          PIPEARITH(double,func,result,n,RFETCH,s1,n1,RFETCH,s2,n2)
 
 #else
 
