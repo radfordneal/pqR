@@ -132,7 +132,7 @@ convenient procedures for scheduling these task procedures are also
 provided.
 
 The matprod.c and/or par-matprod.c source files should be compiled and
-linked with the program that usies the routines in the usual fashion.
+linked with the program that uses the routines in the usual fashion.
 Some options can be set by pre-processor symbols defined with
 arguments to the compiler, or alternatively, by defining the symbol
 MATPROD_APP_INCLUDED (as anything), which will cause matprod.c and
