@@ -1857,14 +1857,13 @@ static SEXP do_subassign2_dflt_int
     if (nsubs == 1) { /* One vector index for a list. */
         len = length(sb1);
         if (len > 1) {
-            int str_sym_sub = isString(sb1) || isSymbol(sb1);
             for (int i = 0; i < len-1; i++) {
                 if (!isVectorList(x) && !isPairList(x))
                     errorcall (call, 
                       _("recursive indexing failed at level %d\n"), i+1);
                 length_x = length(x);
                 off = get1index (sb1, 
-                        str_sym_sub ? getNamesAttrib(x) : R_NilValue,
+                        isString(sb1) ? getNamesAttrib(x) : R_NilValue,
                         length_x, TRUE, i, call);
                 if (off < 0 || off >= length_x)
                     errorcall(call, _("no such index at level %d\n"), i+1);
