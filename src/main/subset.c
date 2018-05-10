@@ -1164,8 +1164,8 @@ static int ExtractDropArg(SEXP *args_ptr)
       -1  not exact, but warn when partial matching is used
 
    The argument list pointed to by args_ptr may be modified.  The
-   caller does not need to protect *args_ptr before.
- */
+   caller does not need to protect *args_ptr before. */
+
 static int ExtractExactArg(SEXP *args_ptr)
 {
     SEXP argval = ExtractArg(args_ptr, R_ExactSymbol);
@@ -1179,24 +1179,33 @@ static int ExtractExactArg(SEXP *args_ptr)
 /* Returns simple (positive or negative) index, with no dim attribute, or 
    zero if not so simple. */
 
-static R_INLINE R_len_t simple_index (SEXP s)
+static R_len_t simple_index (SEXP s)
 {
-    if (HAS_ATTRIB(s) && getDimAttrib(s) != R_NilValue)
-        return 0;
+    int type_etc = TYPE_ETC(s);
 
-    switch (TYPEOF(s)) {
-    case REALSXP:
-        if (LENGTH(s) != 1 || ISNAN(REAL(s)[0])
-         || REAL(s)[0] > R_LEN_T_MAX || REAL(s)[0] < -R_LEN_T_MAX)
-            return 0;
-         return (R_len_t) REAL(s)[0];
-    case INTSXP:
-        if (LENGTH(s) != 1 || INTEGER(s)[0] == NA_INTEGER)
-            return 0;
-        return INTEGER(s)[0];
-    default:
+    if (type_etc == REALSXP) goto real;
+    if (type_etc == INTSXP) goto integer;
+    
+    if ((type_etc & TYPE_ET_CETERA_VEC_DOTS_TR) /* not scalar */
+         || getDimAttrib(s) != R_NilValue)
         return 0;
-    }
+    
+    int type = type_etc & TYPE_ET_CETERA_TYPE;
+
+    if (type == REALSXP) goto real;
+    if (type == INTSXP) goto integer;
+
+    return 0;
+
+  real:
+    if (ISNAN(REAL(s)[0]) || REAL(s)[0]>R_LEN_T_MAX || REAL(s)[0]<-R_LEN_T_MAX)
+        return 0;
+    return (R_len_t) REAL(s)[0];
+
+  integer:
+    if (INTEGER(s)[0] == NA_INTEGER)
+        return 0;
+    return INTEGER(s)[0];
 }
 
 
@@ -1210,7 +1219,7 @@ static R_INLINE R_len_t simple_index (SEXP s)
    function is called.  It's OK for x to still be being computed. The
    variant for the return result is the last argument. */
 
-static inline SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
+static SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
 {
     R_len_t ix, n;
     int typeofx;
@@ -1312,7 +1321,7 @@ static inline SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
    still be being computed. The variant for the return result is the last 
    argument. */
 
-static inline SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2, 
+static SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2, 
                                           int variant)
 {
     R_len_t ix1, ix2, nrow, ncol, avail, e;
