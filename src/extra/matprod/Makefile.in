@@ -11,7 +11,8 @@ R_HOME = $(top_builddir)
 
 include $(top_builddir)/Makeconf
 
-MATPROD_CPPFLAGS = -I$(srcdir) -I$(srcdir)/../helpers
+MATPROD_CPPFLAGS = -I$(srcdir) -I$(srcdir)/../helpers -I$(srcdir)/../sggc \
+                   -DMATPROD_APP_INCLUDED
 ALL_CPPFLAGS = $(MATPROD_CPPFLAGS) $(R_XTRA_CPPFLAGS) $(CPPFLAGS) $(DEFS)
 
 SOURCES = matprod.c par-matprod.c
