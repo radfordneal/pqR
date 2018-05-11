@@ -1340,125 +1340,9 @@ static void SubAssignArgs(SEXP *subs, SEXP *y, SEXP call)
     }
 }
 
-/* The [<- operator. */
-
-static SEXP do_subassign_dflt_seq (SEXP call, SEXP x, SEXP sb1, SEXP sb2, 
-                                   SEXP subs, SEXP rho, SEXP y, int64_t seq);
-
-static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
-{
-    SEXP sv_scalar_stack = R_scalar_stack;
-
-    SEXP ans, x, sb1, sb2, subs, y;
-    int argsevald = 0;
-    int64_t seq = 0;
-
-    /* See if we are using the fast interface. */
-
-    if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
-
-        /* Fast interface: object assigned into (x) comes already
-           evaluated.  Evaluate indexes using VARIANT_SCALAR_STACK_OK,
-           and evaluate a single index with VARIANT_SEQ so it may come
-           as a range rather than a vector.  */
-
-        y = R_fast_sub_replacement;  /* may be on scalar stack */
-        x = R_fast_sub_var;
-        sb1 = CAR(args);
-        subs = CDR(args);
-
-        if (subs == R_NilValue) {
-            sb1 = evalv (sb1, rho, VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
-                                                 VARIANT_MISSING_OK);
-            if (R_variant_result) {
-                seq = R_variant_seq_spec;
-                R_variant_result = 0;
-            }
-            sb2 = R_NoObject;
-        }
-        else {
-            sb1 = evalv (sb1, rho, VARIANT_SCALAR_STACK_OK |
-                                   VARIANT_MISSING_OK);
-            PROTECT(sb1);
-            if (TAG(subs) != R_NilValue || CAR(subs) == R_DotsSymbol)
-                sb2 = R_NoObject;
-            else {
-                sb2 = evalv (CAR(subs), rho, VARIANT_SCALAR_STACK_OK |
-                                             VARIANT_MISSING_OK);
-                subs = CDR(subs);
-            }
-            if (subs != R_NilValue) {
-                PROTECT(sb2);
-                subs = evalList_v (subs, rho, VARIANT_SCALAR_STACK_OK |
-                                              VARIANT_MISSING_OK);
-                UNPROTECT(1); /* sb2 */
-            }
-            UNPROTECT(1); /* sb1 */
-        }
-
-        goto dflt_seq;
-    }
-
-    y = R_NoObject;  /* found later after other arguments */
-    x = CAR(args);   /* args are (x, indexes..., y) */
-    sb1 = R_NoObject;
-    sb2 = R_NoObject;
-    subs = CDR(args);
-
-    if (x != R_DotsSymbol) {
-
-        /* Mostly called from do_set, with first arg an evaluated promise. */
-
-        PROTECT (x = TYPEOF(x) == PROMSXP && PRVALUE(x) != R_UnboundValue
-                        ? PRVALUE(x) : eval(x,rho));
-        if (isObject(x)) {
-            args = CONS(x,subs);
-            UNPROTECT(1);
-            argsevald = -1;
-        }
-        else if (TYPEOF(CAR(subs)) != LANGSXP || CDR(subs) != R_NilValue) {
-            /* in particular, CAR(subs) might be missing or ... */
-            subs = evalList_v (subs, rho, VARIANT_SCALAR_STACK_OK |
-                                          VARIANT_MISSING_OK);
-            UNPROTECT(1);
-            goto dflt_seq;
-        }
-        else {
-            PROTECT(sb1 = evalv (CAR(subs), rho, VARIANT_SEQ |
-                            VARIANT_SCALAR_STACK_OK | VARIANT_MISSING_OK));
-            if (R_variant_result) {
-                seq = R_variant_seq_spec;
-                R_variant_result = 0;
-            }
-            subs = R_NilValue;
-            UNPROTECT(2);
-            goto dflt_seq;
-        }
-    }
-
-    /* This code performs an internal version of method dispatch. */
-    /* We evaluate the first argument and attempt to dispatch on it. */
-    /* If the dispatch fails, we "drop through" to the default code below. */
-
-    if (DispatchOrEval(call, op, "[<-", args, rho, &ans, 0, argsevald)) {
-        R_Visible = TRUE;
-        return ans;
-    }
-
-    return do_subassign_dflt_seq
-       (call, CAR(ans), R_NoObject, R_NoObject, CDR(ans), rho, R_NoObject, 0);
-
-    /* ... path that bypasses DispatchOrEval ... */
-
-  dflt_seq: ;
-
-    SEXP r = do_subassign_dflt_seq (call, x, sb1, sb2, subs, rho, y, seq);
-
-    R_scalar_stack = sv_scalar_stack;
-    return r;
-}
-
-/* N.B.  do_subassign_dflt is called directly from elsewhere. */
+/* The [<- operator is implemeted in do_subassign in eval.c, which calls
+   routines below. */
+                           /* do_subassign_dflt is called from elsewhere too. */
 
 SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -1469,8 +1353,9 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* The last "seq" argument below is non-zero if the first subscript is a 
    sequence spec (a variant result).  Sets R_Visible to TRUE. */
 
-static SEXP do_subassign_dflt_seq (SEXP call, SEXP x, SEXP sb1, SEXP sb2, 
-                                   SEXP subs, SEXP rho, SEXP y, int64_t seq)
+SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x, 
+                                             SEXP sb1, SEXP sb2, SEXP subs,
+                                             SEXP rho, SEXP y, int64_t seq)
 {
     R_Visible = TRUE;
 
@@ -1623,68 +1508,18 @@ static SEXP do_subassign_dflt_seq (SEXP call, SEXP x, SEXP sb1, SEXP sb2,
     END_PROTECT;
 }
 
-/* The [[<- operator; should be fast. */
+/* The [[<- operator is implemented by do_subassign2 in eval.c, which calls
+   routines below. */
 
-static SEXP do_subassign2_dflt_int
-        (SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP subs, SEXP rho, SEXP y);
-
-static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
-{
-    if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
-
-        SEXP scalar_stack_sv = R_scalar_stack;
-        SEXP y = R_fast_sub_replacement; /* may be on the scalar stack */
-        SEXP x = R_fast_sub_var;
-        SEXP sb1, sb2, subs;
-
-        sb1 = evalv (CAR(args), rho, VARIANT_SCALAR_STACK_OK | 
-                                     VARIANT_MISSING_OK);
-        subs = CDR(args);
-
-        PROTECT(sb1);
-        if (subs == R_NilValue || TAG(subs) != R_NilValue 
-                               || CAR(subs) == R_DotsSymbol)
-            sb2 = R_NoObject;
-        else {
-            sb2 = evalv (CAR(subs), rho, VARIANT_SCALAR_STACK_OK |
-                                         VARIANT_MISSING_OK);
-            subs = CDR(subs);
-        }
-        if (subs != R_NilValue) {
-            PROTECT(sb2);
-            subs = evalList_v (subs, rho, VARIANT_SCALAR_STACK_OK |
-                                          VARIANT_MISSING_OK);
-            UNPROTECT(1); /* sb2 */
-        }
-        UNPROTECT(1); /* sb1 */
-
-        SEXP r = do_subassign2_dflt_int (call, x, sb1, sb2, subs, rho, y);
-        R_scalar_stack = scalar_stack_sv;
-        return r;
-    }
-
-    SEXP ans;
-
-    if (DispatchOrEval(call, op, "[[<-", args, rho, &ans, 0, 0)) {
-        R_Visible = TRUE;
-        return ans;
-    }
-
-    return do_subassign2_dflt_int 
-            (call, CAR(ans), R_NoObject, R_NoObject, CDR(ans), rho, R_NoObject);
-}
-
-/* Also called directly from elsewhere. */
-
-SEXP attribute_hidden do_subassign2_dflt
-                               (SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_subassign2_dflt         /* called from elsewhere too */
+                        (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     return do_subassign2_dflt_int 
          (call, CAR(args), R_NoObject, R_NoObject, CDR(args), rho, R_NoObject);
 }
 
 /* Sets R_Visible to TRUE. */
-static SEXP do_subassign2_dflt_int
+SEXP attribute_hidden do_subassign2_dflt_int
          (SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP subs, SEXP rho, SEXP y)
 {
     SEXP dims, newname, xup;
@@ -2277,8 +2112,6 @@ attribute_hidden FUNTAB R_FunTab_subassign[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"[<-",		do_subassign,	0,	101000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
-{"[[<-",	do_subassign2,	1,	101000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 {"$<-",		do_subassign3,	1,	101000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}

@@ -634,9 +634,13 @@
  do_shellexec
  do_shortpath
  do_subassign2_dflt
+ do_subassign2_dflt_int
  do_subassign_dflt
+ do_subassign_dflt_seq
  do_subset2_dflt
+ do_subset2_dflt_x
  do_subset_dflt
+ do_subset_dflt_seq
  do_sysinfo
  do_syssleep
  do_system
