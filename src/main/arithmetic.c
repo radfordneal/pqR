@@ -282,25 +282,6 @@ static double logbase(double x, double base)
 }
 
 
-/* These macros are quite a bit faster than having real modulo calls
-   in the loop. */
-
-#define mod_iterate(n,n1,n2,i1,i2) \
-  for (R_len_t i = 0, i1 = i2 = 0; \
-       i < n; \
-       i1 = (++i1 == n1 ? 0 : i1), i2 = (++i2 == n2 ? 0 : i2), ++i)
-
-#define mod_iterate_1(n1,n2,i1,i2) /* assumes n1 <= n2 */ \
-  for (R_len_t i = 0, i1 = i2 = 0; \
-       i2 < n2; \
-       i1 = (i1+1 == n1 ? 0 : i1+1), ++i2, i = i2)
-
-#define mod_iterate_2(n1,n2,i1,i2) /* assumes n2 <= n1 */ \
-  for (R_len_t i = 0, i1 = i2 = 0; \
-       i1 < n1; \
-       i2 = (i2+1 == n2 ? 0 : i2+1), ++i1, i = i1)
-
-
 #define add_func(a,b) ((a)+(b))
 #define sub_func(a,b) ((a)-(b))
 #define mul_func(a,b) ((a)*(b))

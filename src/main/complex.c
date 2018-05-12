@@ -185,12 +185,6 @@ double complex R_cpow (double complex X, double complex Y)
     return Z;
 }
 
-/* See arithmetic.c */
-#define mod_iterate(n1,n2,i1,i2) for (i=i1=i2=0; i<n; \
-	i1 = (++i1 == n1) ? 0 : i1,\
-	i2 = (++i2 == n2) ? 0 : i2,\
-	++i)
-
 /* Procedure below is no longer used in arithmetic.c; kept here just in case.*/
 
 SEXP attribute_hidden complex_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
@@ -210,33 +204,33 @@ SEXP attribute_hidden complex_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 
     switch (code) {
     case PLUSOP:
-	mod_iterate(n1, n2, i1, i2) {
+	mod_iterate (n, n1, n2, i1, i2) {
 	    Rcomplex x1 = COMPLEX(s1)[i1], x2 = COMPLEX(s2)[i2];
 	    COMPLEX(ans)[i].r = x1.r + x2.r;
 	    COMPLEX(ans)[i].i = x1.i + x2.i;
 	}
 	break;
     case MINUSOP:
-	mod_iterate(n1, n2, i1, i2) {
+	mod_iterate (n, n1, n2, i1, i2) {
 	    Rcomplex x1 = COMPLEX(s1)[i1], x2 = COMPLEX(s2)[i2];
 	    COMPLEX(ans)[i].r = x1.r - x2.r;
 	    COMPLEX(ans)[i].i = x1.i - x2.i;
 	}
 	break;
     case TIMESOP:
-	mod_iterate(n1, n2, i1, i2) {
+	mod_iterate (n, n1, n2, i1, i2) {
 	    SET_C99_COMPLEX(COMPLEX(ans), i,
 			    C99_COMPLEX2(s1, i1) * C99_COMPLEX2(s2, i2));
 	}
 	break;
     case DIVOP:
-	mod_iterate(n1, n2, i1, i2) {
+	mod_iterate (n, n1, n2, i1, i2) {
 	    SET_C99_COMPLEX(COMPLEX(ans), i,
 			    C99_COMPLEX2(s1, i1) / C99_COMPLEX2(s2, i2));
 	}
 	break;
     case POWOP:
-	mod_iterate(n1, n2, i1, i2) {
+	mod_iterate (n, n1, n2, i1, i2) {
 	    SET_C99_COMPLEX(COMPLEX(ans), i,
 			    R_cpow(C99_COMPLEX2(s1, i1), C99_COMPLEX2(s2, i2)));
 	}
