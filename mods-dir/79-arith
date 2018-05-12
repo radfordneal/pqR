@@ -1,3 +1,7 @@
 Improvements to arithmetic.
 
-Better versions of mod_iterate, used for integer and complex arithmetic.
+Better versions of mod_iterate, used for arithmetic / comparison / etc.
+
+Revisions to merged operations, doing only basic ops and abs, not other
+math1 functions.
+
