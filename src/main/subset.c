@@ -112,11 +112,11 @@ SEXP attribute_hidden Rf_DecideVectorOrRange(int64_t seq, int *start, int *end,
 }
 
 
-/* ExtractRange does the transfer of elements from "x" to "result" 
-   according to the range given by start and end.  The caller will
-   have allocated "result" to be at least the required length, and
-   for VECSXP and EXPRSXP, the entries will be R_NilValue (done by
-   allocVector).
+/* ExtractRange does the transfer of elements from "x" to the
+   beginning of "result", according to the range within x given by
+   "start" and "end" (1-based).  The caller will have allocated
+   "result" to be at least the required length, and for VECSXP and
+   EXPRSXP, the entries will be R_NilValue (done by allocVector).
 
    Arguments x and result must be protected by the caller. */
 
@@ -136,26 +136,18 @@ static void ExtractRange(SEXP x, SEXP result, int start, int end, SEXP call)
     switch (TYPEOF(x)) {
     case LGLSXP:
         memcpy (LOGICAL(result), LOGICAL(x)+start, m * sizeof *LOGICAL(x));
-        for (i = m; i<n; i++) LOGICAL(result)[i] = NA_LOGICAL;
         break;
     case INTSXP:
         memcpy (INTEGER(result), INTEGER(x)+start, m * sizeof *INTEGER(x));
-        for (i = m; i<n; i++) INTEGER(result)[i] = NA_INTEGER;
         break;
     case REALSXP:
         memcpy (REAL(result), REAL(x)+start, m * sizeof *REAL(x));
-        for (i = m; i<n; i++) REAL(result)[i] = NA_REAL;
         break;
     case CPLXSXP:
         memcpy (COMPLEX(result), COMPLEX(x)+start, m * sizeof *COMPLEX(x));
-        for (i = m; i<n; i++) {
-            COMPLEX(result)[i].r = NA_REAL;
-            COMPLEX(result)[i].i = NA_REAL;
-        }
         break;
     case STRSXP:
         copy_string_elements (result, 0, x, start, m);
-        for (i = m; i<n; i++) SET_STRING_ELT_NA(result, i);
         break;
     case VECSXP:
     case EXPRSXP:
@@ -169,10 +161,10 @@ static void ExtractRange(SEXP x, SEXP result, int start, int end, SEXP call)
             for (i = 0; i<m; i++)
                 SET_VECTOR_ELT (result, i, duplicate(VECTOR_ELT(x,start+i)));
         }
-        /* remaining elements already set to R_NilValue */
-        break;
+        return;  /* remaining elements already set to R_NilValue */
     case LISTSXP:
-            /* cannot happen: pairlists are coerced to lists */
+        /* cannot happen: pairlists are coerced to lists */
+        abort();
     case LANGSXP:
         for (i = 0; i<m; i++) {
             tmp2 = nthcdr(x, start+i);
@@ -184,14 +176,15 @@ static void ExtractRange(SEXP x, SEXP result, int start, int end, SEXP call)
             SETCAR_NIL(tmp);
             tmp = CDR(tmp);
         }
-        break;
+        return;
     case RAWSXP:
         memcpy (RAW(result), RAW(x)+start, m * sizeof *RAW(x));
-        for (i = m; i<n; i++) RAW(result)[i] = (Rbyte) 0;
         break;
     default:
-        nonsubsettable_error(call,x);
+        abort();
     }
+
+    if (m < n) Rf_set_elements_to_NA (result, m, 1, n);
 }
 
 
@@ -467,49 +460,6 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
 }
 
 
-/* Used in MatrixSubset to set a whole row or column of a matrix to NAs. */
-
-static void set_row_or_col_to_na (SEXP result, int start, int step, int end,
-                                  SEXP call)
-{
-    int i;
-    switch (TYPEOF(result)) {
-    case LGLSXP:
-        for (i = start; i<end; i += step)
-            LOGICAL(result)[i] = NA_LOGICAL;
-        break;
-    case INTSXP:
-        for (i = start; i<end; i += step)
-            INTEGER(result)[i] = NA_INTEGER;
-        break;
-    case REALSXP:
-        for (i = start; i<end; i += step)
-            REAL(result)[i] = NA_REAL;
-        break;
-    case CPLXSXP:
-        for (i = start; i<end; i += step) {
-            COMPLEX(result)[i].r = NA_REAL;
-            COMPLEX(result)[i].i = NA_REAL;
-        }
-        break;
-    case STRSXP:
-        for (i = start; i<end; i += step)
-            SET_STRING_ELT_NA(result, i);
-        break;
-    case VECSXP:
-        for (i = start; i<end; i += step)
-            SET_VECTOR_ELT_NIL(result, i);
-        break;
-    case RAWSXP:
-        for (i = start; i<end; i += step)
-            RAW(result)[i] = (Rbyte) 0;
-        break;
-    default:
-        errorcall(call, _("matrix subscripting not handled for this type"));
-    }
-}
-
-
 /* Used in MatrixSubset when only one (valid) row is accessed. */
 
 static void one_row_of_matrix (SEXP call, SEXP x, SEXP result, 
@@ -525,7 +475,7 @@ static void one_row_of_matrix (SEXP call, SEXP x, SEXP result,
         jj = INTEGER(sc)[j];
 
         if (jj == NA_INTEGER) {
-            set_row_or_col_to_na (result, j, 1, j+1, call);
+            Rf_set_elements_to_NA (result, j, 1, j+1);
             continue;
         }
 
@@ -555,7 +505,7 @@ static void one_row_of_matrix (SEXP call, SEXP x, SEXP result,
             RAW(result)[j] = RAW(x) [st+jj*nr];
             break;
         default:
-            errorcall(call, _("matrix subscripting not handled for this type"));
+            abort();
         }
     }
 }
@@ -582,7 +532,7 @@ static void range_of_rows_of_matrix (SEXP call, SEXP x, SEXP result,
         /* If column index is NA, just set column of result to NAs. */
 
         if (jj == NA_INTEGER) {
-            set_row_or_col_to_na (result, ij, 1, ij+nrs, call);
+            Rf_set_elements_to_NA (result, ij, 1, ij+nrs);
             ij += nrs;
             continue;
         }
@@ -633,7 +583,7 @@ static void range_of_rows_of_matrix (SEXP call, SEXP x, SEXP result,
                     nrs * sizeof *RAW(x));
             break;
         default:
-            errorcall(call, _("matrix subscripting not handled for this type"));
+            abort();
         }
 
         ij += nrs;
@@ -654,7 +604,7 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
     for (i = 0; i < nrs; i++) {
         ii = INTEGER(sr)[i];
         if (ii == NA_INTEGER) 
-            set_row_or_col_to_na (result, i, nrs, i+nrs*ncs, call);
+            Rf_set_elements_to_NA (result, i, nrs, i+nrs*ncs);
         else if (ii < 1 || ii > nr)
             out_of_bounds_error(call);
     }
@@ -669,7 +619,7 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
         /* If column index is NA, just set column of result to NAs. */
 
         if (jj == NA_INTEGER) {
-            set_row_or_col_to_na (result, j*nrs, 1, (j+1)*nrs, call);
+            Rf_set_elements_to_NA (result, j*nrs, 1, (j+1)*nrs);
             ij += nrs;
             continue;
         }
@@ -731,7 +681,7 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
                     RAW(result)[ij] = RAW(x)[(ii-1)+jjnr];
             break;
         default:
-            errorcall(call, _("matrix subscripting not handled for this type"));
+            abort();
         }
     }
 }

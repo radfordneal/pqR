@@ -479,8 +479,7 @@ static SEXP start_parseData_record (source_location *start_loc,
     /* Allocate space for the integer portion of the record. */
 
     idat = allocVector (INTSXP, PDATA_ROWS);
-
-    for (i = 0; i < PDATA_ROWS; i++) INTEGER(idat)[i] = NA_INTEGER;
+    Rf_set_elements_to_NA (idat, 0, 1, PDATA_ROWS);
 
     /* Put information in the record.  The last parsed and column fields
        can't be filled in yet, however. */

@@ -364,6 +364,50 @@ void integer_to_string (char *s, int i)
 #endif
 
 
+/* Set elements of a vector to NA of suitable type (or NULL for VECSXP and
+   EXPRSXP, or 0 for RAWSXP). */
+
+void attribute_hidden Rf_set_elements_to_NA 
+  (SEXP vec, R_len_t start, R_len_t step, R_len_t end)
+{
+    int i;
+    switch (TYPEOF(vec)) {
+    case LGLSXP: /* just fall through to INTSXP code...
+        for (i = start; i<end; i += step)
+            LOGICAL(vec)[i] = NA_LOGICAL;
+        break; */
+    case INTSXP:
+        for (i = start; i<end; i += step)
+            INTEGER(vec)[i] = NA_INTEGER;
+        break;
+    case REALSXP:
+        for (i = start; i<end; i += step)
+            REAL(vec)[i] = NA_REAL;
+        break;
+    case CPLXSXP:
+        for (i = start; i<end; i += step) {
+            COMPLEX(vec)[i].r = NA_REAL;
+            COMPLEX(vec)[i].i = NA_REAL;
+        }
+        break;
+    case STRSXP:
+        for (i = start; i<end; i += step)
+            SET_STRING_ELT_NA(vec, i);
+        break;
+    case EXPRSXP:
+    case VECSXP:
+        for (i = start; i<end; i += step)
+            SET_VECTOR_ELT_NIL(vec, i);
+        break;
+    case RAWSXP:
+        for (i = start; i<end; i += step)
+            RAW(vec)[i] = (Rbyte) 0;
+        break;
+    default:
+        abort();
+    }
+}
+
 
 Rboolean tsConform(SEXP x, SEXP y)
 {

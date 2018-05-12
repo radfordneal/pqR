@@ -1683,6 +1683,7 @@ R_NORETURN void out_of_bounds_error(SEXP call);
 R_NORETURN void nonsubsettable_error(SEXP call, SEXP x);
 R_NORETURN void PRSEEN_error(SEXP e);
 Rboolean Rf_strIsASCII(const char *str);
+void Rf_set_elements_to_NA (SEXP, R_len_t, R_len_t, R_len_t);
 int utf8clen(char c);
 
 /* NOTE:  Some below should not really be returning size_t, which
