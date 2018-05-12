@@ -109,7 +109,6 @@ static SEXP cross_colon(SEXP call, SEXP s, SEXP t)
 static SEXP make_seq (int from, int len, int variant, int dotdot)
 {
     SEXP ans;
-    int *p;
 
     if (VARIANT_KIND(variant) == VARIANT_SEQ && (from|len|dotdot) != 0) {
         R_variant_seq_spec = ((int64_t)from<<32) | ((int64_t)len<<1) | dotdot;
@@ -117,9 +116,7 @@ static SEXP make_seq (int from, int len, int variant, int dotdot)
         ans = R_NilValue;
     }
     else {
-        ans = allocVector (INTSXP, len);
-        p = INTEGER(ans);
-        for (int i = 0; i < len; i++) p[i] = from + i;
+        ans = Rf_VectorFromRange (from, from+(len-1));
         if (dotdot) {
             SEXP dim1;
             PROTECT(ans);
