@@ -45,15 +45,6 @@
    Separate macros are defined for non-variant operations, and for
    the and, or, and sum variants. */
 
-/* i1 = i % n1; i2 = i % n2;
- * this macro is quite a bit faster than having real modulo calls
- * in the loop (tested on Intel and Sparc)
- */
-#define mod_iterate(n1,n2,i1,i2) for (i=i1=i2=0; i<n; \
-	i1 = (++i1 == n1) ? 0 : i1,\
-	i2 = (++i2 == n2) ? 0 : i2,\
-	++i)
-
 #define RAW_FETCH(s,i)  RAW(s)[i]
 #define INT_FETCH(s,i)  INTEGER(s)[i]
 #define REAL_FETCH(s,i) REAL(s)[i]
@@ -89,8 +80,16 @@
               NANCHK1 || NANCHK2 ? NA_LOGICAL : COMPARE ? T : F; \
         } \
     } \
-    else { \
-        mod_iterate(n1, n2, i1, i2) { \
+    else if (n1 < n2) { \
+        mod_iterate_1 (n1, n2, i1, i2) { \
+            x1 = FETCH(s1,i1); \
+            x2 = FETCH(s2,i2); \
+            lp[i] = \
+              NANCHK1 || NANCHK2 ? NA_LOGICAL : COMPARE ? T : F; \
+        } \
+    } \
+    else { /* n2 < n1 */ \
+        mod_iterate_2 (n1, n2, i1, i2) { \
             x1 = FETCH(s1,i1); \
             x2 = FETCH(s2,i2); \
             lp[i] = \
@@ -145,8 +144,20 @@
             } \
         } \
     } \
-    else { \
-        mod_iterate(n1, n2, i1, i2) { \
+    else if (n1 < n2) { \
+        mod_iterate_1 (n1, n2, i1, i2) { \
+            x1 = FETCH(s1,i1); \
+            x2 = FETCH(s2,i2); \
+            if (NANCHK1 || NANCHK2) \
+                res = NA_LOGICAL; \
+            else if (COMPARE ? F : T) { \
+                res = FALSE; \
+                break; \
+            } \
+        } \
+    } \
+    else { /* n2 < n1 */ \
+        mod_iterate_2 (n1, n2, i1, i2) { \
             x1 = FETCH(s1,i1); \
             x2 = FETCH(s2,i2); \
             if (NANCHK1 || NANCHK2) \
@@ -206,8 +217,20 @@
             } \
         } \
     } \
-    else { \
-        mod_iterate(n1, n2, i1, i2) { \
+    else if (n1 < n2) { \
+        mod_iterate_1 (n1, n2, i1, i2) { \
+            x1 = FETCH(s1,i1); \
+            x2 = FETCH(s2,i2); \
+            if (NANCHK1 || NANCHK2) \
+                res = NA_LOGICAL; \
+            else if (COMPARE ? T : F) { \
+                res = TRUE; \
+                break; \
+            } \
+        } \
+    } \
+    else { /* n2 < n1 */ \
+        mod_iterate_2 (n1, n2, i1, i2) { \
             x1 = FETCH(s1,i1); \
             x2 = FETCH(s2,i2); \
             if (NANCHK1 || NANCHK2) \
@@ -267,8 +290,20 @@
                 res += 1; \
         } \
     } \
-    else { \
-        mod_iterate(n1, n2, i1, i2) { \
+    else if (n1 < n2) { \
+        mod_iterate_1 (n1, n2, i1, i2) { \
+            x1 = FETCH(s1,i1); \
+            x2 = FETCH(s2,i2); \
+            if (NANCHK1 || NANCHK2) { \
+                res = NA_INTEGER; \
+                break; \
+            } \
+            else if (COMPARE ? T : F) \
+                res += 1; \
+        } \
+    } \
+    else { /* n2 < n1 */ \
+        mod_iterate_2 (n1, n2, i1, i2) { \
             x1 = FETCH(s1,i1); \
             x2 = FETCH(s2,i2); \
             if (NANCHK1 || NANCHK2) { \
@@ -583,7 +618,7 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             }
         }
         else {
-	    mod_iterate(n1, n2, i1, i2) {
+	    mod_iterate (n, n1, n2, i1, i2) {
 	        x1 = e1[i1];
                 x2 = e2[i2];
                 lp[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
@@ -629,7 +664,7 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             }
         }
         else {
-            mod_iterate(n1, n2, i1, i2) {
+            mod_iterate (n, n1, n2, i1, i2) {
                 x1 = e1[i1];
                 x2 = e2[i2];
                 if (x1 == NA_STRING || x2 == NA_STRING)
@@ -699,7 +734,7 @@ static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             }
         }
         else {
-	    mod_iterate(n1, n2, i1, i2) {
+	    mod_iterate (n, n1, n2, i1, i2) {
 	        x1 = e1[i1];
                 x2 = e2[i2];
                 if (x1==NA_STRING || x2==NA_STRING)
@@ -783,7 +818,7 @@ static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             }
         }
         else {
-	    mod_iterate(n1, n2, i1, i2) {
+	    mod_iterate (n, n1, n2, i1, i2) {
 	        x1 = e1[i1];
                 x2 = e2[i2];
                 if (x1==NA_STRING || x2==NA_STRING)
@@ -871,7 +906,7 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             }
         }
         else {
-	    mod_iterate(n1, n2, i1, i2) {
+	    mod_iterate (n, n1, n2, i1, i2) {
 	        x1 = e1[i1];
                 x2 = e2[i2];
                 if (x1==NA_STRING || x2==NA_STRING) {
@@ -903,7 +938,7 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 
 
 /* MAIN PART OF IMPLEMENTATION OF RELATIONAL OPERATORS.  Called from
-   do_relop below, and from elsewhere. */
+   do_relop in eval.c, and from elsewhere. */
 
 #define T_relop THRESHOLD_ADJUST(24) 
 
