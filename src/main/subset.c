@@ -57,6 +57,10 @@
 
 #include <helpers/helpers-app.h>
 
+#if __AVX2__ && !defined(DISABLE_AVX_CODE)
+#include <immintrin.h>
+#endif
+
 /* JMC convinced MM that this was not a good idea: */
 #undef _S4_subsettable
 
@@ -66,14 +70,61 @@
 SEXP attribute_hidden Rf_VectorFromRange (int rng0, int rng1)
 { 
     SEXP vec;
-    int i, n;
+    int n;
 
-    n = rng1>=rng0 ? rng1-rng0+1 : 0;
+    if (rng1<rng0)
+        return allocVector (INTSXP, 0);
+
+    n = rng1-rng0+1;
   
     vec = allocVector(INTSXP, n);
 
-    for (i = 0; i<n; i++) 
-        INTEGER(vec)[i] = rng0 + i;
+    int *p = INTEGER(vec);
+    int i = 0;
+
+#   if !__AVX2__ || defined(DISABLE_AVX_CODE)
+    {
+        while (i < n) {
+            p[i] = rng0+i; i += 1;
+        }
+    }
+#   else
+    {
+        if ((SGGC_ALIGN_FORWARD & 8) && i < n-1) {
+            p[i] = rng0+i; i += 1;
+            p[i] = rng0+i; i += 1;
+        }
+        if ((SGGC_ALIGN_FORWARD & 16) && i < n-3) {
+            p[i] = rng0+i; i += 1;
+            p[i] = rng0+i; i += 1;
+            p[i] = rng0+i; i += 1;
+            p[i] = rng0+i; i += 1;
+        }
+        if (i < n-7) {
+            __m256i eights = _mm256_set1_epi32 (8);
+            __m256i vals = _mm256_add_epi32 (_mm256_set1_epi32(rng0+i),
+                                             _mm256_set_epi32(7,6,5,4,3,2,1,0));
+            do {
+                _mm256_store_si256 ((__m256i*)(p+i), vals);
+                vals = _mm256_add_epi32 (vals, eights);
+                i += 8;
+            } while (i < n-7);
+        }
+        if (i < n-3) {
+            p[i] = rng0+i; i += 1;
+            p[i] = rng0+i; i += 1;
+            p[i] = rng0+i; i += 1;
+            p[i] = rng0+i; i += 1;
+        }
+        if (i < n-1) {
+            p[i] = rng0+i; i += 1;
+            p[i] = rng0+i; i += 1;
+        }
+        if (i < n) {
+            p[i] = rng0+i;
+        }
+    }
+#   endif
   
     return vec;
 }
