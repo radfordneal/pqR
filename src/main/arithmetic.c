@@ -1308,8 +1308,6 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
                 flags = HELPERS_PIPE_IN0_OUT | HELPERS_MERGE_IN_OUT;
             }
         }
-        else if (oper == MODOP)
-            flags = HELPERS_PIPE_IN0_OUT;
         if (n>1) {
             if (nx==n) flags |= HELPERS_PIPE_IN1;
             if (ny==n) flags |= HELPERS_PIPE_IN2;
