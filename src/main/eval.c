@@ -4502,7 +4502,7 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                   : *INTEGER(y) == NA_INTEGER ? NA_REAL : *INTEGER(y);
 
         int res;
-        if (ISNAN(xv) || ISNAN(yv)) 
+        if (MAY_BE_NAN2(xv,yv) && (ISNAN(xv) || ISNAN(yv)))
             res = NA_LOGICAL;
         else {
             switch (PRIMVAL(op)) {
