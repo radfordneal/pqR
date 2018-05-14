@@ -304,17 +304,18 @@ static double logbase(double x, double base)
        fetch2   macro to fetch an element of the second operand
        s2       address of second operand
        n2       length of the second operand
+       swp      if 1, ops have been swapped so that n1 <= n2.
 
    Both n1 and n2 must be non-zero and no bigger than n, and at least one 
    of n1 and n2 must be equal to n.  An operand of length one or with length 
    less than n is assumed to already be available with no waiting.
 */
 
-#define PIPEARITH(type,func,result,n,fetch1,s1,n1,fetch2,s2,n2) \
+#define PIPEARITH(type,func,result,n,fetch1,s1,n1,fetch2,s2,n2,swp) \
     do { \
         R_len_t i, i1, i2, a, a1, a2; \
         i = 0; \
-        if (n2 == 1) { \
+        if (!swp && n2 == 1) { \
             type tmp = fetch2(s2,0); \
             while (i<n) { \
                 HELPERS_WAIT_IN1 (a, i, n); \
@@ -389,7 +390,7 @@ static double logbase(double x, double base)
                 } while (i<a1 && i<a2); \
             } \
         } \
-        else if (n1 > n2) { \
+        else if (!swp && n1 > n2) { \
             i2 = 0; \
             while (i<n) { \
                 HELPERS_WAIT_IN1 (a, i, n); \
@@ -434,18 +435,18 @@ static double logbase(double x, double base)
 
 #if !__AVX__ || defined(DISABLE_AVX_CODE)
 
-#define MM_PIPEARITH(func,result,n,s1,n1,s2,n2) \
-          PIPEARITH(double,func,result,n,RFETCH,s1,n1,RFETCH,s2,n2)
+#define MM_PIPEARITH(func,result,n,s1,n1,s2,n2,swp) \
+          PIPEARITH(double,func,result,n,RFETCH,s1,n1,RFETCH,s2,n2,swp)
 
 #else
 
 #include <immintrin.h>
 
-#define MM_PIPEARITH(func,result,n,s1,n1,s2,n2) \
+#define MM_PIPEARITH(func,result,n,s1,n1,s2,n2,swp) \
     do { \
         R_len_t i, i1, i2, a, a1, a2; \
         i = 0; \
-        if (n2 == 1) { \
+        if (!swp && n2 == 1) { \
             double tmp = REAL(s2)[0]; \
             __m256d tmp_pd = _mm256_set_pd(tmp,tmp,tmp,tmp); \
             while (i<n) { \
@@ -526,7 +527,7 @@ static double logbase(double x, double base)
                 } while (i<a1 && i<a2); \
             } \
         } \
-        else if (n1 > n2) { \
+        else if (!swp && n1 > n2) { \
             i2 = 0; \
             while (i<n) { \
                 HELPERS_WAIT_IN1 (a, i, n); \
@@ -580,7 +581,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
     switch (code) {
     case PLUSOP:
-        if (n1 > n2) { SEXP t = s1; s1 = s2; s2 = t; n1 = n2; n2 = n; }
+        if (n1 > n2) abort();
         mod_iterate_1 (n1, n2, i1, i2) {
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
@@ -634,7 +635,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         }
         break;
     case TIMESOP:
-        if (n1 > n2) { SEXP t = s1; s1 = s2; s2 = t; n1 = n2; n2 = n; }
+        if (n1 > n2) abort();
         mod_iterate_1 (n1, n2, i1, i2) {
             x1 = INTEGER(s1)[i1];
             x2 = INTEGER(s2)[i2];
@@ -715,35 +716,35 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     switch (code) {
     case PLUSOP:
         if (TYPEOF(s1) != REALSXP)
-            PIPEARITH(double,add_func,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,add_func,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2,1);
         else if (TYPEOF(s2) != REALSXP)
-            PIPEARITH(double,add_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
+            PIPEARITH(double,add_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2,1);
         else
-            MM_PIPEARITH(add_func,rans,n,s1,n1,s2,n2);
+            MM_PIPEARITH(add_func,rans,n,s1,n1,s2,n2,1);
         break;
     case MINUSOP:
         if (TYPEOF(s1) != REALSXP)
-            PIPEARITH(double,sub_func,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,sub_func,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2,0);
         else if (TYPEOF(s2) != REALSXP)
-            PIPEARITH(double,sub_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
+            PIPEARITH(double,sub_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2,0);
         else
-            MM_PIPEARITH(sub_func,rans,n,s1,n1,s2,n2);
+            MM_PIPEARITH(sub_func,rans,n,s1,n1,s2,n2,0);
         break;
     case TIMESOP:
         if (TYPEOF(s1) != REALSXP)
-            PIPEARITH(double,mul_func,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,mul_func,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2,1);
         else if (TYPEOF(s2) != REALSXP)
-            PIPEARITH(double,mul_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
+            PIPEARITH(double,mul_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2,1);
         else
-            MM_PIPEARITH(mul_func,rans,n,s1,n1,s2,n2);
+            MM_PIPEARITH(mul_func,rans,n,s1,n1,s2,n2,1);
         break;
     case DIVOP:
         if (TYPEOF(s1) != REALSXP)
-            PIPEARITH(double,div_func,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,div_func,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2,0);
         else if (TYPEOF(s2) != REALSXP)
-            PIPEARITH(double,div_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
+            PIPEARITH(double,div_func,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2,0);
         else
-            MM_PIPEARITH(div_func,rans,n,s1,n1,s2,n2);
+            MM_PIPEARITH(div_func,rans,n,s1,n1,s2,n2,0);
         break;
     case POWOP:
         if (TYPEOF(s1) == REALSXP && n2 == 1) {
@@ -840,27 +841,27 @@ void task_real_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                 }
         }
         else if (TYPEOF(s1) != REALSXP)
-            PIPEARITH(double,R_POW,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,R_POW,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2,0);
         else if (TYPEOF(s2) != REALSXP)
-            PIPEARITH(double,R_POW,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
+            PIPEARITH(double,R_POW,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2,0);
         else
-            PIPEARITH(double,R_POW,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,R_POW,rans,n,RFETCH,s1,n1,RFETCH,s2,n2,0);
         break;
     case MODOP:
         if (TYPEOF(s1) != REALSXP)
-            PIPEARITH(double,myfmod,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,myfmod,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2,0);
         else if (TYPEOF(s2) != REALSXP)
-            PIPEARITH(double,myfmod,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
+            PIPEARITH(double,myfmod,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2,0);
         else
-            PIPEARITH(double,myfmod,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,myfmod,rans,n,RFETCH,s1,n1,RFETCH,s2,n2,0);
         break;
     case IDIVOP:
         if (TYPEOF(s1) != REALSXP)
-            PIPEARITH(double,myfloor,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,myfloor,rans,n,RIFETCH,s1,n1,RFETCH,s2,n2,0);
         else if (TYPEOF(s2) != REALSXP)
-            PIPEARITH(double,myfloor,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2);
+            PIPEARITH(double,myfloor,rans,n,RFETCH,s1,n1,RIFETCH,s2,n2,0);
         else
-            PIPEARITH(double,myfloor,rans,n,RFETCH,s1,n1,RFETCH,s2,n2);
+            PIPEARITH(double,myfloor,rans,n,RFETCH,s1,n1,RFETCH,s2,n2,0);
         break;
     }
 }
@@ -1168,7 +1169,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
     int xattr, yattr;
     PROTECT_INDEX xpi, ypi;
     ARITHOP_TYPE oper = (ARITHOP_TYPE) PRIMVAL(op);
-    int threshold, flags, nprotect;
+    int threshold, flags, nprotect, swap_ops;
 
     if (x == R_NilValue) x = allocVector(REALSXP,0);
     PROTECT_WITH_INDEX(x, &xpi);
@@ -1289,6 +1290,9 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
             local_assign2 = 1;
     }
     
+    swap_ops = FALSE;  /* whether to swap ops to task procedure (in order
+                          to reduce number of cases to handle) */
+
     if (TYPEOF(x) == CPLXSXP || TYPEOF(y) == CPLXSXP) {
         if (oper==IDIVOP || oper==MODOP)
             errorcall(call,_("unimplemented complex operation"));
@@ -1311,6 +1315,8 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         if (n>1) {
             if (nx==n) flags |= HELPERS_PIPE_IN1;
             if (ny==n) flags |= HELPERS_PIPE_IN2;
+            if (ny<nx && (oper == PLUSOP || oper == TIMESOP))
+                swap_ops = TRUE;
         }
     }
     else {
@@ -1328,6 +1334,9 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
 
         flags = oper==POWOP || oper==DIVOP || oper==IDIVOP || oper==MODOP ? 0 
               : HELPERS_MASTER_NOW;
+
+        if (ny<nx && (oper == PLUSOP || oper == TIMESOP))
+            swap_ops = TRUE;
     }
 
     if (isObject(ans) && !objx && !objy) ans = allocVector (TYPEOF(ans), n);
@@ -1356,7 +1365,9 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
             else if (ON_SCALAR_STACK(x)) x = duplicate(x);
             else if (ON_SCALAR_STACK(y)) y = duplicate(y);
         }
-        DO_NOW_OR_LATER2 (variant, n>=threshold, flags, task, oper, ans, x, y);
+        SEXP xx, yy;
+        if (swap_ops) { xx = y; yy = x; } else { xx = x; yy = y; }
+        DO_NOW_OR_LATER2(variant, n>=threshold, flags, task, oper, ans, xx, yy);
 
         if (integer_overflow)
             warningcall(call, _("NAs produced by integer overflow"));
