@@ -3681,7 +3681,11 @@ static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
 /* -------------------------------------------------------------------------- */
 /*                         LOGICAL OPERATORS                                  */
 
+#define SWAP12(s1,n1,s2,n2) \
+ do { SEXP st = s1; s1 = s2; s2 = st; int nt = n1; n1 = n2; n2 = nt; } while (0)
+
 static SEXP binaryLogic2(int code, SEXP s1, SEXP s2);
+
 
 void task_and_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
@@ -3693,27 +3697,24 @@ void task_and_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     n2 = LENGTH(s2);
     n = LENGTH(ans);
 
+    if (n2 < n1) SWAP12(s1,n1,s2,n2);
+
     switch (code) {
     case 1:  /* & operator */
         if (n1 == n2) {
             for (i = 0; i<n; i++) {
                 uint32_t u1 = LOGICAL(s1)[i];
                 uint32_t u2 = LOGICAL(s2)[i];
-                lans[i] = (u1 & u2) | (u1 & (u2<<31)) | (u2 & (u1<<31));
+                uint32_t u = u1 | u2;
+                lans[i] = (u1 & u2) | (u & (u << 31));
             }
         }
-        else if (n1 < n2) {
+        else {  /* n1 < n2 */
             mod_iterate_1(n1,n2,i1,i2) {
                 uint32_t u1 = LOGICAL(s1)[i1];
                 uint32_t u2 = LOGICAL(s2)[i2];
-                lans[i] = (u1 & u2) | (u1 & (u2<<31)) | (u2 & (u1<<31));
-            }
-        }
-        else {  /* n2 < n1 */
-            mod_iterate_2(n1,n2,i1,i2) {
-                uint32_t u1 = LOGICAL(s1)[i1];
-                uint32_t u2 = LOGICAL(s2)[i2];
-                lans[i] = (u1 & u2) | (u1 & (u2<<31)) | (u2 & (u1<<31));
+                uint32_t u = u1 | u2;
+                lans[i] = (u1 & u2) | (u & (u << 31));
             }
         }
         break;
@@ -3724,14 +3725,8 @@ void task_and_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
                 lans[i] = u & ~ (u << 31);
             }
         }
-        else if (n1 < n2) {
+        else {  /* n1 < n2 */
             mod_iterate_1(n1,n2,i1,i2) {
-                uint32_t u = LOGICAL(s1)[i1] | LOGICAL(s2)[i2];
-                lans[i] = u & ~ (u << 31);
-            }
-        }
-        else {  /* n2 < n1 */
-            mod_iterate_2(n1,n2,i1,i2) {
                 uint32_t u = LOGICAL(s1)[i1] | LOGICAL(s2)[i2];
                 lans[i] = u & ~ (u << 31);
             }
@@ -4071,18 +4066,16 @@ static SEXP binaryLogic2(int code, SEXP s1, SEXP s2)
     }
     ans = allocVector(RAWSXP, n);
 
+    if (n2 < n1) SWAP12(s1,n1,s2,n2);
+
     switch (code) {
     case 1:  /* & : AND */
         if (n1 == n2) {
             for (i = 0; i<n; i++)
                 RAW(ans)[i] = RAW(s1)[i] & RAW(s2)[i];
         }
-        else if (n1 < n2 ) {
+        else {  /* n1 < n2 */
             mod_iterate_1(n1,n2,i1,i2)
-                RAW(ans)[i] = RAW(s1)[i1] & RAW(s2)[i2];
-        }
-        else {  /* n2 < n1 */
-            mod_iterate_2(n1,n2,i1,i2)
                 RAW(ans)[i] = RAW(s1)[i1] & RAW(s2)[i2];
         }
 	break;
@@ -4091,12 +4084,8 @@ static SEXP binaryLogic2(int code, SEXP s1, SEXP s2)
             for (i = 0; i<n; i++)
                 RAW(ans)[i] = RAW(s1)[i] | RAW(s2)[i];
         }
-        else if (n1 < n2) {
+        else {  /* n1 < n2 */
             mod_iterate_1(n1,n2,i1,i2)
-                RAW(ans)[i] = RAW(s1)[i1] | RAW(s2)[i2];
-        }
-        else {  /* n2 < n1 */
-            mod_iterate_2(n1,n2,i1,i2)
                 RAW(ans)[i] = RAW(s1)[i1] | RAW(s2)[i2];
         }
 	break;
