@@ -4098,46 +4098,93 @@ static SEXP binaryLogic2(int code, SEXP s1, SEXP s2)
 
 static int any_all_check (int op, int na_rm, int *x, int n)
 {
-    unsigned na1 = 0, na2 = 0;  /* two flags to try to increase ILP */
     int i = 0;
 
     if (op == OP_ANY) {
+        unsigned na = 0;
         if (n & 1) {
-            if (x[i] == TRUE) 
+            na |= x[i];
+            if (na & 1) 
                 return TRUE;
-            na1 |= x[i];
             i += 1;
         }
-        while (i < n) {
-            if (x[i] == TRUE) 
+        if (n & 2) {
+            na |= x[i];
+            na |= x[i+1];
+            if (na & 1) 
                 return TRUE;
-            na1 |= x[i];
-            if (x[i+1] == TRUE) 
-                return TRUE;
-            na2 |= x[i+1];
             i += 2;
         }
+        if (n & 4) {
+            na |= x[i];
+            na |= x[i+1];
+            na |= x[i+2];
+            na |= x[i+3];
+            if (na & 1) 
+                return TRUE;
+            i += 4;
+        }
+        while (i < n) {
+            na |= x[i];
+            na |= x[i+1];
+            na |= x[i+2];
+            na |= x[i+3];
+            na |= x[i+4];
+            na |= x[i+5];
+            na |= x[i+6];
+            na |= x[i+7];
+            if (na & 1) 
+                return TRUE;
+            i += 8;
+        }
 
-        return na_rm || ((na1|na2)>>31) == 0 ? FALSE : NA_LOGICAL;
+        return na_rm || (na>>31) == 0 ? FALSE : NA_LOGICAL;
     }
     else { /* OP_ALL */
+        uint64_t na = 0;
         if (n & 1) {
             if (x[i] == FALSE)
                 return FALSE;
-            na1 |= x[i];
+            na |= x[i];
             i += 1;
         }
-        while (i < n) {
+        if (n & 2) {
             if (x[i] == FALSE)
                 return FALSE;
-            na1 |= x[i];
+            na |= x[i];
             if (x[i+1] == FALSE)
                 return FALSE;
-            na2 |= x[i+1];
+            na |= x[i+1];
             i += 2;
         }
+        if (n & 4) {
+            uint64_t s;
+            s = (unsigned) x[i];
+            s += (unsigned) x[i+1];
+            s += (unsigned) x[i+2];
+            s += (unsigned) x[i+3];
+            na |= s;
+            if ((uint8_t)(s + (s>>31)) != 4)
+                return FALSE;
+            i += 4;
+        }
+        while (i < n) {
+            uint64_t s;
+            s = (unsigned) x[i];
+            s += (unsigned) x[i+1];
+            s += (unsigned) x[i+2];
+            s += (unsigned) x[i+3];
+            s += (unsigned) x[i+4];
+            s += (unsigned) x[i+5];
+            s += (unsigned) x[i+6];
+            s += (unsigned) x[i+7];
+            na |= s;
+            if ((uint8_t)(s + (s>>31)) != 8)
+                return FALSE;
+            i += 8;
+        }
 
-        return na_rm || ((na1|na2)>>31) == 0 ? TRUE : NA_LOGICAL;
+        return na_rm || (na>>31) == 0 ? TRUE : NA_LOGICAL;
     }
 }
 
