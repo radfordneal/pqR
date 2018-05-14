@@ -4098,51 +4098,25 @@ static SEXP binaryLogic2(int code, SEXP s1, SEXP s2)
 
 static int any_all_check (int op, int na_rm, int *x, int n)
 {
-    if (na_rm) {
-
-        if (op == OP_ANY) {
-            unsigned res = 0;
-            for (int i = 0; i<n; i++) {
-                res |= x[i];
-                if (res & 1)
-                    return TRUE;
-            }
-            return FALSE;
-        }
-        else { /* OP_ALL */
-            unsigned res = 1;
-            for (int i = 0; i<n; i++) {
-                res &= x[i] | (x[i]>>31);
-                if (! (res & 1))
-                    return FALSE;
-            }
-            return TRUE;
+    if (op == OP_ANY) {
+        unsigned na = 0;
+        for (int i = 0; i<n; i++) {
+            if (x[i] == TRUE) 
+                return TRUE;
+            na |= x[i];
         }
 
+        return na_rm || (na>>31) == 0 ? FALSE : NA_LOGICAL;
     }
-    else { /* !na_rm */
-
-        if (op == OP_ANY) {
-            unsigned res = 0;
-            for (int i = 0; i<n; i++) {
-                res |= x[i];
-                if (res & 1)
-                    return TRUE;
-            }
-            return res>>31 ? NA_LOGICAL : FALSE;
-        }
-        else { /* OP_ALL */
-            unsigned res = 1;
-            unsigned na = 0;
-            for (int i = 0; i<n; i++) {
-                res &= x[i] | (x[i]>>31);
-                if (! (res & 1))
-                    return FALSE;
-                na |= x[i];
-            }
-            return na>>31 ? NA_LOGICAL : TRUE;
+    else { /* OP_ALL */
+        unsigned na = 0;
+        for (int i = 0; i<n; i++) {
+            if (x[i] == FALSE)
+                return FALSE;
+            na |= x[i];
         }
 
+        return na_rm || (na>>31) == 0 ? TRUE : NA_LOGICAL;
     }
 }
 
