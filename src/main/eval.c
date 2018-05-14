@@ -4098,25 +4098,46 @@ static SEXP binaryLogic2(int code, SEXP s1, SEXP s2)
 
 static int any_all_check (int op, int na_rm, int *x, int n)
 {
+    unsigned na1 = 0, na2 = 0;  /* two flags to try to increase ILP */
+    int i = 0;
+
     if (op == OP_ANY) {
-        unsigned na = 0;
-        for (int i = 0; i<n; i++) {
+        if (n & 1) {
             if (x[i] == TRUE) 
                 return TRUE;
-            na |= x[i];
+            na1 |= x[i];
+            i += 1;
+        }
+        while (i < n) {
+            if (x[i] == TRUE) 
+                return TRUE;
+            na1 |= x[i];
+            if (x[i+1] == TRUE) 
+                return TRUE;
+            na2 |= x[i+1];
+            i += 2;
         }
 
-        return na_rm || (na>>31) == 0 ? FALSE : NA_LOGICAL;
+        return na_rm || ((na1|na2)>>31) == 0 ? FALSE : NA_LOGICAL;
     }
     else { /* OP_ALL */
-        unsigned na = 0;
-        for (int i = 0; i<n; i++) {
+        if (n & 1) {
             if (x[i] == FALSE)
                 return FALSE;
-            na |= x[i];
+            na1 |= x[i];
+            i += 1;
+        }
+        while (i < n) {
+            if (x[i] == FALSE)
+                return FALSE;
+            na1 |= x[i];
+            if (x[i+1] == FALSE)
+                return FALSE;
+            na2 |= x[i+1];
+            i += 2;
         }
 
-        return na_rm || (na>>31) == 0 ? TRUE : NA_LOGICAL;
+        return na_rm || ((na1|na2)>>31) == 0 ? TRUE : NA_LOGICAL;
     }
 }
 
