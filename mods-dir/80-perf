@@ -1,3 +1,5 @@
 Miscellaneous performance and other improvements.
 
 Defines and uses Rf_set_elements_to_NA.
+
+Speeds up any and all.

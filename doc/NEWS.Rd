@@ -151,7 +151,10 @@
         defined in packages (rather than in the global workspace).
   \item The speed of \code{which} has been improved.
   \item The speed of \code{.Call} has been improved.
-  \itme Input and output have been sped up, sometimes considerably,
+  \item The speed of \code{any} and \code{all} has been improved,
+        for cases when many elements need to be checked to determine
+        the result.
+  \item Input and output have been sped up, sometimes considerably,
         both with regard to low-level character io, and with respect to 
         output formatting.
   \item The \code{\%\%} and \code{\%/\%} operators are now faster when 
