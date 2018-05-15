@@ -1965,7 +1965,7 @@ static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
 
     if (args == R_NilValue || CDR(args) != R_NilValue)
-        checkArity(op, args);
+        checkArity(op, args);  /* to report the error */
 
     SEXP res = evalv (CAR(args), rho, VARIANT_PASS_ON(variant));
 
@@ -2230,7 +2230,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     if ((a = CDR(args)) == R_NilValue /* includes case of args == R_NilValue */
           || CDR(a) != R_NilValue)
-        checkArity(op,args);
+        checkArity(op,args);  /* to report the error */
 
     SEXP lhs = CAR(args), rhs = CAR(a);
     int opval = PRIMVAL(op);
@@ -3786,7 +3786,8 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
     /* Check argument count now (after dispatch, since other methods may allow
        other argument count). */
 
-    checkArity(op,args);
+    if (CDR(args) == R_NilValue || CDDR(args) != R_NilValue)
+        checkArity(op,args);  /* to report the error */
 
     /* Arguments are now in x and y, and are protected.  The value 
        in args may not be protected, and is not used below. */
@@ -4004,7 +4005,8 @@ SEXP attribute_hidden do_not(SEXP call, SEXP op, SEXP args, SEXP env,
 	return ans;
     }
 
-    checkArity (op, args);
+    if (args == R_NilValue || CDR(args) != R_NilValue)
+        checkArity(op,args);  /* to report the error */
 
     return do_fast_not (call, op, CAR(args), env, variant);
 }
@@ -4502,7 +4504,8 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* Check argument count now (after dispatch, since other methods may allow
        other argument count). */
 
-    checkArity(op,argsevald);
+    if (CDR(argsevald) == R_NilValue || CDDR(argsevald) != R_NilValue)
+        checkArity(op,argsevald);  /* to report the error */
 
     /* Arguments are now in x and y, and are protected.  They may be on
        the scalar stack, but if so are popped off here (but retain their
