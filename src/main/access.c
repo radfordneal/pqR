@@ -211,12 +211,14 @@ void (SET_ATTRIB)(SEXP x, SEXP v) {
             return;  /* silently ignore attempt to set attribute on symbol */
         if (v == R_NilValue) {
             ATTRIB_W(x) = R_NilValue;
-            UNSET_HAS_ATTRIB(x);
+            if ((VECTOR_OR_LIST_TYPES >> TYPEOF(x)) & 1) 
+                UNSET_HAS_ATTRIB(x);
         }
         else {
             CHECK_OLD_TO_NEW(x, v);
             ATTRIB_W(x) = v;
-            SET_HAS_ATTRIB(x);
+            if ((VECTOR_OR_LIST_TYPES >> TYPEOF(x)) & 1) 
+                SET_HAS_ATTRIB(x);
         }
     }
 }
@@ -230,12 +232,14 @@ void SET_ATTRIB_TO_ANYTHING(SEXP x, SEXP v) {
             return;  /* silently ignore attempt to set attribute on symbol */
         if (v == R_NilValue) {
             ATTRIB_W(x) = R_NilValue;
-            UNSET_HAS_ATTRIB(x);
+            if ((VECTOR_OR_LIST_TYPES >> TYPEOF(x)) & 1) 
+                UNSET_HAS_ATTRIB(x);
         }
         else {
             CHECK_OLD_TO_NEW(x, v);
             ATTRIB_W(x) = v;
-            SET_HAS_ATTRIB(x);
+            if ((VECTOR_OR_LIST_TYPES >> TYPEOF(x)) & 1) 
+                SET_HAS_ATTRIB(x);
         }
     }
 }
@@ -270,6 +274,11 @@ void (SETLENGTH)(SEXP x, int v)
         abort();
 
     LENGTH(x) = v;
+
+    if (v == 1)
+        UNSET_VEC_DOTS_TR_BIT(x);
+    else
+        SET_VEC_DOTS_TR_BIT(x);
 }
 
 int (TRUELENGTH)(SEXP x) { return TRUELENGTH(Rf_chk_valid_SEXP(x)); }
