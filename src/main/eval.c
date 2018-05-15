@@ -1426,7 +1426,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
         }
     }
     else {
-	PROTECT(res = eval(body, newrho));
+	PROTECT(res = evalv(body, newrho, 0));
     }
 
     R_Srcref = savedsrcref;
@@ -1811,8 +1811,7 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho)
                been assigned to another variable (NAMEDCNT(v) > 1), or when an
                attribute has been attached to it, etc. */
 
-            if (TYPEOF(v) != val_type || LENGTH(v) != 1 || HAS_ATTRIB(v)
-                                      || NAMEDCNT_GT_1(v))
+            if (TYPE_ETC(v) != val_type || NAMEDCNT_GT_1(v))
                 REPROTECT(v = allocVector(val_type, 1), vpi);
 
             switch (val_type) {
@@ -1967,7 +1966,7 @@ static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (args == R_NilValue || CDR(args) != R_NilValue)
         checkArity(op, args);  /* to report the error */
 
-    SEXP res = evalv (CAR(args), rho, VARIANT_PASS_ON(variant));
+    SEXP res = EVALV (CAR(args), rho, VARIANT_PASS_ON(variant));
 
     R_Visible = TRUE;
     return res;
