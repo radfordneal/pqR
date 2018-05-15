@@ -1901,7 +1901,7 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 
     /* Mark non-scalars, enabling quicker identification of scalars. */
 
-    if (length != 1)
+    if (length != 1 && type != CHARSXP)
         SET_VEC_DOTS_TR_BIT(s);
 
 #if VALGRIND_LEVEL>0
@@ -2805,11 +2805,35 @@ static void R_StringHash_resize(unsigned int newsize)
 #endif
 }
 
-/* Add a CHARSXP value, with hash already set, to the cache. */
+/* Set up a new CHARSXP value, with given hash and encoding. */
 
-static void add_char_to_cache (SEXP val)
+static void setup_char_val (SEXP val, unsigned int full_hash, 
+                            cetype_t enc, Rboolean is_ascii)
 {    
-    unsigned int hashcode = CHAR_HASH(val) & char_hash_mask;
+    switch(enc) {
+    case 0:
+        break;          /* don't set encoding */
+    case CE_UTF8:
+        SET_UTF8(val);
+        break;
+    case CE_LATIN1:
+        SET_LATIN1(val);
+        break;
+    case CE_BYTES:
+        SET_BYTES(val);
+        break;
+    default:
+        error("unknown encoding mask: %d", enc);
+    }
+
+    if (is_ascii) 
+        SET_ASCII(val);
+    else
+        SET_VEC_DOTS_TR_BIT(val);
+
+    CHAR_HASH(val) = full_hash;
+
+    unsigned int hashcode = full_hash & char_hash_mask;
 
     if (VECTOR_ELT(R_StringHash, hashcode) == R_NilValue)
         SET_HASHSLOTSUSED(R_StringHash, HASHSLOTSUSED(R_StringHash) + 1);
@@ -2862,8 +2886,8 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
     }
     if (embedNul) {
 	SEXP c;
-	/* This is tricky: we want to make a reasonable job of
-	   representing this string, and EncodeString() is the most
+	/* This is tricky: for the error message, we want to make a reasonable
+	   job of representing this string, and EncodeString() is the most
 	   comprehensive */
 	c = allocCharsxp(len);
 	memcpy(CHAR_RW(c), name, len);
@@ -2873,7 +2897,10 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 	case CE_BYTES: SET_BYTES(c); break;
 	default: break;
 	}
-	if (is_ascii) SET_ASCII(c);
+	if (is_ascii)
+            SET_ASCII(c);
+        else
+            SET_VEC_DOTS_TR_BIT(c);
 	error(_("embedded nul in string: '%s'"),
 	      EncodeString(c, 0, 0, Rprt_adj_none));
     }
@@ -2907,25 +2934,8 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 
     val = allocCharsxp(len);
     memcpy(CHAR_RW(val), name, len);
-    switch(enc) {
-    case 0:
-        break;          /* don't set encoding */
-    case CE_UTF8:
-        SET_UTF8(val);
-        break;
-    case CE_LATIN1:
-        SET_LATIN1(val);
-        break;
-    case CE_BYTES:
-        SET_BYTES(val);
-        break;
-    default:
-        error("unknown encoding mask: %d", enc);
-    }
-    if (is_ascii) SET_ASCII(val);
 
-    CHAR_HASH(val) = full_hash;
-    add_char_to_cache(val);
+    setup_char_val (val, full_hash, enc, is_ascii);
 
     return val;
 }
@@ -3025,26 +3035,8 @@ SEXP attribute_hidden Rf_mkCharMulti (const char **strings, const int *lengths,
         q += lengths[i];
     }
     *q = 0;
-    
-    switch(enc) {
-    case 0:
-        break;          /* don't set encoding */
-    case CE_UTF8:
-        SET_UTF8(val);
-        break;
-    case CE_LATIN1:
-        SET_LATIN1(val);
-        break;
-    case CE_BYTES:
-        SET_BYTES(val);
-        break;
-    default:
-        error("unknown encoding mask: %d", enc);
-    }
-    if (is_ascii) SET_ASCII(val);
 
-    CHAR_HASH(val) = full_hash;
-    add_char_to_cache(val);
+    setup_char_val (val, full_hash, enc, is_ascii);
 
     return val;
 }
@@ -3137,25 +3129,7 @@ SEXP attribute_hidden Rf_mkCharRep (const char *string, int len, int rep,
     }
     *q = 0;
 
-    switch(enc) {
-    case 0:
-        break;          /* don't set encoding */
-    case CE_UTF8:
-        SET_UTF8(val);
-        break;
-    case CE_LATIN1:
-        SET_LATIN1(val);
-        break;
-    case CE_BYTES:
-        SET_BYTES(val);
-        break;
-    default:
-        error("unknown encoding mask: %d", enc);
-    }
-    if (is_ascii) SET_ASCII(val);
-
-    CHAR_HASH(val) = full_hash;
-    add_char_to_cache(val);
+    setup_char_val (val, full_hash, enc, is_ascii);
 
     return val;
 }
