@@ -427,9 +427,10 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
     if (sb != R_NoObject) {
         int stretch = 1;  /* allow out of bounds, not for assignment */
         int hasna;
-        if (drop == NA_LOGICAL) suppress_drop = whether_suppress_drop(sb);
         PROTECT(indx = makeSubscript(x, sb, &stretch, &hasna, call, 0));
         n = LENGTH(indx);
+        if (drop == NA_LOGICAL)
+            suppress_drop = whether_suppress_drop(sb);
     }
 
     /* Allocate and extract the result. */
@@ -480,13 +481,13 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
     UNPROTECT(2 + (sb!=R_NoObject));
 
     /* One-dimensional arrays should have their dimensions dropped only 
-       if the result has length one and drop TRUE or is NA_INTEGER without
+       if the result has length one and drop TRUE or is NA_LOGICAL without
        the drop being suppressed by the index being a 1D array. */
 
     if (ndim == 1) {
         int len = length(result);
 
-        if (len > 1 || drop == FALSE || drop == NA_INTEGER && suppress_drop) {
+        if (len > 1 || drop == FALSE || drop == NA_LOGICAL && suppress_drop) {
             SEXP attr;
             PROTECT(result);
             PROTECT(attr = allocVector1INT());
