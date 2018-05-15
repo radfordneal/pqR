@@ -214,18 +214,21 @@ struct sxpinfo_struct {
     /* First byte:   Whole of it allows quick checks for, eg, simple scalars. 
                      Parts give type and other information */
 
-    unsigned int type_et_cetera : 8;   /* Bit fields as defined below... */
+    unsigned int type_et_cetera : 8;    /* Bit fields as defined, 0 if use 
+                                           is not specified below */
 
 #   define TYPE_ET_CETERA_TYPE 0x1f /* Type of object, narrower than SEXPTYPE */
 
 #   define TYPE_ET_CETERA_BEING_COMPUTED 0x20 /* Obj being computed in helper?*/
 
-#   define TYPE_ET_CETERA_VEC_DOTS_TR 0x40 /* Symbol: one of ..., ..1, ..2, etc.
-                                              Vector: not scalar (length 1)
-                                              Function: is being traced */
+#   define TYPE_ET_CETERA_VEC_DOTS_TR 0x40 /* Symbol:   is ... or ..1, ..2, etc.
+                                              Vector:   not scalar (length != 1)
+                                              Function: is being traced 
+                                              CHARSXP:  may need translation */
 
-#   define TYPE_ET_CETERA_HAS_ATTR 0x80 /* Set to 1 if ATTRIB != R_NilValue, not
-                                           used when ATTRIB not normal attrib */
+#   define TYPE_ET_CETERA_HAS_ATTR 0x80 /* Vector or LISTSXP: 
+                                             1 if ATTRIB != R_NilValue */
+
     /* Second byte. */
 
     unsigned int obj : 1;     /* Set if this is an S3 or S4 object */
@@ -821,25 +824,38 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define RTRACE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                                                    & TYPE_ET_CETERA_VEC_DOTS_TR)
 #define LEVELS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)
+
   /* For SET_OBJECT and SET_TYPEOF, don't set if new value is the current value,
      to avoid crashing on an innocuous write to a constant that may be stored
      in read-only memory. */
+
 #define SET_OBJECT(x,v) do { \
     SEXPREC *_x_ = UPTR_FROM_SEXP(x); int _v_ = (v); \
     if (_x_->sxpinfo.obj!=_v_) _x_->sxpinfo.obj = _v_; \
   } while (0)
+
 #define SET_TYPEOF(x,v) do { \
     SEXPREC *_x_ = UPTR_FROM_SEXP(x); int _v_ = (v); \
-    if ((_x_->sxpinfo.type_et_cetera & TYPE_ET_CETERA_TYPE) != _v_) \
+    if ((_x_->sxpinfo.type_et_cetera & TYPE_ET_CETERA_TYPE) != _v_) { \
         _x_->sxpinfo.type_et_cetera = \
           (_x_->sxpinfo.type_et_cetera & ~TYPE_ET_CETERA_TYPE) | _v_; \
+        if (((VECTOR_OR_LIST_TYPES >> _v_) & 1) == 0) \
+            UNSET_HAS_ATTRIB(_x_); \
+        else if (ATTRIB(_x_) == R_NilValue) \
+            UNSET_HAS_ATTRIB(_x_); \
+        else \
+            SET_HAS_ATTRIB(_x_); \
+    } \
   } while (0)
+
 #define SET_TYPEOF0(x,v) /* don't check if same as previous; expr not stmt */ \
     (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera = \
       (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera & ~TYPE_ET_CETERA_TYPE) | v)
+
 #define SET_RTRACE(x,v)	((v) ? \
   (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera |= TYPE_ET_CETERA_VEC_DOTS_TR) \
    : (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera &= ~TYPE_ET_CETERA_VEC_DOTS_TR))
+
 #define SETLEVELS(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.gp=(v))
 
 /* The TRUELENGTH is seldom used, and usually has no connection with length. */
@@ -2325,6 +2341,10 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 
 #define VECTOR_TYPES ( \
   ATOMIC_VECTOR_TYPES + NONATOMIC_VECTOR_TYPES \
+)
+
+#define VECTOR_OR_LIST_TYPES ( \
+  VECTOR_TYPES + (1<<LISTSXP) \
 )
 
 #define VECTOR_OR_CHAR_TYPES ( \
