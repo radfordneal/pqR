@@ -61,7 +61,7 @@ static SEXP ItemName(SEXP names, int i)
    costly than dereferencing. */
 #define DUPLICATE_ATTRIB(to, from) do {\
   SEXP __from__ = (from); \
-  if (HAS_ATTRIB(__from__)) { \
+  if (ATTRIB(__from__) != R_NilValue) { \
     SEXP __to__ = (to); \
     (DUPLICATE_ATTRIB)(__to__, __from__);	\
   } \
@@ -69,7 +69,7 @@ static SEXP ItemName(SEXP names, int i)
 
 #define CLEAR_ATTRIB(x) do {\
   SEXP __x__ = (x); \
-  if (HAS_ATTRIB(__x__)) { \
+  if (ATTRIB(__x__) != R_NilValue) { \
     SET_ATTRIB(__x__, R_NilValue); \
     if (OBJECT(__x__)) SET_OBJECT(__x__, 0); \
     if (IS_S4_OBJECT(__x__)) UNSET_S4_OBJECT(__x__); \
