@@ -74,18 +74,17 @@ typedef SEXP helpers_var_ptr;
 #ifndef HELPERS_DISABLED
 #ifdef R_TASK_MERGING
 
-#define USE_SLOW_MERGED_OP 0  /* 1 for slow test version, 0 for fast version */
-
-#define MAX_OPS_MERGED 3      /* Either 2 or 3, must be 3 for fast version */
+#define MAX_OPS_MERGED 3      /* Must be 3 for the current procedure */
 
 #define HELPERS_TASK_DATA_AMT MAX_OPS_MERGED
 
 #define helpers_can_merge(out,proc_a,op_a,in1_a,in2_a,proc_b,op_b,in1_b,in2_b) \
 ((proc_b) == task_merged_arith_abs \
-   ? ((op_b)&(0x7f<<(8*MAX_OPS_MERGED)))==0 && (helpers_not_multithreading_now \
-        || (proc_a)!=task_abs && (op_a)<=TIMESOP) \
-   : helpers_not_multithreading_now || (proc_b)!=task_abs && op_b<=TIMESOP \
-        || (proc_a)!=task_abs && (op_a)<=TIMESOP \
+   ? ((op_b)&(0x7f<<(8*MAX_OPS_MERGED)))==0 /* not already at maximum */ \
+        && (helpers_not_multithreading_now \
+             || (op_a)<=TIMESOP) /* not slow and might be done in parallel */ \
+   : helpers_not_multithreading_now \
+             || (op_b)<=TIMESOP || (op_a)<=TIMESOP /* not both slow */ \
 )
 
 #define helpers_merge(out,proc_a,op_a,in1_a,in2_a, \
