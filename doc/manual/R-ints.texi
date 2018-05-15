@@ -326,34 +326,42 @@ The @code{sxpinfo} header is defined as the 32-bit C structure below:
 @example
 struct sxpinfo_struct @{
 
-    /* Type and namedcnt in first byte */
-    unsigned int nmcnt : 3;   /* count of "names" referring to object */
-    unsigned int type : 5;    /* ==> (FUNSXP == 99) %% 2^5 == 3 == CLOSXP
-                                 -> warning: `type' is narrower than values
-                                              of its type
-                                 when SEXPTYPE was an enum */
+    /* First byte:   Whole of it allows quick checks for, eg, simple scalars. 
+                     Parts give type and other information */
 
-    /* Miscellaneous flags, some with multiple meanings depending on type */
+    unsigned int type_et_cetera : 8;    /* Bit fields as defined, 0 if use 
+                                           is not specified below */
+
+#   define TYPE_ET_CETERA_TYPE 0x1f /* Type of object, narrower than SEXPTYPE */
+
+#   define TYPE_ET_CETERA_BEING_COMPUTED 0x20 /* Obj being computed in helper?*/
+
+#   define TYPE_ET_CETERA_VEC_DOTS_TR 0x40 /* Symbol:   is ... or ..1, ..2, etc.
+                                              Vector:   not scalar (length != 1)
+                                              Function: is being traced 
+                                              CHARSXP:  may need translation */
+
+#   define TYPE_ET_CETERA_HAS_ATTR 0x80 /* Vector or LISTSXP: 
+                                             1 if ATTRIB != R_NilValue */
+
+    /* Second byte. */
+
+    unsigned int obj : 1;     /* Set if this is an S3 or S4 object */
+
+    unsigned int in_use: 1;   /* whether contents may be in use by a helper */
 
     unsigned int debug : 1;       /* Function/Environment: is being debugged */
     unsigned int rstep_pname : 1; /* Function: is to be debugged just once */
                                   /* CHARSXP: is used as a symbol's printname */
-    unsigned int trace_base : 1;  /* Function: is being traced,
-                                     Symbol: has base binding in global cache,
-                                     Environment: R_BaseEnv or R_BaseNamespace*/
-    unsigned int has_attrib : 1;  /* Set to 1 iff ATTRIB != R_NilValue, except
-                                     not used when ATTRIB isn't normal attrib */
-    unsigned int sym_no_dots : 1; /* Is a symbol, but not ..., ..1, ..2, etc. */
+    unsigned int base_sym_env : 1;  /* Symbol: has base binding in global cache,
+                                       Envir: R_BaseEnv or R_BaseNamespace*/
 
-    /* Object flag */
-    unsigned int obj : 1;     /* set if this is an S3 or S4 object */
-
-    /* Flags to synchronize with helper threads */
-    unsigned int in_use: 1;   /* whether contents may be in use by a helper */
-    unsigned int being_computed : 1;  /* whether helper may be computing this */
+    unsigned int nmcnt : 3;   /* Count of "names" referring to object */
 
     /* The "general purpose" field, used for miscellaneous purposes */
+
     unsigned int gp : 16;     /* The "general purpose" field */
+
 @};
 @end example
 
@@ -367,28 +375,17 @@ single-step mode.
 @findex rstep_pname bit
 @findex RSTEP
 The @code{rstep_pname} bit is used for closures to indicate
-"debugonce".  It is used for CHARSXP objects to mark those that are used as
-the printname of a symbol, and hence should never be garbage collected
+"debugonce".  It is used for @code{CHARSXP} objects to mark those that are used
+as the printname of a symbol, and hence should never be garbage collected
 (since symbols are never collected). 
 
-@findex trace_base bit
-The @code{trace_base} bit is used for functions for @code{trace()}.  For
-environments, it is a flag (accessed with @code{IS_BASE}) set only for
+@findex base_sym_env bit
+For environments, a flag (accessed with @code{IS_BASE}) set only for
 the base environment and namespace, and used to slightly speed up the
 check for whether an environment is one of these, which is done in
 time-critical code.  For symbols, it is used for the @code{BASE_CACHE}
 flag, that indicates that the symbol is in the global cache with a
 binding in the base environment.
-
-@findex has_attrib bit
-The @code{has_attrib} bit is used to flag an object that does not
-have @code{R_NilValue} for @code{ATTRIB}, allowing a slightly faster
-check of this.
-
-@findex sym_no_dots bit
-The @code{sym_no_dots} bit is set in objects that are symbols, but
-not @code{...} or one of @code{..1}, @code{..2}, etc.  This speeds
-up the check for a regular symbol in time-critical code.
 
 @findex nmcnt field
 @findex named field
@@ -417,7 +414,6 @@ and sometimes avoided by instead simply incrementing the @code{nmcnt} field
 for the object.
 
 See @ref{Reference counts and the nmcnt field} for details.
-
 
 The @code{gp} bits are called that because they are supposedly
 `general purpose'.  This term is misleading, however, since at least
