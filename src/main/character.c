@@ -158,10 +158,11 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
             INTEGER(s)[i] = 2;
             continue;
         }
-        if (type_bytes) {
+        if (IS_ASCII(sxi) || type_bytes) {
             INTEGER(s)[i] = LENGTH(sxi);
+            continue;
         }
-        else if (type_chars) {
+        if (type_chars) {
             if (IS_UTF8(sxi)) { /* assume this is valid */
                 const char *p = CHAR(sxi);
                 nc = 0;
