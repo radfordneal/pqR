@@ -816,7 +816,6 @@ extern void helpers_wait_until_not_in_use(SEXP);
                                  |= TYPE_ET_CETERA_HAS_ATTR)
 #define UNSET_HAS_ATTRIB(x)   (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                                  &= ~TYPE_ET_CETERA_HAS_ATTR)
-#define SYM_NO_DOTS(x)  (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera == SYMSXP)
 #define SET_VEC_DOTS_TR_BIT(x)   (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                                    |= TYPE_ET_CETERA_VEC_DOTS_TR)
 #define UNSET_VEC_DOTS_TR_BIT(x) (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \

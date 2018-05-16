@@ -917,7 +917,7 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
 
         SEXP fn = CAR(e), args = CDR(e);
 
-        if (SYM_NO_DOTS(fn))
+        if (TYPE_ETC(fn) == SYMSXP)  /* symbol, and not ..., ..1, ..2, etc. */
             op = FINDFUN(fn,rho);
         else
             op = eval(fn,rho);
