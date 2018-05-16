@@ -347,11 +347,8 @@ static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
 
 static SEXP do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP s, x, sa, so, value, el, v_el;
-    int i, len, start, stop, k, l, v;
-    size_t slen;
-    cetype_t ienc, venc;
-    const char *ss, *v_ss;
+    SEXP s, x, sa, so, value;
+    int i, len, k, l, v;
     const void *vmax;
 
     const char *strings[4];  /* for interface to mkCharMulti */
@@ -378,38 +375,38 @@ static SEXP do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
         
         vmax = VMAXGET();
         for (i = 0; i < len; i++) {
-            el = STRING_ELT(x, i);
-            v_el = STRING_ELT(value, i % v);
-            start = INTEGER(sa)[i % k];
-            stop = INTEGER(so)[i % l];
+            SEXP el = STRING_ELT(x, i);
+            SEXP v_el = STRING_ELT(value, i % v);
+            int start = INTEGER(sa)[i % k];
+            int stop = INTEGER(so)[i % l];
             if (el == NA_STRING || v_el == NA_STRING ||
                 start == NA_INTEGER || stop == NA_INTEGER) {
                 SET_STRING_ELT_NA(s, i);
                 continue;
             }
-            ienc = getCharCE(el);
-            ss = CHAR(el);
-            slen = LENGTH(el);
             if (start < 1) start = 1;
             if (start > stop) {
                 SET_STRING_ELT(s, i, STRING_ELT(x, i));
                 continue;
             }
+            cetype_t ienc = getCharCE(el);
             int ienc2 = ienc;
-            v_ss = CHAR(v_el);
+            const char *ss = CHAR(el);
+            size_t slen = LENGTH(el);
+            const char *v_ss = CHAR(v_el);
+            size_t v_ss_l = LENGTH(v_el);
             /* is the value in the same encoding?
                FIXME: could prefer UTF-8 here
              */
-            venc = getCharCE(v_el);
-            if (venc != ienc && !strIsASCII(v_ss)) {
+            if (!IS_ASCII(v_el) && getCharCE(el) != ienc) {
                 ss = translateChar(el);
                 slen = strlen(ss);
                 v_ss = translateChar(v_el);
                 ienc2 = CE_NATIVE;
+                v_ss_l = strlen(v_ss);
             }
-            size_t ss_b, ss_e, v_ss_l, v_ss_b, v_ss_e;
+            size_t ss_b, ss_e, v_ss_b, v_ss_e;
             int n, v_n;
-            v_ss_l = strlen(v_ss);
             n = find_substr (ss, slen, ienc2, start, stop, &ss_b, &ss_e);
             v_n = find_substr (v_ss, v_ss_l, ienc2, 1, n, &v_ss_b, &v_ss_e);
                   /* note: v_ss_b will be set to zero */
