@@ -288,7 +288,6 @@ static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
     int i, len, start, stop, k, l;
     size_t slen;
     cetype_t ienc;
-    const char *ss;
 
     checkArity(op, args);
     x = CAR(args);
@@ -314,22 +313,34 @@ static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
                 continue;
             }
             ienc = getCharCE(el);
-            ss = CHAR(el);
             slen = LENGTH(el);
             if (start < 1) start = 1;
-            if (start > stop)
+            if (start > stop) {
                 SET_STRING_ELT_BLANK (s, i);
+                continue;
+            }
+            const char *ss = CHAR(el);
+            size_t beginning, end;
+            if (IS_ASCII(el)) {
+                if (start > LENGTH(el))
+                    beginning = end = LENGTH(el)-1;
+                else {
+                    beginning = start-1;
+                    if (stop > LENGTH(el))
+                        end = LENGTH(el)-1;
+                    else
+                        end = stop-1;
+                }
+            }
             else {
-                size_t beginning, end;
                 (void) find_substr (ss, slen, ienc, start, stop, 
                                     &beginning, &end);
-                SET_STRING_ELT (s, i, 
-                  mkCharLenCE (ss+beginning, (int)(end-beginning), ienc));
             }
+            SET_STRING_ELT (s, i, 
+              mkCharLenCE (ss+beginning, (int)(end-beginning), ienc));
         }
     }
-    DUPLICATE_ATTRIB(s, x);
-    /* This copied the class, if any */
+    DUPLICATE_ATTRIB(s, x);  /* This copied the class, if any */
     UNPROTECT(1);
     return s;
 }
