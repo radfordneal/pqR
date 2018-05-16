@@ -323,13 +323,13 @@ static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
             size_t beginning, end;
             if (IS_ASCII(el)) {
                 if (start > LENGTH(el))
-                    beginning = end = LENGTH(el)-1;
+                    beginning = end = 0;
                 else {
                     beginning = start-1;
                     if (stop > LENGTH(el))
-                        end = LENGTH(el)-1;
+                        end = LENGTH(el);
                     else
-                        end = stop-1;
+                        end = stop;
                 }
             }
             else {
