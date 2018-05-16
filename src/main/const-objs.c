@@ -58,28 +58,20 @@
 #   define LENGTH1 /* nothing */
 #   define LENGTH1_NONVEC /* nothing */
 #   define NILATTRIB /* nothing */
-#   define NUM_OFFSET(o) (o)
-#   define CONS_OFFSET(o) (o)
 #elif SIZEOF_CHAR_P == 8 && USE_AUX_FOR_ATTRIB
 #   define CPTR_FIELD(index,offset) .cptr = SGGC_CPTR_VAL(index,offset),
 #   define LENGTH1 .length = 1,
 #   define LENGTH1_NONVEC /* nothing */
 #   define NILATTRIB /* nothing */
-#   define NUM_OFFSET(o) (2*(o))
-#   define CONS_OFFSET(o) (2*(o))
 #else
 #   define CPTR_FIELD(index,offset) .cptr = SGGC_CPTR_VAL(index,offset),
 #   define LENGTH1 .length = 1,
 #   define LENGTH1_NONVEC .length = 1,
 #   define NILATTRIB .attrib = R_NilValue,
-#   if SIZEOF_CHAR_P == 4
-#       define NUM_OFFSET(o) (2*(o))
-#       define CONS_OFFSET(o) (2*(o))
-#   else
-#       define NUM_OFFSET(o) (2*(o))
-#       define CONS_OFFSET(o) (3*(o))
-#   endif
 #endif
+
+#define NUM_OFFSET(o) (SGGC_SCALAR_CHUNKS*o)
+#define CONS_OFFSET(o) (SGGC_CONS_CHUNKS*o)
 
 
 /* Header for a scalar constant. */
@@ -105,18 +97,15 @@ R_CONST SEXPREC R_NilValue_const = { \
    is used.  These objects are not actually constant, since the data they 
    contain is changed, but are allocated similarly.  Types are initialized
    to RAWSXP, which is never used, so the high-water mark will be visible
-   for debugging and tuning. */
+   More than one segment may be used, which must have consecutive indexes. */
 
-#if USE_COMPRESSED_POINTERS
 #define SCALAR_STACK_VALUE(offset) { \
-    CONST_HEADER(RAWSXP,R_SGGC_SCALAR_STACK_INDEX,NUM_OFFSET(offset)) }
-#else
-#define SCALAR_STACK_VALUE(offset) { \
-    CONST_HEADER(RAWSXP,R_SGGC_SCALAR_STACK_INDEX,NUM_OFFSET(offset)), \
-    LENGTH1 }
-#endif
+    CONST_HEADER (RAWSXP, R_SGGC_SCALAR_STACK_INDEX \
+                   + SGGC_SCALAR_CHUNKS*offset/SGGC_CHUNKS_IN_SMALL_SEGMENT, \
+                  NUM_OFFSET(offset)), LENGTH1 }
 
 VECTOR_SEXPREC_C R_scalar_stack_space[SCALAR_STACK_SIZE] = {
+
     SCALAR_STACK_VALUE(0),   SCALAR_STACK_VALUE(1),
     SCALAR_STACK_VALUE(2),   SCALAR_STACK_VALUE(3),
     SCALAR_STACK_VALUE(4),   SCALAR_STACK_VALUE(5),
@@ -125,6 +114,7 @@ VECTOR_SEXPREC_C R_scalar_stack_space[SCALAR_STACK_SIZE] = {
     SCALAR_STACK_VALUE(10),  SCALAR_STACK_VALUE(11),
     SCALAR_STACK_VALUE(12),  SCALAR_STACK_VALUE(13),
     SCALAR_STACK_VALUE(14),  SCALAR_STACK_VALUE(15),
+
     SCALAR_STACK_VALUE(16),  SCALAR_STACK_VALUE(17),
     SCALAR_STACK_VALUE(18),  SCALAR_STACK_VALUE(19),
     SCALAR_STACK_VALUE(20),  SCALAR_STACK_VALUE(21),
@@ -132,7 +122,61 @@ VECTOR_SEXPREC_C R_scalar_stack_space[SCALAR_STACK_SIZE] = {
     SCALAR_STACK_VALUE(24),  SCALAR_STACK_VALUE(25),
     SCALAR_STACK_VALUE(26),  SCALAR_STACK_VALUE(27),
     SCALAR_STACK_VALUE(28),  SCALAR_STACK_VALUE(29),
-    SCALAR_STACK_VALUE(20),  SCALAR_STACK_VALUE(31)
+    SCALAR_STACK_VALUE(30),  SCALAR_STACK_VALUE(31),
+
+    SCALAR_STACK_VALUE(32),  SCALAR_STACK_VALUE(33),
+    SCALAR_STACK_VALUE(34),  SCALAR_STACK_VALUE(35),
+    SCALAR_STACK_VALUE(36),  SCALAR_STACK_VALUE(37),
+    SCALAR_STACK_VALUE(38),  SCALAR_STACK_VALUE(39),
+    SCALAR_STACK_VALUE(40),  SCALAR_STACK_VALUE(41),
+    SCALAR_STACK_VALUE(42),  SCALAR_STACK_VALUE(43),
+    SCALAR_STACK_VALUE(44),  SCALAR_STACK_VALUE(45),
+    SCALAR_STACK_VALUE(46),  SCALAR_STACK_VALUE(47),
+
+    SCALAR_STACK_VALUE(48),  SCALAR_STACK_VALUE(49),
+    SCALAR_STACK_VALUE(50),  SCALAR_STACK_VALUE(51),
+    SCALAR_STACK_VALUE(52),  SCALAR_STACK_VALUE(53),
+    SCALAR_STACK_VALUE(54),  SCALAR_STACK_VALUE(55),
+    SCALAR_STACK_VALUE(56),  SCALAR_STACK_VALUE(57),
+    SCALAR_STACK_VALUE(58),  SCALAR_STACK_VALUE(59),
+    SCALAR_STACK_VALUE(60),  SCALAR_STACK_VALUE(61),
+    SCALAR_STACK_VALUE(62),  SCALAR_STACK_VALUE(63),
+
+    SCALAR_STACK_VALUE(64),  SCALAR_STACK_VALUE(65),
+    SCALAR_STACK_VALUE(66),  SCALAR_STACK_VALUE(67),
+    SCALAR_STACK_VALUE(68),  SCALAR_STACK_VALUE(69),
+    SCALAR_STACK_VALUE(70),  SCALAR_STACK_VALUE(71),
+    SCALAR_STACK_VALUE(72),  SCALAR_STACK_VALUE(73),
+    SCALAR_STACK_VALUE(74),  SCALAR_STACK_VALUE(75),
+    SCALAR_STACK_VALUE(76),  SCALAR_STACK_VALUE(77),
+    SCALAR_STACK_VALUE(78),  SCALAR_STACK_VALUE(79),
+
+    SCALAR_STACK_VALUE(80),  SCALAR_STACK_VALUE(81),
+    SCALAR_STACK_VALUE(82),  SCALAR_STACK_VALUE(83),
+    SCALAR_STACK_VALUE(84),  SCALAR_STACK_VALUE(85),
+    SCALAR_STACK_VALUE(86),  SCALAR_STACK_VALUE(87),
+    SCALAR_STACK_VALUE(88),  SCALAR_STACK_VALUE(89),
+    SCALAR_STACK_VALUE(90),  SCALAR_STACK_VALUE(91),
+    SCALAR_STACK_VALUE(92),  SCALAR_STACK_VALUE(93),
+    SCALAR_STACK_VALUE(94),  SCALAR_STACK_VALUE(95),
+
+    SCALAR_STACK_VALUE(96),  SCALAR_STACK_VALUE(97),
+    SCALAR_STACK_VALUE(98),  SCALAR_STACK_VALUE(99),
+    SCALAR_STACK_VALUE(100), SCALAR_STACK_VALUE(101),
+    SCALAR_STACK_VALUE(102), SCALAR_STACK_VALUE(103),
+    SCALAR_STACK_VALUE(104), SCALAR_STACK_VALUE(105),
+    SCALAR_STACK_VALUE(106), SCALAR_STACK_VALUE(107),
+    SCALAR_STACK_VALUE(108), SCALAR_STACK_VALUE(109),
+    SCALAR_STACK_VALUE(110), SCALAR_STACK_VALUE(111),
+
+    SCALAR_STACK_VALUE(112), SCALAR_STACK_VALUE(113),
+    SCALAR_STACK_VALUE(114), SCALAR_STACK_VALUE(115),
+    SCALAR_STACK_VALUE(116), SCALAR_STACK_VALUE(117),
+    SCALAR_STACK_VALUE(118), SCALAR_STACK_VALUE(119),
+    SCALAR_STACK_VALUE(120), SCALAR_STACK_VALUE(121),
+    SCALAR_STACK_VALUE(122), SCALAR_STACK_VALUE(123),
+    SCALAR_STACK_VALUE(124), SCALAR_STACK_VALUE(125),
+    SCALAR_STACK_VALUE(126), SCALAR_STACK_VALUE(127)
 };
 
 
@@ -259,7 +303,8 @@ SEXP attribute_hidden MaybeConstList1(SEXP car)
     int list_chunks
           = sggc_kind_chunks [R_type_to_sggc_type[LISTSXP] + SGGC_N_TYPES];
     for (int i = 0; ; i++) {
-        SEXP c = SEXP_FROM_CPTR (SGGC_CPTR_VAL (R_SGGC_LIST1_INDEX, i*list_chunks));
+        SEXP c;
+        c = SEXP_FROM_CPTR (SGGC_CPTR_VAL (R_SGGC_LIST1_INDEX, i*list_chunks));
         if (CAR(c) == car) 
             return c;
         if (CAR(c) == R_NilValue)
@@ -374,21 +419,28 @@ void Rf_constant_init(void)
 
     if (SGGC_SEGMENT_INDEX(p) != R_SGGC_LIST1_INDEX) abort();
 
-    /* Scalar stack space.  Uses same segment for integers and reals. */
+    /* Scalar stack space.  Uses same segments for integers and reals. 
+       Assumes SGGC_SCALAR_CHUNKS is a power of two. */
 
     if (R_type_to_sggc_type[INTSXP] != R_type_to_sggc_type[REALSXP]) abort();
+    if ((SGGC_SCALAR_CHUNKS & (SGGC_SCALAR_CHUNKS-1)) != 0) abort();
 
-    p = sggc_constant (R_type_to_sggc_type[REALSXP],
-                       R_type_to_sggc_type[REALSXP]+SGGC_N_TYPES,
-                       32, (char *) R_scalar_stack_space
+    for (int i = 0; 
+         i < SCALAR_STACK_SIZE; 
+         i += SGGC_CHUNKS_IN_SMALL_SEGMENT/SGGC_SCALAR_CHUNKS) {
+        p = sggc_constant (R_type_to_sggc_type[REALSXP],
+                           R_type_to_sggc_type[REALSXP]+SGGC_N_TYPES,
+                           SGGC_CHUNKS_IN_SMALL_SEGMENT/SGGC_SCALAR_CHUNKS,
+                           (char *) (R_scalar_stack_space + i)
 #if USE_COMPRESSED_POINTERS
-                       , (char *) sggc_length1, (char *) nilattrib
+                           , (char *) sggc_length1, (char *) nilattrib
 #elif USE_AUX_FOR_ATTRIB
-                       , (char *) nilattrib
+                           , (char *) nilattrib
 #endif
-                      );
+                          );
+        if (i == 0 && SGGC_SEGMENT_INDEX(p)!=R_SGGC_SCALAR_STACK_INDEX) abort();
+    }
 
-    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_SCALAR_STACK_INDEX) abort();
 
 }
 

@@ -4815,10 +4815,10 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 /* Below is used to implement 'lengths'. */
 SEXP attribute_hidden dispatch_subset2(SEXP x, R_xlen_t i, SEXP call, SEXP rho)
 {
-    static SEXP bracket_op = NULL;
+    static SEXP bracket_op = R_NoObject;
     SEXP args, x_elt;
     if (isObject(x)) {
-	if (bracket_op == NULL)
+	if (bracket_op == R_NoObject)
             bracket_op = R_Primitive("[[");
         PROTECT(args = list2(x, ScalarReal(i + 1)));
         x_elt = do_subset2(call, bracket_op, args, rho, 0);

@@ -835,13 +835,11 @@ extern void helpers_wait_until_not_in_use(SEXP);
   } while (0)
 
 #define SET_TYPEOF(x,v) do { \
-    SEXPREC *_x_ = UPTR_FROM_SEXP(x); int _v_ = (v); \
-    if ((_x_->sxpinfo.type_et_cetera & TYPE_ET_CETERA_TYPE) != _v_) { \
-        _x_->sxpinfo.type_et_cetera = \
-          (_x_->sxpinfo.type_et_cetera & ~TYPE_ET_CETERA_TYPE) | _v_; \
-        if (((VECTOR_OR_LIST_TYPES >> _v_) & 1) == 0) \
-            UNSET_HAS_ATTRIB(_x_); \
-        else if (ATTRIB(_x_) == R_NilValue) \
+    SEXP _x_ = (x); SEXPREC * _X_ = UPTR_FROM_SEXP(_x_); int _v_ = (v); \
+    if (TYPEOF(_x_) != _v_) { \
+        _X_->sxpinfo.type_et_cetera = \
+          (_X_->sxpinfo.type_et_cetera & ~TYPE_ET_CETERA_TYPE) | _v_; \
+        if (((VECTOR_OR_LIST_TYPES>>_v_)&1) == 0 || ATTRIB(_x_) == R_NilValue) \
             UNSET_HAS_ATTRIB(_x_); \
         else \
             SET_HAS_ATTRIB(_x_); \
@@ -1517,14 +1515,14 @@ struct R_local_protect {
 #define R_SGGC_SYM_INDEX 3
 #define R_SGGC_NUM_INDEX 4
 #define R_SGGC_LIST1_INDEX 5
-#define R_SGGC_SCALAR_STACK_INDEX 6
+#define R_SGGC_SCALAR_STACK_INDEX 6  /* and possibly subsequent segments */
 #else
 #define R_SGGC_NIL_INDEX 0
 #define R_SGGC_ENV_INDEX 1
 #define R_SGGC_SYM_INDEX 2
 #define R_SGGC_NUM_INDEX 3
 #define R_SGGC_LIST1_INDEX 4
-#define R_SGGC_SCALAR_STACK_INDEX 5
+#define R_SGGC_SCALAR_STACK_INDEX 5  /* and possibly subsequent segments */
 #endif
 
 #define R_N_NUM_CONSTS (3+12+3)     /* # of numerical constants in const-objs */
@@ -1602,7 +1600,7 @@ ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS];
 
 /* Start of scalar stack. */
 
-#define SCALAR_STACK_SIZE 32  /* Number of values on the scalar stack */
+#define SCALAR_STACK_SIZE 128  /* Number of values on the scalar stack */
 
 ConstExtern VECTOR_SEXPREC_C R_scalar_stack_space[SCALAR_STACK_SIZE];
 
