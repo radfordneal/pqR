@@ -2053,7 +2053,7 @@ static SEXP do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
 	log_ans = 0;
 
     /* We allow a "names" attribute on any vector. */
-    if (log_ans && HAS_ATTRIB(CAR(args))) {
+    if (log_ans && ATTRIB(CAR(args)) != R_NilValue) {
 	a = ATTRIB(CAR(args));
 	while(a != R_NilValue) {
 	    if (TAG(a) != R_NamesSymbol) {
