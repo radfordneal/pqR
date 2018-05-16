@@ -904,7 +904,7 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
 {
     SEXP op, res;
 
-    if (TYPEOF(e) == LANGSXP) {
+    if (TYPE_ETC(e) == LANGSXP) {  /* parts other than type will be 0 */
 
 #       ifdef Win32
             /* Reset precision, rounding and exception modes of an ix86 fpu. */
@@ -922,10 +922,11 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
         else
             op = eval(fn,rho);
 
-        int type_tr = TYPE_ETC(op) & ~TYPE_ET_CETERA_HAS_ATTR;
+        int type_etc = TYPE_ETC(op);
 
-      redo:
-        if (type_tr == CLOSXP) {
+      redo:  /* comes back here for traced functions, after clearing flag */
+
+        if (type_etc == CLOSXP) {
             PROTECT(op);
             res = applyClosure_v (e, op, promiseArgs(args,rho), rho, 
                                   NULL, variant);
@@ -936,22 +937,22 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
             const void *vmax = VMAXGET();
 
             /* Note: If called from evalv, R_Visible will've been set to TRUE */
-            if (type_tr == SPECIALSXP) {
+            if (type_etc == SPECIALSXP) {
                 res = CALL_PRIMFUN (e, op, args, rho, variant);
                 /* Note:  Special primitives are responsible for setting 
                    R_Visible as desired themselves, with default of TRUE. */
             }
-            else if (type_tr == BUILTINSXP) {
+            else if (type_etc == BUILTINSXP) {
                 res = R_Profiling ? Rf_builtin_op(op, e, rho, variant)
                                   : Rf_builtin_op_no_cntxt(op, e, rho, variant);
                 if (PRIMVISON(op))
                     R_Visible = TRUE;
             }
-            else if (type_tr & TYPE_ET_CETERA_VEC_DOTS_TR) {
+            else if (type_etc & TYPE_ET_CETERA_VEC_DOTS_TR) {
                 PROTECT(op);
                 R_trace_call(e,op);
                 UNPROTECT(1);
-                type_tr &= ~TYPE_ET_CETERA_VEC_DOTS_TR;
+                type_etc &= ~TYPE_ET_CETERA_VEC_DOTS_TR;
                 goto redo;
             }
             else
@@ -972,7 +973,8 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
 #       endif
     }
 
-    else if (TYPEOF(e) == SYMSXP) {  /* Must be ... or ..1, ..2, etc. */
+    else if (TYPE_ETC(e) == SYMSXP
+              + TYPE_ET_CETERA_VEC_DOTS_TR) { /* ... or ..1, ..2, etc */
 
         if (e == R_DotsSymbol)
             dotdotdot_error();
@@ -1007,7 +1009,7 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
         R_Visible = TRUE;
     }
 
-    else if (TYPEOF(e) == PROMSXP) {
+    else if (TYPE_ETC(e) == PROMSXP) {  /* parts other than type will be 0 */
 
         if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
             res = forcePromiseUnbound(e,variant);
@@ -1020,7 +1022,7 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
         R_Visible = TRUE;
     }
 
-    else if (TYPEOF(e) == BCODESXP) {
+    else if (TYPE_ETC(e) == BCODESXP) {  /* parts other than type will be 0 */
 
         res = bcEval(e, rho, TRUE);
     }
