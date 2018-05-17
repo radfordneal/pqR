@@ -1025,7 +1025,7 @@ void attribute_hidden InitMemory()
         R_inspect(R_ScalarLogicalTRUE);
         REprintf("-----\n"); fflush(stdout); fflush(stderr);
         REprintf("3L:\n");
-        R_inspect(R_ScalarInteger0To20(3));
+        R_inspect(R_ScalarInteger0To31(3));
         REprintf("-----\n"); fflush(stdout); fflush(stderr);
         REprintf("1.0:\n");
         R_inspect(R_ScalarRealOne);
@@ -1796,8 +1796,8 @@ SEXP mkFalse(void)
 SEXP ScalarIntegerMaybeConst(int x)
 {
     if (ENABLE_SHARED_CONSTANTS) {
-        if (x >=0 && x <= 20)
-            return R_ScalarInteger0To20(x);
+        if (x >=0 && x <= 31)
+            return R_ScalarInteger0To31(x);
         if (x == NA_INTEGER)
             return R_ScalarIntegerNA;
     }

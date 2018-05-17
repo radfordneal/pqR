@@ -220,61 +220,79 @@ SYM_SEXPREC R_sym_consts[1] = {
 };
 
 
-/* Logical, integer, and real constants. */
+/* Small integer constants. */
 
-#define LOGICAL_CONST(v,offset) { \
-    CONST_HEADER(LGLSXP,R_SGGC_NUM_INDEX,NUM_OFFSET(offset)), \
+#define SMALL_INT_CONST(v,offset) { \
+    CONST_HEADER(INTSXP,R_SGGC_MISC_INDEX,NUM_OFFSET(offset)), \
     LENGTH1 \
     .data = { .i = v } \
 }
 
+R_CONST VECTOR_SEXPREC_C R_ScalarInteger_consts[32] = {
+
+    /* At most 32 fit in one segment (since up to 2 chunks each) */
+
+    SMALL_INT_CONST(0,0),   SMALL_INT_CONST(1,1),   SMALL_INT_CONST(2,2),
+    SMALL_INT_CONST(3,3),   SMALL_INT_CONST(4,4),   SMALL_INT_CONST(5,5),
+    SMALL_INT_CONST(6,6),   SMALL_INT_CONST(7,7),   SMALL_INT_CONST(8,8), 
+    SMALL_INT_CONST(9,9),   SMALL_INT_CONST(10,10), SMALL_INT_CONST(11,11),
+    SMALL_INT_CONST(12,12), SMALL_INT_CONST(13,13), SMALL_INT_CONST(14,14),
+    SMALL_INT_CONST(15,15), SMALL_INT_CONST(16,16), SMALL_INT_CONST(17,17),
+    SMALL_INT_CONST(18,18), SMALL_INT_CONST(19,19), SMALL_INT_CONST(20,20),
+    SMALL_INT_CONST(21,21), SMALL_INT_CONST(22,22), SMALL_INT_CONST(23,23),
+    SMALL_INT_CONST(24,24), SMALL_INT_CONST(25,25), SMALL_INT_CONST(26,26),
+    SMALL_INT_CONST(27,27), SMALL_INT_CONST(28,28), SMALL_INT_CONST(29,29),
+    SMALL_INT_CONST(30,30), SMALL_INT_CONST(31,31)
+};
+
+
+/* Miscellaneious integer, logical, and real constants. */
+
 #define INTEGER_CONST(v,offset) { \
-    CONST_HEADER(INTSXP,R_SGGC_NUM_INDEX,NUM_OFFSET(offset)), \
+    CONST_HEADER(INTSXP,R_SGGC_MISC_INDEX,NUM_OFFSET(offset)), \
+    LENGTH1 \
+    .data = { .i = v } \
+}
+
+#define LOGICAL_CONST(v,offset) { \
+    CONST_HEADER(LGLSXP,R_SGGC_MISC_INDEX,NUM_OFFSET(offset)), \
     LENGTH1 \
     .data = { .i = v } \
 }
 
 #define REAL_CONST(v,offset) { \
-    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,NUM_OFFSET(offset)), \
+    CONST_HEADER(REALSXP,R_SGGC_MISC_INDEX,NUM_OFFSET(offset)), \
     LENGTH1 \
     .data = { .d = v } \
 }
 
 #ifdef WORDS_BIGENDIAN
 #define REAL_NA_CONST(offset) { \
-    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,NUM_OFFSET(offset)), \
+    CONST_HEADER(REALSXP,R_SGGC_MISC_INDEX,NUM_OFFSET(offset)), \
     LENGTH1 \
     .data = { .w = { 0x7ff00000, 1954 } } \
 }
 #else
 #define REAL_NA_CONST(offset) { \
-    CONST_HEADER(REALSXP,R_SGGC_NUM_INDEX,NUM_OFFSET(offset)), \
+    CONST_HEADER(REALSXP,R_SGGC_MISC_INDEX,NUM_OFFSET(offset)), \
     LENGTH1 \
     .data = { .w = { 1954, 0x7ff00000 } } \
 }
 #endif
 
-R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS] = {
+R_CONST VECTOR_SEXPREC_C R_ScalarMisc_consts[7] = {
 
     /* At most 32 fit in one segment (since up to 2 chunks each) */
 
-    INTEGER_CONST(0,0),   INTEGER_CONST(1,1),   INTEGER_CONST(2,2),
-    INTEGER_CONST(3,3),   INTEGER_CONST(4,4),   INTEGER_CONST(5,5),
-    INTEGER_CONST(6,6),   INTEGER_CONST(7,7),   INTEGER_CONST(8,8), 
-    INTEGER_CONST(9,9),   INTEGER_CONST(10,10), INTEGER_CONST(11,11),
-    INTEGER_CONST(12,12), INTEGER_CONST(13,13), INTEGER_CONST(14,14),
-    INTEGER_CONST(15,15), INTEGER_CONST(16,16), INTEGER_CONST(17,17),
-    INTEGER_CONST(18,18), INTEGER_CONST(19,19), INTEGER_CONST(20,20),
+    LOGICAL_CONST(FALSE,0),
+    LOGICAL_CONST(TRUE,1),
+    LOGICAL_CONST(NA_LOGICAL,2),
 
-    LOGICAL_CONST(FALSE,21),
-    LOGICAL_CONST(TRUE,22),
-    LOGICAL_CONST(NA_LOGICAL,23),
+    INTEGER_CONST(NA_INTEGER,3),
 
-    INTEGER_CONST(NA_INTEGER,24),
-
-    REAL_CONST(0.0,25),
-    REAL_CONST(1.0,26),
-    REAL_NA_CONST(27)
+    REAL_CONST(0.0,4),
+    REAL_CONST(1.0,5),
+    REAL_NA_CONST(6)
 };
 
 
@@ -451,19 +469,19 @@ static R_CONST SEXPREC R_List1_consts[] = {
 
     /* At most 21 fit in one segment (since up to 3 chunks each) */
 
-    LIST1_CONST(R_ScalarInteger0To20(0),0),
-    LIST1_CONST(R_ScalarInteger0To20(1),1),
-    LIST1_CONST(R_ScalarInteger0To20(2),2),
-    LIST1_CONST(R_ScalarInteger0To20(3),3),
-    LIST1_CONST(R_ScalarInteger0To20(4),4),
-    LIST1_CONST(R_ScalarInteger0To20(5),5),
-    LIST1_CONST(R_ScalarInteger0To20(6),6),
-    LIST1_CONST(R_ScalarInteger0To20(7),7),
-    LIST1_CONST(R_ScalarInteger0To20(8),8),
-    LIST1_CONST(R_ScalarInteger0To20(9),9),
-    LIST1_CONST(R_ScalarInteger0To20(10),10),
-    LIST1_CONST(R_ScalarInteger0To20(11),11),
-    LIST1_CONST(R_ScalarInteger0To20(12),12),
+    LIST1_CONST(R_ScalarInteger0To31(0),0),
+    LIST1_CONST(R_ScalarInteger0To31(1),1),
+    LIST1_CONST(R_ScalarInteger0To31(2),2),
+    LIST1_CONST(R_ScalarInteger0To31(3),3),
+    LIST1_CONST(R_ScalarInteger0To31(4),4),
+    LIST1_CONST(R_ScalarInteger0To31(5),5),
+    LIST1_CONST(R_ScalarInteger0To31(6),6),
+    LIST1_CONST(R_ScalarInteger0To31(7),7),
+    LIST1_CONST(R_ScalarInteger0To31(8),8),
+    LIST1_CONST(R_ScalarInteger0To31(9),9),
+    LIST1_CONST(R_ScalarInteger0To31(10),10),
+    LIST1_CONST(R_ScalarInteger0To31(11),11),
+    LIST1_CONST(R_ScalarInteger0To31(12),12),
 
     LIST1_CONST(R_ScalarLogicalNA,13),
     LIST1_CONST(R_ScalarLogicalFALSE,14),
@@ -570,14 +588,11 @@ void Rf_constant_init(void)
 
     if (SGGC_SEGMENT_INDEX(p) != R_SGGC_SYM_INDEX) abort();
 
-    /*** Numerical/logical constants.  All use same segment. ***/
+    /*** Small integer constants. ***/
 
-    if (R_type_to_sggc_type[INTSXP] != R_type_to_sggc_type[LGLSXP]) abort();
-    if (R_type_to_sggc_type[REALSXP] != R_type_to_sggc_type[LGLSXP]) abort();
-
-    p = sggc_constant (R_type_to_sggc_type[LGLSXP],
-                       R_type_to_sggc_type[LGLSXP]+SGGC_N_TYPES,
-                       R_N_NUM_CONSTS, (char *) R_ScalarNumerical_consts
+    p = sggc_constant (R_type_to_sggc_type[INTSXP],
+                       R_type_to_sggc_type[INTSXP]+SGGC_N_TYPES,
+                       32, (char *) R_ScalarInteger_consts
 #if USE_COMPRESSED_POINTERS
                        , (char *) sggc_length1, (char *) nilattrib
 #elif USE_AUX_FOR_ATTRIB
@@ -585,7 +600,24 @@ void Rf_constant_init(void)
 #endif
                       );
 
-    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_NUM_INDEX) abort();
+    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_INT_INDEX) abort();
+
+    /*** Miscellaneous integer, logical, and real constants. ***/
+
+    if (R_type_to_sggc_type[INTSXP] != R_type_to_sggc_type[LGLSXP]) abort();
+    if (R_type_to_sggc_type[REALSXP] != R_type_to_sggc_type[LGLSXP]) abort();
+
+    p = sggc_constant (R_type_to_sggc_type[LGLSXP],
+                       R_type_to_sggc_type[LGLSXP]+SGGC_N_TYPES,
+                       7, (char *) R_ScalarMisc_consts
+#if USE_COMPRESSED_POINTERS
+                       , (char *) sggc_length1, (char *) nilattrib
+#elif USE_AUX_FOR_ATTRIB
+                       , (char *) nilattrib
+#endif
+                      );
+
+    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_MISC_INDEX) abort();
 
     /*** ASCII CHARSXP constants.  In four segments. ***/
 

@@ -1513,21 +1513,21 @@ struct R_local_protect {
 #define R_SGGC_NIL_INDEX 1
 #define R_SGGC_ENV_INDEX 2
 #define R_SGGC_SYM_INDEX 3
-#define R_SGGC_NUM_INDEX 4
-#define R_SGGC_CHAR_INDEX 5  /* also uses 6, 7, and 8 */
-#define R_SGGC_LIST1_INDEX 9
-#define R_SGGC_SCALAR_STACK_INDEX 10  /* and possibly subsequent segments */
+#define R_SGGC_INT_INDEX 4
+#define R_SGGC_MISC_INDEX 5
+#define R_SGGC_CHAR_INDEX 6  /* also uses 7, 8, and 9 */
+#define R_SGGC_LIST1_INDEX 10
+#define R_SGGC_SCALAR_STACK_INDEX 11  /* and possibly subsequent segments */
 #else
 #define R_SGGC_NIL_INDEX 0
 #define R_SGGC_ENV_INDEX 1
 #define R_SGGC_SYM_INDEX 2
-#define R_SGGC_NUM_INDEX 3
-#define R_SGGC_CHAR_INDEX 4  /* also uses 5, 6, and 7 */
-#define R_SGGC_LIST1_INDEX 8
-#define R_SGGC_SCALAR_STACK_INDEX 9  /* and possibly subsequent segments */
+#define R_SGGC_INT_INDEX 3
+#define R_SGGC_MISC_INDEX 4
+#define R_SGGC_CHAR_INDEX 5  /* also uses 6, 7, and 8 */
+#define R_SGGC_LIST1_INDEX 9
+#define R_SGGC_SCALAR_STACK_INDEX 10  /* and possibly subsequent segments */
 #endif
-
-#define R_N_NUM_CONSTS (21+3+1+3)   /* # of numerical constants in const-objs */
 
 
 /* R_EmptyEnv - a n empty environment at the root of the environment tree */
@@ -1580,24 +1580,25 @@ LibExtern SEXP	R_MissingUnder;	    /* Missing argument marker as "_" */
    in sync. */
 
 #if USE_COMPRESSED_POINTERS
-#define R_ScalarInteger0To20(v)   ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,v))
-#define R_ScalarLogicalFALSE      ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,21))
-#define R_ScalarLogicalTRUE       ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,22))
-#define R_ScalarLogicalNA         ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,23))
-#define R_ScalarIntegerNA         ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,24))
-#define R_ScalarRealZero          ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,25))
-#define R_ScalarRealOne           ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,26))
-#define R_ScalarRealNA            ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,27))
+#define R_ScalarInteger0To31(v)   ((SEXP)SGGC_CPTR_VAL(R_SGGC_INT_INDEX,v))
+#define R_ScalarLogicalFALSE      ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,0))
+#define R_ScalarLogicalTRUE       ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,1))
+#define R_ScalarLogicalNA         ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,2))
+#define R_ScalarIntegerNA         ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,3))
+#define R_ScalarRealZero          ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,4))
+#define R_ScalarRealOne           ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,5))
+#define R_ScalarRealNA            ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,6))
 #else
-ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS];
-#define R_ScalarInteger0To20(v) ((SEXP) &R_ScalarNumerical_consts[v])
-#define R_ScalarLogicalFALSE    ((SEXP) &R_ScalarNumerical_consts[21])
-#define R_ScalarLogicalTRUE     ((SEXP) &R_ScalarNumerical_consts[22])
-#define R_ScalarLogicalNA       ((SEXP) &R_ScalarNumerical_consts[23])
-#define R_ScalarIntegerNA       ((SEXP) &R_ScalarNumerical_consts[24])
-#define R_ScalarRealZero        ((SEXP) &R_ScalarNumerical_consts[25])
-#define R_ScalarRealOne         ((SEXP) &R_ScalarNumerical_consts[26])
-#define R_ScalarRealNA          ((SEXP) &R_ScalarNumerical_consts[27])
+ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarInteger_consts[32];
+ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarMisc_consts[7];
+#define R_ScalarInteger0To31(v) ((SEXP) &R_ScalarInteger_consts[v])
+#define R_ScalarLogicalFALSE    ((SEXP) &R_ScalarMisc_consts[0])
+#define R_ScalarLogicalTRUE     ((SEXP) &R_ScalarMisc_consts[1])
+#define R_ScalarLogicalNA       ((SEXP) &R_ScalarMisc_consts[2])
+#define R_ScalarIntegerNA       ((SEXP) &R_ScalarMisc_consts[3])
+#define R_ScalarRealZero        ((SEXP) &R_ScalarMisc_consts[4])
+#define R_ScalarRealOne         ((SEXP) &R_ScalarMisc_consts[5])
+#define R_ScalarRealNA          ((SEXP) &R_ScalarMisc_consts[6])
 #endif
 
 /* CHARSXP constants.  Defined in const-objs.c. */
