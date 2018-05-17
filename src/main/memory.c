@@ -1703,7 +1703,8 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     UNPROTECT(2);
 
     PRINTNAME(c) = name;
-    IS_PRINTNAME(name) = 1;
+    if (!IS_PRINTNAME(name)) /* check in case it's a constant CHARSXP */
+        IS_PRINTNAME(name) = 1;
 #   if SYM_HASH_IN_SYM
         SYM_HASH(c) = CHAR_HASH(name);
 #   endif    
@@ -2866,6 +2867,12 @@ static void setup_char_val (SEXP val, unsigned int full_hash,
 
 SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 {
+    /* Quicly handle the case of a single ascii character. */
+
+    if (len == 1 && name[0] > 0 && name[0] <= 127) {
+        return R_ASCII_CHAR(name[0]);
+    }
+
     int need_enc;
     Rboolean embedNul = FALSE, is_ascii = TRUE;
 

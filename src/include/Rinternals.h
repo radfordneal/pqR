@@ -1514,15 +1514,17 @@ struct R_local_protect {
 #define R_SGGC_ENV_INDEX 2
 #define R_SGGC_SYM_INDEX 3
 #define R_SGGC_NUM_INDEX 4
-#define R_SGGC_LIST1_INDEX 5
-#define R_SGGC_SCALAR_STACK_INDEX 6  /* and possibly subsequent segments */
+#define R_SGGC_CHAR_INDEX 5  /* also uses 6, 7, and 8 */
+#define R_SGGC_LIST1_INDEX 9
+#define R_SGGC_SCALAR_STACK_INDEX 10  /* and possibly subsequent segments */
 #else
 #define R_SGGC_NIL_INDEX 0
 #define R_SGGC_ENV_INDEX 1
 #define R_SGGC_SYM_INDEX 2
 #define R_SGGC_NUM_INDEX 3
-#define R_SGGC_LIST1_INDEX 4
-#define R_SGGC_SCALAR_STACK_INDEX 5  /* and possibly subsequent segments */
+#define R_SGGC_CHAR_INDEX 4  /* also uses 5, 6, and 7 */
+#define R_SGGC_LIST1_INDEX 8
+#define R_SGGC_SCALAR_STACK_INDEX 9  /* and possibly subsequent segments */
 #endif
 
 #define R_N_NUM_CONSTS (3+12+3)     /* # of numerical constants in const-objs */
@@ -1574,7 +1576,7 @@ ConstExtern SYM_SEXPREC R_sym_consts[1];         /* defined in const-objs.c */
 LibExtern SEXP	R_MissingArg;       /* Missing argument marker */
 LibExtern SEXP	R_MissingUnder;	    /* Missing argument marker as "_" */
 
-/* Logical / Intteger / Real Values.  Defined in const-objs.c, must keep
+/* Logical / Integer / Real Values.  Defined in const-objs.c, must keep
    in sync. */
 
 #if USE_COMPRESSED_POINTERS
@@ -1598,9 +1600,18 @@ ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS];
 #define R_ScalarRealNA          ((SEXP) &R_ScalarNumerical_consts[17])
 #endif
 
+/* CHARSXP constants.  Defined in const-objs.c. */
+
+#if USE_COMPRESED_POINTERS
+#define R_ASCII_CHAR(c) ((SEXP)SGGC_CPTR_VAL(R_SGGC_CHAR_INDEX+(c>>5),(c&0x1f)))
+#else
+ConstExtern R_CONST VECTOR_SEXPREC_C R_ASCII_consts[128];
+#define R_ASCII_CHAR(c) ((SEXP) &R_ASCII_consts[c])
+#endif
+
 /* Start of scalar stack. */
 
-#define SCALAR_STACK_SIZE 128  /* Number of values on the scalar stack */
+#define SCALAR_STACK_SIZE 128  /* Number of values allowed on scalar stack */
 
 ConstExtern VECTOR_SEXPREC_C R_scalar_stack_space[SCALAR_STACK_SIZE];
 

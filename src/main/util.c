@@ -830,7 +830,9 @@ Rboolean StringFalse(const char *name)
 /* Character hashing done in memory.c and names.c; also here to stop compiler 
    from inlining it.  Four forms, one for null-terminated string, one with
    specified length, and one for a null-terminated string with given starting
-   hash from previous characters, one same but with specified length. */
+   hash from previous characters, one same but with specified length. 
+
+   Keep in sync with the HASH1CHAR macro in const-objs.c. */
 
 attribute_hidden int Rf_char_hash (const char *s)
 {

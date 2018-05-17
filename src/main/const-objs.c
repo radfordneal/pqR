@@ -79,7 +79,18 @@
 #define CONST_HEADER(typ,index,offset) \
     CPTR_FIELD(index,offset) \
     NILATTRIB \
-    .sxpinfo = { .nmcnt = 7, .type_et_cetera = typ } \
+    .sxpinfo = { .nmcnt = 7, .type_et_cetera = typ }
+
+
+/* Header for an ASCII CHARSXP constant. */
+
+#define CONST_HEADER_CHAR(index,offset) \
+    CPTR_FIELD(index,offset) \
+    NILATTRIB \
+    .sxpinfo = { .nmcnt = 7, \
+                 .type_et_cetera = CHARSXP, \
+                 .rstep_pname = 1,  /* may not always be, but OK to say so */ \
+                 .gp = ASCII_MASK }
 
 
 /* Definition of the R_NilValue constant, whose address when cast to SEXP is 
@@ -261,6 +272,162 @@ R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS] = {
 };
 
 
+/* ASCII CHARSXP constants.  Put in four segments (which may not 
+   be full), so that the number of segments won't vary with the
+   configuration.  The entry of ASCII code 0 is not used.
+
+   These are not put in the string hash table, but do have the correct
+   hash code, since it may be used for other purposes. */
+
+#define HASH1CHAR(c) ((5381*33) + c)  /* keep in sync with Rf_char_hash */
+
+#define CHARSXP_CONST(v,index) { \
+    CONST_HEADER_CHAR(index,NUM_OFFSET(v&0x1f)), \
+    LENGTH1 \
+    .truelength = HASH1CHAR(v), \
+    .data = { .c = v } \
+}
+
+R_CONST VECTOR_SEXPREC_C R_ASCII_consts[128] = {
+
+    CHARSXP_CONST(0x00,R_SGGC_CHAR_INDEX+0),  /* unused (and wrong) */
+    CHARSXP_CONST(0x01,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x02,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x03,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x04,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x05,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x06,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x07,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x08,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x09,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x0a,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x0b,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x0c,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x0d,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x0e,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x0f,R_SGGC_CHAR_INDEX+0),
+
+    CHARSXP_CONST(0x10,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x11,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x12,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x13,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x14,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x15,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x16,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x17,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x18,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x19,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x1a,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x1b,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x1c,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x1d,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x1e,R_SGGC_CHAR_INDEX+0),
+    CHARSXP_CONST(0x1f,R_SGGC_CHAR_INDEX+0),
+
+    CHARSXP_CONST(0x20,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x21,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x22,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x23,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x24,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x25,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x26,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x27,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x28,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x29,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x2a,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x2b,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x2c,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x2d,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x2e,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x2f,R_SGGC_CHAR_INDEX+1),
+
+    CHARSXP_CONST(0x30,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x31,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x32,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x33,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x34,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x35,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x36,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x37,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x38,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x39,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x3a,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x3b,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x3c,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x3d,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x3e,R_SGGC_CHAR_INDEX+1),
+    CHARSXP_CONST(0x3f,R_SGGC_CHAR_INDEX+1),
+
+    CHARSXP_CONST(0x40,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x41,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x42,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x43,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x44,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x45,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x46,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x47,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x48,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x49,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x4a,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x4b,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x4c,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x4d,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x4e,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x4f,R_SGGC_CHAR_INDEX+2),
+
+    CHARSXP_CONST(0x50,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x51,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x52,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x53,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x54,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x55,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x56,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x57,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x58,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x59,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x5a,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x5b,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x5c,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x5d,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x5e,R_SGGC_CHAR_INDEX+2),
+    CHARSXP_CONST(0x5f,R_SGGC_CHAR_INDEX+2),
+
+    CHARSXP_CONST(0x60,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x61,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x62,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x63,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x64,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x65,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x66,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x67,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x68,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x69,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x6a,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x6b,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x6c,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x6d,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x6e,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x6f,R_SGGC_CHAR_INDEX+3),
+
+    CHARSXP_CONST(0x70,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x71,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x72,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x73,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x74,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x75,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x76,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x77,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x78,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x79,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x7a,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x7b,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x7c,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x7d,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x7e,R_SGGC_CHAR_INDEX+3),
+    CHARSXP_CONST(0x7f,R_SGGC_CHAR_INDEX+3),
+};
+
+
 /* 1-element pairlist constants.  Set LENGTH (if it exists) to 1. */
 
 #define LIST1_CONST(car,offset) { \
@@ -345,7 +512,7 @@ void Rf_constant_init(void)
 {
     sggc_cptr_t p;
 
-    /* R_NilValue (= R NULL). */
+    /*** R_NilValue (= R NULL). ****/
 
     p = sggc_constant (R_type_to_sggc_type[NILSXP],
                        R_type_to_sggc_type[NILSXP]+SGGC_N_TYPES, 
@@ -359,7 +526,7 @@ void Rf_constant_init(void)
 
     if (SGGC_SEGMENT_INDEX(p) != R_SGGC_NIL_INDEX) abort();
 
-    /* Environment constant. */
+    /*** Environment constant. ***/
 
     p = sggc_constant (R_type_to_sggc_type[ENVSXP],
                        R_type_to_sggc_type[ENVSXP]+SGGC_N_TYPES,
@@ -373,7 +540,7 @@ void Rf_constant_init(void)
 
     if (SGGC_SEGMENT_INDEX(p) != R_SGGC_ENV_INDEX) abort();
 
-    /* Symbol constant. */
+    /*** Symbol constant. ***/
 
     p = sggc_constant (R_type_to_sggc_type[SYMSXP],
                        R_type_to_sggc_type[SYMSXP]+2*SGGC_N_TYPES,
@@ -387,7 +554,7 @@ void Rf_constant_init(void)
 
     if (SGGC_SEGMENT_INDEX(p) != R_SGGC_SYM_INDEX) abort();
 
-    /* Numerical/logical constants.  All use same segment. */
+    /*** Numerical/logical constants.  All use same segment. ***/
 
     if (R_type_to_sggc_type[INTSXP] != R_type_to_sggc_type[LGLSXP]) abort();
     if (R_type_to_sggc_type[REALSXP] != R_type_to_sggc_type[LGLSXP]) abort();
@@ -404,6 +571,56 @@ void Rf_constant_init(void)
 
     if (SGGC_SEGMENT_INDEX(p) != R_SGGC_NUM_INDEX) abort();
 
+    /*** ASCII CHARSXP constants.  In four segments. ***/
+
+    p = sggc_constant (R_type_to_sggc_type[CHARSXP],
+                       R_type_to_sggc_type[CHARSXP]+SGGC_N_TYPES,
+                       32, (char *) (R_ASCII_consts + 0)
+#if USE_COMPRESSED_POINTERS
+                       , (char *) sggc_length1, (char *) nilattrib
+#elif USE_AUX_FOR_ATTRIB
+                       , (char *) nilattrib
+#endif
+                      );
+
+    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_CHAR_INDEX+0) abort();
+
+    p = sggc_constant (R_type_to_sggc_type[CHARSXP],
+                       R_type_to_sggc_type[CHARSXP]+SGGC_N_TYPES,
+                       32, (char *) (R_ASCII_consts + 32)
+#if USE_COMPRESSED_POINTERS
+                       , (char *) sggc_length1, (char *) nilattrib
+#elif USE_AUX_FOR_ATTRIB
+                       , (char *) nilattrib
+#endif
+                      );
+
+    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_CHAR_INDEX+1) abort();
+
+    p = sggc_constant (R_type_to_sggc_type[CHARSXP],
+                       R_type_to_sggc_type[CHARSXP]+SGGC_N_TYPES,
+                       32, (char *) (R_ASCII_consts + 64)
+#if USE_COMPRESSED_POINTERS
+                       , (char *) sggc_length1, (char *) nilattrib
+#elif USE_AUX_FOR_ATTRIB
+                       , (char *) nilattrib
+#endif
+                      );
+
+    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_CHAR_INDEX+2) abort();
+
+    p = sggc_constant (R_type_to_sggc_type[CHARSXP],
+                       R_type_to_sggc_type[CHARSXP]+SGGC_N_TYPES,
+                       32, (char *) (R_ASCII_consts + 96)
+#if USE_COMPRESSED_POINTERS
+                       , (char *) sggc_length1, (char *) nilattrib
+#elif USE_AUX_FOR_ATTRIB
+                       , (char *) nilattrib
+#endif
+                      );
+
+    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_CHAR_INDEX+3) abort();
+
     /* Pairlists of length 1. */
 
     p = sggc_constant (R_type_to_sggc_type[LISTSXP],
@@ -419,8 +636,9 @@ void Rf_constant_init(void)
 
     if (SGGC_SEGMENT_INDEX(p) != R_SGGC_LIST1_INDEX) abort();
 
-    /* Scalar stack space.  Uses same segments for integers and reals. 
-       Assumes SGGC_SCALAR_CHUNKS is a power of two. */
+    /*** Scalar stack space.  Uses same segments for integers and reals. ***/
+
+    /* Assumes SGGC_SCALAR_CHUNKS is a power of two. */
 
     if (R_type_to_sggc_type[INTSXP] != R_type_to_sggc_type[REALSXP]) abort();
     if ((SGGC_SCALAR_CHUNKS & (SGGC_SCALAR_CHUNKS-1)) != 0) abort();
