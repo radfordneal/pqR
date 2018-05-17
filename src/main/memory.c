@@ -2874,7 +2874,7 @@ static void setup_char_val (SEXP val, unsigned int full_hash,
 
 SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 {
-    /* Quicly handle the case of a single ascii character. */
+    /* Quickly handle the case of a single ascii character. */
 
     if (len == 1 && name[0] > 0 && name[0] <= 127) {
         return R_ASCII_CHAR(name[0]);
@@ -2965,18 +2965,6 @@ SEXP attribute_hidden Rf_mkCharMulti (const char **strings, const int *lengths,
 {
     int i, j;
 
-    switch(enc){
-    case CE_NATIVE:
-    case CE_UTF8:
-    case CE_LATIN1:
-    case CE_BYTES:
-    case CE_SYMBOL:
-    case CE_ANY:
-	break;
-    default:
-	error(_("unknown encoding: %d"), enc);
-    }
-
     int is_ascii = TRUE;
     int len = 0;
 
@@ -2991,6 +2979,25 @@ SEXP attribute_hidden Rf_mkCharMulti (const char **strings, const int *lengths,
             or |= p[j];
         if ((or >> 7) != 0)
             is_ascii = FALSE;
+    }
+
+    /* Quickly handle the case of a single ascii character. */
+
+    if (len == 1 && is_ascii) {
+        for (i = 0; lengths[i] != 1; i++) ;
+        return R_ASCII_CHAR(strings[i][0]);
+    }
+
+    switch(enc){
+    case CE_NATIVE:
+    case CE_UTF8:
+    case CE_LATIN1:
+    case CE_BYTES:
+    case CE_SYMBOL:
+    case CE_ANY:
+	break;
+    default:
+	error(_("unknown encoding: %d"), enc);
     }
 
     int need_enc;
@@ -3063,6 +3070,12 @@ SEXP attribute_hidden Rf_mkCharRep (const char *string, int len, int rep,
                                     cetype_t enc)
 {
     int i, j;
+
+    /* Quickly handle the case of a single ascii character. */
+
+    if (len == 1 && rep == 1 && string[0] > 0 && string[0] <= 127) {
+        return R_ASCII_CHAR(string[0]);
+    }
 
     if ((uint64_t)len * rep > INT_MAX)
         error("R character strings are limited to 2^31-1 bytes");

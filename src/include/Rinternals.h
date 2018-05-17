@@ -1605,7 +1605,7 @@ ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS];
 #if USE_COMPRESED_POINTERS
 #define R_ASCII_CHAR(c) ((SEXP)SGGC_CPTR_VAL(R_SGGC_CHAR_INDEX+(c>>5),(c&0x1f)))
 #else
-ConstExtern R_CONST VECTOR_SEXPREC_C R_ASCII_consts[128];
+ConstExtern /* R_CONST */ VECTOR_SEXPREC_C R_ASCII_consts[128];
 #define R_ASCII_CHAR(c) ((SEXP) &R_ASCII_consts[c])
 #endif
 

@@ -294,7 +294,10 @@ R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS] = {
     .data = { .c = v } \
 }
 
-R_CONST VECTOR_SEXPREC_C R_ASCII_consts[128] = {
+/* Should really be declared as R_CONST, but radixsort actually
+   fiddles with TRUELENGTH, so we can't do that. */
+
+/* R_CONST */ VECTOR_SEXPREC_C R_ASCII_consts[128] = {
 
     CHARSXP_CONST(0x00,R_SGGC_CHAR_INDEX+0),  /* unused (and wrong) */
     CHARSXP_CONST(0x01,R_SGGC_CHAR_INDEX+0),
