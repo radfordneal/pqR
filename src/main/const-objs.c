@@ -256,19 +256,25 @@ SYM_SEXPREC R_sym_consts[1] = {
 
 R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS] = {
 
-    LOGICAL_CONST(FALSE,0),
-    LOGICAL_CONST(TRUE,1),
-    LOGICAL_CONST(NA_LOGICAL,2),
+    /* At most 32 fit in one segment (since up to 2 chunks each) */
 
-    INTEGER_CONST(0,3), INTEGER_CONST(1,4), INTEGER_CONST(2,5),
-    INTEGER_CONST(3,6), INTEGER_CONST(4,7), INTEGER_CONST(5,8),
-    INTEGER_CONST(6,9), INTEGER_CONST(7,10), INTEGER_CONST(8,11), 
-    INTEGER_CONST(9,12), INTEGER_CONST(10,13),
-    INTEGER_CONST(NA_INTEGER,14),
+    INTEGER_CONST(0,0),   INTEGER_CONST(1,1),   INTEGER_CONST(2,2),
+    INTEGER_CONST(3,3),   INTEGER_CONST(4,4),   INTEGER_CONST(5,5),
+    INTEGER_CONST(6,6),   INTEGER_CONST(7,7),   INTEGER_CONST(8,8), 
+    INTEGER_CONST(9,9),   INTEGER_CONST(10,10), INTEGER_CONST(11,11),
+    INTEGER_CONST(12,12), INTEGER_CONST(13,13), INTEGER_CONST(14,14),
+    INTEGER_CONST(15,15), INTEGER_CONST(16,16), INTEGER_CONST(17,17),
+    INTEGER_CONST(18,18), INTEGER_CONST(19,19), INTEGER_CONST(20,20),
 
-    REAL_CONST(0.0,15),
-    REAL_CONST(1.0,16),
-    REAL_NA_CONST(17)
+    LOGICAL_CONST(FALSE,21),
+    LOGICAL_CONST(TRUE,22),
+    LOGICAL_CONST(NA_LOGICAL,23),
+
+    INTEGER_CONST(NA_INTEGER,24),
+
+    REAL_CONST(0.0,25),
+    REAL_CONST(1.0,26),
+    REAL_NA_CONST(27)
 };
 
 
@@ -438,26 +444,33 @@ R_CONST VECTOR_SEXPREC_C R_ASCII_consts[128] = {
          } \
 }
 
-static R_CONST SEXPREC R_List1_consts[] = {
-    LIST1_CONST(R_ScalarInteger0To10(0),0),
-    LIST1_CONST(R_ScalarInteger0To10(1),1),
-    LIST1_CONST(R_ScalarInteger0To10(2),2),
-    LIST1_CONST(R_ScalarInteger0To10(3),3),
-    LIST1_CONST(R_ScalarInteger0To10(4),4),
-    LIST1_CONST(R_ScalarInteger0To10(5),5),
-    LIST1_CONST(R_ScalarInteger0To10(6),6),
-    LIST1_CONST(R_ScalarInteger0To10(7),7),
-    LIST1_CONST(R_ScalarInteger0To10(8),8),
-    LIST1_CONST(R_ScalarInteger0To10(9),9),
-    LIST1_CONST(R_ScalarInteger0To10(10),10),
-    LIST1_CONST(R_ScalarLogicalNA,11),
-    LIST1_CONST(R_ScalarLogicalFALSE,12),
-    LIST1_CONST(R_ScalarLogicalTRUE,13),
-    LIST1_CONST(R_ScalarIntegerNA,14),
-    LIST1_CONST(R_ScalarRealZero,15),
-    LIST1_CONST(R_ScalarRealOne,16),
-    LIST1_CONST(R_ScalarRealNA,17),
-    LIST1_CONST(R_NilValue,18) /* may be used, and also signals end of list*/
+static R_CONST SEXPREC R_List1_consts[] = {  
+
+    /* At most 21 fit in one segment (since up to 3 chunks each) */
+
+    LIST1_CONST(R_ScalarInteger0To20(0),0),
+    LIST1_CONST(R_ScalarInteger0To20(1),1),
+    LIST1_CONST(R_ScalarInteger0To20(2),2),
+    LIST1_CONST(R_ScalarInteger0To20(3),3),
+    LIST1_CONST(R_ScalarInteger0To20(4),4),
+    LIST1_CONST(R_ScalarInteger0To20(5),5),
+    LIST1_CONST(R_ScalarInteger0To20(6),6),
+    LIST1_CONST(R_ScalarInteger0To20(7),7),
+    LIST1_CONST(R_ScalarInteger0To20(8),8),
+    LIST1_CONST(R_ScalarInteger0To20(9),9),
+    LIST1_CONST(R_ScalarInteger0To20(10),10),
+    LIST1_CONST(R_ScalarInteger0To20(11),11),
+    LIST1_CONST(R_ScalarInteger0To20(12),12),
+
+    LIST1_CONST(R_ScalarLogicalNA,13),
+    LIST1_CONST(R_ScalarLogicalFALSE,14),
+    LIST1_CONST(R_ScalarLogicalTRUE,15),
+    LIST1_CONST(R_ScalarIntegerNA,16),
+    LIST1_CONST(R_ScalarRealZero,17),
+    LIST1_CONST(R_ScalarRealOne,18),
+    LIST1_CONST(R_ScalarRealNA,19),
+
+    LIST1_CONST(R_NilValue,20) /* may be used, and also signals end of list*/
 };
 
 

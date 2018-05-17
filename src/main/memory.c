@@ -1025,7 +1025,7 @@ void attribute_hidden InitMemory()
         R_inspect(R_ScalarLogicalTRUE);
         REprintf("-----\n"); fflush(stdout); fflush(stderr);
         REprintf("3L:\n");
-        R_inspect(R_ScalarInteger0To10(3));
+        R_inspect(R_ScalarInteger0To20(3));
         REprintf("-----\n"); fflush(stdout); fflush(stderr);
         REprintf("1.0:\n");
         R_inspect(R_ScalarRealOne);
@@ -1796,8 +1796,8 @@ SEXP mkFalse(void)
 SEXP ScalarIntegerMaybeConst(int x)
 {
     if (ENABLE_SHARED_CONSTANTS) {
-        if (x >=0 && x <= 10)
-            return R_ScalarInteger0To10(x);
+        if (x >=0 && x <= 20)
+            return R_ScalarInteger0To20(x);
         if (x == NA_INTEGER)
             return R_ScalarIntegerNA;
     }
@@ -1813,13 +1813,20 @@ SEXP ScalarRealMaybeConst(double x)
            as doubles, since double comparison doesn't work for NA or when 
            comparing -0 and +0 (which should be distinct). */
 
-        uint64_t xv = *(uint64_t*) &x;
+        union { double d; uint64_t i; } u, v;
 
-        if (xv == *(uint64_t*) &REAL(R_ScalarRealZero)[0])
+        u.d = x;
+
+        v.d = REAL(R_ScalarRealZero)[0];
+        if (u.i == v.i)
             return R_ScalarRealZero;
-        if (xv == *(uint64_t*) &REAL(R_ScalarRealOne)[0])
+
+        v.d = REAL(R_ScalarRealOne)[0];
+        if (u.i == v.i)
             return R_ScalarRealOne;
-        if (xv == *(uint64_t*) &REAL(R_ScalarRealNA)[0])
+
+        v.d = REAL(R_ScalarRealNA)[0];
+        if (u.i == v.i)
             return R_ScalarRealNA;
     }
 
