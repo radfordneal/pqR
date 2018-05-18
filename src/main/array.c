@@ -2028,10 +2028,9 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-/** Routines from R-3.2.0 and later for implementing the 'lengths' function,
- ** slightly modified.  Long vector stuff not actually used.  Also, see 
- ** dispatch_subset2 in subset.c.
- **/
+/* Routines from R-3.2.0 and later for implementing the 'lengths' function,
+   slightly modified.  Long vector stuff not actually used.  Also, see 
+   dispatch_subset2. */
 
 static R_xlen_t dispatch_xlength(SEXP x, SEXP rho) {
     static SEXP length_op = NULL;
