@@ -1840,6 +1840,15 @@ SEXP ScalarComplexMaybeConst(Rcomplex x)
 
 SEXP ScalarStringMaybeConst(SEXP x)
 {
+    if (LENGTH(x) == 1) {
+        char c = CHAR(x)[0];
+        if (c > 0 && c <= 127) {
+            SEXP s = R_ASCII_SCALAR_STRING(c);
+            if (STRING_ELT(s,0) == x)  /* might not, if other encoding...? */
+                return s;
+        }
+    }
+
     return ScalarString(x);
 }
 

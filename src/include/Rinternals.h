@@ -1611,6 +1611,7 @@ ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarMisc_consts[7];
                       ((SEXP)SGGC_CPTR_VAL(R_SGGC_STRING_INDEX+(c>>5),(c&0x1f)))
 #else
 ConstExtern /* R_CONST */ VECTOR_SEXPREC_C R_ASCII_consts[128];
+ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarString_consts[128];
 #define R_ASCII_CHAR(c) ((SEXP) &R_ASCII_consts[c])
 #define R_ASCII_SCALAR_STRING(c) ((SEXP) &R_ScalarString_consts[c])
 #endif
