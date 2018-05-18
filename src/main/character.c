@@ -303,7 +303,7 @@ static int find_substr (const char *str, size_t slen, int ienc,
 
 static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP s, x, sa, so, el;
+    SEXP ans, res, x, sa, so, el;
     int i, len, start, stop, k, l;
     size_t slen;
     cetype_t ienc;
@@ -317,51 +317,70 @@ static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (!isString(x))
         error(_("extracting substrings from a non-character object"));
+
     len = LENGTH(x);
-    PROTECT(s = allocVector(STRSXP, len));
+    if (len == 1 && !HAS_ATTRIB(x)) {
+        ans = R_NilValue; /* simple scalars done with ScalarStringMaybeConst */
+    }
+    else {
+        PROTECT(ans = allocVector (STRSXP, len));
+    }
+
     if (len > 0) {
         if (!isInteger(sa) || !isInteger(so) || k == 0 || l == 0)
             error(_("invalid substring argument(s)"));
 
         for (i = 0; i < len; i++) {
-            start = INTEGER(sa)[i % k];
-            stop = INTEGER(so)[i % l];
+
             el = STRING_ELT(x,i);
+
+            start = INTEGER(sa)[i % k];
+            if (start != NA_INTEGER && start <= 0) start = 1;
+            stop = INTEGER(so)[i % l];
+
             if (el == NA_STRING || start == NA_INTEGER || stop == NA_INTEGER) {
-                SET_STRING_ELT_NA(s, i);
-                continue;
+                res = NA_STRING;
             }
-            ienc = getCharCE(el);
-            slen = LENGTH(el);
-            if (start < 1) start = 1;
-            if (start > stop) {
-                SET_STRING_ELT_BLANK (s, i);
-                continue;
-            }
-            const char *ss = CHAR(el);
-            size_t beginning, end;
-            if (IS_ASCII(el)) {
-                if (start > LENGTH(el))
-                    beginning = end = 0;
-                else {
-                    beginning = start-1;
-                    if (stop > LENGTH(el))
-                        end = LENGTH(el);
-                    else
-                        end = stop;
-                }
+            else if (start > stop) {
+                res = R_BlankString;
             }
             else {
-                (void) find_substr (ss, slen, ienc, start, stop, 
-                                    &beginning, &end);
+                ienc = getCharCE(el);
+                slen = LENGTH(el);
+                const char *ss = CHAR(el);
+                size_t beginning, end;
+                if (IS_ASCII(el)) {
+                    if (start > LENGTH(el))
+                        beginning = end = 0;
+                    else {
+                        beginning = start-1;
+                        if (stop > LENGTH(el))
+                            end = LENGTH(el);
+                        else
+                            end = stop;
+                    }
+                }
+                else {
+                    (void) find_substr (ss, slen, ienc, start, stop, 
+                                        &beginning, &end);
+                }
+    
+                res = mkCharLenCE (ss+beginning, (int)(end-beginning), ienc);
             }
-            SET_STRING_ELT (s, i, 
-              mkCharLenCE (ss+beginning, (int)(end-beginning), ienc));
+
+            if (ans != R_NilValue)
+                SET_STRING_ELT (ans, i, res);
         }
     }
-    DUPLICATE_ATTRIB(s, x);  /* This copied the class, if any */
-    UNPROTECT(1);
-    return s;
+
+    if (ans == R_NilValue) {
+        return ScalarStringMaybeConst(res);
+    }
+    else {
+        DUPLICATE_ATTRIB (ans, x);  /* This copied the class, if any */
+        UNPROTECT(1);
+        return ans;
+    }
 }
 
 static SEXP do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)

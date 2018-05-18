@@ -150,6 +150,7 @@
         speed in many contexts, and especially in functions that are
         defined in packages (rather than in the global workspace).
   \item The speed of \code{nchar} has been greatly improved.
+  \item The speed of \code{substr} has been improved.
   \item The speed of \code{which} has been improved.
   \item The speed of \code{.Call} has been improved.
   \item The speed of \code{any} and \code{all} has been improved,
