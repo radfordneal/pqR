@@ -479,7 +479,7 @@ typedef struct VECTOR_SEXPREC_C {
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
     int32_t padding;
 #endif
-    union { double d; int w[2]; int i; char c; char s[8]; } data;
+    union { double d; int w[2]; int i; char c; char s[8]; SEXP p; } data;
 #if USE_AUX_FOR_ATTRIB
     double const_padding; /* Needed to fill out full chunk */
 #endif
@@ -1515,22 +1515,24 @@ struct R_local_protect {
 #define R_SGGC_SYM_INDEX 3
 #define R_SGGC_INT_INDEX 4
 #define R_SGGC_MISC_INDEX 5
-#define R_SGGC_CHAR_INDEX 6  /* also uses 7, 8, and 9 */
-#define R_SGGC_LIST1_INDEX 10
-#define R_SGGC_SCALAR_STACK_INDEX 11  /* and possibly subsequent segments */
+#define R_SGGC_CHAR_INDEX 6     /* also uses 7, 8, and 9 */
+#define R_SGGC_STRING_INDEX 10  /* also uses 11, 12, and 13 */
+#define R_SGGC_LIST1_INDEX 14
+#define R_SGGC_SCALAR_STACK_INDEX 15  /* and possibly subsequent segments */
 #else
 #define R_SGGC_NIL_INDEX 0
 #define R_SGGC_ENV_INDEX 1
 #define R_SGGC_SYM_INDEX 2
 #define R_SGGC_INT_INDEX 3
 #define R_SGGC_MISC_INDEX 4
-#define R_SGGC_CHAR_INDEX 5  /* also uses 6, 7, and 8 */
-#define R_SGGC_LIST1_INDEX 9
-#define R_SGGC_SCALAR_STACK_INDEX 10  /* and possibly subsequent segments */
+#define R_SGGC_CHAR_INDEX 5     /* also uses 6, 7, and 8 */
+#define R_SGGC_STRING_INDEX 9   /* also uses 10, 11, and 12 */
+#define R_SGGC_LIST1_INDEX 13
+#define R_SGGC_SCALAR_STACK_INDEX 14  /* and possibly subsequent segments */
 #endif
 
 
-/* R_EmptyEnv - a n empty environment at the root of the environment tree */
+/* R_EmptyEnv - an empty environment at the root of the environment tree */
 
 LibExtern SEXP R_EmptyEnv;          /* Variable form, for those that need it */
                                     /* Set in const-objs.c, as done below */
@@ -1601,13 +1603,16 @@ ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarMisc_consts[7];
 #define R_ScalarRealNA          ((SEXP) &R_ScalarMisc_consts[6])
 #endif
 
-/* CHARSXP constants.  Defined in const-objs.c. */
+/* CHARSXP and scalar STRSXP constants.  Defined in const-objs.c. */
 
 #if USE_COMPRESED_POINTERS
 #define R_ASCII_CHAR(c) ((SEXP)SGGC_CPTR_VAL(R_SGGC_CHAR_INDEX+(c>>5),(c&0x1f)))
+#define R_ASCII_SCALAR_STRING(c) \
+                      ((SEXP)SGGC_CPTR_VAL(R_SGGC_STRING_INDEX+(c>>5),(c&0x1f)))
 #else
 ConstExtern /* R_CONST */ VECTOR_SEXPREC_C R_ASCII_consts[128];
 #define R_ASCII_CHAR(c) ((SEXP) &R_ASCII_consts[c])
+#define R_ASCII_SCALAR_STRING(c) ((SEXP) &R_ScalarString_consts[c])
 #endif
 
 /* Start of scalar stack. */
