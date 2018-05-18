@@ -2475,10 +2475,10 @@ static int mbcs_get_next2(int c, ucs_t *wc)
 
 static SEXP mkStringUTF8(const ucs_t *wcs, int cnt)
 {
-    SEXP t;
     int nb;
 
 /* NB: cnt includes the terminator */
+
 #ifdef Win32
     nb = cnt*4; /* UCS-2/UTF-16 so max 4 bytes per wchar_t */
 #else
@@ -2487,6 +2487,7 @@ static SEXP mkStringUTF8(const ucs_t *wcs, int cnt)
     char s[nb];
     R_CheckStack();
     memset(s, 0, nb); /* safety */
+
 #ifdef WC_NOT_UNICODE
     {
 	char *ss;
@@ -2495,25 +2496,19 @@ static SEXP mkStringUTF8(const ucs_t *wcs, int cnt)
 #else
     wcstoutf8(s, wcs, nb);
 #endif
-    PROTECT(t = allocVector(STRSXP, 1));
-    SET_STRING_ELT(t, 0, mkCharCE(s, CE_UTF8));
-    UNPROTECT(1);
-    return t;
+
+    return ScalarStringMaybeConst (mkCharCE (s, CE_UTF8));
 }
 
 
 static SEXP mkString2(const char *s, int len, Rboolean escaped)
 {
-    SEXP t;
     cetype_t enc = CE_NATIVE;
 
     if(known_to_be_latin1) enc= CE_LATIN1;
     else if(!escaped && known_to_be_utf8) enc = CE_UTF8;
 
-    PROTECT(t = allocVector(STRSXP, 1));
-    SET_STRING_ELT(t, 0, mkCharLenCE(s, len, enc));
-    UNPROTECT(1);
-    return t;
+    return ScalarStringMaybeConst (mkCharLenCE (s, len, enc));
 }
 
 
