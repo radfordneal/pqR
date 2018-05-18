@@ -122,7 +122,7 @@ static SEXP do_nzchar(SEXP call, SEXP op, SEXP args, SEXP env)
 
 static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP d, s, x, stype;
+    SEXP names, dim, dimnames, ans, x, stype;
     int i, len, allowNA;
     size_t ntype;
     int nc;
@@ -147,38 +147,53 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
     allowNA = asLogical(CADDR(args));
     if (allowNA == NA_LOGICAL) allowNA = 0;
 
-    PROTECT(s = allocVector(INTSXP, len));
+    names = getAttrib (x, R_NamesSymbol);
+    dim =getDimAttrib (x);
+    dimnames = getAttrib (x, R_DimNamesSymbol);
+
+    if (len == 1 && names == R_NilValue 
+                 && dim == R_NilValue && dimnames == R_NilValue) {
+        /* simple scalars are done below with ScalarIntegerMaybeConst */
+        ans = R_NilValue;
+    }
+    else {
+        PROTECT(ans = allocVector(INTSXP, len));
+        if (names != R_NilValue)    setAttrib(ans, R_NamesSymbol, names);
+        if (dim != R_NilValue)      setAttrib(ans, R_DimSymbol, dim);
+        if (dimnames != R_NilValue) setAttrib(ans, R_DimNamesSymbol, dimnames);
+    }
+
     int type_bytes = strncmp(type, "bytes", ntype) == 0;
     int type_chars = strncmp(type, "chars", ntype) == 0;
     int type_width = strncmp(type, "width", ntype) == 0;
     vmax = VMAXGET();
+    int nch;
+
     for (i = 0; i < len; i++) {
         SEXP sxi = STRING_ELT(x, i);
         if (sxi == NA_STRING) {
-            INTEGER(s)[i] = 2;
-            continue;
+            nch = 2;
         }
-        if (IS_ASCII(sxi) || type_bytes) {
-            INTEGER(s)[i] = LENGTH(sxi);
-            continue;
+        else if (IS_ASCII(sxi) || type_bytes) {
+            nch = LENGTH(sxi);
         }
-        if (type_chars) {
+        else if (type_chars) {
             if (IS_UTF8(sxi)) { /* assume this is valid */
                 const char *p = CHAR(sxi);
                 nc = 0;
                 for( ; *p; p += utf8clen(*p)) nc++;
-                INTEGER(s)[i] = nc;
+                nch = nc;
             } else if (IS_BYTES(sxi)) {
                 if (!allowNA) /* could do chars 0 */
                     error(_("number of characters is not computable for element %d in \"bytes\" encoding"), i+1);
-                INTEGER(s)[i] = NA_INTEGER;
+                nch = NA_INTEGER;
             } else if (mbcslocale) {
                 nc = mbstowcs(NULL, translateChar(sxi), 0);
                 if (!allowNA && nc < 0)
                     error(_("invalid multibyte string %d"), i+1);
-                INTEGER(s)[i] = nc >= 0 ? nc : NA_INTEGER;
+                nch = nc >= 0 ? nc : NA_INTEGER;
             } else
-                INTEGER(s)[i] = strlen(translateChar(sxi));
+                nch = strlen(translateChar(sxi));
         }
         else if (type_width) {
             if (IS_UTF8(sxi)) { /* assume this is valid */
@@ -189,11 +204,11 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
                     utf8toucs(&wc1, p);
                     nc += Ri18n_wcwidth(wc1);
                 }
-                INTEGER(s)[i] = nc;
+                nch = nc;
             } else if (IS_BYTES(sxi)) {
                 if (!allowNA) /* could do width 0 */
                     error(_("width is not computable for element %d in \"bytes\" encoding"), i+1);
-                INTEGER(s)[i] = NA_INTEGER;
+                nch = NA_INTEGER;
             } else if (mbcslocale) {
                 xi = translateChar(sxi);
                 nc = mbstowcs(NULL, xi, 0);
@@ -201,28 +216,27 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
                     wc = (wchar_t *) R_AllocStringBuffer((nc+1)*sizeof(wchar_t), &cbuff);
 
                     mbstowcs(wc, xi, nc + 1);
-                    INTEGER(s)[i] = Ri18n_wcswidth(wc, 2147483647);
-                    if (INTEGER(s)[i] < 1) INTEGER(s)[i] = nc;
+                    nch = Ri18n_wcswidth(wc, 2147483647);
+                    if (nch < 1) nch = nc;
                 } else if (allowNA)
                     error(_("invalid multibyte string %d"), i+1);
                 else
-                    INTEGER(s)[i] = NA_INTEGER;
+                    nch = NA_INTEGER;
             } else
-                INTEGER(s)[i] = strlen(translateChar(sxi));
+                nch = strlen(translateChar(sxi));
         }
         else
             error(_("invalid '%s' argument"), "type");
         VMAXSET(vmax);
+        if (ans != R_NilValue)
+            INTEGER(ans)[i] = nch;
     }
+
     R_FreeStringBufferL(&cbuff);
-    if ((d = getAttrib(x, R_NamesSymbol)) != R_NilValue)
-        setAttrib(s, R_NamesSymbol, d);
-    if ((d = getDimAttrib(x)) != R_NilValue)
-        setAttrib(s, R_DimSymbol, d);
-    if ((d = getAttrib(x, R_DimNamesSymbol)) != R_NilValue)
-        setAttrib(s, R_DimNamesSymbol, d);
-    UNPROTECT(2);
-    return s;
+
+    UNPROTECT (1 + (ans!=R_NilValue));
+
+    return ans == R_NilValue ? ScalarIntegerMaybeConst(nch) : ans;
 }
 
 /* Find the beginning and end (indexes start at 0) of the substring in str
