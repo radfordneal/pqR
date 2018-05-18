@@ -671,8 +671,13 @@ static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
 }
 
 
-/* Inline version of findFun, meant to be fast when a special symbol is found 
-   in the base environmet. */
+/* Inline version of findFun.  It's meant to be very fast when a
+   function is found in the base environmet.  It can delegate uncommon
+   cases such as traced functions to the general-case procedure.
+
+   Note that primitive functions in the base environment are directly
+   stored as the bound values, while closures (including internals)
+   are referenced via promises (for lazy loading). */
 
 static inline SEXP FINDFUN (SEXP symbol, SEXP rho)
 {
@@ -680,10 +685,14 @@ static inline SEXP FINDFUN (SEXP symbol, SEXP rho)
 
     if (rho == R_GlobalEnv && BASE_CACHE(symbol)) {
         SEXP res = SYMVALUE(symbol);
-        if (TYPEOF(res) == PROMSXP)
-            res = PRVALUE_PENDING_OK(res);
-        if (isFunction(res))
+        int type_etc = TYPE_ETC(res);
+        if (type_etc == SPECIALSXP || type_etc == BUILTINSXP)
             return res;
+        if (type_etc == PROMSXP) {
+            res = PRVALUE_PENDING_OK(res);
+            if (TYPE_ETC(res) == CLOSXP)  /* won't be if not yet forced */
+                return res;
+        }
     }
 
     return findFun_nospecsym(symbol,rho);
@@ -868,13 +877,13 @@ static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
 
     res = FIND_VAR_PENDING_OK (e, rho);
 
-    if (TYPEOF(res) == PROMSXP) {
+    if (TYPE_ETC(res) == PROMSXP) {
         if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
             res = forcePromiseUnbound(res,variant);
         else
             res = PRVALUE_PENDING_OK(res);
     }
-    else if (TYPEOF(res) == SYMSXP) {
+    else if (TYPE_ETC(res) == SYMSXP) {
         if (res == R_MissingArg) {
             if ( ! (variant & VARIANT_MISSING_OK))
                 if (!DDVAL(e))  /* revert bug fix for the moment */
@@ -971,6 +980,14 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
                 if (R_scalar_stack != sv_stack) abort();
             }
 #       endif
+
+        return res;  /* can skip possible wait below, and R_visible setting */
+    }
+
+    else if (TYPE_ETC(e) == PROMSXP) {
+        res = PRVALUE_PENDING_OK(e);
+        if (res == R_UnboundValue)
+            res = forcePromiseUnbound(e,variant);
     }
 
     else if (TYPE_ETC(e) == SYMSXP
@@ -981,13 +998,13 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
 
         res = ddfindVar(e,rho);
 
-        if (TYPEOF(res) == PROMSXP) {
+        if (TYPE_ETC(res) == PROMSXP) {
             if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
                 res = forcePromiseUnbound(res,variant);
             else
                 res = PRVALUE_PENDING_OK(res);
         }
-        else if (TYPEOF(res) == SYMSXP) {
+        else if (TYPE_ETC(res) == SYMSXP) {
             if (res == R_MissingArg) {
                 if ( ! (variant & VARIANT_MISSING_OK))
                     if (!DDVAL(e))  /* revert bug fix for the moment */
@@ -1002,29 +1019,11 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
            promises have NAMEDCNT of 0), so fix up here... */
 
         SET_NAMEDCNT_NOT_0(res);
-
-        if ( ! (variant & VARIANT_PENDING_OK))
-            WAIT_UNTIL_COMPUTED(res);
-
-        R_Visible = TRUE;
-    }
-
-    else if (TYPE_ETC(e) == PROMSXP) {  /* parts other than type will be 0 */
-
-        if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
-            res = forcePromiseUnbound(e,variant);
-        else
-            res = PRVALUE_PENDING_OK(e);
-
-        if ( ! (variant & VARIANT_PENDING_OK))
-            WAIT_UNTIL_COMPUTED(res);
-
-        R_Visible = TRUE;
     }
 
     else if (TYPE_ETC(e) == BCODESXP) {  /* parts other than type will be 0 */
 
-        res = bcEval(e, rho, TRUE);
+        return bcEval(e, rho, TRUE); /* skip possible wait, R_visible setting */
     }
 
     else if (TYPEOF(e) == DOTSXP)
@@ -1032,6 +1031,13 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
 
     else
         UNIMPLEMENTED_TYPE("eval", e);
+
+    /* Final actions for several of the paths above. */
+
+    if ( ! (variant & VARIANT_PENDING_OK))
+        WAIT_UNTIL_COMPUTED(res);
+
+    R_Visible = TRUE;
 
     return res;
 }
