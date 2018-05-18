@@ -630,8 +630,9 @@ static R_CONST SEXPREC R_List1_consts[] = {
     LIST1_CONST(R_ScalarInteger0To31(8),8),
     LIST1_CONST(R_ScalarInteger0To31(9),9),
     LIST1_CONST(R_ScalarInteger0To31(10),10),
-    LIST1_CONST(R_ScalarInteger0To31(11),11),
-    LIST1_CONST(R_ScalarInteger0To31(12),12),
+
+    LIST1_CONST(R_ASCII_SCALAR_STRING(' '),11),
+    LIST1_CONST(R_ASCII_SCALAR_STRING('.'),12),
 
     LIST1_CONST(R_ScalarLogicalNA,13),
     LIST1_CONST(R_ScalarLogicalFALSE,14),
