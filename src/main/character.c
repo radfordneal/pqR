@@ -124,7 +124,7 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP names, dim, dimnames, ans, x, stype;
     int i, len, allowNA;
-    size_t ntype;
+    R_len_t type_len;
     int nc;
     const char *type;
     const char *xi;
@@ -139,11 +139,10 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
         error(_("'%s' requires a character vector"), "nchar()");
     len = LENGTH(x);
     stype = CADR(args);
-    if (!isString(stype) || LENGTH(stype) != 1)
+    if (!isString(stype) || LENGTH(stype)!=1 || LENGTH(STRING_ELT(stype,0))==0)
         error(_("invalid '%s' argument"), "type");
-    type = CHAR(STRING_ELT(stype, 0)); /* always ASCII */
-    ntype = strlen(type);
-    if (ntype == 0) error(_("invalid '%s' argument"), "type");
+    type = CHAR(STRING_ELT(stype,0));
+    type_len = LENGTH(STRING_ELT(stype,0));
     allowNA = asLogical(CADDR(args));
     if (allowNA == NA_LOGICAL) allowNA = 0;
 
@@ -152,9 +151,9 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
     dimnames = getAttrib (x, R_DimNamesSymbol);
 
     if (len == 1 && names == R_NilValue 
-                 && dim == R_NilValue && dimnames == R_NilValue) {
-        /* simple scalars are done below with ScalarIntegerMaybeConst */
-        ans = R_NilValue;
+                 && dim == R_NilValue
+                 && dimnames == R_NilValue) {
+        ans = R_NilValue; /* simple scalars done with ScalarIntegerMaybeConst */
     }
     else {
         PROTECT(ans = allocVector(INTSXP, len));
@@ -163,9 +162,17 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
         if (dimnames != R_NilValue) setAttrib(ans, R_DimNamesSymbol, dimnames);
     }
 
-    int type_bytes = strncmp(type, "bytes", ntype) == 0;
-    int type_chars = strncmp(type, "chars", ntype) == 0;
-    int type_width = strncmp(type, "width", ntype) == 0;
+    enum { type_chars, type_bytes, type_width } op_type;
+    
+    if (strncmp(type, "chars", type_len) == 0)
+        op_type = type_chars;
+    else if (strncmp(type, "bytes", type_len) == 0)
+        op_type = type_bytes;
+    else if (strncmp(type, "width", type_len) == 0)
+        op_type = type_bytes;
+    else
+        error(_("invalid '%s' argument"), "type");
+
     vmax = VMAXGET();
     int nch;
 
@@ -174,10 +181,10 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
         if (sxi == NA_STRING) {
             nch = 2;
         }
-        else if (IS_ASCII(sxi) || type_bytes) {
+        else if (IS_ASCII(sxi) || op_type == type_bytes) {
             nch = LENGTH(sxi);
         }
-        else if (type_chars) {
+        else if (op_type == type_chars) {
             if (IS_UTF8(sxi)) { /* assume this is valid */
                 const char *p = CHAR(sxi);
                 nc = 0;
@@ -195,7 +202,7 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
             } else
                 nch = strlen(translateChar(sxi));
         }
-        else if (type_width) {
+        else {  /* op_type == type_width */
             if (IS_UTF8(sxi)) { /* assume this is valid */
                 const char *p = CHAR(sxi);
                 wchar_t wc1;
@@ -225,8 +232,6 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
             } else
                 nch = strlen(translateChar(sxi));
         }
-        else
-            error(_("invalid '%s' argument"), "type");
         VMAXSET(vmax);
         if (ans != R_NilValue)
             INTEGER(ans)[i] = nch;
