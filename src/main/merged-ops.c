@@ -183,17 +183,15 @@ static void proc_##o (SEXP ans, double *vecp, int sw, int which, \
 
 PROC(MERGED_OP_NULL, ;)
 PROC(MERGED_OP_C_PLUS_V,  v = c1 + v)
-PROC(MERGED_OP_V_PLUS_C,  abort())
+PROC(MERGED_OP_ABS,       v = fabs(v))
 PROC(MERGED_OP_C_MINUS_V, v = c1 - v)
 PROC(MERGED_OP_V_MINUS_C, v = v - c1)
 PROC(MERGED_OP_C_TIMES_V, v = c1 * v)
-PROC(MERGED_OP_V_TIMES_C, abort())
+PROC(MERGED_OP_V_SQUARED, v = v * v)
 PROC(MERGED_OP_C_DIV_V,   v = c1 / v)
 PROC(MERGED_OP_V_DIV_C,   v = v / c1)
 PROC(MERGED_OP_C_POW_V,   v = R_pow(c1,v))
 PROC(MERGED_OP_V_POW_C,   v = R_pow(v,c1))
-PROC(MERGED_OP_ABS,       v = fabs(v))
-PROC(MERGED_OP_V_SQUARED, v = v * v)
 PROC(MERGED_OP_CONSTANT,  v = c1)
 
 static void (*proc_table[N_MERGED_OPS])() = {
