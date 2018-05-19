@@ -746,11 +746,12 @@ void attribute_hidden wait_until_arguments_computed (SEXP args)
 }
 
 
-/* Fast eval macro.  Does not set R_Visible, so should not be used if
-   that is needed.  Does not check evaluation count, so should not be
-   used if a loop without such a check might result.  Does not check
-   expression depth or stack overflow, so should not be used if
-   infinite recursion could result. */
+/* Fast eval macros.  Do not set R_Visible properly, so should not be
+   used if that is needed.  Do not check evaluation count, so should
+   not be used if a loop without such a check might result.  Do not
+   check expression depth or stack overflow, so should not be used if
+   infinite recursion could result.  EVALV_NC is meant for use in
+   contexts where a self-evaluating constant is not likely. */
 
 static SEXP attribute_noinline evalv_sym   (SEXP, SEXP, int);
 static SEXP attribute_noinline evalv_other (SEXP, SEXP, int);
@@ -761,6 +762,13 @@ static SEXP attribute_noinline evalv_other (SEXP, SEXP, int);
        (UPTR_FROM_SEXP(e)->sxpinfo.nmcnt == MAX_NAMEDCNT ? e \
          : (UPTR_FROM_SEXP(e)->sxpinfo.nmcnt = MAX_NAMEDCNT, e)) \
     : TYPE_ETC(e) == SYMSXP /* not ..., ..1, etc */ ? \
+       evalv_sym (e, rho, variant) \
+    :  evalv_other (e, rho, variant) \
+)
+
+#define EVALV_NC(e, rho, variant) ( \
+    R_variant_result = 0, \
+    TYPE_ETC(e) == SYMSXP /* not ..., ..1, etc */ ? \
        evalv_sym (e, rho, variant) \
     :  evalv_other (e, rho, variant) \
 )
@@ -812,7 +820,7 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
         return res;
     }
 
-    /* Handle other evaluations, typically of LANGSXP. */
+    /* Handle evaluations of other things (mostly language objects). */
 
     R_CHECKSTACK();  /* Check for stack overflow. */
 
@@ -906,14 +914,17 @@ static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
 }
 
 
-/* Evaluate an expression that is not self-evaluating and not a symbol
-   (other than ..., ..1, ..2, etc.). */
+/* Evaluate an expression that is not a symbol (other than ..., ..1, ..2, etc.)
+   such as language objects, promises, and self-evaluating expressions. 
+   (Most often called with language objects.) */
 
 static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
 {
-    SEXP op, res;
+    SEXP res;
 
     if (TYPE_ETC(e) == LANGSXP) {  /* parts other than type will be 0 */
+
+        SEXP op;
 
 #       ifdef Win32
             /* Reset precision, rounding and exception modes of an ix86 fpu. */
@@ -981,17 +992,26 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
             }
 #       endif
 
-        return res;  /* can skip possible wait below, and R_visible setting */
+        return res;
     }
 
-    else if (TYPE_ETC(e) == PROMSXP) {
+    if (TYPE_ETC(e) == PROMSXP) {  /* parts other than type will be 0 */
         res = PRVALUE_PENDING_OK(e);
         if (res == R_UnboundValue)
             res = forcePromiseUnbound(e,variant);
+        else if ( ! (variant & VARIANT_PENDING_OK))
+            WAIT_UNTIL_COMPUTED(res);
+        R_Visible = TRUE;
+        return res;
     }
 
-    else if (TYPE_ETC(e) == SYMSXP
-              + TYPE_ET_CETERA_VEC_DOTS_TR) { /* ... or ..1, ..2, etc */
+    if (SELF_EVAL(TYPEOF(e))) {
+        SET_NAMEDCNT_MAX(e);
+        return e;
+    }
+
+    if (TYPE_ETC(e)==SYMSXP
+                      + TYPE_ET_CETERA_VEC_DOTS_TR) { /* ... or ..1, ..2, etc */
 
         if (e == R_DotsSymbol)
             dotdotdot_error();
@@ -1019,27 +1039,22 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
            promises have NAMEDCNT of 0), so fix up here... */
 
         SET_NAMEDCNT_NOT_0(res);
+
+        if ( ! (variant & VARIANT_PENDING_OK))
+            WAIT_UNTIL_COMPUTED(res);
+
+        R_Visible = TRUE;
+        return res;
     }
 
-    else if (TYPE_ETC(e) == BCODESXP) {  /* parts other than type will be 0 */
-
-        return bcEval(e, rho, TRUE); /* skip possible wait, R_visible setting */
+    if (TYPE_ETC(e) == BCODESXP) {  /* parts other than type will be 0 */
+        return bcEval(e, rho, TRUE);
     }
 
-    else if (TYPEOF(e) == DOTSXP)
+    if (TYPEOF(e) == DOTSXP)
         dotdotdot_error();
-
     else
         UNIMPLEMENTED_TYPE("eval", e);
-
-    /* Final actions for several of the paths above. */
-
-    if ( ! (variant & VARIANT_PENDING_OK))
-        WAIT_UNTIL_COMPUTED(res);
-
-    R_Visible = TRUE;
-
-    return res;
 }
 
 
@@ -1076,8 +1091,8 @@ static SEXP attribute_noinline forcePromiseUnbound (SEXP e, int variant)
 
         PROTECT(e);
 
-        val = EVALV (val, PRENV(e), 
-                     (variant & VARIANT_PENDING_OK) | VARIANT_MISSING_OK);
+        val = EVALV_NC (val, PRENV(e), 
+                        (variant & VARIANT_PENDING_OK) | VARIANT_MISSING_OK);
 
         UNPROTECT(1);
 
@@ -1087,7 +1102,7 @@ static SEXP attribute_noinline forcePromiseUnbound (SEXP e, int variant)
         SET_PRSEEN (e, 0);
 
         SET_PRVALUE_MACRO (e, val);
-    
+
         if (val == R_MissingArg) {
 
             /* Attempt to mimic past behaviour... */
@@ -1543,8 +1558,8 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     Cond = CAR(args); args = CDR(args);
     Stmt = CAR(args); args = CDR(args);
 
-    SEXP condval = EVALV (Cond, rho, 
-                          VARIANT_SCALAR_STACK_OK | VARIANT_ANY_ATTR);
+    SEXP condval = EVALV_NC (Cond, rho, 
+                             VARIANT_SCALAR_STACK_OK | VARIANT_ANY_ATTR);
     int condlogical = asLogicalNoNA (condval, call);
     POP_IF_TOP_OF_STACK(condval);
 
@@ -1642,8 +1657,9 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT2(args,rho);
 
-    PROTECT(val = EVALV (val, rho, in    ? VARIANT_SEQ | VARIANT_ANY_ATTR :
-                                   along ? VARIANT_UNCLASS | VARIANT_ANY_ATTR :
+    PROTECT(val = EVALV_NC (val, rho, 
+                            in    ? VARIANT_SEQ | VARIANT_ANY_ATTR :
+                            along ? VARIANT_UNCLASS | VARIANT_ANY_ATTR :
                                     VARIANT_UNCLASS | VARIANT_ANY_ATTR_EX_DIM));
     dims = R_NilValue;
 
@@ -1898,8 +1914,8 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) { /* <- back here for "next" */
         for (;;) {
-            SEXP condval = EVALV (CAR(args), rho, 
-                                  VARIANT_SCALAR_STACK_OK | VARIANT_ANY_ATTR);
+            SEXP condval = EVALV_NC(CAR(args), rho, 
+                                    VARIANT_SCALAR_STACK_OK | VARIANT_ANY_ATTR);
             int condlogical = asLogicalNoNA (condval, call);
             POP_IF_TOP_OF_STACK(condval);
             if (!condlogical) 
@@ -1974,7 +1990,7 @@ static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (args == R_NilValue || CDR(args) != R_NilValue)
         checkArity(op, args);  /* to report the error */
 
-    SEXP res = EVALV (CAR(args), rho, VARIANT_PASS_ON(variant));
+    SEXP res = EVALV_NC (CAR(args), rho, VARIANT_PASS_ON(variant));
 
     R_Visible = TRUE;
     return res;
@@ -2010,7 +2026,7 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             start_browser (call, op, arg, rho);
         if (args == R_NilValue)
             break;
-        s = EVALV (arg, rho, vrnt);
+        s = EVALV_NC (arg, rho, vrnt);
         if (R_variant_result & VARIANT_RTN_FLAG) {
             R_Srcref = savedsrcref;
             return s;
@@ -3767,8 +3783,8 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
         args_evald = 1;
     }
     else {
-        PROTECT(x = EVALV (x, env, VARIANT_PENDING_OK));
-        PROTECT(y = EVALV (y, env, VARIANT_PENDING_OK));
+        PROTECT(x = EVALV_NC (x, env, VARIANT_PENDING_OK));
+        PROTECT(y = EVALV_NC (y, env, VARIANT_PENDING_OK));
         args_evald = 0;
     }
 
@@ -4031,7 +4047,7 @@ SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env)
     if (args==R_NilValue || CDR(args)==R_NilValue || CDDR(args)!=R_NilValue)
 	error(_("'%s' operator requires 2 arguments"), ov == 1 ? "&&" : "||");
 
-    s1 = EVALV (CAR(args), env, 0);
+    s1 = EVALV_NC (CAR(args), env, 0);
     if (!isNumber(s1))
 	errorcall(call, _("invalid 'x' type in 'x %s y'"), ov==1 ? "&&" : "||");
 
@@ -4043,7 +4059,7 @@ SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env)
     if (ov==2 && x1==TRUE)   /* TRUE || ... */
         return ScalarLogicalMaybeConst(TRUE);
     
-    s2  = EVALV (CADR(args), env, 0);
+    s2  = EVALV_NC (CADR(args), env, 0);
     if (!isNumber(s2))	
         errorcall(call, _("invalid 'y' type in 'x %s y'"), ov==1 ? "&&" : "||");
 
@@ -4585,8 +4601,8 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (args != R_NilValue && CAR(args) != R_DotsSymbol) {
         SEXP ixlist = CDR(args);
         SEXP array;
-        PROTECT(array = EVALV (CAR(args), rho, VARIANT_UNCLASS | 
-                                               VARIANT_PENDING_OK));
+        PROTECT(array = EVALV_NC (CAR(args), rho, VARIANT_UNCLASS | 
+                                                  VARIANT_PENDING_OK));
         int obj = isObject(array);
         if (R_variant_result) {
             obj = 0;
@@ -4712,8 +4728,8 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         else {
             ixlist = CDR(args);
             array = CAR(args);
-            PROTECT(array = EVALV (array, rho, VARIANT_UNCLASS | 
-                                               VARIANT_PENDING_OK));
+            PROTECT(array = EVALV_NC (array, rho, VARIANT_UNCLASS | 
+                                                  VARIANT_PENDING_OK));
             obj = isObject(array);
             if (R_variant_result) {
                 obj = 0;
