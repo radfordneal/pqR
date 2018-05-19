@@ -63,10 +63,7 @@ extern double Rf_gamma_cody(double);
 extern helpers_task_proc task_unary_minus, task_abs;
 
 
-/* CODES FOR MERGED ARITHMETIC OPERATIONS AND ABS FUNCTION.  Note that
-   PLUS and TIMES are not assumed to be commutative, since they aren't
-   always when one or both operands are NaN or NA, and we want exactly
-   the same result as is obtained without merging operations.
+/* CODES FOR MERGED ARITHMETIC OPERATIONS AND ABS FUNCTION. .
 
    Relies on PLUSOP ... POWOP being the integers from 1 to 5.  Code 6
    is abs.  Code 0 is for empty slots.  Additional operation codes are
@@ -78,11 +75,12 @@ extern helpers_task_proc task_unary_minus, task_abs;
    the last operation in lowest position.  The code for the null operation 
    is zero, so null operations occur naturally in higher-order bytes.  The
    64 bits in task operations codes could accommodate up to seven merged
-   operations, but the limit for the fast procedure is three. 
+   operations, but the limit for this implementation is three. 
 
-   For the commutative operations PLUS and TIMES, only the C op V
-   forms are implemented (operands are swapped when scheduling a task
-   as required), and the codes for V op C are used for other operations. */
+   For the commutative (except for NaN handling on Intel processors)
+   operations PLUS and TIMES, only the C op V forms are implemented
+   (operands are swapped when scheduling a task as required), and the
+   codes for V op C are used for other operations. */
 
 #define MERGED_OP_NULL      0   /* No operation, either created or empty slot */
 
@@ -133,7 +131,9 @@ extern helpers_task_proc task_unary_minus, task_abs;
 #error Merged operations are implemented only when MAX_OPS_MERGED is 3
 #endif
 
-#define SW_CASE(o,S) \
+#if 0 && __AVX__ && !defined(DISABLE_AVX_CODE)
+
+#define SW_CASE(o,S,S_AVX) \
     case o: \
         do { \
             R_len_t u = HELPERS_UP_TO(i,a); \
@@ -156,21 +156,61 @@ extern helpers_task_proc task_unary_minus, task_abs;
         } while (i < a); \
         break;
 
-#define SW_CASES(o,S) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_NULL,      S; OP_NULL(3)) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_PLUS_V,  S; OP_C_PLUS_V(3)) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_ABS_V,     S; OP_ABS_V(3)) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_MINUS_V, S; OP_C_MINUS_V(3)) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_V_MINUS_C, S; OP_V_MINUS_C(3)) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_TIMES_V, S; OP_C_TIMES_V(3)) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_V_SQUARED, S; OP_V_SQUARED(3)) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_DIV_V,   S; OP_C_DIV_V(3)) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_V_DIV_C,   S; OP_V_DIV_C(3)) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_POW_V,   S; OP_C_POW_V(3)) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_V_POW_C,   S; OP_V_POW_C(3)) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_CONSTANT,  S; OP_CONSTANT(3))
+#else
 
-#define PROC(o,S) \
+#define SW_CASE(o,S,S_AVX) \
+    case o: \
+        do { \
+            R_len_t u = HELPERS_UP_TO(i,a); \
+            do { \
+                v = vecp[i]; S; ansp[i] = v; \
+                i += 1; \
+            } while (i <= u); \
+            helpers_amount_out(i); \
+        } while (i < a); \
+        break;
+
+#endif
+
+#define SW_CASES(o,S,S_AVX) \
+  SW_CASE(o*N_MERGED_OPS+MERGED_OP_NULL,     \
+             S; OP_NULL(3), \
+             S; OP_NULL(3)) \
+  SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_PLUS_V, \
+             S; OP_C_PLUS_V(3), \
+             S; OP_C_PLUS_V(3)) \
+  SW_CASE(o*N_MERGED_OPS+MERGED_OP_ABS_V,    \
+             S; OP_ABS_V(3), \
+             S; OP_ABS_V(3)) \
+  SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_MINUS_V,\
+             S; OP_C_MINUS_V(3), \
+             S; OP_C_MINUS_V(3)) \
+  SW_CASE(o*N_MERGED_OPS+MERGED_OP_V_MINUS_C,\
+             S; OP_V_MINUS_C(3), \
+             S; OP_V_MINUS_C(3)) \
+  SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_TIMES_V,\
+             S; OP_C_TIMES_V(3), \
+             S; OP_C_TIMES_V(3)) \
+  SW_CASE(o*N_MERGED_OPS+MERGED_OP_V_SQUARED,\
+             S; OP_V_SQUARED(3), \
+             S; OP_V_SQUARED(3)) \
+  SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_DIV_V,  \
+             S; OP_C_DIV_V(3), \
+             S; OP_C_DIV_V(3)) \
+  SW_CASE(o*N_MERGED_OPS+MERGED_OP_V_DIV_C,  \
+             S; OP_V_DIV_C(3), \
+             S; OP_V_DIV_C(3)) \
+  SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_POW_V,  \
+             S; OP_C_POW_V(3), \
+             S; OP_C_POW_V(3)) \
+  SW_CASE(o*N_MERGED_OPS+MERGED_OP_V_POW_C,  \
+             S; OP_V_POW_C(3), \
+             S; OP_V_POW_C(3)) \
+  SW_CASE(o*N_MERGED_OPS+MERGED_OP_CONSTANT, \
+             S; OP_CONSTANT(3), \
+             S; OP_CONSTANT(3))
+
+#define PROC(o,S,S_AVX) \
 static void proc_##o (SEXP ans, double *vecp, int sw, int which, \
                       double *data) \
 { \
@@ -187,35 +227,83 @@ static void proc_##o (SEXP ans, double *vecp, int sw, int which, \
         else \
             HELPERS_WAIT_IN1 (a, i, n); \
         switch (sw) { \
-        SW_CASES(MERGED_OP_NULL,      S; OP_NULL(2)) \
-        SW_CASES(MERGED_OP_C_PLUS_V,  S; OP_C_PLUS_V(2)) \
-        SW_CASES(MERGED_OP_ABS_V,     S; OP_ABS_V(2)) \
-        SW_CASES(MERGED_OP_C_MINUS_V, S; OP_C_MINUS_V(2)) \
-        SW_CASES(MERGED_OP_V_MINUS_C, S; OP_V_MINUS_C(2)) \
-        SW_CASES(MERGED_OP_C_TIMES_V, S; OP_C_TIMES_V(2)) \
-        SW_CASES(MERGED_OP_V_SQUARED, S; OP_V_SQUARED(2)) \
-        SW_CASES(MERGED_OP_C_DIV_V,   S; OP_C_DIV_V(2)) \
-        SW_CASES(MERGED_OP_V_DIV_C,   S; OP_V_DIV_C(2)) \
-        SW_CASES(MERGED_OP_C_POW_V,   S; OP_C_POW_V(2)) \
-        SW_CASES(MERGED_OP_V_POW_C,   S; OP_V_POW_C(2)) \
-        SW_CASES(MERGED_OP_CONSTANT,  S; OP_CONSTANT(2)) \
+        SW_CASES(MERGED_OP_NULL,     \
+             S; OP_NULL(2), \
+             S; OP_NULL(2)) \
+        SW_CASES(MERGED_OP_C_PLUS_V, \
+             S; OP_C_PLUS_V(2), \
+             S; OP_C_PLUS_V(2)) \
+        SW_CASES(MERGED_OP_ABS_V,    \
+             S; OP_ABS_V(2), \
+             S; OP_ABS_V(2)) \
+        SW_CASES(MERGED_OP_C_MINUS_V,\
+             S; OP_C_MINUS_V(2), \
+             S; OP_C_MINUS_V(2)) \
+        SW_CASES(MERGED_OP_V_MINUS_C,\
+             S; OP_V_MINUS_C(2), \
+             S; OP_V_MINUS_C(2)) \
+        SW_CASES(MERGED_OP_C_TIMES_V,\
+             S; OP_C_TIMES_V(2), \
+             S; OP_C_TIMES_V(2)) \
+        SW_CASES(MERGED_OP_V_SQUARED,\
+             S; OP_V_SQUARED(2), \
+             S; OP_V_SQUARED(2)) \
+        SW_CASES(MERGED_OP_C_DIV_V,  \
+             S; OP_C_DIV_V(2), \
+             S; OP_C_DIV_V(2)) \
+        SW_CASES(MERGED_OP_V_DIV_C,  \
+             S; OP_V_DIV_C(2), \
+             S; OP_V_DIV_C(2)) \
+        SW_CASES(MERGED_OP_C_POW_V,  \
+             S; OP_C_POW_V(2), \
+             S; OP_C_POW_V(2)) \
+        SW_CASES(MERGED_OP_V_POW_C,  \
+             S; OP_V_POW_C(2), \
+             S; OP_V_POW_C(2)) \
+        SW_CASES(MERGED_OP_CONSTANT, \
+             S; OP_CONSTANT(2), \
+             S; OP_CONSTANT(2)) \
         default: abort(); \
         } \
     } \
 }
 
-PROC(MERGED_OP_NULL,      OP_NULL(1))
-PROC(MERGED_OP_C_PLUS_V,  OP_C_PLUS_V(1))
-PROC(MERGED_OP_ABS_V,     OP_ABS_V(1))
-PROC(MERGED_OP_C_MINUS_V, OP_C_MINUS_V(1))
-PROC(MERGED_OP_V_MINUS_C, OP_V_MINUS_C(1))
-PROC(MERGED_OP_C_TIMES_V, OP_C_TIMES_V(1))
-PROC(MERGED_OP_V_SQUARED, OP_V_SQUARED(1))
-PROC(MERGED_OP_C_DIV_V,   OP_C_DIV_V(1))
-PROC(MERGED_OP_V_DIV_C,   OP_V_DIV_C(1))
-PROC(MERGED_OP_C_POW_V,   OP_C_POW_V(1))
-PROC(MERGED_OP_V_POW_C,   OP_V_POW_C(1))
-PROC(MERGED_OP_CONSTANT,  OP_CONSTANT(1))
+PROC(MERGED_OP_NULL,      
+    OP_NULL(1),
+    OP_NULL(1))
+PROC(MERGED_OP_C_PLUS_V,  
+    OP_C_PLUS_V(1),
+    OP_C_PLUS_V(1))
+PROC(MERGED_OP_ABS_V,     
+    OP_ABS_V(1),
+    OP_ABS_V(1))
+PROC(MERGED_OP_C_MINUS_V, 
+    OP_C_MINUS_V(1),
+    OP_C_MINUS_V(1))
+PROC(MERGED_OP_V_MINUS_C, 
+    OP_V_MINUS_C(1),
+    OP_V_MINUS_C(1))
+PROC(MERGED_OP_C_TIMES_V, 
+    OP_C_TIMES_V(1),
+    OP_C_TIMES_V(1))
+PROC(MERGED_OP_V_SQUARED, 
+    OP_V_SQUARED(1),
+    OP_V_SQUARED(1))
+PROC(MERGED_OP_C_DIV_V,   
+    OP_C_DIV_V(1),
+    OP_C_DIV_V(1))
+PROC(MERGED_OP_V_DIV_C,   
+    OP_V_DIV_C(1),
+    OP_V_DIV_C(1))
+PROC(MERGED_OP_C_POW_V,   
+    OP_C_POW_V(1),
+    OP_C_POW_V(1))
+PROC(MERGED_OP_V_POW_C,   
+    OP_V_POW_C(1),
+    OP_V_POW_C(1))
+PROC(MERGED_OP_CONSTANT,
+    OP_CONSTANT(1),
+    OP_CONSTANT(1))
 
 static void (*proc_table[N_MERGED_OPS])() = {
     proc_MERGED_OP_NULL,
