@@ -235,6 +235,8 @@
   \item The default \code{size} for \code{new.env} is now \code{NA}, which
         gives an internal default, which now varies depending on the
         platform and configuration options.
+  \item Assigning to \code{...} or \code{..1}, \code{..2}, etc. with
+        \code{<-} and other assignment operators is no longer allowed.
   \item A warning is no longer generated when the first argument of
         \code{.C}, \code{.Fortran}, \code{.Call}, or \code{.External} is
         given its proper name of \code{.NAME}.  Passing more than one

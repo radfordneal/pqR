@@ -2273,7 +2273,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         lhs = install(translateChar(STRING_ELT(lhs, 0)));
     }
 
-    if (TYPEOF(lhs) == SYMSXP) {
+    if (TYPE_ETC(lhs) == SYMSXP) {  /* don't allow ... or ..1, ..2, etc. */
 
         /* -- ASSIGNMENT TO A SIMPLE VARIABLE -- */
 
