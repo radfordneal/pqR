@@ -1552,6 +1552,8 @@ SEXP R_execMethod(SEXP op, SEXP rho)
 
 static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
+    /* Don't check arg count - missing are seen as R_NilValue, extra ignored. */
+
     SEXP Cond, Stmt;
     int absent_else = 0;
 
@@ -1898,6 +1900,8 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho)
 
 static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
+    /* Don't check arg count - missing are seen as R_NilValue, extra ignored. */
+
     int dbg;
     volatile int bgn;
     volatile SEXP body;
@@ -1937,6 +1941,8 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
+    /* Don't check arg count - missing are seen as R_NilValue, extra ignored. */
+
     int dbg;
     volatile int bgn;
     volatile SEXP body;
@@ -1973,22 +1979,20 @@ static R_NORETURN SEXP do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* Parens are now a SPECIAL, to avoid overhead of creating an arg list. 
-   Also avoids overhead of calling checkArity when there is no error.  
-   Care is taken to allow (...) when ... is bound to exactly one argument, 
-   though it is debatable whether this should be considered valid. 
+   Care is taken to allow (...), though it is debatable whether this should 
+   be considered valid. 
 
    The eval variant requested is passed on to the inner expression. */
 
 static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    if (args!=R_NilValue && CAR(args)==R_DotsSymbol && CDR(args)==R_NilValue) {
+    /* Don't check arg count - missing are seen as R_NilValue, extra ignored. */
+
+    if (CAR(args) == R_DotsSymbol) {
         args = findVar(R_DotsSymbol, rho);
         if (TYPEOF(args) != DOTSXP)
             args = R_NilValue;
     }
-
-    if (args == R_NilValue || CDR(args) != R_NilValue)
-        checkArity(op, args);  /* to report the error */
 
     SEXP res = EVALV_NC (CAR(args), rho, VARIANT_PASS_ON(variant));
 
@@ -2249,20 +2253,16 @@ SEXP Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
 static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    SEXP a;
+    /* Don't check arg count - missing are seen as R_NilValue, extra ignored. */
 
-    if ((a = CDR(args)) == R_NilValue /* includes case of args == R_NilValue */
-          || CDR(a) != R_NilValue)
-        checkArity(op,args);  /* to report the error */
-
-    SEXP lhs = CAR(args), rhs = CAR(a);
+    SEXP lhs = CAR(args), rhs = CADR(args);
     int opval = PRIMVAL(op);
 
     /* Swap operands for -> and ->>. */
 
     if (opval >= 10) {
-        rhs = lhs;
-        lhs = CAR(a);
+        lhs = rhs;
+        rhs = CAR(args);
         opval -= 10;
     }
 
