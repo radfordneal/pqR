@@ -512,6 +512,7 @@ typedef struct VECTOR_SEXPREC_C {
 #define CAR(e)     NOT_LVALUE(UPTR_FROM_SEXP(e)->u.listsxp.carval)
 #define CDR(e)     NOT_LVALUE(UPTR_FROM_SEXP(e)->u.listsxp.cdrval)
 
+#define TYPE_ETC(x)(UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera)
 #define TYPEOF(x)  (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                      & TYPE_ET_CETERA_TYPE)
 
@@ -974,6 +975,8 @@ SEXP Rf_chk_valid_SEXP (SEXP x);
 #else
 #define Rf_chk_valid_SEXP(x) (x)
 #endif
+
+const char *Rf_translateChar_nontrivial (SEXP);
 
 /* General Cons Cell Attributes */
 SEXP (ATTRIB)(SEXP x);
@@ -1855,7 +1858,6 @@ SEXPTYPE Rf_str2type(const char *);
 Rboolean Rf_StringBlank(SEXP);
 SEXP Rf_substitute(SEXP,SEXP);
 int Rf_tag_index(SEXP,SEXP);
-const char * Rf_translateChar(SEXP);
 const char * Rf_translateChar0(SEXP);
 const char * Rf_translateCharUTF8(SEXP);
 const char * Rf_type2char(SEXPTYPE);
@@ -2514,6 +2516,7 @@ SEXP	 Rf_ScalarReal(double);
 SEXP	 Rf_ScalarComplex(Rcomplex);
 SEXP	 Rf_ScalarString(SEXP);
 SEXP	 Rf_ScalarLogicalMaybeConst(int);
+const char * Rf_translateChar(SEXP);
 
 #ifdef complex  /* In C99, should be defined if complex.h included */
 double complex Rf_C99_from_R_complex(Rcomplex *);

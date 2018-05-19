@@ -3295,13 +3295,20 @@ void attribute_hidden R_FreeStringBufferL(R_StringBuffer *buf)
 }
 
 
-/* ======== These need direct access to gp field for efficiency ======== */
-
 /* This has NA_STRING = NA_STRING.  Uses inlined version from Defn.h. */
 int Seql(SEXP a, SEXP b)
 {
     return SEQL(a,b);
 }
+
+int attribute_hidden Rf_translated_Seql (SEXP a, SEXP b)
+{
+    SEXP vmax = R_VStack;
+    int result = strcmp (translateCharUTF8(a), translateCharUTF8(b)) == 0;
+    R_VStack = vmax; /* discard any memory used by translateCharUTF8 */
+    return result;
+}
+
 
 
 /* A count of the memory used by an object.

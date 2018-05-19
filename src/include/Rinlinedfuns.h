@@ -679,4 +679,14 @@ static inline int Rf_ep_match_strings (const char *f, const char *t)
 }
 
 
+/* Character translation.  Strings (maybe) needing translation are marked
+   by TYPE_ET_CETERA_VEC_DOTS_TR in TYPE_ETC, so we can quickly check for
+   the non-trivial case here. */
+
+INLINE_FUN const char *Rf_translateChar (SEXP x)
+{
+    return TYPE_ETC(x) == CHARSXP ? CHAR(x) : Rf_translateChar_nontrivial(x);
+}
+
+
 #endif /* R_INLINES_H_ */

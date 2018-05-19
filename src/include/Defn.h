@@ -220,8 +220,6 @@ extern0 SEXP	R_UnderscoreString;   /* "_", as a CHARSXP */
 
 #ifdef USE_RINTERNALS
 
-# define TYPE_ETC(x) (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera)
-
 # define IS_BYTES(x) (UPTR_FROM_SEXP(x)->sxpinfo.gp & BYTES_MASK)
 # define SET_BYTES(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= BYTES_MASK)
 # define IS_LATIN1(x) (UPTR_FROM_SEXP(x)->sxpinfo.gp & LATIN1_MASK)
@@ -1599,6 +1597,7 @@ int StrToInternal(const char *);
 SEXP strmat2intmat(SEXP, SEXP, SEXP);
 SEXP substituteList(SEXP, SEXP);
 void R_trace_call(SEXP, SEXP);
+int Rf_translated_Seql (SEXP, SEXP);
 Rboolean tsConform(SEXP,SEXP);
 SEXP tspgets(SEXP, SEXP);
 SEXP type2symbol(SEXPTYPE);
@@ -1995,10 +1994,7 @@ static inline int SEQL(SEXP a, SEXP b)
     if (ENC_KNOWN(a) == ENC_KNOWN(b))
 	return 0;
 
-    SEXP vmax = R_VStack;
-    int result = !strcmp(translateCharUTF8(a), translateCharUTF8(b));
-    R_VStack = vmax; /* discard any memory used by translateCharUTF8 */
-    return result;
+    return Rf_translated_Seql (a, b);
 }
 
 
