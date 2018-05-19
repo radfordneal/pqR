@@ -4852,6 +4852,94 @@ SEXP attribute_hidden dispatch_subset2(SEXP x, R_xlen_t i, SEXP call, SEXP rho)
     return(x_elt);
 }
 
+static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+{
+    SEXP from, what, ans, input, ncall;
+
+    SEXP string = R_NilValue;
+    SEXP name = R_NilValue;
+    int argsevald = 0;
+
+    if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
+
+        /* Fast interface: object to be subsetted comes already evaluated. */
+
+        what = CAR(args);
+        from = R_fast_sub_var;
+        argsevald = 1;
+    }
+
+    else {  /* regular SPECIAL interface */
+
+        checkArity(op, args);
+        what = CADR(args);
+        from = CAR(args);
+
+        if (from != R_DotsSymbol) {
+            from = EVALV_NC (from, env, VARIANT_ONE_NAMED | VARIANT_UNCLASS);
+            argsevald = 1;
+        }
+    }
+
+    if (TYPEOF(what) == PROMSXP)
+        what = PRCODE(what);
+    if (isSymbol(what))
+        name = what;
+    else if (isString(what) && LENGTH(what) > 0) 
+        string = STRING_ELT(what,0);
+    else
+	errorcall(call, _("invalid subscript type '%s'"), 
+                        type2char(TYPEOF(what)));
+
+    if (argsevald) {
+        if (isObject(from) && ! (R_variant_result & VARIANT_UNCLASS_FLAG))
+            PROTECT(from);
+        else {
+            R_variant_result = 0;
+            return R_subset3_dflt (from, string, name, call, variant);
+        }
+    }
+
+    /* first translate CADR of args into a string so that we can
+       pass it down to DispatchorEval and have it behave correctly */
+
+    input = allocVector(STRSXP,1);
+
+    if (name!=R_NilValue)
+	SET_STRING_ELT(input, 0, PRINTNAME(name));
+    else
+	SET_STRING_ELT(input, 0, string);
+
+    /* replace the second argument with a string */
+
+    /* Previously this was SETCADR(args, input); */
+    /* which could cause problems when "from" was */
+    /* ..., as in PR#8718 */
+    PROTECT(args = CONS(from, CONS(input, R_NilValue)));
+    /* Change call used too, for compatibility with
+       R-2.15.0:  It's accessible using "substitute", 
+       and was a string in R-2.15.0. */
+    PROTECT(ncall = LCONS(CAR(call), CONS(CADR(call), CONS(input,R_NilValue))));
+
+    /* If the first argument is an object and there is */
+    /* an approriate method, we dispatch to that method, */
+    /* otherwise we evaluate the arguments and fall */
+    /* through to the generic code below.  Note that */
+    /* evaluation retains any missing argument indicators. */
+
+    if(DispatchOrEval(ncall, op, "$", args, env, &ans, 0, argsevald)) {
+        UNPROTECT(2+argsevald);
+	if (NAMEDCNT_GT_0(ans))         /* IS THIS NECESSARY? */
+	    SET_NAMEDCNT_MAX(ans);
+        R_Visible = TRUE;
+	return ans;
+    }
+
+    ans = R_subset3_dflt(CAR(ans), string, name, call, variant);
+    UNPROTECT(2+argsevald);
+    return ans;
+}
+
 /* -------------------------------------------------------------------------- */
 /*                         SUBASSIGN OPERATORS.                               */
 
@@ -5010,6 +5098,7 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             (call, CAR(ans), R_NoObject, R_NoObject, CDR(ans), rho, R_NoObject);
 }
 
+
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
 
 attribute_hidden FUNTAB R_FunTab_eval[] =
@@ -5078,6 +5167,7 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 {"[",		do_subset,	1,	1000,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
 {"[[",		do_subset2,	2,	101000,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
 {".el.methods",	do_subset2,	0,	101000,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
+{"$",		do_subset3,	3,	101000,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
 
 /* Subassign operators. */
 
