@@ -164,6 +164,11 @@
   \item Subscripting with a logical vector is now faster for long vectors.
   \item The \code{grep}, \code{grepl}, \code{sub}, and \code{gsub} functions
         have been speeded up, substantially in some situations.
+  \item Merging of arithmetic operations on vectors has been streamlined,
+        with consequent reduction in code size.  Now only the \code{abs}
+        function may be merged (not other one-argument math functions),
+        and \code{^} is merged only when the second operand is 2.
+        See \code{help(helpers)} for details.
   \item General interpretive overhead has been reduced in some contexts,
         particularly when extracting or replacing subsets with 
         \code{[.]} or \code{[[.]]}.
@@ -228,7 +233,7 @@
         of a symbol returns NULL.  Previously (and also in R-3.4.0),
         attributes could be attached to symbols, but they were lost
         when a workspace was saved and restored.  Attaching attributes
-        to symbols is not also disallowed in R-3.5.0.
+        to symbols is now also disallowed in R-3.5.0.
   \item There is no longer a \code{SET_PRINTNAME} function available in
         the C API (even if internal header files are used).  Setting the 
         print name of a symbol has never been

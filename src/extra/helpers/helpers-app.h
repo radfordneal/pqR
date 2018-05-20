@@ -74,18 +74,13 @@ typedef SEXP helpers_var_ptr;
 #ifndef HELPERS_DISABLED
 #ifdef R_TASK_MERGING
 
-#define MAX_OPS_MERGED 3      /* Must be 3 for the current procedure */
+#define MAX_OPS_MERGED 3      /* Must be 3 for the current implementation */
 
 #define HELPERS_TASK_DATA_AMT MAX_OPS_MERGED
 
 #define helpers_can_merge(out,proc_a,op_a,in1_a,in2_a,proc_b,op_b,in1_b,in2_b) \
-((proc_b) == task_merged_arith_abs \
-   ? ((op_b)&(0x7f<<(8*MAX_OPS_MERGED)))==0 /* not already at maximum */ \
-        && (helpers_not_multithreading_now \
-             || (op_a)<=TIMESOP) /* not slow and might be done in parallel */ \
-   : helpers_not_multithreading_now \
-             || (op_b)<=TIMESOP || (op_a)<=TIMESOP /* not both slow */ \
-)
+   ((proc_b) != task_merged_arith_abs \
+     || ((op_b) & (0x7f<<(8*MAX_OPS_MERGED))) == 0 /* not already at maximum */)
 
 #define helpers_merge(out,proc_a,op_a,in1_a,in2_a, \
                           proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr, \

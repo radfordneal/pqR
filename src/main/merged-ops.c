@@ -85,39 +85,20 @@ extern helpers_task_proc task_unary_minus, task_abs;
 #define MERGED_OP_NULL      0   /* No operation, either created or empty slot */
 
 #define MERGED_OP_C_PLUS_V  (2*PLUSOP - 1)
-#define MERGED_OP_ABS_V     (2*PLUSOP)
+#define MERGED_OP_ABS_V     (2*PLUSOP)       /* no V_PLUS_C */
 #define MERGED_OP_C_MINUS_V (2*MINUSOP - 1)
 #define MERGED_OP_V_MINUS_C (2*MINUSOP)
 #define MERGED_OP_C_TIMES_V (2*TIMESOP - 1)
-#define MERGED_OP_V_SQUARED (2*TIMESOP)     /* for V_POW_C when power is 2 */
+#define MERGED_OP_V_SQUARED (2*TIMESOP)      /* no V_TIMES_C */
 #define MERGED_OP_C_DIV_V   (2*DIVOP - 1)
 #define MERGED_OP_V_DIV_C   (2*DIVOP)
-#define MERGED_OP_C_POW_V   (2*POWOP - 1)
-#define MERGED_OP_V_POW_C   (2*POWOP)
-#define MERGED_OP_CONSTANT  11              /* for V_POW_C when power is 0 */
 
-#define N_MERGED_OPS 12         /* Number of operation codes above */
-
-#define OP_NULL(k)       (void)0
-#define OP_C_PLUS_V(k)   v = c ## k + v
-#define OP_ABS_V(k)      v = fabs(v)
-#define OP_C_MINUS_V(k)  v = c ## k - v
-#define OP_V_MINUS_C(k)  v = v - c ## k
-#define OP_C_TIMES_V(k)  v = c ## k * v
-#define OP_V_SQUARED(k)  v = v * v
-#define OP_C_DIV_V(k)    v = c ## k / v
-#define OP_V_DIV_C(k)    v = v / c ## k
-#define OP_C_POW_V(k)    v = R_pow (c ## k, v)
-#define OP_V_POW_C(k)    v = R_pow (v, c ## k)
-#define OP_CONSTANT(k)   v = c ## k
+#define N_MERGED_OPS 9         /* Number of operation codes above */
 
 
 /* TASK FOR PERFORMING A SET OF MERGED ARITHMETIC OPERATIONS.
 
    Works only when MAX_OPS_MERGED is 3.
-
-   Treats powers of -1, 0, 1, and 2 specially, replacing the MERGED_OP_V_POW_C
-   code with another.  
 
    The code for the first operation (which will be MERGED_OP_NULL if
    there are less than three merged operations) will be used to select
@@ -131,24 +112,52 @@ extern helpers_task_proc task_unary_minus, task_abs;
 #error Merged operations are implemented only when MAX_OPS_MERGED is 3
 #endif
 
-#if 0 && __AVX__ && !defined(DISABLE_AVX_CODE)
+#define OP_NULL(k)       (void)0
+#define OP_C_PLUS_V(k)   v = c ## k + v
+#define OP_ABS_V(k)      v = fabs(v)
+#define OP_C_MINUS_V(k)  v = c ## k - v
+#define OP_V_MINUS_C(k)  v = v - c ## k
+#define OP_C_TIMES_V(k)  v = c ## k * v
+#define OP_V_SQUARED(k)  v = v * v
+#define OP_C_DIV_V(k)    v = c ## k / v
+#define OP_V_DIV_C(k)    v = v / c ## k
+
+#if __AVX__ && !defined(DISABLE_AVX_CODE)
+
+#include <immintrin.h>
+
+#define MM_OP_NULL(k)       (void)0
+#define MM_OP_C_PLUS_V(k)   V = _mm256_add_pd (C ## k, V)
+#define MM_OP_ABS_V(k)      V = _mm256_and_pd (V, _mm256_set1_pd (signb))
+#define MM_OP_C_MINUS_V(k)  V = _mm256_sub_pd (C ## k, V)
+#define MM_OP_V_MINUS_C(k)  V = _mm256_sub_pd (V, C ## k)
+#define MM_OP_C_TIMES_V(k)  V = _mm256_mul_pd (C ## k, V)
+#define MM_OP_V_SQUARED(k)  V = _mm256_mul_pd (V, V)
+#define MM_OP_C_DIV_V(k)    V = _mm256_div_pd (C ## k, V)
+#define MM_OP_V_DIV_C(k)    V = _mm256_div_pd (V, C ## k)
+
+#define LOAD_MM \
+    __m256d C1 = _mm256_set1_pd(c1); \
+    __m256d C2 = _mm256_set1_pd(c2); \
+    __m256d C3 = _mm256_set1_pd(c3);
 
 #define SW_CASE(o,S,S_AVX) \
     case o: \
         do { \
             R_len_t u = HELPERS_UP_TO(i,a); \
             while (((uintptr_t)(ansp+i) & 0x1f) != 0 && i <= u) { \
+                double v; \
                 v = vecp[i]; S; ansp[i] = v; \
                 i += 1; \
             } \
             while (i <= u-3) { \
-                v = vecp[i+0]; S; ansp[i+0] = v; \
-                v = vecp[i+1]; S; ansp[i+1] = v; \
-                v = vecp[i+2]; S; ansp[i+2] = v; \
-                v = vecp[i+3]; S; ansp[i+3] = v; \
+                __m256d V = _mm256_load_pd (vecp+i); \
+                S_AVX; \
+                _mm256_store_pd (ansp+i, V); \
                 i += 4; \
             } \
             while (i <= u) { \
+                double v; \
                 v = vecp[i]; S; ansp[i] = v; \
                 i += 1; \
             } \
@@ -158,11 +167,14 @@ extern helpers_task_proc task_unary_minus, task_abs;
 
 #else
 
+#define LOAD_MM
+
 #define SW_CASE(o,S,S_AVX) \
     case o: \
         do { \
             R_len_t u = HELPERS_UP_TO(i,a); \
             do { \
+                double v; \
                 v = vecp[i]; S; ansp[i] = v; \
                 i += 1; \
             } while (i <= u); \
@@ -175,51 +187,44 @@ extern helpers_task_proc task_unary_minus, task_abs;
 #define SW_CASES(o,S,S_AVX) \
   SW_CASE(o*N_MERGED_OPS+MERGED_OP_NULL,     \
              S; OP_NULL(3), \
-             S; OP_NULL(3)) \
+             S_AVX; MM_OP_NULL(3)) \
   SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_PLUS_V, \
              S; OP_C_PLUS_V(3), \
-             S; OP_C_PLUS_V(3)) \
+             S_AVX; MM_OP_C_PLUS_V(3)) \
   SW_CASE(o*N_MERGED_OPS+MERGED_OP_ABS_V,    \
              S; OP_ABS_V(3), \
-             S; OP_ABS_V(3)) \
+             S_AVX; MM_OP_ABS_V(3)) \
   SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_MINUS_V,\
              S; OP_C_MINUS_V(3), \
-             S; OP_C_MINUS_V(3)) \
+             S_AVX; MM_OP_C_MINUS_V(3)) \
   SW_CASE(o*N_MERGED_OPS+MERGED_OP_V_MINUS_C,\
              S; OP_V_MINUS_C(3), \
-             S; OP_V_MINUS_C(3)) \
+             S_AVX; MM_OP_V_MINUS_C(3)) \
   SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_TIMES_V,\
              S; OP_C_TIMES_V(3), \
-             S; OP_C_TIMES_V(3)) \
+             S_AVX; MM_OP_C_TIMES_V(3)) \
   SW_CASE(o*N_MERGED_OPS+MERGED_OP_V_SQUARED,\
              S; OP_V_SQUARED(3), \
-             S; OP_V_SQUARED(3)) \
+             S_AVX; MM_OP_V_SQUARED(3)) \
   SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_DIV_V,  \
              S; OP_C_DIV_V(3), \
-             S; OP_C_DIV_V(3)) \
+             S_AVX; MM_OP_C_DIV_V(3)) \
   SW_CASE(o*N_MERGED_OPS+MERGED_OP_V_DIV_C,  \
              S; OP_V_DIV_C(3), \
-             S; OP_V_DIV_C(3)) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_POW_V,  \
-             S; OP_C_POW_V(3), \
-             S; OP_C_POW_V(3)) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_V_POW_C,  \
-             S; OP_V_POW_C(3), \
-             S; OP_V_POW_C(3)) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_CONSTANT, \
-             S; OP_CONSTANT(3), \
-             S; OP_CONSTANT(3))
+             S_AVX; MM_OP_V_DIV_C(3))
 
 #define PROC(o,S,S_AVX) \
 static void proc_##o (SEXP ans, double *vecp, int sw, int which, \
                       double *data) \
 { \
     double c1 = data[2], c2 = data[1], c3 = data[0]; \
+    LOAD_MM /* load AVX versions of c1, c2, c3, if doing AVX */ \
+    double signb; uint64_t usignb = ~ ((uint64_t)1 << 63); \
     double *ansp = REAL(ans); \
+    memcpy(&signb,&usignb,sizeof(double)); \
     R_len_t n = LENGTH(ans); \
     R_len_t i = 0; \
     R_len_t a; \
-    double v; \
     HELPERS_SETUP_OUT(6); \
     while (i < n) { \
         if (which) \
@@ -229,40 +234,31 @@ static void proc_##o (SEXP ans, double *vecp, int sw, int which, \
         switch (sw) { \
         SW_CASES(MERGED_OP_NULL,     \
              S; OP_NULL(2), \
-             S; OP_NULL(2)) \
+             S_AVX; MM_OP_NULL(2)) \
         SW_CASES(MERGED_OP_C_PLUS_V, \
              S; OP_C_PLUS_V(2), \
-             S; OP_C_PLUS_V(2)) \
+             S_AVX; MM_OP_C_PLUS_V(2)) \
         SW_CASES(MERGED_OP_ABS_V,    \
              S; OP_ABS_V(2), \
-             S; OP_ABS_V(2)) \
+             S_AVX; MM_OP_ABS_V(2)) \
         SW_CASES(MERGED_OP_C_MINUS_V,\
              S; OP_C_MINUS_V(2), \
-             S; OP_C_MINUS_V(2)) \
+             S_AVX; MM_OP_C_MINUS_V(2)) \
         SW_CASES(MERGED_OP_V_MINUS_C,\
              S; OP_V_MINUS_C(2), \
-             S; OP_V_MINUS_C(2)) \
+             S_AVX; MM_OP_V_MINUS_C(2)) \
         SW_CASES(MERGED_OP_C_TIMES_V,\
              S; OP_C_TIMES_V(2), \
-             S; OP_C_TIMES_V(2)) \
+             S_AVX; MM_OP_C_TIMES_V(2)) \
         SW_CASES(MERGED_OP_V_SQUARED,\
              S; OP_V_SQUARED(2), \
-             S; OP_V_SQUARED(2)) \
+             S_AVX; MM_OP_V_SQUARED(2)) \
         SW_CASES(MERGED_OP_C_DIV_V,  \
              S; OP_C_DIV_V(2), \
-             S; OP_C_DIV_V(2)) \
+             S_AVX; MM_OP_C_DIV_V(2)) \
         SW_CASES(MERGED_OP_V_DIV_C,  \
              S; OP_V_DIV_C(2), \
-             S; OP_V_DIV_C(2)) \
-        SW_CASES(MERGED_OP_C_POW_V,  \
-             S; OP_C_POW_V(2), \
-             S; OP_C_POW_V(2)) \
-        SW_CASES(MERGED_OP_V_POW_C,  \
-             S; OP_V_POW_C(2), \
-             S; OP_V_POW_C(2)) \
-        SW_CASES(MERGED_OP_CONSTANT, \
-             S; OP_CONSTANT(2), \
-             S; OP_CONSTANT(2)) \
+             S_AVX; MM_OP_V_DIV_C(2)) \
         default: abort(); \
         } \
     } \
@@ -270,40 +266,31 @@ static void proc_##o (SEXP ans, double *vecp, int sw, int which, \
 
 PROC(MERGED_OP_NULL,      
     OP_NULL(1),
-    OP_NULL(1))
+    MM_OP_NULL(1))
 PROC(MERGED_OP_C_PLUS_V,  
     OP_C_PLUS_V(1),
-    OP_C_PLUS_V(1))
+    MM_OP_C_PLUS_V(1))
 PROC(MERGED_OP_ABS_V,     
     OP_ABS_V(1),
-    OP_ABS_V(1))
+    MM_OP_ABS_V(1))
 PROC(MERGED_OP_C_MINUS_V, 
     OP_C_MINUS_V(1),
-    OP_C_MINUS_V(1))
+    MM_OP_C_MINUS_V(1))
 PROC(MERGED_OP_V_MINUS_C, 
     OP_V_MINUS_C(1),
-    OP_V_MINUS_C(1))
+    MM_OP_V_MINUS_C(1))
 PROC(MERGED_OP_C_TIMES_V, 
     OP_C_TIMES_V(1),
-    OP_C_TIMES_V(1))
+    MM_OP_C_TIMES_V(1))
 PROC(MERGED_OP_V_SQUARED, 
     OP_V_SQUARED(1),
-    OP_V_SQUARED(1))
+    MM_OP_V_SQUARED(1))
 PROC(MERGED_OP_C_DIV_V,   
     OP_C_DIV_V(1),
-    OP_C_DIV_V(1))
+    MM_OP_C_DIV_V(1))
 PROC(MERGED_OP_V_DIV_C,   
     OP_V_DIV_C(1),
-    OP_V_DIV_C(1))
-PROC(MERGED_OP_C_POW_V,   
-    OP_C_POW_V(1),
-    OP_C_POW_V(1))
-PROC(MERGED_OP_V_POW_C,   
-    OP_V_POW_C(1),
-    OP_V_POW_C(1))
-PROC(MERGED_OP_CONSTANT,
-    OP_CONSTANT(1),
-    OP_CONSTANT(1))
+    MM_OP_V_DIV_C(1))
 
 static void (*proc_table[N_MERGED_OPS])() = {
     proc_MERGED_OP_NULL,
@@ -315,9 +302,6 @@ static void (*proc_table[N_MERGED_OPS])() = {
     proc_MERGED_OP_V_SQUARED,
     proc_MERGED_OP_C_DIV_V,
     proc_MERGED_OP_V_DIV_C,
-    proc_MERGED_OP_C_POW_V,
-    proc_MERGED_OP_V_POW_C,
-    proc_MERGED_OP_CONSTANT
 };
 
 void task_merged_arith_abs (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
@@ -334,27 +318,10 @@ void task_merged_arith_abs (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     int switch23;
     int op;
 
-#   define POW_SPECIAL(op,c) do { \
-        if (op == MERGED_OP_V_POW_C) { \
-            if (c == -1.0)     { op = MERGED_OP_C_DIV_V; c = 1.0; } \
-            else if (c == 0.0) { op = MERGED_OP_CONSTANT; c = 1.0; } \
-            else if (c == 1.0) { op = MERGED_OP_NULL; } \
-            else if (c == 2.0) { op = MERGED_OP_V_SQUARED; } \
-        } \
-    } while (0)
-
-    op = ops>>16;
-    POW_SPECIAL(op,data[2]);
-    switch1 = op;
+    switch1 = ops>>16;
     ops &= 0xffff;
 
-    op = ops >> 8;
-    POW_SPECIAL(op,data[1]);
-    switch23 = op * N_MERGED_OPS;
-
-    op = ops & 0xff;
-    POW_SPECIAL(op,data[0]);
-    switch23 += op;
+    switch23 = (ops >> 8) * N_MERGED_OPS + (ops & 0xff);
 
     /* Do the operations by calling a procedure indexed by the first
        operation, which will switch on the second and third operations. */
@@ -371,8 +338,9 @@ void task_merged_arith_abs (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
    by a flag in the operation code. */
 
 #define MERGED_ARITH_OP(proc,op,in1,in2) \
- ((proc)==task_unary_minus ? MERGED_OP_C_MINUS_V \
-          : LENGTH(in1)==1 ? 2*(op) - 1 : 2*(op))
+   ((proc)==task_unary_minus ? MERGED_OP_C_MINUS_V : \
+    op == POWOP ? MERGED_OP_V_SQUARED : \
+    LENGTH(in1)==1 ? 2*(op) - 1 : 2*(op))
 
 void helpers_merge_proc ( /* helpers_var_ptr out, */
   helpers_task_proc *proc_A, helpers_op_t op_A, 

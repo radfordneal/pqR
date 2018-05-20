@@ -1306,12 +1306,13 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         ans = alloc_or_reuse (x, y, REALSXP, n, local_assign1, local_assign2);
         task = task_real_arithmetic;
         flags = HELPERS_PIPE_IN0_OUT;
-        if (oper <= POWOP) { /* this is +, -, *, /, and ^ operators */
-            if (n > 1 && (nx == 1 || ny == 1)
+        if (n > 1 && (nx == 1 || ny == 1)
                   && TYPEOF(x) == REALSXP && TYPEOF(y) == REALSXP) {
+            if (oper < POWOP /* this is the +, -, *, and / operators */
+                  || oper == POWOP && ny == 1 && REAL(y)[0] == 2.0 /* square */)
                 flags = HELPERS_PIPE_IN0_OUT | HELPERS_MERGE_IN_OUT;
-            }
         }
+
         if (n>1) {
             if (nx==n) flags |= HELPERS_PIPE_IN1;
             if (ny==n) flags |= HELPERS_PIPE_IN2;
