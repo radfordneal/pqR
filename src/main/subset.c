@@ -1420,7 +1420,7 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op, SEXP x,
 
     R_Visible = TRUE;
 
-    if (seq == 0 && x != R_NilValue && sb1 != R_NoObject && subs==R_NilValue) {
+    if (seq == 0 && sb1 != R_NoObject && subs==R_NilValue) {
 
         if (sb2 == R_NoObject) {  /* handle simples cases with one subscript */
             SEXP attr = ATTRIB(x);

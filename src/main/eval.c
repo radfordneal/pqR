@@ -4598,7 +4598,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
        indexes with VARIANT_SCALAR_STACK (should be safe, since there
        will be no later call of eval). */
 
-    if (args != R_NilValue && CAR(args) != R_DotsSymbol) {
+    if (CAR(args) != R_DotsSymbol) {
         SEXP ixlist = CDR(args);
         SEXP array;
         PROTECT(array = EVALV_NC (CAR(args), rho, VARIANT_UNCLASS | 
@@ -4661,7 +4661,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 SET_MISSING (remargs, R_isMissing(CAR(ixlist),rho));
                 sb1 = R_NoObject;
             }
-            else if (sb1 != R_NoObject)
+            else
                 WAIT_UNTIL_COMPUTED(sb1);
             wait_until_arguments_computed(remargs);
             r = do_subset_dflt_seq (call, op, array, sb1, sb2,
