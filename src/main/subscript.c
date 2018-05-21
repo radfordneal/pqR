@@ -725,11 +725,24 @@ static SEXP stringSubscript (SEXP s, int ns, int nx, SEXP names,
                 SEXP sbe_i = STRING_ELT(s,i);
                 sub = 0;
                 if (!na_or_empty_string(sbe_i)) {
-                    for (j = 0; j < nnames; j++) {
-                        SEXP sbe_j = strg(names,j);
-                        if (!na_or_empty_string(sbe_j) && SEQL(sbe_i,sbe_j)) {
-                            sub = j + 1;
-                            break;
+                    if (strg == (STRING_ELT)) {  /* do specially for speed */
+                        for (j = 0; j < nnames; j++) {
+                            SEXP sbe_j = STRING_ELT(names,j);
+                            if (!na_or_empty_string(sbe_j) 
+                                  && SEQL(sbe_i,sbe_j)) {
+                                sub = j + 1;
+                                break;
+                            }
+                        }
+                    }
+                    else {
+                        for (j = 0; j < nnames; j++) {
+                            SEXP sbe_j = strg(names,j);
+                            if (!na_or_empty_string(sbe_j)
+                                  && SEQL(sbe_i,sbe_j)) {
+                                sub = j + 1;
+                                break;
+                            }
                         }
                     }
                 }
