@@ -1,9 +1,15 @@
 Miscellaneous performance and other improvements.
 
+Various mods to eval and core operators such as subset and subassign.
+
 Defines and uses Rf_set_elements_to_NA.
 
 Speeds up any and all.
 
+Speeds up min and max for reals.
+
 Expands scalar stack.
 
 Speeds up nchar.
+
+Other stuff.
