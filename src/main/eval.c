@@ -4966,7 +4966,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         subs = CDR(args);
 
         if (subs == R_NilValue) {
-            sb1 = evalv (sb1, rho, VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
+            sb1 = EVALV (sb1, rho, VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
                                                  VARIANT_MISSING_OK);
             if (R_variant_result) {
                 seq = R_variant_seq_spec;
@@ -4975,13 +4975,13 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             sb2 = R_NoObject;
         }
         else {
-            sb1 = evalv (sb1, rho, VARIANT_SCALAR_STACK_OK |
+            sb1 = EVALV (sb1, rho, VARIANT_SCALAR_STACK_OK |
                                    VARIANT_MISSING_OK);
             PROTECT(sb1);
             if (TAG(subs) != R_NilValue || CAR(subs) == R_DotsSymbol)
                 sb2 = R_NoObject;
             else {
-                sb2 = evalv (CAR(subs), rho, VARIANT_SCALAR_STACK_OK |
+                sb2 = EVALV (CAR(subs), rho, VARIANT_SCALAR_STACK_OK |
                                              VARIANT_MISSING_OK);
                 subs = CDR(subs);
             }
@@ -5022,7 +5022,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             goto dflt_seq;
         }
         else {
-            PROTECT(sb1 = evalv (CAR(subs), rho, VARIANT_SEQ |
+            PROTECT(sb1 = EVALV (CAR(subs), rho, VARIANT_SEQ |
                             VARIANT_SCALAR_STACK_OK | VARIANT_MISSING_OK));
             if (R_variant_result) {
                 seq = R_variant_seq_spec;
@@ -5061,7 +5061,7 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         SEXP x = R_fast_sub_var;
         SEXP sb1, sb2, subs;
 
-        sb1 = evalv (CAR(args), rho, VARIANT_SCALAR_STACK_OK | 
+        sb1 = EVALV (CAR(args), rho, VARIANT_SCALAR_STACK_OK | 
                                      VARIANT_MISSING_OK);
         subs = CDR(args);
 
@@ -5070,7 +5070,7 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                                || CAR(subs) == R_DotsSymbol)
             sb2 = R_NoObject;
         else {
-            sb2 = evalv (CAR(subs), rho, VARIANT_SCALAR_STACK_OK |
+            sb2 = EVALV (CAR(subs), rho, VARIANT_SCALAR_STACK_OK |
                                          VARIANT_MISSING_OK);
             subs = CDR(subs);
         }
@@ -5096,6 +5096,96 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     return do_subassign2_dflt_int 
             (call, CAR(ans), R_NoObject, R_NoObject, CDR(ans), rho, R_NoObject);
+}
+
+static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+{
+    SEXP into, what, value, ans, string, ncall;
+
+    SEXP schar = R_NilValue;
+    SEXP name = R_NilValue;
+    int argsevald = 0;
+
+    if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
+        value = R_fast_sub_replacement; /* may be on scalar stack */
+        into = R_fast_sub_var;
+        what = CAR(args);
+        if (args == R_NilValue || CDR(args) != R_NilValue)
+            errorcall (call, _("%d arguments passed to '%s' which requires %d"),
+                             length(args)+2, PRIMNAME(op), 3);
+    }
+    else {
+        into = CAR(args);
+        what = CADR(args);
+        value = CADDR(args);
+        if (CDDR(args) == R_NilValue || CDR(CDDR(args)) != R_NilValue)
+            errorcall (call, _("%d arguments passed to '%s' which requires %d"),
+                             length(args), PRIMNAME(op), 3);
+    }
+
+    if (TYPEOF(what) == PROMSXP)
+        what = PRCODE(what);
+
+    if (isSymbol(what)) {
+        name = what;
+        schar = PRINTNAME(name);
+    }
+    else if (isString(what) && LENGTH(what) > 0)
+        schar = STRING_ELT(what,0);
+    else
+        errorcall(call, _("invalid subscript type '%s'"), 
+                        type2char(TYPEOF(what)));
+
+    /* Handle the fast case, for which 'into' and 'value' have been evaluated,
+       and 'into' is not an object. */
+
+    if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
+        if (name == R_NilValue) name = install(translateChar(schar));
+        return R_subassign3_dflt (call, into, name, value);
+    }
+
+    /* Handle usual case with no "..." and not into an object quickly, without
+       overhead of allocation and calling of DispatchOrEval. */
+
+    if (into != R_DotsSymbol) {
+        /* Note: mostly called from do_set, w first arg an evaluated promise */
+        into = TYPEOF(into) == PROMSXP && PRVALUE(into) != R_UnboundValue
+                 ? PRVALUE(into) : eval (into, env);
+        if (isObject(into)) {
+            argsevald = -1;
+        } 
+        else {
+            PROTECT(into);
+            if (name == R_NilValue) name = install(translateChar(schar));
+            value = EVALV (value, env, 0);
+            UNPROTECT(1);
+            return R_subassign3_dflt (call, into, name, value);
+        }
+    }
+
+    /* First translate CADR of args into a string so that we can
+       pass it down to DispatchorEval and have it behave correctly.
+       We also change the call used, as in do_subset3, since the
+       destructive change in R-2.15.0 has this side effect. */
+
+    PROTECT(into);
+    string = allocVector(STRSXP,1);
+    SET_STRING_ELT (string, 0, schar);
+    PROTECT(args = CONS(into, CONS(string, CDDR(args))));
+    PROTECT(ncall = 
+      LCONS(CAR(call),CONS(CADR(call),CONS(string,CDR(CDDR(call))))));
+
+    if (DispatchOrEval (ncall, op, "$<-", args, env, &ans, 0, argsevald)) {
+        UNPROTECT(3);
+        R_Visible = TRUE;
+        return ans;
+    }
+
+    PROTECT(ans);
+    if (name == R_NilValue) name = install(translateChar(schar));
+    UNPROTECT(4);
+
+    return R_subassign3_dflt(call, CAR(ans), name, CADDR(ans));
 }
 
 
@@ -5173,6 +5263,7 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 
 {"[<-",		do_subassign,	0,	101000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 {"[[<-",	do_subassign2,	1,	101000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+{"$<-",		do_subassign3,	1,	101000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
 };

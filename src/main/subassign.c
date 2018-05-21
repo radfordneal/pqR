@@ -1867,101 +1867,7 @@ SEXP attribute_hidden do_subassign2_dflt_int
     END_PROTECT;
 }
 
-/* $<-(x, elt, val), and elt does not get evaluated it gets matched.
-   to get DispatchOrEval to work we need to first translate it
-   to a string. */
-
-static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
-{
-    SEXP into, what, value, ans, string, ncall;
-
-    SEXP schar = R_NilValue;
-    SEXP name = R_NilValue;
-    int argsevald = 0;
-
-    if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
-        value = R_fast_sub_replacement; /* may be on scalar stack */
-        into = R_fast_sub_var;
-        what = CAR(args);
-        if (args == R_NilValue || CDR(args) != R_NilValue)
-            errorcall (call, _("%d arguments passed to '%s' which requires %d"),
-                             length(args)+2, PRIMNAME(op), 3);
-    }
-    else {
-        into = CAR(args);
-        what = CADR(args);
-        value = CADDR(args);
-        if (CDDR(args) == R_NilValue || CDR(CDDR(args)) != R_NilValue)
-            errorcall (call, _("%d arguments passed to '%s' which requires %d"),
-                             length(args), PRIMNAME(op), 3);
-    }
-
-    if (TYPEOF(what) == PROMSXP)
-        what = PRCODE(what);
-
-    if (isSymbol(what)) {
-        name = what;
-        schar = PRINTNAME(name);
-    }
-    else if (isString(what) && LENGTH(what) > 0)
-        schar = STRING_ELT(what,0);
-    else
-        errorcall(call, _("invalid subscript type '%s'"), 
-                        type2char(TYPEOF(what)));
-
-    /* Handle the fast case, for which 'into' and 'value' have been evaluated,
-       and 'into' is not an object. */
-
-    if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
-        if (name == R_NilValue) name = install(translateChar(schar));
-        return R_subassign3_dflt (call, into, name, value);
-    }
-
-    /* Handle usual case with no "..." and not into an object quickly, without
-       overhead of allocation and calling of DispatchOrEval. */
-
-    if (into != R_DotsSymbol) {
-        /* Note: mostly called from do_set, w first arg an evaluated promise */
-        into = TYPEOF(into) == PROMSXP && PRVALUE(into) != R_UnboundValue
-                 ? PRVALUE(into) : eval (into, env);
-        if (isObject(into)) {
-            argsevald = -1;
-        } 
-        else {
-            PROTECT(into);
-            if (name == R_NilValue) name = install(translateChar(schar));
-            value = eval (value, env);
-            UNPROTECT(1);
-            return R_subassign3_dflt (call, into, name, value);
-        }
-    }
-
-    /* First translate CADR of args into a string so that we can
-       pass it down to DispatchorEval and have it behave correctly.
-       We also change the call used, as in do_subset3, since the
-       destructive change in R-2.15.0 has this side effect. */
-
-    PROTECT(into);
-    string = allocVector(STRSXP,1);
-    SET_STRING_ELT (string, 0, schar);
-    PROTECT(args = CONS(into, CONS(string, CDDR(args))));
-    PROTECT(ncall = 
-      LCONS(CAR(call),CONS(CADR(call),CONS(string,CDR(CDDR(call))))));
-
-    if (DispatchOrEval (ncall, op, "$<-", args, env, &ans, 0, argsevald)) {
-        UNPROTECT(3);
-        R_Visible = TRUE;
-        return ans;
-    }
-
-    PROTECT(ans);
-    if (name == R_NilValue) name = install(translateChar(schar));
-    UNPROTECT(4);
-
-    return R_subassign3_dflt(call, CAR(ans), name, CADDR(ans));
-}
-
-/* Also called directly from elsewhere.  Protects x and val; name should be
+/* Called from do_subassing3, and elsewhere.  Protects x and val; name should be
    a symbol and hence not needing protection.  Sets R_Visible to TRUE. */
 
 #define na_or_empty_string(strelt) ((strelt)==NA_STRING || CHAR((strelt))[0]==0)
@@ -2105,14 +2011,3 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
     if(S4) SET_S4_OBJECT(x);
     return x;
 }
-
-/* FUNTAB entries defined in this source file. See names.c for documentation. */
-
-attribute_hidden FUNTAB R_FunTab_subassign[] =
-{
-/* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
-
-{"$<-",		do_subassign3,	1,	101000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
-
-{NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
-};
