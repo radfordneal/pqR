@@ -795,12 +795,21 @@ static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
     table = match_transform (itable, env);
 
     /* Coerce to a common type; type == NILSXP is ok here.
-     * Note that above we coerce factors and "POSIXlt", only to character.
-     * Hence, coerce to character or to `higher' type
-     * (given that we have "Vector" or NULL) */
-    if(TYPEOF(x) >= STRSXP || TYPEOF(table) >= STRSXP)
+       Note that above we coerce factors and "POSIXlt", only to character.
+       Hence, coerce to character or to `higher' type
+       (given that we have "Vector" or NULL) 
+
+       Coerce a scalar real x that is actually an integer to integer
+       if the table is integer, avoiding needless coercion of a big table. */
+
+    if (TYPEOF(x) == REALSXP && TYPEOF(table) == INTSXP && LENGTH(x) == 1 
+                             && REAL(x)[0] > INT_MIN && REAL(x)[0] <= INT_MAX
+                             && ((int) REAL(x)[0]) == REAL(x)[0])
+        type = INTSXP;
+    else if (TYPEOF(x) >= STRSXP || TYPEOF(table) >= STRSXP)
 	type = STRSXP;
-    else type = TYPEOF(x) < TYPEOF(table) ? TYPEOF(table) : TYPEOF(x);
+    else 
+        type = TYPEOF(x) < TYPEOF(table) ? TYPEOF(table) : TYPEOF(x);
     x = coerceVector (x, type); 
     table = coerceVector (table, type);
     n = LENGTH(x);
