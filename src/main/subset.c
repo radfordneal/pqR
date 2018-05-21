@@ -1945,7 +1945,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
             }
         }
 
-        y = findVarInFrame (x, name);
+        y = findVarInFrame3 (x, name, 1);
         if (y == R_UnboundValue)
             y = R_NilValue;
         else {
