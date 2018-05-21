@@ -748,10 +748,15 @@ static SEXP match_transform(SEXP s, SEXP env)
     return s;
 }
 
-/* Main function used to implement 'match(x,table,nomatch,imcomp)' and
-   'x %in% table'.  The inop argument is 0 for match, 1 for %in% without
-   variant return, 2 for all(x %in% table), 3 for any(x %in% table),
-   and 4 for sum(x %in% table). */
+/* Main function used to implement 'match(x,table,nomatch,imcomp)', 
+   'x %in% table', and sometimes indexing by strings.  The inop argument is 
+
+       0 for match (and indexing)
+       1 for %in% without variant return 
+       2 for all(x %in% table)
+       3 for any(x %in% table)
+       4 for sum(x %in% table). 
+ */
 
 static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
                       int inop)
@@ -771,11 +776,15 @@ static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
         RETURN_SEXP_INSIDE_PROTECT (allocVector (inop ? LGLSXP : INTSXP, 0));
 
     if (length(itable) == 0) {
-        if (inop) {
+        if (inop == 4) /* sum %in% */
+            ans = ScalarIntegerMaybeConst(0);
+        else if (inop > 1) /* any or all %in% */
+            ans = ScalarLogicalMaybeConst(0);
+        else if (inop == 1) { /* %in% */
             ans = allocVector (LGLSXP, n);
             for (i = 0; i < n; i++) LOGICAL(ans)[i] = 0;
         }
-        else {
+        else { /* match */
             ans = allocVector (INTSXP, n);
             for (i = 0; i < n; i++) INTEGER(ans)[i] = nomatch;
         }
@@ -887,9 +896,9 @@ static SEXP matchfun (SEXP itable, SEXP ix, int nomatch, SEXP incomp, SEXP env,
         }}
         if (inop == 4) /* sum (x %in% y) */
             RETURN_SEXP_INSIDE_PROTECT (ScalarInteger(result!=0));
-        else if (inop) /* %in%, not variant */
+        else if (inop) /* %in%, perhaps any or all variant */
             RETURN_SEXP_INSIDE_PROTECT (ScalarLogicalMaybeConst(result!=0));
-        else
+        else /* match */
             RETURN_SEXP_INSIDE_PROTECT (ScalarInteger(result));
     }
 
@@ -1110,7 +1119,7 @@ static SEXP do_match(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     }
 
     int inop = PRIMVAL(op) == 1;  /* is this for %in% operator? */
-    if (inop == 0 && length(incomp) 
+    if (inop == 0 && incomp != R_NilValue && length(incomp) > 0
          && /* S has FALSE to mean empty */
             !(isLogical(incomp) && length(incomp)==1 && LOGICAL(incomp)[0]==0))
         return matchfun (CADR(args), CAR(args), nomatch, incomp, env, 0);
