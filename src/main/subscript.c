@@ -674,10 +674,7 @@ typedef SEXP (*StringEltGetter)(SEXP x, int i);
 */
 
 /* The original code (pre 2.0.0) used a ns x nx loop that was too
- * slow.  So now we hash.  Hashing is expensive on memory (up to 32nx
- * bytes) so it is only worth doing if ns * nx is large.  If nx is
- * large, then it will be too slow unless ns is very small.
- */
+   slow.  So now we hash.  Hashing is only worth doing if ns * nx is large. */
 
 #define na_or_empty_string(strelt) ((strelt)==NA_STRING || CHAR((strelt))[0]==0)
 
@@ -689,7 +686,7 @@ static SEXP stringSubscript (SEXP s, int ns, int nx, SEXP names,
     int canstretch = *stretch;
     /* product may overflow, so check factors as well. */
     Rboolean usehashing = names == R_NilValue ? FALSE :
-        ns > 1000 ? (nx > 2) : nx > 1000 ? (ns > 15) : (ns*nx > 15*nx + 2*ns);
+        ns > 1000 ? (nx > 3) : nx > 1000 ? (ns > 10) : (ns*nx > 10*nx + 3*ns);
     /* was: (ns > 1000 && nx) || (nx > 1000 && ns) || (ns * nx > 15*nx + ns) */
 
     PROTECT(s);
