@@ -1790,8 +1790,9 @@ SEXP attribute_hidden do_subset2_dflt_x (SEXP call, SEXP op,
 /* The $ subset operator is implemented in do_subset3 in eval.c.  It calls
    the routine below. */
 
-/* The field to extract is specified by either the "input" argument or
-   the "name" argument, or both.  Protects x.
+/* The field to extract is specified by either the "input" argument (a
+   CHARSXP or R_NilValue) or the "name" argument (a SYMSXP or R_NilValue),
+   or both.  Protects x.
 
    Sets R_Visible to TRUE. */
 
@@ -1867,10 +1868,28 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
 	int i, n, havematch, imatch=-1;
         SEXP str_elt;
         SEXP nlist = getAttrib(x, R_NamesSymbol);
+        if (nlist == R_NilValue)
+            goto not_found;
+	n = LENGTH(nlist);
+        if (input == R_NilValue) 
+            input = PRINTNAME(name);
+
+        /* Quick check for an exact match.  This has the effect of preferring a
+           match without translation to an earlier match after translation,
+           which may be good... */
+
+	for (i = 0 ; i < n ; i++) {
+            if (STRING_ELT(nlist,i) == input) {
+                y = VECTOR_ELT(x,i);
+                goto found_veclist;
+            }
+        }
+
+        /* Slower search, with possible translation and partial matching. */
+
         cinp = input==R_NilValue ? CHAR(PRINTNAME(name)) : translateChar(input);
-	n = length(nlist);
 	havematch = 0;
-	for (i = 0 ; i < n ; i = i + 1) {
+	for (i = 0 ; i < n ; i++) {
             str_elt = STRING_ELT (nlist, i);
             ctarg = translateChar(str_elt);
 	    mtch = ep_match_strings(ctarg, cinp);
@@ -1902,6 +1921,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
 	    goto found_veclist;
 	}
 
+      not_found:
         UNPROTECT(1);
 	return R_NilValue;
 
