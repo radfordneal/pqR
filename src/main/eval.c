@@ -2266,12 +2266,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         opval -= 10;
     }
 
-    /* Convert lhs string to a symbol. */
-
-    if ((TYPE_ETC(lhs) & (TYPE_ET_CETERA_TYPE | TYPE_ET_CETERA_VEC_DOTS_TR))
-          == STRSXP) {  /* scalar string */
-        lhs = install(translateChar(STRING_ELT(lhs, 0)));
-    }
+  redo:  /* come back here after converting string as lhs to symbol */
 
     if (TYPE_ETC(lhs) == SYMSXP) {  /* don't allow ... or ..1, ..2, etc. */
 
@@ -2293,19 +2288,18 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         /* We decide whether we'll ask the right hand side evalutation to do
            the assignment, for statements like v<-exp(v), v<-v+1, or v<-2*v. */
 
-        int local_assign = 0;
+        int varnt = VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK;
 
         if (TYPEOF(rhs) == LANGSXP) {
             if (CADR(rhs) == lhs) 
-                local_assign = VARIANT_LOCAL_ASSIGN1;
+                varnt |= VARIANT_LOCAL_ASSIGN1;
             else if (CADDR(rhs) == lhs)
-                local_assign = VARIANT_LOCAL_ASSIGN2;
+                varnt |= VARIANT_LOCAL_ASSIGN2;
         }
 
         /* Evaluate the right hand side, asking for it on the scalar stack. */
 
-        rhs = EVALV (rhs, rho, 
-                local_assign | VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK);
+        rhs = EVALV (rhs, rho, varnt);
 
         /* See if the assignment was done by the rhs operator. */
 
@@ -2372,11 +2366,17 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         set_var_in_frame (lhs, rhs, rho, TRUE, 3);
     }
 
-    else if (TYPEOF(lhs) == LANGSXP) {
+    else if (TYPE_ETC(lhs) == LANGSXP) {  /* other parts will be 0 */
 
         /* -- ASSIGNMENT TO A COMPLEX TARGET -- */
 
         rhs = Rf_set_subassign (call, lhs, rhs, rho, variant, opval);
+    }
+
+    else if (TYPEOF(lhs) == STRSXP && LENGTH(lhs) == 1) {
+        /* Convert lhs string to a symbol and try again */
+        lhs = install(translateChar(STRING_ELT(lhs, 0)));
+        goto redo;
     }
 
     else {
@@ -4573,35 +4573,57 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         typeplusy &= ~TYPE_ET_CETERA_HAS_ATTR;
     }
 
-        /* Test if args are scalar numeric, computation not pending, attr OK */
-    if ((typeplusx == REALSXP || typeplusx == INTSXP || typeplusx == LGLSXP)
-     && (typeplusy == REALSXP || typeplusy == INTSXP || typeplusy == LGLSXP)) {
+    double xv, yv;  /* the two operands */
 
-        double xv = typeplusx == REALSXP ? *REAL(x) 
-                  : *INTEGER(x) == NA_INTEGER ? NA_REAL : *INTEGER(x);
-        double yv = typeplusy == REALSXP ? *REAL(y) 
-                  : *INTEGER(y) == NA_INTEGER ? NA_REAL : *INTEGER(y);
-
-        int res;
-        if (MAY_BE_NAN2(xv,yv) && (ISNAN(xv) || ISNAN(yv)))
-            res = NA_LOGICAL;
-        else {
-            switch (PRIMVAL(op)) {
-            case EQOP: res = xv == yv; break;
-            case NEOP: res = xv != yv; break;
-            case LTOP: res = xv < yv; break;
-            case GTOP: res = xv > yv; break;
-            case LEOP: res = xv <= yv; break;
-            case GEOP: res = xv >= yv; break;
-            }
+    if (typeplusx == REALSXP) {
+        xv = *REAL(x);
+    }
+    else if (typeplusx == INTSXP || typeplusx == LGLSXP) {
+        if (*INTEGER(x) == NA_INTEGER) {
+            ans = R_ScalarLogicalNA;
+            goto ret;
         }
-        ans = ScalarLogicalMaybeConst (res);
+        xv = (double) *INTEGER(x);
     }
-    else {  /* the general case */
+    else
+        goto general;
 
-        ans = R_relop (call, op, x, y, obj&1, obj>>1, env, variant);
+    if (typeplusy == REALSXP) {
+        yv = *REAL(y);
     }
+    else if (typeplusy == INTSXP || typeplusy == LGLSXP) {
+        if (*INTEGER(y) == NA_INTEGER) {
+            ans = R_ScalarLogicalNA;
+            goto ret;
+        }
+        yv = (double) *INTEGER(y);
+    }
+    else
+        goto general;
 
+    /* Do the comparison on scalar reals (possibly converted from int) */
+
+    int res;
+
+    if (MAY_BE_NAN2(xv,yv) && (ISNAN(xv) || ISNAN(yv)))
+        res = NA_LOGICAL;
+    else {
+        switch (PRIMVAL(op)) {
+        case EQOP: res = xv == yv; break;
+        case NEOP: res = xv != yv; break;
+        case LTOP: res = xv < yv; break;
+        case GTOP: res = xv > yv; break;
+        case LEOP: res = xv <= yv; break;
+        case GEOP: res = xv >= yv; break;
+        }
+    }
+    ans = ScalarLogicalMaybeConst (res);
+    goto ret;
+
+  general:
+    ans = R_relop (call, op, x, y, obj&1, obj>>1, env, variant);
+
+  ret:
     UNPROTECT(3);
     return ans;
 }
@@ -4687,7 +4709,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             }
             else
                 WAIT_UNTIL_COMPUTED(sb1);
-            wait_until_arguments_computed(remargs);
+            if (remargs != R_NilValue) wait_until_arguments_computed(remargs);
             r = do_subset_dflt_seq (call, op, array, sb1, sb2,
                                     remargs, rho, variant, seq);
             R_scalar_stack = sv_scalar_stack;
