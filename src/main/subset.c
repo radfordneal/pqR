@@ -1181,7 +1181,7 @@ static int ExtractExactArg(SEXP *args_ptr)
 /* Returns simple (positive or negative) index, with no dim attribute, or 
    zero if not so simple. */
 
-static R_len_t simple_index (SEXP s)
+static inline R_len_t simple_index (SEXP s)
 {
     int type_etc = TYPE_ETC(s);
 
@@ -1200,14 +1200,16 @@ static R_len_t simple_index (SEXP s)
     return 0;
 
   real:
-    if (ISNAN(REAL(s)[0]) || REAL(s)[0]>R_LEN_T_MAX || REAL(s)[0]<-R_LEN_T_MAX)
+    if (REAL(s)[0]<=R_LEN_T_MAX && REAL(s)[0]>=-R_LEN_T_MAX) /* false if NaN */
+        return (R_len_t) REAL(s)[0];
+    else 
         return 0;
-    return (R_len_t) REAL(s)[0];
 
   integer:
-    if (INTEGER(s)[0] == NA_INTEGER)
+    if (INTEGER(s)[0] != NA_INTEGER)
+        return INTEGER(s)[0];
+    else
         return 0;
-    return INTEGER(s)[0];
 }
 
 
@@ -1235,10 +1237,11 @@ static SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
     n = LENGTH(x);
     ix = simple_index (s);
 
-    if (ix == 0 || ix > n || ix < -n)
-        return R_NilValue;
-
     if (ix>0) {
+
+        if (ix > n) 
+            return R_NilValue;
+
         R_len_t avail;
         ix -= 1;
         if (helpers_is_being_computed(x)) {
@@ -1267,7 +1270,11 @@ static SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
         default: abort();
         }
     }
-    else { /* ix < 0 */
+
+    else if (ix < 0) {
+
+        if (ix < -n) 
+            return R_NilValue;
 
         R_len_t ex;
 
@@ -1312,6 +1319,9 @@ static SEXP one_vector_subscript (SEXP x, SEXP s, int variant)
         UNPROTECT(1);
         return r;
     }
+
+    else  /* ix == 0 */
+        return R_NilValue;
 }
 
 
@@ -1425,10 +1435,11 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op, SEXP x,
         if (sb2 == R_NoObject) {  /* handle simples cases with one subscript */
             SEXP attr = ATTRIB(x);
             if (attr != R_NilValue) {
-                if (TAG(attr) == R_DimSymbol && CDR(attr) == R_NilValue) {
+                if (TAG(attr) == R_DimSymbol
+                      && CDR(attr) == R_NilValue) {   /* only has a dim attr */
                     SEXP dim = CAR(attr);
-                    if (TYPEOF(dim) == INTSXP && LENGTH(dim) == 1)
-                        attr = R_NilValue;  /* only a dim attribute, 1D */
+                    if (TYPE_ETC(dim) == INTSXP)            /* is a 1D array */
+                        attr = R_NilValue;                  /*  - can ignore */
                 }
             }
             if (attr == R_NilValue) {
@@ -1440,10 +1451,10 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op, SEXP x,
 
         else {  /* handle simple cases with two subscripts*/
             SEXP attr = ATTRIB(x);
-            if (TAG(attr) == R_DimSymbol && CDR(attr) == R_NilValue) {
+            if (TAG(attr) == R_DimSymbol 
+                  && CDR(attr) == R_NilValue) {        /* only has a dim attr */
                 SEXP dim = CAR(attr);
-                if (TYPEOF(dim) == INTSXP && LENGTH(dim) == 2) {
-                    /* x is a matrix */
+                if (TYPEOF(dim) == INTSXP && LENGTH(dim) == 2) {  /* a matrix */
                     SEXP r = two_matrix_subscripts (x, dim, sb1, sb2, variant);
                     if (r != R_NilValue)
                         return r;
