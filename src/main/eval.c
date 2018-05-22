@@ -4365,125 +4365,147 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         typeplus2 &= ~TYPE_ET_CETERA_HAS_ATTR;
     }
 
-      /* Test if arg1 is scalar numeric, computation not pending, attr OK */
-    if (typeplus1 == REALSXP || typeplus1 == INTSXP || typeplus1 == LGLSXP) {
+    if (typeplus2 == NILSXP) { /* Unary operation */
 
-        if (typeplus2 == NILSXP) { /* Unary operation */
-            if (typeplus1 == REALSXP) {
-                double val = opcode == PLUSOP ? *REAL(arg1) : -*REAL(arg1);
-                ans = NAMEDCNT_EQ_0(arg1) ? (*REAL(arg1) = val, arg1)
-                    : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_REAL(val)
-                    :   ScalarReal(val);
-            }
-            else { /* INTSXP or LGLSXP */
-                int val = *INTEGER(arg1) == NA_INTEGER ? NA_INTEGER
-                        : opcode == PLUSOP ? *INTEGER(arg1) : -*INTEGER(arg1);
-                ans = NAMEDCNT_EQ_0(arg1) ? (*INTEGER(arg1) = val, arg1)
-                    : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_INTEGER(val)
-                    :   ScalarInteger(val);
-            }
-            goto ret;
-        }
+        /* Test if arg1 is scalar numeric, computation not pending, attr OK */
 
-          /* Test if arg2 is scalar numeric, computation not pending, attr OK */
-        if (typeplus2 == REALSXP || typeplus2 == INTSXP || typeplus2 == LGLSXP){
+        if (typeplus1 == REALSXP) {
 
-            double a1, a2;  /* the two operands, if at least one is real */
+            double val = opcode == PLUSOP ? *REAL(arg1) : -*REAL(arg1);
 
-            if ((typeplus1<<8) + typeplus2 == (REALSXP<<8) + REALSXP) {
-                a1 = *REAL(arg1);
-                a2 = *REAL(arg2);
-            }
-            else if (typeplus1 == REALSXP) {
-                a1 = *REAL(arg1);
-                a2 = *INTEGER(arg2) == NA_INTEGER ? NA_REAL 
-                                                  : (double) *INTEGER(arg2);
-            }
-            else if (typeplus2 == REALSXP) {
-                a1 = *INTEGER(arg1) == NA_INTEGER ? NA_REAL 
-                                                  : (double) *INTEGER(arg1);
-                a2 = *REAL(arg2);
-            }
-            else { /* neither operand is real */
-
-                if (opcode==PLUSOP || opcode==MINUSOP || opcode==TIMESOP) {
-    
-                    int a1 = *INTEGER(arg1), a2 = *INTEGER(arg2);
-                    int_fast64_t val;
-    
-                    if (a1==NA_INTEGER || a2==NA_INTEGER) {
-                        ans = R_ScalarIntegerNA;
-                        goto ret;
-                    }
-
-                    val = 
-                      opcode==PLUSOP  ? (int_fast64_t)a1 + (int_fast64_t)a2 :
-                      opcode==MINUSOP ? (int_fast64_t)a1 - (int_fast64_t)a2 :
-                                        (int_fast64_t)a1 * (int_fast64_t)a2;
-
-                    if (val < R_INT_MIN || val > R_INT_MAX) {
-                        val = NA_INTEGER;
-                        warningcall (call, 
-                                     _("NAs produced by integer overflow"));
-                    }
-    
-                    int ival = (int) val;
-
-                    ans = NAMEDCNT_EQ_0(arg2) ? (*INTEGER(arg2) = ival, arg2)
-                        : NAMEDCNT_EQ_0(arg1) ? (*INTEGER(arg1) = ival, arg1)
-                        : CAN_USE_SCALAR_STACK(variant) 
-                           ? PUSH_SCALAR_INTEGER(ival) : ScalarInteger(ival);
-  
-                    goto ret;
-                }
-                else
-                    goto general;
-            }
-
-            /* Do operation on scalar reals. */
-            
-            double val;
-
-            switch (opcode) {
-            case PLUSOP:
-                val = a1 + a2;
-                break;
-            case MINUSOP:
-                val = a1 - a2;
-                break;
-            case TIMESOP:
-                val = a1 * a2;
-                break;
-            case DIVOP:
-                val = a1 / a2;
-                break;
-            case POWOP:
-                if (a2 == 2.0)       val = a1 * a1;
-                else if (a2 == 1.0)  val = a1;
-                else if (a2 == 0.0)  val = 1.0;
-                else if (a2 == -1.0) val = 1.0 / a1;
-                else                 val = R_pow(a1,a2);
-                break;
-            case MODOP:
-                val = myfmod(a1,a2);
-                break;
-            case IDIVOP:
-                val = myfloor(a1,a2);
-                break;
-            default: abort();
-            }
-
-            ans = NAMEDCNT_EQ_0(arg2) && typeplus2 == REALSXP ?
-                    (*REAL(arg2) = val, arg2)
-                : NAMEDCNT_EQ_0(arg1) && typeplus1 == REALSXP ?
-                    (*REAL(arg1) = val, arg1)
-                : CAN_USE_SCALAR_STACK(variant) ? 
-                    PUSH_SCALAR_REAL(val)
-                :   ScalarReal(val);
+            ans = NAMEDCNT_EQ_0(arg1) ?           (*REAL(arg1) = val, arg1)
+                : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_REAL(val)
+                :                                 ScalarReal(val);
 
             goto ret;
         }
+
+        if (typeplus1 == INTSXP || typeplus1 == LGLSXP) {
+
+            int val = *INTEGER(arg1) == NA_INTEGER ? NA_INTEGER
+                    : opcode == PLUSOP ? *INTEGER(arg1) : -*INTEGER(arg1);
+
+            ans = NAMEDCNT_EQ_0(arg1) ?           (*INTEGER(arg1) = val, arg1)
+                : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_INTEGER(val)
+                :                                 ScalarInteger(val);
+
+            goto ret;
+        }
+
+        goto general;
     }
+
+    double a1, a2;  /* the two operands, if real */
+    int i1, i2;     /* the two operands, if integer */
+
+    if (typeplus2 == REALSXP) {
+        a2 = *REAL(arg2);
+        if (typeplus1 == REALSXP) {
+            a1 = *REAL(arg1);
+        }
+        else if (typeplus1 == INTSXP || typeplus1 == LGLSXP) {
+            i1 = *INTEGER(arg1);
+            if (i1 == NA_INTEGER) {
+                ans = R_ScalarRealNA;
+                goto ret;
+            }
+            a1 = (double) i1;
+        }
+        else
+            goto general;
+    }
+    else if (typeplus2 == INTSXP || typeplus2 == LGLSXP) {
+        i2 = *INTEGER(arg2);
+        if (typeplus1 == REALSXP) {
+            if (i2 == NA_INTEGER) {
+                ans = R_ScalarRealNA;
+                goto ret;
+            }
+            a1 = *REAL(arg1);
+            a2 = (double) i2;
+        }
+        else if (typeplus1 == INTSXP || typeplus1 == LGLSXP) {
+
+            /* neither operand is real */
+
+            i1 = *INTEGER(arg1);
+            if (i1 == NA_INTEGER || i2 == NA_INTEGER) {
+                ans = R_ScalarIntegerNA;
+                goto ret;
+            }
+
+            int_fast64_t val;
+
+            if (opcode==PLUSOP)
+                val = (int_fast64_t)i1 + (int_fast64_t)i2;
+            else if (opcode == MINUSOP)
+                val = (int_fast64_t)i1 - (int_fast64_t)i2;
+            else if (opcode == TIMESOP)
+                val = (int_fast64_t)i1 * (int_fast64_t)i2;
+            else
+                goto general;
+
+            if (val < R_INT_MIN || val > R_INT_MAX) {
+                val = NA_INTEGER;
+                warningcall (call, _("NAs produced by integer overflow"));
+            }
+
+            int ival = (int) val;
+
+            ans = NAMEDCNT_EQ_0(arg2) && typeplus2 == INTSXP ? 
+                                                   (*INTEGER(arg2) = ival, arg2)
+                : NAMEDCNT_EQ_0(arg1) && typeplus1 == INTSXP ?
+                                                   (*INTEGER(arg1) = ival, arg1)
+                : CAN_USE_SCALAR_STACK(variant) ?  PUSH_SCALAR_INTEGER(ival) 
+                :                                  ScalarInteger(ival);
+  
+            goto ret;
+        }
+        else
+            goto general;
+    }
+    else
+        goto general;
+
+    /* Do the operation on scalar reals. */
+    
+    double val;
+
+    switch (opcode) {
+    case PLUSOP:
+        val = a1 + a2;
+        break;
+    case MINUSOP:
+        val = a1 - a2;
+        break;
+    case TIMESOP:
+        val = a1 * a2;
+        break;
+    case DIVOP:
+        val = a1 / a2;
+        break;
+    case POWOP:
+        if (a2 == 2.0)       val = a1 * a1;
+        else if (a2 == 1.0)  val = a1;
+        else if (a2 == 0.0)  val = 1.0;
+        else if (a2 == -1.0) val = 1.0 / a1;
+        else                 val = R_pow(a1,a2);
+        break;
+    case MODOP:
+        val = myfmod(a1,a2);
+        break;
+    case IDIVOP:
+        val = myfloor(a1,a2);
+        break;
+    default: abort();
+    }
+
+    ans = NAMEDCNT_EQ_0(arg2) && typeplus2==REALSXP ? (*REAL(arg2) = val, arg2)
+        : NAMEDCNT_EQ_0(arg1) && typeplus1==REALSXP ? (*REAL(arg1) = val, arg1)
+        : CAN_USE_SCALAR_STACK(variant) ?             PUSH_SCALAR_REAL(val)
+        :                                             ScalarReal(val);
+
+    goto ret;
 
     /* Handle the general case. */
 
