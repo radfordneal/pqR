@@ -4424,8 +4424,6 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             else { /* not both INTSXP or LGLSXP, so at least one is REALSXP */
 
                 double a1, a2, val;
-    
-                WAIT_UNTIL_COMPUTED_2(arg1,arg2);
 
                 if (typeplus1 != REALSXP) {
                     a1 = *INTEGER(arg1) == NA_INTEGER ? NA_REAL 
