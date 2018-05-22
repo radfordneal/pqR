@@ -4351,18 +4351,24 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     R_scalar_stack = sv_scalar_stack;
 
-    /* We quickly do real arithmetic and integer plus/minus/times on scalars 
-       with no attributes (as will be the case for scalar stack values).  We
-       don't bother trying local assignment, since returning the result on the
-       scalar stack should be about as fast. */
+    /* We quickly do real arithmetic and integer plus/minus/times on
+       scalars with no attributes (as will be the case for scalar
+       stack values), or attributes that will be ignored.  We don't
+       bother trying local assignment, since returning the result on
+       the scalar stack should be about as fast. */
 
-    int typeplus1 = TYPE_ETC(arg1) & ~TYPE_ET_CETERA_HAS_ATTR;
+    int typeplus1 = TYPE_ETC(arg1);
+    int typeplus2 = TYPE_ETC(arg2);
 
-        /* Test if arg1 is scalar numeric, computation not pending, attr OK */
-    if ((typeplus1 == REALSXP || typeplus1 == INTSXP || typeplus1 == LGLSXP)
-          && NO_ATTRIBUTES_OK (variant, arg1)) {
+    if (variant & VARIANT_ANY_ATTR) {
+        typeplus1 &= ~TYPE_ET_CETERA_HAS_ATTR;
+        typeplus2 &= ~TYPE_ET_CETERA_HAS_ATTR;
+    }
 
-        if (CDR(argsevald) == R_NilValue) { /* Unary operation */
+      /* Test if arg1 is scalar numeric, computation not pending, attr OK */
+    if (typeplus1 == REALSXP || typeplus1 == INTSXP || typeplus1 == LGLSXP) {
+
+        if (typeplus2 == NILSXP) { /* Unary operation */
             if (typeplus1 == REALSXP) {
                 double val = opcode == PLUSOP ? *REAL(arg1) : -*REAL(arg1);
                 ans = NAMEDCNT_EQ_0(arg1) ? (*REAL(arg1) = val, arg1)
@@ -4379,13 +4385,10 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             goto ret;
         }
 
-        int typeplus2 = TYPE_ETC(arg2) & ~TYPE_ET_CETERA_HAS_ATTR;
+          /* Test if arg2 is scalar numeric, computation not pending, attr OK */
+        if (typeplus2 == REALSXP || typeplus2 == INTSXP || typeplus2 == LGLSXP){
 
-           /* Test if arg2 is scalar numeric, computation not pending, attr OK*/
-        if ((typeplus2 == REALSXP || typeplus2 == INTSXP || typeplus2 == LGLSXP)
-              && NO_ATTRIBUTES_OK (variant, arg2)) {
-
-            double a1, a2;  /* the two operands, if real */
+            double a1, a2;  /* the two operands, if at least one is real */
 
             if ((typeplus1<<8) + typeplus2 == (REALSXP<<8) + REALSXP) {
                 a1 = *REAL(arg1);
