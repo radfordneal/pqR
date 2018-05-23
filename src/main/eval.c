@@ -2396,24 +2396,6 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                                         int variant, int opval)
 {
-    SEXP var, varval, newval, rhsprom, lhsprom, e, fn;
-
-    /* Find the variable ultimately assigned to, and its depth.
-       The depth is 1 for a variable within one replacement function
-       (eg, in names(a) <- ...). */
-
-    int depth = 1;
-    for (var = CADR(lhs); TYPEOF(var) != SYMSXP; var = CADR(var)) {
-        if (TYPEOF(var) != LANGSXP) {
-            if (TYPEOF(var) == STRSXP && LENGTH(var) == 1) {
-                var = install (CHAR (STRING_ELT(var,0)));
-                break;
-            }
-            errorcall (call, _("invalid assignment left-hand side"));
-        }
-        depth += 1;
-    }
-
     /* Find the assignment function symbol for the depth 1 assignment, and
        see if we maybe (tentatively) will be using the fast interface. */
 
@@ -2441,6 +2423,24 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
     if ( ! (variant & VARIANT_NULL))
         INC_NAMEDCNT(rhs);
+
+    SEXP var, varval, newval, rhsprom, lhsprom, e, fn;
+
+    /* Find the variable ultimately assigned to, and its depth.
+       The depth is 1 for a variable within one replacement function
+       (eg, in names(a) <- ...). */
+
+    int depth = 1;
+    for (var = CADR(lhs); TYPEOF(var) != SYMSXP; var = CADR(var)) {
+        if (TYPEOF(var) != LANGSXP) {
+            if (TYPEOF(var) == STRSXP && LENGTH(var) == 1) {
+                var = install (CHAR (STRING_ELT(var,0)));
+                break;
+            }
+            errorcall (call, _("invalid assignment left-hand side"));
+        }
+        depth += 1;
+    }
 
     /* Get the value of the variable assigned to, and ensure it is local
        (unless this is the <<- operator).  Save and protect the binding 
