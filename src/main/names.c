@@ -471,7 +471,7 @@ static void SetupSubsetSubassign(void)
     for (i = 0; i < SUBASSIGN_TBL_SIZE; i++) {
         char *n = subset_subassign_table[i];
         subset_sym = install(n);
-        copy_2_strings(sa,30,n,"<-");
+        copy_2_strings (sa, sizeof sa, n, "<-");
         subassign_sym = install(sa);
         if (0)  /* can enable for debugging */
             REprintf ("Subset_subassign: %x %x\n",

@@ -2063,15 +2063,18 @@ static SEXP do_return(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 }
 
 
-#define ASSIGNBUFSIZ 32
-static SEXP installAssignFcnName(SEXP fun)
+#define FIND_SUBASSIGN_FUNC(fun)  \
+    SUBASSIGN_FOLLOWS(fun) ? (SEXP) (((SYMSEXP)(fun)) + 1) \
+                           : find_subassign_func(fun)
+
+static attribute_noinline SEXP find_subassign_func(SEXP fun)
 {
     if (TYPE_ETC(fun) == SYMSXP) {  /* don't allow ... or ..1, ..2, etc. */
 
         if (SUBASSIGN_FOLLOWS(fun))
             return (SEXP) (((SYMSEXP)fun) + 1);
 
-        char buf[ASSIGNBUFSIZ];
+        char buf[40];
         const char *fname = CHAR(PRINTNAME(fun));
 
         if (!copy_2_strings (buf, sizeof buf, fname, "<-"))
@@ -2084,7 +2087,7 @@ static SEXP installAssignFcnName(SEXP fun)
 
     if (TYPEOF(fun)==LANGSXP && length(fun)==3 && TYPEOF(CADDR(fun))==SYMSXP
       && (CAR(fun)==R_DoubleColonSymbol || CAR(fun)==R_TripleColonSymbol))
-        return lang3 (CAR(fun), CADR(fun), installAssignFcnName(CADDR(fun)));
+        return lang3 (CAR(fun), CADR(fun), find_subassign_func(CADDR(fun)));
 
     error(_("invalid function in complex assignment"));
 }
@@ -2414,7 +2417,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
     /* Find the assignment function symbol for the depth 1 assignment, and
        see if we maybe (tentatively) will be using the fast interface. */
 
-    SEXP assgnfcn = installAssignFcnName(CAR(lhs));
+    SEXP assgnfcn = FIND_SUBASSIGN_FUNC(CAR(lhs));
 
     int maybe_fast = assgnfcn == R_SubAssignSymbol ||
                      assgnfcn == R_DollarAssignSymbol ||
@@ -2685,7 +2688,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
                 PROTECT (rhsprom = mkValuePROMISE (e, newval));
                 PROTECT (lhsprom = mkValuePROMISE (s[d+1].expr, s[d+1].value));
-                assgnfcn = installAssignFcnName(CAR(s[d].expr));
+                assgnfcn = FIND_SUBASSIGN_FUNC(CAR(s[d].expr));
                 b = cons_with_tag (rhsprom, R_NilValue, R_ValueSymbol);
                 if (s[d].store_args == R_NoObject)
                     s[d].store_args = CONS (CADDR(s[d].expr), b);
