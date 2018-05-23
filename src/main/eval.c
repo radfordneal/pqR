@@ -2419,9 +2419,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
     SEXP assgnfcn = FIND_SUBASSIGN_FUNC(CAR(lhs));
 
-    int maybe_fast = assgnfcn == R_SubAssignSymbol ||
-                     assgnfcn == R_DollarAssignSymbol ||
-                     assgnfcn == R_SubSubAssignSymbol;
+    int maybe_fast = MAYBE_FAST_SUBASSIGN(assgnfcn);
 
     /* We evaluate the right hand side now, asking for it on the
        scalar stack if we (tentatively) will be using the fast
@@ -2502,7 +2500,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             UNPROTECT(3);
         }
         else {
-            if (POP_IF_TOP_OF_STACK(rhs)) 
+            if (POP_IF_TOP_OF_STACK(rhs))  /* might be on stack if maybe_fast */
                 rhs = DUP_STACK_VALUE(rhs);
             PROTECT (rhsprom = mkValuePROMISE(rhs_uneval, rhs));
             PROTECT (lhsprom = mkValuePROMISE(CADR(lhs), varval));
@@ -2646,7 +2644,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             e = R_NilValue;
         }
         else {
-            if (POP_IF_TOP_OF_STACK(rhs)) 
+            if (POP_IF_TOP_OF_STACK(rhs))  /* might be on stack if maybe_fast */
                 rhs = DUP_STACK_VALUE(rhs);
             PROTECT(rhsprom = mkValuePROMISE(rhs_uneval, rhs));
             PROTECT (lhsprom = mkValuePROMISE(s[1].expr, s[1].value));
@@ -5298,7 +5296,8 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 {".el.methods",	do_subset2,	0,	101000,	-1,	{PP_SUBSET,  PREC_SUBSET, 0}},
 {"$",		do_subset3,	3,	101000,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
 
-/* Subassign operators. */
+/* Subassign operators.  The 100000 part of the flag is for the fast subassign
+   interface; keep in sync with SetupSubsetSubassign. */
 
 {"[<-",		do_subassign,	0,	101000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 {"[[<-",	do_subassign2,	1,	101000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},

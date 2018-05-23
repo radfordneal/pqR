@@ -167,6 +167,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
             a = 1;
 #       endif
         if (SUBASSIGN_FOLLOWS(v)) { if (a) Rprintf(","); Rprintf("SAF"); a = 1; }
+        if (MAYBE_FAST_SUBASSIGN(v)) { if (a) Rprintf(","); Rprintf("MF"); a = 1; }
     }    
     if (TYPEOF(v) == ENVSXP) {
         if (a) Rprintf(","); 

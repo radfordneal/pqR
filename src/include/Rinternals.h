@@ -235,7 +235,8 @@ struct sxpinfo_struct {
 
     unsigned int in_use: 1;   /* whether contents may be in use by a helper */
 
-    unsigned int debug : 1;       /* Function/Environment: is being debugged */
+    unsigned int debug : 1;       /* Function/Environment: is being debugged
+                                     Symbol: maybe use fast subassign */
     unsigned int rstep_pname : 1; /* Function: is to be debugged just once
                                      Symbol: subassign counterpart follows it
                                      CHARSXP: is used as a symbol's printname */
@@ -829,6 +830,8 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 #define SUBASSIGN_FOLLOWS(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
 #define SET_SUBASSIGN_FOLLOWS(x) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname = 1)
+#define MAYBE_FAST_SUBASSIGN(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.debug)
+#define SET_MAYBE_FAST_SUBASSIGN(x) (UPTR_FROM_SEXP(x)->sxpinfo.debug = 1)
 
   /* For SET_OBJECT and SET_TYPEOF, don't set if new value is the current value,
      to avoid crashing on an innocuous write to a constant that may be stored

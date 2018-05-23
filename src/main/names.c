@@ -453,13 +453,16 @@ static void SymbolShortcuts(void)
    all symbols go into one segment (64 chunks, up to 4 chunks per symbol).
 
    It is preferrable for the subassign functions here to not be "internal"
-   to avoid possible expansion in the size of the internal table. */
+   to avoid possible expansion in the size of the internal table. 
+
+   Also sets the MAYBE_FAST_SUBASSIGN flag for [<-, [[<-, and $<-; keep in
+   sync with flags for the primitives. */
 
 #define SUBASSIGN_TBL_SIZE 8   /* Maximum is 8 */
    
 static char *subset_subassign_table[SUBASSIGN_TBL_SIZE] = {
-  "[",      "[[",     "$",    "@",
-  "attr",   "class",  "dim",  "names"
+  "[",  "[[",  "$",    /* first three marked as maybe using fast interface */
+  "@",  "attr",  "class",  "dim",  "names"
 };
 
 static void SetupSubsetSubassign(void)
@@ -473,6 +476,8 @@ static void SetupSubsetSubassign(void)
         subset_sym = install(n);
         copy_2_strings (sa, sizeof sa, n, "<-");
         subassign_sym = install(sa);
+        if (i < 3) 
+            SET_MAYBE_FAST_SUBASSIGN(subassign_sym);
         if (0)  /* can enable for debugging */
             REprintf ("Subset_subassign: %x %x\n",
                       CPTR_FROM_SEXP(subset_sym),
@@ -546,7 +551,7 @@ static void SetupBuiltins(void)
         }
     }
 
-    if (1) /* can enable for debugging */
+    if (0) /* can enable for debugging */
         REprintf("first_internal: %d, max_internal: %d\n",
                  (int) R_first_internal, (int) R_max_internal);
 
