@@ -445,14 +445,21 @@ static void SymbolShortcuts(void)
    the subset version in its sxpinfo to indicate this.
 
    This scheme relies on this function being called when the symbol
-   table is first created, so the symbols will be allocated sequentially,
-   rather than some possibly having been already created (hence out of
-   sequence). */
+   table is first created, so the symbols will be allocated
+   sequentially, within one segment, rather than some possibly having
+   been already created (hence out of sequence). 
+
+   The table should have at most eight symbols, in order to ensure that
+   all symbols go into one segment (64 chunks, up to 4 chunks per symbol).
+
+   It is preferrable for the subassign functions here to not be "internal"
+   to avoid possible expansion in the size of the internal table. */
+
+#define SUBASSIGN_TBL_SIZE 8   /* Maximum is 8 */
    
-static char *subset_subassign_table[] = {
-  "[",         "[[",     "$",        "attr",   "attributes", "class", 
-  "colnames",  "dim",    "dimnames", "length", "names",      "rownames",
-  "row.names", "substr", "substring", 0
+static char *subset_subassign_table[SUBASSIGN_TBL_SIZE] = {
+  "[",      "[[",     "$",    "@",
+  "attr",   "class",  "dim",  "names"
 };
 
 static void SetupSubsetSubassign(void)
@@ -461,7 +468,7 @@ static void SetupSubsetSubassign(void)
     char sa[30];
     int i;
 
-    for (i = 0; subset_subassign_table[i] != 0; i++) {
+    for (i = 0; i < SUBASSIGN_TBL_SIZE; i++) {
         char *n = subset_subassign_table[i];
         subset_sym = install(n);
         copy_2_strings(sa,30,n,"<-");
@@ -539,7 +546,7 @@ static void SetupBuiltins(void)
         }
     }
 
-    if (0) /* can enable for debugging */
+    if (1) /* can enable for debugging */
         REprintf("first_internal: %d, max_internal: %d\n",
                  (int) R_first_internal, (int) R_max_internal);
 
