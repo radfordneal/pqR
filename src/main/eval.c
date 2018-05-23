@@ -2066,20 +2066,10 @@ static SEXP do_return(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 #define ASSIGNBUFSIZ 32
 static SEXP installAssignFcnName(SEXP fun)
 {
-    /* Handle "[", "[[", and "$" specially for speed. */
+    if (TYPE_ETC(fun) == SYMSXP) {  /* don't allow ... or ..1, ..2, etc. */
 
-    if (fun == R_BracketSymbol)
-       return R_SubAssignSymbol;
-
-    if (fun == R_Bracket2Symbol)
-        return R_SubSubAssignSymbol;
-
-    if (fun == R_DollarSymbol)
-        return R_DollarAssignSymbol;
-
-    /* The general case for a symbol */
-
-    if (TYPEOF(fun) == SYMSXP) {
+        if (SUBASSIGN_FOLLOWS(fun))
+            return (SEXP) (((SYMSEXP)fun) + 1);
 
         char buf[ASSIGNBUFSIZ];
         const char *fname = CHAR(PRINTNAME(fun));
