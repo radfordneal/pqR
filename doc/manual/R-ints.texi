@@ -351,10 +351,11 @@ struct sxpinfo_struct @{
     unsigned int in_use: 1;   /* whether contents may be in use by a helper */
 
     unsigned int debug : 1;       /* Function/Environment: is being debugged */
-    unsigned int rstep_pname : 1; /* Function: is to be debugged just once */
-                                  /* CHARSXP: is used as a symbol's printname */
-    unsigned int base_sym_env : 1;  /* Symbol: has base binding in global cache,
-                                       Envir: R_BaseEnv or R_BaseNamespace*/
+    unsigned int rstep_pname : 1; /* Function: is to be debugged just once
+                                     Symbol: subassign counterpart follows it
+                                     CHARSXP: is used as a symbol's printname */
+    unsigned int base_sym_env : 1;/* Symbol: has base binding in global cache,
+                                     Envir: R_BaseEnv or R_BaseNamespace*/
 
     unsigned int nmcnt : 3;   /* Count of "names" referring to object */
 

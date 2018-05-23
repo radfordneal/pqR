@@ -166,6 +166,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
             Rprintf("tv%u",((SYMSEXP)UPTR_FROM_SEXP(v))->sym_tunecnt2); 
             a = 1;
 #       endif
+        if (SUBASSIGN_FOLLOWS(v)) { if (a) Rprintf(","); Rprintf("SAF"); a = 1; }
     }    
     if (TYPEOF(v) == ENVSXP) {
         if (a) Rprintf(","); 

@@ -236,10 +236,11 @@ struct sxpinfo_struct {
     unsigned int in_use: 1;   /* whether contents may be in use by a helper */
 
     unsigned int debug : 1;       /* Function/Environment: is being debugged */
-    unsigned int rstep_pname : 1; /* Function: is to be debugged just once */
-                                  /* CHARSXP: is used as a symbol's printname */
-    unsigned int base_sym_env : 1;  /* Symbol: has base binding in global cache,
-                                       Envir: R_BaseEnv or R_BaseNamespace*/
+    unsigned int rstep_pname : 1; /* Function: is to be debugged just once
+                                     Symbol: subassign counterpart follows it
+                                     CHARSXP: is used as a symbol's printname */
+    unsigned int base_sym_env : 1;/* Symbol: has base binding in global cache,
+                                     Envir: R_BaseEnv or R_BaseNamespace*/
 
     unsigned int nmcnt : 3;   /* Count of "names" referring to object */
 
@@ -825,6 +826,9 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define RTRACE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                                                    & TYPE_ET_CETERA_VEC_DOTS_TR)
 #define LEVELS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)
+
+#define SUBASSIGN_FOLLOWS(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
+#define SET_SUBASSIGN_FOLLOWS(x) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname = 1)
 
   /* For SET_OBJECT and SET_TYPEOF, don't set if new value is the current value,
      to avoid crashing on an innocuous write to a constant that may be stored
