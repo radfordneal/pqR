@@ -1434,15 +1434,8 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op, SEXP x,
 
         if (sb2 == R_NoObject) {  /* handle simples cases with one subscript */
             SEXP attr = ATTRIB(x);
-            if (attr != R_NilValue) {
-                if (TAG(attr) == R_DimSymbol
-                      && CDR(attr) == R_NilValue) {   /* only has a dim attr */
-                    SEXP dim = CAR(attr);
-                    if (TYPE_ETC(dim) == INTSXP)            /* is a 1D array */
-                        attr = R_NilValue;                  /*  - can ignore */
-                }
-            }
-            if (attr == R_NilValue) {
+            if (attr == R_NilValue         /* no attributes except maybe dim */
+                 || (TAG(attr) == R_DimSymbol && CDR(attr) == R_NilValue)) {
                 SEXP r = one_vector_subscript (x, sb1, variant);
                 if (r != R_NilValue)
                     return r;
