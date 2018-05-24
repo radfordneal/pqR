@@ -1362,6 +1362,76 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
     BEGIN_PROTECT0 ();
     ALSO_PROTECT5 (x, sb1, sb2, subs, y);
 
+    WAIT_UNTIL_COMPUTED(x);
+
+    /* Do simple cases quickly. */
+
+    if (!seq && sb1 != R_NoObject && subs == R_NilValue 
+             && isVector(x) && !IS_S4_OBJECT(x) && !NAMEDCNT_GT_1(x)
+             && y != R_NoObject && TYPEOF(y) == TYPEOF(x) && LENGTH(y) == 1) {
+        R_len_t ix1 = 0;
+        if (TYPE_ETC(sb1) == INTSXP) {        /* scalar integer index */
+            if (*INTEGER(sb1) <= LENGTH(x))
+                ix1 = *INTEGER(sb1);
+        }
+        else if (TYPE_ETC(sb1) == REALSXP) {  /* scalar real index */
+            if (*REAL(sb1) >= 1 && *REAL(sb1) <= LENGTH(x))  /* false if NaN */
+                ix1 = (R_len_t) *REAL(sb1);
+        }
+        R_len_t ix;
+        if (sb2 == R_NoObject)
+            ix = ix1;
+        else {
+            ix = 0;
+            if (ix1 > 0) {
+                SEXP dim = getDimAttrib(x);
+                if (TYPEOF(dim) == INTSXP && LENGTH(dim) == 2
+                                          && ix1 <= INTEGER(dim)[0]) {
+                    R_len_t ix2 = 0;
+                    if (TYPE_ETC(sb2) == INTSXP) {    /* scalar integer index */
+                        if (*INTEGER(sb2) <= INTEGER(dim)[1])
+                            ix2 = *INTEGER(sb2);
+                    }
+                    else if (TYPE_ETC(sb2) == REALSXP) { /* scalar real index */
+                        if (*REAL(sb2) >= 1 && *REAL(sb2) <= INTEGER(dim)[1])
+                            ix2 = (R_len_t) *REAL(sb2);
+                    }
+                    if (ix2 > 0)
+                        ix = ix1 + INTEGER(dim)[0] * (ix2-1);
+                }
+            }
+        }
+        if (ix > 0) {
+            ix -= 1;
+            switch (TYPEOF(x)) {
+                case RAWSXP: 
+                    RAW(x)[ix] = *RAW(y);
+                    break;
+                case LGLSXP: 
+                    LOGICAL(x)[ix] = *LOGICAL(y);
+                    break;
+                case INTSXP: 
+                    INTEGER(x)[ix] = *INTEGER(y);
+                    break;
+                case REALSXP: 
+                    REAL(x)[ix] = *REAL(y);
+                    break;
+                case CPLXSXP: 
+                    COMPLEX(x)[ix] = *COMPLEX(y);
+                    break;
+                case STRSXP:
+                    SET_STRING_ELT (x, ix, STRING_ELT(y,0));
+                    break;
+                case VECSXP: case EXPRSXP:
+                    DEC_NAMEDCNT (VECTOR_ELT (x, ix));
+                    SET_VECTOR_ELEMENT_FROM_VECTOR (x, ix, y, 0);
+                    break;
+            }
+            SET_NAMEDCNT_0(x);
+            RETURN_SEXP_INSIDE_PROTECT(x);
+        }
+    }
+
     if (y == R_NoObject)
         SubAssignArgs (&subs, &y, call);
     else if (ON_SCALAR_STACK(y) && !isVectorAtomic(x))
@@ -1383,8 +1453,6 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
 
     Rboolean S4 = IS_S4_OBJECT(x);
     int oldtype = NILSXP;
-
-    WAIT_UNTIL_COMPUTED(x);
 
     if (isVector(x)) {
         if (LENGTH(x) == 0) {
@@ -1430,48 +1498,6 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
             }
         }
         if (sb1 != R_NoObject) {
-            /* Do simple scalar cases quickly, where x is a vector, sb1 is
-               scalar real or integer, y matches type of x and is scalar,
-               and subscript is not out of bounds. */
-            int type_plus_sb1 = TYPE_ETC(sb1) & ~TYPE_ET_CETERA_HAS_ATTR;
-            if ((type_plus_sb1 == INTSXP || type_plus_sb1 == REALSXP)
-                  && (TYPE_ETC(y) & ~TYPE_ET_CETERA_HAS_ATTR) == TYPEOF(x)
-                  && isVector(x)) {
-                double sub;
-                if (type_plus_sb1 == INTSXP)
-                    sub = *INTEGER(sb1) == NA_INTEGER ? 0 : *INTEGER(sb1);
-                else
-                    sub = ISNAN(*REAL(sb1)) ? 0 : *REAL(sb1);
-                if (sub >= 1 && sub <= LENGTH(x)) {
-                    int isub = (int) sub - 1;
-                    switch (TYPEOF(x)) {
-                        case RAWSXP: 
-                            RAW(x)[isub] = *RAW(y);
-                            break;
-                        case LGLSXP: 
-                            LOGICAL(x)[isub] = *LOGICAL(y);
-                            break;
-                        case INTSXP: 
-                            INTEGER(x)[isub] = *INTEGER(y);
-                            break;
-                        case REALSXP: 
-                            REAL(x)[isub] = *REAL(y);
-                            break;
-                        case CPLXSXP: 
-                            COMPLEX(x)[isub] = *COMPLEX(y);
-                            break;
-                        case STRSXP:
-                            SET_STRING_ELT (x, isub, STRING_ELT(y,0));
-                            break;
-                        case VECSXP: case EXPRSXP:
-                            DEC_NAMEDCNT (VECTOR_ELT (x, isub));
-                            SET_VECTOR_ELEMENT_FROM_VECTOR (x, isub, y, 0);
-                            break;
-                    }
-                    goto out;
-                }
-            }
-            /* Otherwise, the general case. */
             x = VectorAssign (call, x, sb1, y);
         }
     }
