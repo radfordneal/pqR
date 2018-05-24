@@ -1277,7 +1277,6 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define FrameClassFix		Rf_FrameClassFix
 # define framedepth		Rf_framedepth
 # define frameSubscript		Rf_frameSubscript
-# define get1index		Rf_get1index
 # define getVar			Rf_getVar
 # define getVarInFrame		Rf_getVarInFrame
 # define InitArithmetic		Rf_InitArithmetic

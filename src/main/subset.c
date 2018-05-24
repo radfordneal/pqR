@@ -86,8 +86,7 @@ static int integerOneIndex(int i, int len, SEXP call)
     return(indx);
 }
 
-int attribute_hidden
-get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
+int get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 {
 /* Get a single index for the [[ operator.
    Check that only one index is being selected.
