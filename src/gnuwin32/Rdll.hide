@@ -372,10 +372,8 @@
  Rf_lfastchoose
  Rf_lgammacor
  Rf_lookupCachedSymbol
- Rf_makeSubscript
  Rf_makeUnclassed
  Rf_markKnown
- Rf_mat2indsub
  Rf_matchArg
  Rf_matchArgExact
  Rf_matchArgs
@@ -408,7 +406,6 @@
  Rf_setenvsymbits
  Rf_ssort
  Rf_stirlerr
- Rf_strmat2intmat
  Rf_substituteList
  Rf_translateChar_nontrivial
  Rf_ucstomb

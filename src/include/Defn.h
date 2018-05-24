@@ -1311,9 +1311,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define LogicalFromReal	Rf_LogicalFromReal
 # define LogicalFromString	Rf_LogicalFromString
 # define mainloop		Rf_mainloop
-# define makeSubscript		Rf_makeSubscript
 # define markKnown		Rf_markKnown
-# define mat2indsub		Rf_mat2indsub
 # define matchArg		Rf_matchArg
 # define matchArgExact		Rf_matchArgExact
 # define matchArgs		Rf_matchArgs
@@ -1364,7 +1362,6 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define StringFromReal		Rf_StringFromReal
 # define strIsASCII		Rf_strIsASCII
 # define StrToInternal		Rf_StrToInternal
-# define strmat2intmat		Rf_strmat2intmat
 # define substituteList		Rf_substituteList
 # define too_deep_error		Rf_too_deep_error
 # define tsConform		Rf_tsConform
@@ -1467,7 +1464,6 @@ void copyMostAttribNoTs(SEXP, SEXP);
 void CustomPrintValue(SEXP, SEXP);
 void DataFrameClass(SEXP);
 SEXP ddfindVar(SEXP, SEXP);
-SEXP Rf_DecideVectorOrRange (int64_t, int *, int *, SEXP);
 SEXP deparse1(SEXP,Rboolean,int);
 SEXP deparse1line(SEXP,Rboolean);
 SEXP deparse1s(SEXP call);
@@ -1525,10 +1521,8 @@ void R_NORETURN jump_to_toplevel(void);
 void KillAllDevices(void);
 SEXP levelsgets(SEXP, SEXP);
 void mainloop(void);
-SEXP makeSubscript(SEXP, SEXP, int *, int *, SEXP, int);
 SEXP Rf_makeUnclassed(SEXP);
 SEXP markKnown(const char *, SEXP);
-SEXP mat2indsub(SEXP, SEXP, SEXP);
 SEXP matchArg(SEXP, SEXP*);
 SEXP matchArgExact(SEXP, SEXP*);
 SEXP matchArgs(SEXP, char **, int, SEXP, SEXP);
@@ -1594,7 +1588,6 @@ void sortVector(SEXP, Rboolean);
 void SrcrefPrompt(const char *, SEXP);
 void ssort(SEXP*,int);
 int StrToInternal(const char *);
-SEXP strmat2intmat(SEXP, SEXP, SEXP);
 SEXP substituteList(SEXP, SEXP);
 void R_trace_call(SEXP, SEXP);
 int Rf_translated_Seql (SEXP, SEXP);

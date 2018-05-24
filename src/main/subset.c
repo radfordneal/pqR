@@ -222,7 +222,7 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 /* A zero anywhere in a row will cause a zero in the same */
 /* position in the result. */
 
-SEXP attribute_hidden mat2indsub(SEXP dims, SEXP s, SEXP call)
+static SEXP mat2indsub(SEXP dims, SEXP s, SEXP call)
 {
     int tdim, j, i, k, nrs = nrows(s);
     SEXP rvec;
@@ -265,14 +265,13 @@ SEXP attribute_hidden mat2indsub(SEXP dims, SEXP s, SEXP call)
     return (rvec);
 }
 
-/*
-Special Matrix Subscripting: For the case x[i] where x is an n-way
-array and i is a character matrix with n columns, this code converts i
-to an integer matrix by matching against the dimnames of x. NA values
-in any row of i propagate to the result.  Unmatched entries result in
-a subscript out of bounds error.  */
+/* Special Matrix Subscripting: For the case x[i] where x is an n-way
+   array and i is a character matrix with n columns, this code
+   converts i to an integer matrix by matching against the dimnames of
+   x. NA values in any row of i propagate to the result.  Unmatched
+   entries result in a subscript out of bounds error.  */
 
-SEXP attribute_hidden strmat2intmat(SEXP s, SEXP dnamelist, SEXP call)
+static SEXP strmat2intmat(SEXP s, SEXP dnamelist, SEXP call)
 {
     /* XXX: assumes all args are protected */
     int nr = nrows(s), i, j, v, idx;
@@ -941,8 +940,8 @@ SEXP arraySubscript (int dim, SEXP s, SEXP dims, AttrGetter dng,
    The arguments x and s are protected within this function.
 */
 
-SEXP attribute_hidden makeSubscript (SEXP x, SEXP s, int *stretch, int *hasna,
-                                     SEXP call, int used_to_replace)
+static SEXP makeSubscript (SEXP x, SEXP s, int *stretch, int *hasna,
+                           SEXP call, int used_to_replace)
 {
     int nx, ns;
     SEXP ans, tmp;
@@ -1101,8 +1100,7 @@ SEXP attribute_hidden Rf_VectorFromRange (int rng0, int rng1)
    convert the range to a vector of negative integer subscripts that
    is returned. */
 
-SEXP attribute_hidden Rf_DecideVectorOrRange(int64_t seq, int *start, int *end,
-                                             SEXP call)
+static SEXP Rf_DecideVectorOrRange(int64_t seq, int *start, int *end, SEXP call)
 {
     int from, len;
 
