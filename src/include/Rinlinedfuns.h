@@ -688,5 +688,4 @@ INLINE_FUN const char *Rf_translateChar (SEXP x)
     return TYPE_ETC(x) == CHARSXP ? CHAR(x) : Rf_translateChar_nontrivial(x);
 }
 
-
 #endif /* R_INLINES_H_ */

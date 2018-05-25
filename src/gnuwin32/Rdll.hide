@@ -375,7 +375,7 @@
  Rf_markKnown
  Rf_matchArg
  Rf_matchArgExact
- Rf_matchArgs
+ Rf_matchArgs_nontrivial
  Rf_matchPar
  Rf_mbtoucs
  Rf_mkCLOSXP

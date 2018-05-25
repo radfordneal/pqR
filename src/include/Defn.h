@@ -1313,7 +1313,6 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define markKnown		Rf_markKnown
 # define matchArg		Rf_matchArg
 # define matchArgExact		Rf_matchArgExact
-# define matchArgs		Rf_matchArgs
 # define matchPar		Rf_matchPar
 # define Mbrtowc		Rf_mbrtowc
 # define mbtoucs		Rf_mbtoucs
@@ -1524,7 +1523,6 @@ SEXP Rf_makeUnclassed(SEXP);
 SEXP markKnown(const char *, SEXP);
 SEXP matchArg(SEXP, SEXP*);
 SEXP matchArgExact(SEXP, SEXP*);
-SEXP matchArgs(SEXP, char **, int, SEXP, SEXP);
 SEXP matchPar(const char *, SEXP*);
 SEXP mkCLOSXP(SEXP, SEXP, SEXP);
 SEXP mkFalse(void);
@@ -2018,7 +2016,120 @@ static inline int SEQL(SEXP a, SEXP b)
        i2 = (i2+1 == n2 ? 0 : i2+1), ++i1, i = i1)
 
 
+/* MatchArgs - trivial cases done here, non-trivial part in match.c. */
+
+static inline SEXP matchArgs
+  (SEXP formals, char **formal_names, int arg_count, SEXP supplied, SEXP call)
+{
+    int n_supplied;
+
+    /* Count formal arguments (already known if formal_names given). */
+
+    if (formal_names==NULL) {
+        SEXP a = CDR(formals);
+        arg_count = 1;
+        if (a == R_NilValue) {  /* Note:  CDR(R_NilValue) == R_NilValue */
+            if (formals == R_NilValue)
+                arg_count = 0;
+        }
+        else {
+            do { arg_count += 1; a = CDR(a); } while (a != R_NilValue);
+        }
+    }
+
+    if (supplied == R_NilValue) {
+
+        /* Handle the case of zero supplied arguments and zero formal arguments
+           specially, for speed. */
+
+        if (arg_count == 0) {
+            return R_NilValue;
+        }
+        n_supplied = 0;
+    }
+    else if (CDR(supplied) == R_NilValue) {
+        if (arg_count == 1 && CAR(supplied) != R_DotsSymbol
+                           && TAG(supplied) == R_NilValue) {
+
+            /* Handle the case of a single unnamed actual argument (not ...)
+               and a single formal argument (not ...) specially, for speed. */
+
+            SEXP a = CAR(supplied);
+            int missing = a == R_MissingArg || a == R_MissingUnder;
+            SEXP r;
+
+            if (formal_names != NULL) {
+                if (strcmp(formal_names[0],"...") != 0) {
+                    r = CONS (a, R_NilValue);
+                    SET_MISSING (r, missing);
+                    return r;
+                }
+            }
+            else {
+                if (TAG(formals) != R_DotsSymbol) {
+                    r = cons_with_tag (a, R_NilValue, TAG(formals));
+                    SET_MISSING (r, missing);
+                    return r;
+                }
+            }
+        }
+        n_supplied = 1;
+    }
+    else if (CDDR(supplied) == R_NilValue) {
+        if (arg_count == 2 && CAR(supplied) != R_DotsSymbol
+                           && TAG(supplied) == R_NilValue
+                           && CADR(supplied) != R_DotsSymbol
+                           && TAG(CDR(supplied)) == R_NilValue) {
+
+            /* Handle the case of two unnamed actual arguments (not ...) and
+               two formal arguments (not ...) specially, for speed. */
+
+            SEXP a1 = CAR(supplied), a2 = CADR(supplied);
+            int missing1 = a1 == R_MissingArg || a1 == R_MissingUnder;
+            int missing2 = a2 == R_MissingArg || a2 == R_MissingUnder;
+            SEXP r;
+
+            if (formal_names != NULL) {
+                if (strcmp(formal_names[0],"...") != 0
+                 && strcmp(formal_names[1],"...") != 0) {
+                    r = CONS (a2, R_NilValue);
+                    SET_MISSING (r, missing2);
+                    r = CONS (a1, r);
+                    SET_MISSING (r, missing1);
+                    return r;
+                }
+            }
+            else {
+                if (TAG(formals) != R_DotsSymbol
+                 && TAG(CDR(formals))!=R_DotsSymbol) {
+                    r = cons_with_tag (a2, R_NilValue, TAG(CDR(formals)));
+                    SET_MISSING (r, missing2);
+                    r = cons_with_tag (a1, r, TAG(formals));
+                    SET_MISSING (r, missing1);
+                    return r;
+                }
+            }
+        }
+        n_supplied = 2;
+    }
+    else {
+
+        /* If more than two arguments supplied, count them and call the
+           general procedure below. */
+
+        SEXP a = CDDR(supplied);
+        n_supplied = 2;
+        do { n_supplied += 1; a = CDR(a); } while (a != R_NilValue);
+    }
+
+    extern SEXP Rf_matchArgs_nontrivial(SEXP, char **, int, SEXP, int, SEXP);
+
+    return Rf_matchArgs_nontrivial (formals, formal_names, arg_count, 
+                                    supplied, n_supplied, call);
+}
+
 #endif /* DEFN_H_ */
+
 /*
  *- Local Variables:
  *- page-delimiter: "^/\\*---"

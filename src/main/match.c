@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -284,7 +284,8 @@ SEXP attribute_hidden matchArgExact(SEXP tag, SEXP * list)
 
 
 /* Match the supplied arguments with the formals, and return a list of the 
-   matched or missing arguments.
+   matched or missing arguments.  This is the non-trivial part, with the
+   top-level matchArgs function that checks for simple cases being inlined.
 
    Two ways of calling matchArgs are supported, differing in how the names
    of formal arguments are specified.  
@@ -316,110 +317,12 @@ SEXP attribute_hidden matchArgExact(SEXP tag, SEXP * list)
 /* MULTIPLE_MATCHES was added by RI in Jan 2005 but never activated:
    code in R-2-8-branch */
 
-SEXP attribute_hidden matchArgs (
-    SEXP formals, char **formal_names, int arg_count, SEXP supplied, SEXP call)
+SEXP attribute_hidden Rf_matchArgs_nontrivial 
+      (SEXP formals, char **formal_names, int arg_count, 
+       SEXP supplied, int n_supplied, SEXP call)
 {
     SEXP b, last_positional, last_potential_match, actuals_list;
-    int arg_i, dots, n_supplied, n_matched;
-
-    /* Count formal arguments (already known if formal_names given). */
-
-    if (formal_names==NULL) {
-        SEXP a = CDR(formals);
-        arg_count = 1;
-        if (a == R_NilValue) {  /* Note:  CDR(R_NilValue) == R_NilValue */
-            if (formals == R_NilValue)
-                arg_count = 0;
-        }
-        else {
-            do { arg_count += 1; a = CDR(a); } while (a != R_NilValue);
-        }
-    }
-
-    if (supplied == R_NilValue) {
-
-        /* Handle the case of zero supplied arguments and zero formal arguments
-           specially, for speed. */
-
-        if (arg_count == 0) {
-            return R_NilValue;
-        }
-        n_supplied = 0;
-    }
-    else if (CDR(supplied) == R_NilValue) {
-        if (arg_count == 1 && CAR(supplied) != R_DotsSymbol 
-                           && TAG(supplied) == R_NilValue) {
-
-            /* Handle the case of a single unnamed actual argument (not ...)
-               and a single formal argument (not ...) specially, for speed. */
-     
-            SEXP a = CAR(supplied);
-            int missing = a == R_MissingArg || a == R_MissingUnder;
-            SEXP r;
-
-            if (formal_names != NULL) {
-                if (strcmp(formal_names[0],"...") != 0) {
-                    r = CONS (a, R_NilValue);
-                    SET_MISSING (r, missing);
-                    return r;
-                }
-            }
-            else {
-                if (TAG(formals) != R_DotsSymbol) {
-                    r = cons_with_tag (a, R_NilValue, TAG(formals));
-                    SET_MISSING (r, missing);
-                    return r;
-                }
-            }
-        }
-        n_supplied = 1;
-    }
-    else if (CDDR(supplied) == R_NilValue) {
-        if (arg_count == 2 && CAR(supplied) != R_DotsSymbol
-                           && TAG(supplied) == R_NilValue
-                           && CADR(supplied) != R_DotsSymbol
-                           && TAG(CDR(supplied)) == R_NilValue) {
-
-            /* Handle the case of two unnamed actual arguments (not ...) and
-               two formal arguments (not ...) specially, for speed. */
-
-            SEXP a1 = CAR(supplied), a2 = CADR(supplied);
-            int missing1 = a1 == R_MissingArg || a1 == R_MissingUnder;
-            int missing2 = a2 == R_MissingArg || a2 == R_MissingUnder;
-            SEXP r;
-
-            if (formal_names != NULL) {
-                if (strcmp(formal_names[0],"...") != 0
-                 && strcmp(formal_names[1],"...") != 0) {
-                    r = CONS (a2, R_NilValue);
-                    SET_MISSING (r, missing2);
-                    r = CONS (a1, r);
-                    SET_MISSING (r, missing1);
-                    return r;
-                }
-            }
-            else {
-                if (TAG(formals) != R_DotsSymbol
-                 && TAG(CDR(formals))!=R_DotsSymbol) {
-                    r = cons_with_tag (a2, R_NilValue, TAG(CDR(formals)));
-                    SET_MISSING (r, missing2);
-                    r = cons_with_tag (a1, r, TAG(formals));
-                    SET_MISSING (r, missing1);
-                    return r;
-                }
-            }
-        }
-        n_supplied = 2;
-    }
-    else {
-
-        /* If more than two arguments supplied, count them and use the
-           general code below. */
-
-        SEXP a = CDDR(supplied);
-        n_supplied = 2;
-        do { n_supplied += 1; a = CDR(a); } while (a != R_NilValue);
-    }
+    int arg_i, dots, n_matched;
 
 #if 0  /* Enable for debugging output */
     if (installed_already("DEBUG.MATCHARGS") != R_NoObject) {
