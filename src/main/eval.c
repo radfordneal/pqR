@@ -1268,27 +1268,33 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
        environment layout.  We can live with it for now since it only
        happens immediately after the environment creation.  LT */
 
+    R_symbits_t bits = 0;
+
     f = formals;
     a = actuals;
-    while (f != R_NilValue) {
+    while (a != R_NilValue) {
+        SEXP t = TAG(a);
+        bits |= SYMBITS(t);
         if (MISSING(a)) {
             if (CAR(f) != R_MissingArg) {
                 SETCAR(a, mkPROMISE(CAR(f), newrho));
                 SET_MISSING(a, 2);
             }
         }
-        else {
-            SEXP t = TAG(f);
-            if (TYPE_ETC(t) == SYMSXP /* not ... */ ) {
+        else { 
+            /* optimize assuming non-missing arguments are usually referenced */
+            if (t != R_DotsSymbol) {
                 LASTSYMENV(t) = SEXP32_FROM_SEXP(newrho);
                 LASTSYMBINDING(t) = a;
             }
         }
-	f = CDR(f);
 	a = CDR(a);
+	f = CDR(f);
     }
 
-    set_symbits_in_env (newrho);
+    SET_ENVSYMBITS (newrho, bits);
+
+    /* set_symbits_in_env (newrho); */  /* now done in loop above */
 
     /*  Fix up any extras that were supplied by usemethod. */
 
