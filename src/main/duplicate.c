@@ -142,7 +142,7 @@ static SEXP duplicate1(SEXP s)
 	return s;
     case CLOSXP:
 	PROTECT(s);
-	if (R_jit_enabled > 1 && TYPEOF(BODY(s)) != BCODESXP) {
+	if (0 && R_jit_enabled > 1 && TYPEOF(BODY(s)) != BCODESXP) {
 	    int old_enabled = R_jit_enabled;
 	    SEXP new_s;
 	    R_jit_enabled = 0;

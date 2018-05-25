@@ -1235,7 +1235,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     body = BODY(op);
     savedrho = CLOENV(op);
 
-    if (R_jit_enabled > 0 && TYPEOF(body) != BCODESXP) {
+    if (0 && R_jit_enabled > 0 && TYPEOF(body) != BCODESXP) {
 	int old_enabled = R_jit_enabled;
 	SEXP newop;
 	R_jit_enabled = 0;
@@ -1397,7 +1397,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     body = BODY(op);
 
-    if (R_jit_enabled > 0 && TYPEOF(body) != BCODESXP) {
+    if (0 && R_jit_enabled > 0 && TYPEOF(body) != BCODESXP) {
 	int old_enabled = R_jit_enabled;
 	SEXP newop;
 	R_jit_enabled = 0;
