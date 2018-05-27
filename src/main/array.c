@@ -2018,7 +2018,7 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (lendat == 0)
         set_elements_to_NA_or_NULL (ans, 0, nans);
     else
-        copy_elements_recycled (ans, 0, 1, vals, nans);
+        copy_elements_recycled (ans, 0, vals, nans);
 
     ans = dimgets(ans, dims);
     if (!isNull(dimnames) && length(dimnames) > 0)

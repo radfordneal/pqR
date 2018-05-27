@@ -1785,7 +1785,7 @@ void Rf_copyMostAttrib(SEXP, SEXP);
 void Rf_copyVector(SEXP, SEXP);
 void Rf_copy_elements(SEXP, int, int, SEXP, int, int, int);
 int Rf_copy_elements_coerced(SEXP, int, int, SEXP, int, int, int);
-void Rf_copy_elements_recycled(SEXP, int, int, SEXP, int);
+void Rf_copy_elements_recycled(SEXP, int, SEXP, int);
 void Rf_copy_transposed(SEXP, SEXP, int, int);
 int Rf_countContexts(int, int);
 SEXP Rf_CreateTag(SEXP);
