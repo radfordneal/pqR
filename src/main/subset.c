@@ -643,22 +643,22 @@ static SEXP integerSubscript (SEXP s, int ns, int nx, int *stretch, int *hasna,
             break;
     }
 
+    *hasna = i>0;
+
     if (i==ns) /* all NA, or ns==0 */
         return s;
-
-    *hasna = i>0;
 
     min = ii;
     max = ii;
     for (i = i+1; i < ns; i++) {
         ii = INTEGER(s)[i];
-        if (ii == NA_INTEGER) {
-            if (!*hasna) *hasna = i+1;
-        }
-        else {
-            if (ii > max)  /* checked first since more common than ii < min */
-                max = ii;
-            else if (ii < min)
+        if (ii > max)  /* checked first since more common than ii < min */
+            max = ii;
+        else if (ii < min) {  /* includes the possibility that ii is NA */
+            if (ii == NA_INTEGER) {
+                if (!*hasna) *hasna = i+1;
+            }
+            else
                 min = ii;
         }
     }
@@ -3315,7 +3315,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     double ry;
 
     if (x==R_NilValue && y==R_NilValue)
-	return R_NilValue;
+        return R_NilValue;
 
     PROTECT(s);
 
@@ -3326,9 +3326,9 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
         SEXP dim = getDimAttrib(x);
         if (ncols(s) == LENGTH(dim)) {
             if (isString(s)) {
-		SEXP dnames = PROTECT(GetArrayDimnames(x));
-		s = strmat2intmat(s, dnames, call);
-		UNPROTECT(2); /* dnames, s */
+                SEXP dnames = PROTECT(GetArrayDimnames(x));
+                s = strmat2intmat(s, dnames, call);
+                UNPROTECT(2); /* dnames, s */
                 PROTECT(s);
             }
             if (isInteger(s) || isReal(s)) {
@@ -3351,8 +3351,8 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     /* accept elements from the RHS. */
     SubassignTypeFix(&x, &y, stretch, 1, call);
     if (n == 0) {
-	UNPROTECT(2);
-	return x;
+        UNPROTECT(2);
+        return x;
     }
 
     PROTECT(x);
@@ -3369,10 +3369,10 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     }
 
     if ((TYPEOF(x) != VECSXP && TYPEOF(x) != EXPRSXP) || y != R_NilValue) {
-	if (oldn > 0 && ny == 0)
-	    errorcall(call,_("replacement has length zero"));
-	if (oldn > 0 && n % ny)
-	    warningcall(call,
+        if (oldn > 0 && ny == 0)
+            errorcall(call,_("replacement has length zero"));
+        if (oldn > 0 && n % ny)
+            warningcall(call,
              _("number of items to replace is not a multiple of replacement length"));
     }
 
@@ -3382,9 +3382,9 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     /* objects.  A full duplication is wasteful. */
 
     if (x == y)
-	PROTECT(y = duplicate(y));
+        PROTECT(y = duplicate(y));
     else
-	PROTECT(y);
+        PROTECT(y);
 
     /* Do the actual assignment... Note that assignments to string vectors
        from non-string vectors and from raw vectors to non-raw vectors are
@@ -3396,90 +3396,99 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     case (LGLSXP<<5) + LGLSXP:
     case (INTSXP<<5) + LGLSXP:
     case (INTSXP<<5) + INTSXP:
-	for (i = 0; i < n; i++) {
+        for (i = 0; i < n; i++) {
             ii = INTEGER(indx)[i] - 1;
-	    INTEGER(x)[ii] = INTEGER(y)[k];
-	    if (++k == ny) k = 0;
+            INTEGER(x)[ii] = INTEGER(y)[k];
+            if (++k == ny) k = 0;
         }
-	break;
+        break;
 
     case (REALSXP<<5) + LGLSXP:
     case (REALSXP<<5) + INTSXP:
-	for (i = 0; i < n; i++) {
+        for (i = 0; i < n; i++) {
             ii = INTEGER(indx)[i] - 1;
-	    iy = INTEGER(y)[k];
-	    if (iy == NA_INTEGER)
-		REAL(x)[ii] = NA_REAL;
-	    else
-		REAL(x)[ii] = iy;
-	    if (++k == ny) k = 0;
+            iy = INTEGER(y)[k];
+            if (iy == NA_INTEGER)
+                REAL(x)[ii] = NA_REAL;
+            else
+                REAL(x)[ii] = iy;
+            if (++k == ny) k = 0;
         }
-	break;
+        break;
 
     case (REALSXP<<5) + REALSXP:
-	for (i = 0; i < n; i++) {
-            ii = INTEGER(indx)[i] - 1;
-	    REAL(x)[ii] = REAL(y)[k];
-	    if (++k == ny) k = 0;
+        if (ny >= n) {
+            for (i = 0; i < n; i++) {
+                ii = INTEGER(indx)[i] - 1;
+                REAL(x)[ii] = REAL(y)[k];
+                k += 1;
+            }
         }
-	break;
+        else {
+            for (i = 0; i < n; i++) {
+                ii = INTEGER(indx)[i] - 1;
+                REAL(x)[ii] = REAL(y)[k];
+                if (++k == ny) k = 0;
+            }
+        }
+        break;
 
     case (CPLXSXP<<5) + LGLSXP:
     case (CPLXSXP<<5) + INTSXP:
-	for (i = 0; i < n; i++) {
+        for (i = 0; i < n; i++) {
             ii = INTEGER(indx)[i] - 1;
-	    iy = INTEGER(y)[k];
-	    if (iy == NA_INTEGER) {
-		COMPLEX(x)[ii].r = NA_REAL;
-		COMPLEX(x)[ii].i = NA_REAL;
-	    }
-	    else {
-		COMPLEX(x)[ii].r = iy;
-		COMPLEX(x)[ii].i = 0.0;
-	    }
-	    if (++k == ny) k = 0;
+            iy = INTEGER(y)[k];
+            if (iy == NA_INTEGER) {
+                COMPLEX(x)[ii].r = NA_REAL;
+                COMPLEX(x)[ii].i = NA_REAL;
+            }
+            else {
+                COMPLEX(x)[ii].r = iy;
+                COMPLEX(x)[ii].i = 0.0;
+            }
+            if (++k == ny) k = 0;
         }
-	break;
+        break;
 
     case (CPLXSXP<<5) + REALSXP:
-	for (i = 0; i < n; i++) {
+        for (i = 0; i < n; i++) {
             ii = INTEGER(indx)[i] - 1;
-	    ry = REAL(y)[k];
-	    if (ISNA(ry)) {
-		COMPLEX(x)[ii].r = NA_REAL;
-		COMPLEX(x)[ii].i = NA_REAL;
-	    }
-	    else {
-		COMPLEX(x)[ii].r = ry;
-		COMPLEX(x)[ii].i = 0.0;
-	    }
-	    if (++k == ny) k = 0;
+            ry = REAL(y)[k];
+            if (ISNA(ry)) {
+                COMPLEX(x)[ii].r = NA_REAL;
+                COMPLEX(x)[ii].i = NA_REAL;
+            }
+            else {
+                COMPLEX(x)[ii].r = ry;
+                COMPLEX(x)[ii].i = 0.0;
+            }
+            if (++k == ny) k = 0;
         }
-	break;
+        break;
 
     case (CPLXSXP<<5) + CPLXSXP:
-	for (i = 0; i < n; i++) {
+        for (i = 0; i < n; i++) {
             ii = INTEGER(indx)[i] - 1;
-	    COMPLEX(x)[ii] = COMPLEX(y)[k];
-	    if (++k == ny) k = 0;
+            COMPLEX(x)[ii] = COMPLEX(y)[k];
+            if (++k == ny) k = 0;
         }
-	break;
+        break;
 
     case (STRSXP<<5) + STRSXP:
-	for (i = 0; i < n; i++) {
+        for (i = 0; i < n; i++) {
             ii = INTEGER(indx)[i] - 1;
-	    SET_STRING_ELT(x, ii, STRING_ELT(y, k));
-	    if (++k == ny) k = 0;
+            SET_STRING_ELT(x, ii, STRING_ELT(y, k));
+            if (++k == ny) k = 0;
         }
-	break;
+        break;
 
     case (RAWSXP<<5) + RAWSXP:
-	for (i = 0; i < n; i++) {
+        for (i = 0; i < n; i++) {
             ii = INTEGER(indx)[i] - 1;
-	    RAW(x)[ii] = RAW(y)[k];
-	    if (++k == ny) k = 0;
+            RAW(x)[ii] = RAW(y)[k];
+            if (++k == ny) k = 0;
         }
-	break;
+        break;
 
     case (EXPRSXP<<5) + VECSXP:
     case (EXPRSXP<<5) + EXPRSXP:
@@ -3501,13 +3510,13 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     case (EXPRSXP<<5) + NILSXP:
     case (VECSXP<<5)  + NILSXP:
-	x = DeleteListElements(x, indx);
-	UNPROTECT(4);
-	return x;
-	break;
+        x = DeleteListElements(x, indx);
+        UNPROTECT(4);
+        return x;
+        break;
 
     default:
-	warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
+        warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
     }
 
     /* Check for additional named elements, if subscripting with strings. */
