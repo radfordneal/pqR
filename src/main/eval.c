@@ -404,8 +404,6 @@ static SEXP do_savefile(SEXP call, SEXP op, SEXP args, SEXP env)
 /* -------------------------------------------------------------------------- */
 /*                CONTEXT PROCEDURES - others are in context.c                */
 
-/* Short form used in eval.c for contexts when evaluating BUILTIN ops. */
-
 void beginbuiltincontext (RCNTXT * cptr, SEXP syscall)
 { begincontext (cptr, CTXT_BUILTIN, syscall, R_BaseEnv, 
                       R_BaseEnv, R_NilValue, R_NilValue);
@@ -469,7 +467,7 @@ void endcontext(RCNTXT * cptr)
 
    The revised context differs from the previous one only in env and sysp. */
 
-void revisecontext (SEXP env, SEXP sysp)
+static inline void revisecontext (SEXP env, SEXP sysp)
 {
     R_GlobalContext->sysparent = sysp;
     R_GlobalContext->cloenv = env;
