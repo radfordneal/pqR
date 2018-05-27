@@ -43,22 +43,11 @@
 
 #define SCALAR_STACK_DEBUG 0
 
-
-/*#define BC_PROFILING*/
-#ifdef BC_PROFILING
-static Rboolean bc_profiling = FALSE;
-#endif
-
 #define R_Profiling R_high_frequency_globals.Profiling
 
 #ifdef R_PROFILING
 
-/* BDR 2000-07-15
-   Profiling is now controlled by the R function Rprof(), and should
-   have negligible cost when not enabled.
-*/
-
-/* A simple mechanism for profiling R code.  When R_PROFILING is
+/* A simple mechanism for profiling R code.  When profiling is
    enabled, eval will write out the call stack every PROFSAMPLE
    microseconds using the SIGPROF handler triggered by timer signals
    from the ITIMER_PROF timer.  Since this is the same timer used by C
@@ -68,31 +57,24 @@ static Rboolean bc_profiling = FALSE;
    each give the call stack found at a sampling point with the inner
    most function first.
 
-   To enable profiling, recompile eval.c with R_PROFILING defined.  It
-   would be possible to selectively turn profiling on and off from R
-   and to specify the file name from R as well, but for now I won't
-   bother.
+   To enable profiling, compile with R_PROFILING defined, and enable
+   it with Rprof.
 
    The stack is traced by walking back along the context stack, just
    like the traceback creation in jump_to_toplevel.  One drawback of
    this approach is that it does not show BUILTIN's since they don't
-   get a context.  With recent changes to pos.to.env it seems possible
-   to insert a context around BUILTIN calls to that they show up in
-   the trace.  Since there is a cost in establishing these contexts,
-   they are only inserted when profiling is enabled. [BDR: we have since
-   also added contexts for the BUILTIN calls to foreign code.]
+   get a context.  A context is inserted around BUILTIN calls to that
+   they show up in the trace.  Since there is a cost in establishing
+   these contexts, they are only inserted when profiling is enabled.
+   Contexts are also added for the BUILTIN calls to foreign code.
 
    One possible advantage of not tracing BUILTIN's is that then
-   profiling adds no cost when the timer is turned off.  This would be
-   useful if we want to allow profiling to be turned on and off from
-   within R.
+   profiling adds no cost when the timer is turned off.
 
    One thing that makes interpreting profiling output tricky is lazy
    evaluation.  When an expression f(g(x)) is profiled, lazy
    evaluation will cause g to be called inside the call to f, so it
-   will appear as if g is called by f.
-
-   L. T.  */
+   will appear as if g is called by f. */
 
 #ifdef Win32
 # define WIN32_LEAN_AND_MEAN 1
@@ -265,12 +247,6 @@ static SEXP do_Rprof(SEXP call, SEXP op, SEXP args, SEXP rho)
     int append_mode, mem_profiling;
     double dinterval;
 
-#ifdef BC_PROFILING
-    if (bc_profiling) {
-	warning(_("can't use R profiling while byte code profiling"));
-	return R_NilValue;
-    }
-#endif
     checkArity(op, args);
     if (!isString(CAR(args)) || (LENGTH(CAR(args))) != 1)
 	error(_("invalid '%s' argument"), "filename");
