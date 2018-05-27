@@ -630,7 +630,7 @@ static SEXP nonnegativeSubscript(SEXP s, int ns, int nx)
 }
 
 static SEXP integerSubscript (SEXP s, int ns, int nx, int *stretch, int *hasna,
-                              SEXP call)
+                              SEXP modified_obj, SEXP call)
 {
     int i, ii, min, max, canstretch;
 
@@ -671,7 +671,7 @@ static SEXP integerSubscript (SEXP s, int ns, int nx, int *stretch, int *hasna,
     }
 
     if (min > 0) /* All positive (or NA) */
-        return s;
+        return s == modified_obj ? duplicate(s) : s;
     else if (min < 0) {
         if (max <= 0 && !*hasna) 
             return negativeSubscript(s, ns, nx);
@@ -827,8 +827,8 @@ static SEXP stringSubscript (SEXP s, int ns, int nx, SEXP names,
     hasna is set to index of first NA index, 0 if none
 */
 
-SEXP attribute_hidden internalArraySubscript
-                        (int dim, SEXP s, SEXP dims, SEXP x, int *hasna)
+static SEXP internalArraySubscript
+            (int dim, SEXP s, SEXP dims, SEXP x, SEXP modified_obj, int *hasna)
 {
     SEXP call = R_NilValue;
     int nd, ns, stretch = 0;
@@ -844,10 +844,10 @@ SEXP attribute_hidden internalArraySubscript
     case LGLSXP:
 	return logicalSubscript(s, ns, nd, &stretch, hasna, call);
     case INTSXP:
-	return integerSubscript(s, ns, nd, &stretch, hasna, call);
+	return integerSubscript(s, ns, nd, &stretch, hasna, modified_obj, call);
     case REALSXP:
 	PROTECT(tmp = coerceVector(s, INTSXP));
-	tmp = integerSubscript(tmp, ns, nd, &stretch, hasna, call);
+	tmp = integerSubscript(tmp, ns, nd, &stretch, hasna, R_NoObject, call);
 	UNPROTECT(1);
 	return tmp;
     case STRSXP:
@@ -864,6 +864,39 @@ SEXP attribute_hidden internalArraySubscript
         error(_("invalid subscript type '%s'"), type2char(TYPEOF(s)));
     }
 }
+
+
+/* Inline function to handle positive scalar real and integer
+   subscripts specially, putting them on the scalar stack, and
+   otherwise call internalArraySubscript. */
+
+static inline SEXP array_sub (SEXP sb, SEXP dim, int i, SEXP x, 
+                              SEXP modified_obj, int *hasna)
+{
+    if ( (((1<<INTSXP) + (1<<REALSXP)) >> TYPEOF(sb)) & 1 ) {
+        if (LENGTH(sb) == 1) {
+            R_len_t dm, ix;
+            dm = INTEGER(dim)[i];
+            if (TYPEOF(sb) == REALSXP) {
+                if (ISNAN(*REAL(sb)) || *REAL(sb) < 1 || *REAL(sb) > dm)
+                    goto fallback;
+                ix = (R_len_t) *REAL(sb);
+            }
+            else {
+                ix = *INTEGER(sb);
+                if (ix < 1 || ix > dm)
+                    goto fallback;
+            }
+            *hasna = 0;
+            return SCALAR_STACK_HAS_SPACE() ? PUSH_SCALAR_INTEGER(ix)
+                                            : ScalarInteger(ix);
+        }
+    }
+
+  fallback:
+    return internalArraySubscript (i, sb, dim, x, modified_obj, hasna);
+}
+
 
 /* Function similar to internalArraySubscript, used by packages
    arules and cba. Seems dangerous as the typedef is not exported.
@@ -887,10 +920,10 @@ SEXP arraySubscript (int dim, SEXP s, SEXP dims, AttrGetter dng,
     case LGLSXP:
 	return logicalSubscript(s, ns, nd, &stretch, &hasna, call);
     case INTSXP:
-	return integerSubscript(s, ns, nd, &stretch, &hasna, call);
+	return integerSubscript(s, ns, nd, &stretch, &hasna, x, call);
     case REALSXP:
 	PROTECT(tmp = coerceVector(s, INTSXP));
-	tmp = integerSubscript(tmp, ns, nd, &stretch, &hasna, call);
+	tmp = integerSubscript(tmp, ns, nd, &stretch, &hasna, R_NoObject, call);
 	UNPROTECT(1);
 	return tmp;
     case STRSXP:
@@ -988,11 +1021,12 @@ static SEXP makeSubscript (SEXP x, SEXP s, int *stretch, int *hasna,
 	ans = logicalSubscript(s, ns, nx, stretch, hasna, call);
 	break;
     case INTSXP:
-	ans = integerSubscript(s, ns, nx, stretch, hasna, call);
+	ans = integerSubscript(s, ns, nx, stretch, hasna, 
+                               used_to_replace ? x : R_NoObject, call);
 	break;
     case REALSXP:
 	PROTECT(tmp = coerceVector(s, INTSXP));
-	ans = integerSubscript(tmp, ns, nx, stretch, hasna, call);
+	ans = integerSubscript(tmp, ns, nx, stretch, hasna, R_NoObject, call);
 	UNPROTECT(1);
 	break;
     case STRSXP: {
@@ -1015,12 +1049,6 @@ static SEXP makeSubscript (SEXP x, SEXP s, int *stretch, int *hasna,
 	    errorcall(call, _("invalid subscript type '%s'"),
 		      type2char(TYPEOF(s)));
     }
-
-    /* If ans is being used for replacement, duplicate it if it is the same 
-       as s, to avoid problems with assignments like p[p] <- ... */
-
-    if (used_to_replace && ans == s)
-        ans = duplicate(ans);
 
     UNPROTECT(2);
     return ans;
@@ -1739,7 +1767,7 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
     if (s0 != R_NoObject) {
         if (drop == NA_LOGICAL) 
             suppress_drop_row = whether_suppress_drop(s0);
-        PROTECT (sr = array_sub (s0, dim, 0, x, &rhasna));
+        PROTECT (sr = array_sub (s0, dim, 0, x, R_NoObject, &rhasna));
         nprotect++;
         nrs = LENGTH(sr);
     }
@@ -1751,7 +1779,7 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
     if (drop == FALSE)
         suppress_drop_row = suppress_drop_col = 1;
 
-    PROTECT (sc = array_sub (s1, dim, 1, x, &chasna));
+    PROTECT (sc = array_sub (s1, dim, 1, x, R_NoObject, &chasna));
     nprotect++;
     ncs = LENGTH(sc);
 
@@ -1883,7 +1911,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
         else /* drop == NA_LOGICAL */ 
             suppress_drop[i] = CAR(r) == R_MissingArg ? MISSING(r) == 2
                                 : whether_suppress_drop(CAR(r));
-        PROTECT (subv[i] = array_sub (CAR(r), xdims, i, x, &hasna));
+        PROTECT (subv[i] = array_sub (CAR(r), xdims, i, x, R_NoObject, &hasna));
         subs[i] = INTEGER(subv[i]);
 	nsubs[i] = LENGTH(subv[i]);
         n *= nsubs[i];
@@ -3562,10 +3590,10 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 
     SEXP sv_scalar_stack = R_scalar_stack;
 
-    PROTECT (sr = array_sub (sb1, dim, 0, x, &rhasna));
+    PROTECT (sr = array_sub (sb1, dim, 0, x, x, &rhasna));
     nrs = LENGTH(sr);
 
-    PROTECT (sc = array_sub (sb2, dim, 1, x, &chasna));
+    PROTECT (sc = array_sub (sb2, dim, 1, x, x, &chasna));
     ncs = LENGTH(sc);
 
     /* Do assignment of a single atomic element with matching scalar type,
@@ -4050,7 +4078,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     int nmod = ny > 1;
     int zero = 0;
     for (i = 0; i < k; i++) {
-        PROTECT(tmp = array_sub (CAR(s), dims, i, x, &hasna[i]));
+        PROTECT(tmp = array_sub (CAR(s), dims, i, x, x, &hasna[i]));
 	bound[i] = LENGTH(tmp);
         if (hasna[i]) {
             any_hasna = 1;

@@ -131,34 +131,3 @@
 #    define DUP_STACK_VALUE(x) \
       (TYPEOF(x) == INTSXP ? ScalarInteger(*INTEGER(x)) : ScalarReal(*REAL(x)))
 #endif
-
-
-/* Inline function to handle positive scalar real and integer
-   subscripts specially, putting them on the scalar stack, and
-   otherwise call internalArraySubscript. */
-
-static inline SEXP array_sub (SEXP sb, SEXP dim, int i, SEXP x, int *hasna)
-{
-    if ( (((1<<INTSXP) + (1<<REALSXP)) >> TYPEOF(sb)) & 1 ) {
-        if (LENGTH(sb) == 1) {
-            R_len_t dm, ix;
-            dm = INTEGER(dim)[i];
-            if (TYPEOF(sb) == REALSXP) {
-                if (ISNAN(*REAL(sb)) || *REAL(sb) < 1 || *REAL(sb) > dm)
-                    goto fallback;
-                ix = (R_len_t) *REAL(sb);
-            }
-            else {
-                ix = *INTEGER(sb);
-                if (ix < 1 || ix > dm)
-                    goto fallback;
-            }
-            *hasna = 0;
-            return SCALAR_STACK_HAS_SPACE() ? PUSH_SCALAR_INTEGER(ix)
-                                            : ScalarInteger(ix);
-        }
-    }
-
-  fallback:
-    return internalArraySubscript (i, sb, dim, x, hasna);
-}
