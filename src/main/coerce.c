@@ -2906,10 +2906,10 @@ SEXP attribute_hidden substituteList(SEXP el, SEXP rho)
 static SEXP do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP argList, env, s, t;
-    static char *ap[2] = { "expr", "env" };
+    static const char * const ap[2] = { "expr", "env" };
 
     /* argument matching */
-    PROTECT(argList = matchArgs(R_NilValue, ap, 2, args, call));
+    PROTECT(argList = matchArgs_strings (ap, 2, args, call));
 
     /* set up the environment for substitution */
     if (CADR(argList) == R_MissingArg)

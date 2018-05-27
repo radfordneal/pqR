@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995-1998  Robert Gentleman and Ross Ihaka
@@ -542,8 +542,8 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
 
 static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    static char *ap[2] = { "x", "times" };
-    PROTECT(args = matchArgs(R_NilValue, ap, 2, args, call));
+    static const char * const ap[2] = { "x", "times" };
+    PROTECT(args = matchArgs_strings (ap, 2, args, call));
 
     SEXP s = CAR(args);
     SEXP ncopy = CADR(args);
@@ -630,7 +630,8 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP a, ans, times;
     int i, len, each, nprotect = 0;
-    static char *ap[5] = { "x", "times", "length.out", "each", "..." };
+    static const char * const ap[5] = 
+                         { "x", "times", "length.out", "each", "..." };
 
     if (DispatchOrEval(call, op, "rep", args, rho, &ans, 0, 0))
 	return(ans);
@@ -645,7 +646,7 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
        so we manage the argument matching ourselves.  We pretend this is
        rep(x, times, length.out, each, ...)
     */
-    PROTECT(args = matchArgs(R_NilValue, ap, 5, args, call));
+    PROTECT(args = matchArgs_strings (ap, 5, args, call));
     nprotect++;
 
     SEXP x = CAR(args); args = CDR(args);
@@ -856,7 +857,7 @@ static SEXP do_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     SEXP ans, from, to, by, len, along;
     int i, nargs = length(args), lf, lout = NA_INTEGER;
     Rboolean One = nargs == 1;
-    static char *ap[6] =
+    static const char * const ap[6] =
         { "from", "to", "by", "length.out", "along.with", "..." };
 
     if (DispatchOrEval(call, op, "seq", args, rho, &ans, 0, 1))
@@ -867,7 +868,7 @@ static SEXP do_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
        seq(from, to, by, length.out, along.with, ...)
     */
 
-    PROTECT(args = matchArgs(R_NilValue, ap, 6, args, call));
+    PROTECT(args = matchArgs_strings (ap, 6, args, call));
 
     from = CAR(args); args = CDR(args);
     to = CAR(args); args = CDR(args);

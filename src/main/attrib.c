@@ -1427,13 +1427,13 @@ static SEXP do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
     size_t n;
     int nargs = length(args), exact = 0;
     enum { NONE, PARTIAL, PARTIAL2, FULL } match = NONE;
-    static char *ap[3] = { "x", "which", "exact" };
+    static const char * const ap[3] = { "x", "which", "exact" };
 
     if (nargs < 2 || nargs > 3)
 	errorcall(call, "either 2 or 3 arguments are required");
 
     /* argument matching */
-    argList = matchArgs(R_NilValue, ap, 3, args, call);
+    argList = matchArgs_strings (ap, 3, args, call);
 
     PROTECT(argList);
     s = CAR(argList);
@@ -1591,7 +1591,7 @@ static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
     else { /*  attr(x, which = "<name>")  <-  value  */
 
         SEXP obj, name, argList;
-        static char *ap[3] = { "x", "which", "value" };
+        static const char * const ap[3] = { "x", "which", "value" };
     
         checkArity(op, args);
     
@@ -1602,7 +1602,7 @@ static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
             PROTECT(obj);
     
         /* argument matching */
-        argList = matchArgs(R_NilValue, ap, 3, args, call);
+        argList = matchArgs_strings (ap, 3, args, call);
     
         PROTECT(argList);
     

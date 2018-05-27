@@ -1586,7 +1586,7 @@ static SEXP do_matchcall(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	}
     }
-    rlist = matchArgs(formals, NULL, 0, actuals, call);
+    rlist = matchArgs_pairlist (formals, actuals, call);
 
 #if 0  /* No longer needed, since matchArgs attaches the tags itself.  */
 

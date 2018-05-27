@@ -296,7 +296,7 @@ SEXP attribute_hidden matchArgExact(SEXP tag, SEXP * list)
 
    In applyClosure and some other routines, matchArgs is instead called with
    "formals" being a pairlist having tags that are names of formal arguments.
-   In this case, "formal_names" should be NULL, and "arg_count" should be 0.
+   In this case, arg_count is computed in the inline function.
    
    If formal names are specifed using "formals", the entries in the list of
    actual arguments returned will have tags set from the list of formal 
@@ -318,7 +318,7 @@ SEXP attribute_hidden matchArgExact(SEXP tag, SEXP * list)
    code in R-2-8-branch */
 
 SEXP attribute_hidden Rf_matchArgs_nontrivial 
-      (SEXP formals, char **formal_names, int arg_count, 
+      (SEXP formals, const char * const *formal_names, int arg_count, 
        SEXP supplied, int n_supplied, SEXP call)
 {
     SEXP b, last_positional, last_potential_match, actuals_list;

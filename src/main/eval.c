@@ -1148,7 +1148,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	contains the matched pairs.  Note that actuals is protected via
         newrho. */
 
-    actuals = matchArgs(formals, NULL, 0, arglist, call);
+    actuals = matchArgs_pairlist (formals, arglist, call);
     PROTECT(newrho = NewEnvironment(R_NilValue, actuals, savedrho));
         /* no longer passes formals, since matchArg now puts tags in actuals */
 

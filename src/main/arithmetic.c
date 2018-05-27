@@ -2167,8 +2167,8 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	} else {
 	    /* If named, do argument matching by name */
 	    if (TAG(args) != R_NilValue || TAG(CDR(args)) != R_NilValue) {
-                static char *ap[2] = { "x", "digits" };
-		PROTECT(args = matchArgs(R_NilValue, ap, 2, args, call));
+                static const char * const ap[2] = { "x", "digits" };
+		PROTECT(args = matchArgs_strings (ap, 2, args, call));
 		nprotect += 1;
 	    }
 	    if (length(CADR(args)) == 0)
@@ -2268,8 +2268,8 @@ SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 	case 2:
 	{
 	    /* match argument names if supplied */
-            static char *ap[2] = { "x", "base" };
-	    PROTECT(args = matchArgs(R_NilValue, ap, 2, args, call));
+            static const char * const ap[2] = { "x", "base" };
+	    PROTECT(args = matchArgs_strings (ap, 2, args, call));
 	    if (length(CADR(args)) == 0)
 		errorcall(call, _("invalid argument 'base' of length 0"));
 	    if (isComplex(CAR(args)) || isComplex(CADR(args)))
