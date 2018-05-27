@@ -159,8 +159,6 @@
   \item Input and output have been sped up, sometimes considerably,
         both with regard to low-level character io, and with respect to 
         output formatting.
-  \item The \code{\%\%} and \code{\%/\%} operators are now faster when 
-        their operands are real vectors that contain integer values.
   \item Subscripting with a logical vector is now faster for long vectors.
   \item The \code{grep}, \code{grepl}, \code{sub}, and \code{gsub} functions
         have been speeded up, substantially in some situations.

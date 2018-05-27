@@ -682,8 +682,8 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             if (x1 == NA_INTEGER || x2 == NA_INTEGER || x2 == 0)
                 ians[i] = NA_INTEGER;
             else {
-                ians[i] = /* till 0.63.2: x1 % x2 */
-                    (int)myfmod((double)x1,(double)x2);
+                ians[i] = 0 /* this is slower */ && x1 >= 0 && x2 >= 0 ? x1 % x2
+                        : (int) (x1 - x2 * floor ((double)x1 / (double)x2));
             }
         }
         break;
@@ -696,7 +696,8 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
             if (x1 == NA_INTEGER || x2 == NA_INTEGER || x2 == 0)
                 ians[i] = NA_INTEGER;
             else
-                ians[i] = floor((double)x1 / (double)x2);
+                ians[i] = 0 /* this is slower */ && x1 >= 0 && x2 >= 0 ? x1 / x2
+                        : (int) floor ((double)x1 / (double)x2);
         }
         break;
     }
