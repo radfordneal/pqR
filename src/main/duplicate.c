@@ -256,6 +256,56 @@ void set_elements_to_NA_or_NULL (SEXP x, int i, int n)
 }
 
 
+/* Set n elements of x, starting at i, to the repeated first element of v. */
+
+static void rep_element (SEXP x, int i, SEXP v, int n)
+{
+    if (n == 0)
+        return;
+
+    switch (TYPEOF(x)) {
+    case RAWSXP: {
+        Rbyte e = RAW(v)[0];
+        do { RAW(x)[i] = e; i += 1; } while (--n>0);
+        break;
+    }
+    case LGLSXP: {
+        int e = LOGICAL(v)[0];
+        do { LOGICAL(x)[i] = e; i += 1; } while (--n>0);
+        break;
+    }
+    case INTSXP: {
+        int e = INTEGER(v)[0];
+        do { INTEGER(x)[i] = e; i += 1; } while (--n>0);
+        break;
+    }
+    case REALSXP: {
+        double e = REAL(v)[0];
+        do { REAL(x)[i] = e; i += 1; } while (--n>0);
+        break;
+    }
+    case CPLXSXP: {
+        Rcomplex e = COMPLEX(v)[0];
+        do { COMPLEX(x)[i] = e; i += 1; } while (--n>0);
+        break;
+    }
+    case STRSXP: {
+        rep_string_elements (x, i, 1, v, n);
+        break;
+    }
+    case VECSXP: case EXPRSXP: {
+        PROTECT(x); PROTECT(v);
+        SEXP e = VECTOR_ELT(v,0);
+        do { SET_VECTOR_ELT (x, i, duplicate(e)); i += 1; } while (--n>0);
+        UNPROTECT(2);
+        break;
+    }
+    default:
+        UNIMPLEMENTED_TYPE("rep_element", x);
+    }
+}
+
+
 /* Copy n elements from vector v (starting at j, stepping by t) to
    vector x (starting at i, stepping by s).  The vectors x and v must
    be of the same type (unless n is zero), which may be numeric or
@@ -271,7 +321,9 @@ void copy_elements (SEXP x, int i, int s, SEXP v, int j, int t, int n)
     if (i >= LENGTH(x) - (n-1)*s) abort();
     if (j >= LENGTH(v) - (n-1)*t) abort();
 
-    if (n > 8 && s == 1 && t == 1 && isVectorAtomic(x)) {
+    if (s == 1 && t == 0 && j == 0)
+        rep_element (x, i, v, n);
+    else if (n > 8 && s == 1 && t == 1 && isVectorAtomic(x)) {
         switch (TYPEOF(x)) {
         case RAWSXP:
             memmove (RAW(x)+i, RAW(v)+j, n * sizeof(char));
@@ -347,48 +399,8 @@ void copy_elements_recycled (SEXP x, int i, SEXP v, int n)
     if (vl >= n)
         copy_elements (x, i, 1, v, 0, 1, n);
 
-    else if (vl == 1) {
-        switch (TYPEOF(x)) {
-        case RAWSXP: {
-            Rbyte e = RAW(v)[0];
-            do { RAW(x)[i] = e; i += 1; } while (--n>0);
-            break;
-        }
-        case LGLSXP: {
-            int e = LOGICAL(v)[0];
-            do { LOGICAL(x)[i] = e; i += 1; } while (--n>0);
-            break;
-        }
-        case INTSXP: {
-            int e = INTEGER(v)[0];
-            do { INTEGER(x)[i] = e; i += 1; } while (--n>0);
-            break;
-        }
-        case REALSXP: {
-            double e = REAL(v)[0];
-            do { REAL(x)[i] = e; i += 1; } while (--n>0);
-            break;
-        }
-        case CPLXSXP: {
-            Rcomplex e = COMPLEX(v)[0];
-            do { COMPLEX(x)[i] = e; i += 1; } while (--n>0);
-            break;
-        }
-        case STRSXP: {
-            rep_string_elements (x, i, 1, v, n);
-            break;
-        }
-        case VECSXP: case EXPRSXP: {
-            PROTECT(x); PROTECT(v);
-            SEXP e = VECTOR_ELT(v,0);
-            do { SET_VECTOR_ELT (x, i, duplicate(e)); i += 1; } while (--n>0);
-            UNPROTECT(2);
-            break;
-        }
-        default:
-            UNIMPLEMENTED_TYPE("copy_elements_recycled", x);
-        }
-    }
+    else if (vl == 1)
+        rep_element (x, i, v, n);
 
     else {
         copy_elements (x, i, 1, v, 0, 1, vl);
