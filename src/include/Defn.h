@@ -1051,6 +1051,8 @@ extern uintptr_t R_CStackStart	INI_as((uintptr_t)-1);/* Initial stack address*/
 extern uintptr_t R_CStackLimit  INI_as((uintptr_t)-1);/* C stack limit */
 #define R_CStackThreshold R_high_frequency_globals.CStackThreshold
 
+#define R_Profiling R_high_frequency_globals.Profiling
+
 /* What to do for R_CStackDir if not a defined constant from compiler option. */
 
 #ifndef R_CStackDir
