@@ -1291,6 +1291,9 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
             local_assign2 = 1;
     }
     
+    if (nx == 1) WAIT_UNTIL_COMPUTED(x);
+    if (ny == 1) WAIT_UNTIL_COMPUTED(y);
+
     swap_ops = FALSE;  /* whether to swap ops to task procedure (in order
                           to reduce number of cases to handle) */
 
@@ -1315,10 +1318,14 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         }
 
         if (n>1) {
-            if (nx==n) flags |= HELPERS_PIPE_IN1;
-            if (ny==n) flags |= HELPERS_PIPE_IN2;
-            if (ny<nx && (oper == PLUSOP || oper == TIMESOP))
+            if (ny<nx && (oper == PLUSOP || oper == TIMESOP)) {
                 swap_ops = TRUE;
+                flags |= HELPERS_PIPE_IN2;
+            }
+            else {
+                if (nx==n) flags |= HELPERS_PIPE_IN1;
+                if (ny==n) flags |= HELPERS_PIPE_IN2;
+            }
         }
     }
     else {
@@ -1341,7 +1348,8 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
             swap_ops = TRUE;
     }
 
-    if (isObject(ans) && !objx && !objy) ans = allocVector (TYPEOF(ans), n);
+    if (isObject(ans) && !objx && !objy) 
+        ans = allocVector (TYPEOF(ans), n);
 
     if (ans != x) local_assign1 = 0;
     if (ans != y) local_assign2 = 0;
