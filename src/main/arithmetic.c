@@ -1352,23 +1352,35 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
     /* Do the actual operation. */
 
     if (n!=0) {
-        integer_overflow = 0;
+
+        SEXP xx = x, yy = y;
+        if (swap_ops) { 
+            xx = y; yy = x;
+        }
+        else if (oper == DIVOP) {  /* times 0.5 faster than divide by 2 */
+            if (ny == 1 && REAL(yy)[0] == 2.0) {
+                oper = TIMESOP;
+                xx = R_ScalarRealHalf;
+                yy = x;
+            }
+        }
 
         threshold = T_arithmetic;
         if (TYPEOF(ans)==CPLXSXP) threshold >>= 1;
         if (oper>TIMESOP) threshold >>= 1;
 
         if (n >= threshold && (variant & VARIANT_PENDING_OK)) {
-            if (ON_SCALAR_STACK(x) && ON_SCALAR_STACK(y)) {
-                PROTECT(x = duplicate(x));
-                y = duplicate(y);
+            if (ON_SCALAR_STACK(xx) && ON_SCALAR_STACK(yy)) {
+                PROTECT(xx = duplicate(xx));
+                yy = duplicate(yy);
                 UNPROTECT(1);
             }
-            else if (ON_SCALAR_STACK(x)) x = duplicate(x);
-            else if (ON_SCALAR_STACK(y)) y = duplicate(y);
+            else if (ON_SCALAR_STACK(x)) xx = duplicate(xx);
+            else if (ON_SCALAR_STACK(y)) yy = duplicate(yy);
         }
-        SEXP xx, yy;
-        if (swap_ops) { xx = y; yy = x; } else { xx = x; yy = y; }
+
+        integer_overflow = 0;
+
         DO_NOW_OR_LATER2(variant, n>=threshold, flags, task, oper, ans, xx, yy);
 
         if (integer_overflow)

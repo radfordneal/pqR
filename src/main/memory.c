@@ -1825,6 +1825,14 @@ SEXP ScalarRealMaybeConst(double x)
         if (u.i == v.i)
             return R_ScalarRealOne;
 
+        v.d = REAL(R_ScalarRealTwo)[0];
+        if (u.i == v.i)
+            return R_ScalarRealTwo;
+
+        v.d = REAL(R_ScalarRealHalf)[0];
+        if (u.i == v.i)
+            return R_ScalarRealHalf;
+
         v.d = REAL(R_ScalarRealNA)[0];
         if (u.i == v.i)
             return R_ScalarRealNA;

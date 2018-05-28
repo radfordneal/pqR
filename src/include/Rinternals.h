@@ -1605,10 +1605,12 @@ LibExtern SEXP	R_MissingUnder;	    /* Missing argument marker as "_" */
 #define R_ScalarIntegerNA         ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,3))
 #define R_ScalarRealZero          ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,4))
 #define R_ScalarRealOne           ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,5))
-#define R_ScalarRealNA            ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,6))
+#define R_ScalarRealTwo           ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,6))
+#define R_ScalarRealHalf          ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,7))
+#define R_ScalarRealNA            ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,8))
 #else
 ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarInteger_consts[32];
-ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarMisc_consts[7];
+ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarMisc_consts[9];
 #define R_ScalarInteger0To31(v) ((SEXP) &R_ScalarInteger_consts[v])
 #define R_ScalarLogicalFALSE    ((SEXP) &R_ScalarMisc_consts[0])
 #define R_ScalarLogicalTRUE     ((SEXP) &R_ScalarMisc_consts[1])
@@ -1616,7 +1618,9 @@ ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarMisc_consts[7];
 #define R_ScalarIntegerNA       ((SEXP) &R_ScalarMisc_consts[3])
 #define R_ScalarRealZero        ((SEXP) &R_ScalarMisc_consts[4])
 #define R_ScalarRealOne         ((SEXP) &R_ScalarMisc_consts[5])
-#define R_ScalarRealNA          ((SEXP) &R_ScalarMisc_consts[6])
+#define R_ScalarRealTwo         ((SEXP) &R_ScalarMisc_consts[6])
+#define R_ScalarRealHalf        ((SEXP) &R_ScalarMisc_consts[7])
+#define R_ScalarRealNA          ((SEXP) &R_ScalarMisc_consts[8])
 #endif
 
 /* CHARSXP and scalar STRSXP constants.  Defined in const-objs.c. */

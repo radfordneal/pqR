@@ -280,7 +280,7 @@ R_CONST VECTOR_SEXPREC_C R_ScalarInteger_consts[32] = {
 }
 #endif
 
-R_CONST VECTOR_SEXPREC_C R_ScalarMisc_consts[7] = {
+R_CONST VECTOR_SEXPREC_C R_ScalarMisc_consts[9] = {
 
     /* At most 32 fit in one segment (since up to 2 chunks each) */
 
@@ -292,7 +292,9 @@ R_CONST VECTOR_SEXPREC_C R_ScalarMisc_consts[7] = {
 
     REAL_CONST(0.0,4),
     REAL_CONST(1.0,5),
-    REAL_NA_CONST(6)
+    REAL_CONST(2.0,6),
+    REAL_CONST(0.5,7),
+    REAL_NA_CONST(8)
 };
 
 
