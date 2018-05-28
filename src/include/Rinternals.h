@@ -1858,6 +1858,7 @@ void Rf_PrintValue(SEXP);
 SEXP Rf_protect(SEXP);
 void Rf_protect2(SEXP, SEXP);
 void Rf_protect3(SEXP, SEXP, SEXP);
+void Rf_rep_element (SEXP, int, SEXP, int);
 SEXP Rf_ScalarComplexMaybeConst(Rcomplex);
 SEXP Rf_ScalarIntegerMaybeConst(int);
 SEXP Rf_ScalarRawMaybeConst(Rbyte);

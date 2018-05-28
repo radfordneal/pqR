@@ -258,7 +258,7 @@ void set_elements_to_NA_or_NULL (SEXP x, int i, int n)
 
 /* Set n elements of x, starting at i, to the repeated first element of v. */
 
-static void rep_element (SEXP x, int i, SEXP v, int n)
+void attribute_hidden Rf_rep_element (SEXP x, int i, SEXP v, int n)
 {
     if (n == 0)
         return;
@@ -301,7 +301,7 @@ static void rep_element (SEXP x, int i, SEXP v, int n)
         break;
     }
     default:
-        UNIMPLEMENTED_TYPE("rep_element", x);
+        UNIMPLEMENTED_TYPE("Rf_rep_element", x);
     }
 }
 
@@ -322,7 +322,7 @@ void copy_elements (SEXP x, int i, int s, SEXP v, int j, int t, int n)
     if (j >= LENGTH(v) - (n-1)*t) abort();
 
     if (s == 1 && t == 0 && j == 0)
-        rep_element (x, i, v, n);
+        Rf_rep_element (x, i, v, n);
     else if (n > 8 && s == 1 && t == 1 && isVectorAtomic(x)) {
         switch (TYPEOF(x)) {
         case RAWSXP:
@@ -400,7 +400,7 @@ void copy_elements_recycled (SEXP x, int i, SEXP v, int n)
         copy_elements (x, i, 1, v, 0, 1, n);
 
     else if (vl == 1)
-        rep_element (x, i, v, n);
+        Rf_rep_element (x, i, v, n);
 
     else {
         copy_elements (x, i, 1, v, 0, 1, vl);
