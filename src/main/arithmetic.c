@@ -1357,8 +1357,12 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         if (swap_ops) { 
             xx = y; yy = x;
         }
-        else if (oper == DIVOP) {  /* times 0.5 faster than divide by 2 */
-            if (ny == 1 && REAL(yy)[0] == 2.0) {
+        else if (oper == DIVOP && TYPEOF(ans) != CPLXSXP) {
+            /* Multiplying by 0.5 is faster than dividing by 2. */
+            if (ny == 1 
+             && (TYPEOF(yy)==REALSXP ? REAL(yy)[0] : INTEGER(yy)[0]) == 2.0) {
+                task = task_real_arithmetic;
+                flags = HELPERS_PIPE_IN01_OUT;
                 oper = TIMESOP;
                 xx = R_ScalarRealHalf;
                 yy = x;

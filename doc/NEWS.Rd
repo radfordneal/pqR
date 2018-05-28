@@ -138,6 +138,9 @@
         has been improved for long vectors, and they may now be done
         in a helper thread (though currently without pipelining of data).
   \item Creation of matrices with \code{matrix} is now faster.
+  \item Division of a vector by a scalar real or integer value of 2 is now
+        automatically converted to a faster multiplication by 0.5 (which
+        produces exactly the same result).
   \item Creation of arrays with \code{array} is now usually done with
         a faster internal routine, mimicking (with improvements) changes
         in R-2.15.2 and later R Core versions.
