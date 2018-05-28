@@ -3248,10 +3248,10 @@ static SEXP VectorAssignSeq
 	    errorcall(call,_("replacement has length zero"));
     }
 
-    /* When array elements are being permuted the RHS */
-    /* must be duplicated or the elements get trashed. */
-    /* FIXME : this should be a shallow copy for list */
-    /* objects.  A full duplication is wasteful. */
+    /* When array elements are being permuted the RHS must be
+       duplicated or the elements get trashed.  FIXME : this should be
+       a shallow copy for list objects.  A full duplication is
+       wasteful. And maybe no duplication is needed for sequence here? */
 
     if (x == y)
 	PROTECT(y = duplicate(y));
@@ -3263,8 +3263,13 @@ static SEXP VectorAssignSeq
     if (n == 0) {
         /* nothing to do */
     }
-    else if (isVectorAtomic(x) && isVectorAtomic(y)) {
-        copy_elements_coerced (x, start-1, 1, y, 0, ny>1, n);
+    else if (isVectorAtomic(x)) {
+        if (TYPEOF(x) == TYPEOF(y))
+            copy_elements (x, start-1, 1, y, 0, ny>1, n);
+        else if (isVectorAtomic(y))
+            copy_elements_coerced (x, start-1, 1, y, 0, ny>1, n);
+        else
+            goto warn;
     }
     else  if (isVectorList(x) && isVectorList(y)) {
         if (ny == 1) {
@@ -3283,10 +3288,14 @@ static SEXP VectorAssignSeq
     else if (isVectorList(x) && y == R_NilValue) {
 	x = DeleteListElementsSeq(x, start, end);
     }
-    else {
-	warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
-    }
+    else
+        goto warn;
 
+    UNPROTECT(2);
+    return x;
+
+  warn:
+    warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
     UNPROTECT(2);
     return x;
 }
@@ -3404,10 +3413,9 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
              _("number of items to replace is not a multiple of replacement length"));
     }
 
-    /* When array elements are being permuted the RHS */
-    /* must be duplicated or the elements get trashed. */
-    /* FIXME : this should be a shallow copy for list */
-    /* objects.  A full duplication is wasteful. */
+    /* When array elements are being permuted the RHS must be
+       duplicated or the elements get trashed.  FIXME : this should be
+       a shallow copy for list objects.  A full duplication is wasteful. */
 
     if (x == y)
         PROTECT(y = duplicate(y));
@@ -3736,10 +3744,10 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 
     PROTECT(x);
 
-    /* When array elements are being permuted the RHS */
-    /* must be duplicated or the elements get trashed. */
-    /* FIXME : this should be a shallow copy for list */
-    /* objects.  A full duplication is wasteful. */
+
+    /* When array elements are being permuted the RHS must be
+       duplicated or the elements get trashed.  FIXME : this should be
+       a shallow copy for list objects.  A full duplication is wasteful. */
 
     if (x == y)
 	PROTECT(y = duplicate(y));
@@ -4137,10 +4145,9 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     PROTECT(x);
 
-    /* When array elements are being permuted the RHS */
-    /* must be duplicated or the elements get trashed. */
-    /* FIXME : this should be a shallow copy for list */
-    /* objects.  A full duplication is wasteful. */
+    /* When array elements are being permuted the RHS must be
+       duplicated or the elements get trashed.  FIXME : this should be
+       a shallow copy for list objects.  A full duplication is wasteful. */
 
     if (x == y)
 	PROTECT(y = duplicate(y));
