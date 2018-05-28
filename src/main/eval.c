@@ -1962,7 +1962,7 @@ static SEXP do_return(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 
 #define FIND_SUBASSIGN_FUNC(fun)  \
-    SUBASSIGN_FOLLOWS(fun) ? (SEXP) (((SYMSEXP)(fun)) + 1) \
+    SUBASSIGN_FOLLOWS(fun) ? SUBASSIGN_THAT_FOLLOWS(fun) \
                            : find_subassign_func(fun)
 
 static attribute_noinline SEXP find_subassign_func(SEXP fun)
@@ -1970,7 +1970,7 @@ static attribute_noinline SEXP find_subassign_func(SEXP fun)
     if (TYPE_ETC(fun) == SYMSXP) {  /* don't allow ... or ..1, ..2, etc. */
 
         if (SUBASSIGN_FOLLOWS(fun))
-            return (SEXP) (((SYMSEXP)fun) + 1);
+            return SUBASSIGN_THAT_FOLLOWS(fun);
 
         char buf[40];
         const char *fname = CHAR(PRINTNAME(fun));

@@ -2033,10 +2033,10 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
    dispatch_subset2. */
 
 static R_xlen_t dispatch_xlength(SEXP x, SEXP rho) {
-    static SEXP length_op = NULL;
+    static SEXP length_op = R_NoObject;
     if (isObject(x)) {
         SEXP len, args, call;
-        if (length_op == NULL)
+        if (length_op == R_NoObject)
             length_op = R_Primitive("length");
         PROTECT(args = list1(x));
         PROTECT(call = list2(install("length"),install("x")));

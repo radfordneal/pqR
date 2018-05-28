@@ -462,7 +462,7 @@ R_CONST VECTOR_SEXPREC_C R_ScalarMisc_consts[7] = {
 #define STRSXP_CONST(v,index) { \
     CONST_HEADER(STRSXP,index,NUM_OFFSET(v&0x1f)), \
     LENGTH1 \
-    .data = { .p = (SEXP) &R_ASCII_consts[v] } \
+    .data = { .p = R_ASCII_CHAR(v) } \
 }
 
 R_CONST VECTOR_SEXPREC_C R_ScalarString_consts[128] = {

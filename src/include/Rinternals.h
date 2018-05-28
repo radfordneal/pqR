@@ -830,6 +830,12 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 #define SUBASSIGN_FOLLOWS(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
 #define SET_SUBASSIGN_FOLLOWS(x) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname = 1)
+#if USE_COMPRESSED_POINTERS
+#define SUBASSIGN_THAT_FOLLOWS(x) ((x)+SGGC_SYM_CHUNKS)
+#else
+#define SUBASSIGN_THAT_FOLLOWS(x) ((SEXP)((SYMSEXP)(x)+1))
+#endif
+
 #define MAYBE_FAST_SUBASSIGN(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.debug)
 #define SET_MAYBE_FAST_SUBASSIGN(x) (UPTR_FROM_SEXP(x)->sxpinfo.debug = 1)
 
@@ -1615,7 +1621,7 @@ ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarMisc_consts[7];
 
 /* CHARSXP and scalar STRSXP constants.  Defined in const-objs.c. */
 
-#if USE_COMPRESED_POINTERS
+#if USE_COMPRESSED_POINTERS
 #define R_ASCII_CHAR(c) ((SEXP)SGGC_CPTR_VAL(R_SGGC_CHAR_INDEX+(c>>5),(c&0x1f)))
 #define R_ASCII_SCALAR_STRING(c) \
                       ((SEXP)SGGC_CPTR_VAL(R_SGGC_STRING_INDEX+(c>>5),(c&0x1f)))
