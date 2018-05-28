@@ -3418,6 +3418,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
        from non-string vectors and from raw vectors to non-raw vectors are
        not handled here, but are avoided by coercion in SubassignTypeFix. */
 
+    int *ixp = INTEGER(indx);
     int k;
 
     switch ((TYPEOF(x)<<5) + TYPEOF(y)) {
@@ -3427,20 +3428,32 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     case (INTSXP<<5) + INTSXP:
         if (ny == 1) {
             int e = INTEGER(y)[0];
-            for (i = 0; i < n; i++) {
-                ii = INTEGER(indx)[i] - 1;
+            if (n & 1) {
+                ii = ixp[0] - 1;
+                INTEGER(x)[ii] = e;
+            }
+            for (i = n & 1; i < n; i += 2) {
+                ii = ixp[i] - 1;
+                INTEGER(x)[ii] = e;
+                ii = ixp[i+1] - 1;
                 INTEGER(x)[ii] = e;
             }
         }
         else if (ny >= n) {
-            for (i = 0; i < n; i++) {
-                ii = INTEGER(indx)[i] - 1;
+            if (n & 1) {
+                ii = ixp[0] - 1;
                 INTEGER(x)[ii] = INTEGER(y)[i];
+            }
+            for (i = n & 1; i < n; i += 2) {
+                ii = ixp[i] - 1;
+                INTEGER(x)[ii] = INTEGER(y)[i];
+                ii = ixp[i+1] - 1;
+                INTEGER(x)[ii] = INTEGER(y)[i+1];
             }
         }
         else {
             for (i = 0, k = 0; i < n; i++) {
-                ii = INTEGER(indx)[i] - 1;
+                ii = ixp[i] - 1;
                 INTEGER(x)[ii] = INTEGER(y)[k];
                 if (++k == ny) k = 0;
             }
@@ -3450,7 +3463,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     case (REALSXP<<5) + LGLSXP:
     case (REALSXP<<5) + INTSXP:
         for (i = 0, k = 0; i < n; i++) {
-            ii = INTEGER(indx)[i] - 1;
+            ii = ixp[i] - 1;
             iy = INTEGER(y)[k];
             if (iy == NA_INTEGER)
                 REAL(x)[ii] = NA_REAL;
@@ -3463,20 +3476,32 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     case (REALSXP<<5) + REALSXP:
         if (ny == 1) {
             double e = REAL(y)[0];
-            for (i = 0; i < n; i++) {
-                ii = INTEGER(indx)[i] - 1;
+            if (n & 1) {
+                ii = ixp[0] - 1;
+                REAL(x)[ii] = e;
+            }
+            for (i = n & 1; i < n; i += 2) {
+                ii = ixp[i] - 1;
+                REAL(x)[ii] = e;
+                ii = ixp[i+1] - 1;
                 REAL(x)[ii] = e;
             }
         }
         else if (ny >= n) {
-            for (i = 0; i < n; i++) {
-                ii = INTEGER(indx)[i] - 1;
+            if (n & 1) {
+                ii = ixp[0] - 1;
+                REAL(x)[ii] = REAL(y)[0];
+            }
+            for (i = n & 1; i < n; i += 2) {
+                ii = ixp[i] - 1;
                 REAL(x)[ii] = REAL(y)[i];
+                ii = ixp[i+1] - 1;
+                REAL(x)[ii] = REAL(y)[i+1];
             }
         }
         else {
             for (i = 0, k = 0; i < n; i++) {
-                ii = INTEGER(indx)[i] - 1;
+                ii = ixp[i] - 1;
                 REAL(x)[ii] = REAL(y)[k];
                 if (++k == ny) k = 0;
             }
@@ -3486,7 +3511,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     case (CPLXSXP<<5) + LGLSXP:
     case (CPLXSXP<<5) + INTSXP:
         for (i = 0, k = 0; i < n; i++) {
-            ii = INTEGER(indx)[i] - 1;
+            ii = ixp[i] - 1;
             iy = INTEGER(y)[k];
             if (iy == NA_INTEGER) {
                 COMPLEX(x)[ii].r = NA_REAL;
@@ -3502,7 +3527,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     case (CPLXSXP<<5) + REALSXP:
         for (i = 0, k = 0; i < n; i++) {
-            ii = INTEGER(indx)[i] - 1;
+            ii = ixp[i] - 1;
             ry = REAL(y)[k];
             if (ISNA(ry)) {
                 COMPLEX(x)[ii].r = NA_REAL;
@@ -3518,7 +3543,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     case (CPLXSXP<<5) + CPLXSXP:
         for (i = 0, k = 0; i < n; i++) {
-            ii = INTEGER(indx)[i] - 1;
+            ii = ixp[i] - 1;
             COMPLEX(x)[ii] = COMPLEX(y)[k];
             if (++k == ny) k = 0;
         }
@@ -3528,19 +3553,19 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
         if (ny == 1) {
             SEXP e = STRING_ELT(y,0);
             for (i = 0; i < n; i++) {
-                ii = INTEGER(indx)[i] - 1;
+                ii = ixp[i] - 1;
                 SET_STRING_ELT(x, ii, e);
             }
         }
         else if (ny >= n) {
             for (i = 0; i < n; i++) {
-                ii = INTEGER(indx)[i] - 1;
+                ii = ixp[i] - 1;
                 SET_STRING_ELT(x, ii, STRING_ELT(y, i));
             }
         }
         else {
             for (i = 0, k = 0; i < n; i++) {
-                ii = INTEGER(indx)[i] - 1;
+                ii = ixp[i] - 1;
                 SET_STRING_ELT(x, ii, STRING_ELT(y, k));
                 if (++k == ny) k = 0;
             }
@@ -3551,19 +3576,19 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
         if (ny == 1) {
             int e = RAW(y)[0];
             for (i = 0; i < n; i++) {
-                ii = INTEGER(indx)[i] - 1;
+                ii = ixp[i] - 1;
                 RAW(x)[ii] = e;
             }
         }
         else if (ny >= n) {
             for (i = 0; i < n; i++) {
-                ii = INTEGER(indx)[i] - 1;
+                ii = ixp[i] - 1;
                 RAW(x)[ii] = RAW(y)[i];
             }
         }
         else {
             for (i = 0, k = 0; i < n; i++) {
-                ii = INTEGER(indx)[i] - 1;
+                ii = ixp[i] - 1;
                 RAW(x)[ii] = RAW(y)[k];
                 if (++k == ny) k = 0;
             }
@@ -3575,7 +3600,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     case (VECSXP<<5)  + EXPRSXP:
     case (VECSXP<<5)  + VECSXP:
         for (i = 0, k = 0; i < n; i++) {
-            ii = INTEGER(indx)[i] - 1;
+            ii = ixp[i] - 1;
             if (i < ny) {
                 SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i);
             }
