@@ -458,7 +458,17 @@ static double logbase(double x, double base)
                         result[i] = func(REAL(s1)[i],tmp); \
                         i += 1; \
                     } \
-                    while (i <= u-3) { \
+                    while (i <= u-7) { \
+                        __m256d res_pd; \
+                        res_pd = _mm256_load_pd (REAL(s1)+i); \
+                        res_pd = func ## _mm (res_pd, tmp_pd); \
+                        _mm256_store_pd (result+i, res_pd); \
+                        res_pd = _mm256_load_pd (REAL(s1)+i+4); \
+                        res_pd = func ## _mm (res_pd, tmp_pd); \
+                        _mm256_store_pd (result+i+4, res_pd); \
+                        i += 8; \
+                    } \
+                    if (i <= u-3) { \
                         __m256d res_pd; \
                         res_pd = _mm256_load_pd (REAL(s1)+i); \
                         res_pd = func ## _mm (res_pd, tmp_pd); \
@@ -485,7 +495,17 @@ static double logbase(double x, double base)
                         result[i] = func(tmp,REAL(s2)[i]); \
                         i += 1; \
                     } \
-                    while (i <= u-3) { \
+                    while (i <= u-8) { \
+                        __m256d res_pd; \
+                        res_pd = _mm256_load_pd (REAL(s2)+i); \
+                        res_pd = func ## _mm (tmp_pd, res_pd); \
+                        _mm256_store_pd (result+i, res_pd); \
+                        res_pd = _mm256_load_pd (REAL(s2)+i+4); \
+                        res_pd = func ## _mm (tmp_pd, res_pd); \
+                        _mm256_store_pd (result+i+4, res_pd); \
+                        i += 8; \
+                    } \
+                    if (i <= u-3) { \
                         __m256d res_pd; \
                         res_pd = _mm256_load_pd (REAL(s2)+i); \
                         res_pd = func ## _mm (tmp_pd, res_pd); \
@@ -511,7 +531,19 @@ static double logbase(double x, double base)
                         result[i] = func(REAL(s1)[i],REAL(s2)[i]); \
                         i += 1; \
                     } \
-                    while (i <= u-3) { \
+                    while (i <= u-7) { \
+                        __m256d res_pd, op2_pd; \
+                        res_pd = _mm256_load_pd (REAL(s1)+i); \
+                        op2_pd = _mm256_load_pd (REAL(s2)+i); \
+                        res_pd = func ## _mm (res_pd, op2_pd); \
+                        _mm256_store_pd (result+i, res_pd); \
+                        res_pd = _mm256_load_pd (REAL(s1)+i+4); \
+                        op2_pd = _mm256_load_pd (REAL(s2)+i+4); \
+                        res_pd = func ## _mm (res_pd, op2_pd); \
+                        _mm256_store_pd (result+i+4, res_pd); \
+                        i += 8; \
+                    } \
+                    if (i <= u-3) { \
                         __m256d res_pd, op2_pd; \
                         res_pd = _mm256_load_pd (REAL(s1)+i); \
                         op2_pd = _mm256_load_pd (REAL(s2)+i); \
