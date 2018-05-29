@@ -514,7 +514,7 @@ void R_NORETURN attribute_hidden findcontext(int mask, SEXP env, SEXP val)
 	for (cptr = R_GlobalContext;
 	     cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;
 	     cptr = cptr->nextcontext)
-	    if (cptr->callflag & CTXT_LOOP && cptr->cloenv == env )
+	    if ((cptr->callflag & CTXT_LOOP) && cptr->cloenv == env )
 		jumpfun(cptr, mask, val);
 	error(_("no loop for break/next, jumping to top level"));
     }
@@ -1870,11 +1870,21 @@ static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-/* "break" and "next" */
+/* "break" */
+
 static R_NORETURN SEXP do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    findcontext(PRIMVAL(op), rho, R_NilValue);
+    findcontext (CTXT_BREAK, rho, R_NilValue);
 }
+
+
+/* "next" */
+
+static R_NORETURN SEXP do_next(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    findcontext (CTXT_NEXT, rho, R_NilValue);
+}
+
 
 /* Parens are now a SPECIAL, to avoid overhead of creating an arg list. 
    Care is taken to allow (...), though it is debatable whether this should 
@@ -1897,6 +1907,7 @@ static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     R_Visible = TRUE;
     return res;
 }
+
 
 /* Curly brackets.  Passes on the eval variant to the last expression.  For
    earlier expressions, passes either VARIANT_NULL | VARIANT_PENDING_OK or
@@ -5147,8 +5158,8 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 {"for",		do_for,		0,	100,	-1,	{PP_FOR,     PREC_FN,	  0}},
 {"while",	do_while,	0,	100,	-1,	{PP_WHILE,   PREC_FN,	  0}},
 {"repeat",	do_repeat,	0,	100,	-1,	{PP_REPEAT,  PREC_FN,	  0}},
-{"break",	do_break, CTXT_BREAK,	0,	-1,	{PP_BREAK,   PREC_FN,	  0}},
-{"next",	do_break, CTXT_NEXT,	0,	-1,	{PP_NEXT,    PREC_FN,	  0}},
+{"break",	do_break,	0,	0,	-1,	{PP_BREAK,   PREC_FN,	  0}},
+{"next",	do_next,	0,	0,	-1,	{PP_NEXT,    PREC_FN,	  0}},
 {"(",		do_paren,	0,	1000,	1,	{PP_PAREN,   PREC_FN,	  0}},
 {"{",		do_begin,	0,	1200,	-1,	{PP_CURLY,   PREC_FN,	  0}},
 {"return",	do_return,	0,	1200,	-1,	{PP_RETURN,  PREC_FN,	  0}},
