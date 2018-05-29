@@ -2958,15 +2958,24 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 SEXP attribute_hidden promiseArgsWithValues(SEXP el, SEXP rho, SEXP values)
 {
     SEXP s, a, b;
+
     PROTECT(s = promiseArgs(el, rho));
-    if (length(s) != length(values)) error(_("dispatch error"));
-    for (a = values, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
+
+    for (a = values, b = s; 
+         a != R_NilValue && b != R_NilValue;
+         a = CDR(a), b = CDR(b)) {
         if (TYPEOF(CAR(b)) == PROMSXP) {
             SET_PRVALUE(CAR(b), CAR(a));
             INC_NAMEDCNT(CAR(a));
         }
-    UNPROTECT(1);
-    return s;
+    }
+
+    if (a == R_NilValue && b == R_NilValue) {
+        UNPROTECT(1);
+        return s;
+    }
+
+    error(_("dispatch error"));
 }
 
 /* Like promiseArgsWithValues except it sets only the first value. */
