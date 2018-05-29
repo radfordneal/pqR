@@ -2859,7 +2859,7 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 
 SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 {
-    /* Handle 0 or 1 arguments (not ...) specially, for speed. */
+    /* Handle 0, 1, or 2 arguments (not ...) specially, for speed. */
 
     if (CDR(el) == R_NilValue) {  /* Note that CDR(R_NilValue) == R_NilValue */
         if (el == R_NilValue)
@@ -2868,6 +2868,19 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
         if (a != R_DotsSymbol) {
             MAKE_PROMISE(a,rho);
             return cons_with_tag (a, R_NilValue, TAG(el));
+        }
+    }
+    else if (CDDR(el) == R_NilValue) {
+        SEXP a1 = CAR(el);
+        SEXP a2 = CADR(el);
+        if (a1 != R_DotsSymbol && a2 != R_DotsSymbol) {
+            SEXP r;
+            MAKE_PROMISE(a2,rho);
+            PROTECT (r = cons_with_tag (a2, R_NilValue, TAG(CDR(el))));
+            MAKE_PROMISE(a1,rho);
+            r = cons_with_tag (a1, r, TAG(el));
+            UNPROTECT(1);
+            return r;
         }
     }
 
