@@ -1170,7 +1170,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
     int xattr, yattr;
     PROTECT_INDEX xpi, ypi;
     ARITHOP_TYPE oper = (ARITHOP_TYPE) PRIMVAL(op);
-    int threshold, flags, nprotect, swap_ops;
+    int threshold, flags, nprotect;
 
     if (x == R_NilValue) x = allocVector(REALSXP,0);
     PROTECT_WITH_INDEX(x, &xpi);
@@ -1294,30 +1294,39 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
     if (nx == 1) WAIT_UNTIL_COMPUTED(x);
     if (ny == 1) WAIT_UNTIL_COMPUTED(y);
 
-    swap_ops = FALSE;  /* whether to swap ops to task procedure (in order
-                          to reduce number of cases to handle) */
+    int swap_ops = FALSE, replace_by_half = FALSE;
 
     if (TYPEOF(x) == CPLXSXP || TYPEOF(y) == CPLXSXP) {
+
         if (oper==IDIVOP || oper==MODOP)
             errorcall(call,_("unimplemented complex operation"));
         ans = alloc_or_reuse (x, y, CPLXSXP, n, local_assign1, local_assign2);
         task = task_complex_arithmetic;
         flags = 0;  /* Not bothering with pipelining yet. */
     }
+
     else if (TYPEOF(x) == REALSXP || TYPEOF(y) == REALSXP) {
+
          /* task_real_arithmetic takes REAL, INT, and LOGICAL operands, 
             and assumes INT and LOGICAL are really the same. */
+
         ans = alloc_or_reuse (x, y, REALSXP, n, local_assign1, local_assign2);
         task = task_real_arithmetic;
         flags = HELPERS_PIPE_IN0_OUT;
+
         if (n > 1 && (nx == 1 || ny == 1)
                   && TYPEOF(x) == REALSXP && TYPEOF(y) == REALSXP) {
             if (oper < POWOP /* this is the +, -, *, and / operators */
-                  || oper == POWOP && ny == 1 && REAL(y)[0] == 2.0 /* square */)
+                 || oper == POWOP && ny == 1 && REAL(y)[0] == 2.0 /* square */)
                 flags = HELPERS_PIPE_IN0_OUT | HELPERS_MERGE_IN_OUT;
         }
 
         if (n>1) {
+            if (oper == DIVOP && ny == 1 && TYPEOF(x) == REALSXP
+                 && (TYPEOF(y)==REALSXP ? REAL(y)[0] : INTEGER(y)[0]) == 2.0) {
+                oper = TIMESOP;
+                replace_by_half = TRUE;
+            }
             if (ny<nx && (oper == PLUSOP || oper == TIMESOP)) {
                 swap_ops = TRUE;
                 flags |= HELPERS_PIPE_IN2;
@@ -1329,8 +1338,10 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         }
     }
     else {
+
         /* task_integer_arithmetic is assumed to work for LOGICAL too, though
            this won't be true if they aren't really the same */
+
         if (oper == DIVOP || oper == POWOP)
             ans = allocVector(REALSXP, n);
         else
@@ -1361,25 +1372,18 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
 
     if (n!=0) {
 
-        SEXP xx = x, yy = y;
-        if (swap_ops) { 
-            xx = y; yy = x;
-        }
-        else if (oper == DIVOP && TYPEOF(ans) != CPLXSXP) {
-            /* Multiplying by 0.5 is faster than dividing by 2. */
-            if (ny == 1 
-             && (TYPEOF(yy)==REALSXP ? REAL(yy)[0] : INTEGER(yy)[0]) == 2.0) {
-                task = task_real_arithmetic;
-                flags = HELPERS_PIPE_IN02_OUT;
-                oper = TIMESOP;
-                xx = R_ScalarRealHalf;
-                yy = x;
-            }
-        }
-
         threshold = T_arithmetic;
-        if (TYPEOF(ans)==CPLXSXP) threshold >>= 1;
-        if (oper>TIMESOP) threshold >>= 1;
+        if (TYPEOF(ans) == CPLXSXP)
+            threshold >>= 1;
+        if (oper > TIMESOP)
+            threshold >>= 1;
+
+        SEXP xx = x, yy = y;
+
+        if (swap_ops) { xx = y; yy = x; }
+
+        if (replace_by_half)
+            xx = R_ScalarRealHalf;
 
         if (n >= threshold && (variant & VARIANT_PENDING_OK)) {
             if (ON_SCALAR_STACK(xx) && ON_SCALAR_STACK(yy)) {
@@ -1387,8 +1391,8 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
                 yy = duplicate(yy);
                 UNPROTECT(1);
             }
-            else if (ON_SCALAR_STACK(x)) xx = duplicate(xx);
-            else if (ON_SCALAR_STACK(y)) yy = duplicate(yy);
+            else if (ON_SCALAR_STACK(xx)) xx = duplicate(xx);
+            else if (ON_SCALAR_STACK(yy)) yy = duplicate(yy);
         }
 
         integer_overflow = 0;
