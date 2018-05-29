@@ -1370,7 +1370,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
             if (ny == 1 
              && (TYPEOF(yy)==REALSXP ? REAL(yy)[0] : INTEGER(yy)[0]) == 2.0) {
                 task = task_real_arithmetic;
-                flags = HELPERS_PIPE_IN01_OUT;
+                flags = HELPERS_PIPE_IN02_OUT;
                 oper = TIMESOP;
                 xx = R_ScalarRealHalf;
                 yy = x;
