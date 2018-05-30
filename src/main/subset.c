@@ -685,13 +685,12 @@ static SEXP integerSubscript (SEXP s, int ns, int nx, int *stretch, int *hasna,
 typedef SEXP (*StringEltGetter)(SEXP x, int i);
 
 /* This uses a couple of horrible hacks in conjunction with
- * VectorAssign (in subassign.c).  If subscripting is used for
- * assignment, it is possible to extend a vector by supplying new
- * names, and we want to give the extended vector those names, so they
- * are returned as the use.names attribute. Also, unset elements of the vector
- * of new names (places where a match was found) are indicated by
- * setting the element of the newnames vector to NULL.
-*/
+    VectorAssign.  If subscripting is used for assignment, it is
+    possible to extend a vector by supplying new names, and we want to
+    give the extended vector those names, so they are returned as the
+    use.names attribute. Also, unset elements of the vector of new
+    names (places where a match was found) are indicated by setting
+    the element of the newnames vector to NULL.  */
 
 /* The original code (pre 2.0.0) used a ns x nx loop that was too
    slow.  So now we hash.  Hashing is only worth doing if ns * nx is large. */
@@ -4499,7 +4498,12 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
 
     if (sb1 == R_NoObject) {
         /* 0 subscript arguments */
-        x = VectorAssign(call, x, R_MissingArg, y);
+        R_len_t lenx = length(x);
+        R_len_t leny = length(y);
+        if (y == R_NilValue || leny == 1 || leny == lenx)
+            x = VectorAssignSeq (call, x, 1, lenx, y);
+        else
+            x = VectorAssign (call, x, R_MissingArg, y);
     }
     else if (sb2 == R_NoObject) {
         /* 1 subscript argument */
@@ -4515,7 +4519,15 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
                     x = VectorAssignSeq (call, x, start, end, y);
             }
         }
-        if (sb1 != R_NoObject) {
+        if (sb1 == R_MissingArg) {
+            R_len_t lenx = length(x);
+            R_len_t leny = length(y);
+            if (y == R_NilValue || leny == 1 || leny == lenx)
+                x = VectorAssignSeq (call, x, 1, lenx, y);
+            else
+                x = VectorAssign (call, x, R_MissingArg, y);
+        }
+        else if (sb1 != R_NoObject) {
             x = VectorAssign (call, x, sb1, y);
         }
     }
