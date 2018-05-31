@@ -4385,7 +4385,10 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
 
     if (!seq && sb1 != R_NoObject && subs == R_NilValue 
              && isVector(x) && !IS_S4_OBJECT(x) && !NAMEDCNT_GT_1(x)
-             && y != R_NoObject && TYPEOF(y) == TYPEOF(x) && LENGTH(y) == 1) {
+             && y != R_NoObject 
+             && (TYPEOF(y) == TYPEOF(x) 
+                  || TYPEOF(x) == REALSXP && TYPEOF(y) == INTSXP)
+             && LENGTH(y) == 1) {
         R_len_t ix1 = 0;
         if (TYPE_ETC(sb1) == INTSXP) {        /* scalar integer index */
             if (*INTEGER(sb1) <= LENGTH(x))
@@ -4431,7 +4434,7 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
                     INTEGER(x)[ix] = *INTEGER(y);
                     break;
                 case REALSXP: 
-                    REAL(x)[ix] = *REAL(y);
+                    REAL(x)[ix] = TYPEOF(y) == REALSXP ? *REAL(y) : *INTEGER(y);
                     break;
                 case CPLXSXP: 
                     COMPLEX(x)[ix] = *COMPLEX(y);
