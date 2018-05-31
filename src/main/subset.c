@@ -685,12 +685,12 @@ static SEXP integerSubscript (SEXP s, int ns, int nx, int *stretch, int *hasna,
 typedef SEXP (*StringEltGetter)(SEXP x, int i);
 
 /* This uses a couple of horrible hacks in conjunction with
-    VectorAssign.  If subscripting is used for assignment, it is
-    possible to extend a vector by supplying new names, and we want to
-    give the extended vector those names, so they are returned as the
-    use.names attribute. Also, unset elements of the vector of new
-    names (places where a match was found) are indicated by setting
-    the element of the newnames vector to NULL.  */
+   VectorAssign.  If subscripting is used for assignment, it is
+   possible to extend a vector by supplying new names, and we want to
+   give the extended vector those names, so they are returned as the
+   use.names attribute. Also, unset elements of the vector of new
+   names (places where a match was found) are indicated by setting the
+   element of the newnames vector to NULL.  */
 
 /* The original code (pre 2.0.0) used a ns x nx loop that was too
    slow.  So now we hash.  Hashing is only worth doing if ns * nx is large. */
