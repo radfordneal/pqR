@@ -271,7 +271,30 @@ static void attribute_noinline rep_element (SEXP x, int i, SEXP v, int j, int n)
     switch (TYPEOF(x)) {
     case RAWSXP: {
         Rbyte e = RAW(v)[j];
-        do { RAW(x)[i] = e; i += 1; } while (--n>0);
+#       if !__AVX__ || defined(DISABLE_AVX_CODE)
+            do { RAW(x)[i] = e; i += 1; } while (--n>0);
+#       else
+            __m256i E = _mm256_set1_epi8(e);
+            Rbyte *p = &RAW(x)[i];
+            Rbyte *q = p+n;
+            while (p < q && (((uintptr_t) p) & 0x1f) != 0) 
+                *p++ = e;
+            if (p < q-31) {
+                _mm256_store_si256 ((__m256i *) p, E);
+                p += 32;
+            }
+            while (p < q-63) {
+                _mm256_store_si256 ((__m256i *) p, E);
+                _mm256_store_si256 ((__m256i *) (p+32), E);
+                p += 64;
+            }
+            if (p < q-31) {
+                _mm256_store_si256 ((__m256i *) p, E);
+                p += 32;
+            }
+            while (p < q)
+                *p++ = e;
+#       endif
         break;
     }
     case LGLSXP:
@@ -445,62 +468,51 @@ void attribute_hidden Rf_recycled_copy (SEXP x, R_len_t i, R_len_t r, R_len_t n)
         return;
     }
 
+    R_len_t j;
+
+    j = i;   /* j is index of elements to repeat */
     n += i;  /* n is now the index to stop at */
     i += r;  /* don't set first r elements, which are already set */
 
-    switch (TYPEOF(x)) {
-    case RAWSXP: {
-        do {
-            RAW(x)[i] = RAW(x)[i-r];
-            i += 1;
-        } while (i < n);
-        break;
+    for (;;) {
+
+        R_len_t m = n-i < r ? n-i : r;  /* amount to copy this time (except 
+                                           for strings and lists) */
+        switch (TYPEOF(x)) {
+        case RAWSXP:
+            memcpy (RAW(x)+i, RAW(x)+j, m * sizeof *RAW(x));
+            break;
+        case LGLSXP:
+        case INTSXP:
+            memcpy (INTEGER(x)+i, INTEGER(x)+j, m * sizeof *INTEGER(x));
+            break;
+        case REALSXP:
+            memcpy (REAL(x)+i, REAL(x)+j, m * sizeof *REAL(x));
+            break;
+        case CPLXSXP:
+            memcpy (COMPLEX(x)+i, COMPLEX(x)+j, m * sizeof *COMPLEX(x));
+            break;
+        case STRSXP:
+            copy_string_elements (x, i, x, j, n); /* done sequentially */
+            return;
+        case VECSXP: case EXPRSXP:
+            PROTECT(x);
+            do { 
+                SET_VECTOR_ELT (x, i, duplicate(VECTOR_ELT(x,j)));
+                i += 1; j += 1;
+            } while (i < n);
+            UNPROTECT(1);
+            return;
+        default:
+            UNIMPLEMENTED_TYPE("Rf_recycled_copy", x);
+        }
+
+        i += m;
+
+        if (i == n) break;
+
+        if (r < 256) r += r;  /* can now copy twice as many, if seems faster */
     }
-    case LGLSXP: {
-        do {
-            LOGICAL(x)[i] = LOGICAL(x)[i-r];
-            i += 1;
-        } while (i < n);
-        break;
-    }
-    case INTSXP: {
-        do {
-            INTEGER(x)[i] = INTEGER(x)[i-r];
-            i += 1;
-        } while (i < n);
-        break;
-    }
-    case REALSXP: {
-        do {
-            REAL(x)[i] = REAL(x)[i-r];
-            i += 1;
-        } while (i < n);
-        break;
-    }
-    case CPLXSXP: {
-        do {
-            COMPLEX(x)[i] = COMPLEX(x)[i-r];
-            i += 1;
-        } while (i < n);
-        break;
-    }
-    case STRSXP: {
-        copy_string_elements (x, i, x, i-r, n); /* done sequentially */
-        break;
-    }
-    case VECSXP: case EXPRSXP: {
-        PROTECT(x);
-        do { 
-            SET_VECTOR_ELT (x, i, duplicate(VECTOR_ELT(x,i-r)));
-            i += 1;
-        } while (i < n);
-        UNPROTECT(1);
-        break;
-    }
-    default:
-        UNIMPLEMENTED_TYPE("Rf_recycled_copy", x);
-    }
-    
 }
 
 /* Copy n elements from vector v (starting at 0) to vector x (starting
