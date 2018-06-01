@@ -285,7 +285,16 @@ static void attribute_noinline rep_element (SEXP x, int i, SEXP v, int j, int n)
             int *q = p+n;
             while (p < q && (((uintptr_t) p) & 0x1f) != 0) 
                 *p++ = e;
-            while (p < q-7) {
+            if (p < q-7) {
+                _mm256_store_si256 ((__m256i *) p, E);
+                p += 8;
+            }
+            while (p < q-15) {
+                _mm256_store_si256 ((__m256i *) p, E);
+                _mm256_store_si256 ((__m256i *) (p+8), E);
+                p += 16;
+            }
+            if (p < q-7) {
                 _mm256_store_si256 ((__m256i *) p, E);
                 p += 8;
             }
@@ -304,7 +313,16 @@ static void attribute_noinline rep_element (SEXP x, int i, SEXP v, int j, int n)
             double *q = p+n;
             while (p < q && (((uintptr_t) p) & 0x1f) != 0) 
                 *p++ = e;
-            while (p < q-3) {
+            if (p < q-3) {
+                _mm256_store_pd (p, E);
+                p += 4;
+            }
+            while (p < q-7) {
+                _mm256_store_pd (p, E);
+                _mm256_store_pd (p+4, E);
+                p += 8;
+            }
+            if (p < q-3) {
                 _mm256_store_pd (p, E);
                 p += 4;
             }
