@@ -427,8 +427,8 @@ void attribute_hidden Rf_recycled_copy (SEXP x, R_len_t i, R_len_t r, R_len_t n)
         return;
     }
 
-    i += r;
-    n -= r;
+    n += i;  /* n is now the index to stop at */
+    i += r;  /* don't set first r elements, which are already set */
 
     switch (TYPEOF(x)) {
     case RAWSXP: {
