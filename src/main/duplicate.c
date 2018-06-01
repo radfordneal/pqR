@@ -34,6 +34,10 @@
 
 #include <R_ext/RS.h> /* S4 bit */
 
+#if __AVX__ && !defined(DISABLE_AVX_CODE)
+#   include <immintrin.h>
+#endif
+
 /*  duplicate  -  object duplication  */
 
 /*  Because we try to maintain the illusion of call by
@@ -270,19 +274,43 @@ static void attribute_noinline rep_element (SEXP x, int i, SEXP v, int j, int n)
         do { RAW(x)[i] = e; i += 1; } while (--n>0);
         break;
     }
-    case LGLSXP: {
-        int e = LOGICAL(v)[j];
-        do { LOGICAL(x)[i] = e; i += 1; } while (--n>0);
-        break;
-    }
+    case LGLSXP:
     case INTSXP: {
         int e = INTEGER(v)[j];
-        do { INTEGER(x)[i] = e; i += 1; } while (--n>0);
+#       if !__AVX__ || defined(DISABLE_AVX_CODE)
+            do { INTEGER(x)[i] = e; i += 1; } while (--n>0);
+#       else
+            __m256i E = _mm256_set1_epi32(e);
+            int *p = &INTEGER(x)[i];
+            int *q = p+n;
+            while (p < q && (((uintptr_t) p) & 0x1f) != 0) 
+                *p++ = e;
+            while (p < q-7) {
+                _mm256_store_si256 ((__m256i *) p, E);
+                p += 8;
+            }
+            while (p < q)
+                *p++ = e;
+#       endif
         break;
     }
     case REALSXP: {
         double e = REAL(v)[j];
-        do { REAL(x)[i] = e; i += 1; } while (--n>0);
+#       if !__AVX__ || defined(DISABLE_AVX_CODE)
+            do { REAL(x)[i] = e; i += 1; } while (--n>0);
+#       else
+            __m256d E = _mm256_set1_pd(e);
+            double *p = &REAL(x)[i];
+            double *q = p+n;
+            while (p < q && (((uintptr_t) p) & 0x1f) != 0) 
+                *p++ = e;
+            while (p < q-3) {
+                _mm256_store_pd (p, E);
+                p += 4;
+            }
+            while (p < q)
+                *p++ = e;
+#       endif
         break;
     }
     case CPLXSXP: {
