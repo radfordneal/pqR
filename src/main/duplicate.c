@@ -259,7 +259,7 @@ void set_elements_to_NA_or_NULL (SEXP x, int i, int n)
 /* Set n elements of x, starting at i, to the repeated j'th element of v.
    Duplicates VECSXP and EXPRSXP elements. */
 
-static void rep_element (SEXP x, int i, SEXP v, int j, int n)
+static void attribute_noinline rep_element (SEXP x, int i, SEXP v, int j, int n)
 {
     if (n == 0)
         return;
@@ -295,7 +295,7 @@ static void rep_element (SEXP x, int i, SEXP v, int j, int n)
         break;
     }
     case VECSXP: case EXPRSXP: {
-        PROTECT(x); PROTECT(v);
+        PROTECT2(x,v);
         SEXP e = VECTOR_ELT(v,0);
         do { SET_VECTOR_ELT (x, i, duplicate(e)); i += 1; } while (--n>0);
         UNPROTECT(2);
@@ -370,7 +370,7 @@ void copy_elements (SEXP x, int i, int s, SEXP v, int j, int t, int n)
             } while (--n>0);
             break;
         case VECSXP: case EXPRSXP:
-            PROTECT(x); PROTECT(v);
+            PROTECT2(x,v);
             do { 
                 SET_VECTOR_ELT (x, i, duplicate(VECTOR_ELT(v,j)));
                 i += s; j += t; 
@@ -407,35 +407,35 @@ void attribute_hidden Rf_recycled_copy (SEXP x, R_len_t i, R_len_t r, R_len_t n)
         do {
             RAW(x)[i] = RAW(x)[i-r];
             i += 1;
-        } while (--n>0);
+        } while (i < n);
         break;
     }
     case LGLSXP: {
         do {
             LOGICAL(x)[i] = LOGICAL(x)[i-r];
             i += 1;
-        } while (--n>0);
+        } while (i < n);
         break;
     }
     case INTSXP: {
         do {
             INTEGER(x)[i] = INTEGER(x)[i-r];
             i += 1;
-        } while (--n>0);
+        } while (i < n);
         break;
     }
     case REALSXP: {
         do {
             REAL(x)[i] = REAL(x)[i-r];
             i += 1;
-        } while (--n>0);
+        } while (i < n);
         break;
     }
     case CPLXSXP: {
         do {
             COMPLEX(x)[i] = COMPLEX(x)[i-r];
             i += 1;
-        } while (--n>0);
+        } while (i < n);
         break;
     }
     case STRSXP: {
@@ -447,8 +447,8 @@ void attribute_hidden Rf_recycled_copy (SEXP x, R_len_t i, R_len_t r, R_len_t n)
         do { 
             SET_VECTOR_ELT (x, i, duplicate(VECTOR_ELT(x,i-r)));
             i += 1;
-        } while (--n>0);
-        UNPROTECT(2);
+        } while (i < n);
+        UNPROTECT(1);
         break;
     }
     default:
