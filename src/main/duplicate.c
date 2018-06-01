@@ -256,7 +256,8 @@ void set_elements_to_NA_or_NULL (SEXP x, int i, int n)
 }
 
 
-/* Set n elements of x, starting at i, to the repeated j'th element of v. */
+/* Set n elements of x, starting at i, to the repeated j'th element of v.
+   Duplicates VECSXP and EXPRSXP elements. */
 
 static void rep_element (SEXP x, int i, SEXP v, int j, int n)
 {
@@ -390,13 +391,13 @@ void copy_elements (SEXP x, int i, int s, SEXP v, int j, int t, int n)
 
 void attribute_hidden Rf_recycled_copy (SEXP x, R_len_t i, R_len_t r, R_len_t n)
 {
-   if (n <= r)
-       return;
+    if (n <= r)
+        return;
 
-   if (r == 1) {
-       rep_element (x, i+1, x, i, n-1);
-       return;
-   }
+    if (r == 1) {
+        rep_element (x, i+1, x, i, n-1);
+        return;
+    }
 
     i += r;
     n -= r;

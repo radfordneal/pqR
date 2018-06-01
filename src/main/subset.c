@@ -3241,6 +3241,8 @@ static SEXP VectorAssignSeq
     PROTECT(x);
 
     ny = length(y);
+    if (ny > n) 
+        ny = n;
 
     if ((TYPEOF(x) != VECSXP && TYPEOF(x) != EXPRSXP) || y != R_NilValue) {
 	if (n > 0 && ny == 0)
@@ -3264,9 +3266,12 @@ static SEXP VectorAssignSeq
     }
     else if (isVectorAtomic(x)) {
         if (TYPEOF(x) == TYPEOF(y))
-            copy_elements (x, start-1, 1, y, 0, ny>1, n);
-        else if (isVectorAtomic(y))
-            copy_elements_coerced (x, start-1, 1, y, 0, ny>1, n);
+            copy_elements_recycled (x, start-1, y, n);
+        else if (isVectorAtomic(y)) {
+            copy_elements_coerced (x, start-1, 1, y, 0, 1, ny);
+            if (n > ny)
+                Rf_recycled_copy (x, start-1, ny, n);
+        }
         else
             goto warn;
     }
@@ -3280,8 +3285,14 @@ static SEXP VectorAssignSeq
             }
         }
         else {
-            for (i = 0; i < n; i++)
-                SET_VECTOR_ELEMENT_FROM_VECTOR (x, start-1+i, y, i);
+            for (i = 0; i < n; i++) {
+                SET_VECTOR_ELEMENT_FROM_VECTOR (x, start-1+i, y, i % ny);
+                if (i >= ny) {
+                    if (NAMEDCNT_EQ_0 (VECTOR_ELT (x, start-1+i)))
+                        SET_NAMEDCNT(VECTOR_ELT(x, start-1+i), 2);
+
+                }
+            }
         }
     }
     else if (isVectorList(x) && y == R_NilValue) {
@@ -4501,12 +4512,7 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
 
     if (sb1 == R_NoObject) {
         /* 0 subscript arguments */
-        R_len_t lenx = length(x);
-        R_len_t leny = length(y);
-        if (y == R_NilValue || leny == 1 || leny == lenx)
-            x = VectorAssignSeq (call, x, 1, lenx, y);
-        else
-            x = VectorAssign (call, x, R_MissingArg, y);
+        x = VectorAssignSeq (call, x, 1, length(x), y);
     }
     else if (sb2 == R_NoObject) {
         /* 1 subscript argument */
@@ -4514,21 +4520,11 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
             int start, end;
             sb1 = Rf_DecideVectorOrRange (seq, &start, &end, call);
             if (sb1 == R_NoObject) {
-                R_len_t leny;
-                if (start < 0 || y != R_NilValue && (leny = length(y)) != 1
-                                                 && leny != end - start + 1)
-                    sb1 = Rf_VectorFromRange (start, end);
-                else
-                    x = VectorAssignSeq (call, x, start, end, y);
+                x = VectorAssignSeq (call, x, start, end, y);
             }
         }
         if (sb1 == R_MissingArg) {
-            R_len_t lenx = length(x);
-            R_len_t leny = length(y);
-            if (y == R_NilValue || leny == 1 || leny == lenx)
-                x = VectorAssignSeq (call, x, 1, lenx, y);
-            else
-                x = VectorAssign (call, x, R_MissingArg, y);
+            x = VectorAssignSeq (call, x, 1, length(x), y);
         }
         else if (sb1 != R_NoObject) {
             x = VectorAssign (call, x, sb1, y);
