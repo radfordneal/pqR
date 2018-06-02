@@ -299,19 +299,6 @@ static SEXP strmat2intmat(SEXP s, SEXP dnamelist, SEXP call)
     return si;
 }
 
-static SEXP nullSubscript (int n)
-{
-    SEXP indx = allocVector(INTSXP, n);
-    int *ix = INTEGER(indx) - 1;
-
-    unsigned i;     /* unsigned avoids overflow issue */
-    unsigned m = n;
-
-    for (i = 1; i <= m; i++) ix[i] = i;
-
-    return indx;
-}
-
 static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch, 
                               int *hasna, SEXP call)
 {
@@ -857,7 +844,7 @@ static SEXP internalArraySubscript
 	return stringSubscript(s, ns, nd, dnames, (STRING_ELT), &stretch, call);
     case SYMSXP:
 	if (s == R_MissingArg)
-	    return nullSubscript(nd);
+	    return Rf_VectorFromRange(1,nd);
         /* fall through */
     default:
         error(_("invalid subscript type '%s'"), type2char(TYPEOF(s)));
@@ -933,7 +920,7 @@ SEXP arraySubscript (int dim, SEXP s, SEXP dims, AttrGetter dng,
 	return stringSubscript(s, ns, nd, dnames, strg, &stretch, call);
     case SYMSXP:
 	if (s == R_MissingArg)
-	    return nullSubscript(nd);
+	    return Rf_VectorFromRange(1,nd);
     default:
 	if (call == R_NilValue)
 	    error(_("invalid subscript type '%s'"), type2char(TYPEOF(s)));
@@ -1037,7 +1024,7 @@ static SEXP makeSubscript (SEXP x, SEXP s, int *stretch, int *hasna,
     case SYMSXP:
 	*stretch = 0;
 	if (s == R_MissingArg) {
-	    ans = nullSubscript(nx);
+	    ans = Rf_VectorFromRange(1,nx);
 	    break;
 	}
         /* fall through */
