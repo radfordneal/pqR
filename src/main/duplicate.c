@@ -493,7 +493,7 @@ void attribute_hidden Rf_recycled_copy (SEXP x, R_len_t i, R_len_t r, R_len_t n)
             memcpy (COMPLEX(x)+i, COMPLEX(x)+j, m * sizeof *COMPLEX(x));
             break;
         case STRSXP:
-            copy_string_elements (x, i, x, j, n); /* done sequentially */
+            copy_string_elements (x, i, x, j, n-i); /* done sequentially */
             return;
         case VECSXP: case EXPRSXP:
             PROTECT(x);
