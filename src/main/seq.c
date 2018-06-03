@@ -246,12 +246,12 @@ static SEXP do_colon(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
 void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
 {
+    if (TYPEOF(a) != TYPEOF(s) 
+         || t != (helpers_var_ptr)0 && TYPEOF(t) != INTSXP) abort();
+
     int na = length(a), ns = length(s);
     int i, j, k;
     SEXP u;
-
-    if (TYPEOF(a)!=TYPEOF(s) 
-         || t!=(helpers_var_ptr)0 && TYPEOF(t)!=INTSXP) abort();
 
     if (na <= 0) return;
 
@@ -259,35 +259,14 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
         if (ns == 1) {
             /* Repeat of a single element na times. */
             switch (TYPEOF(s)) {
-            case LGLSXP: {
-                int v = LOGICAL(s)[0];
-                for (i = 0; i < na; i++) LOGICAL(a)[i] = v;
+            case LGLSXP:
+            case INTSXP:
+            case REALSXP:
+            case CPLXSXP:
+            case RAWSXP:
+            case STRSXP:
+                Rf_rep_element (a, 0, s, 0, na);
                 break;
-            }
-            case INTSXP: {
-                int v = INTEGER(s)[0];
-                for (i = 0; i < na; i++) INTEGER(a)[i] = v;
-                break;
-            }
-            case REALSXP: {
-                double v = REAL(s)[0];
-                for (i = 0; i < na; i++) REAL(a)[i] = v;
-                break;
-            }
-            case CPLXSXP: {
-                Rcomplex v = COMPLEX(s)[0];
-                for (i = 0; i < na; i++) COMPLEX(a)[i] = v;
-                break;
-            }
-            case RAWSXP: {
-                Rbyte v = RAW(s)[0];
-                for (i = 0; i < na; i++) RAW(a)[i] = v;
-                break;
-            }
-            case STRSXP: {
-                rep_string_elements (a, 0, s, na);
-                break;
-            }
             case LISTSXP: {
                 SEXP v = CAR(s);
                 for (u = a; u != R_NilValue; u = CDR(u)) 
@@ -297,10 +276,17 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
             case EXPRSXP:
             case VECSXP: {
                 SEXP v = VECTOR_ELT (s, 0);
-                SET_VECTOR_ELEMENT_FROM_VECTOR (a, 0, s, 0);
-                for (i = 1; i < na; i++) {
-                    SET_VECTOR_ELT (a, i, v);
-                    INC_NAMEDCNT_0_AS_1 (v);
+                if (v == R_NilValue) {
+                    for (i = 0; i < na; i++) {
+                        SET_VECTOR_ELT_NIL (a, i);
+                    }
+                }
+                else {
+                    SET_VECTOR_ELEMENT_FROM_VECTOR (a, 0, s, 0);
+                    for (i = 1; i < na; i++) {
+                        SET_VECTOR_ELT (a, i, v);
+                        INC_NAMEDCNT_0_AS_1 (v);
+                    }
                 }
         	break;
             }
@@ -311,37 +297,12 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
             /* Simple repeat of a vector to length na. */
             switch (TYPEOF(s)) {
             case LGLSXP:
-                for (i = 0, j = 0; i < na; i++, j++) {
-                    if (j >= ns) j = 0;
-                    LOGICAL(a)[i] = LOGICAL(s)[j];
-                }
-                break;
             case INTSXP:
-                for (i = 0, j = 0; i < na; i++, j++) {
-                    if (j >= ns) j = 0;
-                    INTEGER(a)[i] = INTEGER(s)[j];
-                }
-                break;
             case REALSXP:
-                for (i = 0, j = 0; i < na; i++, j++) {
-                    if (j >= ns) j = 0;
-                    REAL(a)[i] = REAL(s)[j];
-                }
-                break;
             case CPLXSXP:
-                for (i = 0, j = 0; i < na; i++, j++) {
-                    if (j >= ns) j = 0;
-                    COMPLEX(a)[i] = COMPLEX(s)[j];
-                }
-                break;
             case RAWSXP:
-                for (i = 0, j = 0; i < na; i++, j++) {
-                    if (j >= ns) j = 0;
-                    RAW(a)[i] = RAW(s)[j];
-                }
-                break;
             case STRSXP:
-                rep_string_elements (a, 0, s, na);
+                copy_elements_recycled (a, 0, s, na);
                 break;
             case LISTSXP:
                 for (u = a, j = 0; u != R_NilValue; u = CDR(u), j++) {

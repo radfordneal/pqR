@@ -1938,11 +1938,10 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 
     if (type == VECSXP || type == EXPRSXP) {
         for (i = 0; i < length; i++)
-            VECTOR_ELT(s,i) = R_NilValue;      /* no old-to-new check needed */
+            VECTOR_ELT(s,i) = R_NilValue;       /* no old-to-new check needed */
     }
     else if (type == STRSXP) {
-        for (i = 0; i < length; i++)
-            STRING_ELT(s,i) = R_BlankString;   /* no old-to-new check needed */
+        rep_one_string_element (s, 0, R_BlankString, length);
     }
     else if (type == CHARSXP) {
         CHAR_RW(s)[length] = 0; /* ensure there's a terminating null character*/

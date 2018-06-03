@@ -36,6 +36,10 @@
 #include <Print.h>
 #include <R_ext/Rdynload.h>
 
+#if __AVX__ && !defined(DISABLE_AVX_CODE)
+#   include <immintrin.h>
+#endif
+
 
 /* Enable the redefinition of "error" below to abort on invalid API arguments */
 
@@ -449,13 +453,56 @@ void rep_string_elements(SEXP x, int i, SEXP v, int n)
 
 void rep_one_string_element(SEXP x, int i, SEXP e, int n) 
 {
-    CHECK_OLD_TO_NEW(x, e);
+    CHECK_OLD_TO_NEW(x, e);  /* need only check once, not every time below */
 
-    while (n > 0) {
-        STRING_ELT(x,i) = e;
-        i += 1;
-        n -= 1;
+#   if !__AVX__ || defined(DISABLE_AVX_CODE)
+    {
+        int f = i+n;
+        while (i < f) {
+            STRING_ELT(x,i) = e;
+            i += 1;
+        }
     }
+#   else
+#       if USE_COMPRESSED_POINTERS
+        {
+            __m256i E = _mm256_set1_epi32 ((uint32_t)e);
+            SEXP *p = &STRING_ELT(x,i);
+            SEXP *q = p+n;
+            while (((uintptr_t)p & 0x1f) != 0 && p < q)
+                *p++ = e;
+            while (p < q-7) {
+                _mm256_store_si256 ((__m256i *)p, E);
+                p += 8;
+            }
+            while (p < q)
+                *p++ = e;
+        }
+#       else
+        {
+            __m256i E = _mm256_set1_epi64x ((uint64_t)e);
+            SEXP *p = &STRING_ELT(x,i);
+            SEXP *q = p+n;
+            while (p < q && (((uintptr_t) p) & 0x1f) != 0)
+                *p++ = e;
+            if (p < q-3) {
+                _mm256_store_si256 ((__m256i *)p, E);
+                p += 4;
+            }
+            while (p < q-7) {
+                _mm256_store_si256 ((__m256i *)p, E);
+                _mm256_store_si256 ((__m256i *)(p+4), E);
+                p += 8;
+            }
+            if (p < q-3) {
+                _mm256_store_si256 ((__m256i *)p, E);
+                p += 4;
+            }
+            while (p < q)
+                *p++ = e;
+        }
+#       endif
+#   endif
 }
 
 SEXP (SET_VECTOR_ELT)(SEXP x, int i, SEXP v) {

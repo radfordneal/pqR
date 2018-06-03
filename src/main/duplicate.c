@@ -366,7 +366,10 @@ void attribute_hidden Rf_rep_element (SEXP x, int i, SEXP v, int j, int n)
     case VECSXP: case EXPRSXP: {
         PROTECT2(x,v);
         SEXP e = VECTOR_ELT(v,j);
-        do { SET_VECTOR_ELT (x, i, duplicate(e)); i += 1; } while (--n>0);
+        if (e == R_NilValue)
+            do { SET_VECTOR_ELT_NIL (x, i); i += 1; } while (--n>0);
+        else
+            do { SET_VECTOR_ELT (x, i, duplicate(e)); i += 1; } while (--n>0);
         UNPROTECT(2);
         break;
     }
