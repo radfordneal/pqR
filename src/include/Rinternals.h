@@ -1017,7 +1017,8 @@ SEXP (STRING_ELT)(SEXP x, int i);
 SEXP (VECTOR_ELT)(SEXP x, int i);
 void SET_STRING_ELT(SEXP x, int i, SEXP v);
 void copy_string_elements(SEXP x, int i, SEXP v, int j, int n);
-void rep_string_elements(SEXP x, int i, int s, SEXP v, int n);
+void rep_one_string_element(SEXP x, int i, SEXP e, int n);
+void rep_string_elements(SEXP x, int i, SEXP v, int n);
 SEXP SET_VECTOR_ELT(SEXP x, int i, SEXP v);
 void copy_vector_elements(SEXP x, int i, SEXP v, int j, int n);
 SEXP *(STRING_PTR)(SEXP x);
@@ -1858,7 +1859,7 @@ void Rf_PrintValue(SEXP);
 SEXP Rf_protect(SEXP);
 void Rf_protect2(SEXP, SEXP);
 void Rf_protect3(SEXP, SEXP, SEXP);
-void Rf_rep_element (SEXP, int, SEXP, int);
+void Rf_rep_element (SEXP, int, SEXP, int, int);
 SEXP Rf_ScalarComplexMaybeConst(Rcomplex);
 SEXP Rf_ScalarIntegerMaybeConst(int);
 SEXP Rf_ScalarRawMaybeConst(Rbyte);
@@ -2298,6 +2299,8 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define protect			Rf_protect
 #define R_from_C99_complex	Rf_R_from_C99_complex
 #define reEnc			Rf_reEnc
+#define rep_one_string_element	Rf_rep_one_string_element
+#define rep_string_elements	Rf_rep_string_elements
 #define rownamesgets		Rf_rownamesgets
 #define S3Class                 Rf_S3Class
 #define ScalarComplex		Rf_ScalarComplex

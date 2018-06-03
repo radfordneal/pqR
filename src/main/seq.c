@@ -285,7 +285,7 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                 break;
             }
             case STRSXP: {
-                rep_string_elements (a, 0, 1, s, na);
+                rep_string_elements (a, 0, s, na);
                 break;
             }
             case LISTSXP: {
@@ -341,7 +341,7 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
                 }
                 break;
             case STRSXP:
-                rep_string_elements (a, 0, 1, s, na);
+                rep_string_elements (a, 0, s, na);
                 break;
             case LISTSXP:
                 for (u = a, j = 0; u != R_NilValue; u = CDR(u), j++) {

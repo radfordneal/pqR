@@ -377,6 +377,7 @@ void (SET_STRING_ELT)(SEXP x, int i, SEXP v) {
 /* Copy n string elements from v (starting at j) to x (starting at i). 
    Copied sequentially; x and v can be the same object, but note the
    consequences of this. */
+
 void copy_string_elements(SEXP x, int i, SEXP v, int j, int n) 
 {
     SEXP e;
@@ -403,9 +404,11 @@ void copy_string_elements(SEXP x, int i, SEXP v, int j, int n)
     }
 }
 
-/* Store repeated copies of the string elements of v in x (starting at i,
-   stepping by s), until n elements have been stored. */
-void rep_string_elements(SEXP x, int i, int s, SEXP v, int n) 
+/* Store repeated copies of the string elements of v (recycled if
+   necessary) in x (starting at i, from 0), until n elements have been
+   stored. */
+
+void rep_string_elements(SEXP x, int i, SEXP v, int n) 
 {
     R_len_t lenv = LENGTH(v);
     R_len_t k;
@@ -419,7 +422,7 @@ void rep_string_elements(SEXP x, int i, int s, SEXP v, int n)
         k = 0;
         while (n > 0) {
             STRING_ELT(x,i) = STRING_ELT(v,k);
-            i += s;
+            i += 1;
             n -= 1;
             k += 1;
             if (k >= lenv) k = 0;
@@ -433,11 +436,25 @@ void rep_string_elements(SEXP x, int i, int s, SEXP v, int n)
             e = STRING_ELT(v,k);
             CHECK_OLD_TO_NEW(x, e);
             STRING_ELT(x,i) = e;
-            i += s;
+            i += 1;
             n -= 1;
             k += 1;
             if (k >= lenv) k = 0;
         }
+    }
+}
+
+/* Store repeated copies of the CHARSXP e in x, starting at i, until n
+   elements have been stored. */
+
+void rep_one_string_element(SEXP x, int i, SEXP e, int n) 
+{
+    CHECK_OLD_TO_NEW(x, e);
+
+    while (n > 0) {
+        STRING_ELT(x,i) = e;
+        i += 1;
+        n -= 1;
     }
 }
 

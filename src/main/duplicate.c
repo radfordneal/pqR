@@ -263,7 +263,7 @@ void set_elements_to_NA_or_NULL (SEXP x, int i, int n)
 /* Set n elements of x, starting at i, to the repeated j'th element of v.
    Duplicates VECSXP and EXPRSXP elements. */
 
-static void attribute_noinline rep_element (SEXP x, int i, SEXP v, int j, int n)
+void attribute_hidden Rf_rep_element (SEXP x, int i, SEXP v, int j, int n)
 {
     if (n == 0)
         return;
@@ -360,18 +360,18 @@ static void attribute_noinline rep_element (SEXP x, int i, SEXP v, int j, int n)
         break;
     }
     case STRSXP: {
-        rep_string_elements (x, i, 1, v, n);
+        rep_one_string_element (x, i, STRING_ELT(v,j), n);
         break;
     }
     case VECSXP: case EXPRSXP: {
         PROTECT2(x,v);
-        SEXP e = VECTOR_ELT(v,0);
+        SEXP e = VECTOR_ELT(v,j);
         do { SET_VECTOR_ELT (x, i, duplicate(e)); i += 1; } while (--n>0);
         UNPROTECT(2);
         break;
     }
     default:
-        UNIMPLEMENTED_TYPE("rep_element", x);
+        UNIMPLEMENTED_TYPE("Rf_rep_element", x);
     }
 }
 
@@ -392,7 +392,7 @@ void copy_elements (SEXP x, int i, int s, SEXP v, int j, int t, int n)
     if (j >= LENGTH(v) - (n-1)*t) abort();
 
     if (s == 1 && t == 0)
-        rep_element (x, i, v, j, n);
+        Rf_rep_element (x, i, v, j, n);
     else if (n > 8 && s == 1 && t == 1 && isVectorAtomic(x)) {
         switch (TYPEOF(x)) {
         case RAWSXP:
@@ -464,7 +464,7 @@ void attribute_hidden Rf_recycled_copy (SEXP x, R_len_t i, R_len_t r, R_len_t n)
         return;
 
     if (r == 1) {
-        rep_element (x, i+1, x, i, n-1);
+        Rf_rep_element (x, i+1, x, i, n-1);
         return;
     }
 
@@ -533,7 +533,7 @@ void copy_elements_recycled (SEXP x, int i, SEXP v, int n)
         copy_elements (x, i, 1, v, 0, 1, n);
 
     else if (vl == 1)
-        rep_element (x, i, v, 0, n);
+        Rf_rep_element (x, i, v, 0, n);
 
     else {
         copy_elements (x, i, 1, v, 0, 1, vl);
