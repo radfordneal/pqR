@@ -44,7 +44,7 @@ lazyLoadDBexec <- function(filebase, fun, filter)
     getFromFrame <- function (x, env) .Internal(get(x, env, "any", FALSE))
     set <- function (x, value, env) .Internal(assign(x, value, env, FALSE))
     environment <- function () .Internal(environment(NULL))
-    mkenv <- function() .Internal(new.env(TRUE, baseenv(), 29L))
+    mkenv <- function() .Internal(new.env(TRUE, baseenv(), NA))
 
     ##
     ## main body

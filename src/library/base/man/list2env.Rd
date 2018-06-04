@@ -13,7 +13,7 @@
 }
 \usage{
 list2env(x, envir = NULL, parent = parent.frame(),
-         hash = (length(x) > 100), size = max(29L, length(x)))
+         hash = (length(x) > 100), size = length(x))
 }
 \arguments{
   \item{x}{a \code{\link{list}}, where \code{\link{names}(x)} must

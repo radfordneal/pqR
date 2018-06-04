@@ -23,7 +23,7 @@
     getFromFrame <- function (x, env) .Internal(get(x, env, "any", FALSE))
     set <- function (x, value, env) .Internal(assign(x, value, env, FALSE))
     environment <- function () .Internal(environment(NULL))
-    mkenv <- function() .Internal(new.env(TRUE, baseenv(), 29L))
+    mkenv <- function() .Internal(new.env(TRUE, baseenv(), NA))
 
     ##
     ## main body
@@ -90,7 +90,7 @@
 
     ..lazyLoad(basedb, baseenv())
 
-}), .Internal(new.env(FALSE, baseenv(), 29L)), baseenv()))
+}), .Internal(new.env(FALSE, baseenv(), NA)), baseenv()))
 
 ## keep in sync with R/zzz.R
 as.numeric <- as.real <- as.double

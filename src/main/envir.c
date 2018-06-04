@@ -1840,20 +1840,26 @@ static SEXP do_list2env(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP x, xnms, envir;
     int n;
+
     checkArity(op, args);
 
-    if (TYPEOF(CAR(args)) != VECSXP)
-	error(_("first argument must be a named list"));
     x = CAR(args);
-    n = LENGTH(x);
-    xnms = getAttrib(x, R_NamesSymbol);
-    if (TYPEOF(xnms) != STRSXP || LENGTH(xnms) != n)
-	error(_("names(x) must be a character vector of the same length as x"));
+    if (TYPEOF(x) != VECSXP)
+	error(_("first argument must be a named list"));
+
     envir = CADR(args);
     if (TYPEOF(envir) != ENVSXP)
 	error(_("'envir' argument must be an environment"));
 
-    for(int i = 0; i < LENGTH(x) ; i++) {
+    n = LENGTH(x);
+    if (n == 0)
+        return envir;
+
+    xnms = getAttrib(x, R_NamesSymbol);
+    if (TYPEOF(xnms) != STRSXP || LENGTH(xnms) != n)
+	error(_("names(x) must be a character vector of the same length as x"));
+
+    for (int i = 0; i < n; i++) {
 	SEXP name = install(translateChar(STRING_ELT(xnms, i)));
 	defineVar(name, VECTOR_ELT(x, i), envir);
     }

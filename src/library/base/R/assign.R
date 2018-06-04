@@ -22,6 +22,6 @@ assign <-
 
 ## do_list2env in ../../../main/envir.c
 list2env <- function(x, envir = NULL, parent = parent.frame(),
-		     hash = (length(x) > 100), size = max(29L, length(x)))
+		     hash = length(x) > 100, size = length(x))
     .Internal (list2env (x, 
      if (is.null(envir)) new.env(hash=hash,parent=parent,size=size) else envir))
