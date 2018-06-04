@@ -162,8 +162,8 @@ static SEXP do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if (miss_nr) nr = ceil(lendat/(double) nc);
     else if (miss_nc) nc = ceil(lendat/(double) nr);
 
-    if(lendat > 0 ) {
-	if (lendat > 1 && (nr * nc) % lendat != 0) {
+    if (lendat > 1) {
+	if ((nr * nc) % lendat != 0) {
 	    if (((lendat > nr) && (lendat / nr) * nr != lendat) ||
 		((lendat < nr) && (nr / lendat) * lendat != nr))
 		warning(_("data length [%d] is not a sub-multiple or multiple of the number of rows [%d]"), lendat, nr);
@@ -171,7 +171,7 @@ static SEXP do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 		     ((lendat < nc) && (nc / lendat) * lendat != nc))
 		warning(_("data length [%d] is not a sub-multiple or multiple of the number of columns [%d]"), lendat, nc);
 	}
-	else if ((lendat > 1) && (nr * nc == 0)){
+	else if (nr * nc == 0) {
 	    warning(_("data length exceeds size of matrix"));
 	}
     }

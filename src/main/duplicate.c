@@ -637,13 +637,13 @@ void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
         nc = INTEGER(dims)[1];
     }
 
-    if (!byrow || nr == 1 || nt == 1) {  /* byrow=TRUE or byrow irrelevant */
+    if (!byrow || nr==1 || nc==1 || nt==1) { /* byrow=TRUE or byrow irrelevant*/
         copy_elements_recycled (s, 0, t, len);
     }
     else if (nt == len) {  /* same as a transpose operation */
         copy_transposed (s, t, nc, nr);  /* NOT nr, nc ! */
     }
-    else if (nt <= nc) {  /* each column has repetitions of a single element */
+    else if (nc%nt == 0) { /* each column has repetitions of a single element */
         int i, j, k;
         i = j = k = 0;
         switch (TYPEOF(s)) {
@@ -698,6 +698,7 @@ void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
         case VECSXP: case EXPRSXP:
             while (j < len) {
                 SEXP e = VECTOR_ELT(t,k);
+                SET_NAMEDCNT_MAX(e);
                 i = j; j += nr;
                 while (i < j) SET_VECTOR_ELT(s,i++,e);
                 k += 1; if (k >= nt) k = 0;
@@ -710,49 +711,51 @@ void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
 
     else {  /* general case for byrow=TRUE */
         int len_1 = len - 1;
-        int nomod = nt > len_1;
-        int i, j;
+        unsigned j;
+        int i;
         switch (TYPEOF(s)) {
         case RAWSXP:
             for (i = 0, j = 0; i <= len_1; i++, j += nc) {
                 if (j > len_1) j -= len_1;
-                RAW(s)[i] = RAW(t) [nomod ? j : j % nt];
+                RAW(s)[i] = RAW(t) [j % nt];
             }
             break;
         case LGLSXP:
             for (i = 0, j = 0; i <= len_1; i++, j += nc) {
                 if (j > len_1) j -= len_1;
-                LOGICAL(s)[i] = LOGICAL(t) [nomod ? j : j % nt];
+                LOGICAL(s)[i] = LOGICAL(t) [j % nt];
             }
             break;
         case INTSXP:
             for (i = 0, j = 0; i <= len_1; i++, j += nc) {
                 if (j > len_1) j -= len_1;
-                INTEGER(s)[i] = INTEGER(t) [nomod ? j : j % nt];
+                INTEGER(s)[i] = INTEGER(t) [j % nt];
             }
             break;
         case REALSXP:
             for (i = 0, j = 0; i <= len_1; i++, j += nc) {
                 if (j > len_1) j -= len_1;
-                REAL(s)[i] = REAL(t) [nomod ? j : j % nt];
+                REAL(s)[i] = REAL(t) [j % nt];
             }
             break;
         case CPLXSXP:
             for (i = 0, j = 0; i <= len_1; i++, j += nc) {
                 if (j > len_1) j -= len_1;
-                COMPLEX(s)[i] = COMPLEX(t) [nomod ? j : j % nt];
+                COMPLEX(s)[i] = COMPLEX(t) [j % nt];
             }
             break;
         case STRSXP:
             for (i = 0, j = 0; i <= len_1; i++, j += nc) {
                 if (j > len_1) j -= len_1;
-                SET_STRING_ELT (s, i, STRING_ELT (t, nomod ? j : j % nt));
+                SET_STRING_ELT (s, i, STRING_ELT (t, j % nt));
             }
             break;
         case VECSXP: case EXPRSXP:
             for (i = 0, j = 0; i <= len_1; i++, j += nc) {
                 if (j > len_1) j -= len_1;
-                SET_VECTOR_ELT (s, i, VECTOR_ELT (t, nomod ? j : j % nt));
+                SEXP e = VECTOR_ELT (t, j % nt);
+                SET_NAMEDCNT_MAX(e);
+                SET_VECTOR_ELT (s, i, e);
             }
             break;
         default:

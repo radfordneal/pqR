@@ -227,3 +227,8 @@ for (w in c("aa","bb","cc")) {
 
 o2 <- order(a,b,method="merge")
 identical(o,o2)
+
+# Matrix formation with and without byrow=TRUE.
+
+identical (matrix(1:24,3,8), t(matrix(1:24,8,3,byrow=TRUE)))
+identical (matrix(1:3,6,4,byrow=TRUE),matrix(rep(1:3,length=24),6,4,byrow=TRUE))
