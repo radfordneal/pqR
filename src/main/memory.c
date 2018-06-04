@@ -343,7 +343,7 @@ static void CheckFinalizers(void)
 	    SET_READY_TO_FINALIZE(s);
 }
 
-/* C finalizers are stored in a CHARSXP.  It would be nice if we could
+/* C finalizers are stored in a RAWSXP.  It would be nice if we could
    use EXTPTRSXP's but these only hold a void *, and function pointers
    are not guaranteed to be compatible with a void *.  There should be
    a cleaner way of doing this, but this will do for now. --LT */
