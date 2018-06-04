@@ -1,0 +1,3 @@
+Improvements to package loading, other startup time issues.
+
+Increased initial symbol hash table size from 8K to 16K.

@@ -369,11 +369,6 @@ extern int putenv(char *string);
 #endif
 #endif
 
-#define HSIZE (1<<13)   /* Initial size of lphash symbol table (a power of 2) */
-
-#define MAXIDSIZE 10000	/* Largest symbol size, in bytes excluding terminator.
-			   Was 256 prior to 2.13.0, now just a sanity check */
-
 /* Types for the do_xxxx functions for SPECIAL and BUILTIN operations. */
 
 typedef SEXP (*CCODE)(SEXP, SEXP, SEXP, SEXP);
