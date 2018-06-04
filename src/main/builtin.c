@@ -243,14 +243,19 @@ static SEXP do_makelazy(SEXP call, SEXP op, SEXP args, SEXP rho)
     aenv = CAR(args);
     if (!isEnvironment(aenv)) error(_("invalid '%s' argument"), "assign.env");
 
-    for(i = 0; i < LENGTH(names); i++) {
-	SEXP name = installChar(STRING_ELT(names, i));
-	PROTECT(val = eval(VECTOR_ELT(values, i), eenv));
-	PROTECT(expr0 = duplicate(expr));
-	SETCAR(CDR(expr0), val);
+    for (i = 0; i < LENGTH(names); i++) {
+	SEXP name = installChar (STRING_ELT(names, i));
+        val = VECTOR_ELT(values,i);
+	val = eval (val, eenv);
+        expr0 = cons_with_tag (CAR(expr), 
+                               cons_with_tag (val, CDDR(expr), TAG(CDR(expr))),
+                               TAG(expr));
+        SET_TYPEOF (expr0, TYPEOF(expr));
+	PROTECT(expr0);
 	defineVar(name, mkPROMISE(expr0, eenv), aenv); /* NAMEDCNT==1 for promise */
-	UNPROTECT(2);
+	UNPROTECT(1);
     }
+
     return R_NilValue;
 }
 
