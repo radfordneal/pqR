@@ -15,7 +15,8 @@
 memory.profile(minlength=0L)
 }
 \arguments{
-  \item{minlength} Minimum length for vector types to be counted.
+  \item{minlength}{Minimum length required for an object of a vector type
+                   to be counted.}
 }
 \details{
     The current types and their uses are listed in the include file
