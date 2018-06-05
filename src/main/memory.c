@@ -2154,10 +2154,16 @@ static void gc_end_timing(void)
 /* Procedure for counting object of various types, for do_memoryprofile. */
 
 static SEXP counters_vec;
+static R_len_t min_length_counted;
 
 static void count_obj (sggc_cptr_t v, sggc_nchunks_t nch)
 {
-    int type = TYPEOF(SEXP_FROM_CPTR(v));
+    SEXP o = SEXP_FROM_CPTR(v);
+    int type = TYPEOF(o);
+
+    if (((VECTOR_TYPES >> type) & 1) && LENGTH(o) < min_length_counted)
+        return;
+
     if (type > LGLSXP) type -= 2;
     if (type < 24) INTEGER(counters_vec)[type] += 1;
 }
@@ -2276,6 +2282,9 @@ static SEXP do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, nms, v;
     int i;
+
+    checkArity(op, args);
+    min_length_counted = asInteger(CAR(args));
 
     /* Allocate space for counts. */
 
@@ -3508,7 +3517,7 @@ attribute_hidden FUNTAB R_FunTab_memory[] =
 {"gc",		do_gc,		0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"gc.time",	do_gctime,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"mem.limits",	do_memlimits,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"memory.profile",do_memoryprofile, 0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
+{"memory.profile",do_memoryprofile, 0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"pnamedcnt",	do_pnamedcnt,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"Rprofmem",	do_Rprofmem,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
 {"object.size",	do_objectsize,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},

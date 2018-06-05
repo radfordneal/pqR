@@ -182,6 +182,9 @@
         row or column, as illustrated by the last example in \code{help("[")}.
   \item When \code{unlist} is applied to an atomic vector, names are now removed
         if \code{use.names} is \code{FALSE} (not the default).
+  \item The \code{memory.profile} function now has an argument that can
+        restrict the counts for vector objects to only those of some minimum
+        length.
   \item When the \code{unlist} and \code{c} functions create names for their
         result, the situations in which a sequence number is appended to a 
         name are now the same for atomic vectors and lists.  For example, 

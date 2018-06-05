@@ -70,7 +70,7 @@ lfactorial <- function(x) lgamma(x + 1)
 
 choose <- function(n,k).Internal(choose(n,k))
 lchoose <- function(n,k).Internal(lchoose(n,k))
-
+
 ##-- 2nd part --
 R.Version <- function().Internal(Version())
 
@@ -189,7 +189,7 @@ t.default <- function(x).Internal(t.default(x))
 typeof <- function(x).Internal(typeof(x))
 
 
-memory.profile <- function() .Internal(memory.profile())
+memory.profile <- function(minlength=0L) .Internal(memory.profile(minlength))
 
 capabilities <- function(what = NULL)
 {

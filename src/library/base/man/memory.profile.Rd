@@ -12,7 +12,10 @@
     in use.
 }
 \usage{
-memory.profile()
+memory.profile(minlength=0L)
+}
+\arguments{
+  \item{minlength} Minimum length for vector types to be counted.
 }
 \details{
     The current types and their uses are listed in the include file
@@ -24,10 +27,16 @@ memory.profile()
 % Also \code{FUNSXP} is not included.
 % Nonsense: that is a mode, not a type.
 \value{
-  A vector of counts, named by the types.  See \code{\link{typeof}} for
-  an explanation of types.  A small number of constant 
+  A vector of counts, named by the types, of the number of objects of
+  each type.  For vector types, only objects with length at least
+  \code{minlength} are included in the counts.
+
+  A small number of constant 
   objects (eg, 0, \code{TRUE}, and \code{NULL}) are not included in
   these counts.
+
+  See \code{\link{typeof}} for
+  an explanation of types.  
 }
 
 \seealso{
@@ -37,5 +46,7 @@ memory.profile()
 
 \examples{\donttest{
 memory.profile()
+
+memory.profile(0) - memory.profile(1)  # counts of zero-length vectors
 }}
 \keyword{utilities}
