@@ -2301,10 +2301,14 @@ static SEXP do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
     gc_next_level = 2;
     R_gc_internal(0,ans);
 
-    /* Undo counts for objects allocated by R_alloc. */
+    /* Undo counts for objects allocated by R_alloc.  These do not have a
+       real R type (type and length may be garbage), but here we undo whatever
+       was done before. */
 
     for (v = R_VStack; v != R_NilValue && v != R_NoObject; v = ATTRIB_W(v)) {
         int type = TYPEOF(v);
+        if (((VECTOR_TYPES >> type) & 1) && LENGTH(v) < min_length_counted)
+            continue;
         if (type > LGLSXP) type -= 2;
         if (type < 24) INTEGER(ans)[type] -= 1;
     }
