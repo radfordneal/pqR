@@ -55,7 +55,7 @@
     if (n2 == 1) { \
         x2 = FETCH(s2,0); \
         if (NANCHK2) \
-            for (i = 0; i<n; i++) lp[i] = NA_LOGICAL; \
+            Rf_set_elements_to_NA (ans, 0, 1, n); \
         else \
             for (i = 0; i<n; i++) { \
                 x1 = FETCH(s1,i); \
@@ -65,7 +65,7 @@
     else if (n1 == 1) { \
         x1 = FETCH(s1,0); \
         if (NANCHK1) \
-            for (i = 0; i<n; i++) lp[i] = NA_LOGICAL; \
+            Rf_set_elements_to_NA (ans, 0, 1, n); \
         else \
             for (i = 0; i<n; i++) { \
                 x2 = FETCH(s2,i); \

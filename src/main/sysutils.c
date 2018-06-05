@@ -781,9 +781,7 @@ int Riconv_close (void *cd)
 static void *latin1_obj = NULL, *utf8_obj = NULL, 
             *ucsmb_obj = NULL,  *ucsutf8_obj = NULL;
 
-const char *Rf_translateChar_nontrivial (SEXP x);
-
-const char *translateChar (SEXP x)
+const char *Rf_translateChar_nontrivial (SEXP x)
 {
     if (TYPEOF(x) != CHARSXP)
 	error(_("'%s' must be called on a CHARSXP"), "translateChar");
@@ -805,12 +803,6 @@ const char *translateChar (SEXP x)
     if (latin1locale && IS_LATIN1(x))
         return ans;
 
-    return Rf_translateChar_nontrivial(x);
-}
-
-/* Would be static except want to discourage compiler from inlining it. */
-attribute_hidden const char *Rf_translateChar_nontrivial (SEXP x)
-{
     void * obj;
     const char *inbuf;
     char *outbuf, *p;

@@ -34,6 +34,10 @@
 
 #include <R_ext/RS.h> /* S4 bit */
 
+#if __AVX__ && !defined(DISABLE_AVX_CODE)
+#   include <immintrin.h>
+#endif
+
 /*  duplicate  -  object duplication  */
 
 /*  Because we try to maintain the illusion of call by
@@ -142,7 +146,7 @@ static SEXP duplicate1(SEXP s)
 	return s;
     case CLOSXP:
 	PROTECT(s);
-	if (R_jit_enabled > 1 && TYPEOF(BODY(s)) != BCODESXP) {
+	if (0 && R_jit_enabled > 1 && TYPEOF(BODY(s)) != BCODESXP) {
 	    int old_enabled = R_jit_enabled;
 	    SEXP new_s;
 	    R_jit_enabled = 0;
@@ -256,6 +260,125 @@ void set_elements_to_NA_or_NULL (SEXP x, int i, int n)
 }
 
 
+/* Set n elements of x, starting at i, to the repeated j'th element of v.
+   Duplicates VECSXP and EXPRSXP elements. */
+
+void attribute_hidden Rf_rep_element (SEXP x, int i, SEXP v, int j, int n)
+{
+    if (n == 0)
+        return;
+
+    switch (TYPEOF(x)) {
+    case RAWSXP: {
+        Rbyte e = RAW(v)[j];
+#       if !__AVX__ || defined(DISABLE_AVX_CODE)
+            do { RAW(x)[i] = e; i += 1; } while (--n>0);
+#       else
+            __m256i E = _mm256_set1_epi8(e);
+            Rbyte *p = &RAW(x)[i];
+            Rbyte *q = p+n;
+            while (p < q && (((uintptr_t) p) & 0x1f) != 0) 
+                *p++ = e;
+            if (p < q-31) {
+                _mm256_store_si256 ((__m256i *) p, E);
+                p += 32;
+            }
+            while (p < q-63) {
+                _mm256_store_si256 ((__m256i *) p, E);
+                _mm256_store_si256 ((__m256i *) (p+32), E);
+                p += 64;
+            }
+            if (p < q-31) {
+                _mm256_store_si256 ((__m256i *) p, E);
+                p += 32;
+            }
+            while (p < q)
+                *p++ = e;
+#       endif
+        break;
+    }
+    case LGLSXP:
+    case INTSXP: {
+        int e = INTEGER(v)[j];
+#       if !__AVX__ || defined(DISABLE_AVX_CODE)
+            do { INTEGER(x)[i] = e; i += 1; } while (--n>0);
+#       else
+            __m256i E = _mm256_set1_epi32(e);
+            int *p = &INTEGER(x)[i];
+            int *q = p+n;
+            while (p < q && (((uintptr_t) p) & 0x1f) != 0) 
+                *p++ = e;
+            if (p < q-7) {
+                _mm256_store_si256 ((__m256i *) p, E);
+                p += 8;
+            }
+            while (p < q-15) {
+                _mm256_store_si256 ((__m256i *) p, E);
+                _mm256_store_si256 ((__m256i *) (p+8), E);
+                p += 16;
+            }
+            if (p < q-7) {
+                _mm256_store_si256 ((__m256i *) p, E);
+                p += 8;
+            }
+            while (p < q)
+                *p++ = e;
+#       endif
+        break;
+    }
+    case REALSXP: {
+        double e = REAL(v)[j];
+#       if !__AVX__ || defined(DISABLE_AVX_CODE)
+            do { REAL(x)[i] = e; i += 1; } while (--n>0);
+#       else
+            __m256d E = _mm256_set1_pd(e);
+            double *p = &REAL(x)[i];
+            double *q = p+n;
+            while (p < q && (((uintptr_t) p) & 0x1f) != 0) 
+                *p++ = e;
+            if (p < q-3) {
+                _mm256_store_pd (p, E);
+                p += 4;
+            }
+            while (p < q-7) {
+                _mm256_store_pd (p, E);
+                _mm256_store_pd (p+4, E);
+                p += 8;
+            }
+            if (p < q-3) {
+                _mm256_store_pd (p, E);
+                p += 4;
+            }
+            while (p < q)
+                *p++ = e;
+#       endif
+        break;
+    }
+    case CPLXSXP: {
+        Rcomplex e = COMPLEX(v)[j];
+        do { COMPLEX(x)[i] = e; i += 1; } while (--n>0);
+        break;
+    }
+    case STRSXP: {
+        rep_one_string_element (x, i, STRING_ELT(v,j), n);
+        break;
+    }
+    case VECSXP: case EXPRSXP: {
+        PROTECT2(x,v);
+        SEXP e = VECTOR_ELT(v,j);
+        if (e == R_NilValue)
+            do { SET_VECTOR_ELT_NIL (x, i); i += 1; } while (--n>0);
+        else
+            do { SET_VECTOR_ELT (x, i, duplicate(e)); i += 1; } while (--n>0);
+        UNPROTECT(2);
+        break;
+    }
+    default:
+        UNIMPLEMENTED_TYPE("Rf_rep_element", x);
+    }
+}
+
+
 /* Copy n elements from vector v (starting at j, stepping by t) to
    vector x (starting at i, stepping by s).  The vectors x and v must
    be of the same type (unless n is zero), which may be numeric or
@@ -271,7 +394,9 @@ void copy_elements (SEXP x, int i, int s, SEXP v, int j, int t, int n)
     if (i >= LENGTH(x) - (n-1)*s) abort();
     if (j >= LENGTH(v) - (n-1)*t) abort();
 
-    if (n > 8 && s == 1 && t == 1 && isVectorAtomic(x)) {
+    if (s == 1 && t == 0)
+        Rf_rep_element (x, i, v, j, n);
+    else if (n > 8 && s == 1 && t == 1 && isVectorAtomic(x)) {
         switch (TYPEOF(x)) {
         case RAWSXP:
             memmove (RAW(x)+i, RAW(v)+j, n * sizeof(char));
@@ -317,7 +442,7 @@ void copy_elements (SEXP x, int i, int s, SEXP v, int j, int t, int n)
             } while (--n>0);
             break;
         case VECSXP: case EXPRSXP:
-            PROTECT(x); PROTECT(v);
+            PROTECT2(x,v);
             do { 
                 SET_VECTOR_ELT (x, i, duplicate(VECTOR_ELT(v,j)));
                 i += s; j += t; 
@@ -330,13 +455,76 @@ void copy_elements (SEXP x, int i, int s, SEXP v, int j, int t, int n)
     }
 }
 
-/* Copy n elements from vector v (starting at 0) to vector x (starting at i).
-   The vector v may be shorter than n, in which case its elements are recycled.
-   The vectors v and x must be of the same type, which may be numeric or 
-   non-numeric.  Elements of a VECSXP or EXPRSXP are duplicated.  If necessary,
-   x and v are protected. */
 
-void copy_elements_recycled (SEXP x, int i, int s, SEXP v, int n)
+/* Copy r elements of x starting at index i (from 0) again and again
+   (recycling them) into elements of x starting at index i+r, stopping
+   at index i+n (at which an element is not stored).  VECSXP and EXPRSXP
+   elements are duplicated. */
+
+void attribute_hidden Rf_recycled_copy (SEXP x, R_len_t i, R_len_t r, R_len_t n)
+{
+    if (n <= r)
+        return;
+
+    if (r == 1) {
+        Rf_rep_element (x, i+1, x, i, n-1);
+        return;
+    }
+
+    R_len_t j;
+
+    j = i;   /* j is index of elements to repeat */
+    n += i;  /* n is now the index to stop at */
+    i += r;  /* don't set first r elements, which are already set */
+
+    for (;;) {
+
+        R_len_t m = n-i < r ? n-i : r;  /* amount to copy this time (except 
+                                           for strings and lists) */
+        switch (TYPEOF(x)) {
+        case RAWSXP:
+            memcpy (RAW(x)+i, RAW(x)+j, m * sizeof *RAW(x));
+            break;
+        case LGLSXP:
+        case INTSXP:
+            memcpy (INTEGER(x)+i, INTEGER(x)+j, m * sizeof *INTEGER(x));
+            break;
+        case REALSXP:
+            memcpy (REAL(x)+i, REAL(x)+j, m * sizeof *REAL(x));
+            break;
+        case CPLXSXP:
+            memcpy (COMPLEX(x)+i, COMPLEX(x)+j, m * sizeof *COMPLEX(x));
+            break;
+        case STRSXP:
+            copy_string_elements (x, i, x, j, n-i); /* done sequentially */
+            return;
+        case VECSXP: case EXPRSXP:
+            PROTECT(x);
+            do { 
+                SET_VECTOR_ELT (x, i, duplicate(VECTOR_ELT(x,j)));
+                i += 1; j += 1;
+            } while (i < n);
+            UNPROTECT(1);
+            return;
+        default:
+            UNIMPLEMENTED_TYPE("Rf_recycled_copy", x);
+        }
+
+        i += m;
+
+        if (i == n) break;
+
+        if (r < 256) r += r;  /* can now copy twice as many, if seems faster */
+    }
+}
+
+/* Copy n elements from vector v (starting at 0) to vector x (starting
+   at i).  The vector v may be shorter than n, in which case its
+   elements are recycled.  The vectors v and x must be of the same
+   type, which may be numeric or non-numeric.  Elements of a VECSXP or
+   EXPRSXP are duplicated.  If necessary, x and v are protected. */
+
+void copy_elements_recycled (SEXP x, int i, SEXP v, int n)
 {
     if (n == 0)
         return;
@@ -345,166 +533,14 @@ void copy_elements_recycled (SEXP x, int i, int s, SEXP v, int n)
     if (vl == 0) abort();
 
     if (vl >= n)
-        copy_elements (x, i, s, v, 0, 1, n);
+        copy_elements (x, i, 1, v, 0, 1, n);
 
-    else if (vl == 1) {
-        switch (TYPEOF(x)) {
-        case RAWSXP: {
-            Rbyte e = RAW(v)[0];
-            do { RAW(x)[i] = e; i += s; } while (--n>0);
-            break;
-        }
-        case LGLSXP: {
-            int e = LOGICAL(v)[0];
-            do { LOGICAL(x)[i] = e; i += s; } while (--n>0);
-            break;
-        }
-        case INTSXP: {
-            int e = INTEGER(v)[0];
-            do { INTEGER(x)[i] = e; i += s; } while (--n>0);
-            break;
-        }
-        case REALSXP: {
-            double e = REAL(v)[0];
-            do { REAL(x)[i] = e; i += s; } while (--n>0);
-            break;
-        }
-        case CPLXSXP: {
-            Rcomplex e = COMPLEX(v)[0];
-            do { COMPLEX(x)[i] = e; i += s; } while (--n>0);
-            break;
-        }
-        case STRSXP: {
-            rep_string_elements (x, i, s, v, n);
-            break;
-        }
-        case VECSXP: case EXPRSXP: {
-            PROTECT(x); PROTECT(v);
-            SEXP e = VECTOR_ELT(v,0);
-            do { SET_VECTOR_ELT (x, i, duplicate(e)); i += s; } while (--n>0);
-            UNPROTECT(2);
-            break;
-        }
-        default:
-            UNIMPLEMENTED_TYPE("copy_elements_recycled", x);
-        }
-    }
+    else if (vl == 1)
+        Rf_rep_element (x, i, v, 0, n);
 
-    else if (s == 1) {
+    else {
         copy_elements (x, i, 1, v, 0, 1, vl);
-        i += vl;
-        n -= vl;
-        switch (TYPEOF(x)) {
-        case RAWSXP: {
-            do {
-                RAW(x)[i] = RAW(x)[i-vl];
-                i += 1;
-            } while (--n>0);
-            break;
-        }
-        case LGLSXP: {
-            do {
-                LOGICAL(x)[i] = LOGICAL(x)[i-vl];
-                i += 1;
-            } while (--n>0);
-            break;
-        }
-        case INTSXP: {
-            do {
-                INTEGER(x)[i] = INTEGER(x)[i-vl];
-                i += 1;
-            } while (--n>0);
-            break;
-        }
-        case REALSXP: {
-            do {
-                REAL(x)[i] = REAL(x)[i-vl];
-                i += 1;
-            } while (--n>0);
-            break;
-        }
-        case CPLXSXP: {
-            do {
-                COMPLEX(x)[i] = COMPLEX(x)[i-vl];
-                i += 1;
-            } while (--n>0);
-            break;
-        }
-        case STRSXP: {
-            copy_string_elements (x, i, x, i-vl, n); /* done sequentially */
-            break;
-        }
-        case VECSXP: case EXPRSXP: {
-            PROTECT(x); PROTECT(v);
-            do { 
-                SET_VECTOR_ELT (x, i, duplicate(VECTOR_ELT(x,i-vl)));
-                i += 1;
-            } while (--n>0);
-            UNPROTECT(2);
-            break;
-        }
-        default:
-            UNIMPLEMENTED_TYPE("copy_elements", x);
-        }
-    }
-
-    else {  /* s > 1 */
-        int j = 0;
-        switch (TYPEOF(x)) {
-        case RAWSXP: {
-            do {
-                RAW(x)[i] = RAW(v)[j];
-                i += s; if (++j == vl) j = 0; 
-            } while (--n>0);
-            break;
-        }
-        case LGLSXP: {
-            do {
-                LOGICAL(x)[i] = LOGICAL(v)[j];
-                i += s; if (++j == vl) j = 0; 
-            } while (--n>0);
-            break;
-        }
-        case INTSXP: {
-            do {
-                INTEGER(x)[i] = INTEGER(v)[j];
-                i += s; if (++j == vl) j = 0; 
-            } while (--n>0);
-            break;
-        }
-        case REALSXP: {
-            do {
-                REAL(x)[i] = REAL(v)[j];
-                i += s; if (++j == vl) j = 0; 
-            } while (--n>0);
-            break;
-        }
-        case CPLXSXP: {
-            do {
-                COMPLEX(x)[i] = COMPLEX(v)[j];
-                i += s; if (++j == vl) j = 0; 
-            } while (--n>0);
-            break;
-        }
-        case STRSXP: {
-            do { 
-                SET_STRING_ELT (x, i, STRING_ELT(v,j));
-                i += s; if (++j == vl) j = 0; 
-            } while (--n>0);
-            break;
-        }
-        case VECSXP: case EXPRSXP: {
-            PROTECT(x); PROTECT(v);
-            do { 
-                SET_VECTOR_ELT (x, i, duplicate(VECTOR_ELT(v,j)));
-                i += s; if (++j == vl) j = 0; 
-            } while (--n>0);
-            UNPROTECT(2);
-            break;
-        }
-        default:
-            UNIMPLEMENTED_TYPE("copy_elements", x);
-        }
+        Rf_recycled_copy (x, i, vl, n);
     }
 }
 
@@ -601,13 +637,13 @@ void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
         nc = INTEGER(dims)[1];
     }
 
-    if (!byrow || nr == 1 || nt == 1) {  /* byrow=TRUE or byrow irrelevant */
-        copy_elements_recycled (s, 0, 1, t, len);
+    if (!byrow || nr==1 || nc==1 || nt==1) { /* byrow=TRUE or byrow irrelevant*/
+        copy_elements_recycled (s, 0, t, len);
     }
     else if (nt == len) {  /* same as a transpose operation */
         copy_transposed (s, t, nc, nr);  /* NOT nr, nc ! */
     }
-    else if (nt <= nc) {  /* each column has repetitions of a single element */
+    else if (nc%nt == 0) { /* each column has repetitions of a single element */
         int i, j, k;
         i = j = k = 0;
         switch (TYPEOF(s)) {
@@ -662,6 +698,7 @@ void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
         case VECSXP: case EXPRSXP:
             while (j < len) {
                 SEXP e = VECTOR_ELT(t,k);
+                SET_NAMEDCNT_MAX(e);
                 i = j; j += nr;
                 while (i < j) SET_VECTOR_ELT(s,i++,e);
                 k += 1; if (k >= nt) k = 0;
@@ -674,49 +711,51 @@ void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
 
     else {  /* general case for byrow=TRUE */
         int len_1 = len - 1;
-        int nomod = nt > len_1;
-        int i, j;
+        unsigned j;
+        int i;
         switch (TYPEOF(s)) {
         case RAWSXP:
             for (i = 0, j = 0; i <= len_1; i++, j += nc) {
                 if (j > len_1) j -= len_1;
-                RAW(s)[i] = RAW(t) [nomod ? j : j % nt];
+                RAW(s)[i] = RAW(t) [j % nt];
             }
             break;
         case LGLSXP:
             for (i = 0, j = 0; i <= len_1; i++, j += nc) {
                 if (j > len_1) j -= len_1;
-                LOGICAL(s)[i] = LOGICAL(t) [nomod ? j : j % nt];
+                LOGICAL(s)[i] = LOGICAL(t) [j % nt];
             }
             break;
         case INTSXP:
             for (i = 0, j = 0; i <= len_1; i++, j += nc) {
                 if (j > len_1) j -= len_1;
-                INTEGER(s)[i] = INTEGER(t) [nomod ? j : j % nt];
+                INTEGER(s)[i] = INTEGER(t) [j % nt];
             }
             break;
         case REALSXP:
             for (i = 0, j = 0; i <= len_1; i++, j += nc) {
                 if (j > len_1) j -= len_1;
-                REAL(s)[i] = REAL(t) [nomod ? j : j % nt];
+                REAL(s)[i] = REAL(t) [j % nt];
             }
             break;
         case CPLXSXP:
             for (i = 0, j = 0; i <= len_1; i++, j += nc) {
                 if (j > len_1) j -= len_1;
-                COMPLEX(s)[i] = COMPLEX(t) [nomod ? j : j % nt];
+                COMPLEX(s)[i] = COMPLEX(t) [j % nt];
             }
             break;
         case STRSXP:
             for (i = 0, j = 0; i <= len_1; i++, j += nc) {
                 if (j > len_1) j -= len_1;
-                SET_STRING_ELT (s, i, STRING_ELT (t, nomod ? j : j % nt));
+                SET_STRING_ELT (s, i, STRING_ELT (t, j % nt));
             }
             break;
         case VECSXP: case EXPRSXP:
             for (i = 0, j = 0; i <= len_1; i++, j += nc) {
                 if (j > len_1) j -= len_1;
-                SET_VECTOR_ELT (s, i, VECTOR_ELT (t, nomod ? j : j % nt));
+                SEXP e = VECTOR_ELT (t, j % nt);
+                SET_NAMEDCNT_MAX(e);
+                SET_VECTOR_ELT (s, i, e);
             }
             break;
         default:

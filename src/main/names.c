@@ -177,6 +177,7 @@ extern FUNTAB
     R_FunTab_plot[],
     R_FunTab_plot3d[],
     R_FunTab_print[],
+    R_FunTab_profile[],
     R_FunTab_qsort[],
     R_FunTab_radixsort[],
     R_FunTab_random[],
@@ -187,7 +188,6 @@ extern FUNTAB
     R_FunTab_source[],
     R_FunTab_split[],
     R_FunTab_sprintf[],
-    R_FunTab_subassign[],
     R_FunTab_subset[],
     R_FunTab_sysutils[],
     R_FunTab_unique[],
@@ -253,6 +253,7 @@ static FUNTAB *FunTab_ptrs[] = {
     R_FunTab_plot,
     R_FunTab_plot3d,
     R_FunTab_print,
+    R_FunTab_profile,
     R_FunTab_qsort,
     R_FunTab_radixsort,
     R_FunTab_random,
@@ -263,7 +264,6 @@ static FUNTAB *FunTab_ptrs[] = {
     R_FunTab_source,
     R_FunTab_split,
     R_FunTab_sprintf,
-    R_FunTab_subassign,
     R_FunTab_subset,
     R_FunTab_sysutils,
     R_FunTab_unique,
@@ -297,28 +297,6 @@ static FASTFUNTAB *FastFunTab_ptrs[] = {
     R_FastFunTab_attrib,
     NULL
 };
-
-
-/* Table of special names.  These are the only ones that have bit 0 of
-   symbits set.
-
-   Any symbols can be put here, but ones that contain special characters, or are
-   reserved words, are the ones unlikely to be defined in any environment other
-   than base, and hence the ones where this is most likely to help. */
-
-static char *Spec_name[] = { 
-  "if", "while", "repeat", "for", "break", "next", "return", "function",
-  "(", "{",
-  "+", "-", "*", "/", "^", "%%", "%/%", "%*%", ":",
-  "==", "!=", "<", ">", "<=", ">=",
-  "&", "|", "&&", "||", "!",
-  "<-", "<<-", "=",
-  "$", "[", "[[", 
-  "$<-", "[<-", "[[<-", 
-  ".C", ".Fortran", ".Call", ".External", ".Internal",
-  0
-};
-
 
 /* also used in eval.c */
 SEXP attribute_hidden R_Primitive(const char *primname)
@@ -469,11 +447,79 @@ static void SymbolShortcuts(void)
     R_previousSymbol = install("previous");
 }
 
+/* Set up symbols for subassign functions that will be allocated
+   immediately after their subset counterpart, allowing mapping from,
+   for example, "names" to "names<-" to be done very quickly.  Mark
+   the subset version in its sxpinfo to indicate this.
+
+   This scheme relies on this function being called when the symbol
+   table is first created, so the symbols will be allocated
+   sequentially, within one segment, rather than some possibly having
+   been already created (hence out of sequence). 
+
+   The table should have at most eight symbols, in order to ensure that
+   all symbols go into one segment (64 chunks, up to 4 chunks per symbol).
+
+   It is preferrable for the subassign functions here to not be "internal"
+   to avoid possible expansion in the size of the internal table. 
+
+   Also sets the MAYBE_FAST_SUBASSIGN flag for [<-, [[<-, and $<-; keep in
+   sync with flags for the primitives. */
+
+#define SUBASSIGN_TBL_SIZE 8   /* Maximum is 8 */
+   
+static char *subset_subassign_table[SUBASSIGN_TBL_SIZE] = {
+  "[",  "[[",  "$",    /* first three marked as maybe using fast interface */
+  "@",  "attr",  "class",  "dim",  "names"
+};
+
+static void SetupSubsetSubassign(void)
+{
+    SEXP subset_sym, subassign_sym;
+    char sa[30];
+    int i;
+
+    for (i = 0; i < SUBASSIGN_TBL_SIZE; i++) {
+        char *n = subset_subassign_table[i];
+        subset_sym = install(n);
+        copy_2_strings (sa, sizeof sa, n, "<-");
+        subassign_sym = install(sa);
+        if (i < 3) 
+            SET_MAYBE_FAST_SUBASSIGN(subassign_sym);
+        if (0)  /* can enable for debugging */
+            REprintf ("Subset_subassign: %x %x\n",
+                      CPTR_FROM_SEXP(subset_sym),
+                      CPTR_FROM_SEXP(subassign_sym));
+        SYMSEXP sub = (SYMSEXP)UPTR_FROM_SEXP(subset_sym);
+        SYMSEXP suba = (SYMSEXP)UPTR_FROM_SEXP(subassign_sym);
+        if (suba != sub+1) abort();
+        SET_SUBASSIGN_FOLLOWS(subset_sym);
+    }
+}
+
 /* Set up built-in/special/internal functions from R_FunTab and the
    FastFunTab_srcfile tables.  The R_FunTab tables is created from
-   smaller tables in the various source files.  Also sets the SPEC_SYM
-   flag for those functions that are unlikely to be redefined outside
-   "base". */
+   smaller tables in the various source files. 
+ 
+   Also sets bit 0 of "symbits" for symbols unlikely to be redefined
+   outside "base", according to the table below.  Any symbols can be
+   put there, but ones that contain special characters, or are
+   reserved words, are the ones unlikely to be defined in any
+   environment other than base, and hence the ones where this is most
+   likely to help. */
+
+static char *Spec_name[] = { 
+  "if", "while", "repeat", "for", "break", "next", "return", "function",
+  "(", "{",
+  "+", "-", "*", "/", "^", "%%", "%/%", "%*%", ":",
+  "==", "!=", "<", ">", "<=", ">=",
+  "&", "|", "&&", "||", "!",
+  "<-", "<<-", "=",
+  "$", "[", "[[", 
+  "$<-", "[<-", "[[<-", 
+  ".C", ".Fortran", ".Call", ".External", ".Internal",
+  0
+};
 
 static void SetupBuiltins(void)
 {
@@ -497,7 +543,8 @@ static void SetupBuiltins(void)
     R_FunTab[i].name = NULL;
 
     /* Install the symbols for internals first, so they will have small
-       compressed pointers, allowing for a small table of internals. */
+       compressed pointers, allowing for a small table of internals. 
+       Some may have already been installed, but that should be OK. */
 
     R_first_internal = 0;
     R_max_internal = 0;
@@ -505,7 +552,7 @@ static void SetupBuiltins(void)
     for (i = 0; R_FunTab[i].name!=NULL; i++) {
         if ((R_FunTab[i].eval % 100) / 10) {
             SEXP sym = install(R_FunTab[i].name);
-            if (R_first_internal == 0)
+            if (R_first_internal == 0 || CPTR_FROM_SEXP(sym) < R_first_internal)
                 R_first_internal = CPTR_FROM_SEXP(sym);
             if (CPTR_FROM_SEXP(sym) > R_max_internal)
                 R_max_internal = CPTR_FROM_SEXP(sym);
@@ -608,8 +655,14 @@ void InitNames()
     if (R_lphashSymTbl == NULL)
 	R_Suicide("couldn't allocate memory for symbol table");
 
-    /* Set up built-in functions.  Do first so internals have small
-       compressed pointers. */
+    /* Set up some functions that have subassign counterparts, so the
+       subassign versions can be quickly found.  Do immediately so
+       they will go in consecutive positions within one or two segments. */
+
+    SetupSubsetSubassign();
+
+    /* Set up built-in functions.  Do early so internals have a small
+       range of compressed pointers. */
 
     SetupBuiltins();
 
@@ -658,6 +711,7 @@ void InitNames()
 
     /* Set up a set of globals so that a symbol table search can be
        avoided when matching something like dim or dimnames. */
+
     SymbolShortcuts();
 
     framenames = R_NilValue;

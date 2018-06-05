@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -902,7 +902,7 @@ void setup_Rmainloop(void)
     R_Toplevel.cloenv = R_BaseEnv;
     R_Toplevel.sysparent = R_BaseEnv;
     R_Toplevel.conexit = R_NilValue;
-    R_Toplevel.vmax = R_NilValue;
+    R_Toplevel.vmax = (void *) R_NilValue;
     R_Toplevel.nodestack = R_BCNodeStackTop;
 #ifdef BC_INT_STACK
     R_Toplevel.intstack = R_BCIntStackTop;
@@ -1220,12 +1220,13 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
     RCNTXT thiscontext, returncontext, *cptr;
     int savestack, browselevel, tmp;
     SEXP topExp, argList;
-    static char *ap[4] = { "text", "condition", "expr", "skipCalls" };
+    static const char * const ap[4] = 
+                         { "text", "condition", "expr", "skipCalls" };
 
     R_Visible = FALSE;
 
     /* argument matching */
-    argList = matchArgs(R_NilValue, ap, 4, args, call);
+    argList = matchArgs_strings (ap, 4, args, call);
     PROTECT(argList);
     /* substitute defaults */
     if(CAR(argList) == R_MissingArg)

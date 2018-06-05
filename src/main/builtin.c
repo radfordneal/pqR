@@ -264,10 +264,10 @@ static SEXP do_onexit(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     RCNTXT *ctxt;
     SEXP code, oldcode, tmp, argList;
-    static char *ap[2] = { "expr", "add" };
+    static const char * const ap[2] = { "expr", "add" };
     int addit = 0;
 
-    PROTECT(argList =  matchArgs(R_NilValue, ap, 2, args, call));
+    PROTECT(argList =  matchArgs_strings (ap, 2, args, call));
     if (CAR(argList) == R_MissingArg) code = R_NilValue;
     else code = CAR(argList);
     if (CADR(argList) != R_MissingArg) {

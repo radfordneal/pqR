@@ -140,30 +140,6 @@ static Rboolean imin(int *x, int n, int *value, Rboolean narm)
     return(updated);
 }
 
-static Rboolean rmin(double *x, int n, double *value, Rboolean narm)
-{
-    double s = 0.0; /* -Wall */
-    int i;
-    Rboolean updated = FALSE;
-
-    /* s = R_PosInf; */
-    for (i = 0; i < n; i++) {
-	if (ISNAN(x[i])) {/* Na(N) */
-	    if (!narm) {
-		if(!ISNA(s)) s = x[i]; /* so any NA trumps all NaNs */
-		if(!updated) updated = TRUE;
-	    }
-	}
-	else if (!updated || x[i] < s) {  /* Never true if s is NA/NaN */
-	    s = x[i];
-	    if(!updated) updated = TRUE;
-	}
-    }
-    *value = s;
-
-    return(updated);
-}
-
 static Rboolean smin(SEXP x, SEXP *value, Rboolean narm)
 {
     int i;
@@ -210,27 +186,76 @@ static Rboolean imax(int *x, int n, int *value, Rboolean narm)
     return(updated);
 }
 
-static Rboolean rmax(double *x, int n, double *value, Rboolean narm)
+static Rboolean attribute_noinline rmin_max
+                      (double *x, int n, double *value, Rboolean narm, int max)
 {
-    double s = 0.0 /* -Wall */;
-    int i;
-    Rboolean updated = FALSE;
+    int updated = FALSE;
+    double s = 0;
 
-    for (i = 0; i < n; i++) {
-	if (ISNAN(x[i])) {/* Na(N) */
-	    if (!narm) {
-		if(!ISNA(s)) s = x[i]; /* so any NA trumps all NaNs */
-		if(!updated) updated = TRUE;
-	    }
-	}
-	else if (!updated || x[i] > s) {  /* Never true if s is NA/NaN */
-	    s = x[i];
-	    if(!updated) updated = TRUE;
-	}
+    if (n == 0) goto ret;
+
+    int i = 0;
+
+    /* Look for first non-NaN value (or done if !narm and there's a NaN). */
+
+    while (ISNAN(x[i])) {
+        if (!narm) goto nan;
+        i += 1;
+        if (i >= n) goto ret;
     }
-    *value = s;
 
-    return(updated);
+    /* Look at values, update max or min, skip or exit for NaN values. */
+
+    s = x[i];
+    i += 1;
+
+    if (max) {
+        while (i < n) {
+            if (x[i] > s)        /* never true if x[i] is a NaN */
+                s = x[i];
+            else if (x[i] <= s)  /* if so, not a NaN */
+                ;
+            else { /* a NaN value */
+                if (!narm) goto nan;
+            }
+            i += 1;
+        }
+    }
+    else { /* min */
+        while (i < n) {
+            if (x[i] < s)        /* never true if x[i] is a NaN */
+                s = x[i];
+            else if (x[i] >= s)  /* if so, not a NaN */
+                ;
+            else { /* a NaN value */
+                if (!narm) goto nan;
+            }
+            i += 1;
+        }
+    }
+
+    updated = TRUE;
+    goto ret;
+
+  nan:
+
+    updated = TRUE;
+    s = x[i];
+
+    /* Make NA trump other NaN values. */
+
+    while (i < n) {
+        if (ISNA(x[i])) {
+            s = x[i];
+            goto ret;
+        }
+        i += 1;
+    }
+
+  ret:
+
+    *value = s;
+    return updated;
 }
 
 static Rboolean smax(SEXP x, SEXP *value, Rboolean narm)
@@ -567,9 +592,7 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 			ans_type = REALSXP;
 			if(!empty) zcum.r = Int2Real(icum);
 		    }
-                    updated = 
-                      iop==2 ? rmin(REAL(a), LENGTH(a), &tmp, narm)
-		             : rmax(REAL(a), LENGTH(a), &tmp, narm);
+                    updated = rmin_max (REAL(a), LENGTH(a), &tmp, narm, iop==3);
 		    break;
 		case STRSXP:
 		    if(!empty && ans_type == INTSXP)

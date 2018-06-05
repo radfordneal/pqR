@@ -162,8 +162,8 @@ static SEXP do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if (miss_nr) nr = ceil(lendat/(double) nc);
     else if (miss_nc) nc = ceil(lendat/(double) nr);
 
-    if(lendat > 0 ) {
-	if (lendat > 1 && (nr * nc) % lendat != 0) {
+    if (lendat > 1) {
+	if ((nr * nc) % lendat != 0) {
 	    if (((lendat > nr) && (lendat / nr) * nr != lendat) ||
 		((lendat < nr) && (nr / lendat) * lendat != nr))
 		warning(_("data length [%d] is not a sub-multiple or multiple of the number of rows [%d]"), lendat, nr);
@@ -171,7 +171,7 @@ static SEXP do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 		     ((lendat < nc) && (nc / lendat) * lendat != nc))
 		warning(_("data length [%d] is not a sub-multiple or multiple of the number of columns [%d]"), lendat, nc);
 	}
-	else if ((lendat > 1) && (nr * nc == 0)){
+	else if (nr * nc == 0) {
 	    warning(_("data length exceeds size of matrix"));
 	}
     }
@@ -2018,7 +2018,7 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (lendat == 0)
         set_elements_to_NA_or_NULL (ans, 0, nans);
     else
-        copy_elements_recycled (ans, 0, 1, vals, nans);
+        copy_elements_recycled (ans, 0, vals, nans);
 
     ans = dimgets(ans, dims);
     if (!isNull(dimnames) && length(dimnames) > 0)
@@ -2028,16 +2028,15 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-/** Routines from R-3.2.0 and later for implementing the 'lengths' function,
- ** slightly modified.  Long vector stuff not actually used.  Also, see 
- ** dispatch_subset2 in subset.c.
- **/
+/* Routines from R-3.2.0 and later for implementing the 'lengths' function,
+   slightly modified.  Long vector stuff not actually used.  Also, see 
+   dispatch_subset2. */
 
 static R_xlen_t dispatch_xlength(SEXP x, SEXP rho) {
-    static SEXP length_op = NULL;
+    static SEXP length_op = R_NoObject;
     if (isObject(x)) {
         SEXP len, args, call;
-        if (length_op == NULL)
+        if (length_op == R_NoObject)
             length_op = R_Primitive("length");
         PROTECT(args = list1(x));
         PROTECT(call = list2(install("length"),install("x")));

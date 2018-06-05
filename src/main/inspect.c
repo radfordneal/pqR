@@ -166,6 +166,8 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
             Rprintf("tv%u",((SYMSEXP)UPTR_FROM_SEXP(v))->sym_tunecnt2); 
             a = 1;
 #       endif
+        if (SUBASSIGN_FOLLOWS(v)) { if (a) Rprintf(","); Rprintf("SAF"); a = 1; }
+        if (MAYBE_FAST_SUBASSIGN(v)) { if (a) Rprintf(","); Rprintf("MF"); a = 1; }
     }    
     if (TYPEOF(v) == ENVSXP) {
         if (a) Rprintf(","); 
@@ -203,8 +205,15 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
         if (v == R_UnboundValue)
             Rprintf("<UnboundValue>");
         else {
+            SEXP symv = SYMVALUE(v);
 	    Rprintf("\"%s\" %d %s", CHAR(PRINTNAME(v)), SYM_HASH(v),
-                    SYMVALUE(v)==R_UnboundValue ? "" : " (has value)");
+                    symv == R_UnboundValue ? 
+                     "" :
+                    TYPEOF(symv)==PROMSXP && PRVALUE(symv)==R_UnboundValue ? 
+                     " (has unforced promise)" :
+                    TYPEOF(symv)==PROMSXP && PRVALUE(symv)!=R_UnboundValue ? 
+                     " (has forced promise)" :
+                     " (has value)");
 	    Rprintf("%s", 
                     ATTRIB_W(v)==R_NilValue ? "" : "  (has attr)");
 	    Rprintf("%s", 

@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995-1998  Robert Gentleman and Ross Ihaka
@@ -109,7 +109,6 @@ static SEXP cross_colon(SEXP call, SEXP s, SEXP t)
 static SEXP make_seq (int from, int len, int variant, int dotdot)
 {
     SEXP ans;
-    int *p;
 
     if (VARIANT_KIND(variant) == VARIANT_SEQ && (from|len|dotdot) != 0) {
         R_variant_seq_spec = ((int64_t)from<<32) | ((int64_t)len<<1) | dotdot;
@@ -117,9 +116,7 @@ static SEXP make_seq (int from, int len, int variant, int dotdot)
         ans = R_NilValue;
     }
     else {
-        ans = allocVector (INTSXP, len);
-        p = INTEGER(ans);
-        for (int i = 0; i < len; i++) p[i] = from + i;
+        ans = Rf_VectorFromRange (from, from+(len-1));
         if (dotdot) {
             SEXP dim1;
             PROTECT(ans);
@@ -249,12 +246,12 @@ static SEXP do_colon(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
 void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
 {
+    if (TYPEOF(a) != TYPEOF(s) 
+         || t != (helpers_var_ptr)0 && TYPEOF(t) != INTSXP) abort();
+
     int na = length(a), ns = length(s);
     int i, j, k;
     SEXP u;
-
-    if (TYPEOF(a)!=TYPEOF(s) 
-         || t!=(helpers_var_ptr)0 && TYPEOF(t)!=INTSXP) abort();
 
     if (na <= 0) return;
 
@@ -262,35 +259,14 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
         if (ns == 1) {
             /* Repeat of a single element na times. */
             switch (TYPEOF(s)) {
-            case LGLSXP: {
-                int v = LOGICAL(s)[0];
-                for (i = 0; i < na; i++) LOGICAL(a)[i] = v;
+            case LGLSXP:
+            case INTSXP:
+            case REALSXP:
+            case CPLXSXP:
+            case RAWSXP:
+            case STRSXP:
+                Rf_rep_element (a, 0, s, 0, na);
                 break;
-            }
-            case INTSXP: {
-                int v = INTEGER(s)[0];
-                for (i = 0; i < na; i++) INTEGER(a)[i] = v;
-                break;
-            }
-            case REALSXP: {
-                double v = REAL(s)[0];
-                for (i = 0; i < na; i++) REAL(a)[i] = v;
-                break;
-            }
-            case CPLXSXP: {
-                Rcomplex v = COMPLEX(s)[0];
-                for (i = 0; i < na; i++) COMPLEX(a)[i] = v;
-                break;
-            }
-            case RAWSXP: {
-                Rbyte v = RAW(s)[0];
-                for (i = 0; i < na; i++) RAW(a)[i] = v;
-                break;
-            }
-            case STRSXP: {
-                rep_string_elements (a, 0, 1, s, na);
-                break;
-            }
             case LISTSXP: {
                 SEXP v = CAR(s);
                 for (u = a; u != R_NilValue; u = CDR(u)) 
@@ -300,10 +276,17 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
             case EXPRSXP:
             case VECSXP: {
                 SEXP v = VECTOR_ELT (s, 0);
-                SET_VECTOR_ELEMENT_FROM_VECTOR (a, 0, s, 0);
-                for (i = 1; i < na; i++) {
-                    SET_VECTOR_ELT (a, i, v);
-                    INC_NAMEDCNT_0_AS_1 (v);
+                if (v == R_NilValue) {
+                    for (i = 0; i < na; i++) {
+                        SET_VECTOR_ELT_NIL (a, i);
+                    }
+                }
+                else {
+                    SET_VECTOR_ELEMENT_FROM_VECTOR (a, 0, s, 0);
+                    for (i = 1; i < na; i++) {
+                        SET_VECTOR_ELT (a, i, v);
+                        INC_NAMEDCNT_0_AS_1 (v);
+                    }
                 }
         	break;
             }
@@ -314,37 +297,12 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
             /* Simple repeat of a vector to length na. */
             switch (TYPEOF(s)) {
             case LGLSXP:
-                for (i = 0, j = 0; i < na; i++, j++) {
-                    if (j >= ns) j = 0;
-                    LOGICAL(a)[i] = LOGICAL(s)[j];
-                }
-                break;
             case INTSXP:
-                for (i = 0, j = 0; i < na; i++, j++) {
-                    if (j >= ns) j = 0;
-                    INTEGER(a)[i] = INTEGER(s)[j];
-                }
-                break;
             case REALSXP:
-                for (i = 0, j = 0; i < na; i++, j++) {
-                    if (j >= ns) j = 0;
-                    REAL(a)[i] = REAL(s)[j];
-                }
-                break;
             case CPLXSXP:
-                for (i = 0, j = 0; i < na; i++, j++) {
-                    if (j >= ns) j = 0;
-                    COMPLEX(a)[i] = COMPLEX(s)[j];
-                }
-                break;
             case RAWSXP:
-                for (i = 0, j = 0; i < na; i++, j++) {
-                    if (j >= ns) j = 0;
-                    RAW(a)[i] = RAW(s)[j];
-                }
-                break;
             case STRSXP:
-                rep_string_elements (a, 0, 1, s, na);
+                copy_elements_recycled (a, 0, s, na);
                 break;
             case LISTSXP:
                 for (u = a, j = 0; u != R_NilValue; u = CDR(u), j++) {
@@ -545,8 +503,8 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
 
 static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    static char *ap[2] = { "x", "times" };
-    PROTECT(args = matchArgs(R_NilValue, ap, 2, args, call));
+    static const char * const ap[2] = { "x", "times" };
+    PROTECT(args = matchArgs_strings (ap, 2, args, call));
 
     SEXP s = CAR(args);
     SEXP ncopy = CADR(args);
@@ -633,7 +591,8 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP a, ans, times;
     int i, len, each, nprotect = 0;
-    static char *ap[5] = { "x", "times", "length.out", "each", "..." };
+    static const char * const ap[5] = 
+                         { "x", "times", "length.out", "each", "..." };
 
     if (DispatchOrEval(call, op, "rep", args, rho, &ans, 0, 0))
 	return(ans);
@@ -648,7 +607,7 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
        so we manage the argument matching ourselves.  We pretend this is
        rep(x, times, length.out, each, ...)
     */
-    PROTECT(args = matchArgs(R_NilValue, ap, 5, args, call));
+    PROTECT(args = matchArgs_strings (ap, 5, args, call));
     nprotect++;
 
     SEXP x = CAR(args); args = CDR(args);
@@ -859,7 +818,7 @@ static SEXP do_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     SEXP ans, from, to, by, len, along;
     int i, nargs = length(args), lf, lout = NA_INTEGER;
     Rboolean One = nargs == 1;
-    static char *ap[6] =
+    static const char * const ap[6] =
         { "from", "to", "by", "length.out", "along.with", "..." };
 
     if (DispatchOrEval(call, op, "seq", args, rho, &ans, 0, 1))
@@ -870,7 +829,7 @@ static SEXP do_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
        seq(from, to, by, length.out, along.with, ...)
     */
 
-    PROTECT(args = matchArgs(R_NilValue, ap, 6, args, call));
+    PROTECT(args = matchArgs_strings (ap, 6, args, call));
 
     from = CAR(args); args = CDR(args);
     to = CAR(args); args = CDR(args);

@@ -88,12 +88,14 @@ static inline Rboolean asLogicalNoNA(SEXP s, SEXP call)
 
 static inline double myfmod(double x1, double x2)
 {
+#if 0  /* seems to be slower */
     int i1 = (int) x1;
     if ((double)i1 == x1 && i1 >= 0) {
         int i2 = (int) x2;
         if ((double)i2 == x2 && i2 > 0)
             return (double) (i1 % i2);
     }
+#endif
 
     if (x2 == 0.0) return R_NaN;
 
@@ -105,12 +107,14 @@ static inline double myfmod(double x1, double x2)
 
 static inline double myfloor(double x1, double x2)
 {
+#if 0  /* seems to be slower */
     int i1 = (int) x1;
     if ((double)i1 == x1 && i1 >= 0) {
         int i2 = (int) x2;
         if ((double)i2 == x2 && i2 > 0)
             return (double) (i1 / i2);
     }
+#endif
 
     if (x2 == 0.0) return R_NaN;
 
@@ -678,5 +682,14 @@ static inline int Rf_ep_match_strings (const char *f, const char *t)
     return *f==0 ? 1 : -1;
 }
 
+
+/* Character translation.  Strings (maybe) needing translation are marked
+   by TYPE_ET_CETERA_VEC_DOTS_TR in TYPE_ETC, so we can quickly check for
+   the non-trivial case here. */
+
+INLINE_FUN const char *Rf_translateChar (SEXP x)
+{
+    return TYPE_ETC(x) == CHARSXP ? CHAR(x) : Rf_translateChar_nontrivial(x);
+}
 
 #endif /* R_INLINES_H_ */

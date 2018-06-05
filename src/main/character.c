@@ -122,9 +122,9 @@ static SEXP do_nzchar(SEXP call, SEXP op, SEXP args, SEXP env)
 
 static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP d, s, x, stype;
+    SEXP names, dim, dimnames, ans, x, stype;
     int i, len, allowNA;
-    size_t ntype;
+    R_len_t type_len;
     int nc;
     const char *type;
     const char *xi;
@@ -133,89 +133,115 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
 
     checkArity(op, args);
     if (isFactor(CAR(args)))
-	error(_("'%s' requires a character vector"), "nchar()");
+        error(_("'%s' requires a character vector"), "nchar()");
     PROTECT(x = coerceVector(CAR(args), STRSXP));
     if (!isString(x))
-	error(_("'%s' requires a character vector"), "nchar()");
+        error(_("'%s' requires a character vector"), "nchar()");
     len = LENGTH(x);
     stype = CADR(args);
-    if (!isString(stype) || LENGTH(stype) != 1)
-	error(_("invalid '%s' argument"), "type");
-    type = CHAR(STRING_ELT(stype, 0)); /* always ASCII */
-    ntype = strlen(type);
-    if (ntype == 0) error(_("invalid '%s' argument"), "type");
+    if (!isString(stype) || LENGTH(stype)!=1 || LENGTH(STRING_ELT(stype,0))==0)
+        error(_("invalid '%s' argument"), "type");
+    type = CHAR(STRING_ELT(stype,0));
+    type_len = LENGTH(STRING_ELT(stype,0));
     allowNA = asLogical(CADDR(args));
     if (allowNA == NA_LOGICAL) allowNA = 0;
 
-    PROTECT(s = allocVector(INTSXP, len));
-    vmax = VMAXGET();
-    for (i = 0; i < len; i++) {
-	SEXP sxi = STRING_ELT(x, i);
-	if (sxi == NA_STRING) {
-	    INTEGER(s)[i] = 2;
-	    continue;
-	}
-	if (strncmp(type, "bytes", ntype) == 0) {
-	    INTEGER(s)[i] = LENGTH(sxi);
-	} else if (strncmp(type, "chars", ntype) == 0) {
-	    if (IS_UTF8(sxi)) { /* assume this is valid */
-		const char *p = CHAR(sxi);
-		nc = 0;
-		for( ; *p; p += utf8clen(*p)) nc++;
-		INTEGER(s)[i] = nc;
-	    } else if (IS_BYTES(sxi)) {
-		if (!allowNA) /* could do chars 0 */
-		    error(_("number of characters is not computable for element %d in \"bytes\" encoding"), i+1);
-		INTEGER(s)[i] = NA_INTEGER;
-	    } else if (mbcslocale) {
-		nc = mbstowcs(NULL, translateChar(sxi), 0);
-		if (!allowNA && nc < 0)
-		    error(_("invalid multibyte string %d"), i+1);
-		INTEGER(s)[i] = nc >= 0 ? nc : NA_INTEGER;
-	    } else
-		INTEGER(s)[i] = strlen(translateChar(sxi));
-	} else if (strncmp(type, "width", ntype) == 0) {
-	    if (IS_UTF8(sxi)) { /* assume this is valid */
-		const char *p = CHAR(sxi);
-		wchar_t wc1;
-		nc = 0;
-		for( ; *p; p += utf8clen(*p)) {
-		    utf8toucs(&wc1, p);
-		    nc += Ri18n_wcwidth(wc1);
-		}
-		INTEGER(s)[i] = nc;
-	    } else if (IS_BYTES(sxi)) {
-		if (!allowNA) /* could do width 0 */
-		    error(_("width is not computable for element %d in \"bytes\" encoding"), i+1);
-		INTEGER(s)[i] = NA_INTEGER;
-	    } else if (mbcslocale) {
-		xi = translateChar(sxi);
-		nc = mbstowcs(NULL, xi, 0);
-		if (nc >= 0) {
-		    wc = (wchar_t *) R_AllocStringBuffer((nc+1)*sizeof(wchar_t), &cbuff);
+    names = getAttrib (x, R_NamesSymbol);
+    dim =getDimAttrib (x);
+    dimnames = getAttrib (x, R_DimNamesSymbol);
 
-		    mbstowcs(wc, xi, nc + 1);
-		    INTEGER(s)[i] = Ri18n_wcswidth(wc, 2147483647);
-		    if (INTEGER(s)[i] < 1) INTEGER(s)[i] = nc;
-		} else if (allowNA)
-		    error(_("invalid multibyte string %d"), i+1);
-		else
-		    INTEGER(s)[i] = NA_INTEGER;
-	    } else
-		INTEGER(s)[i] = strlen(translateChar(sxi));
-	} else
-	    error(_("invalid '%s' argument"), "type");
-	VMAXSET(vmax);
+    if (len == 1 && names == R_NilValue 
+                 && dim == R_NilValue
+                 && dimnames == R_NilValue) {
+        ans = R_NilValue; /* simple scalars done with ScalarIntegerMaybeConst */
     }
+    else {
+        PROTECT(ans = allocVector(INTSXP, len));
+        if (names != R_NilValue)    setAttrib(ans, R_NamesSymbol, names);
+        if (dim != R_NilValue)      setAttrib(ans, R_DimSymbol, dim);
+        if (dimnames != R_NilValue) setAttrib(ans, R_DimNamesSymbol, dimnames);
+    }
+
+    enum { type_chars, type_bytes, type_width } op_type;
+    
+    if (strncmp(type, "chars", type_len) == 0)
+        op_type = type_chars;
+    else if (strncmp(type, "bytes", type_len) == 0)
+        op_type = type_bytes;
+    else if (strncmp(type, "width", type_len) == 0)
+        op_type = type_bytes;
+    else
+        error(_("invalid '%s' argument"), "type");
+
+    vmax = VMAXGET();
+    int nch;
+
+    for (i = 0; i < len; i++) {
+        SEXP sxi = STRING_ELT(x, i);
+        if (sxi == NA_STRING) {
+            nch = 2;
+        }
+        else if (IS_ASCII(sxi) || op_type == type_bytes) {
+            nch = LENGTH(sxi);
+        }
+        else if (op_type == type_chars) {
+            if (IS_UTF8(sxi)) { /* assume this is valid */
+                const char *p = CHAR(sxi);
+                nc = 0;
+                for( ; *p; p += utf8clen(*p)) nc++;
+                nch = nc;
+            } else if (IS_BYTES(sxi)) {
+                if (!allowNA) /* could do chars 0 */
+                    error(_("number of characters is not computable for element %d in \"bytes\" encoding"), i+1);
+                nch = NA_INTEGER;
+            } else if (mbcslocale) {
+                nc = mbstowcs(NULL, translateChar(sxi), 0);
+                if (!allowNA && nc < 0)
+                    error(_("invalid multibyte string %d"), i+1);
+                nch = nc >= 0 ? nc : NA_INTEGER;
+            } else
+                nch = strlen(translateChar(sxi));
+        }
+        else {  /* op_type == type_width */
+            if (IS_UTF8(sxi)) { /* assume this is valid */
+                const char *p = CHAR(sxi);
+                wchar_t wc1;
+                nc = 0;
+                for( ; *p; p += utf8clen(*p)) {
+                    utf8toucs(&wc1, p);
+                    nc += Ri18n_wcwidth(wc1);
+                }
+                nch = nc;
+            } else if (IS_BYTES(sxi)) {
+                if (!allowNA) /* could do width 0 */
+                    error(_("width is not computable for element %d in \"bytes\" encoding"), i+1);
+                nch = NA_INTEGER;
+            } else if (mbcslocale) {
+                xi = translateChar(sxi);
+                nc = mbstowcs(NULL, xi, 0);
+                if (nc >= 0) {
+                    wc = (wchar_t *) R_AllocStringBuffer((nc+1)*sizeof(wchar_t), &cbuff);
+
+                    mbstowcs(wc, xi, nc + 1);
+                    nch = Ri18n_wcswidth(wc, 2147483647);
+                    if (nch < 1) nch = nc;
+                } else if (allowNA)
+                    error(_("invalid multibyte string %d"), i+1);
+                else
+                    nch = NA_INTEGER;
+            } else
+                nch = strlen(translateChar(sxi));
+        }
+        VMAXSET(vmax);
+        if (ans != R_NilValue)
+            INTEGER(ans)[i] = nch;
+    }
+
     R_FreeStringBufferL(&cbuff);
-    if ((d = getAttrib(x, R_NamesSymbol)) != R_NilValue)
-	setAttrib(s, R_NamesSymbol, d);
-    if ((d = getDimAttrib(x)) != R_NilValue)
-	setAttrib(s, R_DimSymbol, d);
-    if ((d = getAttrib(x, R_DimNamesSymbol)) != R_NilValue)
-	setAttrib(s, R_DimNamesSymbol, d);
-    UNPROTECT(2);
-    return s;
+
+    UNPROTECT (1 + (ans!=R_NilValue));
+
+    return ans == R_NilValue ? ScalarIntegerMaybeConst(nch) : ans;
 }
 
 /* Find the beginning and end (indexes start at 0) of the substring in str
@@ -277,11 +303,10 @@ static int find_substr (const char *str, size_t slen, int ienc,
 
 static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP s, x, sa, so, el;
+    SEXP ans, res, x, sa, so, el;
     int i, len, start, stop, k, l;
     size_t slen;
     cetype_t ienc;
-    const char *ss;
 
     checkArity(op, args);
     x = CAR(args);
@@ -291,49 +316,77 @@ static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
     l = LENGTH(so);
 
     if (!isString(x))
-	error(_("extracting substrings from a non-character object"));
-    len = LENGTH(x);
-    PROTECT(s = allocVector(STRSXP, len));
-    if (len > 0) {
-	if (!isInteger(sa) || !isInteger(so) || k == 0 || l == 0)
-	    error(_("invalid substring argument(s)"));
+        error(_("extracting substrings from a non-character object"));
 
-	for (i = 0; i < len; i++) {
-	    start = INTEGER(sa)[i % k];
-	    stop = INTEGER(so)[i % l];
-	    el = STRING_ELT(x,i);
-	    if (el == NA_STRING || start == NA_INTEGER || stop == NA_INTEGER) {
-		SET_STRING_ELT_NA(s, i);
-		continue;
-	    }
-	    ienc = getCharCE(el);
-	    ss = CHAR(el);
-	    slen = LENGTH(el);
-	    if (start < 1) start = 1;
-	    if (start > stop)
-                SET_STRING_ELT_BLANK (s, i);
-	    else {
-                size_t beginning, end;
-		(void) find_substr (ss, slen, ienc, start, stop, 
-                                    &beginning, &end);
-                SET_STRING_ELT (s, i, 
-                  mkCharLenCE (ss+beginning, (int)(end-beginning), ienc));
-            }
-	}
+    len = LENGTH(x);
+    if (len == 1 && !HAS_ATTRIB(x)) {
+        ans = R_NilValue; /* simple scalars done with ScalarStringMaybeConst */
     }
-    DUPLICATE_ATTRIB(s, x);
-    /* This copied the class, if any */
-    UNPROTECT(1);
-    return s;
+    else {
+        PROTECT(ans = allocVector (STRSXP, len));
+    }
+
+    if (len > 0) {
+        if (!isInteger(sa) || !isInteger(so) || k == 0 || l == 0)
+            error(_("invalid substring argument(s)"));
+
+        for (i = 0; i < len; i++) {
+
+            el = STRING_ELT(x,i);
+
+            start = INTEGER(sa)[i % k];
+            if (start != NA_INTEGER && start <= 0) start = 1;
+            stop = INTEGER(so)[i % l];
+
+            if (el == NA_STRING || start == NA_INTEGER || stop == NA_INTEGER) {
+                res = NA_STRING;
+            }
+            else if (start > stop) {
+                res = R_BlankString;
+            }
+            else {
+                ienc = getCharCE(el);
+                slen = LENGTH(el);
+                const char *ss = CHAR(el);
+                size_t beginning, end;
+                if (IS_ASCII(el)) {
+                    if (start > LENGTH(el))
+                        beginning = end = 0;
+                    else {
+                        beginning = start-1;
+                        if (stop > LENGTH(el))
+                            end = LENGTH(el);
+                        else
+                            end = stop;
+                    }
+                }
+                else {
+                    (void) find_substr (ss, slen, ienc, start, stop, 
+                                        &beginning, &end);
+                }
+    
+                res = mkCharLenCE (ss+beginning, (int)(end-beginning), ienc);
+            }
+
+            if (ans != R_NilValue)
+                SET_STRING_ELT (ans, i, res);
+        }
+    }
+
+    if (ans == R_NilValue) {
+        return ScalarStringMaybeConst(res);
+    }
+    else {
+        DUPLICATE_ATTRIB (ans, x);  /* This copied the class, if any */
+        UNPROTECT(1);
+        return ans;
+    }
 }
 
 static SEXP do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP s, x, sa, so, value, el, v_el;
-    int i, len, start, stop, k, l, v;
-    size_t slen;
-    cetype_t ienc, venc;
-    const char *ss, *v_ss;
+    SEXP s, x, sa, so, value;
+    int i, len, k, l, v;
     const void *vmax;
 
     const char *strings[4];  /* for interface to mkCharMulti */
@@ -348,50 +401,50 @@ static SEXP do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
     l = LENGTH(so);
 
     if (!isString(x))
-	error(_("replacing substrings in a non-character object"));
+        error(_("replacing substrings in a non-character object"));
     len = LENGTH(x);
     PROTECT(s = allocVector(STRSXP, len));
     if (len > 0) {
-	if (!isInteger(sa) || !isInteger(so) || k == 0 || l == 0)
-	    error(_("invalid substring argument(s)"));
+        if (!isInteger(sa) || !isInteger(so) || k == 0 || l == 0)
+            error(_("invalid substring argument(s)"));
 
-	v = LENGTH(value);
-	if (!isString(value) || v == 0) error(_("invalid value"));
-	
-	vmax = VMAXGET();
-	for (i = 0; i < len; i++) {
-	    el = STRING_ELT(x, i);
-	    v_el = STRING_ELT(value, i % v);
-	    start = INTEGER(sa)[i % k];
-	    stop = INTEGER(so)[i % l];
-	    if (el == NA_STRING || v_el == NA_STRING ||
-		start == NA_INTEGER || stop == NA_INTEGER) {
-		SET_STRING_ELT_NA(s, i);
-		continue;
-	    }
-	    ienc = getCharCE(el);
-	    ss = CHAR(el);
-	    slen = LENGTH(el);
-	    if (start < 1) start = 1;
-	    if (start > stop) {
+        v = LENGTH(value);
+        if (!isString(value) || v == 0) error(_("invalid value"));
+        
+        vmax = VMAXGET();
+        for (i = 0; i < len; i++) {
+            SEXP el = STRING_ELT(x, i);
+            SEXP v_el = STRING_ELT(value, i % v);
+            int start = INTEGER(sa)[i % k];
+            int stop = INTEGER(so)[i % l];
+            if (el == NA_STRING || v_el == NA_STRING ||
+                start == NA_INTEGER || stop == NA_INTEGER) {
+                SET_STRING_ELT_NA(s, i);
+                continue;
+            }
+            if (start < 1) start = 1;
+            if (start > stop) {
                 SET_STRING_ELT(s, i, STRING_ELT(x, i));
                 continue;
             }
+            cetype_t ienc = getCharCE(el);
             int ienc2 = ienc;
-            v_ss = CHAR(v_el);
+            const char *ss = CHAR(el);
+            size_t slen = LENGTH(el);
+            const char *v_ss = CHAR(v_el);
+            size_t v_ss_l = LENGTH(v_el);
             /* is the value in the same encoding?
                FIXME: could prefer UTF-8 here
              */
-            venc = getCharCE(v_el);
-            if (venc != ienc && !strIsASCII(v_ss)) {
+            if (!IS_ASCII(v_el) && getCharCE(el) != ienc) {
                 ss = translateChar(el);
                 slen = strlen(ss);
                 v_ss = translateChar(v_el);
                 ienc2 = CE_NATIVE;
+                v_ss_l = strlen(v_ss);
             }
-            size_t ss_b, ss_e, v_ss_l, v_ss_b, v_ss_e;
+            size_t ss_b, ss_e, v_ss_b, v_ss_e;
             int n, v_n;
-            v_ss_l = strlen(v_ss);
             n = find_substr (ss, slen, ienc2, start, stop, &ss_b, &ss_e);
             v_n = find_substr (v_ss, v_ss_l, ienc2, 1, n, &v_ss_b, &v_ss_e);
                   /* note: v_ss_b will be set to zero */
@@ -440,7 +493,7 @@ static SEXP do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 #define FIRSTCHAR(i) (isspace((int)buff1[i-1]))
 #define LASTCHAR(i) (!isspace((int)buff1[i-1]) && (!buff1[i+1] || isspace((int)buff1[i+1])))
 #define LOWVOW(i) (buff1[i] == 'a' || buff1[i] == 'e' || buff1[i] == 'i' || \
-		   buff1[i] == 'o' || buff1[i] == 'u')
+        	   buff1[i] == 'o' || buff1[i] == 'u')
 
 
 /* memmove does allow overlapping src and dest */

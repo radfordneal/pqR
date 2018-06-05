@@ -149,5 +149,6 @@ SEXP Rf_find_binding_in_frame (SEXP, SEXP, Rboolean *);
 SEXP R_relop(SEXP, SEXP, SEXP, SEXP, int, int, SEXP, int);
 SEXP R_unary(SEXP, SEXP, SEXP, int, SEXP, int);
 SEXP R_binary(SEXP, SEXP, SEXP, SEXP, int, int, SEXP, int);
+void Rf_recycled_copy (SEXP, R_len_t, R_len_t, R_len_t);
 
 #endif /* not R_INTERNAL_H */

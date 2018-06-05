@@ -199,22 +199,12 @@ results of a function of one argument in the first group above
 result'' mechanism (with pipelining for the one-argument functions),
 but \code{sum} does not operate as a task otherwise.
 
-Task merging is currently done only for mathematical functions of one
-real argument (except \code{abs}) and the \code{+}, \code{-},
-\code{*}, \code{/}, and \code{^} operators when one of their operands
-is a real vector and one is a real scalar (or missing, for unary
-\code{-}).  A maximum of three such operations can be merged.
-Operations listed above as being done by the master thread can only be
-merged as the last of a series of operations.  For example,
-\code{exp(v+1)-1} can be computed by a single merged task, but
-\code{sqrt(v+1)-1} will be done using two tasks, because \code{sqrt}
-may produce a warning message that must appear immediately.
-
-When helper threads are in use, tasks are merged only when one of the
-tasks is for the \code{+}, \code{-}, or \code{*} operator (including
-unary \code{-}), since other operations may be faster done in parallel
-by a helper thread without merging.
-
+Task merging is currently done only for the \code{+}, \code{-},
+\code{*}, and \code{/}, operators when one of their operands is a real
+vector and one is a real scalar (or missing, for unary \code{-}), for
+the \code{^} operator when the second operand is the scalar 2.0, and
+for the \code{abs} function.  A maximum of three such operations can
+be merged. 
 }
 
 \seealso{

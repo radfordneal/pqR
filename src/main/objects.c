@@ -440,9 +440,9 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
     SEXP callenv, defenv;
     SEXP argList;
     RCNTXT *cptr;
-    static char *ap[2] = { "generic", "object" };
+    static const char * const ap[2] = { "generic", "object" };
 
-    PROTECT(argList =  matchArgs(R_NilValue, ap, 2, args, call));
+    PROTECT(argList =  matchArgs_strings (ap, 2, args, call));
     if (CAR(argList) == R_MissingArg)
         errorcall(call, _("there must be a 'generic' argument"));
     else
@@ -640,7 +640,7 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
     /* Get formals and actuals; matchArgs attaches the names of the formals to
        the actuals.  Then expand any ... that occurs. */
     formals = FORMALS(s);
-    PROTECT(actuals = matchArgs(formals, NULL, 0, cptr->promargs, call));
+    PROTECT(actuals = matchArgs_pairlist (formals, cptr->promargs, call));
 
     i = 0;
     for(t = actuals; t != R_NilValue; t = CDR(t)) {

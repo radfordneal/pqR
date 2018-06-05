@@ -362,7 +362,6 @@
  Rf_framedepth
  Rf_gamma_cody
  Rf_gammalims
- Rf_get1index
  Rf_gpptr
  Rf_i1mach
  Rf_internalArraySubscript
@@ -372,13 +371,11 @@
  Rf_lfastchoose
  Rf_lgammacor
  Rf_lookupCachedSymbol
- Rf_makeSubscript
  Rf_makeUnclassed
  Rf_markKnown
- Rf_mat2indsub
  Rf_matchArg
  Rf_matchArgExact
- Rf_matchArgs
+ Rf_matchArgs_nontrivial
  Rf_matchPar
  Rf_mbtoucs
  Rf_mkCLOSXP
@@ -400,6 +397,8 @@
  Rf_regerror
  Rf_regexec
  Rf_regfree
+ Rf_rep_one_string_element
+ Rf_rep_string_elements
  Rf_set_elements_to_NA_or_NULL
  Rf_set_symbits_in_env
  Rf_setBaseDevice
@@ -408,7 +407,6 @@
  Rf_setenvsymbits
  Rf_ssort
  Rf_stirlerr
- Rf_strmat2intmat
  Rf_substituteList
  Rf_translateChar_nontrivial
  Rf_ucstomb

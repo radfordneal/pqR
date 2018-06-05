@@ -138,6 +138,9 @@
         has been improved for long vectors, and they may now be done
         in a helper thread (though currently without pipelining of data).
   \item Creation of matrices with \code{matrix} is now faster.
+  \item Division of a real vector by a scalar real or integer value of 2 is now
+        automatically converted to a faster multiplication by 0.5 (which
+        produces exactly the same result).
   \item Creation of arrays with \code{array} is now usually done with
         a faster internal routine, mimicking (with improvements) changes
         in R-2.15.2 and later R Core versions.
@@ -149,16 +152,24 @@
   \item Improved methods for symbol lookup are now used, which increase
         speed in many contexts, and especially in functions that are
         defined in packages (rather than in the global workspace).
+  \item The speed of \code{nchar} has been greatly improved.
+  \item The speed of \code{substr} has been improved.
   \item The speed of \code{which} has been improved.
   \item The speed of \code{.Call} has been improved.
-  \itme Input and output have been sped up, sometimes considerably,
+  \item The speed of \code{any} and \code{all} has been improved,
+        for cases when many elements need to be checked to determine
+        the result.
+  \item Input and output have been sped up, sometimes considerably,
         both with regard to low-level character io, and with respect to 
         output formatting.
-  \item The \code{\%\%} and \code{\%/\%} operators are now faster when 
-        their operands are real vectors that contain integer values.
   \item Subscripting with a logical vector is now faster for long vectors.
   \item The \code{grep}, \code{grepl}, \code{sub}, and \code{gsub} functions
         have been speeded up, substantially in some situations.
+  \item Merging of arithmetic operations on vectors has been streamlined,
+        with consequent reduction in code size.  Now only the \code{abs}
+        function may be merged (not other one-argument math functions),
+        and \code{^} is merged only when the second operand is 2.
+        See \code{help(helpers)} for details.
   \item General interpretive overhead has been reduced in some contexts,
         particularly when extracting or replacing subsets with 
         \code{[.]} or \code{[[.]]}.
@@ -175,7 +186,7 @@
         with \code{[]}, a name derived from a dimension name was attached
         to it only if a single dimension had names (though this was not 
         correctly documented by \code{help("[")}, and is not correctly
-        documented in R Core versions to at least R-3.4.0).  This behaviour has
+        documented in R Core versions to at least R-3.5.0).  This behaviour has
         been changed in pqR so that a name is attached when two dimensions
         have names provided one of these dimensions had dropping suppressed.
         This gives reliable results when matrices happen to have only one
@@ -204,7 +215,7 @@
         \code{NaN} and \code{NA} values that are encountered to all later
         values, with \code{NA} taking precedence over \code{NaN}.  Previously,
         \code{NaN} had been converted to \code{NA} in \code{cumsum}.  (In
-        R-3.4.1, the behaviour in this respect appears to be platform 
+        R-3.5.0, the behaviour in this respect appears to be platform 
         dependent.)
   \item Indexes used with \code{[[} can be symbols, with effect equivalent 
         to indexing with the symbol's print name.  This has actually been
@@ -225,7 +236,8 @@
         at the C API level, with \code{SET_ATTRIB}.  Getting the attributes
         of a symbol returns NULL.  Previously (and also in R-3.4.0),
         attributes could be attached to symbols, but they were lost
-        when a workspace was saved and restored.
+        when a workspace was saved and restored.  Attaching attributes
+        to symbols is now also disallowed in R-3.5.0.
   \item There is no longer a \code{SET_PRINTNAME} function available in
         the C API (even if internal header files are used).  Setting the 
         print name of a symbol has never been
@@ -233,6 +245,8 @@
   \item The default \code{size} for \code{new.env} is now \code{NA}, which
         gives an internal default, which now varies depending on the
         platform and configuration options.
+  \item Assigning to \code{...} or \code{..1}, \code{..2}, etc. with
+        \code{<-} and other assignment operators is no longer allowed.
   \item A warning is no longer generated when the first argument of
         \code{.C}, \code{.Fortran}, \code{.Call}, or \code{.External} is
         given its proper name of \code{.NAME}.  Passing more than one
@@ -305,6 +319,11 @@
 
   \subsection{BUG FIXES}{
   \itemize{
+  \item Fixed a pqR bug illustrated by the following code:
+\preformatted{    p<-matrix(c(2L,3L,2L,2L),1,4); p[,p]<-1L; p
+}
+        This previously produced a matrix with values 1, 1, 2, 2 rather than the
+        correct answer of 2, 1, 1, 2.
   \item Fixed bugs illustrated by \code{format(3.1,width=9999)}, in which
         large field widths are reduced to 999, but are filled with only spaces.
         The field widths are now automatically reduced to 999 (2000 for
@@ -314,15 +333,15 @@
         rather than print the square root of two:
 \preformatted{    f <- function (...) ..1(2); f(sqrt)
 }
-        This bug also exists in R Core versions to at least R-3.4.4.
+        This bug also exists in R Core versions to at least R-3.5.0.
   \item Fixed bugs in which \code{as.numeric("0x1.1.1p0")} didn't give an error,
         and \code{as.numeric("0x1fffffffffffff.7ffp0")} gave an 
         incorrectly-rounded result.  Both bugs (and related ones previously
-        fixed in pqR) exist in R-3.4.4.
+        fixed in pqR) exist in R-3.5.0.
   \item Fixed a bug that caused
         \code{print(c(F,NA,NA,F),na.print="abcdef")} to
         produce incorrectly-formatted output.  This bug also exists in
-        R Core versions to at least R-3.4.4.
+        R Core versions to at least R-3.5.0.
   \item The documentation on \code{debug} and \code{debugonce} has been
         fixed to remove mention of the \code{text} and \code{condition} 
         arguments. These arguments were documented in R-2.10.0, and in 
@@ -344,12 +363,12 @@
     L
 }
         In the value printed for \code{L}, \code{L[[1]][1]} had changed to 9.
-        This bug also exists in R Core versions to at least R-3.4.4.
+        This bug also exists in R Core versions to at least R-3.5.0.
   \item Fixed a bug illustrated by the following:
 \preformatted{    a <- as.integer(NA); e <- new.env(size=a); print(a)
 }
         The value printed was previously 0 rather than NA.
-        This bug also exists in R Core versions to at least R-3.4.4.
+        This bug also exists in R Core versions to at least R-3.5.0.
   \item Fixed a bug that caused a crash (rather than an error message)
         for code like the following:
 \preformatted{    a <- quote(r<-1); a[[2]] <- character(0); eval(a)

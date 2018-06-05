@@ -122,6 +122,10 @@
 #include "scalar-stack.h"
 
 
+/***  NOTE:  Some context procedures are in eval.c, to allow better  ***/
+/***  optimization of their calls from core evaluation procedures.   ***/
+
+
 /* R_run_onexits - runs the conexit/cend code for all contexts from
    R_GlobalContext down to but not including the argument context.
    This routine does not stop at a CTXT_TOPLEVEL--the code that
@@ -196,144 +200,6 @@ void attribute_hidden R_restore_globals(RCNTXT *cptr)
 #endif
     R_local_protect_start = cptr->local_pr;
     R_scalar_stack = cptr->scalar_stack;
-}
-
-
-/* jumpfun - jump to the named context */
-
-static R_NORETURN void jumpfun(RCNTXT * cptr, int mask, SEXP val)
-{
-    Rboolean savevis = R_Visible;
-
-    if (ON_SCALAR_STACK(val))
-        val = DUP_STACK_VALUE(val);
-
-    /* run onexit/cend code for all contexts down to but not including
-       the jump target */
-    PROTECT(val);
-    R_run_onexits(cptr);
-    UNPROTECT(1);
-    R_Visible = savevis;
-
-    R_ReturnedValue = val;
-    R_GlobalContext = cptr; /* this used to be set to
-			       cptr->nextcontext for non-toplevel
-			       jumps (with the context set back at the
-			       SETJMP for restarts).  Changing this to
-			       always using cptr as the new global
-			       context should simplify some code and
-			       perhaps allow loops to be handled with
-			       fewer SETJMP's.  LT */
-    R_restore_globals(R_GlobalContext);
-
-    LONGJMP(cptr->cjmpbuf, mask);
-}
-
-
-/* Short form used in eval.c for contexts when evaluating BUILTIN ops. */
-
-void beginbuiltincontext (RCNTXT * cptr, SEXP syscall)
-{ begincontext (cptr, CTXT_BUILTIN, syscall, R_BaseEnv, 
-                      R_BaseEnv, R_NilValue, R_NilValue);
-}
-
-/* begincontext - begin an execution context
-
-   begincontext and endcontext are used in dataentry.c and modules */
-void begincontext(RCNTXT * cptr, int flags,
-		  SEXP syscall, SEXP env, SEXP sysp,
-		  SEXP promargs, SEXP callfun)
-{
-    cptr->nextcontext = R_GlobalContext;  /* store in order in structure, */
-    cptr->callflag = flags;               /*   since that may be faster   */
-    cptr->cstacktop = R_PPStackTop;
-    cptr->evaldepth = R_EvalDepth;
-    cptr->promargs = promargs;
-    cptr->callfun = callfun;
-    cptr->sysparent = sysp;
-    cptr->call = syscall;
-    cptr->cloenv = env;
-    cptr->conexit = R_NilValue;
-    cptr->cend = NULL;
-    cptr->vmax = VMAXGET();
-    cptr->intsusp = R_interrupts_suspended;
-    cptr->handlerstack = R_HandlerStack;
-    cptr->restartstack = R_RestartStack;
-    cptr->prstack = R_PendingPromises;
-    cptr->nodestack = R_BCNodeStackTop;
-#ifdef BC_INT_STACK
-    cptr->intstack = R_BCIntStackTop;
-#endif
-    cptr->srcref = R_Srcref;
-    cptr->local_pr = R_local_protect_start;
-    cptr->scalar_stack = R_scalar_stack;
-    R_GlobalContext = cptr;
-}
-
-
-/* endcontext - end an execution context */
-
-void endcontext(RCNTXT * cptr)
-{
-    R_HandlerStack = cptr->handlerstack;
-    R_RestartStack = cptr->restartstack;
-    if (cptr->cloenv != R_NilValue && cptr->conexit != R_NilValue ) {
-	SEXP s = cptr->conexit;
-	Rboolean savevis = R_Visible;
-	cptr->conexit = R_NilValue; /* prevent recursion */
-	PROTECT(s);
-	eval(s, cptr->cloenv);
-	UNPROTECT(1);
-	R_Visible = savevis;
-    }
-    R_GlobalContext = cptr->nextcontext;
-}
-
-
-/* revisecontext - change environments in a context
-
-   The revised context differs from the previous one only in env and sysp. */
-
-void revisecontext (SEXP env, SEXP sysp)
-{
-    R_GlobalContext->sysparent = sysp;
-    R_GlobalContext->cloenv = env;
-}
-
-
-/* findcontext - find the correct context */
-
-void R_NORETURN attribute_hidden findcontext(int mask, SEXP env, SEXP val)
-{
-    RCNTXT *cptr;
-    if (mask & CTXT_LOOP) {		/* break/next */
-	for (cptr = R_GlobalContext;
-	     cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;
-	     cptr = cptr->nextcontext)
-	    if (cptr->callflag & CTXT_LOOP && cptr->cloenv == env )
-		jumpfun(cptr, mask, val);
-	error(_("no loop for break/next, jumping to top level"));
-    }
-    else {				/* return; or browser */
-	for (cptr = R_GlobalContext;
-	     cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;
-	     cptr = cptr->nextcontext)
-	    if ((cptr->callflag & mask) && cptr->cloenv == env)
-		jumpfun(cptr, mask, val);
-	error(_("no function to return from, jumping to top level"));
-    }
-}
-
-void R_NORETURN attribute_hidden R_JumpToContext (RCNTXT *target, int mask, 
-                                                  SEXP val)
-{
-    RCNTXT *cptr;
-    for (cptr = R_GlobalContext;
-	 cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;
-	 cptr = cptr->nextcontext)
-	if (cptr == target)
-	    jumpfun(cptr, mask, val);
-    error(_("target context is not on the stack"));
 }
 
 

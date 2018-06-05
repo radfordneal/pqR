@@ -220,8 +220,6 @@ extern0 SEXP	R_UnderscoreString;   /* "_", as a CHARSXP */
 
 #ifdef USE_RINTERNALS
 
-# define TYPE_ETC(x) (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera)
-
 # define IS_BYTES(x) (UPTR_FROM_SEXP(x)->sxpinfo.gp & BYTES_MASK)
 # define SET_BYTES(x) ((UPTR_FROM_SEXP(x)->sxpinfo.gp) |= BYTES_MASK)
 # define IS_LATIN1(x) (UPTR_FROM_SEXP(x)->sxpinfo.gp & LATIN1_MASK)
@@ -1048,6 +1046,8 @@ extern uintptr_t R_CStackStart	INI_as((uintptr_t)-1);/* Initial stack address*/
 extern uintptr_t R_CStackLimit  INI_as((uintptr_t)-1);/* C stack limit */
 #define R_CStackThreshold R_high_frequency_globals.CStackThreshold
 
+#define R_Profiling R_high_frequency_globals.Profiling
+
 /* What to do for R_CStackDir if not a defined constant from compiler option. */
 
 #ifndef R_CStackDir
@@ -1274,7 +1274,6 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define FrameClassFix		Rf_FrameClassFix
 # define framedepth		Rf_framedepth
 # define frameSubscript		Rf_frameSubscript
-# define get1index		Rf_get1index
 # define getVar			Rf_getVar
 # define getVarInFrame		Rf_getVarInFrame
 # define InitArithmetic		Rf_InitArithmetic
@@ -1297,7 +1296,6 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define IntegerFromLogical	Rf_IntegerFromLogical
 # define IntegerFromReal	Rf_IntegerFromReal
 # define IntegerFromString	Rf_IntegerFromString
-# define internalArraySubscript	Rf_internalArraySubscript
 # define internalTypeCheck	Rf_internalTypeCheck
 # define isValidName		Rf_isValidName
 # define jump_to_toplevel	Rf_jump_to_toplevel
@@ -1308,12 +1306,9 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define LogicalFromReal	Rf_LogicalFromReal
 # define LogicalFromString	Rf_LogicalFromString
 # define mainloop		Rf_mainloop
-# define makeSubscript		Rf_makeSubscript
 # define markKnown		Rf_markKnown
-# define mat2indsub		Rf_mat2indsub
 # define matchArg		Rf_matchArg
 # define matchArgExact		Rf_matchArgExact
-# define matchArgs		Rf_matchArgs
 # define matchPar		Rf_matchPar
 # define Mbrtowc		Rf_mbrtowc
 # define mbtoucs		Rf_mbtoucs
@@ -1349,7 +1344,6 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define RealFromLogical	Rf_RealFromLogical
 # define RealFromString		Rf_RealFromString
 # define RemoveVariable		Rf_RemoveVariable
-# define revisecontext          Rf_revisecontext
 # define Seql			Rf_Seql
 # define Scollate		Rf_Scollate
 # define sortVector		Rf_sortVector
@@ -1361,7 +1355,6 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define StringFromReal		Rf_StringFromReal
 # define strIsASCII		Rf_strIsASCII
 # define StrToInternal		Rf_StrToInternal
-# define strmat2intmat		Rf_strmat2intmat
 # define substituteList		Rf_substituteList
 # define too_deep_error		Rf_too_deep_error
 # define tsConform		Rf_tsConform
@@ -1464,7 +1457,6 @@ void copyMostAttribNoTs(SEXP, SEXP);
 void CustomPrintValue(SEXP, SEXP);
 void DataFrameClass(SEXP);
 SEXP ddfindVar(SEXP, SEXP);
-SEXP Rf_DecideVectorOrRange (int64_t, int *, int *, SEXP);
 SEXP deparse1(SEXP,Rboolean,int);
 SEXP deparse1line(SEXP,Rboolean);
 SEXP deparse1s(SEXP call);
@@ -1514,7 +1506,6 @@ void Init_R_Variables(SEXP);
 void InitTempDir(void);
 void InitTypeTables(void);
 void initStack(void);
-SEXP internalArraySubscript(int, SEXP, SEXP, SEXP, int *);
 void internalTypeCheck(SEXP, SEXP, SEXPTYPE);
 Rboolean isMethodsDispatchOn(void);
 int isValidName(const char *);
@@ -1522,13 +1513,10 @@ void R_NORETURN jump_to_toplevel(void);
 void KillAllDevices(void);
 SEXP levelsgets(SEXP, SEXP);
 void mainloop(void);
-SEXP makeSubscript(SEXP, SEXP, int *, int *, SEXP, int);
 SEXP Rf_makeUnclassed(SEXP);
 SEXP markKnown(const char *, SEXP);
-SEXP mat2indsub(SEXP, SEXP, SEXP);
 SEXP matchArg(SEXP, SEXP*);
 SEXP matchArgExact(SEXP, SEXP*);
-SEXP matchArgs(SEXP, char **, int, SEXP, SEXP);
 SEXP matchPar(const char *, SEXP*);
 SEXP mkCLOSXP(SEXP, SEXP, SEXP);
 SEXP mkFalse(void);
@@ -1591,9 +1579,9 @@ void sortVector(SEXP, Rboolean);
 void SrcrefPrompt(const char *, SEXP);
 void ssort(SEXP*,int);
 int StrToInternal(const char *);
-SEXP strmat2intmat(SEXP, SEXP, SEXP);
 SEXP substituteList(SEXP, SEXP);
 void R_trace_call(SEXP, SEXP);
+int Rf_translated_Seql (SEXP, SEXP);
 Rboolean tsConform(SEXP,SEXP);
 SEXP tspgets(SEXP, SEXP);
 SEXP type2symbol(SEXPTYPE);
@@ -1610,7 +1598,6 @@ void Rf_wait_until_arguments_computed (SEXP);
 #ifdef R_USE_SIGNALS
 void beginbuiltincontext(RCNTXT*, SEXP);
 void begincontext(RCNTXT*, int, SEXP, SEXP, SEXP, SEXP, SEXP);
-void revisecontext(SEXP, SEXP);
 SEXP dynamicfindVar(SEXP, RCNTXT*);
 void endcontext(RCNTXT*);
 int framedepth(RCNTXT*);
@@ -1678,6 +1665,7 @@ R_NORETURN void out_of_bounds_error(SEXP call);
 R_NORETURN void nonsubsettable_error(SEXP call, SEXP x);
 R_NORETURN void PRSEEN_error(SEXP e);
 Rboolean Rf_strIsASCII(const char *str);
+void Rf_set_elements_to_NA (SEXP, R_len_t, R_len_t, R_len_t);
 int utf8clen(char c);
 
 /* NOTE:  Some below should not really be returning size_t, which
@@ -1989,10 +1977,7 @@ static inline int SEQL(SEXP a, SEXP b)
     if (ENC_KNOWN(a) == ENC_KNOWN(b))
 	return 0;
 
-    SEXP vmax = R_VStack;
-    int result = !strcmp(translateCharUTF8(a), translateCharUTF8(b));
-    R_VStack = vmax; /* discard any memory used by translateCharUTF8 */
-    return result;
+    return Rf_translated_Seql (a, b);
 }
 
 
@@ -2024,7 +2009,117 @@ static inline int SEQL(SEXP a, SEXP b)
        i2 = (i2+1 == n2 ? 0 : i2+1), ++i1, i = i1)
 
 
+/* MatchArgs - trivial cases are done here, with two interfaces;
+   non-trivial part is in match.c, where there is more documentation. */
+
+extern SEXP Rf_matchArgs_nontrivial
+              (SEXP, const char * const *, int, SEXP, int, SEXP);
+
+static inline SEXP matchArgs_strings
+  (const char * const *formal_names, int arg_count, SEXP supplied, SEXP call)
+{
+    int n_supplied;
+    SEXP r;
+
+    if (supplied == R_NilValue) {             /* zero arguments supplied */
+        if (arg_count == 0) 
+            return R_NilValue;
+        n_supplied = 0;
+    }
+    else if (CDR(supplied) == R_NilValue) {   /* one argument supplied */
+        SEXP a = CAR(supplied);
+        if (arg_count == 1 && strcmp(formal_names[0],"...") != 0
+              && TAG(supplied) == R_NilValue && a != R_DotsSymbol) {
+            r = CONS (a, R_NilValue);
+            SET_MISSING (r, a == R_MissingArg || a == R_MissingUnder);
+            return r;
+        }
+        n_supplied = 1;
+    }
+    else if (CDDR(supplied) == R_NilValue) {  /* two arguments supplied */
+        SEXP a1 = CAR(supplied), a2 = CADR(supplied);
+        if (arg_count == 2 && a1 != R_DotsSymbol
+                           && a2 != R_DotsSymbol
+                           && TAG(supplied) == R_NilValue
+                           && TAG(CDR(supplied)) == R_NilValue
+                           && strcmp(formal_names[0],"...") != 0
+                           && strcmp(formal_names[1],"...") != 0) {
+            r = CONS (a2, R_NilValue);
+            SET_MISSING (r, a2 == R_MissingArg || a2 == R_MissingUnder);
+            r = CONS (a1, r);
+            SET_MISSING (r, a1 == R_MissingArg || a1 == R_MissingUnder);
+            return r;
+        }
+        n_supplied = 2;
+    }
+    else {  /* more than two arguments supplied, count them */
+        SEXP s = CDDR(supplied);
+        n_supplied = 2;
+        do { n_supplied += 1; s = CDR(s); } while (s != R_NilValue);
+    }
+
+    return Rf_matchArgs_nontrivial (R_NilValue, formal_names, arg_count, 
+                                    supplied, n_supplied, call);
+}
+
+static inline SEXP matchArgs_pairlist (SEXP formals, SEXP supplied, SEXP call)
+
+{
+    int arg_count, n_supplied;
+    SEXP r;
+
+    if (supplied == R_NilValue) {             /* zero arguments supplied */
+        if (formals == R_NilValue)
+            return R_NilValue;
+        n_supplied = 0;
+    }
+    else if (CDR(supplied) == R_NilValue) {   /* one argument supplied */
+        SEXP a = CAR(supplied);
+        if (formals != R_NilValue && CDR(formals) == R_NilValue
+             && TAG(supplied) == R_NilValue && TAG(formals) != R_DotsSymbol 
+             && a != R_DotsSymbol) {
+            r = cons_with_tag (a, R_NilValue, TAG(formals));
+            SET_MISSING (r, a == R_MissingArg || a == R_MissingUnder);
+            return r;
+        }
+        n_supplied = 1;
+    }
+    else if (CDDR(supplied) == R_NilValue) {  /* two arguments supplied */
+        SEXP a1 = CAR(supplied), a2 = CADR(supplied);
+        if (CDR(formals) != R_NilValue && a1 != R_DotsSymbol
+                                       && a2 != R_DotsSymbol
+                                       && TAG(formals) != R_DotsSymbol
+                                       && TAG(CDR(formals)) != R_DotsSymbol
+                                       && CDDR(formals) == R_NilValue
+                                       && TAG(supplied) == R_NilValue
+                                       && TAG(CDR(supplied))==R_NilValue) {
+            r = cons_with_tag (a2, R_NilValue, TAG(CDR(formals)));
+            SET_MISSING (r, a2 == R_MissingArg || a2 == R_MissingUnder);
+            r = cons_with_tag (a1, r, TAG(formals));
+            SET_MISSING (r, a1 == R_MissingArg || a1 == R_MissingUnder);
+            return r;
+        }
+        n_supplied = 2;
+    }
+    else {  /* more than two arguments supplied, count them */
+        SEXP s = CDDR(supplied);
+        n_supplied = 2;
+        do { n_supplied += 1; s = CDR(s); } while (s != R_NilValue);
+    }
+
+    /* Count formal arguments. */
+
+    SEXP a;
+    arg_count = 0;
+    for (a = formals; a != R_NilValue; a = CDR(a))
+        arg_count += 1;
+
+    return Rf_matchArgs_nontrivial (formals, NULL, arg_count, 
+                                    supplied, n_supplied, call);
+}
+
 #endif /* DEFN_H_ */
+
 /*
  *- Local Variables:
  *- page-delimiter: "^/\\*---"

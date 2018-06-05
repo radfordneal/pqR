@@ -41,6 +41,11 @@
 #include "arithmetic.h"
 
 
+/*#define BC_PROFILING*/
+#ifdef BC_PROFILING
+static Rboolean bc_profiling = FALSE;
+#endif
+
 static int R_disable_bytecode = 0;
 
 

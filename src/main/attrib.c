@@ -1427,13 +1427,13 @@ static SEXP do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
     size_t n;
     int nargs = length(args), exact = 0;
     enum { NONE, PARTIAL, PARTIAL2, FULL } match = NONE;
-    static char *ap[3] = { "x", "which", "exact" };
+    static const char * const ap[3] = { "x", "which", "exact" };
 
     if (nargs < 2 || nargs > 3)
 	errorcall(call, "either 2 or 3 arguments are required");
 
     /* argument matching */
-    argList = matchArgs(R_NilValue, ap, 3, args, call);
+    argList = matchArgs_strings (ap, 3, args, call);
 
     PROTECT(argList);
     s = CAR(argList);
@@ -1534,7 +1534,7 @@ static void check_slot_assign(SEXP obj, SEXP input, SEXP value, SEXP env)
     SEXP
 	valueClass = PROTECT(R_data_class(value, FALSE)),
 	objClass   = PROTECT(R_data_class(obj, FALSE));
-    static SEXP checkAt = NULL;
+    static SEXP checkAt = R_NoObject;
     /* 'methods' may *not* be in search() ==> do as if calling 
         methods::checkAtAssignment(..) */
     if(!isMethodsDispatchOn()) { // needed?
@@ -1542,7 +1542,7 @@ static void check_slot_assign(SEXP obj, SEXP input, SEXP value, SEXP env)
 	eval(e, R_MethodsNamespace); // only works with methods loaded
 	UNPROTECT(1);
     }
-    if(checkAt == NULL)
+    if(checkAt == R_NoObject)
 	checkAt = findFun(install("checkAtAssignment"), R_MethodsNamespace);
     SEXP e = PROTECT(lang4(checkAt, objClass, input, valueClass));
     eval(e, env);
@@ -1591,7 +1591,7 @@ static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
     else { /*  attr(x, which = "<name>")  <-  value  */
 
         SEXP obj, name, argList;
-        static char *ap[3] = { "x", "which", "value" };
+        static const char * const ap[3] = { "x", "which", "value" };
     
         checkArity(op, args);
     
@@ -1602,7 +1602,7 @@ static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
             PROTECT(obj);
     
         /* argument matching */
-        argList = matchArgs(R_NilValue, ap, 3, args, call);
+        argList = matchArgs_strings (ap, 3, args, call);
     
         PROTECT(argList);
     

@@ -1025,7 +1025,7 @@ void attribute_hidden InitMemory()
         R_inspect(R_ScalarLogicalTRUE);
         REprintf("-----\n"); fflush(stdout); fflush(stderr);
         REprintf("3L:\n");
-        R_inspect(R_ScalarInteger0To10(3));
+        R_inspect(R_ScalarInteger0To31(3));
         REprintf("-----\n"); fflush(stdout); fflush(stderr);
         REprintf("1.0:\n");
         R_inspect(R_ScalarRealOne);
@@ -1703,7 +1703,8 @@ SEXP attribute_hidden mkSYMSXP(SEXP name, SEXP value)
     UNPROTECT(2);
 
     PRINTNAME(c) = name;
-    IS_PRINTNAME(name) = 1;
+    if (!IS_PRINTNAME(name)) /* check in case it's a constant CHARSXP */
+        IS_PRINTNAME(name) = 1;
 #   if SYM_HASH_IN_SYM
         SYM_HASH(c) = CHAR_HASH(name);
 #   endif    
@@ -1795,8 +1796,8 @@ SEXP mkFalse(void)
 SEXP ScalarIntegerMaybeConst(int x)
 {
     if (ENABLE_SHARED_CONSTANTS) {
-        if (x >=0 && x <= 10)
-            return R_ScalarInteger0To10(x);
+        if (x >=0 && x <= 31)
+            return R_ScalarInteger0To31(x);
         if (x == NA_INTEGER)
             return R_ScalarIntegerNA;
     }
@@ -1812,13 +1813,28 @@ SEXP ScalarRealMaybeConst(double x)
            as doubles, since double comparison doesn't work for NA or when 
            comparing -0 and +0 (which should be distinct). */
 
-        uint64_t xv = *(uint64_t*) &x;
+        union { double d; uint64_t i; } u, v;
 
-        if (xv == *(uint64_t*) &REAL(R_ScalarRealZero)[0])
+        u.d = x;
+
+        v.d = REAL(R_ScalarRealZero)[0];
+        if (u.i == v.i)
             return R_ScalarRealZero;
-        if (xv == *(uint64_t*) &REAL(R_ScalarRealOne)[0])
+
+        v.d = REAL(R_ScalarRealOne)[0];
+        if (u.i == v.i)
             return R_ScalarRealOne;
-        if (xv == *(uint64_t*) &REAL(R_ScalarRealNA)[0])
+
+        v.d = REAL(R_ScalarRealTwo)[0];
+        if (u.i == v.i)
+            return R_ScalarRealTwo;
+
+        v.d = REAL(R_ScalarRealHalf)[0];
+        if (u.i == v.i)
+            return R_ScalarRealHalf;
+
+        v.d = REAL(R_ScalarRealNA)[0];
+        if (u.i == v.i)
             return R_ScalarRealNA;
     }
 
@@ -1832,6 +1848,15 @@ SEXP ScalarComplexMaybeConst(Rcomplex x)
 
 SEXP ScalarStringMaybeConst(SEXP x)
 {
+    if (LENGTH(x) == 1) {
+        char c = CHAR(x)[0];
+        if (c > 0 && c <= 127) {
+            SEXP s = R_ASCII_SCALAR_STRING(c);
+            if (STRING_ELT(s,0) == x)  /* might not, if other encoding...? */
+                return s;
+        }
+    }
+
     return ScalarString(x);
 }
 
@@ -1913,11 +1938,10 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 
     if (type == VECSXP || type == EXPRSXP) {
         for (i = 0; i < length; i++)
-            VECTOR_ELT(s,i) = R_NilValue;      /* no old-to-new check needed */
+            VECTOR_ELT(s,i) = R_NilValue;       /* no old-to-new check needed */
     }
     else if (type == STRSXP) {
-        for (i = 0; i < length; i++)
-            STRING_ELT(s,i) = R_BlankString;   /* no old-to-new check needed */
+        rep_one_string_element (s, 0, R_BlankString, length);
     }
     else if (type == CHARSXP) {
         CHAR_RW(s)[length] = 0; /* ensure there's a terminating null character*/
@@ -2879,6 +2903,12 @@ static void setup_char_val (SEXP val, unsigned int full_hash,
 
 SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 {
+    /* Quickly handle the case of a single ascii character. */
+
+    if (len == 1 && name[0] > 0 && name[0] <= 127) {
+        return R_ASCII_CHAR(name[0]);
+    }
+
     int need_enc;
     Rboolean embedNul = FALSE, is_ascii = TRUE;
 
@@ -2964,18 +2994,6 @@ SEXP attribute_hidden Rf_mkCharMulti (const char **strings, const int *lengths,
 {
     int i, j;
 
-    switch(enc){
-    case CE_NATIVE:
-    case CE_UTF8:
-    case CE_LATIN1:
-    case CE_BYTES:
-    case CE_SYMBOL:
-    case CE_ANY:
-	break;
-    default:
-	error(_("unknown encoding: %d"), enc);
-    }
-
     int is_ascii = TRUE;
     int len = 0;
 
@@ -2990,6 +3008,25 @@ SEXP attribute_hidden Rf_mkCharMulti (const char **strings, const int *lengths,
             or |= p[j];
         if ((or >> 7) != 0)
             is_ascii = FALSE;
+    }
+
+    /* Quickly handle the case of a single ascii character. */
+
+    if (len == 1 && is_ascii) {
+        for (i = 0; lengths[i] != 1; i++) ;
+        return R_ASCII_CHAR(strings[i][0]);
+    }
+
+    switch(enc){
+    case CE_NATIVE:
+    case CE_UTF8:
+    case CE_LATIN1:
+    case CE_BYTES:
+    case CE_SYMBOL:
+    case CE_ANY:
+	break;
+    default:
+	error(_("unknown encoding: %d"), enc);
     }
 
     int need_enc;
@@ -3062,6 +3099,12 @@ SEXP attribute_hidden Rf_mkCharRep (const char *string, int len, int rep,
                                     cetype_t enc)
 {
     int i, j;
+
+    /* Quickly handle the case of a single ascii character. */
+
+    if (len == 1 && rep == 1 && string[0] > 0 && string[0] <= 127) {
+        return R_ASCII_CHAR(string[0]);
+    }
 
     if ((uint64_t)len * rep > INT_MAX)
         error("R character strings are limited to 2^31-1 bytes");
@@ -3272,13 +3315,20 @@ void attribute_hidden R_FreeStringBufferL(R_StringBuffer *buf)
 }
 
 
-/* ======== These need direct access to gp field for efficiency ======== */
-
 /* This has NA_STRING = NA_STRING.  Uses inlined version from Defn.h. */
 int Seql(SEXP a, SEXP b)
 {
     return SEQL(a,b);
 }
+
+int attribute_hidden Rf_translated_Seql (SEXP a, SEXP b)
+{
+    SEXP vmax = R_VStack;
+    int result = strcmp (translateCharUTF8(a), translateCharUTF8(b)) == 0;
+    R_VStack = vmax; /* discard any memory used by translateCharUTF8 */
+    return result;
+}
+
 
 
 /* A count of the memory used by an object.

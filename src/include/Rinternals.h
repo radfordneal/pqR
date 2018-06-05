@@ -235,11 +235,13 @@ struct sxpinfo_struct {
 
     unsigned int in_use: 1;   /* whether contents may be in use by a helper */
 
-    unsigned int debug : 1;       /* Function/Environment: is being debugged */
-    unsigned int rstep_pname : 1; /* Function: is to be debugged just once */
-                                  /* CHARSXP: is used as a symbol's printname */
-    unsigned int base_sym_env : 1;  /* Symbol: has base binding in global cache,
-                                       Envir: R_BaseEnv or R_BaseNamespace*/
+    unsigned int debug : 1;       /* Function/Environment: is being debugged
+                                     Symbol: maybe use fast subassign */
+    unsigned int rstep_pname : 1; /* Function: is to be debugged just once
+                                     Symbol: subassign counterpart follows it
+                                     CHARSXP: is used as a symbol's printname */
+    unsigned int base_sym_env : 1;/* Symbol: has base binding in global cache,
+                                     Envir: R_BaseEnv or R_BaseNamespace*/
 
     unsigned int nmcnt : 3;   /* Count of "names" referring to object */
 
@@ -479,7 +481,7 @@ typedef struct VECTOR_SEXPREC_C {
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
     int32_t padding;
 #endif
-    union { double d; int w[2]; int i; char c; char s[8]; } data;
+    union { double d; int w[2]; int i; char c; char s[8]; SEXP p; } data;
 #if USE_AUX_FOR_ATTRIB
     double const_padding; /* Needed to fill out full chunk */
 #endif
@@ -512,6 +514,7 @@ typedef struct VECTOR_SEXPREC_C {
 #define CAR(e)     NOT_LVALUE(UPTR_FROM_SEXP(e)->u.listsxp.carval)
 #define CDR(e)     NOT_LVALUE(UPTR_FROM_SEXP(e)->u.listsxp.cdrval)
 
+#define TYPE_ETC(x)(UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera)
 #define TYPEOF(x)  (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                      & TYPE_ET_CETERA_TYPE)
 
@@ -816,7 +819,6 @@ extern void helpers_wait_until_not_in_use(SEXP);
                                  |= TYPE_ET_CETERA_HAS_ATTR)
 #define UNSET_HAS_ATTRIB(x)   (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                                  &= ~TYPE_ET_CETERA_HAS_ATTR)
-#define SYM_NO_DOTS(x)  (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera == SYMSXP)
 #define SET_VEC_DOTS_TR_BIT(x)   (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                                    |= TYPE_ET_CETERA_VEC_DOTS_TR)
 #define UNSET_VEC_DOTS_TR_BIT(x) (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
@@ -825,6 +827,17 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define RTRACE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                                                    & TYPE_ET_CETERA_VEC_DOTS_TR)
 #define LEVELS(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp)
+
+#define SUBASSIGN_FOLLOWS(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
+#define SET_SUBASSIGN_FOLLOWS(x) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname = 1)
+#if USE_COMPRESSED_POINTERS
+#define SUBASSIGN_THAT_FOLLOWS(x) ((x)+SGGC_SYM_CHUNKS)
+#else
+#define SUBASSIGN_THAT_FOLLOWS(x) ((SEXP)((SYMSEXP)(x)+1))
+#endif
+
+#define MAYBE_FAST_SUBASSIGN(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.debug)
+#define SET_MAYBE_FAST_SUBASSIGN(x) (UPTR_FROM_SEXP(x)->sxpinfo.debug = 1)
 
   /* For SET_OBJECT and SET_TYPEOF, don't set if new value is the current value,
      to avoid crashing on an innocuous write to a constant that may be stored
@@ -836,13 +849,11 @@ extern void helpers_wait_until_not_in_use(SEXP);
   } while (0)
 
 #define SET_TYPEOF(x,v) do { \
-    SEXPREC *_x_ = UPTR_FROM_SEXP(x); int _v_ = (v); \
-    if ((_x_->sxpinfo.type_et_cetera & TYPE_ET_CETERA_TYPE) != _v_) { \
-        _x_->sxpinfo.type_et_cetera = \
-          (_x_->sxpinfo.type_et_cetera & ~TYPE_ET_CETERA_TYPE) | _v_; \
-        if (((VECTOR_OR_LIST_TYPES >> _v_) & 1) == 0) \
-            UNSET_HAS_ATTRIB(_x_); \
-        else if (ATTRIB(_x_) == R_NilValue) \
+    SEXP _x_ = (x); SEXPREC * _X_ = UPTR_FROM_SEXP(_x_); int _v_ = (v); \
+    if (TYPEOF(_x_) != _v_) { \
+        _X_->sxpinfo.type_et_cetera = \
+          (_X_->sxpinfo.type_et_cetera & ~TYPE_ET_CETERA_TYPE) | _v_; \
+        if (((VECTOR_OR_LIST_TYPES>>_v_)&1) == 0 || ATTRIB(_x_) == R_NilValue) \
             UNSET_HAS_ATTRIB(_x_); \
         else \
             SET_HAS_ATTRIB(_x_); \
@@ -978,6 +989,8 @@ SEXP Rf_chk_valid_SEXP (SEXP x);
 #define Rf_chk_valid_SEXP(x) (x)
 #endif
 
+const char *Rf_translateChar_nontrivial (SEXP);
+
 /* General Cons Cell Attributes */
 SEXP (ATTRIB)(SEXP x);
 int  (OBJECT)(SEXP x);
@@ -1004,7 +1017,8 @@ SEXP (STRING_ELT)(SEXP x, int i);
 SEXP (VECTOR_ELT)(SEXP x, int i);
 void SET_STRING_ELT(SEXP x, int i, SEXP v);
 void copy_string_elements(SEXP x, int i, SEXP v, int j, int n);
-void rep_string_elements(SEXP x, int i, int s, SEXP v, int n);
+void Rf_rep_one_string_element(SEXP x, int i, SEXP e, int n);
+void Rf_rep_string_elements(SEXP x, int i, SEXP v, int n);
 SEXP SET_VECTOR_ELT(SEXP x, int i, SEXP v);
 void copy_vector_elements(SEXP x, int i, SEXP v, int j, int n);
 SEXP *(STRING_PTR)(SEXP x);
@@ -1516,22 +1530,26 @@ struct R_local_protect {
 #define R_SGGC_NIL_INDEX 1
 #define R_SGGC_ENV_INDEX 2
 #define R_SGGC_SYM_INDEX 3
-#define R_SGGC_NUM_INDEX 4
-#define R_SGGC_LIST1_INDEX 5
-#define R_SGGC_SCALAR_STACK_INDEX 6
+#define R_SGGC_INT_INDEX 4
+#define R_SGGC_MISC_INDEX 5
+#define R_SGGC_CHAR_INDEX 6     /* also uses 7, 8, and 9 */
+#define R_SGGC_STRING_INDEX 10  /* also uses 11, 12, and 13 */
+#define R_SGGC_LIST1_INDEX 14
+#define R_SGGC_SCALAR_STACK_INDEX 15  /* and possibly subsequent segments */
 #else
 #define R_SGGC_NIL_INDEX 0
 #define R_SGGC_ENV_INDEX 1
 #define R_SGGC_SYM_INDEX 2
-#define R_SGGC_NUM_INDEX 3
-#define R_SGGC_LIST1_INDEX 4
-#define R_SGGC_SCALAR_STACK_INDEX 5
+#define R_SGGC_INT_INDEX 3
+#define R_SGGC_MISC_INDEX 4
+#define R_SGGC_CHAR_INDEX 5     /* also uses 6, 7, and 8 */
+#define R_SGGC_STRING_INDEX 9   /* also uses 10, 11, and 12 */
+#define R_SGGC_LIST1_INDEX 13
+#define R_SGGC_SCALAR_STACK_INDEX 14  /* and possibly subsequent segments */
 #endif
 
-#define R_N_NUM_CONSTS (3+12+3)     /* # of numerical constants in const-objs */
 
-
-/* R_EmptyEnv - a n empty environment at the root of the environment tree */
+/* R_EmptyEnv - an empty environment at the root of the environment tree */
 
 LibExtern SEXP R_EmptyEnv;          /* Variable form, for those that need it */
                                     /* Set in const-objs.c, as done below */
@@ -1577,33 +1595,51 @@ ConstExtern SYM_SEXPREC R_sym_consts[1];         /* defined in const-objs.c */
 LibExtern SEXP	R_MissingArg;       /* Missing argument marker */
 LibExtern SEXP	R_MissingUnder;	    /* Missing argument marker as "_" */
 
-/* Logical / Intteger / Real Values.  Defined in const-objs.c, must keep
+/* Logical / Integer / Real Values.  Defined in const-objs.c, must keep
    in sync. */
 
 #if USE_COMPRESSED_POINTERS
-#define R_ScalarLogicalFALSE      ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,0))
-#define R_ScalarLogicalTRUE       ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,1))
-#define R_ScalarLogicalNA         ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,2))
-#define R_ScalarInteger0To10(v)   ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,3+v))
-#define R_ScalarIntegerNA         ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,14))
-#define R_ScalarRealZero          ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,15))
-#define R_ScalarRealOne           ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,16))
-#define R_ScalarRealNA            ((SEXP)SGGC_CPTR_VAL(R_SGGC_NUM_INDEX,17))
+#define R_ScalarInteger0To31(v)   ((SEXP)SGGC_CPTR_VAL(R_SGGC_INT_INDEX,v))
+#define R_ScalarLogicalFALSE      ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,0))
+#define R_ScalarLogicalTRUE       ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,1))
+#define R_ScalarLogicalNA         ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,2))
+#define R_ScalarIntegerNA         ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,3))
+#define R_ScalarRealZero          ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,4))
+#define R_ScalarRealOne           ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,5))
+#define R_ScalarRealTwo           ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,6))
+#define R_ScalarRealHalf          ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,7))
+#define R_ScalarRealNA            ((SEXP)SGGC_CPTR_VAL(R_SGGC_MISC_INDEX,8))
 #else
-ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarNumerical_consts[R_N_NUM_CONSTS];
-#define R_ScalarLogicalFALSE    ((SEXP) &R_ScalarNumerical_consts[0])
-#define R_ScalarLogicalTRUE     ((SEXP) &R_ScalarNumerical_consts[1])
-#define R_ScalarLogicalNA       ((SEXP) &R_ScalarNumerical_consts[2])
-#define R_ScalarInteger0To10(v) ((SEXP) &R_ScalarNumerical_consts[3+v])
-#define R_ScalarIntegerNA       ((SEXP) &R_ScalarNumerical_consts[14])
-#define R_ScalarRealZero        ((SEXP) &R_ScalarNumerical_consts[15])
-#define R_ScalarRealOne         ((SEXP) &R_ScalarNumerical_consts[16])
-#define R_ScalarRealNA          ((SEXP) &R_ScalarNumerical_consts[17])
+ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarInteger_consts[32];
+ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarMisc_consts[9];
+#define R_ScalarInteger0To31(v) ((SEXP) &R_ScalarInteger_consts[v])
+#define R_ScalarLogicalFALSE    ((SEXP) &R_ScalarMisc_consts[0])
+#define R_ScalarLogicalTRUE     ((SEXP) &R_ScalarMisc_consts[1])
+#define R_ScalarLogicalNA       ((SEXP) &R_ScalarMisc_consts[2])
+#define R_ScalarIntegerNA       ((SEXP) &R_ScalarMisc_consts[3])
+#define R_ScalarRealZero        ((SEXP) &R_ScalarMisc_consts[4])
+#define R_ScalarRealOne         ((SEXP) &R_ScalarMisc_consts[5])
+#define R_ScalarRealTwo         ((SEXP) &R_ScalarMisc_consts[6])
+#define R_ScalarRealHalf        ((SEXP) &R_ScalarMisc_consts[7])
+#define R_ScalarRealNA          ((SEXP) &R_ScalarMisc_consts[8])
+#endif
+
+/* CHARSXP and scalar STRSXP constants.  Defined in const-objs.c. */
+
+#if USE_COMPRESSED_POINTERS
+#define R_ASCII_CHAR(c) ((SEXP)SGGC_CPTR_VAL(R_SGGC_CHAR_INDEX+(c>>5),(c&0x1f)))
+#define R_ASCII_SCALAR_STRING(c) \
+                      ((SEXP)SGGC_CPTR_VAL(R_SGGC_STRING_INDEX+(c>>5),(c&0x1f)))
+#else
+ConstExtern /* R_CONST */ VECTOR_SEXPREC_C R_ASCII_consts[128];
+ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarString_consts[128];
+#define R_ASCII_CHAR(c) ((SEXP) &R_ASCII_consts[c])
+#define R_ASCII_SCALAR_STRING(c) ((SEXP) &R_ScalarString_consts[c])
 #endif
 
 /* Start of scalar stack. */
 
-#define SCALAR_STACK_SIZE 32  /* Number of values on the scalar stack */
+#define SCALAR_STACK_SIZE 128  /* Number of values allowed on scalar stack */
 
 ConstExtern VECTOR_SEXPREC_C R_scalar_stack_space[SCALAR_STACK_SIZE];
 
@@ -1760,7 +1796,7 @@ void Rf_copyMostAttrib(SEXP, SEXP);
 void Rf_copyVector(SEXP, SEXP);
 void Rf_copy_elements(SEXP, int, int, SEXP, int, int, int);
 int Rf_copy_elements_coerced(SEXP, int, int, SEXP, int, int, int);
-void Rf_copy_elements_recycled(SEXP, int, int, SEXP, int);
+void Rf_copy_elements_recycled(SEXP, int, SEXP, int);
 void Rf_copy_transposed(SEXP, SEXP, int, int);
 int Rf_countContexts(int, int);
 SEXP Rf_CreateTag(SEXP);
@@ -1823,6 +1859,7 @@ void Rf_PrintValue(SEXP);
 SEXP Rf_protect(SEXP);
 void Rf_protect2(SEXP, SEXP);
 void Rf_protect3(SEXP, SEXP, SEXP);
+void Rf_rep_element (SEXP, int, SEXP, int, int);
 SEXP Rf_ScalarComplexMaybeConst(Rcomplex);
 SEXP Rf_ScalarIntegerMaybeConst(int);
 SEXP Rf_ScalarRawMaybeConst(Rbyte);
@@ -1840,7 +1877,6 @@ SEXPTYPE Rf_str2type(const char *);
 Rboolean Rf_StringBlank(SEXP);
 SEXP Rf_substitute(SEXP,SEXP);
 int Rf_tag_index(SEXP,SEXP);
-const char * Rf_translateChar(SEXP);
 const char * Rf_translateChar0(SEXP);
 const char * Rf_translateCharUTF8(SEXP);
 const char * Rf_type2char(SEXPTYPE);
@@ -2263,6 +2299,8 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define protect			Rf_protect
 #define R_from_C99_complex	Rf_R_from_C99_complex
 #define reEnc			Rf_reEnc
+#define rep_one_string_element	Rf_rep_one_string_element
+#define rep_string_elements	Rf_rep_string_elements
 #define rownamesgets		Rf_rownamesgets
 #define S3Class                 Rf_S3Class
 #define ScalarComplex		Rf_ScalarComplex
@@ -2499,6 +2537,7 @@ SEXP	 Rf_ScalarReal(double);
 SEXP	 Rf_ScalarComplex(Rcomplex);
 SEXP	 Rf_ScalarString(SEXP);
 SEXP	 Rf_ScalarLogicalMaybeConst(int);
+const char * Rf_translateChar(SEXP);
 
 #ifdef complex  /* In C99, should be defined if complex.h included */
 double complex Rf_C99_from_R_complex(Rcomplex *);

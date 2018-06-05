@@ -364,6 +364,50 @@ void integer_to_string (char *s, int i)
 #endif
 
 
+/* Set elements of a vector to NA of suitable type (or NULL for VECSXP and
+   EXPRSXP, or 0 for RAWSXP). */
+
+void attribute_hidden Rf_set_elements_to_NA 
+  (SEXP vec, R_len_t start, R_len_t step, R_len_t end)
+{
+    int i;
+    switch (TYPEOF(vec)) {
+    case LGLSXP: /* just fall through to INTSXP code...
+        for (i = start; i<end; i += step)
+            LOGICAL(vec)[i] = NA_LOGICAL;
+        break; */
+    case INTSXP:
+        for (i = start; i<end; i += step)
+            INTEGER(vec)[i] = NA_INTEGER;
+        break;
+    case REALSXP:
+        for (i = start; i<end; i += step)
+            REAL(vec)[i] = NA_REAL;
+        break;
+    case CPLXSXP:
+        for (i = start; i<end; i += step) {
+            COMPLEX(vec)[i].r = NA_REAL;
+            COMPLEX(vec)[i].i = NA_REAL;
+        }
+        break;
+    case STRSXP:
+        for (i = start; i<end; i += step)
+            SET_STRING_ELT_NA(vec, i);
+        break;
+    case EXPRSXP:
+    case VECSXP:
+        for (i = start; i<end; i += step)
+            SET_VECTOR_ELT_NIL(vec, i);
+        break;
+    case RAWSXP:
+        for (i = start; i<end; i += step)
+            RAW(vec)[i] = (Rbyte) 0;
+        break;
+    default:
+        abort();
+    }
+}
+
 
 Rboolean tsConform(SEXP x, SEXP y)
 {
@@ -677,88 +721,6 @@ void R_NORETURN UNIMPLEMENTED_TYPE (const char *s, SEXP x)
     UNIMPLEMENTED_TYPEt(s, TYPEOF(x));
 }
 
-/* -------------------------------------------------------------------------- */
-
-void attribute_hidden check_stack_balance (SEXP op, int save)
-{
-    /* NEEDED: A fixup is needed in browser, because it can trap errors,
-       and currently does not reset the limit to the right value. */
-
-    if (save == R_PPStackTop) 
-        return;
-
-    REprintf ("Warning: stack imbalance in '%s', %d then %d\n",
-	       PRIMNAME(op), save, R_PPStackTop);
-}
-
-
-R_NORETURN void too_deep_error(void)
-{
-    R_Expressions = R_Expressions_keep + 500;
-    errorcall (R_NilValue /* avoids deparsing call in the error handler */,
-   _("evaluation nested too deeply: infinite recursion / options(expressions=)?"
-    ));
-}
-
-
-R_NORETURN void attribute_hidden dotdotdot_error(void)
-{ 
-    error(_("'...' used in an incorrect context"));
-}
-
-R_NORETURN void attribute_hidden arg_missing_error(SEXP sym)
-{
-    if (TYPEOF(sym) == SYMSXP && *CHAR(PRINTNAME(sym)))
-        error(_("argument \"%s\" is missing, with no default"),
-              CHAR(PRINTNAME(sym)));
-    else
-        error(_("argument is missing, with no default"));
-}
-
-R_NORETURN void attribute_hidden unbound_var_error(SEXP sym)
-{
-    error(_("object '%s' not found"), CHAR(PRINTNAME(sym)));
-}
-
-R_NORETURN void attribute_hidden nonsubsettable_error(SEXP call, SEXP x)
-{
-    errorcall (call, _("object of type '%s' is not subsettable"),
-               type2char(TYPEOF(x)));
-}
-
-R_NORETURN void attribute_hidden out_of_bounds_error(SEXP call)
-{
-    errorcall(call, _("subscript out of bounds"));
-}
-
-R_NORETURN void attribute_hidden apply_non_function_error(void)
-{
-    error(_("attempt to apply non-function"));
-}
-
-R_NORETURN void attribute_hidden PRSEEN_error(SEXP e)
-{
-    errorcall (R_GlobalContext->call,
-     _("promise already under evaluation: recursive default argument reference or earlier problems?"));
-}
-
-R_NORETURN void attribute_hidden Rf_asLogicalNoNA_error (SEXP s, SEXP call)
-{
-    PROTECT(s);
-    errorcall (call, 
-      length(s) == 0 ? _("argument is of length zero") :
-      isLogical(s) ?   _("missing value where TRUE/FALSE needed") :
-                       _("argument is not interpretable as logical"));
-}
-
-void attribute_hidden Rf_asLogicalNoNA_warning (SEXP s, SEXP call)
-{
-    PROTECT(s);
-    warningcall (call,
-     _("the condition has length > 1 and only the first element will be used"));
-    UNPROTECT(1);
-}
-
 
 # include <R_ext/Riconv.h>
 # include <sys/param.h>
@@ -868,7 +830,9 @@ Rboolean StringFalse(const char *name)
 /* Character hashing done in memory.c and names.c; also here to stop compiler 
    from inlining it.  Four forms, one for null-terminated string, one with
    specified length, and one for a null-terminated string with given starting
-   hash from previous characters, one same but with specified length. */
+   hash from previous characters, one same but with specified length. 
+
+   Keep in sync with the HASH1CHAR macro in const-objs.c. */
 
 attribute_hidden int Rf_char_hash (const char *s)
 {

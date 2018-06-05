@@ -831,7 +831,7 @@ static SEXP do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
         }
         else {
             ans = allocVector(INTSXP, n);
-            for (i = 0; i < n; i++)  INTEGER(ans)[i] = NA_INTEGER;
+            Rf_set_elements_to_NA (ans, 0, 1, n);
         }
         return ans;
     }
