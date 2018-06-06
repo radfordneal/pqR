@@ -5,3 +5,7 @@ Increased initial symbol hash table size from 8K to 16K.
 Got rid of occurrences of 29L w.r.t. hash table sizes.
 
 Also introduces minlength argument for memory.profile
+
+Includes a first attempt at not always duplicating attributes when
+assigning them, rather conservative, in hopes that this may reduce
+duplication of things like scalar strings at startup.

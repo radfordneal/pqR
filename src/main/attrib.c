@@ -279,12 +279,25 @@ SEXP setAttrib(SEXP vec, SEXP name, SEXP val)
     if (vec == R_NilValue)
 	error(_("attempt to set an attribute on NULL"));
 
-    if (NAMEDCNT_GT_0(val))
-    { SEXP v = duplicate(val);
-      if (v != val) {
-          SET_NAMEDCNT_1(v);
-          val = v;
-      }
+    /* This should probably be replaced by normal incrementing of NAMEDCNT, 
+       but there could be some code that doesn't check NAMEDCNT, assuming 
+       that the duplicate below is done.  Avoiding a duplicate when NAMEDCNT
+       is already MAX_NAMEDCNT, and there is no possibility of cycles, is a 
+       conservative attempt to reduce the number of duplications done, for
+       example, when the value is a literal constant that is part of an 
+       expression being evaluated.
+
+       Note that getAttrib00 sets NAMEDCNT to MAX_NAMEDCNT. */
+
+    if (NAMEDCNT_GT_0(val)) {
+        if (NAMEDCNT(val) != MAX_NAMEDCNT || !isVectorAtomic(val) 
+                              || HAS_ATTRIB(val) || vec == val) {
+            SEXP v = duplicate(val);
+            if (v != val) {
+                SET_NAMEDCNT_1(v);
+                val = v;
+            }
+        }
     }
 
     UNPROTECT(3);
