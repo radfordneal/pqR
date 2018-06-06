@@ -354,6 +354,11 @@
         for code like the following:
 \preformatted{    a <- quote(r<-1); a[[2]] <- character(0); eval(a)
 }
+  \item Similarly to R-3.1.2, \code{as.environment(list())} and 
+        \code{list2env(list())} now work, and as.list() of such an
+        environment (or any empty environment) now gives an
+        empty list with no names, the same as \code{list()}. (PR#15926)
+
   }}
 }
 
