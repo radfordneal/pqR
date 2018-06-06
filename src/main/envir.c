@@ -2754,7 +2754,7 @@ SEXP R_lsInternal(SEXP env, Rboolean all)
     return ans;
 }
 
-/* transform an environment into a named list */
+/* transform an environment into a named list (unnamed if empty) */
 
 static SEXP do_env2list(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -2765,46 +2765,48 @@ static SEXP do_env2list(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     env = CAR(args);
     if (env == R_NilValue)
-	error(_("use of NULL environment is defunct"));
+        error(_("use of NULL environment is defunct"));
     if( !isEnvironment(env) ) {
         SEXP xdata;
-	if( IS_S4_OBJECT(env) && TYPEOF(env) == S4SXP &&
-	    (xdata = R_getS4DataSlot(env, ENVSXP)) != R_NilValue)
-	    env = xdata;
-	else
-	    error(_("argument must be an environment"));
+        if( IS_S4_OBJECT(env) && TYPEOF(env) == S4SXP &&
+            (xdata = R_getS4DataSlot(env, ENVSXP)) != R_NilValue)
+            env = xdata;
+        else
+            error(_("argument must be an environment"));
     }
 
     all = asLogical(CADR(args)); /* all.names = TRUE/FALSE */
     if (all == NA_LOGICAL) all = 0;
 
     if (IS_BASE(env))
-	k = BuiltinSize(all, 0);
+        k = BuiltinSize(all, 0);
     else if (HASHTAB(env) != R_NilValue)
-	k = HashTableSize(HASHTAB(env), all);
+        k = HashTableSize(HASHTAB(env), all);
     else
-	k = FrameSize(FRAME(env), all);
+        k = FrameSize(FRAME(env), all);
 
-    PROTECT(names = allocVector(STRSXP, k));
     PROTECT(ans = allocVector(VECSXP, k));
+    PROTECT(names = k == 0 ? R_NilValue : allocVector(STRSXP, k));
 
     k = 0;
     if (IS_BASE(env))
-	BuiltinValues(all, 0, ans, &k);
+        BuiltinValues(all, 0, ans, &k);
     else if (HASHTAB(env) != R_NilValue)
-	HashTableValues(HASHTAB(env), all, ans, &k);
+        HashTableValues(HASHTAB(env), all, ans, &k);
     else
-	FrameValues(FRAME(env), all, ans, &k);
+        FrameValues(FRAME(env), all, ans, &k);
 
-    k = 0;
-    if (IS_BASE(env))
-	BuiltinNames(all, 0, names, &k);
-    else if (HASHTAB(env) != R_NilValue)
-	HashTableNames(HASHTAB(env), all, names, &k);
-    else
-	FrameNames(FRAME(env), all, names, &k);
+    if (names != R_NilValue) {
+        k = 0;
+        if (IS_BASE(env))
+            BuiltinNames(all, 0, names, &k);
+        else if (HASHTAB(env) != R_NilValue)
+            HashTableNames(HASHTAB(env), all, names, &k);
+        else
+            FrameNames(FRAME(env), all, names, &k);
+        setAttrib(ans, R_NamesSymbol, names);
+    }
 
-    setAttrib(ans, R_NamesSymbol, names);
     UNPROTECT(2);
     return(ans);
 }
