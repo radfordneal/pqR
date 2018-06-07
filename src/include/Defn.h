@@ -1442,6 +1442,7 @@ SEXP Rf_EnsureString(SEXP);
 SEXP Rf_allocCharsxp(R_len_t);
 SEXP alloc_or_reuse (SEXP, SEXP, SEXPTYPE, int, int, int);
 SEXP Rf_append(SEXP, SEXP); /* apparently unused now */
+SEXP Rf_attributes_dup (SEXP, SEXP);
 SEXP bcEval(SEXP, SEXP, Rboolean);
 SEXP bytecodeExpr(SEXP);
 void check1arg(SEXP, SEXP, const char *);

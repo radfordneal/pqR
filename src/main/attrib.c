@@ -277,7 +277,7 @@ SEXP R_copyDFattr(SEXP in, SEXP out)
 
    It is also of interest that getAttrib00 sets NAMEDCNT to MAX_NAMEDCNT. */
 
-static inline SEXP attr_val_dup (SEXP obj, SEXP name, SEXP val)
+static SEXP attr_val_dup (SEXP obj, SEXP name, SEXP val)
 {
     if (NAMEDCNT_EQ_0(val))
         return val;
@@ -297,6 +297,33 @@ static inline SEXP attr_val_dup (SEXP obj, SEXP name, SEXP val)
     if (v != val)  SET_NAMEDCNT_1(v);
     return v;
 }
+
+
+/* Duplicate an attribute pairlist, and some of its attributes, that will be
+   used for an object.  When to duplicate uses the same criterion as for
+   setting an attribute. */
+
+SEXP attribute_hidden Rf_attributes_dup (SEXP obj, SEXP attrs)
+{
+   if (attrs == R_NilValue)
+       return R_NilValue;
+
+   SEXP first = cons_with_tag (attr_val_dup (obj, TAG(attrs), CAR(attrs)),
+                               R_NilValue, TAG(attrs));
+   SEXP next = first;
+   PROTECT(first);
+
+   while ((attrs = CDR(attrs)) != R_NilValue) {
+       SEXP dv = cons_with_tag (attr_val_dup (obj, TAG(attrs), CAR(attrs)),
+                                R_NilValue, TAG(attrs));
+       SETCDR (next, dv);
+       next = dv;
+   }
+
+   UNPROTECT(1);
+   return first;
+}
+
 
 /* 'name' should be 1-element STRSXP or SYMSXP */
 

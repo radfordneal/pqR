@@ -1625,27 +1625,45 @@ SEXP R_getClassDef(const char *what)
 SEXP R_do_new_object(SEXP class_def)
 {
     static SEXP s_virtual = R_NoObject, s_prototype, s_className;
-    SEXP e, value;
     if (s_virtual == R_NoObject) {
-	s_virtual = install("virtual");
-	s_prototype = install("prototype");
-	s_className = install("className");
+        s_virtual = install("virtual");
+        s_prototype = install("prototype");
+        s_className = install("className");
     }
-    if(class_def == R_NoObject)
-	error(_("C level NEW macro called with null class definition pointer"));
+
+    if (class_def == R_NoObject)
+        error(_("C level NEW macro called with null class definition pointer"));
+
+    SEXP e;
     e = R_do_slot(class_def, s_virtual);
-    if(asLogical(e) != 0)  { /* includes NA, TRUE, or anything other than FALSE */
-	e = R_do_slot(class_def, s_className);
-	error(_("trying to generate an object from a virtual class (\"%s\")"),
-	      translateChar(asChar(e)));
+    if (asLogical(e) != 0) { /* includes NA, TRUE - anything other than FALSE */
+        e = R_do_slot(class_def, s_className);
+        error(_("trying to generate an object from a virtual class (\"%s\")"),
+              translateChar(asChar(e)));
     }
     PROTECT(e = R_do_slot(class_def, s_className));
-    PROTECT(value = duplicate(R_do_slot(class_def, s_prototype)));
-    if(TYPEOF(value) == S4SXP || getAttrib(e, R_PackageSymbol) != R_NilValue)
-    { /* Anything but an object from a base "class" (numeric, matrix,..) */
-	setAttrib(value, R_ClassSymbol, e);
-	SET_S4_OBJECT(value);
+
+    SEXP value;
+    PROTECT(value = R_do_slot(class_def, s_prototype));
+    if (TYPEOF(value) == S4SXP) {
+        SEXP a;
+        PROTECT (a = Rf_attributes_dup (value, ATTRIB(value)));
+        PROTECT (value = allocS4Object());
+        SET_ATTRIB (value, a);
+        UNPROTECT(3);
     }
+    else {
+        value = duplicate(value);
+        UNPROTECT(1);
+    }
+    PROTECT(value);
+
+    if (TYPEOF(value) == S4SXP || getAttrib(e, R_PackageSymbol) != R_NilValue)
+    { /* Anything but an object from a base "class" (numeric, matrix,..) */
+        setAttrib(value, R_ClassSymbol, e);
+        SET_S4_OBJECT(value);
+    }
+
     UNPROTECT(2); /* value, e */
     return value;
 }
