@@ -530,20 +530,18 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
 static inline SEXP fixcall(SEXP call, SEXP args)
 {
     SEXP s, t;
-    int found;
 
     for(t = args; t != R_NilValue; t = CDR(t)) {
-	if(TAG(t) != R_NilValue) {
-		found = 0;
-		for(s = call; CDR(s) != R_NilValue; s = CDR(s))
-		    if(TAG(CDR(s)) == TAG(t)) found = 1;
-		if( !found ) {
-			SETCDR(s, allocList(1));
-			SET_TAG(CDR(s), TAG(t));
-			SETCAR(CDR(s), duplicate(CAR(t)));
-		}
-	}
+        SEXP tag = TAG(t);
+        if (tag != R_NilValue) {
+            for (s = call; CDR(s) != R_NilValue; s = CDR(s))
+                if (TAG(CDR(s)) == tag)
+                    goto next_arg;
+            SETCDR (s, cons_with_tag (duplicate(CAR(t)), R_NilValue, tag));
+        }
+      next_arg: ;
     }
+
     return call;
 }
 
