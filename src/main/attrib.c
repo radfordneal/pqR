@@ -262,7 +262,44 @@ SEXP R_copyDFattr(SEXP in, SEXP out)
     return out;
 }
 
+/* Possibly duplicate value that will be set as an attribute.
+
+   This should probably be replaced by normal incrementing of
+   NAMEDCNT, but there could be some code that doesn't check NAMEDCNT,
+   assuming that the duplicate below is done.  Avoiding a duplicate
+   when NAMEDCNT is already MAX_NAMEDCNT, and there is no possibility
+   of cycles, is a conservative attempt to reduce the number of
+   duplications done, for example, when the value is a literal
+   constant that is part of an expression being evaluated.
+
+   Also, don't dup "class" attribute, just set to MAX_NAMEDCNT, which
+   seems safe, and saves space on every object of the class.
+
+   It is also of interest that getAttrib00 sets NAMEDCNT to MAX_NAMEDCNT. */
+
+static inline SEXP attr_val_dup (SEXP obj, SEXP name, SEXP val)
+{
+    if (NAMEDCNT_EQ_0(val))
+        return val;
+
+    if (name == R_ClassSymbol) {
+        SET_NAMEDCNT_MAX(val);
+        return val;
+    }
+
+    if (NAMEDCNT(val) == MAX_NAMEDCNT 
+             && isVectorAtomic(val) 
+             && !HAS_ATTRIB(val) 
+             && val != obj)
+        return val;
+
+    SEXP v = duplicate(val);
+    if (v != val)  SET_NAMEDCNT_1(v);
+    return v;
+}
+
 /* 'name' should be 1-element STRSXP or SYMSXP */
+
 SEXP setAttrib(SEXP vec, SEXP name, SEXP val)
 {
     PROTECT3(vec,name,val);
@@ -275,30 +312,10 @@ SEXP setAttrib(SEXP vec, SEXP name, SEXP val)
 	return removeAttrib(vec, name);
     }
 
-    /* We allow attempting to remove names from NULL, which is handled above */
-    if (vec == R_NilValue)
+    if (vec == R_NilValue) /* after above: we allow removing names from NULL */
 	error(_("attempt to set an attribute on NULL"));
 
-    /* This should probably be replaced by normal incrementing of NAMEDCNT, 
-       but there could be some code that doesn't check NAMEDCNT, assuming 
-       that the duplicate below is done.  Avoiding a duplicate when NAMEDCNT
-       is already MAX_NAMEDCNT, and there is no possibility of cycles, is a 
-       conservative attempt to reduce the number of duplications done, for
-       example, when the value is a literal constant that is part of an 
-       expression being evaluated.
-
-       Note that getAttrib00 sets NAMEDCNT to MAX_NAMEDCNT. */
-
-    if (NAMEDCNT_GT_0(val)) {
-        if (NAMEDCNT(val) != MAX_NAMEDCNT || !isVectorAtomic(val) 
-                              || HAS_ATTRIB(val) || vec == val) {
-            SEXP v = duplicate(val);
-            if (v != val) {
-                SET_NAMEDCNT_1(v);
-                val = v;
-            }
-        }
-    }
+    val = attr_val_dup (vec, name, val);
 
     UNPROTECT(3);
 
@@ -1880,14 +1897,9 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value)
 
 	/* simplified version of setAttrib(obj, name, value);
 	   here we do *not* treat "names", "dimnames", "dim", .. specially : */
+
 	PROTECT(name);
-	if (NAMEDCNT_GT_0(value)) {
-            SEXP v = duplicate(value);
-            if (v != value) {
-                SET_NAMEDCNT_1(v);
-                value = v;
-            }
-        }
+        value = attr_val_dup (obj, name, value);
 	UNPROTECT(1);
 	installAttrib(obj, name, value);
     }

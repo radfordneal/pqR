@@ -8,4 +8,5 @@ Also introduces minlength argument for memory.profile
 
 Includes a first attempt at not always duplicating attributes when
 assigning them, rather conservative, in hopes that this may reduce
-duplication of things like scalar strings at startup.
+duplication of things like scalar strings at startup, and also for
+class attributes.
