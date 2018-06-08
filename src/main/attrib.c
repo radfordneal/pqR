@@ -1612,7 +1612,6 @@ static void check_slot_assign(SEXP obj, SEXP input, SEXP value, SEXP env)
 static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     if (PRIMVAL(op) == 1) { /* @<-, code adapted from R-3.0.0 */
-
         SEXP obj, name, input, ans, value;
         PROTECT(input = allocVector(STRSXP, 1));
 
@@ -1639,10 +1638,12 @@ static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
         PROTECT(obj = CAR(ans));
         PROTECT(value = CADDR(ans));
         check_slot_assign(obj, input, value, env);
-        value = R_do_slot_assign(obj, input, value);
-        UNPROTECT(2);
+        obj = R_do_slot_assign(obj, input, value);
+
+        SET_NAMEDCNT_0(obj);  /* The standard kludge for subassign primitives */
         R_Visible = TRUE;
-        return value;
+        UNPROTECT(2);
+        return obj;
     }
 
     else { /*  attr(x, which = "<name>")  <-  value  */

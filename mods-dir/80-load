@@ -1,4 +1,5 @@
-Improvements to package loading, other startup time issues.
+Improvements to package loading, other startup time issues, which
+have veered off into distantly-related changes.
 
 Increased initial symbol hash table size from 8K to 16K.
 
@@ -6,7 +7,10 @@ Got rid of occurrences of 29L w.r.t. hash table sizes.
 
 Also introduces minlength argument for memory.profile
 
-Includes a first attempt at not always duplicating attributes when
-assigning them, rather conservative, in hopes that this may reduce
-duplication of things like scalar strings at startup, and also for
-class attributes.
+Includes attempts at not always duplicating attributes when assigning
+them, rather conservative, in hopes that this may reduce duplication
+of things like scalar strings at startup, and also for class
+attributes.
+
+Applys the usual kludge to get @<- to not increment NAMEDCNT.
+
