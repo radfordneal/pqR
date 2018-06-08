@@ -124,7 +124,7 @@
         \code{substring} has also been sped up for long strings.
   \item Conversion of integer, double, and logical values to strings,
         and vice versa, has been sped up, in some cases enormously.
-  \item From R-3.0.0: 
+  \item From R-3.0.0 (with further pqR improvements): 
         The \code{@<-} operator is now implemented as a primitive, which should
         reduce some copying of objects when used.  Note that the operator
         object must now be in package base: do not try to import it
