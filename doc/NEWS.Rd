@@ -163,6 +163,7 @@
         both with regard to low-level character io, and with respect to 
         output formatting.
   \item Subscripting with a logical vector is now faster for long vectors.
+  \item Setting names on a vector has now been sped up in many cases.
   \item The \code{grep}, \code{grepl}, \code{sub}, and \code{gsub} functions
         have been speeded up, substantially in some situations.
   \item Merging of arithmetic operations on vectors has been streamlined,
@@ -319,6 +320,18 @@
 
   \subsection{BUG FIXES}{
   \itemize{
+  \item Fixed a bug in which setting names could cause a quoted expression
+        to be evaluated, illustrated by the following:
+\preformatted{    > abc <- 1:2; b <- quote(cat("Hi!\n")); names(abc) <- b
+    Hi!
+    > abc
+    <NA> <NA> 
+       1    2 
+}
+        The \code{cat} function is now no longer called, and the names
+        attached to \code{abc} are now \code{"cat"} and \code{"Hi!\n"},
+        the correct conversion of the quoted expression to a character
+        vector.  This bug also exists in R Core versions to at least R-3.5.0.
   \item Fixed a pqR bug illustrated by the following code:
 \preformatted{    p<-matrix(c(2L,3L,2L,2L),1,4); p[,p]<-1L; p
 }

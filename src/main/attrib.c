@@ -1001,17 +1001,25 @@ static SEXP do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
               klass);
 	/* else, go ahead, but can't check validity of replacement*/
     }
-    if (CADR(args) != R_NilValue) {
-	PROTECT(call = allocList(2));
-	SET_TYPEOF(call, LANGSXP);
-	SETCAR(call, install("as.character"));
-	SETCADR(call, CADR(args));
-	SETCADR(args, eval(call, env));
+
+    SEXP obj = CAR(args);
+    SEXP nms = CADR(args);
+    if (nms != R_NilValue && (TYPEOF(nms) != STRSXP || HAS_ATTRIB(nms))) {
+        static SEXP asc = R_NoObject;
+        if (asc == R_NoObject) asc = install("as.character");
+        SEXP prom = mkPROMISE (nms, R_EmptyEnv);
+        SET_PRVALUE (prom, nms);
+        SEXP cl = LCONS (asc, CONS(prom,R_NilValue));
+        PROTECT(cl);
+	nms = eval(cl, env);
 	UNPROTECT(1);
     }
-    setAttrib(CAR(args), R_NamesSymbol, CADR(args));
-    UNPROTECT(1);
-    return CAR(args);
+    PROTECT(nms);
+    SET_NAMEDCNT_MAX(nms);
+    setAttrib(obj, R_NamesSymbol, nms);
+    UNPROTECT(2);
+
+    return obj;
 }
 
 SEXP namesgets(SEXP vec, SEXP val)

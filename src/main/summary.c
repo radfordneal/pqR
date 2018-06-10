@@ -117,29 +117,6 @@ static Rcomplex csum (Rcomplex *x, int n, Rboolean narm)
     return s;
 }
 
-static Rboolean imin(int *x, int n, int *value, Rboolean narm)
-{
-    int i, s = 0 /* -Wall */;
-    Rboolean updated = FALSE;
-
-    /* Used to set s = INT_MAX, but this ignored INT_MAX in the input */
-    for (i = 0; i < n; i++) {
-	if (x[i] != NA_INTEGER) {
-	    if (!updated || s > x[i]) {
-		s = x[i];
-		if(!updated) updated = TRUE;
-	    }
-	}
-	else if (!narm) {
-	    *value = NA_INTEGER;
-	    return(TRUE);
-	}
-    }
-    *value = s;
-
-    return(updated);
-}
-
 static Rboolean smin(SEXP x, SEXP *value, Rboolean narm)
 {
     int i;
@@ -165,25 +142,62 @@ static Rboolean smin(SEXP x, SEXP *value, Rboolean narm)
     return(updated);
 }
 
-static Rboolean imax(int *x, int n, int *value, Rboolean narm)
+static Rboolean attribute_noinline imin_max
+                      (int *x, int n, int *value, Rboolean narm, int max)
 {
-    int i, s = 0 /* -Wall */;
-    Rboolean updated = FALSE;
+    int updated = FALSE;
+    int s = 0;
 
-    for (i = 0; i < n; i++) {
-	if (x[i] != NA_INTEGER) {
-	    if (!updated || s < x[i]) {
-		s = x[i];
-		if(!updated) updated = TRUE;
-	    }
-	} else if (!narm) {
-	    *value = NA_INTEGER;
-	    return(TRUE);
-	}
+    if (n == 0) goto ret;
+
+    int i = 0;
+
+    /* Look for first non-NA value (or done if !narm and there's a NA). */
+
+    while (x[i] == NA_INTEGER) {
+        if (!narm) goto na;
+        i += 1;
+        if (i >= n) goto ret;
     }
-    *value = s;
 
-    return(updated);
+    /* Look at values, update max or min, skip or exit for NA value. */
+
+    s = x[i];
+    i += 1;
+
+    if (max) {
+        while (i < n) {
+            if (x[i] == NA_INTEGER) {
+                if (!narm) goto na;
+            }
+            else if (x[i] > s)
+                s = x[i];
+            i += 1;
+        }
+    }
+    else { /* min */
+        while (i < n) {
+            if (x[i] == NA_INTEGER) {
+                if (!narm) goto na;
+            }
+            else if (x[i] < s)
+                s = x[i];
+            i += 1;
+        }
+    }
+
+    updated = TRUE;
+    goto ret;
+
+  na:
+
+    updated = TRUE;
+    s = NA_INTEGER;
+
+  ret:
+
+    *value = s;
+    return updated;
 }
 
 static Rboolean attribute_noinline rmin_max
@@ -582,9 +596,8 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 		case LGLSXP:
 		case INTSXP:
 		    int_a = 1;
-                    updated = 
-                      iop==2 ? imin(INTEGER(a), LENGTH(a), &itmp, narm)
-		             : imax(INTEGER(a), LENGTH(a), &itmp, narm);
+                    updated = imin_max (INTEGER(a), LENGTH(a), 
+                                        &itmp, narm, iop==3);
 		    break;
 		case REALSXP:
 		    real_a = 1;

@@ -2248,25 +2248,29 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 /* log{2,10} are builtins */
 SEXP do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP res, call2, args2, tmp = R_NilValue /* -Wall */;
+    SEXP res, call2, args2, base, val;
 
     checkArity(op, args);
     check1arg_x (args, call);
 
     if (DispatchGroup("Math", call, op, args, env, &res)) return res;
 
-    SEXP sLog = install("log");
-    if(PRIMVAL(op) == 10) tmp = ScalarRealMaybeConst(10.0);
-    if(PRIMVAL(op) == 2)  tmp = ScalarRealMaybeConst(2.0);
+    static SEXP sLog = R_NoObject;
+    if (sLog == R_NoObject) sLog = install("log");
+    base = PRIMVAL(op) == 10 ? ScalarRealMaybeConst(10.0) 
+                             : ScalarRealMaybeConst(2.0);
+    val = CAR(args);
 
-    PROTECT(call2 = lang3(sLog, CAR(args), tmp));
-    PROTECT(args2 = lang2(CAR(args), tmp));
+    PROTECT(args2 = CONS (val, CONS(base,R_NilValue)));
+    PROTECT(call2 = LCONS (sLog, args2));
+
     if (! DispatchGroup("Math", call2, op, args2, env, &res)) {
-	if (isComplex(CAR(args)))
+	if (isComplex(val))
 	    res = complex_math2(call2, op, args2, env);
 	else
-	    res = math2(CAR(args), tmp, logbase, call);
+	    res = math2(val, base, logbase, call);
     }
+
     UNPROTECT(2);
     return res;
 }
