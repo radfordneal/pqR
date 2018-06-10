@@ -322,6 +322,10 @@
 
   \subsection{BUG FIXES}{
   \itemize{
+  \item Fixed a bug in which \code{pmin(NA,0/0)} produced \code{NaN} as
+        its result, rather than \code{NA}, which \code{help(pmin)} implies
+        should be the result.  This bug also exists in R Core versions 
+        to at least R-3.5.0.
   \item Fixed a bug in which setting names could cause a quoted expression
         to be evaluated, illustrated by the following:
 \preformatted{    > abc <- 1:2; b <- quote(cat("Hi!\n")); names(abc) <- b
