@@ -1322,13 +1322,15 @@ static SEXP do_compcases(SEXP call, SEXP op, SEXP args, SEXP rho)
  */
 static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
+    int max = PRIMVAL(op) == 1;
+
     SEXP a, x, ans;
-    int i, n, len, narm;
+    int i, j, n, len, narm;
     SEXPTYPE type, anstype;
 
     narm = asLogical(CAR(args));
     if(narm == NA_LOGICAL)
-	error(_("invalid '%s' value"), "na.rm");
+        error(_("invalid '%s' value"), "na.rm");
     args = CDR(args);
     x = CAR(args);
     if(args == R_NilValue) error(_("no arguments"));
@@ -1340,35 +1342,35 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
     case INTSXP:
     case REALSXP:
     case STRSXP:
-	break;
+        break;
     default:
-	error(_("invalid input type"));
+        error(_("invalid input type"));
     }
     a = CDR(args);
     if(a == R_NilValue) return x; /* one input */
 
     len = length(x); /* not LENGTH, as NULL is allowed */
     for(; a != R_NilValue; a = CDR(a)) {
-	x = CAR(a);
-	type = TYPEOF(x);
-	switch(type) {
-	case NILSXP:
-	case LGLSXP:
-	case INTSXP:
-	case REALSXP:
-	case STRSXP:
-	    break;
-	default:
-	    error(_("invalid input type"));
-	}
-	if(type > anstype) anstype = type;  /* RELIES ON SEXPTYPE ORDERING! */
-	n = length(x);
-	if ((len > 0) ^ (n > 0)) {
-	    // till 2.15.0:  error(_("cannot mix 0-length vectors with others"));
-	    len = 0;
-	    break;
-	}
-	len = imax2(len, n);
+        x = CAR(a);
+        type = TYPEOF(x);
+        switch(type) {
+        case NILSXP:
+        case LGLSXP:
+        case INTSXP:
+        case REALSXP:
+        case STRSXP:
+            break;
+        default:
+            error(_("invalid input type"));
+        }
+        if(type > anstype) anstype = type;  /* RELIES ON SEXPTYPE ORDERING! */
+        n = length(x);
+        if ((len > 0) ^ (n > 0)) {
+            // till 2.15.0:  error(_("cannot mix 0-length vectors with others"));
+            len = 0;
+            break;
+        }
+        len = imax2(len, n);
     }
     if(anstype < INTSXP) anstype = INTSXP;
 
@@ -1376,119 +1378,130 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* Check for fractional recycling (added in 2.14.0) */
     for(a = args; a != R_NilValue; a = CDR(a)) {
-	n = LENGTH(CAR(a));
-	if (len % n != 0) {
-	    warning(_("an argument will be fractionally recycled"));
-	    break;
-	}
+        n = LENGTH(CAR(a));
+        if (len % n != 0) {
+            warning(_("an argument will be fractionally recycled"));
+            break;
+        }
     }
 
     PROTECT(ans = allocVector(anstype, len));
     switch(anstype) {
     case INTSXP:
     {
-	int *r,  *ra = INTEGER(ans), tmp;
-	PROTECT(x = coerceVector(CAR(args), anstype));
-	r = INTEGER(x);
-	n = LENGTH(x);
+        int *r,  *ra = INTEGER(ans), tmp;
+        PROTECT(x = coerceVector(CAR(args), anstype));
+        r = INTEGER(x);
+        n = LENGTH(x);
         if (n == len)
-	    for (i = 0; i < len; i++) ra[i] = r[i];
+            for (i = 0; i < len; i++) ra[i] = r[i];
         else if (n == 1)
-	    for (i = 0; i < len; i++) ra[i] = r[0];
+            for (i = 0; i < len; i++) ra[i] = r[0];
         else
-	    for (i = 0; i < len; i++) ra[i] = r[i % n];
-	UNPROTECT(1);
-	for(a = CDR(args); a != R_NilValue; a = CDR(a)) {
-	    PROTECT(x = coerceVector(CAR(a), anstype));
-	    n = LENGTH(x);
-	    r = INTEGER(x);
-	    for (i = 0; i < len; i++) {
-		tmp = r[i % n];
+            for (i = 0; i < len; i++) ra[i] = r[i % n];
+        UNPROTECT(1);
+        for(a = CDR(args); a != R_NilValue; a = CDR(a)) {
+            PROTECT(x = coerceVector(CAR(a), anstype));
+            n = LENGTH(x);
+            r = INTEGER(x);
+            for (i = 0, j = 0; i < len; i++, j++) {
+                if (j >= n) j = 0;
+                tmp = r[j];
                 if (tmp == NA_INTEGER) {
-                    if (narm && ra[i] != NA_INTEGER) continue;
+                    if (!narm) ra[i] = NA_INTEGER;
                 }
                 else if (ra[i] == NA_INTEGER) {
-                    if (!narm) continue;
+                    if (narm) ra[i] = tmp;
                 }
-                else if (PRIMVAL(op)==1 ? tmp <= ra[i] : tmp >= ra[i])
-                    continue;
-                ra[i] = tmp;
-	    }
-	    UNPROTECT(1);
-	}
+                else if (max ? tmp > ra[i] : tmp < ra[i])
+                    ra[i] = tmp;
+            }
+            UNPROTECT(1);
+        }
+        break;
     }
-	break;
     case REALSXP:
     {
-	double *r, *ra = REAL(ans), tmp;
-	PROTECT(x = coerceVector(CAR(args), anstype));
-	r = REAL(x);
-	n = LENGTH(x);
+        double *r, *ra = REAL(ans), tmp;
+        PROTECT(x = coerceVector(CAR(args), anstype));
+        r = REAL(x);
+        n = LENGTH(x);
         if (n == len)
-	    for (i = 0; i < len; i++) ra[i] = r[i];
+            for (i = 0; i < len; i++) ra[i] = r[i];
         else if (n == 1)
-	    for (i = 0; i < len; i++) ra[i] = r[0];
+            for (i = 0; i < len; i++) ra[i] = r[0];
         else
-	    for (i = 0; i < len; i++) ra[i] = r[i % n];
-	UNPROTECT(1);
-	for(a = CDR(args); a != R_NilValue; a = CDR(a)) {
-	    PROTECT(x = coerceVector(CAR(a), anstype));
-	    n = LENGTH(x);
-	    r = REAL(x);
-	    for (i = 0; i < len; i++) {
-		tmp = r[i % n];
-                if (ISNAN(tmp)) {
-                    if (narm && !ISNAN(ra[i])) continue;
+            for (i = 0; i < len; i++) ra[i] = r[i % n];
+        UNPROTECT(1);
+        for(a = CDR(args); a != R_NilValue; a = CDR(a)) {
+            PROTECT(x = coerceVector(CAR(a), anstype));
+            n = LENGTH(x);
+            r = REAL(x);
+            for (i = 0, j = 0; i < len; i++, j++) {
+                if (j >= n) j = 0;
+                tmp = r[j];
+                if (MAY_BE_NAN2(ra[i],tmp)) {
+                    if (ISNAN(ra[i])) {
+                        if (ISNAN(tmp)) {
+                            if (!ISNA(ra[i])) ra[i] = tmp;
+                        }
+                        else {
+                            if (narm) ra[i] = tmp;
+                        }
+                        continue;
+                    }
+                    if (ISNAN(tmp)) {
+                        if (!narm) ra[i] = tmp;
+                        continue;
+                    }
                 }
-                else if (ISNAN(ra[i])) {
-                    if (!narm) continue;
-                }
-                else if (PRIMVAL(op)==1 ? tmp <= ra[i] : tmp >= ra[i])
-                    continue;
-                ra[i] = tmp;
+                else if (max ? tmp > ra[i] : tmp < ra[i])
+                    ra[i] = tmp;
             }
-	    UNPROTECT(1);
-	}
+            UNPROTECT(1);
+        }
+        break;
     }
-	break;
     case STRSXP:
     {
-	PROTECT(x = coerceVector(CAR(args), anstype));
-	n = LENGTH(x);
+        PROTECT(x = coerceVector(CAR(args), anstype));
+        n = LENGTH(x);
         if (n == len)
-	    for (i = 0; i < len; i++)
+            for (i = 0; i < len; i++)
                 SET_STRING_ELT(ans, i, STRING_ELT(x, i));
         else if (n == 1)
-	    for (i = 0; i < len; i++)
+            for (i = 0; i < len; i++)
                 SET_STRING_ELT(ans, i, STRING_ELT(x, 0));
         else
-	    for (i = 0; i < len; i++)
+            for (i = 0; i < len; i++)
                 SET_STRING_ELT(ans, i, STRING_ELT(x, i % n));
-	UNPROTECT(1);
-	for(a = CDR(args); a != R_NilValue; a = CDR(a)) {
-	    SEXP tmp, t2;
-	    PROTECT(x = coerceVector(CAR(a), anstype));
-	    n = LENGTH(x);
-	    for(i = 0; i < len; i++) {
-		tmp = STRING_ELT(x, i % n);
-		t2 = STRING_ELT(ans, i);
+        UNPROTECT(1);
+        for(a = CDR(args); a != R_NilValue; a = CDR(a)) {
+            SEXP tmp, rai, new;
+            PROTECT(x = coerceVector(CAR(a), anstype));
+            n = LENGTH(x);
+            for (i = 0, j = 0; i < len; i++, j++) {
+                if (j >= n) j = 0;
+                tmp = STRING_ELT (x, j);
+                rai = STRING_ELT (ans, i);
+                new = rai;
                 if (tmp == NA_STRING) {
-                    if (narm && t2 != NA_STRING) continue;
+                    if (!narm) new = NA_STRING;
                 }
-                else if (t2 == NA_STRING) {
-                    if (!narm) continue;
+                else if (rai == NA_STRING) {
+                    if (narm) new = tmp;
                 }
-                else if (PRIMVAL(op)==1 ? Scollate (tmp, t2) <= 0 
-                                        : Scollate (tmp, t2) >= 0)
-                    continue;
-                SET_STRING_ELT(ans, i, tmp);
-	    }
-	    UNPROTECT(1);
-	}
+                else if (max ? Scollate(tmp,rai) > 0 : Scollate(tmp,rai) < 0)
+                    new = tmp;
+                if (new != rai)
+                    SET_STRING_ELT (ans, i, new);
+            }
+            UNPROTECT(1);
+        }
+        break;
     }
-	break;
     default:
-	break;
+        break;
     }
     UNPROTECT(1);
     return ans;
