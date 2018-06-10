@@ -267,10 +267,11 @@ SEXP R_copyDFattr(SEXP in, SEXP out)
    This should probably be replaced by normal incrementing of
    NAMEDCNT, but there could be some code that doesn't check NAMEDCNT,
    assuming that the duplicate below is done.  Avoiding a duplicate
-   when NAMEDCNT is already MAX_NAMEDCNT, and there is no possibility
-   of cycles, is a conservative attempt to reduce the number of
-   duplications done, for example, when the value is a literal
-   constant that is part of an expression being evaluated.
+   for a vector when NAMEDCNT is already MAX_NAMEDCNT, or the vector
+   is length zero, and there is no possibility of cycles, is a
+   conservative attempt to reduce the number of duplications done, for
+   example, when the value is a literal constant that is part of an
+   expression being evaluated.
 
    Also, don't dup "class" attribute, just set to MAX_NAMEDCNT, which
    seems safe, and saves space on every object of the class.
@@ -287,11 +288,14 @@ static SEXP attr_val_dup (SEXP obj, SEXP name, SEXP val)
         return val;
     }
 
-    if (NAMEDCNT(val) == MAX_NAMEDCNT 
-             && isVectorAtomic(val) 
-             && !HAS_ATTRIB(val) 
-             && val != obj)
-        return val;
+    if (isVectorAtomic(val) && !HAS_ATTRIB(val) && val != obj) {
+        if (LENGTH(val) == 0) {
+            SET_NAMEDCNT_MAX(val);
+            return val;
+        }
+        if (NAMEDCNT(val) == MAX_NAMEDCNT)
+            return val;
+    }
 
     SEXP v = duplicate(val);
     if (v != val)  SET_NAMEDCNT_1(v);
