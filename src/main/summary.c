@@ -1386,22 +1386,17 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     PROTECT(ans = allocVector(anstype, len));
+    x = CAR(args);
+    if (TYPEOF(x) != anstype)
+        x = coerceVector(CAR(args), anstype);
+    copy_elements_recycled (ans, 0, x, len);
+
     switch(anstype) {
     case INTSXP:
     {
         int *r,  *ra = INTEGER(ans), tmp;
-        PROTECT(x = coerceVector(CAR(args), anstype));
-        r = INTEGER(x);
-        n = LENGTH(x);
-        if (n == len)
-            for (i = 0; i < len; i++) ra[i] = r[i];
-        else if (n == 1)
-            for (i = 0; i < len; i++) ra[i] = r[0];
-        else
-            for (i = 0; i < len; i++) ra[i] = r[i % n];
-        UNPROTECT(1);
-        for(a = CDR(args); a != R_NilValue; a = CDR(a)) {
-            PROTECT(x = coerceVector(CAR(a), anstype));
+        for (a = CDR(args); a != R_NilValue; a = CDR(a)) {
+            x = coerceVector(CAR(a), anstype);
             n = LENGTH(x);
             r = INTEGER(x);
             for (i = 0, j = 0; i < len; i++, j++) {
@@ -1416,25 +1411,14 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
                 else if (max ? tmp > ra[i] : tmp < ra[i])
                     ra[i] = tmp;
             }
-            UNPROTECT(1);
         }
         break;
     }
     case REALSXP:
     {
         double *r, *ra = REAL(ans), tmp;
-        PROTECT(x = coerceVector(CAR(args), anstype));
-        r = REAL(x);
-        n = LENGTH(x);
-        if (n == len)
-            for (i = 0; i < len; i++) ra[i] = r[i];
-        else if (n == 1)
-            for (i = 0; i < len; i++) ra[i] = r[0];
-        else
-            for (i = 0; i < len; i++) ra[i] = r[i % n];
-        UNPROTECT(1);
-        for(a = CDR(args); a != R_NilValue; a = CDR(a)) {
-            PROTECT(x = coerceVector(CAR(a), anstype));
+        for (a = CDR(args); a != R_NilValue; a = CDR(a)) {
+            x = coerceVector(CAR(a), anstype);
             n = LENGTH(x);
             r = REAL(x);
             for (i = 0, j = 0; i < len; i++, j++) {
@@ -1458,25 +1442,12 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
                 else if (max ? tmp > ra[i] : tmp < ra[i])
                     ra[i] = tmp;
             }
-            UNPROTECT(1);
         }
         break;
     }
     case STRSXP:
     {
-        PROTECT(x = coerceVector(CAR(args), anstype));
-        n = LENGTH(x);
-        if (n == len)
-            for (i = 0; i < len; i++)
-                SET_STRING_ELT(ans, i, STRING_ELT(x, i));
-        else if (n == 1)
-            for (i = 0; i < len; i++)
-                SET_STRING_ELT(ans, i, STRING_ELT(x, 0));
-        else
-            for (i = 0; i < len; i++)
-                SET_STRING_ELT(ans, i, STRING_ELT(x, i % n));
-        UNPROTECT(1);
-        for(a = CDR(args); a != R_NilValue; a = CDR(a)) {
+        for (a = CDR(args); a != R_NilValue; a = CDR(a)) {
             SEXP tmp, rai, new;
             PROTECT(x = coerceVector(CAR(a), anstype));
             n = LENGTH(x);
