@@ -280,10 +280,7 @@ SEXP R_copyDFattr(SEXP in, SEXP out)
 
 static SEXP attr_val_dup (SEXP obj, SEXP name, SEXP val)
 {
-    if (NAMEDCNT_EQ_0(val))
-        return val;
-
-    if (name == R_ClassSymbol) {
+    if (NAMEDCNT_EQ_0(val) || name == R_ClassSymbol) {
         SET_NAMEDCNT_MAX(val);
         return val;
     }
@@ -298,7 +295,9 @@ static SEXP attr_val_dup (SEXP obj, SEXP name, SEXP val)
     }
 
     SEXP v = duplicate(val);
-    if (v != val)  SET_NAMEDCNT_1(v);
+    if (v != val)
+        SET_NAMEDCNT_MAX(v);
+
     return v;
 }
 
