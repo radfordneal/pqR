@@ -1,12 +1,14 @@
 % File src/library/base/man/base-internal.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2012 R Core Team
-% Modifications for pqR Copyright (c) 2017 Radford M. Neal.
+% Modifications for pqR Copyright (c) 2017, 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{base-internal}
 \alias{.subset}
 \alias{.subset2}
+\alias{@internal}
+\alias{@internal<-}
 \alias{.el.methods}
 \alias{.getRequiredPackages}
 \alias{.getRequiredPackages2}
@@ -41,6 +43,8 @@
 \usage{
 .subset(x, \dots)
 .subset2(x, \dots)
+
+`@internal`(obj,slot) <- value
 
 .el.methods(x, \dots)
 
@@ -111,6 +115,8 @@ lazyLoadDBfetch(key, file, compressed, hook)
   \item{i, j}{indices.}
   \item{strictly}{logical.}
   \item{obj}{an \R object.}
+  \item{slot}{slot (attribute) of an object}
+  \item{value}{value to be assigned to slot}
   \item{xx}{a classless object to be placed into the class.}
   \item{tz}{an optional timezone.}
   \item{units}{see \code{\link{difftime}}.}
@@ -126,6 +132,10 @@ lazyLoadDBfetch(key, file, compressed, hook)
   as fast as \code{.subset(obj,1)} and \code{.subset2(obj,1)}, so
   there is no longer any reason to use \code{.subset} or
   \code{.subset2}.
+
+  The `code{`@internal`} subassignment function is like \code{@}, but
+  without the check that the slot exists.  It is for internal use by
+  the methods package only.
 
   The \code{.el.methods} primitive function is almost the same as \code{[[}, 
   except that \code{NULL} is returned for elements beyond the end of

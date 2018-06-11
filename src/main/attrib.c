@@ -1611,11 +1611,17 @@ static void check_slot_assign(SEXP obj, SEXP input, SEXP value, SEXP env)
 }
 
 /* Implements   attr(obj, which = "<name>")  <-  value    (op == 0, BUILTIN) 
-   and          obj @ <name>                 <-  value    (op == 1, SPECIAL)  */
+
+   and          obj @ <name>                 <-  value    (op == 1, SPECIAL)
+
+   and          `@internal`(obj,name)        <-  value    (op == 2, BUILTIN)
+                ** for internal use only, no validity check **
+ */
 
 static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    if (PRIMVAL(op) == 1) { /* @<-, code adapted from R-3.0.0 */
+    if (PRIMVAL(op) == 1) {  /* obj@name <- value, code adapted from R-3.0.0 */
+
         SEXP obj, name, input, ans, value;
         PROTECT(input = allocVector(STRSXP, 1));
 
@@ -1634,9 +1640,9 @@ static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 
         /* replace the second argument with a string */
         SETCADR(args, input);
-        UNPROTECT(1); // 'input' is now protected
+        UNPROTECT(1);  /* 'input' is now protected */
 
-        if(DispatchOrEval(call, op, "@<-", args, env, &ans, 0, 0))
+        if (DispatchOrEval(call, op, "@<-", args, env, &ans, 0, 0))
             return(ans);
 
         PROTECT(obj = CAR(ans));
@@ -1650,7 +1656,36 @@ static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
         return obj;
     }
 
-    else { /*  attr(x, which = "<name>")  <-  value  */
+    else if (PRIMVAL(op) == 2) {  /* `@internal`(obj,name)  <-  value */
+
+        SEXP obj, name, input, value;
+
+        PROTECT(obj = CAR(args));
+        PROTECT(value = CADDR(args));
+        PROTECT(input = allocVector(STRSXP, 1));
+
+        name = CADR(args);
+        if (TYPEOF(name) == PROMSXP)
+            name = PRCODE(name);
+        if (isSymbol(name))
+            SET_STRING_ELT(input, 0, PRINTNAME(name));
+        else if(isString(name) )
+            SET_STRING_ELT(input, 0, STRING_ELT(name, 0));
+        else {
+            error(_("invalid type '%s' for slot name"),
+                  type2char(TYPEOF(name)));
+            return R_NilValue; /*-Wall*/
+        }
+
+        obj = R_do_slot_assign(obj, input, value);
+
+        SET_NAMEDCNT_0(obj);  /* The standard kludge for subassign primitives */
+        R_Visible = TRUE;
+        UNPROTECT(3);
+        return obj;
+    }
+
+    else {  /*  attr(x, which = "<name>")  <-  value  */
 
         SEXP obj, name, argList;
         static char *ap[3] = { "x", "which", "value" };
@@ -1911,7 +1946,8 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value)
        first argument in place, even if it appears to be shared.  
        Package "methods" did this as well in R-2.15.1, but has been 
        modified not to in pqR. */
-    if (FALSE /* disabled */ && NAMEDCNT_GT_1(obj)) {
+
+    if (FALSE && /* disabled */ NAMEDCNT_GT_1(obj)) {
         obj = dup_top_level(obj);
         UNPROTECT(1); /* old obj */
         PROTECT(obj);
@@ -2053,6 +2089,7 @@ attribute_hidden FUNTAB R_FunTab_attrib[] =
 {"attr",	do_attr,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"attr<-",	do_attrgets,	0,	1,	3,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"@<-",		do_attrgets,	1,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+{"@internal<-",	do_attrgets,	2,	1,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 {"levels<-",	do_levelsgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 
 {"@",		do_AT,		0,	0,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
