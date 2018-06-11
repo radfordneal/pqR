@@ -1,5 +1,6 @@
 #  File src/library/tools/R/QC.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -253,7 +254,8 @@ function(package, dir, lib.loc = NULL)
         extras <- prototypes %w/o% prims
         if(length(extras))
             undoc_things <- c(undoc_things, list(prim_extra=extras))
-        langElts <- c("$","$<-","&&","(",":","..","@","[","[[","@<-",
+        langElts <- c("$","$<-","&&","(",":","..","@","[","[[",
+                      "@<-","@internal<-",
                       "[[<-","[<-","{","||","~","<-","<<-","=","->","->>",
                       "break","for","function","if","next","repeat","return",
                       "while")

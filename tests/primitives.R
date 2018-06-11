@@ -1,5 +1,5 @@
 ## check that the 'internal generics' are indeed generic.
-## Modified for pqR by Radford Neal, 2015.
+## Modified for pqR by Radford Neal, 2015, 2018.
 
 x <- structure(pi, class="testit")
 xx <- structure("OK", class="testOK")
@@ -55,7 +55,8 @@ for(f in ls(.ArgsEnv, all.names=TRUE))
 ff <- ls("package:base", all.names=TRUE)
 ff <- ff[sapply(ff, function(x) is.primitive(get(x, "package:base")))]
 lang_elements <-
-  c('$', '$<-', '&&', '(', ':', '..', '<-', '<<-', '=', '->', '->>', '@', '@<-',
+  c('$', '$<-', '&&', '(', ':', '..', '<-', '<<-', '=', '->', '->>', 
+    '@', '@<-', '@internal<-',
     '[', '[<-', '[[', '[[<-', 'break', 'for', 'function', 'if', 'next',
     'repeat', 'return', 'while', '{', '||', '~')
 

@@ -1,6 +1,6 @@
 #  File src/library/methods/R/SClasses.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2014, 2017 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2014, 2017, 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -145,14 +145,15 @@ prototype <- function(...)
     if(dataPart) {
         if(sum(data) > 1)
             stop("only one data object (unnamed argument to prototype) allowed")
-        obj <- unclass(props[[seq_along(data)[data] ]])
+        obj <- unclass (props [[ seq_along(data)[data] ]])
         props <- props[!data]
         names <- names[!data]
     }
     else
         obj <- defaultPrototype()
-    for(i in seq_along(names))
-        slot(obj, names[[i]], FALSE) <- props[[i]]
+    for (i in seq_along(names))
+        # was previously slot(obj, names[[i]], FALSE) <- props[[i]]
+        `@internal`(obj, names[[i]]) <- props[[i]]
     new("classPrototypeDef", object = obj, slots = names, dataPart = dataPart)
 }
 
@@ -663,15 +664,13 @@ initialize <- function(.Object, ...) {
                               dQuote(Class),
                               paste(snames[is.na(which)], collapse=", ")),
                      domain = NA)
-            firstTime <- TRUE
             for(i in seq_along(snames)) {
                 slotName <- el(snames, i)
                 slotClass <- elNamed(slotDefs, slotName)
                 slotClassDef <- getClassDef(slotClass, package=ClassDef@package)
                 slotVal <- el(elements, i)
                 ## perform non-strict coercion, but leave the error messages for
-                ## values not conforming to the slot definitions to validObject(),
-                ## hence the check = FALSE argument in the slot assignment
+                ## values not conforming to the slot definitions to validObject().
                 if(!.identC(class(slotVal), slotClass)
                    && !is.null(slotClassDef) ) {
                     valClass <- class(slotVal)
@@ -680,22 +679,7 @@ initialize <- function(.Object, ...) {
                                          valClassDef, slotClassDef), FALSE))
                         slotVal <- as(slotVal, slotClass, strict = FALSE)
                 }
-                if (firstTime) {
-                    ## Force a copy of .Object.  The copy is forced at 
-                    ## present in subset assign code in eval.c, but it ought
-                    ## instead to be forced by R_set_slot called from slot<-.
-                    slot(.Object, slotName, check = FALSE) <- slotVal
-                    firstTime <- FALSE
-                } else {
-                    ## Do the assignment in-place.  .Object should be unshared
-                    ## now, which is good, since set_slot.internal modifies it
-                    ## regardless.  The assignment of the result to
-                    ## .Object is therefore redundant, but is done so that this
-                    ## code will work even if the setup is someday fixed to 
-                    ## work as it should.
-                    .Object <- 
-                      .Internal (set_slot.internal (.Object, slotName, slotVal))
-                }
+                `@internal` (.Object, slotName) <- slotVal
             }
         }
         validObject(.Object)
