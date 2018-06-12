@@ -1955,6 +1955,11 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
 
 /* Reallocate a vector with different length, returning the same
    storage if possible and reasonable, and otherwise new storage.  
+   If new storage is allocated, it is expected that the old storage
+   will no longer be used (hence no need to adjust NAMEDCNT, etc.).
+   It is the caller's responsibility to fix any inconsistencies
+   between the new length and things like any dim attribute.
+
    The last argument controls what happens if new storage is allocated: 
    If 'init' is 1, or the type of the vector is STRSXP, VECSXP, or
    EXPRSXP (the types with pointer elements), the old contents are
@@ -1963,6 +1968,8 @@ SEXP allocVector(SEXPTYPE type, R_len_t length)
    new STRSXP, VECSXP, and EXPRSXP elements are set to NA or
    R_NilValue, and if 'init' is 1, new elements for other types are
    set to NA or raw 0 (but left uninitialized if 'init' is 0).
+   If new storage is allocated, attributes and gp and truelength 
+   info are copied over.
 
    Protects its first argument if necessary.  Also waits until it
    is not being computed, and is not in use by a helper. */
@@ -1973,9 +1980,11 @@ SEXP reallocVector (SEXP vec, R_len_t length, int init)
         errorcall(R_GlobalContext->call,
                   _("negative length vectors are not allowed"));
 
-    sggc_nchunks_t curr_chunks = sggc_nchunks_allocated (CPTR_FROM_SEXP(vec));
-    sggc_nchunks_t new_chunks = Rf_nchunks (TYPEOF(vec), length);
+    SEXPTYPE type = TYPEOF(vec);
     R_len_t curr_len = LENGTH(vec);
+
+    sggc_nchunks_t curr_chunks = sggc_nchunks_allocated (CPTR_FROM_SEXP(vec));
+    sggc_nchunks_t new_chunks = Rf_nchunks (type, length);
 
     /* See if we can just reduce LENGTH and return current location.
        Don't do this if the new vector would have lots of unused space
@@ -2011,32 +2020,41 @@ SEXP reallocVector (SEXP vec, R_len_t length, int init)
 
         SEXP old_vec = vec;
 
-        sggc_type_t sggctype = R_type_to_sggc_type[TYPEOF(vec)];
+        sggc_type_t sggctype = R_type_to_sggc_type[type];
         sggc_cptr_t cp;
 
         PROTECT(old_vec);
         ALLOC_WITH_COLLECT(cp = sggc_alloc (sggctype, new_chunks),
                            mem_error(), new_chunks);
-        UNPROTECT(1);
+        vec = SEXP_FROM_CPTR(cp);
 
         WAIT_UNTIL_COMPUTED(old_vec);
-        helpers_wait_until_not_in_use(vec);
+        helpers_wait_until_not_in_use(old_vec);
 
-        if (init || !isVectorNonpointer(vec)) {
+        if (init || !isVectorNonpointer(old_vec)) {
             sggc_nchunks_t copy_chunks 
               = new_chunks < curr_chunks ? new_chunks : curr_chunks;
-            memcpy (SGGC_DATA(cp), SGGC_DATA(CPTR_FROM_SEXP(old_vec)), 
+            memcpy (SGGC_DATA(cp), SGGC_DATA(CPTR_FROM_SEXP(old_vec)),
                     (size_t) copy_chunks * SGGC_CHUNK_SIZE);
+#           if !USE_COMPRESSED_POINTERS
+                vec->cptr = cp;
+#           endif
+        }
+        else {
+#           if !USE_COMPRESSED_POINTERS
+                vec->cptr = cp;
+#           endif
+            UPTR_FROM_SEXP(vec)->sxpinfo = UPTR_FROM_SEXP(old_vec)->sxpinfo;
+            SETLEVELS (vec, LEVELS(old_vec));
+            SET_TRUELENGTH (vec, TRUELENGTH(old_vec));
         }
 
-        vec = SEXP_FROM_CPTR(cp);
-#if !USE_COMPRESSED_POINTERS
-        vec->cptr = cp;
-#endif
-        ATTRIB_W(vec) = ATTRIB_W(old_vec); /* these might not be in SGGC_DATA */
+        ATTRIB_W(vec) = ATTRIB_W(old_vec);  /* might not be in SGGC_DATA */
         LENGTH(vec) = length;
 
         if (R_IsMemReporting) R_ReportAllocation(vec);
+
+        UNPROTECT(1);
     }
     else {
         WAIT_UNTIL_COMPUTED(vec);
@@ -2055,7 +2073,7 @@ SEXP reallocVector (SEXP vec, R_len_t length, int init)
 
         R_len_t i;
 
-        switch (TYPEOF(vec)) {
+        switch (type) {
         case LGLSXP:
         case INTSXP:
             for (i = curr_len; i < length; i++)
