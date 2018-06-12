@@ -111,6 +111,7 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
     if (typ == NILSXP)
         return R_NoObject;
 
+    SEXP names0 = getNamesAttrib(objs[0]);
     R_len_t len0 = LENGTH(objs[0]);
 
     /* Allocate space for result.  May be a reallocation of the first
@@ -132,7 +133,7 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
     }
     else {
         if (add_names && (NAMEDCNT_EQ_0(objs[0]) || local_assign1)) {
-            ansnames = getNamesAttrib(objs[0]);
+            ansnames = names0;
             if (NAMEDCNT_GT_1(ansnames) /* Enough?  But go on for now... */
                  || NAMEDCNT_GT_0(ansnames) && !local_assign1)
                 ansnames = R_NilValue;
@@ -210,7 +211,7 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
                 continue;
             R_len_t ln = i == 0 ? len0 : LENGTH(a);
             if (i > 0 || !realloc) {
-                SEXP nms = getNamesAttrib(a);
+                SEXP nms = i == 0 ? names0 : getNamesAttrib(a);
                 if (nms != R_NilValue) {
                     if (LENGTH(nms) != ln) abort();
                     copy_elements (ansnames, pos, 1, nms, 0, 1, ln);
