@@ -765,34 +765,60 @@ void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
 }
 
 
-/* Duplicates object, including attributes, except that a VECSXP or EXPRSXP 
-   is duplicated at the top level only, and the NAMEDCNT field of each element 
-   is incremented to account for the extra reference.  The argument needn't be 
-   protected by the caller. */
+/* Duplicates an object, including attributes, except that a vector or
+   S4 type is duplicated at the top level only, and the NAMEDCNT field
+   of each element is incremented to account for the extra reference,
+   with the attribute list also being duplicated only at the list
+   level, not at the level of attribute values, with NAMEDCNT of
+   attribute values set to the maximum.
+
+   The argument needn't be protected by the caller. */
 
 SEXP attribute_hidden dup_top_level (SEXP x)
 {
-    R_len_t n;
     SEXP r;
-    int i;
 
-    if (!isVectorList(x))
+    if (!isVector(x) && TYPEOF(x) != S4SXP)
         return duplicate(x);
 
     PROTECT(x);
-    n = LENGTH(x);
-    PROTECT(r = allocVector(TYPEOF(x),n));
-    copy_vector_elements (r, 0, x, 0, n);
-    for (i = 0; i < n; i++) INC_NAMEDCNT_0_AS_1 (VECTOR_ELT(r,i));
-    DUPLICATE_ATTRIB(r,x);
-    UNPROTECT(2);
+    if (TYPEOF(x) == S4SXP) {
+        r = allocS4Object();
+    }
+    else {
+        R_len_t n = LENGTH(x);
+        PROTECT(r = allocVector(TYPEOF(x),n));
+        SET_TRUELENGTH(r,TRUELENGTH(x));
+        if (isVectorAtomic(x)) {
+           copy_elements (r, 0, 1, x, 0, 1, n);
+        }
+        else {  /* VECSXP or EXPRSXP */
+            int i;
+            copy_vector_elements (r, 0, x, 0, n);
+            for (i = 0; i < n; i++) INC_NAMEDCNT_0_AS_1 (VECTOR_ELT(r,i));
+        }
+        UNPROTECT(1);
+    }
+
+    if (ATTRIB(x) != R_NilValue) {
+        SEXP a = dup_arg_list(ATTRIB(x));
+        SET_ATTRIB(r,a);
+        while (a != R_NilValue) {
+            SET_NAMEDCNT_MAX(CAR(a));
+            a = CDR(a);
+        }
+        SET_OBJECT(r,OBJECT(x));
+    }
+
+    SETLEVELS(r,LEVELS(x));
+    UNPROTECT(1);
 
     return r;
 }
 
 
-/* Duplicate an argument list.  Does not adjust NAMEDCNT, and does not
-   duplicate any attributes of binding cells. */
+/* Duplicate an argument list, or other pairlist.  Does not adjust
+   NAMEDCNT, and does not duplicate any attributes of binding cells. */
 
 SEXP attribute_hidden dup_arg_list (SEXP x)
 {

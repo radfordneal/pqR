@@ -518,7 +518,9 @@ SEXP (SET_VECTOR_ELT)(SEXP x, int i, SEXP v) {
     return VECTOR_ELT(x, i) = v;
 }
 
-/* Copy n vector elements from v (starting at j) to x (starting at i). */
+/* Copy n vector elements from v (starting at j) to x (starting at i). 
+   Nothing is done about NAMEDCNT here. */
+
 void copy_vector_elements(SEXP x, int i, SEXP v, int j, int n) 
 {
     SEXP e;
