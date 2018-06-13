@@ -783,7 +783,7 @@ SEXP attribute_hidden dup_top_level (SEXP x)
 
     PROTECT(x);
     if (TYPEOF(x) == S4SXP) {
-        r = allocS4Object();
+        PROTECT(r = allocS4Object());
     }
     else {
         R_len_t n = LENGTH(x);
@@ -797,7 +797,6 @@ SEXP attribute_hidden dup_top_level (SEXP x)
             copy_vector_elements (r, 0, x, 0, n);
             for (i = 0; i < n; i++) INC_NAMEDCNT_0_AS_1 (VECTOR_ELT(r,i));
         }
-        UNPROTECT(1);
     }
 
     if (ATTRIB(x) != R_NilValue) {
@@ -811,7 +810,7 @@ SEXP attribute_hidden dup_top_level (SEXP x)
     }
 
     SETLEVELS(r,LEVELS(x));
-    UNPROTECT(1);
+    UNPROTECT(2);
 
     return r;
 }
