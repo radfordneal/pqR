@@ -80,7 +80,7 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
                                 int variant, SEXP call, SEXP env)
 {
     SEXPTYPE typ = NILSXP;
-    SEXP ans, ansnames;
+    SEXP ans, ansnames, names0;
     int add_names, realloc, largeone0, largeones;
     R_len_t i, len, pos;
 
@@ -90,16 +90,28 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
     add_names = 0;
     largeone0 = 0;
     largeones = 0;
+    names0 = R_NilValue;
     len = 0;
+    PROTECT(names0);
     for (i = 0; i < nobj; i++) {
         SEXP a = objs[i];
         if (a == R_NilValue)
             continue;
-        if (!isVectorAtomic(a) || LENGTH(a) > INT_MAX - len) 
+        if (!isVectorAtomic(a) || LENGTH(a) > INT_MAX - len) {
+            UNPROTECT(1);  /* names0 */
             return R_NoObject;
-        if (usenames && HAS_ATTRIB(a) /* quick pretest */ 
-                     && getNamesAttrib(a) != R_NilValue)
-            add_names = 1;
+        }
+        if (usenames && HAS_ATTRIB(a) /* quick pretest */) {
+            SEXP nms = getNamesAttrib(a);
+            if (nms != R_NilValue) {
+                if (i == 0) {
+                    names0 = nms;
+                    UNPROTECT(1);
+                    PROTECT(names0);
+                }
+                add_names = 1;
+            }
+        }
         typ = Rf_higher_atomic_type (typ, TYPEOF(a));
         len += LENGTH(a);
         if (LENGTH(a) > T_c) {
@@ -108,10 +120,11 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
         }
     }
 
-    if (typ == NILSXP)
+    if (typ == NILSXP) {
+        UNPROTECT(1);  /* names0 */
         return R_NoObject;
+    }
 
-    SEXP names0 = getNamesAttrib(objs[0]);
     R_len_t len0 = LENGTH(objs[0]);
 
     /* Allocate space for result.  May be a reallocation of the first
@@ -224,13 +237,13 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
             pos += ln;
         }
         setAttrib (ans, R_NamesSymbol, ansnames);
-        UNPROTECT(1);
+        UNPROTECT(1);  /* ansnames */
     }
 
     if (! (variant & VARIANT_PENDING_OK))
         WAIT_UNTIL_COMPUTED(ans);
 
-    UNPROTECT(1);
+    UNPROTECT(2);  /* names0, ans */
     R_variant_result = local_assign1;
     return ans;
 }
