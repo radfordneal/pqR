@@ -1,0 +1,6 @@
+Changes to allow names to be updated without copying.
+
+Implements VARIANT_QUERY_UNSHARED_SUBSET for names(x).
+
+Doesn't always set NAMEDCNT to MAX for names.
+

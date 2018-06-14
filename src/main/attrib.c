@@ -110,8 +110,9 @@ static SEXP stripAttrib(SEXP tag, SEXP lst)
 }
 
 /* Get the "names" attribute, and don't change its NAMEDCNT unless
-   it's really taken from another attribute.  Used directly in
-   subassign.c, and in getAttrib0 below. */
+   it's really taken from another attribute, or is zero even though in
+   the attribute list.  Used directly in subassign.c, and in
+   getAttrib0 below. */
 
 static SEXP getAttrib0(SEXP vec, SEXP name);
 
@@ -153,8 +154,10 @@ SEXP attribute_hidden getNamesAttrib (SEXP vec)
     }
 
     for (s = ATTRIB(vec); s != R_NilValue; s = CDR(s)) {
-	if (TAG(s) == R_NamesSymbol && TYPEOF(CAR(s)) == STRSXP)
+	if (TAG(s) == R_NamesSymbol && TYPEOF(CAR(s)) == STRSXP) {
+            SET_NAMEDCNT_NOT_0(CAR(s));
 	    return CAR(s);
+        }
     }
 
     return R_NilValue;
@@ -171,7 +174,7 @@ static SEXP getAttrib0(SEXP vec, SEXP name)
 
     if (name == R_NamesSymbol) {
         s = getNamesAttrib(vec);
-        SET_NAMEDCNT_MAX(s);
+        SET_NAMEDCNT_NOT_0(s);
         return s;
     }
 
@@ -273,13 +276,20 @@ SEXP R_copyDFattr(SEXP in, SEXP out)
    example, when the value is a literal constant that is part of an
    expression being evaluated.
 
-   Also, don't dup "class" attribute, just set to MAX_NAMEDCNT, which
-   seems safe, and saves space on every object of the class.
+   For "names", just increment NAMEDCNT.  Also, don't dup "class"
+   attribute, just set to MAX_NAMEDCNT, which seems safe, and saves
+   space on every object of the class.
 
-   It is also of interest that getAttrib00 sets NAMEDCNT to MAX_NAMEDCNT. */
+   It is also of interest that getAttrib00 sets NAMEDCNT to
+   MAX_NAMEDCNT, except for "names". */
 
 static SEXP attr_val_dup (SEXP obj, SEXP name, SEXP val)
 {
+    if (name == R_NamesSymbol) {
+        INC_NAMEDCNT(val);
+        return val;
+    }
+
     if (NAMEDCNT_EQ_0(val) || name == R_ClassSymbol) {
         SET_NAMEDCNT_MAX(val);
         return val;
@@ -1003,6 +1013,7 @@ static SEXP do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 
     SEXP obj = CAR(args);
     SEXP nms = CADR(args);
+
     if (nms != R_NilValue && (TYPEOF(nms) != STRSXP || HAS_ATTRIB(nms))) {
         static SEXP asc = R_NoObject;
         if (asc == R_NoObject) asc = install("as.character");
@@ -1014,7 +1025,6 @@ static SEXP do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	UNPROTECT(1);
     }
     PROTECT(nms);
-    SET_NAMEDCNT_MAX(nms);
     setAttrib(obj, R_NamesSymbol, nms);
     UNPROTECT(2);
 
@@ -1094,23 +1104,26 @@ SEXP namesgets(SEXP vec, SEXP val)
     return vec;
 }
 
-static SEXP do_names(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_names(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
-    SEXP ans;
+    SEXP obj, nms, ans;
     checkArity(op, args);
     check1arg_x (args, call);
     if (DispatchOrEval(call, op, "names", args, env, &ans, 0, 1))
-	return(ans);
-    PROTECT(args = ans);
-    ans = CAR(args);
-    if (isVector(ans) || isList(ans) || isLanguage(ans) || IS_S4_OBJECT(ans)) {
-	ans = getNamesAttrib(ans);
-        SET_NAMEDCNT_MAX(ans);
-    }
+	return ans;
+    PROTECT(obj = CAR(ans));
+    if (isVector(obj) || isList(obj) || isLanguage(obj) || IS_S4_OBJECT(obj))
+	nms = getNamesAttrib(obj);
     else 
-        ans = R_NilValue;
+        nms = R_NilValue;
     UNPROTECT(1);
-    return ans;
+
+    if ((VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET 
+           || VARIANT_KIND(variant) == VARIANT_FAST_SUB) 
+         && !NAMEDCNT_GT_1(obj) && !NAMEDCNT_GT_1(nms))
+        R_variant_result = 1;
+
+    return nms;
 }
 
 static SEXP do_dimnamesgets(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -2085,7 +2098,7 @@ attribute_hidden FUNTAB R_FunTab_attrib[] =
 {"comment<-",	do_commentgets,	0,	11,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"oldClass",	do_class,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"oldClass<-",	do_classgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT, 1}},
-{"names",	do_names,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"names",	do_names,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"names<-",	do_namesgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"dimnames",	do_dimnames,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"dimnames<-",	do_dimnamesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
