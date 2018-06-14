@@ -225,10 +225,9 @@ SEXP getAttrib(SEXP vec, SEXP name)
 	SEXP s = getAttrib00(vec, R_RowNamesSymbol);
 	if(isInteger(s) && LENGTH(s) == 2 && INTEGER(s)[0] == NA_INTEGER) {
 	    int i, n = abs(INTEGER(s)[1]);
-	    PROTECT(s = allocVector(INTSXP, n));
-	    for(i = 0; i < n; i++)
+	    s = allocVector(INTSXP, n);
+	    for (i = 0; i < n; i++)
 		INTEGER(s)[i] = i+1;
-	    UNPROTECT(1);
 	}
 	return s;
     } else
@@ -276,16 +275,16 @@ SEXP R_copyDFattr(SEXP in, SEXP out)
    example, when the value is a literal constant that is part of an
    expression being evaluated.
 
-   For "names", just increment NAMEDCNT.  Also, don't dup "class"
-   attribute, just set to MAX_NAMEDCNT, which seems safe, and saves
-   space on every object of the class.
+   For "names", just increment NAMEDCNT (unless could create cycle).
+   Also, don't dup "class" attribute, just set to MAX_NAMEDCNT, which
+   seems safe, and saves space on every object of the class.
 
    It is also of interest that getAttrib00 sets NAMEDCNT to
    MAX_NAMEDCNT, except for "names". */
 
 static SEXP attr_val_dup (SEXP obj, SEXP name, SEXP val)
 {
-    if (name == R_NamesSymbol) {
+    if (name == R_NamesSymbol && !HAS_ATTRIB(val) && val != obj) {
         INC_NAMEDCNT(val);
         return val;
     }
@@ -1118,9 +1117,16 @@ static SEXP do_names(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         nms = R_NilValue;
     UNPROTECT(1);
 
+    /* See if names are an unshared subset of the object.  Not true if
+       names are not from the "names" attribute, which is detected by 
+       obj not being a vector (names created from tags in pairlist, for
+       example) or by NAMEDCNT being greater than one (shared names, or
+       names actually from dimnames). */
+
     if ((VARIANT_KIND(variant) == VARIANT_QUERY_UNSHARED_SUBSET 
            || VARIANT_KIND(variant) == VARIANT_FAST_SUB) 
-         && !NAMEDCNT_GT_1(obj) && !NAMEDCNT_GT_1(nms))
+         && !NAMEDCNT_GT_1(obj) && !NAMEDCNT_GT_1(nms)
+         && isVector(obj))
         R_variant_result = 1;
 
     return nms;
