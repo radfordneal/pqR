@@ -213,6 +213,7 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
             realloc = 0;
         }
         else {
+            DEC_NAMEDCNT(ansnames);  /* will be increased when set */
             ansnames = reallocVector (ansnames, len, 1);
             realloc = 1;
         }
