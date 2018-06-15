@@ -1196,7 +1196,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 #define T_arithmetic THRESHOLD_ADJUST(24)  /* >= 8, further adjusted below */
 
-SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y, 
+SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y, 
                                 int objx, int objy, SEXP env, int variant)
 {
     helpers_task_proc *task;
@@ -1204,7 +1204,6 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
     int mismatch = 0, nx, ny, n, xarray, yarray, xts, yts, xS4 = 0, yS4 = 0;
     int xattr, yattr;
     PROTECT_INDEX xpi, ypi;
-    ARITHOP_TYPE oper = (ARITHOP_TYPE) PRIMVAL(op);
     int threshold, flags, nprotect;
 
     if (x == R_NilValue) x = allocVector(REALSXP,0);
@@ -1333,7 +1332,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
 
     if (TYPEOF(x) == CPLXSXP || TYPEOF(y) == CPLXSXP) {
 
-        if (oper==IDIVOP || oper==MODOP)
+        if (opcode==IDIVOP || opcode==MODOP)
             errorcall(call,_("unimplemented complex operation"));
         ans = alloc_or_reuse (x, y, CPLXSXP, n, local_assign1, local_assign2);
         task = task_complex_arithmetic;
@@ -1351,18 +1350,18 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
 
         if (n > 1 && (nx == 1 || ny == 1)
                   && TYPEOF(x) == REALSXP && TYPEOF(y) == REALSXP) {
-            if (oper < POWOP /* this is the +, -, *, and / operators */
-                 || oper == POWOP && ny == 1 && REAL(y)[0] == 2.0 /* square */)
+            if (opcode < POWOP /* this is the +, -, *, and / operators */
+                 || opcode == POWOP && ny == 1 && REAL(y)[0] == 2.0 /* square*/)
                 flags = HELPERS_PIPE_IN0_OUT | HELPERS_MERGE_IN_OUT;
         }
 
         if (n>1) {
-            if (oper == DIVOP && ny == 1 && TYPEOF(x) == REALSXP
+            if (opcode == DIVOP && ny == 1 && TYPEOF(x) == REALSXP
                  && (TYPEOF(y)==REALSXP ? REAL(y)[0] : INTEGER(y)[0]) == 2.0) {
-                oper = TIMESOP;
+                opcode = TIMESOP;
                 replace_by_half = TRUE;
             }
-            if (ny<nx && (oper == PLUSOP || oper == TIMESOP)) {
+            if (ny<nx && (opcode == PLUSOP || opcode == TIMESOP)) {
                 swap_ops = TRUE;
                 flags |= HELPERS_PIPE_IN2;
             }
@@ -1377,7 +1376,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         /* task_integer_arithmetic is assumed to work for LOGICAL too, though
            this won't be true if they aren't really the same */
 
-        if (oper == DIVOP || oper == POWOP)
+        if (opcode == DIVOP || opcode == POWOP)
             ans = allocVector(REALSXP, n);
         else
             ans = alloc_or_reuse(x, y, INTSXP, n, local_assign1, local_assign2);
@@ -1387,10 +1386,11 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
           must be in the master because of possible integer overflow.
           Not bothering with pipelining yet. */
 
-        flags = oper==POWOP || oper==DIVOP || oper==IDIVOP || oper==MODOP ? 0 
-              : HELPERS_MASTER_NOW;
+        flags = 
+          opcode==POWOP || opcode==DIVOP || opcode==IDIVOP || opcode==MODOP ? 0 
+            : HELPERS_MASTER_NOW;
 
-        if (ny<nx && (oper == PLUSOP || oper == TIMESOP))
+        if (ny<nx && (opcode == PLUSOP || opcode == TIMESOP))
             swap_ops = TRUE;
     }
 
@@ -1410,7 +1410,7 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
         threshold = T_arithmetic;
         if (TYPEOF(ans) == CPLXSXP)
             threshold >>= 1;
-        if (oper > TIMESOP)
+        if (opcode > TIMESOP)
             threshold >>= 1;
 
         SEXP xx = x, yy = y;
@@ -1432,7 +1432,8 @@ SEXP attribute_hidden R_binary (SEXP call, SEXP op, SEXP x, SEXP y,
 
         integer_overflow = 0;
 
-        DO_NOW_OR_LATER2(variant, n>=threshold, flags, task, oper, ans, xx, yy);
+        DO_NOW_OR_LATER2 (variant, n>=threshold, flags, 
+                          task, opcode, ans, xx, yy);
 
         if (integer_overflow)
             warningcall(call, _("NAs produced by integer overflow"));
@@ -1542,10 +1543,9 @@ void task_unary_minus (helpers_op_t op, SEXP ans, SEXP s1, SEXP ignored)
 
 #define T_unary_minus THRESHOLD_ADJUST(20)
 
-SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int obj1,
+SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
                                SEXP env, int variant)
 {
-    ARITHOP_TYPE operation = (ARITHOP_TYPE) PRIMVAL(op);
     int type = TYPEOF(s1);
     int local_assign = 0;
     SEXP ans;
@@ -1568,7 +1568,7 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int obj1,
         UNPROTECT(3);
     }
 
-    if (operation==PLUSOP) {
+    if (opcode==PLUSOP) {
         if (type != LGLSXP)
             ans = isObject(s1) && !obj1 ? Rf_makeUnclassed(s1) : s1;
         else {
@@ -1576,7 +1576,7 @@ SEXP attribute_hidden R_unary (SEXP call, SEXP op, SEXP s1, int obj1,
             for (int i = 0; i<LENGTH(s1); i++) INTEGER(ans)[i] = LOGICAL(s1)[i];
         }
     }
-    else if (operation==MINUSOP) {
+    else if (opcode==MINUSOP) {
         if (type == LGLSXP) 
             ; /* allocated above */
         else if (isObject(s1) && !obj1)
