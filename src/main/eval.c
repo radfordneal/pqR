@@ -4230,7 +4230,6 @@ static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
 static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP argsevald, ans, arg1, arg2;
-    int opcode = PRIMVAL(op);
     int obj;
 
     /* Evaluate arguments, maybe putting them on the scalar stack. */
@@ -4250,15 +4249,16 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
     }
 
+    int opcode = PRIMVAL(op);
+
     /* Check for argument count error (not before dispatch, since other
-       methods may have different requirements). */
+       methods may have different requirements).  Only check for more than
+       two at this point - check for simple cases will fail for other
+       argument count errors, so do those checks later. */
 
-    if (argsevald==R_NilValue || CDDR(argsevald)!=R_NilValue)
-	errorcall(call,_("operator needs one or two arguments"));
+    if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
 
-    if (CDR(argsevald)==R_NilValue && opcode!=MINUSOP && opcode!=PLUSOP)
-        errorcall(call, _("%d argument passed to '%s' which requires %d"),
-                        1, PRIMNAME(op), 2);
+    R_Visible = TRUE;
 
     /* Arguments are now in arg1 and arg2, and are protected. They may
        be on the scalar stack, but if so, are removed now, though they
@@ -4269,8 +4269,6 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
        but faster. */
 
-    R_Visible = TRUE;
-
     R_scalar_stack = sv_scalar_stack;
 
     /* We quickly do real arithmetic and integer plus/minus/times on
@@ -4279,8 +4277,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        bother trying local assignment, since returning the result on
        the scalar stack should be about as fast. */
 
-    int typeplus1 = TYPE_ETC(arg1);
-    int typeplus2 = TYPE_ETC(arg2);
+    char typeplus1 = TYPE_ETC(arg1);
+    char typeplus2 = TYPE_ETC(arg2);
 
     if (variant & VARIANT_ANY_ATTR) {
         typeplus1 &= ~TYPE_ET_CETERA_HAS_ATTR;
@@ -4318,7 +4316,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     }
 
     double a1, a2;  /* the two operands, if real */
-    int i1, i2;     /* the two operands, if integer */
+    int i1;         /* the first operand, if integer */
 
     if (typeplus2 == REALSXP) {
         a2 = *REAL(arg2);
@@ -4337,7 +4335,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             goto general;
     }
     else if (typeplus2 == INTSXP || typeplus2 == LGLSXP) {
-        i2 = *INTEGER(arg2);
+        int i2 = *INTEGER(arg2);
         if (typeplus1 == REALSXP) {
             if (i2 == NA_INTEGER) {
                 ans = R_ScalarRealNA;
@@ -4432,13 +4430,24 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* Handle the general case. */
 
   general:
-    ans = CDR(argsevald)==R_NilValue 
-           ? R_unary (call, op, arg1, obj, env, variant) 
-           : R_binary (call, op, arg1, arg2, obj&1, obj>>1, env, variant);
+
+    if (argsevald == R_NilValue) goto arg_count_err;
+
+    if (CDR(argsevald) != R_NilValue)
+        ans = R_binary (call, opcode, arg1, arg2, obj&1, obj>>1, env, variant);
+    else {
+        if (opcode != MINUSOP && opcode != PLUSOP)
+            errorcall(call, _("%d argument passed to '%s' which requires %d"),
+                            1, opcode == MINUSOP ? "-" : "+", 2);
+        ans = R_unary (call, opcode, arg1, obj, env, variant);
+    }
 
   ret:
     UNPROTECT(3);
     return ans;
+
+  arg_count_err:
+    errorcall(call,_("operator needs one or two arguments"));
 }
 
 /* -------------------------------------------------------------------------- */
@@ -4468,13 +4477,15 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
     }
 
-    R_Visible = TRUE;
-
     /* Check argument count now (after dispatch, since other methods may allow
        other argument count). */
 
     if (CDR(argsevald) == R_NilValue || CDDR(argsevald) != R_NilValue)
         checkArity(op,argsevald);  /* to report the error */
+
+    int opcode = PRIMVAL(op);
+
+    R_Visible = TRUE;
 
     /* Arguments are now in x and y, and are protected.  They may be on
        the scalar stack, but if so are popped off here (but retain their
@@ -4530,7 +4541,7 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     if (MAY_BE_NAN2(xv,yv) && (ISNAN(xv) || ISNAN(yv)))
         res = NA_LOGICAL;
     else {
-        switch (PRIMVAL(op)) {
+        switch (opcode) {
         case EQOP: res = xv == yv; break;
         case NEOP: res = xv != yv; break;
         case LTOP: res = xv < yv; break;
@@ -4543,7 +4554,7 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     goto ret;
 
   general:
-    ans = R_relop (call, op, x, y, obj&1, obj>>1, env, variant);
+    ans = R_relop (call, opcode, x, y, obj&1, obj>>1, env, variant);
 
   ret:
     UNPROTECT(3);
