@@ -1025,6 +1025,7 @@ static SEXP do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     PROTECT(nms);
     setAttrib(obj, R_NamesSymbol, nms);
+    SET_NAMEDCNT_0(obj);  /* the standard kludge for subassign primitives */
     UNPROTECT(2);
 
     return obj;
@@ -1352,16 +1353,21 @@ static SEXP do_attributes(SEXP call, SEXP op, SEXP args, SEXP env)
     nvalues = 0;
     if (namesattr != R_NilValue) {
 	SET_VECTOR_ELT(value, nvalues, namesattr);
+        INC_NAMEDCNT(namesattr);
 	SET_STRING_ELT(names, nvalues, PRINTNAME(R_NamesSymbol));
 	nvalues++;
     }
     while (attrs != R_NilValue) {
 	/* treat R_RowNamesSymbol specially */
-	if (TAG(attrs) == R_RowNamesSymbol)
-	    SET_VECTOR_ELT(value, nvalues,
-			   getAttrib(CAR(args), R_RowNamesSymbol));
-	else
-	    SET_VECTOR_ELT(value, nvalues, CAR(attrs));
+	if (TAG(attrs) == R_RowNamesSymbol) {
+            SEXP rn = getAttrib (CAR(args), R_RowNamesSymbol);
+	    SET_VECTOR_ELT(value, nvalues, rn);
+            INC_NAMEDCNT(rn);
+        }
+	else {
+	    SET_VECTOR_ELT (value, nvalues, CAR(attrs));
+            INC_NAMEDCNT(CAR(attrs));
+        }
 	if (TAG(attrs) == R_NilValue)
 	    SET_STRING_ELT_BLANK(names, nvalues);
 	else
@@ -1370,7 +1376,6 @@ static SEXP do_attributes(SEXP call, SEXP op, SEXP args, SEXP env)
 	nvalues++;
     }
     setAttrib(value, R_NamesSymbol, names);
-    SET_NAMED(value, NAMED(CAR(args)));
     UNPROTECT(3);
     return value;
 }
@@ -1706,7 +1711,6 @@ static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
         obj = R_do_slot_assign(obj, input, value);
 
         SET_NAMEDCNT_0(obj);  /* The standard kludge for subassign primitives */
-        R_Visible = TRUE;
         UNPROTECT(3);
         return obj;
     }
