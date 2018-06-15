@@ -942,7 +942,7 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 
 #define T_relop THRESHOLD_ADJUST(24) 
 
-SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y, 
+SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y, 
                                int objx, int objy, SEXP env, int variant)
 {
     SEXP klass = R_NilValue;
@@ -954,27 +954,26 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
 
     /* Reduce operation codes to EQOP and LTOP by swapping and negating. */
 
-    RELOP_TYPE code = (RELOP_TYPE) PRIMVAL(op);
     int negate = 0;
 
-    switch (code) {
+    switch (opcode) {
     case NEOP: 
-        code = EQOP; 
+        opcode = EQOP; 
         negate = 1; 
         break; 
     case GTOP: 
-        code = LTOP; 
+        opcode = LTOP; 
         tmp = x; x = y; y = tmp; 
         itmp = objx; objx = objy; objy = itmp; 
         break;
     case LEOP:
-        code = LTOP;
+        opcode = LTOP;
         negate = 1;
         tmp = x; x = y; y = tmp;
         itmp = objx; objx = objy; objy = itmp; 
         break;
     case GEOP:
-        code = LTOP;
+        opcode = LTOP;
         negate = 1;
         break;
     default:
@@ -1014,7 +1013,7 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
 
                 SEXP x1 = STRING_ELT(x,0), y1 = STRING_ELT(y,0);
                 result = x1==NA_STRING || y1==NA_STRING ? NA_LOGICAL
-                          : code == EQOP ? SEQL(x1,y1) 
+                          : opcode == EQOP ? SEQL(x1,y1) 
                           : /* LTOP */ x1 == y1 ? FALSE : Scollate(x1,y1) < 0;
             }
             else {  /* INTSXP or REALSXP */
@@ -1030,7 +1029,7 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
                    : INTEGER(y)[0]!=NA_INTEGER ? INTEGER(y)[0] : NA_REAL;
 
                 result = ISNAN(x1) || ISNAN(y1) ? NA_LOGICAL
-                           : code == EQOP ? x1 == y1 : /* LTOP */ x1 < y1;
+                           : opcode == EQOP ? x1 == y1 : /* LTOP */ x1 < y1;
             }
 
             return ScalarLogicalMaybeConst (negate && result != NA_LOGICAL 
@@ -1086,13 +1085,11 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
                 UNPROTECT(2);
                 return allocVector(LGLSXP,0);
             }
-            errorcall(call,
-              _("comparison (%d) is possible only for atomic and list types"),
-              PRIMVAL(op));
+            goto cmp_err;
         }
 
         if (typeof_x == EXPRSXP || typeof_y == EXPRSXP)
-            errorcall(call, _("comparison is not allowed for expressions"));
+            goto cmp_err;
 
         /* At this point, x and y are both atomic or vector list */
 
@@ -1162,7 +1159,7 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
         else if (typeof_x == CPLXSXP || typeof_y == CPLXSXP) {
             if (typeof_x!=CPLXSXP) REPROTECT(x = coerceVector(x, CPLXSXP), xpi);
             if (typeof_y!=CPLXSXP) REPROTECT(y = coerceVector(y, CPLXSXP), ypi);
-            if (code != EQOP)
+            if (opcode != EQOP)
                 errorcall (call, _("invalid comparison with complex values"));
         }
         else if (typeof_x == REALSXP || typeof_y == REALSXP) {
@@ -1180,35 +1177,34 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
             if (typeof_y != RAWSXP) REPROTECT(y = coerceVector(y, RAWSXP), ypi);
         }
         else 
-            errorcall (call, 
-                       _("comparison of these types is not implemented"));
+            goto cmp_err;
     }
 
     if (typeof_x == STRSXP || typeof_y == STRSXP) {
         WAIT_UNTIL_COMPUTED_2(x,y);
         switch (VARIANT_KIND(variant)) {
         case VARIANT_AND: 
-            ans = string_relop_and (code, negate, x, y); 
+            ans = string_relop_and (opcode, negate, x, y); 
             if (xts || yts) UNPROTECT(2);
             UNPROTECT(5);
             return ans;
         case VARIANT_OR:
-            ans = string_relop_or (code, negate, x, y);
+            ans = string_relop_or (opcode, negate, x, y);
             if (xts || yts) UNPROTECT(2);
             UNPROTECT(5);
             return ans;
         case VARIANT_SUM:
-            ans = string_relop_sum (code, negate, x, y);
+            ans = string_relop_sum (opcode, negate, x, y);
             if (xts || yts) UNPROTECT(2);
             UNPROTECT(5);
             return ans;
         default:
-            PROTECT(ans = string_relop (code, negate, x, y));
+            PROTECT(ans = string_relop (opcode, negate, x, y));
             break;
         }
     }
     else /* not strings */ {
-        helpers_op_t codeop = (code<<1) | negate;
+        helpers_op_t codeop = (opcode<<1) | negate;
         switch (VARIANT_KIND(variant)) {
         case VARIANT_AND: 
             WAIT_UNTIL_COMPUTED_2(x,y);
@@ -1277,6 +1273,10 @@ SEXP attribute_hidden R_relop (SEXP call, SEXP op, SEXP x, SEXP y,
 
     UNPROTECT(6);
     return ans;
+
+  cmp_err:
+    errorcall (call, _("comparison of these types is not implemented"));
+
 }
 
 
