@@ -818,11 +818,6 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
 
         SEXP op;
 
-#       ifdef Win32
-            /* Reset precision, rounding and exception modes of an ix86 fpu. */
-            __asm__ ( "fninit" );
-#       endif
-
 #       if SCALAR_STACK_DEBUG
             SEXP sv_stack = R_scalar_stack;
 #       endif
@@ -847,6 +842,11 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
         else {
             int save = R_PPStackTop;
             const void *vmax = VMAXGET();
+
+#           ifdef Win32
+                /* Reset precision, rounding & exception modes of an ix86 fpu */
+                __asm__ ( "fninit" );
+#           endif
 
             /* Note: If called from evalv, R_Visible will've been set to TRUE */
             if (type_etc == SPECIALSXP) {
