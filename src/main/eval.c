@@ -1560,10 +1560,10 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* Need to declare volatile variables whose values are relied on
        after for_next or for_break longjmps and that might change between
        the setjmp and longjmp calls.  Theoretically this does not include
-       n, bgn, and some others, but gcc -O2 -Wclobbered warns about some, 
+       n and some others, but gcc -O2 -Wclobbered warns about some, 
        so to be safe we declare them volatile as well. */
 
-    volatile int i, n, bgn;
+    volatile int i, n;
     volatile SEXP val, nval;
     volatile SEXP v, bcell;                /* for use with one 'for' variable */
     volatile SEXP indexes, ixvals, bcells; /* for use with >1 'for' variables */
@@ -1718,7 +1718,6 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
 
     dbg = RDEBUG(rho);
-    bgn = BodyHasBraces(body);
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
@@ -1823,7 +1822,8 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     do_iter: ;
 
-        DO_LOOP_RDEBUG(call, op, body, rho, bgn);
+        if (RDEBUG(rho) && !BodyHasBraces(body))
+            start_browser (call, op, body, rho);
 
         evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
 
@@ -1852,27 +1852,29 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     /* Don't check arg count - missing are seen as R_NilValue, extra ignored. */
 
-    int dbg;
-    volatile int bgn;
-    volatile SEXP body;
+    SEXP cond = CAR(args);
+    SEXP body = CADR(args);
     RCNTXT cntxt;
+    int dbg;
 
     R_Visible = FALSE;
 
     dbg = RDEBUG(rho);
-    body = CADR(args);
-    bgn = BodyHasBraces(body);
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
 
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) { /* <- back here for "next" */
         for (;;) {
-            SEXP condval = EVALV_NC(CAR(args), rho, 
-                                    VARIANT_SCALAR_STACK_OK | VARIANT_ANY_ATTR);
+            SEXP condval = EVALV_NC (cond, rho, VARIANT_SCALAR_STACK_OK 
+                              | VARIANT_ANY_ATTR /* | VARIANT_DIRECT_RETURN */);
+            
             if ( ! asLogicalNoNA (condval, call))
                 break;
-	    DO_LOOP_RDEBUG(call, op, body, rho, bgn);
+
+            if (RDEBUG(rho) && !BodyHasBraces(body))
+                start_browser (call, op, body, rho);
+
 	    evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
 	}
     }
@@ -1891,23 +1893,21 @@ static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     /* Don't check arg count - missing are seen as R_NilValue, extra ignored. */
 
-    int dbg;
-    volatile int bgn;
-    volatile SEXP body;
+    SEXP body = CAR(args);
     RCNTXT cntxt;
+    int dbg;
 
     R_Visible = FALSE;
 
     dbg = RDEBUG(rho);
-    body = CAR(args);
-    bgn = BodyHasBraces(body);
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
 
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) { /* <- back here for "next" */
 	for (;;) {
-	    DO_LOOP_RDEBUG(call, op, body, rho, bgn);
+            if (RDEBUG(rho) && !BodyHasBraces(body))
+                start_browser (call, op, body, rho);
 	    evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
 	}
     }
