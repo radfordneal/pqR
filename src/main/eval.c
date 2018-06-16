@@ -822,7 +822,7 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
             SEXP sv_stack = R_scalar_stack;
 #       endif
 
-        SEXP fn = CAR(e), args = CDR(e);
+        SEXP fn = CAR(e);
 
         if (TYPE_ETC(fn) == SYMSXP)  /* symbol, and not ..., ..1, ..2, etc. */
             op = FINDFUN(fn,rho);
@@ -830,6 +830,7 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
             op = eval(fn,rho);
 
         int type_etc = TYPE_ETC(op);
+        SEXP args = CDR(e);
 
       redo:  /* comes back here for traced functions, after clearing flag */
 
@@ -1128,7 +1129,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     body = BODY(op);
     savedrho = CLOENV(op);
 
-    if (0 && R_jit_enabled > 0 && TYPEOF(body) != BCODESXP) {
+    if (0 /* JIT NOW DISABLED */ && R_jit_enabled>0 && TYPEOF(body)!=BCODESXP) {
 	int old_enabled = R_jit_enabled;
 	SEXP newop;
 	R_jit_enabled = 0;
@@ -3980,7 +3981,7 @@ SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env,
     if (args==R_NilValue || CDR(args)==R_NilValue || CDDR(args)!=R_NilValue)
 	error(_("'%s' operator requires 2 arguments"), ov == 1 ? "&&" : "||");
 
-    s1 = EVALV_NC (CAR(args), env, 0);
+    s1 = EVALV_NC (CAR(args), env, VARIANT_ANY_ATTR);
     if (!isNumber(s1))
 	errorcall(call, _("invalid 'x' type in 'x %s y'"), ov==1 ? "&&" : "||");
 
@@ -3992,7 +3993,7 @@ SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env,
     if (ov==2 && x1==TRUE)   /* TRUE || ... */
         return ScalarLogicalMaybeConst(TRUE);
     
-    s2  = EVALV_NC (CADR(args), env, 0);
+    s2  = EVALV_NC (CADR(args), env, VARIANT_ANY_ATTR);
     if (!isNumber(s2))	
         errorcall(call, _("invalid 'y' type in 'x %s y'"), ov==1 ? "&&" : "||");
 
