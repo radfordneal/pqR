@@ -1574,8 +1574,13 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     int is_seq, seq_start;
     int along = 0, across = 0, down = 0, in = 0;
     int nsyms;
+    SEXP ret;
     SEXP s;
     int j;
+
+    int vrnt = VARIANT_NULL | VARIANT_PENDING_OK;
+    if (variant & VARIANT_DIRECT_RETURN) 
+        vrnt |= VARIANT_PASS_ON(variant);
 
     R_Visible = FALSE;
 
@@ -1825,12 +1830,21 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (RDEBUG(rho) && !BodyHasBraces(body))
             start_browser (call, op, body, rho);
 
-        evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
+        SEXP r = evalv (body, rho, vrnt);
+
+        if (R_variant_result & VARIANT_RTN_FLAG) {
+            ret = r;
+            goto for_return;
+        }
 
     for_next: ;  /* semi-colon needed for attaching label */
     }
 
  for_break:
+    R_Visible = FALSE;
+    ret = R_NilValue;
+
+ for_return:
     endcontext(&cntxt);
     if (in && !is_seq)
         DEC_NAMEDCNT(val);
@@ -1841,8 +1855,7 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     UNPROTECT(3);      /* val, rho, args */
     SET_RDEBUG(rho, dbg);
 
-    R_Visible = FALSE;
-    return R_NilValue;
+    return ret;
 }
 
 
@@ -1857,6 +1870,10 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     RCNTXT cntxt;
     int dbg;
 
+    int vrnt = VARIANT_NULL | VARIANT_PENDING_OK;
+    if (variant & VARIANT_DIRECT_RETURN) 
+        vrnt |= VARIANT_PASS_ON(variant);
+
     R_Visible = FALSE;
 
     dbg = RDEBUG(rho);
@@ -1867,15 +1884,21 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) { /* <- back here for "next" */
         for (;;) {
             SEXP condval = EVALV_NC (cond, rho, VARIANT_SCALAR_STACK_OK 
-                              | VARIANT_ANY_ATTR /* | VARIANT_DIRECT_RETURN */);
-            
+                                                    | VARIANT_ANY_ATTR);
+
             if ( ! asLogicalNoNA (condval, call))
                 break;
 
             if (RDEBUG(rho) && !BodyHasBraces(body))
                 start_browser (call, op, body, rho);
 
-	    evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
+            SEXP r = evalv (body, rho, vrnt);
+
+            if (R_variant_result & VARIANT_RTN_FLAG) {
+                endcontext(&cntxt);
+                SET_RDEBUG (rho, dbg);
+                return r;
+            }
 	}
     }
 
@@ -1897,6 +1920,10 @@ static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     RCNTXT cntxt;
     int dbg;
 
+    int vrnt = VARIANT_NULL | VARIANT_PENDING_OK;
+    if (variant & VARIANT_DIRECT_RETURN) 
+        vrnt |= VARIANT_PASS_ON(variant);
+
     R_Visible = FALSE;
 
     dbg = RDEBUG(rho);
@@ -1906,9 +1933,17 @@ static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) { /* <- back here for "next" */
 	for (;;) {
+
             if (RDEBUG(rho) && !BodyHasBraces(body))
                 start_browser (call, op, body, rho);
-	    evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
+
+            SEXP r = evalv (body, rho, vrnt);
+
+            if (R_variant_result & VARIANT_RTN_FLAG) {
+                endcontext(&cntxt);
+                SET_RDEBUG (rho, dbg);
+                return r;
+            }
 	}
     }
 
@@ -1979,9 +2014,8 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     getBlockSrcrefs(call,&srcrefs,&len);
 
     int vrnt = VARIANT_NULL | VARIANT_PENDING_OK;
-    variant = VARIANT_PASS_ON(variant);
     if (variant & VARIANT_DIRECT_RETURN) 
-        vrnt |= variant;
+        vrnt |= VARIANT_PASS_ON(variant);
 
     for (int i = 1; ; i++) {
         arg = CAR(args);
