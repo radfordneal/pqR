@@ -818,11 +818,6 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
 
         SEXP op;
 
-#       ifdef Win32
-            /* Reset precision, rounding and exception modes of an ix86 fpu. */
-            __asm__ ( "fninit" );
-#       endif
-
 #       if SCALAR_STACK_DEBUG
             SEXP sv_stack = R_scalar_stack;
 #       endif
@@ -847,6 +842,11 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
         else {
             int save = R_PPStackTop;
             const void *vmax = VMAXGET();
+
+#           ifdef Win32
+                /* Reset precision, rounding & exception modes of an ix86 fpu */
+                __asm__ ( "fninit" );
+#           endif
 
             /* Note: If called from evalv, R_Visible will've been set to TRUE */
             if (type_etc == SPECIALSXP) {
@@ -4514,29 +4514,19 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     double xv, yv;  /* the two operands */
 
-    if (typeplusx == REALSXP) {
+    if (typeplusx == REALSXP)
         xv = *REAL(x);
-    }
-    else if (typeplusx == INTSXP || typeplusx == LGLSXP) {
-        if (*INTEGER(x) == NA_INTEGER) {
-            ans = R_ScalarLogicalNA;
-            goto ret;
-        }
+    else if ((typeplusx == INTSXP || typeplusx == LGLSXP)
+               && *INTEGER(x) != NA_INTEGER)
         xv = (double) *INTEGER(x);
-    }
     else
         goto general;
 
-    if (typeplusy == REALSXP) {
+    if (typeplusy == REALSXP)
         yv = *REAL(y);
-    }
-    else if (typeplusy == INTSXP || typeplusy == LGLSXP) {
-        if (*INTEGER(y) == NA_INTEGER) {
-            ans = R_ScalarLogicalNA;
-            goto ret;
-        }
+    else if ((typeplusy == INTSXP || typeplusy == LGLSXP)
+               && *INTEGER(y) != NA_INTEGER)
         yv = (double) *INTEGER(y);
-    }
     else
         goto general;
 
