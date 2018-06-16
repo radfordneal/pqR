@@ -850,9 +850,10 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
 
             /* Note: If called from evalv, R_Visible will've been set to TRUE */
             if (type_etc == SPECIALSXP) {
-                res = CALL_PRIMFUN (e, op, args, rho, variant);
-                /* Note:  Special primitives are responsible for setting 
-                   R_Visible as desired themselves, with default of TRUE. */
+                res = PRIMFUNV(op) (e, op, args, rho, variant);
+                /* Note:  Special primitives always take variant argument,
+                   and are responsible for setting R_Visible as desired 
+                   themselves, with default of TRUE. */
             }
             else if (type_etc == BUILTINSXP) {
                 res = R_Profiling ? Rf_builtin_op(op, e, rho, variant)
@@ -1503,7 +1504,7 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (!bgn && RDEBUG(rho)) start_browser (call, op, body, rho); \
     } while (0)
 
-static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     /* Need to declare volatile variables whose values are relied on
        after for_next or for_break longjmps and that might change between
@@ -1796,7 +1797,7 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* While statement.  Evaluates body with VARIANT_NULL | VARIANT_PENDING_OK. */
 
-static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     /* Don't check arg count - missing are seen as R_NilValue, extra ignored. */
 
@@ -1837,7 +1838,7 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* Repeat statement.  Evaluates body with VARIANT_NULL | VARIANT_PENDING_OK. */
 
-static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     /* Don't check arg count - missing are seen as R_NilValue, extra ignored. */
 
@@ -1872,7 +1873,8 @@ static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* "break" */
 
-static R_NORETURN SEXP do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
+static R_NORETURN SEXP do_break(SEXP call, SEXP op, SEXP args, SEXP rho, 
+                                int variant)
 {
     findcontext (CTXT_BREAK, rho, R_NilValue);
 }
@@ -1880,7 +1882,8 @@ static R_NORETURN SEXP do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* "next" */
 
-static R_NORETURN SEXP do_next(SEXP call, SEXP op, SEXP args, SEXP rho)
+static R_NORETURN SEXP do_next(SEXP call, SEXP op, SEXP args, SEXP rho,
+                               int variant)
 {
     findcontext (CTXT_NEXT, rho, R_NilValue);
 }
@@ -3468,7 +3471,7 @@ void attribute_hidden CheckFormals(SEXP ls)
 }
 
 /* Declared with a variable number of args in names.c */
-static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP rval, srcref;
 
@@ -3966,7 +3969,8 @@ SEXP attribute_hidden do_not(SEXP call, SEXP op, SEXP args, SEXP env,
 
 /* Handles the && (op 1) and || (op 2) operators. */
 
-SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env,
+                                int variant)
 {
     int ov = PRIMVAL(op);
 
@@ -5178,15 +5182,15 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {"if",		do_if,		0,	1200,	-1,	{PP_IF,	     PREC_FN,	  1}},
-{"for",		do_for,		0,	100,	-1,	{PP_FOR,     PREC_FN,	  0}},
-{"while",	do_while,	0,	100,	-1,	{PP_WHILE,   PREC_FN,	  0}},
-{"repeat",	do_repeat,	0,	100,	-1,	{PP_REPEAT,  PREC_FN,	  0}},
-{"break",	do_break,	0,	0,	-1,	{PP_BREAK,   PREC_FN,	  0}},
-{"next",	do_next,	0,	0,	-1,	{PP_NEXT,    PREC_FN,	  0}},
+{"for",		do_for,		0,	1100,	-1,	{PP_FOR,     PREC_FN,	  0}},
+{"while",	do_while,	0,	1100,	-1,	{PP_WHILE,   PREC_FN,	  0}},
+{"repeat",	do_repeat,	0,	1100,	-1,	{PP_REPEAT,  PREC_FN,	  0}},
+{"break",	do_break,	0,	1000,	-1,	{PP_BREAK,   PREC_FN,	  0}},
+{"next",	do_next,	0,	1000,	-1,	{PP_NEXT,    PREC_FN,	  0}},
 {"(",		do_paren,	0,	1000,	1,	{PP_PAREN,   PREC_FN,	  0}},
 {"{",		do_begin,	0,	1200,	-1,	{PP_CURLY,   PREC_FN,	  0}},
 {"return",	do_return,	0,	1200,	-1,	{PP_RETURN,  PREC_FN,	  0}},
-{"function",	do_function,	0,	0,	-1,	{PP_FUNCTION,PREC_FN,	  0}},
+{"function",	do_function,	0,	1000,	-1,	{PP_FUNCTION,PREC_FN,	  0}},
 {"<-",		do_set,		1,	1100,	2,	{PP_ASSIGN,  PREC_LEFT,	  1}},
 {"=",		do_set,		3,	1100,	2,	{PP_ASSIGN,  PREC_EQ,	  1}},
 {"<<-",		do_set,		2,	1100,	2,	{PP_ASSIGN2, PREC_LEFT,	  1}},
@@ -5206,8 +5210,8 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 {"!",		do_not,		1,	1001,	1,	{PP_UNARY,   PREC_NOT,	  0}},
 
 /* specials as conditionally evaluate second arg */
-{"&&",		do_andor2,	1,	0,	2,	{PP_BINARY,  PREC_AND,	  0}},
-{"||",		do_andor2,	2,	0,	2,	{PP_BINARY,  PREC_OR,	  0}},
+{"&&",		do_andor2,	1,	1000,	2,	{PP_BINARY,  PREC_AND,	  0}},
+{"||",		do_andor2,	2,	1000,	2,	{PP_BINARY,  PREC_OR,	  0}},
 
 /* these are group generic and so need to eval args */
 {"all",		do_allany,	1,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},

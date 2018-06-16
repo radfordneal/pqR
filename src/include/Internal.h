@@ -101,7 +101,6 @@ SEXP do_dataframe(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dataviewer(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dumpb(SEXP, SEXP, SEXP, SEXP);
 SEXP do_edit(SEXP, SEXP, SEXP, SEXP);
-SEXP do_expression(SEXP, SEXP, SEXP, SEXP);
 SEXP do_flatContour(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getGraphicsEvent(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getGraphicsEventEnv(SEXP, SEXP, SEXP, SEXP);

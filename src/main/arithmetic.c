@@ -2198,7 +2198,7 @@ SEXP do_math2(SEXP call, SEXP op, SEXP args, SEXP env)
 
 /* The S4 Math2 group, round and signif */
 /* This is a primitive SPECIALSXP with internal argument matching */
-SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP res, call2;
 
@@ -2833,8 +2833,8 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 
 /* Mathematical Functions */
 /* primitives: these are group generic and so need to eval args (possibly internally) */
-{"round",	do_Math2,	10001,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"signif",	do_Math2,	10004,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"round",	do_Math2,	10001,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"signif",	do_Math2,	10004,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"log",		do_log,		10003,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"log10",	do_log1arg,	10,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"log2",	do_log1arg,	2,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},

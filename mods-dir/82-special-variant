@@ -1,0 +1,2 @@
+Make all SPECIAL primitives take a 'variant' argument, so that
+this doesn't have to be checked for in evalv_other.

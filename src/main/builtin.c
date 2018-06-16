@@ -260,7 +260,7 @@ static SEXP do_makelazy(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* This is a primitive SPECIALSXP */
-static SEXP do_onexit(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_onexit(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     RCNTXT *ctxt;
     SEXP code, oldcode, tmp, argList;
@@ -817,7 +817,7 @@ static SEXP do_cat(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-/* This is BUILTIN for "list" (op 0) and SPECIAL for "expression" (op 1). */
+/* This is BUILTIN for "list". */
 
 static SEXP do_makelist(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -848,6 +848,13 @@ static SEXP do_makelist(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     R_Visible = TRUE;
     return list;
+}
+
+/* This is SPECIAL for "expression". */
+
+static SEXP do_expression(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+{
+    return do_makelist (call, op, args, rho);
 }
 
 /* vector(mode="logical", length=0) */
@@ -1096,7 +1103,7 @@ static SEXP setDflt(SEXP arg, SEXP dflt)
 */
 
 
-static SEXP do_switch(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_switch(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     int argval, nargs = length(args);
     SEXP x, y, z, w, ans, dflt = R_NoObject;
@@ -1197,7 +1204,7 @@ attribute_hidden FUNTAB R_FunTab_builtin[] =
 
 {"delayedAssign",do_delayed,	0,	111,	4,	{PP_FUNCALL, PREC_FN,	  0}},
 {"makeLazy",	do_makelazy,	0,	111,	5,	{PP_FUNCALL, PREC_FN,	  0}},
-{"on.exit",	do_onexit,	0,	100,	1,	{PP_FUNCALL, PREC_FN,	  0}},
+{"on.exit",	do_onexit,	0,	1100,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {"args",	do_args,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"formals",	do_formals,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"body",	do_body,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -1209,11 +1216,11 @@ attribute_hidden FUNTAB R_FunTab_builtin[] =
 {"parent.env<-",do_parentenvgets, 0,	11,     2,      {PP_FUNCALL, PREC_LEFT,	1}},
 {"environmentName",do_envirName,0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"cat",		do_cat,		0,	111,	6,	{PP_FUNCALL, PREC_FN,	0}},
-{"expression",	do_makelist,	1,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"expression",	do_expression,	0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"list",	do_makelist,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"vector",	do_makevector,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"length<-",	do_lengthgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"switch",	do_switch,	0,	200,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
+{"switch",	do_switch,	0,	1200,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
 
 {"setNumMathThreads", do_setnumthreads,      0, 11, 1,  {PP_FUNCALL, PREC_FN, 0}},
 {"setMaxNumMathThreads", do_setmaxnumthreads,0, 11, 1,  {PP_FUNCALL, PREC_FN, 0}},

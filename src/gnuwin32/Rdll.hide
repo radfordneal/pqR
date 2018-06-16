@@ -594,7 +594,6 @@
  do_dimgets
  do_dllversion
  do_edit
- do_expression
  do_flushconsole
  do_getClipboardFormats
  do_getGraphicsEvent
