@@ -827,7 +827,7 @@ static SEXP do_makelist(SEXP call, SEXP op, SEXP args, SEXP rho)
     n = length(args);
     names = R_NilValue;
 
-    PROTECT (list = allocVector (PRIMVAL(op)==0 ? VECSXP : EXPRSXP, n));
+    PROTECT (list = allocVector (VECSXP, n));
 
     for (i = 0; i < n; i++) {
 	if (TAG(args) != R_NilValue) {
@@ -854,7 +854,9 @@ static SEXP do_makelist(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 static SEXP do_expression(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    return do_makelist (call, op, args, rho);
+    SEXP r = do_makelist (call, op, args, rho);
+    SET_TYPEOF (r, EXPRSXP);
+    return r;
 }
 
 /* vector(mode="logical", length=0) */
