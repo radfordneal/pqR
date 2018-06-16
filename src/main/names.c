@@ -591,7 +591,7 @@ static void SetupBuiltins(void)
               && !PRIMVARIANT(prim)) {
             REprintf("SPECIAL primitive must take a 'variant' argument: %s\n",
                       PRIMNAME(prim));
-            /* abort(); */
+            abort();
         }
 
         SEXP sym = install(R_FunTab[i].name);
