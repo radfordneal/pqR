@@ -545,6 +545,58 @@ void R_NORETURN attribute_hidden R_JumpToContext (RCNTXT *target, int mask,
 /*              CORE EVAL PROCEDURES - KEEP TOGETHER FOR LOCALITY             */
 
 
+/* Similar version used in bytecode.c */
+
+extern void Rf_asLogicalNoNA_warning(SEXP s, SEXP call);
+extern R_NORETURN void Rf_asLogicalNoNA_error(SEXP s, SEXP call);
+
+/* Caller needn't protect the s arg below.  Value is popped off the
+   scalar stack if it's there. */
+
+static inline Rboolean asLogicalNoNA(SEXP s, SEXP call)
+{
+    int len, cond;
+
+    /* Check the constants explicitly, since they should be the most
+       common cases, and then no need to check for NA, or pop scalar stack. */
+
+    if (s == R_ScalarLogicalTRUE)
+        return TRUE;
+    if (s == R_ScalarLogicalFALSE)
+        return FALSE;
+
+    switch(TYPEOF(s)) { /* common cases done here for efficiency */
+    case INTSXP:  /* assume logical and integer are the same */
+    case LGLSXP:
+        len = LENGTH(s);
+        if (len == 0) goto error;
+        cond = LOGICAL(s)[0];
+        break;
+    case REALSXP:
+    case CPLXSXP:
+    case STRSXP:
+    case RAWSXP:
+        len = LENGTH(s);
+        if (len == 0) goto error;
+        cond = asLogical(s);
+        break;
+    default:
+        goto error;
+    }
+
+    if (cond == NA_LOGICAL) goto error;
+
+    POP_IF_TOP_OF_STACK(s);
+
+    if (len > 1) Rf_asLogicalNoNA_warning (s, call);
+
+    return cond;
+
+  error:
+    Rf_asLogicalNoNA_error (s, call);
+}
+
+
 /* Inline version of findVarPendingOK, for speed when symbol is found
    from LASTSYMBINDING.  Doesn't necessarily set R_binding_cell. */
 
@@ -1462,10 +1514,8 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     SEXP condval = EVALV_NC (Cond, rho, 
                              VARIANT_SCALAR_STACK_OK | VARIANT_ANY_ATTR);
-    int condlogical = asLogicalNoNA (condval, call);
-    POP_IF_TOP_OF_STACK(condval);
 
-    if (!condlogical) {
+    if ( ! asLogicalNoNA (condval, call)) {
         /* go to else part */
         if (args != R_NilValue)
             Stmt = CAR(args);
@@ -1820,9 +1870,7 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         for (;;) {
             SEXP condval = EVALV_NC(CAR(args), rho, 
                                     VARIANT_SCALAR_STACK_OK | VARIANT_ANY_ATTR);
-            int condlogical = asLogicalNoNA (condval, call);
-            POP_IF_TOP_OF_STACK(condval);
-            if (!condlogical) 
+            if ( ! asLogicalNoNA (condval, call))
                 break;
 	    DO_LOOP_RDEBUG(call, op, body, rho, bgn);
 	    evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);

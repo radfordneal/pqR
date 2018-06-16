@@ -44,46 +44,6 @@
 #include <complex.h>
 
 
-/* Used in eval.c and bytecode.c */
-
-extern void Rf_asLogicalNoNA_warning(SEXP s, SEXP call);
-extern R_NORETURN void Rf_asLogicalNoNA_error(SEXP s, SEXP call);
-
-/* Caller needn't protect the s arg below */
-
-static inline Rboolean asLogicalNoNA(SEXP s, SEXP call)
-{
-    int len, cond;
-
-    switch(TYPEOF(s)) { /* common cases done here for efficiency */
-    case INTSXP:  /* assume logical and integer are the same */
-    case LGLSXP:
-        len = LENGTH(s);
-        if (len == 0) goto error;
-        cond = LOGICAL(s)[0];
-        break;
-    case REALSXP:
-    case CPLXSXP:
-    case STRSXP:
-    case RAWSXP:
-        len = LENGTH(s);
-        if (len == 0) goto error;
-        cond = asLogical(s);
-        break;
-    default:
-        goto error;
-    }
-
-    if (cond == NA_LOGICAL) goto error;
-
-    if (len > 1) Rf_asLogicalNoNA_warning (s, call);
-
-    return cond;
-
-  error:
-    Rf_asLogicalNoNA_error (s, call);
-}
-
 /* Keep myfmod and myfloor in step. */
 
 static inline double myfmod(double x1, double x2)

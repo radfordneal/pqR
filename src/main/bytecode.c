@@ -49,6 +49,56 @@ static Rboolean bc_profiling = FALSE;
 static int R_disable_bytecode = 0;
 
 
+
+/* Similar versoin used in eval.c. */
+
+extern void Rf_asLogicalNoNA_warning(SEXP s, SEXP call);
+extern R_NORETURN void Rf_asLogicalNoNA_error(SEXP s, SEXP call);
+
+/* Caller needn't protect the s arg below.  Value is popped off the
+   scalar stack if it's there. */
+
+static inline Rboolean asLogicalNoNA(SEXP s, SEXP call)
+{
+    int len, cond;
+
+    /* Check the constants explicitly, since they should be the most
+       common cases, and then no need to check for NA. */
+
+    if (s == R_ScalarLogicalTRUE)
+        return TRUE;
+    if (s == R_ScalarLogicalFALSE)
+        return FALSE;
+
+    switch(TYPEOF(s)) { /* common cases done here for efficiency */
+    case INTSXP:  /* assume logical and integer are the same */
+    case LGLSXP:
+        len = LENGTH(s);
+        if (len == 0) goto error;
+        cond = LOGICAL(s)[0];
+        break;
+    case REALSXP:
+    case CPLXSXP:
+    case STRSXP:
+    case RAWSXP:
+        len = LENGTH(s);
+        if (len == 0) goto error;
+        cond = asLogical(s);
+        break;
+    default:
+        goto error;
+    }
+
+    if (cond == NA_LOGICAL) goto error;
+
+    if (len > 1) Rf_asLogicalNoNA_warning (s, call);
+
+    return cond;
+
+  error:
+    Rf_asLogicalNoNA_error (s, call);
+}
+
 static void loadCompilerNamespace(void)
 {
     SEXP fun, arg, expr;
