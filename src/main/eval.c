@@ -4514,29 +4514,19 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     double xv, yv;  /* the two operands */
 
-    if (typeplusx == REALSXP) {
+    if (typeplusx == REALSXP)
         xv = *REAL(x);
-    }
-    else if (typeplusx == INTSXP || typeplusx == LGLSXP) {
-        if (*INTEGER(x) == NA_INTEGER) {
-            ans = R_ScalarLogicalNA;
-            goto ret;
-        }
+    else if ((typeplusx == INTSXP || typeplusx == LGLSXP)
+               && *INTEGER(x) != NA_INTEGER)
         xv = (double) *INTEGER(x);
-    }
     else
         goto general;
 
-    if (typeplusy == REALSXP) {
+    if (typeplusy == REALSXP)
         yv = *REAL(y);
-    }
-    else if (typeplusy == INTSXP || typeplusy == LGLSXP) {
-        if (*INTEGER(y) == NA_INTEGER) {
-            ans = R_ScalarLogicalNA;
-            goto ret;
-        }
+    else if ((typeplusy == INTSXP || typeplusy == LGLSXP)
+               && *INTEGER(y) != NA_INTEGER)
         yv = (double) *INTEGER(y);
-    }
     else
         goto general;
 
