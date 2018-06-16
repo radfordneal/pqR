@@ -2239,11 +2239,18 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 POP_IF_TOP_OF_STACK(rhs);
                 helpers_wait_until_not_in_use(v);  /* won't be being computed */
                 switch (rhs_type_etc) {
-                case LGLSXP:  *LOGICAL(v) = *LOGICAL(rhs); break;
-                case INTSXP:  *INTEGER(v) = *INTEGER(rhs); break;
-                case REALSXP: *REAL(v)    = *REAL(rhs);    break;
-                case CPLXSXP: *COMPLEX(v) = *COMPLEX(rhs); break;
-                case RAWSXP:  *RAW(v)     = *RAW(rhs);     break;
+                case REALSXP:
+                    *REAL(v)    = *REAL(rhs);
+                    break;
+                case CPLXSXP:
+                    *COMPLEX(v) = *COMPLEX(rhs);
+                    break;
+                case RAWSXP:
+                    *RAW(v)     = *RAW(rhs);
+                    break;
+                default: /* INTSXP or LGLSXP */
+                    *INTEGER(v) = *INTEGER(rhs);
+                    break;
                 }
                 rhs = v; /* for return value */
                 goto done;
@@ -4431,11 +4438,10 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
   general:
 
-    if (argsevald == R_NilValue) goto arg_count_err;
-
     if (CDR(argsevald) != R_NilValue)
         ans = R_binary (call, opcode, arg1, arg2, obj&1, obj>>1, env, variant);
     else {
+        if (argsevald == R_NilValue) goto arg_count_err;
         if (opcode != MINUSOP && opcode != PLUSOP)
             errorcall(call, _("%d argument passed to '%s' which requires %d"),
                             1, opcode == MINUSOP ? "-" : "+", 2);
@@ -4477,11 +4483,11 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
     }
 
-    /* Check argument count now (after dispatch, since other methods may allow
-       other argument count). */
+    /* Check argument count after dispatch, since other methods may allow
+       other argument count.  Only check for too many now, since check
+       for simple cases will fail on too few. */
 
-    if (CDR(argsevald) == R_NilValue || CDDR(argsevald) != R_NilValue)
-        checkArity(op,argsevald);  /* to report the error */
+    if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
 
     int opcode = PRIMVAL(op);
 
@@ -4554,11 +4560,18 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     goto ret;
 
   general:
+
+    if (CDR(argsevald) == R_NilValue) goto arg_count_err;
+
     ans = R_relop (call, opcode, x, y, obj&1, obj>>1, env, variant);
 
   ret:
     UNPROTECT(3);
     return ans;
+
+  arg_count_err:
+    checkArity(op,argsevald);  /* will report the error, not return */
+    return R_NoObject;         /* never executed */
 }
 
 /* -------------------------------------------------------------------------- */
