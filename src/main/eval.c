@@ -4670,29 +4670,32 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
        will be no later call of eval). */
 
     if (CAR(args) != R_DotsSymbol) {
+
         SEXP ixlist = CDR(args);
         SEXP array;
-        PROTECT(array = EVALV_NC (CAR(args), rho, VARIANT_UNCLASS | 
-                                                  VARIANT_PENDING_OK));
+
+        array = EVALV_NC (CAR(args), rho, VARIANT_UNCLASS | VARIANT_PENDING_OK);
         int obj = isObject(array);
         if (R_variant_result) {
             obj = 0;
             R_variant_result = 0;
         }
+
         if (obj) {
             args = CONS(array,ixlist);
             argsevald = -1;
-            UNPROTECT(1);  /* array */
         }
         else if (ixlist == R_NilValue || TAG(ixlist) != R_NilValue 
                                       || CAR(ixlist) == R_DotsSymbol) {
+            PROTECT(array);
             args = evalListKeepMissing(ixlist,rho);
-            UNPROTECT(1);  /* array */
+            UNPROTECT(1);
             return do_subset_dflt_seq (call, op, array, R_NoObject, R_NoObject,
                                        args, rho, variant, 0);
         }
         else {
             SEXP r;
+            PROTECT(array);
             BEGIN_PROTECT3 (sb1, sb2, remargs);
             SEXP sv_scalar_stack = R_scalar_stack;
             SEXP ixlist2 = CDR(ixlist);
@@ -4739,7 +4742,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                                     remargs, rho, variant, seq);
             R_scalar_stack = sv_scalar_stack;
             END_PROTECT;
-            UNPROTECT(1); /* array */
+            UNPROTECT(1);  /* array */
             R_Visible = TRUE;
             return ON_SCALAR_STACK(r) ? PUSH_SCALAR(r) : r;
         }
@@ -4793,14 +4796,13 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         if (fast_sub) {
             ixlist = args;
-            PROTECT(array = R_fast_sub_var);
+            array = R_fast_sub_var;
             obj = isObject(array);
         }
         else {
             ixlist = CDR(args);
-            array = CAR(args);
-            PROTECT(array = EVALV_NC (array, rho, VARIANT_UNCLASS | 
-                                                  VARIANT_PENDING_OK));
+            array = 
+              EVALV_NC (CAR(args), rho, VARIANT_UNCLASS | VARIANT_PENDING_OK);
             obj = isObject(array);
             if (R_variant_result) {
                 obj = 0;
@@ -4810,10 +4812,10 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         if (obj) {
             args = CONS(array,ixlist);
-            UNPROTECT(1);  /* array */
         }
         else if (ixlist == R_NilValue || TAG(ixlist) != R_NilValue 
                                       || CAR(ixlist) == R_DotsSymbol) {
+            PROTECT(array);
             args = evalListKeepMissing(ixlist,rho);
             UNPROTECT(1);  /* array */
             return do_subset2_dflt_x (call, op, array, R_NoObject, R_NoObject,
@@ -4821,6 +4823,7 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
         else {
             SEXP r;
+            PROTECT(array);
             BEGIN_PROTECT3 (sb1, sb2, remargs);
             SEXP sv_scalar_stack = R_scalar_stack;
             SEXP ixlist2 = CDR(ixlist);
