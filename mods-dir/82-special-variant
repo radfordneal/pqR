@@ -1,2 +1,4 @@
 Make all SPECIAL primitives take a 'variant' argument, so that
 this doesn't have to be checked for in evalv_other.
+
+Also now uses VARIANT_RETURN_DIRECT for returns inside loops.
