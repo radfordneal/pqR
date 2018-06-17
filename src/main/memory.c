@@ -1087,11 +1087,18 @@ static void gc_strategy (sggc_nchunks_t nch)
     /* See if a garbage collection should be done based on the size of the
        object being allocated. */
 
-    if (nch > 0.4 * gc_big_chunks_last_full && nch > 0.7 * total_big_chunks) {
+    if (nch > 500000 && nch > 0.4 * gc_big_chunks_last_full 
+                     && nch > 0.7 * total_big_chunks) {
         if (DEBUG_STRATEGY) REprintf("GC from large allocation\n");
         gc_next_level = 2;
         goto collect;
     }
+
+    /* Otherwise, don't collect if memory usage is small (probably during
+       initialization). */
+
+    if (sggc_info.total_mem_usage < 10000000)
+        return;
 
     /* See if a garbage collection should be done based on sizes of big objects,
        and if so at which level. */
@@ -1117,8 +1124,9 @@ static void gc_strategy (sggc_nchunks_t nch)
     /* See if a garbage collection should be done based on object counts,
        and if so at which level. */
 
-    if (sggc_info.gen0_count * recovery_frac0 
-           > 1.4 * (sggc_info.gen1_count + sggc_info.gen2_count)) {
+    if (sggc_info.gen0_count > 10000
+          && sggc_info.gen0_count * recovery_frac0 
+              > 1.4 * (sggc_info.gen1_count + sggc_info.gen2_count)) {
         if ((gc_count-gc_count_last_full) * recovery_frac2 > 4.0) {
             if (DEBUG_STRATEGY) REprintf("GC from counts level 2\n");
             gc_next_level = 2;
