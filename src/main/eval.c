@@ -4330,8 +4330,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     SEXP sv_scalar_stack = R_scalar_stack;
 
-    PROTECT (argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env));
-    PROTECT2(arg1,arg2);
+    argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env);
+    PROTECT3(argsevald,arg1,arg2);
 
     /* Check for dispatch on S3 or S4 objects. */
 
@@ -4557,8 +4557,8 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     SEXP sv_scalar_stack = R_scalar_stack;
 
-    PROTECT(argsevald = scalar_stack_eval2 (args, &x, &y, &obj, env));
-    PROTECT2(x,y);
+    argsevald = scalar_stack_eval2 (args, &x, &y, &obj, env);
+    PROTECT3(argsevald,x,y);
 
     /* Check for dispatch on S3 or S4 objects. */
 
