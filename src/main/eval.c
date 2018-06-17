@@ -1301,15 +1301,16 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    PROTECT(res = evalv (body, newrho, vrnt));
+	    res = evalv (body, newrho, vrnt);
 	}
 	else {
-	    PROTECT(res = R_ReturnedValue);
+	    res = R_ReturnedValue;
         }
     }
     else {
-	PROTECT(res = evalv (body, newrho, vrnt));
+	res = evalv (body, newrho, vrnt);
     }
+    PROTECT(res);
 
     R_variant_result &= ~VARIANT_RTN_FLAG;
 
@@ -1393,16 +1394,17 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    PROTECT(res = evalv(body, newrho, VARIANT_NOT_WHOLE_BODY));
+	    res = evalv(body, newrho, VARIANT_NOT_WHOLE_BODY);
 	}
 	else {
-	    PROTECT(res = R_ReturnedValue);
+	    res = R_ReturnedValue;
             WAIT_UNTIL_COMPUTED(res);
         }
     }
     else {
-	PROTECT(res = evalv(body, newrho, 0));
+	res = evalv(body, newrho, 0);
     }
+    PROTECT(res);
 
     R_Srcref = savedsrcref;
     endcontext(&cntxt);
@@ -2412,13 +2414,11 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
     SEXP rhs_uneval = rhs;  /* save unevaluated rhs */
 
-    if (maybe_fast) {
-        PROTECT(rhs = EVALV (rhs, rho, 
-                       (variant & (VARIANT_SCALAR_STACK_OK | VARIANT_NULL)) ? 
-                         VARIANT_SCALAR_STACK_OK : 0));
-    }
-    else
-        PROTECT(rhs = EVALV (rhs, rho, VARIANT_PENDING_OK));
+    PROTECT (rhs = EVALV (rhs, rho, 
+                          !maybe_fast ? 
+                            VARIANT_PENDING_OK :
+                          (variant & (VARIANT_SCALAR_STACK_OK | VARIANT_NULL)) ?
+                            VARIANT_SCALAR_STACK_OK : 0));
 
     /* Increment NAMEDCNT temporarily if rhs will be needed as the value,
        to protect it from being modified by the assignment, or otherwise. */
@@ -2595,8 +2595,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                     s[d].store_args = dup_arg_list (fetch_args);
             }
 
-            PROTECT(s[d].store_args);
-            PROTECT(fetch_args);
+            PROTECT2 (s[d].store_args, fetch_args);
 
             /* We'll need this value for the subsequent replacement
                operation, so make sure it doesn't change.  Incrementing
@@ -3675,11 +3674,12 @@ static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
                 PROTECT(y);
                 if (ON_SCALAR_STACK(x)) {
                     POP_SCALAR_STACK(x);
-                    PROTECT(x = duplicate(x));
+                    x = duplicate(x);
                 }
                 else { /* isObject(x) */
-                    PROTECT(x = Rf_makeUnclassed(x));
+                    x = Rf_makeUnclassed(x);
                 }
+                PROTECT(x);
             }
             else
                 PROTECT(y);
