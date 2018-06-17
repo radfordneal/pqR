@@ -3793,8 +3793,9 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
 
     if (x==R_DotsSymbol || y==R_DotsSymbol || CDDR(args)!=R_NilValue) {
         args = evalList (args, env);
-        PROTECT(x = CAR(args)); 
-        PROTECT(y = CADR(args));
+        x = CAR(args); 
+        y = CADR(args);
+        PROTECT2(x,y);
         args_evald = 1;
     }
     else {
@@ -3849,14 +3850,15 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
 	if (xarray && yarray) {
 	    if (!conformable(x, y))
 		error(_("binary operation on non-conformable arrays"));
-	    PROTECT(dims = getDimAttrib(x));
+	    dims = getDimAttrib(x);
 	}
 	else if (xarray) {
-	    PROTECT(dims = getDimAttrib(x));
+	    dims = getDimAttrib(x);
 	}
 	else /*(yarray)*/ {
-	    PROTECT(dims = getDimAttrib(y));
+	    dims = getDimAttrib(y);
 	}
+        PROTECT(dims);
 	PROTECT(xnames = getAttrib(x, R_DimNamesSymbol));
 	PROTECT(ynames = getAttrib(y, R_DimNamesSymbol));
     }
