@@ -270,6 +270,12 @@
         utility function.  From R-3.2.4: \code{provideDimnames()}
         gets an optional \code{unique} argument.
 
+  \item An \code{anyNA} function is now provided, defined simply as
+        \code{function (x) any(is.na(x))} (which is fast in pqR).
+        This is useful only for compatibility with the \code{anyNA}
+        function introduced in R-3.1.0.  The \code{recursive} argument
+        to \code{anyNA} introduced in R-3.2.0 is not implemented.
+
   \item From R-3.1.0: The way the unary operators (\code{+ - !}) handle
         attributes is now more consistent.  If there is no coercion,
         all attributes (including class) are copied from the input to

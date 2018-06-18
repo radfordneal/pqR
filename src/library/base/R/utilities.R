@@ -1,5 +1,6 @@
 #  File src/library/base/R/utilities.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -16,6 +17,8 @@
 
 mat.or.vec <- function(nr,nc)
     if(nc == 1L) numeric(nr) else matrix(0, nr, nc)
+
+anyNA <- function (x) any(is.na(x))
 
 ## Use  'version' since that exists in all S dialects :
 is.R <-

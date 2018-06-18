@@ -1,6 +1,7 @@
 % File src/library/base/man/NA.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
+% Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{NA}
@@ -13,6 +14,7 @@
 \alias{is.na.data.frame}
 \alias{is.na<-}
 \alias{is.na<-.default}
+\alias{anyNA}
 \title{\sQuote{Not Available} / Missing Values}
 \description{
   \code{NA} is a logical constant of length 1 which contains a missing
@@ -32,6 +34,8 @@ is.na(x)
 \method{is.na}{data.frame}(x)
 
 is.na(x) <- value
+
+anyNA(x)
 }
 \arguments{
   \item{x}{an \R object to be tested: the default method handles atomic
@@ -57,6 +61,15 @@ is.na(x) <- value
   Computations using \code{NA} will normally result in \code{NA}: a
   possible exception is where \code{\link{NaN}} is also involved, in
   which case either might result.
+
+  The \code{anyNA} function is provided for compatibility with the
+  function of this name introduced in R-3.1.0.  It is defined simply as 
+  \code{function (x) any(is.na(x))}.  This function is fast as a result of 
+  general pqR optimizations, as are similar constructs such as
+  \code{all(is.na(x))} and \code{any(x<0)} - these all terminate early
+  when the result is apparent from early elements of \code{x}.  There
+  is no reason to use \code{anyNA} except in code that may
+  also be run with R Core versions of R.
 }
 \value{
   The default method for \code{is.na} applied to an atomic vector
