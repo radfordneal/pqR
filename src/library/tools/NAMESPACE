@@ -2,9 +2,9 @@ useDynLib(tools, .registration = TRUE)
 
 export("Adobe_glyphs", "HTMLheader", "Rd2HTML", "Rd2ex", "Rd2latex",
        "Rd2txt", "Rd2txt_options", "RdTextFilter", "Rd_db",
-       "Rd_parse", "Rdiff", "Rdindex", "SweaveTeXFilter",
-       "add_datalist", "bibstyle", "buildVignettes",
-       "charset_to_Unicode", "checkDocFiles", "checkDocStyle",
+       "Rd_parse", "Rdiff", "Rdindex", "SweaveTeXFilter", "add_datalist",
+       "assertCondition", "assertError", "assertWarning", "bibstyle",
+       "buildVignettes", "charset_to_Unicode", "checkDocFiles", "checkDocStyle",
        "checkFF", "checkMD5sums", "checkNEWS", "checkRd",
        "checkRdaFiles", "checkReplaceFuns", "checkS3methods",
        "checkTnF", "checkVignettes", "codoc", "codocClasses",
