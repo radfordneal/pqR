@@ -545,6 +545,58 @@ void R_NORETURN attribute_hidden R_JumpToContext (RCNTXT *target, int mask,
 /*              CORE EVAL PROCEDURES - KEEP TOGETHER FOR LOCALITY             */
 
 
+/* Similar version used in bytecode.c */
+
+extern void Rf_asLogicalNoNA_warning(SEXP s, SEXP call);
+extern R_NORETURN void Rf_asLogicalNoNA_error(SEXP s, SEXP call);
+
+/* Caller needn't protect the s arg below.  Value is popped off the
+   scalar stack if it's there. */
+
+static inline Rboolean asLogicalNoNA(SEXP s, SEXP call)
+{
+    int len, cond;
+
+    /* Check the constants explicitly, since they should be the most
+       common cases, and then no need to check for NA, or pop scalar stack. */
+
+    if (s == R_ScalarLogicalTRUE)
+        return TRUE;
+    if (s == R_ScalarLogicalFALSE)
+        return FALSE;
+
+    switch(TYPEOF(s)) { /* common cases done here for efficiency */
+    case INTSXP:  /* assume logical and integer are the same */
+    case LGLSXP:
+        len = LENGTH(s);
+        if (len == 0) goto error;
+        cond = LOGICAL(s)[0];
+        break;
+    case REALSXP:
+    case CPLXSXP:
+    case STRSXP:
+    case RAWSXP:
+        len = LENGTH(s);
+        if (len == 0) goto error;
+        cond = asLogical(s);
+        break;
+    default:
+        goto error;
+    }
+
+    if (cond == NA_LOGICAL) goto error;
+
+    POP_IF_TOP_OF_STACK(s);
+
+    if (len > 1) Rf_asLogicalNoNA_warning (s, call);
+
+    return cond;
+
+  error:
+    Rf_asLogicalNoNA_error (s, call);
+}
+
+
 /* Inline version of findVarPendingOK, for speed when symbol is found
    from LASTSYMBINDING.  Doesn't necessarily set R_binding_cell. */
 
@@ -822,7 +874,7 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
             SEXP sv_stack = R_scalar_stack;
 #       endif
 
-        SEXP fn = CAR(e), args = CDR(e);
+        SEXP fn = CAR(e);
 
         if (TYPE_ETC(fn) == SYMSXP)  /* symbol, and not ..., ..1, ..2, etc. */
             op = FINDFUN(fn,rho);
@@ -830,6 +882,7 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
             op = eval(fn,rho);
 
         int type_etc = TYPE_ETC(op);
+        SEXP args = CDR(e);
 
       redo:  /* comes back here for traced functions, after clearing flag */
 
@@ -850,9 +903,10 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
 
             /* Note: If called from evalv, R_Visible will've been set to TRUE */
             if (type_etc == SPECIALSXP) {
-                res = CALL_PRIMFUN (e, op, args, rho, variant);
-                /* Note:  Special primitives are responsible for setting 
-                   R_Visible as desired themselves, with default of TRUE. */
+                res = PRIMFUNV(op) (e, op, args, rho, variant);
+                /* Note:  Special primitives always take variant argument,
+                   and are responsible for setting R_Visible as desired 
+                   themselves, with default of TRUE. */
             }
             else if (type_etc == BUILTINSXP) {
                 res = R_Profiling ? Rf_builtin_op(op, e, rho, variant)
@@ -1127,7 +1181,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     body = BODY(op);
     savedrho = CLOENV(op);
 
-    if (0 && R_jit_enabled > 0 && TYPEOF(body) != BCODESXP) {
+    if (0 /* JIT NOW DISABLED */ && R_jit_enabled>0 && TYPEOF(body)!=BCODESXP) {
 	int old_enabled = R_jit_enabled;
 	SEXP newop;
 	R_jit_enabled = 0;
@@ -1247,15 +1301,16 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    PROTECT(res = evalv (body, newrho, vrnt));
+	    res = evalv (body, newrho, vrnt);
 	}
 	else {
-	    PROTECT(res = R_ReturnedValue);
+	    res = R_ReturnedValue;
         }
     }
     else {
-	PROTECT(res = evalv (body, newrho, vrnt));
+	res = evalv (body, newrho, vrnt);
     }
+    PROTECT(res);
 
     R_variant_result &= ~VARIANT_RTN_FLAG;
 
@@ -1339,16 +1394,17 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    PROTECT(res = evalv(body, newrho, VARIANT_NOT_WHOLE_BODY));
+	    res = evalv(body, newrho, VARIANT_NOT_WHOLE_BODY);
 	}
 	else {
-	    PROTECT(res = R_ReturnedValue);
+	    res = R_ReturnedValue;
             WAIT_UNTIL_COMPUTED(res);
         }
     }
     else {
-	PROTECT(res = evalv(body, newrho, 0));
+	res = evalv(body, newrho, 0);
     }
+    PROTECT(res);
 
     R_Srcref = savedsrcref;
     endcontext(&cntxt);
@@ -1460,10 +1516,8 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     SEXP condval = EVALV_NC (Cond, rho, 
                              VARIANT_SCALAR_STACK_OK | VARIANT_ANY_ATTR);
-    int condlogical = asLogicalNoNA (condval, call);
-    POP_IF_TOP_OF_STACK(condval);
 
-    if (!condlogical) {
+    if ( ! asLogicalNoNA (condval, call)) {
         /* go to else part */
         if (args != R_NilValue)
             Stmt = CAR(args);
@@ -1503,15 +1557,15 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (!bgn && RDEBUG(rho)) start_browser (call, op, body, rho); \
     } while (0)
 
-static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     /* Need to declare volatile variables whose values are relied on
        after for_next or for_break longjmps and that might change between
        the setjmp and longjmp calls.  Theoretically this does not include
-       n, bgn, and some others, but gcc -O2 -Wclobbered warns about some, 
+       n and some others, but gcc -O2 -Wclobbered warns about some, 
        so to be safe we declare them volatile as well. */
 
-    volatile int i, n, bgn;
+    volatile int i, n;
     volatile SEXP val, nval;
     volatile SEXP v, bcell;                /* for use with one 'for' variable */
     volatile SEXP indexes, ixvals, bcells; /* for use with >1 'for' variables */
@@ -1522,8 +1576,13 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho)
     int is_seq, seq_start;
     int along = 0, across = 0, down = 0, in = 0;
     int nsyms;
+    SEXP ret;
     SEXP s;
     int j;
+
+    int vrnt = VARIANT_NULL | VARIANT_PENDING_OK;
+    if (variant & VARIANT_DIRECT_RETURN) 
+        vrnt |= VARIANT_PASS_ON(variant);
 
     R_Visible = FALSE;
 
@@ -1666,7 +1725,6 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     dbg = RDEBUG(rho);
-    bgn = BodyHasBraces(body);
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
@@ -1771,14 +1829,24 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho)
 
     do_iter: ;
 
-        DO_LOOP_RDEBUG(call, op, body, rho, bgn);
+        if (RDEBUG(rho) && !BodyHasBraces(body))
+            start_browser (call, op, body, rho);
 
-        evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
+        SEXP r = evalv (body, rho, vrnt);
+
+        if (R_variant_result & VARIANT_RTN_FLAG) {
+            ret = r;
+            goto for_return;
+        }
 
     for_next: ;  /* semi-colon needed for attaching label */
     }
 
  for_break:
+    R_Visible = FALSE;
+    ret = R_NilValue;
+
+ for_return:
     endcontext(&cntxt);
     if (in && !is_seq)
         DEC_NAMEDCNT(val);
@@ -1789,41 +1857,50 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho)
     UNPROTECT(3);      /* val, rho, args */
     SET_RDEBUG(rho, dbg);
 
-    R_Visible = FALSE;
-    return R_NilValue;
+    return ret;
 }
 
 
 /* While statement.  Evaluates body with VARIANT_NULL | VARIANT_PENDING_OK. */
 
-static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     /* Don't check arg count - missing are seen as R_NilValue, extra ignored. */
 
-    int dbg;
-    volatile int bgn;
-    volatile SEXP body;
+    SEXP cond = CAR(args);
+    SEXP body = CADR(args);
     RCNTXT cntxt;
+    int dbg;
+
+    int vrnt = VARIANT_NULL | VARIANT_PENDING_OK;
+    if (variant & VARIANT_DIRECT_RETURN) 
+        vrnt |= VARIANT_PASS_ON(variant);
 
     R_Visible = FALSE;
 
     dbg = RDEBUG(rho);
-    body = CADR(args);
-    bgn = BodyHasBraces(body);
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
 
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) { /* <- back here for "next" */
         for (;;) {
-            SEXP condval = EVALV_NC(CAR(args), rho, 
-                                    VARIANT_SCALAR_STACK_OK | VARIANT_ANY_ATTR);
-            int condlogical = asLogicalNoNA (condval, call);
-            POP_IF_TOP_OF_STACK(condval);
-            if (!condlogical) 
+            SEXP condval = EVALV_NC (cond, rho, VARIANT_SCALAR_STACK_OK 
+                                                    | VARIANT_ANY_ATTR);
+
+            if ( ! asLogicalNoNA (condval, call))
                 break;
-	    DO_LOOP_RDEBUG(call, op, body, rho, bgn);
-	    evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
+
+            if (RDEBUG(rho) && !BodyHasBraces(body))
+                start_browser (call, op, body, rho);
+
+            SEXP r = evalv (body, rho, vrnt);
+
+            if (R_variant_result & VARIANT_RTN_FLAG) {
+                endcontext(&cntxt);
+                SET_RDEBUG (rho, dbg);
+                return r;
+            }
 	}
     }
 
@@ -1837,28 +1914,38 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* Repeat statement.  Evaluates body with VARIANT_NULL | VARIANT_PENDING_OK. */
 
-static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     /* Don't check arg count - missing are seen as R_NilValue, extra ignored. */
 
-    int dbg;
-    volatile int bgn;
-    volatile SEXP body;
+    SEXP body = CAR(args);
     RCNTXT cntxt;
+    int dbg;
+
+    int vrnt = VARIANT_NULL | VARIANT_PENDING_OK;
+    if (variant & VARIANT_DIRECT_RETURN) 
+        vrnt |= VARIANT_PASS_ON(variant);
 
     R_Visible = FALSE;
 
     dbg = RDEBUG(rho);
-    body = CAR(args);
-    bgn = BodyHasBraces(body);
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
 
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) { /* <- back here for "next" */
 	for (;;) {
-	    DO_LOOP_RDEBUG(call, op, body, rho, bgn);
-	    evalv (body, rho, VARIANT_NULL | VARIANT_PENDING_OK);
+
+            if (RDEBUG(rho) && !BodyHasBraces(body))
+                start_browser (call, op, body, rho);
+
+            SEXP r = evalv (body, rho, vrnt);
+
+            if (R_variant_result & VARIANT_RTN_FLAG) {
+                endcontext(&cntxt);
+                SET_RDEBUG (rho, dbg);
+                return r;
+            }
 	}
     }
 
@@ -1872,7 +1959,8 @@ static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* "break" */
 
-static R_NORETURN SEXP do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
+static R_NORETURN SEXP do_break(SEXP call, SEXP op, SEXP args, SEXP rho, 
+                                int variant)
 {
     findcontext (CTXT_BREAK, rho, R_NilValue);
 }
@@ -1880,7 +1968,8 @@ static R_NORETURN SEXP do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* "next" */
 
-static R_NORETURN SEXP do_next(SEXP call, SEXP op, SEXP args, SEXP rho)
+static R_NORETURN SEXP do_next(SEXP call, SEXP op, SEXP args, SEXP rho,
+                               int variant)
 {
     findcontext (CTXT_NEXT, rho, R_NilValue);
 }
@@ -1927,9 +2016,8 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     getBlockSrcrefs(call,&srcrefs,&len);
 
     int vrnt = VARIANT_NULL | VARIANT_PENDING_OK;
-    variant = VARIANT_PASS_ON(variant);
     if (variant & VARIANT_DIRECT_RETURN) 
-        vrnt |= variant;
+        vrnt |= VARIANT_PASS_ON(variant);
 
     for (int i = 1; ; i++) {
         arg = CAR(args);
@@ -2326,13 +2414,11 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
     SEXP rhs_uneval = rhs;  /* save unevaluated rhs */
 
-    if (maybe_fast) {
-        PROTECT(rhs = EVALV (rhs, rho, 
-                       (variant & (VARIANT_SCALAR_STACK_OK | VARIANT_NULL)) ? 
-                         VARIANT_SCALAR_STACK_OK : 0));
-    }
-    else
-        PROTECT(rhs = EVALV (rhs, rho, VARIANT_PENDING_OK));
+    PROTECT (rhs = EVALV (rhs, rho, 
+                          !maybe_fast ? 
+                            VARIANT_PENDING_OK :
+                          (variant & (VARIANT_SCALAR_STACK_OK | VARIANT_NULL)) ?
+                            VARIANT_SCALAR_STACK_OK : 0));
 
     /* Increment NAMEDCNT temporarily if rhs will be needed as the value,
        to protect it from being modified by the assignment, or otherwise. */
@@ -2509,8 +2595,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                     s[d].store_args = dup_arg_list (fetch_args);
             }
 
-            PROTECT(s[d].store_args);
-            PROTECT(fetch_args);
+            PROTECT2 (s[d].store_args, fetch_args);
 
             /* We'll need this value for the subsequent replacement
                operation, so make sure it doesn't change.  Incrementing
@@ -3468,7 +3553,7 @@ void attribute_hidden CheckFormals(SEXP ls)
 }
 
 /* Declared with a variable number of args in names.c */
-static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP rval, srcref;
 
@@ -3589,11 +3674,12 @@ static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
                 PROTECT(y);
                 if (ON_SCALAR_STACK(x)) {
                     POP_SCALAR_STACK(x);
-                    PROTECT(x = duplicate(x));
+                    x = duplicate(x);
                 }
                 else { /* isObject(x) */
-                    PROTECT(x = Rf_makeUnclassed(x));
+                    x = Rf_makeUnclassed(x);
                 }
+                PROTECT(x);
             }
             else
                 PROTECT(y);
@@ -3707,8 +3793,9 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
 
     if (x==R_DotsSymbol || y==R_DotsSymbol || CDDR(args)!=R_NilValue) {
         args = evalList (args, env);
-        PROTECT(x = CAR(args)); 
-        PROTECT(y = CADR(args));
+        x = CAR(args); 
+        y = CADR(args);
+        PROTECT2(x,y);
         args_evald = 1;
     }
     else {
@@ -3763,14 +3850,15 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
 	if (xarray && yarray) {
 	    if (!conformable(x, y))
 		error(_("binary operation on non-conformable arrays"));
-	    PROTECT(dims = getDimAttrib(x));
+	    dims = getDimAttrib(x);
 	}
 	else if (xarray) {
-	    PROTECT(dims = getDimAttrib(x));
+	    dims = getDimAttrib(x);
 	}
 	else /*(yarray)*/ {
-	    PROTECT(dims = getDimAttrib(y));
+	    dims = getDimAttrib(y);
 	}
+        PROTECT(dims);
 	PROTECT(xnames = getAttrib(x, R_DimNamesSymbol));
 	PROTECT(ynames = getAttrib(y, R_DimNamesSymbol));
     }
@@ -3966,7 +4054,8 @@ SEXP attribute_hidden do_not(SEXP call, SEXP op, SEXP args, SEXP env,
 
 /* Handles the && (op 1) and || (op 2) operators. */
 
-SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env,
+                                int variant)
 {
     int ov = PRIMVAL(op);
 
@@ -3976,7 +4065,7 @@ SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env)
     if (args==R_NilValue || CDR(args)==R_NilValue || CDDR(args)!=R_NilValue)
 	error(_("'%s' operator requires 2 arguments"), ov == 1 ? "&&" : "||");
 
-    s1 = EVALV_NC (CAR(args), env, 0);
+    s1 = EVALV_NC (CAR(args), env, VARIANT_ANY_ATTR);
     if (!isNumber(s1))
 	errorcall(call, _("invalid 'x' type in 'x %s y'"), ov==1 ? "&&" : "||");
 
@@ -3988,7 +4077,7 @@ SEXP attribute_hidden do_andor2(SEXP call, SEXP op, SEXP args, SEXP env)
     if (ov==2 && x1==TRUE)   /* TRUE || ... */
         return ScalarLogicalMaybeConst(TRUE);
     
-    s2  = EVALV_NC (CADR(args), env, 0);
+    s2  = EVALV_NC (CADR(args), env, VARIANT_ANY_ATTR);
     if (!isNumber(s2))	
         errorcall(call, _("invalid 'y' type in 'x %s y'"), ov==1 ? "&&" : "||");
 
@@ -4243,8 +4332,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     SEXP sv_scalar_stack = R_scalar_stack;
 
-    PROTECT (argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env));
-    PROTECT2(arg1,arg2);
+    argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env);
+    PROTECT3(argsevald,arg1,arg2);
 
     /* Check for dispatch on S3 or S4 objects. */
 
@@ -4470,8 +4559,8 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     SEXP sv_scalar_stack = R_scalar_stack;
 
-    PROTECT(argsevald = scalar_stack_eval2 (args, &x, &y, &obj, env));
-    PROTECT2(x,y);
+    argsevald = scalar_stack_eval2 (args, &x, &y, &obj, env);
+    PROTECT3(argsevald,x,y);
 
     /* Check for dispatch on S3 or S4 objects. */
 
@@ -4581,29 +4670,32 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
        will be no later call of eval). */
 
     if (CAR(args) != R_DotsSymbol) {
+
         SEXP ixlist = CDR(args);
         SEXP array;
-        PROTECT(array = EVALV_NC (CAR(args), rho, VARIANT_UNCLASS | 
-                                                  VARIANT_PENDING_OK));
+
+        array = EVALV_NC (CAR(args), rho, VARIANT_UNCLASS | VARIANT_PENDING_OK);
         int obj = isObject(array);
         if (R_variant_result) {
             obj = 0;
             R_variant_result = 0;
         }
+
         if (obj) {
             args = CONS(array,ixlist);
             argsevald = -1;
-            UNPROTECT(1);  /* array */
         }
         else if (ixlist == R_NilValue || TAG(ixlist) != R_NilValue 
                                       || CAR(ixlist) == R_DotsSymbol) {
+            PROTECT(array);
             args = evalListKeepMissing(ixlist,rho);
-            UNPROTECT(1);  /* array */
+            UNPROTECT(1);
             return do_subset_dflt_seq (call, op, array, R_NoObject, R_NoObject,
                                        args, rho, variant, 0);
         }
         else {
             SEXP r;
+            PROTECT(array);
             BEGIN_PROTECT3 (sb1, sb2, remargs);
             SEXP sv_scalar_stack = R_scalar_stack;
             SEXP ixlist2 = CDR(ixlist);
@@ -4650,7 +4742,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                                     remargs, rho, variant, seq);
             R_scalar_stack = sv_scalar_stack;
             END_PROTECT;
-            UNPROTECT(1); /* array */
+            UNPROTECT(1);  /* array */
             R_Visible = TRUE;
             return ON_SCALAR_STACK(r) ? PUSH_SCALAR(r) : r;
         }
@@ -4704,14 +4796,13 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         if (fast_sub) {
             ixlist = args;
-            PROTECT(array = R_fast_sub_var);
+            array = R_fast_sub_var;
             obj = isObject(array);
         }
         else {
             ixlist = CDR(args);
-            array = CAR(args);
-            PROTECT(array = EVALV_NC (array, rho, VARIANT_UNCLASS | 
-                                                  VARIANT_PENDING_OK));
+            array = 
+              EVALV_NC (CAR(args), rho, VARIANT_UNCLASS | VARIANT_PENDING_OK);
             obj = isObject(array);
             if (R_variant_result) {
                 obj = 0;
@@ -4721,10 +4812,10 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         if (obj) {
             args = CONS(array,ixlist);
-            UNPROTECT(1);  /* array */
         }
         else if (ixlist == R_NilValue || TAG(ixlist) != R_NilValue 
                                       || CAR(ixlist) == R_DotsSymbol) {
+            PROTECT(array);
             args = evalListKeepMissing(ixlist,rho);
             UNPROTECT(1);  /* array */
             return do_subset2_dflt_x (call, op, array, R_NoObject, R_NoObject,
@@ -4732,6 +4823,7 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
         else {
             SEXP r;
+            PROTECT(array);
             BEGIN_PROTECT3 (sb1, sb2, remargs);
             SEXP sv_scalar_stack = R_scalar_stack;
             SEXP ixlist2 = CDR(ixlist);
@@ -5178,15 +5270,15 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {"if",		do_if,		0,	1200,	-1,	{PP_IF,	     PREC_FN,	  1}},
-{"for",		do_for,		0,	100,	-1,	{PP_FOR,     PREC_FN,	  0}},
-{"while",	do_while,	0,	100,	-1,	{PP_WHILE,   PREC_FN,	  0}},
-{"repeat",	do_repeat,	0,	100,	-1,	{PP_REPEAT,  PREC_FN,	  0}},
-{"break",	do_break,	0,	0,	-1,	{PP_BREAK,   PREC_FN,	  0}},
-{"next",	do_next,	0,	0,	-1,	{PP_NEXT,    PREC_FN,	  0}},
+{"for",		do_for,		0,	1100,	-1,	{PP_FOR,     PREC_FN,	  0}},
+{"while",	do_while,	0,	1100,	-1,	{PP_WHILE,   PREC_FN,	  0}},
+{"repeat",	do_repeat,	0,	1100,	-1,	{PP_REPEAT,  PREC_FN,	  0}},
+{"break",	do_break,	0,	1000,	-1,	{PP_BREAK,   PREC_FN,	  0}},
+{"next",	do_next,	0,	1000,	-1,	{PP_NEXT,    PREC_FN,	  0}},
 {"(",		do_paren,	0,	1000,	1,	{PP_PAREN,   PREC_FN,	  0}},
 {"{",		do_begin,	0,	1200,	-1,	{PP_CURLY,   PREC_FN,	  0}},
 {"return",	do_return,	0,	1200,	-1,	{PP_RETURN,  PREC_FN,	  0}},
-{"function",	do_function,	0,	0,	-1,	{PP_FUNCTION,PREC_FN,	  0}},
+{"function",	do_function,	0,	1000,	-1,	{PP_FUNCTION,PREC_FN,	  0}},
 {"<-",		do_set,		1,	1100,	2,	{PP_ASSIGN,  PREC_LEFT,	  1}},
 {"=",		do_set,		3,	1100,	2,	{PP_ASSIGN,  PREC_EQ,	  1}},
 {"<<-",		do_set,		2,	1100,	2,	{PP_ASSIGN2, PREC_LEFT,	  1}},
@@ -5206,8 +5298,8 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 {"!",		do_not,		1,	1001,	1,	{PP_UNARY,   PREC_NOT,	  0}},
 
 /* specials as conditionally evaluate second arg */
-{"&&",		do_andor2,	1,	0,	2,	{PP_BINARY,  PREC_AND,	  0}},
-{"||",		do_andor2,	2,	0,	2,	{PP_BINARY,  PREC_OR,	  0}},
+{"&&",		do_andor2,	1,	1000,	2,	{PP_BINARY,  PREC_AND,	  0}},
+{"||",		do_andor2,	2,	1000,	2,	{PP_BINARY,  PREC_OR,	  0}},
 
 /* these are group generic and so need to eval args */
 {"all",		do_allany,	1,	1,	-1,	{PP_FUNCALL, PREC_FN,	  0}},

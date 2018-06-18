@@ -587,6 +587,13 @@ static void SetupBuiltins(void)
                       PRIMINTERNAL(prim), PRIMPRINT(prim), PRIMPENDINGOK(prim));
         }
 
+        if (TYPEOF(prim) == SPECIALSXP && !PRIMINTERNAL(prim)
+              && !PRIMVARIANT(prim)) {
+            REprintf("SPECIAL primitive must take a 'variant' argument: %s\n",
+                      PRIMNAME(prim));
+            abort();
+        }
+
         SEXP sym = install(R_FunTab[i].name);
 
         if ((R_FunTab[i].eval % 100) / 10) {

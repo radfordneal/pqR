@@ -1318,6 +1318,8 @@ copied to a single table for all such functions by initialization
 code in @file{names.c}. This table also has other information, such
 as whether the primitive is BUILTIN or SPECIAL, and whether the
 variant argument of evalv is passed on to the @code{do_XXX} function.
+(Currently, SPECIAL primitive functions must be called with a variant
+argument, so that a check for this in time-critical code can be avoided.)
 
 Arguments are passed to the @code{do_XXX} function as a pairlist.
 This is inefficient, since it requires that a CONS cell be allocated

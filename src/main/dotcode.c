@@ -434,7 +434,8 @@ typedef SEXP (*R_ExternalRoutine)(SEXP);
 
 static SEXP do_External_e (SEXP call, SEXP op, SEXP args, SEXP env);
 
-SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env,
+                                  int variant)
 {
     return do_External_e (call, op, evalListUnshared (args, env), env);
 }
@@ -479,7 +480,8 @@ typedef SEXP (*VarFun)();
 
 static SEXP do_dotcall_e (SEXP call, SEXP op, SEXP args, SEXP env, int evald);
 
-SEXP attribute_hidden do_dotcall (SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_dotcall (SEXP call, SEXP op, SEXP args, SEXP env,
+                                  int variant)
 {
     return do_dotcall_e (call, op, args, env, 0);
 }
@@ -1237,7 +1239,8 @@ static SEXP do_dotcall_e (SEXP call, SEXP op, SEXP args, SEXP env, int evald)
     to TRUE as per the comment above.
 */
 
-SEXP attribute_hidden do_Externalgr(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_Externalgr(SEXP call, SEXP op, SEXP args, SEXP env,
+                                    int variant)
 {
     SEXP retval;
     pGEDevDesc dd = GEcurrentDevice();
@@ -1258,7 +1261,8 @@ SEXP attribute_hidden do_Externalgr(SEXP call, SEXP op, SEXP args, SEXP env)
     return retval;
 }
 
-SEXP attribute_hidden do_dotcallgr(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_dotcallgr(SEXP call, SEXP op, SEXP args, SEXP env,
+                                   int variant)
 {
     SEXP retval;
     pGEDevDesc dd = GEcurrentDevice();
@@ -2729,10 +2733,10 @@ attribute_hidden FUNTAB R_FunTab_dotcode[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {"is.loaded",	do_isloaded,	0,	11,	-1,	{PP_FOREIGN, PREC_FN,	0}},
-{".External",   do_External,    0,      0,      -1,     {PP_FOREIGN, PREC_FN,	0}},
-{".Call",       do_dotcall,     0,      0,      -1,     {PP_FOREIGN, PREC_FN,	0}},
-{".External.graphics", do_Externalgr, 0, 0,	-1,	{PP_FOREIGN, PREC_FN,	0}},
-{".Call.graphics", do_dotcallgr, 0,	0,	-1,	{PP_FOREIGN, PREC_FN,	0}},
+{".External",   do_External,    0,      1000,   -1,     {PP_FOREIGN, PREC_FN,	0}},
+{".Call",       do_dotcall,     0,      1000,   -1,     {PP_FOREIGN, PREC_FN,	0}},
+{".External.graphics", do_Externalgr, 0, 1000,	-1,	{PP_FOREIGN, PREC_FN,	0}},
+{".Call.graphics", do_dotcallgr, 0,	1000,	-1,	{PP_FOREIGN, PREC_FN,	0}},
 {".C",		do_dotCode,	0,	1000,	-1,	{PP_FOREIGN, PREC_FN,	0}},
 {".Fortran",	do_dotCode,	1,	1000,	-1,	{PP_FOREIGN, PREC_FN,	0}},
 

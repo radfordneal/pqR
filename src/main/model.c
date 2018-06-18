@@ -1478,7 +1478,7 @@ static SEXP do_modelframe(SEXP call, SEXP op, SEXP args, SEXP rho)
 	/* Just returns the unevaluated call */
 	/* No longer needed??? */
 
-static SEXP do_tilde(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_tilde(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     if (isObject(call))
 	return duplicate(call);
@@ -2010,7 +2010,7 @@ attribute_hidden FUNTAB R_FunTab_model[] =
 {"terms.formula",do_termsform,	0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"update.formula",do_updateform,0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"model.frame",	do_modelframe,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
-{"~",		do_tilde,	0,	0,	2,	{PP_BINARY,  PREC_TILDE,  0}},
+{"~",		do_tilde,	0,	1000,	2,	{PP_BINARY,  PREC_TILDE,  0}},
 {"model.matrix",do_modelmatrix,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}

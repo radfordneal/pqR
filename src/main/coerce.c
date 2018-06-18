@@ -2732,7 +2732,7 @@ static SEXP do_isinfinite (SEXP call, SEXP op, SEXP args, SEXP rho,
 }
 
 /* This is a primitive SPECIALSXP */
-static SEXP do_call(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_call(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP rest, evargs, rfun;
 
@@ -2903,7 +2903,7 @@ SEXP attribute_hidden substituteList(SEXP el, SEXP rho)
 
 
 /* This is a primitive SPECIALSXP */
-static SEXP do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP argList, env, s, t;
     static const char * const ap[2] = { "expr", "env" };
@@ -2933,7 +2933,7 @@ static SEXP do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* This is a primitive SPECIALSXP */
-static SEXP do_quote(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_quote(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     checkArity(op, args);
     check1arg(args, call, "expr");
@@ -3188,10 +3188,10 @@ attribute_hidden FUNTAB R_FunTab_coerce[] =
 {"is.finite",	do_isfinite,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"is.infinite",	do_isinfinite,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"call",	do_call,	0,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"call",	do_call,	0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"do.call",	do_docall,	0,	211,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"substitute",	do_substitute,	0,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"quote",	do_quote,	0,	0,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"substitute",	do_substitute,	0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"quote",	do_quote,	0,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"storage.mode<-",do_storage_mode,0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"class<-",	R_do_set_class,	0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},

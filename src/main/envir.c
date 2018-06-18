@@ -2264,7 +2264,7 @@ static int isMissing_recursive(SEXP symbol, SEXP rho, struct detectcycle *dc)
 
   These are primitive and SPECIALSXP */
 
-static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP t, sym, s;
     int under = PRIMVAL(op);
@@ -3617,8 +3617,8 @@ attribute_hidden FUNTAB R_FunTab_envir[] =
 {"get",		do_get,		1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"exists",	do_get,		0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"mget",	do_mget,	1,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
-{"missing",	do_missing,	0,	0,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"missing_from_underline",do_missing,1,	0,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"missing",	do_missing,	0,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"missing_from_underline",do_missing,1,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"globalenv",	do_globalenv,	0,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"baseenv",	do_baseenv,	0,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"emptyenv",	do_emptyenv,	0,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},

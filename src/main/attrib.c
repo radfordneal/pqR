@@ -1641,109 +1641,107 @@ static void check_slot_assign(SEXP obj, SEXP input, SEXP value, SEXP env)
     UNPROTECT(3);
 }
 
-/* Implements   attr(obj, which = "<name>")  <-  value    (op == 0, BUILTIN) 
-
-   and          obj @ <name>                 <-  value    (op == 1, SPECIAL)
-
-   and          `@internal`(obj,name)        <-  value    (op == 2, BUILTIN)
-                ** for internal use only, no validity check **
- */
+/* Implements   attr(obj, which = "<name>")  <-  value  */
 
 static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    if (PRIMVAL(op) == 1) {  /* obj@name <- value, code adapted from R-3.0.0 */
+    SEXP obj, name, argList;
+    static const char * const ap[3] = { "x", "which", "value" };
 
-        SEXP obj, name, input, ans, value;
-        PROTECT(input = allocVector(STRSXP, 1));
+    checkArity(op, args);
 
-        name = CADR(args);
-        if (TYPEOF(name) == PROMSXP)
-            name = PRCODE(name);
-        if (isSymbol(name))
-            SET_STRING_ELT(input, 0, PRINTNAME(name));
-        else if(isString(name) )
-            SET_STRING_ELT(input, 0, STRING_ELT(name, 0));
-        else {
-            error(_("invalid type '%s' for slot name"),
-                  type2char(TYPEOF(name)));
-            return R_NilValue; /*-Wall*/
-        }
+    obj = CAR(args);
+    if (NAMEDCNT_GT_1(obj))
+        PROTECT(obj = dup_top_level(obj));
+    else
+        PROTECT(obj);
 
-        /* replace the second argument with a string */
-        SETCADR(args, input);
-        UNPROTECT(1);  /* 'input' is now protected */
+    /* argument matching */
+    argList = matchArgs_strings (ap, 3, args, call);
 
-        if (DispatchOrEval(call, op, "@<-", args, env, &ans, 0, 0))
-            return(ans);
+    PROTECT(argList);
 
-        PROTECT(obj = CAR(ans));
-        PROTECT(value = CADDR(ans));
-        check_slot_assign(obj, input, value, env);
-        obj = R_do_slot_assign(obj, input, value);
+    name = CADR(argList);
+    if (!isValidString(name) || STRING_ELT(name, 0) == NA_STRING)
+        errorcall(call,_("'name' must be non-null character string"));
+    /* TODO?  if (isFactor(obj) && !strcmp(asChar(name), "levels"))
+     * ---         if(any_duplicated(CADDR(args)))
+     *                  error(.....)
+     */
+    setAttrib(obj, name, CADDR(args));
+    UNPROTECT(2);
+    return obj;
+}
 
-        SET_NAMEDCNT_0(obj);  /* The standard kludge for subassign primitives */
-        R_Visible = TRUE;
-        UNPROTECT(2);
-        return obj;
+/* Implements   obj @ <name>  <-  value   (SPECIAL) 
+
+   Code adapted from R-3.0.0 */
+
+static SEXP do_ATgets(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+{
+    SEXP obj, name, input, ans, value;
+    PROTECT(input = allocVector(STRSXP, 1));
+
+    name = CADR(args);
+    if (TYPEOF(name) == PROMSXP)
+        name = PRCODE(name);
+    if (isSymbol(name))
+        SET_STRING_ELT(input, 0, PRINTNAME(name));
+    else if(isString(name) )
+        SET_STRING_ELT(input, 0, STRING_ELT(name, 0));
+    else {
+        error(_("invalid type '%s' for slot name"), type2char(TYPEOF(name)));
+        return R_NilValue; /*-Wall*/
     }
 
-    else if (PRIMVAL(op) == 2) {  /* `@internal`(obj,name)  <-  value */
+    /* replace the second argument with a string */
+    SETCADR(args, input);
+    UNPROTECT(1);  /* 'input' is now protected */
 
-        SEXP obj, name, input, value;
+    if (DispatchOrEval(call, op, "@<-", args, env, &ans, 0, 0))
+        return(ans);
 
-        PROTECT(obj = CAR(args));
-        PROTECT(value = CADDR(args));
-        PROTECT(input = allocVector(STRSXP, 1));
+    PROTECT(obj = CAR(ans));
+    PROTECT(value = CADDR(ans));
+    check_slot_assign(obj, input, value, env);
+    obj = R_do_slot_assign(obj, input, value);
 
-        name = CADR(args);
-        if (TYPEOF(name) == PROMSXP)
-            name = PRCODE(name);
-        if (isSymbol(name))
-            SET_STRING_ELT(input, 0, PRINTNAME(name));
-        else if(isString(name) )
-            SET_STRING_ELT(input, 0, STRING_ELT(name, 0));
-        else {
-            error(_("invalid type '%s' for slot name"),
-                  type2char(TYPEOF(name)));
-            return R_NilValue; /*-Wall*/
-        }
+    SET_NAMEDCNT_0(obj);  /* The standard kludge for subassign primitives */
+    R_Visible = TRUE;
+    UNPROTECT(2);
+    return obj;
+}
 
-        obj = R_do_slot_assign(obj, input, value);
+/* Implements   `@internal`(obj,name)        <-  value 
+                ** for internal use only, no validity check **
+ */
 
-        SET_NAMEDCNT_0(obj);  /* The standard kludge for subassign primitives */
-        UNPROTECT(3);
-        return obj;
+static SEXP do_ATinternalgets(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    SEXP obj, name, input, value;
+
+    PROTECT(obj = CAR(args));
+    PROTECT(value = CADDR(args));
+    PROTECT(input = allocVector(STRSXP, 1));
+
+    name = CADR(args);
+    if (TYPEOF(name) == PROMSXP)
+        name = PRCODE(name);
+    if (isSymbol(name))
+        SET_STRING_ELT(input, 0, PRINTNAME(name));
+    else if(isString(name) )
+        SET_STRING_ELT(input, 0, STRING_ELT(name, 0));
+    else {
+        error(_("invalid type '%s' for slot name"),
+              type2char(TYPEOF(name)));
+        return R_NilValue; /*-Wall*/
     }
 
-    else {  /*  attr(x, which = "<name>")  <-  value  */
+    obj = R_do_slot_assign(obj, input, value);
 
-        SEXP obj, name, argList;
-        static const char * const ap[3] = { "x", "which", "value" };
-    
-        checkArity(op, args);
-    
-        obj = CAR(args);
-        if (NAMEDCNT_GT_1(obj))
-            PROTECT(obj = dup_top_level(obj));
-        else
-            PROTECT(obj);
-    
-        /* argument matching */
-        argList = matchArgs_strings (ap, 3, args, call);
-    
-        PROTECT(argList);
-    
-        name = CADR(argList);
-        if (!isValidString(name) || STRING_ELT(name, 0) == NA_STRING)
-            errorcall(call,_("'name' must be non-null character string"));
-        /* TODO?  if (isFactor(obj) && !strcmp(asChar(name), "levels"))
-         * ---         if(any_duplicated(CADDR(args)))
-         *                  error(.....)
-         */
-        setAttrib(obj, name, CADDR(args));
-        UNPROTECT(2);
-        return obj;
-    }
+    SET_NAMEDCNT_0(obj);  /* The standard kludge for subassign primitives */
+    UNPROTECT(3);
+    return obj;
 }
 
 
@@ -2006,7 +2004,7 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value)
     return obj;
 }
 
-static SEXP do_AT(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_AT(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP  nlist, object, ans, klass;
 
@@ -2118,11 +2116,12 @@ attribute_hidden FUNTAB R_FunTab_attrib[] =
 {"attributes<-",do_attributesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"attr",	do_attr,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"attr<-",	do_attrgets,	0,	1,	3,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"@<-",		do_attrgets,	1,	0,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
-{"@internal<-",	do_attrgets,	2,	1,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 {"levels<-",	do_levelsgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 
-{"@",		do_AT,		0,	0,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
+{"@",		do_AT,		0,	1000,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
+{"@<-",		do_ATgets,	0,	1000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+{"@internal<-",	do_ATinternalgets, 0,	1,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+
 {"set_slot.internal", do_set_slot, 0,	11,	3,	{PP_FUNCALL, PREC_FN,	}},
 {"get_slot.internal", do_get_slot, 0,	11,	2,	{PP_FUNCALL, PREC_FN,	}},
 
