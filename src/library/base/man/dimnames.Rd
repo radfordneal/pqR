@@ -1,6 +1,7 @@
 % File src/library/base/man/dimnames.Rd
 % Part of the R package, http://www.R-project.org
-% Copyright 1995-2010 R Core Team
+% Copyright 1995-2010 R Core Team, some text from later R Core releases.
+% Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{dimnames}
@@ -9,17 +10,28 @@
 \alias{dimnames<-}
 \alias{dimnames.data.frame}
 \alias{dimnames<-.data.frame}
+\alias{provideDimnames}
 \description{
   Retrieve or set the dimnames of an object.
 }
 \usage{
 dimnames(x)
 dimnames(x) <- value
+
+provideDimnames(x, sep = "", base = list(LETTERS), unique = TRUE)
 }
 \arguments{
   \item{x}{an \R object, for example a matrix, array or data frame.}
   \item{value}{a possible value for \code{dimnames(x)}: see the
     \sQuote{Value} section.}
+  \item{sep}{a character string, used to separate \code{base}
+    symbols and digits in the constructed dimnames.}
+  \item{base}{a non-empty \code{\link{list}} of character vectors.  The
+    list components are used in turn (and recycled when needed) to
+    construct replacements for empty \code{dimnames} components.  
+    (See the examples.}
+  \item{unique}{logical indicating that the dimnames constructed are
+    unique within each dimension in the sense of \code{\link{make.unique}}.}
 }
 \details{
   The functions \code{dimnames} and \code{dimnames<-} are generic.
@@ -46,15 +58,27 @@ dimnames(x) <- value
   (only) component of the \code{dimnames}.
   
   Both are \link{primitive} functions.  
+
+  \code{provideDimnames(x)} provides \code{dimnames} for all
+  dimensions where they are currently \code{NULL}, such that its
+  result has \code{\link{character}} dimnames for each component.  If
+  \code{unique} is true as by default, they are unique within each
+  component via \code{\link{make.unique}(*, sep=sep)}.
 }
 \value{
-  The dimnames of a matrix or array can be \code{NULL} or a list of the
-  same length as \code{dim(x)}.  If a list, its components are either
-  \code{NULL} or a character vector with positive length of the
-  appropriate dimension of \code{x}.  The list can be named.
+  The dimnames of a matrix or array can be \code{NULL} (which is not
+  stored) or a list of the same length as \code{dim(x)}.  If a list, its
+  components are either \code{NULL} or a character vector with positive
+  length of the appropriate dimension of \code{x}.  The list can have
+  names.  It is possible that all components are \code{NULL}: such
+  dimnames may get converted to \code{NULL}.
 
   For the \code{"data.frame"} method both dimnames are character
-  vectors, and the rownames must contain no duplicates nor missing values.
+  vectors, and the rownames must contain no duplicates or missing values.
+
+  \code{provideDimnames(x)} returns an array like \code{x} but with a
+  \code{dimnames} attribute that has character vectors of the correct length
+  for all dimensions (none \code{NULL}).
 }
 \note{
   Setting components of the dimnames, e.g.
@@ -77,6 +101,16 @@ dimnames(x) <- value
 ## could be defined as follows
 rownames0 <- function(x) dimnames(x)[[1]]
 colnames0 <- function(x) dimnames(x)[[2]]
+
+(dn <- dimnames(A <- provideDimnames(N <- array(1:24, dim = 2:4))))
+A0 <- A; dimnames(A)[2:3] <- list(NULL)
+stopifnot(identical(A0, provideDimnames(A)))
+strd <- function(x) utils::str(dimnames(x))
+strd(provideDimnames(A, base= list(letters[-(1:9)], tail(LETTERS))))
+strd(provideDimnames(N, base= list(letters[-(1:9)], tail(LETTERS)))) # recycling
+strd(provideDimnames(A, base= list(c("AA","BB")))) # recycling on both levels
+## set "empty dimnames":
+provideDimnames(rbind(1, 2:3), base = list(""), unique=FALSE)
 }
 \keyword{array}
 \keyword{manip}

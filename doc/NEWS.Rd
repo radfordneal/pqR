@@ -266,6 +266,10 @@
 
   \subsection{NEW FEATURES FROM R CORE RELEASES}{
   \itemize{
+  \item From R-3.0.0: New simple \code{provideDimnames()}
+        utility function.  From R-3.2.4: \code{provideDimnames()}
+        gets an optional \code{unique} argument.
+
   \item From R-3.1.0: The way the unary operators (\code{+ - !}) handle
         attributes is now more consistent.  If there is no coercion,
         all attributes (including class) are copied from the input to

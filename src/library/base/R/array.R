@@ -1,6 +1,6 @@
 #  File src/library/base/R/array.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2013, 2017 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2013, 2017, 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -63,4 +63,25 @@ function(x, MARGIN)
 		 prod(d[seq.int(from = MARGIN + 1L, length.out = n - MARGIN)]))
     dim(y) <- d
     get_rm(y)
+}
+
+# From R-3.5.0 (feature introduced in R-3.0.0).
+
+provideDimnames <- function(x, sep = "", base = list(LETTERS), unique = TRUE)
+{
+    ## provide dimnames where missing - not copying x unnecessarily
+    dx <- dim(x)
+    dnx <- dimnames(x)
+    if(new <- is.null(dnx))
+	dnx <- vector("list", length(dx))
+    k <- length(M <- lengths(base))
+    for(i in which(vapply(dnx, is.null, NA))) {
+	ii <- 1L+(i-1L) %% k # recycling
+        ss <- seq_len(dx[i]) - 1L # dim could be zero
+	bi <- base[[ii]][1L+ (ss %% M[ii])]
+	dnx[[i]] <- if(unique) make.unique(bi, sep = sep) else bi
+	new <- TRUE
+    }
+    if(new) dimnames(x) <- dnx
+    x
 }

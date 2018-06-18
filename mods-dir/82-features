@@ -1,0 +1,4 @@
+Added features from R Core releases.
+
+Adds provideDimnames from R-3.0.0, as the same R function
+as in R-3.5.0.
