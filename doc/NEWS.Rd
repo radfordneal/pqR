@@ -266,6 +266,9 @@
 
   \subsection{NEW FEATURES FROM R CORE RELEASES}{
   \itemize{
+  \item From R-3.0.2: New \code{assertCondition()}, etc. utilities in tools,
+        useful for testing.
+
   \item From R-3.0.0: New simple \code{provideDimnames()}
         utility function.  From R-3.2.4: \code{provideDimnames()}
         gets an optional \code{unique} argument.
