@@ -318,6 +318,10 @@
         and \code{[[} on \code{x}, so it should work automatically on
         any objects for which appropriate methods on those generics
         are defined.
+  \item The C macros \code{MAYBE_SHARED}, \code{NO_REFERENCES}, 
+        \code{MAYBE_REFERENCED}, \code{NOT_SHARED}, and \code{MARK_MUTABLE}
+        have been added to \file{Rinternals.h}, for compatibility with
+        recent R Core versions.
 }}
 
   \subsection{BUG FIXES}{
