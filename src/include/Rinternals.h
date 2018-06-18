@@ -750,6 +750,15 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 #endif
 
+/* Macros for compatibility with later R Core versions. */
+
+#define MAYBE_SHARED(x)     NAMEDCNT_GT_1(x)
+#define NO_REFERENCES(x)    NAMEDCNT_EQ_0(x)
+#define MAYBE_REFERENCED(x) NAMEDCNT_GT_0(x)
+#define NOT_SHARED(x)       (! NAMEDCNT_GT_1(x))
+
+#define MARK_NOT_MUTABLE(x) SET_NAMEDCNT_MAX(x)
+
 /* Decrement NAMEDCNT for object and for PRVALUE if object is a promise. */
 
 #if 0  /* temporarily disabled, pending problem resolution */
