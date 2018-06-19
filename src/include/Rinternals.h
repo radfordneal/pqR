@@ -596,18 +596,6 @@ static inline int LENGTH (SEXP x)
 #define CADDDR(e)	CAR(CDR(CDR(CDR(e))))
 #define CAD4R(e)	CAR(CDR(CDR(CDR(CDR(e)))))
 
-
-#ifdef USE_RINTERNALS
-/* This is intended for use only within R itself.
- * It defines internal structures that are otherwise only accessible
- * via SEXP, and macros to replace many (but not all) of accessor functions
- * (which are always defined).
- *
- * Making R_NilValue a constant has necessitated exposing more of the
- * internals (some of what is above used to be after this ifdef).
- */
-
-
 /* Macros for accessing and changing NAMEDCNT. */
 
 #define MAX_NAMEDCNT 7	/* Must be either 2 or a power of 2 minus 1, limited 
@@ -635,11 +623,10 @@ static inline int LENGTH (SEXP x)
 extern void helpers_wait_until_not_in_use(SEXP);
 #endif
 
-/* Below is for packages that (naughtily) define USE_RINTERNALS, but don't
-   include Defn.h, where helpers_is_in_use is defined. */
+/* Below for when Defn.h is not included, where helpers_is_in_use is defined. */
 
 #ifndef helpers_is_in_use  
-#define helpers_is_in_use(x)        (UPTR_FROM_SEXP(x)->sxpinfo.in_use)
+#define helpers_is_in_use(x)  (UPTR_FROM_SEXP(x)->sxpinfo.in_use)
 #endif
 
 #define NAMEDCNT(x) \
@@ -667,6 +654,29 @@ extern void helpers_wait_until_not_in_use(SEXP);
     if (_p_->sxpinfo.nmcnt == 0) \
         _p_->sxpinfo.nmcnt = 1; \
   } while (0)
+
+/* Macros for compatibility with later R Core versions. */
+
+#define MAYBE_SHARED(x)     NAMEDCNT_GT_1(x)
+#define NO_REFERENCES(x)    NAMEDCNT_EQ_0(x)
+#define MAYBE_REFERENCED(x) NAMEDCNT_GT_0(x)
+#define NOT_SHARED(x)       (! NAMEDCNT_GT_1(x))
+
+#define MARK_NOT_MUTABLE(x) SET_NAMEDCNT_MAX(x)
+
+
+#ifdef USE_RINTERNALS
+
+/* This is intended for use only within R itself.
+ * It defines internal structures that are otherwise only accessible
+ * via SEXP, and macros to replace many (but not all) of accessor functions
+ * (which are always defined).
+ *
+ * Making R_NilValue a constant has necessitated exposing more of the
+ * internals (some of what is above used to be after this ifdef).  Also
+ * the case for defining MAYBE_REFERENCED, etc. without creating more 
+ * functions (rather than macros).
+ */
 
 /* Be careful not to write to an object with NAMEDCNT equal to MAX_NAMEDCNT, 
    even if the new value is also MAX_NAMEDCNT, since it might be a constant 
@@ -749,15 +759,6 @@ extern void helpers_wait_until_not_in_use(SEXP);
   } while (0)
 
 #endif
-
-/* Macros for compatibility with later R Core versions. */
-
-#define MAYBE_SHARED(x)     NAMEDCNT_GT_1(x)
-#define NO_REFERENCES(x)    NAMEDCNT_EQ_0(x)
-#define MAYBE_REFERENCED(x) NAMEDCNT_GT_0(x)
-#define NOT_SHARED(x)       (! NAMEDCNT_GT_1(x))
-
-#define MARK_NOT_MUTABLE(x) SET_NAMEDCNT_MAX(x)
 
 /* Decrement NAMEDCNT for object and for PRVALUE if object is a promise. */
 
