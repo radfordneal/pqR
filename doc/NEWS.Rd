@@ -180,6 +180,8 @@
 
   \subsection{FEATURE CHANGES}{
   \itemize{
+  \item The version of the \code{digest} package included as a recommended
+        package is now XXXXXX.
   \item The \code{along}, \code{across}, and \code{down} forms of 
         the \code{for} statement (introduced in pqR-2016-06-24 and
         pqR-2016-10-05) now set the loop variable(s) to the
