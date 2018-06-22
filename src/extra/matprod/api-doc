@@ -338,7 +338,7 @@ negative value can be used for "split", in which case the negative of
 splitting is not possible (given implementation constraints).  A value
 of zero for "split" indicates that the corresponding matprod procedure
 should be called immediately without scheduling a task, after waiting
-for the second operand to be computed if it has not been already.
+for the operands to be computed if they have not been already.
 
 If the final 'pipe' argument is non-zero, the tasks scheduled by the
 par_matprod procedures use pipelining for the second operand and the
