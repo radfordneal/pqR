@@ -1354,7 +1354,7 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
         if (n > 1) {
             if ((nx==1 || ny==1) && TYPEOF(x)==REALSXP && TYPEOF(y)==REALSXP
                  && (opcode < POWOP  /* this is the +, -, *, and / operators */
-                  || opcode==POWOP && ny == 1 && REAL(y)[0] == 2.0 /* square */)
+                  || opcode==POWOP && ny==1 && REAL(y)[0]==2.0 /* square */))
                 flags = HELPERS_PIPE_IN0_OUT | HELPERS_MERGE_IN_OUT;
 
             if (opcode == DIVOP && ny == 1 && (TYPEOF(y)==REALSXP ? REAL(y)[0]
