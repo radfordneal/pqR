@@ -1328,7 +1328,10 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
     if (nx == 1) WAIT_UNTIL_COMPUTED(x);
     if (ny == 1) WAIT_UNTIL_COMPUTED(y);
 
-    int swap_ops = FALSE, replace_by_half = FALSE;
+    int swap_ops = FALSE;  /* TRUE if ops will be swapped so first is shorter */
+
+    int replace_by_half = FALSE;  /* TRUE if x/2 will be replaced by 0.5*x;
+                                     if TRUE, swap_ops will be TRUE as well */
 
     if (TYPEOF(x) == CPLXSXP || TYPEOF(y) == CPLXSXP) {
 
@@ -1341,23 +1344,21 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
 
     else if (TYPEOF(x) == REALSXP || TYPEOF(y) == REALSXP) {
 
-         /* task_real_arithmetic takes REAL, INT, and LOGICAL operands, 
-            and assumes INT and LOGICAL are really the same. */
+         /* task_real_arithmetic takes REAL, INTEGER, and LOGICAL operands, 
+            and assumes INTEGER and LOGICAL are really the same. */
 
         ans = alloc_or_reuse (x, y, REALSXP, n, local_assign1, local_assign2);
         task = task_real_arithmetic;
         flags = HELPERS_PIPE_IN0_OUT;
 
-        if (n > 1 && (nx == 1 || ny == 1)
-                  && TYPEOF(x) == REALSXP && TYPEOF(y) == REALSXP) {
-            if (opcode < POWOP /* this is the +, -, *, and / operators */
-                 || opcode == POWOP && ny == 1 && REAL(y)[0] == 2.0 /* square*/)
+        if (n > 1) {
+            if ((nx==1 || ny==1) && TYPEOF(x)==REALSXP && TYPEOF(y)==REALSXP
+                 && (opcode < POWOP  /* this is the +, -, *, and / operators */
+                  || opcode==POWOP && ny == 1 && REAL(y)[0] == 2.0 /* square */)
                 flags = HELPERS_PIPE_IN0_OUT | HELPERS_MERGE_IN_OUT;
-        }
 
-        if (n>1) {
-            if (opcode == DIVOP && ny == 1 && TYPEOF(x) == REALSXP
-                 && (TYPEOF(y)==REALSXP ? REAL(y)[0] : INTEGER(y)[0]) == 2.0) {
+            if (opcode == DIVOP && ny == 1 && (TYPEOF(y)==REALSXP ? REAL(y)[0]
+                                                      : INTEGER(y)[0]) == 2.0) {
                 opcode = TIMESOP;
                 replace_by_half = TRUE;
             }
@@ -1415,10 +1416,11 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
 
         SEXP xx = x, yy = y;
 
-        if (swap_ops) { xx = y; yy = x; }
-
-        if (replace_by_half)
-            xx = R_ScalarRealHalf;
+        if (swap_ops) { 
+            xx = y; yy = x;
+            if (replace_by_half)
+                xx = R_ScalarRealHalf;
+        }
 
         if (n >= threshold && (variant & VARIANT_PENDING_OK)) {
             if (ON_SCALAR_STACK(xx) && ON_SCALAR_STACK(yy)) {
