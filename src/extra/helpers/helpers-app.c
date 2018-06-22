@@ -25,17 +25,17 @@
 /* NAMES OF TASKS.  The list below has to be manually updated when new 
    task procedures are defined. */
 
-#define TASK_NAME(n) \
-    do { \
-        extern helpers_task_proc task_##n; \
-        if (task == &task_##n) return #n; \
-    } while (0)
-
 char *Rf_task_name (helpers_task_proc *task)
 {
     /* Put one line here for every task procedure used.  Names of task 
        procedures should start with "task_".  The part of the name
        after "task_" should be given as the argument to TASK_NAME below. */
+
+#   define TASK_NAME(n) \
+        do { \
+            extern helpers_task_proc task_##n; \
+            if (task == &task_##n) return #n; \
+        } while (0)
 
     TASK_NAME(row_or_col);
     /* a */
@@ -76,6 +76,7 @@ char *Rf_task_name (helpers_task_proc *task)
     TASK_NAME(par_matprod_vec_vec);
     TASK_NAME(par_matprod_mat_vec);
     TASK_NAME(par_matprod_vec_mat);
+    TASK_NAME(par_matprod_outer);
     TASK_NAME(par_matprod_mat_mat);
     /* s */
     TASK_NAME(matprod_trans1);
