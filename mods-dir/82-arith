@@ -1,0 +1,4 @@
+Changes regarding arithmetic.
+
+Convert x/2 to 0.5*x even when x is integer.
+
