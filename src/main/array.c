@@ -957,11 +957,13 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* Compute the result matrix. */
 
     int inhlpr = nrows*(k+1.0)*ncols > T_matmult;
-    int no_pipelining = !inhlpr || helpers_not_pipelining_now;
+    int pipeline = inhlpr && !helpers_not_pipelining_now;
+    int no_pipelining = !pipeline;
+    int split = !inhlpr || helpers_not_multithreading_now ? 0 : helpers_num+1;
     SEXP op1 = x, op2 = y;
-    int flags = 0;
 
-    helpers_task_proc *task_proc;
+    helpers_task_proc *task_proc = 0;
+    int flags = 0;
 
     ans = allocMatrix0 (mode, nrows, ncols);
 
@@ -1025,12 +1027,8 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 task_proc = task_matprod_vec_vec_BLAS;
                 if (!R_BLAS_in_helpers) inhlpr = 0;
             }
-            else if (no_pipelining)
-                task_proc = task_matprod_vec_vec;
-            else {
-                task_proc = task_par_matprod_vec_vec;
-                flags = HELPERS_PIPE_IN2;
-            }
+            else
+                par_matprod_vec_vec (ans, op1, op2, split, pipeline);
         }
 
         else if (primop == 0) { /* %*%, real, not dot product, not null or 0s */
@@ -1039,36 +1037,26 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     task_proc = task_matprod_mat_vec_BLAS;
                     if (!R_BLAS_in_helpers) inhlpr = 0;
                 }
-                else if (no_pipelining)
-                    task_proc = task_matprod_mat_vec;
-                else {
-                    task_proc = task_par_matprod_mat_vec;
-                    flags = HELPERS_PIPE_IN2;
-                }
+                else
+                    par_matprod_mat_vec (ans, op1, op2, split, pipeline);
             }
             else if (nrows==1) {
                 if (R_mat_mult_with_BLAS[2] == 1) {
                     task_proc = task_matprod_vec_mat_BLAS;
                     if (!R_BLAS_in_helpers) inhlpr = 0;
                 }
-                else if (no_pipelining)
-                    task_proc = task_matprod_vec_mat;
-                else {
-                    task_proc = task_par_matprod_vec_mat;
-                    flags = HELPERS_PIPE_IN2_OUT;
-                }
+                else
+                    par_matprod_vec_mat (ans, op1, op2, split, pipeline);
             }
+            else if (k == 1 && use_BLAS == 0)
+                par_matprod_outer (ans, op1, op2, split, pipeline);
             else {
                 if (use_BLAS != 0) /* will always be 0 or 1, never NA */ {
                     task_proc = task_matprod_mat_mat_BLAS;
                     if (!R_BLAS_in_helpers) inhlpr = 0;
                 }
-                else if (no_pipelining)
-                    task_proc = task_matprod_mat_mat;
-                else {
-                    task_proc = task_par_matprod_mat_mat;
-                    flags = HELPERS_PIPE_IN2_OUT;
-                }
+                else
+                    par_matprod_mat_mat (ans, op1, op2, k, split, pipeline);
             }
         }
 
@@ -1080,12 +1068,8 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                         task_proc = task_matprod_vec_mat_BLAS;
                         if (!R_BLAS_in_helpers) inhlpr = 0;
                     }
-                    else if (no_pipelining)
-                        task_proc = task_matprod_vec_mat;
-                    else {
-                        task_proc = task_par_matprod_vec_mat;
-                        flags = HELPERS_PIPE_IN2_OUT;
-                    }
+                    else
+                        par_matprod_vec_mat (ans, op1, op2, split, pipeline);
                 }
                 else {
                     if (nrows==1) { op1 = y; op2 = x; }
@@ -1093,12 +1077,8 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                         task_proc = task_matprod_mat_vec_BLAS;
                         if (!R_BLAS_in_helpers) inhlpr = 0;
                     }
-                    else if (no_pipelining)
-                        task_proc = task_matprod_mat_vec;
-                    else {
-                        task_proc = task_par_matprod_mat_vec;
-                        flags = HELPERS_PIPE_IN2;
-                    }
+                    else
+                        par_matprod_mat_vec (ans, op1, op2, split, pipeline);
                 }
             }
             else {
@@ -1107,23 +1087,21 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                                           : task_matprod_trans2_BLAS;
                     if (!R_BLAS_in_helpers) inhlpr = 0;
                 }
-                else if (no_pipelining)
-                    task_proc = primop==1 ? task_matprod_trans1 
-                                          : task_matprod_trans2;
-                else {
-                    if (primop==1) {
-                        task_proc = task_par_matprod_trans1;
-                        flags = HELPERS_PIPE_IN2_OUT;
-                    }
-                    else {
-                        task_proc = task_par_matprod_trans2;
-                        flags = HELPERS_PIPE_OUT;
-                    }
-                }
+                else if (primop == 1)
+                    par_matprod_trans1 (ans, op1, op2, k, split, pipeline);
+                else
+                    par_matprod_trans2 (ans, op1, op2, k, split, pipeline);
             }
         }
-    
-        DO_NOW_OR_LATER2 (variant, inhlpr, flags, task_proc, k, ans, op1, op2);
+
+        if (task_proc != 0) {
+            DO_NOW_OR_LATER2 (variant, inhlpr, flags, task_proc, 
+                              k, ans, op1, op2);
+        }
+        else {
+            if (split != 0 && ! (variant & VARIANT_PENDING_OK)) 
+                WAIT_UNTIL_COMPUTED(ans);
+        }
     }
 
     PROTECT(ans = allocMatrix1 (ans, nrows, ncols));
