@@ -83,9 +83,8 @@
   is less loop overhead, and the intermediate results need not be
   stored in main memory.  However, when helper threads are available,
   two separate tasks exectured in parallel might take less time than a
-  merged task done on one processor core.  Accordingly, when helper
-  threads are in use, pqR merges tasks only when at least one is a
-  simple task taking little computation time.
+  merged task done on one processor core.  Accordingly, pqR only merges
+  tasks for which the computation on each element is quite fast.
 
   The table below summarizes what operations can currently be deferred,
   to be done in a helper thread, or merged with another operation,
@@ -200,11 +199,10 @@ result'' mechanism (with pipelining for the one-argument functions),
 but \code{sum} does not operate as a task otherwise.
 
 Task merging is currently done only for the \code{+}, \code{-},
-\code{*}, and \code{/}, operators when one of their operands is a real
-vector and one is a real scalar (or missing, for unary \code{-}), for
-the \code{^} operator when the second operand is the scalar 2.0, and
-for the \code{abs} function.  A maximum of three such operations can
-be merged. 
+\code{*}, and \code{/}, operators, for the \code{^} operator when the
+second operand is the scalar 2.0, and for the \code{abs} function.
+There are also some further limitations on what operations will be merged.
+A merged operation can have at most three component operations.  
 }
 
 \seealso{

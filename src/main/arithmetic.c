@@ -1369,6 +1369,16 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                     flags = HELPERS_PIPE_IN0_OUT | HELPERS_MERGE_IN;
             }
 
+            if (nx == ny && opcode <= TIMESOP) {
+                /* need first op to not be being computed for merging */
+                if (!helpers_is_being_computed(x))
+                    flags = HELPERS_PIPE_IN02_OUT | HELPERS_MERGE_OUT;
+                else if (!helpers_is_being_computed(y) && opcode != MINUSOP) {
+                    flags = HELPERS_PIPE_IN02_OUT | HELPERS_MERGE_OUT;
+                    swap_ops = TRUE;
+                }
+            }
+
             if (ny<nx && (opcode == PLUSOP || opcode == TIMESOP)) {
                 swap_ops = TRUE;
                 flags |= HELPERS_PIPE_IN2;

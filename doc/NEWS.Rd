@@ -171,8 +171,11 @@
   \item Merging of arithmetic operations on vectors has been streamlined,
         with consequent reduction in code size.  Now only the \code{abs}
         function may be merged (not other one-argument math functions),
-        and \code{^} is merged only when the second operand is 2.
-        See \code{help(helpers)} for details.
+        and \code{^} is merged only when the second operand is 2.  
+        The first operation in a merged sequence can now sometimes be
+        on two vectors (merged operations are otherwise restricted to
+        operating on a vector and a scalar).  Division can now
+        only be the last operation in a merged sequence.
   \item General interpretive overhead has been reduced in some contexts,
         particularly when extracting or replacing subsets with 
         \code{[.]} or \code{[[.]]}.
