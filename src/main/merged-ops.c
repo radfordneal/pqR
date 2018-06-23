@@ -65,48 +65,50 @@ extern helpers_task_proc task_unary_minus, task_abs;
 
 /* CODES FOR MERGED ARITHMETIC OPERATIONS AND ABS FUNCTION. .
 
-   Relies on PLUSOP ... POWOP being the integers from 1 to 5.  Code 6
-   is abs.  Code 0 is for empty slots.  Additional operation codes are
-   created internally.
+   Relies on PLUSOP ... DIVOP being the integers from 1 to 4. 
 
-   The opcode for the merged task procedure encodes two or more operations
-   plus a flag saying which operand is scalar.  The flag is in the low-order
-   byte.  The codes for the operations follow in higher-order bytes, with
-   the last operation in lowest position.  The code for the null operation 
-   is zero, so null operations occur naturally in higher-order bytes.  The
-   64 bits in task operations codes could accommodate up to seven merged
-   operations, but the limit for this implementation is three. 
+   The opcode for the merged task procedure encodes two or more
+   operations plus a flag saying which is the vector operand.  The
+   flag is in the low-order byte.  The codes for the operations follow
+   in higher-order bytes, with the last operation in lowest position.
+   The code for the null operation is zero, so a null operation may
+   naturally occur in the higher-order byte, but this is manipulated
+   in task_merged_arith_abs so that it instead occurs only as the
+   middle operation.  
 
-   For the commutative (except for NaN handling on Intel processors)
-   operations PLUS and TIMES, only the C op V forms are implemented
-   (operands are swapped when scheduling a task as required), and the
-   codes for V op C are used for other operations. */
+   For the PLUS and TIMES operations, which are commutative (except
+   for NaN handling on Intel processors), only the C op V forms are
+   implemented (operands are swapped when scheduling a task as
+   required), and the codes for V op C are used for other
+   operations. */
 
 #define MERGED_OP_NULL      0   /* No operation, either created or empty slot */
 
 #define MERGED_OP_C_PLUS_V  (2*PLUSOP - 1)
-#define MERGED_OP_ABS_V     (2*PLUSOP)       /* no V_PLUS_C */
+#define MERGED_OP_ABS_V     (2*PLUSOP)      /* no V_PLUS_C */
 #define MERGED_OP_C_MINUS_V (2*MINUSOP - 1)
 #define MERGED_OP_V_MINUS_C (2*MINUSOP)
 #define MERGED_OP_C_TIMES_V (2*TIMESOP - 1)
-#define MERGED_OP_V_SQUARED (2*TIMESOP)      /* no V_TIMES_C */
-#define MERGED_OP_C_DIV_V   (2*DIVOP - 1)
+#define MERGED_OP_V_SQUARED (2*TIMESOP)     /* no V_TIMES_C */
+
+#define MERGED_OP_C_DIV_V   (2*DIVOP - 1)   /* these allowed only for last op */
 #define MERGED_OP_V_DIV_C   (2*DIVOP)
 
-#define N_MERGED_OPS 9         /* Number of operation codes above */
+#define N_MERGED_OPS 9          /* Number of operation codes above */
+#define N_MERGED_OPS_NOT_LAST 7 /* Number of op codes for all but the last op */
 
 
 /* TASK FOR PERFORMING A SET OF MERGED ARITHMETIC OPERATIONS.
 
    Works only when MAX_OPS_MERGED is 3.
 
-   The code for the first operation (which will be MERGED_OP_NULL if
-   there are less than three merged operations) will be used to select
-   one of N_MERGED_OPS procedures to call that are defined below.
-   These procedures contain the processing loop, and a switch on the
-   remaining two operation codes.  This split into multiple procedures
-   prevents the compiler (in particular gcc) from using lots of time
-   and memory processing a single large switch statement. */
+   The code for the first operation (which is never MERGED_OP_NULL or
+   a DIV operation) is used to select one of N_MERGED_OPS_NOT_LAST-1
+   procedures to call that are defined below.  These procedures
+   contain the processing loop, and a switch on the remaining two
+   operation codes.  This split into multiple procedures prevents the
+   compiler (in particular gcc) from using lots of time and memory
+   processing a single large switch statement. */
 
 #if MAX_OPS_MERGED != 3
 #error Merged operations are implemented only when MAX_OPS_MERGED is 3
@@ -184,10 +186,9 @@ extern helpers_task_proc task_unary_minus, task_abs;
 
 #endif
 
+/* Cases for earlier and last op; last op never NULL, but possibly a DIV. */
+
 #define SW_CASES(o,S,S_AVX) \
-  SW_CASE(o*N_MERGED_OPS+MERGED_OP_NULL,     \
-             S; OP_NULL(3), \
-             S_AVX; MM_OP_NULL(3)) \
   SW_CASE(o*N_MERGED_OPS+MERGED_OP_C_PLUS_V, \
              S; OP_C_PLUS_V(3), \
              S_AVX; MM_OP_C_PLUS_V(3)) \
@@ -215,9 +216,8 @@ extern helpers_task_proc task_unary_minus, task_abs;
 
 #define PROC(o,S,S_AVX) \
 static void proc_##o (SEXP ans, double *vecp, int sw, int which, \
-                      double *data) \
+                      double c1, double c2, double c3) \
 { \
-    double c1 = data[2], c2 = data[1], c3 = data[0]; \
     LOAD_MM /* load AVX versions of c1, c2, c3, if doing AVX */ \
     double signb; uint64_t usignb = ~ ((uint64_t)1 << 63); \
     double *ansp = REAL(ans); \
@@ -253,20 +253,11 @@ static void proc_##o (SEXP ans, double *vecp, int sw, int which, \
         SW_CASES(MERGED_OP_V_SQUARED,\
              S; OP_V_SQUARED(2), \
              S_AVX; MM_OP_V_SQUARED(2)) \
-        SW_CASES(MERGED_OP_C_DIV_V,  \
-             S; OP_C_DIV_V(2), \
-             S_AVX; MM_OP_C_DIV_V(2)) \
-        SW_CASES(MERGED_OP_V_DIV_C,  \
-             S; OP_V_DIV_C(2), \
-             S_AVX; MM_OP_V_DIV_C(2)) \
         default: abort(); \
         } \
     } \
 }
 
-PROC(MERGED_OP_NULL,      
-    OP_NULL(1),
-    MM_OP_NULL(1))
 PROC(MERGED_OP_C_PLUS_V,  
     OP_C_PLUS_V(1),
     MM_OP_C_PLUS_V(1))
@@ -285,49 +276,51 @@ PROC(MERGED_OP_C_TIMES_V,
 PROC(MERGED_OP_V_SQUARED, 
     OP_V_SQUARED(1),
     MM_OP_V_SQUARED(1))
-PROC(MERGED_OP_C_DIV_V,   
-    OP_C_DIV_V(1),
-    MM_OP_C_DIV_V(1))
-PROC(MERGED_OP_V_DIV_C,   
-    OP_V_DIV_C(1),
-    MM_OP_V_DIV_C(1))
 
-static void (*proc_table[N_MERGED_OPS])() = {
-    proc_MERGED_OP_NULL,
+static void (*proc_table[N_MERGED_OPS_NOT_LAST])() = {
+    0,
     proc_MERGED_OP_C_PLUS_V,
     proc_MERGED_OP_ABS_V,
     proc_MERGED_OP_C_MINUS_V,
     proc_MERGED_OP_V_MINUS_C,
     proc_MERGED_OP_C_TIMES_V,
-    proc_MERGED_OP_V_SQUARED,
-    proc_MERGED_OP_C_DIV_V,
-    proc_MERGED_OP_V_DIV_C,
+    proc_MERGED_OP_V_SQUARED
 };
 
 void task_merged_arith_abs (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
+    double *data = helpers_task_data();
+    double c1 = data[2], c2 = data[1], c3 = data[0]; \
     int which = code & 1;  /* which is the vector operand? */
 
     /* Set up switch values encoding the first (possibly null) operation and
        the 2nd and 3rd operations. */
 
     int ops = code >> 8;
-    double *data = helpers_task_data();
 
     int switch1;
     int switch23;
     int op;
 
-    switch1 = ops>>16;
-    ops &= 0xffff;
+    switch1 = ops >> 16;
+    switch23 = ops & 0xff;
+    ops = (ops >> 8) & 0xff;
 
-    switch23 = (ops >> 8) * N_MERGED_OPS + (ops & 0xff);
+    if (switch1 == 0) {
+        switch1 = ops;
+        c1 = c2;
+    }
+    else {
+        switch23 += ops * N_MERGED_OPS;
+    }
 
     /* Do the operations by calling a procedure indexed by the first
        operation, which will switch on the second and third operations. */
 
+    if (switch1 >= N_MERGED_OPS_NOT_LAST) abort();
+
     (*proc_table[switch1]) (ans, which ? REAL(s2) : REAL(s1), switch23, 
-                            which, data);
+                            which, c1, c2, c3);
 }
 
 
