@@ -82,7 +82,7 @@ extern helpers_task_proc task_unary_minus, task_abs;
    required), and the codes for V op C are used for other
    operations. */
 
-#define MERGED_OP_NULL      0   /* No operation, either created or empty slot */
+#define MERGED_OP_NULL      0   /* No operation */
 
 #define MERGED_OP_C_PLUS_V  (2*PLUSOP - 1)
 #define MERGED_OP_ABS_V     (2*PLUSOP)      /* no V_PLUS_C */
@@ -95,7 +95,13 @@ extern helpers_task_proc task_unary_minus, task_abs;
 #define MERGED_OP_V_DIV_C   (2*DIVOP)
 
 #define N_MERGED_OPS 9          /* Number of operation codes above */
-#define N_MERGED_OPS_NOT_LAST 7 /* Number of op codes for all but the last op */
+
+#define MERGED_OP_W_PLUS_V  7   /* Codes for first operation; these codes */
+#define MERGED_OP_W_MINUS_V 8   /*    overlap codes for the last operaton */
+#define MERGED_OP_W_TIMES_V 9
+
+#define N_MERGED_OPS_FIRST 10   /* Number of op codes for the first op,
+                                   including NULL, which is not actually used */
 
 
 /* TASK FOR PERFORMING A SET OF MERGED ARITHMETIC OPERATIONS.
@@ -103,7 +109,7 @@ extern helpers_task_proc task_unary_minus, task_abs;
    Works only when MAX_OPS_MERGED is 3.
 
    The code for the first operation (which is never MERGED_OP_NULL or
-   a DIV operation) is used to select one of N_MERGED_OPS_NOT_LAST-1
+   a DIV operation) is used to select one of N_MERGED_OPS_FIRST-1
    procedures to call that are defined below.  These procedures
    contain the processing loop, and a switch on the remaining two
    operation codes.  This split into multiple procedures prevents the
@@ -123,6 +129,9 @@ extern helpers_task_proc task_unary_minus, task_abs;
 #define OP_V_SQUARED(k)  v = v * v
 #define OP_C_DIV_V(k)    v = c ## k / v
 #define OP_V_DIV_C(k)    v = v / c ## k
+#define OP_W_PLUS_V      v = w[i] + v
+#define OP_W_MINUS_V     v = w[i] - v
+#define OP_W_TIMES_V     v = w[i] * v
 
 #if __AVX__ && !defined(DISABLE_AVX_CODE)
 
@@ -137,6 +146,9 @@ extern helpers_task_proc task_unary_minus, task_abs;
 #define MM_OP_V_SQUARED(k)  V = _mm256_mul_pd (V, V)
 #define MM_OP_C_DIV_V(k)    V = _mm256_div_pd (C ## k, V)
 #define MM_OP_V_DIV_C(k)    V = _mm256_div_pd (V, C ## k)
+#define MM_OP_W_PLUS_V      V = _mm256_add_pd (_mm256_load_pd(w+i), V)
+#define MM_OP_W_MINUS_V     V = _mm256_sub_pd (_mm256_load_pd(w+i), V)
+#define MM_OP_W_TIMES_V     V = _mm256_mul_pd (_mm256_load_pd(w+i), V)
 
 #define LOAD_MM \
     __m256d C1 = _mm256_set1_pd(c1); \
@@ -215,7 +227,7 @@ extern helpers_task_proc task_unary_minus, task_abs;
              S_AVX; MM_OP_V_DIV_C(3))
 
 #define PROC(o,S,S_AVX) \
-static void proc_##o (SEXP ans, double *vecp, int sw, int which, \
+static void proc_##o (SEXP ans, double *vecp, double *w, int sw, int which, \
                       double c1, double c2, double c3) \
 { \
     LOAD_MM /* load AVX versions of c1, c2, c3, if doing AVX */ \
@@ -276,22 +288,34 @@ PROC(MERGED_OP_C_TIMES_V,
 PROC(MERGED_OP_V_SQUARED, 
     OP_V_SQUARED(1),
     MM_OP_V_SQUARED(1))
+PROC(MERGED_OP_W_PLUS_V,
+    OP_W_PLUS_V,
+    MM_OP_W_PLUS_V)
+PROC(MERGED_OP_W_MINUS_V,
+    OP_W_MINUS_V,
+    MM_OP_W_MINUS_V)
+PROC(MERGED_OP_W_TIMES_V,
+    OP_W_TIMES_V,
+    MM_OP_W_TIMES_V)
 
-static void (*proc_table[N_MERGED_OPS_NOT_LAST])() = {
+static void (*proc_table[N_MERGED_OPS_FIRST])() = {
     0,
     proc_MERGED_OP_C_PLUS_V,
     proc_MERGED_OP_ABS_V,
     proc_MERGED_OP_C_MINUS_V,
     proc_MERGED_OP_V_MINUS_C,
     proc_MERGED_OP_C_TIMES_V,
-    proc_MERGED_OP_V_SQUARED
+    proc_MERGED_OP_V_SQUARED,
+    proc_MERGED_OP_W_PLUS_V,
+    proc_MERGED_OP_W_MINUS_V,
+    proc_MERGED_OP_W_TIMES_V,
 };
 
 void task_merged_arith_abs (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
     double *data = helpers_task_data();
     double c1 = data[2], c2 = data[1], c3 = data[0]; \
-    int which = code & 1;  /* which is the vector operand? */
+    int which = code & 1;  /* which is the main vector operand? */
 
     /* Set up switch values encoding the first (possibly null) operation and
        the 2nd and 3rd operations. */
@@ -317,10 +341,14 @@ void task_merged_arith_abs (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     /* Do the operations by calling a procedure indexed by the first
        operation, which will switch on the second and third operations. */
 
-    if (switch1 >= N_MERGED_OPS_NOT_LAST) abort();
+    if (switch1 >= N_MERGED_OPS_FIRST) abort();
 
-    (*proc_table[switch1]) (ans, which ? REAL(s2) : REAL(s1), switch23, 
-                            which, c1, c2, c3);
+    if (which)
+        (*proc_table[switch1]) (ans, REAL(s2), REAL(s1), switch23, 
+                                which, c1, c2, c3);
+    else
+        (*proc_table[switch1]) (ans, REAL(s1), REAL(s2), switch23, 
+                                which, c1, c2, c3);
 }
 
 
@@ -330,10 +358,9 @@ void task_merged_arith_abs (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
    or second operand of the merged task procedure, with this being indicated 
    by a flag in the operation code. */
 
-#define MERGED_ARITH_OP(proc,op,in1,in2) \
-   ((proc)==task_unary_minus ? MERGED_OP_C_MINUS_V : \
-    op == POWOP ? MERGED_OP_V_SQUARED : \
-    LENGTH(in1)==1 ? 2*(op) - 1 : 2*(op))
+#define MERGED_BINARY_OP(proc,op,in1,in2) \
+  ( op == POWOP    ? MERGED_OP_V_SQUARED : \
+    LENGTH(in1)==1 ? 2*(op) - 1 : 2*(op) )
 
 void helpers_merge_proc ( /* helpers_var_ptr out, */
   helpers_task_proc *proc_A, helpers_op_t op_A, 
@@ -356,15 +383,21 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
     else { 
         task_data[2] = task_data[1] = 0.0;
         if (*proc_B == task_abs) {
-            which = 0;
             ops = MERGED_OP_ABS_V;
+            which = 0;
+        }
+        else if (*proc_B == task_unary_minus) {
+            ops = MERGED_OP_C_MINUS_V;
+            task_data[1] = 0.0;
+            which = 0;
+        }
+        else if (LENGTH(*in1_B) == LENGTH(*in2_B)) {  /* two vector operands */
+            ops = *op_B + MERGED_OP_W_PLUS_V - 1;
+            which = 1;
         }
         else { /* binary or unary arithmetic operation */
-            ops = MERGED_ARITH_OP (*proc_B, *op_B, *in1_B, *in2_B);
-            if (*in2_B == 0) { /* unary minus */
-                which = 0;
-            }
-            else if (LENGTH(*in2_B) == 1) {
+            ops = MERGED_BINARY_OP (*proc_B, *op_B, *in1_B, *in2_B);
+            if (LENGTH(*in2_B) == 1) {
                 task_data[1] = *REAL(*in2_B);
                 which = 0;
             }
@@ -380,14 +413,19 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
 
     helpers_op_t newop;
 
-    task_data[0] = 0.0;
     if (proc_A == task_abs) {
         newop = MERGED_OP_ABS_V;  
     }
-    else { /* binary or unary arithmetic operation */
-        if (in2_A != 0)
-            task_data[0] = LENGTH(in2_A)==1 ? *REAL(in2_A) : *REAL(in1_A);
-        newop = MERGED_ARITH_OP (proc_A, op_A, in1_A, in2_A);
+    else if (proc_A == task_unary_minus) {
+        newop = MERGED_OP_C_MINUS_V;
+        task_data[0] = 0.0;
+    }
+    else { /* binary arithmetic operation on vector and scalar */
+        newop = MERGED_BINARY_OP (proc_A, op_A, in1_A, in2_A);
+        if (LENGTH(in2_A) == 1)
+            task_data[0] = *REAL(in2_A);
+        else
+            task_data[0] = *REAL(in1_A);
     }
 
     ops = (ops << 8) | newop;
