@@ -156,6 +156,13 @@ getOption(x, default = NULL)
       no helper threads, unless the helpers apparatus was disabled when pqR
       was configured.}
 
+    \item{\code{helpers_no_holding}:}{A logical value set to \code{TRUE} 
+      to disable the putting of tasks that may be mergeable with later tasks
+      on hold, preventing them from being done in helper threads, until
+      their result becomes needed, or there is no longer a possibility of
+      them being merged, or the master embarks on what is recognized as a 
+      long computation (currently only garbage collection).}
+
     \item{\code{helpers_no_multithreading}:}{A logical value set to \code{TRUE} 
       to disable use of helper threads (but not the entire helpers apparatus
       supporting deferred evaluation).  Initially \code{FALSE}, unless there 

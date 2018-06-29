@@ -363,6 +363,11 @@ void attribute_hidden InitOptions(void)
 
     SETCDR(v,CONS(R_NilValue,R_NilValue));
     v = CDR(v);
+    SET_TAG(v, install("helpers_no_holding"));
+    SETCAR(v, ScalarLogical(helpers_not_holding_now));
+
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
     SET_TAG(v, install("helpers_no_merging"));
     SETCAR(v, ScalarLogical(helpers_not_merging));
 
@@ -640,6 +645,14 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		helpers_no_pipelining(k);
 		SET_VECTOR_ELT(value, i, 
                    SetOption(tag, ScalarLogical(helpers_not_pipelining)));
+	    }
+	    else if (streql(CHAR(namei), "helpers_no_holding")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), CHAR(namei));
+		k = asLogical(argi);
+		helpers_no_holding(k);
+		SET_VECTOR_ELT(value, i, 
+                   SetOption(tag, ScalarLogical(helpers_not_holding)));
 	    }
 	    else if (streql(CHAR(namei), "helpers_no_merging")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)

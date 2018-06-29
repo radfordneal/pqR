@@ -5,3 +5,5 @@ Convert x/2 to 0.5*x even when x is integer.
 Revised merging scheme to only merge div as last op, and reduce size
 of code from switches.
 
+Use the new "holding" facility of the helpers module for mergeable tasks.
+
