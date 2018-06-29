@@ -66,7 +66,7 @@ extern int B_in_use, B_being_computed;
                              
 #define helpers_merge(out,proc_a,op_a,in1_a,in2_a, \
                           proc_b_ptr,op_b_ptr,in1_b_ptr,in2_b_ptr,d) \
-  (*(proc_b_ptr) = mul_add_task, (d)[0] = 2.0, (d)[1] = 0.1)
+  (*(proc_b_ptr) = mul_add_task, (d)[0] = 2.0, (d)[1] = 0.1, 0)
 
 #endif
 
