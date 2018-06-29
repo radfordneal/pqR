@@ -1091,7 +1091,7 @@ static mtix find_untaken_runnable (int only_needed)
                                 if p is 0, ignore non-needed pipelined tasks
                                 if p is -1, any runnable task might be used */
 
-  for (i = untaken_out; i!=u_in; i = (i+1)&QMask) 
+  for (i = untaken_out; i!=u_in; i = (i + 1) & QMask) 
   { t = untaken[i];
     ATOMIC_READ_CHAR (n = task[t].info.needed);
     if (n)
@@ -1153,7 +1153,7 @@ static void put_in_untaken (mtix t)
 
 # ifdef HELPERS_NO_MULTITHREADING
 
-  untaken_in = (untaken_in+1) & QMask;
+  untaken_in = (untaken_in + 1) & QMask;
 
 # else
 
@@ -1196,7 +1196,7 @@ static void put_in_untaken (mtix t)
   { struct task_info *info = &task[t].info;
     if (info->is_on_hold)
     { int j;
-      for (j = on_hold_out; on_hold[j]!=t; j = (j + 1) & !QMask) ;
+      for (j = on_hold_out; on_hold[j]!=t; j = (j + 1) & QMask) ;
       on_hold[j] = on_hold[on_hold_out];
       on_hold_out = (on_hold_out + 1) & QMask;
       info->is_on_hold = 0;
@@ -1905,7 +1905,7 @@ void helpers_do_task
 
           int j;
 
-          for (j = untaken_out; untaken[j]!=pipe0; j = (j+1) & QMask)
+          for (j = untaken_out; untaken[j]!=pipe0; j = (j + 1) & QMask)
           { if (j==untaken_in)
             { helpers_printf("TASK TO MERGE INTO IS NOT IN UNTAKEN QUEUE!\n");
               exit(1);
