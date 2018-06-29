@@ -1858,9 +1858,9 @@ void helpers_do_task
            merged task.  Removes the old task from the on_hold queue
            if it was there but the merged task will not be. */
 
-        helpers_merge (out, task_to_do, op, in1, in2, 
-                       &m->task_to_do, &m->op, &m->var[1], &m->var[2],
-                       task_data_loc);
+        int flags_to_clear = helpers_merge (out, task_to_do, op, in1, in2, 
+                               &m->task_to_do, &m->op, &m->var[1], &m->var[2],
+                               task_data_loc);
 
 #       ifndef HELPERS_NO_HOLDING
           if ((m->flags & ~flags) & HELPERS_HOLD) /* old had HOLD, new doesn't*/
@@ -1878,6 +1878,8 @@ void helpers_do_task
 
         m->flags &= ~ (HELPERS_MERGE_IN_OUT | HELPERS_PIPE_OUT);
         m->flags |= flags & (HELPERS_MERGE_OUT | HELPERS_PIPE_OUT);
+        m->flags &= ~ (flags_to_clear & (HELPERS_MERGE_OUT | HELPERS_HOLD 
+                                          | HELPERS_PIPE_IN012_OUT));
 
         /* Remove and/or add merged task from/to queues.  Nothing needs to
            be done if the task merged into is master-only and the new task
