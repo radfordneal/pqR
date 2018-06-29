@@ -362,7 +362,7 @@ void task_merged_arith_abs (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
   ( op == POWOP    ? MERGED_OP_V_SQUARED : \
     LENGTH(in1)==1 ? 2*(op) - 1 : 2*(op) )
 
-void helpers_merge_proc ( /* helpers_var_ptr out, */
+int helpers_merge_proc ( /* helpers_var_ptr out, */
   helpers_task_proc *proc_A, helpers_op_t op_A, 
   helpers_var_ptr in1_A, helpers_var_ptr in2_A,
   helpers_task_proc **proc_B, helpers_op_t *op_B, 
@@ -434,6 +434,11 @@ void helpers_merge_proc ( /* helpers_var_ptr out, */
        may have been updated above. */
   
     *op_B = (ops << 8) | which;
+
+    /* Return value to clear flags so no further merge allowed (and no hold)
+       if the maximum number of operations (three) have already been merged. */
+
+    return (ops >> 16) ? (HELPERS_MERGE_OUT | HELPERS_HOLD) : 0;
 }
 
 #endif
