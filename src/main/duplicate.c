@@ -772,7 +772,8 @@ void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
    level, not at the level of attribute values, with NAMEDCNT of
    attribute values set to the maximum.
 
-   The argument needn't be protected by the caller. */
+   The argument needn't be protected by the caller.  Waits here for 
+   it to be computed. */
 
 SEXP attribute_hidden dup_top_level (SEXP x)
 {
@@ -789,6 +790,7 @@ SEXP attribute_hidden dup_top_level (SEXP x)
         R_len_t n = LENGTH(x);
         PROTECT(r = allocVector(TYPEOF(x),n));
         SET_TRUELENGTH(r,TRUELENGTH(x));
+        WAIT_UNTIL_COMPUTED(x);
         if (isVectorAtomic(x)) {
            copy_elements (r, 0, 1, x, 0, 1, n);
         }
