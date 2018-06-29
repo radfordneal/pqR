@@ -176,6 +176,15 @@
         on two vectors (merged operations are otherwise restricted to
         operating on a vector and a scalar).  Division can now
         only be the last operation in a merged sequence.
+  \item Tasks that may be mergable with later tasks are now by default
+        scheduled with a "hold" option, which prevents them from being
+        started immediately in a helper thread (which would make a merge
+        impossible).  They are instead eligible to be done in a helper
+        thread only when a merge is no longer possible, or the result
+        becomes needed, or the master thread starts what is recognized 
+        as being a long computation (currently only garbage collection).  
+        This behaviour can be disabled with the \code{helpers_no_holding}
+        option (see \code{help(options)}).
   \item General interpretive overhead has been reduced in some contexts,
         particularly when extracting or replacing subsets with 
         \code{[.]} or \code{[[.]]}.
@@ -259,6 +268,8 @@
         \code{PACKAGE}, \code{NAOK}, \code{DUP}, \code{HELPERS}, or
         \code{ENCODING} argument now results in an error rather than a
         warning. 
+  \item There is now a \code{helpers_no_holding} option; see note above
+        under performance improvements.
   \item [ Following changes from R Core releases described below: ]
         ICU is not used by default for collation if the initial locale 
         is \code{"C"} or \code{"POSIX"}; the C \code{strcmp} function

@@ -2246,6 +2246,8 @@ static void R_gc_internal (int reason, SEXP counters)
 {
     struct sggc_info old_sggc_info = sggc_info;
 
+    helpers_release_holds();
+
     if (DEBUG_STRATEGY) {
         printf (
          "AT START: Cnts: 0/%u 1/%u 2/%u, Bigchnks: 0/%u 1/%u 2/%u, Recov: 0/%.2f 1/%.2f 2/%.2f\n",

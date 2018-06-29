@@ -1362,7 +1362,8 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
             if ((nx==1 || ny==1) && TYPEOF(x)==REALSXP && TYPEOF(y)==REALSXP) {
                 if (opcode < DIVOP  /* this is the +, -, and * operators */
                       || opcode==POWOP && ny==1 && REAL(y)[0]==2.0 /* square */)
-                    flags = HELPERS_PIPE_IN0_OUT | HELPERS_MERGE_IN_OUT;
+                    flags = 
+                     HELPERS_PIPE_IN0_OUT | HELPERS_MERGE_IN_OUT | HELPERS_HOLD;
                 else if (opcode == DIVOP) /* only allowed to be last in merge */
                     if (helpers_is_being_computed(x) 
                      || helpers_is_being_computed(y))
@@ -1372,9 +1373,11 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
             if (nx == ny && opcode <= TIMESOP) {
                 /* need first op to not be being computed for merging */
                 if (!helpers_is_being_computed(x))
-                    flags = HELPERS_PIPE_IN02_OUT | HELPERS_MERGE_OUT;
+                    flags = 
+                      HELPERS_PIPE_IN02_OUT | HELPERS_MERGE_OUT | HELPERS_HOLD;
                 else if (!helpers_is_being_computed(y) && opcode != MINUSOP) {
-                    flags = HELPERS_PIPE_IN02_OUT | HELPERS_MERGE_OUT;
+                    flags = 
+                      HELPERS_PIPE_IN02_OUT | HELPERS_MERGE_OUT | HELPERS_HOLD;
                     swap_ops = TRUE;
                 }
             }

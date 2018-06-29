@@ -84,7 +84,12 @@
   stored in main memory.  However, when helper threads are available,
   two separate tasks exectured in parallel might take less time than a
   merged task done on one processor core.  Accordingly, pqR only merges
-  tasks for which the computation on each element is quite fast.
+  tasks for which the computation on each element is quite fast.  
+
+  Tasks that may be mergeable with later tasks are by default not
+  eligible (initially) to run in helper threads, until (for example)
+  their result is needed.  This behaviour can be disabled with the
+  \code{helpers_no_holding} option (see \code{options}).
 
   The table below summarizes what operations can currently be deferred,
   to be done in a helper thread, or merged with another operation,
@@ -208,7 +213,7 @@ A merged operation can have at most three component operations.
 \seealso{
   \code{\link{options}} for information on the options \code{helpers_disable},
   \code{helpers_no_multithreading}, \code{helpers_no_pipelining}, 
-  \code{helpers_no_merging}, and 
+  \code{helpers_no_merging}, \code{helpers_no_holding}, and 
   \code{helpers_trace}.  \code{\link{\%*\%}} for information on matrix 
   multiplication with or without the BLAS.
 }
