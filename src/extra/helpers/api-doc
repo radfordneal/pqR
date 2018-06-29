@@ -313,9 +313,10 @@ implicitly wait for the variables used or computed by the master-only
 tasks.
 
 The helpers_wait_for_all procedure takes no arguments, and waits until
-all scheduled tasks have completed.  Calling this procedure may be
-advisable before terminating the program, if some pending tasks may
-have desired side effects (such as writing data to files).
+all scheduled tasks have completed (including those on hold).  Calling
+this procedure may be advisable before terminating the program, if
+some pending tasks may have desired side effects (such as writing data
+to files).
 
 
 FAST CHECKS FOR VARIABLES BEING IN USE OR BEING COMPUTED
@@ -598,7 +599,7 @@ program, since this implementation scheme could change in future.
 
 The task procedure producing the output should keep track of how many
 vector elements have been computed in some local variable (which
-should generally be of type helpers_size_t.  When another element has
+should generally be of type helpers_size_t).  When another element has
 been computed, a macro call of the following form should be made:
 
   HELPERS_NEXT_OUT (i)
@@ -889,14 +890,16 @@ the state of the helpers module (eg, it must not wait until a variable
 is not in use).
 
 The task resulting from merging a new and an old task will have flag
-bits HELPERS_MERGE_OUT, HELPERS_MASTER_ONLY, HELPERS_MASTER_NOW, or
+bits HELPERS_MERGE_OUT, HELPERS_MASTER_ONLY, HELPERS_MASTER_NOW, and
 HELPERS_PIPE_OUT if the new task had the corresponding flag bit, and
-it will also have flag bits HELPERS_PIPE_IN0, HELPERS_PIPE_IN1,
-HELPERS_PIPE_IN2, or HELPERS_MASTER_ONLY if the old task had the
-corresponding flag bit (except HELPERS_MASTER_ONLY will be overridden
-by HELPERS_MASTER_NOW in the new task).  The HELPERS_MERGE_IN flag bit
-will not be set for the merged task (it would have no effect in any
-case).
+it will have flag bits HELPERS_PIPE_IN0, HELPERS_PIPE_IN1, and
+HELPERS_PIPE_IN2 if the old task had the corresponding flag bit.  A
+HELPERS_MASTER_ONLY flag for the old task will cause the merged task
+to have the HELPERS_MASTER_ONLY flag, unless it is overridden by
+HELPERS_MASTER_NOW in the new task.  The merged task will not have the
+HELPERS_MERGE_IN flag bit (it would anyway have no effect).  The
+merged task will have the HELPERS_HOLD flag only if both the old and
+the new task have the HELPERS_HOLD flag.
 
 Task merging can be disabled by calling helpers_no_merging with
 argument 1 (and can be re-enabled by calling it with argument 0).
@@ -910,6 +913,52 @@ HELPERS_DISABLE symbol is defined (see below).  The global variable
 helpers_not_merging_now will be 1 if task merging will not be done,
 because it has either been disabled, or the whole helpers facility 
 has been disabled.
+
+
+SCHEDULING TASKS THAT ARE PUT ON HOLD
+
+A task (other than a master-only or master-now task) that is scheduled
+with the HELPERS_HOLD bit set in its flags will be created, but it
+will not be run, either by a helper or the master, until such time as
+the hold is released (unless the hold facility has been disabled, as
+described below).  The main use of HELPERS_HOLD is to prevent a task
+from running if there is a chance that if not run now it might be
+merged with a task scheduled later.
+
+All tasks currently on hold are released when helpers_release_holds or
+helpers_wait_for_all is called.  The hold on a particular task will be
+released if any of the following occurs:
+
+  1) a task is scheduled that takes as one of its inputs the output 
+     of the task that is on hold (though first a check is made for 
+     whether the new task can instead be merged with the task on hold).
+
+  2) helpers_wait_until_not_computed is called for the output of the 
+     task on hold.
+
+  3) helpers_wait_until_not_in_use is called for an input of the task 
+     on hold.
+
+Also, the hold on some task (possibly selected arbitrarily) will be
+released when an attempt is made to schedule a new task, but the limit
+on the number of tasks has been reached, and all of the existing tasks
+are on hold.  (Because of this, one cannot reliably prevent a task
+from running during a period when it must not run by scheduling it
+with HELPERS_HOLD and then later releasing the hold.)
+
+The cabability of putting tasks on hold will be disabled if the symbol
+HELPERS_NO_HOLDING is defined, in which case the HELPERS_HOLD flag bit
+is ignored, and helpers_release_holds does nothing.  (This saves a
+small amount of time if the hold facility is never used.)  Calling the
+helpers_no_holding procedure with argument 1 will cause HELPERS_HOLD
+to be ignored for new tasks, until helpers_no_holding is called with 0
+as its argument.  The global variable helpers_not_holding will be be 1
+(versus 0 otherwise) if holding has been disabled by the most recent
+call of helpers_no_holding, or if the symbol HELPERS_NO_HOLDING or
+HELPERS_DISABLED has been defined.  The global variable
+helpers_not_holding_now will be 1 (versus 0) if HELPERS_HOLD will be
+ignored, either because holding has been disabled, or because the
+whole helpers facility has been disabled.
 
 
 INFORMATION FUNCTIONS AND VARIABLES
@@ -1102,9 +1151,9 @@ defined.  If HELPERS_NO_MULTITHREADING is defined but HELPERS_DISABLED
 is not, the helpers.c module must be linked with the application
 program, but compiling helpers.c will not require support for OpenMP.
 
-Defining HELPERS_NO_MULTITHREADING is useful (apart from testing) only
-if the application is using the helpers facility in order to support
-task merging, as described above.
+Defining HELPERS_NO_MULTITHREADING is likely to be useful (apart from
+testing) only if the application is using the helpers facility in
+order to support task merging, as described above.
 
 Use of helper threads can be disabled temporarily, without disabling
 the whole helpers facility, by calling the helpers_no_multithreading
@@ -1173,6 +1222,9 @@ along with the context in which they may be called.
                                    helpers_var_ptr,
                                    helpers_var_ptr
 
+  helpers_release_holds
+                    void           void                  master
+
   helpers_start_computing_var
                     void           helpers_var_ptr       master
 
@@ -1217,12 +1269,14 @@ along with the context in which they may be called.
   helpers_debug     void           char *, ...           task
 
   helpers_disable   void           int                   master or init
-  helpers_no_multithreading                              master
-                    void           int
-  helpers_no_pipelining                                  master
-                    void           int
-  helpers_no_merging                                     master
-                    void           int
+  helpers_no_merging                  
+                    void           int                   master
+  helpers_no_holding
+                    void           int                   master
+  helpers_no_pipelining               
+                    void           int                   master
+  helpers_no_multithreading           
+                    void           int                   master
 
 An application program using the helpers facility must define the
 following types in helpers-app.h:
@@ -1273,6 +1327,8 @@ available in the master:
   helpers_are_disabled       Set to 1 if helpers not enabled, 0 otherwise
   helpers_not_merging        Set to 1 if task merging is disabled, 0 otherwise
   helpers_not_merging_now    Set to 1 if task merging not done now, 0 otherwise
+  helpers_not_holding        Set to 1 if holding of tasks disabled, 0 otherwise
+  helpers_not_holding_now    Set to 1 if holding not done now, 0 otherwise
   helpers_not_pipelining     Set to 1 if pipelining is disabled, 0 otherwise
   helpers_not_pipelining_now Set to 1 if pipelining is not done, 0 otherwise
   helpers_not_multithreading Set to 1 if multithreading is disabled, 0 otherwise
@@ -1285,7 +1341,8 @@ The following constants are defined in helpers.h:
 
   HELPERS_MASTER_ONLY        Constants that may be or'd together to
   HELPERS_MASTER_NOW           create a flags argument to be passed
-  HELPERS_PIPE_OUT             to helpers_do_task.
+  HELPERS_HOLD                 to helpers_do_task.
+  HELPERS_PIPE_OUT
   HELPERS_PIPE_IN0
   HELPERS_PIPE_IN1
   HELPERS_PIPE_IN2
@@ -1329,6 +1386,7 @@ options when building the helpers facility:
 
   HELPERS_DISABLED
   HELPERS_NO_MULTITHREADING
+  HELPERS_NO_HOLDING
 
   ENABLE_DEBUG
   ENABLE_TRACE

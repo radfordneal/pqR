@@ -165,7 +165,8 @@ next repetitions.
 A version of the example program called "simple" is also provided,
 which is the same as "example" except that the only option that it
 implements is -t.  It is a more easily-read illustration of basic use
-of the helpers facility, and also illustrates helpers_debug.
+of the helpers facility, and also illustrates helpers_debug.  It's
+also compiled with -DHELPERS_NO_HOLDING, just to test that that works.
 
 The program "parex" is a modified version of "example" that allows the
 sin and cos computations (steps (2) and (3) above) to be done with
@@ -224,6 +225,15 @@ The possible options are as follows:
 
     -nN   Schedule the N'th task with the HELPERS_MASTER_NOW flag.
 
+    -hN   Schedule the N'th task with the HELPERS_HOLD flag.
+
+    -r    Call helpers_release_holds after scheduling the multiply.
+
+    -w    Call helpers_wait_until_not_being_computed for the result
+          of the multiply, immediately after scheduling it.
+
 Note that when the number of helpers threads is greater than 0, the
 multiply and add tasks will be merged only if the multiply has not
-started yet when the add task is scheduled.
+started yet when the add task is scheduled.  This will be so if the
+multiply task was scheduled with the HELPERS_HOLD flag, and neither of
+the -r and -w options were specified.

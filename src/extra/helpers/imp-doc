@@ -206,23 +206,27 @@ arise with it.  Note that the "used" array will contain some tasks
 that have completed, but have not been noticed by the master to have
 completed.
 
-Two circular queues of task indexes are maintained, as arrays in which
-the number of entries is equal to MAX_TASKS+1, which must be a power
-of two, so that increments modulo the size of the array can be quickly
-done by adding and then and'ing with MAX_TASKS (which must be a power
-of two minus one).  All tasks in these queues will also be present in
-the "used" array.
+Three circular queues of task indexes are maintained, as arrays in
+which the number of entries is equal to MAX_TASKS+1, which must be a
+power of two, so that increments modulo the size of the array can be
+quickly done by adding and then and'ing with MAX_TASKS (which must be
+a power of two minus one).  All tasks in these queues will also be
+present in the "used" array.
 
 The "master_only" queue holds indexes of pending master-only tasks, in
 the order in which they were scheduled.  It is read and written only
 in the master thread, with no need for synchronization.
 
+The "on_hold" queue holds indexes of pending tasks (never master-only)
+that where scheduled with the HELPERS_HOLD flag bit, and have not had
+their hold released.
+
 The "untaken" queue holds indexes of scheduled tasks that are not
-master-only and which have not yet been started, in arbitrary order.
-Tasks are added to this queue only by the master thread.  Tasks may be
-taken from the "untaken" queue by the master or a helper thread, with
-exclusive access (to take a task to start, or for a merge operation)
-controlled by "start_lock".
+master-only and not on hold, and which have not yet been started, in
+arbitrary order.  Tasks are added to this queue only by the master
+thread.  Tasks may be taken from the "untaken" queue by the master or
+a helper thread, with exclusive access (to take a task to start, or
+for a merge operation) controlled by "start_lock".
 
 Two locks are maintained for use in a scheme that allows the helper
 thread that has set start_lock to suspend itself, and later be woken
@@ -260,11 +264,11 @@ it at the end of the "used" array, with a currently unused task index.
 It also searches for tasks that are computing each of its input
 variables, and records the most-recently-scheduled such task in the
 "pipe" field of the new task's entry in the 'task' array.  Finally, it
-adds the new task to either the "master_only" queue, or the "untaken"
-queue.  Since only the master accesses the "used" array, and only the
+adds the new task to one of the "master_only", "on_hold", or "untaken"
+queues.  Since only the master accesses the "used" array, and only the
 master add tasks to these queues, this requires no synchronization
 with helpers, except for the brief setting of untaken_lock described
-above to avoid a suspension race.  
+above to avoid a suspension race.
 
 When a new task is added to the "untaken" queue, the master looks to
 see if a helper has suspended itself because the "untaken" queue was
@@ -310,6 +314,10 @@ order to reliably check that the old task to merge with has not
 started running, and to have exclusive access to the untaken queue
 when removing a task that has become master-only or master-now after
 the merge.
+
+When the hold on a task is released, it is moved from the "on_hold"
+queue to the "untaken" queue.  This may result in a suspended helper
+begin woken up.
 
 
 OPERATION OF A HELPER THREAD
@@ -397,11 +405,12 @@ above may be set when compiling helpers.c, perhaps most conveniently
 with a compiler option.
 
 The MAX_TASKS symbol, giving the maximum number of outstanding task
-may also be defined.  Letting it default to its maximum of 255 is
-probably usually best, but a smaller value (which must be a power of
-two minus one) will prevent there being a large number of pending
-tasks, which might sometimes be undesirable (eg, if these pending
-tasks are preventing memory reclamation).
+may also be defined.  Letting it default to its maximum of 255 may
+often be best, but a smaller value (which must be a power of two minus
+one) will prevent there being a large number of pending tasks, which
+might sometimes be undesirable (eg, if these pending tasks are
+preventing memory reclamation, or because of the slowdown when the
+helpers module has to scan a larger list of tasks).
 
 The ENABLE_TRACE symbol can be defined as 0, 1, 2, 3, or 4 to control
 how much output is produced when tracing has been requested (by

@@ -71,6 +71,8 @@ typedef void helpers_task_proc \
 
 #define HELPERS_MERGE_IN_OUT (HELPERS_MERGE_IN + HELPERS_MERGE_OUT)
 
+#define HELPERS_HOLD 256
+
 
 /* MASTER PROCEDURE DEFINED BY THE USER. */
 
@@ -214,6 +216,8 @@ void helpers_no_pipelining (int);    /* Disable/re-enable pipelining */
 #define helpers_are_disabled 1
 #define helpers_not_merging 1
 #define helpers_not_merging_now 1
+#define helpers_not_holding 1
+#define helpers_not_holding_now 1
 
 #define helpers_startup(n) \
   do { helpers_master(); exit(0); } while (0)
@@ -237,6 +241,8 @@ static helpers_var_ptr helpers_var_list_null[1] = { (helpers_var_ptr) 0 };
 #define helpers_stats()              0
 #define helpers_disable(a)           0
 #define helpers_no_merging(a)        0
+#define helpers_no_holding(a)        0
+#define helpers_release_holds()      0
 
 #define HELPERS_NOW_OR_LATER(_c1_,_c2_,_flags_,_proc_,_op_,_out_,_in1_,_in2_) \
   ((_proc_)((_op_),(_out_),(_in1_),(_in2_)))
@@ -306,6 +312,21 @@ void helpers_no_merging (int);       /* Disable/re-enable task merging */
 #define helpers_not_merging 1        /* Stubs for when merging not supported */
 #define helpers_not_merging_now 1
 #define helpers_no_merging(a) 0
+
+#endif
+
+#ifdef HELPERS_NO_HOLDING
+
+#define helpers_not_holding 1
+#define helpers_not_holding_now 1
+#define helpers_release_holds() 0
+
+#else
+
+extern int helpers_not_holding;      /* 1 if holding is not enabled */
+extern int helpers_not_holding_now;  /* 1 if no holding at the moment */
+void helpers_no_holding (int);       /* Disable/re-enable holding */
+void helpers_release_holds(void);    /* Release all tasks currently on hold */
 
 #endif
 
