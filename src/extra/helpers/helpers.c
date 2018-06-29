@@ -2050,8 +2050,14 @@ out_of_merge:
   /* Release any tasks on hold that compute inputs of the new task. */
 
 # ifndef HELPERS_NO_HOLDING
-  { while (on_hold_out != on_hold_in)
-    { put_in_untaken (on_hold[on_hold_out]);
+  { int j;
+    for (j = on_hold_out; j!=on_hold_in; j = (j + 1) & QMask)
+    { mtix h = on_hold[j];
+      struct task_info *info = &task[h].info;
+      helpers_var_ptr hout = info->var[0];
+      if (hout!=null && (hout==in1 || hout==in2))
+      { put_in_untaken (h);
+      }
     }
   }
 # endif
