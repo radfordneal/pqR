@@ -1,7 +1,7 @@
 # HELPERS - A LIBRARY SUPPORTING COMPUTATIONS USING HELPER THREADS
 #           Makefile for Compiling Example Programs
 #
-# Copyright (c) 2013 Radford M. Neal.
+# Copyright (c) 2013, 2018 Radford M. Neal.
 # 
 #   The helpers library is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -19,8 +19,8 @@
 
 
 WARN=  # -Wall -Wno-parentheses -Wno-unused-value
-COMPILE=gcc -fopenmp -g ${WARN} -O2                     # command for gcc/Intel
-COMPILE_NO_OPENMP=gcc -g ${WARN} -O2
+COMPILE=gcc-8 -fopenmp -g ${WARN} -O2                   # command for gcc/Intel
+COMPILE_NO_OPENMP=gcc-8 -g ${WARN} -O2
 
 #COMPILE=cc -xopenmp -DASSUME_ATOMIC_READ_CHAR  # command for cc/SPARC
 #COMPILE_NO_OPENMP=cc
@@ -40,14 +40,18 @@ example-m:	example.c helpers-app.h ../helpers.c ../helpers.h
 	example.c ../helpers.c -lm -o example-m
 
 simple:		simple.c helpers-app.h ../helpers.c ../helpers.h
-	${COMPILE} -I.. -I. simple.c ../helpers.c -lm -o simple
+	${COMPILE} -I.. -I. -DHELPERS_NO_HOLDING simple.c ../helpers.c -lm \
+	           -o simple
 
 simple-debug:	simple.c helpers-app.h ../helpers.c ../helpers.h
-	${COMPILE} -I.. -I. -DENABLE_DEBUG=1 simple.c ../helpers.c -lm \
+	${COMPILE} -I.. -I. \
+	           -DENABLE_DEBUG=1 -DENABLE_TRACE=1 -DHELPERS_NO_HOLDING \
+	           simple.c ../helpers.c -lm \
 	           -o simple-debug
 
 merge:		merge.c helpers-app.h ../helpers.c ../helpers.h
-	${COMPILE} -I.. -I. -DMERGE merge.c ../helpers.c -lm -o merge
+	${COMPILE} -I.. -I. -DMERGE -DENABLE_TRACE=1 merge.c ../helpers.c -lm \
+	           -o merge
 
 parex:		parex.c helpers-app.h ../helpers.c ../helpers.h
 	${COMPILE} -I.. -I. parex.c ../helpers.c -lm -o parex
