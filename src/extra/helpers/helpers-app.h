@@ -105,7 +105,7 @@ typedef SEXP helpers_var_ptr;
 
 extern helpers_task_proc task_merged_arith_abs, task_abs;
 
-extern void helpers_merge_proc ( /* helpers_var_ptr out, */
+extern int helpers_merge_proc ( /* helpers_var_ptr out, */
   helpers_task_proc *proc_A, helpers_op_t op_A, 
   helpers_var_ptr in1_A, helpers_var_ptr in2_A,
   helpers_task_proc **proc_B, helpers_op_t *op_B, 
