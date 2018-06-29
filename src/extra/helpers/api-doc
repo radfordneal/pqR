@@ -851,12 +851,12 @@ modify the task information for task B to merge in the operation of
 task A.  If defined as a function, the prototype for helpers_merge
 should be as follows:
 
-  void helpers_merge (helpers_var_ptr out, 
-     helpers_task_proc *proc_A, helpers_op_t op_A, 
-     helpers_var_ptr in1_A, helpers_var_ptr in2_A,
-     helpers_task_proc **proc_B, helpers_op_t *op_B, 
-     helpers_var_ptr *in1_B, helpers_var_ptr *in2_B,
-     double task_data[HELPERS_TASK_DATA_AMT]);
+  int helpers_merge (helpers_var_ptr out, 
+        helpers_task_proc *proc_A, helpers_op_t op_A, 
+        helpers_var_ptr in1_A, helpers_var_ptr in2_A,
+        helpers_task_proc **proc_B, helpers_op_t *op_B, 
+        helpers_var_ptr *in1_B, helpers_var_ptr *in2_B,
+        double task_data[HELPERS_TASK_DATA_AMT]);
 
 The first argument is the output variable shared by tasks A and B.
 The next four arguments are as passed to helpers_do_task when task A
@@ -889,8 +889,9 @@ The helpers_merge function or macro must not do anything that affects
 the state of the helpers module (eg, it must not wait until a variable
 is not in use).
 
-The task resulting from merging a new and an old task will have flag
-bits HELPERS_MERGE_OUT, HELPERS_MASTER_ONLY, HELPERS_MASTER_NOW, and
+Execpt as modified by the return value of helpers_merge, the task
+resulting from merging a new and an old task will have flag bits
+HELPERS_MERGE_OUT, HELPERS_MASTER_ONLY, HELPERS_MASTER_NOW, and
 HELPERS_PIPE_OUT if the new task had the corresponding flag bit, and
 it will have flag bits HELPERS_PIPE_IN0, HELPERS_PIPE_IN1, and
 HELPERS_PIPE_IN2 if the old task had the corresponding flag bit.  A
@@ -899,7 +900,15 @@ to have the HELPERS_MASTER_ONLY flag, unless it is overridden by
 HELPERS_MASTER_NOW in the new task.  The merged task will not have the
 HELPERS_MERGE_IN flag bit (it would anyway have no effect).  The
 merged task will have the HELPERS_HOLD flag only if both the old and
-the new task have the HELPERS_HOLD flag.
+the new task have the HELPERS_HOLD flag.  
+
+These flags are modified by anding with the complement of the value
+returned by helpers_merge (so this functions should return zero if no
+modification is desired).  One possible use of this feature is to
+clear the HELPERS_MERGE_OUT and HELPERS_HOLD bits if it is known that
+no further merges are possible.  Clearing the HELPERS_PIPE_OUT,
+HELPERS_PIPE_IN0, HELPERS_PIPE_IN1, or HELPERS_PIPE_IN2 bits could
+also be useful.  Other flag bits should not be changed.
 
 Task merging can be disabled by calling helpers_no_merging with
 argument 1 (and can be re-enabled by calling it with argument 0).
