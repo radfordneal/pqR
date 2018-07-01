@@ -149,10 +149,10 @@ int main (int argc, char **argv)
   { 
 #   if ENABLE_DEBUG
     fprintf (stderr, 
-             "Usage:  simmple-debug [ -t ] n-helpers vec-size repetitions\n");
+             "Usage:  simple-debug [ -t ] n-helpers vec-size repetitions\n");
 #   else
     fprintf (stderr, 
-             "Usage:  simmple [ -t ] n-helpers vec-size repetitions\n");
+             "Usage:  simple [ -t ] n-helpers vec-size repetitions\n");
 #   endif
     exit(1);
   }
