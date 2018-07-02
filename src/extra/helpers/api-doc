@@ -1132,8 +1132,8 @@ extended period of time (such as when the application is waiting for
 user input).  So calling helpers_disable makes sense only when some
 circumstance (eg, high time-sharing system load) makes use of helper
 threads undesirable during a computation that might have used them.
-(Though it is also useful for testing, and for understanding impact of
-helper threads and task merging.)
+(Though it is also useful for testing, and for understanding the
+impact of helper threads and task merging.)
 
 The global variable helpers_are_disabled will be set to 1 (versus 0)
 when helpers are disabled.  If HELPERS_DISABLED is defined, this will

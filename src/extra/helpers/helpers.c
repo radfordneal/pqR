@@ -549,7 +549,12 @@ static void check_consistency (void)
   }
 
   /* Check contents of 'untaken' queue.  Note that tasks may be being
-     taken out concurrently by a helper. */
+     taken out concurrently by a helper.  Because of this, we can't
+     check for a task being queued twice here because that can happen
+     momentarily as a helper manipulates the queue.  Also, other checks 
+     depend on reads from 'untaken' being atomic even though this
+     isn't technically ensured by the code here and elsewhere (but not
+     likely to be a problem in practice). */
 
   tix u_in, u_out;
   u_in = untaken_in;
@@ -572,8 +577,6 @@ static void check_consistency (void)
                       j, t, u_out, u_in);
       abort();
     }
-    /* Can't check for being queued twice here because a helper may be
-       manipulating the queue. */
     in_queue[t] = 1;
   }
 
@@ -1262,6 +1265,9 @@ static mtix find_untaken_runnable (int only_needed)
 
   for (i = untaken_out; i!=u_in; i = (i + 1) & QMask) 
   { t = untaken[i];
+#   ifdef HELPERS_DEBUG
+      if (t<1 || t>MAX_TASKS) abort();
+#   endif
     ATOMIC_READ_CHAR (n = task[t].info.needed);
     if (n)
     { r = runnable(t);
@@ -1318,6 +1324,12 @@ static mtix find_untaken_runnable (int only_needed)
 
 static void put_in_untaken (mtix t)
 {
+  check_consistency();  /* only enabled for debugging */
+
+# ifdef HELPERS_DEBUG
+    if (t<1 || t>MAX_TASKS) abort();
+# endif
+
   untaken[untaken_in] = t;
 
 # ifdef HELPERS_NO_MULTITHREADING
@@ -1372,6 +1384,8 @@ static void put_in_untaken (mtix t)
     }
   }
 # endif
+
+  check_consistency();  /* only enabled for debugging */
 }
 
 
@@ -1932,15 +1946,16 @@ void helpers_do_task
     { goto no_merge;
     }
 
-    /* Can't merge if both tasks must be done in master, but other master-only
-       tasks should be done in between, or if te new task is master-now, but
-       old task is not the only master-only task. */
+    /* Can't merge if both tasks must be done in master, and either some
+       other master-only task(s) should be done in between, or the new 
+       task is master-now and the old task is not the only master-only task. */
 
     if ((m->flags & HELPERS_MASTER_ONLY) 
-          && (flags & (HELPERS_MASTER_ONLY | HELPERS_MASTER_NOW))
-          && master_only [(master_only_in + (QSize-1)) & QMask] != pipe0
-        || (flags & HELPERS_MASTER_NOW) && master_only[master_only_out]!=pipe0)
-    { goto no_merge;
+          && (flags & (HELPERS_MASTER_ONLY | HELPERS_MASTER_NOW)))
+    { if (master_only [(master_only_in + (QSize-1)) & QMask] != pipe0
+       || (flags & HELPERS_MASTER_NOW) && master_only[master_only_out] != pipe0)
+      { goto no_merge;
+      }
     }
 
     /* Can't merge if application-provided function says we can't. */
@@ -1960,42 +1975,53 @@ void helpers_do_task
     int merge = 1, locked = 0;
 
 #   ifndef HELPERS_NO_MULTITHREADING
-    {
-      if ( ! (helpers_not_multithreading_now
-#              ifndef HELPERS_NO_HOLDING
-               || m->is_on_hold
-                    && ! (flags & (HELPERS_MASTER_ONLY | HELPERS_MASTER_NOW))
-#              endif
-               || (m->flags & HELPERS_MASTER_ONLY)))
+    { if (!helpers_not_multithreading_now)
       { 
-        FLUSH;
-        ATOMIC_READ_CHAR (h = m->helper);
+        /* If task we're trying to merge with is not master-only or on hold,
+           set the start lock, in order to check for sure whether the merged
+           task has already been started in a helper.  This also allows the
+           untaken queue may be manipulated later, until the lock is unset. */
 
-        /* Don't merge if the task to merge with has started to run. */
+        if (! (m->flags & HELPERS_MASTER_ONLY)
+#          ifndef HELPERS_NO_HOLDING
+             && !m->is_on_hold
+#          endif
+           )
+        { 
+#         ifndef HELPERS_NO_HOLDING
+          if (!m->is_on_hold)
+#         endif
+          { FLUSH;
+            ATOMIC_READ_CHAR (h = m->helper);
 
-        if (h!=-1)
-        { goto no_merge;
-        }
+            /* Don't merge if the task to merge with has started to run. */
 
-        /* We need to set start_lock to be sure that we don't merge
-           with a task that has started, and so we can remove it
-           from the untaken queue if it will become master-only.
-           The lock will usually be unset, but it may be set for a
-           prolonged time if here are untaken tasks and they can't
-           be run until some master-only tasks have run. */
-
-        while (!omp_test_lock (&start_lock.lock))
-        { ATOMIC_READ_CHAR (h = m->helper);
-          if (h!=-1)
-          { goto no_merge;
+            if (h!=-1)
+            { goto no_merge;
+            }
           }
-          do_task_in_master(0);
-        }
-        locked = 1;
 
-        ATOMIC_READ_CHAR (h = m->helper);
-        if (h!=-1) 
-        { merge = 0;
+          /* This lock will usually be unset, but it may be set for a
+             prolonged time if here are untaken tasks and they can't
+             be run until some master-only tasks have run. */
+
+          while (!omp_test_lock (&start_lock.lock))
+          { ATOMIC_READ_CHAR (h = m->helper);
+            if (h!=-1)
+            { goto no_merge;
+            }
+            do_task_in_master(0);
+          }
+          locked = 1;
+
+#         ifndef HELPERS_NO_HOLDING
+          if (!m->is_on_hold)
+#         endif
+          { ATOMIC_READ_CHAR (h = m->helper);
+            if (h!=-1) 
+            { merge = 0;
+            }
+          }
         }
       }
     }
@@ -2056,20 +2082,6 @@ void helpers_do_task
                              &m->task_to_do, &m->op, &m->var[1], &m->var[2],
                              task_data_loc);
 
-#     ifndef HELPERS_NO_HOLDING
-        if ((m->flags & ~flags) & HELPERS_HOLD) /* old had HOLD, new doesn't*/
-        { 
-          /* Move the old task from the on_hold queue, if it's there,
-             to the untaken queue (it can't be master-only). */
-
-          if (m->is_on_hold)
-          { put_in_untaken (pipe0);
-          }
-
-          m->flags &= ~ HELPERS_HOLD;
-        }
-#     endif
-
       m->flags &= ~ (HELPERS_MERGE_IN_OUT | HELPERS_PIPE_OUT);
       m->flags |= flags & (HELPERS_MERGE_OUT | HELPERS_PIPE_OUT);
       m->flags &= ~ (flags_to_clear & (HELPERS_MERGE_OUT | HELPERS_HOLD 
@@ -2087,59 +2099,87 @@ void helpers_do_task
       { if (flags & HELPERS_MASTER_NOW)
         { 
           /* Remove the task to merge into from the master-only queue.
-             It must be at the head of the queue (checked above). */
+             It must be the next in the queue (checked above). */
 
           master_only_out = (master_only_out + 1) & QMask;
           m->flags &= ~ HELPERS_MASTER_ONLY;
           m->flags |= HELPERS_MASTER_NOW;
         }
       }
-      else if (flags & (HELPERS_MASTER_ONLY | HELPERS_MASTER_NOW))
+      else /* task merged into is not master-only */
       { 
-        /* Remove the task to merge into from the untaken or on_hold queue.
-           Note that start_lock should alread be set if it's in untaken. */
-
-        int j;
-
-        if (m->is_on_hold)
-        { for (j = on_hold_out; on_hold[j]!=pipe0; j = (j + 1) & QMask)
-          { if (j==on_hold_in)
-            { helpers_printf("TASK TO MERGE INTO IS NOT IN ON_HOLD QUEUE!\n");
-              exit(1);
-            }
-          }
-          on_hold[j] = on_hold[on_hold_out];
-          on_hold_out = (on_hold_out + 1) & QMask;
-        }
-        else
-        { for (j = untaken_out; untaken[j]!=pipe0; j = (j + 1) & QMask)
-          { if (j==untaken_in)
-            { helpers_printf("TASK TO MERGE INTO IS NOT IN UNTAKEN QUEUE!\n");
-              exit(1);
-            }
-          }
-          untaken[j] = untaken[untaken_out];
-          untaken_out = (untaken_out + 1) & QMask;
-        }
-
-        if (flags & HELPERS_MASTER_NOW)
-        {
-          m->flags |= HELPERS_MASTER_NOW;
-        }
-        else
+        if (flags & (HELPERS_MASTER_ONLY | HELPERS_MASTER_NOW))
         { 
-          /* Add the merged task to the master-only queue. */
+          /* Remove the task to merge into from the untaken or on_hold queue. */
 
-          master_only[master_only_in] = pipe0;
-          master_only_in = (master_only_in + 1) & QMask;
+          int j;
 
-          m->flags |= HELPERS_MASTER_ONLY;
+#         ifndef HELPERS_NO_HOLDING
+          if (m->is_on_hold)
+          { for (j = on_hold_out; on_hold[j]!=pipe0; j = (j + 1) & QMask)
+            { if (j==on_hold_in)
+              { helpers_printf("TASK TO MERGE INTO IS NOT IN ON_HOLD QUEUE!\n");
+                exit(1);
+              }
+            }
+            on_hold[j] = on_hold[on_hold_out];
+            on_hold_out = (on_hold_out + 1) & QMask;
+            m->is_on_hold = 0;
+          }
+          else
+#         endif
+          { 
+            /* Task being merged into must be in the 'untaken' queue.  Note that
+               start_lock should already be set (unless not multithreading). */
+
+#           ifdef HELPERS_DEBUG
+              if (!locked && !helpers_no_multithreading) abort();
+#           endif
+
+            for (j = untaken_out; ; j = (j + 1) & QMask)
+            { if (j==untaken_in)
+              { helpers_printf("TASK TO MERGE INTO IS NOT IN UNTAKEN QUEUE!\n");
+                exit(1);
+              }
+#             ifdef HELPERS_DEBUG
+                if (untaken[j]<1 || untaken[j]>MAX_TASKS) abort();
+#             endif
+              if (untaken[j]==pipe0)
+              { break;
+              }
+            }
+
+            untaken[j] = untaken[untaken_out];
+            untaken_out = (untaken_out + 1) & QMask;
+          }
+
+          if ( ! (flags & HELPERS_MASTER_NOW))
+          { 
+            /* Add the merged task to the master-only queue. */
+
+            master_only[master_only_in] = pipe0;
+            master_only_in = (master_only_in + 1) & QMask;
+          }
+        }
+        else /* neither task is master-only or master-now */
+        {
+          if ((m->flags & ~flags) & HELPERS_HOLD) /* old had HOLD, new doesn't*/
+          {
+            /* Move the old task from the on_hold queue, if it's there, 
+               to the untaken queue.  Doesn't require start_lock to be
+               set (but note the task may start running immediately). */
+
+            if (m->is_on_hold)
+            { put_in_untaken (pipe0);
+            }
+
+            m->flags &= ~ HELPERS_HOLD;
+          }
         }
       }
     }
 
-    /* Queue manipulations are all done, so release start_lock if it
-       is set. */
+    /* Queue manipulations are all done, so release start_lock if it was set. */
 
 #   ifndef HELPERS_NO_MULTITHREADING
     if (locked)
@@ -2250,9 +2290,11 @@ void helpers_do_task
       return;
     }
 
-no_merge:
+  no_merge:
 
 # endif
+
+  check_consistency();  /* only enabled for debugging */
 
   /* Release any tasks on hold that compute inputs of the new task. */
 
@@ -2268,6 +2310,8 @@ no_merge:
     }
   }
 # endif
+
+  check_consistency();  /* only enabled for debugging */
 
   /* Set up for task - either master-now or another kind. */
 
@@ -2351,11 +2395,11 @@ no_merge:
 
     if (helpers_tasks==MAX_TASKS)
     { 
-#    ifndef HELPERS_NO_HOLDING
+#     ifndef HELPERS_NO_HOLDING
         if (((on_hold_in + 1) & QMask) == on_hold_out)
         { put_in_untaken (on_hold[on_hold_out]);
         }
-#   endif
+#     endif
 
       do 
       { do_task_in_master(0);
