@@ -218,7 +218,7 @@ the order in which they were scheduled.  It is read and written only
 in the master thread, with no need for synchronization.
 
 The "on_hold" queue holds indexes of pending tasks (never master-only)
-that where scheduled with the HELPERS_HOLD flag bit, and have not had
+that were scheduled with the HELPERS_HOLD flag bit, and have not had
 their hold released.
 
 The "untaken" queue holds indexes of scheduled tasks that are not
