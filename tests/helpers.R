@@ -556,37 +556,59 @@ show_results <- function (R)
 }
 
 
-# Do tests for varying dimensions of vectors and matrices, under four
-# conditions of multithreading and/or task merging being enabled.
+# Do tests for varying dimensions of vectors and matrices, under various
+# conditions of multithreading, holding, and task merging being enabled.
 
-for (len in c(1,2,21,22,127,128,129,201,202))
+for (len in c(1,2,21,22,127,128,129,201,202,513))
 {
     cat("\n\nTESTING WITH DIMENSION",len,"\n\n")
+
     cat("Tests with helpers disabled:\n")
     options(helpers_disable=TRUE)
     R0 <- do_helpers_tests(len)
     show_results(R0)
     
-    cat("\nTests with task merging but no multithreading:\n")
+    cat("\nTests with merging and holding, but no multithreading:\n")
     options(helpers_disable=FALSE)
     options(helpers_no_multithreading=TRUE)
     options(helpers_no_merging=FALSE)
+    options(helpers_no_holding=FALSE)
     R <- do_helpers_tests(len)
     show_results(R)
     stopifnot(identical(R,R0))
     
-    cat("\nTests with no task merging and multithreading:\n")
+    cat("\nTests with holding and multithreading, but no merging:\n")
     options(helpers_disable=FALSE)
     options(helpers_no_multithreading=FALSE)
     options(helpers_no_merging=TRUE)
+    options(helpers_no_holding=FALSE)
     R <- do_helpers_tests(len)
     show_results(R)
     stopifnot(identical(R,R0))
     
-    cat("\nTests with both task merging and multithreading:\n")
+    cat("\nTests with merging and multithreading, but no holding:\n")
     options(helpers_disable=FALSE)
     options(helpers_no_multithreading=FALSE)
     options(helpers_no_merging=FALSE)
+    options(helpers_no_holding=TRUE)
+    R <- do_helpers_tests(len)
+    show_results(R)
+    stopifnot(identical(R,R0))
+    
+    cat("\nTests with multithreading, but no merging or holding:\n")
+    options(helpers_disable=FALSE)
+    options(helpers_no_multithreading=FALSE)
+    options(helpers_no_merging=TRUE)
+    options(helpers_no_holding=TRUE)
+    R <- do_helpers_tests(len)
+    show_results(R)
+    stopifnot(identical(R,R0))
+    
+    cat("\nTests with merging, holding, and multithreading:\n")
+    options(helpers_disable=FALSE)
+    options(helpers_no_multithreading=FALSE)
+    options(helpers_no_merging=FALSE)
+    options(helpers_no_holding=FALSE)
     R <- do_helpers_tests(len)
     show_results(R)
     stopifnot(identical(R,R0))
