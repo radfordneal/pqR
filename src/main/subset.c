@@ -3447,7 +3447,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
         else if (ny >= n) {
             if (n & 1) {
                 ii = ixp[0] - 1;
-                INTEGER(x)[ii] = INTEGER(y)[i];
+                INTEGER(x)[ii] = INTEGER(y)[0];
             }
             for (i = n & 1; i < n; i += 2) {
                 ii = ixp[i] - 1;
