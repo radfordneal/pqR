@@ -224,6 +224,10 @@
   \item The \code{\%\%} operator can no longer produce a warning of
         "probable complete loss of accuracy in modulus", the possiblity
         of which had prevented it being done in parallel in a helper thread.
+  \item The \code{sin}, \code{cos}, and \code{tan} functions no longer produce
+        a warning message when they return \code{NA} when given \code{Inf}
+        as their argument, the possiblity of which had prevented them being
+        done in parallel in a helper thread.
   \item The \code{inhibit_release} argument to the \code{gctorture2} function,
         and the \code{R_GCTORTURE_INHIBIT_RELEASE} environment variable,
         can now (as earlier, and in R Core versions of R) be used to prevent 
