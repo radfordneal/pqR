@@ -960,7 +960,6 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     int inhlpr = nrows*(k+1.0)*ncols > T_matmult;
     int pipeline = inhlpr && !helpers_not_pipelining_now;
-    int no_pipelining = !pipeline;
     int split = !inhlpr || helpers_not_multithreading_now ? 0 : helpers_num+1;
     SEXP op1 = x, op2 = y;
 

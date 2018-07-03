@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
@@ -189,7 +189,7 @@ double complex R_cpow (double complex X, double complex Y)
 
 SEXP attribute_hidden complex_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 {
-    int i,i1, i2, n, n1, n2;
+    int n, n1, n2;
     SEXP ans;
 
     /* Note: "s1" and "s2" are protected in the calling code. */

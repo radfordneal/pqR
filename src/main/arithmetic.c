@@ -607,7 +607,7 @@ void task_integer_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
     int *ians = INTEGER(ans);
 
-    R_len_t i1, i2, n, n1, n2;
+    R_len_t n, n1, n2;
     int x1, x2;
 
     n1 = LENGTH(s1);
@@ -906,7 +906,7 @@ extern double complex R_cpow (double complex, double complex);
 
 void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
-    R_len_t i1, i2, n, n1, n2;
+    R_len_t n, n1, n2;
 
     n1 = LENGTH(s1);
     n2 = LENGTH(s2);
@@ -2043,7 +2043,6 @@ static void setup_Math2
 #define DO_MATH2(y,a,b,n,na,nb,fncall) do { \
     int naflag = 0; \
     double ai, bi; \
-    R_len_t ia, ib; \
     mod_iterate (n, na, nb, ia, ib) { \
         ai = a[ia]; \
         bi = b[ib]; \

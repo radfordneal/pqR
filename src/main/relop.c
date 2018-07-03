@@ -57,7 +57,7 @@
         if (NANCHK2) \
             Rf_set_elements_to_NA (ans, 0, 1, n); \
         else \
-            for (i = 0; i<n; i++) { \
+            for (R_len_t i = 0; i<n; i++) { \
                 x1 = FETCH(s1,i); \
                 lp[i] = NANCHK1 ? NA_LOGICAL : COMPARE ? T : F; \
             } \
@@ -67,13 +67,13 @@
         if (NANCHK1) \
             Rf_set_elements_to_NA (ans, 0, 1, n); \
         else \
-            for (i = 0; i<n; i++) { \
+            for (R_len_t i = 0; i<n; i++) { \
                 x2 = FETCH(s2,i); \
                 lp[i] = NANCHK2 ? NA_LOGICAL : COMPARE ? T : F; \
             } \
     } \
     else if (n1 == n2) { \
-        for (i = 0; i<n; i++) { \
+        for (R_len_t i = 0; i<n; i++) { \
             x1 = FETCH(s1,i); \
             x2 = FETCH(s2,i); \
             lp[i] = \
@@ -107,7 +107,7 @@
         if (NANCHK2) \
             res = NA_LOGICAL; \
         else \
-            for (i = 0; i<n; i++) { \
+            for (R_len_t i = 0; i<n; i++) { \
                 x1 = FETCH(s1,i); \
                 if (NANCHK1) \
                     res = NA_LOGICAL; \
@@ -122,7 +122,7 @@
         if (NANCHK1) \
             res = NA_LOGICAL; \
         else \
-            for (i = 0; i<n; i++) { \
+            for (R_len_t i = 0; i<n; i++) { \
                 x2 = FETCH(s2,i); \
                 if (NANCHK2) \
                     res = NA_LOGICAL; \
@@ -133,7 +133,7 @@
             } \
     } \
     else if (n1 == n2) { \
-        for (i = 0; i<n; i++) { \
+        for (R_len_t i = 0; i<n; i++) { \
             x1 = FETCH(s1,i); \
             x2 = FETCH(s2,i); \
             if (NANCHK1 || NANCHK2) \
@@ -180,7 +180,7 @@
         if (NANCHK2) \
             res = NA_LOGICAL; \
         else \
-            for (i = 0; i<n; i++) { \
+            for (R_len_t i = 0; i<n; i++) { \
                 x1 = FETCH(s1,i); \
                 if (NANCHK1) \
                     res = NA_LOGICAL; \
@@ -195,7 +195,7 @@
         if (NANCHK1) \
             res = NA_LOGICAL; \
         else \
-            for (i = 0; i<n; i++) { \
+            for (R_len_t i = 0; i<n; i++) { \
                 x2 = FETCH(s2,i); \
                 if (NANCHK2) \
                     res = NA_LOGICAL; \
@@ -206,7 +206,7 @@
             } \
     } \
     else if (n1 == n2) { \
-        for (i = 0; i<n; i++) { \
+        for (R_len_t i = 0; i<n; i++) { \
             x1 = FETCH(s1,i); \
             x2 = FETCH(s2,i); \
             if (NANCHK1 || NANCHK2) \
@@ -253,7 +253,7 @@
         if (NANCHK2) \
             res = NA_INTEGER; \
         else \
-            for (i = 0; i<n; i++) { \
+            for (R_len_t i = 0; i<n; i++) { \
                 x1 = FETCH(s1,i); \
                 if (NANCHK1) { \
                     res = NA_INTEGER; \
@@ -268,7 +268,7 @@
         if (NANCHK1) \
             res = NA_INTEGER; \
         else \
-            for (i = 0; i<n; i++) { \
+            for (R_len_t i = 0; i<n; i++) { \
                 x2 = FETCH(s2,i); \
                 if (NANCHK2) { \
                     res = NA_INTEGER; \
@@ -279,7 +279,7 @@
             } \
     } \
     else if (n1 == n2) { \
-        for (i = 0; i<n; i++) { \
+        for (R_len_t i = 0; i<n; i++) { \
             x1 = FETCH(s1,i); \
             x2 = FETCH(s2,i); \
             if (NANCHK1 || NANCHK2) { \
@@ -335,8 +335,6 @@ void task_relop (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     int n1 = LENGTH(s1);
     int n2 = LENGTH(s2);
     int n = n1>n2 ? n1 : n2;
-
-    int i, i1, i2;
 
     switch (TYPEOF(s1)) {
     case RAWSXP: {
@@ -395,7 +393,6 @@ void task_relop_and (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     int n2 = LENGTH(s2);
     int n = n1>n2 ? n1 : n2;
 
-    int i, i1, i2;
     int res;
 
     switch (TYPEOF(s1)) {
@@ -458,7 +455,6 @@ void task_relop_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     int n2 = LENGTH(s2);
     int n = n1>n2 ? n1 : n2;
 
-    int i, i1, i2;
     int res;
 
     switch (TYPEOF(s1)) {
@@ -521,7 +517,6 @@ void task_relop_sum (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     int n2 = LENGTH(s2);
     int n = n1>n2 ? n1 : n2;
 
-    int i, i1, i2;
     int res;
 
     switch (TYPEOF(s1)) {
@@ -579,7 +574,7 @@ void task_relop_sum (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    int i, i1, i2, n, n1, n2;
+    int n, n1, n2;
     SEXP ans, x1, x2;
     const SEXP *e1 = STRING_PTR(s1);
     const SEXP *e2 = STRING_PTR(s2);
@@ -595,7 +590,7 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
     if (code == EQOP) {
         if (n2 == 1) {
             x2 = e2[0];
-            for (i = 0; i<n; i++) {
+            for (R_len_t i = 0; i<n; i++) {
                 x1 = e1[i];
                 lp[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
                       : SEQL(x1, x2) ? T : F;
@@ -603,14 +598,14 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
         }
         else if (n1 == 1) {
             x1 = e1[0];
-            for (i = 0; i<n; i++) {
+            for (R_len_t i = 0; i<n; i++) {
                 x2 = e2[i];
                 lp[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
                       : SEQL(x1, x2) ? T : F;
             }
         }
         else if (n1 == n2) {
-            for (i = 0; i<n; i++) {
+            for (R_len_t i = 0; i<n; i++) {
 	        x1 = e1[i];
                 x2 = e2[i];
                 lp[i] = x1==NA_STRING || x2==NA_STRING ? NA_LOGICAL
@@ -629,7 +624,7 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
     else { /* LTOP */
         if (n2 == 1) {
             x2 = e2[0];
-            for (i = 0; i<n; i++) {
+            for (R_len_t i = 0; i<n; i++) {
                 x1 = e1[i];
                 if (x1 == NA_STRING || x2 == NA_STRING)
                     lp[i] = NA_LOGICAL;
@@ -641,7 +636,7 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
         }
         else if (n1 == 1) {
             x1 = e1[0];
-            for (i = 0; i<n; i++) {
+            for (R_len_t i = 0; i<n; i++) {
                 x2 = e2[i];
                 if (x1 == NA_STRING || x2 == NA_STRING)
                     lp[i] = NA_LOGICAL;
@@ -652,7 +647,7 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             }
         }
         else if (n1 == n2) {
-            for (i = 0; i<n; i++) {
+            for (R_len_t i = 0; i<n; i++) {
 	        x1 = e1[i];
                 x2 = e2[i];
                 if (x1 == NA_STRING || x2 == NA_STRING)
@@ -683,7 +678,7 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 
 static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    int i, i1, i2, n, n1, n2;
+    int n, n1, n2;
     SEXP x1, x2;
     const SEXP *e1 = STRING_PTR(s1);
     const SEXP *e2 = STRING_PTR(s2);
@@ -702,7 +697,7 @@ static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             if (x2 == NA_STRING)
                 ans = NA_LOGICAL;
             else
-                for (i = 0; i<n; i++) {
+                for (R_len_t i = 0; i<n; i++) {
                     x1 = e1[i];
                     if (x1==NA_STRING)
                         ans = NA_LOGICAL;
@@ -715,7 +710,7 @@ static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             if (x1 == NA_STRING)
                 ans = NA_LOGICAL;
             else
-                for (i = 0; i<n; i++) {
+                for (R_len_t i = 0; i<n; i++) {
                     x2 = e2[i];
                     if (x2==NA_STRING)
                         ans = NA_LOGICAL;
@@ -724,7 +719,7 @@ static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             }
         }
         else if (n1 == n2) {
-            for (i = 0; i<n; i++) {
+            for (R_len_t i = 0; i<n; i++) {
 	        x1 = e1[i];
                 x2 = e2[i];
                 if (x1==NA_STRING || x2==NA_STRING)
@@ -745,7 +740,7 @@ static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	}
     }
     else { /* LTOP */
-	for (i = 0; i < n; i++) {
+	for (R_len_t i = 0; i < n; i++) {
 	    x1 = e1[i % n1];
 	    x2 = e2[i % n2];
 	    if (x1 == NA_STRING || x2 == NA_STRING)
@@ -767,7 +762,7 @@ false:
 
 static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    int i, i1, i2, n, n1, n2;
+    int n, n1, n2;
     SEXP x1, x2;
     const SEXP *e1 = STRING_PTR(s1);
     const SEXP *e2 = STRING_PTR(s2);
@@ -786,7 +781,7 @@ static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             if (x2 == NA_STRING)
                 ans = NA_LOGICAL;
             else
-                for (i = 0; i<n; i++) {
+                for (R_len_t i = 0; i<n; i++) {
                     x1 = e1[i];
                     if (x1==NA_STRING)
                         ans = NA_LOGICAL;
@@ -799,7 +794,7 @@ static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             if (x1 == NA_STRING)
                 ans = NA_LOGICAL;
             else
-                for (i = 0; i<n; i++) {
+                for (R_len_t i = 0; i<n; i++) {
                     x2 = e2[i];
                     if (x2==NA_STRING)
                         ans = NA_LOGICAL;
@@ -808,7 +803,7 @@ static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             }
         }
         else if (n1 == n2) {
-            for (i = 0; i<n; i++) {
+            for (R_len_t i = 0; i<n; i++) {
 	        x1 = e1[i];
                 x2 = e2[i];
                 if (x1==NA_STRING || x2==NA_STRING)
@@ -829,7 +824,7 @@ static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	}
     }
     else { /* LTOP */
-	for (i = 0; i < n; i++) {
+	for (R_len_t i = 0; i < n; i++) {
 	    x1 = e1[i % n1];
 	    x2 = e2[i % n2];
 	    if (x1 == NA_STRING || x2 == NA_STRING)
@@ -849,7 +844,7 @@ true:
 
 static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    int i, i1, i2, n, n1, n2;
+    int n, n1, n2;
     SEXP x1, x2;
     const SEXP *e1 = STRING_PTR(s1);
     const SEXP *e2 = STRING_PTR(s2);
@@ -868,7 +863,7 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             if (x2 == NA_STRING)
                 ans = NA_INTEGER;
             else
-                for (i = 0; i<n; i++) {
+                for (R_len_t i = 0; i<n; i++) {
                     x1 = e1[i];
                     if (x1==NA_STRING) {
                         ans = NA_INTEGER;
@@ -883,7 +878,7 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             if (x1 == NA_STRING)
                 ans = NA_INTEGER;
             else
-                for (i = 0; i<n; i++) {
+                for (R_len_t i = 0; i<n; i++) {
                     x2 = e2[i];
                     if (x2==NA_STRING) {
                         ans = NA_INTEGER;
@@ -894,7 +889,7 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
             }
         }
         else if (n1 == n2) {
-            for (i = 0; i<n; i++) {
+            for (R_len_t i = 0; i<n; i++) {
 	        x1 = e1[i];
                 x2 = e2[i];
                 if (x1==NA_STRING || x2==NA_STRING) {
@@ -919,7 +914,7 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	}
     }
     else { /* LTOP */
-	for (i = 0; i < n; i++) {
+	for (R_len_t i = 0; i < n; i++) {
 	    x1 = e1[i % n1];
 	    x2 = e2[i % n2];
 	    if (x1 == NA_STRING || x2 == NA_STRING) {
@@ -1286,35 +1281,36 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
 
 SEXP bitwiseNot(SEXP a)
 {
-    int  m = LENGTH(a);
+    R_len_t m = LENGTH(a);
     SEXP ans = allocVector(INTSXP, m);
-    for(int i = 0; i < m; i++) INTEGER(ans)[i] =  ~INTEGER(a)[i];
+    for (R_len_t i = 0; i < m; i++)
+        INTEGER(ans)[i] =  ~INTEGER(a)[i];
     return ans;
 }
 
 SEXP bitwiseAnd(SEXP a, SEXP b)
 {
-    int  m = LENGTH(a), n = LENGTH(b), mn = (m && n) ? fmax2(m, n) : 0;
+    R_len_t m = LENGTH(a), n = LENGTH(b), mn = (m && n) ? fmax2(m, n) : 0;
     SEXP ans = allocVector(INTSXP, mn);
-    for(int i = 0; i < mn; i++)
+    for (R_len_t i = 0; i < mn; i++)
 	INTEGER(ans)[i] = INTEGER(a)[i%m] & INTEGER(b)[i%n];
     return ans;
 }
 
 SEXP bitwiseOr(SEXP a, SEXP b)
 {
-    int  m = LENGTH(a), n = LENGTH(b), mn = (m && n) ? fmax2(m, n) : 0;
+    R_len_t m = LENGTH(a), n = LENGTH(b), mn = (m && n) ? fmax2(m, n) : 0;
     SEXP ans = allocVector(INTSXP, mn);
-    for(int i = 0; i < mn; i++)
+    for (R_len_t i = 0; i < mn; i++)
 	INTEGER(ans)[i] = INTEGER(a)[i%m] | INTEGER(b)[i%n];
     return ans;
 }
 
 SEXP bitwiseXor(SEXP a, SEXP b)
 {
-    int  m = LENGTH(a), n = LENGTH(b), mn = (m && n) ? fmax2(m, n) : 0;
+    R_len_t m = LENGTH(a), n = LENGTH(b), mn = (m && n) ? fmax2(m, n) : 0;
     SEXP ans = allocVector(INTSXP, mn);
-    for(int i = 0; i < mn; i++)
+    for (R_len_t i = 0; i < mn; i++)
 	INTEGER(ans)[i] = INTEGER(a)[i%m] ^ INTEGER(b)[i%n];
     return ans;
 }
