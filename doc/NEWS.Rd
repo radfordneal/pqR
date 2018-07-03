@@ -137,6 +137,9 @@
   \item The speed of the logical operators (\code{!}, \code{&}, and \code{|})
         has been improved for long vectors, and they may now be done
         in a helper thread (though currently without pipelining of data).
+  \item Many 1-argument math functions (such as \code{exp} and \code{sin})
+        are now sometimes computed in parallel using two threads 
+        (possibly running in parallel with the master thread).
   \item Creation of matrices with \code{matrix} is now faster.
   \item Division of a vector by a scalar real or integer value of 2 is now
         automatically converted to a faster multiplication by 0.5 (which
