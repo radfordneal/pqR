@@ -114,13 +114,13 @@ static SEXP getActiveValue(SEXP fun)
 #if USE_SYM_TUNECNTS
 #define INC_SYM_TUNECNT(sym) (((SYMSEXP)UPTR_FROM_SEXP(sym))->sym_tunecnt += 1)
 #else 
-#define INC_SYM_TUNECNT(sym) 0
+#define INC_SYM_TUNECNT(sym) ((void)0)
 #endif
 
 #if USE_ENV_TUNECNTS
 #define INC_ENV_TUNECNT(env) (((ENVSEXP)UPTR_FROM_SEXP(env))->env_tunecnt += 1)
 #else 
-#define INC_ENV_TUNECNT(env) 0
+#define INC_ENV_TUNECNT(env) ((void)0)
 #endif
 
 #if USE_COMPRESSED_POINTERS

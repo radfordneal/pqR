@@ -3643,7 +3643,7 @@ void task_and_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 {
     int * restrict lans = LOGICAL(ans);
 
-    int i, i1, i2, n, n1, n2;
+    int n, n1, n2;
 
     n1 = LENGTH(s1);
     n2 = LENGTH(s2);
@@ -3654,7 +3654,7 @@ void task_and_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     switch (code) {
     case 1:  /* & operator */
         if (n1 == n2) {
-            for (i = 0; i<n; i++) {
+            for (R_len_t i = 0; i<n; i++) {
                 uint32_t u1 = LOGICAL(s1)[i];
                 uint32_t u2 = LOGICAL(s2)[i];
                 uint32_t u = u1 | u2;
@@ -3672,7 +3672,7 @@ void task_and_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
         break;
     case 2:  /* | operator */
         if (n1 == n2) {
-            for (i = 0; i<n; i++) {
+            for (R_len_t i = 0; i<n; i++) {
                 uint32_t u = LOGICAL(s1)[i] | LOGICAL(s2)[i];
                 lans[i] = u & ~ (u << 31);
             }

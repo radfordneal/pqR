@@ -316,7 +316,6 @@ void task_merged_arith_abs (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
     int switch1;
     int switch23;
-    int op;
 
     switch1 = ops>>16;
     ops &= 0xffff;

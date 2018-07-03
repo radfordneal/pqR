@@ -2581,7 +2581,7 @@ SEXP attribute_hidden do_subset2_dflt_x (SEXP call, SEXP op,
     }
 
     SEXP dims, dimnames;
-    int i, drop, ndims, nsubs;
+    int i, ndims, nsubs;
     int pok, exact = -1;
 
     /* This was intended for compatibility with S, */
@@ -2592,7 +2592,7 @@ SEXP attribute_hidden do_subset2_dflt_x (SEXP call, SEXP op,
 
     PROTECT(x);
 
-    drop = ExtractDropArg(&subs);  /* a "drop" arg is tolerated, but ignored */
+    (void) ExtractDropArg(&subs);  /* a "drop" arg is tolerated, but ignored */
     exact = ExtractExactArg(&subs);
     PROTECT(subs);
     if (sb1 == R_NoObject && subs != R_NilValue) {
@@ -4527,7 +4527,6 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
         x = ArrayAssign(call, x, subs, y);
     }
 
-  out:
     if (oldtype == LANGSXP) {
         if (LENGTH(x)==0)
             errorcall(call,

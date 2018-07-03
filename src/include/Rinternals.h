@@ -1643,8 +1643,8 @@ ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarMisc_consts[9];
 #else
 ConstExtern /* R_CONST */ VECTOR_SEXPREC_C R_ASCII_consts[128];
 ConstExtern R_CONST VECTOR_SEXPREC_C R_ScalarString_consts[128];
-#define R_ASCII_CHAR(c) ((SEXP) &R_ASCII_consts[c])
-#define R_ASCII_SCALAR_STRING(c) ((SEXP) &R_ScalarString_consts[c])
+#define R_ASCII_CHAR(c) ((SEXP) &R_ASCII_consts[(int)c])
+#define R_ASCII_SCALAR_STRING(c) ((SEXP) &R_ScalarString_consts[(int)c])
 #endif
 
 /* Start of scalar stack. */

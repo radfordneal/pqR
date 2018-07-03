@@ -457,7 +457,6 @@ static SEXP start_parseData_record (source_location *start_loc,
                                     int terminal)
 {
     SEXP idat, rec, up;
-    int i;
 
     if (!ps->keep_source) return R_NilValue;
 
