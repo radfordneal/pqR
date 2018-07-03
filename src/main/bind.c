@@ -50,8 +50,8 @@
    suitable for combining several calls of this task procedure for parallel
    computation of the result.
 
-   The coercion required must not involve allocation (not to string, no 
-   warning possible. */
+   The coercion required must not involve allocation (must not be not to 
+   string, must be no warning possible). */
 
 void task_copy_coerced (helpers_op_t code, SEXP out, SEXP in, SEXP in2)
 {
@@ -65,7 +65,10 @@ void task_copy_coerced (helpers_op_t code, SEXP out, SEXP in, SEXP in2)
     copy_elements_coerced (out, pos, 1, in, start, 1, count);
 
     helpers_amount_out (pos+count);
-    while (helpers_avail0(LENGTH(out)) < LENGTH(out)) ;
+
+    helpers_size_t a;
+    while ((a = helpers_avail0(LENGTH(out))) < LENGTH(out))
+        helpers_amount_out(a);
 }
 
 /* Check for case of only atomic vectors in c and unlist.  Return result, or
@@ -151,16 +154,19 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
                  || NAMEDCNT_GT_0(ansnames) && !local_assign1)
                 ansnames = R_NilValue;
         }
-        ans = reallocVector (objs[0], len, 1);
+        ans = reallocVector (objs[0], len, 0);
         SET_ATTRIB (ans, R_NilValue);
         SETLEVELS (ans, 0);
         SET_TRUELENGTH (ans, 0);
-        if (ans != objs[0]) {
+        if (ans == objs[0]) {
+            largeones -= largeone0;
+            realloc = 1;
+        }
+        else {
             local_assign1 = 0;
             SET_NAMEDCNT_0(ans);
+            realloc = 0;
         }
-        largeones -= largeone0;
-        realloc = 1;
     }
 
     PROTECT(ans);
