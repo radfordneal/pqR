@@ -1,0 +1,3 @@
+Work on doing things in parallel.
+
+Refines how c(...) works for parallel operation and realloc.
