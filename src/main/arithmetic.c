@@ -1637,31 +1637,27 @@ const char R_math1_err_table[44] = {
 
 int R_naflag;  /* Set to one (in master) for the "NAs produced" warning */
 
+/* Math1 task procedures.  The opcode has the function code in the low
+   byte, and (except for the sum task) and indication of which parallel
+   part to do above that. */
+
 void task_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
 {
+    int op = opcode & 0xff;
+    int par = opcode >> 8;
+    double (*f)(double) = R_math1_func_table[op];
+
+    R_len_t n = LENGTH(sa);
     double *ra = REAL(sa);
     double *ry = REAL(sy);
-    R_len_t n = LENGTH(sa);
-    R_len_t i = 0;
-    R_len_t a;
 
-    double (*f)(double) = R_math1_func_table[opcode];
+    R_len_t i, a;
 
-    HELPERS_SETUP_OUT(5);
+    if (R_math1_err_table[op] > 1) {
 
-    if (R_math1_err_table[opcode]<=1) {
-        while (i < n) {
-            HELPERS_WAIT_IN1 (a, i, n);
-            do {
-                if (ISNAN(ra[i]))
-                    ry[i] = ra[i];
-                else
-                    ry[i] = f(ra[i]);
-                HELPERS_NEXT_OUT(i);
-            } while (i < a);
-        }
-    }
-    else {
+        /* Code for when a warning is possible, only done in master. */
+
+        i = 0;
         while (i < n) {
             HELPERS_WAIT_IN1 (a, i, n);
             do {
@@ -1673,7 +1669,74 @@ void task_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
                         R_naflag = 1; /* only done in master thread */
                     }
                 }
+                i += 1;
+            } while (i < a);
+        }
+    }
+
+    else if (par == 0) {
+
+        /* Code for only one task for whole vector, may be done in helper. */
+
+        HELPERS_SETUP_OUT(5);
+
+        i = 0;
+        while (i < n) {
+            HELPERS_WAIT_IN1 (a, i, n);
+            do {
+                if (ISNAN(ra[i]))
+                    ry[i] = ra[i];
+                else
+                    ry[i] = f(ra[i]);
                 HELPERS_NEXT_OUT(i);
+            } while (i < a);
+        }
+    }
+
+    else if (par == 1) {  
+
+        /* Code for task that does first half of vector. */
+
+        R_len_t halfn = n >> 1;
+
+        HELPERS_SETUP_OUT(5);
+
+        i = 0;
+        while (i < halfn) {
+            HELPERS_WAIT_IN1 (a, i, n);
+            if (a > halfn) a = halfn;
+            do {
+                if (ISNAN(ra[i]))
+                    ry[i] = ra[i];
+                else
+                    ry[i] = f(ra[i]);
+                HELPERS_NEXT_OUT(i);
+            } while (i < a);
+        }
+
+        /* Must wait for task doing second half to finish before this
+           task finishes. */
+
+        HELPERS_WAIT_IN0 (a, n-1, n);
+    }
+
+    else {
+
+        /* Code for task that does second half of vector.  Doesn't
+           bother with output pipelining since it likely will finish
+           before the first half has been computed.  (But needs to be
+           scheduled with HELPERS_PIPE_OUT so task for first half will
+           be able to start. */
+
+        i = n >> 1;
+        while (i < n) {
+            HELPERS_WAIT_IN1 (a, i, n);
+            do {
+                if (ISNAN(ra[i]))
+                    ry[i] = ra[i];
+                else
+                    ry[i] = f(ra[i]);
+                i += 1;
             } while (i < a);
         }
     }
@@ -1681,27 +1744,20 @@ void task_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
 
 void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
 {
-    double *ra = REAL(sa);
-    long double s = 0.0;
+    int op = opcode;
+    double (*f)(double) = R_math1_func_table[op];
+
     R_len_t n = LENGTH(sa);
+    double *ra = REAL(sa);
+
+    long double s = 0.0;
     R_len_t i = 0;
     R_len_t a;
 
-    double (*f)(double) = R_math1_func_table[opcode];
+    if (R_math1_err_table[op] > 1) {
 
-    if (R_math1_err_table[opcode]<=1) {
-        while (i < n) {
-            HELPERS_WAIT_IN1 (a, i, n);
-            do {
-                if (ISNAN(ra[i]))
-                    s += ra[i];
-                else
-                    s += f(ra[i]);
-                i += 1;
-            } while (i < a);
-        }
-    }
-    else {
+        /* Code for when a warning is possible, only done in master. */
+
         while (i < n) {
             HELPERS_WAIT_IN1 (a, i, n);
             do {
@@ -1714,6 +1770,22 @@ void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
                     }
                     s += t;
                 }
+                i += 1;
+            } while (i < a);
+        }
+    }
+
+    else {
+
+        /* Code for when no warning is possible, may be done in a helper. */
+
+        while (i < n) {
+            HELPERS_WAIT_IN1 (a, i, n);
+            do {
+                if (ISNAN(ra[i]))
+                    s += ra[i];
+                else
+                    s += f(ra[i]);
                 i += 1;
             } while (i < a);
         }
@@ -1787,7 +1859,9 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
 
         R_naflag = 0;
 
-        if (VARIANT_KIND(variant) == VARIANT_SUM) { /* just need the sum */
+        if (VARIANT_KIND(variant) == VARIANT_SUM) {
+
+            /* Just need the sum. */
 
             PROTECT(sy = allocVector1REAL());
             DO_NOW_OR_LATER1 (variant, 
@@ -1795,15 +1869,36 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
                         HELPERS_PIPE_IN1, task_sum_math1, opcode, sy, sa);
         }
 
-        else { /* not scalar, not just sum */
+        else {
 
             PROTECT(sy = local_assign || NAMEDCNT_EQ_0(sa) 
                            ? sa : allocVector(REALSXP, n));
 
-            DO_NOW_OR_LATER1 (variant,
-                        LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] <= 1,
-                        HELPERS_PIPE_IN01_OUT,
-                        task_math1, opcode, sy, sa);
+            if (helpers_not_multithreading_now || LENGTH(sa) < 2*T_math1
+                || R_math1_err_table[opcode] > 1) {
+
+                /* Use only one task. */
+
+                DO_NOW_OR_LATER1 (variant,
+                            LENGTH(sa) >= T_math1 
+                              && R_math1_err_table[opcode] <= 1,
+                            HELPERS_PIPE_IN01_OUT,
+                            task_math1, opcode, sy, sa);
+            }
+            else {
+
+                /* Use two tasks, computing second half and first half. */
+
+                helpers_do_task (HELPERS_PIPE_IN01_OUT, 
+                                 task_math1, opcode | (2<<8),
+                                 sy, sa, 0);
+
+                helpers_do_task (variant & VARIANT_PENDING_OK
+                                  ? HELPERS_PIPE_IN01_OUT
+                                  : HELPERS_PIPE_IN01_OUT | HELPERS_MASTER_NOW,
+                                 task_math1, opcode | (1<<8),
+                                 sy, sa, 0);
+            }
 
             maybe_dup_attributes (sy, sa, variant);
         }

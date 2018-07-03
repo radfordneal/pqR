@@ -115,17 +115,20 @@ Functions \tab Output piped? \tab Input piped? \tab Remarks\cr
                    \tab No
                    \tab \cr 
 \tab\tab\tab\cr
-abs, floor, ceil,  \tab Yes
+abs                \tab Yes
                    \tab Yes
                    \tab \cr
-sign, trunc, exp,  \tab\tab\tab\cr
-expm1, atan, cosh, \tab\tab\tab\cr
+\tab\tab\tab\cr
+floor, ceil, sign, \tab Yes
+                   \tab Yes
+                   \tab May use 2 threads\cr
+trunc, exp, cos, sin, \tab\tab\tab\cr
+tan, expm1, atan, cosh, \tab\tab\tab\cr
 sinh, tanh, asinh  \tab\tab\tab\cr
 \tab\tab\tab\cr
-sqrt, log, log1p,  \tab No
+sqrt, log, log1p, acos, \tab No
                    \tab Yes
                    \tab Done by master\cr
-cos, sin, tan, acos,\tab\tab\tab\cr
 asin, acosh, atanh,\tab\tab\tab\cr
 lgammafn, gammfn,  \tab\tab\tab\cr
 digamma, trigramma \tab\tab\tab\cr
