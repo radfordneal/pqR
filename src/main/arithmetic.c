@@ -1645,18 +1645,18 @@ double (* const R_math1_func_table[44])(double) = {
 
        0:  NA/NaN only when argument is NA/NaN
        1:  NA/NaN only when argument is NA/Nan or +-Inf
-      -1:  NA/NaN possible for finite argument as well as NA/NaN or +- Inf
-      -2:  may produce warning message, not just NA/NaN
+       2:  NA/NaN possible for finite argument as well as NA/NaN or +- Inf
+       3:  may produce warning message, not just NA/NaN
 
    Entries correspond to those in R_math1_func_table above. */
 
 const char R_math1_err_table[44] = {
         /*      0       1       2       3       4       5       6 7 8 9 */
-/* 00 */        0,      0,      0,      -1,     0,      0,      0,0,0,0,
-/* 10 */        0,      0,      -1,     -1,     0,      0,      0,0,0,0,
-/* 20 */        1,      1,      1,      -1,     -1,     0,      0,0,0,0,
-/* 30 */        0,      0,      0,      -1,     0,      -1,     0,0,0,0,
-/* 40 */        -2,     -2,     -1,     -1
+/* 00 */        0,      0,      0,      2,      0,      0,      0,0,0,0,
+/* 10 */        0,      0,      2,      2,      0,      0,      0,0,0,0,
+/* 20 */        1,      1,      1,      2,      2,      0,      0,0,0,0,
+/* 30 */        0,      0,      0,      2,      0,      2,      0,0,0,0,
+/* 40 */        3,      3,      2,      -1
 };
 
 int R_naflag;  /* Set to one (in master) for the "NAs produced" warning */
@@ -1673,7 +1673,7 @@ void task_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
 
     HELPERS_SETUP_OUT(5);
 
-    if (R_math1_err_table[opcode]==0) {
+    if (R_math1_err_table[opcode]<=1) {
         while (i < n) {
             HELPERS_WAIT_IN1 (a, i, n);
             do {
@@ -1713,7 +1713,7 @@ void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
 
     double (*f)(double) = R_math1_func_table[opcode];
 
-    if (R_math1_err_table[opcode]==0) {
+    if (R_math1_err_table[opcode]<=1) {
         while (i < n) {
             HELPERS_WAIT_IN1 (a, i, n);
             do {
@@ -1783,7 +1783,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
             res = opr;
         else {
             res = R_math1_func_table[opcode] (opr);
-            if (R_math1_err_table[opcode] && ISNAN(res))
+            if (R_math1_err_table[opcode]>1 && ISNAN(res))
                 NaN_warningcall(call);
         }
 
@@ -1815,7 +1815,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
 
             PROTECT(sy = allocVector1REAL());
             DO_NOW_OR_LATER1 (variant, 
-                        LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] == 0,
+                        LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] <= 1,
                         HELPERS_PIPE_IN1, task_sum_math1, opcode, sy, sa);
         }
 
@@ -1825,7 +1825,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
                            ? sa : allocVector(REALSXP, n));
 
             DO_NOW_OR_LATER1 (variant,
-                        LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] == 0,
+                        LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] <= 1,
                         HELPERS_PIPE_IN01_OUT,
                         task_math1, opcode, sy, sa);
 
