@@ -141,6 +141,8 @@ typedef int sggc_length_t;      /* Type for holding an object length, which
        4  Attribute pointer plus one or two others (EXTPTRSXP, S4SXP)
        5  Only attribute pointer to follow, uncollected, used for primitives
           and symbols, which are distinguished by kind (even if same size)
+
+   See R_type_to_sggc_type in sggc-app.c for more details.
 */
 
 #define SGGC_N_TYPES 6
@@ -192,10 +194,10 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
                                           implementation above. */
 
 /* Note: chunks in non-vector types are given by second row below, except
-   for EXTPTRSXP and SYMSXP, given by third row. */
+   for EXTPTRSXP, ENVSXP, and SYMSXP, given by third row. */
 
 #define SGGC_KIND_CHUNKS \
-{ 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
+{ 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 0, 1 & 3*/ \
   1,   1,   1,   1,   1,   2, /* Smallest sizes for the SGGC types */ \
   2,   2,   2,   2,   2,   2, /* 2nd smallest sizes */ \
   3,   4,   2,   4,   2,   2, /* 3rd smallest sizes, unused for types 2,4,5 */ \
@@ -286,10 +288,10 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 #define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus 7 small */
 
 /* Note: chunks in non-vector types are given by second row below, except
-   for SYMSXP, given by third row. */
+   for ENVSXP and SYMSXP, given by third row. */
 
 #define SGGC_KIND_CHUNKS \
-{ 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
+{ 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 0, 1 & 3*/ \
   2,   2,   3,   2,   3,   3, /* Smallest sizes for the SGGC types */ \
   3,   4,   4,   3,   3,   4, /* 2nd smallest sizes, unused for type 4 */ \
   4,   8,   4,   5,   3,   4, /* 3rd smallest sizes, unused for types 2,4,5 */ \
@@ -377,10 +379,10 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 #define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus 7 small */
 
 /* Note: chunks in non-vector types are given by second row below, except
-   for SYMSXP, given by third row. */
+   for ENVSXP and SYMSXP, given by third row. */
 
 #define SGGC_KIND_CHUNKS \
-{ 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
+{ 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 0, 1 & 3*/ \
   2,   2,   2,   2,   2,   2, /* Smallest sizes for the SGGC types */ \
   3,   4,   3,   3,   2,   3, /* 2nd smallest sizes, unused for type 4 */ \
   4,   8,   3,   5,   2,   3, /* 3rd smallest sizes, unused for types 2,4,5 */ \
@@ -462,10 +464,10 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 #define SGGC_N_KINDS (8*SGGC_N_TYPES)  /* A big kind, plus 7 small */
 
 /* Note: chunks in non-vector types are given by second row below, except
-   for SYMSXP, given by third row. */
+   for ENVSXP and SYMSXP, given by third row. */
 
 #define SGGC_KIND_CHUNKS \
-{ 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 1 & 3 */ \
+{ 0,   0,   0,   0,   0,   0, /* Kinds for big segments, only types 0, 1 & 3*/ \
   2,   2,   2,   2,   2,   2, /* Smallest sizes for the SGGC types */ \
   3,   4,   3,   3,   2,   3, /* 2nd smallest sizes, unused for type 4 */ \
   4,   8,   3,   5,   2,   3, /* 3rd smallest sizes, unused for types 2,4,5 */ \
