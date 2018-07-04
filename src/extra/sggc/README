@@ -1,6 +1,6 @@
 SEGMENTED GENERATIONAL GARBAGE COLLECTOR
 
-Copyright 2016, 2017 Radford M. Neal.  Distributed under the GPL
+Copyright 2016, 2017, 2018 Radford M. Neal.  Distributed under the GPL
 version 2 or later.  See COPYING for licence details.
 
 The SGGC library provides a facility for allocating and automatically

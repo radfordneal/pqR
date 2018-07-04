@@ -1,5 +1,9 @@
 The stable versions of SGGC below are tagged in the source code repository.
 
+Version 2018-07-04
+
+  Minor revisions.  Used in pqR-2018-07-04.
+
 Version 2017-10-21
 
   Added optional data alignment specification.  Other minor tweaks.
