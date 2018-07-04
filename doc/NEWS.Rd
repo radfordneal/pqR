@@ -54,12 +54,34 @@
         and earlier), since given current software environments, it is 
         effectively impossible to use the FPU in these system to
         perform correctly-rounded 64-bit floating-point operations.
+
+        On processors with fused multiply-add instructions, achieving
+        reproducible IEEE arithmetic will require compiling with the 
+        gcc/clang option \code{-ffp-contract=off}.
   }}
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
-  \item New versions of the C matrix multiply functions are now used...
-        NEED MORE HERE
+  \item New versions of the C matrix multiply functions are now used, which
+        take advantage of SIMD instructions on Intel/AMD processors, and
+        which may perform operations in parallel using helper threads (when
+        these are enabled).  
+
+        These routines will (if built properly) produce exactly the
+        same results as naive matrix multiplication routines in which
+        each element of the result is computed as a dot product of two
+        vectors, with the dot products computed by sequentially summing
+        products of elements.  NA and NaN values are therefore propagated
+        properly, and roundoff errors are the same as for the naive
+        method (which is the same as the variant of the reference BLAS 
+        routines that are supplied with pqR).
+
+        Partly because of this desire to maintain reproducibility,
+        these routines are not always as fast as the multiplication
+        routines in optimized BLAS packages such as openBLAS.
+        Performance is generally less than a factor of two worse than
+        these optimized BLAS routines, however, and in some contexts
+        performance is actually better.
   \item The radix sorting procedure introduced in R-3.3.1 is now available
         in pqR.  The R-3.3.1 NEWS entry regarding this was as follows:
       
