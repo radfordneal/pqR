@@ -70,8 +70,8 @@
 #   define NILATTRIB .attrib = R_NilValue,
 #endif
 
-#define NUM_OFFSET(o) (SGGC_SCALAR_CHUNKS*o)
-#define CONS_OFFSET(o) (SGGC_CONS_CHUNKS*o)
+#define NUM_OFFSET(o) (SGGC_SCALAR_CHUNKS*(o))
+#define CONS_OFFSET(o) (SGGC_CONS_CHUNKS*(o))
 
 
 /* Header for a scalar constant. */
@@ -223,7 +223,7 @@ SYM_SEXPREC R_sym_consts[1] = {
 /* Small integer constants. */
 
 #define SMALL_INT_CONST(v,offset) { \
-    CONST_HEADER(INTSXP,R_SGGC_MISC_INDEX,NUM_OFFSET(offset)), \
+    CONST_HEADER(INTSXP,R_SGGC_INT_INDEX,NUM_OFFSET(offset)), \
     LENGTH1 \
     .data = { .i = v } \
 }
@@ -308,7 +308,7 @@ R_CONST VECTOR_SEXPREC_C R_ScalarMisc_consts[9] = {
 #define HASH1CHAR(c) ((5381*33) + c)  /* keep in sync with Rf_char_hash */
 
 #define CHARSXP_CONST(v,index) { \
-    CONST_HEADER_CHAR(index,NUM_OFFSET(v&0x1f)), \
+     CONST_HEADER_CHAR(index,NUM_OFFSET((v)&0x1f)), \
     LENGTH1 \
     .truelength = HASH1CHAR(v), \
     .data = { .c = v } \
@@ -462,7 +462,7 @@ R_CONST VECTOR_SEXPREC_C R_ScalarMisc_consts[9] = {
    configuration.  The entry for ASCII code 0 is not used. */
 
 #define STRSXP_CONST(v,index) { \
-    CONST_HEADER(STRSXP,index,NUM_OFFSET(v&0x1f)), \
+    CONST_HEADER(STRSXP,index,NUM_OFFSET((v)&0x1f)), \
     LENGTH1 \
     .data = { .p = R_ASCII_CHAR(v) } \
 }
