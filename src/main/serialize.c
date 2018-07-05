@@ -1494,7 +1494,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 
     /* The result is stored in "s", which is returned at the end of this
        function (at label "ret").  However, for tail recursion elimination, 
-       when "set_cdr" is not NULL, "s" is instead stored in the CDR of
+       when "set_cdr" is not R_NoObject, "s" is instead stored in the CDR of
        "set_cdr", and "ss" is returned. */
 
     SEXP s, ss, set_cdr = R_NoObject;
@@ -1609,8 +1609,10 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
                 SETCDR(set_cdr,s);
                 UNPROTECT(1);  /* s, which is now protected through ss */
             }
-            else
-                ss = s;  /* ss is proteced, since s is */
+            else {
+                ss = s;  /* ss is protected, since s is, and since set_cdr will
+                            no longer be R_NoObject, will UNPROTECT ss at ret */
+            }
             set_cdr = s;
             goto again;
         }
@@ -1759,8 +1761,9 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
         UNPROTECT(1);  /* ss */
         return ss;
     }
-    else
+    else {
         return s;
+    }
 }
 
 static SEXP ReadBC1(SEXP ref_table, SEXP reps, R_inpstream_t stream);
