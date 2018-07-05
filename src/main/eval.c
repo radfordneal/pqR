@@ -1302,7 +1302,6 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     else {
 	res = evalv (body, newrho, vrnt);
     }
-    PROTECT(res);
 
     PROTECT(res);
 
@@ -1388,7 +1387,6 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     else {
 	res = evalv(body, newrho, 0);
     }
-    PROTECT(res);
 
     PROTECT(res);
 
