@@ -1,8 +1,0 @@
-Change the defaults to not byte compile packages, even if asked to in
-DESCRIPTION or otherwise, and to ignore byte code when evaluating a
-function.  
-
-Thse changes can be overridden only by setting the R_PKG_BYTECOMPILE
-and R_USE_BYTECODE environment variables to TRUE.
-
-JIT is now never enabled.
