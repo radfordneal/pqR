@@ -1592,10 +1592,19 @@ void sggc_collect_look_at (void)
       { for (;;)
         { if (SGGC_DEBUG) printf("sggc_collect: looking at %x\n",(unsigned)v);
           put_in_right_old_gen (v);
+#         ifdef SGGC_TRACE_CPTR
+            sggc_cptr_t sv = v;
+#         endif
           v = sggc_find_object_ptrs (v);
           if (v == SGGC_NO_OBJECT)
           { break;
           }
+#         ifdef SGGC_TRACE_CPTR
+            if (v == sggc_trace_cptr && !sggc_trace_cptr_in_use)
+            { printf ("TRACED CPTR LOOKED AT WHEN NOT IN USE: %d %d\n",sv,v);
+              abort();
+            }
+#         endif
           if (SGGC_DEBUG)
           { printf ("sggc_collect: from find_object_ptrs: %x\n", (unsigned)v);
           }
@@ -2107,6 +2116,13 @@ void sggc_look_at (sggc_cptr_t cptr)
   if (cptr == SGGC_NO_OBJECT)
   { return;
   }
+
+# ifdef SGGC_TRACE_CPTR
+    if (cptr == sggc_trace_cptr && !sggc_trace_cptr_in_use)
+    { printf ("TRACED CPTR LOOKED AT WHEN NOT IN USE: %d\n",cptr);
+      abort();
+    }
+#  endif
 
   if (SGGC_DEBUG) 
   { printf ("sggc_look_at: %x %d\n", (unsigned)cptr, old_to_new_check);
