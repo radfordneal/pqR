@@ -921,11 +921,14 @@ tracing:
                         value of this global variable may be accessed
                         when debugging after a program crash.  
 
-                        Also, the global variable sggc_trace_cptr_in_use
+                        Also, global variable sggc_trace_cptr_in_use
                         is set to 1 (rather than 0) at times when an
                         object that is associated with the traced
                         compressed pointer has been allocated and not
-                        yet collected as garbage.
+                        yet collected as garbage.  This is used to
+                        perform some consistency checks, which cause
+                        "abort" to be called on failure (after
+                        printing a message).
 
   SGGC_TRACE_ALLOC_TRAP If defined as an integer, "abort" is called 
                         when an object that becomes associated with
