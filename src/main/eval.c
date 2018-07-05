@@ -1172,29 +1172,19 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     SEXP formals, actuals, savedrho, savedsrcref;
     volatile SEXP body, newrho;
-    SEXP f, a, res;
+    SEXP f, a;
     RCNTXT cntxt;
-
-    PROTECT2(op,arglist);
 
     formals = FORMALS(op);
     body = BODY(op);
     savedrho = CLOENV(op);
 
-    if (0 /* JIT NOW DISABLED */ && R_jit_enabled>0 && TYPEOF(body)!=BCODESXP) {
-	int old_enabled = R_jit_enabled;
-	SEXP newop;
-	R_jit_enabled = 0;
-	newop = R_cmpfun(op);
-	body = BODY(newop);
-	SET_BODY(op, body);
-	R_jit_enabled = old_enabled;
-    }
-
     /*  Set up a context with the call in it for use if an error occurs below
-        in matchArgs or from running out of memory (eg, in NewEnvironment). */
+        in matchArgs or from running out of memory (eg, in NewEnvironment). 
+        Note that this also protects call, savedrho, rho, arglist, and op. */
 
     begincontext(&cntxt, CTXT_RETURN, call, savedrho, rho, arglist, op);
+
     savedsrcref = R_Srcref;  /* saved in context for longjmp, and protection */
 
     /*  Build a list which matches the actual (unevaluated) arguments
@@ -1294,8 +1284,10 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	UNPROTECT(1);
     }
 
-    /*  Set a longjmp target which will catch any explicit returns
-	from the function body.  */
+    /* Set a longjmp target which will catch any explicit returns from
+       the function body.  */
+
+    SEXP res;
 
     if ((SETJMP(cntxt.cjmpbuf))) {
 	if (R_ReturnedValue == R_RestartToken) {
@@ -1312,6 +1304,8 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     }
     PROTECT(res);
 
+    PROTECT(res);
+
     R_variant_result &= ~VARIANT_RTN_FLAG;
 
     R_Srcref = savedsrcref;
@@ -1325,7 +1319,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
         printcall(call,rho);
     }
 
-    UNPROTECT(3); /* op, arglist, res */
+    UNPROTECT(1); /* res */
     return res;
 }
 
@@ -1343,22 +1337,10 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 			  SEXP newrho)
 {
     volatile SEXP body;
-    SEXP res, savedsrcref;
+    SEXP savedsrcref;
     RCNTXT cntxt;
 
-    PROTECT2(op,arglist);
-
     body = BODY(op);
-
-    if (0 && R_jit_enabled > 0 && TYPEOF(body) != BCODESXP) {
-	int old_enabled = R_jit_enabled;
-	SEXP newop;
-	R_jit_enabled = 0;
-	newop = R_cmpfun(op);
-	body = BODY(newop);
-	SET_BODY(op, body);
-	R_jit_enabled = old_enabled;
-    }
 
     begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
     savedsrcref = R_Srcref;  /* saved in context for longjmp, and protection */
@@ -1390,6 +1372,8 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     /*  Set a longjmp target which will catch any explicit returns
 	from the function body.  */
 
+    SEXP res;
+
     if ((SETJMP(cntxt.cjmpbuf))) {
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
@@ -1406,6 +1390,8 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     }
     PROTECT(res);
 
+    PROTECT(res);
+
     R_Srcref = savedsrcref;
     endcontext(&cntxt);
 
@@ -1414,7 +1400,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	printcall (call, rho);
     }
 
-    UNPROTECT(3);  /* op, arglist, res */
+    UNPROTECT(1);  /* res */
     return res;
 }
 
