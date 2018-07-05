@@ -1877,7 +1877,9 @@ static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
    macros below call procedure in memory.c for error handling.  PROTECT_PTR is 
    not redefined, since it contains a significant amount of code.
 
-   Macros PROTECT2 and PROTECT3 for protecting 2 or 3 objects are also defined.
+   Macros PROTECT2 and PROTECT3 for protecting 2 or 3 objects are also
+   defined.  There arguments should be simple variables - avoid calling 
+   anything, and avoid any side effects.
 
    Defining USE_FAST_PROTECT_MACROS in source files outside src/main may
    cause problems at link time. 
@@ -1894,14 +1896,15 @@ extern R_NORETURN void Rf_unprotect_error (void);
 #undef  PROTECT
 #define PROTECT(s) ( \
     (R_PPStackTop >= R_PPStackSize ? Rf_protect_error() : (void) 0), \
-    (R_PPStack[R_PPStackTop++] = s)  /* has s as its value */ \
+    (R_PPStack[R_PPStackTop] = (s)), R_PPStack[R_PPStackTop++] \
+    /* s may be a function call: don't increment top before it's evaluated! */ \
 )
 
 #undef  PROTECT2
 #define PROTECT2(s1,s2) ( \
     (R_PPStackTop+1 >= R_PPStackSize ? Rf_protect_error() : (void) 0), \
-    (R_PPStack[R_PPStackTop] = s1), \
-    (R_PPStack[R_PPStackTop+1] = s2), \
+    (R_PPStack[R_PPStackTop] = (s1)), \
+    (R_PPStack[R_PPStackTop+1] = (s2)), \
     (R_PPStackTop += 2), \
     (void)0 \
 )
@@ -1909,9 +1912,9 @@ extern R_NORETURN void Rf_unprotect_error (void);
 #undef  PROTECT3
 #define PROTECT3(s1,s2,s3) ( \
     (R_PPStackTop+2 >= R_PPStackSize ? Rf_protect_error() : (void) 0), \
-    (R_PPStack[R_PPStackTop] = s1), \
-    (R_PPStack[R_PPStackTop+1] = s2), \
-    (R_PPStack[R_PPStackTop+2] = s3), \
+    (R_PPStack[R_PPStackTop] = (s1)), \
+    (R_PPStack[R_PPStackTop+1] = (s2)), \
+    (R_PPStack[R_PPStackTop+2] = (s3)), \
     (R_PPStackTop += 3), \
     (void)0 \
 )
