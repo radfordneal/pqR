@@ -738,7 +738,7 @@ static SEXP install_with_hashcode (char *name, int hashcode)
 
     bucket = lphash_key_lookup (R_lphashSymTbl, hashcode, name);
     if (bucket != NULL)
-        return SEXP_FROM_SEXP32 (bucket->entry);
+        return SEXP_FROM_SEXP32 ((SEXP32) bucket->entry);
 
     if (strlen(name) > MAXIDSIZE)
 	error(_("variable names are limited to %d bytes"), MAXIDSIZE);
@@ -748,7 +748,7 @@ static SEXP install_with_hashcode (char *name, int hashcode)
     if (bucket == NULL)
         R_Suicide("couldn't allocate memory to expand symbol table");
 
-    SEXP sym = SEXP_FROM_SEXP32(bucket->entry);
+    SEXP sym = SEXP_FROM_SEXP32 ((SEXP32) bucket->entry);
 
     /* Set up symbits.  May be fiddled to try to improve performance. 
        Currently, the low 14 bits of symbits are reserved for special and
@@ -791,7 +791,8 @@ SEXP installed_already(const char *name)
     bucket = lphash_key_lookup (R_lphashSymTbl, Rf_char_hash(name), 
                                                 (char *) name);
 
-    return bucket == NULL ? R_NoObject : SEXP_FROM_SEXP32 (bucket->entry);
+    return bucket == NULL ? R_NoObject 
+                          : SEXP_FROM_SEXP32 ((SEXP32) bucket->entry);
 }
 
 /* Lookup up a symbol, returning it if it exists already, but not creating
@@ -805,7 +806,8 @@ SEXP installed_already_with_hash (const char *name, int hashcode)
 
     bucket = lphash_key_lookup (R_lphashSymTbl, hashcode, (char *) name);
 
-    return bucket == NULL ? R_NoObject : SEXP_FROM_SEXP32 (bucket->entry);
+    return bucket == NULL ? R_NoObject 
+                          : SEXP_FROM_SEXP32 ((SEXP32) bucket->entry);
 }
 
 
