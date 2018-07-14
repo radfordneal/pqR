@@ -6,13 +6,10 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2018-07-05}{
+\section{CHANGES IN VERSION RELEASED 2018-00-00}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
-  \item This is a preliminary test release.  It has no known major bugs,
-        but it has some issues that should be resolved for a real release.
-
   \item This release has quite a few significant performance improvements.
         It also has some feature changes and bug fixes, including some
         features from later R Core versions.

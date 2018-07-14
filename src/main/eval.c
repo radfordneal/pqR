@@ -53,8 +53,8 @@ attribute_hidden void SrcrefPrompt(const char * prefix, SEXP srcref)
 	if (TYPEOF(srcfile) == ENVSXP) {
 	    SEXP filename = findVar(install("filename"), srcfile);
 	    if (isString(filename) && length(filename)) {
-	    	Rprintf(_("%s at %s#%d: "), prefix, CHAR(STRING_ELT(filename, 0)), 
-	                                    asInteger(srcref));
+	    	Rprintf(_("%s at %s#%d: "),prefix,CHAR(STRING_ELT(filename,0)), 
+	                                   asInteger(srcref));
 	        return;
 	    }
 	}
@@ -777,27 +777,6 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
 
     R_EvalDepth -= 1;
 
-#   if SCALAR_STACK_DEBUG /* Get debug output after typing SCALAR.STACK.DEBUG */
-        if (installed_already("SCALAR.STACK.DEBUG") != R_NoObject) {
-            if (ON_SCALAR_STACK(res)) {
-                REprintf("SCALAR STACK VALUE RETURNED: %llx %llx %llx %s %f\n",
-                 (long long) R_scalar_stack_start,
-                 (long long) res, 
-                 (long long) R_scalar_stack,
-                 TYPEOF(res)==INTSXP ? "int" : "real",
-                 TYPEOF(res)==INTSXP ? (double)*INTEGER(res) : *REAL(res));
-            }
-#           if 0
-                REprintf("STACK:\n");
-                for (int i = 0; i < 6; i++) {
-                    if (SCALAR_STACK_ENTRY(i)==R_scalar_stack) REprintf("@@\n");
-                    R_inspect(SCALAR_STACK_ENTRY(i));
-                }
-                REprintf("END\n");
-#           endif
-        }
-#   endif
-
 #   ifdef ENABLE_EVAL_DEBUG
     {
         sggc_cptr_t cptr = CPTR_FROM_SEXP(res);
@@ -871,7 +850,7 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
         SEXP op;
 
 #       if SCALAR_STACK_DEBUG
-            SEXP sv_stack = R_scalar_stack;
+            SEXP sv_scalar_stack = R_scalar_stack;
 #       endif
 
         SEXP fn = CAR(e);
@@ -930,11 +909,40 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
 
 #       if SCALAR_STACK_DEBUG
             if (variant & VARIANT_SCALAR_STACK_OK) {
-                if (R_scalar_stack != sv_stack && (res != sv_stack 
-                      || SCALAR_STACK_OFFSET(1) != sv_stack)) abort();
+                if (ON_SCALAR_STACK(res)) {
+                    if (res != sv_scalar_stack) abort();
+                    if (res != SCALAR_STACK_OFFSET(1)) abort();
+                }
+                else {
+                    if (R_scalar_stack != sv_scalar_stack) abort();
+                }
             }
             else {
-                if (R_scalar_stack != sv_stack) abort();
+                if (ON_SCALAR_STACK(res)) abort();
+                if (R_scalar_stack != sv_scalar_stack) abort();
+            }
+#       endif
+
+#       if SCALAR_STACK_DEBUG /* to get debug output, type SCALAR.STACK.DEBUG */
+            if (installed_already("SCALAR.STACK.DEBUG") != R_NoObject) {
+                if (ON_SCALAR_STACK(res)) {
+                    REprintf(
+                     "SCALAR STACK VALUE RETURNED: %llx %llx %llx %s %f\n",
+                     (long long) R_scalar_stack_start,
+                     (long long) res, 
+                     (long long) R_scalar_stack,
+                     TYPEOF(res)==INTSXP ? "int" : "real",
+                     TYPEOF(res)==INTSXP ? (double)*INTEGER(res) : *REAL(res));
+                }
+#               if 0
+                    REprintf("STACK:\n");
+                    for (int i = 0; i < 6; i++) {
+                        if (SCALAR_STACK_ENTRY(i)==R_scalar_stack)
+                            REprintf("@@\n");
+                        R_inspect(SCALAR_STACK_ENTRY(i));
+                    }
+                    REprintf("END\n");
+#               endif
             }
 #       endif
 
@@ -1284,8 +1292,8 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	UNPROTECT(1);
     }
 
-    /* Set a longjmp target which will catch any explicit returns from
-       the function body.  */
+    /* Set a longjmp target which will catch any explicit returns from the
+       function body that are not instead handled by VARIANT_DIRECT_RETURN.  */
 
     SEXP res;
 
@@ -1564,6 +1572,10 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     SEXP s;
     int j;
 
+#   if SCALAR_STACK_DEBUG
+        SEXP sv_scalar_stack = R_scalar_stack;
+#   endif
+
     int vrnt = VARIANT_NULL | VARIANT_PENDING_OK;
     if (variant & VARIANT_DIRECT_RETURN) 
         vrnt |= VARIANT_PASS_ON(variant);
@@ -1823,6 +1835,12 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             goto for_return;
         }
 
+        (void) POP_IF_TOP_OF_STACK(r);
+
+#       if SCALAR_STACK_DEBUG
+            if (R_scalar_stack != sv_scalar_stack) abort();
+#       endif
+
     for_next: ;  /* semi-colon needed for attaching label */
     }
 
@@ -1864,6 +1882,10 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     dbg = RDEBUG(rho);
 
+#   if SCALAR_STACK_DEBUG
+        SEXP sv_scalar_stack = R_scalar_stack;
+#   endif
+
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
 
@@ -1885,6 +1907,12 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 SET_RDEBUG (rho, dbg);
                 return r;
             }
+
+            (void) POP_IF_TOP_OF_STACK(r);
+
+#           if SCALAR_STACK_DEBUG
+                if (R_scalar_stack != sv_scalar_stack) abort();
+#           endif
 	}
     }
 
@@ -1914,6 +1942,10 @@ static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     dbg = RDEBUG(rho);
 
+#   if SCALAR_STACK_DEBUG
+        SEXP sv_scalar_stack = R_scalar_stack;
+#   endif
+
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
 
@@ -1930,6 +1962,12 @@ static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 SET_RDEBUG (rho, dbg);
                 return r;
             }
+
+            (void) POP_IF_TOP_OF_STACK(r);
+
+#           if SCALAR_STACK_DEBUG
+                if (R_scalar_stack != sv_scalar_stack) abort();
+#           endif
 	}
     }
 
@@ -2003,6 +2041,10 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (variant & VARIANT_DIRECT_RETURN) 
         vrnt |= VARIANT_PASS_ON(variant);
 
+#   if SCALAR_STACK_DEBUG
+        SEXP sv_scalar_stack = R_scalar_stack;
+#   endif
+
     for (int i = 1; ; i++) {
         arg = CAR(args);
         args = CDR(args);
@@ -2016,6 +2058,10 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             R_Srcref = savedsrcref;
             return s;
         }
+        (void) POP_IF_TOP_OF_STACK(s);
+#       if SCALAR_STACK_DEBUG
+            if (R_scalar_stack != sv_scalar_stack) abort();
+#       endif
     }
 
     s = evalv (arg, rho, variant);
@@ -2026,21 +2072,23 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 static SEXP do_return(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    SEXP v;
+    SEXP a = CAR(args);  /* if malformed, CAR(R_NilValue) will be R_NilValue. */
 
     if (CDR(args) != R_NilValue)
 	errorcall(call, _("multi-argument returns are not permitted"));
 
-    v = evalv (CAR(args),  /* relies on CDR(R_NilValue) being R_NilValue. */
-               rho, ! (variant & VARIANT_DIRECT_RETURN) ? 0
-                        : VARIANT_PASS_ON(variant) & ~ VARIANT_NULL);
+    SEXP v;
 
     if (variant & VARIANT_DIRECT_RETURN) {
+        v = evalv (a, rho, VARIANT_PASS_ON(variant) 
+                             & ~ (VARIANT_NULL | VARIANT_SCALAR_STACK_OK));
         R_variant_result |= VARIANT_RTN_FLAG;
         return v;
     }
-
-    findcontext(CTXT_BROWSER | CTXT_FUNCTION, rho, v);
+    else {
+        v = evalv (a, rho, 0);
+        findcontext (CTXT_BROWSER | CTXT_FUNCTION, rho, v);
+    }
 }
 
 

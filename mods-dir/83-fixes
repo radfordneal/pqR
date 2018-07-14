@@ -1,0 +1,3 @@
+Fixes to pqR-2017-07-05 to make revised release.
+
+Fixes bugs with not popping scalar stack values.
