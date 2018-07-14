@@ -61,9 +61,10 @@
    to TRUE, ENCODING to R_NilValue, PACKAGE to R_NilValue, and HELPER
    to FALSE.
 
-   Also checks that the first argument is present and unnamed.  Note
-   that since this argument is always present, removal of later
-   arguments won't change the head of the argument list. */
+   Also checks that the first argument is present and unnamed or
+   properly named.  Note that since this argument is always present,
+   removal of later arguments won't change the head of the argument
+   list. */
 
 struct special_args { int naok, dup, helper; SEXP encoding, pkg; };
 
@@ -75,7 +76,8 @@ static int trimargs (SEXP args, int C_Fort, struct special_args *r, SEXP call)
     if (args == R_NilValue)
         errorcall(call, _("'.NAME' is missing"));
     if (TAG(args) != R_NilValue 
-          && strcmp (CHAR(PRINTNAME(TAG(args))), ".NAME") != 0)
+          && strcmp (CHAR(PRINTNAME(TAG(args))), ".NAME") != 0
+          && strcmp (CHAR(PRINTNAME(TAG(args))), "name") != 0 /* for now */)
         errorcall(call,_("the first argument should be .NAME or not be named"));
 
     r->naok = FALSE;
@@ -513,7 +515,8 @@ static SEXP do_dotcall_e (SEXP call, SEXP op, SEXP args, SEXP env, int evald)
     if (args == R_NilValue)
         errorcall(call, _("'.NAME' is missing"));
     if (TAG(args) != R_NilValue 
-          && strcmp (CHAR(PRINTNAME(TAG(args))), ".NAME") != 0)
+          && strcmp (CHAR(PRINTNAME(TAG(args))), ".NAME") != 0
+          && strcmp (CHAR(PRINTNAME(TAG(args))), "name") != 0 /* for now */)
         errorcall(call,_("the first argument should be .NAME or not be named"));
 
     PROTECT (what = evald ? CAR(args) : eval(CAR(args),env));

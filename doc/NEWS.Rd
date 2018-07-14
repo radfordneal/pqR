@@ -295,10 +295,11 @@
         \code{<-} and other assignment operators is no longer allowed.
   \item A warning is no longer generated when the first argument of
         \code{.C}, \code{.Fortran}, \code{.Call}, or \code{.External} is
-        given its proper name of \code{.NAME}.  Passing more than one
-        \code{PACKAGE}, \code{NAOK}, \code{DUP}, \code{HELPERS}, or
-        \code{ENCODING} argument now results in an error rather than a
-        warning. 
+        given its proper name of \code{.NAME}.  For the moment, the first
+        argument is also allowed to be called "name", though this is deprecated.
+        Passing more than one \code{PACKAGE}, \code{NAOK}, \code{DUP}, 
+        \code{HELPERS}, or \code{ENCODING} argument now results in an error 
+        rather than a warning. 
   \item There is now a \code{helpers_no_holding} option; see note above
         under performance improvements.
   \item [ Following changes from R Core releases described below: ]
