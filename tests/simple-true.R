@@ -237,3 +237,20 @@ identical (matrix(4:5,4,6), t(matrix(4:5,6,4,byrow=TRUE)))
 identical (matrix(1:3,4,6), t(matrix(1:3,6,4,byrow=TRUE)))
 identical (matrix(1:3,4,6,byrow=TRUE),matrix(rep(1:3,length=24),4,6,byrow=TRUE))
 identical (matrix(1:3,6,4,byrow=TRUE),matrix(rep(1:3,length=24),6,4,byrow=TRUE))
+
+# Logical arithmetic.
+
+identical (-TRUE, -1L)
+identical (+TRUE, 1L)
+identical (-c(TRUE,FALSE,TRUE), c(-1L,0L,-1L))
+identical (+c(TRUE,FALSE,TRUE), c(1L,0L,1L))
+
+identical (0L-TRUE, -1L)
+identical (0L+TRUE, 1L)
+identical (0L-c(TRUE,FALSE,TRUE), c(-1L,0L,-1L))
+identical (0L+c(TRUE,FALSE,TRUE), c(1L,0L,1L))
+
+identical (0-TRUE, -1)
+identical (0+TRUE, 1)
+identical (0-c(TRUE,FALSE,TRUE), c(-1,0,-1))
+identical (0+c(TRUE,FALSE,TRUE), c(1,0,1))

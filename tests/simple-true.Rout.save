@@ -412,3 +412,32 @@ sorting c by merge method
 > identical (matrix(1:3,6,4,byrow=TRUE),matrix(rep(1:3,length=24),6,4,byrow=TRUE))
 [1] TRUE
 > 
+> # Logical arithmetic.
+> 
+> identical (-TRUE, -1L)
+[1] TRUE
+> identical (+TRUE, 1L)
+[1] TRUE
+> identical (-c(TRUE,FALSE,TRUE), c(-1L,0L,-1L))
+[1] TRUE
+> identical (+c(TRUE,FALSE,TRUE), c(1L,0L,1L))
+[1] TRUE
+> 
+> identical (0L-TRUE, -1L)
+[1] TRUE
+> identical (0L+TRUE, 1L)
+[1] TRUE
+> identical (0L-c(TRUE,FALSE,TRUE), c(-1L,0L,-1L))
+[1] TRUE
+> identical (0L+c(TRUE,FALSE,TRUE), c(1L,0L,1L))
+[1] TRUE
+> 
+> identical (0-TRUE, -1)
+[1] TRUE
+> identical (0+TRUE, 1)
+[1] TRUE
+> identical (0-c(TRUE,FALSE,TRUE), c(-1,0,-1))
+[1] TRUE
+> identical (0+c(TRUE,FALSE,TRUE), c(1,0,1))
+[1] TRUE
+>

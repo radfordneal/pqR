@@ -1582,7 +1582,7 @@ SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
 
     if (type == LGLSXP) {
         SEXP dim, dimnames, names;
-        ans = allocVector(LGLSXP,n);
+        ans = allocVector(INTSXP,n);
         PROTECT (names    = getAttrib (s1, R_NamesSymbol));
         PROTECT (dim      = getDimAttrib(s1));
         PROTECT (dimnames = getAttrib (s1, R_DimNamesSymbol));
