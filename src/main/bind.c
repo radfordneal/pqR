@@ -294,7 +294,9 @@ static void AnswerType (SEXP x, int recurse, int usenames,
             len = 0;  /* nothing extra after recursive calls */
         }
         else {
-            if (data->ans_type != EXPRSXP)
+            if (TYPEOF(x) == EXPRSXP)
+                data->ans_type= EXPRSXP;
+            else if (data->ans_type != EXPRSXP)
                 data->ans_type = VECSXP;
         }
     }
