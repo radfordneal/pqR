@@ -247,11 +247,11 @@ SEXP allocArray(SEXPTYPE mode, SEXP dims)
     return array;
 }
 
-/* DropDims strips away redundant dimensioning information. */
-/* If there is an appropriate dimnames attribute the correct */
-/* element is extracted and attached to the vector as a names */
-/* attribute.  Note that this function mutates x. */
-/* Duplication should occur before this is called. */
+/* DropDims strips away redundant dimensioning information.  If there
+   is an appropriate dimnames attribute the correct element is
+   extracted and attached to the vector as a names attribute.  Note
+   that this function mutates x.  Duplication should occur before this
+   is called. */
 
 SEXP DropDims(SEXP x)
 {

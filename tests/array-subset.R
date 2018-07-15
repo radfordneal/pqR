@@ -84,3 +84,63 @@ dn <- dimnames(a3)
 dn[2] <- list(NULL)
 dimnames(a3) <- dn
 stopifnot(inherits(try(a3[ss], silent=TRUE), "try-error"))
+
+
+# preservation of names.
+
+a <- 1:24
+names(a) <- letters[1:24]
+
+stopifnot(identical(a[],a))
+stopifnot(identical(a[3],c(c=3L)))
+
+a <- matrix(1:24,6,4)
+dimnames(a) <- list(LETTERS[11:16],letters[1:4])
+
+s <- a[2:3,2:3]
+r <- matrix(c(8L,9L,14L,15L),2,2)
+dimnames(r) <- list(c("L","M"),c("b","c"))
+stopifnot(identical(s,r))
+
+s <- a[2:3,]
+r <- matrix(c(2L,3L,8L,9L,14L,15L,20L,21L),2,4)
+dimnames(r) <- list(c("L","M"),c("a","b","c","d"))
+stopifnot(identical(s,r))
+
+a <- array(1:24,c(2,3,4))
+dimnames(a) <- list(LETTERS[1:2],letters[11:13],LETTERS[11:14])
+
+s <- a[2,2:3,3:4]
+r <- matrix(c(16L,18L,22L,24L),2,2)
+dimnames(r) <- list(c("l","m"),c("M","N"))
+stopifnot(identical(s,r))
+
+s <- a[2,2,]
+stopifnot(identical(s,c(K=4L,L=10L,M=16L,N=22L)))
+
+a <- matrix(11:13,1,3)
+dimnames(a) <- list("X",letters[1:3])
+
+stopifnot(identical(a[1,2],12L))
+stopifnot(identical(a[1,2:2],12L))
+stopifnot(identical(a[1,2..2],c(b=12L)))
+stopifnot(identical(a[1:1,2],12L))
+stopifnot(identical(a[1..1,2],c(X=12L)))
+
+stopifnot(identical(a[1,],c(a=11L,b=12L,c=13L)))
+
+a <- array(11:13,c(1,3,1))
+dimnames(a) <- list("X",letters[1:3],"Y")
+
+stopifnot(identical(a[1,2,1],12L))
+stopifnot(identical(a[1,2:2,1],12L))
+stopifnot(identical(a[1,2..2,1],c(b=12L)))
+stopifnot(identical(a[1:1,2,1],12L))
+stopifnot(identical(a[1..1,2,1],c(X=12L)))
+
+stopifnot(identical(a[1,,1],c(a=11L,b=12L,c=13L)))
+
+a <- provideDimnames(array(5,c(2,5,2,5)))
+s <- a[1:2,1:2,1:2,1:2]
+r <- provideDimnames(array(5,c(2,2,2,2)))
+stopifnot(identical(s,r))

@@ -1877,7 +1877,7 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
 static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 {
     int i, j, ii, jj, n;
-    SEXP dimnames, dimnamesnames, r, result;
+    SEXP dimnames, r, result;
     int mode = TYPEOF(x);
 
     int *subs[k], indx[k], nsubs[k], offset[k], suppress_drop[k];
@@ -2022,7 +2022,6 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 
     SEXP newdimnames;
     PROTECT(dimnames = getAttrib(x, R_DimNamesSymbol));
-    PROTECT(dimnamesnames = getAttrib(dimnames, R_NamesSymbol));
     if (TYPEOF(dimnames) == VECSXP) { /* broken code for others in R-2.15.0 */
         PROTECT(newdimnames = allocVector(VECSXP, k));
         for (i = 0; i < k ; i++) {
@@ -2033,7 +2032,10 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
             } 
             /* else leave as NULL for 0-length dims */
         }
+        SEXP dimnamesnames;
+        PROTECT(dimnamesnames = getAttrib(dimnames, R_NamesSymbol));
         setAttrib(newdimnames, R_NamesSymbol, dimnamesnames);
+        UNPROTECT(1);
     }
     else
         PROTECT(newdimnames = R_NilValue);
@@ -2048,13 +2050,11 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 
     if (rdims <= 1) { /* result is vector without dims, but maybe with names */
         if (newdimnames != R_NilValue) {
-            int w = -1;   /* which dimension to take names from, -1 if none */
+            int w = -1;   /* which dimension to take names from, neg if none */
             for (i = 0; i < k; i++) {
                 if (VECTOR_ELT(newdimnames,i) != R_NilValue) {
-                    if (w < 0 || nsubs[i] != 1 || suppress_drop[i])
+                    if (nsubs[i] != 1 || suppress_drop[i]) {
                         w = i;
-                    else if (!suppress_drop[w]) {
-                        w = -1;
                         break;
                     }
                 }
@@ -2078,7 +2078,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
         UNPROTECT(1); /* newdims */
     }
 
-    UNPROTECT(k+7); /* ... + result, dimnames, dimnamesnames, newdimnames,
+    UNPROTECT(k+6); /* ... + result, dimnames, newdimnames,
                              x, s, xdims */
 
     R_scalar_stack = sv_scalar_stack;
