@@ -169,9 +169,11 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 
         /* Allocate space to put character conversions of integer arguments. */
 
+        char ichr[12]; int used_ichr = 0;
         for (j = 0; j < nx; j++)
             if (TYPEOF(xa[j]) == INTSXP)
-                chr [sepw == 0 ? j : 2*j] = R_alloc(12,1);
+                chr [sepw == 0 ? j : 2*j] = 
+                  !used_ichr ? (used_ichr = 1, ichr) : (char *) R_alloc(12,1);
 
         /* Create the string vector result. */
 
