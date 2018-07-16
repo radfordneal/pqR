@@ -171,7 +171,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 
         for (j = 0; j < nx; j++)
             if (TYPEOF(xa[j]) == INTSXP)
-                chra [sepw == 0 ? j : 2*j] = R_alloc(12,1);
+                chr [sepw == 0 ? j : 2*j] = R_alloc(12,1);
 
         /* Create the string vector result. */
 
