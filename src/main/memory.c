@@ -1268,6 +1268,22 @@ static SEXP alloc_obj (SEXPTYPE type, R_len_t length)
     return r;
 }
 
+/* Allocate object while proteting three SEXP values. Declared to not be
+   inline to reduce overhead in the time-critical code that will call
+   this function only rarely. */
+
+static attribute_noinline SEXP alloc_obj_prot (SEXPTYPE type, R_len_t length,
+                                               SEXP o1, SEXP o2, SEXP o3)
+{
+    PROTECT3(o1,o2,o3);
+
+    SEXP s = alloc_obj (type, length);
+
+    UNPROTECT(3);
+
+    return s;
+}
+
 
 /* Allocate a symbol.  Needs to be done with its own function because
    symbols share an sggc type with other objects, but should be in their 
@@ -1476,17 +1492,15 @@ SEXP allocSExp(SEXPTYPE t)
     }
 }
 
+
 /* Caller needn't protect arguments of cons. */
 
 SEXP cons(SEXP car, SEXP cdr)
 {
     SEXP s;
 
-    if ((s = alloc_fast(SGGC_LIST_KIND,LISTSXP)) == R_NoObject) {
-        PROTECT2(car,cdr);
-        s = alloc_obj(LISTSXP,1);
-        UNPROTECT(2);
-    }
+    if ((s = alloc_fast(SGGC_LIST_KIND,LISTSXP)) == R_NoObject)
+        s = alloc_obj_prot (LISTSXP, 1, car, cdr, R_NilValue);
 
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
@@ -1501,11 +1515,8 @@ SEXP cons_with_tag(SEXP car, SEXP cdr, SEXP tag)
 {
     SEXP s;
 
-    if ((s = alloc_fast(SGGC_LIST_KIND,LISTSXP)) == R_NoObject) {
-        PROTECT3(car,cdr,tag);
-        s = alloc_obj(LISTSXP,1);
-        UNPROTECT(3);
-    }
+    if ((s = alloc_fast(SGGC_LIST_KIND,LISTSXP)) == R_NoObject)
+        s = alloc_obj_prot (LISTSXP, 1, car, cdr, tag);
 
     CAR(s) = Rf_chk_valid_SEXP(car);
     CDR(s) = Rf_chk_valid_SEXP(cdr);
@@ -1530,11 +1541,8 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 {
     SEXP newrho;
 
-    if ((newrho = alloc_fast(SGGC_ENV_KIND,ENVSXP)) == R_NoObject) {
-        PROTECT3(namelist,valuelist,rho);
-        newrho = alloc_obj(ENVSXP,1);
-        UNPROTECT(3);
-    }
+    if ((newrho = alloc_fast(SGGC_ENV_KIND,ENVSXP)) == R_NoObject)
+        newrho = alloc_obj_prot (ENVSXP, 1, namelist, valuelist, rho);
 
     SEXP v, n;
 
@@ -1556,7 +1564,7 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 	n = CDR(n);
     }
 
-    return (newrho);
+    return newrho;
 }
 
 
@@ -1568,11 +1576,8 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 {
     SEXP s;
 
-    if ((s = alloc_fast(SGGC_PROM_KIND,PROMSXP)) == R_NoObject) {
-        PROTECT2(expr,rho);
-        s = alloc_obj(PROMSXP,1);
-        UNPROTECT(2);
-    }
+    if ((s = alloc_fast(SGGC_PROM_KIND,PROMSXP)) == R_NoObject)
+        s = alloc_obj_prot (PROMSXP, 1, expr, rho, R_NilValue);
 
     SET_NAMEDCNT_MAX(expr);
 
@@ -1597,11 +1602,8 @@ SEXP attribute_hidden mkValuePROMISE(SEXP expr, SEXP value)
 {
     SEXP s;
 
-    if ((s = alloc_fast(SGGC_PROM_KIND,PROMSXP)) == R_NoObject) {
-        PROTECT2(expr,value);
-        s = alloc_obj(PROMSXP,1);
-        UNPROTECT(2);
-    }
+    if ((s = alloc_fast(SGGC_PROM_KIND,PROMSXP)) == R_NoObject)
+        s = alloc_obj_prot (PROMSXP, 1, expr, value, R_NilValue);
 
     SET_NAMEDCNT_MAX(expr);
 
@@ -1661,11 +1663,8 @@ SEXP attribute_hidden mkCLOSXP(SEXP formals, SEXP body, SEXP rho)
 {
     SEXP c;
 
-    if ((c = alloc_fast(SGGC_CLOS_KIND,CLOSXP)) == R_NoObject) {
-        PROTECT3(formals,body,rho);
-        c = alloc_obj(CLOSXP,1);
-        UNPROTECT(3);
-    }
+    if ((c = alloc_fast(SGGC_CLOS_KIND,CLOSXP)) == R_NoObject)
+        c = alloc_obj_prot (CLOSXP, 1, formals, body, rho);
 
     FORMALS(c) = formals;
     BODY(c) = body;
@@ -2575,10 +2574,12 @@ void R_ReleaseObject(SEXP object)
 /* External Pointer Objects */
 SEXP R_MakeExternalPtr(void *p, SEXP tag, SEXP prot)
 {
+    PROTECT2(tag,prot);
     SEXP s = alloc_obj(EXTPTRSXP,1);
     EXTPTR_PTR(s) = p;
     EXTPTR_PROT(s) = Rf_chk_valid_SEXP(prot);
     EXTPTR_TAG(s) = Rf_chk_valid_SEXP(tag);
+    UNPROTECT(2);
     return s;
 }
 
@@ -2588,12 +2589,14 @@ typedef union {void *p; DL_FUNC fn;} fn_ptr;
 /* used in package methods */
 SEXP R_MakeExternalPtrFn(DL_FUNC p, SEXP tag, SEXP prot)
 {
+    PROTECT2(tag,prot);
     fn_ptr tmp;
     SEXP s = alloc_obj(EXTPTRSXP,1);
     tmp.fn = p;
     EXTPTR_PTR(s) = tmp.p;
     EXTPTR_PROT(s) = Rf_chk_valid_SEXP(prot);
     EXTPTR_TAG(s) = Rf_chk_valid_SEXP(tag);
+    UNPROTECT(2);
     return s;
 }
 
