@@ -1998,7 +1998,8 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
         copy_elements_recycled (ans, 0, vals, nans);
 
     ans = dimgets(ans, dims);
-    if (!isNull(dimnames) && length(dimnames) > 0)
+    /* if (!isNull(dimnames) && length(dimnames) > 0) - what it should be but */
+    if (TYPEOF(dimnames) == VECSXP || TYPEOF(dimnames) == LISTSXP) /* for now */
 	ans = dimnamesgets(ans, dimnames);
 
     UNPROTECT(2);
