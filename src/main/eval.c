@@ -2330,6 +2330,17 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             goto done;
         }
 
+        /* Look to see if the binding for the variable can be found
+           from LASTSYMBINDING.  Set v to the bound value, or
+           R_UnboundValue if not found, and R_binding_cell to the
+           cell, if it was found. */
+
+        SEXP v = R_UnboundValue;
+        if (SEXP32_FROM_SEXP(rho) == LASTSYMENV(lhs) 
+              && ! BINDING_IS_LOCKED((R_binding_cell = LASTSYMBINDING(lhs)))) {
+            v = CAR(R_binding_cell);
+        }
+
         /* Try to copy the value, not assign the object, if the rhs is
            scalar (no attributes, not being computed) and doesn't have
            zero NAMEDCNT (for which assignment would be free).  This
@@ -2340,23 +2351,22 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
            overhead of calling set_var_in_frame.
 
            Avoid accessing NAMEDCNT in a way that will cause unnecessary
-           waits for task completion. */
+           waits for task completion.
+
+           Note that the check below catches items on the scalar stack. */
 
         int rhs_type_etc = TYPE_ETC(rhs);  /* type + vec + attr + b.c. */
 
-        if ((rhs_type_etc&~TYPE_ET_CETERA_TYPE)==0 /* scalar, no attr, n.b.c. */
-             && ((NONPOINTER_VECTOR_TYPES >> rhs_type_etc) & 1)
-             && NAMEDCNT_GT_0(rhs)) {
-            SEXP v;
-            if (SEXP32_FROM_SEXP(rho) != LASTSYMENV(lhs) 
-                  || BINDING_IS_LOCKED((R_binding_cell = LASTSYMBINDING(lhs)))
-                  || (v = CAR(R_binding_cell)) == R_UnboundValue)
+        if (NAMEDCNT_GT_0(rhs)
+         && (rhs_type_etc&~TYPE_ET_CETERA_TYPE)==0 /* scalar, no attr, n.b.c. */
+         && ((NONPOINTER_VECTOR_TYPES >> rhs_type_etc) & 1)) {
+            if (v == R_UnboundValue)
                 v = findVarInFrame3_nolast (rho, lhs, 7);
             if (TYPE_ETC(v) == rhs_type_etc  /* won't be if R_UnboundValue */
                  && TRUELENGTH(v) == TRUELENGTH(rhs) && LEVELS(v) == LEVELS(rhs)
                  && !NAMEDCNT_GT_1(v)) {
                 SET_NAMEDCNT_NOT_0(v);
-                POP_IF_TOP_OF_STACK(rhs);
+                (void) POP_IF_TOP_OF_STACK(rhs);
                 helpers_wait_until_not_in_use(v);  /* won't be being computed */
                 switch (rhs_type_etc) {
                 case REALSXP:
@@ -2377,15 +2387,18 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             }
             if (POP_IF_TOP_OF_STACK(rhs))
                 rhs = DUP_STACK_VALUE(rhs);
-            if (R_binding_cell != R_NilValue) {
-                DEC_NAMEDCNT_AND_PRVALUE(v);
-                SETCAR(R_binding_cell, rhs);
-                SET_MISSING(R_binding_cell,0);
-                INC_NAMEDCNT(rhs);
-                if (rho == R_GlobalEnv) 
-                    R_DirtyImage = 1;
-                goto done;
-            }
+        }
+
+        /* Assign rhs to lhs using the binding cell found above. */
+
+        if (v != R_UnboundValue) {
+            DEC_NAMEDCNT_AND_PRVALUE(v);
+            SETCAR_MACRO(R_binding_cell, rhs);
+            SET_MISSING(R_binding_cell,0);
+            INC_NAMEDCNT(rhs);
+            if (rho == R_GlobalEnv) 
+                R_DirtyImage = 1;
+            goto done;
         }
 
         /* Assign rhs object to lhs symbol the usual way. */

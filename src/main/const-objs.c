@@ -108,7 +108,8 @@ R_CONST SEXPREC R_NilValue_const = { \
    is used.  These objects are not actually constant, since the data they 
    contain is changed, but are allocated similarly.  Types are initialized
    to RAWSXP, which is never used, so the high-water mark will be visible
-   More than one segment may be used, which must have consecutive indexes. */
+   More than one segment may be used, which must have consecutive indexes.
+   Note that they have maximum NAMEDCNT even though they are modified. */
 
 #define SCALAR_STACK_VALUE(offset) { \
     CONST_HEADER (RAWSXP, R_SGGC_SCALAR_STACK_INDEX \
