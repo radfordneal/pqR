@@ -409,7 +409,6 @@
  Rf_ssort
  Rf_stirlerr
  Rf_substituteList
- Rf_translateChar_nontrivial
  Rf_ucstomb
  Rf_unbound_var_error
  Rf_utf8toucs

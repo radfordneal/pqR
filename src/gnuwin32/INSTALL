@@ -73,6 +73,7 @@ always completely adequate, is as follows:
          set TMPDIR=c:\tmp
          set CYGWIN=nodosfilewarning
          set TAR_OPTIONS=--no-same-owner
+         set TAR=<path-to-where-you-put-Rtools>\bin\tar.exe
 
      You can replace c:\tmp with some other directory if you wish.
 

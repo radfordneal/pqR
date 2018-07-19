@@ -72,10 +72,10 @@ SORT=sort
 
 .c.d:
 	@echo "making $@ from $<"
-	@$(CC) -MM $(CPPFLAGS) $($*-CPPFLAGS) $(DEFINES) $< -o $@
+	@$(CC) -MM $(CPPFLAGS) $($*-CPPFLAGS) $(DEFINES) -DNO_ASSUME_ALIGNED $< -o $@
 
 .c.o:
-	$(CC) $(CPPFLAGS) $($*-CPPFLAGS) $(CFLAGS) $($*-CFLAGS) $(DEFINES) -c $< -o $@
+	$(CC) $(CPPFLAGS) $($*-CPPFLAGS) $(CFLAGS) $($*-CFLAGS) $(DEFINES) -DNO_ASSUME_ALIGNED -c $< -o $@
 
 .f.o:
 	$(F77) $(FFLAGS) $($*-FFLAGS) -c $< -o $@
