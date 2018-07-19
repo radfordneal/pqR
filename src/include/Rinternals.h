@@ -290,7 +290,8 @@ struct promsxp_struct {
     struct sxpinfo_struct sxpinfo; \
     uint32_t cptr; \
     SEXP attrib; \
-    R_len_t length;
+    R_len_t length
+
 #endif
 
 #if !USE_COMPRESSED_POINTERS && USE_AUX_FOR_ATTRIB
@@ -489,13 +490,13 @@ typedef struct VECTOR_SEXPREC_C {
 
 #define DATAPTR(x)	(((SEXPREC_ALIGN *) UPTR_FROM_SEXP(x)) + 1)
 
-/* Use gcc's facility for specifying alignment if present.  This may
-   assert an incorrect assumption about alignment in the case of
+/* Use gcc's facility for specifying alignment if present, and not disabled.
+   This may assert an incorrect assumption about alignment in the case of
    scalars - since they may be constants, or may be held in one chunk
    when compressed pointers are used.  But it's difficult to see how
    that could cause a problem in practice... */
 
-#ifdef __GNUC__ 
+#if __GNUC__ && !defined(NO_ASSUME_ALIGNED)
 #define DATAPTR_WITH_ALIGNMENT(x) __builtin_assume_aligned \
             (DATAPTR(x), SGGC_DATA_ALIGNMENT, SGGC_DATA_ALIGNMENT_OFFSET)
 #else
