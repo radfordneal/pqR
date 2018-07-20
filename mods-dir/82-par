@@ -1,6 +1,0 @@
-Work on doing things in parallel.
-
-Refines how c(...) works for parallel operation and realloc.
-
-Allows math1 functions to be done in two threads.
-

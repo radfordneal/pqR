@@ -1,8 +1,0 @@
-Bug fixes.
-
-Adds wait for arg being computed to dup_to_level.
-
-Fixes some setup bugs in const-objs.c
-
-Fixed bug in PROTECT, regarding timing of increment of Top.
-
