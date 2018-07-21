@@ -2528,6 +2528,16 @@ void uiter_setUTF8(UCharIterator *iter, const char *s, int32_t length);
 
 void uloc_setDefault(const char* localeID, UErrorCode* status);
 
+typedef enum {
+    ULOC_ACTUAL_LOCALE = 0,
+    ULOC_VALID_LOCALE = 1,
+    ULOC_DATA_LOCALE_TYPE_LIMIT = 3
+} ULocDataLocaleType ;
+
+const char* ucol_getLocaleByType(const UCollator *coll,
+				 ULocDataLocaleType type,
+				 UErrorCode *status);
+
 #define U_ZERO_ERROR 0
 #define U_FAILURE(x) ((x)>U_ZERO_ERROR)
 
