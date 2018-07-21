@@ -904,13 +904,6 @@ Other configuration options for can be listed with @command{configure
 of helper threads and compressed pointers, which are discussed in 
 @ref{Configuration on a Unix-alike}.
 
-The @option{--disable-byte-compiled-packages} option may be useful for
-pqR, for which byte compiling is not necessarily beneficial.  It
-ensures that the base and recommended packages are lazyloaded but not
-byte-compiled.  (Alternatively the (make or environment) variable
-@env{R_NO_BASE_COMPILE} can be set to a non-empty value other than
-FALSE for the duration of the build.)
-
 Most options not listed elsewhere in this manual are either standard
 @command{autoconf} options not relevant to @R{} or are intended for
 specialist uses by the @R{} developers.
@@ -1238,11 +1231,6 @@ make -j4 recommended
 @noindent
 but this is only likely to be worthwhile on a multi-core machine with
 ample memory, and is not 100% reliable.
-
-@item 
-To inhibit the byte-compilation of the base and recommended
-package, set the (make or environment) variable @env{R_NO_BASE_COMPILE}
-to a non-empty value other than FALSE.
 
 @end itemize
 
@@ -2000,21 +1988,9 @@ starting with a source tarball.
 @node Byte-compilation,  , Multiple sub-architectures, Installing packages
 @subsection Byte-compilation
 
-As from @R{} 2.14.0 the base and recommended packages are byte-compiled
-by default.  Other packages can be byte-compiled on installation by
-using the option @option{--byte-compile} with @command{R CMD INSTALL} or
-with @code{install.packages(type = "source")}.
-
-Not all contributed packages work correctly when byte-compiled (for
-example because they interfere with the sealing of namespaces).  For
-most packages (especially those which make extensive use of compiled
-code) the speed-up is small.  Unless a package is used frequently the
-time spent in byte-compilation can outweigh the time saved in execution:
-also byte-compilation can add substantially to the installed size of the
-package.
-
-Byte-compilation can be controlled on a per-package basis by the
-@samp{ByteCompile} field in the @file{DESCRIPTION} file.
+Byte compilation is not recommended in pqR, and can only be enabled
+by very deliberate measures, as described in @code{help(compile)} from
+the compiler package.
 
 @node Updating packages, Removing packages, Installing packages, Add-on packages
 @section Updating packages
