@@ -1,5 +1,5 @@
 
-R version 3.5.0 RC (2018-04-15 r74605) -- "Joy in Playing"
+R version 3.5.0 Patched (2018-06-18 r74911) -- "Joy in Playing"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -1496,11 +1496,11 @@ List of 2
 > pairs(iris[1:4], main = "Anderson's Iris Data -- 3 species",
 +       pch = 21, bg = c("red", "green3", "blue")[unclass(iris$Species)])
 > 
-> ## formula method
-> pairs(~ Fertility + Education + Catholic, data = swiss,
+> ## formula method, "graph" layout (row 1 at bottom):
+> pairs(~ Fertility + Education + Catholic, data = swiss, row1attop=FALSE,
 +       subset = Education < 20, main = "Swiss data, Education < 20")
 > 
-> pairs(USJudgeRatings)
+> pairs(USJudgeRatings, gap=1/10) # (gap: not wasting plotting area)
 > ## show only lower triangle (and suppress labeling for whatever reason):
 > pairs(USJudgeRatings, text.panel = NULL, upper.panel = NULL)
 > 
@@ -1530,7 +1530,8 @@ List of 2
 +     if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
 +     text(0.5, 0.5, txt, cex = cex.cor * r)
 + }
-> pairs(USJudgeRatings, lower.panel = panel.smooth, upper.panel = panel.cor)
+> pairs(USJudgeRatings, lower.panel = panel.smooth, upper.panel = panel.cor,
++       gap=0, row1attop=FALSE)
 > 
 > pairs(iris[-5], log = "xy") # plot all variables on log scale
 > pairs(iris, log = 1:4, # log the first four
@@ -2081,7 +2082,7 @@ N
 > points.default # to see how it calls "plot.xy(xy.coords(x, y), ...)"
 function (x, y = NULL, type = "p", ...) 
 plot.xy(xy.coords(x, y), type = type, ...)
-<bytecode: 0x3b8a770>
+<bytecode: 0x2e528f8>
 <environment: namespace:graphics>
 > 
 > 
@@ -2951,7 +2952,7 @@ function (xy = 1, warn.log = TRUE)
     u <- par("usr")
     xy * c(u[2L] - u[1L], u[4L] - u[3L])/par("pin")
 }
-<bytecode: 0x23b5348>
+<bytecode: 0x2ab08c0>
 <environment: namespace:graphics>
 > 
 > ## plot labels offset 0.12 inches to the right
@@ -3032,7 +3033,7 @@ function (xy = 1, warn.log = TRUE)
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  2.801 0.055 2.871 0 0 
+Time elapsed:  2.005 0.171 2.184 0 0 
 > grDevices::dev.off()
 null device 
           1 

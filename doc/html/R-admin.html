@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-<!-- This manual is for R, version 3.5.0 (2018-04-23).
+<!-- This manual is for R, version 3.5.1 (2018-07-02).
 
 Copyright (C) 2001-2018 R Core Team
 
@@ -333,7 +333,7 @@ p {
 
 <p>This is a guide to installation and administration for R.
 </p>
-<p>This manual is for R, version 3.5.0 (2018-04-23).
+<p>This manual is for R, version 3.5.1 (2018-07-02).
 </p>
 <p>Copyright &copy; 2001&ndash;2018 R Core Team
 </p>
@@ -927,13 +927,13 @@ specified on the <code>make install</code> command line (at least for
 <code>libdir</code>.  The C header files can be installed to the value of
 <code>rincludedir</code>: note that as the headers are not installed into a
 subdirectory you probably want something like
-<code>rincludedir=/usr/local/include/R-3.5.0</code>.
+<code>rincludedir=/usr/local/include/R-3.5.1</code>.
 </p>
 <p>If you want the R home to be something other than
 <samp><var>libdir</var>/R</samp>, use <samp>rhome</samp>: for example
 </p>
 <div class="example">
-<pre class="example">make install rhome=/usr/local/lib64/R-3.5.0
+<pre class="example">make install rhome=/usr/local/lib64/R-3.5.1
 </pre></div>
 
 <p>will use a version-specific R home on a non-Debian Linux 64-bit
@@ -1408,7 +1408,7 @@ conversion to short name equivalents (a.k.a. DOS 8.3 names), then R
 <em>must</em> be installed in a path that does not contain spaces.
 </p>
 <p>Installation is <em>via</em> the installer
-<samp>R-3.5.0-win.exe</samp>.  Just double-click on the icon and
+<samp>R-3.5.1-win.exe</samp>.  Just double-click on the icon and
 follow the instructions.  When installing on a 64-bit version of Windows
 the options will include 32- or 64-bit versions of R (and the default is
 to install both).  You can uninstall R from the Control Panel.
@@ -1475,12 +1475,12 @@ will call this directory <samp><var>R_HOME</var></samp> below.
 
 <p>You need to collect the following sets of files:
 </p><ul>
-<li> Get the R source code tarball <samp>R-3.5.0.tar.gz</samp> from
+<li> Get the R source code tarball <samp>R-3.5.1.tar.gz</samp> from
 <acronym>CRAN</acronym>.  Open a command window (or another shell) at directory
 <var>R_HOME</var>, and run
 
 <div class="example">
-<pre class="example">tar -xf R-3.5.0.tar.gz
+<pre class="example">tar -xf R-3.5.1.tar.gz
 </pre></div>
 
 <p>to create the source tree in <var>R_HOME</var>.  <strong>Beware</strong>: do use
@@ -1489,7 +1489,7 @@ If you are using an account with administrative privileges you may get a
 lot of messages which can be suppressed by
 </p>
 <div class="example">
-<pre class="example">tar --no-same-owner -xf R-3.5.0.tar.gz
+<pre class="example">tar --no-same-owner -xf R-3.5.1.tar.gz
 </pre></div>
 
 <a name="index-TAR_005fOPTIONS-1"></a>
@@ -1804,7 +1804,7 @@ source tree) in <samp>src/gnuwin32/installer</samp> run
 installation (in double quotes if it contains spaces or backslashes).
 </p>
 <p>Both methods create an executable with a standard name such as
-<samp>R-3.5.0-win.exe</samp>, so please rename it to indicate that
+<samp>R-3.5.1-win.exe</samp>, so please rename it to indicate that
 it is customized.  If you intend to <em>distribute</em> a customized
 installer please do check that license requirements are met &ndash; note that
 the installer will state that the contents are distributed under GPL
@@ -1863,21 +1863,21 @@ make msi
 </pre></div>
 
 <p>which will result in a file with a name like
-<samp>R-3.5.0-win32.msi</samp>.  This can be double-clicked to be
+<samp>R-3.5.1-win32.msi</samp>.  This can be double-clicked to be
 installed, but those who need it will know what to do with it (usually
 by running <code>msiexec /i</code> with additional options).  Properties
 that users might want to set from the <code>msiexec</code> command line
 include &lsquo;<samp>ALLUSERS</samp>&rsquo;, &lsquo;<samp>INSTALLDIR</samp>&rsquo; (something like
-<samp>c:\Program Files\R\R-3.5.0</samp>) and &lsquo;<samp>RMENU</samp>&rsquo; (the path
+<samp>c:\Program Files\R\R-3.5.1</samp>) and &lsquo;<samp>RMENU</samp>&rsquo; (the path
 to the &lsquo;<samp>R</samp>&rsquo; folder on the start menu) and &lsquo;<samp>STARTDIR</samp>&rsquo; (the
 starting directory for R shortcuts, defaulting to something like
 <samp>c:\Users\name\Documents\R</samp>).
 </p>
 <p>The MSI installer can be built both from a 32-bit build of R
-(<samp>R-3.5.0-win32.msi</samp>) and from a 64-bit build of R
-(<samp>R-3.5.0-win64.msi</samp>, optionally including 32-bit files
+(<samp>R-3.5.1-win32.msi</samp>) and from a 64-bit build of R
+(<samp>R-3.5.1-win64.msi</samp>, optionally including 32-bit files
 by setting the macro <code>HOME32</code>, when the name is
-<samp>R-3.5.0-win.msi</samp>).  Unlike the main installer, a 64-bit
+<samp>R-3.5.1-win.msi</samp>).  Unlike the main installer, a 64-bit
 MSI installer can only be run on 64-bit Windows.
 </p>
 <p>Thanks to David del Campo (Dept of Statistics, University of Oxford)
@@ -1947,7 +1947,7 @@ Windows&rsquo; CRLF line endings.
 <p>(&lsquo;macOS&rsquo; was known as &lsquo;OS X&rsquo; from 2012&ndash;2016 and as &lsquo;Mac OS X&rsquo; before that.)
 </p>
 <p>The front page of a <acronym>CRAN</acronym> site has a link &lsquo;Download R for OS
-X&rsquo;. Click on that, then download the file <samp>R-3.5.0.pkg</samp>
+X&rsquo;. Click on that, then download the file <samp>R-3.5.1.pkg</samp>
 and install it. This runs on macOS 10.11 and later (El Capitan, Sierra,
 High Sierra, &hellip;).
 </p>
@@ -5095,11 +5095,11 @@ paragraph.
 </p>
 <p>There are installers<a name="DOCF75" href="#FOOT75"><sup>75</sup></a> for Fortran compilers for El Capitan and Sierra at
 <a href="http://coudert.name/software/gfortran-6.1-ElCapitan.dmg">http://coudert.name/software/gfortran-6.1-ElCapitan.dmg</a> and
-<a href="http://coudert.name/software/gfortran-6.3-Sierra.dmg">http://coudert.name/software/gfortran-6.3-Sierra.dmg</a>.  (These
-compilers are also available from a <code>CRAN</code> mirror: select &lsquo;Other&rsquo;
-under &lsquo;Software&rsquo; from the left-hand menu.)  One way to use these builds
-with a binary distribution of R is to have a <samp>~/.R/Makevars</samp>
-file similar to (El Capitan)
+<a href="http://coudert.name/software/gfortran-6.3-Sierra.dmg">http://coudert.name/software/gfortran-6.3-Sierra.dmg</a>.  (An
+Apple package for 6.1 is also available at
+<a href="https://cran.r-project.org/bin/macosx/tools/gfortran-6.1.pkg">https://cran.r-project.org/bin/macosx/tools/gfortran-6.1.pkg</a>.)
+One way to use these builds with a binary distribution of R is to
+have a <samp>~/.R/Makevars</samp> file similar to (El Capitan)
 </p><div class="example">
 <pre class="example">F77 = /usr/local/gfortran/bin/gfortran
 FC = $F77
@@ -5115,33 +5115,34 @@ FLIBS = -L/usr/local/gfortran/lib/gcc/x86_64-apple-darwin16/6.3.0
 </pre></div>
 <p>(with lines broken here for legibility).
 </p>
-<p>More recent and complete distributions of <code>clang</code> are often
-available from <a href="http://llvm.org/releases/">http://llvm.org/releases/</a>: for example at the time
-of writing<a name="DOCF76" href="#FOOT76"><sup>76</sup></a> of 5.0.1
-and 6.0.0.  In particular, these include support for OpenMP.  Another
-build of clang 4.0.0 with OpenMP is available at
-<a href="https://r.research.att.com/libs/clang-4.0.0-darwin15.6-Release.tar.gz">https://r.research.att.com/libs/clang-4.0.0-darwin15.6-Release.tar.gz</a>
-and used for the <acronym>CRAN</acronym> binary distributions.  Suppose one of
-these distributions is installed under <samp>/usr/local/clang4</samp>.  Then
-R could be configured by something like
+<p>Current <acronym>CRAN</acronym> binary distributions use the build of
+<code>clang</code> 6.0.0 contained in
+<a href="https://cran.r-project.org/bin/macosx/tools/clang-6.0.0.pkg">https://cran.r-project.org/bin/macosx/tools/clang-6.0.0.pkg</a>.
+Other recent distributions of <code>clang</code> are often available from
+<a href="http://llvm.org/releases/">http://llvm.org/releases/</a>: for example at the time of
+writing<a name="DOCF76" href="#FOOT76"><sup>76</sup></a> of 5.0.1 and
+6.0.0.  In particular, all of these include support for OpenMP which
+Apple builds of <code>clang</code> do not.  Suppose one of these
+distributions is installed under <samp>/usr/local/clang6</samp>.  Then R
+could be configured by something like
 </p><div class="example">
 <pre class="example">./configure --x-includes=/opt/X11/include --x-libraries=/opt/X11/lib \
 PKG_CONFIG_PATH=/opt/X11/lib/pkgconfig:/usr/local/lib/pkgconfig:/usr/lib/pkgconfig \
-DYLD_FALLBACK_LIBRARY_PATH=/usr/local/clang4/lib:/usr/local/lib
+DYLD_FALLBACK_LIBRARY_PATH=/usr/local/clang6/lib:/usr/local/lib
 </pre></div>
 <p>with <samp>config.site</samp> containing
 </p><div class="example">
-<pre class="example">CC=/usr/local/clang4/bin/clang
+<pre class="example">CC=/usr/local/clang6/bin/clang
 OBJC=$CC
 F77=/usr/local/gfortran/bin/gfortran
 FC=$F77
-CXX=/usr/local/clang4/bin/clang++
-LDFLAGS=&quot;-L/usr/local/clang4/lib -L/usr/local/lib&quot;
-R_LD_LIBRARY_PATH=/usr/local/clang4/lib:/usr/local/lib
+CXX=/usr/local/clang6/bin/clang++
+LDFLAGS=&quot;-L/usr/local/clang6/lib -L/usr/local/lib&quot;
+R_LD_LIBRARY_PATH=/usr/local/clang6/lib:/usr/local/lib
 </pre></div>
 <p>The care to specify library paths is to ensure that the OpenMP runtime
-library, here <samp>/usr/local/clang4/lib/libomp.dylib</samp>, is found when
-needed. If this works, you should see the line
+library, here <samp>/usr/local/clang6/lib/libomp.dylib</samp>, is found when
+needed.  If this works, you should see the line
 </p><div class="example">
 <pre class="example">checking whether OpenMP SIMD reduction is supported... yes
 </pre></div>
@@ -5157,7 +5158,7 @@ installation from source of many packages: it will also be used if
 present when configuring the <code>X11()</code> and bitmap devices.
 </p>
 <p>Support for <code>cairo</code> (without <code>Pango</code>) can be enabled if
-<code>pkg-config</code> and XQuartz are available, Make sure the XQuartz&rsquo;s
+<code>pkg-config</code> and XQuartz are available.  Make sure the XQuartz&rsquo;s
 <code>pkg-config</code> files are found first on the configuration path: for
 example by setting
 </p><div class="example">
@@ -5190,7 +5191,7 @@ will show the compilers and configuration options used for the
 <acronym>CRAN</acronym> binary package for R: at the time of writing the
 non-default options
 </p><div class="example">
-<pre class="example">--enable-memory-profiling --enable-R-framework
+<pre class="example">--enable-memory-profiling --enable-R-framework --x-libraries=/opt/X11/lib
 </pre></div>
 <p>were used.
 </p>
@@ -5270,9 +5271,7 @@ tclvalue(.Tcl(&quot;tk windowingsystem&quot;))  # &quot;x11&quot; or &quot;aqua&
 <h4 class="subsection">C.3.2 Java</h4>
 
 <p>The situation with Java support on macOS is messy,<a name="DOCF80" href="#FOOT80"><sup>80</sup></a> and
-distribution of Java for all platforms is changing during 2018.  The
-<acronym>CRAN</acronym> distribution of <a href="https://CRAN.R-project.org/package=rJava"><strong>rJava</strong></a> currently requires Java
-8.
+distribution of Java for all platforms is changing during 2018.
 </p>
 <p>macOS no longer comes with an installed Java runtime (JRE), and a macOS
 upgrade may remove one if already installed: it is intended to be
@@ -5998,7 +5997,7 @@ install LaTeX packages on first use.
 <a name="The-Inno-Setup-installer-1"></a>
 <h3 class="section">D.2 The Inno Setup installer</h3>
 
-<p>To make the installer package (<samp>R-3.5.0-win.exe</samp>) we
+<p>To make the installer package (<samp>R-3.5.1-win.exe</samp>) we
 currently require the Unicode version of Inno Setup 5.3.7 or later from
 <a href="http://jrsoftware.org/">http://jrsoftware.org/</a>. This is <em>not</em> included in
 <samp>Rtools*.exe</samp>.
@@ -6706,14 +6705,14 @@ of <code>clang</code>, so it is strongly recommended to use that.</p>
 install them you may need to right-click and select <code>Open with -&gt;
 Installer</code>.</p>
 <h3><a name="FOOT76" href="#DOCF76">(76)</a></h3>
-<p>It is unstated what the minimum OS requirement is
-for these: the distribution of 5.0.0 required Sierra or later.</p>
+<p>It is unstated what the minimum OS requirement is for
+these: the distribution of 5.0.0 required Sierra or later.</p>
 <h3><a name="FOOT77" href="#DOCF77">(77)</a></h3>
 <p><a href="https://developer.apple.com/documentation/accelerate">https://developer.apple.com/documentation/accelerate</a>.</p>
 <h3><a name="FOOT78" href="#DOCF78">(78)</a></h3>
 <p>It was reported that for some non-Apple
 toolchains <code>CPPFLAGS</code> needed to contain <code>-D__ACCELERATE__</code>:
-not needed for <code>clang</code> 4.0.0, though.</p>
+not needed for <code>clang</code> 6.0.0, though.</p>
 <h3><a name="FOOT79" href="#DOCF79">(79)</a></h3>
 <p>E.g. <em>via</em> <code>tlmgr install cm-super helvetic
 inconsolata texinfo</code> .</p>

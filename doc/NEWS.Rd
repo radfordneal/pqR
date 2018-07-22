@@ -5,6 +5,81 @@
 \title{R News}
 \encoding{UTF-8}
 
+\section{\Rlogo CHANGES IN R 3.5.0 patched}{
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{file("stdin")} is no longer considered seekable.
+
+      \item \code{dput()} and \code{dump()} are no longer truncating
+      when \code{options(deparse.max.lines = *)} is set.
+
+      \item Calls with an S3 class are no longer evaluated when printed,
+      fixing part of \PR{17398}, thanks to a patch from Lionel Henry.
+
+      \item Allow \code{file} argument of \command{Rscript} to include space
+      even when it is first on the command line.
+
+      \item \code{callNextMethod()} uses the generic from the
+      environment of the calling method. Reported by Hervé Pagès with
+      well documented examples.
+
+      \item Compressed file connections are marked as blocking.
+
+      \item \code{optim(*, lower = c(-Inf, -Inf))} no longer warns (and
+      switches the method), thanks to a suggestion by John Nash.
+
+      \item \code{predict(fm, newdata)} is now correct also for models
+      where the formula has terms such as \code{splines::ns(..)} or
+      \code{stats::poly(..)}, fixing \PR{17414}, based on a patch from
+      Duncan Murdoch.
+
+      \item \code{simulate.lm(glm(*, gaussian(link = <non-default>)))}
+      has been corrected, fixing \PR{17415} thanks to Alex Courtiol.
+
+      \item \code{unlist(x)} no longer fails in some cases of nested
+      empty lists.  Reported by Steven Nydick.
+
+      \item \code{qr.coef(qr(<all 0, w/ colnames>))} now works.
+      Reported by Kun Ren.
+
+      \item The radix sort is robust to vectors with >1 billion elements
+      (but long vectors are still unsupported). Thanks to Matt Dowle for
+      the fix.
+
+      \item Terminal connections (e.g., stdin) are no longer
+      buffered. Fixes \PR{17432}.
+
+      \item \code{deparse(x)}, \code{dput(x)} and \code{dump()} now
+      respect \code{c()}'s argument names \code{recursive} and
+      \code{use.names}, e.g., for \code{x <- setNames(0, "recursive")},
+      thanks to Suharto Anggono's \PR{17427}.
+
+      \item Unbuffered connections now work with encoding conversion.
+      Reported by Stephen Berman.
+
+      \item \file{.Renviron} on Windows with \command{Rgui} is again by
+      default searched for in user documents directory when invoked
+      \emph{via} the launcher icon.  Reported by Jeroen Ooms.
+
+      \item \code{printCoefmat()} now also works with explicit \code{right=TRUE}.
+
+      \item \code{print.noquote()} now also works with explicit \code{quote=FALSE}.
+
+      \item The default method for \code{pairs(.., horInd=*, verInd=*)}
+      now gets the correct order, thanks to reports by Chris Andrews and
+      Gerrit Eichner.  Additionally, when \code{horInd} or \code{verInd}
+      contain only a subset of variables, all the axes are labeled
+      correctly now.
+
+      \item \code{agrep("..|..", .., fixed=FALSE)} now matches when it
+      should, thanks to a reminder by Andreas Kolter.
+
+      \item \code{str(ch)} now works for more invalid multibyte strings.
+    }
+  }
+}
+
 \section{\Rlogo CHANGES IN R 3.5.0}{
 
   \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
@@ -357,7 +432,7 @@
 
       \item The \code{"Date"} and \dQuote{date-time} classes
       \code{"POSIXlt"} and \code{"POSIXct"} now have a working
-      \code{`length<-`} method, as wished in \PR{17387}.
+      \code{length<-()} method, as wished in \PR{17387}.
 
       \item \code{optim(*, control = list(warn.1d.NelderMead = FALSE))}
       allows to turn off the warning when applying the default

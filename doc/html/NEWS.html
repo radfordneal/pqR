@@ -7,6 +7,107 @@
 
 <h2>R News</h2>
 
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.5.0 patched</h3>
+
+
+
+<h4>BUG FIXES</h4>
+
+
+<ul>
+<li> <p><code>file("stdin")</code> is no longer considered seekable.
+</p>
+</li>
+<li> <p><code>dput()</code> and <code>dump()</code> are no longer truncating
+when <code>options(deparse.max.lines = *)</code> is set.
+</p>
+</li>
+<li><p> Calls with an S3 class are no longer evaluated when printed,
+fixing part of <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17398">PR#17398</a>, thanks to a patch from Lionel Henry.
+</p>
+</li>
+<li><p> Allow <code>file</code> argument of <code>Rscript</code> to include space
+even when it is first on the command line.
+</p>
+</li>
+<li> <p><code>callNextMethod()</code> uses the generic from the
+environment of the calling method. Reported by Hervé Pagès with
+well documented examples.
+</p>
+</li>
+<li><p> Compressed file connections are marked as blocking.
+</p>
+</li>
+<li> <p><code>optim(*, lower = c(-Inf, -Inf))</code> no longer warns (and
+switches the method), thanks to a suggestion by John Nash.
+</p>
+</li>
+<li> <p><code>predict(fm, newdata)</code> is now correct also for models
+where the formula has terms such as <code>splines::ns(..)</code> or
+<code>stats::poly(..)</code>, fixing <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17414">PR#17414</a>, based on a patch from
+Duncan Murdoch.
+</p>
+</li>
+<li> <p><code>simulate.lm(glm(*, gaussian(link = &lt;non-default&gt;)))</code>
+has been corrected, fixing <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17415">PR#17415</a> thanks to Alex Courtiol.
+</p>
+</li>
+<li> <p><code>unlist(x)</code> no longer fails in some cases of nested
+empty lists.  Reported by Steven Nydick.
+</p>
+</li>
+<li> <p><code>qr.coef(qr(&lt;all 0, w/ colnames&gt;))</code> now works.
+Reported by Kun Ren.
+</p>
+</li>
+<li><p> The radix sort is robust to vectors with &gt;1 billion elements
+(but long vectors are still unsupported). Thanks to Matt Dowle for
+the fix.
+</p>
+</li>
+<li><p> Terminal connections (e.g., stdin) are no longer
+buffered. Fixes <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17432">PR#17432</a>.
+</p>
+</li>
+<li> <p><code>deparse(x)</code>, <code>dput(x)</code> and <code>dump()</code> now
+respect <code>c()</code>'s argument names <code>recursive</code> and
+<code>use.names</code>, e.g., for <code>x &lt;- setNames(0, "recursive")</code>,
+thanks to Suharto Anggono's <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17427">PR#17427</a>.
+</p>
+</li>
+<li><p> Unbuffered connections now work with encoding conversion.
+Reported by Stephen Berman.
+</p>
+</li>
+<li> <p>&lsquo;<span class="file">.Renviron</span>&rsquo; on Windows with <code>Rgui</code> is again by
+default searched for in user documents directory when invoked
+<em>via</em> the launcher icon.  Reported by Jeroen Ooms.
+</p>
+</li>
+<li> <p><code>printCoefmat()</code> now also works with explicit <code>right=TRUE</code>.
+</p>
+</li>
+<li> <p><code>print.noquote()</code> now also works with explicit <code>quote=FALSE</code>.
+</p>
+</li>
+<li><p> The default method for <code>pairs(.., horInd=*, verInd=*)</code>
+now gets the correct order, thanks to reports by Chris Andrews and
+Gerrit Eichner.  Additionally, when <code>horInd</code> or <code>verInd</code>
+contain only a subset of variables, all the axes are labeled
+correctly now.
+</p>
+</li>
+<li> <p><code>agrep("..|..", .., fixed=FALSE)</code> now matches when it
+should, thanks to a reminder by Andreas Kolter.
+</p>
+</li>
+<li> <p><code>str(ch)</code> now works for more invalid multibyte strings.
+</p>
+</li></ul>
+
+
+
+
 <h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.5.0</h3>
 
 
@@ -439,7 +540,7 @@ to version 3.5.0.
 </li>
 <li><p> The <code>"Date"</code> and &ldquo;date-time&rdquo; classes
 <code>"POSIXlt"</code> and <code>"POSIXct"</code> now have a working
-<code>`length&lt;-`</code> method, as wished in <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17387">PR#17387</a>.
+<code>length&lt;-()</code> method, as wished in <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17387">PR#17387</a>.
 </p>
 </li>
 <li> <p><code>optim(*, control = list(warn.1d.NelderMead = FALSE))</code>

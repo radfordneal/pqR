@@ -410,7 +410,7 @@ static int InInteger(R_inpstream_t stream)
     switch (stream->type) {
     case R_pstream_ascii_format:
 	InWord(stream, word, sizeof(word));
-	if(sscanf(word, "%s", buf) != 1) error(_("read error"));
+	if(sscanf(word, "%127s", buf) != 1) error(_("read error"));
 	if (strcmp(buf, "NA") == 0)
 	    return NA_INTEGER;
 	else
@@ -441,7 +441,7 @@ static double InReal(R_inpstream_t stream)
     switch (stream->type) {
     case R_pstream_ascii_format:
 	InWord(stream, word, sizeof(word));
-	if(sscanf(word, "%s", buf) != 1) error(_("read error"));
+	if(sscanf(word, "%127s", buf) != 1) error(_("read error"));
 	if (strcmp(buf, "NA") == 0)
 	    return NA_REAL;
 	else if (strcmp(buf, "NaN") == 0)
@@ -2830,7 +2830,7 @@ R_serialize(SEXP object, SEXP icon, SEXP ascii, SEXP Sversion, SEXP fun)
     }
     else {
 	Rconnection con = getConnection(asInteger(icon));
-	R_InitConnOutPStream(&out, con, type, 0, hook, fun);
+	R_InitConnOutPStream(&out, con, type, version, hook, fun);
 	R_Serialize(object, &out);
 	return R_NilValue;
     }

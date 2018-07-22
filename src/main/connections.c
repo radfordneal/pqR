@@ -508,7 +508,10 @@ int dummy_fgetc(Rconnection con)
 	    }
 	    p = con->iconvbuff + con->inavail;
 	    for(i = con->inavail; i < 25; i++) {
-		c = buff_fgetc(con);
+		if (con->buff)
+		    c = buff_fgetc(con);
+		else
+		    c = con->fgetc_internal(con);
 		if(c == R_EOF){ con->EOF_signalled = TRUE; break; }
 		*p++ = (char) c;
 		con->inavail++;
@@ -712,6 +715,7 @@ static Rboolean file_open(Rconnection con)
 	    /* fdopen won't set dstdin to binary mode */
 	    setmode(dstdin, _O_BINARY);
 # endif
+	con->canseek = FALSE;
         fp = fdopen(dstdin, con->mode);
 #else
 	warning(_("cannot open file '%s': %s"), name,
@@ -753,7 +757,8 @@ static Rboolean file_open(Rconnection con)
     if(mlen >= 2 && con->mode[mlen-1] == 'b') con->text = FALSE;
     else con->text = TRUE;
     con->save = -1000;
-    set_buffer(con);
+    if (!isatty(fileno(fp)))
+	set_buffer(con);
     set_iconv(con);
 
 #ifdef HAVE_FCNTL
@@ -2219,6 +2224,7 @@ SEXP attribute_hidden do_gzfile(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     ncon = NextConnection();
     Connections[ncon] = con;
+    con->blocking = TRUE;
     strncpy(con->encname, CHAR(STRING_ELT(enc, 0)), 100); /* ASCII */
     con->encname[100 - 1] = '\0';
 
@@ -3816,7 +3822,7 @@ SEXP attribute_hidden do_readLines(SEXP call, SEXP op, SEXP args, SEXP env)
 	/* for a non-blocking connection, more input may
 	   have become available, so re-position */
 	if(con->canseek && !con->blocking)
-	    Rconn_seek(con, con->seek(con, -1, 1, 1), 1, 1);
+	    Rconn_seek(con, Rconn_seek(con, -1, 1, 1), 1, 1);
     }
     con->incomplete = FALSE;
     if(con->UTF8out || streql(encoding, "UTF-8")) oenc = CE_UTF8;
@@ -5104,8 +5110,11 @@ SEXP attribute_hidden do_sinknumber(SEXP call, SEXP op, SEXP args, SEXP rho)
 #ifdef Win32
 void WinCheckUTF8(void)
 {
-    if(CharacterMode == RGui) WinUTF8out = (SinkCons[R_SinkNumber] == 1);
-    else WinUTF8out = FALSE;
+    if(CharacterMode == RGui)
+	WinUTF8out = (SinkCons[R_SinkNumber] == 1 ||
+	              SinkCons[R_SinkNumber] == 2);
+    else
+	WinUTF8out = FALSE;
 }
 #endif
 
