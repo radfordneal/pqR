@@ -662,6 +662,12 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define MAYBE_REFERENCED(x) NAMEDCNT_GT_0(x)
 #define NOT_SHARED(x)       (! NAMEDCNT_GT_1(x))
 
+#define SET_NAMEDCNT_MAX(x) do { \
+    SEXPREC *_p_ = UPTR_FROM_SEXP(x); \
+    if (_p_->sxpinfo.nmcnt < MAX_NAMEDCNT) \
+        _p_->sxpinfo.nmcnt = MAX_NAMEDCNT; \
+  } while (0)
+
 #define MARK_NOT_MUTABLE(x) SET_NAMEDCNT_MAX(x)
 
 
@@ -687,12 +693,6 @@ extern void helpers_wait_until_not_in_use(SEXP);
     int _v_ = v; \
     if (_p_->sxpinfo.nmcnt != _v_) \
         _p_->sxpinfo.nmcnt = _v_; \
-  } while (0)
-
-#define SET_NAMEDCNT_MAX(x) do { \
-    SEXPREC *_p_ = UPTR_FROM_SEXP(x); \
-    if (_p_->sxpinfo.nmcnt < MAX_NAMEDCNT) \
-        _p_->sxpinfo.nmcnt = MAX_NAMEDCNT; \
   } while (0)
 
 #define INC_NAMEDCNT(x) do { \
