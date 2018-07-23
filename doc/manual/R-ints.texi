@@ -745,11 +745,13 @@ environments.  The list of such symbols, marked by @code{SPEC_SYM},
 is in @file{src/main/names.c}.
 
 Every symbol contains a pointer to the environment in which the last
-unhashed binding for the symbol was found, along with a pointer to the
-binding cell that was found for that lookup.  If a binding for the
-symbol is looked for again in this environment, the binding cell can
-be returned without a search (unless it has been set to
-@code{R_UnboundValue} due to deletion of the variable). Similarly,
+unhashed binding for the symbol was found (provided it is not an
+active binding), along with a pointer to the binding cell that was
+found for that lookup.  (These can also be set up in anticipation of
+their being needed, such as when function arguments are bound.) If a
+binding for the symbol is looked for again in this environment, the
+binding cell can be returned without a search (unless it has been set
+to @code{R_UnboundValue} due to deletion of the variable). Similarly,
 every symbol contains a pointer the the last unhashed environment in
 which a lookup for the symbol failed, provided that lookup was for a
 function, and either the lookup later succeeded, or the lookup was for
