@@ -3196,7 +3196,8 @@ void R_MakeActiveBinding(SEXP sym, SEXP fun, SEXP env)
 	if (binding == R_NilValue) {
 	    defineVar(sym, fun, env); /* fails if env is locked */
 	    binding = Rf_find_binding_in_frame(env, sym, NULL);
-	    SET_ACTIVE_BINDING_BIT(binding);
+            if (binding != R_NilValue)  /* just in case; should always be... */
+                SET_ACTIVE_BINDING_BIT(binding);
 	}
 	else if (! IS_ACTIVE_BINDING(binding))
 	    error(_("symbol already has a regular binding"));
@@ -3204,6 +3205,11 @@ void R_MakeActiveBinding(SEXP sym, SEXP fun, SEXP env)
 	    error(_("cannot change active binding if binding is locked"));
 	else
 	    SETCAR(binding, fun);
+    }
+
+    /* Make sure active binding is not used as LASTSYMBINDING. */
+    if (LASTSYMENV(sym) == SEXP32_FROM_SEXP(env)) {
+        LASTSYMENV(sym) = R_NoObject32;
     }
 }
 

@@ -2,7 +2,7 @@
 # in global environemnts when local bindings come and go (testing 
 # whether several optimizations are correct).
 #
-# Added for pqR, 2014, Radford M. Neal.
+# Added for pqR, 2014, 2018 Radford M. Neal.
 
 abc <- 11
 def <- 22
@@ -105,3 +105,22 @@ fun2 (1100, 8)
 cat("Test 2nd time\n")
 fun (1100, function (a,b) 5400+10*a+b, 8)
 fun2 (1100, 8)
+
+
+cat("Test active bindings\n")
+
+f <- function () 999000
+
+e <- new.env()
+makeActiveBinding("xyzzy_xyzzy",f,e)
+r <- e$xyzzy_xyzzy
+stopifnot(identical(r,999000))
+r <- e$xyzzy_xyzzy
+stopifnot(identical(r,999000))
+
+e <- new.env(hash=FALSE)
+makeActiveBinding("xyzzy_xyzzy",f,e)
+r <- e$xyzzy_xyzzy
+stopifnot(identical(r,999000))
+r <- e$xyzzy_xyzzy
+stopifnot(identical(r,999000))
