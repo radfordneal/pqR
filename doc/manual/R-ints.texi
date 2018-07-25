@@ -1401,7 +1401,8 @@ is being used by a task that has not yet completed must not be
 modified, even if its @code{NAMEDCNT} field is such that it could
 otherwise be modified.  This constraint is implemented by having the
 @code{NAMEDCNT} macro wait until no task is using the object before
-returning the value.  See @ref{Helper threads and task merging} for
+returning the value.  (But macros like @code{NAMEDCNT_EQ_0} can
+sometimes avoid a wait.) See @ref{Helper threads and task merging} for
 details.
 
 The @code{nmcnt} field can be set with the @code{SET_NAMEDCNT} macro,
@@ -2328,7 +2329,7 @@ contains an index.  The objects are stored in (usually) a
 uncompressed serialized length (in XDR, that is big-endian, byte order)
 and read by a call to the primitive @code{lazyLoadDBfetch}.  (Note that
 this makes lazy-loading unsuitable for really large objects: the
-unserialized length of an @R{} object can exceed 4GB.)
+serialized length of an @R{} object can exceed 4GB.)
 
 The index or `map' file @file{@var{name}.rdx} is a compressed serialized
 @R{} object to be read by @code{readRDS}.  It is a list with three
@@ -2376,20 +2377,24 @@ that directory define how the helpers facility interfaces to the
 @pqR{} interpreter.
 
 At present, computation in helper threads (or in other deferred tasks)
-is confined to numeric vectors.  Two bits in the headers of such
-objects (actually all objects) allow checks on how computations that
-may be done by helper threads or otherwise are deferred are
-progressing.  These bits are accessed by the
-@code{helpers_is_being_computed} and @code{helpers_is_in_use} macros.
-An object is being computed by a task if computation of its data part
-was scheduled to be done by a task that has not been completed (or
-perhaps not even started).  An object is in use by a task if it is an
-input to a scheduled task for which it is not also the output.  (However,
-a object with maximum @code{NAMEDCNT} may not be flagged as in use
-even if it is, since such an object will never be modified anyway.) Note
-that these bits are set only by the master thread (whenever the master
-thread looks to see what tasks performed by helpers have completed),
-so access to them does not raise any synchronization issues.
+is confined to vectors, which must be numeric vectors unless the task
+is scheduled with the "master-only" flag (which makes it doable only
+by the master thread).
+
+Two bits in the headers of such objects (actually all objects) allow
+checks on how computations that may be done by helper threads (or that
+otherwise are deferred) are progressing.  These bits are accessed by
+the @code{helpers_is_being_computed} and @code{helpers_is_in_use}
+macros.  An object is being computed by a task if computation of its
+data part was scheduled to be done by a task that has not been
+completed (or perhaps not even started).  An object is in use by a
+task if it is an input to a scheduled task for which it is not also
+the output.  (However, a object with maximum @code{NAMEDCNT} may not
+be flagged as in use even if it is, since such an object will never be
+modified anyway.) Note that these bits are set only by the master
+thread (whenever the master thread looks to see what tasks performed
+by helpers have completed), so access to them does not raise any
+synchronization issues.
 
 The @code{WAIT_UNTIL_COMPUTED} and @code{WAIT_UNTIL_COMPUTED_2} macros
 wait until an object is not being computed, or until two objects are
