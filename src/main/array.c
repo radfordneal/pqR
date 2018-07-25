@@ -1172,7 +1172,10 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 
 /* Do transposed copy.  Note: nrow & ncol are the number of rows and
-   columns in the input (a) - this is swapped for the output! */
+   columns in the input (a) - this is swapped for the output! 
+
+   May be called from a task procedure, but must be done in the master
+   for arrays with a pointer type (STRSXP, VECSXP, EXPRSXP). */
 
 void copy_transposed (SEXP r, SEXP a, int nrow, int ncol)
 {
