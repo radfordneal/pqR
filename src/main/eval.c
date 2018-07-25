@@ -4413,7 +4413,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         typeplus2 &= ~TYPE_ET_CETERA_HAS_ATTR;
     }
 
-    if (typeplus2 == NILSXP) { /* Unary operation */
+    if (typeplus2 == NILSXP && CDR(argsevald) == R_NilValue) { /* Unary op */
 
         /* Test if arg1 is scalar numeric, computation not pending, attr OK */
 
