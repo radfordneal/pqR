@@ -43,7 +43,11 @@
 
 /* MACROS FOR BUILDING PROCEDURES THAT DO THE RELATIONAL OPERATIONS.  
    Separate macros are defined for non-variant operations, and for
-   the and, or, and sum variants. */
+   the and, or, and sum variants. 
+
+   Note that T and F are the values to return for "true" and "false" 
+   comparisons, which may be swapped from TRUE and FALSE, as part
+   of the procedure for reducing all relational ops to == and <. */
 
 #define RAW_FETCH(s,i)  RAW(s)[i]
 #define INT_FETCH(s,i)  INTEGER(s)[i]
@@ -745,12 +749,8 @@ static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	    x2 = e2[i % n2];
 	    if (x1 == NA_STRING || x2 == NA_STRING)
 		ans = NA_LOGICAL;
-	    else if (x1 == x2)
-		goto false;
-	    else {
-                if (Scollate(x1, x2) < 0 ? F : T)
-                    goto false;
-	    }
+	    else if (x1 != x2 /* quick check */ && Scollate(x1,x2) < 0 ? F : T)
+                goto false;
 	}
     }
 
@@ -829,10 +829,8 @@ static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 	    x2 = e2[i % n2];
 	    if (x1 == NA_STRING || x2 == NA_STRING)
 		ans = NA_LOGICAL;
-	    else if (x1 != x2) {
-                if (Scollate(x1, x2) < 0 ? T : F)
-                    goto true;
-	    }
+	    else if (x1 != x2 /* quick check */ && Scollate(x1,x2) < 0 ? T : F)
+                goto true;
 	}
     }
 
@@ -921,10 +919,8 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 		ans = NA_INTEGER;
                 break;
             }
-	    else if (x1 != x2) {
-                if (Scollate(x1, x2) < 0 ? T : F)
-                    ans += 1;
-	    }
+	    else if (x1 != x2 /* quick check */ && Scollate(x1,x2) < 0 ? T : F)
+                ans += 1;
 	}
     }
 
