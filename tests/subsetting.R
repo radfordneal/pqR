@@ -286,3 +286,20 @@ stopifnot(identical(A[_,2],c(a=3)))
 A <- M[_,1..1]
 stopifnot(identical(A[2,],3))
 stopifnot(identical(A[2,_],c(x=3)))
+
+
+# Check array indexing.
+
+a <- array(1:120,c(2,3,4,5))
+a[2,3,4,5] <- 9999L
+stopifnot(a[2,3,4,5]==9999L)
+stopifnot(a[length(a)]==9999L)
+a[2,3,4,5] <- 120L
+stopifnot(all(c(a)==1:120))
+
+a <- array(1:120,c(2,3,4,5))
+a[[2,3,4,5]] <- 9999L
+stopifnot(a[[2,3,4,5]]==9999L)
+stopifnot(a[length(a)]==9999L)
+a[[2,3,4,5]] <- 120L
+stopifnot(all(c(a)==1:120))
