@@ -260,7 +260,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
                         else {
                             chr[j] = (char *) translateChar(cs);
                             if (declare_encoding && !ENC_KNOWN(cs) 
-                                                 && !strIsASCII(s))
+                                                 && !strIsASCII(chr[j]))
                                 declare_encoding = FALSE;
                         }
                         len[j] = chr[j]==CHAR(cs) ? LENGTH(cs) : strlen(chr[j]);
@@ -293,7 +293,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
                         else {
                             chr[2*j] = (char *) translateChar(cs);
                             if (declare_encoding && !ENC_KNOWN(cs) 
-                                                 && !strIsASCII(s))
+                                                 && !strIsASCII(chr[2*j]))
                                 declare_encoding = FALSE;
                         }
                         len[2*j] = chr[2*j]==CHAR(cs) ? LENGTH(cs) 
