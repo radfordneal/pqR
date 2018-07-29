@@ -4807,10 +4807,10 @@ SEXP attribute_hidden do_subassign2_dflt_int
                 ix = sb1;
             else if (i == 1)
                 ix = sb2;
-            else {
+            else if (i == 2)
                 ix = CAR(s);
-                s = CDR(s);
-            }
+            else
+                ix = CAR(nthcdr(s,i-2));
             R_len_t ii = 
              get1index(ix, names==R_NilValue ? R_NilValue : VECTOR_ELT(names,i),
                        INTEGER(dims)[i], /*partial ok*/ FALSE, -1, call);
