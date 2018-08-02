@@ -480,4 +480,3 @@ sorting c by merge method
 > identical(startsWith(t3, "Mä"), c(FALSE, FALSE, TRUE))
 [1] TRUE
 > 
->>>>>>> Stashed changes
