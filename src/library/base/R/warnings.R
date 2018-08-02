@@ -1,5 +1,6 @@
 #  File src/library/base/R/warnings.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -55,8 +56,8 @@ print.warnings <- function(x, ...)
 ##' @param allowed not yet implemented: character vector of *named* elements in '...'
 ##' which are \dQuote{allowed} and hence not warned about
 chkDots <- function(..., which.call = -1, allowed = character(0)) {
-    if(nx <- length(list(...))) ## <- or  if(missing(...)) ?
-        warning(sprintf(ngettext(nx,
+    if(length(list(...))) ## <- or  if(missing(...)) ?
+        warning(sprintf(ngettext(length(list(...)),
                                  "In %s :\n extra argument %s will be disregarded",
                                  "In %s :\n extra arguments %s will be disregarded"),
                         paste(deparse(sys.call(which.call), control=c()), collapse="\n"),
