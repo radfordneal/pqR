@@ -1,6 +1,6 @@
 #  File src/library/base/R/character.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2017 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2017, 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -26,6 +26,9 @@ substring <- function(text, first, last=.Machine$integer.max)
     if(lt && lt < n) text <- rep(text, length.out = n)
     .Internal(substr(text, as.integer(first), as.integer(last)))
 }
+
+startsWith <- function(x, prefix) .Internal(startsWith(x, prefix))
+endsWith   <- function(x, suffix) .Internal(endsWith  (x, suffix))
 
 `substr<-` <- function(x, start, stop, value)
     .Internal(`substr<-`(x, as.integer(start), as.integer(stop), value))
