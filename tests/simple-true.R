@@ -237,3 +237,41 @@ identical (matrix(4:5,4,6), t(matrix(4:5,6,4,byrow=TRUE)))
 identical (matrix(1:3,4,6), t(matrix(1:3,6,4,byrow=TRUE)))
 identical (matrix(1:3,4,6,byrow=TRUE),matrix(rep(1:3,length=24),4,6,byrow=TRUE))
 identical (matrix(1:3,6,4,byrow=TRUE),matrix(rep(1:3,length=24),6,4,byrow=TRUE))
+
+# Logical arithmetic.
+
+identical (-TRUE, -1L)
+identical (+TRUE, 1L)
+identical (-c(TRUE,FALSE,TRUE), c(-1L,0L,-1L))
+identical (+c(TRUE,FALSE,TRUE), c(1L,0L,1L))
+
+identical (0L-TRUE, -1L)
+identical (0L+TRUE, 1L)
+identical (0L-c(TRUE,FALSE,TRUE), c(-1L,0L,-1L))
+identical (0L+c(TRUE,FALSE,TRUE), c(1L,0L,1L))
+
+identical (0-TRUE, -1)
+identical (0+TRUE, 1)
+identical (0-c(TRUE,FALSE,TRUE), c(-1,0,-1))
+identical (0+c(TRUE,FALSE,TRUE), c(1,0,1))
+
+## startsWith() / endsWith()  assertions
+t1 <- c("Foobar", "bla bla", "something", "another", "blu", "brown",
+        "blau blüht der Enzian")# non-ASCII
+t2 <- c("some text", "any text")
+t3 <- c("Martin", "Zürich", "Mächler")
+
+all(endsWith(t1, "")); all(startsWith(t1, ""))
+all(endsWith(t2, "")); all(startsWith(t2, ""))
+all(endsWith(t3, "")); all(startsWith(t3, ""))
+all(endsWith(t2, "text"))
+all(endsWith(t2, " text"))
+identical(startsWith(t1, "b" ), c(FALSE, TRUE, FALSE, FALSE, TRUE,  TRUE, TRUE))
+identical(startsWith(t1, "bl"), c(FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE))
+identical(startsWith(t1, "bla"),c(FALSE, TRUE, FALSE, FALSE,FALSE, FALSE, TRUE))
+identical(  endsWith(t1, "n"),  c(FALSE,FALSE, FALSE, FALSE,FALSE,  TRUE, TRUE))
+identical(  endsWith(t1, "an"), c(FALSE,FALSE, FALSE, FALSE,FALSE, FALSE, TRUE))
+##
+identical(startsWith(t3, "M" ), c( TRUE, FALSE, TRUE))
+identical(startsWith(t3, "Ma"), c( TRUE, FALSE, FALSE))
+identical(startsWith(t3, "Mä"), c(FALSE, FALSE, TRUE))
