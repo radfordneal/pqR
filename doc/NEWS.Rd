@@ -317,6 +317,8 @@
         of a character vector.  The pqR version has a significantly faster
         implementation.
 
+  \item From R-3.3.0: New programmeR's utility function \code{chkDots()}.
+
   \item The \code{lengths} function has been ported from R Core releases
         which had NEWS items as below:
 
