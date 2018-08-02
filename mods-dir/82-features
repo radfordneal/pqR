@@ -9,4 +9,5 @@ Added anyNA, defined as any(is.na(x)).
 
 Added chkDots from R-3.3.0; use in seq.R, lm.R, and density.R.
 
+Added startsWith and endsWith from R-3.3.0.
 
