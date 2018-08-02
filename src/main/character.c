@@ -383,6 +383,111 @@ static SEXP do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 }
 
+/* Adapted from R-3.3.0:
+
+  .Internal( startsWith(x, prefix) )  and
+  .Internal( endsWith  (x, suffix) )
+*/
+
+SEXP attribute_hidden do_startsWith(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    checkArity(op, args);
+
+    SEXP x = CAR(args), Xfix = CADR(args); // 'prefix' or 'suffix'
+    if (!isString(x) || !isString(Xfix))
+	error(_("non-character object(s)"));
+    R_xlen_t
+	n1 = XLENGTH(x),
+	n2 = XLENGTH(Xfix),
+	n = (n1 > 0 && n2 > 0) ? ((n1 >= n2) ? n1 : n2) : 0;
+    if (n == 0) return allocVector(LGLSXP, 0);
+    SEXP ans = PROTECT(allocVector(LGLSXP, n));
+
+    typedef const char * cp;
+    if (n2 == 1) { // optimize the most common case
+	SEXP el = STRING_ELT(Xfix, 0);
+	if (el == NA_STRING) {
+	    for (R_xlen_t i = 0; i < n1; i++)
+		LOGICAL(ans)[i] = NA_LOGICAL;
+	} else {
+	    // ASCII matching will do for ASCII Xfix except in non-UTF-8 MBCS
+	    Rboolean need_translate = TRUE;
+	    if (strIsASCII(CHAR(el)) && (utf8locale || !mbcslocale)) 
+		need_translate = FALSE;
+	    cp y0 = need_translate ? translateCharUTF8(el) : CHAR(el);
+	    int ylen = (int) strlen(y0);
+	    for (R_xlen_t i = 0; i < n1; i++) {
+		SEXP el = STRING_ELT(x, i);
+		if (el == NA_STRING) {
+		    LOGICAL(ans)[i] = NA_LOGICAL;
+		} else {
+		    cp x0 = need_translate ? translateCharUTF8(el) : CHAR(el);
+		    if(PRIMVAL(op) == 0) { // startsWith
+			LOGICAL(ans)[i] = strncmp(x0, y0, ylen) == 0;
+		    } else { // endsWith
+			int off = (int)strlen(x0) - ylen;
+			if (off < 0)
+			    LOGICAL(ans)[i] = 0;
+			else {
+			    LOGICAL(ans)[i] = memcmp(x0 + off, y0, ylen) == 0;
+			}
+		    }
+		}
+	    }
+	}
+    } else { // n2 > 1
+	// convert both inputs to UTF-8
+	cp *x0 = (cp *) R_alloc(n1, sizeof(char *));
+	cp *y0 = (cp *) R_alloc(n2, sizeof(char *));
+	// and record lengths, -1 for NA
+	int *x1 = (int *) R_alloc(n1, sizeof(int *));
+	int *y1 = (int *) R_alloc(n2, sizeof(int *));
+	for (R_xlen_t i = 0; i < n1; i++) {
+	    SEXP el = STRING_ELT(x, i);
+	    if (el == NA_STRING)
+		x1[i] = -1;
+	    else {
+		x0[i] = translateCharUTF8(el);
+		x1[i] = (int) strlen(x0[i]);
+	    }
+	}
+	for (R_xlen_t i = 0; i < n2; i++) {
+	    SEXP el = STRING_ELT(Xfix, i);
+	    if (el == NA_STRING)
+		y1[i] = -1;
+	    else {
+		y0[i] = translateCharUTF8(el);
+		y1[i] = (int) strlen(y0[i]);
+	    }
+	}
+	R_xlen_t i1, i2;
+	if(PRIMVAL(op) == 0) { // 0 = startsWith, 1 = endsWith
+	    mod_iterate (n, n1, n2, i1, i2) {
+		if (x1[i1] < 0 || y1[i2] < 0)
+		    LOGICAL(ans)[i] = NA_LOGICAL;
+		else if (x1[i1] < y1[i2])
+		    LOGICAL(ans)[i] = 0;
+		else // memcmp should be faster than strncmp
+		    LOGICAL(ans)[i] = memcmp(x0[i1], y0[i2], y1[i2]) == 0;
+            }
+	} else { // endsWith
+	    mod_iterate (n, n1, n2, i1, i2) {
+		if (x1[i1] < 0 || y1[i2] < 0)
+		    LOGICAL(ans)[i] = NA_LOGICAL;
+		else {
+		    int off = x1[i1] - y1[i2];
+		    if (off < 0)
+			LOGICAL(ans)[i] = 0;
+		    else
+			LOGICAL(ans)[i] = memcmp(x0[i1]+off,y0[i2],y1[i2]) == 0;
+		}
+            }
+	}
+    }
+    UNPROTECT(1);
+    return ans;
+}
+
 static SEXP do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP s, x, sa, so, value;
@@ -1495,6 +1600,8 @@ attribute_hidden FUNTAB R_FunTab_character[] =
 {"strtrim",	do_strtrim,	0,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"strtoi",	do_strtoi,	0,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"strrep",	do_strrep,	0,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"startsWith",	do_startsWith,  0,        11,   2,      {PP_FUNCALL, PREC_FN,    0}},
+{"endsWith",	do_startsWith,  1,        11,   2,      {PP_FUNCALL, PREC_FN,    0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
