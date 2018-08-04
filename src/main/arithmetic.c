@@ -1220,7 +1220,7 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
         xattr = TRUE;
         xarray = isArray(x);
         xts = isTs(x);
-        xS4 = objx && isS4(x);
+        xS4 = objx && IS_S4_OBJECTx);
     }
     else xarray = xts = xattr = FALSE;
     ny = LENGTH(y);
@@ -1228,7 +1228,7 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
         yattr = TRUE;
         yarray = isArray(y);
         yts = isTs(y);
-        yS4 = objy && isS4(y);
+        yS4 = objy && IS_S4_OBJECT(y);
     }
     else yarray = yts = yattr = FALSE;
 

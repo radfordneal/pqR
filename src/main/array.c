@@ -2075,7 +2075,7 @@ SEXP attribute_hidden do_lengths(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (DispatchOrEval(call, op, "lengths", args, rho, &ans, 0, 1))
       return(ans);
 
-    Rboolean isList = isVectorList(x) || isS4(x);
+    Rboolean isList = isVectorList(x) || IS_S4_OBJECT(x);
     if(!isList) switch(TYPEOF(x)) {
 	case NILSXP:
 	case CHARSXP:
