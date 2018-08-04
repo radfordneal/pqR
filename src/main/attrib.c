@@ -154,9 +154,14 @@ SEXP attribute_hidden getNamesAttrib (SEXP vec)
     }
 
     for (s = ATTRIB(vec); s != R_NilValue; s = CDR(s)) {
-	if (TAG(s) == R_NamesSymbol && TYPEOF(CAR(s)) == STRSXP) {
-            SET_NAMEDCNT_NOT_0(CAR(s));
-	    return CAR(s);
+	if (TAG(s) == R_NamesSymbol) {
+            /* Ensure that code getting names of vectors never gets invalid
+               names - silently for now. */
+            if (!isVector(vec) || TYPEOF(CAR(s)) == STRSXP 
+                                    && LENGTH(CAR(s)) == LENGTH(vec)) {
+                SET_NAMEDCNT_NOT_0(CAR(s));
+	        return CAR(s);
+            }
         }
     }
 

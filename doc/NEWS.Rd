@@ -244,6 +244,21 @@
         \code{unlist(list(x=list(2,a=3)))} and \code{unlist(list(x=c(2,a=3)))}
         now return the same result (in which the name for the first element 
         is \code{x}, not \code{x1}).
+  \item It is now no longer possible to create an S4 object with a vector
+        data part and a slot called "names" that is not a 
+        character vector.  This was previously allowed
+        (and is in R-3.5.1), but didn't really work, as illustrated below:
+\preformatted{
+  > setClass("cl",representation(names="logical"),prototype(1,names=c(T,F)))
+  > a <- new("cl")
+  > a@names
+  [1]  TRUE FALSE
+  > b <- a+1
+  > b@names
+  Error: no slot of name "names" for this object of class "cl"
+}
+        However, completely consistent behaviour in this regard is still 
+        not enforced.
   \item The warning message "restarting interrupted promise evaluation" is
         no longer produced.
   \item The \code{\%\%} operator can no longer produce a warning of
