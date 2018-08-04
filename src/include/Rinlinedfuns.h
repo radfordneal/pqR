@@ -287,8 +287,8 @@ INLINE_FUN SEXP lang6(SEXP s, SEXP t, SEXP u, SEXP v, SEXP w, SEXP x)
 INLINE_FUN Rboolean conformable(SEXP x, SEXP y)
 {
     int i, n;
-    PROTECT(x = getAttrib(x, R_DimSymbol));
-    y = getAttrib(y, R_DimSymbol);
+    PROTECT(x = getAttrib00(x, R_DimSymbol));
+    y = getAttrib00(y, R_DimSymbol);
     UNPROTECT(1);
     if ((n = LENGTH(x)) != LENGTH(y))
 	return FALSE;
@@ -416,7 +416,7 @@ INLINE_FUN Rboolean isMatrix(SEXP s)
 {
     SEXP t;
     if (isVector(s)) {
-	t = getAttrib(s, R_DimSymbol);
+	t = getAttrib00(s, R_DimSymbol);
 	/* You are not supposed to be able to assign a non-integer dim,
 	   although this might be possible by misuse of ATTRIB. */
 	if (TYPEOF(t) == INTSXP && LENGTH(t) == 2)
@@ -429,7 +429,7 @@ INLINE_FUN Rboolean isArray(SEXP s)
 {
     SEXP t;
     if (isVector(s)) {
-	t = getAttrib(s, R_DimSymbol);
+	t = getAttrib00(s, R_DimSymbol);
 	/* You are not supposed to be able to assign a 0-length dim,
 	 nor a non-integer dim */
 	if (TYPEOF(t) == INTSXP && LENGTH(t) > 0)
@@ -440,7 +440,7 @@ INLINE_FUN Rboolean isArray(SEXP s)
 
 INLINE_FUN Rboolean isTs(SEXP s)
 {
-    return (isVector(s) && getAttrib(s, R_TspSymbol) != R_NilValue);
+    return (isVector(s) && getAttrib00(s, R_TspSymbol) != R_NilValue);
 }
 
 
@@ -456,7 +456,7 @@ INLINE_FUN Rboolean isFactor(SEXP s)
 
 INLINE_FUN int nlevels(SEXP f)
 {
-    return isFactor(f) ? length(getAttrib(f, R_LevelsSymbol)) : 0;
+    return isFactor(f) ? length(getAttrib00(f, R_LevelsSymbol)) : 0;
 }
 
 /* Is an object of numeric type? */
