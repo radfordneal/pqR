@@ -78,6 +78,10 @@ Rprofmemt(filename = "", append = FALSE,
   When \code{terminal=TRUE} or \code{details=TRUE}, a newline is always 
   written after each allocation report.  For backward compatibility, this 
   is otherwise not the case when the call stack is empty.
+
+  When interpreting output, note that parsing and other routine operations may
+  cause small vectors to be allocated during a session, which 
+  could be confused with vectors allocated by visible code.
 }
 \note{
  The memory profiler can be used at the same time as other \R and C profilers.
@@ -94,9 +98,9 @@ Rprofmemt(filename = "", append = FALSE,
 }
 \examples{
 # Reports printed to the terminal, with details, for all vectors of 
-# at least 10 elements.
-Rprofmemt(nelem=10)
-v <- numeric(10)
+# at least 100 elements.
+Rprofmemt(nelem=100)
+v <- numeric(100)
 v[3] <- 1
 u <- v
 v[3] <- 2
