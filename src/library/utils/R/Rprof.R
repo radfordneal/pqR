@@ -25,17 +25,19 @@ Rprof <- function(filename = "Rprof.out", append = FALSE, interval =  0.02,
 # Enhanced Rprofmem for pqR.  Rprofmemt has different defaults.
 
 Rprofmem <- function(filename = "Rprofmem.out", append = FALSE, threshold = 0,
-             nelem = 0, stack=TRUE, terminal = FALSE, pages = TRUE, details = FALSE)
+             nelem = 0, stack=TRUE, terminal = FALSE, pages = TRUE, 
+             details = FALSE, bytes = TRUE)
 {
     if(is.null(filename)) filename <- ""
     invisible(.Internal(Rprofmem(filename, append, as.double(threshold), 
-                                 as.double(nelem), stack, terminal, pages, details)))
+                as.double(nelem), stack, terminal, pages, details, bytes)))
 }
 
 Rprofmemt <- function(filename = "", append = FALSE, threshold = 0,
-             nelem = 0, stack=TRUE, terminal = TRUE, pages = FALSE, details = TRUE)
+              nelem = 0, stack=TRUE, terminal = TRUE, pages = FALSE,
+              details = TRUE, bytes = TRUE)
 {
     if(is.null(filename)) { filename <- ""; terminal <- FALSE }
     invisible(.Internal(Rprofmem(filename, append, as.double(threshold), 
-                                 as.double(nelem), stack, terminal, pages, details)))
+                as.double(nelem), stack, terminal, pages, details, bytes)))
 }

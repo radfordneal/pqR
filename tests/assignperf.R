@@ -6,7 +6,7 @@ options(keep.source=FALSE)  # avoid allocations for source references
 print(1)  # get some stuff allocated before Rprofmemt activatived.
 
 vsize <- 100  # must be multiple of 4
-Rprofmemt(nelem=vsize)
+Rprofmemt(nelem=vsize,bytes=FALSE)
 
 
 # One-level assignments.
@@ -138,7 +138,7 @@ print(a$q$x)
 
 Rprofmemt(NULL)
 setClass ("george", representation(a="numeric",b="logical"))
-Rprofmemt(nelem=vsize)
+Rprofmemt(nelem=vsize,bytes=FALSE)
 
 ia <- rep(1.2,vsize)
 ib <- rep(c(TRUE,FALSE),length=vsize)
@@ -152,7 +152,7 @@ x@b[3] <- NA  # should duplicate at most one, but currently dups four things
 
 Rprofmemt(NULL)
 print(x)
-Rprofmemt(nelem=vsize)
+Rprofmemt(nelem=vsize,bytes=FALSE)
 
 
 # Things that should use VARIANT_UNCLASS, VARIANT_ANY_ATTR, or
@@ -171,7 +171,7 @@ attr(B,"fred") <- rep("a",vsize)
 o <- (1:vsize) + 0.5
 class(o) <- "abc"
 
-Rprofmemt(nelem=vsize)
+Rprofmemt(nelem=vsize,bytes=FALSE)
 
 for (i in a) print (i)
 for (i in exp(a)) print (i)

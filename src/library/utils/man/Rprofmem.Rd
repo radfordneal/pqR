@@ -14,11 +14,13 @@
 \usage{
 Rprofmem(filename = "Rprofmem.out", append = FALSE, 
          threshold = 0, nelem = 0, stack = TRUE,
-         terminal = FALSE, pages = TRUE, details = FALSE)
+         terminal = FALSE, pages = TRUE,
+         details = FALSE, bytes = TRUE)
 
 Rprofmemt(filename = "", append = FALSE, 
-         threshold = 0, nelem = 0, stack = TRUE,
-         terminal = TRUE, pages = FALSE, details = TRUE)
+          threshold = 0, nelem = 0, stack = TRUE,
+          terminal = TRUE, pages = FALSE,
+          details = TRUE, bytes = TRUE)
 }
 \arguments{
   \item{filename}{The file to which reports of memory allocations are written, 
@@ -33,8 +35,9 @@ Rprofmemt(filename = "", append = FALSE,
   \item{terminal}{logical: should reports be printed on the terminal (as
     well as possibly written to \code{filename})?}
   \item{pages}{logical: ignored, but retained for compatibility}
-  \item{details}{logical: should details of allocation be reported,
-    rather than only the total number of bytes?}
+  \item{details}{logical: should details (type, length) of the allocation 
+    be reported?}
+  \item{bytes}{logical: should the number of bytes allocated be reported?}
 }
 \details{
   The profiler tracks memory allocations, some of which will be to previously
@@ -67,6 +70,10 @@ Rprofmemt(filename = "", append = FALSE,
   functions in the call stack will also be printed, and if
   \code{details=TRUE}, the type and length of the vector allocated will be 
   displayed in parentheses (before the call stack).  
+
+  Output of the number of bytes allocated can be suppressed using
+  \code{bytes = FALSE}.  This is mainly useful for producing output that
+  is platform-independent, as is useful for testing.
 
   When \code{terminal=TRUE} or \code{details=TRUE}, a newline is always 
   written after each allocation report.  For backward compatibility, this 
