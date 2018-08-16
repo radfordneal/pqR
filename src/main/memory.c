@@ -208,6 +208,7 @@ static int R_IsMemReporting;
 static int R_MemReportingToTerminal;
 static int R_MemStackReporting;
 static int R_MemDetailsReporting;
+static int R_MemBytesReporting;
 static FILE *R_MemReportingOutfile;
 static R_size_t R_MemReportingThreshold;
 static R_len_t R_MemReportingNElem;
@@ -2705,22 +2706,21 @@ static void R_ReportAllocation (SEXP s)
 
     if (size > R_MemReportingThreshold && length >= R_MemReportingNElem) {
         if (R_MemReportingOutfile != NULL) {
-            if (R_MemDetailsReporting)
-                fprintf (R_MemReportingOutfile, "%llu (%s %lu)",
-                  (unsigned long long) size, type2char(type),
-                  (unsigned long)length);
-            else 
+            if (R_MemBytesReporting)
                 fprintf (R_MemReportingOutfile, "%llu ",
-                  (unsigned long long) size);
+                         (unsigned long long) size);
+            if (R_MemDetailsReporting)
+                fprintf (R_MemReportingOutfile, "(%s %lu)",
+                         type2char(type), (unsigned long)length);
         }
         if (R_MemReportingToTerminal) {
+            REprintf ("RPROFMEM: ");
+            if (R_MemBytesReporting)
+                REprintf ("%llu ",
+                           (unsigned long long) size);
             if (R_MemDetailsReporting)
-                REprintf("RPROFMEM: %llu (%s %lu)",
-                         (unsigned long long) size, type2char(type),
-                         (unsigned long)length);
-            else
-                REprintf ("RPROFMEM: %llu ", 
-                  (unsigned long long) size);
+                REprintf("(%s %lu)",
+                          type2char(type), (unsigned long)length);
         }
         R_OutputStackTrace();
     }
@@ -2791,6 +2791,9 @@ static SEXP do_Rprofmem(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     ap = CDR(ap);
     R_MemDetailsReporting = asLogical(CAR(ap));
+
+    ap = CDR(ap);
+    R_MemBytesReporting = asLogical(CAR(ap));
 
     if (R_MemReportingToTerminal || strlen(CHAR(filename)) > 0)
 	R_InitMemReporting(filename, append_mode);
@@ -3623,7 +3626,7 @@ attribute_hidden FUNTAB R_FunTab_memory[] =
 {"mem.limits",	do_memlimits,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"memory.profile",do_memoryprofile, 0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"pnamedcnt",	do_pnamedcnt,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"Rprofmem",	do_Rprofmem,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
+{"Rprofmem",	do_Rprofmem,	0,	11,	9,	{PP_FUNCALL, PREC_FN,	0}},
 {"object.size",	do_objectsize,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"testvalgrind",do_testvalgrind,0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
