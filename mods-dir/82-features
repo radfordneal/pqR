@@ -11,3 +11,4 @@ Added chkDots from R-3.3.0; use in seq.R, lm.R, and density.R.
 
 Added startsWith and endsWith from R-3.3.0.
 
+Added bytes arg to Rprofmemt.
