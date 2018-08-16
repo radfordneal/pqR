@@ -6,3 +6,5 @@ Fixed bug with LASTSYMENV and active bindings.
 
 Made "names" legal as a slot for an S4 object, but not if
 it's also a vector and the values isn't a character string.
+
+Fixed startsWith to allow NULL arguments.

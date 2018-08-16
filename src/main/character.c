@@ -394,13 +394,23 @@ SEXP attribute_hidden do_startsWith(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
 
     SEXP x = CAR(args), Xfix = CADR(args); // 'prefix' or 'suffix'
+
+    if (isNull(x) || isNull(Xfix))
+        return allocVector (LGLSXP, 0);
+
     if (!isString(x) || !isString(Xfix))
 	error(_("non-character object(s)"));
+    if (!isString(x) || !isString(Xfix))
+	error(_("non-character object(s)"));
+
     R_xlen_t
 	n1 = XLENGTH(x),
 	n2 = XLENGTH(Xfix),
 	n = (n1 > 0 && n2 > 0) ? ((n1 >= n2) ? n1 : n2) : 0;
-    if (n == 0) return allocVector(LGLSXP, 0);
+
+    if (n == 0) 
+        return allocVector (LGLSXP, 0);
+
     SEXP ans = PROTECT(allocVector(LGLSXP, n));
 
     typedef const char * cp;
