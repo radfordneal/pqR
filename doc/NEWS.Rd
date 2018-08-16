@@ -384,7 +384,8 @@
   \item From R-3.3.0: New programmeR's utility function \code{chkDots()}.
 
   \item From R-3.3.0: New string utilities \code{startsWith(x, prefix)} and
-        \code{endsWith(x, suffix)}.
+        \code{endsWith(x, suffix)}.  (However, in pqR, \code{NULL} arguments
+        are allowed, and are treated the same as zero-length character vectors.)
 
   \item The \code{lengths} function has been ported from R Core releases
         which had NEWS items as below:

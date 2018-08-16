@@ -7,17 +7,17 @@
   \code{prefix} or \code{suffix} respectively, where strings are
   recycled to common lengths.
 
-  \code{startsWith()} is equivalent to but much faster than
-  \preformatted{substring(x, 1, nchar(prefix)) == prefix}
-  or also \preformatted{grepl("^<prefix>", x)} where \code{prefix} is
-  not to contain special regular expression characters.
+  \code{startsWith()} is equivalent to but much faster
+  than \preformatted{substring(x, 1, nchar(prefix)) == prefix}
+  or also \preformatted{grepl("^<prefix>", x)}
+  when \code{prefix} does not contain special regular expression characters.
 }
 \usage{
 startsWith(x, prefix)
   endsWith(x, suffix)
 }
 \arguments{
-  \item{x}{vector of \code{\link{character}} string whose \dQuote{starts}
+  \item{x}{a vector of \code{\link{character}} strings whose \dQuote{starts}
     are considered.}
   \item{prefix, suffix}{\code{\link{character}} vector (often of length one).}
 }
@@ -25,6 +25,9 @@ startsWith(x, prefix)
   The code has an optimized branch for the most common usage in which
   \code{prefix} or \code{suffix} is of length one, and is further
   optimized in a UTF-8 or 8-byte locale if that is an ASCII string.
+
+  An argument of \code{NULL} is treated the same as a zero-length 
+  character vector.
 }
 \value{
   A \code{\link{logical}} vector, of \dQuote{common length} of \code{x}
