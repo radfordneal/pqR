@@ -238,6 +238,9 @@
   \item The \code{memory.profile} function now has an argument that can
         restrict the counts for vector objects to only those of some minimum
         length.
+  \item The \code{Rprofmemt} function now has a \code{bytes} argument, which
+        can be set to \code{FALSE} to suppress output of the number of bytes
+        allocated (useful for producing platform-independent output).
   \item When the \code{unlist} and \code{c} functions create names for their
         result, the situations in which a sequence number is appended to a 
         name are now the same for atomic vectors and lists.  For example, 
