@@ -24,8 +24,6 @@ all: Makefile R
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 
-@BYTE_COMPILE_PACKAGES_FALSE@R_NO_BASE_COMPILE = true
-
 ## FIXME: do some of this in parallel?
 ## Beware there is a bootstrapping problem here: tools uses tools to
 ## dump its namespace. So it works initially, but not to update.
@@ -37,13 +35,13 @@ R:
 	@for pkg in profile base tools compiler; do \
 	  (cd $${pkg} && $(MAKE) all) || exit 1; \
 	done
-	@if [ x$(R_NO_BASE_COMPILE) = x -o x$(R_NO_BASE_COMPILE) = xFALSE ]; then \
+	@if [ x$(R_NO_BASE_COMPILE) != xFALSE ]; then \
 	  for pkg in base tools; do \
-	    (cd $${pkg} && $(MAKE) mklazycomp) || exit 1; \
+	    (cd $${pkg} && $(MAKE) Rlazy) || exit 1; \
 	  done; \
 	else \
 	  for pkg in base tools; do \
-	    (cd $${pkg} && $(MAKE) Rlazy) || exit 1; \
+	    (cd $${pkg} && $(MAKE) mklazycomp) || exit 1; \
 	  done; \
 	fi
 	@for pkg in $(R_PKGS_BASE1); do \

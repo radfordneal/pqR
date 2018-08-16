@@ -114,14 +114,19 @@ always completely adequate, is as follows:
      compressed pointers are enabled) at the start of fixed\h\config.h
      (in src\gnuwin32).
 
- 11) Enter the command 
+ 11) If you want the base and recommended packages to be byte compiled,
+     enter the commands
 
-          set R_NO_BASE_COMPILE=TRUE
+          set R_NO_BASE_COMPILE=FALSE
+          set R_PKG_BYTECOMPILE=TRUE
 
-     if you don't want the base and recommended packages to be byte
-     compiled. (If you want byte compilation, though it isn't always
-     desirable for pqR, do not set R_NO_BASE_COMPILE at all, or set it
-     to FALSE.)
+     Note that byte compilation is NOT recommended, so you should 
+     probably NOT do this.
+
+     The compiled byte code will not actually be used unless the 
+     following command is also entered each time before R is run:
+
+          set R_USE_BYTECODE=TRUE
 
  12) Issue the following commands in a Windows console (command
      prompt) window (after issuing the commands in step (5)), in order

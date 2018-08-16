@@ -33,13 +33,13 @@ R:
 	  $(MAKE) -C $${pkg} -f Makefile.win R_ARCH=$(R_ARCH) VERSION=$(RVER) \
 	    all install-tests || exit 1; \
 	done
-	@if [ x$(R_NO_BASE_COMPILE) = x -o x$(R_NO_BASE_COMPILE) = xFALSE ]; then \
+	@if [ x$(R_NO_BASE_COMPILE) != xFALSE ]; then \
 	  for pkg in base tools; do \
-	    $(MAKE) -C $${pkg} -f Makefile.win mklazycomp || exit 1; \
+	    $(MAKE) -C $${pkg} -f Makefile.win Rlazy || exit 1; \
 	  done; \
 	else \
 	  for pkg in base tools; do \
-	    $(MAKE) -C $${pkg} -f Makefile.win Rlazy || exit 1; \
+	    $(MAKE) -C $${pkg} -f Makefile.win mklazycomp || exit 1; \
 	  done; \
 	fi
 	@for pkg in $(R_PKGS_BASE1); do \

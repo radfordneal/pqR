@@ -6,6 +6,9 @@ abs_top_builddir = @abs_top_builddir@
 
 include $(top_srcdir)/share/make/vars.mk
 
+@BYTE_COMPILE_PACKAGES_FALSE@R_NO_BASE_COMPILE = TRUE
+@BYTE_COMPILE_PACKAGES_TRUE@R_NO_BASE_COMPILE = FALSE
+
 AR = @AR@
 ACLOCAL = @ACLOCAL@
 AUTOCONF = @AUTOCONF@
