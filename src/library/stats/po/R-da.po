@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:53\n"
+"POT-Creation-Date: 2018-08-17 17:27\n"
 "PO-Revision-Date: 2012-01-28 01:18+0200\n"
 "Last-Translator: Joe <joedalton2@yahoo.dk>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -654,9 +654,6 @@ msgid "'ColSideColors' must be a character vector of length ncol(x)"
 msgstr ""
 
 msgid "'RowSideColors' must be a character vector of length nrow(x)"
-msgstr ""
-
-msgid "non-matched further arguments are disregarded"
 msgstr ""
 
 msgid "argument 'x' must be numeric"

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.2.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:53\n"
+"POT-Creation-Date: 2018-08-17 17:27\n"
 "PO-Revision-Date: 2005-04-08 08:37+0000\n"
 "Last-Translator: 陈斐 <FeiChen@FairIsaac.com>\n"
 "Language-Team: Chinese\n"
@@ -660,9 +660,6 @@ msgstr "'ColSideColors'必需是长度为ncol(x)的字节矢量"
 
 msgid "'RowSideColors' must be a character vector of length nrow(x)"
 msgstr "'RowSideColors'必需是长度为nrow(x)的字节矢量"
-
-msgid "non-matched further arguments are disregarded"
-msgstr "不匹配的额外参数略过不用"
 
 msgid "argument 'x' must be numeric"
 msgstr "参数'x'必需是数值"
@@ -2400,6 +2397,9 @@ msgstr[0] "因为不存在，%d个观察量被删除了"
 msgid "parameter %s does not occur in the model formula"
 msgid_plural "parameters %s do not occur in the model formula"
 msgstr[0] "参数%s没有在模型公式里出现过"
+
+#~ msgid "non-matched further arguments are disregarded"
+#~ msgstr "不匹配的额外参数略过不用"
 
 #~ msgid "'vec' contains NAs"
 #~ msgstr "'vec'含NA"
