@@ -1,2 +1,0 @@
-Adds a "level" argument to "gc", which specifies the level of collection
-to be done.

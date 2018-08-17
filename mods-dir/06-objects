@@ -1,2 +1,0 @@
-Speeds up routines in objects.c, such as GetObject.  Also fixes the
-bug mentioned in the NEWS item here.
