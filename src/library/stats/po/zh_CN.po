@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.4.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:53-0400\n"
+"POT-Creation-Date: 2018-08-17 17:27-0400\n"
 "PO-Revision-Date: 2005-02-04 08:37+0000\n"
 "Last-Translator: 陈斐 <feic@avaya.com>\n"
 "Language-Team: Chinese\n"
@@ -116,64 +116,64 @@ msgstr "length(m)的值必需为二"
 msgid "Argument Sx must be numeric vector one shorter than m[]"
 msgstr "参数Sx必需是长度比m[]小一的数值向量"
 
-#: nls.c:99
+#: nls.c:101
 msgid "'control' must be a list"
 msgstr "'control'的值必需为串列"
 
-#: nls.c:101
+#: nls.c:103
 msgid "'m' must be a list"
 msgstr "'m'的值必需是串列"
 
-#: nls.c:107 nls.c:112 nls.c:117 nls.c:122 nls.c:127 nls.c:168 nls.c:173
-#: nls.c:178 nls.c:183 nls.c:188 nls.c:193
+#: nls.c:109 nls.c:114 nls.c:119 nls.c:124 nls.c:129 nls.c:170 nls.c:175
+#: nls.c:180 nls.c:185 nls.c:190 nls.c:195
 #, c-format
 msgid "'%s' absent"
 msgstr "需要设定'%s'"
 
-#: nls.c:234
+#: nls.c:236
 msgid "singular gradient"
 msgstr "奇异梯度"
 
-#: nls.c:255
+#: nls.c:257
 #, c-format
 msgid "step factor %g reduced below 'minFactor' of %g"
 msgstr "算法的步因素%g的大小被减少到小于%g的'minFactor'值"
 
-#: nls.c:264
+#: nls.c:266
 #, c-format
 msgid "number of iterations exceeded maximum of %d"
 msgstr "循环次数超过了%d这个最大值"
 
-#: nls.c:269
+#: nls.c:271
 msgid "converged"
 msgstr "收敛了"
 
-#: nls.c:290
+#: nls.c:292
 msgid "'theta' should be of type character"
 msgstr "'theta'的种类必需是字符"
 
-#: nls.c:292 port.c:369
+#: nls.c:294 port.c:369
 msgid "use of NULL environment is defunct"
 msgstr "NULL环境不再有用了"
 
-#: nls.c:296
+#: nls.c:298
 msgid "'rho' should be an environment"
 msgstr "'rho'必需为环境"
 
-#: nls.c:299
+#: nls.c:301
 msgid "'dir' is not a numeric vector of the correct length"
 msgstr "'dir'这个数字向量的长度不对"
 
-#: nls.c:316 nls.c:353
+#: nls.c:318 nls.c:355
 msgid "Missing value or an infinity produced when evaluating the model"
 msgstr "在计算模型的时候产生了缺省值或无限值"
 
-#: nls.c:324
+#: nls.c:326
 #, c-format
 msgid "variable '%s' is integer, not numeric"
 msgstr "变量'%s'应该为整数，不能是数值"
 
-#: nls.c:326
+#: nls.c:328
 #, c-format
 msgid "variable '%s' is not numeric"
 msgstr "变量'%s'不是数值"

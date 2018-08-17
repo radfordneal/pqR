@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.15.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-04-22 15:25\n"
+"POT-Creation-Date: 2018-08-17 17:27\n"
 "PO-Revision-Date: 2012-03-06 09:33+0100\n"
 "Last-Translator: Detlef Steuer <steuer@hsu-hh.de>\n"
 "Language-Team: R Core <r-core@r-project.org>\n"
@@ -605,6 +605,27 @@ msgstr "Fehler: Dies ist R Version %s, benötigt wird R %s %s"
 
 msgid "loading failed"
 msgstr "Laden fehlgeschlagen"
+
+msgid "assertConditon: Successfully caught a condition"
+msgstr ""
+
+msgid "Got %s in evaluating %s; wanted %s"
+msgstr ""
+
+msgid "Failed to get %s in evaluating %s"
+msgstr ""
+
+msgid "Failed to get error in evaluating %s"
+msgstr ""
+
+msgid "Asserted error: %s"
+msgstr ""
+
+msgid "Got warning in evaluating %s, but also an error"
+msgstr ""
+
+msgid "Asserted warning: %s"
+msgstr ""
 
 msgid "Changes require specified 'style'"
 msgstr "Änderungen benötigen den angegebenen 'style'"

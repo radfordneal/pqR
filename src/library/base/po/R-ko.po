@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.3.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:53\n"
+"POT-Creation-Date: 2018-08-17 17:27\n"
 "PO-Revision-Date: 2012-03-08 20:10+0200\n"
 "Last-Translator: Chel Hee Lee <chl948@mail.usask.ca>\n"
 "Language-Team: The Korean R Translation Council <gnustats@gmail.com>\n"
@@ -158,6 +158,10 @@ msgstr "자동로더는 '%s' 를 '%s' 에서 찾을 수 없습니다 "
 msgid "invalid argument values in 'backsolve'"
 msgstr "'backsolve' 의 인자값이 잘못되었습니다 "
 
+#, fuzzy
+msgid "invalid value of ncol(x)"
+msgstr "잘못된 값입니다 "
+
 msgid "singular matrix in 'backsolve'. First zero in diagonal [%d]"
 msgstr "singular matrix in 'backsolve'. First zero in diagonal [%d]"
 
@@ -172,6 +176,10 @@ msgstr "'chol' 에 비정방행렬이 있습니다 "
 
 msgid "non-matrix argument to 'chol'"
 msgstr "'chol' 에 행렬이 아닌 인수입니다"
+
+#, fuzzy
+msgid "invalid nrow(x)"
+msgstr "부적절한 이름입니다"
 
 msgid "matrix not positive definite"
 msgstr "향렬이 positive definite 가 아닙니다 "
@@ -241,6 +249,10 @@ msgstr "'breaks' 가 고유하지 않습니다 "
 
 msgid "labels/breaks length conflict"
 msgstr "labels/breaks 의 길이가 일치하지 않습니다 "
+
+#, fuzzy
+msgid "invalid value of length(x)"
+msgstr "잘못된 값입니다 "
 
 msgid "invalid 'row.names' length"
 msgstr "'row.names' 길이가 잘못되었습니다 "
@@ -782,10 +794,6 @@ msgstr "must have replacements for matches"
 msgid "norm '%s' currently always uses exact = FALSE"
 msgstr "norm '%s' currently always uses exact = FALSE"
 
-#, fuzzy
-msgid "invalid nrow(x)"
-msgstr "부적절한 이름입니다"
-
 msgid "triangular matrix should be square"
 msgstr "triangular matrix should be square"
 
@@ -967,21 +975,15 @@ msgstr "empty (zero-byte) input file"
 msgid "input has been corrupted, with LF replaced by CR"
 msgstr "input has been corrupted, with LF replaced by CR"
 
-msgid ""
-"file %s has magic number '%s'\n"
-"   Use of save versions prior to 2 is deprecated"
-msgstr ""
-"file %s has magic number '%s'\n"
-"Use of save versions prior to 2 is deprecated"
+#, fuzzy
+msgid "Use of save versions prior to 2 is no longer allowed"
+msgstr "Use of save versions prior to 2 is deprecated"
 
 msgid "bad 'file' argument"
 msgstr "잘못한 'file' 인수입니다"
 
 msgid "'file' must be specified"
 msgstr "'file' 은 반드시 지정되야 합니다 "
-
-msgid "Use of save versions prior to 2 is deprecated"
-msgstr "Use of save versions prior to 2 is deprecated"
 
 msgid "nothing specified to be save()d"
 msgstr "nothing specified to be save()d"
@@ -1022,14 +1024,14 @@ msgstr "must specify formal argument names to vectorize"
 msgid "'arg' must be NULL or a character vector"
 msgstr "'arg' 는 반드시 NULL 혹은 문자형 벡터이어야 합니다 "
 
-msgid "'arg' must be of length 1"
-msgstr "'arg' 의 길이는 반드시 1 이어야 합니다 "
-
 msgid "'arg' must be of length >= 1"
 msgstr "'arg' 의 길이는 반드시 1 이상이어야 합니다 "
 
 msgid "'arg' should be one of %s"
 msgstr "'arg' 는 %s 중에 하나 이어야 합니다 "
+
+msgid "'arg' must be of length 1"
+msgstr "'arg' 의 길이는 반드시 1 이어야 합니다 "
 
 msgid "there is more than one match in 'match.arg'"
 msgstr "there is more than one match in 'match.arg'"
@@ -1292,8 +1294,24 @@ msgstr "'u5.bias' 는 반드시 양수이어야 합니다 "
 msgid "'eps.correct' must be 0, 1, or 2"
 msgstr "'eps.corect' 는 반드시 0, 1, 또는 2 일 것입니다 "
 
+#, fuzzy
+msgid "invalid ncol(x)"
+msgstr "부적절한 이름입니다"
+
 msgid "first argument must be a QR decomposition"
 msgstr "첫번째 인수가 QR 분해이어야 합니다 "
+
+#, fuzzy
+msgid "invalid nrow(qr$qr)"
+msgstr "부적절한 이름입니다"
+
+#, fuzzy
+msgid "invalid ncol(qr$qr)"
+msgstr "부적절한 이름입니다"
+
+#, fuzzy
+msgid "invalid ncol(y)"
+msgstr "부적절한 이름입니다"
 
 msgid "'qr' and 'y' must have the same number of rows"
 msgstr "'qr' 과 'y' 는 행의 개수가 동일해야 합니다 "
@@ -1303,6 +1321,10 @@ msgstr "exact singularity in 'qr.coef'"
 
 msgid "argument is not a QR decomposition"
 msgstr "인수가 QR 분해가 아닙니다 "
+
+#, fuzzy
+msgid "invalid NCOL(y)"
+msgstr "부적절한 이름입니다"
 
 msgid "not implemented for complex 'qr'"
 msgstr "복소수 'qr' 은 구현되지 않았습니다 "
@@ -1315,6 +1337,10 @@ msgstr "'k' 는 너무 큽니다 "
 
 msgid "need larger value of 'ncol' as pivoting occurred"
 msgstr "pivoting 이 발생하도록 'ncol' 에 더 큰값이 필요합니다 "
+
+#, fuzzy
+msgid "invalid NCOL(R)"
+msgstr "부적절한 이름입니다"
 
 msgid "'x' must be an atomic vector"
 msgstr "'x' 는 반드시 atomic 벡터이어야 합니다 "
@@ -1349,9 +1375,6 @@ msgstr "'length.out' 인자는 반드시 길이가 1 이어야 합니다 "
 
 msgid "first element used of 'length.out' argument"
 msgstr "'length.out' 인자는 첫번째로 사용된 요소입니다 "
-
-msgid "extra argument(s) %s will be disregarded"
-msgstr "추가적인 %s 는 고려되지 않습니다 "
 
 msgid "invalid (to - from)/by in seq(.)"
 msgstr "seq(.) 안의 (to - from)/by 가 잘못되었습니다 "
@@ -1409,6 +1432,9 @@ msgstr ""
 "'decreasing' must be a length-1 logical vector.\n"
 "Did you intend to set 'partial'?"
 
+msgid "'partial' sorting not supported by radix method"
+msgstr ""
+
 msgid "'index.return' only for non-factors"
 msgstr "'index.return' only for non-factors"
 
@@ -1434,11 +1460,9 @@ msgstr ""
 "'x' 는 'sort.list' 에 대한 atomic 입니다 \n"
 "list 에서 'sort' 라고 사용한 적이 있나요? "
 
-msgid "method=\"quick\" is only for numeric 'x'"
+#, fuzzy
+msgid "method = \"quick\" is only for numeric 'x'"
 msgstr "method=\"quick\" 는 'x' 가 수치일 경우에만 사용합니다 "
-
-msgid "method=\"radix\" is only for integer 'x'"
-msgstr "method=\"radix\" 는 'x' 가 정수일때만 사용합니다 "
 
 msgid "'local' must be TRUE, FALSE or an environment"
 msgstr "'local' 은 만드시 TRUE, FLASE, 혹은 환경 값을 가집니다 "
@@ -1746,12 +1770,23 @@ msgid_plural "Warning messages:\n"
 msgstr[0] "경고 매시지: \n"
 
 #, fuzzy
-#~ msgid "invalid value of ncol(x)"
-#~ msgstr "잘못된 값입니다 "
+msgid ""
+"In %s :\n"
+" extra argument %s will be disregarded"
+msgid_plural ""
+"In %s :\n"
+" extra arguments %s will be disregarded"
+msgstr[0] "추가적인 %s 는 고려되지 않습니다 "
 
-#, fuzzy
-#~ msgid "invalid value of length(x)"
-#~ msgstr "잘못된 값입니다 "
+#~ msgid ""
+#~ "file %s has magic number '%s'\n"
+#~ "   Use of save versions prior to 2 is deprecated"
+#~ msgstr ""
+#~ "file %s has magic number '%s'\n"
+#~ "Use of save versions prior to 2 is deprecated"
+
+#~ msgid "method=\"radix\" is only for integer 'x'"
+#~ msgstr "method=\"radix\" 는 'x' 가 정수일때만 사용합니다 "
 
 #, fuzzy
 #~ msgid "invalid length(x)"
@@ -1763,14 +1798,6 @@ msgstr[0] "경고 매시지: \n"
 
 #~ msgid "'by' must specify valid column(s)"
 #~ msgstr "'by' 에 올바른 열이 지정되어야 합니다 "
-
-#, fuzzy
-#~ msgid "invalid ncol(x)"
-#~ msgstr "부적절한 이름입니다"
-
-#, fuzzy
-#~ msgid "invalid ncol(y)"
-#~ msgstr "부적절한 이름입니다"
 
 #~ msgid "' has changed"
 #~ msgstr "' has changed"

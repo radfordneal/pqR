@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.15.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:53-0400\n"
+"POT-Creation-Date: 2018-08-17 17:27-0400\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
 "Language-Team: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
@@ -117,66 +117,66 @@ msgstr "length(m) musi być co najmniej dwa"
 msgid "Argument Sx must be numeric vector one shorter than m[]"
 msgstr "Argument Sx musi być wektorem liczbowym o jeden którszym niż m[]"
 
-#: nls.c:99
+#: nls.c:101
 msgid "'control' must be a list"
 msgstr "'control' musi być listą"
 
-#: nls.c:101
+#: nls.c:103
 msgid "'m' must be a list"
 msgstr "'m' musi być listą"
 
-#: nls.c:107 nls.c:112 nls.c:117 nls.c:122 nls.c:127 nls.c:168 nls.c:173
-#: nls.c:178 nls.c:183 nls.c:188 nls.c:193
+#: nls.c:109 nls.c:114 nls.c:119 nls.c:124 nls.c:129 nls.c:170 nls.c:175
+#: nls.c:180 nls.c:185 nls.c:190 nls.c:195
 #, c-format
 msgid "'%s' absent"
 msgstr "'%s' jest niedostępny"
 
-#: nls.c:234
+#: nls.c:236
 msgid "singular gradient"
 msgstr "osobliwy gradient"
 
-#: nls.c:255
+#: nls.c:257
 #, c-format
 msgid "step factor %g reduced below 'minFactor' of %g"
 msgstr "czynnik kroku %g zmiejszony poniżej  'minFactor' %g"
 
-#: nls.c:264
+#: nls.c:266
 #, c-format
 msgid "number of iterations exceeded maximum of %d"
 msgstr "liczba iteracji przekroczyła maksymalną liczbę %d"
 
-#: nls.c:269
+#: nls.c:271
 msgid "converged"
 msgstr "zbiegł się"
 
-#: nls.c:290
+#: nls.c:292
 msgid "'theta' should be of type character"
 msgstr "'theta' powinna być znakiem"
 
-#: nls.c:292 port.c:369
+#: nls.c:294 port.c:369
 msgid "use of NULL environment is defunct"
 msgstr "użycie wartości NULL dla środowiska zostało zlikwidowane"
 
-#: nls.c:296
+#: nls.c:298
 msgid "'rho' should be an environment"
 msgstr "'rho' powinno być środowiskiem"
 
-#: nls.c:299
+#: nls.c:301
 msgid "'dir' is not a numeric vector of the correct length"
 msgstr "'dir' nie jest wektorem liczbowym o poprawnej długości"
 
-#: nls.c:316 nls.c:353
+#: nls.c:318 nls.c:355
 msgid "Missing value or an infinity produced when evaluating the model"
 msgstr ""
 "Brakuje wartości lub wyprodukowano wartości nieskończone podczas wyliczania "
 "modelu"
 
-#: nls.c:324
+#: nls.c:326
 #, c-format
 msgid "variable '%s' is integer, not numeric"
 msgstr "zmienna '%s' jest liczbą całkowitą, a nie rzeczywistyą"
 
-#: nls.c:326
+#: nls.c:328
 #, c-format
 msgid "variable '%s' is not numeric"
 msgstr "zmienna '%s' nie jest liczbą rzeczywistą"

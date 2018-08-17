@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.1.0 \n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2012-04-22 15:25\n"
+"POT-Creation-Date: 2018-08-17 17:27\n"
 "PO-Revision-Date: 2012-02-26 14:22+0200 \n"
 "Last-Translator: Shigeru Mase <maseshigeru@gmail.com> \n"
 "Language-Team: RjpWiki Message Translation Team <mokada@md.tsukuba.ac.jp> \n"
@@ -626,6 +626,27 @@ msgstr " エラー：この R はバージョン %s です。 R %s %s を必要�
 #, fuzzy
 msgid "loading failed"
 msgstr " '%s' のロードに失敗しました "
+
+msgid "assertConditon: Successfully caught a condition"
+msgstr ""
+
+msgid "Got %s in evaluating %s; wanted %s"
+msgstr ""
+
+msgid "Failed to get %s in evaluating %s"
+msgstr ""
+
+msgid "Failed to get error in evaluating %s"
+msgstr ""
+
+msgid "Asserted error: %s"
+msgstr ""
+
+msgid "Got warning in evaluating %s, but also an error"
+msgstr ""
+
+msgid "Asserted warning: %s"
+msgstr ""
 
 msgid "Changes require specified 'style'"
 msgstr " 指定された 'style' の変更が必要です "

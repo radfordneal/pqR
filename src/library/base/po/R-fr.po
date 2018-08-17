@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.12.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:53\n"
+"POT-Creation-Date: 2018-08-17 17:27\n"
 "PO-Revision-Date: 2012-03-06 21:31+0100\n"
 "Last-Translator: Philippe Grosjean <phgrosjean@sciviews.org>\n"
 "Language-Team: French <R-core@r-project.org>\n"
@@ -162,6 +162,10 @@ msgstr "le chargement automatique n'a pas trouvé '%s' dans '%s'"
 msgid "invalid argument values in 'backsolve'"
 msgstr "valeurs d'arguments incorrectes dans 'backsolve'"
 
+#, fuzzy
+msgid "invalid value of ncol(x)"
+msgstr "valeur incorrecte"
+
 msgid "singular matrix in 'backsolve'. First zero in diagonal [%d]"
 msgstr ""
 "matrice singulière dans 'backsolve'. Premier zéro dans la diagonale [%d]"
@@ -177,6 +181,10 @@ msgstr "la matrice doit être carrée pour 'chol'"
 
 msgid "non-matrix argument to 'chol'"
 msgstr "l'argument doit être une matrice pour 'chol'"
+
+#, fuzzy
+msgid "invalid nrow(x)"
+msgstr "nom incorrect"
 
 msgid "matrix not positive definite"
 msgstr "la matrice n'est pas définie positive"
@@ -248,6 +256,10 @@ msgstr "'breaks' ne sont pas des valeurs uniques"
 
 msgid "labels/breaks length conflict"
 msgstr "longueurs de 'labels' et 'breaks' non conformes"
+
+#, fuzzy
+msgid "invalid value of length(x)"
+msgstr "valeur incorrecte"
 
 msgid "invalid 'row.names' length"
 msgstr "longueur de 'row.names' incorrecte"
@@ -816,10 +828,6 @@ msgstr "des remplacements doivent être fournis pour les correspondances"
 msgid "norm '%s' currently always uses exact = FALSE"
 msgstr "norm '%s' utilise systématiquement 'exact = FALSE' pour l'instant"
 
-#, fuzzy
-msgid "invalid nrow(x)"
-msgstr "nom incorrect"
-
 msgid "triangular matrix should be square"
 msgstr "la matrice triangulaire doit être carrée"
 
@@ -1007,21 +1015,15 @@ msgstr "fichier d'entrée vide (0 octets)"
 msgid "input has been corrupted, with LF replaced by CR"
 msgstr "l'entrée est corrompue, avec LF remplacé par CR"
 
-msgid ""
-"file %s has magic number '%s'\n"
-"   Use of save versions prior to 2 is deprecated"
-msgstr ""
-"le fichier %s a un nombre magique '%s'\n"
-"  L'utilisation d'une version antérieure à 2 est obsolète"
+#, fuzzy
+msgid "Use of save versions prior to 2 is no longer allowed"
+msgstr "L'utilisation d'une version antérieure à 2 est obsolète"
 
 msgid "bad 'file' argument"
 msgstr "mauvais argument 'file'"
 
 msgid "'file' must be specified"
 msgstr "'file' doit être spécifié"
-
-msgid "Use of save versions prior to 2 is deprecated"
-msgstr "L'utilisation d'une version antérieure à 2 est obsolète"
 
 msgid "nothing specified to be save()d"
 msgstr "rien n'est indiqué pour être sauvé avec save()"
@@ -1062,14 +1064,14 @@ msgstr "les noms d'arguments formels doivent être spécifiés pour vectoriser"
 msgid "'arg' must be NULL or a character vector"
 msgstr "'arg' doit être NULL ou une chaîne de caractères"
 
-msgid "'arg' must be of length 1"
-msgstr "'arg' doit être de longueur 1"
-
 msgid "'arg' must be of length >= 1"
 msgstr "'arg'' doit être de longueur >= 1"
 
 msgid "'arg' should be one of %s"
 msgstr "'arg' doit être un de %s"
+
+msgid "'arg' must be of length 1"
+msgstr "'arg' doit être de longueur 1"
 
 msgid "there is more than one match in 'match.arg'"
 msgstr "plus d'une correspondance dans 'match.arg'"
@@ -1344,8 +1346,24 @@ msgstr "'u5.bias' doit être un nombre positif ou nul"
 msgid "'eps.correct' must be 0, 1, or 2"
 msgstr "'eps.correct' doit être 0, 1 ou 2"
 
+#, fuzzy
+msgid "invalid ncol(x)"
+msgstr "nom incorrect"
+
 msgid "first argument must be a QR decomposition"
 msgstr "le premier argument doit être une décomposition QR"
+
+#, fuzzy
+msgid "invalid nrow(qr$qr)"
+msgstr "nom incorrect"
+
+#, fuzzy
+msgid "invalid ncol(qr$qr)"
+msgstr "nom incorrect"
+
+#, fuzzy
+msgid "invalid ncol(y)"
+msgstr "nom incorrect"
 
 msgid "'qr' and 'y' must have the same number of rows"
 msgstr "'qr' et 'y' doivent avoir le même nombre de lignes"
@@ -1355,6 +1373,10 @@ msgstr "singularité parfaite dans 'qr.coef'"
 
 msgid "argument is not a QR decomposition"
 msgstr "l'argument n'est pas une décomposition QR"
+
+#, fuzzy
+msgid "invalid NCOL(y)"
+msgstr "nom incorrect"
 
 msgid "not implemented for complex 'qr'"
 msgstr "pas implémenté pour un 'qr' complexe"
@@ -1369,6 +1391,10 @@ msgid "need larger value of 'ncol' as pivoting occurred"
 msgstr ""
 "une valeur plus grande de 'ncol' est nécessaire car un pivotement s'est "
 "produit"
+
+#, fuzzy
+msgid "invalid NCOL(R)"
+msgstr "nom incorrect"
 
 msgid "'x' must be an atomic vector"
 msgstr "'x' doit être un vecteur atomique"
@@ -1402,9 +1428,6 @@ msgstr "l'argument 'length.out' doit être de longueur 1"
 
 msgid "first element used of 'length.out' argument"
 msgstr "seul le premier élément de 'length.out' est utilisé"
-
-msgid "extra argument(s) %s will be disregarded"
-msgstr "l'argument supplémentaire %s sera ignoré"
 
 msgid "invalid (to - from)/by in seq(.)"
 msgstr "(to - from) / by incorrect dans seq(.)"
@@ -1461,6 +1484,9 @@ msgstr ""
 "'decreasing' doit être un vecteur logique unitaire.\n"
 "Aviez-vous l'intention de définir 'partial'?"
 
+msgid "'partial' sorting not supported by radix method"
+msgstr ""
+
 msgid "'index.return' only for non-factors"
 msgstr "'index.return' seulement pour des variables autres que des facteurs"
 
@@ -1486,11 +1512,9 @@ msgstr ""
 "'x' doit être atomique pour 'sort.list'\n"
 "Avez-vous appelé 'sort' sur une liste ?"
 
-msgid "method=\"quick\" is only for numeric 'x'"
+#, fuzzy
+msgid "method = \"quick\" is only for numeric 'x'"
 msgstr "method=\"quick\" est seulement pour des 'x' numériques"
-
-msgid "method=\"radix\" is only for integer 'x'"
-msgstr "method=\"radix\" est seulement pour des 'x' entiers"
 
 msgid "'local' must be TRUE, FALSE or an environment"
 msgstr "'local' doit être TRUE, FALSE ou un environnement"
@@ -1812,12 +1836,24 @@ msgstr[0] "Message d'avis :\n"
 msgstr[1] "Messages d'avis :\n"
 
 #, fuzzy
-#~ msgid "invalid value of ncol(x)"
-#~ msgstr "valeur incorrecte"
+msgid ""
+"In %s :\n"
+" extra argument %s will be disregarded"
+msgid_plural ""
+"In %s :\n"
+" extra arguments %s will be disregarded"
+msgstr[0] "l'argument supplémentaire %s sera ignoré"
+msgstr[1] "l'argument supplémentaire %s sera ignoré"
 
-#, fuzzy
-#~ msgid "invalid value of length(x)"
-#~ msgstr "valeur incorrecte"
+#~ msgid ""
+#~ "file %s has magic number '%s'\n"
+#~ "   Use of save versions prior to 2 is deprecated"
+#~ msgstr ""
+#~ "le fichier %s a un nombre magique '%s'\n"
+#~ "  L'utilisation d'une version antérieure à 2 est obsolète"
+
+#~ msgid "method=\"radix\" is only for integer 'x'"
+#~ msgstr "method=\"radix\" est seulement pour des 'x' entiers"
 
 #, fuzzy
 #~ msgid "invalid length(x)"
@@ -1829,14 +1865,6 @@ msgstr[1] "Messages d'avis :\n"
 
 #~ msgid "'by' must specify valid column(s)"
 #~ msgstr "'by' doit spécifier une / des colonne(s) correcte(s)"
-
-#, fuzzy
-#~ msgid "invalid ncol(x)"
-#~ msgstr "nom incorrect"
-
-#, fuzzy
-#~ msgid "invalid ncol(y)"
-#~ msgstr "nom incorrect"
 
 #~ msgid "' has changed"
 #~ msgstr "' a été modifiée"

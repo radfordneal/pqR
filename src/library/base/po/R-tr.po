@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.13.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:53\n"
+"POT-Creation-Date: 2018-08-17 17:27\n"
 "PO-Revision-Date: 2011-04-01 04:29+0200\n"
 "Last-Translator: Murat Alkan <muratalk@gmail.com>\n"
 "Language-Team: Turkish <muratalk@gmail.com>\n"
@@ -156,6 +156,9 @@ msgstr ""
 msgid "invalid argument values in 'backsolve'"
 msgstr ""
 
+msgid "invalid value of ncol(x)"
+msgstr ""
+
 msgid "singular matrix in 'backsolve'. First zero in diagonal [%d]"
 msgstr ""
 
@@ -169,6 +172,9 @@ msgid "non-square matrix in 'chol'"
 msgstr ""
 
 msgid "non-matrix argument to 'chol'"
+msgstr ""
+
+msgid "invalid nrow(x)"
 msgstr ""
 
 msgid "matrix not positive definite"
@@ -238,6 +244,9 @@ msgid "'breaks' are not unique"
 msgstr ""
 
 msgid "labels/breaks length conflict"
+msgstr ""
+
+msgid "invalid value of length(x)"
 msgstr ""
 
 msgid "invalid 'row.names' length"
@@ -759,9 +768,6 @@ msgstr ""
 msgid "norm '%s' currently always uses exact = FALSE"
 msgstr ""
 
-msgid "invalid nrow(x)"
-msgstr ""
-
 msgid "triangular matrix should be square"
 msgstr ""
 
@@ -938,18 +944,13 @@ msgstr ""
 msgid "input has been corrupted, with LF replaced by CR"
 msgstr ""
 
-msgid ""
-"file %s has magic number '%s'\n"
-"   Use of save versions prior to 2 is deprecated"
+msgid "Use of save versions prior to 2 is no longer allowed"
 msgstr ""
 
 msgid "bad 'file' argument"
 msgstr ""
 
 msgid "'file' must be specified"
-msgstr ""
-
-msgid "Use of save versions prior to 2 is deprecated"
 msgstr ""
 
 msgid "nothing specified to be save()d"
@@ -991,13 +992,13 @@ msgstr ""
 msgid "'arg' must be NULL or a character vector"
 msgstr ""
 
-msgid "'arg' must be of length 1"
-msgstr ""
-
 msgid "'arg' must be of length >= 1"
 msgstr ""
 
 msgid "'arg' should be one of %s"
+msgstr ""
+
+msgid "'arg' must be of length 1"
 msgstr ""
 
 msgid "there is more than one match in 'match.arg'"
@@ -1251,7 +1252,19 @@ msgstr ""
 msgid "'eps.correct' must be 0, 1, or 2"
 msgstr ""
 
+msgid "invalid ncol(x)"
+msgstr ""
+
 msgid "first argument must be a QR decomposition"
+msgstr ""
+
+msgid "invalid nrow(qr$qr)"
+msgstr ""
+
+msgid "invalid ncol(qr$qr)"
+msgstr ""
+
+msgid "invalid ncol(y)"
 msgstr ""
 
 msgid "'qr' and 'y' must have the same number of rows"
@@ -1261,6 +1274,9 @@ msgid "exact singularity in 'qr.coef'"
 msgstr ""
 
 msgid "argument is not a QR decomposition"
+msgstr ""
+
+msgid "invalid NCOL(y)"
 msgstr ""
 
 msgid "not implemented for complex 'qr'"
@@ -1273,6 +1289,9 @@ msgid "'k' is too large"
 msgstr ""
 
 msgid "need larger value of 'ncol' as pivoting occurred"
+msgstr ""
+
+msgid "invalid NCOL(R)"
 msgstr ""
 
 msgid "'x' must be an atomic vector"
@@ -1306,9 +1325,6 @@ msgid "argument 'length.out' must be of length 1"
 msgstr ""
 
 msgid "first element used of 'length.out' argument"
-msgstr ""
-
-msgid "extra argument(s) %s will be disregarded"
 msgstr ""
 
 msgid "invalid (to - from)/by in seq(.)"
@@ -1364,6 +1380,9 @@ msgid ""
 "Did you intend to set 'partial'?"
 msgstr ""
 
+msgid "'partial' sorting not supported by radix method"
+msgstr ""
+
 msgid "'index.return' only for non-factors"
 msgstr ""
 
@@ -1387,10 +1406,7 @@ msgid ""
 "Have you called 'sort' on a list?"
 msgstr ""
 
-msgid "method=\"quick\" is only for numeric 'x'"
-msgstr ""
-
-msgid "method=\"radix\" is only for integer 'x'"
+msgid "method = \"quick\" is only for numeric 'x'"
 msgstr ""
 
 msgid "'local' must be TRUE, FALSE or an environment"
@@ -1699,3 +1715,11 @@ msgid "Warning message:\n"
 msgid_plural "Warning messages:\n"
 msgstr[0] ""
 msgstr[1] ""
+
+msgid ""
+"In %s :\n"
+" extra argument %s will be disregarded"
+msgid_plural ""
+"In %s :\n"
+" extra arguments %s will be disregarded"
+msgstr[0] ""

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.15.0\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2016-08-25 20:53\n"
+"POT-Creation-Date: 2018-08-17 17:27\n"
 "PO-Revision-Date: 2012-03-06 09:25+0100\n"
 "Last-Translator: Detlef Steuer <steuer@hsu-hh.de>\n"
 "Language-Team: R Core <r-core@r-project.org>\n"
@@ -673,9 +673,6 @@ msgstr "'ColSideColors' muss ein Zeichenkettenvektor der Länge ncol(x) sein"
 
 msgid "'RowSideColors' must be a character vector of length nrow(x)"
 msgstr "'RowSideColors' muss ein Zeichenkettenvektor der Länge nrow(x) sein"
-
-msgid "non-matched further arguments are disregarded"
-msgstr "übrige Argumente ohne Entsprechung werden verworfen"
 
 msgid "argument 'x' must be numeric"
 msgstr "Argument 'x' muss numerisch sein"
@@ -2489,6 +2486,9 @@ msgid "parameter %s does not occur in the model formula"
 msgid_plural "parameters %s do not occur in the model formula"
 msgstr[0] "Parameter %s kommt in der Modellgleichung nicht vor"
 msgstr[1] "Parameter %s kommen in der Modellgleichung nicht vor"
+
+#~ msgid "non-matched further arguments are disregarded"
+#~ msgstr "übrige Argumente ohne Entsprechung werden verworfen"
 
 #~ msgid "'vec' contains NAs"
 #~ msgstr "'vec' enthält NAs"

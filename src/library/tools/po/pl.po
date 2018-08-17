@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.15.0\n"
 "Report-Msgid-Bugs-To: bugs@R-project.org\n"
-"POT-Creation-Date: 2012-06-07 15:52+0100\n"
+"POT-Creation-Date: 2018-08-17 17:27-0400\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
 "Language-Team: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
@@ -34,10 +34,10 @@ msgstr "pskill() nie jest wspierany na tej platformie"
 msgid "psnice() is not supported on this platform"
 msgstr "psnice() nie jest wspierany na tej platformie"
 
-#: text.c:65
+#: text.c:71
 msgid "invalid argument type"
 msgstr "niepoprawny typ argumentu"
 
-#: text.c:222 text.c:244
+#: text.c:228 text.c:250
 msgid "out of memory"
 msgstr "brakło pamięci"
