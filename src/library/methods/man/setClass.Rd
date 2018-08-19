@@ -1,6 +1,7 @@
 % File src/library/methods/man/setClass.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2007 R Core Team
+% Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{setClass}
@@ -20,7 +21,7 @@
 \usage{
 setClass(Class, representation, prototype, contains=character(),
          validity, access, where, version, sealed, package,
-         S3methods = FALSE)
+         S3methods = FALSE, slots)
 }
 \arguments{
   \item{Class}{character string name for the class.}
@@ -69,6 +70,11 @@ elements for superclasses, but the recommended style is to use the
       classes that extend such classes, which will nearly always be
       the case when S3 methods are relevant.
     }
+  \item{slots}{optionally, a character vector with names, giving the 
+      names and classes of slots, as an alternative to use of the 
+      \code{representation} argument.  This is to provide some compatibility 
+      with R-3.0.0, prior to porting the full set of modifications to the 
+      methods package from that version.}
 }
 
 \value{

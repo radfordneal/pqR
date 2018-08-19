@@ -21,11 +21,17 @@ setClass <-
              contains = character(), validity = NULL, access = list(),
              where = topenv(parent.frame()), version = .newExternalptr(),
              sealed = FALSE, package = getPackageName(where),
-             S3methods = FALSE)
+             S3methods = FALSE, slots)
 {
     oldDef <- getClassDef(Class, where)
     if(is(oldDef, "classRepresentation") && oldDef@sealed)
         stop(gettextf("\"%s\" has a sealed class definition and cannot be redefined", Class), domain = NA)
+    if (!missing(slots)) {
+        if (!missing(representation)) 
+            stop("Argument \"representation\" cannot be used if argument \"slots\" is supplied")
+        representation <- as.list(slots)
+    }
+
     if(is(representation, "classRepresentation")) {
         ## supplied a class definition object
         classDef <- representation
