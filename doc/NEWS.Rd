@@ -251,6 +251,10 @@
         data part and a slot called "names" that is not a 
         character vector.  This was previously allowed
         (and is in R-3.5.1), but didn't really work, as illustrated below:
+  \item A \codes{slots} argument that is a named character vector is now
+        allowed for \code{setClass}, to provide some compatibility with
+        extensions to the \code{methods} package in R-3.0.0, prior to fully
+        porting those extensions.
 \preformatted{
   > setClass("cl",representation(names="logical"),prototype(1,names=c(T,F)))
   > a <- new("cl")
