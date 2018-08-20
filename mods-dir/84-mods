@@ -1,0 +1,5 @@
+Miscellaneous mods before revised release.
+
+Added minimal "slots" arg to setClass.
+
+Improved efficiency of serialize/unserialize.
