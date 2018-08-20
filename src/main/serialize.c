@@ -199,13 +199,19 @@ static int Rsnprintf(char *buf, int size, const char *format, ...)
 }
 
 
-/*
- * Basic Output Routines
- */
+/* BUFFERS FOR USE BY INPUT/OUTPUT ROUTINES.  Statically alllocated on the
+   assumption that these routines are not recursive. */
 
-static void OutInteger(R_outpstream_t stream, int i)
+#define CHUNK_SIZE 2048
+
+char buf [CHUNK_SIZE * sizeof(Rcomplex)];  /* complex is the biggest type */
+char word [128];
+
+
+/* BASIC OUTPUT ROUTINES. */
+
+static attribute_noinline void OutInteger(R_outpstream_t stream, int i)
 {
-    char buf[128];
     switch (stream->type) {
     case R_pstream_ascii_format:
 	if (i == NA_INTEGER)
@@ -226,9 +232,8 @@ static void OutInteger(R_outpstream_t stream, int i)
     }
 }
 
-static void OutReal(R_outpstream_t stream, double d)
+static attribute_noinline void OutReal(R_outpstream_t stream, double d)
 {
-    char buf[128];
     switch (stream->type) {
     case R_pstream_ascii_format:
 	if (! R_FINITE(d)) {
@@ -262,9 +267,8 @@ static void OutComplex(R_outpstream_t stream, Rcomplex c)
     OutReal(stream, c.i);
 }
 
-static void OutByte(R_outpstream_t stream, Rbyte i)
+static attribute_noinline void OutByte(R_outpstream_t stream, Rbyte i)
 {
-    char buf[128];
     switch (stream->type) {
     case R_pstream_ascii_format:
 	Rsnprintf(buf, sizeof(buf), "%02x\n", i);
@@ -279,11 +283,11 @@ static void OutByte(R_outpstream_t stream, Rbyte i)
     }
 }
 
-static void OutString(R_outpstream_t stream, const char *s, int length)
+static attribute_noinline void OutString (R_outpstream_t stream, 
+                                          const char *s, int length)
 {
     if (stream->type == R_pstream_ascii_format) {
 	int i;
-	char buf[128];
 	for (i = 0; i < length; i++) {
 	    switch(s[i]) {
 	    case '\n': sprintf(buf, "\\n");  break;
@@ -317,9 +321,7 @@ static void OutString(R_outpstream_t stream, const char *s, int length)
 }
 
 
-/*
- * Basic Input Routines
- */
+/* BASIC INPUT ROUTINES. */
 
 static void InWord(R_inpstream_t stream, char * buf, int size)
 {
@@ -341,8 +343,6 @@ static void InWord(R_inpstream_t stream, char * buf, int size)
 
 static int InInteger(R_inpstream_t stream)
 {
-    char word[128];
-    char buf[128];
     int i;
 
     switch (stream->type) {
@@ -367,8 +367,6 @@ static int InInteger(R_inpstream_t stream)
 
 static double InReal(R_inpstream_t stream)
 {
-    char word[128];
-    char buf[128];
     double d;
 
     switch (stream->type) {
@@ -508,7 +506,6 @@ static void OutFormat(R_outpstream_t stream)
 
 static void InFormat(R_inpstream_t stream)
 {
-    char buf[2];
     R_pstream_format_t type;
     stream->InBytes(stream, buf, 2);
     switch (buf[0]) {
@@ -573,7 +570,7 @@ static SEXP MakeHashTable(void)
     return val;
 }
 
-static R_INLINE void HashAdd(SEXP obj, SEXP ht)
+static void HashAdd(SEXP obj, SEXP ht)
 {
     int pos = PTRHASH(obj) % HASH_TABLE_SIZE(ht);
     int count = HASH_TABLE_COUNT(ht) + 1;
@@ -585,7 +582,7 @@ static R_INLINE void HashAdd(SEXP obj, SEXP ht)
     SET_TAG(cell, obj);
 }
 
-static R_INLINE int HashGet(SEXP item, SEXP ht)
+static int HashGet(SEXP item, SEXP ht)
 {
     int pos = PTRHASH(item) % HASH_TABLE_SIZE(ht);
     SEXP cell;
@@ -732,7 +729,7 @@ static R_INLINE int InRefIndex(R_inpstream_t stream, int flags)
  * customized handling of reference objects.
  */
 
-static SEXP GetPersistentName(R_outpstream_t stream, SEXP s)
+static inline SEXP GetPersistentName(R_outpstream_t stream, SEXP s)
 {
     if (stream->OutPersistHookFunc != NULL) {
 	switch (TYPEOF(s)) {
@@ -755,7 +752,7 @@ static SEXP GetPersistentName(R_outpstream_t stream, SEXP s)
 	return R_NilValue;
 }
 
-static SEXP PersistentRestore(R_inpstream_t stream, SEXP s)
+static inline SEXP PersistentRestore(R_inpstream_t stream, SEXP s)
 {
     if (stream->InPersistHookFunc == NULL)
 	error(_("no restore method available"));
@@ -767,7 +764,7 @@ static SEXP PersistentRestore(R_inpstream_t stream, SEXP s)
  * Serialization Code
  */
 
-static int SaveSpecialHook(SEXP item)
+static inline int SaveSpecialHook(SEXP item)
 {
     if (item == R_NilValue)      return NILVALUE_SXP;
     if (item == R_EmptyEnv)	 return EMPTYENV_SXP;
@@ -780,8 +777,8 @@ static int SaveSpecialHook(SEXP item)
     return 0;
 }
 
-static void OutStringVec(R_outpstream_t stream, SEXP s, SEXP ref_table,
-                         int nosharing)
+static attribute_noinline void OutStringVec(R_outpstream_t stream, 
+                                SEXP s, SEXP ref_table, int nosharing)
 {
     int i, len;
 
@@ -803,17 +800,17 @@ static void OutStringVec(R_outpstream_t stream, SEXP s, SEXP ref_table,
 #include <rpc/types.h>
 #include <rpc/xdr.h>
 
-#define CHUNK_SIZE 8096
-
 #define min2(a, b) ((a) < (b)) ? (a) : (b)
 
 /* length will need to be another type to allow longer vectors */
-static void OutIntegerVec(R_outpstream_t stream, SEXP s, int length) 
+static attribute_noinline void OutIntegerVec (R_outpstream_t stream, SEXP s)
 {
+    R_len_t length = LENGTH(s);
+    OutInteger(stream, length);
+
     switch (stream->type) {
     case R_pstream_xdr_format:
     {
-        static char buf[CHUNK_SIZE * sizeof(int)];
 	int done, this; /* and done */
 	XDR xdrs;
 	for (done = 0; done < length; done += this) {
@@ -843,12 +840,14 @@ static void OutIntegerVec(R_outpstream_t stream, SEXP s, int length)
     }
 }
 
-static void OutRealVec(R_outpstream_t stream, SEXP s, int length) 
+static attribute_noinline void OutRealVec(R_outpstream_t stream, SEXP s) 
 {
+    R_len_t length = LENGTH(s);
+    OutInteger(stream, length);
+
     switch (stream->type) {
     case R_pstream_xdr_format:
     {
-        static char buf[CHUNK_SIZE * sizeof(double)];
 	int done, this;
 	XDR xdrs;
         for (done = 0; done < length; done += this) {
@@ -877,12 +876,14 @@ static void OutRealVec(R_outpstream_t stream, SEXP s, int length)
     }
 }
 
-static void OutComplexVec(R_outpstream_t stream, SEXP s, int length) 
+static attribute_noinline void OutComplexVec(R_outpstream_t stream, SEXP s)
 {
+    R_len_t length = LENGTH(s);
+    OutInteger(stream, length);
+
     switch (stream->type) {
     case R_pstream_xdr_format:
     {
-        static char buf[CHUNK_SIZE * sizeof(Rcomplex)];
 	int done, this;
 	XDR xdrs;
 	Rcomplex *c = COMPLEX(s);
@@ -932,19 +933,28 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream,
 	return;
     }
 
- tailcall:
-    R_CHECKSTACK();
-    if ((t = GetPersistentName(stream, s)) != R_NilValue) {
+ tailcall: ;
+
+    int cannot_be_special = ((VECTOR_TYPES | CONS_TYPES) >> TYPEOF(s)) & 1;
+
+    if (!cannot_be_special && (i = SaveSpecialHook(s)) != 0) {
+	OutInteger(stream, i);
+        return;
+    }
+
+    if (!cannot_be_special && (t = GetPersistentName(stream,s)) != R_NilValue) {
 	R_assert(TYPEOF(t) == STRSXP && LENGTH(t) > 0);
 	PROTECT(t);
 	HashAdd(s, ref_table);
 	OutInteger(stream, PERSISTSXP);
 	OutStringVec(stream, t, ref_table, nosharing);
 	UNPROTECT(1);
+        return;
     }
-    else if ((i = SaveSpecialHook(s)) != 0)
-	OutInteger(stream, i);
-    else if ((i = HashGet(s, ref_table)) != 0)
+
+    R_CHECKSTACK();
+
+    if ((i = HashGet(s, ref_table)) != 0)
 	OutRefIndex(stream, i);
     else if (TYPEOF(s) == SYMSXP) {
 	/* Note : NILSXP can't occur here */
@@ -984,7 +994,9 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream,
 	}
     }
     else {
+
 	int flags, hastag, hasattr;
+
 	switch(TYPEOF(s)) {
 	case LISTSXP:
 	case LANGSXP:
@@ -993,13 +1005,17 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream,
 	case DOTSXP: hastag = TAG(s) != R_NilValue; break;
 	default: hastag = FALSE;
 	}
+
 	/* The CHARSXP cache chains are maintained through the ATTRIB
 	   field, so the content of that field must not be serialized, so
 	   we treat it as not there. */
-	hasattr = (TYPEOF(s) != CHARSXP && ATTRIB(s) != R_NilValue);
+	hasattr = ATTRIB(s) != R_NilValue && TYPEOF(s) != CHARSXP;
+
 	flags = PackFlags(TYPEOF(s), LEVELS(s), OBJECT(s),
 			  hasattr, hastag, nosharing ? 0 : IS_CONSTANT(s));
+
 	OutInteger(stream, flags);
+
 	switch (TYPEOF(s)) {
 	case LISTSXP:
 	case LANGSXP:
@@ -1043,16 +1059,13 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream,
 	    break;
 	case LGLSXP:
 	case INTSXP:
-	    OutInteger(stream, LENGTH(s));
-	    OutIntegerVec(stream, s, LENGTH(s));
+	    OutIntegerVec(stream, s);
 	    break;
 	case REALSXP:
-	    OutInteger(stream, LENGTH(s));
-	    OutRealVec(stream, s, LENGTH(s));
+	    OutRealVec(stream, s);
 	    break;
 	case CPLXSXP:
-	    OutInteger(stream, LENGTH(s));
-	    OutComplexVec(stream, s, LENGTH(s));
+	    OutComplexVec(stream, s);
 	    break;
 	case STRSXP:
 	    OutInteger(stream, LENGTH(s));
@@ -1284,9 +1297,7 @@ void R_Serialize (SEXP s, R_outpstream_t stream)
 }
 
 
-/*
- * Unserialize Code
- */
+/*** UNSERIALIZE CODE ***/
 
 #define INITIAL_REFREAD_TABLE_SIZE 128
 
@@ -1350,7 +1361,7 @@ static SEXP InStringVec(R_inpstream_t stream, SEXP ref_table)
 
 #define ShortStringLimit 1000
 
-static SEXP InCharSXP(R_inpstream_t stream, int levs)
+static attribute_noinline SEXP InCharSXP(R_inpstream_t stream, int levs)
 {
     int length = InInteger(stream); /* suppose still limited to 2^31-1 bytes */
 
@@ -1379,14 +1390,12 @@ static SEXP InCharSXP(R_inpstream_t stream, int levs)
     return s;
 }
 
-/* use static buffer to reuse storage */
 /* length, done could be a longer type */
 static void InIntegerVec(R_inpstream_t stream, SEXP obj, int length)
 {
     switch (stream->type) {
     case R_pstream_xdr_format:
     {
-        static char buf[CHUNK_SIZE * sizeof(int)];
 	int done, this;
 	XDR xdrs;
         for (done = 0; done < length; done += this) {
@@ -1420,7 +1429,6 @@ static void InRealVec(R_inpstream_t stream, SEXP obj, int length)
     switch (stream->type) {
     case R_pstream_xdr_format:
     {
-        static char buf[CHUNK_SIZE * sizeof(double)];
 	int done, this;
 	XDR xdrs;
         for (done = 0; done < length; done += this) {
@@ -1454,7 +1462,6 @@ static void InComplexVec(R_inpstream_t stream, SEXP obj, int length)
     switch (stream->type) {
     case R_pstream_xdr_format:
     {
-        static char buf[CHUNK_SIZE * sizeof(Rcomplex)];
 	int done, this;
 	XDR xdrs;
 	Rcomplex *output = COMPLEX(obj);
@@ -2345,45 +2352,55 @@ typedef struct membuf_st {
 
 
 #define INCR MAXELTSIZE
-static void resize_buffer(membuf_t mb, R_size_t needed)
+static void resize_buffer (membuf_t mb, double dneeded)
 {
-    /* This used to allocate double 'needed', but that was problematic for
-       large buffers */
     /* we need to store the result in a RAWSXP so limited to INT_MAX */
-    if(needed > INT_MAX)
+    if (dneeded > INT_MAX)
 	error(_("serialization is too large to store in a raw vector"));
+
+    R_size_t needed = dneeded;
     if(needed < 10000000) /* ca 10MB */
 	needed = (1+2*needed/INCR) * INCR;
     if(needed < 1000000000) /* ca 1GB */
 	needed = (1+1.2*needed/INCR) * INCR;
     else if(needed < INT_MAX - INCR)
 	needed = (1+needed/INCR) * INCR;
+
     unsigned char *tmp = realloc(mb->buf, needed);
     if (tmp == NULL) {
 	free(mb->buf); mb->buf = NULL;
 	error(_("cannot allocate buffer"));
-    } else mb->buf = tmp;
+    }
+    else mb->buf = tmp;
+
     mb->size = needed;
 }
 
 static void OutCharMem(R_outpstream_t stream, int c)
 {
     membuf_t mb = stream->data;
-    if (mb->count >= mb->size)
-	resize_buffer(mb, mb->count + 1);
+    if (mb->count >= mb->size) {
+        resize_buffer (mb, (double)mb->count + 1);
+    }
     mb->buf[mb->count++] = c;
 }
 
 static void OutBytesMem(R_outpstream_t stream, void *buf, int length)
 {
     membuf_t mb = stream->data;
-    R_size_t needed = mb->count + (R_size_t) length;
-    /* There is a potential overflow here on 32-bit systems */
-    if((double) mb->count + length > (double) INT_MAX)
-	error(_("serialization is too large to store in a raw vector"));
-    if (needed > mb->size) resize_buffer(mb, needed);
-    memcpy(mb->buf + mb->count, buf, length);
-    mb->count = needed;
+    double dneeded = mb->count + (double) length;  /* avoid possible overflow */
+    if (dneeded > mb->size) resize_buffer (mb, dneeded);
+
+    char *p = mb->buf + mb->count;
+    mb->count = (R_size_t)dneeded;
+
+    if (length <= 4) {
+        char *q = buf;
+        while (length > 0) { *p++ = *q++; length -= 1; }
+    }
+    else {
+        memcpy (p, buf, length);
+    }
 }
 
 static int InCharMem(R_inpstream_t stream)
@@ -2399,8 +2416,17 @@ static void InBytesMem(R_inpstream_t stream, void *buf, int length)
     membuf_t mb = stream->data;
     if (mb->count + (R_size_t) length > mb->size)
 	error(_("read error"));
-    memcpy(buf, mb->buf + mb->count, length);
+
+    char *p = mb->buf + mb->count;
     mb->count += length;
+
+    if (0 && length <= 4) {  /* seems to be slower, so disabled */
+        char *q = buf;
+        while (length > 0) { *q++ = *p++; length -= 1; }
+    }
+    else {
+        memcpy (buf, p, length);
+    }
 }
 
 static void InitMemInPStream(R_inpstream_t stream, membuf_t mb,
