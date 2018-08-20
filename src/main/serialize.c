@@ -2355,7 +2355,7 @@ typedef struct membuf_st {
 
 
 #define INCR MAXELTSIZE
-static void resize_buffer (membuf_t mb, double dneeded)
+static attribute_noinline void resize_buffer (membuf_t mb, double dneeded)
 {
     /* we need to store the result in a RAWSXP so limited to INT_MAX */
     if (dneeded > INT_MAX)
@@ -2391,11 +2391,12 @@ static void OutCharMem(R_outpstream_t stream, int c)
 static void OutBytesMem(R_outpstream_t stream, void *buf, int length)
 {
     membuf_t mb = stream->data;
-    double dneeded = mb->count + (double) length;  /* avoid possible overflow */
-    if (dneeded > mb->size) resize_buffer (mb, dneeded);
+
+    if (mb->count > (double)mb->size - length)  /* need to avoid overflow */
+        resize_buffer (mb, mb->count + (double) length);
 
     char *p = mb->buf + mb->count;
-    mb->count = (R_size_t)dneeded;
+    mb->count += length;
 
     if (length == sizeof(int))          /* a common case */
         memcpy (p, buf, sizeof(int));
