@@ -540,60 +540,62 @@ static void InFormat(R_inpstream_t stream)
 }
 
 
-/*
- * Hash Table Functions
- *
- * Hashing functions for hashing reference objects during writing.
- * Objects are entered, and the order in which they are encountered is
- * recorded.  HashGet returns this number, a positive integer, if the
- * object was seen before, and zero if not.  A fixed hash table size
- * is used; this is not ideal but seems adequate for now.  The hash
- * table representation consists of a (R_NilValue . vector) pair.  The
- * hash buckets are in the vector.  This indirect representation
- * should allow resizing the table at some point.
- */
+/* HASH TABLE FUNCTIONS.
 
-#define HASHSIZE_HERE 1099
+   Hashing functions for hashing reference objects during writing.
+   Objects are entered, and the order in which they are encountered is
+   recorded.  HashGet returns this number, a positive integer, if the
+   object was seen before, and zero if not.  A fixed hash table size
+   is used, which seems adequate for now. 
 
-#define PTRHASH(obj) (((R_size_t) (obj)) >> 2)
+   The hash table is a VECSXP, with count in TRUELENGTH, and buckets
+   that are chains of VECSXP nodes of length 2, with value in TRUELENGTH
+   and key and link as the two elements.
+*/
 
-#define HASH_TABLE_COUNT(ht) TRUELENGTH(CDR(ht))
-#define SET_HASH_TABLE_COUNT(ht, val) SET_TRUELENGTH(CDR(ht), val)
+#define HASHSIZE_HERE 1103
 
-#define HASH_TABLE_SIZE(ht) LENGTH(CDR(ht))
+#define PTRHASH(obj) ((unsigned)((R_size_t)obj ^ ((R_size_t)obj>>16)) >> 2)
 
-#define HASH_BUCKET(ht, pos) VECTOR_ELT(CDR(ht), pos)
-#define SET_HASH_BUCKET(ht, pos, val) SET_VECTOR_ELT(CDR(ht), pos, val)
+#define HASH_TABLE_COUNT(ht) TRUELENGTH(ht)
+#define SET_HASH_TABLE_COUNT(ht,val) SET_TRUELENGTH(ht,val)
+
+#define HASH_BUCKET(ht,pos) VECTOR_ELT(ht, pos)
+#define SET_HASH_BUCKET(ht,pos,val) SET_VECTOR_ELT(ht,pos,val)
 
 static SEXP MakeHashTable(void)
 {
-    SEXP val = CONS(R_NilValue, allocVector(VECSXP, HASHSIZE_HERE));
-    SET_HASH_TABLE_COUNT(val, 0);
-    return val;
+    SEXP ht = allocVector (VECSXP, HASHSIZE_HERE);
+    SET_HASH_TABLE_COUNT (ht, 0);
+    return ht;
 }
 
-static void HashAdd(SEXP obj, SEXP ht)
+static attribute_noinline void HashAdd (SEXP obj, SEXP ht)
 {
-    int pos = PTRHASH(obj) % HASH_TABLE_SIZE(ht);
+    int pos = PTRHASH(obj) % HASHSIZE_HERE;
     int count = HASH_TABLE_COUNT(ht) + 1;
-    SEXP val = ScalarInteger(count);
-    SEXP cell = CONS(val, HASH_BUCKET(ht, pos));
 
-    SET_HASH_TABLE_COUNT(ht, count);
-    SET_HASH_BUCKET(ht, pos, cell);
-    SET_TAG(cell, obj);
+    SEXP cell = allocVector(VECSXP,2);
+    SET_TRUELENGTH(cell,count);
+    SET_VECTOR_ELT(cell,0,obj);
+    SET_VECTOR_ELT(cell,1,HASH_BUCKET(ht,pos));
+
+    SET_HASH_BUCKET (ht, pos, cell);
+    SET_HASH_TABLE_COUNT (ht, count);
 }
 
-static int HashGet(SEXP item, SEXP ht)
+static attribute_noinline int HashGet (SEXP obj, SEXP ht)
 {
-    int pos = PTRHASH(item) % HASH_TABLE_SIZE(ht);
+    int pos = PTRHASH(obj) % HASHSIZE_HERE;
     SEXP cell;
-    for (cell = HASH_BUCKET(ht, pos); cell != R_NilValue; cell = CDR(cell))
-	if (item == TAG(cell))
-	    return INTEGER(CAR(cell))[0];
+    for (cell = HASH_BUCKET(ht,pos); 
+         cell != R_NilValue; 
+         cell = VECTOR_ELT(cell,1)) {
+	if (obj == VECTOR_ELT(cell,0))
+	    return TRUELENGTH(cell);
+    }
     return 0;
 }
-
 
 /*
  * Administrative SXP values
@@ -1508,8 +1510,6 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
        "set_cdr", and "ss" is returned. */
 
     SEXP s, ss, set_cdr = R_NoObject;
-
-    R_assert(TYPEOF(ref_table) == LISTSXP && TYPEOF(CAR(ref_table)) == VECSXP);
 
   again: /* we jump back here instead of tail recursion for CDR of CONS type */
 
