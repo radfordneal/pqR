@@ -283,9 +283,11 @@ static attribute_noinline void OutByte(R_outpstream_t stream, Rbyte i)
     }
 }
 
-static attribute_noinline void OutString (R_outpstream_t stream, 
-                                          const char *s, int length)
+static attribute_noinline void OutString (R_outpstream_t stream, const char *s,
+                                          int length)
 {
+    OutInteger (stream, length);
+
     if (stream->type == R_pstream_ascii_format) {
 	int i;
 	for (i = 0; i < length; i++) {
@@ -952,17 +954,22 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream,
         return;
     }
 
+    if ((i = HashGet(s, ref_table)) != 0) {
+	OutRefIndex(stream, i);
+        return;
+    }
+
     R_CHECKSTACK();
 
-    if ((i = HashGet(s, ref_table)) != 0)
-	OutRefIndex(stream, i);
-    else if (TYPEOF(s) == SYMSXP) {
+    if (TYPEOF(s) == SYMSXP) {
 	/* Note : NILSXP can't occur here */
 	HashAdd(s, ref_table);
 	OutInteger(stream, SYMSXP);
 	WriteItem(PRINTNAME(s), ref_table, stream, nosharing);
+        return;
     }
-    else if (TYPEOF(s) == ENVSXP) {
+
+    if (TYPEOF(s) == ENVSXP) {
 	HashAdd(s, ref_table);
 	if (R_IsPackageEnv(s)) {
 	    SEXP name = R_PackageEnvName(s);
@@ -992,120 +999,116 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream,
             UNPROTECT(1);
 	    WriteItem(ATTRIB(s), ref_table, stream, nosharing);
 	}
+        return;
     }
-    else {
 
-	int flags, hastag, hasattr;
+    int flags, hastag, hasattr;
 
-	switch(TYPEOF(s)) {
-	case LISTSXP:
-	case LANGSXP:
-	case CLOSXP:
-	case PROMSXP:
-	case DOTSXP: hastag = TAG(s) != R_NilValue; break;
-	default: hastag = FALSE;
-	}
+    hastag = FALSE;
 
-	/* The CHARSXP cache chains are maintained through the ATTRIB
-	   field, so the content of that field must not be serialized, so
-	   we treat it as not there. */
-	hasattr = ATTRIB(s) != R_NilValue && TYPEOF(s) != CHARSXP;
-
-	flags = PackFlags(TYPEOF(s), LEVELS(s), OBJECT(s),
-			  hasattr, hastag, nosharing ? 0 : IS_CONSTANT(s));
-
-	OutInteger(stream, flags);
-
-	switch (TYPEOF(s)) {
-	case LISTSXP:
-	case LANGSXP:
-	case CLOSXP:
-	case PROMSXP:
-	case DOTSXP:
-	    /* Dotted pair objects */
-	    /* These write their ATTRIB fields first to allow us to avoid
-	       recursion on the CDR */
-	    if (hasattr)
-		WriteItem(ATTRIB(s), ref_table, stream, nosharing);
-	    if (TAG(s) != R_NilValue)
-		WriteItem(TAG(s), ref_table, stream, nosharing);
-	    WriteItem(CAR(s), ref_table, stream, nosharing);
-	    /* now do a tail call to WriteItem to handle the CDR */
-	    s = CDR(s);
-	    goto tailcall;
-	case EXTPTRSXP:
-	    /* external pointers */
-	    HashAdd(s, ref_table);
-	    WriteItem(EXTPTR_PROT(s), ref_table, stream, nosharing);
-	    WriteItem(EXTPTR_TAG(s), ref_table, stream, nosharing);
-	    break;
-	case WEAKREFSXP:
-	    /* Weak references */
-	    HashAdd(s, ref_table);
-	    break;
-	case SPECIALSXP:
-	case BUILTINSXP:
-	    /* Builtin functions */
-	    OutInteger(stream, strlen(PRIMNAME(s)));
-	    OutString(stream, PRIMNAME(s), strlen(PRIMNAME(s)));
-	    break;
-	case CHARSXP:
-	    if (s == NA_STRING)
-		OutInteger(stream, -1);
-	    else {
-		OutInteger(stream, LENGTH(s));
-		OutString(stream, CHAR(s), LENGTH(s));
-	    }
-	    break;
-	case LGLSXP:
-	case INTSXP:
-	    OutIntegerVec(stream, s);
-	    break;
-	case REALSXP:
-	    OutRealVec(stream, s);
-	    break;
-	case CPLXSXP:
-	    OutComplexVec(stream, s);
-	    break;
-	case STRSXP:
-	    OutInteger(stream, LENGTH(s));
-	    for (ix = 0; ix < LENGTH(s); ix++)
-		WriteItem(STRING_ELT(s, ix), ref_table, stream, nosharing);
-	    break;
-	case VECSXP:
-	case EXPRSXP:
-	    OutInteger(stream, LENGTH(s));
-	    for (ix = 0; ix < LENGTH(s); ix++)
-		WriteItem(VECTOR_ELT(s, ix), ref_table, stream, nosharing);
-	    break;
-	case BCODESXP:
-	    WriteBC(s, ref_table, stream, nosharing);
-	    break;
-	case RAWSXP:
-	    OutInteger(stream, LENGTH(s));
-	    switch (stream->type) {
-	    case R_pstream_xdr_format:
-	    case R_pstream_binary_format:
-	    {	int done, this, len = LENGTH(s);
-		for (done = 0; done < len; done += this) {
-		    this = min2(CHUNK_SIZE, len - done);
-		    stream->OutBytes(stream, RAW(s) + done, this);
-		}
-		break;
-	    }
-	    default:
-		for (ix = 0; ix < LENGTH(s); ix++) 
-		    OutByte(stream, RAW(s)[ix]);
-	    }
-	    break;
-	case S4SXP:
-	  break; /* only attributes (i.e., slots) count */
-	default:
-	    error(_("WriteItem: unknown type %i"), TYPEOF(s));
-	}
-	if (hasattr)
-	    WriteItem(ATTRIB(s), ref_table, stream, nosharing);
+    if((((1<<LISTSXP) + (1<<LANGSXP) + (1<<CLOSXP) + (1<<PROMSXP) + (1<<DOTSXP))
+          >> TYPEOF(s)) & 1) {
+        if (TAG(s) != R_NilValue)
+            hastag = TRUE;
     }
+
+    /* The CHARSXP cache chains are maintained through the ATTRIB
+       field, so the content of that field must not be serialized, so
+       we treat it as not there. */
+    hasattr = ATTRIB(s) != R_NilValue && TYPEOF(s) != CHARSXP;
+
+    flags = PackFlags(TYPEOF(s), LEVELS(s), OBJECT(s),
+                      hasattr, hastag, nosharing ? 0 : IS_CONSTANT(s));
+
+    OutInteger(stream, flags);
+
+    switch (TYPEOF(s)) {
+    case LISTSXP:
+    case LANGSXP:
+    case CLOSXP:
+    case PROMSXP:
+    case DOTSXP:
+        /* Dotted pair objects */
+        /* These write their ATTRIB fields first to allow us to avoid
+           recursion on the CDR */
+        if (hasattr)
+            WriteItem(ATTRIB(s), ref_table, stream, nosharing);
+        if (TAG(s) != R_NilValue)
+            WriteItem(TAG(s), ref_table, stream, nosharing);
+        WriteItem(CAR(s), ref_table, stream, nosharing);
+        /* now do a tail call to WriteItem to handle the CDR */
+        s = CDR(s);
+        goto tailcall;
+    case EXTPTRSXP:
+        /* external pointers */
+        HashAdd(s, ref_table);
+        WriteItem(EXTPTR_PROT(s), ref_table, stream, nosharing);
+        WriteItem(EXTPTR_TAG(s), ref_table, stream, nosharing);
+        break;
+    case WEAKREFSXP:
+        /* Weak references */
+        HashAdd(s, ref_table);
+        break;
+    case SPECIALSXP:
+    case BUILTINSXP:
+        /* Builtin functions */
+        OutString(stream, PRIMNAME(s), strlen(PRIMNAME(s)));
+        break;
+    case CHARSXP:
+        if (s == NA_STRING)
+            OutInteger(stream, -1);
+        else
+            OutString(stream, CHAR(s), LENGTH(s));
+        break;
+    case LGLSXP:
+    case INTSXP:
+        OutIntegerVec(stream, s);
+        break;
+    case REALSXP:
+        OutRealVec(stream, s);
+        break;
+    case CPLXSXP:
+        OutComplexVec(stream, s);
+        break;
+    case STRSXP:
+        OutInteger(stream, LENGTH(s));
+        for (ix = 0; ix < LENGTH(s); ix++)
+            WriteItem(STRING_ELT(s, ix), ref_table, stream, nosharing);
+        break;
+    case VECSXP:
+    case EXPRSXP:
+        OutInteger(stream, LENGTH(s));
+        for (ix = 0; ix < LENGTH(s); ix++)
+            WriteItem(VECTOR_ELT(s, ix), ref_table, stream, nosharing);
+        break;
+    case BCODESXP:
+        WriteBC(s, ref_table, stream, nosharing);
+        break;
+    case RAWSXP:
+        OutInteger(stream, LENGTH(s));
+        switch (stream->type) {
+        case R_pstream_xdr_format:
+        case R_pstream_binary_format:
+        {        int done, this, len = LENGTH(s);
+            for (done = 0; done < len; done += this) {
+                this = min2(CHUNK_SIZE, len - done);
+                stream->OutBytes(stream, RAW(s) + done, this);
+            }
+            break;
+        }
+        default:
+            for (ix = 0; ix < LENGTH(s); ix++) 
+                OutByte(stream, RAW(s)[ix]);
+        }
+        break;
+    case S4SXP:
+      break; /* only attributes (i.e., slots) count */
+    default:
+        error(_("WriteItem: unknown type %i"), TYPEOF(s));
+    }
+
+    if (hasattr)
+        WriteItem(ATTRIB(s), ref_table, stream, nosharing);
 }
 
 static SEXP MakeCircleHashTable(void)
@@ -2394,13 +2397,12 @@ static void OutBytesMem(R_outpstream_t stream, void *buf, int length)
     char *p = mb->buf + mb->count;
     mb->count = (R_size_t)dneeded;
 
-    if (length <= 4) {
-        char *q = buf;
-        while (length > 0) { *p++ = *q++; length -= 1; }
-    }
-    else {
+    if (length == sizeof(int))          /* a common case */
+        memcpy (p, buf, sizeof(int));
+    else if (length == sizeof(double))  /* another common case */
+        memcpy (p, buf, sizeof(double));
+    else 
         memcpy (p, buf, length);
-    }
 }
 
 static int InCharMem(R_inpstream_t stream)
@@ -2420,13 +2422,12 @@ static void InBytesMem(R_inpstream_t stream, void *buf, int length)
     char *p = mb->buf + mb->count;
     mb->count += length;
 
-    if (0 && length <= 4) {  /* seems to be slower, so disabled */
-        char *q = buf;
-        while (length > 0) { *q++ = *p++; length -= 1; }
-    }
-    else {
+    if (length == sizeof(int))          /* a common case */
+        memcpy (buf, p, sizeof(int));
+    else if (length == sizeof(double))  /* another common case */
+        memcpy (buf, p, sizeof(double));
+    else 
         memcpy (buf, p, length);
-    }
 }
 
 static void InitMemInPStream(R_inpstream_t stream, membuf_t mb,
