@@ -413,7 +413,6 @@ distribution:
 
 ## ============= End of maintainer targets ========================
 
-# Dependencies: malloc.c doesn't have any
 DEPS=$(CSOURCES:.c=.d)
 
 makeMakedeps: $(DEPS)

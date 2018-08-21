@@ -41,6 +41,18 @@
 #define USE_FAST_PROTECT_MACROS   /* MUST use them in this module! */
 #define USE_FAST_PROTECT_MACROS_DISABLED  /* ... even if disabled! */
 
+/* Replace malloc, etc. by dlmalloc versions if LEA_MALLOC is defined. 
+   (It will be defined for Windows.)  Will only apply to this source file. */
+
+#if defined(LEA_MALLOC)
+#define USE_DL_PREFIX
+#include <dlmalloc/malloc.c>
+#define calloc dlcalloc
+#define malloc dlmalloc
+#define realloc dlrealloc
+#define free dlfree
+#endif
+
 #define SGGC_EXTERN  /* So SGGC globals are actually defined here */
 
 #define R_USE_SIGNALS 1
@@ -127,18 +139,6 @@
 
 #ifndef VALGRIND_LEVEL
 #define VALGRIND_LEVEL 0
-#endif
-
-#if defined(Win32) && defined(LEA_MALLOC)
-/*#include <stddef.h> */
-extern void *Rm_malloc(size_t n);
-extern void *Rm_calloc(size_t n_elements, size_t element_size);
-extern void Rm_free(void * p);
-extern void *Rm_realloc(void * p, size_t n);
-#define calloc Rm_calloc
-#define malloc Rm_malloc
-#define realloc Rm_realloc
-#define free Rm_free
 #endif
 
 
@@ -2253,6 +2253,16 @@ void *lphash_malloc (size_t size)
     }
 
     return m;
+}
+
+/* Free function used by lphash.  Needs to be defined here to make sure that the
+   "free" function called matches the "malloc" called in lphash_malloc above. */
+
+void lphash_free (void *ptr)
+{
+    /* REprintf("lphash_free: %p\n",ptr); */
+
+    free(ptr);
 }
 
 

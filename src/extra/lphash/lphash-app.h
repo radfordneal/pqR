@@ -34,8 +34,6 @@ typedef struct {
 
 #define LPHASH_NO_ENTRY 0           /* R_NoObject */
 
-#define lphash_free free            /* lphash_malloc is in memory.c */
-
 #include "lphash.h"
 
 #endif
