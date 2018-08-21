@@ -30,7 +30,7 @@ DEBUG=T
 # debugger supports only stabs.
 G_FLAG=-gdwarf-2
 
-# Comment out if the msvcrt.dll malloc/free is required (not tested recently)
+# Comment out to use msvcrt.dll malloc/free instead of dlmalloc/dlfree.
 LEA_MALLOC=YES
 
 # Set to YES and specify the path if you want to use the ATLAS BLAS.
@@ -47,9 +47,9 @@ MULTI = 32
 # (including the trailing /, and use / not \).
 TOOL_PATH =
 
-# Compilers use a -m64 or -m32 option to select architectures.  Including
-# -msse2 and -mfpmath=sse as well will ensure reproducibility of floating-point
-# operations, but this assumes a Pentium 4 or later machine.  SSE2 instructions
+# Compilers use a -m64 or -m32 option to select architectures.  Must include
+# -msse2 and -mfpmath=sse as well to ensure reproducibility of floating-point
+# operations, which requirews a Pentium 4 or later machine.  SSE2 instructions
 # require 16-byte stack alignment, which appears to not be ensured by setup code
 # for Windows, so the -mstackrealign option is specified to force C procedures
 # to ensure this alignment.
