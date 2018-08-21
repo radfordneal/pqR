@@ -41,8 +41,8 @@
 #define USE_FAST_PROTECT_MACROS   /* MUST use them in this module! */
 #define USE_FAST_PROTECT_MACROS_DISABLED  /* ... even if disabled! */
 
-/* Replace malloc, etc. by dlmalloc versions if LEA_MALLOC is defined. 
-   (It will be defined for Windows.)  Will only apply to this source file. */
+/* Replace malloc, etc. by dlmalloc versions if LEA_MALLOC is defined
+   (by default defined for Windows).  Will only apply to this source file. */
 
 #if defined(LEA_MALLOC)
 #define USE_DL_PREFIX

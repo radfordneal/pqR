@@ -26,7 +26,7 @@ DEBUG=T
 # debugger supports only stabs.
 G_FLAG=-gdwarf-2
 
-# Comment out if the msvcrt.dll malloc/free is required (not tested recently)
+# Comment out to use msvcrt.dll malloc/free instead of dlmalloc/dlfree.
 LEA_MALLOC=YES
 
 # Set to YES and specify the path if you want to use the ATLAS BLAS.
@@ -45,8 +45,7 @@ TOOL_PATH =
 
 # Compilers use a -m64 or -m32 option to select architectures.  The compiler
 # defaults to using SSE2 instructions when -m64 is specified, but these
-# options are specified explicitly below just to make this clear.  (Specify
-# -mfpmath=387 instead to use the older FPU for floating-point math).
+# options are specified explicitly below just to make this clear.
 
 M_ARCH = -m64 -msse2 -mfpmath=sse
 

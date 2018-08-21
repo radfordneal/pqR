@@ -91,7 +91,6 @@ EXTRALIBS = getline/gl.a ../extra/xdr/libxdr.a \
 # flags to ensure that Doug Lea's malloc is used:
 ifdef LEA_MALLOC
 extra-CFLAGS+=-DLEA_MALLOC
-OBJS-EXTRA=malloc.o
 malloc-DEFS=-DLEA_MALLOC
 endif
 
