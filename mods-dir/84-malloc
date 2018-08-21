@@ -1,0 +1,2 @@
+Changes to how dlmalloc is used.  Fixes problem with Windows version.
+Can now use dlmalloc for non-Windows builds too, if -DLEA_MALLOC used.

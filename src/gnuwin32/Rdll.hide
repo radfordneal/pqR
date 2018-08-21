@@ -428,10 +428,10 @@
  Ri18n_iswctype
  Ri18n_wcswidth
  Ri18n_wctype
- Rm_calloc
- Rm_free
- Rm_malloc
- Rm_realloc
+ dlcalloc
+ dlfree
+ dlmalloc
+ dlrealloc
  Rrowsum_df
  Rrowsum_matrix
  Rsockclose

@@ -59,16 +59,16 @@
 #	define NULL 0
 #endif
 
-#if !defined(_WIN32) && !defined(macintosh) && !defined(__CYGWIN__)
+#if defined(LEA_MALLOC)
+#include <stddef.h>
+extern void *dlmalloc(size_t n);
+extern void dlfree(void * p);
+#define mem_alloc	dlmalloc
+#define mem_free(ptr, bsize)	dlfree(ptr)
+#else
+#if !defined(macintosh) && !defined(__CYGWIN__)
 #include <stdlib.h> // for malloc
 #endif
-#if defined(_WIN32) && defined(LEA_MALLOC)
-#include <stddef.h>
-extern void *Rm_malloc(size_t n);
-extern void Rm_free(void * p);
-#define mem_alloc	Rm_malloc
-#define mem_free(ptr, bsize)	Rm_free(ptr)
-#else
 #define mem_alloc	malloc
 #define mem_free(ptr, bsize)	free(ptr)
 #endif

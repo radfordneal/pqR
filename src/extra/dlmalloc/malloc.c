@@ -1,8 +1,5 @@
 /* R changes:
 
- - use Rm_malloc, Rm_calloc, Rm_realloc, Rm_free to ensure this is only
-   used from memory.c.
-
  - make attempt for maximum footprint to exceed limit a failure.
 
  - MinGW does have unistd and does not need VC++ pragma.
@@ -656,11 +653,11 @@ void Rf_warning(const char *, ...);
 /* ------------------- Declarations of public routines ------------------- */
 
 #ifndef USE_DL_PREFIX
-#define dlcalloc               Rm_calloc
-#define dlfree                 Rm_free
-#define dlmalloc               Rm_malloc
+#define dlcalloc               calloc
+#define dlfree                 free
+#define dlmalloc               malloc
 #define dlmemalign             memalign
-#define dlrealloc              Rm_realloc
+#define dlrealloc              realloc
 #define dlvalloc               valloc
 #define dlpvalloc              pvalloc
 #define dlmallinfo             mallinfo
