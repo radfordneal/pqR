@@ -149,32 +149,31 @@
    initialization can be separated--we don't really have that option
    at the R level.  */
 
-/*
- * Forward Declarations
- */
 
-static void OutStringVec(R_outpstream_t stream, SEXP s, SEXP ref_table,
-                         int nosharing);
-static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream,
-                       int nosharing);
-static SEXP ReadItem(SEXP ref_table, R_inpstream_t stream);
-static void WriteBC(SEXP s, SEXP ref_table, R_outpstream_t stream, 
-                    int nosharing);
-static SEXP ReadBC(SEXP ref_table, R_inpstream_t stream);
+/* FORWARD DECLARATIONS. */
 
-/*
- * Constants
- */
+struct outpar { R_outpstream_t stream; SEXP ref_table; int nosharing; };
+struct inpar { R_inpstream_t stream; SEXP ref_table; };
+
+static void OutStringVec (struct outpar *par, SEXP s);
+static void WriteItem  (struct outpar *par, SEXP s);
+static SEXP InStringVec (struct inpar *par);
+static SEXP ReadItem (struct inpar *par);
+static void WriteBC (struct outpar *par, SEXP s);
+static SEXP ReadBC (struct inpar *par);
+
+
+/* CONSTANTS. */
 
 /* The default version used when a stream Init function is called with
    version = 0 */
 
 static const int R_DefaultSerializeVersion = 2;
 
-/*
- * Utility Functions
- *
- * An assert function which doesn't crash the program.
+
+/* UTILITY FUNCTIONS. */
+
+/* An assert function which doesn't crash the program.
  * Something like this might be useful in an R header file
  */
 
@@ -325,7 +324,7 @@ static attribute_noinline void OutString (R_outpstream_t stream, const char *s,
 
 /* BASIC INPUT ROUTINES. */
 
-static void InWord(R_inpstream_t stream, char * buf, int size)
+static void InWord (R_inpstream_t stream, char *buf, int size)
 {
     int c, i;
     i = 0;
@@ -693,15 +692,13 @@ static R_INLINE void UnpackFlags(int flags, SEXPTYPE *ptype, int *plevs,
 }
 
 
-/*
- * Reference/Index Packing and Unpacking
- *
- * Code will contain many references to symbols. As long as there are
- * not too many references, the index and the REFSXP flag indicating a
- * reference can be packed in a single integeger.  Since the index is
- * 1-based, a 0 is used to indicate an index that doesn't fit and
- * therefore follows.
- */
+/* REFERENCE/INDEX PACKING AND UNPACKING.
+
+   Code will contain many references to symbols. As long as there are
+   not too many references, the index and the REFSXP flag indicating a
+   reference can be packed in a single integeger.  Since the index is
+   1-based, a 0 is used to indicate an index that doesn't fit and
+   therefore follows. */
 
 #define PACK_REF_INDEX(i) (((i) << 8) | REFSXP)
 #define UNPACK_REF_INDEX(i) ((i) >> 8)
@@ -726,12 +723,10 @@ static R_INLINE int InRefIndex(R_inpstream_t stream, int flags)
 }
 
 
-/*
- * Persistent Name Hooks
- *
- * These routines call the appropriate hook functions for allowing
- * customized handling of reference objects.
- */
+/* PERSISTENT NAME HOOKS.
+
+   These routines call the appropriate hook functions for allowing
+   customized handling of reference objects. */
 
 static inline SEXP GetPersistentName(R_outpstream_t stream, SEXP s)
 {
@@ -764,9 +759,7 @@ static inline SEXP PersistentRestore(R_inpstream_t stream, SEXP s)
 }
 
 
-/*
- * Serialization Code
- */
+/* SERIALIZATION CODE. */
 
 static inline int SaveSpecialHook(SEXP item)
 {
@@ -781,9 +774,11 @@ static inline int SaveSpecialHook(SEXP item)
     return 0;
 }
 
-static attribute_noinline void OutStringVec(R_outpstream_t stream, 
-                                SEXP s, SEXP ref_table, int nosharing)
+static attribute_noinline void OutStringVec (struct outpar *par, SEXP s)
 {
+    R_outpstream_t stream = par->stream;
+    SEXP ref_table = par->ref_table;
+
     int i, len;
 
     R_assert(TYPEOF(s) == STRSXP);
@@ -798,7 +793,7 @@ static attribute_noinline void OutStringVec(R_outpstream_t stream,
     OutInteger(stream, 0); /* place holder to allow names if we want to */
     OutInteger(stream, len);
     for (i = 0; i < len; i++)
-	WriteItem(STRING_ELT(s, i), ref_table, stream, nosharing);
+	WriteItem (par, STRING_ELT(s, i));
 }
 
 #include <rpc/types.h>
@@ -920,9 +915,12 @@ static attribute_noinline void OutComplexVec(R_outpstream_t stream, SEXP s)
     }
 }
 
-static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream, 
-                       int nosharing)
+static void WriteItem (struct outpar *par, SEXP s)
 {
+    R_outpstream_t stream = par->stream;
+    SEXP ref_table = par->ref_table;
+    int nosharing = par->nosharing;
+
     int i;
     int ix; /* this could be a different type for longer vectors */
     SEXP t;
@@ -931,7 +929,7 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream,
 	SEXP new_s;
 	R_compile_pkgs = FALSE;
 	PROTECT(new_s = R_cmpfun(s));
-	WriteItem (new_s, ref_table, stream, nosharing);
+	WriteItem (par, new_s);
 	UNPROTECT(1);
 	R_compile_pkgs = TRUE;
 	return;
@@ -951,7 +949,7 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream,
 	PROTECT(t);
 	HashAdd(s, ref_table);
 	OutInteger(stream, PERSISTSXP);
-	OutStringVec(stream, t, ref_table, nosharing);
+	OutStringVec (par, t);
 	UNPROTECT(1);
         return;
     }
@@ -967,7 +965,7 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream,
 	/* Note : NILSXP can't occur here */
 	HashAdd(s, ref_table);
 	OutInteger(stream, SYMSXP);
-	WriteItem(PRINTNAME(s), ref_table, stream, nosharing);
+	WriteItem (par, PRINTNAME(s));
         return;
     }
 
@@ -978,28 +976,27 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream,
 	    warning(_("'%s' may not be available when loading"),
 		    CHAR(STRING_ELT(name, 0)));
 	    OutInteger(stream, PACKAGESXP);
-	    OutStringVec(stream, name, ref_table, nosharing);
+	    OutStringVec (par, name);
 	}
 	else if (R_IsNamespaceEnv(s)) {
 #ifdef WARN_ABOUT_NAME_SPACES_MAYBE_NOT_AVAILABLE
 	    warning(_("namespaces may not be available when loading"));
 #endif
 	    OutInteger(stream, NAMESPACESXP);
-	    OutStringVec(stream, PROTECT(R_NamespaceEnvSpec(s)), ref_table,
-                         nosharing);
+	    OutStringVec (par, PROTECT(R_NamespaceEnvSpec(s)));
 	    UNPROTECT(1);
 	}
 	else {
 	    OutInteger(stream, ENVSXP);
 	    OutInteger(stream, R_EnvironmentIsLocked(s) ? 1 : 0);
-	    WriteItem(ENCLOS(s), ref_table, stream, nosharing);
-	    WriteItem(FRAME(s), ref_table, stream, nosharing);
+	    WriteItem (par, ENCLOS(s));
+	    WriteItem (par, FRAME(s));
             SEXP newtable = HASHTAB(s) == R_NilValue ? R_NilValue
                              : R_HashRehashOld(HASHTAB(s));
             PROTECT(newtable);
-	    WriteItem(newtable, ref_table, stream, nosharing);
+	    WriteItem (par, newtable);
             UNPROTECT(1);
-	    WriteItem(ATTRIB(s), ref_table, stream, nosharing);
+	    WriteItem (par, ATTRIB(s));
 	}
         return;
     }
@@ -1034,18 +1031,18 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream,
         /* These write their ATTRIB fields first to allow us to avoid
            recursion on the CDR */
         if (hasattr)
-            WriteItem(ATTRIB(s), ref_table, stream, nosharing);
+            WriteItem (par, ATTRIB(s));
         if (TAG(s) != R_NilValue)
-            WriteItem(TAG(s), ref_table, stream, nosharing);
-        WriteItem(CAR(s), ref_table, stream, nosharing);
+            WriteItem (par, TAG(s));
+        WriteItem (par, CAR(s));
         /* now do a tail call to WriteItem to handle the CDR */
         s = CDR(s);
         goto tailcall;
     case EXTPTRSXP:
         /* external pointers */
         HashAdd(s, ref_table);
-        WriteItem(EXTPTR_PROT(s), ref_table, stream, nosharing);
-        WriteItem(EXTPTR_TAG(s), ref_table, stream, nosharing);
+        WriteItem (par, EXTPTR_PROT(s));
+        WriteItem (par, EXTPTR_TAG(s));
         break;
     case WEAKREFSXP:
         /* Weak references */
@@ -1075,16 +1072,16 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream,
     case STRSXP:
         OutInteger(stream, LENGTH(s));
         for (ix = 0; ix < LENGTH(s); ix++)
-            WriteItem(STRING_ELT(s, ix), ref_table, stream, nosharing);
+            WriteItem (par, STRING_ELT(s, ix));
         break;
     case VECSXP:
     case EXPRSXP:
         OutInteger(stream, LENGTH(s));
         for (ix = 0; ix < LENGTH(s); ix++)
-            WriteItem(VECTOR_ELT(s, ix), ref_table, stream, nosharing);
+            WriteItem (par, VECTOR_ELT(s, ix));
         break;
     case BCODESXP:
-        WriteBC(s, ref_table, stream, nosharing);
+        WriteBC (par, s);
         break;
     case RAWSXP:
         OutInteger(stream, LENGTH(s));
@@ -1110,7 +1107,7 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream,
     }
 
     if (hasattr)
-        WriteItem(ATTRIB(s), ref_table, stream, nosharing);
+        WriteItem (par, ATTRIB(s));
 }
 
 static SEXP MakeCircleHashTable(void)
@@ -1183,9 +1180,10 @@ static SEXP findrep(SEXP x, SEXP reps)
     return R_NilValue;
 }
 
-static void WriteBCLang(SEXP s, SEXP ref_table, SEXP reps,
-			R_outpstream_t stream, int nosharing)
+static void WriteBCLang (struct outpar *par, SEXP s, SEXP reps)
 {
+    R_outpstream_t stream = par->stream;
+
     int type = TYPEOF(s);
     if (type == LANGSXP || type == LISTSXP) {
 	SEXP r = findrep(s, reps);
@@ -1218,25 +1216,26 @@ static void WriteBCLang(SEXP s, SEXP ref_table, SEXP reps,
 	    }
 	    OutInteger(stream, type);
 	    if (attr != R_NilValue)
-		WriteItem(attr, ref_table, stream, nosharing);
-	    WriteItem(TAG(s), ref_table, stream, nosharing);
-	    WriteBCLang(CAR(s), ref_table, reps, stream, nosharing);
-	    WriteBCLang(CDR(s), ref_table, reps, stream, nosharing);
+		WriteItem (par, attr);
+	    WriteItem (par, TAG(s));
+	    WriteBCLang (par, CAR(s), reps);
+	    WriteBCLang (par, CDR(s), reps);
 	}
     }
     else {
 	OutInteger(stream, 0); /* pad */
-	WriteItem(s, ref_table, stream, nosharing);
+	WriteItem (par, s);
     }
 }
 
-static void WriteBC1(SEXP s, SEXP ref_table, SEXP reps, R_outpstream_t stream,
-                     int nosharing)
+static void WriteBC1 (struct outpar *par, SEXP s, SEXP reps)
 {
+    R_outpstream_t stream = par->stream;
+
     int i, n;
     SEXP code, consts;
     PROTECT(code = R_bcDecode(BCODE_CODE(s)));
-    WriteItem(code, ref_table, stream, nosharing);
+    WriteItem (par, code);
     consts = BCODE_CONSTS(s);
     n = LENGTH(consts);
     OutInteger(stream, n);
@@ -1246,29 +1245,30 @@ static void WriteBC1(SEXP s, SEXP ref_table, SEXP reps, R_outpstream_t stream,
 	switch (type) {
 	case BCODESXP:
 	    OutInteger(stream, type);
-	    WriteBC1(c, ref_table, reps, stream, nosharing);
+	    WriteBC1 (par, c, reps);
 	    break;
 	case LANGSXP:
 	case LISTSXP:
-	    WriteBCLang(c, ref_table, reps, stream, nosharing);
+	    WriteBCLang (par, c, reps);
 	    break;
 	default:
 	    OutInteger(stream, type);
-	    WriteItem(c, ref_table, stream, nosharing);
+	    WriteItem (par, c);
 	}
     }
     UNPROTECT(1);
 }
 
-static void WriteBC(SEXP s, SEXP ref_table, R_outpstream_t stream, 
-                    int nosharing)
+static void WriteBC (struct outpar *par, SEXP s)
 {
+    R_outpstream_t stream = par->stream;
+
     SEXP reps = ScanForCircles(s);
     PROTECT(reps = CONS(R_NilValue, reps));
     OutInteger(stream, length(reps));
     SETCAR(reps, allocVector1INT());
     INTEGER(CAR(reps))[0] = 0;
-    WriteBC1(s, ref_table, reps, stream, nosharing);
+    WriteBC1 (par, s, reps);
     UNPROTECT(1);
 }
 
@@ -1277,7 +1277,6 @@ static void WriteBC(SEXP s, SEXP ref_table, R_outpstream_t stream,
 
 static void R_Serialize_internal (SEXP s, R_outpstream_t stream, int nosharing)
 {
-    SEXP ref_table;
     int version = stream->version;
 
     OutFormat(stream);
@@ -1291,8 +1290,13 @@ static void R_Serialize_internal (SEXP s, R_outpstream_t stream, int nosharing)
     default: error(_("version %d not supported"), version);
     }
 
-    PROTECT(ref_table = MakeHashTable());
-    WriteItem(s, ref_table, stream, nosharing);
+    struct outpar par;
+    par.nosharing = nosharing;
+    par.stream = stream;
+    PROTECT(par.ref_table = MakeHashTable());
+
+    WriteItem (&par, s);
+
     UNPROTECT(1);
 }
 
@@ -1350,8 +1354,11 @@ static R_INLINE void AddReadRef(SEXP table, SEXP value)
     SET_VECTOR_ELT(data, count - 1, value);
 }
 
-static SEXP InStringVec(R_inpstream_t stream, SEXP ref_table)
+static SEXP InStringVec (struct inpar *par)
 {
+    R_inpstream_t stream = par->stream;
+    SEXP ref_table = par->ref_table;
+
     SEXP s;
     int i, len;
     if (InInteger(stream) != 0)
@@ -1359,7 +1366,7 @@ static SEXP InStringVec(R_inpstream_t stream, SEXP ref_table)
     len = InInteger(stream);
     PROTECT(s = allocVector(STRSXP, len));
     for (i = 0; i < len; i++)
-	SET_STRING_ELT(s, i, ReadItem(ref_table, stream));
+	SET_STRING_ELT(s, i, ReadItem(par));
     UNPROTECT(1);
     return s;
 }
@@ -1499,8 +1506,11 @@ static void InComplexVec(R_inpstream_t stream, SEXP obj, int length)
     }
 }
 
-static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
+static SEXP ReadItem (struct inpar *par)
 {
+    R_inpstream_t stream = par->stream;
+    SEXP ref_table = par->ref_table;
+
     int len, flags, levs, objf, hasattr, hastag, isconstant;
     SEXPTYPE type;
 
@@ -1529,25 +1539,25 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	s = GetReadRef(ref_table, InRefIndex(stream, flags));
         goto ret;
     case PERSISTSXP:
-	PROTECT(s = InStringVec(stream, ref_table));
+	PROTECT(s = InStringVec(par));
 	s = PersistentRestore(stream, s);
 	UNPROTECT(1);
 	AddReadRef(ref_table, s);
 	goto ret;
     case SYMSXP:
-	PROTECT(s = ReadItem(ref_table, stream)); /* print name */
+	PROTECT(s = ReadItem(par)); /* print name */
 	s = installChar(s);
 	AddReadRef(ref_table, s);
 	UNPROTECT(1);
 	goto ret;
     case PACKAGESXP:
-	PROTECT(s = InStringVec(stream, ref_table));
+	PROTECT(s = InStringVec(par));
 	s = R_FindPackageEnv(s);
 	UNPROTECT(1);
 	AddReadRef(ref_table, s);
 	goto ret;
     case NAMESPACESXP:
-	PROTECT(s = InStringVec(stream, ref_table));
+	PROTECT(s = InStringVec(par));
 	s = R_FindNamespace(s);
 	AddReadRef(ref_table, s);
 	UNPROTECT(1);
@@ -1562,10 +1572,10 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    AddReadRef(ref_table, s);
 
 	    /* Now fill it in  */
-	    SET_ENCLOS(s, ReadItem(ref_table, stream));
-	    SET_FRAME(s, ReadItem(ref_table, stream));
-	    SET_HASHTAB(s, ReadItem(ref_table, stream));
-	    SET_ATTRIB(s, ReadItem(ref_table, stream));
+	    SET_ENCLOS(s, ReadItem(par));
+	    SET_FRAME(s, ReadItem(par));
+	    SET_HASHTAB(s, ReadItem(par));
+	    SET_ATTRIB(s, ReadItem(par));
 	    if (ATTRIB(s) != R_NilValue &&
 		getClassAttrib(s) != R_NilValue)
 		/* We don't write out the object bit for environments,
@@ -1584,8 +1594,8 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
     case LISTSXP:
         if (isconstant && !objf && !hasattr && !hastag && levs==0) {
             SEXP car, cdr;
-            PROTECT(car = ReadItem (ref_table, stream));
-            cdr = ReadItem (ref_table, stream);
+            PROTECT(car = ReadItem (par));
+            cdr = ReadItem (par);
             s = cdr == R_NilValue ? MaybeConstList1(car) : CONS(car,cdr);
             UNPROTECT(1); /* car */
             goto ret;
@@ -1599,19 +1609,19 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	SETLEVELS(s, levs);
 	SET_OBJECT(s, objf);
         if (hasattr)
-	    SET_ATTRIB(s, ReadItem(ref_table, stream));
+	    SET_ATTRIB(s, ReadItem(par));
         if (hastag)
-	    SET_TAG(s, ReadItem(ref_table, stream));
-	SETCAR(s, ReadItem(ref_table, stream));
+	    SET_TAG(s, ReadItem(par));
+	SETCAR(s, ReadItem(par));
 
         /* For reading closures and promises stored in earlier versions, 
            convert NULL env to baseenv() */
         if (type == CLOSXP) {
-            SETCDR(s, ReadItem(ref_table, stream));  /* CDR == CLOENV */
+            SETCDR(s, ReadItem(par));  /* CDR == CLOENV */
             if (CLOENV(s) == R_NilValue) SET_CLOENV(s, R_BaseEnv);
         }
         else if (type == PROMSXP) {
-            SETCDR(s, ReadItem(ref_table, stream));  /* CDR == PRENV */
+            SETCDR(s, ReadItem(par));  /* CDR == PRENV */
             if (PRENV(s) == R_NilValue) SET_PRENV(s, R_BaseEnv);
         }
         else {  /* Eliminate tail recursion for CDR */
@@ -1637,8 +1647,8 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    PROTECT(s = allocSExp(type));
 	    AddReadRef(ref_table, s);
 	    R_SetExternalPtrAddr(s, NULL);
-	    R_SetExternalPtrProtected(s, ReadItem(ref_table, stream));
-	    R_SetExternalPtrTag(s, ReadItem(ref_table, stream));
+	    R_SetExternalPtrProtected(s, ReadItem(par));
+	    R_SetExternalPtrTag(s, ReadItem(par));
 	    break;
 	case WEAKREFSXP:
 	    PROTECT(s = R_MakeWeakRef(R_NilValue, R_NilValue, R_NilValue,
@@ -1708,11 +1718,11 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
         case STRSXP:
             len = InInteger(stream);
             if (isconstant && len==1 && !objf && !hasattr && levs==0)
-                PROTECT(s = ScalarStringMaybeConst(ReadItem(ref_table, stream)));
+                PROTECT(s = ScalarStringMaybeConst(ReadItem(par)));
             else {
                 PROTECT(s = allocVector(type, len));
                 for (int count = 0; count < len; ++count)
-                    SET_STRING_ELT(s, count, ReadItem(ref_table, stream));
+                    SET_STRING_ELT(s, count, ReadItem(par));
             }
             break;
 	case VECSXP:
@@ -1720,10 +1730,10 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    len = InInteger(stream);
 	    PROTECT(s = allocVector(type, len));
 	    for (int count = 0; count < len; ++count)
-		SET_VECTOR_ELT(s, count, ReadItem(ref_table, stream));
+		SET_VECTOR_ELT(s, count, ReadItem(par));
 	    break;
 	case BCODESXP:
-	    PROTECT(s = ReadBC(ref_table, stream));
+	    PROTECT(s = ReadBC(par));
 	    break;
 	case CLASSREFSXP:
 	    error(_("this version of R cannot read class references"));
@@ -1762,10 +1772,10 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	       alone.  If there is an attribute (as there might be if
 	       the serialized data was created by an older version) we
 	       read and ignore the value. */
-	    if (hasattr) (void) ReadItem(ref_table, stream);
+	    if (hasattr) (void) ReadItem(par);
 	}
 	else if (hasattr)
-	    SET_ATTRIB(s, ReadItem(ref_table, stream));
+	    SET_ATTRIB(s, ReadItem(par));
 	UNPROTECT(1); /* s */
 	goto ret;
     }
@@ -1781,11 +1791,12 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
     }
 }
 
-static SEXP ReadBC1(SEXP ref_table, SEXP reps, R_inpstream_t stream);
+static SEXP ReadBC1 (struct inpar *par, SEXP reps);
 
-static SEXP ReadBCLang(int type, SEXP ref_table, SEXP reps,
-		       R_inpstream_t stream)
+static SEXP ReadBCLang (struct inpar *par, int type, SEXP reps)
 {
+    R_inpstream_t stream = par->stream;
+
     switch (type) {
     case BCREPREF:
 	return VECTOR_ELT(reps, InInteger(stream));
@@ -1810,21 +1821,21 @@ static SEXP ReadBCLang(int type, SEXP ref_table, SEXP reps,
 	    if (pos >= 0)
 		SET_VECTOR_ELT(reps, pos, ans);
 	    if (hasattr)
-		SET_ATTRIB(ans, ReadItem(ref_table, stream));
-	    SET_TAG(ans, ReadItem(ref_table, stream));
-	    SETCAR(ans, ReadBCLang(InInteger(stream), ref_table, reps,
-				   stream));
-	    SETCDR(ans, ReadBCLang(InInteger(stream), ref_table, reps,
-				   stream));
+		SET_ATTRIB(ans, ReadItem(par));
+	    SET_TAG(ans, ReadItem(par));
+	    SETCAR(ans, ReadBCLang (par, InInteger(stream), reps));
+	    SETCDR(ans, ReadBCLang (par, InInteger(stream), reps));
 	    UNPROTECT(1);
 	    return ans;
 	}
-    default: return ReadItem(ref_table, stream);
+    default: return ReadItem(par);
     }
 }
 
-static SEXP ReadBCConsts(SEXP ref_table, SEXP reps, R_inpstream_t stream)
+static SEXP ReadBCConsts (struct inpar *par, SEXP reps)
 {
+    R_inpstream_t stream = par->stream;
+
     SEXP ans, c;
     int i, n;
     n = InInteger(stream);
@@ -1833,7 +1844,7 @@ static SEXP ReadBCConsts(SEXP ref_table, SEXP reps, R_inpstream_t stream)
 	int type = InInteger(stream);
 	switch (type) {
 	case BCODESXP:
-	    c = ReadBC1(ref_table, reps, stream);
+	    c = ReadBC1 (par, reps);
 	    SET_VECTOR_ELT(ans, i, c);
 	    break;
 	case LANGSXP:
@@ -1842,34 +1853,36 @@ static SEXP ReadBCConsts(SEXP ref_table, SEXP reps, R_inpstream_t stream)
 	case BCREPREF:
 	case ATTRLANGSXP:
 	case ATTRLISTSXP:
-	    c = ReadBCLang(type, ref_table, reps, stream);
+	    c = ReadBCLang (par, type, reps);
 	    SET_VECTOR_ELT(ans, i, c);
 	    break;
 	default:
-	    SET_VECTOR_ELT(ans, i, ReadItem(ref_table, stream));
+	    SET_VECTOR_ELT(ans, i, ReadItem(par));
 	}
     }
     UNPROTECT(1);
     return ans;
 }
 
-static SEXP ReadBC1(SEXP ref_table, SEXP reps, R_inpstream_t stream)
+static SEXP ReadBC1 (struct inpar *par, SEXP reps)
 {
     SEXP s;
     PROTECT(s = allocSExp(BCODESXP));
-    SETCAR(s, ReadItem(ref_table, stream)); /* code */
+    SETCAR(s, ReadItem(par)); /* code */
     SETCAR(s, R_bcEncode(CAR(s)));
-    SETCDR(s, ReadBCConsts(ref_table, reps, stream)); /* consts */
+    SETCDR(s, ReadBCConsts(par, reps)); /* consts */
     SET_TAG_NIL(s); /* expr */
     UNPROTECT(1);
     return s;
 }
 
-static SEXP ReadBC(SEXP ref_table, R_inpstream_t stream)
+static SEXP ReadBC (struct inpar *par)
 {
+    R_inpstream_t stream = par->stream;
+
     SEXP reps, ans;
     PROTECT(reps = allocVector(VECSXP, InInteger(stream)));
-    ans = ReadBC1(ref_table, reps, stream);
+    ans = ReadBC1 (par, reps);
     UNPROTECT(1);
     return ans;
 }
@@ -1911,8 +1924,10 @@ SEXP R_Unserialize(R_inpstream_t stream)
     }
 
     /* Read the actual object back */
-    PROTECT(ref_table = MakeReadRefTable());
-    obj =  ReadItem(ref_table, stream);
+    struct inpar par;
+    par.stream = stream;
+    PROTECT(par.ref_table = MakeReadRefTable());
+    obj =  ReadItem(&par);
     UNPROTECT(1);
 
     return obj;
@@ -2005,9 +2020,7 @@ R_InitFileInPStream(R_inpstream_t stream, FILE *fp,
 }
 
 
-/*
- * Persistent Connection Streams
- */
+/* PERSISTENT CONNECTION STREAMS. */
 
 #include <Rconnections.h>
 
