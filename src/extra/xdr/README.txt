@@ -35,3 +35,7 @@ xdr_double, xdr_int, xdr_string, xdrmem_create and xdrstdio_create.
 There was some further tidying up in July 2011 to enable this to be
 used on other systems.  In particular, we replaced 'long' by int32_t
 and 'u_long' by uint32_t to ensure 32-bit types.
+
+
+For pqR: got rid of xdrmem_destroy, storing a null pointer in the
+structure of functions instead.
