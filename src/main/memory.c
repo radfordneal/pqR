@@ -46,6 +46,8 @@
 
 #if defined(LEA_MALLOC)
 #define USE_DL_PREFIX
+#define DEFAULT_TRIM_THRESHOLD ((size_t)8U * (size_t)1024U * (size_t)1024U)
+#define DEFAULT_MMAP_THRESHOLD ((size_t)1024U * (size_t)1024U)
 #include <dlmalloc/malloc.c>
 #define calloc dlcalloc
 #define malloc dlmalloc
