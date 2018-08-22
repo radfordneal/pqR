@@ -58,6 +58,11 @@
         On processors with fused multiply-add instructions, achieving
         reproducible IEEE arithmetic will require compiling with the 
         gcc/clang option \code{-ffp-contract=off}.
+  \item The malloc/free routines written by Doug Lea (in
+        src/extra/dlmalloc), which by default are used for Windows platforms,
+        can now also be used for non-Windows platforms, by including
+        \code{-DLEA_MALLOC} in \code{CFLAGS}.  This is meant for 
+        experimentation, and is not recommended for general use.
   }}
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
