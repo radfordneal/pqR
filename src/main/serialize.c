@@ -823,7 +823,7 @@ static attribute_noinline void OutIntegerVec (R_outpstream_t stream, SEXP s)
 	    for(int cnt = 0; cnt < this; cnt++)
 		if(!xdr_int(&xdrs, INTEGER(s) + done + cnt))
 		    error(_("XDR write failed"));
-	    xdr_destroy(&xdrs);
+	    /* xdr_destroy(&xdrs); */
 	    stream->OutBytes(stream, buf, sizeof(int) * this);
 	}
 	break;
@@ -860,7 +860,7 @@ static attribute_noinline void OutRealVec(R_outpstream_t stream, SEXP s)
 	    for(int cnt = 0; cnt < this; cnt++)
 		if(!xdr_double(&xdrs, REAL(s) + done + cnt))
 		    error(_("XDR write failed"));
-	    xdr_destroy(&xdrs);
+	    /* xdr_destroy(&xdrs); */
 	    stream->OutBytes(stream, buf, sizeof(double) * this);
 	}
 	break;
@@ -900,7 +900,7 @@ static attribute_noinline void OutComplexVec(R_outpstream_t stream, SEXP s)
 		    error(_("XDR write failed"));
 	    }
 	    stream->OutBytes(stream, buf, sizeof(Rcomplex) * this);
-	    xdr_destroy(&xdrs);
+	    /* xdr_destroy(&xdrs); */
 	}
 	break;
     }
@@ -1386,7 +1386,7 @@ static attribute_noinline SEXP InCharSXP(R_inpstream_t stream, int levs)
         s = mkCharLenCE(cbuf, length, enc);
     }
     else {
-        char *big_cbuf = CallocCharBuf(length+1);
+        char *big_cbuf = CallocCharBuf(length);
         InString(stream, big_cbuf, length);
         s = mkCharLenCE(big_cbuf, length, enc);
         Free(big_cbuf);
@@ -1410,7 +1410,7 @@ static void InIntegerVec(R_inpstream_t stream, SEXP obj, int length)
 	    for(int cnt = 0; cnt < this; cnt++)
 		if(!xdr_int(&xdrs, INTEGER(obj) + done + cnt))
 		    error(_("XDR read failed"));
-	    xdr_destroy(&xdrs);
+	    /* xdr_destroy(&xdrs); */
 	}
 	break;
     }
@@ -1443,7 +1443,7 @@ static void InRealVec(R_inpstream_t stream, SEXP obj, int length)
 	    for(int cnt = 0; cnt < this; cnt++)
 		if(!xdr_double(&xdrs, REAL(obj) + done + cnt))
 		    error(_("XDR read failed"));
-	    xdr_destroy(&xdrs);
+	    /* xdr_destroy(&xdrs); */
 	}
 	break;
     }
@@ -1479,7 +1479,7 @@ static void InComplexVec(R_inpstream_t stream, SEXP obj, int length)
 		   !xdr_double(&xdrs, &(output[done+cnt].i)))
 		    error(_("XDR read failed"));
 	    }
-	    xdr_destroy(&xdrs);
+	    /* xdr_destroy(&xdrs); */
 	}
 	break;
     }
@@ -1684,8 +1684,13 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
             break;
         case REALSXP:
             len = InInteger(stream);
-            if (isconstant && len==1 && !objf && !hasattr && levs==0)
-                PROTECT(s = ScalarRealMaybeConst(InReal(stream)));
+            if (len==1) {
+                double r = InReal(stream);
+                if (isconstant && !objf && !hasattr && levs==0)
+                    PROTECT(s = ScalarRealMaybeConst(r));
+                else
+                    PROTECT(s = ScalarReal(r));
+            }
             else {
                 PROTECT(s = allocVector(type, len));
                 InRealVec(stream, s, len);

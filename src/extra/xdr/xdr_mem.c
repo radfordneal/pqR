@@ -104,7 +104,7 @@ static bool_t	xdrmem_putbytes();
 static u_int	xdrmem_getpos();
 static bool_t	xdrmem_setpos();
 static long *	xdrmem_inline();
-static void	xdrmem_destroy();
+/* static void	xdrmem_destroy(); */
 
 static struct	xdr_ops xdrmem_ops = {
 	xdrmem_getlong,
@@ -114,7 +114,7 @@ static struct	xdr_ops xdrmem_ops = {
 	xdrmem_getpos,
 	xdrmem_setpos,
 	xdrmem_inline,
-	xdrmem_destroy
+	0 /* xdrmem_destroy */
 };
 
 /*
@@ -135,11 +135,13 @@ xdrmem_create(xdrs, addr, size, op)
 	xdrs->x_handy = size;
 }
 
+/*
 static void
-xdrmem_destroy(/*xdrs*/)
-	/*XDR *xdrs;*/
+xdrmem_destroy(xdrs)
+	XDR *xdrs;
 {
 }
+*/
 
 static bool_t
 xdrmem_getlong(XDR *xdrs, int32_t *lp)
