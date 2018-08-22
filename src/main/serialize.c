@@ -1304,7 +1304,7 @@ void R_Serialize (SEXP s, R_outpstream_t stream)
 
 /*** UNSERIALIZE CODE ***/
 
-#define INITIAL_REFREAD_TABLE_SIZE 128
+#define INITIAL_REFREAD_TABLE_SIZE 250
 
 static SEXP MakeReadRefTable(void)
 {
