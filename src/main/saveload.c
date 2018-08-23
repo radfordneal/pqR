@@ -73,7 +73,7 @@ static int R_DefaultSaveFormatVersion = 2;
 
 
 #ifndef INT_32_BITS
-/* The way XDR is used pretty much assumes that int is 32 bits and
+/* The "XDR" save format assumes that an int is 32 bits and
    maybe even 2's complement representation--without that, NA_INTEGER
    is not likely to be preserved properly.  Since 32 bit ints (and 2's
    complement) are pretty much universal, we can worry about that when
@@ -82,9 +82,6 @@ static int R_DefaultSaveFormatVersion = 2;
 */
 # error code requires that int have 32 bits
 #endif
-
-#include <rpc/types.h>
-#include <rpc/xdr.h>
 
 
 /* ----- F i l e -- M a g i c -- N u m b e r s ----- */
@@ -263,79 +260,6 @@ static SEXP RestoreToEnv(SEXP ans, SEXP aenv)
 static SEXP R_LoadSavedData(FILE *fp, SEXP aenv)
 {
     return RestoreToEnv(R_LoadFromFile(fp, 0), aenv);
-}
-
-void attribute_hidden R_XDREncodeDouble(double d, void *buf)
-{
-    XDR xdrs;
-    int success;
-
-    xdrmem_create(&xdrs, (char *) buf, R_XDR_DOUBLE_SIZE, XDR_ENCODE);
-    success = xdr_double(&xdrs, &d);
-    /* xdr_destroy(&xdrs); */
-    if (! success)
-	error(_("XDR write failed"));
-}
-
-double attribute_hidden R_XDRDecodeDouble(void *buf)
-{
-    XDR xdrs;
-    double d;
-    int success;
-
-    xdrmem_create(&xdrs, (char *) buf, R_XDR_DOUBLE_SIZE, XDR_DECODE);
-    success = xdr_double(&xdrs, &d);
-    /* xdr_destroy(&xdrs); */
-    if (! success)
-	error(_("XDR read failed"));
-    return d;
-}
-
-void attribute_hidden R_XDREncodeInteger(int i, void *buf)
-{
-#if 0
-
-    XDR xdrs;
-    int success;
-
-    xdrmem_create(&xdrs, (char *) buf, R_XDR_INTEGER_SIZE, XDR_ENCODE);
-    success = /* xdr_int(&xdrs, &i) */ XDR_PUTLONG (&xdrs, (int32_t*) &i);
-    /* xdr_destroy(&xdrs); */
-    if (! success)
-	error(_("XDR write failed"));
-
-#else
-
-    ((signed char *)buf)[0] = i >> 24;
-    ((unsigned char *)buf)[1] = (i >> 16) & 0xff;
-    ((unsigned char *)buf)[2] = (i >> 8) & 0xff;
-    ((unsigned char *)buf)[3] = i & 0xff;
-
-#endif
-}
-
-int attribute_hidden R_XDRDecodeInteger(void *buf)
-{
-#if 0
-
-    XDR xdrs;
-    int i, success;
-
-    xdrmem_create(&xdrs, (char *) buf, R_XDR_INTEGER_SIZE, XDR_DECODE);
-    success = /* xdr_int(&xdrs, &i) */ XDR_GETLONG (&xdrs, (int32_t*) &i);
-    /* xdr_destroy(&xdrs); */
-    if (! success)
-	error(_("XDR read failed"));
-    return i;
-
-#else
-
-    return (int)(((signed char *)buf)[0] << 24) +
-           (int)(((unsigned char *)buf)[1] << 16) +
-           (int)(((unsigned char *)buf)[2] << 8) +
-           (int)(((unsigned char *)buf)[3]);
-
-#endif
 }
 
 /* Next two were used in gnomeGUI package, are in Rinterface.h  */
