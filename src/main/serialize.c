@@ -105,8 +105,9 @@
    CHARSXPs are now handled in a way that preserves both embedded null
    characters and NA_STRING values.
 
-   The XDR save format now only uses the in-memory xdr facility for
-   converting integers and doubles to a portable format.
+   The "XDR" save format no longer uses the XDR routines, which are
+   slow and cumbersome.  Conversion to big-endian representation is
+   accomplished with routines in this module.
 
    The output format packs the type flag and other flags into a single
    integer.  This produces more compact output for code; it has little
@@ -208,6 +209,83 @@ static int Rsnprintf(char *buf, int size, const char *format, ...)
 }
 
 
+/* HANDLE XDR ENCODE/DECODE FOR BOTH BIG AND LITTLE ENDIAN MACHINES.
+
+   The "XDR" format is big-endian, but most processors are now little-endian.
+
+   For recent Intel/AMD processors and recent versions of gcc, the four
+   functions below may each compile to a single bswap or movbe instruction. */
+
+static inline void encode_integer(int i, void *buf)
+{
+    ((signed char *)buf)[0] = i >> 24;
+    ((unsigned char *)buf)[1] = (i >> 16) & 0xff;
+    ((unsigned char *)buf)[2] = (i >> 8) & 0xff;
+    ((unsigned char *)buf)[3] = i & 0xff;
+}
+
+static inline void encode_double(double d, void *buf)
+{
+    uint64_t u;
+    memcpy(&u,&d,8);
+
+    ((unsigned char *)buf)[0] = (u >> 56) & 0xff;
+    ((unsigned char *)buf)[1] = (u >> 48) & 0xff;
+    ((unsigned char *)buf)[2] = (u >> 40) & 0xff;
+    ((unsigned char *)buf)[3] = (u >> 32) & 0xff;
+    ((unsigned char *)buf)[4] = (u >> 24) & 0xff;
+    ((unsigned char *)buf)[5] = (u >> 16) & 0xff;
+    ((unsigned char *)buf)[6] = (u >> 8) & 0xff;
+    ((unsigned char *)buf)[7] = u & 0xff;
+}
+
+static inline int decode_integer(void *buf)
+{
+    return ((int)(((signed char *)buf)[0]) << 24) |
+           ((int)(((unsigned char *)buf)[1]) << 16) |
+           ((int)(((unsigned char *)buf)[2]) << 8) |
+           (int)(((unsigned char *)buf)[3]);
+}
+
+static inline double decode_double(void *buf)
+{
+    uint64_t u = ((uint64_t)(((unsigned char *)buf)[0]) << 56) |
+                 ((uint64_t)(((unsigned char *)buf)[1]) << 48) |
+                 ((uint64_t)(((unsigned char *)buf)[2]) << 40) |
+                 ((uint64_t)(((unsigned char *)buf)[3]) << 32) |
+                 ((uint64_t)(((unsigned char *)buf)[4]) << 24) |
+                 ((uint64_t)(((unsigned char *)buf)[5]) << 16) |
+                 ((uint64_t)(((unsigned char *)buf)[6]) << 8) |
+                 (uint64_t)(((unsigned char *)buf)[7]);
+    double d;
+
+    memcpy(&d,&u,8);
+    return d;
+}
+
+static attribute_noinline void encode_doubles (double *d, int n, void *buf)
+{
+    double *p = (double *) buf;
+    int i;
+    for (i = 0; i < n; i++) {
+        encode_double (*d, (void *)p);
+        p += 1;
+        d += 1;
+    }
+}
+
+static attribute_noinline void decode_doubles (double *d, int n, void *buf)
+{
+    double *p = (double *) buf;
+    int i;
+    for (i = 0; i < n; i++) {
+        *d = decode_double ((void *)p);
+        p += 1;
+        d += 1;
+    }
+}
+
+
 /* SIZE OF BUFFERS USED BY INPUT/OUTPUT ROUTINES. */
 
 #define CHUNK_SIZE 1024
@@ -230,11 +308,11 @@ static attribute_noinline void OutInteger (struct outpar *par, int i)
 	stream->OutBytes(stream, buf, strlen(buf));
 	break;
     case R_pstream_binary_format:
-	stream->OutBytes(stream, &i, sizeof(int));
+	stream->OutBytes(stream, &i, sizeof (int));
 	break;
     case R_pstream_xdr_format:
-	R_XDREncodeInteger(i, buf);
-	stream->OutBytes(stream, buf, R_XDR_INTEGER_SIZE);
+	encode_integer(i, buf);
+	stream->OutBytes(stream, buf, sizeof (int));
 	break;
     default:
 	error(_("unknown or inappropriate output format"));
@@ -262,11 +340,11 @@ static attribute_noinline void OutReal (struct outpar *par, double d)
 	stream->OutBytes(stream, buf, strlen(buf));
 	break;
     case R_pstream_binary_format:
-	stream->OutBytes(stream, &d, sizeof(double));
+	stream->OutBytes(stream, &d, sizeof (double));
 	break;
     case R_pstream_xdr_format:
-	R_XDREncodeDouble(d, buf);
-	stream->OutBytes(stream, buf, R_XDR_DOUBLE_SIZE);
+	encode_double (d, buf);
+	stream->OutBytes(stream, buf, sizeof (double));
 	break;
     default:
 	error(_("unknown or inappropriate output format"));
@@ -363,7 +441,7 @@ static void InWord (R_inpstream_t stream, char *word, int size)
 
 static char word[100];  /* used in InInteger and InReal */
 
-static int InInteger (struct inpar *par)
+static attribute_noinline int InInteger (struct inpar *par)
 {
     R_inpstream_t stream = par->stream;
     char *buf = par->buf;
@@ -380,17 +458,17 @@ static int InInteger (struct inpar *par)
 	    sscanf(word, "%d", &i);
 	return i;
     case R_pstream_binary_format:
-	stream->InBytes(stream, &i, sizeof(int));
+	stream->InBytes(stream, &i, sizeof (int));
 	return i;
     case R_pstream_xdr_format:
-	stream->InBytes(stream, buf, R_XDR_INTEGER_SIZE);
-	return R_XDRDecodeInteger(buf);
+	stream->InBytes(stream, buf, sizeof (int));
+	return decode_integer(buf);
     default:
 	return NA_INTEGER;
     }
 }
 
-static double InReal (struct inpar *par)
+static attribute_noinline double InReal (struct inpar *par)
 {
     R_inpstream_t stream = par->stream;
     char *buf = par->buf;
@@ -411,11 +489,11 @@ static double InReal (struct inpar *par)
 	    sscanf(word, "%lg", &d);
 	return d;
     case R_pstream_binary_format:
-	stream->InBytes(stream, &d, sizeof(double));
+	stream->InBytes(stream, &d, sizeof (double));
 	return d;
     case R_pstream_xdr_format:
-	stream->InBytes(stream, buf, R_XDR_DOUBLE_SIZE);
-	return R_XDRDecodeDouble(buf);
+	stream->InBytes(stream, buf, sizeof (double));
+	return decode_double (buf);
     default:
 	return NA_REAL;
     }
@@ -461,7 +539,7 @@ static R_INLINE void UngetChar(R_instring_stream_t s, int c)
 }
 
 
-static void InString (R_inpstream_t stream, char *buf, int length)
+static attribute_noinline void InString (R_inpstream_t stream, char *buf, int length)
 {
     if (stream->type == R_pstream_ascii_format) {
 	if (length > 0) {
@@ -824,9 +902,6 @@ static attribute_noinline void OutStringVec (struct outpar *par, SEXP s)
 	WriteItem (par, STRING_ELT(s, i));
 }
 
-#include <rpc/types.h>
-#include <rpc/xdr.h>
-
 #define min2(a, b) ((a) < (b)) ? (a) : (b)
 
 /* length will need to be another type to allow longer vectors */
@@ -841,15 +916,11 @@ static attribute_noinline void OutIntegerVec (struct outpar *par, SEXP s)
     switch (stream->type) {
     case R_pstream_xdr_format:
     {
-	int done, this; /* and done */
-	XDR xdrs;
+	int done, this;
 	for (done = 0; done < length; done += this) {
 	    this = min2(CHUNK_SIZE, length - done);
-	    xdrmem_create(&xdrs, buf, this * sizeof(int), XDR_ENCODE);
-	    for(int cnt = 0; cnt < this; cnt++)
-		if(!xdr_int(&xdrs, INTEGER(s) + done + cnt))
-		    error(_("XDR write failed"));
-	    /* xdr_destroy(&xdrs); */
+	    for (int cnt = 0; cnt < this; cnt++)
+                encode_integer (INTEGER(s)[done+cnt], buf + sizeof(int) * cnt);
 	    stream->OutBytes(stream, buf, sizeof(int) * this);
 	}
 	break;
@@ -882,14 +953,9 @@ static attribute_noinline void OutRealVec (struct outpar *par, SEXP s)
     case R_pstream_xdr_format:
     {
 	int done, this;
-	XDR xdrs;
         for (done = 0; done < length; done += this) {
 	    this = min2(CHUNK_SIZE, length - done);
-	    xdrmem_create(&xdrs, buf, this * sizeof(double), XDR_ENCODE);
-	    for(int cnt = 0; cnt < this; cnt++)
-		if(!xdr_double(&xdrs, REAL(s) + done + cnt))
-		    error(_("XDR write failed"));
-	    /* xdr_destroy(&xdrs); */
+            encode_doubles (REAL(s)+done, this, buf);
 	    stream->OutBytes(stream, buf, sizeof(double) * this);
 	}
 	break;
@@ -921,18 +987,11 @@ static attribute_noinline void OutComplexVec (struct outpar *par, SEXP s)
     case R_pstream_xdr_format:
     {
 	int done, this;
-	XDR xdrs;
 	Rcomplex *c = COMPLEX(s);
         for (done = 0; done < length; done += this) {
 	    this = min2(CHUNK_SIZE, length - done);
-	    xdrmem_create(&xdrs, buf, this * sizeof(Rcomplex), XDR_ENCODE);
-	    for(int cnt = 0; cnt < this; cnt++) {
-		if(!xdr_double(&xdrs, &(c[done+cnt].r)) ||
-		   !xdr_double(&xdrs, &(c[done+cnt].i))) 
-		    error(_("XDR write failed"));
-	    }
+            encode_doubles ((double*)(COMPLEX(s)+done), 2*this, buf);
 	    stream->OutBytes(stream, buf, sizeof(Rcomplex) * this);
-	    /* xdr_destroy(&xdrs); */
 	}
 	break;
     }
@@ -1393,7 +1452,7 @@ static R_INLINE void AddReadRef(SEXP table, SEXP value)
     SET_VECTOR_ELT(data, count - 1, value);
 }
 
-static SEXP InStringVec (struct inpar *par)
+static attribute_noinline SEXP InStringVec (struct inpar *par)
 {
     R_inpstream_t stream = par->stream;
     SEXP ref_table = par->ref_table;
@@ -1442,7 +1501,7 @@ static attribute_noinline SEXP InCharSXP (struct inpar *par, int levs)
 }
 
 /* length, done could be a longer type */
-static void InIntegerVec (struct inpar *par, SEXP obj, int length)
+static  attribute_noinline void InIntegerVec (struct inpar *par, SEXP obj, int length)
 {
     R_inpstream_t stream = par->stream;
     char *buf = par->buf;
@@ -1451,15 +1510,11 @@ static void InIntegerVec (struct inpar *par, SEXP obj, int length)
     case R_pstream_xdr_format:
     {
 	int done, this;
-	XDR xdrs;
         for (done = 0; done < length; done += this) {
 	    this = min2(CHUNK_SIZE, length - done);
 	    stream->InBytes(stream, buf, sizeof(int) * this);
-	    xdrmem_create(&xdrs, buf, this * sizeof(int), XDR_DECODE);
-	    for(int cnt = 0; cnt < this; cnt++)
-		if(!xdr_int(&xdrs, INTEGER(obj) + done + cnt))
-		    error(_("XDR read failed"));
-	    /* xdr_destroy(&xdrs); */
+	    for (int cnt = 0; cnt < this; cnt++)
+                INTEGER(obj)[done+cnt] = decode_integer(buf + sizeof(int)*cnt);
 	}
 	break;
     }
@@ -1478,7 +1533,7 @@ static void InIntegerVec (struct inpar *par, SEXP obj, int length)
     }
 }
 
-static void InRealVec (struct inpar *par, SEXP obj, int length)
+static attribute_noinline void InRealVec (struct inpar *par, SEXP obj, int length)
 {
     R_inpstream_t stream = par->stream;
     char *buf = par->buf;
@@ -1487,15 +1542,10 @@ static void InRealVec (struct inpar *par, SEXP obj, int length)
     case R_pstream_xdr_format:
     {
 	int done, this;
-	XDR xdrs;
         for (done = 0; done < length; done += this) {
 	    this = min2(CHUNK_SIZE, length - done);
 	    stream->InBytes(stream, buf, sizeof(double) * this);
-	    xdrmem_create(&xdrs, buf, this * sizeof(double), XDR_DECODE);
-	    for(int cnt = 0; cnt < this; cnt++)
-		if(!xdr_double(&xdrs, REAL(obj) + done + cnt))
-		    error(_("XDR read failed"));
-	    /* xdr_destroy(&xdrs); */
+            decode_doubles (REAL(obj)+done, this, buf);
 	}
 	break;
     }
@@ -1514,7 +1564,7 @@ static void InRealVec (struct inpar *par, SEXP obj, int length)
     }
 }
 
-static void InComplexVec (struct inpar *par, SEXP obj, int length)
+static attribute_noinline void InComplexVec (struct inpar *par, SEXP obj, int length)
 {
     R_inpstream_t stream = par->stream;
     char *buf = par->buf;
@@ -1523,18 +1573,11 @@ static void InComplexVec (struct inpar *par, SEXP obj, int length)
     case R_pstream_xdr_format:
     {
 	int done, this;
-	XDR xdrs;
 	Rcomplex *output = COMPLEX(obj);
 	for (done = 0; done < length; done += this) {
 	    this = min2(CHUNK_SIZE, length - done);
 	    stream->InBytes(stream, buf, sizeof(Rcomplex) * this);
-	    xdrmem_create(&xdrs, buf, this * sizeof(Rcomplex), XDR_DECODE);
-	    for(int cnt = 0; cnt < this; cnt++) {
-		if(!xdr_double(&xdrs, &(output[done+cnt].r)) ||
-		   !xdr_double(&xdrs, &(output[done+cnt].i)))
-		    error(_("XDR read failed"));
-	    }
-	    /* xdr_destroy(&xdrs); */
+            decode_doubles ((double*)(COMPLEX(obj)+done), 2*this, buf);
 	}
 	break;
     }

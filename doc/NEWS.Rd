@@ -146,6 +146,10 @@
         \code{substring} has also been sped up for long strings.
   \item Conversion of integer, double, and logical values to strings,
         and vice versa, has been sped up, in some cases enormously.
+  \item The \code{serialize} and \code{unserialize} functions have been
+        sped up, particularly when the default "XDR" format is used.
+        The old, slow, and cumbersome XDR routines written by Sun are
+        no longer used.
   \item From R-3.0.0 (with further pqR improvements): 
         The \code{@<-} operator is now implemented as a primitive, which should
         reduce some copying of objects when used.  Note that the operator
