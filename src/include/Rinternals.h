@@ -2044,15 +2044,6 @@ R_NORETURN void Rf_errorcall(SEXP, const char *, ...);
 void Rf_warningcall(SEXP, const char *, ...);
 void Rf_warningcall_immediate(SEXP, const char *, ...);
 
-/* Save/Load Interface */
-#define R_XDR_DOUBLE_SIZE 8
-#define R_XDR_INTEGER_SIZE 4
-
-void R_XDREncodeDouble(double d, void *buf);
-double R_XDRDecodeDouble(void *buf);
-void R_XDREncodeInteger(int i, void *buf);
-int R_XDRDecodeInteger(void *buf);
-
 typedef void *R_pstream_data_t;
 
 typedef enum {

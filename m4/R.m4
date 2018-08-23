@@ -2926,46 +2926,6 @@ LIBS="${acx_lapack_save_LIBS}"
 AC_SUBST(LAPACK_LIBS)
 ])# R_LAPACK_LIBS
 
-## R_XDR
-## -----
-## Try finding XDR library functions and headers.
-## FreeBSD in particular needs rpc/types.h before rpc/xdr.h.
-AC_DEFUN([R_XDR],
-[AC_CHECK_HEADER(rpc/types.h)
-if test "${ac_cv_header_rpc_types_h}" = yes ; then
-  AC_CHECK_HEADER(rpc/xdr.h, , , [#include <rpc/types.h>])
-fi
-if test "${ac_cv_header_rpc_types_h}" = yes && \
-   test "${ac_cv_header_rpc_xdr_h}" = yes && \
-   test "${ac_cv_search_xdr_string}" != no ; then
-  r_xdr=yes
-else
-  r_xdr=no
-fi
-TIRPC_CPPFLAGS=
-if test "${r_xdr}" = no ; then
-  ## No RPC headers, so try for TI-RPC headers: need /usr/include/tirpc
-  ## on include path to find /usr/include/tirpc/netconfig.h
-  save_CPPFLAGS=${CPPFLAGS}
-  CPPFLAGS="${CPPFLAGS} -I/usr/include/tirpc"
-  AC_CHECK_HEADER(tirpc/rpc/types.h)
-  if test "${ac_cv_header_tirpc_rpc_types_h}" = yes ; then
-    AC_CHECK_HEADER(tirpc/rpc/xdr.h, , , [#include <tirpc/rpc/types.h>])
-  fi
-  if test "${ac_cv_header_tirpc_rpc_types_h}" = yes && \
-       test "${ac_cv_header_tirpc_rpc_xdr_h}" = yes &&
-       test "${ac_cv_search_xdr_string}" != no ; then
-    TIRPC_CPPFLAGS=-I/usr/include/tirpc
-    r_xdr=yes
-  fi
-  CPPFLAGS="${save_CPPFLAGS}"
-fi
-AC_MSG_CHECKING([for XDR support])
-AC_MSG_RESULT([${r_xdr}])
-AM_CONDITIONAL(BUILD_XDR, [test "x${r_xdr}" = xno])
-AC_SUBST(TIRPC_CPPFLAGS)
-])# R_XDR
-
 ## R_ZLIB
 ## ------
 ## Try finding zlib library and headers.
