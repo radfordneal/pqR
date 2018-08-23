@@ -2263,9 +2263,6 @@ R_BSD_NETWORKING
 ## Bitmap headers and libraries.
 R_BITMAPS
 
-## XDR headers and library routines.
-R_XDR
-
 ## zlib headers and libraries.
 R_ZLIB
 
@@ -2680,7 +2677,6 @@ AC_CONFIG_FILES(
   src/extra/intl/Makefile
   src/extra/pcre/Makefile
   src/extra/tre/Makefile
-  src/extra/xdr/Makefile
   src/extra/xz/Makefile
   src/extra/zlib/Makefile
   src/extra/matprod/Makefile

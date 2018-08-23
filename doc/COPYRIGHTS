@@ -298,14 +298,6 @@ src/modules/lapack/dlapack[0123].f, cmplx.f, dlamc.f
 
   although no actual copyright statement appears in the code.
 
-
-src/extra/xdr/*
-
-	Copyright (undated) Sun Microsystems, Inc.
-
-	See the file src/extra/xdr/copyrght.txt
-
-
 src/extra/zlib/README, *.c, *.h
 
   Taken from zlib-1.2.8 (C) 1995-2013 Jean-loup Gailly and Mark Adler
