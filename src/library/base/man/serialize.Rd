@@ -25,8 +25,10 @@ unserialize(connection, refhook = NULL)
     written; otherwise binary one.  The default is \code{TRUE} for a
     text-mode connection and \code{FALSE} otherwise.
     See also the comments in the help for \code{\link{save}}.}
-  \item{xdr}{a logical: if a binary representation is used, should a
-    big-endian one (XDR) be used?}
+  \item{xdr}{a logical: If \code{TRUE}, when a binary representation is 
+    used, data is written in big-endian (XDR) format, regardless of the
+    platform's native byte order.  The data can then be read back 
+    on a platform with either byte-order.}
   \item{version}{the workspace format version to use.  \code{NULL}
     specifies the current default version (2).  Versions prior to 2 are not
     supported, so this will only be relevant when there are later versions.}
@@ -63,17 +65,18 @@ unserialize(connection, refhook = NULL)
   to \code{TRUE}: only ASCII representations can be written to text-mode
   connections and attempting to use \code{ascii = FALSE} will throw an
   error.
-  
-  The format consists of a single line followed by the data: the first
-  line contains a single character: \code{X} for binary serialization
-  and \code{A} for ASCII serialization, followed by a new line.  (The
-  format used is identical to that used by \code{\link{readRDS}}.)
 
-  The option of \code{xdr = FALSE} was introduced in \R 2.15.0.  As
+  The option of \code{xdr = FALSE} was introduced in \R 2.15.0; it allows
+  for binary data to be written in the platform's native byte-order.  As
   almost all systems in current use are little-endian, this can be used
   to avoid byte-shuffling at both ends when transferring data from one
-  little-endian machine to another.  Depending on the system, this can
-  speed up serialization and unserialization by a factor of up to 3x.
+  little-endian machine to another.  The speed gain is small, however.
+  
+  The format consists of a single line followed by the data: the first
+  line contains a single character: \code{X} for binary XDR serialization,
+  \code{A} for ASCII serialization, or \code{B} for native byte-order
+  binary serialization.  This is followed by a new line.  (The
+  format used is identical to that used by \code{\link{readRDS}}.)
 }
 \section{Warning}{
   These functions have provided a stable interface since \R 2.4.0 (when
