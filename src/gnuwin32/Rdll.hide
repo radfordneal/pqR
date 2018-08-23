@@ -186,10 +186,6 @@
  R_WarnLength
  R_Warnings
  R_WholeSrcrefSymbol
- R_XDRDecodeDouble
- R_XDRDecodeInteger
- R_XDREncodeDouble
- R_XDREncodeInteger
  R_Zero_Hack
  R_binary
  R_check_locale
@@ -1171,25 +1167,6 @@
  xbufdel
  xbufgrow
  xcalloc_impl
- xdr_bool
- xdr_bytes
- xdr_char
- xdr_enum
- xdr_free
- xdr_int
- xdr_long
- xdr_netobj
- xdr_opaque
- xdr_short
- xdr_string
- xdr_u_char
- xdr_u_int
- xdr_u_long
- xdr_u_short
- xdr_union
- xdr_void
- xdr_wrapstring
- xdrstdio_create
  xfree_impl
  xmalloc_configure
  xmalloc_current
