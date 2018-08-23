@@ -211,17 +211,23 @@ static int Rsnprintf(char *buf, int size, const char *format, ...)
 
 /* HANDLE XDR ENCODE/DECODE FOR BOTH BIG AND LITTLE ENDIAN MACHINES.
 
-   The "XDR" format is big-endian, but most processors are now little-endian.
-
-   For recent Intel/AMD processors and recent versions of gcc, the four
-   functions below may each compile to a single bswap or movbe instruction. */
+   The "XDR" format is big-endian, but most processors are now little-endian. 
+   Handles both below, but may not work for more bizarre mixed-endian machines.
+*/
 
 static inline void encode_integer(int i, void *buf)
 {
-    ((signed char *)buf)[0] = i >> 24;
-    ((unsigned char *)buf)[1] = (i >> 16) & 0xff;
-    ((unsigned char *)buf)[2] = (i >> 8) & 0xff;
-    ((unsigned char *)buf)[3] = i & 0xff;
+#   if __GNUC__ 
+#       if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
+            i = __builtin_bswap32(i);
+#       endif
+        memcpy(buf,&i,sizeof(int));
+#   else
+        ((signed char *)buf)[0] = i >> 24;
+        ((unsigned char *)buf)[1] = (i >> 16) & 0xff;
+        ((unsigned char *)buf)[2] = (i >> 8) & 0xff;
+        ((unsigned char *)buf)[3] = i & 0xff;
+#   endif
 }
 
 static inline void encode_double(double d, void *buf)
@@ -229,36 +235,63 @@ static inline void encode_double(double d, void *buf)
     uint64_t u;
     memcpy(&u,&d,8);
 
-    ((unsigned char *)buf)[0] = (u >> 56) & 0xff;
-    ((unsigned char *)buf)[1] = (u >> 48) & 0xff;
-    ((unsigned char *)buf)[2] = (u >> 40) & 0xff;
-    ((unsigned char *)buf)[3] = (u >> 32) & 0xff;
-    ((unsigned char *)buf)[4] = (u >> 24) & 0xff;
-    ((unsigned char *)buf)[5] = (u >> 16) & 0xff;
-    ((unsigned char *)buf)[6] = (u >> 8) & 0xff;
-    ((unsigned char *)buf)[7] = u & 0xff;
+#   if __GNUC__ 
+#       if __FLOAT_WORD_ORDER == __ORDER_LITTLE_ENDIAN__
+            u = __builtin_bswap64(u);
+#       endif
+        memcpy(buf,&u,sizeof(double));
+#   else
+        ((unsigned char *)buf)[0] = (u >> 56) & 0xff;
+        ((unsigned char *)buf)[1] = (u >> 48) & 0xff;
+        ((unsigned char *)buf)[2] = (u >> 40) & 0xff;
+        ((unsigned char *)buf)[3] = (u >> 32) & 0xff;
+        ((unsigned char *)buf)[4] = (u >> 24) & 0xff;
+        ((unsigned char *)buf)[5] = (u >> 16) & 0xff;
+        ((unsigned char *)buf)[6] = (u >> 8) & 0xff;
+        ((unsigned char *)buf)[7] = u & 0xff;
+#   endif
 }
 
 static inline int decode_integer(void *buf)
 {
-    return ((int)(((signed char *)buf)[0]) << 24) |
-           ((int)(((unsigned char *)buf)[1]) << 16) |
-           ((int)(((unsigned char *)buf)[2]) << 8) |
-           (int)(((unsigned char *)buf)[3]);
+    int i;
+
+#   if __GNUC__ 
+        memcpy(&i,buf,sizeof(int));
+#       if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
+            i = __builtin_bswap32(i);
+#       endif
+#   else
+        i = ((int)(((signed char *)buf)[0]) << 24) |
+            ((int)(((unsigned char *)buf)[1]) << 16) |
+            ((int)(((unsigned char *)buf)[2]) << 8) |
+            (int)(((unsigned char *)buf)[3]);
+#   endif
+
+    return i;
 }
 
 static inline double decode_double(void *buf)
 {
-    uint64_t u = ((uint64_t)(((unsigned char *)buf)[0]) << 56) |
-                 ((uint64_t)(((unsigned char *)buf)[1]) << 48) |
-                 ((uint64_t)(((unsigned char *)buf)[2]) << 40) |
-                 ((uint64_t)(((unsigned char *)buf)[3]) << 32) |
-                 ((uint64_t)(((unsigned char *)buf)[4]) << 24) |
-                 ((uint64_t)(((unsigned char *)buf)[5]) << 16) |
-                 ((uint64_t)(((unsigned char *)buf)[6]) << 8) |
-                 (uint64_t)(((unsigned char *)buf)[7]);
-    double d;
+    uint64_t u;
 
+#   if __GNUC__
+        memcpy(&u,buf,sizeof(double));
+#       if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
+            u = __builtin_bswap64(u);
+#       endif
+#   else
+        u = ((uint64_t)(((unsigned char *)buf)[0]) << 56) |
+            ((uint64_t)(((unsigned char *)buf)[1]) << 48) |
+            ((uint64_t)(((unsigned char *)buf)[2]) << 40) |
+            ((uint64_t)(((unsigned char *)buf)[3]) << 32) |
+            ((uint64_t)(((unsigned char *)buf)[4]) << 24) |
+            ((uint64_t)(((unsigned char *)buf)[5]) << 16) |
+            ((uint64_t)(((unsigned char *)buf)[6]) << 8) |
+            (uint64_t)(((unsigned char *)buf)[7]);
+#   endif
+
+    double d;
     memcpy(&d,&u,8);
     return d;
 }

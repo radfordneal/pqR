@@ -154,7 +154,8 @@
   \item The \code{serialize} and \code{unserialize} functions have been
         sped up, particularly when the default "XDR" format is used.
         The old, slow, and cumbersome XDR routines written by Sun are
-        no longer used.
+        no longer used. The advantage of using the \code{xdr=FALSE}
+        option to \code{serialize} is now quite small.
   \item From R-3.0.0 (with further pqR improvements): 
         The \code{@<-} operator is now implemented as a primitive, which should
         reduce some copying of objects when used.  Note that the operator
