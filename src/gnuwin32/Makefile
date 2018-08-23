@@ -81,7 +81,7 @@ ifeq "$(WIN)" "32"
  OBJS += e_pow.o
 endif
 MAINLIBS = ../main/libmain.a ../appl/libappl.a ../nmath/libnmath.a
-EXTRALIBS = getline/gl.a ../extra/xdr/libxdr.a \
+EXTRALIBS = getline/gl.a \
    ../extra/pcre/libpcre.a ../extra/bzip2/libbz2.a \
    ../extra/intl/libintl.a ../extra/trio/libtrio.a ../extra/tzone/libtz.a \
    ../extra/tre/libtre.a ../extra/xz/liblzma.a \
@@ -123,7 +123,7 @@ rlibs:
 	$(MK) -C ../nmath CFLAGS='$(CFLAGS)' FFLAGS='${FFLAGS}' -f Makefile.win
 	$(MK) -C ../main CFLAGS='$(CFLAGS)' FFLAGS='$(FFLAGS)' malloc-DEFS='$(malloc-DEFS)' -f Makefile.win
 	$(MK) -C ./getline CFLAGS='$(CFLAGS)'
-	@for ex in graphapp pcre bzip2 zlib xdr tre trio \
+	@for ex in graphapp pcre bzip2 zlib tre trio \
                    helpers matprod sggc lphash tzone win_iconv xz; do \
 	  $(MK) -C ../extra/$${ex} CFLAGS='$(CFLAGS)' -f Makefile.win || exit 1; \
 	done
@@ -254,7 +254,7 @@ PKGDIR=../library
 pkgclean-%:
 	@(cd $(PKGDIR)/$*/src; rm -f *.d *.o *.dll *_res.rc Makedeps)
 
-EXTRA_DIRS = blas bzip2 graphapp intl pcre tre trio tzone xdr xz win_iconv zlib
+EXTRA_DIRS = blas bzip2 graphapp intl pcre tre trio tzone xz win_iconv zlib
 
 clean: cleanwin
 	@$(MAKE) -C ../library -f Makefile.win clean
