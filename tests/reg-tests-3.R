@@ -118,3 +118,11 @@ if(suppressMessages(require("Matrix"))) {
 contr.sum(4)
 contr.helmert(4)
 contr.sum(2) # needed drop=FALSE at one point.
+
+
+## Check correct serialize output, and correct unserialization.
+
+a <- serialize(quote(0x12345678L+0.1),NULL)
+print(a[-(7:10)])  # eliminate R version number
+print(unserialize(a))
+print(0x12345678L)
