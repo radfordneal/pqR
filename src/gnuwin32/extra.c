@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2015 by Radford M. Neal
+ *  Copyright (C) 2015, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  * 
@@ -722,7 +722,7 @@ struct mallinfo {
 };
 extern R_size_t R_max_memory;
 
-struct mallinfo mallinfo(void);
+struct mallinfo dlmallinfo(void);
 #endif
 
 SEXP do_memsize(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -757,9 +757,9 @@ SEXP do_memsize(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(maxmem == NA_LOGICAL)
 	REAL(ans)[0] = R_max_memory;
     else if(maxmem)
-	REAL(ans)[0] = mallinfo().usmblks;
+	REAL(ans)[0] = dlmallinfo().usmblks;
     else
-	REAL(ans)[0] = mallinfo().uordblks;
+	REAL(ans)[0] = dlmallinfo().uordblks;
     REAL(ans)[0] /= 1048576.0;
 #else
     REAL(ans)[0] = NA_REAL;
