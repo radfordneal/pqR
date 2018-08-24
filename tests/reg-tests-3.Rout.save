@@ -733,3 +733,16 @@ b . 1
 1    1
 2   -1
 > 
+> 
+> ## Check correct serialize output, and correct unserialization.
+> 
+> a <- serialize(quote(0x12345678L+0.1),NULL)
+> print(a[-(7:10)])  # eliminate R version number
+ [1] 58 0a 00 00 00 02 00 02 03 00 00 00 00 06 00 00 00 01 00 04 00 09 00 00 00
+[26] 01 2b 00 00 00 02 00 00 00 0d 00 00 00 01 12 34 56 78 00 00 00 02 00 00 00
+[51] 0e 00 00 00 01 3f b9 99 99 99 99 99 9a 00 00 00 fe
+> print(unserialize(a))
+305419896L + 0.1
+> print(0x12345678L)
+[1] 305419896
+>

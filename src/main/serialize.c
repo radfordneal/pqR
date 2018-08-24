@@ -217,8 +217,8 @@ static int Rsnprintf(char *buf, int size, const char *format, ...)
 
 static inline void encode_integer(int i, void *buf)
 {
-#   if __GNUC__ 
-#       if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
+#   if __GNUC__ && defined(__BYTE_ORDER__)
+#       if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
             i = __builtin_bswap32(i);
 #       endif
         memcpy(buf,&i,sizeof(int));
@@ -235,8 +235,8 @@ static inline void encode_double(double d, void *buf)
     uint64_t u;
     memcpy(&u,&d,8);
 
-#   if __GNUC__ 
-#       if __FLOAT_WORD_ORDER == __ORDER_LITTLE_ENDIAN__
+#   if __GNUC__ && defined(__FLOAT_WORD_ORDER__)
+#       if __FLOAT_WORD_ORDER__ == __ORDER_LITTLE_ENDIAN__
             u = __builtin_bswap64(u);
 #       endif
         memcpy(buf,&u,sizeof(double));
@@ -256,9 +256,9 @@ static inline int decode_integer(void *buf)
 {
     int i;
 
-#   if __GNUC__ 
+#   if __GNUC__ && defined(__BYTE_ORDER__)
         memcpy(&i,buf,sizeof(int));
-#       if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
+#       if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
             i = __builtin_bswap32(i);
 #       endif
 #   else
@@ -275,9 +275,9 @@ static inline double decode_double(void *buf)
 {
     uint64_t u;
 
-#   if __GNUC__
+#   if __GNUC__ && defined(__FLOAT_WORD_ORDER__)
         memcpy(&u,buf,sizeof(double));
-#       if __BYTE_ORDER == __ORDER_LITTLE_ENDIAN__
+#       if __FLOAT_WORD_ORDER__ == __ORDER_LITTLE_ENDIAN__
             u = __builtin_bswap64(u);
 #       endif
 #   else
