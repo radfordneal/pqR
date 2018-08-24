@@ -228,7 +228,8 @@
   \subsection{FEATURE CHANGES}{
   \itemize{
   \item The version of the \code{digest} package included as a recommended
-        package is now 0.6.15.
+        package is now 0.6.16 (with modified "Depends" to allow pqR, 
+        with modified version of 0.6.16-1).
   \item The \code{along}, \code{across}, and \code{down} forms of 
         the \code{for} statement (introduced in pqR-2016-06-24 and
         pqR-2016-10-05) now set the loop variable(s) to the
