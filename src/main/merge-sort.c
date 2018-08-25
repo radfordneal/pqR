@@ -109,7 +109,7 @@ static void merge_sort (merge_value *dst, merge_value *src, int n)
     }
     else if (n > 2) {
 
-        merge_sort (dst + n/2, src + n/2, (n+1)/2);
+        merge_sort (dst + n/2, src + n/2, n-n/2);
 
         if (n == 3) {
             if (!merge_greater (src[0], dst[1]))
@@ -131,7 +131,7 @@ static void merge_sort (merge_value *dst, merge_value *src, int n)
             merge_sort (src + n/2, src, n/2);
 
             int n1 = n/2;
-            int n2 = (n+1)/2;
+            int n2 = n-n1;
 
             merge_value *i1 = src + n1;
             merge_value *i2 = dst + n1;
@@ -142,7 +142,13 @@ static void merge_sort (merge_value *dst, merge_value *src, int n)
                     *j++ = *i2++;
                     n2 -= 1;
                     if (n2 == 0) {
-                        do { *j++ = *i1++; n1 -= 1; } while (n1 > 0);
+                        if (n1 <= 2) {
+                            *j = *i1;
+                            if (n1 == 2)
+                               *(j+1) = *(i1+1);
+                        }
+                        else
+                            memcpy (j, i1, n1*sizeof(merge_value));
                         break;
                     }
                 }
@@ -154,10 +160,13 @@ static void merge_sort (merge_value *dst, merge_value *src, int n)
                     /* Periodically check for a big block that can be copied.
                        This helps when the data is partially sorted already. */
 
-                    const int mask = 0x1f;
-                    if (n1 != 0 && (n1 & mask) == 0 
-                                && !merge_greater (*(i1+mask), *i2)) {
-                        do { *j++ = *i1++; n1 -= 1; } while (n1 & mask);
+#                   define blk 32  /* must be a power of two */
+                    if (n1 != 0 && (n1 & (blk-1)) == 0 
+                                && !merge_greater (*(i1+(blk-1)), *i2)) {
+                        memcpy (j, i1, blk*sizeof(merge_value));
+                        j += blk;
+                        i1 += blk;
+                        n1 -= blk;
                     }
 
                     if (n1 == 0) {
