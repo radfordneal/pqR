@@ -54,7 +54,7 @@ sort.int <-
             stop("'partial' sorting not supported by radix method")
         }
         if (index.return && is.na(na.last)) {
-            x <- x[!is.na(x)]
+            if (any(is.na(x))) x <- x[!is.na(x)]
             na.last <- TRUE
         }
         o <- order(x, na.last = na.last, decreasing = decreasing,
@@ -73,8 +73,10 @@ sort.int <-
     else if(!is.atomic(x))
         stop("'x' must be atomic")
 
-    if(has.na <- any(ina <- is.na(x))) {
-        nas <- x[ina]
+    has.na <- any(is.na(x))
+    if (has.na) {
+        ina <- is.na(x)
+        if (!is.na(na.last)) nas <- x[ina]
         x <-  x[!ina]
     }
 
@@ -120,7 +122,7 @@ sort.int <-
     }
 
     if (!is.na(na.last) && has.na)
-        y <- if(!na.last) c(nas, y) else c(y, nas)
+        y <- if (na.last) c(y, nas) else c(nas, y)
     if (isfact)
         y <- 
          (if (isord) ordered else factor) (y, levels=seq_len(nlev), labels=lev)
