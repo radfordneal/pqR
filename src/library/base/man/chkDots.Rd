@@ -21,7 +21,7 @@ chkDots(..., which.call = -1, allowed = character(0))
 }
 \author{Martin Maechler, first version outside base, June 2012.}
 \seealso{
-  \code{\link{warning}},  \code{\link{...}}.
+  \code{\link{warning}}}.
 }
 \examples{
 seq.default ## <- you will see  ' chkDots(...) '
