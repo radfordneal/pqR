@@ -42,7 +42,7 @@ sort.int <-
     if (method == "auto") {
         if (is.null(partial) 
              && (is.numeric(x) || is.factor(x) || is.logical(x)))
-            method <- if (length(x) < 200) "shell" else "radix"
+            method <- if (length(x) < 500) "shell" else "radix"
         else
             method <- "merge"
     }
