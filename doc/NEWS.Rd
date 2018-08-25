@@ -227,6 +227,9 @@
 
   \subsection{FEATURE CHANGES}{
   \itemize{
+  \item The versoin of the \code{boot} package included as a recommended
+        package is now 1.3-9, with slight tweaks for pqR, so version changed
+        to 1.3-9-1.
   \item The version of the \code{digest} package included as a recommended
         package is now 0.6.16 (with modified "Depends" to allow pqR, 
         with modified version of 0.6.16-1).
