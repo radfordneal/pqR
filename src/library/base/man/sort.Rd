@@ -60,7 +60,7 @@ sort.int(x, partial = NULL, na.last = NA, decreasing = FALSE,
 
   The \code{"auto"} method selects \code{"radix"} for numeric vectors,
   integer vectors, logical vectors, and factors, except that \code{"shell"}
-  is used for vector with length less than 200.  In other cases, method
+  is used for vectors with length less than 200.  In other cases, method
   \code{"merge"} is used.
   
   All methods except \code{"quick"} are stable, leaving the order unchanged
@@ -80,7 +80,7 @@ sort.int(x, partial = NULL, na.last = NA, decreasing = FALSE,
 
   Method \code{"shell"} uses Shellsort (an \eqn{O(n^{4/3})} variant from
   Sedgewick (1986)), which requires no auxiliary space, but is generally
-  slower than merge sort. 
+  slower than merge sort for long vectors.
 
   Method \code{"quick"} uses Singleton (1969)'s implementation of
   Hoare's Quicksort method and is only available when \code{x} is
@@ -100,12 +100,11 @@ sort.int(x, partial = NULL, na.last = NA, decreasing = FALSE,
   inputs (< 200), the implementation uses an insertion sort (O(n^2))
   that operates in-place to avoid the allocation overhead of the radix
   sort. For integer vectors of range less than 100,000, it switches to a
-  simpler and faster linear time counting sort. It is the default method
-  for integer vectors and factors.
+  simpler and faster linear time counting sort.
 
   The \code{"radix"} method generally outperforms the other methods,
-  especially for small integers and character vectors.  However,
-  If \code{x} is a character vector, all elements must share
+  especially for long vectors of small integers or character strings.
+  However, if \code{x} is a character vector, all elements must share
   the same encoding, only UTF-8 (including ASCII) and Latin-1
   encodings are supported, and collation always follows the "C" locale.
 
