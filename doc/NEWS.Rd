@@ -231,8 +231,9 @@
         package is now 1.3-9, with slight tweaks for pqR, so version changed
         to 1.3-9-1.
   \item The version of the \code{digest} package included as a recommended
-        package is now 0.6.16 (with modified "Depends" to allow pqR, 
-        with modified version of 0.6.16-1).
+        package is now 0.6.16, modified to fix a mis-aligned access issue
+        and with "Depends" changed to allow use by pqR, with the modified 
+        version called 0.6.16-1.
   \item The \code{along}, \code{across}, and \code{down} forms of 
         the \code{for} statement (introduced in pqR-2016-06-24 and
         pqR-2016-10-05) now set the loop variable(s) to the
