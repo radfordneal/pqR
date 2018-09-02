@@ -169,7 +169,7 @@ static SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
     else if (strncmp(type, "bytes", type_len) == 0)
         op_type = type_bytes;
     else if (strncmp(type, "width", type_len) == 0)
-        op_type = type_bytes;
+        op_type = type_width;
     else
         error(_("invalid '%s' argument"), "type");
 
