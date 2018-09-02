@@ -156,7 +156,7 @@ int Rf_initialize_R(int ac, char **av)
    Rf_initialize and merging their stack frames, thereby defeating the
    scheme. */
 
-int Rf_initialize_R1(int ac, char **av, void *stackstart)
+int attribute_noinline Rf_initialize_R1(int ac, char **av, void *stackstart)
 {
     int i, ioff = 1, j;
     Rboolean useX11 = TRUE, useTk = FALSE;

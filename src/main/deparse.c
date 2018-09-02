@@ -400,7 +400,7 @@ static SEXP do_dump(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(opts == NA_INTEGER || opts < 0 || opts > 256)
 	errorcall(call, _("'opts' should be small non-negative integer"));
     evaluate = asLogical(CAD4R(args));
-    if (evaluate==TRUE) opts |= DELAYPROMISES;
+    if (evaluate==FALSE) opts |= DELAYPROMISES;
     if (evaluate==NA_LOGICAL) opts |= CODEPROMISES;
 
     PROTECT(o = objs = allocList(nobjs));

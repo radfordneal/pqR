@@ -838,19 +838,26 @@ Rstd_ReadConsole(const char *prompt, unsigned char *buf, int len,
 		 int addtohistory)
 {
     if(!R_Interactive) {
+
 	int ll, err = 0;
+
 	if (!R_Slave) {
 	    fputs(prompt, stdout);
 	    fflush(stdout); /* make sure prompt is output */
 	}
-	if (fgets((char *)buf, len, ifp ? ifp: stdin) == NULL)
+
+	if (fgets((char *)buf, len, ifp ? ifp: stdin) == NULL) {
 	    return 0;
+        }
+
 	ll = strlen((char *)buf);
+
 	/* remove CR in CRLF ending */
 	if (ll >= 2 && buf[ll - 1] == '\n' && buf[ll - 2] == '\r') {
 	    buf[ll - 2] = '\n';
 	    buf[--ll] = '\0';
 	}
+
 	/* translate if necessary */
 	if(strlen(R_StdinEnc) && strcmp(R_StdinEnc, "native.enc")) {
 	    size_t res, inb = strlen((char *)buf), onb = len;
@@ -872,18 +879,22 @@ Rstd_ReadConsole(const char *prompt, unsigned char *buf, int len,
 			   R_StdinEnc);
 	    strncpy((char *)buf, obuf, len);
 	}
-/* according to system.txt, should be terminated in \n, so check this
-   at eof and error */
+
+	/* according to system.txt, should be terminated in \n, so check this
+	   at eof and error */
 	if ((err || feof(ifp ? ifp : stdin))
 	    && (ll == 0 || buf[ll - 1] != '\n') && ll < len) {
 	    buf[ll++] = '\n'; buf[ll] = '\0';
 	}
+
 	if (!R_Slave) {
 	    fputs((char *)buf, stdout);
 	    fflush(stdout);
 	}
+
 	return 1;
     }
+
     else {
 #ifdef HAVE_LIBREADLINE
 	R_ReadlineData rl_data;
