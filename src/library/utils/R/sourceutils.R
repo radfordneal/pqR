@@ -138,7 +138,7 @@ getParseData <- function(x, includeText = NA) {
         if (any(is.na(data$line2)))
             data <- data[!is.na(data$line2),]
         if (!all(abs(data$parent) %in% data$id))
-            data$parent[!(abs(data$parent) %in% data$id)] <- 0
+            data$parent[!(abs(data$parent) %in% data$id)] <- 0L
 
     	rownames(data) <- data$id
     	attr(data, "srcfile") <- srcfile
