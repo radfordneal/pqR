@@ -478,6 +478,8 @@
     L <- list(1,2); y <- list(2+1); L[2] <- y; y[[1]][1] <- 9; L[[2]]
 }
         For both lines above, the value printed was 9 rather than 3.
+  \item Fixed a pqR bug in which the \code{evaluate} argument to \code{dump}
+        was interpreted backwards.
   \item Previously, \code{length(plist)<-n} did not work when \code{plist}
         was a pairlist, but it does now.  This bug was also fixed independently
         in R-3.4.3.
