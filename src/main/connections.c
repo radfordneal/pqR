@@ -24,11 +24,6 @@
  */
 
 
-#define SEEK_WITH_ENCODING_OK 0  /* Set to 1 to make pos returned by seek be
-                                    meaningful for connections with encoding,
-                                    but at a large performance cost. */
-
-
 /* Notes on so-called 'Large File Support':
 
    The C stdio functions such as fseek and ftell are defined using
@@ -421,17 +416,7 @@ static attribute_noinline void buff_iconv (Rconnection con)
 
     do {
 
-        if (SEEK_WITH_ENCODING_OK /* If enabled, on connections with encoding */
-              && con->inconv) {   /*   read one char at a time, so seek works */
-            if (con->inavail < 25) {
-                c = con->fgetc_internal(con);
-                if (c == R_EOF)
-                    con->EOF_signalled = TRUE;
-                else
-                    con->iconvbuff[con->inavail++] = c;
-            }
-        }
-        else {
+        if (con->inavail < 25) {
             size_t new = con->read (con->iconvbuff + con->inavail,
                                     sizeof(char), 25 - con->inavail, con);
             if (new == 0)
@@ -452,6 +437,11 @@ static attribute_noinline void buff_iconv (Rconnection con)
         }
     
         if (con->inconv) {
+
+            /* save input for use when finding position for later seek. */
+            memcpy (con->saved_iconvbuff, con->iconvbuff, 25);
+            con->n_saved = con->inavail;
+
             char *ob = con->oconvbuff;
             size_t onb = 50;
             const char *ib = con->iconvbuff;
@@ -613,10 +603,21 @@ static OFF_T file_pos_from_tell (Rconnection con, Rfileconn this)
     if (this->last_was_write) 
         this->wpos = pos;
     else {
-        if (con->inconv)
-            pos -= SEEK_WITH_ENCODING_OK 
-                    ? con->inavail /* OK if n-to-1 mapping, maybe if 1-to-n */
-                    : con->navail  /* wrong if not 1-to-1 mapping */;
+        if (con->inconv) {
+            /* do conversion again with output buffer limited to what has been
+               read in order to find out what input positon we've reached. */
+            Riconv (con->inconv, NULL, NULL, NULL, NULL);  /* reset - needed? */
+            const char *ib = con->saved_iconvbuff;
+            size_t inb = con->n_saved;
+            char buff[25];
+            char *ob = buff;
+            size_t onb = con->next - con->oconvbuff;
+            if (onb > 50) abort();  /* shouldn't happen */
+            size_t res;
+            errno = 0;
+            res = Riconv (con->inconv, &ib, &inb, &ob, &onb);
+            pos -= inb;
+        }
         else
             pos -= con->navail;
         this->rpos = pos;
@@ -626,17 +627,14 @@ static OFF_T file_pos_from_tell (Rconnection con, Rfileconn this)
 }
 
 static void attribute_noinline file_switch_to_read (Rconnection con, 
-                                                   Rfileconn this)
+                                                    Rfileconn this)
 {
     file_pos_from_tell (con, this);
 
     if (this->last_was_write) {
         this->last_was_write = FALSE;
         f_seek(this->fp, this->rpos, SEEK_SET);
-        if (con->inconv && !SEEK_WITH_ENCODING_OK)
-            ; /* hope for the best - may work if no write in buffered area */
-        else
-            con->navail = 0;
+        con->navail = 0;
         con->inavail = 0;
         con->EOF_signalled = 0;
     }
@@ -647,13 +645,10 @@ static void attribute_noinline file_switch_to_write (Rconnection con,
 {
     file_pos_from_tell (con, this);
 
-    if (!this->last_was_write) {
+    if ( ! this->last_was_write) {
         this->last_was_write = TRUE;
         f_seek(this->fp, this->wpos, SEEK_SET);
-        if (con->inconv && !SEEK_WITH_ENCODING_OK)
-            ; /* hope for the best - may work if no write in buffered area */
-        else
-            con->navail = 0;
+        con->navail = 0;
         con->inavail = 0;
         con->EOF_signalled = 0;
     }
@@ -828,7 +823,7 @@ static double file_seek(Rconnection con, double where, int origin, int rw)
     con->inavail = con->navail = con->EOF_signalled = 0;
 
 ret:
-    return con->inconv && !SEEK_WITH_ENCODING_OK ? NA_REAL : pos;
+    return pos;
 }
 
 static void file_truncate(Rconnection con)
@@ -4976,11 +4971,6 @@ static SEXP do_url(SEXP call, SEXP op, SEXP args, SEXP env)
     strncpy(con->encname, CHAR(STRING_ELT(enc, 0)), 100); /* ASCII */
     con->encname[100 - 1] = '\0';
 
-    /* only text-mode connections are affected, but we can't tell that
-       until the connection is opened, and why set an encoding on a
-       connection intended to be used in binary mode? */
-    if (con->encname[0] && !streql(con->encname, "native.enc"))
-	con->canseek = 0;
     /* This is referenced in do_getconnection, so set up before
        any warning */
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));

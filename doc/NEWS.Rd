@@ -239,6 +239,9 @@
         pqR-2016-10-05) now set the loop variable(s) to the
         corresponding length or dimension size when the loop is done
         zero times, rather than to \code{NULL}.
+  \item An attempt is now made to get \code{seek} to work on text files
+        when re-encoding is done, but it's possible that some anomalies
+        could arise.
   \item Previously, when a scalar was extracted from a matrix or array 
         with \code{[]}, a name derived from a dimension name was attached
         to it only if a single dimension had names (though this was not 
