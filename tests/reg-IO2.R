@@ -122,3 +122,163 @@ writeLines(x, "test.dat")
 read.table("test.dat", allowEscapes=FALSE, header = TRUE)
 unlink("test.dat")
 ## end of tests
+
+
+## Tests of "seek".  The "pr" argument can be "print" for debugging.
+
+seek_test <- function (file, encoding="", pr=invisible) {
+
+    # Do it with file contents actually all ASCII.
+
+    cat("With ASCII only\n")
+
+    con <- file (file)
+    open (con, "w")
+    lets <- rep (paste (LETTERS, collapse=""), 100)
+    substring(lets[1],3,3) <- ":"
+    lets[2] <- paste (letters, collapse="")
+    writeLines (lets, con)
+    close (con)
+
+    con <- file (file, encoding=encoding)
+    open (con, "r+")
+    cat ("seekable?", isSeekable(con), "\n")
+
+    r <- readLines (con)
+    pr (seek (con, NA))
+    stopifnot (identical (r, lets))
+
+    pr (seek (con, 0))
+    r <- readLines (con, n=1)
+    pr (r)
+    pr (L2pos <- seek (con, NA))
+    stopifnot (identical (r, lets[1]))
+    r <- readLines (con, n=1)
+    pr (r)
+    pr (seek (con, NA))
+    stopifnot (identical (r, lets[2]))
+    r <- readLines (con, n=1)
+    pr (r)
+    pr (seek (con, NA))
+    stopifnot (identical (r, lets[3]))
+
+    pr (seek (con, L2pos))
+    r <- readLines (con, n=1)
+    pr (r)
+    pr (seek (con, NA))
+    stopifnot (identical (r, lets[2]))
+
+    r <- readLines (con, n=1)
+    pr (r)
+    pr (seek (con, NA))
+    stopifnot (identical (r, lets[3]))
+
+    pr (seek (con, L2pos))
+    r <- readLines (con, n=1)
+    pr (r)
+    pr (seek (con, NA))
+    stopifnot (identical (r, lets[2]))
+
+    cat("--\n")
+
+    uvwxyz <- "uvwyxzuvwyxz..uvwyxzuvwyxz"
+    pr (seek (con, L2pos, rw="w"))
+    writeLines (rep(uvwxyz,2), con)
+    r <- readLines (con, n=1)
+    pr (r)
+    pr (seek (con, NA))
+    stopifnot (identical (r, uvwxyz))
+
+    pr (seek (con, 0))
+    r <- readLines (con, n=4)
+    pr (r)
+    pr (seek (con, NA))
+    stopifnot (identical (r, c(lets[1],uvwxyz,uvwxyz,lets[4])))
+
+    close (con)
+    cat ("OK\n")
+
+    # Do it again with file containing some UTF-8 characters.
+
+    cat("With UTF-8\n")
+
+    con <- file (file)
+    open (con, "w", useBytes=TRUE)
+    LETRS <- LETTERS
+    LETRS[1] <- "\u0100"
+    LETRS[5] <- "\u0112"
+    lets <- rep (paste (LETRS, collapse=""), 100)
+    substring(lets[1],3,3) <- ":"
+    letrs <- letters
+    letrs[1] <- "\u0101"
+    letrs[5] <- "\u0113"
+    lets[2] <- paste (letrs, collapse="")
+    writeLines (lets, con)
+    close (con)
+
+    con <- file (file, encoding=encoding)
+    open (con, "r+")
+    cat ("seekable?", isSeekable(con), "\n")
+
+    r <- readLines (con)
+    pr (seek (con, NA))
+    pr(r)
+    lets <- r
+
+    pr (seek (con, 0))
+    r <- readLines (con, n=1)
+    pr (r)
+    pr (L2pos <- seek (con, NA))
+    stopifnot (identical (r, lets[1]))
+    r <- readLines (con, n=1)
+    pr (r)
+    pr (seek (con, NA))
+    stopifnot (identical (r, lets[2]))
+    r <- readLines (con, n=1)
+    pr (r)
+    pr (seek (con, NA))
+    stopifnot (identical (r, lets[3]))
+
+    pr (seek (con, L2pos))
+    r <- readLines (con, n=1)
+    pr (r)
+    pr (seek (con, NA))
+    stopifnot (identical (r, lets[2]))
+
+    r <- readLines (con, n=1)
+    pr (r)
+    pr (seek (con, NA))
+    stopifnot (identical (r, lets[3]))
+
+    pr (seek (con, L2pos))
+    r <- readLines (con, n=1)
+    pr (r)
+    pr (seek (con, NA))
+    stopifnot (identical (r, lets[2]))
+
+    cat("--\n")
+
+    uvwxyz <- "\u0101vwy\u0102zuvwyxz..uvwyxzuvwyxz"
+    pr (seek (con, L2pos, rw="w"))
+    writeLines (rep(uvwxyz,2), con)
+    r <- readLines (con, n=1)
+    pr (r)
+    pr (seek (con, NA))
+    stopifnot (identical (r, enc2native(uvwxyz)))
+
+    pr (seek (con, 0))
+    r <- readLines (con, n=4)
+    pr (r)
+    pr (seek (con, NA))
+    stopifnot (identical (r, 
+                c(lets[1],enc2native(uvwxyz),enc2native(uvwxyz),lets[4])))
+
+    close (con)
+    cat ("OK\n")
+}
+
+tf <- tempfile()
+
+seek_test (tf)
+
+seek_test (tf, "UTF-8")
