@@ -560,6 +560,7 @@ void init_con(Rconnection new, const char *description, int enc,
     if(!current_id) current_id = (void *) 1;
     new->id = current_id;
     new->ex_ptr = R_NoObject;
+    new->n_saved = 0;
 }
 
 /* ------------------- file connections --------------------- */
@@ -604,19 +605,22 @@ static OFF_T file_pos_from_tell (Rconnection con, Rfileconn this)
         this->wpos = pos;
     else {
         if (con->inconv) {
-            /* do conversion again with output buffer limited to what has been
-               read in order to find out what input positon we've reached. */
-            Riconv (con->inconv, NULL, NULL, NULL, NULL);  /* reset - needed? */
-            const char *ib = con->saved_iconvbuff;
-            size_t inb = con->n_saved;
-            char buff[25];
-            char *ob = buff;
-            size_t onb = con->next - con->oconvbuff;
-            if (onb > 50) abort();  /* shouldn't happen */
-            size_t res;
-            errno = 0;
-            res = Riconv (con->inconv, &ib, &inb, &ob, &onb);
-            pos -= inb;
+            if (con->n_saved > 0) {
+                /* do conversion again with output buffer limited to
+                   what has been read in order to find out what input
+                   positon we've reached. */
+                Riconv (con->inconv, NULL, NULL, NULL, NULL);  /* unneeded? */
+                const char *ib = con->saved_iconvbuff;
+                size_t inb = con->n_saved;
+                char buff[25];
+                char *ob = buff;
+                size_t onb = con->next - con->oconvbuff;
+                if (onb > 50) abort();  /* shouldn't happen */
+                size_t res;
+                errno = 0;
+                res = Riconv (con->inconv, &ib, &inb, &ob, &onb);
+                pos -= inb;
+            }
         }
         else
             pos -= con->navail;
