@@ -74,6 +74,9 @@ struct Rconn {
     void *id;
     SEXP ex_ptr;
     void *private;
+
+    char saved_iconvbuff[25];  /* saved for help in finding position for seek */
+    int n_saved;
 };
 
 
