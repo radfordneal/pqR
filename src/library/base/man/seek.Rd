@@ -75,10 +75,9 @@ truncate(con, \dots)
   implemented on all platforms: on others (including Windows) it will
   not work for large (> 2Gb) files.
   
-  On text-mode connections with re-encoding selected, an attempt is
-  made to get \code{seek} to work (with positions defined before re-encoding),
-  but there may be anomalies, and the position returned by \code{seek}
-  will be \code{NA}.
+  An attempt is made to get \code{seek} to work on text-mode connections 
+  with re-encoding selected, but it is possible that some anomalies
+  will arise.
 }
 \section{Warning}{
   Use of \code{seek} on Windows is discouraged.  We have found so many
@@ -88,8 +87,7 @@ truncate(con, \dots)
 }
 \value{
   \code{seek} returns the current position (before any move), as a
-  (numeric) byte offset from the origin, or \code{NA} if the position
-  is not available for a connection with re-encoding, or \code{0} if a
+  (numeric) byte offset from the origin, or \code{0} if a
   position is not meaningful for the type of connection.  Note that
   the position can exceed the largest representable number in an \R
   \code{integer} on 64-bit builds, and on some 32-bit builds.
