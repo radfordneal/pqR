@@ -616,7 +616,7 @@ static OFF_T file_pos_from_tell (Rconnection con, Rfileconn this)
             size_t res;
             errno = 0;
             res = Riconv (con->inconv, &ib, &inb, &ob, &onb);
-            pos -= (con->n_saved - inb);
+            pos -= inb;
         }
         else
             pos -= con->navail;
