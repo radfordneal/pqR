@@ -374,7 +374,7 @@ SEXP attribute_hidden Rf_matchArgs_nontrivial
     /* Below is used only when formal_names==NULL; has size 1 if not used. */
     SEXP formal_tag[formal_names==NULL ? arg_count : 1]; 
 
-    /* If "formals" specified, copy formal tags from "formals" to "formal_tags".
+    /* If "formals" specified, copy formal tags from "formals" to "formal_tag".
        Save the location of the first ... in "dots" (-1 if none).  Initialize 
        "actual" array to R_MissingArg and "fargused" to 0. */
     

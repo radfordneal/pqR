@@ -2033,7 +2033,8 @@ static inline SEXP matchArgs_strings
     else if (CDR(supplied) == R_NilValue) {   /* one argument supplied */
         SEXP a = CAR(supplied);
         if (arg_count == 1 && strcmp(formal_names[0],"...") != 0
-              && TAG(supplied) == R_NilValue && a != R_DotsSymbol) {
+                           && TAG(supplied) == R_NilValue 
+                           && a != R_DotsSymbol) {
             r = CONS (a, R_NilValue);
             SET_MISSING (r, a == R_MissingArg || a == R_MissingUnder);
             return r;
@@ -2042,10 +2043,10 @@ static inline SEXP matchArgs_strings
     }
     else if (CDDR(supplied) == R_NilValue) {  /* two arguments supplied */
         SEXP a1 = CAR(supplied), a2 = CADR(supplied);
-        if (arg_count == 2 && a1 != R_DotsSymbol
-                           && a2 != R_DotsSymbol
-                           && TAG(supplied) == R_NilValue
+        if (arg_count == 2 && TAG(supplied) == R_NilValue
                            && TAG(CDR(supplied)) == R_NilValue
+                           && a1 != R_DotsSymbol
+                           && a2 != R_DotsSymbol
                            && strcmp(formal_names[0],"...") != 0
                            && strcmp(formal_names[1],"...") != 0) {
             r = CONS (a2, R_NilValue);
@@ -2080,27 +2081,31 @@ static inline SEXP matchArgs_pairlist (SEXP formals, SEXP supplied, SEXP call)
     else if (CDR(supplied) == R_NilValue) {   /* one argument supplied */
         SEXP a = CAR(supplied);
         if (formals != R_NilValue && CDR(formals) == R_NilValue
-             && TAG(supplied) == R_NilValue && TAG(formals) != R_DotsSymbol 
-             && a != R_DotsSymbol) {
+                                  && TAG(supplied) == R_NilValue 
+                                  && TAG(formals) != R_DotsSymbol 
+                                  && a != R_DotsSymbol) {
             r = cons_with_tag (a, R_NilValue, TAG(formals));
-            SET_MISSING (r, a == R_MissingArg || a == R_MissingUnder);
+            if (a == R_MissingArg || a == R_MissingUnder)
+                SET_MISSING (r, 1);
             return r;
         }
         n_supplied = 1;
     }
     else if (CDDR(supplied) == R_NilValue) {  /* two arguments supplied */
         SEXP a1 = CAR(supplied), a2 = CADR(supplied);
-        if (CDR(formals) != R_NilValue && a1 != R_DotsSymbol
+        if (CDR(formals) != R_NilValue && CDDR(formals) == R_NilValue
+                                       && TAG(supplied) == R_NilValue
+                                       && TAG(CDR(supplied))==R_NilValue
+                                       && a1 != R_DotsSymbol
                                        && a2 != R_DotsSymbol
                                        && TAG(formals) != R_DotsSymbol
-                                       && TAG(CDR(formals)) != R_DotsSymbol
-                                       && CDDR(formals) == R_NilValue
-                                       && TAG(supplied) == R_NilValue
-                                       && TAG(CDR(supplied))==R_NilValue) {
+                                       && TAG(CDR(formals)) != R_DotsSymbol) {
             r = cons_with_tag (a2, R_NilValue, TAG(CDR(formals)));
-            SET_MISSING (r, a2 == R_MissingArg || a2 == R_MissingUnder);
+            if (a2 == R_MissingArg || a2 == R_MissingUnder)
+                SET_MISSING (r, 1);
             r = cons_with_tag (a1, r, TAG(formals));
-            SET_MISSING (r, a1 == R_MissingArg || a1 == R_MissingUnder);
+            if (a1 == R_MissingArg || a1 == R_MissingUnder)
+                SET_MISSING (r, 1);
             return r;
         }
         n_supplied = 2;
