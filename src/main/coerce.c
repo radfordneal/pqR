@@ -2947,7 +2947,7 @@ static SEXP do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         return s;
     }
 
-    PROTECT(t = CONS(duplicate(expr), R_NilValue));
+    PROTECT(t = CONS (expr, R_NilValue));
     s = substituteList (t, env);
     UNPROTECT(2);
     return CAR(s);
