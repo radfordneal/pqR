@@ -597,14 +597,13 @@ static inline int LENGTH (SEXP x)
 #define CADDDR(e)	CAR(CDR(CDR(CDR(e))))
 #define CAD4R(e)	CAR(CDR(CDR(CDR(CDR(e)))))
 
-/* Macros for accessing and changing NAMEDCNT. */
+/* Macros for accessing and changing NAMEDCNT.
 
-#define MAX_NAMEDCNT 7	/* Must be either 2 or a power of 2 minus 1, limited 
-                           by the number of bits in the nmcnt sxpinfo field */
+   Be careful not to write to an object with NAMEDCNT equal to MAX_NAMEDCNT, 
+   even if the new value is also MAX_NAMEDCNT, since it might be a constant 
+   object in a read-only memory area.
 
-/* Below is the obvious way of implementing these macros. */
-
-/* When a variable may be being used by a helper, it is treated as temporarily
+   When a variable may be being used by a helper, it is treated as temporarily
    having a nmcnt value that is greater than the value stored.  If the value
    of a macro is the same regardless of whether this temporary increment is
    counted, the value can be returned immediately.  Otherwise, it's necessary
@@ -617,6 +616,9 @@ static inline int LENGTH (SEXP x)
    When helper threads are disabled, helpers_wait_until_not_in_use is normally
    a null macro, but a stub for it will also be defined in main.c for linking 
    to by any modules that don't know that helper threads are disabled. */
+
+#define MAX_NAMEDCNT 7	/* Must be either 2 or a power of 2 minus 1, limited 
+                           by the number of bits in the nmcnt sxpinfo field */
 
 #ifdef HELPERS_DISABLED
 #define helpers_wait_until_not_in_use(v) 0
@@ -643,18 +645,33 @@ extern void helpers_wait_until_not_in_use(SEXP);
 ( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt != 0 ? 1 : !helpers_is_in_use(x) ? 0 \
     : (helpers_wait_until_not_in_use(x), 0) )
 
+#if MAX_NAMEDCNT!=2 && 1     /* Change 1 to 0 to disable "optimized" version */
+#define NAMEDCNT_GT_1(x) \
+( (UPTR_FROM_SEXP(x)->sxpinfo.nmcnt & (MAX_NAMEDCNT-1)) != 0 ? 1 \
+    : !helpers_is_in_use(x) ? 0 \
+    : (helpers_wait_until_not_in_use(x), 0) )
+#else
 #define NAMEDCNT_GT_1(x) \
 ( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt > 1 ? 1 : !helpers_is_in_use(x) ? 0 \
     : (helpers_wait_until_not_in_use(x), 0) )
+#endif
 
 #define SET_NAMEDCNT_0(x)     (UPTR_FROM_SEXP(x)->sxpinfo.nmcnt = 0)
 #define SET_NAMEDCNT_1(x)     (UPTR_FROM_SEXP(x)->sxpinfo.nmcnt = 1)
 
-#define SET_NAMEDCNT_NOT_0(x) do { /* if 0, change to 1, without waiting */ \
+/* if 0, change to 1, without waiting */ \
+#if 1                        /* Change 1 to 0 to disable "optimized" version */
+#define SET_NAMEDCNT_NOT_0(x) do { \
+    SEXPREC *_p_ = UPTR_FROM_SEXP(x); \
+    if (_p_->sxpinfo.nmcnt == 0) \
+        _p_->sxpinfo.nmcnt |= 1; \
+  } while (0)
+#else
     SEXPREC *_p_ = UPTR_FROM_SEXP(x); \
     if (_p_->sxpinfo.nmcnt == 0) \
         _p_->sxpinfo.nmcnt = 1; \
   } while (0)
+#endif
 
 /* Macros for compatibility with later R Core versions. */
 
@@ -663,11 +680,19 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define MAYBE_REFERENCED(x) NAMEDCNT_GT_0(x)
 #define NOT_SHARED(x)       (! NAMEDCNT_GT_1(x))
 
+#if MAX_NAMEDCNT!=2 && 1     /* Change 1 to 0 to disable "optimized" version */
 #define SET_NAMEDCNT_MAX(x) do { \
     SEXPREC *_p_ = UPTR_FROM_SEXP(x); \
-    if (_p_->sxpinfo.nmcnt < MAX_NAMEDCNT) \
+    if (_p_->sxpinfo.nmcnt != MAX_NAMEDCNT) \
+        _p_->sxpinfo.nmcnt |= MAX_NAMEDCNT; \
+  } while (0)
+#else
+#define SET_NAMEDCNT_MAX(x) do { \
+    SEXPREC *_p_ = UPTR_FROM_SEXP(x); \
+    if (_p_->sxpinfo.nmcnt != MAX_NAMEDCNT) \
         _p_->sxpinfo.nmcnt = MAX_NAMEDCNT; \
   } while (0)
+#endif
 
 #define MARK_NOT_MUTABLE(x) SET_NAMEDCNT_MAX(x)
 
@@ -685,10 +710,6 @@ extern void helpers_wait_until_not_in_use(SEXP);
  * functions (rather than macros).
  */
 
-/* Be careful not to write to an object with NAMEDCNT equal to MAX_NAMEDCNT, 
-   even if the new value is also MAX_NAMEDCNT, since it might be a constant 
-   object in a read-only memory area. */
-
 #define SET_NAMEDCNT(x,v) do { \
     SEXPREC *_p_ = UPTR_FROM_SEXP(x); \
     int _v_ = v; \
@@ -704,7 +725,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 #define INC_NAMEDCNT_0_AS_1(x) do { \
     SEXPREC *_p_ = UPTR_FROM_SEXP(x); \
-    if (_p_->sxpinfo.nmcnt == 0) \
+    if (_p_->sxpinfo.nmcnt < 2) \
         _p_->sxpinfo.nmcnt = 2; \
     else if (_p_->sxpinfo.nmcnt < MAX_NAMEDCNT) \
         _p_->sxpinfo.nmcnt += 1; \
@@ -715,21 +736,6 @@ extern void helpers_wait_until_not_in_use(SEXP);
     if (_p_->sxpinfo.nmcnt < MAX_NAMEDCNT && _p_->sxpinfo.nmcnt != 0) \
         _p_->sxpinfo.nmcnt -= 1; \
   } while (0)
-
-/* Changes for an optimized implemention of the above macros.  The optimization
-   assumes MAX_NAMEDCNT is a power of 2 minus 1.  There's not much to gain with
-   gcc 4.6.3 on Intel - gcc is sometimes too smart to need help, and other times
-   too dumb to take advantage of hints. */
-
-#if MAX_NAMEDCNT!=2 && 1     /* Change 1 to 0 to disable these optimizations */
-
-#undef NAMEDCNT_GT_1
-#define NAMEDCNT_GT_1(x) \
-( (UPTR_FROM_SEXP(x)->sxpinfo.nmcnt & (MAX_NAMEDCNT-1)) != 0 ? 1 \
-    : !helpers_is_in_use(x) ? 0 \
-    : (helpers_wait_until_not_in_use(x), 0) )
-
-#endif
 
 /* Backward-compatible NAMED macros.  To mimic the 0/1/2 scheme, any nmcnt 
    greater than 1 must be converted to 2, and a value of 2 must be convert back

@@ -784,6 +784,8 @@ void Rf_code_gen_test_func1 (void)
   SET_TRUELENGTH(R_tobj_p,R_tint_p);
 
   R_tint_q = TYPEOF(R_tobj_q);
+
+  INC_NAMEDCNT_0_AS_1(R_tobj_r);
 }
 
 void Rf_code_gen_test_func2 (void)
