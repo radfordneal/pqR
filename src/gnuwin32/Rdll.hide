@@ -373,6 +373,7 @@
  Rf_matchArg
  Rf_matchArgExact
  Rf_matchArgs_nontrivial
+ Rf_matchArgs_tail
  Rf_matchPar
  Rf_mbtoucs
  Rf_mkCLOSXP

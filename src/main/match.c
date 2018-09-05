@@ -314,8 +314,6 @@ SEXP attribute_hidden matchArgExact(SEXP tag, SEXP * list)
                          : CHAR(PRINTNAME(formal_tag[arg_i])) )
 
 /* We need to leave 'supplied' unchanged in case we call UseMethod */
-/* MULTIPLE_MATCHES was added by RI in Jan 2005 but never activated:
-   code in R-2-8-branch */
 
 SEXP attribute_hidden Rf_matchArgs_nontrivial 
       (SEXP formals, const char * const *formal_names, int arg_count, 
@@ -622,4 +620,35 @@ SEXP attribute_hidden Rf_matchArgs_nontrivial
 #endif
 
     return(actuals_list);
+}
+
+/* Create default "actuals" from formals pairlist.  The tail argument
+   must not be R_NilValue. */
+
+SEXP attribute_hidden Rf_matchArgs_tail (SEXP tail)
+{
+    SEXP res = R_NilValue;
+
+    SEXP tail2 = CDR(tail);
+    if (tail2 != R_NilValue) {
+        SEXP tail3 = CDR(tail2);
+        if (tail3 != R_NilValue) {
+            SEXP tail4 = CDR(tail3);
+            if (tail4 != R_NilValue) {
+                if (CDR(tail4) != R_NilValue) {
+                    res = Rf_matchArgs_tail (CDR(tail4));
+                }
+                res = cons_with_tag (R_MissingArg, res, TAG(tail4));
+                SET_MISSING (res, 1);
+            }
+            res = cons_with_tag (R_MissingArg, res, TAG(tail3));
+            SET_MISSING (res, 1);
+        }
+        res = cons_with_tag (R_MissingArg, res, TAG(tail2));
+        SET_MISSING (res, 1);
+    }
+    res = cons_with_tag (R_MissingArg, res, TAG(tail));
+    SET_MISSING (res, 1);
+
+    return res;
 }
