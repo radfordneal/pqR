@@ -184,6 +184,8 @@
   \item The speed of \code{any} and \code{all} has been improved,
         for cases when many elements need to be checked to determine
         the result.
+  \item The speed of \code{substitute} has been improved for many
+        cases.
   \item The speed of \code{pmin} and \code{pmax} has been improved,
         especially when they have only two arguments.
   \item Input and output have been sped up, sometimes considerably,

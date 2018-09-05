@@ -2905,30 +2905,51 @@ SEXP attribute_hidden substituteList(SEXP el, SEXP rho)
 /* This is a primitive SPECIALSXP */
 static SEXP do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    SEXP argList, env, s, t;
-    static const char * const ap[2] = { "expr", "env" };
+    SEXP expr, env;
 
-    /* argument matching */
-    PROTECT(argList = matchArgs_strings (ap, 2, args, call));
+    if (CDR(args) == R_NilValue && TAG(args) == R_NilValue) {
+       /* handle one unnamed argument specially for speed */
+        expr = CAR(args);
+        env = rho;
+    }                                
+    else {
 
-    /* set up the environment for substitution */
-    if (CADR(argList) == R_MissingArg)
-	env = rho;
-    else
-	env = eval(CADR(argList), rho);
-    if (env == R_GlobalEnv)	/* For historical reasons, don't substitute in R_GlobalEnv */
-	env = R_NilValue;
-    else if (TYPEOF(env) == VECSXP)
-	env = NewEnvironment(R_NilValue, VectorToPairList(env), R_BaseEnv);
-    else if (TYPEOF(env) == LISTSXP)
-	env = NewEnvironment(R_NilValue, duplicate(env), R_BaseEnv);
-    if (env != R_NilValue && TYPEOF(env) != ENVSXP)
-	errorcall(call, _("invalid environment specified"));
+        static const char * const ap[2] = { "expr", "env" };
+        SEXP argList;
 
+        /* argument matching */
+        PROTECT(argList = matchArgs_strings (ap, 2, args, call));
+        expr = CAR(argList);
+
+        /* set up the environment for substitution */
+        if (CADR(argList) == R_MissingArg)
+            env = rho;
+        else
+            env = eval(CADR(argList), rho);
+        if (env == R_GlobalEnv) /* historicaly, we don't subst in R_GlobalEnv */
+            env = R_NilValue;
+        else if (TYPEOF(env) == VECSXP)
+            env = NewEnvironment(R_NilValue, VectorToPairList(env), R_BaseEnv);
+        else if (TYPEOF(env) == LISTSXP)
+            env = NewEnvironment(R_NilValue, duplicate(env), R_BaseEnv);
+        if (env != R_NilValue && TYPEOF(env) != ENVSXP)
+            errorcall(call, _("invalid environment specified"));
+        UNPROTECT(1);
+    }
+
+    SEXP s, t;
     PROTECT(env);
-    PROTECT(t = CONS(duplicate(CAR(argList)), R_NilValue));
-    s = substituteList(t, env);
-    UNPROTECT(3);
+
+    if (TYPE_ETC(expr) == SYMSXP) { 
+        /* do symbols (not ..., etc.) specially for speed */
+        s = substitute (expr, env);
+        UNPROTECT(1);
+        return s;
+    }
+
+    PROTECT(t = CONS(duplicate(expr), R_NilValue));
+    s = substituteList (t, env);
+    UNPROTECT(2);
     return CAR(s);
 }
 
