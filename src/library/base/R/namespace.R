@@ -88,14 +88,18 @@ getExportedValue <- function(ns, name) {
 
 `::` <- function(pkg, name) {
     pkg <- as.character(substitute(pkg))
-    name <- as.character(substitute(name))
-    getExportedValue(pkg, name)
+    if (identical(pkg,"base")) 
+        get (as.character(substitute(name)), baseenv())
+    else 
+        getExportedValue (pkg, as.character(substitute(name)))
 }
 
 `:::` <- function(pkg, name) {
     pkg <- as.character(substitute(pkg))
-    name <- as.character(substitute(name))
-    get(name, envir = asNamespace(pkg), inherits = FALSE)
+    if (identical(pkg,"base")) 
+        get (as.character(substitute(name)), baseenv())
+    else
+        get (as.character(substitute(name)), getNamespace(pkg), inherits=FALSE)
 }
 
 .Firstlib_as_onLoad <-
