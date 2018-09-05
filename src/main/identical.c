@@ -49,28 +49,44 @@ static Rboolean neWithNaN(double x, double y, ne_strictness_type str);
 /* .Internal(identical(..)) */
 static SEXP do_identical(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    int num_eq = 1, single_NA = 1, attr_as_set = 1, ignore_bytecode = 1, nargs = length(args), flags;
-    /* avoid problems with earlier (and future) versions captured in S4 methods */
-    /* checkArity(op, args); */
-    if (nargs < 5)
-	error("%d arguments passed to .Internal(%s) which requires %d",
-	      length(args), PRIMNAME(op), PRIMARITY(op));
+    int num_eq = 1, single_NA = 1, attr_as_set = 1, ignore_bytecode = 1;
+    SEXP args0 = args;
+    SEXP x, y;
+    int flags;
 
-    if (nargs >= 5) {
-	num_eq      = asLogical(CADDR(args));
-	single_NA   = asLogical(CADDDR(args));
-	attr_as_set = asLogical(CAD4R(args));
+    x = CAR(args); args = CDR(args);
+    y = CAR(args); args = CDR(args);
+
+    if (args == R_NilValue) goto argerr;
+    num_eq = asLogical(CAR(args)); args = CDR(args);
+
+    if (args == R_NilValue) goto argerr;
+    single_NA = asLogical(CAR(args)); args = CDR(args);
+
+    if (args == R_NilValue) goto argerr;
+    attr_as_set = asLogical(CAR(args)); args = CDR(args);
+
+    if (args != R_NilValue) {
+        ignore_bytecode = asLogical(CAR(args)); args = CDR(args);
     }
-    if (nargs >= 6) 
-	ignore_bytecode = asLogical(CAD4R(CDR(args)));
 
-    if(num_eq      == NA_LOGICAL) error(_("invalid '%s' value"), "num.eq");
-    if(single_NA   == NA_LOGICAL) error(_("invalid '%s' value"), "single.NA");
-    if(attr_as_set == NA_LOGICAL) error(_("invalid '%s' value"), "attrib.as.set");
-    if(ignore_bytecode == NA_LOGICAL) error(_("invalid '%s' value"), "ignore.bytecode");
+    if (args != R_NilValue) goto argerr;
+
+    if (num_eq      == NA_LOGICAL) error(_("invalid '%s' value"), "num.eq");
+    if (single_NA   == NA_LOGICAL) error(_("invalid '%s' value"), "single.NA");
+    if (attr_as_set == NA_LOGICAL) error(_("invalid '%s' value"), "attrib.as.set");
+    if (ignore_bytecode == NA_LOGICAL) error(_("invalid '%s' value"), "ignore.bytecode");
     
-    flags = (num_eq ? 0 : 1) + (single_NA ? 0 : 2) + (attr_as_set ? 0 : 4) + (ignore_bytecode ? 0 : 8); 
-    return ScalarLogicalMaybeConst(R_compute_identical(CAR(args),CADR(args),flags));
+    flags = (num_eq ? 0 : 1) + 
+            (single_NA ? 0 : 2) + 
+            (attr_as_set ? 0 : 4) + 
+            (ignore_bytecode ? 0 : 8); 
+
+    return ScalarLogicalMaybeConst (R_compute_identical (x, y, flags));
+
+  argerr:
+      error("%d arguments passed to .Internal(%s) which requires %d",
+            length(args0), PRIMNAME(op), PRIMARITY(op));
 }
 
 #define NUM_EQ 		(!(flags & 1))
@@ -84,11 +100,17 @@ Rboolean
 R_compute_identical(SEXP x, SEXP y, int flags)
 {
     SEXP ax, ay, atrx, atry;
-    if(x == y) /* same pointer */
+
+    if (x == y) /* same pointer */
 	return TRUE;
-    if(TYPEOF(x) != TYPEOF(y))
+
+    if (TYPEOF(x) != TYPEOF(y))
 	return FALSE;
-    if(OBJECT(x) != OBJECT(y))
+
+    if (TYPEOF(x) == SYMSXP) /* symbols are only identical if same pointer */
+	return FALSE;
+
+    if (OBJECT(x) != OBJECT(y))
 	return FALSE;
 
     /* Skip attribute checks for CHARSXP
@@ -148,19 +170,19 @@ R_compute_identical(SEXP x, SEXP y, int flags)
     case NILSXP:
 	return TRUE;
     case LGLSXP:
-	if (length(x) != length(y)) return FALSE;
+	if (LENGTH(x) != LENGTH(y)) return FALSE;
 	/* Use memcmp (which is ISO C90) to speed up the comparison */
 	return memcmp((void *)LOGICAL(x), (void *)LOGICAL(y),
-		      length(x) * sizeof(int)) == 0 ? TRUE : FALSE;
+		      LENGTH(x) * sizeof(int)) == 0 ? TRUE : FALSE;
     case INTSXP:
-	if (length(x) != length(y)) return FALSE;
+	if (LENGTH(x) != LENGTH(y)) return FALSE;
 	/* Use memcmp (which is ISO C90) to speed up the comparison */
 	return memcmp((void *)INTEGER(x), (void *)INTEGER(y),
-		      length(x) * sizeof(int)) == 0 ? TRUE : FALSE;
+		      LENGTH(x) * sizeof(int)) == 0 ? TRUE : FALSE;
     case REALSXP:
     {
-	int n = length(x);
-	if(n != length(y)) return FALSE;
+	int n = LENGTH(x);
+	if(n != LENGTH(y)) return FALSE;
 	else {
 	    double *xp = REAL(x), *yp = REAL(y);
 	    int i, ne_strict = NUM_EQ | (SINGLE_NA << 1);
@@ -171,8 +193,8 @@ R_compute_identical(SEXP x, SEXP y, int flags)
     }
     case CPLXSXP:
     {
-	int n = length(x);
-	if(n != length(y)) return FALSE;
+	int n = LENGTH(x);
+	if(n != LENGTH(y)) return FALSE;
 	else {
 	    Rcomplex *xp = COMPLEX(x), *yp = COMPLEX(y);
 	    int i, ne_strict = NUM_EQ | (SINGLE_NA << 1);
@@ -185,8 +207,8 @@ R_compute_identical(SEXP x, SEXP y, int flags)
     }
     case STRSXP:
     {
-	int i, n = length(x);
-	if(n != length(y)) return FALSE;
+	int i, n = LENGTH(x);
+	if(n != LENGTH(y)) return FALSE;
 	for(i = 0; i < n; i++) {
 	    /* This special-casing for NAs is not needed */
 	    Rboolean na1 = (STRING_ELT(x, i) == NA_STRING),
@@ -205,8 +227,8 @@ R_compute_identical(SEXP x, SEXP y, int flags)
     case VECSXP:
     case EXPRSXP:
     {
-	int i, n = length(x);
-	if(n != length(y)) return FALSE;
+	int i, n = LENGTH(x);
+	if(n != LENGTH(y)) return FALSE;
 	for(i = 0; i < n; i++)
 	    if(!R_compute_identical(VECTOR_ELT(x, i),VECTOR_ELT(y, i), flags))
 		return FALSE;
@@ -244,10 +266,10 @@ R_compute_identical(SEXP x, SEXP y, int flags)
     case EXTPTRSXP:
 	return (EXTPTR_PTR(x) == EXTPTR_PTR(y) ? TRUE : FALSE);
     case RAWSXP:
-	if (length(x) != length(y)) return FALSE;
+	if (LENGTH(x) != LENGTH(y)) return FALSE;
 	/* Use memcmp (which is ISO C90) to speed up the comparison */
 	return memcmp((void *)RAW(x), (void *)RAW(y),
-		      length(x) * sizeof(Rbyte)) == 0 ? TRUE : FALSE;
+		      LENGTH(x) * sizeof(Rbyte)) == 0 ? TRUE : FALSE;
 
 /*  case PROMSXP: args are evaluated, so will not be seen */
 	/* test for equality of the substituted expression -- or should
