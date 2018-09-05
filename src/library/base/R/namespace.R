@@ -67,7 +67,10 @@ getNamespaceUsers <- function(ns) {
 }
 
 getExportedValue <- function(ns, name) {
-    getInternalExportName <- function(name, ns) {
+    ns <- asNamespace(ns)
+    if (isBaseNamespace(ns))
+        get(name, envir = ns, inherits = FALSE)
+    else {
         exports <- getNamespaceInfo(ns, "exports")
         if (exists(name, envir = exports, inherits = FALSE))
             get(get(name, envir = exports, inherits = FALSE), envir = ns)
@@ -76,19 +79,17 @@ getExportedValue <- function(ns, name) {
             if (exists(name, envir = ld, inherits = FALSE))
                 get(name, envir = ld, inherits = FALSE)
             else
-                stop(gettextf("'%s' is not an exported object from 'namespace:%s'",
-                              name, getNamespaceName(ns)),
-                     call. = FALSE, domain = NA)
+                stop (gettextf(
+                        "'%s' is not an exported object from 'namespace:%s'",
+                        name, getNamespaceName(ns)),
+                      call. = FALSE, domain = NA)
         }
     }
-    ns <- asNamespace(ns)
-    if (isBaseNamespace(ns)) get(name, envir = ns, inherits = FALSE)
-    else getInternalExportName(name, ns)
 }
 
 `::` <- function(pkg, name) {
     pkg <- as.character(substitute(pkg))
-    if (identical(pkg,"base")) 
+    if (.Internal(identical(pkg,"base",TRUE,TRUE,TRUE,TRUE))) 
         get (as.character(substitute(name)), baseenv())
     else 
         getExportedValue (pkg, as.character(substitute(name)))
@@ -96,7 +97,7 @@ getExportedValue <- function(ns, name) {
 
 `:::` <- function(pkg, name) {
     pkg <- as.character(substitute(pkg))
-    if (identical(pkg,"base")) 
+    if (.Internal(identical(pkg,"base",TRUE,TRUE,TRUE,TRUE))) 
         get (as.character(substitute(name)), baseenv())
     else
         get (as.character(substitute(name)), getNamespace(pkg), inherits=FALSE)
