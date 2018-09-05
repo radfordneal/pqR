@@ -231,7 +231,7 @@ struct sxpinfo_struct {
 
     /* Second byte. */
 
-    unsigned int obj : 1;     /* Set if this is an S3 or S4 object */
+    unsigned int nmcnt : 3;   /* Count of "names" referring to object */
 
     unsigned int in_use: 1;   /* whether contents may be in use by a helper */
 
@@ -243,7 +243,7 @@ struct sxpinfo_struct {
     unsigned int base_sym_env : 1;/* Symbol: has base binding in global cache,
                                      Envir: R_BaseEnv or R_BaseNamespace*/
 
-    unsigned int nmcnt : 3;   /* Count of "names" referring to object */
+    unsigned int obj : 1;     /* Set if this is an S3 or S4 object */
 
     /* The "general purpose" field, used for miscellaneous purposes */
 
@@ -638,11 +638,13 @@ extern void helpers_wait_until_not_in_use(SEXP);
      : UPTR_FROM_SEXP(x)->sxpinfo.nmcnt )
 
 #define NAMEDCNT_EQ_0(x) \
-( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt != 0 ? 0 : !helpers_is_in_use(x) ? 1 \
+( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt == 0 && helpers_is_in_use(x) == 0 ? 1 \
+    : UPTR_FROM_SEXP(x)->sxpinfo.nmcnt != 0 ? 0 \
     : (helpers_wait_until_not_in_use(x), 1) )
 
 #define NAMEDCNT_GT_0(x) \
-( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt != 0 ? 1 : !helpers_is_in_use(x) ? 0 \
+( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt == 0 && helpers_is_in_use(x) == 0 ? 0 \
+    : UPTR_FROM_SEXP(x)->sxpinfo.nmcnt != 0 ? 1 \
     : (helpers_wait_until_not_in_use(x), 0) )
 
 #if MAX_NAMEDCNT!=2 && 1     /* Change 1 to 0 to disable "optimized" version */

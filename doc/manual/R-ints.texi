@@ -346,7 +346,7 @@ struct sxpinfo_struct @{
 
     /* Second byte. */
 
-    unsigned int obj : 1;     /* Set if this is an S3 or S4 object */
+    unsigned int nmcnt : 3;   /* Count of "names" referring to object */
 
     unsigned int in_use: 1;   /* whether contents may be in use by a helper */
 
@@ -358,7 +358,7 @@ struct sxpinfo_struct @{
     unsigned int base_sym_env : 1;/* Symbol: has base binding in global cache,
                                      Envir: R_BaseEnv or R_BaseNamespace*/
 
-    unsigned int nmcnt : 3;   /* Count of "names" referring to object */
+    unsigned int obj : 1;     /* Set if this is an S3 or S4 object */
 
     /* The "general purpose" field, used for miscellaneous purposes */
 
