@@ -21,4 +21,4 @@ identical <- function(x, y, num.eq = TRUE, single.NA = TRUE,
                         ignore.bytecode))
 
 isTRUE <- function(x)
-    .Internal(identical(TRUE,x,TRUE,TRUE,TRUE,TRUE))
+    .Internal(identical(x,TRUE))

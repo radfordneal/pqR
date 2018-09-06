@@ -89,7 +89,7 @@ getExportedValue <- function(ns, name) {
 
 `::` <- function(pkg, name) {
     pkg <- as.character(substitute(pkg))
-    if (.Internal(identical(pkg,"base",TRUE,TRUE,TRUE,TRUE))) 
+    if (.Internal(identical(pkg,"base"))) 
         get (as.character(substitute(name)), baseenv())
     else 
         getExportedValue (pkg, as.character(substitute(name)))
@@ -97,7 +97,7 @@ getExportedValue <- function(ns, name) {
 
 `:::` <- function(pkg, name) {
     pkg <- as.character(substitute(pkg))
-    if (.Internal(identical(pkg,"base",TRUE,TRUE,TRUE,TRUE))) 
+    if (.Internal(identical(pkg,"base"))) 
         get (as.character(substitute(name)), baseenv())
     else
         get (as.character(substitute(name)), getNamespace(pkg), inherits=FALSE)
