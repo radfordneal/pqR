@@ -46,31 +46,32 @@ typedef enum {
 static Rboolean neWithNaN(double x, double y, ne_strictness_type str);
 
 
-/* .Internal(identical(..)) */
+/* .Internal(identical(...)). 
+
+    Extra arguments are ignored.  Missing arguments default to R_NilValue,
+    R_NilValue, and then TRUE for the rest. */
+
 static SEXP do_identical(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int num_eq = 1, single_NA = 1, attr_as_set = 1, ignore_bytecode = 1;
-    SEXP args0 = args;
     SEXP x, y;
     int flags;
 
     x = CAR(args); args = CDR(args);
     y = CAR(args); args = CDR(args);
 
-    if (args == R_NilValue) goto argerr;
-    num_eq = asLogical(CAR(args)); args = CDR(args);
-
-    if (args == R_NilValue) goto argerr;
-    single_NA = asLogical(CAR(args)); args = CDR(args);
-
-    if (args == R_NilValue) goto argerr;
-    attr_as_set = asLogical(CAR(args)); args = CDR(args);
-
     if (args != R_NilValue) {
-        ignore_bytecode = asLogical(CAR(args)); args = CDR(args);
+        num_eq = asLogical(CAR(args)); args = CDR(args);
+        if (args != R_NilValue) {
+            single_NA = asLogical(CAR(args)); args = CDR(args);
+            if (args != R_NilValue) {
+                attr_as_set = asLogical(CAR(args)); args = CDR(args);
+                if (args != R_NilValue) {
+                    ignore_bytecode = asLogical(CAR(args)); args = CDR(args);
+                }
+            }
+        }
     }
-
-    if (args != R_NilValue) goto argerr;
 
     if (num_eq      == NA_LOGICAL) error(_("invalid '%s' value"), "num.eq");
     if (single_NA   == NA_LOGICAL) error(_("invalid '%s' value"), "single.NA");
@@ -83,10 +84,6 @@ static SEXP do_identical(SEXP call, SEXP op, SEXP args, SEXP env)
             (ignore_bytecode ? 0 : 8); 
 
     return ScalarLogicalMaybeConst (R_compute_identical (x, y, flags));
-
-  argerr:
-      error("%d arguments passed to .Internal(%s) which requires %d",
-            length(args0), PRIMNAME(op), PRIMARITY(op));
 }
 
 #define NUM_EQ 		(!(flags & 1))
