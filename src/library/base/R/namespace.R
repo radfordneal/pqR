@@ -22,9 +22,10 @@
 ##  2) We use  ':::' instead of '::' inside the code below, for efficiency only
 
 getNamespace <- function(name) {
-    ns <- .Internal(getRegisteredNamespace(as.name(name)))
-    if (! is.null(ns)) ns
-    else tryCatch(loadNamespace(name), error = function(e) stop(e))
+    if (is.null (ns <- .Internal(getRegisteredNamespace(as.name(name)))))
+        tryCatch (loadNamespace(name), error = function(e) stop(e))
+    else
+        ns
 }
 
 loadedNamespaces <- function()
@@ -68,7 +69,7 @@ getNamespaceUsers <- function(ns) {
 
 getExportedValue <- function(ns, name) {
     ns <- asNamespace(ns)
-    if (isBaseNamespace(ns))
+    if (identical (ns, .BaseNamespaceEnv))
         get(name, envir = ns, inherits = FALSE)
     else {
         exports <- getNamespaceInfo(ns, "exports")
@@ -793,13 +794,13 @@ isNamespace <- function(ns) .Internal(isNamespaceEnv(ns))
 isBaseNamespace <- function(ns) identical(ns, .BaseNamespaceEnv)
 
 getNamespaceInfo <- function(ns, which) {
-    ns <- asNamespace(ns, base.OK = FALSE)
+    ns <- asNamespace (ns, FALSE)
     info <- get(".__NAMESPACE__.", envir = ns, inherits = FALSE)
     get(which, envir = info, inherits = FALSE)
 }
 
 setNamespaceInfo <- function(ns, which, val) {
-    ns <- asNamespace(ns, base.OK = FALSE)
+    ns <- asNamespace (ns, FALSE)
     info <- get(".__NAMESPACE__.", envir = ns, inherits = FALSE)
     assign(which, val, envir = info)
 }
@@ -807,11 +808,13 @@ setNamespaceInfo <- function(ns, which, val) {
 asNamespace <- function(ns, base.OK = TRUE) {
     if (is.character(ns) || is.name(ns))
         ns <- getNamespace(ns)
-    if (! isNamespace(ns))
+    if (isNamespace(ns))
+        if (base.OK || !isBaseNamespace(ns))
+            ns
+        else 
+            stop("operation not allowed on base namespace")
+    else
         stop("not a namespace")
-    else if (! base.OK && isBaseNamespace(ns))
-        stop("operation not allowed on base namespace")
-    else ns
 }
 
 namespaceImport <- function(self, ...)
