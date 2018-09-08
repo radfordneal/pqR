@@ -20,7 +20,7 @@ make.names(names, unique = FALSE, allow_ = TRUE,
  \item{unique}{logical; if \code{TRUE}, the resulting elements are
      unique.  This may be desired for, e.g., column names.}
  \item{allow_}{logical.  For compatibility with \R prior to 1.9.0.}
- \item{no..}{logical.  For compatibility with R Core versions that
+ \item{no..}{integer.  For compatibility with R Core versions that
                        allow \code{..} not at beginning or end}
 }
 \value{

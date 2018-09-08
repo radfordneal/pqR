@@ -1058,7 +1058,7 @@ SEXP *(VECTOR_PTR)(SEXP x);
 #define LCONS(a, b)	lcons((a), (b))		/* language lists */
 int  (MISSING)(SEXP x);
 void (SET_MISSING)(SEXP x, int v);
-void SET_TAG(SEXP x, SEXP y);
+void (SET_TAG)(SEXP x, SEXP y);
 SEXP SETCAR(SEXP x, SEXP y);
 SEXP SETCDR(SEXP x, SEXP y);
 SEXP SETCADR(SEXP x, SEXP y);
