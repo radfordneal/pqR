@@ -21,74 +21,35 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, a copy is available at
- *  http://www.r-project.org/Licenses/
- *
- *
- *  IMPLEMENTATION NOTES:
- *
- *  Deparsing has 3 layers.  The user interface, do_deparse, should
- *  not be called from an internal function, the actual deparsing needs
- *  to be done twice, once to count things up and a second time to put
- *  them into the string vector for return.  Printing this to a file
- *  is handled by the calling routine.
- *
- *
- *  INDENTATION:
- *
- *  Indentation is carried out in the routine printtab2buff at the
- *  botton of this file.  It seems like this should be settable via
- *  options.
- *
- *
- *  GLOBAL VARIABLES:
- *
- *  linenumber:	 counts the number of lines that have been written,
- *		 this is used to setup storage for deparsing.
- *
- *  len:	 counts the length of the current line, it will be
- *		 used to determine when to break lines.
- *
- *  incurly:	 keeps track of whether we are inside a curly or not,
- *		 this affects the printing of if-then-else.
- *
- *  inlist:	 keeps track of whether we are inside a list or not,
- *		 this affects the printing of if-then-else.
- *
- *  startline:	 indicator TRUE=start of a line (so we can tab out to
- *		 the correct place).
- *
- *  indent:	 how many tabs should be written at the start of
- *		 a line.
- *
- *  buff:	 contains the current string, we attempt to break
- *		 lines at cutoff, but can unlimited length.
- *
- *  lbreak:	 often used to indicate whether a line has been
- *		 broken, this makes sure that that indenting behaves
- *		 itself.
- */
+ *  http://www.r-project.org/Licenses/ */
 
-/*
-* The code here used to use static variables to share values
-* across the different routines. These have now been collected
-* into a struct named  LocalParseData and this is explicitly
-* passed between the different routines. This avoids the needs
-* for the global variables and allows multiple evaluators, potentially
-* in different threads, to work on their own independent copies
-* that are local to their call stacks. This avoids any issues
-* with interrupts, etc. not restoring values.
 
-* The previous issue with the global "cutoff" variable is now implemented
-* by creating a deparse1WithCutoff() routine which takes the cutoff from
-* the caller and passes this to the different routines as a member of the
-* LocalParseData struct. Access to the deparse1() routine remains unaltered.
-* This is exactly as Ross had suggested ...
-*
-* One possible fix is to restructure the code with another function which
-* takes a cutoff value as a parameter.	 Then "do_deparse" and "deparse1"
-* could each call this deeper function with the appropriate argument.
-* I wonder why I didn't just do this? -- it would have been quicker than
-* writing this note.  I guess it needs a bit more thought ...
+/* IMPLEMENTATION NOTES:
+
+   Deparsing has 3 layers.  The user interface, do_deparse, should not
+   be called from an internal function, the actual deparsing needs to
+   be done twice, once to count things up and a second time to put
+   them into the string vector for return.  Printing this to a file is
+   handled by the calling routine.
+
+   Indentation is carried out in the routine printtab2buff at the
+   botton of this file.  It seems like this should be settable via
+   options.
+
+   'lbreak' is often used to indicate whether a line has been broken,
+    this makes sure that that indenting behaves itself.
+
+   The previous issue with the global "cutoff" variable is now
+   implemented by creating a deparse1WithCutoff() routine which takes
+   the cutoff from the caller and passes this to the different routines
+   as a member of the LocalParseData struct. Access to the deparse1()
+   routine remains unaltered.  This is exactly as Ross had suggested...
+ 
+   One possible fix is to restructure the code with another function
+   which takes a cutoff value as a parameter.  Then "do_deparse" and
+   "deparse1" could each call this deeper function with the appropriate
+   argument.  I wonder why I didn't just do this? -- it would have been
+   quicker than writing this note.  I guess it needs a bit more thought...
 */
 
 #ifdef HAVE_CONFIG_H
@@ -114,17 +75,34 @@
 
 typedef R_StringBuffer DeparseBuffer;
 
+/* The code here used to use static variables to share values across
+   the different routines. These have now been collected into a struct
+   named LocalParseData, which is explicitly passed between the
+   different routines. This avoids the needs for the global variables
+   and allows multiple evaluators, potentially in different threads,
+   to work on their own independent copies that are local to their
+   call stacks. This avoids any issues with interrupts, etc. not
+   restoring values. */
+
 typedef struct {
-    int linenumber;
-    int len;
-    int incurly;
-    int inlist;
-    Rboolean startline; /* = TRUE; */
-    int indent;
+
+    int linenumber;      /* counts the number of lines that have been written,
+                            this is used to setup storage for deparsing */
+    int len;             /* counts the length of the current line, it will be
+                            used to determine when to break lines */
+    int incurly;         /* keeps track of whether we are inside a curly or not,
+                            this affects the printing of if-then-else */
+    int inlist;          /* keeps track of whether we are inside a list or not,
+                            this affects the printing of if-then-else */
+    Rboolean startline;  /* TRUE indicates start of a line (so we can tab out to
+                            the correct place) */
+    int indent;          /* how many tabs should be written at the start of 
+                            a line */
+
     SEXP strvec;
 
-    DeparseBuffer buffer;
-
+    DeparseBuffer buffer;  /* contains the current string, we attempt to break
+                              lines at cutoff, but can unlimited length */
     int cutoff;
     int backtick;
     int opts;
@@ -730,7 +708,7 @@ static const char * quotify(SEXP name, int quote)
     const char *s = CHAR(name);
 
     /* If a symbol is not a valid name, put it in quotes, escaping
-     * any quotes in the string itself */
+       any quotes in the string itself */
 
     if (*s == 0 /* really?? */ || isValidName(s))
         return s;
