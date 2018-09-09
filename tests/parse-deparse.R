@@ -17,19 +17,25 @@ print(getParseData(expr))
 
 # Check retention/removal of parentheses.
 
-options(keep.parens=TRUE)
+options(keep.parens=FALSE)
 print(as.list (quote (a+b*c)))
 print(as.list (quote (a+(b*c))))
 print(as.list (quote ((a+b)*c)))
+print(as.list (quote ((a^b)^c)))
+print(as.list (quote (a^(b^c))))
+print(as.list (quote ((a <- b <- c) -> d)))
 f <- y ~ (x) + a * (b + c)
 print(as.list(f))
 print(as.list(f[[3]]))
 print(as.list(f[[3]][[3]]))
 
-options(keep.parens=FALSE)
+options(keep.parens=TRUE)
 print(as.list (quote (a+b*c)))
 print(as.list (quote (a+(b*c))))
 print(as.list (quote ((a+b)*c)))
+print(as.list (quote ((a^b)^c)))
+print(as.list (quote (a^(b^c))))
+print(as.list (quote ((a <- b <- c) -> d)))
 f <- y ~ (x) + a * (b + c)
 print(as.list(f))
 print(as.list(f[[3]]))
@@ -158,7 +164,7 @@ for (kp in c(FALSE,TRUE)) {
     options(keep.parens=kp)
     cat("\n\nWith keep.parens set to",kp,"\n")
 
-    cat("\nOne operator\n\n");
+    cat("\nOne level\n\n");
     for (e in exprs) {
         e1 <- e
         s1 <- deparse(e1)
@@ -176,7 +182,7 @@ for (kp in c(FALSE,TRUE)) {
             cat("IDENTICAL: ",s1," : ",s2,"\n")
     }
 
-    cat("\nWith a replaced by inner operator\n");
+    cat("\nWith a replaced by inner expression\n");
     for (e in exprs) {
         for (f in exprs) {
             e1 <- eval(as.call(list(substitute,e,list(a=f))))
@@ -195,7 +201,7 @@ for (kp in c(FALSE,TRUE)) {
         }
     }
 
-    cat("\nWith b replaced by inner operator\n");
+    cat("\nWith b replaced by inner expression\n");
     for (e in exprs) {
         for (f in exprs) {
             e1 <- eval(as.call(list(substitute,e,list(b=f))))

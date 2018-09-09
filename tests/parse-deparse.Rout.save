@@ -124,7 +124,7 @@ No helper threads, task merging enabled, uncompressed pointers.
 > 
 > # Check retention/removal of parentheses.
 > 
-> options(keep.parens=TRUE)
+> options(keep.parens=FALSE)
 > print(as.list (quote (a+b*c)))
 [[1]]
 `+`
@@ -150,10 +150,40 @@ a
 `*`
 
 [[2]]
-(a + b)
+a + b
 
 [[3]]
 c
+
+> print(as.list (quote ((a^b)^c)))
+[[1]]
+`^`
+
+[[2]]
+a^b
+
+[[3]]
+c
+
+> print(as.list (quote (a^(b^c))))
+[[1]]
+`^`
+
+[[2]]
+a
+
+[[3]]
+(b^c)
+
+> print(as.list (quote ((a <- b <- c) -> d)))
+[[1]]
+`->`
+
+[[2]]
+a <- b <- c
+
+[[3]]
+d
 
 > f <- y ~ (x) + a * (b + c)
 > print(as.list(f))
@@ -187,7 +217,7 @@ a
 (b + c)
 
 > 
-> options(keep.parens=FALSE)
+> options(keep.parens=TRUE)
 > print(as.list (quote (a+b*c)))
 [[1]]
 `+`
@@ -213,10 +243,40 @@ a
 `*`
 
 [[2]]
-a + b
+(a + b)
 
 [[3]]
 c
+
+> print(as.list (quote ((a^b)^c)))
+[[1]]
+`^`
+
+[[2]]
+(a^b)
+
+[[3]]
+c
+
+> print(as.list (quote (a^(b^c))))
+[[1]]
+`^`
+
+[[2]]
+a
+
+[[3]]
+(b^c)
+
+> print(as.list (quote ((a <- b <- c) -> d)))
+[[1]]
+`->`
+
+[[2]]
+(a <- b <- c)
+
+[[3]]
+d
 
 > f <- y ~ (x) + a * (b + c)
 > print(as.list(f))
@@ -4399,7 +4459,7 @@ With keep.parens set to TRUE
 +     options(keep.parens=kp)
 +     cat("\n\nWith keep.parens set to",kp,"\n")
 + 
-+     cat("\nOne operator\n\n");
++     cat("\nOne level\n\n");
 +     for (e in exprs) {
 +         e1 <- e
 +         s1 <- deparse(e1)
@@ -4417,7 +4477,7 @@ With keep.parens set to TRUE
 +             cat("IDENTICAL: ",s1," : ",s2,"\n")
 +     }
 + 
-+     cat("\nWith a replaced by inner operator\n");
++     cat("\nWith a replaced by inner expression\n");
 +     for (e in exprs) {
 +         for (f in exprs) {
 +             e1 <- eval(as.call(list(substitute,e,list(a=f))))
@@ -4436,7 +4496,7 @@ With keep.parens set to TRUE
 +         }
 +     }
 + 
-+     cat("\nWith b replaced by inner operator\n");
++     cat("\nWith b replaced by inner expression\n");
 +     for (e in exprs) {
 +         for (f in exprs) {
 +             e1 <- eval(as.call(list(substitute,e,list(b=f))))
@@ -4459,7 +4519,7 @@ With keep.parens set to TRUE
 
 With keep.parens set to FALSE 
 
-One operator
+One level
 
 IDENTICAL:  +b  :  +b 
 IDENTICAL:  -b  :  -b 
@@ -4505,14 +4565,14 @@ IDENTICAL:  -if (c) a else b  :  -if (c) a else b
 IDENTICAL:  -!a  :  -!a 
 IDENTICAL:  a * 2^if (T) 1 else b  :  a * 2^if (T) 1 else b 
 
-With a replaced by inner operator
+With a replaced by inner expression
 
-With b replaced by inner operator
+With b replaced by inner expression
 
 
 With keep.parens set to TRUE 
 
-One operator
+One level
 
 IDENTICAL:  +b  :  +b 
 IDENTICAL:  -b  :  -b 
@@ -4558,7 +4618,7 @@ IDENTICAL:  -if (c) a else b  :  -if (c) a else b
 IDENTICAL:  -!a  :  -!a 
 IDENTICAL:  a * 2^if (T) 1 else b  :  a * 2^if (T) 1 else b 
 
-With a replaced by inner operator
+With a replaced by inner expression
 
-With b replaced by inner operator
+With b replaced by inner expression
 > 

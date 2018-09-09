@@ -490,6 +490,53 @@ curlyahead(SEXP s)
     return FALSE;
 }
 
+
+/* Check whether an expression is a complex literal that will be deparsed
+   as a sum. */
+
+static int complex_literal (SEXP expr)
+{
+    return TYPEOF(expr) == CPLXSXP && LENGTH(expr)==1 && 
+           !ISNAN(COMPLEX(expr)->r) && COMPLEX(expr)->r != 0;
+}
+
+
+/* Find the lowest precedence of an unenclosed operator at the right edge of
+   an expression.  For example, for the expression
+
+       a * b ^ if (v) 1 else a/2 
+
+   the right edge precedence is that of "if" (which is the lowest), not 
+   that of the top-level "*" operator, or of the rightmost "/" operator.
+
+   Returns 0 if the expression is not of operator form. */
+
+static int right_edge_prec (SEXP expr)
+{
+    if (TYPEOF(expr) == LANGSXP && TYPEOF(CAR(expr)) == SYMSXP) {
+        int nargs = length(CDR(expr));
+        int lowest = INT_MAX;
+        int prec;
+        if (nargs == 1 && (prec = unary_prec(CAR(expr)))) lowest = prec;
+        if (nargs == 2 && (prec = binary_prec(CAR(expr)))) lowest = prec;
+        if (lowest == INT_MAX && (prec = misc_prec(CAR(expr)))) lowest = prec;
+        if (lowest == INT_MAX)
+            return 0;
+        if (nargs > 0) {
+            prec = right_edge_prec (CAR(nthcdr(expr,nargs)));
+            if (prec && prec < lowest) lowest = prec;
+        }
+        return lowest;
+    }
+    else if (complex_literal(expr)) {
+        /* Handle a complex number that will be deparsed as a sum */
+        return binary_prec(R_AddSymbol);
+    }
+    else
+        return 0;
+}
+
+
 /* Determine whether an argument to a postfix operator needs to be 
    parenthesized when deparsed.  The symbol op is the outer postfix
    operator (eg, $).  The expression arg is the first operand. */
@@ -497,36 +544,10 @@ curlyahead(SEXP s)
 attribute_hidden Rboolean needsparens_postfix (SEXP op, SEXP arg)
 {
     int op_prec = misc_prec(op);
-    int in_prec;
-
     if (!op_prec) abort();
 
-    if (TYPEOF(arg) == LANGSXP && TYPEOF(CAR(arg)) == SYMSXP) {
-        int nargs = length(CDR(arg));
-        if (nargs == 1) {
-            in_prec = unary_prec(CAR(arg));
-            if (in_prec && in_prec < op_prec)
-               return TRUE;
-        }
-        if (nargs == 2) {
-            in_prec = binary_prec(CAR(arg));
-            if (in_prec && in_prec < op_prec)
-                return TRUE;
-        }
-        in_prec = misc_prec(CAR(arg));
-        if (in_prec && in_prec < op_prec)
-            return TRUE;
-    }
-    else if (TYPEOF(arg) == CPLXSXP && LENGTH(arg)==1 && !ISNAN(COMPLEX(arg)->r)
-                                    && COMPLEX(arg)->r != 0) {
-        /* Handle a complex number that will be deparsed as a sum */
-        in_prec = binary_prec(R_AddSymbol);
-        if (!in_prec) abort();
-        if (in_prec < op_prec)
-            return TRUE;
-    }
-
-    return FALSE;
+    int right_prec = right_edge_prec (arg);
+    return right_prec && right_prec < op_prec;
 }
 
 /* Determine whether an argument to a unary operator needs to be 
@@ -548,8 +569,7 @@ attribute_hidden Rboolean needsparens_unary (SEXP op, SEXP arg)
                 return TRUE;
         }
     }
-    else if (TYPEOF(arg) == CPLXSXP && LENGTH(arg)==1 && !ISNAN(COMPLEX(arg)->r)
-                                    && COMPLEX(arg)->r != 0) {
+    else if (complex_literal(arg)) {
         /* Handle a complex number that will be deparsed as a sum */
         in_prec = binary_prec(R_AddSymbol);
         if (!in_prec) abort();
@@ -568,31 +588,30 @@ attribute_hidden Rboolean needsparens_unary (SEXP op, SEXP arg)
 attribute_hidden Rboolean needsparens_binary (SEXP op, SEXP arg, int left)
 {
     int op_prec = binary_prec(op);
-    int in_prec;
-
     if (!op_prec) abort();
+
+    if (left) {
+        int right_prec = right_edge_prec (arg);
+        if (right_prec && right_prec < op_prec)
+            return TRUE;
+    }
+
+    int in_prec;
 
     if (TYPEOF(arg) == LANGSXP && TYPEOF(CAR(arg)) == SYMSXP) {
         int nargs = length(CDR(arg));
         if (nargs == 2) {
             in_prec = binary_prec(CAR(arg));
-            if (in_prec && (in_prec < op_prec || in_prec == op_prec 
-                  && (NON_ASSOC(op_prec) || LEFT_ASSOC(op_prec) != left)))
-                return TRUE;
-        }
-        if (left) {
-            in_prec = unary_prec(CAR(arg));
-            if (in_prec && in_prec < op_prec)
-               return TRUE;
-            in_prec = misc_prec(CAR(arg));
-            if (in_prec && in_prec < op_prec)
-               return TRUE;
+            if (in_prec) {
+                if (in_prec < op_prec || in_prec == op_prec &&
+                      (NON_ASSOC(op_prec) || LEFT_ASSOC(op_prec) != left))
+                    return TRUE;
+            }
         }
     }
-    else if (TYPEOF(arg) == CPLXSXP && LENGTH(arg)==1 && !ISNAN(COMPLEX(arg)->r)
-                                    && COMPLEX(arg)->r != 0) {
+    else if (complex_literal(arg)) {
         /* Handle a complex number that will be deparsed as a sum */
-        in_prec = binary_prec(R_AddSymbol); /* Note: + is left associative */
+        in_prec = binary_prec(R_AddSymbol); /* Note + is left associative */
         if (!in_prec) abort();
         if (in_prec < op_prec || in_prec == op_prec && !left)
             return TRUE;

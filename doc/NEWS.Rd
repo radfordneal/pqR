@@ -409,10 +409,19 @@
 
   \subsection{BUG FIXES}{
   \itemize{
+  \item Fixed bugs in the deparser related to the following, reported on r-devel
+        by Martin Binder in July 2017:
+\preformatted{    > (expr = substitute(-a * 10, list(a = quote(if (TRUE) 1 else 0))))
+    -if (TRUE) 1 else 0 * 10
+}
+The deparsed expression printed does not parse to the actual expression.
+After the fix, the output is now
+\preformatted{    (-if (TRUE) 1 else 0) * 10}
+This bug remains in R Core versions to at least R-3.5.1.
   \item Fixed a bug in which \code{pmin(NA,0/0)} produced \code{NaN} as
         its result, rather than \code{NA}, which \code{help(pmin)} implies
         should be the result.  This bug also exists in R Core versions 
-        to at least R-3.5.0.
+        to at least R-3.5.1.
   \item Fixed a bug in which setting names could cause a quoted expression
         to be evaluated, illustrated by the following:
 \preformatted{    > abc <- 1:2; b <- quote(cat("Hi!\n")); names(abc) <- b
@@ -424,7 +433,7 @@
         The \code{cat} function is now no longer called, and the names
         attached to \code{abc} are now \code{"cat"} and \code{"Hi!\n"},
         the correct conversion of the quoted expression to a character
-        vector.  This bug also exists in R Core versions to at least R-3.5.0.
+        vector.  This bug also exists in R Core versions to at least R-3.5.1.
   \item Fixed a pqR bug illustrated by the following code:
 \preformatted{    p<-matrix(c(2L,3L,2L,2L),1,4); p[,p]<-1L; p
 }
@@ -439,19 +448,19 @@
         rather than print the square root of two:
 \preformatted{    f <- function (...) ..1(2); f(sqrt)
 }
-        This bug also exists in R Core versions to at least R-3.5.0.
+        This bug also exists in R Core versions to at least R-3.5.1.
   \item Fixed bugs in which \code{as.numeric("0x1.1.1p0")} didn't give an error,
         and \code{as.numeric("0x1fffffffffffff.7ffp0")} gave an 
         incorrectly-rounded result.  Both bugs (and related ones previously
-        fixed in pqR) exist in R-3.5.0.
+        fixed in pqR) exist in R-3.5.1.
   \item Fixed a bug that caused
         \code{print(c(F,NA,NA,F),na.print="abcdef")} to
         produce incorrectly-formatted output.  This bug also exists in
-        R Core versions to at least R-3.5.0.
+        R Core versions to at least R-3.5.1.
   \item The documentation on \code{debug} and \code{debugonce} has been
         fixed to remove mention of the \code{text} and \code{condition} 
         arguments. These arguments were documented in R-2.10.0, and in 
-        subsequent R Core versions to at least R-3.4.1, but they have never 
+        subsequent R Core versions, but at least to R-3.4.1, they have never 
         been implemented as documented, but rather have always been 
         completely ignored.
   \item Fixed two pqR bugs illustrated by the following:
@@ -469,12 +478,12 @@
     L
 }
         In the value printed for \code{L}, \code{L[[1]][1]} had changed to 9.
-        This bug also exists in R Core versions to at least R-3.5.0.
+        This bug also exists in R Core versions to at least R-3.5.1.
   \item Fixed a bug illustrated by the following:
 \preformatted{    a <- as.integer(NA); e <- new.env(size=a); print(a)
 }
         The value printed was previously 0 rather than NA.
-        This bug also exists in R Core versions to at least R-3.5.0.
+        This bug also exists in R Core versions to at least R-3.5.1.
   \item Fixed a bug that caused a crash (rather than an error message)
         for code like the following:
 \preformatted{    a <- quote(r<-1); a[[2]] <- character(0); eval(a)
