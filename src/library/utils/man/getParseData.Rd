@@ -1,7 +1,7 @@
 % File src/library/utils/man/getParseData.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 2012 R Core Team
-% Modifications for pqR Copyright (c) 2015 Radford M. Neal.
+% Modifications for pqR Copyright (c) 2015, 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \newcommand{\CRANpkg}{\href{http://CRAN.R-project.org/package=#1}{\pkg{#1}}}
