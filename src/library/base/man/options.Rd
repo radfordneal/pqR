@@ -191,10 +191,11 @@ getOption(x, default = NULL)
       the operands are too small to justify the overhead of task scheduling.}
 
     \item{\code{keep.parens}:}{When \code{FALSE} (the default), parentheses
-      are eliminated from parsed expressions unless they are unnecessary 
-      (and hence would not be reproduced when the expression is deparsed). 
-      When \code{keep.parens} is \code{TRUE}, all parentheses that are written
-      in the source are represented with the \code{(} operator.}
+      are eliminated from parsed expressions (other than formulas) unless 
+      they are unnecessary (and hence would not be reproduced when the 
+      expression is deparsed).  When \code{keep.parens} is \code{TRUE}, 
+      all parentheses that are written in the source are represented with
+      the \code{(} operator.}
 
     \item{\code{keep.source}:}{When \code{TRUE}, the source code for
       functions (newly defined or loaded) is stored internally
