@@ -4765,6 +4765,11 @@ operator @samp{:=} is parsed, with precedence the same as @samp{<-},
 but is given no meaning in base R, though it can be given meaning in
 user code.
 
+Note that language elements such as @samp{if} are effectively lower
+precedence than all of these operators.  For example, @samp{if (a>0)
+a else 2 * a} means the same as @samp{if (a>0) a else (2 * a)}, not
+@samp{(if (a>0) a else 2) * a}.
+
 
 @node Index constructions, Compound expressions, Infix and prefix operators, Expressions
 @subsection Index constructions
