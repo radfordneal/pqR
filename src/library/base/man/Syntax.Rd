@@ -14,24 +14,25 @@
   The following unary and binary operators are defined.  They are listed
   in precedence groups, from highest to lowest.
   \tabular{ll}{
-    \code{:: :::}\tab access variables in a namespace\cr
-    \code{$ @}\tab component / slot extraction\cr
-    \code{[ [[}\tab indexing\cr
+    \code{::} \code{:::}\tab access variables in a namespace\cr
+    \code{$} \code{@}\tab component / slot extraction\cr
+    \code{[} \code{[[}\tab indexing\cr
     \code{^}\tab exponentiation (right to left)\cr
-    \code{- +}\tab unary minus and plus\cr
+    \code{-} \code{+}\tab unary minus and plus\cr
     \code{:}\tab sequence operator\cr
-    \code{\%any\%}\tab special operators (including \code{\%\%} and \code{\%/\%})\cr
-    \code{* /}\tab multiply, divide\cr
-    \code{+ -}\tab (binary) add, subtract\cr
-    \code{..}\tab increasing sequence operator (no ordering)\cr
-    \code{< > <= >= == !=}\tab ordering and comparison (no ordering)\cr
+    \code{\%op\%}\tab special operators (includes \code{\%\%} \code{\%/\%})\cr
+    \code{*} \code{/}\tab multiply, divide\cr
+    \code{+} \code{-}\tab (binary) add, subtract\cr
+    \code{..}\tab upward sequence operator (no ordering)\cr
+    \code{<} \code{>} \code{<=} \code{>=} \code{==} \code{!=}\tab 
+             ordering and comparison (no ordering)\cr
     \code{!}\tab negation\cr
-    \code{&  &&}\tab and\cr
-    \code{| ||}\tab or\cr
+    \code{&} \code{&&}\tab and\cr
+    \code{|} \code{||}\tab or\cr
     \code{~}\tab (unary and binary) as in formulae\cr
-    \code{-> ->>}\tab rightwards assignment\cr
+    \code{->} \code{->>}\tab rightwards assignment\cr
     \code{=}\tab assignment (right to left)\cr
-    \code{<- <<-}\tab assignment (right to left)\cr
+    \code{<-} \code{<<-}\tab assignment (right to left)\cr
     \code{?}\tab help (unary and binary)\cr
   }
   Within an expression operators of equal precedence are evaluated
@@ -44,13 +45,19 @@
   names or string constants on the right hand side, and the first two
   also require them on the left.
 
+  Language elements such as \code{if} are effectively lower
+  precedence than all of these operators.  For example, \code{if (a>0)
+  a else 2 * a} means the same as \code{if (a>0) a else (2 * a)}, which is
+  not the same as \code{(if (a>0) a else 2) * a}.
+
   The links in the \bold{See Also} section cover most other aspects of
   the basic syntax.
 }
 \note{
   There are substantial precedence differences between \R and S.  In
-  particular, in S \code{?} has the same precedence as (binary) \code{+ -}
-  and \code{& && | ||} have equal precedence.
+  particular, in S \code{?} has the same precedence as (binary) \code{+}
+  and \code{-} and \code{&}, \cod{&&}, \code{|}, and \code{||} have 
+  equal precedence.
 }
 \references{
   Becker, R. A., Chambers, J. M. and Wilks, A. R. (1988)

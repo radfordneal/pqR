@@ -1,6 +1,17 @@
-# Test parsing and deparsing
+# Test parsing and deparsing, and getParseData
 #
-# Added for pqR, 2015, Radford M. Neal
+# Added for pqR, 2015, 2018, Radford M. Neal
+
+
+options(keep.source=TRUE,keep.parens=FALSE)
+
+expr <- parse (text = "y <- 1; fn <- function(x) {
+      (x+y)   +   (2*y)    # A comment
+      if (y > 10 && fn (x+1, y-1) <= 1) 1 else 2
+  }")
+
+print(getParseData(expr))
+
 
 unary_ops <- 
   expression (`U`, `+`, `-`, `!`, `~`, `?`)
@@ -103,7 +114,9 @@ exprs <- eval (parse (text = "list (
     quote (function (x) a),
     quote (if (c) a else b),
     quote (while (a) b),
-    quote (repeat a)
+    quote (repeat a),
+    quote (-if (c) a else b),
+    quote (-!a)
 )" ))
 
 for (kp in c(FALSE,TRUE)) {

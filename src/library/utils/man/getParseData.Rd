@@ -108,19 +108,21 @@ Original R Core version by Duncan Murdoch, rewritten for pqR by Radford Neal
 \code{\link{parse}}, \code{\link{srcref}}
 }
 \examples{
+sv <- options(keep.source=TRUE)
 expr <- parse (text = "y <- 1; fn <- function(x) {
       x   +   y # A comment
   }")
-
 d <- getParseData(expr)
-if (!is.null(d)) {
-  plus <- which(d$token == "'+'")
-  sum <- d$parent[plus]
-  print (getParseText(d,sum))
-  body <- d[as.character(sum),"parent"]
-  print (getParseText(d,body))
-  b <- d[as.character(body),]
-  print (c (b$line1, b$col1, b$line2, b$col2))
-}
+print(d)
+
+plus <- which(d$token == "'+'")
+sum <- d$parent[plus]
+print (getParseText(d,sum))
+body <- d[as.character(sum),"parent"]
+print (getParseText(d,body))
+b <- d[as.character(body),]
+print (c (b$line1, b$col1, b$line2, b$col2))
+
+options(sv)
 }
 \keyword{  utilities  }

@@ -269,7 +269,7 @@ cr	:
 
    The get_next_token function obtains the next token, calling xxgetc
    as required, and returning 1 if end of file is encountered immediately. 
-   It's argument is 1 if a symbol is not expected (allowing ".." to be seen),
+   Its argument is 1 if a symbol is not expected (allowing ".." to be seen),
    though it will get a symbol anyway, as long as it doesn't start with "..".
    The convention for get_next_token is that a "lookahead" token after
    what has been parsed so far is normally present (the opposite of the 
@@ -288,7 +288,7 @@ static int get_next_token(int); /* Update ps->next_token to the next token, and
 
    Note that '\n' is returned at the end of a line of input text, and
    is treated the same as end of file if the expression could end
-   there.  Otherwise, it is skipped as a token, except that
+   there.  Otherwise, it is skipped as a token; however note that
    newline_before_token is set when the following token is returned. */
 
 enum token_type {
@@ -956,7 +956,7 @@ static void error_msg(const char *s)
 #define PARSE_UNEXPECTED() PARSE_ERROR_MSG("unexpected ");
 
 
-/* Say the current is unexpected unless it is equal to tk. */
+/* Say the current token is unexpected unless it is equal to tk. */
 
 #define EXPECT(tk) \
     do { \
@@ -1041,7 +1041,7 @@ static void end_location (source_location *loc)
 
 /* Tables of operator precedence.  The lower two bits are 1 for binary
    operators that are left associative, 2 for binary operators that are
-   right associative, and 0 for relational .. operators, unary operators,
+   right associative, and 0 for relational operators, .., unary operators,
    and miscellaneous operators.  This is expressed in the NON_ASSOC, 
    LEFT_ASSOC, and RIGHT_ASSOC macros in Parse.h. */
 
@@ -1248,9 +1248,9 @@ static int binary_op(void)
    parentheses if they are necessary (and hence will be re-inserted
    when the expression is deparsed).
 
-   The parse routines return the object parsed, or R_NoObject if there was an
-   error (or errors may cause exit out of the whole parser with a call
-   of "error").
+   The parse routines return the object parsed, or R_NoObject if there
+   was an error (except that some errors will cause an exit out of the
+   whole parser with a call of "error").
 
    Maintainence of a lookahead token is complicated by the need for
    care in handling newlines.  A newline is sometimes a "soft EOF".
