@@ -3,6 +3,8 @@
 # Added for pqR, 2015, 2018, Radford M. Neal
 
 
+# Check output of getParseData.
+
 options(keep.source=TRUE,keep.parens=FALSE)
 
 expr <- parse (text = "y <- 1; fn <- function(x) {
@@ -12,6 +14,35 @@ expr <- parse (text = "y <- 1; fn <- function(x) {
 
 print(getParseData(expr))
 
+
+# Check retention/removal of parentheses.
+
+options(keep.parens=FALSE)
+print(as.list (quote (a+b*c)))
+print(as.list (quote (a+(b*c))))
+print(as.list (quote ((a+b)*c)))
+print(as.list (quote ((a^b)^c)))
+print(as.list (quote (a^(b^c))))
+print(as.list (quote ((a <- b <- c) -> d)))
+f <- y ~ (x) + a * (b + c)
+print(as.list(f))
+print(as.list(f[[3]]))
+print(as.list(f[[3]][[3]]))
+
+options(keep.parens=TRUE)
+print(as.list (quote (a+b*c)))
+print(as.list (quote (a+(b*c))))
+print(as.list (quote ((a+b)*c)))
+print(as.list (quote ((a^b)^c)))
+print(as.list (quote (a^(b^c))))
+print(as.list (quote ((a <- b <- c) -> d)))
+f <- y ~ (x) + a * (b + c)
+print(as.list(f))
+print(as.list(f[[3]]))
+print(as.list(f[[3]][[3]]))
+
+
+# Check consistency of parsing and deparsing.
 
 unary_ops <- 
   expression (`U`, `+`, `-`, `!`, `~`, `?`)
@@ -36,37 +67,45 @@ check_deparse_parse <- function (ex)
     stopifnot (identical(pa1,pa2))
 }
 
-for (i in unary_ops)
-    check_deparse_parse (substitute (x(a), list(x=i)))
 
-for (i in binary_ops)
-    check_deparse_parse (substitute (y(a,b), list(y=i)))
+for (kp in c(FALSE,TRUE)) {
 
-for (i in unary_ops)
-    for (j in binary_ops)
-        check_deparse_parse (substitute (x(y(b,c)), list(x=i,y=j)))
+    options(keep.parens=kp)
+    cat("\n\nWith keep.parens set to",kp,"\n")
 
-for (i in unary_ops)
-    for (j in binary_ops)
-        check_deparse_parse (substitute (y(x(b),c), list(x=i,y=j)))
+    for (i in unary_ops)
+        check_deparse_parse (substitute (x(a), list(x=i)))
 
-for (i in unary_ops)
-    for (j in binary_ops)
-        check_deparse_parse (substitute (x((y(b,c))), list(x=i,y=j)))
+    for (i in binary_ops)
+        check_deparse_parse (substitute (y(a,b), list(y=i)))
 
-for (i in binary_ops)
-    for (j in binary_ops)
-        check_deparse_parse (substitute (x(a,(y(b,c))), list(x=i,y=j)))
+    for (i in unary_ops)
+        for (j in binary_ops)
+            check_deparse_parse (substitute (x(y(b,c)), list(x=i,y=j)))
 
-for (i in unary_ops)
-    check_deparse_parse (substitute (x(a)$q, list(x=i)))
+    for (i in unary_ops)
+        for (j in binary_ops)
+            check_deparse_parse (substitute (y(x(b),c), list(x=i,y=j)))
 
-for (i in binary_ops)
-    check_deparse_parse (substitute (y(a,b)$q, list(y=i)))
+    for (i in unary_ops)
+        for (j in binary_ops)
+            check_deparse_parse (substitute (x((y(b,c))), list(x=i,y=j)))
 
-for (i in binary_ops)
-    for (j in binary_ops)
+    for (i in binary_ops)
+        for (j in binary_ops)
+            check_deparse_parse (substitute (x(a,(y(b,c))), list(x=i,y=j)))
+
+    for (i in unary_ops)
+        check_deparse_parse (substitute (x(a)$q, list(x=i)))
+
+    for (i in binary_ops)
+        check_deparse_parse (substitute (y(a,b)$q, list(y=i)))
+
+    for (i in binary_ops)
+        for (j in binary_ops)
         check_deparse_parse (substitute (x(a,y(b,c)), list(x=i,y=j)))
+
+}
 
 
 options(keep.source=FALSE)
@@ -116,7 +155,8 @@ exprs <- eval (parse (text = "list (
     quote (while (a) b),
     quote (repeat a),
     quote (-if (c) a else b),
-    quote (-!a)
+    quote (-!a),
+    quote (a * 2 ^ if (T) 1 else b)
 )" ))
 
 for (kp in c(FALSE,TRUE)) {
@@ -124,7 +164,7 @@ for (kp in c(FALSE,TRUE)) {
     options(keep.parens=kp)
     cat("\n\nWith keep.parens set to",kp,"\n")
 
-    cat("\nOne operator\n\n");
+    cat("\nOne level\n\n");
     for (e in exprs) {
         e1 <- e
         s1 <- deparse(e1)
@@ -142,7 +182,7 @@ for (kp in c(FALSE,TRUE)) {
             cat("IDENTICAL: ",s1," : ",s2,"\n")
     }
 
-    cat("\nWith a replaced by inner operator\n");
+    cat("\nWith a replaced by inner expression\n");
     for (e in exprs) {
         for (f in exprs) {
             e1 <- eval(as.call(list(substitute,e,list(a=f))))
@@ -161,7 +201,7 @@ for (kp in c(FALSE,TRUE)) {
         }
     }
 
-    cat("\nWith b replaced by inner operator\n");
+    cat("\nWith b replaced by inner expression\n");
     for (e in exprs) {
         for (f in exprs) {
             e1 <- eval(as.call(list(substitute,e,list(b=f))))

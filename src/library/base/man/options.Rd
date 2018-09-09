@@ -1,7 +1,8 @@
 % File src/library/base/man/options.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
-% Modifications for pqR Copyright (c) 2013, 2014, 2015, 2016 Radford M. Neal.
+% Modifications for pqR 
+%   Copyright (c) 2013, 2014, 2015, 2016, 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{options}
