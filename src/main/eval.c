@@ -4678,13 +4678,20 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             sb2 = R_NoObject;
             if (ixlist2 != R_NilValue && TAG(ixlist2) == R_NilValue 
                                       && CAR(ixlist2) != R_DotsSymbol) {
+                INC_NAMEDCNT(sb1);
                 sb2 = EVALV (CAR(ixlist2), rho,
                              VARIANT_SCALAR_STACK_OK | VARIANT_MISSING_OK);
+                DEC_NAMEDCNT(sb1);
                 remargs = CDR(ixlist2);
             }
-            if (remargs != R_NilValue)
+            if (remargs != R_NilValue) {
+                INC_NAMEDCNT(sb1);
+                if (sb2 != R_NoObject) INC_NAMEDCNT(sb2);
                 remargs = evalList_v (remargs, rho, VARIANT_SCALAR_STACK_OK |
                                       VARIANT_PENDING_OK | VARIANT_MISSING_OK);
+                DEC_NAMEDCNT(sb1);
+                if (sb2 != R_NoObject) DEC_NAMEDCNT(sb2);
+            }
             if (sb2 == R_MissingArg && isSymbol(CAR(ixlist2))) {
                 remargs = CONS(sb2,remargs);
                 SET_MISSING (remargs, R_isMissing(CAR(ixlist2),rho));
@@ -4802,13 +4809,20 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             }
             else if (ixlist2 != R_NilValue && TAG(ixlist2) == R_NilValue 
                                       && CAR(ixlist2) != R_DotsSymbol) {
+                INC_NAMEDCNT(sb1);
                 sb2 = EVALV (CAR(ixlist2), rho,
                              VARIANT_SCALAR_STACK_OK | VARIANT_MISSING_OK);
+                DEC_NAMEDCNT(sb1);
                 remargs = CDR(ixlist2);
             }
-            if (remargs != R_NilValue)
+            if (remargs != R_NilValue) {
+                INC_NAMEDCNT(sb1);
+                if (sb2 != R_NoObject) INC_NAMEDCNT(sb2);
                 remargs = evalList_v (remargs, rho, VARIANT_SCALAR_STACK_OK |
                                       VARIANT_PENDING_OK | VARIANT_MISSING_OK);
+                DEC_NAMEDCNT(sb1);
+                if (sb2 != R_NoObject) DEC_NAMEDCNT(sb2);
+            }
             if (sb2 == R_MissingArg && isSymbol(CAR(ixlist2))) {
                 remargs = CONS(sb2,remargs);
                 SET_MISSING (remargs, R_isMissing(CAR(ixlist2),rho));
@@ -5019,15 +5033,25 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             if (TAG(subs) != R_NilValue || CAR(subs) == R_DotsSymbol)
                 sb2 = R_NoObject;
             else {
+                INC_NAMEDCNT(sb1);
                 sb2 = EVALV (CAR(subs), rho, VARIANT_SCALAR_STACK_OK |
                                              VARIANT_MISSING_OK);
+                DEC_NAMEDCNT(sb1);
                 subs = CDR(subs);
             }
             if (subs != R_NilValue) {
-                PROTECT(sb2);
+                INC_NAMEDCNT(sb1);
+                if (sb2 != R_NoObject) {
+                    PROTECT(sb2);
+                    INC_NAMEDCNT(sb2);
+                }
                 subs = evalList_v (subs, rho, VARIANT_SCALAR_STACK_OK |
                                               VARIANT_MISSING_OK);
-                UNPROTECT(1); /* sb2 */
+                DEC_NAMEDCNT(sb1);
+                if (sb2 != R_NoObject) {
+                    UNPROTECT(1);
+                    DEC_NAMEDCNT(sb2);
+                }
             }
             UNPROTECT(1); /* sb1 */
         }
@@ -5108,15 +5132,25 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                                || CAR(subs) == R_DotsSymbol)
             sb2 = R_NoObject;
         else {
+            INC_NAMEDCNT(sb1);
             sb2 = EVALV (CAR(subs), rho, VARIANT_SCALAR_STACK_OK |
                                          VARIANT_MISSING_OK);
+            DEC_NAMEDCNT(sb1);
             subs = CDR(subs);
         }
         if (subs != R_NilValue) {
-            PROTECT(sb2);
+            INC_NAMEDCNT(sb1);
+            if (sb2 != R_NoObject) {
+                PROTECT(sb2);
+                INC_NAMEDCNT(sb2);
+            }
             subs = evalList_v (subs, rho, VARIANT_SCALAR_STACK_OK |
                                           VARIANT_MISSING_OK);
-            UNPROTECT(1); /* sb2 */
+            DEC_NAMEDCNT(sb1);
+            if (sb2 != R_NoObject) {
+                UNPROTECT(1);
+                DEC_NAMEDCNT(sb2);
+            }
         }
         UNPROTECT(1); /* sb1 */
 
