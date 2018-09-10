@@ -550,9 +550,13 @@ static SEXP do_dotcall_e (SEXP call, SEXP op, SEXP args, SEXP env, int evald)
                 errorcall (call, 
                            _("too many arguments in foreign function call"));
             cargs[nargs] = a;
+            INC_NAMEDCNT(a);
             nargs += 1;
        }
     }
+
+    for (int i = 0; i < nargs; i++)
+        DEC_NAMEDCNT(cargs[i]);
 
     if (pkg == R_NoObject) pkg = R_NilValue;
 
@@ -561,7 +565,8 @@ static SEXP do_dotcall_e (SEXP call, SEXP op, SEXP args, SEXP env, int evald)
     fun = (VarFun) fun0;
 
     if (wait) {
-        for (int i = 0; i < nargs; i++) WAIT_UNTIL_COMPUTED(cargs[i]);
+        for (int i = 0; i < nargs; i++)
+            WAIT_UNTIL_COMPUTED(cargs[i]);
     }
 
     switch (nargs) {

@@ -306,3 +306,15 @@ F <- function (e) typeof(e)
 lapply(M,F)
 G <- function (e) invisible(e)
 lapply(M,G)
+
+
+# test that argument values are not destroyed by later evaluation.
+
+a <- c(10,20); print(a+(a[2]<-7))
+
+a <- c(10,20); print(c(a,a[2]<-7,a,a[1]<-8))
+
+p <- c(4L,2L,2L,3L,2L)
+p[p] <- 1L
+print(p)
+

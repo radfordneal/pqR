@@ -435,6 +435,15 @@
 
   \subsection{BUG FIXES}{
   \itemize{
+  \item A long-known "bug" that was tolerated for performance reasons
+        is no longer tolerated.  Previously, values for arguments of functions
+        or operators could be changed by evaluation of later operators, as
+        illustrated below:
+\preformatted{    > a<-c(10,20); a+(a[2]<-7)
+    [1] 17 14}
+        The result is now (correctly) a vector with elements 17 and 27.  This
+        is also fixed in R-3.5, but without this being documented (as far as I
+        can see).
   \item Fixed bugs in the deparser related to the following, reported on r-devel
         by Martin Binder in July 2017:
 \preformatted{    > (expr = substitute(-a * 10, list(a = quote(if (TRUE) 1 else 0))))
