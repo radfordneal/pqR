@@ -703,8 +703,8 @@ static SEXP attribute_noinline evalv_other (SEXP, SEXP, int);
 #define EVALV(e, rho, variant) ( \
     R_variant_result = 0, \
     SELF_EVAL(TYPEOF(e)) ? \
-       (UPTR_FROM_SEXP(e)->sxpinfo.nmcnt == MAX_NAMEDCNT ? e \
-         : (UPTR_FROM_SEXP(e)->sxpinfo.nmcnt = MAX_NAMEDCNT, e)) \
+       (NAMEDCNT_EQ_MAX(e) ? e \
+         : (UPTR_FROM_SEXP(e)->sxpinfo.nmcnt |= MAX_NAMEDCNT, e)) \
     : TYPE_ETC(e) == SYMSXP /* not ..., ..1, etc */ ? \
        evalv_sym (e, rho, variant) \
     :  evalv_other (e, rho, variant) \
@@ -3616,10 +3616,16 @@ static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
     /* Now we evaluate the second argument, also allowing it to be on the
        scalar stack, again with VARIANT_UNCLASS. */
 
-    INC_NAMEDCNT(x);
-    y = EVALV (y, env, 
-                VARIANT_UNCLASS | VARIANT_SCALAR_STACK_OK | VARIANT_PENDING_OK);
-    DEC_NAMEDCNT(x);
+    if (SELF_EVAL(TYPEOF(y))) {
+        R_variant_result = 0;
+        SET_NAMEDCNT_MAX(y);
+    }
+    else {
+        INC_NAMEDCNT(x);
+        y = EVALV_NC (y, env, 
+              VARIANT_UNCLASS | VARIANT_SCALAR_STACK_OK | VARIANT_PENDING_OK);
+        DEC_NAMEDCNT(x);
+    }
 
     if (isObject(y)) {
 
