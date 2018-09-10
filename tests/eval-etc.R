@@ -310,11 +310,23 @@ lapply(M,G)
 
 # test that argument values are not destroyed by later evaluation.
 
-a <- c(10,20); print(a+(a[2]<-7))
+f <- function () {
 
-a <- c(10,20); print(c(a,a[2]<-7,a,a[1]<-8))
+    a <- c(10,20); print(a+(a[2]<-7))
+    a <- c(10,20); print(a>(a[2]<-7))
+    a <- c(10,20); print(c(a,a[2]<-7,a,a[1]<-8))
 
-p <- c(4L,2L,2L,3L,2L)
-p[p] <- 1L
-print(p)
+    M <- matrix(11:14,2,2); a <- c(2,2); print(M[a,a[2]<-1])
+    M <- matrix(11:14,2,2); a <- c(2,2); M[a,a[2]<-1] <- 7; print(M)
+
+    M <- matrix(11:14,2,2); a <- c(2); print(M[[a,a[1]<-1]])
+    M <- matrix(11:14,2,2); a <- c(2); M[[a,a[1]<-1]] <- 7; print(M)
+
+    p <- c(4L,2L,2L,3L,2L)
+    p[p] <- 1L
+    print(p)
+}
+
+f()
+
 
