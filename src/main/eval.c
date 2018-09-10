@@ -4822,11 +4822,11 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 remargs = CDR(ixlist2);
             }
             if (remargs != R_NilValue) {
-                INC_NAMEDCNT(sb1);
+                if (sb1 != R_NoObject) INC_NAMEDCNT(sb1);
                 if (sb2 != R_NoObject) INC_NAMEDCNT(sb2);
                 remargs = evalList_v (remargs, rho, VARIANT_SCALAR_STACK_OK |
                                       VARIANT_PENDING_OK | VARIANT_MISSING_OK);
-                DEC_NAMEDCNT(sb1);
+                if (sb1 != R_NoObject) DEC_NAMEDCNT(sb1);
                 if (sb2 != R_NoObject) DEC_NAMEDCNT(sb2);
             }
             if (sb2 == R_MissingArg && isSymbol(CAR(ixlist2))) {
