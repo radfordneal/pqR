@@ -639,6 +639,9 @@ extern void helpers_wait_until_not_in_use(SEXP);
 ( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt != 0 ? 0 : !helpers_is_in_use(x) ? 1 \
     : (helpers_wait_until_not_in_use(x), 1) )
 
+#define NAMEDCNT_EQ_MAX(x) \
+( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt == MAX_NAMEDCNT)
+
 #define NAMEDCNT_GT_0(x) \
 ( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt != 0 ? 1 : !helpers_is_in_use(x) ? 0 \
     : (helpers_wait_until_not_in_use(x), 0) )
