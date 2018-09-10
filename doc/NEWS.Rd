@@ -409,6 +409,15 @@
 
   \subsection{BUG FIXES}{
   \itemize{
+  \item A long-known "bug" that was tolerated for performance reasons
+        is no longer tolerated.  Previously, values for arguments of functions
+        or operators could be changed by evaluation of later operators, as
+        illustrated below:
+\preformatted{    > a<-c(10,20); a+(a[2]<-7)
+    [1] 17 14}
+        The result is now (correctly) a vector with elements 17 and 27.  This
+        is also fixed in R-3.5, but without this being documented (as far as I
+        can see).
   \item Fixed a bug in which \code{pmin(NA,0/0)} produced \code{NaN} as
         its result, rather than \code{NA}, which \code{help(pmin)} implies
         should be the result.  This bug also exists in R Core versions 

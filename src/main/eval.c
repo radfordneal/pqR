@@ -2152,122 +2152,6 @@ static SEXP replaceCall(SEXP fun, SEXP varval, SEXP args, SEXP rhs)
 }
 
 
-/* Macro used in promiseArgs and promiseArgsTwo. */
-
-#define MAKE_PROMISE(a,rho) do { \
-    if (TYPEOF(a) == PROMSXP) { \
-        INC_NAMEDCNT(a); \
-        SEXP p = PRVALUE_PENDING_OK(a); \
-        if (p != R_UnboundValue && NAMEDCNT_GT_0(p)) \
-            INC_NAMEDCNT(p); \
-    } \
-    else if (a != R_MissingArg && a != R_MissingUnder) \
-        a = mkPROMISE (a, rho); \
-} while (0)
-
-
-/* Create two lists of promises to evaluate each argument, with promises
-   shared.  When an argument is evaluated in a call using one argument list,
-   its value is then known without re-evaluation in a second call using 
-   the second argument list.  The argument lists are terminated with the
-   initial values of *a1 and *a2. */
-
-static void promiseArgsTwo (SEXP el, SEXP rho, SEXP *a1, SEXP *a2)
-{
-    /* Handle 0 or 1 arguments (not ...) specially, for speed. */
-
-    if (CDR(el) == R_NilValue) {  /* Note that CDR(R_NilValue) == R_NilValue */
-        if (el == R_NilValue)
-            return;
-        SEXP a = CAR(el);
-        SEXP t = TAG(el);
-        if (a != R_DotsSymbol) {
-            MAKE_PROMISE(a,rho);
-            PROTECT (*a1 = cons_with_tag (a, *a1, t));
-            *a2 = cons_with_tag (a, *a2, t);
-            UNPROTECT(1);
-            return;
-        }
-    }
-
-    /* The general case (except el == R_NilValue handled above). */
-
-    BEGIN_PROTECT6 (head1, tail1, head2, tail2, ev, h);
-
-    head1 = head2 = R_NilValue;
-
-    do {  /* el won't be R_NilValue, so we loop at least once */
-
-        SEXP a = CAR(el);
-
-	/* If we have a ... symbol, we look to see what it is bound to.
-	   If its binding is R_NilValue we just ignore it.  If it is bound
-           to a ... list of promises, we repromise all the promises and 
-           then splice the list of resulting values into the return value.
-	   Anything else bound to a ... symbol is an error. */
-
-	if (a == R_DotsSymbol) {
-	    h = findVar(a, rho);
-            if (h == R_NilValue) {
-                /* nothing */
-            }
-	    else if (TYPEOF(h) == DOTSXP) {
-		while (h != R_NilValue) {
-                    a = CAR(h);
-                    MAKE_PROMISE(a,rho);
-                    INC_NAMEDCNT(a);
-                    ev = cons_with_tag (a, R_NilValue, TAG(h));
-                    if (head1==R_NilValue)
-                        head1 = ev;
-                    else
-                        SETCDR(tail1,ev);
-                    tail1 = ev;
-                    ev = cons_with_tag (a, R_NilValue, TAG(h));
-                    if (head2==R_NilValue)
-                        head2 = ev;
-                    else
-                        SETCDR(tail2,ev);
-                    tail2 = ev;
-		    h = CDR(h);
-		}
-	    }
-	    else if (h != R_MissingArg)
-		dotdotdot_error();
-	}
-        else {
-            MAKE_PROMISE(a,rho);
-            INC_NAMEDCNT(a);
-            ev = cons_with_tag (a, R_NilValue, TAG(el));
-            if (head1 == R_NilValue)
-                head1 = ev;
-            else
-                SETCDR(tail1, ev);
-            tail1 = ev;
-            ev = cons_with_tag (a, R_NilValue, TAG(el));
-            if (head2 == R_NilValue)
-                head2 = ev;
-            else
-                SETCDR(tail2, ev);
-            tail2 = ev;
-        }
-
-	el = CDR(el);
-
-    } while (el != R_NilValue);
-
-    if (head1 != R_NilValue) {
-        if (*a1 != R_NilValue)
-            SETCDR(tail1,*a1);
-        *a1 = head1;
-        if (*a2 != R_NilValue)
-            SETCDR(tail2,*a2);
-        *a2 = head2;
-    }
-
-    END_PROTECT;
-}
-
-
 /*  Assignment in its various forms. */
 
 SEXP Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho, 
@@ -2794,6 +2678,10 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
    set to the result of R_isMissing, which will allow identification 
    of missing arguments resulting from '_'.
 
+   For all but the last argument, NAMEDCNT is temporarily incremented
+   to prevent modification by evaluation of later arguments, with
+   NAMEDCNT decremented again when all arguments have been evaluated.
+
    Used in eval and applyMethod (object.c) for builtin primitives,
    do_internal (names.c) for builtin .Internals and in evalArgs. */
 
@@ -2813,9 +2701,11 @@ SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
 
     int varpend = variant | VARIANT_PENDING_OK;
 
-    BEGIN_PROTECT4 (head, tail, ev, h);
+    BEGIN_PROTECT3 (head, tail, h);
+    SEXP ev, ev_el;
 
     head = R_NilValue;
+    tail = R_NilValue;
 
     do {  /* el won't be R_NilValue, so will loop at least once */
 
@@ -2830,8 +2720,9 @@ SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
-                    ev = cons_with_tag (EVALV (CAR(h), rho, varpend),
-                                        R_NilValue, TAG(h));
+                    INC_NAMEDCNT(CAR(tail));  /* OK when tail is R_NilValue */
+                    ev_el = EVALV (CAR(h), rho, varpend);
+                    ev = cons_with_tag (ev_el, R_NilValue, TAG(h));
                     if (head==R_NilValue)
                         head = ev;
                     else
@@ -2848,19 +2739,24 @@ SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
 	} else {
             if (CDR(el) == R_NilValue) 
                 varpend = variant;  /* don't defer pointlessly for last one */
-            ev = cons_with_tag(EVALV(CAR(el),rho,varpend), R_NilValue, TAG(el));
+            INC_NAMEDCNT(CAR(tail));  /* OK when tail is R_NilValue */
+            ev_el = EVALV(CAR(el),rho,varpend);
+            ev = cons_with_tag (ev_el, R_NilValue, TAG(el));
             if (head==R_NilValue)
                 head = ev;
             else
                 SETCDR_MACRO(tail, ev);
             tail = ev;
-            if (CAR(ev) == R_MissingArg && isSymbol(CAR(el)))
+            if (ev_el == R_MissingArg && isSymbol(CAR(el)))
                 SET_MISSING (ev, R_isMissing(CAR(el),rho));
 	}
 
 	el = CDR(el);
 
     } while (el != R_NilValue);
+
+    for (el = head; CDR(el) != R_NilValue; el = CDR(el))
+        DEC_NAMEDCNT(CAR(el));
 
     if (! (variant & VARIANT_PENDING_OK))
         WAIT_UNTIL_ARGUMENTS_COMPUTED(head);
@@ -2925,11 +2821,12 @@ SEXP attribute_hidden eval_unshared (SEXP e, SEXP rho, int variant)
 
 SEXP attribute_hidden evalListUnshared(SEXP el, SEXP rho)
 {
-    BEGIN_PROTECT4 (head, tail, ev, h);
-
+    BEGIN_PROTECT3 (head, tail, h);
     int variant = VARIANT_PENDING_OK;
+    SEXP ev, ev_el;
 
     head = R_NilValue;
+    tail = R_NilValue;
 
     while (el != R_NilValue) {
 
@@ -2947,8 +2844,9 @@ SEXP attribute_hidden evalListUnshared(SEXP el, SEXP rho)
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
-                    ev = cons_with_tag (eval_unshared (CAR(h), rho, variant),
-                                        R_NilValue, TAG(h));
+                    INC_NAMEDCNT(CAR(tail));  /* OK when tail is R_NilValue */
+                    ev_el = eval_unshared (CAR(h), rho, variant);
+                    ev = cons_with_tag (ev_el, R_NilValue, TAG(h));
                     if (head==R_NilValue)
                         head = ev;
                     else
@@ -2963,8 +2861,9 @@ SEXP attribute_hidden evalListUnshared(SEXP el, SEXP rho)
 		dotdotdot_error();
 
 	} else {
-            ev = cons_with_tag (eval_unshared (CAR(el), rho, variant), 
-                                R_NilValue, TAG(el));
+            INC_NAMEDCNT(CAR(tail));  /* OK when tail is R_NilValue */
+            ev_el = eval_unshared (CAR(el), rho, variant);
+            ev = cons_with_tag (ev_el, R_NilValue, TAG(el));
             if (head==R_NilValue)
                 head = ev;
             else
@@ -2976,6 +2875,9 @@ SEXP attribute_hidden evalListUnshared(SEXP el, SEXP rho)
 
 	el = CDR(el);
     }
+
+    for (el = head; CDR(el) != R_NilValue; el = CDR(el))
+        DEC_NAMEDCNT(CAR(el));
 
     WAIT_UNTIL_ARGUMENTS_COMPUTED (head);
 
@@ -3004,6 +2906,17 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
    a promise, it is used unchanged, except that it has its NAMEDCNT
    incremented, and the NAMEDCNT of its value (if not unbound) incremented
    unless it is zero.  See inside for handling of ... */
+
+#define MAKE_PROMISE(a,rho) do { \
+    if (TYPEOF(a) == PROMSXP) { \
+        INC_NAMEDCNT(a); \
+        SEXP p = PRVALUE_PENDING_OK(a); \
+        if (p != R_UnboundValue && NAMEDCNT_GT_0(p)) \
+            INC_NAMEDCNT(p); \
+    } \
+    else if (a != R_MissingArg && a != R_MissingUnder) \
+        a = mkPROMISE (a, rho); \
+} while (0)
 
 SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 {
@@ -3680,7 +3593,9 @@ static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
                the arguments (actually, at most one) normally. */
 
             ob = 1;  /* x is an object, not unclassed */
+            INC_NAMEDCNT(x);
             argsevald = evalList (CDR(args), env);
+            DEC_NAMEDCNT(x);
             y = CAR(argsevald);
             if (isObject(y)) ob |= 2;
             argsevald = cons_with_tag (x, argsevald, TAG(args));
@@ -3701,8 +3616,10 @@ static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
     /* Now we evaluate the second argument, also allowing it to be on the
        scalar stack, again with VARIANT_UNCLASS. */
 
+    INC_NAMEDCNT(x);
     y = EVALV (y, env, 
                 VARIANT_UNCLASS | VARIANT_SCALAR_STACK_OK | VARIANT_PENDING_OK);
+    DEC_NAMEDCNT(x);
 
     if (isObject(y)) {
 
@@ -3845,7 +3762,9 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
     }
     else {
         PROTECT(x = EVALV_NC (x, env, VARIANT_PENDING_OK));
+        INC_NAMEDCNT(x);
         PROTECT(y = EVALV_NC (y, env, VARIANT_PENDING_OK));
+        DEC_NAMEDCNT(x);
         args_evald = 0;
     }
 
