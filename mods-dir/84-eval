@@ -1,3 +1,7 @@
 Ensure that evaluated arguments are not changed by evaluation
-of later arguments.  Adds tests for this.  Other minor related mods.
+of later arguments.  Adds tests for this.  
+
+Other performance improvements too, including introduction of
+install_translated.
+
 

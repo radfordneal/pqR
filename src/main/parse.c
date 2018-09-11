@@ -1376,7 +1376,7 @@ static SEXP parse_sublist (int flags)
                         set_token_in_rec (prev_token_rec(2), "SYMBOL_SUB");
                     }
                     else if (TYPEOF(arg) == STRSXP)
-                        tag = install (translateChar (STRING_ELT(arg,0)));
+                        tag = install_translated (STRING_ELT(arg,0));
                     else if (arg == R_NilValue)
                         tag = install("NULL");
                     else

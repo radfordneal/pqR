@@ -365,8 +365,10 @@
  Rf_gammalims
  Rf_gpptr
  Rf_i1mach
+ Rf_install_translated
  Rf_internalArraySubscript
  Rf_internalTypeCheck
+ Rf_invalid_assignment_error
  Rf_isNAcol
  Rf_labelformat
  Rf_lfastchoose

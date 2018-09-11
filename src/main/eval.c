@@ -134,7 +134,7 @@ static SEXP VectorToPairListNamed(SEXP x)
 	for (i = 0; i < len_x; i++) {
 	    if (CHAR(STRING_ELT(xnames,i))[0] != 0) {
 		SETCAR (xptr, VECTOR_ELT(x,i));
-		SET_TAG (xptr, install (translateChar (STRING_ELT(xnames,i))));
+		SET_TAG (xptr, install_translated (STRING_ELT(xnames,i)));
 		xptr = CDR(xptr);
 	    }
 	}
@@ -2178,12 +2178,13 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         /* -- ASSIGNMENT TO A SIMPLE VARIABLE -- */
 
-        /* Handle <<- or assignment to base environment or user database
-           without trying the optimizations done below. */
+        /* Handle <<-, or assignment to the base environment, or a user 
+           database (which has object bit set) without trying the 
+           optimizations done below. */
 
-        if (opval == 2 || IS_BASE(rho) || IS_USER_DATABASE(rho)) {
+        if (opval || IS_BASE(rho) || OBJECT(rho)) {
             rhs = evalv (rhs, rho, VARIANT_PENDING_OK);
-            if (opval == 2) {
+            if (opval) {
                 set_var_nonlocal (lhs, rhs, ENCLOS(rho), 3);
                 goto done;
             }
@@ -2251,7 +2252,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                  && !NAMEDCNT_GT_1(v)) {
                 SET_NAMEDCNT_NOT_0(v);
                 (void) POP_IF_TOP_OF_STACK(rhs);
-                helpers_wait_until_not_in_use(v);  /* won't be being computed */
+                WAIT_UNTIL_NOT_IN_USE(v);  /* won't be being computed */
                 switch (rhs_type_etc) {
                 case REALSXP:
                     *REAL(v)    = *REAL(rhs);
@@ -2301,12 +2302,12 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     else if (TYPEOF(lhs) == STRSXP && LENGTH(lhs) == 1) {
         /* Convert lhs string to a symbol and try again */
-        lhs = install(translateChar(STRING_ELT(lhs, 0)));
+        lhs = install_translated (STRING_ELT(lhs,0));
         goto redo;
     }
 
     else {
-        errorcall (call, _("invalid assignment left-hand side"));
+        invalid_assignment_error(call);
     }
 
   done:
@@ -2377,7 +2378,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
        (unless this is the <<- operator).  Save and protect the binding 
        cell used. */
 
-    if (opval == 2) /* <<- */
+    if (opval) /* <<- */
         varval = findVar (var, ENCLOS(rho));
     else {
         varval = findVarInFramePendingOK (rho, var);
@@ -2654,7 +2655,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
         SET_NAMEDCNT_NOT_0(varval);
     }
     else {
-        if (opval == 2) /* <<- */
+        if (opval) /* <<- */
             set_var_nonlocal (var, newval, ENCLOS(rho), 3);
         else
             set_var_in_frame (var, newval, rho, TRUE, 3);
@@ -5218,7 +5219,7 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        and 'into' is not an object. */
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
-        if (name == R_NilValue) name = install(translateChar(schar));
+        if (name == R_NilValue) name = install_translated(schar);
         return R_subassign3_dflt (call, into, name, value);
     }
 
@@ -5234,7 +5235,7 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         } 
         else {
             PROTECT(into);
-            if (name == R_NilValue) name = install(translateChar(schar));
+            if (name == R_NilValue) name = install_translated(schar);
             value = EVALV (value, env, 0);
             UNPROTECT(1);
             return R_subassign3_dflt (call, into, name, value);
@@ -5260,7 +5261,7 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     }
 
     PROTECT(ans);
-    if (name == R_NilValue) name = install(translateChar(schar));
+    if (name == R_NilValue) name = install_translated(schar);
     UNPROTECT(4);
 
     return R_subassign3_dflt(call, CAR(ans), name, CADDR(ans));
@@ -5283,11 +5284,11 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 {"{",		do_begin,	0,	1200,	-1,	{PP_CURLY,   PREC_FN,	  0}},
 {"return",	do_return,	0,	1200,	-1,	{PP_RETURN,  PREC_FN,	  0}},
 {"function",	do_function,	0,	1000,	-1,	{PP_FUNCTION,PREC_FN,	  0}},
-{"<-",		do_set,		1,	1100,	2,	{PP_ASSIGN,  PREC_LEFT,	  1}},
-{"=",		do_set,		3,	1100,	2,	{PP_ASSIGN,  PREC_EQ,	  1}},
-{"<<-",		do_set,		2,	1100,	2,	{PP_ASSIGN2, PREC_LEFT,	  1}},
-{"->",		do_set,		11,	1100,	2,	{PP_ASSIGN,  PREC_RIGHT,	  1}},
-{"->>",		do_set,		12,	1100,	2,	{PP_ASSIGN2, PREC_RIGHT,	  1}},
+{"<-",		do_set,		0,	1100,	2,	{PP_ASSIGN,  PREC_LEFT,	  1}},
+{"=",		do_set,		0,	1100,	2,	{PP_ASSIGN,  PREC_EQ,	  1}},
+{"<<-",		do_set,		1,	1100,	2,	{PP_ASSIGN2, PREC_LEFT,	  1}},
+{"->",		do_set,		10,	1100,	2,	{PP_ASSIGN,  PREC_RIGHT,	  1}},
+{"->>",		do_set,		11,	1100,	2,	{PP_ASSIGN2, PREC_RIGHT,	  1}},
 {"eval",	do_eval,	0,	1211,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"eval.with.vis",do_eval,	1,	1211,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"Recall",	do_recall,	0,	210,	-1,	{PP_FUNCALL, PREC_FN,	  0}},

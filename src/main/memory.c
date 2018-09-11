@@ -678,10 +678,8 @@ void sggc_after_marking (int level, int rep)
             for (SEXP *var_list = helpers_var_list(0); *var_list; var_list++) {
                 SEXP v = *var_list;
                 if (NOT_MARKED(v)) {
-                    if (helpers_is_being_computed(v))
-                        helpers_wait_until_not_being_computed(v);
-                    if (helpers_is_in_use(v))
-                        helpers_wait_until_not_in_use(v);
+                    WAIT_UNTIL_COMPUTED(v);
+                    WAIT_UNTIL_NOT_IN_USE(v);
                 }
             }
         }
@@ -2023,7 +2021,7 @@ SEXP reallocVector (SEXP vec, R_len_t length, int init)
             return vec;
         if (new_chunks >= (curr_chunks>>1) || curr_chunks - new_chunks < 4) {
             WAIT_UNTIL_COMPUTED(vec);
-            helpers_wait_until_not_in_use(vec);
+            WAIT_UNTIL_NOT_IN_USE(vec);
             LENGTH(vec) = length;
             if (length == 1) 
                 UNSET_VEC_DOTS_TR_BIT(vec);
@@ -2055,7 +2053,7 @@ SEXP reallocVector (SEXP vec, R_len_t length, int init)
         vec = SEXP_FROM_CPTR(cp);
 
         WAIT_UNTIL_COMPUTED(old_vec);
-        helpers_wait_until_not_in_use(old_vec);
+        WAIT_UNTIL_NOT_IN_USE(old_vec);
 
         if (init || !isVectorNonpointer(old_vec)) {
             sggc_nchunks_t copy_chunks 
@@ -2084,7 +2082,7 @@ SEXP reallocVector (SEXP vec, R_len_t length, int init)
     }
     else {
         WAIT_UNTIL_COMPUTED(vec);
-        helpers_wait_until_not_in_use(vec);
+        WAIT_UNTIL_NOT_IN_USE(vec);
         LENGTH(vec) = length;
     }
 

@@ -80,7 +80,7 @@ SEXP attribute_hidden do_mapply(SEXP f, SEXP varyingArgs, SEXP constantArgs, SEX
 	UNPROTECT(3);
 	PROTECT(fcall = LCONS(tmp2, fcall));
 	if (named && CHAR(STRING_ELT(vnames, j))[0] != '\0')
-	    SET_TAG(fcall, install(translateChar(STRING_ELT(vnames, j))));
+	    SET_TAG(fcall, install_translated (STRING_ELT(vnames,j)));
     }
 
     UNPROTECT(1);

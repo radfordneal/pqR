@@ -729,7 +729,14 @@ extern void helpers_wait_until_not_being_computed2 (SEXP, SEXP);
 #define WAIT_UNTIL_COMPUTED_2(x1,x2) \
   ( ! helpers_is_being_computed(x1) && ! helpers_is_being_computed(x2) \
     ? (void) 0 \
-    : helpers_wait_until_not_being_computed2(x1,x2) ) \
+    : helpers_wait_until_not_being_computed2(x1,x2) )
+
+/* Macro to wait until variable not in use. */
+
+#define WAIT_UNTIL_NOT_IN_USE(x) \
+  ( ! helpers_is_in_use(x) \
+    ? (void) 0 \
+    : helpers_wait_until_not_in_use(x) )
 
 #else 
 
@@ -1292,11 +1299,13 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define InitTempDir		Rf_InitTempDir
 # define InitTypeTables         Rf_InitTypeTables
 # define initStack		Rf_initStack
+# define install_translated	Rf_install_translated
 # define IntegerFromComplex	Rf_IntegerFromComplex
 # define IntegerFromLogical	Rf_IntegerFromLogical
 # define IntegerFromReal	Rf_IntegerFromReal
 # define IntegerFromString	Rf_IntegerFromString
 # define internalTypeCheck	Rf_internalTypeCheck
+# define invalid_assignment_error Rf_invalid_assignment_error
 # define isValidName		Rf_isValidName
 # define jump_to_toplevel	Rf_jump_to_toplevel
 # define KillAllDevices		Rf_KillAllDevices
@@ -1507,6 +1516,7 @@ void Init_R_Variables(SEXP);
 void InitTempDir(void);
 void InitTypeTables(void);
 void initStack(void);
+SEXP install_translated (SEXP);
 void internalTypeCheck(SEXP, SEXP, SEXPTYPE);
 Rboolean isMethodsDispatchOn(void);
 int isValidName(const char *);
@@ -1662,6 +1672,7 @@ R_NORETURN void dotdotdot_error(void);
 R_NORETURN void apply_non_function_error(void);
 R_NORETURN void arg_missing_error(SEXP sym);
 R_NORETURN void unbound_var_error(SEXP sym);
+R_NORETURN void invalid_assignment_error(SEXP call);
 R_NORETURN void out_of_bounds_error(SEXP call);
 R_NORETURN void nonsubsettable_error(SEXP call, SEXP x);
 R_NORETURN void PRSEEN_error(SEXP e);

@@ -40,7 +40,7 @@ static SEXP do_debug(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP fn = CAR(args);
 
     if (isValidString(fn))
-        fn = findFun (install(translateChar(STRING_ELT(fn,0))), rho);
+        fn = findFun (install_translated (STRING_ELT(fn,0)), rho);
 
     if (TYPEOF(fn) != CLOSXP && TYPEOF(fn) != SPECIALSXP 
                              &&  TYPEOF(fn) != BUILTINSXP )
@@ -75,7 +75,7 @@ static SEXP do_trace(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP fn = CAR(args);
 
     if (isValidString(fn))
-        fn = findFun (install(translateChar(STRING_ELT(fn,0))), rho);
+        fn = findFun (install_translated (STRING_ELT(fn,0)), rho);
 
     if (TYPEOF(fn) != CLOSXP && TYPEOF(fn) != BUILTINSXP
                              && TYPEOF(fn) != SPECIALSXP)
