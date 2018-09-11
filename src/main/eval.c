@@ -2327,6 +2327,11 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
    to avoid possible overhead of a large function (eg, stack frame size)
    for the simple case. */
 
+SEXP attribute_hidden Rf_set_subassign_general 
+  (SEXP call, SEXP lhs, SEXP rhs, SEXP rho, int depth, SEXP var, SEXP varval,
+   SEXP assgnfcn, SEXP rhsprom, SEXP lhsprom, SEXP rhs_uneval, 
+   int maybe_fast);
+
 SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
                                         int variant, int opval)
 {
@@ -2356,7 +2361,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
     if ( ! (variant & VARIANT_NULL))
         INC_NAMEDCNT(rhs);
 
-    SEXP var, varval, newval, rhsprom, lhsprom, e, fn;
+    SEXP var, varval, newval, rhsprom, lhsprom;
 
     /* Find the variable ultimately assigned to, and its depth.
        The depth is 1 for a variable within one replacement function
@@ -2418,6 +2423,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
        general code below should also work when depth is 1. */
 
     if (depth == 1) {
+        SEXP fn, e;
         if (maybe_fast && !isObject(varval)
               && CADDR(lhs) != R_DotsSymbol
               && (fn = FINDFUN(assgnfcn,rho), 
@@ -2429,7 +2435,6 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             R_variant_result = 0;
             newval = CALL_PRIMFUN (call, fn, CDDR(lhs), rho, 
                                    VARIANT_FAST_SUB);
-            UNPROTECT(3);
         }
         else {
             if (POP_IF_TOP_OF_STACK(rhs))  /* might be on stack if maybe_fast */
@@ -2438,212 +2443,22 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
             PROTECT (lhsprom = mkValuePROMISE(CADR(lhs), varval));
             PROTECT(e = replaceCall (assgnfcn, lhsprom, CDDR(lhs), rhsprom));
             newval = eval(e,rho);
-            UNPROTECT(6);
+            UNPROTECT(3);
         }
     }
 
-    else {  /* the general case, for any depth */
+    else {  
 
-        SEXP v, b, op, prom, fetch_args;
-        int d, fast;
+        /* The general case, for any depth, done in another function to
+           possibly reduce overhead (eg, stack frame size) for simpler cases. */
 
-        /* Structure recording information on expressions at all levels of 
-           the lhs.  Level 'depth' is the ultimate variable; level 0 is the
-           whole lhs expression. */
-
-        struct { 
-            SEXP expr;        /* Expression at this level */
-            SEXP value;       /* Value of expr, may later change */
-            SEXP store_args;  /* Arg list for store; depth 0 special, else  */
-                              /*   LISTSXP or NILSXP - pairlist of promises */
-                              /*   PROMSXP - promise for single argument    */
-                              /*   R_NoObject - one arg from CADDR(expr)    */
-            int in_top;       /* 1 or 2 if value is an unshared part of the */
-                              /*   value at top level, else 0               */
-        } s[depth+1];         
-
-        /* For each level from 1 to depth, store the lhs expression at that
-           level. */
-
-        s[0].expr = lhs;
-        for (v = CADR(lhs), d = 1; d < depth; v = CADR(v), d++) {
-            s[d].expr = v;
-        }
-        s[depth].expr = var;
-
-        /* Note: In code below, promises with the value already filled
-                 in are used to 'quote' values passsed as arguments,
-                 so they will not be changed when the arguments are
-                 evaluated, and so deparsed error messages will have
-                 the source expression.  These promises should not be
-                 recycled, since they may be saved in warning messages
-                 stored for later display.  */
-
-        /* For each level except the outermost, evaluate and save the
-           value of the expression as it is before the assignment.
-           Also, ask if it is an unshared subset of the next larger
-           expression (and all larger ones).  If it is not known to be
-           part of the larger expressions, we do a top-level duplicate
-           of it.
-
-           Also, for each level except the final variable and
-           outermost level, which only does a store, save argument
-           lists for the fetch/store functions that are built with
-           shared promises, so that they are evaluated only once.  The
-           store argument list has a "value" cell at the end to fill
-           in the stored value.
-
-           For efficiency, $ and [[ are handled with VARIANT_FAST_SUB,
-           and for $, no promise is created for its argument. */
-
-        s[depth].value = varval;
-        s[depth].in_top = 1;
-
-        s[0].store_args = CDDR(lhs);  /* original args, no value cell */
-
-        for (d = depth-1; d > 0; d--) {
-
-            op = CAR(s[d].expr);
-
-            fast = 0;
-            if (op == R_DollarSymbol || op == R_Bracket2Symbol) {
-                fn = FINDFUN (op, rho);
-                fast = TYPEOF(fn)==SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn);
-            }
-
-            if (fast && op == R_DollarSymbol 
-                     && CDDR(s[d].expr) != R_NilValue 
-                     && CDR(CDDR(s[d].expr)) == R_NilValue) {
-                fetch_args = CDDR(s[d].expr);
-                s[d].store_args = R_NoObject;
-            }
-            else {
-                fetch_args = promiseArgs (CDDR(s[d].expr), rho);
-                if (CDR(fetch_args)==R_NilValue && TAG(fetch_args)==R_NilValue)
-                    s[d].store_args = CAR(fetch_args);
-                else
-                    s[d].store_args = dup_arg_list (fetch_args);
-            }
-
-            PROTECT2 (s[d].store_args, fetch_args);
-
-            /* We'll need this value for the subsequent replacement
-               operation, so make sure it doesn't change.  Incrementing
-               NAMEDCNT would be the obvious way, but if NAMEDCNT 
-               was already non-zero, that leads to undesirable duplication
-               later (even if the increment is later undone).  Making sure
-               that NAMEDCNT isn't zero seems to be sufficient. */
-
-            SET_NAMEDCNT_NOT_0(s[d+1].value);
-
-            if (fast) {
-                R_fast_sub_var = s[d+1].value;
-                R_variant_result = 0;
-                e = CALL_PRIMFUN (call, fn, fetch_args, rho, 
-                      VARIANT_FAST_SUB /* implies QUERY_UNSHARED_SUBSET */);
-                UNPROTECT(1);  /* fetch_args */
-            }
-            else {
-                prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
-                PROTECT (e = LCONS (op, CONS (prom, fetch_args)));
-                R_variant_result = 0;
-                e = evalv_other (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
-                UNPROTECT(2);  /* e, fetch_args */
-            }
-
-            s[d].in_top = 
-              s[d+1].in_top == 1 ? R_variant_result : 0;  /* 0, 1, or 2 */
-            R_variant_result = 0;
-            if (s[d].in_top == 0)
-                e = dup_top_level(e);
-            s[d].value = e;
-            PROTECT(e);
-        }
-
-        /* Call the replacement function at level 1, perhaps using the
-           fast interface. */
-
-        if (maybe_fast && !isObject(s[1].value) 
-              && CAR(s[0].store_args) != R_DotsSymbol
-              && (fn = FINDFUN(assgnfcn,rho), 
-                  TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
-            R_fast_sub_var = s[1].value;
-            R_fast_sub_replacement = rhs;
-            PROTECT3(R_fast_sub_replacement,R_fast_sub_var,fn);
-            newval = CALL_PRIMFUN (call, fn, s[0].store_args, rho, 
-                                   VARIANT_FAST_SUB);
-            e = R_NilValue;
-        }
-        else {
-            if (POP_IF_TOP_OF_STACK(rhs))  /* might be on stack if maybe_fast */
-                rhs = DUP_STACK_VALUE(rhs);
-            PROTECT(rhsprom = mkValuePROMISE(rhs_uneval, rhs));
-            PROTECT (lhsprom = mkValuePROMISE(s[1].expr, s[1].value));
-            /* original args, no value cell at end, assgnfcn set above*/
-            PROTECT(e = replaceCall (assgnfcn, lhsprom, 
-                                     s[0].store_args, rhsprom));
-            newval = eval(e,rho);
-        }
-
-        /* Unprotect e, lhsprom, rhsprom, and s[1].value from the
-           previous loop, which went from depth-1 to 1 in the 
-           opposite order as this one (plus unprotect one more from
-           before that).  Note: e used later, but no alloc before. */
-
-        UNPROTECT(4);
-
-        /* Call the replacement functions at levels 2 to depth, changing the
-           values at each level, using the fetched value at that level 
-           (was perhaps duplicated), and the new value after replacement at 
-           the lower level.  Except we don't do that if it's not necessary
-           because the new value is already part of the larger object. */
-        
-        for (d = 1; d < depth; d++) {
-
-            /* If the replacement function returned a different object, 
-               we have to replace, since that new object won't be part 
-               of the object at the next level, even if the old one was. */
-
-            if (s[d].in_top == 1 && s[d].value == newval) { 
-
-                /* Don't need to do replacement. */
-
-                newval = s[d+1].value;
-                UNPROTECT(1);  /* s[d+1].value protected in previous loop */
-            }
-            else {
-
-                /* Put value into the next-higher object. */
-
-                PROTECT (rhsprom = mkValuePROMISE (e, newval));
-                PROTECT (lhsprom = mkValuePROMISE (s[d+1].expr, s[d+1].value));
-                assgnfcn = FIND_SUBASSIGN_FUNC(CAR(s[d].expr));
-                b = cons_with_tag (rhsprom, R_NilValue, R_ValueSymbol);
-                if (s[d].store_args == R_NoObject)
-                    s[d].store_args = CONS (CADDR(s[d].expr), b);
-                else if (s[d].store_args == R_NilValue)
-                    s[d].store_args = b;
-                else if (TYPEOF(s[d].store_args) != LISTSXP) /* one arg */
-                    s[d].store_args = CONS (s[d].store_args, b);
-                else {
-                    for (v = s[d].store_args; CDR(v)!=R_NilValue; v = CDR(v)) ;
-                    SETCDR(v, b);
-                }
-                PROTECT(e = LCONS (assgnfcn, CONS(lhsprom, s[d].store_args)));
-
-                newval = eval(e,rho);
-
-                /* Unprotect e, lhsprom, rhsprom, and s[d+1].value from the
-                   previous loop, which went from depth-1 to 1 in the 
-                   opposite order as this one (plus unprotect one more from
-                   before that).  Note: e used later, but no alloc before. */
-
-                UNPROTECT(4);
-            }
-        }
-
-        UNPROTECT(depth-1+2);  /* store_args + two more */
+        newval = 
+          Rf_set_subassign_general (call, lhs, rhs, rho, depth, var, varval, 
+                                    assgnfcn, rhsprom, lhsprom, rhs_uneval, 
+                                    maybe_fast);
     }
+
+    UNPROTECT(3);  /* rhs, bcell, varval */
 
     /* Assign the final result after the top level replacement.  We
        can sometimes avoid the cost of this by looking at the saved
@@ -2669,6 +2484,204 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
         DEC_NAMEDCNT(rhs);
         return rhs;
     }
+}
+
+SEXP attribute_hidden Rf_set_subassign_general 
+  (SEXP call, SEXP lhs, SEXP rhs, SEXP rho, int depth, SEXP var, SEXP varval,
+   SEXP assgnfcn, SEXP rhsprom, SEXP lhsprom, SEXP rhs_uneval, 
+   int maybe_fast)
+{
+    SEXP v, b, e, op, prom, fn, fetch_args, newval;
+    int d, fast;
+
+    /* Structure recording information on expressions at all levels of 
+       the lhs.  Level 'depth' is the ultimate variable; level 0 is the
+       whole lhs expression. */
+
+    struct { 
+        SEXP expr;        /* Expression at this level */
+        SEXP value;       /* Value of expr, may later change */
+        SEXP store_args;  /* Arg list for store; depth 0 special, else  */
+                          /*   LISTSXP or NILSXP - pairlist of promises */
+                          /*   PROMSXP - promise for single argument    */
+                          /*   R_NoObject - one arg from CADDR(expr)    */
+        int in_top;       /* 1 or 2 if value is an unshared part of the */
+                          /*   value at top level, else 0               */
+    } s[depth+1];         
+
+    /* For each level from 1 to depth, store the lhs expression at that
+       level. */
+
+    s[0].expr = lhs;
+    for (v = CADR(lhs), d = 1; d < depth; v = CADR(v), d++) {
+        s[d].expr = v;
+    }
+    s[depth].expr = var;
+
+    /* Note: In code below, promises with the value already filled
+             in are used to 'quote' values passsed as arguments,
+             so they will not be changed when the arguments are
+             evaluated, and so deparsed error messages will have
+             the source expression.  These promises should not be
+             recycled, since they may be saved in warning messages
+             stored for later display.  */
+
+    /* For each level except the outermost, evaluate and save the
+       value of the expression as it is before the assignment.
+       Also, ask if it is an unshared subset of the next larger
+       expression (and all larger ones).  If it is not known to be
+       part of the larger expressions, we do a top-level duplicate
+       of it.
+
+       Also, for each level except the final variable and
+       outermost level, which only does a store, save argument
+       lists for the fetch/store functions that are built with
+       shared promises, so that they are evaluated only once.  The
+       store argument list has a "value" cell at the end to fill
+       in the stored value.
+
+       For efficiency, $ and [[ are handled with VARIANT_FAST_SUB,
+       and for $, no promise is created for its argument. */
+
+    s[depth].value = varval;
+    s[depth].in_top = 1;
+
+    s[0].store_args = CDDR(lhs);  /* original args, no value cell */
+
+    for (d = depth-1; d > 0; d--) {
+
+        op = CAR(s[d].expr);
+
+        fast = 0;
+        if (op == R_DollarSymbol || op == R_Bracket2Symbol) {
+            fn = FINDFUN (op, rho);
+            fast = TYPEOF(fn)==SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn);
+        }
+
+        if (fast && op == R_DollarSymbol 
+                 && CDDR(s[d].expr) != R_NilValue 
+                 && CDR(CDDR(s[d].expr)) == R_NilValue) {
+            fetch_args = CDDR(s[d].expr);
+            s[d].store_args = R_NoObject;
+        }
+        else {
+            fetch_args = promiseArgs (CDDR(s[d].expr), rho);
+            if (CDR(fetch_args)==R_NilValue && TAG(fetch_args)==R_NilValue)
+                s[d].store_args = CAR(fetch_args);
+            else
+                s[d].store_args = dup_arg_list (fetch_args);
+        }
+
+        PROTECT2 (s[d].store_args, fetch_args);
+
+        /* We'll need this value for the subsequent replacement
+           operation, so make sure it doesn't change.  Incrementing
+           NAMEDCNT would be the obvious way, but if NAMEDCNT 
+           was already non-zero, that leads to undesirable duplication
+           later (even if the increment is later undone).  Making sure
+           that NAMEDCNT isn't zero seems to be sufficient. */
+
+        SET_NAMEDCNT_NOT_0(s[d+1].value);
+
+        if (fast) {
+            R_fast_sub_var = s[d+1].value;
+            R_variant_result = 0;
+            e = CALL_PRIMFUN (call, fn, fetch_args, rho, 
+                  VARIANT_FAST_SUB /* implies QUERY_UNSHARED_SUBSET */);
+            UNPROTECT(1);  /* fetch_args */
+        }
+        else {
+            prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
+            PROTECT (e = LCONS (op, CONS (prom, fetch_args)));
+            R_variant_result = 0;
+            e = evalv_other (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
+            UNPROTECT(2);  /* e, fetch_args */
+        }
+
+        s[d].in_top = 
+          s[d+1].in_top == 1 ? R_variant_result : 0;  /* 0, 1, or 2 */
+        R_variant_result = 0;
+        if (s[d].in_top == 0)
+            e = dup_top_level(e);
+        s[d].value = e;
+        PROTECT(e);
+    }
+
+    /* Call the replacement function at level 1, perhaps using the
+       fast interface. */
+
+    if (maybe_fast && !isObject(s[1].value) 
+          && CAR(s[0].store_args) != R_DotsSymbol
+          && (fn = FINDFUN(assgnfcn,rho), 
+              TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
+        R_fast_sub_var = s[1].value;
+        R_fast_sub_replacement = rhs;
+        PROTECT3 (R_fast_sub_replacement, R_fast_sub_var, fn);
+        newval = CALL_PRIMFUN (call, fn, s[0].store_args, rho, 
+                               VARIANT_FAST_SUB);
+        e = R_NilValue;
+    }
+    else {
+        if (POP_IF_TOP_OF_STACK(rhs))  /* might be on stack if maybe_fast */
+            rhs = DUP_STACK_VALUE(rhs);
+        PROTECT (rhsprom = mkValuePROMISE(rhs_uneval, rhs));
+        PROTECT (lhsprom = mkValuePROMISE(s[1].expr, s[1].value));
+        /* original args, no value cell at end, assgnfcn set above*/
+        PROTECT (e = replaceCall (assgnfcn, lhsprom, 
+                                  s[0].store_args, rhsprom));
+        newval = eval(e,rho);
+    }
+
+    UNPROTECT(3);  /* e, lhsprom, rhsprom OR 3 from other branch of above if
+                      Note: is e used later, but with no alloc before. */
+
+    /* Call the replacement functions at levels 2 to depth, changing the
+       values at each level, using the fetched value at that level 
+       (was perhaps duplicated), and the new value after replacement at 
+       the lower level.  Except we don't do that if it's not necessary
+       because the new value is already part of the larger object. */
+    
+    for (d = 1; d < depth; d++) {
+
+        /* If the replacement function returned a different object, 
+           we have to replace, since that new object won't be part 
+           of the object at the next level, even if the old one was. */
+
+        if (s[d].in_top == 1 && s[d].value == newval) { 
+
+            /* Don't need to do replacement. */
+
+            newval = s[d+1].value;
+        }
+        else {
+
+            /* Put value into the next-higher object. */
+
+            PROTECT (rhsprom = mkValuePROMISE (e, newval));
+            PROTECT (lhsprom = mkValuePROMISE (s[d+1].expr, s[d+1].value));
+            assgnfcn = FIND_SUBASSIGN_FUNC(CAR(s[d].expr));
+            b = cons_with_tag (rhsprom, R_NilValue, R_ValueSymbol);
+            if (s[d].store_args == R_NoObject)
+                s[d].store_args = CONS (CADDR(s[d].expr), b);
+            else if (s[d].store_args == R_NilValue)
+                s[d].store_args = b;
+            else if (TYPEOF(s[d].store_args) != LISTSXP) /* one arg */
+                s[d].store_args = CONS (s[d].store_args, b);
+            else {
+                for (v = s[d].store_args; CDR(v)!=R_NilValue; v = CDR(v)) ;
+                SETCDR(v, b);
+            }
+            PROTECT(e = LCONS (assgnfcn, CONS(lhsprom, s[d].store_args)));
+
+            newval = eval(e,rho);
+
+            UNPROTECT(3);  /* rhsprom, lhsprom, e (used later, but no alloc) */
+        }
+    }
+
+    UNPROTECT (2 * (depth-1));
+
+    return newval;
 }
 
 
@@ -4665,62 +4678,127 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                                        args, rho, variant, 0);
         }
         else {
-            SEXP r;
-            PROTECT(array);
-            BEGIN_PROTECT3 (sb1, sb2, remargs);
+
             SEXP sv_scalar_stack = R_scalar_stack;
             SEXP ixlist2 = CDR(ixlist);
+            SEXP r;
+
+            BEGIN_PROTECT3 (sb1, sb2, remargs);
+            ALSO_PROTECT1 (array);
+
+            SEXP sb1 = EVALV (CAR(ixlist), rho, 
+                         ixlist2 == R_NilValue ?  /* only 1 argument */
+                           VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
+                           VARIANT_MISSING_OK
+                       : CDR(ixlist2)==R_NilValue ?  /* at most 2 arguments */
+                           VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
+                           VARIANT_MISSING_OK | VARIANT_PENDING_OK
+                       : /* more than 2 arguments */
+                           VARIANT_SCALAR_STACK_OK | 
+                           VARIANT_MISSING_OK | VARIANT_PENDING_OK);
+
             int64_t seq = 0;
-            sb1 = EVALV (CAR(ixlist), rho, 
-                         CDR(ixlist2)==R_NilValue /* no more than 2 arguments */
-                          ? VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
-                            VARIANT_MISSING_OK | VARIANT_PENDING_OK
-                          : VARIANT_SCALAR_STACK_OK | 
-                            VARIANT_MISSING_OK | VARIANT_PENDING_OK);
+            sb2 = R_NoObject;
+            remargs = ixlist2;
             if (R_variant_result) {
                 seq = R_variant_seq_spec;
                 R_variant_result = 0;
             }
-            remargs = ixlist2;
-            sb2 = R_NoObject;
-            if (ixlist2 != R_NilValue && TAG(ixlist2) == R_NilValue 
-                                      && CAR(ixlist2) != R_DotsSymbol) {
-                INC_NAMEDCNT(sb1);
-                sb2 = EVALV (CAR(ixlist2), rho,
-                             VARIANT_SCALAR_STACK_OK | VARIANT_MISSING_OK);
-                DEC_NAMEDCNT(sb1);
-                remargs = CDR(ixlist2);
+
+            if (ixlist2 == R_NilValue) {
+                if (sb1 == R_MissingArg && isSymbol(CAR(ixlist))) {
+                    remargs = CONS(sb1,R_NilValue);
+                    SET_MISSING (remargs, R_isMissing(CAR(ixlist),rho));
+                    sb1 = R_NoObject;
+                }
+                else if (!seq && isVectorAtomic(array)) {
+
+                    /* Do simplest cases here */
+
+                    R_len_t len = LENGTH(array);
+                    R_len_t ix = 0;
+                    if (TYPE_ETC(sb1) == INTSXP && *INTEGER(sb1) >= 1
+                                                && *INTEGER(sb1) <= len)
+                        ix = *INTEGER(sb1);
+                    else if (TYPE_ETC(sb1) == REALSXP && *REAL(sb1) >= 1 
+                                                      && *REAL(sb1) <= len)
+                        ix = (int) *REAL(sb1);
+                    if (ix != 0) {
+                        ix -= 1;
+                        WAIT_UNTIL_COMPUTED(array);
+                        switch (TYPEOF(array)) {
+                        case LGLSXP:
+                            r = ScalarLogicalMaybeConst (LOGICAL(array)[ix]);
+                            break;
+                        case INTSXP:
+                            if (CAN_USE_SCALAR_STACK(variant))
+                                r = PUSH_SCALAR_INTEGER(INTEGER(array)[ix]);
+                            else
+                                r = ScalarIntegerMaybeConst(INTEGER(array)[ix]);
+                            break;
+                        case REALSXP:
+                            if (CAN_USE_SCALAR_STACK(variant))
+                                r = PUSH_SCALAR_REAL(REAL(array)[ix]);
+                            else
+                                r = ScalarRealMaybeConst(REAL(array)[ix]);
+                            break;
+                        case RAWSXP:
+                            r = ScalarRawMaybeConst (RAW(array)[ix]);
+                            break;
+                        case STRSXP:
+                            r = ScalarStringMaybeConst (STRING_ELT(array,ix));
+                            break;
+                        case CPLXSXP:
+                            r = ScalarComplexMaybeConst (COMPLEX(array)[ix]);
+                            break;
+                        default: abort();
+                        }
+                        goto done;
+                    }
+                }
             }
-            if (remargs != R_NilValue) {
-                INC_NAMEDCNT(sb1);
-                if (sb2 != R_NoObject) INC_NAMEDCNT(sb2);
-                remargs = evalList_v (remargs, rho, VARIANT_SCALAR_STACK_OK |
-                                      VARIANT_PENDING_OK | VARIANT_MISSING_OK);
-                DEC_NAMEDCNT(sb1);
-                if (sb2 != R_NoObject) DEC_NAMEDCNT(sb2);
-            }
-            if (sb2 == R_MissingArg && isSymbol(CAR(ixlist2))) {
-                remargs = CONS(sb2,remargs);
-                SET_MISSING (remargs, R_isMissing(CAR(ixlist2),rho));
-                sb2 = R_NoObject;
-            }
-            if (sb1 == R_MissingArg && isSymbol(CAR(ixlist))) {
-                if (sb2 != R_NoObject) {
+            else {
+                if (TAG(ixlist2)==R_NilValue && CAR(ixlist2) != R_DotsSymbol) {
+                    INC_NAMEDCNT(sb1);
+                    sb2 = EVALV (CAR(ixlist2), rho,
+                                 VARIANT_SCALAR_STACK_OK | VARIANT_MISSING_OK);
+                    DEC_NAMEDCNT(sb1);
+                    remargs = CDR(ixlist2);
+                }
+                if (remargs != R_NilValue) {
+                    INC_NAMEDCNT(sb1);
+                    if (sb2 != R_NoObject) INC_NAMEDCNT(sb2);
+                    remargs = evalList_v(remargs, rho, VARIANT_SCALAR_STACK_OK |
+                                VARIANT_PENDING_OK | VARIANT_MISSING_OK);
+                    DEC_NAMEDCNT(sb1);
+                    if (sb2 != R_NoObject) DEC_NAMEDCNT(sb2);
+                }
+                if (sb2 == R_MissingArg && isSymbol(CAR(ixlist2))) {
                     remargs = CONS(sb2,remargs);
+                    SET_MISSING (remargs, R_isMissing(CAR(ixlist2),rho));
                     sb2 = R_NoObject;
                 }
-                remargs = CONS(sb1,remargs);
-                SET_MISSING (remargs, R_isMissing(CAR(ixlist),rho));
-                sb1 = R_NoObject;
+                if (sb1 == R_MissingArg && isSymbol(CAR(ixlist))) {
+                    if (sb2 != R_NoObject) {
+                        remargs = CONS(sb2,remargs);
+                        sb2 = R_NoObject;
+                    }
+                    remargs = CONS(sb1,remargs);
+                    SET_MISSING (remargs, R_isMissing(CAR(ixlist),rho));
+                    sb1 = R_NoObject;
+                }
+                if (remargs != R_NilValue) 
+                    wait_until_arguments_computed(remargs);
             }
-            else
-                WAIT_UNTIL_COMPUTED(sb1);
-            if (remargs != R_NilValue) wait_until_arguments_computed(remargs);
+
+            if (sb1 != R_NoObject) WAIT_UNTIL_COMPUTED(sb1);
             r = do_subset_dflt_seq (call, op, array, sb1, sb2,
                                     remargs, rho, variant, seq);
+
+          done:
             R_scalar_stack = sv_scalar_stack;
             END_PROTECT;
-            UNPROTECT(1);  /* array */
+
             R_Visible = TRUE;
             return ON_SCALAR_STACK(r) ? PUSH_SCALAR(r) : r;
         }
