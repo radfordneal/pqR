@@ -836,7 +836,7 @@ SEXP VectorToPairList(SEXP x)
 	SETCAR(xptr, VECTOR_ELT(x, i));
         SET_NAMEDCNT_MAX(CAR(xptr));
 	if (named && CHAR(STRING_ELT(xnames, i))[0] != '\0') /* ASCII */
-	    SET_TAG(xptr, install(translateChar(STRING_ELT(xnames, i))));
+	    SET_TAG(xptr, install_translated (STRING_ELT(xnames,i)));
 	xptr = CDR(xptr);
     }
     if (len>0)       /* can't set attributes on NULL */
@@ -1359,7 +1359,7 @@ SEXP CreateTag(SEXP x)
     if (isNull(x) || isSymbol(x))
 	return x;
     else if (isString(x) && LENGTH(x) >= 1 && LENGTH(STRING_ELT(x, 0)) >= 1)
-	return install(translateChar(STRING_ELT(x, 0)));
+	return install_translated (STRING_ELT(x,0));
     else
 	return installChar(STRING_ELT(deparse1(x, 1, SIMPLEDEPARSE), 0));
 }
@@ -1644,7 +1644,7 @@ static SEXP do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
     for (i = 0; i < n - 1; i++) {
 	SETCAR(pargs, VECTOR_ELT(arglist, i));
 	if (names != R_NilValue && *CHAR(STRING_ELT(names, i)) != '\0') /* ASCII */
-	    SET_TAG(pargs, install(translateChar(STRING_ELT(names, i))));
+	    SET_TAG(pargs, install_translated (STRING_ELT(names,i)));
 	else
 	    SET_TAG_NIL(pargs);
 	pargs = CDR(pargs);
@@ -1689,7 +1689,7 @@ static SEXP do_ascall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	for (i = 0; i < n; i++) {
 	    SETCAR(ap, VECTOR_ELT(args, i));
 	    if (names != R_NilValue && !StringBlank(STRING_ELT(names, i)))
-		SET_TAG(ap, install(translateChar(STRING_ELT(names, i))));
+		SET_TAG(ap, install_translated (STRING_ELT(names,i)));
 	    ap = CDR(ap);
 	}
 	UNPROTECT(2); /* ap, names */
@@ -2744,7 +2744,7 @@ static SEXP do_call(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
      */
     if (!isString(rfun) || length(rfun) != 1)
 	errorcall_return(call, _("first argument must be a character string"));
-    PROTECT(rfun = install(translateChar(STRING_ELT(rfun, 0))));
+    PROTECT(rfun = install_translated (STRING_ELT(rfun,0)));
     PROTECT(evargs = duplicate(CDR(args)));
     for (rest = evargs; rest != R_NilValue; rest = CDR(rest))
 	SETCAR(rest, eval(CAR(rest), rho));
@@ -2785,14 +2785,14 @@ static SEXP do_docall(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(c = call = allocList(n + 1));
     SET_TYPEOF(c, LANGSXP);
     if( isString(fun) )
-	SETCAR(c, install(translateChar(STRING_ELT(fun, 0))));
+	SETCAR(c, install_translated (STRING_ELT(fun,0)));
     else
 	SETCAR(c, fun);
     c = CDR(c);
     for (i = 0; i < n; i++) {
 	SETCAR(c, VECTOR_ELT(args, i));
 	if (ItemName(names, i) != R_NilValue)
-	    SET_TAG(c, install(translateChar(ItemName(names, i))));
+	    SET_TAG(c, install_translated (ItemName(names,i)));
 	c = CDR(c);
     }
     call = eval(call, envir);

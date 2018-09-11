@@ -200,7 +200,7 @@ static SEXP do_delayed(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isString(CAR(args)) || length(CAR(args)) == 0)
 	error(_("invalid first argument"));
 
-    name = install(translateChar(STRING_ELT(CAR(args), 0)));
+    name = install_translated (STRING_ELT(CAR(args),0));
     args = CDR(args);
     expr = CAR(args);
 
@@ -322,7 +322,7 @@ static SEXP do_args(SEXP call, SEXP op, SEXP args, SEXP rho)
     fun = CAR(args);
 
     if (TYPEOF(fun) == STRSXP && length(fun)==1) {
-	PROTECT(s = install(translateChar(STRING_ELT(fun, 0))));
+	PROTECT(s = install_translated (STRING_ELT(fun,0)));
         fun = findFun(s, rho);
 	SETCAR(args, fun);
 	UNPROTECT(1);

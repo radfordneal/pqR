@@ -470,7 +470,7 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 
 	if (*CHAR(namei)) { /* name = value  ---> assignment */
-	    tag = install(translateChar(namei));
+	    tag = install_translated (namei);
 	    if (streql(CHAR(namei), "parse_dotdot")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
 		    error(_("invalid value for '%s'"), CHAR(namei));

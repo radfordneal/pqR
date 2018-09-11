@@ -1187,7 +1187,7 @@ static SEXP dispatchNonGeneric(SEXP name, SEXP env, SEXP fdef)
     SEXP e, value, rho, fun, symbol;
     RCNTXT *cptr;
     /* find a non-generic function */
-    symbol = install(translateChar(asChar(name)));
+    symbol = install_translated (asChar(name));
     for(rho = ENCLOS(env); rho != R_EmptyEnv;
 	rho = ENCLOS(rho)) {
 	fun = findVarInFrame3(rho, symbol, TRUE);

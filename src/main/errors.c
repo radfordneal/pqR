@@ -1917,6 +1917,10 @@ R_NORETURN void too_deep_error(void)
     ));
 }
 
+R_NORETURN void attribute_hidden invalid_assignment_error (SEXP call)
+{
+    errorcall (call, _("invalid assignment left-hand side"));
+}
 
 R_NORETURN void attribute_hidden dotdotdot_error(void)
 { 

@@ -172,7 +172,7 @@ static void CheckRHS(SEXP v)
     }
     if (isSymbol(v) && framenames != R_NilValue) {
 	for (i = 0; i < LENGTH(framenames); i++) {
-	    s = install(translateChar(STRING_ELT(framenames, i)));
+	    s = install_translated (STRING_ELT(framenames,i));
 	    if (v == s) {
 		t = allocVector(STRSXP, LENGTH(framenames)-1);
 		for (j = 0; j < LENGTH(t); j++) {
@@ -207,7 +207,7 @@ static void ExtractVars(SEXP formula, int checkonly)
 	    if (formula == dotSymbol && framenames != R_NilValue) {
 		haveDot = TRUE;
 		for (i = 0; i < LENGTH(framenames); i++) {
-		    v = install(translateChar(STRING_ELT(framenames, i)));
+		    v = install_translated (STRING_ELT(framenames,i));
 		    if (!MatchVar(v, CADR(varlist))) InstallVar(v);
 		}
 	    } else
@@ -1038,11 +1038,11 @@ static SEXP do_termsform(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (haveDot) {
 	if(length(framenames)) {
 	    PROTECT_INDEX ind;
-	    PROTECT_WITH_INDEX(rhs = install(translateChar(STRING_ELT(framenames, 0))),
+	    PROTECT_WITH_INDEX(rhs = install_translated (STRING_ELT(framenames,0)),
 			       &ind);
 	    for (i = 1; i < LENGTH(framenames); i++) {
 		REPROTECT(rhs = lang3(plusSymbol, rhs,
-				      install(translateChar(STRING_ELT(framenames, i)))),
+				      install_translated (STRING_ELT(framenames,i))),
 			  ind);
 	    }
 	    if (!isNull(CADDR(ans)))
@@ -1440,7 +1440,7 @@ static SEXP do_modelframe(SEXP call, SEXP op, SEXP args, SEXP rho)
 	   explanatory variables */
 	setAttrib(data, install("terms"), terms);
 	if (isString(na_action) && length(na_action) > 0)
-	    na_action = install(translateChar(STRING_ELT(na_action, 0)));
+	    na_action = install_translated (STRING_ELT(na_action,0));
 	PROTECT(na_action);
 	PROTECT(tmp = lang2(na_action, data));
 	PROTECT(ans = eval(tmp, rho));

@@ -806,6 +806,9 @@ SEXP attribute_hidden Rf_find_binding_in_frame (SEXP rho, SEXP symbol,
 {
     SEXP loc;
 
+    if (!isEnvironment(rho))  /* somebody does this... */
+	return R_NilValue;
+
     if (SEXP32_FROM_SEXP(rho) == LASTSYMENV(symbol)) {
          loc = LASTSYMBINDING(symbol);
          if (BINDING_VALUE(loc) == R_UnboundValue)
@@ -814,32 +817,32 @@ SEXP attribute_hidden Rf_find_binding_in_frame (SEXP rho, SEXP symbol,
              return loc;
     }
 
-    if (IS_USER_DATABASE(rho)) {
-	R_ObjectTable *table = (R_ObjectTable *)R_ExternalPtrAddr(HASHTAB(rho));
-	SEXP val = table->get(CHAR(PRINTNAME(symbol)), canCache, table);
-	/* Better to use exists() here if we don't actually need the value? */
-	if (val == R_UnboundValue)
-            loc = R_NilValue;
-        else {
-	    /* The result should probably be identified as being from
-	       a user database, or maybe use an active binding
-	       mechanism to allow setting a new value to get back to
-	       the data base. */
-            loc = cons_with_tag (val, R_NilValue, symbol);
-	    /* If the database has a canCache method, then call that.
-	       Otherwise, we believe the setting for canCache. */
-	    if(canCache && table->canCache)
-		*canCache = table->canCache(CHAR(PRINTNAME(symbol)), table);
-	}
+    if (IS_BASE(rho) || OBJECT(rho)) { /* user databases have OBJECT set */
+        if (IS_USER_DATABASE(rho)) {
+            R_ObjectTable *table = (R_ObjectTable *)
+                                      R_ExternalPtrAddr(HASHTAB(rho));
+            SEXP val = table->get(CHAR(PRINTNAME(symbol)), canCache, table);
+            /* Better to use exists here if we don't actually need the value? */
+            if (val == R_UnboundValue)
+                loc = R_NilValue;
+            else {
+                /* The result should probably be identified as being from
+                   a user database, or maybe use an active binding
+                   mechanism to allow setting a new value to get back to
+                   the data base. */
+                loc = cons_with_tag (val, R_NilValue, symbol);
+                /* If the database has a canCache method, then call that.
+                   Otherwise, we believe the setting for canCache. */
+                if (canCache && table->canCache)
+                    *canCache = table->canCache(CHAR(PRINTNAME(symbol)), table);
+            }
+        }
+        else if (IS_BASE(rho))
+            error(
+              "'find_binding_in_frame' cannot be used on the base environment");
     }
 
-    else if (IS_BASE(rho))
-	error("'find_binding_in_frame' cannot be used on the base environment");
-
-    else if (!isEnvironment(rho))  /* somebody does this... */
-	return R_NilValue;
-
-    else if (HASHTAB(rho) == R_NilValue) {
+    else if (FRAME(rho) != R_NilValue) {
 
         loc = FRAME(rho);
         SEARCH_LOOP (rho, loc, symbol, goto found);
@@ -854,12 +857,14 @@ SEXP attribute_hidden Rf_find_binding_in_frame (SEXP rho, SEXP symbol,
             LASTSYMBINDING(symbol) = loc;
         }
     }
-    else {
+    else if (HASHTAB(rho) != R_NilValue) {
         int hashcode;
-	hashcode = SYM_HASH(symbol) % HASHLEN(rho);
-	/* Will return 'R_NilValue' if not found */
-	loc = R_HashGetLoc(rho, hashcode, symbol, HASHTAB(rho));
+        hashcode = SYM_HASH(symbol) % HASHLEN(rho);
+        /* Will return 'R_NilValue' if not found */
+        loc = R_HashGetLoc(rho, hashcode, symbol, HASHTAB(rho));
     }
+    else
+        return R_NilValue;
 
     return loc;
 }
@@ -966,6 +971,9 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, int option)
 {
     SEXP value;
 
+    if (!isEnvironment(rho))
+        error(_("argument to '%s' is not an environment"), "findVarInFrame3");
+
     if (SEXP32_FROM_SEXP(rho) == LASTSYMENV(symbol)) {
         SEXP binding = LASTSYMBINDING(symbol); /* won't be an active binding */
         if ( ! BINDING_IS_LOCKED(binding)) {
@@ -1039,10 +1047,7 @@ SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
         }
     }
 
-    else if (!isEnvironment(rho))
-        error(_("argument to '%s' is not an environment"), "findVarInFrame3");
-
-    else if (HASHTAB(rho) == R_NilValue) {
+    else if (FRAME(rho) != R_NilValue) {
 
         if (LASTENVNOTFOUND(symbol) != SEXP32_FROM_SEXP(rho)) {
             loc = FRAME(rho);
@@ -1073,7 +1078,7 @@ SEXP findVarInFrame3_nolast(SEXP rho, SEXP symbol, int option)
         value = option==2 ? R_NilValue : BINDING_VALUE(loc);
     }
 
-    else {
+    else if (HASHTAB(rho) != R_NilValue) {
         int hashcode;
         hashcode = SYM_HASH(symbol) % HASHLEN(rho);
         loc = R_HashGetLoc(rho, hashcode, symbol, HASHTAB(rho));
@@ -1563,13 +1568,13 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         return TRUE;      /* should have either succeeded, or raised an error */
     }
 
-    if (HASHTAB(rho) == R_NilValue) {
+    if (FRAME(rho) != R_NilValue) {
         if (LASTENVNOTFOUND(symbol) != SEXP32_FROM_SEXP(rho)) {
             loc = FRAME(rho);
             SEARCH_LOOP (rho, loc, symbol, goto found_update_last);
         }
     }
-    else { /* hashed environment */
+    else if (HASHTAB(rho) != R_NilValue) {
         hashcode = SYM_HASH(symbol) % HASHLEN(rho);
         loc = VECTOR_ELT(HASHTAB(rho), hashcode);
         SEARCH_LOOP (rho, loc, symbol, goto found);
@@ -1813,7 +1818,7 @@ static SEXP do_assign(SEXP call, SEXP op, SEXP args, SEXP rho)
     else {
 	if (length(CAR(args)) > 1)
 	    warning(_("only the first element is used as variable name"));
-	name = install(translateChar(STRING_ELT(CAR(args), 0)));
+	name = install_translated (STRING_ELT(CAR(args),0));
     }
     PROTECT(val = CADR(args));
     aenv = CADDR(args);
@@ -1860,7 +1865,7 @@ static SEXP do_list2env(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("names(x) must be a character vector of the same length as x"));
 
     for (int i = 0; i < n; i++) {
-	SEXP name = install(translateChar(STRING_ELT(xnms, i)));
+	SEXP name = install_translated (STRING_ELT(xnms,i));
 	defineVar(name, VECTOR_ELT(x, i), envir);
     }
 
@@ -1906,7 +1911,7 @@ static SEXP do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     for (i = 0; i < LENGTH(name); i++) {
 	value = R_NoObject;
-	tsym = install(translateChar(STRING_ELT(name, i)));
+	tsym = install_translated (STRING_ELT(name,i));
 	tenv = envarg;
 	while (tenv != R_EmptyEnv) {
 	    value = RemoveVariable(tsym, tenv);
@@ -1986,7 +1991,7 @@ static SEXP do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isValidStringF(CAR(args)))
 	error(_("invalid first argument"));
     else
-	t1 = install(translateChar(STRING_ELT(CAR(args), 0)));
+	t1 = install_translated (STRING_ELT(CAR(args),0));
 
     /* envir :	originally, the "where=" argument */
 
@@ -2275,7 +2280,7 @@ static SEXP do_missing(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     sym = CAR(args);
     if (isString(sym) && length(sym)==1)
-	sym = install(translateChar(STRING_ELT(CAR(args), 0)));
+	sym = install_translated (STRING_ELT(CAR(args),0));
     if (!isSymbol(sym))
 	errorcall(call, _("invalid use of 'missing'"));
 
@@ -3474,7 +3479,7 @@ static SEXP checkNSname(SEXP call, SEXP name)
 	break;
     case STRSXP:
 	if (LENGTH(name) >= 1) {
-	    name = install(translateChar(STRING_ELT(name, 0)));
+	    name = install_translated (STRING_ELT(name,0));
 	    break;
 	}
 	/* else fall through */
@@ -3558,8 +3563,8 @@ static SEXP do_importIntoEnv(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     n = LENGTH(impnames);
     for (i = 0; i < n; i++) {
-	impsym = install(translateChar(STRING_ELT(impnames, i)));
-	expsym = install(translateChar(STRING_ELT(expnames, i)));
+	impsym = install_translated (STRING_ELT(impnames,i));
+	expsym = install_translated (STRING_ELT(expnames,i));
 
 	/* find the binding--may be a CONS cell or a symbol */
 	SEXP binding = R_NilValue;

@@ -772,6 +772,14 @@ SEXP install(const char *name)
     return install_with_hashcode ((char *) name, Rf_char_hash(name));
 }
 
+SEXP attribute_hidden install_translated (SEXP charSXP)
+{
+    const void *vmax = VMAXGET();
+    SEXP r = install (translateChar (charSXP));
+    VMAXSET(vmax);
+    return r;
+}
+
 SEXP installChar(SEXP charSXP)
 {
     PROTECT(charSXP);

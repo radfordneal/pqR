@@ -4629,7 +4629,7 @@ SEXP attribute_hidden do_subassign2_dflt_int
     if( TYPEOF(x) == ENVSXP) {
         if (nsubs != 1 || !isString(sb1) || length(sb1) != 1)
             errorcall(call,_("wrong args for environment subassignment"));
-        SEXP name = install (translateChar (STRING_ELT (sb1, 0)));
+        SEXP name = install_translated (STRING_ELT(sb1,0));
         set_var_in_frame (name, y, x, TRUE, 3);
         RETURN_SEXP_INSIDE_PROTECT (S4 ? xOrig : x);
     }
@@ -4872,7 +4872,7 @@ SEXP attribute_hidden do_subassign2_dflt_int
             else {
                 SEXP append = 
                   cons_with_tag (y, R_NilValue, newname == R_NilValue ? 
-                                  R_NilValue : install(translateChar(newname)));
+                                  R_NilValue : install_translated (newname));
                 for (i = length_x + 1; i < stretch; i++)
                     append = CONS(R_NilValue,append);
                 x = with_pairlist_appended(x,append);
