@@ -642,7 +642,8 @@ extern SEXP framenames; /* from model.c */
 
 void lphash_setup_bucket (lphash_bucket_t *bucket, lphash_key_t key)
 {
-    bucket->entry =  SEXP32_FROM_SEXP (mkSYMSXP (mkChar(key), R_UnboundValue));
+    bucket->entry =  (lphash_entry_t) /* SEXP32 might be pointer or unsigned */
+                      SEXP32_FROM_SEXP (mkSYMSXP (mkChar(key), R_UnboundValue));
 }
 
 int lphash_match (lphash_bucket_t *bucket, lphash_key_t key)
