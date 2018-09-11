@@ -882,10 +882,10 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
 
             /* Note: If called from evalv, R_Visible will've been set to TRUE */
             if (type_etc == SPECIALSXP) {
-                res = PRIMFUNV(op) (e, op, args, rho, variant);
                 /* Note:  Special primitives always take variant argument,
                    and are responsible for setting R_Visible as desired 
                    themselves, with default of TRUE. */
+                res = PRIMFUNV(op) (e, op, args, rho, variant);
             }
             else if (type_etc == BUILTINSXP) {
                 res = R_Profiling ? Rf_builtin_op(op, e, rho, variant)
@@ -5006,7 +5006,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP sv_scalar_stack = R_scalar_stack;
 
-    SEXP ans, x, sb1, sb2, subs, y;
+    SEXP ans, r, x, sb1, sb2, subs, y;
     int argsevald = 0;
     int64_t seq = 0;
 
@@ -5030,6 +5030,47 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             if (R_variant_result) {
                 seq = R_variant_seq_spec;
                 R_variant_result = 0;
+            }
+
+            else {
+
+                /* Do the very simplest cases here. */
+
+                if (isVectorAtomic(x) && TYPEOF(x) == TYPE_ETC(y)) {
+                    R_len_t len = LENGTH(x);
+                    R_len_t ix = 0;
+                    if (TYPE_ETC(sb1) == INTSXP && *INTEGER(sb1) >= 1
+                                                && *INTEGER(sb1) <= len)
+                        ix = *INTEGER(sb1);
+                    else if (TYPE_ETC(sb1) == REALSXP && *REAL(sb1) >= 1 
+                                                      && *REAL(sb1) <= len)
+                        ix = (int) *REAL(sb1);
+                    if (ix != 0) {
+                        ix -= 1;
+                        WAIT_UNTIL_COMPUTED(x);
+                        switch (TYPEOF(x)) {
+                            case LGLSXP:
+                            case INTSXP:
+                                INTEGER(x)[ix] = *INTEGER(y);
+                                break;
+                            case REALSXP:
+                                REAL(x)[ix] = *REAL(y);
+                                break;
+                            case CPLXSXP:
+                                COMPLEX(x)[ix] = *COMPLEX(y);
+                                break;
+                            case STRSXP:
+                                SET_STRING_ELT (x, ix, STRING_ELT(y,0));
+                                break;
+                            case RAWSXP:
+                                RAW(x)[ix] = *RAW(y);
+                                break;
+                        }
+                        SET_NAMEDCNT_0(x);
+                        r = x;
+                        goto ret;
+                    }
+                }
             }
             sb2 = R_NoObject;
         }
@@ -5113,10 +5154,10 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     /* ... path that bypasses DispatchOrEval ... */
 
-  dflt_seq: ;
+  dflt_seq:
+    r = do_subassign_dflt_seq (call, x, sb1, sb2, subs, rho, y, seq);
 
-    SEXP r = do_subassign_dflt_seq (call, x, sb1, sb2, subs, rho, y, seq);
-
+  ret:
     R_scalar_stack = sv_scalar_stack;
     return r;
 }
