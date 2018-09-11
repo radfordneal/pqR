@@ -4694,12 +4694,7 @@ SEXP attribute_hidden do_subassign2_dflt_int
             if (ix > 0 && ix <= lenx) {
                 ix -= 1;
                 switch (TYPEOF(x)) {
-                    case RAWSXP:
-                        RAW(x)[ix] = *RAW(y);
-                        break;
                     case LGLSXP:
-                        LOGICAL(x)[ix] = *LOGICAL(y);
-                        break;
                     case INTSXP:
                         INTEGER(x)[ix] = *INTEGER(y);
                         break;
@@ -4712,10 +4707,13 @@ SEXP attribute_hidden do_subassign2_dflt_int
                     case STRSXP:
                         SET_STRING_ELT (x, ix, STRING_ELT(y,0));
                         break;
+                    case RAWSXP:
+                        RAW(x)[ix] = *RAW(y);
+                        break;
                     case VECSXP: case EXPRSXP:
                         DEC_NAMEDCNT (VECTOR_ELT (x, ix));
                         SET_VECTOR_ELEMENT_TO_VALUE (x, ix, y);
-                    break;
+                        break;
                 }
                 SET_NAMEDCNT_0(x);
                 RETURN_SEXP_INSIDE_PROTECT (x);
