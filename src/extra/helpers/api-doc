@@ -61,11 +61,20 @@ provide a C header file called helpers-app.h, which will declare
 several types (as detailed below) and then include the file helpers.h.
 Also (as described later), several macros for use by the helpers
 facility may optionally be defined in helpers-app.h, which default to
-stubs if they are not define there.  Other declarations used by the
+stubs if they are not define there, and several constants may also be
+defined (which also default).  Other declarations used by the
 application program may be put in helpers-app.h if that is convenient.
 The helpers-app.h header file is included by the helpers.c module,
 which implements the helpers facility, and it should be included in
 application source files that use the helpers facility.
+
+The number of helper threads can be limited by defining HELPERS_MAX in
+helpers-app.h; it defaults to 127, which is the largest value allowed.
+The maximum number of scheduled tasks can be set by defining
+HELPERS_MAX_TASKS, which must be a power of two minus one.  It
+defaults to 255, which is the largest value allowed.  (Note: it makes
+no sense to define HELPERS_MAX to be greater than HELPERS_MAX_TASKS,
+since some helper threads would then always be idle.)
 
 The helpers-app.h file must declare a type called helpers_var_ptr that
 points to a variable of the type that tasks operate on.  Typically,
@@ -1392,6 +1401,9 @@ vectors are defined:
 
 The following symbols may be defined in helpers-app.h or via compiler
 options when building the helpers facility:
+
+  HELPERS_MAX       maximum number of helper thrreads, defaults to 127
+  HELPERS_MAX_TAKS  maximum number of scheduled tasks, defaults to 255
 
   HELPERS_DISABLED
   HELPERS_NO_MULTITHREADING

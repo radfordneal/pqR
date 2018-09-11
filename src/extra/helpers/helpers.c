@@ -38,7 +38,9 @@
    MAX_TASKS to exactly 255 may produce faster code, since masking will then
    be unnecessary if an unsigned char is 8 bits in size.) */
 
-#ifndef MAX_TASKS    /* Allow value from compile option to override below's */
+#ifdef HELPERS_MAX_TASKS /* Allow helpers-app.h or compile option to override */
+#define MAX_TASKS HELPERS_MAX_TASKS
+#else
 #define MAX_TASKS 255
 #endif
 
