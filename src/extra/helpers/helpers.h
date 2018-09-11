@@ -33,7 +33,9 @@ typedef void helpers_task_proc \
 /* MAXIMUM NUMBER OF HELPER THREADS.  Must be no more than 127 (to fit in
    a signed char). */
 
+#ifndef HELPERS_MAX  /* Allow helpers-app.h or compile option to override */
 #define HELPERS_MAX 127
+#endif
 
 #if HELPERS_MAX < 0 || HELPERS_MAX > 127
 #error Invalid value for HELPERS_MAX

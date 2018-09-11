@@ -50,12 +50,16 @@
 #endif
 
 
-/* MAXIMUM NUMBER OF TASKS THAT CAN BE OUTSTANDING.  Must be a power of two
-   minus one, and no more than 255 (to fit in an unsigned char).  A lower
-   value may be desirable to prevent large numbers of outstanding tasks
-   when some values are computed but never used. */
+/* MAXIMUM NUMBER OF TASKS THAT CAN BE OUTSTANDING.  Must be a power
+   of two minus one, and no more than 255.  A lower value may be
+   desirable to prevent large numbers of outstanding tasks when some
+   values are computed but never used.  The maximum number of helper
+   threads to use is set to the maximum tasks (more would be of no
+   use), up to the maximum of 127. */
 
-#define MAX_TASKS 15
+#define HELPERS_MAX_TASKS 15
+
+#define HELPERS_MAX (HELPERS_MAX_TASKS > 127 ? 127 : HELPERS_MAX_TASKS)
 
 
 /* TYPES DEFINED BY THE APPLICATION. */
