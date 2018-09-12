@@ -1,6 +1,6 @@
 % File src/library/base/man/pnamedcnt.Rd
 % Part of pqR.
-% Copyright (C) 2013 Radford M. Neal
+% Copyright (C) 2013, 2018 Radford M. Neal
 % Distributed under GPL 2 or later
 
 \name{get_rm}
@@ -52,6 +52,6 @@ u[500] <- 9  # just one allocation of a vector of length 1000 will be done
 
 A <- numeric(1000)+2
 B <- numeric(1000)+3
-A <- get_rm(A)*B # doesn't allocate space for a third 1000-element vector
+A <- (get_rm(A)+1)*B # doesn't allocate space for a 3rd 1000-element vector
 }
 \keyword{programming}
