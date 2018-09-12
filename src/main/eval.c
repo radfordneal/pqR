@@ -4709,7 +4709,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     SET_MISSING (remargs, R_isMissing(CAR(ixlist),rho));
                     sb1 = R_NoObject;
                 }
-                else if (!seq && isVectorAtomic(array)) {
+                else if (!seq && isVectorAtomic(array) && !HAS_ATTRIB(array)) {
 
                     /* Do simplest cases here */
 
