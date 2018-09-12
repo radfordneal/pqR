@@ -356,12 +356,16 @@
 
   \subsection{NEW FEATURES FROM R CORE RELEASES}{
   \itemize{
-  \item From R-3.0.2: New \code{assertCondition()}, etc. utilities in tools,
-        useful for testing.
-
   \item From R-3.0.0: New simple \code{provideDimnames()}
         utility function.  From R-3.2.4: \code{provideDimnames()}
         gets an optional \code{unique} argument.
+
+  \item \code{mget()} now has a default for \code{envir} (the frame
+        from which it is called), for consistency with \code{get()} and
+        \code{assign()}.
+
+  \item From R-3.0.2: New \code{assertCondition()}, etc. utilities in tools,
+        useful for testing.
 
   \item An \code{anyNA} function is now provided, defined simply as
         \code{function (x) any(is.na(x))} (which is fast in pqR).
@@ -402,6 +406,9 @@
 
   \item From R-3.2.0: New function \code{trimws()} for removing leading/trailing
         whitespace.  The pqR version is modified to slightly improve speed.
+
+  \item From R-3.2.0: New \code{get0()} function, combining \code{exists()} and
+        \code{get()} in one call, for efficiency.
 
   \item From R-3.3.0: New function \code{strrep()} for repeating the elements
         of a character vector.  The pqR version has a significantly faster

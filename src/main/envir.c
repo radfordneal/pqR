@@ -1976,6 +1976,9 @@ static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
       get(x, envir, mode, inherits)
       exists(x, envir, mode, inherits)
+      get0   (x, envir, mode, inherits, value_if_not_exists)
+
+  get0 is from R-3.2.0.
 */
 
 static SEXP do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -1983,28 +1986,29 @@ static SEXP do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP rval, genv, t1 = R_NilValue;
     SEXPTYPE gmode;
     int ginherits = 0, where;
+    int opval = PRIMVAL(op);
     checkArity(op, args);
 
     /* The first arg is the object name */
     /* It must be present and a non-empty string */
 
     if (!isValidStringF(CAR(args)))
-	error(_("invalid first argument"));
+        error(_("invalid first argument"));
     else
-	t1 = install_translated (STRING_ELT(CAR(args),0));
+        t1 = install_translated (STRING_ELT(CAR(args),0));
 
-    /* envir :	originally, the "where=" argument */
+    /* envir :        originally, the "where=" argument */
 
     if (TYPEOF(CADR(args)) == REALSXP || TYPEOF(CADR(args)) == INTSXP) {
-	where = asInteger(CADR(args));
-	genv = R_sysframe(where, R_GlobalContext);
+        where = asInteger(CADR(args));
+        genv = R_sysframe(where, R_GlobalContext);
     }
     else if (TYPEOF(CADR(args)) == NILSXP)
-	error(_("use of NULL environment is defunct"));
+        error(_("use of NULL environment is defunct"));
     else if (TYPEOF(CADR(args)) == ENVSXP)
-	genv = CADR(args);
+        genv = CADR(args);
     else if(TYPEOF((genv = simple_as_environment(CADR(args)))) != ENVSXP)
-	error(_("invalid '%s' argument"), "envir");
+        error(_("invalid '%s' argument"), "envir");
 
     /* mode :  The mode of the object being sought */
 
@@ -2013,42 +2017,51 @@ static SEXP do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
     */
 
     if (isString(CADDR(args))) {
-	if (!strcmp(CHAR(STRING_ELT(CAR(CDDR(args)), 0)), "function")) /*ASCII*/
-	    gmode = FUNSXP;
-	else
-	    gmode = str2type(CHAR(STRING_ELT(CAR(CDDR(args)), 0))); /* ASCII */
+        if (!strcmp(CHAR(STRING_ELT(CAR(CDDR(args)), 0)), "function")) /*ASCII*/
+            gmode = FUNSXP;
+        else
+            gmode = str2type(CHAR(STRING_ELT(CAR(CDDR(args)), 0))); /* ASCII */
     } 
     else
-	error(_("invalid '%s' argument"), "mode");
+        error(_("invalid '%s' argument"), "mode");
 
     ginherits = asLogical(CADDDR(args));
     if (ginherits == NA_LOGICAL)
-	error(_("invalid '%s' argument"), "inherits");
+        error(_("invalid '%s' argument"), "inherits");
 
     /* Search for the object */
-    rval = findVar1mode(t1, genv, gmode, ginherits, PRIMVAL(op));
+    rval = findVar1mode(t1, genv, gmode, ginherits, opval!=0);
 
-    if (PRIMVAL(op)) { /* have get(.) */
-	if (rval == R_MissingArg)
-            arg_missing_error(t1);
-	if (rval == R_UnboundValue) {
-	    if (gmode == ANYSXP)
-                unbound_var_error(t1);
-	    else
-		error(_("object '%s' of mode '%s' was not found"),
-		      CHAR(PRINTNAME(t1)),
-		      CHAR(STRING_ELT(CAR(CDDR(args)), 0))); /* ASCII */
-	}
+    if (rval == R_MissingArg)
+        arg_missing_error(t1);
 
-	/* We need to evaluate if it is a promise */
-	if (TYPEOF(rval) == PROMSXP)
-	    rval = forcePromise(rval);
+    if (opval != 0) { /* have get or get0 */
 
-	SET_NAMEDCNT_NOT_0(rval);
-	return rval;
+        if (rval == R_UnboundValue) {
+            if (opval == 2) /* get0 */
+                return CAD4R(args); /* value_if_not_exists */
+            else { /* get */
+                if (gmode == ANYSXP)
+                    unbound_var_error(t1);
+                else
+                    error(_("object '%s' of mode '%s' was not found"),
+                          CHAR(PRINTNAME(t1)),
+                          CHAR(STRING_ELT(CAR(CDDR(args)), 0))); /* ASCII */
+            }
+        }
+
+        /* We need to evaluate if it is a promise */
+        if (TYPEOF(rval) == PROMSXP)
+            rval = forcePromise(rval);
+
+        SET_NAMEDCNT_NOT_0(rval);
+
+        return rval;
     }
-    else /* exists(.) */
-	return ScalarLogicalMaybeConst (rval != R_UnboundValue);
+
+    else /* have exists */
+
+        return ScalarLogicalMaybeConst (rval != R_UnboundValue);
 }
 
 static SEXP gfind(const char *name, SEXP env, SEXPTYPE mode,
@@ -3625,6 +3638,7 @@ attribute_hidden FUNTAB R_FunTab_envir[] =
 {"list2env",	do_list2env,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"remove",	do_remove,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"get_rm",	do_get_rm,	0,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"get0",	do_get,		2,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"get",		do_get,		1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"exists",	do_get,		0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"mget",	do_mget,	1,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
