@@ -726,7 +726,8 @@ static SEXP attribute_noinline evalv_other (SEXP, SEXP, int);
 static SEXP attribute_noinline forcePromiseUnbound (SEXP e, int variant);
 static SEXP attribute_noinline Rf_builtin_op_no_cntxt (SEXP op, SEXP e, 
                                                        SEXP rho, int variant);
-SEXP Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant);
+SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, 
+                                     SEXP rho, int variant);
 
 #define evalcount R_high_frequency_globals.evalcount
 
@@ -1099,7 +1100,7 @@ SEXP forcePromise_v (SEXP e, int variant) /* e protected here if necessary */
 }
 
 
-/* Like Rf_builtin_op (defined in builtin.c) except that no context is
+/* Like Rf_builtin_op (in builtin.c) except that no context is
    created.  Making this separate from Rf_builtin_op saves on stack
    space for the local context variable.  Since the somewhat
    time-consuming context creation is not done, there is no advantage
@@ -2154,8 +2155,8 @@ static SEXP replaceCall(SEXP fun, SEXP varval, SEXP args, SEXP rhs)
 
 /*  Assignment in its various forms. */
 
-SEXP Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho, 
-                       int variant, int opval);
+static attribute_noinline SEXP Rf_set_subassign 
+  (SEXP call, SEXP lhs, SEXP rhs, SEXP rho, int variant, int opval);
 
 static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
@@ -2327,13 +2328,12 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
    to avoid possible overhead of a large function (eg, stack frame size)
    for the simple case. */
 
-SEXP attribute_hidden Rf_set_subassign_general 
+static attribute_noinline SEXP Rf_set_subassign_general 
   (SEXP call, SEXP lhs, SEXP rhs, SEXP rho, int depth, SEXP var, SEXP varval,
-   SEXP assgnfcn, SEXP rhsprom, SEXP lhsprom, SEXP rhs_uneval, 
-   int maybe_fast);
+   SEXP assgnfcn, SEXP rhsprom, SEXP rhs_uneval, int maybe_fast);
 
-SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
-                                        int variant, int opval)
+static SEXP attribute_noinline Rf_set_subassign 
+  (SEXP call, SEXP lhs, SEXP rhs, SEXP rho, int variant, int opval)
 {
     /* Find the assignment function symbol for the depth 1 assignment, and
        see if we maybe (tentatively) will be using the fast interface. */
@@ -2361,7 +2361,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
     if ( ! (variant & VARIANT_NULL))
         INC_NAMEDCNT(rhs);
 
-    SEXP var, varval, newval, rhsprom, lhsprom;
+    SEXP var, varval, newval, rhsprom;
 
     /* Find the variable ultimately assigned to, and its depth.
        The depth is 1 for a variable within one replacement function
@@ -2371,10 +2371,10 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
     for (var = CADR(lhs); TYPEOF(var) != SYMSXP; var = CADR(var)) {
         if (TYPEOF(var) != LANGSXP) {
             if (TYPEOF(var) == STRSXP && LENGTH(var) == 1) {
-                var = install (CHAR (STRING_ELT(var,0)));
+                var = installChar (STRING_ELT(var,0));
                 break;
             }
-            errorcall (call, _("invalid assignment left-hand side"));
+            invalid_assignment_error(call);
         }
         depth += 1;
     }
@@ -2423,7 +2423,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
        general code below should also work when depth is 1. */
 
     if (depth == 1) {
-        SEXP fn, e;
+        SEXP lhsprom, fn, e;
         if (maybe_fast && !isObject(varval)
               && CADDR(lhs) != R_DotsSymbol
               && (fn = FINDFUN(assgnfcn,rho), 
@@ -2454,8 +2454,7 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
 
         newval = 
           Rf_set_subassign_general (call, lhs, rhs, rho, depth, var, varval, 
-                                    assgnfcn, rhsprom, lhsprom, rhs_uneval, 
-                                    maybe_fast);
+                                    assgnfcn, rhsprom, rhs_uneval, maybe_fast);
     }
 
     UNPROTECT(3);  /* rhs, bcell, varval */
@@ -2486,12 +2485,11 @@ SEXP attribute_hidden Rf_set_subassign (SEXP call, SEXP lhs, SEXP rhs, SEXP rho,
     }
 }
 
-SEXP attribute_hidden Rf_set_subassign_general 
+static SEXP attribute_noinline Rf_set_subassign_general 
   (SEXP call, SEXP lhs, SEXP rhs, SEXP rho, int depth, SEXP var, SEXP varval,
-   SEXP assgnfcn, SEXP rhsprom, SEXP lhsprom, SEXP rhs_uneval, 
-   int maybe_fast)
+   SEXP assgnfcn, SEXP rhsprom, SEXP rhs_uneval, int maybe_fast)
 {
-    SEXP v, b, e, op, prom, fn, fetch_args, newval;
+    SEXP v, b, e, op, prom, fn, fetch_args, newval, lhsprom;
     int d, fast;
 
     /* Structure recording information on expressions at all levels of 
