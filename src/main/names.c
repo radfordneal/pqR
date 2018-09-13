@@ -713,6 +713,7 @@ void InitNames()
     (void)installChar (R_numeric_CHARSXP = mkChar("numeric"));
     (void)installChar (R_name_CHARSXP = mkChar("name"));
     (void)installChar (R_function_CHARSXP = mkChar("function"));
+    (void)installChar (R_any_CHARSXP = mkChar("any"));
     (void)installChar (R_NativeSymbolInfo_CHARSXP = mkChar("NativeSymbolInfo"));
     (void)installChar (R_TRUE_CHARSXP = mkChar("TRUE"));
     (void)installChar (R_FALSE_CHARSXP = mkChar("FALSE"));
