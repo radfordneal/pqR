@@ -187,6 +187,7 @@
   \item Improved methods for symbol lookup are now used, which increase
         speed in many contexts, and especially in functions that are
         defined in packages (rather than in the global workspace).
+  \item The \code{get} and \code{mget} functions have been sped up.
   \item The speed of \code{package::symbol} and \code{package:::symbol}
         has been improved, especially when the package is \code{base}.
   \item The speed of \code{nchar} has been greatly improved.
