@@ -543,6 +543,9 @@ This bug remains in R Core versions to at least R-3.5.1.
         environment (or any empty environment) now gives an
         empty list with no names, the same as \code{list()}. (PR#15926)
 
+  \item From R-3.5.0: \code{dist(x, method = "canberra")} now uses the correct
+        definition; the result may only differ when \code{x} contains
+        values of differing signs, e.g.\sspace{}not for 0-1 data.
   }}
 }
 

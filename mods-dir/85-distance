@@ -1,0 +1,5 @@
+Changes to stats::dist.
+
+Changes canberra distance definition, as in R-3.5.1.
+
+Improves performance.

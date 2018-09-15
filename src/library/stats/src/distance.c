@@ -121,7 +121,7 @@ static double R_canberra(double *x, int nr, int nc, int i1, int i2)
     dist = 0;
     for(j = 0 ; j < nc ; j++) {
 	if(both_non_NA(x[i1], x[i2])) {
-	    sum = fabs(x[i1] + x[i2]);
+            sum = fabs(x[i1]) + fabs(x[i2]);
 	    diff = fabs(x[i1] - x[i2]);
 	    if (sum > DBL_MIN || diff > DBL_MIN) {
 		dev = diff/sum;
@@ -201,42 +201,52 @@ enum { EUCLIDEAN=1, MAXIMUM, MANHATTAN, CANBERRA, BINARY, MINKOWSKI };
 void R_distance(double *x, int *nr, int *nc, double *d, int *diag,
 		int *method, double *p)
 {
-    int dc, i, j;
-    size_t  ij;  /* can exceed 2^31 - 1 */
-    double (*distfun)(double*, int, int, int, int) = NULL;
-#ifdef HAVE_OPENMP
-    int nthreads;
-#endif
+    int dc = (*diag) ? 0 : 1; /* diag=1:  we do the diagonal */
+    R_len_t nrow = *nr;
+    R_len_t ncol = *nc;
+    double pv = *p;
 
-    switch(*method) {
-    case EUCLIDEAN:
-	distfun = R_euclidean;
-	break;
-    case MAXIMUM:
-	distfun = R_maximum;
-	break;
-    case MANHATTAN:
-	distfun = R_manhattan;
-	break;
-    case CANBERRA:
-	distfun = R_canberra;
-	break;
-    case BINARY:
-	distfun = R_dist_binary;
-	break;
-    case MINKOWSKI:
-	if(!R_FINITE(*p) || *p <= 0)
-	    error(_("distance(): invalid p"));
-	break;
-    default:
-	error(_("distance(): invalid distance"));
-    }
-    dc = (*diag) ? 0 : 1; /* diag=1:  we do the diagonal */
+    size_t ij;  /* can exceed 2^31 - 1 */
+    R_len_t i, j;
+
     ij = 0;
-    for(j = 0 ; j <= *nr ; j++)
-	for(i = j+dc ; i < *nr ; i++)
-	    d[ij++] = (*method != MINKOWSKI) ?
-		distfun(x, *nr, *nc, i, j) : R_minkowski(x, *nr, *nc, i, j, *p);
+
+    switch (*method) {
+    case EUCLIDEAN:
+        for (j = 0 ; j <= nrow ; j++)
+            for (i = j+dc ; i < nrow ; i++)
+                d[ij++] = R_euclidean (x, nrow, ncol, i, j);
+        break;
+    case MAXIMUM:
+        for (j = 0 ; j <= nrow ; j++)
+            for (i = j+dc ; i < nrow ; i++)
+                d[ij++] = R_maximum (x, nrow, ncol, i, j);
+        break;
+    case MANHATTAN:
+        for (j = 0 ; j <= nrow ; j++)
+            for (i = j+dc ; i < nrow ; i++)
+                d[ij++] = R_manhattan (x, nrow, ncol, i, j);
+        break;
+    case CANBERRA:
+        for (j = 0 ; j <= nrow ; j++)
+            for (i = j+dc ; i < nrow ; i++)
+                d[ij++] = R_canberra (x, nrow, ncol, i, j);
+        break;
+    case BINARY:
+        for (j = 0 ; j <= nrow ; j++)
+            for (i = j+dc ; i < nrow ; i++)
+                d[ij++] = R_dist_binary (x, nrow, ncol, i, j);
+        break;
+    case MINKOWSKI:
+        if (!R_FINITE(pv) || pv <= 0)
+            error(_("distance(): invalid p"));
+        for (j = 0 ; j <= nrow ; j++)
+            for (i = j+dc ; i < nrow ; i++)
+                d[ij++] = R_minkowski (x, nrow, ncol, i, j, pv);
+        break;
+    default:
+        error(_("distance(): invalid distance"));
+    }
 }
 
 #include <Rinternals.h>

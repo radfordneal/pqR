@@ -1,9 +1,7 @@
 % File src/library/stats/man/dist.Rd
-% Part of the R package, http://www.R-project.org
-% Copyright 1995-2010 R Core Team
+% Part of the R package, https://www.R-project.org
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
-
-\newcommand{\CRANpkg}{\href{http://CRAN.R-project.org/package=#1}{\pkg{#1}}}
 
 \name{dist}
 \alias{dist}
@@ -34,7 +32,7 @@ as.dist(m, diag = FALSE, upper = FALSE)
 }
 \arguments{
   \item{x}{a numeric matrix, data frame or \code{"dist"} object.}
-  \item{method}{the distance measure to be used. This must be one of
+  \item{method}{the distance measure to be used.  This must be one of
     \code{"euclidean"}, \code{"maximum"}, \code{"manhattan"},
     \code{"canberra"}, \code{"binary"} or \code{"minkowski"}.
     Any unambiguous substring can be given.}
@@ -56,23 +54,24 @@ as.dist(m, diag = FALSE, upper = FALSE)
   Available distance measures are (written for two vectors \eqn{x} and
   \eqn{y}):
   \describe{
-    \item{\code{euclidean}:}{Usual square distance between the two
-      vectors (2 norm).}
+    \item{\code{euclidean}:}{Usual distance between the two vectors (2
+      norm aka \eqn{L_2}), \eqn{\sqrt{\sum_i (x_i - y_i)^2}}{sqrt(sum((x_i - y_i)^2))}.}
 
     \item{\code{maximum}:}{Maximum distance between two components of \eqn{x}
       and \eqn{y} (supremum norm)}
 
-    \item{\code{manhattan}:}{Absolute distance between the two vectors
-      (1 norm).}
+    \item{\code{manhattan}:}{Absolute distance between the two vectors (1 norm aka \eqn{L_1}).}
 
     \item{\code{canberra}:}{
-      \eqn{\sum_i |x_i - y_i| / |x_i + y_i|}{sum(|x_i - y_i| / |x_i + y_i|)}.
+      %% till 2017-07-15: \eqn{\sum_i |x_i - y_i| / |x_i + y_i|}{sum(|x_i - y_i| / |x_i + y_i|)}.
+      \eqn{\sum_i |x_i - y_i| / (|x_i| + |y_i|)}{sum(|x_i - y_i| / (|x_i| + |y_i|))}.
       Terms with zero numerator and denominator are omitted from the sum
       and treated as if the values were missing.
 
-      This is intended for non-negative values (e.g. counts): taking the
-      absolute value of the denominator is a 1998 \R modification to
-      avoid negative distances.
+      This is intended for non-negative values (e.g., counts), in which
+      case the denominator can be written in various equivalent ways;
+      Originally, \R used \eqn{x_i + y_i}, then from 1998 to 2017,
+      \eqn{|x_i + y_i|}, and then the correct \eqn{|x_i| + |y_i|}.
     }
 
     \item{\code{binary}:}{(aka \emph{asymmetric binary}): The vectors
@@ -150,7 +149,7 @@ as.dist(m, diag = FALSE, upper = FALSE)
 \examples{
 require(graphics)
 
-x <- matrix(rnorm(100), nrow=5)
+x <- matrix(rnorm(100), nrow = 5)
 dist(x)
 dist(x, diag = TRUE)
 dist(x, upper = TRUE)
@@ -166,9 +165,9 @@ plot(hclust(dd)) # to see a dendrogram of clustered variables
 ## example of binary and canberra distances.
 x <- c(0, 0, 1, 1, 1, 1)
 y <- c(1, 0, 1, 1, 0, 1)
-dist(rbind(x,y), method= "binary")
+dist(rbind(x, y), method = "binary")
 ## answer 0.4 = 2/5
-dist(rbind(x,y), method= "canberra")
+dist(rbind(x, y), method = "canberra")
 ## answer 2 * (6/5)
 
 ## To find the names
@@ -177,23 +176,23 @@ labels(eurodist)
 ## Examples involving "Inf" :
 ## 1)
 x[6] <- Inf
-(m2 <- rbind(x,y))
-dist(m2, method="binary")# warning, answer 0.5 = 2/4
+(m2 <- rbind(x, y))
+dist(m2, method = "binary")   # warning, answer 0.5 = 2/4
 ## These all give "Inf":
-stopifnot(Inf == dist(m2, method= "euclidean"),
-          Inf == dist(m2, method= "maximum"),
-          Inf == dist(m2, method= "manhattan"))
+stopifnot(Inf == dist(m2, method =  "euclidean"),
+          Inf == dist(m2, method =  "maximum"),
+          Inf == dist(m2, method =  "manhattan"))
 ##  "Inf" is same as very large number:
 x1 <- x; x1[6] <- 1e100
-stopifnot(dist(cbind(x ,y), method="canberra") ==
-    print(dist(cbind(x1,y), method="canberra")))
+stopifnot(dist(cbind(x, y), method = "canberra") ==
+    print(dist(cbind(x1, y), method = "canberra")))
 
 ## 2)
 y[6] <- Inf #-> 6-th pair is excluded
-dist(rbind(x,y), method="binary")   # warning; 0.5
-dist(rbind(x,y), method="canberra") # 3
-dist(rbind(x,y), method="maximum")  # 1
-dist(rbind(x,y), method="manhattan")# 2.4
+dist(rbind(x, y), method = "binary"  )   # warning; 0.5
+dist(rbind(x, y), method = "canberra"  ) # 3
+dist(rbind(x, y), method = "maximum")    # 1
+dist(rbind(x, y), method = "manhattan")  # 2.4
 }
 \keyword{multivariate}
 \keyword{cluster}
