@@ -285,7 +285,7 @@ SEXP attribute_hidden matchArgExact(SEXP tag, SEXP * list)
 
 /* Match the supplied arguments with the formals, and return a list of the 
    matched or missing arguments.  This is the non-trivial part, with the
-   top-level matchArgs function that checks for simple cases being inlined.
+   top-level matchArgs functions that handle simple cases being inlined.
 
    Two ways of calling matchArgs are supported, differing in how the names
    of formal arguments are specified.  
@@ -366,11 +366,12 @@ SEXP attribute_hidden Rf_matchArgs_nontrivial
        for the supplied arguments we use an array only for the used flag.
      */
 
-    char suppused[n_supplied], *u;
-    char fargused[arg_count];
-    SEXP actual[arg_count];
+    char suppused[n_supplied+1];  /* +1 just to avoid illegal zero size */
+    char fargused[arg_count+1];   /* ditto */
+    SEXP actual[arg_count+1];     /* ditto */
     /* Below is used only when formal_names==NULL; has size 1 if not used. */
-    SEXP formal_tag[formal_names==NULL ? arg_count : 1]; 
+    SEXP formal_tag[formal_names==NULL ? arg_count+1 : 1]; 
+    char *u;
 
     /* If "formals" specified, copy formal tags from "formals" to "formal_tag".
        Save the location of the first ... in "dots" (-1 if none).  Initialize 

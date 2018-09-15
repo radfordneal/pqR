@@ -995,9 +995,9 @@ LibExtern SEXP R_fast_sub_replacement;    /* Replacement value, for subassign */
 
 #define R_variant_result R_high_frequency_globals.variant_result
 
-/* Sequence specification that may be set with VARIANT_SEQ.  Upper 32 bits
-   is start of sequence, next 31 bits is length, low bit is 1 if from ..
-   (ie, 1D array). */
+/* Sequence specification that may be set with VARIANT_SEQ.  Upper 32
+   bits is (signed) start of sequence, next 31 bits is length, low bit
+   is 1 if from ..  (ie, 1D array). */
 
 LibExtern int64_t R_variant_seq_spec;
 

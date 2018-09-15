@@ -1117,8 +1117,9 @@ static SEXP Rf_DecideVectorOrRange(int64_t seq, int *start, int *end, SEXP call)
 {
     int from, len;
 
-    from = seq >> 32;
-    len = (seq >> 1) & 0x7fffffff;
+    from = seq >= 0 ? seq>>32  /* Note:  In C99, negative >> ... is undefined */
+                    : (int64_t)((uint64_t)seq>>32) - ((int64_t)1<<32);
+    len = (seq &0xffffffff) >> 1;
 
     if (from==0) {                     /* get rid of 0 subscript at beginning */
         from = 1;
