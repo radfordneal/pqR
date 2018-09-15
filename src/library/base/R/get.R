@@ -1,5 +1,6 @@
 #  File src/library/base/R/get.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -14,16 +15,28 @@
 #  A copy of the GNU General Public License is available at
 #  http://www.r-project.org/Licenses/
 
+exists <-
+    function (x, where = -1L,
+              envir = if(missing(frame)) as.environment(where) else sys.frame(frame),
+              frame, mode = "any", inherits = TRUE)
+    .Internal(exists(x, envir, mode, inherits))
+
 get <-
-    function (x, pos = -1, envir = as.environment(pos), mode = "any",
+    function (x, pos = -1L, envir = as.environment(pos), mode = "any",
               inherits = TRUE)
     .Internal(get(x, envir, mode, inherits))
 
-mget <- function(x, envir, mode = "any",
+# get0 is taken from R-3.2.0.
+
+get0 <- function (x, envir = pos.to.env(-1L), mode = "any", inherits = TRUE,
+                  ifnotfound = NULL)
+    .Internal(get0(x, envir, mode, inherits, ifnotfound))
+
+mget <- function(x, envir = as.environment(-1L), mode = "any",
                  ifnotfound= list(function(x)
 				stop(paste0("value for '", x, "' not found"),
 				     call.=FALSE)),
-          inherits = FALSE)
+                 inherits = FALSE)
      .Internal(mget(x, envir, mode, ifnotfound, inherits))
 
 ## DB's proposed name "getSlotOrComponent" is more precise but harder to type

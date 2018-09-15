@@ -72,19 +72,24 @@ getExportedValue <- function(ns, name) {
     if (identical (ns, .BaseNamespaceEnv))
         get(name, envir = ns, inherits = FALSE)
     else {
-        exports <- getNamespaceInfo(ns, "exports")
-        if (exists(name, envir = exports, inherits = FALSE))
-            get(get(name, envir = exports, inherits = FALSE), envir = ns)
-        else {
-            ld <- getNamespaceInfo(ns, "lazydata")
-            if (exists(name, envir = ld, inherits = FALSE))
-                get(name, envir = ld, inherits = FALSE)
-            else
-                stop (gettextf(
-                        "'%s' is not an exported object from 'namespace:%s'",
-                        name, getNamespaceName(ns)),
-                      call. = FALSE, domain = NA)
-        }
+        # Use mods from R-3.5.1...
+	if (!is.null(oNam <- .getNamespaceInfo(ns, "exports")[[name]])) {
+	    get0(oNam, envir = ns)
+	}
+        else { ##  <pkg> :: <dataset>  for lazydata :
+	    ld <- .getNamespaceInfo(ns, "lazydata")
+	    if (!is.null(obj <- ld[[name]]))
+		obj
+	    else { ## if there's a lazydata object with value NULL:
+		if (exists(name, envir = ld, inherits = FALSE))
+		    NULL
+		else
+		    stop (gettextf(
+                           "'%s' is not an exported object from 'namespace:%s'",
+			   name, getNamespaceName(ns)),
+			  call. = FALSE, domain = NA)
+	    }
+	}
     }
 }
 
@@ -793,10 +798,15 @@ isNamespace <- function(ns) .Internal(isNamespaceEnv(ns))
 
 isBaseNamespace <- function(ns) identical(ns, .BaseNamespaceEnv)
 
+# Using mods from R-3.5.1...
+
 getNamespaceInfo <- function(ns, which) {
     ns <- asNamespace (ns, FALSE)
-    info <- get(".__NAMESPACE__.", envir = ns, inherits = FALSE)
-    get(which, envir = info, inherits = FALSE)
+    get(which, envir = ns[[".__NAMESPACE__."]])
+}
+
+.getNamespaceInfo <- function(ns, which) {
+    ns[[".__NAMESPACE__."]][[which]]
 }
 
 setNamespaceInfo <- function(ns, which, val) {

@@ -1,6 +1,7 @@
 % File src/library/base/man/get.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2007 R Core Team
+% Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{get}
@@ -11,10 +12,10 @@
   Search for an \R object with a given name and return it.
 }
 \usage{
-get(x, pos = -1, envir = as.environment(pos), mode = "any",
+get(x, pos = -1L, envir = as.environment(pos), mode = "any",
     inherits = TRUE)
 
-mget(x, envir, mode = "any",
+mget(x, envir = as.environment(-1L), mode = "any",
      ifnotfound = list(function(x)
          stop(paste0("value for '", x, "' not found"),
               call. = FALSE)),
@@ -90,7 +91,8 @@ mget(x, envir, mode = "any",
   Wadsworth & Brooks/Cole.
 }
 \seealso{
-  \code{\link{exists}}, \code{\link{assign}}.
+  \code{\link{get_rm}}, \code{\link{get0}}, \code{\link{exists}}, 
+  \code{\link{assign}}.
 }
 \examples{
 get("\%o\%")

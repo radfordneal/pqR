@@ -1756,6 +1756,7 @@ LibExtern SEXP R_double_CHARSXP;
 LibExtern SEXP R_numeric_CHARSXP;
 LibExtern SEXP R_name_CHARSXP;
 LibExtern SEXP R_function_CHARSXP;
+LibExtern SEXP R_any_CHARSXP;
 LibExtern SEXP R_TRUE_CHARSXP;
 LibExtern SEXP R_FALSE_CHARSXP;
 

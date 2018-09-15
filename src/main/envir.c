@@ -1976,79 +1976,100 @@ static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
       get(x, envir, mode, inherits)
       exists(x, envir, mode, inherits)
+      get0   (x, envir, mode, inherits, value_if_not_exists)
+
+  get0 is from R-3.2.0.
 */
 
 static SEXP do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP rval, genv, t1 = R_NilValue;
+
+    SEXP rval, genv;
     SEXPTYPE gmode;
-    int ginherits = 0, where;
+    int ginherits, where;
+
     checkArity(op, args);
+    int opval = PRIMVAL(op);
+
+    SEXP x = CAR(args);
+    SEXP pos = CADR(args);
+    SEXP mode = CADDR(args);
+    SEXP inherits = CADDDR(args);
 
     /* The first arg is the object name */
-    /* It must be present and a non-empty string */
 
-    if (!isValidStringF(CAR(args)))
-	error(_("invalid first argument"));
+    if (!isValidStringF(x))
+        error(_("invalid first argument"));
     else
-	t1 = install_translated (STRING_ELT(CAR(args),0));
+        x = install_translated (STRING_ELT(x,0));
 
-    /* envir :	originally, the "where=" argument */
+    /* envir : originally, the "where=" argument */
 
-    if (TYPEOF(CADR(args)) == REALSXP || TYPEOF(CADR(args)) == INTSXP) {
-	where = asInteger(CADR(args));
-	genv = R_sysframe(where, R_GlobalContext);
+    if (TYPEOF(pos) == REALSXP || TYPEOF(pos) == INTSXP) {
+        where = asInteger(pos);
+        genv = R_sysframe(where, R_GlobalContext);
     }
-    else if (TYPEOF(CADR(args)) == NILSXP)
-	error(_("use of NULL environment is defunct"));
-    else if (TYPEOF(CADR(args)) == ENVSXP)
-	genv = CADR(args);
-    else if(TYPEOF((genv = simple_as_environment(CADR(args)))) != ENVSXP)
-	error(_("invalid '%s' argument"), "envir");
+    else if (TYPEOF(pos) == NILSXP)
+        error(_("use of NULL environment is defunct"));
+    else if (TYPEOF(pos) == ENVSXP)
+        genv = pos;
+    else if(TYPEOF((genv = simple_as_environment(pos))) != ENVSXP)
+        error(_("invalid '%s' argument"), "envir");
 
-    /* mode :  The mode of the object being sought */
+    /* mode : The mode of the object being sought */
 
     /* as from R 1.2.0, this is the *mode*, not the *typeof* aka
        storage.mode.
     */
 
-    if (isString(CADDR(args))) {
-	if (!strcmp(CHAR(STRING_ELT(CAR(CDDR(args)), 0)), "function")) /*ASCII*/
-	    gmode = FUNSXP;
-	else
-	    gmode = str2type(CHAR(STRING_ELT(CAR(CDDR(args)), 0))); /* ASCII */
-    } 
-    else
-	error(_("invalid '%s' argument"), "mode");
+    if (TYPEOF(mode) != STRSXP || LENGTH(mode) < 1)
+        error(_("invalid '%s' argument"), "mode");
 
-    ginherits = asLogical(CADDDR(args));
+    mode = STRING_ELT(mode,0);
+    if (mode == R_any_CHARSXP)
+        gmode = ANYSXP;
+    else if (mode == R_function_CHARSXP)
+        gmode = FUNSXP;
+    else
+        gmode = str2type(CHAR(mode));
+
+    ginherits = asLogical(inherits);
     if (ginherits == NA_LOGICAL)
-	error(_("invalid '%s' argument"), "inherits");
+        error(_("invalid '%s' argument"), "inherits");
 
     /* Search for the object */
-    rval = findVar1mode(t1, genv, gmode, ginherits, PRIMVAL(op));
+    rval = findVar1mode(x, genv, gmode, ginherits, opval!=0);
 
-    if (PRIMVAL(op)) { /* have get(.) */
-	if (rval == R_MissingArg)
-            arg_missing_error(t1);
-	if (rval == R_UnboundValue) {
-	    if (gmode == ANYSXP)
-                unbound_var_error(t1);
-	    else
-		error(_("object '%s' of mode '%s' was not found"),
-		      CHAR(PRINTNAME(t1)),
-		      CHAR(STRING_ELT(CAR(CDDR(args)), 0))); /* ASCII */
-	}
+    if (rval == R_MissingArg)
+        arg_missing_error(x);
 
-	/* We need to evaluate if it is a promise */
-	if (TYPEOF(rval) == PROMSXP)
-	    rval = forcePromise(rval);
+    if (opval != 0) { /* have get or get0 */
 
-	SET_NAMEDCNT_NOT_0(rval);
-	return rval;
+        if (rval == R_UnboundValue) {
+            if (opval == 2) /* get0 */
+                return CAD4R(args); /* value_if_not_exists */
+            else { /* get */
+                if (gmode == ANYSXP)
+                    unbound_var_error(x);
+                else
+                    error(_("object '%s' of mode '%s' was not found"),
+                          CHAR(PRINTNAME(x)),
+                          CHAR(STRING_ELT(CAR(CDDR(args)), 0))); /* ASCII */
+            }
+        }
+
+        /* We need to evaluate if it is a promise */
+        if (TYPEOF(rval) == PROMSXP)
+            rval = forcePromise(rval);
+
+        SET_NAMEDCNT_NOT_0(rval);
+
+        return rval;
     }
-    else /* exists(.) */
-	return ScalarLogicalMaybeConst (rval != R_UnboundValue);
+
+    else /* have exists */
+
+        return ScalarLogicalMaybeConst (rval != R_UnboundValue);
 }
 
 static SEXP gfind(const char *name, SEXP env, SEXPTYPE mode,
@@ -2086,82 +2107,81 @@ static SEXP gfind(const char *name, SEXP env, SEXPTYPE mode,
 
 static SEXP do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans, env, x, mode, ifnotfound, ifnfnd;
-    SEXPTYPE gmode; /* is unsigned int */
-    int ginherits = 0, nvals, nmode, nifnfnd, i;
+    int ginherits, nvals, nmode, nifnfnd, i;
+    SEXP ans;
 
     checkArity(op, args);
 
-    x = CAR(args);
-
-    nvals = length(x);
+    SEXP x = CAR(args);
+    SEXP env = CADR(args);
+    SEXP mode = CADDR(args);
+    SEXP ifnotfound = CADDDR(args);
+    SEXP inherits = CAD4R(args);
 
     /* The first arg is the object name */
     /* It must be present and a string */
+
     if (!isString(x) )
-	error(_("invalid first argument"));
-    for(i = 0; i < nvals; i++)
-	if( isNull(STRING_ELT(x, i)) || !CHAR(STRING_ELT(x, 0))[0] )
-	    error(_("invalid name in position %d"), i+1);
+        error(_("invalid first argument"));
 
-    /* FIXME: should we install them all?) */
+    nvals = LENGTH(x);
 
-    env = CADR(args);
-    if (env == R_NilValue) {
-	error(_("use of NULL environment is defunct"));
-    } else if( !isEnvironment(env) )
-	error(_("second argument must be an environment"));
+    for (i = 0; i < nvals; i++)
+        if (isNull(STRING_ELT(x,i)) /* unnecessary? */
+             || CHAR(STRING_ELT(x,0))[0] == 0)
+            error(_("invalid name in position %d"), i+1);
 
-    mode = CADDR(args);
-    nmode = length(mode);
-    if( !isString(mode) )
-	error(_("invalid '%s' argument"), "mode");
+    if (env == R_NilValue)
+        error(_("use of NULL environment is defunct"));
+    if( !isEnvironment(env))
+        error(_("second argument must be an environment"));
 
-    if( nmode != nvals && nmode != 1 )
-	error(_("wrong length for '%s' argument"), "mode");
+    if (!isString(mode))
+        error(_("invalid '%s' argument"), "mode");
+    nmode = LENGTH(mode);
 
-    PROTECT(ifnotfound = coerceVector(CADDDR(args), VECSXP));
-    nifnfnd = length(ifnotfound);
-    if( !isVector(ifnotfound) )
-	error(_("invalid '%s' argument"), "ifnotfound");
+    if (nmode != nvals && nmode != 1)
+        error(_("wrong length for '%s' argument"), "mode");
 
-    if( nifnfnd != nvals && nifnfnd != 1 )
-	error(_("wrong length for '%s' argument"), "ifnotfound");
+    PROTECT(ifnotfound = coerceVector(ifnotfound, VECSXP));
+    if (!isVector(ifnotfound))
+        error(_("invalid '%s' argument"), "ifnotfound");
+    nifnfnd = LENGTH(ifnotfound);
 
-    ginherits = asLogical(CAD4R(args));
+    if (nifnfnd != nvals && nifnfnd != 1)
+        error(_("wrong length for '%s' argument"), "ifnotfound");
+
+    ginherits = asLogical(inherits);
     if (ginherits == NA_LOGICAL)
-	error(_("invalid '%s' argument"), "inherits");
+        error(_("invalid '%s' argument"), "inherits");
 
     PROTECT(ans = allocVector(VECSXP, nvals));
 
     /* now for each element of x, we look for it, using the inherits,
        etc */
 
-    for(i = 0; i < nvals; i++) {
-	if (isString(mode)) { /* ASCII */
-	    if (!strcmp(CHAR(STRING_ELT(CAR(CDDR(args)), i % nmode )), "function"))
-		gmode = FUNSXP;
-	    else
-		gmode = str2type(CHAR(STRING_ELT(CAR(CDDR(args)), i % nmode )));
-	} 
+    for (i = 0; i < nvals; i++) {
+
+        SEXP modeCHARSXP = STRING_ELT (mode, i % nmode);
+        SEXPTYPE gmode; /* is unsigned int */
+        if (modeCHARSXP == R_any_CHARSXP)
+            gmode = ANYSXP;
+        else if (modeCHARSXP == R_function_CHARSXP)
+            gmode = FUNSXP;
         else
-	    error(_("invalid '%s' argument"), "mode");
+            gmode = str2type(CHAR(modeCHARSXP));
 
-	/* is the mode provided one of the real modes? */
-	if( gmode == (SEXPTYPE) (-1))
-	    error(_("invalid '%s' argument"), "mode");
+        /* is the mode provided one of the real modes? */
+        if (gmode == (SEXPTYPE) (-1))
+            error(_("invalid '%s' argument"), "mode");
 
-
-	if( TYPEOF(ifnotfound) != VECSXP )
-	    error(_("invalid '%s' argument"), "ifnotfound");
-	if( nifnfnd == 1 ) /* length has been checked to be 1 or nvals. */
-	    ifnfnd = VECTOR_ELT(ifnotfound, 0);
-	else
-	    ifnfnd = VECTOR_ELT(ifnotfound, i);
+        SEXP ifnfnd = nifnfnd == 1 ? /* length known be 1 or nvals. */
+                        VECTOR_ELT(ifnotfound, 0)
+                      : VECTOR_ELT(ifnotfound, i);
 
         SET_VECTOR_ELEMENT_TO_VALUE (ans, i, 
-          gfind (translateChar(STRING_ELT(x,i % nvals)), 
-                 env, gmode, ifnfnd, ginherits, rho));
+                   gfind (translateChar (STRING_ELT (x, i % nvals)), 
+                          env, gmode, ifnfnd, ginherits, rho));
     }
 
     setAttrib(ans, R_NamesSymbol, duplicate(x));
@@ -3625,6 +3645,7 @@ attribute_hidden FUNTAB R_FunTab_envir[] =
 {"list2env",	do_list2env,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"remove",	do_remove,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"get_rm",	do_get_rm,	0,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"get0",	do_get,		2,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"get",		do_get,		1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"exists",	do_get,		0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"mget",	do_mget,	1,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},

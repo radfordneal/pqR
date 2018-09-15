@@ -1,5 +1,5 @@
 
-pqR version 2.15.1 (2018-08-17), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.1 (2018-00-00), based on R 2.15.0 (2012-03-30)
 
 R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
@@ -122,8 +122,8 @@ List of 2
 +     "\n\t starting with 'is.' :\t  ",
 +     sum(grepl("^is\\.", ls.base[base.is.f])), "\n", sep = "")
 
-Number of base objects:		1269
-Number of functions in base:	1238
+Number of base objects:		1271
+Number of functions in base:	1240
 	 starting with 'is.' :	  50
 
 > ## 0.14  : 31
@@ -1515,5 +1515,5 @@ sm     3    3    3    3    4    4    4    4    2     2     2
 > par(op)
 > 
 > cat("Time elapsed: ", proc.time() - .ptime, "\n")
-Time elapsed:  1.375 0.031 0.775 0 0 
+Time elapsed:  1.161 0.04 0.73 0 0 
 > 
