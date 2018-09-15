@@ -111,7 +111,10 @@ static SEXP make_seq (int from, int len, int variant, int dotdot)
     SEXP ans;
 
     if (VARIANT_KIND(variant) == VARIANT_SEQ && (from|len|dotdot) != 0) {
-        R_variant_seq_spec = ((int64_t)from<<32) | ((int64_t)len<<1) | dotdot;
+        R_variant_seq_spec = 
+          ((int64_t)from * ((int64_t)1<<32)) /* Note: -ve<<. is undef in C99 */
+            | ((int64_t)len<<1) 
+            | dotdot;
         R_variant_result = 1;
         ans = R_NilValue;
     }

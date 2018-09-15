@@ -482,6 +482,9 @@ This bug remains in R Core versions to at least R-3.5.1.
 }
         This previously produced a matrix with values 1, 1, 2, 2 rather than the
         correct answer of 2, 1, 1, 2.
+  \item Fixed a bug illustrated by
+        \code{deparse(as.integer(c(2^31-1,NA,-(2^31-1))))}
+        producing incorrect output.
   \item Fixed bugs illustrated by \code{format(3.1,width=9999)}, in which
         large field widths are reduced to 999, but are filled with only spaces.
         The field widths are now automatically reduced to 999 (2000 for

@@ -1296,16 +1296,17 @@ static void vector2buff(SEXP vector, LocalParseData *d)
 	   Also, it is neat to deparse m:n in that form,
 	   so we do so as from 2.5.0.
 	 */
-	Rboolean intSeq = (tlen > 1);
-	int *tmp = INTEGER(vector);
-
-	for(i = 1; i < tlen; i++) {
-	    if(tmp[i] - tmp[i-1] != 1) {
-		intSeq = FALSE;
-		break;
-	    }
-	}
-	if(intSeq) {
+        int *tmp = INTEGER(vector);
+	Rboolean intSeq = (tlen > 1) && tmp[0] != NA_INTEGER;
+        if (intSeq) {
+            for (i = 1; i < tlen; i++) {
+                if (tmp[i-1] == INT_MAX || tmp[i-1] + 1 != tmp[i]) {
+                    intSeq = FALSE;
+                    break;
+                }
+            }
+        }
+        if (intSeq) {
 		strp = EncodeElement(vector, 0, '"', '.');
 		print2buff(strp, d);
 		print2buff(":", d);

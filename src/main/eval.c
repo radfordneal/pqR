@@ -1659,8 +1659,10 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     else if (R_variant_result) {  /* variant "in" value */
         R_variant_result = 0;
         is_seq = 1;
-        seq_start = R_variant_seq_spec >> 32;
-        n = (R_variant_seq_spec >> 1) & 0x7fffffff;
+        seq_start = R_variant_seq_spec >= 0 ? R_variant_seq_spec>>32
+            /* Note:  In C99, negative >> ... is undefined */
+          : (int64_t)((uint64_t)R_variant_seq_spec>>32) - ((int64_t)1<<32);
+        n = (R_variant_seq_spec & 0xffffffff) >> 1;
         val_type = INTSXP;
     }
     else { /* non-variant "in" value */
