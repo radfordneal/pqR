@@ -1182,7 +1182,7 @@ sggc_cptr_t sggc_constant (sggc_type_t type, sggc_kind_t kind, int n_objects,
 
   bits = 0;
   for (i = 0; i < n_objects; i++)
-  { bits |= 1 << (i*sggc_kind_chunks[kind]);
+  { bits |= (sbset_bits_t)1 << (i*sggc_kind_chunks[kind]);
   }
 
   sbset_index_t index = new_segment();
