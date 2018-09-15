@@ -121,7 +121,7 @@ static double R_canberra(double *x, int nr, int nc, int i1, int i2)
     dist = 0;
     for(j = 0 ; j < nc ; j++) {
 	if(both_non_NA(x[i1], x[i2])) {
-	    sum = fabs(x[i1] + x[i2]);
+            sum = fabs(x[i1]) + fabs(x[i2]);
 	    diff = fabs(x[i1] - x[i2]);
 	    if (sum > DBL_MIN || diff > DBL_MIN) {
 		dev = diff/sum;
