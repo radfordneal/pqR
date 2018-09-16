@@ -1,8 +1,14 @@
 /*
- *  R : A Computer Language for Statistical Data Analysis
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2018 by Radford M. Neal
+ *
+ *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1998-2012  The R Core Team
  *  Copyright (C) 2002, 2004  The R Foundation
+ *
+ *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
+ *  documented in the NEWS and MODS files in the top-level source directory.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,8 +24,6 @@
  *  along with this program; if not, a copy is available at
  *  http://www.r-project.org/Licenses/
  */
-
-/* As from R 2.16.0 this might need long vectors for result. */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -46,69 +50,64 @@
 static double R_euclidean(double *x, int nr, int nc, int i1, int i2)
 {
     double dev, dist;
-    int count, j;
+    int na_count, j;
 
-    count= 0;
+    na_count= 0;
     dist = 0;
-    for(j = 0 ; j < nc ; j++) {
-	if(both_non_NA(x[i1], x[i2])) {
-	    dev = (x[i1] - x[i2]);
-	    if(!ISNAN(dev)) {
-		dist += dev * dev;
-		count++;
-	    }
-	}
-	i1 += nr;
-	i2 += nr;
+    for (j = 0; j < nc; j++) {
+        dev = x[i1] - x[i2];
+        if (ISNAN(dev))
+            na_count += 1;
+        else
+            dist += dev * dev;
+        i1 += nr;
+        i2 += nr;
     }
-    if(count == 0) return NA_REAL;
-    if(count != nc) dist /= ((double)count/nc);
+    if (na_count > 0) {
+        if (na_count == nc)
+            return NA_REAL;
+        dist /= (double)(nc-na_count) / nc;
+    }
     return sqrt(dist);
 }
 
 static double R_maximum(double *x, int nr, int nc, int i1, int i2)
 {
     double dev, dist;
-    int count, j;
+    int j;
 
-    count = 0;
-    dist = -DBL_MAX;
-    for(j = 0 ; j < nc ; j++) {
-	if(both_non_NA(x[i1], x[i2])) {
-	    dev = fabs(x[i1] - x[i2]);
-	    if(!ISNAN(dev)) {
-		if(dev > dist)
-		    dist = dev;
-		count++;
-	    }
-	}
-	i1 += nr;
-	i2 += nr;
+    dist = -1;
+    for (j = 0; j < nc; j++) {
+        dev = fabs(x[i1] - x[i2]);
+        if (dev > dist) /* won't be true if dev is NA/NaN */
+            dist = dev;
+        i1 += nr;
+        i2 += nr;
     }
-    if(count == 0) return NA_REAL;
-    return dist;
+    return dist < 0 ? NA_REAL : dist;
 }
 
 static double R_manhattan(double *x, int nr, int nc, int i1, int i2)
 {
     double dev, dist;
-    int count, j;
+    int na_count, j;
 
-    count = 0;
+    na_count = 0;
     dist = 0;
-    for(j = 0 ; j < nc ; j++) {
-	if(both_non_NA(x[i1], x[i2])) {
-	    dev = fabs(x[i1] - x[i2]);
-	    if(!ISNAN(dev)) {
-		dist += dev;
-		count++;
-	    }
-	}
-	i1 += nr;
-	i2 += nr;
+    for (j = 0; j < nc; j++) {
+        dev = fabs(x[i1] - x[i2]);
+        if (ISNAN(dev))
+            na_count += 1;
+        else
+            dist += dev;
+        i1 += nr;
+        i2 += nr;
     }
-    if(count == 0) return NA_REAL;
-    if(count != nc) dist /= ((double)count/nc);
+    if (na_count > 0) {
+        if (na_count == nc)
+            return NA_REAL;
+        dist /= (double)(nc-na_count) / nc;
+    }
     return dist;
 }
 
@@ -119,22 +118,22 @@ static double R_canberra(double *x, int nr, int nc, int i1, int i2)
 
     count = 0;
     dist = 0;
-    for(j = 0 ; j < nc ; j++) {
-	if(both_non_NA(x[i1], x[i2])) {
+    for (j = 0; j < nc; j++) {
+        if (both_non_NA(x[i1], x[i2])) {
             sum = fabs(x[i1]) + fabs(x[i2]);
-	    diff = fabs(x[i1] - x[i2]);
-	    if (sum > DBL_MIN || diff > DBL_MIN) {
-		dev = diff/sum;
-		if(!ISNAN(dev) ||
-		   (!R_FINITE(diff) && diff == sum &&
-		    /* use Inf = lim x -> oo */ (dev = 1.))) {
-		    dist += dev;
-		    count++;
-		}
-	    }
-	}
-	i1 += nr;
-	i2 += nr;
+            diff = fabs(x[i1] - x[i2]);
+            if (sum > DBL_MIN || diff > DBL_MIN) {
+                dev = diff/sum;
+                if (!ISNAN(dev) ||
+                   (!R_FINITE(diff) && diff == sum &&
+                    /* use Inf = lim x -> oo */ (dev = 1.))) {
+                    dist += dev;
+                    count++;
+                }
+            }
+        }
+        i1 += nr;
+        i2 += nr;
     }
     if(count == 0) return NA_REAL;
     if(count != nc) dist /= ((double)count/nc);
@@ -150,48 +149,49 @@ static double R_dist_binary(double *x, int nr, int nc, int i1, int i2)
     count = 0;
     dist = 0;
 
-    for(j = 0 ; j < nc ; j++) {
-	if(both_non_NA(x[i1], x[i2])) {
-	    if(!both_FINITE(x[i1], x[i2])) {
-		warning(_("treating non-finite values as NA"));
-	    }
-	    else {
-		if(x[i1] || x[i2]) {
-		    count++;
-		    if( ! (x[i1] && x[i2]) ) dist++;
-		}
-		total++;
-	    }
-	}
-	i1 += nr;
-	i2 += nr;
+    for (j = 0; j < nc; j++) {
+        if (both_non_NA(x[i1], x[i2])) {
+            if (!both_FINITE(x[i1], x[i2])) {
+                warning(_("treating non-finite values as NA"));
+            }
+            else {
+                if (x[i1] || x[i2]) {
+                    count++;
+                    if ( ! (x[i1] && x[i2]) ) dist++;
+                }
+                total++;
+            }
+        }
+        i1 += nr;
+        i2 += nr;
     }
 
-    if(total == 0) return NA_REAL;
-    if(count == 0) return 0;
+    if (total == 0) return NA_REAL;
+    if (count == 0) return 0;
     return (double) dist / count;
 }
 
 static double R_minkowski(double *x, int nr, int nc, int i1, int i2, double p)
 {
     double dev, dist;
-    int count, j;
+    int na_count, j;
 
-    count= 0;
+    na_count= 0;
     dist = 0;
-    for(j = 0 ; j < nc ; j++) {
-	if(both_non_NA(x[i1], x[i2])) {
-	    dev = (x[i1] - x[i2]);
-	    if(!ISNAN(dev)) {
-		dist += R_pow(fabs(dev), p);
-		count++;
-	    }
-	}
-	i1 += nr;
-	i2 += nr;
+    for (j = 0; j < nc; j++) {
+        dev = x[i1] - x[i2];
+        if (ISNAN(dev))
+            na_count += 1;
+        else
+            dist += R_pow(fabs(dev), p);
+        i1 += nr;
+        i2 += nr;
     }
-    if(count == 0) return NA_REAL;
-    if(count != nc) dist /= ((double)count/nc);
+    if (na_count > 0) {
+        if (na_count == nc)
+            return NA_REAL;
+        dist /= (double)(nc-na_count) / nc;
+    }
     return R_pow(dist, 1.0/p);
 }
 
@@ -199,9 +199,10 @@ enum { EUCLIDEAN=1, MAXIMUM, MANHATTAN, CANBERRA, BINARY, MINKOWSKI };
 /* == 1,2,..., defined by order in the R function dist */
 
 void R_distance(double *x, int *nr, int *nc, double *d, int *diag,
-		int *method, double *p)
+                int *method, double *p)
 {
     int dc = (*diag) ? 0 : 1; /* diag=1:  we do the diagonal */
+    int meth = *method;
     R_len_t nrow = *nr;
     R_len_t ncol = *nc;
     double pv = *p;
@@ -211,37 +212,39 @@ void R_distance(double *x, int *nr, int *nc, double *d, int *diag,
 
     ij = 0;
 
-    switch (*method) {
+    if (meth == MINKOWSKI && pv == 2.0) meth = EUCLIDEAN;
+
+    switch (meth) {
     case EUCLIDEAN:
-        for (j = 0 ; j <= nrow ; j++)
-            for (i = j+dc ; i < nrow ; i++)
+        for (j = 0; j <= nrow; j++)
+            for (i = j+dc; i < nrow; i++)
                 d[ij++] = R_euclidean (x, nrow, ncol, i, j);
         break;
     case MAXIMUM:
-        for (j = 0 ; j <= nrow ; j++)
-            for (i = j+dc ; i < nrow ; i++)
+        for (j = 0; j <= nrow; j++)
+            for (i = j+dc; i < nrow; i++)
                 d[ij++] = R_maximum (x, nrow, ncol, i, j);
         break;
     case MANHATTAN:
-        for (j = 0 ; j <= nrow ; j++)
-            for (i = j+dc ; i < nrow ; i++)
+        for (j = 0; j <= nrow; j++)
+            for (i = j+dc; i < nrow; i++)
                 d[ij++] = R_manhattan (x, nrow, ncol, i, j);
         break;
     case CANBERRA:
-        for (j = 0 ; j <= nrow ; j++)
-            for (i = j+dc ; i < nrow ; i++)
+        for (j = 0; j <= nrow; j++)
+            for (i = j+dc; i < nrow; i++)
                 d[ij++] = R_canberra (x, nrow, ncol, i, j);
         break;
     case BINARY:
-        for (j = 0 ; j <= nrow ; j++)
-            for (i = j+dc ; i < nrow ; i++)
+        for (j = 0; j <= nrow; j++)
+            for (i = j+dc; i < nrow; i++)
                 d[ij++] = R_dist_binary (x, nrow, ncol, i, j);
         break;
     case MINKOWSKI:
         if (!R_FINITE(pv) || pv <= 0)
             error(_("distance(): invalid p"));
-        for (j = 0 ; j <= nrow ; j++)
-            for (i = j+dc ; i < nrow ; i++)
+        for (j = 0; j <= nrow; j++)
+            for (i = j+dc; i < nrow; i++)
                 d[ij++] = R_minkowski (x, nrow, ncol, i, j, pv);
         break;
     default:
@@ -263,8 +266,8 @@ SEXP Cdist(SEXP x, SEXP smethod, SEXP attrs, SEXP p)
     /* tack on attributes */
     SEXP names = getAttrib(attrs, R_NamesSymbol);
     for (int i = 0; i < LENGTH(attrs); i++)
-	setAttrib(ans, install(translateChar(STRING_ELT(names, i))),
-		  VECTOR_ELT(attrs, i));
+        setAttrib(ans, install(translateChar(STRING_ELT(names, i))),
+                  VECTOR_ELT(attrs, i));
     UNPROTECT(1);
     return ans;
 }
