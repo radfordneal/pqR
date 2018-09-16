@@ -1,5 +1,6 @@
 #  File src/library/stats/R/dist.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2018 Radford Neal
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -16,29 +17,28 @@
 
 dist <- function(x, method="euclidean", diag=FALSE, upper=FALSE, p=2)
 {
-    ## account for possible spellings of euclid?an
-    if(!is.na(pmatch(method, "euclidian")))
-	method <- "euclidean"
-
     METHODS <- c("euclidean", "maximum",
-		 "manhattan", "canberra", "binary", "minkowski")
+             "manhattan", "canberra", "binary", "minkowski")
     method <- pmatch(method, METHODS)
-    if(is.na(method))
-	stop("invalid distance method")
-    if(method == -1)
-	stop("ambiguous distance method")
+    if (is.na(method)) {
+        if (!is.na(pmatch(method,"euclidian")))  # possible misspelling
+            method <- 1L
+        else
+            stop("invalid distance method")
+    }
+    if (method == -1)
+        stop("ambiguous distance method")
 
     x <- as.matrix(x)
-    N  <- nrow(x)
-    if (!is.double(x)) storage.mode(x) <- "double"
-    attrs <- if(method == 6L)
-        list(Size = N, Labels =  dimnames(x)[[1L]], Diag = diag,
-             Upper = upper, method = METHODS[method],
-             p = p, call = match.call(), class = "dist")
-    else
-        list(Size = N, Labels =  dimnames(x)[[1L]], Diag = diag,
-             Upper = upper, method = METHODS[method],
-             call = match.call(), class = "dist")
+    if (!is.double(x))
+        storage.mode(x) <- "double"
+
+    attrs <- list (Size = nrow(x), Labels =  dimnames(x)[[1L]], Diag = diag,
+                   Upper = upper, method = METHODS[method],
+                   call = match.call(), class = "dist")
+    if (method == 6L)
+        attrs$p <- p
+
     .Call(C_Cdist, x, method, attrs, p)
 }
 
