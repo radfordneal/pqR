@@ -527,10 +527,17 @@ This bug remains in R Core versions to at least R-3.5.1.
         for code like the following:
 \preformatted{    a <- quote(r<-1); a[[2]] <- character(0); eval(a)
 }
+  }}
+
+  \subsection{BUG FIXES FROM R CORE RELEASES}{
+  \itemize{
   \item Similarly to R-3.1.2, \code{as.environment(list())} and 
         \code{list2env(list())} now work, and as.list() of such an
         environment (or any empty environment) now gives an
         empty list with no names, the same as \code{list()}. (PR#15926)
+
+  \item From R-3.0.2: \code{deparse()} now deparses raw vectors in a form that
+        is syntactically correct. (\PR{15369})
 
   }}
 }
