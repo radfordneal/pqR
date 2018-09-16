@@ -1376,9 +1376,13 @@ static void vector2buff(SEXP vector, LocalParseData *d)
 		print2buff("as.character(", d);
 	    }
 	}
+        else if(TYPEOF(vector) == RAWSXP) {
+	    print2buff("as.raw(", d); surround = TRUE;
+ 	}
 	if(tlen > 1) print2buff("c(", d);
 	allNA = allNA && !(d->opts & S_COMPAT);
 	for (i = 0; i < tlen; i++) {
+            static char buf[50];
 	    if(allNA && TYPEOF(vector) == REALSXP &&
 	       ISNA(REAL(vector)[i])) {
 		strp = "NA_real_";
@@ -1403,10 +1407,13 @@ static void vector2buff(SEXP vector, LocalParseData *d)
 		int w, d, e;
 		formatReal(&COMPLEX(vector)[i].i, 1, &w, &d, &e, 0);
 		strp = EncodeReal(COMPLEX(vector)[i].i, w, d, e, '.');
-                static char buf[50];
                 copy_2_strings (buf, sizeof buf, strp, "i");
                 strp = buf;
-	    } else
+	    } else if (TYPEOF(vector) == RAWSXP) {
+                strp = EncodeRaw(RAW(vector)[i]);
+                copy_2_strings (buf, sizeof buf, "0x", strp);
+                strp = buf;
+            } else
 		strp = EncodeElement(vector, i, quote, '.');
 	    print2buff(strp, d);
 	    if (i < (tlen - 1)) print2buff(", ", d);
