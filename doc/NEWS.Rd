@@ -285,7 +285,7 @@
 }
         However, completely consistent behaviour in this regard is still 
         not enforced.
-  \item A \codes{slots} argument that is a named character vector is now
+  \item A \code{slots} argument that is a named character vector is now
         allowed for \code{setClass}, to provide some compatibility with
         extensions to the \code{methods} package in R-3.0.0, prior to fully
         porting those extensions.
@@ -542,7 +542,7 @@ This bug remains in R Core versions to at least R-3.5.1.
 
   \subsection{BUG FIXES FROM R CORE RELEASES}{
   \itemize{
-  \itme From R-2.15.2: \code{R CMD build --resave-data} could fail if there 
+  \item From R-2.15.2: \code{R CMD build --resave-data} could fail if there 
         was no \file{data} directory but there was an \file{R/sysdata.rda}
         file. (\PR{14947})
   \item Similarly to R-3.1.2, \code{as.environment(list())} and 
