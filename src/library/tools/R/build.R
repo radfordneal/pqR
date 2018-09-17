@@ -1,5 +1,6 @@
 #  File src/library/tools/R/build.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -676,7 +677,9 @@ get_exclude_patterns <- function()
             if(any(rdas$compress %in% c("bzip2", "xz")))
                 fixup_R_dep(pkgname, "2.10")
         } else {
-            rdas <- checkRdaFiles(ddir)
+            ## ddir need not exist if just R/sysdata.rda
+            rdas <- checkRdaFiles(Sys.glob(c(file.path(ddir, "*.rda"),
+                                             file.path(ddir, "*.RData"))))
             if(nrow(rdas)) {
                 update <- with(rdas, ASCII | compress == "none" | version < 2)
                 if(any(update)) {
