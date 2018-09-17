@@ -542,6 +542,9 @@ This bug remains in R Core versions to at least R-3.5.1.
 
   \subsection{BUG FIXES FROM R CORE RELEASES}{
   \itemize{
+  \itme From R-2.15.2: \code{R CMD build --resave-data} could fail if there 
+        was no \file{data} directory but there was an \file{R/sysdata.rda}
+        file. (\PR{14947})
   \item Similarly to R-3.1.2, \code{as.environment(list())} and 
         \code{list2env(list())} now work, and as.list() of such an
         environment (or any empty environment) now gives an
