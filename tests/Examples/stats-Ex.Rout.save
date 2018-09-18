@@ -1,10 +1,10 @@
 
-pqR version 2.15.1 (2016-00-00), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.1 (2018-00-00), based on R 2.15.0 (2012-03-30)
 
 R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 
-Modifications to R in pqR are Copyright (C) 2013-2016 Radford M. Neal
+Modifications to R in pqR are Copyright (C) 2013-2018 Radford M. Neal
 
 Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
@@ -23,7 +23,7 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 Type 'q()' to quit R.
 
 
-No helper threads, task merging enabled.
+3 helper threads, task merging enabled, uncompressed pointers.
 
 > pkgname <- "stats"
 > source(file.path(R.home("share"), "R", "examples-header.R"))
@@ -3708,7 +3708,7 @@ detaching 'package:cluster'
 > 
 > asOneSidedFormula("age")
 ~age
-<environment: 0x31ce6d8>
+<environment: 55c963b15400>
 > asOneSidedFormula(~ age)
 ~age
 > 
@@ -6022,7 +6022,7 @@ function (b0, b1, th, x)
 > 
 > require(graphics)
 > 
-> x <- matrix(rnorm(100), nrow=5)
+> x <- matrix(rnorm(100), nrow = 5)
 > dist(x)
          1        2        3        4
 2 5.701817                           
@@ -6067,11 +6067,11 @@ RTEN  517   31   28   35   36   38   25   29    9   16   47
 > ## example of binary and canberra distances.
 > x <- c(0, 0, 1, 1, 1, 1)
 > y <- c(1, 0, 1, 1, 0, 1)
-> dist(rbind(x,y), method= "binary")
+> dist(rbind(x, y), method = "binary")
     x
 y 0.4
 > ## answer 0.4 = 2/5
-> dist(rbind(x,y), method= "canberra")
+> dist(rbind(x, y), method = "canberra")
     x
 y 2.4
 > ## answer 2 * (6/5)
@@ -6088,23 +6088,23 @@ y 2.4
 > ## Examples involving "Inf" :
 > ## 1)
 > x[6] <- Inf
-> (m2 <- rbind(x,y))
+> (m2 <- rbind(x, y))
   [,1] [,2] [,3] [,4] [,5] [,6]
 x    0    0    1    1    1  Inf
 y    1    0    1    1    0    1
-> dist(m2, method="binary")# warning, answer 0.5 = 2/4
+> dist(m2, method = "binary")   # warning, answer 0.5 = 2/4
 Warning in dist(m2, method = "binary") :
   treating non-finite values as NA
     x
 y 0.5
 > ## These all give "Inf":
-> stopifnot(Inf == dist(m2, method= "euclidean"),
-+           Inf == dist(m2, method= "maximum"),
-+           Inf == dist(m2, method= "manhattan"))
+> stopifnot(Inf == dist(m2, method =  "euclidean"),
++           Inf == dist(m2, method =  "maximum"),
++           Inf == dist(m2, method =  "manhattan"))
 > ##  "Inf" is same as very large number:
 > x1 <- x; x1[6] <- 1e100
-> stopifnot(dist(cbind(x ,y), method="canberra") ==
-+     print(dist(cbind(x1,y), method="canberra")))
+> stopifnot(dist(cbind(x, y), method = "canberra") ==
++     print(dist(cbind(x1, y), method = "canberra")))
   1 2 3 4 5
 2 2        
 3 1 2      
@@ -6114,18 +6114,18 @@ y 0.5
 > 
 > ## 2)
 > y[6] <- Inf #-> 6-th pair is excluded
-> dist(rbind(x,y), method="binary")   # warning; 0.5
+> dist(rbind(x, y), method = "binary"  )   # warning; 0.5
 Warning in dist(rbind(x, y), method = "binary") :
   treating non-finite values as NA
     x
 y 0.5
-> dist(rbind(x,y), method="canberra") # 3
+> dist(rbind(x, y), method = "canberra"  ) # 3
   x
 y 3
-> dist(rbind(x,y), method="maximum")  # 1
+> dist(rbind(x, y), method = "maximum")    # 1
   x
 y 1
-> dist(rbind(x,y), method="manhattan")# 2.4
+> dist(rbind(x, y), method = "manhattan")  # 2.4
     x
 y 2.4
 > 
@@ -6695,7 +6695,7 @@ List of 12
 > gf$linkinv
 function (eta) 
 1/eta
-<environment: 0xb0235a8>
+<environment: 55c96905cac0>
 > gf$variance(-3:4) #- == (.)^2
 [1]  9  4  1  0  1  4  9 16
 > 
@@ -7097,7 +7097,7 @@ attr(,".Environment")
 > environment(as.formula("y ~ x"))
 <environment: R_GlobalEnv>
 > environment(as.formula("y ~ x", env=new.env()))
-<environment: 0xc013228>
+<environment: 55c96a425240>
 > 
 > 
 > ## Create a formula for a model with a large number of variables:
@@ -11511,22 +11511,22 @@ attr(,"degree")
 $linkfun
 function (mu) 
 mu
-<environment: 0xbfc54e8>
+<environment: 55c963d3dc40>
 
 $linkinv
 function (eta) 
 eta
-<environment: 0xbfc54e8>
+<environment: 55c963d3dc40>
 
 $mu.eta
 function (eta) 
 rep.int(1, length(eta))
-<environment: 0xbfc54e8>
+<environment: 55c963d3dc40>
 
 $valideta
 function (eta) 
 TRUE
-<environment: 0xbfc54e8>
+<environment: 55c963d3dc40>
 
 $name
 [1] "identity"
@@ -11537,12 +11537,12 @@ attr(,"class")
 $linkfun
 function (mu) 
 mu^lambda
-<environment: 0xbfd2988>
+<environment: 55c963d3b0c0>
 
 $linkinv
 function (eta) 
 pmax(eta^(1/lambda), .Machine$double.eps)
-<environment: 0xbfd2988>
+<environment: 55c963d3b0c0>
 
 > 
 > 
@@ -15207,7 +15207,7 @@ function (v)
     xout = as.double(v), as.integer(length(v)), as.integer(method), 
     as.double(yleft), as.double(yright), as.double(f), NAOK = TRUE, 
     PACKAGE = "stats")$xout
-<environment: 0xa774578>
+<environment: 55c96956a040>
 attr(,"call")
 stepfun(1:3, y0, f = 0)
 > ls(envir = environment(sfun0))
@@ -17423,7 +17423,7 @@ Number of Fisher Scoring iterations: 6
 > ### * <FOOTER>
 > ###
 > cat("Time elapsed: ", proc.time() - get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  5.576 0.132 5.728 0 0 
+Time elapsed:  6.287 0.111 2.535 0 0 
 > grDevices::dev.off()
 null device 
           1 
