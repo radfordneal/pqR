@@ -1,7 +1,10 @@
 % File src/library/stats/man/dist.Rd
 % Part of the R package, https://www.R-project.org
 % Copyright 1995-2017 R Core Team
+% Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
+
+\newcommand{\CRANpkg}{\href{http://CRAN.R-project.org/package=#1}{\pkg{#1}}}
 
 \name{dist}
 \alias{dist}
