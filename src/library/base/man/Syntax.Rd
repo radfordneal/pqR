@@ -56,7 +56,7 @@
 \note{
   There are substantial precedence differences between \R and S.  In
   particular, in S \code{?} has the same precedence as (binary) \code{+}
-  and \code{-} and \code{&}, \cod{&&}, \code{|}, and \code{||} have 
+  and \code{-} and \code{&}, \code{&&}, \code{|}, and \code{||} have 
   equal precedence.
 }
 \references{
