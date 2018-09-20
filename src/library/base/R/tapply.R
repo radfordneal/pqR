@@ -23,16 +23,15 @@ tapply <- function (X, INDEX, FUN = NULL, ..., simplify = TRUE)
     names(namelist) <- names(INDEX)
     extent <- integer(nI)
     nx <- length(X)
-    one <- 1L
-    group <- rep.int(one, nx)#- to contain the splitting vector
-    ngroup <- one
+    group <- rep.int(1L, nx)#- to contain the splitting vector
+    ngroup <- 1L
     for (i along INDEX) {
 	index <- as.factor(INDEX[[i]])
 	if (length(index) != nx)
 	    stop("arguments must have same length")
 	namelist[[i]] <- levels(index)#- all of them, yes !
 	extent[i] <- nlevels(index)
-	group <- group + ngroup * (as.integer(index) - one)
+	group <- group + ngroup * (as.integer(index) - 1L)
 	ngroup <- ngroup * nlevels(index)
     }
     if (is.null(FUN)) return(group)
