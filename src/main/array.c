@@ -1970,25 +1970,24 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
     vals = CAR(args);
     /* at least NULL can get here */
     switch(TYPEOF(vals)) {
-	case LGLSXP:
-	case INTSXP:
-	case REALSXP:
-	case CPLXSXP:
-	case STRSXP:
-	case RAWSXP:
-	case EXPRSXP:
-	case VECSXP:
-	    break;
-	default:
-	    error(_("'data' must be of a vector type, was '%s'"),
-		type2char(TYPEOF(vals)));
+        case LGLSXP:
+        case INTSXP:
+        case REALSXP:
+        case CPLXSXP:
+        case STRSXP:
+        case RAWSXP:
+        case EXPRSXP:
+        case VECSXP:
+            break;
+        default:
+            error(_("'data' must be of a vector type, was '%s'"),
+                  type2char(TYPEOF(vals)));
     }
     lendat = XLENGTH(vals);
     dims = CADR(args);
     dimnames = CADDR(args);
     PROTECT(dims = coerceVector(dims, INTSXP));
     int nd = LENGTH(dims);
-    if (nd == 0) error(_("'dims' cannot be of length 0"));
     double d = 1.0;
     for (int j = 0; j < nd; j++) d *= INTEGER(dims)[j];
     if (d > INT_MAX) error(_("'dim' specifies too large an array"));
@@ -2000,10 +1999,13 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
     else
         copy_elements_recycled (ans, 0, vals, nans);
 
-    ans = dimgets(ans, dims);
-    /* if (!isNull(dimnames) && length(dimnames) > 0) - what it should be but */
-    if (TYPEOF(dimnames) == VECSXP || TYPEOF(dimnames) == LISTSXP) /* for now */
-	ans = dimnamesgets(ans, dimnames);
+    if (nd > 0) {
+        ans = dimgets(ans, dims);
+        /* if (!isNull(dimnames) && length(dimnames)>0) - what should, but... */
+        if (TYPEOF(dimnames) == VECSXP 
+         || TYPEOF(dimnames) == LISTSXP) /* for now */
+            ans = dimnamesgets(ans, dimnames);
+    }
 
     UNPROTECT(2);
     return ans;
