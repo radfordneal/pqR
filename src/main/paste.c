@@ -140,18 +140,18 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
     if (nx == 1) {
 
         /* If only one argument, just turn NA into "NA" for strings, or
-           convert from integer to string. */
+           convert from integer to string.  Allocate new STRSXP so it
+           won't have any attributes. */
 
         if (TYPEOF(xa[0]) == INTSXP)
             PROTECT (ans = coerceVector (xa[0], STRSXP));
         else {
-            PROTECT(ans = xa[0]);
+            PROTECT(ans = allocVector(STRSXP, maxlen));
             SEXP NA = mkChar(CHAR(NA_STRING)); /* will not be the same thing! */
-            for (i = 0; i < maxlen; i++) {
-                if (STRING_ELT(ans,i) == NA_STRING)
-                    SET_STRING_ELT (ans, i, NA);
-            }
-        }
+            for (i = 0; i < maxlen; i++)
+                SET_STRING_ELT (ans, i, STRING_ELT(xa[0],i) == NA_STRING ? NA
+                                         : STRING_ELT (xa[0], i));
+         }
     }
     else {
 
