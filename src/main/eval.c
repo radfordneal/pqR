@@ -4684,14 +4684,14 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             BEGIN_PROTECT3 (sb1, sb2, remargs);
             ALSO_PROTECT1 (array);
 
-            SEXP sb1 = EVALV (CAR(ixlist), rho, 
+            sb1 = EVALV (CAR(ixlist), rho, 
                          ixlist2 == R_NilValue ?  /* only 1 argument */
                            VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
                            VARIANT_MISSING_OK
-                       : CDR(ixlist2)==R_NilValue ?  /* at most 2 arguments */
+                         : CDR(ixlist2)==R_NilValue ?  /* at most 2 arguments */
                            VARIANT_SEQ | VARIANT_SCALAR_STACK_OK |
                            VARIANT_MISSING_OK | VARIANT_PENDING_OK
-                       : /* more than 2 arguments */
+                         : /* more than 2 arguments */
                            VARIANT_SCALAR_STACK_OK | 
                            VARIANT_MISSING_OK | VARIANT_PENDING_OK);
 
