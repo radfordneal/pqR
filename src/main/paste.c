@@ -326,7 +326,7 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
         VMAXSET(vmax1);
     }
 
-    UNPROTECT(nx+1);
+    UNPROTECT(nx+1);  /* args + ans */
     PROTECT(ans);
 
     /* Now collapse, if required. */
@@ -416,7 +416,6 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
         unsigned first_hash = as[0] != CHAR (STRING_ELT(ans,0)) ? 0
                                : CHAR_HASH (STRING_ELT(ans,0));
 
-        UNPROTECT(1);
         PROTECT(ans = allocVector(STRSXP, 1));
 
         ienc = CE_NATIVE;
@@ -430,9 +429,11 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
         }
 
         SET_STRING_ELT (ans, 0, Rf_mkCharMulti (as, len, first_hash, ienc));
+
+        UNPROTECT(1);  /* newer ans */
     }
 
-    UNPROTECT(1);
+    UNPROTECT(1);  /* ans (original) */
     VMAXSET(vmax0);
     return ans;
 }
