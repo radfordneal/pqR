@@ -323,11 +323,16 @@ static SEXP do_printdefault(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* It should make sure that it quotes when there are special */
 /* characters and also take care of ansi escapes properly. */
 
+#define NB 1000
+
 static void PrintGenericVector(SEXP s, SEXP env)
 {
+    static char pbuf[NB];
+
     int i, taglen, ns, w, wr, dr, er, wi, di, ei;
     SEXP dims, t, names, newcall, tmp;
-    char pbuf[115], *ptag, save[TAGBUFLEN + 5];
+    char save[TAGBUFLEN + 5];
+    char *ptag;
 
     ns = length(s);
     if((dims = getDimAttrib(s)) != R_NilValue && length(dims) > 1) {
@@ -338,50 +343,50 @@ static void PrintGenericVector(SEXP s, SEXP env)
 	    PROTECT(tmp = VECTOR_ELT(s, i));
 	    switch(TYPEOF(tmp)) {
 	    case NILSXP:
-		snprintf(pbuf, 115, "NULL");
+		snprintf(pbuf, NB, "NULL");
 		break;
 	    case LGLSXP:
 		if (LENGTH(tmp) == 1) {
 		    formatLogical(LOGICAL(tmp), 1, &w);
-		    snprintf(pbuf, 115, "%s",
+		    snprintf(pbuf, NB, "%s",
 			     EncodeLogical(LOGICAL(tmp)[0], w));
 		} else
-		    snprintf(pbuf, 115, "Logical,%d", LENGTH(tmp));
+		    snprintf(pbuf, NB, "Logical,%d", LENGTH(tmp));
 		break;
 	    case INTSXP:
 		/* factors are stored as integers */
 		if (inherits_CHAR (tmp, R_factor_CHARSXP)) {
-		    snprintf(pbuf, 115, "factor,%d", LENGTH(tmp));
+		    snprintf(pbuf, NB, "factor,%d", LENGTH(tmp));
 		} else {
 		    if (LENGTH(tmp) == 1) {
 			formatInteger(INTEGER(tmp), 1, &w);
-			snprintf(pbuf, 115, "%s",
+			snprintf(pbuf, NB, "%s",
 				 EncodeInteger(INTEGER(tmp)[0], w));
 		    } else
-			snprintf(pbuf, 115, "Integer,%d", LENGTH(tmp));
+			snprintf(pbuf, NB, "Integer,%d", LENGTH(tmp));
 		}
 		break;
 	    case REALSXP:
 		if (LENGTH(tmp) == 1) {
                     double_to_string (pbuf, REAL(tmp)[0]);
 		} else
-		    snprintf(pbuf, 115, "Numeric,%d", LENGTH(tmp));
+		    snprintf(pbuf, NB, "Numeric,%d", LENGTH(tmp));
 		break;
 	    case CPLXSXP:
 		if (LENGTH(tmp) == 1) {
 		    Rcomplex *x = COMPLEX(tmp);
 		    if (ISNA(x[0].r) || ISNA(x[0].i))
 			/* formatReal(NA) --> w=R_print.na_width, d=0, e=0 */
-			snprintf(pbuf, 115, "%s",
+			snprintf(pbuf, NB, "%s",
 				 EncodeReal(NA_REAL, R_print.na_width, 0, 0, OutDec));
 		    else {
 			formatComplex(x, 1, &wr, &dr, &er, &wi, &di, &ei, 0);
-			snprintf(pbuf, 115, "%s",
+			snprintf(pbuf, NB, "%s",
 				 EncodeComplex(x[0],
 					       wr, dr, er, wi, di, ei, OutDec));
 		    }
 		} else
-		snprintf(pbuf, 115, "Complex,%d", LENGTH(tmp));
+		snprintf(pbuf, NB, "Complex,%d", LENGTH(tmp));
 		break;
 	    case STRSXP:
 		if (LENGTH(tmp) == 1) {
@@ -389,32 +394,35 @@ static void PrintGenericVector(SEXP s, SEXP env)
 		    const char *ctmp = translateChar(STRING_ELT(tmp, 0));
 		    int len = strlen(ctmp);
 		    if(len < 100)
-			snprintf(pbuf, 115, "\"%s\"", ctmp);
+			snprintf(pbuf, NB, "\"%s\"", ctmp);
 		    else {
 			snprintf(pbuf, 101, "\"%s\"", ctmp);
 			pbuf[100] = '"'; pbuf[101] = '\0';
 			strcat(pbuf, " [truncated]");
 		    }
 		} else
-		snprintf(pbuf, 115, "Character,%d", LENGTH(tmp));
+		snprintf(pbuf, NB, "Character,%d", LENGTH(tmp));
 		break;
 	    case RAWSXP:
-		snprintf(pbuf, 115, "Raw,%d", LENGTH(tmp));
+		snprintf(pbuf, NB, "Raw,%d", LENGTH(tmp));
 		break;
 	    case LISTSXP:
 	    case VECSXP:
-		snprintf(pbuf, 115, "List,%d", length(tmp));
+		snprintf(pbuf, NB, "List,%d", length(tmp));
 		break;
 	    case LANGSXP:
-		snprintf(pbuf, 115, "Expression");
+		snprintf(pbuf, NB, "Expression");
 		break;
 	    default:
-		snprintf(pbuf, 115, "?");
+		snprintf(pbuf, NB, "?");
 		break;
 	    }
+
 	    UNPROTECT(1); /* tmp */
-	    pbuf[114] = '\0';
+
+	    pbuf[NB-1] = '\0';
 	    SET_STRING_ELT(t, i, mkChar(pbuf));
+
 	}
 	if (LENGTH(dims) == 2) {
 	    SEXP rl, cl;
