@@ -572,6 +572,7 @@ static SEXP do_format(SEXP call, SEXP op, SEXP args, SEXP env)
     if(na == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "na.encode");
     args = CDR(args);
+
     if(LENGTH(CAR(args)) != 1)
 	error(_("invalid '%s' argument"), "scientific");
     if(isLogical(CAR(args))) {
@@ -582,7 +583,13 @@ static SEXP do_format(SEXP call, SEXP op, SEXP args, SEXP env)
 	sci = asInteger(CAR(args));
     } else
 	error(_("invalid '%s' argument"), "scientific");
-    if(sci != NA_INTEGER) R_print.scipen = sci;
+    if (sci == NA_INTEGER) {
+        R_print.scipen = asInteger(GetOption1(install("scipen")));
+        if (R_print.scipen == NA_INTEGER) R_print.scipen = 0;
+    }
+    else {
+        R_print.scipen = sci;
+    }
 
     if ((n = LENGTH(x)) <= 0) {
 	PROTECT(y = allocVector(STRSXP, 0));
