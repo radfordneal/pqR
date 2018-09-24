@@ -150,29 +150,33 @@ const char *EncodeInteger(int x, int w)
 
 const char *EncodeRaw(Rbyte x)
 {
-    static char buff[10];
-    sprintf(buff, "%02x", x);
+    static char buff[8];
+    sprintf (buff, "%02x", x);
     return buff;
 }
 
 const char *EncodeEnvironment(SEXP x)
 {
-    static char ch[100];
-    if (x == R_GlobalEnv)
-	sprintf(ch, "<environment: R_GlobalEnv>");
-    else if (x == R_BaseEnv)
-	sprintf(ch, "<environment: base>");
-    else if (x == R_EmptyEnv)
-	sprintf(ch, "<environment: R_EmptyEnv>");
-    else if (R_IsPackageEnv(x))
-	sprintf(ch, "<environment: %s>",
-		translateChar(STRING_ELT(R_PackageEnvName(x), 0)));
-    else if (R_IsNamespaceEnv(x))
-	sprintf(ch, "<environment: namespace:%s>",
-		translateChar(STRING_ELT(R_NamespaceEnvSpec(x), 0)));
-    else sprintf(ch, "<environment: %llx>", (long long) (uintptr_t) x);
+    static char buff[NB];
 
-    return ch;
+    if (x == R_GlobalEnv)
+	snprintf (buff, NB, "<environment: R_GlobalEnv>");
+    else if (x == R_BaseEnv)
+	snprintf (buff, NB, "<environment: base>");
+    else if (x == R_EmptyEnv)
+	snprintf (buff, NB, "<environment: R_EmptyEnv>");
+    else if (R_IsPackageEnv(x))
+	snprintf (buff, NB, "<environment: %s>",
+                  translateChar(STRING_ELT(R_PackageEnvName(x), 0)));
+    else if (R_IsNamespaceEnv(x))
+	snprintf (buff, NB, "<environment: namespace:%s>",
+                  translateChar(STRING_ELT(R_NamespaceEnvSpec(x), 0)));
+    else 
+        snprintf (buff, NB, 
+                  "<environment: %llx>", (long long) (uintptr_t) x);
+
+    buff[NB-1] = '\0';
+    return buff;
 }
 
 /* cdec is the decimal point character, with 0 same as '.' except always 

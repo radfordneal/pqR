@@ -387,7 +387,7 @@ SEXP attribute_hidden StringFromReal(double x, int *warn)
     if (ISNA(x))
         return NA_STRING;
     else {
-        char s[32];
+        static char s[1000];
         double_to_string(s,x);
         return mkChar(s);
     }
