@@ -43,6 +43,7 @@
 #endif
 
 #include "sbset-app.h"
+#include <stdio.h>
 #include <stdlib.h>
 #ifdef SGGC_USE_MEMSET
 #include <string.h>
