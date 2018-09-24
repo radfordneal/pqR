@@ -154,10 +154,9 @@ Rboolean copy_3_strings(char *to, int size, const char *from1,
     return TRUE;
 }
 
-/* Put the ASCII representation of a double in a string, with 0 termination.
-   There must be space for at least 32 characters in the string (no extra
-   needed for 0 termination).  Uses the global variable OutDec for the 
-   decimal point. */
+/* Put the ASCII representation of a double in a string, with '\0' termination.
+   Trailing zeros are removed. There must be space for at least 1000 characters
+   in the string.  Uses the global variable OutDec for the decimal point. */
 
 void double_to_string (char *s, double x)
 {
@@ -188,7 +187,7 @@ void double_to_string (char *s, double x)
     *s = 0;
 }
 
-/* Put the ASCII representation of an integer in a string, with 0 termination.
+/* Put ASCII representation of an integer in a string, with '\0' termination.
    There must be space for at least 12 characters in the string.  NA is put
    in as "NA". */
 
