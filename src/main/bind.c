@@ -295,7 +295,7 @@ static void AnswerType (SEXP x, int recurse, int usenames,
         }
         else {
             if (TYPEOF(x) == EXPRSXP)
-                data->ans_type= EXPRSXP;
+                data->ans_type = EXPRSXP;
             else if (data->ans_type != EXPRSXP)
                 data->ans_type = VECSXP;
         }
@@ -322,6 +322,10 @@ static void AnswerType (SEXP x, int recurse, int usenames,
             }
             len = length(x);
         }
+    }
+
+    else if (data->ans_type == EXPRSXP && TYPEOF(x) == LANGSXP) {
+        len = 1;
     }
 
     else if (x == R_NilValue) {
