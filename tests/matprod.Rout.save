@@ -1,13 +1,14 @@
 
-pqR version 2.15.0 (2013-07-22), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.1 (2018-00-00), based on R 2.15.0 (2012-03-30)
 
-R is Copyright (C) 2012 The R Foundation for Statistical Computing
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 
-Modifications to R in pqR are Copyright (C) 2013 Radford M. Neal
+Modifications to R in pqR are Copyright (C) 2013-2018 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
 Platform: x86_64-unknown-linux-gnu (64-bit)
-Deferred evaluation disabled (no helpers, no merging).
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -21,10 +22,13 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
 
+
+No helper threads, task merging enabled, uncompressed pointers.
+
 > # Test matrix multiplication, with %*%, crossprod, and tcrossprod, by
 > # BLAS and 'matprod' routines.
 > #
-> # Added for pqR, 2013, Radford M. Neal.
+> # Added for pqR, 2013, 2018 Radford M. Neal.
 > 
 > # Check matrix multiplication with various sizes of matrices, setting
 > # matrix elements to random values that are integer multiples of 1/8 so
@@ -34,8 +38,13 @@ Type 'q()' to quit R.
 > #
 > # Returns the last (largest) result matrix.
 > 
-> check_matprod <- function ()
-+ {  
+> check_matprod <- function (print=TRUE)
++ { 
++   if (print) 
++   { cat("\n")
++     print(options()[c("mat_mult_with_BLAS","helpers_disable")])
++   }
++ 
 +   # Matrix multiply the hard way, to check results.
 + 
 +   matmult <- function (A,B)
@@ -52,41 +61,85 @@ Type 'q()' to quit R.
 +     C
 +   }
 + 
++   # Do checks with given matrix sizes.
++ 
++   check <- function (n, m, k)
++   { A <- matrix (rgeom(n*k,0.1)/8, n, k)
++     B <- matrix (rgeom(k*m,0.1)/8, k, m)
++     C <- matmult(A,B)
++     At <- t(A)
++     Bt <- t(B)
++     stopifnot(identical(A%*%B,C))
++     stopifnot(identical(crossprod(At,B),C))
++     stopifnot(identical(tcrossprod(A,Bt),C))
++     if (n==m) 
++     { D <- matmult(At,A)
++       stopifnot(identical(crossprod(A),D))
++       stopifnot(identical(tcrossprod(At),D))
++     }
++     C
++   }
++ 
 +   # Set seed to get consistent results.
 + 
 +   set.seed(1)
 + 
-+   # Try various sizes.
++   # Try various sizes systematically.
 + 
 +   for (n in 0:11)
 +   { for (m in 0:11)
 +     { for (k in 0:11)
-+       { A <- matrix (rgeom(n*k,0.1)/8, n, k)
-+         B <- matrix (rgeom(k*m,0.1)/8, k, m)
-+         C <- matmult(A,B)
-+         At <- t(A)
-+         Bt <- t(B)
-+         stopifnot(identical(A%*%B,C))
-+         stopifnot(identical(crossprod(At,B),C))
-+         stopifnot(identical(tcrossprod(A,Bt),C))
-+         if (n==m) 
-+         { D <- matmult(At,A)
-+           stopifnot(identical(crossprod(A),D))
-+           stopifnot(identical(tcrossprod(At),D))
-+         }
++       { C <- check(n,m,k)
 +       }
 +     }
 +   }
 + 
-+   C
++   if (print)
++   { cat("\n")
++     print(C)
++   }
++ 
++   # Try various sizes randomly.  Can increase loop count for more testing
++   # by setting the environment variable R_MATPROD_TEST_COUNT (minimum 200).
++ 
++   count <- as.integer(Sys.getenv("R_MATPROD_TEST_COUNT"))
++   if (is.na(count) || count < 200) count <- 200
++ 
++   for (i in 1..count)
++   {  n <- if (runif(1)<0.6) 15*rpois(1,10) + rpois(1,10) 
++           else if (runif(1)>0.93) 50*rpois(1,12) + rpois(1,30) 
++           else rpois(1,5)
++      m <- if (runif(1)<0.6) 15*rpois(1,10) + rpois(1,10) 
++           else if (runif(1)>0.93) 50*rpois(1,12) + rpois(1,30) 
++           else rpois(1,5)
++      k <- if (runif(1)<0.6) 15*rpois(1,10) + rpois(1,10) 
++           else if (runif(1)>0.93) 50*rpois(1,12) + rpois(1,30) 
++           else rpois(1,5)
++      if (n > 1200) n <- 1200
++      if (m > 1200) m <- 1200
++      if (k > 1200) k <- 1200
++      # Print n,m,k, but only for the first 200, so increasing the loop
++      # repetitions won't invalidate saved output.
++      if (print && i <= 200) print(c(n,m,k))
++      check(n,m,k)
++   }
 + }
 > 
-> # Check matrix products using BLAS and using 'matprod' routines.
+> # Check matrix products using BLAS and using 'matprod' routines, with
+> # or without helper threads enabled.
 > 
-> sv <- getOption("mat_mult_with_BLAS")
+> sv <- options()[c("mat_mult_with_BLAS","helpers_disable")]
 > 
-> options(mat_mult_with_BLAS=F)
-> print(check_matprod())
+> options(mat_mult_with_BLAS=FALSE,helpers_disable=FALSE)
+> check_matprod()
+
+$mat_mult_with_BLAS
+[1] FALSE FALSE FALSE FALSE
+
+$helpers_disable
+[1] FALSE
+
+
           [,1]      [,2]     [,3]      [,4]     [,5]      [,6]      [,7]
  [1,] 6.859375  8.890625 15.98438 15.484375  9.78125  6.781250  7.781250
  [2,] 3.500000  7.921875 12.25000 13.421875  9.21875  8.406250 10.265625
@@ -111,9 +164,217 @@ Type 'q()' to quit R.
  [9,]  7.984375 17.375000 15.796875 15.984375
 [10,]  2.968750 15.406250  5.000000 11.921875
 [11,] 16.500000 19.500000  8.953125 22.812500
+[1]   4   4 143
+[1]   5   7 173
+[1]   4 176   8
+[1] 190   3 191
+[1]  87 206   6
+[1]   2   5 101
+[1] 146   5 116
+[1]   5 161 209
+[1]  4 70  3
+[1] 163 174  41
+[1] 87  3  3
+[1] 145   6   7
+[1] 103   4 155
+[1] 145 132   5
+[1]   6   5 145
+[1]   1 177  65
+[1] 175 159 580
+[1] 160 139 125
+[1]   7   7 231
+[1]   2 202 147
+[1] 116   6 177
+[1]   4 141  95
+[1] 96  4 11
+[1] 4 3 5
+[1]   5   8 172
+[1] 1078    6  186
+[1]   4 142 173
+[1]  68   2 133
+[1] 131 263   8
+[1] 201 172 203
+[1]   5   7 141
+[1] 129 140   1
+[1] 113 158 203
+[1]   3 161 234
+[1] 145 178 172
+[1]  70  73 103
+[1] 131  93 157
+[1] 176 129 179
+[1]  98 147 234
+[1]   8 627 179
+[1] 115 223  55
+[1]   4 161   5
+[1] 5 7 3
+[1] 131 234 114
+[1]  9  4 99
+[1] 188   7 173
+[1]  84 158 142
+[1]   5   6 207
+[1] 141 127   6
+[1]   3 179 108
+[1] 115   5 176
+[1]  89 247 201
+[1]   3   2 142
+[1] 6 2 8
+[1] 206 190 170
+[1] 217   8   4
+[1] 222 112   6
+[1] 111 235 141
+[1]  7  5 86
+[1]  10 127 172
+[1] 193  98 101
+[1] 482   6 103
+[1] 193  69 110
+[1] 188   3   6
+[1]   6 162 145
+[1] 150 129 109
+[1]   5 117  10
+[1]   1   5 221
+[1] 139 103 238
+[1]   7 161 161
+[1] 103   4  99
+[1]   3 147   4
+[1] 128   6   3
+[1] 209 187   5
+[1]  98 188  94
+[1] 152 204  99
+[1] 209   5   1
+[1] 489 156  56
+[1]   3 156 195
+[1] 151   3 170
+[1]  6  4 86
+[1]   9 131 128
+[1] 187   5   6
+[1] 386   3  97
+[1]   1   8 204
+[1]   1   3 923
+[1]   4 187   6
+[1] 114 147 164
+[1] 132   4 143
+[1]   4   5 156
+[1]   5   3 147
+[1]   4 135 173
+[1]   7 264 133
+[1] 132   5   5
+[1]   4 190   9
+[1]  86 116 134
+[1] 3 2 5
+[1] 189   2 174
+[1]   5 120 232
+[1] 98  5  1
+[1] 114  82   4
+[1] 188 158 681
+[1] 129 176 120
+[1] 132   3 162
+[1] 157 229   3
+[1] 224  99  70
+[1] 205 254   4
+[1] 179  83 264
+[1] 277 161 579
+[1] 103 101   9
+[1]   7 205 171
+[1] 164   4  83
+[1] 158   6 223
+[1] 186 158 176
+[1] 173 158   2
+[1] 220 137   2
+[1]   7 157   8
+[1]   6 130 270
+[1]  11   6 194
+[1] 247 163 187
+[1] 205 138 192
+[1] 230   8   7
+[1]   3 174 145
+[1]   6 237 148
+[1] 189  65   1
+[1] 250 149   3
+[1] 321 112  10
+[1]   6   3 217
+[1] 145   7 148
+[1] 261   3 191
+[1]  84 819 130
+[1]   5 118 163
+[1]   6 119 149
+[1] 148 246   6
+[1] 161   6 193
+[1]   4 106 135
+[1]  84   4 111
+[1] 146 212 115
+[1] 118 585   4
+[1] 255 220 172
+[1] 235 160 176
+[1] 117 203 190
+[1]   6   2 192
+[1]   4 193 176
+[1]  10  94 186
+[1] 128   9   2
+[1]   3 187 142
+[1] 141 146 205
+[1] 126 199 245
+[1]   1 175 180
+[1]   5 189   7
+[1]   3 162  76
+[1]   6 175   8
+[1] 778  91 142
+[1] 223 174 191
+[1]   4  82 147
+[1]   2 214 109
+[1] 220 159 173
+[1] 128   4 116
+[1] 218  82   7
+[1]   4 129  97
+[1]   5   2 114
+[1] 115   7   9
+[1] 131 205 126
+[1]   1 189  10
+[1] 144   4 129
+[1]   3   6 129
+[1] 140 159   5
+[1] 131 145 172
+[1] 142   7 159
+[1] 191   3 127
+[1] 148  68   3
+[1] 216   9 146
+[1]   6   8 148
+[1] 101 193 118
+[1] 145   5 146
+[1] 216   2   5
+[1] 7 4 4
+[1] 209   4   7
+[1] 333 239 174
+[1]  82 150 128
+[1] 193 158  85
+[1] 114 257 209
+[1]  3 86  4
+[1] 254 173 162
+[1] 207   3   6
+[1] 174   8   3
+[1] 161   6 175
+[1] 110   3 192
+[1]   7   7 114
+[1] 207 130   4
+[1]   2 203 109
+[1] 196   7   8
+[1] 430   3   6
+[1]   5 103 174
+[1] 11  7  5
+[1] 178   4   4
+[1]   5 150 146
+[1]   6 201  51
+[1]  99  72 568
 > 
-> options(mat_mult_with_BLAS=T)
-> print(check_matprod())
+> options(mat_mult_with_BLAS=FALSE,helpers_disable=TRUE)
+> check_matprod()
+
+$mat_mult_with_BLAS
+[1] FALSE FALSE FALSE FALSE
+
+$helpers_disable
+[1] TRUE
+
+
           [,1]      [,2]     [,3]      [,4]     [,5]      [,6]      [,7]
  [1,] 6.859375  8.890625 15.98438 15.484375  9.78125  6.781250  7.781250
  [2,] 3.500000  7.921875 12.25000 13.421875  9.21875  8.406250 10.265625
@@ -138,6 +399,215 @@ Type 'q()' to quit R.
  [9,]  7.984375 17.375000 15.796875 15.984375
 [10,]  2.968750 15.406250  5.000000 11.921875
 [11,] 16.500000 19.500000  8.953125 22.812500
+[1]   4   4 143
+[1]   5   7 173
+[1]   4 176   8
+[1] 190   3 191
+[1]  87 206   6
+[1]   2   5 101
+[1] 146   5 116
+[1]   5 161 209
+[1]  4 70  3
+[1] 163 174  41
+[1] 87  3  3
+[1] 145   6   7
+[1] 103   4 155
+[1] 145 132   5
+[1]   6   5 145
+[1]   1 177  65
+[1] 175 159 580
+[1] 160 139 125
+[1]   7   7 231
+[1]   2 202 147
+[1] 116   6 177
+[1]   4 141  95
+[1] 96  4 11
+[1] 4 3 5
+[1]   5   8 172
+[1] 1078    6  186
+[1]   4 142 173
+[1]  68   2 133
+[1] 131 263   8
+[1] 201 172 203
+[1]   5   7 141
+[1] 129 140   1
+[1] 113 158 203
+[1]   3 161 234
+[1] 145 178 172
+[1]  70  73 103
+[1] 131  93 157
+[1] 176 129 179
+[1]  98 147 234
+[1]   8 627 179
+[1] 115 223  55
+[1]   4 161   5
+[1] 5 7 3
+[1] 131 234 114
+[1]  9  4 99
+[1] 188   7 173
+[1]  84 158 142
+[1]   5   6 207
+[1] 141 127   6
+[1]   3 179 108
+[1] 115   5 176
+[1]  89 247 201
+[1]   3   2 142
+[1] 6 2 8
+[1] 206 190 170
+[1] 217   8   4
+[1] 222 112   6
+[1] 111 235 141
+[1]  7  5 86
+[1]  10 127 172
+[1] 193  98 101
+[1] 482   6 103
+[1] 193  69 110
+[1] 188   3   6
+[1]   6 162 145
+[1] 150 129 109
+[1]   5 117  10
+[1]   1   5 221
+[1] 139 103 238
+[1]   7 161 161
+[1] 103   4  99
+[1]   3 147   4
+[1] 128   6   3
+[1] 209 187   5
+[1]  98 188  94
+[1] 152 204  99
+[1] 209   5   1
+[1] 489 156  56
+[1]   3 156 195
+[1] 151   3 170
+[1]  6  4 86
+[1]   9 131 128
+[1] 187   5   6
+[1] 386   3  97
+[1]   1   8 204
+[1]   1   3 923
+[1]   4 187   6
+[1] 114 147 164
+[1] 132   4 143
+[1]   4   5 156
+[1]   5   3 147
+[1]   4 135 173
+[1]   7 264 133
+[1] 132   5   5
+[1]   4 190   9
+[1]  86 116 134
+[1] 3 2 5
+[1] 189   2 174
+[1]   5 120 232
+[1] 98  5  1
+[1] 114  82   4
+[1] 188 158 681
+[1] 129 176 120
+[1] 132   3 162
+[1] 157 229   3
+[1] 224  99  70
+[1] 205 254   4
+[1] 179  83 264
+[1] 277 161 579
+[1] 103 101   9
+[1]   7 205 171
+[1] 164   4  83
+[1] 158   6 223
+[1] 186 158 176
+[1] 173 158   2
+[1] 220 137   2
+[1]   7 157   8
+[1]   6 130 270
+[1]  11   6 194
+[1] 247 163 187
+[1] 205 138 192
+[1] 230   8   7
+[1]   3 174 145
+[1]   6 237 148
+[1] 189  65   1
+[1] 250 149   3
+[1] 321 112  10
+[1]   6   3 217
+[1] 145   7 148
+[1] 261   3 191
+[1]  84 819 130
+[1]   5 118 163
+[1]   6 119 149
+[1] 148 246   6
+[1] 161   6 193
+[1]   4 106 135
+[1]  84   4 111
+[1] 146 212 115
+[1] 118 585   4
+[1] 255 220 172
+[1] 235 160 176
+[1] 117 203 190
+[1]   6   2 192
+[1]   4 193 176
+[1]  10  94 186
+[1] 128   9   2
+[1]   3 187 142
+[1] 141 146 205
+[1] 126 199 245
+[1]   1 175 180
+[1]   5 189   7
+[1]   3 162  76
+[1]   6 175   8
+[1] 778  91 142
+[1] 223 174 191
+[1]   4  82 147
+[1]   2 214 109
+[1] 220 159 173
+[1] 128   4 116
+[1] 218  82   7
+[1]   4 129  97
+[1]   5   2 114
+[1] 115   7   9
+[1] 131 205 126
+[1]   1 189  10
+[1] 144   4 129
+[1]   3   6 129
+[1] 140 159   5
+[1] 131 145 172
+[1] 142   7 159
+[1] 191   3 127
+[1] 148  68   3
+[1] 216   9 146
+[1]   6   8 148
+[1] 101 193 118
+[1] 145   5 146
+[1] 216   2   5
+[1] 7 4 4
+[1] 209   4   7
+[1] 333 239 174
+[1]  82 150 128
+[1] 193 158  85
+[1] 114 257 209
+[1]  3 86  4
+[1] 254 173 162
+[1] 207   3   6
+[1] 174   8   3
+[1] 161   6 175
+[1] 110   3 192
+[1]   7   7 114
+[1] 207 130   4
+[1]   2 203 109
+[1] 196   7   8
+[1] 430   3   6
+[1]   5 103 174
+[1] 11  7  5
+[1] 178   4   4
+[1]   5 150 146
+[1]   6 201  51
+[1]  99  72 568
 > 
-> options(mat_mult_with_BLAS=sv)
+> if (identical(Sys.getenv("R_MATPROD_TEST_BLAS"),"TRUE")) {
++ 
++     options(mat_mult_with_BLAS=TRUE,helpers_disable=FALSE)
++     check_matprod(print=FALSE)
++ 
++     options(mat_mult_with_BLAS=TRUE,helpers_disable=TRUE)
++     check_matprod(print=FALSE)
++ }
+> 
+> options(sv)
 > 

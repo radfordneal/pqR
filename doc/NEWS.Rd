@@ -63,6 +63,14 @@
         can now also be used for non-Windows platforms, by including
         \code{-DLEA_MALLOC} in \code{CFLAGS}.  This is meant for 
         experimentation, and is not recommended for general use.
+  \item More testing of the correctness of matrix multiplication
+        operations is now done by \code{make check}.  Setting the
+        \code{R_MATPROD_TEST_COUNT} environment variable to a value
+        greater than the default of 200 will increase the number of
+        random cases of matrix multiplication that are generated and
+        checked.  Setting \code{R_MATPROD_TEST_BLAS} to TRUE will
+        case the BLAS matrix multiplication routines to be tested
+        as well as the C matprod functions.
   }}
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
