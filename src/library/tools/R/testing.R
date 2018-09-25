@@ -225,6 +225,9 @@ testInstalledPackages <-
         pkgs <- c(pkgs, known_packages$recommended)
     ## It *should* be an error if any of these are missing
     for (pkg in pkgs) {
+        # -- Uncomment the line below if system libraries used by tcltk cause
+        # -- errors with, for example, address sanitizer.
+        # if (pkg == "tcltk") next
         if(is.null(srcdir) && pkg %in% known_packages$base)
             srcdir <- R.home("tests/Examples")
         res <- testInstalledPackage(pkg, .Library, outDir, types, srcdir, Ropts)

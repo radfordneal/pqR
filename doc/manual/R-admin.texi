@@ -345,6 +345,13 @@ non-UTF-8 non-Western-European locales.)  A failure in
 @file{tests/ok-errors.R} may indicate inadequate resource limits
 (@pxref{Running R}).
 
+Note: Setting the \code{R_MATPROD_TEST_COUNT} environment variable to
+a value greater than the default of 200 will increase the number of
+random cases of matrix multiplication that are generated and checked
+for correctness. Setting \code{R_MATPROD_TEST_BLAS} to TRUE will case
+the BLAS matrix multiplication routines to be tested as well as the C
+matprod functions.
+
 More comprehensive testing can be done by
 
 @example
