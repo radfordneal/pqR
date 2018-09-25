@@ -23,7 +23,7 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 Type 'q()' to quit R.
 
 
-No helper threads, task merging enabled, uncompressed pointers.
+4 helper threads, task merging enabled, uncompressed pointers.
 
 > # Test matrix multiplication, with %*%, crossprod, and tcrossprod, by
 > # BLAS and 'matprod' routines.
@@ -67,11 +67,19 @@ No helper threads, task merging enabled, uncompressed pointers.
 +   { A <- matrix (rgeom(n*k,0.1)/8, n, k)
 +     B <- matrix (rgeom(k*m,0.1)/8, k, m)
 +     C <- matmult(A,B)
++     C1 <- matmult(A,B+1)
++     C2 <- matmult(A,B)+2
 +     At <- t(A)
 +     Bt <- t(B)
 +     stopifnot(identical(A%*%B,C))
 +     stopifnot(identical(crossprod(At,B),C))
 +     stopifnot(identical(tcrossprod(A,Bt),C))
++     stopifnot(identical(A%*%(B+1),C1))
++     stopifnot(identical(crossprod(At,B+1),C1))
++     stopifnot(identical(tcrossprod(A,Bt+1),C1))
++     stopifnot(identical(A%*%B+2,C2))
++     stopifnot(identical(crossprod(At,B)+2,C2))
++     stopifnot(identical(tcrossprod(A,Bt)+2,C2))
 +     if (n==m) 
 +     { D <- matmult(At,A)
 +       stopifnot(identical(crossprod(A),D))
