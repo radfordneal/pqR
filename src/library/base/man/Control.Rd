@@ -1,7 +1,7 @@
 % File src/library/base/man/Control.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
-% Modifications for pqR Copyright (c) 2016 Radford M. Neal.
+% Modifications for pqR Copyright (c) 2016, 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Control}
@@ -73,10 +73,16 @@ next
   For that reason, one (somewhat extreme) attitude of defensive programming
   is to always use braces, e.g., for \code{if} clauses.
 
-  To avoid a syntax error in entering a \code{if ... else}
-  construct at the keyboard or via \code{source}, you need to avoid
-  putting a newline between the end of \code{cons.expr} (often a \code{\}})
-  and \code{else}.
+  To avoid a syntax error in entering an \code{if ... else} construct
+  at the keyboard, you need to avoid putting a newline between the end
+  of \code{cons.expr} (often a \code{\}}) and \code{else} --- this is a
+  requirement so that the intepreter will not be waiting for keyboard input when
+  the user does not intend to enter an \code{else} clause.  For R Core
+  versions of R, a newline before \code{else} must also be avoided for code
+  read with \code{source} or parsed from a file or a character vector with 
+  \code{parse}, even though there is then no reason not to always look for
+  an \code{else} clause, but pqR parses an \code{else} properly without
+  giveing an error in this situation.
 
   The \code{seq}, \code{vector}, \code{matrix}, or \code{array} in a 
   \code{for} loop is evaluated at the start of
