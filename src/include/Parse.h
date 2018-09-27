@@ -25,6 +25,7 @@
 
 #include <R_ext/Parse.h>
 #include <IOStuff.h>
+#include <Rconnections.h>
 
 /* Public interface */
 /* SEXP R_ParseVector(SEXP, int, ParseStatus *, SEXP); in R_ext/Parse.h */
@@ -59,6 +60,7 @@ void R_TextForSrcRefState (SrcRefState *state, const char *text);
 void R_FinalizeSrcRefState(SrcRefState *state);
 
 SEXP R_Parse1Stream (int (*)(void *), void *, ParseStatus *, SrcRefState *);
+SEXP R_ParseConn (Rconnection con, int, ParseStatus *, SEXP);
 
 /* Report a parse error */
 	
