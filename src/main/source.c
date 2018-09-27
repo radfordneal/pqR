@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -201,8 +201,6 @@ static void conn_cleanup(void *data)
     if(con->isopen) con->close(con);
 }
 
-static int conn_getc (void *con) { return Rconn_fgetc ((Rconnection) con); }
-
 static unsigned char console_buf[CONSOLE_BUFFER_SIZE+1];
 static unsigned char *console_bufp;
 
@@ -309,7 +307,7 @@ static SEXP do_parse(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
 	if(!con->canread) error(_("cannot read from this connection"));
 
-        s = R_ParseStream (conn_getc, (void *) con, num, &status, source);
+        s = R_ParseConn (con, num, &status, source);
 
 	if(!wasopen) {
 	    PROTECT(s);

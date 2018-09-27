@@ -30,6 +30,7 @@
 #include "Fileio.h"
 #include "Parse.h"
 #include <R_ext/Print.h>
+#include <Rconnections.h>
 
 #if !defined(__STDC_ISO_10646__) && (defined(__APPLE__) || defined(__FreeBSD__))
 /* This may not be 100% true (see the comment in rlocales.h),
@@ -47,31 +48,37 @@
 /* --------------------------------------------------------------------------
    PARSING ENTRY POINTS PROVIDED
  
-   The following routines, declared in R_ext/Parse.h, parse several
-   expressions and return their values in a single expression vector.
+   The following routines, declared in R_ext/Parse.h, parse up to n
+   expressions (any number if n is -1) and return their values in a
+   single expression vector.
  
        SEXP R_ParseVector (SEXP *text, int n, ParseStatus *status, SEXP srcfile)
 
        SEXP R_ParseStream (int (*getc)(void *), void *getc_arg, int n, 
                            ParseStatus *status, SEXP srcfile);
 
-   The following routine, declared in the less public Parse.h, parses
-   a single expression:
+   The following routine is similar to R_ParseStream, except it always
+   uses Rconn_getc, and is declared in the less public Parse.h:
+
+       SEXP R_ParseConn   (Rconnection con, int n,
+                           ParseStatus *status, SEXP srcfile);
+
+   The following routine, also in Parse.h, parses a single expression:
  
        SEXP R_Parse1Stream (int (*getc)(void *), void *getc_arg, 
                             ParseStatus *status, SrcRefState *state);
 
    The R_InitSrcRefState and R_FinalizeSrcRefState routines (which in
    fact deal with more than source references) will need to be used in
-   conjunction with this routine.  Calls to these two routines must be
-   paired, with the protect stack at the same level for the call of
-   R_FinalizeSrcRefState as after the call of R_InitSrcRefState.
-   However, a non-local error exit (causing the call of R_FinalizeSrcRefState
-   to be bypassed) is allowed.  Note that R_FinalizeSrcRefState may
-   allocate storage, so objects needed after its call must be protected
-   before its call (and hence before the call of R_InitializeSrcRefState,
-   or using REPROTECT after a PROTECT call before).  R_TextForSrcRefState 
-   may also be needed.
+   conjunction with the R_Parse1Stream routine.  Calls to these two
+   routines must be paired, with the protect stack at the same level
+   for the call of R_FinalizeSrcRefState as after the call of
+   R_InitSrcRefState.  However, a non-local error exit (causing the
+   call of R_FinalizeSrcRefState to be bypassed) is allowed.  Note
+   that R_FinalizeSrcRefState may allocate storage, so objects needed
+   after its call must be protected before its call (and hence before
+   the call of R_InitializeSrcRefState, or using REPROTECT after a
+   PROTECT call before).  R_TextForSrcRefState may also be needed.
 
    The success of the parse is indicated as follows:
  
@@ -80,8 +87,8 @@
  		 PARSE_ERROR      - syntax error
  		 PARSE_EOF	  - end of file
 
-   PARSE_NULL and PARSE_EOF are not possible for R_ParseVector and
-   R_ParseStream.  
+   PARSE_NULL and PARSE_EOF are not possible for R_ParseVector,
+   R_ParseStream, and R_ParseConn.
 
    If PARSE_ERROR is returned, the error message and context is in 
    the global variables R_ParseErrorMsg, R_ParseContext, etc., which
@@ -1951,21 +1958,29 @@ static SEXP parse_prog (int flags)
 
 /* -------------------------------------------------------------------------- */
 
-/* R_Parse1 is a glue function between the recursive descent parsing routines
-   and the parsing entry points. 
+/* R_Parse1 and prog_flags are glue functions between the recursive
+   descent parsing routines and the parsing entry points.
 
-   The keep_source variable should be set before calling this function. */
+   The keep_source variable should be set before calling R_Parse1. */
 
-static SEXP R_Parse1(ParseStatus *status, source_location *loc)
+static int prog_flags (int no_peeking)
 {
     int flags;
     SEXP keepp;
-    SEXP res;
 
-    flags = END_ON_NL | NO_PEEKING;
+    flags = END_ON_NL;
+    if (no_peeking) flags |= NO_PEEKING;
+
     keepp = GetOption1(install("keep.parens"));
     if (TYPEOF(keepp) == LGLSXP && LOGICAL(keepp)[0] == 1)
         flags |= KEEP_PARENS;
+
+    return flags;
+}
+
+static SEXP R_Parse1(ParseStatus *status, source_location *loc, int flags)
+{
+    SEXP res;
 
     if (!get_next_token(0)) {
         *status = PARSE_EOF;
@@ -2029,16 +2044,30 @@ attribute_hidden SEXP R_Parse1Stream (int (*getc) (void *), void *getc_arg,
 {
     PARSE_INIT
 
-    source_location loc;
-    SEXP res;
-
     ps->stream_getc = getc;
     ps->stream_getc_arg = getc_arg;
     ps->ptr_getc = call_stream_getc;
     ps->sr = state;
     ps->keep_source = state->keepSrcRefs;
 
-    res = R_Parse1 (status, &loc);
+    SEXP res = R_NilValue;
+
+    if (!get_next_token(0))
+        *status = PARSE_EOF;
+
+    else if (ps->next_token == END_OF_INPUT || ps->next_token == '\n' 
+                                            || ps->next_token == ';')
+        *status = PARSE_NULL;
+
+    else {
+        res = parse_prog (prog_flags(TRUE));
+        if (res == R_NoObject) {
+            res = R_NilValue;
+            *status = PARSE_ERROR;
+        }
+        else
+            *status = PARSE_OK;
+    }
 
     PARSE_FINI
 
@@ -2046,9 +2075,9 @@ attribute_hidden SEXP R_Parse1Stream (int (*getc) (void *), void *getc_arg,
 }
 
 
-static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
+static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile, int no_peeking)
 {
-    SEXP rval, tval, tlast, cur, refs, last_ref;
+    SEXP rval, tval, tlast, res, refs, last_ref;
     PROTECT_INDEX rval_prot;
     SrcRefState state;
     source_location loc;
@@ -2076,16 +2105,41 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     
     ps->keep_source = ps->sr->keepSrcRefs;
 
+    const int flags = prog_flags(no_peeking);
+
     i = 0;
     while (n < 0 || i < n) {
 
-	cur = R_Parse1(status,&loc);
+        res = R_NilValue;
+
+        if ((i == 0 || ps->next_token == '\n' || ps->next_token == ';'
+                    || ps->next_token == END_OF_INPUT) && !get_next_token(0))
+            *status = PARSE_EOF;
+
+        else if (ps->next_token == END_OF_INPUT)
+            *status = PARSE_NULL;
+
+        else if (ps->next_token == '\n' || ps->next_token == ';')
+            *status = PARSE_NULL;
+
+        else {
+            start_location(&loc);
+            res = parse_prog (flags);
+            end_location(&loc);
+
+            if (res == R_NoObject) {
+                res = R_NilValue;
+                *status = PARSE_ERROR;
+            }
+            else
+                *status = PARSE_OK;
+        }
 
 	switch(*status) {
 	case PARSE_NULL:
 	    break;
 	case PARSE_OK:
-            SETCDR (tlast, CONS (cur, R_NilValue));
+            SETCDR (tlast, CONS (res, R_NilValue));
             tlast = CDR(tlast);
             if (ps->sr->keepSrcRefs) {
                 SETCDR (last_ref, 
@@ -2119,11 +2173,7 @@ ret:
 }
 
 
-static int text_getc(void)
-{
-    return R_TextBufferGetc(ps->textb_ptr);
-}
-
+static int text_getc(void) { return R_TextBufferGetc(ps->textb_ptr); }
 
 SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
 {
@@ -2139,13 +2189,33 @@ SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
     ps->textb_ptr = &textb;
     ps->ptr_getc = text_getc;
 
-    rval = R_Parse(n, status, srcfile);
+    rval = R_Parse(n, status, srcfile, FALSE);
 
     R_TextBufferFree(&textb);
 
     PARSE_FINI
 
     return rval;
+}
+
+
+static int conn_getc (void *con) { return Rconn_fgetc ((Rconnection) con); }
+
+SEXP R_ParseConn (Rconnection con, int n, ParseStatus *status, SEXP srcfile)
+{
+    PARSE_INIT
+
+    SEXP res;
+
+    ps->stream_getc = conn_getc;
+    ps->stream_getc_arg = (void *) con;
+    ps->ptr_getc = call_stream_getc;
+
+    res = R_Parse (n, status, srcfile, FALSE);
+
+    PARSE_FINI
+
+    return res;
 }
 
 
@@ -2160,7 +2230,7 @@ SEXP R_ParseStream (int (*getc) (void *), void *getc_arg,
     ps->stream_getc_arg = getc_arg;
     ps->ptr_getc = call_stream_getc;
 
-    res = R_Parse (n, status, srcfile);
+    res = R_Parse (n, status, srcfile, TRUE);
 
     PARSE_FINI
 
