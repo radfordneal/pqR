@@ -406,9 +406,10 @@ struct parse_state {
 
     int (*ptr_getc)(void);     /* Function to call to get a character */
 
+    TextBuffer *textb_ptr;
+    Rconnection conn;
     void *stream_getc_arg;
     int (*stream_getc)(void *);
-    TextBuffer *textb_ptr;
 
 #   define PUSHBACK_BUFSIZE 16
 
@@ -1956,56 +1957,6 @@ static SEXP parse_prog (int flags)
     return res;
 }
 
-/* -------------------------------------------------------------------------- */
-
-/* R_Parse1 and prog_flags are glue functions between the recursive
-   descent parsing routines and the parsing entry points.
-
-   The keep_source variable should be set before calling R_Parse1. */
-
-static int prog_flags (int no_peeking)
-{
-    int flags;
-    SEXP keepp;
-
-    flags = END_ON_NL;
-    if (no_peeking) flags |= NO_PEEKING;
-
-    keepp = GetOption1(install("keep.parens"));
-    if (TYPEOF(keepp) == LGLSXP && LOGICAL(keepp)[0] == 1)
-        flags |= KEEP_PARENS;
-
-    return flags;
-}
-
-static SEXP R_Parse1(ParseStatus *status, source_location *loc, int flags)
-{
-    SEXP res;
-
-    if (!get_next_token(0)) {
-        *status = PARSE_EOF;
-        return R_NilValue;
-    }
-
-    if (ps->next_token == END_OF_INPUT || ps->next_token == '\n' 
-                                       || ps->next_token == ';') {
-        *status = PARSE_NULL;
-        return R_NilValue;
-    }
-
-    start_location(loc);
-    res = parse_prog (flags);
-    end_location(loc);
-
-    if (res == R_NoObject) {
-        *status = PARSE_ERROR;
-        return R_NilValue;
-    }
-
-    *status = PARSE_OK;
-    return res;
-}
-
 /* -------------------------------------------------------------------------- 
    PARSING ENTRY POINTS.
 
@@ -2031,6 +1982,26 @@ static SEXP R_Parse1(ParseStatus *status, source_location *loc, int flags)
     memcpy (R_ParseContext, ps->ParseContext, PARSE_CONTEXT_SIZE); \
     R_ParseContextLast = ps->ParseContextLast; \
     R_ParseContextLine = ps->ParseContextLine;
+
+
+/* Create top-level flags to pass to parse_prog.  The no_peeking argument
+   should be TRUE if peeking ahead looking for an "else" is not allowed
+   (as appropriate if input is from the user, interactively). */
+
+static int prog_flags (int no_peeking)
+{
+    int flags;
+    SEXP keepp;
+
+    flags = END_ON_NL;
+    if (no_peeking) flags |= NO_PEEKING;
+
+    keepp = GetOption1(install("keep.parens"));
+    if (TYPEOF(keepp) == LGLSXP && LOGICAL(keepp)[0] == 1)
+        flags |= KEEP_PARENS;
+
+    return flags;
+}
 
 
 static int call_stream_getc(void) 
@@ -2110,50 +2081,34 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile, int no_peeking)
     i = 0;
     while (n < 0 || i < n) {
 
-        res = R_NilValue;
+        rval = R_NilValue;
 
         if ((i == 0 || ps->next_token == '\n' || ps->next_token == ';'
                     || ps->next_token == END_OF_INPUT) && !get_next_token(0))
-            *status = PARSE_EOF;
+            goto finish;
 
-        else if (ps->next_token == END_OF_INPUT)
-            *status = PARSE_NULL;
+        if (ps->next_token == '\n' || ps->next_token == ';'
+                    || ps->next_token == END_OF_INPUT)
+            continue;
 
-        else if (ps->next_token == '\n' || ps->next_token == ';')
-            *status = PARSE_NULL;
+        start_location(&loc);
+        res = parse_prog (flags);
+        end_location(&loc);
 
-        else {
-            start_location(&loc);
-            res = parse_prog (flags);
-            end_location(&loc);
-
-            if (res == R_NoObject) {
-                res = R_NilValue;
-                *status = PARSE_ERROR;
-            }
-            else
-                *status = PARSE_OK;
+        if (res == R_NoObject) {
+            *status = PARSE_ERROR;
+            goto ret;
         }
 
-	switch(*status) {
-	case PARSE_NULL:
-	    break;
-	case PARSE_OK:
-            SETCDR (tlast, CONS (res, R_NilValue));
-            tlast = CDR(tlast);
-            if (ps->sr->keepSrcRefs) {
-                SETCDR (last_ref, 
-                        CONS (makeSrcref(&loc,ps->sr->SrcFile),R_NilValue));
-                last_ref = CDR(last_ref);
-            }
-	    i++;
-	    break;
-	case PARSE_ERROR:
-            rval = R_NilValue;
-            goto ret;
-	case PARSE_EOF:
-	    goto finish;
-	}
+        SETCDR (tlast, CONS (res, R_NilValue));
+        tlast = CDR(tlast);
+        if (ps->sr->keepSrcRefs) {
+            SETCDR (last_ref, 
+                    CONS (makeSrcref(&loc,ps->sr->SrcFile),R_NilValue));
+            last_ref = CDR(last_ref);
+        }
+
+        i += 1;
     }
 
 finish:
@@ -2199,7 +2154,7 @@ SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
 }
 
 
-static int conn_getc (void *con) { return Rconn_fgetc ((Rconnection) con); }
+static int conn_getc (void) { return Rconn_fgetc (ps->conn); }
 
 SEXP R_ParseConn (Rconnection con, int n, ParseStatus *status, SEXP srcfile)
 {
@@ -2207,9 +2162,8 @@ SEXP R_ParseConn (Rconnection con, int n, ParseStatus *status, SEXP srcfile)
 
     SEXP res;
 
-    ps->stream_getc = conn_getc;
-    ps->stream_getc_arg = (void *) con;
-    ps->ptr_getc = call_stream_getc;
+    ps->conn = con;
+    ps->ptr_getc = conn_getc;
 
     res = R_Parse (n, status, srcfile, FALSE);
 

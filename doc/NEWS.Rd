@@ -10,9 +10,12 @@
 
   \subsection{INTRODUCTION}{
   \itemize{ 
-  \item This release has quite a few significant performance improvements.
-        It also has some feature changes and bug fixes, including some
-        features from later R Core versions.
+  \item This release has many significant performance improvements.
+        It also has some feature changes, including some from later R
+        Core versions, and some bug fixes.  One notable new feature is
+        that in code read from a file, an error is no longer produced
+        when an \code{else} at the top level appears at the beginning
+        of a line.
 
   \item With the performance improvements in this release, it is
         generally no longer desirable to use the bytecode compiler.
@@ -231,13 +234,14 @@
 
   \subsection{FEATURE CHANGES}{
   \itemize{
-  \item The versoin of the \code{boot} package included as a recommended
-        package is now 1.3-9, with slight tweaks for pqR, so version changed
-        to 1.3-9-1.
-  \item The version of the \code{digest} package included as a recommended
-        package is now 0.6.16, modified to fix a mis-aligned access issue
-        and with "Depends" changed to allow use by pqR, with the modified 
-        version called 0.6.16-1.
+  \item When code is read from a file with \code{source} or
+        \code{parse}, or is parsed from a vector of characer strings, it
+        is no longer necessary to avoid putting the \code{else} clause
+        of an \code{if} statement at the start of a line.  When code
+        is entered interactively, an \code{else} clause must still not
+        start on a new line, since in that context checking whether an
+        \code{else} is on the next line would require waiting for the
+        user to input a line which they may not intend to enter.
   \item The \code{along}, \code{across}, and \code{down} forms of 
         the \code{for} statement (introduced in pqR-2016-06-24 and
         pqR-2016-10-05) now set the loop variable(s) to the
@@ -352,6 +356,13 @@
         is used instead, as when \code{icuSetCollate(locale="ASCII")} 
         has been called.  This default may of course be changed using
         \code{icuSetCollate}.
+  \item The version of the \code{boot} package included as a recommended
+        package is now 1.3-9, with slight tweaks for pqR, so version changed
+        to 1.3-9-1.
+  \item The version of the \code{digest} package included as a recommended
+        package is now 0.6.16, modified to fix a mis-aligned access issue
+        and with "Depends" changed to allow use by pqR, with the modified 
+        version called 0.6.16-1.
   }}
 
   \subsection{NEW FEATURES FROM R CORE RELEASES}{

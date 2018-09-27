@@ -23,7 +23,8 @@ parse(file = "", n = NULL, text = NULL, prompt = "?",
     then input is taken from the console.}
   \item{n}{integer (or coerced to integer).  The maximum number of
     expressions to parse.  If \code{n} is \code{NULL} or negative or
-    \code{NA} the input is parsed in its entirety.}
+    \code{NA} the input is parsed in its entirety, unless input is from
+    the console, in which case \code{n} is taken to be one.}
   \item{text}{character vector.  The text to parse.  Elements are treated
     as if they were lines of a file.  Other \R objects will be coerced
     to character if possible.}
