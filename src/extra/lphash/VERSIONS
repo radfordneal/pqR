@@ -1,5 +1,9 @@
 The stable versions of lphash below are tagged in source code repository.
 
+Version 2018-09-27
+
+  Fixed possible bug.
+
 Version 2017-08-06
 
   Added LPHASH_STATIC option.
