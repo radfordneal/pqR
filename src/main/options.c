@@ -97,13 +97,26 @@ static SEXP Options(void)
     return install(".Options");
 }
 
-static SEXP FindTaggedItem(SEXP lst, SEXP tag)
+static attribute_noinline SEXP FindTaggedItem(SEXP lst, SEXP tag)
 {
-    for ( ; lst!=R_NilValue ; lst=CDR(lst)) {
+    if (tag == R_NilValue) return R_NilValue;  /* just in case... */
+
+    do {
 	if (TAG(lst) == tag)
-	    return lst;
-    }
-    return R_NilValue;
+	    break;
+        lst = CDR(lst);
+	if (TAG(lst) == tag)
+	    break;
+        lst = CDR(lst);
+	if (TAG(lst) == tag)
+	    break;
+        lst = CDR(lst);
+	if (TAG(lst) == tag)
+	    break;
+        lst = CDR(lst);
+    } while (lst != R_NilValue);
+
+    return lst;
 }
 
 static SEXP makeErrorCall(SEXP fun)
@@ -165,8 +178,9 @@ Rboolean Rf_GetOptionDeviceAsk(void)
 }
 
 
-/* Change the value of an option or add a new option or, */
-/* if called with value R_NilValue, remove that option. */
+/* Change the value of an option, or add a new option or (if called
+   with value R_NilValue) remove that option.  Returns the old option
+   value. */
 
 static SEXP SetOption(SEXP tag, SEXP value)
 {
@@ -469,301 +483,428 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    UNIMPLEMENTED_TYPE("options", args);
 	}
 
-	if (*CHAR(namei)) { /* name = value  ---> assignment */
+        const char *opname = CHAR(namei);
+
+	if (*opname) { /* name = value  ---> assignment */
+
 	    tag = install_translated (namei);
-	    if (streql(CHAR(namei), "parse_dotdot")) {
+            SEXP val;
+
+            /* switch on first character of option name for efficiency */
+
+            switch (*opname) {
+            
+            case 'a':
+            break;
+            
+            case 'b':
+	    if (streql(opname, "browserNLdisabled")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
+		    error(_("invalid value for '%s'"), opname);
 		k = asLogical(argi);
-                R_parse_dotdot = k;
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+		if (k == NA_LOGICAL)
+		    error(_("invalid value for '%s'"), opname);
+		R_DisableNLinBrowser = k;
+		val = ScalarLogical(k);
+                goto set;
 	    }
-	    if (streql(CHAR(namei), "width")) {
-		k = asInteger(argi);
-		if (k < R_MIN_WIDTH_OPT || k > R_MAX_WIDTH_OPT)
-		    error(_("invalid 'width' parameter, allowed %d...%d"),
-			  R_MIN_WIDTH_OPT, R_MAX_WIDTH_OPT);
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarInteger(k)));
+            break;
+            
+            case 'c':
+	    if (streql(opname, "continue")) {
+		s = asChar(argi);
+		if (s == NA_STRING || length(s) == 0)
+		    error(_("invalid value for '%s'"), opname);
+		/* We want to make sure these are in the native encoding */
+		val = mkString(translateChar(s));
+                goto set;
 	    }
-	    else if (streql(CHAR(namei), "digits")) {
+	    if (streql(opname, "contrasts")) {
+		if (TYPEOF(argi) != STRSXP || LENGTH(argi) != 2)
+		    error(_("invalid value for '%s'"), opname);
+		val = argi;
+                goto set;
+	    }
+	    if (streql(opname, "check.bounds")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), opname);
+		k = asLogical(argi);
+		/* R_CheckBounds = k; */
+		val = ScalarLogical(k);
+                goto set;
+	    }
+            break;
+            
+            case 'd':
+	    if (streql(opname, "digits")) {
 		k = asInteger(argi);
 		if (k < R_MIN_DIGITS_OPT || k > R_MAX_DIGITS_OPT)
 		    error(_("invalid 'digits' parameter, allowed %d...%d"),
 			  R_MIN_DIGITS_OPT, R_MAX_DIGITS_OPT);
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarInteger(k)));
+		val = ScalarInteger(k);
+                goto set;
 	    }
-	    else if (streql(CHAR(namei), "expressions")) {
+            break;
+            
+            case 'e':
+	    if (streql(opname, "expressions")) {
 		k = asInteger(argi);
 		if (k < R_MIN_EXPRESSIONS_OPT || k > R_MAX_EXPRESSIONS_OPT)
 		    error(_("'expressions' parameter invalid, allowed %d...%d"),
 			  R_MIN_EXPRESSIONS_OPT, R_MAX_EXPRESSIONS_OPT);
 		R_Expressions = R_Expressions_keep = k;
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarInteger(k)));
+		val = ScalarInteger(k);
+                goto set;
 	    }
-	    else if (streql(CHAR(namei), "keep.parens")) {
-		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		k = asLogical(argi);
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
-	    }
-	    else if (streql(CHAR(namei), "keep.source")) {
-		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		k = asLogical(argi);
-		R_KeepSource = k;
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
-	    }
-	    else if (streql(CHAR(namei), "editor") && isString(argi)) {
-		s = asChar(argi);
-		if (s == NA_STRING || length(s) == 0)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarString(s)));
-	    }
-	    else if (streql(CHAR(namei), "continue")) {
-		s = asChar(argi);
-		if (s == NA_STRING || length(s) == 0)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		/* We want to make sure these are in the native encoding */
-		SET_VECTOR_ELT(value, i,
-			       SetOption(tag, mkString(translateChar(s))));
-	    }
-	    else if (streql(CHAR(namei), "prompt")) {
-		s = asChar(argi);
-		if (s == NA_STRING || length(s) == 0)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		/* We want to make sure these are in the native encoding */
-		SET_VECTOR_ELT(value, i,
-			       SetOption(tag, mkString(translateChar(s))));
-	    }
-	    else if (streql(CHAR(namei), "contrasts")) {
-		if (TYPEOF(argi) != STRSXP || LENGTH(argi) != 2)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		SET_VECTOR_ELT(value, i, SetOption(tag, argi));
-	    }
-	    else if (streql(CHAR(namei), "check.bounds")) {
-		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		k = asLogical(argi);
-		/* R_CheckBounds = k; */
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
-	    }
-	    else if (streql(CHAR(namei), "warn")) {
-		if (!isNumeric(argi) || length(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		SET_VECTOR_ELT(value, i, SetOption(tag, argi));
-	    }
-	    else if (streql(CHAR(namei), "warning.length")) {
-		k = asInteger(argi);
-		if (k < 100 || k > 8170)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		R_WarnLength = k;
-		SET_VECTOR_ELT(value, i, SetOption(tag, argi));
-	    }
-	    else if ( streql(CHAR(namei), "warning.expression") )  {
-		if( !isLanguage(argi) &&  ! isExpression(argi) )
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		SET_VECTOR_ELT(value, i, SetOption(tag, argi));
-	    }
-	    else if (streql(CHAR(namei), "max.print")) {
-		k = asInteger(argi);
-		if (k < 1) error(_("invalid value for '%s'"), CHAR(namei));
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarInteger(k)));
-	    }
-	    else if (streql(CHAR(namei), "nwarnings")) {
-		k = asInteger(argi);
-		if (k < 1) error(_("invalid value for '%s'"), CHAR(namei));
-		R_nwarnings = k;
-		R_CollectWarnings = 0; /* force a reset */
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarInteger(k)));
-	    }
-	    else if ( streql(CHAR(namei), "error") ) {
+	    if (streql(opname, "error")) {
 		if(isFunction(argi))
 		  argi = makeErrorCall(argi);
 		else if( !isLanguage(argi) &&  !isExpression(argi) )
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		SET_VECTOR_ELT(value, i, SetOption(tag, argi));
+		    error(_("invalid value for '%s'"), opname);
+		val = argi;
+                goto set;
 	    }
-/* handle this here to avoid GetOption during error handling */
-	    else if ( streql(CHAR(namei), "show.error.messages") ) {
-		if( !isLogical(argi) && length(argi) != 1 )
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		SET_VECTOR_ELT(value, i, SetOption(tag, argi));
-		R_ShowErrorMessages = LOGICAL(argi)[0];
+	    if (streql(opname, "editor") && isString(argi)) {
+		s = asChar(argi);
+		if (s == NA_STRING || length(s) == 0)
+		    error(_("invalid value for '%s'"), opname);
+		val = ScalarString(s);
+                goto set;
 	    }
-	    else if (streql(CHAR(namei), "echo")) {
+	    if (streql(opname, "echo")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
+		    error(_("invalid value for '%s'"), opname);
 		k = asLogical(argi);
 		/* Should be quicker than checking options(echo)
 		   every time R prompts for input:
 		   */
 		R_Slave = !k;
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+		val = ScalarLogical(k);
+                goto set;
 	    }
-	    else if (streql(CHAR(namei), "OutDec")) {
-		if (TYPEOF(argi) != STRSXP || LENGTH(argi) != 1 ||
-		    strlen(CHAR(STRING_ELT(argi, 0))) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		OutDec = CHAR(STRING_ELT(argi, 0))[0];
-		SET_VECTOR_ELT(value, i, SetOption(tag, duplicate(argi)));
-	    }
-	    else if (streql(CHAR(namei), "max.contour.segments")) {
-		k = asInteger(argi);
-		if (k < 0) // also many times above: rely on  NA_INTEGER  <  <finite_int>
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		max_contour_segments = k;
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarInteger(k)));
-	    }
-	    else if (streql(CHAR(namei), "rl_word_breaks")) {
-		if (TYPEOF(argi) != STRSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-#ifdef HAVE_RL_COMPLETION_MATCHES
-		set_rl_word_breaks(CHAR(STRING_ELT(argi, 0)));
-#endif
-		SET_VECTOR_ELT(value, i, SetOption(tag, duplicate(argi)));
-	    }
-	    else if (streql(CHAR(namei), "helpers_disable")) {
+            break;
+            
+            case 'f':
+            break;
+            
+            case 'g':
+            break;
+            
+            case 'h':
+	    if (streql(opname, "helpers_disable")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
+		    error(_("invalid value for '%s'"), opname);
 		k = asLogical(argi);
 		helpers_disable(k);
-		SET_VECTOR_ELT(value, i, 
-                   SetOption(tag, ScalarLogical(helpers_are_disabled)));
+		val = ScalarLogical(helpers_are_disabled);
+                goto set;
 	    }
-	    else if (streql(CHAR(namei), "helpers_no_multithreading")) {
+	    if (streql(opname, "helpers_no_multithreading")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
+		    error(_("invalid value for '%s'"), opname);
 		k = asLogical(argi);
 		helpers_no_multithreading(k);
-		SET_VECTOR_ELT(value, i, 
-                   SetOption(tag, ScalarLogical(helpers_not_multithreading)));
+                val = ScalarLogical(helpers_not_multithreading);
+                goto set;
 	    }
-	    else if (streql(CHAR(namei), "helpers_no_pipelining")) {
+	    if (streql(opname, "helpers_no_pipelining")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
+		    error(_("invalid value for '%s'"), opname);
 		k = asLogical(argi);
 		helpers_no_pipelining(k);
-		SET_VECTOR_ELT(value, i, 
-                   SetOption(tag, ScalarLogical(helpers_not_pipelining)));
+                val = ScalarLogical(helpers_not_pipelining);
+                goto set;
 	    }
-	    else if (streql(CHAR(namei), "helpers_no_holding")) {
+	    if (streql(opname, "helpers_no_holding")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
+		    error(_("invalid value for '%s'"), opname);
 		k = asLogical(argi);
 		helpers_no_holding(k);
-		SET_VECTOR_ELT(value, i, 
-                   SetOption(tag, ScalarLogical(helpers_not_holding)));
+                val = ScalarLogical(helpers_not_holding);
+                goto set;
 	    }
-	    else if (streql(CHAR(namei), "helpers_no_merging")) {
+	    if (streql(opname, "helpers_no_merging")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
+		    error(_("invalid value for '%s'"), opname);
 		k = asLogical(argi);
 		helpers_no_merging(k);
-		SET_VECTOR_ELT(value, i, 
-                   SetOption(tag, ScalarLogical(helpers_not_merging)));
+                val = ScalarLogical(helpers_not_merging);
+                goto set;
 	    }
-	    else if (streql(CHAR(namei), "helpers_trace")) {
+	    if (streql(opname, "helpers_trace")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
+		    error(_("invalid value for '%s'"), opname);
 		k = asLogical(argi);
 		helpers_trace(k);
-		SET_VECTOR_ELT(value, i, 
-                   SetOption(tag, ScalarLogical(k)));
+                val = ScalarLogical(k);
+                goto set;
 	    }
-	    else if (streql(CHAR(namei), "warnPartialMatchDollar")) {
+            break;
+            
+            case 'i':
+            break;
+            
+            case 'j':
+            break;
+            
+            case 'k':
+	    if (streql(opname, "keep.parens")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
+		    error(_("invalid value for '%s'"), opname);
 		k = asLogical(argi);
-		R_warn_partial_match_dollar = k;
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+		val = ScalarLogical(k);
+                goto set;
 	    }
-	    else if (streql(CHAR(namei), "warnPartialMatchArgs")) {
+	    if (streql(opname, "keep.source")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
+		    error(_("invalid value for '%s'"), opname);
 		k = asLogical(argi);
-		R_warn_partial_match_args = k;
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+		R_KeepSource = k;
+		val = ScalarLogical(k);
+                goto set;
 	    }
-	    else if (streql(CHAR(namei), "warnPartialMatchAttr")) {
-		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		k = asLogical(argi);
-		R_warn_partial_match_attr = k;
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
-	    }
-	    else if (streql(CHAR(namei), "showWarnCalls")) {
-		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		k = asLogical(argi);
-		R_ShowWarnCalls = k;
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
-	    }
-	    else if (streql(CHAR(namei), "showErrorCalls")) {
-		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		k = asLogical(argi);
-		R_ShowErrorCalls = k;
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
-	    }
-	    else if (streql(CHAR(namei), "showNCalls")) {
+            break;
+            
+            case 'l':
+            break;
+            
+            case 'm':
+	    if (streql(opname, "max.print")) {
 		k = asInteger(argi);
-		if (k < 30 || k > 500 || k == NA_INTEGER || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		R_NShowCalls = k;
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarInteger(k)));
+		if (k < 1) error(_("invalid value for '%s'"), opname);
+		val = ScalarInteger(k);
+                goto set;
 	    }
-	    else if (streql(CHAR(namei), "par.ask.default")) {
-		error(_("\"par.ask.default\" has been replaced by \"device.ask.default\""));
+	    if (streql(opname, "max.contour.segments")) {
+		k = asInteger(argi);
+                /* ... as many times above: rely on NA_INTEGER < <finite_int> */
+		if (k < 0) 
+		    error(_("invalid value for '%s'"), opname);
+		max_contour_segments = k;
+		val = ScalarInteger(k);
+                goto set;
 	    }
-	    else if (streql(CHAR(namei), "browserNLdisabled")) {
-		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		k = asLogical(argi);
-		if (k == NA_LOGICAL)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		R_DisableNLinBrowser = k;
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
-	    }
-	    else if (streql(CHAR(namei), "BLAS_in_helpers")) {
-		if (TYPEOF(argi)!=LGLSXP || LENGTH(argi)!=1 
-                                         || *LOGICAL(argi)==NA_LOGICAL)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-                k = asLogical(argi);
-                if (R_BLAS_IN_HELPERS_DEFAULT != FALSE)
-                    SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
-	    }
-	    else if (streql(CHAR(namei), "mat_mult_with_BLAS")) {
+	    if (streql(opname, "mat_mult_with_BLAS")) {
                 SEXP ov;
                 int j;
 		if (TYPEOF(argi)!=LGLSXP
                  || LENGTH(argi)!=1 && LENGTH(argi)!=R_mat_mult_with_BLAS_len)
-		    error(_("invalid value for '%s'"), CHAR(namei));
+		    error(_("invalid value for '%s'"), opname);
                 ov = allocVector (LGLSXP, R_mat_mult_with_BLAS_len);
                 for (j = 0; j<R_mat_mult_with_BLAS_len; j++)
                     LOGICAL(ov)[j] = LOGICAL(argi) [LENGTH(argi)==1 ? 0 : j];
                 for (j = 0; j<R_mat_mult_with_BLAS_len; j++) 
                     R_mat_mult_with_BLAS[j] = LOGICAL(ov)[j];
-		SET_VECTOR_ELT(value, i, SetOption(tag, ov));
+		val = ov;
+                goto set;
 	    }
-	    else {
-		SET_VECTOR_ELT(value, i, SetOption(tag, duplicate(argi)));
+            break;
+            
+            case 'n':
+	    if (streql(opname, "nwarnings")) {
+		k = asInteger(argi);
+		if (k < 1) error(_("invalid value for '%s'"), opname);
+		R_nwarnings = k;
+		R_CollectWarnings = 0; /* force a reset */
+		val = ScalarInteger(k);
+                goto set;
 	    }
-	    SET_STRING_ELT(names, i, namei);
+            break;
+            
+            case 'o':
+            break;
+            
+            case 'p':
+	    if (streql(opname, "parse_dotdot")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), opname);
+		k = asLogical(argi);
+                R_parse_dotdot = k;
+		val = ScalarLogical(k);
+                goto set;
+	    }
+	    if (streql(opname, "prompt")) {
+		s = asChar(argi);
+		if (s == NA_STRING || length(s) == 0)
+		    error(_("invalid value for '%s'"), opname);
+		/* We want to make sure these are in the native encoding */
+		val = mkString(translateChar(s));
+                goto set;
+	    }
+	    if (streql(opname, "par.ask.default")) {
+		error(_("\"par.ask.default\" has been replaced by \"device.ask.default\""));
+	    }
+            break;
+            
+            case 'q':
+            break;
+            
+            case 'r':
+	    if (streql(opname, "rl_word_breaks")) {
+		if (TYPEOF(argi) != STRSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), opname);
+#ifdef HAVE_RL_COMPLETION_MATCHES
+		set_rl_word_breaks(CHAR(STRING_ELT(argi, 0)));
+#endif
+		val = duplicate(argi);
+                goto set;
+	    }
+            break;
+            
+            case 's':
+	    if (streql(opname, "show.error.messages")) {
+                /* handle this here to avoid GetOption during error handling */
+		if( !isLogical(argi) && length(argi) != 1 )
+		    error(_("invalid value for '%s'"), opname);
+		R_ShowErrorMessages = LOGICAL(argi)[0];
+		val = argi;
+                goto set;
+	    }
+	    if (streql(opname, "showWarnCalls")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), opname);
+		k = asLogical(argi);
+		R_ShowWarnCalls = k;
+		val = ScalarLogical(k);
+                goto set;
+	    }
+	    if (streql(opname, "showErrorCalls")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), opname);
+		k = asLogical(argi);
+		R_ShowErrorCalls = k;
+		val = ScalarLogical(k);
+                goto set;
+	    }
+	    if (streql(opname, "showNCalls")) {
+		k = asInteger(argi);
+		if (k < 30 || k > 500 || k == NA_INTEGER || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), opname);
+		R_NShowCalls = k;
+		val = ScalarInteger(k);
+                goto set;
+	    }
+            break;
+            
+            case 't':
+            break;
+            
+            case 'u':
+            break;
+            
+            case 'v':
+            break;
+            
+            case 'w':
+	    if (streql(opname, "width")) {
+		k = asInteger(argi);
+		if (k < R_MIN_WIDTH_OPT || k > R_MAX_WIDTH_OPT)
+		    error(_("invalid 'width' parameter, allowed %d...%d"),
+			  R_MIN_WIDTH_OPT, R_MAX_WIDTH_OPT);
+		val = ScalarInteger(k);
+                goto set;
+	    }
+	    if (streql(opname, "warn")) {
+		if (!isNumeric(argi) || length(argi) != 1)
+		    error(_("invalid value for '%s'"), opname);
+		val = argi;
+                goto set;
+	    }
+	    if (streql(opname, "warning.length")) {
+		k = asInteger(argi);
+		if (k < 100 || k > 8170)
+		    error(_("invalid value for '%s'"), opname);
+		R_WarnLength = k;
+		val = argi;
+                goto set;
+	    }
+	    if (streql(opname, "warning.expression") )  {
+		if( !isLanguage(argi) &&  ! isExpression(argi) )
+		    error(_("invalid value for '%s'"), opname);
+		val = argi;
+                goto set;
+	    }
+	    if (streql(opname, "warnPartialMatchDollar")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), opname);
+		k = asLogical(argi);
+		R_warn_partial_match_dollar = k;
+		val = ScalarLogical(k);
+                goto set;
+	    }
+	    if (streql(opname, "warnPartialMatchArgs")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), opname);
+		k = asLogical(argi);
+		R_warn_partial_match_args = k;
+		val = ScalarLogical(k);
+                goto set;
+	    }
+	    if (streql(opname, "warnPartialMatchAttr")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), opname);
+		k = asLogical(argi);
+		R_warn_partial_match_attr = k;
+		val = ScalarLogical(k);
+                goto set;
+	    }
+            break;
+            
+            case 'x':
+            break;
+            
+            case 'y':
+            break;
+            
+            case 'z':
+            break;
+
+            default:  /* don't start with a-z */
+	    if (streql(opname, "OutDec")) {
+		if (TYPEOF(argi) != STRSXP || LENGTH(argi) != 1 ||
+		    strlen(CHAR(STRING_ELT(argi, 0))) != 1)
+		    error(_("invalid value for '%s'"), opname);
+		OutDec = CHAR(STRING_ELT(argi, 0))[0];
+		val = duplicate(argi);
+                goto set;
+	    }
+	    if (streql(opname, "BLAS_in_helpers")) {
+		if (TYPEOF(argi)!=LGLSXP || LENGTH(argi)!=1 
+                                         || *LOGICAL(argi)==NA_LOGICAL)
+		    error(_("invalid value for '%s'"), opname);
+                k = asLogical(argi);
+                if (R_BLAS_IN_HELPERS_DEFAULT != FALSE)
+                    val = ScalarLogical(k);
+                goto set;
+	    }
+            break;
+            }
+
+
+            /* none of the above... */
+
+            val = duplicate(argi);
+
+          set:
+            SET_VECTOR_ELT (value, i, SetOption (tag, val));
+	    SET_STRING_ELT (names, i, namei);
 	}
 	else { /* querying arg */
-	    const char *tag;
+	    SEXP tag;
 	    if (!isString(argi) || LENGTH(argi) <= 0)
 		error(_("invalid argument"));
-	    tag = CHAR(STRING_ELT(argi, 0));
-	    if (streql(tag, "par.ask.default")) {
+	    tag = STRING_ELT (argi, 0);
+	    if (streql (CHAR(tag), "par.ask.default")) {
 		error(_("\"par.ask.default\" has been replaced by \"device.ask.default\""));
 	    }
 
-	    SET_VECTOR_ELT(value, i, duplicate(CAR(FindTaggedItem(options, install(tag)))));
-	    SET_STRING_ELT(names, i, STRING_ELT(argi, 0));
+	    SET_VECTOR_ELT (value, i, duplicate (CAR 
+                             (FindTaggedItem (options, installChar(tag)))));
+	    SET_STRING_ELT (names, i, tag);
 	    R_Visible = TRUE;
 	}
     } /* for() */
+
     setAttrib(value, R_NamesSymbol, names);
     UNPROTECT(2);
     return value;
