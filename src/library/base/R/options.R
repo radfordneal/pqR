@@ -19,9 +19,13 @@ options <- function(...)
 
 getOption <- function(x, default = NULL)
 {
-    ## To avoid always performing the %in%,
-    ## we use the original code if default is not specified.
-    if(missing(default)) return(options(x)[[1L]])
+    # To avoid always performing the %in%, we use the original code 
+    # if default is not specified (hence NULL).
 
-    if(x %in% names(options())) options(x)[[1L]] else default
+    if (missing(default)) 
+        options(x)[[1L]]
+    else if (x %in% names(options())) 
+        options(x)[[1L]] 
+    else 
+        default
 }

@@ -1,5 +1,4 @@
 Modifications to parser to fix the problem of outer-level "else" being
 rejected when sourcing a file (or parsing from text variable).
 
-Other parsing cleanup as well.
-
+Other parsing cleanup as well.  Also slight performance tweak to getOptions.

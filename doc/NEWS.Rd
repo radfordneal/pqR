@@ -270,6 +270,9 @@
         row or column, as illustrated by the last example in \code{help("[")}.
   \item When \code{unlist} is applied to an atomic vector, names are now removed
         if \code{use.names} is \code{FALSE} (not the default).
+  \item The \code{text} argument of \code{parse} is now coerced to a 
+        character vector using \code{as.character}, with possible method
+        dispatch.
   \item The \code{memory.profile} function now has an argument that can
         restrict the counts for vector objects to only those of some minimum
         length.

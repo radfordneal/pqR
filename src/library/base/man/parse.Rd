@@ -62,8 +62,9 @@ parse(file = "", n = NULL, text = NULL, prompt = "?",
   \code{\link{getParseData}}.  
 }
 \details{
-  If \code{text} has length greater than zero (after coercion) it is used in
-  preference to \code{file}.
+  If \code{text} is not \code{NULL}, it is used rather than \code{file}
+  (which is then ignored).  It will first be coerced to a character 
+  vector using \code{as.character} (with possible method dispatch).
 
   All versions of \R accept input from a connection with end of line
   marked by LF (as used on Unix), CRLF (as used on DOS/Windows)
