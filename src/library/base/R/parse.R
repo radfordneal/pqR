@@ -2,6 +2,7 @@
 #  Part of the R package, http://www.R-project.org
 #
 #  Copyright (C) 1995-2012 The R Core Team
+#  Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -17,40 +18,48 @@
 #  http://www.r-project.org/Licenses/
 
 parse <- function(file = "", n = NULL, text = NULL, prompt = "?",
-		  keep.source = getOption("keep.source"),
+                  keep.source = getOption("keep.source"),
                   srcfile = NULL, encoding = "unknown")
 {
-    keep.source <- isTRUE(keep.source)
-    if(!is.null(text)) {
-    	if (length(text) == 0L) return(expression())
-	if (missing(srcfile)) {
-	    srcfile <- "<text>"
-	    if (keep.source)
-	       srcfile <- srcfilecopy(srcfile, text)
-	}
-	file <- stdin()
-    } else {
-	if(is.character(file)) {
-            if(file == "") {
-            	file <- stdin()
-            	if (missing(srcfile))
-            	    srcfile <- "<stdin>"
-            } else {
-		filename <- file
-		file <- file(filename, "r")
-            	if (missing(srcfile))
-            	    srcfile <- filename
-            	if (keep.source) {
-		    text <- readLines(file, warn = FALSE)
-		    if (!length(text)) text <- ""
-            	    close(file)
-            	    file <- stdin()
-        	    srcfile <- srcfilecopy(filename, text, file.info(filename)[1,"mtime"],
-        	                       isFile = TRUE)
-                } else
-		    on.exit(close(file))
-	    }
-	}
+    if (is.null(text)) { # use 'file'
+
+        if (is.character(file)) {
+            if (file == "") {
+                file <- stdin()
+                if (missing(srcfile))
+                    srcfile <- "<stdin>"
+            } 
+            else {
+                filename <- file
+                file <- file (filename, "r")
+                if (missing(srcfile))
+                    srcfile <- filename
+                if (isTRUE(keep.source)) {
+                    text <- readLines(file, warn = FALSE)
+                    if (!length(text)) text <- ""
+                    close(file)
+                    file <- NULL
+                    srcfile <- srcfilecopy (filename, text, 
+                                 file.info(filename)[1,"mtime"], isFile = TRUE)
+                }
+                else
+                    on.exit(close(file))
+            }
+        }
+    } 
+
+    else { # use 'text', not 'file'
+
+        text <- as.character(text)
+        if (length(text) == 0L)
+            return (expression())
+        if (missing(srcfile)) {
+            if (isTRUE(keep.source))
+               srcfile <- srcfilecopy ("<text>", text)
+            else 
+               srcfile <- "<text>"
+        }
     }
+
     .Internal(parse(file, n, text, prompt, srcfile, encoding))
 }

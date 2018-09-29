@@ -221,11 +221,11 @@ static int console_getc (void *prompt_string)
 
 static SEXP do_parse(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP text, prompt, s, source;
+    SEXP file, text, prompt, s, source, encarg;
     const char *prompt_string;
     Rconnection con;
-    Rboolean wasopen, old_latin1 = known_to_be_latin1,
-	old_utf8 = known_to_be_utf8, allKnown = TRUE;
+    Rboolean old_latin1 = known_to_be_latin1, old_utf8 = known_to_be_utf8;
+    Rboolean wasopen;
     int ifile, num, i;
     const char *encoding;
     ParseStatus status;
@@ -235,107 +235,120 @@ static SEXP do_parse(SEXP call, SEXP op, SEXP args, SEXP env)
     R_ParseError = 0;
     R_ParseErrorMsg[0] = '\0';
 
-    ifile = asInteger(CAR(args));                       args = CDR(args);
+    file = CAR(args); args = CDR(args);
+    num = asInteger(CAR(args)); args = CDR(args);
+    text = CAR(args); args = CDR(args);
+    prompt = CAR(args); args = CDR(args);
+    source = CAR(args); args = CDR(args);
+    encarg = CAR(args);
 
-    con = getConnection(ifile);
-    wasopen = con->isopen;
-    num = asInteger(CAR(args));				args = CDR(args);
-    if (num == 0)
-	return(allocVector(EXPRSXP, 0));
+    if (text != R_NilValue && TYPEOF(text) != STRSXP)
+        errorcall (call, _("coercion of 'text' to character was unsuccessful"));
 
-    PROTECT(text = coerceVector(CAR(args), STRSXP));
-    if(length(CAR(args)) && !length(text))
-	errorcall(call, _("coercion of 'text' to character was unsuccessful"));
-    args = CDR(args);
-    prompt = CAR(args);					args = CDR(args);
-    source = CAR(args);					args = CDR(args);
-    if(!isString(CAR(args)) || LENGTH(CAR(args)) != 1)
-	error(_("invalid '%s' value"), "encoding");
-    encoding = CHAR(STRING_ELT(CAR(args), 0)); /* ASCII */
-    known_to_be_latin1 = known_to_be_utf8 = FALSE;
+    if (num == 0 || TYPEOF(text) == STRSXP && LENGTH(text) == 0)
+        return allocVector (EXPRSXP, 0);
+
+    if (prompt != R_NilValue) prompt = coerceVector (prompt, STRSXP);
+    PROTECT(prompt);
+
+    if (!isString(encarg) || LENGTH(encarg) != 1)
+        error(_("invalid '%s' value"), "encoding");
+    encoding = CHAR(STRING_ELT(encarg,0));
+
     /* allow 'encoding' to override declaration on 'text'. */
-    if(streql(encoding, "latin1")) {
-	known_to_be_latin1 = TRUE;
-	allKnown = FALSE;
-    } else if(streql(encoding, "UTF-8"))  {
-	known_to_be_utf8 = TRUE;
-	allKnown = FALSE;
-    } else if(!streql(encoding, "unknown") && !streql(encoding, "native.enc")) 
-    	warning(_("argument '%s = \"%s\"' will be ignored"), "encoding", encoding);
-
-    if (prompt == R_NilValue)
-	PROTECT(prompt);
-    else
-	PROTECT(prompt = coerceVector(prompt, STRSXP));
-
-    if (length(text) > 0) {
-
-	/* If 'text' has known encoding then we can be sure it will be
-	   correctly re-encoded to the current encoding by
-	   translateChar in the parser and so could mark the result in
-	   a Latin-1 or UTF-8 locale.
-
-	   A small complication is that different elements could have
-	   different encodings, but all that matters is that all
-	   non-ASCII elements have known encoding.
-	*/
-	for(i = 0; i < LENGTH(text); i++)
-	    if(!ENC_KNOWN(STRING_ELT(text, i)) &&
-	       !IS_ASCII(STRING_ELT(text, i))) {
-		allKnown = FALSE;
-		break;
-	    }
-	if(allKnown) {
-	    known_to_be_latin1 = old_latin1;
-	    known_to_be_utf8 = old_utf8;
-	}
-	if (num == NA_INTEGER) num = -1;
-
-        s = R_ParseVector(text, num, &status, source);
+    known_to_be_latin1 = known_to_be_utf8 = FALSE;
+    Rboolean allKnown = TRUE;
+    if (streql(encoding, "latin1")) {
+        known_to_be_latin1 = TRUE;
+        allKnown = FALSE;
     }
-    else if (ifile >= 3) {/* file != "" */
+    else if (streql(encoding, "UTF-8"))  {
+        known_to_be_utf8 = TRUE;
+        allKnown = FALSE;
+    }
+    else if (!streql(encoding, "unknown") && !streql(encoding, "native.enc")) 
+            warning(_("argument '%s = \"%s\"' will be ignored"), 
+                "encoding", encoding);
 
-	if (num == NA_INTEGER) num = -1;
+    if (text != R_NilValue) {
 
-	if(!wasopen) {
-	    if(!con->open(con)) error(_("cannot open the connection"));
-	    /* Set up a context which will close the connection on error */
-	    begincontext(&cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
-			 R_NilValue, R_NilValue);
-	    cntxt.cend = &conn_cleanup;
-	    cntxt.cenddata = con;
-	}
-	if(!con->canread) error(_("cannot read from this connection"));
+        /* If 'text' has known encoding then we can be sure it will be
+           correctly re-encoded to the current encoding by
+           translateChar in the parser and so could mark the result in
+           a Latin-1 or UTF-8 locale.
 
-        s = R_ParseConn (con, num, &status, source);
+           A small complication is that different elements could have
+           different encodings, but all that matters is that all
+           non-ASCII elements have known encoding. */
 
-	if(!wasopen) {
-	    PROTECT(s);
-	    endcontext(&cntxt);
-	    con->close(con);
-	    UNPROTECT(1);
-	}
+        for (i = 0; i < LENGTH(text); i++) {
+            if (!ENC_KNOWN(STRING_ELT(text, i))
+                 && !IS_ASCII(STRING_ELT(text, i))) {
+                allKnown = FALSE;
+                break;
+            }
+        }
+
+        if (allKnown) {
+            known_to_be_latin1 = old_latin1;
+            known_to_be_utf8 = old_utf8;
+        }
+
+        if (num == NA_INTEGER) num = -1;
+
+        s = R_ParseVector (text, num, &status, source);
     }
     else {
 
-	if (num == NA_INTEGER) num = 1;
+        ifile = asInteger(file);
+        con = getConnection(ifile);
+        wasopen = con->isopen;
 
-        prompt_string = isString(prompt) && LENGTH(prompt) > 0
-                         ? CHAR(STRING_ELT(prompt,0))
-                         : CHAR(STRING_ELT(GetOption1(install("prompt")),0));
+        if (ifile >= 3) { /* file != "" */
 
-        console_bufp = console_buf;  /* empty buffer initially */
-        *console_bufp = 0;
+            if (num == NA_INTEGER) num = -1;
 
-        s = R_ParseStream (console_getc, (void *) prompt_string, num, 
-                           &status, source);
+            if(!wasopen) {
+                if (!con->open(con)) error(_("cannot open the connection"));
+                /* Set up a context which will close the connection on error */
+                begincontext (&cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, 
+                              R_BaseEnv, R_NilValue, R_NilValue);
+                cntxt.cend = &conn_cleanup;
+                cntxt.cenddata = con;
+            }
+            if (!con->canread) error(_("cannot read from this connection"));
+
+            s = R_ParseConn (con, num, &status, source);
+
+            if (!wasopen) {
+                PROTECT(s);
+                endcontext(&cntxt);
+                con->close(con);
+                UNPROTECT(1);
+            }
+        }
+        else {  /* reading from standard input */
+
+            if (num == NA_INTEGER) num = 1;
+
+            prompt_string = isString(prompt) && LENGTH(prompt) > 0
+                            ? CHAR(STRING_ELT(prompt,0))
+                            : CHAR(STRING_ELT(GetOption1(install("prompt")),0));
+
+            console_bufp = console_buf;  /* empty buffer initially */
+            *console_bufp = 0;
+
+            s = R_ParseStream (console_getc, (void *) prompt_string, num, 
+                               &status, source);
+        }
     }
 
-    if (status != PARSE_OK) parseError(call, R_ParseError);
+    if (status != PARSE_OK) parseError (call, R_ParseError);
 
-    UNPROTECT(2);
+    UNPROTECT(1);
     known_to_be_latin1 = old_latin1;
     known_to_be_utf8 = old_utf8;
+
     return s;
 }
 
