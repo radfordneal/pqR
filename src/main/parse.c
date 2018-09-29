@@ -1966,6 +1966,7 @@ static SEXP parse_prog (int flags)
 #define PARSE_INIT \
     struct parse_state new_parse_state; \
     ps = &new_parse_state; \
+    ps->next_token_val = R_NilValue; \
     ps->parse_dotdot = R_parse_dotdot; \
     ps->token_loc.first_line = 0; \
     ps->token_loc.first_column = 0; \
@@ -2049,7 +2050,7 @@ attribute_hidden SEXP R_Parse1Stream (int (*getc) (void *), void *getc_arg,
 static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile, int no_peeking)
 {
     SEXP rval, tval, tlast, res, refs, last_ref;
-    PROTECT_INDEX rval_prot;
+    PROTECT_INDEX rval_prot, token_val_prot;
     SrcRefState state;
     source_location loc;
     int i;
@@ -2078,6 +2079,8 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile, int no_peeking)
 
     const int flags = prog_flags(no_peeking);
 
+    PROTECT_WITH_INDEX (ps->next_token_val, &token_val_prot);
+
     i = 0;
     while (n < 0 || i < n) {
 
@@ -2090,6 +2093,8 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile, int no_peeking)
         if (ps->next_token == '\n' || ps->next_token == ';'
                     || ps->next_token == END_OF_INPUT)
             continue;
+
+        REPROTECT (ps->next_token_val, token_val_prot);
 
         start_location(&loc);
         res = parse_prog (flags);
@@ -2121,9 +2126,10 @@ finish:
 	attachSrcrefs(rval,CDR(refs));
 
 ret:
-    UNPROTECT(2); /* tval, refs - must unprotect before R_FinalizeSrcRefState */
+    UNPROTECT(3); /* tval, refs, ps->next_token_val - must be unprotected
+                     before R_FinalizeSrcRefState */
     R_FinalizeSrcRefState(ps->sr);
-    UNPROTECT(1); /* rval - must unprotect after R_FinalizeSrcRefState */
+    UNPROTECT(1); /* rval - must be unprotected after R_FinalizeSrcRefState */
     return rval;
 }
 
