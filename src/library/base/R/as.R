@@ -1,5 +1,6 @@
 #  File src/library/base/R/as.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -49,12 +50,12 @@ as.list.environment <- function(x, all.names=FALSE, ...)
 as.vector <- function(x, mode = "any") .Internal(as.vector(x, mode))
 
 as.matrix <- function(x, ...) UseMethod("as.matrix")
-as.matrix.default <- function(x, ...) {
+as.matrix.default <- function(x, ...)
     if (is.matrix(x)) x
     else
 	array(x, c(length(x), 1L),
 	      if(!is.null(names(x))) list(names(x), NULL) else NULL)
-}
+
 as.null <- function(x,...) UseMethod("as.null")
 as.null.default <- function(x,...) NULL
 

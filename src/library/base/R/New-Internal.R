@@ -1,6 +1,6 @@
 #  File src/library/base/R/New-Internal.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2014, 2017 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2014, 2017, 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -125,13 +125,11 @@ deparse <-
                       .deparseOpts(control), nlines))
 
 do.call <- function(what, args, quote = FALSE, envir = parent.frame())
-{
     if (!is.list(args))
 	stop("second argument must be a list")
-    if (quote)
-	args <- lapply(args, enquote)
-    .Internal(do.call(what, args, envir))
-}
+    else
+        .Internal (do.call (what, if (quote) lapply(args,enquote) else args,
+                            envir))
 
 drop <- function(x).Internal(drop(x))
 

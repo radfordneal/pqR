@@ -1,6 +1,6 @@
 #  File src/library/base/R/dataframe.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2013, 2016 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2013, 2016, 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -200,12 +200,10 @@ as.data.frame.vector <- function(x, row.names = NULL, optional = FALSE, ...,
 }
 
 as.data.frame.ts <- function(x, ...)
-{
-    if(is.matrix(x))
+    if (is.matrix(x))
 	as.data.frame.matrix(x, ...)
     else
 	as.data.frame.vector(x, ...)
-}
 
 as.data.frame.raw  <- as.data.frame.vector
 as.data.frame.factor  <- as.data.frame.vector
@@ -224,12 +222,11 @@ default.stringsAsFactors <- function()
 }
 
 
-as.data.frame.character <-
-    function(x, ..., stringsAsFactors = default.stringsAsFactors()){
-        nm <- deparse(substitute(x), width.cutoff=500L)
-        if(stringsAsFactors) x <- factor(x)
-        as.data.frame.vector(x, ..., nm=nm)
-    }
+as.data.frame.character <- function (x, ..., 
+                             stringsAsFactors = default.stringsAsFactors())
+    as.data.frame.vector (if (stringsAsFactors) factor(x) else x, 
+                          ..., 
+                          nm = deparse(substitute(x), width.cutoff=500L))
 
 as.data.frame.logical <- as.data.frame.vector
 

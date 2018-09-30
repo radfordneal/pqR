@@ -1,5 +1,6 @@
 #  File src/library/base/R/match.fun.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -17,24 +18,26 @@
 ### clean up FUN arguments to *apply, outer, sweep, etc.
 ### note that this grabs two levels back and is not designed
 ### to be called at top level
+
 match.fun <- function (FUN, descend = TRUE)
-{
-    if ( is.function(FUN) )
-        return(FUN)
-    if (!(is.character(FUN) && length(FUN) == 1L || is.symbol(FUN))) {
-        ## Substitute in parent
-        FUN <- eval.parent(substitute(substitute(FUN)))
-        if (!is.symbol(FUN))
-            stop(gettextf("'%s' is not a function, character or symbol",
-                          deparse(FUN)), domain = NA)
-    }
-    envir <- parent.frame(2)
-    if( descend )
-        FUN <- get(as.character(FUN), mode = "function", envir = envir)
+
+    if (is.function(FUN))
+        FUN
     else {
-        FUN <- get(as.character(FUN), mode = "any", envir = envir)
-        if( !is.function(FUN) )
-           stop(gettextf("found non-function '%s'", FUN), domain = NA)
+        if (!(is.character(FUN) && length(FUN) == 1L || is.symbol(FUN))) {
+            ## Substitute in parent
+            FUN <- eval.parent(substitute(substitute(FUN)))
+            if (!is.symbol(FUN))
+                stop(gettextf("'%s' is not a function, character or symbol",
+                              deparse(FUN)), domain = NA)
+        }
+        envir <- parent.frame(2)
+        if (descend)
+            FUN <- get(as.character(FUN), mode = "function", envir = envir)
+        else {
+            FUN <- get(as.character(FUN), mode = "any", envir = envir)
+            if (!is.function(FUN))
+               stop(gettextf("found non-function '%s'", FUN), domain = NA)
+        }
+        FUN
     }
-    return(FUN)
-}

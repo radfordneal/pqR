@@ -1,5 +1,6 @@
 #  File src/library/base/R/options.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -18,7 +19,7 @@ options <- function(...)
     .Internal(options(...))
 
 getOption <- function(x, default = NULL)
-{
+
     # To avoid always performing the %in%, we use the original code 
     # if default is not specified (hence NULL).
 
@@ -28,4 +29,4 @@ getOption <- function(x, default = NULL)
         options(x)[[1L]] 
     else 
         default
-}
+

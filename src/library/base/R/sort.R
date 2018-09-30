@@ -1,6 +1,6 @@
 #  File src/library/base/R/sort.R
 #  Part of the R package, https://www.R-project.org
-#  Modifications for pqR Copyright (c) 2017 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2017, 2018 Radford M. Neal.
 #
 #  Copyright (C) 1995-2016 The R Core Team
 #
@@ -18,18 +18,21 @@
 #  https://www.R-project.org/Licenses/
 
 sort <- function(x, decreasing = FALSE, ...)
-{
-    if(!is.logical(decreasing) || length(decreasing) != 1L)
+
+    if (!is.logical(decreasing) || length(decreasing) != 1L)
         stop("'decreasing' must be a length-1 logical vector.\nDid you intend to set 'partial'?")
-    UseMethod("sort")
-}
+    else
+        UseMethod("sort")
+
 
 sort.default <- function(x, decreasing = FALSE, na.last = NA, ...)
-{
+
     ## The first case includes factors.
-    if(is.object(x)) x[order(x, na.last = na.last, decreasing = decreasing)]
-    else sort.int(x, na.last = na.last, decreasing = decreasing, ...)
-}
+    if (is.object(x)) 
+        x[order(x, na.last = na.last, decreasing = decreasing)]
+    else 
+        sort.int(x, na.last = na.last, decreasing = decreasing, ...)
+
 
 sort.int <-
     function(x, partial = NULL, na.last = NA, decreasing = FALSE,
@@ -80,7 +83,7 @@ sort.int <-
         x <-  x[!ina]
     }
 
-    if(index.return && !is.na(na.last))
+    if (index.return && !is.na(na.last))
         stop("'index.return' only for 'na.last = NA'")
 
     if (!is.null(partial)) {
