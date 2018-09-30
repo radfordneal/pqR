@@ -3605,6 +3605,8 @@ int isValidName(const char *name)
 	int c = 0xff & *p++;  /* char may be a signed type */
 	if (c != '.' && !isalpha(c) )
             return 0;
+        if (*p == 0)  /* one character name, never a reserved word */
+            return 1;
 	if (c == '.' && isdigit(0xff & (int)*p))
             return 0;
 
@@ -3627,8 +3629,13 @@ int isValidName(const char *name)
 
     /* Check whether it's a reserved word. */
 
+    if (name[1] == 0) /* reserved words all at least length 2 */
+        return 1;
+
     for (i = 0; keywords[i].name != NULL; i++)
-	if (strcmp(keywords[i].name, name) == 0)
+	if (name[0] == keywords[i].name[0] /* quick pre-test */ 
+         && name[1] == keywords[i].name[1]
+         && strcmp(keywords[i].name+2, name+2) == 0)
             return 0;
 
     return 1;
