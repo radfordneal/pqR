@@ -142,24 +142,29 @@ static int file_getc (void *fp) { return R_fgetc ((FILE *) fp); }
 static void R_ReplFile(FILE *fp, SEXP rho)
 {
     ParseStatus status;
-    int count=0;
     SrcRefState ParseState;
     int savestack;
     SEXP value;
 
+    char saved_ps[R_parse_state_size];
+    int retain = 0;
+
     /* next must be paired with R_FinalizeSrcRefState (see parse.c) */
     R_InitSrcRefState (&ParseState, FALSE);
 
-    savestack = R_PPStackTop;    
+    savestack = R_PPStackTop;
 
-    for(;;) {
+    for (;;) {
 
 	R_PPStackTop = savestack;
 
         /* Note: R_CurrentExpr is protected as a root by the garbage collector*/
 
 	R_CurrentExpr = R_Parse1Stream (file_getc, (void *) fp, 
-                                        &status, &ParseState);
+                                        &status, &ParseState,
+                                        FALSE, retain, saved_ps);
+        retain = 1;
+
 	switch (status) {
 	case PARSE_NULL:
 	    break;
@@ -169,7 +174,6 @@ static void R_ReplFile(FILE *fp, SEXP rho)
 	    R_Visible = FALSE;
 	    R_EvalDepth = 0;
 	    resetTimeLimits();
-	    count++;
 
 	    PROTECT(value = evalv (R_CurrentExpr, rho, VARIANT_PENDING_OK));
 	    SET_SYMVALUE(R_LastvalueSymbol, value);
@@ -193,7 +197,6 @@ static void R_ReplFile(FILE *fp, SEXP rho)
 
             /* next must be paired with R_InitSrcRefState (see parse.c) */
 	    R_FinalizeSrcRefState(&ParseState);
-
 	    return;
 	    break;
 
@@ -325,7 +328,8 @@ int Rf_ReplIteration (SEXP rho, R_ReplState *state)
       R_FinalizeSrcRefState would be disrupted. */
 
     R_CurrentExpr = R_Parse1Stream (ReplGetc, (void *) state, 
-                                    &state->status, &ParseState);
+                                    &state->status, &ParseState, 
+                                    TRUE, 0, NULL);
     if (keepSource) {
         int buflen = R_IoBufferWriteOffset(&R_ConsoleIob);
         char buf[buflen+1];

@@ -59,7 +59,11 @@ void R_InitSrcRefState(SrcRefState *state, int kepSource);
 void R_TextForSrcRefState (SrcRefState *state, const char *text);
 void R_FinalizeSrcRefState(SrcRefState *state);
 
-SEXP R_Parse1Stream (int (*)(void *), void *, ParseStatus *, SrcRefState *);
+extern const int R_parse_state_size; /* Size of parse state structure */
+
+SEXP R_Parse1Stream (int (*)(void *), void *, ParseStatus *, SrcRefState *,
+                     int, int, char *);
+
 SEXP R_ParseConn (Rconnection con, int, ParseStatus *, SEXP);
 
 /* Report a parse error */

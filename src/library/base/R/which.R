@@ -1,5 +1,6 @@
 #  File src/library/base/R/which.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -16,8 +17,9 @@
 
 which <- function(x, arr.ind = FALSE, useNames = TRUE)
     if (arr.ind && !is.null(d <- dim(x)))
-        arrayInd(.Internal(which(x)), d, dimnames(x), useNames=useNames) else
-          .Internal(which(x))
+        arrayInd(.Internal(which(x)), d, dimnames(x), useNames=useNames)
+    else
+        .Internal(which(x))
 
 arrayInd <- function(ind, .dim, .dimnames = NULL, useNames = FALSE) {
     ##-- return a matrix  length(ind) x rank == length(ind) x length(.dim)

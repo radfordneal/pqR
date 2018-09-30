@@ -1,5 +1,6 @@
 #  File src/library/base/R/mode.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -14,20 +15,19 @@
 #  A copy of the GNU General Public License is available at
 #  http://www.r-project.org/Licenses/
 
-mode <- function(x) {
-    if(is.expression(x)) return("expression")
-    if(is.call(x))
-	return(switch(deparse(x[[1L]])[1L],
-		      "(" = "(",
-		      ## otherwise
-		      "call"))
-    if(is.name(x)) "name" else
-    switch(tx <- typeof(x),
-	   double=, integer= "numeric",# 'real=' dropped, 2000/Jan/14
-	   closure=, builtin=, special= "function",
-	   ## otherwise
-	   tx)
-}
+mode <- function(x)
+    if (is.expression(x))
+        "expression"
+    else if (is.call(x))
+	switch (deparse(x[[1L]])[1L], "(" = "(", "call")
+    else if (is.name(x)) 
+        "name"
+    else
+        switch (tx <- typeof(x),
+	        double=, integer= "numeric",# 'real=' dropped, 2000/Jan/14
+	        closure=, builtin=, special= "function",
+                ## otherwise
+                tx)
 
 `mode<-` <- function(x, value)
 {

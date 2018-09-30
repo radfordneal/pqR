@@ -1,5 +1,6 @@
 #  File src/library/base/R/namespace.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -21,12 +22,11 @@
 ##  1) This code should work also when methods is not yet loaded
 ##  2) We use  ':::' instead of '::' inside the code below, for efficiency only
 
-getNamespace <- function(name) {
+getNamespace <- function(name)
     if (is.null (ns <- .Internal(getRegisteredNamespace(as.name(name)))))
         tryCatch (loadNamespace(name), error = function(e) stop(e))
     else
         ns
-}
 
 loadedNamespaces <- function()
     ls(.Internal(getNamespaceRegistry()), all.names = TRUE)
@@ -93,21 +93,17 @@ getExportedValue <- function(ns, name) {
     }
 }
 
-`::` <- function(pkg, name) {
-    pkg <- as.character(substitute(pkg))
-    if (.Internal(identical(pkg,"base"))) 
+`::` <- function(pkg, name)
+    if (.Internal (identical (pkg <- as.character(substitute(pkg)), "base"))) 
         get (as.character(substitute(name)), baseenv())
     else 
         getExportedValue (pkg, as.character(substitute(name)))
-}
 
-`:::` <- function(pkg, name) {
-    pkg <- as.character(substitute(pkg))
-    if (.Internal(identical(pkg,"base"))) 
+`:::` <- function(pkg, name)
+    if (.Internal (identical (pkg <- as.character(substitute(pkg)), "base"))) 
         get (as.character(substitute(name)), baseenv())
     else
         get (as.character(substitute(name)), getNamespace(pkg), inherits=FALSE)
-}
 
 .Firstlib_as_onLoad <-
     c(## automatically detected as calls to library.dynam

@@ -52,21 +52,29 @@
    expressions (any number if n is -1) and return their values in a
    single expression vector.
  
-       SEXP R_ParseVector (SEXP *text, int n, ParseStatus *status, SEXP srcfile)
+     SEXP R_ParseVector (SEXP *text, int n, ParseStatus *status, SEXP srcfile)
 
-       SEXP R_ParseStream (int (*getc)(void *), void *getc_arg, int n, 
-                           ParseStatus *status, SEXP srcfile);
+     SEXP R_ParseStream (int (*getc)(void *), void *getc_arg, int n, 
+                         ParseStatus *status, SEXP srcfile);
 
    The following routine is similar to R_ParseStream, except it always
    uses Rconn_getc, and is declared in the less public Parse.h:
 
-       SEXP R_ParseConn   (Rconnection con, int n,
-                           ParseStatus *status, SEXP srcfile);
+     SEXP R_ParseConn   (Rconnection con, int n,
+                         ParseStatus *status, SEXP srcfile);
 
    The following routine, also in Parse.h, parses a single expression:
  
-       SEXP R_Parse1Stream (int (*getc)(void *), void *getc_arg, 
-                            ParseStatus *status, SrcRefState *state);
+     SEXP R_Parse1Stream (int (*getc)(void *), void *getc_arg, 
+                          ParseStatus *status, SrcRefState *state,
+                          int no_peeking, int retain, char *saved_ps)
+
+   If 'no_peeking' is non-zero, peeking past a newline for an "else"
+   following an "if" clause is not done, so at the outer level an
+   "else" on a new line will not be seen as part of the "if".  If
+   'retain' is non-zero, the parse state is initialized from
+   'saved_ps'.  If 'saved_ps' is not null, before returning the parse
+   state is saved there (must be an area of R_parse_state_size bytes).
 
    The R_InitSrcRefState and R_FinalizeSrcRefState routines (which in
    fact deal with more than source references) will need to be used in
@@ -423,6 +431,8 @@ struct parse_state {
     unsigned int npush;
     int prevpos;
 };
+
+const int attribute_hidden R_parse_state_size = sizeof (struct parse_state);
 
 
 /* --------------------------------------------------------------------------
@@ -1963,21 +1973,25 @@ static SEXP parse_prog (int flags)
    See the documentation at the start of this module. */
 
 
-#define PARSE_INIT \
+#define PARSE_INIT(sv) \
     struct parse_state new_parse_state; \
+    void *saved = (sv); \
     ps = &new_parse_state; \
-    ps->next_token_val = R_NilValue; \
-    ps->parse_dotdot = R_parse_dotdot; \
-    ps->token_loc.first_line = 0; \
-    ps->token_loc.first_column = 0; \
-    ps->token_loc.first_byte = 0; \
-    ps->token_loc.first_parsed = 1; \
-    ps->ParseContext[0] = 0; \
-    ps->ParseContextLast = 0; \
-    ps->ParseContextLine = 0; \
-    ps->prevpos = 0; \
-    ps->npush = 0;
-
+    if (saved) \
+        memcpy (&new_parse_state, saved, sizeof (struct parse_state)); \
+    else { \
+        ps->next_token_val = R_NilValue; \
+        ps->parse_dotdot = R_parse_dotdot; \
+        ps->token_loc.first_line = 0; \
+        ps->token_loc.first_column = 0; \
+        ps->token_loc.first_byte = 0; \
+        ps->token_loc.first_parsed = 1; \
+        ps->ParseContext[0] = 0; \
+        ps->ParseContextLast = 0; \
+        ps->ParseContextLine = 0; \
+        ps->prevpos = 0; \
+        ps->npush = 0; \
+    }
 
 #define PARSE_FINI \
     memcpy (R_ParseContext, ps->ParseContext, PARSE_CONTEXT_SIZE); \
@@ -2011,10 +2025,11 @@ static int call_stream_getc(void)
 }
 
 
-attribute_hidden SEXP R_Parse1Stream (int (*getc) (void *), void *getc_arg, 
-                                      ParseStatus *status, SrcRefState *state)
+attribute_hidden SEXP R_Parse1Stream(int (*getc) (void *), void *getc_arg, 
+                                     ParseStatus *status, SrcRefState *state,
+                                     int no_peeking, int retain, char *saved_ps)
 {
-    PARSE_INIT
+    PARSE_INIT(retain ? saved_ps : NULL)
 
     ps->stream_getc = getc;
     ps->stream_getc_arg = getc_arg;
@@ -2024,15 +2039,15 @@ attribute_hidden SEXP R_Parse1Stream (int (*getc) (void *), void *getc_arg,
 
     SEXP res = R_NilValue;
 
-    if (!get_next_token(0))
+    if (!retain || ps->next_token == '\n' || ps->next_token == ';')
+        get_next_token(0);
+
+    if (ps->next_token == END_OF_INPUT)
         *status = PARSE_EOF;
-
-    else if (ps->next_token == END_OF_INPUT || ps->next_token == '\n' 
-                                            || ps->next_token == ';')
+    else if (ps->next_token == '\n' || ps->next_token == ';')
         *status = PARSE_NULL;
-
     else {
-        res = parse_prog (prog_flags(TRUE));
+        res = parse_prog (prog_flags(no_peeking));
         if (res == R_NoObject) {
             res = R_NilValue;
             *status = PARSE_ERROR;
@@ -2040,6 +2055,9 @@ attribute_hidden SEXP R_Parse1Stream (int (*getc) (void *), void *getc_arg,
         else
             *status = PARSE_OK;
     }
+
+    if (saved_ps) 
+        memcpy (saved_ps, ps, sizeof (struct parse_state));
 
     PARSE_FINI
 
@@ -2050,7 +2068,7 @@ attribute_hidden SEXP R_Parse1Stream (int (*getc) (void *), void *getc_arg,
 static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile, int no_peeking)
 {
     SEXP rval, tval, tlast, res, refs, last_ref;
-    PROTECT_INDEX rval_prot, token_val_prot;
+    PROTECT_INDEX rval_prot;
     SrcRefState state;
     source_location loc;
     int i;
@@ -2079,8 +2097,6 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile, int no_peeking)
 
     const int flags = prog_flags(no_peeking);
 
-    PROTECT_WITH_INDEX (ps->next_token_val, &token_val_prot);
-
     i = 0;
     while (n < 0 || i < n) {
 
@@ -2093,8 +2109,6 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile, int no_peeking)
         if (ps->next_token == '\n' || ps->next_token == ';'
                     || ps->next_token == END_OF_INPUT)
             continue;
-
-        REPROTECT (ps->next_token_val, token_val_prot);
 
         start_location(&loc);
         res = parse_prog (flags);
@@ -2126,8 +2140,7 @@ finish:
 	attachSrcrefs(rval,CDR(refs));
 
 ret:
-    UNPROTECT(3); /* tval, refs, ps->next_token_val - must be unprotected
-                     before R_FinalizeSrcRefState */
+    UNPROTECT(2); /* tval, refs - must unprotect before R_FinalizeSrcRefState */
     R_FinalizeSrcRefState(ps->sr);
     UNPROTECT(1); /* rval - must be unprotected after R_FinalizeSrcRefState */
     return rval;
@@ -2138,7 +2151,7 @@ static int text_getc(void) { return R_TextBufferGetc(ps->textb_ptr); }
 
 SEXP R_ParseVector(SEXP text, int n, ParseStatus *status, SEXP srcfile)
 {
-    PARSE_INIT
+    PARSE_INIT(0)
 
     SEXP rval;
     TextBuffer textb;
@@ -2164,7 +2177,7 @@ static int conn_getc (void) { return Rconn_fgetc (ps->conn); }
 
 SEXP R_ParseConn (Rconnection con, int n, ParseStatus *status, SEXP srcfile)
 {
-    PARSE_INIT
+    PARSE_INIT(0)
 
     SEXP res;
 
@@ -2182,7 +2195,7 @@ SEXP R_ParseConn (Rconnection con, int n, ParseStatus *status, SEXP srcfile)
 SEXP R_ParseStream (int (*getc) (void *), void *getc_arg, 
                     int n, ParseStatus *status, SEXP srcfile)
 {
-    PARSE_INIT
+    PARSE_INIT(0)
 
     SEXP res;
 

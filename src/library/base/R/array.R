@@ -16,8 +16,8 @@
 #  http://www.r-project.org/Licenses/
 
 array <- function(data = NA, dim = length(data), dimnames = NULL)
-{
-    ## Changed as in R-3.4.1, except for use of get_rm.
+
+    ## Changed as in R-3.4.1, with some mods (e.g. use of get_rm).
 
     ## allow for as.vector.factor (converts to character)
     if (is.atomic(data) && !is.object(data))
@@ -43,7 +43,7 @@ array <- function(data = NA, dim = length(data), dimnames = NULL)
         else
             .Internal (array (data, dim, dimnames))
     }
-}
+
 
 slice.index <-
 function(x, MARGIN)
