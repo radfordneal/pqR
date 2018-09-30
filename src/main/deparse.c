@@ -183,6 +183,7 @@ static SEXP deparse1WithCutoff(SEXP call, Rboolean abbrev, int cutoff,
 	     R_NoObject,
 	     /*DeparseBuffer=*/{NULL, 0, BUFSIZE},
 	     DEFAULT_Cutoff, FALSE, 0, TRUE, FALSE, INT_MAX, TRUE, 0};
+    R_AllocStringBuffer (0, &localData.buffer);
     localData.cutoff = cutoff;
     localData.backtick = backtick;
     localData.opts = opts;
@@ -881,7 +882,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 	if (TYPEOF(op) == SYMSXP) {
             const char *opname = CHAR(PRINTNAME(op));
             int nargs = length(s);
-            if (nargs >= 2 && nargs <= 3 &&  op == R_IfSymbol) {
+            if (op == R_IfSymbol && nargs >= 2 && nargs <= 3) {
                 print2buff("if (", d);
                 /* print the predicate */
                 int np = needsparens_arg(CAR(s));
@@ -921,7 +922,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                     d->indent--;
                 }
             }
-            else if (nargs == 2 && op == R_WhileSymbol) {
+            else if (op == R_WhileSymbol && nargs == 2) {
                 print2buff("while (", d);
                 int np = needsparens_arg(CAR(s));
                 if (np) print2buff("(", d);
@@ -930,11 +931,11 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff(") ", d);
                 deparse2buff(CADR(s), d);
             }
-            else if (nargs == 3 && op == R_ForSymbol 
-                                && isSymbol(CAR(s))
-                                && (TAG(CDR(s))==R_NilValue
-                                     || TAG(CDR(s))==R_AcrossSymbol
-                                     || TAG(CDR(s))==R_DownSymbol)) {
+            else if (op == R_ForSymbol && nargs == 3 
+                                       && isSymbol(CAR(s))
+                                       && (TAG(CDR(s))==R_NilValue
+                                           || TAG(CDR(s))==R_AcrossSymbol
+                                           || TAG(CDR(s))==R_DownSymbol)) {
                 print2buff("for (", d);
                 deparse2buff(CAR(s), d);
                 if (TAG(CDR(s)) == R_AcrossSymbol)
@@ -950,9 +951,9 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff(") ", d);
                 deparse2buff(CADR(CDR(s)), d);
             }
-            else if (nargs >= 3 && op == R_ForSymbol 
-                                && isSymbol(CAR(s))
-                                && TAG(nthcdr(s,nargs-2))==R_AlongSymbol) {
+            else if (op == R_ForSymbol && nargs >= 3
+                                     && isSymbol(CAR(s))
+                                     && TAG(nthcdr(s,nargs-2))==R_AlongSymbol) {
                 print2buff("for (", d);
                 deparse2buff(CAR(s), d);
                 SEXP t = CDR(s);
@@ -969,11 +970,11 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff(") ", d);
                 deparse2buff(CADR(t), d);
             }
-            else if (nargs == 1 && op == R_RepeatSymbol) {
+            else if (op == R_RepeatSymbol && nargs == 1) {
                 print2buff("repeat ", d);
                 deparse2buff(CAR(s), d);
             }
-            else if (nargs==0 && (op == R_BreakSymbol || op == R_NextSymbol)) {
+            else if ((op == R_BreakSymbol || op == R_NextSymbol) && nargs==0) {
                 print2buff(opname, d);
             }
             else if (op == R_BraceSymbol) {
@@ -990,12 +991,12 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff("}", d);
                 d->incurly -= 1;
             }
-            else if (nargs == 1 && op == R_ParenSymbol) {
+            else if (op == R_ParenSymbol && nargs == 1) {
                 print2buff("(", d);
                 deparse2buff(CAR(s), d);
                 print2buff(")", d);
             }
-            else if (nargs >= 2 && op == R_BracketSymbol) {
+            else if (op == R_BracketSymbol && nargs >= 2) {
                 if ((parens = needsparens_postfix(op,CAR(s))))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
@@ -1005,7 +1006,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 args2buff(CDR(s), 0, 0, d);
                 print2buff("]", d);
             }
-            else if (nargs >= 2 && op == R_Bracket2Symbol) {
+            else if (op == R_Bracket2Symbol && nargs >= 2) {
                 if ((parens = needsparens_postfix(op,CAR(s))))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
@@ -1015,7 +1016,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 args2buff(CDR(s), 0, 0, d);
                 print2buff("]]", d);
             }
-            else if ((nargs == 2 || nargs == 3) && op == R_FunctionSymbol) {
+            else if (op == R_FunctionSymbol && (nargs == 2 || nargs == 3)) {
                 /* may have hidden third argument with source references */
                 printcomment(s, d);
                 if (!(d->opts & USESOURCE) || !isString(CADDR(s))) {
@@ -1033,15 +1034,15 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                     }
                 }
             }
-            else if (nargs == 2 && (isSymbol(CAR(s)) || isString(CAR(s)))
-                                && (isSymbol(CADR(s)) || isString(CADR(s)))
-                  && (op == R_DoubleColonSymbol || op == R_TripleColonSymbol)) {
+            else if ((op == R_DoubleColonSymbol || op == R_TripleColonSymbol)
+                   && nargs == 2 && (isSymbol(CAR(s)) || isString(CAR(s)))
+                                 && (isSymbol(CADR(s)) || isString(CADR(s)))) {
                 deparse2buff(CAR(s), d);
                 print2buff(opname, d);
                 deparse2buff(CADR(s), d);
             }
-            else if (nargs == 2 && (isSymbol(CADR(s)) || isString(CADR(s)))
-                      && (op == R_DollarSymbol || op == R_AtSymbol)) {
+            else if ((op == R_DollarSymbol || op == R_AtSymbol)
+                   && nargs == 2 && (isSymbol(CADR(s)) || isString(CADR(s)))) {
                 if ((parens = needsparens_postfix(op,CAR(s))))
                     print2buff("(", d);
                 deparse2buff(CAR(s), d);
@@ -1254,17 +1255,15 @@ static void writeline(LocalParseData *d)
 
 static void print2buff(const char *strng, LocalParseData *d)
 {
-    size_t tlen, bufflen;
+    size_t tlen;
 
     if (d->startline) {
 	d->startline = FALSE;
 	printtab2buff(d->indent, d);	/*if at the start of a line tab over */
     }
     tlen = strlen(strng);
-    R_AllocStringBuffer(0, &(d->buffer));
-    bufflen = strlen(d->buffer.data);
-    R_AllocStringBuffer(bufflen + tlen, &(d->buffer));
-    strcat(d->buffer.data, strng);
+    R_AllocStringBuffer (d->len + tlen, &d->buffer);
+    strcpy (d->buffer.data + d->len, strng);
     d->len += tlen;
 }
 
@@ -1274,11 +1273,9 @@ static void vector2buff(SEXP vector, LocalParseData *d)
     const char *strp;
     Rboolean surround = FALSE, allNA, addL = TRUE;
 
-    tlen = length(vector);
-    if( isString(vector) )
-	quote = '"';
-    else
-	quote = 0;
+    tlen = LENGTH(vector);
+    quote = isString(vector) ? '"' : 0;
+
     if (tlen == 0) {
 	switch(TYPEOF(vector)) {
 	case LGLSXP: print2buff("logical(0)", d); break;
