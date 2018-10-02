@@ -747,6 +747,7 @@ extern void helpers_wait_until_not_being_computed2 (SEXP, SEXP);
 
 #define WAIT_UNTIL_COMPUTED(x) 0
 #define WAIT_UNTIL_COMPUTED_2(x1,x2) 0
+#define WAIT_UNTIL_NOT_IN_USE(x) 0
 
 #endif
 
