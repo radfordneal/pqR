@@ -288,10 +288,10 @@
   \item It is now no longer possible to create an S4 object with a vector
         data part and a slot called "names" that is not a 
         character vector.  This was previously allowed
-        (and is in R-3.5.1), but didn't really work, as illustrated below:
-\preformatted{
-  > setClass("cl",representation(names="logical"),prototype(1,names=c(T,F)))
-  > a <- new("cl")
+        (and is in R-3.5.1), but didn't really work, as illustrated 
+        below: 
+\preformatted{  > setClass("X",representation(names="logical"),prototype(1,names=c(T,F)))
+  > a <- new("X")
   > a@names
   [1]  TRUE FALSE
   > b <- a+1
@@ -362,6 +362,12 @@
         rather than a warning. 
   \item There is now a \code{helpers_no_holding} option; see note above
         under performance improvements.
+  \item The defensive measures against code that incorrectly modifies arguments
+        to \code{.Call}, which were introduced in pqR-2016-10-05, have been
+        extended, so that scalar function arguments that appear to reference
+        shared data may now also be duplicated.  Note that this defensive
+        measure should not be relied upon - code called with \code{.Call}
+        should modify objects only after confirming that they are not shared.
   \item [ Following changes from R Core releases described below: ]
         ICU is not used by default for collation if the initial locale 
         is \code{"C"} or \code{"POSIX"}; the C \code{strcmp} function
