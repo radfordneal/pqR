@@ -2793,7 +2793,8 @@ SEXP attribute_hidden eval_unshared (SEXP e, SEXP rho, int variant)
 {
     SEXP res;
 
-    if (!isSymbol(e) || e == R_DotsSymbol || DDVAL(e)) {
+    if (!isSymbol(e) || e == R_DotsSymbol || DDVAL(e) 
+                     || e == R_MissingArg || e == R_MissingUnder) {
         res = EVALV (e, rho, variant);
     }
     else {
@@ -2802,17 +2803,31 @@ SEXP attribute_hidden eval_unshared (SEXP e, SEXP rho, int variant)
 
         if (res == R_UnboundValue)
             unbound_var_error(e);
+
         else if (res == R_MissingArg) {
             if ( ! (variant & VARIANT_MISSING_OK))
                 if (!DDVAL(e))  /* revert bug fix for the moment */
                     arg_missing_error(e);
         }
+
         else if (TYPEOF(res) == PROMSXP) {
-            if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
-                res = forcePromiseUnbound(res,VARIANT_PENDING_OK);
+            SEXP prom = res;
+            if (PRVALUE_PENDING_OK(prom) == R_UnboundValue)
+                res = forcePromiseUnbound(prom,VARIANT_PENDING_OK);
             else
-                res = PRVALUE_PENDING_OK(res);
+                res = PRVALUE_PENDING_OK(prom);
+            if (isVectorAtomic(res) && LENGTH(res) == 1 && !HAS_ATTRIB(res)
+                  && NAMEDCNT(res) > 2 /* will be 2 if unshared var passed */) {
+                if (0) { /* Enable for debugging */
+                    if (installed_already("UNSHARED.DEBUG") != R_NoObject)
+                        Rprintf("Making %s unshared\n",CHAR(PRINTNAME(e)));
+                }
+                res = duplicate(res);
+                SET_PRVALUE (prom, res);
+            }
+            SET_NAMEDCNT_NOT_0(res);
         }
+
         else {
             if (NAMEDCNT_GT_1(res) && R_binding_cell != R_NilValue
               && isVectorAtomic(res) && LENGTH(res) == 1 && !HAS_ATTRIB(res)) {
