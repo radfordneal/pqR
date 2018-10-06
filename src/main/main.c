@@ -293,7 +293,11 @@ static int ReplGetc (void *vstate)
     return c;
 }
 
-/* The body of the Read-Eval-Print Loop.
+/* The body of the Read-Eval-Print Loop.  The Rf_ReplIteration
+   function is possibly called from somewhere else, so it's interface
+   is preserved here.  But internally, the static function REPL_iter
+   is used, which allows for preserving parse state, and hence proper
+   handling of "else" after "if" in a non-interactive session.
 
    If the input can be parsed correctly,
 
@@ -304,7 +308,7 @@ static int ReplGetc (void *vstate)
    The bufp pointer into buf is moved to the next starting point, 
    i.e. the end of the first line or after the terminating ';'. */
 
-int Rf_ReplIteration (SEXP rho, R_ReplState *state)
+static int REPL_iter (SEXP rho, R_ReplState *state, int first, char *saved_ps)
 {
     SEXP R_scalar_stack_at_start = R_scalar_stack;
 
@@ -329,7 +333,7 @@ int Rf_ReplIteration (SEXP rho, R_ReplState *state)
 
     R_CurrentExpr = R_Parse1Stream (ReplGetc, (void *) state, 
                                     &state->status, &ParseState, 
-                                    TRUE, 0, NULL);
+                                    saved_ps == NULL, !first, saved_ps);
     if (keepSource) {
         int buflen = R_IoBufferWriteOffset(&R_ConsoleIob);
         char buf[buflen+1];
@@ -410,10 +414,16 @@ int Rf_ReplIteration (SEXP rho, R_ReplState *state)
     }
 }
 
+int Rf_ReplIteration (SEXP rho, R_ReplState *state)
+{
+    return REPL_iter (rho, state, TRUE, NULL);
+}
+
 static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 {
+    char saved_ps [R_Interactive ? 1 : R_parse_state_size];
     R_ReplState state;
-    int status;
+    int first, status;
 
     state.status = PARSE_NULL;
     state.prompt_type = 1;
@@ -421,13 +431,18 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
     state.buf[0] = 0;
     state.bufp = state.buf;
 
-    if (R_Verbose)
-	REprintf(" >R_ReplConsole(): before \"for(;;)\" {main.c}\n");
+    first = TRUE;
 
     do {
 
         R_PPStackTop = savestack;
-        status = Rf_ReplIteration (rho, &state);
+
+        if (R_Interactive)
+            status = REPL_iter (rho, &state, TRUE, NULL);
+        else {
+            status = REPL_iter (rho, &state, first, saved_ps);
+            first = FALSE;
+        }
 
     } while (status >= 0);
 }

@@ -79,10 +79,11 @@ next
   requirement so that the intepreter will not be waiting for keyboard input when
   the user does not intend to enter an \code{else} clause.  For R Core
   versions of R, a newline before \code{else} must also be avoided for code
-  read with \code{source} or parsed from a file or a character vector with 
-  \code{parse}, even though there is then no reason not to always look for
-  an \code{else} clause, but pqR parses an \code{else} properly without
-  giveing an error in this situation.
+  read with \code{source}, or parsed from a file or a character vector with 
+  \code{parse}, or run with \code{Rscript}, or read from standard input
+  in a non-interactive R session, even though there is then no reason not 
+  to always peek ahead looking for an \code{else} clause, but pqR parses 
+  an \code{else} properly without giving an error in this situation.
 
   The \code{seq}, \code{vector}, \code{matrix}, or \code{array} in a 
   \code{for} loop is evaluated at the start of
