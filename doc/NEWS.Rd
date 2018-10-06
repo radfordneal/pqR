@@ -243,14 +243,16 @@
 
   \subsection{FEATURE CHANGES}{
   \itemize{
-  \item When code is read from a file with \code{source} or
-        \code{parse}, or is parsed from a vector of characer strings, it
-        is no longer necessary to avoid putting the \code{else} clause
-        of an \code{if} statement at the start of a line.  When code
-        is entered interactively, an \code{else} clause must still not
-        start on a new line, since in that context checking whether an
-        \code{else} is on the next line would require waiting for the
-        user to input a line which they may not intend to enter.
+  \item It is no longer necessary to avoid putting the \code{else}
+        clause of a top-level \code{if} statement at the start of a line 
+        when code is read from a file with \code{source} or
+        \code{parse}, or is parsed from a vector of character strings,
+        or is run with \code{Rscript}, or is read from standard input
+        in a non-interactive R session.  When code is entered interactively,
+        an \code{else} clause must still not start on a new line,
+        since in that context checking whether an \code{else} is on
+        the next line would require waiting for the user to input a
+        line which they may not intend to enter.
   \item The \code{along}, \code{across}, and \code{down} forms of 
         the \code{for} statement (introduced in pqR-2016-06-24 and
         pqR-2016-10-05) now set the loop variable(s) to the
