@@ -19,6 +19,10 @@ paste <- function (..., sep = " ", collapse = NULL)
 paste0 <- function(..., collapse = NULL)
     .Internal(paste("",collapse,...))
 
+`!!` <- function (e1, e2)
+    .Internal(paste(" ",NULL,e1,e2))
+
+
 ##=== Could we extend  paste(.) to (optionally) accept a
 ##    2-vector for collapse ?	 With the following functionality
 

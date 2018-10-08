@@ -6,17 +6,22 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2018-08-23}{
+\section{CHANGES IN VERSION RELEASED 2018-10-08}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
   \item This release has many significant performance improvements.
-        It also has some feature changes, including some from later R
-        Core versions, and some bug fixes.  One notable new feature is
+        It also has some new or changed features, including some from
+        later R Core versions, and some bug fixes.
+
+  \item One notable change is
         that when code is read with \code{source}, or done with \code{Rscript},
         or parsed from text strings or a file, an error is no longer produced
         when an \code{else} at the top level appears at the beginning
         of a line.  See below for more details.
+
+  \item New binary operators \code{!!} and \code{!} have been introduced
+        as more concise ways of writing \code{paste} and \code{paste0}.
 
   \item With the performance improvements in this release, it is
         generally no longer desirable to use the bytecode compiler.
@@ -254,6 +259,10 @@
         on a new line, since in that context checking whether an \code{else} 
         is on the next line would require waiting for the user to input a
         line which they may not intend to enter.
+  \item Character pasting operations can now be written more concisely using
+        new binary operators \code{!} and \code{!!}, with \code{a !! b}
+        equivalent to \code{paste(a,b)} and \code{a ! b} equivalent
+        to \code{paste0(a,b)}.
   \item The \code{along}, \code{across}, and \code{down} forms of 
         the \code{for} statement (introduced in pqR-2016-06-24 and
         pqR-2016-10-05) now set the loop variable(s) to the

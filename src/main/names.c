@@ -408,6 +408,7 @@ static void SymbolShortcuts(void)
     R_DivSymbol = install("/");
     R_ExptSymbol = install("^");
     R_Expt2Symbol = install("**");
+    R_BangBangSymbol = install("!!");
     R_EqSymbol = install("==");
     R_NeSymbol = install("!=");
     R_LtSymbol = install("<");

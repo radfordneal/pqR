@@ -818,6 +818,19 @@ static SEXP do_formatinfo(SEXP call, SEXP op, SEXP args, SEXP env)
     return x;
 }
 
+
+/* Binary ! operator. */
+
+SEXP do_paste_bang(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    SEXP args2 = CONS (R_BlankScalarString, CONS (R_NilValue, args));
+    PROTECT(args2);
+    SEXP res = do_paste (call, op, args2, env);
+    UNPROTECT(1);
+    return res;
+}
+
+
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
 
 attribute_hidden FUNTAB R_FunTab_paste[] =

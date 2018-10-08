@@ -1106,6 +1106,8 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                       || op == R_And2Symbol
                       || op == R_Or2Symbol
                       || op == R_TildeSymbol
+                      || op == R_NotSymbol
+                      || op == R_BangBangSymbol
                       || op == R_EqSymbol
                       || op == R_NeSymbol
                       || op == R_LtSymbol

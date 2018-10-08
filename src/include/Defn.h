@@ -157,6 +157,7 @@ extern0 SEXP	R_And2Symbol;         /* "&&" */
 extern0 SEXP	R_OrSymbol;           /* "|" */
 extern0 SEXP	R_Or2Symbol;          /* "||" */
 extern0 SEXP	R_NotSymbol;          /* "!" */
+extern0 SEXP	R_BangBangSymbol;     /* "!!" */
 extern0 SEXP	R_TildeSymbol;        /* "~" */
 extern0 SEXP	R_QuerySymbol;        /* "?" */
 extern0 SEXP	R_ColonAssignSymbol;  /* ":=" */

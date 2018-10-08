@@ -110,6 +110,7 @@ SEXP do_machine(SEXP, SEXP, SEXP, SEXP);
 SEXP do_not(SEXP, SEXP, SEXP, SEXP, int);
 SEXP do_pack(SEXP, SEXP, SEXP, SEXP);
 SEXP do_pause(SEXP, SEXP, SEXP, SEXP);
+SEXP do_paste_bang(SEXP, SEXP, SEXP, SEXP);
 SEXP do_printdf(SEXP, SEXP, SEXP, SEXP);
 SEXP do_restoreb(SEXP, SEXP, SEXP, SEXP);
 SEXP do_rownames(SEXP, SEXP, SEXP, SEXP);

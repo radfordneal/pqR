@@ -24,7 +24,8 @@ isTRUE(x)
 \alias{Logic}
 \alias{isTRUE}
 \description{
-  These operators act on logical and number-like vectors.
+  These operators act on logical and number-like vectors.  For the 
+  binary version of \code{!}, see \code{\link{paste0}}.
 }
 \arguments{
   \item{x, y}{logical or \sQuote{number-like} vectors (i.e., of type
@@ -79,7 +80,8 @@ isTRUE(x)
   For \code{!}, the result is a logical or raw vector of the same
   length as \code{x}.  If no coercion is done, all attributes are
   preserved; if \code{x} is coerced to logical, names, dims, and
-  dimnames (but not other attributes) are copied from \code{x}.
+  dimnames (but not other attributes) are copied from \code{x}.  Note
+  that \code{!} is also a binary operator (see \code{\link{paste0}}).
 
   For \code{|}, \code{&} and \code{xor}, 
   elements of shorter vectors are recycled as necessary (with a

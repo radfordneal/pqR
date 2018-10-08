@@ -4035,16 +4035,19 @@ static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     return x;
 }
 
-SEXP attribute_hidden do_not(SEXP call, SEXP op, SEXP args, SEXP env, 
-                             int variant)
+SEXP attribute_hidden do_not (SEXP call, SEXP op, SEXP args, SEXP env, 
+                              int variant)
 {
+    if (CDR(args) != R_NilValue)  /* more than one arg, so paste, not not */
+        return do_paste_bang (call, op, args, env);
+
     SEXP ans;
 
     if (DispatchGroup("Ops", call, op, args, env, &ans)) {
 	return ans;
     }
 
-    if (args == R_NilValue || CDR(args) != R_NilValue)
+    if (args == R_NilValue)
         checkArity(op,args);  /* to report the error */
 
     return do_fast_not (call, op, CAR(args), env, variant);

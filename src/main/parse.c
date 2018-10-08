@@ -283,12 +283,13 @@ cr	:
    ps->ParseContext (later copied to R_ParseContext). 
 
    The get_next_token function obtains the next token, calling xxgetc
-   as required, and returning 1 if end of file is encountered immediately. 
-   Its argument is 1 if a symbol is not expected (allowing ".." to be seen),
-   though it will get a symbol anyway, as long as it doesn't start with "..".
-   The convention for get_next_token is that a "lookahead" token after
-   what has been parsed so far is normally present (the opposite of the 
-   convention for xxgetc). */
+   as required, and returning 1 if end of file is encountered
+   immediately.  Its argument is 1 if a symbol or unary operator is
+   not expected (allowing ".." and "!!" to be seen), though it will
+   get a symbol or unary op anyway, as long as it doesn't start with
+   ".." and isn't "!".  The convention for get_next_token is that a
+   "lookahead" token after what has been parsed so far is normally
+   present (the opposite of the convention for xxgetc). */
 
 
 static int xxgetc(void);       /* Return next input character, or EOF */
@@ -314,7 +315,7 @@ enum token_type {
   GT,           GE,             LT,        LE,               EQ,
   NE,           AND,            OR,        AND2,             OR2,
   NS_GET,       NS_GET_INT,     EXPT2,     SPECIAL,          COLON_ASSIGN,
-  DOTDOT,
+  DOTDOT,       BANGBANG,
 };
 
 /* Names for tokens with codes >= 256.  These must correspond in order
@@ -327,8 +328,8 @@ static const char *const token_name[] = {
   "'else'",     "'while'",      "'next'",  "'break'",        "'repeat'",
   "'>'",        "'>='",         "'<'",     "'<='",           "'=='",
   "'!='",       "'&'",          "'|'",     "'&&'",           "'||'",
-  "'::'",       "':::'",        "**",      "SPECIAL",        "':='",
-  ".."
+  "'::'",       "':::'",        "'**'",    "SPECIAL",        "':='",
+  "'..'",       "'!!'"
 };
 
 #define NUM_TRANSLATED 7  /* Number above (at front) that are translated */
@@ -354,7 +355,7 @@ static const char *const pdata_token_name[] = {
   "GT",         "GE",           "LT",      "LE",             "EQ",
   "NE",         "AND",          "OR",      "AND2",           "OR2",
   "NS_GET",     "NS_GET_INT",   "^",       "SPECIAL",        "COLON_ASSIGN",
-  "DOTDOT"
+  "DOTDOT",     "BANGBANG"
 };
 
 
@@ -984,7 +985,7 @@ static void error_msg(const char *s)
     } while (0)
 
 
-/* Version of EXPECT that scans the next token with no_symbol set. */
+/* Version of EXPECT that scans the next token with no_sym_un set. */
 
 #define EXPECT_NO_SYMBOL_AFTER(tk) \
     do { \
@@ -1085,7 +1086,9 @@ static struct { SEXP *sym_ptr; int prec; } binary_prec_tbl[] =
     { &R_DivSymbol,               /* /   */ 0xa1 },
     { &R_AddSymbol,               /* +   */ 0x91 },
     { &R_SubSymbol,               /* -   */ 0x91 },
-    { &R_DotDotSymbol,            /* ..  */ 0x84 },
+    { &R_DotDotSymbol,            /* ..  */ 0x88 },
+    { &R_NotSymbol,               /* !   */ 0x85 },
+    { &R_BangBangSymbol,          /* !!  */ 0x85 },
     { &R_EqSymbol,                /* ==  */ 0x80 },
     { &R_NeSymbol,                /* !=  */ 0x80 },
     { &R_LtSymbol,                /* <   */ 0x80 },
@@ -1481,9 +1484,9 @@ static SEXP parse_sublist (int flags)
    be parenthesized, but `(`(x) is not, even though they produce the same
    expression. If 'paren' is the C NULL pointer, this information isn't stored.
 
-   The token after the expression is scanned with no_symbol set to 1, since
-   symbols are not allowed in that context, and we wish the .. operator
-   to be recognized.
+   The token after the expression is scanned with no_sym_un set to 1,
+   since symbols and unary operators are not allowed in that context,
+   and we wish the .. and !! operators to be recognized.
 
    An attempt is made to make the last operand of an operator be a constant
    object. */
@@ -3321,14 +3324,14 @@ static int nextchar(int expect)
    the token code (or ERROR if the next token is malformed).  Will also
    set next_token_val to an associated SEXP (R_NilValue if none).
 
-   If no_symbol is non-zero, symbols are not expected, which therefore
+   If no_sym_un is non-zero, symbols are not expected, which therefore
    allows the .. operator to be recognized.  (But no error is signaled
    here if a symbol is seen.)
 
    The character after the token may have been looked at, but if so xxungetc
    will have been called to put it back. */
 
-static int token (int c, int no_symbol)
+static int token (int c, int no_sym_un)
 {
     wchar_t wc;
 
@@ -3360,10 +3363,10 @@ static int token (int c, int no_symbol)
     if (c == '%')
 	return SpecialValue(c);
 
-    /* The .. operator.  Only recognized if no_symbol is true (and if 
+    /* The .. operator.  Only recognized if no_sym_un is true (and if 
        parse_dotdot is enabled). */
 
-    if (ps->parse_dotdot && no_symbol && c == '.' && nextchar('.')) {
+    if (ps->parse_dotdot && no_sym_un && c == '.' && nextchar('.')) {
         strcpy(yytext,"..");
         ps->next_token_val = R_DotDotSymbol;
         return DOTDOT;
@@ -3432,6 +3435,10 @@ static int token (int c, int no_symbol)
 	    ps->next_token_val = R_NeSymbol;
 	    return NE;
 	}
+        if (no_sym_un && nextchar('!')) {
+	    ps->next_token_val = R_BangBangSymbol;
+	    return BANGBANG;
+        }
 	ps->next_token_val = R_NotSymbol;
 	return '!';
     case '=':
@@ -3536,9 +3543,10 @@ static int token (int c, int no_symbol)
    to 1 when returning END_OF_INPUT or '\n', regardless of 
    whether a newline was actually present before. 
 
-   If no_symbol is non-zero, symbols are not expected, which therefore
-   allows the .. operator to be recognized.  (But no error is signaled
-   here if a symbol is seen.)
+   If no_sym_un is non-zero, symbols and unary operators are not
+   expected, which therefore allows the .. and !! operators to be
+   recognized.  (But no error is signaled here if a symbol or unary
+   operator is seen anyway.)
 
    Returns 0 if end of file was immediately encountered, with no
    whitespace before, and 1 if not (even when END_OF_INPUT is the 
@@ -3548,7 +3556,7 @@ static int token (int c, int no_symbol)
    via the ps->sr->TokenValProt index, but must be protected by the
    caller if it will be used after the following token is obtained. */
 
-static int get_next_token(int no_symbol)
+static int get_next_token(int no_sym_un)
 {
     int c, val;
 
@@ -3570,7 +3578,7 @@ static int get_next_token(int no_symbol)
     ps->token_loc.first_byte   = ps->sr->xxbyteno;
     ps->token_loc.first_parsed = ps->sr->xxparseno;
 
-    ps->next_token = token(c,no_symbol);
+    ps->next_token = token(c,no_sym_un);
 
     REPROTECT (ps->next_token_val, ps->sr->TokenValProt);
 

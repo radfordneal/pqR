@@ -24,9 +24,10 @@
     \code{*} \code{/}\tab multiply, divide\cr
     \code{+} \code{-}\tab (binary) add, subtract\cr
     \code{..}\tab upward sequence operator (no ordering)\cr
+    \code{!} \code{!!}\tab (binary) string concatenation\cr
     \code{<} \code{>} \code{<=} \code{>=} \code{==} \code{!=}\tab 
              ordering and comparison (no ordering)\cr
-    \code{!}\tab negation\cr
+    \code{!}\tab (unary) negation \cr
     \code{&} \code{&&}\tab and\cr
     \code{|} \code{||}\tab or\cr
     \code{~}\tab (unary and binary) as in formulae\cr

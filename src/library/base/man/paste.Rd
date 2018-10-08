@@ -1,6 +1,7 @@
 % File src/library/base/man/paste.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2011 R Core Team
+% Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{paste}
@@ -9,11 +10,16 @@
 \usage{
 paste (\dots, sep = " ", collapse = NULL)
 paste0(\dots, collapse = NULL)
+
+e1 !! e2
+e1 ! e2
 }
 \alias{paste}
 \alias{paste0}
+\alias{!!}
 \arguments{
   \item{\dots}{one or more \R objects, to be converted to character vectors.}
+  \item{e1, e2}{two \R objects, to be converted to character vectors.}
   \item{sep}{a character string to separate the terms.  Not
     \code{\link{NA_character_}}.}
   \item{collapse}{an optional character string to separate the results.  Not
@@ -41,6 +47,11 @@ paste0(\dots, collapse = NULL)
   If a value is specified for \code{collapse}, the values in the result
   are then concatenated into a single string, with the elements being
   separated by the value of \code{collapse}.
+
+  \code{e1 !! e2} is a short form for \code{paste(e1,e2)}, and 
+  \code{e1 ! e2} is a short form for \code{paste0(e1,e2)}.  Both
+  of these operators are left-associate with precedence just above
+  relational operators (see \link{Syntax}).
 }
 \value{
   A character vector of the concatenated values.  This will be of length
@@ -76,6 +87,10 @@ paste0(\dots, collapse = NULL)
   \sQuote{\link{plotmath}} for the use of \code{paste} in plot annotation.
 }
 \examples{
+"Hello" ! "World"              # has no space between words
+"Hello" !! "World"             # has a space between words
+paste("Hello","World",sep="_") # has _ between words
+
 paste(1:12) # same as as.character(1:12)
 paste("A", 1:6, sep = "")
 stopifnot(identical(paste ("A", 1:6, sep = ""),
