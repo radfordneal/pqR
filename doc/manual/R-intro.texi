@@ -7024,6 +7024,12 @@ support is available, @samp{Tk}. (For back-compatibility, @samp{x11} and
 Mac OS X, where the possible values are @samp{i386}, @samp{x86_64} and
 @samp{ppc}.
 
+@item --helpers[=N]
+@item -p[=N]
+Use N helper threads.  If this option is not specified, no helper threads
+are used.  If this option is present but N is omitted, one helper thread
+is used.
+
 @item --args
 This flag does nothing except cause the rest of the command line to be
 skipped: this can be useful to retrieve values from it with
