@@ -1,5 +1,8 @@
 /*
- *  R : A Computer Language for Statistical Data Analysis
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2018 by Radford M. Neal
+ *
+ *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2006-10  The R Development Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -24,7 +27,7 @@ commandArgs(TRUE)
 q(status=7)
 
 This invokes R with a command line like
-R --slave --no-restore --vanilla --file=foo [script_args]
+R --slave --peek-for-else --no-restore --vanilla --file=foo [script_args]
 
 */
 
@@ -94,7 +97,7 @@ void usage(void)
     fprintf(stderr, "  --default-packages=list\n");
     fprintf(stderr, "                      Where 'list' is a comma-separated set\n");
     fprintf(stderr, "                        of package names, or 'NULL'\n");
-    fprintf(stderr, "or options to R, in addition to --slave --no-restore, such as\n");
+    fprintf(stderr, "or options to R, in addition to --slave --peek-for-else, --no-restore, such as\n");
     fprintf(stderr, "  --save              Do save workspace at the end of the session\n");
     fprintf(stderr, "  --no-environ        Don't read the site and user environment files\n");
     fprintf(stderr, "  --no-site-file      Don't read the site-wide Rprofile\n");
@@ -117,7 +120,7 @@ int main(int argc, char *argv[])
 	usage();
 	exit(1);
     }
-    av = (char **) malloc((size_t) (argc+4)*sizeof(char *));
+    av = (char **) malloc((size_t) (argc+5)*sizeof(char *));
     if(!av) {
 	fprintf(stderr, "malloc failure\n");
 	exit(1);
@@ -146,6 +149,7 @@ int main(int argc, char *argv[])
 #endif
     av[ac++] = cmd;
     av[ac++] = "--slave";
+    av[ac++] = "--peek-for-else";
     av[ac++] = "--no-restore";
 
     if(argc == 2) {

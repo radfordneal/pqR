@@ -13,9 +13,10 @@
   \item This release has many significant performance improvements.
         It also has some feature changes, including some from later R
         Core versions, and some bug fixes.  One notable new feature is
-        that in code read from a file, an error is no longer produced
+        that when code is read with \code{source}, or done with \code{Rscript},
+        or parsed from text strings or a file, an error is no longer produced
         when an \code{else} at the top level appears at the beginning
-        of a line.
+        of a line.  See below for more details.
 
   \item With the performance improvements in this release, it is
         generally no longer desirable to use the bytecode compiler.
@@ -235,14 +236,14 @@
   \subsection{FEATURE CHANGES}{
   \itemize{
   \item It is no longer necessary to avoid putting the \code{else}
-        clause of a top-level \code{if} statement at the start of a line 
+        clause of an unenclosed \code{if} statement at the start of a line 
         when code is read from a file with \code{source} or
         \code{parse}, or is parsed from a vector of character strings,
-        or is run with \code{Rscript}, or is read from standard input
-        in a non-interactive R session.  When code is entered interactively,
-        an \code{else} clause must still not start on a new line,
-        since in that context checking whether an \code{else} is on
-        the next line would require waiting for the user to input a
+        or is run with \code{Rscript}, or when the \code{--peek-for-else}
+        option is used when starting an R session.  In interactive sessions,
+        it is still by default necessary to not start an \code{else} clause 
+        on a new line, since in that context checking whether an \code{else} 
+        is on the next line would require waiting for the user to input a
         line which they may not intend to enter.
   \item The \code{along}, \code{across}, and \code{down} forms of 
         the \code{for} statement (introduced in pqR-2016-06-24 and

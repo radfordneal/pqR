@@ -1,6 +1,6 @@
 /*
   pqR : A pretty quick version of R
-  Copyright (C) 2013, 2014 by Radford M. Neal
+  Copyright (C) 2013, 2014, 2018 by Radford M. Neal
 
   Based on R : A Computer Language for Statistical Data Analysis
   Copyright (C) 1995-1996   Robert Gentleman and Ross Ihaka
@@ -154,6 +154,7 @@ void R_DefParams(Rstart Rp)
     Rp->R_Slave = FALSE;
     Rp->R_Interactive = TRUE;
     Rp->R_Verbose = FALSE;
+    Rp->R_PeekForElse = FALSE;
     Rp->RestoreAction = SA_RESTORE;
     Rp->SaveAction = SA_SAVEASK;
     Rp->LoadSiteFile = TRUE;
@@ -228,6 +229,7 @@ void R_SetParams(Rstart Rp)
     R_Slave = Rp->R_Slave;
     R_Interactive = Rp->R_Interactive;
     R_Verbose = Rp->R_Verbose;
+    R_PeekForElse = Rp->R_PeekForElse;
     RestoreAction = Rp->RestoreAction;
     SaveAction = Rp->SaveAction;
     LoadSiteFile = Rp->LoadSiteFile;
