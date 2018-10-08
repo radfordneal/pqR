@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1997-2012   The R Core Team
@@ -34,25 +34,21 @@
 #include <R_ext/RStartup.h>
 
 
-/* Remove and process common command-line arguments
- *  Formally part of ../unix/sys-common.c.
- */
+/* Remove and process common command-line arguments. */
 
-/*
-  This copies the command line arguments to the Rstart
-  structure. The memory is obtained from calloc, etc.
-  since these are permanent and it is not intended that
-  they be modified. This is why they are copied before
-  being processed and removed from the list.
+/* This copies the command line arguments to the Rstart
+   structure. The memory is obtained from calloc, etc.
+   since these are permanent and it is not intended that
+   they be modified. This is why they are copied before
+   being processed and removed from the list.
 
-  We might store these as a SEXP. I have no strong opinion
-  about this.
- */
+   We might store these as a SEXP. I have no strong opinion
+   about this. */
 
 /* Permanent copy of the command line arguments and the number
    of them passed to the application.
-   These are populated via the routine R_set_command_line_arguments().
-*/
+   These are populated via the routine R_set_command_line_arguments(). */
+
 static int    NumCommandLineArgs = 0;
 static char **CommandLineArgs = NULL;
 
@@ -159,6 +155,9 @@ R_common_command_line(int *pac, char **argv, Rstart Rp)
 		Rp->R_Slave = TRUE;
 		Rp->SaveAction = SA_NOSAVE;
 	    }
+            else if (!strcmp(*av, "--peek-for-else")) {
+                Rp->R_PeekForElse = TRUE;
+            }
 	    else if (!strcmp(*av, "--no-site-file")) {
 		Rp->LoadSiteFile = FALSE;
 	    }

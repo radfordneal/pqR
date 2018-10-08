@@ -1,5 +1,8 @@
 /*
- *  R : A Computer Language for Statistical Data Analysis
+ *  pqR : A pretty quick version of R
+ *  Copyright (C) 2018 by Radford M. Neal
+ *
+ *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1999-2010  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -56,6 +59,7 @@ typedef struct
     Rboolean R_Slave;
     Rboolean R_Interactive;
     Rboolean R_Verbose;
+    Rboolean R_PeekForElse;
     Rboolean LoadSiteFile;
     Rboolean LoadInitFile;
     Rboolean DebugInitFile;
@@ -80,6 +84,7 @@ typedef struct
     UImode CharacterMode;
     blah7 WriteConsoleEx; /* used only if WriteConsole is NULL */
 #endif
+
 } structRstart;
 
 typedef structRstart *Rstart;

@@ -333,7 +333,7 @@ static int REPL_iter (SEXP rho, R_ReplState *state, int first, char *saved_ps)
 
     R_CurrentExpr = R_Parse1Stream (ReplGetc, (void *) state, 
                                     &state->status, &ParseState, 
-                                    saved_ps == NULL, !first, saved_ps);
+                                    !R_PeekForElse, !first, saved_ps);
     if (keepSource) {
         int buflen = R_IoBufferWriteOffset(&R_ConsoleIob);
         char buf[buflen+1];

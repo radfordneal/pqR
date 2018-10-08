@@ -1,4 +1,6 @@
 Modifications to parser to fix the problem of outer-level "else" being
-rejected when sourcing a file (or parsing from text variable).
+rejected when sourcing a file (or parsing from file or text variable, or
+in Rscript).  Also --peek-for-else option to control this in other 
+contexts.
 
 Other parsing cleanup as well.  Also slight performance tweak to getOptions.

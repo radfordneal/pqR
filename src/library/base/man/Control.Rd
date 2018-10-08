@@ -21,7 +21,8 @@
 \description{
   These are the basic control-flow constructs of the \R language.  They
   function in much the same way as control statements in any Algol-like
-  language.  They are all (except \code{along}) \link{reserved} words.
+  language.  Except \code{along}, \code{down}, and \code{across}), the
+  words used in these constructs are \link{reserved}.
 }
 \usage{
 if (cond) expr
@@ -62,28 +63,36 @@ next
   }
 }
 \details{
-  \code{break} breaks out of a \code{for}, \code{while} or \code{repeat}
-  loop; control is transferred to the first statement outside the
-  inner-most loop. \code{next} halts the processing of the current
-  iteration and advances the looping index.  Both \code{break} and
-  \code{next} apply only to the innermost of nested loops.
-  
-  Note that it is a common mistake to forget to put braces (\code{\{ .. \}})
-  around your statements, e.g., after \code{if (..)} or \code{for (....)}.
-  For that reason, one (somewhat extreme) attitude of defensive programming
-  is to always use braces, e.g., for \code{if} clauses.
+  The \code{if} expression evaluates one expression or another, depending
+  on a condition, as described below.
 
-  To avoid a syntax error in entering an \code{if ... else} construct
-  at the keyboard, you need to avoid putting a newline between the end
-  of \code{cons.expr} (often a \code{\}}) and \code{else} --- this is a
-  requirement so that the intepreter will not be waiting for keyboard input when
-  the user does not intend to enter an \code{else} clause.  For R Core
-  versions of R, a newline before \code{else} must also be avoided for code
-  read with \code{source}, or parsed from a file or a character vector with 
-  \code{parse}, or run with \code{Rscript}, or read from standard input
-  in a non-interactive R session, even though there is then no reason not 
-  to always peek ahead looking for an \code{else} clause, but pqR parses 
-  an \code{else} properly without giving an error in this situation.
+  The \code{for}, \code{while}, and \code{repeat} expressions are used
+  for looping, as described below. \code{break} breaks out of a loop,
+  after which control passes to the next expression following the
+  loop (or to the outer expression if there is no such expression). 
+  \code{next} halts the processing of the current iteration and
+  (advancing the looping index in the case of \code{for}).  Both
+  \code{break} and \code{next} apply only to the innermost of nested
+  loops.
+  
+  Note that the expressions in alternatives for an \code{if} expression and
+  the body of a loop are single expressions.  If evaluation of more than one 
+  expression is desired, they must be encosed in braces (\code{\{ ... \}}).
+
+  To avoid a syntax error during keyboard entry of expressions, an
+  \code{if...else...} construct that is not enclosed in another
+  syntactic unit must not have the \code{else} at the start of a line
+  --- this is a requirement so that the intepreter will not be waiting
+  for keyboard input when the user does not intend to enter the
+  optional \code{else} clause.  For pqR, this restriction is not
+  present for code read with \code{source}, or parsed from a file or a
+  character vector with the \code{parse} function, or run with
+  \code{Rscript}, or if the \code{--peek-for-else} option is used (which
+  may have undesired effects even for non-interactive sessions).
+  Note, however, that R Core implementations always give an error when an
+  unenclosed \code{else} is at the start of a line, even when reading
+  code with \code{source}, and in other contexts where this would cause
+  no problems.
 
   The \code{seq}, \code{vector}, \code{matrix}, or \code{array} in a 
   \code{for} loop is evaluated at the start of

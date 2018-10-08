@@ -29,6 +29,7 @@ Copyright @copyright{} 1997 R.@: Gentleman & R.@: Ihaka@*
 Copyright @copyright{} 1997, 1998 M.@: Maechler@*
 Copyright @copyright{} 1997-- R Core Development Team@*
 @Rcopyright{1999}
+Copyright @copyright{} 2018 Radford M. Neal
 @end macro
 @end ifnottex
 
@@ -41,6 +42,7 @@ Copyright @copyright{} 1997 R.@: Gentleman & R.@: Ihaka
 Copyright @copyright{} 1997, 1998 M.@: Maechler
 Copyright @copyright{} 1997-- R Core Development Team@*
 @Rcopyright{1999}
+Copyright @copyright{} 2018 Radford M. Neal
 @end macro
 @end iftex
 
@@ -68,7 +70,7 @@ This is an introduction to R.
 @titlepage
 @title An Introduction to R
 @subtitle Notes on @R{}: A Programming Environment for Data Analysis and Graphics
-@subtitle Version @value{VERSION}
+@subtitle Version @value{VERSION}, modified for pqR
 @author W. N. Venables, D. M. Smith
 @author and the R Development Core Team
 
@@ -6972,6 +6974,15 @@ Do not print out the initial copyright and welcome messages.
 Make @R{} run as quietly as possible.  This option is intended to
 support programs which use @R{} to compute results for them.  It implies
 @option{--quiet} and @option{--no-save}.
+
+@item --peek-for-else
+In the main interpreter loop that reads and evaluates expressions,
+peek ahead for an @code{else} after the expression following the
+condition in an @code{if} expression.  Without this option, an
+@code{else} in an unenclosed @code{if} expression must not start at
+the beginning of a line.  However, if peeking for an @code{else} is
+enabled, and the user did not intend to enter an @code{else} as part
+of an @code{if}, they may need to enter a line with just a semicolon.
 
 @item --interactive
 (UNIX only) Assert that @R{} really is being run interactively even if
