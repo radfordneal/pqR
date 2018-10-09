@@ -1,6 +1,7 @@
 % File src/library/base/man/ns-internal.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2009 R Core Team
+% Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{ns-internals}
@@ -8,6 +9,7 @@
 
 \alias{asNamespace}
 \alias{getNamespaceInfo}
+\alias{.getNamespaceInfo}
 \alias{importIntoEnv}
 \alias{isBaseNamespace}
 \alias{isNamespace}
@@ -26,9 +28,11 @@
 \alias{.mergeImportMethods}
 \alias{.knownS3Generics}
 \alias{loadingNamespaceInfo}
+\alias{.getNamespaceInfo}
 \usage{
 asNamespace(ns, base.OK = TRUE)
 getNamespaceInfo(ns, which)
+.getNamespaceInfo(ns, which)
 importIntoEnv(impenv, impnames, expenv, expnames)
 isBaseNamespace(ns)
 isNamespace(ns)
