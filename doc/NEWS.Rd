@@ -451,6 +451,10 @@
   \item From R-3.2.0: New \code{get0()} function, combining \code{exists()} and
         \code{get()} in one call, for efficiency.
 
+  \item From R-3.2.0: New function \code{.getNamespaceInfo()}, a
+        no-check version of \code{getNamespaceInfo()} mostly for
+        internal speedups.
+
   \item From R-3.3.0: New function \code{strrep()} for repeating the elements
         of a character vector.  The pqR version has a significantly faster
         implementation.
