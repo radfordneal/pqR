@@ -19,11 +19,11 @@ e1 ! e2
 \alias{!!}
 \arguments{
   \item{\dots}{one or more \R objects, to be converted to character vectors.}
-  \item{e1, e2}{two \R objects, to be converted to character vectors.}
   \item{sep}{a character string to separate the terms.  Not
     \code{\link{NA_character_}}.}
   \item{collapse}{an optional character string to separate the results.  Not
     \code{\link{NA_character_}}.}
+  \item{e1, e2}{two \R objects, to be converted to character vectors.}
 }
 \description{
   Concatenate vectors after converting to character.
