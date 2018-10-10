@@ -49,17 +49,25 @@ static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 
 #define N_AUTO 15  /* Size limit of arrays as auto vars rather than R_alloc */
 
-static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP pasteop (SEXP call, SEXP op, SEXP sep, SEXP collapse, 
+                     SEXP xpl, SEXP env);
+
+static SEXP do_paste (SEXP call, SEXP op, SEXP args, SEXP env)
+{ 
+    return pasteop (call, op, CAR(args), CADR(args), CDDR(args), env);
+}
+
+static SEXP pasteop (SEXP call, SEXP op, SEXP sep, SEXP collapse, 
+                     SEXP xpl, SEXP env)
 {
-    SEXP ans, collapse, sep;
     int i, j, k, maxlen, sepw, u_sepw, ienc;
     const char *s, *csep, *u_csep;
+    SEXP ans;
 
     const void *vmax0 = VMAXGET();
 
     /* Handle sep argument */
 
-    sep = CAR(args);
     if (!isString(sep) || LENGTH(sep) <= 0 || STRING_ELT(sep,0)==NA_STRING)
         error(_("invalid separator"));
     sep = STRING_ELT(sep, 0);
@@ -79,8 +87,6 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 
     /* Handle collapse argument */
 
-    collapse = CADR(args);
-
     if (!isNull(collapse))
         if(!isString(collapse) || LENGTH(collapse) <= 0 ||
            STRING_ELT(collapse, 0) == NA_STRING)
@@ -88,7 +94,6 @@ static SEXP do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 
     /* Look at remaining arguments. */
 
-    SEXP xpl = CDDR(args);
     int nx = length(xpl);
 
     if (nx == 0)
@@ -823,11 +828,7 @@ static SEXP do_formatinfo(SEXP call, SEXP op, SEXP args, SEXP env)
 
 SEXP do_paste_bang(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP args2 = CONS (R_BlankScalarString, CONS (R_NilValue, args));
-    PROTECT(args2);
-    SEXP res = do_paste (call, op, args2, env);
-    UNPROTECT(1);
-    return res;
+    return pasteop(call, op, R_BlankScalarString, R_NilValue, args, env);
 }
 
 
@@ -835,11 +836,7 @@ SEXP do_paste_bang(SEXP call, SEXP op, SEXP args, SEXP env)
 
 static SEXP do_paste_bangbang(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP args2 = CONS (R_ASCII_SCALAR_STRING(' '), CONS (R_NilValue, args));
-    PROTECT(args2);
-    SEXP res = do_paste (call, op, args2, env);
-    UNPROTECT(1);
-    return res;
+    return pasteop(call, op, R_ASCII_SCALAR_STRING(' '), R_NilValue, args, env);
 }
 
 
