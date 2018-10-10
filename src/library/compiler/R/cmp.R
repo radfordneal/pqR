@@ -1036,7 +1036,8 @@ cmpConstArg <- function(a, cb, cntxt) {
 checkCall <- function(def, call, signal = warning) {
     if (typeof(def) %in% c("builtin", "special"))
         def <- args(def)
-    if (typeof(def) != "closure" || any.dots(call))
+    if (typeof(def) != "closure" || any.dots(call)
+          || call[[1]] == "!")  # don't check !, as it's both unary and binary
         NA
     else {
         old <-options()$show.error.messages
@@ -1826,7 +1827,8 @@ cmpPrim1 <- function(e, cb, op, cntxt) {
     if (dots.or.missing(e[-1]))
         cmpBuiltin(e, cb, cntxt)
     else if (length(e) != 2) {
-        notifyWrongArgCount(e[[1]], cntxt)
+        if (e[[1]] != "!") # ! can be unary or binary
+            notifyWrongArgCount(e[[1]], cntxt)
         cmpBuiltin(e, cb, cntxt)
     }
     else {
