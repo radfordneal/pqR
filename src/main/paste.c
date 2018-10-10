@@ -831,6 +831,18 @@ SEXP do_paste_bang(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 
+/* Binary !! operator. */
+
+static SEXP do_paste_bangbang(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    SEXP args2 = CONS (R_ASCII_SCALAR_STRING(' '), CONS (R_NilValue, args));
+    PROTECT(args2);
+    SEXP res = do_paste (call, op, args2, env);
+    UNPROTECT(1);
+    return res;
+}
+
+
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
 
 attribute_hidden FUNTAB R_FunTab_paste[] =
@@ -838,6 +850,7 @@ attribute_hidden FUNTAB R_FunTab_paste[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {"paste",	do_paste,	0,   1000011,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"!!",		do_paste_bangbang, 0,   1,	2,	{PP_BINARY,  PREC_FN,	0}},
 {"file.path",	do_filepath,	0,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"format",	do_format,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
 {"format.info",	do_formatinfo,	0,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},

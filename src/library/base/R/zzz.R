@@ -1,6 +1,6 @@
 #  File src/library/base/R/zzz.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2013, 2015 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2013, 2015, 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -139,7 +139,7 @@ assign("switch", function(EXPR, ...) NULL, envir = .ArgsEnv)
 assign("tracemem", function(x) NULL, envir = .ArgsEnv)
 assign("unclass", function(x) NULL, envir = .ArgsEnv)
 assign("untracemem", function(x) NULL, envir = .ArgsEnv)
-
+assign("!!", function (e1, e2) NULL, envir = .ArgsEnv)
 
 .S3PrimitiveGenerics <-
   c("as.character", "as.complex", "as.double", "as.environment",
@@ -173,7 +173,7 @@ assign("untracemem", function(x) NULL, envir = .ArgsEnv)
         assign(f, fx, envir = env)
     }
 
-    ## ! is unary and handled below
+    ## ! is (sometimes) unary and handled below
     fx <- function(e1, e2) {}
     for(f in c("+", "-", "*", "/", "^", "%%", "%/%", "&", "|",
                "==", "!=", "<", "<=", ">=", ">")) {

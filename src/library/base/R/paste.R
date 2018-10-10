@@ -1,5 +1,6 @@
 #  File src/library/base/R/paste.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -18,9 +19,6 @@ paste <- function (..., sep = " ", collapse = NULL)
     .Internal(paste(sep,collapse,...))
 paste0 <- function(..., collapse = NULL)
     .Internal(paste("",collapse,...))
-
-`!!` <- function (e1, e2)
-    .Internal(paste(" ",NULL,e1,e2))
 
 
 ##=== Could we extend  paste(.) to (optionally) accept a
