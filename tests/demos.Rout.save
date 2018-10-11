@@ -122,8 +122,8 @@ List of 2
 +     "\n\t starting with 'is.' :\t  ",
 +     sum(grepl("^is\\.", ls.base[base.is.f])), "\n", sep = "")
 
-Number of base objects:		1271
-Number of functions in base:	1240
+Number of base objects:		1272
+Number of functions in base:	1241
 	 starting with 'is.' :	  50
 
 > ## 0.14  : 31
@@ -1515,5 +1515,5 @@ sm     3    3    3    3    4    4    4    4    2     2     2
 > par(op)
 > 
 > cat("Time elapsed: ", proc.time() - .ptime, "\n")
-Time elapsed:  1.161 0.04 0.73 0 0 
+Time elapsed:  1.183 0.024 0.737 0 0 
 > 
