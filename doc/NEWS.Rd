@@ -80,6 +80,13 @@
         checked.  Setting \code{R_MATPROD_TEST_BLAS} to TRUE will
         case the BLAS matrix multiplication routines to be tested
         as well as the C matprod functions.
+  \item Recommended packages that have been tweaked to work with pqR
+        (sometimes just to change the version of R depended on)
+        are now marked by having a version number ending in -909.
+        A source code repository recording the changes to these (and
+        other) packages may be found at 
+\preformatted{    https://github.com/radfordneal/R-package-mods
+}
   }}
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
@@ -387,12 +394,9 @@
         has been called.  This default may of course be changed using
         \code{icuSetCollate}.
   \item The version of the \code{boot} package included as a recommended
-        package is now 1.3-9, with slight tweaks for pqR, so version changed
-        to 1.3-9-1.
+        package is now 1.3-9 (named 1.3-9-909 since it is slightly tweaked).
   \item The version of the \code{digest} package included as a recommended
-        package is now 0.6.16, modified to fix a mis-aligned access issue
-        and with "Depends" changed to allow use by pqR, with the modified 
-        version called 0.6.16-1.
+        package is now 0.6.18 (named 0.6.18-909 since it is slightly tweaked).
   }}
 
   \subsection{NEW FEATURES FROM R CORE RELEASES}{
