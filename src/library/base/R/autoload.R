@@ -1,5 +1,6 @@
 #  File src/library/base/R/autoload.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -42,7 +43,7 @@ autoloader <- function (name, package, ...)
     ## reset the autoloader
     autoload(name, package, reset = TRUE, ...)
     ## reevaluate the object
-    where <- match(paste("package", package, sep = ":"), search())
+    where <- match ("package:" ! package, search())
     if (exists(name, where = where, inherits = FALSE))
 	eval(as.name(name), as.environment(where))
     else

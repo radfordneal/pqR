@@ -1,6 +1,6 @@
 #  File src/library/base/R/merge.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2016 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2016, 2018 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -67,9 +67,9 @@ merge.data.frame <-
         nm.y <- names(y)
         has.common.nms <- any(cnm <- nm.x %in% nm.y)
         if(has.common.nms) {
-            names(x)[cnm] <- paste0(nm.x[cnm], suffixes[1L])
+            names(x)[cnm] <- nm.x[cnm] ! suffixes[1L]
             cnm <- nm.y %in% nm
-            names(y)[cnm] <- paste0(nm.y[cnm], suffixes[2L])
+            names(y)[cnm] <- nm.y[cnm] ! suffixes[2L]
         }
         if (nx == 0L || ny == 0L) {
             res <- cbind(x[FALSE, ], y[FALSE, ])
@@ -99,7 +99,7 @@ merge.data.frame <-
             ## Do these together for consistency in as.character.
             ## Use same set of names.
             bx <- x[, by.x, drop=FALSE]; by <- y[, by.y, drop=FALSE]
-            names(bx) <- names(by) <- paste0("V", seq_len(ncol(bx)))
+            names(bx) <- names(by) <- "V" ! seq_len(ncol(bx))
             bz <- do.call("paste", c(rbind(bx, by), sep = "\r"))
             bx <- bz[seq_len(nx)]
             by <- bz[nx + seq_len(ny)]
@@ -123,7 +123,7 @@ merge.data.frame <-
         ## x = [ by | x ] :
         has.common.nms <- any(cnm <- nm.x %in% nm.y)
         if(has.common.nms && nzchar(suffixes[1L]))
-            nm.x[cnm] <- paste0(nm.x[cnm], suffixes[1L])
+            nm.x[cnm] <- nm.x[cnm] ! suffixes[1L]
         x <- x[c(m$xi, if(all.x) m$x.alone),
                c(by.x, seq_len(ncx)[-by.x]), drop=FALSE]
         names(x) <- c(nm.by, nm.x)
@@ -141,7 +141,7 @@ merge.data.frame <-
         ## y (w/o 'by'):
         if(has.common.nms && nzchar(suffixes[2L])) {
             cnm <- nm.y %in% nm
-            nm.y[cnm] <- paste0(nm.y[cnm], suffixes[2L])
+            nm.y[cnm] <- nm.y[cnm] ! suffixes[2L]
         }
         y <- y[c(m$yi, if(all.x) rep.int(1L, nxx), if(all.y) m$y.alone),
                -by.y, drop = FALSE]

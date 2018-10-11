@@ -625,11 +625,8 @@ function(package, dir, lib.loc = NULL,
                    SIMPLIFY = FALSE)
         ## Replacement functions.
         if(length(replace_exprs)) {
-            replace_funs <-
-                paste(sapply(replace_exprs,
-                             function(e) as.character(e[[2L]][[1L]])),
-                      "<-",
-                      sep = "")
+            replace_funs <- sapply (replace_exprs, 
+                              function(e) as.character(e[[2L]][[1L]])) ! "<-"
             replace_funs <- .transform_S3_method_markup(replace_funs)
             functions <- c(functions, replace_funs)
             ind <- (replace_funs %in% functions_in_code)
@@ -1370,11 +1367,8 @@ function(package, dir, lib.loc = NULL)
 	} 
         ## Replacement functions.
         if(length(replace_exprs)) {
-            replace_funs <-
-                paste(sapply(replace_exprs,
-                             function(e) as.character(e[[2L]][[1L]])),
-                      "<-",
-                      sep = "")
+            replace_funs <- sapply (replace_exprs,
+                              function(e) as.character(e[[2L]][[1L]])) ! "<-"
             functions <- c(functions, replace_funs)
             arg_names_in_usage <-
                 c(arg_names_in_usage,
@@ -1664,7 +1658,7 @@ function(package, dir, lib.loc = NULL)
         ## for internal generics and group generics.)
         ## Matching via grep() is tricky with e.g. a '$' in the name of
         ## the generic function ... hence substr().
-        name <- paste0(g, ".")
+        name <- g ! "."
         methods <-
             functions_in_code[substr(functions_in_code, 1L,
                                      nchar(name, type="c")) == name]
@@ -1733,11 +1727,8 @@ function(package, dir, lib.loc = NULL)
         ind <- as.logical(sapply(exprs,
                                  .is_call_from_replacement_function_usage))
         if(any(ind)) {
-            replace_funs <-
-                paste(sapply(exprs[ind],
-                             function(e) as.character(e[[2L]][[1L]])),
-                      "<-",
-                      sep = "")
+            replace_funs <- sapply(exprs[ind],
+                              function(e) as.character(e[[2L]][[1L]])) ! "<-"
             functions <- c(functions, replace_funs)
         }
 
@@ -1968,13 +1959,8 @@ function(x, ...)
 {
     if(!length(x)) return(character())
 
-    .fmt <- function(i) {
-        paste(deparse(x[[i]][[1L]]),
-              "(",
-              deparse(x[[i]][[2L]]),
-              ", ...)",
-              sep = "")
-    }
+    .fmt <- function(i) 
+              deparse(x[[i]][[1L]]) ! "(" ! deparse(x[[i]][[2L]]) ! ", ...)"
 
     c(gettextf("Foreign function calls without 'PACKAGE' argument:"),
       ## <FIXME>
@@ -2191,7 +2177,7 @@ function(package, dir, lib.loc = NULL)
         ## needed for internal generics and group generics.)
         ## Matching via grep() is tricky with e.g. a '$' in the name
         ## of the generic function ... hence substr().
-        name <- paste0(g, ".")
+        name <- g ! "."
         methods <-
             functions_in_code[substr(functions_in_code, 1L,
                                      nchar(name, type="c")) == name]
@@ -2221,9 +2207,9 @@ function(x, ...)
         paste0("function(", paste(s, collapse = ", "), ")")
 
     .fmt <- function(entry) {
-        c(paste0(names(entry)[1L], ":"),
+        c(names(entry)[1L] ! ":",
           strwrap(format_args(entry[[1L]]), indent = 2L, exdent = 11L),
-          paste0(names(entry)[2L], ":"),
+          names(entry)[2L] ! ":",
           strwrap(format_args(entry[[2L]]), indent = 2L, exdent = 11L),
           "")
     }
@@ -2930,20 +2916,20 @@ function(x, ...)
         writeLines(gettext("Malformed Depends or Suggests or Imports or Enhances field."))
         if(length(bad$bad_dep_entry)) {
             tmp <- c(gettext("Offending entries:"),
-                     paste(" ", bad$bad_dep_entry),
+                     " " !! bad$bad_dep_entry,
                      strwrap(gettextf("Entries must be names of packages optionally followed by '<=' or '>=', white space, and a valid version number in parentheses.")))
             writeLines(tmp)
         }
         if(length(bad$bad_dep_op)) {
             tmp <- c(gettext("Entries with infeasible comparison operator:"),
-                     paste(" ", bad$bad_dep_entry),
+                     " " !! bad$bad_dep_entry,
                      strwrap(gettextf("Only operators '<=' and '>=' are possible.")))
 
             writeLines(tmp)
         }
         if(length(bad$bad_dep_version)) {
             tmp <- c(gettext("Entries with infeasible version number:"),
-                     paste(" ", bad$bad_dep_version),
+                     " " !! bad$bad_dep_version,
                      strwrap(gettextf("Version numbers must be sequences of at least two non-negative integers, separated by single '.' or '-'.")))
             writeLines(tmp)
         }
@@ -3005,12 +2991,12 @@ function(x)
     any <- FALSE
     if(length(bad <- x[["bad_authors_at_R_field"]])) {
         writeLines(c(gettext("Malformed Authors@R field:"),
-                     paste(" ", bad)))
+                     " " !! bad))
         any <- TRUE
     }
     if(length(bad <- x[["bad_authors_at_R_field_for_author"]])) {
         writeLines(c(gettext("Cannot extract Author field from Authors@R field:"),
-                     paste(" ", bad)))
+                     " "!! bad))
         any <- TRUE
     }
     if(length(x[["bad_authors_at_R_field_has_no_author"]])) {
@@ -3019,7 +3005,7 @@ function(x)
     }
     if(length(bad <- x[["bad_authors_at_R_field_for_maintainer"]])) {
         writeLines(c(gettext("Cannot extract Maintainer field from Authors@R field:"),
-                     paste(" ", bad)))
+                     " " !! bad))
         any <- TRUE
     }
     if(length(x[["bad_authors_at_R_field_has_no_maintainer"]])) {
@@ -3316,7 +3302,7 @@ function(package, lib.loc = NULL)
             assign("readClipboard", function(format = 1, raw = FALSE) {},
                    envir = compat)
             assign("setWindowTitle",
-                   function(suffix, title = paste(getIdentification(), suffix)) {},
+                   function(suffix, title = getIdentification() !! suffix) {},
                    envir = compat)
             assign("shell",
                    function(cmd, shell, flag = "/c", intern = FALSE,
@@ -3388,7 +3374,6 @@ function(package, lib.loc = NULL)
         attach(compat, name="compat", pos = length(search()),
                warn.conflicts = FALSE)
     }
-
     ## A simple function for catching the output from the codetools
     ## analysis using the checkUsage report mechanism.
     out <- character()
@@ -3411,7 +3396,7 @@ function(package, lib.loc = NULL)
 	    }
     }
     checkMethodUsagePackage <- function (pack, ...) {
-	pname <- paste("package", pack, sep = ":")
+	pname <- "package:" ! pack
 	if (!pname %in% search())
 	    stop("package must be loaded")
 	checkMethodUsageEnv(if (pack %in% loadedNamespaces())
@@ -3433,6 +3418,7 @@ function(package, lib.loc = NULL)
                    config_val_to_logical)
     }
     ## look for globalVariables declaration in package
+
     .glbs <- utils::globalVariables(,package)
     if(length(.glbs))
         ## codetools doesn't allow adding to its default
@@ -3440,6 +3426,7 @@ function(package, lib.loc = NULL)
             c(codetools:::dfltSuppressUndefined, .glbs)
 
     args <- c(list(package, report = foo), args)
+
     suppressMessages(do.call(codetools::checkUsagePackage, args))
     suppressMessages(do.call(checkMethodUsagePackage, args))
 
@@ -3530,7 +3517,7 @@ function(package, dir, lib.loc = NULL)
     db <- cbind(db, bad = FALSE, report = db[, 1L])
     have_anchor <- nzchar(anchor <- db[, 2L])
     db[have_anchor, "report"] <-
-        paste0("[", db[have_anchor, 2L], "]{", db[have_anchor, 1L], "}")
+        "[" ! db[have_anchor, 2L] ! "]{" ! db[have_anchor, 1L] ! "}"
 
     ## Check the targets from the non-anchored xrefs.
     db[!have_anchor, "bad"] <- !( db[!have_anchor, 1L] %in% unlist(aliases))
@@ -3721,7 +3708,7 @@ format.check_package_datasets <-
 function(x, ...)
 {
     ## not sQuote as we have mucked about with locales.
-    iconv0 <- function(x, ...) paste0("'", iconv(x, ...), "'")
+    iconv0 <- function(x, ...) "'" ! iconv(x, ...) ! "'"
 
     c(character(),
       if(n <- x$latin1) {
@@ -3802,7 +3789,7 @@ print.check_package_compact_datasets <-
 function(x, ...)
 {
     reformat <- function(x) {
-        xx <- paste0(x, "b")
+        xx <- x ! "b"
         ind1 <- (x >= 1024)
         xx[ind1] <- sprintf("%.0fKb", x[ind1]/1024)
         ind2 <- x >= 1024^2
@@ -4129,15 +4116,15 @@ function(x, ...)
             msg <- gsub("\n", "\n  ", sub("[^:]*: *", "", xi$Error),
 			perl = TRUE, useBytes = TRUE)
             writeLines(c(sprintf("Error in file '%s':", xi$File),
-                         paste(" ", msg)))
+                         " " !! msg))
         }
         if(len <- length(xi$Warnings))
             writeLines(c(sprintf(ngettext(len,
                                           "Warning in file '%s':",
                                           "Warnings in file '%s':"),
                                  xi$File),
-                         paste(" ", gsub("\n\n", "\n  ", xi$Warnings,
-					 perl = TRUE, useBytes = TRUE))))
+                         " " !! gsub("\n\n", "\n  ", xi$Warnings,
+			             perl = TRUE, useBytes = TRUE)))
     }
     invisible(x)
 }
@@ -5048,7 +5035,7 @@ function(x, ...)
                           "Found possibly global 'T' or 'F' in the following Rd example files:"
                           )
           c(strwrap(msg),
-            paste(" ", x$bad_examples))
+            " " !! x$bad_examples)
       })
 }
 
@@ -5194,7 +5181,7 @@ function(cfile)
         entries <-
             ifelse(nchar(entries) < 20L,
                    entries,
-                   paste(substring(entries, 1L, 20L), "[TRUNCATED]"))
+                   substring(entries, 1L, 20L) !! "[TRUNCATED]")
         writeLines(sprintf("entry %d: invalid type %s",
                            pos, sQuote(entries)))
     }
@@ -5704,7 +5691,7 @@ function(txt, re)
                        substring(txt, 1L, ipos - 1L), str)
         txt <- substring(txt, epos + 1L)
     }
-    paste0(out, txt)
+    out ! txt
 }
 
 ### ** .functions_to_be_ignored_from_usage
@@ -5757,7 +5744,7 @@ function(env, verbose = getOption("verbose"))
 		       tryCatch(methods::hasMethods(g, where = env),
 				error = identity))
 	if(any(hasErr <- sapply(hasM, inherits, what = "error"))) {
-            dq <- function(ch) paste('"', ch ,'"', sep='')
+            dq <- function(ch) '"' ! ch ! '"'
             rErr <- r[hasErr]
             pkgs <- r@package[hasErr]
             ## FIXME: This warning should not happen here when called
@@ -5929,7 +5916,7 @@ function(x)
 .package_env <-
 function(package_name)
 {
-    as.environment(paste("package", package_name, sep = ":"))
+    as.environment ("package:" ! package_name)
 }
 
 ### ** .parse_text_as_much_as_possible

@@ -162,7 +162,7 @@ as.data.frame.list <-
     m <- match(c("row.names", "check.rows", "check.names", "stringsAsFactors"),
                cn, 0L)
     if(any(m)) {
-        cn[m] <- paste0("..adfl.", cn[m])
+        cn[m] <- "..adfl." ! cn[m]
         names(x) <- cn
     }
     x <- eval(as.call(c(expression(data.frame), x, check.names = !optional,
@@ -256,11 +256,11 @@ as.data.frame.matrix <- function(x, row.names = NULL, optional = FALSE, ...,
     collabs <- dn[[2L]]
     if (length(collabs) == ncols) {
         if (! all (nz <- nzchar(collabs)))
-            collabs[!nz] <- paste0("V", seq_len(ncols)[!nz])
+            collabs[!nz] <- "V" ! seq_len(ncols)[!nz]
         names(value) <- collabs
     }
     else if (!optional)
-	names(value) <- paste0("V", seq_len(ncols))
+	names(value) <- "V" ! seq_len(ncols)
 
     attr(value, "row.names") <- row.names
     class(value) <- "data.frame"
@@ -800,8 +800,7 @@ data.frame <-
 	else {
 	    jseq <- j
 	    if(max(jseq) > nvars) {
-		new.cols <- paste("V", seq.int(from = nvars + 1L, to = max(jseq)),
-                                  sep = "")
+		new.cols <- "V" ! seq.int(from = nvars + 1L, to = max(jseq))
 		if(length(new.cols)  != sum(jseq > nvars))
 		    stop("new columns would leave holes after existing columns")
                 ## try to use the names of a list `value'
@@ -970,7 +969,7 @@ data.frame <-
         ## added in 1.8.0 -- make sure there is a name
         if(length(x) > nc) {
             nc <- length(x)
-            if(names(x)[nc] == "") names(x)[nc] <- paste0("V", nc)
+            if(names(x)[nc] == "") names(x)[nc] <- "V" ! nc
             names(x) <- make.unique(names(x))
         }
 	class(x) <- cl
