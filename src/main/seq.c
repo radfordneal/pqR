@@ -573,7 +573,7 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	    SET_STRING_ELT(tmp, 0, R_factor_CHARSXP);
         }
 	setAttrib(a, R_ClassSymbol, tmp);
-	UNPROTECT(1 + (ncopy!=(helpers_var_ptr)0));
+	UNPROTECT(1);
 	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
     }
 
