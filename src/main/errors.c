@@ -1899,13 +1899,17 @@ R_GetSrcFilename(SEXP srcref)
 void attribute_hidden check_stack_balance (SEXP op, int save)
 {
     /* NEEDED: A fixup is needed in browser, because it can trap errors,
-       and currently does not reset the limit to the right value. */
+       and currently does not reset the limit to the right value. 
+
+       - Is this still true? Not clear how it can happen... */
 
     if (save == R_PPStackTop) 
         return;
 
-    REprintf ("Warning: stack imbalance in '%s', %d then %d\n",
+    REprintf ("ERROR: stack imbalance in '%s', %d then %d - aborting\n",
 	       PRIMNAME(op), save, R_PPStackTop);
+
+    abort();
 }
 
 
