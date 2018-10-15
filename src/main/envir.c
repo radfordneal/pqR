@@ -817,7 +817,8 @@ SEXP attribute_hidden Rf_find_binding_in_frame (SEXP rho, SEXP symbol,
              return loc;
     }
 
-    if (IS_BASE(rho) || OBJECT(rho)) { /* user databases have OBJECT set */
+    if (IS_BASE(rho) || OBJECT(rho)) { /* user databases have OBJECT set, so
+                                          this gives quick combined test */
         if (IS_USER_DATABASE(rho)) {
             R_ObjectTable *table = (R_ObjectTable *)
                                       R_ExternalPtrAddr(HASHTAB(rho));
@@ -842,7 +843,7 @@ SEXP attribute_hidden Rf_find_binding_in_frame (SEXP rho, SEXP symbol,
               "'find_binding_in_frame' cannot be used on the base environment");
     }
 
-    else if (FRAME(rho) != R_NilValue) {
+    if (FRAME(rho) != R_NilValue) {
 
         loc = FRAME(rho);
         SEARCH_LOOP (rho, loc, symbol, goto found);
