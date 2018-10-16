@@ -1786,7 +1786,7 @@ static SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
                     }
                 } while (global && (st = fgrep_one_bytes(spat, spatlen, s, slen,
                                            useBytes,use_UTF8)) >= 0);
-                strcpy (t, s);
+                do { STORE_CHAR (*s, t); } while (*s++ != 0);
                 if (useBytes)
                     elt = mkChar (cbuff.data);
                 else if (use_UTF8)
