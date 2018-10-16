@@ -3,7 +3,7 @@
  *  Copyright (C) 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2006-10  The R Development Core Team
+ *  Copyright (C) 2006-2018  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, a copy is available at
- *  http://www.r-project.org/Licenses/
+ *  https://www.R-project.org/Licenses/
  */
 
 /* This is intended to be used in scripts like
@@ -42,7 +42,7 @@ R --slave --peek-for-else --no-restore --vanilla --file=foo [script_args]
 # include <config.h>
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <psignal.h>
 /* on some systems needs to be included before <sys/types.h> */
 #endif
@@ -73,8 +73,13 @@ R --slave --peek-for-else --no-restore --vanilla --file=foo [script_args]
 # endif
 #endif
 
-#ifndef WIN32
+#ifndef _WIN32
+#ifndef R_ARCH /* R_ARCH should be always defined, but for safety ... */
+#define R_ARCH ""
+#endif
+
 static char rhome[] = R_HOME;
+static char rarch[] = R_ARCH;
 #else
 # ifndef BINDIR
 #  define BINDIR "bin"
@@ -89,7 +94,7 @@ static int verbose = 0;
 
 void usage(void)
 {
-    fprintf(stderr, "Usage: /path/to/Rscript [--options] [-e expr] file [args]\n\n");
+    fprintf(stderr, "Usage: /path/to/Rscript [--options] [-e expr [-e expr2 ...] | file] [args]\n\n");
     fprintf(stderr, "--options accepted are\n");
     fprintf(stderr, "  --help              Print usage and exit\n");
     fprintf(stderr, "  --version           Print version and exit\n");
@@ -97,7 +102,7 @@ void usage(void)
     fprintf(stderr, "  --default-packages=list\n");
     fprintf(stderr, "                      Where 'list' is a comma-separated set\n");
     fprintf(stderr, "                        of package names, or 'NULL'\n");
-    fprintf(stderr, "or options to R, in addition to --slave --peek-for-else, --no-restore, such as\n");
+    fprintf(stderr, "or options to R, in addition to --slave --peek-for-else --no-restore, such as\n");
     fprintf(stderr, "  --save              Do save workspace at the end of the session\n");
     fprintf(stderr, "  --no-environ        Don't read the site and user environment files\n");
     fprintf(stderr, "  --no-site-file      Don't read the site-wide Rprofile\n");
@@ -106,20 +111,89 @@ void usage(void)
     fprintf(stderr, "  --vanilla           Combine --no-save, --no-restore, --no-site-file\n");
     fprintf(stderr, "                        --no-init-file and --no-environ\n");
     fprintf(stderr, "\n'file' may contain spaces but not shell metacharacters\n");
+    fprintf(stderr, "Expressions (one or more '-e <expr>') may be used *instead* of 'file'\n");
+    fprintf(stderr, "See also  ?Rscript  from within R\n");
 }
 
 
-int main(int argc, char *argv[])
+int main(int argc_, char *argv_[])
 {
 #ifdef HAVE_EXECV
     char cmd[PATH_MAX+1], buf[PATH_MAX+8], buf2[1100], *p;
     int i, i0 = 0, ac = 0, res = 0, e_mode = 0, set_dp = 0;
     char **av;
+    int have_cmdarg_default_packages = 0;
 
-    if(argc <= 1) {
+    if(argc_ <= 1) {
 	usage();
 	exit(1);
     }
+
+    /* When executed via '#!' on most systems, argv_[1] will include multiple
+       arguments. These arguments will be those provided directly on the line
+       starting with '#!'.
+
+       argv_[1] is split here into individual arguments assuming any space or
+       tab is a separator - no quoting is supported
+
+       This code is, however, also used with explicit invocation of Rscript
+       where arguments are not joined and the first argument may be a file
+       name, which is explicitly allowed to contain space. Thus, only split the
+       first argument if it starts with "--"  (a file name for Rscript cannot
+       start with "--"; it can start with "-", but the only short option is "-e"
+       and that is not usable with '#!' invocation).
+    */
+
+    /* compute number of arguments included in argv_[1] */
+    char *s = argv_[1];
+    int njoined = 0;
+    size_t j;
+    if (strncmp(s, "--", 2) == 0)
+	for(j = 0; s[j] != 0; j++)
+	    if (s[j] != ' ' && s[j] != '\t' &&
+		    (j == 0 || s[j-1] == ' ' || s[j-1] == '\t'))
+		/* first character of an argument */
+		njoined++;
+
+    int argc;
+    char **argv;
+
+    if (njoined > 1) { /* need to split argv_[1] */
+	argc = argc_ - 1 + njoined;
+	argv = (char **) malloc((size_t) (argc+1)*sizeof(char *));
+	if (!argv) {
+	    fprintf(stderr, "malloc failure\n");
+	    exit(1);
+	}
+	argv[0] = argv_[0];
+
+	size_t len = strlen(s);
+	char *buf = (char *)malloc((size_t) (len+1)*sizeof(char *));
+	if (!buf) {
+	    fprintf(stderr, "malloc failure\n");
+	    exit(1);
+	}
+	strcpy(buf, s);
+
+	i = 1;
+	for(j = 0; s[j] != 0; j++)
+	    if (s[j] == ' ' || s[j] == '\t')
+		/* turn space into end-of-string */
+		buf[j] = 0;
+	    else if (j == 0 || s[j-1] == ' ' || s[j-1] == '\t')
+		/* first character of an argument */
+		argv[i++] = buf + j;
+	/* assert i - 1 == njoined */
+
+	for(i = 2; i < argc_; i++)
+	    argv[i-1+njoined] = argv_[i];
+	argv[argc] = 0;
+
+    } else {
+	argc = argc_;
+	argv = argv_;
+    }
+
     av = (char **) malloc((size_t) (argc+5)*sizeof(char *));
     if(!av) {
 	fprintf(stderr, "malloc failure\n");
@@ -127,7 +201,7 @@ int main(int argc, char *argv[])
     }
 
     p = getenv("RHOME");
-#ifdef WIN32
+#ifdef _WIN32
     if(p && *p)
 	snprintf(cmd, PATH_MAX+1, "%s\\%s\\Rterm.exe",  p, BINDIR);
     else {
@@ -145,7 +219,7 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "impossibly long path for RHOME\n");
 	exit(1);
     }
-    sprintf(cmd, "%s/bin/R", p);
+    snprintf(cmd, PATH_MAX+1, "%s/bin/R", p);
 #endif
     av[ac++] = cmd;
     av[ac++] = "--slave";
@@ -158,13 +232,8 @@ int main(int argc, char *argv[])
 	    exit(0);
 	}
 	if(strcmp(argv[1], "--version") == 0) {
-	    if(strlen(R_STATUS) == 0)
-		fprintf(stderr, "R scripting front-end version %s.%s (%s-%s-%s)\n", 
-			R_MAJOR, R_MINOR, R_YEAR, R_MONTH, R_DAY);
-	    else 
-		fprintf(stderr, "R scripting front-end version %s.%s %s (%s-%s-%s r%s)\n", 
-			R_MAJOR, R_MINOR, R_STATUS, R_YEAR, R_MONTH, R_DAY,
-			R_SVN_REVISION);
+	    fprintf(stderr, "R scripting front-end version %s.%s (%s-%s-%s)\n",
+		    R_MAJOR, R_MINOR, R_YEAR, R_MONTH, R_DAY);
 	    exit(0);
 	}
     }
@@ -194,7 +263,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "unable to set R_DEFAULT_PACKAGES\n");
 		exit(1);
 	    }
-	    sprintf(buf2, "R_DEFAULT_PACKAGES=%s", argv[i]+19);
+	    snprintf(buf2, 1100, "R_DEFAULT_PACKAGES=%s", argv[i]+19);
 	    if(verbose)
 		fprintf(stderr, "setting '%s'\n", buf2);
 #ifdef HAVE_PUTENV
@@ -204,6 +273,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "unable to set R_DEFAULT_PACKAGES\n");
 		exit(1);
 	    }
+	    else have_cmdarg_default_packages = 1;
 	    i0 = i;
 	    continue;
 	}
@@ -212,30 +282,64 @@ int main(int argc, char *argv[])
     }
 
     if(!e_mode) {
-      if(++i0 >= argc) {
-        fprintf(stderr, "file name is missing\n");
-        exit(1);
-      }
-      if(strlen(argv[i0]) > PATH_MAX) {
+	if(++i0 >= argc) {
+	    fprintf(stderr, "file name is missing\n");
+	    exit(1);
+	}
+	if(strlen(argv[i0]) > PATH_MAX) {
 	    fprintf(stderr, "file name is too long\n");
 	    exit(1);
 	}
-	sprintf(buf, "--file=%s", argv[i0]);
+	snprintf(buf, PATH_MAX+8, "--file=%s", argv[i0]);
 	av[ac++] = buf;
     }
-    av[ac++] = "--args";
-    for(i = i0+1; i < argc; i++) av[ac++] = argv[i];
+    // copy any user arguments, preceded by "--args"
+    i = i0+1;
+    if (i < argc) {
+	av[ac++] = "--args";
+	for(; i < argc; i++)
+	    av[ac++] = argv[i];
+    }
     av[ac] = (char *) NULL;
 #ifdef HAVE_PUTENV
-    if(!set_dp && !getenv("R_DEFAULT_PACKAGES"))
+    /* If provided, and default packages are not specified on the
+       command line, then R_SCRIPT_DEFAULT_PACKAGES takes precedence
+       over R_DEFAULT_PACKAGES. */
+    if (! have_cmdarg_default_packages) {
+	char *rdpvar = "R_DEFAULT_PACKAGES";
+	char *rsdp = getenv("R_SCRIPT_DEFAULT_PACKAGES");
+	if (rsdp && strlen(rdpvar) + strlen(rsdp) + 1 < sizeof(buf2)) {
+	    snprintf(buf2, sizeof(buf2), "%s=%s", rdpvar, rsdp);
+	    putenv(buf2);
+	}
+    }
+
+    p = getenv("R_SCRIPT_LEGACY");
+    int legacy = (p && (strcmp(p, "yes") == 0)) ? 1 : 0;
+    //int legacy = (p && (strcmp(p, "no") == 0)) ? 0 : 1;
+    if(legacy && !set_dp && !getenv("R_DEFAULT_PACKAGES"))
 	putenv("R_DEFAULT_PACKAGES=datasets,utils,grDevices,graphics,stats");
+
+#ifndef _WIN32
+    /* pass on r_arch from this binary to R as a default */
+    if (!getenv("R_ARCH") && *rarch) {
+	/* we have to prefix / so we may as well use putenv */
+	if (strlen(rarch) + 9 > sizeof(buf2)) {
+	    fprintf(stderr, "impossibly long string for R_ARCH\n");
+	    exit(1);
+	}
+	strcpy(buf2, "R_ARCH=/");
+	strcat(buf2, rarch);
+	putenv(buf2);
+    }
+#endif
 #endif
     if(verbose) {
 	fprintf(stderr, "running\n  '%s", cmd);
-	for(i = 1; i < ac-1; i++) fprintf(stderr, " %s", av[i]);
+	for(i = 1; i < ac; i++) fprintf(stderr, " %s", av[i]);
 	fprintf(stderr, "'\n\n");
     }
-#ifndef WIN32
+#ifndef _WIN32
     res = execv(cmd, av); /* will not return if R is launched */
     perror("Rscript execution error");
 #else
