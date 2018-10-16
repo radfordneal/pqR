@@ -19,14 +19,14 @@ dist <- function(x, method="euclidean", diag=FALSE, upper=FALSE, p=2)
 {
     METHODS <- c("euclidean", "maximum",
              "manhattan", "canberra", "binary", "minkowski")
-    method <- pmatch(method, METHODS)
-    if (is.na(method)) {
+    meth <- pmatch(method, METHODS)
+    if (is.na(meth)) {
         if (!is.na(pmatch(method,"euclidian")))  # possible misspelling
-            method <- 1L
+            meth <- 1L
         else
             stop("invalid distance method")
     }
-    if (method == -1)
+    if (meth == -1)
         stop("ambiguous distance method")
 
     x <- as.matrix(x)
@@ -34,12 +34,12 @@ dist <- function(x, method="euclidean", diag=FALSE, upper=FALSE, p=2)
         storage.mode(x) <- "double"
 
     attrs <- list (Size = nrow(x), Labels =  dimnames(x)[[1L]], Diag = diag,
-                   Upper = upper, method = METHODS[method],
+                   Upper = upper, method = METHODS[meth],
                    call = match.call(), class = "dist")
-    if (method == 6L)
+    if (meth == 6L)
         attrs$p <- p
 
-    .Call(C_Cdist, x, method, attrs, p)
+    .Call(C_Cdist, x, meth, attrs, p)
 }
 
 format.dist <- function(x, ...) format(as.vector(x), ...)

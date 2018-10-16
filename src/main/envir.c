@@ -817,7 +817,8 @@ SEXP attribute_hidden Rf_find_binding_in_frame (SEXP rho, SEXP symbol,
              return loc;
     }
 
-    if (IS_BASE(rho) || OBJECT(rho)) { /* user databases have OBJECT set */
+    if (IS_BASE(rho) || OBJECT(rho)) { /* user databases have OBJECT set, so
+                                          this gives quick combined test */
         if (IS_USER_DATABASE(rho)) {
             R_ObjectTable *table = (R_ObjectTable *)
                                       R_ExternalPtrAddr(HASHTAB(rho));
@@ -842,7 +843,7 @@ SEXP attribute_hidden Rf_find_binding_in_frame (SEXP rho, SEXP symbol,
               "'find_binding_in_frame' cannot be used on the base environment");
     }
 
-    else if (FRAME(rho) != R_NilValue) {
+    if (FRAME(rho) != R_NilValue) {
 
         loc = FRAME(rho);
         SEARCH_LOOP (rho, loc, symbol, goto found);
@@ -1525,8 +1526,6 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     int hashcode;
     SEXP loc;
 
-    PROTECT3(symbol,value,rho);
-
     R_binding_cell = R_NilValue;
 
     if (SEXP32_FROM_SEXP(rho) == LASTSYMENV(symbol)) {
@@ -1535,37 +1534,42 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
             goto found;
     }
 
-    if (IS_USER_DATABASE(rho)) {
-        /* FIXME: This does not behave as described - DESCRIBED WHERE? HOW? */
-        WAIT_UNTIL_COMPUTED(value);
-        R_ObjectTable *table;
-        table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(rho));
-        if (table->assign == NULL) /* maybe should just return FALSE? */
-            error(_("cannot assign variables to this database"));
-        table->assign (CHAR(PRINTNAME(symbol)), value, table);
-        if (incdec&2) 
-            INC_NAMEDCNT(value);
-        /* don't try to do decrement on old value (getting it might be slow) */
+    PROTECT3(symbol,value,rho);
 
-        if (IS_GLOBAL_FRAME(rho)) R_FlushGlobalCache(symbol);
-
-        if (rho == R_GlobalEnv) 
-            R_DirtyImage = 1;
-        UNPROTECT(3);
-        return TRUE; /* unclear whether assign always succeeds, but assume so */
-    }
-
-    if (IS_BASE(rho)) {
-        if (!create && SYMVALUE(symbol) == R_UnboundValue) {
+    if (IS_BASE(rho) || OBJECT(rho)) { /* user databases have OBJECT set, so
+                                          this gives quick combined test */
+        if (IS_USER_DATABASE(rho)) {
+            /* FIXME: This does not behave as described - WHERE? HOW? */
+            WAIT_UNTIL_COMPUTED(value);
+            R_ObjectTable *table;
+            table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(rho));
+            if (table->assign == NULL) /* maybe should just return FALSE? */
+                error(_("cannot assign variables to this database"));
+            table->assign (CHAR(PRINTNAME(symbol)), value, table);
+            if (incdec&2) 
+                INC_NAMEDCNT(value);
+            /* don't try to decrement on old value: getting it might be slow. */
+    
+            if (IS_GLOBAL_FRAME(rho)) R_FlushGlobalCache(symbol);
+    
+            if (rho == R_GlobalEnv) 
+                R_DirtyImage = 1;
             UNPROTECT(3);
-            return FALSE;
+            return TRUE; /* unclear whether assign always succeeds, assume so */
         }
-        gsetVar(symbol,value,rho);
-        if (incdec&2) 
-            INC_NAMEDCNT(value);  
-        /* don't bother with decrement on the old value (not time-critical) */
-        UNPROTECT(3);
-        return TRUE;      /* should have either succeeded, or raised an error */
+    
+        if (IS_BASE(rho)) {
+            if (!create && SYMVALUE(symbol) == R_UnboundValue) {
+                UNPROTECT(3);
+                return FALSE;
+            }
+            gsetVar(symbol,value,rho);
+            if (incdec&2) 
+                INC_NAMEDCNT(value);  
+            /* don't bother with decrement on the old value: not time-critical*/
+            UNPROTECT(3);
+            return TRUE;  /* should have either succeeded, or raised an error */
+        }
     }
 
     if (FRAME(rho) != R_NilValue) {
@@ -1577,7 +1581,7 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     else if (HASHTAB(rho) != R_NilValue) {
         hashcode = SYM_HASH(symbol) % HASHLEN(rho);
         loc = VECTOR_ELT(HASHTAB(rho), hashcode);
-        SEARCH_LOOP (rho, loc, symbol, goto found);
+        SEARCH_LOOP (rho, loc, symbol, goto found_unprotect);
     }
 
     if (create) { /* try to create new variable */
@@ -1632,7 +1636,10 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
         LASTSYMENV(symbol) = SEXP32_FROM_SEXP(rho);
         LASTSYMBINDING(symbol) = loc;
     }
-    
+
+  found_unprotect:    
+    UNPROTECT(3);
+
   found:
     if (!IS_ACTIVE_BINDING(loc)) {
         R_binding_cell = BINDING_IS_LOCKED(loc) ? R_NilValue : loc;
@@ -1645,7 +1652,6 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     SET_MISSING(loc,0);
     if (rho == R_GlobalEnv) 
         R_DirtyImage = 1;
-    UNPROTECT(3);
     return TRUE;
 }
 

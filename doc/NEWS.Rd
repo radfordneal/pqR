@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2018-10-10}{
+\section{CHANGES IN VERSION RELEASED 2018-00-00}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
@@ -34,7 +34,7 @@
         changes aimed at improving reproducibility of numerical results.
   }}
 
-  \subsection{INSTALLATION}{
+  \subsection{INSTALLATION, TESTING, AND PACKAGES}{
   \itemize{
   \item Byte compilation is now discouraged, because on the whole it 
         makes performance worse rather than better, since it does not
@@ -87,6 +87,13 @@
         other) packages may be found at 
 \preformatted{    https://github.com/radfordneal/R-package-mods
 }
+  \item The interpreter now aborts if it detects a protection stack
+        imbalance.  This previously resulted only in a message being
+        printed, which might be overlooked; this change ensures that
+        the error will be noticed.  Also, continuing after an imbalance
+        is detected is not safe, since bad maintenance of the protection
+        stack can lead to garbage collection of objects that are still
+        in use, and thence to arbitrary memory corruption.
   }}
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
