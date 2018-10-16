@@ -237,6 +237,15 @@ function(ap)
     if(length(stale_dups)) ap[-stale_dups, , drop = FALSE] else ap
 }
 
+.remove_later_dups <-
+function(ap)
+{
+    ## Given a matrix from available.packages, return a copy
+    ## with no duplicate packages, keeping the first one.
+
+    ap [ ! duplicated(ap[,"Package"]), , drop=FALSE ]
+}
+
 package_dependencies <-
 function(packages = NULL, db,
          which = c("Depends", "Imports", "LinkingTo"),

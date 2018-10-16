@@ -625,15 +625,13 @@ getOption(x, default = NULL)
     }
 
     \item{\code{repos}:}{URLs of the repositories for use by
-      \code{\link{update.packages}}.  Defaults to
-      \code{c(CRAN="@CRAN@")}, a value that causes some utilities to
-      prompt for a CRAN mirror.  To avoid this do set the CRAN mirror,
-      by something like
-      \code{local({r <- getOption("repos"); r["CRAN"] <- "http://my.local.cran";
-                   options(repos=r)})}.
+      \code{\link{update.packages}}.  Defaults to \code{
+          c(pqR = "ftp://price.utstat.utoronto.ca",
+            CRAN = "http://cloud.r-project.org")
+      }
 
-      Note that you can add more repositories (Bioconductor and
-      Omegahat, notably) using \code{\link{setRepositories}()}.
+      Note that the value \code{"@CRAN@"} causes some utilities to
+      prompt for a CRAN mirror. 
     }
     \item{\code{SweaveHooks}, \code{SweaveSyntax}:}{see \code{\link{Sweave}}.}
 
