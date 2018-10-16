@@ -141,7 +141,7 @@ function(contriburl = contrib.url(getOption("repos"), type), method,
 }
 
 available_packages_filters_default <-
-    c("R_version", "OS_type", "subarch", "duplicates")
+    c("R_version", "OS_type", "subarch", "first")
 
 available_packages_filters_db <- new.env(hash = FALSE) # small
 
@@ -206,6 +206,10 @@ function(db)
 available_packages_filters_db$duplicates <-
 function(db)
     tools:::.remove_stale_dups(db)
+
+available_packages_filters_db$first <-
+function(db)
+    tools:::.remove_later_dups(db)
 
 available_packages_filters_db$`license/FOSS` <-
 function(db)

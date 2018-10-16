@@ -56,6 +56,10 @@
 
         The JIT feature is now never enabled, regardless of any attempt
         to do so.
+  \item By default, \code{install.packages} now looks first in the
+        pqR repository, at \url{ftp://price.utstat.utoronto.ca}, and
+        if the package is not found there, at the CRAN mirror located
+        at \url{http://cloud.r-project.org}.
   \item A platform on which pqR is installed must now
         implement correct 64-bit IEEE floating-point arithmetic for the C 
         "double" type.  In particular, this means that pqR is not supported
@@ -393,6 +397,9 @@
         is used instead, as when \code{icuSetCollate(locale="ASCII")} 
         has been called.  This default may of course be changed using
         \code{icuSetCollate}.
+  \item There is now a \code{"first"} option for the filter used by
+        \code{available.packages}, which takes the package found in the
+        earliest repository, regardless of version.
   \item The version of the \code{boot} package included as a recommended
         package is now 1.3-9 (named 1.3-9-909 since it is slightly tweaked).
   \item The version of the \code{digest} package included as a recommended

@@ -69,6 +69,9 @@ available.packages(contriburl = contrib.url(getOption("repos"), type),
       than one version is available, and only report the first-named
       repository (in \code{contriburl}) with the latest version if that
       is in more than one repository.}
+    \item{\code{"first"}}{only report the the package as
+      found in the earliest-named repository where it exists, regardless 
+      of version.}
     \item{\code{"license/FOSS"}}{include only packages for which
       installation can proceed solely based on packages which can be
       verified as Free or Open Source Software (FOSS, e.g.,
