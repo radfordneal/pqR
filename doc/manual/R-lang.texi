@@ -1137,7 +1137,7 @@ below:
 @item @code{+}
 @tab Plus, can be unary or binary
 @item @code{!}
-@tab Unary not
+@tab Not (when unary)
 @item @code{~}
 @tab Tilde, used for model formulae, can be either unary or binary
 @item @code{?}
@@ -1184,6 +1184,10 @@ below:
 @tab Or, binary, vectorized
 @item @code{||}
 @tab Or, binary, not vectorized
+@item @code{!!}
+@tab String pasting with space separator, binary
+@item @code{!}
+@tab String pasting without space separator (when binary)
 @item @code{<-}
 @tab Left assignment, binary
 @item @code{->}
@@ -4694,8 +4698,9 @@ $  @@
 *  /
 +  -                  @r{(binary)}
 ..
+! !!                  @r(binary)
 >  >=  <  <=  ==  !=
-!
+!                     @r(unary)
 &  &&
 |  ||
 ~                     @r{(unary)}
@@ -4740,10 +4745,11 @@ and the operands as the function arguments.
 
 Parentheses are recorded as equivalent to a unary operator, with name
 @code{"("}, except where the need for parentheses could be inferred
-from operator precedence (e.g., @code{a * (b + c)}), or inside the
-right side of a formula (where some programs attach meaning to them
-beyond their grouping function).  This allows the presence of
-parentheses in a deparsed expression to match their presence or
+from operator precedence (e.g., @code{a * (b + c)}) (an exception is
+that parentheses are always retained as unary operators inside the
+right side of a formula, where some programs attach meaning to
+parentheses beyond their grouping function).  This allows the presence
+of parentheses in a deparsed expression to match their presence or
 absence in the source.
 
 Notice that the 
