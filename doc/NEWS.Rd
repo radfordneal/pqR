@@ -483,6 +483,15 @@
         and \code{[[} on \code{x}, so it should work automatically on
         any objects for which appropriate methods on those generics
         are defined.
+  \item From R-3.5.0: If \option{--default-packages} is not used, then
+      \command{Rscript} now checks the environment variable
+      \env{R_SCRIPT_DEFAULT_PACKAGES}. If this is set, then it takes
+      precedence over \env{R_DEFAULT_PACKAGES}. If default packages are
+      not specified on the command line or by one of these environment
+      variables, then \command{Rscript} now uses the same default
+      packages as \command{R}. For now, the previous behavior of not
+      including \pkg{methods} can be restored by setting the environment
+      variable \env{R_SCRIPT_LEGACY} to \samp{yes}.
   \item The C macros \code{MAYBE_SHARED}, \code{NO_REFERENCES}, 
         \code{MAYBE_REFERENCED}, \code{NOT_SHARED}, and \code{MARK_MUTABLE}
         have been added to \file{Rinternals.h}, for compatibility with
@@ -604,6 +613,10 @@ This bug remains in R Core versions to at least R-3.5.1.
 
   \item From R-3.0.2: \code{deparse()} now deparses raw vectors in a form that
         is syntactically correct. (\PR{15369})
+
+  \item From R-3.5.0 \code{Rscript} can now accept more than one argument given 
+      on the \samp{#!} line of a script. Previously, one could only pass a
+      single argument on the \samp{#!} line in Linux.
   }}
 }
 
