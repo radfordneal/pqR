@@ -4594,6 +4594,7 @@ The following operator tokens exist in pqR:
 @item @code{+ - * / %% %/% ^} @tab arithmetic
 @item @code{> >= < <= == !=} @tab relational
 @item @code{! & && | ||} @tab logical
+@item @code{!!} @tab string concatenation (also binary !)
 @item @code{~} @tab model formulae
 @item @code{<- <<- = -> ->>} @tab assignment
 @item @code{$ @@} @tab list and slot indexing
@@ -4698,9 +4699,9 @@ $  @@
 *  /
 +  -                  @r{(binary)}
 ..
-! !!                  @r(binary)
+! !!                  @r{(binary)}
 >  >=  <  <=  ==  !=
-!                     @r(unary)
+!                     @r{(unary)}
 &  &&
 |  ||
 ~                     @r{(unary)}
