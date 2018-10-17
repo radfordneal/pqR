@@ -243,6 +243,9 @@
   \item Setting names on a vector has now been sped up in many cases.
   \item The \code{grep}, \code{grepl}, \code{sub}, and \code{gsub} functions
         have been speeded up, substantially in some situations.
+  \item The speed of \code{rbind} for data frames has been improved for
+        simple cases where all arguments are simple data frames with
+        columns that are atomic vectors.
   \item Merging of arithmetic operations on vectors has been streamlined,
         with consequent reduction in code size.  Now only the \code{abs}
         function may be merged (not other one-argument math functions),

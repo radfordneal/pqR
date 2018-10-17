@@ -1101,6 +1101,97 @@ cbind.data.frame <- function(..., deparse.level = 1)
 
 rbind.data.frame <- function(..., deparse.level = 1)
 {
+    allargs <- list(...)
+    allargs <- allargs [lengths(allargs,use.names=FALSE) > 0L]
+    if (length(allargs)) {
+        ## drop any zero-row data frames, as they may not have proper column
+        ## types (e.g. NULL).
+        nr <- vapply (allargs,
+                      function(x)
+                       if (is.data.frame(x)) .row_names_info(x,2L)
+                       else if (is.list(x)) length(x[[1L]])
+                                            # mismatched lists are checked later
+                       else length(x),
+                      1L)
+        if (all (nr <= 0L))
+            return (allargs[[1L]])  # pretty arbitrary
+        else if (any(nr <= 0L))
+            allargs <- allargs[nr > 0L]
+    }
+    n <- length(allargs)
+    if (n == 0L)
+	return(structure(list(),
+			 class = "data.frame",
+			 row.names = integer()))
+    nms <- names(allargs)
+
+    ## Quickly handle the simplest cases of data frames with matching simple
+    ## vector columns, and default row names.
+
+    simple <- is.null(nms)
+
+    if (simple) {
+        t1 <- NULL
+        for (a in allargs) {
+            if (is.null(t1)) {  # first argument
+                if (!identical(class(a),"data.frame")
+                       || .row_names_info(a,1L) > 0) {
+                    simple <- FALSE
+                    break
+                }
+                t1 <- character(length(a))
+                for (j along a) {
+                    if (!is.atomic(unclass(a)[[j]]) 
+                          || !is.null(attributes(unclass(a)[[j]]))) {
+                        simple <- FALSE
+                        break
+                    }
+                    t1[j] <- typeof(unclass(a)[[j]])
+                }
+                if (!simple) break;
+                n1 <- names(a)
+                next
+            }
+            if (!identical(class(a),"data.frame")
+                   || .row_names_info(a,1L) > 0
+                   || !identical(names(a),n1)) {
+                simple <- FALSE
+                break
+            }
+            for (j along a) {
+                if (typeof(unclass(a)[[j]]) != t1[j]
+                       || !is.null(attributes(unclass(a)[[j]]))) {
+                    simple <- FALSE
+                    break
+                }
+            }
+            if (!simple) break;
+        }
+    }
+
+    if (simple) {
+        value <- unclass(allargs[[1]])
+        nrow <- sum(nr)
+        for (j along value) {
+            v <- vector (t1[j], nrow)
+            i <- 1
+            for (a in allargs) {
+                n <- length(unclass(a)[[j]])
+                v[i..i+n-1] <- unclass(a)[[j]]
+                i <- i+n
+            }
+            value[[j]] <- v
+        }
+        attr(value,"row.names") <- .set_row_names(nrow)
+        class(value) <- "data.frame"
+        return (value)
+    }
+
+    ## Not so simple...
+
+    if (is.null(nms))
+	nms <- character(n)
+
     match.names <- function(clabs, nmi)
     {
 	if(identical(clabs, nmi)) NULL
@@ -1123,26 +1214,7 @@ rbind.data.frame <- function(..., deparse.level = 1)
 	    as.integer(seq.int(from = nrow + 1L, length.out = ni))
 	else ri
     }
-    allargs <- list(...)
-    allargs <- allargs[vapply(allargs, length, 1L) > 0L]
-    if(length(allargs)) {
-    ## drop any zero-row data frames, as they may not have proper column
-    ## types (e.g. NULL).
-        nr <- vapply(allargs, function(x)
-                     if(is.data.frame(x)) .row_names_info(x, 2L)
-                     else if(is.list(x)) length(x[[1L]]) # mismatched lists are checked later
-                     else length(x), 1L)
-        if(any(nr > 0L)) allargs <- allargs[nr > 0L]
-        else return(allargs[[1L]]) # pretty arbitrary
-    }
-    n <- length(allargs)
-    if(n == 0L)
-	return(structure(list(),
-			 class = "data.frame",
-			 row.names = integer()))
-    nms <- names(allargs)
-    if(is.null(nms))
-	nms <- character(n)
+
     cl <- NULL
     perm <- rows <- rlabs <- vector("list", n)
     nrow <- 0L
@@ -1200,7 +1272,7 @@ rbind.data.frame <- function(..., deparse.level = 1)
             }
 	}
 	else if(is.list(xi)) {
-	    ni <- range(vapply(xi, length, 1L))
+	    ni <- range(lengths(xi))
 	    if(ni[1L] == ni[2L])
 		ni <- ni[1L]
 	    else stop("invalid list argument: all variables should have the same length")
@@ -1226,7 +1298,7 @@ rbind.data.frame <- function(..., deparse.level = 1)
     }
     nvar <- length(clabs)
     if(nvar == 0L)
-	nvar <- max(vapply(allargs, length, 1L)) # only vector args
+	nvar <- max(lengths(allargs)) # only vector args
     if(nvar == 0L)
 	return(structure(list(), class = "data.frame",
 			 row.names = integer()))
