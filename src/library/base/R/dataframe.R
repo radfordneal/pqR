@@ -1103,58 +1103,54 @@ rbind.data.frame <- function(..., deparse.level = 1)
 {
     allargs <- list(...)
     allargs <- allargs [lengths(allargs,use.names=FALSE) > 0L]
-    if (length(allargs)) {
-        ## drop any zero-row data frames, as they may not have proper column
-        ## types (e.g. NULL).
-        nr <- vapply (allargs,
-                      function(x)
-                       if (is.data.frame(x)) .row_names_info(x,2L)
-                       else if (is.list(x)) length(x[[1L]])
-                                            # mismatched lists are checked later
-                       else length(x),
-                      1L)
-        if (all (nr <= 0L))
-            return (allargs[[1L]])  # pretty arbitrary
-        else if (any(nr <= 0L))
-            allargs <- allargs[nr > 0L]
-    }
     n <- length(allargs)
+
     if (n == 0L)
-	return(structure(list(),
-			 class = "data.frame",
-			 row.names = integer()))
-    nms <- names(allargs)
+        return (structure (list(), class = "data.frame", row.names = integer()))
 
     ## Quickly handle the simplest cases of data frames with matching simple
-    ## vector columns, and default row names.
+    ## vector columns, and default row names.  Arguments after first can also
+    ## be lists that would match as data frames.
 
-    simple <- is.null(nms)
+    simple <- is.null(names(allargs))
 
     if (simple) {
-        t1 <- NULL
-        for (a in allargs) {
-            if (is.null(t1)) {  # first argument
-                if (!identical(class(a),"data.frame")
-                       || .row_names_info(a,1L) > 0) {
+        a <- allargs[[1]]
+        if (!identical(class(a),"data.frame") || .row_names_info(a,1L) >= 0)
+            simple <- FALSE
+        else {
+            n1 <- names(a)
+            t1 <- character(length(a))
+            for (j along a) {
+                if (!is.atomic(unclass(a)[[j]]) 
+                      || !is.null(attributes(unclass(a)[[j]]))) {
                     simple <- FALSE
                     break
                 }
-                t1 <- character(length(a))
-                for (j along a) {
-                    if (!is.atomic(unclass(a)[[j]]) 
-                          || !is.null(attributes(unclass(a)[[j]]))) {
-                        simple <- FALSE
-                        break
-                    }
-                    t1[j] <- typeof(unclass(a)[[j]])
-                }
-                if (!simple) break;
-                n1 <- names(a)
-                next
+                t1[j] <- typeof(unclass(a)[[j]])
             }
-            if (!identical(class(a),"data.frame")
-                   || .row_names_info(a,1L) > 0
-                   || !identical(names(a),n1)) {
+            nrow <- length(a[[1]])
+        }
+    }
+
+    if (simple) {
+        for (a in allargs[-1]) {
+            if (identical(class(a),"data.frame")) {
+                if (!identical(names(a),n1)
+                      || .row_names_info(a,1L) >= 0) {
+                    simple <- FALSE
+                    break
+                }
+            }
+            else if (identical(class(a),"list")) {
+                if (!identical(names(a),n1)
+                      || length(a[[1]]) == 0
+                      || !all (lengths(a) == length(a[[1]]))) {
+                    simple <- FALSE
+                    break
+                }
+            }
+            else {
                 simple <- FALSE
                 break
             }
@@ -1166,18 +1162,21 @@ rbind.data.frame <- function(..., deparse.level = 1)
                 }
             }
             if (!simple) break;
+            ni <- length(a[[1]])
+            if (ni > .Machine$integer.max-nrow)
+                stop("result would have too many rows")
+            nrow <- nrow + ni
         }
     }
 
     if (simple) {
         value <- unclass(allargs[[1]])
-        nrow <- sum(nr)
         for (j along value) {
             v <- vector (t1[j], nrow)
-            i <- 1
+            i <- 0
             for (a in allargs) {
                 n <- length(unclass(a)[[j]])
-                v[i..i+n-1] <- unclass(a)[[j]]
+                v[i+1..i+n] <- unclass(a)[[j]]
                 i <- i+n
             }
             value[[j]] <- v
@@ -1189,6 +1188,25 @@ rbind.data.frame <- function(..., deparse.level = 1)
 
     ## Not so simple...
 
+    ## Drop any zero-row data frames - may lack proper column types (e.g. NULL).
+
+    nr <- vapply (allargs,
+                  function(x)
+                   if (is.data.frame(x)) .row_names_info(x,2L)
+                   else if (is.list(x)) length(x[[1L]])
+                                        # mismatched lists are checked later
+                   else length(x),
+                  1L)
+    if (all (nr <= 0L))
+        return (allargs[[1L]])  # pretty arbitrary
+    if (any(nr <= 0L))
+        allargs <- allargs[nr > 0L]
+
+    n <- length(allargs)
+    if (n == 0L)
+        return (structure (list(), class = "data.frame", row.names = integer()))
+
+    nms <- names(allargs)
     if (is.null(nms))
 	nms <- character(n)
 
@@ -1231,6 +1249,8 @@ rbind.data.frame <- function(..., deparse.level = 1)
 		cl <- oldClass(xi)
 	    ri <- attr(xi, "row.names")
 	    ni <- length(ri)
+            if (ni > .Machine$integer.max-nrow)
+                stop("result would have too many rows")
 	    if(is.null(clabs))
 		clabs <- names(xi)
 	    else {
