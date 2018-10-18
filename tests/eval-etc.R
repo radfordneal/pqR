@@ -330,3 +330,24 @@ f <- function () {
 f()
 
 
+# Test that overflow of the scalar stack is handled properly.  Should continue
+# to give the right answer, but be a bit slower. Note that currently 128 entries
+# fit on the scalar stack.
+
+f <- function (x) {
+    if (x == 0) {
+        # Enable statement below to see performance change when stack overflows
+        # print(system.time(for (i in 1:2000000) r <- 3*4+(1+2)*(1*2+3*4+7*8)))
+        0
+    }
+    else 
+        2*x + f(x-1)
+}
+
+for (x in c(3,20,124,125,126,127,128,129,200,300,600)) {
+    r <- f(x)
+    print (c(x, r, x*(x+1)))
+    stopifnot(r == x*(x+1))
+    cat("\n")
+}
+
