@@ -2031,8 +2031,6 @@ attribute_hidden SEXP R_Parse1Stream(int (*getc) (void *), void *getc_arg,
 {
     PARSE_INIT(retain ? saved_ps : NULL)
 
-    ps->ParseContext[0] = 0;
-    ps->ParseContextLast = 0;
     ps->stream_getc = getc;
     ps->stream_getc_arg = getc_arg;
     ps->ptr_getc = call_stream_getc;
@@ -2041,8 +2039,11 @@ attribute_hidden SEXP R_Parse1Stream(int (*getc) (void *), void *getc_arg,
 
     SEXP res = R_NilValue;
 
-    if (!retain || ps->next_token == '\n' || ps->next_token == ';')
+    if (!retain || ps->next_token == '\n' || ps->next_token == ';') {
+        ps->ParseContext[0] = 0;
+        ps->ParseContextLast = 0;
         get_next_token(0);
+    }
 
     if (ps->next_token == END_OF_INPUT)
         *status = PARSE_EOF;
