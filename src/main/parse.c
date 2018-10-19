@@ -2034,6 +2034,8 @@ attribute_hidden SEXP R_Parse1Stream(int (*getc) (void *), void *getc_arg,
 {
     PARSE_INIT(retain ? saved_ps : NULL)
 
+    ps->ParseContext[0] = 0;
+    ps->ParseContextLast = 0;
     ps->stream_getc = getc;
     ps->stream_getc_arg = getc_arg;
     ps->ptr_getc = call_stream_getc;
@@ -2059,7 +2061,7 @@ attribute_hidden SEXP R_Parse1Stream(int (*getc) (void *), void *getc_arg,
             *status = PARSE_OK;
     }
 
-    if (saved_ps) 
+    if (saved_ps)
         memcpy (saved_ps, ps, sizeof (struct parse_state));
 
     PARSE_FINI
