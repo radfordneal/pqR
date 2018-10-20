@@ -1,8 +1,0 @@
-This mod uses the helpers framework to implement pipelined arithmetic
-tasks, for operators +, -, *, /, ^, %%, and %/%, and for mathematical
-functions of one argument (exp, etc.).  The code is also cleaned up in
-various ways.
-
-Note that some operations cannot be done in helper threads because of
-the possibility that they will produce a warning message, which can be
-produced only in the master thread.
