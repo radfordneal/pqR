@@ -10,9 +10,10 @@ version of R released by the R Core Team on which pqR is based
 Later development branches have the form DD-desc, where DD is a
 two-digit number, and desc is a descriptive string.  All branches
 starting with DD are merged into the branch with number DD+1, which
-does not contain any modifications of its own (branch 00, containing
-this text, excepted), but which forms the basis for the development
-branches starting with DD+1.
+does not contain any modifications of its own, except perhaps for
+updates to the version number/date in VERSION/NEWS.Rd, or to this
+README file, but which forms the basis for the development branches
+starting with DD+1.
 
 Release branches have names of the form Release-YYYY-MM-DD (and are
 also given tag pqR-YYYY-MM-DD).  They are based on some merged
@@ -26,11 +27,12 @@ After the new release branch is created, the following should be done:
 
  1) Remove the file ".gitignore" using "git rm".
 
- 2) Update the release date, which is stored in the (now mis-named) 
-    file "SVN-REVISION".  This should match the date in "NEWS.Rd", which
-    would have been set in a development branch.  (The date in the
-    "SVN-REVISION" file of a development branch should have approximately the
-    correct year, but have month and day set to "00".)
+ 2) Update the release date, which is stored in the (now mis-named)
+    file "SVN-REVISION".  This should match the date in "NEWS.Rd",
+    which would have been set in a development (or merge) branch.
+    (The date in the "SVN-REVISION" file of a development branch
+    should have approximately the correct year, but have month and day
+    set to "00".)
 
  3) Create the file "configure" by running create-configure.  Add it
     to the git repository with "git add".
