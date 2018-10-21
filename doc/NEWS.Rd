@@ -241,6 +241,10 @@
         output formatting.
   \item Subscripting with a logical vector is now faster for long vectors.
   \item Setting names on a vector has now been sped up in many cases.
+  \item Calls to LAPACK routines in the base package are now done with
+        \code{.Internal} rather than \code{.Call}, which provides a 
+        noticeable speedup for operations on small matrices.  This is
+        similar to a change made in R-3.0.0.
   \item The \code{grep}, \code{grepl}, \code{sub}, and \code{gsub} functions
         have been speeded up, substantially in some situations.
   \item The speed of \code{rbind} for data frames has been improved for
