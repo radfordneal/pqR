@@ -470,7 +470,6 @@ SEXP attribute_hidden do_startsWith(SEXP call, SEXP op, SEXP args, SEXP env)
 		y1[i] = (int) strlen(y0[i]);
 	    }
 	}
-	R_xlen_t i1, i2;
 	if(PRIMVAL(op) == 0) { // 0 = startsWith, 1 = endsWith
 	    mod_iterate (n, n1, n2, i1, i2) {
 		if (x1[i1] < 0 || y1[i2] < 0)

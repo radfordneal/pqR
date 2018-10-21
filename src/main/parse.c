@@ -2278,7 +2278,6 @@ static int NumericValue(int c)
     int seenexp = 0;
     int last = c;
     int nd = 0;
-    int asNumeric = 0;
     int count = 1; /* The number of characters seen */
 
     DECLARE_YYTEXT_BUFP(yyp);
@@ -3195,7 +3194,7 @@ static int skip_comment (void)
     int text_ix;
     source_location loc;
     char *dir;
-    int c, i;
+    int c;
 
     loc.first_parsed = ps->sr->xxparseno;
     loc.first_column = ps->sr->xxcolno;

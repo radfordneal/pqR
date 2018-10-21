@@ -401,9 +401,6 @@ int dummy_vfprintf(Rconnection con, const char *format, va_list ap)
 
 static attribute_noinline void buff_iconv (Rconnection con)
 {
-    size_t inew;
-    int c;
-
     if (con->EOF_signalled)
         return;
 
