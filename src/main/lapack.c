@@ -319,55 +319,54 @@ R_setLapackRoutines(R_LapackRoutines *routines)
 
 static SEXP do_lapack(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP ans = R_NilValue;
+    SEXP ans;
+
+    SEXP a1 = CAR(args); args = CDR(args);
+    SEXP a2 = CAR(args); args = CDR(args);
+    SEXP a3 = CAR(args); args = CDR(args);
 
     switch(PRIMVAL(op)) {
-    case 1: ans = La_rs(CAR(args), CADR(args)); break;
-    case 2: ans = La_rs_cmplx(CAR(args), CADR(args)); break;
-    case 3: ans = La_rg(CAR(args), CADR(args)); break;
-    case 41: ans = La_rg_cmplx(CAR(args), CADR(args)); break;
-    case 5: ans = La_rs(CAR(args), CADR(args)); break;
-    case 51: ans = La_rs_cmplx(CAR(args), CADR(args)); break;
-    case 6: ans = La_dlange(CAR(args), CADR(args)); break;
-    case 7: ans = La_dgecon(CAR(args), CADR(args)); break;
-    case 8: ans = La_dtrcon(CAR(args), CADR(args)); break;
-    case 9: ans = La_zgecon(CAR(args), CADR(args)); break;
-    case 10: ans = La_ztrcon(CAR(args), CADR(args)); break;
+    case 1:   ans = La_rs (a1, a2); break;
+    case 2:   ans = La_rs_cmplx (a1, a2); break;
+    case 3:   ans = La_rg (a1, a2); break;
+    case 41:  ans = La_rg_cmplx (a1, a2); break;
+    case 5:   ans = La_rs (a1, a2); break;
+    case 51:  ans = La_rs_cmplx (a1, a2); break;
+    case 6:   ans = La_dlange (a1, a2); break;
+    case 7:   ans = La_dgecon (a1, a2); break;
+    case 8:   ans = La_dtrcon (a1, a2); break;
+    case 9:   ans = La_zgecon (a1, a2); break;
+    case 10:  ans = La_ztrcon (a1, a2); break;
 
-    case 200: ans = La_chol(CAR(args)); break;
-    case 201: ans = La_chol2inv(CAR(args), CADR(args)); break;
+    case 200: ans = La_chol (a1); break;
+    case 201: ans = La_chol2inv (a1, a2); break;
 
-    case 300: ans = qr_coef_real(CAR(args), CADR(args)); break;
-    case 301: ans = qr_qy_real(CAR(args), CADR(args), CADDR(args)); break;
-    case 302: ans = det_ge_real(CAR(args), CADR(args)); break;
-    case 303: ans = qr_coef_cmplx(CAR(args), CADR(args)); break;
-    case 304: ans = qr_qy_cmplx(CAR(args), CADR(args), CADDR(args)); break;
+    case 300: ans = qr_coef_real (a1, a2); break;
+    case 301: ans = qr_qy_real (a1, a2, a3); break;
+    case 302: ans = det_ge_real (a1, a2); break;
+    case 303: ans = qr_coef_cmplx (a1, a2); break;
+    case 304: ans = qr_qy_cmplx (a1, a2, a3); break;
 
-    case 400:
-    {
-	SEXP a1, a2, a3, a4, a5;
-	a1 = CAR(args); args = CDR(args);
-	a2 = CAR(args); args = CDR(args);
-	a3 = CAR(args); args = CDR(args);
-	a4 = CAR(args); args = CDR(args);
-	a5 = CAR(args); args = CDR(args);
-	ans = La_svd(a1, a2, a3, a4, a5, CAR(args), CADR(args));
-	break;
+    case 400: {
+        SEXP a4 = CAR(args); args = CDR(args);
+        SEXP a5 = CAR(args); args = CDR(args);
+        SEXP a6 = CAR(args); args = CDR(args);
+        SEXP a7 = CAR(args);
+        ans = La_svd (a1, a2, a3, a4, a5, a6, a7);
+        break;
     }
-    case 401:
-    {
-	SEXP a1, a2, a3, a4, a5;
-	a1 = CAR(args); args = CDR(args);
-	a2 = CAR(args); args = CDR(args);
-	a3 = CAR(args); args = CDR(args);
-	a4 = CAR(args); args = CDR(args);
-	a5 = CAR(args); args = CDR(args);
-	ans =  La_svd_cmplx(a1, a2, a3, a4, a5, CAR(args));
-	break;
+    case 401: {
+        SEXP a4 = CAR(args); args = CDR(args);
+        SEXP a5 = CAR(args); args = CDR(args);
+        SEXP a6 = CAR(args);
+        ans =  La_svd_cmplx (a1, a2, a3, a4, a5, a6);
+        break;
     }
 
-    case 500: ans = La_dgesv(CAR(args), CADR(args), CADDR(args)); break;
-    case 501: ans = La_dgeqp3(CAR(args)); break;
+    case 500: ans = La_dgesv (a1, a2, a3); break;
+    case 501: ans = La_dgeqp3 (a1); break;
+    case 502: ans = La_zgesv (a1, a2); break;
+    case 503: ans = La_zgeqp3 (a1); break;
 
     default:
         ans = R_NilValue;
@@ -408,6 +407,8 @@ attribute_hidden FUNTAB R_FunTab_lapack[] =
 
 {"La_dgesv",	do_lapack,     	500,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"La_dgeqp3",	do_lapack,     	501,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"La_zgesv",	do_lapack,     	502,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"La_zgeqp3",	do_lapack,     	503,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
