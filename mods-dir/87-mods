@@ -1,8 +1,0 @@
-Miscellaneous mods.
-
-Now abort when protection stack imbalance detected.
-
-Speed up to rbind.data.frame in simple cases.  New version of codetools
-that makes better use of this.
-
-

@@ -1,2 +1,0 @@
-Introduce VARIANT_WHOLE_BODY, and use for .Internal to sometimes avoid 
-incrementing NAMEDCNT for args.
