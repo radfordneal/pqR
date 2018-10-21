@@ -192,7 +192,9 @@ extern FUNTAB
     R_FunTab_sysutils[],
     R_FunTab_unique[],
     R_FunTab_util[],
-    R_FunTab_version[];
+    R_FunTab_version[],
+
+    R_FunTab_lapack[];
 
 static FUNTAB *FunTab_ptrs[] = { 
     R_FunTab_eval,
@@ -269,6 +271,8 @@ static FUNTAB *FunTab_ptrs[] = {
     R_FunTab_unique,
     R_FunTab_util,
     R_FunTab_version,
+
+    R_FunTab_lapack,
     NULL
 };
 

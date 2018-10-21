@@ -48,9 +48,9 @@ solve.default <-
 	return (if (is.matrix(b)) {
             if(ncol(a) != nrow(b)) stop("'b' must be compatible with 'a'")
 	    rownames(b) <- colnames(a)
-	    .Call("La_zgesv", a, b, PACKAGE = "base")
+	    .Internal (La_zgesv (a, b))
 	} else
-	    drop(.Call("La_zgesv", a, as.matrix(b), PACKAGE = "base")))
+	    drop(.Internal (La_zgesv (a, as.matrix(b)))))
     }
     if(is.qr(a)) {
 	warning("solve.default called with a \"qr\" object: use 'qr.solve'")
@@ -69,9 +69,9 @@ solve.default <-
 	return (if (is.matrix(b)) {
             if(ncol(a) != nrow(b)) stop("'b' must be compatible with 'a'")
 	    rownames(b) <- colnames(a)
-	    .Call("La_dgesv", a, b, tol, PACKAGE = "base")
+	    .Internal (La_dgesv (a, b, tol))
 	} else
-	    drop(.Call("La_dgesv", a, as.matrix(b), tol, PACKAGE = "base")))
+	    drop(.Internal (La_dgesv (a, as.matrix(b), tol))))
     }
     a <- qr(a, tol = tol)
     nc <- ncol(a$qr)

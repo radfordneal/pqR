@@ -44,5 +44,5 @@ determinant.matrix <- function(x, logarithm = TRUE, ...)
     ##      moddet_ge_real() in ../../../modules/lapack/Lapack.c
     ## the 'sign' would have to be complex z, with |z|=1
     storage.mode(x) <- "double"
-    .Call("det_ge_real", x, logarithm, PACKAGE = "base")
+    .Internal (det_ge_real (x, logarithm))
 }
