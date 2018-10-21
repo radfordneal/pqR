@@ -200,14 +200,16 @@ static SEXP modLa_rs(SEXP xin, SEXP only_values)
     return ret;
 }
 
-static SEXP unscramble(const double* imaginary, int n,
+static SEXP unscramble(const double* imaginry,  
+                             /* "imaginary" causes problem with Solaris cc. */
+                       int n,
 		       const double* vecs)
 {
     int i, j;
     SEXP s = allocMatrix(CPLXSXP, n, n);
 
     for (j = 0; j < n; j++) {
-	if (imaginary[j] != 0) {
+	if (imaginry[j] != 0) {
 	    int j1 = j + 1;
 	    for (i = 0; i < n; i++) {
 		COMPLEX(s)[i+n*j].r = COMPLEX(s)[i+n*j1].r = vecs[i + j * n];

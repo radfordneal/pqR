@@ -2500,7 +2500,7 @@ char R_vector_element_size[32]
 ;
 
 
-#if defined(CALLED_FROM_DEFN_H) && !defined(__MAIN__) && (defined(COMPILING_R) || ( __GNUC__ && !defined(__INTEL_COMPILER) ))
+#if defined(CALLED_FROM_DEFN_H) && !defined(__MAIN__)
 #include "Rinlinedfuns.h"
 #else
 /* need remapped names here for use with R_NO_REMAP */
