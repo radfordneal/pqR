@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995--2012  The R Core Team
@@ -915,9 +915,6 @@ static inline int SaveSpecialHook(SEXP item)
 
 static attribute_noinline void OutStringVec (struct outpar *par, SEXP s)
 {
-    R_outpstream_t stream = par->stream;
-    SEXP ref_table = par->ref_table;
-
     int i, len;
 
     R_assert(TYPEOF(s) == STRSXP);
@@ -1020,7 +1017,6 @@ static attribute_noinline void OutComplexVec (struct outpar *par, SEXP s)
     case R_pstream_xdr_format:
     {
 	int done, this;
-	Rcomplex *c = COMPLEX(s);
         for (done = 0; done < length; done += this) {
 	    this = min2(CHUNK_SIZE, length - done);
             encode_doubles ((double*)(COMPLEX(s)+done), 2*this, buf);
@@ -1311,8 +1307,6 @@ static SEXP findrep(SEXP x, SEXP reps)
 
 static void WriteBCLang (struct outpar *par, SEXP s, SEXP reps)
 {
-    R_outpstream_t stream = par->stream;
-
     int type = TYPEOF(s);
     if (type == LANGSXP || type == LISTSXP) {
 	SEXP r = findrep(s, reps);
@@ -1359,8 +1353,6 @@ static void WriteBCLang (struct outpar *par, SEXP s, SEXP reps)
 
 static void WriteBC1 (struct outpar *par, SEXP s, SEXP reps)
 {
-    R_outpstream_t stream = par->stream;
-
     int i, n;
     SEXP code, consts;
     PROTECT(code = R_bcDecode(BCODE_CODE(s)));
@@ -1390,8 +1382,6 @@ static void WriteBC1 (struct outpar *par, SEXP s, SEXP reps)
 
 static void WriteBC (struct outpar *par, SEXP s)
 {
-    R_outpstream_t stream = par->stream;
-
     SEXP reps = ScanForCircles(s);
     PROTECT(reps = CONS(R_NilValue, reps));
     OutInteger(par, length(reps));
@@ -1487,9 +1477,6 @@ static R_INLINE void AddReadRef(SEXP table, SEXP value)
 
 static attribute_noinline SEXP InStringVec (struct inpar *par)
 {
-    R_inpstream_t stream = par->stream;
-    SEXP ref_table = par->ref_table;
-
     SEXP s;
     int i, len;
     if (InInteger(par) != 0)
@@ -1606,7 +1593,6 @@ static attribute_noinline void InComplexVec (struct inpar *par, SEXP obj, int le
     case R_pstream_xdr_format:
     {
 	int done, this;
-	Rcomplex *output = COMPLEX(obj);
 	for (done = 0; done < length; done += this) {
 	    this = min2(CHUNK_SIZE, length - done);
 	    stream->InBytes(stream, buf, sizeof(Rcomplex) * this);
@@ -1959,8 +1945,6 @@ static SEXP ReadBCLang (struct inpar *par, int type, SEXP reps)
 
 static SEXP ReadBCConsts (struct inpar *par, SEXP reps)
 {
-    R_inpstream_t stream = par->stream;
-
     SEXP ans, c;
     int i, n;
     n = InInteger(par);
@@ -2003,8 +1987,6 @@ static SEXP ReadBC1 (struct inpar *par, SEXP reps)
 
 static SEXP ReadBC (struct inpar *par)
 {
-    R_inpstream_t stream = par->stream;
-
     SEXP reps, ans;
     PROTECT(reps = allocVector(VECSXP, InInteger(par)));
     ans = ReadBC1 (par, reps);
@@ -2023,7 +2005,7 @@ SEXP R_Unserialize(R_inpstream_t stream)
 {
     int version;
     int writer_version, release_version;
-    SEXP obj, ref_table;
+    SEXP obj;
 
     struct inpar par;
     char buf [CBUF_SIZE];
