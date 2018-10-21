@@ -1730,6 +1730,7 @@ LibExtern SEXP	R_SeedsSymbol;	    /* ".Random.seed" */
 LibExtern SEXP	R_SourceSymbol;     /* "source" */
 LibExtern SEXP	R_SrcrefSymbol;     /* "srcref" */
 LibExtern SEXP	R_TspSymbol;	    /* "tsp" */
+LibExtern SEXP	R_LogarithmSymbol;   /* "logarithm" */
 LibExtern SEXP	R_ValueSymbol;	    /* "value" */
 
 LibExtern SEXP  R_dot_defined;      /* ".defined" */
@@ -1757,6 +1758,9 @@ LibExtern SEXP R_numeric_CHARSXP;
 LibExtern SEXP R_name_CHARSXP;
 LibExtern SEXP R_function_CHARSXP;
 LibExtern SEXP R_any_CHARSXP;
+LibExtern SEXP R_modulus_CHARSXP;
+LibExtern SEXP R_sign_CHARSXP;
+LibExtern SEXP R_det_CHARSXP;
 LibExtern SEXP R_TRUE_CHARSXP;
 LibExtern SEXP R_FALSE_CHARSXP;
 

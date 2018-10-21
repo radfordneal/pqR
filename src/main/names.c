@@ -374,6 +374,7 @@ static void SymbolShortcuts(void)
     R_SourceSymbol = install("source");   /* for back compatibility, unused */
     R_SrcrefSymbol = install("srcref");
     R_TspSymbol = install("tsp");
+    R_LogarithmSymbol = install("logarithm");
     R_ValueSymbol = install("value");
 
     R_dot_defined = install(".defined");
@@ -719,6 +720,9 @@ void InitNames()
     (void)installChar (R_name_CHARSXP = mkChar("name"));
     (void)installChar (R_function_CHARSXP = mkChar("function"));
     (void)installChar (R_any_CHARSXP = mkChar("any"));
+    (void)installChar (R_modulus_CHARSXP = mkChar("modulus"));
+    (void)installChar (R_sign_CHARSXP = mkChar("sign"));
+    (void)installChar (R_det_CHARSXP = mkChar("det"));
     (void)installChar (R_NativeSymbolInfo_CHARSXP = mkChar("NativeSymbolInfo"));
     (void)installChar (R_TRUE_CHARSXP = mkChar("TRUE"));
     (void)installChar (R_FALSE_CHARSXP = mkChar("FALSE"));

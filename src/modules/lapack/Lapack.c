@@ -1157,14 +1157,13 @@ static SEXP moddet_ge_real(SEXP Ain, SEXP logarithm)
     }
     val = PROTECT(allocVector(VECSXP, 2));
     nm = PROTECT(allocVector(STRSXP, 2));
-    SET_STRING_ELT(nm, 0, mkChar("modulus"));
-    SET_STRING_ELT(nm, 1, mkChar("sign"));
+    SET_STRING_ELT(nm, 0, R_modulus_CHARSXP);
+    SET_STRING_ELT(nm, 1, R_sign_CHARSXP);
     setAttrib(val, R_NamesSymbol, nm);
     SET_VECTOR_ELT(val, 0, ScalarReal(modulus));
-    SEXP logarithm_install = install("logarithm"); /* protected by sym table */
-    setAttrib(VECTOR_ELT(val, 0), logarithm_install, ScalarLogical(useLog));
+    setAttrib(VECTOR_ELT(val, 0), R_LogarithmSymbol, ScalarLogical(useLog));
     SET_VECTOR_ELT(val, 1, ScalarInteger(sign));
-    setAttrib(val, R_ClassSymbol, ScalarString(mkChar("det")));
+    setAttrib(val, R_ClassSymbol, ScalarString(R_det_CHARSXP));
     UNPROTECT(3);
     return val;
 }
