@@ -1150,6 +1150,9 @@ void run_Rmainloop(void)
     if (n_helpers < 0)
         helpers_disable(1);
 
+    if (n_helpers > HELPERS_MAX)
+        n_helpers = HELPERS_MAX;
+
     helpers_trace (getenv("R_HELPERS_TRACE") ? 1 : 0);
 
     /* The call of helpers_startup below will call helpers_master above. */
