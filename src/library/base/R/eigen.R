@@ -52,15 +52,15 @@ eigen <- function(x, symmetric, only.values = FALSE, EISPACK = FALSE)
     if (!EISPACK) {
         if (symmetric) {
             z <- if(!complex.x)
-                .Call("La_rs", x, only.values, PACKAGE = "base")
+                .Internal (La_rs (x, only.values))
             else
-                .Call("La_rs_cmplx", x, only.values, PACKAGE = "base")
+                .Internal (La_rs_cmplx (x, only.values))
             ord <- rev(seq_along(z$values))
         } else {
             z <- if(!complex.x)
-                .Call("La_rg", x, only.values, PACKAGE = "base")
+                .Internal (La_rg (x, only.values))
             else
-                .Call("La_rg_cmplx", x, only.values, PACKAGE = "base")
+                .Internal (La_rg_cmplx (x, only.values))
             ord <- sort.list(Mod(z$values), decreasing = TRUE)
         }
         return(list(values = z$values[ord],

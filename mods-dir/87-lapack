@@ -1,0 +1,2 @@
+Interface from base to LAPACK using .Internal rather than .Call, 
+similarly to R-3.0.0.
