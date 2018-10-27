@@ -1,7 +1,7 @@
 % File src/library/base/man/matmult.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2008 R Core Team
-% Modifications for pqR Copyright (c) 2013 Radford M. Neal.
+% Modifications for pqR Copyright (c) 2013, 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{matmult}
@@ -54,27 +54,35 @@ x \%*\% y
   elements are \code{NA}, \code{NaN}, or infinite, which may not be
   the case with all BLAS packages.  Also, the order of addition in the
   C routines is the same as for the obvious matrix multiplication
-  algorithm, whereas it may differ in some BLAS implementations, which
-  affects roundoff errors.
+  algorithm, and products are consistently computed to double
+  precision (only).  This may not be the case for some BLAS
+  implementations, which may therefore produce round-off errors that
+  differ from those produced by the obvious method (and may even
+  differ between runs of the same BLAS routines).
 
   If the builtin C routines are used when helper threads are enabled,
   they will take piplelined input for their second operand, and
   produce pipelined output for vector-matrix and matrix-matrix
-  products.  Matrix multiplication with the BLAS routines may also be
-  done in helper threads, depending on the \code{BLAS_in_helpers}
-  option (see below), but with no pipelining of inputs or output.
+  products.  When helper threads are enabled, the C routines may also
+  use multiple threads to compute a single product.
 
-  The built-in C routines are sometimes slightly faster than the BLAS
-  routines supplied with pqR, but are likely slower (at least for
-  large matrix-matrix products) than the routines in whatever
-  optimized BLAS you may have available.  This holds even if only a
-  single processor core is used by the BLAS, more so if it uses
-  multiple cores.  However, if helper threads are used, it is possible
-  that the benefit of pipelining done by the C routines is greater
-  than any gain from using a more optimized BLAS, especially for
-  vector-vector, vector-matrix, and matrix-vector multiplies.
+  Matrix multiplication with the BLAS routines may also be done in
+  helper threads, depending on the \code{BLAS_in_helpers} option (see
+  below), but with no pipelining of inputs or output.  Some BLAS
+  routines may use multiple threads to compute a product, but if so, 
+  their use will not be coordinated with helper threads used by pqR,
+  which can lead to degraded performance.
 
-  Note that some other linear algebra operations make use internally
+  The built-in C routines are significantly faster (for most
+  operations) than the BLAS routines for matrix multiplicaton supplied
+  with pqR, but may be slower (at least for large operations) than the
+  routines in whatever optimized BLAS you may have available (eg,
+  OpenBLAS or Apple's veclib).  However, the advantage of optimized
+  BLAS routines over the C routines is seldom more than a factor of
+  two (assuming both are allowed to use the same number of threads),
+  and the C routines can be faster for some operations.
+
+  Note that some other linear algebra operations make nternal use
   of the BLAS matrix multiply routines, regardless of how the
   \code{mat_mult_with_BLAS} option is set.
 
@@ -88,12 +96,7 @@ x \%*\% y
   for matrix-matrix multiplies, for which the BLAS is used except when
   an operand contains an \code{NA} or \code{NaN} value, or the
   operands are of a size where checking this takes time comparable to
-  just doing the operation with the C routines.  Setting
-  \code{mat_mult_with_BLAS} to \code{NA} therefore gives the same
-  effect as R Core releases (at least to R-3.1.1), but without the
-  substantial inefficiency that R Core releases incur from checking
-  for \code{NA} or \code{NaN} values even when this check takes more
-  time than the multiply itself.
+  just doing the operation with the C routines. 
 
   The default settings of the \code{mat_mult_with_BLAS} option is
   determined by the configuration options when pqR is built. It can be
@@ -140,8 +143,8 @@ x \%*\% y
 }
 \examples{
 x <- 1:4
-(z <- x \%*\% x)      # scalar ("inner") product (1 x 1 matrix)
-drop(z)             # as scalar
+(z <- x \%*\% x)    # scalar ("inner") product (1 x 1 matrix)
+drop(z)             # ... as scalar
 
 y <- diag(x)
 z <- matrix(1:12, ncol = 3, nrow = 4)
@@ -149,7 +152,7 @@ y \%*\% z
 y \%*\% x
 x \%*\% z
 
-a <- matrix(1.1,10,10)
+a <- matrix(c(1.1,2.2),10,10)
 f <- function (m) t(m+1i)
 f(a) \%*\% a          # the transpose of a+1i is not actually computed
 
