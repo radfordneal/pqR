@@ -82,7 +82,7 @@ x \%*\% y
   two (assuming both are allowed to use the same number of threads),
   and the C routines can be faster for some operations.
 
-  Note that some other linear algebra operations make nternal use
+  Note that some other linear algebra operations make internal use
   of the BLAS matrix multiply routines, regardless of how the
   \code{mat_mult_with_BLAS} option is set.
 
@@ -144,7 +144,7 @@ x \%*\% y
 \examples{
 x <- 1:4
 (z <- x \%*\% x)    # scalar ("inner") product (1 x 1 matrix)
-drop(z)             # ... as scalar
+drop(z)           # ... as scalar
 
 y <- diag(x)
 z <- matrix(1:12, ncol = 3, nrow = 4)
