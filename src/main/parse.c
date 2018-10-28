@@ -376,6 +376,8 @@ typedef struct
   int last_parsed;
 } source_location;
 
+static source_location location_last_expr;  /* location of last expr parsed */
+
 
 /* --------------------------------------------------------------------------
    POINTER TO THE COMPLETE STATE OF THE PARSER
@@ -1502,6 +1504,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
     int keep_parens = flags & KEEP_PARENS;
     int subflags = flags &  ~ (END_ON_NL | NO_PEEKING);
+    int location_set = 0;  /* has location for end of expr already been set? */
     int par = 0;  /* parenthesization indicator - initially not parenthesized */
 
     start_location (&begin_loc);
@@ -1663,6 +1666,9 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         EXPECT(')');
         PARSE_SUB(true_stmt = parse_expr(0, flags, &ipar));
 
+        loc = begin_loc;      /* tentatively set location, in case there */
+        end_location(&loc);   /*   is no 'else' */
+
         if ( ! (NL_END && (flags & NO_PEEKING)) && NEXT_TOKEN == ELSE) {
             if (!keep_parens && ipar) {
                 SEXP e = CADR(true_stmt);
@@ -1673,8 +1679,10 @@ static SEXP parse_expr (int prec, int flags, int *paren)
             PARSE_SUB(false_stmt = parse_expr (0, flags, NULL));
             res = PROTECT_N (LANG4 (op, cond, true_stmt, false_stmt));
         }
-        else
+        else {
             res = PROTECT_N (LANG3 (op, cond, true_stmt));
+            location_set = 1;  /* use tentative location set above */
+        }
     }
 
     /* For statements. */
@@ -1941,10 +1949,15 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
     if (paren != NULL) *paren = par;
 
-    end_location (&loc);
+    if (!location_set) {
+        loc = begin_loc;
+        end_location (&loc);
+    }
     end_parseData_record (rec, &loc);
     if (ps->next_token != '\n' && ps->next_token != END_OF_INPUT)
         set_parent_in_rec (prev_token_rec(1), ps->sr->containing_parse_rec);
+
+    location_last_expr = loc;
 
     END_PARSE_FUN;
     return res;
@@ -2076,7 +2089,6 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile, int no_peeking)
     SEXP rval, tval, tlast, res, refs, last_ref;
     PROTECT_INDEX rval_prot;
     SrcRefState state;
-    source_location loc;
     int i;
 
     /* We must make a place to protect rval before calling R_InitSrcRefState. */
@@ -2116,9 +2128,7 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile, int no_peeking)
                     || ps->next_token == END_OF_INPUT)
             continue;
 
-        start_location(&loc);
         res = parse_prog (flags);
-        end_location(&loc);
 
         if (res == R_NoObject) {
             *status = PARSE_ERROR;
@@ -2129,7 +2139,8 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile, int no_peeking)
         tlast = CDR(tlast);
         if (ps->sr->keepSrcRefs) {
             SETCDR (last_ref, 
-                    CONS (makeSrcref(&loc,ps->sr->SrcFile),R_NilValue));
+                    CONS (makeSrcref (&location_last_expr, ps->sr->SrcFile),
+                          R_NilValue));
             last_ref = CDR(last_ref);
         }
 
