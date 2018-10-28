@@ -571,6 +571,9 @@ This bug remains in R Core versions to at least R-3.5.1.
         For both lines above, the value printed was 9 rather than 3.
   \item Fixed a pqR bug in which the \code{evaluate} argument to \code{dump}
         was interpreted backwards.
+  \item Fixed a pqR bug in which \code{parse} sometimes produced parse data
+        in which an \code{if} expression at the end of a line was said to 
+        end at the start of the next line.
   \item Fixed a pqR bug in which the "parent" column returned by 
         \code{getParseData} could be of double rather than integer type.
   \item Previously, \code{length(plist)<-n} did not work when \code{plist}
