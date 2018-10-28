@@ -34,92 +34,153 @@ No helper threads, task merging enabled, uncompressed pointers.
 > 
 > options(keep.source=TRUE,keep.parens=FALSE)
 > 
-> expr <- parse (text = "y <- 1; fn <- function(x) {
-+       (x+y)   +   (2*y)    # A comment
-+       if (y > 10 && fn (x+1, y-1) <= 1) 1 else 2
-+   }")
+> expr1 <- parse (text = "y <- 1; fn <- function(x) {
++                          z <- (x+y)   +   (2*y)    # A comment
++                          y <- y-1
++                          if (y > 10 && fn (x+1) <= 1) 1 else z
++                        }
++                        if (y>1) y <- 3
++                        y <- y+1")
 > 
-> print(getParseData(expr))
-   line1 col1 line2 col2 id parent                token terminal        text
-4      1    1     1    6  4      0                 expr    FALSE            
-1      1    1     1    1  1      2               SYMBOL     TRUE           y
-2      1    1     1    1  2      4                 expr    FALSE            
-3      1    3     1    4  3      4          LEFT_ASSIGN     TRUE          <-
-5      1    6     1    6  5      6            NUM_CONST     TRUE           1
-6      1    6     1    6  6      4                 expr    FALSE            
-7      1    7     1    7  7      0                  ';'     TRUE           ;
-11     1    9     4    3 11      0                 expr    FALSE            
-8      1    9     1   10  8      9               SYMBOL     TRUE          fn
-9      1    9     1   10  9     11                 expr    FALSE            
-10     1   12     1   13 10     11          LEFT_ASSIGN     TRUE          <-
-13     1   15     4    3 13     11                 expr    FALSE            
-12     1   15     1   22 12     13             FUNCTION     TRUE    function
-14     1   23     1   23 14     13                  '('     TRUE           (
-15     1   24     1   24 15     13       SYMBOL_FORMALS     TRUE           x
-16     1   25     1   25 16     13                  ')'     TRUE           )
-18     1   27     4    3 18     13                 expr    FALSE            
-17     1   27     1   27 17     18                  '{'     TRUE           {
-29     2    7     2   23 29     18                 expr    FALSE            
-20     2    7     2   11 20     29                 expr    FALSE            
-19     2    7     2    7 19     20                  '('     TRUE           (
-24     2    8     2   10 24     20                 expr    FALSE            
-21     2    8     2    8 21     22               SYMBOL     TRUE           x
-22     2    8     2    8 22     24                 expr    FALSE            
-23     2    9     2    9 23     24                  '+'     TRUE           +
-25     2   10     2   10 25     26               SYMBOL     TRUE           y
-26     2   10     2   10 26     24                 expr    FALSE            
-27     2   11     2   11 27     20                  ')'     TRUE           )
-28     2   15     2   15 28     29                  '+'     TRUE           +
-31     2   19     2   23 31     29                 expr    FALSE            
-30     2   19     2   19 30     31                  '('     TRUE           (
-35     2   20     2   22 35     31                 expr    FALSE            
-32     2   20     2   20 32     33            NUM_CONST     TRUE           2
-33     2   20     2   20 33     35                 expr    FALSE            
-34     2   21     2   21 34     35                  '*'     TRUE           *
-36     2   22     2   22 36     37               SYMBOL     TRUE           y
-37     2   22     2   22 37     35                 expr    FALSE            
-38     2   23     2   23 38     31                  ')'     TRUE           )
-39     2   28     2   38 39     31              COMMENT     TRUE # A comment
-41     3    7     3   48 41     18                 expr    FALSE            
-40     3    7     3    8 40     41                   IF     TRUE          if
-42     3   10     3   10 42     41                  '('     TRUE           (
-50     3   11     3   38 50     41                 expr    FALSE            
-46     3   11     3   16 46     50                 expr    FALSE            
-43     3   11     3   11 43     44               SYMBOL     TRUE           y
-44     3   11     3   11 44     46                 expr    FALSE            
-45     3   13     3   13 45     46                   GT     TRUE           >
-47     3   15     3   16 47     48            NUM_CONST     TRUE          10
-48     3   15     3   16 48     46                 expr    FALSE            
-49     3   18     3   19 49     50                 AND2     TRUE          &&
-70     3   21     3   38 70     50                 expr    FALSE            
-54     3   21     3   33 54     70                 expr    FALSE            
-51     3   21     3   22 51     52 SYMBOL_FUNCTION_CALL     TRUE          fn
-52     3   21     3   22 52     54                 expr    FALSE            
-53     3   24     3   24 53     54                  '('     TRUE           (
-58     3   25     3   27 58     54                 expr    FALSE            
-55     3   25     3   25 55     56               SYMBOL     TRUE           x
-56     3   25     3   25 56     58                 expr    FALSE            
-57     3   26     3   26 57     58                  '+'     TRUE           +
-59     3   27     3   27 59     60            NUM_CONST     TRUE           1
-60     3   27     3   27 60     58                 expr    FALSE            
-61     3   28     3   28 61     54                  ','     TRUE           ,
-65     3   30     3   32 65     54                 expr    FALSE            
-62     3   30     3   30 62     63               SYMBOL     TRUE           y
-63     3   30     3   30 63     65                 expr    FALSE            
-64     3   31     3   31 64     65                  '-'     TRUE           -
-66     3   32     3   32 66     67            NUM_CONST     TRUE           1
-67     3   32     3   32 67     65                 expr    FALSE            
-68     3   33     3   33 68     54                  ')'     TRUE           )
-69     3   35     3   36 69     70                   LE     TRUE          <=
-71     3   38     3   38 71     72            NUM_CONST     TRUE           1
-72     3   38     3   38 72     70                 expr    FALSE            
-73     3   39     3   39 73     41                  ')'     TRUE           )
-74     3   41     3   41 74     75            NUM_CONST     TRUE           1
-75     3   41     3   41 75     41                 expr    FALSE            
-76     3   43     3   46 76     41                 ELSE     TRUE        else
-77     3   48     3   48 77     78            NUM_CONST     TRUE           2
-78     3   48     3   48 78     41                 expr    FALSE            
-79     4    3     4    3 79     18                  '}'     TRUE           }
+> pd1 <- getParseData(expr1)[c(-5,-6)]
+> row.names(pd1) <- NULL 
+> print(pd1)
+    line1 col1 line2 col2                token terminal        text
+1       1    1     1    6                 expr    FALSE            
+2       1    1     1    1               SYMBOL     TRUE           y
+3       1    1     1    1                 expr    FALSE            
+4       1    3     1    4          LEFT_ASSIGN     TRUE          <-
+5       1    6     1    6            NUM_CONST     TRUE           1
+6       1    6     1    6                 expr    FALSE            
+7       1    7     1    7                  ';'     TRUE           ;
+8       1    9     5   24                 expr    FALSE            
+9       1    9     1   10               SYMBOL     TRUE          fn
+10      1    9     1   10                 expr    FALSE            
+11      1   12     1   13          LEFT_ASSIGN     TRUE          <-
+12      1   15     5   24                 expr    FALSE            
+13      1   15     1   22             FUNCTION     TRUE    function
+14      1   23     1   23                  '('     TRUE           (
+15      1   24     1   24       SYMBOL_FORMALS     TRUE           x
+16      1   25     1   25                  ')'     TRUE           )
+17      1   27     5   24                 expr    FALSE            
+18      1   27     1   27                  '{'     TRUE           {
+19      2   26     2   47                 expr    FALSE            
+20      2   26     2   26               SYMBOL     TRUE           z
+21      2   26     2   26                 expr    FALSE            
+22      2   28     2   29          LEFT_ASSIGN     TRUE          <-
+23      2   31     2   47                 expr    FALSE            
+24      2   31     2   35                 expr    FALSE            
+25      2   31     2   31                  '('     TRUE           (
+26      2   32     2   34                 expr    FALSE            
+27      2   32     2   32               SYMBOL     TRUE           x
+28      2   32     2   32                 expr    FALSE            
+29      2   33     2   33                  '+'     TRUE           +
+30      2   34     2   34               SYMBOL     TRUE           y
+31      2   34     2   34                 expr    FALSE            
+32      2   35     2   35                  ')'     TRUE           )
+33      2   39     2   39                  '+'     TRUE           +
+34      2   43     2   47                 expr    FALSE            
+35      2   43     2   43                  '('     TRUE           (
+36      2   44     2   46                 expr    FALSE            
+37      2   44     2   44            NUM_CONST     TRUE           2
+38      2   44     2   44                 expr    FALSE            
+39      2   45     2   45                  '*'     TRUE           *
+40      2   46     2   46               SYMBOL     TRUE           y
+41      2   46     2   46                 expr    FALSE            
+42      2   47     2   47                  ')'     TRUE           )
+43      2   52     2   62              COMMENT     TRUE # A comment
+44      3   26     3   33                 expr    FALSE            
+45      3   26     3   26               SYMBOL     TRUE           y
+46      3   26     3   26                 expr    FALSE            
+47      3   28     3   29          LEFT_ASSIGN     TRUE          <-
+48      3   31     3   33                 expr    FALSE            
+49      3   31     3   31               SYMBOL     TRUE           y
+50      3   31     3   31                 expr    FALSE            
+51      3   32     3   32                  '-'     TRUE           -
+52      3   33     3   33            NUM_CONST     TRUE           1
+53      3   33     3   33                 expr    FALSE            
+54      4   26     4   62                 expr    FALSE            
+55      4   26     4   27                   IF     TRUE          if
+56      4   29     4   29                  '('     TRUE           (
+57      4   30     4   52                 expr    FALSE            
+58      4   30     4   35                 expr    FALSE            
+59      4   30     4   30               SYMBOL     TRUE           y
+60      4   30     4   30                 expr    FALSE            
+61      4   32     4   32                   GT     TRUE           >
+62      4   34     4   35            NUM_CONST     TRUE          10
+63      4   34     4   35                 expr    FALSE            
+64      4   37     4   38                 AND2     TRUE          &&
+65      4   40     4   52                 expr    FALSE            
+66      4   40     4   47                 expr    FALSE            
+67      4   40     4   41 SYMBOL_FUNCTION_CALL     TRUE          fn
+68      4   40     4   41                 expr    FALSE            
+69      4   43     4   43                  '('     TRUE           (
+70      4   44     4   46                 expr    FALSE            
+71      4   44     4   44               SYMBOL     TRUE           x
+72      4   44     4   44                 expr    FALSE            
+73      4   45     4   45                  '+'     TRUE           +
+74      4   46     4   46            NUM_CONST     TRUE           1
+75      4   46     4   46                 expr    FALSE            
+76      4   47     4   47                  ')'     TRUE           )
+77      4   49     4   50                   LE     TRUE          <=
+78      4   52     4   52            NUM_CONST     TRUE           1
+79      4   52     4   52                 expr    FALSE            
+80      4   53     4   53                  ')'     TRUE           )
+81      4   55     4   55            NUM_CONST     TRUE           1
+82      4   55     4   55                 expr    FALSE            
+83      4   57     4   60                 ELSE     TRUE        else
+84      4   62     4   62               SYMBOL     TRUE           z
+85      4   62     4   62                 expr    FALSE            
+86      5   24     5   24                  '}'     TRUE           }
+87      6   24     6   38                 expr    FALSE            
+88      6   24     6   25                   IF     TRUE          if
+89      6   27     6   27                  '('     TRUE           (
+90      6   28     6   30                 expr    FALSE            
+91      6   28     6   28               SYMBOL     TRUE           y
+92      6   28     6   28                 expr    FALSE            
+93      6   29     6   29                   GT     TRUE           >
+94      6   30     6   30            NUM_CONST     TRUE           1
+95      6   30     6   30                 expr    FALSE            
+96      6   31     6   31                  ')'     TRUE           )
+97      6   33     6   38                 expr    FALSE            
+98      6   33     6   33               SYMBOL     TRUE           y
+99      6   33     6   33                 expr    FALSE            
+100     6   35     6   36          LEFT_ASSIGN     TRUE          <-
+101     6   38     6   38            NUM_CONST     TRUE           3
+102     6   38     6   38                 expr    FALSE            
+103     7   24     7   31                 expr    FALSE            
+104     7   24     7   24               SYMBOL     TRUE           y
+105     7   24     7   24                 expr    FALSE            
+106     7   26     7   27          LEFT_ASSIGN     TRUE          <-
+107     7   29     7   31                 expr    FALSE            
+108     7   29     7   29               SYMBOL     TRUE           y
+109     7   29     7   29                 expr    FALSE            
+110     7   30     7   30                  '+'     TRUE           +
+111     7   31     7   31            NUM_CONST     TRUE           1
+112     7   31     7   31                 expr    FALSE            
+> 
+> for (e in attr(expr1,"srcref")) print(unclass(e))
+[1] 1 1 1 6 1 6 1 1
+[1]  1  9  5 24  9 24  1  5
+[1]  6 24  6 38 24 38  6  6
+[1]  7 24  7 31 24 31  7  7
+> 
+> expr2 <- parse (text = c("y <- 1; fn <- function(x) {",
++ "                         z <- (x+y)   +   (2*y)    # A comment",
++ "                         y <- y-1",
++ "                         if (y > 10 && fn (x+1) <= 1) 1 else z",
++ "                       }",
++ "                       if (y>1) y <- 3",
++ "                       y <- y+1"))
+> 
+> cmp <- c(-5,-6)
+> stopifnot(identical(getParseData(expr1)[cmp],getParseData(expr2)[cmp]))
+> 
+> for (e in attr(expr1,"srcref")) print(unclass(e))
+[1] 1 1 1 6 1 6 1 1
+[1]  1  9  5 24  9 24  1  5
+[1]  6 24  6 38 24 38  6  6
+[1]  7 24  7 31 24 31  7  7
 > 
 > 
 > # Check retention/removal of parentheses.
