@@ -7,12 +7,32 @@
 
 options(keep.source=TRUE,keep.parens=FALSE)
 
-expr <- parse (text = "y <- 1; fn <- function(x) {
-      (x+y)   +   (2*y)    # A comment
-      if (y > 10 && fn (x+1, y-1) <= 1) 1 else 2
-  }")
+expr1 <- parse (text = "y <- 1; fn <- function(x) {
+                         z <- (x+y)   +   (2*y)    # A comment
+                         y <- y-1
+                         if (y > 10 && fn (x+1) <= 1) 1 else z
+                       }
+                       if (y>1) y <- 3
+                       y <- y+1")
 
-print(getParseData(expr))
+pd1 <- getParseData(expr1)[c(-5,-6)]
+row.names(pd1) <- NULL 
+print(pd1)
+
+for (e in attr(expr1,"srcref")) print(unclass(e))
+
+expr2 <- parse (text = c("y <- 1; fn <- function(x) {",
+"                         z <- (x+y)   +   (2*y)    # A comment",
+"                         y <- y-1",
+"                         if (y > 10 && fn (x+1) <= 1) 1 else z",
+"                       }",
+"                       if (y>1) y <- 3",
+"                       y <- y+1"))
+
+cmp <- c(-5,-6)
+stopifnot(identical(getParseData(expr1)[cmp],getParseData(expr2)[cmp]))
+
+for (e in attr(expr1,"srcref")) print(unclass(e))
 
 
 # Check retention/removal of parentheses.
