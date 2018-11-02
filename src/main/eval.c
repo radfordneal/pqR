@@ -341,65 +341,6 @@ static SEXP do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-static SEXP do_is_builtin_internal(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    SEXP symbol, i;
-
-    checkArity(op, args);
-    symbol = CAR(args);
-
-    if (!isSymbol(symbol))
-	errorcall(call, _("invalid symbol"));
-
-    if ((i = INTERNAL(symbol)) != R_NilValue && TYPEOF(i) == BUILTINSXP)
-	return R_ScalarLogicalTRUE;
-    else
-	return R_ScalarLogicalFALSE;
-}
-
-static SEXP do_loadfile(SEXP call, SEXP op, SEXP args, SEXP env)
-{
-    SEXP file, s;
-    FILE *fp;
-
-    checkArity(op, args);
-
-    PROTECT(file = coerceVector(CAR(args), STRSXP));
-
-    if (! isValidStringF(file))
-	errorcall(call, _("bad file name"));
-
-    fp = RC_fopen(STRING_ELT(file, 0), "rb", TRUE);
-    if (!fp)
-	errorcall(call, _("unable to open 'file'"));
-    s = R_LoadFromFile(fp, 0);
-    fclose(fp);
-
-    UNPROTECT(1);
-    return s;
-}
-
-static SEXP do_savefile(SEXP call, SEXP op, SEXP args, SEXP env)
-{
-    FILE *fp;
-
-    checkArity(op, args);
-
-    if (!isValidStringF(CADR(args)))
-	errorcall(call, _("'file' must be non-empty string"));
-    if (TYPEOF(CADDR(args)) != LGLSXP)
-	errorcall(call, _("'ascii' must be logical"));
-
-    fp = RC_fopen(STRING_ELT(CADR(args), 0), "wb", TRUE);
-    if (!fp)
-	errorcall(call, _("unable to open 'file'"));
-
-    R_SaveToFileV(CAR(args), fp, INTEGER(CADDR(args))[0], 0);
-
-    fclose(fp);
-    return R_NilValue;
-}
-
 
 /* -------------------------------------------------------------------------- */
 /*                CONTEXT PROCEDURES - others are in context.c                */
