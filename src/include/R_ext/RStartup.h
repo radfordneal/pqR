@@ -53,13 +53,20 @@ typedef enum {
     SA_SUICIDE
 } SA_TYPE;
 
+/* The following structure is used externally (eg, in RStudio) and hence
+   must only be extended in a way that does not change field offsets and
+   does not change the size, if such external uses are to remain valid
+   without them being recompiled with the new version of this header file.
+   This is platform dependent, of course, but the addition of R_PeakForElse
+   has been done so that it will work at least for 32 and 64 bit Intel/AMD 
+   processors with gcc/clang. */
+
 typedef struct
 {
     Rboolean R_Quiet;
     Rboolean R_Slave;
     Rboolean R_Interactive;
     Rboolean R_Verbose;
-    Rboolean R_PeekForElse;
     Rboolean LoadSiteFile;
     Rboolean LoadInitFile;
     Rboolean DebugInitFile;
@@ -82,7 +89,30 @@ typedef struct
     blah5 YesNoCancel;
     blah6 Busy;
     UImode CharacterMode;
-    blah7 WriteConsoleEx; /* used only if WriteConsole is NULL */
+
+#if SIZEOF_CHAR_P == 8
+    Rboolean R_PeekForElse;    /* should fit in padding present anyway due to
+                                  next item being a pointer */
+#endif
+
+    blah7 WriteConsoleEx;      /* used only if WriteConsole is NULL */
+
+#if SIZEOF_CHAR_P == 4
+    Rboolean R_PeekForElse;    /* 26th field, hope struct size is padded to
+                                  multiple of 8 bytes so it will hold it even
+                                  if it's absent in external declaration (as
+                                  gcc & clang seem to do) */ 
+#endif
+
+#else  /* not Win32 */
+
+    Rboolean R_PeekForElse;    /* 32-bit: 16th field, hope struct size padded
+                                          to multiple of 8 bytes so it will
+                                          hold it even if not declared (as 
+                                          gcc & clang seem to do) */
+                               /* 64-bit: second 32-bit item after size_t item,
+                                          should fit in padding that will be 
+                                          present even if it is not declared */
 #endif
 
 } structRstart;
