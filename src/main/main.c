@@ -1162,6 +1162,11 @@ void run_Rmainloop(void)
 
 void mainloop(void)
 {
+    if (getenv("R_DISPLAY_SIZES")) {
+        fprintf(stderr,"sizeof Rboolean: %d\n",(int)sizeof(Rboolean));
+        fprintf(stderr,"sizeof structRstart: %d\n",(int)sizeof(structRstart));
+    }
+
     setup_Rmainloop();
     run_Rmainloop();
 }
