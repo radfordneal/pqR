@@ -67,9 +67,9 @@ check_matprod <- function (print=TRUE)
 
   # Try various sizes systematically.
 
-  for (n in 0:11)
-  { for (m in 0:11)
-    { for (k in 0:11)
+  for (n in 0..11)
+  { for (m in 0..11)
+    { for (k in 0..11)
       { C <- check(n,m,k)
       }
     }
@@ -78,6 +78,15 @@ check_matprod <- function (print=TRUE)
   if (print)
   { cat("\n")
     print(C)
+  }
+
+  for (n in c(20,100,200,1000,2000,10000))
+  { for (m in c(20,100,200,1000,2000,10000))
+    { if (n*m <= 2000000)
+      { if (print) print(c(n,m))
+        for (k in c(1,2,3,4,5,8,9)) check(n,m,k)
+      }
+    }
   }
 
   # Try various sizes randomly.  Can increase loop count for more testing
