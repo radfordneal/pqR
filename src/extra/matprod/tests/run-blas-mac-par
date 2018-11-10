@@ -7,4 +7,6 @@ for thr in $@; do
   echo RUNNING TESTS FOR blas4 WITH $thr THREADS
   ../run-tests blas4 >& blas4-$thr.out
   ../tim blas4-$thr
+  ../run-tests blas4-off >& blas4-off-$thr.out
+  ../tim blas4-off-$thr
 done

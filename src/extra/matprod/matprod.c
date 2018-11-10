@@ -58,10 +58,13 @@
                                     last-level cache with some space to spare */
 
 
-/* SETUP TO FACILITATE INCLUSION AND USE OF MATPROD.C IN PIPED-MATPROD.C.
+/* SETUP TO FACILITATE INCLUSION AND USE OF MATPROD.C IN PAR-MATPROD.C.
    If PAR_MATPROD is defined, SCOPE, AMTOUT, EXTRAD, and EXTRAN will
    be defined before matprod.c is included.  Otherwise, they are
-   defined here as nothing.
+   defined here as nothing.  EXTRAD declares extra arguments to the
+   matprod functions for use by AMTOUT, EXTRAN passes them along, and 
+   EXTRAZ passes along null versions when more output should not be
+   signalled.
 
    Also, matprod.h and perhaps matprod-app.h are included only if
    PAR_MATPROD is not defined. */
@@ -96,7 +99,7 @@
 # endif
 #endif
 
-#define NDEBUG           /* Define to disable assertion check */
+#define NDEBUG             /* Define to disable assertion check */
 #include <assert.h>
 
 #define CHK_ALIGN(p) assert (((uintptr_t)(p)&(ALIGN-1)) == ALIGN_OFFSET)
@@ -214,11 +217,11 @@
 #endif
 
 
-/* MACRO TO SPLIT COUNT, ALIGNED.  Given that M < c < 2*M, with M a
+/* MACRO TO SPLIT COUNT, ALIGNED.  Given that M < c <= 2*M, with M a
    multiple of 4, finds a value v s.t. v <= M and c-v <= M, and v is 
    a multiple of 4. */
 
-#define SPLITC(c,M) M  /* trivial method for now, not necessarily best */
+#define SPLITC(c,M) (((c+3)>>1) & ~3) /* reasonable, but not necessarily best */
 
 
 /* Set vector/matrix z with s elements to all zeros.  This is a
@@ -2405,7 +2408,7 @@ static void matprod_mat_vec_n4 (double * MATPROD_RESTRICT x,
    in the n x m matrix z.
 
    Cases where n is four or less are handled specially, storing all of
-   x in local variables rather thna fetching it to compute each column
+   x in local variables rather than fetching it to compute each column
    of z. */
 
 static void matprod_outer_sub (double * MATPROD_RESTRICT x,
@@ -2469,7 +2472,7 @@ SCOPE void matprod_outer (double * MATPROD_RESTRICT x,
   int rows = n;
 
   while (rows > 2*OUTER_ROWS)
-  { matprod_outer_sub (x, y, z, n, m, OUTER_ROWS EXTRAN);
+  { matprod_outer_sub (x, y, z, n, m, OUTER_ROWS EXTRAZ);
     x += OUTER_ROWS;
     z += OUTER_ROWS;
     rows -= OUTER_ROWS;
@@ -2477,7 +2480,7 @@ SCOPE void matprod_outer (double * MATPROD_RESTRICT x,
 
   if (rows > OUTER_ROWS)
   { int nr = SPLITC (rows, OUTER_ROWS);
-    matprod_outer_sub (x, y, z, n, m, nr EXTRAN);
+    matprod_outer_sub (x, y, z, n, m, nr EXTRAZ);
     x += nr;
     z += nr;
     rows -= nr;
@@ -3795,34 +3798,6 @@ static void matprod_mat_mat_sub_xrowscols (double * MATPROD_RESTRICT x,
           T = _mm_add_sd (
                  _mm_add_sd (T, _mm_mul_sd (_mm_load_sd (xx+j), cast128(B0))),
                  _mm_mul_sd (_mm_load_sd (xx+n+j), cast128(B1)));
-          _mm_store_sd (z+j, T);
-        }
-      }
-
-#     elif CAN_USE_SSE2
-      {
-        j = 0;
-#       if ALIGN_FORWARD & 8
-          __m128d T = _mm_load_sd(z+j);
-          T = _mm_add_sd (
-                 _mm_add_sd (T, _mm_mul_sd (_mm_load_sd (xx+j), B0)),
-                 _mm_mul_sd (_mm_load_sd (xx+n+j), B1));
-          _mm_store_sd (z+j, T);
-          j += 1;
-#       endif
-        while (j <= xrows-2)
-        { __m128d T = _mm_loadA_pd(z+j);
-          T = _mm_add_pd (
-                 _mm_add_pd (T, _mm_mul_pd (_mm_loadA_pd (xx+j), B0)),
-                 _mm_mul_pd (_mm_loadu_pd (xx+n+j), B1));
-          _mm_storeA_pd (z+j, T);
-          j += 2;
-        }
-        if (j < xrows)
-        { __m128d T = _mm_load_sd(z+j);
-          T = _mm_add_sd (
-                 _mm_add_sd (T, _mm_mul_sd (_mm_load_sd (xx+j), B0)),
-                 _mm_mul_sd (_mm_load_sd (xx+n+j), B1));
           _mm_store_sd (z+j, T);
         }
       }
@@ -5346,7 +5321,8 @@ static void matprod_trans2_sub_xrowscols (double * MATPROD_RESTRICT x,
 #       endif
 
 #       if ALIGN_OFFSET & 8
-        {
+        { /* should increase alignment of stores into z, to at least 16 bytes
+             for the first column of the pair */
           __m128d S1 = _mm_load_sd(r);
           __m128d S2 = _mm_load_sd(r+n);
           __m128d T1 = _mm_load_sd(t);
@@ -5388,7 +5364,7 @@ static void matprod_trans2_sub_xrowscols (double * MATPROD_RESTRICT x,
                              _mm_add_pd (_mm_mul_pd (S1, cast128(B11)), T1));
             T2 = _mm_add_pd (_mm_mul_pd (S2, cast128(B22)),
                              _mm_add_pd (_mm_mul_pd (S1, cast128(B21)), T2));
-            _mm_storeu_pd (t, T1);
+            _mm_storeA_pd (t, T1);
             _mm_storeu_pd (t+n, T2);
             S1 = _mm_loadu_pd(r+2);
             S2 = _mm_loadu_pd(r+n+2);
@@ -5398,7 +5374,7 @@ static void matprod_trans2_sub_xrowscols (double * MATPROD_RESTRICT x,
                              _mm_add_pd (_mm_mul_pd (S1, cast128(B11)), T1));
             T2 = _mm_add_pd (_mm_mul_pd (S2, cast128(B22)),
                              _mm_add_pd (_mm_mul_pd (S1, cast128(B21)), T2));
-            _mm_storeu_pd (t+2, T1);
+            _mm_storeA_pd (t+2, T1);
             _mm_storeu_pd (t+n+2, T2);
           }
 #         endif
@@ -5415,7 +5391,7 @@ static void matprod_trans2_sub_xrowscols (double * MATPROD_RESTRICT x,
                            _mm_add_pd (_mm_mul_pd (S1, cast128(B11)), T1));
           T2 = _mm_add_pd (_mm_mul_pd (S2, cast128(B22)),
                            _mm_add_pd (_mm_mul_pd (S1, cast128(B21)), T2));
-          _mm_storeu_pd (t, T1);
+          _mm_storeA_pd (t, T1);
           _mm_storeu_pd (t+n, T2);
           t += 2;
           r += 2;
@@ -5521,9 +5497,8 @@ static void matprod_trans2_sub_xrowscols (double * MATPROD_RESTRICT x,
     double *xs = sym == 0 || z >= sym ? x : x + ((z-sym) & ~3);
     double *q = y;
 
-    /* Unless we're adding, initialize sums in z to the product of
-       the first element of the last row of y with the first
-       column of x. */
+    /* Unless we're adding, initialize sums in z to the product of the
+       first element of the final row of y with the first column of x. */
 
     if (!add)
     { double *r = xs;
@@ -5544,29 +5519,97 @@ static void matprod_trans2_sub_xrowscols (double * MATPROD_RESTRICT x,
       xs += n;
     }
 
-    /* Each time around this loop, add the products of two
-       columns of x with two elements of the first row of y to
-       the result vector, z.  Adjust r and y to account for this. */
+    /* Each time around this loop, add the products of two columns of x
+       with two elements of the final row of y to the result vector, z. */
 
     while (xs < ex-n)
     { double *r = xs;
       double *t = z;
-      double b1, b2;
-      b1 = q[0];
-      b2 = (q+m)[0];
-      while (t < ez)
-      { t[0] = (t[0] + (r[0] * b1)) + ((r+n)[0] * b2);
-        t[1] = (t[1] + (r[1] * b1)) + ((r+n)[1] * b2);
-        r += 2;
-        t += 2;
+
+#     if CAN_USE_AVX || CAN_USE_SSE2
+      {
+#       if CAN_USE_AVX
+          __m256d B1 = _mm256_set1_pd(q[0]);
+          __m256d B2 = _mm256_set1_pd((q+m)[0]);
+#       else 
+          __m128d B1 = _mm_set1_pd(q[0]);
+          __m128d B2 = _mm_set1_pd((q+m)[0]);
+#       endif
+
+#       if ALIGN_OFFSET & 8 
+        { /* should increase alignment of stores into z, to at least 16 bytes */
+          __m128d T;
+          T = _mm_load_sd(t);
+          T = _mm_add_sd (T, _mm_mul_sd(_mm_load_sd(r),cast128(B1)));
+          T = _mm_add_sd (T, _mm_mul_sd(_mm_load_sd(r+n),cast128(B2)));
+          _mm_store_sd(t,T);
+          r += 1;
+          t += 1;
+        }
+#       endif
+
+        while (t < ez-2)
+        { 
+#         if CAN_USE_AVX
+          { __m256d T;
+            T = _mm256_loadu_pd(t);       
+            T = _mm256_add_pd (T, _mm256_mul_pd(_mm256_loadu_pd(r),B1));
+            T = _mm256_add_pd (T, _mm256_mul_pd(_mm256_loadu_pd(r+n),B2));
+            _mm256_storeu_pd(t,T);
+          }
+#         else  /* CAN_USE_SSE2 */
+          { __m128d T;
+            T = _mm_loadu_pd(t);       
+            T = _mm_add_pd (T, _mm_mul_pd(_mm_loadu_pd(r),B1));
+            T = _mm_add_pd (T, _mm_mul_pd(_mm_loadu_pd(r+n),B2));
+            _mm_storeA_pd(t,T);
+            T = _mm_loadu_pd(t+2);
+            T = _mm_add_pd (T, _mm_mul_pd(_mm_loadu_pd(r+2),B1));
+            T = _mm_add_pd (T, _mm_mul_pd(_mm_loadu_pd(r+n+2),B2));
+            _mm_storeA_pd(t+2,T);
+          }
+#         endif
+          r += 4;
+          t += 4;
+        }
+        if (t < ez)
+        { __m128d T;
+          T = _mm_loadu_pd(t);
+          T = _mm_add_pd (T, _mm_mul_pd(_mm_loadu_pd(r),cast128(B1)));
+          T = _mm_add_pd (T, _mm_mul_pd(_mm_loadu_pd(r+n),cast128(B2)));
+          _mm_storeA_pd(t,T);
+          r += 2;
+          t += 2;
+        }
+        if (t <= ez)
+        { __m128d T;
+          T = _mm_load_sd(t);
+          T = _mm_add_sd (T, _mm_mul_sd(_mm_load_sd(r),cast128(B1)));
+          T = _mm_add_sd (T, _mm_mul_sd(_mm_load_sd(r+n),cast128(B2)));
+          _mm_store_sd(t,T);
+        }
       }
-      if (t <= ez)
-      { t[0] = (t[0] + (r[0] * b1)) + ((r+n)[0] * b2);
-        r += 1;
+#     else  /* non-SIMD code */
+      {
+        double b1, b2;
+        b1 = q[0];
+        b2 = (q+m)[0];
+        while (t < ez)
+        { t[0] = (t[0] + (r[0] * b1)) + ((r+n)[0] * b2);
+          t[1] = (t[1] + (r[1] * b1)) + ((r+n)[1] * b2);
+          r += 2;
+          t += 2;
+        }
+        if (t <= ez)
+        { t[0] = (t[0] + (r[0] * b1)) + ((r+n)[0] * b2);
+        }
       }
+#     endif
       q += m; q += m;
       xs += n; xs += n;
     }
+
+    /* Handle possible odd element at end of final row of y. */
 
     if (xs < ex)
     { double *r = xs;

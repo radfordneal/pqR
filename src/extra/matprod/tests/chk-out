@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# Check correctness of output against blas1 output.
+
+grep -v "[rs]" blas1.out >/tmp/blas1chk
+grep -v "[rs]" $1 | diff /tmp/blas1chk -
