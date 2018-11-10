@@ -61,6 +61,10 @@ check_matprod <- function (print=TRUE)
     C
   }
 
+  # Set seed to get consistent results.
+
+  set.seed(1)
+
   # Try various sizes systematically.
 
   cat("---- (0..11) (0..11) (0..11)\n")
@@ -104,8 +108,6 @@ check_matprod <- function (print=TRUE)
 
   # Try various sizes randomly.  Can increase loop count for more testing
   # by setting the environment variable R_MATPROD_TEST_COUNT (minimum 200).
-
-  set.seed(1)  # Set seed to get consistent results.
 
   count <- as.integer(Sys.getenv("R_MATPROD_TEST_COUNT"))
   if (is.na(count) || count < 200) count <- 200
