@@ -61,11 +61,9 @@ check_matprod <- function (print=TRUE)
     C
   }
 
-  # Set seed to get consistent results.
-
-  set.seed(1)
-
   # Try various sizes systematically.
+
+  cat("---- (0..11) (0..11) (0..11)\n")
 
   for (n in 0..11)
   { for (m in 0..11)
@@ -80,17 +78,34 @@ check_matprod <- function (print=TRUE)
     print(C)
   }
 
-  for (n in c(20,100,200,1000,2000,10000))
-  { for (m in c(20,100,200,1000,2000,10000))
-    { if (n*m <= 2000000)
+  cat("---- n (1 2 3 4 5) m\n")
+
+  for (n in c(2,3,4,5,8,100,1000,2000,4000))
+  { for (m in c(2,3,4,5,8,100,1000,2000,4000))
+    { if (n*m <= 1000000)
       { if (print) print(c(n,m))
-        for (k in c(1,2,3,4,5,8,9)) check(n,m,k)
+        for (k in c(1,2,3,4,5)) check(n,m,k)
       }
     }
   }
 
+  cat("---- (1 2 3 4 5) k m\n")
+
+  for (k in c(2,3,4,5,8,100,1000,2000))
+  { for (m in c(2,3,4,5,8,100,1000,2000))
+    { if (k*m <= 1000000)
+      { if (print) print(c(k,m))
+        for (n in c(1,2,3,4,5)) check(n,m,k)
+      }
+    }
+  }
+
+  cat("---- random\n")
+
   # Try various sizes randomly.  Can increase loop count for more testing
   # by setting the environment variable R_MATPROD_TEST_COUNT (minimum 200).
+
+  set.seed(1)  # Set seed to get consistent results.
 
   count <- as.integer(Sys.getenv("R_MATPROD_TEST_COUNT"))
   if (is.na(count) || count < 200) count <- 200
@@ -121,16 +136,20 @@ check_matprod <- function (print=TRUE)
 sv <- options()[c("mat_mult_with_BLAS","helpers_disable")]
 
 options(mat_mult_with_BLAS=FALSE,helpers_disable=FALSE)
+cat("\nNot BLAS, Helpers not disabled\n\n")
 check_matprod()
 
 options(mat_mult_with_BLAS=FALSE,helpers_disable=TRUE)
+cat("\nNot BLAS, Helpers disabled\n\n")
 check_matprod()
 
 if (identical(Sys.getenv("R_MATPROD_TEST_BLAS"),"TRUE")) {
 
+    cat("\nBLAS, Helpers not disabled\n\n")
     options(mat_mult_with_BLAS=TRUE,helpers_disable=FALSE)
     check_matprod(print=FALSE)
 
+    cat("\nBLAS, Helpers disabled\n\n")
     options(mat_mult_with_BLAS=TRUE,helpers_disable=TRUE)
     check_matprod(print=FALSE)
 }
