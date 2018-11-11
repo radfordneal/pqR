@@ -444,9 +444,13 @@
         utility function.  From R-3.2.4: \code{provideDimnames()}
         gets an optional \code{unique} argument.
 
-  \item \code{mget()} now has a default for \code{envir} (the frame
-        from which it is called), for consistency with \code{get()} and
+  \item From R-3.0.0: \code{mget()} now has a default for \code{envir} (the 
+        frame from which it is called), for consistency with \code{get()} and
         \code{assign()}.
+
+  \item From R-3.0.0: The \code{R_forceSymbols} function, which disallows
+        calls of C functions via names given by character strings, is now 
+        implemented, as described in \code{R-exts}.
 
   \item From R-3.0.2: New \code{assertCondition()}, etc. utilities in tools,
         useful for testing.

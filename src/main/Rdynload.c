@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995-1996 Robert Gentleman and Ross Ihaka
@@ -163,7 +163,7 @@ static DllInfo *R_RegisterDLL(HINSTANCE handle, const char *path);
 attribute_hidden OSDynSymbol Rf_osDynSymbol;
 attribute_hidden OSDynSymbol *R_osDynSymbol = &Rf_osDynSymbol;
 
-void R_init_base(DllInfo *); /* In Registration.c */
+void R_init_base(DllInfo *); /* In registration.c */
 DL_FUNC R_dlsym(DllInfo *dll, char const *name,
 		R_RegisteredNativeSymbol *symbol);
 
@@ -196,8 +196,15 @@ Rboolean R_useDynamicSymbols(DllInfo *info, Rboolean value)
     Rboolean old;
     old = info->useDynamicLookup;
     info->useDynamicLookup = value;
+    return old;
+}
 
-    return(old);
+Rboolean R_forceSymbols(DllInfo *info, Rboolean value)
+{
+    Rboolean old;
+    old = info->forceSymbols;
+    info->forceSymbols = value;
+    return old;
 }
 
 static void
@@ -262,6 +269,7 @@ R_registerRoutines(DllInfo *info, const R_CMethodDef * const croutines,
        if there are any registered values.
     */
     info->useDynamicLookup = (info->handle)?TRUE:FALSE;
+    info->forceSymbols = FALSE;
 
     if(croutines) {
 	for(num=0; croutines[num].name != NULL; num++) {;}
@@ -495,6 +503,7 @@ found:
 	LoadedDLL[i - 1].CallSymbols = LoadedDLL[i].CallSymbols;
 	LoadedDLL[i - 1].FortranSymbols = LoadedDLL[i].FortranSymbols;
 	LoadedDLL[i - 1].ExternalSymbols = LoadedDLL[i].ExternalSymbols;
+        LoadedDLL[i - 1].forceSymbols = LoadedDLL[i].forceSymbols;
     }
     CountDLL--;
     return 1;
@@ -591,14 +600,7 @@ static DllInfo* AddDLL(const char *path, int asLocal, int now,
 
 static DllInfo *R_RegisterDLL(HINSTANCE handle, const char *path)
 {
-    char *dpath,  DLLname[PATH_MAX], *p;
-    DllInfo *info;
-
-    info = &LoadedDLL[CountDLL];
-    /* default is to use old-style dynamic lookup.  The object's
-       initialization routine can limit access by setting this to FALSE.
-    */
-    info->useDynamicLookup = TRUE;
+    char *dpath, DLLname[PATH_MAX], *p;
 
     dpath = (char *) malloc(strlen(path)+1);
     if(dpath == NULL) {
@@ -625,25 +627,28 @@ static DllInfo *R_RegisterDLL(HINSTANCE handle, const char *path)
     if(p > DLLname && strcmp(p, SHLIB_EXT) == 0) *p = '\0';
 #endif
 
-    addDLL(dpath, DLLname, handle);
+    int which = addDLL(dpath, DLLname, handle);
+    if (which < 0)
+        return NULL;
 
-    return(info);
+    return &LoadedDLL[which];
 }
 
-static int
-addDLL(char *dpath, char *DLLname, HINSTANCE handle)
+static int addDLL(char *dpath, char *DLLname, HINSTANCE handle)
 {
-    int ans = CountDLL;
+    if (CountDLL == MAX_NUM_DLLS) {
+        strcpy(DLLerror, _("Maximal number of DLLs reached..."));
+	goto error;
+    }
+
     char *name = (char *) malloc(strlen(DLLname)+1);
-    if(name == NULL) {
-	strcpy(DLLerror, _("could not allocate space for 'name'"));
-	if(handle)
-	    R_osDynSymbol->closeLibrary(handle);
-	free(dpath);
-	return 0;
+    if (name == NULL) {
+        strcpy(DLLerror, _("could not allocate space for 'name'"));
+	goto error;
     }
 
     strcpy(name, DLLname);
+
     LoadedDLL[CountDLL].path = dpath;
     LoadedDLL[CountDLL].name = name;
     LoadedDLL[CountDLL].handle = handle;
@@ -656,9 +661,20 @@ addDLL(char *dpath, char *DLLname, HINSTANCE handle)
     LoadedDLL[CountDLL].CallSymbols = NULL;
     LoadedDLL[CountDLL].FortranSymbols = NULL;
     LoadedDLL[CountDLL].ExternalSymbols = NULL;
-    CountDLL++;
 
-    return(ans);
+    /* default is to use old-style dynamic lookup.  The object's
+       initialization routine can limit access by setting this to FALSE.
+    */
+    LoadedDLL[CountDLL].useDynamicLookup = TRUE;
+    LoadedDLL[CountDLL].forceSymbols = FALSE;
+
+    return CountDLL++;
+
+  error:
+    if (handle)
+        R_osDynSymbol->closeLibrary(handle);
+    free(dpath);
+    return -1;
 }
 
 static Rf_DotCSymbol *
@@ -886,6 +902,7 @@ DL_FUNC R_FindSymbol(char const *name, char const *pkg,
     for (i = CountDLL - 1; i >= 0; i--) {
 	doit = all;
 	if(!doit && !strcmp(pkg, LoadedDLL[i].name)) doit = 2;
+        if(doit && LoadedDLL[i].forceSymbols) doit = 0;
 	if(doit) {
 	    fcnptr = R_dlsym(&LoadedDLL[i], name, symbol); /* R_osDynSymbol->dlsym */
 	    if (fcnptr != (DL_FUNC) NULL) {

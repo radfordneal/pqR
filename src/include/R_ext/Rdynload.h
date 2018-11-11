@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2001-8  The R Core Team.
@@ -96,6 +96,7 @@ int R_registerRoutines(DllInfo *info, const R_CMethodDef * const croutines,
                        const R_ExternalMethodDef * const externalRoutines);
 
 Rboolean R_useDynamicSymbols(DllInfo *info, Rboolean value);
+Rboolean R_forceSymbols(DllInfo *info, Rboolean value);
 
 DllInfo *R_getDllInfo(const char *name);
 
