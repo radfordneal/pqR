@@ -397,6 +397,24 @@
         package is now 1.3-9 (named 1.3-9-909 since it is slightly tweaked).
   \item The version of the \code{digest} package included as a recommended
         package is now 0.6.18 (named 0.6.18-909 since it is slightly tweaked).
+  \item The version of the \code{KernSmooth} package included as a recommended
+        package is now 2.23-15.
+  \item The version of the \code{class} package included as a recommended
+        package is now 7.3-5.
+  \item The version of the \code{lattice} package included as a recommended
+        package is now 0.20-29.
+  \item The version of the \code{mgcv} package included as a recommended
+        package is now 1.7-24.
+  \item The version of the \code{nlme} package included as a recommended
+        package is now 3.1-107.
+  \item The version of the \code{nnet} package included as a recommended
+        package is now 7.3-12.
+  \item The version of the \code{rpart} package included as a recommended
+        package is now 4.1-13.
+  \item The version of the \code{spatial} package included as a recommended
+        package is now 7.3-5.
+  \item The version of the \code{survival} package included as a recommended
+        package is now 2.37-7.
   }}
 
   \subsection{NEW FEATURES FROM R CORE RELEASES}{
