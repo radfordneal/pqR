@@ -837,6 +837,7 @@ SEXP attribute_hidden Rf_find_binding_in_frame (SEXP rho, SEXP symbol,
                 if (canCache && table->canCache)
                     *canCache = table->canCache(CHAR(PRINTNAME(symbol)), table);
             }
+            return loc;
         }
         else if (IS_BASE(rho))
             error(
