@@ -1,0 +1,2 @@
+Add R_forceSymbols function from R-3.0.0, plus some changes to
+avoid possible overflow and unitialized field problems.
