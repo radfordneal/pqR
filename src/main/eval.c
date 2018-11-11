@@ -3789,7 +3789,7 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
     if (xarray || yarray) {
 	if (xarray && yarray) {
 	    if (!conformable(x, y))
-		error(_("binary operation on non-conformable arrays"));
+		error(_("non-conformable arrays"));
 	    dims = getDimAttrib(x);
 	}
 	else if (xarray) {
@@ -3840,14 +3840,10 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
         WAIT_UNTIL_COMPUTED_2(x,y);
         PROTECT(ans = binaryLogic2(PRIMVAL(op), x, y));
     }
+    else if (nx == 0 || ny == 0) {
+        PROTECT (ans = allocVector (LGLSXP, 0));
+    }
     else {
-
-        if (nx == 0 || ny == 0) {
-            ans = allocVector (LGLSXP, 0);
-            UNPROTECT(5);
-            return ans;
-        }
-
         R_len_t n = (nx > ny) ? nx : ny;
         PROTECT(ans = allocVector (LGLSXP, n));
 
@@ -3921,7 +3917,7 @@ void task_not (helpers_op_t code, SEXP x, SEXP arg, SEXP unused)
 }
 
 
-/* Handles the ! operator. */
+/* Handles the ! operator.  When unary, it's "not", when binary, it's paste0. */
 
 #define T_not THRESHOLD_ADJUST(40)
 
@@ -3979,7 +3975,7 @@ static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 SEXP attribute_hidden do_not (SEXP call, SEXP op, SEXP args, SEXP env, 
                               int variant)
 {
-    if (CDR(args) != R_NilValue)  /* more than one arg, so paste, not not */
+    if (CDR(args) != R_NilValue)  /* more than one arg, so paste0, not not */
         return do_paste_bang (call, op, args, env);
 
     SEXP ans;
