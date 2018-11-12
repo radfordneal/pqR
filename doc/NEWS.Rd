@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2018-11-02}{
+\section{CHANGES IN VERSION RELEASED 2018-11-11}{
 
   \subsection{INTRODUCTION}{
   \itemize{ 
