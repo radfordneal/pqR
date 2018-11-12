@@ -2907,8 +2907,9 @@ static SEXP do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP expr, env;
 
-    if (CDR(args) == R_NilValue && TAG(args) == R_NilValue) {
-       /* handle one unnamed argument specially for speed */
+    if (CDR(args) == R_NilValue 
+            && TAG(args) == R_NilValue && args != R_NilValue) {
+        /* handle one unnamed argument specially for speed */
         expr = CAR(args);
         env = rho;
     }                                
