@@ -11422,8 +11422,8 @@ In addition, a call
 @example
     R_forceSymbols(dll, TRUE);
 @end example
-can be added to an initializer function to specify that calls via @(.C), etc. 
-can only be made via @R{} variables, not by character strings.
+can be added to an initializer function to specify that calls via @code{.C},
+etc. can only be made via @R{} variables, not by character strings.
 
 In more detail, if a package @code{mypkg} contains entry points
 @code{reg} and @code{unreg} and the first is registered as a 0-argument
