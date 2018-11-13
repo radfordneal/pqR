@@ -6,3 +6,5 @@ Speed up to rbind.data.frame in simple cases.  New version of codetools
 that makes better use of this.
 
 Bug fixes.
+
+Tuning adjustments.

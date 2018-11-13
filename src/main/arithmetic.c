@@ -1194,7 +1194,7 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     }
 }
 
-#define T_arithmetic THRESHOLD_ADJUST(24)  /* >= 8, further adjusted below */
+#define T_arithmetic THRESHOLD_ADJUST(500)  /* >= 16, further adjusted below */
 
 SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y, 
                                 int objx, int objy, SEXP env, int variant)
@@ -1432,9 +1432,9 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
 
         threshold = T_arithmetic;
         if (TYPEOF(ans) == CPLXSXP)
-            threshold >>= 1;
+            threshold >>= 2;
         if (opcode > TIMESOP)
-            threshold >>= 1;
+            threshold >>= 2;
 
         SEXP xx = x, yy = y;
 
@@ -1565,7 +1565,7 @@ void task_unary_minus (helpers_op_t op, SEXP ans, SEXP s1, SEXP ignored)
     }
 }
 
-#define T_unary_minus THRESHOLD_ADJUST(20)
+#define T_unary_minus THRESHOLD_ADJUST(500)
 
 SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
                                SEXP env, int variant)
@@ -1818,7 +1818,7 @@ void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
     REAL(sy)[0] = (double) s;
 }
 
-#define T_math1 THRESHOLD_ADJUST(5)
+#define T_math1 THRESHOLD_ADJUST(10)
 
 static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
                   /* Note:  sa may be on the scalar stack. */
@@ -2029,7 +2029,7 @@ void task_sum_abs (helpers_op_t op, SEXP s, SEXP x, SEXP ignored)
     REAL(s)[0] = (double) r;
 }
 
-#define T_abs THRESHOLD_ADJUST(10)
+#define T_abs THRESHOLD_ADJUST(500)
 
 static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
 {   

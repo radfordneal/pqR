@@ -447,7 +447,7 @@ void task_row_or_col (helpers_op_t op, SEXP ans, SEXP dim, SEXP ignored)
     }
 }
 
-#define T_rowscols THRESHOLD_ADJUST(100)
+#define T_rowscols THRESHOLD_ADJUST(500)
 
 static SEXP do_rowscols (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
@@ -740,7 +740,7 @@ void task_cmatprod_trans2 (helpers_op_t op, SEXP sz, SEXP sx, SEXP sy)
 
 static SEXP do_transpose (SEXP, SEXP, SEXP, SEXP, int);
 
-#define T_matmult THRESHOLD_ADJUST(30)
+#define T_matmult THRESHOLD_ADJUST(300)
 
 /* "%*%" (op = 0), crossprod (op = 1) or tcrossprod (op = 2).  For op = 0,
    it is set up as a SPECIAL so that it can evaluate its arguments requesting
@@ -1321,7 +1321,7 @@ void task_transpose (helpers_op_t op, SEXP r, SEXP a, SEXP ignored)
 /* This implements t.default, which is internal.  Can be called from %*% 
    when VARIANT_TRANS result turns out to not be desired. */
 
-#define T_transpose THRESHOLD_ADJUST(10)
+#define T_transpose THRESHOLD_ADJUST(120)
 
 static SEXP do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
@@ -1902,8 +1902,8 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
 
 /* This implements (row/col)(Sums/Means). */
 
-#define T_colSums THRESHOLD_ADJUST(20)
-#define T_rowSums THRESHOLD_ADJUST(20)
+#define T_colSums THRESHOLD_ADJUST(300)
+#define T_rowSums THRESHOLD_ADJUST(300)
 
 static SEXP do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {

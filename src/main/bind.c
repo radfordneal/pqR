@@ -77,7 +77,7 @@ void task_copy_coerced (helpers_op_t code, SEXP out, SEXP in, SEXP in2)
    names (if present) are to be used, and the variant (used to see if pending
    computation is OK). */
 
-#define T_c THRESHOLD_ADJUST(80)
+#define T_c THRESHOLD_ADJUST(200)
 
 static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames, 
                                 int variant, SEXP call, SEXP env)

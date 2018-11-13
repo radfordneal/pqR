@@ -931,7 +931,7 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 /* MAIN PART OF IMPLEMENTATION OF RELATIONAL OPERATORS.  Called from
    do_relop in eval.c, and from elsewhere. */
 
-#define T_relop THRESHOLD_ADJUST(24) 
+#define T_relop THRESHOLD_ADJUST(60) 
 
 SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y, 
                                int objx, int objy, SEXP env, int variant)
