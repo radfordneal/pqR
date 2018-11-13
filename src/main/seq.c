@@ -502,7 +502,7 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
 }
 
 
-#define T_rep THRESHOLD_ADJUST(20)
+#define T_rep THRESHOLD_ADJUST(300)
 
 static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {

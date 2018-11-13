@@ -3714,7 +3714,7 @@ void task_and_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 /* Handles the & and | operators. */
 
-#define T_and_or THRESHOLD_ADJUST(25)
+#define T_and_or THRESHOLD_ADJUST(100)
 
 SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env, 
                                int variant)
@@ -3919,7 +3919,7 @@ void task_not (helpers_op_t code, SEXP x, SEXP arg, SEXP unused)
 
 /* Handles the ! operator.  When unary, it's "not", when binary, it's paste0. */
 
-#define T_not THRESHOLD_ADJUST(40)
+#define T_not THRESHOLD_ADJUST(100)
 
 static SEXP do_fast_not(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 {
