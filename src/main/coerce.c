@@ -2842,7 +2842,8 @@ SEXP substitute(SEXP lang, SEXP rho)
     case LANGSXP:
 	return substituteList(lang, rho);
     default:
-	return (lang);
+        INC_NAMEDCNT(lang);
+	return lang;
     }
 }
 
