@@ -1,10 +1,10 @@
 
-pqR version 2.15.1 (2016-00-00), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.1 (2018-00-00), based on R 2.15.0 (2012-03-30)
 
 R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 
-Modifications to R in pqR are Copyright (C) 2013-2016 Radford M. Neal
+Modifications to R in pqR are Copyright (C) 2013-2018 Radford M. Neal
 
 Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
@@ -23,7 +23,7 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 Type 'q()' to quit R.
 
 
-No helper threads, task merging enabled.
+3 helper threads, task merging enabled, uncompressed pointers.
 
 > pkgname <- "grDevices"
 > source(file.path(R.home("share"), "R", "examples-header.R"))
@@ -1745,8 +1745,6 @@ detaching 'package:grid'
 > x   <- rbind(x1,x2)
 > 
 > dcols <- densCols(x)
-KernSmooth 2.23 loaded
-Copyright M. P. Wand 1997-2009
 > graphics::plot(x, col = dcols, pch=20, main = "n = 1000")
 > 
 > 
@@ -3524,7 +3522,7 @@ $zlab
 > ### * <FOOTER>
 > ###
 > cat("Time elapsed: ", proc.time() - get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  1.208 0.02 1.231 0 0 
+Time elapsed:  0.947 0.021 0.664 0 0 
 > grDevices::dev.off()
 null device 
           1 
