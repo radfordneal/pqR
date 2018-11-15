@@ -235,7 +235,8 @@ void task_par_matprod_vec_mat (helpers_op_t op, helpers_var_ptr sz,
       { 
         helpers_size_t od = d;
         helpers_size_t na = d1-d <= 4 ? a1 : k*(d+4);
-        HELPERS_WAIT_IN2 (a, na-1, a1);
+        HELPERS_WAIT_IN2 (a, na-1, k_times_m);
+        if (a > a1) a = a1;
         d = a/k;
         if (d < m) d &= ~3;
 
@@ -407,8 +408,8 @@ void task_par_matprod_outer (helpers_op_t op, helpers_var_ptr sz,
     { 
       helpers_size_t od = d;
       helpers_size_t na = d1-d <= 4 ? a1 : d+4;
-      HELPERS_WAIT_IN2 (a, na-1, a1);
-
+      HELPERS_WAIT_IN2 (a, na-1, m);
+      if (a > a1) a = a1;
       d = a;
       if (d < m) d &= ~3;
       if (d > d1) d = d1;
@@ -497,8 +498,8 @@ void task_par_matprod_mat_mat (helpers_op_t op, helpers_var_ptr sz,
     { 
       helpers_size_t od = d;
       helpers_size_t na = d1-d <= 4 ? a1 : k*(d+4);
-      HELPERS_WAIT_IN2 (a, na-1, a1);
-
+      HELPERS_WAIT_IN2 (a, na-1, k_times_m);
+      if (a > a1) a = a1;
       d = a/k;
       if (d < m) d &= ~3;
       if (d > d1) d = d1;
@@ -597,8 +598,8 @@ void task_par_matprod_trans1 (helpers_op_t op, helpers_var_ptr sz,
     { 
       helpers_size_t od = d;
       helpers_size_t na = d1-d <= 5 ? a1 : k*(d+4);
-      HELPERS_WAIT_IN2 (a, na-1, a1);
-
+      HELPERS_WAIT_IN2 (a, na-1, k_times_m);
+      if (a > a1) a = a1;
       d = a/k;
       if (d < d1) d &= ~3;
       if (d > d1) d = d1;
