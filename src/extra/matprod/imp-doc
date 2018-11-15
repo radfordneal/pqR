@@ -228,6 +228,10 @@ bad cache behaviour for these non-sequential copies is somewhat
 reduced by two columns being computed at once, which results in two
 adjacent doubles being stored when copying.
 
+When the operation is split into multiple tasks, the split tries to
+equalize the time required for all tasks, taking into account that
+computations of later columns take less time.
+
 
 SIMD instructions and alignment.
 
