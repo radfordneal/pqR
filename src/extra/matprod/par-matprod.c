@@ -39,17 +39,35 @@
 
 /* -------------------------------------------------------------------------- */
 
+/* DEFINITIONS SUPPORTING PIPELINING.  These override the null definitions in
+   matprod.c (see there for more info), adding pipelining to the functions 
+   defined when matprod.c is included below. 
+
+   The extra parameters are as follows:
+
+       start_z       ptr to start of result matrix; 0 disables output pipelining
+
+       last_z        ptr just after the last element of the result passed on
+                     as output from this task
+
+       input_first   1 if waiting for & passing on output from earlier tasks
+                     0 if we can now start passing on output from this task
+
+       s_sz          the size of the result matrix (z)
+*/
+
 #define PAR_MATPROD  /* Tell matprod.c it's being included from here */
 
 #define SCOPE static
 
-#define EXTRA(start_z,last_z,input_first) \
+#define EXTRA(start_z,last_z,input_first,sz) \
                , start_z, last_z, input_first, LENGTH(sz)
-#define EXTRAD , double *start_z, double *last_z, int input_first, size_t s_sz
+#define EXTRAD , double *start_z, double *last_z, int input_first, \
+                 helpers_size_t s_sz
 #define EXTRAZ , 0, 0, 0, 0
 #define EXTRAN , start_z, last_z, input_first, s_sz
 
-#define THRESH 64
+#define THRESH 64  /* keep a multiple of 8 to avoid possible alignment issues */
 
 #define AMTOUT(_z_) \
   do \
@@ -68,11 +86,11 @@
     } \
   } while (0)
 
-#define THRESH 64  /* keep a multiple of 8 to avoid possible alignment issues */
-
 #include "matprod.c"
 
 /* -------------------------------------------------------------------------- */
+
+/* SUPPORT FOR TASK INTERFFACE.                                               */
 
 #define OP_K(op) (op & 0x7fffffff)          /* get value of k from task op */
 #define OP_S(op) (1 + ((op >> 32) & 0xff))  /* get value of s from task op */
@@ -96,6 +114,8 @@
   { if (w == 0) return; \
     s -= 1; w -= 1; \
   }
+
+/* -------------------------------------------------------------------------- */
 
 
 /* Scalar-vector product, with pipelining of input y and output z. */
@@ -130,7 +150,7 @@ void task_par_matprod_scalar_vec (helpers_op_t op, helpers_var_ptr sz,
       if (a > t1) a = t1;
       else if (a < t1) a &= ~3;
 
-      matprod_scalar_vec (x, y+oa, z+oa, a-oa EXTRA (z, z+oa, w));
+      matprod_scalar_vec (x, y+oa, z+oa, a-oa EXTRA (z, z+oa, w, sz));
     }
 
     if (w != 0) WAIT_FOR_EARLIER_TASKS(sz);
@@ -147,7 +167,7 @@ void task_par_matprod_scalar_vec (helpers_op_t op, helpers_var_ptr sz,
       HELPERS_WAIT_IN2 (a, na-1, m);
       if (a < m) a &= ~3;
 
-      matprod_scalar_vec (x, y+oa, z+oa, a-oa EXTRA (z, z+oa, 0));
+      matprod_scalar_vec (x, y+oa, z+oa, a-oa EXTRA (z, z+oa, 0, sz));
     }
   }
 }
@@ -215,7 +235,7 @@ void task_par_matprod_vec_mat (helpers_op_t op, helpers_var_ptr sz,
 
   if (k == 0)
   { if (w == s-1)  /* do in only the last thread */
-    { matprod_vec_mat (x, y, z, k, m EXTRA (z, z, 0));
+    { matprod_vec_mat (x, y, z, k, m EXTRA (z, z, 0, sz));
     }
     return;
   }
@@ -224,23 +244,26 @@ void task_par_matprod_vec_mat (helpers_op_t op, helpers_var_ptr sz,
   { 
     if (w < s)
     { 
-      helpers_size_t d, d1, a, a1;
+      helpers_size_t d;   /* # of columns computed by earlier tasks */
+      helpers_size_t d1;  /* # of columns computed by this and earlier tasks */
+      helpers_size_t a1;  /* # of elements of 2nd operand needed to finish
+                             computations in this task */
 
       d = w == 0 ? 0 : (helpers_size_t) ((double)m * w / s) & ~3;
       d1 = w == s-1 ? m : (helpers_size_t) ((double)m * (w+1) / s) & ~3;
-      a = d * k;
       a1 = d1 * k;
 
       while (d < d1)
       { 
         helpers_size_t od = d;
         helpers_size_t na = d1-d <= 4 ? a1 : k*(d+4);
+        helpers_size_t a;
         HELPERS_WAIT_IN2 (a, na-1, k_times_m);
         if (a > a1) a = a1;
         d = a/k;
         if (d < m) d &= ~3;
 
-        matprod_vec_mat (x, y+od*k, z+od, k, d-od EXTRA (z, z+od, w));
+        matprod_vec_mat (x, y+od*k, z+od, k, d-od EXTRA (z, z+od, w, sz));
       }
     }
 
@@ -260,7 +283,7 @@ void task_par_matprod_vec_mat (helpers_op_t op, helpers_var_ptr sz,
       d = a/k;
       if (d < m) d &= ~3;
 
-      matprod_vec_mat (x, y+od*k, z+od, k, d-od EXTRA (z, z+od, 0));
+      matprod_vec_mat (x, y+od*k, z+od, k, d-od EXTRA (z, z+od, 0, sz));
     }
   }
 }
@@ -397,24 +420,27 @@ void task_par_matprod_outer (helpers_op_t op, helpers_var_ptr sz,
 
   if (s > 1)
   { 
-    helpers_size_t d, d1, a, a1;
+    helpers_size_t d;   /* # of columns computed by earlier tasks */
+    helpers_size_t d1;  /* # of columns computed by this and earlier tasks */
+    helpers_size_t a1;  /* # of elements of 2nd operand needed to finish
+                             computations in this task */
 
     d = w == 0 ? 0 : (helpers_size_t) ((double)m * w / s) & ~3;
     d1 = w == s-1 ? m : (helpers_size_t) ((double)m * (w+1) / s) & ~3;
-    a = d;
     a1 = d1;
 
     while (d < d1)
     { 
       helpers_size_t od = d;
       helpers_size_t na = d1-d <= 4 ? a1 : d+4;
+      helpers_size_t a;
       HELPERS_WAIT_IN2 (a, na-1, m);
       if (a > a1) a = a1;
       d = a;
       if (d < m) d &= ~3;
       if (d > d1) d = d1;
 
-      matprod_outer (x, y+od, z+od*n, n, d-od EXTRA (z, z+od*n, w));
+      matprod_outer (x, y+od, z+od*n, n, d-od EXTRA (z, z+od*n, w, sz));
     }
 
     if (w != 0) WAIT_FOR_EARLIER_TASKS(sz);
@@ -433,7 +459,7 @@ void task_par_matprod_outer (helpers_op_t op, helpers_var_ptr sz,
       d = a;
       if (d < m) d &= ~3;
 
-      matprod_outer (x, y+od, z+od*n, n, d-od EXTRA (z, z+od*n, 0));
+      matprod_outer (x, y+od, z+od*n, n, d-od EXTRA (z, z+od*n, 0, sz));
     }
   }
 }
@@ -480,31 +506,34 @@ void task_par_matprod_mat_mat (helpers_op_t op, helpers_var_ptr sz,
 
   if (k == 0)
   { if (w == s-1)  /* do in only the last thread */
-    { matprod_mat_mat (x, y, z, n, k, m EXTRA (z, z, 0));
+    { matprod_mat_mat (x, y, z, n, k, m EXTRA (z, z, 0, sz));
     }
     return;
   }
 
   if (s > 1)
   { 
-    helpers_size_t d, d1, a, a1;
+    helpers_size_t d;   /* # of columns computed by earlier tasks */
+    helpers_size_t d1;  /* # of columns computed by this and earlier tasks */
+    helpers_size_t a1;  /* # of elements of 2nd operand needed to finish
+                           computations in this task */
 
     d = w == 0 ? 0 : (helpers_size_t) ((double)m * w / s) & ~3;
     d1 = w == s-1 ? m : (helpers_size_t) ((double)m * (w+1) / s) & ~3;
-    a = d * k;
     a1 = d1 * k;
 
     while (d < d1)
     { 
       helpers_size_t od = d;
       helpers_size_t na = d1-d <= 4 ? a1 : k*(d+4);
+      helpers_size_t a;
       HELPERS_WAIT_IN2 (a, na-1, k_times_m);
       if (a > a1) a = a1;
       d = a/k;
       if (d < m) d &= ~3;
       if (d > d1) d = d1;
 
-      matprod_mat_mat (x, y+od*k, z+od*n, n, k, d-od EXTRA (z, z+od*n, w));
+      matprod_mat_mat (x, y+od*k, z+od*n, n, k, d-od EXTRA (z, z+od*n, w, sz));
     }
 
     if (w != 0) WAIT_FOR_EARLIER_TASKS(sz);
@@ -523,7 +552,7 @@ void task_par_matprod_mat_mat (helpers_op_t op, helpers_var_ptr sz,
       d = a/k;
       if (d < m) d &= ~3;
 
-      matprod_mat_mat (x, y+od*k, z+od*n, n, k, d-od EXTRA (z, z+od*n, 0));
+      matprod_mat_mat (x, y+od*k, z+od*n, n, k, d-od EXTRA (z, z+od*n, 0, sz));
     }
   }
 }
@@ -571,7 +600,7 @@ void task_par_matprod_trans1 (helpers_op_t op, helpers_var_ptr sz,
 
   if (k == 0)
   { if (w == s-1)  /* do in only the last thread */
-    { matprod_trans1 (x, y, z, n, k, m EXTRA (z, z, 0));
+    { matprod_trans1 (x, y, z, n, k, m EXTRA (z, z, 0, sz));
     }
     return;
   }
@@ -580,7 +609,10 @@ void task_par_matprod_trans1 (helpers_op_t op, helpers_var_ptr sz,
 
   if (s > 1)  /* do in more than one thread */
   { 
-    helpers_size_t d, d1, a, a1;
+    helpers_size_t d;   /* # of columns computed by earlier tasks */
+    helpers_size_t d1;  /* # of columns computed by this and earlier tasks */
+    helpers_size_t a1;  /* # of elements of 2nd operand needed to finish
+                           computations in this task */
 
     if (dosym)
     { d = w == 0 ? 0 : (helpers_size_t) (m*(1-sqrt(1-(double)w/s))) & ~3;
@@ -591,13 +623,13 @@ void task_par_matprod_trans1 (helpers_op_t op, helpers_var_ptr sz,
       d1 = w == s-1 ? m : (helpers_size_t) ((double)m * (w+1) / s) & ~3;
     }
 
-    a = d * k;
     a1 = d1 * k;
 
     while (d < d1)
     { 
       helpers_size_t od = d;
       helpers_size_t na = d1-d <= 5 ? a1 : k*(d+4);
+      helpers_size_t a;
       HELPERS_WAIT_IN2 (a, na-1, k_times_m);
       if (a > a1) a = a1;
       d = a/k;
@@ -611,7 +643,7 @@ void task_par_matprod_trans1 (helpers_op_t op, helpers_var_ptr sz,
       double *sym = dosym ? z+od*n+od : 0;
 
       matprod_trans1_sub (x, y+od*k, z+od*n, n, k, d-od, sym
-                          EXTRA (z, z+od*n, w));
+                          EXTRA (z, z+od*n, w, sz));
     }
 
     if (w != 0) WAIT_FOR_EARLIER_TASKS(sz);
@@ -637,7 +669,7 @@ void task_par_matprod_trans1 (helpers_op_t op, helpers_var_ptr sz,
       double *sym = dosym ? z+od*n+od : 0;
 
       matprod_trans1_sub (x, y+od*k, z+od*n, n, k, d-od, sym
-                          EXTRA (z, z+od*n, 0));
+                          EXTRA (z, z+od*n, 0, sz));
     }
   }
 }
@@ -684,7 +716,7 @@ void task_par_matprod_trans2 (helpers_op_t op, helpers_var_ptr sz,
 
   if (k == 0)
   { if (w == s-1)  /* do in only the last thread */
-    { matprod_trans2 (x, y, z, n, k, m EXTRA (z, z, 0));
+    { matprod_trans2 (x, y, z, n, k, m EXTRA (z, z, 0, sz));
     }
     return;
   }
@@ -697,21 +729,22 @@ void task_par_matprod_trans2 (helpers_op_t op, helpers_var_ptr sz,
 
   if (s > 1)
   { 
-    helpers_size_t od, d;
+    helpers_size_t d;   /* # of columns computed by earlier tasks */
+    helpers_size_t d1;  /* # of columns computed by this and earlier tasks */
 
     if (dosym)
-    { od = w == 0 ? 0 : (helpers_size_t) (m*(1-sqrt(1-(double)w/s))) & ~3;
-      d = w == s-1 ? m : (helpers_size_t) (m*(1-sqrt(1-(double)(w+1)/s))) & ~3;
+    { d = w == 0 ? 0 : (helpers_size_t) (m*(1-sqrt(1-(double)w/s))) & ~3;
+      d1 = w == s-1 ? m : (helpers_size_t) (m*(1-sqrt(1-(double)(w+1)/s))) & ~3;
     }
     else
-    { od = w == 0 ? 0 : (helpers_size_t) ((double)m * w / s) & ~3;
-      d = w == s-1 ? m : (helpers_size_t) ((double)m * (w+1) / s) & ~3;
+    { d = w == 0 ? 0 : (helpers_size_t) ((double)m * w / s) & ~3;
+      d1 = w == s-1 ? m : (helpers_size_t) ((double)m * (w+1) / s) & ~3;
     }
 
-    if (d > od)
-    { double *sym = dosym ? z+od*n+od : 0;
-      matprod_trans2_sub (x, y+od, z+od*n, n, k, m, d-od, sym
-                          EXTRA (z, z+od*n, w));
+    if (d1 > d)
+    { double *sym = dosym ? z+d*n+d : 0;
+      matprod_trans2_sub (x, y+d, z+d*n, n, k, m, d1-d, sym
+                          EXTRA (z, z+d*n, w, sz));
     }
 
     if (w != 0) WAIT_FOR_EARLIER_TASKS(sz);
@@ -722,7 +755,7 @@ void task_par_matprod_trans2 (helpers_op_t op, helpers_var_ptr sz,
     double *sym = dosym ? z : 0;
 
     matprod_trans2_sub (x, y, z, n, k, m, m, sym
-                        EXTRA (z, z, 0));
+                        EXTRA (z, z, 0, sz));
   }
 }
 
@@ -780,11 +813,13 @@ void task_par_matprod_trans12 (helpers_op_t op, helpers_var_ptr sz,
 
   if (s > 1)
   { 
-    helpers_size_t d, d1;
+    helpers_size_t d;   /* # of columns computed by earlier tasks */
+    helpers_size_t d1;  /* # of columns computed by this and earlier tasks */
+
     d = w == 0 ? 0 : (helpers_size_t) ((double)m * w / s) & ~3;
     d1 = w == s-1 ? m : (helpers_size_t) ((double)m * (w+1) / s) & ~3;
 
-    matprod_trans12_sub (x, y+d, z+(size_t)d*n, n, k, m, d1-d);
+    matprod_trans12_sub (x, y+d, z+d*n, n, k, m, d1-d);
 
     if (w != 0) WAIT_FOR_EARLIER_TASKS(sz);
   }
