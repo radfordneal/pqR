@@ -1,9 +1,0 @@
-Improvements in subscript.c.
-
-Speeds up subscripting with a logical vector, with alternative
-implementations for 32/64-bit platforms.  
-
-Improvement for negative subscripts to allocate flags as bytes
-rather than as ints (saving memory).
-
-

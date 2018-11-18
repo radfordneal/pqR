@@ -1,5 +1,0 @@
-This mod splits the R_FunTab table in names.c, that gives all the
-builtin functions, into smaller tables found in each source file
-defining these builtin functions. This lets the descriptions be placed
-near the functions, and also lets these functions be static rather
-than extern.

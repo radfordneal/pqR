@@ -1,5 +1,0 @@
-Fixes a memory expansion bug reported to R Core (PR 15363), and the
-similar problem with rm and get_rm.  Also cleans up the code some
-(more cleanup is needed), and uses HASHASH to avoid hash computations
-consistently.  Defines a maximum size for the string hash table in
-memory.c separately from the maximum size for other hash tables.
