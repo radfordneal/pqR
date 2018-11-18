@@ -2971,7 +2971,7 @@ int main() {
 #ifdef ZLIB_VERSION
 /* Workaround Debian bug: it uses 1.2.3.4 even though there is no such
    version on the master site zlib.net */
-  exit(strncmp(ZLIB_VERSION, "1.2.3", 5) < 0);
+  exit ( strncmp(ZLIB_VERSION, "1.2.3",5) < 0 && (ZLIB_VERSION)[5] == 0);
 #else
   exit(1);
 #endif
@@ -3080,7 +3080,7 @@ AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #endif
 int main() {
     char *ver = BZ2_bzlibVersion();
-    exit(strcmp(ver, "1.0.6") < 0);
+    exit(strcmp(ver, "1.0.6") < 0 && ver[5] == 0);
 }
 ]])], [r_cv_have_bzlib=yes], [r_cv_have_bzlib=no], [r_cv_have_bzlib=no])
 LIBS="${r_save_LIBS}"
