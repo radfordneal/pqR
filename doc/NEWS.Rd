@@ -94,6 +94,16 @@
         is detected is not safe, since bad maintenance of the protection
         stack can lead to garbage collection of objects that are still
         in use, and thence to arbitrary memory corruption.
+  \item As in R-3.2.0: \command{configure} options \option{--with-system-zlib},
+        \option{--with-system-bzlib} and \option{--with-system-pcre} are
+        now the default.  For the time being there is fallback to the
+        versions included in the \R sources if no system versions are
+        found or (unlikely) if they are too old.
+
+        Linux users should check that the \code{-devel} or \code{-dev}
+        versions of packages \pkg{zlib}, \pkg{bzip2}/\pkg{libbz2} and
+        \pkg{pcre} as well as \pkg{xz-devel}/\pkg{liblzma-dev} (or
+        similar names) are installed.
   }}
 
   \subsection{PERFORMANCE IMPROVEMENTS}{
