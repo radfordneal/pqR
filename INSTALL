@@ -52,6 +52,11 @@ You can get a list of configuration options with
 These options are discussed in the R-admin manual.  The ones most
 likely to be useful are as follows:
 
+    --enable-R-shlib
+
+        Build R as a shared library.  This is necessary if you want to
+        use RStudio.
+
     --disable-helper-threads
 
         This disables use of "helper threads" to do some operations in
@@ -60,19 +65,14 @@ likely to be useful are as follows:
         hyperthreading.  It is necessary if your system does not
         support the OpenMP facility.
 
-    --disable-byte-compiled-packages
+    --enable-compressed-pointers
 
-        Disables byte compilation for the builtin and recommended 
-        packages built along with pqR.  This does not affect whether
-        packages installed later are byte compiled.  It is not clear
-        whether or not byte compilation is desirable in pqR, since
-        it speeds up some operations, but does not support some of
-        pqR's speed improvements.
-
-    --enable-R-shlib
-
-        Build R as a shared library.  This is necessary if you want to
-        use RStudio.
+        Builds pqR with compressed pointers rather than pointers that
+        are machine addresses.  This slows the interpreter by up to
+        about 40%, but reduces memory usage (and increases speed for
+        some memory-intensive operations).  It is possible but mostly
+        pointless for a 32-bit build, since the compressed and
+        uncompressed pointers are then the same size.
 
     --with-blas  or   --with-blas=...
 
@@ -118,6 +118,15 @@ likely to be useful are as follows:
         Sets the default paper size to 8 1/2 by 11 inch letter size.
         The default is A4, appropriate for Europeans, but probably not
         North Americans.
+
+    --enable-byte-compiled-packages
+
+        Enables byte compilation for the builtin and recommended
+        packages built along with pqR.  This does not affect whether
+        packages installed later are byte compiled.  Byte compilation
+        is undesirable in pqR, since it does not support some of pqR's
+        speed improvements.  See library(compiler); help(compile)
+        for further information.
  
     CC=...
     CXX=...
@@ -192,14 +201,12 @@ be run with
     make check-all
 
 Some discrepancies are typically shown in the output of these
-commands, because floating-point round-off errors and sizes of objects
-differ from one computer to another (including 32-bit versus 64-bit
-builds), because the exact form of error messages may differ depending
-on whether a package was byte compiled or not, and because some output
-depends on the current date, the set of files present, etc.  However,
-any report of "ERROR" or "FAILED" that appears indicates a problem,
-except if it is due to lack of internet access, or to running the
-checks in a C/POSIX locale.
+commands, because accuracy of functions such as sin differs from one
+computer to another, because the exact form of error messages may
+change, and because some output depends on the current date, the set
+of files present, etc.  However, any report of "ERROR" or "FAILED"
+that appears indicates a problem, except if it is due to lack of
+internet access, or to running the checks in a C/POSIX locale.
 
 
 Running and installing pqR
