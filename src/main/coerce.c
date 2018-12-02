@@ -37,6 +37,8 @@
 #include <Rmath.h>
 #include <Print.h>
 
+#include "scalar-stack.h"
+
 
 static SEXP ItemName(SEXP names, int i)
 {
@@ -2071,32 +2073,52 @@ static SEXP do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
 #include <immintrin.h>
 #endif
 
-static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
-{
-    SEXP dims, names, ans;
-
-    int i, ret;
-
-#ifdef stringent_is
-    if (!isList(x) && !isVector(x))
-	errorcall_return(call, "is.na " R_MSG_list_vec);
-
-#endif
-
-    int n = length(x);
-    int * restrict lans;
-
-    if (!isVectorAtomic(x) || VARIANT_KIND(variant) != VARIANT_AND 
-                               && VARIANT_KIND(variant) != VARIANT_OR) {
-        PROTECT(ans = allocVector(LGLSXP, n));
-        if (isVector(x)) {
-	    PROTECT(dims = getDimAttrib(x));
-	    PROTECT(names = 
-              getAttrib (x, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol));
-        }
-        lans = LOGICAL(ans);
+#define IS_PRELUDE \
+    POP_IF_TOP_OF_STACK(x); \
+    SEXP dims = R_NilValue; \
+    SEXP names = R_NilValue; \
+    SEXP ans = R_NilValue; \
+    int n = length(x);   /* Length of argument & answer */ \
+    int scalar_ans;      /* Answer location if arg scalar, no dim, no names */ \
+    int * restrict lans; /* Pointer to where answer is stored */ \
+    int ret;             /* Scalar result value for length 1 or variant ret */ \
+    if (!isVectorAtomic(x) || VARIANT_KIND(variant) != VARIANT_AND  \
+                               && VARIANT_KIND(variant) != VARIANT_OR) { \
+        if (isVector(x)) { \
+	    dims = getDimAttrib(x); \
+            if (dims != R_NilValue) PROTECT(dims); \
+	    names = getAttrib(x, \
+                              isArray(x) ? R_DimNamesSymbol : R_NamesSymbol); \
+            if (names != R_NilValue) PROTECT(names); \
+            if (n != 1 || dims != R_NilValue || names != R_NilValue) \
+                PROTECT(ans = allocVector(LGLSXP, n)); \
+        } \
+        else { \
+            PROTECT(ans = allocVector(LGLSXP, n)); \
+        } \
+        lans = ans == R_NilValue ? &scalar_ans : LOGICAL(ans); \
     }
 
+#define IS_POSTLUDE \
+    if (dims != R_NilValue) \
+        setAttrib (ans, R_DimSymbol, dims); \
+    if (names != R_NilValue) \
+        setAttrib (ans, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol, \
+                   names); \
+    UNPROTECT ((dims != R_NilValue) + (names != R_NilValue)); \
+    if (ans != R_NilValue) { \
+        UNPROTECT(1); /*ans*/ \
+        return ans; \
+    } \
+    ret = *lans;  /* Scalar return value */\
+  vret: \
+    return ScalarLogicalMaybeConst(ret);
+
+static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
+{
+    IS_PRELUDE
+
+    int i;
     switch (TYPEOF(x)) {
     case LGLSXP:  /* assumes logical same as integer */
     case INTSXP:
@@ -2363,28 +2385,14 @@ static SEXP do_fast_isna (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
 	}
 	break;
     default:
-	warningcall(call, _("%s() applied to non-(list or vector) of type '%s'"),
+	warningcall(call, 
+                    _("%s() applied to non-(list or vector) of type '%s'"),
 		    "is.na", type2char(TYPEOF(x)));
 	for (i = 0; i < n; i++)
 	    lans[i] = 0;
     }
 
-    if (isVector(x)) {
-        if (dims != R_NilValue)
-            setAttrib (ans, R_DimSymbol, dims);
-        if (names != R_NilValue)
-	    setAttrib (ans, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol, 
-                       names);
-	UNPROTECT(2); /* dims & names */
-    }
-
-    UNPROTECT(1); /*ans*/
-    return ans;
-
-    /* Return variant result. */
-
-vret:
-    return ScalarLogicalMaybeConst(ret);
+    IS_POSTLUDE
 }
 
 static SEXP do_isna (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
@@ -2402,26 +2410,9 @@ static SEXP do_isna (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 static SEXP do_fast_isnan (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
 {
-    SEXP ans, dims, names;
-    int i, ret;
+    IS_PRELUDE
 
-#ifdef stringent_is
-    if (!isList(x) && !isVector(x))
-	errorcall_return(call, "is.nan " R_MSG_list_vec);
-
-#endif
-
-    int n = length(x);
-
-    if (VARIANT_KIND(variant) != VARIANT_AND 
-         && VARIANT_KIND(variant) != VARIANT_OR) {
-        PROTECT(ans = allocVector(LGLSXP, n));
-        if (isVector(x)) {
-	    PROTECT(dims = getDimAttrib(x));
-	    PROTECT(names = 
-              getAttrib (x, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol));
-        }
-    }
+    int i;
 
     switch (TYPEOF(x)) {
     case STRSXP:
@@ -2432,7 +2423,7 @@ static SEXP do_fast_isnan (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
         if (VARIANT_KIND(variant) == VARIANT_AND) { ret = n==0;  goto vret; }
         if (VARIANT_KIND(variant) == VARIANT_OR)  { ret = FALSE; goto vret; }
 	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = 0;
+	    lans[i] = 0;
 	break;
     case REALSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
@@ -2446,7 +2437,7 @@ static SEXP do_fast_isnan (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
             ret = FALSE; goto vret;
         }
         for (i = 0; i < n; i++)
-            LOGICAL(ans)[i] = R_IsNaN(REAL(x)[i]);
+            lans[i] = R_IsNaN(REAL(x)[i]);
         break;
     case CPLXSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
@@ -2462,7 +2453,7 @@ static SEXP do_fast_isnan (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
             ret = FALSE; goto vret;
         }
         for (i = 0; i < n; i++)
-            LOGICAL(ans)[i] = (ISNAN_NOT_NA(COMPLEX(x)[i].r) ||
+            lans[i] = (ISNAN_NOT_NA(COMPLEX(x)[i].r) ||
                                ISNAN_NOT_NA(COMPLEX(x)[i].i));
         break;
     default:
@@ -2471,22 +2462,7 @@ static SEXP do_fast_isnan (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
                   type2char(TYPEOF(x)));
     }
 
-    if (isVector(x)) {
-        if (dims != R_NilValue)
-            setAttrib (ans, R_DimSymbol, dims);
-        if (names != R_NilValue)
-	    setAttrib (ans, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol, 
-                       names);
-	UNPROTECT(2); /* dims & names */
-    }
-
-    UNPROTECT(1); /*ans*/
-    return ans;
-
-    /* Return variant result. */
-
-vret:
-    return ScalarLogicalMaybeConst(ret);
+    IS_POSTLUDE
 }
 
 static SEXP do_isnan (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
@@ -2504,26 +2480,9 @@ static SEXP do_isnan (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 static SEXP do_fast_isfinite (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
 {
-    SEXP ans, dims, names;
-    int i, ret;
+    IS_PRELUDE
 
-#ifdef stringent_is
-    if (!isList(x) && !isVector(x))
-	errorcall_return(call, "is.finite " R_MSG_list_vec);
-
-#endif
-
-    int n = length(x);
-
-    if (VARIANT_KIND(variant) != VARIANT_AND 
-         && VARIANT_KIND(variant) != VARIANT_OR) {
-        PROTECT(ans = allocVector(LGLSXP, n));
-        if (isVector(x)) {
-	    PROTECT(dims = getDimAttrib(x));
-	    PROTECT(names = 
-              getAttrib (x, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol));
-        }
-    }
+    int i;
 
     switch (TYPEOF(x)) {
     case STRSXP:
@@ -2532,7 +2491,7 @@ static SEXP do_fast_isfinite (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
         if (VARIANT_KIND(variant) == VARIANT_AND) { ret = n==0;  goto vret; }
         if (VARIANT_KIND(variant) == VARIANT_OR)  { ret = FALSE; goto vret; }
 	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = 0;
+	    lans[i] = 0;
 	break;
     case LGLSXP:
     case INTSXP:
@@ -2547,7 +2506,7 @@ static SEXP do_fast_isfinite (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
             ret = FALSE; goto vret;
         }
         for (i = 0; i < n; i++)
-            LOGICAL(ans)[i] = INTEGER(x)[i] != NA_INTEGER;
+            lans[i] = INTEGER(x)[i] != NA_INTEGER;
         break;
     case REALSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
@@ -2561,7 +2520,7 @@ static SEXP do_fast_isfinite (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
             ret = FALSE; goto vret;
         }
         for (i = 0; i < n; i++)
-            LOGICAL(ans)[i] = R_FINITE(REAL(x)[i]);
+            lans[i] = R_FINITE(REAL(x)[i]);
         break;
     case CPLXSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
@@ -2577,7 +2536,7 @@ static SEXP do_fast_isfinite (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
             ret = FALSE; goto vret;
         }
         for (i = 0; i < n; i++)
-            LOGICAL(ans)[i] = R_FINITE(COMPLEX(x)[i].r)
+            lans[i] = R_FINITE(COMPLEX(x)[i].r)
                                && R_FINITE(COMPLEX(x)[i].i);
         break;
     default:
@@ -2586,22 +2545,7 @@ static SEXP do_fast_isfinite (SEXP call, SEXP op, SEXP x, SEXP rho, int variant)
                   type2char(TYPEOF(x)));
     }
 
-    if (isVector(x)) {
-        if (dims != R_NilValue)
-            setAttrib (ans, R_DimSymbol, dims);
-        if (names != R_NilValue)
-	    setAttrib (ans, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol, 
-                       names);
-	UNPROTECT(2); /* dims & names */
-    }
-
-    UNPROTECT(1); /*ans*/
-    return ans;
-
-    /* Return variant result. */
-
-vret:
-    return ScalarLogicalMaybeConst(ret);
+    IS_POSTLUDE
 }
 
 static SEXP do_isfinite (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
@@ -2620,27 +2564,10 @@ static SEXP do_isfinite (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 static SEXP do_fast_isinfinite (SEXP call, SEXP op, SEXP x, SEXP rho, 
                                 int variant)
 {
-    SEXP ans, dims, names;
+    IS_PRELUDE
+
     double xr, xi;
-    int i, ret;
-
-#ifdef stringent_is
-    if (!isList(x) && !isVector(x))
-	errorcall_return(call, "is.infinite " R_MSG_list_vec);
-
-#endif
-
-    int n = length(x);
-
-    if (VARIANT_KIND(variant) != VARIANT_AND 
-         && VARIANT_KIND(variant) != VARIANT_OR) {
-        PROTECT(ans = allocVector(LGLSXP, n));
-        if (isVector(x)) {
-	    PROTECT(dims = getDimAttrib(x));
-	    PROTECT(names = 
-              getAttrib (x, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol));
-        }
-    }
+    int i;
 
     switch (TYPEOF(x)) {
     case STRSXP:
@@ -2651,7 +2578,7 @@ static SEXP do_fast_isinfinite (SEXP call, SEXP op, SEXP x, SEXP rho,
         if (VARIANT_KIND(variant) == VARIANT_AND) { ret = n==0;  goto vret; }
         if (VARIANT_KIND(variant) == VARIANT_OR)  { ret = FALSE; goto vret; }
 	for (i = 0; i < n; i++)
-	    LOGICAL(ans)[i] = 0;
+	    lans[i] = 0;
 	break;
     case REALSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
@@ -2667,7 +2594,7 @@ static SEXP do_fast_isinfinite (SEXP call, SEXP op, SEXP x, SEXP rho,
             ret = FALSE; goto vret;
         }
         for (i = 0; i < n; i++)
-            LOGICAL(ans)[i] = R_INFINITE(REAL(x)[i]);
+            lans[i] = R_INFINITE(REAL(x)[i]);
         break;
     case CPLXSXP:
         if (VARIANT_KIND(variant) == VARIANT_AND) {
@@ -2690,7 +2617,7 @@ static SEXP do_fast_isinfinite (SEXP call, SEXP op, SEXP x, SEXP rho,
         for (i = 0; i < n; i++) {
             xr = COMPLEX(x)[i].r;
             xi = COMPLEX(x)[i].i;
-            LOGICAL(ans)[i] = R_INFINITE(xr) || R_INFINITE(xi);
+            lans[i] = R_INFINITE(xr) || R_INFINITE(xi);
         }
         break;
     default:
@@ -2699,22 +2626,7 @@ static SEXP do_fast_isinfinite (SEXP call, SEXP op, SEXP x, SEXP rho,
                   type2char(TYPEOF(x)));
     }
 
-    if (isVector(x)) {
-        if (dims != R_NilValue)
-            setAttrib (ans, R_DimSymbol, dims);
-        if (names != R_NilValue)
-	    setAttrib (ans, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol, 
-                       names);
-	UNPROTECT(2); /* dims & names */
-    }
-
-    UNPROTECT(1); /*ans*/
-    return ans;
-
-    /* Return variant result. */
-
-vret:
-    return ScalarLogicalMaybeConst(ret);
+    IS_POSTLUDE
 }
 
 static SEXP do_isinfinite (SEXP call, SEXP op, SEXP args, SEXP rho, 
@@ -3227,15 +3139,15 @@ attribute_hidden FUNTAB R_FunTab_coerce[] =
 attribute_hidden FASTFUNTAB R_FastFunTab_coerce[] = {
 /*slow func	fast func,     code or -1   dsptch  variant */
 
-{ do_is,	do_fast_is,	100,		1,  0 },
-{ do_is,	do_fast_is,	101,		1,  0 },
-{ do_is,	do_fast_is,	102,		1,  0 },
-{ do_is,	do_fast_is,	-1,		0,  0 },
+{ do_is,	do_fast_is,	100,		1,  VARIANT_PENDING_OK },
+{ do_is,	do_fast_is,	101,		1,  VARIANT_PENDING_OK },
+{ do_is,	do_fast_is,	102,		1,  VARIANT_PENDING_OK },
+{ do_is,	do_fast_is,	-1,		0,  VARIANT_PENDING_OK },
 
-{ do_isna,	do_fast_isna,	    -1,		1,  0 },
-{ do_isnan,	do_fast_isnan,	    -1,		1,  0 },
-{ do_isfinite,	do_fast_isfinite,   -1,		1,  0 },
-{ do_isinfinite,do_fast_isinfinite, -1,		1,  0 },
+{ do_isna,	do_fast_isna,	    -1,		1,  VARIANT_SCALAR_STACK_OK },
+{ do_isnan,	do_fast_isnan,	    -1,		1,  VARIANT_SCALAR_STACK_OK },
+{ do_isfinite,	do_fast_isfinite,   -1,		1,  VARIANT_SCALAR_STACK_OK },
+{ do_isinfinite,do_fast_isinfinite, -1,		1,  VARIANT_SCALAR_STACK_OK },
 
 { 0,		0,		0,		0,  0 }
 };

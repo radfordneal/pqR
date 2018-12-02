@@ -1,0 +1,4 @@
+Miscellaneous performance improvements.
+
+Faster is.na, etc. for scalars.
+

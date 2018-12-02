@@ -6,6 +6,17 @@
 \encoding{UTF-8}
 
 
+\section{CHANGES IN VERSION RELEASED 2018-00-00}{
+
+  \subsection{PERFORMANCE IMPROVEMENTS}{
+  \itemize{
+  \item The \code{is.na}, \code{is.nan}, \code{is.finite}, and 
+        \code{is.infinite} functions are now faster for unnamed 
+        scalar arguments.
+  }}
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2018-11-18}{
 
   \subsection{INTRODUCTION}{
