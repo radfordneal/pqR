@@ -13,6 +13,7 @@
   \item The \code{is.na}, \code{is.nan}, \code{is.finite}, and 
         \code{is.infinite} functions are now faster for unnamed 
         scalar arguments.
+  \item The \code{sample} function has been sped up for some cases.
   }}
 }
 

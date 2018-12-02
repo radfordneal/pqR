@@ -453,6 +453,10 @@ static SEXP SampleReplace (int k, int n)
    used, in which hash entries record which elements of x in the above
    algorithm would have been modified from their original setting in which
    x[i] == i.
+
+   When k is less than 0.6*n, but not very small compared to n, the original
+   scheme is used.  There's a tradeoff between space and time here, which is
+   resolved more towards saving space when n is big.
  */
 
 static SEXP SampleNoReplace (int k, int n)
@@ -476,7 +480,8 @@ static SEXP SampleNoReplace (int k, int n)
         INTEGER(r)[0] = i1;
         INTEGER(r)[1] = i2;
     }
-    else if (n < 100 || k > 0.6*n) {
+
+    else if (n < 100 || k >= 0.6*n) {
 
         /* Code similar to previous method, but with temporary storage avoided.
            This reqires storing the initial sequence in decreasing rather than 
@@ -498,6 +503,28 @@ static SEXP SampleNoReplace (int k, int n)
         }
         if (k < n)
             r = reallocVector(r,k,1);
+    }
+
+    else if (k >= 0.4*n || k >= 0.1*n && n < 1000000) {
+
+        /* Use the original method. */
+
+        void *vmax = VMAXGET();
+        PROTECT(r = allocVector(INTSXP,k));
+        int *y = INTEGER(r);
+        int *x = (int *) R_alloc(n,sizeof(int));
+        int i, j;
+
+        for (i = 0; i < n; i++)
+            x[i] = i;
+        for (i = 0; i < k; i++) {
+            j = n * unif_rand();
+            y[i] = x[j] + 1;
+            x[j] = x[--n];
+        }
+
+        UNPROTECT(1);
+        VMAXSET(vmax);
     }
 
     else {
