@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -408,10 +408,10 @@ static void fcn(int n, const double x[], double *f, function_info
 	goto badvalue;
     }
     if (state->have_gradient) {
-	PROTECT(tmp = coerceVector(getAttrib(s, install("gradient")), REALSXP));
+	PROTECT(tmp = coerceVector(getAttrib(s, R_GradientSymbol), REALSXP));
 	g = REAL(tmp);
 	if (state->have_hessian) {
-	    PROTECT(tmp = coerceVector(getAttrib(s, install("hessian")), REALSXP));
+	    PROTECT(tmp = coerceVector(getAttrib(s, R_HessianSymbol), REALSXP));
 	    h = REAL(tmp);
 	}
     }
@@ -569,7 +569,7 @@ from above in some direction,\n"\
 
 static SEXP do_nlm(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP value, names, v, R_gradientSymbol, R_hessianSymbol;
+    SEXP value, names, v;
 
     double *x, *typsiz, fscale, gradtl, stepmx,
 	steptol, *xpls, *gpls, fpls, *a, *wrk, dlt;
@@ -652,8 +652,6 @@ static SEXP do_nlm(SEXP call, SEXP op, SEXP args, SEXP rho)
     iahflg = 0;			/* No analytic hessian */
     state->have_gradient = 0;
     state->have_hessian = 0;
-    R_gradientSymbol = install("gradient");
-    R_hessianSymbol = install("hessian");
 
     v = allocVector(REALSXP, n);
     for (i = 0; i < n; i++) {
@@ -662,12 +660,12 @@ static SEXP do_nlm(SEXP call, SEXP op, SEXP args, SEXP rho)
     SETCADR(state->R_fcall, v);
     PROTECT(value = eval(state->R_fcall, state->R_env));
 
-    v = getAttrib(value, R_gradientSymbol);
+    v = getAttrib(value, R_GradientSymbol);
     if (v != R_NilValue) {
 	if (LENGTH(v) == n && (isReal(v) || isInteger(v))) {
 	    iagflg = 1;
 	    state->have_gradient = 1;
-	    v = getAttrib(value, R_hessianSymbol);
+	    v = getAttrib(value, R_HessianSymbol);
 
 	    if (v != R_NilValue) {
 		if (LENGTH(v) == (n * n) && (isReal(v) || isInteger(v))) {

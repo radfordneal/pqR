@@ -23,7 +23,7 @@ SOURCES_C = \
 	dotcode.c dounzip.c duplicate.c \
 	engine.c envir.c errors.c eval.c \
 	format.c fourier.c \
-	gevents.c gram-ex.c gramLatex.c gramRd.c graphics.c grep.c \
+	gevents.c gradient.c gram-ex.c gramLatex.c gramRd.c graphics.c grep.c \
 	identical.c inlined.c inspect.c internet.c iosupport.c \
 	lapack.c list.c localecharset.c \
 	main.c mapply.c match.c memory.c merged-ops.c model.c \

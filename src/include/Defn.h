@@ -600,10 +600,14 @@ typedef struct {
 #define VARIANT_TRANS 0x05  /* May return the transpose of the result.  
                                Sets R_variant_result to 1 if so. */
 
-#define VARIANT_ONE_NAMED 0x06  /* When the result is a vector list with exactly
-                                   one named element, may return a one-element
-                                   pairlist with this element (used for $).
-                                   Does not set R_variant_result. */
+#define VARIANT_ONE_NAMED 0x06 /* When the result is a vector list with exactly
+                                  one named element, may return a one-element
+                                  pairlist with this element (used for $).
+                                  Does not set R_variant_result. */
+
+#define VARIANT_GRADIENT 0x07  /* Caller wants the gradient information, in
+                                  R_gradient, with R_variant_result having
+                                  VARIANT_GRADIENT_FLAG bit set if present. */
 
 /* Variant kinds that are not passed on. */
 
@@ -684,9 +688,11 @@ typedef struct {
 
 /* Flags in R_variant_result. */
 
-#define VARIANT_RTN_FLAG 0x80000000     /* Bit flagging a direct return */
+#define VARIANT_RTN_FLAG 0x80000000      /* Bit flagging a direct return */
 
-#define VARIANT_UNCLASS_FLAG 0x40000000 /* Result has class but shouldn't */
+#define VARIANT_UNCLASS_FLAG 0x40000000  /* Result has class but shouldn't */
+
+#define VARIANT_GRADIENT_FLAG 0x20000000 /* Gradient returned in R_gradient */
 
 
 #ifdef R_DEFERRED_EVAL
@@ -996,6 +1002,8 @@ LibExtern SEXP R_fast_sub_replacement;    /* Replacement value, for subassign */
                                   a CONS cell that is suitable for update */
 
 #define R_variant_result R_high_frequency_globals.variant_result
+
+#define R_gradient R_high_frequency_globals.gradient
 
 /* Sequence specification that may be set with VARIANT_SEQ.  Upper 32
    bits is (signed) start of sequence, next 31 bits is length, low bit

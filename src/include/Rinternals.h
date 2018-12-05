@@ -1730,8 +1730,10 @@ LibExtern SEXP	R_SeedsSymbol;	    /* ".Random.seed" */
 LibExtern SEXP	R_SourceSymbol;     /* "source" */
 LibExtern SEXP	R_SrcrefSymbol;     /* "srcref" */
 LibExtern SEXP	R_TspSymbol;	    /* "tsp" */
-LibExtern SEXP	R_LogarithmSymbol;   /* "logarithm" */
+LibExtern SEXP	R_LogarithmSymbol;  /* "logarithm" */
 LibExtern SEXP	R_ValueSymbol;	    /* "value" */
+LibExtern SEXP	R_GradientSymbol;   /* "gradient" */
+LibExtern SEXP	R_HessianSymbol;    /* "hessian" */
 
 LibExtern SEXP  R_dot_defined;      /* ".defined" */
 LibExtern SEXP  R_dot_Method;       /* ".Method" */
@@ -1980,6 +1982,9 @@ LibExtern struct {
     SEXP Srcref;                  /* Current srcref, for debuggers */
     SEXP BraceSymbol;             /* Symbol { */
     short Profiling;              /* Whether performance profiling enabled */
+
+    SEXP gradient;                /* Gradient of expression, if requested and
+                                     provided */
 } R_high_frequency_globals;
 
 #define InitHighFrequencyGlobals() \
@@ -1993,6 +1998,7 @@ do \
     R_high_frequency_globals.PPStackSize  = R_PPSSIZE; \
     R_high_frequency_globals.Profiling    = 0; \
     R_high_frequency_globals.local_protect_start = NULL; \
+    R_high_frequency_globals.gradient     = R_NoObject; \
 } while (0)
 
 

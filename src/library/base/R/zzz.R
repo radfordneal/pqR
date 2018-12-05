@@ -21,7 +21,6 @@ is.name <- is.symbol
 `**` <- `^`
 
 
-## extracted from existing NAMESPACE files in Dec 2003
 .knownS3Generics <- local({
 
     ## include the S3 group generics here
@@ -92,6 +91,7 @@ assign("expression", function(...) NULL, envir = .ArgsEnv)
 assign("gc.time", function(on = TRUE) NULL, envir = .ArgsEnv)
 assign("get_rm", function(x) NULL, envir = .ArgsEnv)
 assign("globalenv", function() NULL, envir = .ArgsEnv)
+assign("gradient_of", function(x) NULL, envir = .ArgsEnv)
 assign("interactive", function() NULL, envir = .ArgsEnv)
 assign("invisible", function(x) NULL, envir = .ArgsEnv)
 assign("is.atomic", function(x) NULL, envir = .ArgsEnv)

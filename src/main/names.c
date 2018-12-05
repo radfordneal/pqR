@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -157,6 +157,7 @@ extern FUNTAB
     R_FunTab_envir[],
     R_FunTab_errors[],
     R_FunTab_fourier[],
+    R_FunTab_gradient[],
     R_FunTab_gramLatex[],
     R_FunTab_gramRd[],
     R_FunTab_grep[],
@@ -235,6 +236,7 @@ static FUNTAB *FunTab_ptrs[] = {
     R_FunTab_envir,
     R_FunTab_errors,
     R_FunTab_fourier,
+    R_FunTab_gradient,
     R_FunTab_gramLatex,
     R_FunTab_gramRd,
     R_FunTab_grep,
@@ -376,6 +378,8 @@ static void SymbolShortcuts(void)
     R_TspSymbol = install("tsp");
     R_LogarithmSymbol = install("logarithm");
     R_ValueSymbol = install("value");
+    R_GradientSymbol = install("gradient");
+    R_HessianSymbol = install("hessian");
 
     R_dot_defined = install(".defined");
     R_dot_Method = install(".Method");
