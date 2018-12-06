@@ -66,8 +66,7 @@ static inline SEXP copy_gradients (SEXP xenv)
     return q;
 }
 
-/* Add a set of gradients, possibly after multiplication, to another
-   set of gradients. */
+/* Add a set of gradients, multiplied by factor, to another set of gradients. */
 
 static inline SEXP add_grads (SEXP base, SEXP extra, SEXP factor)
 {
@@ -75,15 +74,13 @@ static inline SEXP add_grads (SEXP base, SEXP extra, SEXP factor)
 
     r = R_NilValue;
     
-    /* Include gradients in base, possibly with gradient from extra, possibly
+    /* Include gradients in base, possibly adding gradient from extra
        times factor. */
 
     for (p = base; p != R_NilValue; p = CDR(p)) {
         for (q = extra; q != R_NilValue; q = CDR(q)) {
             if (TAG(p) == TAG(q)) {
-                double d = *REAL(CAR(q));
-                if (factor != R_NilValue) d *= *REAL(factor);
-                d += *REAL(CAR(p));
+                double d = *REAL(CAR(p)) + *REAL(CAR(q)) * *REAL(factor);
                 r = cons_with_tag (ScalarRealMaybeConst(d), r, TAG(p));
                 goto next_base;
             }
@@ -92,7 +89,7 @@ static inline SEXP add_grads (SEXP base, SEXP extra, SEXP factor)
       next_base: ;
     }
 
-    /* Include gradients only in extra, possibly times factor. */
+    /* Include gradients only in extra times factor. */
 
     for (q = extra; q != R_NilValue; q = CDR(q)) {
         for (p = base; p != R_NilValue; p = CDR(p)) {
@@ -100,7 +97,8 @@ static inline SEXP add_grads (SEXP base, SEXP extra, SEXP factor)
                 goto next_extra;
             }
         }
-        r = cons_with_tag (CAR(q), r, TAG(r));
+        double d = *REAL(CAR(q)) * *REAL(factor);
+        r = cons_with_tag (ScalarRealMaybeConst(d), r, TAG(q));
       next_extra: ;
     }
 
@@ -154,11 +152,8 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
         if (VARIANT_KIND(variant) == VARIANT_GRADIENT) {
 
-            if (val_grads != R_NilValue) {
-                other_grads = 
-                  result_grad == R_NilValue && other_grads == R_NilValue 
-                    ? val_grads 
-                    : add_grads (other_grads, val_grads, result_grad);
+            if (val_grads != R_NilValue && result_grad != R_NilValue) {
+                other_grads = add_grads (other_grads, val_grads, result_grad);
             }
             if (other_grads != R_NilValue) {
                 R_gradient = other_grads;
