@@ -327,7 +327,12 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
 		    if (TAG(lc) != R_NilValue) {
 			pp(pre + 2);
 			Rprintf("TAG: "); /*  one line, since symbol, so no extra line */
-			inspect_tree(0, TAG(lc), deep - 1, pvec, prom);
+			if (TYPEOF(TAG(lc)) == ENVSXP) 
+			    Rprintf("environment %d.%d\n",
+		             SGGC_SEGMENT_INDEX(CPTR_FROM_SEXP(TAG(lc))), 
+		             SGGC_SEGMENT_OFFSET(CPTR_FROM_SEXP(TAG(lc))));
+			else
+			    inspect_tree(0, TAG(lc), deep - 1, pvec, prom);
 		    }
 		    inspect_tree (pre + 2, CAR(lc), deep - 1, pvec, prom);
 		    lc = CDR(lc);

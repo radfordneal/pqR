@@ -130,6 +130,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     PROTECT(newenv);
     INC_NAMEDCNT(val);
     SET_ENVSYMBITS (newenv, SYMBITS(sym));
+    SET_STORE_GRAD(newenv,1);
 
     SEXP id_grad = ScalarRealMaybeConst(1.0);
     SET_ATTRIB (cell, cons_with_tag (id_grad, R_NilValue, newenv));

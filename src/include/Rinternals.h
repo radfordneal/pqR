@@ -954,7 +954,7 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define RSTEP(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
 #define SET_RSTEP(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname=(v))
 #define STORE_GRAD(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
-#define SET_STORE_GRADT(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname=(v))
+#define SET_STORE_GRAD(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname=(v))
 
 /* Symbol Access Macros */
 #define PRINTNAME(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->pname)

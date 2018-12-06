@@ -746,9 +746,15 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
 
 static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
 {
-    SEXP res;
+    SEXP res = FIND_VAR_PENDING_OK (e, rho);
 
-    res = FIND_VAR_PENDING_OK (e, rho);
+    int ret_grad = 0;
+    SEXP grad;
+    
+    if (VARIANT_KIND(variant)==VARIANT_GRADIENT && HAS_ATTRIB(R_binding_cell)) {
+        PROTECT (grad = ATTRIB(R_binding_cell));
+        ret_grad = 1;
+    }
 
     if (TYPE_ETC(res) == PROMSXP) {
         if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
@@ -774,6 +780,12 @@ static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
 
     if ( ! (variant & VARIANT_PENDING_OK))
         WAIT_UNTIL_COMPUTED(res);
+
+    if (ret_grad) {
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+        R_gradient = grad;
+        UNPROTECT(1);
+    }
 
     return res;
 }
