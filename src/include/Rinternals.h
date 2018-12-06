@@ -239,7 +239,8 @@ struct sxpinfo_struct {
                                      Symbol: maybe use fast subassign */
     unsigned int rstep_pname : 1; /* Function: is to be debugged just once
                                      Symbol: subassign counterpart follows it
-                                     CHARSXP: is used as a symbol's printname */
+                                     CHARSXP: is used as a symbol's printname
+                                     Envir: store gradient with variables */
     unsigned int base_sym_env : 1;/* Symbol: has base binding in global cache,
                                      Envir: R_BaseEnv or R_BaseNamespace*/
 
@@ -952,6 +953,8 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SET_RDEBUG(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.debug=(v))
 #define RSTEP(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
 #define SET_RSTEP(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname=(v))
+#define STORE_GRAD(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
+#define SET_STORE_GRADT(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname=(v))
 
 /* Symbol Access Macros */
 #define PRINTNAME(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->pname)
