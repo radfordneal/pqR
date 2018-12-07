@@ -151,7 +151,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
     }
 
-    if (got_grad && VARIANT_KIND(variant) == VARIANT_GRADIENT) {
+    if (got_grad && (variant & VARIANT_GRADIENT)) {
 
         SEXP other_grads = copy_gradients (newenv);
         PROTECT(other_grads);

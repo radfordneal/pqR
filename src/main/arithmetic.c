@@ -1998,7 +1998,13 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
             maybe_dup_attributes (sy, sa, variant);
             UNPROTECT(1);
         }
-
+#if 0
+        if (variant & VARIANT_GRADIENT) {
+            double g = R_math1_deriv_table[opcode] (opr, res);
+            SEXP gcell = cons_with_tag (ScalarRealMaybeConst(g), 
+            if (local_assign) 
+        }
+#endif
         UNPROTECT(1);
     }
 

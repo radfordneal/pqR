@@ -751,7 +751,7 @@ static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
     int ret_grad = 0;
     SEXP grad;
     
-    if (VARIANT_KIND(variant)==VARIANT_GRADIENT && HAS_ATTRIB(R_binding_cell)) {
+    if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(R_binding_cell)) {
         PROTECT (grad = ATTRIB(R_binding_cell));
         ret_grad = 1;
     }

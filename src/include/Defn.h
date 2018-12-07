@@ -605,10 +605,6 @@ typedef struct {
                                   pairlist with this element (used for $).
                                   Does not set R_variant_result. */
 
-#define VARIANT_GRADIENT 0x07  /* Caller wants the gradient information, in
-                                  R_gradient, with R_variant_result having
-                                  VARIANT_GRADIENT_FLAG bit set if present. */
-
 /* Variant kinds that are not passed on. */
 
 #define VARIANT_LOCAL_ASSIGN1 0x10  /* May assign result to the first operand.
@@ -670,6 +666,10 @@ typedef struct {
                                    VARIANT_UNCLASS_FLAG set in R_variant_result
                                    if so (but if in PRIMFUN_ARG1VAR, eval will
                                    clear to 0). */
+
+#define VARIANT_GRADIENT 0x8000 /* Caller wants the gradient information, in
+                                   R_gradient, with R_variant_result having
+                                   VARIANT_GRADIENT_FLAG bit set if present. */
 
 /* Variant flags that are not passed on. */
 
