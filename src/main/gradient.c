@@ -138,33 +138,36 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     PROTECT(result);
     
     int got_grad = R_variant_result & VARIANT_GRADIENT_FLAG;
+    SEXP result_grad = got_grad ? get_gradient (newenv) : R_NilValue;
+    PROTECT(result_grad);
     R_variant_result = 0;
 
-    if (got_grad) {
+    if (PRIMVAL(op) == 0) {
+        if (result_grad == R_NilValue)
+            setAttrib (result, R_GradientSymbol, ScalarRealMaybeConst(0.0));
+        else {
+            setAttrib (result, R_GradientSymbol, result_grad);
+            INC_NAMEDCNT(result_grad);
+        }
+    }
 
-        SEXP result_grad = get_gradient (newenv);
-        PROTECT(result_grad);
+    if (got_grad && VARIANT_KIND(variant) == VARIANT_GRADIENT) {
+
         SEXP other_grads = copy_gradients (newenv);
         PROTECT(other_grads);
 
-        if (PRIMVAL(op) == 0 && result_grad != R_NilValue)
-            setAttrib (result, R_GradientSymbol, result_grad);
-
-        if (VARIANT_KIND(variant) == VARIANT_GRADIENT) {
-
-            if (val_grads != R_NilValue && result_grad != R_NilValue) {
-                other_grads = add_grads (other_grads, val_grads, result_grad);
-            }
-            if (other_grads != R_NilValue) {
-                R_gradient = other_grads;
-                R_variant_result = VARIANT_GRADIENT_FLAG;
-            }
+        if (val_grads != R_NilValue && result_grad != R_NilValue) {
+            other_grads = add_grads (other_grads, val_grads, result_grad);
+        }
+        if (other_grads != R_NilValue) {
+            R_gradient = other_grads;
+            R_variant_result = VARIANT_GRADIENT_FLAG;
         }
 
-        UNPROTECT(2);
+        UNPROTECT(1);
     }
 
-    UNPROTECT(3);
+    UNPROTECT(4);
     return result;
 }
 

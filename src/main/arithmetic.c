@@ -1661,6 +1661,132 @@ const char R_math1_err_table[44] = {
 
 int R_naflag;  /* Set to one (in master) for the "NAs produced" warning */
 
+static double zero (double x, double y)
+{ 
+    return 0;
+}
+
+static double Dfabs (double x, double y)
+{ 
+    return x>=0 ? 1 : -1;
+}
+
+static double Dsqrt (double x, double y)
+{ 
+    return 1/y;
+}
+
+static double Dexp (double x, double y)
+{ 
+    return y;
+}
+
+static double Dexpm1 (double x, double y)
+{ 
+    return y+1;
+}
+
+static double Dlog1p (double x, double y)
+{ 
+    return 1+x < 0 ? NA_REAL : 1/(1+x);
+}
+
+static double Dlog (double x, double y)
+{ 
+    return x < 0 ? NA_REAL : 1/x;
+}
+
+static double Dcos (double x, double y)
+{ 
+    return -sin(x);
+}
+
+static double Dsin (double x, double y)
+{ 
+    return cos(x);
+}
+
+static double Dtan (double x, double y)
+{ 
+    return NA_REAL;  /* for now */
+}
+
+static double Dacos (double x, double y)
+{ 
+    return NA_REAL;  /* for now */
+}
+
+static double Dasin (double x, double y)
+{ 
+    return NA_REAL;  /* for now */
+}
+
+static double Datan (double x, double y)
+{ 
+    return NA_REAL;  /* for now */
+}
+
+static double Dcosh (double x, double y)
+{ 
+    return NA_REAL;  /* for now */
+}
+
+static double Dsinh (double x, double y)
+{ 
+    return NA_REAL;  /* for now */
+}
+
+static double Dtanh (double x, double y)
+{ 
+    return NA_REAL;  /* for now */
+}
+
+static double Dacosh (double x, double y)
+{ 
+    return NA_REAL;  /* for now */
+}
+
+static double Dasinh (double x, double y)
+{ 
+    return NA_REAL;  /* for now */
+}
+
+static double Datanh (double x, double y)
+{ 
+    return NA_REAL;  /* for now */
+}
+
+static double Dlgammafn (double x, double y)
+{ 
+    return NA_REAL;  /* for now */
+}
+
+static double Dgammafn (double x, double y)
+{ 
+    return NA_REAL;  /* for now */
+}
+
+static double Ddigamma (double x, double y)
+{ 
+    return NA_REAL;  /* for now */
+}
+
+static double Dtrigamma (double x, double y)
+{ 
+    return NA_REAL;  /* for now */
+}
+
+/* Table to map math1 operation code to derivative function. */
+
+double (* const R_math1_deriv_table[44])(double,double) = {
+        /*      0       1       2       3       4       5       6 7 8 9 */
+/* 00 */        Dfabs,  zero,   zero,   Dsqrt,  zero,   zero,   0,0,0,0,
+/* 10 */        Dexp,   Dexpm1, Dlog1p, Dlog,   0,      0,      0,0,0,0,
+/* 20 */        Dcos,   Dsin,   Dtan,   Dacos,  Dasin,  Datan,  0,0,0,0,
+/* 30 */        Dcosh,  Dsinh,  Dtanh,  Dacosh, Dasinh, Datanh, 0,0,0,0,
+/* 40 */     Dlgammafn, Dgammafn, Ddigamma, Dtrigamma
+};
+
 /* Math1 task procedures.  The opcode has the function code in the low
    byte, and (except for the sum task) and indication of which parallel
    part to do above that. */
