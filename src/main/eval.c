@@ -909,9 +909,6 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
     if (TYPE_ETC(e)==SYMSXP
                       + TYPE_ET_CETERA_VEC_DOTS_TR) { /* ... or ..1, ..2, etc */
 
-        if (e == R_DotsSymbol)
-            dotdotdot_error();
-
         res = ddfindVar(e,rho);
 
         if (TYPE_ETC(res) == PROMSXP) {
