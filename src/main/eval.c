@@ -909,9 +909,6 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
     if (TYPE_ETC(e)==SYMSXP
                       + TYPE_ET_CETERA_VEC_DOTS_TR) { /* ... or ..1, ..2, etc */
 
-        if (e == R_DotsSymbol)
-            dotdotdot_error();
-
         res = ddfindVar(e,rho);
 
         if (TYPE_ETC(res) == PROMSXP) {
@@ -1169,10 +1166,8 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
         }
         else { 
             /* optimize assuming non-missing arguments are usually referenced */
-            if (t != R_DotsSymbol) {
-                LASTSYMENV(t) = SEXP32_FROM_SEXP(newrho);
-                LASTSYMBINDING(t) = a;
-            }
+            LASTSYMENV(t) = SEXP32_FROM_SEXP(newrho);
+            LASTSYMBINDING(t) = a;
         }
 	a = CDR(a);
 	f = CDR(f);
@@ -1950,12 +1945,6 @@ static R_NORETURN SEXP do_next(SEXP call, SEXP op, SEXP args, SEXP rho,
 static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     /* Don't check arg count - missing are seen as R_NilValue, extra ignored. */
-
-    if (CAR(args) == R_DotsSymbol) {
-        args = findVar(R_DotsSymbol, rho);
-        if (TYPEOF(args) != DOTSXP)
-            args = R_NilValue;
-    }
 
     SEXP res = EVALV_NC (CAR(args), rho, VARIANT_PASS_ON(variant));
 

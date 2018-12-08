@@ -1310,7 +1310,7 @@ static int ddVal(SEXP symbol)
   This function fetches the variables ..1, ..2, etc from the first
   frame of the environment passed as the second argument to ddfindVar.
   These variables are implicitly defined whenever a ... object is
-  created.
+  created.  Also will fetch ... if it is bound to a single argument.
 
   To determine values for the variables we first search for an
   explicit definition of the symbol, them we look for a ... object in
@@ -1328,18 +1328,24 @@ SEXP ddfindVar(SEXP symbol, SEXP rho)
 
     /* first look for ... symbol  */
     vl = findVar(R_DotsSymbol, rho);
-    i = ddVal(symbol);
-    if (vl != R_UnboundValue) {
-	if (vl != R_MissingArg && vl != R_MissingUnder && length(vl) >= i) {
-	    vl = nthcdr(vl, i - 1);
-	    return(CAR(vl));
-	}
-	else
-	    error(_("The ... list does not contain %d elements"), i);
+    if (vl == R_UnboundValue) {
+        if (symbol == R_DotsSymbol)
+            dotdotdot_error();
+        else
+            error(_("..%d used in an incorrect context, no ... to look in"), i);
     }
-    else error(_("..%d used in an incorrect context, no ... to look in"), i);
 
-    return R_NilValue;
+    if (symbol == R_DotsSymbol) {
+        if (TYPEOF(vl) != DOTSXP || length(vl) != 1)
+            error(_("The ... list does not contain %d elements"), 1);
+        return CAR(vl);
+    }
+    else {  /* ..n */
+        i = ddVal(symbol);
+        if (vl == R_MissingArg || vl == R_MissingUnder || length(vl) < i)
+            error(_("The ... list does not contain %d elements"), i);
+        return CAR (nthcdr (vl, i-1));
+    }
 }
 
 
