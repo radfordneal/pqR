@@ -1166,10 +1166,8 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
         }
         else { 
             /* optimize assuming non-missing arguments are usually referenced */
-            if (t != R_DotsSymbol) {
-                LASTSYMENV(t) = SEXP32_FROM_SEXP(newrho);
-                LASTSYMBINDING(t) = a;
-            }
+            LASTSYMENV(t) = SEXP32_FROM_SEXP(newrho);
+            LASTSYMBINDING(t) = a;
         }
 	a = CDR(a);
 	f = CDR(f);
