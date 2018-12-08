@@ -47,7 +47,6 @@ static inline SEXP get_gradient (SEXP env)
     return R_NilValue;
 }
 
-
 /* Copy gradients excluding one for xenv from those in R_gradient. */
 
 static inline SEXP copy_gradients (SEXP xenv)

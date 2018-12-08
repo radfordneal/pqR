@@ -45,6 +45,19 @@
 
 /*** NOTE: do_arith itself is in eval.c, calling R_unary and R_binary here. ***/
 
+/* Copy scaled gradients from those in grad (which caller must protect). */
+
+static inline SEXP copy_scaled_gradients (SEXP grad, double f)
+{
+    SEXP p, q;
+
+    for (p = grad, q = R_NilValue; p != R_NilValue; p = CDR(p)) {
+        q = cons_with_tag (ScalarReal(*REAL(CAR(p)) * f), q, TAG(p));
+    }
+
+    return q;
+}
+
 static inline void maybe_dup_attributes (SEXP to, SEXP from, int variant)
 {
     if (to == from) {
@@ -2163,9 +2176,24 @@ void task_sum_abs (helpers_op_t op, SEXP s, SEXP x, SEXP ignored)
 
 #define T_abs THRESHOLD_ADJUST(500)
 
-static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
-{   
-    SEXP s;
+SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+{
+    SEXP r, s, x, g;
+
+    checkArity(op, args);
+    check1arg_x (args, call);
+
+    x = evalv (CAR(args), env, variant & VARIANT_GRADIENT);
+    PROTECT (g = R_variant_result & VARIANT_GRADIENT_FLAG 
+                  ? R_gradient : R_NilValue);
+    PROTECT (args = CONS(x,R_NilValue));
+    if (g != R_NilValue)
+        SET_ATTRIB (args, g);
+
+    if (DispatchGroup("Math", call, op, args, env, &r)) {
+        UNPROTECT(2);
+	return r;
+    }
 
     POP_IF_TOP_OF_STACK(x);
 
@@ -2202,6 +2230,8 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
             s = allocVector1REAL();
             DO_NOW_OR_LATER1 (variant, n >= T_abs,
                               HELPERS_PIPE_IN1, task_sum_abs, 0, s, x);
+            UNPROTECT(2);
+            R_Visible = TRUE;
             return s;
         }
         else if (n == 1) {
@@ -2229,22 +2259,17 @@ static SEXP do_fast_abs (SEXP call, SEXP op, SEXP x, SEXP env, int variant)
 
     PROTECT(s);
     maybe_dup_attributes (s, x, variant);
-    UNPROTECT(1);
+    if (g != R_NilValue) {
+        if (TYPEOF(x) == REALSXP && LENGTH(x) == 1 && !ISNAN(*REAL(x))) {
+            double d = sign(*REAL(x));
+            R_gradient = copy_scaled_gradients(g,d);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
+    }
+    UNPROTECT(3);  /* g, args, s */
 
+    R_Visible = TRUE;
     return s;
-}
-
-SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
-{
-    SEXP s;
-
-    checkArity(op, args);
-    check1arg_x (args, call);
-
-    if (DispatchGroup("Math", call, op, args, env, &s))
-	return s;
-
-    return do_fast_abs (call, op, CAR(args), env, variant);
 }
 
 /* Mathematical Functions of Two Numeric Arguments (plus 0, 1, or 2 integers) */
@@ -3088,7 +3113,7 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"log",		do_log,		10003,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"log10",	do_log1arg,	10,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"log2",	do_log1arg,	2,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"abs",		do_abs,		6,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"abs",		do_abs,		6,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"floor",	do_math1,	1,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"ceiling",	do_math1,	2,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"sqrt",	do_math1,	3,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -3252,6 +3277,5 @@ attribute_hidden FASTFUNTAB R_FastFunTab_arithmetic[] = {
 /*slow func	fast func,     code or -1   dsptch  variant */
 { do_math1,	do_fast_math1,	-1,             1,  VARIANT_SCALAR_STACK_OK|VARIANT_PENDING_OK },
 { do_trunc,	do_fast_trunc,	-1,		1,  VARIANT_SCALAR_STACK_OK|VARIANT_PENDING_OK },
-{ do_abs,	do_fast_abs,	-1,		1,  VARIANT_SCALAR_STACK_OK|VARIANT_PENDING_OK },
 { 0,		0,		0,		0,  0 }
 };
