@@ -58,7 +58,8 @@ lang_elements <-
   c('$', '$<-', '&&', '(', ':', '..', '<-', '<<-', '=', '->', '->>', 
     '@', '@<-', '@internal<-',
     '[', '[<-', '[[', '[[<-', 'break', 'for', 'function', 'if', 'next',
-    'repeat', 'return', 'while', '{', '||', '~')
+    'repeat', 'return', 'while', '{', '||', '~',
+    'with_gradient', 'track_gradient', 'compute_gradient')
 
 known <- c(ls(.GenericArgsEnv, all.names=TRUE),
            ls(.ArgsEnv, all.names=TRUE),
