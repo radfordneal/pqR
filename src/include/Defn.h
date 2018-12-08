@@ -1005,6 +1005,9 @@ LibExtern SEXP R_fast_sub_replacement;    /* Replacement value, for subassign */
 
 #define R_gradient R_high_frequency_globals.gradient
 
+LibExtern SEXP R_prev_gradient;     /* From previous evaluation by evalList_v */
+LibExtern unsigned R_prev_variant_result;
+
 /* Sequence specification that may be set with VARIANT_SEQ.  Upper 32
    bits is (signed) start of sequence, next 31 bits is length, low bit
    is 1 if from ..  (ie, 1D array). */

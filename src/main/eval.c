@@ -2639,7 +2639,11 @@ static SEXP attribute_noinline Rf_set_subassign_general
    NAMEDCNT decremented again when all arguments have been evaluated.
 
    Used in eval and applyMethod (object.c) for builtin primitives,
-   do_internal (names.c) for builtin .Internals and in evalArgs. */
+   do_internal (names.c) for builtin .Internals and in evalArgs. 
+
+   R_variant_result and R_gradient will be set to the values from the
+   last evaluation (if any), and R_prev_variant_result and R_prev_gradient
+   to the evaluation before that (if there is one). */
 
 SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
 {
@@ -2677,6 +2681,8 @@ SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
 	    if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
                     INC_NAMEDCNT(CAR(tail));  /* OK when tail is R_NilValue */
+                    R_prev_variant_result = R_variant_result;
+                    R_prev_gradient = R_gradient;
                     ev_el = EVALV (CAR(h), rho, varpend);
                     ev = cons_with_tag (ev_el, R_NilValue, TAG(h));
                     if (head==R_NilValue)
@@ -2696,6 +2702,8 @@ SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
             if (CDR(el) == R_NilValue) 
                 varpend = variant;  /* don't defer pointlessly for last one */
             INC_NAMEDCNT(CAR(tail));  /* OK when tail is R_NilValue */
+            R_prev_variant_result = R_variant_result;
+            R_prev_gradient = R_gradient;
             ev_el = EVALV(CAR(el),rho,varpend);
             ev = cons_with_tag (ev_el, R_NilValue, TAG(el));
             if (head==R_NilValue)

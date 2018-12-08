@@ -239,6 +239,8 @@
  R_num_math_threads
  R_osDynSymbol
  R_possible_dispatch
+ R_prev_gradient
+ R_prev_variant_result
  R_print
  R_relop
  R_restore_globals
