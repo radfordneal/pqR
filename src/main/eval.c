@@ -1948,12 +1948,6 @@ static SEXP do_paren (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     /* Don't check arg count - missing are seen as R_NilValue, extra ignored. */
 
-    if (CAR(args) == R_DotsSymbol) {
-        args = findVar(R_DotsSymbol, rho);
-        if (TYPEOF(args) != DOTSXP)
-            args = R_NilValue;
-    }
-
     SEXP res = EVALV_NC (CAR(args), rho, VARIANT_PASS_ON(variant));
 
     R_Visible = TRUE;
