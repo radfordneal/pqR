@@ -105,7 +105,7 @@ static inline SEXP add_grads (SEXP base, SEXP extra, SEXP factor)
 }
 
 
-/* with_gradient (op == 0) and back_gradient (op == 1). */
+/* with_gradient (op == 0) and track_gradient (op == 1). */
 
 static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
@@ -141,7 +141,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     PROTECT(result_grad);
     R_variant_result = 0;
 
-    if (PRIMVAL(op) == 0) {
+    if (PRIMVAL(op) == 0) {  /* with_gradient */
         if (result_grad == R_NilValue)
             setAttrib (result, R_GradientSymbol, ScalarRealMaybeConst(0.0));
         else {
@@ -200,7 +200,7 @@ attribute_hidden FUNTAB R_FunTab_gradient[] =
 
 {"with_gradient", do_gradient,  0,	1200,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"back_gradient", do_gradient,  1,	1200,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"track_gradient", do_gradient,  1,	1200,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"compute_gradient", do_comp_grad,  0,	1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
