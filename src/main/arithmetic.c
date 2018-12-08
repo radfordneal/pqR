@@ -1674,11 +1674,6 @@ const char R_math1_err_table[44] = {
 
 int R_naflag;  /* Set to one (in master) for the "NAs produced" warning */
 
-static double zero (double x, double y)
-{ 
-    return 0;
-}
-
 static double Dfabs (double x, double y)
 { 
     return x>=0 ? 1 : -1;
@@ -1793,7 +1788,7 @@ static double Dtrigamma (double x, double y)
 
 double (* const R_math1_deriv_table[44])(double,double) = {
         /*      0       1       2       3       4       5       6 7 8 9 */
-/* 00 */        Dfabs,  zero,   zero,   Dsqrt,  zero,   zero,   0,0,0,0,
+/* 00 */        Dfabs,  0,      0,      Dsqrt,  0,      0,      0,0,0,0,
 /* 10 */        Dexp,   Dexpm1, Dlog1p, Dlog,   0,      0,      0,0,0,0,
 /* 20 */        Dcos,   Dsin,   Dtan,   Dacos,  Dasin,  Datan,  0,0,0,0,
 /* 30 */        Dcosh,  Dsinh,  Dtanh,  Dacosh, Dasinh, Datanh, 0,0,0,0,
@@ -2011,13 +2006,7 @@ static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
             maybe_dup_attributes (sy, sa, variant);
             UNPROTECT(1);
         }
-#if 0
-        if (variant & VARIANT_GRADIENT) {
-            double g = R_math1_deriv_table[opcode] (opr, res);
-            SEXP gcell = cons_with_tag (ScalarRealMaybeConst(g), 
-            if (local_assign) 
-        }
-#endif
+
         UNPROTECT(1);
     }
 
@@ -2097,20 +2086,163 @@ static SEXP do_fast_math1(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     return math1 (arg, PRIMVAL(op), call, env, variant);
 }
 
-
-SEXP attribute_hidden do_math1(SEXP call, SEXP op, SEXP args, SEXP env, 
-                               int variant)
+SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env, 
+                                int variant)
 {
-    SEXP s;
+    int opcode = PRIMVAL(op);
+    SEXP r, g, sa;
+
+    args = evalList_v (args, env, VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK
+                                    | (variant & VARIANT_GRADIENT));
+    PROTECT(args);
 
     checkArity(op, args);
     check1arg_x (args, call);
 
-    if (DispatchGroup("Math", call, op, args, env, &s))
-	return s;
+    sa = CAR(args);
 
-    return do_fast_math1 (call, op, CAR(args), env, variant);
+    PROTECT (g = R_variant_result & VARIANT_GRADIENT_FLAG
+                  ? R_gradient : R_NilValue);
+
+    if (g != R_NilValue)
+        SET_ATTRIB (args, g);
+
+    if (DispatchGroup("Math", call, op, args, env, &r)) {
+        UNPROTECT(2);
+	return r;
+    }
+
+    if (opcode == 10003) /* horrible kludge for log */
+        opcode = 13;
+    else if (opcode >= 44)
+        errorcall(call, _("unimplemented real function of 1 argument"));
+
+    if (isComplex(sa)) {
+        /* for the moment, keep the interface to complex_math1 the same */
+        SEXP tmp;
+        PROTECT(tmp = CONS(sa,R_NilValue));
+        WAIT_UNTIL_COMPUTED(sa);
+        tmp = complex_math1(call, op, tmp, env);
+        UNPROTECT(3);
+        return tmp;
+    }
+
+    if (!isNumeric(sa)) non_numeric_errorcall(call);
+
+    int local_assign = 0;
+    int n = LENGTH(sa);
+    SEXP sa0 = sa;
+
+    if (TYPEOF(sa) != REALSXP)
+        sa = coerceVector(sa, REALSXP); /* coercion can lose the object bit */
+    else if (VARIANT_KIND(variant)==VARIANT_LOCAL_ASSIGN1 && !NAMEDCNT_GT_1(sa)
+              && sa == findVarInFrame3 (env, CADR(call), 7))
+        local_assign = 1;
+
+    PROTECT(sa);
+
+    SEXP sy;
+
+    if (LENGTH(sa) == 1) { /* scalar operation, including on scalar stack. */
+
+        WAIT_UNTIL_COMPUTED(sa);
+
+        double opr = REAL(sa)[0];
+        double res;
+
+        if (ISNAN(opr))
+            res = opr;
+        else {
+            res = R_math1_func_table[opcode] (opr);
+            if (R_math1_err_table[opcode]>1 && ISNAN(res))
+                NaN_warningcall(call);
+        }
+
+        POP_IF_TOP_OF_STACK(sa0);
+
+        if (local_assign || NAMEDCNT_EQ_0(sa)) {
+            sy = sa;
+            *REAL(sy) = res;
+        }
+        else if (CAN_USE_SCALAR_STACK(variant) && NO_ATTRIBUTES_OK(variant,sa))
+            sy = PUSH_SCALAR_REAL(res);
+        else {
+            PROTECT(sy = ScalarReal(res));
+            maybe_dup_attributes (sy, sa, variant);
+            UNPROTECT(1);
+        }
+    }
+
+    else { /* not scalar */
+
+        /* Note: need to protect sy below because some ops may produce a warning
+           and attributes may be duplicated. */
+
+        R_naflag = 0;
+
+        if (VARIANT_KIND(variant) == VARIANT_SUM) {
+
+            /* Just need the sum. */
+
+            PROTECT(sy = allocVector1REAL());
+            DO_NOW_OR_LATER1 (variant, 
+                        LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] <= 1,
+                        HELPERS_PIPE_IN1, task_sum_math1, opcode, sy, sa);
+        }
+
+        else {
+
+            PROTECT(sy = local_assign || NAMEDCNT_EQ_0(sa) 
+                           ? sa : allocVector(REALSXP, n));
+
+            if (helpers_not_multithreading_now || LENGTH(sa) < 2*T_math1
+                || R_math1_err_table[opcode] > 1) {
+
+                /* Use only one task. */
+
+                DO_NOW_OR_LATER1 (variant,
+                            LENGTH(sa) >= T_math1 
+                              && R_math1_err_table[opcode] <= 1,
+                            HELPERS_PIPE_IN01_OUT,
+                            task_math1, opcode, sy, sa);
+            }
+            else {
+
+                /* Use two tasks, computing second half and first half. */
+
+                helpers_do_task (HELPERS_PIPE_IN01_OUT, 
+                                 task_math1, opcode | (2<<8),
+                                 sy, sa, 0);
+
+                helpers_do_task (variant & VARIANT_PENDING_OK
+                                  ? HELPERS_PIPE_IN01_OUT
+                                  : HELPERS_PIPE_IN01_OUT | HELPERS_MASTER_NOW,
+                                 task_math1, opcode | (1<<8),
+                                 sy, sa, 0);
+            }
+
+            maybe_dup_attributes (sy, sa, variant);
+        }
+
+        if (R_naflag)
+            NaN_warningcall(call);
+        UNPROTECT(1);
+    }
+
+    R_variant_result = local_assign; /* Defer setting to shortly before return*/
+
+    if (g != R_NilValue && R_math1_deriv_table[opcode]) {
+        if (TYPEOF(sy) == REALSXP && LENGTH(sy) == 1 && !ISNAN(*REAL(sy))) {
+            double d = R_math1_deriv_table[opcode] (*REAL(sa), *REAL(sy));
+            R_gradient = copy_scaled_gradients(g,d);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
+    }
+
+    UNPROTECT(3);
+    return sy;
 }
+
 
 /* Methods for trunc are allowed to have more than one arg */
 
@@ -2180,13 +2312,16 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP r, s, x, g;
 
+    PROTECT (args = evalList_v (args, env, variant & VARIANT_GRADIENT));
+
     checkArity(op, args);
     check1arg_x (args, call);
 
-    x = evalv (CAR(args), env, variant & VARIANT_GRADIENT);
+    x = CAR(args);
+
     PROTECT (g = R_variant_result & VARIANT_GRADIENT_FLAG 
                   ? R_gradient : R_NilValue);
-    PROTECT (args = CONS(x,R_NilValue));
+
     if (g != R_NilValue)
         SET_ATTRIB (args, g);
 
@@ -3114,35 +3249,35 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"log10",	do_log1arg,	10,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"log2",	do_log1arg,	2,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"abs",		do_abs,		6,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"floor",	do_math1,	1,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"ceiling",	do_math1,	2,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"sqrt",	do_math1,	3,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"sign",	do_math1,	4,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"floor",	do_math1,	1,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"ceiling",	do_math1,	2,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sqrt",	do_math1,	3,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sign",	do_math1,	4,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"trunc",	do_trunc,	5,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"exp",		do_math1,	10,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"expm1",	do_math1,	11,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"log1p",	do_math1,	12,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"exp",		do_math1,	10,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"expm1",	do_math1,	11,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"log1p",	do_math1,	12,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"cos",		do_math1,	20,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"sin",		do_math1,	21,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"tan",		do_math1,	22,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"acos",	do_math1,	23,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"asin",	do_math1,	24,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"atan",	do_math1,	25,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"cos",		do_math1,	20,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sin",		do_math1,	21,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"tan",		do_math1,	22,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"acos",	do_math1,	23,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"asin",	do_math1,	24,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"atan",	do_math1,	25,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"cosh",	do_math1,	30,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"sinh",	do_math1,	31,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"tanh",	do_math1,	32,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"acosh",	do_math1,	33,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"asinh",	do_math1,	34,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"atanh",	do_math1,	35,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"cosh",	do_math1,	30,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sinh",	do_math1,	31,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"tanh",	do_math1,	32,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"acosh",	do_math1,	33,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"asinh",	do_math1,	34,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"atanh",	do_math1,	35,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"lgamma",	do_math1,	40,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"gamma",	do_math1,	41,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"lgamma",	do_math1,	40,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"gamma",	do_math1,	41,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"digamma",	do_math1,	42,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"trigamma",	do_math1,	43,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"digamma",	do_math1,	42,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"trigamma",	do_math1,	43,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 /* see "psigamma" below !*/
 
 /* Mathematical Functions of Two Numeric (+ 1-2 int) Variables */
