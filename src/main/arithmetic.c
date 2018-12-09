@@ -1681,7 +1681,7 @@ static double Dfabs (double x, double y)
 
 static double Dsqrt (double x, double y)
 { 
-    return 1/y;
+    return 0.5/y;
 }
 
 static double Dexp (double x, double y)
@@ -2395,7 +2395,7 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     PROTECT(s);
     maybe_dup_attributes (s, x, variant);
     if (g != R_NilValue) {
-        if (TYPEOF(x) == REALSXP && LENGTH(x) == 1 && !ISNAN(*REAL(x))) {
+        if (TYPEOF(s) == REALSXP && LENGTH(s) == 1 && !ISNAN(*REAL(s))) {
             double d = sign(*REAL(x));
             R_gradient = copy_scaled_gradients(g,d);
             R_variant_result = VARIANT_GRADIENT_FLAG;
