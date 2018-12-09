@@ -124,6 +124,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     SEXP cell = cons_with_tag (val, R_NilValue, sym);
     SEXP newenv = NewEnvironment (R_NilValue, cell, env);
+    SET_RDEBUG(newenv,RDEBUG(env));
     PROTECT(newenv);
     INC_NAMEDCNT(val);
     SET_ENVSYMBITS (newenv, SYMBITS(sym));
