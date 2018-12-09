@@ -142,6 +142,8 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     R_variant_result = 0;
 
     if (PRIMVAL(op) == 0) {  /* with_gradient */
+        if (NAMEDCNT_GT_0(result))
+            result = duplicate(result);
         if (result_grad == R_NilValue)
             setAttrib (result, R_GradientSymbol, ScalarRealMaybeConst(0.0));
         else {
