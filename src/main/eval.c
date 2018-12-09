@@ -539,7 +539,7 @@ static inline Rboolean asLogicalNoNA(SEXP s, SEXP call)
 
 
 /* Inline version of findVarPendingOK, for speed when symbol is found
-   from LASTSYMBINDING.  Doesn't necessarily set R_binding_cell. */
+   from LASTSYMBINDING. */
 
 static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
 {
@@ -547,8 +547,10 @@ static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
 
     if (LASTSYMENV(sym) == SEXP32_FROM_SEXP(rho)) {
         SEXP b = CAR(LASTSYMBINDING(sym));
-        if (b != R_UnboundValue)
+        if (b != R_UnboundValue) {
+            R_binding_cell = LASTSYMBINDING(sym);
             return b;
+        }
         LASTSYMENV(sym) = R_NoObject32;
     }
 
@@ -2108,6 +2110,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     SEXP lhs = CAR(args), rhs = CADR(args);
     int opval = PRIMVAL(op);
+    SEXP grad = R_NilValue;
 
     /* Swap operands for -> and ->>. */
 
@@ -2125,7 +2128,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         /* Handle <<-, or assignment to the base environment, or a user 
            database (which has object bit set) without trying the 
-           optimizations done below. */
+           optimizations done below.  Does not track gradient. */
 
         if (opval || IS_BASE(rho) || OBJECT(rho)) {
             rhs = evalv (rhs, rho, VARIANT_PENDING_OK);
@@ -2142,7 +2145,9 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         int varnt = VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK;
 
-        if (TYPEOF(rhs) == LANGSXP) {
+        if (STORE_GRAD(rho) && !opval || (variant & VARIANT_GRADIENT)) 
+            varnt |= VARIANT_GRADIENT;
+        else if (TYPEOF(rhs) == LANGSXP) {
             if (CADR(rhs) == lhs) 
                 varnt |= VARIANT_LOCAL_ASSIGN1;
             else if (CADDR(rhs) == lhs)
@@ -2152,10 +2157,14 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         /* Evaluate the right hand side, asking for it on the scalar stack. */
 
         rhs = EVALV (rhs, rho, varnt);
+        if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+            R_variant_result = 0;
+            grad = R_gradient;
+        }
 
         /* See if the assignment was done by the rhs operator. */
 
-        if (R_variant_result) {
+        if (R_variant_result == 1) {
             R_variant_result = 0;
             goto done;
         }
@@ -2170,6 +2179,8 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
               && ! BINDING_IS_LOCKED((R_binding_cell = LASTSYMBINDING(lhs)))) {
             v = CAR(R_binding_cell);
         }
+        else
+            R_binding_cell = R_NilValue;
 
         /* Try to copy the value, not assign the object, if the rhs is
            scalar (no attributes, not being computed) and doesn't have
@@ -2256,6 +2267,15 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
 
   done:
+
+    if (grad != R_NilValue) {
+        if (STORE_GRAD(rho) && !opval && R_binding_cell != R_NilValue)
+            SET_ATTRIB (R_binding_cell, grad);
+        if (variant & VARIANT_GRADIENT) {
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            R_gradient = grad;
+        }
+    }
 
     R_Visible = FALSE;
 
