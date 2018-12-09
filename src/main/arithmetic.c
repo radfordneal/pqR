@@ -2090,7 +2090,8 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
                                 int variant)
 {
     int opcode = PRIMVAL(op);
-    SEXP r, g, sa;
+    SEXP r, grad, sa;
+    double opr, res;
 
     args = evalList_v (args, env, VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK
                                     | (variant & VARIANT_GRADIENT));
@@ -2101,11 +2102,12 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
 
     sa = CAR(args);
 
-    PROTECT (g = R_variant_result & VARIANT_GRADIENT_FLAG
-                  ? R_gradient : R_NilValue);
+    PROTECT (grad = R_variant_result & VARIANT_GRADIENT_FLAG
+                     ? R_gradient : R_NilValue);
+    R_variant_result = 0;
 
-    if (g != R_NilValue)
-        SET_ATTRIB (args, g);
+    if (grad != R_NilValue)
+        SET_ATTRIB (args, grad);
 
     if (DispatchGroup("Math", call, op, args, env, &r)) {
         UNPROTECT(2);
@@ -2147,8 +2149,7 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
 
         WAIT_UNTIL_COMPUTED(sa);
 
-        double opr = REAL(sa)[0];
-        double res;
+        opr = REAL(sa)[0];
 
         if (ISNAN(opr))
             res = opr;
@@ -2231,10 +2232,10 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
 
     R_variant_result = local_assign; /* Defer setting to shortly before return*/
 
-    if (g != R_NilValue && R_math1_deriv_table[opcode]) {
-        if (TYPEOF(sy) == REALSXP && LENGTH(sy) == 1 && !ISNAN(*REAL(sy))) {
-            double d = R_math1_deriv_table[opcode] (*REAL(sa), *REAL(sy));
-            R_gradient = copy_scaled_gradients(g,d);
+    if (grad != R_NilValue && R_math1_deriv_table[opcode]) {
+        if (TYPEOF(sy) == REALSXP && LENGTH(sy) == 1 && !ISNAN(res)) {
+            double d = R_math1_deriv_table[opcode] (opr, res);
+            R_gradient = copy_scaled_gradients(grad,d);
             R_variant_result = VARIANT_GRADIENT_FLAG;
         }
     }
@@ -2311,6 +2312,7 @@ void task_sum_abs (helpers_op_t op, SEXP s, SEXP x, SEXP ignored)
 SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP r, s, x, g;
+    double opr, res;
 
     PROTECT (args = evalList_v (args, env, variant & VARIANT_GRADIENT));
 
@@ -2371,12 +2373,13 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
         else if (n == 1) {
             WAIT_UNTIL_COMPUTED(x);
-            double v = fabs(*REAL(x));
+            opr = *REAL(x);
+            res = fabs(opr);
             s = NAMEDCNT_EQ_0(x) && TYPEOF(x) == REALSXP ? 
-                  (*REAL(x) = v, x)
+                  (*REAL(x) = res, x)
               : CAN_USE_SCALAR_STACK(variant) && NO_ATTRIBUTES_OK(variant,x) ?
-                  PUSH_SCALAR_REAL(v)
-              :   ScalarReal(v);
+                  PUSH_SCALAR_REAL(res)
+              :   ScalarReal(res);
         }
         else { /* x won't be on scalar stack, since n != 1 */
             s = NAMEDCNT_EQ_0(x) ? x : allocVector(REALSXP, n);
@@ -2396,8 +2399,7 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     maybe_dup_attributes (s, x, variant);
     if (g != R_NilValue) {
         if (TYPEOF(s) == REALSXP && LENGTH(s) == 1 && !ISNAN(*REAL(s))) {
-            double d = sign(*REAL(x));
-            R_gradient = copy_scaled_gradients(g,d);
+            R_gradient = copy_scaled_gradients (g, sign(opr));
             R_variant_result = VARIANT_GRADIENT_FLAG;
         }
     }
