@@ -187,8 +187,12 @@ static SEXP do_gradient_of(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     (void) evalv (CAR(args), env, VARIANT_GRADIENT);
 
-    return R_variant_result & VARIANT_GRADIENT_FLAG ? get_gradient (env)
-                                                    : R_NilValue;
+    SEXP r = R_NilValue;
+    if (R_variant_result & VARIANT_GRADIENT_FLAG) 
+        r = get_gradient (env);
+
+    R_variant_result = 0;
+    return r;
 }
 
 
