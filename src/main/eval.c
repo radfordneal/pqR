@@ -759,10 +759,15 @@ static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
     }
 
     if (TYPE_ETC(res) == PROMSXP) {
+        SEXP prom = res;
         if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
-            res = forcePromiseUnbound(res,variant);
+            res = forcePromiseUnbound(prom,variant);
         else
-            res = PRVALUE_PENDING_OK(res);
+            res = PRVALUE_PENDING_OK(prom);
+        if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(prom)) {
+            PROTECT (grad = ATTRIB(prom));
+            ret_grad = 1;
+        }
     }
     else if (TYPE_ETC(res) == SYMSXP) {
         if (res == R_MissingArg) {
@@ -823,8 +828,8 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
 
         if (type_etc == CLOSXP) {
             PROTECT(op);
-            res = applyClosure_v (e, op, promiseArgs(args,rho), rho, 
-                                  NULL, variant);
+            res = applyClosure_v (e, op, promiseArgs(args,rho,variant), 
+                                  rho, NULL, variant);
             UNPROTECT(1);
         }
         else {
@@ -911,6 +916,10 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
             res = forcePromiseUnbound(e,variant);
         else if ( ! (variant & VARIANT_PENDING_OK))
             WAIT_UNTIL_COMPUTED(res);
+        if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(e)) {
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            R_gradient = ATTRIB(e);
+        }
         R_Visible = TRUE;
         return res;
     }
@@ -926,10 +935,15 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
         res = ddfindVar(e,rho);
 
         if (TYPE_ETC(res) == PROMSXP) {
-            if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
-                res = forcePromiseUnbound(res,variant);
+            SEXP prom = res;
+            if (PRVALUE_PENDING_OK(prom) == R_UnboundValue)
+                res = forcePromiseUnbound(prom,variant);
             else
-                res = PRVALUE_PENDING_OK(res);
+                res = PRVALUE_PENDING_OK(prom);
+            if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(prom)) {
+                R_variant_result = VARIANT_GRADIENT_FLAG;
+                R_gradient = ATTRIB(prom);
+            }
         }
         else if (TYPE_ETC(res) == SYMSXP) {
             if (res == R_MissingArg) {
@@ -998,10 +1012,14 @@ static SEXP attribute_noinline forcePromiseUnbound (SEXP e, int variant)
 
         PROTECT(e);
 
-        val = EVALV_NC (val, PRENV(e), 
-                        (variant & VARIANT_PENDING_OK) | VARIANT_MISSING_OK);
+        int vrnt = (variant & VARIANT_PENDING_OK) | VARIANT_MISSING_OK;
+        if (STORE_GRAD(e)) 
+            vrnt |= VARIANT_GRADIENT;
 
-        UNPROTECT(1);
+        val = EVALV_NC (val, PRENV(e), vrnt);
+
+        if (STORE_GRAD(e) && (R_variant_result & VARIANT_GRADIENT_FLAG)) 
+            SET_ATTRIB (e, R_gradient);
 
         /* Pop the stack, unmark the promise and set its value field. */
 
@@ -1017,10 +1035,12 @@ static SEXP attribute_noinline forcePromiseUnbound (SEXP e, int variant)
                       && R_isMissing (PRCODE(e), PRENV(e)))
                 arg_missing_error(PRCODE(e));
 
+            UNPROTECT(1);
             return val;
         }
 
         INC_NAMEDCNT(val);
+        UNPROTECT(1);
     }
 
     /* Set the environment to R_NilValue to allow GC to reclaim the
@@ -1986,7 +2006,7 @@ static SEXP do_begin (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     int vrnt = VARIANT_NULL | VARIANT_PENDING_OK;
     if (variant & VARIANT_DIRECT_RETURN) 
-        vrnt |= VARIANT_PASS_ON(variant);
+        vrnt |= VARIANT_PASS_ON(variant) & ~VARIANT_GRADIENT;
 
 #   if SCALAR_STACK_DEBUG
         SEXP sv_scalar_stack = R_scalar_stack;
@@ -2027,8 +2047,11 @@ static SEXP do_return(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     SEXP v;
 
     if (variant & VARIANT_DIRECT_RETURN) {
-        v = evalv (a, rho, VARIANT_PASS_ON(variant) 
-                             & ~ (VARIANT_NULL | VARIANT_SCALAR_STACK_OK));
+        int vrnt =  VARIANT_PASS_ON(variant) 
+                     & ~ (VARIANT_NULL | VARIANT_SCALAR_STACK_OK);
+        if (STORE_GRAD(rho))
+            vrnt |= VARIANT_GRADIENT;
+        v = evalv (a, rho, vrnt);
         R_variant_result |= VARIANT_RTN_FLAG;
         return v;
     }
@@ -2527,7 +2550,7 @@ static SEXP attribute_noinline Rf_set_subassign_general
             s[d].store_args = R_NoObject;
         }
         else {
-            fetch_args = promiseArgs (CDDR(s[d].expr), rho);
+            fetch_args = promiseArgs (CDDR(s[d].expr), rho, 0);
             if (CDR(fetch_args)==R_NilValue && TAG(fetch_args)==R_NilValue)
                 s[d].store_args = CAR(fetch_args);
             else
@@ -2906,19 +2929,23 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
    incremented, and the NAMEDCNT of its value (if not unbound) incremented
    unless it is zero.  See inside for handling of ... */
 
-#define MAKE_PROMISE(a,rho) do { \
+#define MAKE_PROMISE(a,rho,variant) do { \
     if (TYPEOF(a) == PROMSXP) { \
         INC_NAMEDCNT(a); \
         SEXP p = PRVALUE_PENDING_OK(a); \
         if (p != R_UnboundValue && NAMEDCNT_GT_0(p)) \
             INC_NAMEDCNT(p); \
     } \
-    else if (a != R_MissingArg && a != R_MissingUnder) \
+    else if (a != R_MissingArg && a != R_MissingUnder) { \
         a = mkPROMISE (a, rho); \
+        if (variant) SET_STORE_GRAD (a, 1); \
+    } \
 } while (0)
 
-SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
+SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho, int variant)
 {
+    variant &= VARIANT_GRADIENT;
+
     /* Handle 0, 1, or 2 arguments (not ...) specially, for speed. */
 
     if (CDR(el) == R_NilValue) {  /* Note that CDR(R_NilValue) == R_NilValue */
@@ -2926,7 +2953,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
             return el;
         SEXP a = CAR(el);
         if (a != R_DotsSymbol) {
-            MAKE_PROMISE(a,rho);
+            MAKE_PROMISE(a,rho,variant);
             return cons_with_tag (a, R_NilValue, TAG(el));
         }
     }
@@ -2935,9 +2962,9 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
         SEXP a2 = CADR(el);
         if (a1 != R_DotsSymbol && a2 != R_DotsSymbol) {
             SEXP r;
-            MAKE_PROMISE(a2,rho);
+            MAKE_PROMISE(a2,rho,variant);
             PROTECT (r = cons_with_tag (a2, R_NilValue, TAG(CDR(el))));
-            MAKE_PROMISE(a1,rho);
+            MAKE_PROMISE(a1,rho,variant);
             r = cons_with_tag (a1, r, TAG(el));
             UNPROTECT(1);
             return r;
@@ -2969,7 +2996,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	    else if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
                     a = CAR(h);
-                    MAKE_PROMISE(a,rho);
+                    MAKE_PROMISE(a,rho,variant);
                     ev = cons_with_tag (a, R_NilValue, TAG(h));
                     if (head==R_NilValue)
                         head = ev;
@@ -2983,7 +3010,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 		dotdotdot_error();
 	}
         else {
-            MAKE_PROMISE(a,rho);
+            MAKE_PROMISE(a,rho,variant);
             ev = cons_with_tag (a, R_NilValue, TAG(el));
             if (head == R_NilValue)
                 head = ev;
@@ -3002,20 +3029,22 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 /* Create promises for arguments, with values for promises filled in.  
    Values for arguments that don't become promises are silently ignored.  
    This is used in method dispatch, hence the text of the error message 
-   (which should never occur). */
+   (which should never occur).  Copies gradient info from 'values' to
+   promises in result. */
  
 SEXP attribute_hidden promiseArgsWithValues(SEXP el, SEXP rho, SEXP values)
 {
     SEXP s, a, b;
 
-    PROTECT(s = promiseArgs(el, rho));
+    PROTECT (s = promiseArgs (el, rho, 0));
 
     for (a = values, b = s; 
          a != R_NilValue && b != R_NilValue;
          a = CDR(a), b = CDR(b)) {
-        if (TYPEOF(CAR(b)) == PROMSXP) {
-            SET_PRVALUE(CAR(b), CAR(a));
-            INC_NAMEDCNT(CAR(a));
+        if (TYPEOF (CAR(b)) == PROMSXP) {
+            SET_PRVALUE (CAR(b), CAR(a));
+            if (HAS_ATTRIB(a)) SET_ATTRIB (CAR(b), ATTRIB(a));
+            INC_NAMEDCNT (CAR(a));
         }
     }
 
@@ -3027,16 +3056,20 @@ SEXP attribute_hidden promiseArgsWithValues(SEXP el, SEXP rho, SEXP values)
     error(_("dispatch error"));
 }
 
-/* Like promiseArgsWithValues except it sets only the first value. */
+/* Like promiseArgsWithValues except it sets only the first value.  So it
+   needs the variant for creating promises for the other arguments (which
+   might require gradient). */
 
-SEXP attribute_hidden promiseArgsWith1Value(SEXP el, SEXP rho, SEXP value)
+SEXP attribute_hidden promiseArgsWith1Value (SEXP el, SEXP rho, SEXP value,
+                                             int variant)
 {
     SEXP s;
-    PROTECT(s = promiseArgs(el, rho));
+    PROTECT (s = promiseArgs (el, rho, variant));
     if (s == R_NilValue) error(_("dispatch error"));
-    if (TYPEOF(CAR(s)) == PROMSXP) {
-        SET_PRVALUE(CAR(s), value);
-        INC_NAMEDCNT(value);
+    if (TYPEOF (CAR(s)) == PROMSXP) {
+        SET_PRVALUE (CAR(s), value);
+        if (HAS_ATTRIB(value)) SET_ATTRIB (CAR(s), ATTRIB(value));
+        INC_NAMEDCNT (value);
     }
     UNPROTECT(1);
     return s;
@@ -3160,9 +3193,9 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 
 	    /* create a promise to pass down to applyClosure  */
 	    if (argsevald < 0)
-                argValue = promiseArgsWith1Value(CDR(call), rho, x);
+                argValue = promiseArgsWith1Value(CDR(call), rho, x, 0);
             else if (argsevald == 0)
-		argValue = promiseArgsWith1Value(args, rho, x);
+		argValue = promiseArgsWith1Value(args, rho, x, 0);
 	    else 
                 argValue = args;
 	    /* This means S4 dispatch */
@@ -3205,7 +3238,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
                 pargs = promiseArgsWithValues(CDR(call), rho, args);
             }
             else
-                pargs = promiseArgsWith1Value(args, rho, x); 
+                pargs = promiseArgsWith1Value(args, rho, x, 0); 
 
 	    /* The context set up here is needed because of the way
 	       usemethod() is written.  DispatchGroup() repeats some

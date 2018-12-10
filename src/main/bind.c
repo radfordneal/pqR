@@ -963,7 +963,7 @@ static SEXP do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
      *	  drop through to the default code.
      */
 
-    PROTECT(args = promiseArgs(args, env));
+    PROTECT(args = promiseArgs(args, env, 0));
 
     generic = ((PRIMVAL(op) == 1) ? "cbind" : "rbind");
     klass = "";

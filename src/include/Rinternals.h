@@ -240,7 +240,8 @@ struct sxpinfo_struct {
     unsigned int rstep_pname : 1; /* Function: is to be debugged just once
                                      Symbol: subassign counterpart follows it
                                      CHARSXP: is used as a symbol's printname
-                                     Envir: store gradient with variables */
+                                     Envir: store gradient with variables
+                                     Promise: evaluate with VARIANT_GRADIENT */
     unsigned int base_sym_env : 1;/* Symbol: has base binding in global cache,
                                      Envir: R_BaseEnv or R_BaseNamespace*/
 

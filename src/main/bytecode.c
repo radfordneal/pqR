@@ -1045,7 +1045,7 @@ static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
   int dispatched = FALSE;
   SEXP op = SYMVALUE(install(generic)); /**** avoid this */
 
-  PROTECT(pargs = promiseArgsWith1Value(CDR(call), rho, x));
+  PROTECT(pargs = promiseArgsWith1Value(CDR(call), rho, x, 0));
 
   /**** Minimal hack to try to handle the S4 case.  If we do the check
 	and do not dispatch then some arguments beyond the first might
