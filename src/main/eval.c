@@ -760,7 +760,7 @@ static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
 
     if (TYPE_ETC(res) == PROMSXP) {
         SEXP prom = res;
-        if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
+        if (PRVALUE_PENDING_OK(prom) == R_UnboundValue)
             res = forcePromiseUnbound(prom,variant);
         else
             res = PRVALUE_PENDING_OK(prom);
