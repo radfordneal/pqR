@@ -1318,12 +1318,13 @@ static int ddVal(SEXP symbol)
 
   If no value is obtained we return R_UnboundValue.
 
+  Sets R_binding_cell to the cell found in the ... list.
+
   It is an error to specify a .. index longer than the length of the
   ... object the value is sought in. */
 
 SEXP ddfindVar(SEXP symbol, SEXP rho)
 {
-    int i;
     SEXP vl;
 
     /* first look for ... symbol  */
@@ -1332,20 +1333,26 @@ SEXP ddfindVar(SEXP symbol, SEXP rho)
         if (symbol == R_DotsSymbol)
             dotdotdot_error();
         else
-            error(_("..%d used in an incorrect context, no ... to look in"), i);
+            error(_("..%d used in an incorrect context, no ... to look in"), 
+                  ddVal(symbol));
     }
 
     if (symbol == R_DotsSymbol) {
-        if (TYPEOF(vl) != DOTSXP || length(vl) != 1)
+        if (TYPEOF(vl) != DOTSXP || CDR(vl) != R_NilValue)
             error(_("The ... list does not contain %d elements"), 1);
-        return CAR(vl);
     }
     else {  /* ..n */
-        i = ddVal(symbol);
-        if (vl == R_MissingArg || vl == R_MissingUnder || length(vl) < i)
+        int i = ddVal(symbol);
+        if (TYPEOF(vl) != DOTSXP || length(vl) < i) {
+            /* will catch cases where vl == R_MissingArg || vl == R_MissingUnder
+                                                         || vl == R_NilValue */
             error(_("The ... list does not contain %d elements"), i);
-        return CAR (nthcdr (vl, i-1));
+        }
+        vl = nthcdr (vl, i-1);
     }
+
+    R_binding_cell = vl;
+    return CAR(vl);
 }
 
 
