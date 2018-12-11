@@ -224,6 +224,17 @@ static SEXP do_all_gradients_of (SEXP call, SEXP op, SEXP args, SEXP env,
 }
 
 
+/* .Internal, for debugging gradient implementation. */
+
+static SEXP do_tracking_gradients (SEXP call, SEXP op, SEXP args, SEXP env,
+                                   int variant)
+{
+    checkArity (op, args);
+
+    return ScalarLogicalMaybeConst (STORE_GRAD(env));
+}
+
+
 /* FUNTAB entries defined in this source file. See names.c for documentation. */
 
 attribute_hidden FUNTAB R_FunTab_gradient[] =
@@ -239,6 +250,8 @@ attribute_hidden FUNTAB R_FunTab_gradient[] =
 {"gradient_of", do_gradient_of, 0,	1200,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"all_gradients_of", do_all_gradients_of, 1, 1210, 1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"tracking_gradients", do_tracking_gradients, 1, 1210, 0, {PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
