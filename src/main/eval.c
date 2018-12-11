@@ -1176,6 +1176,8 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     actuals = matchArgs_pairlist (formals, arglist, call);
     PROTECT(newrho = NewEnvironment(R_NilValue, actuals, savedrho));
         /* no longer passes formals, since matchArg now puts tags in actuals */
+    if (variant & VARIANT_GRADIENT)
+        SET_STORE_GRAD (newrho, STORE_GRAD(rho));
 
     /* This piece of code is destructively modifying the actuals list,
        which is now also the list of bindings in the frame of newrho.
@@ -2291,13 +2293,11 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
   done:
 
-    if (grad != R_NilValue) {
-        if (STORE_GRAD(rho) && !opval && R_binding_cell != R_NilValue)
-            SET_ATTRIB (R_binding_cell, grad);
-        if (variant & VARIANT_GRADIENT) {
-            R_variant_result = VARIANT_GRADIENT_FLAG;
-            R_gradient = grad;
-        }
+    if (STORE_GRAD(rho) && !opval && R_binding_cell != R_NilValue)
+        SET_ATTRIB (R_binding_cell, grad);
+    if (grad != R_NilValue && (variant & VARIANT_GRADIENT)) {
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+        R_gradient = grad;
     }
 
     R_Visible = FALSE;

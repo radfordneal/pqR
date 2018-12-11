@@ -421,7 +421,6 @@ found: ;
     *ans = applyMethod (newcall, sxp, matchedarg, rho, supplied, 
                         variant & VARIANT_WHOLE_BODY ? variant 
                           : variant | VARIANT_NOT_WHOLE_BODY);
-
     R_GlobalContext->callflag = CTXT_RETURN;
     UNPROTECT(nprotect+5);
     return 1;
@@ -434,7 +433,7 @@ found: ;
 
 /* This is a primitive SPECIALSXP */
 static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
-                                    int variant)
+                          int variant)
 {
     SEXP ans, generic, obj, val;
     SEXP callenv, defenv;
