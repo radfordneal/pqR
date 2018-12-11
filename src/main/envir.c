@@ -55,6 +55,7 @@ static SEXP spec_name = R_NoObject;
 #define SYMBOL_BINDING_VALUE(s) ((IS_ACTIVE_BINDING(s) ? getActiveValue(SYMVALUE(s)) : SYMVALUE(s)))
 #define SYMBOL_HAS_BINDING(s) (IS_ACTIVE_BINDING(s) || (SYMVALUE(s) != R_UnboundValue))
 
+/* Set value in binding cell.  Also clears "missing" and gradient info. */
 #define SET_BINDING_VALUE(b,val) do { \
   SEXP __b__ = (b); \
   SEXP __val__ = (val); \
@@ -63,10 +64,14 @@ static SEXP spec_name = R_NoObject;
 	  CHAR(PRINTNAME(TAG(__b__)))); \
   if (IS_ACTIVE_BINDING(__b__)) \
     setActiveValue(CAR(__b__), __val__); \
-  else \
+  else { \
     SETCAR_MACRO(__b__, __val__); \
+  } \
+  SET_MISSING(__b__,0); \
+  if (HAS_ATTRIB(__b__)) SET_ATTRIB(__b__,R_NilValue); \
 } while (0)
 
+/* Set value in global symbol binding. */
 #define SET_SYMBOL_BINDING_VALUE(sym, val) do { \
   SEXP __sym__ = (sym); \
   SEXP __val__ = (val); \
@@ -905,7 +910,6 @@ Rboolean R_GetVarLocMISSING(R_varloc_t vl)
 void R_SetVarLocValue(R_varloc_t vl, SEXP value)
 {
     SET_BINDING_VALUE((SEXP) vl, value);
-    /* Should this also do a SET_MISSING((SEXP)vl,0)? */
 }
 
 
@@ -1663,7 +1667,6 @@ int set_var_in_frame (SEXP symbol, SEXP value, SEXP rho, int create, int incdec)
     SET_BINDING_VALUE(loc,value);
     if (incdec&2) 
         INC_NAMEDCNT(value);
-    SET_MISSING(loc,0);
     if (rho == R_GlobalEnv) 
         R_DirtyImage = 1;
     return TRUE;
