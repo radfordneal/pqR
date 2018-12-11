@@ -32,6 +32,11 @@
 #include <Defn.h>
 #include <Rmath.h>
 
+static void R_NORETURN NULL_error (void)
+{
+    error(_("attempt to set an attribute on NULL"));
+}
+
 static SEXP installAttrib(SEXP, SEXP, SEXP);
 static SEXP removeAttrib(SEXP, SEXP);
 
@@ -43,7 +48,7 @@ static SEXP row_names_gets(SEXP vec , SEXP val)
     SEXP ans;
 
     if (vec == R_NilValue)
-	error(_("attempt to set an attribute on NULL"));
+	NULL_error();
 
     if(isReal(val) && length(val) == 2 && ISNAN(REAL(val)[0]) ) {
 	/* This should not happen, but if a careless user dput()s a
@@ -361,7 +366,7 @@ SEXP setAttrib(SEXP vec, SEXP name, SEXP val)
     }
 
     if (vec == R_NilValue) /* after above: we allow removing names from NULL */
-	error(_("attempt to set an attribute on NULL"));
+	NULL_error();
 
     val = attr_val_dup (vec, name, val);
 
@@ -421,7 +426,7 @@ void copyMostAttrib(SEXP inp, SEXP ans)
     SEXP s;
 
     if (ans == R_NilValue)
-	error(_("attempt to set an attribute on NULL"));
+	NULL_error();
 
     PROTECT2(ans,inp);
     for (s = ATTRIB(inp); s != R_NilValue; s = CDR(s)) {
@@ -443,7 +448,7 @@ void attribute_hidden copyMostAttribNoClass(SEXP inp, SEXP ans)
     SEXP s;
 
     if (ans == R_NilValue)
-	error(_("attempt to set an attribute on NULL"));
+	NULL_error();
 
     PROTECT2(ans,inp);
     for (s = ATTRIB(inp); s != R_NilValue; s = CDR(s)) {
@@ -463,7 +468,7 @@ void attribute_hidden copyMostAttribNoTs(SEXP inp, SEXP ans)
     SEXP s;
 
     if (ans == R_NilValue)
-	error(_("attempt to set an attribute on NULL"));
+	NULL_error();
 
     PROTECT2(ans,inp);
     for (s = ATTRIB(inp); s != R_NilValue; s = CDR(s)) {
@@ -578,7 +583,7 @@ SEXP tspgets(SEXP vec, SEXP val)
     int n;
 
     if (vec == R_NilValue)
-	error(_("attempt to set an attribute on NULL"));
+	NULL_error();
 
     if(IS_S4_OBJECT(vec)) { /* leave validity checking to validObject */
         if (!isNumeric(val)) /* but should have been checked */
@@ -625,7 +630,7 @@ SEXP tspgets(SEXP vec, SEXP val)
 static SEXP commentgets(SEXP vec, SEXP comment)
 {
     if (vec == R_NilValue)
-	error(_("attempt to set an attribute on NULL"));
+	NULL_error();
 
     if (isNull(comment) || isString(comment)) {
 	if (length(comment) <= 0) {
@@ -675,7 +680,7 @@ SEXP classgets(SEXP vec, SEXP klass)
 	    Rboolean isfactor = FALSE;
 
 	    if (vec == R_NilValue)
-		error(_("attempt to set an attribute on NULL"));
+		NULL_error();
 
 	    for(i = 0; i < LENGTH(klass); i++)
 		if(streql(CHAR(STRING_ELT(klass, i)), "factor")) { /* ASCII */
