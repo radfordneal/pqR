@@ -1012,14 +1012,18 @@ static SEXP attribute_noinline forcePromiseUnbound (SEXP e, int variant)
 
         PROTECT(e);
 
-        int vrnt = (variant & VARIANT_PENDING_OK) | VARIANT_MISSING_OK;
-        if (STORE_GRAD(e)) 
-            vrnt |= VARIANT_GRADIENT;
+        int vrnt = variant & VARIANT_PENDING_OK;
 
-        val = EVALV_NC (val, PRENV(e), vrnt);
-
-        if (STORE_GRAD(e) && (R_variant_result & VARIANT_GRADIENT_FLAG)) 
-            SET_ATTRIB (e, R_gradient);
+        if (STORE_GRAD(e)) {
+            vrnt |= VARIANT_MISSING_OK | VARIANT_GRADIENT;
+            val = EVALV_NC (val, PRENV(e), vrnt);
+            if (R_variant_result & VARIANT_GRADIENT_FLAG)
+                SET_ATTRIB (e, R_gradient);
+        }
+        else {
+            vrnt |= VARIANT_MISSING_OK;
+            val = EVALV_NC (val, PRENV(e), vrnt);
+        }
 
         /* Pop the stack, unmark the promise and set its value field. */
 
@@ -2189,7 +2193,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         /* See if the assignment was done by the rhs operator. */
 
-        if (R_variant_result == 1) {
+        if (R_variant_result) {
             R_variant_result = 0;
             goto done;
         }
@@ -2293,11 +2297,13 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
   done:
 
-    if (STORE_GRAD(rho) && !opval && R_binding_cell != R_NilValue)
-        SET_ATTRIB (R_binding_cell, grad);
-    if (grad != R_NilValue && (variant & VARIANT_GRADIENT)) {
-        R_variant_result = VARIANT_GRADIENT_FLAG;
-        R_gradient = grad;
+    if (grad != R_NilValue) {
+        if (STORE_GRAD(rho) && !opval && R_binding_cell != R_NilValue)
+            SET_ATTRIB (R_binding_cell, grad);
+        if (variant & VARIANT_GRADIENT) {
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            R_gradient = grad;
+        }
     }
 
     R_Visible = FALSE;
