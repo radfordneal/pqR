@@ -758,13 +758,13 @@ static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
         ret_grad = 1;
     }
 
-    if (TYPE_ETC(res) == PROMSXP) {
+    if (TYPEOF(res) == PROMSXP) {
         SEXP prom = res;
         if (PRVALUE_PENDING_OK(prom) == R_UnboundValue)
             res = forcePromiseUnbound(prom,variant);
         else
             res = PRVALUE_PENDING_OK(prom);
-        if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(prom)) {
+        if ((variant & VARIANT_GRADIENT) && ATTRIB(prom) != R_NilValue) {
             PROTECT (grad = ATTRIB(prom));
             ret_grad = 1;
         }
@@ -910,13 +910,13 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
         return res;
     }
 
-    if (TYPE_ETC(e) == PROMSXP) {  /* parts other than type will be 0 */
+    if (TYPEOF(e) == PROMSXP) {
         res = PRVALUE_PENDING_OK(e);
         if (res == R_UnboundValue)
             res = forcePromiseUnbound(e,variant);
         else if ( ! (variant & VARIANT_PENDING_OK))
             WAIT_UNTIL_COMPUTED(res);
-        if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(e)) {
+        if ((variant & VARIANT_GRADIENT) && ATTRIB(e) != R_NilValue) {
             R_variant_result = VARIANT_GRADIENT_FLAG;
             R_gradient = ATTRIB(e);
         }
@@ -934,13 +934,13 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
 
         res = ddfindVar(e,rho);
 
-        if (TYPE_ETC(res) == PROMSXP) {
+        if (TYPEOF(res) == PROMSXP) {
             SEXP prom = res;
             if (PRVALUE_PENDING_OK(prom) == R_UnboundValue)
                 res = forcePromiseUnbound(prom,variant);
             else
                 res = PRVALUE_PENDING_OK(prom);
-            if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(prom)) {
+            if ((variant & VARIANT_GRADIENT) && ATTRIB(prom) != R_NilValue) {
                 R_variant_result = VARIANT_GRADIENT_FLAG;
                 R_gradient = ATTRIB(prom);
             }
