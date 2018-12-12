@@ -224,9 +224,10 @@ struct sxpinfo_struct {
 #   define TYPE_ET_CETERA_VEC_DOTS_TR 0x40 /* Symbol:   is ... or ..1, ..2, etc.
                                               Vector:   not scalar (length != 1)
                                               Function: is being traced 
-                                              CHARSXP:  may need translation */
+                                              CHARSXP:  may need translation 
+                                              PROMSXP:  has been forced */
 
-#   define TYPE_ET_CETERA_HAS_ATTR 0x80 /* Vector or LISTSXP: 
+#   define TYPE_ET_CETERA_HAS_ATTR 0x80 /* Vector type, LISTSXP, or PROMSXP: 
                                              1 if ATTRIB != R_NilValue */
 
     /* Second byte. */
@@ -846,16 +847,22 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define ATTRIB(x)       NOT_LVALUE(TYPEOF(x)==SYMSXP ? R_NilValue : ATTRIB_W(x))
 
 #define IS_PRINTNAME(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
+
+/* HAS_ATTR(x) check for existence of an attribute not R_NilValue, but only
+   for vector types, LISTSXP, and PROMSXP. */
+
 #define HAS_ATTRIB(x)   ((UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                           & TYPE_ET_CETERA_HAS_ATTR) != 0)
 #define SET_HAS_ATTRIB(x)     (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                                  |= TYPE_ET_CETERA_HAS_ATTR)
 #define UNSET_HAS_ATTRIB(x)   (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                                  &= ~TYPE_ET_CETERA_HAS_ATTR)
+
 #define SET_VEC_DOTS_TR_BIT(x)   (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                                    |= TYPE_ET_CETERA_VEC_DOTS_TR)
 #define UNSET_VEC_DOTS_TR_BIT(x) (UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                                    &= ~TYPE_ET_CETERA_VEC_DOTS_TR)
+
 #define OBJECT(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.obj)
 #define RTRACE(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.type_et_cetera \
                                                    & TYPE_ET_CETERA_VEC_DOTS_TR)
@@ -886,7 +893,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
     if (TYPEOF(_x_) != _v_) { \
         _X_->sxpinfo.type_et_cetera = \
           (_X_->sxpinfo.type_et_cetera & ~TYPE_ET_CETERA_TYPE) | _v_; \
-        if (((VECTOR_OR_LIST_TYPES>>_v_)&1) == 0 || ATTRIB(_x_) == R_NilValue) \
+        if (((HAS_ATTRIB_TYPES>>_v_)&1) == 0 || ATTRIB(_x_) == R_NilValue) \
             UNSET_HAS_ATTRIB(_x_); \
         else \
             SET_HAS_ATTRIB(_x_); \
@@ -2439,6 +2446,11 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 
 #define NUMBER_TYPES ( \
   NUMERIC_TYPES + (1<<CPLXSXP) \
+)
+
+/* Types for which existence of an attribute is recorded with HAS_ATTRIB */
+#define HAS_ATTRIB_TYPES ( \
+  VECTOR_TYPES + (1<<LISTSXP) + (1<<PROMSXP) \
 )
 
 /* Bit flags that say whether each SEXP type evaluates to itself.  Used via

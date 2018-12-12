@@ -215,13 +215,13 @@ void (SET_ATTRIB)(SEXP x, SEXP v) {
             return;  /* silently ignore attempt to set attribute on symbol */
         if (v == R_NilValue) {
             ATTRIB_W(x) = R_NilValue;
-            if ((VECTOR_OR_LIST_TYPES >> TYPEOF(x)) & 1) 
+            if ((HAS_ATTRIB_TYPES >> TYPEOF(x)) & 1) 
                 UNSET_HAS_ATTRIB(x);
         }
         else {
             CHECK_OLD_TO_NEW(x, v);
             ATTRIB_W(x) = v;
-            if ((VECTOR_OR_LIST_TYPES >> TYPEOF(x)) & 1) 
+            if ((HAS_ATTRIB_TYPES >> TYPEOF(x)) & 1) 
                 SET_HAS_ATTRIB(x);
         }
     }
@@ -696,8 +696,14 @@ SEXP (PRVALUE)(SEXP x) { return Rf_chk_valid_SEXP(PRVALUE(Rf_chk_valid_SEXP(x)))
 int (PRSEEN)(SEXP x) { return PRSEEN(Rf_chk_valid_SEXP(x)); }
 
 void (SET_PRENV)(SEXP x, SEXP v){ CHECK_OLD_TO_NEW(x, v); PRENV(x) = v; }
+
 void (SET_PRVALUE)(SEXP x, SEXP v) 
-  { CHECK_OLD_TO_NEW(x, v); UPTR_FROM_SEXP(x)->u.promsxp.value = v; }
+{
+    CHECK_OLD_TO_NEW(x, v);
+    UPTR_FROM_SEXP(x)->u.promsxp.value = v; 
+    SET_VEC_DOTS_TR_BIT(x);
+}
+
 void (SET_PRCODE)(SEXP x, SEXP v) { CHECK_OLD_TO_NEW(x, v); PRCODE(x) = v; }
 void (SET_PRSEEN)(SEXP x, int v) { SET_PRSEEN(Rf_chk_valid_SEXP(x), v); }
 

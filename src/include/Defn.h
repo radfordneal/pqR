@@ -1825,6 +1825,7 @@ static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
     SEXP __x__ = (x), __y__ = (y); \
     sggc_old_to_new_check(CPTR_FROM_SEXP(__x__),CPTR_FROM_SEXP(__y__)); \
     UPTR_FROM_SEXP(__x__)->u.promsxp.value = __y__; \
+    SET_VEC_DOTS_TR_BIT(__x__); \
 } while (0)
 
 
@@ -1835,6 +1836,7 @@ static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
 #define SET_PRVALUE_TO_PRCODE(x) do { \
     SEXP __x__ = (x); \
     UPTR_FROM_SEXP(__x__)->u.promsxp.value = PRCODE(__x__); \
+    SET_VEC_DOTS_TR_BIT(__x__); \
 } while (0)
 
 
