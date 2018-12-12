@@ -764,7 +764,7 @@ static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
             res = forcePromiseUnbound(prom,variant);
         else
             res = PRVALUE_PENDING_OK(prom);
-        if ((variant & VARIANT_GRADIENT) && ATTRIB(prom) != R_NilValue) {
+        if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(prom)) {
             PROTECT (grad = ATTRIB(prom));
             ret_grad = 1;
         }
@@ -916,7 +916,7 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
             res = forcePromiseUnbound(e,variant);
         else if ( ! (variant & VARIANT_PENDING_OK))
             WAIT_UNTIL_COMPUTED(res);
-        if ((variant & VARIANT_GRADIENT) && ATTRIB(e) != R_NilValue) {
+        if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(e)) {
             R_variant_result = VARIANT_GRADIENT_FLAG;
             R_gradient = ATTRIB(e);
         }
@@ -940,7 +940,7 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
                 res = forcePromiseUnbound(prom,variant);
             else
                 res = PRVALUE_PENDING_OK(prom);
-            if ((variant & VARIANT_GRADIENT) && ATTRIB(prom) != R_NilValue) {
+            if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(prom)) {
                 R_variant_result = VARIANT_GRADIENT_FLAG;
                 R_gradient = ATTRIB(prom);
             }
@@ -1058,21 +1058,24 @@ static SEXP attribute_noinline forcePromiseUnbound (SEXP e, int variant)
 
 SEXP forcePromise (SEXP e) /* e protected here if necessary */
 {
-    if (PRVALUE(e) == R_UnboundValue) {
+    if (PRVALUE(e) == R_UnboundValue)
         return forcePromiseUnbound(e,0);
-    }
     else
         return PRVALUE(e);
 }
 
 SEXP forcePromise_v (SEXP e, int variant) /* e protected here if necessary */
 {
-    if (PRVALUE(e) == R_UnboundValue) {
+    if (PRVALUE(e) == R_UnboundValue)
         return forcePromiseUnbound(e,variant);
-    }
-    else
+    else {
+        if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(e)) {
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            R_gradient = ATTRIB(e);
+        }
         return variant & VARIANT_PENDING_OK ? PRVALUE_PENDING_OK(e)
                                             : PRVALUE(e);
+    }
 }
 
 
