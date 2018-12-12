@@ -575,11 +575,12 @@ static inline SEXP FINDFUN (SEXP symbol, SEXP rho)
         int type_etc = TYPE_ETC(res);
         if (type_etc == SPECIALSXP || type_etc == BUILTINSXP)
             return res;
-        if (type_etc == PROMSXP) {
+        if (type_etc == PROMSXP + TYPE_ET_CETERA_VEC_DOTS_TR) { /* forced prom*/
             res = PRVALUE_PENDING_OK(res);
-            if (TYPE_ETC(res) == CLOSXP)  /* won't be if not yet forced */
-                return res;
+            type_etc = TYPE_ETC(res);
         }
+        if (type_etc == CLOSXP)
+            return res;
     }
 
     return findFun_nospecsym(symbol,rho);
