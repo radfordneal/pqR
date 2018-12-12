@@ -759,13 +759,28 @@ static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
         ret_grad = 1;
     }
 
-    if (TYPEOF(res) == PROMSXP) {
+    if (TYPE_ETC(res) == PROMSXP + TYPE_ET_CETERA_VEC_DOTS_TR) {
+        /* forced promise, no gradient */
+        res = PRVALUE_PENDING_OK(res);
+    }
+    else if (TYPE_ETC(res) == PROMSXP) {
+        /* unforced promise, force here */
         SEXP prom = res;
         if (PRVALUE_PENDING_OK(prom) == R_UnboundValue)
             res = forcePromiseUnbound(prom,variant);
         else
             res = PRVALUE_PENDING_OK(prom);
         if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(prom)) {
+            PROTECT (grad = ATTRIB(prom));
+            ret_grad = 1;
+        }
+    }
+    else if (TYPE_ETC(res) == 
+               PROMSXP + TYPE_ET_CETERA_VEC_DOTS_TR + TYPE_ET_CETERA_HAS_ATTR) {
+        /* forced promise, with gradient */
+        SEXP prom = res;
+        res = PRVALUE_PENDING_OK(prom);
+        if (variant & VARIANT_GRADIENT) {
             PROTECT (grad = ATTRIB(prom));
             ret_grad = 1;
         }
@@ -918,6 +933,19 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
             WAIT_UNTIL_COMPUTED(res);
         return res;
     }
+
+    if (TYPE_ETC(e) == PROMSXP) {
+        /* unforced promise, force here */
+        res = forcePromiseUnbound(e,variant);
+        if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(e)) {
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            R_gradient = ATTRIB(e);
+        }
+        if ( ! (variant & VARIANT_PENDING_OK))
+            WAIT_UNTIL_COMPUTED(res);
+        R_Visible = TRUE;
+        return res;
+    }
  
     if (TYPE_ETC(e) == 
            PROMSXP + TYPE_ET_CETERA_VEC_DOTS_TR + TYPE_ET_CETERA_HAS_ATTR) {
@@ -929,18 +957,6 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
         }
         if ( ! (variant & VARIANT_PENDING_OK))
             WAIT_UNTIL_COMPUTED(res);
-        return res;
-    }
-
-    if (TYPE_ETC(e) == PROMSXP) {  /* unforced promise, force here */
-        res = forcePromiseUnbound(e,variant);
-        if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(e)) {
-            R_variant_result = VARIANT_GRADIENT_FLAG;
-            R_gradient = ATTRIB(e);
-        }
-        if ( ! (variant & VARIANT_PENDING_OK))
-            WAIT_UNTIL_COMPUTED(res);
-        R_Visible = TRUE;
         return res;
     }
 
