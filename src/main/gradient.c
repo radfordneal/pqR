@@ -114,19 +114,19 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXP sym = TAG(args) == R_NilValue ? CAR(args) : TAG(args);
     SEXP expr = CAR(args);
     if (TYPEOF(sym) != SYMSXP)
-        error(_("gradient variable must be named"));
+        errorcall (call, _("gradient variable must be named"));
 
     SEXP val = evalv (expr, env, VARIANT_GRADIENT | VARIANT_PENDING_OK);
     SEXP val_grads = R_variant_result ? R_gradient : R_NilValue;
     PROTECT(val_grads);
     if (TYPEOF(val) != REALSXP || LENGTH(val) != 1) /* for now */
-        error (_("gradient variable must have real scalar value"));
+        errorcall (call, _("gradient variable must have real scalar value"));
 
     SEXP cell = cons_with_tag (val, R_NilValue, sym);
+    INC_NAMEDCNT(val);
     SEXP newenv = NewEnvironment (R_NilValue, cell, env);
     SET_RDEBUG(newenv,RDEBUG(env));
     PROTECT(newenv);
-    INC_NAMEDCNT(val);
     SET_ENVSYMBITS (newenv, SYMBITS(sym));
     SET_STORE_GRAD(newenv,1);
 
@@ -174,12 +174,70 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 }
 
 
-static SEXP do_comp_grad (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
+                             int variant)
 {
+    int na = length(args);
+   
+    if ((na & 1) != 1)
+        errorcall (call, _("invalid argument list"));
+
+    int nv = na / 2;
+
+    SEXP skip = nthcdr (args, nv);
+    SEXP grads = CDR(skip);
+    SEXP body = CAR(skip);
+
+    SEXP p, q, r;
+
+    /* Check for errors in argument structure. */
+
+    for (p = args, q = grads; p != skip; p = CDR(p), q = CDR(q)) {
+        SEXP t = TAG(p);
+        if (t == R_NilValue)
+            errorcall (call, _("gradient variable must be named"));
+        for (r = CDR(p); r != skip; r = CDR(r)) {
+            if (TAG(r) == t)
+                errorcall (call, _("repeated name for gradient variable"));
+        }
+        if (TAG(q) != R_NilValue && TAG(q) != t)
+            errorcall (call, 
+           _("name for gradient expression must match corresponding variable"));
+    }
+
+    /* Create new environment. */
+
+    SEXP newenv = NewEnvironment (R_NilValue, R_NilValue, env);
+    SET_RDEBUG(newenv,RDEBUG(env));
+    PROTECT(newenv);
+
+    SEXP frame = R_NilValue;
+    R_symbits_t bits = 0;
+
+    for (p = args, q = grads; p != skip; p = CDR(p), q = CDR(q)) {
+        SEXP t = TAG(p);
+        SEXP val = evalv (CAR(p), env, 
+                          (variant & VARIANT_GRADIENT) | VARIANT_PENDING_OK);
+        frame = cons_with_tag (val, frame, t);
+        INC_NAMEDCNT(val);
+        bits |= SYMBITS(t);
+        SET_FRAME (newenv, frame);  /* protects frame */
+    }
+
+    SET_ENVSYMBITS (newenv, bits);
+
+    /* Evaluate body. */
+
     SEXP result;
 
-    result = R_NilValue;
+    PROTECT (result = evalv (body, newenv, variant));
 
+    /* Add gradients if requested. */
+
+    if (variant & VARIANT_GRADIENT) {
+    }
+
+    UNPROTECT(2);  /* newenv, result */
     return result;
 }
 
@@ -245,7 +303,7 @@ attribute_hidden FUNTAB R_FunTab_gradient[] =
 
 {"track_gradient", do_gradient,  1,	1200,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"compute_gradient", do_comp_grad,  0,	1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"compute_gradient", do_compute_grad,  0, 1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"gradient_of", do_gradient_of, 0,	1200,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
