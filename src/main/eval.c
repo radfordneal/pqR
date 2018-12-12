@@ -911,16 +911,35 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
         return res;
     }
 
-    if (TYPEOF(e) == PROMSXP) {
+    if (TYPE_ETC(e) == PROMSXP + TYPE_ET_CETERA_VEC_DOTS_TR) {
+        /* forced promise, no gradient */
         res = PRVALUE_PENDING_OK(e);
-        if (res == R_UnboundValue)
-            res = forcePromiseUnbound(e,variant);
-        else if ( ! (variant & VARIANT_PENDING_OK))
+        if ( ! (variant & VARIANT_PENDING_OK))
             WAIT_UNTIL_COMPUTED(res);
+        return res;
+    }
+ 
+    if (TYPE_ETC(e) == 
+           PROMSXP + TYPE_ET_CETERA_VEC_DOTS_TR + TYPE_ET_CETERA_HAS_ATTR) {
+        /* forced promise, with gradient */
+        res = PRVALUE_PENDING_OK(e);
+        if (variant & VARIANT_GRADIENT) {
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            R_gradient = ATTRIB(e);
+        }
+        if ( ! (variant & VARIANT_PENDING_OK))
+            WAIT_UNTIL_COMPUTED(res);
+        return res;
+    }
+
+    if (TYPE_ETC(e) == PROMSXP) {  /* unforced promise, force here */
+        res = forcePromiseUnbound(e,variant);
         if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(e)) {
             R_variant_result = VARIANT_GRADIENT_FLAG;
             R_gradient = ATTRIB(e);
         }
+        if ( ! (variant & VARIANT_PENDING_OK))
+            WAIT_UNTIL_COMPUTED(res);
         R_Visible = TRUE;
         return res;
     }
