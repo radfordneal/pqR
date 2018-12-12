@@ -1622,6 +1622,7 @@ SEXP attribute_hidden mkValuePROMISE(SEXP expr, SEXP value)
     PRCODE(s) = Rf_chk_valid_SEXP(expr);
     PRENV(s) = R_NilValue;
     PRSEEN(s) = 0;
+    SET_VEC_DOTS_TR_BIT(s);
 
     return s;
 }
