@@ -73,14 +73,16 @@ static inline SEXP add_grads (SEXP base, SEXP extra, SEXP factor)
 
     r = R_NilValue;
     
-    /* Include gradients in base, possibly adding gradient from extra
+    /* Include gradients found in base, possibly adding gradient from extra
        times factor. */
 
     for (p = base; p != R_NilValue; p = CDR(p)) {
         for (q = extra; q != R_NilValue; q = CDR(q)) {
             if (TAG(p) == TAG(q)) {
                 double d = *REAL(CAR(p)) + *REAL(CAR(q)) * *REAL(factor);
+                PROTECT(r);
                 r = cons_with_tag (ScalarRealMaybeConst(d), r, TAG(p));
+                UNPROTECT(1);
                 goto next_base;
             }
         }
@@ -88,7 +90,7 @@ static inline SEXP add_grads (SEXP base, SEXP extra, SEXP factor)
       next_base: ;
     }
 
-    /* Include gradients only in extra times factor. */
+    /* Include gradients only found in extra, times factor. */
 
     for (q = extra; q != R_NilValue; q = CDR(q)) {
         for (p = base; p != R_NilValue; p = CDR(p)) {
@@ -97,7 +99,9 @@ static inline SEXP add_grads (SEXP base, SEXP extra, SEXP factor)
             }
         }
         double d = *REAL(CAR(q)) * *REAL(factor);
+        PROTECT(r);
         r = cons_with_tag (ScalarRealMaybeConst(d), r, TAG(q));
+        UNPROTECT(1);
       next_extra: ;
     }
 
@@ -181,6 +185,8 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
     if ((na & 1) != 1)
         errorcall (call, _("invalid argument list"));
 
+    int nv = na / 2;
+
     SEXP skip = nthcdr (args, nv);
     SEXP grads = CDR(skip);
     SEXP body = CAR(skip);
@@ -190,9 +196,9 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
     /* Check for errors in argument structure. */
 
     for (p = args, q = grads; p != skip; p = CDR(p), q = CDR(q)) {
-        SEXP t = TAG(p);
+        SEXP t = TAG(p)==R_NilValue && TYPEOF(CAR(p))==SYMSXP ? CAR(p) : TAG(p);
         if (t == R_NilValue)
-            errorcall (call, _("gradient variable must be named"));
+            errorcall (call, _("gradient target must be named, or be symbol"));
         for (r = CDR(p); r != skip; r = CDR(r)) {
             if (TAG(r) == t)
                 errorcall (call, _("repeated name for gradient variable"));
@@ -202,11 +208,14 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
            _("name for gradient expression must match corresponding variable"));
     }
 
-    int nv = na / 2;
     if (nv > 200) 
         errorcall (call, _("too many variables (max 200)"));
 
-    /* Create new environment. */
+    /* Create new environment, with gradient variables, storing gradients
+       of their expressions if gradient of final result will be needed. */
+
+    SEXP vargrad [variant & VARIANT_GRADIENT ? nv : 1];  /* 0 not allowed */
+    int vgi;  /* index in vargrad */
 
     SEXP newenv = NewEnvironment (R_NilValue, R_NilValue, env);
     SET_RDEBUG(newenv,RDEBUG(env));
@@ -214,15 +223,21 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
 
     SEXP frame = R_NilValue;
     R_symbits_t bits = 0;
+    vgi = 0;
 
     for (p = args, q = grads; p != skip; p = CDR(p), q = CDR(q)) {
-        SEXP t = TAG(p);
+
+        SEXP t = TAG(p)==R_NilValue && TYPEOF(CAR(p))==SYMSXP ? CAR(p) : TAG(p);
         SEXP val = evalv (CAR(p), env, 
                           (variant & VARIANT_GRADIENT) | VARIANT_PENDING_OK);
         frame = cons_with_tag (val, frame, t);
-        INC_NAMEDCNT(val);
         bits |= SYMBITS(t);
+        INC_NAMEDCNT(val);
         SET_FRAME (newenv, frame);  /* protects frame */
+
+        if ((variant & VARIANT_GRADIENT) 
+              && (R_variant_result & VARIANT_GRADIENT_FLAG))
+            PROTECT (vargrad[vgi++] = R_gradient);
     }
 
     SET_ENVSYMBITS (newenv, bits);
@@ -231,14 +246,33 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
 
     SEXP result;
 
-    PROTECT (result = evalv (body, newenv, variant));
+    PROTECT (result = evalv (body, newenv, variant & ~VARIANT_GRADIENT));
+    int vr = R_variant_result;
 
-    /* Add gradients if requested. */
+    /* Compute gradients of result if requested, using the chain rule applied
+       with the given expressions and the previous gradients. */
 
     if (variant & VARIANT_GRADIENT) {
+        SEXP resgrad = R_NilValue;
+        PROTECT(resgrad);
+        vgi = 0;
+        for (q = grads; q != R_NilValue; q = CDR(q)) {
+            SEXP gval;
+            PROTECT (gval = evalv (CAR(q), newenv, VARIANT_PENDING_OK));
+            if (TYPEOF(gval) != REALSXP || LENGTH(gval) != 1)
+                errorcall (call, _("computed value for gradient is invalid"));
+            resgrad = add_grads (resgrad, vargrad[vgi++], gval);
+            UNPROTECT(2);  /* gval, old resgrad */
+            PROTECT(resgrad);
+        }
+        UNPROTECT(1+nv);  /* resgrad, vargrad */
+        vr |= VARIANT_GRADIENT_FLAG;
+        R_gradient = resgrad;
     }
 
     UNPROTECT(2);  /* newenv, result */
+
+    R_variant_result = vr;
     return result;
 }
 
