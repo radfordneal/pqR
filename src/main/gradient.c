@@ -178,11 +178,8 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
                              int variant)
 {
     int na = length(args);
-   
     if ((na & 1) != 1)
         errorcall (call, _("invalid argument list"));
-
-    int nv = na / 2;
 
     SEXP skip = nthcdr (args, nv);
     SEXP grads = CDR(skip);
@@ -204,6 +201,10 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
             errorcall (call, 
            _("name for gradient expression must match corresponding variable"));
     }
+
+    int nv = na / 2;
+    if (nv > 200) 
+        errorcall (call, _("too many variables (max 200)"));
 
     /* Create new environment. */
 
