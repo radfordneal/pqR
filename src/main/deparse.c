@@ -992,6 +992,36 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff(") ", d);
                 deparse2buff(CADR(s), d);
             }
+            else if (op == R_ComputeGradientSymbol && nargs > 2 && nargs%2 == 1
+                      && TAG(s) != R_NilValue /* should check others too! */) {
+                SEXP skip = nthcdr(s,nargs/2);
+                SEXP t;
+                print2buff("compute_gradient", d);
+                print2buff(" (", d);
+                for (t = s; t != skip; t = CDR(t)) {
+                    print2buff(CHAR(PRINTNAME(TAG(t))), d);
+                    if (TAG(t) != CAR(t)) {
+                        print2buff(" = ", d);
+                        int np = needsparens_arg(CAR(t));
+                        if (np) print2buff("(", d);
+                        deparse2buff(CAR(t), d);
+                        if (np) print2buff(")", d);
+                    }
+                    if (CDR(t) != skip) print2buff(", ",d);
+                }
+                print2buff(") ", d);
+                deparse2buff(CAR(skip), d);
+                print2buff(" ", d);
+                print2buff("as (", d);
+                for (t = CDR(skip); t != R_NilValue; t = CDR(t)) {
+                    int np = needsparens_arg(CAR(t));
+                    if (np) print2buff("(", d);
+                    deparse2buff(CAR(t), d);
+                    if (np) print2buff(")", d);
+                    if (CDR(t) != R_NilValue) print2buff(", ",d);
+                }
+                print2buff(")", d);
+            }
             else if (op == R_BraceSymbol) {
                 print2buff("{", d);
                 d->incurly += 1;
