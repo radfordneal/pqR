@@ -23,6 +23,9 @@
   function in much the same way as control statements in any Algol-like
   language.  Except \code{along}, \code{down}, and \code{across}), the
   words used in these constructs are \link{reserved}.
+
+  See \link{\code{Gradient}} for the syntax of constructs for gradient 
+  computation.
 }
 \usage{
 if (cond) expr
