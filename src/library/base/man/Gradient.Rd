@@ -158,7 +158,7 @@ a <- with_gradient (x=1) sigmoid(x)  # both value and gradient computed
 attr(a,"gradient")
 
 track_gradient (x=1)                 # should compute the same gradient
-    gradient_of (1/(1+exp(-x))       # as above, but perhaps more slowly
+    gradient_of (1/(1+exp(-x)))      # as above, but perhaps more slowly
                                      # (though maybe not since x is scalar)
 }
 \keyword{programming}
