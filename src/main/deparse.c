@@ -977,6 +977,21 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             else if ((op == R_BreakSymbol || op == R_NextSymbol) && nargs==0) {
                 print2buff(opname, d);
             }
+            else if ((op == R_WithGradientSymbol || op == R_TrackGradientSymbol)
+                         && nargs == 2 && TAG(s) != R_NilValue) {
+                print2buff(opname, d);
+                print2buff(" (", d);
+                print2buff(CHAR(PRINTNAME(TAG(s))), d);
+                if (TAG(s) != CAR(s)) {
+                    print2buff(" = ", d);
+                    int np = needsparens_arg(CAR(s));
+                    if (np) print2buff("(", d);
+                    deparse2buff(CAR(s), d);
+                    if (np) print2buff(")", d);
+                }
+                print2buff(") ", d);
+                deparse2buff(CADR(s), d);
+            }
             else if (op == R_BraceSymbol) {
                 print2buff("{", d);
                 d->incurly += 1;
