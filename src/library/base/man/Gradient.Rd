@@ -144,8 +144,8 @@ funny <- function (x,y) {  # has a discontinuity
 }
 
 track_gradient (a = 3) {
-    print (gradient_of(funny(a,a)))    # prints 2*sin(3+3)
-    print (gradient_of(funny(a,8*a)))  # prints 9*cos(3+24)
+    print (gradient_of(funny(a,a)))    # prints 2*cos(3+3)
+    print (gradient_of(funny(a,8*a)))  # prints -9*sin(3+24)
 }
 
 sigmoid <- function (x)
