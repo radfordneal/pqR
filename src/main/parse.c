@@ -315,7 +315,7 @@ enum token_type {
   GT,           GE,             LT,        LE,               EQ,
   NE,           AND,            OR,        AND2,             OR2,
   NS_GET,       NS_GET_INT,     EXPT2,     SPECIAL,          COLON_ASSIGN,
-  DOTDOT,       BANGBANG,
+  DOTDOT,       BANGBANG,       WITHGRAD,  TRACKGRAD,        COMPUTEGRAD
 };
 
 /* Names for tokens with codes >= 256.  These must correspond in order
@@ -329,7 +329,8 @@ static const char *const token_name[] = {
   "'>'",        "'>='",         "'<'",     "'<='",           "'=='",
   "'!='",       "'&'",          "'|'",     "'&&'",           "'||'",
   "'::'",       "':::'",        "'**'",    "SPECIAL",        "':='",
-  "'..'",       "'!!'"
+  "'..'",       "'!!'",         "'with_gradient'", "'track_gradient'",
+                                "'compute_gradient'"
 };
 
 #define NUM_TRANSLATED 7  /* Number above (at front) that are translated */
@@ -355,7 +356,7 @@ static const char *const pdata_token_name[] = {
   "GT",         "GE",           "LT",      "LE",             "EQ",
   "NE",         "AND",          "OR",      "AND2",           "OR2",
   "NS_GET",     "NS_GET_INT",   "^",       "SPECIAL",        "COLON_ASSIGN",
-  "DOTDOT",     "BANGBANG"
+  "DOTDOT",     "BANGBANG",     "WITHGRAD","TRACKGRAD",      "COMPUTEGRAD"
 };
 
 
@@ -1765,6 +1766,32 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         get_next_token(0);
     }
 
+    /* Gradient constructs. */
+
+    else if (NEXT_TOKEN == WITHGRAD || NEXT_TOKEN == TRACKGRAD) {
+        SEXP op, var, val, body;
+        op = TOKEN_VALUE();
+        get_next_token(0);
+        EXPECT('(');
+        if (NEXT_TOKEN != SYMBOL)
+            PARSE_UNEXPECTED();
+        set_token_in_rec (prev_token_rec(1), "SYMBOL_FORMALS");
+        var = val = TOKEN_VALUE();
+        get_next_token(0);
+        if (NEXT_TOKEN == EQ_ASSIGN) {
+            set_token_in_rec (prev_token_rec(1), "EQ_FORMALS");
+            get_next_token(0);
+            PARSE_SUB(val = parse_expr (EQASSIGN_PREC, subflags, NULL));
+        }
+        EXPECT(')');
+        PARSE_SUB(body = parse_expr (0, flags, NULL));
+        res = PROTECT_N (lang3 (op, val, body));
+        SET_TAG (CDR(res), var);
+    }
+
+    else if (NEXT_TOKEN == COMPUTEGRAD) {
+    }
+
     else
         PARSE_UNEXPECTED();
 
@@ -2870,25 +2897,28 @@ static int StringValue(int c, Rboolean forSymbol)
 /* Table of syntactic keywords and symbolic constants. */
 
 static struct { char *name; int token; } keywords[] = {
-    { "NULL",	    NULL_CONST },
-    { "NA",	    NUM_CONST  },  /* order of next 9 is significant below */
-    { "TRUE",	    NUM_CONST  },
-    { "FALSE",	    NUM_CONST  },
-    { "Inf",	    NUM_CONST  },
-    { "NaN",	    NUM_CONST  },
-    { "NA_integer_", NUM_CONST },
-    { "NA_real_",    NUM_CONST },
+    { "NULL",	    NULL_CONST   },
+    { "NA",	    NUM_CONST    },  /* order of next 9 is significant below */
+    { "TRUE",	    NUM_CONST    },
+    { "FALSE",	    NUM_CONST    },
+    { "Inf",	    NUM_CONST    },
+    { "NaN",	    NUM_CONST    },
+    { "NA_integer_", NUM_CONST   },
+    { "NA_real_",    NUM_CONST   },
     { "NA_character_", NUM_CONST },
-    { "NA_complex_", NUM_CONST },
-    { "function",   FUNCTION   },
-    { "while",	    WHILE      },
-    { "repeat",	    REPEAT     },
-    { "for",	    FOR	       },
-    { "if",	    IF	       },
-    { "in",	    IN	       },
-    { "else",	    ELSE       },
-    { "next",	    NEXT       },
-    { "break",	    BREAK      },
+    { "NA_complex_", NUM_CONST   },
+    { "function",   FUNCTION     },
+    { "while",	    WHILE        },
+    { "repeat",	    REPEAT       },
+    { "for",	    FOR	         },
+    { "if",	    IF	         },
+    { "in",	    IN	         },
+    { "else",	    ELSE         },
+    { "next",	    NEXT         },
+    { "break",	    BREAK        },
+    { "with_gradient",    WITHGRAD     },
+    { "track_gradient",   TRACKGRAD    },
+    { "compute_gradient", COMPUTEGRAD  },
     { "..",         DOTDOT     },  /* delete if don't want .. to be reserved */
     { 0,	    0	       }
 };
@@ -2965,6 +2995,15 @@ static int KeywordLookup(const char *s)
 	    case BREAK:
 		ps->next_token_val = R_BreakSymbol;
 		break;
+		break;
+	    case WITHGRAD:
+		ps->next_token_val = install("with_gradient");
+		break;
+	    case TRACKGRAD:
+		ps->next_token_val = install("track_gradient");
+		break;
+	    case COMPUTEGRAD:
+		ps->next_token_val = install("compute_gradient");
 		break;
 	    case IN:
 	    case ELSE:
