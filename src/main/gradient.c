@@ -292,6 +292,14 @@ static SEXP do_gradient_of(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 }
 
 
+static SEXP do_no_gradient(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+{
+    checkArity (op, args);
+
+    return evalv (CAR(args), env, variant & ~VARIANT_GRADIENT);
+}
+
+
 /* .Internal, for debugging gradient implementation. */
 
 static SEXP do_all_gradients_of (SEXP call, SEXP op, SEXP args, SEXP env,
@@ -341,6 +349,8 @@ attribute_hidden FUNTAB R_FunTab_gradient[] =
 {"compute_gradient", do_compute_grad,  0, 1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"gradient_of", do_gradient_of, 0,	1200,	1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"no_gradient", do_no_gradient, 0,	1200,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"all_gradients_of", do_all_gradients_of, 1, 1210, 1,	{PP_FUNCALL, PREC_FN,	0}},
 
