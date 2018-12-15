@@ -1806,7 +1806,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         }
         EXPECT(')');
         PARSE_SUB(body = parse_expr (0, flags, NULL));
-        if (NEXT_TOKEN != SYMBOL || ps->next_token_val != install("as"))
+        if (NEXT_TOKEN != SYMBOL || ps->next_token_val != R_AsSymbol)
             PARSE_UNEXPECTED();
         get_next_token(0);
         EXPECT('(');
@@ -3021,13 +3021,13 @@ static int KeywordLookup(const char *s)
 		break;
 		break;
 	    case WITHGRAD:
-		ps->next_token_val = install("with_gradient");
+		ps->next_token_val = R_WithGradientSymbol;
 		break;
 	    case TRACKGRAD:
-		ps->next_token_val = install("track_gradient");
+		ps->next_token_val = R_TrackGradientSymbol;
 		break;
 	    case COMPUTEGRAD:
-		ps->next_token_val = install("compute_gradient");
+		ps->next_token_val = R_ComputeGradientSymbol;
 		break;
 	    case IN:
 	    case ELSE:

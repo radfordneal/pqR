@@ -408,6 +408,10 @@ static void SymbolShortcuts(void)
     R_IfSymbol = install("if");
     R_NextSymbol = install("next");
     R_BreakSymbol = install("break");
+    R_WithGradientSymbol = install("with_gradient");
+    R_TrackGradientSymbol = install("track_gradient");
+    R_ComputeGradientSymbol = install("compute_gradient");
+    R_AsSymbol = install("as");
     R_ColonSymbol = install(":");
     R_DoubleColonSymbol = install("::");
     R_TripleColonSymbol = install(":::");
