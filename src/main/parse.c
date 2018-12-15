@@ -1790,30 +1790,48 @@ static SEXP parse_expr (int prec, int flags, int *paren)
     }
 
     else if (NEXT_TOKEN == COMPUTEGRAD) {
-        SEXP op, var, val, body, grad;
+
+        SEXP op, var, val, body, grad, last;
         op = TOKEN_VALUE();
         get_next_token(0);
+
+        PROTECT_N (res = last = LCONS (op, R_NilValue));
+
         EXPECT('(');
-        if (NEXT_TOKEN != SYMBOL)
-            PARSE_UNEXPECTED();
-        set_token_in_rec (prev_token_rec(1), "SYMBOL_FORMALS");
-        var = val = TOKEN_VALUE();
-        get_next_token(0);
-        if (NEXT_TOKEN == EQ_ASSIGN) {
-            set_token_in_rec (prev_token_rec(1), "EQ_FORMALS");
+        for (;;) {
+            if (NEXT_TOKEN != SYMBOL)
+                PARSE_UNEXPECTED();
+            set_token_in_rec (prev_token_rec(1), "SYMBOL_FORMALS");
+            var = val = TOKEN_VALUE();
             get_next_token(0);
-            PARSE_SUB(val = parse_expr (EQASSIGN_PREC, subflags, NULL));
+            if (NEXT_TOKEN == EQ_ASSIGN) {
+                set_token_in_rec (prev_token_rec(1), "EQ_FORMALS");
+                get_next_token(0);
+                PARSE_SUB(val = parse_expr (EQASSIGN_PREC, subflags, NULL));
+            }
+            SETCDR (last, cons_with_tag (val, R_NilValue, var));
+            last = CDR(last);
+            if (NEXT_TOKEN != ',') break;
+            get_next_token(0);
         }
         EXPECT(')');
+
         PARSE_SUB(body = parse_expr (0, flags, NULL));
+        SETCDR (last, CONS (body, R_NilValue));
+        last = CDR(last);
         if (NEXT_TOKEN != SYMBOL || ps->next_token_val != R_AsSymbol)
             PARSE_UNEXPECTED();
         get_next_token(0);
+
         EXPECT('(');
-        PARSE_SUB(grad = parse_expr (EQASSIGN_PREC, subflags, NULL));
+        for (;;) {
+            PARSE_SUB(grad = parse_expr (EQASSIGN_PREC, subflags, NULL));
+            SETCDR (last, CONS (grad, R_NilValue));
+            last = CDR(last);
+            if (NEXT_TOKEN != ',') break;
+            get_next_token(0);
+        }
         EXPECT(')');
-        res = PROTECT_N (lang4 (op, val, body, grad));
-        SET_TAG (CDR(res), var);
     }
 
     else
