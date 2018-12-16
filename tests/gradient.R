@@ -12,11 +12,11 @@ stopifnot (identical (track_gradient (x) gradient_of (sqrt(x)),
 stopifnot (identical (track_gradient (x) gradient_of (exp(x)),
                       eval (D (quote (exp(x)), "x")) ))
 
-#stopifnot (identical (track_gradient (x) gradient_of (expm1(x)),
-#                      eval (D (quote (expm1(x)), "x")) ))
+stopifnot (identical (track_gradient (x) gradient_of (expm1(x)),
+                      eval (D (quote (expm1(x)), "x")) ))
 
-#stopifnot (identical (track_gradient (x) gradient_of (log1p(x)),
-#                      eval (D (quote (log1p(x)), "x")) ))
+stopifnot (identical (track_gradient (x) gradient_of (log1p(x)),
+                      eval (D (quote (log1p(x)), "x")) ))
 
 stopifnot (identical (track_gradient (x) gradient_of (log(x)),
                       eval (D (quote (log(x)), "x")) ))
@@ -44,15 +44,6 @@ stopifnot (identical (track_gradient (x) gradient_of (sinh(x)),
 
 stopifnot (identical (track_gradient (x) gradient_of (tanh(x)),
                       eval (D (quote (tanh(x)), "x")) ))
-
-#stopifnot (identical (track_gradient (x) gradient_of (acosh(x)),
-#                      eval (D (quote (acosh(x)), "x")) ))
-
-#stopifnot (identical (track_gradient (x) gradient_of (asinh(x)),
-#                      eval (D (quote (asinh (x)), "x")) ))
-
-#stopifnot (identical (track_gradient (x) gradient_of (atanh(x)),
-#                      eval (D (quote (atanh(x)), "x")) ))
 
 stopifnot (identical (track_gradient (x) gradient_of (lgamma(x)),
                       eval (D (quote (lgamma(x)), "x")) ))
