@@ -8,6 +8,12 @@
 
 \section{CHANGES IN VERSION RELEASED 2018-00-00}{
 
+  \subsection{FEATURE CHANGES}{
+  \itemize{
+  \item It is now allowed to use \code{...} anywhere an expression is
+        allowed when \code{...} refers to exactly one argument.
+  }}
+
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
   \item The \code{is.na}, \code{is.nan}, \code{is.finite}, and 
