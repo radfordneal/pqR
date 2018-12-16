@@ -1716,72 +1716,74 @@ static double Dsin (double x, double y)
 
 static double Dtan (double x, double y)
 { 
-    return NA_REAL;  /* for now */
+    double a = cos(x);
+    return 1 / (a*a);
 }
 
 static double Dacos (double x, double y)
 { 
-    return NA_REAL;  /* for now */
+    return (-1) / sqrt (1 - x*x);
 }
 
 static double Dasin (double x, double y)
 { 
-    return NA_REAL;  /* for now */
+    return 1 / sqrt (1 - x*x);
 }
 
 static double Datan (double x, double y)
 { 
-    return NA_REAL;  /* for now */
+    return 1 / (1 + x*x);
 }
 
 static double Dcosh (double x, double y)
 { 
-    return NA_REAL;  /* for now */
+    return sinh(x);
 }
 
 static double Dsinh (double x, double y)
 { 
-    return NA_REAL;  /* for now */
+    return cosh(x);
 }
 
 static double Dtanh (double x, double y)
 { 
-    return NA_REAL;  /* for now */
+    double a = cosh(x);
+    return 1 / (a*a);
 }
 
 static double Dacosh (double x, double y)
 { 
-    return NA_REAL;  /* for now */
+    return 1 / sqrt (x*x - 1);
 }
 
 static double Dasinh (double x, double y)
 { 
-    return NA_REAL;  /* for now */
+    return 1 / sqrt (x*x + 1);
 }
 
 static double Datanh (double x, double y)
 { 
-    return NA_REAL;  /* for now */
+    return 1 / (1 - x*x);
 }
 
 static double Dlgammafn (double x, double y)
 { 
-    return NA_REAL;  /* for now */
+    return digamma(x);
 }
 
 static double Dgammafn (double x, double y)
 { 
-    return NA_REAL;  /* for now */
+    return y * digamma(x);
 }
 
 static double Ddigamma (double x, double y)
 { 
-    return NA_REAL;  /* for now */
+    return trigamma(x);
 }
 
 static double Dtrigamma (double x, double y)
 { 
-    return NA_REAL;  /* for now */
+    return psigamma(x,2);
 }
 
 /* Table to map math1 operation code to derivative function. */
