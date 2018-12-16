@@ -6,6 +6,15 @@
 \encoding{UTF-8}
 
 
+\section{CHANGES IN VERSION RELEASED 2018-00-00}{
+  \subsection{FEATURE CHANGES}{
+  \itemize{
+  \item It is now allowed to use \code{...} anywhere an expression is
+        allowed when \code{...} refers to exactly one argument.
+  }}
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2018-11-18}{
 
   \subsection{INTRODUCTION}{
