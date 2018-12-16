@@ -1,11 +1,14 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1998-2011   The R Core Team.
  *  Copyright (C) 2004-5        The R Foundation
+ *
+ *  Some extensions from R-3.4.0 are incorporated, 
+ *  Copyright (C) 2011-2017 The R Core Team
  *
  *  The changes in pqR from R-2.15.0 distributed by the R Core Team are
  *  documented in the NEWS and MODS files in the top-level source directory.
@@ -61,6 +64,14 @@ static SEXP LGammaSymbol;
 static SEXP DiGammaSymbol;
 static SEXP TriGammaSymbol;
 static SEXP PsiSymbol;
+static SEXP ExpM1Symbol;
+static SEXP Log1PSymbol;
+static SEXP Log2Symbol;
+static SEXP Log10Symbol;
+static SEXP FactorialSymbol;
+static SEXP LFactorialSymbol;
+/* sinpi, etc. from R-3.4.0 not yet included,
+   since these functions aren't yet in pqR. */
 
 static Rboolean Initialized = FALSE;
 
@@ -94,6 +105,12 @@ static void InitDerivSymbols(void)
     DiGammaSymbol = install("digamma");
     TriGammaSymbol = install("trigamma");
     PsiSymbol = install("psigamma");
+    ExpM1Symbol = install("expm1");
+    Log1PSymbol = install("log1p");
+    Log2Symbol = install("log2");
+    Log10Symbol = install("log10");
+    FactorialSymbol = install("factorial");
+    LFactorialSymbol = install("lfactorial");
 
     Initialized = TRUE;
 }
@@ -262,6 +279,18 @@ static SEXP simplify(SEXP fun, SEXP arg1, SEXP arg2)
        if (arg2 == R_MissingArg) ans = lang2(PsiSymbol, arg1);
        else ans = lang3(PsiSymbol, arg1, arg2);
     }
+    else if (fun == ExpM1Symbol) {
+        /* FIXME: simplify expm1(log1p( E )) = E */
+        ans = lang2(ExpM1Symbol, arg1);
+    }
+    else if (fun == Log1PSymbol) {
+        /* FIXME: simplify log1p(expm1( E )) = E */
+        ans = lang2(Log1PSymbol, arg1);
+    }
+    else if (fun == Log2Symbol) ans = lang2(Log2Symbol, arg1);
+    else if (fun == Log10Symbol) ans = lang2(Log10Symbol, arg1);
+    else if (fun == FactorialSymbol)ans = lang2(FactorialSymbol, arg1);
+    else if (fun == LFactorialSymbol)ans = lang2(LFactorialSymbol, arg1);
     else ans = Constant(NA_REAL);
     /* FIXME */
 #ifdef NOTYET
@@ -527,7 +556,50 @@ static SEXP D(SEXP expr, SEXP var)
 		UNPROTECT(3);
 	    }
 	}
-
+        else if (CAR(expr) == ExpM1Symbol) {
+            ans = simplify(TimesSymbol,
+			   PP_S2(ExpSymbol, CADR(expr)),
+                           PP(D(CADR(expr), var)));
+            UNPROTECT(2);
+        }
+        else if (CAR(expr) == Log1PSymbol) {
+            ans = simplify(DivideSymbol,
+                           PP(D(CADR(expr), var)),
+                           PP_S(PlusSymbol, PP(Constant(1.)), CADR(expr)));
+            UNPROTECT(3);
+        }
+        else if (CAR(expr) == Log2Symbol) {
+            ans = simplify(DivideSymbol,
+                           PP(D(CADR(expr), var)),
+                           PP_S(TimesSymbol, CADR(expr),
+				             PP_S2(LogSymbol, PP(Constant(2.)))));
+            UNPROTECT(4);
+        }
+        else if (CAR(expr) == Log10Symbol) {
+            ans = simplify(DivideSymbol,
+                           PP(D(CADR(expr), var)),
+                           PP_S(TimesSymbol, CADR(expr),
+				             PP_S2(LogSymbol, PP(Constant(10.)))));
+            UNPROTECT(4);
+        }
+        else if (CAR(expr) == LFactorialSymbol) {
+            ans = simplify(TimesSymbol,
+                           PP(D(CADR(expr), var)),
+                           PP_S2(DiGammaSymbol, PP_S(PlusSymbol,
+						     CADR(expr),
+						     PP(ScalarInteger(1)))));
+            UNPROTECT(4);
+        }
+        else if (CAR(expr) == FactorialSymbol) {
+            ans = simplify(TimesSymbol,
+                           PP(D(CADR(expr), var)),
+                           PP_S(TimesSymbol,
+                                expr,
+                                PP_S2(DiGammaSymbol, PP_S(PlusSymbol,
+							  CADR(expr),
+							  PP(ScalarInteger(1))))));
+            UNPROTECT(5);
+        }
 	else {
 	    SEXP u = deparse1(CAR(expr), 0, SIMPLEDEPARSE);
 	    error(_("Function '%s' is not in the derivatives table"),
@@ -579,14 +651,15 @@ static int isPowerForm(SEXP expr)
 	    && CAR(expr) == PowerSymbol);
 }
 
-/* Add parentheses is some places where they are needed to get the right
-   precedence.  But not all.  It's not clear this is needed, since
-   deparsing puts parentheses in where needed, and evaluation gets it 
-   right with or without parentheses.  But we'll do it anyway, as before, 
-   but without altering the expression passed, as it used to do... */
+/* Used to add parentheses is some places where they are needed to get
+   the right precedence.  But not all.  Shouldn't be needed, since
+   deparsing puts parentheses in where needed, and evaluation gets it
+   right with or without parentheses.  So this is now disabled. */
 
 static SEXP AddParens(SEXP expr)
 {
+#if 0  /* NOW DISABLED */
+
     if (TYPEOF(expr) != LANGSXP)
         return expr;
 
@@ -638,6 +711,9 @@ static SEXP AddParens(SEXP expr)
 	}
     }
     UNPROTECT(1);
+
+#endif
+
     return expr;
 }
 

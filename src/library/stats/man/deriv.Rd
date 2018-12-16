@@ -1,6 +1,7 @@
 % File src/library/stats/man/deriv.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2007 R Core Team
+% Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{deriv}
@@ -66,9 +67,11 @@ deriv3(expr, \dots)
 
   The internal code knows about the arithmetic operators \code{+},
   \code{-}, \code{*}, \code{/} and \code{^}, and the single-variable
-  functions \code{exp}, \code{log}, \code{sin}, \code{cos}, \code{tan},
+  functions \code{exp}, \code{expm1}, \code{log}, \code{log2}, \code{log10},
+  \code{log1p}, \code{sin}, \code{cos}, \code{tan},
   \code{sinh}, \code{cosh}, \code{sqrt}, \code{pnorm}, \code{dnorm},
-  \code{asin}, \code{acos}, \code{atan}, \code{gamma}, \code{lgamma},
+  \code{asin}, \code{acos}, \code{atan}, \code{factorial}, \code{lfactorial},
+  \code{gamma}, \code{lgamma},
   \code{digamma} and \code{trigamma}, as well as \code{psigamma} for one
   or two arguments (but derivative only with respect to the first).
   (Note that only the standard normal distribution is considered.)
@@ -145,11 +148,25 @@ DD <- function(expr,name, order = 1) {
    else DD(D(expr, name), name, order - 1)
 }
 DD(expression(sin(x^2)), "x", 3)
+
 ## showing the limits of the internal "simplify()" :
-\dontrun{
--sin(x^2) * (2 * x) * 2 + ((cos(x^2) * (2 * x) * (2 * x) + sin(x^2) *
+\dontrun{-sin(x^2) * (2 * x) * 2 + ((cos(x^2) * (2 * x) * (2 * x) + sin(x^2) *
     2) * (2 * x) + sin(x^2) * (2 * x) * 2)
 }
+D(quote(log1p(x^2)), "x") ## log1p(x) = log(1 + x)
+stopifnot(identical(
+       D(quote(log1p(x^2)), "x"),
+       D(quote(log(1+x^2)), "x")))
+D(quote(expm1(x^2)), "x") ## expm1(x) = exp(x) - 1
+stopifnot(identical(
+       D(quote(expm1(x^2)), "x") -> Dex1,
+       D(quote(exp(x^2)-1), "x")),
+       identical(Dex1, quote(exp(x^2) * (2 * x))))
+
+stopifnot(identical(D(quote(log2 (x^2)), "x"),
+                    quote(2 * x/(x^2 * log(2)))),
+          identical(D(quote(log10(x^2)), "x"),
+                    quote(2 * x/(x^2 * log(10)))))
 }
 \keyword{math}
 \keyword{nonlinear}
