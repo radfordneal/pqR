@@ -12,8 +12,18 @@
   \itemize{
   \item It is now allowed to use \code{...} anywhere an expression is
         allowed when \code{...} refers to exactly one argument.
+  \item \code{D} and \code{deriv} no longer add parenthesis in (some of)
+        the places where they would be needed according to precedence, since
+        this slows evaluation, and is unnecessary considering that
+        \code{deparse} adds such parentheses.
   }}
-
+  \subsection{NEW FEATURES FROM R CORE RELEASES}{
+  \itemize{
+  \item From R-3.4.0: The \code{deriv()} and similar functions now can compute
+        derivatives of \code{log1p()}, \code{sinpi()} and similar
+        one-argument functions, thanks to a contribution by Jerry Lewis.
+        [ Except that \code{sinpi}, etc. are not yet in pqR. ]
+  }}
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
   \item The \code{is.na}, \code{is.nan}, \code{is.finite}, and 

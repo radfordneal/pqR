@@ -23,7 +23,7 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 Type 'q()' to quit R.
 
 
-3 helper threads, task merging enabled, uncompressed pointers.
+No helper threads, task merging enabled, uncompressed pointers.
 
 > pkgname <- "stats"
 > source(file.path(R.home("share"), "R", "examples-header.R"))
@@ -3708,7 +3708,7 @@ detaching 'package:cluster'
 > 
 > asOneSidedFormula("age")
 ~age
-<environment: 55c963b15400>
+<environment: 56256b2681c0>
 > asOneSidedFormula(~ age)
 ~age
 > 
@@ -5978,11 +5978,28 @@ function (b0, b1, th, x)
 > DD(expression(sin(x^2)), "x", 3)
 -(sin(x^2) * (2 * x) * 2 + ((cos(x^2) * (2 * x) * (2 * x) + sin(x^2) * 
     2) * (2 * x) + sin(x^2) * (2 * x) * 2))
+> 
 > ## showing the limits of the internal "simplify()" :
 > ## Not run: 
 > ##D -sin(x^2) * (2 * x) * 2 + ((cos(x^2) * (2 * x) * (2 * x) + sin(x^2) *
 > ##D     2) * (2 * x) + sin(x^2) * (2 * x) * 2)
 > ## End(Not run)
+> D(quote(log1p(x^2)), "x") ## log1p(x) = log(1 + x)
+2 * x/(1 + x^2)
+> stopifnot(identical(
++        D(quote(log1p(x^2)), "x"),
++        D(quote(log(1+x^2)), "x")))
+> D(quote(expm1(x^2)), "x") ## expm1(x) = exp(x) - 1
+exp(x^2) * (2 * x)
+> stopifnot(identical(
++        D(quote(expm1(x^2)), "x") -> Dex1,
++        D(quote(exp(x^2)-1), "x")),
++        identical(Dex1, quote(exp(x^2) * (2 * x))))
+> 
+> stopifnot(identical(D(quote(log2 (x^2)), "x"),
++                     quote(2 * x/(x^2 * log(2)))),
++           identical(D(quote(log10(x^2)), "x"),
++                     quote(2 * x/(x^2 * log(10)))))
 > 
 > 
 > 
@@ -6695,7 +6712,7 @@ List of 12
 > gf$linkinv
 function (eta) 
 1/eta
-<environment: 55c96905cac0>
+<environment: 56257091ba80>
 > gf$variance(-3:4) #- == (.)^2
 [1]  9  4  1  0  1  4  9 16
 > 
@@ -7097,7 +7114,7 @@ attr(,".Environment")
 > environment(as.formula("y ~ x"))
 <environment: R_GlobalEnv>
 > environment(as.formula("y ~ x", env=new.env()))
-<environment: 55c96a425240>
+<environment: 562571b7e840>
 > 
 > 
 > ## Create a formula for a model with a large number of variables:
@@ -11511,22 +11528,22 @@ attr(,"degree")
 $linkfun
 function (mu) 
 mu
-<environment: 55c963d3dc40>
+<environment: 56256b659fc0>
 
 $linkinv
 function (eta) 
 eta
-<environment: 55c963d3dc40>
+<environment: 56256b659fc0>
 
 $mu.eta
 function (eta) 
 rep.int(1, length(eta))
-<environment: 55c963d3dc40>
+<environment: 56256b659fc0>
 
 $valideta
 function (eta) 
 TRUE
-<environment: 55c963d3dc40>
+<environment: 56256b659fc0>
 
 $name
 [1] "identity"
@@ -11537,12 +11554,12 @@ attr(,"class")
 $linkfun
 function (mu) 
 mu^lambda
-<environment: 55c963d3b0c0>
+<environment: 56256b657040>
 
 $linkinv
 function (eta) 
 pmax(eta^(1/lambda), .Machine$double.eps)
-<environment: 55c963d3b0c0>
+<environment: 56256b657040>
 
 > 
 > 
@@ -15207,7 +15224,7 @@ function (v)
     xout = as.double(v), as.integer(length(v)), as.integer(method), 
     as.double(yleft), as.double(yright), as.double(f), NAOK = TRUE, 
     PACKAGE = "stats")$xout
-<environment: 55c96956a040>
+<environment: 562570d7cb40>
 attr(,"call")
 stepfun(1:3, y0, f = 0)
 > ls(envir = environment(sfun0))
@@ -17423,7 +17440,7 @@ Number of Fisher Scoring iterations: 6
 > ### * <FOOTER>
 > ###
 > cat("Time elapsed: ", proc.time() - get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  6.287 0.111 2.535 0 0 
+Time elapsed:  2.403 0.1 2.504 0 0 
 > grDevices::dev.off()
 null device 
           1 
