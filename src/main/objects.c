@@ -305,16 +305,12 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     for (i = 0; i < nclass; i++) {
         SEXP elt = STRING_ELT (klass, i);
         const char *ss = translateChar(elt);
-        int l;
-        for (l = 0; ; l++) {
-            if (len+l >= sizeof buf)
-                error(_("class name too long in '%s'"), generic);
-            buf[len+l] = ss[l];
-            if (ss[l] == 0) 
-                break;
-        }
+        const int ss_len = ss == CHAR(elt) ? LENGTH(elt) : strlen(ss);
+        if (len+ss_len >= sizeof buf)
+            error(_("class name too long in '%s'"), generic);
+        strcpy(buf+len,ss);
         method = installed_already_with_hash 
-                   (buf, Rf_char_hash_more_len(hash,ss,l));
+                   (buf, Rf_char_hash_more_len(hash,ss,ss_len));
         if (method != R_NoObject) {
             sxp = R_LookupMethod (method, rho, callrho, defrho);
             if (sxp != R_UnboundValue) {
@@ -360,7 +356,7 @@ found: ;
     SEXP op = cptr->callfun;
 
     SEXP matchedarg, newcall;
-    newcall = LCONS(method,CDR(cptr->call)); /* used to duplicate... but why? */
+    newcall = LCONS(method,CDR(cptr->call)); /* previously duplicated - why? */
     matchedarg = cptr->promargs;
     PROTECT2(newcall,matchedarg);
 
@@ -441,12 +437,16 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
     RCNTXT *cptr;
     static const char * const ap[2] = { "generic", "object" };
 
-    PROTECT(argList =  matchArgs_strings (ap, 2, args, call));
-    if (CAR(argList) == R_MissingArg)
-        errorcall(call, _("there must be a 'generic' argument"));
+    if (TAG(args) == R_NilValue && CDR(args) == R_NilValue) /* typical case */
+        argList = args;  /* note that "object" is not here explicitly */
     else
-        generic = CAR(argList);
+        argList = matchArgs_strings (ap, 2, args, call);
+    PROTECT(argList);
 
+    generic = CAR(argList);
+    if (TYPEOF(generic) == SYMSXP /* quick pretest */
+          && (generic == R_MissingArg || generic == R_MissingUnder))
+        errorcall(call, _("there must be a 'generic' argument"));
     if (TYPEOF(generic) == STRSXP)
         ;  /* the usual case, no eval needed */
     else
@@ -488,8 +488,8 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
 
     defenv = TYPEOF(val) == CLOSXP ? CLOENV(val) : R_BaseNamespace;
 
-    obj = CADR(argList) == R_MissingArg ? GetObject(cptr)
-                                        : eval (CADR(argList), env);
+    obj = CDR(argList) == R_NilValue || CADR(argList) == R_MissingArg 
+           ? GetObject(cptr) : eval (CADR(argList), env);
     PROTECT (obj);
 
     if (!usemethod(generic_trans, obj, call, CDR(args),
@@ -516,8 +516,14 @@ static SEXP do_usemethod (SEXP call, SEXP op, SEXP args, SEXP env,
            generic_trans, cl);
     }
 
-    UNPROTECT(3); /* obj, generic, argList  - but unnecessary? because... */
-    findcontext (CTXT_RETURN, env, ans);  /*              does not return */
+    UNPROTECT(3); /* obj, generic, argList  - but unnecessary? */
+
+    if (variant & VARIANT_DIRECT_RETURN) {
+        R_variant_result |= VARIANT_RTN_FLAG;
+        return ans;
+    }
+    else     
+        findcontext (CTXT_RETURN, env, ans); 
 }
 
 /*
