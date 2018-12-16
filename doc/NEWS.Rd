@@ -14,6 +14,7 @@
         \code{is.infinite} functions are now faster for unnamed 
         scalar arguments.
   \item The \code{sample} function has been sped up for some cases.
+  \item Common cases of \code{UseMethod} have been sped up.
   }}
 }
 
