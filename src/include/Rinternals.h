@@ -1742,6 +1742,7 @@ LibExtern SEXP	R_SourceSymbol;     /* "source" */
 LibExtern SEXP	R_SrcrefSymbol;     /* "srcref" */
 LibExtern SEXP	R_TspSymbol;	    /* "tsp" */
 LibExtern SEXP	R_LogarithmSymbol;  /* "logarithm" */
+LibExtern SEXP	R_LogSymbol;        /* "log" */
 LibExtern SEXP	R_ValueSymbol;	    /* "value" */
 LibExtern SEXP	R_GradientSymbol;   /* "gradient" */
 LibExtern SEXP	R_HessianSymbol;    /* "hessian" */

@@ -377,6 +377,7 @@ static void SymbolShortcuts(void)
     R_SrcrefSymbol = install("srcref");
     R_TspSymbol = install("tsp");
     R_LogarithmSymbol = install("logarithm");
+    R_LogSymbol = install("log");
     R_ValueSymbol = install("value");
     R_GradientSymbol = install("gradient");
     R_HessianSymbol = install("hessian");

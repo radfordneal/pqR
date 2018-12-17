@@ -176,6 +176,8 @@ int R_isnancpp(double x)
 
 /* Arithmetic Initialization */
 
+static double R_log2_value, R_log10_value;
+
 void attribute_hidden InitArithmetic()
 {
 #ifdef Win32
@@ -189,6 +191,8 @@ void attribute_hidden InitArithmetic()
     R_PosInf = 1.0/R_Zero_Hack;
     R_NegInf = -1.0/R_Zero_Hack;
     R_NaN_cast_to_int = (int) R_NaN;
+    R_log2_value = log(2);
+    R_log10_value = log(10);
 }
 
 /* some systems get this wrong, possibly depend on what libs are loaded */
@@ -285,13 +289,23 @@ double R_pow_di(double x, int n)
 */
 static double logbase(double x, double base)
 {
-#ifdef HAVE_LOG10
-    if(base == 10) return x > 0 ? log10(x) : x < 0 ? R_NaN : R_NegInf;
-#endif
-#ifdef HAVE_LOG2
-    if(base == 2) return x > 0 ? log2(x) : x < 0 ? R_NaN : R_NegInf;
-#endif
+    if (base == 10)
+        return x > 0 ? log10(x) : x < 0 ? R_NaN : R_NegInf;
+
+    if (base == 2)
+        return x > 0 ? log2(x) : x < 0 ? R_NaN : R_NegInf;
+
     return R_log(x) / R_log(base);
+}
+
+static double R_log2 (double x) 
+{
+    return x > 0 ? log2(x) : x < 0 ? R_NaN : R_NegInf;
+}
+
+static double R_log10 (double x) 
+{
+    return x > 0 ? log10(x) : x < 0 ? R_NaN : R_NegInf;
 }
 
 
@@ -1640,15 +1654,16 @@ SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
 /* MATHEMATICAL FUNCTIONS OF ONE ARGUMENT.  Implements a variant return
    of the sum of the vector result, rather than the vector itself. */
 
-/* Table to map math1 operation code to function.  The entries for trunc
-   and R_log are not called via do_math1 like the others, but from special
-   primitives.  The entry for fabs is currently not used, since the compiler
-   may be able to inline fabs when it's called directly from task_abs. */
+/* Table to map math1 operation code to function.  The entries for trunc,
+   R_log, R_log2, and R_log10 are not called via do_math1 like the others, 
+   but from special primitives.  The entry for fabs is currently not used, 
+   since the compiler may be able to inline fabs when it's called directly 
+   from task_abs. */
 
 double (* const R_math1_func_table[44])(double) = {
         /*      0       1       2       3       4       5       6 7 8 9 */
 /* 00 */        fabs,   floor,  ceil,   sqrt,   sign,   trunc,  0,0,0,0,
-/* 10 */        exp,    expm1,  log1p,  R_log,  0,      0,      0,0,0,0,
+/* 10 */        exp,    expm1,  log1p,  R_log,  R_log2, R_log10,0,0,0,0,
 /* 20 */        cos,    sin,    tan,    acos,   asin,   atan,   0,0,0,0,
 /* 30 */        cosh,   sinh,   tanh,   acosh,  asinh,  atanh,  0,0,0,0,
 /* 40 */      lgammafn, gammafn,digamma,trigamma
@@ -1666,7 +1681,7 @@ double (* const R_math1_func_table[44])(double) = {
 const char R_math1_err_table[44] = {
         /*      0       1       2       3       4       5       6 7 8 9 */
 /* 00 */        0,      0,      0,      2,      0,      0,      0,0,0,0,
-/* 10 */        0,      0,      2,      2,      0,      0,      0,0,0,0,
+/* 10 */        0,      0,      2,      2,      2,      2,      0,0,0,0,
 /* 20 */        1,      1,      1,      2,      2,      0,      0,0,0,0,
 /* 30 */        0,      0,      0,      2,      0,      2,      0,0,0,0,
 /* 40 */        3,      3,      2,      -1
@@ -1702,6 +1717,16 @@ static double Dlog1p (double x, double y)
 static double Dlog (double x, double y)
 { 
     return x < 0 ? NA_REAL : 1/x;
+}
+
+static double Dlog2 (double x, double y)
+{ 
+    return x < 0 ? NA_REAL : 1/(x*R_log2_value);
+}
+
+static double Dlog10 (double x, double y)
+{ 
+    return x < 0 ? NA_REAL : 1/(x*R_log10_value);
 }
 
 static double Dcos (double x, double y)
@@ -1791,7 +1816,7 @@ static double Dtrigamma (double x, double y)
 double (* const R_math1_deriv_table[44])(double,double) = {
         /*      0       1       2       3       4       5       6 7 8 9 */
 /* 00 */        Dfabs,  0,      0,      Dsqrt,  0,      0,      0,0,0,0,
-/* 10 */        Dexp,   Dexpm1, Dlog1p, Dlog,   0,      0,      0,0,0,0,
+/* 10 */        Dexp,   Dexpm1, Dlog1p, Dlog,   Dlog2,  Dlog10, 0,0,0,0,
 /* 20 */        Dcos,   Dsin,   Dtan,   Dacos,  Dasin,  Datan,  0,0,0,0,
 /* 30 */        Dcosh,  Dsinh,  Dtanh,  Dacosh, Dasinh, Datanh, 0,0,0,0,
 /* 40 */     Dlgammafn, Dgammafn, Ddigamma, Dtrigamma
@@ -2088,19 +2113,29 @@ static SEXP do_fast_math1(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     return math1 (arg, PRIMVAL(op), call, env, variant);
 }
 
+static SEXP math1_evald (SEXP call, SEXP op, SEXP args, SEXP env, int variant);
+
 SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env, 
                                 int variant)
 {
-    int opcode = PRIMVAL(op);
-    SEXP r, grad, sa;
-    double opr, res;
-
     args = evalList_v (args, env, VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK
                                     | (variant & VARIANT_GRADIENT));
     PROTECT(args);
 
     checkArity(op, args);
     check1arg_x (args, call);
+
+    SEXP r = math1_evald (call, op, args, env, variant);
+
+    UNPROTECT(1);
+    return r;
+}
+
+static SEXP math1_evald (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+{
+    int opcode = PRIMVAL(op);
+    SEXP r, grad, sa;
+    double opr, res;
 
     sa = CAR(args);
 
@@ -2111,8 +2146,8 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
     if (grad != R_NilValue)
         SET_ATTRIB (args, grad);
 
-    if (DispatchGroup("Math", call, op, args, env, &r)) {
-        UNPROTECT(2);
+    if (isObject(sa) && DispatchGroup("Math", call, op, args, env, &r)) {
+        UNPROTECT(1);
 	return r;
     }
 
@@ -2127,7 +2162,7 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
         PROTECT(tmp = CONS(sa,R_NilValue));
         WAIT_UNTIL_COMPUTED(sa);
         tmp = complex_math1(call, op, tmp, env);
-        UNPROTECT(3);
+        UNPROTECT(2);
         return tmp;
     }
 
@@ -2242,7 +2277,7 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
         }
     }
 
-    UNPROTECT(3);
+    UNPROTECT(2);
     return sy;
 }
 
@@ -2659,33 +2694,66 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     return res;
 }
 
-/* log{2,10} are builtins */
-SEXP do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
+/* PRIMVAL(op) == 14 for log2; PRIMVAL(op) == 15 for log10; to match math1 */
+
+static SEXP do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP res, call2, args2, base, val;
+
+    PROTECT (args = evalList_v (args, env, variant & VARIANT_GRADIENT));
 
     checkArity(op, args);
     check1arg_x (args, call);
 
-    if (DispatchGroup("Math", call, op, args, env, &res)) return res;
-
-    static SEXP sLog = R_NoObject;
-    if (sLog == R_NoObject) sLog = install("log");
-    base = PRIMVAL(op) == 10 ? ScalarRealMaybeConst(10.0) 
-                             : ScalarRealMaybeConst(2.0);
     val = CAR(args);
 
-    PROTECT(args2 = CONS (val, CONS(base,R_NilValue)));
-    PROTECT(call2 = LCONS (sLog, args2));
+    if (isObject(val)) {
 
-    if (! DispatchGroup("Math", call2, op, args2, env, &res)) {
-	if (isComplex(val))
-	    res = complex_math2(call2, op, args2, env);
-	else
-	    res = math2(val, base, logbase, call);
+        SEXP g;
+
+        PROTECT (g = R_variant_result & VARIANT_GRADIENT_FLAG
+                      ? R_gradient : R_NilValue);
+
+        if (g != R_NilValue)
+            SET_ATTRIB (args, g);
+
+        if (DispatchGroup("Math", call, op, args, env, &res)) {
+            UNPROTECT(2);
+            return res;
+        }
+
+        base = PRIMVAL(op) == 15 ? ScalarRealMaybeConst(10.0) 
+                                 : ScalarRealMaybeConst(2.0);
+
+        SEXP basel = CONS (base, R_NilValue);
+        PROTECT(args2 = CONS (val, basel));
+        if (g != R_NilValue)
+            SET_ATTRIB (args2, g);
+        
+        PROTECT(call2 = LCONS (R_LogSymbol, CONS (val, basel)));
+
+        if (DispatchGroup("Math", call2, op, args2, env, &res)) {
+            UNPROTECT(4);
+            return res;
+        }
+
+        UNPROTECT(3);
     }
 
-    UNPROTECT(2);
+    if (isComplex(val)) {
+        base = PRIMVAL(op) == 15 ? ScalarRealMaybeConst(10.0) 
+                                 : ScalarRealMaybeConst(2.0);
+        SEXP basel = CONS (base, R_NilValue);
+        PROTECT(args2 = CONS (val, basel));
+        PROTECT(call2 = LCONS (R_LogSymbol, CONS (val, basel)));
+        res = complex_math2 (call2, op, args2, env);
+        UNPROTECT(3);
+        return res;
+    }
+
+    res = math1_evald (call, op, args, env, variant);
+
+    UNPROTECT(1);
     return res;
 }
 
@@ -3250,8 +3318,8 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"round",	do_Math2,	10001,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"signif",	do_Math2,	10004,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"log",		do_log,		10003,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"log10",	do_log1arg,	10,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"log2",	do_log1arg,	2,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"log10",	do_log1arg,	15,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"log2",	do_log1arg,	14,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"abs",		do_abs,		6,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"floor",	do_math1,	1,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"ceiling",	do_math1,	2,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
