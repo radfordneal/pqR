@@ -17,6 +17,7 @@
 }
         This is done by using the "gcc" clang alias when compiling one
         small glue routine (so this must exist).
+  }}
   \subsection{FEATURE CHANGES}{
   \itemize{
   \item It is now allowed to use \code{...} anywhere an expression is
