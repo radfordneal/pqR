@@ -72,6 +72,13 @@ R: Makedeps
 @USE_EXTERNAL_LAPACK_FALSE@	@$(MAKE) rhome="$(abs_top_builddir)" $(Rlapack_la) Rlapack_install
 	@$(MAKE) $(lapack_la)
 
+## Use default gcc (really clang) to compile vecLibg95c.c, since Apple uses
+## non-standard C in header files it includes.
+vecLibg95c.o:	vecLibg95c.c
+	gcc -O2 -I. -I../../../src/include -I$(srcdir)/../../include \
+	  -I/usr/local/include -DHAVE_CONFIG_H -fPIC -c $(srcdir)/vecLibg95c.c \
+	  -o vecLibg95c.o
+
 $(lapack_la): $(lapack_la_OBJECTS)
 	$(SHLIB_LINK) -o $@ $(lapack_la_LDFLAGS) $(lapack_la_OBJECTS) $(lapack_la_LIBADD) @LAPACK_LIBS@ @BLAS_LIBS@ $(FLIBS_IN_SO)
 ## <FIXME>
