@@ -8,6 +8,15 @@
 
 \section{CHANGES IN VERSION RELEASED 2018-00-00}{
 
+  \subsection{INSTALLATION}{
+  \itemize{
+  \item Installation on recent versions of macOS now works when using
+        recent versions of gcc (not clang, or the "gcc" alias for clang)
+        when use of Apple's BLAS routines is enabled with the configure option
+\preformatted{    --with-blas='-framework Accelerate'
+}
+        This is done by using the "gcc" clang alias when compiling one
+        small glue routine (so this must exist).
   \subsection{FEATURE CHANGES}{
   \itemize{
   \item It is now allowed to use \code{...} anywhere an expression is
