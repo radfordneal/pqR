@@ -1,0 +1,181 @@
+
+pqR version 2.15.1 (2018-00-00), based on R 2.15.0 (2012-03-30)
+
+R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
+ISBN 3-900051-07-0
+
+Modifications to R in pqR are Copyright (C) 2013-2018 Radford M. Neal
+
+Some modules are from R-2.15.1 or later versions distributed by the R Core Team
+
+Platform: x86_64-unknown-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+
+No helper threads, task merging enabled, uncompressed pointers.
+
+> # Test gradient computations.
+> #
+> # Added for pqR, 2018 Radford M. Neal.
+> 
+> 
+> # Check consistency of simple math derivatives with 'D'
+> 
+> x <- 0.32739
+> 
+> stopifnot <- print
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (sqrt(x)),
++                       eval (D (quote (sqrt(x)), "x")) ))
+[1] TRUE
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (exp(x)),
++                       eval (D (quote (exp(x)), "x")) ))
+[1] TRUE
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (expm1(x)),
++                       eval (D (quote (expm1(x)), "x")) ))
+[1] TRUE
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (log1p(x)),
++                       eval (D (quote (log1p(x)), "x")) ))
+[1] TRUE
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (log(x)),
++                       eval (D (quote (log(x)), "x")) ))
+[1] FALSE
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (cos(x)),
++                       eval (D (quote (cos(x)), "x")) ))
+[1] TRUE
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (sin(x)),
++                       eval (D (quote (sin(x)), "x")) ))
+[1] TRUE
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (tan(x)),
++                       eval (D (quote (tan(x)), "x")) ))
+[1] TRUE
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (acos(x)),
++                       eval (D (quote (acos(x)), "x")) ))
+[1] TRUE
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (asin(x)),
++                       eval (D (quote (asin(x)), "x")) ))
+[1] TRUE
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (cosh(x)),
++                       eval (D (quote (cosh(x)), "x")) ))
+[1] TRUE
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (sinh(x)),
++                       eval (D (quote (sinh(x)), "x")) ))
+[1] TRUE
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (tanh(x)),
++                       eval (D (quote (tanh(x)), "x")) ))
+[1] TRUE
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (lgamma(x)),
++                       eval (D (quote (lgamma(x)), "x")) ))
+[1] TRUE
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (gamma(x)),
++                       eval (D (quote (gamma(x)), "x")) ))
+[1] TRUE
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (digamma(x)),
++                       eval (D (quote (digamma(x)), "x")) ))
+[1] TRUE
+> 
+> stopifnot (identical (track_gradient (x) gradient_of (trigamma(x)),
++                       eval (D (quote (trigamma (x)), "x")) ))
+[1] TRUE
+> 
+> 
+> # Check gradient computations passing through mathematical function dispatch.
+> 
+> a <- 256; class(a) <- "fred"
+> cos.fred <- function (x) tan(x)
+> log2.fred <- function (x) tan(tan(x))
+> Math.fred <- function (x,...) {
++     if (.Generic=="log") sqrt(x)
++     else if (.Generic=="log10") sqrt(sqrt(x))
++     else if (.Generic=="exp") sqrt(sqrt(sqrt(x)))
++     else NextMethod()
++ }
+> 
+> print(cos(a))
+[1] 25.11156
+attr(,"class")
+[1] "fred"
+> print(log2(a))
+[1] -0.02118493
+attr(,"class")
+[1] "fred"
+> print(log(a))
+[1] 16
+attr(,"class")
+[1] "fred"
+> print(log10(a))
+[1] 4
+attr(,"class")
+[1] "fred"
+> print(exp(a))
+[1] 2
+attr(,"class")
+[1] "fred"
+> print(sin(a))
+[1] -0.999208
+attr(,"class")
+[1] "fred"
+> 
+> print (with_gradient (a) cos(a))
+[1] 25.11156
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+[1] 0
+> print (with_gradient (a) log2(a))
+[1] -0.02118493
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+[1] 0
+> print (with_gradient (a) log(a))
+[1] 16
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+[1] 0
+> print (with_gradient (a) log10(a))
+[1] 4
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+[1] 0
+> print (with_gradient (a) exp(a))
+[1] 2
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+[1] 0
+> print (with_gradient (a) sin(a))
+[1] -0.999208
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+[1] 0
+> 

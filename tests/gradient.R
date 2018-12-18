@@ -2,6 +2,9 @@
 #
 # Added for pqR, 2018 Radford M. Neal.
 
+
+# Check consistency of simple math derivatives with 'D'
+
 x <- 0.32739
 
 stopifnot <- print
@@ -56,3 +59,30 @@ stopifnot (identical (track_gradient (x) gradient_of (digamma(x)),
 
 stopifnot (identical (track_gradient (x) gradient_of (trigamma(x)),
                       eval (D (quote (trigamma (x)), "x")) ))
+
+
+# Check gradient computations passing through mathematical function dispatch.
+
+a <- 256; class(a) <- "fred"
+cos.fred <- function (x) tan(x)
+log2.fred <- function (x) tan(tan(x))
+Math.fred <- function (x,...) {
+    if (.Generic=="log") sqrt(x)
+    else if (.Generic=="log10") sqrt(sqrt(x))
+    else if (.Generic=="exp") sqrt(sqrt(sqrt(x)))
+    else NextMethod()
+}
+
+print(cos(a))
+print(log2(a))
+print(log(a))
+print(log10(a))
+print(exp(a))
+print(sin(a))
+
+print (with_gradient (a) cos(a))
+print (with_gradient (a) log2(a))
+print (with_gradient (a) log(a))
+print (with_gradient (a) log10(a))
+print (with_gradient (a) exp(a))
+print (with_gradient (a) sin(a))
