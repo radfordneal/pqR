@@ -2109,57 +2109,95 @@ static SEXP do_fast_math1(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     return math1 (arg, PRIMVAL(op), call, env, variant);
 }
 
-static SEXP math1_evald (SEXP call, SEXP op, SEXP args, SEXP env, int variant);
+#define ONE_SIMPLE_ARG(args) \
+    ( !isNull(args) && isNull(CDR(args)) && isNull(TAG(args)) \
+       && CAR(args) != R_DotsSymbol && CAR(args) != R_MissingArg \
+       && CAR(args) != R_MissingUnder)
 
 SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env, 
                                 int variant)
 {
-    args = evalList_v (args, env, VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK
-                                    | (variant & VARIANT_GRADIENT));
-    PROTECT(args);
+    int vrnt = VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK
+                                  | (variant & VARIANT_GRADIENT);
+    SEXP sa;
 
-    checkArity(op, args);
-    check1arg_x (args, call);
-
-    SEXP r = math1_evald (call, op, args, env, variant);
-
-    UNPROTECT(1);
-    return r;
-}
-
-static SEXP math1_evald (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
-{
-    int opcode = PRIMVAL(op);
-    SEXP r, grad, sa;
-    double opr, res;
-
-    sa = CAR(args);
-
-    PROTECT (grad = R_variant_result & VARIANT_GRADIENT_FLAG
-                     ? R_gradient : R_NilValue);
-    R_variant_result = 0;
-
-    if (grad != R_NilValue)
-        SET_ATTRIB (args, grad);
-
-    if (isObject(sa) && DispatchGroup("Math", call, op, args, env, &r)) {
-        UNPROTECT(1);
-	return r;
+    if (ONE_SIMPLE_ARG(args)) {
+        PROTECT (sa = evalv (CAR(args), env, vrnt));
+        args = R_NilValue;
+    }
+    else {
+        PROTECT (args = evalList_v (args, env, vrnt));
+        checkArity(op, args);
+        check1arg_x (args, call);
+        sa = CAR(args);
     }
 
+    /* At this point, sa is the first argument, and args is either the
+       pairlist of arguments, or R_NilValue if that hasn't been created. */
+
+    int opcode = PRIMVAL(op);
     if (opcode == 10003) /* horrible kludge for log */
         opcode = 13;
     else if (opcode >= 44)
         errorcall(call, _("unimplemented real function of 1 argument"));
 
+    SEXP r, grad;
+
+    PROTECT (grad = R_variant_result & VARIANT_GRADIENT_FLAG
+                     ? R_gradient : R_NilValue);
+    R_variant_result = 0;
+
+    if (isObject(sa)) {
+
+        SEXP nargs = args == R_NilValue ? CONS(sa,R_NilValue) : args;
+        PROTECT(nargs);
+        if (grad != R_NilValue)
+            SET_ATTRIB (nargs, grad);
+        if (DispatchGroup("Math", call, op, nargs, env, &r)) {
+            UNPROTECT(3);  /* sa|args, grad, nargs */
+            return r;
+        }
+        UNPROTECT(1);  /* nargs */
+
+        if (opcode == 14 || opcode == 15) {
+            /* log2 or log10 - try dispatching on log with base argument. */
+            SEXP base = PRIMVAL(op) == 15 ? ScalarRealMaybeConst(10.0)
+                                          : ScalarRealMaybeConst(2.0);
+            SEXP basel = CONS (base, R_NilValue);
+            SEXP call2;
+            PROTECT(nargs = CONS (sa, basel));
+            if (grad != R_NilValue)
+                SET_ATTRIB (nargs, grad);
+            PROTECT(call2 = LCONS (R_LogSymbol, CONS (sa, basel)));
+            if (DispatchGroup("Math", call2, op, nargs, env, &r)) {
+                UNPROTECT(4);  /* sa|args, grad, nargs, call2 */
+                return r;
+            }
+            UNPROTECT(2);  /* nargs, call2 */
+        }
+    }
+
     if (isComplex(sa)) {
         /* for the moment, keep the interface to complex_math1 the same */
-        SEXP tmp;
-        PROTECT(tmp = CONS(sa,R_NilValue));
-        WAIT_UNTIL_COMPUTED(sa);
-        tmp = complex_math1(call, op, tmp, env);
-        UNPROTECT(2);
-        return tmp;
+        if (opcode == 14 || opcode == 15) {  /* log2 or log10 */
+            SEXP base = opcode == 15 ? ScalarRealMaybeConst(10.0)
+                                     : ScalarRealMaybeConst(2.0);
+            SEXP basel = CONS (base, R_NilValue);
+            SEXP args2, call2;
+            PROTECT(args2 = CONS (sa, basel));
+            PROTECT(call2 = LCONS (R_LogSymbol, CONS (sa, basel)));
+            r = complex_math2 (call2, op, args2, env);
+            UNPROTECT(2);  /* args2, call2 */
+        }
+        else {
+            SEXP tmp;
+            PROTECT(tmp = CONS(sa,R_NilValue));
+            WAIT_UNTIL_COMPUTED(sa);
+            r = complex_math1(call, op, tmp, env);
+            UNPROTECT(1);  /* tmp */
+        }
+        UNPROTECT(2);  /* sa|args, grad */
+        return r;
     }
 
     if (!isNumeric(sa)) non_numeric_errorcall(call);
@@ -2176,6 +2214,7 @@ static SEXP math1_evald (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     PROTECT(sa);
 
+    double opr, res;
     SEXP sy;
 
     if (LENGTH(sa) == 1) { /* scalar operation, including on scalar stack. */
@@ -2273,7 +2312,7 @@ static SEXP math1_evald (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
     }
 
-    UNPROTECT(2);
+    UNPROTECT(3);  /* sa|args, grad, sa (possibly changed) */
     return sy;
 }
 
@@ -2687,69 +2726,6 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     UNPROTECT(nprotect);
     R_Visible = TRUE;
-    return res;
-}
-
-/* PRIMVAL(op) == 14 for log2; PRIMVAL(op) == 15 for log10; to match math1 */
-
-static SEXP do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
-{
-    SEXP res, call2, args2, base, val;
-
-    PROTECT (args = evalList_v (args, env, variant & VARIANT_GRADIENT));
-
-    checkArity(op, args);
-    check1arg_x (args, call);
-
-    val = CAR(args);
-
-    if (isObject(val)) {
-
-        SEXP g;
-
-        PROTECT (g = R_variant_result & VARIANT_GRADIENT_FLAG
-                      ? R_gradient : R_NilValue);
-
-        if (g != R_NilValue)
-            SET_ATTRIB (args, g);
-
-        if (DispatchGroup("Math", call, op, args, env, &res)) {
-            UNPROTECT(2);
-            return res;
-        }
-
-        base = PRIMVAL(op) == 15 ? ScalarRealMaybeConst(10.0) 
-                                 : ScalarRealMaybeConst(2.0);
-
-        SEXP basel = CONS (base, R_NilValue);
-        PROTECT(args2 = CONS (val, basel));
-        if (g != R_NilValue)
-            SET_ATTRIB (args2, g);
-        
-        PROTECT(call2 = LCONS (R_LogSymbol, CONS (val, basel)));
-
-        if (DispatchGroup("Math", call2, op, args2, env, &res)) {
-            UNPROTECT(4);
-            return res;
-        }
-
-        UNPROTECT(3);
-    }
-
-    if (isComplex(val)) {
-        base = PRIMVAL(op) == 15 ? ScalarRealMaybeConst(10.0) 
-                                 : ScalarRealMaybeConst(2.0);
-        SEXP basel = CONS (base, R_NilValue);
-        PROTECT(args2 = CONS (val, basel));
-        PROTECT(call2 = LCONS (R_LogSymbol, CONS (val, basel)));
-        res = complex_math2 (call2, op, args2, env);
-        UNPROTECT(3);
-        return res;
-    }
-
-    res = math1_evald (call, op, args, env, variant);
-
-    UNPROTECT(1);
     return res;
 }
 
@@ -3314,8 +3290,8 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"round",	do_Math2,	10001,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"signif",	do_Math2,	10004,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"log",		do_log,		10003,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"log10",	do_log1arg,	15,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"log2",	do_log1arg,	14,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"log10",	do_math1,	15,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"log2",	do_math1,	14,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"abs",		do_abs,		6,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"floor",	do_math1,	1,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"ceiling",	do_math1,	2,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
