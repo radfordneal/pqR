@@ -176,8 +176,6 @@ int R_isnancpp(double x)
 
 /* Arithmetic Initialization */
 
-static double R_log2_value, R_log10_value;
-
 void attribute_hidden InitArithmetic()
 {
 #ifdef Win32
@@ -191,8 +189,6 @@ void attribute_hidden InitArithmetic()
     R_PosInf = 1.0/R_Zero_Hack;
     R_NegInf = -1.0/R_Zero_Hack;
     R_NaN_cast_to_int = (int) R_NaN;
-    R_log2_value = log(2);
-    R_log10_value = log(10);
 }
 
 /* some systems get this wrong, possibly depend on what libs are loaded */
@@ -1721,12 +1717,12 @@ static double Dlog (double x, double y)
 
 static double Dlog2 (double x, double y)
 { 
-    return x < 0 ? NA_REAL : 1/(x*R_log2_value);
+    return x < 0 ? NA_REAL : 1.4426950408889634073599246810 / x;
 }
 
 static double Dlog10 (double x, double y)
 { 
-    return x < 0 ? NA_REAL : 1/(x*R_log10_value);
+    return x < 0 ? NA_REAL : 0.4342944819032518276511289189 / x;
 }
 
 static double Dcos (double x, double y)
