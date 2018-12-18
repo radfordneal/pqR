@@ -533,6 +533,7 @@ static char *Spec_name[] = {
   "$", "[", "[[", 
   "$<-", "[<-", "[[<-", 
   ".C", ".Fortran", ".Call", ".External", ".Internal",
+  "with_gradient", "track_gradient", "compute_gradient",
   0
 };
 
