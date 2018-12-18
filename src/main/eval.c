@@ -763,8 +763,7 @@ static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
         /* forced promise, no gradient */
         res = PRVALUE_PENDING_OK(res);
     }
-    else if (TYPE_ETC(res) == PROMSXP) {
-        /* unforced promise, force here */
+    else if (TYPEOF(res) == PROMSXP) {
         SEXP prom = res;
         if (PRVALUE_PENDING_OK(prom) == R_UnboundValue)
             res = forcePromiseUnbound(prom,variant);
@@ -775,17 +774,7 @@ static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
             ret_grad = 1;
         }
     }
-    else if (TYPE_ETC(res) == 
-               PROMSXP + TYPE_ET_CETERA_VEC_DOTS_TR + TYPE_ET_CETERA_HAS_ATTR) {
-        /* forced promise, with gradient */
-        SEXP prom = res;
-        res = PRVALUE_PENDING_OK(prom);
-        if (variant & VARIANT_GRADIENT) {
-            PROTECT (grad = ATTRIB(prom));
-            ret_grad = 1;
-        }
-    }
-    else if (TYPE_ETC(res) == SYMSXP) {
+    else if (TYPEOF(res) == SYMSXP) {
         if (res == R_MissingArg) {
             if ( ! (variant & VARIANT_MISSING_OK))
                 if (!DDVAL(e))  /* revert bug fix for the moment */
@@ -801,14 +790,14 @@ static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
 
     SET_NAMEDCNT_NOT_0(res);
 
-    if ( ! (variant & VARIANT_PENDING_OK))
-        WAIT_UNTIL_COMPUTED(res);
-
     if (ret_grad) {
         R_variant_result = VARIANT_GRADIENT_FLAG;
         R_gradient = grad;
         UNPROTECT(1);
     }
+
+    if ( ! (variant & VARIANT_PENDING_OK))
+        WAIT_UNTIL_COMPUTED(res);
 
     return res;
 }
@@ -1109,8 +1098,10 @@ SEXP forcePromise_v (SEXP e, int variant) /* e protected here if necessary */
             R_variant_result = VARIANT_GRADIENT_FLAG;
             R_gradient = ATTRIB(e);
         }
-        return variant & VARIANT_PENDING_OK ? PRVALUE_PENDING_OK(e)
-                                            : PRVALUE(e);
+        SEXP r = PRVALUE_PENDING_OK(e);
+        if ( ! (variant & VARIANT_PENDING_OK))
+            WAIT_UNTIL_COMPUTED(r);
+        return r;
     }
 }
 
