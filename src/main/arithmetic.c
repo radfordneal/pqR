@@ -2037,7 +2037,7 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
         PROTECT(nargs);
         if (grad != R_NilValue)
             SET_ATTRIB (nargs, grad);
-        if (DispatchGroup("Math", call, op, nargs, env, &r)) {
+        if (DispatchGroup("Math", call, op, nargs, env, &r, variant)) {
             UNPROTECT(3);  /* sa|args, grad, nargs */
             return r;
         }
@@ -2053,7 +2053,7 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
             if (grad != R_NilValue)
                 SET_ATTRIB (nargs, grad);
             PROTECT(call2 = LCONS (R_LogSymbol, CONS (sa, basel)));
-            if (DispatchGroup("Math", call2, op, nargs, env, &r)) {
+            if (DispatchGroup("Math", call2, op, nargs, env, &r, variant)) {
                 UNPROTECT(4);  /* sa|args, grad, nargs, call2 */
                 return r;
             }
@@ -2222,7 +2222,7 @@ static SEXP nonsimple_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXP res, call2;
     PROTECT(call2 = LCONS (CAR(call), args));
 
-    if (DispatchGroup("Math", call2, op, args, env, &res)) {
+    if (DispatchGroup("Math", call2, op, args, env, &res, variant)) {
         UNPROTECT(2); /* args, call2 */
         return res;
     }
@@ -2307,7 +2307,7 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     if (g != R_NilValue)
         SET_ATTRIB (args, g);
 
-    if (DispatchGroup("Math", call, op, args, env, &r)) {
+    if (DispatchGroup("Math", call, op, args, env, &r, variant)) {
         UNPROTECT(2);
 	return r;
     }
@@ -2613,7 +2613,7 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     PROTECT(call2 = LCONS (CAR(call), args));
     int nprotect = 1;
 
-    if (! DispatchGroup("Math", call2, op, args, env, &res)) {
+    if (! DispatchGroup("Math", call2, op, args, env, &res, variant)) {
 	if(n == 1) {
 	    double digits = 0.0;
             check1arg_x (args, call);

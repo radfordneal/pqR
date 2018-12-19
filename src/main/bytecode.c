@@ -500,7 +500,7 @@ static SEXP cmp_relop(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 	SEXP args, ans;
 	args = CONS(x, CONS(y, R_NilValue));
 	PROTECT(args);
-	if (DispatchGroup("Ops", call, op, args, rho, &ans)) {
+	if (DispatchGroup("Ops", call, op, args, rho, &ans, 0)) {
 	    UNPROTECT(1);
 	    return ans;
 	}
@@ -516,7 +516,7 @@ static SEXP cmp_arith1(SEXP call, SEXP opsym, SEXP x, SEXP rho)
 	SEXP args, ans;
 	args = CONS(x, R_NilValue);
 	PROTECT(args);
-	if (DispatchGroup("Ops", call, op, args, rho, &ans)) {
+	if (DispatchGroup("Ops", call, op, args, rho, &ans, 0)) {
 	    UNPROTECT(1);
 	    return ans;
 	}
@@ -537,7 +537,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 	SEXP args, ans;
 	args = CONS(x, CONS(y, R_NilValue));
 	PROTECT(args);
-	if (DispatchGroup("Ops", call, op, args, rho, &ans)) {
+	if (DispatchGroup("Ops", call, op, args, rho, &ans, 0)) {
 	    UNPROTECT(1);
 	    return ans;
 	}

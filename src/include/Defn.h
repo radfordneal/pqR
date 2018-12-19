@@ -1488,7 +1488,7 @@ SEXP deparse1line(SEXP,Rboolean);
 SEXP deparse1s(SEXP call);
 int DispatchAnyOrEval(SEXP, SEXP, const char *, SEXP, SEXP, SEXP*, int, int);
 int DispatchOrEval(SEXP, SEXP, const char *, SEXP, SEXP, SEXP*, int, int);
-int DispatchGroup(const char *, SEXP,SEXP,SEXP,SEXP,SEXP*);
+int DispatchGroup(const char *, SEXP,SEXP,SEXP,SEXP,SEXP*,int);
 SEXP dup_arg_list(SEXP);
 SEXP dup_top_level(SEXP);
 SEXP duplicated(SEXP, Rboolean);

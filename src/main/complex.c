@@ -349,7 +349,7 @@ static SEXP do_cmathfuns(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     checkArity(op, args);
     check1arg(args, call, "z");
 
-    if (DispatchGroup("Complex", call, op, args, env, &ans))
+    if (DispatchGroup("Complex", call, op, args, env, &ans, variant))
 	return ans;
     
     return do_fast_cmathfuns (call, op, CAR(args), env, variant);

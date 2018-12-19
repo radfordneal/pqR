@@ -208,7 +208,7 @@ static SEXP do_cum(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP s, t, ans;
 
     checkArity(op, args);
-    if (DispatchGroup("Math", call, op, args, env, &ans))
+    if (DispatchGroup("Math", call, op, args, env, &ans, 0))
         return ans;
 
     if (isComplex(CAR(args))) {

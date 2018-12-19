@@ -3324,7 +3324,7 @@ static void findmethod(SEXP Class, const char *group, const char *generic,
 
 attribute_hidden
 int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
-		  SEXP *ans)
+		  SEXP *ans, int variant)
 {
     int nargs, lwhich, rwhich, set;
     SEXP lclass, s, t, m, lmeth, lsxp, lgr;
@@ -3523,7 +3523,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
             SET_TAG_NIL(m);
     }
 
-    *ans = applyClosure_v (t, lsxp, s, rho, supplied, 0);
+    *ans = applyClosure_v (t, lsxp, s, rho, supplied, variant);
 
     UNPROTECT(9);
     return 1;
@@ -3817,7 +3817,7 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
             WAIT_UNTIL_COMPUTED_2(x,y);
         }
         PROTECT(args);
-        if (DispatchGroup("Ops", call, op, args, env, &ans)) {
+        if (DispatchGroup("Ops", call, op, args, env, &ans, variant)) {
             UNPROTECT(3);
             R_Visible = TRUE;
             return ans;
@@ -4043,7 +4043,7 @@ SEXP attribute_hidden do_not (SEXP call, SEXP op, SEXP args, SEXP env,
 
     SEXP ans;
 
-    if (DispatchGroup("Ops", call, op, args, env, &ans)) {
+    if (DispatchGroup("Ops", call, op, args, env, &ans, variant)) {
 	return ans;
     }
 
@@ -4280,7 +4280,7 @@ static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(args = fixup_NaRm(args));
     PROTECT(call2 = LCONS(CAR(call),args));
 
-    if (DispatchGroup("Summary", call2, op, args, env, &ans)) {
+    if (DispatchGroup("Summary", call2, op, args, env, &ans, 0)) {
 	UNPROTECT(2);
 	return(ans);
     }
@@ -4340,7 +4340,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* Check for dispatch on S3 or S4 objects. */
 
     if (obj) { /* one or other or both operands are objects */
-        if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
+        if (DispatchGroup("Ops", call, op, argsevald, env, &ans, variant)) {
             UNPROTECT(3);
             R_Visible = TRUE;
             return ans;
@@ -4567,7 +4567,7 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* Check for dispatch on S3 or S4 objects. */
 
     if (obj) {
-        if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
+        if (DispatchGroup("Ops", call, op, argsevald, env, &ans, variant)) {
             R_Visible = TRUE;
             UNPROTECT(3);
             return ans;
