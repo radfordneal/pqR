@@ -2292,13 +2292,12 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
   done:
 
-    if (grad != R_NilValue) {
-        if (STORE_GRAD(rho) && !opval && R_binding_cell != R_NilValue)
-            SET_ATTRIB (R_binding_cell, grad);
-        if (variant & VARIANT_GRADIENT) {
-            R_variant_result = VARIANT_GRADIENT_FLAG;
-            R_gradient = grad;
-        }
+    if (STORE_GRAD(rho) && !opval && R_binding_cell != R_NilValue)
+        SET_ATTRIB (R_binding_cell, grad);
+
+    if ((variant & VARIANT_GRADIENT) && grad != R_NilValue) {
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+        R_gradient = grad;
     }
 
     R_Visible = FALSE;
@@ -3039,7 +3038,10 @@ SEXP attribute_hidden promiseArgsWithValues(SEXP el, SEXP rho, SEXP values)
          a = CDR(a), b = CDR(b)) {
         if (TYPEOF (CAR(b)) == PROMSXP) {
             SET_PRVALUE (CAR(b), CAR(a));
-            if (HAS_ATTRIB(a)) SET_ATTRIB (CAR(b), ATTRIB(a));
+            if (HAS_ATTRIB(a)) {
+                SET_STORE_GRAD (CAR(s), 1);
+                SET_ATTRIB (CAR(b), ATTRIB(a));
+            }
             INC_NAMEDCNT (CAR(a));
         }
     }
@@ -3064,7 +3066,10 @@ SEXP attribute_hidden promiseArgsWith1Value (SEXP el, SEXP rho, SEXP value,
     if (s == R_NilValue) error(_("dispatch error"));
     if (TYPEOF (CAR(s)) == PROMSXP) {
         SET_PRVALUE (CAR(s), value);
-        if (HAS_ATTRIB(value)) SET_ATTRIB (CAR(s), ATTRIB(value));
+        if (HAS_ATTRIB(value)) {
+            SET_STORE_GRAD (CAR(s), 1);
+            SET_ATTRIB (CAR(s), ATTRIB(value));
+        }
         INC_NAMEDCNT (value);
     }
     UNPROTECT(1);
@@ -3507,9 +3512,9 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 
     PROTECT(t = LCONS(lmeth, CDR(call)));
 
-    /* the arguments have been evaluated; since we are passing them */
-    /* out to a closure we need to wrap them in promises so that */
-    /* they get duplicated and things like missing/substitute work. */
+    /* The arguments have been evaluated; since we are passing them
+       out to a closure we need to wrap them in promises so that they
+       get duplicated and things like missing/substitute work.  */
 
     PROTECT(s = promiseArgsWithValues(CDR(call), rho, args));
     if (isOps) {
