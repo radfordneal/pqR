@@ -745,13 +745,9 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
 }
 
 
-/* Evaluate an expression that is a symbol other than ..., ..1, ..2, etc. */
-
-static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
+static inline SEXP handle_symbol (SEXP res, SEXP e, SEXP rho, int variant)
 {
     SEXP grad = R_NoObject;
-
-    SEXP res = FIND_VAR_PENDING_OK (e, rho);
 
     if (TYPEOF(res) == PROMSXP) {
         if (TYPE_ETC(res) == PROMSXP + TYPE_ET_CETERA_VEC_DOTS_TR) {
@@ -797,6 +793,14 @@ static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
         WAIT_UNTIL_COMPUTED(res);
 
     return res;
+}
+
+
+/* Evaluate an expression that is a symbol other than ..., ..1, ..2, etc. */
+
+static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
+{
+    return handle_symbol (FIND_VAR_PENDING_OK (e, rho), e, rho, variant);
 }
 
 
@@ -951,44 +955,8 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
         return e;
     }
 
-    if (TYPE_ETC(e)==SYMSXP
-                      + TYPE_ET_CETERA_VEC_DOTS_TR) { /* ... or ..1, ..2, etc */
-
-        res = ddfindVar(e,rho);
-
-        if (TYPEOF(res) == PROMSXP) {
-            SEXP prom = res;
-            if (PRVALUE_PENDING_OK(prom) == R_UnboundValue)
-                res = forcePromiseUnbound(prom,variant);
-            else
-                res = PRVALUE_PENDING_OK(prom);
-            if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(prom)) {
-                R_variant_result = VARIANT_GRADIENT_FLAG;
-                R_gradient = ATTRIB(prom);
-            }
-        }
-        else if (TYPE_ETC(res) == SYMSXP) {
-            if (res == R_MissingArg) {
-                if ( ! (variant & VARIANT_MISSING_OK))
-                    if (!DDVAL(e))  /* revert bug fix for the moment */
-                        arg_missing_error(e);
-            }
-            else if (res == R_UnboundValue)
-                unbound_var_error(e);
-        }
-
-        /* A NAMEDCNT of 0 might arise from an inadverently missing increment
-           somewhere, or from a save/load sequence (since loaded values in
-           promises have NAMEDCNT of 0), so fix up here... */
-
-        SET_NAMEDCNT_NOT_0(res);
-
-        if ( ! (variant & VARIANT_PENDING_OK))
-            WAIT_UNTIL_COMPUTED(res);
-
-        R_Visible = TRUE;
-        return res;
-    }
+    if (TYPE_ETC(e )== SYMSXP+TYPE_ET_CETERA_VEC_DOTS_TR) /* ... or ..1, ..2 */
+        return handle_symbol (ddfindVar(e,rho), e, rho, variant);
 
     if (TYPE_ETC(e) == BCODESXP) {  /* parts other than type will be 0 */
         return bcEval(e, rho, TRUE);
