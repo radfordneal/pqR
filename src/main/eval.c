@@ -749,39 +749,42 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
 
 static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
 {
+    SEXP grad = R_NoObject;
+
     SEXP res = FIND_VAR_PENDING_OK (e, rho);
 
-    int ret_grad = 0;
-    SEXP grad;
-    
-    if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(R_binding_cell)) {
-        PROTECT (grad = ATTRIB(R_binding_cell));
-        ret_grad = 1;
+    if (TYPEOF(res) == PROMSXP) {
+        if (TYPE_ETC(res) == PROMSXP + TYPE_ET_CETERA_VEC_DOTS_TR) {
+            /* forced promise, no gradient */
+            res = PRVALUE_PENDING_OK(res);
+        }
+        else {
+            SEXP prom = res;
+            if (PRVALUE_PENDING_OK(prom) == R_UnboundValue)
+                res = forcePromiseUnbound(prom,variant);
+            else
+                res = PRVALUE_PENDING_OK(prom);
+            if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(prom))
+                grad = ATTRIB(prom);
+        }
+    }
+    else {
+        if (TYPEOF(res) == SYMSXP) {
+            if (res == R_MissingArg) {
+                if ( ! (variant & VARIANT_MISSING_OK))
+                    if (!DDVAL(e))  /* revert bug fix for the moment */
+                        arg_missing_error(e);
+            }
+            else if (res == R_UnboundValue)
+                unbound_var_error(e);
+        }
+        if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(R_binding_cell))
+            grad = ATTRIB(R_binding_cell);
     }
 
-    if (TYPE_ETC(res) == PROMSXP + TYPE_ET_CETERA_VEC_DOTS_TR) {
-        /* forced promise, no gradient */
-        res = PRVALUE_PENDING_OK(res);
-    }
-    else if (TYPEOF(res) == PROMSXP) {
-        SEXP prom = res;
-        if (PRVALUE_PENDING_OK(prom) == R_UnboundValue)
-            res = forcePromiseUnbound(prom,variant);
-        else
-            res = PRVALUE_PENDING_OK(prom);
-        if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(prom)) {
-            PROTECT (grad = ATTRIB(prom));
-            ret_grad = 1;
-        }
-    }
-    else if (TYPEOF(res) == SYMSXP) {
-        if (res == R_MissingArg) {
-            if ( ! (variant & VARIANT_MISSING_OK))
-                if (!DDVAL(e))  /* revert bug fix for the moment */
-                    arg_missing_error(e);
-        }
-        else if (res == R_UnboundValue)
-            unbound_var_error(e);
+    if (grad != R_NoObject) {
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+        R_gradient = grad;
     }
 
     /* A NAMEDCNT of 0 might arise from an inadverently missing increment
@@ -789,12 +792,6 @@ static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
        promises have NAMEDCNT of 0), so fix up here... */
 
     SET_NAMEDCNT_NOT_0(res);
-
-    if (ret_grad) {
-        R_variant_result = VARIANT_GRADIENT_FLAG;
-        R_gradient = grad;
-        UNPROTECT(1);
-    }
 
     if ( ! (variant & VARIANT_PENDING_OK))
         WAIT_UNTIL_COMPUTED(res);
