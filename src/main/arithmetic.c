@@ -2114,9 +2114,18 @@ static SEXP do_fast_math1(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
        && CAR(args) != R_DotsSymbol && CAR(args) != R_MissingArg \
        && CAR(args) != R_MissingUnder)
 
+static SEXP nonsimple_log(SEXP call, SEXP op, SEXP args, SEXP env, int variant);
+static SEXP math2(SEXP sa, SEXP sb, double (*f)(double, double), SEXP lcall);
+
 SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env, 
                                 int variant)
 {
+    int opcode = PRIMVAL(op);
+    if (opcode == 10003) /* horrible kludge for log */
+        opcode = 13;
+    else if (opcode >= 44)
+        errorcall(call, _("unimplemented real function of 1 argument"));
+
     int vrnt = VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK
                                   | (variant & VARIANT_GRADIENT);
     SEXP sa;
@@ -2126,20 +2135,25 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
         args = R_NilValue;
     }
     else {
-        PROTECT (args = evalList_v (args, env, vrnt));
+
+        if (opcode == 13 /* log */)
+            vrnt |= VARIANT_MISSING_OK;
+
+        args = evalList_v (args, env, vrnt);
+
+        if (opcode == 13 /* log */ && CDR(args) != R_NilValue) 
+            return nonsimple_log (call, op, args, env, variant);
+
+        PROTECT(args);
         checkArity(op, args);
         check1arg_x (args, call);
         sa = CAR(args);
     }
 
+    R_Visible = TRUE;
+
     /* At this point, sa is the first argument, and args is either the
        pairlist of arguments, or R_NilValue if that hasn't been created. */
-
-    int opcode = PRIMVAL(op);
-    if (opcode == 10003) /* horrible kludge for log */
-        opcode = 13;
-    else if (opcode >= 44)
-        errorcall(call, _("unimplemented real function of 1 argument"));
 
     SEXP r, grad;
 
@@ -2314,6 +2328,48 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
 
     UNPROTECT(3);  /* sa|args, grad, sa (possibly changed) */
     return sy;
+}
+
+/* Cases of log that don't have just one unnamed argument (principally base).
+   Does not compute gradients. */
+
+static SEXP nonsimple_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+{
+    PROTECT(args);
+    R_Visible = TRUE;
+
+    /* This seems like some sort of horrible kludge that can't possibly
+       be right in general (it ignores the argument names, and silently
+       discards arguments after the first two). */
+
+    if (CDR(args) != R_NilValue && CADR(args) == R_MissingArg) {
+        double e = 2.718281828459045235;
+        PROTECT(args);
+        args = list2(CAR(args), ScalarReal(e)); 
+        UNPROTECT(1);
+    }
+
+    SEXP res, call2;
+    PROTECT(call2 = LCONS (CAR(call), args));
+
+    if (DispatchGroup("Math", call2, op, args, env, &res)) {
+        UNPROTECT(2); /* args, call2 */
+        return res;
+    }
+
+    /* match argument names if supplied */
+    static const char * const ap[2] = { "x", "base" };
+    PROTECT(args = matchArgs_strings (ap, 2, args, call));
+    if (length(CADR(args)) == 0)
+        errorcall(call, _("invalid argument 'base' of length 0"));
+
+    if (isComplex(CAR(args)) || isComplex(CADR(args)))
+        res = complex_math2(call, op, args, env);
+    else
+        res = math2(CAR(args), CADR(args), logbase, call);
+
+    UNPROTECT(3); /* old args, call2, args */
+    return res;
 }
 
 
@@ -2725,87 +2781,6 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     }
 
     UNPROTECT(nprotect);
-    R_Visible = TRUE;
-    return res;
-}
-
-
-/* This is a primitive SPECIALSXP with internal argument matching */
-SEXP do_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
-{
-    /* Do the common case of one un-tagged, non-object, argument quickly. */
-
-    if (!isNull(args) && isNull(CDR(args)) && isNull(TAG(args)) 
-          && CAR(args) != R_DotsSymbol && CAR(args) != R_MissingArg) {
-
-        SEXP arg, ans;
-        arg = evalv (CAR(args), env, 
-                     VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK);
-        if (isObject(arg)) {
-            WAIT_UNTIL_COMPUTED(arg);
-            args = CONS(arg, R_NilValue);
-        }
-        else {
-            PROTECT(arg);
-            ans = do_fast_math1 (call, op, arg, env, variant);
-            UNPROTECT(1);
-            R_Visible = TRUE;
-            return ans;
-        }
-    }
-    else {
-
-        args = evalListKeepMissing(args, env);
-
-        /* This seems like some sort of horrible kludge that can't possibly
-           be right in general (it ignores the argument names, and silently
-           discards arguments after the first two). */
-        if (CDR(args) != R_NilValue && CADR(args) == R_MissingArg) {
-#ifdef M_E
-	    double e = M_E;
-#else
-	    double e = exp(1.);
-#endif
-            PROTECT(args);
-	    args = list2(CAR(args), ScalarReal(e)); 
-            UNPROTECT(1);
-        }
-    }
-
-    SEXP res, call2;
-    PROTECT(call2 = LCONS (CAR(call), args));
-
-    int n = length(args);
-
-    if (! DispatchGroup("Math", call2, op, args, env, &res)) {
-	switch (n) {
-	case 1:
-            check1arg_x (args, call);
-	    if (isComplex(CAR(args)))
-		res = complex_math1(call, op, args, env);
-	    else
-		res = math1(CAR(args), 13, call, env, variant);
-	    break;
-	case 2:
-	{
-	    /* match argument names if supplied */
-            static const char * const ap[2] = { "x", "base" };
-	    PROTECT(args = matchArgs_strings (ap, 2, args, call));
-	    if (length(CADR(args)) == 0)
-		errorcall(call, _("invalid argument 'base' of length 0"));
-	    if (isComplex(CAR(args)) || isComplex(CADR(args)))
-		res = complex_math2(call, op, args, env);
-	    else
-		res = math2(CAR(args), CADR(args), logbase, call);
-            UNPROTECT(1); /* args */
-	    break;
-	}
-	default:
-	    error(_("%d arguments passed to 'log' which requires 1 or 2"), n);
-	}
-    }
-
-    UNPROTECT(1); /* call2 */
     R_Visible = TRUE;
     return res;
 }
@@ -3289,7 +3264,7 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 /* primitives: these are group generic and so need to eval args (possibly internally) */
 {"round",	do_Math2,	10001,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"signif",	do_Math2,	10004,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"log",		do_log,		10003,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"log",		do_math1,	10003,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"log10",	do_math1,	15,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"log2",	do_math1,	14,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"abs",		do_abs,		6,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},

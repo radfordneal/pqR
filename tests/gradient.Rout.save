@@ -54,7 +54,7 @@ No helper threads, task merging enabled, uncompressed pointers.
 > 
 > stopifnot (identical (track_gradient (x) gradient_of (log(x)),
 +                       eval (D (quote (log(x)), "x")) ))
-[1] FALSE
+[1] TRUE
 > 
 > stopifnot (identical (track_gradient (x) gradient_of (cos(x)),
 +                       eval (D (quote (cos(x)), "x")) ))
