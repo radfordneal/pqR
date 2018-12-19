@@ -283,7 +283,6 @@ static FUNTAB *FunTab_ptrs[] = {
    source files, with names having the form R_FastFunTab_srcfilename. */
 
 extern FASTFUNTAB 
-    R_FastFunTab_arithmetic[],
     R_FastFunTab_complex[],
     R_FastFunTab_eval[],
     R_FastFunTab_array[],
@@ -293,7 +292,6 @@ extern FASTFUNTAB
     R_FastFunTab_attrib[];
 
 static FASTFUNTAB *FastFunTab_ptrs[] = { 
-    R_FastFunTab_arithmetic, 
     R_FastFunTab_complex, 
     R_FastFunTab_eval,
     R_FastFunTab_array,

@@ -1975,140 +1975,6 @@ void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
     REAL(sy)[0] = (double) s;
 }
 
-#define T_math1 THRESHOLD_ADJUST(10)
-
-static SEXP math1(SEXP sa, unsigned opcode, SEXP call, SEXP env, int variant)
-                  /* Note:  sa may be on the scalar stack. */
-{
-    if (opcode == 10003) /* horrible kludge for log */
-        opcode = 13;
-    else if (opcode >= 44)
-        errorcall(call, _("unimplemented real function of 1 argument"));
-
-    if (!isNumeric(sa)) non_numeric_errorcall(call);
-
-    int local_assign = 0;
-    int n = LENGTH(sa);
-    SEXP sa0 = sa;
-
-    if (TYPEOF(sa) != REALSXP)
-        sa = coerceVector(sa, REALSXP); /* coercion can lose the object bit */
-    else if (VARIANT_KIND(variant)==VARIANT_LOCAL_ASSIGN1 && !NAMEDCNT_GT_1(sa)
-              && sa == findVarInFrame3 (env, CADR(call), 7))
-        local_assign = 1;
-
-    PROTECT(sa);
-
-    SEXP sy;
-
-    if (LENGTH(sa) == 1) { /* scalar operation, including on scalar stack. */
-
-        WAIT_UNTIL_COMPUTED(sa);
-
-        double opr = REAL(sa)[0];
-        double res;
-
-        if (ISNAN(opr))
-            res = opr;
-        else {
-            res = R_math1_func_table[opcode] (opr);
-            if (R_math1_err_table[opcode]>1 && ISNAN(res))
-                NaN_warningcall(call);
-        }
-
-        POP_IF_TOP_OF_STACK(sa0);
-
-        if (local_assign || NAMEDCNT_EQ_0(sa)) {
-            sy = sa;
-            *REAL(sy) = res;
-        }
-        else if (CAN_USE_SCALAR_STACK(variant) && NO_ATTRIBUTES_OK(variant,sa))
-            sy = PUSH_SCALAR_REAL(res);
-        else {
-            PROTECT(sy = ScalarReal(res));
-            maybe_dup_attributes (sy, sa, variant);
-            UNPROTECT(1);
-        }
-
-        UNPROTECT(1);
-    }
-
-    else { /* not scalar */
-
-        /* Note: need to protect sy below because some ops may produce a warning
-           and attributes may be duplicated. */
-
-        R_naflag = 0;
-
-        if (VARIANT_KIND(variant) == VARIANT_SUM) {
-
-            /* Just need the sum. */
-
-            PROTECT(sy = allocVector1REAL());
-            DO_NOW_OR_LATER1 (variant, 
-                        LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] <= 1,
-                        HELPERS_PIPE_IN1, task_sum_math1, opcode, sy, sa);
-        }
-
-        else {
-
-            PROTECT(sy = local_assign || NAMEDCNT_EQ_0(sa) 
-                           ? sa : allocVector(REALSXP, n));
-
-            if (helpers_not_multithreading_now || LENGTH(sa) < 2*T_math1
-                || R_math1_err_table[opcode] > 1) {
-
-                /* Use only one task. */
-
-                DO_NOW_OR_LATER1 (variant,
-                            LENGTH(sa) >= T_math1 
-                              && R_math1_err_table[opcode] <= 1,
-                            HELPERS_PIPE_IN01_OUT,
-                            task_math1, opcode, sy, sa);
-            }
-            else {
-
-                /* Use two tasks, computing second half and first half. */
-
-                helpers_do_task (HELPERS_PIPE_IN01_OUT, 
-                                 task_math1, opcode | (2<<8),
-                                 sy, sa, 0);
-
-                helpers_do_task (variant & VARIANT_PENDING_OK
-                                  ? HELPERS_PIPE_IN01_OUT
-                                  : HELPERS_PIPE_IN01_OUT | HELPERS_MASTER_NOW,
-                                 task_math1, opcode | (1<<8),
-                                 sy, sa, 0);
-            }
-
-            maybe_dup_attributes (sy, sa, variant);
-        }
-
-        if (R_naflag)
-            NaN_warningcall(call);
-        UNPROTECT(2);
-    }
-
-    R_variant_result = local_assign;  /* defer setting to just before return */
-
-    return sy;
-}
-
-static SEXP do_fast_math1(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
-{
-    if (isComplex(arg)) {
-        /* for the moment, keep the interface to complex_math1 the same */
-        SEXP tmp;
-        PROTECT(tmp = CONS(arg,R_NilValue));
-        WAIT_UNTIL_COMPUTED(arg);
-        tmp = complex_math1(call, op, tmp, env);
-        UNPROTECT(1);
-        return tmp;
-    }
-
-    return math1 (arg, PRIMVAL(op), call, env, variant);
-}
-
 #define ONE_SIMPLE_ARG(args) \
     ( !isNull(args) && isNull(CDR(args)) && isNull(TAG(args)) \
        && CAR(args) != R_DotsSymbol && CAR(args) != R_MissingArg \
@@ -2116,6 +1982,8 @@ static SEXP do_fast_math1(SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 
 static SEXP nonsimple_log(SEXP call, SEXP op, SEXP args, SEXP env, int variant);
 static SEXP math2(SEXP sa, SEXP sb, double (*f)(double, double), SEXP lcall);
+
+#define T_math1 THRESHOLD_ADJUST(10)
 
 SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env, 
                                 int variant)
@@ -2126,8 +1994,10 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
     else if (opcode >= 44)
         errorcall(call, _("unimplemented real function of 1 argument"));
 
-    int vrnt = VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK
-                                  | (variant & VARIANT_GRADIENT);
+    int vrnt = VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK;
+    if ((variant & VARIANT_GRADIENT) && R_math1_deriv_table[opcode])
+        vrnt |= VARIANT_GRADIENT;
+
     SEXP sa;
 
     if (ONE_SIMPLE_ARG(args)) {
@@ -2145,7 +2015,7 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
             return nonsimple_log (call, op, args, env, variant);
 
         PROTECT(args);
-        checkArity(op, args);
+        if (opcode != 5 /* trunc */) checkArity(op, args);
         check1arg_x (args, call);
         sa = CAR(args);
     }
@@ -2173,8 +2043,8 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
         }
         UNPROTECT(1);  /* nargs */
 
-        if (opcode == 14 || opcode == 15) {
-            /* log2 or log10 - try dispatching on log with base argument. */
+        if (opcode == 14 || opcode == 15) {  /* log2 or log10 */
+            /* try dispatching on log with base argument. */
             SEXP base = PRIMVAL(op) == 15 ? ScalarRealMaybeConst(10.0)
                                           : ScalarRealMaybeConst(2.0);
             SEXP basel = CONS (base, R_NilValue);
@@ -2372,24 +2242,6 @@ static SEXP nonsimple_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     return res;
 }
 
-
-/* Methods for trunc are allowed to have more than one arg */
-
-static SEXP do_fast_trunc (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
-{
-    return math1(arg, 5, call, env, variant);
-}
-
-SEXP do_trunc(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
-{
-    SEXP s;
-    if (DispatchGroup("Math", call, op, args, env, &s))
-	return s;
-
-    check1arg_x (args, call);
-
-    return do_fast_trunc (call, op, CAR(args), env, variant);
-}
 
 /* Note that abs is slightly different from the do_math1 set, both
    for integer/logical inputs and what it dispatches to for complex ones. 
@@ -3272,7 +3124,7 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"ceiling",	do_math1,	2,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"sqrt",	do_math1,	3,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"sign",	do_math1,	4,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"trunc",	do_trunc,	5,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"trunc",	do_math1,	5,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"exp",		do_math1,	10,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"expm1",	do_math1,	11,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -3423,13 +3275,4 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"qtukey",	do_math4,	12,   1000011,	4+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
-};
-
-/* Fast built-in functions in this file. See names.c for documentation */
-
-attribute_hidden FASTFUNTAB R_FastFunTab_arithmetic[] = {
-/*slow func	fast func,     code or -1   dsptch  variant */
-{ do_math1,	do_fast_math1,	-1,             1,  VARIANT_SCALAR_STACK_OK|VARIANT_PENDING_OK },
-{ do_trunc,	do_fast_trunc,	-1,		1,  VARIANT_SCALAR_STACK_OK|VARIANT_PENDING_OK },
-{ 0,		0,		0,		0,  0 }
 };
