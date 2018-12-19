@@ -147,35 +147,35 @@ attr(,"class")
 attr(,"class")
 [1] "fred"
 attr(,"gradient")
-[1] 0
+[1] 631.5904
 > print (with_gradient (a) log2(a))
 [1] -0.02118493
 attr(,"class")
 [1] "fred"
 attr(,"gradient")
-[1] 0
+[1] 631.8739
 > print (with_gradient (a) log(a))
 [1] 16
 attr(,"class")
 [1] "fred"
 attr(,"gradient")
-[1] 0
+[1] 0.03125
 > print (with_gradient (a) log10(a))
 [1] 4
 attr(,"class")
 [1] "fred"
 attr(,"gradient")
-[1] 0
+[1] 0.00390625
 > print (with_gradient (a) exp(a))
 [1] 2
 attr(,"class")
 [1] "fred"
 attr(,"gradient")
-[1] 0
+[1] 0.0009765625
 > print (with_gradient (a) sin(a))
 [1] -0.999208
 attr(,"class")
 [1] "fred"
 attr(,"gradient")
-[1] 0
+[1] -0.03979076
 > 
