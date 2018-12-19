@@ -580,8 +580,7 @@ static inline Rboolean equalS3Signature(const char *signature, const char *left,
 #define ARGUSED(x) LEVELS(x)
 
 /* This is a special .Internal */
-static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
-                                     int variant)
+static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     char buf[512], b[512], bb[512], tbuf[14];
     const char *sb, *sg, *sk;
@@ -676,8 +675,7 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
     }
     PROTECT(actuals);
 
-
-    /* we can't duplicate because it would force the promises */
+    /* We can't duplicate because it would force the promises */
     /* so we do our own duplication of the promargs */
 
     PROTECT(matchedarg = allocList(length(cptr->promargs)));
@@ -685,8 +683,6 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
 	 s = CDR(s), t = CDR(t)) {
 	SETCAR(t, CAR(s));
 	SET_TAG(t, TAG(s));
-    }
-    for (t = matchedarg; t != R_NilValue; t = CDR(t)) {
 	for (SEXP m = actuals; m != R_NilValue; m = CDR(m))
 	    if (CAR(m) == CAR(t))  {
 		if (CAR(m) == R_MissingArg) {
@@ -694,15 +690,15 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
 		    if (tmp == R_MissingArg) break;
 		}
 		SETCAR(t, mkPROMISE(TAG(m), cptr->cloenv));
+                if (TYPEOF(CAR(m)) == PROMSXP && STORE_GRAD(CAR(m)))
+                    SET_STORE_GRAD (CAR(t), 1);
 		break;
 	   }
     }
-    /*
-      Now see if there were any other arguments passed in
-      Currently we seem to only allow named args to change
-      or to be added, this is at variance with p. 470 of the
-      White Book
-    */
+
+    /* Now see if there were any other arguments passed in Currently
+       we seem to only allow named args to change or to be added, this
+       is at variance with p. 470 of the White Book */
 
     s = CADDR(args); /* this is ... and we need to see if it's bound */
     if (s == R_DotsSymbol) {
