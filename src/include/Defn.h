@@ -1013,9 +1013,6 @@ LibExtern SEXP R_fast_sub_replacement;    /* Replacement value, for subassign */
 
 #define R_gradient R_high_frequency_globals.gradient
 
-LibExtern SEXP R_gradient_internal[3]; /* Gradients of up to first 3 arguments
-                                          of an internal function, if enabled */
-
 /* Sequence specification that may be set with VARIANT_SEQ.  Upper 32
    bits is (signed) start of sequence, next 31 bits is length, low bit
    is 1 if from ..  (ie, 1D array). */
@@ -1292,6 +1289,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define evalList		Rf_evalList
 # define evalListKeepMissing	Rf_evalListKeepMissing
 # define evalListUnshared	Rf_evalListUnshared
+# define evalList_gradient	Rf_evalList_gradient
 # define evalList_v		Rf_evalList_v
 # define eval_unshared		Rf_eval_unshared
 # define factorsConform		Rf_factorsConform
@@ -1505,6 +1503,7 @@ int envlength(SEXP);
 SEXP evalList(SEXP, SEXP);
 SEXP evalListKeepMissing(SEXP, SEXP);
 SEXP evalListUnshared(SEXP, SEXP);
+SEXP evalList_gradient(SEXP, SEXP, int, int);
 SEXP evalList_v(SEXP, SEXP, int);
 SEXP eval_unshared(SEXP,SEXP,int);
 int factorsConform(SEXP, SEXP);

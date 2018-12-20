@@ -128,6 +128,7 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
 
     beginbuiltincontext (&cntxt, e);
 
+    R_variant_result = 0;
     R_Visible = TRUE;
     res = CALL_PRIMFUN(e, op, args, rho, variant);
 

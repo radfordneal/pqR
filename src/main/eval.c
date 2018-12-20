@@ -824,8 +824,10 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
 
         if (TYPE_ETC(fn) == SYMSXP)  /* symbol, and not ..., ..1, ..2, etc. */
             op = FINDFUN(fn,rho);
-        else
+        else {
             op = eval(fn,rho);
+            R_variant_result = 0;
+        }
 
         int type_etc = TYPE_ETC(op);
         SEXP args = CDR(e);
@@ -1129,6 +1131,7 @@ static SEXP attribute_noinline Rf_builtin_op_no_cntxt(SEXP op, SEXP e, SEXP rho,
 
   not_fast: 
 
+    R_variant_result = 0;
     R_Visible = TRUE;
     res = CALL_PRIMFUN(e, op, args, rho, variant);
 
@@ -2744,6 +2747,105 @@ SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
             INC_NAMEDCNT(CAR(tail));  /* OK when tail is R_NilValue */
             ev_el = EVALV(CAR(el),rho,varpend);
             ev = cons_with_tag (ev_el, R_NilValue, TAG(el));
+            if (head==R_NilValue)
+                head = ev;
+            else
+                SETCDR_MACRO(tail, ev);
+            tail = ev;
+            if (ev_el == R_MissingArg && isSymbol(CAR(el)))
+                SET_MISSING (ev, R_isMissing(CAR(el),rho));
+	}
+
+	el = CDR(el);
+
+    } while (el != R_NilValue);
+
+    for (el = head; CDR(el) != R_NilValue; el = CDR(el))
+        DEC_NAMEDCNT(CAR(el));
+
+    if (! (variant & VARIANT_PENDING_OK))
+        WAIT_UNTIL_ARGUMENTS_COMPUTED(head);
+
+    RETURN_SEXP_INSIDE_PROTECT (head);
+    END_PROTECT;
+
+} /* evalList_v */
+
+
+/* Version of evalList_v that also asks for gradients of first n>0 arguments
+   attaching them as attributes of the CONS cells holding the arguments. */
+
+SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
+{
+    /* Handle 0 or 1 arguments (not ...) specially, for speed. */
+
+    if (CDR(el) == R_NilValue) { /* Note that CDR(R_NilValue) == R_NilValue */
+        if (el == R_NilValue)
+            return R_NilValue;
+        if (CAR(el) != R_DotsSymbol) {
+            SEXP r = cons_with_tag (
+                       EVALV (CAR(el), rho, variant | VARIANT_GRADIENT), 
+                       R_NilValue, TAG(el));
+            if (R_variant_result & VARIANT_GRADIENT_FLAG)
+                SET_ATTRIB (r, R_gradient);
+            return r;
+        }
+    }
+
+    /* The general case (except for el == R_NilValue, handed above). */
+
+    int varpend = variant | VARIANT_PENDING_OK;
+
+    BEGIN_PROTECT3 (head, tail, h);
+    SEXP ev, ev_el;
+    int i = 0;
+
+    head = R_NilValue;
+    tail = R_NilValue;
+
+    do {  /* el won't be R_NilValue, so will loop at least once */
+
+	if (CAR(el) == R_DotsSymbol) {
+            /* If we have a ... symbol, we look to see what it is bound to.
+               If its binding is Null (i.e. zero length) or missing we just
+               ignore it and return the cdr with all its expressions evaluated.
+               If it is bound to a ... list of promises, we force all the 
+               promises and then splice the list of resulting values into
+               the return value. Anything else bound to a ... symbol is an 
+               error. */
+	    h = findVar(CAR(el), rho);
+	    if (TYPEOF(h) == DOTSXP) {
+		while (h != R_NilValue) {
+                    INC_NAMEDCNT(CAR(tail));  /* OK when tail is R_NilValue */
+                    ev_el = EVALV (CAR(h), rho, 
+                                   i<n ? varpend | VARIANT_GRADIENT : varpend);
+                    i += 1;
+                    ev = cons_with_tag (ev_el, R_NilValue, TAG(h));
+                    if (R_variant_result & VARIANT_GRADIENT_FLAG)
+                        SET_ATTRIB (ev, R_gradient);
+                    if (head==R_NilValue)
+                        head = ev;
+                    else
+                        SETCDR(tail, ev);
+                    tail = ev;
+                    if (CAR(ev) == R_MissingArg && isSymbol(CAR(h)))
+                        SET_MISSING (ev, R_isMissing(CAR(h),rho));
+		    h = CDR(h);
+		}
+	    }
+	    else if (h != R_NilValue && h != R_MissingArg)
+		dotdotdot_error();
+
+	} else {
+            if (CDR(el) == R_NilValue) 
+                varpend = variant;  /* don't defer pointlessly for last one */
+            INC_NAMEDCNT(CAR(tail));  /* OK when tail is R_NilValue */
+            ev_el = EVALV (CAR(el), rho, 
+                           i<n ? varpend | VARIANT_GRADIENT : varpend);
+            i += 1;
+            ev = cons_with_tag (ev_el, R_NilValue, TAG(el));
+            if (R_variant_result & VARIANT_GRADIENT_FLAG)
+                SET_ATTRIB (ev, R_gradient);
             if (head==R_NilValue)
                 head = ev;
             else

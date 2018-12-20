@@ -74,8 +74,8 @@
  *
  * eval:	= STUVWXYZ (8 digits) --- where e.g. '1' means '00000001'
  *              S=n (for internals only) ask for gradient for first n args,
- *                  if gradient of result is desired. Max for n is currently 3.
- *                  Gradients (or R_NoObject) stored in R_gradient_internal[]. 
+ *                  if gradient of result is desired.  Gradients are attached
+ *                  to CONS cells holding arguments by evalList_gradient.
  *              T=1 says do special processing for BUILTIN internal function
  *                  when called with VARIANT_WHOLE_BODY
  *              T=0 not what it says above
@@ -857,11 +857,15 @@ static SEXP do_internal (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 		  CHAR(PRINTNAME(fun)));
 
     args = CDR(s);
-    if (TYPEOF(ifun) == BUILTINSXP)
-        args = evalList_v (args, env, PRIMFUN_PENDING_OK(ifun) 
-                                       ? VARIANT_PENDING_OK : 0);
+    if (TYPEOF(ifun) == BUILTINSXP) {
+        int vrnt = PRIMFUN_PENDING_OK(ifun) ? VARIANT_PENDING_OK : 0;
+        args = PRIMGRADN(ifun)
+                 ? evalList_gradient (args, env, vrnt, PRIMGRADN(ifun))
+                 : evalList_v (args, env, vrnt);
+    }
     PROTECT(args);
 
+    R_variant_result = 0;
     R_Visible = TRUE;
 
     ans = CALL_PRIMFUN(s, ifun, args, env, variant);
