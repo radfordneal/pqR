@@ -1981,7 +1981,7 @@ void task_sum_math1 (helpers_op_t opcode, SEXP sy, SEXP sa, SEXP ignored)
        && CAR(args) != R_MissingUnder)
 
 static SEXP nonsimple_log(SEXP call, SEXP op, SEXP args, SEXP env, int variant);
-static SEXP math2(SEXP sa, SEXP sb, double (*f)(double, double), SEXP lcall);
+static SEXP do_math2(SEXP call, SEXP op, SEXP args, SEXP env);
 
 #define T_math1 THRESHOLD_ADJUST(10)
 
@@ -2236,7 +2236,7 @@ static SEXP nonsimple_log (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     if (isComplex(CAR(args)) || isComplex(CADR(args)))
         res = complex_math2(call, op, args, env);
     else
-        res = math2(CAR(args), CADR(args), logbase, call);
+        res = do_math2 (call, op, args, env);
 
     UNPROTECT(3); /* old args, call2, args */
     return res;
@@ -2391,199 +2391,145 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
 /* Mathematical Functions of Two Numeric Arguments (plus 0, 1, or 2 integers) */
 
-static void setup_Math2 
-    (SEXP *sa, SEXP *sb, SEXP *sy, int na, int nb, SEXP lcall)
+SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    if (!isNumeric(*sa) || !isNumeric(*sb))
-	non_numeric_errorcall(lcall);
+    SEXP res;
 
-    if (na == 0 || nb == 0) {
-	PROTECT(*sy = allocVector(REALSXP, 0));
-        /* for 0-length a we want the attributes of a, not those of b
-           as no recycling will occur */
-	if (na == 0) DUPLICATE_ATTRIB(*sy, *sa);
-	UNPROTECT(1);
-        return;
-    }
-
-    PROTECT(*sa = coerceVector (*sa, REALSXP));
-    PROTECT(*sb = coerceVector (*sb, REALSXP));
-    PROTECT(*sy = allocVector (REALSXP, na < nb ? nb : na));
-}
-
-#define DO_MATH2(y,a,b,n,na,nb,fncall) do { \
-    int naflag = 0; \
-    double ai, bi; \
-    mod_iterate (n, na, nb, ia, ib) { \
-        ai = a[ia]; \
-        bi = b[ib]; \
-        if (MAY_BE_NAN2(ai,bi)) { \
-            if (ISNA(ai) || ISNA(bi)) { \
-                y[i] = NA_REAL; \
-                continue; \
-            } \
-            if (ISNAN(ai) || ISNAN(bi)) { \
-                y[i] = R_NaN; \
-                continue; \
-            } \
-        } \
-        y[i] = fncall; \
-        if (ISNAN(y[i])) naflag = 1; \
-    } \
-    if (naflag) NaN_warning(); \
-    SEXP frm = n==na ? sa : sb; \
-    DUPLICATE_ATTRIB(sy, frm); \
-    UNPROTECT(3); \
-} while (0)
-
-
-static SEXP math2(SEXP sa, SEXP sb, double (*f)(double, double),
-		  SEXP lcall)
-{
-    double *a, *b, *y;
-    int n, na, nb;
-    SEXP sy;
-
-    na = LENGTH(sa); nb = LENGTH(sb);
-    setup_Math2 (&sa, &sb, &sy, na, nb, lcall);
-    if ((n = LENGTH(sy)) == 0) return sy;
-    a = REAL(sa); b = REAL(sb); y = REAL(sy);
-
-    DO_MATH2(y,a,b,n,na,nb, f(ai,bi));
-
-    return sy;
-} /* math2() */
-
-static SEXP math2_1(SEXP sa, SEXP sb, SEXP sI,
-		    double (*f)(double, double, int), SEXP lcall)
-{
-    double *a, *b, *y;
-    int n, na, nb;
-    SEXP sy;
-
-    na = LENGTH(sa); nb = LENGTH(sb);
-    setup_Math2 (&sa, &sb, &sy, na, nb, lcall);
-    if ((n = LENGTH(sy)) == 0) return sy;
-    a = REAL(sa); b = REAL(sb); y = REAL(sy);
-
-    int m_opt = asInteger(sI);
-
-    DO_MATH2(y,a,b,n,na,nb, f(ai,bi,m_opt));
-
-    return sy;
-} /* math2_1() */
-
-static SEXP math2_2(SEXP sa, SEXP sb, SEXP sI1, SEXP sI2,
-		    double (*f)(double, double, int, int), SEXP lcall)
-{
-    double *a, *b, *y;
-    int n, na, nb;
-    SEXP sy;
-
-    na = LENGTH(sa); nb = LENGTH(sb);
-    setup_Math2 (&sa, &sb, &sy, na, nb, lcall);
-    if ((n = LENGTH(sy)) == 0) return sy;
-    a = REAL(sa); b = REAL(sb); y = REAL(sy);
-
-    int i_1 = asInteger(sI1);
-    int i_2 = asInteger(sI2);
-
-    DO_MATH2(y,a,b,n,na,nb, f(ai,bi,i_1,i_2));
-
-    return sy;
-} /* math2_2() */
-
-static SEXP math2B(SEXP sa, SEXP sb, double (*f)(double, double, double *),
-		   SEXP lcall)
-{
-    double *a, *b, *y;
-    int n, na, nb;
-    SEXP sy;
-
-    na = LENGTH(sa); nb = LENGTH(sb);
-    setup_Math2 (&sa, &sb, &sy, na, nb, lcall);
-    if ((n = LENGTH(sy)) == 0) return sy;
-    a = REAL(sa); b = REAL(sb); y = REAL(sy);
-
-    /* allocate work array for BesselJ, BesselY large enough for all
-       arguments */
-
-    double amax, *work;
-    long nw;
-    int i;
-
-    amax = 0.0;
-    for (i = 0; i < nb; i++) {
-	double av = b[i] < 0 ? -b[i] : b[i];
-	if (av > amax) amax = av;
-    }
-    nw = 1 + (long)floor(amax);
-    work = (double *) R_alloc((size_t) nw, sizeof(double));
-
-    DO_MATH2(y,a,b,n,na,nb, f(ai,bi,work));
-
-    return sy;
-} /* math2B() */
-
-SEXP do_math2(SEXP call, SEXP op, SEXP args, SEXP env)
-{
     checkArity(op, args);
 
     if (isComplex(CAR(args)) || (PRIMVAL(op) == 0 && isComplex(CADR(args))))
 	return complex_math2(call, op, args, env);
 
-    SEXP a1 = CAR(args); args = CDR(args);
-    SEXP a2 = CAR(args); args = CDR(args);
-    SEXP a3 = CAR(args); args = CDR(args);  /* will be R_NilValue if absent */
-    SEXP a4 = CAR(args);                    /* ... ditto */
+    double (*fncall)();
 
     switch (PRIMVAL(op)) {
 
-    case  0: return math2(a1, a2, atan2, call);
-
-    case  2: return math2(a1, a2, lbeta, call);
-    case  3: return math2(a1, a2, beta, call);
-    case  4: return math2(a1, a2, lchoose, call);
-    case  5: return math2(a1, a2, choose, call);
-
-    case  6: return math2_1(a1, a2, a3, dchisq, call);
-    case  7: return math2_2(a1, a2, a3, a4, pchisq, call);
-    case  8: return math2_2(a1, a2, a3, a4, qchisq, call);
-
-    case  9: return math2_1(a1, a2, a3, dexp, call);
-    case 10: return math2_2(a1, a2, a3, a4, pexp, call);
-    case 11: return math2_2(a1, a2, a3, a4, qexp, call);
-
-    case 12: return math2_1(a1, a2, a3, dgeom, call);
-    case 13: return math2_2(a1, a2, a3, a4, pgeom, call);
-    case 14: return math2_2(a1, a2, a3, a4, qgeom, call);
-
-    case 15: return math2_1(a1, a2, a3, dpois, call);
-    case 16: return math2_2(a1, a2, a3, a4, ppois, call);
-    case 17: return math2_2(a1, a2, a3, a4, qpois, call);
-
-    case 18: return math2_1(a1, a2, a3, dt, call);
-    case 19: return math2_2(a1, a2, a3, a4, pt, call);
-    case 20: return math2_2(a1, a2, a3, a4, qt, call);
-
-    case 21: return math2_1(a1, a2, a3, dsignrank, call);
-    case 22: return math2_2(a1, a2, a3, a4, psignrank, call);
-    case 23: return math2_2(a1, a2, a3, a4, qsignrank, call);
-
-    case 24: return math2B(a1, a2, bessel_j_ex, call);
-    case 25: return math2B(a1, a2, bessel_y_ex, call);
-    case 26: return math2(a1, a2, psigamma, call);
+    case  1: fncall = atan2;
+             break;
+    case  2: fncall = lbeta;
+             break;
+    case  3: fncall = beta;
+             break;
+    case  4: fncall = lchoose;
+             break;
+    case  5: fncall = choose;
+             break;
+    case  6: fncall = dchisq;
+             break;
+    case  7: fncall = pchisq;
+             break;
+    case  8: fncall = qchisq;
+             break;
+    case  9: fncall = dexp;
+             break;
+    case 10: fncall = pexp;
+             break;
+    case 11: fncall = qexp;
+             break;
+    case 12: fncall = dgeom;
+             break;
+    case 13: fncall = pgeom;
+             break;
+    case 14: fncall = qgeom;
+             break;
+    case 15: fncall = dpois;
+             break;
+    case 16: fncall = ppois;
+             break;
+    case 17: fncall = qpois;
+             break;
+    case 18: fncall = dt;
+             break;
+    case 19: fncall = pt;
+             break;
+    case 20: fncall = qt;
+             break;
+    case 21: fncall = dsignrank;
+             break;
+    case 22: fncall = psignrank;
+             break;
+    case 23: fncall = qsignrank;
+             break;
+    case 24: fncall = bessel_j_ex;
+             break;
+    case 25: fncall = bessel_y_ex;
+             break;
+    case 26: fncall = psigamma;
+             break;
 
     default: 
-        /* Put 10001 and 10004 here so switch table won't be sparse. */
-        if (PRIMVAL(op) == 10001)
-            return math2(a1, a2, fround, call); /* round, src/nmath/fround.c */
-        if (PRIMVAL(op) == 10004)
-            return math2(a1, a2, fprec, call);  /* signif, src/nmath/fprec.c */
-
-	errorcall(call,
-		  _("unimplemented real function of %d numeric arguments"), 2);
+        /* Put 10001, 1003, and 10004 here so switch table won't be sparse. */
+        if (PRIMVAL(op)==10001)
+            fncall = fround; /* round, src/nmath/fround.c */
+        else if (PRIMVAL(op)==10003)
+            fncall = logbase;/* log with base */
+        else if (PRIMVAL(op)==10004)
+            fncall = fprec;  /* signif, src/nmath/fprec.c */
+        else
+            errorcall(call,
+              _("unimplemented real function of %d numeric arguments"), 2);
+        break;
     }
+
+    SEXP a1 = CAR(args); args = CDR(args);
+    SEXP a2 = CAR(args); args = CDR(args);
+
+    if (!isNumeric(a1) || !isNumeric(a2))
+        non_numeric_errorcall(call);
+
+    R_len_t n1 = LENGTH(a1);
+    R_len_t n2 = LENGTH(a2);
+
+    if (n1 == 0 || n2 == 0) {
+        PROTECT(res = allocVector(REALSXP, 0));
+        /* for 0-length a we want the attributes of a, not those of b
+           as no recycling will occur */
+        if (n1 == 0) DUPLICATE_ATTRIB(res, a1);
+        UNPROTECT(1);
+        return res;
+    }
+
+    PROTECT(a1 = coerceVector (a1, REALSXP));
+    PROTECT(a2 = coerceVector (a2, REALSXP));
+
+    PROTECT(res = allocVector (REALSXP, n1 < n2 ? n2 : n1));
+    DUPLICATE_ATTRIB (res, n1 >= n2 ? a1 : a2);
+
+    int i1 = 0, i2 = 0;
+    if (args != R_NilValue)
+        i1 = asInteger(CAR(args));
+    if (CDR(args) != R_NilValue)
+        i2 = asInteger(CADR(args));
+
+    int n = n1 > n2 ? n1 : n2;
+    int naflag = 0;
+
+    mod_iterate (n, n1, n2, j1, j2) {
+
+        double v1 = REAL(a1)[j1];
+	double v2 = REAL(a2)[j2];
+        if (MAY_BE_NAN2(v1,v2)) {
+            if (ISNA(v1) || ISNA(v2)) {
+                REAL(res)[i] = NA_REAL;
+                continue;
+            }
+            if (ISNAN(v1) || ISNAN(v2)) {
+		REAL(res)[i] = R_NaN;
+                continue;
+            }
+        }
+
+        REAL(res)[i] = args == R_NilValue ? fncall (v1, v2)
+                     : CDR(args) == R_NilValue ? fncall (v1, v2, i1)
+                     : fncall (v1, v2, i1, i2);
+
+	if (ISNAN(REAL(res)[i])) naflag = 1;
+    }
+
+    if (naflag) NaN_warning();
+
+    UNPROTECT(3);
+    return res;
 }
 
 
@@ -3152,7 +3098,7 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 
 /* Mathematical Functions of Two Numeric (+ 1-2 int) Variables */
 
-{"atan2",	do_math2,	0,  21000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"atan2",	do_math2,	1,  21000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"lbeta",	do_math2,	2,  21000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"beta",	do_math2,	3,  21000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
