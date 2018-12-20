@@ -2525,62 +2525,61 @@ static SEXP math2B(SEXP sa, SEXP sb, double (*f)(double, double, double *),
     return sy;
 } /* math2B() */
 
-#define Math2(A, FUN)	  math2(CAR(A), CADR(A), FUN, call)
-#define Math2_1(A, FUN)	math2_1(CAR(A), CADR(A), CADDR(A), FUN, call)
-#define Math2_2(A, FUN) math2_2(CAR(A), CADR(A), CADDR(A), CADDDR(A), FUN, call)
-#define Math2B(A, FUN)	  math2B(CAR(A), CADR(A), FUN, call)
-
 SEXP do_math2(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
 
-    if (isComplex(CAR(args)) ||
-	(PRIMVAL(op) == 0 && isComplex(CADR(args))))
+    if (isComplex(CAR(args)) || (PRIMVAL(op) == 0 && isComplex(CADR(args))))
 	return complex_math2(call, op, args, env);
+
+    SEXP a1 = CAR(args); args = CDR(args);
+    SEXP a2 = CAR(args); args = CDR(args);
+    SEXP a3 = CAR(args); args = CDR(args);  /* will be R_NilValue if absent */
+    SEXP a4 = CAR(args);                    /* ... ditto */
 
     switch (PRIMVAL(op)) {
 
-    case  0: return Math2(args, atan2);
+    case  0: return math2(a1, a2, atan2, call);
 
-    case  2: return Math2(args, lbeta);
-    case  3: return Math2(args, beta);
-    case  4: return Math2(args, lchoose);
-    case  5: return Math2(args, choose);
+    case  2: return math2(a1, a2, lbeta, call);
+    case  3: return math2(a1, a2, beta, call);
+    case  4: return math2(a1, a2, lchoose, call);
+    case  5: return math2(a1, a2, choose, call);
 
-    case  6: return Math2_1(args, dchisq);
-    case  7: return Math2_2(args, pchisq);
-    case  8: return Math2_2(args, qchisq);
+    case  6: return math2_1(a1, a2, a3, dchisq, call);
+    case  7: return math2_2(a1, a2, a3, a4, pchisq, call);
+    case  8: return math2_2(a1, a2, a3, a4, qchisq, call);
 
-    case  9: return Math2_1(args, dexp);
-    case 10: return Math2_2(args, pexp);
-    case 11: return Math2_2(args, qexp);
+    case  9: return math2_1(a1, a2, a3, dexp, call);
+    case 10: return math2_2(a1, a2, a3, a4, pexp, call);
+    case 11: return math2_2(a1, a2, a3, a4, qexp, call);
 
-    case 12: return Math2_1(args, dgeom);
-    case 13: return Math2_2(args, pgeom);
-    case 14: return Math2_2(args, qgeom);
+    case 12: return math2_1(a1, a2, a3, dgeom, call);
+    case 13: return math2_2(a1, a2, a3, a4, pgeom, call);
+    case 14: return math2_2(a1, a2, a3, a4, qgeom, call);
 
-    case 15: return Math2_1(args, dpois);
-    case 16: return Math2_2(args, ppois);
-    case 17: return Math2_2(args, qpois);
+    case 15: return math2_1(a1, a2, a3, dpois, call);
+    case 16: return math2_2(a1, a2, a3, a4, ppois, call);
+    case 17: return math2_2(a1, a2, a3, a4, qpois, call);
 
-    case 18: return Math2_1(args, dt);
-    case 19: return Math2_2(args, pt);
-    case 20: return Math2_2(args, qt);
+    case 18: return math2_1(a1, a2, a3, dt, call);
+    case 19: return math2_2(a1, a2, a3, a4, pt, call);
+    case 20: return math2_2(a1, a2, a3, a4, qt, call);
 
-    case 21: return Math2_1(args, dsignrank);
-    case 22: return Math2_2(args, psignrank);
-    case 23: return Math2_2(args, qsignrank);
+    case 21: return math2_1(a1, a2, a3, dsignrank, call);
+    case 22: return math2_2(a1, a2, a3, a4, psignrank, call);
+    case 23: return math2_2(a1, a2, a3, a4, qsignrank, call);
 
-    case 24: return Math2B(args, bessel_j_ex);
-    case 25: return Math2B(args, bessel_y_ex);
-    case 26: return Math2(args, psigamma);
+    case 24: return math2B(a1, a2, bessel_j_ex, call);
+    case 25: return math2B(a1, a2, bessel_y_ex, call);
+    case 26: return math2(a1, a2, psigamma, call);
 
     default: 
         /* Put 10001 and 10004 here so switch table won't be sparse. */
         if (PRIMVAL(op) == 10001)
-            return Math2(args, fround); /* round(), src/nmath/fround.c */
+            return math2(a1, a2, fround, call); /* round, src/nmath/fround.c */
         if (PRIMVAL(op) == 10004)
-            return Math2(args, fprec);  /* signif(), src/nmath/fprec.c */
+            return math2(a1, a2, fprec, call);  /* signif, src/nmath/fprec.c */
 
 	errorcall(call,
 		  _("unimplemented real function of %d numeric arguments"), 2);
@@ -3153,41 +3152,41 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 
 /* Mathematical Functions of Two Numeric (+ 1-2 int) Variables */
 
-{"atan2",	do_math2,	0,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"atan2",	do_math2,	0,  21000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"lbeta",	do_math2,	2,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"beta",	do_math2,	3,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"lchoose",	do_math2,	4,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"choose",	do_math2,	5,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"lbeta",	do_math2,	2,  21000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"beta",	do_math2,	3,  21000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"lchoose",	do_math2,	4,  21000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"choose",	do_math2,	5,  21000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dchisq",	do_math2,	6,   1000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pchisq",	do_math2,	7,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qchisq",	do_math2,	8,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dchisq",	do_math2,	6,  21000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pchisq",	do_math2,	7,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qchisq",	do_math2,	8,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dexp",	do_math2,	9,   1000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pexp",	do_math2,	10,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qexp",	do_math2,	11,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dexp",	do_math2,	9,  21000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pexp",	do_math2,	10,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qexp",	do_math2,	11,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dgeom",	do_math2,	12,   1000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pgeom",	do_math2,	13,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qgeom",	do_math2,	14,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dgeom",	do_math2,	12,  21000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pgeom",	do_math2,	13,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qgeom",	do_math2,	14,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dpois",	do_math2,	15,   1000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"ppois",	do_math2,	16,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qpois",	do_math2,	17,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dpois",	do_math2,	15,  21000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"ppois",	do_math2,	16,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qpois",	do_math2,	17,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dt",		do_math2,	18,   1000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pt",		do_math2,	19,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qt",		do_math2,	20,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dt",		do_math2,	18,  21000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pt",		do_math2,	19,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qt",		do_math2,	20,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dsignrank",	do_math2,	21,   1000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"psignrank",	do_math2,	22,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qsignrank",	do_math2,	23,   1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dsignrank",	do_math2,	21,  21000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"psignrank",	do_math2,	22,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qsignrank",	do_math2,	23,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"besselJ",	do_math2,	24,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"besselY",	do_math2,	25,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"besselJ",	do_math2,	24,  21000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"besselY",	do_math2,	25,  21000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"psigamma",	do_math2,	26,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"psigamma",	do_math2,	26,  21000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 
 /* Mathematical Functions of Three Numeric (+ 1-2 int) Variables */

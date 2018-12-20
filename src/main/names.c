@@ -72,7 +72,10 @@
  * offset:	the 'op' (offset pointer) above; used for C functions
  *		which deal with more than one R function...
  *
- * eval:	= TUVWXYZ (six digits) --- where e.g. '1' means '000001'
+ * eval:	= STUVWXYZ (8 digits) --- where e.g. '1' means '00000001'
+ *              S=n (for internals only) ask for gradient for first n args,
+ *                  if gradient of result is desired. Max for n is currently 3.
+ *                  Gradients (or R_NoObject) stored in R_gradient_internal[]. 
  *              T=1 says do special processing for BUILTIN internal function
  *                  when called with VARIANT_WHOLE_BODY
  *              T=0 not what it says above

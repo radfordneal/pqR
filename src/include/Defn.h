@@ -496,6 +496,8 @@ typedef struct {
         = (R_FunTab[setprim_value].eval/100000)&1; \
     setprim_ptr->primsxp.whole \
         = (R_FunTab[setprim_value].eval/1000000)&1; \
+    setprim_ptr->primsxp.gradn \
+        = (R_FunTab[setprim_value].eval/10000000)&3; \
 } while (0)
 
 #define PRIMOFFSET(x) \
@@ -529,6 +531,8 @@ typedef struct {
   (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.fast_sub)
 #define PRIMWHOLE(x) \
   (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.whole)
+#define PRIMGRADN(x) \
+  (((PRIMSEXP)UPTR_FROM_SEXP(x))->primsxp.gradn)
 #define PRIMFOREIGN(x) \
   (R_FunTab[PRIMOFFSET(x)].gram.kind==PP_FOREIGN)
 #define PRIMNAME(x) \
@@ -1009,6 +1013,8 @@ LibExtern SEXP R_fast_sub_replacement;    /* Replacement value, for subassign */
 
 #define R_gradient R_high_frequency_globals.gradient
 
+LibExtern SEXP R_gradient_internal[3]; /* Gradients of up to first 3 arguments
+                                          of an internal function, if enabled */
 
 /* Sequence specification that may be set with VARIANT_SEQ.  Upper 32
    bits is (signed) start of sequence, next 31 bits is length, low bit

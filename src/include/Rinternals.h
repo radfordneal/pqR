@@ -372,6 +372,7 @@ struct primsxp_struct {    /* table offset of this and other info is in gp  */
     unsigned int fast_sub:1;  /* subassign/subset fn that can use fast method*/
     unsigned int dsptch1:1;   /* might dispatch on 1st argument (only
                                  for when fast_cfun != NULL) */
+    unsigned int gradn:2;     /* # of internal args that might have gradient */
     unsigned int whole:1;     /* Do special processing for .Internal
                                  when VARIANT_WHOLE_BODY (BUILTIN only) */
 #if USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
