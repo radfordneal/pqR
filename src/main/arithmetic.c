@@ -2383,33 +2383,46 @@ static void Datan2 (double y, double x, double *dy, double *dx, double v)
 {
     double r2 = x*x + y*y;
 
-    if (r2 == 0)
-    { if (dy) *dy = NA_REAL;
-      if (dx) *dx = NA_REAL;
+    if (r2 == 0) {
+        if (dy) *dy = NA_REAL;
+        if (dx) *dx = NA_REAL;
     }
-    else
-    { if (dy) *dy = x / r2;
-      if (dx) *dx = -y / r2;
+    else {
+        if (dy) *dy = x / r2;
+        if (dx) *dx = -y / r2;
     }
 }
 
-static void Ddexp (double x, double scale, double *dx, double *dscale, double v,
-                   int give_log)
+static void Ddexp (double x, double scale, double *dx, double *dscale,
+                   double v, int give_log)
 {
-    if (x < 0)
-    { if (dx) *dx = 0;
-      if (dscale) *dscale = 0;
+    if (x < 0) {
+        if (dx) *dx = 0;
+        if (dscale) *dscale = 0;
     }
-    else if (give_log)
-    { if (dx) *dx = (-1.0) / scale;
-      if (dscale) *dscale = (x/scale - 1) / scale;
+    else if (give_log) {
+        if (dx) *dx = (-1.0) / scale;
+        if (dscale) *dscale = (x/scale - 1) / scale;
     }
-    else
-    { if (dx) *dx = -v / scale;
-      if (dscale) *dscale = v * (x/scale - 1) / scale;
+    else {
+        if (dx) *dx = -v / scale;
+        if (dscale) *dscale = v * (x/scale - 1) / scale;
     }
 }
 
+static void Ddgeom (double x, double p, double *dx /*ignored*/, double *dp,
+                    double v, int give_log)
+{
+    if (dp == 0) return;
+
+    if (x < 0 || p <= 0 || p >= 1)
+        *dp = 0;
+    else {
+        *dp = 1/p - x/(1-p);
+        if (!give_log) 
+            *dp *= v;
+    }
+}
 
 /* Mathematical Functions of Two Numeric Arguments (plus 0, 1, or 2 integers) */
 
@@ -2449,7 +2462,7 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
              break;
     case 11: fncall = qexp; Dcall = 0;
              break;
-    case 12: fncall = dgeom; Dcall = 0;
+    case 12: fncall = dgeom; Dcall = Ddgeom;
              break;
     case 13: fncall = pgeom; Dcall = 0;
              break;
@@ -3182,26 +3195,26 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"pexp",	do_math2,	10,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qexp",	do_math2,	11,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dgeom",	do_math2,	12,  21000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pgeom",	do_math2,	13,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qgeom",	do_math2,	14,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dgeom",	do_math2,	12,  51000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pgeom",	do_math2,	13,  51000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qgeom",	do_math2,	14,  01000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dpois",	do_math2,	15,  21000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"ppois",	do_math2,	16,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qpois",	do_math2,	17,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dpois",	do_math2,	15,  51000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"ppois",	do_math2,	16,  51000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qpois",	do_math2,	17,  01000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"dt",		do_math2,	18,  21000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
 {"pt",		do_math2,	19,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qt",		do_math2,	20,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dsignrank",	do_math2,	21,  21000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"psignrank",	do_math2,	22,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qsignrank",	do_math2,	23,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dsignrank",	do_math2,	21,  01000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"psignrank",	do_math2,	22,  01000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qsignrank",	do_math2,	23,  01000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"besselJ",	do_math2,	24,  21000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"besselY",	do_math2,	25,  21000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"besselJ",	do_math2,	24,  01000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"besselY",	do_math2,	25,  01000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"psigamma",	do_math2,	26,  21000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"psigamma",	do_math2,	26,  11000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 
 /* Mathematical Functions of Three Numeric (+ 1-2 int) Variables */

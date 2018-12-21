@@ -73,8 +73,12 @@
  *		which deal with more than one R function...
  *
  * eval:	= STUVWXYZ (8 digits) --- where e.g. '1' means '00000001'
- *              S=n (for internals only) ask for gradient for first n args,
- *                  if gradient of result is desired.  Gradients are attached
+ *              S   (for internals only) If S is 0, don't ask for for gradient
+ *                  of any arguments; otherwise, if S is 1, 2, 3, or 4, ask
+ *                  for gradient for first 1, 2, 3, or 4 arguments, and if
+ *                  s is 5, 6, or 7 don't ask for gradient of first argument,
+ *                  but do ask for following 1, 2, or 3 arguments.  Values for
+ *                  S of 8 or 9 are not currently used.  Gradients are attached 
  *                  to CONS cells holding arguments by evalList_gradient.
  *              T=1 says do special processing for BUILTIN internal function
  *                  when called with VARIANT_WHOLE_BODY

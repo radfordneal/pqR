@@ -89,7 +89,8 @@ print (with_gradient (a) sin(a))
 # Check consistency of results between with_gradient and numericDeriv.
 
 x <- 0.32739
-x1 <- 2.1047; x2 <- 1.9713
+x1 <- 0.89472; x2 <- 0.49718
+i1 <- 3
 
 bindgrads <- function (r1,r2) 
     cbind (rbind(r1,r2), rbind(attr(r1,"gradient"),attr(r2,"gradient")))
@@ -112,6 +113,11 @@ test2 <- function (fun,...) {
     ))
 }
 
+test2i <- function (fun,...) {
+    print (bindgrads (numericDeriv(quote(fun(i1,x2,...)),"x2"),
+                      with_gradient (x2) fun(i1,x2,...)))
+}
+
 test1(sin)
 
 test1(log)
@@ -124,3 +130,6 @@ test2(dexp)
 
 test2(dexp,log=TRUE)
 
+test2i(dgeom)
+
+test2i(dgeom,log=TRUE)

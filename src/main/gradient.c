@@ -40,8 +40,10 @@ static inline SEXP get_gradient (SEXP env)
     SEXP p;
 
     for (p = R_gradient; p != R_NilValue; p = CDR(p)) {
-        if (TAG(p) == env) 
+        if (TAG(p) == env) {
+            SET_NAMEDCNT_MAX(CAR(p));  /* may be able to be less drastic */
             return CAR(p);
+        }
     }
 
     return R_NilValue;
