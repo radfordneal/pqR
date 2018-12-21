@@ -1246,6 +1246,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 
 /*--- FUNCTIONS ------------------------------------------------------ */
 
+# define add_scaled_gradients	Rf_add_scaled_gradients
 # define allocCharsxp		Rf_allocCharsxp
 # define alloc_or_reuse		Rf_alloc_or_reuse
 # define apply_non_functon_error Rf_apply_non_function_error
@@ -1267,6 +1268,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define copyListMatrix		Rf_copyListMatrix
 # define copyMostAttribNoClass	Rf_copyMostAttribNoClass
 # define copyMostAttribNoTs	Rf_copyMostAttribNoTs
+# define copy_scaled_gradients	Rf_copy_scaled_gradients
 # define CustomPrintValue	Rf_CustomPrintValue
 # define DataFrameClass		Rf_DataFrameClass
 # define ddfindVar		Rf_ddfindVar
@@ -1468,6 +1470,8 @@ SEXP Rf_EnsureString(SEXP);
 
 /* Other Internally Used Functions */
 
+SEXP copy_scaled_gradients (SEXP, double);
+SEXP add_scaled_gradients (SEXP, SEXP, double);
 SEXP Rf_allocCharsxp(R_len_t);
 SEXP alloc_or_reuse (SEXP, SEXP, SEXPTYPE, int, int, int);
 SEXP Rf_append(SEXP, SEXP); /* apparently unused now */

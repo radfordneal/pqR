@@ -263,14 +263,13 @@
  R_wfopen
  Rconsolesetwidth
  Rf_AdobeSymbol2ucs2
- Rf_bcEval
- Rf_bytecodeExpr
  Rf_CheckFormals
  Rf_CoercionWarning
  Rf_ComplexFromInteger
  Rf_ComplexFromLogical
  Rf_ComplexFromReal
  Rf_ComplexFromString
+ Rf_copy_scaled_gradients
  Rf_CustomPrintValue
  Rf_DispatchAnyOrEval
  Rf_DispatchGroup
@@ -322,14 +321,17 @@
  Rf_StringFromLogical
  Rf_StringFromReal
  Rf_VectorIndex
+ Rf_add_scaled_gradients
  Rf_allocCharsxp
  Rf_apply_non_function_error
  Rf_arg_missing_error
  Rf_asLogicalNoNA_error
  Rf_asLogicalNoNA_warning
  Rf_attributes_dup
+ Rf_bcEval
  Rf_bd0
  Rf_builtin_op
+ Rf_bytecodeExpr
  Rf_char_hash
  Rf_char_hash_len
  Rf_char_hash_more

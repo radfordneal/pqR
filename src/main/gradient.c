@@ -47,7 +47,8 @@ static inline SEXP get_gradient (SEXP env)
     return R_NilValue;
 }
 
-/* Copy gradients excluding one for xenv from those in R_gradient. */
+/* Copy gradients excluding one for xenv from those in R_gradient, which
+   is protected for the duration of this function. */
 
 static inline SEXP copy_gradients (SEXP xenv)
 {
@@ -65,11 +66,32 @@ static inline SEXP copy_gradients (SEXP xenv)
     return q;
 }
 
-/* Add a set of gradients, multiplied by factor, to another set of gradients. */
+/* Copy scaled gradients from those in grad, which is protected here. */
 
-static inline SEXP add_grads (SEXP base, SEXP extra, SEXP factor)
+attribute_hidden SEXP copy_scaled_gradients (SEXP grad, double factor)
+{
+    SEXP p, q;
+
+    PROTECT(grad);
+
+    for (p = grad, q = R_NilValue; p != R_NilValue; p = CDR(p)) {
+        PROTECT(q);
+        q = cons_with_tag (ScalarReal(*REAL(CAR(p)) * factor), q, TAG(p));
+        UNPROTECT(1);
+    }
+
+    UNPROTECT(1);
+    return q;
+}
+
+/* Add a set of gradients, in extra, multiplied by factor, to another set 
+   of gradients, in base.  Protects its arguments. */
+
+attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
 {
     SEXP p, q, r;
+
+    PROTECT2(base,extra);
 
     r = R_NilValue;
     
@@ -79,7 +101,7 @@ static inline SEXP add_grads (SEXP base, SEXP extra, SEXP factor)
     for (p = base; p != R_NilValue; p = CDR(p)) {
         for (q = extra; q != R_NilValue; q = CDR(q)) {
             if (TAG(p) == TAG(q)) {
-                double d = *REAL(CAR(p)) + *REAL(CAR(q)) * *REAL(factor);
+                double d = *REAL(CAR(p)) + *REAL(CAR(q)) * factor;
                 PROTECT(r);
                 r = cons_with_tag (ScalarRealMaybeConst(d), r, TAG(p));
                 UNPROTECT(1);
@@ -98,13 +120,14 @@ static inline SEXP add_grads (SEXP base, SEXP extra, SEXP factor)
                 goto next_extra;
             }
         }
-        double d = *REAL(CAR(q)) * *REAL(factor);
+        double d = *REAL(CAR(q)) * factor;
         PROTECT(r);
         r = cons_with_tag (ScalarRealMaybeConst(d), r, TAG(q));
         UNPROTECT(1);
       next_extra: ;
     }
 
+    UNPROTECT(2);
     return r;
 }
 
@@ -163,7 +186,8 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         PROTECT(other_grads);
 
         if (val_grads != R_NilValue && result_grad != R_NilValue) {
-            other_grads = add_grads (other_grads, val_grads, result_grad);
+            other_grads = add_scaled_gradients (other_grads, val_grads, 
+                                                *REAL(result_grad));
         }
         if (other_grads != R_NilValue) {
             R_gradient = other_grads;
@@ -274,7 +298,8 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
                 if (TYPEOF(gval) != REALSXP || LENGTH(gval) != 1)
                     errorcall (call, 
                                _("computed value for gradient is invalid"));
-                resgrad = add_grads (resgrad, vargrad[vgi], gval);
+                resgrad = add_scaled_gradients (resgrad, vargrad[vgi], 
+                                                *REAL(gval));
                 UNPROTECT(2);  /* gval, old resgrad */
                 PROTECT(resgrad);
                 vgi += 1;

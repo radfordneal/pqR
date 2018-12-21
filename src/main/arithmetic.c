@@ -45,19 +45,6 @@
 
 /*** NOTE: do_arith itself is in eval.c, calling R_unary and R_binary here. ***/
 
-/* Copy scaled gradients from those in grad (which caller must protect). */
-
-static inline SEXP copy_scaled_gradients (SEXP grad, double f)
-{
-    SEXP p, q;
-
-    for (p = grad, q = R_NilValue; p != R_NilValue; p = CDR(p)) {
-        q = cons_with_tag (ScalarReal(*REAL(CAR(p)) * f), q, TAG(p));
-    }
-
-    return q;
-}
-
 static inline void maybe_dup_attributes (SEXP to, SEXP from, int variant)
 {
     if (to == from) {
@@ -2390,6 +2377,40 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 }
 
 
+/* Derivatives of math2 functions. */
+
+static void Datan2 (double y, double x, double *dy, double *dx, double v)
+{
+    double r2 = x*x + y*y;
+
+    if (r2 == 0)
+    { if (dy) *dy = NA_REAL;
+      if (dx) *dx = NA_REAL;
+    }
+    else
+    { if (dy) *dy = x / r2;
+      if (dx) *dx = -y / r2;
+    }
+}
+
+static void Ddexp (double x, double scale, double *dx, double *dscale, double v,
+                   int give_log)
+{
+    if (x < 0)
+    { if (dx) *dx = 0;
+      if (dscale) *dscale = 0;
+    }
+    else if (give_log)
+    { if (dx) *dx = (-1.0) / scale;
+      if (dscale) *dscale = (x/scale - 1) / scale;
+    }
+    else
+    { if (dx) *dx = -v / scale;
+      if (dscale) *dscale = v * (x/scale - 1) / scale;
+    }
+}
+
+
 /* Mathematical Functions of Two Numeric Arguments (plus 0, 1, or 2 integers) */
 
 SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
@@ -2401,11 +2422,12 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
     if (isComplex(CAR(args)) || (PRIMVAL(op) == 0 && isComplex(CADR(args))))
 	return complex_math2(call, op, args, env);
 
-    double (*fncall)(), (*Dcall)();
+    double (*fncall)();
+    void (*Dcall)();
 
     switch (PRIMVAL(op)) {
 
-    case  1: fncall = atan2; Dcall = 0;
+    case  1: fncall = atan2; Dcall = Datan2;
              break;
     case  2: fncall = lbeta; Dcall = 0;
              break;
@@ -2421,7 +2443,7 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
              break;
     case  8: fncall = qchisq; Dcall = 0;
              break;
-    case  9: fncall = dexp; Dcall = 0;
+    case  9: fncall = dexp; Dcall = Ddexp;
              break;
     case 10: fncall = pexp; Dcall = 0;
              break;
@@ -2546,6 +2568,31 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
                                       : fncall (v1, v2, i1, i2);
 
         if (ISNAN(rp[i])) naflag = 1;
+    }
+
+    if (n == 1 && Dcall != 0 && !ISNAN(rp[0])
+               && (g1 != R_NilValue || g2 != R_NilValue)) {
+
+        double grad1, grad2;
+        double *gp1 = g1 != R_NilValue ? &grad1 : 0;
+        double *gp2 = g2 != R_NilValue ? &grad2 : 0;
+
+        if (args == R_NilValue)
+            Dcall (ap1[0], ap2[0], gp1, gp2, rp[0]);
+        else if (CDR(args)==R_NilValue)
+            Dcall (ap1[0], ap2[0], gp1, gp2, rp[0], i1);
+        else
+            Dcall (ap1[0], ap2[0], gp1, gp2, rp[0], i1, i2);
+
+        if (g2 == R_NilValue)
+            R_gradient = copy_scaled_gradients (g1, grad1);
+        else if (g1 == R_NilValue)
+            R_gradient = copy_scaled_gradients (g2, grad2);
+        else
+            R_gradient = add_scaled_gradients 
+                          (copy_scaled_gradients (g1, grad1), g2, grad2);
+
+        R_variant_result = VARIANT_GRADIENT_FLAG;
     }
 
     if (naflag) NaN_warning();
