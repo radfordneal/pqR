@@ -696,7 +696,7 @@ SEXP attribute_hidden complex_math2(SEXP call, SEXP op, SEXP args, SEXP env)
     cm2_fun f;
 
     switch (PRIMVAL(op)) {
-    case 0: /* atan2 */
+    case 1: /* atan2 */
 	f = z_atan2; break;
     case 10001: /* round */
 	f = z_rround; break;

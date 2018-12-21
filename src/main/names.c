@@ -859,7 +859,7 @@ static SEXP do_internal (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     args = CDR(s);
     if (TYPEOF(ifun) == BUILTINSXP) {
         int vrnt = PRIMFUN_PENDING_OK(ifun) ? VARIANT_PENDING_OK : 0;
-        args = PRIMGRADN(ifun)
+        args = PRIMGRADN(ifun) && (variant & VARIANT_GRADIENT)
                  ? evalList_gradient (args, env, vrnt, PRIMGRADN(ifun))
                  : evalList_v (args, env, vrnt);
     }

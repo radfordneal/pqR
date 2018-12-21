@@ -2389,6 +2389,7 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     return s;
 }
 
+
 /* Mathematical Functions of Two Numeric Arguments (plus 0, 1, or 2 integers) */
 
 SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
@@ -2400,79 +2401,82 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
     if (isComplex(CAR(args)) || (PRIMVAL(op) == 0 && isComplex(CADR(args))))
 	return complex_math2(call, op, args, env);
 
-    double (*fncall)();
+    double (*fncall)(), (*Dcall)();
 
     switch (PRIMVAL(op)) {
 
-    case  1: fncall = atan2;
+    case  1: fncall = atan2; Dcall = 0;
              break;
-    case  2: fncall = lbeta;
+    case  2: fncall = lbeta; Dcall = 0;
              break;
-    case  3: fncall = beta;
+    case  3: fncall = beta; Dcall = 0;
              break;
-    case  4: fncall = lchoose;
+    case  4: fncall = lchoose; Dcall = 0;
              break;
-    case  5: fncall = choose;
+    case  5: fncall = choose; Dcall = 0;
              break;
-    case  6: fncall = dchisq;
+    case  6: fncall = dchisq; Dcall = 0;
              break;
-    case  7: fncall = pchisq;
+    case  7: fncall = pchisq; Dcall = 0;
              break;
-    case  8: fncall = qchisq;
+    case  8: fncall = qchisq; Dcall = 0;
              break;
-    case  9: fncall = dexp;
+    case  9: fncall = dexp; Dcall = 0;
              break;
-    case 10: fncall = pexp;
+    case 10: fncall = pexp; Dcall = 0;
              break;
-    case 11: fncall = qexp;
+    case 11: fncall = qexp; Dcall = 0;
              break;
-    case 12: fncall = dgeom;
+    case 12: fncall = dgeom; Dcall = 0;
              break;
-    case 13: fncall = pgeom;
+    case 13: fncall = pgeom; Dcall = 0;
              break;
-    case 14: fncall = qgeom;
+    case 14: fncall = qgeom; Dcall = 0;
              break;
-    case 15: fncall = dpois;
+    case 15: fncall = dpois; Dcall = 0;
              break;
-    case 16: fncall = ppois;
+    case 16: fncall = ppois; Dcall = 0;
              break;
-    case 17: fncall = qpois;
+    case 17: fncall = qpois; Dcall = 0;
              break;
-    case 18: fncall = dt;
+    case 18: fncall = dt; Dcall = 0;
              break;
-    case 19: fncall = pt;
+    case 19: fncall = pt; Dcall = 0;
              break;
-    case 20: fncall = qt;
+    case 20: fncall = qt; Dcall = 0;
              break;
-    case 21: fncall = dsignrank;
+    case 21: fncall = dsignrank; Dcall = 0;
              break;
-    case 22: fncall = psignrank;
+    case 22: fncall = psignrank; Dcall = 0;
              break;
-    case 23: fncall = qsignrank;
+    case 23: fncall = qsignrank; Dcall = 0;
              break;
-    case 24: fncall = bessel_j_ex;
+    case 24: fncall = bessel_j_ex; Dcall = 0;
              break;
-    case 25: fncall = bessel_y_ex;
+    case 25: fncall = bessel_y_ex; Dcall = 0;
              break;
-    case 26: fncall = psigamma;
+    case 26: fncall = psigamma; Dcall = 0;
              break;
 
     default: 
         /* Put 10001, 1003, and 10004 here so switch table won't be sparse. */
-        if (PRIMVAL(op)==10001)
-            fncall = fround; /* round, src/nmath/fround.c */
-        else if (PRIMVAL(op)==10003)
-            fncall = logbase;/* log with base */
-        else if (PRIMVAL(op)==10004)
-            fncall = fprec;  /* signif, src/nmath/fprec.c */
+        if (PRIMVAL(op)==10001) {
+            fncall = fround; Dcall = 0; /* round, src/nmath/fround.c */
+        }
+        else if (PRIMVAL(op)==10003) {
+            fncall = logbase; Dcall = 0;/* log with base */
+        }
+        else if (PRIMVAL(op)==10004) {
+            fncall = fprec; Dcall = 0;  /* signif, src/nmath/fprec.c */
+        }
         else
             errorcall(call,
               _("unimplemented real function of %d numeric arguments"), 2);
         break;
     }
 
-    SEXP a1 = CAR(args); args = CDR(args);
-    SEXP a2 = CAR(args); args = CDR(args);
+    SEXP a1 = CAR(args); SEXP g1 = ATTRIB(args); args = CDR(args);
+    SEXP a2 = CAR(args); SEXP g2 = ATTRIB(args); args = CDR(args);
 
     if (!isNumeric(a1) || !isNumeric(a2))
         non_numeric_errorcall(call);
@@ -2501,29 +2505,47 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
     if (CDR(args) != R_NilValue)
         i2 = asInteger(CADR(args));
 
+    double *ap1 = REAL(a1), *ap2 = REAL(a2), *rp = REAL(res);
     int n = n1 > n2 ? n1 : n2;
     int naflag = 0;
 
+    /* Allocate work array for BesselJ & BesselY big enough for all arguments */
+
+    double *work = 0;
+    if (fncall == bessel_j_ex || fncall == bessel_y_ex) {
+        double amax;
+        long nw;
+        int i;
+        amax = 0.0;
+        for (i = 0; i < n2; i++) {
+            double av = ap2[i] < 0 ? -ap2[i] : ap2[i];
+            if (av > amax) amax = av;
+        }
+        nw = 1 + (long)floor(amax);
+        work = (double *) R_alloc((size_t) nw, sizeof(double));
+    }
+
     mod_iterate (n, n1, n2, j1, j2) {
 
-        double v1 = REAL(a1)[j1];
-	double v2 = REAL(a2)[j2];
+        double v1 = ap1[j1];
+        double v2 = ap2[j2];
         if (MAY_BE_NAN2(v1,v2)) {
             if (ISNA(v1) || ISNA(v2)) {
-                REAL(res)[i] = NA_REAL;
+                rp[i] = NA_REAL;
                 continue;
             }
             if (ISNAN(v1) || ISNAN(v2)) {
-		REAL(res)[i] = R_NaN;
+                rp[i] = R_NaN;
                 continue;
             }
         }
 
-        REAL(res)[i] = args == R_NilValue ? fncall (v1, v2)
-                     : CDR(args) == R_NilValue ? fncall (v1, v2, i1)
-                     : fncall (v1, v2, i1, i2);
+        rp[i] = work ? fncall (v1, v2, work)
+              : args == R_NilValue ? fncall (v1, v2)
+              : CDR(args)==R_NilValue ? fncall (v1, v2, i1)
+                                      : fncall (v1, v2, i1, i2);
 
-	if (ISNAN(REAL(res)[i])) naflag = 1;
+        if (ISNAN(rp[i])) naflag = 1;
     }
 
     if (naflag) NaN_warning();
