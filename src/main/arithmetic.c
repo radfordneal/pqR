@@ -1668,7 +1668,7 @@ SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
 
     R_variant_result = local_assign;  /* do at end, just in case */
 
-    if (grad1 != R_NilValue && n == 1) && !ISNAN(*REAL(ans))) {
+    if (grad1 != R_NilValue && n == 1 && !ISNAN(*REAL(ans))) {
         double d = opcode == MINUSOP ? -1 : 1;
         R_gradient = copy_scaled_gradients(grad1,d);
         R_variant_result = VARIANT_GRADIENT_FLAG;
