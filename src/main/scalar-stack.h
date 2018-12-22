@@ -55,10 +55,24 @@
      ((SEXP)(((VECTOR_SEXPREC_C*)R_scalar_stack)-(n)))
 #endif
 
-/* Test if object is on the scalar stack (set up in const-objs.c). */
+/* Test if object is on the scalar stack (set up in const-objs.c).  Relies on
+   segments for scalar stack being consecutive, starting with an index that
+   is a multiple of 4. */
 
+#if (SCALAR_STACK_SIZE*SGGC_SCALAR_CHUNKS) / SGGC_CHUNKS_IN_SMALL_SEGMENT == 1
 #define ON_SCALAR_STACK(x) \
   (SGGC_SEGMENT_INDEX(CPTR_FROM_SEXP(x)) == R_SGGC_SCALAR_STACK_INDEX)
+#endif
+
+#if (SCALAR_STACK_SIZE*SGGC_SCALAR_CHUNKS) / SGGC_CHUNKS_IN_SMALL_SEGMENT == 2
+#define ON_SCALAR_STACK(x) \
+  (SGGC_SEGMENT_INDEX(CPTR_FROM_SEXP(x)) >> 1 == R_SGGC_SCALAR_STACK_INDEX >> 1)
+#endif
+
+#if (SCALAR_STACK_SIZE*SGGC_SCALAR_CHUNKS) / SGGC_CHUNKS_IN_SMALL_SEGMENT == 4
+#define ON_SCALAR_STACK(x) \
+  (SGGC_SEGMENT_INDEX(CPTR_FROM_SEXP(x)) >> 2 == R_SGGC_SCALAR_STACK_INDEX >> 2)
+#endif
 
 /* See if a value can be put on the scalar stack, based on variant, and on
    whether there is space. */

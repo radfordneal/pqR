@@ -42,6 +42,11 @@
   \item The \code{sample} function has been sped up for some cases.
   \item Common cases of \code{UseMethod} have been sped up.
   }}
+  \subsection{BUG FIXES}{
+  \itemize{
+  \item Fixed a bug involving the "scalar stack" that could affect evaluation 
+        of arithmetic operations when deep recursion has occurred.
+  }}
 }
 
 
