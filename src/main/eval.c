@@ -41,7 +41,9 @@
 #include <helpers/helpers-app.h>
 
 
-#define SCALAR_STACK_DEBUG 1
+#ifndef SCALAR_STACK_DEBUG    /* can be overridden by compiler option */
+#define SCALAR_STACK_DEBUG 0
+#endif
 
 
 attribute_hidden void SrcrefPrompt(const char * prefix, SEXP srcref)

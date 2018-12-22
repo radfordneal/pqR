@@ -1566,10 +1566,9 @@ struct R_local_protect {
     } while (0)
 
 
-/* Segment indexes for constant segments.  They start at 0 or 1 depending
-   on whether SGGC_NO_OBJECT_ZERO is defined (1) or not (0). */
+/* Segment indexes for constant segments.  They start at 1, since 
+   SGGC_NO_OBJECT_ZERO is defined. */
 
-#ifdef SGGC_NO_OBJECT_ZERO
 #define R_SGGC_NIL_INDEX 1
 #define R_SGGC_ENV_INDEX 2
 #define R_SGGC_SYM_INDEX 3
@@ -1578,19 +1577,9 @@ struct R_local_protect {
 #define R_SGGC_CHAR_INDEX 6     /* also uses 7, 8, and 9 */
 #define R_SGGC_STRING_INDEX 10  /* also uses 11, 12, and 13 */
 #define R_SGGC_LIST1_INDEX 14
-#define R_SGGC_SCALAR_STACK_INDEX 15  /* and possibly subsequent segments */
-#else
-#define R_SGGC_NIL_INDEX 0
-#define R_SGGC_ENV_INDEX 1
-#define R_SGGC_SYM_INDEX 2
-#define R_SGGC_INT_INDEX 3
-#define R_SGGC_MISC_INDEX 4
-#define R_SGGC_CHAR_INDEX 5     /* also uses 6, 7, and 8 */
-#define R_SGGC_STRING_INDEX 9   /* also uses 10, 11, and 12 */
-#define R_SGGC_LIST1_INDEX 13
-#define R_SGGC_SCALAR_STACK_INDEX 14  /* and possibly subsequent segments */
-#endif
-
+#define R_SGGC_PADDING_INDEX 15 /* unused, here so next will be multiple of 4 */
+#define R_SGGC_SCALAR_STACK_INDEX 16  /* and possibly subsequent segments,
+                                         must be a multiple of 4 */
 
 /* R_EmptyEnv - an empty environment at the root of the environment tree */
 
