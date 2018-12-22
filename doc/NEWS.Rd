@@ -18,6 +18,12 @@
         This is done by using the "gcc" clang alias when compiling one
         small glue routine (so this must exist).
   }}
+
+  \subsection{BUG FIXES}{
+  \itemize{
+  \item Fixed a bug involving the "scalar stack" that could affect evaluation 
+        of arithmetic operations when deep recursion has occurred.
+  }}
 }
 
 

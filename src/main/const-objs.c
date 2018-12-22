@@ -888,12 +888,31 @@ void Rf_constant_init(void)
 
     if (SGGC_SEGMENT_INDEX(p) != R_SGGC_LIST1_INDEX) abort();
 
+    /*** Padding, so next will have index that is a multiple of 4.  Pads
+         by just making another version of NULL. */
+
+    p = sggc_constant (R_type_to_sggc_type[NILSXP],
+                       R_type_to_sggc_type[NILSXP]+SGGC_N_TYPES, 
+                       1, (char *) &R_NilValue_const
+#if USE_COMPRESSED_POINTERS
+                       , (char *) sggc_length0, (char *) nilattrib
+#elif USE_AUX_FOR_ATTRIB
+                       , (char *) nilattrib
+#endif
+                      );
+
+    if (SGGC_SEGMENT_INDEX(p) != R_SGGC_PADDING_INDEX) abort();
+
     /*** Scalar stack space.  Uses same segments for integers and reals. ***/
 
-    /* Assumes SGGC_SCALAR_CHUNKS is a power of two. */
+    /* Assumes SGGC_SCALAR_CHUNKS is a power of two.  Also assumes that
+       SGGC_SCALAR_STACK_INDEX is a multiple of 4 (which might increase
+       to a higher power of two if the stack is made bigger), so that
+       ON_SCALAR_STACK can be done efficiently. */
 
     if (R_type_to_sggc_type[INTSXP] != R_type_to_sggc_type[REALSXP]) abort();
     if ((SGGC_SCALAR_CHUNKS & (SGGC_SCALAR_CHUNKS-1)) != 0) abort();
+    if ((R_SGGC_SCALAR_STACK_INDEX & 3) != 0) abort();
 
     for (int i = 0; 
          i < SCALAR_STACK_SIZE; 
@@ -910,7 +929,6 @@ void Rf_constant_init(void)
                           );
         if (i == 0 && SGGC_SEGMENT_INDEX(p)!=R_SGGC_SCALAR_STACK_INDEX) abort();
     }
-
 
 }
 
