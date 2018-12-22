@@ -128,12 +128,12 @@ attr(a,"gradient")               # should be cos(3)
 
 x <- 3
 a <- with_gradient (x) { r <- sin(x); r^2 }
-attr(a,"gradient")               # should be 2*cos(3)
+attr(a,"gradient")               # should be 2*sin(3)*cos(3)
 
 sqr <- function (y) y^2
 x <- 3
 a <- with_gradient (x) { r <- sin(x); sqr(r) }
-attr(a,"gradient")               # should also be 2*cos(3)
+attr(a,"gradient")               # should also be 2*sin(3)*cos(3)
 
 funny <- function (x,y) {  # has a discontinuity
     q <- no_gradient(2*x)    # gradient of 2*x won't be tracked

@@ -1520,9 +1520,9 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
     }
 
     R_variant_result = local_assign1 | local_assign2;
+    double aval1 = *REAL(ans);
 
-    if (n == 1 && (grad1 != R_NilValue || grad2 != R_NilValue)
-               && !ISNAN(*REAL(ans))) {
+    if (n==1 && (grad1 != R_NilValue || grad2 != R_NilValue) && !ISNAN(aval1)) {
         switch (opcode) {
         case PLUSOP: 
             if (grad1 == R_NilValue)
@@ -1566,6 +1566,17 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                 R_gradient = add_scaled_gradients (
                                copy_scaled_gradients (grad1, 1/yval1),
                                grad2, -xval1/(yval1*yval1));
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            break;
+        case POWOP: ;
+            SEXP g = R_NilValue;
+            if (aval1 != 0) {
+                if (grad1 != R_NilValue)
+                    g = copy_scaled_gradients (grad1, aval1*yval1/xval1);
+                if (grad2 != R_NilValue && xval1 > 0)
+                    g = add_scaled_gradients (g, grad2, aval1*log(xval1));
+            }
+            R_gradient = g;
             R_variant_result = VARIANT_GRADIENT_FLAG;
             break;
         }

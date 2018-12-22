@@ -8,97 +8,106 @@
 x <- 0.32739
 
 print (identical (track_gradient (x) gradient_of (sqrt(x)),
-                      eval (D (quote (sqrt(x)), "x")) ))
+                  eval (D (quote (sqrt(x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (exp(x)),
-                      eval (D (quote (exp(x)), "x")) ))
+                  eval (D (quote (exp(x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (expm1(x)),
-                      eval (D (quote (expm1(x)), "x")) ))
+                  eval (D (quote (expm1(x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (log1p(x)),
-                      eval (D (quote (log1p(x)), "x")) ))
+                  eval (D (quote (log1p(x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (log(x)),
-                      eval (D (quote (log(x)), "x")) ))
+                  eval (D (quote (log(x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (cos(x)),
-                      eval (D (quote (cos(x)), "x")) ))
+                  eval (D (quote (cos(x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (sin(x)),
-                      eval (D (quote (sin(x)), "x")) ))
+                  eval (D (quote (sin(x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (tan(x)),
-                      eval (D (quote (tan(x)), "x")) ))
+                  eval (D (quote (tan(x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (acos(x)),
-                      eval (D (quote (acos(x)), "x")) ))
+                  eval (D (quote (acos(x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (asin(x)),
-                      eval (D (quote (asin(x)), "x")) ))
+                  eval (D (quote (asin(x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (cosh(x)),
-                      eval (D (quote (cosh(x)), "x")) ))
+                  eval (D (quote (cosh(x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (sinh(x)),
-                      eval (D (quote (sinh(x)), "x")) ))
+                  eval (D (quote (sinh(x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (tanh(x)),
-                      eval (D (quote (tanh(x)), "x")) ))
+                  eval (D (quote (tanh(x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (lgamma(x)),
-                      eval (D (quote (lgamma(x)), "x")) ))
+                  eval (D (quote (lgamma(x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (gamma(x)),
-                      eval (D (quote (gamma(x)), "x")) ))
+                  eval (D (quote (gamma(x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (digamma(x)),
-                      eval (D (quote (digamma(x)), "x")) ))
+                  eval (D (quote (digamma(x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (trigamma(x)),
-                      eval (D (quote (trigamma (x)), "x")) ))
+                  eval (D (quote (trigamma (x)), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (+x),
-                      eval (D (quote (+x), "x")) ))
+                  eval (D (quote (+x), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (-x),
-                      eval (D (quote (-x), "x")) ))
+                  eval (D (quote (-x), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (3.1+x),
-                      eval (D (quote (3.1+x), "x")) ))
+                  eval (D (quote (3.1+x), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (3.1-x),
-                      eval (D (quote (3.1-x), "x")) ))
+                  eval (D (quote (3.1-x), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (3.1*x),
-                      eval (D (quote (3.1*x), "x")) ))
+                  eval (D (quote (3.1*x), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (3.1/x),
-                      eval (D (quote (3.1/x), "x")) ))
+                  eval (D (quote (3.1/x), "x")) ))
+
+print (identical (track_gradient (x) gradient_of (3.1^x),
+                  eval (D (quote (3.1^x), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (x+3.1),
-                      eval (D (quote (x+3.1), "x")) ))
+                  eval (D (quote (x+3.1), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (x-3.1),
-                      eval (D (quote (x-3.1), "x")) ))
+                  eval (D (quote (x-3.1), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (x*3.1),
-                      eval (D (quote (x*3.1), "x")) ))
+                  eval (D (quote (x*3.1), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (x/3.1),
-                      eval (D (quote (x/3.1), "x")) ))
+                  eval (D (quote (x/3.1), "x")) ))
+
+print (identical (track_gradient (x) gradient_of (x^3.1),
+                  eval (D (quote (x^3.1), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (x+x),
-                      eval (D (quote (x+x), "x")) ))
+                  eval (D (quote (x+x), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (x-x),
-                      eval (D (quote (x-x), "x")) ))
+                  eval (D (quote (x-x), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (x*x),
-                      eval (D (quote (x*x), "x")) ))
+                  eval (D (quote (x*x), "x")) ))
 
 print (identical (track_gradient (x) gradient_of (x/x),
-                      eval (D (quote (x/x), "x")) ))
+                  eval (D (quote (x/x), "x")) ))
+
+print (identical (round (track_gradient (x) gradient_of (x^x), 14),
+                  round (eval (D (quote (x^x), "x")), 14) ))
 
 
 # Check gradient computations passing through mathematical function dispatch.
