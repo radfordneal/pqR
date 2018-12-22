@@ -3241,22 +3241,22 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 
 {"dgeom",	do_math2,	12,  51000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
 {"pgeom",	do_math2,	13,  51000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qgeom",	do_math2,	14,  01000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qgeom",	do_math2,	14,  1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"dpois",	do_math2,	15,  51000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
 {"ppois",	do_math2,	16,  51000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qpois",	do_math2,	17,  01000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qpois",	do_math2,	17,  1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"dt",		do_math2,	18,  21000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
 {"pt",		do_math2,	19,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qt",		do_math2,	20,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dsignrank",	do_math2,	21,  01000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"psignrank",	do_math2,	22,  01000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qsignrank",	do_math2,	23,  01000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dsignrank",	do_math2,	21,  1000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"psignrank",	do_math2,	22,  1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qsignrank",	do_math2,	23,  1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"besselJ",	do_math2,	24,  01000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"besselY",	do_math2,	25,  01000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"besselJ",	do_math2,	24,  1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"besselY",	do_math2,	25,  1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"psigamma",	do_math2,	26,  11000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
