@@ -41,7 +41,7 @@
 #include <helpers/helpers-app.h>
 
 
-#define SCALAR_STACK_DEBUG 0
+#define SCALAR_STACK_DEBUG 1
 
 
 attribute_hidden void SrcrefPrompt(const char * prefix, SEXP srcref)
@@ -3714,7 +3714,7 @@ static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
     y = CADR(args);
 
     /* Evaluate by the general procedure if ... present, or more than
-       two arguments, not trying to put arguments on the scalar stack.
+       two arguments, not trying to put arguments on the scalar stack. */
 
     if (x==R_DotsSymbol || y==R_DotsSymbol || CDDR(args)!=R_NilValue) {
         argsevald = evalList (args, env);
@@ -4444,7 +4444,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     int opcode = PRIMVAL(op);
 
     SEXP argsevald, ans, arg1, arg2, grad1, grad2;
-    SEXP sv_scalar_stack;
+    SEXP sv_scalar_stack = 0;
     int obj;
 
     if (variant & VARIANT_GRADIENT) {
