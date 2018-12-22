@@ -1441,7 +1441,11 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
 
     /* Do the actual operation. */
 
+    double xval1, yval1;
+
     if (n!=0) {
+
+        xval1 = *REAL(x), yval1 = *REAL(y);  /* may be needed for gradient */
 
         threshold = T_arithmetic;
         if (TYPEOF(ans) == CPLXSXP)
@@ -1540,6 +1544,28 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                 R_gradient = add_scaled_gradients (
                                copy_scaled_gradients (grad1, 1.0),
                                grad2, -1.0);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            break;
+        case TIMESOP: 
+            if (grad1 == R_NilValue)
+                R_gradient = copy_scaled_gradients (grad2, xval1);
+            else if (grad2 == R_NilValue)
+                R_gradient = copy_scaled_gradients (grad1, yval1);
+            else
+                R_gradient = add_scaled_gradients (
+                               copy_scaled_gradients (grad1, yval1),
+                               grad2, xval1);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            break;
+        case DIVOP: 
+            if (grad1 == R_NilValue)
+                R_gradient = copy_scaled_gradients(grad2, -xval1/(yval1*yval1));
+            else if (grad2 == R_NilValue)
+                R_gradient = copy_scaled_gradients (grad1, 1/yval1);
+            else
+                R_gradient = add_scaled_gradients (
+                               copy_scaled_gradients (grad1, 1/yval1),
+                               grad2, -xval1/(yval1*yval1));
             R_variant_result = VARIANT_GRADIENT_FLAG;
             break;
         }

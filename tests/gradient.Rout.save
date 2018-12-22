@@ -30,78 +30,132 @@ No helper threads, task merging enabled, uncompressed pointers.
 > # Added for pqR, 2018 Radford M. Neal.
 > 
 > 
-> # Check consistency of simple math derivatives with 'D'
+> # Check consistency of simple math derivatives using track_gradient with 'D'
 > 
 > x <- 0.32739
 > 
-> stopifnot <- print
-> 
-> stopifnot (identical (track_gradient (x) gradient_of (sqrt(x)),
+> print (identical (track_gradient (x) gradient_of (sqrt(x)),
 +                       eval (D (quote (sqrt(x)), "x")) ))
 [1] TRUE
 > 
-> stopifnot (identical (track_gradient (x) gradient_of (exp(x)),
+> print (identical (track_gradient (x) gradient_of (exp(x)),
 +                       eval (D (quote (exp(x)), "x")) ))
 [1] TRUE
 > 
-> stopifnot (identical (track_gradient (x) gradient_of (expm1(x)),
+> print (identical (track_gradient (x) gradient_of (expm1(x)),
 +                       eval (D (quote (expm1(x)), "x")) ))
 [1] TRUE
 > 
-> stopifnot (identical (track_gradient (x) gradient_of (log1p(x)),
+> print (identical (track_gradient (x) gradient_of (log1p(x)),
 +                       eval (D (quote (log1p(x)), "x")) ))
 [1] TRUE
 > 
-> stopifnot (identical (track_gradient (x) gradient_of (log(x)),
+> print (identical (track_gradient (x) gradient_of (log(x)),
 +                       eval (D (quote (log(x)), "x")) ))
 [1] TRUE
 > 
-> stopifnot (identical (track_gradient (x) gradient_of (cos(x)),
+> print (identical (track_gradient (x) gradient_of (cos(x)),
 +                       eval (D (quote (cos(x)), "x")) ))
 [1] TRUE
 > 
-> stopifnot (identical (track_gradient (x) gradient_of (sin(x)),
+> print (identical (track_gradient (x) gradient_of (sin(x)),
 +                       eval (D (quote (sin(x)), "x")) ))
 [1] TRUE
 > 
-> stopifnot (identical (track_gradient (x) gradient_of (tan(x)),
+> print (identical (track_gradient (x) gradient_of (tan(x)),
 +                       eval (D (quote (tan(x)), "x")) ))
 [1] TRUE
 > 
-> stopifnot (identical (track_gradient (x) gradient_of (acos(x)),
+> print (identical (track_gradient (x) gradient_of (acos(x)),
 +                       eval (D (quote (acos(x)), "x")) ))
 [1] TRUE
 > 
-> stopifnot (identical (track_gradient (x) gradient_of (asin(x)),
+> print (identical (track_gradient (x) gradient_of (asin(x)),
 +                       eval (D (quote (asin(x)), "x")) ))
 [1] TRUE
 > 
-> stopifnot (identical (track_gradient (x) gradient_of (cosh(x)),
+> print (identical (track_gradient (x) gradient_of (cosh(x)),
 +                       eval (D (quote (cosh(x)), "x")) ))
 [1] TRUE
 > 
-> stopifnot (identical (track_gradient (x) gradient_of (sinh(x)),
+> print (identical (track_gradient (x) gradient_of (sinh(x)),
 +                       eval (D (quote (sinh(x)), "x")) ))
 [1] TRUE
 > 
-> stopifnot (identical (track_gradient (x) gradient_of (tanh(x)),
+> print (identical (track_gradient (x) gradient_of (tanh(x)),
 +                       eval (D (quote (tanh(x)), "x")) ))
 [1] TRUE
 > 
-> stopifnot (identical (track_gradient (x) gradient_of (lgamma(x)),
+> print (identical (track_gradient (x) gradient_of (lgamma(x)),
 +                       eval (D (quote (lgamma(x)), "x")) ))
 [1] TRUE
 > 
-> stopifnot (identical (track_gradient (x) gradient_of (gamma(x)),
+> print (identical (track_gradient (x) gradient_of (gamma(x)),
 +                       eval (D (quote (gamma(x)), "x")) ))
 [1] TRUE
 > 
-> stopifnot (identical (track_gradient (x) gradient_of (digamma(x)),
+> print (identical (track_gradient (x) gradient_of (digamma(x)),
 +                       eval (D (quote (digamma(x)), "x")) ))
 [1] TRUE
 > 
-> stopifnot (identical (track_gradient (x) gradient_of (trigamma(x)),
+> print (identical (track_gradient (x) gradient_of (trigamma(x)),
 +                       eval (D (quote (trigamma (x)), "x")) ))
+[1] TRUE
+> 
+> print (identical (track_gradient (x) gradient_of (+x),
++                       eval (D (quote (+x), "x")) ))
+[1] TRUE
+> 
+> print (identical (track_gradient (x) gradient_of (-x),
++                       eval (D (quote (-x), "x")) ))
+[1] TRUE
+> 
+> print (identical (track_gradient (x) gradient_of (3.1+x),
++                       eval (D (quote (3.1+x), "x")) ))
+[1] TRUE
+> 
+> print (identical (track_gradient (x) gradient_of (3.1-x),
++                       eval (D (quote (3.1-x), "x")) ))
+[1] TRUE
+> 
+> print (identical (track_gradient (x) gradient_of (3.1*x),
++                       eval (D (quote (3.1*x), "x")) ))
+[1] TRUE
+> 
+> print (identical (track_gradient (x) gradient_of (3.1/x),
++                       eval (D (quote (3.1/x), "x")) ))
+[1] TRUE
+> 
+> print (identical (track_gradient (x) gradient_of (x+3.1),
++                       eval (D (quote (x+3.1), "x")) ))
+[1] TRUE
+> 
+> print (identical (track_gradient (x) gradient_of (x-3.1),
++                       eval (D (quote (x-3.1), "x")) ))
+[1] TRUE
+> 
+> print (identical (track_gradient (x) gradient_of (x*3.1),
++                       eval (D (quote (x*3.1), "x")) ))
+[1] TRUE
+> 
+> print (identical (track_gradient (x) gradient_of (x/3.1),
++                       eval (D (quote (x/3.1), "x")) ))
+[1] TRUE
+> 
+> print (identical (track_gradient (x) gradient_of (x+x),
++                       eval (D (quote (x+x), "x")) ))
+[1] TRUE
+> 
+> print (identical (track_gradient (x) gradient_of (x-x),
++                       eval (D (quote (x-x), "x")) ))
+[1] TRUE
+> 
+> print (identical (track_gradient (x) gradient_of (x*x),
++                       eval (D (quote (x*x), "x")) ))
+[1] TRUE
+> 
+> print (identical (track_gradient (x) gradient_of (x/x),
++                       eval (D (quote (x/x), "x")) ))
 [1] TRUE
 > 
 > 
@@ -178,4 +232,95 @@ attr(,"class")
 [1] "fred"
 attr(,"gradient")
 [1] -0.03979076
+> 
+> 
+> # Check consistency of results between with_gradient and numericDeriv.
+> 
+> x <- 0.32739
+> x1 <- 0.89472; x2 <- 0.49718
+> i1 <- 3
+> 
+> bindgrads <- function (r1,r2) 
++     cbind (rbind(r1,r2), rbind(attr(r1,"gradient"),attr(r2,"gradient")))
+> 
+> test1 <- function (fun,...)
++     print (bindgrads (numericDeriv(quote(fun(x,...)),"x"),
++                       with_gradient (x) fun(x,...)))
+> 
+> test2 <- function (fun,...) {
++     print (bindgrads (numericDeriv(quote(fun(x1,x2,...)),"x1"),
++                       with_gradient (x1) fun(x1,x2,...)))
++     print (bindgrads (numericDeriv(quote(fun(x1,x2,...)),"x2"),
++                       with_gradient (x2) fun(x1,x2,...)))
++     print (bindgrads (numericDeriv(quote(fun(x1,x2,...)),c("x1","x2")),
++       { r <- with_gradient (x1) { s <- with_gradient (x2) fun(x1,x2,...); 
++                                   g2 <<- attr(s,"gradient"); s }
++         attr(r,"gradient") <- cbind(g1=attr(r,"gradient"),g2=g2)
++         r
++       }
++     ))
++ }
+> 
+> test2i <- function (fun,...) {
++     print (bindgrads (numericDeriv(quote(fun(i1,x2,...)),"x2"),
++                       with_gradient (x2) fun(i1,x2,...)))
++ }
+> 
+> test1(sin)
+        [,1]      [,2]
+r1 0.3215728 0.9468849
+r2 0.3215728 0.9468849
+> 
+> test1(log)
+        [,1]     [,2]
+r1 -1.116603 3.054461
+r2 -1.116603 3.054461
+> 
+> test1(gamma)
+       [,1]      [,2]
+r1 2.729765 -8.716212
+r2 2.729765 -8.716212
+> 
+> test2(atan2)
+       [,1]      [,2]
+r1 1.063601 0.4745389
+r2 1.063601 0.4745389
+       [,1]       [,2]
+r1 1.063601 -0.8539753
+r2 1.063601 -0.8539753
+                   g1         g2
+r1 1.063601 0.4745389 -0.8539753
+r2 1.063601 0.4745389 -0.8539753
+> 
+> test2(dexp)
+       [,1]       [,2]
+r1 0.318657 -0.1584299
+r2 0.318657 -0.1584299
+       [,1]    [,2]
+r1 0.318657 0.35582
+r2 0.318657 0.35582
+                    g1      g2
+r1 0.318657 -0.1584299 0.35582
+r2 0.318657 -0.1584299 0.35582
+> 
+> test2(dexp,log=TRUE)
+       [,1]     [,2]
+r1 -1.14364 -0.49718
+r2 -1.14364 -0.49718
+       [,1]     [,2]
+r1 -1.14364 1.116624
+r2 -1.14364 1.116624
+                  g1       g2
+r1 -1.14364 -0.49718 1.116624
+r2 -1.14364 -0.49718 1.116624
+> 
+> test2i(dgeom)
+         [,1]       [,2]
+r1 0.06320498 -0.2499760
+r2 0.06320498 -0.2499761
+> 
+> test2i(dgeom,log=TRUE)
+        [,1]      [,2]
+r1 -2.761372 -3.955006
+r2 -2.761372 -3.955006
 > 
