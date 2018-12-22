@@ -4441,10 +4441,10 @@ static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
 
 static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
-    SEXP sv_scalar_stack = R_scalar_stack;
     int opcode = PRIMVAL(op);
 
     SEXP argsevald, ans, arg1, arg2, grad1, grad2;
+    SEXP sv_scalar_stack;
     int obj;
 
     if (variant & VARIANT_GRADIENT) {
@@ -4453,7 +4453,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
            desired, with any gradients being attached as attributes of
            the CONS cells of the argument list. */
 
-        argsevald = evalList_gradient (args, env, variant, 2);
+        argsevald = evalList_gradient (args, env, VARIANT_PENDING_OK, 2);
         arg1 = CAR(argsevald);
         arg2 = CADR(argsevald);
         obj = isObject(arg1) | (isObject(arg2)<<1);
@@ -4462,6 +4462,7 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
         /* Evaluate arguments, maybe putting them on the scalar stack. */
 
+        sv_scalar_stack = R_scalar_stack;
         argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env);
     }
 
