@@ -147,8 +147,8 @@ SEXP do_readlines(SEXP, SEXP, SEXP, SEXP);
 
 SEXP Rf_find_binding_in_frame (SEXP, SEXP, Rboolean *);
 SEXP R_relop(SEXP, int, SEXP, SEXP, int, int, SEXP, int);
-SEXP R_unary(SEXP, int, SEXP, int, SEXP, int);
-SEXP R_binary(SEXP, int, SEXP, SEXP, int, int, SEXP, int);
+SEXP R_unary(SEXP, int, SEXP, int, SEXP, SEXP, int);
+SEXP R_binary(SEXP, int, SEXP, SEXP, int, int, SEXP, SEXP, SEXP, int);
 void Rf_recycled_copy (SEXP, R_len_t, R_len_t, R_len_t);
 
 #endif /* not R_INTERNAL_H */

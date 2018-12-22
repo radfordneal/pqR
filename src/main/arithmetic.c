@@ -1207,7 +1207,8 @@ void task_complex_arithmetic (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 #define T_arithmetic THRESHOLD_ADJUST(500)  /* >= 16, further adjusted below */
 
 SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y, 
-                                int objx, int objy, SEXP env, int variant)
+                                int objx, int objy, SEXP grad1, SEXP grad2,
+                                SEXP env, int variant)
 {
     helpers_task_proc *task;
     SEXP klass, dims, tsp, xnames, ynames, ans;
@@ -1324,15 +1325,17 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
 
     int local_assign1 = 0, local_assign2 = 0;
 
-    if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1) {
-        if (n == nx && !NAMEDCNT_GT_1(x)
-          && x == findVarInFrame3 (env, CADR(call), 7))
-            local_assign1 = 1;
-    }
-    else if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN2) {
-        if (n == ny && !NAMEDCNT_GT_1(y)
-          && y == findVarInFrame3 (env, CADDR(call), 7))
-            local_assign2 = 1;
+    if (grad1 == R_NilValue && grad2 == R_NilValue) {
+        if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1) {
+            if (n == nx && !NAMEDCNT_GT_1(x)
+              && x == findVarInFrame3 (env, CADR(call), 7))
+                local_assign1 = 1;
+        }
+        else if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN2) {
+            if (n == ny && !NAMEDCNT_GT_1(y)
+              && y == findVarInFrame3 (env, CADDR(call), 7))
+                local_assign2 = 1;
+        }
     }
     
     if (nx == 1) WAIT_UNTIL_COMPUTED(x);
@@ -1513,6 +1516,35 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
     }
 
     R_variant_result = local_assign1 | local_assign2;
+
+    if (n == 1 && (grad1 != R_NilValue || grad2 != R_NilValue)
+               && !ISNAN(*REAL(ans))) {
+        switch (opcode) {
+        case PLUSOP: 
+            if (grad1 == R_NilValue)
+                R_gradient = copy_scaled_gradients (grad2, 1.0);
+            else if (grad2 == R_NilValue)
+                R_gradient = copy_scaled_gradients (grad1, 1.0);
+            else
+                R_gradient = add_scaled_gradients (
+                               copy_scaled_gradients (grad1, 1.0),
+                               grad2, 1.0);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            break;
+        case MINUSOP: 
+            if (grad1 == R_NilValue)
+                R_gradient = copy_scaled_gradients (grad2, -1.0);
+            else if (grad2 == R_NilValue)
+                R_gradient = copy_scaled_gradients (grad1, 1.0);
+            else
+                R_gradient = add_scaled_gradients (
+                               copy_scaled_gradients (grad1, 1.0),
+                               grad2, -1.0);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            break;
+        }
+    }
+
     UNPROTECT(nprotect);
     return ans;
 }
@@ -1578,7 +1610,7 @@ void task_unary_minus (helpers_op_t op, SEXP ans, SEXP s1, SEXP ignored)
 #define T_unary_minus THRESHOLD_ADJUST(500)
 
 SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
-                               SEXP env, int variant)
+                               SEXP grad1, SEXP env, int variant)
 {
     int type = TYPEOF(s1);
     int local_assign = 0;
@@ -1620,7 +1652,9 @@ SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
             ans = Rf_makeUnclassed(s1);
         else {
             if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1
-              && !NAMEDCNT_GT_1(s1) && s1 == findVarInFrame3(env,CADR(call),7))
+              && grad1 == R_NilValue
+              && !NAMEDCNT_GT_1(s1) 
+              && s1 == findVarInFrame3(env,CADR(call),7))
                 local_assign = 1;
             ans = local_assign || NAMEDCNT_EQ_0(s1) ? s1 : duplicate(s1);
         }
@@ -1633,6 +1667,13 @@ SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
         errorcall(call, _("invalid argument to unary operator"));
 
     R_variant_result = local_assign;  /* do at end, just in case */
+
+    if (grad1 != R_NilValue && n == 1) && !ISNAN(*REAL(ans))) {
+        double d = opcode == MINUSOP ? -1 : 1;
+        R_gradient = copy_scaled_gradients(grad1,d);
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     return ans;
 }
 

@@ -4441,9 +4441,10 @@ static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
 
 static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
+    SEXP sv_scalar_stack = R_scalar_stack;
     int opcode = PRIMVAL(op);
 
-    SEXP argsevald, ans, arg1, arg2;
+    SEXP argsevald, ans, arg1, arg2, grad1, grad2;
     int obj;
 
     if (variant & VARIANT_GRADIENT) {
@@ -4456,31 +4457,13 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         arg1 = CAR(argsevald);
         arg2 = CADR(argsevald);
         obj = isObject(arg1) | (isObject(arg2)<<1);
-
-        /* Keep code below in sync with code just below this 'if' statement. */
-
-        PROTECT3(argsevald,arg1,arg2);
-
-        if (obj) { /* one or other or both operands are objects */
-            if (DispatchGroup("Ops", call, op, argsevald, env, &ans, variant)) {
-                UNPROTECT(3);
-                R_Visible = TRUE;
-                return ans;
-            }
-        }
-
-        if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
-
-        /* FOR NOW:  Handle with the general-case procedure. */
-
-        goto general;
     }
+    else {
 
-    /* Evaluate arguments, maybe putting them on the scalar stack. */
+        /* Evaluate arguments, maybe putting them on the scalar stack. */
 
-    SEXP sv_scalar_stack = R_scalar_stack;
-
-    argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env);
+        argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env);
+    }
 
     PROTECT3(argsevald,arg1,arg2);
 
@@ -4500,6 +4483,15 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        argument count errors, so do those checks later. */
 
     if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
+
+    /* FOR NOW:  Handle gradients with the general-case R_unary and R_binary
+       procedures. */
+
+    if (variant & VARIANT_GRADIENT) {
+        grad1 = ATTRIB(argsevald);
+        grad2 = ATTRIB(CDR(argsevald));
+        goto gradient;
+    }
 
     /* Arguments are now in arg1 and arg2, and are protected. They may
        be on the scalar stack, but if so, are removed now, though they
@@ -4674,11 +4666,16 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
   general:
 
+    grad1 = grad2 = R_NilValue;
+
+  gradient:
+
     if (CDR(argsevald) != R_NilValue)
-        ans = R_binary (call, opcode, arg1, arg2, obj&1, obj>>1, env, variant);
+        ans = R_binary (call, opcode, arg1, arg2, obj&1, obj>>1, 
+                        grad1, grad2, env, variant);
     else {
         if (argsevald == R_NilValue) goto arg_count_err;
-        ans = R_unary (call, opcode, arg1, obj, env, variant);
+        ans = R_unary (call, opcode, arg1, obj, grad1, env, variant);
     }
 
   ret:
