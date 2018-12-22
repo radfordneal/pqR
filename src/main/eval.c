@@ -3689,7 +3689,7 @@ static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
    objects (accounting for VARIANT_UNCLASS_FLAG) in the two lowest
    bits of obj.  If one of the first two arguments is an object, a
    list of the evaluated arguments is returned as the value of the
-   function, so that dispatch must be attempted (note that the
+   function, so that dispatch can be attempted (note that the
    argument count in this case may not be two).  If neither is an
    object, a list with the correct number of arguments is returned,
    but they may (or may not) be the unevaluated arguments.
@@ -3713,8 +3713,8 @@ static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
     x = CAR(args); 
     y = CADR(args);
 
-    /* We evaluate by the general procedure if ... present or more than
-       two arguments, not trying to put arguments on the scalar stack. */
+    /* Evaluate by the general procedure if ... present, or more than
+       two arguments, not trying to put arguments on the scalar stack.
 
     if (x==R_DotsSymbol || y==R_DotsSymbol || CDDR(args)!=R_NilValue) {
         argsevald = evalList (args, env);
@@ -4441,14 +4441,47 @@ static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
 
 static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
+    int opcode = PRIMVAL(op);
+
     SEXP argsevald, ans, arg1, arg2;
     int obj;
+
+    if (variant & VARIANT_GRADIENT) {
+
+        /* FOR NOW:  Evaluate by evalList_gradient if gradients are
+           desired, with any gradients being attached as attributes of
+           the CONS cells of the argument list. */
+
+        argsevald = evalList_gradient (args, env, variant, 2);
+        arg1 = CAR(argsevald);
+        arg2 = CADR(argsevald);
+        obj = isObject(arg1) | (isObject(arg2)<<1);
+
+        /* Keep code below in sync with code just below this 'if' statement. */
+
+        PROTECT3(argsevald,arg1,arg2);
+
+        if (obj) { /* one or other or both operands are objects */
+            if (DispatchGroup("Ops", call, op, argsevald, env, &ans, variant)) {
+                UNPROTECT(3);
+                R_Visible = TRUE;
+                return ans;
+            }
+        }
+
+        if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
+
+        /* FOR NOW:  Handle with the general-case procedure. */
+
+        goto general;
+    }
 
     /* Evaluate arguments, maybe putting them on the scalar stack. */
 
     SEXP sv_scalar_stack = R_scalar_stack;
 
     argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env);
+
     PROTECT3(argsevald,arg1,arg2);
 
     /* Check for dispatch on S3 or S4 objects. */
@@ -4461,16 +4494,12 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
     }
 
-    int opcode = PRIMVAL(op);
-
     /* Check for argument count error (not before dispatch, since other
        methods may have different requirements).  Only check for more than
        two at this point - check for simple cases will fail for other
        argument count errors, so do those checks later. */
 
     if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
-
-    R_Visible = TRUE;
 
     /* Arguments are now in arg1 and arg2, and are protected. They may
        be on the scalar stack, but if so, are removed now, though they
@@ -4498,6 +4527,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     }
 
     if (typeplus2 == NILSXP && CDR(argsevald) == R_NilValue) { /* Unary op */
+
+        if (opcode > MINUSOP) goto general;
 
         /* Test if arg1 is scalar numeric, computation not pending, attr OK */
 
@@ -4647,13 +4678,11 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         ans = R_binary (call, opcode, arg1, arg2, obj&1, obj>>1, env, variant);
     else {
         if (argsevald == R_NilValue) goto arg_count_err;
-        if (opcode != MINUSOP && opcode != PLUSOP)
-            errorcall(call, _("%d argument passed to '%s' which requires %d"),
-                            1, opcode == MINUSOP ? "-" : "+", 2);
         ans = R_unary (call, opcode, arg1, obj, env, variant);
     }
 
   ret:
+    R_Visible = TRUE;
     UNPROTECT(3);
     return ans;
 

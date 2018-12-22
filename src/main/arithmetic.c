@@ -1585,6 +1585,9 @@ SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
     SEXP ans;
     int n;
 
+    if (opcode != MINUSOP && opcode != PLUSOP)
+        errorcall(call, _("invalid unary operator"));
+
     if ( ! ((NUMBER_TYPES >> type) & 1))
         errorcall(call, _("invalid argument to unary operator"));
 
