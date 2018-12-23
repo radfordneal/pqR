@@ -15,7 +15,7 @@
 \description{
   These are the facilities for computing gradients via run-time
   automatic differentiation.  For symbolic differentiation facilities,
-  see \link{\code{deriv}}.
+  see \code{\link{deriv}}.
 
   The present implementation of these facilities is a preliminary
   one that supports only gradients of scalar values, with respect to scalar

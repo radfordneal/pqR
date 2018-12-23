@@ -258,7 +258,8 @@ function(package, dir, lib.loc = NULL)
                       "@<-","@internal<-",
                       "[[<-","[<-","{","||","~","<-","<<-","=","->","->>",
                       "break","for","function","if","next","repeat","return",
-                      "while")
+                      "while",
+                      "with_gradient","track_gradient","compute_gradient")
         miss <- prims %w/o% c(langElts, prototypes)
         if(length(miss))
             undoc_things <- c(undoc_things, list(primitives=miss))

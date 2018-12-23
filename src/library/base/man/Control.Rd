@@ -24,7 +24,7 @@
   language.  Except \code{along}, \code{down}, and \code{across}), the
   words used in these constructs are \link{reserved}.
 
-  See \link{\code{Gradient}} for the syntax of constructs for gradient 
+  See \code{\link{Gradient}} for the syntax of constructs for gradient 
   computation.
 }
 \usage{
