@@ -2062,13 +2062,14 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
     else if (opcode >= 44)
         errorcall(call, _("unimplemented real function of 1 argument"));
 
-    int vrnt = VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK;
+    int vrnt = VARIANT_PENDING_OK;
     if ((variant & VARIANT_GRADIENT) && R_math1_deriv_table[opcode])
         vrnt |= VARIANT_GRADIENT;
 
     SEXP sa;
 
     if (ONE_SIMPLE_ARG(args)) {
+        vrnt |= VARIANT_SCALAR_STACK_OK;
         PROTECT (sa = evalv (CAR(args), env, vrnt));
         args = R_NilValue;
     }
