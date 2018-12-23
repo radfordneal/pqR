@@ -121,6 +121,7 @@ assign("lazyLoadDBfetch", function(key, file, compressed, hook) NULL,
 assign("missing", function(x) NULL, envir = .ArgsEnv)
 assign("missing_from_underline", function(x) NULL, envir = .ArgsEnv)
 assign("nargs", function() NULL, envir = .ArgsEnv)
+assign("no_gradient", function (x) NULL, envir = .ArgsEnv)
 assign("nzchar", function(x) NULL, envir = .ArgsEnv)
 assign("oldClass", function(x) NULL, envir = .ArgsEnv)
 assign("oldClass<-", function(x, value) NULL, envir = .ArgsEnv)
