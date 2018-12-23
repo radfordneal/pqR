@@ -127,6 +127,18 @@ static void vec2buff(SEXP, LocalParseData *);
 static void linebreak(Rboolean *lbreak, LocalParseData *);
 static void deparse2(SEXP, SEXP, LocalParseData *);
 
+static int has_n_tags (SEXP s, int n)
+{
+    while (n > 0) {
+        if (TAG(s) == R_NilValue)  /* note that TAG(R_NilValue) == R_NilValue */
+            return 0;
+        s = CDR(s);
+        n -= 1;
+    }
+
+    return 1;
+}
+
 static SEXP do_deparse(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ca1;
@@ -978,25 +990,13 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 print2buff(opname, d);
             }
             else if ((op == R_WithGradientSymbol || op == R_TrackGradientSymbol)
-                         && nargs == 2 && TAG(s) != R_NilValue) {
-                print2buff(opname, d);
-                print2buff(" (", d);
-                print2buff(CHAR(PRINTNAME(TAG(s))), d);
-                if (TAG(s) != CAR(s)) {
-                    print2buff(" = ", d);
-                    int np = needsparens_arg(CAR(s));
-                    if (np) print2buff("(", d);
-                    deparse2buff(CAR(s), d);
-                    if (np) print2buff(")", d);
-                }
-                print2buff(") ", d);
-                deparse2buff(CADR(s), d);
-            }
-            else if (op == R_ComputeGradientSymbol && nargs > 2 && nargs%2 == 1
-                      && TAG(s) != R_NilValue /* should check others too! */) {
-                SEXP skip = nthcdr(s,nargs/2);
+                       && nargs >= 2 && has_n_tags(s,nargs-1)
+                   || op == R_ComputeGradientSymbol && nargs > 2 && nargs%2 == 1
+                       && has_n_tags(s,nargs/2)) {
+                SEXP skip = 
+                     nthcdr(s, op==R_ComputeGradientSymbol ? nargs/2 : nargs-1);
                 SEXP t;
-                print2buff("compute_gradient", d);
+                print2buff(opname, d);
                 print2buff(" (", d);
                 for (t = s; t != skip; t = CDR(t)) {
                     print2buff(CHAR(PRINTNAME(TAG(t))), d);
@@ -1011,16 +1011,18 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 }
                 print2buff(") ", d);
                 deparse2buff(CAR(skip), d);
-                print2buff(" ", d);
-                print2buff("as (", d);
-                for (t = CDR(skip); t != R_NilValue; t = CDR(t)) {
-                    int np = needsparens_arg(CAR(t));
-                    if (np) print2buff("(", d);
-                    deparse2buff(CAR(t), d);
-                    if (np) print2buff(")", d);
-                    if (CDR(t) != R_NilValue) print2buff(", ",d);
+                if (op == R_ComputeGradientSymbol) {
+                    print2buff(" ", d);
+                    print2buff("as (", d);
+                    for (t = CDR(skip); t != R_NilValue; t = CDR(t)) {
+                        int np = needsparens_arg(CAR(t));
+                        if (np) print2buff("(", d);
+                        deparse2buff(CAR(t), d);
+                        if (np) print2buff(")", d);
+                        if (CDR(t) != R_NilValue) print2buff(", ",d);
+                    }
+                    print2buff(")", d);
                 }
-                print2buff(")", d);
             }
             else if (op == R_BraceSymbol) {
                 print2buff("{", d);

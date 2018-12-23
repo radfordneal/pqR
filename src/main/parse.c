@@ -1768,29 +1768,10 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
     /* Gradient constructs. */
 
-    else if (NEXT_TOKEN == WITHGRAD || NEXT_TOKEN == TRACKGRAD) {
-        SEXP op, var, val, body;
-        op = TOKEN_VALUE();
-        get_next_token(0);
-        EXPECT('(');
-        if (NEXT_TOKEN != SYMBOL)
-            PARSE_UNEXPECTED();
-        set_token_in_rec (prev_token_rec(1), "SYMBOL_FORMALS");
-        var = val = TOKEN_VALUE();
-        get_next_token(0);
-        if (NEXT_TOKEN == EQ_ASSIGN) {
-            set_token_in_rec (prev_token_rec(1), "EQ_FORMALS");
-            get_next_token(0);
-            PARSE_SUB(val = parse_expr (EQASSIGN_PREC, subflags, NULL));
-        }
-        EXPECT(')');
-        PARSE_SUB(body = parse_expr (0, flags, NULL));
-        res = PROTECT_N (lang3 (op, val, body));
-        SET_TAG (CDR(res), var);
-    }
+    else if (NEXT_TOKEN == WITHGRAD || NEXT_TOKEN == TRACKGRAD
+                                    || NEXT_TOKEN == COMPUTEGRAD) {
 
-    else if (NEXT_TOKEN == COMPUTEGRAD) {
-
+        int compute_gradient = ps->next_token == COMPUTEGRAD;
         SEXP op, var, val, body, grad, last;
         op = TOKEN_VALUE();
         get_next_token(0);
@@ -1818,20 +1799,24 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
         PARSE_SUB(body = parse_expr (0, flags, NULL));
         SETCDR (last, CONS (body, R_NilValue));
-        last = CDR(last);
-        if (NEXT_TOKEN != SYMBOL || ps->next_token_val != R_AsSymbol)
-            PARSE_UNEXPECTED();
-        get_next_token(0);
 
-        EXPECT('(');
-        for (;;) {
-            PARSE_SUB(grad = parse_expr (EQASSIGN_PREC, subflags, NULL));
-            SETCDR (last, CONS (grad, R_NilValue));
+        if (compute_gradient) {
+
             last = CDR(last);
-            if (NEXT_TOKEN != ',') break;
+            if (NEXT_TOKEN != SYMBOL || ps->next_token_val != R_AsSymbol)
+                PARSE_UNEXPECTED();
             get_next_token(0);
+
+            EXPECT('(');
+            for (;;) {
+                PARSE_SUB(grad = parse_expr (EQASSIGN_PREC, subflags, NULL));
+                SETCDR (last, CONS (grad, R_NilValue));
+                last = CDR(last);
+                if (NEXT_TOKEN != ',') break;
+                get_next_token(0);
+            }
+            EXPECT(')');
         }
-        EXPECT(')');
     }
 
     else
