@@ -271,8 +271,8 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
             else {
                 PROTECT (vargrad[vgi] = R_NilValue);
             }
-            vgi += 1;
         }
+        vgi += 1;
 
     }
 
@@ -304,8 +304,8 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
                                                 *REAL(gval));
                 UNPROTECT(2);  /* gval, old resgrad */
                 PROTECT(resgrad);
-                vgi += 1;
             }
+            vgi += 1;
         }
         vr |= VARIANT_GRADIENT_FLAG;
         R_gradient = resgrad;
