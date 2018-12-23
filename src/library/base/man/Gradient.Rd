@@ -15,7 +15,8 @@
 \description{
   These are the facilities for computing gradients via run-time
   automatic differentiation.  For symbolic differentiation facilities,
-  see \code{\link{deriv}}.
+  see \code{\link{deriv}}.  For numerical differentiation, see
+  \code{\link{numericDeriv}}.
 
   The present implementation of these facilities is a preliminary
   one that supports only gradients of scalar values, with respect to scalar
@@ -34,6 +35,18 @@ compute_gradient (var1, var2) expr as (g1.expr, g2.expr)
 
 gradient_of (e)
 no_gradient (e)
+}
+
+\arguments{
+  \item{var, var1, var2}{(And so forth for var3, etc.) Names (not strings)
+    of variables with respect to which gradients will be tracked or computed.}
+  \item{expr}{An expression, often a compound expression, of the form
+    \code{\{expr1;expr2\}}, which is evaluated in a new environment
+    containing the new variable or variables listed.}
+  \item{g1.expr, g2.expr}{(and so forth for g3.expr, etc.) Expressions
+    giving the gradients of the specified \code{expr} with respect to
+    the specified variables.}
+  \item{e}{An expression whose gradient is or is not computed (if possible).}
 }
 
 \details{
@@ -101,6 +114,8 @@ some points, with the gradient returned at such points being arbitrary.
 
 Gradients may not have been defined for some builtin functions (even if
 they exist mathematically), in which case they will appear to be zero.
+When a builtin functions returns \code{NA} or a \code{NaN} value, the
+gradient will be regarded as zero (without an error or warning).
 
 Gradients may be defined for real-valued random generation functions
 (eg, \code{rnorm}), with the gradient being defined as if the
@@ -112,13 +127,15 @@ with respect all their real-valued arguments (unless noted):
 \tabular{l}{
 +, -, *, /, ^ (+ and - may be unary) \cr
 \cr
-abs, sqrt, exp, expm1, log, log1p \cr
+abs, sqrt, expm1, exp, log1p, log2, log10, log (one-argument form only) \cr
 cos, sin, tan, acos, asin, atan \cr
 cosh, sinh, tanh, acosh, asinh, atanh \cr
 gamma, lgamma, digamma, trigamma \cr
 \cr
-dnorm, pnorm, qnorm, rnorm \cr
-dpois, ppois 
+dexp, pexp, qexp, rexp \cr
+dgeom, pgeom \cr
+dpois, ppois \cr
+dnorm, pnorm, qnorm, rnorm
 }
 }
 
