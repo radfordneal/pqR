@@ -998,7 +998,7 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
                            /* 1 = R_BaseEnv or R_BaseNamespace */
 #define IS_USER_DATABASE(rho) \
   ( OBJECT((rho)) && inherits((rho), "UserDefinedDatabase") )
-#define GRADVARS(x)	NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->gradvars)
+#define GRADVARS(x)	SEXP_FROM_SEXP32(((ENVSEXP)UPTR_FROM_SEXP(x))->gradvars)
 #define SET_GRADVARS(x,v)  (((ENVSEXP)UPTR_FROM_SEXP(x))->gradvars \
                              = SEXP32_FROM_SEXP(v))
 #define GRADINDEX(x)	(LEVELS(x) >> 8)

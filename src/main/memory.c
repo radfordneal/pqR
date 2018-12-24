@@ -1552,7 +1552,7 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
     FRAME(newrho) = valuelist;
     HASHTAB(newrho) = R_NilValue;
     ENCLOS(newrho) = Rf_chk_valid_SEXP(rho);
-    ((ENVSEXP)newrho)->gradvars = R_NoObject32;
+    SET_GRADVARS(newrho,R_NilValue);
 
     ENVSYMBITS(newrho) = ~(R_symbits_t)0;       /* all 1s disables */
 

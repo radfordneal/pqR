@@ -78,8 +78,8 @@ static void PrintEnvironment(SEXP x)
 #   else
     else Rprintf("<%llx>", (long long) x);
 #   endif
-    if (GRADVARS(x) != R_NoObject32) {
-        SEXP g = SEXP_FROM_SEXP32(GRADVARS(x));
+    if (GRADVARS(x) != R_NilValue) {
+        SEXP g = GRADVARS(x);
         Rprintf(" gradvars:");
         if (TYPEOF(g) != VECSXP)
             Rprintf(" garbled");
