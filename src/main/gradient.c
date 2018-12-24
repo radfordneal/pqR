@@ -152,12 +152,16 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         errorcall (call, _("gradient variable must have real scalar value"));
 
     SEXP cell = cons_with_tag (val, R_NilValue, sym);
+    SET_GRADINDEX(cell,1);
     INC_NAMEDCNT(val);
     SEXP newenv = NewEnvironment (R_NilValue, cell, env);
-    SET_RDEBUG(newenv,RDEBUG(env));
     PROTECT(newenv);
+    SET_RDEBUG(newenv,RDEBUG(env));
     SET_ENVSYMBITS (newenv, SYMBITS(sym));
     SET_STORE_GRAD(newenv,1);
+    SEXP gv = allocVector (VECSXP, 1);
+    SET_VECTOR_ELT(gv,0,sym);
+    SET_GRADVARS(newenv,gv);
 
     SEXP id_grad = ScalarRealMaybeConst(1.0);
     SET_ATTRIB (cell, cons_with_tag (id_grad, R_NilValue, newenv));

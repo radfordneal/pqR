@@ -334,7 +334,11 @@ typedef struct SEXPREC {
 
 /* Version of SEXPREC used for environments. */
 
+#if 1 /* currently no space for this */
+#define USE_ENV_TUNECNTS 0  /* Must be kept as 0 */
+#else
 #define USE_ENV_TUNECNTS 0  /* May be 0 or 1 - normally 0 to avoid slowdown */
+#endif
 
 typedef uint64_t R_symbits_t;
 
@@ -347,7 +351,7 @@ typedef struct ENV_SEXPREC {
     SEXP enclos;
     SEXP hashtab;
     int32_t hashlen;
-    uint32_t env_tunecnt;
+    SEXP32 gradvars;
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
     int32_t padding;
 #endif
@@ -994,6 +998,11 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
                            /* 1 = R_BaseEnv or R_BaseNamespace */
 #define IS_USER_DATABASE(rho) \
   ( OBJECT((rho)) && inherits((rho), "UserDefinedDatabase") )
+#define GRADVARS(x)	NOT_LVALUE(((ENVSEXP)UPTR_FROM_SEXP(x))->gradvars)
+#define SET_GRADVARS(x,v)  (((ENVSEXP)UPTR_FROM_SEXP(x))->gradvars \
+                             = SEXP32_FROM_SEXP(v))
+#define GRADINDEX(x)	(LEVELS(x) >> 8)
+#define SET_GRADINDEX(x,v) SETLEVELS(x,(LEVELS(x)&0xff)|((v)<<8))
 
 #else /* not USE_RINTERNALS */
 

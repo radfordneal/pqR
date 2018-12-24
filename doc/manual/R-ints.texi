@@ -443,6 +443,12 @@ environment to indicate if it participates in the global cache.
 See the next section on @ref{Environments and variable
 lookup} for further details.
 
+@findex GRADINDEX
+@findex SET_GRADINDEX
+Bits 8-15 in a node in a pairlist of gradient values holds the index
+of the variable whose gradient is recorded, within the list in the relevant
+@code{with_gradient} or @code{track_gradient} construct, starting with 1.
+
 @findex MISSING
 @findex SET_MISSING
 The macros @code{MISSING} and @code{SET_MISSING} are used for pairlists
@@ -500,8 +506,7 @@ from the name when restoring saved data.
 @subsection The `data'
 
 A @code{SEXPREC} is a C structure containing the 64-bit header as
-described above, three pointers (to the attributes, previous and next
-node) and the node data, a union
+described above, a pointer to the attributes, and the node data, a union
 
 @example
 union @{
@@ -585,7 +590,10 @@ Contains pointers to the frame, enclosing environment, and hash table
 with tag the symbol and CAR the bound value.  Also contains 
 the logical OR of the @code{symbits} fields of all symbols that
 have ever been stored in the environment, allowing quick determination
-that some symbols cannot be in the environment.
+that some symbols cannot be in the environment.  Finally, if the
+environment is for the body of a @code{with_gradient} or @code{track_gradient}
+construct, it contains a vector list of symbols for the variables
+whose gradient will be tracked.
 
 @item PROMSXP
 Pointers to the value, expression and environment (in which to evaluate
@@ -594,7 +602,9 @@ set to @code{R_NilValue}.
 
 @item LISTSXP
 Pointers to the CAR, CDR (usually a @code{LISTSXP} or @code{R_NilValue}) and
-TAG (a @code{SYMSXP} or @code{R_NilValue}).
+TAG (usually a @code{SYMSXP} or @code{R_NilValue}).  For LISTSXP nodes used
+to record gradient values, the TAG is the environment for the relevant
+@code{with_gradient} or @code{trace_gradient} construct.
 
 @item LANGSXP
 A special type of @code{LISTSXP} used for function calls.  (The CAR
