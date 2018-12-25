@@ -296,11 +296,13 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
         SEXP car = CAR(n), cdr = CDR(n), tag = TAG(n);
         if (tag != R_NilValue && CHK_NO_OBJECT(tag) && TYPEOF(tag) != SYMSXP)
             sggc_look_at(GET_CPTR(tag));
-        if (cdr == R_NilValue)
-            return CHK_NO_OBJECT(car) ? GET_CPTR(car) : SGGC_NO_OBJECT;
-        if (CHK_NO_OBJECT(car))
+        if (CHK_NO_OBJECT(car)) {
+            if (cdr == R_NilValue)
+                return GET_CPTR(car);
             sggc_look_at(GET_CPTR(car));
-        return CHK_NO_OBJECT(cdr) ? GET_CPTR(cdr) : SGGC_NO_OBJECT;
+        }
+        return cdr != R_NilValue && CHK_NO_OBJECT(cdr) ? GET_CPTR(cdr) 
+                                                       : SGGC_NO_OBJECT;
     }
 
     /* Vectors of pointers (+ attribute):  VECSXP, EXPRSXP, STRSXP. */
