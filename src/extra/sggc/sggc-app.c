@@ -269,7 +269,7 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
     a = * (SEXP *) SGGC_AUX1(cptr);  /* avoid waste of CPTR -> UPTR -> CPTR */
 #else
     n = SEXP_FROM_CPTR(cptr);
-    a = ATTRIB(n);
+    a = ATTRIB_W(n);
 #endif
 
     /* Only attribute:  INTSXP, REALSXP, and other non-pointer vectors. */
