@@ -2506,6 +2506,22 @@ static void Ddgeom (double x, double p, double *dx /*ignored*/, double *dp,
     }
 }
 
+/* Allocate work array for Bessel functions. */
+
+static double *Bessel_work_array (int n2, double *ap2)
+{
+    double amax;
+    long nw;
+    int i;
+    amax = 0.0;
+    for (i = 0; i < n2; i++) {
+        double av = ap2[i] < 0 ? -ap2[i] : ap2[i];
+        if (av > amax) amax = av;
+    }
+    nw = 1 + (long)floor(amax);
+    return (double *) R_alloc((size_t) nw, sizeof(double));
+}
+
 /* Table of functions to compute values and derivatives for math2 functions. */
 
 static struct { double (*fncall)(); void (*Dcall)(); } math2_table[31] = {
@@ -2542,7 +2558,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math2_table[31] = {
     { fprec,	0 }
 };
 
-/* Mathematical Functions of Two Numeric Arguments (plus 0, 1, or 2 integers) */
+/* Mathematical functions of 2 numeric arguments (plus 0, 1, or 2 integers) */
 
 SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
 {
@@ -2601,18 +2617,8 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
     /* Allocate work array for BesselJ & BesselY big enough for all arguments */
 
     double *work = 0;
-    if (fncall == bessel_j_ex || fncall == bessel_y_ex) {
-        double amax;
-        long nw;
-        int i;
-        amax = 0.0;
-        for (i = 0; i < n2; i++) {
-            double av = ap2[i] < 0 ? -ap2[i] : ap2[i];
-            if (av > amax) amax = av;
-        }
-        nw = 1 + (long)floor(amax);
-        work = (double *) R_alloc((size_t) nw, sizeof(double));
-    }
+    if (fncall == bessel_j_ex || fncall == bessel_y_ex)
+        work = Bessel_work_array (n2, ap2);
 
     mod_iterate (n, n1, n2, j1, j2) {
 
@@ -2719,208 +2725,178 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 }
 
 
-/* Mathematical Functions of Three (Real) Arguments */
+/* Table of functions to compute values and derivatives for math3 functions. */
 
-static void setup_Math3
-    (SEXP *sa, SEXP *sb, SEXP *sc, SEXP *sy, int na, int nb, int nc, SEXP lcall)
+static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
+    { 0,	0 },
+    { dbeta,	0 },
+    { pbeta,	0 },
+    { qbeta,	0 },
+    { dbinom,	0 },
+    { pbinom,	0 },
+    { qbinom,	0 },
+    { dcauchy,	0 },
+    { pcauchy,	0 },
+    { qcauchy,	0 },
+    { df,	0 },
+    { pf,	0 },
+    { qf,	0 },
+    { dgamma,	0 },
+    { pgamma,	0 },
+    { qgamma,	0 },
+    { dlnorm,	0 },
+    { plnorm,	0 },
+    { qlnorm,	0 },
+    { dlogis,	0 },
+    { plogis,	0 },
+    { qlogis,	0 },
+    { dnbinom,	0 },
+    { pnbinom,	0 },
+    { qnbinom,	0 },
+    { dnorm,	0 },
+    { pnorm,	0 },
+    { qnorm,	0 },
+    { dunif,	0 },
+    { punif,	0 },
+    { qunif,	0 },
+    { dweibull,	0 },
+    { pweibull,	0 },
+    { qweibull,	0 },
+    { dnchisq,	0 },
+    { pnchisq,	0 },
+    { qnchisq,	0 },
+    { dnt,	0 },
+    { pnt,	0 },
+    { qnt,	0 },
+    { dwilcox,	0 },
+    { pwilcox,	0 },
+    { qwilcox,	0 },
+    { bessel_i_ex, 0 },
+    { bessel_k_ex, 0 },
+    { dnbinom_mu,  0 },
+    { pnbinom_mu,  0 },
+    { qnbinom_mu,  0 }
+};
+
+
+/* Mathematical functions of 3 numeric arguments (plus 0, 1, or 2 integers) */
+
+SEXP do_math3 (SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    if (!isNumeric(*sa) || !isNumeric(*sb) || !isNumeric(*sc))
-	non_numeric_errorcall(lcall);
+    SEXP res;
 
-    if (na == 0 || nb == 0 || nc == 0) {
-	*sy = allocVector(REALSXP,0);
-        return;
-    }
-
-    PROTECT(*sa = coerceVector (*sa, REALSXP));
-    PROTECT(*sb = coerceVector (*sb, REALSXP));
-    PROTECT(*sc = coerceVector (*sc, REALSXP));
-
-    int n = na;
-    if (n < nb) n = nb;
-    if (n < nc) n = nc;
-    PROTECT(*sy = allocVector (REALSXP, n));
-}
-
-#define DO_MATH3(y,a,b,c,n,na,nb,nc,fncall) do { \
-    int naflag = 0; \
-    double ai, bi, ci; \
-    int i, ia, ib, ic; \
-    for (i = ia = ib = ic = 0; i < n; \
-         ia = (++ia==na) ? 0 : ia, \
-         ib = (++ib==nb) ? 0 : ib, \
-         ic = (++ic==nc) ? 0 : ic, i++) { \
-        ai = a[ia]; \
-        bi = b[ib]; \
-        ci = c[ic]; \
-        if (MAY_BE_NAN3(ai,bi,ci)) { \
-            if (ISNA(ai) || ISNA(bi) || ISNA(ci)) { \
-                y[i] = NA_REAL; \
-                continue; \
-            } \
-            if (ISNAN(ai) || ISNAN(bi) || ISNAN(ci)) { \
-                y[i] = R_NaN; \
-                continue; \
-            } \
-        } \
-        y[i] = fncall; \
-        if (ISNAN(y[i])) naflag = 1; \
-    } \
-    if (naflag) NaN_warning(); \
-    SEXP frm = n==na ? sa : n==nb ? sb : sc; \
-    DUPLICATE_ATTRIB(sy, frm); \
-    UNPROTECT(4); \
-} while (0)
-
-static SEXP math3_1(SEXP sa, SEXP sb, SEXP sc, SEXP sI,
-		    double (*f)(double, double, double, int), SEXP lcall)
-{
-    double *a, *b, *c, *y;
-    int n, na, nb, nc;
-    SEXP sy;
-
-    na = LENGTH(sa); nb = LENGTH(sb); nc = LENGTH(sc);
-    setup_Math3 (&sa, &sb, &sc, &sy, na, nb, nc, lcall);
-    if ((n = LENGTH(sy)) == 0) return sy;
-    a = REAL(sa); b = REAL(sb); c = REAL(sc); y = REAL(sy);
-
-    int i_1 = asInteger(sI);
-
-    DO_MATH3(y,a,b,c,n,na,nb,nc, f(ai,bi,ci,i_1));
-
-    return sy;
-} /* math3_1 */
-
-static SEXP math3_2(SEXP sa, SEXP sb, SEXP sc, SEXP sI, SEXP sJ,
-		    double (*f)(double, double, double, int, int), SEXP lcall)
-{
-    double *a, *b, *c, *y;
-    int n, na, nb, nc;
-    SEXP sy;
-
-    na = LENGTH(sa); nb = LENGTH(sb); nc = LENGTH(sc);
-    setup_Math3 (&sa, &sb, &sc, &sy, na, nb, nc, lcall);
-    if ((n = LENGTH(sy)) == 0) return sy;
-    a = REAL(sa); b = REAL(sb); c = REAL(sc); y = REAL(sy);
-
-    int i_1 = asInteger(sI);
-    int i_2 = asInteger(sJ);
-
-    DO_MATH3(y,a,b,c,n,na,nb,nc, f(ai,bi,ci,i_1,i_2));
-
-    return sy;
-} /* math3_2 */
-
-static SEXP math3B(SEXP sa, SEXP sb, SEXP sc,
-		   double (*f)(double, double, double, double *), SEXP lcall)
-{
-    double *a, *b, *c, *y;
-    int n, na, nb, nc;
-    SEXP sy;
-
-    na = LENGTH(sa); nb = LENGTH(sb); nc = LENGTH(sc);
-    setup_Math3 (&sa, &sb, &sc, &sy, na, nb, nc, lcall);
-    if ((n = LENGTH(sy)) == 0) return sy;
-    a = REAL(sa); b = REAL(sb); c = REAL(sc); y = REAL(sy);
-
-    /* allocate work array for BesselI, BesselK large enough for all
-       arguments */
-
-    double amax, *work;
-    long nw;
-    int i;
-
-    amax = 0.0;
-    for (i = 0; i < nb; i++) {
-	double av = b[i] < 0 ? -b[i] : b[i];
-	if (av > amax) amax = av;
-    }
-    nw = 1 + (long)floor(amax);
-    work = (double *) R_alloc((size_t) nw, sizeof(double));
-
-    DO_MATH3(y,a,b,c,n,na,nb,nc, f(ai,bi,ci,work));
-
-    return sy;
-} /* math3B */
-
-#define Math3_1(A, FUN)	math3_1(CAR(A), CADR(A), CADDR(A), CADDDR(A), FUN, call)
-#define Math3_2(A, FUN) math3_2(CAR(A), CADR(A), CADDR(A), CADDDR(A), CAD4R(A), FUN, call)
-#define Math3B(A, FUN)  math3B (CAR(A), CADR(A), CADDR(A), FUN, call)
-
-SEXP do_math3(SEXP call, SEXP op, SEXP args, SEXP env)
-{
     checkArity(op, args);
 
-    switch (PRIMVAL(op)) {
+    double (*fncall)();
+    void (*Dcall)();
 
-    case  1:  return Math3_1(args, dbeta);
-    case  2:  return Math3_2(args, pbeta);
-    case  3:  return Math3_2(args, qbeta);
+    int ix = PRIMVAL(op);
+    if (ix < 0 || ix > 47 || (fncall = math3_table[ix].fncall) == 0)
+        errorcall (call,
+                   _("unimplemented real function of %d numeric arguments"), 3);
 
-    case  4:  return Math3_1(args, dbinom);
-    case  5:  return Math3_2(args, pbinom);
-    case  6:  return Math3_2(args, qbinom);
+    Dcall = math3_table[ix].Dcall;
 
-    case  7:  return Math3_1(args, dcauchy);
-    case  8:  return Math3_2(args, pcauchy);
-    case  9:  return Math3_2(args, qcauchy);
+    SEXP a1 = CAR(args); SEXP g1 = ATTRIB(args); args = CDR(args);
+    SEXP a2 = CAR(args); SEXP g2 = ATTRIB(args); args = CDR(args);
+    SEXP a3 = CAR(args); SEXP g3 = ATTRIB(args); args = CDR(args);
 
-    case 10:  return Math3_1(args, df);
-    case 11:  return Math3_2(args, pf);
-    case 12:  return Math3_2(args, qf);
+    if (!isNumeric(a1) || !isNumeric(a2) || !isNumeric(a3))
+        non_numeric_errorcall(call);
 
-    case 13:  return Math3_1(args, dgamma);
-    case 14:  return Math3_2(args, pgamma);
-    case 15:  return Math3_2(args, qgamma);
+    R_len_t n1 = LENGTH(a1);
+    R_len_t n2 = LENGTH(a2);
+    R_len_t n3 = LENGTH(a3);
 
-    case 16:  return Math3_1(args, dlnorm);
-    case 17:  return Math3_2(args, plnorm);
-    case 18:  return Math3_2(args, qlnorm);
+    if (n1 == 0 || n2 == 0 || n3 == 0)
+        return allocVector(REALSXP,0);
 
-    case 19:  return Math3_1(args, dlogis);
-    case 20:  return Math3_2(args, plogis);
-    case 21:  return Math3_2(args, qlogis);
+    PROTECT(a1 = coerceVector (a1, REALSXP));
+    PROTECT(a2 = coerceVector (a2, REALSXP));
+    PROTECT(a3 = coerceVector (a3, REALSXP));
 
-    case 22:  return Math3_1(args, dnbinom);
-    case 23:  return Math3_2(args, pnbinom);
-    case 24:  return Math3_2(args, qnbinom);
+    int n; 
+    n = n1; if (n2 > n) n = n2; if (n3 > n) n = n3;
 
-    case 25:  return Math3_1(args, dnorm);
-    case 26:  return Math3_2(args, pnorm);
-    case 27:  return Math3_2(args, qnorm);
+    PROTECT(res = allocVector (REALSXP, n));
+    DUPLICATE_ATTRIB (res, n == n1 ? a1 : n == n2 ? a2 : a3);
 
-    case 28:  return Math3_1(args, dunif);
-    case 29:  return Math3_2(args, punif);
-    case 30:  return Math3_2(args, qunif);
+    int i1 = 0, i2 = 0;
+    if (args != R_NilValue)
+        i1 = asInteger(CAR(args));
+    if (CDR(args) != R_NilValue)
+        i2 = asInteger(CADR(args));
 
-    case 31:  return Math3_1(args, dweibull);
-    case 32:  return Math3_2(args, pweibull);
-    case 33:  return Math3_2(args, qweibull);
+    double *ap1 = REAL(a1), *ap2 = REAL(a2), *ap3 = REAL(a3), *rp = REAL(res);
+    int naflag = 0;
 
-    case 34:  return Math3_1(args, dnchisq);
-    case 35:  return Math3_2(args, pnchisq);
-    case 36:  return Math3_2(args, qnchisq);
+    /* Allocate work array for BesselI & BesselK big enough for all arguments */
 
-    case 37:  return Math3_1(args, dnt);
-    case 38:  return Math3_2(args, pnt);
-    case 39:  return Math3_2(args, qnt);
+    double *work = 0;
+    if (fncall == bessel_i_ex || fncall == bessel_k_ex)
+        work = Bessel_work_array (n2, ap2);
 
-    case 40:  return Math3_1(args, dwilcox);
-    case 41:  return Math3_2(args, pwilcox);
-    case 42:  return Math3_2(args, qwilcox);
+    R_len_t j, j1, j2, j3;
 
-    case 43:  return Math3B(args, bessel_i_ex);
-    case 44:  return Math3B(args, bessel_k_ex);
+    for (j = j1 = j2 = j3 = 0; j < n; 
+         j1 = (++j1==n1) ? 0 : j1,
+         j2 = (++j2==n2) ? 0 : j2,
+         j3 = (++j3==n3) ? 0 : j3, j++) {
 
-    case 45:  return Math3_1(args, dnbinom_mu);
-    case 46:  return Math3_2(args, pnbinom_mu);
-    case 47:  return Math3_2(args, qnbinom_mu);
+        double v1 = ap1[j1];
+        double v2 = ap2[j2];
+        double v3 = ap3[j3];
+        if (MAY_BE_NAN3(v1,v2,v3)) {
+            if (ISNA(v1) || ISNA(v2) || ISNA(v3)) {
+                rp[j] = NA_REAL;
+                continue;
+            }
+            if (ISNAN(v1) || ISNAN(v2) || ISNAN(v3)) {
+                rp[j] = R_NaN;
+                continue;
+            }
+        }
 
-    default:
-	errorcall(call,
-		  _("unimplemented real function of %d numeric arguments"), 3);
+        rp[j] = work ? fncall (v1, v2, v3, work)
+              : args == R_NilValue ? fncall (v1, v2, v3)
+              : CDR(args)==R_NilValue ? fncall (v1, v2, v3, i1)
+                                      : fncall (v1, v2, v3, i1, i2);
+
+        if (ISNAN(rp[j])) naflag = 1;
     }
-} /* do_math3() */
+
+    if (n == 1 && Dcall != 0 && !ISNAN(rp[0])
+               && (g1 != R_NilValue || g2 != R_NilValue || g3 != R_NilValue)) {
+#if 0
+        double grad1, grad2;
+        double *gp1 = g1 != R_NilValue ? &grad1 : 0;
+        double *gp2 = g2 != R_NilValue ? &grad2 : 0;
+
+        if (args == R_NilValue)
+            Dcall (ap1[0], ap2[0], gp1, gp2, rp[0]);
+        else if (CDR(args)==R_NilValue)
+            Dcall (ap1[0], ap2[0], gp1, gp2, rp[0], i1);
+        else
+            Dcall (ap1[0], ap2[0], gp1, gp2, rp[0], i1, i2);
+
+        if (g2 == R_NilValue)
+            R_gradient = copy_scaled_gradients (g1, grad1);
+        else if (g1 == R_NilValue)
+            R_gradient = copy_scaled_gradients (g2, grad2);
+        else
+            R_gradient = add_scaled_gradients 
+                          (copy_scaled_gradients (g1, grad1), g2, grad2);
+
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+#endif
+    }
+
+    if (naflag) NaN_warning();
+
+    UNPROTECT(4);
+    return res;
+}
+
 
 /* Mathematical Functions of Four (Real) Arguments */
 
