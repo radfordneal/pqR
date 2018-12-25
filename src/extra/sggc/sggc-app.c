@@ -291,7 +291,7 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
 
     if (sggctype == 2) {
         SEXP car = CAR(n), cdr = CDR(n), tag = TAG(n);
-        if (tag != R_NilValue && CHK_NO_OBJECT(tag)) 
+        if (tag != R_NilValue && CHK_NO_OBJECT(tag) && TYPEOF(tag) != SYMSXP)
             sggc_look_at(GET_CPTR(tag));
         if (cdr == R_NilValue)
             return CHK_NO_OBJECT(car) ? GET_CPTR(car) : SGGC_NO_OBJECT;
@@ -325,11 +325,11 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
         return CHK_NO_OBJECT(TAG(n)) ? GET_CPTR(TAG(n)) : SGGC_NO_OBJECT;
     }
 
-    /* Uncollected with only attribute, done last since they shouldn't really
-       be encountered here. */
+    /* Uncollected with only attribute, which was already looked at above.
+       Checked for last since they shouldn't really be encountered here. */
 
     if (sggctype == 5)
-        return CHK_NO_OBJECT(a) ? GET_CPTR(a) : SGGC_NO_OBJECT;
+        return SGGC_NO_OBJECT;
 
     abort();
 }
