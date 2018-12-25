@@ -272,16 +272,19 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
     a = ATTRIB_W(n);
 #endif
 
+    /* Handle attribute if there is one.  Only thing to do for sggctype==1. */
+    
+    if (a != R_NilValue && CHK_NO_OBJECT(a)) {
+        if (sggctype == 1)
+            return GET_CPTR(a);
+        else 
+            sggc_look_at(GET_CPTR(a));
+    }
+
     /* Only attribute:  INTSXP, REALSXP, and other non-pointer vectors. */
 
-    if (sggctype == 1)
-        return a != R_NilValue && CHK_NO_OBJECT(a) ? GET_CPTR(a) 
-                                                   : SGGC_NO_OBJECT;
-
-    /* Follow attribute reference. */
-
-    if (a != R_NilValue && CHK_NO_OBJECT(a))
-        sggc_look_at(GET_CPTR(a));
+    if (sggctype == 1)  
+        return SGGC_NO_OBJECT;  /* if had attribute, would have handled above */
 
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && USE_AUX_FOR_ATTRIB
     n = SEXP_FROM_CPTR(cptr);
