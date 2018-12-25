@@ -55,9 +55,19 @@ static inline SEXP get_gradient (SEXP env)
                 break;
             }
             if (GRADINDEX(p) < 1 || GRADINDEX(p) > nv) abort();
-            if (r == R_NilValue)
+            if (r == R_NilValue) {
                 r = allocVector (VECSXP, nv);
+                setAttrib (r, R_NamesSymbol, gv);
+            }
             SET_VECTOR_ELT (r, GRADINDEX(p)-1, CAR(p));
+        }
+    }
+
+    if (r != R_NilValue && nv > 1) {
+        int i;
+        for (i = 0; i < nv; i++) {
+            if (VECTOR_ELT(r,i) == R_NilValue)
+                SET_VECTOR_ELT (r, i, ScalarRealMaybeConst(0.0));
         }
     }
 
@@ -167,6 +177,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         errorcall (call, _("no gradient variables"));
 
     SEXP gv = allocVector (VECSXP, nv);
+    SET_NAMEDCNT_MAX(gv);
     PROTECT(gv);
 
     SEXP p, q, r;
