@@ -309,11 +309,11 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
 
     if (sggctype == 3) {
         R_len_t len = LENGTH(n);
-        if (len == 0)
-            return SGGC_NO_OBJECT;
         SEXP *ptr = &STRING_ELT(n,0);
         if (len == 1)
             return GET_CPTR(*ptr);
+        if (len == 0)
+            return SGGC_NO_OBJECT;
         SEXP *last = &STRING_ELT(n,len-1);
         do {
             sggc_look_at(GET_CPTR(*ptr));
