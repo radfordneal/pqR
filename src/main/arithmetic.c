@@ -2506,6 +2506,42 @@ static void Ddgeom (double x, double p, double *dx /*ignored*/, double *dp,
     }
 }
 
+/* Table of functions to compute values and derivatives for math2 functions. */
+
+static struct { double (*fncall)(); void (*Dcall)(); } math2_table[31] = {
+    { 0,	0 },
+    { atan2,	Datan2 },
+    { lbeta,	0 },
+    { beta,	0 },
+    { lchoose,	0 },
+    { choose,	0 },
+    { dchisq,	0 },
+    { pchisq,	0 },
+    { qchisq,	0 },
+    { dexp,	Ddexp },
+    { pexp,	0 },
+    { qexp,	0 },
+    { dgeom,	Ddgeom },
+    { pgeom,	0 },
+    { qgeom,	0 },
+    { dpois,	0 },
+    { ppois,	0 },
+    { qpois,	0 },
+    { dt,	0 },
+    { pt,	0 },
+    { qt,	0 },
+    { dsignrank,   0 },
+    { psignrank,   0 },
+    { qsignrank,   0 },
+    { bessel_j_ex, 0 },
+    { bessel_y_ex, 0 },
+    { psigamma,	0 },
+    { fround,	0 },
+    { 0,	0 },
+    { logbase,	0 },
+    { fprec,	0 }
+};
+
 /* Mathematical Functions of Two Numeric Arguments (plus 0, 1, or 2 integers) */
 
 SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
@@ -2520,77 +2556,13 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
     double (*fncall)();
     void (*Dcall)();
 
-    switch (PRIMVAL(op)) {
+    int ix = PRIMVAL(op);
+    if (ix>10000) ix = ix - 10000 + 26;  /* kludge */
+    if (ix < 0 || ix > 30 || (fncall = math2_table[ix].fncall) == 0)
+        errorcall (call,
+                   _("unimplemented real function of %d numeric arguments"), 2);
 
-    case  1: fncall = atan2; Dcall = Datan2;
-             break;
-    case  2: fncall = lbeta; Dcall = 0;
-             break;
-    case  3: fncall = beta; Dcall = 0;
-             break;
-    case  4: fncall = lchoose; Dcall = 0;
-             break;
-    case  5: fncall = choose; Dcall = 0;
-             break;
-    case  6: fncall = dchisq; Dcall = 0;
-             break;
-    case  7: fncall = pchisq; Dcall = 0;
-             break;
-    case  8: fncall = qchisq; Dcall = 0;
-             break;
-    case  9: fncall = dexp; Dcall = Ddexp;
-             break;
-    case 10: fncall = pexp; Dcall = 0;
-             break;
-    case 11: fncall = qexp; Dcall = 0;
-             break;
-    case 12: fncall = dgeom; Dcall = Ddgeom;
-             break;
-    case 13: fncall = pgeom; Dcall = 0;
-             break;
-    case 14: fncall = qgeom; Dcall = 0;
-             break;
-    case 15: fncall = dpois; Dcall = 0;
-             break;
-    case 16: fncall = ppois; Dcall = 0;
-             break;
-    case 17: fncall = qpois; Dcall = 0;
-             break;
-    case 18: fncall = dt; Dcall = 0;
-             break;
-    case 19: fncall = pt; Dcall = 0;
-             break;
-    case 20: fncall = qt; Dcall = 0;
-             break;
-    case 21: fncall = dsignrank; Dcall = 0;
-             break;
-    case 22: fncall = psignrank; Dcall = 0;
-             break;
-    case 23: fncall = qsignrank; Dcall = 0;
-             break;
-    case 24: fncall = bessel_j_ex; Dcall = 0;
-             break;
-    case 25: fncall = bessel_y_ex; Dcall = 0;
-             break;
-    case 26: fncall = psigamma; Dcall = 0;
-             break;
-
-    default: 
-        /* Put 10001, 1003, and 10004 here so switch table won't be sparse. */
-        if (PRIMVAL(op)==10001) {
-            fncall = fround; Dcall = 0; /* round, src/nmath/fround.c */
-        }
-        else if (PRIMVAL(op)==10003) {
-            fncall = logbase; Dcall = 0;/* log with base */
-        }
-        else if (PRIMVAL(op)==10004) {
-            fncall = fprec; Dcall = 0;  /* signif, src/nmath/fprec.c */
-        }
-        else
-            errorcall(call,
-              _("unimplemented real function of %d numeric arguments"), 2);
-        break;
-    }
+    Dcall = math2_table[ix].Dcall;
 
     SEXP a1 = CAR(args); SEXP g1 = ATTRIB(args); args = CDR(args);
     SEXP a2 = CAR(args); SEXP g2 = ATTRIB(args); args = CDR(args);
