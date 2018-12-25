@@ -269,19 +269,22 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
     a = * (SEXP *) SGGC_AUX1(cptr);  /* avoid waste of CPTR -> UPTR -> CPTR */
 #else
     n = SEXP_FROM_CPTR(cptr);
-    a = ATTRIB(n);
+    a = ATTRIB_W(n);
 #endif
+
+    /* Handle attribute if there is one.  Only thing to do for sggctype==1. */
+    
+    if (a != R_NilValue && CHK_NO_OBJECT(a)) {
+        if (sggctype == 1)
+            return GET_CPTR(a);
+        else 
+            sggc_look_at(GET_CPTR(a));
+    }
 
     /* Only attribute:  INTSXP, REALSXP, and other non-pointer vectors. */
 
-    if (sggctype == 1)
-        return a != R_NilValue && CHK_NO_OBJECT(a) ? GET_CPTR(a) 
-                                                   : SGGC_NO_OBJECT;
-
-    /* Follow attribute reference. */
-
-    if (a != R_NilValue && CHK_NO_OBJECT(a))
-        sggc_look_at(GET_CPTR(a));
+    if (sggctype == 1)  
+        return SGGC_NO_OBJECT;  /* if had attribute, would have handled above */
 
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 8 && USE_AUX_FOR_ATTRIB
     n = SEXP_FROM_CPTR(cptr);
@@ -291,24 +294,26 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
 
     if (sggctype == 2) {
         SEXP car = CAR(n), cdr = CDR(n), tag = TAG(n);
-        if (tag != R_NilValue && CHK_NO_OBJECT(tag)) 
+        if (tag != R_NilValue && CHK_NO_OBJECT(tag) && TYPEOF(tag) != SYMSXP)
             sggc_look_at(GET_CPTR(tag));
-        if (cdr == R_NilValue)
-            return CHK_NO_OBJECT(car) ? GET_CPTR(car) : SGGC_NO_OBJECT;
-        if (CHK_NO_OBJECT(car))
+        if (CHK_NO_OBJECT(car)) {
+            if (cdr == R_NilValue)
+                return GET_CPTR(car);
             sggc_look_at(GET_CPTR(car));
-        return CHK_NO_OBJECT(cdr) ? GET_CPTR(cdr) : SGGC_NO_OBJECT;
+        }
+        return cdr != R_NilValue && CHK_NO_OBJECT(cdr) ? GET_CPTR(cdr) 
+                                                       : SGGC_NO_OBJECT;
     }
 
     /* Vectors of pointers (+ attribute):  VECSXP, EXPRSXP, STRSXP. */
 
     if (sggctype == 3) {
         R_len_t len = LENGTH(n);
-        if (len == 0)
-            return SGGC_NO_OBJECT;
         SEXP *ptr = &STRING_ELT(n,0);
         if (len == 1)
             return GET_CPTR(*ptr);
+        if (len == 0)
+            return SGGC_NO_OBJECT;
         SEXP *last = &STRING_ELT(n,len-1);
         do {
             sggc_look_at(GET_CPTR(*ptr));
@@ -325,11 +330,11 @@ sggc_cptr_t sggc_find_object_ptrs (sggc_cptr_t cptr)
         return CHK_NO_OBJECT(TAG(n)) ? GET_CPTR(TAG(n)) : SGGC_NO_OBJECT;
     }
 
-    /* Uncollected with only attribute, done last since they shouldn't really
-       be encountered here. */
+    /* Uncollected with only attribute, which was already looked at above.
+       Checked for last since they shouldn't really be encountered here. */
 
     if (sggctype == 5)
-        return CHK_NO_OBJECT(a) ? GET_CPTR(a) : SGGC_NO_OBJECT;
+        return SGGC_NO_OBJECT;
 
     abort();
 }
