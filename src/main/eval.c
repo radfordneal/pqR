@@ -4489,6 +4489,7 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
 
+
     /* FOR NOW:  Handle gradients with the general-case R_unary and R_binary
        procedures. */
 
@@ -4830,6 +4831,7 @@ static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
   arg_count_err:
     errorcall(call,_("operator needs one or two arguments"));
 }
+
 
 /* -------------------------------------------------------------------------- */
 /*                       RELATIONAL OPERATORS.                                */
