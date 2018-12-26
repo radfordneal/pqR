@@ -38,13 +38,22 @@
 
 static inline SEXP get_gradient (SEXP env)
 {
+    if (! (R_variant_result & VARIANT_GRADIENT_FLAG))
+        R_gradient = R_NilValue;
+
     PROTECT(R_gradient);
 
     SEXP gv = GRADVARS(env);
     if (TYPEOF(gv) != VECSXP) abort();
 
     int nv = LENGTH(gv);
+
     SEXP r = R_NilValue;
+    if (nv > 1) {
+        PROTECT(r = allocVector (VECSXP, nv));
+        setAttrib (r, R_NamesSymbol, gv);
+    }
+
     SEXP p;
 
     for (p = R_gradient; p != R_NilValue; p = CDR(p)) {
@@ -55,23 +64,23 @@ static inline SEXP get_gradient (SEXP env)
                 break;
             }
             if (GRADINDEX(p) < 1 || GRADINDEX(p) > nv) abort();
-            if (r == R_NilValue) {
-                r = allocVector (VECSXP, nv);
-                setAttrib (r, R_NamesSymbol, gv);
-            }
             SET_VECTOR_ELT (r, GRADINDEX(p)-1, CAR(p));
         }
     }
 
-    if (r != R_NilValue && nv > 1) {
+    if (r == R_NilValue) {
+        r = ScalarRealMaybeConst(0.0);
+    }
+    else if (nv > 1) {
         int i;
         for (i = 0; i < nv; i++) {
             if (VECTOR_ELT(r,i) == R_NilValue)
                 SET_VECTOR_ELT (r, i, ScalarRealMaybeConst(0.0));
         }
+        UNPROTECT(1); /* r */
     }
 
-    UNPROTECT(1);
+    UNPROTECT(1);  /* R_gradient */
     return r;
 }
 
@@ -246,8 +255,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     /* Attach gradient, and propage gradients backwards with the chain rule. */
     
-    int got_grad = R_variant_result & VARIANT_GRADIENT_FLAG;
-    SEXP result_grad = got_grad ? get_gradient (newenv) : R_NilValue;
+    SEXP result_grad = get_gradient (newenv);
     PROTECT(result_grad);
     R_variant_result = 0;
 
@@ -263,7 +271,8 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
     }
 
-    if (got_grad && (variant & VARIANT_GRADIENT)) {
+    if ((R_variant_result & VARIANT_GRADIENT_FLAG)
+           && (variant & VARIANT_GRADIENT)) {
 
         SEXP other_grads = get_other_gradients (newenv);
         PROTECT(other_grads);
@@ -417,11 +426,12 @@ static SEXP do_gradient_of(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     checkArity (op, args);
 
+    if (TYPEOF(GRADVARS(env)) != VECSXP)
+        errorcall (call, _("gradient_of called outside gradient construct"));
+
     (void) evalv (CAR(args), env, VARIANT_GRADIENT);
 
-    SEXP r = R_NilValue;
-    if (R_variant_result & VARIANT_GRADIENT_FLAG) 
-        r = get_gradient (env);
+    SEXP r = get_gradient (env);
 
     R_variant_result = 0;
     return r;
