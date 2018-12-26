@@ -4316,14 +4316,14 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     char typeplus1 = TYPE_ETC(arg1);
     char typeplus2 = TYPE_ETC(arg2);
 
-    if (variant & VARIANT_ANY_ATTR) {
-        typeplus1 &= ~TYPE_ET_CETERA_HAS_ATTR;
-        typeplus2 &= ~TYPE_ET_CETERA_HAS_ATTR;
-    }
+    double a1, a2;  /* the two operands, if real */
+    int i1;         /* the first operand, if integer */
 
     if (typeplus2 == NILSXP && CDR(argsevald) == R_NilValue) { /* Unary op */
 
         /* Test if arg1 is scalar numeric, computation not pending, attr OK */
+
+      retry_unary:
 
         if (typeplus1 == REALSXP) {
 
@@ -4338,8 +4338,8 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
         if (typeplus1 == INTSXP || typeplus1 == LGLSXP) {
 
-            int val = *INTEGER(arg1) == NA_INTEGER ? NA_INTEGER
-                    : opcode == PLUSOP ? *INTEGER(arg1) : -*INTEGER(arg1);
+            i1 = *INTEGER(arg1);
+            int val = i1 == NA_INTEGER ? NA_INTEGER : opcode==PLUSOP ? i1 : -i1;
 
             ans = NAMEDCNT_EQ_0(arg1) ?           (*INTEGER(arg1) = val, arg1)
                 : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_INTEGER(val)
@@ -4348,11 +4348,16 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             goto ret;
         }
 
+        if ((variant & VARIANT_ANY_ATTR)
+              && (typeplus1 & TYPE_ET_CETERA_HAS_ATTR)) {
+            typeplus1 &= ~TYPE_ET_CETERA_HAS_ATTR;
+            goto retry_unary;
+        }
+
         goto general;
     }
 
-    double a1, a2;  /* the two operands, if real */
-    int i1;         /* the first operand, if integer */
+  retry_binary:
 
     if (typeplus2 == REALSXP) {
         a2 = *REAL(arg2);
@@ -4415,6 +4420,12 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
         else
             goto general;
+    }
+    else if ((variant & VARIANT_ANY_ATTR)
+               && ((typeplus1 | typeplus1) & TYPE_ET_CETERA_HAS_ATTR)) {
+        typeplus1 &= ~TYPE_ET_CETERA_HAS_ATTR;
+        typeplus2 &= ~TYPE_ET_CETERA_HAS_ATTR;
+        goto retry_binary;
     }
     else
         goto general;
@@ -4507,13 +4518,10 @@ static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     char typeplus1 = TYPE_ETC(arg1);
     char typeplus2 = TYPE_ETC(arg2);
 
-    if (variant & VARIANT_ANY_ATTR) {
-        typeplus1 &= ~TYPE_ET_CETERA_HAS_ATTR;
-        typeplus2 &= ~TYPE_ET_CETERA_HAS_ATTR;
-    }
-
     double a1, a2;  /* the two operands, if real */
     int i1;         /* the first operand, if integer */
+
+  retry:
 
     if (typeplus2 == REALSXP) {
         a2 = *REAL(arg2);
@@ -4542,6 +4550,12 @@ static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
         else
             goto general;
+    }
+    else if ((variant & VARIANT_ANY_ATTR)
+               && ((typeplus1 | typeplus1) & TYPE_ET_CETERA_HAS_ATTR)) {
+        typeplus1 &= ~TYPE_ET_CETERA_HAS_ATTR;
+        typeplus2 &= ~TYPE_ET_CETERA_HAS_ATTR;
+        goto retry;
     }
     else
         goto general;
@@ -4649,26 +4663,35 @@ static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     int typeplusx = TYPE_ETC(x);
     int typeplusy = TYPE_ETC(y);
 
-    if (variant & VARIANT_ANY_ATTR) {
-        typeplusx &= ~TYPE_ET_CETERA_HAS_ATTR;
-        typeplusy &= ~TYPE_ET_CETERA_HAS_ATTR;
-    }
-
     double xv, yv;  /* the two operands */
+
+  retry_x:
 
     if (typeplusx == REALSXP)
         xv = *REAL(x);
     else if ((typeplusx == INTSXP || typeplusx == LGLSXP)
                && *INTEGER(x) != NA_INTEGER)
         xv = (double) *INTEGER(x);
+    else if ((variant & VARIANT_ANY_ATTR) 
+               && (typeplusx & TYPE_ET_CETERA_HAS_ATTR)) {
+        typeplusx &= ~TYPE_ET_CETERA_HAS_ATTR;
+        goto retry_x;
+    }
     else
         goto general;
+
+  retry_y:
 
     if (typeplusy == REALSXP)
         yv = *REAL(y);
     else if ((typeplusy == INTSXP || typeplusy == LGLSXP)
                && *INTEGER(y) != NA_INTEGER)
         yv = (double) *INTEGER(y);
+    else if ((variant & VARIANT_ANY_ATTR) 
+               && (typeplusy & TYPE_ET_CETERA_HAS_ATTR)) {
+        typeplusy &= ~TYPE_ET_CETERA_HAS_ATTR;
+        goto retry_y;
+    }
     else
         goto general;
 
