@@ -4252,17 +4252,22 @@ static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
 /*                        ARITHMETIC OPERATORS.                               */
 /*                                                                            */
 /* All but simple cases are handled in R_unary and R_binary in arithmetic.c.  */
+/* do_arith1 handles binary and unary + and -.  do_arith2 handles the binary  */
+/* *, /, ^, %%, and %/% operators.                                            */
 
-static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
+    int opcode = PRIMVAL(op);
+
     SEXP argsevald, ans, arg1, arg2;
+    SEXP sv_scalar_stack = 0;
     int obj;
 
     /* Evaluate arguments, maybe putting them on the scalar stack. */
 
-    SEXP sv_scalar_stack = R_scalar_stack;
-
+    sv_scalar_stack = R_scalar_stack;
     argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env);
+
     PROTECT3(argsevald,arg1,arg2);
 
     /* Check for dispatch on S3 or S4 objects. */
@@ -4275,16 +4280,12 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
     }
 
-    int opcode = PRIMVAL(op);
-
     /* Check for argument count error (not before dispatch, since other
        methods may have different requirements).  Only check for more than
        two at this point - check for simple cases will fail for other
        argument count errors, so do those checks later. */
 
     if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
-
-    R_Visible = TRUE;
 
     /* Arguments are now in arg1 and arg2, and are protected. They may
        be on the scalar stack, but if so, are removed now, though they
@@ -4384,12 +4385,8 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
             if (opcode==PLUSOP)
                 val = (int_fast64_t)i1 + (int_fast64_t)i2;
-            else if (opcode == MINUSOP)
-                val = (int_fast64_t)i1 - (int_fast64_t)i2;
-            else if (opcode == TIMESOP)
-                val = (int_fast64_t)i1 * (int_fast64_t)i2;
             else
-                goto general;
+                val = (int_fast64_t)i1 - (int_fast64_t)i2;
 
             if (val < R_INT_MIN || val > R_INT_MAX) {
                 val = NA_INTEGER;
@@ -4417,13 +4414,134 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     
     double val;
 
-    switch (opcode) {
-    case PLUSOP:
+    if (opcode == PLUSOP)
         val = a1 + a2;
-        break;
-    case MINUSOP:
+    else
         val = a1 - a2;
-        break;
+
+    ans = NAMEDCNT_EQ_0(arg2) && typeplus2==REALSXP ? (*REAL(arg2) = val, arg2)
+        : NAMEDCNT_EQ_0(arg1) && typeplus1==REALSXP ? (*REAL(arg1) = val, arg1)
+        : CAN_USE_SCALAR_STACK(variant) ?             PUSH_SCALAR_REAL(val)
+        :                                             ScalarReal(val);
+
+    goto ret;
+
+    /* Handle the general case. */
+
+  general:
+
+    if (CDR(argsevald) != R_NilValue)
+        ans = R_binary (call, opcode, arg1, arg2, obj&1, obj>>1, env, variant);
+    else {
+        if (argsevald == R_NilValue) goto arg_count_err;
+        ans = R_unary (call, opcode, arg1, obj, env, variant);
+    }
+
+  ret:
+    R_Visible = TRUE;
+    UNPROTECT(3);
+    return ans;
+
+  arg_count_err:
+    errorcall(call,_("operator needs one or two arguments"));
+}
+
+static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+{
+    int opcode = PRIMVAL(op);
+
+    SEXP argsevald, ans, arg1, arg2;
+    SEXP sv_scalar_stack = 0;
+    int obj;
+
+    /* Evaluate arguments, maybe putting them on the scalar stack. */
+
+    sv_scalar_stack = R_scalar_stack;
+    argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env);
+
+    PROTECT3(argsevald,arg1,arg2);
+
+    /* Check for dispatch on S3 or S4 objects. */
+
+    if (obj) { /* one or other or both operands are objects */
+        if (DispatchGroup("Ops", call, op, argsevald, env, &ans)) {
+            UNPROTECT(3);
+            R_Visible = TRUE;
+            return ans;
+        }
+    }
+
+    /* Check for argument count error (not before dispatch, since other
+       methods may have different requirements).  Only check for more than
+       two at this point - check for simple cases will fail for other
+       argument count errors, so do those checks later. */
+
+    if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
+
+    /* Arguments are now in arg1 and arg2, and are protected. They may
+       be on the scalar stack, but if so, are removed now, though they
+       may still be referenced.  Note that result might be on top of
+       one of them - OK since after storing into it, the args won't be
+       accessed again.
+
+       Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
+       but faster. */
+
+    R_scalar_stack = sv_scalar_stack;
+
+    /* We quickly do real arithmetic and integer plus/minus/times on
+       scalars with no attributes (as will be the case for scalar
+       stack values), or attributes that will be ignored.  We don't
+       bother trying local assignment, since returning the result on
+       the scalar stack should be about as fast. */
+
+    char typeplus1 = TYPE_ETC(arg1);
+    char typeplus2 = TYPE_ETC(arg2);
+
+    if (variant & VARIANT_ANY_ATTR) {
+        typeplus1 &= ~TYPE_ET_CETERA_HAS_ATTR;
+        typeplus2 &= ~TYPE_ET_CETERA_HAS_ATTR;
+    }
+
+    double a1, a2;  /* the two operands, if real */
+    int i1;         /* the first operand, if integer */
+
+    if (typeplus2 == REALSXP) {
+        a2 = *REAL(arg2);
+        if (typeplus1 == REALSXP) {
+            a1 = *REAL(arg1);
+        }
+        else if (typeplus1 == INTSXP || typeplus1 == LGLSXP) {
+            i1 = *INTEGER(arg1);
+            if (i1 == NA_INTEGER) {
+                ans = R_ScalarRealNA;
+                goto ret;
+            }
+            a1 = (double) i1;
+        }
+        else
+            goto general;
+    }
+    else if (typeplus2 == INTSXP || typeplus2 == LGLSXP) {
+        if (typeplus1 == REALSXP) {
+            if (*INTEGER(arg2) == NA_INTEGER) {
+                ans = R_ScalarRealNA;
+                goto ret;
+            }
+            a1 = *REAL(arg1);
+            a2 = (double) *INTEGER(arg2);
+        }
+        else
+            goto general;
+    }
+    else
+        goto general;
+
+    /* Do the operation on scalar reals. */
+    
+    double val;
+
+    switch (opcode) {
     case TIMESOP:
         val = a1 * a2;
         break;
@@ -4457,23 +4575,19 @@ static SEXP do_arith (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
   general:
 
-    if (CDR(argsevald) != R_NilValue)
-        ans = R_binary (call, opcode, arg1, arg2, obj&1, obj>>1, env, variant);
-    else {
-        if (argsevald == R_NilValue) goto arg_count_err;
-        if (opcode != MINUSOP && opcode != PLUSOP)
-            errorcall(call, _("%d argument passed to '%s' which requires %d"),
-                            1, opcode == MINUSOP ? "-" : "+", 2);
-        ans = R_unary (call, opcode, arg1, obj, env, variant);
-    }
+    if (CDR(argsevald) == R_NilValue) goto arg_count_err;
+
+    ans = R_binary (call, opcode, arg1, arg2, obj&1, obj>>1, env, variant);
 
   ret:
+    R_Visible = TRUE;
     UNPROTECT(3);
     return ans;
 
   arg_count_err:
     errorcall(call,_("operator needs one or two arguments"));
 }
+
 
 /* -------------------------------------------------------------------------- */
 /*                       RELATIONAL OPERATORS.                                */
@@ -5377,13 +5491,13 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 
 /* Arithmetic Operators, all primitives, now special, though always eval args */
 
-{"+",		do_arith,	PLUSOP,	1000,	2,	{PP_BINARY,  PREC_SUM,	  0}},
-{"-",		do_arith,	MINUSOP,1000,	2,	{PP_BINARY,  PREC_SUM,	  0}},
-{"*",		do_arith,	TIMESOP,1000,	2,	{PP_BINARY,  PREC_PROD,	  0}},
-{"/",		do_arith,	DIVOP,	1000,	2,	{PP_BINARY2, PREC_PROD,	  0}},
-{"^",		do_arith,	POWOP,	1000,	2,	{PP_BINARY2, PREC_POWER,  1}},
-{"%%",		do_arith,	MODOP,	1000,	2,	{PP_BINARY2, PREC_PERCENT,0}},
-{"%/%",		do_arith,	IDIVOP,	1000,	2,	{PP_BINARY2, PREC_PERCENT,0}},
+{"+",		do_arith1,	PLUSOP,	1000,	2,	{PP_BINARY,  PREC_SUM,	  0}},
+{"-",		do_arith1,	MINUSOP,1000,	2,	{PP_BINARY,  PREC_SUM,	  0}},
+{"*",		do_arith2,	TIMESOP,1000,	2,	{PP_BINARY,  PREC_PROD,	  0}},
+{"/",		do_arith2,	DIVOP,	1000,	2,	{PP_BINARY2, PREC_PROD,	  0}},
+{"^",		do_arith2,	POWOP,	1000,	2,	{PP_BINARY2, PREC_POWER,  1}},
+{"%%",		do_arith2,	MODOP,	1000,	2,	{PP_BINARY2, PREC_PERCENT,0}},
+{"%/%",		do_arith2,	IDIVOP,	1000,	2,	{PP_BINARY2, PREC_PERCENT,0}},
 
 /* Relational Operators, all primitives */
 /* these are group generic and so need to eval args (inside, as special) */
