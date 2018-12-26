@@ -1,6 +1,7 @@
 % File src/library/stats/man/numericDeriv.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2008 R Core Team
+% Modifications for pqR Copyright (c) 2018 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{numericDeriv}
@@ -8,6 +9,8 @@
 \title{Evaluate Derivatives Numerically}
 \description{
     \code{numericDeriv} numerically evaluates the gradient of an expression.
+    For run-time automatic differentiation, see \link{Gradient}. 
+    For symbolic differentiation facilities, see \code{\link{deriv}}. 
 }
 \usage{
 numericDeriv(expr, theta, rho = parent.frame(), dir = 1.0)

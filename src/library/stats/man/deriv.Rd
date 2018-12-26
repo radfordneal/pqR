@@ -14,7 +14,9 @@
 \alias{deriv3.formula}
 \title{Symbolic and Algorithmic Derivatives of Simple Expressions}
 \description{
-  Compute derivatives of simple expressions, symbolically.
+  Compute derivatives of simple expressions, symbolically.  For
+  run-time automatic differentiation, see \link{Gradient}.  For
+  numerical differentiations, see \code{\link{numericDeriv}}.
 }
 \usage{
     D (expr, name)
