@@ -2725,6 +2725,32 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 }
 
 
+/* Derivatives of math3 functions. */
+
+static void Ddnorm (double x, double mu, double sigma, 
+                    double *dx, double *dmu, double *dsigma,
+                    int give_log, double v)
+{
+    if (!R_FINITE(v)) {
+        if (dx) *dx = 0;
+        if (dmu) *dmu = 0;
+        if (dsigma) *dsigma = 0;
+    }
+    else {
+        double x0 = (x - mu) / sigma;
+        if (give_log) {
+            if (dx) *dx = -x0 / sigma;
+            if (dmu) *dmu = x0 / sigma;
+            if (dsigma) *dsigma = (x0*x0 - 1) / sigma;
+        }
+        else {
+            if (dx) *dx = - v * x0 / sigma;
+            if (dmu) *dmu = v * x0 / sigma;
+            if (dsigma) *dsigma = v * (x0*x0 - 1) / sigma;
+        }
+    }
+}
+
 /* Table of functions to compute values and derivatives for math3 functions. */
 
 static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
@@ -2753,7 +2779,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { dnbinom,	0 },
     { pnbinom,	0 },
     { qnbinom,	0 },
-    { dnorm,	0 },
+    { dnorm,	Ddnorm },
     { pnorm,	0 },
     { qnorm,	0 },
     { dunif,	0 },
@@ -2777,7 +2803,6 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { pnbinom_mu,  0 },
     { qnbinom_mu,  0 }
 };
-
 
 /* Mathematical functions of 3 numeric arguments (plus 0, 1, or 2 integers) */
 
@@ -2867,28 +2892,35 @@ SEXP do_math3 (SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (n == 1 && Dcall != 0 && !ISNAN(rp[0])
                && (g1 != R_NilValue || g2 != R_NilValue || g3 != R_NilValue)) {
-#if 0
-        double grad1, grad2;
+
+        double grad1, grad2, grad3;
         double *gp1 = g1 != R_NilValue ? &grad1 : 0;
         double *gp2 = g2 != R_NilValue ? &grad2 : 0;
+        double *gp3 = g3 != R_NilValue ? &grad3 : 0;
 
         if (args == R_NilValue)
-            Dcall (ap1[0], ap2[0], gp1, gp2, rp[0]);
+            Dcall (ap1[0], ap2[0], ap3[0], gp1, gp2, gp3, rp[0]);
         else if (CDR(args)==R_NilValue)
-            Dcall (ap1[0], ap2[0], gp1, gp2, rp[0], i1);
+            Dcall (ap1[0], ap2[0], ap3[0], gp1, gp2, gp3, rp[0], i1);
         else
-            Dcall (ap1[0], ap2[0], gp1, gp2, rp[0], i1, i2);
+            Dcall (ap1[0], ap2[0], ap3[0], gp1, gp2, gp3, rp[0], i1, i2);
 
-        if (g2 == R_NilValue)
+        R_gradient = R_NilValue;
+        if (g1 != R_NilValue) {
             R_gradient = copy_scaled_gradients (g1, grad1);
-        else if (g1 == R_NilValue)
-            R_gradient = copy_scaled_gradients (g2, grad2);
-        else
-            R_gradient = add_scaled_gradients 
-                          (copy_scaled_gradients (g1, grad1), g2, grad2);
+        }
+        if (g2 != R_NilValue) {
+            R_gradient = R_gradient == R_NilValue 
+                          ? copy_scaled_gradients (g2, grad2)
+                          : add_scaled_gradients (R_gradient, g2, grad2);
+        }
+        if (g3 != R_NilValue) {
+            R_gradient = R_gradient == R_NilValue 
+                          ? copy_scaled_gradients (g3, grad3)
+                          : add_scaled_gradients (R_gradient, g3, grad3);
+        }
 
         R_variant_result = VARIANT_GRADIENT_FLAG;
-#endif
     }
 
     if (naflag) NaN_warning();
@@ -3281,7 +3313,7 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"pnbinom",	do_math3,	23,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qnbinom",	do_math3,	24,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dnorm",	do_math3,	25,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"dnorm",	do_math3,	25,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
 {"pnorm",	do_math3,	26,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qnorm",	do_math3,	27,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
