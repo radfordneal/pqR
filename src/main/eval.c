@@ -2807,9 +2807,9 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
 
     int i, m;
     i = 0;
-    if (n > 4) { 
-        m = 0;   /* so i won't be less than m for first argument */
-        n -= 4;  /* m will be set to this new n after first argument */
+    if (n > 4) { /* don't ask for gradient for first argument */
+        m = 0;     /* so i won't be less than m for first argument */
+        n -= 3;    /* m will be set to this new n after first argument */
     }
     else 
         m = n;
@@ -2852,7 +2852,7 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
 
 	} else {
             if (CDR(el) == R_NilValue) 
-                varpend = variant;  /* don't defer pointlessly for last one */
+                varpend = variant;    /* don't defer pointlessly for last one */
             INC_NAMEDCNT(CAR(tail));  /* OK when tail is R_NilValue */
             ev_el = EVALV (CAR(el), rho, 
                            i<m ? varpend | VARIANT_GRADIENT : varpend);

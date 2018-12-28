@@ -1629,7 +1629,8 @@ SEXP attribute_hidden mkValuePROMISE(SEXP expr, SEXP value)
 }
 
 
-/* mkPRIMSXP - return a primitve function, "builtin" or "special".
+/* mkPRIMSXP - Return a primitve function, "builtin" or "special".
+               May be actually "primitive", or be "internal".
 
    Primitive objects are recorded to avoid creation of extra ones
    during unserializaton or reconstruction after a package has

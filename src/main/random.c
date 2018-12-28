@@ -41,10 +41,25 @@ R_NORETURN static void invalid(SEXP call)
     error(_("invalid arguments"));
 }
 
-/* "do_random1" - random sampling from 1 parameter families. */
+/* Derivatives for random1 generators. */
 
-static double (*rand1_funs[6])(double) = {
-    rchisq, rexp, rgeom, rpois, rt, rsignrank
+static double Drexp (double r, double scale)
+{
+    return r / scale;
+}
+
+/* Table of functions for generation and derivatives of random1 distibutions. */
+
+static struct { 
+    double (*fncall)(double); double (*Dcall)(double,double); 
+} rand1_table[6] = 
+{
+    { rchisq,	0 },
+    { rexp,	Drexp },
+    { rgeom,	0 },
+    { rpois,	0 },
+    { rt,	0 },
+    { rsignrank,0 }
 };
 
 static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -70,15 +85,34 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
     na = LENGTH(a);
 
     int opcode = PRIMVAL(op);
-    if (opcode < 0 || opcode >= sizeof rand1_funs)
+    if (opcode < 0 || opcode > 5)
         error(_("internal error in do_random1"));
-    double (*rf)(double) = rand1_funs[opcode];
+    double (*fncall)(double) = rand1_table[opcode].fncall;
 
     if (n == 1 && na >= 1) { /* quickly generate single value */
+
         GetRNGstate();
-        double r = rf (*REAL(a));
-        if (ISNAN(r)) warning(_("NAs produced"));
+        double av = *REAL(a);
+        double r = fncall (av);
         PutRNGstate();
+
+        if (ISNAN(r)) {
+            warning(_("NAs produced"));
+        }
+        else {
+
+            /* Compute gradient if requested. */
+
+            SEXP g = ATTRIB(CDR(args));
+            if (g != R_NilValue) {
+                double (*Dcall)(double,double) = rand1_table[opcode].Dcall;
+                if (Dcall != 0) {
+                    R_gradient = copy_scaled_gradients (g, Dcall(r,av));
+                    R_variant_result = VARIANT_GRADIENT_FLAG;
+                }
+            }
+        }
+
         UNPROTECT(1); /* a */
         return ScalarReal(r);
     }
@@ -107,10 +141,10 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
     double *ap = REAL(a), *xp = REAL(x);
 
     if (na == 1) {
-        double ar = *ap;
+        double av = *ap;
         int i;
         for (i = 0; i < n; i++) {
-            xp[i] = rf (ar);
+            xp[i] = fncall (av);
             if (ISNAN(xp[i])) naflag = TRUE;
         }
     }
@@ -118,7 +152,7 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
         int i, i1;
         for (i = 0, i1 = 0; i < n; i++, i1++) {
             if (i1 == na) i1 = 0;
-            xp[i] = rf (ap[i1]);
+            xp[i] = fncall (ap[i1]);
             if (ISNAN(xp[i])) naflag = TRUE;
         }
     }
@@ -807,11 +841,11 @@ attribute_hidden FUNTAB R_FunTab_random[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"rchisq",	do_random1,	0,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"rexp",	do_random1,	1,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"rgeom",	do_random1,	2,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"rpois",	do_random1,	3,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"rt",		do_random1,	4,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rchisq",	do_random1,	0,   51000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rexp",	do_random1,	1,   51000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rgeom",	do_random1,	2,   51000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rpois",	do_random1,	3,   51000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rt",		do_random1,	4,   51000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"rsignrank",	do_random1,	5,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"rbeta",	do_random2,	0,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"rbinom",	do_random2,	1,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},

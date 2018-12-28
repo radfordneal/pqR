@@ -598,14 +598,15 @@ static void SetupBuiltins(void)
         int this_code = R_FunTab[i].code;
         SEXP prim;
         /* prim needs protect since install can (and does here) allocate.
-           Except... mkPRIMSXP now caches them all, so maybe not. */
+           Except... they're now uncollected... */
         PROTECT(prim = mkPRIMSXP(i, R_FunTab[i].eval % 10));
 
         if (0) { /* enable to display info */
             Rprintf (
-              "SETUP: %s, builtin %d, internal %d, visible %d, pending_ok %d\n",
-                      PRIMNAME(prim), TYPEOF(prim) == BUILTINSXP,
-                      PRIMINTERNAL(prim), PRIMPRINT(prim), PRIMPENDINGOK(prim));
+            "SETUP: %d %s, builtin %d, int %d, vis %d, pend_ok %d, gradn %d\n",
+                    i, PRIMNAME(prim), TYPEOF(prim) == BUILTINSXP,
+                    PRIMINTERNAL(prim), PRIMPRINT(prim), PRIMPENDINGOK(prim),
+                    PRIMGRADN(prim));
         }
 
         if (TYPEOF(prim) == SPECIALSXP && !PRIMINTERNAL(prim)
