@@ -540,24 +540,6 @@ static inline Rboolean asLogicalNoNA(SEXP s, SEXP call)
 }
 
 
-/* Inline version of findVarPendingOK, for speed when symbol is found
-   from LASTSYMBINDING.  Doesn't necessarily set R_binding_cell. */
-
-static inline SEXP FIND_VAR_PENDING_OK (SEXP sym, SEXP rho)
-{
-    rho = SKIP_USING_SYMBITS (rho, sym);
-
-    if (LASTSYMENV(sym) == SEXP32_FROM_SEXP(rho)) {
-        SEXP b = CAR(LASTSYMBINDING(sym));
-        if (b != R_UnboundValue)
-            return b;
-        LASTSYMENV(sym) = R_NoObject32;
-    }
-
-    return findVarPendingOK(sym,rho);
-}
-
-
 /* Inline version of findFun.  It's meant to be very fast when a
    function is found in the base environmet.  It can delegate uncommon
    cases such as traced functions to the general-case procedure.
@@ -746,11 +728,24 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
 
 /* Evaluate an expression that is a symbol other than ..., ..1, ..2, etc. */
 
-static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
+static SEXP attribute_noinline evalv_sym (SEXP sym, SEXP rho, int variant)
 {
     SEXP res;
 
-    res = FIND_VAR_PENDING_OK (e, rho);
+    SEXP32 lastsymenv = LASTSYMENV(sym);
+
+    if (lastsymenv != SEXP32_FROM_SEXP(rho))
+        goto slow_lookup;
+
+  local:
+
+    res = CAR(LASTSYMBINDING(sym));
+    if (res == R_UnboundValue) {
+        LASTSYMENV(sym) = lastsymenv = R_NoObject32;
+        goto slow_lookup;
+    }
+
+  found:
 
     if (TYPE_ETC(res) == PROMSXP) {
         if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
@@ -758,14 +753,10 @@ static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
         else
             res = PRVALUE_PENDING_OK(res);
     }
-    else if (TYPE_ETC(res) == SYMSXP) {
-        if (res == R_MissingArg) {
-            if ( ! (variant & VARIANT_MISSING_OK))
-                if (!DDVAL(e))  /* revert bug fix for the moment */
-                    arg_missing_error(e);
-        }
-        else if (res == R_UnboundValue)
-            unbound_var_error(e);
+    else if (TYPE_ETC(res) == SYMSXP && res == R_MissingArg) {
+        if ( ! (variant & VARIANT_MISSING_OK))
+            if (!DDVAL(sym))  /* revert bug fix for the moment */
+                arg_missing_error(sym);
     }
 
     /* A NAMEDCNT of 0 might arise from an inadverently missing increment
@@ -778,6 +769,18 @@ static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
         WAIT_UNTIL_COMPUTED(res);
 
     return res;
+
+  slow_lookup:
+
+    rho = SKIP_USING_SYMBITS (rho, sym);
+    if (lastsymenv == SEXP32_FROM_SEXP(rho))
+        goto local;
+
+    res = findVarPendingOK(sym,rho);
+    if (res != R_UnboundValue)
+        goto found;
+
+    unbound_var_error(sym);
 }
 
 
