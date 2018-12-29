@@ -144,17 +144,28 @@ x1 <- 0.89472; x2 <- 0.49718
 i1 <- 3
 
 bindgrads <- function (r1,r2) 
-    cbind (rbind(r1,r2), rbind(attr(r1,"gradient"),attr(r2,"gradient")))
+    cbind (rbind(r1,r2), rbind(attr(r1,"gradient"),unlist(attr(r2,"gradient"))))
 
 test1 <- function (fun,...)
     print (bindgrads (numericDeriv(quote(fun(x,...)),"x"),
                       with_gradient (x) fun(x,...)))
+test1p1 <- function (fun,...)
+    print (bindgrads (numericDeriv(quote(fun(x+1,...)),"x"),
+                      with_gradient (x) fun(x+1,...)))
+
+test1r <- function (fun,...) {
+    f <- function (x) { set.seed(179); fun(1,x,...) }
+    print (bindgrads (numericDeriv(quote(f(x)),"x"),
+                      with_gradient (x) f(x)))
+}
 
 test2 <- function (fun,...) {
     print (bindgrads (numericDeriv(quote(fun(x1,x2,...)),"x1"),
                       with_gradient (x1) fun(x1,x2,...)))
     print (bindgrads (numericDeriv(quote(fun(x1,x2,...)),"x2"),
                       with_gradient (x2) fun(x1,x2,...)))
+    print (bindgrads (numericDeriv(quote(fun(x1,x2,...)),c("x1","x2")),
+                      with_gradient (x1,x2) fun(x1,x2,...)))
     print (bindgrads (numericDeriv(quote(fun(x1,x2,...)),c("x1","x2")),
       { r <- with_gradient (x1) { s <- with_gradient (x2) fun(x1,x2,...); 
                                   g2 <<- attr(s,"gradient"); s }
@@ -169,18 +180,44 @@ test2i <- function (fun,...) {
                       with_gradient (x2) fun(i1,x2,...)))
 }
 
-test1(sin)
+test1(abs)
 
+test1(sqrt)
+
+test1(exp)
+test1(expm1)
+
+test1(log1p)
 test1(log)
+test1(log2)
+test1(log10)
+
+test1(cos)
+test1(sin)
+test1(tan)
+
+test1(acos)
+test1(asin)
+test1(atan)
+
+test1(cosh)
+test1(sinh)
+test1(tanh)
+
+test1p1(acosh)
+test1(asinh)
+test1(atanh)
 
 test1(gamma)
+test1(lgamma)
+test1(digamma)
+test1(trigamma)
 
 test2(atan2)
 
 test2(dexp)
-
 test2(dexp,log=TRUE)
+test1r(rexp)
 
 test2i(dgeom)
-
 test2i(dgeom,log=TRUE)
