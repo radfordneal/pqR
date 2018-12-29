@@ -747,42 +747,27 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
 }
 
 
-static inline SEXP handle_symbol (SEXP res, SEXP e, SEXP rho, int variant)
+static inline SEXP handle_symbol (SEXP res, SEXP sym, int variant)
 {
-    SEXP grad = R_NoObject;
-
     if (TYPEOF(res) == PROMSXP) {
-        if (TYPE_ETC(res) == PROMSXP + TYPE_ET_CETERA_VEC_DOTS_TR) {
-            /* forced promise, no gradient */
-            res = PRVALUE_PENDING_OK(res);
-        }
-        else {
-            SEXP prom = res;
-            if (PRVALUE_PENDING_OK(prom) == R_UnboundValue)
-                res = forcePromiseUnbound(prom,variant);
-            else
-                res = PRVALUE_PENDING_OK(prom);
-            if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(prom))
-                grad = ATTRIB(prom);
+        SEXP prom = res;
+        if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
+            res = forcePromiseUnbound(res,variant);
+	else
+	    res = PRVALUE_PENDING_OK(res);
+        if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(prom)) {
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            R_gradient = ATTRIB(prom);
         }
     }
-    else {
-        if (TYPEOF(res) == SYMSXP) {
-            if (res == R_MissingArg) {
-                if ( ! (variant & VARIANT_MISSING_OK))
-                    if (!DDVAL(e))  /* revert bug fix for the moment */
-                        arg_missing_error(e);
-            }
-            else if (res == R_UnboundValue)
-                unbound_var_error(e);
-        }
-        if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(R_binding_cell))
-            grad = ATTRIB(R_binding_cell);
+    else if (TYPEOF(res) == SYMSXP && res == R_MissingArg) {
+        if ( ! (variant & VARIANT_MISSING_OK))
+            if (!DDVAL(sym))  /* revert bug fix for the moment */
+		arg_missing_error(sym);
     }
-
-    if (grad != R_NoObject) {
+    else if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(R_binding_cell)) {
         R_variant_result = VARIANT_GRADIENT_FLAG;
-        R_gradient = grad;
+        R_gradient = ATTRIB(R_binding_cell);
     }
 
     /* A NAMEDCNT of 0 might arise from an inadverently missing increment
@@ -800,9 +785,39 @@ static inline SEXP handle_symbol (SEXP res, SEXP e, SEXP rho, int variant)
 
 /* Evaluate an expression that is a symbol other than ..., ..1, ..2, etc. */
 
-static SEXP attribute_noinline evalv_sym (SEXP e, SEXP rho, int variant)
+static SEXP attribute_noinline evalv_sym (SEXP sym, SEXP rho, int variant)
 {
-    return handle_symbol (FIND_VAR_PENDING_OK (e, rho), e, rho, variant);
+    SEXP res;
+
+    SEXP32 lastsymenv = LASTSYMENV(sym);
+
+    if (lastsymenv != SEXP32_FROM_SEXP(rho))
+        goto slow_lookup;
+
+  local:
+
+    res = CAR(LASTSYMBINDING(sym));
+    if (res == R_UnboundValue) {
+	LASTSYMENV(sym) = lastsymenv = R_NoObject32;
+        goto slow_lookup;
+    }
+    R_binding_cell = LASTSYMBINDING(sym);
+
+  found:
+
+    return handle_symbol (res, sym, variant);
+
+  slow_lookup:
+
+    rho = SKIP_USING_SYMBITS (rho, sym);
+    if (lastsymenv == SEXP32_FROM_SEXP(rho))
+        goto local;
+
+    res = findVarPendingOK(sym,rho);
+    if (res != R_UnboundValue)
+        goto found;
+
+    unbound_var_error(sym);
 }
 
 
@@ -959,8 +974,8 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
         return e;
     }
 
-    if (TYPE_ETC(e )== SYMSXP+TYPE_ET_CETERA_VEC_DOTS_TR) /* ... or ..1, ..2 */
-        return handle_symbol (ddfindVar(e,rho), e, rho, variant);
+    if (TYPE_ETC(e) == SYMSXP+TYPE_ET_CETERA_VEC_DOTS_TR) /* ... or ..1, ..2 */
+        return handle_symbol (ddfindVar(e,rho), e, variant);
 
     if (TYPE_ETC(e) == BCODESXP) {  /* parts other than type will be 0 */
         return bcEval(e, rho, TRUE);
