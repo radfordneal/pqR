@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2017, 2018 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -41,7 +41,8 @@ R_NORETURN static void invalid(SEXP call)
     error(_("invalid arguments"));
 }
 
-/* "do_random1" - random sampling from 1 parameter families. */
+
+/* Random sampling from 1-parameter families. */
 
 static double (*rand1_funs[6])(double) = {
     rchisq, rexp, rgeom, rpois, rt, rsignrank
@@ -49,11 +50,12 @@ static double (*rand1_funs[6])(double) = {
 
 static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
+    SEXP a;
     int n, na;
 
     checkArity(op, args);
 
-    if (!isVector(CAR(args)) || !isNumeric(CADR(args)))
+    if (!isVector(CAR(args)) || !isNumeric(a = CADR(args)))
         invalid(call);
 
     if (LENGTH(CAR(args)) == 1) {
@@ -64,13 +66,12 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
     else
         n = LENGTH(CAR(args));
 
-    SEXP a = CADR(args);
-    if (TYPEOF(a) != REALSXP) a = coerceVector(CADR(args), REALSXP);
+    if (TYPEOF(a) != REALSXP) a = coerceVector(a, REALSXP);
     PROTECT(a);
     na = LENGTH(a);
 
     int opcode = PRIMVAL(op);
-    if (opcode < 0 || opcode >= sizeof rand1_funs)
+    if (opcode < 0 || opcode >= sizeof rand1_funs / sizeof rand1_funs[0])
         error(_("internal error in do_random1"));
     double (*rf)(double) = rand1_funs[opcode];
 
@@ -131,170 +132,209 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
     return x;
 }
 
-static Rboolean random2(double (*f) (double, double), double *a, int na, double *b, int nb,
-		    double *x, int n)
-{
-    double ai, bi; int i;
-    Rboolean naflag = FALSE;
-    errno = 0;
-    for (i = 0; i < n; i++) {
-	ai = a[i % na];
-	bi = b[i % nb];
-	x[i] = f(ai, bi);
-	if (ISNAN(x[i])) naflag = TRUE;
-    }
-    return(naflag);
-}
 
-#define RAND2(num,name) \
-	case num: \
-		naflag = random2(name, REAL(a), na, REAL(b), nb, REAL(x), n); \
-		break
+/* Random sampling from 2-parameter families. */
 
-/* "do_random2" - random sampling from 2 parameter families. */
-/* See switch below for distributions. */
+static double (*rand2_funs[14])(double,double) = {
+    rbeta, rbinom, rcauchy, rf, rgamma, rlnorm, rlogis, rnbinom, 
+    rnorm, runif, rweibull, rwilcox, rnchisq, rnbinom_mu
+};
 
 static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP x, a, b;
-    int i, n, na, nb;
+    SEXP a1, a2;
+    int n, na1, na2;
+
     checkArity(op, args);
-    if (!isVector(CAR(args)) ||
-	!isNumeric(CADR(args)) ||
-	!isNumeric(CADDR(args)))
-	invalid(call);
+
+    if (!isVector(CAR(args)) || !isNumeric(a1 = CADR(args)) 
+                             || !isNumeric(a2 = CADDR(args)))
+        invalid(call);
+
     if (LENGTH(CAR(args)) == 1) {
-	n = asInteger(CAR(args));
-	if (n == NA_INTEGER || n < 0)
-	    invalid(call);
+        n = asInteger(CAR(args));
+        if (n == NA_INTEGER || n < 0)
+            invalid(call);
     }
-    else n = LENGTH(CAR(args));
-    PROTECT(x = allocVector(REALSXP, n));
+    else
+        n = LENGTH(CAR(args));
+
+    if (TYPEOF(a1) != REALSXP) a1 = coerceVector(a1, REALSXP);
+    PROTECT(a1);
+    na1 = LENGTH(a1);
+
+    if (TYPEOF(a2) != REALSXP) a2 = coerceVector(a2, REALSXP);
+    PROTECT(a2);
+    na2 = LENGTH(a2);
+
+    int opcode = PRIMVAL(op);
+    if (opcode < 0 || opcode >= sizeof rand2_funs / sizeof rand2_funs[0])
+        error(_("internal error in do_random2"));
+    double (*rf)(double,double) = rand2_funs[opcode];
+
+    if (n == 1 && na1 >= 1 && na2 >= 1) { /* quickly generate single value */
+        GetRNGstate();
+        double r = rf (*REAL(a1), *REAL(a2));
+        if (ISNAN(r)) warning(_("NAs produced"));
+        PutRNGstate();
+        UNPROTECT(2); /* a1, a2 */
+        return ScalarReal(r);
+    }
+
+    SEXP x = allocVector(REALSXP, n);
+    PROTECT(x);
+
     if (n == 0) {
-	UNPROTECT(1);
-	return(x);
+        UNPROTECT(3); /* a1, a2, x */
+        return x;
     }
-    na = LENGTH(CADR(args));
-    nb = LENGTH(CADDR(args));
-    if (na < 1 || nb < 1) {
-	for (i = 0; i < n; i++)
-	    REAL(x)[i] = NA_REAL;
-	warning(_("NAs produced"));
+
+    if (na1 < 1 || na2 < 1) {
+        int i;
+        for (i = 0; i < n; i++)
+            REAL(x)[i] = NA_REAL;
+        warning(_("NAs produced"));
+        UNPROTECT(3); /* a1, a2, x */
+        return x;
+    }
+
+    Rboolean naflag = FALSE;
+
+    GetRNGstate();
+
+    double *ap1 = REAL(a1), *ap2 = REAL(a2), *xp = REAL(x);
+
+    if (na1 == 1 && na2 == 1) {
+        double ar1 = *ap1, ar2 = *ap2;
+        int i;
+        for (i = 0; i < n; i++) {
+            xp[i] = rf (ar1, ar2);
+            if (ISNAN(xp[i])) naflag = TRUE;
+        }
     }
     else {
-	Rboolean naflag = FALSE;
-	PROTECT(a = coerceVector(CADR(args), REALSXP));
-	PROTECT(b = coerceVector(CADDR(args), REALSXP));
-	GetRNGstate();
-	switch (PRIMVAL(op)) {
-	    RAND2(0, rbeta);
-	    RAND2(1, rbinom);
-	    RAND2(2, rcauchy);
-	    RAND2(3, rf);
-	    RAND2(4, rgamma);
-	    RAND2(5, rlnorm);
-	    RAND2(6, rlogis);
-	    RAND2(7, rnbinom);
-	    RAND2(8, rnorm);
-	    RAND2(9, runif);
-	    RAND2(10, rweibull);
-	    RAND2(11, rwilcox);
-	    RAND2(12, rnchisq);
-	    RAND2(13, rnbinom_mu);
-	default:
-	    error(_("internal error in do_random2"));
-	}
-	if (naflag)
-	    warning(_("NAs produced"));
-
-	PutRNGstate();
-	UNPROTECT(2);
+        int i, i1, i2;
+        for (i = 0, i1 = 0, i2 = 0; i < n; i++, i1++, i2++) {
+            if (i1 == na1) i1 = 0;
+            if (i2 == na2) i2 = 0;
+            xp[i] = rf (ap1[i1], ap2[i2]);
+            if (ISNAN(xp[i])) naflag = TRUE;
+        }
     }
-    UNPROTECT(1);
+
+    if (naflag)
+        warning(_("NAs produced"));
+
+    PutRNGstate();
+    UNPROTECT(3); /* a1, a2, x */
     return x;
 }
 
-static Rboolean random3(double (*f) (double, double, double), double *a, int na, double *b, int nb,
-			double *c, int nc, double *x, int n)
-{
-    double ai, bi, ci;
-    int i;
-    Rboolean naflag = FALSE;
-    errno = 0;
-    for (i = 0; i < n; i++) {
-	ai = a[i % na];
-	bi = b[i % nb];
-	ci = c[i % nc];
-	x[i] = f(ai, bi, ci);
-	if (ISNAN(x[i])) naflag = TRUE;
-    }
-    return(naflag);
-}
 
-#define RAND3(num,name) \
-	case num: \
-		naflag = random3(name, REAL(a), na, REAL(b), nb, REAL(c), nc, REAL(x), n); \
-		break
+/* Random sampling from 3-parameter families. */
 
-
-/* "do_random3" - random sampling from 3 parameter families. */
-/* See switch below for distributions. */
+static double (*rand3_funs[1])(double,double,double) = {
+    rhyper
+};
 
 static SEXP do_random3(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP x, a, b, c;
-    int i, n, na, nb, nc;
+    SEXP a1, a2, a3;
+    int n, na1, na2, na3;
+
     checkArity(op, args);
-    if (!isVector(CAR(args))) invalid(call);
+
+    if (!isVector(CAR(args)) || !isNumeric(a1 = CADR(args)) 
+                             || !isNumeric(a2 = CADDR(args))
+                             || !isNumeric(a3 = CADDDR(args)))
+        invalid(call);
+
     if (LENGTH(CAR(args)) == 1) {
-	n = asInteger(CAR(args));
-	if (n == NA_INTEGER || n < 0)
-	    invalid(call);
+        n = asInteger(CAR(args));
+        if (n == NA_INTEGER || n < 0)
+            invalid(call);
     }
-    else n = LENGTH(CAR(args));
-    PROTECT(x = allocVector(REALSXP, n));
-    if (n == 0) {
-	UNPROTECT(1);
-	return(x);
+    else
+        n = LENGTH(CAR(args));
+
+    if (TYPEOF(a1) != REALSXP) a1 = coerceVector(a1, REALSXP);
+    PROTECT(a1);
+    na1 = LENGTH(a1);
+
+    if (TYPEOF(a2) != REALSXP) a2 = coerceVector(a2, REALSXP);
+    PROTECT(a2);
+    na2 = LENGTH(a2);
+
+    if (TYPEOF(a3) != REALSXP) a3 = coerceVector(a3, REALSXP);
+    PROTECT(a3);
+    na3 = LENGTH(a3);
+
+    int opcode = PRIMVAL(op);
+    if (opcode < 0 || opcode >= sizeof rand3_funs / sizeof rand3_funs[0])
+        error(_("internal error in do_random3"));
+    double (*rf)(double,double,double) = rand3_funs[opcode];
+
+    if (n == 1 && na1 >= 1 && na2 >= 1 && na3 >= 1) { /* generate single value*/
+        GetRNGstate();
+        double r = rf (*REAL(a1), *REAL(a2), *REAL(a3));
+        if (ISNAN(r)) warning(_("NAs produced"));
+        PutRNGstate();
+        UNPROTECT(3); /* a1, a2, a3 */
+        return ScalarReal(r);
     }
 
-    args = CDR(args); a = CAR(args);
-    args = CDR(args); b = CAR(args);
-    args = CDR(args); c = CAR(args);
-    if (!isNumeric(a) || !isNumeric(b) || !isNumeric(c))
-	invalid(call);
-    na = LENGTH(a);
-    nb = LENGTH(b);
-    nc = LENGTH(c);
-    if (na < 1 || nb < 1 || nc < 1) {
-	for (i = 0; i < n; i++)
-	    REAL(x)[i] = NA_REAL;
-	warning(_("NAs produced"));
+    SEXP x = allocVector(REALSXP, n);
+    PROTECT(x);
+
+    if (n == 0) {
+        UNPROTECT(4); /* a1, a2, a3, x */
+        return x;
+    }
+
+    if (na1 < 1 || na2 < 1 | na3 < 1) {
+        int i;
+        for (i = 0; i < n; i++)
+            REAL(x)[i] = NA_REAL;
+        warning(_("NAs produced"));
+        UNPROTECT(4); /* a1, a2, a3, x */
+        return x;
+    }
+
+    Rboolean naflag = FALSE;
+
+    GetRNGstate();
+
+    double *ap1 = REAL(a1), *ap2 = REAL(a2), *ap3 = REAL(a3), *xp = REAL(x);
+
+    if (na1 == 1 && na2 == 1 && na3 == 1) {
+        double ar1 = *ap1, ar2 = *ap2, ar3 = *ap3;
+        int i;
+        for (i = 0; i < n; i++) {
+            xp[i] = rf (ar1, ar2, ar3);
+            if (ISNAN(xp[i])) naflag = TRUE;
+        }
     }
     else {
-	Rboolean naflag = FALSE;
-	PROTECT(a = coerceVector(a, REALSXP));
-	PROTECT(b = coerceVector(b, REALSXP));
-	PROTECT(c = coerceVector(c, REALSXP));
-	GetRNGstate();
-	switch (PRIMVAL(op)) {
-	    RAND3(0, rhyper);
-	default:
-	    error(_("internal error in do_random3"));
-	}
-	if (naflag)
-	    warning(_("NAs produced"));
-
-	PutRNGstate();
-	UNPROTECT(3);
+        int i, i1, i2, i3;
+        for (i = 0, i1 = 0, i2 = 0, i3 = 0; i < n; i++, i1++, i2++, i3++) {
+            if (i1 == na1) i1 = 0;
+            if (i2 == na2) i2 = 0;
+            if (i3 == na3) i3 = 0;
+            xp[i] = rf (ap1[i1], ap2[i2], ap3[i3]);
+            if (ISNAN(xp[i])) naflag = TRUE;
+        }
     }
-    UNPROTECT(1);
+
+    if (naflag)
+        warning(_("NAs produced"));
+
+    PutRNGstate();
+    UNPROTECT(4); /* a1, a2, a3, x */
     return x;
 }
 
 
-/*
- *  Unequal Probability Sampling.
+/*  Unequal Probability Sampling.
  *
  *  Modelled after Fortran code provided by:
  *    E. S. Venkatraman <venkat@biosta.mskcc.org>
