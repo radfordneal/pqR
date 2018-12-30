@@ -54,7 +54,7 @@ static double Drexp (double r, double scale)
 /* Table of functions for generation and derivatives of random1 distibutions. */
 
 static struct { 
-    double (*fncall)(double); double (*Dcall)(double,double); 
+    double (*fncall)(double); double (*Dcall)(double, double); 
 } rand1_table[6] = 
 {
     { rchisq,	0 },
@@ -172,9 +172,25 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* Random sampling from 2-parameter families. */
 
-static double (*rand2_funs[14])(double,double) = {
-    rbeta, rbinom, rcauchy, rf, rgamma, rlnorm, rlogis, rnbinom, 
-    rnorm, runif, rweibull, rwilcox, rnchisq, rnbinom_mu
+static struct { 
+    double (*fncall)(double, double);
+    void (*Dcall)(double, double, double, double *, double *); 
+} rand2_table[14] = 
+{
+    { rbeta,	0 },
+    { rbinom,	0 },
+    { rcauchy,	0 },
+    { rf,	0 },
+    { rgamma,	0 },
+    { rlnorm,	0 },
+    { rlogis,	0 },
+    { rnbinom,	0 },
+    { rnorm,	0 },
+    { runif,	0 },
+    { rweibull,	0 },
+    { rwilcox,	0 },
+    { rnchisq,	0 },
+    { rnbinom_mu, 0 }
 };
 
 static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -205,9 +221,9 @@ static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
     na2 = LENGTH(a2);
 
     int opcode = PRIMVAL(op);
-    if (opcode < 0 || opcode >= sizeof rand2_funs / sizeof rand2_funs[0])
+    if (opcode < 0 || opcode >= sizeof rand2_table / sizeof rand2_table[0])
         error(_("internal error in do_random2"));
-    double (*rf)(double,double) = rand2_funs[opcode];
+    double (*rf)(double,double) = rand2_table[opcode].fncall;
 
     if (n == 1 && na1 >= 1 && na2 >= 1) { /* quickly generate single value */
         GetRNGstate();
@@ -270,8 +286,12 @@ static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* Random sampling from 3-parameter families. */
 
-static double (*rand3_funs[1])(double,double,double) = {
-    rhyper
+static struct { 
+    double (*fncall)(double, double, double);
+    void (*Dcall)(double, double, double, double, double *, double *, double *);
+} rand3_table[1] =
+{
+    { rhyper,	0 }
 };
 
 static SEXP do_random3(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -307,9 +327,9 @@ static SEXP do_random3(SEXP call, SEXP op, SEXP args, SEXP rho)
     na3 = LENGTH(a3);
 
     int opcode = PRIMVAL(op);
-    if (opcode < 0 || opcode >= sizeof rand3_funs / sizeof rand3_funs[0])
+    if (opcode < 0 || opcode >= sizeof rand3_table / sizeof rand3_table[0])
         error(_("internal error in do_random3"));
-    double (*rf)(double,double,double) = rand3_funs[opcode];
+    double (*rf)(double,double,double) = rand3_table[opcode].fncall;
 
     if (n == 1 && na1 >= 1 && na2 >= 1 && na3 >= 1) { /* generate single value*/
         GetRNGstate();
