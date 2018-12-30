@@ -134,9 +134,10 @@ When a builtin functions returns \code{NA} or a \code{NaN} value, the
 gradient will be regarded as zero (without an error or warning).
 
 Gradients may be defined for real-valued random generation functions
-(eg, \code{rnorm}), with the gradient being defined as if the
-generation was done by applying the corresponding quantile function to
-a uniform (0,1) random variate (considered fixed).
+(eg, \code{rnorm}).  The gradient for these functions indicates how a
+change in the distribution parameters would produce a change in the
+generated random value, if the state of the random number generator
+when calling the function were kept fixed.
 
 The following built-in functions and operators will compute gradients,
 with respect all their real-valued arguments (unless noted):
@@ -202,11 +203,18 @@ sigmoid <- function (x)
     compute_gradient (x) { v <- 1 / (1+exp(-x)); v }
     as (v * (1-v))
 
-sigmoid(1)                            # no gradient computed, only value
-with_gradient (x=1) sigmoid(x)        # both value and gradient computed
+sigmoid(1)                       # no gradient computed, only value
+with_gradient (x=1) sigmoid(x)   # both value and gradient computed
 
-track_gradient (x=1)                  # should compute the same gradient
-    gradient_of (1/(1+exp(-x)))       # as above, but perhaps more slowly
-                                      # (though maybe not since x is scalar)
+track_gradient (x=1)             # should compute the same gradient
+    gradient_of (1/(1+exp(-x)))  # as above, but perhaps more slowly
+                                 # (though maybe not since x is scalar)
+
+set.seed(123); with_gradient (r=5) rexp(1,r)
+
+set.seed(123); v1<-rexp(1,4.999)
+set.seed(123); v2<-rexp(1,5.001)
+(v2-v1) / 0.002                  # should be close to gradient above
+
 }
 \keyword{programming}
