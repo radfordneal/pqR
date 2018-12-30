@@ -21,6 +21,7 @@
   The present implementation of these facilities is a preliminary
   one that supports only gradients of scalar values, with respect to scalar
   variables.  Support for vectors, matrices, arrays, and lists is planned.
+  Support for higher-order derivatives may possibly be added as well.
 }
 
 \usage{
@@ -80,6 +81,10 @@ the final value for \code{with_gradient}, its gradient can be
 computed.  Note, however, that the gradients of attribute values are
 not recorded, nor are gradients recorded when non-local assignments
 are made with \code{<<-}.
+
+Tracking of gradients continues when a function is called with 
+one or more arguments with tracked gradients.  This includes functions
+for S3 methods, but not S4 methods.
 
 Within \code{expr}, the gradient of an expression, \code{e}, with
 respect the variable or variables of the enclosing
@@ -175,10 +180,10 @@ x <- 3
 a <- with_gradient (x) { r <- sin(x); r^2 }
 attr(a,"gradient")               # should be 2*sin(3)*cos(3)
 
-sqr <- function (y) y^2
+sqr <- function (y) y^2          # gradients can be tracked through sqr
 x <- 3
 a <- with_gradient (x) { r <- sin(x); sqr(r) }
-attr(a,"gradient")               # should also be 2*sin(3)*cos(3)
+attr(a,"gradient")               # should be 2*sin(3)*cos(3)
 
 funny <- function (x,y) {        # has a discontinuity
     q <- no_gradient(2*x)          # gradient of 2*x won't be tracked

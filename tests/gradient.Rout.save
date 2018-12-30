@@ -246,6 +246,77 @@ attr(,"gradient")
 [1] -0.03979076
 > 
 > 
+> # Check tracking of gradients through S3 methods.
+> 
+> fuddle <- function (x,y) UseMethod("fuddle")
+> fuddle.default <- function (x,y) x^2+y^3
+> fuddle.mary <- function (x,y) sin(x) + log(y)
+> fuddle.bert <- function (x,y) NextMethod("fuddle")
+> 
+> a <- 256; class(a) <- "mary"
+> b <- 200; class(b) <- "bert"
+> 
+> with_gradient (a=256,b=200) fuddle(a,b)
+[1] 8065536
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 512
+
+attr(,"gradient")$b
+[1] 120000
+
+> with_gradient (a,b) fuddle(a,b)
+[1] 4.299109
+attr(,"class")
+[1] "mary"
+attr(,"gradient")
+attr(,"gradient")$a
+[1] -0.03979076
+
+attr(,"gradient")$b
+[1] 0.005
+
+> with_gradient (a,b) fuddle(b,a)
+[1] 16817216
+attr(,"class")
+[1] "bert"
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 196608
+
+attr(,"gradient")$b
+[1] 400
+
+> 
+> biffle <- function (x) UseMethod("biffle")
+> biffle.mary <- function (x) NextMethod("biffle",x,x^2,x^3)
+> biffle.bert <- function (x,y,z) sin(x)+cos(y)+exp(-sqrt(z)/2000)
+> 
+> b <- 200; class(b) <- c("mary","bert")
+> biffle(b)
+[1] -0.3075931
+attr(,"class")
+[1] "mary" "bert"
+> with_gradient (b) biffle(b)
+[1] -0.3075931
+attr(,"class")
+[1] "mary" "bert"
+attr(,"gradient")
+[1] -378.1313
+> 
+> 
+> # Check tracking of gradients through S4 methods.  Not currently implemented,
+> # so this is disabled.
+> 
+> if (FALSE) {
++ 
++ setGeneric ("fiddler", function (x,y) x^2+y^3)
++ fiddler(2,3)
++ with_gradient (x=2,y=3) fiddler(x,y)
++ 
++ }
+> 
+> 
 > # Check consistency of results between with_gradient and numericDeriv.
 > 
 > x <- 0.32739
@@ -454,6 +525,21 @@ r2 0.001044058 -0.02858399
 r1 -6.86464 -27.37777
 r2 -6.86464 -27.37777
 > 
+> test2r(rcauchy)
+             x1        x2
+r1 -1.585831  1 -2.305762
+r2 -1.585831  1 -2.305762
+> 
+> test2r(rlnorm)
+                x1        x2
+r1 2.16995 2.16995 0.7215801
+r2 2.16995 2.16995 0.7215800
+> 
+> test2r(rlogis)
+             x1        x2
+r1 0.9543501  1 0.5333178
+r2 0.9543501  1 0.5333178
+> 
 > test2r(rnorm)
             x1        x2
 r1 0.774704  1 0.3325331
@@ -463,4 +549,9 @@ r2 0.774704  1 0.3325331
                     x1        x2
 r1 0.7403373 0.3697434 0.6302566
 r2 0.7403373 0.3697434 0.6302566
+> 
+> test2r(rweibull)
+                    x1        x2
+r1 0.1770773 0.6011398 0.1979137
+r2 0.1770773 0.6011398 0.1979137
 > 

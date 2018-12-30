@@ -137,6 +137,41 @@ print (with_gradient (a) exp(a))
 print (with_gradient (a) sin(a))
 
 
+# Check tracking of gradients through S3 methods.
+
+fuddle <- function (x,y) UseMethod("fuddle")
+fuddle.default <- function (x,y) x^2+y^3
+fuddle.mary <- function (x,y) sin(x) + log(y)
+fuddle.bert <- function (x,y) NextMethod("fuddle")
+
+a <- 256; class(a) <- "mary"
+b <- 200; class(b) <- "bert"
+
+with_gradient (a=256,b=200) fuddle(a,b)
+with_gradient (a,b) fuddle(a,b)
+with_gradient (a,b) fuddle(b,a)
+
+biffle <- function (x) UseMethod("biffle")
+biffle.mary <- function (x) NextMethod("biffle",x,x^2,x^3)
+biffle.bert <- function (x,y,z) sin(x)+cos(y)+exp(-sqrt(z)/2000)
+
+b <- 200; class(b) <- c("mary","bert")
+biffle(b)
+with_gradient (b) biffle(b)
+
+
+# Check tracking of gradients through S4 methods.  Not currently implemented,
+# so this is disabled.
+
+if (FALSE) {
+
+setGeneric ("fiddler", function (x,y) x^2+y^3)
+fiddler(2,3)
+with_gradient (x=2,y=3) fiddler(x,y)
+
+}
+
+
 # Check consistency of results between with_gradient and numericDeriv.
 
 x <- 0.32739

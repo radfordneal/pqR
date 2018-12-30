@@ -78,7 +78,7 @@ static void PrintEnvironment(SEXP x)
 #   else
     else Rprintf("<%llx>", (long long) x);
 #   endif
-    if (GRADVARS(x) != R_NilValue) {
+    if (GRADVARS(x) != R_NilValue && GRADVARS(x) != R_NoObject) {
         SEXP g = GRADVARS(x);
         Rprintf(" gradvars:");
         if (TYPEOF(g) != VECSXP)
