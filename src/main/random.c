@@ -44,11 +44,11 @@ R_NORETURN static void invalid(SEXP call)
 
 /* Random sampling from 1-parameter families. */
 
-/* Derivatives for random1 generators. */
+/* Derivatives for random1 generators of continuous distributions. */
 
 static double Drexp (double r, double scale)
 {
-    return r / scale;
+    return scale <= 0 ? 0 : r / scale;
 }
 
 /* Table of functions for generation and derivatives of random1 distibutions. */
@@ -59,10 +59,10 @@ static struct {
 {
     { rchisq,	0 },
     { rexp,	Drexp },
-    { rgeom,	0 },
-    { rpois,	0 },
+    { rgeom,	0 /* discrete */ },
+    { rpois,	0 /* discrete */ },
     { rt,	0 },
-    { rsignrank,0 }
+    { rsignrank,0 /* discrete */ }
 };
 
 static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -172,13 +172,21 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* Random sampling from 2-parameter families. */
 
-/* Derivatives for random2 generators. */
+/* Derivatives for random2 generators of continuous distributions. */
 
 static void Drnorm (double r, double mu, double sigma, 
                               double *dmu, double *dsigma)
 {
     if (dmu) *dmu = 1;
-    if (dsigma) *dsigma = sigma == 0 ? 0 : (r - mu) / sigma;
+    if (dsigma) *dsigma = sigma <= 0 ? 0 : (r - mu) / sigma;
+}
+
+static void Drunif (double r, double a, double b,
+                              double *da, double *db)
+{
+    double u = b <= a ? 0.5 : (r - a) / (b - a);
+    if (da) *da = 1-u;
+    if (db) *db = u;
 }
 
 static struct { 
@@ -187,19 +195,19 @@ static struct {
 } rand2_table[14] = 
 {
     { rbeta,	0 },
-    { rbinom,	0 },
+    { rbinom,	0 /* discrete */ },
     { rcauchy,	0 },
     { rf,	0 },
     { rgamma,	0 },
     { rlnorm,	0 },
     { rlogis,	0 },
-    { rnbinom,	0 },
+    { rnbinom,	0 /* discrete */ },
     { rnorm,	Drnorm },
-    { runif,	0 },
+    { runif,	Drunif },
     { rweibull,	0 },
-    { rwilcox,	0 },
+    { rwilcox,	0 /* discrete */ },
     { rnchisq,	0 },
-    { rnbinom_mu, 0 }
+    { rnbinom_mu, 0 /* discrete */ }
 };
 
 static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -326,14 +334,17 @@ static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-/* Random sampling from 3-parameter families. */
+/* Random sampling from 3-parameter families.  There's only one, and it's
+   a discrete distribution, so there are currently no derivatives to compute,
+   and hence the code to do so has not been written. (It would follow the
+   pattern in do_random2, with one more parameter.) */
 
 static struct { 
     double (*fncall)(double, double, double);
     void (*Dcall)(double, double, double, double, double *, double *, double *);
 } rand3_table[1] =
 {
-    { rhyper,	0 }
+    { rhyper,	0 /* discrete */ }
 };
 
 static SEXP do_random3(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -948,24 +959,24 @@ attribute_hidden FUNTAB R_FunTab_random[] =
 
 {"rchisq",	do_random1,	0,   51000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"rexp",	do_random1,	1,   51000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"rgeom",	do_random1,	2,   51000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"rpois",	do_random1,	3,   51000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rgeom",	do_random1,	2,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rpois",	do_random1,	3,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"rt",		do_random1,	4,   51000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"rsignrank",	do_random1,	5,   1000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"rbeta",	do_random2,	0,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rbeta",	do_random2,	0,   61000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"rbinom",	do_random2,	1,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"rcauchy",	do_random2,	2,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"rf",		do_random2,	3,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"rgamma",	do_random2,	4,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"rlnorm",	do_random2,	5,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"rlogis",	do_random2,	6,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rcauchy",	do_random2,	2,   61000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rf",		do_random2,	3,   61000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rgamma",	do_random2,	4,   61000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rlnorm",	do_random2,	5,   61000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rlogis",	do_random2,	6,   61000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"rnbinom",	do_random2,	7,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"rnbinom_mu",	do_random2,	13,  1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"rnchisq",	do_random2,	12,  1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"rnorm",	do_random2,	8,   61000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"runif",	do_random2,	9,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"rweibull",	do_random2,	10,  1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"runif",	do_random2,	9,   61000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rweibull",	do_random2,	10,  61000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"rwilcox",	do_random2,	11,  1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rnchisq",	do_random2,	12,  61000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rnbinom_mu",	do_random2,	13,  1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"rhyper",	do_random3,	0,   1000011,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"sample",	do_sample,	0,   1000011,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"rmultinom",	do_rmultinom,	0,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},

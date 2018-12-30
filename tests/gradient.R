@@ -140,7 +140,7 @@ print (with_gradient (a) sin(a))
 # Check consistency of results between with_gradient and numericDeriv.
 
 x <- 0.32739
-x1 <- 0.89472; x2 <- 0.49718
+x1 <- 0.47718; x2 <- 0.89472
 i1 <- 3
 
 bindgrads <- function (r1,r2) 
@@ -229,3 +229,5 @@ test2i(dgeom)
 test2i(dgeom,log=TRUE)
 
 test2r(rnorm)
+
+test2r(runif)
