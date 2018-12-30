@@ -139,14 +139,18 @@ with respect all their real-valued arguments (unless noted):
 +, -, *, /, ^ (+ and - may be unary) \cr
 \cr
 abs, sqrt, expm1, exp, log1p, log2, log10, log (one-argument form only) \cr
-cos, sin, tan, acos, asin, atan \cr
+cos, sin, tan, acos, asin, atan, atan2 \cr
 cosh, sinh, tanh, acosh, asinh, atanh \cr
 gamma, lgamma, digamma, trigamma \cr
 \cr
-dexp, pexp, qexp, rexp \cr
-dgeom, pgeom \cr
-dpois, ppois \cr
-dnorm, pnorm, qnorm, rnorm
+runif \cr
+dexp, rexp \cr
+dgeom \cr
+rcauchy \cr
+dnorm, rnorm \cr
+rlnorm \cr
+rlogis \cr
+rweibull
 }
 }
 

@@ -228,6 +228,14 @@ test1r(rexp)
 test2i(dgeom)
 test2i(dgeom,log=TRUE)
 
+test2r(rcauchy)
+
+test2r(rlnorm)
+
+test2r(rlogis)
+
 test2r(rnorm)
 
 test2r(runif)
+
+test2r(rweibull)

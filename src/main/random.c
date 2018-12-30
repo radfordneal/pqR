@@ -174,6 +174,27 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* Derivatives for random2 generators of continuous distributions. */
 
+static void Drcauchy (double r, double location, double scale, 
+                                double *dlocation, double *dscale)
+{
+    if (dlocation) *dlocation = 1;
+    if (dscale) *dscale = scale <= 0 ? 0 : (r - location) / scale;
+}
+
+static void Drlnorm (double r, double meanlog, double sdlog, 
+                               double *dmeanlog, double *dsdlog)
+{
+    if (dmeanlog) *dmeanlog = r;
+    if (dsdlog) *dsdlog = sdlog <= 0 ? 0 : r * (log(r) - meanlog) / sdlog;
+}
+
+static void Drlogis (double r, double location, double scale, 
+                               double *dlocation, double *dscale)
+{
+    if (dlocation) *dlocation = 1;
+    if (dscale) *dscale = scale <= 0 ? 0 : (r - location) / scale;
+}
+
 static void Drnorm (double r, double mu, double sigma, 
                               double *dmu, double *dsigma)
 {
@@ -189,6 +210,13 @@ static void Drunif (double r, double a, double b,
     if (db) *db = u;
 }
 
+static void Drweibull (double r, double shape, double scale, 
+                                 double *dshape, double *dscale)
+{
+    if (dshape) *dshape = - r * log(r/scale) / shape;
+    if (dscale) *dscale = r / scale;
+}
+
 static struct { 
     double (*fncall)(double, double);
     void (*Dcall)(double, double, double, double *, double *); 
@@ -196,15 +224,15 @@ static struct {
 {
     { rbeta,	0 },
     { rbinom,	0 /* discrete */ },
-    { rcauchy,	0 },
+    { rcauchy,	Drcauchy },
     { rf,	0 },
     { rgamma,	0 },
-    { rlnorm,	0 },
-    { rlogis,	0 },
+    { rlnorm,	Drlnorm },
+    { rlogis,	Drlogis },
     { rnbinom,	0 /* discrete */ },
     { rnorm,	Drnorm },
     { runif,	Drunif },
-    { rweibull,	0 },
+    { rweibull,	Drweibull },
     { rwilcox,	0 /* discrete */ },
     { rnchisq,	0 },
     { rnbinom_mu, 0 /* discrete */ }
