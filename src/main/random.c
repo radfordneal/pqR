@@ -89,7 +89,7 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     int opcode = PRIMVAL(op);
 
-    if (opcode < 0 || opcode >= sizeof rand1_funs / sizeof rand1_funs[0])
+    if (opcode < 0 || opcode >= sizeof rand1_table / sizeof rand1_table[0])
         error(_("internal error in do_random1"));
     double (*fncall)(double) = rand1_table[opcode].fncall;
 
