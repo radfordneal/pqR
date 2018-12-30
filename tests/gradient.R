@@ -176,6 +176,7 @@ with_gradient (x=2,y=3) fiddler(x,y)
 
 x <- 0.32739
 x1 <- 0.47718; x2 <- 0.89472
+z1 <- 11.4319; z2 <- 13.1133
 i1 <- 3
 
 bindgrads <- function (r1,r2) 
@@ -203,6 +204,22 @@ test2 <- function (fun,...) {
                       with_gradient (x1,x2) fun(x1,x2,...)))
     print (bindgrads (numericDeriv(quote(fun(x1,x2,...)),c("x1","x2")),
       { r <- with_gradient (x1) { s <- with_gradient (x2) fun(x1,x2,...); 
+                                  g2 <<- attr(s,"gradient"); s }
+        attr(r,"gradient") <- cbind(g1=attr(r,"gradient"),g2=g2)
+        r
+      }
+    ))
+}
+
+test2z <- function (fun,...) {
+    print (bindgrads (numericDeriv(quote(fun(z1,z2,...)),"z1"),
+                      with_gradient (z1) fun(z1,z2,...)))
+    print (bindgrads (numericDeriv(quote(fun(z1,z2,...)),"z2"),
+                      with_gradient (z2) fun(z1,z2,...)))
+    print (bindgrads (numericDeriv(quote(fun(z1,z2,...)),c("z1","z2")),
+                      with_gradient (z1,z2) fun(z1,z2,...)))
+    print (bindgrads (numericDeriv(quote(fun(z1,z2,...)),c("z1","z2")),
+      { r <- with_gradient (z1) { s <- with_gradient (z2) fun(z1,z2,...); 
                                   g2 <<- attr(s,"gradient"); s }
         attr(r,"gradient") <- cbind(g1=attr(r,"gradient"),g2=g2)
         r
@@ -255,6 +272,13 @@ test1(digamma)
 test1(trigamma)
 
 test2(atan2)
+test2z(atan2)
+
+test2(beta)
+test2z(beta)
+
+test2(lbeta)
+test2z(lbeta)
 
 test2(dexp)
 test2(dexp,log=TRUE)

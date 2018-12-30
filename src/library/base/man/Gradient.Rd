@@ -147,7 +147,7 @@ with respect all their real-valued arguments (unless noted):
 abs, sqrt, expm1, exp, log1p, log2, log10, log (one-argument form only) \cr
 cos, sin, tan, acos, asin, atan, atan2 \cr
 cosh, sinh, tanh, acosh, asinh, atanh \cr
-gamma, lgamma, digamma, trigamma \cr
+gamma, lgamma, digamma, trigamma, beta, lbeta \cr
 \cr
 runif \cr
 dexp, rexp \cr

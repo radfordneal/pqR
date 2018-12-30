@@ -2466,12 +2466,38 @@ static void Datan2 (double y, double x, double *dy, double *dx, double v)
     double r2 = x*x + y*y;
 
     if (r2 == 0) {
-        if (dy) *dy = NA_REAL;
-        if (dx) *dx = NA_REAL;
+        if (dy) *dy = 0;
+        if (dx) *dx = 0;
     }
     else {
         if (dy) *dy = x / r2;
         if (dx) *dx = -y / r2;
+    }
+}
+
+static void Dlbeta (double a, double b, double *da, double *db, double v)
+{
+    if (a == 0 || b == 0) {
+        if (da) *da = a == 0 ? R_NegInf : 0;
+        if (db) *db = b == 0 ? R_NegInf : 0;
+    }
+    else {
+        double diab = digamma(a+b);
+        if (da) *da = digamma(a) - diab;
+        if (db) *db = digamma(b) - diab;
+    }
+}
+
+static void Dbeta (double a, double b, double *da, double *db, double v)
+{
+    if (a == 0 || b == 0) {
+        if (da) *da = a == 0 ? R_NegInf : 0;
+        if (db) *db = b == 0 ? R_NegInf : 0;
+    }
+    else {
+        double diab = digamma(a+b);
+        if (da) *da = v * (digamma(a) - diab);
+        if (db) *db = v * (digamma(b) - diab);
     }
 }
 
@@ -2527,8 +2553,8 @@ static double *Bessel_work_array (int n2, double *ap2)
 static struct { double (*fncall)(); void (*Dcall)(); } math2_table[31] = {
     { 0,	0 },
     { atan2,	Datan2 },
-    { lbeta,	0 },
-    { beta,	0 },
+    { lbeta,	Dlbeta },
+    { beta,	Dbeta },
     { lchoose,	0 },
     { choose,	0 },
     { dchisq,	0 },
