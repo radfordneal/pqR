@@ -172,6 +172,15 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* Random sampling from 2-parameter families. */
 
+/* Derivatives for random2 generators. */
+
+static void Drnorm (double r, double mu, double sigma, 
+                              double *dmu, double *dsigma)
+{
+    if (dmu) *dmu = 1;
+    if (dsigma) *dsigma = sigma == 0 ? 0 : (r - mu) / sigma;
+}
+
 static struct { 
     double (*fncall)(double, double);
     void (*Dcall)(double, double, double, double *, double *); 
@@ -185,7 +194,7 @@ static struct {
     { rlnorm,	0 },
     { rlogis,	0 },
     { rnbinom,	0 },
-    { rnorm,	0 },
+    { rnorm,	Drnorm },
     { runif,	0 },
     { rweibull,	0 },
     { rwilcox,	0 },
@@ -226,10 +235,43 @@ static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
     double (*rf)(double,double) = rand2_table[opcode].fncall;
 
     if (n == 1 && na1 >= 1 && na2 >= 1) { /* quickly generate single value */
+
         GetRNGstate();
-        double r = rf (*REAL(a1), *REAL(a2));
-        if (ISNAN(r)) warning(_("NAs produced"));
+        double av1 = *REAL(a1), av2 = *REAL(a2);
+        double r = rf (av1, av2);
         PutRNGstate();
+
+        if (ISNAN(r)) {
+            warning(_("NAs produced"));
+        }
+        else {
+
+            /* Compute gradient if requested. */
+
+            SEXP g1 = ATTRIB(CDR(args)), g2 = ATTRIB(CDDR(args));
+            if (g1 != R_NilValue || g2 != R_NilValue) {
+                void (*Dcall)(double, double, double, double *, double *) 
+                       = rand2_table[opcode].Dcall;
+                if (Dcall != 0) {
+                    double gv1, gv2;
+                    Dcall (r, av1, av2, 
+                           g1 != R_NilValue ? &gv1 : 0,
+                           g2 != R_NilValue ? &gv2 : 0);
+                    R_gradient = R_NilValue;
+                    if (g1 != R_NilValue)
+                        R_gradient = copy_scaled_gradients (g1, gv1);
+                    if (g2 != R_NilValue) {
+                        if (R_gradient == R_NilValue)
+                            R_gradient = copy_scaled_gradients (g2, gv2);
+                        else
+                            R_gradient = add_scaled_gradients (R_gradient,
+                                                               g2, gv2);
+                    }
+                    R_variant_result = VARIANT_GRADIENT_FLAG;
+                }
+            }
+        }
+
         UNPROTECT(2); /* a1, a2 */
         return ScalarReal(r);
     }
@@ -920,7 +962,7 @@ attribute_hidden FUNTAB R_FunTab_random[] =
 {"rnbinom",	do_random2,	7,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"rnbinom_mu",	do_random2,	13,  1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"rnchisq",	do_random2,	12,  1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"rnorm",	do_random2,	8,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"rnorm",	do_random2,	8,   61000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"runif",	do_random2,	9,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"rweibull",	do_random2,	10,  1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"rwilcox",	do_random2,	11,  1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},

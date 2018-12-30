@@ -180,6 +180,12 @@ test2i <- function (fun,...) {
                       with_gradient (x2) fun(i1,x2,...)))
 }
 
+test2r <- function (fun,...) {
+    f <- function (x1,x2) { set.seed(179); fun(1,x1,x2,...) }
+    print (bindgrads (numericDeriv(quote(f(x1,x2)),c("x1","x2")),
+                      with_gradient (x1,x2) f(x1,x2)))
+}
+
 test1(abs)
 
 test1(sqrt)
@@ -221,3 +227,5 @@ test1r(rexp)
 
 test2i(dgeom)
 test2i(dgeom,log=TRUE)
+
+test2r(rnorm)
