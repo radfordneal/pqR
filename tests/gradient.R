@@ -333,6 +333,15 @@ test3(dlogis,log=TRUE)
 test3z(dlogis)
 test3z(dlogis,log=TRUE)
 
+test3(plogis)
+test3(plogis,log=TRUE)
+test3(plogis,lower=FALSE)
+test3(plogis,log=TRUE,lower=FALSE)
+test3z(plogis)
+test3z(plogis,log=TRUE)
+test3z(plogis,lower=FALSE)
+test3z(plogis,log=TRUE,lower=FALSE)
+
 test2r(rlogis)
 
 test3(dnorm)
