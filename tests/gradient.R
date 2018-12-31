@@ -324,6 +324,20 @@ test2i(dgeom,log=TRUE)
 test2i(dpois)
 test2i(dpois,log=TRUE)
 
+test3(pcauchy)
+test3(pcauchy,log=TRUE)
+test3(pcauchy,lower=FALSE)
+test3(pcauchy,log=TRUE,lower=FALSE)
+test3z(pcauchy)
+test3z(pcauchy,log=TRUE)
+test3z(pcauchy,lower=FALSE)
+test3z(pcauchy,log=TRUE,lower=FALSE)
+
+test3(qcauchy)
+test3y(qcauchy,log=TRUE)
+test3(qcauchy,lower=FALSE)
+test3y(qcauchy,log=TRUE,lower=FALSE)
+
 test2r(rcauchy)
 
 test2r(rlnorm)

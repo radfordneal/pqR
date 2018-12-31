@@ -153,7 +153,7 @@ runif \cr
 dexp, rexp \cr
 dgeom \cr
 dpois \cr
-rcauchy \cr
+pcauchy, qcauchy, rcauchy \cr
 dnorm, pnorm, qnorm, rnorm \cr
 rlnorm \cr
 dlogis, plogis, qlogis, rlogis \cr

@@ -2767,6 +2767,61 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
 /* Derivatives of math3 functions. */
 
+static void Dpcauchy (double q, double location, double scale, 
+                      double *dq, double *dlocation, double *dscale,
+                      int lower_tail, int log_p, double v)
+{
+    if (scale <= 0) {
+        if (dq) *dq = 0;
+        if (dlocation) *dlocation = 0;
+        if (dscale) *dscale = 0;
+    }
+    else {
+
+        double q0 = (q - location) / scale;
+        double dp0 = dcauchy (q0, 0, 1, 0);
+
+        if (dq) *dq = dp0 / scale;
+        if (dlocation) *dlocation = - dp0 / scale;
+        if (dscale) *dscale = - dp0 * q0 / scale;
+
+        if (!lower_tail) {
+            if (dq) *dq = -*dq;
+            if (dlocation) *dlocation = -*dlocation;
+            if (dscale) *dscale = -*dscale;
+        }
+
+        if (log_p) {
+            double expv = exp(-v);
+            if (dq) *dq *= expv;
+            if (dlocation) *dlocation *= expv;
+            if (dscale) *dscale *= expv;
+        }
+    }
+}
+
+static void Dqcauchy (double p, double location, double scale, 
+                      double *dp, double *dlocation, double *dscale,
+                      int lower_tail, int log_p, double v)
+{
+    if (scale <= 0) {
+        if (dp) *dp = 0;
+        if (dlocation) *dlocation = 0;
+        if (dscale) *dscale = 0;
+    }
+    else {
+
+        double q0 = (v - location) / scale;
+
+        if (dp) *dp = (lower_tail ? 1 : -1) * scale / dcauchy (q0, 0, 1, 0);
+        if (dlocation) *dlocation = 1;
+        if (dscale) *dscale = q0;
+
+        if (log_p)
+            if (dp) *dp *= exp(p);
+    }
+}
+
 static void Ddnorm (double x, double mu, double sigma, 
                     double *dx, double *dmu, double *dsigma,
                     int give_log, double v)
@@ -2937,8 +2992,8 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { pbinom,	0 },
     { qbinom,	0 /* discrete */ },
     { dcauchy,	0 },
-    { pcauchy,	0 },
-    { qcauchy,	0 },
+    { pcauchy,	Dpcauchy },
+    { qcauchy,	Dqcauchy },
     { df,	0 },
     { pf,	0 },
     { qf,	0 },
