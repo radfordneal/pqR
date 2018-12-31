@@ -175,8 +175,9 @@ with_gradient (x=2,y=3) fiddler(x,y)
 # Check consistency of results between with_gradient and numericDeriv.
 
 x <- 0.32739
-x1 <- 0.47718; x2 <- 0.89472
-z1 <- 11.4319; z2 <- 13.1133
+x1 <- 0.47718; x2 <- 0.89472; x3 <- 0.67325
+y1 <- -0.3721; y2 <- -0.8131; y3 <- 1.22213
+z1 <- 11.4319; z2 <- 13.1133; z3 <- 6.68901
 i1 <- 3
 
 bindgrads <- function (r1,r2) 
@@ -238,6 +239,39 @@ test2r <- function (fun,...) {
                       with_gradient (x1,x2) f(x1,x2)))
 }
 
+test3 <- function (fun,...) {
+    print (bindgrads (numericDeriv(quote(fun(x1,x2,x3,...)),"x1"),
+                      with_gradient (x1) fun(x1,x2,x3,...)))
+    print (bindgrads (numericDeriv(quote(fun(x1,x2,x3,...)),"x2"),
+                      with_gradient (x2) fun(x1,x2,x3,...)))
+    print (bindgrads (numericDeriv(quote(fun(x1,x2,x3,...)),"x3"),
+                      with_gradient (x3) fun(x1,x2,x3,...)))
+    print (bindgrads (numericDeriv(quote(fun(x1,x2,x3,...)),c("x1","x2","x3")),
+                      with_gradient (x1,x2,x3) fun(x1,x2,x3,...)))
+}
+
+test3y <- function (fun,...) {
+    print (bindgrads (numericDeriv(quote(fun(y1,y2,y3,...)),"y1"),
+                      with_gradient (y1) fun(y1,y2,y3,...)))
+    print (bindgrads (numericDeriv(quote(fun(y1,y2,y3,...)),"y2"),
+                      with_gradient (y2) fun(y1,y2,y3,...)))
+    print (bindgrads (numericDeriv(quote(fun(y1,y2,y3,...)),"y3"),
+                      with_gradient (y3) fun(y1,y2,y3,...)))
+    print (bindgrads (numericDeriv(quote(fun(y1,y2,y3,...)),c("y1","y2","y3")),
+                      with_gradient (y1,y2,y3) fun(y1,y2,y3,...)))
+}
+
+test3z <- function (fun,...) {
+    print (bindgrads (numericDeriv(quote(fun(z1,z2,z3,...)),"z1"),
+                      with_gradient (z1) fun(z1,z2,z3,...)))
+    print (bindgrads (numericDeriv(quote(fun(z1,z2,z3,...)),"z2"),
+                      with_gradient (z2) fun(z1,z2,z3,...)))
+    print (bindgrads (numericDeriv(quote(fun(z1,z2,z3,...)),"z3"),
+                      with_gradient (z3) fun(z1,z2,z3,...)))
+    print (bindgrads (numericDeriv(quote(fun(z1,z2,z3,...)),c("z1","z2","z3")),
+                      with_gradient (z1,z2,z3) fun(z1,z2,z3,...)))
+}
+
 test1(abs)
 
 test1(sqrt)
@@ -295,6 +329,25 @@ test2r(rcauchy)
 test2r(rlnorm)
 
 test2r(rlogis)
+
+test3(dnorm)
+test3(dnorm,log=TRUE)
+test3z(dnorm)
+test3z(dnorm,log=TRUE)
+
+test3(pnorm)
+test3(pnorm,log=TRUE)
+test3(pnorm,lower=FALSE)
+test3(pnorm,log=TRUE,lower=FALSE)
+test3z(pnorm)
+test3z(pnorm,log=TRUE)
+test3z(pnorm,lower=FALSE)
+test3z(pnorm,log=TRUE,lower=FALSE)
+
+test3(qnorm)
+test3y(qnorm,log=TRUE)
+test3(qnorm,lower=FALSE)
+test3y(qnorm,log=TRUE,lower=FALSE)
 
 test2r(rnorm)
 

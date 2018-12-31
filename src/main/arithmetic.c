@@ -2579,20 +2579,20 @@ static struct { double (*fncall)(); void (*Dcall)(); } math2_table[31] = {
     { qexp,	0 },
     { dgeom,	Ddgeom },
     { pgeom,	0 },
-    { qgeom,	0 },
+    { qgeom,	0 /* discrete */ },
     { dpois,	Ddpois },
     { ppois,	0 },
-    { qpois,	0 },
+    { qpois,	0 /* discrete */ },
     { dt,	0 },
     { pt,	0 },
     { qt,	0 },
-    { dsignrank,   0 },
-    { psignrank,   0 },
-    { qsignrank,   0 },
+    { dsignrank,   0 /* discrete */ },
+    { psignrank,   0 /* discrete */ },
+    { qsignrank,   0 /* discrete */ },
     { bessel_j_ex, 0 },
     { bessel_y_ex, 0 },
     { psigamma,	0 },
-    { fround,	0 },
+    { fround,	0 /* discrete */ },
     { 0,	0 },
     { logbase,	0 },
     { fprec,	0 }
@@ -2791,6 +2791,61 @@ static void Ddnorm (double x, double mu, double sigma,
     }
 }
 
+static void Dpnorm (double q, double mu, double sigma, 
+                    double *dq, double *dmu, double *dsigma,
+                    int lower_tail, int log_p, double v)
+{
+    if (sigma <= 0) {
+        if (dq) *dq = 0;
+        if (dmu) *dmu = 0;
+        if (dsigma) *dsigma = 0;
+    }
+    else {
+
+        double q0 = (q - mu) / sigma;
+        double dp0 = dnorm (q0, 0, 1, 0);
+
+        if (dq) *dq = dp0 / sigma;
+        if (dmu) *dmu = - dp0 / sigma;
+        if (dsigma) *dsigma = - dp0 * q0 / sigma;
+
+        if (!lower_tail) {
+            if (dq) *dq = -*dq;
+            if (dmu) *dmu = -*dmu;
+            if (dsigma) *dsigma = -*dsigma;
+        }
+
+        if (log_p) {
+            double expv = exp(-v);
+            if (dq) *dq *= expv;
+            if (dmu) *dmu *= expv;
+            if (dsigma) *dsigma *= expv;
+        }
+    }
+}
+
+static void Dqnorm (double p, double mu, double sigma, 
+                    double *dp, double *dmu, double *dsigma,
+                    int lower_tail, int log_p, double v)
+{
+    if (sigma <= 0) {
+        if (dp) *dp = 0;
+        if (dmu) *dmu = 0;
+        if (dsigma) *dsigma = 0;
+    }
+    else {
+
+        double q0 = (v - mu) / sigma;
+
+        if (dp) *dp = (lower_tail ? 1 : -1) * sigma / dnorm (q0, 0, 1, 0);
+        if (dmu) *dmu = 1;
+        if (dsigma) *dsigma = q0;
+
+        if (log_p)
+            if (dp) *dp *= exp(p);
+    }
+}
+
 /* Table of functions to compute values and derivatives for math3 functions. */
 
 static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
@@ -2800,7 +2855,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { qbeta,	0 },
     { dbinom,	0 },
     { pbinom,	0 },
-    { qbinom,	0 },
+    { qbinom,	0 /* discrete */ },
     { dcauchy,	0 },
     { pcauchy,	0 },
     { qcauchy,	0 },
@@ -2818,10 +2873,10 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { qlogis,	0 },
     { dnbinom,	0 },
     { pnbinom,	0 },
-    { qnbinom,	0 },
+    { qnbinom,	0 /* discrete */ },
     { dnorm,	Ddnorm },
-    { pnorm,	0 },
-    { qnorm,	0 },
+    { pnorm,	Dpnorm },
+    { qnorm,	Dqnorm },
     { dunif,	0 },
     { punif,	0 },
     { qunif,	0 },
@@ -2834,14 +2889,14 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { dnt,	0 },
     { pnt,	0 },
     { qnt,	0 },
-    { dwilcox,	0 },
-    { pwilcox,	0 },
-    { qwilcox,	0 },
+    { dwilcox,	0 /* discrete */ },
+    { pwilcox,	0 /* discrete */ },
+    { qwilcox,	0 /* discrete */ },
     { bessel_i_ex, 0 },
     { bessel_k_ex, 0 },
     { dnbinom_mu,  0 },
     { pnbinom_mu,  0 },
-    { qnbinom_mu,  0 }
+    { qnbinom_mu,  0 /* discrete */ }
 };
 
 /* Mathematical functions of 3 numeric arguments (plus 0, 1, or 2 integers) */
@@ -3321,57 +3376,57 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 
 /* Mathematical Functions of Three Numeric (+ 1-2 int) Variables */
 
-{"dbeta",	do_math3,	1,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pbeta",	do_math3,	2,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qbeta",	do_math3,	3,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dbeta",	do_math3,	1,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pbeta",	do_math3,	2,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qbeta",	do_math3,	3,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"dbinom",	do_math3,	4,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
 {"pbinom",	do_math3,	5,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qbinom",	do_math3,	6,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dcauchy",	do_math3,	7,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pcauchy",	do_math3,	8,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qcauchy",	do_math3,	9,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dcauchy",	do_math3,	7,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pcauchy",	do_math3,	8,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qcauchy",	do_math3,	9,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"df",		do_math3,	10,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pf",		do_math3,	11,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qf",		do_math3,	12,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"df",		do_math3,	10,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pf",		do_math3,	11,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qf",		do_math3,	12,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dgamma",	do_math3,	13,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pgamma",	do_math3,	14,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qgamma",	do_math3,	15,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dgamma",	do_math3,	13,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pgamma",	do_math3,	14,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qgamma",	do_math3,	15,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dlnorm",	do_math3,	16,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"plnorm",	do_math3,	17,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qlnorm",	do_math3,	18,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dlnorm",	do_math3,	16,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"plnorm",	do_math3,	17,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qlnorm",	do_math3,	18,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dlogis",	do_math3,	19,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"plogis",	do_math3,	20,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qlogis",	do_math3,	21,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dlogis",	do_math3,	19,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"plogis",	do_math3,	20,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qlogis",	do_math3,	21,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"dnbinom",	do_math3,	22,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
 {"pnbinom",	do_math3,	23,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qnbinom",	do_math3,	24,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"dnorm",	do_math3,	25,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnorm",	do_math3,	26,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnorm",	do_math3,	27,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnorm",	do_math3,	26,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnorm",	do_math3,	27,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dunif",	do_math3,	28,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"punif",	do_math3,	29,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qunif",	do_math3,	30,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dunif",	do_math3,	28,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"punif",	do_math3,	29,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qunif",	do_math3,	30,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dweibull",	do_math3,	31,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pweibull",	do_math3,	32,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qweibull",	do_math3,	33,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dweibull",	do_math3,	31,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pweibull",	do_math3,	32,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qweibull",	do_math3,	33,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dnchisq",	do_math3,	34,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnchisq",	do_math3,	35,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnchisq",	do_math3,	36,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dnchisq",	do_math3,	34,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnchisq",	do_math3,	35,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnchisq",	do_math3,	36,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dnt",		do_math3,	37,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnt",		do_math3,	38,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnt",		do_math3,	39,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dnt",		do_math3,	37,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnt",		do_math3,	38,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnt",		do_math3,	39,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"dwilcox",	do_math3,	40,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
 {"pwilcox",	do_math3,	41,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},

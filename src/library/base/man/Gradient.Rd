@@ -154,7 +154,7 @@ dexp, rexp \cr
 dgeom \cr
 dpois \cr
 rcauchy \cr
-dnorm, rnorm \cr
+dnorm, pnorm, qnorm, rnorm \cr
 rlnorm \cr
 rlogis \cr
 rweibull
