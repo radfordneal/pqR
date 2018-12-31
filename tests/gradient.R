@@ -328,6 +328,11 @@ test2r(rcauchy)
 
 test2r(rlnorm)
 
+test3(dlogis)
+test3(dlogis,log=TRUE)
+test3z(dlogis)
+test3z(dlogis,log=TRUE)
+
 test2r(rlogis)
 
 test3(dnorm)

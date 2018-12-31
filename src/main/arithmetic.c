@@ -2846,6 +2846,57 @@ static void Dqnorm (double p, double mu, double sigma,
     }
 }
 
+static void Ddlogis (double x, double location, double scale, 
+                     double *dx, double *dlocation, double *dscale,
+                     int give_log, double v)
+{
+    if (!R_FINITE(v)) {
+        if (dx) *dx = 0;
+        if (dlocation) *dlocation = 0;
+        if (dscale) *dscale = 0;
+    }
+    else {
+        double x0 = (x - location) / scale;
+        double t = tanh(x0/2);
+        if (give_log) {
+            if (dx) *dx = - t / scale;
+            if (dlocation) *dlocation = t / scale;
+            if (dscale) *dscale = (t*x0 - 1) / scale;
+        }
+        else {
+            if (dx) *dx = - v * t / scale;
+            if (dlocation) *dlocation = v * t / scale;
+            if (dscale) *dscale = v * (t*x0 - 1) / scale;
+        }
+    }
+}
+
+static void Dplogis (double q, double location, double scale, 
+                     double *dq, double *dlocation, double *dscale,
+                     int lower_tail, int log_p, double v)
+{
+    if (scale <= 0) {
+        if (dq) *dq = 0;
+        if (dlocation) *dlocation = 0;
+        if (dscale) *dscale = 0;
+    }
+    else {
+    }
+}
+
+static void Dqlogis (double p, double location, double scale, 
+                     double *dp, double *dlocation, double *dscale,
+                     int lower_tail, int log_p, double v)
+{
+    if (scale <= 0) {
+        if (dp) *dp = 0;
+        if (dlocation) *dlocation = 0;
+        if (dscale) *dscale = 0;
+    }
+    else {
+    }
+}
+
 /* Table of functions to compute values and derivatives for math3 functions. */
 
 static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
@@ -2868,7 +2919,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { dlnorm,	0 },
     { plnorm,	0 },
     { qlnorm,	0 },
-    { dlogis,	0 },
+    { dlogis,	Ddlogis },
     { plogis,	0 },
     { qlogis,	0 },
     { dnbinom,	0 },
