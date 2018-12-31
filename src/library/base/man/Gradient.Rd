@@ -156,7 +156,7 @@ dpois \cr
 rcauchy \cr
 dnorm, pnorm, qnorm, rnorm \cr
 rlnorm \cr
-dlogis, plogis, rlogis \cr
+dlogis, plogis, qlogis, rlogis \cr
 rweibull
 }
 }

@@ -342,6 +342,11 @@ test3z(plogis,log=TRUE)
 test3z(plogis,lower=FALSE)
 test3z(plogis,log=TRUE,lower=FALSE)
 
+test3(qlogis)
+test3y(qlogis,log=TRUE)
+test3(qlogis,lower=FALSE)
+test3y(qlogis,log=TRUE,lower=FALSE)
+
 test2r(rlogis)
 
 test3(dnorm)

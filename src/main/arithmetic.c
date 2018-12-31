@@ -2914,6 +2914,15 @@ static void Dqlogis (double p, double location, double scale,
         if (dscale) *dscale = 0;
     }
     else {
+
+        double q0 = (v - location) / scale;
+
+        if (dp) *dp = (lower_tail ? 1 : -1) * scale / dlogis (q0, 0, 1, 0);
+        if (dlocation) *dlocation = 1;
+        if (dscale) *dscale = q0;
+
+        if (log_p)
+            if (dp) *dp *= exp(p);
     }
 }
 
@@ -2941,7 +2950,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { qlnorm,	0 },
     { dlogis,	Ddlogis },
     { plogis,	Dplogis },
-    { qlogis,	0 },
+    { qlogis,	Dqlogis },
     { dnbinom,	0 },
     { pnbinom,	0 },
     { qnbinom,	0 /* discrete */ },
