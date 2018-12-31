@@ -287,6 +287,9 @@ test1r(rexp)
 test2i(dgeom)
 test2i(dgeom,log=TRUE)
 
+test2i(dpois)
+test2i(dpois,log=TRUE)
+
 test2r(rcauchy)
 
 test2r(rlnorm)

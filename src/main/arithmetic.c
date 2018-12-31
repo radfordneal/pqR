@@ -2518,10 +2518,10 @@ static void Ddexp (double x, double scale, double *dx, double *dscale,
     }
 }
 
-static void Ddgeom (double x, double p, double *dx /*ignored*/, double *dp,
-                    double v, int give_log)
+static void Ddgeom (double x, double p, double *dx /*ignored*/, 
+                    double *dp, double v, int give_log)
 {
-    if (dp == 0) return;
+    if (!dp) return;
 
     if (x < 0 || p <= 0 || p >= 1)
         *dp = 0;
@@ -2529,6 +2529,20 @@ static void Ddgeom (double x, double p, double *dx /*ignored*/, double *dp,
         *dp = 1/p - x/(1-p);
         if (!give_log) 
             *dp *= v;
+    }
+}
+
+static void Ddpois (double x, double lambda, double *dx /*ignored*/, 
+                    double *dlambda, double v, int give_log)
+{
+    if (!dlambda) return;
+
+    if (x < 0 || lambda < 0)
+        *dlambda = 0;
+    else {
+        *dlambda = x == 0 ? -1 : x/lambda - 1;
+        if (!give_log) 
+            *dlambda *= v;
     }
 }
 
@@ -2555,8 +2569,8 @@ static struct { double (*fncall)(); void (*Dcall)(); } math2_table[31] = {
     { atan2,	Datan2 },
     { lbeta,	Dlbeta },
     { beta,	Dbeta },
-    { lchoose,	0 },
-    { choose,	0 },
+    { lchoose,	0  /* could differentiate wrt 1st arg, but usually integer */ },
+    { choose,	0  /* could differentiate wrt 1st arg, but usually integer */ },
     { dchisq,	0 },
     { pchisq,	0 },
     { qchisq,	0 },
@@ -2566,7 +2580,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math2_table[31] = {
     { dgeom,	Ddgeom },
     { pgeom,	0 },
     { qgeom,	0 },
-    { dpois,	0 },
+    { dpois,	Ddpois },
     { ppois,	0 },
     { qpois,	0 },
     { dt,	0 },
