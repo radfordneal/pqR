@@ -1,6 +1,6 @@
 % File src/library/base/man/Gradient.Rd
 % pqR : A pretty quick version of R
-% Copyright (C) 2018 by Radford M. Neal
+% Copyright (C) 2018, 2019 by Radford M. Neal
 % Distributed under GPL 2 or later
 
 \name{Gradient}
