@@ -2880,7 +2880,7 @@ static void Dqcauchy (double p, double location, double scale,
 {
     if (scale <= 0) {
         if (dp) *dp = 0;
-        if (dlocation) *dlocation = 0;
+        if (dlocation) *dlocation = 1;
         if (dscale) *dscale = 0;
     }
     else {
@@ -2959,7 +2959,7 @@ static void Dqnorm (double p, double mu, double sigma,
 {
     if (sigma <= 0) {
         if (dp) *dp = 0;
-        if (dmu) *dmu = 0;
+        if (dmu) *dmu = 1;
         if (dsigma) *dsigma = 0;
     }
     else {
@@ -2972,6 +2972,84 @@ static void Dqnorm (double p, double mu, double sigma,
 
         if (log_p)
             if (dp) *dp *= exp(p);
+    }
+}
+
+static void Ddunif (double x, double a, double b, 
+                    double *dx, double *da, double *db,
+                    int give_log, double v)
+{
+    if (dx) *dx = 0;
+
+    if (b <= a || x <= a || x >= b) {
+        if (da) *da = 0;
+        if (db) *db = 0;
+    }
+    else {
+        double t = 1 / (b-a);
+        if (give_log) {
+            if (da) *da = t;
+            if (db) *db = -t;
+        }
+        else {
+            if (da) *da = t * v;
+            if (db) *db = -t * v;
+        }
+    }
+}
+
+static void Dpunif (double q, double a, double b, 
+                    double *dq, double *da, double *db,
+                    int lower_tail, int log_p, double v)
+{
+    if (b <= a || q <= a || q >= b) {
+        if (dq) *dq = 0;
+        if (da) *da = 0;
+        if (db) *db = 0;
+    }
+    else {
+
+        double t = 1 / (b-a);
+
+        if (lower_tail) {
+            if (dq) *dq = t;
+            if (da) *da = ((q-a)*t - 1) * t;
+            if (db) *db = (a-q) * t * t;
+        }
+        else {
+            if (dq) *dq = -t;
+            if (da) *da = ((a-q)*t + 1) * t;
+            if (db) *db = (q-a) * t * t;
+        }
+
+        if (log_p) {
+            double expv = exp(-v);
+            if (dq) *dq *= expv;
+            if (da) *da *= expv;
+            if (db) *db *= expv;
+        }
+    }
+}
+
+static void Dqunif (double p, double a, double b, 
+                    double *dp, double *da, double *db,
+                    int lower_tail, int log_p, double v)
+{
+    if (b <= a) {
+        if (dp) *dp = 0;
+    }
+    else {
+        if (dp) *dp = lower_tail ? b-a : a-b;
+    }
+
+    if (log_p) {
+        if (da) *da = lower_tail ? -expm1(p) : exp(p);
+        if (db) *db = lower_tail ? exp(p) : -expm1(p);
+        if (dp) *dp *= exp(p);
+    }
+    else {
+        if (da) *da = lower_tail ? 1-p : p;
+        if (db) *db = lower_tail ? p : 1-p;
     }
 }
 
@@ -3039,7 +3117,7 @@ static void Dqlogis (double p, double location, double scale,
 {
     if (scale <= 0) {
         if (dp) *dp = 0;
-        if (dlocation) *dlocation = 0;
+        if (dlocation) *dlocation = 1;
         if (dscale) *dscale = 0;
     }
     else {
@@ -3086,9 +3164,9 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { dnorm,	Ddnorm },
     { pnorm,	Dpnorm },
     { qnorm,	Dqnorm },
-    { dunif,	0 },
-    { punif,	0 },
-    { qunif,	0 },
+    { dunif,	Ddunif },
+    { punif,	Dpunif },
+    { qunif,	Dqunif },
     { dweibull,	0 },
     { pweibull,	0 },
     { qweibull,	0 },

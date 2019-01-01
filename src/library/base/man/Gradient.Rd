@@ -149,7 +149,7 @@ cos, sin, tan, acos, asin, atan, atan2 \cr
 cosh, sinh, tanh, acosh, asinh, atanh \cr
 gamma, lgamma, digamma, trigamma, beta, lbeta \cr
 \cr
-runif \cr
+dunif, punif, qunif, runif \cr
 dexp, pexp, qexp, rexp \cr
 dgeom, pgeom \cr
 dpois \cr

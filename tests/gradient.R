@@ -178,6 +178,7 @@ x <- 0.32739
 x1 <- 0.47718; x2 <- 0.89472; x3 <- 0.67325
 y1 <- -0.3721; y2 <- -0.8131; y3 <- 1.22213
 z1 <- 11.4319; z2 <- 13.1133; z3 <- 6.68901
+w1 <- 0.8389; w2 <- 0.1123; w3 <- 4.68701
 i1 <- 3
 
 bindgrads <- function (r1,r2) 
@@ -286,6 +287,17 @@ test3z <- function (fun,...) {
                       with_gradient (z3) fun(z1,z2,z3,...)))
     print (bindgrads (numericDeriv(quote(fun(z1,z2,z3,...)),c("z1","z2","z3")),
                       with_gradient (z1,z2,z3) fun(z1,z2,z3,...)))
+}
+
+test3w <- function (fun,...) {
+    print (bindgrads (numericDeriv(quote(fun(w1,w2,w3,...)),"w1"),
+                      with_gradient (w1) fun(w1,w2,w3,...)))
+    print (bindgrads (numericDeriv(quote(fun(w1,w2,w3,...)),"w2"),
+                      with_gradient (w2) fun(w1,w2,w3,...)))
+    print (bindgrads (numericDeriv(quote(fun(w1,w2,w3,...)),"w3"),
+                      with_gradient (w3) fun(w1,w2,w3,...)))
+    print (bindgrads (numericDeriv(quote(fun(w1,w2,w3,...)),c("w1","w2","w3")),
+                      with_gradient (w1,w2,w3) fun(w1,w2,w3,...)))
 }
 
 test1(abs)
@@ -415,6 +427,19 @@ test3(qnorm,lower=FALSE)
 test3y(qnorm,log=TRUE,lower=FALSE)
 
 test2r(rnorm)
+
+test3w(dunif)
+test3w(dunif,log=TRUE)
+
+test3w(punif)
+test3w(punif,log=TRUE)
+test3w(punif,lower=FALSE)
+test3w(punif,log=TRUE,lower=FALSE)
+
+test3w(qunif)
+test3y(qunif,log=TRUE)
+test3w(qunif,lower=FALSE)
+test3y(qunif,log=TRUE,lower=FALSE)
 
 test2r(runif)
 
