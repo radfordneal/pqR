@@ -2841,6 +2841,33 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
 /* Derivatives of math3 functions. */
 
+static void Ddbeta (double x, double a, double b, 
+                    double *dx, double *da, double *db,
+                    int give_log, double v)
+{
+    if (!R_FINITE(v)) {
+        if (dx) *dx = 0;
+        if (da) *da = 0;
+        if (db) *db = 0;
+    }
+    else {
+
+        if (dx) *dx = (a-1)/x - (b-1)/(1-x);
+
+        if (da || db) {
+            double diab = digamma(a+b);
+            if (da) *da = log(x) - digamma(a) + diab;
+            if (db) *db = log1p(-x) - digamma(b) + diab;
+        }
+
+        if (!give_log) {
+            if (dx) *dx *= v;
+            if (da) *da *= v;
+            if (db) *db *= v; 
+        }
+    }
+}
+
 static void Ddbinom (double x, double n, double p, 
                      double *dx /*ignored*/, double *dn /*ignored*/, double *dp,
                      int give_log, double v)
@@ -3152,7 +3179,7 @@ static void Dqlogis (double p, double location, double scale,
 
 static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { 0,	0 },
-    { dbeta,	0 },
+    { dbeta,	Ddbeta },
     { pbeta,	0 },
     { qbeta,	0 },
     { dbinom,	Ddbinom },
