@@ -2793,8 +2793,8 @@ SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
    attaching them as attributes of the CONS cells holding the arguments.
    The n argument must be non-zero.  If n is 1, 2, 3, or 4, that number
    of leading arguments are evaluated with VARIANT_GRADIENT.  If n is
-   5, 6, or 7, the first argument is evaluated without asking for gradient,
-   but a gradient is requested for the next 1, 2, or 3. */
+   5, 6, or 7, the first 1, 2, or 3 arguments are evaluated without asking 
+   for gradients, but a gradient is requested for the next argument. */
 
 SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
 {
@@ -2820,14 +2820,8 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
     BEGIN_PROTECT3 (head, tail, h);
     SEXP ev, ev_el;
 
-    int i, m;
-    i = 0;
-    if (n > 4) { /* don't ask for gradient for first argument */
-        m = 0;     /* so i won't be less than m for first argument */
-        n -= 3;    /* m will be set to this new n after first argument */
-    }
-    else 
-        m = n;
+    int i = 0;
+    int m = n > 4 ? n-4 : 0;
 
     head = R_NilValue;
     tail = R_NilValue;
@@ -2846,9 +2840,9 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
 	    if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
                     INC_NAMEDCNT(CAR(tail));  /* OK when tail is R_NilValue */
-                    ev_el = EVALV (CAR(h), rho, 
-                                   i<n ? varpend | VARIANT_GRADIENT : varpend);
-                    i += 1; m = n;
+                    ev_el = EVALV (CAR(h), rho, i >= n || i < m ? varpend
+                                                 : varpend | VARIANT_GRADIENT);
+                    i += 1;
                     ev = cons_with_tag (ev_el, R_NilValue, TAG(h));
                     if (R_variant_result & VARIANT_GRADIENT_FLAG)
                         SET_ATTRIB (ev, R_gradient);
@@ -2869,9 +2863,9 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
             if (CDR(el) == R_NilValue) 
                 varpend = variant;    /* don't defer pointlessly for last one */
             INC_NAMEDCNT(CAR(tail));  /* OK when tail is R_NilValue */
-            ev_el = EVALV (CAR(el), rho, 
-                           i<m ? varpend | VARIANT_GRADIENT : varpend);
-            i += 1; m = n;
+            ev_el = EVALV (CAR(el), rho, i >= n || i < m ? varpend
+                                          : varpend | VARIANT_GRADIENT);
+            i += 1;
             ev = cons_with_tag (ev_el, R_NilValue, TAG(el));
             if (R_variant_result & VARIANT_GRADIENT_FLAG)
                 SET_ATTRIB (ev, R_gradient);
