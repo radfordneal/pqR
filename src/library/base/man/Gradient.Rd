@@ -153,6 +153,7 @@ dunif, punif, qunif, runif \cr
 dexp, pexp, qexp, rexp \cr
 dgeom, pgeom \cr
 dpois \cr
+dbinom \cr
 pcauchy, qcauchy, rcauchy \cr
 dnorm, pnorm, qnorm, rnorm \cr
 rlnorm \cr

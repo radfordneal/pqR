@@ -2841,6 +2841,21 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
 /* Derivatives of math3 functions. */
 
+static void Ddbinom (double x, double n, double p, 
+                     double *dx /*ignored*/, double *dn /*ignored*/, double *dp,
+                     int give_log, double v)
+{
+    if (!dp) return;
+
+    if (p <= 0 || p >= 1) {
+        *dp = 0;
+    }
+    else {
+        double lp = x/p - (n-x)/(1-p);
+        *dp = give_log ? lp : lp*v;
+    }
+}
+
 static void Dpcauchy (double q, double location, double scale, 
                       double *dq, double *dlocation, double *dscale,
                       int lower_tail, int log_p, double v)
@@ -3140,7 +3155,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { dbeta,	0 },
     { pbeta,	0 },
     { qbeta,	0 },
-    { dbinom,	0 },
+    { dbinom,	Ddbinom },
     { pbinom,	0 },
     { qbinom,	0 /* discrete */ },
     { dcauchy,	0 },
@@ -3666,8 +3681,8 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"pbeta",	do_math3,	2,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qbeta",	do_math3,	3,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dbinom",	do_math3,	4,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pbinom",	do_math3,	5,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dbinom",	do_math3,	4,   61000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pbinom",	do_math3,	5,   61000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qbinom",	do_math3,	6,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"dcauchy",	do_math3,	7,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
