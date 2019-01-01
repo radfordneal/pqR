@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996	Robert Gentleman and Ross Ihaka
@@ -837,7 +837,8 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
                 if (PRIMVISON(op))
                     R_Visible = TRUE;
             }
-            else if (type_etc & TYPE_ET_CETERA_VEC_DOTS_TR) {
+            else if ((type_etc & TYPE_ET_CETERA_VEC_DOTS_TR) 
+                       && isFunction(op)) {
                 PROTECT(op);
                 R_trace_call(e,op);
                 UNPROTECT(1);
