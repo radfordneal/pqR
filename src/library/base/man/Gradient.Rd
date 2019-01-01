@@ -150,7 +150,7 @@ cosh, sinh, tanh, acosh, asinh, atanh \cr
 gamma, lgamma, digamma, trigamma, beta, lbeta \cr
 \cr
 runif \cr
-dexp, rexp \cr
+dexp, pexp, qexp, rexp \cr
 dgeom \cr
 dpois \cr
 pcauchy, qcauchy, rcauchy \cr

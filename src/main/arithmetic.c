@@ -2459,6 +2459,9 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 }
 
 
+/* MATHEMATICAL FUNCTIONS OF TWO NUMERIC ARGUMENTS 
+   (plus 0, 1, or 2 integers). */
+
 /* Derivatives of math2 functions. */
 
 static void Datan2 (double y, double x, double *dy, double *dx, double v)
@@ -2515,6 +2518,53 @@ static void Ddexp (double x, double scale, double *dx, double *dscale,
     else {
         if (dx) *dx = -v / scale;
         if (dscale) *dscale = v * (x/scale - 1) / scale;
+    }
+}
+
+static void Dpexp (double q, double scale, double *dq, double *dscale,
+                   int lower_tail, int log_p, double v)
+{
+    if (scale <= 0) {
+        if (dq) *dq = 0;
+        if (dscale) *dscale = 0;
+    }
+    else {
+
+        double q0 = q / scale;
+        double dp0 = dexp (q0, 1, 0);
+
+        if (dq) *dq = dp0 / scale;
+        if (dscale) *dscale = - dp0 * q0 / scale;
+
+        if (!lower_tail) {
+            if (dq) *dq = -*dq;
+            if (dscale) *dscale = -*dscale;
+        }
+
+        if (log_p) {
+            double expv = exp(-v);
+            if (dq) *dq *= expv;
+            if (dscale) *dscale *= expv;
+        }
+    }
+}
+
+static void Dqexp (double p, double scale, double *dp, double *dscale,
+                   int lower_tail, int log_p, double v)
+{
+    if (scale <= 0) {
+        if (dp) *dp = 0;
+        if (dscale) *dscale = 0;
+    }
+    else {
+
+        double q0 = v / scale;
+
+        if (dp) *dp = (lower_tail ? 1 : -1) * scale / dexp (q0, 1, 0);
+        if (dscale) *dscale = q0;
+
+        if (log_p)
+            if (dp) *dp *= exp(p);
     }
 }
 
@@ -2575,8 +2625,8 @@ static struct { double (*fncall)(); void (*Dcall)(); } math2_table[31] = {
     { pchisq,	0 },
     { qchisq,	0 },
     { dexp,	Ddexp },
-    { pexp,	0 },
-    { qexp,	0 },
+    { pexp,	Dpexp },
+    { qexp,	Dqexp },
     { dgeom,	Ddgeom },
     { pgeom,	0 },
     { qgeom,	0 /* discrete */ },
@@ -2597,8 +2647,6 @@ static struct { double (*fncall)(); void (*Dcall)(); } math2_table[31] = {
     { logbase,	0 },
     { fprec,	0 }
 };
-
-/* Mathematical functions of 2 numeric arguments (plus 0, 1, or 2 integers) */
 
 SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
 {
@@ -2764,6 +2812,9 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     return res;
 }
 
+
+/* MATHEMATICAL FUNCTIONS OF THREE NUMERIC ARGUMENTS 
+   (plus 0, 1, or 2 integers). */
 
 /* Derivatives of math3 functions. */
 
@@ -3034,8 +3085,6 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { qnbinom_mu,  0 /* discrete */ }
 };
 
-/* Mathematical functions of 3 numeric arguments (plus 0, 1, or 2 integers) */
-
 SEXP do_math3 (SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP res;
@@ -3160,7 +3209,7 @@ SEXP do_math3 (SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 
-/* Mathematical Functions of Four (Real) Arguments */
+/* MATHEMATICAL FUNCTIONS OF FOUR (REAL) ARGUMENTS. */
 
 static void setup_Math4 (SEXP *sa, SEXP *sb, SEXP *sc, SEXP *sd, SEXP *sy, 
                          int na, int nb, int nc, int nd, SEXP lcall)

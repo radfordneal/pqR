@@ -212,6 +212,22 @@ test2 <- function (fun,...) {
     ))
 }
 
+test2y <- function (fun,...) {
+    print (bindgrads (numericDeriv(quote(fun(y1,y3,...)),"y1"),
+                      with_gradient (y1) fun(y1,y3,...)))
+    print (bindgrads (numericDeriv(quote(fun(y1,y3,...)),"y3"),
+                      with_gradient (y3) fun(y1,y3,...)))
+    print (bindgrads (numericDeriv(quote(fun(y1,y3,...)),c("y1","y3")),
+                      with_gradient (y1,y3) fun(y1,y3,...)))
+    print (bindgrads (numericDeriv(quote(fun(y1,y3,...)),c("y1","y3")),
+      { r <- with_gradient (y1) { s <- with_gradient (y3) fun(y1,y3,...); 
+                                  g2 <<- attr(s,"gradient"); s }
+        attr(r,"gradient") <- cbind(g1=attr(r,"gradient"),g2=g2)
+        r
+      }
+    ))
+}
+
 test2z <- function (fun,...) {
     print (bindgrads (numericDeriv(quote(fun(z1,z2,...)),"z1"),
                       with_gradient (z1) fun(z1,z2,...)))
@@ -316,6 +332,17 @@ test2z(lbeta)
 
 test2(dexp)
 test2(dexp,log=TRUE)
+
+test2(pexp)
+test2(pexp,log=TRUE)
+test2(pexp,lower=FALSE)
+test2(pexp,log=TRUE,lower=FALSE)
+
+test2(qexp)
+test2y(qexp,log=TRUE)
+test2(qexp,lower=FALSE)
+test2y(qexp,log=TRUE,lower=FALSE)
+
 test1r(rexp)
 
 test2i(dgeom)
