@@ -30,6 +30,7 @@
 #endif
 
 #define USE_FAST_PROTECT_MACROS
+#define R_USE_SIGNALS
 #include "Defn.h"
 
 
@@ -482,6 +483,43 @@ static SEXP do_all_gradients_of (SEXP call, SEXP op, SEXP args, SEXP env,
 
     R_variant_result = 0;
     return r;
+}
+
+
+/* Trace tracking of the gradients in R_gradient. */
+
+attribute_hidden void Rf_gradient_trace (SEXP call)
+{
+    REprintf("GRADIENT TRACE: ");
+
+    SEXP p;
+    for (p = R_gradient; p != R_NilValue; p = CDR(p)) {
+        int ix = GRADINDEX(p);
+        SEXP env = TAG(p);
+        SEXP gv = GRADVARS(env);
+        if (gv==R_NoObject || TYPEOF(gv)!=VECSXP || ix < 1 || ix > LENGTH(gv))
+            REprintf("?? ");
+        else
+            REprintf("%s ",CHAR(PRINTNAME(VECTOR_ELT(gv,ix-1))));
+    }
+
+    RCNTXT *cptr;
+
+    REprintf (": ");
+
+    if (call != R_NilValue && TYPEOF(CAR(call)) == SYMSXP)
+        REprintf ("\"%s\" ", CHAR(PRINTNAME(CAR(call))));
+
+    for (cptr = R_GlobalContext; cptr; cptr = cptr->nextcontext) {
+	if ((cptr->callflag & (CTXT_FUNCTION | CTXT_BUILTIN))
+	    && TYPEOF(cptr->call) == LANGSXP) {
+	    SEXP fun = CAR(cptr->call);
+            REprintf ("\"%s\" ",
+               TYPEOF(fun) == SYMSXP ? CHAR(PRINTNAME(fun)) : "<Anonymous>");
+	}
+    }
+
+    REprintf("\n");
 }
 
 

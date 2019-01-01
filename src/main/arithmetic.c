@@ -1580,6 +1580,7 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
             R_variant_result = VARIANT_GRADIENT_FLAG;
             break;
         }
+        GRADIENT_TRACE(call);
     }
 
     UNPROTECT(nprotect);
@@ -1709,6 +1710,7 @@ SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
         double d = opcode == MINUSOP ? -1 : 1;
         R_gradient = copy_scaled_gradients(grad1,d);
         R_variant_result = VARIANT_GRADIENT_FLAG;
+        GRADIENT_TRACE(call);
     }
 
     return ans;
@@ -2262,6 +2264,7 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
             double d = R_math1_deriv_table[opcode] (opr, res);
             R_gradient = copy_scaled_gradients(grad,d);
             R_variant_result = VARIANT_GRADIENT_FLAG;
+            GRADIENT_TRACE(call);
         }
     }
 
@@ -2450,6 +2453,7 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         if (TYPEOF(s) == REALSXP && LENGTH(s) == 1 && !ISNAN(*REAL(s))) {
             R_gradient = copy_scaled_gradients (g, sign(opr));
             R_variant_result = VARIANT_GRADIENT_FLAG;
+            GRADIENT_TRACE(call);
         }
     }
     UNPROTECT(3);  /* g, args, s */
@@ -2772,6 +2776,7 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
                           (copy_scaled_gradients (g1, grad1), g2, grad2);
 
         R_variant_result = VARIANT_GRADIENT_FLAG;
+        GRADIENT_TRACE(call);
     }
 
     if (naflag) NaN_warning();
@@ -3218,6 +3223,7 @@ SEXP do_math3 (SEXP call, SEXP op, SEXP args, SEXP env)
         }
 
         R_variant_result = VARIANT_GRADIENT_FLAG;
+        GRADIENT_TRACE(call);
     }
 
     if (naflag) NaN_warning();

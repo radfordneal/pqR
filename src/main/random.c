@@ -113,6 +113,7 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
                 if (Dcall != 0) {
                     R_gradient = copy_scaled_gradients (g, Dcall(r,av));
                     R_variant_result = VARIANT_GRADIENT_FLAG;
+                    GRADIENT_TRACE(call);
                 }
             }
         }
@@ -304,6 +305,7 @@ static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
                                                                g2, gv2);
                     }
                     R_variant_result = VARIANT_GRADIENT_FLAG;
+                    GRADIENT_TRACE(call);
                 }
             }
         }

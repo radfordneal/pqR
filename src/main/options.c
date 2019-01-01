@@ -390,6 +390,11 @@ void attribute_hidden InitOptions(void)
     SET_TAG(v, install("helpers_trace"));
     SETCAR(v, ScalarLogical(getenv("R_HELPERS_TRACE")!=0));
 
+    SETCDR(v,CONS(R_NilValue,R_NilValue));
+    v = CDR(v);
+    SET_TAG(v, install("gradient_trace"));
+    SETCAR(v, ScalarLogical(FALSE));
+
     SET_SYMVALUE(install(".Options"), CDR(val));
     UNPROTECT(1);
 }
@@ -588,6 +593,13 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
             break;
             
             case 'g':
+	    if (streql(opname, "gradient_trace")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), opname);
+		R_gradient_trace = asLogical(argi);
+		val = ScalarLogical(R_gradient_trace);
+                goto set;
+	    }
             break;
             
             case 'h':
