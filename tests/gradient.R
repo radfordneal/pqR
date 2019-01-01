@@ -348,6 +348,11 @@ test1r(rexp)
 test2i(dgeom)
 test2i(dgeom,log=TRUE)
 
+test2i(pgeom)
+test2i(pgeom,log=TRUE)
+test2i(pgeom,lower=FALSE)
+test2i(pgeom,log=TRUE,lower=FALSE)
+
 test2i(dpois)
 test2i(dpois,log=TRUE)
 

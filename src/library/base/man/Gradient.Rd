@@ -151,7 +151,7 @@ gamma, lgamma, digamma, trigamma, beta, lbeta \cr
 \cr
 runif \cr
 dexp, pexp, qexp, rexp \cr
-dgeom \cr
+dgeom, pgeom \cr
 dpois \cr
 pcauchy, qcauchy, rcauchy \cr
 dnorm, pnorm, qnorm, rnorm \cr

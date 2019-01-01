@@ -2573,12 +2573,30 @@ static void Ddgeom (double x, double p, double *dx /*ignored*/,
 {
     if (!dp) return;
 
-    if (x < 0 || p <= 0 || p >= 1)
+    if (x < 0 || p <= 0 || x > 0 && p >= 1)
         *dp = 0;
     else {
         *dp = 1/p - x/(1-p);
         if (!give_log) 
             *dp *= v;
+    }
+}
+
+static void Dpgeom (double q, double p, double *dq /*ignored*/, double *dp,
+                    int lower_tail, int log_p, double v)
+{
+    if (!dp) return;
+
+    if (q < 0 || p <= 0)
+        *dp = 0;
+    else {
+
+        double t = (q+1) / (p-1);
+
+        if (log_p)
+            *dp = lower_tail ? -t*expm1(-v) : t;
+        else
+            *dp = lower_tail ? t*(v-1) : t*v;
     }
 }
 
@@ -2628,7 +2646,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math2_table[31] = {
     { pexp,	Dpexp },
     { qexp,	Dqexp },
     { dgeom,	Ddgeom },
-    { pgeom,	0 },
+    { pgeom,	Dpgeom },
     { qgeom,	0 /* discrete */ },
     { dpois,	Ddpois },
     { ppois,	0 },
