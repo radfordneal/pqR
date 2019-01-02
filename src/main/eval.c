@@ -1092,13 +1092,18 @@ SEXP forcePromise_v (SEXP e, int variant) /* e protected here if necessary */
     if (PRVALUE(e) == R_UnboundValue)
         return forcePromiseUnbound(e,variant);
     else {
-        if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(e)) {
-            R_variant_result = VARIANT_GRADIENT_FLAG;
-            R_gradient = ATTRIB(e);
-        }
         SEXP r = PRVALUE_PENDING_OK(e);
-        if ( ! (variant & VARIANT_PENDING_OK))
-            WAIT_UNTIL_COMPUTED(r);
+        if (variant & (VARIANT_PENDING_OK | VARIANT_GRADIENT)) {
+            if ( ! (variant & VARIANT_GRADIENT))
+                return r;
+            if (HAS_ATTRIB(e)) {
+                R_variant_result = VARIANT_GRADIENT_FLAG;
+                R_gradient = ATTRIB(e);
+            }
+            if (variant & VARIANT_PENDING_OK)
+                return r;
+        }
+        WAIT_UNTIL_COMPUTED(r);
         return r;
     }
 }
