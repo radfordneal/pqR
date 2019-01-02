@@ -749,25 +749,20 @@ SEXP evalv (SEXP e, SEXP rho, int variant)
 
 static inline SEXP handle_symbol (SEXP res, SEXP sym, int variant)
 {
+    SEXP cell = R_binding_cell;
+
     if (TYPEOF(res) == PROMSXP) {
-        SEXP prom = res;
+        cell = res;
         if (PRVALUE_PENDING_OK(res) == R_UnboundValue)
             res = forcePromiseUnbound(res,variant);
 	else
 	    res = PRVALUE_PENDING_OK(res);
-        if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(prom)) {
-            R_variant_result = VARIANT_GRADIENT_FLAG;
-            R_gradient = ATTRIB(prom);
-        }
     }
     else if (TYPEOF(res) == SYMSXP && res == R_MissingArg) {
         if ( ! (variant & VARIANT_MISSING_OK))
             if (!DDVAL(sym))  /* revert bug fix for the moment */
 		arg_missing_error(sym);
-    }
-    else if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(R_binding_cell)) {
-        R_variant_result = VARIANT_GRADIENT_FLAG;
-        R_gradient = ATTRIB(R_binding_cell);
+        return res;
     }
 
     /* A NAMEDCNT of 0 might arise from an inadverently missing increment
@@ -776,8 +771,18 @@ static inline SEXP handle_symbol (SEXP res, SEXP sym, int variant)
 
     SET_NAMEDCNT_NOT_0(res);
 
-    if ( ! (variant & VARIANT_PENDING_OK))
-        WAIT_UNTIL_COMPUTED(res);
+    if (variant & (VARIANT_PENDING_OK | VARIANT_GRADIENT)) {
+        if ( ! (variant & VARIANT_GRADIENT))
+            return res;
+        if (HAS_ATTRIB(cell)) {
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            R_gradient = ATTRIB(cell);
+        }
+        if (variant & VARIANT_PENDING_OK)
+            return res;
+    }
+
+    WAIT_UNTIL_COMPUTED(res);
 
     return res;
 }
@@ -947,32 +952,40 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
     if (TYPE_ETC(e) == PROMSXP) {
         /* unforced promise, force here */
         res = forcePromiseUnbound(e,variant);
-        if ((variant & VARIANT_GRADIENT) && HAS_ATTRIB(e)) {
-            R_variant_result = VARIANT_GRADIENT_FLAG;
-            R_gradient = ATTRIB(e);
-        }
-        if ( ! (variant & VARIANT_PENDING_OK))
-            WAIT_UNTIL_COMPUTED(res);
         R_Visible = TRUE;
-        return res;
-    }
- 
-    if (TYPE_ETC(e) == 
-           PROMSXP + TYPE_ET_CETERA_VEC_DOTS_TR + TYPE_ET_CETERA_HAS_ATTR) {
-        /* forced promise, with gradient */
-        res = PRVALUE_PENDING_OK(e);
-        if (variant & VARIANT_GRADIENT) {
-            R_variant_result = VARIANT_GRADIENT_FLAG;
-            R_gradient = ATTRIB(e);
+        if (variant & (VARIANT_PENDING_OK | VARIANT_GRADIENT)) {
+            if ( ! (variant & VARIANT_GRADIENT))
+                return res;
+            if (HAS_ATTRIB(e)) {
+                R_variant_result = VARIANT_GRADIENT_FLAG;
+                R_gradient = ATTRIB(e);
+            }
+            if (variant & VARIANT_PENDING_OK)
+                return res;
         }
-        if ( ! (variant & VARIANT_PENDING_OK))
-            WAIT_UNTIL_COMPUTED(res);
+        WAIT_UNTIL_COMPUTED(res);
         return res;
     }
 
     if (SELF_EVAL(TYPEOF(e))) {
         SET_NAMEDCNT_MAX(e);
         return e;
+    }
+ 
+    if (TYPE_ETC(e) == 
+           PROMSXP + TYPE_ET_CETERA_VEC_DOTS_TR + TYPE_ET_CETERA_HAS_ATTR) {
+        /* forced promise, with gradient */
+        res = PRVALUE_PENDING_OK(e);
+        if (variant & (VARIANT_PENDING_OK | VARIANT_GRADIENT)) {
+            if ( ! (variant & VARIANT_GRADIENT))
+                return res;
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            R_gradient = ATTRIB(e);
+            if (variant & VARIANT_PENDING_OK)
+                return res;
+        }
+        WAIT_UNTIL_COMPUTED(res);
+        return res;
     }
 
     if (TYPE_ETC(e) == SYMSXP+TYPE_ET_CETERA_VEC_DOTS_TR) /* ... or ..1, ..2 */
@@ -2202,16 +2215,13 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         /* Evaluate the right hand side, asking for it on the scalar stack. */
 
         rhs = EVALV (rhs, rho, varnt);
-        if (R_variant_result & VARIANT_GRADIENT_FLAG) {
-            R_variant_result = 0;
-            grad = R_gradient;
-        }
-
-        /* See if the assignment was done by the rhs operator. */
-
         if (R_variant_result) {
+            int vr = R_variant_result;
             R_variant_result = 0;
-            goto done;
+            if (vr & VARIANT_GRADIENT_FLAG)
+                grad = R_gradient;
+            else /* the assignment was done by the rhs operator. */
+                goto done;
         }
 
         /* Look to see if the binding for the variable can be found
