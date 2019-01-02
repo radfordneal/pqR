@@ -137,9 +137,9 @@ extern0 SEXP	R_DownSymbol;         /* "down" */
 extern0 SEXP	R_IfSymbol;           /* "if" */
 extern0 SEXP	R_NextSymbol;         /* "next" */
 extern0 SEXP	R_BreakSymbol;        /* "break" */
-extern0 SEXP	R_WithGradientSymbol; /* "with_gradient" */
-extern0 SEXP	R_TrackGradientSymbol;  /* "track_gradient" */
-extern0 SEXP	R_ComputeGradientSymbol;  /* "compute_gradient" */
+extern0 SEXP	R_WithGradientSymbol; /* "with gradient" */
+extern0 SEXP	R_TrackGradientSymbol;  /* "track gradient" */
+extern0 SEXP	R_ComputeGradientSymbol;  /* "compute gradient" */
 extern0 SEXP	R_AsSymbol;           /* "as" */
 extern0 SEXP	R_ColonSymbol;        /* ":" */
 extern0 SEXP	R_DoubleColonSymbol;  /* "::" */

@@ -319,7 +319,8 @@ enum token_type {
 };
 
 /* Names for tokens with codes >= 256.  These must correspond in order
-   with the codes for token types above.  They are used for error messages. */
+   with the codes for token types above.  They are used for error messages,
+   and text for "with gradient", etc. in parse data. */
 
 static const char *const token_name[] = {
   "input",      "end of input", "input",   "string constant","numeric constant",
@@ -329,8 +330,8 @@ static const char *const token_name[] = {
   "'>'",        "'>='",         "'<'",     "'<='",           "'=='",
   "'!='",       "'&'",          "'|'",     "'&&'",           "'||'",
   "'::'",       "':::'",        "'**'",    "SPECIAL",        "':='",
-  "'..'",       "'!!'",         "'with_gradient'", "'track_gradient'",
-                                "'compute_gradient'"
+  "'..'",       "'!!'",         "'with gradient'", "'track gradient'",
+                                "'compute gradient'"
 };
 
 #define NUM_TRANSLATED 7  /* Number above (at front) that are translated */
@@ -575,10 +576,18 @@ static void set_parent_in_rec (SEXP rec, SEXP parent_rec)
    used to put some higher-level syntactic context into the token
    itself. */
 
-static void set_token_in_rec (SEXP rec, char *token)
+static void set_token_in_rec (SEXP rec, const char *token)
 {
     if (rec != R_NilValue)
         SET_VECTOR_ELT (rec, PDATA_REC_TOKEN, mkChar(token));
+}
+
+/* Change the text string in a record.  Needed for "with gradient", etc. */
+
+static void set_text_in_rec (SEXP rec, const char *text)
+{
+    if (rec != R_NilValue)
+        SET_VECTOR_ELT (rec, PDATA_REC_TEXT, mkChar(text));
 }
 
 /* Set comments outside any expression (and not previously handled) to 
@@ -1525,14 +1534,89 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         res = PROTECT_N (LANG2 (op, res));
     }
 
-    /* Symbols, string constants, and namespace references built from
-       one or the other or both of these. */
+    /* Symbols, string constants, namespace references built from
+       one or the other or both of these, and gradient constructs. */
 
     else if (NEXT_TOKEN == SYMBOL || NEXT_TOKEN == STR_CONST) {
+
         SEXP op, sym;
         res = TOKEN_VALUE();
-        get_next_token(1);
-        if (!NL_END && (NEXT_TOKEN == NS_GET || NEXT_TOKEN == NS_GET_INT)) {
+        get_next_token(1);  /* won't create parse data record for 'gradient' */
+
+        /* Gradient constructs. */
+
+        if (!NL_END && NEXT_TOKEN == SYMBOL && TYPEOF(res) == SYMSXP
+                    && ps->next_token_val == R_GradientSymbol) {
+
+            if (strcmp(CHAR(PRINTNAME(res)),"with") == 0
+                 || strcmp(CHAR(PRINTNAME(res)),"track") == 0
+                 || strcmp(CHAR(PRINTNAME(res)),"compute") == 0) {
+
+                char opname[20];
+                strcpy(opname,CHAR(PRINTNAME(res)));
+                strcat(opname," gradient");
+                SEXP op = install(opname);
+
+                enum token_type tk = 
+                  strcmp(CHAR(PRINTNAME(res)),"with") == 0 ? WITHGRAD :
+                  strcmp(CHAR(PRINTNAME(res)),"track") == 0 ? TRACKGRAD :
+                                                              COMPUTEGRAD;
+                set_token_in_rec (prev_token_rec(1), pdata_token_name[tk-256]);
+                set_text_in_rec (prev_token_rec(1), token_name[tk-256]);
+
+                SEXP var, val, body, grad, last;
+                get_next_token(0);
+
+                PROTECT_N (res = last = LCONS (op, R_NilValue));
+
+                EXPECT('(');
+                for (;;) {
+                    if (NEXT_TOKEN != SYMBOL)
+                        PARSE_UNEXPECTED();
+                    set_token_in_rec (prev_token_rec(1), "SYMBOL_FORMALS");
+                    var = val = TOKEN_VALUE();
+                    get_next_token(0);
+                    if (NEXT_TOKEN == EQ_ASSIGN) {
+                        set_token_in_rec (prev_token_rec(1), "EQ_FORMALS");
+                        get_next_token(0);
+                        PARSE_SUB(val = parse_expr 
+                                         (EQASSIGN_PREC, subflags, NULL));
+                    }
+                    SETCDR (last, cons_with_tag (val, R_NilValue, var));
+                    last = CDR(last);
+                    if (NEXT_TOKEN != ',') break;
+                    get_next_token(0);
+                }
+                EXPECT(')');
+
+                PARSE_SUB(body = parse_expr (0, flags, NULL));
+                SETCDR (last, CONS (body, R_NilValue));
+
+                if (strcmp(opname,"compute gradient")==0) {
+
+                    last = CDR(last);
+                    if (NEXT_TOKEN != SYMBOL 
+                          || ps->next_token_val != R_AsSymbol)
+                        PARSE_UNEXPECTED();
+                    get_next_token(0);
+
+                    EXPECT('(');
+                    for (;;) {
+                        PARSE_SUB(grad = parse_expr 
+                                           (EQASSIGN_PREC, subflags, NULL));
+                        SETCDR (last, CONS (grad, R_NilValue));
+                        last = CDR(last);
+                        if (NEXT_TOKEN != ',') break;
+                        get_next_token(0);
+                    }
+                    EXPECT(')');
+                }
+            }
+        }
+
+        /* Namespace references. */
+
+        else if (!NL_END && (NEXT_TOKEN==NS_GET || NEXT_TOKEN==NS_GET_INT)) {
             op = TOKEN_VALUE();
             set_token_in_rec (prev_token_rec(2), "SYMBOL_PACKAGE");
             get_next_token(0);
@@ -1764,59 +1848,6 @@ static SEXP parse_expr (int prec, int flags, int *paren)
         op = TOKEN_VALUE();
         res = PROTECT_N (LCONS (op, R_NilValue));
         get_next_token(0);
-    }
-
-    /* Gradient constructs. */
-
-    else if (NEXT_TOKEN == WITHGRAD || NEXT_TOKEN == TRACKGRAD
-                                    || NEXT_TOKEN == COMPUTEGRAD) {
-
-        int compute_gradient = ps->next_token == COMPUTEGRAD;
-        SEXP op, var, val, body, grad, last;
-        op = TOKEN_VALUE();
-        get_next_token(0);
-
-        PROTECT_N (res = last = LCONS (op, R_NilValue));
-
-        EXPECT('(');
-        for (;;) {
-            if (NEXT_TOKEN != SYMBOL)
-                PARSE_UNEXPECTED();
-            set_token_in_rec (prev_token_rec(1), "SYMBOL_FORMALS");
-            var = val = TOKEN_VALUE();
-            get_next_token(0);
-            if (NEXT_TOKEN == EQ_ASSIGN) {
-                set_token_in_rec (prev_token_rec(1), "EQ_FORMALS");
-                get_next_token(0);
-                PARSE_SUB(val = parse_expr (EQASSIGN_PREC, subflags, NULL));
-            }
-            SETCDR (last, cons_with_tag (val, R_NilValue, var));
-            last = CDR(last);
-            if (NEXT_TOKEN != ',') break;
-            get_next_token(0);
-        }
-        EXPECT(')');
-
-        PARSE_SUB(body = parse_expr (0, flags, NULL));
-        SETCDR (last, CONS (body, R_NilValue));
-
-        if (compute_gradient) {
-
-            last = CDR(last);
-            if (NEXT_TOKEN != SYMBOL || ps->next_token_val != R_AsSymbol)
-                PARSE_UNEXPECTED();
-            get_next_token(0);
-
-            EXPECT('(');
-            for (;;) {
-                PARSE_SUB(grad = parse_expr (EQASSIGN_PREC, subflags, NULL));
-                SETCDR (last, CONS (grad, R_NilValue));
-                last = CDR(last);
-                if (NEXT_TOKEN != ',') break;
-                get_next_token(0);
-            }
-            EXPECT(')');
-        }
     }
 
     else
@@ -2943,9 +2974,6 @@ static struct { char *name; int token; } keywords[] = {
     { "else",	    ELSE         },
     { "next",	    NEXT         },
     { "break",	    BREAK        },
-    { "with_gradient",    WITHGRAD     },
-    { "track_gradient",   TRACKGRAD    },
-    { "compute_gradient", COMPUTEGRAD  },
     { "..",         DOTDOT     },  /* delete if don't want .. to be reserved */
     { 0,	    0	       }
 };
@@ -3022,15 +3050,6 @@ static int KeywordLookup(const char *s)
 	    case BREAK:
 		ps->next_token_val = R_BreakSymbol;
 		break;
-		break;
-	    case WITHGRAD:
-		ps->next_token_val = R_WithGradientSymbol;
-		break;
-	    case TRACKGRAD:
-		ps->next_token_val = R_TrackGradientSymbol;
-		break;
-	    case COMPUTEGRAD:
-		ps->next_token_val = R_ComputeGradientSymbol;
 		break;
 	    case IN:
 	    case ELSE:
@@ -3624,8 +3643,10 @@ static int token (int c, int no_sym_un)
 
    If no_sym_un is non-zero, symbols and unary operators are not
    expected, which therefore allows the .. and !! operators to be
-   recognized.  (But no error is signaled here if a symbol or unary
-   operator is seen anyway.)
+   recognized.  No error is signaled here if a symbol or unary
+   operator is seen anyway.  But if a second symbol is "gradient",
+   no parse data record is created for it - instead a previous "with",
+   "track", or "compute" record is modified appropriately.
 
    Returns 0 if end of file was immediately encountered, with no
    whitespace before, and 1 if not (even when END_OF_INPUT is the 
@@ -3666,11 +3687,13 @@ static int get_next_token(int no_sym_un)
     ps->token_loc.last_byte    = ps->sr->xxbyteno;
     ps->token_loc.last_parsed  = ps->sr->xxparseno;
 
-    if (ps->next_token != END_OF_INPUT && ps->next_token != '\n') {
+    if (ps->next_token != END_OF_INPUT && ps->next_token != '\n'
+         && (!no_sym_un || ps->next_token_val != R_GradientSymbol)) {
         SEXP rec;
         char t[4] = { '\'', (char) ps->next_token, '\'', 0 };
-        rec = start_parseData_record (&ps->token_loc, ps->next_token < 256 ? t
-                                        : pdata_token_name[ps->next_token-256],
+        rec = start_parseData_record (&ps->token_loc, 
+                                      ps->next_token < 256 ? t
+                                       : pdata_token_name[ps->next_token-256],
                                       yytext, TRUE);
         end_parseData_record (rec, &ps->token_loc);
     }

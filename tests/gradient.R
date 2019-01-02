@@ -3,110 +3,110 @@
 # Added for pqR, 2018 Radford M. Neal.
 
 
-# Check consistency of simple math derivatives using track_gradient with 'D'
+# Check consistency of simple math derivatives using track gradient with 'D'
 
 x <- 0.32739
 
-print (identical (track_gradient (x) gradient_of (sqrt(x)),
+print (identical (track gradient (x) gradient_of (sqrt(x)),
                   eval (D (quote (sqrt(x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (exp(x)),
+print (identical (track gradient (x) gradient_of (exp(x)),
                   eval (D (quote (exp(x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (expm1(x)),
+print (identical (track gradient (x) gradient_of (expm1(x)),
                   eval (D (quote (expm1(x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (log1p(x)),
+print (identical (track gradient (x) gradient_of (log1p(x)),
                   eval (D (quote (log1p(x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (log(x)),
+print (identical (track gradient (x) gradient_of (log(x)),
                   eval (D (quote (log(x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (cos(x)),
+print (identical (track gradient (x) gradient_of (cos(x)),
                   eval (D (quote (cos(x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (sin(x)),
+print (identical (track gradient (x) gradient_of (sin(x)),
                   eval (D (quote (sin(x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (tan(x)),
+print (identical (track gradient (x) gradient_of (tan(x)),
                   eval (D (quote (tan(x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (acos(x)),
+print (identical (track gradient (x) gradient_of (acos(x)),
                   eval (D (quote (acos(x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (asin(x)),
+print (identical (track gradient (x) gradient_of (asin(x)),
                   eval (D (quote (asin(x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (cosh(x)),
+print (identical (track gradient (x) gradient_of (cosh(x)),
                   eval (D (quote (cosh(x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (sinh(x)),
+print (identical (track gradient (x) gradient_of (sinh(x)),
                   eval (D (quote (sinh(x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (tanh(x)),
+print (identical (track gradient (x) gradient_of (tanh(x)),
                   eval (D (quote (tanh(x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (lgamma(x)),
+print (identical (track gradient (x) gradient_of (lgamma(x)),
                   eval (D (quote (lgamma(x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (gamma(x)),
+print (identical (track gradient (x) gradient_of (gamma(x)),
                   eval (D (quote (gamma(x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (digamma(x)),
+print (identical (track gradient (x) gradient_of (digamma(x)),
                   eval (D (quote (digamma(x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (trigamma(x)),
+print (identical (track gradient (x) gradient_of (trigamma(x)),
                   eval (D (quote (trigamma (x)), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (+x),
+print (identical (track gradient (x) gradient_of (+x),
                   eval (D (quote (+x), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (-x),
+print (identical (track gradient (x) gradient_of (-x),
                   eval (D (quote (-x), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (3.1+x),
+print (identical (track gradient (x) gradient_of (3.1+x),
                   eval (D (quote (3.1+x), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (3.1-x),
+print (identical (track gradient (x) gradient_of (3.1-x),
                   eval (D (quote (3.1-x), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (3.1*x),
+print (identical (track gradient (x) gradient_of (3.1*x),
                   eval (D (quote (3.1*x), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (3.1/x),
+print (identical (track gradient (x) gradient_of (3.1/x),
                   eval (D (quote (3.1/x), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (3.1^x),
+print (identical (track gradient (x) gradient_of (3.1^x),
                   eval (D (quote (3.1^x), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (x+3.1),
+print (identical (track gradient (x) gradient_of (x+3.1),
                   eval (D (quote (x+3.1), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (x-3.1),
+print (identical (track gradient (x) gradient_of (x-3.1),
                   eval (D (quote (x-3.1), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (x*3.1),
+print (identical (track gradient (x) gradient_of (x*3.1),
                   eval (D (quote (x*3.1), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (x/3.1),
+print (identical (track gradient (x) gradient_of (x/3.1),
                   eval (D (quote (x/3.1), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (x^3.1),
+print (identical (track gradient (x) gradient_of (x^3.1),
                   eval (D (quote (x^3.1), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (x+x),
+print (identical (track gradient (x) gradient_of (x+x),
                   eval (D (quote (x+x), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (x-x),
+print (identical (track gradient (x) gradient_of (x-x),
                   eval (D (quote (x-x), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (x*x),
+print (identical (track gradient (x) gradient_of (x*x),
                   eval (D (quote (x*x), "x")) ))
 
-print (identical (track_gradient (x) gradient_of (x/x),
+print (identical (track gradient (x) gradient_of (x/x),
                   eval (D (quote (x/x), "x")) ))
 
-print (identical (round (track_gradient (x) gradient_of (x^x), 14),
+print (identical (round (track gradient (x) gradient_of (x^x), 14),
                   round (eval (D (quote (x^x), "x")), 14) ))
 
 
@@ -129,12 +129,12 @@ print(log10(a))
 print(exp(a))
 print(sin(a))
 
-print (with_gradient (a) cos(a))
-print (with_gradient (a) log2(a))
-print (with_gradient (a) log(a))
-print (with_gradient (a) log10(a))
-print (with_gradient (a) exp(a))
-print (with_gradient (a) sin(a))
+print (with gradient (a) cos(a))
+print (with gradient (a) log2(a))
+print (with gradient (a) log(a))
+print (with gradient (a) log10(a))
+print (with gradient (a) exp(a))
+print (with gradient (a) sin(a))
 
 
 # Check tracking of gradients through S3 methods.
@@ -147,9 +147,9 @@ fuddle.bert <- function (x,y) NextMethod("fuddle")
 a <- 256; class(a) <- "mary"
 b <- 200; class(b) <- "bert"
 
-with_gradient (a=256,b=200) fuddle(a,b)
-with_gradient (a,b) fuddle(a,b)
-with_gradient (a,b) fuddle(b,a)
+with gradient (a=256,b=200) fuddle(a,b)
+with gradient (a,b) fuddle(a,b)
+with gradient (a,b) fuddle(b,a)
 
 biffle <- function (x) UseMethod("biffle")
 biffle.mary <- function (x) NextMethod("biffle",x,x^2,x^3)
@@ -157,7 +157,7 @@ biffle.bert <- function (x,y,z) sin(x)+cos(y)+exp(-sqrt(z)/2000)
 
 b <- 200; class(b) <- c("mary","bert")
 biffle(b)
-with_gradient (b) biffle(b)
+with gradient (b) biffle(b)
 
 
 # Check tracking of gradients through S4 methods.  Not currently implemented,
@@ -167,12 +167,12 @@ if (FALSE) {
 
 setGeneric ("fiddler", function (x,y) x^2+y^3)
 fiddler(2,3)
-with_gradient (x=2,y=3) fiddler(x,y)
+with gradient (x=2,y=3) fiddler(x,y)
 
 }
 
 
-# Check consistency of results between with_gradient and numericDeriv.
+# Check consistency of results between with gradient and numericDeriv.
 
 x <- 0.32739
 x1 <- 0.47718; x2 <- 0.89472; x3 <- 0.67325
@@ -187,26 +187,26 @@ bindgrads <- function (r1,r2)
 
 test1 <- function (fun,...)
     print (bindgrads (numericDeriv(quote(fun(x,...)),"x"),
-                      with_gradient (x) fun(x,...)))
+                      with gradient (x) fun(x,...)))
 test1p1 <- function (fun,...)
     print (bindgrads (numericDeriv(quote(fun(x+1,...)),"x"),
-                      with_gradient (x) fun(x+1,...)))
+                      with gradient (x) fun(x+1,...)))
 
 test1r <- function (fun,...) {
     f <- function (x) { set.seed(179); fun(1,x,...) }
     print (bindgrads (numericDeriv(quote(f(x)),"x"),
-                      with_gradient (x) f(x)))
+                      with gradient (x) f(x)))
 }
 
 test2 <- function (fun,...) {
     print (bindgrads (numericDeriv(quote(fun(x1,x2,...)),"x1"),
-                      with_gradient (x1) fun(x1,x2,...)))
+                      with gradient (x1) fun(x1,x2,...)))
     print (bindgrads (numericDeriv(quote(fun(x1,x2,...)),"x2"),
-                      with_gradient (x2) fun(x1,x2,...)))
+                      with gradient (x2) fun(x1,x2,...)))
     print (bindgrads (numericDeriv(quote(fun(x1,x2,...)),c("x1","x2")),
-                      with_gradient (x1,x2) fun(x1,x2,...)))
+                      with gradient (x1,x2) fun(x1,x2,...)))
     print (bindgrads (numericDeriv(quote(fun(x1,x2,...)),c("x1","x2")),
-      { r <- with_gradient (x1) { s <- with_gradient (x2) fun(x1,x2,...); 
+      { r <- with gradient (x1) { s <- with gradient (x2) fun(x1,x2,...); 
                                   g2 <<- attr(s,"gradient"); s }
         attr(r,"gradient") <- cbind(g1=attr(r,"gradient"),g2=g2)
         r
@@ -216,13 +216,13 @@ test2 <- function (fun,...) {
 
 test2y <- function (fun,...) {
     print (bindgrads (numericDeriv(quote(fun(y1,y3,...)),"y1"),
-                      with_gradient (y1) fun(y1,y3,...)))
+                      with gradient (y1) fun(y1,y3,...)))
     print (bindgrads (numericDeriv(quote(fun(y1,y3,...)),"y3"),
-                      with_gradient (y3) fun(y1,y3,...)))
+                      with gradient (y3) fun(y1,y3,...)))
     print (bindgrads (numericDeriv(quote(fun(y1,y3,...)),c("y1","y3")),
-                      with_gradient (y1,y3) fun(y1,y3,...)))
+                      with gradient (y1,y3) fun(y1,y3,...)))
     print (bindgrads (numericDeriv(quote(fun(y1,y3,...)),c("y1","y3")),
-      { r <- with_gradient (y1) { s <- with_gradient (y3) fun(y1,y3,...); 
+      { r <- with gradient (y1) { s <- with gradient (y3) fun(y1,y3,...); 
                                   g2 <<- attr(s,"gradient"); s }
         attr(r,"gradient") <- cbind(g1=attr(r,"gradient"),g2=g2)
         r
@@ -232,13 +232,13 @@ test2y <- function (fun,...) {
 
 test2z <- function (fun,...) {
     print (bindgrads (numericDeriv(quote(fun(z1,z2,...)),"z1"),
-                      with_gradient (z1) fun(z1,z2,...)))
+                      with gradient (z1) fun(z1,z2,...)))
     print (bindgrads (numericDeriv(quote(fun(z1,z2,...)),"z2"),
-                      with_gradient (z2) fun(z1,z2,...)))
+                      with gradient (z2) fun(z1,z2,...)))
     print (bindgrads (numericDeriv(quote(fun(z1,z2,...)),c("z1","z2")),
-                      with_gradient (z1,z2) fun(z1,z2,...)))
+                      with gradient (z1,z2) fun(z1,z2,...)))
     print (bindgrads (numericDeriv(quote(fun(z1,z2,...)),c("z1","z2")),
-      { r <- with_gradient (z1) { s <- with_gradient (z2) fun(z1,z2,...); 
+      { r <- with gradient (z1) { s <- with gradient (z2) fun(z1,z2,...); 
                                   g2 <<- attr(s,"gradient"); s }
         attr(r,"gradient") <- cbind(g1=attr(r,"gradient"),g2=g2)
         r
@@ -248,67 +248,67 @@ test2z <- function (fun,...) {
 
 test2i <- function (fun,...) {
     print (bindgrads (numericDeriv(quote(fun(i1,x2,...)),"x2"),
-                      with_gradient (x2) fun(i1,x2,...)))
+                      with gradient (x2) fun(i1,x2,...)))
 }
 
 test2r <- function (fun,...) {
     f <- function (x1,x2) { set.seed(179); fun(1,x1,x2,...) }
     print (bindgrads (numericDeriv(quote(f(x1,x2)),c("x1","x2")),
-                      with_gradient (x1,x2) f(x1,x2)))
+                      with gradient (x1,x2) f(x1,x2)))
 }
 
 test3 <- function (fun,...) {
     print (bindgrads (numericDeriv(quote(fun(x1,x2,x3,...)),"x1"),
-                      with_gradient (x1) fun(x1,x2,x3,...)))
+                      with gradient (x1) fun(x1,x2,x3,...)))
     print (bindgrads (numericDeriv(quote(fun(x1,x2,x3,...)),"x2"),
-                      with_gradient (x2) fun(x1,x2,x3,...)))
+                      with gradient (x2) fun(x1,x2,x3,...)))
     print (bindgrads (numericDeriv(quote(fun(x1,x2,x3,...)),"x3"),
-                      with_gradient (x3) fun(x1,x2,x3,...)))
+                      with gradient (x3) fun(x1,x2,x3,...)))
     print (bindgrads (numericDeriv(quote(fun(x1,x2,x3,...)),c("x1","x2","x3")),
-                      with_gradient (x1,x2,x3) fun(x1,x2,x3,...)))
+                      with gradient (x1,x2,x3) fun(x1,x2,x3,...)))
 }
 
 test3y <- function (fun,...) {
     print (bindgrads (numericDeriv(quote(fun(y1,y2,y3,...)),"y1"),
-                      with_gradient (y1) fun(y1,y2,y3,...)))
+                      with gradient (y1) fun(y1,y2,y3,...)))
     print (bindgrads (numericDeriv(quote(fun(y1,y2,y3,...)),"y2"),
-                      with_gradient (y2) fun(y1,y2,y3,...)))
+                      with gradient (y2) fun(y1,y2,y3,...)))
     print (bindgrads (numericDeriv(quote(fun(y1,y2,y3,...)),"y3"),
-                      with_gradient (y3) fun(y1,y2,y3,...)))
+                      with gradient (y3) fun(y1,y2,y3,...)))
     print (bindgrads (numericDeriv(quote(fun(y1,y2,y3,...)),c("y1","y2","y3")),
-                      with_gradient (y1,y2,y3) fun(y1,y2,y3,...)))
+                      with gradient (y1,y2,y3) fun(y1,y2,y3,...)))
 }
 
 test3z <- function (fun,...) {
     print (bindgrads (numericDeriv(quote(fun(z1,z2,z3,...)),"z1"),
-                      with_gradient (z1) fun(z1,z2,z3,...)))
+                      with gradient (z1) fun(z1,z2,z3,...)))
     print (bindgrads (numericDeriv(quote(fun(z1,z2,z3,...)),"z2"),
-                      with_gradient (z2) fun(z1,z2,z3,...)))
+                      with gradient (z2) fun(z1,z2,z3,...)))
     print (bindgrads (numericDeriv(quote(fun(z1,z2,z3,...)),"z3"),
-                      with_gradient (z3) fun(z1,z2,z3,...)))
+                      with gradient (z3) fun(z1,z2,z3,...)))
     print (bindgrads (numericDeriv(quote(fun(z1,z2,z3,...)),c("z1","z2","z3")),
-                      with_gradient (z1,z2,z3) fun(z1,z2,z3,...)))
+                      with gradient (z1,z2,z3) fun(z1,z2,z3,...)))
 }
 
 test3w <- function (fun,...) {
     print (bindgrads (numericDeriv(quote(fun(w1,w2,w3,...)),"w1"),
-                      with_gradient (w1) fun(w1,w2,w3,...)))
+                      with gradient (w1) fun(w1,w2,w3,...)))
     print (bindgrads (numericDeriv(quote(fun(w1,w2,w3,...)),"w2"),
-                      with_gradient (w2) fun(w1,w2,w3,...)))
+                      with gradient (w2) fun(w1,w2,w3,...)))
     print (bindgrads (numericDeriv(quote(fun(w1,w2,w3,...)),"w3"),
-                      with_gradient (w3) fun(w1,w2,w3,...)))
+                      with gradient (w3) fun(w1,w2,w3,...)))
     print (bindgrads (numericDeriv(quote(fun(w1,w2,w3,...)),c("w1","w2","w3")),
-                      with_gradient (w1,w2,w3) fun(w1,w2,w3,...)))
+                      with gradient (w1,w2,w3) fun(w1,w2,w3,...)))
 }
 
 test3u <- function (fun,...) {
     print (bindgrads (numericDeriv(quote(fun(u1,u2,u3,...)),"u3"),
-                      with_gradient (u3) fun(u1,u2,u3,...)))
+                      with gradient (u3) fun(u1,u2,u3,...)))
 }
 
 test3v <- function (fun,...) {
     print (bindgrads (numericDeriv(quote(fun(v1,v2,v3,...)),"v3"),
-                      with_gradient (v3) fun(v1,v2,v3,...)))
+                      with gradient (v3) fun(v1,v2,v3,...)))
 }
 
 test1(abs)

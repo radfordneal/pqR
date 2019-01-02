@@ -59,7 +59,7 @@ lang_elements <-
     '@', '@<-', '@internal<-',
     '[', '[<-', '[[', '[[<-', 'break', 'for', 'function', 'if', 'next',
     'repeat', 'return', 'while', '{', '||', '~',
-    'with_gradient', 'track_gradient', 'compute_gradient')
+    'with gradient', 'track gradient', 'compute gradient')
 
 known <- c(ls(.GenericArgsEnv, all.names=TRUE),
            ls(.ArgsEnv, all.names=TRUE),

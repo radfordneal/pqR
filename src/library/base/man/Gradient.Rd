@@ -5,9 +5,9 @@
 
 \name{Gradient}
 \alias{Gradient}
-\alias{with_gradient}
-\alias{track_gradient}
-\alias{compute_gradient}
+\alias{with gradient}
+\alias{track gradient}
+\alias{compute gradient}
 \alias{gradient_of}
 \alias{no_gradient}
 \title{Gradient Computation}
@@ -25,18 +25,18 @@
 }
 
 \usage{
-with_gradient (var=v.expr) expr
-with_gradient (var) expr
-with_gradient (var1=v1.expr,var2=v2.expr) expr
-with_gradient (var1,var2) expr
+with gradient (var=v.expr) expr
+with gradient (var) expr
+with gradient (var1=v1.expr,var2=v2.expr) expr
+with gradient (var1,var2) expr
 
-track_gradient (var=v.expr) expr
-track_gradient (var) expr
-track_gradient (var1=v1.expr,var2=v2.expr) expr
-track_gradient (var1,var2) expr
+track gradient (var=v.expr) expr
+track gradient (var) expr
+track gradient (var1=v1.expr,var2=v2.expr) expr
+track gradient (var1,var2) expr
 
-compute_gradient (var1=v1.expr, var2=v2.expr) expr as (g1.expr, g2.expr)
-compute_gradient (var1, var2) expr as (g1.expr, g2.expr)
+compute gradient (var1=v1.expr, var2=v2.expr) expr as (g1.expr, g2.expr)
+compute gradient (var1, var2) expr as (g1.expr, g2.expr)
 
 gradient_of (e)
 no_gradient (e)
@@ -56,28 +56,24 @@ no_gradient (e)
 }
 
 \details{
-The \code{with_gradient}, \code{track_gradient}, and \code{compute_gradient}
-keywords used in these constructs are reserved words; \code{as} is not
-reserved. 
-
-The \code{with_gradient} construct evaluates \code{expr} in a new
+The \code{with gradient} construct evaluates \code{expr} in a new
 environment (with the current environment as its parent) containing
 the variable \code{var} (or variables \code{var1}, \code{var2}, etc),
 with initial value \code{v.expr} (or initial values \code{v1.expr},
 \code{v2.expr}, etc.).  The value of \code{expr} is returned as that
-of \code{with_gradient}, with a \code{"gradient"} attribute attached
+of \code{with gradient}, with a \code{"gradient"} attribute attached
 containing the derivative of the value of \code{expr} with respect to
 \code{var}, or the derivatives with respect to \code{var1},
 \code{var2}, etc..  (Any existing \code{"gradient"} attribute is
 discarded.)
 
-During the evaluation of \code{expr} within \code{with_gradient},
+During the evaluation of \code{expr} within \code{with gradient},
 assignments to local variables (in the new environment) will record
 the gradient of the assigned value with respect to \code{var} (or
 \code{var1}, \code{var2}, etc.), and with respect to the variables
-listed in any enclosing \code{with_gradient} or \code{track_gradient}
+listed in any enclosing \code{with gradient} or \code{track gradient}
 constructs, so that if the value of the variable is used to compute
-the final value for \code{with_gradient}, its gradient can be
+the final value for \code{with gradient}, its gradient can be
 computed.  Note, however, that the gradients of attribute values are
 not recorded, nor are gradients recorded when non-local assignments
 are made with \code{<<-}.
@@ -88,30 +84,30 @@ for S3 methods, but not S4 methods.
 
 Within \code{expr}, the gradient of an expression, \code{e}, with
 respect the variable or variables of the enclosing
-\code{with_gradient} construct can be found with
+\code{with gradient} construct can be found with
 \code{gradient_of(e)}.  Tracking of gradients can be explicitly
 suppressed (to save time) with \code{no_gradient(e)}.  Gradient
 tracking is automatically suppressed when evaluating expressions that
 are used as \code{if} or \code{while} conditions, as indexes, or as
 expressions iterated over with \code{for}.
 
-The \code{track_gradient} construct is like \code{with_gradient},
+The \code{track gradient} construct is like \code{with gradient},
 except that the gradient is not attached to the final result.  It is
 therefore useful only in combination with calls of \code{gradient_of},
-or if it is inside another \code{track_gradient} or
-\code{with_gradient} construct.  When these constructs are nested,
+or if it is inside another \code{track gradient} or
+\code{with gradient} construct.  When these constructs are nested,
 derivatives with respect to an inner variable may determine
 derivatives with respect to an outer variable, by application of the
 chain rule.
 
-In forms of \code{with_gradient} and \code{track_gradient} in which no
+In forms of \code{with gradient} and \code{track gradient} in which no
 expression follows a variable, the expression is assumed to be the
 same as the variable (evaluated in the current (not the new)
 environment).
 
 User-defined functions can specify the gradient using the
-\code{compute_gradient} construct.  The \code{expr} within
-\code{compute_gradient} is evaluated in a new environment in which one
+\code{compute gradient} construct.  The \code{expr} within
+\code{compute gradient} is evaluated in a new environment in which one
 or more variables have been defined (two in the above templates).  The
 initial values of these variables are as specified, defaulting to the
 variable's value evaluated in the current environment.  Gradients with
@@ -120,7 +116,7 @@ instead specified by the expressions after \code{as}.  The chain rule
 is used to translate these gradients to gradients with respect to
 variables used to compute \code{v1.expr}, \code{v2.expr}, etc.
 
-If computation of a gradient has not been requested, \code{compute_gradient}
+If computation of a gradient has not been requested, \code{compute gradient}
 will evaluate only the value, skipping evaluation of the expressions after
 \code{as}.  Computation of gradients for built-in functions is also
 skipped when it is known that the gradient will not be needed.
@@ -165,28 +161,28 @@ rweibull
 
 \value{
 The gradient returned by \code{gradient_of} or attached as a \code{"gradient"}
-attribute by \code{with_gradient} will be a scalar real if the gradient
-is with respect to only one variable.  When the \code{with_gradient} or
-\code{track_gradient} construct has more than one variable, the gradient
+attribute by \code{with gradient} will be a scalar real if the gradient
+is with respect to only one variable.  When the \code{with gradient} or
+\code{track gradient} construct has more than one variable, the gradient
 will be a list of scalar real values, with names corresponding to the
 variables.
 }
 
 \examples{
-a <- with_gradient (x=3) sin(x)
+a <- with gradient (x=3) sin(x)
 attr(a,"gradient")               # should be cos(3)
 
-a <- with_gradient (x=3,y=2) sin(x+2*y)
+a <- with gradient (x=3,y=2) sin(x+2*y)
 attr(a,"gradient")$x             # should be cos(7)
 attr(a,"gradient")$y             # should be 2*cos(7)
 
 x <- 3
-a <- with_gradient (x) { r <- sin(x); r^2 }
+a <- with gradient (x) { r <- sin(x); r^2 }
 attr(a,"gradient")               # should be 2*sin(3)*cos(3)
 
 sqr <- function (y) y^2          # gradients can be tracked through sqr
 x <- 3
-a <- with_gradient (x) { r <- sin(x); sqr(r) }
+a <- with gradient (x) { r <- sin(x); sqr(r) }
 attr(a,"gradient")               # should be 2*sin(3)*cos(3)
 
 funny <- function (x,y) {        # has a discontinuity
@@ -197,23 +193,23 @@ funny <- function (x,y) {        # has a discontinuity
         cos(x+y)
 }
 
-track_gradient (a = 3) {
+track gradient (a = 3) {
     print (gradient_of(funny(a,a)))   # prints 2*cos(3+3)
     print (gradient_of(funny(a,8*a))) # prints -9*sin(3+24)
 }
 
 sigmoid <- function (x)
-    compute_gradient (x) { v <- 1 / (1+exp(-x)); v }
+    compute gradient (x) { v <- 1 / (1+exp(-x)); v }
     as (v * (1-v))
 
 sigmoid(1)                       # no gradient computed, only value
-with_gradient (x=1) sigmoid(x)   # both value and gradient computed
+with gradient (x=1) sigmoid(x)   # both value and gradient computed
 
-track_gradient (x=1)             # should compute the same gradient
+track gradient (x=1)             # should compute the same gradient
     gradient_of (1/(1+exp(-x)))  # as above, but perhaps more slowly
                                  # (though maybe not since x is scalar)
 
-set.seed(123); with_gradient (r=5) rexp(1,r)
+set.seed(123); with gradient (r=5) rexp(1,r)
 
 set.seed(123); v1<-rexp(1,4.999)
 set.seed(123); v2<-rexp(1,5.001)

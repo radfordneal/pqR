@@ -414,9 +414,9 @@ static void SymbolShortcuts(void)
     R_IfSymbol = install("if");
     R_NextSymbol = install("next");
     R_BreakSymbol = install("break");
-    R_WithGradientSymbol = install("with_gradient");
-    R_TrackGradientSymbol = install("track_gradient");
-    R_ComputeGradientSymbol = install("compute_gradient");
+    R_WithGradientSymbol = install("with gradient");
+    R_TrackGradientSymbol = install("track gradient");
+    R_ComputeGradientSymbol = install("compute gradient");
     R_AsSymbol = install("as");
     R_ColonSymbol = install(":");
     R_DoubleColonSymbol = install("::");
@@ -538,7 +538,7 @@ static char *Spec_name[] = {
   "$", "[", "[[", "@",
   "$<-", "[<-", "[[<-", "@<-",
   ".C", ".Fortran", ".Call", ".External", ".Internal",
-  "with_gradient", "track_gradient", "compute_gradient",
+  "with gradient", "track gradient", "compute gradient",
   0
 };
 

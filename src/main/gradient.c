@@ -540,11 +540,11 @@ attribute_hidden FUNTAB R_FunTab_gradient[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"with_gradient", do_gradient,  0,	1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"with gradient", do_gradient,  0,	1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"track_gradient", do_gradient,  1,	1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"track gradient", do_gradient,  1,	1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"compute_gradient", do_compute_grad,  0, 1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"compute gradient", do_compute_grad,  0, 1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"gradient_of", do_gradient_of, 0,	1200,	1,	{PP_FUNCALL, PREC_FN,	0}},
 

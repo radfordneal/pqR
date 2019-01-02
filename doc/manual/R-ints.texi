@@ -447,7 +447,7 @@ lookup} for further details.
 @findex SET_GRADINDEX
 Bits 8-15 in a node in a pairlist of gradient values holds the index
 of the variable whose gradient is recorded, within the list in the relevant
-@code{with_gradient} or @code{track_gradient} construct, starting with 1.
+@code{with gradient} or @code{track gradient} construct, starting with 1.
 
 @findex MISSING
 @findex SET_MISSING
@@ -591,7 +591,7 @@ with tag the symbol and CAR the bound value.  Also contains
 the logical OR of the @code{symbits} fields of all symbols that
 have ever been stored in the environment, allowing quick determination
 that some symbols cannot be in the environment.  Finally, if the
-environment is for the body of a @code{with_gradient} or @code{track_gradient}
+environment is for the body of a @code{with gradient} or @code{track gradient}
 construct, it contains a vector list of symbols for the variables
 whose gradient will be tracked.
 
@@ -604,7 +604,7 @@ set to @code{R_NilValue}.
 Pointers to the CAR, CDR (usually a @code{LISTSXP} or @code{R_NilValue}) and
 TAG (usually a @code{SYMSXP} or @code{R_NilValue}).  For LISTSXP nodes used
 to record gradient values, the TAG is the environment for the relevant
-@code{with_gradient} or @code{trace_gradient} construct.
+@code{with gradient} or @code{trace gradient} construct.
 
 @item LANGSXP
 A special type of @code{LISTSXP} used for function calls.  (The CAR
