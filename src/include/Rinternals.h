@@ -1623,6 +1623,12 @@ ConstExtern R_CONST SEXPREC R_NilValue_const; /* defined in const-objs.c */
 #define R_NilValue ((SEXP) &R_NilValue_const)
 #endif
 
+/* Symbol constants. */
+
+#if !USE_COMPRESSED_POINTERS
+ConstExtern SYM_SEXPREC R_sym_consts[3];         /* defined in const-objs.c */
+#endif
+
 /* R_UnboundValue - for symbol with no value. */
 
 LibExtern SEXP R_UnboundValue;      /* Variable form, for those that need it */
@@ -1631,12 +1637,28 @@ LibExtern SEXP R_UnboundValue;      /* Variable form, for those that need it */
 #if USE_COMPRESSED_POINTERS
 #define R_UnboundValue ((SEXP)SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,0))
 #else
-ConstExtern SYM_SEXPREC R_sym_consts[1];         /* defined in const-objs.c */
 #define R_UnboundValue ((SEXP) &R_sym_consts[0]) /* for sym with no value */
 #endif
 
-LibExtern SEXP	R_MissingArg;       /* Missing argument marker */
-LibExtern SEXP	R_MissingUnder;	    /* Missing argument marker as "_" */
+/* Missing argument symbols.  MissingUnder form is for "_". */
+
+LibExtern SEXP R_MissingArg;        /* Variable form, for those that need it */
+                                    /* Set in const-objs.c, as done below */
+
+#if USE_COMPRESSED_POINTERS
+#define R_MissingArg ((SEXP)SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,1))
+#else
+#define R_MissingArg ((SEXP) &R_sym_consts[1])
+#endif
+
+LibExtern SEXP R_MissingUnder;      /* Variable form, for those that need it */
+                                    /* Set in const-objs.c, as done below */
+
+#if USE_COMPRESSED_POINTERS
+#define R_MissingUnder ((SEXP)SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,2))
+#else
+#define R_MissingUnder ((SEXP) &R_sym_consts[2])
+#endif
 
 /* Logical / Integer / Real Values.  Defined in const-objs.c, must keep
    in sync. */

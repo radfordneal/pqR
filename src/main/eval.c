@@ -325,7 +325,7 @@ void endcontext(RCNTXT * cptr)
 {
     R_HandlerStack = cptr->handlerstack;
     R_RestartStack = cptr->restartstack;
-    if (cptr->cloenv != R_NilValue && cptr->conexit != R_NilValue ) {
+    if (cptr->conexit != R_NilValue && cptr->cloenv != R_NilValue) {
 	SEXP s = cptr->conexit;
 	Rboolean savevis = R_Visible;
 	cptr->conexit = R_NilValue; /* prevent recursion */
@@ -987,8 +987,7 @@ static SEXP attribute_noinline forcePromiseUnbound (SEXP e, int variant)
 
         SET_PRVALUE_MACRO (e, val);
 
-        if (TYPE_ETC(val) == SYMSXP && 
-              (val == R_MissingArg || val == R_MissingUnder)) {
+        if (val == R_MissingArg || val == R_MissingUnder) {
 
             /* Attempt to mimic past behaviour... */
             if ( ! (variant & VARIANT_MISSING_OK) && TYPEOF(PRCODE(e)) == SYMSXP

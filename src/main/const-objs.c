@@ -206,18 +206,33 @@ R_CONST ENV_SEXPREC R_env_consts[1] = {
 };
 
 
-/* Definition of the R_UnboundValue constant, whose address when cast to SEXP
-   is R_UnboundValue.  Don't put in read-only memory, so won't have to special
-   case it when clearing LASTSYMENV and LASTENVNOTFOUND.  Leave LENGTH
-   (if it exists) as zero. */
+/* Symbol constants. Defines an R_UnboundValue constant, whose address
+   when cast to SEXP is R_UnboundValue, and similarly R_MissingArg and
+   R_MissingUnder.  Don't put in read-only memory, so won't have to
+   special case when clearing LASTSYMENV and LASTENVNOTFOUND, and so
+   print names can be set up later.  Leave LENGTH (if it exists) as
+   zero here (may be changed).  Set symbits to all zeros, so will be 
+   looked for (and usually not found). */
 
-SYM_SEXPREC R_sym_consts[1] = { 
+SYM_SEXPREC R_sym_consts[3] = { 
 {
     CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,0),
     .pname = R_NilValue,
     .value = R_UnboundValue,
-    .symbits = 0                    /* all 0s, so will always look for this */
-}                                   /*   (and presumably not find it)       */
+    .symbits = 0
+},
+{
+    CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,1),
+    .pname = R_NilValue,
+    .value = R_UnboundValue,
+    .symbits = 0
+},
+{
+    CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,2),
+    .pname = R_NilValue,
+    .value = R_UnboundValue,
+    .symbits = 0
+}
 };
 
 
@@ -728,11 +743,11 @@ void Rf_constant_init(void)
 
     if (SGGC_SEGMENT_INDEX(p) != R_SGGC_ENV_INDEX) abort();
 
-    /*** Symbol constant. ***/
+    /*** Symbol constants. ***/
 
     p = sggc_constant (R_type_to_sggc_type[SYMSXP],
                        R_type_to_sggc_type[SYMSXP]+2*SGGC_N_TYPES,
-                       1, (char *) R_sym_consts
+                       3, (char *) R_sym_consts
 #if USE_COMPRESSED_POINTERS
                        , (char *) sggc_length1, (char *) nilattrib
 #elif USE_AUX_FOR_ATTRIB
@@ -956,4 +971,18 @@ SEXP R_EmptyEnv = (SEXP) &R_env_consts[0];
 SEXP R_UnboundValue = SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,0);
 #else
 SEXP R_UnboundValue = (SEXP) &R_sym_consts[0];
+#endif
+
+#undef R_MissingArg
+#if USE_COMPRESSED_POINTERS
+SEXP R_MissingArg = SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,1);
+#else
+SEXP R_MissingArg = (SEXP) &R_sym_consts[1];
+#endif
+
+#undef R_MissingUnder
+#if USE_COMPRESSED_POINTERS
+SEXP R_MissingUnder = SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,2);
+#else
+SEXP R_MissingUnder = (SEXP) &R_sym_consts[2];
 #endif

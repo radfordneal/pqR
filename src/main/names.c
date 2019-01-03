@@ -38,6 +38,9 @@
 #include <Rinterface.h>
 #include <lphash/lphash-app.h>
 
+#undef NOT_LVALUE         /* Allow PRINTNAME, etc. on left of assignment here */
+#define NOT_LVALUE(x) (x) /* since it's needed to set up R_MissingUnder  */
+
 
 #define HSIZE (1<<14)   /* Initial size of lphash symbol table (a power of 2) */
 
@@ -704,12 +707,21 @@ void InitNames()
     /* The SYMSXP objects below are not in the symbol table. */
 
     /* R_MissingArg */
-    R_MissingArg = mkSYMSXP(R_BlankString,R_NilValue);
+    PRINTNAME(R_MissingArg) = R_BlankString;
+    IS_PRINTNAME(R_BlankString) = 1;
     SET_SYMVALUE(R_MissingArg, R_MissingArg);
+#   if !USE_AUX_FOR_ATTRIB
+        LENGTH(R_MissingArg) = 1;
+#   endif
 
     /* R_MissingUnder */
     R_UnderscoreString = mkChar("_");
-    R_MissingUnder = mkSYMSXP(R_UnderscoreString,R_MissingArg);
+    PRINTNAME(R_MissingUnder) = R_UnderscoreString;
+    IS_PRINTNAME(R_UnderscoreString) = 1;
+    SET_SYMVALUE(R_MissingUnder, R_MissingArg);
+#   if !USE_AUX_FOR_ATTRIB
+        LENGTH(R_MissingUnder) = 1;
+#   endif
 
     /* R_RestartToken */
     R_RestartToken = mkSYMSXP(R_BlankString,R_NilValue);
