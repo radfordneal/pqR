@@ -217,22 +217,6 @@ static SEXP do_compilepkgs(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ScalarLogicalMaybeConst(old);
 }
 
-static void printcall (SEXP call, SEXP rho)
-{
-    int old_bl = R_BrowseLines;
-    int blines = asInteger(GetOption1(install("deparse.max.lines")));
-    if (blines != NA_INTEGER && blines > 0) R_BrowseLines = blines;
-    PrintValueRec(call,rho);
-    R_BrowseLines = old_bl;
-}
-
-static void start_browser (SEXP call, SEXP op, SEXP stmt, SEXP env)
-{
-    SrcrefPrompt("debug", R_Srcref);
-    PrintValue(stmt);
-    do_browser(call, op, R_NilValue, env);
-}
-
 static int R_bcVersion = 7;
 static int R_bcMinVersion = 6;
 

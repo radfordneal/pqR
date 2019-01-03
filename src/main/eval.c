@@ -46,74 +46,6 @@
 #endif
 
 
-attribute_hidden void SrcrefPrompt(const char * prefix, SEXP srcref)
-{
-    /* If we have a valid srcref, use it */
-    if (srcref && srcref != R_NilValue) {
-        if (TYPEOF(srcref) == VECSXP) srcref = VECTOR_ELT(srcref, 0);
-	SEXP srcfile = getAttrib00(srcref, R_SrcfileSymbol);
-	if (TYPEOF(srcfile) == ENVSXP) {
-	    SEXP filename = findVar(install("filename"), srcfile);
-	    if (isString(filename) && length(filename)) {
-	    	Rprintf(_("%s at %s#%d: "),prefix,CHAR(STRING_ELT(filename,0)), 
-	                                   asInteger(srcref));
-	        return;
-	    }
-	}
-    }
-    /* default: */
-    Rprintf("%s: ", prefix);
-}
-
-
-/* This function gets the srcref attribute from a statement block, 
-   and confirms it's in the expected format */
-   
-static inline void getBlockSrcrefs(SEXP call, SEXP **refs, int *len)
-{
-    SEXP srcrefs = getAttrib00(call, R_SrcrefSymbol);
-    if (TYPEOF(srcrefs) == VECSXP) {
-        *refs = (SEXP *) DATAPTR(srcrefs);
-        *len = LENGTH(srcrefs);
-    }
-    else
-    {   *len = 0;
-    }
-}
-
-
-/* This function extracts one srcref, and confirms the format.  It is 
-   passed an index and the array and length from getBlockSrcrefs. */
-
-static inline SEXP getSrcref(SEXP *refs, int len, int ind)
-{
-    if (ind < len) {
-        SEXP result = refs[ind];
-        if (TYPEOF(result) == INTSXP && LENGTH(result) >= 6)
-            return result;
-    }
-
-    return R_NilValue;
-}
-
-static void start_browser (SEXP call, SEXP op, SEXP stmt, SEXP env)
-{
-    SrcrefPrompt("debug", R_Srcref);
-    PrintValue(stmt);
-    do_browser(call, op, R_NilValue, env);
-}
-
-
-static void printcall (SEXP call, SEXP rho)
-{
-    int old_bl = R_BrowseLines;
-    int blines = asInteger(GetOption1(install("deparse.max.lines")));
-    if (blines != NA_INTEGER && blines > 0) R_BrowseLines = blines;
-    PrintValueRec(call,rho);
-    R_BrowseLines = old_bl;
-}
-
-
 static SEXP VectorToPairListNamed(SEXP x)
 {
     SEXP xptr, xnew, xnames;
@@ -1002,7 +934,8 @@ static SEXP attribute_noinline forcePromiseUnbound (SEXP e, int variant)
 
         SET_PRVALUE_MACRO (e, val);
 
-        if (val == R_MissingArg) {
+        if (TYPE_ETC(val) == SYMSXP && 
+              (val == R_MissingArg || val == R_MissingUnder)) {
 
             /* Attempt to mimic past behaviour... */
             if ( ! (variant & VARIANT_MISSING_OK) && TYPEOF(PRCODE(e)) == SYMSXP
@@ -1016,8 +949,8 @@ static SEXP attribute_noinline forcePromiseUnbound (SEXP e, int variant)
     }
 
     /* Set the environment to R_NilValue to allow GC to reclaim the
-       promise environment (unless value is R_MissingArg); this is
-       also useful for fancy games with delayedAssign() */
+       promise environment (unless value is R_MissingArg or R_MissingUnder);
+       this is also useful for fancy games with delayedAssign() */
 
     SET_PRENV_NIL(e);
 
@@ -1109,7 +1042,6 @@ static SEXP attribute_noinline Rf_builtin_op_no_cntxt(SEXP op, SEXP e, SEXP rho,
     return res;
 }
 
-
 /* 'supplied' is an array of SEXP values, first a set of pairs of tag and
    value, then a pairlist of tagged values (or R_NilValue).  If NULL, no
    extras supplied. */
@@ -1123,30 +1055,24 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     if (variant & VARIANT_NOT_WHOLE_BODY)
         vrnt &= ~VARIANT_WHOLE_BODY;
 
-    SEXP formals, actuals, savedrho, savedsrcref;
-    volatile SEXP body, newrho;
-    SEXP f, a;
+    SEXP actuals, savedsrcref, newrho;
     RCNTXT cntxt;
-
-    formals = FORMALS(op);
-    body = BODY(op);
-    savedrho = CLOENV(op);
 
     /*  Set up a context with the call in it for use if an error occurs below
         in matchArgs or from running out of memory (eg, in NewEnvironment). 
-        Note that this also protects call, savedrho, rho, arglist, and op. */
+        Note that this also protects call, rho, arglist, and op. */
 
-    begincontext(&cntxt, CTXT_RETURN, call, savedrho, rho, arglist, op);
+    begincontext(&cntxt, CTXT_RETURN, call, CLOENV(op), rho, arglist, op);
 
     savedsrcref = R_Srcref;  /* saved in context for longjmp, and protection */
 
     /*  Build a list which matches the actual (unevaluated) arguments
-	to the formal paramters.  Build a new environment which
-	contains the matched pairs.  Note that actuals is protected via
+        to the formal paramters.  Build a new environment which
+        contains the matched pairs.  Note that actuals is protected via
         newrho. */
 
-    actuals = matchArgs_pairlist (formals, arglist, call);
-    PROTECT(newrho = NewEnvironment(R_NilValue, actuals, savedrho));
+    actuals = matchArgs_pairlist (FORMALS(op), arglist, call);
+    PROTECT(newrho = NewEnvironment(R_NilValue, actuals, CLOENV(op)));
         /* no longer passes formals, since matchArg now puts tags in actuals */
 
     /* This piece of code is destructively modifying the actuals list,
@@ -1159,8 +1085,8 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     R_symbits_t bits = 0;
 
-    f = formals;
-    a = actuals;
+    SEXP f = FORMALS(op);
+    SEXP a = actuals;
     while (a != R_NilValue) {
         SEXP t = TAG(a);
         bits |= SYMBITS(t);
@@ -1175,8 +1101,8 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
             LASTSYMENV(t) = SEXP32_FROM_SEXP(newrho);
             LASTSYMBINDING(t) = a;
         }
-	a = CDR(a);
-	f = CDR(f);
+        a = CDR(a);
+        f = CDR(f);
     }
 
     SET_ENVSYMBITS (newrho, bits);
@@ -1190,13 +1116,13 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
             set_var_in_frame (*supplied, *(supplied+1), newrho, TRUE, 3);
             supplied += 2;
         }
-	for (SEXP t = *supplied; t != R_NilValue; t = CDR(t)) {
-	    for (a = actuals; a != R_NilValue; a = CDR(a))
-		if (TAG(a) == TAG(t))
-		    break;
-	    if (a == R_NilValue)
-		set_var_in_frame (TAG(t), CAR(t), newrho, TRUE, 3);
-	}
+        for (SEXP t = *supplied; t != R_NilValue; t = CDR(t)) {
+            for (a = actuals; a != R_NilValue; a = CDR(a))
+                if (TAG(a) == TAG(t))
+                    break;
+            if (a == R_NilValue)
+                set_var_in_frame (TAG(t), CAR(t), newrho, TRUE, 3);
+        }
     }
 
     UNPROTECT(1); /* newrho, which will be protected below via revised context*/
@@ -1204,36 +1130,24 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     /*  Change the previously-set-up context to have the correct environment.
 
         If we have a generic function we need to use the sysparent of
-	the generic as the sysparent of the method because the method
-	is a straight substitution of the generic. */
+        the generic as the sysparent of the method because the method
+        is a straight substitution of the generic. */
 
     if (R_GlobalContext->nextcontext->callflag == CTXT_GENERIC)
-	revisecontext (newrho, R_GlobalContext->nextcontext->sysparent);
+        revisecontext (newrho, R_GlobalContext->nextcontext->sysparent);
     else
-	revisecontext (newrho, rho);
+        revisecontext (newrho, rho);
 
     /* Get the srcref record from the closure object */
     
     R_Srcref = getAttrib00(op, R_SrcrefSymbol);
 
+     SEXP body = BODY(op);
+
     /* Debugging */
 
-    if (RDEBUG(op) | RSTEP(op)) {
-        SET_RDEBUG(newrho, 1);
-        if (RSTEP(op)) SET_RSTEP(op, 0);
-	SEXP savesrcref; SEXP *srcrefs; int len;
-	/* switch to interpreted version when debugging compiled code */
-	if (TYPEOF(body) == BCODESXP)
-	    body = bytecodeExpr(body);
-	Rprintf("debugging in: ");
-        printcall(call,rho);
-	savesrcref = R_Srcref;
-	getBlockSrcrefs(body,&srcrefs,&len);
-	PROTECT(R_Srcref = getSrcref(srcrefs,len,0));
-        start_browser (call, op, body, newrho);
-	R_Srcref = savesrcref;
-	UNPROTECT(1);
-    }
+    if (RDEBUG(op) | RSTEP(op))
+        body = Rf_apply_debug_setup (call, op, rho, body, newrho);
 
     /* Set a longjmp target which will catch any explicit returns from the
        function body that are not instead handled by VARIANT_DIRECT_RETURN.  */
@@ -1241,19 +1155,17 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     SEXP res;
 
     if ((SETJMP(cntxt.cjmpbuf))) {
-	if (R_ReturnedValue == R_RestartToken) {
-	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
-	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    res = evalv (body, newrho, vrnt);
-	}
-	else {
-	    res = R_ReturnedValue;
+        if (R_ReturnedValue != R_RestartToken) {
+            res = R_ReturnedValue;
+            goto evald;
         }
-    }
-    else {
-	res = evalv (body, newrho, vrnt);
+        cntxt.callflag = CTXT_RETURN;  /* turn restart off */
+        R_ReturnedValue = R_NilValue;  /* remove restart token */
     }
 
+    res = evalv (body, newrho, vrnt);
+
+  evald: 
     PROTECT(res);
 
     R_variant_result &= ~VARIANT_RTN_FLAG;
@@ -1264,10 +1176,8 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     if ( ! (variant & VARIANT_PENDING_OK))
         WAIT_UNTIL_COMPUTED(res);
 
-    if (RDEBUG(op)) {
-	Rprintf("exiting from: ");
-        printcall(call,rho);
-    }
+    if (RDEBUG(op))
+        Rf_apply_debug_finish (call, rho);
 
     UNPROTECT(1); /* res */
     return res;
@@ -1302,52 +1212,33 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     /* Debugging */
 
-    if (RDEBUG(op) | RSTEP(op)) {
-        SET_RDEBUG(newrho, 1);
-        if (RSTEP(op)) SET_RSTEP(op, 0);
-        SEXP savesrcref; SEXP *srcrefs; int len;
-	/* switch to interpreted version when debugging compiled code */
-	if (TYPEOF(body) == BCODESXP)
-	    body = bytecodeExpr(body);
-	Rprintf("debugging in: ");
-	printcall (call, rho);
-	savesrcref = R_Srcref;
-	getBlockSrcrefs(body,&srcrefs,&len);
-	PROTECT(R_Srcref = getSrcref(srcrefs,len,0));
-        start_browser (call, op, body, newrho);
-	R_Srcref = savesrcref;
-	UNPROTECT(1);
-    }
+    if (RDEBUG(op) | RSTEP(op))
+        body =  Rf_apply_debug_setup (call, op, rho, body, newrho);
 
     /*  Set a longjmp target which will catch any explicit returns
-	from the function body.  */
+        from the function body.  */
 
     SEXP res;
 
     if ((SETJMP(cntxt.cjmpbuf))) {
-	if (R_ReturnedValue == R_RestartToken) {
-	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
-	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    res = evalv(body, newrho, VARIANT_NOT_WHOLE_BODY);
-	}
-	else {
-	    res = R_ReturnedValue;
-            WAIT_UNTIL_COMPUTED(res);
+        if (R_ReturnedValue != R_RestartToken) {
+            res = R_ReturnedValue;
+            goto evald;
         }
-    }
-    else {
-	res = evalv(body, newrho, 0);
+        cntxt.callflag = CTXT_RETURN;  /* turn restart off */
+        R_ReturnedValue = R_NilValue;  /* remove restart token */
     }
 
+    res = evalv(body, newrho, 0);
+
+  evald:
     PROTECT(res);
 
     R_Srcref = savedsrcref;
     endcontext(&cntxt);
 
-    if (RDEBUG(op)) {
-	Rprintf("exiting from: ");
-	printcall (call, rho);
-    }
+    if (RDEBUG(op))
+        Rf_apply_debug_finish (call, rho);
 
     UNPROTECT(1);  /* res */
     return res;
@@ -1373,7 +1264,7 @@ SEXP R_execMethod(SEXP op, SEXP rho)
        set to the new environment.  should move this to envir.c where
        it can be done more efficiently. */
     for (next = FORMALS(op); next != R_NilValue; next = CDR(next)) {
-	SEXP symbol =  TAG(next);
+        SEXP symbol =  TAG(next);
 	R_varloc_t loc;
 	int missing;
 	loc = R_findVarLocInFrame(rho,symbol);
@@ -1435,10 +1326,6 @@ SEXP R_execMethod(SEXP op, SEXP rho)
 }
 
 
-#define BodyHasBraces(body) \
-    (isLanguage(body) && CAR(body) == R_BraceSymbol)
-
-
 static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     /* Don't check arg count - missing are seen as R_NilValue, extra ignored. */
@@ -1462,7 +1349,7 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
     }
 
-    if (RDEBUG(rho) && Stmt!=R_NilValue && !BodyHasBraces(Stmt))
+    if (RDEBUG(rho))
         start_browser (call, op, Stmt, rho);
 
     if (absent_else) {
@@ -1485,12 +1372,7 @@ static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
    Extra variables after i are ignored for 'in', 'down', and 'across'.
 
-   Evaluates body with VARIANT_NULL | VARIANT_PENDING_OK.
- */
-
-#define DO_LOOP_RDEBUG(call, op, body, rho, bgn) do { \
-        if (!bgn && RDEBUG(rho)) start_browser (call, op, body, rho); \
-    } while (0)
+   Evaluates body with VARIANT_NULL | VARIANT_PENDING_OK. */
 
 static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
@@ -1770,7 +1652,7 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     do_iter: ;
 
-        if (RDEBUG(rho) && !BodyHasBraces(body))
+        if (RDEBUG(rho))
             start_browser (call, op, body, rho);
 
         SEXP r = evalv (body, rho, vrnt);
@@ -1842,7 +1724,7 @@ static SEXP do_while(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             if ( ! asLogicalNoNA (condval, call))
                 break;
 
-            if (RDEBUG(rho) && !BodyHasBraces(body))
+            if (RDEBUG(rho))
                 start_browser (call, op, body, rho);
 
             SEXP r = evalv (body, rho, vrnt);
@@ -1897,7 +1779,7 @@ static SEXP do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) { /* <- back here for "next" */
 	for (;;) {
 
-            if (RDEBUG(rho) && !BodyHasBraces(body))
+            if (RDEBUG(rho))
                 start_browser (call, op, body, rho);
 
             SEXP r = evalv (body, rho, vrnt);

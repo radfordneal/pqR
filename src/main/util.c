@@ -924,6 +924,80 @@ SEXP attribute_hidden EnsureString(SEXP s)
     return s;
 }
 
+
+attribute_hidden void SrcrefPrompt(const char * prefix, SEXP srcref)
+{
+    /* If we have a valid srcref, use it */
+    if (srcref && srcref != R_NilValue) {
+        if (TYPEOF(srcref) == VECSXP) srcref = VECTOR_ELT(srcref, 0);
+	SEXP srcfile = getAttrib00(srcref, R_SrcfileSymbol);
+	if (TYPEOF(srcfile) == ENVSXP) {
+	    SEXP filename = findVar(install("filename"), srcfile);
+	    if (isString(filename) && length(filename)) {
+	    	Rprintf(_("%s at %s#%d: "),prefix,CHAR(STRING_ELT(filename,0)), 
+	                                   asInteger(srcref));
+	        return;
+	    }
+	}
+    }
+    /* default: */
+    Rprintf("%s: ", prefix);
+}
+
+
+attribute_hidden void start_browser (SEXP call, SEXP op, SEXP stmt, SEXP env)
+{
+    if (stmt == R_NilValue || isLanguage(stmt) && CAR(stmt) == R_BraceSymbol)
+        return;
+
+    SrcrefPrompt("debug", R_Srcref);
+    PrintValue(stmt);
+    do_browser(call, op, R_NilValue, env);
+}
+
+
+/* Part of applyClosure, etc. put here to reduce code size there. */
+
+attribute_hidden SEXP Rf_apply_debug_setup 
+   (SEXP call, SEXP op, SEXP rho, SEXP body, SEXP newrho)
+{
+    SET_RDEBUG(newrho, 1);
+    if (RSTEP(op)) SET_RSTEP(op, 0);
+    SEXP savesrcref; SEXP *srcrefs; int len;
+    /* switch to interpreted version when debugging compiled code */
+    if (TYPEOF(body) == BCODESXP)
+        body = bytecodeExpr(body);
+    Rprintf("debugging in: ");
+
+    int old_bl = R_BrowseLines;
+    int blines = asInteger(GetOption1(install("deparse.max.lines")));
+    if (blines != NA_INTEGER && blines > 0) R_BrowseLines = blines;
+    PrintValueRec(call,newrho);
+    R_BrowseLines = old_bl;
+
+    savesrcref = R_Srcref;
+    getBlockSrcrefs(body,&srcrefs,&len);
+    PROTECT(R_Srcref = getSrcref(srcrefs,len,0));
+
+    SrcrefPrompt("debug", R_Srcref);
+    PrintValue(body);
+    do_browser(call, op, R_NilValue, newrho);
+
+    R_Srcref = savesrcref;
+    UNPROTECT(1);
+    return body;
+}
+
+attribute_hidden SEXP Rf_apply_debug_finish (SEXP call, SEXP rho)
+{
+    Rprintf("exiting from: ");
+    int old_bl = R_BrowseLines;
+    int blines = asInteger(GetOption1(install("deparse.max.lines")));
+    if (blines != NA_INTEGER && blines > 0) R_BrowseLines = blines;
+    PrintValueRec(call,rho);
+    R_BrowseLines = old_bl;
+}
+
 /* Allocate space for the result of an operation, or reuse the space for
    one of its operands, if it has NAMEDCNT of zero. Attributes are assumed 
    to be taken from the operands, with the first operand's attributes taking 
