@@ -934,8 +934,7 @@ static SEXP attribute_noinline forcePromiseUnbound (SEXP e, int variant)
 
         SET_PRVALUE_MACRO (e, val);
 
-        if (TYPE_ETC(val) == SYMSXP && 
-              (val == R_MissingArg || val == R_MissingUnder)) {
+        if (val == R_MissingArg || val == R_MissingUnder) {
 
             /* Attempt to mimic past behaviour... */
             if ( ! (variant & VARIANT_MISSING_OK) && TYPEOF(PRCODE(e)) == SYMSXP
