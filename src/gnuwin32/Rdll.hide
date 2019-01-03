@@ -323,6 +323,8 @@
  Rf_VectorIndex
  Rf_add_scaled_gradients
  Rf_allocCharsxp
+ Rf_apply_debug_finish
+ Rf_apply_debug_setup
  Rf_apply_non_function_error
  Rf_arg_missing_error
  Rf_asLogicalNoNA_error
@@ -413,6 +415,7 @@
  Rf_setRVector
  Rf_setenvsymbits
  Rf_ssort
+ Rf_start_browser
  Rf_stirlerr
  Rf_substituteList
  Rf_ucstomb

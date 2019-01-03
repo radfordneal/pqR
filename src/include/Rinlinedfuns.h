@@ -652,4 +652,35 @@ INLINE_FUN const char *Rf_translateChar (SEXP x)
     return TYPE_ETC(x) == CHARSXP ? CHAR(x) : Rf_translateChar_nontrivial(x);
 }
 
+
+/* This function extracts one srcref, and confirms the format.  It is 
+   passed an index and the array and length from getBlockSrcrefs. */
+
+INLINE_FUN SEXP getSrcref(SEXP *refs, int len, int ind)
+{
+    if (ind < len) {
+        SEXP result = refs[ind];
+        if (TYPEOF(result) == INTSXP && LENGTH(result) >= 6)
+            return result;
+    }
+
+    return R_NilValue;
+}
+
+
+/* This function gets the srcref attribute from a statement block, 
+   and confirms it's in the expected format */
+   
+INLINE_FUN void getBlockSrcrefs(SEXP call, SEXP **refs, int *len)
+{
+    SEXP srcrefs = getAttrib00(call, R_SrcrefSymbol);
+    if (TYPEOF(srcrefs) == VECSXP) {
+        *refs = (SEXP *) DATAPTR(srcrefs);
+        *len = LENGTH(srcrefs);
+    }
+    else
+    {   *len = 0;
+    }
+}
+
 #endif /* R_INLINES_H_ */

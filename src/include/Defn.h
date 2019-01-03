@@ -1389,6 +1389,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define sortVector		Rf_sortVector
 # define SrcrefPrompt		Rf_SrcrefPrompt
 # define ssort			Rf_ssort
+# define start_browser		Rf_start_browser
 # define StringFromComplex	Rf_StringFromComplex
 # define StringFromInteger	Rf_StringFromInteger
 # define StringFromLogical	Rf_StringFromLogical
@@ -1484,6 +1485,8 @@ SEXP add_scaled_gradients (SEXP, SEXP, double);
 SEXP Rf_allocCharsxp(R_len_t);
 SEXP alloc_or_reuse (SEXP, SEXP, SEXPTYPE, int, int, int);
 SEXP Rf_append(SEXP, SEXP); /* apparently unused now */
+SEXP Rf_apply_debug_finish (SEXP, SEXP);
+SEXP Rf_apply_debug_setup (SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP Rf_attributes_dup (SEXP, SEXP);
 SEXP bcEval(SEXP, SEXP, Rboolean);
 SEXP bytecodeExpr(SEXP);
@@ -1623,6 +1626,7 @@ int R_isMissing(SEXP symbol, SEXP rho);
 void sortVector(SEXP, Rboolean);
 void SrcrefPrompt(const char *, SEXP);
 void ssort(SEXP*,int);
+void start_browser (SEXP, SEXP, SEXP, SEXP);
 int StrToInternal(const char *);
 SEXP substituteList(SEXP, SEXP);
 void R_trace_call(SEXP, SEXP);
