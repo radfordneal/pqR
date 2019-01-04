@@ -1,6 +1,7 @@
 % File src/library/stats/man/Weibull.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2009 R Core Team
+% Modifications for pqR Copyright (c) 2019 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Weibull}
@@ -27,9 +28,12 @@ rweibull(n, shape, scale = 1)
   \item{n}{number of observations. If \code{length(n) > 1}, the length
     is taken to be the number required.}
   \item{shape, scale}{shape and scale parameters, the latter defaulting to 1.}
-  \item{log, log.p}{logical; if TRUE, probabilities p are given as log(p).}
-  \item{lower.tail}{logical; if TRUE (default), probabilities are
-    \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
+  \item{log}{logical; if TRUE, the log of the density is returned.}
+  \item{log.p}{logical; if TRUE, the quantile function takes the
+    log of the tail probability, or the distribution function returns the
+    log of the tail probability.}
+  \item{lower.tail}{logical; if TRUE (which is the default), tail probabilities
+    are \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
 }
 \value{
   \code{dweibull} gives the density,

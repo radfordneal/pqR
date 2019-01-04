@@ -1,6 +1,7 @@
 % File src/library/stats/man/Uniform.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2010 R Core Team
+% Modifications for pqR Copyright (c) 2019 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Uniform}
@@ -22,9 +23,12 @@ runif(n, min=0, max=1)
   \item{n}{number of observations. If \code{length(n) > 1}, the length
     is taken to be the number required.}
   \item{min,max}{lower and upper limits of the distribution.  Must be finite.}
-  \item{log, log.p}{logical; if TRUE, probabilities p are given as log(p).}
-  \item{lower.tail}{logical; if TRUE (default), probabilities are
-    \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
+  \item{log}{logical; if TRUE, the log of the density is returned.}
+  \item{log.p}{logical; if TRUE, the quantile function takes the
+    log of the tail probability, or the distribution function returns the
+    log of the tail probability.}
+  \item{lower.tail}{logical; if TRUE (which is the default), tail probabilities
+    are \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
 }
 \description{
   These functions provide information about the uniform distribution

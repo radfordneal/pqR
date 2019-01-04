@@ -1,6 +1,7 @@
 % File src/library/stats/man/Fdist.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2010 R Core Team
+% Modifications for pqR Copyright (c) 2019 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{FDist}
@@ -28,9 +29,12 @@ rf(n, df1, df2, ncp)
     is taken to be the number required.}
   \item{df1, df2}{degrees of freedom.  \code{Inf} is allowed.}
   \item{ncp}{non-centrality parameter. If omitted the central F is assumed.}
-  \item{log, log.p}{logical; if TRUE, probabilities p are given as log(p).}
-  \item{lower.tail}{logical; if TRUE (default), probabilities are
-    \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
+  \item{log}{logical; if TRUE, the log of the density is returned.}
+  \item{log.p}{logical; if TRUE, the quantile function takes the
+    log of the tail probability, or the distribution function returns the
+    log of the tail probability.}
+  \item{lower.tail}{logical; if TRUE (which is the default), tail probabilities
+    are \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
 }
 \value{
   \code{df} gives the density,
