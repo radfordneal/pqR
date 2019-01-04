@@ -1,6 +1,7 @@
 % File src/library/stats/man/Hypergeometric.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2007 R Core Team
+% Modifications for pqR Copyright (c) 2019 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Hypergeometric}
@@ -30,8 +31,11 @@ rhyper(nn, m, n, k)
   \item{p}{probability, it must be between 0 and 1.}
   \item{nn}{number of observations. If \code{length(nn) > 1}, the length
     is taken to be the number required.}
-  \item{log, log.p}{logical; if TRUE, probabilities p are given as log(p).}
-  \item{lower.tail}{logical; if TRUE (default), probabilities are
+  \item{log}{logical; if TRUE, the log of the density is returned.}
+  \item{log.p}{logical; if TRUE, the quantile function takes the
+    log of the tail probability, or the distribution function returns the
+    log of the tail probability.}
+  \item{lower.tail}{logical; if TRUE (default), tail probabilities are
     \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
 }
 \value{

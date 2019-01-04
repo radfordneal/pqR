@@ -1,6 +1,7 @@
 % File src/library/stats/man/Lognormal.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2009 R Core Team
+% Modifications for pqR Copyright (c) 2019 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Lognormal}
@@ -28,8 +29,11 @@ rlnorm(n, meanlog = 0, sdlog = 1)
     is taken to be the number required.}
   \item{meanlog, sdlog}{mean and standard deviation of the distribution
     on the log scale with default values of \code{0} and \code{1} respectively.}
-  \item{log, log.p}{logical; if TRUE, probabilities p are given as log(p).}
-  \item{lower.tail}{logical; if TRUE (default), probabilities are
+  \item{log}{logical; if TRUE, the log of the density is returned.}
+  \item{log.p}{logical; if TRUE, the quantile function takes the
+    log of the tail probability, or the distribution function returns the
+    log of the tail probability.}
+  \item{lower.tail}{logical; if TRUE (default), tail probabilities are
     \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
 }
 \value{

@@ -1,6 +1,7 @@
 % File src/library/stats/man/TDist.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2010 R Core Team
+% Modifications for pqR Copyright (c) 2019 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{TDist}
@@ -32,8 +33,11 @@ rt(n, df, ncp)
   \item{ncp}{non-centrality parameter \eqn{\delta}{delta};
     currently except for \code{rt()}, only for \code{abs(ncp) <= 37.62}.
     If omitted, use the central t distribution.}
-  \item{log, log.p}{logical; if TRUE, probabilities p are given as log(p).}
-  \item{lower.tail}{logical; if TRUE (default), probabilities are
+  \item{log}{logical; if TRUE, the log of the density is returned.}
+  \item{log.p}{logical; if TRUE, the quantile function takes the
+    log of the tail probability, or the distribution function returns the
+    log of the tail probability.}
+  \item{lower.tail}{logical; if TRUE (default), tail probabilities are
     \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
 }
 \value{
