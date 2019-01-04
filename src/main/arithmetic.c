@@ -2627,11 +2627,12 @@ static void Dppois (double x, double lambda, double *dx /*ignored*/,
         *dlambda = 0;
     else {
 
-        double d = dpois(x,lambda,FALSE);
-        *dlambda = lower_tail ? -d : d;
+        double d = dpois(x,lambda,log_p);
 
-        if (log_p)
-            *dlambda *= exp(-v);
+        if (lower_tail) 
+            *dlambda = log_p ? -exp(d-v) : -d;
+        else
+            *dlambda = log_p ? exp(d-v) : d;
     }
 }
 
