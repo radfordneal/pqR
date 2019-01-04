@@ -1,6 +1,7 @@
 % File src/library/stats/man/GammaDist.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2007 R Core Team
+% Modifications for pqR Copyright (c) 2019 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{GammaDist}
@@ -32,10 +33,12 @@ rgamma(n, shape, rate = 1, scale = 1/rate)
   \item{rate}{an alternative way to specify the scale.}
   \item{shape, scale}{shape and scale parameters.  Must be positive,
     \code{scale} strictly.}
-  \item{log, log.p}{logical; if \code{TRUE}, probabilities/densities \eqn{p}
-    are returned as \eqn{log(p)}.}
-  \item{lower.tail}{logical; if TRUE (default), probabilities are
-    \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
+  \item{log}{logical; if TRUE, the log of the density is returned.}
+  \item{log.p}{logical; if TRUE, the quantile function takes the
+    log of the tail probability, or the distribution function returns the
+    log of the tail probability.}
+  \item{lower.tail}{logical; if TRUE (which is the default), tail probabilities
+    are \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
 }
 \value{
   \code{dgamma} gives the density,

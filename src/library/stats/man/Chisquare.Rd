@@ -1,6 +1,7 @@
 % File src/library/stats/man/Chisquare.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2010 R Core Team
+% Modifications for pqR Copyright (c) 2019 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{Chisquare}
@@ -29,9 +30,12 @@ rchisq(n, df, ncp=0)
     is taken to be the number required.}
   \item{df}{degrees of freedom (non-negative, but can be non-integer).}
   \item{ncp}{non-centrality parameter (non-negative).}
-  \item{log, log.p}{logical; if TRUE, probabilities p are given as log(p).}
-  \item{lower.tail}{logical; if TRUE (default), probabilities are
-    \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
+  \item{log}{logical; if TRUE, the log of the density is returned.}
+  \item{log.p}{logical; if TRUE, the quantile function takes the
+    log of the tail probability, or the distribution function returns the
+    log of the tail probability.}
+  \item{lower.tail}{logical; if TRUE (which is the default), tail probabilities
+    are \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
 }
 \value{
   \code{dchisq} gives the density, \code{pchisq} gives the distribution
