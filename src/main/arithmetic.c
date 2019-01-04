@@ -2526,7 +2526,7 @@ static void Ddexp (double x, double scale, double *dx, double *dscale,
 }
 
 static void Dpexp (double q, double scale, double *dq, double *dscale,
-                   int lower_tail, int log_p, double v)
+                   double v, int lower_tail, int log_p)
 {
     if (scale <= 0) {
         if (dq) *dq = 0;
@@ -2554,7 +2554,7 @@ static void Dpexp (double q, double scale, double *dq, double *dscale,
 }
 
 static void Dqexp (double p, double scale, double *dp, double *dscale,
-                   int lower_tail, int log_p, double v)
+                   double v, int lower_tail, int log_p)
 {
     if (scale <= 0) {
         if (dp) *dp = 0;
@@ -2587,7 +2587,7 @@ static void Ddgeom (double x, double p, double *dx /*ignored*/,
 }
 
 static void Dpgeom (double q, double p, double *dq /*ignored*/, double *dp,
-                    int lower_tail, int log_p, double v)
+                    double v, int lower_tail, int log_p)
 {
     if (!dp) return;
 
@@ -2843,7 +2843,7 @@ SEXP do_Math2(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
 static void Ddbeta (double x, double a, double b, 
                     double *dx, double *da, double *db,
-                    int give_log, double v)
+                    double v, int give_log)
 {
     if (!R_FINITE(v)) {
         if (dx) *dx = 0;
@@ -2870,7 +2870,7 @@ static void Ddbeta (double x, double a, double b,
 
 static void Ddbinom (double x, double n, double p, 
                      double *dx /*ignored*/, double *dn /*ignored*/, double *dp,
-                     int give_log, double v)
+                     double v, int give_log)
 {
     if (!dp) return;
 
@@ -2885,7 +2885,7 @@ static void Ddbinom (double x, double n, double p,
 
 static void Dpcauchy (double q, double location, double scale, 
                       double *dq, double *dlocation, double *dscale,
-                      int lower_tail, int log_p, double v)
+                      double v, int lower_tail, int log_p)
 {
     if (scale <= 0) {
         if (dq) *dq = 0;
@@ -2918,7 +2918,7 @@ static void Dpcauchy (double q, double location, double scale,
 
 static void Dqcauchy (double p, double location, double scale, 
                       double *dp, double *dlocation, double *dscale,
-                      int lower_tail, int log_p, double v)
+                      double v, int lower_tail, int log_p)
 {
     if (scale <= 0) {
         if (dp) *dp = 0;
@@ -2940,7 +2940,7 @@ static void Dqcauchy (double p, double location, double scale,
 
 static void Ddnorm (double x, double mu, double sigma, 
                     double *dx, double *dmu, double *dsigma,
-                    int give_log, double v)
+                    double v, int give_log)
 {
     if (!R_FINITE(v)) {
         if (dx) *dx = 0;
@@ -2964,7 +2964,7 @@ static void Ddnorm (double x, double mu, double sigma,
 
 static void Dpnorm (double q, double mu, double sigma, 
                     double *dq, double *dmu, double *dsigma,
-                    int lower_tail, int log_p, double v)
+                    double v, int lower_tail, int log_p)
 {
     if (sigma <= 0) {
         if (dq) *dq = 0;
@@ -2997,7 +2997,7 @@ static void Dpnorm (double q, double mu, double sigma,
 
 static void Dqnorm (double p, double mu, double sigma, 
                     double *dp, double *dmu, double *dsigma,
-                    int lower_tail, int log_p, double v)
+                    double v, int lower_tail, int log_p)
 {
     if (sigma <= 0) {
         if (dp) *dp = 0;
@@ -3019,7 +3019,7 @@ static void Dqnorm (double p, double mu, double sigma,
 
 static void Ddunif (double x, double a, double b, 
                     double *dx, double *da, double *db,
-                    int give_log, double v)
+                    double v, int give_log)
 {
     if (dx) *dx = 0;
 
@@ -3042,7 +3042,7 @@ static void Ddunif (double x, double a, double b,
 
 static void Dpunif (double q, double a, double b, 
                     double *dq, double *da, double *db,
-                    int lower_tail, int log_p, double v)
+                    double v, int lower_tail, int log_p)
 {
     if (b <= a || q <= a || q >= b) {
         if (dq) *dq = 0;
@@ -3075,7 +3075,7 @@ static void Dpunif (double q, double a, double b,
 
 static void Dqunif (double p, double a, double b, 
                     double *dp, double *da, double *db,
-                    int lower_tail, int log_p, double v)
+                    double v, int lower_tail, int log_p)
 {
     if (b <= a) {
         if (dp) *dp = 0;
@@ -3097,7 +3097,7 @@ static void Dqunif (double p, double a, double b,
 
 static void Ddlogis (double x, double location, double scale, 
                      double *dx, double *dlocation, double *dscale,
-                     int give_log, double v)
+                     double v, int give_log)
 {
     if (!R_FINITE(v)) {
         if (dx) *dx = 0;
@@ -3122,7 +3122,7 @@ static void Ddlogis (double x, double location, double scale,
 
 static void Dplogis (double q, double location, double scale, 
                      double *dq, double *dlocation, double *dscale,
-                     int lower_tail, int log_p, double v)
+                     double v, int lower_tail, int log_p)
 {
     if (scale <= 0) {
         if (dq) *dq = 0;
@@ -3155,7 +3155,7 @@ static void Dplogis (double q, double location, double scale,
 
 static void Dqlogis (double p, double location, double scale, 
                      double *dp, double *dlocation, double *dscale,
-                     int lower_tail, int log_p, double v)
+                     double v, int lower_tail, int log_p)
 {
     if (scale <= 0) {
         if (dp) *dp = 0;
