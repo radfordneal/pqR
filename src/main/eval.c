@@ -2640,7 +2640,7 @@ SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
 	    if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
                     INC_NAMEDCNT(CAR(tail));  /* OK when tail is R_NilValue */
-                    ev_el = EVALV (CAR(h), rho, varpend);
+                    ev_el = evalv (CAR(h), rho, varpend);
                     ev = cons_with_tag (ev_el, R_NilValue, TAG(h));
                     if (head==R_NilValue)
                         head = ev;
@@ -2737,7 +2737,7 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
 	    if (TYPEOF(h) == DOTSXP) {
 		while (h != R_NilValue) {
                     INC_NAMEDCNT(CAR(tail));  /* OK when tail is R_NilValue */
-                    ev_el = EVALV (CAR(h), rho, i >= n || i < m ? varpend
+                    ev_el = evalv (CAR(h), rho, i >= n || i < m ? varpend
                                                  : varpend | VARIANT_GRADIENT);
                     i += 1;
                     ev = cons_with_tag (ev_el, R_NilValue, TAG(h));
