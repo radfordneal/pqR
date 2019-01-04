@@ -1932,6 +1932,8 @@ static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
    defined.  There arguments should be simple variables - avoid calling 
    anything, and avoid any side effects.
 
+   UNPROTECT_PROTECT(x) is the same as UNPROTECT(1); PROTECT(x), but faster.
+
    Defining USE_FAST_PROTECT_MACROS in source files outside src/main may
    cause problems at link time. 
 
@@ -1978,6 +1980,9 @@ extern R_NORETURN void Rf_unprotect_error (void);
 #else  /* no underflow check */
 #define UNPROTECT(n) ((void) (R_PPStackTop -= (n)))
 #endif
+
+#undef UNPROTECT_PROTECT
+#define UNPROTECT_PROTECT(s) (R_PPStack[R_PPStackTop] = (s))
 
 #undef  PROTECT_WITH_INDEX
 #define PROTECT_WITH_INDEX(x,i) \
