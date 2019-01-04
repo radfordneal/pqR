@@ -86,7 +86,7 @@ static void NaN_warningcall (SEXP call)
    not this macro. */
 
 #define DUPLICATE_ATTRIB(_to_,_from_) do { \
-    if (ATTRIB((_to_))!=ATTRIB((_from_)) || OBJECT((_from_))) \
+    if (ATTRIB_W((_to_))!=ATTRIB_W((_from_)) || OBJECT((_from_))) \
         (DUPLICATE_ATTRIB)((_to_),(_from_)); \
 } while (0)
 
@@ -2690,8 +2690,8 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
 
     Dcall = math2_table[ix].Dcall;
 
-    SEXP a1 = CAR(args); SEXP g1 = ATTRIB(args); args = CDR(args);
-    SEXP a2 = CAR(args); SEXP g2 = ATTRIB(args); args = CDR(args);
+    SEXP a1 = CAR(args); SEXP g1 = ATTRIB_W(args); args = CDR(args);
+    SEXP a2 = CAR(args); SEXP g2 = ATTRIB_W(args); args = CDR(args);
 
     if (!isNumeric(a1) || !isNumeric(a2))
         non_numeric_errorcall(call);
@@ -3244,9 +3244,9 @@ SEXP do_math3 (SEXP call, SEXP op, SEXP args, SEXP env)
 
     Dcall = math3_table[ix].Dcall;
 
-    SEXP a1 = CAR(args); SEXP g1 = ATTRIB(args); args = CDR(args);
-    SEXP a2 = CAR(args); SEXP g2 = ATTRIB(args); args = CDR(args);
-    SEXP a3 = CAR(args); SEXP g3 = ATTRIB(args); args = CDR(args);
+    SEXP a1 = CAR(args); SEXP g1 = ATTRIB_W(args); args = CDR(args);
+    SEXP a2 = CAR(args); SEXP g2 = ATTRIB_W(args); args = CDR(args);
+    SEXP a3 = CAR(args); SEXP g3 = ATTRIB_W(args); args = CDR(args);
 
     if (!isNumeric(a1) || !isNumeric(a2) || !isNumeric(a3))
         non_numeric_errorcall(call);

@@ -708,7 +708,7 @@ static inline SEXP handle_symbol (SEXP res, SEXP sym, int variant)
             return res;
         if (HAS_ATTRIB(cell)) {
             R_variant_result = VARIANT_GRADIENT_FLAG;
-            R_gradient = ATTRIB(cell);
+            R_gradient = ATTRIB_W(cell);
         }
         if (variant & VARIANT_PENDING_OK)
             return res;
@@ -890,7 +890,7 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
                 return res;
             if (HAS_ATTRIB(e)) {
                 R_variant_result = VARIANT_GRADIENT_FLAG;
-                R_gradient = ATTRIB(e);
+                R_gradient = ATTRIB_W(e);
             }
             if (variant & VARIANT_PENDING_OK)
                 return res;
@@ -912,7 +912,7 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
             if ( ! (variant & VARIANT_GRADIENT))
                 return res;
             R_variant_result = VARIANT_GRADIENT_FLAG;
-            R_gradient = ATTRIB(e);
+            R_gradient = ATTRIB_W(e);
             if (variant & VARIANT_PENDING_OK)
                 return res;
         }
@@ -1030,7 +1030,7 @@ SEXP forcePromise_v (SEXP e, int variant) /* e protected here if necessary */
                 return r;
             if (HAS_ATTRIB(e)) {
                 R_variant_result = VARIANT_GRADIENT_FLAG;
-                R_gradient = ATTRIB(e);
+                R_gradient = ATTRIB_W(e);
             }
             if (variant & VARIANT_PENDING_OK)
                 return r;
