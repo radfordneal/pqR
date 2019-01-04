@@ -2618,6 +2618,23 @@ static void Ddpois (double x, double lambda, double *dx /*ignored*/,
     }
 }
 
+static void Dppois (double x, double lambda, double *dx /*ignored*/, 
+                    double *dlambda, double v, int lower_tail, int log_p)
+{
+    if (!dlambda) return;
+
+    if (x < 0 || lambda < 0)
+        *dlambda = 0;
+    else {
+
+        double d = dpois(x,lambda,FALSE);
+        *dlambda = lower_tail ? -d : d;
+
+        if (log_p)
+            *dlambda *= exp(-v);
+    }
+}
+
 /* Allocate work array for Bessel functions. */
 
 static double *Bessel_work_array (int n2, double *ap2)
@@ -2653,7 +2670,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math2_table[31] = {
     { pgeom,	Dpgeom },
     { qgeom,	0 /* discrete */ },
     { dpois,	Ddpois },
-    { ppois,	0 },
+    { ppois,	Dppois },
     { qpois,	0 /* discrete */ },
     { dt,	0 },
     { pt,	0 },

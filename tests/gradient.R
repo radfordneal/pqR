@@ -379,6 +379,11 @@ test2i(pgeom,log=TRUE,lower=FALSE)
 test2i(dpois)
 test2i(dpois,log=TRUE)
 
+test2i(ppois)
+test2i(ppois,log=TRUE)
+test2i(ppois,lower=FALSE)
+test2i(ppois,log=TRUE,lower=FALSE)
+
 test3(dbeta)
 test3(dbeta,log=TRUE)
 test3w(dbeta)

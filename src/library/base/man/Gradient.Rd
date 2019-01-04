@@ -148,7 +148,7 @@ gamma, lgamma, digamma, trigamma, beta, lbeta \cr
 dunif, punif, qunif, runif \cr
 dexp, pexp, qexp, rexp \cr
 dgeom, pgeom \cr
-dpois \cr
+dpois, ppois \cr
 dbeta \cr
 dbinom \cr
 pcauchy, qcauchy, rcauchy \cr
