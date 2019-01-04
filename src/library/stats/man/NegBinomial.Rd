@@ -37,8 +37,8 @@ rnbinom(n, size, prob, mu)
   \item{log.p}{logical; if TRUE, the quantile function takes the
     log of the tail probability, or the distribution function returns the
     log of the tail probability. Does not alter the meaning of \code{prob}.}
-  \item{lower.tail}{logical; if TRUE (default), tail probabilities are
-    \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
+  \item{lower.tail}{logical; if TRUE (which is the default), tail probabilities
+    are \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
 }
 \details{
   The negative binomial distribution with \code{size} \eqn{= n} and

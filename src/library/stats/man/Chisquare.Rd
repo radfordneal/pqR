@@ -34,8 +34,8 @@ rchisq(n, df, ncp=0)
   \item{log.p}{logical; if TRUE, the quantile function takes the
     log of the tail probability, or the distribution function returns the
     log of the tail probability.}
-  \item{lower.tail}{logical; if TRUE (default), tail probabilities are
-    \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
+  \item{lower.tail}{logical; if TRUE (which is the default), tail probabilities
+    are \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.}
 }
 \value{
   \code{dchisq} gives the density, \code{pchisq} gives the distribution

@@ -24,7 +24,7 @@
   \item Fixed the misleading/ambiguous/incorrect/incomprehensible documentation
         on the \code{log}, \code{log.p}, and \code{lower.tail} arguments of
         all the density, distribution, and quantile functions for standard
-        distributions (eg, \code{dgeom}, \code{pgeom}, \code{qgeom}, etc.).
+        distributions (eg, \code{dgeom}, \code{pgeom}, \code{qgeom}).
   \item Fixed a bug involving the "scalar stack" that could affect evaluation 
         of arithmetic operations when deep recursion has occurred.
   }}
