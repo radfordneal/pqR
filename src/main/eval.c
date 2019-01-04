@@ -154,8 +154,7 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             if ( ! (variant & VARIANT_PENDING_OK))
                 WAIT_UNTIL_COMPUTED(R_ReturnedValue);
 	}
-	UNPROTECT(1);
-	PROTECT(expr);
+	UNPROTECT_PROTECT(expr);
 	endcontext(&cntxt);
     }
     else if (TYPEOF(expr) == EXPRSXP) {
@@ -184,8 +183,7 @@ static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             if ( ! (variant & VARIANT_PENDING_OK))
                 WAIT_UNTIL_COMPUTED(R_ReturnedValue);
 	}
-	UNPROTECT(1);
-	PROTECT(tmp);
+	UNPROTECT_PROTECT(tmp);
         R_Srcref = savedsrcref;
 	endcontext(&cntxt);
 	expr = tmp;
@@ -1075,8 +1073,7 @@ static SEXP attribute_noinline Rf_builtin_op_no_cntxt(SEXP op, SEXP e, SEXP rho,
                     R_variant_result &= ~VARIANT_UNCLASS_FLAG;
                 }
                 else {
-                    UNPROTECT(1);
-                    PROTECT(args = CONS(arg1,R_NilValue));
+                    UNPROTECT_PROTECT(args = CONS(arg1,R_NilValue));
                     goto not_fast;
                 }
             }
@@ -1566,8 +1563,7 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         if (inherits_CHAR (val, R_factor_CHARSXP)) {
             val = asCharacterFactor(val);
-            UNPROTECT(1);
-            PROTECT(val);
+            UNPROTECT_PROTECT(val);
         }
 
         n = length(val);
@@ -3609,7 +3605,54 @@ static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
    Note that if there are less than two arguments, the missing ones will
    appear here to be R_NilValue (since CAR(R_NilValue) is R_NilValue).
 
-   The args and env arguments must be protected by the caller. */
+   The args and env arguments must be protected by the caller. 
+
+   Two non-inlined routines below are used for the uncommon cases where
+   operands are objects. */
+
+static attribute_noinline SEXP scalar_stack_eval2_xobj 
+ (SEXP x, SEXP args, SEXP env)  /* x protect at start, unprotected here */
+{
+    /* If first argument is an object, we evaluate the rest of the
+       arguments (actually, at most one) normally. */
+
+    SEXP argsevald;
+    INC_NAMEDCNT(x);
+    argsevald = evalList (CDR(args), env);
+    argsevald = cons_with_tag (x, argsevald, TAG(args));
+    DEC_NAMEDCNT(x);
+    UNPROTECT(1); /* x */
+    WAIT_UNTIL_COMPUTED(x);
+    return argsevald;
+}
+
+static attribute_noinline SEXP scalar_stack_eval2_yobj 
+ (SEXP x, SEXP y, SEXP args, SEXP env) /* x protect at start, unprotected here*/
+{
+    /* If the second argument is an object, we have to duplicate the
+       first arg if it is on the scalar stack, or an unclassed object,
+       and create the list of evaluated arguments. */
+
+    if (ON_SCALAR_STACK(x) || isObject(x)) /* can't be both */ {
+        UNPROTECT_PROTECT(y); /* unprotects x */
+        if (ON_SCALAR_STACK(x)) {
+            POP_SCALAR_STACK(x);
+            x = duplicate(x);
+        }
+        else { /* isObject(x) */
+            x = Rf_makeUnclassed(x);
+        }
+        UNPROTECT_PROTECT(x); /* unprotects y */
+    }
+
+    /* should not be any more arguments */
+    SEXP argsevald;
+    argsevald = cons_with_tag (y, R_NilValue, TAG(CDR(args)));
+    argsevald = cons_with_tag (x, argsevald, TAG(args));
+    UNPROTECT(1); /* x */
+    WAIT_UNTIL_COMPUTED_2(x,y);
+    return argsevald;
+}
 
 static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
                                        int *obj, SEXP env)
@@ -3641,21 +3684,11 @@ static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
              VARIANT_SCALAR_STACK_OK | VARIANT_UNCLASS | VARIANT_PENDING_OK));
 
     if (isObject(x)) {
-
         if (! (R_variant_result & VARIANT_UNCLASS_FLAG)) {
-
-            /* If first argument is an object, we evaluate the rest of
-               the arguments (actually, at most one) normally. */
-
+            argsevald = scalar_stack_eval2_xobj (x, args, env);
+            y = CADR(argsevald);
             ob = 1;  /* x is an object, not unclassed */
-            INC_NAMEDCNT(x);
-            argsevald = evalList (CDR(args), env);
-            DEC_NAMEDCNT(x);
-            y = CAR(argsevald);
             if (isObject(y)) ob |= 2;
-            argsevald = cons_with_tag (x, argsevald, TAG(args));
-            UNPROTECT(1); /* x */
-            WAIT_UNTIL_COMPUTED(x);
             goto rtrn;
         }
     }
@@ -3683,35 +3716,11 @@ static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
     }
 
     if (isObject(y)) {
-
         if (! (R_variant_result & VARIANT_UNCLASS_FLAG)) {
-
-            /* If the second argument is an object, we have to
-               duplicate the first arg if it is on the scalar stack,
-               or an unclassed object, and create the list of
-               evaluated arguments. */
-
+            argsevald = scalar_stack_eval2_yobj (x, y, args, env);
+            x = CAR(argsevald);
+            y = CADR(argsevald);
             ob = 2;  /* y is an object, not unclassed */
-            if (ON_SCALAR_STACK(x) || isObject(x)) /* can't be both */ {
-                UNPROTECT(1); /* x */
-                PROTECT(y);
-                if (ON_SCALAR_STACK(x)) {
-                    POP_SCALAR_STACK(x);
-                    x = duplicate(x);
-                }
-                else { /* isObject(x) */
-                    x = Rf_makeUnclassed(x);
-                }
-                PROTECT(x);
-            }
-            else
-                PROTECT(y);
-
-            /* should not be any more arguments */
-            argsevald = cons_with_tag (y, R_NilValue, TAG(CDR(args)));
-            argsevald = cons_with_tag (x, argsevald, TAG(args));
-            UNPROTECT(2); /* x & y */
-            WAIT_UNTIL_COMPUTED_2(x,y);
             goto rtrn;
         }
     }
@@ -5182,8 +5191,7 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         /* Method dispatch has failed, we now */
         /* run the generic internal code. */
 
-        UNPROTECT(1);
-        PROTECT(ans);
+        UNPROTECT_PROTECT(ans);
 
         SEXP x = CAR(ans);
         args = CDR(ans);
