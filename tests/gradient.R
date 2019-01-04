@@ -392,6 +392,11 @@ test3w(dbeta,log=TRUE)
 test3v(dbinom)
 test3v(dbinom,log=TRUE)
 
+test3(dcauchy)
+test3(dcauchy,log=TRUE)
+test3z(dcauchy)
+test3z(dcauchy,log=TRUE)
+
 test3(pcauchy)
 test3(pcauchy,log=TRUE)
 test3(pcauchy,lower=FALSE)

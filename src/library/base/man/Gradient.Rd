@@ -151,7 +151,7 @@ dgeom, pgeom \cr
 dpois, ppois \cr
 dbeta \cr
 dbinom \cr
-pcauchy, qcauchy, rcauchy \cr
+dcauchy, pcauchy, qcauchy, rcauchy \cr
 dnorm, pnorm, qnorm, rnorm \cr
 rlnorm \cr
 dlogis, plogis, qlogis, rlogis \cr

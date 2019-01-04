@@ -2900,6 +2900,31 @@ static void Ddbinom (double x, double n, double p,
     }
 }
 
+static void Ddcauchy (double x, double location, double scale, 
+                      double *dx, double *dlocation, double *dscale,
+                      double v, int give_log)
+{
+    if (!R_FINITE(v)) {
+        if (dx) *dx = 0;
+        if (dlocation) *dlocation = 0;
+        if (dscale) *dscale = 0;
+    }
+    else {
+        double x0 = (x - location) / scale;
+        double f = 1 + x0*x0;
+        if (give_log) {
+            if (dx) *dx = -2*x0 / (f*scale);
+            if (dlocation) *dlocation = 2*x0 / (f*scale);
+            if (dscale) *dscale = (x0*x0-1) / (f*scale);
+        }
+        else {
+            if (dx) *dx = -2*v*x0 / (f*scale);
+            if (dlocation) *dlocation = 2*v*x0 / (f*scale);
+            if (dscale) *dscale = v * (x0*x0-1) / (f*scale);
+        }
+    }
+}
+
 static void Dpcauchy (double q, double location, double scale, 
                       double *dq, double *dlocation, double *dscale,
                       double v, int lower_tail, int log_p)
@@ -3202,7 +3227,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { dbinom,	Ddbinom },
     { pbinom,	0 },
     { qbinom,	0 /* discrete */ },
-    { dcauchy,	0 },
+    { dcauchy,	Ddcauchy },
     { pcauchy,	Dpcauchy },
     { qcauchy,	Dqcauchy },
     { df,	0 },
