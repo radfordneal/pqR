@@ -690,7 +690,7 @@ static inline SEXP handle_symbol (SEXP res, SEXP sym, int variant)
 	else
 	    res = PRVALUE_PENDING_OK(res);
     }
-    else if (TYPEOF(res) == SYMSXP && res == R_MissingArg) {
+    else if (res == R_MissingArg) {
         if ( ! (variant & VARIANT_MISSING_OK))
             if (!DDVAL(sym))  /* revert bug fix for the moment */
 		arg_missing_error(sym);
@@ -1013,7 +1013,7 @@ static SEXP attribute_noinline forcePromiseUnbound (SEXP e, int variant)
 
 SEXP forcePromise (SEXP e) /* e protected here if necessary */
 {
-    if (PRVALUE(e) == R_UnboundValue)
+    if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
         return forcePromiseUnbound(e,0);
     else
         return PRVALUE(e);
@@ -1021,7 +1021,7 @@ SEXP forcePromise (SEXP e) /* e protected here if necessary */
 
 SEXP forcePromise_v (SEXP e, int variant) /* e protected here if necessary */
 {
-    if (PRVALUE(e) == R_UnboundValue)
+    if (PRVALUE_PENDING_OK(e) == R_UnboundValue)
         return forcePromiseUnbound(e,variant);
     else {
         SEXP r = PRVALUE_PENDING_OK(e);
@@ -5428,7 +5428,8 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         /* Mostly called from do_set, with first arg an evaluated promise. */
 
-        PROTECT (x = TYPEOF(x) == PROMSXP && PRVALUE(x) != R_UnboundValue
+        PROTECT (x = TYPEOF(x) == PROMSXP 
+                      && PRVALUE_PENDING_OK(x) != R_UnboundValue
                         ? PRVALUE(x) : eval(x,rho));
         if (isObject(x)) {
             args = CONS(x,subs);
@@ -5580,8 +5581,9 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     if (into != R_DotsSymbol) {
         /* Note: mostly called from do_set, w first arg an evaluated promise */
-        into = TYPEOF(into) == PROMSXP && PRVALUE(into) != R_UnboundValue
-                 ? PRVALUE(into) : eval (into, env);
+        into = TYPEOF(into) == PROMSXP 
+                && PRVALUE_PENDING_OK(into) != R_UnboundValue
+                  ? PRVALUE(into) : eval (into, env);
         if (isObject(into)) {
             argsevald = -1;
         } 

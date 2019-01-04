@@ -2275,7 +2275,8 @@ static int isMissing_recursive(SEXP symbol, SEXP rho, struct detectcycle *dc)
 	if (IS_ACTIVE_BINDING(vl))
 	    return 0;
 	if (TYPEOF(vlv)==PROMSXP && TYPEOF(PREXPR(vlv))==SYMSXP
-             && (PRVALUE(vlv)==R_UnboundValue || PRVALUE(vlv)==R_MissingArg)) {
+             && (PRVALUE_PENDING_OK(vlv)==R_UnboundValue 
+                  || PRVALUE_PENDING_OK(vlv)==R_MissingArg)) {
             for (struct detectcycle *p = dc; p != NULL; p = p->next) {
                 if (p->prom == vlv) {
                     return 1;
