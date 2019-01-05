@@ -2689,7 +2689,7 @@ SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
    The n argument must be non-zero.  If n is 1, 2, 3, or 4, that number
    of leading arguments are evaluated with VARIANT_GRADIENT.  If n is
    5, 6, or 7, the first 1, 2, or 3 arguments are evaluated without asking 
-   for gradients, but a gradient is requested for the next argument. */
+   for gradients, but a gradient is requested for the next argument (only). */
 
 SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
 {
@@ -2716,7 +2716,8 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
     SEXP ev, ev_el;
 
     int i = 0;
-    int m = n > 4 ? n-4 : 0;
+    int m = 0;
+    if (n > 4) { m = n-4; n -= 3; }
 
     head = R_NilValue;
     tail = R_NilValue;
