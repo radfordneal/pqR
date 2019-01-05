@@ -704,7 +704,7 @@ static inline SEXP handle_symbol (SEXP res, SEXP sym, int variant)
     if (variant & (VARIANT_PENDING_OK | VARIANT_GRADIENT)) {
         if ( ! (variant & VARIANT_GRADIENT))
             return res;
-        if (HAS_ATTRIB(cell)) {
+        if (HAS_ATTRIB(cell) && (TYPEOF(cell) == LISTSXP || STORE_GRAD(cell))) {
             R_variant_result = VARIANT_GRADIENT_FLAG;
             R_gradient = ATTRIB_W(cell);
         }
@@ -3061,7 +3061,7 @@ SEXP attribute_hidden promiseArgsWithValues(SEXP el, SEXP rho, SEXP values)
             SET_PRVALUE (CAR(b), CAR(a));
             if (HAS_ATTRIB(a)) {
                 SET_STORE_GRAD (CAR(s), 1);
-                SET_ATTRIB (CAR(b), ATTRIB(a));
+                SET_ATTRIB (CAR(b), ATTRIB_W(a));
             }
             INC_NAMEDCNT (CAR(a));
         }
@@ -3077,19 +3077,22 @@ SEXP attribute_hidden promiseArgsWithValues(SEXP el, SEXP rho, SEXP values)
 
 /* Like promiseArgsWithValues except it sets only the first value.  So it
    needs the variant for creating promises for the other arguments (which
-   might require gradient). */
+   might require gradient) - BUT DOESN"T HAVE THE GRADIENT FOR THE FIRST
+   ARGUMENT AT THE MOMENT.  WILL NEED TO BE FIXED IF DISPATCHOREVAL NEEDS 
+   TO TRACK GRADIENTS. */
 
 SEXP attribute_hidden promiseArgsWith1Value (SEXP el, SEXP rho, SEXP value,
                                              int variant)
 {
-    SEXP s;
+    SEXP s, p;
     PROTECT (s = promiseArgs (el, rho, variant));
     if (s == R_NilValue) error(_("dispatch error"));
-    if (TYPEOF (CAR(s)) == PROMSXP) {
-        SET_PRVALUE (CAR(s), value);
-        if (HAS_ATTRIB(value)) {
-            SET_STORE_GRAD (CAR(s), 1);
-            SET_ATTRIB (CAR(s), ATTRIB(value));
+    p = CAR(s);
+    if (TYPEOF(p) == PROMSXP) {
+        SET_PRVALUE (p, value);
+        if (0) {  /* may sometime need to do something for gradients */
+            SET_STORE_GRAD (p, 1);
+            SET_ATTRIB (p, R_NilValue);
         }
         INC_NAMEDCNT (value);
     }

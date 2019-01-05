@@ -2806,7 +2806,7 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (n == 1 && Dcall != 0 && !ISNAN(rp[0])
                && (g1 != R_NilValue || g2 != R_NilValue)) {
-REprintf("g1: %d g2: %d\n",g1!=R_NilValue,g2!=R_NilValue);
+
         double grad1, grad2;
         double *gp1 = g1 != R_NilValue ? &grad1 : 0;
         double *gp2 = g2 != R_NilValue ? &grad2 : 0;
