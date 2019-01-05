@@ -970,8 +970,10 @@ static SEXP attribute_noinline forcePromiseUnbound (SEXP e, int variant)
         if (STORE_GRAD(e)) {
             vrnt |= VARIANT_MISSING_OK | VARIANT_GRADIENT;
             val = EVALV_NC (val, PRENV(e), vrnt);
-            if (R_variant_result & VARIANT_GRADIENT_FLAG)
+            if (R_variant_result & VARIANT_GRADIENT_FLAG) {
                 SET_ATTRIB (e, R_gradient);
+                R_variant_result = 0;
+            }
         }
         else {
             vrnt |= VARIANT_MISSING_OK;
