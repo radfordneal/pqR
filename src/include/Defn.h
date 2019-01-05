@@ -497,7 +497,7 @@ typedef struct {
     setprim_ptr->primsxp.whole \
         = (R_FunTab[setprim_value].eval/1000000)&1; \
     setprim_ptr->primsxp.gradn \
-        = (R_FunTab[setprim_value].eval/10000000)%10; \
+        = (R_FunTab[setprim_value].eval/10000000)%100; \
 } while (0)
 
 #define PRIMOFFSET(x) \

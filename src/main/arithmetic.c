@@ -3591,8 +3591,9 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-/* Mathematical Functions */
-/* primitives: these are group generic and so need to eval args (possibly internally) */
+/* Mathematical Functions of one argument.  These are primitives.
+   They are group generic and so need to eval args (possibly internally). */
+
 {"round",	do_Math2,	10001,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"signif",	do_Math2,	10004,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"log",		do_math1,	10003,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -3630,7 +3631,7 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"trigamma",	do_math1,	43,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 /* see "psigamma" below !*/
 
-/* Mathematical Functions of Two Numeric (+ 1-2 int) Variables */
+/* Mathematical Functions of Two Numeric (+ 1-2 int) Variables.  Internal. */
 
 {"atan2",	do_math2,	1,  21000011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
@@ -3644,15 +3645,15 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"qchisq",	do_math2,	8,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"dexp",	do_math2,	9,  21000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pexp",	do_math2,	10,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qexp",	do_math2,	11,  21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"pexp",	do_math2,	10, 21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qexp",	do_math2,	11, 21000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dgeom",	do_math2,	12,  51000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pgeom",	do_math2,	13,  51000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dgeom",	do_math2,	12,  101000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pgeom",	do_math2,	13,  101000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qgeom",	do_math2,	14,  1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dpois",	do_math2,	15,  51000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"ppois",	do_math2,	16,  51000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dpois",	do_math2,	15,  101000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"ppois",	do_math2,	16,  101000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qpois",	do_math2,	17,  1000011,	2+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"dt",		do_math2,	18,  21000011,	2+1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -3675,8 +3676,8 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"pbeta",	do_math3,	2,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qbeta",	do_math3,	3,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dbinom",	do_math3,	4,   61000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pbinom",	do_math3,	5,   61000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dbinom",	do_math3,	4,   191000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pbinom",	do_math3,	5,   191000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qbinom",	do_math3,	6,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"dcauchy",	do_math3,	7,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -3699,9 +3700,9 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"plogis",	do_math3,	20,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qlogis",	do_math3,	21,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dnbinom",	do_math3,	22,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnbinom",	do_math3,	23,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnbinom",	do_math3,	24,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dnbinom",	do_math3,	22,   191000011,3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnbinom",	do_math3,	23,   191000011,3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnbinom",	do_math3,	24,   1000011,  3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"dnorm",	do_math3,	25,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
 {"pnorm",	do_math3,	26,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
@@ -3715,13 +3716,13 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"pweibull",	do_math3,	32,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qweibull",	do_math3,	33,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dnchisq",	do_math3,	34,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnchisq",	do_math3,	35,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnchisq",	do_math3,	36,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dnchisq",	do_math3,	34,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnchisq",	do_math3,	35,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnchisq",	do_math3,	36,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dnt",		do_math3,	37,   31000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnt",		do_math3,	38,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
-{"qnt",		do_math3,	39,   31000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dnt",		do_math3,	37,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnt",		do_math3,	38,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"qnt",		do_math3,	39,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"dwilcox",	do_math3,	40,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
 {"pwilcox",	do_math3,	41,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},

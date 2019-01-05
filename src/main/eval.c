@@ -2684,15 +2684,17 @@ SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
 } /* evalList_v */
 
 
-/* Version of evalList_v that also asks for gradients of some arguments,
-   attaching them as attributes of the CONS cells holding the arguments.
-   The n argument must be non-zero.  If n is 1, 2, 3, or 4, that number
-   of leading arguments are evaluated with VARIANT_GRADIENT.  If n is
-   5, 6, or 7, the first 1, 2, or 3 arguments are evaluated without asking 
-   for gradients, but a gradient is requested for the next argument (only). */
+/* Version of evalList_v that also asks for gradients of some arguments, 
+   attaching them as attributes of the CONS cells holding the
+   arguments.  The n argument must be non-zero, with n&7 being number
+   of arguments that might have gradient, and n>>3 being number of
+   initial arguments that don't.  Will always have (n>>3) < (n&7). */
 
 SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
 {
+    int m = n>>3;
+    n &= 7;
+
     /* Handle 0 or 1 arguments (not ...) specially, for speed. */
 
     if (CDR(el) == R_NilValue) { /* Note that CDR(R_NilValue) == R_NilValue */
@@ -2700,7 +2702,7 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
             return R_NilValue;
         if (CAR(el) != R_DotsSymbol) {
             SEXP r = cons_with_tag (EVALV (CAR(el), rho,
-                       n > 4 ? variant : variant | VARIANT_GRADIENT), 
+                       m > 0 ? variant : variant | VARIANT_GRADIENT), 
                        R_NilValue, TAG(el));
             if (R_variant_result & VARIANT_GRADIENT_FLAG)
                 SET_ATTRIB (r, R_gradient);
@@ -2716,8 +2718,6 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
     SEXP ev, ev_el;
 
     int i = 0;
-    int m = 0;
-    if (n > 4) { m = n-4; n -= 3; }
 
     head = R_NilValue;
     tail = R_NilValue;

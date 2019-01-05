@@ -379,8 +379,9 @@ struct primsxp_struct {    /* table offset of this and other info is in gp  */
     unsigned int whole:1;     /* Do special processing for .Internal
                                  when VARIANT_WHOLE_BODY (BUILTIN only) */
     unsigned int padbit:1;
-    unsigned int gradn:3;     /* # of internal args that might have gradient,
-                                 (with fudge, see 'eval' field in names.c) */
+    unsigned int gradn:5;     /* gradn&7 is # of internal arguments that might 
+                                 have gradient; gradn>>3 is number of initial
+                                 args that don't have gradient. See names.c */
 #if USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
     int32_t padding1, padding2;
 #endif
