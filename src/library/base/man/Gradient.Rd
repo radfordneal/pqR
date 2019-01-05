@@ -145,16 +145,17 @@ cos, sin, tan, acos, asin, atan, atan2 \cr
 cosh, sinh, tanh, acosh, asinh, atanh \cr
 gamma, lgamma, digamma, trigamma, beta, lbeta \cr
 \cr
-dunif, punif, qunif, runif \cr
-dexp, pexp, qexp, rexp \cr
-dgeom, pgeom \cr
-dpois, ppois \cr
 dbeta \cr
 dbinom \cr
 dcauchy, pcauchy, qcauchy, rcauchy \cr
-dnorm, pnorm, qnorm, rnorm \cr
-rlnorm \cr
+dexp, pexp, qexp, rexp \cr
+dgeom, pgeom \cr
 dlogis, plogis, qlogis, rlogis \cr
+rlnorm \cr
+dnorm, pnorm, qnorm, rnorm \cr
+dpois, ppois \cr
+dt (only with no ncp parameter)\cr
+dunif, punif, qunif, runif \cr
 rweibull
 }
 }

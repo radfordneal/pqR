@@ -2635,6 +2635,29 @@ static void Dppois (double x, double lambda, double *dx /*ignored*/,
     }
 }
 
+static void Ddt (double x, double n, double *dx, double *dn,
+                 double v, int give_log)
+{
+    double f = 1 + x*x/n;
+
+    if (dx) *dx = -x/f - x/(n+x*x);  /* OK for both n->0 and n->oo */
+
+    /* Finds derivative wrt to n of
+
+          0.5*log(n/2) - log((n+1)/2) + lgamma((n+3)/2) - lgamma((n+2)/2)
+           - (n/2)*log(1+x*x/n) - 0.5*log(2*M_PI) - 0.5*log(1+x*x/n)
+     
+       See nmath/dt.c. */
+
+    if (dn) *dn = 0.5/n - 1/(n+1) + 0.5*digamma((n+3)/2) - 0.5*digamma((n+2)/2)
+                    + (0.5+0.5/n)/(1+n/(x*x)) - 0.5*log(f);
+
+    if (!give_log) {
+        if (dx) *dx *= v;
+        if (dn) *dn *= v;
+    }
+}
+
 /* Allocate work array for Bessel functions. */
 
 static double *Bessel_work_array (int n2, double *ap2)
@@ -2672,7 +2695,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math2_table[31] = {
     { dpois,	Ddpois },
     { ppois,	Dppois },
     { qpois,	0 /* discrete */ },
-    { dt,	0 },
+    { dt,	Ddt },
     { pt,	0 },
     { qt,	0 },
     { dsignrank,   0 /* discrete */ },

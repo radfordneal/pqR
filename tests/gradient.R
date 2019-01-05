@@ -384,6 +384,9 @@ test2i(ppois,log=TRUE)
 test2i(ppois,lower=FALSE)
 test2i(ppois,log=TRUE,lower=FALSE)
 
+test2(dt)
+test2(dt,log=TRUE)
+
 test3(dbeta)
 test3(dbeta,log=TRUE)
 test3w(dbeta)
