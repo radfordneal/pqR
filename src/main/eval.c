@@ -874,9 +874,9 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
     if (TYPE_ETC(e) == PROMSXP + TYPE_ET_CETERA_VEC_DOTS_TR) {
         /* forced promise, no gradient */
         res = PRVALUE_PENDING_OK(e);
-        if ( ! (variant & VARIANT_PENDING_OK))
-            WAIT_UNTIL_COMPUTED(res);
-        return res;
+        if (variant & VARIANT_PENDING_OK)
+            return res;
+        goto wait_and_return;
     }
 
     if (TYPE_ETC(e) == PROMSXP) {
@@ -893,8 +893,7 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
             if (variant & VARIANT_PENDING_OK)
                 return res;
         }
-        WAIT_UNTIL_COMPUTED(res);
-        return res;
+        goto wait_and_return;
     }
 
     if (SELF_EVAL(TYPEOF(e))) {
@@ -914,8 +913,7 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
             if (variant & VARIANT_PENDING_OK)
                 return res;
         }
-        WAIT_UNTIL_COMPUTED(res);
-        return res;
+        goto wait_and_return;
     }
 
     if (TYPE_ETC(e) == SYMSXP+TYPE_ET_CETERA_VEC_DOTS_TR) /* ... or ..1, ..2 */
@@ -929,6 +927,10 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
         dotdotdot_error();
     else
         UNIMPLEMENTED_TYPE("eval", e);
+
+  wait_and_return:
+    WAIT_UNTIL_COMPUTED(res);
+    return res;
 }
 
 
@@ -4415,8 +4417,8 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        procedures. */
 
     if (variant & VARIANT_GRADIENT) {
-        grad1 = ATTRIB(argsevald);
-        grad2 = ATTRIB(CDR(argsevald));
+        grad1 = ATTRIB_W(argsevald);
+        grad2 = ATTRIB_W(CDR(argsevald));
         goto gradient;
     }
 
@@ -4644,8 +4646,8 @@ static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* FOR NOW:  Handle gradients with the general-case R_binary procedure. */
 
     if (variant & VARIANT_GRADIENT) {
-        grad1 = ATTRIB(argsevald);
-        grad2 = ATTRIB(CDR(argsevald));
+        grad1 = ATTRIB_W(argsevald);
+        grad2 = ATTRIB_W(CDR(argsevald));
         goto gradient;
     }
 
