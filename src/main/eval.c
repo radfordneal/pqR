@@ -319,19 +319,23 @@ void begincontext(RCNTXT * cptr, int flags,
 
 /* endcontext - end an execution context. */
 
-void endcontext(RCNTXT * cptr)
+static void attribute_noinline endcontext_onexit (RCNTXT *cptr)
+{
+    SEXP s = cptr->conexit;
+    Rboolean savevis = R_Visible;
+    cptr->conexit = R_NilValue; /* prevent recursion */
+    PROTECT(s);
+    eval(s, cptr->cloenv);
+    UNPROTECT(1);
+    R_Visible = savevis;
+}
+
+void endcontext(RCNTXT *cptr)
 {
     R_HandlerStack = cptr->handlerstack;
     R_RestartStack = cptr->restartstack;
-    if (cptr->conexit != R_NilValue && cptr->cloenv != R_NilValue) {
-	SEXP s = cptr->conexit;
-	Rboolean savevis = R_Visible;
-	cptr->conexit = R_NilValue; /* prevent recursion */
-	PROTECT(s);
-	eval(s, cptr->cloenv);
-	UNPROTECT(1);
-	R_Visible = savevis;
-    }
+    if (cptr->conexit != R_NilValue && cptr->cloenv != R_NilValue)
+        endcontext_onexit(cptr);  /* not inline, since not the common case */
     R_GlobalContext = cptr->nextcontext;
 }
 
