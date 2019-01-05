@@ -2627,6 +2627,18 @@ static void Dppois (double x, double lambda, double *dx /*ignored*/,
         *dlambda = 0;
     else {
 
+        /* Sum of Poisson probabilities P(x;lambda) = lambda^x exp(-lambda) / x!
+           differentiates to similar sums of Poisson probabilities, which then
+           mostly cancel.  For example:
+
+           d/dlambda [exp(-lambda) (1 + lambda + lambda^2/2 + lambda^3/3!)]
+
+             = exp(-lambda) (1 + lambda + lambda^2/2)
+                 - exp(-lambda) (1 + lambda + lambda^2/2 + lambda^3/3!)
+
+             = - P(3;lambda)
+         */
+
         double d = dpois(x,lambda,log_p);
 
         *dlambda = log_p ? exp(d-v) : d;
@@ -2720,15 +2732,12 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
 	return complex_math2(call, op, args, env);
 
     double (*fncall)();
-    void (*Dcall)();
 
     int ix = PRIMVAL(op);
     if (ix>10000) ix = ix - 10000 + 26;  /* kludge */
     if (ix < 0 || ix > 30 || (fncall = math2_table[ix].fncall) == 0)
         errorcall (call,
                    _("unimplemented real function of %d numeric arguments"), 2);
-
-    Dcall = math2_table[ix].Dcall;
 
     SEXP a1 = CAR(args); SEXP g1 = ATTRIB_W(args); args = CDR(args);
     SEXP a2 = CAR(args); SEXP g2 = ATTRIB_W(args); args = CDR(args);
@@ -2793,9 +2802,11 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
         if (ISNAN(rp[i])) naflag = 1;
     }
 
+    void (*Dcall)() = math2_table[ix].Dcall;
+
     if (n == 1 && Dcall != 0 && !ISNAN(rp[0])
                && (g1 != R_NilValue || g2 != R_NilValue)) {
-
+REprintf("g1: %d g2: %d\n",g1!=R_NilValue,g2!=R_NilValue);
         double grad1, grad2;
         double *gp1 = g1 != R_NilValue ? &grad1 : 0;
         double *gp2 = g2 != R_NilValue ? &grad2 : 0;
@@ -3300,14 +3311,11 @@ SEXP do_math3 (SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
 
     double (*fncall)();
-    void (*Dcall)();
 
     int ix = PRIMVAL(op);
     if (ix < 0 || ix > 47 || (fncall = math3_table[ix].fncall) == 0)
         errorcall (call,
                    _("unimplemented real function of %d numeric arguments"), 3);
-
-    Dcall = math3_table[ix].Dcall;
 
     SEXP a1 = CAR(args); SEXP g1 = ATTRIB_W(args); args = CDR(args);
     SEXP a2 = CAR(args); SEXP g2 = ATTRIB_W(args); args = CDR(args);
@@ -3376,6 +3384,8 @@ SEXP do_math3 (SEXP call, SEXP op, SEXP args, SEXP env)
 
         if (ISNAN(rp[j])) naflag = 1;
     }
+
+    void (*Dcall)() = math3_table[ix].Dcall;
 
     if (n == 1 && Dcall != 0 && !ISNAN(rp[0])
                && (g1 != R_NilValue || g2 != R_NilValue || g3 != R_NilValue)) {
