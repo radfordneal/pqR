@@ -146,7 +146,7 @@ cosh, sinh, tanh, acosh, asinh, atanh \cr
 gamma, lgamma, digamma, trigamma, beta, lbeta \cr
 \cr
 dbeta \cr
-dbinom \cr
+dbinom, pbinom \cr
 dcauchy, pcauchy, qcauchy, rcauchy \cr
 dexp, pexp, qexp, rexp \cr
 dgeom, pgeom \cr

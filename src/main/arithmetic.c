@@ -2930,7 +2930,7 @@ static void Ddbinom (double x, double n, double p,
     if (dx || dn) abort();
     if (!dp) return;
 
-    if (p <= 0 || p >= 1 || x < 0 || x > n) {
+    if (n <= 0 || p <= 0 || p >= 1 || x < 0 || x > n) {
         *dp = 0;
     }
     else {
@@ -2946,12 +2946,30 @@ static void Dpbinom (double q, double n, double p,
     if (dq || dn) abort();
     if (!dp) return;
 
-    if (p <= 0 || p >= 1 || q < 0 || q > n)
+    if (n <= 0 || p <= 0 || p >= 1 || q < 0 || q > n)
         *dp = 0;
     else {
-        *dp = n * dbinom(q,n-1,p,0);
-        if (lower_tail) *dp = - *dp;
-        if (log_p) *dp /= v;
+
+        /* Derivative wrt p of tail sum of binomial (n,p) probabilities gives 
+           sum of pairs of binomial (n-1,p) probabilities, times +-n, with
+           all but one term then cancelling.  Eg:
+
+             d/dp [ P(0;3,p) + P(1;3,p) + P(2;3,p) ] =
+             d/dp [ (1-p)^3    + 3*p*(1-p)^2 + 3*p^2*(1-p) ]
+               =     0         + 3*(1-p)^2   + 3*2*p*(1-p) 
+                   - 3*(1-p)^2 - 3*2*p*(1-p) - 3*p^2       
+               =   - 3*p^2
+               =   - 3*P(2;2,p)
+         */
+
+        if (log_p) {
+            double t = dbinom(q,n-1,p,TRUE) + log(n);
+            *dp = lower_tail ? -exp(t-v) : exp(t-v);
+        }
+        else {
+            double t = dbinom(q,n-1,p,FALSE)*n;
+            *dp = lower_tail ? -t : t;
+        }
     }
 }
 
