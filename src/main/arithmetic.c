@@ -1690,8 +1690,7 @@ SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
             ans = Rf_makeUnclassed(s1);
         else {
             if (VARIANT_KIND(variant) == VARIANT_LOCAL_ASSIGN1
-              && grad1 == R_NilValue
-              && !NAMEDCNT_GT_1(s1) 
+              && !NAMEDCNT_GT_1(s1) && grad1 == R_NilValue
               && s1 == findVarInFrame3(env,CADR(call),7))
                 local_assign = 1;
             ans = local_assign || NAMEDCNT_EQ_0(s1) ? s1 : duplicate(s1);
@@ -2163,7 +2162,8 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
 
     if (TYPEOF(sa) != REALSXP)
         sa = coerceVector(sa, REALSXP); /* coercion can lose the object bit */
-    else if (VARIANT_KIND(variant)==VARIANT_LOCAL_ASSIGN1 && !NAMEDCNT_GT_1(sa)
+    else if (VARIANT_KIND(variant)==VARIANT_LOCAL_ASSIGN1 
+              && !NAMEDCNT_GT_1(sa) && grad == R_NilValue
               && sa == findVarInFrame3 (env, CADR(call), 7))
         local_assign = 1;
 

@@ -1523,9 +1523,9 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         int varnt = VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK;
 
-        if (STORE_GRAD(rho) && !opval || (variant & VARIANT_GRADIENT)) 
+        if (STORE_GRAD(rho) && !opval)
             varnt |= VARIANT_GRADIENT;
-        else if (TYPEOF(rhs) == LANGSXP) {
+        if (TYPEOF(rhs) == LANGSXP) {
             if (CADR(rhs) == lhs) 
                 varnt |= VARIANT_LOCAL_ASSIGN1;
             else if (CADDR(rhs) == lhs)
