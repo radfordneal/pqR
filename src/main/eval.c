@@ -1521,7 +1521,8 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         /* We decide whether we'll ask the right hand side evalutation to do
            the assignment, for statements like v<-exp(v), v<-v+1, or v<-2*v. */
 
-        int varnt = VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK;
+        int varnt = (VARIANT_PENDING_OK | VARIANT_SCALAR_STACK_OK)
+                      | (variant & VARIANT_GRADIENT);
 
         if (STORE_GRAD(rho) && !opval)
             varnt |= VARIANT_GRADIENT;
@@ -1532,16 +1533,15 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 varnt |= VARIANT_LOCAL_ASSIGN2;
         }
 
-        /* Evaluate the right hand side, asking for it on the scalar stack. */
+        /* Evaluate the right hand side, asking for it on the scalar stack. 
+           May also get the gradient of the rhs, in which case we let it 
+           say in R_gradient, with VARIANT_GRADIENT_FLAG in R_variant_result. */
 
         rhs = EVALV (rhs, rho, varnt);
-        if (R_variant_result) {
-            int vr = R_variant_result;
+
+        if (R_variant_result & 1) {  /* assignment done by the rhs operator. */
             R_variant_result = 0;
-            if (vr & VARIANT_GRADIENT_FLAG)
-                grad = R_gradient;
-            else /* the assignment was done by the rhs operator. */
-                goto done;
+            goto done;
         }
 
         /* Look to see if the binding for the variable can be found
@@ -1643,12 +1643,12 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
   done:
 
-    if (STORE_GRAD(rho) && !opval && R_binding_cell != R_NilValue)
-        SET_ATTRIB (R_binding_cell, grad);
-
-    if ((variant & VARIANT_GRADIENT) && grad != R_NilValue) {
-        R_variant_result = VARIANT_GRADIENT_FLAG;
-        R_gradient = grad;
+    if (STORE_GRAD(rho)) {
+        if (!opval && R_binding_cell != R_NilValue) {
+            SET_ATTRIB (R_binding_cell, 
+                        R_variant_result & VARIANT_GRADIENT_FLAG 
+                         ? R_gradient : R_NilValue);
+        }
     }
 
     R_Visible = FALSE;
