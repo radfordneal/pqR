@@ -2572,9 +2572,10 @@ static void Dqexp (double p, double scale, double *dp, double *dscale,
     }
 }
 
-static void Ddgeom (double x, double p, double *dx /*ignored*/, 
+static void Ddgeom (double x, double p, double *dx /* must be 0 */, 
                     double *dp, double v, int give_log)
 {
+    if (dx) abort();
     if (!dp) return;
 
     if (x < 0 || p <= 0 || x > 0 && p >= 1)
@@ -2586,9 +2587,10 @@ static void Ddgeom (double x, double p, double *dx /*ignored*/,
     }
 }
 
-static void Dpgeom (double q, double p, double *dq /*ignored*/, double *dp,
+static void Dpgeom (double q, double p, double *dq /* must be 0 */, double *dp,
                     double v, int lower_tail, int log_p)
 {
+    if (dq) abort();
     if (!dp) return;
 
     if (q < 0 || p <= 0)
@@ -2604,9 +2606,10 @@ static void Dpgeom (double q, double p, double *dq /*ignored*/, double *dp,
     }
 }
 
-static void Ddpois (double x, double lambda, double *dx /*ignored*/, 
+static void Ddpois (double x, double lambda, double *dx /* must be 0 */, 
                     double *dlambda, double v, int give_log)
 {
+    if (dx) abort();
     if (!dlambda) return;
 
     if (x < 0 || lambda < 0)
@@ -2618,9 +2621,10 @@ static void Ddpois (double x, double lambda, double *dx /*ignored*/,
     }
 }
 
-static void Dppois (double x, double lambda, double *dx /*ignored*/, 
+static void Dppois (double x, double lambda, double *dx /* must be 0 */, 
                     double *dlambda, double v, int lower_tail, int log_p)
 {
+    if (dx) abort();
     if (!dlambda) return;
 
     if (x < 0 || lambda < 0)
@@ -2920,17 +2924,34 @@ static void Ddbeta (double x, double a, double b,
 }
 
 static void Ddbinom (double x, double n, double p, 
-                     double *dx /*ignored*/, double *dn /*ignored*/, double *dp,
-                     double v, int give_log)
+                     double *dx /* must be 0 */, double *dn /* must be 0 */, 
+                     double *dp, double v, int give_log)
 {
+    if (dx || dn) abort();
     if (!dp) return;
 
-    if (p <= 0 || p >= 1) {
+    if (p <= 0 || p >= 1 || x < 0 || x > n) {
         *dp = 0;
     }
     else {
         double lp = x/p - (n-x)/(1-p);
         *dp = give_log ? lp : lp*v;
+    }
+}
+
+static void Dpbinom (double q, double n, double p, 
+                     double *dq /* must be 0 */, double *dn /* must be 0 */,
+                     double *dp, double v, int lower_tail, int log_p)
+{
+    if (dq || dn) abort();
+    if (!dp) return;
+
+    if (p <= 0 || p >= 1 || q < 0 || q > n)
+        *dp = 0;
+    else {
+        *dp = n * dbinom(q,n-1,p,0);
+        if (lower_tail) *dp = - *dp;
+        if (log_p) *dp /= v;
     }
 }
 
@@ -3259,7 +3280,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { pbeta,	0 },
     { qbeta,	0 },
     { dbinom,	Ddbinom },
-    { pbinom,	0 },
+    { pbinom,	Dpbinom },
     { qbinom,	0 /* discrete */ },
     { dcauchy,	Ddcauchy },
     { pcauchy,	Dpcauchy },
