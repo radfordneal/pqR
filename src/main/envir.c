@@ -87,23 +87,27 @@ static SEXP spec_name = R_NoObject;
 static void setActiveValue(SEXP fun, SEXP val)
 {
     int sv_variant_result = R_variant_result;
+    SEXP sv_gradient = R_gradient;
     SEXP arg = LCONS(R_QuoteSymbol, CONS(val, R_NilValue));
     SEXP expr = LCONS(fun, CONS(arg, R_NilValue));
-    PROTECT(expr);
+    PROTECT2(expr,sv_gradient);
     WAIT_UNTIL_COMPUTED(val);
     eval(expr, R_GlobalEnv);
-    UNPROTECT(1);
+    UNPROTECT(2);
     R_variant_result = sv_variant_result;
+    R_gradient = sv_gradient;
 }
 
 static SEXP getActiveValue(SEXP fun)
 {
     int sv_variant_result = R_variant_result;
+    SEXP sv_gradient = R_gradient;
     SEXP expr = LCONS(fun, R_NilValue);
-    PROTECT(expr);
+    PROTECT2(expr,sv_gradient);
     expr = eval(expr, R_GlobalEnv);
-    UNPROTECT(1);
+    UNPROTECT(2);
     R_variant_result = sv_variant_result;
+    R_gradient = sv_gradient;
     return expr;
 }
 
