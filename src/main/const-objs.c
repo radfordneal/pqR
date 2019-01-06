@@ -72,6 +72,7 @@
 
 #define NUM_OFFSET(o) (SGGC_SCALAR_CHUNKS*(o))
 #define CONS_OFFSET(o) (SGGC_CONS_CHUNKS*(o))
+#define SYM_OFFSET(o) (SGGC_SYM_CHUNKS*(o))
 
 
 /* Header for a scalar constant. */
@@ -216,19 +217,19 @@ R_CONST ENV_SEXPREC R_env_consts[1] = {
 
 SYM_SEXPREC R_sym_consts[3] = { 
 {
-    CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,0),
+    CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,SYM_OFFSET(0)),
     .pname = R_NilValue,
     .value = R_UnboundValue,
     .symbits = 0
 },
 {
-    CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,1),
+    CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,SYM_OFFSET(1)),
     .pname = R_NilValue,
     .value = R_UnboundValue,
     .symbits = 0
 },
 {
-    CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,2),
+    CONST_HEADER(SYMSXP,R_SGGC_SYM_INDEX,SYM_OFFSET(2)),
     .pname = R_NilValue,
     .value = R_UnboundValue,
     .symbits = 0
