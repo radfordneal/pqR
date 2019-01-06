@@ -46,234 +46,6 @@
 #endif
 
 
-static SEXP VectorToPairListNamed(SEXP x)
-{
-    SEXP xptr, xnew, xnames;
-    int i, len, len_x = length(x);
-
-    PROTECT(x);
-    PROTECT(xnames = getAttrib(x, R_NamesSymbol)); 
-                       /* isn't this protected via x?  Or could be concocted? */
-
-    len = 0;
-    if (xnames != R_NilValue) {
-	for (i = 0; i < len_x; i++)
-	    if (CHAR(STRING_ELT(xnames,i))[0] != 0) len += 1;
-    }
-
-    PROTECT(xnew = allocList(len));
-
-    if (len > 0) {
-	xptr = xnew;
-	for (i = 0; i < len_x; i++) {
-	    if (CHAR(STRING_ELT(xnames,i))[0] != 0) {
-		SETCAR (xptr, VECTOR_ELT(x,i));
-		SET_TAG (xptr, install_translated (STRING_ELT(xnames,i)));
-		xptr = CDR(xptr);
-	    }
-	}
-    } 
-
-    UNPROTECT(3);
-    return xnew;
-}
-
-#define simple_as_environment(arg) (IS_S4_OBJECT(arg) && (TYPEOF(arg) == S4SXP) ? R_getS4DataSlot(arg, ENVSXP) : R_NilValue)
-
-/* "eval" and "eval.with.vis" : Evaluate the first argument */
-/* in the environment specified by the second argument. */
-
-static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
-{
-    SEXP encl, x, xptr;
-    volatile SEXP expr, env, tmp;
-
-    int frame;
-    RCNTXT cntxt;
-
-    checkArity(op, args);
-
-    expr = CAR(args);
-    env = CADR(args);
-    encl = CADDR(args);
-    if (isNull(encl)) {
-	/* This is supposed to be defunct, but has been kept here
-	   (and documented as such) */
-	encl = R_BaseEnv;
-    } else if ( !isEnvironment(encl) &&
-		!isEnvironment((encl = simple_as_environment(encl))) )
-	error(_("invalid '%s' argument"), "enclos");
-    if(IS_S4_OBJECT(env) && (TYPEOF(env) == S4SXP))
-	env = R_getS4DataSlot(env, ANYSXP); /* usually an ENVSXP */
-    switch(TYPEOF(env)) {
-    case NILSXP:
-	env = encl;     /* so eval(expr, NULL, encl) works */
-        break;
-    case ENVSXP:
-	break;
-    case LISTSXP:
-	/* This usage requires all the pairlist to be named */
-	env = NewEnvironment(R_NilValue, duplicate(CADR(args)), encl);
-        set_symbits_in_env(env);
-	break;
-    case VECSXP:
-	/* PR#14035 */
-	x = VectorToPairListNamed(CADR(args));
-	for (xptr = x ; xptr != R_NilValue ; xptr = CDR(xptr))
-	    SET_NAMEDCNT_MAX(CAR(xptr));
-	env = NewEnvironment(R_NilValue, x, encl);
-        set_symbits_in_env(env);
-	break;
-    case INTSXP:
-    case REALSXP:
-	if (length(env) != 1)
-	    error(_("numeric 'envir' arg not of length one"));
-	frame = asInteger(env);
-	if (frame == NA_INTEGER)
-	    error(_("invalid '%s' argument"), "envir");
-	env = R_sysframe(frame, R_GlobalContext);
-	break;
-    default:
-	error(_("invalid '%s' argument"), "envir");
-    }
-
-    PROTECT(env); /* may no longer be what was passed in arg */
-
-    /* isLanguage includes NILSXP, and that does not need to be evaluated,
-       so don't use isLanguage(expr) || isSymbol(expr) || isByteCode(expr) */
-    if (TYPEOF(expr) == LANGSXP || TYPEOF(expr) == SYMSXP || isByteCode(expr)) {
-	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
-	if (!SETJMP(cntxt.cjmpbuf))
-	    expr = evalv (expr, env, VARIANT_PASS_ON(variant));
-	else {
-	    expr = R_ReturnedValue;
-	    if (expr == R_RestartToken) {
-		cntxt.callflag = CTXT_RETURN;  /* turn restart off */
-		error(_("restarts not supported in 'eval'"));
-	    }
-            if ( ! (variant & VARIANT_PENDING_OK))
-                WAIT_UNTIL_COMPUTED(R_ReturnedValue);
-	}
-	UNPROTECT_PROTECT(expr);
-	endcontext(&cntxt);
-    }
-    else if (TYPEOF(expr) == EXPRSXP) {
-	int i, n;
-        int len;
-        SEXP *srcrefs;
-        getBlockSrcrefs(expr,&srcrefs,&len);
-	n = LENGTH(expr);
-	tmp = R_NilValue;
-	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
-        SEXP savedsrcref = R_Srcref;
-	if (!SETJMP(cntxt.cjmpbuf)) {
-	    for (i = 0 ; i < n ; i++) {
-                R_Srcref = getSrcref (srcrefs, len, i); 
-		tmp = evalv (VECTOR_ELT(expr, i), env, 
-                        i==n-1 ? VARIANT_PASS_ON(variant) 
-                               : VARIANT_NULL | VARIANT_PENDING_OK);
-            }
-        }
-	else {
-	    tmp = R_ReturnedValue;
-	    if (tmp == R_RestartToken) {
-		cntxt.callflag = CTXT_RETURN;  /* turn restart off */
-		error(_("restarts not supported in 'eval'"));
-	    }
-            if ( ! (variant & VARIANT_PENDING_OK))
-                WAIT_UNTIL_COMPUTED(R_ReturnedValue);
-	}
-	UNPROTECT_PROTECT(tmp);
-        R_Srcref = savedsrcref;
-	endcontext(&cntxt);
-	expr = tmp;
-    }
-    else if( TYPEOF(expr) == PROMSXP ) {
-	expr = forcePromise(expr);
-    } 
-    else 
-        ; /* expr is returned unchanged */
-
-    if (PRIMVAL(op)) { /* eval.with.vis(*) : */
-	PROTECT(expr);
-	PROTECT(env = allocVector(VECSXP, 2));
-	PROTECT(encl = allocVector(STRSXP, 2));
-	SET_STRING_ELT(encl, 0, mkChar("value"));
-	SET_STRING_ELT(encl, 1, mkChar("visible"));
-	SET_VECTOR_ELT(env, 0, expr);
-	SET_VECTOR_ELT(env, 1, ScalarLogicalMaybeConst(R_Visible));
-	setAttrib(env, R_NamesSymbol, encl);
-	expr = env;
-	UNPROTECT(3);
-    }
-
-    UNPROTECT(1);
-    return expr;
-}
-
-/* This is a special .Internal */
-static SEXP do_withVisible(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    SEXP x, nm, ret;
-
-    checkArity(op, args);
-    x = CAR(args);
-    x = eval(x, rho);
-    PROTECT(x);
-    PROTECT(ret = allocVector(VECSXP, 2));
-    PROTECT(nm = allocVector(STRSXP, 2));
-    SET_STRING_ELT(nm, 0, mkChar("value"));
-    SET_STRING_ELT(nm, 1, mkChar("visible"));
-    SET_VECTOR_ELT(ret, 0, x);
-    SET_VECTOR_ELT(ret, 1, ScalarLogicalMaybeConst(R_Visible));
-    setAttrib(ret, R_NamesSymbol, nm);
-    UNPROTECT(3);
-    return ret;
-}
-
-/* This is a special .Internal */
-static SEXP do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    RCNTXT *cptr;
-    SEXP s, ans ;
-    cptr = R_GlobalContext;
-    /* get the args supplied */
-    while (cptr != NULL) {
-	if (cptr->callflag == CTXT_RETURN && cptr->cloenv == rho)
-	    break;
-	cptr = cptr->nextcontext;
-    }
-    if (cptr != NULL) {
-	args = cptr->promargs;
-    }
-    /* get the env recall was called from */
-    s = R_GlobalContext->sysparent;
-    while (cptr != NULL) {
-	if (cptr->callflag == CTXT_RETURN && cptr->cloenv == s)
-	    break;
-	cptr = cptr->nextcontext;
-    }
-    if (cptr == NULL)
-	error(_("'Recall' called from outside a closure"));
-
-    /* If the function has been recorded in the context, use it
-       otherwise search for it by name or evaluate the expression
-       originally used to get it.
-    */
-    if (cptr->callfun != R_NilValue)
-	PROTECT(s = cptr->callfun);
-    else if( TYPEOF(CAR(cptr->call)) == SYMSXP)
-	PROTECT(s = findFun(CAR(cptr->call), cptr->sysparent));
-    else
-	PROTECT(s = eval(CAR(cptr->call), cptr->sysparent));
-    if (TYPEOF(s) != CLOSXP) 
-    	error(_("'Recall' called from outside a closure"));
-    ans = applyClosure_v(cptr->call, s, args, cptr->sysparent, NULL, 0);
-    UNPROTECT(1);
-    return ans;
-}
-
-
 /* -------------------------------------------------------------------------- */
 /*                CONTEXT PROCEDURES - others are in context.c                */
 
@@ -1115,291 +887,6 @@ static SEXP attribute_noinline Rf_builtin_op_no_cntxt(SEXP op, SEXP e, SEXP rho,
     return res;
 }
 
-/* 'supplied' is an array of SEXP values, first a set of pairs of tag and
-   value, then a pairlist of tagged values (or R_NilValue).  If NULL, no
-   extras supplied. */
-
-SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
-                                     SEXP *supplied, int variant)
-{
-    int vrnt = VARIANT_PENDING_OK | VARIANT_DIRECT_RETURN | VARIANT_WHOLE_BODY
-                 | VARIANT_PASS_ON(variant);
-
-    if (variant & VARIANT_NOT_WHOLE_BODY)
-        vrnt &= ~VARIANT_WHOLE_BODY;
-
-    SEXP actuals, savedsrcref, newrho;
-    RCNTXT cntxt;
-
-    /*  Set up a context with the call in it for use if an error occurs below
-        in matchArgs or from running out of memory (eg, in NewEnvironment). 
-        Note that this also protects call, rho, arglist, and op. */
-
-    begincontext(&cntxt, CTXT_RETURN, call, CLOENV(op), rho, arglist, op);
-
-    savedsrcref = R_Srcref;  /* saved in context for longjmp, and protection */
-
-    /*  Build a list which matches the actual (unevaluated) arguments
-        to the formal paramters.  Build a new environment which
-        contains the matched pairs.  Note that actuals is protected via
-        newrho. */
-
-    actuals = matchArgs_pairlist (FORMALS(op), arglist, call);
-    PROTECT(newrho = NewEnvironment(R_NilValue, actuals, CLOENV(op)));
-        /* no longer passes formals, since matchArg now puts tags in actuals */
-    if (variant & VARIANT_GRADIENT)
-        SET_STORE_GRAD (newrho, STORE_GRAD(rho));
-
-    /* This piece of code is destructively modifying the actuals list,
-       which is now also the list of bindings in the frame of newrho.
-       This is one place where internal structure of environment
-       bindings leaks out of envir.c.  It should be rewritten
-       eventually so as not to break encapsulation of the internal
-       environment layout.  We can live with it for now since it only
-       happens immediately after the environment creation.  LT */
-
-    R_symbits_t bits = 0;
-
-    SEXP f = FORMALS(op);
-    SEXP a = actuals;
-    while (a != R_NilValue) {
-        SEXP t = TAG(a);
-        bits |= SYMBITS(t);
-        if (MISSING(a)) {
-            if (CAR(f) != R_MissingArg) {
-                SETCAR(a, mkPROMISE(CAR(f), newrho));
-                SET_MISSING(a, 2);
-            }
-        }
-        else { 
-            /* optimize assuming non-missing arguments are usually referenced */
-            LASTSYMENV(t) = SEXP32_FROM_SEXP(newrho);
-            LASTSYMBINDING(t) = a;
-        }
-        a = CDR(a);
-        f = CDR(f);
-    }
-
-    SET_ENVSYMBITS (newrho, bits);
-
-    /* set_symbits_in_env (newrho); */  /* now done in loop above */
-
-    /*  Fix up any extras that were supplied by usemethod. */
-
-    if (supplied != NULL) {
-        while (TYPEOF(*supplied) == SYMSXP) {
-            set_var_in_frame (*supplied, *(supplied+1), newrho, TRUE, 3);
-            supplied += 2;
-        }
-        for (SEXP t = *supplied; t != R_NilValue; t = CDR(t)) {
-            for (a = actuals; a != R_NilValue; a = CDR(a))
-                if (TAG(a) == TAG(t))
-                    break;
-            if (a == R_NilValue)
-                set_var_in_frame (TAG(t), CAR(t), newrho, TRUE, 3);
-        }
-    }
-
-    UNPROTECT(1); /* newrho, which will be protected below via revised context*/
-
-    /*  Change the previously-set-up context to have the correct environment.
-
-        If we have a generic function we need to use the sysparent of
-        the generic as the sysparent of the method because the method
-        is a straight substitution of the generic. */
-
-    if (R_GlobalContext->nextcontext->callflag == CTXT_GENERIC)
-        revisecontext (newrho, R_GlobalContext->nextcontext->sysparent);
-    else
-        revisecontext (newrho, rho);
-
-    /* Get the srcref record from the closure object */
-    
-    R_Srcref = getAttrib00(op, R_SrcrefSymbol);
-
-    SEXP body = BODY(op);
-
-    /* Debugging */
-
-    if (RDEBUG(op) | RSTEP(op))
-        body = Rf_apply_debug_setup (call, op, rho, body, newrho);
-
-    /* Set a longjmp target which will catch any explicit returns from the
-       function body that are not instead handled by VARIANT_DIRECT_RETURN.  */
-
-    SEXP res;
-
-    if ((SETJMP(cntxt.cjmpbuf))) {
-        if (R_ReturnedValue != R_RestartToken) {
-            res = R_ReturnedValue;
-            goto evald;
-        }
-        cntxt.callflag = CTXT_RETURN;  /* turn restart off */
-        R_ReturnedValue = R_NilValue;  /* remove restart token */
-    }
-
-    res = evalv (body, newrho, vrnt);
-
-  evald: 
-    PROTECT(res);
-
-    R_variant_result &= ~VARIANT_RTN_FLAG;
-
-    R_Srcref = savedsrcref;
-    endcontext(&cntxt);
-
-    if ( ! (variant & VARIANT_PENDING_OK))
-        WAIT_UNTIL_COMPUTED(res);
-
-    if (RDEBUG(op))
-        Rf_apply_debug_finish (call, rho);
-
-    UNPROTECT(1); /* res */
-    return res;
-}
-
-SEXP applyClosure (SEXP call, SEXP op, SEXP arglist, SEXP rho, 
-                   SEXP *supplied)
-{
-    if (supplied != NULL) error("Last argument to applyClosure must be NULL");
-    return applyClosure_v (call, op, arglist, rho, NULL, 0);
-}
-
-/* **** FIXME: This code is factored out of applyClosure.  If we keep
-   **** it we should change applyClosure to run through this routine
-   **** to avoid code drift. */
-static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
-			  SEXP newrho)
-{
-    volatile SEXP body;
-    SEXP savedsrcref;
-    RCNTXT cntxt;
-
-    body = BODY(op);
-
-    begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
-    savedsrcref = R_Srcref;  /* saved in context for longjmp, and protection */
-
-    /* Get the srcref record from the closure object.  Disable for now
-       at least, since it's not clear that it's needed. */
-    
-    R_Srcref = R_NilValue;  /* was: getAttrib(op, R_SrcrefSymbol); */
-
-    /* Debugging */
-
-    if (RDEBUG(op) | RSTEP(op))
-        body =  Rf_apply_debug_setup (call, op, rho, body, newrho);
-
-    /*  Set a longjmp target which will catch any explicit returns
-        from the function body.  */
-
-    SEXP res;
-
-    if ((SETJMP(cntxt.cjmpbuf))) {
-        if (R_ReturnedValue != R_RestartToken) {
-            res = R_ReturnedValue;
-            goto evald;
-        }
-        cntxt.callflag = CTXT_RETURN;  /* turn restart off */
-        R_ReturnedValue = R_NilValue;  /* remove restart token */
-    }
-
-    res = evalv(body, newrho, 0);
-
-  evald:
-    PROTECT(res);
-
-    R_Srcref = savedsrcref;
-    endcontext(&cntxt);
-
-    if (RDEBUG(op))
-        Rf_apply_debug_finish (call, rho);
-
-    UNPROTECT(1);  /* res */
-    return res;
-}
-
-/* **** FIXME: Temporary code to execute S4 methods in a way that
-   **** preserves lexical scope. */
-
-/* called from methods_list_dispatch.c */
-SEXP R_execMethod(SEXP op, SEXP rho)
-{
-    SEXP call, arglist, callerenv, newrho, next, val;
-    RCNTXT *cptr;
-
-    /* create a new environment frame enclosed by the lexical
-       environment of the method */
-    PROTECT(newrho = Rf_NewEnvironment(R_NilValue, R_NilValue, CLOENV(op)));
-
-    /* copy the bindings for the formal environment from the top frame
-       of the internal environment of the generic call to the new
-       frame.  need to make sure missingness information is preserved
-       and the environments for any default expression promises are
-       set to the new environment.  should move this to envir.c where
-       it can be done more efficiently. */
-    for (next = FORMALS(op); next != R_NilValue; next = CDR(next)) {
-        SEXP symbol =  TAG(next);
-	R_varloc_t loc;
-	int missing;
-	loc = R_findVarLocInFrame(rho,symbol);
-	if (loc == R_NoObject)
-	    error(_("could not find symbol \"%s\" in environment of the generic function"),
-		  CHAR(PRINTNAME(symbol)));
-	missing = R_GetVarLocMISSING(loc);
-	val = R_GetVarLocValue(loc);
-	SET_FRAME(newrho, CONS(val, FRAME(newrho)));
-	SET_TAG(FRAME(newrho), symbol);
-	if (missing) {
-	    SET_MISSING(FRAME(newrho), missing);
-	    if (TYPEOF(val) == PROMSXP && PRENV(val) == rho) {
-		SEXP deflt;
-		SET_PRENV(val, newrho);
-		/* find the symbol in the method, copy its expression
-		 * to the promise */
-		for(deflt = CAR(op); deflt != R_NilValue; deflt = CDR(deflt)) {
-		    if(TAG(deflt) == symbol)
-			break;
-		}
-		if(deflt == R_NilValue)
-		    error(_("symbol \"%s\" not in environment of method"),
-			  CHAR(PRINTNAME(symbol)));
-		SET_PRCODE(val, CAR(deflt));
-	    }
-	}
-    }
-
-    /* copy the bindings of the spacial dispatch variables in the top
-       frame of the generic call to the new frame */
-    defineVar(R_dot_defined, findVarInFrame(rho, R_dot_defined), newrho);
-    defineVar(R_dot_Method, findVarInFrame(rho, R_dot_Method), newrho);
-    defineVar(R_dot_target, findVarInFrame(rho, R_dot_target), newrho);
-
-    /* copy the bindings for .Generic and .Methods.  We know (I think)
-       that they are in the second frame, so we could use that. */
-    defineVar(R_dot_Generic, findVar(R_dot_Generic, rho), newrho);
-    defineVar(R_dot_Methods, findVar(R_dot_Methods, rho), newrho);
-
-    /* Find the calling context.  Should be R_GlobalContext unless
-       profiling has inserted a CTXT_BUILTIN frame. */
-    cptr = R_GlobalContext;
-    if (cptr->callflag & CTXT_BUILTIN)
-	cptr = cptr->nextcontext;
-
-    /* The calling environment should either be the environment of the
-       generic, rho, or the environment of the caller of the generic,
-       the current sysparent. */
-    callerenv = cptr->sysparent; /* or rho? */
-
-    /* get the rest of the stuff we need from the current context,
-       execute the method, and return the result */
-    call = cptr->call;
-    arglist = cptr->promargs;
-    val = R_execClosure(call, op, arglist, callerenv, newrho);
-    UNPROTECT(1);
-    return val;
-}
-
 
 static SEXP do_if (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
@@ -1898,7 +1385,7 @@ static R_NORETURN SEXP do_next(SEXP call, SEXP op, SEXP args, SEXP rho,
 }
 
 
-/* Parens are now a SPECIAL, to avoid overhead of creating an arg list. 
+/* Parens are SPECIAL in order to avoid overhead of creating an arg list. 
    Care is taken to allow (...), though it is debatable whether this should 
    be considered valid. 
 
@@ -1987,66 +1474,6 @@ static SEXP do_return(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         v = evalv (a, rho, 0);
         findcontext (CTXT_BROWSER | CTXT_FUNCTION, rho, v);
     }
-}
-
-
-#define FIND_SUBASSIGN_FUNC(fun)  \
-    SUBASSIGN_FOLLOWS(fun) ? SUBASSIGN_THAT_FOLLOWS(fun) \
-                           : find_subassign_func(fun)
-
-static attribute_noinline SEXP find_subassign_func(SEXP fun)
-{
-    if (TYPE_ETC(fun) == SYMSXP) {  /* don't allow ... or ..1, ..2, etc. */
-
-        if (SUBASSIGN_FOLLOWS(fun))
-            return SUBASSIGN_THAT_FOLLOWS(fun);
-
-        char buf[40];
-        const char *fname = CHAR(PRINTNAME(fun));
-
-        if (!copy_2_strings (buf, sizeof buf, fname, "<-"))
-            error(_("overlong name in '%s'"), fname);
-
-        return install(buf);
-    }
-
-    /* Handle foo::bar and foo:::bar. */
-
-    if (TYPEOF(fun)==LANGSXP && length(fun)==3 && TYPEOF(CADDR(fun))==SYMSXP
-      && (CAR(fun)==R_DoubleColonSymbol || CAR(fun)==R_TripleColonSymbol))
-        return lang3 (CAR(fun), CADR(fun), find_subassign_func(CADDR(fun)));
-
-    error(_("invalid function in complex assignment"));
-}
-
-/* arguments of replaceCall must be protected by the caller. */
-
-static SEXP replaceCall(SEXP fun, SEXP varval, SEXP args, SEXP rhs)
-{
-    SEXP value, first;
-
-    first = value = cons_with_tag (rhs, R_NilValue, R_ValueSymbol);
-
-    if (args != R_NilValue) {
-
-        first = cons_with_tag (CAR(args), value, TAG(args));
-
-        SEXP p = CDR(args);
-        if (p != R_NilValue) {
-            PROTECT(first);
-            SEXP q = first;
-            do { 
-                SETCDR (q, cons_with_tag (CAR(p), value, TAG(p)));
-                q = CDR(q);
-                p = CDR(p);
-            } while (p != R_NilValue);
-            UNPROTECT(1);
-        }
-    }
-
-    first = LCONS (fun, CONS(varval, first));
-
-    return first;
 }
 
 
@@ -2233,6 +1660,65 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         WAIT_UNTIL_COMPUTED(rhs);
     
     return rhs;
+}
+
+#define FIND_SUBASSIGN_FUNC(fun)  \
+    SUBASSIGN_FOLLOWS(fun) ? SUBASSIGN_THAT_FOLLOWS(fun) \
+                           : find_subassign_func(fun)
+
+static attribute_noinline SEXP find_subassign_func(SEXP fun)
+{
+    if (TYPE_ETC(fun) == SYMSXP) {  /* don't allow ... or ..1, ..2, etc. */
+
+        if (SUBASSIGN_FOLLOWS(fun))
+            return SUBASSIGN_THAT_FOLLOWS(fun);
+
+        char buf[40];
+        const char *fname = CHAR(PRINTNAME(fun));
+
+        if (!copy_2_strings (buf, sizeof buf, fname, "<-"))
+            error(_("overlong name in '%s'"), fname);
+
+        return install(buf);
+    }
+
+    /* Handle foo::bar and foo:::bar. */
+
+    if (TYPEOF(fun)==LANGSXP && length(fun)==3 && TYPEOF(CADDR(fun))==SYMSXP
+      && (CAR(fun)==R_DoubleColonSymbol || CAR(fun)==R_TripleColonSymbol))
+        return lang3 (CAR(fun), CADR(fun), find_subassign_func(CADDR(fun)));
+
+    error(_("invalid function in complex assignment"));
+}
+
+/* arguments of replaceCall must be protected by the caller. */
+
+static SEXP replaceCall(SEXP fun, SEXP varval, SEXP args, SEXP rhs)
+{
+    SEXP value, first;
+
+    first = value = cons_with_tag (rhs, R_NilValue, R_ValueSymbol);
+
+    if (args != R_NilValue) {
+
+        first = cons_with_tag (CAR(args), value, TAG(args));
+
+        SEXP p = CDR(args);
+        if (p != R_NilValue) {
+            PROTECT(first);
+            SEXP q = first;
+            do { 
+                SETCDR (q, cons_with_tag (CAR(p), value, TAG(p)));
+                q = CDR(q);
+                p = CDR(p);
+            } while (p != R_NilValue);
+            UNPROTECT(1);
+        }
+    }
+
+    first = LCONS (fun, CONS(varval, first));
+
+    return first;
 }
 
 /* Complex assignment.  Made a separate, non-static, function in order
@@ -2949,659 +2435,12 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 }
 
 
-/* Create a promise to evaluate each argument.	If the argument is itself
-   a promise, it is used unchanged, except that it has its NAMEDCNT
-   incremented, and the NAMEDCNT of its value (if not unbound) incremented
-   unless it is zero.  See inside for handling of ... */
-
-#define MAKE_PROMISE(a,rho,variant) do { \
-    if (TYPEOF(a) == PROMSXP) { \
-        INC_NAMEDCNT(a); \
-        SEXP p = PRVALUE_PENDING_OK(a); \
-        if (p != R_UnboundValue && NAMEDCNT_GT_0(p)) \
-            INC_NAMEDCNT(p); \
-    } \
-    else if (a != R_MissingArg && a != R_MissingUnder) { \
-        a = mkPROMISE (a, rho); \
-        if (variant) SET_STORE_GRAD (a, 1); \
-    } \
-} while (0)
-
-SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho, int variant)
-{
-    variant &= VARIANT_GRADIENT;
-
-    /* Handle 0, 1, or 2 arguments (not ...) specially, for speed. */
-
-    if (CDR(el) == R_NilValue) {  /* Note that CDR(R_NilValue) == R_NilValue */
-        if (el == R_NilValue)
-            return el;
-        SEXP a = CAR(el);
-        if (a != R_DotsSymbol) {
-            MAKE_PROMISE(a,rho,variant);
-            return cons_with_tag (a, R_NilValue, TAG(el));
-        }
-    }
-    else if (CDDR(el) == R_NilValue) {
-        SEXP a1 = CAR(el);
-        SEXP a2 = CADR(el);
-        if (a1 != R_DotsSymbol && a2 != R_DotsSymbol) {
-            SEXP r;
-            MAKE_PROMISE(a2,rho,variant);
-            PROTECT (r = cons_with_tag (a2, R_NilValue, TAG(CDR(el))));
-            MAKE_PROMISE(a1,rho,variant);
-            r = cons_with_tag (a1, r, TAG(el));
-            UNPROTECT(1);
-            return r;
-        }
-    }
-
-    /* Handle the general case (except for el being R_NilValue, done above). */
-
-    BEGIN_PROTECT4 (head, tail, ev, h);
-
-    head = R_NilValue;
-
-    do {  /* el == R_NilValue is handled above, so always loop at least once */
-
-        SEXP a = CAR(el);
-
-	/* If we have a ... symbol, we look to see what it is bound to.
-	   If its binding is R_NilValue we just ignore it.  If it is bound
-           to a list, promises in the list (typical case) are re-used with
-           NAMEDCNT incremented, and non-promises have promises created for
-           them; the promise is then spliced into the list that is returned.
-           Anything else bound to a ... symbol is an error. */
-
-	if (a == R_DotsSymbol) {
-	    h = findVar(a, rho);
-            if (h == R_NilValue) {
-                /* nothing */
-            }
-	    else if (TYPEOF(h) == DOTSXP) {
-		while (h != R_NilValue) {
-                    a = CAR(h);
-                    MAKE_PROMISE(a,rho,variant);
-                    ev = cons_with_tag (a, R_NilValue, TAG(h));
-                    if (head==R_NilValue)
-                        head = ev;
-                    else
-                        SETCDR(tail,ev);
-                    tail = ev;
-		    h = CDR(h);
-		}
-	    }
-	    else if (h != R_MissingArg)
-		dotdotdot_error();
-	}
-        else {
-            MAKE_PROMISE(a,rho,variant);
-            ev = cons_with_tag (a, R_NilValue, TAG(el));
-            if (head == R_NilValue)
-                head = ev;
-            else
-                SETCDR_MACRO(tail, ev);
-            tail = ev;
-        }
-	el = CDR(el);
-
-    } while (el != R_NilValue);
-
-    RETURN_SEXP_INSIDE_PROTECT (head);
-    END_PROTECT;
-}
- 
-/* Create promises for arguments, with values for promises filled in.  
-   Values for arguments that don't become promises are silently ignored.  
-   This is used in method dispatch, hence the text of the error message 
-   (which should never occur).  Copies gradient info from 'values' to
-   promises in result. */
- 
-SEXP attribute_hidden promiseArgsWithValues(SEXP el, SEXP rho, SEXP values)
-{
-    SEXP s, a, b;
-
-    PROTECT (s = promiseArgs (el, rho, 0));
-
-    for (a = values, b = s; 
-         a != R_NilValue && b != R_NilValue;
-         a = CDR(a), b = CDR(b)) {
-        if (TYPEOF (CAR(b)) == PROMSXP) {
-            SET_PRVALUE (CAR(b), CAR(a));
-            if (HAS_ATTRIB(a)) {
-                SET_STORE_GRAD (CAR(s), 1);
-                SET_ATTRIB (CAR(b), ATTRIB_W(a));
-            }
-            INC_NAMEDCNT (CAR(a));
-        }
-    }
-
-    if (a == R_NilValue && b == R_NilValue) {
-        UNPROTECT(1);
-        return s;
-    }
-
-    error(_("dispatch error"));
-}
-
-/* Like promiseArgsWithValues except it sets only the first value.  So it
-   needs the variant for creating promises for the other arguments (which
-   might require gradient) - BUT DOESN"T HAVE THE GRADIENT FOR THE FIRST
-   ARGUMENT AT THE MOMENT.  WILL NEED TO BE FIXED IF DISPATCHOREVAL NEEDS 
-   TO TRACK GRADIENTS. */
-
-SEXP attribute_hidden promiseArgsWith1Value (SEXP el, SEXP rho, SEXP value,
-                                             int variant)
-{
-    SEXP s, p;
-    PROTECT (s = promiseArgs (el, rho, variant));
-    if (s == R_NilValue) error(_("dispatch error"));
-    p = CAR(s);
-    if (TYPEOF(p) == PROMSXP) {
-        SET_PRVALUE (p, value);
-        if (0) {  /* may sometime need to do something for gradients */
-            SET_STORE_GRAD (p, 1);
-            SET_ATTRIB (p, R_NilValue);
-        }
-        INC_NAMEDCNT (value);
-    }
-    UNPROTECT(1);
-    return s;
-}
-
-
-static SEXP evalArgs(SEXP el, SEXP rho, int dropmissing)
-{
-    return dropmissing ? evalList(el,rho) : evalListKeepMissing(el,rho);
-}
-
-
-/* A version of DispatchOrEval that checks for possible S4 methods for
- * any argument, not just the first.  Used in the code for `[` in
- * do_subset.  Differs in that all arguments are evaluated
- * immediately, rather than after the call to R_possible_dispatch.
- * NOT ACTUALLY USED AT PRESENT.
- */
-attribute_hidden
-int DispatchAnyOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
-		      SEXP rho, SEXP *ans, int dropmissing, int argsevald)
-{
-    if(R_has_methods(op)) {
-        SEXP argValue, el,  value; 
-	/* Rboolean hasS4 = FALSE; */ 
-	int nprotect = 0, dispatch;
-	if(!argsevald) {
-            PROTECT(argValue = evalArgs(args, rho, dropmissing));
-	    nprotect++;
-	    argsevald = TRUE;
-	}
-	else argValue = args;
-	for(el = argValue; el != R_NilValue; el = CDR(el)) {
-	    if(IS_S4_OBJECT(CAR(el))) {
-	        value = R_possible_dispatch(call, op, argValue, rho, TRUE);
-	        if (value != R_NoObject) {
-		    *ans = value;
-		    UNPROTECT(nprotect);
-		    return 1;
-	        }
-		else break;
-	    }
-	}
-	 /* else, use the regular DispatchOrEval, but now with evaluated args */
-	dispatch = DispatchOrEval(call, op, generic, argValue, rho, ans, dropmissing, argsevald);
-	UNPROTECT(nprotect);
-	return dispatch;
-    }
-    return DispatchOrEval(call, op, generic, args, rho, ans, dropmissing, argsevald);
-}
-
-
-/* DispatchOrEval is used in internal functions which dispatch to
- * object methods (e.g. "[" or "[[").  The code either builds promises
- * and dispatches to the appropriate method, or it evaluates the
- * arguments it comes in with (if argsevald is 0) and returns them so that
- * the generic built-in C code can continue.  Note that CDR(call) is
- * used to obtain the unevaluated arguments when creating promises, even
- * when argsevald is 1 (so args is the evaluated arguments).  If argsevald 
- * is -1, only the first argument will have been evaluated.
- *
- * The arg list is protected by this function, and needn't be by the caller.
- */
-attribute_hidden
-int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
-		   SEXP rho, SEXP *ans, int dropmissing, int argsevald)
-{
-/* DispatchOrEval is called very frequently, most often in cases where
-   no dispatching is needed and the isObject or the string-based
-   pre-test fail.  To avoid degrading performance it is therefore
-   necessary to avoid creating promises in these cases.  The pre-test
-   does require that we look at the first argument, so that needs to
-   be evaluated.  The complicating factor is that the first argument
-   might come in with a "..." and that there might be other arguments
-   in the "..." as well.  LT */
-
-    BEGIN_PROTECT1 (x);
-    ALSO_PROTECT1 (args);
-
-    int dots = FALSE;
-
-    if (argsevald != 0)
-	x = CAR(args);
-    else {
-	/* Find the object to dispatch on, dropping any leading
-	   ... arguments with missing or empty values.  If there are no
-	   arguments, R_NilValue is used. */
-        x = R_NilValue;
-	for (; args != R_NilValue; args = CDR(args)) {
-	    if (CAR(args) == R_DotsSymbol) {
-		SEXP h = findVar(R_DotsSymbol, rho);
-		if (TYPEOF(h) == DOTSXP) {
-#ifdef DODO
-		    /**** any self-evaluating value should be OK; this
-			  is used in byte compiled code. LT */
-		    /* just a consistency check */
-		    if (TYPEOF(CAR(h)) != PROMSXP)
-			error(_("value in '...' is not a promise"));
-#endif
-		    dots = TRUE;
-		    x = eval(CAR(h), rho);
-                    break;
-		}
-		else if (h != R_NilValue && h != R_MissingArg)
-		    dotdotdot_error();
-	    }
-	    else {
-                dots = FALSE;
-                x = eval(CAR(args), rho);
-                break;
-	    }
-	}
-    }
-
-    if (isObject(x)) { /* try to dispatch on the object */
-	char *pt;
-	/* Try for formal method. */
-	if(IS_S4_OBJECT(x) && R_has_methods(op)) {
-
-	    BEGIN_INNER_PROTECT2 (value, argValue);
-
-	    /* create a promise to pass down to applyClosure  */
-	    if (argsevald < 0)
-                argValue = promiseArgsWith1Value(CDR(call), rho, x, 0);
-            else if (argsevald == 0)
-		argValue = promiseArgsWith1Value(args, rho, x, 0);
-	    else 
-                argValue = args;
-	    /* This means S4 dispatch */
-	    value = R_possible_dispatch (call, op, argValue, rho, argsevald<=0);
-	    if (value != R_NoObject) {
-		*ans = value;
-		RETURN_OUTSIDE_PROTECT (1);
-	    }
-	    else {
-		/* go on, with the evaluated args.  Not guaranteed to have
-		   the same semantics as if the arguments were not
-		   evaluated, in special cases (e.g., arg values that are
-		   LANGSXP).
-		   The use of the promiseArgs is supposed to prevent
-		   multiple evaluation after the call to possible_dispatch.
-		*/
-		if (dots)
-		    argValue = evalArgs(argValue, rho, dropmissing);
-		else {
-		    argValue = CONS(x, evalArgs(CDR(argValue),rho,dropmissing));
-		    SET_TAG(argValue, CreateTag(TAG(args)));
-		}
-		args = argValue; 
-		argsevald = 1;
-	    }
-
-            END_INNER_PROTECT;
-	}
-	if (TYPEOF(CAR(call)) == SYMSXP)
-	    pt = Rf_strrchr(CHAR(PRINTNAME(CAR(call))), '.');
-	else
-	    pt = NULL;
-
-	if (pt == NULL || strcmp(pt,".default")) {
-
-	    BEGIN_INNER_PROTECT2 (pargs, rho1);
-	    RCNTXT cntxt;
-
-            if (argsevald > 0) {  /* handle as in R_possible_dispatch */
-                pargs = promiseArgsWithValues(CDR(call), rho, args);
-            }
-            else
-                pargs = promiseArgsWith1Value(args, rho, x, 0); 
-
-	    /* The context set up here is needed because of the way
-	       usemethod() is written.  DispatchGroup() repeats some
-	       internal usemethod() code and avoids the need for a
-	       context; perhaps the usemethod() code should be
-	       refactored so the contexts around the usemethod() calls
-	       in this file can be removed.
-
-	       Using rho for current and calling environment can be
-	       confusing for things like sys.parent() calls captured
-	       in promises (Gabor G had an example of this).  Also,
-	       since the context is established without a SETJMP using
-	       an R-accessible environment allows a segfault to be
-	       triggered (by something very obscure, but still).
-	       Hence here and in the other usemethod() uses below a
-	       new environment rho1 is created and used.  LT */
-	    rho1 = NewEnvironment(R_NilValue, R_NilValue, rho);
-	    begincontext(&cntxt, CTXT_RETURN, call, rho1, rho, pargs, op);
-	    if(usemethod(generic, x, call, pargs, rho1, rho, R_BaseEnv, 0, ans))
-	    {   endcontext(&cntxt);
-		RETURN_OUTSIDE_PROTECT (1);
-	    }
-	    endcontext(&cntxt);
-
-            END_INNER_PROTECT;
-	}
-    }
-
-    if (argsevald <= 0) {
-	if (dots)
-	    /* The first call argument was ... and may contain more than the
-	       object, so it needs to be evaluated here.  The object should be
-	       in a promise, so evaluating it again should be no problem. */
-	    args = evalArgs(args, rho, dropmissing);
-	else {
-	    args = cons_with_tag (x, evalArgs(CDR(args), rho, dropmissing),
-                                  TAG(args));
-	}
-    }
-
-    *ans = args;
-    END_PROTECT;
-    return 0;
-}
-
-
-/* gr needs to be protected on return from this function. */
-static void findmethod(SEXP Class, const char *group, const char *generic,
-		       SEXP *sxp,  SEXP *gr, SEXP *meth, int *which,
-		       SEXP rho)
-{
-    int len, whichclass;
-    char buf[512];
-
-    len = length(Class);
-
-    /* Need to interleave looking for group and generic methods
-       e.g. if class(x) is c("foo", "bar)" then x > 3 should invoke
-       "Ops.foo" rather than ">.bar"
-    */
-    for (whichclass = 0 ; whichclass < len ; whichclass++) {
-	const char *ss = translateChar(STRING_ELT(Class, whichclass));
-	if (!copy_3_strings (buf, sizeof buf, generic, ".", ss))
-	    error(_("class name too long in '%s'"), generic);
-	*meth = install(buf);
-	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
-	if (isFunction(*sxp)) {
-	    *gr = R_BlankScalarString;
-	    break;
-	}
-        if (!copy_3_strings (buf, sizeof buf, group, ".", ss))
-	    error(_("class name too long in '%s'"), group);
-	*meth = install(buf);
-	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
-	if (isFunction(*sxp)) {
-	    *gr = mkString(group);
-	    break;
-	}
-    }
-    *which = whichclass;
-}
-
-attribute_hidden
-int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
-		  SEXP *ans, int variant)
-{
-    int nargs, lwhich, rwhich, set;
-    SEXP lclass, s, t, m, lmeth, lsxp, lgr;
-    SEXP rclass, rmeth, rgr, rsxp, value;
-    char *generic;
-    Rboolean useS4 = TRUE, isOps = FALSE;
-
-    /* pre-test to avoid string computations when there is nothing to
-       dispatch on because either there is only one argument and it
-       isn't an object or there are two or more arguments but neither
-       of the first two is an object -- both of these cases would be
-       rejected by the code following the string examination code
-       below */
-    if (args != R_NilValue && ! isObject(CAR(args)) &&
-	(CDR(args) == R_NilValue || ! isObject(CADR(args))))
-	return 0;
-
-    isOps = strcmp(group, "Ops") == 0;
-
-    /* try for formal method */
-    if(length(args) == 1 && !IS_S4_OBJECT(CAR(args))) useS4 = FALSE;
-    if(length(args) == 2 &&
-       !IS_S4_OBJECT(CAR(args)) && !IS_S4_OBJECT(CADR(args))) useS4 = FALSE;
-    if(useS4) {
-	/* Remove argument names to ensure positional matching */
-	if(isOps)
-	    for(s = args; s != R_NilValue; s = CDR(s)) SET_TAG_NIL(s);
-	if(R_has_methods(op)) {
-	    value = R_possible_dispatch(call, op, args, rho, FALSE);
-            if (value != R_NoObject) {
-	        *ans = value;
-	        return 1;
-            }
-	}
-	/* else go on to look for S3 methods */
-    }
-
-    /* check whether we are processing the default method */
-    if ( isSymbol(CAR(call)) ) {
-        const char *pt;
-        pt = CHAR(PRINTNAME(CAR(call)));
-        while (*pt == '.') pt += 1;   /* duplicate previous behaviour exactly */
-        while (*pt != 0 && *pt != '.') pt += 1;
-        if (*pt != 0) {
-            while (*pt == '.') pt += 1;
-            if (strcmp(pt,"default") == 0)
-                return 0;
-        }
-    }
-
-    if(isOps)
-	nargs = length(args);
-    else
-	nargs = 1;
-
-    if( nargs == 1 && !isObject(CAR(args)) )
-	return 0;
-
-    if(!isObject(CAR(args)) && !isObject(CADR(args)))
-	return 0;
-
-    generic = PRIMNAME(op);
-
-    lclass = IS_S4_OBJECT(CAR(args)) ? R_data_class2(CAR(args))
-              : getClassAttrib(CAR(args));
-    PROTECT(lclass);
-
-    if( nargs == 2 )
-	rclass = IS_S4_OBJECT(CADR(args)) ? R_data_class2(CADR(args))
-                  : getClassAttrib(CADR(args));
-    else
-	rclass = R_NilValue;
-    PROTECT(rclass);
-
-    lsxp = R_NilValue; lgr = R_NilValue; lmeth = R_NilValue;
-    rsxp = R_NilValue; rgr = R_NilValue; rmeth = R_NilValue;
-
-    findmethod(lclass, group, generic, &lsxp, &lgr, &lmeth, &lwhich, rho);
-    PROTECT(lgr);
-    if(isFunction(lsxp) && IS_S4_OBJECT(CAR(args)) && lwhich > 0
-       && isBasicClass(translateChar(STRING_ELT(lclass, lwhich)))) {
-	/* This and the similar test below implement the strategy
-	 for S3 methods selected for S4 objects.  See ?Methods */
-        value = CAR(args);
-	if (NAMEDCNT_GT_0(value)) SET_NAMEDCNT_MAX(value);
-	value = R_getS4DataSlot(value, S4SXP); /* the .S3Class obj. or NULL*/
-	if(value != R_NilValue) /* use the S3Part as the inherited object */
-	    SETCAR(args, value);
-    }
-
-    if( nargs == 2 )
-	findmethod(rclass, group, generic, &rsxp, &rgr, &rmeth, &rwhich, rho);
-    else
-	rwhich = 0;
-
-    if(isFunction(rsxp) && IS_S4_OBJECT(CADR(args)) && rwhich > 0
-       && isBasicClass(translateChar(STRING_ELT(rclass, rwhich)))) {
-        value = CADR(args);
-	if (NAMEDCNT_GT_0(value)) SET_NAMEDCNT_MAX(value);
-	value = R_getS4DataSlot(value, S4SXP);
-	if(value != R_NilValue) SETCADR(args, value);
-    }
-
-    PROTECT(rgr);
-
-    if( !isFunction(lsxp) && !isFunction(rsxp) ) {
-	UNPROTECT(4);
-	return 0; /* no generic or group method so use default*/
-    }
-
-    if( lsxp != rsxp ) {
-	if ( isFunction(lsxp) && isFunction(rsxp) ) {
-	    /* special-case some methods involving difftime */
-	    const char *lname = CHAR(PRINTNAME(lmeth)),
-		*rname = CHAR(PRINTNAME(rmeth));
-	    if( streql(rname, "Ops.difftime") && 
-		(streql(lname, "+.POSIXt") || streql(lname, "-.POSIXt") ||
-		 streql(lname, "+.Date") || streql(lname, "-.Date")) )
-		rsxp = R_NilValue;
-	    else if (streql(lname, "Ops.difftime") && 
-		     (streql(rname, "+.POSIXt") || streql(rname, "+.Date")) )
-		lsxp = R_NilValue;
-	    else {
-		warning(_("Incompatible methods (\"%s\", \"%s\") for \"%s\""),
-			lname, rname, generic);
-		UNPROTECT(4);
-		return 0;
-	    }
-	}
-	/* if the right hand side is the one */
-	if( !isFunction(lsxp) ) { /* copy over the righthand stuff */
-	    lsxp = rsxp;
-	    lmeth = rmeth;
-	    lgr = rgr;
-	    lclass = rclass;
-	    lwhich = rwhich;
-	}
-    }
-
-    /* we either have a group method or a class method */
-
-    int i, j;
-
-    PROTECT(m = allocVector(STRSXP,nargs));
-    s = args;
-    for (i = 0 ; i < nargs ; i++) {
-	t = IS_S4_OBJECT(CAR(s)) ? R_data_class2(CAR(s))
-	  : getClassAttrib(CAR(s));
-	set = 0;
-	if (isString(t)) {
-	    for (j = 0 ; j < LENGTH(t) ; j++) {
-		if (!strcmp(translateChar(STRING_ELT(t, j)),
-			    translateChar(STRING_ELT(lclass, lwhich)))) {
-		    SET_STRING_ELT(m, i, PRINTNAME(lmeth));
-		    set = 1;
-		    break;
-		}
-	    }
-	}
-	if( !set )
-	    SET_STRING_ELT_BLANK(m, i);
-	s = CDR(s);
-    }
-
-    SEXP genstr = PROTECT(mkString(generic));
-
-    set = length(lclass) - lwhich;
-    PROTECT(t = allocVector(STRSXP, set));
-    copy_string_elements (t, 0, lclass, lwhich, set);
-
-    SEXP supplied[13];
-    supplied[0] = R_NilValue;
-
-    i = 0;
-
-    supplied[i++] = R_dot_Class;          supplied[i++] = t;
-    supplied[i++] = R_dot_Generic;        supplied[i++] = genstr;
-    supplied[i++] = R_dot_Method;         supplied[i++] = m;
-    supplied[i++] = R_dot_GenericCallEnv; supplied[i++] = rho;
-    supplied[i++] = R_dot_GenericDefEnv;  supplied[i++] = R_BaseEnv;
-    supplied[i++] = R_dot_Group;          supplied[i++] = lgr;
-
-
-    supplied[i] = R_NilValue;
-
-    PROTECT(t = LCONS(lmeth, CDR(call)));
-
-    /* The arguments have been evaluated; since we are passing them
-       out to a closure we need to wrap them in promises so that they
-       get duplicated and things like missing/substitute work.  */
-
-    PROTECT(s = promiseArgsWithValues(CDR(call), rho, args));
-    if (isOps) {
-        /* ensure positional matching for operators */
-        for (m = s; m != R_NilValue; m = CDR(m))
-            SET_TAG_NIL(m);
-    }
-
-    *ans = applyClosure_v (t, lsxp, s, rho, supplied, variant);
-
-    UNPROTECT(9);
-    return 1;
-}
-
-/* Check that each formal is a symbol.  Also used in coerce.c */
-
-void attribute_hidden CheckFormals(SEXP ls)
-{
-    if (isList(ls)) {
-	for (; ls != R_NilValue; ls = CDR(ls))
-	    if (TYPEOF(TAG(ls)) != SYMSXP)
-		goto err;
-	return;
-    }
- err:
-    error(_("invalid formal argument list for \"function\""));
-}
-
-/* Declared with a variable number of args in names.c */
-static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
-{
-    SEXP rval, srcref;
-
-    /* The following is as in 2.15.0, but it's not clear how it can happen. */
-    if (TYPEOF(op) == PROMSXP) {
-	op = forcePromise(op);
-	SET_NAMEDCNT_MAX(op);
-    }
-
-    CheckFormals(CAR(args));
-    rval = mkCLOSXP(CAR(args), CADR(args), rho);
-    srcref = CADDR(args);
-    if (srcref != R_NilValue) 
-        setAttrib(rval, R_SrcrefSymbol, srcref);
-
-    R_Visible = TRUE;
-    return rval;
-}
-
-
-/* --------------------------------------------------------------------------
-
-   Inline function used by operators that can take operands on the
-   scalar stack and can handle unclassed objects (VARIANT_UNCLASS_FLAG).
+/* -------------------------------------------------------------------------- */
+/*                          SCALAR STACK SUPPORT                              */
+
+/* scalar_stack_eval2 is an inline function used by operators that can
+   take operands on the scalar stack and can handle unclassed objects
+   (VARIANT_UNCLASS_FLAG).
 
    Evaluates two arguments that may be put on the scalar stack.  These
    two arguments are returned in arg1 and arg2, and whether they are
@@ -3760,6 +2599,535 @@ static inline SEXP scalar_stack_eval2 (SEXP args, SEXP *arg1, SEXP *arg2,
     *obj = ob;
 
     return argsevald;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/*                        ARITHMETIC OPERATORS.                               */
+/*                                                                            */
+/* All but simple cases are handled in R_unary and R_binary in arithmetic.c.  */
+/* do_arith1 handles binary and unary + and -.  do_arith2 handles the binary  */
+/* *, /, ^, %%, and %/% operators.                                            */
+
+static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+{
+    int opcode = PRIMVAL(op);
+
+    SEXP argsevald, ans, arg1, arg2, grad1, grad2;
+    SEXP sv_scalar_stack = 0;
+    int obj;
+
+    if (variant & VARIANT_GRADIENT) {
+
+        /* FOR NOW:  Evaluate by evalList_gradient if gradients are
+           desired, with any gradients being attached as attributes of
+           the CONS cells of the argument list. */
+
+        argsevald = evalList_gradient (args, env, VARIANT_PENDING_OK, 2);
+        arg1 = CAR(argsevald);
+        arg2 = CADR(argsevald);
+        obj = isObject(arg1) | (isObject(arg2)<<1);
+    }
+    else {
+
+        /* Evaluate arguments, maybe putting them on the scalar stack. */
+
+        sv_scalar_stack = R_scalar_stack;
+        argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env);
+    }
+
+    PROTECT3(argsevald,arg1,arg2);
+
+    /* Check for dispatch on S3 or S4 objects. */
+
+    if (obj) { /* one or other or both operands are objects */
+        if (DispatchGroup("Ops", call, op, argsevald, env, &ans, variant)) {
+            UNPROTECT(3);
+            R_Visible = TRUE;
+            return ans;
+        }
+    }
+
+    /* Check for argument count error (not before dispatch, since other
+       methods may have different requirements).  Only check for more than
+       two at this point - check for simple cases will fail for other
+       argument count errors, so do those checks later. */
+
+    if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
+
+
+    /* FOR NOW:  Handle gradients with the general-case R_unary and R_binary
+       procedures. */
+
+    if (variant & VARIANT_GRADIENT) {
+        grad1 = ATTRIB_W(argsevald);
+        grad2 = ATTRIB_W(CDR(argsevald));
+        goto gradient;
+    }
+
+    /* Arguments are now in arg1 and arg2, and are protected. They may
+       be on the scalar stack, but if so, are removed now, though they
+       may still be referenced.  Note that result might be on top of
+       one of them - OK since after storing into it, the args won't be
+       accessed again.
+
+       Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
+       but faster. */
+
+    R_scalar_stack = sv_scalar_stack;
+
+    /* We quickly do real arithmetic and integer plus/minus/times on
+       scalars with no attributes (as will be the case for scalar
+       stack values), or attributes that will be ignored.  We don't
+       bother trying local assignment, since returning the result on
+       the scalar stack should be about as fast. */
+
+    char typeplus1 = TYPE_ETC(arg1);
+    char typeplus2 = TYPE_ETC(arg2);
+
+    double a1, a2;  /* the two operands, if real */
+    int i1;         /* the first operand, if integer */
+
+    if (typeplus2 == NILSXP && CDR(argsevald) == R_NilValue) { /* Unary op */
+
+        /* Test if arg1 is scalar numeric, computation not pending, attr OK */
+
+      retry_unary:
+
+        if (typeplus1 == REALSXP) {
+
+            double val = opcode == PLUSOP ? *REAL(arg1) : -*REAL(arg1);
+
+            ans = NAMEDCNT_EQ_0(arg1) ?           (*REAL(arg1) = val, arg1)
+                : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_REAL(val)
+                :                                 ScalarReal(val);
+
+            goto ret;
+        }
+
+        if (typeplus1 == INTSXP || typeplus1 == LGLSXP) {
+
+            i1 = *INTEGER(arg1);
+            int val = i1 == NA_INTEGER ? NA_INTEGER : opcode==PLUSOP ? i1 : -i1;
+
+            ans = NAMEDCNT_EQ_0(arg1) ?           (*INTEGER(arg1) = val, arg1)
+                : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_INTEGER(val)
+                :                                 ScalarInteger(val);
+
+            goto ret;
+        }
+
+        if ((variant & VARIANT_ANY_ATTR)
+              && (typeplus1 & TYPE_ET_CETERA_HAS_ATTR)) {
+            typeplus1 &= ~TYPE_ET_CETERA_HAS_ATTR;
+            goto retry_unary;
+        }
+
+        goto general;
+    }
+
+  retry_binary:
+
+    if (typeplus2 == REALSXP) {
+        a2 = *REAL(arg2);
+        if (typeplus1 == REALSXP) {
+            a1 = *REAL(arg1);
+        }
+        else if (typeplus1 == INTSXP || typeplus1 == LGLSXP) {
+            i1 = *INTEGER(arg1);
+            if (i1 == NA_INTEGER) {
+                ans = R_ScalarRealNA;
+                goto ret;
+            }
+            a1 = (double) i1;
+        }
+        else
+            goto general;
+    }
+    else if (typeplus2 == INTSXP || typeplus2 == LGLSXP) {
+        int i2 = *INTEGER(arg2);
+        if (typeplus1 == REALSXP) {
+            if (i2 == NA_INTEGER) {
+                ans = R_ScalarRealNA;
+                goto ret;
+            }
+            a1 = *REAL(arg1);
+            a2 = (double) i2;
+        }
+        else if (typeplus1 == INTSXP || typeplus1 == LGLSXP) {
+
+            /* neither operand is real */
+
+            i1 = *INTEGER(arg1);
+            if (i1 == NA_INTEGER || i2 == NA_INTEGER) {
+                ans = R_ScalarIntegerNA;
+                goto ret;
+            }
+
+            int_fast64_t val;
+
+            if (opcode==PLUSOP)
+                val = (int_fast64_t)i1 + (int_fast64_t)i2;
+            else
+                val = (int_fast64_t)i1 - (int_fast64_t)i2;
+
+            if (val < R_INT_MIN || val > R_INT_MAX) {
+                val = NA_INTEGER;
+                warningcall (call, _("NAs produced by integer overflow"));
+            }
+
+            int ival = (int) val;
+
+            ans = NAMEDCNT_EQ_0(arg2) && typeplus2 == INTSXP ? 
+                                                   (*INTEGER(arg2) = ival, arg2)
+                : NAMEDCNT_EQ_0(arg1) && typeplus1 == INTSXP ?
+                                                   (*INTEGER(arg1) = ival, arg1)
+                : CAN_USE_SCALAR_STACK(variant) ?  PUSH_SCALAR_INTEGER(ival) 
+                :                                  ScalarInteger(ival);
+  
+            goto ret;
+        }
+        else
+            goto general;
+    }
+    else if ((variant & VARIANT_ANY_ATTR)
+               && ((typeplus1 | typeplus1) & TYPE_ET_CETERA_HAS_ATTR)) {
+        typeplus1 &= ~TYPE_ET_CETERA_HAS_ATTR;
+        typeplus2 &= ~TYPE_ET_CETERA_HAS_ATTR;
+        goto retry_binary;
+    }
+    else
+        goto general;
+
+    /* Do the operation on scalar reals. */
+    
+    double val;
+
+    if (opcode == PLUSOP)
+        val = a1 + a2;
+    else
+        val = a1 - a2;
+
+    ans = NAMEDCNT_EQ_0(arg2) && typeplus2==REALSXP ? (*REAL(arg2) = val, arg2)
+        : NAMEDCNT_EQ_0(arg1) && typeplus1==REALSXP ? (*REAL(arg1) = val, arg1)
+        : CAN_USE_SCALAR_STACK(variant) ?             PUSH_SCALAR_REAL(val)
+        :                                             ScalarReal(val);
+
+    goto ret;
+
+    /* Handle the general case. */
+
+  general:
+
+    grad1 = grad2 = R_NilValue;
+
+  gradient:
+
+    if (CDR(argsevald) != R_NilValue)
+        ans = R_binary (call, opcode, arg1, arg2, obj&1, obj>>1, 
+                        grad1, grad2, env, variant);
+    else {
+        if (argsevald == R_NilValue) goto arg_count_err;
+        ans = R_unary (call, opcode, arg1, obj, grad1, env, variant);
+    }
+
+  ret:
+    R_Visible = TRUE;
+    UNPROTECT(3);
+    return ans;
+
+  arg_count_err:
+    errorcall(call,_("operator needs one or two arguments"));
+}
+
+static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+{
+    int opcode = PRIMVAL(op);
+
+    SEXP argsevald, ans, arg1, arg2, grad1, grad2;
+    SEXP sv_scalar_stack = 0;
+    int obj;
+
+    if (variant & VARIANT_GRADIENT) {
+
+        /* FOR NOW:  Evaluate by evalList_gradient if gradients are
+           desired, with any gradients being attached as attributes of
+           the CONS cells of the argument list. */
+
+        argsevald = evalList_gradient (args, env, VARIANT_PENDING_OK, 2);
+        arg1 = CAR(argsevald);
+        arg2 = CADR(argsevald);
+        obj = isObject(arg1) | (isObject(arg2)<<1);
+    }
+    else {
+
+        /* Evaluate arguments, maybe putting them on the scalar stack. */
+
+        sv_scalar_stack = R_scalar_stack;
+        argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env);
+    }
+
+    PROTECT3(argsevald,arg1,arg2);
+
+    /* Check for dispatch on S3 or S4 objects. */
+
+    if (obj) { /* one or other or both operands are objects */
+        if (DispatchGroup("Ops", call, op, argsevald, env, &ans, variant)) {
+            UNPROTECT(3);
+            R_Visible = TRUE;
+            return ans;
+        }
+    }
+
+    /* Check for argument count error (not before dispatch, since other
+       methods may have different requirements).  Only check for more than
+       two at this point - check for simple cases will fail for other
+       argument count errors, so do those checks later. */
+
+    if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
+
+    /* FOR NOW:  Handle gradients with the general-case R_binary procedure. */
+
+    if (variant & VARIANT_GRADIENT) {
+        grad1 = ATTRIB_W(argsevald);
+        grad2 = ATTRIB_W(CDR(argsevald));
+        goto gradient;
+    }
+
+    /* Arguments are now in arg1 and arg2, and are protected. They may
+       be on the scalar stack, but if so, are removed now, though they
+       may still be referenced.  Note that result might be on top of
+       one of them - OK since after storing into it, the args won't be
+       accessed again.
+
+       Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
+       but faster. */
+
+    R_scalar_stack = sv_scalar_stack;
+
+    /* We quickly do real arithmetic and integer plus/minus/times on
+       scalars with no attributes (as will be the case for scalar
+       stack values), or attributes that will be ignored.  We don't
+       bother trying local assignment, since returning the result on
+       the scalar stack should be about as fast. */
+
+    char typeplus1 = TYPE_ETC(arg1);
+    char typeplus2 = TYPE_ETC(arg2);
+
+    double a1, a2;  /* the two operands, if real */
+    int i1;         /* the first operand, if integer */
+
+  retry:
+
+    if (typeplus2 == REALSXP) {
+        a2 = *REAL(arg2);
+        if (typeplus1 == REALSXP) {
+            a1 = *REAL(arg1);
+        }
+        else if (typeplus1 == INTSXP || typeplus1 == LGLSXP) {
+            i1 = *INTEGER(arg1);
+            if (i1 == NA_INTEGER) {
+                ans = R_ScalarRealNA;
+                goto ret;
+            }
+            a1 = (double) i1;
+        }
+        else
+            goto general;
+    }
+    else if (typeplus2 == INTSXP || typeplus2 == LGLSXP) {
+        if (typeplus1 == REALSXP) {
+            if (*INTEGER(arg2) == NA_INTEGER) {
+                ans = R_ScalarRealNA;
+                goto ret;
+            }
+            a1 = *REAL(arg1);
+            a2 = (double) *INTEGER(arg2);
+        }
+        else
+            goto general;
+    }
+    else if ((variant & VARIANT_ANY_ATTR)
+               && ((typeplus1 | typeplus1) & TYPE_ET_CETERA_HAS_ATTR)) {
+        typeplus1 &= ~TYPE_ET_CETERA_HAS_ATTR;
+        typeplus2 &= ~TYPE_ET_CETERA_HAS_ATTR;
+        goto retry;
+    }
+    else
+        goto general;
+
+    /* Do the operation on scalar reals. */
+    
+    double val;
+
+    switch (opcode) {
+    case TIMESOP:
+        val = a1 * a2;
+        break;
+    case DIVOP:
+        val = a1 / a2;
+        break;
+    case POWOP:
+        if (a2 == 2.0)       val = a1 * a1;
+        else if (a2 == 1.0)  val = a1;
+        else if (a2 == 0.0)  val = 1.0;
+        else if (a2 == -1.0) val = 1.0 / a1;
+        else                 val = R_pow(a1,a2);
+        break;
+    case MODOP:
+        val = myfmod(a1,a2);
+        break;
+    case IDIVOP:
+        val = myfloor(a1,a2);
+        break;
+    default: abort();
+    }
+
+    ans = NAMEDCNT_EQ_0(arg2) && typeplus2==REALSXP ? (*REAL(arg2) = val, arg2)
+        : NAMEDCNT_EQ_0(arg1) && typeplus1==REALSXP ? (*REAL(arg1) = val, arg1)
+        : CAN_USE_SCALAR_STACK(variant) ?             PUSH_SCALAR_REAL(val)
+        :                                             ScalarReal(val);
+
+    goto ret;
+
+    /* Handle the general case. */
+
+  general:
+
+    grad1 = grad2 = R_NilValue;
+
+  gradient:
+
+    if (CDR(argsevald) == R_NilValue) goto arg_count_err;
+
+    ans = R_binary (call, opcode, arg1, arg2, obj&1, obj>>1, 
+                    grad1, grad2, env, variant);
+
+  ret:
+    R_Visible = TRUE;
+    UNPROTECT(3);
+    return ans;
+
+  arg_count_err:
+    errorcall(call,_("operator needs one or two arguments"));
+}
+
+
+/* -------------------------------------------------------------------------- */
+/*                       RELATIONAL OPERATORS.                                */
+/*                                                                            */
+/* Main work (except for simple scalar reals) is done in R_relop, in relop.c. */
+
+static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
+{
+    SEXP argsevald, ans, x, y;
+    int obj;
+
+    /* Evaluate arguments, maybe putting them on the scalar stack. */
+
+    SEXP sv_scalar_stack = R_scalar_stack;
+
+    argsevald = scalar_stack_eval2 (args, &x, &y, &obj, env);
+    PROTECT3(argsevald,x,y);
+
+    /* Check for dispatch on S3 or S4 objects. */
+
+    if (obj) {
+        if (DispatchGroup("Ops", call, op, argsevald, env, &ans, variant)) {
+            R_Visible = TRUE;
+            UNPROTECT(3);
+            return ans;
+        }
+    }
+
+    /* Check argument count after dispatch, since other methods may allow
+       other argument count.  Only check for too many now, since check
+       for simple cases will fail on too few. */
+
+    if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
+
+    int opcode = PRIMVAL(op);
+
+    R_Visible = TRUE;
+
+    /* Arguments are now in x and y, and are protected.  They may be on
+       the scalar stack, but if so are popped off here (but retain their
+       values if eval is not called). */
+
+    /* Below does same as POP_IF_TOP_OF_STACK(y); POP_IF_TOP_OF_STACK(x);
+       but faster. */
+
+    R_scalar_stack = sv_scalar_stack;
+
+    /* Handle numeric scalars specially for speed. */
+
+    int typeplusx = TYPE_ETC(x);
+    int typeplusy = TYPE_ETC(y);
+
+    double xv, yv;  /* the two operands */
+
+  retry_x:
+
+    if (typeplusx == REALSXP)
+        xv = *REAL(x);
+    else if ((typeplusx == INTSXP || typeplusx == LGLSXP)
+               && *INTEGER(x) != NA_INTEGER)
+        xv = (double) *INTEGER(x);
+    else if ((variant & VARIANT_ANY_ATTR) 
+               && (typeplusx & TYPE_ET_CETERA_HAS_ATTR)) {
+        typeplusx &= ~TYPE_ET_CETERA_HAS_ATTR;
+        goto retry_x;
+    }
+    else
+        goto general;
+
+  retry_y:
+
+    if (typeplusy == REALSXP)
+        yv = *REAL(y);
+    else if ((typeplusy == INTSXP || typeplusy == LGLSXP)
+               && *INTEGER(y) != NA_INTEGER)
+        yv = (double) *INTEGER(y);
+    else if ((variant & VARIANT_ANY_ATTR) 
+               && (typeplusy & TYPE_ET_CETERA_HAS_ATTR)) {
+        typeplusy &= ~TYPE_ET_CETERA_HAS_ATTR;
+        goto retry_y;
+    }
+    else
+        goto general;
+
+    /* Do the comparison on scalar reals (possibly converted from int) */
+
+    int res;
+
+    if (MAY_BE_NAN2(xv,yv) && (ISNAN(xv) || ISNAN(yv)))
+        res = NA_LOGICAL;
+    else {
+        switch (opcode) {
+        case EQOP: res = xv == yv; break;
+        case NEOP: res = xv != yv; break;
+        case LTOP: res = xv < yv; break;
+        case GTOP: res = xv > yv; break;
+        case LEOP: res = xv <= yv; break;
+        case GEOP: res = xv >= yv; break;
+        }
+    }
+    ans = ScalarLogicalMaybeConst (res);
+    goto ret;
+
+  general:
+
+    if (CDR(argsevald) == R_NilValue) goto arg_count_err;
+
+    ans = R_relop (call, opcode, x, y, obj&1, obj>>1, env, variant);
+
+  ret:
+    UNPROTECT(3);
+    return ans;
+
+  arg_count_err:
+    checkArity(op,argsevald);  /* will report the error, not return */
+    return R_NoObject;         /* never executed */
 }
 
 
@@ -4366,533 +3734,6 @@ static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
     return ScalarLogicalMaybeConst (has_na ? NA_LOGICAL : val);
 }
 
-/* -------------------------------------------------------------------------- */
-/*                        ARITHMETIC OPERATORS.                               */
-/*                                                                            */
-/* All but simple cases are handled in R_unary and R_binary in arithmetic.c.  */
-/* do_arith1 handles binary and unary + and -.  do_arith2 handles the binary  */
-/* *, /, ^, %%, and %/% operators.                                            */
-
-static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
-{
-    int opcode = PRIMVAL(op);
-
-    SEXP argsevald, ans, arg1, arg2, grad1, grad2;
-    SEXP sv_scalar_stack = 0;
-    int obj;
-
-    if (variant & VARIANT_GRADIENT) {
-
-        /* FOR NOW:  Evaluate by evalList_gradient if gradients are
-           desired, with any gradients being attached as attributes of
-           the CONS cells of the argument list. */
-
-        argsevald = evalList_gradient (args, env, VARIANT_PENDING_OK, 2);
-        arg1 = CAR(argsevald);
-        arg2 = CADR(argsevald);
-        obj = isObject(arg1) | (isObject(arg2)<<1);
-    }
-    else {
-
-        /* Evaluate arguments, maybe putting them on the scalar stack. */
-
-        sv_scalar_stack = R_scalar_stack;
-        argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env);
-    }
-
-    PROTECT3(argsevald,arg1,arg2);
-
-    /* Check for dispatch on S3 or S4 objects. */
-
-    if (obj) { /* one or other or both operands are objects */
-        if (DispatchGroup("Ops", call, op, argsevald, env, &ans, variant)) {
-            UNPROTECT(3);
-            R_Visible = TRUE;
-            return ans;
-        }
-    }
-
-    /* Check for argument count error (not before dispatch, since other
-       methods may have different requirements).  Only check for more than
-       two at this point - check for simple cases will fail for other
-       argument count errors, so do those checks later. */
-
-    if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
-
-
-    /* FOR NOW:  Handle gradients with the general-case R_unary and R_binary
-       procedures. */
-
-    if (variant & VARIANT_GRADIENT) {
-        grad1 = ATTRIB_W(argsevald);
-        grad2 = ATTRIB_W(CDR(argsevald));
-        goto gradient;
-    }
-
-    /* Arguments are now in arg1 and arg2, and are protected. They may
-       be on the scalar stack, but if so, are removed now, though they
-       may still be referenced.  Note that result might be on top of
-       one of them - OK since after storing into it, the args won't be
-       accessed again.
-
-       Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
-       but faster. */
-
-    R_scalar_stack = sv_scalar_stack;
-
-    /* We quickly do real arithmetic and integer plus/minus/times on
-       scalars with no attributes (as will be the case for scalar
-       stack values), or attributes that will be ignored.  We don't
-       bother trying local assignment, since returning the result on
-       the scalar stack should be about as fast. */
-
-    char typeplus1 = TYPE_ETC(arg1);
-    char typeplus2 = TYPE_ETC(arg2);
-
-    double a1, a2;  /* the two operands, if real */
-    int i1;         /* the first operand, if integer */
-
-    if (typeplus2 == NILSXP && CDR(argsevald) == R_NilValue) { /* Unary op */
-
-        /* Test if arg1 is scalar numeric, computation not pending, attr OK */
-
-      retry_unary:
-
-        if (typeplus1 == REALSXP) {
-
-            double val = opcode == PLUSOP ? *REAL(arg1) : -*REAL(arg1);
-
-            ans = NAMEDCNT_EQ_0(arg1) ?           (*REAL(arg1) = val, arg1)
-                : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_REAL(val)
-                :                                 ScalarReal(val);
-
-            goto ret;
-        }
-
-        if (typeplus1 == INTSXP || typeplus1 == LGLSXP) {
-
-            i1 = *INTEGER(arg1);
-            int val = i1 == NA_INTEGER ? NA_INTEGER : opcode==PLUSOP ? i1 : -i1;
-
-            ans = NAMEDCNT_EQ_0(arg1) ?           (*INTEGER(arg1) = val, arg1)
-                : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_INTEGER(val)
-                :                                 ScalarInteger(val);
-
-            goto ret;
-        }
-
-        if ((variant & VARIANT_ANY_ATTR)
-              && (typeplus1 & TYPE_ET_CETERA_HAS_ATTR)) {
-            typeplus1 &= ~TYPE_ET_CETERA_HAS_ATTR;
-            goto retry_unary;
-        }
-
-        goto general;
-    }
-
-  retry_binary:
-
-    if (typeplus2 == REALSXP) {
-        a2 = *REAL(arg2);
-        if (typeplus1 == REALSXP) {
-            a1 = *REAL(arg1);
-        }
-        else if (typeplus1 == INTSXP || typeplus1 == LGLSXP) {
-            i1 = *INTEGER(arg1);
-            if (i1 == NA_INTEGER) {
-                ans = R_ScalarRealNA;
-                goto ret;
-            }
-            a1 = (double) i1;
-        }
-        else
-            goto general;
-    }
-    else if (typeplus2 == INTSXP || typeplus2 == LGLSXP) {
-        int i2 = *INTEGER(arg2);
-        if (typeplus1 == REALSXP) {
-            if (i2 == NA_INTEGER) {
-                ans = R_ScalarRealNA;
-                goto ret;
-            }
-            a1 = *REAL(arg1);
-            a2 = (double) i2;
-        }
-        else if (typeplus1 == INTSXP || typeplus1 == LGLSXP) {
-
-            /* neither operand is real */
-
-            i1 = *INTEGER(arg1);
-            if (i1 == NA_INTEGER || i2 == NA_INTEGER) {
-                ans = R_ScalarIntegerNA;
-                goto ret;
-            }
-
-            int_fast64_t val;
-
-            if (opcode==PLUSOP)
-                val = (int_fast64_t)i1 + (int_fast64_t)i2;
-            else
-                val = (int_fast64_t)i1 - (int_fast64_t)i2;
-
-            if (val < R_INT_MIN || val > R_INT_MAX) {
-                val = NA_INTEGER;
-                warningcall (call, _("NAs produced by integer overflow"));
-            }
-
-            int ival = (int) val;
-
-            ans = NAMEDCNT_EQ_0(arg2) && typeplus2 == INTSXP ? 
-                                                   (*INTEGER(arg2) = ival, arg2)
-                : NAMEDCNT_EQ_0(arg1) && typeplus1 == INTSXP ?
-                                                   (*INTEGER(arg1) = ival, arg1)
-                : CAN_USE_SCALAR_STACK(variant) ?  PUSH_SCALAR_INTEGER(ival) 
-                :                                  ScalarInteger(ival);
-  
-            goto ret;
-        }
-        else
-            goto general;
-    }
-    else if ((variant & VARIANT_ANY_ATTR)
-               && ((typeplus1 | typeplus1) & TYPE_ET_CETERA_HAS_ATTR)) {
-        typeplus1 &= ~TYPE_ET_CETERA_HAS_ATTR;
-        typeplus2 &= ~TYPE_ET_CETERA_HAS_ATTR;
-        goto retry_binary;
-    }
-    else
-        goto general;
-
-    /* Do the operation on scalar reals. */
-    
-    double val;
-
-    if (opcode == PLUSOP)
-        val = a1 + a2;
-    else
-        val = a1 - a2;
-
-    ans = NAMEDCNT_EQ_0(arg2) && typeplus2==REALSXP ? (*REAL(arg2) = val, arg2)
-        : NAMEDCNT_EQ_0(arg1) && typeplus1==REALSXP ? (*REAL(arg1) = val, arg1)
-        : CAN_USE_SCALAR_STACK(variant) ?             PUSH_SCALAR_REAL(val)
-        :                                             ScalarReal(val);
-
-    goto ret;
-
-    /* Handle the general case. */
-
-  general:
-
-    grad1 = grad2 = R_NilValue;
-
-  gradient:
-
-    if (CDR(argsevald) != R_NilValue)
-        ans = R_binary (call, opcode, arg1, arg2, obj&1, obj>>1, 
-                        grad1, grad2, env, variant);
-    else {
-        if (argsevald == R_NilValue) goto arg_count_err;
-        ans = R_unary (call, opcode, arg1, obj, grad1, env, variant);
-    }
-
-  ret:
-    R_Visible = TRUE;
-    UNPROTECT(3);
-    return ans;
-
-  arg_count_err:
-    errorcall(call,_("operator needs one or two arguments"));
-}
-
-static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
-{
-    int opcode = PRIMVAL(op);
-
-    SEXP argsevald, ans, arg1, arg2, grad1, grad2;
-    SEXP sv_scalar_stack = 0;
-    int obj;
-
-    if (variant & VARIANT_GRADIENT) {
-
-        /* FOR NOW:  Evaluate by evalList_gradient if gradients are
-           desired, with any gradients being attached as attributes of
-           the CONS cells of the argument list. */
-
-        argsevald = evalList_gradient (args, env, VARIANT_PENDING_OK, 2);
-        arg1 = CAR(argsevald);
-        arg2 = CADR(argsevald);
-        obj = isObject(arg1) | (isObject(arg2)<<1);
-    }
-    else {
-
-        /* Evaluate arguments, maybe putting them on the scalar stack. */
-
-        sv_scalar_stack = R_scalar_stack;
-        argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env);
-    }
-
-    PROTECT3(argsevald,arg1,arg2);
-
-    /* Check for dispatch on S3 or S4 objects. */
-
-    if (obj) { /* one or other or both operands are objects */
-        if (DispatchGroup("Ops", call, op, argsevald, env, &ans, variant)) {
-            UNPROTECT(3);
-            R_Visible = TRUE;
-            return ans;
-        }
-    }
-
-    /* Check for argument count error (not before dispatch, since other
-       methods may have different requirements).  Only check for more than
-       two at this point - check for simple cases will fail for other
-       argument count errors, so do those checks later. */
-
-    if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
-
-    /* FOR NOW:  Handle gradients with the general-case R_binary procedure. */
-
-    if (variant & VARIANT_GRADIENT) {
-        grad1 = ATTRIB_W(argsevald);
-        grad2 = ATTRIB_W(CDR(argsevald));
-        goto gradient;
-    }
-
-    /* Arguments are now in arg1 and arg2, and are protected. They may
-       be on the scalar stack, but if so, are removed now, though they
-       may still be referenced.  Note that result might be on top of
-       one of them - OK since after storing into it, the args won't be
-       accessed again.
-
-       Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
-       but faster. */
-
-    R_scalar_stack = sv_scalar_stack;
-
-    /* We quickly do real arithmetic and integer plus/minus/times on
-       scalars with no attributes (as will be the case for scalar
-       stack values), or attributes that will be ignored.  We don't
-       bother trying local assignment, since returning the result on
-       the scalar stack should be about as fast. */
-
-    char typeplus1 = TYPE_ETC(arg1);
-    char typeplus2 = TYPE_ETC(arg2);
-
-    double a1, a2;  /* the two operands, if real */
-    int i1;         /* the first operand, if integer */
-
-  retry:
-
-    if (typeplus2 == REALSXP) {
-        a2 = *REAL(arg2);
-        if (typeplus1 == REALSXP) {
-            a1 = *REAL(arg1);
-        }
-        else if (typeplus1 == INTSXP || typeplus1 == LGLSXP) {
-            i1 = *INTEGER(arg1);
-            if (i1 == NA_INTEGER) {
-                ans = R_ScalarRealNA;
-                goto ret;
-            }
-            a1 = (double) i1;
-        }
-        else
-            goto general;
-    }
-    else if (typeplus2 == INTSXP || typeplus2 == LGLSXP) {
-        if (typeplus1 == REALSXP) {
-            if (*INTEGER(arg2) == NA_INTEGER) {
-                ans = R_ScalarRealNA;
-                goto ret;
-            }
-            a1 = *REAL(arg1);
-            a2 = (double) *INTEGER(arg2);
-        }
-        else
-            goto general;
-    }
-    else if ((variant & VARIANT_ANY_ATTR)
-               && ((typeplus1 | typeplus1) & TYPE_ET_CETERA_HAS_ATTR)) {
-        typeplus1 &= ~TYPE_ET_CETERA_HAS_ATTR;
-        typeplus2 &= ~TYPE_ET_CETERA_HAS_ATTR;
-        goto retry;
-    }
-    else
-        goto general;
-
-    /* Do the operation on scalar reals. */
-    
-    double val;
-
-    switch (opcode) {
-    case TIMESOP:
-        val = a1 * a2;
-        break;
-    case DIVOP:
-        val = a1 / a2;
-        break;
-    case POWOP:
-        if (a2 == 2.0)       val = a1 * a1;
-        else if (a2 == 1.0)  val = a1;
-        else if (a2 == 0.0)  val = 1.0;
-        else if (a2 == -1.0) val = 1.0 / a1;
-        else                 val = R_pow(a1,a2);
-        break;
-    case MODOP:
-        val = myfmod(a1,a2);
-        break;
-    case IDIVOP:
-        val = myfloor(a1,a2);
-        break;
-    default: abort();
-    }
-
-    ans = NAMEDCNT_EQ_0(arg2) && typeplus2==REALSXP ? (*REAL(arg2) = val, arg2)
-        : NAMEDCNT_EQ_0(arg1) && typeplus1==REALSXP ? (*REAL(arg1) = val, arg1)
-        : CAN_USE_SCALAR_STACK(variant) ?             PUSH_SCALAR_REAL(val)
-        :                                             ScalarReal(val);
-
-    goto ret;
-
-    /* Handle the general case. */
-
-  general:
-
-    grad1 = grad2 = R_NilValue;
-
-  gradient:
-
-    if (CDR(argsevald) == R_NilValue) goto arg_count_err;
-
-    ans = R_binary (call, opcode, arg1, arg2, obj&1, obj>>1, 
-                    grad1, grad2, env, variant);
-
-  ret:
-    R_Visible = TRUE;
-    UNPROTECT(3);
-    return ans;
-
-  arg_count_err:
-    errorcall(call,_("operator needs one or two arguments"));
-}
-
-
-/* -------------------------------------------------------------------------- */
-/*                       RELATIONAL OPERATORS.                                */
-/*                                                                            */
-/* Main work (except for simple scalar reals) is done in R_relop, in relop.c. */
-
-static SEXP do_relop(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
-{
-    SEXP argsevald, ans, x, y;
-    int obj;
-
-    /* Evaluate arguments, maybe putting them on the scalar stack. */
-
-    SEXP sv_scalar_stack = R_scalar_stack;
-
-    argsevald = scalar_stack_eval2 (args, &x, &y, &obj, env);
-    PROTECT3(argsevald,x,y);
-
-    /* Check for dispatch on S3 or S4 objects. */
-
-    if (obj) {
-        if (DispatchGroup("Ops", call, op, argsevald, env, &ans, variant)) {
-            R_Visible = TRUE;
-            UNPROTECT(3);
-            return ans;
-        }
-    }
-
-    /* Check argument count after dispatch, since other methods may allow
-       other argument count.  Only check for too many now, since check
-       for simple cases will fail on too few. */
-
-    if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
-
-    int opcode = PRIMVAL(op);
-
-    R_Visible = TRUE;
-
-    /* Arguments are now in x and y, and are protected.  They may be on
-       the scalar stack, but if so are popped off here (but retain their
-       values if eval is not called). */
-
-    /* Below does same as POP_IF_TOP_OF_STACK(y); POP_IF_TOP_OF_STACK(x);
-       but faster. */
-
-    R_scalar_stack = sv_scalar_stack;
-
-    /* Handle numeric scalars specially for speed. */
-
-    int typeplusx = TYPE_ETC(x);
-    int typeplusy = TYPE_ETC(y);
-
-    double xv, yv;  /* the two operands */
-
-  retry_x:
-
-    if (typeplusx == REALSXP)
-        xv = *REAL(x);
-    else if ((typeplusx == INTSXP || typeplusx == LGLSXP)
-               && *INTEGER(x) != NA_INTEGER)
-        xv = (double) *INTEGER(x);
-    else if ((variant & VARIANT_ANY_ATTR) 
-               && (typeplusx & TYPE_ET_CETERA_HAS_ATTR)) {
-        typeplusx &= ~TYPE_ET_CETERA_HAS_ATTR;
-        goto retry_x;
-    }
-    else
-        goto general;
-
-  retry_y:
-
-    if (typeplusy == REALSXP)
-        yv = *REAL(y);
-    else if ((typeplusy == INTSXP || typeplusy == LGLSXP)
-               && *INTEGER(y) != NA_INTEGER)
-        yv = (double) *INTEGER(y);
-    else if ((variant & VARIANT_ANY_ATTR) 
-               && (typeplusy & TYPE_ET_CETERA_HAS_ATTR)) {
-        typeplusy &= ~TYPE_ET_CETERA_HAS_ATTR;
-        goto retry_y;
-    }
-    else
-        goto general;
-
-    /* Do the comparison on scalar reals (possibly converted from int) */
-
-    int res;
-
-    if (MAY_BE_NAN2(xv,yv) && (ISNAN(xv) || ISNAN(yv)))
-        res = NA_LOGICAL;
-    else {
-        switch (opcode) {
-        case EQOP: res = xv == yv; break;
-        case NEOP: res = xv != yv; break;
-        case LTOP: res = xv < yv; break;
-        case GTOP: res = xv > yv; break;
-        case LEOP: res = xv <= yv; break;
-        case GEOP: res = xv >= yv; break;
-        }
-    }
-    ans = ScalarLogicalMaybeConst (res);
-    goto ret;
-
-  general:
-
-    if (CDR(argsevald) == R_NilValue) goto arg_count_err;
-
-    ans = R_relop (call, opcode, x, y, obj&1, obj>>1, env, variant);
-
-  ret:
-    UNPROTECT(3);
-    return ans;
-
-  arg_count_err:
-    checkArity(op,argsevald);  /* will report the error, not return */
-    return R_NoObject;         /* never executed */
-}
 
 /* -------------------------------------------------------------------------- */
 /*                           SUBSET OPERATORS.                                */
@@ -5642,6 +4483,1185 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     UNPROTECT(4);
 
     return R_subassign3_dflt(call, CAR(ans), name, CADDR(ans));
+}
+
+
+/* -------------------------------------------------------------------------- */
+/*                      FUNCTION APPLY PROCEDURES                             */
+
+/* Apply a "closure" to an argument list.  Keep in sync with execMethod, etc.
+   below.
+
+   'supplied' is an array of SEXP values, first a set of pairs of tag and
+   value, then a pairlist of tagged values (or R_NilValue).  If NULL, no
+   extras supplied. */
+
+SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
+                                     SEXP *supplied, int variant)
+{
+    int vrnt = VARIANT_PENDING_OK | VARIANT_DIRECT_RETURN | VARIANT_WHOLE_BODY
+                 | VARIANT_PASS_ON(variant);
+
+    if (variant & VARIANT_NOT_WHOLE_BODY)
+        vrnt &= ~VARIANT_WHOLE_BODY;
+
+    SEXP actuals, savedsrcref, newrho;
+    RCNTXT cntxt;
+
+    /*  Set up a context with the call in it for use if an error occurs below
+        in matchArgs or from running out of memory (eg, in NewEnvironment). 
+        Note that this also protects call, rho, arglist, and op. */
+
+    begincontext(&cntxt, CTXT_RETURN, call, CLOENV(op), rho, arglist, op);
+
+    savedsrcref = R_Srcref;  /* saved in context for longjmp, and protection */
+
+    /*  Build a list which matches the actual (unevaluated) arguments
+        to the formal paramters.  Build a new environment which
+        contains the matched pairs.  Note that actuals is protected via
+        newrho. */
+
+    actuals = matchArgs_pairlist (FORMALS(op), arglist, call);
+    PROTECT(newrho = NewEnvironment(R_NilValue, actuals, CLOENV(op)));
+        /* no longer passes formals, since matchArg now puts tags in actuals */
+    if (variant & VARIANT_GRADIENT)
+        SET_STORE_GRAD (newrho, STORE_GRAD(rho));
+
+    /* This piece of code is destructively modifying the actuals list,
+       which is now also the list of bindings in the frame of newrho.
+       This is one place where internal structure of environment
+       bindings leaks out of envir.c.  It should be rewritten
+       eventually so as not to break encapsulation of the internal
+       environment layout.  We can live with it for now since it only
+       happens immediately after the environment creation.  LT */
+
+    R_symbits_t bits = 0;
+
+    SEXP f = FORMALS(op);
+    SEXP a = actuals;
+    while (a != R_NilValue) {
+        SEXP t = TAG(a);
+        bits |= SYMBITS(t);
+        if (MISSING(a)) {
+            if (CAR(f) != R_MissingArg) {
+                SETCAR(a, mkPROMISE(CAR(f), newrho));
+                SET_MISSING(a, 2);
+            }
+        }
+        else { 
+            /* optimize assuming non-missing arguments are usually referenced */
+            LASTSYMENV(t) = SEXP32_FROM_SEXP(newrho);
+            LASTSYMBINDING(t) = a;
+        }
+        a = CDR(a);
+        f = CDR(f);
+    }
+
+    SET_ENVSYMBITS (newrho, bits);
+
+    /* set_symbits_in_env (newrho); */  /* now done in loop above */
+
+    /*  Fix up any extras that were supplied by usemethod. */
+
+    if (supplied != NULL) {
+        while (TYPEOF(*supplied) == SYMSXP) {
+            set_var_in_frame (*supplied, *(supplied+1), newrho, TRUE, 3);
+            supplied += 2;
+        }
+        for (SEXP t = *supplied; t != R_NilValue; t = CDR(t)) {
+            for (a = actuals; a != R_NilValue; a = CDR(a))
+                if (TAG(a) == TAG(t))
+                    break;
+            if (a == R_NilValue)
+                set_var_in_frame (TAG(t), CAR(t), newrho, TRUE, 3);
+        }
+    }
+
+    UNPROTECT(1); /* newrho, which will be protected below via revised context*/
+
+    /*  Change the previously-set-up context to have the correct environment.
+
+        If we have a generic function we need to use the sysparent of
+        the generic as the sysparent of the method because the method
+        is a straight substitution of the generic. */
+
+    if (R_GlobalContext->nextcontext->callflag == CTXT_GENERIC)
+        revisecontext (newrho, R_GlobalContext->nextcontext->sysparent);
+    else
+        revisecontext (newrho, rho);
+
+    /* Get the srcref record from the closure object */
+    
+    R_Srcref = getAttrib00(op, R_SrcrefSymbol);
+
+    SEXP body = BODY(op);
+
+    /* Debugging */
+
+    if (RDEBUG(op) | RSTEP(op))
+        body = Rf_apply_debug_setup (call, op, rho, body, newrho);
+
+    /* Set a longjmp target which will catch any explicit returns from the
+       function body that are not instead handled by VARIANT_DIRECT_RETURN.  */
+
+    SEXP res;
+
+    if ((SETJMP(cntxt.cjmpbuf))) {
+        if (R_ReturnedValue != R_RestartToken) {
+            res = R_ReturnedValue;
+            goto evald;
+        }
+        cntxt.callflag = CTXT_RETURN;  /* turn restart off */
+        R_ReturnedValue = R_NilValue;  /* remove restart token */
+    }
+
+    res = evalv (body, newrho, vrnt);
+
+  evald: 
+    PROTECT(res);
+
+    R_variant_result &= ~VARIANT_RTN_FLAG;
+
+    R_Srcref = savedsrcref;
+    endcontext(&cntxt);
+
+    if ( ! (variant & VARIANT_PENDING_OK))
+        WAIT_UNTIL_COMPUTED(res);
+
+    if (RDEBUG(op))
+        Rf_apply_debug_finish (call, rho);
+
+    UNPROTECT(1); /* res */
+    return res;
+}
+
+SEXP applyClosure (SEXP call, SEXP op, SEXP arglist, SEXP rho, 
+                   SEXP *supplied)
+{
+    if (supplied != NULL) error("Last argument to applyClosure must be NULL");
+    return applyClosure_v (call, op, arglist, rho, NULL, 0);
+}
+
+/* Create a promise to evaluate each argument.	If the argument is itself
+   a promise, it is used unchanged, except that it has its NAMEDCNT
+   incremented, and the NAMEDCNT of its value (if not unbound) incremented
+   unless it is zero.  See inside for handling of ... */
+
+#define MAKE_PROMISE(a,rho,variant) do { \
+    if (TYPEOF(a) == PROMSXP) { \
+        INC_NAMEDCNT(a); \
+        SEXP p = PRVALUE_PENDING_OK(a); \
+        if (p != R_UnboundValue && NAMEDCNT_GT_0(p)) \
+            INC_NAMEDCNT(p); \
+    } \
+    else if (a != R_MissingArg && a != R_MissingUnder) { \
+        a = mkPROMISE (a, rho); \
+        if (variant) SET_STORE_GRAD (a, 1); \
+    } \
+} while (0)
+
+SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho, int variant)
+{
+    variant &= VARIANT_GRADIENT;
+
+    /* Handle 0, 1, or 2 arguments (not ...) specially, for speed. */
+
+    if (CDR(el) == R_NilValue) {  /* Note that CDR(R_NilValue) == R_NilValue */
+        if (el == R_NilValue)
+            return el;
+        SEXP a = CAR(el);
+        if (a != R_DotsSymbol) {
+            MAKE_PROMISE(a,rho,variant);
+            return cons_with_tag (a, R_NilValue, TAG(el));
+        }
+    }
+    else if (CDDR(el) == R_NilValue) {
+        SEXP a1 = CAR(el);
+        SEXP a2 = CADR(el);
+        if (a1 != R_DotsSymbol && a2 != R_DotsSymbol) {
+            SEXP r;
+            MAKE_PROMISE(a2,rho,variant);
+            PROTECT (r = cons_with_tag (a2, R_NilValue, TAG(CDR(el))));
+            MAKE_PROMISE(a1,rho,variant);
+            r = cons_with_tag (a1, r, TAG(el));
+            UNPROTECT(1);
+            return r;
+        }
+    }
+
+    /* Handle the general case (except for el being R_NilValue, done above). */
+
+    BEGIN_PROTECT4 (head, tail, ev, h);
+
+    head = R_NilValue;
+
+    do {  /* el == R_NilValue is handled above, so always loop at least once */
+
+        SEXP a = CAR(el);
+
+	/* If we have a ... symbol, we look to see what it is bound to.
+	   If its binding is R_NilValue we just ignore it.  If it is bound
+           to a list, promises in the list (typical case) are re-used with
+           NAMEDCNT incremented, and non-promises have promises created for
+           them; the promise is then spliced into the list that is returned.
+           Anything else bound to a ... symbol is an error. */
+
+	if (a == R_DotsSymbol) {
+	    h = findVar(a, rho);
+            if (h == R_NilValue) {
+                /* nothing */
+            }
+	    else if (TYPEOF(h) == DOTSXP) {
+		while (h != R_NilValue) {
+                    a = CAR(h);
+                    MAKE_PROMISE(a,rho,variant);
+                    ev = cons_with_tag (a, R_NilValue, TAG(h));
+                    if (head==R_NilValue)
+                        head = ev;
+                    else
+                        SETCDR(tail,ev);
+                    tail = ev;
+		    h = CDR(h);
+		}
+	    }
+	    else if (h != R_MissingArg)
+		dotdotdot_error();
+	}
+        else {
+            MAKE_PROMISE(a,rho,variant);
+            ev = cons_with_tag (a, R_NilValue, TAG(el));
+            if (head == R_NilValue)
+                head = ev;
+            else
+                SETCDR_MACRO(tail, ev);
+            tail = ev;
+        }
+	el = CDR(el);
+
+    } while (el != R_NilValue);
+
+    RETURN_SEXP_INSIDE_PROTECT (head);
+    END_PROTECT;
+}
+ 
+/* Create promises for arguments, with values for promises filled in.  
+   Values for arguments that don't become promises are silently ignored.  
+   This is used in method dispatch, hence the text of the error message 
+   (which should never occur).  Copies gradient info from 'values' to
+   promises in result. */
+ 
+SEXP attribute_hidden promiseArgsWithValues(SEXP el, SEXP rho, SEXP values)
+{
+    SEXP s, a, b;
+
+    PROTECT (s = promiseArgs (el, rho, 0));
+
+    for (a = values, b = s; 
+         a != R_NilValue && b != R_NilValue;
+         a = CDR(a), b = CDR(b)) {
+        if (TYPEOF (CAR(b)) == PROMSXP) {
+            SET_PRVALUE (CAR(b), CAR(a));
+            if (HAS_ATTRIB(a)) {
+                SET_STORE_GRAD (CAR(s), 1);
+                SET_ATTRIB (CAR(b), ATTRIB_W(a));
+            }
+            INC_NAMEDCNT (CAR(a));
+        }
+    }
+
+    if (a == R_NilValue && b == R_NilValue) {
+        UNPROTECT(1);
+        return s;
+    }
+
+    error(_("dispatch error"));
+}
+
+/* Like promiseArgsWithValues except it sets only the first value.  So it
+   needs the variant for creating promises for the other arguments (which
+   might require gradient) - BUT DOESN"T HAVE THE GRADIENT FOR THE FIRST
+   ARGUMENT AT THE MOMENT.  WILL NEED TO BE FIXED IF DISPATCHOREVAL NEEDS 
+   TO TRACK GRADIENTS. */
+
+SEXP attribute_hidden promiseArgsWith1Value (SEXP el, SEXP rho, SEXP value,
+                                             int variant)
+{
+    SEXP s, p;
+    PROTECT (s = promiseArgs (el, rho, variant));
+    if (s == R_NilValue) error(_("dispatch error"));
+    p = CAR(s);
+    if (TYPEOF(p) == PROMSXP) {
+        SET_PRVALUE (p, value);
+        if (0) {  /* may sometime need to do something for gradients */
+            SET_STORE_GRAD (p, 1);
+            SET_ATTRIB (p, R_NilValue);
+        }
+        INC_NAMEDCNT (value);
+    }
+    UNPROTECT(1);
+    return s;
+}
+
+/* Declared with a variable number of args in names.c */
+static SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+{
+    SEXP rval, srcref;
+
+    /* The following is as in 2.15.0, but it's not clear how it can happen. */
+    if (TYPEOF(op) == PROMSXP) {
+	op = forcePromise(op);
+	SET_NAMEDCNT_MAX(op);
+    }
+
+    CheckFormals(CAR(args));
+    rval = mkCLOSXP(CAR(args), CADR(args), rho);
+    srcref = CADDR(args);
+    if (srcref != R_NilValue) 
+        setAttrib(rval, R_SrcrefSymbol, srcref);
+
+    R_Visible = TRUE;
+    return rval;
+}
+
+/* Check that each formal is a symbol.  Also used in coerce.c */
+
+void attribute_hidden CheckFormals(SEXP ls)
+{
+    if (isList(ls)) {
+	for (; ls != R_NilValue; ls = CDR(ls))
+	    if (TYPEOF(TAG(ls)) != SYMSXP)
+		goto err;
+	return;
+    }
+ err:
+    error(_("invalid formal argument list for \"function\""));
+}
+
+
+/* -------------------------------------------------------------------------- */
+/*                         METHOD DISPATCH FOR PRIMITIVES                     */
+
+
+static SEXP evalArgs(SEXP el, SEXP rho, int dropmissing)
+{
+    return dropmissing ? evalList(el,rho) : evalListKeepMissing(el,rho);
+}
+
+
+/* A version of DispatchOrEval that checks for possible S4 methods for
+ * any argument, not just the first.  Used in the code for `[` in
+ * do_subset.  Differs in that all arguments are evaluated
+ * immediately, rather than after the call to R_possible_dispatch.
+ * NOT ACTUALLY USED AT PRESENT.
+ */
+attribute_hidden
+int DispatchAnyOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
+		      SEXP rho, SEXP *ans, int dropmissing, int argsevald)
+{
+    if(R_has_methods(op)) {
+        SEXP argValue, el,  value; 
+	/* Rboolean hasS4 = FALSE; */ 
+	int nprotect = 0, dispatch;
+	if(!argsevald) {
+            PROTECT(argValue = evalArgs(args, rho, dropmissing));
+	    nprotect++;
+	    argsevald = TRUE;
+	}
+	else argValue = args;
+	for(el = argValue; el != R_NilValue; el = CDR(el)) {
+	    if(IS_S4_OBJECT(CAR(el))) {
+	        value = R_possible_dispatch(call, op, argValue, rho, TRUE);
+	        if (value != R_NoObject) {
+		    *ans = value;
+		    UNPROTECT(nprotect);
+		    return 1;
+	        }
+		else break;
+	    }
+	}
+	 /* else, use the regular DispatchOrEval, but now with evaluated args */
+	dispatch = DispatchOrEval(call, op, generic, argValue, rho, ans, dropmissing, argsevald);
+	UNPROTECT(nprotect);
+	return dispatch;
+    }
+    return DispatchOrEval(call, op, generic, args, rho, ans, dropmissing, argsevald);
+}
+
+
+/* DispatchOrEval is used in internal functions which dispatch to
+ * object methods (e.g. "[" or "[[").  The code either builds promises
+ * and dispatches to the appropriate method, or it evaluates the
+ * arguments it comes in with (if argsevald is 0) and returns them so that
+ * the generic built-in C code can continue.  Note that CDR(call) is
+ * used to obtain the unevaluated arguments when creating promises, even
+ * when argsevald is 1 (so args is the evaluated arguments).  If argsevald 
+ * is -1, only the first argument will have been evaluated.
+ *
+ * The arg list is protected by this function, and needn't be by the caller.
+ */
+attribute_hidden
+int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
+		   SEXP rho, SEXP *ans, int dropmissing, int argsevald)
+{
+/* DispatchOrEval is called very frequently, most often in cases where
+   no dispatching is needed and the isObject or the string-based
+   pre-test fail.  To avoid degrading performance it is therefore
+   necessary to avoid creating promises in these cases.  The pre-test
+   does require that we look at the first argument, so that needs to
+   be evaluated.  The complicating factor is that the first argument
+   might come in with a "..." and that there might be other arguments
+   in the "..." as well.  LT */
+
+    BEGIN_PROTECT1 (x);
+    ALSO_PROTECT1 (args);
+
+    int dots = FALSE;
+
+    if (argsevald != 0)
+	x = CAR(args);
+    else {
+	/* Find the object to dispatch on, dropping any leading
+	   ... arguments with missing or empty values.  If there are no
+	   arguments, R_NilValue is used. */
+        x = R_NilValue;
+	for (; args != R_NilValue; args = CDR(args)) {
+	    if (CAR(args) == R_DotsSymbol) {
+		SEXP h = findVar(R_DotsSymbol, rho);
+		if (TYPEOF(h) == DOTSXP) {
+#ifdef DODO
+		    /**** any self-evaluating value should be OK; this
+			  is used in byte compiled code. LT */
+		    /* just a consistency check */
+		    if (TYPEOF(CAR(h)) != PROMSXP)
+			error(_("value in '...' is not a promise"));
+#endif
+		    dots = TRUE;
+		    x = eval(CAR(h), rho);
+                    break;
+		}
+		else if (h != R_NilValue && h != R_MissingArg)
+		    dotdotdot_error();
+	    }
+	    else {
+                dots = FALSE;
+                x = eval(CAR(args), rho);
+                break;
+	    }
+	}
+    }
+
+    if (isObject(x)) { /* try to dispatch on the object */
+	char *pt;
+	/* Try for formal method. */
+	if(IS_S4_OBJECT(x) && R_has_methods(op)) {
+
+	    BEGIN_INNER_PROTECT2 (value, argValue);
+
+	    /* create a promise to pass down to applyClosure  */
+	    if (argsevald < 0)
+                argValue = promiseArgsWith1Value(CDR(call), rho, x, 0);
+            else if (argsevald == 0)
+		argValue = promiseArgsWith1Value(args, rho, x, 0);
+	    else 
+                argValue = args;
+	    /* This means S4 dispatch */
+	    value = R_possible_dispatch (call, op, argValue, rho, argsevald<=0);
+	    if (value != R_NoObject) {
+		*ans = value;
+		RETURN_OUTSIDE_PROTECT (1);
+	    }
+	    else {
+		/* go on, with the evaluated args.  Not guaranteed to have
+		   the same semantics as if the arguments were not
+		   evaluated, in special cases (e.g., arg values that are
+		   LANGSXP).
+		   The use of the promiseArgs is supposed to prevent
+		   multiple evaluation after the call to possible_dispatch.
+		*/
+		if (dots)
+		    argValue = evalArgs(argValue, rho, dropmissing);
+		else {
+		    argValue = CONS(x, evalArgs(CDR(argValue),rho,dropmissing));
+		    SET_TAG(argValue, CreateTag(TAG(args)));
+		}
+		args = argValue; 
+		argsevald = 1;
+	    }
+
+            END_INNER_PROTECT;
+	}
+	if (TYPEOF(CAR(call)) == SYMSXP)
+	    pt = Rf_strrchr(CHAR(PRINTNAME(CAR(call))), '.');
+	else
+	    pt = NULL;
+
+	if (pt == NULL || strcmp(pt,".default")) {
+
+	    BEGIN_INNER_PROTECT2 (pargs, rho1);
+	    RCNTXT cntxt;
+
+            if (argsevald > 0) {  /* handle as in R_possible_dispatch */
+                pargs = promiseArgsWithValues(CDR(call), rho, args);
+            }
+            else
+                pargs = promiseArgsWith1Value(args, rho, x, 0); 
+
+	    /* The context set up here is needed because of the way
+	       usemethod() is written.  DispatchGroup() repeats some
+	       internal usemethod() code and avoids the need for a
+	       context; perhaps the usemethod() code should be
+	       refactored so the contexts around the usemethod() calls
+	       in this file can be removed.
+
+	       Using rho for current and calling environment can be
+	       confusing for things like sys.parent() calls captured
+	       in promises (Gabor G had an example of this).  Also,
+	       since the context is established without a SETJMP using
+	       an R-accessible environment allows a segfault to be
+	       triggered (by something very obscure, but still).
+	       Hence here and in the other usemethod() uses below a
+	       new environment rho1 is created and used.  LT */
+	    rho1 = NewEnvironment(R_NilValue, R_NilValue, rho);
+	    begincontext(&cntxt, CTXT_RETURN, call, rho1, rho, pargs, op);
+	    if(usemethod(generic, x, call, pargs, rho1, rho, R_BaseEnv, 0, ans))
+	    {   endcontext(&cntxt);
+		RETURN_OUTSIDE_PROTECT (1);
+	    }
+	    endcontext(&cntxt);
+
+            END_INNER_PROTECT;
+	}
+    }
+
+    if (argsevald <= 0) {
+	if (dots)
+	    /* The first call argument was ... and may contain more than the
+	       object, so it needs to be evaluated here.  The object should be
+	       in a promise, so evaluating it again should be no problem. */
+	    args = evalArgs(args, rho, dropmissing);
+	else {
+	    args = cons_with_tag (x, evalArgs(CDR(args), rho, dropmissing),
+                                  TAG(args));
+	}
+    }
+
+    *ans = args;
+    END_PROTECT;
+    return 0;
+}
+
+
+/* gr needs to be protected on return from this function. */
+static void findmethod(SEXP Class, const char *group, const char *generic,
+		       SEXP *sxp,  SEXP *gr, SEXP *meth, int *which,
+		       SEXP rho)
+{
+    int len, whichclass;
+    char buf[512];
+
+    len = length(Class);
+
+    /* Need to interleave looking for group and generic methods
+       e.g. if class(x) is c("foo", "bar)" then x > 3 should invoke
+       "Ops.foo" rather than ">.bar"
+    */
+    for (whichclass = 0 ; whichclass < len ; whichclass++) {
+	const char *ss = translateChar(STRING_ELT(Class, whichclass));
+	if (!copy_3_strings (buf, sizeof buf, generic, ".", ss))
+	    error(_("class name too long in '%s'"), generic);
+	*meth = install(buf);
+	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
+	if (isFunction(*sxp)) {
+	    *gr = R_BlankScalarString;
+	    break;
+	}
+        if (!copy_3_strings (buf, sizeof buf, group, ".", ss))
+	    error(_("class name too long in '%s'"), group);
+	*meth = install(buf);
+	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
+	if (isFunction(*sxp)) {
+	    *gr = mkString(group);
+	    break;
+	}
+    }
+    *which = whichclass;
+}
+
+attribute_hidden
+int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
+		  SEXP *ans, int variant)
+{
+    int nargs, lwhich, rwhich, set;
+    SEXP lclass, s, t, m, lmeth, lsxp, lgr;
+    SEXP rclass, rmeth, rgr, rsxp, value;
+    char *generic;
+    Rboolean useS4 = TRUE, isOps = FALSE;
+
+    /* pre-test to avoid string computations when there is nothing to
+       dispatch on because either there is only one argument and it
+       isn't an object or there are two or more arguments but neither
+       of the first two is an object -- both of these cases would be
+       rejected by the code following the string examination code
+       below */
+    if (args != R_NilValue && ! isObject(CAR(args)) &&
+	(CDR(args) == R_NilValue || ! isObject(CADR(args))))
+	return 0;
+
+    isOps = strcmp(group, "Ops") == 0;
+
+    /* try for formal method */
+    if(length(args) == 1 && !IS_S4_OBJECT(CAR(args))) useS4 = FALSE;
+    if(length(args) == 2 &&
+       !IS_S4_OBJECT(CAR(args)) && !IS_S4_OBJECT(CADR(args))) useS4 = FALSE;
+    if(useS4) {
+	/* Remove argument names to ensure positional matching */
+	if(isOps)
+	    for(s = args; s != R_NilValue; s = CDR(s)) SET_TAG_NIL(s);
+	if(R_has_methods(op)) {
+	    value = R_possible_dispatch(call, op, args, rho, FALSE);
+            if (value != R_NoObject) {
+	        *ans = value;
+	        return 1;
+            }
+	}
+	/* else go on to look for S3 methods */
+    }
+
+    /* check whether we are processing the default method */
+    if ( isSymbol(CAR(call)) ) {
+        const char *pt;
+        pt = CHAR(PRINTNAME(CAR(call)));
+        while (*pt == '.') pt += 1;   /* duplicate previous behaviour exactly */
+        while (*pt != 0 && *pt != '.') pt += 1;
+        if (*pt != 0) {
+            while (*pt == '.') pt += 1;
+            if (strcmp(pt,"default") == 0)
+                return 0;
+        }
+    }
+
+    if(isOps)
+	nargs = length(args);
+    else
+	nargs = 1;
+
+    if( nargs == 1 && !isObject(CAR(args)) )
+	return 0;
+
+    if(!isObject(CAR(args)) && !isObject(CADR(args)))
+	return 0;
+
+    generic = PRIMNAME(op);
+
+    lclass = IS_S4_OBJECT(CAR(args)) ? R_data_class2(CAR(args))
+              : getClassAttrib(CAR(args));
+    PROTECT(lclass);
+
+    if( nargs == 2 )
+	rclass = IS_S4_OBJECT(CADR(args)) ? R_data_class2(CADR(args))
+                  : getClassAttrib(CADR(args));
+    else
+	rclass = R_NilValue;
+    PROTECT(rclass);
+
+    lsxp = R_NilValue; lgr = R_NilValue; lmeth = R_NilValue;
+    rsxp = R_NilValue; rgr = R_NilValue; rmeth = R_NilValue;
+
+    findmethod(lclass, group, generic, &lsxp, &lgr, &lmeth, &lwhich, rho);
+    PROTECT(lgr);
+    if(isFunction(lsxp) && IS_S4_OBJECT(CAR(args)) && lwhich > 0
+       && isBasicClass(translateChar(STRING_ELT(lclass, lwhich)))) {
+	/* This and the similar test below implement the strategy
+	 for S3 methods selected for S4 objects.  See ?Methods */
+        value = CAR(args);
+	if (NAMEDCNT_GT_0(value)) SET_NAMEDCNT_MAX(value);
+	value = R_getS4DataSlot(value, S4SXP); /* the .S3Class obj. or NULL*/
+	if(value != R_NilValue) /* use the S3Part as the inherited object */
+	    SETCAR(args, value);
+    }
+
+    if( nargs == 2 )
+	findmethod(rclass, group, generic, &rsxp, &rgr, &rmeth, &rwhich, rho);
+    else
+	rwhich = 0;
+
+    if(isFunction(rsxp) && IS_S4_OBJECT(CADR(args)) && rwhich > 0
+       && isBasicClass(translateChar(STRING_ELT(rclass, rwhich)))) {
+        value = CADR(args);
+	if (NAMEDCNT_GT_0(value)) SET_NAMEDCNT_MAX(value);
+	value = R_getS4DataSlot(value, S4SXP);
+	if(value != R_NilValue) SETCADR(args, value);
+    }
+
+    PROTECT(rgr);
+
+    if( !isFunction(lsxp) && !isFunction(rsxp) ) {
+	UNPROTECT(4);
+	return 0; /* no generic or group method so use default*/
+    }
+
+    if( lsxp != rsxp ) {
+	if ( isFunction(lsxp) && isFunction(rsxp) ) {
+	    /* special-case some methods involving difftime */
+	    const char *lname = CHAR(PRINTNAME(lmeth)),
+		*rname = CHAR(PRINTNAME(rmeth));
+	    if( streql(rname, "Ops.difftime") && 
+		(streql(lname, "+.POSIXt") || streql(lname, "-.POSIXt") ||
+		 streql(lname, "+.Date") || streql(lname, "-.Date")) )
+		rsxp = R_NilValue;
+	    else if (streql(lname, "Ops.difftime") && 
+		     (streql(rname, "+.POSIXt") || streql(rname, "+.Date")) )
+		lsxp = R_NilValue;
+	    else {
+		warning(_("Incompatible methods (\"%s\", \"%s\") for \"%s\""),
+			lname, rname, generic);
+		UNPROTECT(4);
+		return 0;
+	    }
+	}
+	/* if the right hand side is the one */
+	if( !isFunction(lsxp) ) { /* copy over the righthand stuff */
+	    lsxp = rsxp;
+	    lmeth = rmeth;
+	    lgr = rgr;
+	    lclass = rclass;
+	    lwhich = rwhich;
+	}
+    }
+
+    /* we either have a group method or a class method */
+
+    int i, j;
+
+    PROTECT(m = allocVector(STRSXP,nargs));
+    s = args;
+    for (i = 0 ; i < nargs ; i++) {
+	t = IS_S4_OBJECT(CAR(s)) ? R_data_class2(CAR(s))
+	  : getClassAttrib(CAR(s));
+	set = 0;
+	if (isString(t)) {
+	    for (j = 0 ; j < LENGTH(t) ; j++) {
+		if (!strcmp(translateChar(STRING_ELT(t, j)),
+			    translateChar(STRING_ELT(lclass, lwhich)))) {
+		    SET_STRING_ELT(m, i, PRINTNAME(lmeth));
+		    set = 1;
+		    break;
+		}
+	    }
+	}
+	if( !set )
+	    SET_STRING_ELT_BLANK(m, i);
+	s = CDR(s);
+    }
+
+    SEXP genstr = PROTECT(mkString(generic));
+
+    set = length(lclass) - lwhich;
+    PROTECT(t = allocVector(STRSXP, set));
+    copy_string_elements (t, 0, lclass, lwhich, set);
+
+    SEXP supplied[13];
+    supplied[0] = R_NilValue;
+
+    i = 0;
+
+    supplied[i++] = R_dot_Class;          supplied[i++] = t;
+    supplied[i++] = R_dot_Generic;        supplied[i++] = genstr;
+    supplied[i++] = R_dot_Method;         supplied[i++] = m;
+    supplied[i++] = R_dot_GenericCallEnv; supplied[i++] = rho;
+    supplied[i++] = R_dot_GenericDefEnv;  supplied[i++] = R_BaseEnv;
+    supplied[i++] = R_dot_Group;          supplied[i++] = lgr;
+
+
+    supplied[i] = R_NilValue;
+
+    PROTECT(t = LCONS(lmeth, CDR(call)));
+
+    /* The arguments have been evaluated; since we are passing them
+       out to a closure we need to wrap them in promises so that they
+       get duplicated and things like missing/substitute work.  */
+
+    PROTECT(s = promiseArgsWithValues(CDR(call), rho, args));
+    if (isOps) {
+        /* ensure positional matching for operators */
+        for (m = s; m != R_NilValue; m = CDR(m))
+            SET_TAG_NIL(m);
+    }
+
+    *ans = applyClosure_v (t, lsxp, s, rho, supplied, variant);
+
+    UNPROTECT(9);
+    return 1;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/*                     VERSIONS OF "APPLY" FOR METHODS                        */
+
+/* **** FIXME: This code is factored out of applyClosure.  If we keep
+   **** it we should change applyClosure to run through this routine
+   **** to avoid code drift. */
+static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
+			  SEXP newrho)
+{
+    volatile SEXP body;
+    SEXP savedsrcref;
+    RCNTXT cntxt;
+
+    body = BODY(op);
+
+    begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
+    savedsrcref = R_Srcref;  /* saved in context for longjmp, and protection */
+
+    /* Get the srcref record from the closure object.  Disable for now
+       at least, since it's not clear that it's needed. */
+    
+    R_Srcref = R_NilValue;  /* was: getAttrib(op, R_SrcrefSymbol); */
+
+    /* Debugging */
+
+    if (RDEBUG(op) | RSTEP(op))
+        body =  Rf_apply_debug_setup (call, op, rho, body, newrho);
+
+    /*  Set a longjmp target which will catch any explicit returns
+        from the function body.  */
+
+    SEXP res;
+
+    if ((SETJMP(cntxt.cjmpbuf))) {
+        if (R_ReturnedValue != R_RestartToken) {
+            res = R_ReturnedValue;
+            goto evald;
+        }
+        cntxt.callflag = CTXT_RETURN;  /* turn restart off */
+        R_ReturnedValue = R_NilValue;  /* remove restart token */
+    }
+
+    res = evalv(body, newrho, 0);
+
+  evald:
+    PROTECT(res);
+
+    R_Srcref = savedsrcref;
+    endcontext(&cntxt);
+
+    if (RDEBUG(op))
+        Rf_apply_debug_finish (call, rho);
+
+    UNPROTECT(1);  /* res */
+    return res;
+}
+
+/* **** FIXME: Temporary code to execute S4 methods in a way that
+   **** preserves lexical scope. */
+
+/* called from methods_list_dispatch.c */
+SEXP R_execMethod(SEXP op, SEXP rho)
+{
+    SEXP call, arglist, callerenv, newrho, next, val;
+    RCNTXT *cptr;
+
+    /* create a new environment frame enclosed by the lexical
+       environment of the method */
+    PROTECT(newrho = Rf_NewEnvironment(R_NilValue, R_NilValue, CLOENV(op)));
+
+    /* copy the bindings for the formal environment from the top frame
+       of the internal environment of the generic call to the new
+       frame.  need to make sure missingness information is preserved
+       and the environments for any default expression promises are
+       set to the new environment.  should move this to envir.c where
+       it can be done more efficiently. */
+    for (next = FORMALS(op); next != R_NilValue; next = CDR(next)) {
+        SEXP symbol =  TAG(next);
+	R_varloc_t loc;
+	int missing;
+	loc = R_findVarLocInFrame(rho,symbol);
+	if (loc == R_NoObject)
+	    error(_("could not find symbol \"%s\" in environment of the generic function"),
+		  CHAR(PRINTNAME(symbol)));
+	missing = R_GetVarLocMISSING(loc);
+	val = R_GetVarLocValue(loc);
+	SET_FRAME(newrho, CONS(val, FRAME(newrho)));
+	SET_TAG(FRAME(newrho), symbol);
+	if (missing) {
+	    SET_MISSING(FRAME(newrho), missing);
+	    if (TYPEOF(val) == PROMSXP && PRENV(val) == rho) {
+		SEXP deflt;
+		SET_PRENV(val, newrho);
+		/* find the symbol in the method, copy its expression
+		 * to the promise */
+		for(deflt = CAR(op); deflt != R_NilValue; deflt = CDR(deflt)) {
+		    if(TAG(deflt) == symbol)
+			break;
+		}
+		if(deflt == R_NilValue)
+		    error(_("symbol \"%s\" not in environment of method"),
+			  CHAR(PRINTNAME(symbol)));
+		SET_PRCODE(val, CAR(deflt));
+	    }
+	}
+    }
+
+    /* copy the bindings of the spacial dispatch variables in the top
+       frame of the generic call to the new frame */
+    defineVar(R_dot_defined, findVarInFrame(rho, R_dot_defined), newrho);
+    defineVar(R_dot_Method, findVarInFrame(rho, R_dot_Method), newrho);
+    defineVar(R_dot_target, findVarInFrame(rho, R_dot_target), newrho);
+
+    /* copy the bindings for .Generic and .Methods.  We know (I think)
+       that they are in the second frame, so we could use that. */
+    defineVar(R_dot_Generic, findVar(R_dot_Generic, rho), newrho);
+    defineVar(R_dot_Methods, findVar(R_dot_Methods, rho), newrho);
+
+    /* Find the calling context.  Should be R_GlobalContext unless
+       profiling has inserted a CTXT_BUILTIN frame. */
+    cptr = R_GlobalContext;
+    if (cptr->callflag & CTXT_BUILTIN)
+	cptr = cptr->nextcontext;
+
+    /* The calling environment should either be the environment of the
+       generic, rho, or the environment of the caller of the generic,
+       the current sysparent. */
+    callerenv = cptr->sysparent; /* or rho? */
+
+    /* get the rest of the stuff we need from the current context,
+       execute the method, and return the result */
+    call = cptr->call;
+    arglist = cptr->promargs;
+    val = R_execClosure(call, op, arglist, callerenv, newrho);
+    UNPROTECT(1);
+    return val;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/*                          R-LEVEL "EVAL" FUNCTIONS                          */
+
+static SEXP VectorToPairListNamed(SEXP x)
+{
+    SEXP xptr, xnew, xnames;
+    int i, len, len_x = length(x);
+
+    PROTECT(x);
+    PROTECT(xnames = getAttrib(x, R_NamesSymbol)); 
+                       /* isn't this protected via x?  Or could be concocted? */
+
+    len = 0;
+    if (xnames != R_NilValue) {
+	for (i = 0; i < len_x; i++)
+	    if (CHAR(STRING_ELT(xnames,i))[0] != 0) len += 1;
+    }
+
+    PROTECT(xnew = allocList(len));
+
+    if (len > 0) {
+	xptr = xnew;
+	for (i = 0; i < len_x; i++) {
+	    if (CHAR(STRING_ELT(xnames,i))[0] != 0) {
+		SETCAR (xptr, VECTOR_ELT(x,i));
+		SET_TAG (xptr, install_translated (STRING_ELT(xnames,i)));
+		xptr = CDR(xptr);
+	    }
+	}
+    } 
+
+    UNPROTECT(3);
+    return xnew;
+}
+
+#define simple_as_environment(arg) (IS_S4_OBJECT(arg) && (TYPEOF(arg) == S4SXP) ? R_getS4DataSlot(arg, ENVSXP) : R_NilValue)
+
+/* "eval" and "eval.with.vis" : Evaluate the first argument */
+/* in the environment specified by the second argument. */
+
+static SEXP do_eval (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+{
+    SEXP encl, x, xptr;
+    volatile SEXP expr, env, tmp;
+
+    int frame;
+    RCNTXT cntxt;
+
+    checkArity(op, args);
+
+    expr = CAR(args);
+    env = CADR(args);
+    encl = CADDR(args);
+    if (isNull(encl)) {
+	/* This is supposed to be defunct, but has been kept here
+	   (and documented as such) */
+	encl = R_BaseEnv;
+    } else if ( !isEnvironment(encl) &&
+		!isEnvironment((encl = simple_as_environment(encl))) )
+	error(_("invalid '%s' argument"), "enclos");
+    if(IS_S4_OBJECT(env) && (TYPEOF(env) == S4SXP))
+	env = R_getS4DataSlot(env, ANYSXP); /* usually an ENVSXP */
+    switch(TYPEOF(env)) {
+    case NILSXP:
+	env = encl;     /* so eval(expr, NULL, encl) works */
+        break;
+    case ENVSXP:
+	break;
+    case LISTSXP:
+	/* This usage requires all the pairlist to be named */
+	env = NewEnvironment(R_NilValue, duplicate(CADR(args)), encl);
+        set_symbits_in_env(env);
+	break;
+    case VECSXP:
+	/* PR#14035 */
+	x = VectorToPairListNamed(CADR(args));
+	for (xptr = x ; xptr != R_NilValue ; xptr = CDR(xptr))
+	    SET_NAMEDCNT_MAX(CAR(xptr));
+	env = NewEnvironment(R_NilValue, x, encl);
+        set_symbits_in_env(env);
+	break;
+    case INTSXP:
+    case REALSXP:
+	if (length(env) != 1)
+	    error(_("numeric 'envir' arg not of length one"));
+	frame = asInteger(env);
+	if (frame == NA_INTEGER)
+	    error(_("invalid '%s' argument"), "envir");
+	env = R_sysframe(frame, R_GlobalContext);
+	break;
+    default:
+	error(_("invalid '%s' argument"), "envir");
+    }
+
+    PROTECT(env); /* may no longer be what was passed in arg */
+
+    /* isLanguage includes NILSXP, and that does not need to be evaluated,
+       so don't use isLanguage(expr) || isSymbol(expr) || isByteCode(expr) */
+    if (TYPEOF(expr) == LANGSXP || TYPEOF(expr) == SYMSXP || isByteCode(expr)) {
+	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
+	if (!SETJMP(cntxt.cjmpbuf))
+	    expr = evalv (expr, env, VARIANT_PASS_ON(variant));
+	else {
+	    expr = R_ReturnedValue;
+	    if (expr == R_RestartToken) {
+		cntxt.callflag = CTXT_RETURN;  /* turn restart off */
+		error(_("restarts not supported in 'eval'"));
+	    }
+            if ( ! (variant & VARIANT_PENDING_OK))
+                WAIT_UNTIL_COMPUTED(R_ReturnedValue);
+	}
+	UNPROTECT_PROTECT(expr);
+	endcontext(&cntxt);
+    }
+    else if (TYPEOF(expr) == EXPRSXP) {
+	int i, n;
+        int len;
+        SEXP *srcrefs;
+        getBlockSrcrefs(expr,&srcrefs,&len);
+	n = LENGTH(expr);
+	tmp = R_NilValue;
+	begincontext(&cntxt, CTXT_RETURN, call, env, rho, args, op);
+        SEXP savedsrcref = R_Srcref;
+	if (!SETJMP(cntxt.cjmpbuf)) {
+	    for (i = 0 ; i < n ; i++) {
+                R_Srcref = getSrcref (srcrefs, len, i); 
+		tmp = evalv (VECTOR_ELT(expr, i), env, 
+                        i==n-1 ? VARIANT_PASS_ON(variant) 
+                               : VARIANT_NULL | VARIANT_PENDING_OK);
+            }
+        }
+	else {
+	    tmp = R_ReturnedValue;
+	    if (tmp == R_RestartToken) {
+		cntxt.callflag = CTXT_RETURN;  /* turn restart off */
+		error(_("restarts not supported in 'eval'"));
+	    }
+            if ( ! (variant & VARIANT_PENDING_OK))
+                WAIT_UNTIL_COMPUTED(R_ReturnedValue);
+	}
+	UNPROTECT_PROTECT(tmp);
+        R_Srcref = savedsrcref;
+	endcontext(&cntxt);
+	expr = tmp;
+    }
+    else if( TYPEOF(expr) == PROMSXP ) {
+	expr = forcePromise(expr);
+    } 
+    else 
+        ; /* expr is returned unchanged */
+
+    if (PRIMVAL(op)) { /* eval.with.vis(*) : */
+	PROTECT(expr);
+	PROTECT(env = allocVector(VECSXP, 2));
+	PROTECT(encl = allocVector(STRSXP, 2));
+	SET_STRING_ELT(encl, 0, mkChar("value"));
+	SET_STRING_ELT(encl, 1, mkChar("visible"));
+	SET_VECTOR_ELT(env, 0, expr);
+	SET_VECTOR_ELT(env, 1, ScalarLogicalMaybeConst(R_Visible));
+	setAttrib(env, R_NamesSymbol, encl);
+	expr = env;
+	UNPROTECT(3);
+    }
+
+    UNPROTECT(1);
+    return expr;
+}
+
+/* This is a special .Internal */
+static SEXP do_withVisible(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    SEXP x, nm, ret;
+
+    checkArity(op, args);
+    x = CAR(args);
+    x = eval(x, rho);
+    PROTECT(x);
+    PROTECT(ret = allocVector(VECSXP, 2));
+    PROTECT(nm = allocVector(STRSXP, 2));
+    SET_STRING_ELT(nm, 0, mkChar("value"));
+    SET_STRING_ELT(nm, 1, mkChar("visible"));
+    SET_VECTOR_ELT(ret, 0, x);
+    SET_VECTOR_ELT(ret, 1, ScalarLogicalMaybeConst(R_Visible));
+    setAttrib(ret, R_NamesSymbol, nm);
+    UNPROTECT(3);
+    return ret;
+}
+
+/* This is a special .Internal */
+static SEXP do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    RCNTXT *cptr;
+    SEXP s, ans ;
+    cptr = R_GlobalContext;
+    /* get the args supplied */
+    while (cptr != NULL) {
+	if (cptr->callflag == CTXT_RETURN && cptr->cloenv == rho)
+	    break;
+	cptr = cptr->nextcontext;
+    }
+    if (cptr != NULL) {
+	args = cptr->promargs;
+    }
+    /* get the env recall was called from */
+    s = R_GlobalContext->sysparent;
+    while (cptr != NULL) {
+	if (cptr->callflag == CTXT_RETURN && cptr->cloenv == s)
+	    break;
+	cptr = cptr->nextcontext;
+    }
+    if (cptr == NULL)
+	error(_("'Recall' called from outside a closure"));
+
+    /* If the function has been recorded in the context, use it
+       otherwise search for it by name or evaluate the expression
+       originally used to get it.
+    */
+    if (cptr->callfun != R_NilValue)
+	PROTECT(s = cptr->callfun);
+    else if( TYPEOF(CAR(cptr->call)) == SYMSXP)
+	PROTECT(s = findFun(CAR(cptr->call), cptr->sysparent));
+    else
+	PROTECT(s = eval(CAR(cptr->call), cptr->sysparent));
+    if (TYPEOF(s) != CLOSXP) 
+    	error(_("'Recall' called from outside a closure"));
+    ans = applyClosure_v(cptr->call, s, args, cptr->sysparent, NULL, 0);
+    UNPROTECT(1);
+    return ans;
 }
 
 
