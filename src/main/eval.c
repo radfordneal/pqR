@@ -321,6 +321,9 @@ void begincontext(RCNTXT * cptr, int flags,
 
 static void attribute_noinline endcontext_onexit (RCNTXT *cptr)
 {
+    if (cptr->cloenv == R_NilValue)
+        return;
+
     SEXP s = cptr->conexit;
     Rboolean savevis = R_Visible;
     cptr->conexit = R_NilValue; /* prevent recursion */
@@ -334,7 +337,7 @@ void endcontext(RCNTXT *cptr)
 {
     R_HandlerStack = cptr->handlerstack;
     R_RestartStack = cptr->restartstack;
-    if (cptr->conexit != R_NilValue && cptr->cloenv != R_NilValue)
+    if (cptr->conexit != R_NilValue)
         endcontext_onexit(cptr);  /* not inline, since not the common case */
     R_GlobalContext = cptr->nextcontext;
 }
@@ -1214,7 +1217,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     
     R_Srcref = getAttrib00(op, R_SrcrefSymbol);
 
-     SEXP body = BODY(op);
+    SEXP body = BODY(op);
 
     /* Debugging */
 
