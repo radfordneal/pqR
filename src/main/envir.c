@@ -733,29 +733,26 @@ static inline void R_AddGlobalCacheNotFound(SEXP symbol)
     SET_BASE_CACHE (symbol, 0);
 }
 
-static SEXP R_GetGlobalCache(SEXP symbol)
+static inline SEXP R_GetGlobalCache(SEXP symbol)
 {
-    SEXP val;
+    if (BASE_CACHE(symbol))
+        return SYMVALUE(symbol);
 
-    if (BASE_CACHE(symbol)) {
-        val = SYMVALUE(symbol);
+    SEXP val = ATTRIB_W(symbol);
+
+    if (TYPEOF(val) == LISTSXP) {
+        val = BINDING_VALUE(val);
+        if (val == R_UnboundValue) {
+            ATTRIB_W(symbol) = R_NilValue;
+            return R_NoObject;
+        }
         return val;
     }
 
-    if (ATTRIB_W(symbol) == R_UnboundValue)
+    if (val == R_UnboundValue)
         return R_UnboundValue;
 
-    if (ATTRIB_W(symbol) == R_NilValue)
-        return R_NoObject;
-
-    val = BINDING_VALUE(ATTRIB_W(symbol));
-
-    if (val == R_UnboundValue) {
-        ATTRIB_W(symbol) = R_NilValue;
-        return R_NoObject;
-    }
-
-    return val;
+    return R_NoObject;
 }
 
 
@@ -1112,18 +1109,14 @@ SEXP findVarInFrame(SEXP rho, SEXP symbol)
 
 /* findGlobalVar searches for a symbol value starting at R_GlobalEnv, so the
    cache can be used.  Doesn't wait for the value found to be computed.
-   Always set R_binding_cell to R_NilValue - fast updates here aren't needed. */
+   Always set R_binding_cell to R_NilValue - fast updates here aren't needed. 
+   findGlobalVar_uncached doesn't check the cache. */
 
-static inline SEXP findGlobalVar(SEXP symbol)
+static inline SEXP findGlobalVar_uncached(SEXP symbol)
 {
     SEXP vl, rho;
 
     R_binding_cell = R_NilValue;
-
-    vl = R_GetGlobalCache(symbol);
-    if (vl != R_NoObject)
-	return vl;
-
     Rboolean canCache = TRUE;
 
     for (rho = R_GlobalEnv; rho != R_EmptyEnv; rho = ENCLOS(rho)) {
@@ -1149,6 +1142,19 @@ static inline SEXP findGlobalVar(SEXP symbol)
     return R_UnboundValue;
 }
 
+static inline SEXP findGlobalVar(SEXP symbol)
+{
+    SEXP vl, rho;
+
+    R_binding_cell = R_NilValue;
+
+    vl = R_GetGlobalCache(symbol);
+    if (vl != R_NoObject)
+	return vl;
+
+    return findGlobalVar_uncached(symbol);
+}
+
 
 /*----------------------------------------------------------------------
 
@@ -1158,7 +1164,8 @@ static inline SEXP findGlobalVar(SEXP symbol)
 
   findVarPendingOK 
 
-     Like findVar, but doesn't wait for the value to be computed.
+     Like findVar, but doesn't wait for the value to be computed.  Also
+     doesn't skip using symbits (assumes already done).
 
   These set R_binding_cell as for findVarInFrame3. */
 
@@ -1193,8 +1200,6 @@ SEXP findVar(SEXP symbol, SEXP rho)
 SEXP findVarPendingOK(SEXP symbol, SEXP rho)
 {
     SEXP value;
-
-    rho = SKIP_USING_SYMBITS (rho, symbol);
 
     /* This first loop handles local frames, if there are any.  It
        will also handle all frames if rho is a global frame other than
