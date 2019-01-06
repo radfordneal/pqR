@@ -2305,7 +2305,7 @@ SEXP attribute_hidden eval_unshared (SEXP e, SEXP rho, int variant)
     }
     else {
 
-        res = findVarPendingOK (e, rho);
+        res = findVarPendingOK (e, SKIP_USING_SYMBITS(rho,e));
 
         if (res == R_UnboundValue)
             unbound_var_error(e);
