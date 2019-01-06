@@ -86,20 +86,24 @@ static SEXP spec_name = R_NoObject;
 
 static void setActiveValue(SEXP fun, SEXP val)
 {
+    int sv_variant_result = R_variant_result;
     SEXP arg = LCONS(R_QuoteSymbol, CONS(val, R_NilValue));
     SEXP expr = LCONS(fun, CONS(arg, R_NilValue));
-    WAIT_UNTIL_COMPUTED(val); \
     PROTECT(expr);
+    WAIT_UNTIL_COMPUTED(val);
     eval(expr, R_GlobalEnv);
     UNPROTECT(1);
+    R_variant_result = sv_variant_result;
 }
 
 static SEXP getActiveValue(SEXP fun)
 {
+    int sv_variant_result = R_variant_result;
     SEXP expr = LCONS(fun, R_NilValue);
     PROTECT(expr);
     expr = eval(expr, R_GlobalEnv);
     UNPROTECT(1);
+    R_variant_result = sv_variant_result;
     return expr;
 }
 
