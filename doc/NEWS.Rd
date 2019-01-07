@@ -6,7 +6,13 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2018-00-00}{
+\section{CHANGES IN VERSION RELEASED 2019-01-07}{
+
+  \subsection{INTRODUCTION}{
+  \itemize{
+  \item This is a maintenance release, with some bug fixes, minor feature
+        changes, and small performance improvements.
+  }}
 
   \subsection{INSTALLATION}{
   \itemize{
