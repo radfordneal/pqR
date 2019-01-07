@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -649,7 +649,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
      : UPTR_FROM_SEXP(x)->sxpinfo.nmcnt )
 
 #define NAMEDCNT_EQ_0(x) \
-( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt == 0 && helpers_is_in_use(x) == 0 ? 1 \
+( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt == 0 && !helpers_is_in_use(x) ? 1 \
     : UPTR_FROM_SEXP(x)->sxpinfo.nmcnt != 0 ? 0 \
     : (helpers_wait_until_not_in_use(x), 1) )
 
@@ -657,7 +657,7 @@ extern void helpers_wait_until_not_in_use(SEXP);
 ( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt == MAX_NAMEDCNT)
 
 #define NAMEDCNT_GT_0(x) \
-( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt == 0 && helpers_is_in_use(x) == 0 ? 0 \
+( UPTR_FROM_SEXP(x)->sxpinfo.nmcnt == 0 && !helpers_is_in_use(x) ? 0 \
     : UPTR_FROM_SEXP(x)->sxpinfo.nmcnt != 0 ? 1 \
     : (helpers_wait_until_not_in_use(x), 0) )
 
@@ -689,13 +689,6 @@ extern void helpers_wait_until_not_in_use(SEXP);
   } while (0)
 #endif
 
-/* Macros for compatibility with later R Core versions. */
-
-#define MAYBE_SHARED(x)     NAMEDCNT_GT_1(x)
-#define NO_REFERENCES(x)    NAMEDCNT_EQ_0(x)
-#define MAYBE_REFERENCED(x) NAMEDCNT_GT_0(x)
-#define NOT_SHARED(x)       (! NAMEDCNT_GT_1(x))
-
 #if MAX_NAMEDCNT!=2 && 1     /* Change 1 to 0 to disable "optimized" version */
 #define SET_NAMEDCNT_MAX(x) do { \
     SEXPREC *_p_ = UPTR_FROM_SEXP(x); \
@@ -710,6 +703,13 @@ extern void helpers_wait_until_not_in_use(SEXP);
   } while (0)
 #endif
 
+
+/* Macros for compatibility with later R Core versions. */
+
+#define MAYBE_SHARED(x)     NAMEDCNT_GT_1(x)
+#define NO_REFERENCES(x)    NAMEDCNT_EQ_0(x)
+#define MAYBE_REFERENCED(x) NAMEDCNT_GT_0(x)
+#define NOT_SHARED(x)       (! NAMEDCNT_GT_1(x))
 #define MARK_NOT_MUTABLE(x) SET_NAMEDCNT_MAX(x)
 
 
