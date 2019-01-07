@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996	Robert Gentleman and Ross Ihaka
@@ -2066,13 +2066,17 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
            Avoid accessing NAMEDCNT in a way that will cause unnecessary
            waits for task completion.
 
-           Note that the check below catches items on the scalar stack. */
+           Note that the check below catches items on the scalar stack. 
+
+           The copy is done with memcpy of 8 bytes, which is the minimum
+           space allocated for data (required by alignment), which will
+           not copy all of a complex item (hence CPLXSXP not handled here). */
 
         int rhs_type_etc = TYPE_ETC(rhs);  /* type + vec + attr + b.c. */
 
         if (NAMEDCNT_GT_0(rhs)
          && (rhs_type_etc&~TYPE_ET_CETERA_TYPE)==0 /* scalar, no attr, n.b.c. */
-         && ((NONPOINTER_VECTOR_TYPES >> rhs_type_etc) & 1)) {
+         && (((NONPOINTER_VECTOR_TYPES & ~(1<<CPLXSXP)) >> rhs_type_etc) & 1)) {
             if (v == R_UnboundValue)
                 v = findVarInFrame3_nolast (rho, lhs, 7);
             if (TYPE_ETC(v) == rhs_type_etc  /* won't be if R_UnboundValue */
@@ -2081,20 +2085,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 SET_NAMEDCNT_NOT_0(v);
                 (void) POP_IF_TOP_OF_STACK(rhs);
                 WAIT_UNTIL_NOT_IN_USE(v);  /* won't be being computed */
-                switch (rhs_type_etc) {
-                case REALSXP:
-                    *REAL(v)    = *REAL(rhs);
-                    break;
-                case CPLXSXP:
-                    *COMPLEX(v) = *COMPLEX(rhs);
-                    break;
-                case RAWSXP:
-                    *RAW(v)     = *RAW(rhs);
-                    break;
-                default: /* INTSXP or LGLSXP */
-                    *INTEGER(v) = *INTEGER(rhs);
-                    break;
-                }
+                memcpy(REAL(v),REAL(rhs),sizeof(double)); /* others no bigger */
                 rhs = v; /* for return value */
                 goto done;
             }
