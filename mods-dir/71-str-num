@@ -1,7 +1,0 @@
-Performance improvements to conversions from strings to
-integers/doubles/logicals and vice versa.
-
-Also fixed bugs in which as.numeric("0x1.1.1p0") didn't give an error,
-as.numeric("0x1fffffffffffff.7ffp0") gave an incorrectly-rounded result.
-
-And fixed bug illustrated by print(c(F,NA,NA,F),na.print="abcdef")

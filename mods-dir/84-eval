@@ -1,8 +1,0 @@
-Ensure that evaluated arguments are not changed by evaluation
-of later arguments.  Adds tests for this.  
-
-Other performance improvements too, including introduction of
-install_translated, and faster subassign for simple cases.
-
-
-

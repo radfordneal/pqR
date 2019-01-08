@@ -1,3 +1,0 @@
-Parentheses are make faster by making them SPECIAL.  Also, curly
-brackets pass on the eval variant to the last expression, and pass
-VARIANT_NULL for earlier expressions.
