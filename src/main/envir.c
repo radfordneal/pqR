@@ -684,7 +684,7 @@ void attribute_hidden InitGlobalEnv()
 
 static inline void R_FlushGlobalCache(SEXP sym)
 {
-    ATTRIB_W(sym) = R_NilValue;
+    if (ATTRIB_W(sym) != R_NilValue) ATTRIB_W(sym) = R_NilValue;
     SET_BASE_CACHE(sym,0);
 }
 
@@ -717,19 +717,21 @@ static void R_FlushGlobalCacheFromUserTable(SEXP udb)
 
 static inline void R_AddGlobalCacheBase(SEXP symbol)
 {
-    ATTRIB_W(symbol) = R_NilValue;
+    if (ATTRIB_W(symbol) != R_NilValue) ATTRIB_W(symbol) = R_NilValue;
     SET_BASE_CACHE (symbol, !IS_ACTIVE_BINDING(symbol));
 }
 
 static inline void R_AddGlobalCacheNonBase(SEXP symbol, SEXP place)
 {
-    ATTRIB_W(symbol) = place;
+    if (symbol != R_MissingArg && symbol != R_MissingUnder)
+        ATTRIB_W(symbol) = place;
     SET_BASE_CACHE (symbol, 0);
 }
 
 static inline void R_AddGlobalCacheNotFound(SEXP symbol)
 {
-    ATTRIB_W(symbol) = R_UnboundValue;
+    if (symbol != R_MissingArg && symbol != R_MissingUnder)
+        ATTRIB_W(symbol) = R_UnboundValue;
     SET_BASE_CACHE (symbol, 0);
 }
 
