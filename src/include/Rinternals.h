@@ -1612,7 +1612,7 @@ LibExtern SEXP R_UnboundValue;      /* Variable form, for those that need it */
                                     /* Set in const-objs.c, as done below */
 
 #if USE_COMPRESSED_POINTERS
-#define R_UnboundValue ((SEXP)SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,0))
+#define R_UnboundValue ((SEXP)SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,0*SGGC_SYM_CHUNKS))
 #else
 #define R_UnboundValue ((SEXP) &R_sym_consts[0]) /* for sym with no value */
 #endif
@@ -1623,7 +1623,7 @@ LibExtern SEXP R_MissingArg;        /* Variable form, for those that need it */
                                     /* Set in const-objs.c, as done below */
 
 #if USE_COMPRESSED_POINTERS
-#define R_MissingArg ((SEXP)SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,1))
+#define R_MissingArg ((SEXP)SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,1*SGGC_SYM_CHUNKS))
 #else
 #define R_MissingArg ((SEXP) &R_sym_consts[1])
 #endif
@@ -1632,7 +1632,7 @@ LibExtern SEXP R_MissingUnder;      /* Variable form, for those that need it */
                                     /* Set in const-objs.c, as done below */
 
 #if USE_COMPRESSED_POINTERS
-#define R_MissingUnder ((SEXP)SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,2))
+#define R_MissingUnder ((SEXP)SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,2*SGGC_SYM_CHUNKS))
 #else
 #define R_MissingUnder ((SEXP) &R_sym_consts[2])
 #endif

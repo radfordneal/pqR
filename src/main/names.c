@@ -694,7 +694,7 @@ void InitNames()
     PRINTNAME(R_MissingArg) = R_BlankString;
     IS_PRINTNAME(R_BlankString) = 1;
     SET_SYMVALUE(R_MissingArg, R_MissingArg);
-#   if !USE_AUX_FOR_ATTRIB
+#   if !USE_AUX_FOR_ATTRIB && !USE_COMPRESSED_POINTERS
         LENGTH(R_MissingArg) = 1;
 #   endif
 
@@ -703,8 +703,8 @@ void InitNames()
     PRINTNAME(R_MissingUnder) = R_UnderscoreString;
     IS_PRINTNAME(R_UnderscoreString) = 1;
     SET_SYMVALUE(R_MissingUnder, R_MissingArg);
-#   if !USE_AUX_FOR_ATTRIB
-        LENGTH(R_MissingUnder) = 1;
+#   if !USE_AUX_FOR_ATTRIB && !USE_COMPRESSED_POINTERS
+        LENGTH(R_MissingArg) = 1;
 #   endif
 
     /* R_RestartToken */
