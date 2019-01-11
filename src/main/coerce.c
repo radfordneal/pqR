@@ -2073,6 +2073,14 @@ static SEXP do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
 #include <immintrin.h>
 #endif
 
+/* Prelude & postlude for fast versions of is.xxx functions.  For
+   VARIANT_AND and VARIANT_OR, when the result will be a scalar
+   logical, the value is returned via ScalarLogicalMaybeConst - the
+   ...fast... routine should store the result in 'ret' and then do a
+   'goto vret'.  Otherwise, 'lans' is set to the place to store the
+   logical vector result; after the ...fast... routines stores the
+   result in it, it should let control flow into IS_POSTLUDE. */
+
 #define IS_PRELUDE \
     POP_IF_TOP_OF_STACK(x); \
     SEXP dims = R_NilValue; \
@@ -2082,20 +2090,17 @@ static SEXP do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
     int scalar_ans;      /* Answer location if arg scalar, no dim, no names */ \
     int * restrict lans; /* Pointer to where answer is stored */ \
     int ret;             /* Scalar result value for length 1 or variant ret */ \
-    if (!isVectorAtomic(x) || VARIANT_KIND(variant) != VARIANT_AND  \
-                               && VARIANT_KIND(variant) != VARIANT_OR) { \
+    if (VARIANT_KIND(variant) != VARIANT_AND  \
+     && VARIANT_KIND(variant) != VARIANT_OR) { \
         if (isVector(x)) { \
 	    dims = getDimAttrib(x); \
             if (dims != R_NilValue) PROTECT(dims); \
 	    names = getAttrib(x, \
                               isArray(x) ? R_DimNamesSymbol : R_NamesSymbol); \
             if (names != R_NilValue) PROTECT(names); \
-            if (n != 1 || dims != R_NilValue || names != R_NilValue) \
-                PROTECT(ans = allocVector(LGLSXP, n)); \
         } \
-        else { \
+        if (n != 1 || dims != R_NilValue || names != R_NilValue) \
             PROTECT(ans = allocVector(LGLSXP, n)); \
-        } \
         lans = ans == R_NilValue ? &scalar_ans : LOGICAL(ans); \
     }
 
@@ -2105,11 +2110,9 @@ static SEXP do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (names != R_NilValue) \
         setAttrib (ans, isArray(x) ? R_DimNamesSymbol : R_NamesSymbol, \
                    names); \
-    UNPROTECT ((dims != R_NilValue) + (names != R_NilValue)); \
-    if (ans != R_NilValue) { \
-        UNPROTECT(1); /*ans*/ \
+    UNPROTECT ((dims!=R_NilValue) + (names!=R_NilValue) + (ans!=R_NilValue)); \
+    if (ans != R_NilValue) \
         return ans; \
-    } \
     ret = *lans;  /* Scalar return value */\
   vret: \
     return ScalarLogicalMaybeConst(ret);
