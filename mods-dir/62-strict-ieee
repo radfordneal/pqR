@@ -1,3 +1,0 @@
-Require that doubles obey strictly-correct IEEE 64-bit floating point.
-
-This eliminates use of x86 FPU, hence only SSE2 allowed.
