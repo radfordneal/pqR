@@ -57,6 +57,10 @@
   \item Fixed a bug involving the "scalar stack" that could affect evaluation 
         of arithmetic operations when deep recursion has occurred.
   }}
+  \subsection{BUG FIXES FROM R CORE RELEASES}{
+  \itemize{
+      \item From R-3.4.4: \code{is.na(NULL)} no longer warns.  (\PR{16107})
+  }}
 }
 
 

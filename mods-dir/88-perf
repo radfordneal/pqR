@@ -1,7 +1,8 @@
 Miscellaneous performance improvements.
 
-Faster is.na, etc. for scalars.
+Faster is.na, etc. for scalars.  Also does bug fix for is.na(NULL).
 
 Speed of sampling without replacement improved for some cases, and
 overhead reduced for small cases of sample.
 
+Reduced interpretive overhead.
