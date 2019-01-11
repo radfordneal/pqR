@@ -16,6 +16,11 @@
   \item The \code{sample} function has been sped up for some cases.
   \item Common cases of \code{UseMethod} have been sped up.
   }}
+
+  \subsection{BUG FIXES FROM R CORE RELEASES}{
+  \itemize{
+      \item \code{is.na(NULL)} no longer warns.  (\PR{16107})
+  }}
 }
 
 
