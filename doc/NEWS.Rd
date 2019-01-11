@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2019-01-08}{
+\section{CHANGES IN VERSION RELEASED 2019-01-11}{
 
   \subsection{INTRODUCTION}{
   \itemize{
@@ -56,6 +56,10 @@
         distributions (eg, \code{dgeom}, \code{pgeom}, \code{qgeom}).
   \item Fixed a bug involving the "scalar stack" that could affect evaluation 
         of arithmetic operations when deep recursion has occurred.
+  }}
+  \subsection{BUG FIXES FROM R CORE RELEASES}{
+  \itemize{
+      \item From R-3.4.4: \code{is.na(NULL)} no longer warns.  (\PR{16107})
   }}
 }
 
