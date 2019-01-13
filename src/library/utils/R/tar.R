@@ -1,7 +1,7 @@
 #  File src/library/utils/R/tar.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -32,22 +32,27 @@ untar <- function(tarfile, files = NULL, list = FALSE, exdir = ".",
     if (!nzchar(TAR) || TAR == "internal")
         return(untar2(tarfile, files, list, exdir))
 
+    ## The ability of external tar commands to handle compressed tarfiles
+    ## automagically varies and is poorly documented.
+    ## E.g. macOS says its tar handles bzip2 but does not mention xz nor lzma.
+    ## (And it supports -J and --lzma flags not mentioned by man tar.)
+    ##
+    ## These days it might be better to give up trying to detect for
+    ## ourselves and rely on the external tar to do so.
+    ##
     cflag <- ""
     if (is.character(compressed)) {
         ## Any tar which supports -J does not need it for extraction
-        switch(match.arg(compressed, c("gzip", "bzip2", "xz")),
-               "gzip" = "z", "bzip2" = "j", "xz" = "J")
+        cflag <- switch(match.arg(compressed, c("gzip", "bzip2", "xz")),
+                        "gzip" = "z", "bzip2" = "j", "xz" = "J")
     } else if (is.logical(compressed)) {
         if (is.na(compressed)) {
             magic <- readBin(tarfile, "raw", n = 3L)
             if(all(magic[1:2] == c(0x1f, 0x8b))) cflag <- "z"
             else if(all(magic[1:2] == c(0x1f, 0x9d))) cflag <- "z" # compress
             else if(rawToChar(magic[1:3]) == "BZh") cflag <- "j"
-            else if(rawToChar(magic[1:5]) == paste0(rawToChar(as.raw(0xfd)),"7zXZ"))
-                 cflag <- "J"
-        } else if (compressed) cflag <- "z"
+       } else if (compressed) cflag <- "z"
     } else stop("'compressed' must be logical or character")
-    if (!restore_times) cflag <- paste0(cflag, "m")
 
     gzOK <- .Platform$OS.type == "windows"
     if (!gzOK ) {
@@ -69,20 +74,22 @@ untar <- function(tarfile, files = NULL, list = FALSE, exdir = ".",
     }
     if (!gzOK && cflag == "j" && nzchar(ZIP <- Sys.getenv("R_BZIPCMD"))) {
         TAR <- paste(ZIP,  "-dc", shQuote(tarfile), "|", TAR)
-        tarfile < "-"
+        tarfile <- "-"
         cflag <- ""
     }
-    if (cflag == "J") {
+    if (cflag == "J" && nzchar(Sys.which("xz"))) {
         TAR <- paste("xz -dc", shQuote(tarfile), "|", TAR)
-        tarfile < "-"
+        tarfile <- "-"
         cflag <- ""
     }
     if (list) {
+        ## TAR might be a command+flags or piped commands, so don't quote it
         cmd <- paste0(TAR, " -", cflag, "tf ", shQuote(tarfile))
         if (length(extras)) cmd <- paste(cmd, extras, collapse = " ")
         if (verbose) message("untar: using cmd = ", sQuote(cmd), domain = NA)
         system(cmd, intern = TRUE)
     } else {
+        if (!restore_times) cflag <- paste0(cflag, "m")
         cmd <- paste0(TAR, " -", cflag, "xf ", shQuote(tarfile))
         if (!missing(exdir)) {
             if (!dir.exists(exdir)) {
@@ -388,6 +395,7 @@ tar <- function(tarfile, files = NULL,
     } else if(inherits(tarfile, "connection")) con <- tarfile
     else stop("'tarfile' must be a character string or a connection")
 
+    ## (Comment from 2013)
     ## FIXME: eventually we should use the pax extension, but
     ## that was first supported in R 2.15.3.
     GNUname <- function(name, link = FALSE)

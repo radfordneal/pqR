@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-<!-- This manual is for R, version 3.5.1 (2018-07-02).
+<!-- This manual is for R, version 3.5.2 (2018-12-20).
 
 Copyright (C) 2001-2018 R Core Team
 
@@ -260,10 +260,9 @@ p {
       <li><a name="toc-BLAS-1" href="#BLAS">A.3.1 BLAS</a>
       <ul class="no-bullet">
         <li><a name="toc-ATLAS-1" href="#ATLAS">A.3.1.1 ATLAS</a></li>
-        <li><a name="toc-Goto-and-OpenBLAS-1" href="#Goto-and-OpenBLAS">A.3.1.2 Goto and OpenBLAS</a></li>
+        <li><a name="toc-OpenBLAS-1" href="#OpenBLAS">A.3.1.2 OpenBLAS</a></li>
         <li><a name="toc-Intel-MKL" href="#MKL">A.3.1.3 Intel MKL</a></li>
-        <li><a name="toc-ACML-1" href="#ACML">A.3.1.4 ACML</a></li>
-        <li><a name="toc-Shared-BLAS-1" href="#Shared-BLAS">A.3.1.5 Shared BLAS</a></li>
+        <li><a name="toc-Shared-BLAS-1" href="#Shared-BLAS">A.3.1.4 Shared BLAS</a></li>
       </ul></li>
       <li><a name="toc-LAPACK-1" href="#LAPACK">A.3.2 LAPACK</a></li>
       <li><a name="toc-Caveats-1" href="#Caveats">A.3.3 Caveats</a></li>
@@ -333,7 +332,7 @@ p {
 
 <p>This is a guide to installation and administration for R.
 </p>
-<p>This manual is for R, version 3.5.1 (2018-07-02).
+<p>This manual is for R, version 3.5.2 (2018-12-20).
 </p>
 <p>Copyright &copy; 2001&ndash;2018 R Core Team
 </p>
@@ -396,10 +395,10 @@ before unpacking so that the files will be readable by the target group
 (e.g., <code>umask 022</code> to be usable by all users).  Keep this
 setting of <code>umask</code> whilst building and installing.
 </p>
-<p>If you use a recent <acronym>GNU</acronym> version of <code>tar</code> and do this
-as a root account (which on Windows includes accounts with administrator
-privileges) you may see many warnings about changing ownership.  In
-which case you can use
+<p>If you use a fairly recent <acronym>GNU</acronym> version of <code>tar</code> and do
+this as a root account (which on Windows includes accounts with
+administrator privileges) you may see many warnings about changing
+ownership.  In which case you can use
 </p>
 <div class="example">
 <pre class="example">tar --no-same-owner -xf R-<var>x</var>.<var>y</var>.<var>z</var>.tar.gz
@@ -504,13 +503,13 @@ might be (for the correct value of <samp><var>dir</var></samp>)
 
 <p>R will configure and build under most common Unix and Unix-alike
 platforms including &lsquo;<samp><var>cpu</var>-*-linux-gnu</samp>&rsquo; for the
-&lsquo;<samp>alpha</samp>&rsquo;, &lsquo;<samp>arm</samp>&rsquo;, &lsquo;<samp>hppa</samp>&rsquo;, &lsquo;<samp>ix86</samp>&rsquo;,
-&lsquo;<samp>m68k</samp>&rsquo;, &lsquo;<samp>mips</samp>&rsquo;, &lsquo;<samp>mipsel</samp>&rsquo;, &lsquo;<samp>powerpc</samp>&rsquo;,
-&lsquo;<samp>s390</samp>&rsquo;, &lsquo;<samp>sparc</samp>&rsquo;, and &lsquo;<samp>x86_64</samp>&rsquo; <acronym>CPU</acronym>s,
+&lsquo;<samp>alpha</samp>&rsquo;, &lsquo;<samp>arm64</samp>&rsquo;, &lsquo;<samp>hppa</samp>&rsquo;, &lsquo;<samp>ix86</samp>&rsquo;,
+&lsquo;<samp>m68k</samp>&rsquo;, &lsquo;<samp>mips</samp>&rsquo;, &lsquo;<samp>mipsel</samp>&rsquo;, &lsquo;<samp>ppc64</samp>&rsquo;,
+&lsquo;<samp>s390</samp>&rsquo;, &lsquo;<samp>sparc64</samp>&rsquo;, and &lsquo;<samp>x86_64</samp>&rsquo; <acronym>CPU</acronym>s,
 &lsquo;<samp>x86_64-apple-darwin</samp>&rsquo;, &lsquo;<samp>i386-sun-solaris</samp>&rsquo; and
 &lsquo;<samp>sparc-sun-solaris</samp>&rsquo; as well as
 perhaps (it is tested less frequently on these platforms)
-&lsquo;<samp>i386-apple-darwin</samp>&rsquo;, &lsquo;<samp>i386-*-freebsd</samp>&rsquo;, &lsquo;<samp>x86_64-*-freebsd</samp>&rsquo;,
+&lsquo;<samp>i386-*-freebsd</samp>&rsquo;, &lsquo;<samp>x86_64-*-freebsd</samp>&rsquo;,
 &lsquo;<samp>i386-*-netbsd</samp>&rsquo;, &lsquo;<samp>x86_64/*-openbsd</samp>&rsquo; and
 &lsquo;<samp>powerpc-ibm-aix6*</samp>&rsquo;
 </p>
@@ -535,9 +534,9 @@ of R and then runs many R scripts to complete the build.
 <a href="#Essential-and-useful-other-programs-under-a-Unix_002dalike">Essential and useful other programs under a Unix-alike</a>, and install
 those you
 <a name="index-TMPDIR"></a>
-want or need.  Ensure that the environment variable <code>TMPDIR</code> is
-either unset (and <samp>/tmp</samp> exists and can be written in and scripts
-can be executed from) or points to the absolute path to a valid
+want or need.  Ensure that either the environment variable <code>TMPDIR</code>
+is either unset (and <samp>/tmp</samp> exists and can be written in and
+scripts can be executed from) or points to the absolute path to a valid
 temporary directory (one from which execution of scripts is allowed)
 which does not contain spaces.<a name="DOCF3" href="#FOOT3"><sup>3</sup></a>
 </p>
@@ -647,6 +646,10 @@ some do not have <samp>/usr/local/bin</samp> on the default path.
 <a name="Help-options-1"></a>
 <h3 class="section">2.2 Help options</h3>
 
+<p>R by default provides help pages a plain text displayed in a pager,
+with the options (see the help for <code>help</code> of displaying help as
+HTML or PDF.
+</p>
 <p>By default <acronym>HTML</acronym> help pages are created when needed rather than being
 built at install time.
 </p>
@@ -680,11 +683,11 @@ loopback interface has been disabled.  See
 <dl compact="compact">
 <dt>&lsquo;<samp>fullrefman</samp>&rsquo;</dt>
 <dd><p>Printed versions of all the help pages for base and recommended packages
-(around 3500 pages).
+(around 3600 pages).
 </p></dd>
 <dt>&lsquo;<samp>refman</samp>&rsquo;</dt>
 <dd><p>Printed versions of the help pages for selected base packages (around
-2000 pages)
+2200 pages)
 </p></dd>
 <dt>&lsquo;<samp>R-FAQ</samp>&rsquo;</dt>
 <dd><p>R <acronym>FAQ</acronym>
@@ -802,8 +805,8 @@ LaTeX package <strong>inconsolata</strong> installed.
 </p>
 <p>Further options, e.g for <strong>hyperref</strong>, can be included in a file
 <samp>Rd.cfg</samp> somewhere on your LaTeX search path.  For example, if
-you prefer the text and not the page number in the table of contents to
-be hyperlinked use
+you prefer to hyperlink the text and not the page number in the table of
+contents use
 </p><div class="example">
 <pre class="example">\ifthenelse{\boolean{Rd@use@hyper}}{\hypersetup{linktoc=section}}{}
 </pre></div>
@@ -827,7 +830,8 @@ make mobi
 (<a href="http://calibre-ebook.com/download">http://calibre-ebook.com/download</a>), or from most Linux
 distributions.  If necessary the path to <code>ebook-convert</code> can be
 set as make macro <code>EBOOK</code> to by editing <samp>doc/manual/Makefile</samp>
-(which contains a commented value suitable for macOS).
+(which contains a commented value suitable for macOS) or using
+<code>make -e</code>.
 </p>
 
 <hr>
@@ -927,13 +931,13 @@ specified on the <code>make install</code> command line (at least for
 <code>libdir</code>.  The C header files can be installed to the value of
 <code>rincludedir</code>: note that as the headers are not installed into a
 subdirectory you probably want something like
-<code>rincludedir=/usr/local/include/R-3.5.1</code>.
+<code>rincludedir=/usr/local/include/R-3.5.2</code>.
 </p>
 <p>If you want the R home to be something other than
 <samp><var>libdir</var>/R</samp>, use <samp>rhome</samp>: for example
 </p>
 <div class="example">
-<pre class="example">make install rhome=/usr/local/lib64/R-3.5.1
+<pre class="example">make install rhome=/usr/local/lib64/R-3.5.2
 </pre></div>
 
 <p>will use a version-specific R home on a non-Debian Linux 64-bit
@@ -1187,9 +1191,9 @@ environment variable <code>TZ</code>.
 <a name="OpenMP-Support-1"></a>
 <h4 class="subsection">2.7.1 OpenMP Support</h4>
 
-<p>By default <code>configure</code> searches for suitable
-options<a name="DOCF11" href="#FOOT11"><sup>11</sup></a> for OpenMP support for the C, C++98, FORTRAN 77 and Fortran
-compilers.
+<p>By default <code>configure</code> searches for suitable flags<a name="DOCF11" href="#FOOT11"><sup>11</sup></a>
+for OpenMP support for the C, C++ (default standard), FORTRAN 77 and
+Fortran compilers.
 </p>
 <p>Only the C result is currently used for R itself, and only if
 <code>MAIN_LD</code>/<code>DYLIB_LD</code> were not specified.  This can be
@@ -1199,7 +1203,7 @@ overridden by specifying
 </pre></div>
 
 <p>Use for packages has similar restrictions (involving <code>SHLIB_LD</code> and
-similar: note that as FORTRAN 77 code is normally linked by the C
+similar: note that as FORTRAN 77 code is linked by the C (or C++)
 compiler, both need to support OpenMP) and can be overridden by
 specifying some of
 </p><div class="example">
@@ -1209,8 +1213,8 @@ SHLIB_OPENMP_FCFLAGS
 SHLIB_OPENMP_FFLAGS
 </pre></div>
 
-<p>Setting to an empty value will disable OpenMP for that compiler (and
-configuring with <samp>--disable-openmp</samp> will disable all
+<p>Setting these to an empty value will disable OpenMP for that compiler
+(and configuring with <samp>--disable-openmp</samp> will disable all
 detection<a name="DOCF12" href="#FOOT12"><sup>12</sup></a> of OpenMP).  The
 <code>configure</code> detection test is to compile and link a standalone
 OpenMP program, which is not the same as compiling a shared object and
@@ -1256,21 +1260,21 @@ CXX17PICFLAGS
 <code>CXX11STD</code> a suitable flag such as <samp>-std=c++11</samp> for C++11
 support. Similarly, configure will if possible choose for
 <code>CXX14STD</code> a flag<a name="DOCF13" href="#FOOT13"><sup>13</sup></a> such as <samp>-std=c++14</samp> for C++14 support and
-<samp>-std=c++1z</samp> for support for the forthcoming C++17 standard. The
-inferred values can be overridden in file <samp>config.site</samp> or on the
-<code>configure</code> command line: user-supplied values will be tested
-compiling some C++11/14/17 code.
+<samp>-std=c++17</samp> or <samp>-std=c++1z</samp> for support for the C++17
+standard.  The inferred values can be overridden in file
+<samp>config.site</samp> or on the <code>configure</code> command line:
+user-supplied values will be tested by compiling some C++11/14/17 code.
 </p>
-<p>R versions 3.1.0 to 3.3.3 used <code>CXX1X</code> rather than <code>CXX11</code>,
-and these forms are deprecated but still accepted.
+<p>R versions 3.1.0 to 3.3.3 used <code>CXX1X</code> rather than <code>CXX11</code>:
+these forms were deprecated in 3.4.4 and will be removed in 3.6.0.
 </p>
-<p>It may be<a name="DOCF14" href="#FOOT14"><sup>14</sup></a> that there is no suitable flag for C++11 support, in which
-case a different compiler could be selected for <code>CXX11</code> and its
-corresponding flags.  Likewise, a different compiler can be specified for
-C++14 support with <code>CXX14</code> and for C++17 support with <code>CXX17</code>.
-Some compilers<a name="DOCF15" href="#FOOT15"><sup>15</sup></a> by default assume
-a later standard than C++98 whereas the latter is assumed by some
-packages.  So users of GCC 6 might like to specify
+<p>It may be<a name="DOCF14" href="#FOOT14"><sup>14</sup></a> that there is no suitable flag for C++11 support,
+in which case a different compiler could be selected for <code>CXX11</code>
+and its corresponding flags.  Likewise, a different compiler can be
+specified for C++14 support with <code>CXX14</code> and for C++17 support with
+<code>CXX17</code>.  Some compilers<a name="DOCF15" href="#FOOT15"><sup>15</sup></a> by default assume a later
+standard than C++98 whereas the latter has been assumed by some packages.  So
+users of GCC 6 might like to specify
 </p><div class="example">
 <pre class="example">CXX='g++ -std=gnu++98'
 CXX11=g++
@@ -1279,11 +1283,11 @@ CXX14=g++
 CXX14STD='-std=c++14'
 </pre></div>
 
-<p>The <samp>-std</samp> flag is supported by the GCC, <code>clang</code>, Intel
+<p>The <samp>-std</samp> flag is supported by the GCC, <code>clang++</code>, Intel
 and Solaris compilers (the latter from version 12.4).  Currently
 accepted values are (plus some synonyms)
 </p><div class="example">
-<pre class="example">g++:     c++98 gnu++98 c++11 gnu+11 c++14 gnu++14 c++1z gnu++1z
+<pre class="example">g++:     c++98 gnu++98 c++11 gnu+11 c++14 gnu++14 c++17 gnu++17
 Intel:   gnu+98 c++11 c++14 (from 16.0) c++17 (from 17.0)
 Solaris: c++03 c++11 c++14 (from 12.5)
 </pre></div>
@@ -1300,7 +1304,9 @@ support to be picked by <code>configure</code>.)  Option
 extensions&rsquo;: what those are is hard to track down.
 </p>
 <p>For the use of C++11 and later in R packages see the &lsquo;Writing R
-Extensions&rsquo; manual.
+Extensions&rsquo; manual.  Currently the default C++ standard is that of the
+compiler used: from R 3.6.0 it will be C++11 if supported by the
+compiler.
 </p>
 <hr>
 <a name="Testing-a-Unix_002dalike-Installation"></a>
@@ -1316,9 +1322,9 @@ been installed with
 
 <p>which populates a <samp>tests</samp> directory in the installation.
 </p>
-<p>If this has been done, two testing routes are available.
-The first is to move to the home directory of the R installation
-(as given by <code>R.home()</code>) and run
+<p>If this has been done, two testing routes are available.  The first is
+to move to the home directory of the R installation (as given by
+<code>R RHOME</code> or from R as <code>R.home()</code>) and run
 </p>
 <div class="example">
 <pre class="example">cd tests
@@ -1333,7 +1339,7 @@ The first is to move to the home directory of the R installation
 packages (if installed) respectively.
 </p>
 <p>This re-runs all the tests relevant to the installed R (including for
-example code in the package vignettes), but not for example the ones
+example the code in the package vignettes), but not for example the ones
 checking the example code in the manuals nor making the standalone Rmath
 library.  This can occasionally be useful when the operating environment
 has been changed, for example by OS updates or by substituting the
@@ -1346,9 +1352,7 @@ of <code>make check</code>) and package sources (part of <code>make
 check-devel</code> and <code>make check-recommended</code>).  It does require a
 <code>make</code> command which supports the <code>make -j <var>n</var></code>
 option: most do but on Solaris you need to select GNU <code>make</code> or
-<code>dmake</code>.  Where parallel checking of package sources is done, a log
-file <samp><var>pngname</var>.log</samp> is left in the <code>tests</code> directory for
-inspection.
+<code>dmake</code>.
 </p>
 
 <p>Alternatively, the installed R can be run, preferably with
@@ -1408,7 +1412,7 @@ conversion to short name equivalents (a.k.a. DOS 8.3 names), then R
 <em>must</em> be installed in a path that does not contain spaces.
 </p>
 <p>Installation is <em>via</em> the installer
-<samp>R-3.5.1-win.exe</samp>.  Just double-click on the icon and
+<samp>R-3.5.2-win.exe</samp>.  Just double-click on the icon and
 follow the instructions.  When installing on a 64-bit version of Windows
 the options will include 32- or 64-bit versions of R (and the default is
 to install both).  You can uninstall R from the Control Panel.
@@ -1475,12 +1479,12 @@ will call this directory <samp><var>R_HOME</var></samp> below.
 
 <p>You need to collect the following sets of files:
 </p><ul>
-<li> Get the R source code tarball <samp>R-3.5.1.tar.gz</samp> from
+<li> Get the R source code tarball <samp>R-3.5.2.tar.gz</samp> from
 <acronym>CRAN</acronym>.  Open a command window (or another shell) at directory
 <var>R_HOME</var>, and run
 
 <div class="example">
-<pre class="example">tar -xf R-3.5.1.tar.gz
+<pre class="example">tar -xf R-3.5.2.tar.gz
 </pre></div>
 
 <p>to create the source tree in <var>R_HOME</var>.  <strong>Beware</strong>: do use
@@ -1489,7 +1493,7 @@ If you are using an account with administrative privileges you may get a
 lot of messages which can be suppressed by
 </p>
 <div class="example">
-<pre class="example">tar --no-same-owner -xf R-3.5.1.tar.gz
+<pre class="example">tar --no-same-owner -xf R-3.5.2.tar.gz
 </pre></div>
 
 <a name="index-TAR_005fOPTIONS-1"></a>
@@ -1804,7 +1808,7 @@ source tree) in <samp>src/gnuwin32/installer</samp> run
 installation (in double quotes if it contains spaces or backslashes).
 </p>
 <p>Both methods create an executable with a standard name such as
-<samp>R-3.5.1-win.exe</samp>, so please rename it to indicate that
+<samp>R-3.5.2-win.exe</samp>, so please rename it to indicate that
 it is customized.  If you intend to <em>distribute</em> a customized
 installer please do check that license requirements are met &ndash; note that
 the installer will state that the contents are distributed under GPL
@@ -1863,21 +1867,21 @@ make msi
 </pre></div>
 
 <p>which will result in a file with a name like
-<samp>R-3.5.1-win32.msi</samp>.  This can be double-clicked to be
+<samp>R-3.5.2-win32.msi</samp>.  This can be double-clicked to be
 installed, but those who need it will know what to do with it (usually
 by running <code>msiexec /i</code> with additional options).  Properties
 that users might want to set from the <code>msiexec</code> command line
 include &lsquo;<samp>ALLUSERS</samp>&rsquo;, &lsquo;<samp>INSTALLDIR</samp>&rsquo; (something like
-<samp>c:\Program Files\R\R-3.5.1</samp>) and &lsquo;<samp>RMENU</samp>&rsquo; (the path
+<samp>c:\Program Files\R\R-3.5.2</samp>) and &lsquo;<samp>RMENU</samp>&rsquo; (the path
 to the &lsquo;<samp>R</samp>&rsquo; folder on the start menu) and &lsquo;<samp>STARTDIR</samp>&rsquo; (the
 starting directory for R shortcuts, defaulting to something like
 <samp>c:\Users\name\Documents\R</samp>).
 </p>
 <p>The MSI installer can be built both from a 32-bit build of R
-(<samp>R-3.5.1-win32.msi</samp>) and from a 64-bit build of R
-(<samp>R-3.5.1-win64.msi</samp>, optionally including 32-bit files
+(<samp>R-3.5.2-win32.msi</samp>) and from a 64-bit build of R
+(<samp>R-3.5.2-win64.msi</samp>, optionally including 32-bit files
 by setting the macro <code>HOME32</code>, when the name is
-<samp>R-3.5.1-win.msi</samp>).  Unlike the main installer, a 64-bit
+<samp>R-3.5.2-win.msi</samp>).  Unlike the main installer, a 64-bit
 MSI installer can only be run on 64-bit Windows.
 </p>
 <p>Thanks to David del Campo (Dept of Statistics, University of Oxford)
@@ -1911,7 +1915,7 @@ build systems: a 64-bit build is selected in file <samp>MkRules.local</samp>.
 <p>The Windows installer contains a set of test files used when building
 R.
 </p>
-<p>The <code>Rtools</code> are not needed to run these tests. but more
+<p>The <code>Rtools</code> are not needed to run these tests, but more
 comprehensive analysis of errors will be given if <code>diff</code> is in
 the path (and <code>errorsAreFatal = FALSE</code> is then not needed below).
 </p>
@@ -1946,10 +1950,10 @@ Windows&rsquo; CRLF line endings.
 
 <p>(&lsquo;macOS&rsquo; was known as &lsquo;OS X&rsquo; from 2012&ndash;2016 and as &lsquo;Mac OS X&rsquo; before that.)
 </p>
-<p>The front page of a <acronym>CRAN</acronym> site has a link &lsquo;Download R for OS
-X&rsquo;. Click on that, then download the file <samp>R-3.5.1.pkg</samp>
-and install it. This runs on macOS 10.11 and later (El Capitan, Sierra,
-High Sierra, &hellip;).
+<p>The front page of a <acronym>CRAN</acronym> site has a link &lsquo;Download R for (Mac)
+OS X&rsquo;. Click on that, then download the file
+<samp>R-3.5.2.pkg</samp> and install it. This runs on macOS 10.11
+and later (El Capitan, Sierra, High Sierra, Mojave, &hellip;).
 </p>
 <p>Installers for R-patched and R-devel are usually available from
 <a href="https://r.research.att.com">https://r.research.att.com</a>.  (Some of these packages are
@@ -1982,8 +1986,8 @@ want this time &hellip;).
 <p>Various parts of the build require XQuartz to be installed: see
 <a href="https://xquartz.macosforge.org/">https://xquartz.macosforge.org/</a>.  These include the <strong>tcltk</strong>
 package and the <code>X11</code> device: attempting to use these without
-XQuartz will remind you.  Also the cairographics-based devices (which
-are not often used on macOS) such as <code>png(type = &quot;cairo&quot;)</code>.
+XQuartz will remind you.  Also for the cairographics-based devices
+(which are not often used on macOS) such as <code>png(type = &quot;cairo&quot;)</code>.
 </p>
 <p>If you update your macOS version, you should re-install R (and
 perhaps XQuartz): the installer may tailor the installation to the
@@ -2183,7 +2187,8 @@ library is a directory containing installed packages; the main library
 is <samp><var>R_HOME</var>/library</samp>, but others can be used, for example by
 <a name="index-R_005fLIBS"></a>
 setting the environment variable <code>R_LIBS</code> or using the R function
-<code>.libPaths()</code>.
+<code>.libPaths()</code>.  To avoid any confusion you will often see a library
+directory referred to as a &lsquo;library tree&rsquo;.
 </p>
 <hr>
 <a name="Default-packages"></a>
@@ -2286,7 +2291,7 @@ absolute path to a valid temporary directory, not containing spaces.
 intention is to install a <acronym>CRAN</acronym> package and internet access is
 available.<a name="DOCF23" href="#FOOT23"><sup>23</sup></a>  On most systems &lsquo;<samp>install.packages()</samp>&rsquo;
 will allow packages to be selected from a list box (typically with
-several thousand items).
+thousands of items).
 </p>
 <p>To install packages from source on a Unix-alike use in a terminal
 </p>
@@ -2441,8 +2446,8 @@ the 64 bit path used in <samp>etc/x64/Makeconf</samp>. The version used by
 <p>On macOS (formerly OS X) <code>install.packages</code> works as it does on
 other Unix-alike systems, but there are additional types starting with
 <code>mac.binary</code> (available for the <acronym>CRAN</acronym> distribution but not
-when compiling from source: <code>mac.binary.el-capitan</code> for a &lsquo;El
-Capitan and later build with <code>&quot;default&quot;</code> a synonym for the
+when compiling R from source: <code>mac.binary.el-capitan</code> for an 
+&lsquo;El Capitan and later&rsquo; build with <code>&quot;default&quot;</code> a synonym for the
 appropriate variant) which can be passed to <code>install.packages</code> in
 order to download and install binary packages from a suitable
 repository.  These binary package files for macOS have the extension
@@ -2480,9 +2485,9 @@ appropriate version at the time of writing was
 <a href="https://r.research.att.com/libs/GTK_2.24.17-X11.pkg">https://r.research.att.com/libs/GTK_2.24.17-X11.pkg</a>
 </p>
 <p>The default compilers specified are shown in file
-<samp>/Library/Frameworks/R.framework/Resources/etc/Makeconf</samp>.  At the
-time of writing these setting assumed that the C, Fortran and C++
-compilers were on the path, and <code>gfortan</code> 6.1.0 (see
+<samp>/Library/Frameworks/R.framework/Resources/etc/Makeconf</samp>.  At
+the time of writing these setting assumed that the C, Fortran and C++
+compilers were on the path, using <code>gfortran</code> 6.1.0 (see
 <a href="#macOS">macOS</a>).  The settings can be changed, either by editing that file
 or in a file such as <samp>~/.R/Makevars</samp> (see the next section).
 Entries which may need to be changed include &lsquo;<samp>CC</samp>&rsquo;, &lsquo;<samp>CXX</samp>&rsquo;,
@@ -2494,14 +2499,13 @@ the &lsquo;<samp>CXX11</samp>&rsquo;, &lsquo;<samp>CXX14</samp>&rsquo; and &lsqu
 <p>So for example you could select a specific build of <code>clang</code> for
 both C and C++ with extensive checking by having in <samp>~/.R/Makevars</samp>
 </p><div class="example">
-<pre class="example">CC = /usr/local/clang4/bin/clang
-CXX = /usr/local/clang4/bin/clang++
+<pre class="example">CC = /usr/local/clang7/bin/clang
+CXX = /usr/local/clang7/bin/clang++
 CFLAGS = -g -O2 -Wall -pedantic -Wconversion -Wno-sign-conversion
 CXXFLAGS = -g -O2 -Wall -pedantic -Wconversion -Wno-sign-conversion
 CXX11 = $CXX
 CXX14 = $CXX
 CXX17 = $CXX
-CXX1X = $CXX
 </pre></div>
 <p>and the Sierra build of <code>gfortran</code> by
 </p><div class="example">
@@ -2512,7 +2516,7 @@ FLIBS = -L/usr/local/gfortran/lib/gcc/x86_64-apple-darwin16/6.3.0
 </pre></div>
 <p>(line split for legibility here).
 </p>
-<p>If using the C/C++ compilers from the Command Line Tools (which does not
+<p>If using the C/C++ compilers from the Command Line Tools (which do not
 have OpenMP support) one will need to include
 </p><div class="example">
 <pre class="example">SHLIB_OPENMP_CFLAGS =
@@ -2549,7 +2553,7 @@ file<a name="DOCF27" href="#FOOT27"><sup>27</sup></a> can be specified <em>via</
 </p>
 <p>Package developers are encouraged to use this mechanism to enable a
 reasonable amount of diagnostic messaging (&ldquo;warnings&rdquo;) when compiling,
-such as e.g. <samp>-Wall -pedantic</samp> for tools from GCC, the Gnu
+such as e.g. <samp>-Wall -pedantic</samp> for tools from GCC, the GNU
 Compiler Collection.
 </p>
 <p>Note that this mechanism can also be used when it necessary to change
@@ -2557,13 +2561,13 @@ the optimization level for a particular package.  For example
 </p>
 <div class="example">
 <pre class="example">## <span class="roman">for C code</span>
-CFLAGS=-g -O -mtune=native
+CFLAGS = -g -O -mtune=native
 ## <span class="roman">for C++ code</span>
-CXXFLAGS=-g -O -mtune=native
+CXXFLAGS = -g -O -mtune=native
 ## <span class="roman">for Fortran code</span>
-FFLAGS=-g -O -mtune=native
+FFLAGS = -g -O -mtune=native
 ## <span class="roman">for Fortran 9x code</span>
-FCFLAGS=-g -O -mtune=native
+FCFLAGS = -g -O -mtune=native
 </pre></div>
 
 <p>Another use is to override the settings in a binary installation of R.
@@ -2659,10 +2663,10 @@ package.
 
 <p>Some R packages contain compiled code which links to external
 software libraries.  Unless the external library is statically linked
-(which is done as much as possible for binary packages on Windows and OS
-X), the libraries have to be found when the package is loaded and not
-just when it is installed.  How this should be done depends on the OS
-(and in some cases the version).
+(which is done as much as possible for binary packages on Windows and
+macOS), the libraries have to be found when the package is loaded and
+not just when it is installed.  How this should be done depends on the
+OS (and in some cases the version).
 </p>
 <p>For Unix-alikes except macOS the primary mechanism is the <code>ld.so</code>
 cache controlled by <code>ldconfig</code>: external dynamic libraries
@@ -2670,29 +2674,30 @@ recorded in that cache will be found.  Standard library locations will
 be covered by the cache, and well-designed software will add its
 locations (as for example <strong>openmpi</strong> does on Fedora).  The secondary
 mechanism is to consult the environment variable <code>LD_LIBRARY_PATH</code>.
-Now the R script controls that variable, and sets it to the
-concatenation of <code>R_LD_LIBRARY_PATH</code>, <code>R_JAVA_LD_LIBRARY_PATH</code>
-and the environment value of <code>LD_LIBRARY_PATH</code>.  The first two have
-defaults which are normally set when R is installed (but can be
-overridden in the environment) so <code>LD_LIBRARY_PATH</code> is the best
-choice for a user to set.
+The R script controls that variable, and sets it to the concatenation
+of <code>R_LD_LIBRARY_PATH</code>, <code>R_JAVA_LD_LIBRARY_PATH</code> and the
+environment value of <code>LD_LIBRARY_PATH</code>.  The first two have defaults
+which are normally set when R is installed (but can be overridden in
+the environment) so <code>LD_LIBRARY_PATH</code> is the best choice for a user
+to set.
 </p>
-<p>On macOS the primary mechanism is to embed the absolute path to dependent
-dynamic libraries into an object when it is compiled.  Few R packages
-arrange to do so, but it can be edited<a name="DOCF28" href="#FOOT28"><sup>28</sup></a> <em>via</em> <code>install_name_tool</code> &mdash;
-that only deals with direct dependencies and those would also need to be
-compiled to include the absolute paths of their dependencies.  If the
-choice of absolute path is to be deferred to load time, how they are
-resolved is described in <code>man dyld</code>: the role of
-<code>LD_LIBRARY_PATH</code> is replaced on macOS by <code>DYLD_LIBRARY_PATH</code> and
-latterly <code>DYLD_FALLBACK_LIBRARY_PATH</code>.  Running <code>R CMD otool
--L</code> on the package shared object will show where (if anywhere) its
-dependencies are resolved. <code>DYLD_FALLBACK_LIBRARY_PATH</code> is preferred
-(and it is that which is manipulated by the R script), but as from
-10.11 (&lsquo;El Capitan&rsquo;) the default behaviour had been changed for security
-reasons to discard these environment variables when invoking a shell
-script (and <samp>R</samp> is a shell script).  That makes the only portable
-option to set <code>R_LD_LIBRARY_PATH</code> in the environment, something like
+<p>On macOS the primary mechanism is to embed the absolute path to
+dependent dynamic libraries into an object when it is compiled.  Few
+R packages arrange to do so, but it can be edited<a name="DOCF28" href="#FOOT28"><sup>28</sup></a> <em>via</em>
+<code>install_name_tool</code> &mdash; that only deals with direct dependencies
+and those would also need to be compiled to include the absolute paths
+of their dependencies.  If the choice of absolute path is to be deferred
+to load time, how they are resolved is described in <code>man dyld</code>:
+the role of <code>LD_LIBRARY_PATH</code> is replaced on macOS by
+<code>DYLD_LIBRARY_PATH</code> and <code>DYLD_FALLBACK_LIBRARY_PATH</code>.  Running
+<code>R CMD otool -L</code> on the package shared object will show where
+(if anywhere) its dependencies are
+resolved.  <code>DYLD_FALLBACK_LIBRARY_PATH</code> is preferred (and it is that
+which is manipulated by the R script), but as from 10.11 (&lsquo;El
+Capitan&rsquo;) the default behaviour had been changed for security reasons to
+discard these environment variables when invoking a shell script (and
+<samp>R</samp> is a shell script).  That makes the only portable option to set
+<code>R_LD_LIBRARY_PATH</code> in the environment, something like
 </p>
 <div class="example">
 <pre class="example">export R_LD_LIBRARY_PATH=&quot;`R RHOME`/lib:/opt/local/lib&quot;
@@ -2977,10 +2982,8 @@ compatibility.
 
 <p>Windows also uses locales, but specified in a rather less concise way.
 Most users will encounter locales only via drop-down menus, but more
-information and lists can be found at
-<a href="https://msdn.microsoft.com/en-us/library/hzz3tw78(v=vs.80)">https://msdn.microsoft.com/en-us/library/hzz3tw78(v=vs.80)</a>
-(or if Microsoft moves it yet again, search for &lsquo;<samp>Windows language
-country strings</samp>&rsquo;).
+information and lists can be found by searching for &lsquo;<samp>Windows
+language country strings</samp>&rsquo;).
 </p>
 <p>It offers only one encoding per language.
 </p>
@@ -3135,7 +3138,7 @@ vector).
 
 </li><li> Most 32-bit OSes by default limit file sizes to 2GB (and this may also
 apply to 32-bit builds on 64-bit OSes).  This can often be worked
-around: and <code>configure</code> selects suitable defines if this is
+around: <code>configure</code> selects suitable defines if this is
 possible.  (We have also largely worked around that limit on 32-bit
 Windows.)  64-bit builds have much larger limits.
 
@@ -3162,8 +3165,8 @@ distributions.)
 </p>
 <p>Even on 64-bit builds of R there are limits on the size of R
 objects (see <code>help(&quot;Memory-limits&quot;)</code>), some of which stem from the
-use of 32-bit integers (especially in FORTRAN code).  For example, the
-dimensions of an array are limited to <em>2^{31} - 1</em>.
+use of 32-bit integers (especially in FORTRAN code).  For example, each
+dimension of an array is limited to <em>2^{31} - 1</em>.
 </p>
 <hr>
 <a name="The-standalone-Rmath-library"></a>
@@ -3216,7 +3219,7 @@ an entry point
 <p>to set its seeds).
 </p>
 <p>The facilities to change the normal random number generator are
-available through the constant N01_kind. This takes values
+available through the constant <code>N01_kind</code>. This takes values
 from the enumeration type
 </p>
 <div class="example">
@@ -3393,7 +3396,7 @@ versions installed.
 <acronym>ISO</acronym>/<acronym>IEC</acronym>&nbsp;60059<a name="DOCF38" href="#FOOT38"><sup>38</sup></a>, POSIX 1003.1 and C99-compliant.<a name="DOCF39" href="#FOOT39"><sup>39</sup></a>  R tries to choose suitable
 flags<a name="DOCF40" href="#FOOT40"><sup>40</sup></a> for the C compilers it knows about, but you may have to
 set <code>CC</code> or <code>CFLAGS</code> suitably.  For versions of <code>gcc</code>
-prior to 5.1 with <code>glibc</code> this means including
+prior to 5.1 with <code>glibc</code>-based Linux this means including
 <samp>-std=gnu99</samp><a name="DOCF41" href="#FOOT41"><sup>41</sup></a>.  (Note that options essential to run the compiler
 even for linking, such as those to set the architecture, should be
 specified as part of <code>CC</code> rather than in <code>CFLAGS</code>.)
@@ -3428,7 +3431,7 @@ configuration.  A small number of POSIX functions<a name="DOCF45" href="#FOOT45"
 </p>
 <p>Installations of <code>zlib</code> (version 1.2.5 or later), <code>libbz2</code>
 (version 1.0.6 or later: called <strong>bzip2-libs</strong>/<strong>bzip2-devel</strong> or
-<strong>libbz2-1.0</strong>/<strong>libbz2-dev</strong> by some Linux distributions),
+<strong>libbz2-1.0</strong>/<strong>libbz2-dev</strong> by some Linux distributions) and
 <code>liblzma</code><a name="DOCF47" href="#FOOT47"><sup>47</sup></a> version 5.0.3 or
 later are required.
 </p>
@@ -3460,6 +3463,8 @@ automagically detect compressed archives is preferred for use with
 <code>gnutar</code> before
 <a name="index-TAR"></a>
 <code>tar</code> &ndash; use environment variable <code>TAR</code> to override this.
+(On NetBSD/OpenBSD systems set this to <code>bsdtar</code> if that is
+installed.)
 </p>
 <p>There need to be suitable versions of the tools <code>grep</code> and
 <code>sed</code>: the problems are usually with old AT&amp;T and BSD variants.
@@ -3561,7 +3566,7 @@ coverage.  See the R help on <code>X11</code> on selecting such fonts.
 <code>tiff()</code> need the appropriate headers and libraries installed:
 <code>jpeg</code> (version 6b or later, or <code>libjpeg-turbo</code>) or
 <code>libpng</code> (version 1.2.7 or later) and <code>zlib</code> or <code>libtiff</code>
-(any recent version &ndash; 3.9.[4567] and 4.0.[23] have been tested)
+(any recent version &ndash; 3.9.[4-7] and 4.0.[2-10] have been tested)
 respectively.  They also need support for either <code>X11</code> or
 <code>cairo</code> (see above).  Should support for these devices <strong>not</strong>
 be required or broken system libraries need to be avoided there are
@@ -3576,9 +3581,9 @@ into <code>libtiff</code> such as <code>lzma</code>, <code>jbig</code> and <code
 and these may need also to be present.
 </p>
 <p>Option <samp>--with-system-tre</samp> is also available: it needs a recent
-version of TRE. (The current sources are in the <code>git</code> repository
-at <a href="https://github.com/laurikari/tre/">https://github.com/laurikari/tre/</a>, but at the time of writing
-the resulting build will not pass its checks.).
+version of TRE. (The latest (2016) sources are in the <code>git</code>
+repository at <a href="https://github.com/laurikari/tre/">https://github.com/laurikari/tre/</a>, but at the time
+of writing the resulting build will not pass its checks.).
 </p>
 <p>An implementation of <acronym>XDR</acronym> is required, and the R sources
 contain one which is likely to suffice (although a system version may
@@ -3586,11 +3591,11 @@ have higher performance).  <acronym>XDR</acronym> is part of <acronym>RPC</acron
 historically has been part of <samp>libc</samp> on a Unix-alike.  (In
 principle <code>man xdr_string</code> should tell you which library is
 needed, but it often does not: on Solaris and others it is provided by
-<code>libnsl</code>.)  However some builds<a name="DOCF56" href="#FOOT56"><sup>56</sup></a> of
-<code>glibc</code> omit or hide it with the intention that the
-<acronym>TI-RPC</acronym> library be used, in which case <code>libtirpc</code> (and its
-development version) needs to be installed, and its headers need to be
-on the C include path or in <samp>/usr/include/tirpc</samp>.
+<code>libnsl</code>.)  However some builds<a name="DOCF56" href="#FOOT56"><sup>56</sup></a> of <code>glibc</code> omit or
+hide it with the intention that the <acronym>TI-RPC</acronym> library be used, in
+which case <code>libtirpc</code> (and its development version) should be
+installed, and its headers<a name="DOCF57" href="#FOOT57"><sup>57</sup></a> need
+to be on the C include path or under <samp>/usr/include/tirpc</samp>.
 </p>
 <p>Use of the X11 clipboard selection requires the <code>Xmu</code> headers and
 libraries.  These are normally part of an X11 installation (e.g. the
@@ -3616,6 +3621,15 @@ path when the command is run, or its full path specified by the
 environment variable <code>R_GSCMD</code> at that time.
 <a name="index-R_005fGSCMD"></a>
 </p>
+<p>At the time of writing a full installation on Fedora Linux used the
+following packages and their development versions, and this may provide
+a useful checklist for other systems:
+</p><div class="example">
+<pre class="example">bzip2 cairo fontconfig freetype fribidi glib2 libX11 libXext libXt
+libcurl libicu libjpeg libpng libtiff libtirpc libxcrypt ncurses pango
+pcre readline tcl tk xz zlib
+</pre></div>
+
 
 
 <hr>
@@ -3646,10 +3660,10 @@ the Tcl and Tk libraries and for finding the <samp>tcl.h</samp> and
 versions of Tcl/Tk installed, specifying the paths to the correct config
 files may be necessary to avoid confusion between them.
 </p>
-<p>Versions of Tcl/Tk up to 8.5.19 and 8.6.4 have been tested (including
+<p>Versions of Tcl/Tk up to 8.5.19 and 8.6.9 have been tested (including
 most versions of 8.4.x, but not recently).
 </p>
-<p>Note that the <samp>tk.h</samp> header includes<a name="DOCF57" href="#FOOT57"><sup>57</sup></a> X11 headers, so you will need X11 and its
+<p>Note that the <samp>tk.h</samp> header includes<a name="DOCF58" href="#FOOT58"><sup>58</sup></a> X11 headers, so you will need X11 and its
 development files installed.
 </p>
 <hr>
@@ -3659,13 +3673,14 @@ development files installed.
 
 <p>The build process looks for Java support on the host system, and if it
 finds it sets some settings which are useful for Java-using packages
-(such as <a href="https://CRAN.R-project.org/package=rJava"><strong>rJava</strong></a> and <a href="https://CRAN.R-project.org/package=JavaGD"><strong>JavaGD</strong></a>).  This check can be
-suppressed by configure option <samp>--disable-java</samp>.
+(such as <a href="https://CRAN.R-project.org/package=rJava"><strong>rJava</strong></a> and <a href="https://CRAN.R-project.org/package=JavaGD"><strong>JavaGD</strong></a>: these require a full
+JDK).  This check can be suppressed by configure option
+<samp>--disable-java</samp>.
 <a name="index-JAVA_005fHOME"></a>
 Configure variable <code>JAVA_HOME</code> can be set to point to a specific
 JRE/JDK, on the <code>configure</code> command line or in the environment.
 </p>
-<p>Principal amongst these settings are some library paths to the Java
+<p>Principal amongst these settings are some paths to the Java
 libraries and JVM, which are stored in environment variable
 <a name="index-R_005fJAVA_005fLD_005fLIBRARY_005fPATH"></a>
 <code>R_JAVA_LD_LIBRARY_PATH</code> in file <samp><var>R_HOME</var>/etc/ldpaths</samp> (or
@@ -3673,7 +3688,7 @@ a sub-architecture-specific version).  A typical setting for
 &lsquo;<samp>x86_64</samp>&rsquo; Linux is
 </p>
 <div class="example">
-<pre class="example">JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.71-1.b15.fc22.x86_64/jre
+<pre class="example">JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.191-1.b12.fc28.x86_64/jre
 R_JAVA_LD_LIBRARY_PATH=${JAVA_HOME}/lib/that/server
 </pre></div>
 
@@ -3706,6 +3721,25 @@ JAVA_HOME=/usr/lib/jvm/java-1.8.0/jre
 
 <p>worked.
 </p>
+<p>&lsquo;Non-server&rsquo; distributions of Java as from version 11 are of a full JDK.
+However, Linux distributions can be confusing: for example Fedora 28 had
+</p><div class="example">
+<pre class="example">java-1.8.0-openjdk
+java-1.8.0-openjdk-devel
+java-9-openjdk
+java-9-openjdk-devel
+java-openjdk
+java-openjdk-devel
+java-11-openjdk
+java-11-openjdk-devel
+</pre></div>
+<p>where the <code>-devel</code> RPMs are needed to complete the JDK.  (At the
+time of writing <code>java-openjdk</code> was Java 10.)  Debian/Ubuntu use
+&lsquo;<samp>-jre</samp>&rsquo; and &lsquo;<samp>-jdk</samp>&rsquo;, e.g.
+</p><div class="example">
+<pre class="example">sudo apt install default-jdk
+</pre></div>
+
 <hr>
 <a name="Other-compiled-languages"></a>
 <a name="Other-compiled-languages-1"></a>
@@ -3780,7 +3814,7 @@ well as <code>LSAME</code>), and appears to be usable.  However, an external
 position-independent code), and that is not checked.
 </p>
 <p>Some enhanced <acronym>BLAS</acronym>es are compiler-system-specific
-(<code>sunperf</code> on Solaris<a name="DOCF58" href="#FOOT58"><sup>58</sup></a>, <code>libessl</code> on IBM,
+(<code>sunperf</code> on Solaris<a name="DOCF59" href="#FOOT59"><sup>59</sup></a>, <code>libessl</code> on IBM,
 <code>Accelerate</code> on macOS).  The correct incantation for these is often
 found <em>via</em> <samp>--with-blas</samp> with no value on the appropriate
 platforms.
@@ -3794,7 +3828,7 @@ more elapsed time (occasionally dramatically so) than using a similar
 single-threaded <acronym>BLAS</acronym>.  On a machine running other tasks, there
 can be contention for CPU caches that reduces the effectiveness of the
 optimization of cache use by a <acronym>BLAS</acronym> implementation: some
-people warn that this is especially problematic for hyperthreaded CPUs
+people warn that this is especially problematic for hyperthreaded CPUs.
 </p>
 <p>Note that under Unix (but not under Windows) if R is compiled against
 a non-default <acronym>BLAS</acronym> and <samp>--enable-BLAS-shlib</samp> is
@@ -3826,6 +3860,12 @@ switch between the available BLAS libraries.  See
 <p>The URIs for several of these BLAS have been subject to frequent
 gratuitous changes, so you will need to search for their current
 locations.
+</p>
+<p>BLAS (and LAPACK) routines may be used inside threaded code, for example
+in OpenMP sections in packages such as <strong>mgcv</strong>.  The reference
+implementations are thread-safe but external ones may not be (even
+single-threaded ones): this can lead to hard-to-track-down incorrect
+results or segfaults.
 </p>
 
 <hr>
@@ -3860,7 +3900,7 @@ these may even contain a full LAPACK.  Such builds can be used by one of
 <p>Distributed ATLAS libraries cannot be tuned to your machine and so are a
 compromise: for example Fedora tunes &lsquo;<samp>x86_64</samp>&rsquo; for CPUs with SSE3
 extensions, and separate &lsquo;<samp>atlas-sse2</samp>&rsquo; and &lsquo;<samp>atlas-sse3</samp>&rsquo;
-&lsquo;<samp>i686</samp>&rsquo; RPMs are available.<a name="DOCF59" href="#FOOT59"><sup>59</sup></a>
+&lsquo;<samp>i686</samp>&rsquo; RPMs are available.<a name="DOCF60" href="#FOOT60"><sup>60</sup></a>
 </p>
 <p>Note that building R on Linux against distributed shared libraries
 may need &lsquo;<samp>-devel</samp>&rsquo; or &lsquo;<samp>-dev</samp>&rsquo; packages installed.
@@ -3874,12 +3914,12 @@ may need &lsquo;<samp>-devel</samp>&rsquo; or &lsquo;<samp>-dev</samp>&rsquo; pa
 </pre></div>
 
 <p>Consult its installation
-guide<a name="DOCF60" href="#FOOT60"><sup>60</sup></a>
+guide<a name="DOCF61" href="#FOOT61"><sup>61</sup></a>
 for how to build ATLAS as a shared library or as a static library with
 position-independent code (on platforms where that matters).
 </p>
 <p>According to the ATLAS
-FAQ<a name="DOCF61" href="#FOOT61"><sup>61</sup></a> the
+FAQ<a name="DOCF62" href="#FOOT62"><sup>62</sup></a> the
 maximum number of threads used by multi-threaded ATLAS is set at compile
 time.  Also, the author advises against using multi-threaded ATLAS on
 hyperthreaded CPUs without restricting affinities at compile-time to one
@@ -3888,35 +3928,32 @@ compile-time flag specifies 4 threads.)
 </p>
 
 <hr>
-<a name="Goto-and-OpenBLAS"></a>
-<a name="Goto-and-OpenBLAS-1"></a>
-<h4 class="subsubsection">A.3.1.2 Goto and OpenBLAS</h4>
+<a name="OpenBLAS"></a>
+<a name="OpenBLAS-1"></a>
+<h4 class="subsubsection">A.3.1.2 OpenBLAS</h4>
 
 <p>Dr Kazushige Goto wrote a tuned <acronym>BLAS</acronym> for several processors
-and OSes, which was frozen in mid-2010.  The final version is known as
-GotoBLAS2, and was re-released under a much less restrictive licence.
-OpenBLAS (<a href="http://www.openblas.net/">http://www.openblas.net/</a>) is a descendant project with
-support for some later CPUs (e.g. Intel Sandy Bridge and Haswell).
+and OSes, which was frozen in mid-2010.  OpenBLAS
+(<a href="http://www.openblas.net/">http://www.openblas.net/</a>) is a descendant project with support
+for some later CPUs.
 </p>
-<p>These can be used by configuring R with something like
+<p>This can be used by configuring R with something like
 </p>
 <div class="example">
-<pre class="example">--with-blas=&quot;-lgoto2&quot;
---with-blas=&quot;-lopenblas&quot;
+<pre class="example">--with-blas=&quot;-lopenblas&quot;
 </pre></div>
 
 <p>See see <a href="#Shared-BLAS">Shared BLAS</a> for an alternative (and in many ways preferable)
 way to use them.
 </p>
-<p>Some platforms provide multiple builds of OpenBLAS: for example Fedora 26
-has RPMs<a name="DOCF62" href="#FOOT62"><sup>62</sup></a>
+<p>Some platforms provide multiple builds of OpenBLAS: for example Fedora 28
+has RPMs<a name="DOCF63" href="#FOOT63"><sup>63</sup></a>
 </p><div class="example">
 <pre class="example">openblas
 openblas-threads
 openblas-openmp
 </pre></div>
-<p>providing shared
-libraries
+<p>providing shared libraries
 </p><div class="example">
 <pre class="example">libopenblas.so
 libopenblasp.so
@@ -3947,12 +3984,12 @@ advisor&rsquo; which will suggest appropriate incantations: its use is
 recommended.  Or see
 <a href="https://software.intel.com/en-us/articles/intel-mkl-link-line-advisor">https://software.intel.com/en-us/articles/intel-mkl-link-line-advisor</a>.
 </p>
-<p>There are also versions of MKL for macOS and Windows, but at the time
-these were tried they did not work with the default compilers used for
-R on those platforms.
+<p>There are also versions of MKL for macOS<a name="DOCF64" href="#FOOT64"><sup>64</sup></a> and Windows, but when
+these have been tried they did not work with the default compilers used
+for R on those platforms.
 </p>
 <p>The MKL interface has changed several times and may change again: the
-following examples have been used with versions 10.3 to 2018.1, for GCC
+following examples have been used with versions 10.3 to 2019.1, for GCC
 compilers on &lsquo;<samp>x86_64</samp>&rsquo;.
 </p>
 <p>To use a sequential version of MKL we used
@@ -3965,25 +4002,25 @@ MKL=&quot;-L${MKL_LIB_PATH} -lmkl_gf_lp64 -lmkl_core -lmkl_sequential&quot;
 </pre></div>
 
 <p>The option <samp>--with-lapack</samp> is used since MKL contains a tuned
-copy of LAPACK as well as <acronym>BLAS</acronym> (see <a href="#LAPACK">LAPACK</a>), although this
-can be omitted.
+copy of LAPACK (often older than the current version) as well as
+<acronym>BLAS</acronym> (see <a href="#LAPACK">LAPACK</a>), although this can be omitted.
 </p>
 <p>Threaded MKL may be used by replacing the line defining the variable
-<code>MKL</code> by
+<code>MKL</code> by (for version 2019.1)
 </p>
 <div class="example">
 <pre class="example">MKL=&quot;-L${MKL_LIB_PATH} -lmkl_gf_lp64 -lmkl_core \
-     -lmkl_gnu_thread -dl -lpthread&quot;
+     -lmkl_gnu_thread -dl -fopenmp&quot;
 </pre></div>
 
 <p>The default number of threads will be chosen by the OpenMP software, but
 can be controlled by setting <code>OMP_NUM_THREADS</code> or
 <code>MKL_NUM_THREADS</code>, and in recent versions seems to default to a
 sensible value for sole use of the machine.  (Parallel MKL has not
-always passed <code>make check-all</code>, but did with MKL 2018.1.)
+always passed <code>make check-all</code>, but did with MKL 2019.1.)
 </p>
 
-<p>It has been reported that
+<p>It was reported in 2015 that
 </p>
 <div class="example">
 <pre class="example">--with-blas='-mkl=parallel' --with-lapack
@@ -3992,17 +4029,9 @@ always passed <code>make check-all</code>, but did with MKL 2018.1.)
 <p>worked with the Intel 2015.3 compilers on Centos 6.
 </p>
 <hr>
-<a name="ACML"></a>
-<a name="ACML-1"></a>
-<h4 class="subsubsection">A.3.1.4 ACML</h4>
-
-<p>The AMD Core Math Library (ACML) is now end-of-life, although downloads
-remained available when checked in January 2018.
-</p>
-<hr>
 <a name="Shared-BLAS"></a>
 <a name="Shared-BLAS-1"></a>
-<h4 class="subsubsection">A.3.1.5 Shared BLAS</h4>
+<h4 class="subsubsection">A.3.1.4 Shared BLAS</h4>
 
 <p>The <acronym>BLAS</acronym> library will be used for many of the add-on packages
 as well as for R itself.  This means that it is better to use a
@@ -4053,10 +4082,9 @@ ln -s /usr/lib64/libopenblasp.so.0 <var>R_HOME</var>/lib/libRblas.so
 
 <p>on &lsquo;<samp>x86_64</samp>&rsquo; Fedora will change the <acronym>BLAS</acronym> used to
 multithreaded OpenBLAS.  A similar link works for most versions of the
-Goto <acronym>BLAS</acronym>, OpenBLAS and ACML (provided the appropriate
-<samp>lib</samp> directory is in the run-time library path or <code>ld.so</code>
-cache).  It can also be used for a single-library ATLAS, so on
-&lsquo;<samp>x86_64</samp>&rsquo; Fedora
+OpenBLAS (provided the appropriate <samp>lib</samp> directory is in the
+run-time library path or <code>ld.so</code> cache).  It can also be used
+for a single-library ATLAS, so on &lsquo;<samp>x86_64</samp>&rsquo; Fedora
 </p>
 <div class="example">
 <pre class="example">ln -s /usr/lib64/atlas/libsatlas.so.3 <var>R_HOME</var>/lib/libRblas.so
@@ -4084,7 +4112,7 @@ on &lsquo;<samp>ix86</samp>&rsquo;/&lsquo;<samp>x86_64</samp>&rsquo; Linux).  At
 is required.  This can only be done if <samp>--with-blas</samp> has been used.
 </p>
 <p>However, the likely performance gains are thought to be small (and may
-be negative), and the default is not to search for a suitable LAPACK
+be negative).  The default is not to search for a suitable LAPACK
 library, and this is definitely <strong>not</strong> recommended.  You can
 specify a specific LAPACK library or a search for a generic library by
 the configuration option <samp>--with-lapack</samp>.  The default for
@@ -4101,9 +4129,6 @@ variable
 <code>LAPACK_LIBS</code>, but this will only be used if <samp>--with-lapack</samp>
 is specified (as the default value is <code>no</code>) and the <acronym>BLAS</acronym> library
 does not contain LAPACK.
-</p>
-<p>Since ACML contains a full LAPACK, if selected as the <acronym>BLAS</acronym> it
-can be used as the LAPACK <em>via</em> <samp>--with-lapack</samp>.
 </p>
 <p>If you do use <samp>--with-lapack</samp>, be aware of potential problems
 with bugs in the LAPACK sources (or in the posted corrections to those
@@ -4137,20 +4162,6 @@ cause LAPACK to return unexpected results or become unstable.
 more elements: it is possible that an external LAPACK will not have that
 support.
 </p>
-<p>If you have a pure FORTRAN 77 compiler which cannot compile LAPACK it
-may be possible to use CLAPACK from
-<a href="http://www.netlib.org/clapack/">http://www.netlib.org/clapack/</a> by something like
-</p><div class="example">
-<pre class="example">-with-lapack=&quot;-lclapack -lf2c&quot;
-</pre></div>
-<p>provided these were built with position-independent code and the calling
-conventions for double complex function return values match those in the
-BLAS used, so it may be simpler to use CLAPACK built to use CBLAS and
-</p><div class="example">
-<pre class="example">-with-lapack=&quot;-lclapack -lcblas -lf2c&quot;
-</pre></div>
-
-
 
 <hr>
 <a name="Caveats"></a>
@@ -4159,7 +4170,7 @@ BLAS used, so it may be simpler to use CLAPACK built to use CBLAS and
 
 <p>As with all libraries, you need to ensure that they and R were
 compiled with compatible compilers and flags.  For example, this has
-meant that on Sun Sparc using the native compilers the flag
+meant that on Sun Sparc using the Oracle compilers the flag
 <samp>-dalign</samp> is needed if <code>sunperf</code> is to be used.
 </p>
 <p>On some systems it has been necessary that an external
@@ -4219,14 +4230,17 @@ elsewhere are (defaults in brackets)
 negatives.
 </p>
 <p>You will want to use <samp>--disable-R-profiling</samp> if you are building
-a profiled executable of R (e.g. with &lsquo;<samp>-pg)</samp>&rsquo;.
+a profiled executable of R (e.g. with &lsquo;<samp>-pg)</samp>&rsquo;.  Support for R
+profiling requires OS support for POSIX threads (<em>aka</em>
+&lsquo;<samp>pthreads</samp>&rsquo;), which are available on all mainstream Unix-alike
+platforms.
 </p>
 <p>Flag <samp>--enable-R-shlib</samp> causes the make process to build R as
 a dynamic (shared) library, typically called <samp>libR.so</samp>, and link
 the main R executable <samp>R.bin</samp> against that library.  This can
 only be done if all the code (including system libraries) can be
 compiled into a dynamic library, and there may be a
-performance<a name="DOCF63" href="#FOOT63"><sup>63</sup></a> penalty.  So you probably
+performance<a name="DOCF65" href="#FOOT65"><sup>65</sup></a> penalty.  So you probably
 only want this if you will be using an application which embeds R.
 Note that C code in packages installed on an R system linked with
 <samp>--enable-R-shlib</samp> is linked against the dynamic library and so
@@ -4243,7 +4257,7 @@ anything.)  The system headers for <code>valgrind</code> can be requested
 by option <samp>--with-system-valgrind-headers</samp>: they will be used if
 present (on Linux they may be in a separate package such as
 <strong>valgrind-devel</strong>).  Note though that there is no guarantee that the
-code in R will be compatible with very old<a name="DOCF64" href="#FOOT64"><sup>64</sup></a> or future <code>valgrind</code>
+code in R will be compatible with very old<a name="DOCF66" href="#FOOT66"><sup>66</sup></a> or future <code>valgrind</code>
 headers.
 </p>
 <p>If you need to re-configure R with different options you may need to run
@@ -4416,8 +4430,7 @@ path to a shell, e.g. <samp>/usr/local/bin/bash</samp>).
 
 <p>To compile R, you will most likely find it easiest to use
 <acronym>GNU</acronym> <code>make</code>, although the Sun <code>make</code> works on
-Solaris.  The native <code>make</code> has been reported to fail on SGI
-Irix 6.5 and Alpha/OSF1 (aka Tru64).
+Solaris.
 </p>
 <p>To build in a separate directory you need a <code>make</code> that supports
 the <code>VPATH</code> variable, for example <acronym>GNU</acronym> <code>make</code> and
@@ -4449,7 +4462,7 @@ is to search for
 <code>epcf90</code>,
 <code>g77</code>, <code>f77</code>, <code>xlf</code>, <code>frt</code>,
 <code>pgf77</code>, <code>cf77</code>, <code>fort77</code>, <code>fl32</code>,
-<code>af77</code> (in that order)<a name="DOCF65" href="#FOOT65"><sup>65</sup></a>, and use whichever is found first; if none is found,
+<code>af77</code> (in that order)<a name="DOCF67" href="#FOOT67"><sup>67</sup></a>, and use whichever is found first; if none is found,
 R cannot be compiled.
 However, if <code>CC</code> is <code>gcc</code>, the matching FORTRAN compiler
 (<code>g77</code> for <code>gcc</code>&nbsp;3 and <code>gfortran</code> for
@@ -4478,7 +4491,7 @@ pointer.  This is checked during the configuration process.
 </p>
 <p>Some of the FORTRAN code makes use of <code>COMPLEX*16</code> variables, which
 is a Fortran 90 extension.  This is checked for at configure
-time<a name="DOCF66" href="#FOOT66"><sup>66</sup></a>, but you may need to avoid
+time<a name="DOCF68" href="#FOOT68"><sup>68</sup></a>, but you may need to avoid
 compiler flags asserting FORTRAN 77 compliance.
 </p>
 <p>Compiling the version of LAPACK in the R sources also requires some
@@ -4567,7 +4580,7 @@ options for the linker
 <dd><p>special flags for compiling C++ code to be turned into a shared object
 </p></dd>
 <dt><code>FCPICFLAGS</code></dt>
-<dd><p>special flags for compiling Fortran 95 code to be turned into a shared object
+<dd><p>special flags for compiling Fortran 9x code to be turned into a shared object
 </p></dd>
 <dt><code>DEFS</code></dt>
 <dd><p>defines to be used when compiling C code in R itself
@@ -4586,6 +4599,11 @@ example &lsquo;<samp>-fpic</samp>&rsquo; and &lsquo;<samp>-fPIC</samp>&rsquo;, a
 allows only a limited number of symbols in a shared object.  Since R
 as a shared library has about 6200 symbols, if in doubt use the larger
 version.
+</p>
+<p>Other variables often set by <code>configure</code> include
+&lsquo;<samp>MAIN_LDFLAGS</samp>&rsquo;, &lsquo;<samp>SAFE_FFLAGS</samp>&rsquo;, &lsquo;<samp>SHLIB_LDFLAGS</samp>&rsquo; and
+&lsquo;<samp>SHLIB_CXXLDFLAGS</samp>&rsquo;: see file <samp>config.site</samp> in the sources for
+more documentation on these and others.
 </p>
 <p>To compile a profiling version of R, one might for example want to
 use &lsquo;<samp>MAIN_CFLAGS=-pg</samp>&rsquo;, &lsquo;<samp>MAIN_FFLAGS=-pg</samp>&rsquo;,
@@ -4618,7 +4636,7 @@ in the rest of this section.
 under <samp>m4</samp> by <code>autoconf</code> and <code>aclocal</code> (part of the
 <strong>automake</strong> package).  There is a formal version requirement on
 <code>autoconf</code> of 2.62 or later, but it is unlikely that anything
-other than the most recent versions<a name="DOCF67" href="#FOOT67"><sup>67</sup></a> have been thoroughly tested.
+other than the most recent versions<a name="DOCF69" href="#FOOT69"><sup>69</sup></a> have been thoroughly tested.
 </p>
 <p>File <samp>src/include/config.h</samp> is created by <code>autoheader</code>
 (part of <strong>autoconf</strong>).
@@ -4635,16 +4653,11 @@ directory.  To re-create the sources from
 <samp>src/library/compiler/noweb/compiler.nw</samp>, the command
 <code>notangle</code> is required.  Some Linux distributions include this
 command in package <strong>noweb</strong>.  It can also be installed from the
-sources at <a href="https://www.cs.tufts.edu/~nr/noweb/">https://www.cs.tufts.edu/~nr/noweb/</a><a name="DOCF68" href="#FOOT68"><sup>68</sup></a>.  The package
+sources at <a href="https://www.cs.tufts.edu/~nr/noweb/">https://www.cs.tufts.edu/~nr/noweb/</a><a name="DOCF70" href="#FOOT70"><sup>70</sup></a>.  The package
 sources are only re-created even in maintainer mode if
 <samp>src/library/compiler/noweb/compiler.nw</samp> has been updated.
 </p>
-<p>It is likely that in future creating <code>configure</code> will need the GNU
-&lsquo;autoconf archive&rsquo; installed.  This can be found at
-<a href="https://www.gnu.org/software/autoconf-archive/">https://www.gnu.org/software/autoconf-archive/</a> and as a package
-(usually called <strong>autoconf-archive</strong>) in most packaged distributions,
-for example Debian, Fedora, OpenCSW, Homebrew and MacPorts.
-</p>
+
 <hr>
 <a name="Platform-notes"></a>
 <a name="Platform-notes-1"></a>
@@ -4687,9 +4700,9 @@ Windows: _WIN32, _WIN64
 <h3 class="section">C.1 X11 issues</h3>
 
 <p>The &lsquo;<samp>X11()</samp>&rsquo; graphics device is the one started automatically on
-Unix-alikes when plotting.  As its name implies, it displays on a (local
-or remote) X server, and relies on the services provided by the X
-server.
+Unix-alikes (except most macOS builds) when plotting.  As its name
+implies, it displays on a (local or remote) X server, and relies on the
+services provided by the X server.
 </p>
 <p>The &lsquo;modern&rsquo; version of the &lsquo;<samp>X11()</samp>&rsquo; device is based on &lsquo;<samp>cairo</samp>&rsquo;
 graphics and (in most implementations) uses &lsquo;<samp>fontconfig</samp>&rsquo; to pick and
@@ -4699,7 +4712,7 @@ selection issues, they are more amenable than the issues with
 </p>
 <p>When X11 was designed, most displays were around 75dpi, whereas today
 they are of the order of 100dpi or more.  If you find that X11()
-is reporting<a name="DOCF69" href="#FOOT69"><sup>69</sup></a> missing font sizes, especially larger ones, it is likely
+is reporting<a name="DOCF71" href="#FOOT71"><sup>71</sup></a> missing font sizes, especially larger ones, it is likely
 that you are not using scalable fonts and have not installed the 100dpi
 versions of the X11 fonts.  The names and details differ by system, but
 will likely have something like Fedora&rsquo;s
@@ -4776,10 +4789,10 @@ directory or elsewhere, for example,
 <a name="index-Linux-1"></a>
 
 <p>Linux is the main development platform for R, so compilation from the
-sources is normally straightforward with the standard compilers and
-libraries.<a name="DOCF70" href="#FOOT70"><sup>70</sup></a>
+sources is normally straightforward with the most common compilers and
+libraries.<a name="DOCF72" href="#FOOT72"><sup>72</sup></a>
 </p>
-<p>Remember that some package management systems (such as <acronym>RPM</acronym> and
+<p>Recall that some package management systems (such as <acronym>RPM</acronym> and
 deb) make a distinction between the user version of a package and the
 developer version.  The latter usually has the same name but with the
 extension &lsquo;<samp>-devel</samp>&rsquo; or &lsquo;<samp>-dev</samp>&rsquo;: you need both versions
@@ -4839,7 +4852,7 @@ used unintentionally.
 
 <p>is appropriate since most (but not all) software installs its 64-bit
 libraries in <samp>/usr/local/lib64</samp>.  To build a 32-bit version of R
-on &lsquo;<samp>x86_64</samp>&rsquo; with Fedora 26 we used
+on &lsquo;<samp>x86_64</samp>&rsquo; with Fedora 28 we used
 </p>
 <div class="example">
 <pre class="example">CC=&quot;gcc -m32&quot;
@@ -4935,7 +4948,7 @@ CX11STD=-std=gnu++11
 ensure as far as possible that features from later C++ standards are not
 used unintentionally.
 </p>
-<p>Recent versions have (optional when built) OpenMP support.<a name="DOCF71" href="#FOOT71"><sup>71</sup></a>
+<p>Recent versions have (optional when built) OpenMP support.<a name="DOCF73" href="#FOOT73"><sup>73</sup></a>
 </p>
 <p>There is a project called <code>flang</code>
 (<a href="https://github.com/flang-compiler/flang">https://github.com/flang-compiler/flang</a>)) to develop a
@@ -4961,7 +4974,7 @@ few diagnostics even with <samp>-Wall -pedantic</samp>.
 </p>
 <p><code>flang</code>&rsquo;s Fortran runtime is compiled against OpenMP and it
 seems this conflicts with using OpenMP in R.  So it may be necessary
-to disable the latter by configuring using <samp>--without-openmp</samp>.
+to disable the latter by configuring R using <samp>--disable-openmp</samp>.
 </p>
 <p>It is not clear what architectures <code>flang</code> intends to support:
 our experiments were done on &lsquo;<samp>x86_64</samp>&rsquo;.
@@ -4991,12 +5004,11 @@ LDFLAGS=&quot;-L$ICC_LIBS -L$IFC_LIBS -L/usr/local/lib64&quot;
 SHLIB_CXXLD=icpc
 </pre></div>
 
-<p><code>configure</code> will add &lsquo;<samp>-c99</samp>&rsquo; to <code>CC</code> for
-C99-compliance.  This causes warnings with <code>icc</code> 10 and later, so
-use <code>CC=&quot;icc -std=c99&quot;</code> there.  The flag <samp>-wd188</samp> suppresses
-a large number of warnings about the enumeration type &lsquo;<samp>Rboolean</samp>&rsquo;.
-Because the Intel C compiler sets &lsquo;<samp>__GNUC__</samp>&rsquo; without complete
-emulation of <code>gcc</code>, we suggest adding <code>CPPFLAGS=-no-gcc</code>.
+<p>It may be necessary to use <code>CC=&quot;icc -std=c99&quot;</code> or <code>CC=&quot;icc
+-c99&quot;</code> for C99-compliance.  The flag <samp>-wd188</samp> suppresses a large
+number of warnings about the enumeration type &lsquo;<samp>Rboolean</samp>&rsquo;.  Because
+the Intel C compiler sets &lsquo;<samp>__GNUC__</samp>&rsquo; without complete emulation of
+<code>gcc</code>, we suggest adding <code>CPPFLAGS=-no-gcc</code>.
 </p>
 <p>To maintain correct <acronym>IEC</acronym>&nbsp;60559 arithmetic you most likely
 need add flags to <code>CFLAGS</code>, <code>FFLAGS</code> and <code>CXXFLAGS</code> such
@@ -5016,7 +5028,7 @@ FFLAGS=&quot;$fast&quot;
 CXX=icpc
 CXXFLAGS=&quot;$fast&quot;
 FC=$F77
-FCFLAGS=$F77FLAGS
+FCFLAGS=$FFLAGS
 </pre></div>
 
 <p>It is possible that 32-builds need to force the use of SSE2 instructions
@@ -5036,21 +5048,32 @@ in <code>SAFE_FFLAGS</code>, e.g. by
 </p>
 <p>The instructions here are for &lsquo;<samp>x86_64</samp>&rsquo; builds on 10.11 (El
 Capitan) or later.  R can be built for 10.9 and 10.10 and in
-principle<a name="DOCF72" href="#FOOT72"><sup>72</sup></a> for 10.6 to 10.8.
+principle<a name="DOCF74" href="#FOOT74"><sup>74</sup></a> for 10.6 to 10.8.
 </p>
 <p>To build R you need Apple&rsquo;s &lsquo;Command Line Tools&rsquo;: these can be
 (re-)installed by <code>xcode-select --install</code>.  (If you have a
 fresh OS installation, running e.g. <code>make</code> in a terminal will
 offer the installation of the command-line tools.  If you have installed
 Xcode, this provides the command-line tools.  The tools will need to be
-reinstalled when macOS is upgraded, as upgrading partially removes them.)
-</p>
-<p>You need GNU <code>readline</code><a name="DOCF73" href="#FOOT73"><sup>73</sup></a>  That and other
-binary components are available from
-<a href="https://r.research.att.com/libs">https://r.research.att.com/libs</a>: you will need <code>pcre</code> and
-<code>xz</code> (for <code>libzma</code>) as recent macOS versions provide libraries
-but not headers for these (and the system <code>pcre</code> is too old at 8.02
-for versions up to Sierra, although High Sierra has 8.40).
+reinstalled when macOS is upgraded, as upgrading partially removes
+them.)  As from macOS 10.14 (&lsquo;Mojave&rsquo;) an additional step is needed to
+install the headers to <samp>/usr/include</samp>: from a Terminal run
+</p><div class="example">
+<pre class="example">sudo installer -pkg \
+/Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg \
+-target /
+</pre></div>
+<p>Alternatively, change the include path <em>via</em>
+</p><div class="example">
+<pre class="example">CPPFLAGS=&quot;-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include&quot;
+</pre></div>
+
+<p>You need GNU <code>readline</code>.  That and other binary components are
+available from <a href="https://r.research.att.com/libs">https://r.research.att.com/libs</a>: you will need
+<code>pcre</code> and <code>xz</code> (for <code>libzma</code>) as recent macOS versions
+provide libraries but not headers for these (and the system <code>pcre</code>
+is too old at 8.02 for versions up to Sierra, although High Sierra had
+8.40).
 </p>
 <p>An X sub-system is required unless configuring using
 <samp>--without-x</samp>: see <a href="https://xquartz.macosforge.org/">https://xquartz.macosforge.org/</a>. R&rsquo;s
@@ -5066,7 +5089,7 @@ for versions up to Sierra, although High Sierra has 8.40).
 becomes the default device when running R at the console and X11
 would only be used for the command-line-R data editor/viewer and one
 version of Tcl/Tk.  (This option needs an Objective-C
-compiler<a name="DOCF74" href="#FOOT74"><sup>74</sup></a> which can
+compiler<a name="DOCF75" href="#FOOT75"><sup>75</sup></a> which can
 compile the source code of <code>quartz()</code>.)
 </p>
 <p>Use <samp>--without-aqua</samp> if you want a standard Unix-alike build:
@@ -5085,15 +5108,15 @@ OBJC=clang
 CFLAGS='-Wal -g -O2'
 CXXFLAGS='-Wall -g -O2'
 OBJCFLAGS='-Wall -g -O2'
-F77FLAGS='-Wall -g -O2 -mtune=generic'
-FCFLAGS=$F77FLAGS
+FFLAGS='-Wall -g -O2 -mtune=generic'
+FCFLAGS=$FFLAGS
 </pre></div>
 
 <p>with <code>clang</code> and <code>clang++</code> from the &lsquo;Command Line Tools&rsquo;
 and the Fortran compiler from one of the packages described in the next
 paragraph.
 </p>
-<p>There are installers<a name="DOCF75" href="#FOOT75"><sup>75</sup></a> for Fortran compilers for El Capitan and Sierra at
+<p>There are installers<a name="DOCF76" href="#FOOT76"><sup>76</sup></a> for Fortran compilers for El Capitan and Sierra at
 <a href="http://coudert.name/software/gfortran-6.1-ElCapitan.dmg">http://coudert.name/software/gfortran-6.1-ElCapitan.dmg</a> and
 <a href="http://coudert.name/software/gfortran-6.3-Sierra.dmg">http://coudert.name/software/gfortran-6.3-Sierra.dmg</a>.  (An
 Apple package for 6.1 is also available at
@@ -5106,7 +5129,7 @@ FC = $F77
 FLIBS = -L/usr/local/gfortran/lib/gcc/x86_64-apple-darwin15/6.1.0
   -L/usr/local/gfortran/lib -lgfortran -lquadmath -lm
 </pre></div>
-<p>or (Sierra or High Sierra)
+<p>or (Sierra or later)
 </p><div class="example">
 <pre class="example">F77 = /usr/local/gfortran/bin/gfortran
 FC = $F77
@@ -5120,8 +5143,8 @@ FLIBS = -L/usr/local/gfortran/lib/gcc/x86_64-apple-darwin16/6.3.0
 <a href="https://cran.r-project.org/bin/macosx/tools/clang-6.0.0.pkg">https://cran.r-project.org/bin/macosx/tools/clang-6.0.0.pkg</a>.
 Other recent distributions of <code>clang</code> are often available from
 <a href="http://llvm.org/releases/">http://llvm.org/releases/</a>: for example at the time of
-writing<a name="DOCF76" href="#FOOT76"><sup>76</sup></a> of 5.0.1 and
-6.0.0.  In particular, all of these include support for OpenMP which
+writing<a name="DOCF77" href="#FOOT77"><sup>77</sup></a> of 6.0.1 and
+7.0.0.  In particular, all of these include support for OpenMP which
 Apple builds of <code>clang</code> do not.  Suppose one of these
 distributions is installed under <samp>/usr/local/clang6</samp>.  Then R
 could be configured by something like
@@ -5169,7 +5192,7 @@ example by setting
 <a name="index-BLAS-library-1"></a>
 <a name="index-LAPACK-library-1"></a>
 <p>The <code>Accelerate</code>
-library<a name="DOCF77" href="#FOOT77"><sup>77</sup></a>
+library<a name="DOCF78" href="#FOOT78"><sup>78</sup></a>
 can be used <em>via</em> the configuration options
 </p>
 <div class="example">
@@ -5177,10 +5200,10 @@ can be used <em>via</em> the configuration options
 </pre></div>
 
 <p>to provide potentially higher-performance versions of the <acronym>BLAS</acronym>
-and LAPACK routines.<a name="DOCF78" href="#FOOT78"><sup>78</sup></a>  This also includes a
+and LAPACK routines.<a name="DOCF79" href="#FOOT79"><sup>79</sup></a>  This also includes a
 full LAPACK which can be used <em>via</em> <samp>--with-lapack</samp>:
 however, the version of LAPACK it contains is currently seriously old
-(&lsquo;<samp>3.2.1</samp>&rsquo; in macOS 10.13.2).
+(&lsquo;<samp>3.2.1</samp>&rsquo; in macOS 10.13.6).
 </p>
 <p>In recent versions of macOS, threading in Accelerate is controlled by
 &lsquo;Grand Central Dispatch&rsquo; and is said not to need user control.
@@ -5203,8 +5226,8 @@ times before 1902 or after 2037 (despite using a 64-bit <code>time_t</code>).
 (<a href="https://www.tug.org/mactex/">https://www.tug.org/mactex/</a>): the full installation is about
 5GB, but a smaller version (&lsquo;Basic TeX&rsquo;) is available at
 <a href="https://www.tug.org/mactex/morepackages.html">https://www.tug.org/mactex/morepackages.html</a> to which you will
-need to add some packages, e.g. for the 2017 version we needed to
-add<a name="DOCF79" href="#FOOT79"><sup>79</sup></a>  <strong>cm-super</strong>, <strong>helvetic</strong>,
+need to add some packages, e.g. for the 2018 version we needed to
+add<a name="DOCF80" href="#FOOT80"><sup>80</sup></a>  <strong>cm-super</strong>, <strong>helvetic</strong>,
 <strong>inconsolata</strong> and <strong>texinfo</strong> which brought this to about 310MB.
 &lsquo;<samp>TeX Live Utility</samp>&rsquo; (available <em>via</em> the MacTeX front page)
 provides a graphical means to manage TeX packages.
@@ -5270,27 +5293,26 @@ tclvalue(.Tcl(&quot;tk windowingsystem&quot;))  # &quot;x11&quot; or &quot;aqua&
 <a name="Java"></a>
 <h4 class="subsection">C.3.2 Java</h4>
 
-<p>The situation with Java support on macOS is messy,<a name="DOCF80" href="#FOOT80"><sup>80</sup></a> and
-distribution of Java for all platforms is changing during 2018.
+<p>The situation with Java support on macOS is messy,<a name="DOCF81" href="#FOOT81"><sup>81</sup></a> and
+distribution of Java for all platforms changed in 2018.
 </p>
 <p>macOS no longer comes with an installed Java runtime (JRE), and a macOS
 upgrade may remove one if already installed: it is intended to be
 installed at first use.  Check if a JRE is installed by running
 <code>java -version</code> in a <code>Terminal</code> window: if Java is not
-installed<a name="DOCF81" href="#FOOT81"><sup>81</sup></a>
-this should prompt you to install it.  You can also install directly a
-recent Java from Oracle (currently from
-<a href="http://www.oracle.com/technetwork/java/javase/downloads/index.html">http://www.oracle.com/technetwork/java/javase/downloads/index.html</a>:
-note that Java 9 and 10 have a limited lifetime and at the time of
-writing <a href="https://CRAN.R-project.org/package=rJava"><strong>rJava</strong></a><a name="DOCF82" href="#FOOT82"><sup>82</sup></a> did
-not install with Java 10).  Builds of OpenJDK may also be available,
-e.g. from <a href="http://jdk.java.net/">http://jdk.java.net/</a>.
+installed<a name="DOCF82" href="#FOOT82"><sup>82</sup></a> this should prompt you to install it.  You can
+also install directly a recent Java from Oracle (currently from
+<a href="http://www.oracle.com/technetwork/java/javase/downloads/index.html">http://www.oracle.com/technetwork/java/javase/downloads/index.html</a>).
+Builds of OpenJDK may also be available, e.g. from
+<a href="http://jdk.java.net/">http://jdk.java.net/</a>.  We recommend you install a version with
+long-term support, e.g. 8 or 11 (but not 9, 10 or 12 which have/had a
+6-month lifetime).
 </p>
-<p>Binary distributions of R are built against a specific version (e.g.
-1.8.0_161) of Oracle Java so <code>sudo R CMD javareconf</code> may be
+<p>Binary distributions of R are built against a specific version
+(e.g. 9) of Java so <code>sudo R CMD javareconf</code> will likely be
 needed before using Java-using packages.
 </p>
-<p>To see what compatible versions of Oracle Java are currently installed, run
+<p>To see what compatible versions of Java are currently installed, run
 <code>/usr/libexec/java_home -V -a x86_64</code>.  If needed, set the
 environment variable <code>JAVA_HOME</code> to choose between these, both when
 R is built from the sources and when <code>R CMD javareconf</code> is
@@ -5299,40 +5321,34 @@ run.
 <p>Configuring and building R both looks for a JRE and for support for
 compiling JNI programs (used by packages <a href="https://CRAN.R-project.org/package=rJava"><strong>rJava</strong></a> and
 <a href="https://CRAN.R-project.org/package=JavaGD"><strong>JavaGD</strong></a>); the latter requires a JDK (Java SDK) and not just a
-JRE.
+JRE<a name="DOCF83" href="#FOOT83"><sup>83</sup></a>.
 </p>
 <p>The build process tries to fathom out what JRE/JDK to use, but it may
-need some help, e.g. by setting <code>JAVA_HOME</code>.  An Oracle JDK can
-be specified explicitly by something like
+need some help, e.g. by setting <code>JAVA_HOME</code>.  A JDK can be
+specified explicitly by something like
 </p><div class="example">
-<pre class="example">JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_161.jdk/Contents/Home
-JAVA_CPPFLAGS=&quot;-I/${JAVA_HOME}/include -I/${JAVA_HOME}/include/darwin&quot;
-JAVA_LD_LIBRARY_PATH=&quot;${JAVA_HOME}/jre/lib/server&quot;
-JAVA_LIBS=&quot;-L/${JAVA_HOME}/jre/lib/server -ljvm&quot; 
-</pre></div>
-<p>or
-</p><div class="example">
-<pre class="example">JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-9.jdk/Contents/Home
+<pre class="example">JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-11.jdk/Contents/Home
 JAVA_CPPFLAGS=&quot;-I/${JAVA_HOME}/include -I/${JAVA_HOME}/include/darwin&quot;
 JAVA_LD_LIBRARY_PATH=&quot;${JAVA_HOME}/lib/server&quot;
 JAVA_LIBS=&quot;-L/${JAVA_HOME}/lib/server -ljvm&quot; 
 </pre></div>
+<p>or
+</p><div class="example">
+<pre class="example">JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home
+JAVA_CPPFLAGS=&quot;-I/${JAVA_HOME}/include -I/${JAVA_HOME}/include/darwin&quot;
+JAVA_LD_LIBRARY_PATH=&quot;${JAVA_HOME}/jre/lib/server&quot;
+JAVA_LIBS=&quot;-L/${JAVA_HOME}/jre/lib/server -ljvm&quot; 
+</pre></div>
 <p>in <samp>config.site</samp>.
 </p>
-<p>To use the builds of OpenJDK from  <a href="http://jdk.java.net/">http://jdk.java.net/</a>, set
-<code>JAVA_HOME</code>:
+<p>To use the builds of OpenJDK (tarballs) from <a href="http://jdk.java.net/">http://jdk.java.net/</a>,
+set <code>JAVA_HOME</code>:
 </p><div class="example">
-<pre class="example">JAVA_HOME=<var>/path/to/JDK</var>/jdk-10.jdk/Contents/Home
+<pre class="example">JAVA_HOME=<var>/path/to/JDK</var>/jdk-11.jdk/Contents/Home
 </pre></div>
 <p>where <samp><var>/path/to/JDK</var></samp> is wherever the distribution tarball was
-unpacked.  Java 10 JDKs do not contain <code>javah</code>, but R
-configuration / <code>R CMD javareconf</code> can use one from an earlier
-installation if <code>JAVAH</code> is set, e.g.,
-</p><div class="example">
-<pre class="example">JAVAH=/Library/Java/JavaVirtualMachines/jdk1.8.0_161.jdk/Contents/Home/bin/javah
-</pre></div>
-
-
+unpacked.
+</p>
 <p>Note that it is necessary to set the environment variable <code>NOAWT</code> to
 <code>1</code> to install many of the Java-using packages.
 </p>
@@ -5407,15 +5423,15 @@ in the <samp>/Applications</samp> folder.
 
 
 <p>R has been built successfully on Solaris 10 using the (zero cost)
-Oracle Developer Studio<a name="DOCF83" href="#FOOT83"><sup>83</sup></a> compilers: there has been some success with
+Oracle Developer Studio<a name="DOCF84" href="#FOOT84"><sup>84</sup></a> compilers: there has also been success with
 <code>gcc</code>/<code>gfortran</code>.  (Recent Sun machines are AMD Opterons
 or Intel Xeons (&lsquo;<samp>amd64</samp>&rsquo;) rather than &lsquo;<samp>x86</samp>&rsquo;, but 32-bit
 &lsquo;<samp>x86</samp>&rsquo; executables are the default.)  How these compilers
-identify<a name="DOCF84" href="#FOOT84"><sup>84</sup></a> themselves is slightly
-confusing: Solaris Studio versions 12.3 and 12.4 report C++ 5.12 and
-5.13, and Developer Studio 12.5 reports C++ 5.14.  We will only consider
-12.5 (May 2016): instructions for 12.3 can be found in versions of this
-manual for R 3.3.x.
+identify themselves is slightly confusing: commands <code>CC -V</code> in
+Solaris Studio versions 12.3 and 12.4 report C++ 5.12 and 5.13, and
+Developer Studio 12.5 and 12.6 report C++ 5.14 and 5.15.  We will only
+consider 12.5 (May 2016) and 12.6 (July 2017): instructions for 12.3 can
+be found in versions of this manual for R 3.3.x.
 </p>
 <p>There have been few reports on Solaris 11, with no known extra issues.
 </p>
@@ -5484,19 +5500,22 @@ CXXSTD=&quot;-library=stlport4&quot;
 CXXFLAGS=-O
 FC=$F77
 FCFLAGS=$FFLAGS
-FCLIBS=&quot;-lfsu /opt/developerstudio12.5/lib/libfui.so.2&quot;
-R_LD_LIBRARY_PATH=&quot;/opt/developerstudio12.5/lib:/usr/local/lib:/opt/csw/lib&quot;
+FCLIBS=&quot;-lfsu /opt/developerstudio12.6/lib/libfui.so.2&quot;
+R_LD_LIBRARY_PATH=&quot;/opt/developerstudio12.6/lib:/usr/local/lib:/opt/csw/lib&quot;
 </pre></div>
 
 <p>The Oracle compilers do not by default conform to the C99 standard
 (appendix F 8.9) on the return values of functions such as <code>log</code>:
 use <samp>-xlibmieee</samp> to ensure this.
 </p>
-<p>A peculiarity of the Fortran compiler is that when asked to link a
-shared object it does not link against the Fortran runtime libraries.
-In R this is only used for packages with F9x code, hence the
-<code>FCLIBS</code> definition (which sufficed for <acronym>CRAN</acronym> packages
-with 12.5).
+<p>A peculiarity of some versions of the Fortran compiler was that when
+asked to link a shared object it did not link against all the Fortran 9x
+runtime libraries, hence
+</p><div class="example">
+<pre class="example">FCLIBS=&quot;-lfsu /opt/developerstudio12.6/lib/libfui.so.2&quot;
+</pre></div>
+
+<p>has been needed.
 </p>
 <p>Using <code>-xlibmil</code> in <code>CFLAGS</code> or <code>-xlibmil</code> in
 <code>FFLAGS</code> allows more system mathematical functions to be inlined.
@@ -5514,19 +5533,36 @@ SAFE_FFLAGS=&quot;-O -libmil -fstore -xtarget=native&quot;
 packages have in the past failed to compile at optimization
 level 5.
 </p>
-<p>The Oracle compilers provide several implementations of the
-C++98 standard which select both the set of headers and a C++ runtime
-library.  These are selected by the <samp>-library</samp> flag, which as it
-is needed for both compiling and linking is best specified as part of
-the compiler.  The examples above use &lsquo;<samp>stlport4</samp>&rsquo;, currently the
-most modern of the options: the default (but still needed to be
-specified as it is needed for linking) is &lsquo;<samp>Cstd</samp>&rsquo;: see
-<a href="http://www.oracle.com/technetwork/server-storage/solaris/cmp-stlport-libcstd-142559.html">http://www.oracle.com/technetwork/server-storage/solaris/cmp-stlport-libcstd-142559.html</a>.
-Note though that most external Solaris C++ libraries will have been
-built with &lsquo;<samp>Cstd</samp>&rsquo; and so an R package using such libraries also
-needs to be.  Occasionally the option <samp>-library=stlport4,Crun</samp>
-has been needed.
+<p>The Oracle compilers provide several implementations of the C++98
+standard which select both the set of headers and a C++ runtime library.
+These are selected by the <samp>-library</samp> flag, which as it is needed
+for both compiling and linking is best specified as part of the compiler
+or &lsquo;standard&rsquo;.  The examples above use &lsquo;<samp>stlport4</samp>&rsquo;: the default (but
+still needed to be specified as it is needed for linking) is
+&lsquo;<samp>Cstd</samp>&rsquo;.  Note though that most external Solaris C++ libraries will
+have been built with &lsquo;<samp>Cstd</samp>&rsquo; and so an R package using such
+libraries also needs to be.  Occasionally the option
+<samp>-library=stlport4,Crun</samp> has been needed.
 </p>
+<p>Versions 12.5 and 12.6 also provide an implementation of C++11, but it
+is largely separate from the older C++98 ones (and their objects cannot
+be mixed).  To use this as the C++11 compiler, select
+</p>
+<div class="example">
+<pre class="example">CXX11=CC
+CXX11STD=&quot;-std=c++11 -library=stdcpp,CrunG3&quot;
+</pre></div>
+
+<p>Both versions also accept <code>-std=c++14</code>, but for 12.5 the C++14 is
+rather incomplete.  It is inadvisable to attempt to mix C++11 and C++98
+compilation (although a package has done so): there is a more compatible
+C++98/03 implementation which can be selected by
+</p>
+<div class="example">
+<pre class="example">CXX=CC 
+CXXSTD=&quot;-compat=g -library=stdcpp,CrunG3&quot;
+</pre></div>
+
 <a name="index-BLAS-library-2"></a>
 <a name="index-LAPACK-library-2"></a>
 
@@ -5572,7 +5608,7 @@ however, there have been many successful installs without this.
 <p>For a 64-bit target add <samp>-m64</samp> to the compiler macros
 and use something like <code>LDFLAGS=-L/usr/local/lib/amd64</code> or
 <code>LDFLAGS=-L/usr/local/lib/sparcv9</code> as appropriate (and other 64-bit
-library directories if used, e.g. <code>-L/opt/csw/lib/arm64</code>).
+library directories if used, e.g. <code>-L/opt/csw/lib/amd64</code>).
 It will also be necessary to point <code>pkg-config</code> at the 64-bit
 directories, e.g. by something like
 </p>
@@ -5997,7 +6033,7 @@ install LaTeX packages on first use.
 <a name="The-Inno-Setup-installer-1"></a>
 <h3 class="section">D.2 The Inno Setup installer</h3>
 
-<p>To make the installer package (<samp>R-3.5.1-win.exe</samp>) we
+<p>To make the installer package (<samp>R-3.5.2-win.exe</samp>) we
 currently require the Unicode version of Inno Setup 5.3.7 or later from
 <a href="http://jrsoftware.org/">http://jrsoftware.org/</a>. This is <em>not</em> included in
 <samp>Rtools*.exe</samp>.
@@ -6457,9 +6493,9 @@ layout is described here.</p>
 <p>How to prepare such a directory is described in file
 <samp>src/extra/tzone/Notes</samp> in the R sources.</p>
 <h3><a name="FOOT11" href="#DOCF11">(11)</a></h3>
-<p>for example, <samp>-fopenmp</samp>, <samp>-xopenmp</samp> or
-<samp>-qopenmp</samp>.  This includes for <code>clang</code> and the Intel C
-compiler.</p>
+<p>for
+example, <samp>-fopenmp</samp>, <samp>-xopenmp</samp> or <samp>-qopenmp</samp>.
+This includes for <code>clang</code> and the Intel and Oracle compilers.</p>
 <h3><a name="FOOT12" href="#DOCF12">(12)</a></h3>
 <p>This does not necessarily disable <em>use</em> of
 OpenMP &ndash; the <code>configure</code> code allows for platforms where OpenMP
@@ -6471,12 +6507,12 @@ the Fortran runtime always used OpenMP.</p>
 compilers.  For earlier versions of <code>g++</code> one could try
 <samp>-std=c++1y</samp>.</p>
 <h3><a name="FOOT14" href="#DOCF14">(14)</a></h3>
-<p>This is true for earlier versions of <code>g++</code> such
-as 4.2.1, and also for commonly-used versions of the Solaris compiler
-<code>CC</code>.</p>
+<p>This is true for earlier versions of <code>g++</code>
+such as 4.2.1, and also for commonly-used versions of the Solaris
+compiler <code>CC</code>.</p>
 <h3><a name="FOOT15" href="#DOCF15">(15)</a></h3>
-<p>Currently only
-GCC 6 and later, but this has been mooted for others.</p>
+<p>Currently only GCC and
+<code>clang++</code> versions 6 and later.</p>
 <h3><a name="FOOT16" href="#DOCF16">(16)</a></h3>
 <p>For when features were
 supported, see
@@ -6523,9 +6559,9 @@ the Open Source project.</p>
 <p>using a path containing spaces is likely to cause
 problems</p>
 <h3><a name="FOOT28" href="#DOCF28">(28)</a></h3>
-<p>They need to have been
-created using <samp>-headerpad_max_install_names</samp>, which is the
-default for an R package.</p>
+<p>They need
+to have been created using <samp>-headerpad_max_install_names</samp>, which
+is the default for an R package.</p>
 <h3><a name="FOOT29" href="#DOCF29">(29)</a></h3>
 <p>&lsquo;X/Open Portability Guide&rsquo;, which has
 had several versions.</p>
@@ -6612,9 +6648,11 @@ static libraries.</p>
 <h3><a name="FOOT51" href="#DOCF51">(51)</a></h3>
 <p>Such as
 <acronym>GNU</acronym> <code>tar</code> 1.15 or later, <code>bsdtar</code> (from
-<a href="https://github.com/libarchive/libarchive/">https://github.com/libarchive/libarchive/</a>, as used by FreeBSD and OS
-X 10.6 and later) or <code>tar</code> from the Heirloom Toolchest
-(<a href="http://heirloom.sourceforge.net/tools.html">http://heirloom.sourceforge.net/tools.html</a>).</p>
+<a href="https://github.com/libarchive/libarchive/">https://github.com/libarchive/libarchive/</a>, as used as
+<code>tar</code> by FreeBSD and macOS 10.6 and later) or <code>tar</code> from
+the Heirloom Toolchest
+(<a href="http://heirloom.sourceforge.net/tools.html">http://heirloom.sourceforge.net/tools.html</a>), although the
+latter does not support <code>xz</code> compression.</p>
 <h3><a name="FOOT52" href="#DOCF52">(52)</a></h3>
 <p><code>texi2dvi</code> is normally a shell
 script.  Some versions (including that from <strong>texinfo</strong> 5.2 and 6.0)
@@ -6636,99 +6674,101 @@ Debian/Ubuntu world: see also
 in Debian/Ubuntu.</p>
 <h3><a name="FOOT56" href="#DOCF56">(56)</a></h3>
 <p>This is the default as
-from <code>glibc</code> 2.26 and has been announced for Fedora 28.</p>
+from <code>glibc</code> 2.26 and has been confirmed for Fedora 28, which does
+not mention this on its <code>man</code> pages.</p>
 <h3><a name="FOOT57" href="#DOCF57">(57)</a></h3>
+<p>R uses <samp>rpc/xdr.h</samp> but that
+includes <samp>netconfig.h</samp> from the top <samp>tirpc</samp> directory.</p>
+<h3><a name="FOOT58" href="#DOCF58">(58)</a></h3>
 <p>This is true even for
 the &lsquo;Aqua&rsquo; version of Tk on macOS, but distributions of that include a
 copy of the X11 files needed.</p>
-<h3><a name="FOOT58" href="#DOCF58">(58)</a></h3>
+<h3><a name="FOOT59" href="#DOCF59">(59)</a></h3>
 <p>Using the Oracle Developer Studio
 <code>cc</code> and <code>f95</code> compilers</p>
-<h3><a name="FOOT59" href="#DOCF59">(59)</a></h3>
+<h3><a name="FOOT60" href="#DOCF60">(60)</a></h3>
 <p>There were others for earlier
 versions of ATLAS, and are for non-Intel architectures.  The only way to
 see exactly which CPUs the distributed libraries have been tuned for is
 to read the <samp>atlas.spec</samp> file: at the time of writing
 &lsquo;<samp>HAMMER64SSE3</samp>&rsquo; and &lsquo;<samp>Corei264AVX</samp>&rsquo; for &lsquo;<samp>x86_64</samp>&rsquo; Fedora.</p>
-<h3><a name="FOOT60" href="#DOCF60">(60)</a></h3>
-<p><a href="http://math-atlas.sourceforge.net/atlas_install/">http://math-atlas.sourceforge.net/atlas_install/</a></p>
 <h3><a name="FOOT61" href="#DOCF61">(61)</a></h3>
-<p><a href="http://math-atlas.sourceforge.net/faq.html#tnum">http://math-atlas.sourceforge.net/faq.html#tnum</a></p>
+<p><a href="http://math-atlas.sourceforge.net/atlas_install/">http://math-atlas.sourceforge.net/atlas_install/</a></p>
 <h3><a name="FOOT62" href="#DOCF62">(62)</a></h3>
-<p>(and more, e.g. for 64-bit ints and static versions).</p>
+<p><a href="http://math-atlas.sourceforge.net/faq.html#tnum">http://math-atlas.sourceforge.net/faq.html#tnum</a></p>
 <h3><a name="FOOT63" href="#DOCF63">(63)</a></h3>
+<p>(and more, e.g. for 64-bit ints and static versions).</p>
+<h3><a name="FOOT64" href="#DOCF64">(64)</a></h3>
+<p>The issue for macOS
+has been the use of double-complex routines.</p>
+<h3><a name="FOOT65" href="#DOCF65">(65)</a></h3>
 <p>We have measured 15&ndash;20% on &lsquo;<samp>i686</samp>&rsquo; Linux
 and around 10% on &lsquo;<samp>x86_64</samp>&rsquo; Linux.</p>
-<h3><a name="FOOT64" href="#DOCF64">(64)</a></h3>
+<h3><a name="FOOT66" href="#DOCF66">(66)</a></h3>
 <p>We believe that
 versions 3.4.0 to 3.13.0 are compatible.</p>
-<h3><a name="FOOT65" href="#DOCF65">(65)</a></h3>
+<h3><a name="FOOT67" href="#DOCF67">(67)</a></h3>
 <p>On HP-UX <code>fort77</code> is the
 <acronym>POSIX</acronym> compliant FORTRAN compiler, and comes after
 <code>g77</code>.</p>
-<h3><a name="FOOT66" href="#DOCF66">(66)</a></h3>
+<h3><a name="FOOT68" href="#DOCF68">(68)</a></h3>
 <p>as well as its equivalence to the <code>Rcomplex</code>
 structure defined in <samp>R_ext/Complex.h</samp>.</p>
-<h3><a name="FOOT67" href="#DOCF67">(67)</a></h3>
+<h3><a name="FOOT69" href="#DOCF69">(69)</a></h3>
 <p>at the time of revision of
-this para in 2017, <strong>autoconf-2.69</strong> from 2012 and <strong>automake-1.15</strong>
-from 2015.</p>
-<h3><a name="FOOT68" href="#DOCF68">(68)</a></h3>
+this para in late 2018, <strong>autoconf-2.69</strong> from 2012 and
+<strong>automake-1.16.1</strong> from 2018.</p>
+<h3><a name="FOOT70" href="#DOCF70">(70)</a></h3>
 <p>The links
 there have proved difficult to access, in which case either point an FTP
 client at <a href="ftp://www.eecs.harvard.edu/pub/nr/">ftp://www.eecs.harvard.edu/pub/nr/</a> or grab the copy
 made available at
 <a href="http://developer.r-project.org/noweb-2.11b.tgz">http://developer.r-project.org/noweb-2.11b.tgz</a>.</p>
-<h3><a name="FOOT69" href="#DOCF69">(69)</a></h3>
+<h3><a name="FOOT71" href="#DOCF71">(71)</a></h3>
 <p>for example, <code>X11 font at size 14 could not
 be loaded</code>.</p>
-<h3><a name="FOOT70" href="#DOCF70">(70)</a></h3>
+<h3><a name="FOOT72" href="#DOCF72">(72)</a></h3>
 <p>For example, <code>glibc</code>: other C libraries such as
 <code>musl</code> have been used but are not routinely tested.</p>
-<h3><a name="FOOT71" href="#DOCF71">(71)</a></h3>
+<h3><a name="FOOT73" href="#DOCF73">(73)</a></h3>
 <p>This
 also needs the OpenMP runtime which has sometimes been distributed
 separately.</p>
-<h3><a name="FOOT72" href="#DOCF72">(72)</a></h3>
+<h3><a name="FOOT74" href="#DOCF74">(74)</a></h3>
 <p>It will be necessary to install later versions of
 software such as <code>libcurl</code>.</p>
-<h3><a name="FOOT73" href="#DOCF73">(73)</a></h3>
-<p>Apple provides a partial emulation
-of GNU readline 4.2 based on the NetBSD <code>editline</code> library.  That
-is not recommended but for the time being R&rsquo;s installation scripts
-will make use of it if GNU readline is not found.</p>
-<h3><a name="FOOT74" href="#DOCF74">(74)</a></h3>
+<h3><a name="FOOT75" href="#DOCF75">(75)</a></h3>
 <p>These days that is defined by Apple&rsquo;s implementation
 of <code>clang</code>, so it is strongly recommended to use that.</p>
-<h3><a name="FOOT75" href="#DOCF75">(75)</a></h3>
+<h3><a name="FOOT76" href="#DOCF76">(76)</a></h3>
 <p>Some of these are unsigned packages: to
 install them you may need to right-click and select <code>Open with -&gt;
 Installer</code>.</p>
-<h3><a name="FOOT76" href="#DOCF76">(76)</a></h3>
+<h3><a name="FOOT77" href="#DOCF77">(77)</a></h3>
 <p>It is unstated what the minimum OS requirement is for
 these: the distribution of 5.0.0 required Sierra or later.</p>
-<h3><a name="FOOT77" href="#DOCF77">(77)</a></h3>
-<p><a href="https://developer.apple.com/documentation/accelerate">https://developer.apple.com/documentation/accelerate</a>.</p>
 <h3><a name="FOOT78" href="#DOCF78">(78)</a></h3>
+<p><a href="https://developer.apple.com/documentation/accelerate">https://developer.apple.com/documentation/accelerate</a>.</p>
+<h3><a name="FOOT79" href="#DOCF79">(79)</a></h3>
 <p>It was reported that for some non-Apple
 toolchains <code>CPPFLAGS</code> needed to contain <code>-D__ACCELERATE__</code>:
 not needed for <code>clang</code> 6.0.0, though.</p>
-<h3><a name="FOOT79" href="#DOCF79">(79)</a></h3>
+<h3><a name="FOOT80" href="#DOCF80">(80)</a></h3>
 <p>E.g. <em>via</em> <code>tlmgr install cm-super helvetic
 inconsolata texinfo</code> .</p>
-<h3><a name="FOOT80" href="#DOCF80">(80)</a></h3>
+<h3><a name="FOOT81" href="#DOCF81">(81)</a></h3>
 <p>For more
 details see <a href="http://www.macstrategy.com/article.php?3">http://www.macstrategy.com/article.php?3</a>.</p>
-<h3><a name="FOOT81" href="#DOCF81">(81)</a></h3>
-<p>In the unlikely event that the version reported does
-not start with <code>1.8.0</code> or <code>9</code> you need to update your Java.</p>
 <h3><a name="FOOT82" href="#DOCF82">(82)</a></h3>
-<p>the current version <code>0.9-9</code>.</p>
+<p>In the unlikely event that the version reported does
+not start with <code>1.8.0</code>, <code>9</code>, <code>10</code> or <code>11</code> you need
+to update your Java.</p>
 <h3><a name="FOOT83" href="#DOCF83">(83)</a></h3>
+<p>As from Java 11, there is no separate client JRE
+distribution.</p>
+<h3><a name="FOOT84" href="#DOCF84">(84)</a></h3>
 <p>Oracle Solaris Studio prior to 2016,
 and previously Sun Studio.</p>
-<h3><a name="FOOT84" href="#DOCF84">(84)</a></h3>
-<p>using the <samp>-V</samp> flag.</p>
 <h3><a name="FOOT85" href="#DOCF85">(85)</a></h3>
 <p>When last checked it failed in <samp>tests/reg-BLAS.R</samp>,
 and on some builds, including for &lsquo;<samp>amd64</samp>&rsquo;, it failed in

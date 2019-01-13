@@ -1,5 +1,5 @@
 
-R version 3.5.0 Patched (2018-04-30 r74684) -- "Joy in Playing"
+R version 3.5.2 RC (2018-12-13 r75856) -- "Eggshell Igloo"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -3827,7 +3827,7 @@ sigma^2 estimated as 0.4566:  log likelihood = -101.2,  aic = 212.4
 > 
 > asOneSidedFormula("age")
 ~age
-<environment: 0x28b5b50>
+<environment: 0x4791ca0>
 > asOneSidedFormula(~ age)
 ~age
 > 
@@ -4825,7 +4825,7 @@ function (V)
     r[cbind(1L:p, 1L:p)] <- 1
     r
 }
-<bytecode: 0x78558f8>
+<bytecode: 0x5671930>
 <environment: namespace:stats>
 > stopifnot(all.equal(Cl, cov2cor(cov(longley))),
 +           all.equal(cor(longley, method = "kendall"),
@@ -6986,18 +6986,22 @@ function (eta)
 + {
 +     linkfun <- function(mu) qlogis(mu^(1/days))
 +     linkinv <- function(eta) plogis(eta)^days
-+     mu.eta <- function(eta) days * plogis(eta)^(days-1) * binomial()$mu_eta
++     mu.eta  <- function(eta) days * plogis(eta)^(days-1) *
++                   binomial()$mu.eta(eta)
 +     valideta <- function(eta) TRUE
 +     link <- paste0("logexp(", days, ")")
 +     structure(list(linkfun = linkfun, linkinv = linkinv,
 +                    mu.eta = mu.eta, valideta = valideta, name = link),
 +               class = "link-glm")
 + }
-> binomial(logexp(3))
+> (bil3 <- binomial(logexp(3)))
 
 Family: binomial 
 Link function: logexp(3) 
 
+> ## Don't show: 
+> stopifnot(length(bil3$mu.eta(as.double(0:5))) == 6)
+> ## End(Don't show)
 > ## in practice this would be used with a vector of 'days', in
 > ## which case use an offset of 0 in the corresponding formula
 > ## to get the null deviance right.
@@ -7405,7 +7409,7 @@ attr(,".Environment")
 > environment(as.formula("y ~ x"))
 <environment: R_GlobalEnv>
 > environment(as.formula("y ~ x", env = new.env()))
-<environment: 0x8900510>
+<environment: 0x52ad4b8>
 > 
 > 
 > ## Create a formula for a model with a large number of variables:
@@ -10484,7 +10488,7 @@ $na.action
 > flush(stderr()); flush(stdout())
 > 
 > ### Name: nextn
-> ### Title: Highly Composite Numbers
+> ### Title: Find Highly Composite Numbers
 > ### Aliases: nextn
 > ### Keywords: math
 > 
@@ -10492,10 +10496,11 @@ $na.action
 > 
 > nextn(1001) # 1024
 [1] 1024
-> table(sapply(599:630, nextn))
+> table(nextn(599:630))
 
 600 625 640 
   2  25   5 
+> n <- 1:100 ; plot(n, nextn(n) - n, type = "o", lwd=2, cex=1/2)
 > 
 > 
 > 
@@ -12060,14 +12065,14 @@ attr(,"class")
 $linkfun
 function (mu) 
 mu^lambda
-<bytecode: 0x5df2f78>
-<environment: 0x5df81b0>
+<bytecode: 0x4f36ff0>
+<environment: 0x4f3dee0>
 
 $linkinv
 function (eta) 
 pmax(eta^(1/lambda), .Machine$double.eps)
-<bytecode: 0x5df2e28>
-<environment: 0x5df81b0>
+<bytecode: 0x4f36ea0>
+<environment: 0x4f3dee0>
 
 > 
 > 
@@ -14119,13 +14124,27 @@ Store  A  B  C  D  E
     5 10  9  7 13 10
     6 19 18 28 37 58
     7 10  7  6  8  7
-> quade.test(y)
+> (qTst <- quade.test(y))
 
 	Quade test
 
 data:  y
 Quade F = 3.8293, num df = 4, denom df = 24, p-value = 0.01519
 
+> 
+> ## Show equivalence of different versions of test :
+> utils::str(dy <- as.data.frame(as.table(y)))
+'data.frame':	35 obs. of  3 variables:
+ $ Store: Factor w/ 7 levels "1","2","3","4",..: 1 2 3 4 5 6 7 1 2 3 ...
+ $ Brand: Factor w/ 5 levels "A","B","C","D",..: 1 1 1 1 1 1 1 2 2 2 ...
+ $ Freq : num  5 1 16 5 10 19 10 4 3 12 ...
+> qT. <- quade.test(Freq ~ Brand|Store, data = dy)
+> qT.$data.name <- qTst$data.name
+> stopifnot(all.equal(qTst, qT., tolerance = 1e-15))
+> dys <- dy[order(dy[,"Freq"]),]
+> qTs <- quade.test(Freq ~ Brand|Store, data = dys)
+> qTs$data.name <- qTst$data.name
+> stopifnot(all.equal(qTst, qTs, tolerance = 1e-15))
 > 
 > 
 > 
@@ -16190,8 +16209,8 @@ Step function with continuity 'f'= 0.2 ,  3 knots at
 > unclass(sfun0)
 function (v) 
 .approxfun(x, y, v, method, yleft, yright, f)
-<bytecode: 0x6b726a8>
-<environment: 0x5146640>
+<bytecode: 0x1dc95d0>
+<environment: 0x50014a0>
 attr(,"call")
 stepfun(1:3, y0, f = 0)
 > ls(envir = environment(sfun0))
@@ -18516,7 +18535,7 @@ Number of Fisher Scoring iterations: 6
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  6.592 0.225 6.858 0 0 
+Time elapsed:  6.506 0.223 6.797 0 0 
 > grDevices::dev.off()
 null device 
           1 

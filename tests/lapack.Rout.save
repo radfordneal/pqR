@@ -1,5 +1,5 @@
 
-R version 3.5.0 Patched (2018-04-30 r74684) -- "Joy in Playing"
+R version 3.5.2 RC (2018-12-13 r75856) -- "Eggshell Igloo"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -67,7 +67,7 @@ Type 'q()' to quit R.
 +     print(zapsmall(E$values))
 +     V <- E$vectors; lam <- E$values
 +     stopifnot(abs(A %*% V - V %*% diag(lam)) < Eps,
-+               abs(lam[length(lam)]/lam[1]) < Eps || # this one not for singular A :
++               abs(lam[length(lam)]/lam[1]) < Eps | # this one not for singular A :
 +               abs(A - V %*% diag(lam) %*% t(V)) < Eps)
 + }
 > 

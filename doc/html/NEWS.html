@@ -7,7 +7,176 @@
 
 <h2>R News</h2>
 
-<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.5.0 patched</h3>
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.5.2</h3>
+
+
+
+<h4>PACKAGE INSTALLATION</h4>
+
+
+<ul>
+<li><p> New macro <span class="samp">CXX_VISIBILITY</span> analogous to
+<span class="samp">C_VISIBILITY</span> (which several packages have been misusing for
+C++ code) for the default C++ compiler (but not necessarily one used
+for non-default C++ dialects like C++14).
+</p>
+</li></ul>
+
+
+
+
+<h4>TESTING</h4>
+
+
+<ul>
+<li><p> The random number generator tests in
+&lsquo;<span class="file">tests/p-r-random-tests.R</span>&rsquo; no longer fail occasionally as
+they now randomly sample from &ldquo;certified&rdquo; random seeds.
+</p>
+</li></ul>
+
+
+
+
+<h4>BUG FIXES</h4>
+
+
+<ul>
+<li><p> The <code>"glm"</code> method of <code>drop1()</code> miscalculated the
+score test (<code>test="Rao"</code>) when the model contained an offset.
+</p>
+</li>
+<li><p> Linear multiple empty models such as <code>lm(y ~ 0)</code>
+now have a correctly dimensioned empty coefficient matrix;
+reported by Brett Presnell.
+</p>
+</li>
+<li> <p><code>vcov(&lt;empty mlm&gt;)</code> and hence <code>confint()</code> now
+work (via a consistency change in <code>summary.lm()</code>).
+</p>
+</li>
+<li> <p><code>confint(&lt;multiple lm()&gt;)</code> now works correctly;
+reported on R-devel by Steven Pav.
+</p>
+</li>
+<li> <p><code>quade.test()</code> now also works correctly when its
+arguments are not yet sorted along <code>groups</code>, fixing <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=15842">PR#15842</a>.
+</p>
+</li>
+<li><p> Installation on a Unix-alike tries harder to link to the
+<span class="samp">pthread</span> library where required (rather than relying on
+OpenMP to provide it: configuring with <span class="option">--disable-openmp</span>
+was failing on some Linux systems).
+</p>
+</li>
+<li><p> The <code>data.frame</code> method for <code>print(x)</code> is fast now
+also for large data frames <code>x</code> and got an optional argument
+<code>max</code>, thanks to suggestions by Juan Telleria.
+</p>
+</li>
+<li> <p><code>hist()</code> no longer integer overflows in very rare
+cases, fixing <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17450">PR#17450</a>.
+</p>
+</li>
+<li> <p><code>untar()</code> ignored a character <code>compressed</code>
+argument: however many external <code>tar</code> programs ignore
+the flags which should have been set and automagically choose the
+compression type, and if appropriate <code>gzip</code> or
+<code>bzip2</code> compression would have been chosen from the magic
+header of the tarball.
+</p>
+</li>
+<li> <p><code>zapsmall(x)</code> now works for more &ldquo;number-like&rdquo; objects.
+</p>
+</li>
+<li><p> The tools-internal function called from <code>R CMD
+	INSTALL</code> now gets a <code>warnOption = 1</code> argument and only sets
+<code>options(warn = warnOption)</code> when that increases the warning
+level (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17453">PR#17453</a>).
+</p>
+</li>
+<li><p> Analogously, the tools-internal function called from <code>R CMD
+	check</code> gets a <code>warnOption = 1</code> argument and uses the larger
+of that and <code>getOption("warn")</code>, also allowing to be run with
+increased warning level.
+</p>
+</li>
+<li><p> Parse data now have deterministic parent nodes (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16041">PR#16041</a>).
+</p>
+</li>
+<li><p> Calling <code>match()</code> with length one <code>x</code> and POSIXlt
+<code>table</code> gave a segfault (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17459">PR#17459</a>).
+</p>
+</li>
+<li><p> Fork clusters could hang due to a race condition in cluster
+initialization (<code>makeCluster()</code>).
+</p>
+</li>
+<li> <p><code>nextn(n)</code> now also works for larger <code>n</code> and no
+longer loops infinitely for e.g, <code>n &lt;- 214e7</code>.
+</p>
+</li>
+<li> <p><code>cooks.distance()</code> and <code>rstandard()</code> now work
+correctly for multiple linear models (<code>"mlm"</code>).
+</p>
+</li>
+<li> <p><code>polym()</code> and corresponding <code>lm()</code> prediction now
+also work for a boundary &quot;vector&quot; case fixing <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17474">PR#17474</a>,
+reported by Alexandre Courtiol.
+</p>
+</li>
+<li><p> With a very large number of variables <code>terms()</code> could
+segfault (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17480">PR#17480</a>).
+</p>
+</li>
+<li> <p><code>cut(rep(0, 7))</code> now works, thanks to Joey Reid and
+Benjamin Tyner (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16802">PR#16802</a>).
+</p>
+</li>
+<li> <p><code>download.file(*, method = "curl", cacheOK = FALSE)</code>
+should work now on Windows, thanks to Kevin Ushey's patch in
+<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17323">PR#17323</a>.
+</p>
+</li>
+<li> <p><code>duplicated(&lt;dataframe with 'f'&gt;)</code> now works, too,
+thanks to Andreas Kersting's <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17485">PR#17485</a>; ditto for
+<code>anyDuplicated()</code>.
+</p>
+</li>
+<li> <p><code>legend(*, cex = 1:2)</code> now works less badly.
+</p>
+</li>
+<li><p> The <code>print()</code> method for <code>POSIXct</code> and
+<code>POSIXlt</code> now correctly obeys <code>getOption("max.print")</code>,
+fixing a long-standing typo, and it also gets a corresponding
+optional <code>max</code> argument.
+</p>
+</li>
+<li><p> Unserialization of raw vectors serialized in ASCII
+representation now works correctly.
+</p>
+</li>
+<li> <p><code>&lt;data frame&gt;[TRUE, &lt;new&gt;] &lt;- list(c1, c2)</code> now works
+correctly, thanks to Suharto Anggono's <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=15362">PR#15362</a> and Emil Bode's
+patch in <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17504">PR#17504</a>.
+</p>
+</li>
+<li> <p><code>seq.int(*, by=by, length=n)</code> no longer wrongly
+&ldquo;drops fractional parts&rdquo; when <code>by</code> is integer, thanks
+to Suharto Anggono's report <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17506">PR#17506</a>.
+</p>
+</li>
+<li><p> Buffering is disabled for <code>file()</code> connections to
+non-regular files (like sockets), as well as <code>fifo()</code> and
+<code>pipe()</code> connections.  Fixes <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17470">PR#17470</a>, reported by Chris
+Culnane.
+</p>
+</li></ul>
+
+
+
+
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.5.1</h3>
 
 
 
@@ -84,10 +253,12 @@ default searched for in user documents directory when invoked
 <em>via</em> the launcher icon.  Reported by Jeroen Ooms.
 </p>
 </li>
-<li> <p><code>printCoefmat()</code> now also works with explicit <code>right=TRUE</code>.
+<li> <p><code>printCoefmat()</code> now also works with explicit
+<code>right=TRUE</code>.
 </p>
 </li>
-<li> <p><code>print.noquote()</code> now also works with explicit <code>quote=FALSE</code>.
+<li> <p><code>print.noquote()</code> now also works with explicit
+<code>quote=FALSE</code>.
 </p>
 </li>
 <li><p> The default method for <code>pairs(.., horInd=*, verInd=*)</code>
@@ -198,7 +369,7 @@ specifying <code>colClasses</code>.
 <li> <p><code>available.packages()</code> has two new arguments which
 control if the values from the per-session repository cache are
 used (default true, as before) and if so how old cached values can
-be to be used (default one hour).
+be used (default one hour).
 </p>
 <p>These arguments can be passed from <code>install.packages()</code>,
 <code>update.packages()</code> and functions calling that: to enable
@@ -412,6 +583,9 @@ cases of <code>is.vector(x)</code> similarly, and hence much less often
 prints <code>"atomic"</code>.  This is a slight non-back-compatible
 change producing typically both more informative and shorter
 output.
+</p>
+</li>
+<li> <p><code>gc()</code> gets new argument <code>full</code>.
 </p>
 </li>
 <li> <p><code>write.dcf()</code> gets optional argument <code>useBytes</code>.

@@ -1,7 +1,7 @@
 #
 # ${R_HOME}/bin/BATCH
 
-revision='$Rev: 74001 $'
+revision='$Rev: 74000 $'
 version=`set - ${revision}; echo ${2}`
 version="R batch front end: ${R_VERSION} (r${version})
 

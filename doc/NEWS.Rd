@@ -5,7 +5,133 @@
 \title{R News}
 \encoding{UTF-8}
 
-\section{\Rlogo CHANGES IN R 3.5.0 patched}{
+\section{\Rlogo CHANGES IN R 3.5.2}{
+
+  \subsection{PACKAGE INSTALLATION}{
+    \itemize{
+      \item New macro \samp{CXX_VISIBILITY} analogous to
+      \samp{C_VISIBILITY} (which several packages have been misusing for
+      C++ code) for the default C++ compiler (but not necessarily one used
+      for non-default C++ dialects like C++14).
+    }
+  }
+
+  \subsection{TESTING}{
+    \itemize{
+      \item The random number generator tests in
+      \file{tests/p-r-random-tests.R} no longer fail occasionally as
+      they now randomly sample from \dQuote{certified} random seeds.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item The \code{"glm"} method of \code{drop1()} miscalculated the
+      score test (\code{test="Rao"}) when the model contained an offset.
+
+      \item Linear multiple empty models such as \code{lm(y ~ 0)}
+      now have a correctly dimensioned empty coefficient matrix;
+      reported by Brett Presnell.
+
+      \item \code{vcov(<empty mlm>)} and hence \code{confint()} now
+      work (via a consistency change in \code{summary.lm()}).
+
+      \item \code{confint(<multiple lm()>)} now works correctly;
+      reported on R-devel by Steven Pav.
+
+      \item \code{quade.test()} now also works correctly when its
+      arguments are not yet sorted along \code{groups}, fixing \PR{15842}.
+
+      \item Installation on a Unix-alike tries harder to link to the
+      \samp{pthread} library where required (rather than relying on
+      OpenMP to provide it: configuring with \option{--disable-openmp}
+      was failing on some Linux systems).
+
+      \item The \code{data.frame} method for \code{print(x)} is fast now
+      also for large data frames \code{x} and got an optional argument
+      \code{max}, thanks to suggestions by Juan Telleria.
+
+      \item \code{hist()} no longer integer overflows in very rare
+      cases, fixing \PR{17450}.
+
+      \item \code{untar()} ignored a character \code{compressed}
+      argument: however many external \command{tar} programs ignore
+      the flags which should have been set and automagically choose the
+      compression type, and if appropriate \command{gzip} or
+      \command{bzip2} compression would have been chosen from the magic
+      header of the tarball.
+
+      \item \code{zapsmall(x)} now works for more \dQuote{number-like} objects.
+
+      \item The tools-internal function called from \command{R CMD
+	INSTALL} now gets a \code{warnOption = 1} argument and only sets
+      \code{options(warn = warnOption)} when that increases the warning
+      level (\PR{17453}).
+
+      \item Analogously, the tools-internal function called from \command{R CMD
+	check} gets a \code{warnOption = 1} argument and uses the larger
+      of that and \code{getOption("warn")}, also allowing to be run with
+      increased warning level.
+
+      \item Parse data now have deterministic parent nodes (\PR{16041}).
+
+      \item Calling \code{match()} with length one \code{x} and POSIXlt
+      \code{table} gave a segfault (\PR{17459}).
+
+      \item Fork clusters could hang due to a race condition in cluster
+      initialization (\code{makeCluster()}).
+
+      \item \code{nextn(n)} now also works for larger \code{n} and no
+      longer loops infinitely for e.g, \code{n <- 214e7}.
+
+      \item \code{cooks.distance()} and \code{rstandard()} now work
+      correctly for multiple linear models (\code{"mlm"}).
+
+      \item \code{polym()} and corresponding \code{lm()} prediction now
+      also work for a boundary "vector" case fixing \PR{17474},
+      reported by Alexandre Courtiol.
+
+      \item With a very large number of variables \code{terms()} could
+      segfault (\PR{17480}).
+
+      \item \code{cut(rep(0, 7))} now works, thanks to Joey Reid and
+      Benjamin Tyner (\PR{16802}).
+
+      \item \code{download.file(*, method = "curl", cacheOK = FALSE)}
+      should work now on Windows, thanks to Kevin Ushey's patch in
+      \PR{17323}.
+
+      \item \code{duplicated(<dataframe with 'f'>)} now works, too,
+      thanks to Andreas Kersting's \PR{17485}; ditto for
+      \code{anyDuplicated()}.
+
+      \item \code{legend(*, cex = 1:2)} now works less badly.
+
+      \item The \code{print()} method for \code{POSIXct} and
+      \code{POSIXlt} now correctly obeys \code{getOption("max.print")},
+      fixing a long-standing typo, and it also gets a corresponding
+      optional \code{max} argument.
+
+      \item Unserialization of raw vectors serialized in ASCII
+      representation now works correctly.
+
+      \item \code{<data frame>[TRUE, <new>] <- list(c1, c2)} now works
+      correctly, thanks to Suharto Anggono's \PR{15362} and Emil Bode's
+      patch in \PR{17504}.
+
+      \item \code{seq.int(*, by=by, length=n)} no longer wrongly
+      \dQuote{drops fractional parts} when \code{by} is integer, thanks
+      to Suharto Anggono's report \PR{17506}.
+
+      \item Buffering is disabled for \code{file()} connections to
+      non-regular files (like sockets), as well as \code{fifo()} and
+      \code{pipe()} connections.  Fixes \PR{17470}, reported by Chris
+      Culnane.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 3.5.1}{
 
   \subsection{BUG FIXES}{
     \itemize{
@@ -62,9 +188,11 @@
       default searched for in user documents directory when invoked
       \emph{via} the launcher icon.  Reported by Jeroen Ooms.
 
-      \item \code{printCoefmat()} now also works with explicit \code{right=TRUE}.
+      \item \code{printCoefmat()} now also works with explicit
+      \code{right=TRUE}.
 
-      \item \code{print.noquote()} now also works with explicit \code{quote=FALSE}.
+      \item \code{print.noquote()} now also works with explicit
+      \code{quote=FALSE}.
 
       \item The default method for \code{pairs(.., horInd=*, verInd=*)}
       now gets the correct order, thanks to reports by Chris Andrews and
@@ -147,7 +275,7 @@
       \item \code{available.packages()} has two new arguments which
       control if the values from the per-session repository cache are
       used (default true, as before) and if so how old cached values can
-      be to be used (default one hour).
+      be used (default one hour).
 
       These arguments can be passed from \code{install.packages()},
       \code{update.packages()} and functions calling that: to enable
@@ -326,6 +454,8 @@
       prints \code{"atomic"}.  This is a slight non-back-compatible
       change producing typically both more informative and shorter
       output.
+
+      \item \code{gc()} gets new argument \code{full}.
 
       \item \code{write.dcf()} gets optional argument \code{useBytes}.
 

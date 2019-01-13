@@ -198,12 +198,14 @@ static void setId( SEXP expr, yyltype loc){
 	    incrementId( ) ; 						\
 	    (Current).id = identifier ; 				\
 	    _current_token = yyr1[yyn] ; 				\
-	    yyltype childs[N] ;						\
-	    int ii = 0; 						\
-	    for( ii=0; ii<N; ii++){ 					\
-		      childs[ii] = YYRHSLOC (Rhs, (ii+1) ) ; 		\
-	    } 								\
-	    recordParents( identifier, childs, N) ; 			\
+	    if (ParseState.keepSrcRefs) {				\
+		yyltype childs[N];					\
+		int ii = 0; 						\
+		for( ii=0; ii<N; ii++){ 				\
+		    childs[ii] = YYRHSLOC (Rhs, (ii+1) ) ; 		\
+		} 							\
+		recordParents( identifier, childs, N) ; 		\
+	    }								\
 	} else	{							\
 	  (Current).first_line   = (Current).last_line   =		\
 	    YYRHSLOC (Rhs, 0).last_line;				\
@@ -821,16 +823,16 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   335,   335,   336,   337,   338,   339,   342,   343,   346,
-     349,   350,   351,   352,   354,   355,   357,   358,   359,   360,
-     361,   363,   364,   365,   366,   367,   368,   369,   370,   371,
-     372,   373,   374,   375,   376,   377,   378,   379,   380,   381,
-     382,   384,   385,   386,   388,   389,   390,   391,   392,   393,
-     394,   395,   396,   397,   398,   399,   400,   401,   402,   403,
-     404,   405,   406,   407,   408,   409,   413,   416,   419,   423,
-     424,   425,   426,   427,   428,   431,   432,   435,   436,   437,
-     438,   439,   440,   441,   442,   445,   446,   447,   448,   449,
-     453
+       0,   337,   337,   338,   339,   340,   341,   344,   345,   348,
+     351,   352,   353,   354,   356,   357,   359,   360,   361,   362,
+     363,   365,   366,   367,   368,   369,   370,   371,   372,   373,
+     374,   375,   376,   377,   378,   379,   380,   381,   382,   383,
+     384,   386,   387,   388,   390,   391,   392,   393,   394,   395,
+     396,   397,   398,   399,   400,   401,   402,   403,   404,   405,
+     406,   407,   408,   409,   410,   411,   415,   418,   421,   425,
+     426,   427,   428,   429,   430,   433,   434,   437,   438,   439,
+     440,   441,   442,   443,   444,   447,   448,   449,   450,   451,
+     455
 };
 #endif
 
