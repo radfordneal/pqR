@@ -1,6 +1,6 @@
 #  File src/library/base/R/sample.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2018 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2018, 2019 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -18,9 +18,10 @@
 sample <- function(x, size, replace=FALSE, prob=NULL)
     if (length(x) == 1L && is.numeric(x) && x >= 1)
 	.Internal (sample (x, if (missing(size)) x else size, replace, prob))
+    else if (missing(size)) # check missing outside [], which may be nonstandard
+	x [.Internal (sample (length(x), length(x), replace, prob)) ]
     else
-	x [.Internal (sample (length(x), 
-                       if (missing(size)) length(x) else size, replace, prob)) ]
+	x [.Internal (sample (length(x), size, replace, prob)) ]
 
 sample.int  <- function(n, size=n, replace=FALSE, prob=NULL)
     .Internal (sample (n, size, replace, prob))
