@@ -95,8 +95,7 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
                     R_variant_result &= ~VARIANT_UNCLASS_FLAG;
                 }
                 else {
-                    UNPROTECT(1);
-                    PROTECT(args = CONS(arg1,R_NilValue));
+                    UNPROTECT_PROTECT(args = CONS(arg1,R_NilValue));
                     goto not_fast;
                 }
             }
