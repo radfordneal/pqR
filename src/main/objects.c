@@ -711,8 +711,7 @@ static SEXP do_nextmethod (SEXP call, SEXP op, SEXP args, SEXP env,
 	if (t != R_NilValue && t != R_MissingArg) {
 	    SET_TYPEOF(t, LISTSXP); /* a safe mutation */
 	    s = matchmethargs(matchedarg, t);
-	    UNPROTECT(1);
-	    PROTECT(matchedarg = s);
+	    UNPROTECT_PROTECT(matchedarg = s);
 	    newcall = fixcall(newcall, matchedarg);
 	}
     }

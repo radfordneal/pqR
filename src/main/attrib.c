@@ -1067,15 +1067,13 @@ SEXP namesgets(SEXP vec, SEXP val)
 	    val = rval;
 	}
     } else val = coerceVector(val, STRSXP);
-    UNPROTECT(1);
-    PROTECT(val);
+    UNPROTECT_PROTECT(val);
 
     /* Check that the lengths and types are compatible */
 
     if (length(val) < length(vec)) {
 	val = lengthgets(val, length(vec));
-	UNPROTECT(1);
-	PROTECT(val);
+	UNPROTECT_PROTECT(val);
     }
 
     checkNames(vec, val);
@@ -1211,13 +1209,11 @@ SEXP dimnamesgets(SEXP vec, SEXP val)
 	    SET_VECTOR_ELT(newval, i, CAR(val));
 	    val = CDR(val);
 	}
-	UNPROTECT(1);
-	PROTECT(val = newval);
+	UNPROTECT_PROTECT(val = newval);
     }
     if (length(val) > 0 && length(val) < k) {
 	newval = lengthgets(val, k);
-	UNPROTECT(1);
-	PROTECT(val = newval);
+	UNPROTECT_PROTECT(val = newval);
     }
     if (k != length(val))
 	error(_("length of 'dimnames' [%d] must match that of 'dims' [%d]"),
@@ -1311,8 +1307,7 @@ SEXP dimgets(SEXP vec, SEXP val)
     if (!isVector(val) && !isList(val))
 	error(_("invalid second argument"));
     val = coerceVector(val, INTSXP);
-    UNPROTECT(1);
-    PROTECT(val);
+    UNPROTECT_PROTECT(val);
 
     len = length(vec);
     ndim = length(val);
@@ -1986,8 +1981,7 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value)
 
     if (FALSE && /* disabled */ NAMEDCNT_GT_1(obj)) {
         obj = dup_top_level(obj);
-        UNPROTECT(1); /* old obj */
-        PROTECT(obj);
+        UNPROTECT_PROTECT(obj);
     }
         
     if(!s_dot_Data)		/* initialize */
