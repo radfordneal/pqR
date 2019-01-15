@@ -1,4 +1,0 @@
-Sometimes avoid allocation in 'c' by expanding space used by 
-first argument.  Does this for both c(v+1,x) and v<-c(v,x).
-
-Sometimes does copying for 'c' in a helper thread.

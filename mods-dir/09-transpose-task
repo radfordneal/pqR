@@ -1,3 +1,0 @@
-Do matrix transpose in a task that can be executed in a helper thread
-(unless it's a matrix of non-numeric items).  The output can be
-pipelined, but not the input.
