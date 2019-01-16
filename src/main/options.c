@@ -872,9 +872,8 @@ static SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		if (TYPEOF(argi)!=LGLSXP || LENGTH(argi)!=1 
                                          || *LOGICAL(argi)==NA_LOGICAL)
 		    error(_("invalid value for '%s'"), opname);
-                k = asLogical(argi);
-                if (R_BLAS_IN_HELPERS_DEFAULT != FALSE)
-                    val = ScalarLogical(k);
+                k = R_BLAS_IN_HELPERS_DEFAULT==FALSE ? FALSE : asLogical(argi);
+                val = ScalarLogical(k);
                 goto set;
 	    }
             break;

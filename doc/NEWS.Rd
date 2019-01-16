@@ -56,6 +56,8 @@
         distributions (eg, \code{dgeom}, \code{pgeom}, \code{qgeom}).
   \item Fixed a bug involving the "scalar stack" that could affect evaluation 
         of arithmetic operations when deep recursion has occurred.
+  \item Fixed a bug that could lead to the \code{BLAS_in_helpers} option
+        being garbage.
   }}
   \subsection{BUG FIXES FROM R CORE RELEASES}{
   \itemize{
