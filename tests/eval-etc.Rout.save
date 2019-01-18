@@ -1,10 +1,10 @@
 
-pqR version 2.15.1 (2018-00-00), based on R 2.15.0 (2012-03-30)
+pqR version 2.15.1 (2019-00-00), based on R 2.15.0 (2012-03-30)
 
 R 2.15.0 is Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 
-Modifications to R in pqR are Copyright (C) 2013-2018 Radford M. Neal
+Modifications to R in pqR are Copyright (C) 2013-2019 Radford M. Neal
 
 Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
@@ -487,6 +487,104 @@ $x
 
 > 
 > 
+> # Test ops with zero-size matrix.
+> 
+> print (c(3,4) * matrix(0,2,0))
+
+[1,]
+[2,]
+> print (matrix(0,2,0) * c(3,4))
+
+[1,]
+[2,]
+> print (matrix(0,2,0) * matrix(0,2,0))
+
+[1,]
+[2,]
+> 
+> x <- matrix(0,2,0)
+> 
+> print (c(3,4) * x)
+
+[1,]
+[2,]
+> print (x * c(3,4))
+
+[1,]
+[2,]
+> print (x * x)
+
+[1,]
+[2,]
+> 
+> print (c(3,4) < matrix(0,2,0))
+
+[1,]
+[2,]
+> print (matrix(0,2,0) < c(3,4))
+
+[1,]
+[2,]
+> print (matrix(0,2,0) < matrix(0,2,0))
+
+[1,]
+[2,]
+> 
+> x <- matrix(0,2,0)
+> 
+> print (c(3,4) < x)
+
+[1,]
+[2,]
+> print (x < c(3,4))
+
+[1,]
+[2,]
+> print (x < x)
+
+[1,]
+[2,]
+> 
+> x <- matrix(logical(0),2,0)
+> 
+> print (c(TRUE,FALSE) & x)
+
+[1,]
+[2,]
+> print (x & c(TRUE,FALSE))
+
+[1,]
+[2,]
+> print (x & x)
+
+[1,]
+[2,]
+> 
+> 
+> # Test ops with vector and 1-by-1 matrix.
+> 
+> y <- matrix(23,1,1)
+> v <- c(20,10,30)
+> 
+> print(v+y)
+[1] 43 33 53
+> print(y+v)
+[1] 43 33 53
+> 
+> print(v<y)
+[1]  TRUE  TRUE FALSE
+> print(y<v)
+[1] FALSE FALSE  TRUE
+> 
+> y <- matrix(TRUE,1,1)
+> v <- c(TRUE,FALSE,TRUE)
+> 
+> print(v&y)
+[1]  TRUE FALSE  TRUE
+> print(y&v)
+[1]  TRUE FALSE  TRUE
+> 
+> 
 > # test that argument values are not destroyed by later evaluation.
 > 
 > f <- function () {
@@ -563,5 +661,4 @@ $x
 
 [1]    600 360600 360600
 
-> 
 > 
