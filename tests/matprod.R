@@ -85,7 +85,7 @@ check_matprod <- function (print=TRUE, addrand=FALSE)
 
   if (print)
   { cat("\n")
-    print(C)
+    print(round(C,5))  # round so result not sensitive to accuracy of printing
   }
 
   cat("---- n (1 2 3 4 5) m\n")
@@ -144,13 +144,17 @@ check_matprod <- function (print=TRUE, addrand=FALSE)
 
 sv <- options()[c("mat_mult_with_BLAS","helpers_disable")]
 
-options(mat_mult_with_BLAS=FALSE,helpers_disable=FALSE)
-cat("\nNot BLAS, Helpers not disabled, arithmetic should be exact\n\n")
-check_matprod()
+if (FALSE) { # Don't do exact arithmetic tests for matprod, to save time. They
+             # are unlikely to reveal a bug that tests with rounding wouldn't.
 
-options(mat_mult_with_BLAS=FALSE,helpers_disable=TRUE)
-cat("\nNot BLAS, Helpers disabled, arithmetic should be exact\n\n")
-check_matprod()
+  options(mat_mult_with_BLAS=FALSE,helpers_disable=FALSE)
+  cat("\nNot BLAS, Helpers not disabled, arithmetic should be exact\n\n")
+  check_matprod()
+
+  options(mat_mult_with_BLAS=FALSE,helpers_disable=TRUE)
+  cat("\nNot BLAS, Helpers disabled, arithmetic should be exact\n\n")
+  check_matprod()
+}
 
 options(mat_mult_with_BLAS=FALSE,helpers_disable=FALSE)
 cat("\nNot BLAS, Helpers not disabled, arithmetic will have rounding\n\n")
