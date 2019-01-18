@@ -6,7 +6,7 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN VERSION RELEASED 2019-01-14}{
+\section{CHANGES IN VERSION RELEASED 2019-00-00}{
 
   \subsection{INTRODUCTION}{
   \itemize{
@@ -24,6 +24,7 @@
         This is done by using the "gcc" clang alias when compiling one
         small glue routine (so this must exist).
   }}
+
   \subsection{FEATURE CHANGES}{
   \itemize{
   \item It is now allowed to use \code{...} anywhere an expression is
@@ -33,13 +34,35 @@
         this slows evaluation, and is unnecessary considering that
         \code{deparse} adds such parentheses.
   }}
-  \subsection{NEW FEATURES FROM R CORE RELEASES}{
+
+  \subsection{FEATURE CHANGES RESEMBLING, OR NOT, THOSE IN R CORE RELEASES}{
   \itemize{
+  \item From R-3.4.0: Arithmetic, logic (\code{&}, \code{|}) and comparison (aka
+        \sQuote{relational}, e.g., \code{<}, \code{==}) operations with
+        arrays now behave consistently, notably for arrays of length zero.
+  \item Contrary to R-3.4.0:  R-3.4.0 declares that "Arithmetic between
+        length-1 arrays and longer non-arrays had
+        silently dropped the array attributes and recycled.  This now
+        gives a warning and will signal an error in the future, as it has
+        always for logic and comparison operations in these cases (e.g.,
+        compare \code{matrix(1,1) + 2:3} and \code{matrix(1,1) < 2:3})."
+
+        This change was inadvisable, breaking backwards compatibility
+        while increasing the probability that bugs will go undetected
+        (since programmers will respond by dropping dimensions with code
+        such as \code{v+c(a\%*\%b)} when \code{a\%*\%b} is expected to be a
+        vector dot product, suppressing an error when, because of a bug,
+        \code{a\%*\%b} turns out not to be a 1-by-1 matrix.)
+
+        In pqR, consistency is instead obtained by now allowing comparisons
+        and logical operations on vectors and 1-by-1 matrices, as for 
+        arithmetic operators.
   \item From R-3.4.0: The \code{deriv()} and similar functions now can compute
         derivatives of \code{log1p()}, \code{sinpi()} and similar
         one-argument functions, thanks to a contribution by Jerry Lewis.
         [ Except that \code{sinpi}, etc. are not yet in pqR. ]
   }}
+
   \subsection{PERFORMANCE IMPROVEMENTS}{
   \itemize{
   \item The \code{is.na}, \code{is.nan}, \code{is.finite}, and 
@@ -48,17 +71,29 @@
   \item The \code{sample} function has been sped up for some cases.
   \item Common cases of \code{UseMethod} have been sped up.
   }}
+
   \subsection{BUG FIXES}{
   \itemize{
-  \item Fixed the misleading/ambiguous/incorrect/incomprehensible documentation
-        on the \code{log}, \code{log.p}, and \code{lower.tail} arguments of
-        all the density, distribution, and quantile functions for standard
-        distributions (eg, \code{dgeom}, \code{pgeom}, \code{qgeom}).
   \item Fixed a bug involving the "scalar stack" that could affect evaluation 
         of arithmetic operations when deep recursion has occurred.
   \item Fixed a bug that could lead to the \code{BLAS_in_helpers} option
         being garbage.
+  \item Fixed the misleading/ambiguous/incorrect/incomprehensible documentation
+        on the \code{log}, \code{log.p}, and \code{lower.tail} arguments of
+        all the density, distribution, and quantile functions for standard
+        distributions (eg, \code{dgeom}, \code{pgeom}, \code{qgeom}).
+        This incorrect documentation is also present in R Core versions to
+        at least R-3.5.2.
+  \item Incorrect documentation in \code{help(Arithmetic)} has been
+        corrected.  This previously claimed that "If applied to arrays
+        the result will be an array if this is sensible (for example
+        it will not if the recycling rule has been invoked)."  The
+        parenthesized phrase has been deleted, since it is not true.
+        This documentation bug is also present in R Core versions to
+        at least R-3.5.2.
   }}
+  }}
+
   \subsection{BUG FIXES FROM R CORE RELEASES}{
   \itemize{
       \item From R-3.4.4: \code{is.na(NULL)} no longer warns.  (\PR{16107})

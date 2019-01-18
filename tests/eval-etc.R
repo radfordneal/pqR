@@ -308,6 +308,53 @@ G <- function (e) invisible(e)
 lapply(M,G)
 
 
+# Test ops with zero-size matrix.
+
+print (c(3,4) * matrix(0,2,0))
+print (matrix(0,2,0) * c(3,4))
+print (matrix(0,2,0) * matrix(0,2,0))
+
+x <- matrix(0,2,0)
+
+print (c(3,4) * x)
+print (x * c(3,4))
+print (x * x)
+
+print (c(3,4) < matrix(0,2,0))
+print (matrix(0,2,0) < c(3,4))
+print (matrix(0,2,0) < matrix(0,2,0))
+
+x <- matrix(0,2,0)
+
+print (c(3,4) < x)
+print (x < c(3,4))
+print (x < x)
+
+x <- matrix(logical(0),2,0)
+
+print (c(TRUE,FALSE) & x)
+print (x & c(TRUE,FALSE))
+print (x & x)
+
+
+# Test ops with vector and 1-by-1 matrix.
+
+y <- matrix(23,1,1)
+v <- c(20,10,30)
+
+print(v+y)
+print(y+v)
+
+print(v<y)
+print(y<v)
+
+y <- matrix(TRUE,1,1)
+v <- c(TRUE,FALSE,TRUE)
+
+print(v&y)
+print(y&v)
+
+
 # test that argument values are not destroyed by later evaluation.
 
 f <- function () {
@@ -351,3 +398,49 @@ for (x in c(3,20,124,125,126,127,128,129,200,300,600)) {
     cat("\n")
 }
 
+
+# Test ops with zero-size matrix.
+
+print (c(3,4) * matrix(0,2,0))
+print (matrix(0,2,0) * c(3,4))
+print (matrix(0,2,0) * matrix(0,2,0))
+
+x <- matrix(0,2,0)
+
+print (c(3,4) * x)
+print (x * c(3,4))
+print (x * x)
+
+print (c(3,4) < matrix(0,2,0))
+print (matrix(0,2,0) < c(3,4))
+print (matrix(0,2,0) < matrix(0,2,0))
+
+x <- matrix(0,2,0)
+
+print (c(3,4) < x)
+print (x < c(3,4))
+print (x < x)
+
+x <- matrix(logical(0),2,0)
+
+print (c(TRUE,FALSE) & x)
+print (x & c(TRUE,FALSE))
+print (x & x)
+
+
+# Test ops with vector and 1-by-1 matrix.
+
+y <- matrix(23,1,1)
+v <- c(20,10,30)
+
+print(v+y)
+print(y+v)
+
+print(v<y)
+print(y<v)
+
+y <- matrix(TRUE,1,1)
+v <- c(TRUE,FALSE,TRUE)
+
+print(v&y)
+print(y&v)
