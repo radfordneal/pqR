@@ -1,0 +1,3 @@
+Changes to tests.
+
+Speeds up and improves matprod tests.  Uses mods in 88-mods.

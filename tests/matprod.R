@@ -1,7 +1,21 @@
 # Test matrix multiplication, with %*%, crossprod, and tcrossprod, by
 # BLAS and 'matprod' routines.
 #
-# Added for pqR, 2013, 2018 Radford M. Neal.
+# Added for pqR, 2013, 2018, 2019 Radford M. Neal.
+
+
+# Matrix multiply the hard way, to check results.
+
+matmult <- function (A,B)
+{ n <- nrow(A)
+  m <- ncol(B)
+  k <- ncol(A)
+  stopifnot(nrow(B)==k)
+  C <- matrix(0,n,m)
+  for (i in seq_len(n)) C[i,] <- colSums(A[i,]*B)
+  C
+}
+
 
 # Check matrix multiplication with various sizes of matrices, setting
 # matrix elements to random values that are integer multiples of 1/8 so
@@ -16,22 +30,6 @@ check_matprod <- function (print=TRUE)
   if (print) 
   { cat("\n")
     print(options()[c("mat_mult_with_BLAS","helpers_disable")])
-  }
-
-  # Matrix multiply the hard way, to check results.
-
-  matmult <- function (A,B)
-  { n <- nrow(A)
-    m <- ncol(B)
-    k <- ncol(A)
-    stopifnot(nrow(B)==k)
-    C <- matrix(0,n,m)
-    for (i in seq_len(n))
-    { for (j in seq_len(m))
-      { C[i,j] <- sum (A[i,] * B[,j])
-      }
-    }
-    C
   }
 
   # Do checks with given matrix sizes.
@@ -131,6 +129,7 @@ check_matprod <- function (print=TRUE)
      check(n,m,k)
   }
 }
+
 
 # Check matrix products using BLAS and using 'matprod' routines, with
 # or without helper threads enabled.
