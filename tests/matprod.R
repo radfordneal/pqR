@@ -4,7 +4,8 @@
 # Added for pqR, 2013, 2018, 2019 Radford M. Neal.
 
 
-# Matrix multiply the hard way, to check results.
+# Matrix multiply the hard way, to check results.  Avoids use of 'sum' or
+# 'colSums', which may use extended precision.
 
 matmult <- function (A,B)
 { n <- nrow(A)
@@ -12,7 +13,12 @@ matmult <- function (A,B)
   k <- ncol(A)
   stopifnot(nrow(B)==k)
   C <- matrix(0,n,m)
-  for (i in seq_len(n)) C[i,] <- colSums(A[i,]*B)
+  for (i in seq_len(n))
+  { T <- A[i,]*B
+    S <- 0
+    for (j in seq_len(k)) S <- S + T[j,]
+    C[i,] <- S
+  }
   C
 }
 
@@ -20,12 +26,12 @@ matmult <- function (A,B)
 # Check matrix multiplication with various sizes of matrices, setting
 # matrix elements to random values that are integer multiples of 1/8 so
 # that floating point arithmetic will be exact (but accidental conversions
-# to integer will be detected).  The crossprod and tcrossprod routines
-# are also checked when give one argument (producing a symmetric result).
-#
-# Returns the last (largest) result matrix.
+# to integer will be detected), unless addrand is TRUE, in which case 
+# random normals (mean 0.1, sd sqrt(2)) are added to these.  The crossprod 
+# and tcrossprod routines are also checked when given one argument (producing
+# a symmetric result).  Returns the last (largest) result matrix.
 
-check_matprod <- function (print=TRUE)
+check_matprod <- function (print=TRUE, addrand=FALSE)
 { 
   if (print) 
   { cat("\n")
@@ -36,7 +42,9 @@ check_matprod <- function (print=TRUE)
 
   check <- function (n, m, k)
   { A <- matrix (rgeom(n*k,0.1)/8, n, k)
+    if (addrand) A <- A + matrix (rnorm(n*k,0.1,sqrt(2)), n, k)
     B <- matrix (rgeom(k*m,0.1)/8, k, m)
+    if (addrand) B <- B + matrix (rnorm(k*m,0.1,sqrt(2)), k, m)
     C <- matmult(A,B)
     C1 <- matmult(A,B+1)
     C2 <- matmult(A,B)+2
@@ -137,20 +145,28 @@ check_matprod <- function (print=TRUE)
 sv <- options()[c("mat_mult_with_BLAS","helpers_disable")]
 
 options(mat_mult_with_BLAS=FALSE,helpers_disable=FALSE)
-cat("\nNot BLAS, Helpers not disabled\n\n")
+cat("\nNot BLAS, Helpers not disabled, arithmetic should be exact\n\n")
 check_matprod()
 
 options(mat_mult_with_BLAS=FALSE,helpers_disable=TRUE)
-cat("\nNot BLAS, Helpers disabled\n\n")
+cat("\nNot BLAS, Helpers disabled, arithmetic should be exact\n\n")
 check_matprod()
+
+options(mat_mult_with_BLAS=FALSE,helpers_disable=FALSE)
+cat("\nNot BLAS, Helpers not disabled, arithmetic will have rounding\n\n")
+check_matprod(addrand=TRUE)
+
+options(mat_mult_with_BLAS=FALSE,helpers_disable=TRUE)
+cat("\nNot BLAS, Helpers disabled, arithmetic will have rounding\n\n")
+check_matprod(addrand=TRUE)
 
 if (identical(Sys.getenv("R_MATPROD_TEST_BLAS"),"TRUE")) {
 
-    cat("\nBLAS, Helpers not disabled\n\n")
+    cat("\nBLAS, Helpers not disabled, arithmetic should be exact\n\n")
     options(mat_mult_with_BLAS=TRUE,helpers_disable=FALSE)
     check_matprod(print=FALSE)
 
-    cat("\nBLAS, Helpers disabled\n\n")
+    cat("\nBLAS, Helpers disabled, arithmetic should be exact\n\n")
     options(mat_mult_with_BLAS=TRUE,helpers_disable=TRUE)
     check_matprod(print=FALSE)
 }
