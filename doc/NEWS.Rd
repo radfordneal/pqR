@@ -7,10 +7,46 @@
 
 
 \section{CHANGES IN VERSION RELEASED 2018-00-00}{
+
   \subsection{FEATURE CHANGES}{
   \itemize{
   \item It is now allowed to use \code{...} anywhere an expression is
         allowed when \code{...} refers to exactly one argument.
+  }}
+
+  \subsection{FEATURE CHANGES RESEMBLING, OR NOT, THOSE IN R CORE RELEASES}{
+  \itemize{
+  \item From R-3.4.0: Arithmetic, logic (\code{&}, \code{|}) and comparison (aka
+        \sQuote{relational}, e.g., \code{<}, \code{==}) operations with
+        arrays now behave consistently, notably for arrays of length zero.
+  \item Contrary to R-3.4.0:  R-3.4.0 declares that "Arithmetic between
+        length-1 arrays and longer non-arrays had
+        silently dropped the array attributes and recycled.  This now
+        gives a warning and will signal an error in the future, as it has
+        always for logic and comparison operations in these cases (e.g.,
+        compare \code{matrix(1,1) + 2:3} and \code{matrix(1,1) < 2:3})."
+
+        This change was inadvisable, breaking backwards compatibility
+        while increasing the probability that bugs will go undetected
+        (since programmers will respond by dropping dimensions with code
+        such as \code{v+c(a\%*\%b)} when \code{a\%*\%b} is expected to be a
+        vector dot product, suppressing an error when, because of a bug,
+        \code{a\%*\%b} turns out not to be a 1-by-1 matrix.)
+
+        In pqR, consistency is instead obtained by now allowing comparisons
+        and logical operations on vectors and 1-by-1 matrices, as for 
+        arithmetic operators.
+  }}
+
+  \subsection{BUG FIXES}{
+  \itemize{
+  \item Incorrect documentation in \code{help(Arithmetic)} has been
+        corrected.  This previously claimed that "If applied to arrays
+        the result will be an array if this is sensible (for example
+        it will not if the recycling rule has been invoked)."  The
+        parenthesized phrase has been deleted, since it is not true.
+        This documentation bug is also present in R Core versions to
+        at least R-3.5.2.
   }}
 }
 

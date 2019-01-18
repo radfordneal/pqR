@@ -41,7 +41,9 @@
 #include <helpers/helpers-app.h>
 
 
+#ifndef SCALAR_STACK_DEBUG    /* can be overridden by compiler option */
 #define SCALAR_STACK_DEBUG 0
+#endif
 
 
 attribute_hidden void SrcrefPrompt(const char * prefix, SEXP srcref)
@@ -3708,6 +3710,7 @@ void task_and_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env, 
                                int variant)
 {
+    PROTECT_INDEX xpi, ypi;
     SEXP ans, x, y;
     int args_evald;
 
@@ -3722,13 +3725,16 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
         args = evalList (args, env);
         x = CAR(args); 
         y = CADR(args);
-        PROTECT2(x,y);
+        PROTECT_WITH_INDEX(x, &xpi);
+        PROTECT_WITH_INDEX(y, &ypi);
         args_evald = 1;
     }
     else {
-        PROTECT(x = EVALV_NC (x, env, VARIANT_PENDING_OK));
+        x = EVALV_NC (x, env, VARIANT_PENDING_OK);
+        PROTECT_WITH_INDEX(x, &xpi);
         INC_NAMEDCNT(x);
-        PROTECT(y = EVALV_NC (y, env, VARIANT_PENDING_OK));
+        y = EVALV_NC (y, env, VARIANT_PENDING_OK);
+        PROTECT_WITH_INDEX(y, &ypi);
         DEC_NAMEDCNT(x);
         args_evald = 0;
     }
@@ -3769,12 +3775,32 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
         errorcall (call,
        _("operations are possible only for numeric, logical or complex types"));
 
+    R_len_t nx = LENGTH(x);
+    R_len_t ny = LENGTH(y);
+
     tsp = R_NilValue;		/* -Wall */
     klass = R_NilValue;		/* -Wall */
     xarray = isArray(x);
     yarray = isArray(y);
     xts = isTs(x);
     yts = isTs(y);
+
+    /* If either x or y is a matrix with length 1 and the other is a
+       vector, we want to coerce the matrix to be a vector. */
+
+    if (xarray != yarray) {
+        if (xarray && nx==1 && ny!=1) {
+            REPROTECT(x = duplicate(x), xpi);
+            setAttrib(x, R_DimSymbol, R_NilValue);
+            xarray = FALSE;
+        }
+        if (yarray && ny==1 && nx!=1) {
+            REPROTECT(y = duplicate(y), ypi);
+            setAttrib(y, R_DimSymbol, R_NilValue);
+            yarray = FALSE;
+        }
+    }
+
     if (xarray || yarray) {
 	if (xarray && yarray) {
 	    if (!conformable(x, y))
@@ -3817,9 +3843,6 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
 	    PROTECT(klass = getClassAttrib(y));
 	}
     }
-
-    R_len_t nx = LENGTH(x);
-    R_len_t ny = LENGTH(y);
 
     if (nx > 0 && ny > 0 && (nx > ny ? nx % ny : ny % nx))
         warningcall(call,

@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -338,7 +338,7 @@ void task_relop (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
     int n1 = LENGTH(s1);
     int n2 = LENGTH(s2);
-    int n = n1>n2 ? n1 : n2;
+    int n = n1==0 || n2==0 ? 0 : n1>n2 ? n1 : n2;
 
     switch (TYPEOF(s1)) {
     case RAWSXP: {
@@ -395,7 +395,7 @@ void task_relop_and (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
     int n1 = LENGTH(s1);
     int n2 = LENGTH(s2);
-    int n = n1>n2 ? n1 : n2;
+    int n = n1==0 || n2==0 ? 0 : n1>n2 ? n1 : n2;
 
     int res;
 
@@ -457,7 +457,7 @@ void task_relop_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
     int n1 = LENGTH(s1);
     int n2 = LENGTH(s2);
-    int n = n1>n2 ? n1 : n2;
+    int n = n1==0 || n2==0 ? 0 : n1>n2 ? n1 : n2;
 
     int res;
 
@@ -519,7 +519,7 @@ void task_relop_sum (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
     int n1 = LENGTH(s1);
     int n2 = LENGTH(s2);
-    int n = n1>n2 ? n1 : n2;
+    int n = n1==0 || n2==0 ? 0 : n1>n2 ? n1 : n2;
 
     int res;
 
@@ -578,15 +578,14 @@ void task_relop_sum (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
 
 static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    int n, n1, n2;
     SEXP ans, x1, x2;
     const SEXP *e1 = STRING_PTR(s1);
     const SEXP *e2 = STRING_PTR(s2);
     int T = !F;
 
-    n1 = LENGTH(s1);
-    n2 = LENGTH(s2);
-    n = (n1 > n2) ? n1 : n2;
+    int n1 = LENGTH(s1);
+    int n2 = LENGTH(s2);
+    int n = n1==0 || n2==0 ? 0 : n1>n2 ? n1 : n2;
 
     PROTECT(ans = allocVector(LGLSXP, n));
     int * restrict lp = LOGICAL(ans);
@@ -682,16 +681,15 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 
 static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    int n, n1, n2;
     SEXP x1, x2;
     const SEXP *e1 = STRING_PTR(s1);
     const SEXP *e2 = STRING_PTR(s2);
     int T = !F;
     int ans;
 
-    n1 = LENGTH(s1);
-    n2 = LENGTH(s2);
-    n = (n1 > n2) ? n1 : n2;
+    int n1 = LENGTH(s1);
+    int n2 = LENGTH(s2);
+    int n = n1==0 || n2==0 ? 0 : n1>n2 ? n1 : n2;
 
     ans = TRUE;
 
@@ -762,16 +760,15 @@ false:
 
 static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    int n, n1, n2;
     SEXP x1, x2;
     const SEXP *e1 = STRING_PTR(s1);
     const SEXP *e2 = STRING_PTR(s2);
     int T = !F;
     int ans;
 
-    n1 = LENGTH(s1);
-    n2 = LENGTH(s2);
-    n = (n1 > n2) ? n1 : n2;
+    int n1 = LENGTH(s1);
+    int n2 = LENGTH(s2);
+    int n = n1==0 || n2==0 ? 0 : n1>n2 ? n1 : n2;
 
     ans = FALSE;
 
@@ -842,16 +839,15 @@ true:
 
 static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 {
-    int n, n1, n2;
     SEXP x1, x2;
     const SEXP *e1 = STRING_PTR(s1);
     const SEXP *e2 = STRING_PTR(s2);
     int T = !F;
     int ans;
 
-    n1 = LENGTH(s1);
-    n2 = LENGTH(s2);
-    n = (n1 > n2) ? n1 : n2;
+    int n1 = LENGTH(s1);
+    int n2 = LENGTH(s2);
+    int n = n1==0 || n2==0 ? 0 : n1>n2 ? n1 : n2;
 
     ans = 0;
 
@@ -982,7 +978,7 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
 
     int nx = (ATOMIC_VECTOR_TYPES >> typeof_x) & 1 ? LENGTH(x) : length(x);
     int ny = (ATOMIC_VECTOR_TYPES >> typeof_y) & 1 ? LENGTH(y) : length(y);
-    int n = nx>ny ? nx : ny;
+    int n = nx==0 || ny==0 ? 0 : nx>ny ? nx : ny;
 
     /* Handle integer/real/string vectors that have no attributes (or whose
        attributes we will ignore) quickly. */ 
@@ -1084,16 +1080,28 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
 
         /* At this point, x and y are both atomic or vector list */
 
-        if (LENGTH(x) <= 0 || LENGTH(y) <= 0) {
-            UNPROTECT(2);
-            return allocVector(LGLSXP,0);
-        }
-
         mismatch = FALSE;
         xarray = isArray(x);
         yarray = isArray(y);
         xts = isTs(x);
         yts = isTs(y);
+
+        /* If either x or y is a matrix with length 1 and the other is a
+           vector, we want to coerce the matrix to be a vector. */
+
+        if (xarray != yarray) {
+            if (xarray && nx==1 && ny!=1) {
+                REPROTECT(x = duplicate(x), xpi);
+                setAttrib(x, R_DimSymbol, R_NilValue);
+                xarray = FALSE;
+            }
+            if (yarray && ny==1 && nx!=1) {
+                REPROTECT(y = duplicate(y), ypi);
+                setAttrib(y, R_DimSymbol, R_NilValue);
+                yarray = FALSE;
+            }
+        }
+
         if (nx > 0 && ny > 0)
             mismatch = ((nx > ny) ? nx % ny : ny % nx) != 0;
 

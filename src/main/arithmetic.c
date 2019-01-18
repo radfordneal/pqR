@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
@@ -1239,10 +1239,12 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
         if (xarray && nx==1 && ny!=1) {
             REPROTECT(x = duplicate(x), xpi);
             setAttrib(x, R_DimSymbol, R_NilValue);
+            xarray = FALSE;
         }
         if (yarray && ny==1 && nx!=1) {
             REPROTECT(y = duplicate(y), ypi);
             setAttrib(y, R_DimSymbol, R_NilValue);
+            yarray = FALSE;
         }
     }
 
@@ -1472,18 +1474,12 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
         if (xattr && nx==n && ans!=x) /* Done 2nd so x's attrs overwrite y's */
             objx ? copyMostAttrib(x, ans) : copyMostAttribNoClass(x, ans);
     
-        /* Don't set the dims if one argument is an array of size 0 and the
-           other isn't of size zero, cos they're wrong */
-        /* Not if the other argument is a scalar (PR#1979) */
         if (dims != R_NilValue) {
-            if (!((xarray && (nx == 0) && (ny > 1)) ||
-                  (yarray && (ny == 0) && (nx > 1)))){
-                setAttrib(ans, R_DimSymbol, dims);
-                if (xnames != R_NilValue)
-                    setAttrib(ans, R_DimNamesSymbol, xnames);
-                else if (ynames != R_NilValue)
-                    setAttrib(ans, R_DimNamesSymbol, ynames);
-            }
+            setAttrib(ans, R_DimSymbol, dims);
+            if (xnames != R_NilValue)
+                setAttrib(ans, R_DimNamesSymbol, xnames);
+            else if (ynames != R_NilValue)
+                setAttrib(ans, R_DimNamesSymbol, ynames);
         }
         else {
             if (LENGTH(ans) == length(xnames))
