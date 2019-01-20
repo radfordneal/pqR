@@ -92,7 +92,6 @@
         This documentation bug is also present in R Core versions to
         at least R-3.5.2.
   }}
-  }}
 
   \subsection{BUG FIXES FROM R CORE RELEASES}{
   \itemize{
