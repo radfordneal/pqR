@@ -482,7 +482,7 @@ static inline SEXP FINDFUN (SEXP symbol, SEXP rho)
 {
     rho = SKIP_USING_SYMBITS (rho, symbol);
 
-    if (rho == R_GlobalEnv && BASE_CACHE(symbol)) {
+    if (rho == R_GlobalEnv && BASE_CACHE(symbol) || IS_BASE(rho)) {
         SEXP res = SYMVALUE(symbol);
         int type_etc = TYPE_ETC(res);
         if (type_etc == SPECIALSXP || type_etc == BUILTINSXP)

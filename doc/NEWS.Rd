@@ -70,6 +70,8 @@
         scalar arguments.
   \item The \code{sample} function has been sped up for some cases.
   \item Common cases of \code{UseMethod} have been sped up.
+  \item Calls of functions in \code{base} from other functions in \code{base}
+        have been sped up.
   }}
 
   \subsection{BUG FIXES}{
