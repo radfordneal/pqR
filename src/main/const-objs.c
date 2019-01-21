@@ -73,6 +73,7 @@
 #define NUM_OFFSET(o) (SGGC_SCALAR_CHUNKS*(o))
 #define CONS_OFFSET(o) (SGGC_CONS_CHUNKS*(o))
 #define SYM_OFFSET(o) (SGGC_SYM_CHUNKS*(o))
+#define ENV_OFFSET(o) (SGGC_ENV_CHUNKS*(o))
 
 
 /* Header for a scalar constant. */
@@ -193,12 +194,12 @@ VECTOR_SEXPREC_C R_scalar_stack_space[SCALAR_STACK_SIZE] = {
 };
 
 
-/* Definition of the R_EmptyEnv constant, whose address when cast to SEXP is 
-   R_EmptyEnv.  Leave LENGTH (if present) as zero. */
+/* Definition of a fixed environment, R_EmptyEnv.  Leave LENGTH (if present) 
+   as zero. */
 
 R_CONST ENV_SEXPREC R_env_consts[1] = {
 {
-    CONST_HEADER(ENVSXP,R_SGGC_ENV_INDEX,0),
+    CONST_HEADER(ENVSXP,R_SGGC_ENV_INDEX,ENV_OFFSET(0)),
     .frame = R_NilValue, 
     .enclos = R_NilValue, 
     .hashtab = R_NilValue,
