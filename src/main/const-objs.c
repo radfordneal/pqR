@@ -73,6 +73,7 @@
 #define NUM_OFFSET(o) (SGGC_SCALAR_CHUNKS*(o))
 #define CONS_OFFSET(o) (SGGC_CONS_CHUNKS*(o))
 #define SYM_OFFSET(o) (SGGC_SYM_CHUNKS*(o))
+#define ENV_OFFSET(o) (SGGC_ENV_CHUNKS*(o))
 
 
 /* Header for a scalar constant. */
@@ -193,12 +194,12 @@ VECTOR_SEXPREC_C R_scalar_stack_space[SCALAR_STACK_SIZE] = {
 };
 
 
-/* Definition of the R_EmptyEnv constant, whose address when cast to SEXP is 
-   R_EmptyEnv.  Leave LENGTH (if present) as zero. */
+/* Definition of a fixed environment, R_EmptyEnv.  Leave LENGTH (if present) 
+   as zero. */
 
 R_CONST ENV_SEXPREC R_env_consts[1] = {
 {
-    CONST_HEADER(ENVSXP,R_SGGC_ENV_INDEX,0),
+    CONST_HEADER(ENVSXP,R_SGGC_ENV_INDEX,ENV_OFFSET(0)),
     .frame = R_NilValue, 
     .enclos = R_NilValue, 
     .hashtab = R_NilValue,
@@ -955,35 +956,35 @@ void Rf_constant_init(void)
 
 #undef R_NilValue
 #if USE_COMPRESSED_POINTERS
-SEXP R_NilValue = SGGC_CPTR_VAL(R_SGGC_NIL_INDEX,0);
+const SEXP R_NilValue = SGGC_CPTR_VAL(R_SGGC_NIL_INDEX,0);
 #else
-SEXP R_NilValue = (SEXP) &R_NilValue_const;
+const SEXP R_NilValue = (const SEXP) &R_NilValue_const;
 #endif
 
 #undef R_EmptyEnv
 #if USE_COMPRESSED_POINTERS
-SEXP R_EmptyEnv = SGGC_CPTR_VAL(R_SGGC_ENV_INDEX,0);
+const SEXP R_EmptyEnv = SGGC_CPTR_VAL(R_SGGC_ENV_INDEX,0);
 #else
-SEXP R_EmptyEnv = (SEXP) &R_env_consts[0];
+const SEXP R_EmptyEnv = (const SEXP) &R_env_consts[0];
 #endif
 
 #undef R_UnboundValue
 #if USE_COMPRESSED_POINTERS
-SEXP R_UnboundValue = SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,0);
+const SEXP R_UnboundValue = SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,0);
 #else
-SEXP R_UnboundValue = (SEXP) &R_sym_consts[0];
+const SEXP R_UnboundValue = (const SEXP) &R_sym_consts[0];
 #endif
 
 #undef R_MissingArg
 #if USE_COMPRESSED_POINTERS
-SEXP R_MissingArg = SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,1);
+const SEXP R_MissingArg = SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,1);
 #else
-SEXP R_MissingArg = (SEXP) &R_sym_consts[1];
+const SEXP R_MissingArg = (const SEXP) &R_sym_consts[1];
 #endif
 
 #undef R_MissingUnder
 #if USE_COMPRESSED_POINTERS
-SEXP R_MissingUnder = SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,2);
+const SEXP R_MissingUnder = SGGC_CPTR_VAL(R_SGGC_SYM_INDEX,2);
 #else
-SEXP R_MissingUnder = (SEXP) &R_sym_consts[2];
+const SEXP R_MissingUnder = (const SEXP) &R_sym_consts[2];
 #endif

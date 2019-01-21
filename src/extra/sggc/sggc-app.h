@@ -230,6 +230,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 }
 
 #define SGGC_SYM_CHUNKS 2      /* Chunks used for a symbol */
+#define SGGC_ENV_CHUNKS 2      /* Chunks used for an environment */
 #define SGGC_SCALAR_CHUNKS 1   /* Chunks used for a numeric scalar */
 #define SGGC_CONS_CHUNKS 1     /* Chunks used for a CONS cell */
 #define SGGC_ENV_HASH_HEAD 2   /* Size of env hash table header, in ptrs */
@@ -324,6 +325,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 }
 
 #define SGGC_SYM_CHUNKS 4      /* Chunks used for a symbol */
+#define SGGC_ENV_CHUNKS 4      /* Chunks used for an environment */
 #define SGGC_SCALAR_CHUNKS 2   /* Chunks used for a numeric scalar */
 #define SGGC_CONS_CHUNKS 3     /* Chunks used for a CONS cell */
 #define SGGC_ENV_HASH_HEAD 3   /* Size of env hash table header, in ptrs */
@@ -415,6 +417,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 }
 
 #define SGGC_SYM_CHUNKS 3      /* Chunks used for a symbol */
+#define SGGC_ENV_CHUNKS 3      /* Chunks used for an environment */
 #define SGGC_SCALAR_CHUNKS 2   /* Chunks used for a numeric scalar */
 #define SGGC_CONS_CHUNKS 2     /* Chunks used for a CONS cell */
 #define SGGC_ENV_HASH_HEAD 2   /* Size of env hash table header, in ptrs */
@@ -500,6 +503,7 @@ sggc_nchunks_t Rf_nchunks (int type /* SEXPTYPE */, unsigned length);
 };
 
 #define SGGC_SYM_CHUNKS 3      /* Chunks used for a symbol */
+#define SGGC_ENV_CHUNKS 3      /* Chunks used for an environment */
 #define SGGC_SCALAR_CHUNKS 2   /* Chunks used for a numeric scalar */
 #define SGGC_CONS_CHUNKS 2     /* Chunks used for a CONS cell */
 #define SGGC_ENV_HASH_HEAD 6   /* Size of env hash table header, in ptrs */

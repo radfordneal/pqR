@@ -1595,7 +1595,7 @@ struct R_local_protect {
 
 /* R_EmptyEnv - an empty environment at the root of the environment tree */
 
-LibExtern SEXP R_EmptyEnv;          /* Variable form, for those that need it */
+LibExtern SEXP const R_EmptyEnv;    /* Variable form, for those that need it */
                                     /* Set in const-objs.c, as done below */
 
 #if USE_COMPRESSED_POINTERS
@@ -1615,7 +1615,7 @@ LibExtern SEXP	R_NamespaceRegistry;/* Registry for registered namespaces */
 
 /* R_NilValue - the R NULL object */
 
-LibExtern SEXP R_NilValue;          /* Variable form, for those that need it */
+LibExtern const SEXP R_NilValue;    /* Variable form, for those that need it */
                                     /* Set in const-objs.c, as done below */
 #if USE_COMPRESSED_POINTERS
 #define R_NilValue ((SEXP)SGGC_CPTR_VAL(R_SGGC_NIL_INDEX,0))
@@ -1632,7 +1632,7 @@ ConstExtern SYM_SEXPREC R_sym_consts[3];         /* defined in const-objs.c */
 
 /* R_UnboundValue - for symbol with no value. */
 
-LibExtern SEXP R_UnboundValue;      /* Variable form, for those that need it */
+LibExtern SEXP const R_UnboundValue;/* Variable form, for those that need it */
                                     /* Set in const-objs.c, as done below */
 
 #if USE_COMPRESSED_POINTERS
@@ -1643,7 +1643,7 @@ LibExtern SEXP R_UnboundValue;      /* Variable form, for those that need it */
 
 /* Missing argument symbols.  MissingUnder form is for "_". */
 
-LibExtern SEXP R_MissingArg;        /* Variable form, for those that need it */
+LibExtern const SEXP R_MissingArg;  /* Variable form, for those that need it */
                                     /* Set in const-objs.c, as done below */
 
 #if USE_COMPRESSED_POINTERS
@@ -1652,7 +1652,7 @@ LibExtern SEXP R_MissingArg;        /* Variable form, for those that need it */
 #define R_MissingArg ((SEXP) &R_sym_consts[1])
 #endif
 
-LibExtern SEXP R_MissingUnder;      /* Variable form, for those that need it */
+LibExtern const SEXP R_MissingUnder;/* Variable form, for those that need it */
                                     /* Set in const-objs.c, as done below */
 
 #if USE_COMPRESSED_POINTERS
