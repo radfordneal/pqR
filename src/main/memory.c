@@ -2402,23 +2402,15 @@ static SEXP do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
 
 /* "protect" pushes a single argument onto R_PPStack.
 
-   In handling a stack overflow we have to be careful not to use
-   PROTECT. error("protect(): stack overflow") would call deparse1,
-   which uses PROTECT and segfaults.
-
-   However, the traceback creation in the normal error handler also
-   does a PROTECT, as does the jumping code, at least if there are
-   cleanup expressions to handle on the way out.  So for the moment
-   we'll allocate a slightly larger PP stack and only enable the added
-   red zone during handling of a stack overflow error.  LT 
+   The traceback creation in the normal error handler also does a
+   PROTECT, as does the jumping code, at least if there are cleanup
+   expressions to handle on the way out.  So for the moment we'll
+   allocate a slightly larger PP stack and only enable the added red
+   zone during handling of a stack overflow error.  LT
 
    The PROTECT, UNPROTECT, PROTECT_WITH_INDEX, and REPROTECT macros at 
    the end of Defn.h do these things without procedure call overhead, and 
    are used here to define these functions, to keep the code in sync. 
-
-   The procedure versions of protect, protect2, and protect3 do an
-   error check.  Fiddling the condition for redefining PROTECT, etc.
-   in Defn.h can enable use of these for debugging in the interpeter.
 */
 
 static void reset_pp_stack(void *data)
@@ -2445,7 +2437,6 @@ R_NORETURN void attribute_hidden Rf_protect_error (void)
 
 SEXP protect(SEXP s)
 {
-    if (s != R_NoObject && TYPEOF(s) == NILSXP && s != R_NilValue) abort();
     return PROTECT (Rf_chk_valid_SEXP(s));
 }
 
@@ -2455,19 +2446,14 @@ SEXP protect(SEXP s)
 
 void Rf_protect2 (SEXP s1, SEXP s2)
 {
-    if (s1 != R_NoObject && TYPEOF(s1) == NILSXP && s1 != R_NilValue
-     || s2 != R_NoObject && TYPEOF(s2) == NILSXP && s2 != R_NilValue) abort();
-
     PROTECT2 (Rf_chk_valid_SEXP(s1), Rf_chk_valid_SEXP(s2));
 }
 
 void Rf_protect3 (SEXP s1, SEXP s2, SEXP s3)
 {
-    if (s1 != R_NoObject && TYPEOF(s1) == NILSXP && s1 != R_NilValue
-     || s2 != R_NoObject && TYPEOF(s2) == NILSXP && s2 != R_NilValue
-     || s3 != R_NoObject && TYPEOF(s3) == NILSXP && s3 != R_NilValue) abort();
-
-    PROTECT3 (Rf_chk_valid_SEXP(s1), Rf_chk_valid_SEXP(s2), Rf_chk_valid_SEXP(s3));
+    PROTECT3 (Rf_chk_valid_SEXP(s1),
+              Rf_chk_valid_SEXP(s2),
+              Rf_chk_valid_SEXP(s3));
 }
 
 
