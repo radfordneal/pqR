@@ -1,2 +1,0 @@
-Change symbol table to use lphash library.  Allows removal of the next
-link from symbol objects, making space for symbits.

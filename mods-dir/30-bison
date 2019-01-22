@@ -1,2 +1,0 @@
-Runs "bison -l o xxx.c xxx.y" for gramRd and gramLatex to get versions
-with new version of bison.

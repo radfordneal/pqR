@@ -1,6 +1,0 @@
-The parser was changed to improve locality of nodes representing
-language objects, which may improve cache performance when
-interpreting R code.
- 
-The paser is now generated with bison version 2.5.  This is not
-expected to have any consequences.
