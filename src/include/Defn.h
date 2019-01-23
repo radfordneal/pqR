@@ -1949,7 +1949,7 @@ extern R_NORETURN void Rf_unprotect_error (void);
 #endif
 
 #undef UNPROTECT_PROTECT
-#define UNPROTECT_PROTECT(s) (R_PPStack[R_PPStackTop] = (s))
+#define UNPROTECT_PROTECT(s) (R_PPStack[R_PPStackTop-1] = (s))
 
 #undef  PROTECT_WITH_INDEX
 #define PROTECT_WITH_INDEX(x,i) \
