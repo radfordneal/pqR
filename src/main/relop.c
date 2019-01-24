@@ -340,6 +340,8 @@ void task_relop (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     int n2 = LENGTH(s2);
     int n = n1==0 || n2==0 ? 0 : n1>n2 ? n1 : n2;
 
+    if (n == 0) return;
+
     switch (TYPEOF(s1)) {
     case RAWSXP: {
         Rbyte x1, x2;
@@ -397,7 +399,9 @@ void task_relop_and (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     int n2 = LENGTH(s2);
     int n = n1==0 || n2==0 ? 0 : n1>n2 ? n1 : n2;
 
-    int res;
+    int res = TRUE;
+
+    if (n == 0) goto done;
 
     switch (TYPEOF(s1)) {
     case RAWSXP: {
@@ -459,7 +463,9 @@ void task_relop_or (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     int n2 = LENGTH(s2);
     int n = n1==0 || n2==0 ? 0 : n1>n2 ? n1 : n2;
 
-    int res;
+    int res = FALSE;
+
+    if (n == 0) goto done;
 
     switch (TYPEOF(s1)) {
     case RAWSXP: {
@@ -521,7 +527,9 @@ void task_relop_sum (helpers_op_t code, SEXP ans, SEXP s1, SEXP s2)
     int n2 = LENGTH(s2);
     int n = n1==0 || n2==0 ? 0 : n1>n2 ? n1 : n2;
 
-    int res;
+    int res = 0;
+
+    if (n == 0) goto done;
 
     switch (TYPEOF(s1)) {
     case RAWSXP: {
@@ -590,7 +598,10 @@ static SEXP string_relop(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
     PROTECT(ans = allocVector(LGLSXP, n));
     int * restrict lp = LOGICAL(ans);
 
-    if (code == EQOP) {
+    if (n == 0) {
+        /* nothing to do */
+    }
+    else if (code == EQOP) {
         if (n2 == 1) {
             x2 = e2[0];
             for (R_len_t i = 0; i<n; i++) {
@@ -693,7 +704,10 @@ static SEXP string_relop_and(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 
     ans = TRUE;
 
-    if (code == EQOP) {
+    if (n == 0) {
+        /* nothing to do */
+    }
+    else if (code == EQOP) {
         if (n2 == 1) {
             x2 = e2[0];
             if (x2 == NA_STRING)
@@ -772,7 +786,10 @@ static SEXP string_relop_or(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 
     ans = FALSE;
 
-    if (code == EQOP) {
+    if (n == 0) {
+        /* nothing to do */
+    }
+    else if (code == EQOP) {
         if (n2 == 1) {
             x2 = e2[0];
             if (x2 == NA_STRING)
@@ -851,7 +868,10 @@ static SEXP string_relop_sum(RELOP_TYPE code, int F, SEXP s1, SEXP s2)
 
     ans = 0;
 
-    if (code == EQOP) {
+    if (n == 0) {
+        /* nothing to do */
+    }
+    else if (code == EQOP) {
         if (n2 == 1) {
             x2 = e2[0];
             if (x2 == NA_STRING)
@@ -936,7 +956,6 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
     SEXP tsp = R_NilValue;
     SEXP xnames, ynames, tmp, ans, dims;
     int xarray, yarray, xts, yts, itmp;
-    Rboolean mismatch = FALSE, iS;
     PROTECT_INDEX xpi, ypi;
 
     /* Reduce operation codes to EQOP and LTOP by swapping and negating. */
@@ -986,9 +1005,8 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
     if ((typeof_x == REALSXP || typeof_x == INTSXP || typeof_x == STRSXP)
           && (typeof_y == typeof_x || typeof_x != STRSXP 
                                  && (typeof_y == REALSXP || typeof_y == INTSXP))
-          && nx > 0 && ny > 0
-          && ((variant & VARIANT_ANY_ATTR) != 0
-                || !HAS_ATTRIB(x) && !HAS_ATTRIB(y))) {
+          && n > 0 && ((variant & VARIANT_ANY_ATTR) != 0
+                         || !HAS_ATTRIB(x) && !HAS_ATTRIB(y))) {
 
         /* Handle scalars even quicker using ScalarLogicalMaybeConst. */
     
@@ -1048,6 +1066,8 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
         /* That symbols and calls were allowed was undocumented prior to
            R 2.5.0.  We deparse them as deparse() would, minus attributes */
 
+        Rboolean iS;
+
         if ((iS = isSymbol(x)) || typeof_x == LANGSXP) {
             SEXP tmp = allocVector(STRSXP, 1);
             PROTECT(tmp);
@@ -1080,7 +1100,6 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
 
         /* At this point, x and y are both atomic or vector list */
 
-        mismatch = FALSE;
         xarray = isArray(x);
         yarray = isArray(y);
         xts = isTs(x);
@@ -1101,9 +1120,6 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
                 yarray = FALSE;
             }
         }
-
-        if (nx > 0 && ny > 0)
-            mismatch = ((nx > ny) ? nx % ny : ny % nx) != 0;
 
         if (xarray || yarray) {
             if (xarray && yarray) {
@@ -1147,7 +1163,7 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
             }
         }
 
-        if (mismatch)
+        if (n > 0 && ((nx > ny) ? nx % ny : ny % nx) != 0)
             warningcall (call, 
           _("longer object length is not a multiple of shorter object length"));
 
