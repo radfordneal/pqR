@@ -1285,6 +1285,14 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
     /* Tack on dims, names, ts stuff, if necessary. */
 
     if (! (variant & VARIANT_ANY_ATTR)) {
+        /* With zero-length result, dims needn't match */
+        if (dims != R_NilValue && n == 0) {
+            int i;
+            for (i = 0; i < LENGTH(dims); i++) 
+                if (INTEGER(dims)[i] == 0) break;
+            if (i == LENGTH(dims)) /* none zero */
+                dims = R_NilValue;
+        }
         if (dims != R_NilValue) {
             setAttrib(ans, R_DimSymbol, dims);
             if (xnames != R_NilValue)

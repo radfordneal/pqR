@@ -3325,15 +3325,16 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
         warningcall(call,
          _("longer object length is not a multiple of shorter object length"));
 
+    R_len_t n = nx == 0 || ny == 0 ? 0 : nx > ny ? nx : ny;
+
     if (isRaw(x) && isRaw(y)) {
         WAIT_UNTIL_COMPUTED_2(x,y);
         PROTECT(ans = binaryLogic2(PRIMVAL(op), x, y));
     }
-    else if (nx == 0 || ny == 0) {
+    else if (n == 0) {
         PROTECT (ans = allocVector (LGLSXP, 0));
     }
     else {
-        R_len_t n = (nx > ny) ? nx : ny;
         PROTECT(ans = allocVector (LGLSXP, n));
 
         if (!isLogical(x) || !isLogical(y)) {
@@ -3345,6 +3346,15 @@ SEXP attribute_hidden do_andor(SEXP call, SEXP op, SEXP args, SEXP env,
 
         DO_NOW_OR_LATER2 (variant, n >= T_and_or, 
                           0, task_and_or, PRIMVAL(op), ans, x, y);
+    }
+
+    /* With zero-length result, dims needn't match */
+    if (dims != R_NilValue && n == 0) {
+        int i;
+        for (i = 0; i < LENGTH(dims); i++) 
+            if (INTEGER(dims)[i] == 0) break;
+        if (i == LENGTH(dims)) /* none zero */
+            dims = R_NilValue;
     }
 
     if (dims != R_NilValue) {
