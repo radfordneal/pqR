@@ -647,6 +647,9 @@ $x
 [3,]
 [4,]
 > 
+> print(baseenv()==NULL)
+logical(0)
+> 
 > 
 > # test that argument values are not destroyed by later evaluation.
 > 
