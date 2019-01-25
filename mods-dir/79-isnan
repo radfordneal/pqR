@@ -1,3 +1,0 @@
-Speed up is.nan.
-
-Uses new ISNAN_value patterned on glibc's isnan.

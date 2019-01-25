@@ -1,2 +1,0 @@
-Defines a revisecontext function, that is used to avoid the deletion
-and recreation of a context during the setup for applying a function.
