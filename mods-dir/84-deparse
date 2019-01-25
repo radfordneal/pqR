@@ -1,4 +1,0 @@
-Bug fixes and cleanup in deparse.c.
-
-Bugs reported by Martin binder on r-devel, 7 July 2017.
-
