@@ -1199,7 +1199,7 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
         }
     }
 
-    if (typeof_x == STRSXP || typeof_y == STRSXP) {
+    if (TYPEOF(x) == STRSXP) {  /* y will be STRSXP too */ 
         WAIT_UNTIL_COMPUTED_2(x,y);
         switch (VARIANT_KIND(variant)) {
         case VARIANT_AND: 
@@ -1222,7 +1222,7 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
             break;
         }
     }
-    else if (typeof_x == VECSXP || typeof_y == VECSXP) {
+    else if (TYPEOF(x) == VECSXP) {  /* y will be VECSXP too */
         if (n != 0)  /* only zero-length comparisons done; also checked above */
             goto cmp_err;
         PROTECT(ans = allocVector(LGLSXP,0));
