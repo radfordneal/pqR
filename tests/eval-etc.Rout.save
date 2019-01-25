@@ -585,6 +585,68 @@ $x
 [1]  TRUE FALSE  TRUE
 > 
 > 
+> # Test zero-length ops.
+>
+> y <- matrix(numeric(),nrow=4,ncol=0)
+> print(y+1)
+
+[1,]
+[2,]
+[3,]
+[4,]
+> print(y+c(2,3))
+
+[1,]
+[2,]
+[3,]
+[4,]
+> print(y==1)
+
+[1,]
+[2,]
+[3,]
+[4,]
+> print(y==c(2,3))
+
+[1,]
+[2,]
+[3,]
+[4,]
+>
+> y <- matrix(logical(),nrow=4,ncol=0)
+> print(y&TRUE)
+
+[1,]
+[2,]
+[3,]
+[4,]
+> print(y&c(TRUE,FALSE))
+
+[1,]
+[2,]
+[3,]
+[4,]
+>
+> y <- matrix(list(),nrow=4,ncol=0)
+> print(y==1)
+
+[1,]
+[2,]
+[3,]
+[4,]
+> print(y==c(2,3))
+
+[1,]
+[2,]
+[3,]
+[4,]
+> print(y==y)
+[1,]
+[2,]
+[3,]
+[4,]
+>
+>
 > # test that argument values are not destroyed by later evaluation.
 > 
 > f <- function () {

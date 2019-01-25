@@ -355,6 +355,24 @@ print(v&y)
 print(y&v)
 
 
+# Test zero-length ops.
+
+y <- matrix(numeric(),nrow=4,ncol=0)
+print(y+1)
+print(y+c(2,3))
+print(y==1)
+print(y==c(2,3))
+
+y <- matrix(logical(),nrow=4,ncol=0)
+print(y&TRUE)
+print(y&c(TRUE,FALSE))
+
+y <- matrix(list(),nrow=4,ncol=0)
+print(y==1)
+print(y==c(2,3))
+print(y==y)
+
+
 # test that argument values are not destroyed by later evaluation.
 
 f <- function () {

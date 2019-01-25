@@ -93,6 +93,10 @@
         parenthesized phrase has been deleted, since it is not true.
         This documentation bug is also present in R Core versions to
         at least R-3.5.2.
+  \item In \code{help(Comparison), inaccurate information (regarding 
+        zero-length vectors and lists) and bad advice has been corrected.
+        These problems are also in R Core documentation to a least 
+        R-3.5.2.
   }}
 
   \subsection{BUG FIXES FROM R CORE RELEASES}{

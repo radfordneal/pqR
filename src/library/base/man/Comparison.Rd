@@ -54,10 +54,11 @@ x != y
   (see \code{\link{Encoding}}): they are translated to UTF-8 before
   comparison.
 
-  At least one of \code{x} and \code{y} must be an atomic vector, but if
-  the other is a list \R attempts to coerce it to the type of the atomic
-  vector: this will succeed if the list is made up of elements of length
-  one that can be coerced to the correct type.
+  At least one of \code{x} and \code{y} must be an atomic vector
+  (except both may be \code{NULL} or a zero-length list), but if the
+  other is a list \R attempts to coerce it to the type of the atomic
+  vector: this will succeed if the list is made up of elements of
+  length one that can be coerced to the correct type.
 
   If the two arguments are atomic vectors of different types, one is
   coerced to the type of the other, the (decreasing) order of precedence
@@ -75,22 +76,24 @@ x != y
 \value{
   A logical vector indicating the result of the element by element
   comparison.  The elements of shorter vectors are recycled as
-  necessary.
+  necessary.  Comparisons with zero-length vectors give a zero-length
+  result (for any length of the other operand).
 
   Objects such as arrays or time-series can be compared this way
   provided they are conformable.
 }
 \note{
-  Do not use \code{==} and \code{!=} for tests, such as in \code{if}
-  expressions, where you must get a single \code{TRUE} or
-  \code{FALSE}.  Unless you are absolutely sure that nothing unusual
-  can happen, you should use the \code{\link{identical}} function
-  instead.
+  Be cautious when using \code{==} and \code{!=} for tests, such as in
+  \code{if} expressions, where you must get a single \code{TRUE} or
+  \code{FALSE} (not a vector).  It may sometimes be desirable to use the
+  \code{\link{identical}} function instead, although this may conceal
+  errors (eg, unexpected \code{NA} values) and may make the code 
+  fail when an operand has innocuous attributes that should be ignored.
 
   For numerical and complex values, remember \code{==} and \code{!=} do
   not allow for the finite representation of fractions, nor for rounding
-  error.  Using \code{\link{all.equal}} with \code{identical} is almost
-  always preferable.  See the examples.
+  error.  Using \code{\link{all.equal}} with \code{identical} is sometimes
+  preferable (see the examples).
 }
 \section{S4 methods}{
   These operators are members of the S4 \code{\link{Compare}} group generic,
