@@ -1087,7 +1087,16 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
             UNPROTECT(1);
         }
 
-        /* Treat NULL same as list() */
+        /* Comparisons to strange types (eg, external pointer) are allowed
+           only against NULL, and return logical(0).  This also handles
+           the case where both operands are NULL. */
+
+        if (!isVector(x) && isNull(y) || !isVector(y) && isNull(x)) {
+            UNPROTECT(2);  /* x and y */
+            return allocVector(LGLSXP,0);
+        }
+
+        /* Treat NULL same as list() from here on. */
 
         if (isNull(x)) {
             REPROTECT(x = allocVector(VECSXP,0), xpi);

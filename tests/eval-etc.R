@@ -372,6 +372,8 @@ print(y==1)
 print(y==c(2,3))
 print(y==y)
 
+print(baseenv()==NULL)
+
 
 # test that argument values are not destroyed by later evaluation.
 

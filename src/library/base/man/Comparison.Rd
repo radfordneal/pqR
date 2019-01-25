@@ -34,6 +34,23 @@ x != y
   \code{\link[=S3groupGeneric]{Ops}}) group generic function.  (See
   \code{\link[=S3groupGeneric]{Ops}} for how dispatch is computed.)
 
+  Typically, both operands are atomic vectors, and the value is a logical
+  vector with the results of the element-wise comparisons.  
+
+  However, language objects such as symbols and calls can be compared;
+  they are deparsed to character strings before comparison.  Other
+  non-vector types (except \code{NULL}) can be compared only to
+  \code{NULL}, with the result being \code{logical(0)}.  Lists are
+  coerced to the type of the other operand when it is an atomic
+  vector; this will succeed if the list is made up of elements of
+  length one that can be coerced to the correct type.  Comparisons to
+  zero-length lists and \code{NULL} give a result of \code{logical(0)}).
+  Other comparisons involving lists are not allowed.
+
+  If the two arguments are atomic vectors of different types, one is
+  coerced to the type of the other, the (decreasing) order of precedence
+  being character, complex, numeric, integer, logical and raw.
+
   Comparison of strings in character vectors is lexicographic within the
   strings using the collating sequence of the locale in use: see
   \code{\link{locales}}.  The collating sequence of locales such as
@@ -54,24 +71,11 @@ x != y
   (see \code{\link{Encoding}}): they are translated to UTF-8 before
   comparison.
 
-  At least one of \code{x} and \code{y} must be an atomic vector
-  (except both may be \code{NULL} or a zero-length list), but if the
-  other is a list \R attempts to coerce it to the type of the atomic
-  vector: this will succeed if the list is made up of elements of
-  length one that can be coerced to the correct type.
-
-  If the two arguments are atomic vectors of different types, one is
-  coerced to the type of the other, the (decreasing) order of precedence
-  being character, complex, numeric, integer, logical and raw.
-
   Missing values (\code{\link{NA}}) and \code{\link{NaN}} values are
   regarded as non-comparable even to themselves, so comparisons
   involving them will always result in \code{NA}.  Missing values can
   also result when character strings are compared and one is not valid
   in the current collation locale. 
-
-  Language objects such as symbols and calls are deparsed to
-  character strings before comparison.
 }
 \value{
   A logical vector indicating the result of the element by element
