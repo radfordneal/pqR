@@ -1475,6 +1475,14 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
             objx ? copyMostAttrib(x, ans) : copyMostAttribNoClass(x, ans);
     
         if (dims != R_NilValue) {
+            /* With zero-length result, dims needn't match */
+            if (dims != R_NilValue && n == 0) {
+                int i;
+                for (i = 0; i < LENGTH(dims); i++) 
+                    if (INTEGER(dims)[i] == 0) break;
+                if (i == LENGTH(dims)) /* none zero */
+                    dims = R_NilValue;
+            }
             setAttrib(ans, R_DimSymbol, dims);
             if (xnames != R_NilValue)
                 setAttrib(ans, R_DimNamesSymbol, xnames);
