@@ -989,15 +989,15 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
     /* Get types and lengths of operands.  Pretend that logical is
        integer, as they have the same representation. */
 
+    int nx = isVector(x) ? LENGTH(x) : length(x);
+    int ny = isVector(y) ? LENGTH(y) : length(y);
+    int n = nx==0 || ny==0 ? 0 : nx>ny ? nx : ny;
+
     SEXPTYPE typeof_x = TYPEOF(x);
     SEXPTYPE typeof_y = TYPEOF(y);
 
     if (typeof_x == LGLSXP) typeof_x = INTSXP;
     if (typeof_y == LGLSXP) typeof_y = INTSXP;
-
-    int nx = (ATOMIC_VECTOR_TYPES >> typeof_x) & 1 ? LENGTH(x) : length(x);
-    int ny = (ATOMIC_VECTOR_TYPES >> typeof_y) & 1 ? LENGTH(y) : length(y);
-    int n = nx==0 || ny==0 ? 0 : nx>ny ? nx : ny;
 
     /* Handle integer/real/string vectors that have no attributes (or whose
        attributes we will ignore) quickly. */ 
@@ -1087,15 +1087,18 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
             UNPROTECT(1);
         }
 
-        if (!isVector(x) || !isVector(y)) {
-            if (isNull(x) || isNull(y)) {
-                UNPROTECT(2);
-                return allocVector(LGLSXP,0);
-            }
-            goto cmp_err;
+        /* Treat NULL same as list() */
+
+        if (isNull(x)) {
+            REPROTECT(x = allocVector(VECSXP,0), xpi);
+            typeof_x = VECSXP;
+        }
+        if (isNull(y)) {
+            REPROTECT(y = allocVector(VECSXP,0), ypi);
+            typeof_y = VECSXP;
         }
 
-        if (typeof_x == EXPRSXP || typeof_y == EXPRSXP)
+        if (!isVector(x) || !isVector(y))
             goto cmp_err;
 
         /* At this point, x and y are both atomic or vector list */
@@ -1191,8 +1194,9 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
             if (typeof_x != RAWSXP) REPROTECT(x = coerceVector(x, RAWSXP), xpi);
             if (typeof_y != RAWSXP) REPROTECT(y = coerceVector(y, RAWSXP), ypi);
         }
-        else 
+        else if (typeof_x != VECSXP || typeof_y != VECSXP || n != 0) {
             goto cmp_err;
+        }
     }
 
     if (typeof_x == STRSXP || typeof_y == STRSXP) {
@@ -1218,7 +1222,12 @@ SEXP attribute_hidden R_relop (SEXP call, int opcode, SEXP x, SEXP y,
             break;
         }
     }
-    else /* not strings */ {
+    else if (typeof_x == VECSXP || typeof_y == VECSXP) {
+        if (n != 0)  /* only zero-length comparisons done; also checked above */
+            goto cmp_err;
+        PROTECT(ans = allocVector(LGLSXP,0));
+    }
+    else /* not strings or lists */ {
         helpers_op_t codeop = (opcode<<1) | negate;
         switch (VARIANT_KIND(variant)) {
         case VARIANT_AND: 
