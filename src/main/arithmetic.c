@@ -3139,6 +3139,86 @@ static void Dqcauchy (double p, double location, double scale,
     }
 }
 
+static void Ddlogis (double x, double location, double scale, 
+                     double *dx, double *dlocation, double *dscale,
+                     double v, int give_log)
+{
+    if (!R_FINITE(v)) {
+        if (dx) *dx = 0;
+        if (dlocation) *dlocation = 0;
+        if (dscale) *dscale = 0;
+    }
+    else {
+        double x0 = (x - location) / scale;
+        double t = tanh(x0/2);
+        if (give_log) {
+            if (dx) *dx = - t / scale;
+            if (dlocation) *dlocation = t / scale;
+            if (dscale) *dscale = (t*x0 - 1) / scale;
+        }
+        else {
+            if (dx) *dx = - v * t / scale;
+            if (dlocation) *dlocation = v * t / scale;
+            if (dscale) *dscale = v * (t*x0 - 1) / scale;
+        }
+    }
+}
+
+static void Dplogis (double q, double location, double scale, 
+                     double *dq, double *dlocation, double *dscale,
+                     double v, int lower_tail, int log_p)
+{
+    if (scale <= 0) {
+        if (dq) *dq = 0;
+        if (dlocation) *dlocation = 0;
+        if (dscale) *dscale = 0;
+    }
+    else {
+
+        double q0 = (q - location) / scale;
+        double dp0 = dlogis (q0, 0, 1, 0);
+
+        if (dq) *dq = dp0 / scale;
+        if (dlocation) *dlocation = - dp0 / scale;
+        if (dscale) *dscale = - dp0 * q0 / scale;
+
+        if (!lower_tail) {
+            if (dq) *dq = -*dq;
+            if (dlocation) *dlocation = -*dlocation;
+            if (dscale) *dscale = -*dscale;
+        }
+
+        if (log_p) {
+            double expv = exp(-v);
+            if (dq) *dq *= expv;
+            if (dlocation) *dlocation *= expv;
+            if (dscale) *dscale *= expv;
+        }
+    }
+}
+
+static void Dqlogis (double p, double location, double scale, 
+                     double *dp, double *dlocation, double *dscale,
+                     double v, int lower_tail, int log_p)
+{
+    if (scale <= 0) {
+        if (dp) *dp = 0;
+        if (dlocation) *dlocation = 1;
+        if (dscale) *dscale = 0;
+    }
+    else {
+
+        double q0 = (v - location) / scale;
+
+        if (dp) *dp = (lower_tail ? 1 : -1) * scale / dlogis (q0, 0, 1, 0);
+        if (dlocation) *dlocation = 1;
+        if (dscale) *dscale = q0;
+
+        if (log_p)
+            if (dp) *dp *= exp(p);
+    }
+}
+
 static void Ddnorm (double x, double mu, double sigma, 
                     double *dx, double *dmu, double *dsigma,
                     double v, int give_log)
@@ -3296,83 +3376,30 @@ static void Dqunif (double p, double a, double b,
     }
 }
 
-static void Ddlogis (double x, double location, double scale, 
-                     double *dx, double *dlocation, double *dscale,
-                     double v, int give_log)
+static void Ddweibull (double x, double shape, double scale, 
+                       double *dx, double *dshape, double *dscale,
+                       double v, int give_log)
 {
-    if (!R_FINITE(v)) {
+    if (x < 0 || !R_FINITE(v)) {
         if (dx) *dx = 0;
-        if (dlocation) *dlocation = 0;
-        if (dscale) *dscale = 0;
-    }
-    else {
-        double x0 = (x - location) / scale;
-        double t = tanh(x0/2);
-        if (give_log) {
-            if (dx) *dx = - t / scale;
-            if (dlocation) *dlocation = t / scale;
-            if (dscale) *dscale = (t*x0 - 1) / scale;
-        }
-        else {
-            if (dx) *dx = - v * t / scale;
-            if (dlocation) *dlocation = v * t / scale;
-            if (dscale) *dscale = v * (t*x0 - 1) / scale;
-        }
-    }
-}
-
-static void Dplogis (double q, double location, double scale, 
-                     double *dq, double *dlocation, double *dscale,
-                     double v, int lower_tail, int log_p)
-{
-    if (scale <= 0) {
-        if (dq) *dq = 0;
-        if (dlocation) *dlocation = 0;
+        if (dshape) *dshape = 0;
         if (dscale) *dscale = 0;
     }
     else {
 
-        double q0 = (q - location) / scale;
-        double dp0 = dlogis (q0, 0, 1, 0);
+        double t = shape * pow(x/scale,shape-1);
+        if (dx) 
+            *dx = (shape-1)/x - t/scale;
+        if (dshape) 
+            *dshape = 1/shape + log(x/scale) * (1 - pow(x/scale,shape));
+        if (dscale)
+            *dscale = -shape/scale + t*x/(scale*scale);
 
-        if (dq) *dq = dp0 / scale;
-        if (dlocation) *dlocation = - dp0 / scale;
-        if (dscale) *dscale = - dp0 * q0 / scale;
-
-        if (!lower_tail) {
-            if (dq) *dq = -*dq;
-            if (dlocation) *dlocation = -*dlocation;
-            if (dscale) *dscale = -*dscale;
+        if (!give_log) {
+            if (dx) *dx *= v;
+            if (dshape) *dshape *= v;
+            if (dscale) *dscale *= v;
         }
-
-        if (log_p) {
-            double expv = exp(-v);
-            if (dq) *dq *= expv;
-            if (dlocation) *dlocation *= expv;
-            if (dscale) *dscale *= expv;
-        }
-    }
-}
-
-static void Dqlogis (double p, double location, double scale, 
-                     double *dp, double *dlocation, double *dscale,
-                     double v, int lower_tail, int log_p)
-{
-    if (scale <= 0) {
-        if (dp) *dp = 0;
-        if (dlocation) *dlocation = 1;
-        if (dscale) *dscale = 0;
-    }
-    else {
-
-        double q0 = (v - location) / scale;
-
-        if (dp) *dp = (lower_tail ? 1 : -1) * scale / dlogis (q0, 0, 1, 0);
-        if (dlocation) *dlocation = 1;
-        if (dscale) *dscale = q0;
-
-        if (log_p)
-            if (dp) *dp *= exp(p);
     }
 }
 
@@ -3410,7 +3437,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { dunif,	Ddunif },
     { punif,	Dpunif },
     { qunif,	Dqunif },
-    { dweibull,	0 },
+    { dweibull,	Ddweibull },
     { pweibull,	0 },
     { qweibull,	0 },
     { dnchisq,	0 },

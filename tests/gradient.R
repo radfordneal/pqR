@@ -516,4 +516,6 @@ test3y(qunif,log=TRUE,lower=FALSE)
 
 test2r(runif)
 
+test3(dweibull)
+
 test2r(rweibull)

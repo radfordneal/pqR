@@ -163,7 +163,7 @@ dnorm, pnorm, qnorm, rnorm \cr
 dpois, ppois \cr
 dt (with no ncp arg), pt (1st arg only, no ncp), qt (1st arg only, no ncp)\cr
 dunif, punif, qunif, runif \cr
-rweibull
+dweibull, rweibull
 }
 }
 
