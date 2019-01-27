@@ -2678,6 +2678,16 @@ static void Ddt (double x, double n, double *dx, double *dn,
     }
 }
 
+static void Dpsigamma (double x, double deriv, double *dx, 
+                       double *dderiv /* must be zero */, double v)
+{
+    if (dderiv) abort();
+    if (!dx) return;
+
+    *dx = psigamma(x,deriv+1);
+}
+
+
 /* Allocate work array for Bessel functions. */
 
 static double *Bessel_work_array (int n2, double *ap2)
@@ -2723,7 +2733,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math2_table[31] = {
     { qsignrank,   0 /* discrete */ },
     { bessel_j_ex, 0 },
     { bessel_y_ex, 0 },
-    { psigamma,	0 },
+    { psigamma,	Dpsigamma },
     { fround,	0 /* discrete */ },
     { 0,	0 },
     { logbase,	0 },

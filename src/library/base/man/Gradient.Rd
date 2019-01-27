@@ -150,7 +150,7 @@ with respect to all their real-valued arguments (unless noted):
 abs, sqrt, expm1, exp, log1p, log2, log10, log (one-argument form only) \cr
 cos, sin, tan, acos, asin, atan, atan2 \cr
 cosh, sinh, tanh, acosh, asinh, atanh \cr
-gamma, lgamma, digamma, trigamma, beta, lbeta \cr
+gamma, lgamma, digamma, trigamma, psigamma, beta, lbeta \cr
 \cr
 dbeta, pbeta (1st argument only), qbeta (1st argument only) \cr
 dbinom, pbinom \cr
