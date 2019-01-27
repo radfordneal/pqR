@@ -3403,6 +3403,43 @@ static void Ddweibull (double x, double shape, double scale,
     }
 }
 
+static void Dpweibull (double q, double shape, double scale, 
+                       double *dq, double *dshape, double *dscale,
+                       double v, int lower_tail, int log_p)
+{
+    if (q < 0) {
+        if (dq) *dq = 0;
+        if (dshape) *dshape = 0;
+        if (dscale) *dscale = 0;
+    }
+
+    else {
+
+        double w = pow(q/scale,shape);
+        double t = exp(-w);  /* using 1-v when !log_p would be less accurate */
+
+        if (dq) 
+            *dq = t * shape * pow(q/scale,shape-1) / scale;
+        if (dshape) 
+            *dshape = - t * w * log(q/scale);
+        if (dscale)
+            *dscale = - t * shape * q * pow(q/scale,shape-1) / (scale*scale);
+
+        if (!lower_tail) {
+            if (dq) *dq = -*dq;
+            if (dshape) *dshape = -*dshape;
+            if (dscale) *dscale = -*dscale;
+        }
+
+        if (log_p) {
+            double expv = exp(-v);
+            if (dq) *dq *= expv;
+            if (dshape) *dshape *= expv;
+            if (dscale) *dscale *= expv;
+        }
+    }
+}
+
 /* Table of functions to compute values and derivatives for math3 functions. */
 
 static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
@@ -3438,7 +3475,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { punif,	Dpunif },
     { qunif,	Dqunif },
     { dweibull,	Ddweibull },
-    { pweibull,	0 },
+    { pweibull,	Dpweibull },
     { qweibull,	0 },
     { dnchisq,	0 },
     { pnchisq,	0 },

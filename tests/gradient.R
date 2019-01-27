@@ -517,5 +517,9 @@ test3y(qunif,log=TRUE,lower=FALSE)
 test2r(runif)
 
 test3(dweibull)
+test3(pweibull)
+test3(pweibull,log=TRUE)
+test3(pweibull,lower=FALSE)
+test3(pweibull,log=TRUE,lower=FALSE)
 
 test2r(rweibull)
