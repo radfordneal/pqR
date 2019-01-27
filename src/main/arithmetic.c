@@ -2678,6 +2678,40 @@ static void Ddt (double x, double n, double *dx, double *dn,
     }
 }
 
+static void Dpt (double q, double n, double *dq, double *dn,
+                 double v, int lower_tail, int give_log)
+{
+    if (dn) *dn = 0;
+
+    if (!R_FINITE(v)) {
+        if (dq) *dq = 0;
+    }
+    else {
+        if (dq) {
+            double d = dt(q,n,give_log);
+            *dq = give_log ? exp (d-v) : d;
+            if (!lower_tail) *dq = -*dq;
+        }
+    }
+}
+
+static void Dqt (double p, double n, double *dp, double *dn,
+                 double v, int lower_tail, int give_log)
+{
+    if (dn) *dn = 0;
+
+    if (!R_FINITE(v)) {
+        if (dp) *dp = 0;
+    }
+    else {
+        if (dp) {
+            double d = dt(v,n,FALSE);
+            *dp = lower_tail ? 1/d : -1/d;
+            if (give_log) *dp *= exp(p);
+        }
+    }
+}
+
 static void Dpsigamma (double x, double deriv, double *dx, 
                        double *dderiv /* must be zero */, double v)
 {
@@ -2726,8 +2760,8 @@ static struct { double (*fncall)(); void (*Dcall)(); } math2_table[31] = {
     { ppois,	Dppois },
     { qpois,	0 /* discrete */ },
     { dt,	Ddt },
-    { pt,	0 },
-    { qt,	0 },
+    { pt,	Dpt },
+    { qt,	Dqt },
     { dsignrank,   0 /* discrete */ },
     { psignrank,   0 /* discrete */ },
     { qsignrank,   0 /* discrete */ },

@@ -247,6 +247,11 @@ test2z <- function (fun,...) {
     ))
 }
 
+test2u <- function (fun,...) {
+    print (bindgrads (numericDeriv(quote(fun(u1,u2,...)),"u1"),
+                      with gradient (u1) fun(u1,u2,...)))
+}
+
 test2i <- function (fun,...) {
     print (bindgrads (numericDeriv(quote(fun(i1,x2,...)),"x2"),
                       with gradient (x2) fun(i1,x2,...)))
@@ -391,6 +396,22 @@ test2i(ppois,log=TRUE,lower=FALSE)
 
 test2(dt)
 test2(dt,log=TRUE)
+test2z(dt)
+test2z(dt,log=TRUE)
+
+test2(pt)
+test2(pt,log=TRUE)
+test2(pt,lower=FALSE)
+test2(pt,log=TRUE,lower=FALSE)
+test2z(pt)
+test2z(pt,log=TRUE)
+test2z(pt,lower=FALSE)
+test2z(pt,log=TRUE,lower=FALSE)
+
+test2(qt)
+test2u(qt,log=TRUE)
+test2(qt,lower=FALSE)
+test2u(qt,log=TRUE,lower=FALSE)
 
 test3(dbeta)
 test3(dbeta,log=TRUE)
