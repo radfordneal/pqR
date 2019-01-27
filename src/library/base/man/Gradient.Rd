@@ -152,7 +152,7 @@ cos, sin, tan, acos, asin, atan, atan2 \cr
 cosh, sinh, tanh, acosh, asinh, atanh \cr
 gamma, lgamma, digamma, trigamma, beta, lbeta \cr
 \cr
-dbeta, pbeta (1st argument only) \cr
+dbeta, pbeta (1st argument only), qbeta (1st argument only) \cr
 dbinom, pbinom \cr
 dcauchy, pcauchy, qcauchy, rcauchy \cr
 dexp, pexp, qexp, rexp \cr

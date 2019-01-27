@@ -180,6 +180,7 @@ y1 <- -0.3721; y2 <- -0.8131; y3 <- 1.22213
 z1 <- 11.4319; z2 <- 13.1133; z3 <- 6.68901
 w1 <- 0.8389; w2 <- 0.1123; w3 <- 4.68701
 v1 <- 3; v2 <- 7; v3 <- 0.6513
+u1 <- -0.3721; u2 <- 1.8131; u3 <- 1.22213
 i1 <- 3
 
 bindgrads <- function (r1,r2) 
@@ -302,8 +303,8 @@ test3w <- function (fun,...) {
 }
 
 test3u <- function (fun,...) {
-    print (bindgrads (numericDeriv(quote(fun(u1,u2,u3,...)),"u3"),
-                      with gradient (u3) fun(u1,u2,u3,...)))
+    print (bindgrads (numericDeriv(quote(fun(u1,u2,u3,...)),"u1"),
+                      with gradient (u1) fun(u1,u2,u3,...)))
 }
 
 test3v <- function (fun,...) {
@@ -396,6 +397,11 @@ test3(pbeta)
 test3(pbeta,log=TRUE)
 test3(pbeta,lower=FALSE)
 test3(pbeta,log=TRUE,lower=FALSE)
+
+test3(qbeta)
+test3u(qbeta,log=TRUE)
+test3(qbeta,lower=FALSE)
+test3u(qbeta,log=TRUE,lower=FALSE)
 
 test3v(dbinom)
 test3v(dbinom,log=TRUE)

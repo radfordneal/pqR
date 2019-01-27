@@ -2927,21 +2927,40 @@ static void Ddbeta (double x, double a, double b,
     }
 }
 
-static void Dpbeta (double x, double a, double b, 
-                    double *dx, double *da, double *db,
+static void Dpbeta (double q, double a, double b, 
+                    double *dq, double *da, double *db,
                     double v, int lower_tail, int give_log)
 {
     if (da) *da = 0;
     if (db) *db = 0;
 
     if (!R_FINITE(v)) {
-        if (dx) *dx = 0;
+        if (dq) *dq = 0;
     }
     else {
-        if (dx) {
-            double d = dbeta(x,a,b,give_log);
-            *dx = give_log ? exp (d-v) : d;
-            if (!lower_tail) *dx = -*dx;
+        if (dq) {
+            double d = dbeta(q,a,b,give_log);
+            *dq = give_log ? exp (d-v) : d;
+            if (!lower_tail) *dq = -*dq;
+        }
+    }
+}
+
+static void Dqbeta (double p, double a, double b, 
+                    double *dp, double *da, double *db,
+                    double v, int lower_tail, int give_log)
+{
+    if (da) *da = 0;
+    if (db) *db = 0;
+
+    if (!R_FINITE(v)) {
+        if (dp) *dp = 0;
+    }
+    else {
+        if (dp) {
+            double d = dbeta(v,a,b,FALSE);
+            *dp = lower_tail ? 1/d : -1/d;
+            if (give_log) *dp *= exp(p);
         }
     }
 }
@@ -3033,7 +3052,7 @@ static void Dpcauchy (double q, double location, double scale,
     else {
 
         double q0 = (q - location) / scale;
-        double dp0 = dcauchy (q0, 0, 1, 0);
+        double dp0 = dcauchy (q0, 0, 1, FALSE);
 
         if (dq) *dq = dp0 / scale;
         if (dlocation) *dlocation = - dp0 / scale;
@@ -3319,7 +3338,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { 0,	0 },
     { dbeta,	Ddbeta },
     { pbeta,	Dpbeta },
-    { qbeta,	0 },
+    { qbeta,	Dqbeta },
     { dbinom,	Ddbinom },
     { pbinom,	Dpbinom },
     { qbinom,	0 /* discrete */ },
