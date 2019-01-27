@@ -143,7 +143,7 @@ generated random value, if the state of the random number generator
 when calling the function were kept fixed.
 
 The following built-in functions and operators will compute gradients,
-with respect all their real-valued arguments (unless noted):
+with respect to all their real-valued arguments (unless noted):
 \tabular{l}{
 +, -, *, /, ^ (+ and - may be unary) \cr
 \cr
@@ -152,7 +152,7 @@ cos, sin, tan, acos, asin, atan, atan2 \cr
 cosh, sinh, tanh, acosh, asinh, atanh \cr
 gamma, lgamma, digamma, trigamma, beta, lbeta \cr
 \cr
-dbeta \cr
+dbeta, pbeta (1st argument only) \cr
 dbinom, pbinom \cr
 dcauchy, pcauchy, qcauchy, rcauchy \cr
 dexp, pexp, qexp, rexp \cr

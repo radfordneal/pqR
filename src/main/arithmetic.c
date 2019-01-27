@@ -2927,6 +2927,25 @@ static void Ddbeta (double x, double a, double b,
     }
 }
 
+static void Dpbeta (double x, double a, double b, 
+                    double *dx, double *da, double *db,
+                    double v, int lower_tail, int give_log)
+{
+    if (da) *da = 0;
+    if (db) *db = 0;
+
+    if (!R_FINITE(v)) {
+        if (dx) *dx = 0;
+    }
+    else {
+        if (dx) {
+            double d = dbeta(x,a,b,give_log);
+            *dx = give_log ? exp (d-v) : d;
+            if (!lower_tail) *dx = -*dx;
+        }
+    }
+}
+
 static void Ddbinom (double x, double n, double p, 
                      double *dx /* must be 0 */, double *dn /* must be 0 */, 
                      double *dp, double v, int give_log)
@@ -3299,7 +3318,7 @@ static void Dqlogis (double p, double location, double scale,
 static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { 0,	0 },
     { dbeta,	Ddbeta },
-    { pbeta,	0 },
+    { pbeta,	Dpbeta },
     { qbeta,	0 },
     { dbinom,	Ddbinom },
     { pbinom,	Dpbinom },

@@ -392,6 +392,11 @@ test3(dbeta,log=TRUE)
 test3w(dbeta)
 test3w(dbeta,log=TRUE)
 
+test3(pbeta)
+test3(pbeta,log=TRUE)
+test3(pbeta,lower=FALSE)
+test3(pbeta,log=TRUE,lower=FALSE)
+
 test3v(dbinom)
 test3v(dbinom,log=TRUE)
 
