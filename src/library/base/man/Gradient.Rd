@@ -20,8 +20,8 @@
 
   The present implementation of these facilities is a preliminary
   one that supports only gradients of scalar values, with respect to scalar
-  variables.  Support for vectors, matrices, arrays, and lists is planned.
-  Support for higher-order derivatives may possibly be added as well.
+  variables.  Support for vectors, matrices, arrays, and lists, and for
+  higher-order derivatives, is planned.
 }
 
 \usage{
@@ -83,13 +83,17 @@ one or more arguments with tracked gradients.  This includes functions
 for S3 methods, but not S4 methods.
 
 Within \code{expr}, the gradient of an expression, \code{e}, with
-respect the variable or variables of the enclosing
-\code{with gradient} construct can be found with
-\code{gradient_of(e)}.  Tracking of gradients can be explicitly
-suppressed (to save time) with \code{no_gradient(e)}.  Gradient
-tracking is automatically suppressed when evaluating expressions that
-are used as \code{if} or \code{while} conditions, as indexes, or as
-expressions iterated over with \code{for}.
+respect the variable or variables of the enclosing \code{with
+gradient} construct can be found with \code{gradient_of(e)}.  The
+value of \code{gradient_of} does not itself have any gradient
+information --- hence \code{gradient_of(gradient_of(e))} will not
+produce a second derivative (it will always be zero).
+
+Tracking of gradients can be explicitly suppressed (to save time) with
+\code{no_gradient(e)}.  Gradient tracking is automatically suppressed
+when evaluating expressions that are used as \code{if} or \code{while}
+conditions, as indexes, or as expressions iterated over with
+\code{for}.
 
 The \code{track gradient} construct is like \code{with gradient},
 except that the gradient is not attached to the final result.  It is
@@ -105,8 +109,11 @@ expression follows a variable, the expression is assumed to be the
 same as the variable (evaluated in the current (not the new)
 environment).
 
-User-defined functions can specify the gradient using the
-\code{compute gradient} construct.  The \code{expr} within
+The gradient of an expression can be specified explicity using the
+\code{compute gradient} construct, as an alternative to simply letting
+the gradient be obtained automatically, or as a necessary measure if
+the expression contains built-in functions for which automatic
+differentiation has not yet been implemented.  The \code{expr} within
 \code{compute gradient} is evaluated in a new environment in which one
 or more variables have been defined (two in the above templates).  The
 initial values of these variables are as specified, defaulting to the
@@ -121,7 +128,7 @@ will evaluate only the value, skipping evaluation of the expressions after
 \code{as}.  Computation of gradients for built-in functions is also
 skipped when it is known that the gradient will not be needed.
 
-Gradients can be computed for functions that are not differentiable at
+Gradients can be computed for expressions that are not differentiable at
 some points, with the gradient returned at such points being arbitrary.
 
 Gradients may not have been defined for some builtin functions (even if
