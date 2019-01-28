@@ -491,6 +491,12 @@ test3(dgamma,log=TRUE)
 test3z(dgamma)
 test3z(dgamma,log=TRUE)
 
+dgamma_scale <- function (x,a,b,...) dgamma(x,a,scale=b,...)
+test3(dgamma_scale)
+test3(dgamma_scale,log=TRUE)
+test3z(dgamma_scale)
+test3z(dgamma_scale,log=TRUE)
+
 test2r(rlnorm)
 
 test3(dlogis)
