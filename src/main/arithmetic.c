@@ -2512,6 +2512,40 @@ static void Dbeta (double a, double b, double *da, double *db, double v)
     }
 }
 
+static void Dpchisq (double q, double df, double *dq, double *ddf,
+                     double v, int lower_tail, int log_p)
+{
+    if (ddf) *ddf = 0;
+
+    if (!R_FINITE(v)) {
+        if (dq) *dq = 0;
+    }
+    else {
+        if (dq) {
+            double d = dchisq(q,df,log_p);
+            *dq = log_p ? exp (d-v) : d;
+            if (!lower_tail) *dq = -*dq;
+        }
+    }
+}
+
+static void Dqchisq (double p, double df, double *dp, double *ddf,
+                     double v, int lower_tail, int log_p)
+{
+    if (ddf) *ddf = 0;
+
+    if (!R_FINITE(v)) {
+        if (dp) *dp = 0;
+    }
+    else {
+        if (dp) {
+            double d = dchisq(v,df,FALSE);
+            *dp = lower_tail ? 1/d : -1/d;
+            if (log_p) *dp *= exp(p);
+        }
+    }
+}
+
 static void Ddexp (double x, double scale, double *dx, double *dscale,
                    double v, int give_log)
 {
@@ -2748,8 +2782,8 @@ static struct { double (*fncall)(); void (*Dcall)(); } math2_table[31] = {
     { lchoose,	0  /* could differentiate wrt 1st arg, but usually integer */ },
     { choose,	0  /* could differentiate wrt 1st arg, but usually integer */ },
     { dchisq,	0 },
-    { pchisq,	0 },
-    { qchisq,	0 },
+    { pchisq,	Dpchisq },
+    { qchisq,	Dqchisq },
     { dexp,	Ddexp },
     { pexp,	Dpexp },
     { qexp,	Dqexp },
