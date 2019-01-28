@@ -483,6 +483,11 @@ test3u(qf,log=TRUE)
 test3(qf,lower=FALSE)
 test3u(qf,log=TRUE,lower=FALSE)
 
+test3(dgamma)
+test3(dgamma,log=TRUE)
+test3z(dgamma)
+test3z(dgamma,log=TRUE)
+
 test2r(rlnorm)
 
 test3(dlogis)
