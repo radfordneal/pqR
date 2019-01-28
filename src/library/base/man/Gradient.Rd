@@ -158,7 +158,7 @@ dbinom, pbinom \cr
 dcauchy, pcauchy, qcauchy, rcauchy \cr
 dexp, pexp, qexp, rexp \cr
 pf (1st arg only, no ncp), qf (1st arg only, no ncp) \cr
-dgamma \cr
+dgamma, pgamma (1st and 3rd argument only) \cr
 dgeom, pgeom \cr
 dlogis, plogis, qlogis, rlogis \cr
 rlnorm \cr

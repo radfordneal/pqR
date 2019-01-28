@@ -3254,6 +3254,37 @@ static void Ddgamma (double x, double shape, double scale,
     }
 }
 
+static void Dpgamma (double q, double shape, double scale, 
+                     double *dq, double *dshape, double *dscale,
+                     double v, int lower_tail, int log_p)
+{
+    if (scale <= 0 || shape <= 0 || q <= 0) {
+        if (dq) *dq = 0;
+        if (dshape) *dshape = 0;
+        if (dscale) *dscale = 0;
+    }
+    else {
+
+        double q0 = q / scale;
+        double dp0 = dgamma (q0, shape, 1, FALSE);
+
+        if (dq) *dq = dp0 / scale;
+        if (dshape) *dshape = 0;
+        if (dscale) *dscale = - dp0 * q0 / scale;
+
+        if (!lower_tail) {
+            if (dq) *dq = -*dq;
+            if (dscale) *dscale = -*dscale;
+        }
+
+        if (log_p) {
+            double expv = exp(-v);
+            if (dq) *dq *= expv;
+            if (dscale) *dscale *= expv;
+        }
+    }
+}
+
 static void Ddlogis (double x, double location, double scale, 
                      double *dx, double *dlocation, double *dscale,
                      double v, int give_log)
@@ -3601,7 +3632,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { pf,	Dpf },
     { qf,	Dqf },
     { dgamma,	Ddgamma },
-    { pgamma,	0 },
+    { pgamma,	Dpgamma },
     { qgamma,	0 },
     { dlnorm,	0 },
     { plnorm,	0 },

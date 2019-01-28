@@ -497,6 +497,15 @@ test3(dgamma_scale,log=TRUE)
 test3z(dgamma_scale)
 test3z(dgamma_scale,log=TRUE)
 
+test3(pgamma)
+test3(pgamma,log=TRUE)
+test3(pgamma,lower=FALSE)
+test3(pgamma,log=TRUE,lower=FALSE)
+test3z(pgamma)
+test3z(pgamma,log=TRUE)
+test3z(pgamma,lower=FALSE)
+test3z(pgamma,log=TRUE,lower=FALSE)
+
 test2r(rlnorm)
 
 test3(dlogis)
