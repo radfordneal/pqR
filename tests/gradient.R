@@ -369,6 +369,9 @@ test2z(beta)
 test2(lbeta)
 test2z(lbeta)
 
+test2(dchisq)
+test2(dchisq,log=TRUE)
+
 test2(pchisq)
 test2(pchisq,log=TRUE)
 test2(pchisq,lower=FALSE)

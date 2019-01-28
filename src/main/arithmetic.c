@@ -2512,6 +2512,26 @@ static void Dbeta (double a, double b, double *da, double *db, double v)
     }
 }
 
+static void Ddchisq (double x, double df, double *dx, double *ddf,
+                     double v, int give_log)
+{
+    double shape = 0.5*df;
+    double x0 = 0.5*x;
+
+    if (x0 <= 0 || !R_FINITE(v)) {
+        if (dx) *dx = 0;
+        if (ddf) *ddf = 0;
+    }
+    else {
+        if (dx) *dx = 0.5 * ((shape-1)/x0 - 1);
+        if (ddf) *ddf = 0.5 * (log(x) - log(2.0) - digamma(shape));
+        if (!give_log) {
+            if (dx) *dx *= v;
+            if (ddf) *ddf *= v;
+        }
+    }
+}
+
 static void Dpchisq (double q, double df, double *dq, double *ddf,
                      double v, int lower_tail, int log_p)
 {
@@ -2781,7 +2801,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math2_table[31] = {
     { beta,	Dbeta },
     { lchoose,	0  /* could differentiate wrt 1st arg, but usually integer */ },
     { choose,	0  /* could differentiate wrt 1st arg, but usually integer */ },
-    { dchisq,	0 },
+    { dchisq,	Ddchisq },
     { pchisq,	Dpchisq },
     { qchisq,	Dqchisq },
     { dexp,	Ddexp },
