@@ -533,6 +533,7 @@ test3y(qunif,log=TRUE,lower=FALSE)
 test2r(runif)
 
 test3(dweibull)
+
 test3(pweibull)
 test3(pweibull,log=TRUE)
 test3(pweibull,lower=FALSE)
@@ -542,7 +543,5 @@ test3(qweibull)
 test3u(qweibull,log=TRUE)
 test3(qweibull,lower=FALSE)
 test3u(qweibull,log=TRUE,lower=FALSE)
-
-
 
 test2r(rweibull)
