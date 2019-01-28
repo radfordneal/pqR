@@ -506,6 +506,11 @@ test3z(pgamma,log=TRUE)
 test3z(pgamma,lower=FALSE)
 test3z(pgamma,log=TRUE,lower=FALSE)
 
+test3(qgamma)
+test3u(qgamma,log=TRUE)
+test3(qgamma,lower=FALSE)
+test3u(qgamma,log=TRUE,lower=FALSE)
+
 test2r(rlnorm)
 
 test3(dlogis)
