@@ -4566,8 +4566,9 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
         bits |= SYMBITS(t);
         if (MISSING(a)) {
             if (CAR(f) != R_MissingArg) {
-                SETCAR(a, mkPROMISE(CAR(f), newrho));
-                SET_MISSING(a, 2);
+                SETCAR(a, mkPROMISE (CAR(f), newrho));
+                if (variant & VARIANT_GRADIENT) SET_STORE_GRAD(CAR(a),1);
+                SET_MISSING(a,2);
             }
         }
         else { 
