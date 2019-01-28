@@ -157,12 +157,13 @@ pchisq (1st arg only, no ncp), qchisq (1st arg only, no ncp) \cr
 dbinom, pbinom \cr
 dcauchy, pcauchy, qcauchy, rcauchy \cr
 dexp, pexp, qexp, rexp \cr
+pf (1st arg only, no ncp), qf (1s arg only, no ncp) \cr
 dgeom, pgeom \cr
 dlogis, plogis, qlogis, rlogis \cr
 rlnorm \cr
 dnorm, pnorm, qnorm, rnorm \cr
 dpois, ppois \cr
-dt (with no ncp arg), pt (1st arg only, no ncp), qt (1st arg only, no ncp)\cr
+dt (with no ncp arg), pt (1st arg only, no ncp), qt (1st arg only, no ncp) \cr
 dunif, punif, qunif, runif \cr
 dweibull, pweibull, qweibull, rweibull
 }

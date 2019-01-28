@@ -473,6 +473,16 @@ test3y(qcauchy,log=TRUE,lower=FALSE)
 
 test2r(rcauchy)
 
+test3(pf)
+test3(pf,log=TRUE)
+test3(pf,lower=FALSE)
+test3(pf,log=TRUE,lower=FALSE)
+
+test3(qf)
+test3u(qf,log=TRUE)
+test3(qf,lower=FALSE)
+test3u(qf,log=TRUE,lower=FALSE)
+
 test2r(rlnorm)
 
 test3(dlogis)

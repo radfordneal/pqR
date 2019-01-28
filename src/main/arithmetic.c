@@ -3173,6 +3173,44 @@ static void Dqcauchy (double p, double location, double scale,
     }
 }
 
+static void Dpf (double q, double df1, double df2, 
+                 double *dq, double *ddf1, double *ddf2,
+                 double v, int lower_tail, int log_p)
+{
+    if (ddf1) *ddf1 = 0;
+    if (ddf2) *ddf2 = 0;
+
+    if (!R_FINITE(v)) {
+        if (dq) *dq = 0;
+    }
+    else {
+        if (dq) {
+            double d = df(q,df1,df2,log_p);
+            *dq = log_p ? exp (d-v) : d;
+            if (!lower_tail) *dq = -*dq;
+        }
+    }
+}
+
+static void Dqf (double p, double df1, double df2, 
+                 double *dp, double *ddf1, double *ddf2,
+                 double v, int lower_tail, int log_p)
+{
+    if (ddf1) *ddf1 = 0;
+    if (ddf2) *ddf2 = 0;
+
+    if (!R_FINITE(v)) {
+        if (dp) *dp = 0;
+    }
+    else {
+        if (dp) {
+            double d = df(v,df1,df2,FALSE);
+            *dp = lower_tail ? 1/d : -1/d;
+            if (log_p) *dp *= exp(p);
+        }
+    }
+}
+
 static void Ddlogis (double x, double location, double scale, 
                      double *dx, double *dlocation, double *dscale,
                      double v, int give_log)
@@ -3517,8 +3555,8 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { pcauchy,	Dpcauchy },
     { qcauchy,	Dqcauchy },
     { df,	0 },
-    { pf,	0 },
-    { qf,	0 },
+    { pf,	Dpf },
+    { qf,	Dqf },
     { dgamma,	0 },
     { pgamma,	0 },
     { qgamma,	0 },
