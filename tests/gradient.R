@@ -310,6 +310,12 @@ test3w <- function (fun,...) {
 test3u <- function (fun,...) {
     print (bindgrads (numericDeriv(quote(fun(u1,u2,u3,...)),"u1"),
                       with gradient (u1) fun(u1,u2,u3,...)))
+    print (bindgrads (numericDeriv(quote(fun(u1,u2,u3,...)),"u2"),
+                      with gradient (u2) fun(u1,u2,u3,...)))
+    print (bindgrads (numericDeriv(quote(fun(u1,u2,u3,...)),"u3"),
+                      with gradient (u3) fun(u1,u2,u3,...)))
+    print (bindgrads (numericDeriv(quote(fun(u1,u2,u3,...)),c("u1","u2","u3")),
+                      with gradient (u1,u2,u3) fun(u1,u2,u3,...)))
 }
 
 test3v <- function (fun,...) {
@@ -521,5 +527,12 @@ test3(pweibull)
 test3(pweibull,log=TRUE)
 test3(pweibull,lower=FALSE)
 test3(pweibull,log=TRUE,lower=FALSE)
+
+test3(qweibull)
+test3u(qweibull,log=TRUE)
+test3(qweibull,lower=FALSE)
+test3u(qweibull,log=TRUE,lower=FALSE)
+
+
 
 test2r(rweibull)

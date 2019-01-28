@@ -2679,7 +2679,7 @@ static void Ddt (double x, double n, double *dx, double *dn,
 }
 
 static void Dpt (double q, double n, double *dq, double *dn,
-                 double v, int lower_tail, int give_log)
+                 double v, int lower_tail, int log_p)
 {
     if (dn) *dn = 0;
 
@@ -2688,15 +2688,15 @@ static void Dpt (double q, double n, double *dq, double *dn,
     }
     else {
         if (dq) {
-            double d = dt(q,n,give_log);
-            *dq = give_log ? exp (d-v) : d;
+            double d = dt(q,n,log_p);
+            *dq = log_p ? exp (d-v) : d;
             if (!lower_tail) *dq = -*dq;
         }
     }
 }
 
 static void Dqt (double p, double n, double *dp, double *dn,
-                 double v, int lower_tail, int give_log)
+                 double v, int lower_tail, int log_p)
 {
     if (dn) *dn = 0;
 
@@ -2707,7 +2707,7 @@ static void Dqt (double p, double n, double *dp, double *dn,
         if (dp) {
             double d = dt(v,n,FALSE);
             *dp = lower_tail ? 1/d : -1/d;
-            if (give_log) *dp *= exp(p);
+            if (log_p) *dp *= exp(p);
         }
     }
 }
@@ -2973,7 +2973,7 @@ static void Ddbeta (double x, double a, double b,
 
 static void Dpbeta (double q, double a, double b, 
                     double *dq, double *da, double *db,
-                    double v, int lower_tail, int give_log)
+                    double v, int lower_tail, int log_p)
 {
     if (da) *da = 0;
     if (db) *db = 0;
@@ -2983,8 +2983,8 @@ static void Dpbeta (double q, double a, double b,
     }
     else {
         if (dq) {
-            double d = dbeta(q,a,b,give_log);
-            *dq = give_log ? exp (d-v) : d;
+            double d = dbeta(q,a,b,log_p);
+            *dq = log_p ? exp (d-v) : d;
             if (!lower_tail) *dq = -*dq;
         }
     }
@@ -2992,7 +2992,7 @@ static void Dpbeta (double q, double a, double b,
 
 static void Dqbeta (double p, double a, double b, 
                     double *dp, double *da, double *db,
-                    double v, int lower_tail, int give_log)
+                    double v, int lower_tail, int log_p)
 {
     if (da) *da = 0;
     if (db) *db = 0;
@@ -3004,7 +3004,7 @@ static void Dqbeta (double p, double a, double b,
         if (dp) {
             double d = dbeta(v,a,b,FALSE);
             *dp = lower_tail ? 1/d : -1/d;
-            if (give_log) *dp *= exp(p);
+            if (log_p) *dp *= exp(p);
         }
     }
 }
@@ -3440,6 +3440,35 @@ static void Dpweibull (double q, double shape, double scale,
     }
 }
 
+static void Dqweibull (double p, double shape, double scale, 
+                       double *dp, double *dshape, double *dscale,
+                       double v, int lower_tail, int log_p)
+{
+    if (!R_FINITE(v)) {
+        if (dp) *dp = 0;
+    }
+
+    if (dp || dshape) {
+        if (dp) {
+            double d = dweibull(v,shape,scale,FALSE);
+            *dp = lower_tail ? 1/d : -1/d;
+        }
+        if (dshape) {
+            double t = lower_tail ? (log_p ? log(-expm1(p)) : log1p(-p))
+                                  : (log_p ? p : log(p));
+            *dshape = - v * log(-t) / (shape*shape);
+        }
+        if (log_p) {
+            if (dp) *dp *= exp(p);
+        }
+    }
+
+    if (dscale) {
+        *dscale = v / scale;
+    }
+
+}
+
 /* Table of functions to compute values and derivatives for math3 functions. */
 
 static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
@@ -3476,7 +3505,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { qunif,	Dqunif },
     { dweibull,	Ddweibull },
     { pweibull,	Dpweibull },
-    { qweibull,	0 },
+    { qweibull,	Dqweibull },
     { dnchisq,	0 },
     { pnchisq,	0 },
     { qnchisq,	0 },
