@@ -153,7 +153,7 @@ cosh, sinh, tanh, acosh, asinh, atanh \cr
 gamma, lgamma, digamma, trigamma, psigamma, beta, lbeta \cr
 \cr
 dbeta, pbeta (1st argument only), qbeta (1st argument only) \cr
-pchisq (1st argument only), qchisq (1st argument only) \cr
+pchisq (1st arg only, no ncp), qchisq (1st arg only, no ncp) \cr
 dbinom, pbinom \cr
 dcauchy, pcauchy, qcauchy, rcauchy \cr
 dexp, pexp, qexp, rexp \cr
