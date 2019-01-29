@@ -159,6 +159,7 @@ dcauchy, pcauchy, qcauchy, rcauchy \cr
 dexp, pexp, qexp, rexp \cr
 df (no ncp argument), pf (1st arg only, no ncp), qf (1st arg only, no ncp) \cr
 dgamma, pgamma (1st and 3rd args only), qgamma (1st and 3rd args only) \cr
+Note: 3rd argument of dgamma/pgamma/qgamma may be either rate or scale \cr
 dgeom, pgeom \cr
 dlogis, plogis, qlogis, rlogis \cr
 rlnorm \cr
