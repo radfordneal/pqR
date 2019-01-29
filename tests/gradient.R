@@ -476,6 +476,9 @@ test3y(qcauchy,log=TRUE,lower=FALSE)
 
 test2r(rcauchy)
 
+test3(df)
+test3(df,log=TRUE)
+
 test3(pf)
 test3(pf,log=TRUE)
 test3(pf,lower=FALSE)

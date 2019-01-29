@@ -3193,6 +3193,40 @@ static void Dqcauchy (double p, double location, double scale,
     }
 }
 
+static void Ddf (double x, double df1, double df2, 
+                 double *dx, double *ddf1, double *ddf2,
+                 double v, int give_log)
+{
+    if (x <= 0 || !R_FINITE(v)) {
+        if (dx) *dx = 0;
+        if (ddf1) *ddf1 = 0;
+        if (ddf2) *ddf2 = 0;
+    }
+    else {
+
+        double s = 0.5 * (df1 + df2);
+        double r = df1 / df2;
+        double t = s/(1+r*x);
+
+        if (dx) *dx = (0.5*df1-1)/x - r*t;
+        if (ddf1 || ddf2) {
+            double g = 0.5 * digamma(s);
+            double h = 0.5 * log(1+r*x);
+            double m = (x/df2)*t;
+            if (ddf1) *ddf1 = g - 0.5*digamma(0.5*df1) + 0.5*log(r)
+                            - h + 0.5 + 0.5*log(x) - m;
+            if (ddf2) *ddf2 = g - 0.5*digamma(0.5*df2) - 0.5*r
+                            - h + r*m;
+        }
+
+        if (!give_log) {
+            if (dx) *dx *= v;
+            if (ddf1) *ddf1 *= v;
+            if (ddf2) *ddf2 *= v;
+        }
+    }
+}
+
 static void Dpf (double q, double df1, double df2, 
                  double *dq, double *ddf1, double *ddf2,
                  double v, int lower_tail, int log_p)
@@ -3650,7 +3684,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { dcauchy,	Ddcauchy },
     { pcauchy,	Dpcauchy },
     { qcauchy,	Dqcauchy },
-    { df,	0 },
+    { df,	Ddf },
     { pf,	Dpf },
     { qf,	Dqf },
     { dgamma,	Ddgamma },

@@ -157,7 +157,7 @@ dchisq (no ncp arg), pchisq (1st only, no ncp), qchisq (1st only, no ncp) \cr
 dbinom, pbinom \cr
 dcauchy, pcauchy, qcauchy, rcauchy \cr
 dexp, pexp, qexp, rexp \cr
-pf (1st arg only, no ncp), qf (1st arg only, no ncp) \cr
+df (no ncp argument), pf (1st arg only, no ncp), qf (1st arg only, no ncp) \cr
 dgamma, pgamma (1st and 3rd args only), qgamma (1st and 3rd args only) \cr
 dgeom, pgeom \cr
 dlogis, plogis, qlogis, rlogis \cr
