@@ -3125,15 +3125,13 @@ static void Ddcauchy (double x, double location, double scale,
     else {
         double x0 = (x - location) / scale;
         double f = 1 + x0*x0;
-        if (give_log) {
-            if (dx) *dx = -2*x0 / (f*scale);
-            if (dlocation) *dlocation = 2*x0 / (f*scale);
-            if (dscale) *dscale = (x0*x0-1) / (f*scale);
-        }
-        else {
-            if (dx) *dx = -2*v*x0 / (f*scale);
-            if (dlocation) *dlocation = 2*v*x0 / (f*scale);
-            if (dscale) *dscale = v * (x0*x0-1) / (f*scale);
+        if (dx) *dx = -2*x0 / (f*scale);
+        if (dlocation) *dlocation = 2*x0 / (f*scale);
+        if (dscale) *dscale = (x0*x0-1) / (f*scale);
+        if (!give_log) {
+            if (dx) *dx *= v;
+            if (dlocation) *dlocation *= v;
+            if (dscale) *dscale *= v;
         }
     }
 }
@@ -3353,15 +3351,13 @@ static void Ddlogis (double x, double location, double scale,
     else {
         double x0 = (x - location) / scale;
         double t = tanh(x0/2);
-        if (give_log) {
-            if (dx) *dx = - t / scale;
-            if (dlocation) *dlocation = t / scale;
-            if (dscale) *dscale = (t*x0 - 1) / scale;
-        }
-        else {
-            if (dx) *dx = - v * t / scale;
-            if (dlocation) *dlocation = v * t / scale;
-            if (dscale) *dscale = v * (t*x0 - 1) / scale;
+        if (dx) *dx = - t / scale;
+        if (dlocation) *dlocation = t / scale;
+        if (dscale) *dscale = (t*x0 - 1) / scale;
+        if (!give_log) {
+            if (dx) *dx *= v;
+            if (dlocation) *dlocation *= v;
+            if (dscale) *dscale *= v;
         }
     }
 }
@@ -3432,15 +3428,13 @@ static void Ddnorm (double x, double mu, double sigma,
     }
     else {
         double x0 = (x - mu) / sigma;
-        if (give_log) {
-            if (dx) *dx = -x0 / sigma;
-            if (dmu) *dmu = x0 / sigma;
-            if (dsigma) *dsigma = (x0*x0 - 1) / sigma;
-        }
-        else {
-            if (dx) *dx = - v * x0 / sigma;
-            if (dmu) *dmu = v * x0 / sigma;
-            if (dsigma) *dsigma = v * (x0*x0 - 1) / sigma;
+        if (dx) *dx = -x0 / sigma;
+        if (dmu) *dmu = x0 / sigma;
+        if (dsigma) *dsigma = (x0*x0 - 1) / sigma;
+        if (!give_log) {
+            if (dx) *dx *= v;
+            if (dmu) *dmu *= v;
+            if (dsigma) *dsigma *= v;
         }
     }
 }
