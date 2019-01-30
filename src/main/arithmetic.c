@@ -3510,6 +3510,22 @@ static void Ddnbinom (double x, double size, double prob,
     }
 }
 
+static void Dpnbinom (double q, double size, double prob, 
+                      double *dq /* must be 0 */, double *dsize /* must be 0 */,
+                      double *dprob, double v, int lower_tail, int log_p)
+{
+    if (dq || dsize) abort();
+    if (!dprob) return;
+
+    if (size <= 0 || q < 0 || prob <= 0 || prob >= 1)
+        *dprob = 0;
+    else {
+        *dprob = dbeta (prob, size, q+1, FALSE);
+        if (!lower_tail) *dprob = -*dprob;
+        if (log_p) *dprob *= exp(-v);
+    }
+}
+
 static void Ddnorm (double x, double mu, double sigma, 
                     double *dx, double *dmu, double *dsigma,
                     double v, int give_log)
@@ -3784,7 +3800,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { plogis,	Dplogis },
     { qlogis,	Dqlogis },
     { dnbinom,	Ddnbinom },
-    { pnbinom,	0 },
+    { pnbinom,	Dpnbinom },
     { qnbinom,	0 /* discrete */ },
     { dnorm,	Ddnorm },
     { pnorm,	Dpnorm },
