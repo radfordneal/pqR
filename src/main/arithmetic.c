@@ -3537,9 +3537,7 @@ static void Ddnbinom_mu (double x, double size, double mu,
         *dmu = 0;
     }
     else {
-        double prob = size/(size+mu);
-        double lp = size/prob - x/(1-prob);
-        lp *= -size/((size+mu)*(size+mu));
+        double lp = (x/mu - 1) * (size / (size+mu));
         *dmu = give_log ? lp : lp*v;
     }
 }
@@ -3554,9 +3552,8 @@ static void Dpnbinom_mu (double q, double size, double mu,
     if (size <= 0 || q < 0 || mu <= 0)
         *dmu = 0;
     else {
-        double prob = size/(size+mu);
-        *dmu = dbeta (prob, size, q+1, FALSE);
-        *dmu *= -size/((size+mu)*(size+mu));
+        double prob = size / (size+mu);
+        *dmu = - dbeta (prob, size, q+1, FALSE) * prob / (size+mu);
         if (!lower_tail) *dmu = -*dmu;
         if (log_p) *dmu *= exp(-v);
     }
