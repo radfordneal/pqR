@@ -102,6 +102,7 @@ the source code.
 * SEXPs::                       
 * Environments and variable lookup::  
 * Attributes::                  
+* Gradient information::                    
 * Contexts::                    
 * Argument evaluation::         
 * Autoprinting::                
@@ -339,9 +340,10 @@ struct sxpinfo_struct @{
 #   define TYPE_ET_CETERA_VEC_DOTS_TR 0x40 /* Symbol:   is ... or ..1, ..2, etc.
                                               Vector:   not scalar (length != 1)
                                               Function: is being traced 
-                                              CHARSXP:  may need translation */
+                                              CHARSXP:  may need translation
+                                              PROMSXP:  has been forced */
 
-#   define TYPE_ET_CETERA_HAS_ATTR 0x80 /* Vector or LISTSXP: 
+#   define TYPE_ET_CETERA_HAS_ATTR 0x80 /* Vector type, LISTSXP, or PROMSXP: 
                                              1 if ATTRIB != R_NilValue */
 
     /* Second byte. */
@@ -354,7 +356,9 @@ struct sxpinfo_struct @{
                                      Symbol: maybe use fast subassign */
     unsigned int rstep_pname : 1; /* Function: is to be debugged just once
                                      Symbol: subassign counterpart follows it
-                                     CHARSXP: is used as a symbol's printname */
+                                     CHARSXP: is used as a symbol's printname
+                                     Envir: store gradient with variables
+                                     Promise: evaluate with VARIANT_GRADIENT */
     unsigned int base_sym_env : 1;/* Symbol: has base binding in global cache,
                                      Envir: R_BaseEnv or R_BaseNamespace*/
 
@@ -598,13 +602,16 @@ whose gradient will be tracked.
 @item PROMSXP
 Pointers to the value, expression and environment (in which to evaluate
 the expression).  Once an promise has been evaluated, the environment is
-set to @code{R_NilValue}.
+set to @code{R_NilValue}.  The attribute of a promise may hold gradient
+information, which is set when the promise is forced if requested.
 
 @item LISTSXP
 Pointers to the CAR, CDR (usually a @code{LISTSXP} or @code{R_NilValue}) and
 TAG (usually a @code{SYMSXP} or @code{R_NilValue}).  For LISTSXP nodes used
 to record gradient values, the TAG is the environment for the relevant
-@code{with gradient} or @code{trace gradient} construct.
+@code{with gradient} or @code{trace gradient} construct; LISTSXP nodes
+used as binding cells may have such gradient information stored as their
+`attributes'.
 
 @item LANGSXP
 A special type of @code{LISTSXP} used for function calls.  (The CAR
@@ -731,7 +738,7 @@ The frames of environments, other than local environments of functions,
 are normally hashed for faster access (including insertion and deletion).
 The frame field is unused for hashed environments.
 
-By default @R{} maintains a (hashed) global cache of `variables' (that
+@R{} maintains a global cache of `variables' (that
 is symbols and their bindings) which have been found, and this refers
 only to environments which have been marked to participate, which
 consists of the global environment (aka the user workspace), the base
@@ -745,14 +752,12 @@ other environment that participates in the cache (since then bindings
 in the environment masked by others in the global cache should be visible).
 
 Variables in the global cache whose binding within it is its binding
-in the base environment are marked so that they can be accessed quickly
-without consulting the hash table.
+in the base environment are marked so that they can be accessed quickly.
+(Since access to the global cache itself is now quick (the value is the
+`attribute' for the symbol), this may now be an obsolete optimization.)
 
-Local environments for functions may be marked (by @code{NO_SPEC_SYM})
-as known not to contain certain `special' symbols, such as @code{+}
-and @code{for}, so that lookup of such symbols can quickly skip these
-environments.  The list of such symbols, marked by @code{SPEC_SYM},
-is in @file{src/main/names.c}.
+Symbols and environments have `symbits' bit vectors that often allow
+for quick determination that an environment does not contain a symbol.
 
 Every symbol contains a pointer to the environment in which the last
 unhashed binding for the symbol was found (provided it is not an
@@ -889,7 +894,9 @@ this.
 
 Note that the `attributes' of a @code{CHARSXP} are used as part of the
 management of the @code{CHARSXP} cache: of course @code{CHARSXP}'s are
-not user-visible but C-level code might look at their attributes.
+not user-visible but C-level code might look at their attributes.  Also,
+`attributes' on binding cells in environments and on promises are used
+to record gradient information (see @ref{Gradient information} for details).
 
 The code assumes that the attributes of a node are either
 @code{R_NilValue} or a pairlist of non-zero length (and this is checked
@@ -973,7 +980,46 @@ attr(,"comm")
 @end example
 
 
-@node Contexts, Argument evaluation, Attributes, R Internal Structures
+@node Gradient information, Contexts, Attributes, R Internal Structures
+@section Gradient information
+
+The value obtained from evaluating an expression may be accompanied by
+gradient information, if the evaluation is done with the
+@code{VARIANT_GRADIENT} variant (see @ref{The eval function} for
+details on variants).  After evaluation, the presence of variant
+information is indicated by @code{R_variant_result} having the
+@code{VARIANT_GRADIENT_FLAG} bit set, in which case the gradient
+information is in @code{R_gradient}.
+
+Gradient information takes the form of a pairlist of gradient values,
+in which the tag is not a symbol, but rather the environment of the
+@code{with gradient} or @code{track gradient} construct in which the
+variable for which the value is the gradient was defined.  The
+particular variable within that environment is identified by
+@code{GRADINDEX} (the top 8 bits of the general purpose field) for the
+pairlist node, which indexes a table pointed by the @code{GRADVARS}
+field of the environment.
+
+@code{VARIANT_GRADIENT} is used when evaluating the body of a
+@code{with gradient} or @code{track gradient} construct, and passed on
+from there, for example in an if expression.  @code{VARIANT_GRADIENT}
+is also used when evaluating the right-hand side of an assignment to a
+variable in an environment with the @code{STORE_GRAD} flag, which will
+be the case for an environment associated with @code{with gradient} or
+@code{track gradient} and for environments of functions called from
+there.
+
+Values assigned to variables in an environment with @code{STORE_GRAD}
+set have their gradient information stored as the attribute field of
+their binding cell.  Gradient information can also be stored in the
+attribute field of a promise, when it is forced, if it has the
+@code{STORE_GRAD} flag.  The internal @code{evalList_gradient}
+function evaluates a pairlist of arguments and returns a pairlist of
+values in which gradient information may be stored the attribute field
+of each node.
+
+
+@node Contexts, Argument evaluation, Gradient information, R Internal Structures
 @section Contexts
 
 @cindex context
