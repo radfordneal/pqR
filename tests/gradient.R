@@ -556,6 +556,14 @@ test3y(qlogis,log=TRUE,lower=FALSE)
 
 test2r(rlogis)
 
+test3v(dnbinom)
+test3v(dnbinom,log=TRUE)
+
+test3v(pnbinom)
+test3v(pnbinom,log=TRUE)
+test3v(pnbinom,lower=FALSE)
+test3v(pnbinom,log=TRUE,lower=FALSE)
+
 test3(dnorm)
 test3(dnorm,log=TRUE)
 test3z(dnorm)

@@ -3494,6 +3494,22 @@ static void Dqlogis (double p, double location, double scale,
     }
 }
 
+static void Ddnbinom (double x, double size, double prob, 
+                      double *dx /* must be 0 */, double *dsize /* must be 0 */,
+                      double *dprob, double v, int give_log)
+{
+    if (dx || dsize) abort();
+    if (!dprob) return;
+
+    if (size <= 0 || prob <= 0 || prob >= 1 || x < 0) {
+        *dprob = 0;
+    }
+    else {
+        double lp = size/prob - x/(1-prob);
+        *dprob = give_log ? lp : lp*v;
+    }
+}
+
 static void Ddnorm (double x, double mu, double sigma, 
                     double *dx, double *dmu, double *dsigma,
                     double v, int give_log)
@@ -3767,7 +3783,7 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { dlogis,	Ddlogis },
     { plogis,	Dplogis },
     { qlogis,	Dqlogis },
-    { dnbinom,	0 },
+    { dnbinom,	Ddnbinom },
     { pnbinom,	0 },
     { qnbinom,	0 /* discrete */ },
     { dnorm,	Ddnorm },
