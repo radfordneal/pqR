@@ -80,7 +80,9 @@ are made with \code{<<-}.
 
 Tracking of gradients continues when a function is called with 
 one or more arguments with tracked gradients.  This includes functions
-for S3 methods, but not S4 methods.
+for S3 methods, but not S4 methods.  Tracking will also be performed
+when an expression is evaluated with \code{eval}, if the environment
+used for the evaluation is one in which gradients are being tracked.
 
 Within \code{expr}, the gradient of an expression, \code{e}, with
 respect the variable or variables of the enclosing \code{with
