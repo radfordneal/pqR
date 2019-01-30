@@ -2425,6 +2425,34 @@ r2 0.4826404 -2.718452
 r1 -0.7284833 -5.632457
 r2 -0.7284833 -5.632457
 > 
+> dnbinom_mu <- function (x, size, mu, ...) dnbinom(x,size,mu=mu,...)
+> test3v(dnbinom_mu)
+         [,1]       [,2]
+r1 0.02779435 0.09169925
+r2 0.02779435 0.09169925
+> test3v(dnbinom_mu,log=TRUE)
+        [,1]     [,2]
+r1 -3.582923 3.299205
+r2 -3.582923 3.299205
+> 
+> pnbinom_mu <- function (q, size, mu, ...) pnbinom(q,size,mu=mu,...)
+> test3v(pnbinom_mu)
+        [,1]        [,2]
+r1 0.9927539 -0.03632630
+r2 0.9927539 -0.03632631
+> test3v(pnbinom_mu,log=TRUE)
+           [,1]        [,2]
+r1 -0.007272439 -0.03659145
+r2 -0.007272439 -0.03659145
+> test3v(pnbinom_mu,lower=FALSE)
+          [,1]       [,2]
+r1 0.007246059 0.03632631
+r2 0.007246059 0.03632631
+> test3v(pnbinom_mu,log=TRUE,lower=FALSE)
+        [,1]    [,2]
+r1 -4.927298 5.01325
+r2 -4.927298 5.01325
+> 
 > test3(dnorm)
         [,1]      [,2]
 r1 0.4888913 0.4503578

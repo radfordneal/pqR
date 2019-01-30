@@ -3526,6 +3526,42 @@ static void Dpnbinom (double q, double size, double prob,
     }
 }
 
+static void Ddnbinom_mu (double x, double size, double mu, 
+                      double *dx /* must be 0 */, double *dsize /* must be 0 */,
+                      double *dmu, double v, int give_log)
+{
+    if (dx || dsize) abort();
+    if (!dmu) return;
+
+    if (size <= 0 || mu <= 0 || x < 0) {
+        *dmu = 0;
+    }
+    else {
+        double prob = size/(size+mu);
+        double lp = size/prob - x/(1-prob);
+        lp *= -size/((size+mu)*(size+mu));
+        *dmu = give_log ? lp : lp*v;
+    }
+}
+
+static void Dpnbinom_mu (double q, double size, double mu, 
+                      double *dq /* must be 0 */, double *dsize /* must be 0 */,
+                      double *dmu, double v, int lower_tail, int log_p)
+{
+    if (dq || dsize) abort();
+    if (!dmu) return;
+
+    if (size <= 0 || q < 0 || mu <= 0)
+        *dmu = 0;
+    else {
+        double prob = size/(size+mu);
+        *dmu = dbeta (prob, size, q+1, FALSE);
+        *dmu *= -size/((size+mu)*(size+mu));
+        if (!lower_tail) *dmu = -*dmu;
+        if (log_p) *dmu *= exp(-v);
+    }
+}
+
 static void Ddnorm (double x, double mu, double sigma, 
                     double *dx, double *dmu, double *dsigma,
                     double v, int give_log)
@@ -3822,8 +3858,8 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { qwilcox,	0 /* discrete */ },
     { bessel_i_ex, 0 },
     { bessel_k_ex, 0 },
-    { dnbinom_mu,  0 },
-    { pnbinom_mu,  0 },
+    { dnbinom_mu,  Ddnbinom_mu },
+    { pnbinom_mu,  Dpnbinom_mu },
     { qnbinom_mu,  0 /* discrete */ }
 };
 
@@ -4254,8 +4290,8 @@ attribute_hidden FUNTAB R_FunTab_arithmetic[] =
 {"besselI",	do_math3,	43,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"besselK",	do_math3,	44,   1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"dnbinom_mu",	do_math3,	45,   1000011,	3+1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pnbinom_mu",	do_math3,	46,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
+{"dnbinom_mu",	do_math3,	45,   191000011,3+1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pnbinom_mu",	do_math3,	46,   191000011,3+2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qnbinom_mu",	do_math3,	47,   1000011,	3+2,	{PP_FUNCALL, PREC_FN,	0}},
 
 

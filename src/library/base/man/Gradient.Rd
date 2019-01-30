@@ -163,6 +163,7 @@ Note: 3rd argument of dgamma/pgamma/qgamma may be either rate or scale \cr
 dgeom, pgeom \cr
 dlogis, plogis, qlogis, rlogis \cr
 dlnorm, plnorn, qlnorm, rlnorm \cr
+dnbinom (3rd arg (prob or mu) only), pnbinom (3rd arg (prob or mu) only) \cr
 dnorm, pnorm, qnorm, rnorm \cr
 dpois, ppois \cr
 dt (with no ncp arg), pt (1st arg only, no ncp), qt (1st arg only, no ncp) \cr

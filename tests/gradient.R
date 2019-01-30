@@ -564,6 +564,16 @@ test3v(pnbinom,log=TRUE)
 test3v(pnbinom,lower=FALSE)
 test3v(pnbinom,log=TRUE,lower=FALSE)
 
+dnbinom_mu <- function (x, size, mu, ...) dnbinom(x,size,mu=mu,...)
+test3v(dnbinom_mu)
+test3v(dnbinom_mu,log=TRUE)
+
+pnbinom_mu <- function (q, size, mu, ...) pnbinom(q,size,mu=mu,...)
+test3v(pnbinom_mu)
+test3v(pnbinom_mu,log=TRUE)
+test3v(pnbinom_mu,lower=FALSE)
+test3v(pnbinom_mu,log=TRUE,lower=FALSE)
+
 test3(dnorm)
 test3(dnorm,log=TRUE)
 test3z(dnorm)
