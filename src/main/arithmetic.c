@@ -3339,6 +3339,83 @@ static void Dqgamma (double p, double shape, double scale,
     }
 }
 
+static void Ddlnorm (double x, double mu, double sigma, 
+                     double *dx, double *dmu, double *dsigma,
+                     double v, int give_log)
+{
+    if (x <= 0 || sigma <= 0 || !R_FINITE(v)) {
+        if (dx) *dx = 0;
+        if (dmu) *dmu = 0;
+        if (dsigma) *dsigma = 0;
+    }
+    else {
+        double x0 = (log(x) - mu) / sigma;
+        if (dx) *dx = -(x0/sigma+1) / x;
+        if (dmu) *dmu = x0/sigma;
+        if (dsigma) *dsigma = (x0*x0-1) / sigma;
+        if (!give_log) {
+            if (dx) *dx *= v;
+            if (dmu) *dmu *= v;
+            if (dsigma) *dsigma *= v;
+        }
+    }
+}
+
+static void Dplnorm (double q, double mu, double sigma, 
+                     double *dq, double *dmu, double *dsigma,
+                     double v, int lower_tail, int log_p)
+{
+    if (q <= 0 || sigma <= 0) {
+        if (dq) *dq = 0;
+        if (dmu) *dmu = 0;
+        if (dsigma) *dsigma = 0;
+    }
+    else {
+
+        double q0 = (log(q) - mu) / sigma;
+        double dp0 = dnorm (q0, 0, 1, 0);
+
+        if (dq) *dq = dp0 / (q*sigma);
+        if (dmu) *dmu = - dp0 / sigma;
+        if (dsigma) *dsigma = - dp0 * q0 / sigma;
+
+        if (!lower_tail) {
+            if (dq) *dq = -*dq;
+            if (dmu) *dmu = -*dmu;
+            if (dsigma) *dsigma = -*dsigma;
+        }
+
+        if (log_p) {
+            double expv = exp(-v);
+            if (dq) *dq *= expv;
+            if (dmu) *dmu *= expv;
+            if (dsigma) *dsigma *= expv;
+        }
+    }
+}
+
+static void Dqlnorm (double p, double mu, double sigma, 
+                     double *dp, double *dmu, double *dsigma,
+                     double v, int lower_tail, int log_p)
+{
+    if (sigma <= 0) {
+        if (dp) *dp = 0;
+        if (dmu) *dmu = 1;
+        if (dsigma) *dsigma = 0;
+    }
+    else {
+
+        double q0 = (log(v) - mu) / sigma;
+
+        if (dp) *dp = (lower_tail ? v : -v) * sigma / dnorm (q0, 0, 1, 0);
+        if (dmu) *dmu = v;
+        if (dsigma) *dsigma = v * q0;
+
+        if (log_p)
+            if (dp) *dp *= exp(p);
+    }
+}
+
 static void Ddlogis (double x, double location, double scale, 
                      double *dx, double *dlocation, double *dscale,
                      double v, int give_log)
@@ -3684,9 +3761,9 @@ static struct { double (*fncall)(); void (*Dcall)(); } math3_table[48] = {
     { dgamma,	Ddgamma },
     { pgamma,	Dpgamma },
     { qgamma,	Dqgamma },
-    { dlnorm,	0 },
-    { plnorm,	0 },
-    { qlnorm,	0 },
+    { dlnorm,	Ddlnorm },
+    { plnorm,	Dplnorm },
+    { qlnorm,	Dqlnorm },
     { dlogis,	Ddlogis },
     { plogis,	Dplogis },
     { qlogis,	Dqlogis },

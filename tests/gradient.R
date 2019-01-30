@@ -514,6 +514,25 @@ test3u(qgamma,log=TRUE)
 test3(qgamma,lower=FALSE)
 test3u(qgamma,log=TRUE,lower=FALSE)
 
+test3(dlnorm)
+test3(dlnorm,log=TRUE)
+test3z(dlnorm)
+test3z(dlnorm,log=TRUE)
+
+test3(plnorm)
+test3(plnorm,log=TRUE)
+test3(plnorm,lower=FALSE)
+test3(plnorm,log=TRUE,lower=FALSE)
+test3z(plnorm)
+test3z(plnorm,log=TRUE)
+test3z(plnorm,lower=FALSE)
+test3z(plnorm,log=TRUE,lower=FALSE)
+
+test3(qlnorm)
+test3y(qlnorm,log=TRUE)
+test3(qlnorm,lower=FALSE)
+test3y(qlnorm,log=TRUE,lower=FALSE)
+
 test2r(rlnorm)
 
 test3(dlogis)

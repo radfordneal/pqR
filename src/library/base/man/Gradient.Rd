@@ -162,7 +162,7 @@ dgamma, pgamma (1st and 3rd args only), qgamma (1st and 3rd args only) \cr
 Note: 3rd argument of dgamma/pgamma/qgamma may be either rate or scale \cr
 dgeom, pgeom \cr
 dlogis, plogis, qlogis, rlogis \cr
-rlnorm \cr
+dlnorm, plnorn, qlnorm, rlnorm \cr
 dnorm, pnorm, qnorm, rnorm \cr
 dpois, ppois \cr
 dt (with no ncp arg), pt (1st arg only, no ncp), qt (1st arg only, no ncp) \cr
