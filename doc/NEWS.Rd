@@ -6,6 +6,22 @@
 \encoding{UTF-8}
 
 
+\section{TEST VERSION RELEASED 2019-00-00}{
+
+  \itemize{
+  \item This is a test version with a preliminary, and limited,
+  implementation of automatic differentiation.  This is not expected
+  to become a stable release; that will wait until more complete
+  facilities for automatic differentiation have been implemented.
+  However, the version in this test release does demonstrate much 
+  about what the final facility will be like.
+
+  \item Type \code{help(Gradient)} to read documentation on the automatic 
+  differentiation facilities, as they exist so far.
+}
+}
+
+
 \section{CHANGES IN VERSION RELEASED 2019-01-25}{
 
   \subsection{INTRODUCTION}{
