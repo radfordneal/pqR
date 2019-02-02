@@ -1,7 +1,0 @@
-Modifications that are feature-related.
-
-Allows ... as an expression if it corresponds to just one argument.
-
-Changes to handling of dims for arithmetic and relational operators,
-and fix of related documentation bug.
-
