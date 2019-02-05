@@ -351,7 +351,7 @@ typedef struct ENV_SEXPREC {
     SEXP enclos;
     SEXP hashtab;
     int32_t hashlen;
-    SEXP32 gradvars;
+    SEXP32 gradvars;   /* N.B.: not looked at by GC - must protect otherwise */
 #if !USE_COMPRESSED_POINTERS && SIZEOF_CHAR_P == 4
     int32_t padding;
 #endif

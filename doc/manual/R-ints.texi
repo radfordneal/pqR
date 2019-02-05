@@ -597,7 +597,7 @@ have ever been stored in the environment, allowing quick determination
 that some symbols cannot be in the environment.  Finally, if the
 environment is for the body of a @code{with gradient} or @code{track gradient}
 construct, it contains a vector list of symbols for the variables
-whose gradient will be tracked.
+whose gradient will be tracked, accessed by @code{GRADVARS}.
 
 @item PROMSXP
 Pointers to the value, expression and environment (in which to evaluate
@@ -1011,12 +1011,15 @@ there.
 
 Values assigned to variables in an environment with @code{STORE_GRAD}
 set have their gradient information stored as the attribute field of
-their binding cell.  Gradient information can also be stored in the
-attribute field of a promise, when it is forced, if it has the
-@code{STORE_GRAD} flag.  The internal @code{evalList_gradient}
-function evaluates a pairlist of arguments and returns a pairlist of
-values in which gradient information may be stored the attribute field
-of each node.
+their binding cell, accessed in this context as
+@code{GRADIENT_IN_CELL(x)}, and set by
+@code{SET_GRADIENT_IN_CELL(x,g)}.  Gradient information can also be
+stored in the attribute field of a promise, when it is forced, if it
+has the @code{STORE_GRAD} flag, and is accessed by the same macros.
+The internal @code{evalList_gradient} function evaluates a pairlist of
+arguments and returns a pairlist of values in which gradient
+information may be stored in the attribute field of each node, again
+for accesswith @code{GRADIENT_IN_CELL}.
 
 
 @node Contexts, Argument evaluation, Gradient information, R Internal Structures
