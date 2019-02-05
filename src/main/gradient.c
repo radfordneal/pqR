@@ -269,8 +269,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     /* For 'with gradient', attach gradient attribute. */
     
-    if (PRIMVAL(op) == 0 /* with_gradient */ && TYPEOF(result) == REALSXP
-          && LENGTH(result) == 1 /* for now */) {
+    if (PRIMVAL(op) == 0) { /* with gradient */
 
         if (NAMEDCNT_GT_0(result))
             REPROTECT (result = duplicate(result), rix);

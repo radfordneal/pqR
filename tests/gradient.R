@@ -623,3 +623,12 @@ test3(qweibull,lower=FALSE)
 test3u(qweibull,log=TRUE,lower=FALSE)
 
 test2r(rweibull)
+
+
+# Check gradients of lists.
+
+with gradient (a=3.1) list (a^2, a^3)
+
+with gradient (a=3.1) list (list(a^2), xx=sin(a), yy=99, zz=list(7,a^3))
+
+with gradient (a=3.1) with gradient (b=7.7) list(a*b,a^2*b^2)

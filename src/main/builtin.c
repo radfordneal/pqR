@@ -817,50 +817,101 @@ static SEXP do_cat(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-/* This is BUILTIN for "list". */
+/* Make a list, for "list" and "expression" primitives. */
 
-static SEXP do_makelist(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP makelist(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    SEXP list, names;
-    int i, n;
+    SEXP names = R_NilValue;
+    int n = length(args);
+    int has_grad = 0;
 
-    n = length(args);
-    names = R_NilValue;
+    SEXP list, arg;
+    int i;
 
-    PROTECT (list = allocVector (VECSXP, n));
+    PROTECT(list = allocVector(VECSXP,n));
 
-    for (i = 0; i < n; i++) {
-	if (TAG(args) != R_NilValue) {
-            if (names == R_NilValue)
-                PROTECT(names = allocVector(STRSXP,n)); /* R_BlankStrings */
-	    SET_STRING_ELT(names, i, PRINTNAME(TAG(args)));
-	}
-        SET_VECTOR_ELEMENT_TO_VALUE (list, i, CAR(args));
-	args = CDR(args);
+    /* Fill in list elements, and add names, if there are any.  Also see
+       if there are any gradients to handle. */
+
+    for (arg = args, i = 0; arg != R_NilValue; arg = CDR(arg), i++) {
+        SET_VECTOR_ELEMENT_TO_VALUE (list, i, CAR(arg));
+        if (TAG(arg) != R_NilValue) {
+            if (names == R_NilValue) {
+                names = allocVector(STRSXP,n); /* R_BlankStrings */
+                setAttrib (list, R_NamesSymbol, names);
+            }
+            SET_STRING_ELT (names, i, PRINTNAME(TAG(arg)));
+        }
+        if (HAS_GRADIENT_IN_CELL(arg))
+            has_grad = 1;
     }
 
-    if (names != R_NilValue) {
-	setAttrib(list, R_NamesSymbol, names);
-        UNPROTECT(2);
-    }
-    else
+    /* Find merged gradient information, if there is any. */
+
+    if (has_grad) {
+
+        PROTECT(R_gradient = R_NilValue);
+
+        for (arg = args, i = 0; arg != R_NilValue; arg = CDR(arg), i++) {
+            if (HAS_GRADIENT_IN_CELL(arg)) {
+                SEXP ga;
+                for (ga = GRADIENT_IN_CELL(arg); ga!=R_NilValue; ga = CDR(ga)) {
+                    SEXP gv = R_gradient;
+                    while (gv != R_NilValue &&
+                      (TAG(gv) != TAG(ga) || GRADINDEX(gv) != GRADINDEX(ga))) {
+                        gv = CDR(gv);
+                    }
+                    if (gv == R_NilValue) {
+                        SEXP a = allocVector(VECSXP,n); 
+                        SEXP z = ScalarRealMaybeConst(0.0);
+                        for (int j = 0; j < n; j++) SET_VECTOR_ELT (a, j, z);
+                        INC_NAMEDCNT(a);
+                        gv = cons_with_tag (a, R_gradient, TAG(ga));
+                        SET_GRADINDEX (gv, GRADINDEX(ga));
+                        UNPROTECT_PROTECT (R_gradient = gv);
+                        if (names != R_NilValue)
+                            setAttrib (a, R_NamesSymbol, names);
+                    }
+                    SET_VECTOR_ELEMENT_TO_VALUE (CAR(gv), i, CAR(ga));
+                }
+            }
+        }
+
         UNPROTECT(1);
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
 
-    R_Visible = TRUE;
+    UNPROTECT(1);
     return list;
 }
 
-/* This is SPECIAL for "expression". */
+/* This is a SPECIAL for "list".  Arguments are evaluated. */
+
+static SEXP do_list(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+{
+    SEXP r;
+    args = (variant & VARIANT_GRADIENT) 
+             ? evalList_gradient (args, rho, 0, INT_MAX, 0)
+             : evalList_v (args, rho, 0);
+    PROTECT (args);
+    r = makelist (call, op, args, rho, variant);
+    UNPROTECT(1);
+    R_Visible = TRUE;
+    return r;
+}
+
+/* This is SPECIAL for "expression".  Arguments are used unevaluated. */
 
 static SEXP do_expression(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    SEXP r = do_makelist (call, op, args, rho);
+    SEXP r = makelist (call, op, args, rho, variant);
     SET_TYPEOF (r, EXPRSXP);
+    R_Visible = TRUE;
     return r;
 }
 
 /* vector(mode="logical", length=0) */
-static SEXP do_makevector(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_vector(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     R_len_t len;
     SEXP s;
@@ -1219,8 +1270,8 @@ attribute_hidden FUNTAB R_FunTab_builtin[] =
 {"environmentName",do_envirName,0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"cat",		do_cat,		0,	111,	6,	{PP_FUNCALL, PREC_FN,	0}},
 {"expression",	do_expression,	0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"list",	do_makelist,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"vector",	do_makevector,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"list",	do_list,	0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"vector",	do_vector,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"length<-",	do_lengthgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"switch",	do_switch,	0,	1200,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
 

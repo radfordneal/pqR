@@ -2932,3 +2932,77 @@ r2 0.708465 -1.050115 0.2130552 0.5796969
 r1 0.1770773 0.6011398 0.1979137
 r2 0.1770773 0.6011398 0.1979137
 > 
+> 
+> # Check gradients of lists.
+> 
+> with gradient (a=3.1) list (a^2, a^3)
+[[1]]
+[1] 9.61
+
+[[2]]
+[1] 29.791
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 6.2
+
+attr(,"gradient")[[2]]
+[1] 28.83
+
+> 
+> with gradient (a=3.1) list (list(a^2), xx=sin(a), yy=99, zz=list(7,a^3))
+[[1]]
+[[1]][[1]]
+[1] 9.61
+
+
+$xx
+[1] 0.04158066
+
+$yy
+[1] 99
+
+$zz
+$zz[[1]]
+[1] 7
+
+$zz[[2]]
+[1] 29.791
+
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 6.2
+
+
+attr(,"gradient")$xx
+[1] -0.9991352
+
+attr(,"gradient")$yy
+[1] 0
+
+attr(,"gradient")$zz
+attr(,"gradient")$zz[[1]]
+[1] 0
+
+attr(,"gradient")$zz[[2]]
+[1] 28.83
+
+
+> 
+> with gradient (a=3.1) with gradient (b=7.7) list(a*b,a^2*b^2)
+[[1]]
+[1] 23.87
+
+[[2]]
+[1] 569.7769
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 7.7
+
+attr(,"gradient")[[2]]
+[1] 367.598
+
+> 
