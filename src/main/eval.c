@@ -483,9 +483,10 @@ static inline SEXP handle_symbol (SEXP res, SEXP sym, int variant)
     if (variant & (VARIANT_PENDING_OK | VARIANT_GRADIENT)) {
         if ( ! (variant & VARIANT_GRADIENT))
             return res;
-        if (HAS_ATTRIB(cell) && (TYPEOF(cell) == LISTSXP || STORE_GRAD(cell))) {
+        if (HAS_GRADIENT_IN_CELL(cell) 
+             && (TYPEOF(cell) == LISTSXP || STORE_GRAD(cell))) {
             R_variant_result = VARIANT_GRADIENT_FLAG;
-            R_gradient = ATTRIB_W(cell);
+            R_gradient = GRADIENT_IN_CELL(cell);
         }
         if (variant & VARIANT_PENDING_OK)
             return res;
@@ -665,9 +666,9 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
         if (variant & (VARIANT_PENDING_OK | VARIANT_GRADIENT)) {
             if ( ! (variant & VARIANT_GRADIENT))
                 return res;
-            if (HAS_ATTRIB(e)) {
+            if (HAS_GRADIENT_IN_CELL(e)) {
                 R_variant_result = VARIANT_GRADIENT_FLAG;
-                R_gradient = ATTRIB_W(e);
+                R_gradient = GRADIENT_IN_CELL(e);
             }
             if (variant & VARIANT_PENDING_OK)
                 return res;
@@ -688,7 +689,7 @@ static SEXP attribute_noinline evalv_other (SEXP e, SEXP rho, int variant)
             if ( ! (variant & VARIANT_GRADIENT))
                 return res;
             R_variant_result = VARIANT_GRADIENT_FLAG;
-            R_gradient = ATTRIB_W(e);
+            R_gradient = GRADIENT_IN_CELL(e);
             if (variant & VARIANT_PENDING_OK)
                 return res;
         }
@@ -752,7 +753,7 @@ static SEXP attribute_noinline forcePromiseUnbound (SEXP e, int variant)
             vrnt |= VARIANT_MISSING_OK | VARIANT_GRADIENT;
             val = EVALV_NC (val, PRENV(e), vrnt);
             if (R_variant_result & VARIANT_GRADIENT_FLAG) {
-                SET_ATTRIB (e, R_gradient);
+                SET_GRADIENT_IN_CELL (e, R_gradient);
                 R_variant_result = 0;
             }
         }
@@ -809,9 +810,9 @@ SEXP forcePromise_v (SEXP e, int variant) /* e protected here if necessary */
         if (variant & (VARIANT_PENDING_OK | VARIANT_GRADIENT)) {
             if ( ! (variant & VARIANT_GRADIENT))
                 return r;
-            if (HAS_ATTRIB(e)) {
+            if (HAS_GRADIENT_IN_CELL(e)) {
                 R_variant_result = VARIANT_GRADIENT_FLAG;
-                R_gradient = ATTRIB_W(e);
+                R_gradient = GRADIENT_IN_CELL(e);
             }
             if (variant & VARIANT_PENDING_OK)
                 return r;
@@ -1636,9 +1637,9 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     if (STORE_GRAD(rho)) {
         if (!opval && R_binding_cell != R_NilValue) {
-            SET_ATTRIB (R_binding_cell, 
-                        R_variant_result & VARIANT_GRADIENT_FLAG 
-                         ? R_gradient : R_NilValue);
+            SET_GRADIENT_IN_CELL (R_binding_cell, 
+                                  R_variant_result & VARIANT_GRADIENT_FLAG 
+                                    ? R_gradient : R_NilValue);
         }
     }
 
@@ -2085,19 +2086,25 @@ static SEXP attribute_noinline Rf_set_subassign_general
    Used in eval and applyMethod (object.c) for builtin primitives,
    do_internal (names.c) for builtin .Internals and in evalArgs. 
 
-   R_variant_result and R_gradient will be set to the values from the
-   last evaluation (if any). */
+   R_variant_result is set to 0 before return. */
 
 SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
 {
+    SEXP ev, ev_el;
+
     /* Handle 0 or 1 arguments (not ...) specially, for speed. */
 
     if (CDR(el) == R_NilValue) { /* Note that CDR(R_NilValue) == R_NilValue */
-        if (el == R_NilValue)
+        if (el == R_NilValue) {
+            R_variant_result = 0;
             return R_NilValue;
-        if (CAR(el) != R_DotsSymbol)
-            return cons_with_tag (EVALV (CAR(el), rho, variant), 
-                                  R_NilValue, TAG(el));
+        }
+        if (CAR(el) != R_DotsSymbol) {
+            ev = cons_with_tag (EVALV (CAR(el), rho, variant), 
+                                R_NilValue, TAG(el));
+            R_variant_result = 0;
+            return ev;
+        }
     }
 
     /* The general case (except for el == R_NilValue, handed above). */
@@ -2105,7 +2112,6 @@ SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
     int varpend = variant | VARIANT_PENDING_OK;
 
     BEGIN_PROTECT3 (head, tail, h);
-    SEXP ev, ev_el;
 
     head = R_NilValue;
     tail = R_NilValue;
@@ -2164,6 +2170,7 @@ SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
     if (! (variant & VARIANT_PENDING_OK))
         WAIT_UNTIL_ARGUMENTS_COMPUTED(head);
 
+    R_variant_result = 0;
     RETURN_SEXP_INSIDE_PROTECT (head);
     END_PROTECT;
 
@@ -2172,27 +2179,32 @@ SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
 
 /* Version of evalList_v that also asks for gradients of some arguments, 
    attaching them as attributes of the CONS cells holding the
-   arguments.  The n argument must be non-zero, with n&7 being number
-   of arguments that might have gradient, and n>>3 being number of
-   initial arguments that don't.  Will always have (n>>3) < (n&7). */
+   arguments.  The n argument, which must be non-zero, is the number
+   of arguments that might have gradient; the m argument, always less than
+   n, is the number of initial arguments that don't.
 
-SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
+   R_variant_result is set to 0 before return. */
+
+SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, 
+                                         int n, int m)
 {
-    int m = n>>3;
-    n &= 7;
+    SEXP ev, ev_el;
 
     /* Handle 0 or 1 arguments (not ...) specially, for speed. */
 
     if (CDR(el) == R_NilValue) { /* Note that CDR(R_NilValue) == R_NilValue */
-        if (el == R_NilValue)
+        if (el == R_NilValue) {
+            R_variant_result = 0;
             return R_NilValue;
+        }
         if (CAR(el) != R_DotsSymbol) {
-            SEXP r = cons_with_tag (EVALV (CAR(el), rho,
-                       m > 0 ? variant : variant | VARIANT_GRADIENT), 
-                       R_NilValue, TAG(el));
+            ev  = cons_with_tag (EVALV (CAR(el), rho,
+                                 m > 0 ? variant : variant | VARIANT_GRADIENT), 
+                                 R_NilValue, TAG(el));
             if (R_variant_result & VARIANT_GRADIENT_FLAG)
-                SET_ATTRIB (r, R_gradient);
-            return r;
+                SET_GRADIENT_IN_CELL (ev, R_gradient);
+            R_variant_result = 0;
+            return ev;
         }
     }
 
@@ -2201,7 +2213,6 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
     int varpend = variant | VARIANT_PENDING_OK;
 
     BEGIN_PROTECT3 (head, tail, h);
-    SEXP ev, ev_el;
 
     int i = 0;
 
@@ -2227,7 +2238,7 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
                     i += 1;
                     ev = cons_with_tag (ev_el, R_NilValue, TAG(h));
                     if (R_variant_result & VARIANT_GRADIENT_FLAG)
-                        SET_ATTRIB (ev, R_gradient);
+                        SET_GRADIENT_IN_CELL (ev, R_gradient);
                     if (head==R_NilValue)
                         head = ev;
                     else
@@ -2245,12 +2256,12 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
             if (CDR(el) == R_NilValue) 
                 varpend = variant;    /* don't defer pointlessly for last one */
             INC_NAMEDCNT(CAR(tail));  /* OK when tail is R_NilValue */
-            ev_el = EVALV (CAR(el), rho, i >= n || i < m ? varpend
-                                          : varpend | VARIANT_GRADIENT);
+            int vr = i >= n || i < m ? varpend : varpend | VARIANT_GRADIENT;
+            ev_el = EVALV (CAR(el), rho, vr);
             i += 1;
             ev = cons_with_tag (ev_el, R_NilValue, TAG(el));
             if (R_variant_result & VARIANT_GRADIENT_FLAG)
-                SET_ATTRIB (ev, R_gradient);
+                SET_GRADIENT_IN_CELL (ev, R_gradient);
             if (head==R_NilValue)
                 head = ev;
             else
@@ -2270,10 +2281,11 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant, int n)
     if (! (variant & VARIANT_PENDING_OK))
         WAIT_UNTIL_ARGUMENTS_COMPUTED(head);
 
+    R_variant_result = 0;
     RETURN_SEXP_INSIDE_PROTECT (head);
     END_PROTECT;
 
-} /* evalList_v */
+} /* evalList_gradient */
 
 
 /* evalListUnshared evaluates each expression in "el" in the
@@ -2405,6 +2417,7 @@ SEXP attribute_hidden evalListUnshared(SEXP el, SEXP rho)
 
     WAIT_UNTIL_ARGUMENTS_COMPUTED (head);
 
+    R_variant_result = 0;
     RETURN_SEXP_INSIDE_PROTECT (head);
     END_PROTECT;
 
@@ -2614,7 +2627,7 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
            desired, with any gradients being attached as attributes of
            the CONS cells of the argument list. */
 
-        argsevald = evalList_gradient (args, env, VARIANT_PENDING_OK, 2);
+        argsevald = evalList_gradient (args, env, VARIANT_PENDING_OK, 2, 0);
         arg1 = CAR(argsevald);
         arg2 = CADR(argsevald);
         obj = isObject(arg1) | (isObject(arg2)<<1);
@@ -2845,7 +2858,7 @@ static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
            desired, with any gradients being attached as attributes of
            the CONS cells of the argument list. */
 
-        argsevald = evalList_gradient (args, env, VARIANT_PENDING_OK, 2);
+        argsevald = evalList_gradient (args, env, VARIANT_PENDING_OK, 2, 0);
         arg1 = CAR(argsevald);
         arg2 = CADR(argsevald);
         obj = isObject(arg1) | (isObject(arg2)<<1);
@@ -4546,6 +4559,7 @@ SEXP attribute_hidden applyClosure_v(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     actuals = matchArgs_pairlist (FORMALS(op), arglist, call);
     PROTECT(newrho = NewEnvironment(R_NilValue, actuals, CLOENV(op)));
         /* no longer passes formals, since matchArg now puts tags in actuals */
+
     if (variant & VARIANT_GRADIENT)
         SET_STORE_GRAD (newrho, STORE_GRAD(rho));
 
@@ -4671,14 +4685,15 @@ SEXP applyClosure (SEXP call, SEXP op, SEXP arglist, SEXP rho,
    unless it is zero.  See inside for handling of ... */
 
 #define MAKE_PROMISE(a,rho,variant) do { \
-    if (TYPEOF(a) == PROMSXP) { \
-        INC_NAMEDCNT(a); \
-        SEXP p = PRVALUE_PENDING_OK(a); \
-        if (p != R_UnboundValue && NAMEDCNT_GT_0(p)) \
-            INC_NAMEDCNT(p); \
-    } \
-    else if (a != R_MissingArg && a != R_MissingUnder) { \
-        a = mkPROMISE (a, rho); \
+    if (a != R_MissingArg && a != R_MissingUnder) { \
+        if (TYPEOF(a) == PROMSXP) { \
+            INC_NAMEDCNT(a); \
+            SEXP p = PRVALUE_PENDING_OK(a); \
+            if (p != R_UnboundValue && NAMEDCNT_GT_0(p)) \
+                INC_NAMEDCNT(p); \
+        } \
+        else \
+            a = mkPROMISE (a, rho); \
         if (variant) SET_STORE_GRAD (a, 1); \
     } \
 } while (0)
@@ -4784,9 +4799,9 @@ SEXP attribute_hidden promiseArgsWithValues(SEXP el, SEXP rho, SEXP values)
          a = CDR(a), b = CDR(b)) {
         if (TYPEOF (CAR(b)) == PROMSXP) {
             SET_PRVALUE (CAR(b), CAR(a));
-            if (HAS_ATTRIB(a)) {
-                SET_STORE_GRAD (CAR(s), 1);
-                SET_ATTRIB (CAR(b), ATTRIB_W(a));
+            if (HAS_GRADIENT_IN_CELL(a)) {
+                SET_STORE_GRAD (CAR(b), 1);
+                SET_GRADIENT_IN_CELL (CAR(b), GRADIENT_IN_CELL(a));
             }
             INC_NAMEDCNT (CAR(a));
         }
@@ -4817,7 +4832,7 @@ SEXP attribute_hidden promiseArgsWith1Value (SEXP el, SEXP rho, SEXP value,
         SET_PRVALUE (p, value);
         if (0) {  /* may sometime need to do something for gradients */
             SET_STORE_GRAD (p, 1);
-            SET_ATTRIB (p, R_NilValue);
+            SET_GRADIENT_IN_CELL (p, R_NilValue);
         }
         INC_NAMEDCNT (value);
     }

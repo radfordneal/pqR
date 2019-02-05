@@ -2068,22 +2068,26 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
         errorcall(call, _("unimplemented real function of 1 argument"));
 
     int vrnt = VARIANT_PENDING_OK;
+    int gradv = 0;
     if ((variant & VARIANT_GRADIENT) && R_math1_deriv_table[opcode])
-        vrnt |= VARIANT_GRADIENT;
+        gradv = VARIANT_GRADIENT;
 
-    SEXP sa;
+    SEXP sa, grad, r;
 
     if (ONE_SIMPLE_ARG(args)) {
         vrnt |= VARIANT_SCALAR_STACK_OK;
-        PROTECT (sa = evalv (CAR(args), env, vrnt));
+        PROTECT (sa = evalv (CAR(args), env, vrnt | gradv));
         args = R_NilValue;
+        PROTECT (grad = R_variant_result & VARIANT_GRADIENT_FLAG ? R_gradient 
+                                                                 : R_NilValue);
     }
     else {
 
         if (opcode == 13 /* log */)
             vrnt |= VARIANT_MISSING_OK;
 
-        args = evalList_v (args, env, vrnt);
+        args = gradv ? evalList_gradient (args, env, vrnt | gradv, 1, 0)
+                     : evalList_v (args, env, vrnt);
 
         if (opcode == 13 /* log */ && CDR(args) != R_NilValue) 
             return nonsimple_log (call, op, args, env, variant);
@@ -2092,6 +2096,8 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
         if (opcode != 5 /* trunc */) checkArity(op, args);
         check1arg_x (args, call);
         sa = CAR(args);
+
+        PROTECT (grad = gradv ? GRADIENT_IN_CELL(args) : R_NilValue);
     }
 
     R_Visible = TRUE;
@@ -2099,10 +2105,6 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
     /* At this point, sa is the first argument, and args is either the
        pairlist of arguments, or R_NilValue if that hasn't been created. */
 
-    SEXP r, grad;
-
-    PROTECT (grad = R_variant_result & VARIANT_GRADIENT_FLAG
-                     ? R_gradient : R_NilValue);
     R_variant_result = 0;
 
     if (isObject(sa)) {
@@ -2370,21 +2372,17 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXP r, s, x, g;
     double opr, res;
 
-    PROTECT (args = evalList_v (args, env, variant & VARIANT_GRADIENT));
+    PROTECT (args = variant & VARIANT_GRADIENT 
+                     ? evalList_gradient (args, env, 0, 1, 0)
+                     : evalList_v (args, env, 0));
 
     checkArity(op, args);
     check1arg_x (args, call);
 
     x = CAR(args);
 
-    PROTECT (g = R_variant_result & VARIANT_GRADIENT_FLAG 
-                  ? R_gradient : R_NilValue);
-
-    if (g != R_NilValue)
-        SET_ATTRIB (args, g);
-
     if (DispatchGroup("Math", call, op, args, env, &r, variant)) {
-        UNPROTECT(2);
+        UNPROTECT(1);
 	return r;
     }
 
@@ -2423,7 +2421,7 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             s = allocVector1REAL();
             DO_NOW_OR_LATER1 (variant, n >= T_abs,
                               HELPERS_PIPE_IN1, task_sum_abs, 0, s, x);
-            UNPROTECT(2);
+            UNPROTECT(1);
             R_Visible = TRUE;
             return s;
         }
@@ -2453,14 +2451,15 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     PROTECT(s);
     maybe_dup_attributes (s, x, variant);
-    if (g != R_NilValue) {
+    if (HAS_GRADIENT_IN_CELL(args)) {
         if (TYPEOF(s) == REALSXP && LENGTH(s) == 1 && !ISNAN(*REAL(s))) {
-            R_gradient = copy_scaled_gradients (g, sign(opr));
+            R_gradient = copy_scaled_gradients (GRADIENT_IN_CELL(args),
+                                                sign(opr));
             R_variant_result = VARIANT_GRADIENT_FLAG;
             GRADIENT_TRACE(call);
         }
     }
-    UNPROTECT(3);  /* g, args, s */
+    UNPROTECT(2);  /* args, s */
 
     R_Visible = TRUE;
     return s;
@@ -2844,9 +2843,8 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
     if (ix < 0 || ix > 30 || (fncall = math2_table[ix].fncall) == 0)
         errorcall (call,
                    _("unimplemented real function of %d numeric arguments"), 2);
-
-    SEXP a1 = CAR(args); SEXP g1 = ATTRIB_W(args); args = CDR(args);
-    SEXP a2 = CAR(args); SEXP g2 = ATTRIB_W(args); args = CDR(args);
+    SEXP a1 = CAR(args); SEXP g1 = GRADIENT_IN_CELL(args); args = CDR(args);
+    SEXP a2 = CAR(args); SEXP g2 = GRADIENT_IN_CELL(args); args = CDR(args);
 
     if (!isNumeric(a1) || !isNumeric(a2))
         non_numeric_errorcall(call);
@@ -3873,9 +3871,9 @@ SEXP do_math3 (SEXP call, SEXP op, SEXP args, SEXP env)
         errorcall (call,
                    _("unimplemented real function of %d numeric arguments"), 3);
 
-    SEXP a1 = CAR(args); SEXP g1 = ATTRIB_W(args); args = CDR(args);
-    SEXP a2 = CAR(args); SEXP g2 = ATTRIB_W(args); args = CDR(args);
-    SEXP a3 = CAR(args); SEXP g3 = ATTRIB_W(args); args = CDR(args);
+    SEXP a1 = CAR(args); SEXP g1 = GRADIENT_IN_CELL(args); args = CDR(args);
+    SEXP a2 = CAR(args); SEXP g2 = GRADIENT_IN_CELL(args); args = CDR(args);
+    SEXP a3 = CAR(args); SEXP g3 = GRADIENT_IN_CELL(args); args = CDR(args);
 
     if (!isNumeric(a1) || !isNumeric(a2) || !isNumeric(a3))
         non_numeric_errorcall(call);

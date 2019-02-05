@@ -854,6 +854,9 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 #define ATTRIB(x)       NOT_LVALUE(TYPEOF(x)==SYMSXP ? R_NilValue : ATTRIB_W(x))
 
+#define GRADIENT_IN_CELL(x) ATTRIB_W(x)
+#define HAS_GRADIENT_IN_CELL(x) HAS_ATTRIB(x)
+
 #define IS_PRINTNAME(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
 
 /* HAS_ATTR(x) check for existence of an attribute not R_NilValue, but only

@@ -1519,7 +1519,7 @@ int envlength(SEXP);
 SEXP evalList(SEXP, SEXP);
 SEXP evalListKeepMissing(SEXP, SEXP);
 SEXP evalListUnshared(SEXP, SEXP);
-SEXP evalList_gradient(SEXP, SEXP, int, int);
+SEXP evalList_gradient(SEXP, SEXP, int, int, int);
 SEXP evalList_v(SEXP, SEXP, int);
 SEXP eval_unshared(SEXP,SEXP,int);
 int factorsConform(SEXP, SEXP);
@@ -2000,6 +2000,8 @@ extern R_NORETURN void Rf_unprotect_error (void);
    at user level. */
 
 void SET_ATTRIB_TO_ANYTHING (SEXP, SEXP);
+
+#define SET_GRADIENT_IN_CELL SET_ATTRIB_TO_ANYTHING
 
 
 /* Define R_INFINITE and ISNAN_NOT_NA here as inline functions, using a 

@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2018 by Radford M. Neal
+ *  Copyright (C) 2018, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -35,7 +35,7 @@
 
 
 /* Get gradient identified by env from the gradients in R_gradient, which
-   is protected for the duration of this function.  The gradient is return
+   is protected for the duration of this function.  The gradient is returned
    as a named vector list for multiple variables, or a single gradient if
    there is only one gradient variable for this environment. */
 
@@ -242,7 +242,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         SEXP id_grad = ScalarRealMaybeConst(1.0);
         SEXP gcell = cons_with_tag (id_grad, R_NilValue, newenv);
         SET_GRADINDEX (gcell, i+1);
-        SET_ATTRIB (frame, gcell);
+        SET_GRADIENT_IN_CELL (frame, gcell);
         INC_NAMEDCNT(val);
     }
     UNPROTECT(1); /* frame */
@@ -267,7 +267,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXP result_grad = get_gradient (newenv);
     PROTECT(result_grad);
 
-    /* For with_gradient, attach gradient attribute. */
+    /* For 'with gradient', attach gradient attribute. */
     
     if (PRIMVAL(op) == 0 /* with_gradient */ && TYPEOF(result) == REALSXP
           && LENGTH(result) == 1 /* for now */) {

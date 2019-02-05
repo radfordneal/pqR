@@ -236,13 +236,13 @@ void SET_ATTRIB_TO_ANYTHING(SEXP x, SEXP v) {
             return;  /* silently ignore attempt to set attribute on symbol */
         if (v == R_NilValue) {
             ATTRIB_W(x) = R_NilValue;
-            if ((VECTOR_OR_LIST_TYPES >> TYPEOF(x)) & 1) 
+            if ((HAS_ATTRIB_TYPES >> TYPEOF(x)) & 1) 
                 UNSET_HAS_ATTRIB(x);
         }
         else {
             CHECK_OLD_TO_NEW(x, v);
             ATTRIB_W(x) = v;
-            if ((VECTOR_OR_LIST_TYPES >> TYPEOF(x)) & 1) 
+            if ((HAS_ATTRIB_TYPES >> TYPEOF(x)) & 1) 
                 SET_HAS_ATTRIB(x);
         }
     }
