@@ -19,9 +19,11 @@
   \code{\link{numericDeriv}}.
 
   The present implementation of these facilities is a preliminary
-  one that supports only gradients of scalar values, with respect to scalar
-  variables.  Support for vectors, matrices, arrays, and lists, and for
-  higher-order derivatives, is planned.
+  one that supports only gradients of scalar values, or lists of 
+  scalar values (or lists of lists of scalar values, etc), with respect
+  to scalar variables.  Support for differentiation of and with respect
+  to vectors, matrices, and arrays, and for differentiation with respect
+  to lists, is planned, as is support for higher-order derivatives.
 }
 
 \usage{
@@ -145,8 +147,12 @@ generated random value, if the state of the random number generator
 when calling the function were kept fixed.
 
 The following built-in functions and operators will compute gradients,
-with respect to all their real-valued arguments (unless noted):
+with respect to all their real-valued arguments (unless noted), or
+when applicable, arguments that are lists of scalar reals (or lists of
+lists of scalar reals, etc.):
 \tabular{l}{
+list (currently the only way to create a list with gradient information) \cr
+\cr
 +, -, *, /, ^ (+ and - may be unary) \cr
 \cr
 abs, sqrt, expm1, exp, log1p, log2, log10, log (one-argument form only) \cr
@@ -159,7 +165,7 @@ dchisq (no ncp arg), pchisq (1st only, no ncp), qchisq (1st only, no ncp) \cr
 dbinom, pbinom \cr
 dcauchy, pcauchy, qcauchy, rcauchy \cr
 dexp, pexp, qexp, rexp \cr
-df (no ncp argument), pf (1st arg only, no ncp), qf (1st arg only, no ncp) \cr
+df (no ncp argument), pf (1st arg only, no ncp), qf (1st arg only,no ncp) \cr
 dgamma, pgamma (1st and 3rd args only), qgamma (1st and 3rd args only) \cr
 Note: 3rd argument of dgamma/pgamma/qgamma may be either rate or scale \cr
 dgeom, pgeom \cr
@@ -168,7 +174,7 @@ dlnorm, plnorn, qlnorm, rlnorm \cr
 dnbinom (3rd arg (prob or mu) only), pnbinom (3rd arg (prob or mu) only) \cr
 dnorm, pnorm, qnorm, rnorm \cr
 dpois, ppois \cr
-dt (with no ncp arg), pt (1st arg only, no ncp), qt (1st arg only, no ncp) \cr
+dt (with no ncp arg), pt (1st arg only, no ncp), qt (1st arg only,no ncp) \cr
 dunif, punif, qunif, runif \cr
 dweibull, pweibull, qweibull, rweibull
 }
@@ -177,9 +183,16 @@ dweibull, pweibull, qweibull, rweibull
 \value{
 The gradient returned by \code{gradient_of} or attached as a \code{"gradient"}
 attribute by \code{with gradient} will be a scalar real if the gradient
-is with respect to only one variable.  When the \code{with gradient} or
+is with respect to only one variable, and the expression this is the gradient
+of has a scalar real value.  The gradient of a list is a list of the same
+form, with scalar gradients replacing the scalar elements, except that if
+the gradient or part of the gradient is a list all of whose elements are 
+zero (or a lists that are all zero, etc.), it may be (but is not necessarily)
+abbreviated to a single scalar zero. 
+
+When the \code{with gradient} or
 \code{track gradient} construct has more than one variable, the gradient
-will be a list of scalar real values, with names corresponding to the
+will be a list of scalar real values or lists, with names corresponding to the
 variables.
 }
 
@@ -230,5 +243,15 @@ set.seed(123); v1<-rexp(1,4.999)
 set.seed(123); v2<-rexp(1,5.001)
 (v2-v1) / 0.002                  # should be close to gradient above
 
+r <- with gradient (a=7) list(a,a^2)
+attr(r,"gradient")               # should be a list of 1 and 14
+
+r <- with gradient (a=7) list(3,4)
+attr(r,"gradient")               # may be just 0, rather than list(0,0)
+
+with gradient (a=3)              # only the gradient with respect to a
+  with gradient (b=10*a)         #   will be shown, but the chain rule 
+    list(a,b,a*b)                #   is used to convert derivatives wrt
+                                 #   to b into derivatives wrt to a
 }
 \keyword{programming}
