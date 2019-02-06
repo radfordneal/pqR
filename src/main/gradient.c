@@ -34,6 +34,41 @@
 #include "Defn.h"
 
 
+/* Test whether the structure of a gradient value matches the structure of
+   what it is the gradient of.  If any_for_0 is non-zero, a scalar zero in 
+   grad can match anything. */
+
+static int match_structure (SEXP val, SEXP grad, int any_for_0)
+{
+    if (any_for_0 && TYPEOF(grad) == REALSXP
+                  && LENGTH(grad) == 1 
+                  && *REAL(grad) == 0)
+        return 1;
+
+    if (TYPEOF(val) != TYPEOF(grad))
+        return 0;
+
+    if (TYPEOF(val) == REALSXP) {
+        if (LENGTH(val) != LENGTH(grad))
+            return 0;
+    }
+    else if (TYPEOF(val) == VECSXP) {
+        if (LENGTH(val) != LENGTH(grad))
+            return 0;
+        R_len_t i;
+        for (i = 0; i < LENGTH(val); i++) {
+            if (! match_structure (VECTOR_ELT(val,i),
+                                   VECTOR_ELT(grad,i), any_for_0))
+                return 0;
+        }
+    }
+    else
+        return 0;
+
+    return 1;
+}
+
+
 /* Compute a list from another list by adding the given amount to its scalar 
    elements, recursively when the list has list elements.  (Also works for a 
    'list' that is a simple scalar).  Protects the 'list' argument. */
@@ -580,10 +615,9 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
             if (vargrad[vgi] != R_NilValue) {
                 SEXP gval;
                 PROTECT (gval = evalv (CAR(q), newenv, VARIANT_PENDING_OK));
-                if (TYPEOF(gval) == REALSXP ? (LENGTH(gval) != 1)
-                                            : (TYPEOF(gval) != VECSXP))
+                if (! match_structure (result, gval, 0))
                     errorcall (call, 
-                               _("computed value for gradient is invalid"));
+                      _("computed gradient does not match type of value"));
                 resgrad = add_scaled_SEXP (resgrad, vargrad[vgi], gval);
                 UNPROTECT(2);  /* gval, old resgrad */
                 PROTECT(resgrad);
