@@ -1574,7 +1574,9 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
            The copy is done with memcpy of 8 bytes, which is the minimum
            space allocated for data (required by alignment), which will
-           not copy all of a complex item (hence CPLXSXP not handled here). */
+           not copy all of a complex item (hence CPLXSXP not handled here).
+           (Note that since the size of the copy is constant, this should
+           compile to a few inline instructions.) */
 
         int rhs_type_etc = TYPE_ETC(rhs);  /* type + vec + attr + b.c. */
 
@@ -1621,6 +1623,7 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         /* -- ASSIGNMENT TO A COMPLEX TARGET -- */
 
         rhs = Rf_set_subassign (call, lhs, rhs, rho, variant, opval);
+        goto fini;
     }
 
     else if (TYPEOF(lhs) == STRSXP && LENGTH(lhs) == 1) {
@@ -1642,6 +1645,8 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                                     ? R_gradient : R_NilValue);
         }
     }
+
+  fini:
 
     R_Visible = FALSE;
 
@@ -1738,11 +1743,22 @@ static SEXP attribute_noinline Rf_set_subassign
 
     SEXP rhs_uneval = rhs;  /* save unevaluated rhs */
 
-    PROTECT (rhs = EVALV (rhs, rho, 
-                          !maybe_fast ? 
-                            VARIANT_PENDING_OK :
-                          (variant & (VARIANT_SCALAR_STACK_OK | VARIANT_NULL)) ?
-                            VARIANT_SCALAR_STACK_OK : 0));
+    int rhs_variant = variant & VARIANT_GRADIENT;
+    if (maybe_fast) {
+        if (variant & (VARIANT_SCALAR_STACK_OK | VARIANT_NULL))
+            rhs_variant |= VARIANT_SCALAR_STACK_OK;
+    }
+    else
+        rhs_variant |= VARIANT_PENDING_OK;
+
+    PROTECT (rhs = EVALV (rhs, rho, rhs_variant));
+
+    SEXP grad = R_NilValue;
+    if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+        grad = R_gradient;
+        R_variant_result = 0;
+    }
+    PROTECT(grad);
 
     /* Increment NAMEDCNT temporarily if rhs will be needed as the value,
        to protect it from being modified by the assignment, or otherwise. */
@@ -1846,7 +1862,7 @@ static SEXP attribute_noinline Rf_set_subassign
                                     assgnfcn, rhsprom, rhs_uneval, maybe_fast);
     }
 
-    UNPROTECT(3);  /* rhs, bcell, varval */
+    UNPROTECT(4);  /* rhs, grad, bcell, varval */
 
     /* Assign the final result after the top level replacement.  We
        can sometimes avoid the cost of this by looking at the saved
@@ -1862,6 +1878,11 @@ static SEXP attribute_noinline Rf_set_subassign
             set_var_nonlocal (var, newval, ENCLOS(rho), 3);
         else
             set_var_in_frame (var, newval, rho, TRUE, 3);
+        bcell = R_binding_cell;
+    }
+
+    if (!opval) {  /* not <<- */
+        SET_GRADIENT_IN_CELL (bcell, R_NilValue);
     }
 
     if (variant & VARIANT_NULL) {
