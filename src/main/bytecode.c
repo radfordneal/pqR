@@ -2145,7 +2145,8 @@ SEXP attribute_hidden bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	if (dispatched)
 	    SETSTACK(-1, value);
 	else
-	    SETSTACK(-1, R_subset3_dflt(x, R_NilValue, symbol, R_NilValue, 0));
+	    SETSTACK(-1, R_subset3_dflt(x, R_NilValue, symbol, 
+                                        R_NilValue, R_NilValue, 0));
 	NEXT();
       }
     OP(DOLLARGETS, 2):

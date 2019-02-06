@@ -1695,7 +1695,7 @@ void orderVector1(int *indx, int n, SEXP key, Rboolean nalast,
 		  Rboolean decreasing, SEXP rho);
 
 /* main/subset.c */
-SEXP R_subset3_dflt(SEXP, SEXP, SEXP, SEXP, int);
+SEXP R_subset3_dflt(SEXP, SEXP, SEXP, SEXP, SEXP, int);
 
 /* main/subassign.c */
 SEXP R_subassign3_dflt(SEXP, SEXP, SEXP, SEXP);

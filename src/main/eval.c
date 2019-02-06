@@ -4148,7 +4148,7 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     SEXP string = R_NilValue;
     SEXP name = R_NilValue;
-    int argsevald = 0;
+    SEXP grad = R_NilValue;
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
 
@@ -4156,19 +4156,18 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
         what = CAR(args);
         from = R_fast_sub_var;
-        argsevald = 1;
     }
 
-    else {  /* regular SPECIAL interface */
+    else {
+
+        /* regular SPECIAL interface */
 
         checkArity(op, args);
         what = CADR(args);
-        from = CAR(args);
-
-        if (from != R_DotsSymbol) {
-            from = EVALV_NC (from, env, VARIANT_ONE_NAMED | VARIANT_UNCLASS);
-            argsevald = 1;
-        }
+        from = EVALV_NC (CAR(args), env, VARIANT_ONE_NAMED | VARIANT_UNCLASS
+                                          | (variant & VARIANT_GRADIENT));
+        if (R_variant_result & VARIANT_GRADIENT_FLAG)
+            grad = R_gradient;
     }
 
     if (TYPEOF(what) == PROMSXP)
@@ -4181,17 +4180,15 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 	errorcall(call, _("invalid subscript type '%s'"), 
                         type2char(TYPEOF(what)));
 
-    if (argsevald) {
-        if (isObject(from) && ! (R_variant_result & VARIANT_UNCLASS_FLAG))
-            PROTECT(from);
-        else {
-            R_variant_result = 0;
-            return R_subset3_dflt (from, string, name, call, variant);
-        }
+    if (!isObject(from) || (R_variant_result & VARIANT_UNCLASS_FLAG)) {
+        R_variant_result = 0;
+        return R_subset3_dflt (from, string, name, call, grad, variant);
     }
 
     /* first translate CADR of args into a string so that we can
        pass it down to DispatchorEval and have it behave correctly */
+
+    PROTECT(from);
 
     input = allocVector(STRSXP,1);
 
@@ -4217,16 +4214,18 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* through to the generic code below.  Note that */
     /* evaluation retains any missing argument indicators. */
 
-    if(DispatchOrEval(ncall, op, "$", args, env, &ans, 0, argsevald)) {
-        UNPROTECT(2+argsevald);
+    R_variant_result = 0;
+
+    if(DispatchOrEval(ncall, op, "$", args, env, &ans, 0, 1)) {
+        UNPROTECT(3);
 	if (NAMEDCNT_GT_0(ans))         /* IS THIS NECESSARY? */
 	    SET_NAMEDCNT_MAX(ans);
         R_Visible = TRUE;
 	return ans;
     }
 
-    ans = R_subset3_dflt(CAR(ans), string, name, call, variant);
-    UNPROTECT(2+argsevald);
+    ans = R_subset3_dflt(CAR(ans), string, name, call, grad, variant);
+    UNPROTECT(3);
     return ans;
 }
 

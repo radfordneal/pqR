@@ -152,6 +152,7 @@ when applicable, arguments that are lists of scalar reals (or lists of
 lists of scalar reals, etc.):
 \tabular{l}{
 list (currently the only way to create a list with gradient information) \cr
+$ (extract only, currently only way to extract with gradient information) \cr
 \cr
 +, -, *, /, ^ (+ and - may be unary) \cr
 \cr
@@ -245,6 +246,11 @@ attr(r,"gradient")               # should be a list of 1 and 14
 
 r <- with gradient (a=7) list(square=a^2,cube=a^3)
 attr(r,"gradient")$cube          # gradients of lists retain names
+
+with gradient (a=7) {
+    L <- list(square=a^2,cube=a^3)
+    list (L$square*L$cube, a^5)  # both values and gradients of the two
+}                                #   list elements should be the same
 
 with gradient (a=3)              # only the gradient with respect to a
   with gradient (b=10*a)         #   will be shown, but the chain rule 

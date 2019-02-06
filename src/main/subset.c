@@ -2771,7 +2771,7 @@ SEXP attribute_hidden do_subset2_dflt_x (SEXP call, SEXP op,
    Sets R_Visible to TRUE. */
 
 SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
-                                     int variant)
+                                     SEXP grad, int variant)
 {
     const char *cinp, *ctarg;
     int mtch;
@@ -2884,7 +2884,8 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
 		warningcall(call, _("partial match of '%s' to '%s'"),
 			    cinp, ctarg);
 	    }
-	    y = VECTOR_ELT(x, imatch);
+            i = imatch;
+	    y = VECTOR_ELT(x,i);
 
             /* OLD COMMENT: Partial matches can cause aliasing in
                eval.c:evalseq This is overkill, but alternative ways
@@ -2907,9 +2908,28 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
              && !NAMEDCNT_GT_1(x) && !NAMEDCNT_GT_1(y))
             R_variant_result = 1;
 
+        if (grad != R_NilValue) {
+            SEXP cell, tail;
+            R_gradient = R_NilValue;
+            do {
+                SEXP g = CAR(grad);
+                if (TYPEOF(g) != VECSXP || LENGTH(g) != n) abort();
+                cell = cons_with_tag (VECTOR_ELT(g,i), R_gradient, TAG(grad));
+                SET_GRADINDEX (cell, GRADINDEX(grad));
+                if (R_gradient == R_NilValue)
+                    PROTECT(R_gradient = tail = cell);
+                else
+                    SETCDR(tail,cell);
+                grad = CDR(grad);
+            } while (grad != R_NilValue);
+            UNPROTECT(1);
+            R_variant_result |= VARIANT_GRADIENT_FLAG;
+        }
+
         UNPROTECT(1);
         return y;
     }
+
     else if (isEnvironment(x)) {
         if (name==R_NilValue) {
             name = installed_already (translateChar(input));
@@ -2936,9 +2956,11 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
         UNPROTECT(1);
         return y;
     }
+
     else if( isVectorAtomic(x) ){
 	errorcall(call, "$ operator is invalid for atomic vectors");
     }
+
     else /* e.g. a function */
 	nonsubsettable_error(call,x);
 
