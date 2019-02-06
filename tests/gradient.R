@@ -642,3 +642,17 @@ with gradient (a=3.1,b=4.2) with gradient (c=7.9*a) list (a*b*c)
 with gradient (c=7.9) with gradient (a=3.1*c,b=4.2) list (a*b*c)
 
 with gradient (a=3.1) { x <- list(xxx=a,yyy=a^2); list(qqq=x,rrr=a^3) }
+
+
+# Test 'compute gradient'.
+
+f <- function (x) compute gradient (x) x^2 as (123*x) # wrong, see if happens
+
+with gradient (a=12) f(a)
+with gradient (a=12) f(a^2)
+
+g <- function (x,y)
+  compute gradient (x,y) list(x,y,x*y)
+  as (list(8,9,x+y), list(x,y,7))  # wrong, but see if it happens
+
+with gradient (z=9) g(100*z,z+1)

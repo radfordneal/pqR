@@ -3150,3 +3150,42 @@ attr(,"gradient")$rrr
 [1] 28.83
 
 > 
+> 
+> # Test 'compute gradient'.
+> 
+> f <- function (x) compute gradient (x) x^2 as (123*x) # wrong, see if happens
+> 
+> with gradient (a=12) f(a)
+[1] 144
+attr(,"gradient")
+[1] 1476
+> with gradient (a=12) f(a^2)
+[1] 20736
+attr(,"gradient")
+[1] 425088
+> 
+> g <- function (x,y)
++   compute gradient (x,y) list(x,y,x*y)
++   as (list(8,9,x+y), list(x,y,7))  # wrong, but see if it happens
+> 
+> with gradient (z=9) g(100*z,z+1)
+[[1]]
+[1] 900
+
+[[2]]
+[1] 10
+
+[[3]]
+[1] 9000
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1700
+
+attr(,"gradient")[[2]]
+[1] 910
+
+attr(,"gradient")[[3]]
+[1] 91007
+
+> 
