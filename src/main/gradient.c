@@ -34,6 +34,61 @@
 #include "Defn.h"
 
 
+/* Expand the structure of 'list' to match 'base' by replacing NULL elements 
+   that correspond to non-NULL elements by zeros, lists of zeros, etc. 
+   New lists are allocated where there are any changes, but the original
+   is used where there are no changes. */
+
+static SEXP expand_structure (SEXP base, SEXP list)
+{
+    if (list == R_NilValue) {
+        if (base == R_NilValue)
+            return R_NilValue;
+        if (TYPEOF(base) != VECSXP)
+            return ScalarRealMaybeConst(0.0);
+        R_len_t n = LENGTH(base);
+        SEXP res = PROTECT(allocVector(VECSXP,n));
+        setAttrib (res, R_NamesSymbol, getAttrib(base,R_NamesSymbol));
+        R_len_t i;
+        for (i = 0; i < n; i++)
+            SET_VECTOR_ELT (res, i, expand_structure (VECTOR_ELT(base,i),list));
+        UNPROTECT(1);
+        return res;
+    }
+
+    if (TYPEOF(list) == VECSXP) {
+        if (TYPEOF(base) != VECSXP) abort();
+        R_len_t n = LENGTH(base);
+        SEXP old_el, new_el;
+        R_len_t i;
+        for (i = 0; i < n; i++) {
+            old_el = VECTOR_ELT(list,i);
+            new_el = expand_structure (VECTOR_ELT(base,i), old_el);
+            if (new_el != old_el)
+                break;
+        }
+        if (i == n)  /* no change to any elements */
+            return list;
+        SEXP res = PROTECT(allocVector(VECSXP,n));
+        setAttrib (res, R_NamesSymbol, getAttrib(base,R_NamesSymbol));
+        if (i > 0) copy_vector_elements (res, 0, list, 0, i);
+        for (;;) {
+            SET_VECTOR_ELT (res, i, new_el);
+            i += 1;
+            if (i == n) break;
+            old_el = VECTOR_ELT(list,i);
+            new_el = expand_structure (VECTOR_ELT(base,i), old_el);
+        }
+        UNPROTECT(1);
+        return res;
+    }
+
+    if (TYPEOF(base) == VECSXP) abort();
+
+    return list;
+}
+
+
 /* Test whether the structure of a gradient value matches the structure of
    what it is the gradient of.  If any_for_0 is non-zero, a scalar zero in 
    grad can match anything. */
@@ -79,7 +134,9 @@ static SEXP addto_list (SEXP list, double amount)
     
     PROTECT(list);
 
-    if (TYPEOF(list) == REALSXP) {
+    if (list == R_NilValue)
+        res = ScalarRealMaybeConst (amount);
+    else if (TYPEOF(list) == REALSXP) {
         if (LENGTH(list) != 1) abort();
         res = ScalarRealMaybeConst (*REAL(list) + amount);
     }
@@ -106,7 +163,9 @@ static SEXP scaled_list (SEXP list, double factor)
     
     PROTECT(list);
 
-    if (TYPEOF(list) == REALSXP) {
+    if (list == R_NilValue)
+        res = ScalarRealMaybeConst (0.0);
+    else if (TYPEOF(list) == REALSXP) {
         if (LENGTH(list) != 1) abort();
         res = ScalarRealMaybeConst (*REAL(list) * factor);
     }
@@ -127,7 +186,8 @@ static SEXP scaled_list (SEXP list, double factor)
    second list by the given factor, and adding to the first, recursively 
    when the lists have list elements.  (Also works for 'lists' that are 
    simple scalars).  The two input lists must have the same form, except
-   a scalar will be match (by replication) any structure in the other list.  
+   a scalar will be match (by replication) any structure in the other list,
+   and R_NilValue will be regarded as the same as zero.
 
    Protects the 'alist' and 'blist' arguments. */
 
@@ -137,7 +197,11 @@ static SEXP add_scaled_list (SEXP alist, SEXP blist, double factor)
     
     PROTECT2(alist,blist);
 
-    if (TYPEOF(alist) == REALSXP && TYPEOF(blist) == REALSXP) {
+    if (blist == R_NilValue)
+        res = alist;
+    else if (alist == R_NilValue)
+        res = scaled_list (blist, factor);
+    else if (TYPEOF(alist) == REALSXP && TYPEOF(blist) == REALSXP) {
         if (LENGTH(alist) != 1 || LENGTH(blist) != 1) abort();
         res = ScalarRealMaybeConst (*REAL(alist) + *REAL(blist) * factor);
     }
@@ -175,9 +239,9 @@ static SEXP add_scaled_list (SEXP alist, SEXP blist, double factor)
 
 /* Get gradient identified by env from the gradients in R_gradient, which
    is protected for the duration of this function.  The gradient is returned
-   as a named vector list for multiple variables, or a single gradient if
-   there is only one gradient variable for this environment.  A gradient of
-   zero may be returned for a list, if there is not other gradient. */
+   as an unnamed vector list for multiple variables, or a single gradient if
+   there is only one gradient variable for this environment.  Gradients
+   may be R_NilValue if they are zero (or lists of zeros, etc.). */
 
 static SEXP get_gradient (SEXP env)
 {
@@ -191,11 +255,8 @@ static SEXP get_gradient (SEXP env)
 
     int nv = LENGTH(gv);
 
-    SEXP r = R_NilValue;
-    if (nv > 1) {
-        PROTECT(r = allocVector (VECSXP, nv));
-        setAttrib (r, R_NamesSymbol, gv);
-    }
+    SEXP r = nv == 1 ? R_NilValue : allocVector(VECSXP,nv);
+    PROTECT(r);
 
     SEXP p;
 
@@ -215,19 +276,7 @@ static SEXP get_gradient (SEXP env)
         }
     }
 
-    if (nv == 1) {
-        if (r == R_NilValue) r = ScalarRealMaybeConst(0.0);
-    }
-    else {
-        int i;
-        for (i = 0; i < nv; i++) {
-            if (VECTOR_ELT(r,i) == R_NilValue)
-                SET_VECTOR_ELT (r, i, ScalarRealMaybeConst(0.0));
-        }
-        UNPROTECT(1); /* r */
-    }
-
-    UNPROTECT(1);  /* R_gradient */
+    UNPROTECT(2);  /* r, R_gradient */
     return r;
 }
 
@@ -388,6 +437,33 @@ static SEXP add_scaled_SEXP(SEXP base, SEXP extra, SEXP factor)
 }
 
 
+/* Create user-visible form of gradient. */
+
+static SEXP create_gradient (SEXP result, SEXP result_grad, SEXP gv)
+{
+    int nv = LENGTH(gv);
+
+    SEXP gr, gn;
+
+    if (nv == 1)
+        gr = expand_structure (result, result_grad);
+    else {
+        R_len_t i;
+        PROTECT (gr = allocVector (VECSXP, nv));
+        gn = allocVector (STRSXP, nv);
+        setAttrib (gr, R_NamesSymbol, gn); 
+        for (i = 0; i < nv; i++) {
+            SET_STRING_ELT (gn, i, PRINTNAME (VECTOR_ELT (gv, i)));
+            SET_VECTOR_ELT (gr, i, 
+               expand_structure (result, VECTOR_ELT(result_grad,i)));
+        }
+        UNPROTECT(1);
+    }
+
+    return gr;
+}
+
+
 /* with_gradient (op == 0) and track_gradient (op == 1). */
 
 static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
@@ -480,12 +556,9 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         if (NAMEDCNT_GT_0(result))
             REPROTECT (result = duplicate(result), rix);
 
-        if (result_grad == R_NilValue)
-            setAttrib (result, R_GradientSymbol, ScalarRealMaybeConst(0.0));
-        else {
-            setAttrib (result, R_GradientSymbol, result_grad);
-            INC_NAMEDCNT(result_grad);
-        }
+        SEXP gr = create_gradient (result, result_grad, gv);
+        setAttrib (result, R_GradientSymbol, gr);
+        INC_NAMEDCNT(gr);
     }
 
     /* Propage gradients backwards with the chain rule. */
@@ -646,11 +719,13 @@ static SEXP do_gradient_of(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     if (TYPEOF(GRADVARS(env)) != VECSXP)
         errorcall (call, _("gradient_of called outside gradient construct"));
 
-    (void) evalv (CAR(args), env, VARIANT_GRADIENT);
+    SEXP result = PROTECT (evalv (CAR(args), env, VARIANT_GRADIENT));
+    SEXP result_grad = PROTECT (get_gradient(env));
 
-    SEXP r = get_gradient (env);
+    SEXP r = create_gradient (result, result_grad, GRADVARS(env));
 
     R_variant_result = 0;
+    UNPROTECT(2);
     return r;
 }
 
@@ -677,7 +752,9 @@ static SEXP do_all_gradients_of (SEXP call, SEXP op, SEXP args, SEXP env,
         SEXP s = R_gradient;
         PROTECT(s);
         while (s != R_NilValue) {
-            r = CONS (TAG(s), CONS (CAR(s), r));
+            SEXP ix = PROTECT(ScalarIntegerMaybeConst(GRADINDEX(s)));
+            r = CONS (TAG(s), CONS (ix, CONS (CAR(s), r)));
+            UNPROTECT(1);
             s = CDR(s);
         }
         UNPROTECT(1);

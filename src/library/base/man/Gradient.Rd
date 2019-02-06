@@ -185,10 +185,7 @@ The gradient returned by \code{gradient_of} or attached as a \code{"gradient"}
 attribute by \code{with gradient} will be a scalar real if the gradient
 is with respect to only one variable, and the expression this is the gradient
 of has a scalar real value.  The gradient of a list is a list of the same
-form, with scalar gradients replacing the scalar elements, except that if
-the gradient or part of the gradient is a list all of whose elements are 
-zero (or a lists that are all zero, etc.), it may be (but is not necessarily)
-abbreviated to a single scalar zero. 
+form, with scalar gradients replacing the scalar elements.
 
 When the \code{with gradient} or
 \code{track gradient} construct has more than one variable, the gradient
@@ -246,8 +243,8 @@ set.seed(123); v2<-rexp(1,5.001)
 r <- with gradient (a=7) list(a,a^2)
 attr(r,"gradient")               # should be a list of 1 and 14
 
-r <- with gradient (a=7) list(3,4)
-attr(r,"gradient")               # may be just 0, rather than list(0,0)
+r <- with gradient (a=7) list(square=a^2,cube=a^3)
+attr(r,"gradient")$cube          # gradients of lists retain names
 
 with gradient (a=3)              # only the gradient with respect to a
   with gradient (b=10*a)         #   will be shown, but the chain rule 

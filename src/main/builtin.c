@@ -863,8 +863,6 @@ static SEXP makelist(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     }
                     if (gv == R_NilValue) {
                         SEXP a = allocVector(VECSXP,n); 
-                        SEXP z = ScalarRealMaybeConst(0.0);
-                        for (int j = 0; j < n; j++) SET_VECTOR_ELT (a, j, z);
                         INC_NAMEDCNT(a);
                         gv = cons_with_tag (a, R_gradient, TAG(ga));
                         SET_GRADINDEX (gv, GRADINDEX(ga));
