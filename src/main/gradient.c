@@ -34,10 +34,115 @@
 #include "Defn.h"
 
 
+/* Compute a list from another list by adding the given amount to its scalar 
+   elements, recursively when the list has list elements.  (Also works for a 
+   'list' that is a simple scalar).  Protects the 'list' argument. */
+
+static SEXP addto_list (SEXP list, double amount)
+{
+    SEXP res;
+    
+    PROTECT(list);
+
+    if (TYPEOF(list) == REALSXP) {
+        if (LENGTH(list) != 1) abort();
+        res = ScalarRealMaybeConst (*REAL(list) + amount);
+    }
+    else {
+        if (TYPEOF(list) != VECSXP) abort();
+        res = allocVector(VECSXP,LENGTH(list));
+        R_len_t i;
+        for (i = 0; i < LENGTH(list); i++)
+            SET_VECTOR_ELT (res, i, addto_list (VECTOR_ELT(list,i), amount));
+    }
+        
+    UNPROTECT(1);
+    return res;
+}
+
+
+/* Compute a list from another list by scaling scalar elements by the given
+   factor, recursively when the list has list elements.  (Also works for
+   a 'list' that is a simple scalar).  Protects the 'list' argument. */
+
+static SEXP scaled_list (SEXP list, double factor)
+{
+    SEXP res;
+    
+    PROTECT(list);
+
+    if (TYPEOF(list) == REALSXP) {
+        if (LENGTH(list) != 1) abort();
+        res = ScalarRealMaybeConst (*REAL(list) * factor);
+    }
+    else {
+        if (TYPEOF(list) != VECSXP) abort();
+        res = allocVector(VECSXP,LENGTH(list));
+        R_len_t i;
+        for (i = 0; i < LENGTH(list); i++)
+            SET_VECTOR_ELT (res, i, scaled_list (VECTOR_ELT(list,i), factor));
+    }
+        
+    UNPROTECT(1);
+    return res;
+}
+
+
+/* Compute a list from two other lists by scaling scalar elements of the 
+   second list by the given factor, and adding to the first, recursively 
+   when the lists have list elements.  (Also works for 'lists' that are 
+   simple scalars).  The two input lists must have the same form, except
+   a scalar will be match (by replication) any structure in the other list.  
+
+   Protects the 'alist' and 'blist' arguments. */
+
+static SEXP add_scaled_list (SEXP alist, SEXP blist, double factor)
+{
+    SEXP res;
+    
+    PROTECT2(alist,blist);
+
+    if (TYPEOF(alist) == REALSXP && TYPEOF(blist) == REALSXP) {
+        if (LENGTH(alist) != 1 || LENGTH(blist) != 1) abort();
+        res = ScalarRealMaybeConst (*REAL(alist) + *REAL(blist) * factor);
+    }
+    else if (TYPEOF(alist) == VECSXP && TYPEOF(blist) == REALSXP) {
+        if (LENGTH(blist) != 1) abort();
+        res = allocVector (VECSXP, LENGTH(alist));
+        double amt = *REAL(blist) * factor;
+        R_len_t i;
+        for (i = 0; i < LENGTH(res); i++)
+            SET_VECTOR_ELT(res, i, addto_list (VECTOR_ELT(alist,i), amt));
+    }
+    else if (TYPEOF(alist) == REALSXP && TYPEOF(blist) == VECSXP) {
+        if (LENGTH(alist) != 1) abort();
+        res = allocVector (VECSXP, LENGTH(blist));
+        R_len_t i;
+        for (i = 0; i < LENGTH(res); i++)
+            SET_VECTOR_ELT(res, i, 
+                           add_scaled_list(alist, VECTOR_ELT(blist,i), factor));
+    }
+    else if (TYPEOF(alist) == VECSXP && TYPEOF(blist) == VECSXP) {
+        if (LENGTH(alist) != LENGTH(blist)) abort();
+        res = allocVector (VECSXP, LENGTH(alist));
+        R_len_t i;
+        for (i = 0; i < LENGTH(res); i++)
+            SET_VECTOR_ELT (res, i, 
+             add_scaled_list(VECTOR_ELT(alist,i), VECTOR_ELT(blist,i), factor));
+    }
+    else
+        abort();
+
+    UNPROTECT(2);
+    return res;
+}
+
+
 /* Get gradient identified by env from the gradients in R_gradient, which
    is protected for the duration of this function.  The gradient is returned
    as a named vector list for multiple variables, or a single gradient if
-   there is only one gradient variable for this environment. */
+   there is only one gradient variable for this environment.  A gradient of
+   zero may be returned for a list, if there is not other gradient. */
 
 static SEXP get_gradient (SEXP env)
 {
@@ -122,7 +227,10 @@ attribute_hidden SEXP copy_scaled_gradients (SEXP grad, double factor)
 
     for (p = grad, q = R_NilValue; p != R_NilValue; p = CDR(p)) {
         PROTECT(q);
-        q = cons_with_tag (ScalarReal(*REAL(CAR(p)) * factor), q, TAG(p));
+        q = cons_with_tag (TYPEOF(CAR(p)) == REALSXP 
+                            ? ScalarRealMaybeConst (*REAL(CAR(p)) * factor)
+                            : scaled_list (CAR(p), factor),
+                           q, TAG(p));
         SET_GRADINDEX (q, GRADINDEX(p));
         UNPROTECT(1);
     }
@@ -131,8 +239,12 @@ attribute_hidden SEXP copy_scaled_gradients (SEXP grad, double factor)
     return q;
 }
 
-/* Add a set of gradients, in extra, multiplied by factor, to another set 
-   of gradients, in base.  Protects its arguments. */
+/* Add the product of gradients in extra and in factor, to the set of
+   gradients in base.  Factor may be a scalar or a list (for the 
+   add_scaled_SEXP version), as may the gradients in base.  The gradients
+   in extra must be scalars. 
+
+   Protects its arguments. */
 
 attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
 {
@@ -148,9 +260,12 @@ attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
     for (p = base; p != R_NilValue; p = CDR(p)) {
         for (q = extra; q != R_NilValue; q = CDR(q)) {
             if (TAG(p) == TAG(q) && GRADINDEX(p) == GRADINDEX(q)) {
-                double d = *REAL(CAR(p)) + *REAL(CAR(q)) * factor;
+                if (TYPEOF(CAR(q)) != REALSXP) abort();
+                if (TYPEOF(CAR(p)) != REALSXP) abort();
                 PROTECT(r);
-                r = cons_with_tag (ScalarRealMaybeConst(d), r, TAG(p));
+                r = cons_with_tag (
+                     ScalarRealMaybeConst(*REAL(CAR(p)) + *REAL(CAR(q))*factor),
+                     r, TAG(q));
                 SET_GRADINDEX (r, GRADINDEX(p));
                 UNPROTECT(1);
                 goto next_base;
@@ -169,15 +284,71 @@ attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
                 goto next_extra;
             }
         }
-        double d = *REAL(CAR(q)) * factor;
+        if (TYPEOF(CAR(q)) != REALSXP) abort();
         PROTECT(r);
-        r = cons_with_tag (ScalarRealMaybeConst(d), r, TAG(q));
+        r = cons_with_tag (ScalarRealMaybeConst (*REAL(CAR(q)) * factor),
+                           r, TAG(q));
         SET_GRADINDEX (r, GRADINDEX(q));
         UNPROTECT(1);
       next_extra: ;
     }
 
     UNPROTECT(2);
+    return r;
+}
+
+static SEXP add_scaled_SEXP(SEXP base, SEXP extra, SEXP factor)
+{
+    SEXP p, q, r;
+
+    if (TYPEOF(factor) == REALSXP) {
+        if (LENGTH(factor) != 1) abort();
+        return add_scaled_gradients (base, extra, *REAL(factor));
+    }
+
+    PROTECT3(base,extra,factor);
+
+    r = R_NilValue;
+    
+    /* Include gradients found in base, possibly adding gradient from extra
+       times factor. */
+
+    for (p = base; p != R_NilValue; p = CDR(p)) {
+        for (q = extra; q != R_NilValue; q = CDR(q)) {
+            if (TAG(p) == TAG(q) && GRADINDEX(p) == GRADINDEX(q)) {
+                if (TYPEOF(CAR(q)) != REALSXP) abort();
+                if (TYPEOF(CAR(p)) != TYPEOF(factor)) abort();
+                PROTECT(r);
+                r = cons_with_tag (
+                     add_scaled_list (CAR(p), factor, *REAL(CAR(q))),
+                     r, TAG(q));
+                SET_GRADINDEX (r, GRADINDEX(p));
+                UNPROTECT(1);
+                goto next_base;
+            }
+        }
+        r = cons_with_tag (CAR(p), r, TAG(p));
+        SET_GRADINDEX (r, GRADINDEX(p));
+      next_base: ;
+    }
+
+    /* Include gradients only found in extra, times factor. */
+
+    for (q = extra; q != R_NilValue; q = CDR(q)) {
+        for (p = base; p != R_NilValue; p = CDR(p)) {
+            if (TAG(p) == TAG(q) && GRADINDEX(p) == GRADINDEX(q)) {
+                goto next_extra;
+            }
+        }
+        if (TYPEOF(CAR(q)) != REALSXP) abort();
+        PROTECT(r);
+        r = cons_with_tag (scaled_list (factor, *REAL(CAR(q))), r, TAG(q));
+        SET_GRADINDEX (r, GRADINDEX(q));
+        UNPROTECT(1);
+      next_extra: ;
+    }
+
+    UNPROTECT(3);
     return r;
 }
 
@@ -295,10 +466,8 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             for (i = 0; i < nv; i++) {
                 SEXP g = vargrad[i];
                 SEXP r = nv > 1 ? VECTOR_ELT(result_grad,i) : result_grad;
-                if (g != R_NilValue && r != R_NilValue) {
-                    other_grads = 
-                      add_scaled_gradients (other_grads, g, *REAL(r));
-                }
+                if (g != R_NilValue && r != R_NilValue)
+                    other_grads = add_scaled_SEXP (other_grads, g, r);
             }
             UNPROTECT(1);
         }
@@ -411,11 +580,11 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
             if (vargrad[vgi] != R_NilValue) {
                 SEXP gval;
                 PROTECT (gval = evalv (CAR(q), newenv, VARIANT_PENDING_OK));
-                if (TYPEOF(gval) != REALSXP || LENGTH(gval) != 1)
+                if (TYPEOF(gval) == REALSXP ? (LENGTH(gval) != 1)
+                                            : (TYPEOF(gval) != VECSXP))
                     errorcall (call, 
                                _("computed value for gradient is invalid"));
-                resgrad = add_scaled_gradients (resgrad, vargrad[vgi], 
-                                                *REAL(gval));
+                resgrad = add_scaled_SEXP (resgrad, vargrad[vgi], gval);
                 UNPROTECT(2);  /* gval, old resgrad */
                 PROTECT(resgrad);
             }

@@ -2949,7 +2949,6 @@ attr(,"gradient")[[1]]
 attr(,"gradient")[[2]]
 [1] 28.83
 
-> 
 > with gradient (a=3.1) list (list(a^2), xx=sin(a), yy=99, zz=list(7,a^3))
 [[1]]
 [[1]][[1]]
@@ -2990,7 +2989,6 @@ attr(,"gradient")$zz[[2]]
 [1] 28.83
 
 
-> 
 > with gradient (a=3.1) with gradient (b=7.7) list(a*b,a^2*b^2)
 [[1]]
 [1] 23.87
@@ -3004,5 +3002,151 @@ attr(,"gradient")[[1]]
 
 attr(,"gradient")[[2]]
 [1] 367.598
+
+> 
+> with gradient (a=3.1) with gradient (b=100*a) list(a, b, a^2, b^2, a*b, a^2*b^2)
+[[1]]
+[1] 3.1
+
+[[2]]
+[1] 310
+
+[[3]]
+[1] 9.61
+
+[[4]]
+[1] 96100
+
+[[5]]
+[1] 961
+
+[[6]]
+[1] 923521
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1
+
+attr(,"gradient")[[2]]
+[1] 100
+
+attr(,"gradient")[[3]]
+[1] 6.2
+
+attr(,"gradient")[[4]]
+[1] 62000
+
+attr(,"gradient")[[5]]
+[1] 620
+
+attr(,"gradient")[[6]]
+[1] 1191640
+
+> 
+> with gradient (a=3.1,b=4.2) list(a,b,a*b)
+[[1]]
+[1] 3.1
+
+[[2]]
+[1] 4.2
+
+[[3]]
+[1] 13.02
+
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+[1] 1
+
+attr(,"gradient")$a[[2]]
+[1] 0
+
+attr(,"gradient")$a[[3]]
+[1] 4.2
+
+
+attr(,"gradient")$b
+attr(,"gradient")$b[[1]]
+[1] 0
+
+attr(,"gradient")$b[[2]]
+[1] 1
+
+attr(,"gradient")$b[[3]]
+[1] 3.1
+
+
+> 
+> with gradient (a=3.1,b=4.2) with gradient (c=7.9) list (a*b*c)
+[[1]]
+[1] 102.858
+
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+[1] 33.18
+
+
+attr(,"gradient")$b
+attr(,"gradient")$b[[1]]
+[1] 24.49
+
+
+> with gradient (c=7.9) with gradient (a=3.1,b=4.2) list (a*b*c)
+[[1]]
+[1] 102.858
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 13.02
+
+> 
+> with gradient (a=3.1,b=4.2) with gradient (c=7.9*a) list (a*b*c)
+[[1]]
+[1] 318.8598
+
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+[1] 205.716
+
+
+attr(,"gradient")$b
+attr(,"gradient")$b[[1]]
+[1] 75.919
+
+
+> with gradient (c=7.9) with gradient (a=3.1*c,b=4.2) list (a*b*c)
+[[1]]
+[1] 812.5782
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 205.716
+
+> 
+> with gradient (a=3.1) { x <- list(xxx=a,yyy=a^2); list(qqq=x,rrr=a^3) }
+$qqq
+$qqq$xxx
+[1] 3.1
+
+$qqq$yyy
+[1] 9.61
+
+
+$rrr
+[1] 29.791
+
+attr(,"gradient")
+attr(,"gradient")$qqq
+attr(,"gradient")$qqq$xxx
+[1] 1
+
+attr(,"gradient")$qqq$yyy
+[1] 6.2
+
+
+attr(,"gradient")$rrr
+[1] 28.83
 
 > 

@@ -628,7 +628,17 @@ test2r(rweibull)
 # Check gradients of lists.
 
 with gradient (a=3.1) list (a^2, a^3)
-
 with gradient (a=3.1) list (list(a^2), xx=sin(a), yy=99, zz=list(7,a^3))
-
 with gradient (a=3.1) with gradient (b=7.7) list(a*b,a^2*b^2)
+
+with gradient (a=3.1) with gradient (b=100*a) list(a, b, a^2, b^2, a*b, a^2*b^2)
+
+with gradient (a=3.1,b=4.2) list(a,b,a*b)
+
+with gradient (a=3.1,b=4.2) with gradient (c=7.9) list (a*b*c)
+with gradient (c=7.9) with gradient (a=3.1,b=4.2) list (a*b*c)
+
+with gradient (a=3.1,b=4.2) with gradient (c=7.9*a) list (a*b*c)
+with gradient (c=7.9) with gradient (a=3.1*c,b=4.2) list (a*b*c)
+
+with gradient (a=3.1) { x <- list(xxx=a,yyy=a^2); list(qqq=x,rrr=a^3) }
