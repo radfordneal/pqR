@@ -1882,7 +1882,9 @@ REprintf("**\n");
                 if (R_variant_result & VARIANT_GRADIENT_FLAG) {
                     res_grad = R_gradient;
                     R_variant_result = 0;
-/* REprintf("^^\n"); R_inspect(res_grad); */
+#if 0
+REprintf("^^\n"); R_inspect(res_grad);
+#endif
                 }
             }
             else 

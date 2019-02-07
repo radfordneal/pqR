@@ -664,3 +664,44 @@ g <- function (x,y)
   as (list(8,9,x+y), list(x,y,7))  # wrong, but see if it happens
 
 with gradient (z=9) g(100*z,z+1)
+
+
+# Test subassign operations
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r$y <- NULL
+  r
+}
+
+if (FALSE)
+with gradient (a=3.01) {
+  r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r$x$w <- NULL
+  r
+}
+
+xel <- function (a) a$x
+`xel<-` <- function (a,value) { a$x <- value; a }
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  xel(r) <- NULL
+  r
+}
+
+if (FALSE)
+with gradient (a=3.01) {
+  r <- list(x=list(w=3*a,x=4*a),y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  xel(xel(r)) <- NULL
+  r
+}
+

@@ -4941,6 +4941,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val,
 {
     PROTECT_INDEX pvalidx, pxidx, pvalgidx, pxgidx;
     Rboolean S4; SEXP xS4 = R_NilValue;
+    SEXP res_grad = R_NilValue;
 
     R_Visible = TRUE;
 
@@ -5041,13 +5042,22 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val,
         if (val == R_NilValue) {
             /* If "val" is NULL, this is an element deletion */
             x = DeleteListElementsSeq (x, imatch+1, imatch+1);
+#if 0
+REprintf("$$ %d\n",imatch); R_inspect(x_grad);
+REprintf("--\n");
+#endif
             for (SEXP p = x_grad; p != R_NilValue; p = CDR(p)) {
                 SEXP q = CAR(p);
+#if 0
+REprintf("$$$$ %d\n",imatch); R_inspect(q);
+REprintf("----\n");
+#endif
                 if (q == R_NilValue) continue;
                 if (TYPEOF(q) != VECSXP || LENGTH(q) != nx) abort();
                 q = DeleteListElementsSeq (q, imatch+1, imatch+1);
                 SETCAR(p,q);
             }
+            res_grad = x_grad;
         }
         else {
             /* If "val" is non-NULL, we are either replacing an existing 
@@ -5068,7 +5078,6 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val,
                     }
                 }
 #endif
-                x_grad = R_NilValue;  /* FOR NOW */
             }
             else {
                 SEXP ans, ansnames;
@@ -5091,7 +5100,6 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val,
                 setAttrib (ans, R_NamesSymbol, ansnames);
                 UNPROTECT(2);
                 x = ans;
-                x_grad = R_NilValue;  /* FOR NOW */
             }
         }
         break;
@@ -5103,8 +5111,10 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val,
     if (!isList(x)) SET_NAMEDCNT_0(x);
     if(S4) SET_S4_OBJECT(x);
 
-    if (x_grad != R_NilValue)
+    if (res_grad != R_NilValue) {
         R_variant_result = VARIANT_GRADIENT_FLAG;
+        R_gradient = res_grad;
+    }
 
     return x;
 }
