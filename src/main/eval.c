@@ -1751,14 +1751,15 @@ static SEXP attribute_noinline Rf_set_subassign
     else
         rhs_variant |= VARIANT_PENDING_OK;
 
-    PROTECT (rhs = EVALV (rhs, rho, rhs_variant));
+    rhs = EVALV (rhs, rho, rhs_variant);
 
-    SEXP grad = R_NilValue;
+    SEXP rhs_grad = R_NilValue;
     if (R_variant_result & VARIANT_GRADIENT_FLAG) {
-        grad = R_gradient;
+        rhs_grad = R_gradient;
         R_variant_result = 0;
     }
-    PROTECT(grad);
+
+    PROTECT2(rhs,rhs_grad);
 
     /* Increment NAMEDCNT temporarily if rhs will be needed as the value,
        to protect it from being modified by the assignment, or otherwise. */
@@ -1805,10 +1806,28 @@ static SEXP attribute_noinline Rf_set_subassign
     SET_NAMEDCNT_NOT_0(varval); /* 0 may sometime happen - should mean 1 */
 
     SEXP bcell = R_binding_cell;
-    PROTECT(bcell);
+    SEXP var_grad = R_NilValue;
+    if (HAS_GRADIENT_IN_CELL(bcell) && !opval)
+        var_grad = GRADIENT_IN_CELL(bcell);
+    PROTECT2(bcell,var_grad);
 
-    if (TYPEOF(varval) == PROMSXP)
-        varval = forcePromise(varval);
+    if (TYPEOF(varval) == PROMSXP) {
+        SEXP f = forcePromise(varval);
+        if (HAS_GRADIENT_IN_CELL(varval) && !opval)
+            UNPROTECT_PROTECT(var_grad = GRADIENT_IN_CELL(varval));
+        varval = f;
+    }
+
+#if 0
+if ((variant & VARIANT_GRADIENT) || STORE_GRAD(rho) && !opval) {
+REprintf("==\n"); R_inspect(rhs);
+REprintf("--\n"); R_inspect(rhs_grad);
+REprintf("--\n"); R_inspect(varval);
+REprintf("--\n"); R_inspect(var_grad);
+REprintf("**\n");
+}
+#endif
+
     if (varval == R_UnboundValue)
         unbound_var_error(var);
     if (varval == R_MissingArg)
@@ -1824,12 +1843,15 @@ static SEXP attribute_noinline Rf_set_subassign
 
     PROTECT(varval);
 
+    SEXP res_grad = R_NilValue;
+
     /* Special code for depth of 1.  This is purely an optimization - the
        general code below should also work when depth is 1. */
 
     if (depth == 1) {
         SEXP lhsprom, fn, e;
         if (maybe_fast && !isObject(varval)
+              && rhs_grad == R_NilValue && var_grad == R_NilValue  /* FOR NOW */
               && CADDR(lhs) != R_DotsSymbol
               && (fn = FINDFUN(assgnfcn,rho), 
                   TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
@@ -1847,7 +1869,24 @@ static SEXP attribute_noinline Rf_set_subassign
             PROTECT (rhsprom = mkValuePROMISE(rhs_uneval, rhs));
             PROTECT (lhsprom = mkValuePROMISE(CADR(lhs), varval));
             PROTECT(e = replaceCall (assgnfcn, lhsprom, CDDR(lhs), rhsprom));
-            newval = eval(e,rho);
+            if (rhs_grad != R_NilValue || var_grad != R_NilValue) {
+                if (var_grad != R_NilValue) {
+                    SET_GRADIENT_IN_CELL (lhsprom, var_grad);
+                    SET_STORE_GRAD (lhsprom, 1);
+                }
+                if (rhs_grad != R_NilValue) {
+                    SET_GRADIENT_IN_CELL (rhsprom, rhs_grad);
+                    SET_STORE_GRAD (rhsprom, 1);
+                }
+                newval = evalv (e, rho, VARIANT_GRADIENT);
+                if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+                    res_grad = R_gradient;
+                    R_variant_result = 0;
+/* REprintf("^^\n"); R_inspect(res_grad); */
+                }
+            }
+            else 
+                newval = evalv (e, rho, 0);
             UNPROTECT(3);
         }
     }
@@ -1862,7 +1901,7 @@ static SEXP attribute_noinline Rf_set_subassign
                                     assgnfcn, rhsprom, rhs_uneval, maybe_fast);
     }
 
-    UNPROTECT(4);  /* rhs, grad, bcell, varval */
+    UNPROTECT(5);  /* rhs, rhs_grad, bcell, varval, var_grad */
 
     /* Assign the final result after the top level replacement.  We
        can sometimes avoid the cost of this by looking at the saved
@@ -1881,8 +1920,13 @@ static SEXP attribute_noinline Rf_set_subassign
         bcell = R_binding_cell;
     }
 
-    if (!opval) {  /* not <<- */
-        SET_GRADIENT_IN_CELL (bcell, R_NilValue);
+    if (opval) { /* <<- */
+        if (bcell != R_NilValue)
+            SET_GRADIENT_IN_CELL (bcell, R_NilValue);
+    }
+    else {  /* not <<- */
+        if (res_grad != R_NilValue && bcell != R_NilValue) 
+            SET_GRADIENT_IN_CELL (bcell, res_grad);
     }
 
     if (variant & VARIANT_NULL) {
@@ -1891,6 +1935,10 @@ static SEXP attribute_noinline Rf_set_subassign
     }
     else {
         DEC_NAMEDCNT(rhs);
+        if (rhs_grad != R_NilValue) {
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            R_gradient = rhs_grad;
+        }
         return rhs;
     }
 }
