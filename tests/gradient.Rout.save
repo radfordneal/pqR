@@ -3150,6 +3150,64 @@ attr(,"gradient")$rrr
 [1] 28.83
 
 > 
+> with gradient (a=3.1, b=4.2) {
++   r <- list(abc=a^2,pqr=b^2,xyz=a*b)
++   print(gradient_of(r$pqr))
++   print(gradient_of(r$abc))
++   print(gradient_of(r$xyz))
++   r
++ }
+$a
+[1] 0
+
+$b
+[1] 8.4
+
+$a
+[1] 6.2
+
+$b
+[1] 0
+
+$a
+[1] 4.2
+
+$b
+[1] 3.1
+
+$abc
+[1] 9.61
+
+$pqr
+[1] 17.64
+
+$xyz
+[1] 13.02
+
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a$abc
+[1] 6.2
+
+attr(,"gradient")$a$pqr
+[1] 0
+
+attr(,"gradient")$a$xyz
+[1] 4.2
+
+
+attr(,"gradient")$b
+attr(,"gradient")$b$abc
+[1] 0
+
+attr(,"gradient")$b$pqr
+[1] 8.4
+
+attr(,"gradient")$b$xyz
+[1] 3.1
+
+
+> 
 > 
 > # Test 'compute gradient'.
 > 

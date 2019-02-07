@@ -237,22 +237,22 @@ static SEXP add_scaled_list (SEXP alist, SEXP blist, double factor)
 }
 
 
-/* Get gradient identified by env from the gradients in R_gradient, which
-   is protected for the duration of this function.  The gradient is returned
-   as an unnamed vector list for multiple variables, or a single gradient if
-   there is only one gradient variable for this environment.  Gradients
-   may be R_NilValue if they are zero (or lists of zeros, etc.). */
+/* Get gradient identified by env from the gradients in R_gradient (unless
+   not active), which is protected for the duration of this function.  The 
+   gradient is returned as an unnamed vector list for multiple variables, or
+   a single gradient if there is only one gradient variable for this
+   environment.  Gradients may be R_NilValue if they are zero (or lists of 
+   zeros, etc.). */
 
 static SEXP get_gradient (SEXP env)
 {
-    if (! (R_variant_result & VARIANT_GRADIENT_FLAG))
-        R_gradient = R_NilValue;
-
-    PROTECT(R_gradient);
+    SEXP gr = R_variant_result&VARIANT_GRADIENT_FLAG ? R_gradient : R_NilValue;
+    PROTECT(gr);
 
     SEXP gv = GRADVARS(env);
+    PROTECT(gv);
     if (TYPEOF(gv) != VECSXP) abort();
-
+    
     int nv = LENGTH(gv);
 
     SEXP r = nv == 1 ? R_NilValue : allocVector(VECSXP,nv);
@@ -260,7 +260,7 @@ static SEXP get_gradient (SEXP env)
 
     SEXP p;
 
-    for (p = R_gradient; p != R_NilValue; p = CDR(p)) {
+    for (p = gr; p != R_NilValue; p = CDR(p)) {
         if (TAG(p) == env) {
             int ix = GRADINDEX(p);
             SET_NAMEDCNT_MAX(CAR(p));  /* may be able to be less drastic */
@@ -276,7 +276,7 @@ static SEXP get_gradient (SEXP env)
         }
     }
 
-    UNPROTECT(2);  /* r, R_gradient */
+    UNPROTECT(3);  /* gr, gv, r */
     return r;
 }
 

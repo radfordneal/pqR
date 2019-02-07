@@ -2914,12 +2914,13 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
             do {
                 SEXP g = CAR(grad);
                 if (TYPEOF(g) != VECSXP || LENGTH(g) != n) abort();
-                cell = cons_with_tag (VECTOR_ELT(g,i), R_gradient, TAG(grad));
+                cell = cons_with_tag (VECTOR_ELT(g,i), R_NilValue, TAG(grad));
                 SET_GRADINDEX (cell, GRADINDEX(grad));
                 if (R_gradient == R_NilValue)
-                    PROTECT(R_gradient = tail = cell);
+                    PROTECT(R_gradient = cell);
                 else
                     SETCDR(tail,cell);
+                tail = cell;
                 grad = CDR(grad);
             } while (grad != R_NilValue);
             UNPROTECT(1);

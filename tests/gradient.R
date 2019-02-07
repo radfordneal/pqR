@@ -643,6 +643,14 @@ with gradient (c=7.9) with gradient (a=3.1*c,b=4.2) list (a*b*c)
 
 with gradient (a=3.1) { x <- list(xxx=a,yyy=a^2); list(qqq=x,rrr=a^3) }
 
+with gradient (a=3.1, b=4.2) {
+  r <- list(abc=a^2,pqr=b^2,xyz=a*b)
+  print(gradient_of(r$pqr))
+  print(gradient_of(r$abc))
+  print(gradient_of(r$xyz))
+  r
+}
+
 
 # Test 'compute gradient'.
 
