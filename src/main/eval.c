@@ -4453,6 +4453,8 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP into, what, value, ans, string, ncall;
 
+    SEXP value_grad = R_NilValue;
+    SEXP into_grad = R_NilValue;
     SEXP schar = R_NilValue;
     SEXP name = R_NilValue;
     int argsevald = 0;
@@ -4492,27 +4494,39 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
         if (name == R_NilValue) name = install_translated(schar);
-        return R_subassign3_dflt (call, into, name, value);
+        return R_subassign3_dflt (call, into, name, value, 
+                                  into_grad, value_grad);
     }
 
-    /* Handle usual case with no "..." and not into an object quickly, without
-       overhead of allocation and calling of DispatchOrEval. */
+    /* Handle usual case not into an object quickly, without overhead
+       of allocation and calling of DispatchOrEval. */
 
-    if (into != R_DotsSymbol) {
-        /* Note: mostly called from do_set, w first arg an evaluated promise */
-        into = TYPEOF(into) == PROMSXP 
-                && PRVALUE_PENDING_OK(into) != R_UnboundValue
-                  ? PRVALUE(into) : eval (into, env);
-        if (isObject(into)) {
-            argsevald = -1;
-        } 
-        else {
-            PROTECT(into);
-            if (name == R_NilValue) name = install_translated(schar);
-            value = EVALV (value, env, 0);
-            UNPROTECT(1);
-            return R_subassign3_dflt (call, into, name, value);
-        }
+    /* Note: mostly called from do_set, with first arg an evaluated promise */
+
+    if (TYPEOF(into) == PROMSXP && PRVALUE_PENDING_OK(into) != R_UnboundValue) {
+        if (HAS_GRADIENT_IN_CELL(into))
+            into_grad = GRADIENT_IN_CELL(into);
+        into = PRVALUE(into);
+    }
+    else {
+        into = evalv (into, env, variant & VARIANT_GRADIENT);
+        if (R_variant_result & VARIANT_GRADIENT_FLAG)
+            into_grad = R_gradient;
+    }
+
+    PROTECT2(into,into_grad);
+
+    if (isObject(into)) {
+        argsevald = -1;
+    } 
+    else {
+        if (name == R_NilValue) name = install_translated(schar);
+        value = EVALV (value, env, variant & VARIANT_GRADIENT);
+        if (R_variant_result & VARIANT_GRADIENT_FLAG)
+            value_grad = R_gradient;
+        UNPROTECT(2);
+        return R_subassign3_dflt (call, into, name, value, 
+                                  into_grad, value_grad);
     }
 
     /* First translate CADR of args into a string so that we can
@@ -4520,7 +4534,6 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        We also change the call used, as in do_subset3, since the
        destructive change in R-2.15.0 has this side effect. */
 
-    PROTECT(into);
     string = allocVector(STRSXP,1);
     SET_STRING_ELT (string, 0, schar);
     PROTECT(args = CONS(into, CONS(string, CDDR(args))));
@@ -4528,16 +4541,17 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
       LCONS(CAR(call),CONS(CADR(call),CONS(string,CDR(CDDR(call))))));
 
     if (DispatchOrEval (ncall, op, "$<-", args, env, &ans, 0, argsevald)) {
-        UNPROTECT(3);
+        UNPROTECT(4);
         R_Visible = TRUE;
         return ans;
     }
 
     PROTECT(ans);
     if (name == R_NilValue) name = install_translated(schar);
-    UNPROTECT(4);
+    UNPROTECT(5);
 
-    return R_subassign3_dflt(call, CAR(ans), name, CADDR(ans));
+    return R_subassign3_dflt (call, CAR(ans), name, CADDR(ans),
+                              into_grad, value_grad);
 }
 
 
@@ -5797,7 +5811,7 @@ attribute_hidden FUNTAB R_FunTab_eval[] =
 
 {"[<-",		do_subassign,	0,	101000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 {"[[<-",	do_subassign2,	1,	101000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
-{"$<-",		do_subassign3,	1,	101000,	3,	{PP_SUBASS,  PREC_LEFT,	  1}},
+{"$<-",		do_subassign3,	1,	30101000,3,	{PP_SUBASS,  PREC_LEFT,	  1}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}},
 };

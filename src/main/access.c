@@ -519,7 +519,8 @@ SEXP (SET_VECTOR_ELT)(SEXP x, int i, SEXP v) {
 }
 
 /* Copy n vector elements from v (starting at j) to x (starting at i). 
-   Nothing is done about NAMEDCNT here. */
+   Nothing is done about NAMEDCNT here.  x and v can be the same, with
+   effect based on sequentially copying. */
 
 void copy_vector_elements(SEXP x, int i, SEXP v, int j, int n) 
 {
@@ -534,8 +535,8 @@ void copy_vector_elements(SEXP x, int i, SEXP v, int j, int n)
 	      "copy_vector_elements", "list", type2char(TYPEOF(x)));
     }
 
-    if (sggc_youngest_generation(CPTR_FROM_SEXP(x))) {
-        /* x can't be older than anything */
+    if (sggc_youngest_generation(CPTR_FROM_SEXP(x)) || x == v) {
+        /* x can't be older than anything, or just copying within x */
         for (k = 0; k<n; k++) {
             e = VECTOR_ELT(v,j+k);
             VECTOR_ELT(x,i+k) = e;

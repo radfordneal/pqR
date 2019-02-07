@@ -1698,7 +1698,7 @@ void orderVector1(int *indx, int n, SEXP key, Rboolean nalast,
 SEXP R_subset3_dflt(SEXP, SEXP, SEXP, SEXP, SEXP, int);
 
 /* main/subassign.c */
-SEXP R_subassign3_dflt(SEXP, SEXP, SEXP, SEXP);
+SEXP R_subassign3_dflt(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 
 #include <wchar.h>
 

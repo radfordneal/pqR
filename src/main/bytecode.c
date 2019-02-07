@@ -2174,7 +2174,7 @@ SEXP attribute_hidden bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    UNPROTECT(1);
 	}
 	if (! dispatched)
-	    value = R_subassign3_dflt(call, x, symbol, rhs);
+	    value = R_subassign3_dflt(call, x, symbol, rhs, R_NilValue, R_NilValue);
 	R_BCNodeStackTop--;
 	SETSTACK(-1, value);
 	NEXT();

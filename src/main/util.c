@@ -1203,6 +1203,33 @@ SEXP with_pairlist_appended (SEXP s, SEXP t)
 }
 
 
+/* Copy a pairlist, but not its elements.  Also doesn't include any attributes.
+   But it does copy the LEVELS field. */
+
+SEXP copy_pairlist (SEXP s)
+{
+    if (s == R_NilValue)
+        return R_NilValue;
+
+    SEXP head = R_NilValue;
+    SEXP tail, el;
+    
+    do {
+        el = cons_with_tag (CAR(s), R_NilValue, TAG(s));
+        SETLEVELS (el, LEVELS(s));
+        if (head == R_NilValue)
+            PROTECT(head = el);
+        else
+            SETCDR(tail,el);
+        tail = el;
+        s = CDR(s);
+    } while (s != R_NilValue);
+
+    UNPROTECT(1);
+    return head;
+}
+
+
 /* Create a new pairlist/language (of the same type and attributes as
    s, or of its CDR if the first element of s is the one deleted) with
    the nth item (counting from one) deleted.  Silently returns the

@@ -1966,6 +1966,7 @@ void Rf_unprotect_ptr(SEXP);
 SEXP Rf_with_changed_nth(SEXP,int,SEXP);
 SEXP Rf_with_no_nth(SEXP,int);
 SEXP Rf_with_pairlist_appended(SEXP,SEXP);
+SEXP Rf_copy_pairlist(SEXP);
 R_xlen_t Rf_xlength(SEXP);
 
 SEXP R_ProtectWithIndex(SEXP, PROTECT_INDEX *);
@@ -2413,6 +2414,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define warningcall_immediate	Rf_warningcall_immediate
 #define with_changed_nth	Rf_with_changed_nth
 #define with_no_nth		Rf_with_no_nth
+#define copy_pairlist		Rf_copy_pairlist
 #define with_pairlist_appended	Rf_with_pairlist_appended
 #define xlength(x)		Rf_xlength(x)
 #define xlengthgets		Rf_xlengthgets

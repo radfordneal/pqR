@@ -3091,7 +3091,7 @@ static void SubassignTypeFix (SEXP *x, SEXP *y, int stretch, int level,
     SET_OBJECT(*x, x_is_object);
 }
 
-/* Returns list made from x (a LISTSXP, EXPRSXP, or NILSXP) with elements 
+/* Returns list made from x (a VECSXP, EXPRSXP, or NILSXP) with elements 
    from start to end (inclusive) deleted.  The start index will be positive. 
    If start>end, no elements are deleted (x returned unchanged). */
 
@@ -4930,14 +4930,16 @@ SEXP attribute_hidden do_subassign2_dflt_int
     END_PROTECT;
 }
 
-/* Called from do_subassing3, and elsewhere.  Protects x and val; name should be
-   a symbol and hence not needing protection.  Sets R_Visible to TRUE. */
+/* Called from do_subassing3, and elsewhere.  Protects x and val, and x_grad
+   and val_grad; name should be a symbol and hence not needing protection.
+   Sets R_Visible to TRUE. */
 
 #define na_or_empty_string(strelt) ((strelt)==NA_STRING || CHAR((strelt))[0]==0)
 
-SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
+SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val,
+                       SEXP x_grad, SEXP val_grad)
 {
-    PROTECT_INDEX pvalidx, pxidx;
+    PROTECT_INDEX pvalidx, pxidx, pvalgidx, pxgidx;
     Rboolean S4; SEXP xS4 = R_NilValue;
 
     R_Visible = TRUE;
@@ -4947,15 +4949,17 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
 
     PROTECT_WITH_INDEX(x, &pxidx);
     PROTECT_WITH_INDEX(val, &pvalidx);
+    PROTECT_WITH_INDEX(x_grad, &pxgidx);
+    PROTECT_WITH_INDEX(val_grad, &pvalgidx);
     S4 = IS_S4_OBJECT(x);
 
     WAIT_UNTIL_COMPUTED(x);
 
     /* code to allow classes to extend ENVSXP */
     if (TYPEOF(x) == S4SXP) {
-	xS4 = x;
+        xS4 = x;
         x = R_getS4DataSlot(x, ANYSXP);
-	if (x == R_NilValue)
+        if (x == R_NilValue)
             errorcall (call, 
               _("no method for assigning subsets of this S4 class"));
     }
@@ -4981,7 +4985,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
         break;
 
     case ENVSXP:
-	set_var_in_frame (name, val, x, TRUE, 3);
+        set_var_in_frame (name, val, x, TRUE, 3);
         break;
 
     case SYMSXP: case CLOSXP: case SPECIALSXP: case BUILTINSXP:
@@ -4989,9 +4993,9 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
         nonsubsettable_error(call,x);
 
     default:
-	warningcall(call,_("Coercing LHS to a list"));
-	REPROTECT(x = coerceVector(x, VECSXP), pxidx);
-	/* fall through to VECSXP / EXPRSXP / NILSXP code */
+        warningcall(call,_("Coercing LHS to a list"));
+        REPROTECT(x = coerceVector(x, VECSXP), pxidx);
+        /* fall through to VECSXP / EXPRSXP / NILSXP code */
 
     case VECSXP: case EXPRSXP: case NILSXP: ;
 
@@ -5027,27 +5031,52 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
             }
         }
 
+        if (imatch < 0 && val == R_NilValue) /* deleting non-existant element */
+            break;
+
+        if (x_grad != R_NilValue) {
+            REPROTECT (x_grad = copy_pairlist(x_grad), pxgidx);
+        }
+
         if (val == R_NilValue) {
-            /* If "val" is NULL, this is an element deletion if there
-               is a match to "name" otherwise "x" is unchanged. */
-            if (imatch >= 0)
-                x = DeleteListElementsSeq (x, imatch+1, imatch+1);
-            /* else x is unchanged */
+            /* If "val" is NULL, this is an element deletion */
+            x = DeleteListElementsSeq (x, imatch+1, imatch+1);
+            for (SEXP p = x_grad; p != R_NilValue; p = CDR(p)) {
+                SEXP q = CAR(p);
+                if (q == R_NilValue) continue;
+                if (TYPEOF(q) != VECSXP || LENGTH(q) != nx) abort();
+                q = DeleteListElementsSeq (q, imatch+1, imatch+1);
+                SETCAR(p,q);
+            }
         }
         else {
             /* If "val" is non-NULL, we are either replacing an existing 
                list element or we are adding a new element. */
-	    if (imatch >= 0) {
-		/* We are just replacing an element */
+            if (imatch >= 0) {
+                /* We are just replacing an element */
                 DEC_NAMEDCNT (VECTOR_ELT(x,imatch));
-		SET_VECTOR_ELEMENT_TO_VALUE(x, imatch, val);
-	    }
-	    else {
-		SEXP ans, ansnames;
+                SET_VECTOR_ELEMENT_TO_VALUE(x, imatch, val);
+#if 0
+                if (x_grad != R_NilValue) {
+                    for (SEXP p = x_grad; p != R_NilValue; p = CDR(p)) {
+                        if (CAR(p) == R_NilValue) continue;
+                        SEXP q = dup_top_level(CAR(p));
+                        SETCAR(p,q);
+                        if (TYPEOF(q) != VECSXP || LENGTH(q) != nx) abort();
+                        SET_VECTOR_ELT (q, imatch, val_grad);
+                        INC_NAMEDCNT(val_grad);
+                    }
+                }
+#endif
+                x_grad = R_NilValue;  /* FOR NOW */
+            }
+            else {
+                SEXP ans, ansnames;
                 if (x == R_NilValue)
                     PROTECT (ans = allocVector (VECSXP, 1));
                 else
                     PROTECT (ans = reallocVector (x, nx+1, 1));
+                
                 if (names == R_NilValue || NAMEDCNT_GT_1(names)) {
                     PROTECT(ansnames = allocVector (STRSXP, nx+1));
                     if (names != R_NilValue)
@@ -5056,22 +5085,27 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val)
                 else {
                     PROTECT(ansnames = reallocVector (names, nx+1, 1));
                 }
-		SET_VECTOR_ELEMENT_TO_VALUE (ans, nx, val);
-		SET_STRING_ELT (ansnames, nx, pname);
+                SET_VECTOR_ELEMENT_TO_VALUE (ans, nx, val);
+                SET_STRING_ELT (ansnames, nx, pname);
                 no_dim_attributes(ans);
-		setAttrib (ans, R_NamesSymbol, ansnames);
-		UNPROTECT(2);
-		x = ans;
-	    }
-	}
+                setAttrib (ans, R_NamesSymbol, ansnames);
+                UNPROTECT(2);
+                x = ans;
+                x_grad = R_NilValue;  /* FOR NOW */
+            }
+        }
         break;
     }
 
-    UNPROTECT(2);
+    UNPROTECT(4);
     if(xS4 != R_NilValue)
-	x = xS4; /* x was an env't, the data slot of xS4 */
+        x = xS4; /* x was an env't, the data slot of xS4 */
     if (!isList(x)) SET_NAMEDCNT_0(x);
     if(S4) SET_S4_OBJECT(x);
+
+    if (x_grad != R_NilValue)
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+
     return x;
 }
 
