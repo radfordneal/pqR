@@ -855,7 +855,9 @@ extern void helpers_wait_until_not_in_use(SEXP);
 #define ATTRIB(x)       NOT_LVALUE(TYPEOF(x)==SYMSXP ? R_NilValue : ATTRIB_W(x))
 
 #define GRADIENT_IN_CELL(x) ATTRIB_W(x)
-#define HAS_GRADIENT_IN_CELL(x) HAS_ATTRIB(x)
+#define HAS_GRADIENT_IN_CELL(x) \
+(!HAS_ATTRIB(x) ? 0 : \
+ TYPEOF(ATTRIB(x))==LISTSXP && TYPEOF(TAG(ATTRIB(x)))==ENVSXP ? 1 : (abort(),0))
 
 #define IS_PRINTNAME(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
 

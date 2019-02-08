@@ -2001,7 +2001,9 @@ extern R_NORETURN void Rf_unprotect_error (void);
 
 void SET_ATTRIB_TO_ANYTHING (SEXP, SEXP);
 
-#define SET_GRADIENT_IN_CELL SET_ATTRIB_TO_ANYTHING
+#define SET_GRADIENT_IN_CELL(x,v) \
+   ((ATTRIB_W(x) == R_NilValue || HAS_GRADIENT_IN_CELL(x)) \
+      ? SET_ATTRIB_TO_ANYTHING((x),(v)) : (void)abort())
 
 
 /* Define R_INFINITE and ISNAN_NOT_NA here as inline functions, using a 
