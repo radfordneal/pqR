@@ -1,6 +1,6 @@
 # Test gradient computations.
 #
-# Added for pqR, 2018 Radford M. Neal.
+# Added for pqR, 2019 Radford M. Neal.
 
 
 # Check consistency of simple math derivatives using track gradient with 'D'
@@ -666,13 +666,29 @@ g <- function (x,y)
 with gradient (z=9) g(100*z,z+1)
 
 
-# Test subassign operations
+# Test subassign operations.
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r$y <- 1/a
+  r
+}
 
 with gradient (a=3.01) {
   r <- list(x=a^2,y=a^3,z=a^4)
   print(gradient_of(r))
   cat("--\n")
   r$y <- NULL
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r$x$w <- 1/a
   r
 }
 
@@ -691,7 +707,23 @@ with gradient (a=3.01) {
   r <- list(x=a^2,y=a^3,z=a^4)
   print(gradient_of(r))
   cat("--\n")
+  xel(r) <- 1/a
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
   xel(r) <- NULL
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=list(w=3*a,x=4*a),y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  xel(xel(r)) <- 1/a;
   r
 }
 

@@ -1747,7 +1747,8 @@ static SEXP attribute_noinline Rf_set_subassign
 
     SEXP rhs_uneval = rhs;  /* save unevaluated rhs */
 
-    int rhs_variant = variant & VARIANT_GRADIENT;
+    int rhs_variant = STORE_GRAD(rho) ? VARIANT_GRADIENT 
+                                       : variant & VARIANT_GRADIENT;
     if (maybe_fast) {
         if (variant & (VARIANT_SCALAR_STACK_OK | VARIANT_NULL))
             rhs_variant |= VARIANT_SCALAR_STACK_OK;
@@ -1870,6 +1871,10 @@ REprintf("**\n");
         else {
             if (POP_IF_TOP_OF_STACK(rhs))  /* might be on stack if maybe_fast */
                 rhs = DUP_STACK_VALUE(rhs);
+#if 0
+REprintf("rr\n"); R_inspect(rhs_grad);
+REprintf("vv\n"); R_inspect(var_grad);
+#endif
             PROTECT (rhsprom = mkValuePROMISE(rhs_uneval, rhs));
             PROTECT (lhsprom = mkValuePROMISE(CADR(lhs), varval));
             PROTECT(e = replaceCall (assgnfcn, lhsprom, CDDR(lhs), rhsprom));
@@ -1908,7 +1913,7 @@ REprintf("^^\n"); R_inspect(res_grad);
                                             maybe_fast);
         res_grad = R_gradient;
 #if 0
-if (res_grad != R_NilValue) { REprintf("vv\n"); R_inspect(res_grad); }
+if (res_grad != R_NilValue) { REprintf("oo\n"); R_inspect(res_grad); }
 #endif
     }
 

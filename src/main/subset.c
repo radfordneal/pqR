@@ -4946,7 +4946,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val,
     R_Visible = TRUE;
 
     if (ON_SCALAR_STACK(val)) /* currently, never puts value in atomic vector */
-        val = DUP_STACK_VALUE(val); 
+        val = DUP_STACK_VALUE(val);  /* so will always need a non-stack value */
 
     PROTECT_WITH_INDEX(x, &pxidx);
     PROTECT_WITH_INDEX(val, &pvalidx);
@@ -5066,18 +5066,27 @@ REprintf("----\n");
                 /* We are just replacing an element */
                 DEC_NAMEDCNT (VECTOR_ELT(x,imatch));
                 SET_VECTOR_ELEMENT_TO_VALUE(x, imatch, val);
-#if 0
                 if (x_grad != R_NilValue) {
-                    for (SEXP p = x_grad; p != R_NilValue; p = CDR(p)) {
+                    SEXP p, q, r;
+                    for (p = x_grad; p != R_NilValue; p = CDR(p)) {
                         if (CAR(p) == R_NilValue) continue;
-                        SEXP q = dup_top_level(CAR(p));
+                        q = dup_top_level(CAR(p));
                         SETCAR(p,q);
                         if (TYPEOF(q) != VECSXP || LENGTH(q) != nx) abort();
-                        SET_VECTOR_ELT (q, imatch, val_grad);
-                        INC_NAMEDCNT(val_grad);
+                        for (r = val_grad; r != R_NilValue; r = CDR(r)) {
+                            if (TAG(r)==TAG(p) && GRADINDEX(r)==GRADINDEX(p))
+                                break;
+                        }
+                        SET_VECTOR_ELT (q, imatch, CAR(r)); /* r==NilValue OK */
+                        INC_NAMEDCNT(CAR(r));
                     }
-                }
+#if 0
+REprintf("==== %d\n",imatch); R_inspect(val_grad);
+REprintf(".... %d\n",imatch); R_inspect(x_grad);
+REprintf("----\n");
 #endif
+                    res_grad = x_grad;
+                }
             }
             else {
                 SEXP ans, ansnames;
