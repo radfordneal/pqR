@@ -58,6 +58,7 @@ static SEXP expand_structure (SEXP base, SEXP list)
 
     if (TYPEOF(list) == VECSXP) {
         if (TYPEOF(base) != VECSXP) abort();
+        if (LENGTH(base) != LENGTH(list)) abort();
         R_len_t n = LENGTH(base);
         SEXP old_el, new_el;
         R_len_t i;

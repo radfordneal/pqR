@@ -676,7 +676,6 @@ with gradient (a=3.01) {
   r
 }
 
-if (FALSE)
 with gradient (a=3.01) {
   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
   print(gradient_of(r))
@@ -696,7 +695,6 @@ with gradient (a=3.01) {
   r
 }
 
-if (FALSE)
 with gradient (a=3.01) {
   r <- list(x=list(w=3*a,x=4*a),y=a^3,z=a^4)
   print(gradient_of(r))

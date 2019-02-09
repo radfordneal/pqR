@@ -3281,27 +3281,26 @@ attr(,"gradient")$z
 [1] 109.0836
 
 > 
-> if (FALSE)
-+ with gradient (a=3.01) {
+> with gradient (a=3.01) {
 +   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
 +   print(gradient_of(r))
 +   cat("--\n")
 +   r$x$w <- NULL
 +   r
 + }
-> 
-> xel <- function (a) a$x
-> `xel<-` <- function (a,value) { a$x <- value; a }
-> 
-> with gradient (a=3.01) {
-+   r <- list(x=a^2,y=a^3,z=a^4)
-+   print(gradient_of(r))
-+   cat("--\n")
-+   xel(r) <- NULL
-+   r
-+ }
+$a
+[1] 0
+
 $x
-[1] 6.02
+$x$v
+[1] 0
+
+$x$w
+[1] 3
+
+$x$x
+[1] 4
+
 
 $y
 [1] 27.1803
@@ -3310,27 +3309,3 @@ $z
 [1] 109.0836
 
 --
-$y
-[1] 27.2709
-
-$z
-[1] 82.08541
-
-attr(,"gradient")
-attr(,"gradient")$y
-[1] 27.1803
-
-attr(,"gradient")$z
-[1] 109.0836
-
-> 
-> if (FALSE)
-+ with gradient (a=3.01) {
-+   r <- list(x=list(w=3*a,x=4*a),y=a^3,z=a^4)
-+   print(gradient_of(r))
-+   cat("--\n")
-+   xel(xel(r)) <- NULL
-+   r
-+ }
-> 
-> 

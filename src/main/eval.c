@@ -1650,6 +1650,9 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     R_Visible = FALSE;
 
+    if (R_variant_result && !(variant & VARIANT_GRADIENT))
+        R_variant_result = 0;
+
     if (variant & VARIANT_NULL)
         return R_NilValue;
 
@@ -1723,7 +1726,8 @@ static SEXP replaceCall(SEXP fun, SEXP varval, SEXP args, SEXP rhs)
    for the simple case. */
 
 static attribute_noinline SEXP Rf_set_subassign_general 
-  (SEXP call, SEXP lhs, SEXP rhs, SEXP rho, int depth, SEXP var, SEXP varval,
+  (SEXP call, SEXP lhs, SEXP rhs, SEXP rho, int depth, SEXP var, 
+   SEXP varval, SEXP rhs_grad, SEXP var_grad,
    SEXP assgnfcn, SEXP rhsprom, SEXP rhs_uneval, int maybe_fast);
 
 static SEXP attribute_noinline Rf_set_subassign 
@@ -1898,9 +1902,14 @@ REprintf("^^\n"); R_inspect(res_grad);
         /* The general case, for any depth, done in another function to
            possibly reduce overhead (eg, stack frame size) for simpler cases. */
 
-        newval = 
-          Rf_set_subassign_general (call, lhs, rhs, rho, depth, var, varval, 
-                                    assgnfcn, rhsprom, rhs_uneval, maybe_fast);
+        newval =  Rf_set_subassign_general (call, lhs, rhs, rho, depth, var, 
+                                            varval, rhs_grad, var_grad,
+                                            assgnfcn, rhsprom, rhs_uneval,
+                                            maybe_fast);
+        res_grad = R_gradient;
+#if 0
+if (res_grad != R_NilValue) { REprintf("vv\n"); R_inspect(res_grad); }
+#endif
     }
 
     UNPROTECT(5);  /* rhs, rhs_grad, bcell, varval, var_grad */
@@ -1931,6 +1940,7 @@ REprintf("^^\n"); R_inspect(res_grad);
             SET_GRADIENT_IN_CELL (bcell, res_grad);
     }
 
+    R_variant_result = 0;
     if (variant & VARIANT_NULL) {
         POP_IF_TOP_OF_STACK(rhs);
         return R_NilValue;
@@ -1946,7 +1956,8 @@ REprintf("^^\n"); R_inspect(res_grad);
 }
 
 static SEXP attribute_noinline Rf_set_subassign_general 
-  (SEXP call, SEXP lhs, SEXP rhs, SEXP rho, int depth, SEXP var, SEXP varval,
+  (SEXP call, SEXP lhs, SEXP rhs, SEXP rho, int depth, SEXP var, 
+   SEXP varval, SEXP rhs_grad, SEXP var_grad,
    SEXP assgnfcn, SEXP rhsprom, SEXP rhs_uneval, int maybe_fast)
 {
     SEXP v, b, e, op, prom, fn, fetch_args, newval, lhsprom;
@@ -1959,6 +1970,7 @@ static SEXP attribute_noinline Rf_set_subassign_general
     struct { 
         SEXP expr;        /* Expression at this level */
         SEXP value;       /* Value of expr, may later change */
+        SEXP grad;        /* Gradient of value, or R_NilValue */
         SEXP store_args;  /* Arg list for store; depth 0 special, else  */
                           /*   LISTSXP or NILSXP - pairlist of promises */
                           /*   PROMSXP - promise for single argument    */
@@ -1985,11 +1997,11 @@ static SEXP attribute_noinline Rf_set_subassign_general
              stored for later display.  */
 
     /* For each level except the outermost, evaluate and save the
-       value of the expression as it is before the assignment.
-       Also, ask if it is an unshared subset of the next larger
-       expression (and all larger ones).  If it is not known to be
-       part of the larger expressions, we do a top-level duplicate
-       of it.
+       value of the expression as it is before the assignment (and its
+       gradient, if present).  Also, ask if it is an unshared subset
+       of the next larger expression (and all larger ones).  If it is
+       not known to be part of the larger expressions, we do a
+       top-level duplicate of it.
 
        Also, for each level except the final variable and
        outermost level, which only does a store, save argument
@@ -2002,6 +2014,7 @@ static SEXP attribute_noinline Rf_set_subassign_general
        and for $, no promise is created for its argument. */
 
     s[depth].value = varval;
+    s[depth].grad = var_grad;
     s[depth].in_top = 1;
 
     s[0].store_args = CDDR(lhs);  /* original args, no value cell */
@@ -2011,7 +2024,8 @@ static SEXP attribute_noinline Rf_set_subassign_general
         op = CAR(s[d].expr);
 
         fast = 0;
-        if (op == R_DollarSymbol || op == R_Bracket2Symbol) {
+        if ((op == R_DollarSymbol || op == R_Bracket2Symbol)
+             && s[d+1].grad == R_NilValue /* FOR NOW */ ) {
             fn = FINDFUN (op, rho);
             fast = TYPEOF(fn)==SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn);
         }
@@ -2041,6 +2055,8 @@ static SEXP attribute_noinline Rf_set_subassign_general
 
         SET_NAMEDCNT_NOT_0(s[d+1].value);
 
+        s[d].grad = R_NilValue;
+
         if (fast) {
             R_fast_sub_var = s[d+1].value;
             R_variant_result = 0;
@@ -2050,12 +2066,27 @@ static SEXP attribute_noinline Rf_set_subassign_general
         }
         else {
             prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
-            PROTECT (e = LCONS (op, CONS (prom, fetch_args)));
-            R_variant_result = 0;
-            e = evalv_other (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
+            if (s[d+1].grad != R_NilValue) {
+                SET_GRADIENT_IN_CELL (prom, s[d+1].grad);
+                SET_STORE_GRAD (prom, 1);
+                PROTECT (e = LCONS (op, CONS (prom, fetch_args)));
+                R_variant_result = 0;
+                e = evalv_other (e, rho, VARIANT_GRADIENT
+                                           | VARIANT_QUERY_UNSHARED_SUBSET);
+                if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+                    s[d].grad = R_gradient;
+                    R_variant_result &= ~VARIANT_GRADIENT_FLAG;
+                }
+            }
+            else {
+                PROTECT (e = LCONS (op, CONS (prom, fetch_args)));
+                R_variant_result = 0;
+                e = evalv_other (e, rho, VARIANT_QUERY_UNSHARED_SUBSET);
+            }
             UNPROTECT(2);  /* e, fetch_args */
         }
 
+        PROTECT(s[d].grad);
         s[d].in_top = 
           s[d+1].in_top == 1 ? R_variant_result : 0;  /* 0, 1, or 2 */
         R_variant_result = 0;
@@ -2068,7 +2099,10 @@ static SEXP attribute_noinline Rf_set_subassign_general
     /* Call the replacement function at level 1, perhaps using the
        fast interface. */
 
+    SEXP newgrad = R_NilValue;
+
     if (maybe_fast && !isObject(s[1].value) 
+          && rhs_grad == R_NilValue && var_grad == R_NilValue  /* FOR NOW */
           && CAR(s[0].store_args) != R_DotsSymbol
           && (fn = FINDFUN(assgnfcn,rho), 
               TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
@@ -2087,7 +2121,23 @@ static SEXP attribute_noinline Rf_set_subassign_general
         /* original args, no value cell at end, assgnfcn set above*/
         PROTECT (e = replaceCall (assgnfcn, lhsprom, 
                                   s[0].store_args, rhsprom));
-        newval = eval(e,rho);
+        if (rhs_grad != R_NilValue || s[1].grad != R_NilValue) {
+            if (s[1].grad != R_NilValue) {
+                SET_GRADIENT_IN_CELL (lhsprom, s[1].grad);
+                SET_STORE_GRAD (lhsprom, 1);
+            }
+            if (rhs_grad != R_NilValue) {
+                SET_GRADIENT_IN_CELL (rhsprom, rhs_grad);
+                SET_STORE_GRAD (rhsprom, 1);
+            }
+            newval = evalv (e, rho, VARIANT_GRADIENT);
+            if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+                newgrad = R_gradient;
+                R_variant_result = 0;
+            }
+        }
+        else
+            newval = evalv (e, rho, 0);
     }
 
     UNPROTECT(3);  /* e, lhsprom, rhsprom OR 3 from other branch of above if
@@ -2105,18 +2155,32 @@ static SEXP attribute_noinline Rf_set_subassign_general
            we have to replace, since that new object won't be part 
            of the object at the next level, even if the old one was. */
 
-        if (s[d].in_top == 1 && s[d].value == newval) { 
+        if (s[d].in_top == 1 && s[d].value == newval
+          && newgrad == R_NilValue && s[d+1].grad == R_NilValue /* FOR NOW */) {
 
             /* Don't need to do replacement. */
 
             newval = s[d+1].value;
         }
         else {
-
+#if 1
+if (installed_already("DBGG")) {
+  REprintf("repl %d %d\n",depth,d);
+}
+#endif
             /* Put value into the next-higher object. */
 
+            PROTECT (newgrad);
             PROTECT (rhsprom = mkValuePROMISE (e, newval));
+            if (newgrad != R_NilValue) {
+                SET_STORE_GRAD (rhsprom, 1);
+                SET_GRADIENT_IN_CELL (rhsprom, newgrad);
+            }
             PROTECT (lhsprom = mkValuePROMISE (s[d+1].expr, s[d+1].value));
+            if (s[d+1].grad != R_NilValue) {
+                SET_STORE_GRAD (lhsprom, 1);
+                SET_GRADIENT_IN_CELL (lhsprom, s[d+1].grad);
+            }
             assgnfcn = FIND_SUBASSIGN_FUNC(CAR(s[d].expr));
             b = cons_with_tag (rhsprom, R_NilValue, R_ValueSymbol);
             if (s[d].store_args == R_NoObject)
@@ -2131,14 +2195,22 @@ static SEXP attribute_noinline Rf_set_subassign_general
             }
             PROTECT(e = LCONS (assgnfcn, CONS(lhsprom, s[d].store_args)));
 
-            newval = eval(e,rho);
+            newval = newgrad != R_NilValue || s[d+1].grad != R_NilValue
+                       ? evalv(e,rho,VARIANT_GRADIENT) : evalv(e,rho,0);
 
-            UNPROTECT(3);  /* rhsprom, lhsprom, e (used later, but no alloc) */
+            if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+                newgrad = R_gradient;
+                R_variant_result = 0;
+            }
+
+            UNPROTECT(4);  /* newgrad, rhsprom, lhsprom, e
+                              (e is used later, but no alloc before) */
         }
     }
 
-    UNPROTECT (2 * (depth-1));
+    UNPROTECT (3 * (depth-1));
 
+    R_gradient = newgrad;
     return newval;
 }
 
