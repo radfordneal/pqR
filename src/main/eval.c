@@ -1931,14 +1931,8 @@ if (res_grad != R_NilValue) { REprintf("vv\n"); R_inspect(res_grad); }
         bcell = R_binding_cell;
     }
 
-    if (opval) { /* <<- */
-        if (bcell != R_NilValue)
-            SET_GRADIENT_IN_CELL (bcell, R_NilValue);
-    }
-    else {  /* not <<- */
-        if (res_grad != R_NilValue && bcell != R_NilValue) 
-            SET_GRADIENT_IN_CELL (bcell, res_grad);
-    }
+    if (bcell != R_NilValue)
+        SET_GRADIENT_IN_CELL (bcell, res_grad);
 
     R_variant_result = 0;
     if (variant & VARIANT_NULL) {
@@ -2139,6 +2133,13 @@ static SEXP attribute_noinline Rf_set_subassign_general
         else
             newval = evalv (e, rho, 0);
     }
+#if 0
+if (installed_already("DBGG")) {
+  REprintf("repl %d %d\n",depth,0); 
+  R_inspect(newval); REprintf("--\n");
+  R_inspect(newgrad); REprintf("..\n");
+}
+#endif
 
     UNPROTECT(3);  /* e, lhsprom, rhsprom OR 3 from other branch of above if
                       Note: is e used later, but with no alloc before. */
@@ -2163,11 +2164,7 @@ static SEXP attribute_noinline Rf_set_subassign_general
             newval = s[d+1].value;
         }
         else {
-#if 1
-if (installed_already("DBGG")) {
-  REprintf("repl %d %d\n",depth,d);
-}
-#endif
+
             /* Put value into the next-higher object. */
 
             PROTECT (newgrad);
@@ -2202,6 +2199,15 @@ if (installed_already("DBGG")) {
                 newgrad = R_gradient;
                 R_variant_result = 0;
             }
+            else
+                newgrad = R_NilValue;
+#if 0
+if (installed_already("DBGG")) {
+  REprintf("repl %d %d\n",depth,d); 
+  R_inspect(newval); REprintf("--\n");
+  R_inspect(newgrad); REprintf("..\n");
+}
+#endif
 
             UNPROTECT(4);  /* newgrad, rhsprom, lhsprom, e
                               (e is used later, but no alloc before) */
@@ -4632,8 +4638,10 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     }
     else {
         into = evalv (into, env, variant & VARIANT_GRADIENT);
-        if (R_variant_result & VARIANT_GRADIENT_FLAG)
+        if (R_variant_result & VARIANT_GRADIENT_FLAG) {
             into_grad = R_gradient;
+            R_variant_result = 0;
+        }
     }
 
     PROTECT2(into,into_grad);
@@ -4644,8 +4652,10 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     else {
         if (name == R_NilValue) name = install_translated(schar);
         value = EVALV (value, env, variant & VARIANT_GRADIENT);
-        if (R_variant_result & VARIANT_GRADIENT_FLAG)
+        if (R_variant_result & VARIANT_GRADIENT_FLAG) {
             value_grad = R_gradient;
+            R_variant_result = 0;
+        }
         UNPROTECT(2);
         return R_subassign3_dflt (call, into, name, value, 
                                   into_grad, value_grad);

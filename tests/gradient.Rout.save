@@ -3309,3 +3309,120 @@ $z
 [1] 109.0836
 
 --
+$a
+[1] 3
+
+$x
+$x$v
+[1] 8
+
+$x$x
+[1] 12.04
+
+
+$y
+[1] 27.2709
+
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 0
+
+attr(,"gradient")$x
+attr(,"gradient")$x$v
+[1] 0
+
+attr(,"gradient")$x$x
+[1] 0
+
+
+attr(,"gradient")$y
+[1] 0
+
+attr(,"gradient")$z
+[1] 0
+
+> 
+> xel <- function (a) a$x
+> `xel<-` <- function (a,value) { a$x <- value; a }
+> 
+> with gradient (a=3.01) {
++   r <- list(x=a^2,y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   xel(r) <- NULL
++   r
++ }
+$x
+[1] 6.02
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$y
+[1] 27.2709
+
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$y
+[1] 27.1803
+
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=list(w=3*a,x=4*a),y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   xel(xel(r)) <- NULL
++   r
++ }
+$x
+$x$w
+[1] 3
+
+$x$x
+[1] 4
+
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$x
+$x$w
+[1] 9.03
+
+
+$y
+[1] 27.2709
+
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$x
+attr(,"gradient")$x$w
+[1] 0
+
+
+attr(,"gradient")$y
+[1] 0
+
+attr(,"gradient")$z
+[1] 0
+
+> 
+> 

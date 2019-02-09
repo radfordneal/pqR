@@ -41,6 +41,12 @@
 
 static SEXP expand_structure (SEXP base, SEXP list)
 {
+#if 0
+REprintf("expand\n"); 
+R_inspect(base); REprintf("--\n"); 
+R_inspect(list); REprintf("..\n");
+#endif
+
     if (list == R_NilValue) {
         if (base == R_NilValue)
             return R_NilValue;
