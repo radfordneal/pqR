@@ -685,6 +685,14 @@ with gradient (a=3.01) {
 }
 
 with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r$w <- -a
+  r
+}
+
+with gradient (a=3.01) {
   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
   print(gradient_of(r))
   cat("--\n")
@@ -697,6 +705,14 @@ with gradient (a=3.01) {
   print(gradient_of(r))
   cat("--\n")
   r$x$w <- NULL
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r$x$u <- -a
   r
 }
 
@@ -720,6 +736,14 @@ with gradient (a=3.01) {
 }
 
 with gradient (a=3.01) {
+  r <- list(y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  xel(r) <- -a^2
+  r
+}
+
+with gradient (a=3.01) {
   r <- list(x=list(w=3*a,x=4*a),y=a^3,z=a^4)
   print(gradient_of(r))
   cat("--\n")
@@ -728,10 +752,9 @@ with gradient (a=3.01) {
 }
 
 with gradient (a=3.01) {
-  r <- list(x=list(w=3*a,x=4*a),y=a^3,z=a^4)
+  r <- list(x=list(w=3*a),y=a^3,z=a^4)
   print(gradient_of(r))
   cat("--\n")
-  xel(xel(r)) <- NULL
+  xel(xel(r)) <- -a^2
   r
 }
-

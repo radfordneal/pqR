@@ -151,8 +151,7 @@ with respect to all their real-valued arguments (unless noted), or
 when applicable, arguments that are lists of scalar reals (or lists of
 lists of scalar reals, etc.):
 \tabular{l}{
-list (currently the only way to create a list with gradient information) \cr
-$ (extract only, currently only way to extract with gradient information) \cr
+list, $ (for vector lists only), $<- (for vector lists only) \cr
 \cr
 +, -, *, /, ^ (+ and - may be unary) \cr
 \cr
@@ -246,6 +245,14 @@ attr(r,"gradient")               # should be a list of 1 and 14
 
 r <- with gradient (a=7) list(square=a^2,cube=a^3)
 attr(r,"gradient")$cube          # gradients of lists retain names
+
+with gradient (a=7,b=9) {
+    r <- list()
+    r$aplusb <- a+b
+    r$atimesb <- a*b
+    r$asqbsq <- r$atimesb^2
+    list (r, a^2*b^2)            # a^2*b^2 should be the same as asqbsq
+}
 
 with gradient (a=7) {
     L <- list(square=a^2,cube=a^3)

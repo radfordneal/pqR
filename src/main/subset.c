@@ -1041,7 +1041,7 @@ static SEXP makeSubscript (SEXP x, SEXP s, int *stretch, int *hasna,
 }
 
 
-/* ----------------------------- SUBSCRIPTS --------------------------------- */
+/* ----------------------------- SUBSETTING --------------------------------- */
 
 /* Convert range to vector. The caller must ensure that its size won't 
    overflow. */
@@ -4930,9 +4930,87 @@ SEXP attribute_hidden do_subassign2_dflt_int
     END_PROTECT;
 }
 
-/* Called from do_subassing3, and elsewhere.  Protects x and val, and x_grad
-   and val_grad; name should be a symbol and hence not needing protection.
-   Sets R_Visible to TRUE. */
+
+/* Create a pairlist of gradient values for a vector list value, from
+   an existing pairlist of such gradient values ('grad'), and a pairlist
+   of gradient value for a element that is inserted into the list ('new').
+   The new gradient values should have length 'len' (possibly greater than
+   those in 'grad', if the inserted element is a new one).  The index
+   of the inserted element is 'ix'.  The vector of names of elements for
+   the new list is 'names'. */
+
+static SEXP new_veclist_grad 
+               (SEXP grad, R_len_t len, SEXP new, R_len_t ix, SEXP names)
+{
+    SEXP p, q, r;
+
+    if (ix < 0 || ix >= len) abort();
+
+    PROTECT2(new,names);
+    PROTECT(grad = copy_pairlist(grad));
+
+    /* Update gradient values in 'grad' to account for the insertion of
+       the new element.  This requires searching 'new' for a corresponding
+       gradient value; these are then deleted from 'new', but for efficiency
+       here, and so the remaining ones are identified. */
+
+    for (p = grad; p != R_NilValue; p = CDR(p)) {
+
+        if (CAR(p) == R_NilValue) continue;
+        if (TYPEOF(CAR(p)) != VECSXP) abort();
+
+        if (LENGTH(CAR(p)) == len) {
+            q = dup_top_level(CAR(p));
+            SETCAR(p,q);
+        }
+        else {
+            q = allocVector (VECSXP, len);
+            copy_vector_elements (q, 0, CAR(p), 0, 
+                                  len > LENGTH(CAR(p)) ? LENGTH(CAR(p)) : len);
+            SETCAR(p,q);
+            setAttrib (q, R_NamesSymbol, names);
+        }
+
+        SEXP prev;        
+        for (r = new; r != R_NilValue; r = CDR(r)) {
+            if (TAG(r)==TAG(p) && GRADINDEX(r)==GRADINDEX(p))
+                break;
+            prev = r;
+        }
+
+        if (r == R_NilValue)
+            SET_VECTOR_ELT (q, ix, R_NilValue);
+        else {
+            SET_VECTOR_ELT (q, ix, CAR(r));
+            INC_NAMEDCNT(CAR(r));
+            if (r == new)
+                new = CDR(r);
+            else
+                SETCDR(prev,CDR(r));
+        }
+    }
+
+    /* Create new gradient values for the list that are with respect to
+       variables only appearing in 'new', not in 'grad'. */
+
+    for (r = new; r != R_NilValue; r = CDR(r)) {
+        PROTECT(grad);
+        q = allocVector (VECSXP, len);
+        setAttrib (q, R_NamesSymbol, names);
+        grad = cons_with_tag (q, grad, TAG(r));
+        SET_GRADINDEX (grad, GRADINDEX(r));
+        SET_VECTOR_ELT (q, ix, CAR(r));
+        UNPROTECT(1);
+    }
+
+    UNPROTECT(3);
+    return grad;
+}
+
+
+/* R_subassign3_dflt is called from do_subassign3, and elsewhere.
+   Protects x and val, and x_grad and val_grad; name should be a
+   symbol and hence not needing protection.  Sets R_Visible to TRUE. */
 
 #define na_or_empty_string(strelt) ((strelt)==NA_STRING || CHAR((strelt))[0]==0)
 
@@ -5032,26 +5110,17 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val,
             }
         }
 
-        if (imatch < 0 && val == R_NilValue) /* deleting non-existant element */
-            break;
+        if (imatch<0 && val == R_NilValue)  /* deleting non-existant element */
+            ; 
 
-        if (x_grad != R_NilValue) {
-            REPROTECT (x_grad = copy_pairlist(x_grad), pxgidx);
-        }
+        else if (val == R_NilValue) {  /* deleting an element */
 
-        if (val == R_NilValue) {
-            /* If "val" is NULL, this is an element deletion */
-            x = DeleteListElementsSeq (x, imatch+1, imatch+1);
-#if 0
-REprintf("$$ %d\n",imatch); R_inspect(x_grad);
-REprintf("--\n");
-#endif
+            REPROTECT(x = DeleteListElementsSeq(x,imatch+1,imatch+1), pxidx);
+            if (x_grad != R_NilValue) {
+                REPROTECT (x_grad = copy_pairlist(x_grad), pxgidx);
+            }
             for (SEXP p = x_grad; p != R_NilValue; p = CDR(p)) {
                 SEXP q = CAR(p);
-#if 0
-REprintf("$$$$ %d\n",imatch); R_inspect(q);
-REprintf("----\n");
-#endif
                 if (q == R_NilValue) continue;
                 if (TYPEOF(q) != VECSXP || LENGTH(q) != nx) abort();
                 q = DeleteListElementsSeq (q, imatch+1, imatch+1);
@@ -5059,57 +5128,42 @@ REprintf("----\n");
             }
             res_grad = x_grad;
         }
-        else {
-            /* If "val" is non-NULL, we are either replacing an existing 
-               list element or we are adding a new element. */
-            if (imatch >= 0) {
-                /* We are just replacing an element */
-                DEC_NAMEDCNT (VECTOR_ELT(x,imatch));
-                SET_VECTOR_ELEMENT_TO_VALUE(x, imatch, val);
-                if (x_grad != R_NilValue) {
-                    SEXP p, q, r;
-                    for (p = x_grad; p != R_NilValue; p = CDR(p)) {
-                        if (CAR(p) == R_NilValue) continue;
-                        q = dup_top_level(CAR(p));
-                        SETCAR(p,q);
-                        if (TYPEOF(q) != VECSXP || LENGTH(q) != nx) abort();
-                        for (r = val_grad; r != R_NilValue; r = CDR(r)) {
-                            if (TAG(r)==TAG(p) && GRADINDEX(r)==GRADINDEX(p))
-                                break;
-                        }
-                        SET_VECTOR_ELT (q, imatch, CAR(r)); /* r==NilValue OK */
-                        INC_NAMEDCNT(CAR(r));
-                    }
-#if 0
-REprintf("==== %d\n",imatch); R_inspect(val_grad);
-REprintf(".... %d\n",imatch); R_inspect(x_grad);
-REprintf("----\n");
-#endif
-                    res_grad = x_grad;
-                }
+        else if (imatch >= 0) {  /* replacing an element */
+
+            DEC_NAMEDCNT (VECTOR_ELT(x,imatch));
+            SET_VECTOR_ELEMENT_TO_VALUE(x, imatch, val);
+            if (x_grad != R_NilValue || val_grad != R_NilValue)
+                res_grad = new_veclist_grad
+                             (x_grad, nx, val_grad, imatch, names);
+        }
+        else {  /* adding a new element */
+
+            SEXP ans, ansnames;
+            if (x == R_NilValue)
+                PROTECT (ans = allocVector (VECSXP, 1));
+            else
+                PROTECT (ans = reallocVector (x, nx+1, 1));
+            
+            if (names == R_NilValue || NAMEDCNT_GT_1(names)) {
+                PROTECT(ansnames = allocVector (STRSXP, nx+1));
+                if (names != R_NilValue)
+                    copy_string_elements (ansnames, 0, names, 0, nx);
             }
             else {
-                SEXP ans, ansnames;
-                if (x == R_NilValue)
-                    PROTECT (ans = allocVector (VECSXP, 1));
-                else
-                    PROTECT (ans = reallocVector (x, nx+1, 1));
-                
-                if (names == R_NilValue || NAMEDCNT_GT_1(names)) {
-                    PROTECT(ansnames = allocVector (STRSXP, nx+1));
-                    if (names != R_NilValue)
-                        copy_string_elements (ansnames, 0, names, 0, nx);
-                }
-                else {
-                    PROTECT(ansnames = reallocVector (names, nx+1, 1));
-                }
-                SET_VECTOR_ELEMENT_TO_VALUE (ans, nx, val);
-                SET_STRING_ELT (ansnames, nx, pname);
-                no_dim_attributes(ans);
-                setAttrib (ans, R_NamesSymbol, ansnames);
-                UNPROTECT(2);
-                x = ans;
+                PROTECT(ansnames = reallocVector (names, nx+1, 1));
             }
+
+            SET_VECTOR_ELEMENT_TO_VALUE (ans, nx, val);
+            SET_STRING_ELT (ansnames, nx, pname);
+            no_dim_attributes(ans);
+            setAttrib (ans, R_NamesSymbol, ansnames);
+
+            if (x_grad != R_NilValue || val_grad != R_NilValue)
+                res_grad = new_veclist_grad 
+                             (x_grad, nx+1, val_grad, nx, ansnames);
+
+            UNPROTECT(2);
+            x = ans;
         }
         break;
     }
