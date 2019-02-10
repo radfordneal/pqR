@@ -128,12 +128,6 @@ static SEXP make_id_recursive (SEXP val, SEXP top)
         UNPROTECT(1);
     }
 
-#if 0
-REprintf("make_id: %d\n",GRAD_WRT_LIST(res));
-R_inspect(res);
-REprintf("------\n");
-#endif
-
     UNPROTECT(1);
     return res;
 }
@@ -192,7 +186,9 @@ static int match_structure (SEXP val, SEXP grad, int any_for_0)
 
 /* Compute a list from another list by adding the given amount to its scalar 
    elements, recursively when the list has list elements.  (Also works for a 
-   'list' that is a simple scalar).  Protects the 'list' argument. */
+   'list' that is a simple scalar).  Copies the GRAD_WRT_LIST flag.
+
+   Protects the 'list' argument. */
 
 static SEXP addto_list (SEXP list, double amount)
 {
@@ -209,6 +205,7 @@ static SEXP addto_list (SEXP list, double amount)
     else {
         if (TYPEOF(list) != VECSXP) abort();
         res = allocVector(VECSXP,LENGTH(list));
+        SET_GRAD_WRT_LIST (res, GRAD_WRT_LIST(list));
         R_len_t i;
         for (i = 0; i < LENGTH(list); i++)
             SET_VECTOR_ELT (res, i, addto_list (VECTOR_ELT(list,i), amount));
@@ -221,7 +218,9 @@ static SEXP addto_list (SEXP list, double amount)
 
 /* Compute a list from another list by scaling scalar elements by the given
    factor, recursively when the list has list elements.  (Also works for
-   a 'list' that is a simple scalar).  Protects the 'list' argument. */
+   a 'list' that is a simple scalar). Copies the GRAD_WRT_LIST flag.
+
+   Protects the 'list' argument. */
 
 static SEXP scaled_list (SEXP list, double factor)
 {
@@ -238,6 +237,7 @@ static SEXP scaled_list (SEXP list, double factor)
     else {
         if (TYPEOF(list) != VECSXP) abort();
         res = allocVector(VECSXP,LENGTH(list));
+        SET_GRAD_WRT_LIST (res, GRAD_WRT_LIST(list));
         R_len_t i;
         for (i = 0; i < LENGTH(list); i++)
             SET_VECTOR_ELT (res, i, scaled_list (VECTOR_ELT(list,i), factor));
@@ -253,7 +253,8 @@ static SEXP scaled_list (SEXP list, double factor)
    when the lists have list elements.  (Also works for 'lists' that are 
    simple scalars).  The two input lists must have the same form, except
    a scalar will be match (by replication) any structure in the other list,
-   and R_NilValue will be regarded as the same as zero.
+   and R_NilValue will be regarded as the same as zero.  Copies the 
+   GRAD_WRT_LIST flag from alist, or blist if alist is not a list.
 
    Protects the 'alist' and 'blist' arguments. */
 
@@ -274,6 +275,7 @@ static SEXP add_scaled_list (SEXP alist, SEXP blist, double factor)
     else if (TYPEOF(alist) == VECSXP && TYPEOF(blist) == REALSXP) {
         if (LENGTH(blist) != 1) abort();
         res = allocVector (VECSXP, LENGTH(alist));
+        SET_GRAD_WRT_LIST (res, GRAD_WRT_LIST(alist));
         double amt = *REAL(blist) * factor;
         R_len_t i;
         for (i = 0; i < LENGTH(res); i++)
@@ -282,6 +284,7 @@ static SEXP add_scaled_list (SEXP alist, SEXP blist, double factor)
     else if (TYPEOF(alist) == REALSXP && TYPEOF(blist) == VECSXP) {
         if (LENGTH(alist) != 1) abort();
         res = allocVector (VECSXP, LENGTH(blist));
+        SET_GRAD_WRT_LIST (res, GRAD_WRT_LIST(blist));
         R_len_t i;
         for (i = 0; i < LENGTH(res); i++)
             SET_VECTOR_ELT(res, i, 
@@ -290,6 +293,7 @@ static SEXP add_scaled_list (SEXP alist, SEXP blist, double factor)
     else if (TYPEOF(alist) == VECSXP && TYPEOF(blist) == VECSXP) {
         if (LENGTH(alist) != LENGTH(blist)) abort();
         res = allocVector (VECSXP, LENGTH(alist));
+        SET_GRAD_WRT_LIST (res, GRAD_WRT_LIST(alist));
         R_len_t i;
         for (i = 0; i < LENGTH(res); i++)
             SET_VECTOR_ELT (res, i, 
@@ -346,6 +350,7 @@ static SEXP get_gradient (SEXP env)
     return r;
 }
 
+
 /* Get gradients excluding those for xenv from those in R_gradient, which
    is protected for the duration of this function.  The gradients are
    returned as a pairlist. */
@@ -366,6 +371,7 @@ static inline SEXP get_other_gradients (SEXP xenv)
     UNPROTECT(1);
     return q;
 }
+
 
 /* Copy scaled gradients from those in grad, which is protected here. */
 
@@ -388,6 +394,7 @@ attribute_hidden SEXP copy_scaled_gradients (SEXP grad, double factor)
     UNPROTECT(1);
     return q;
 }
+
 
 /* Add the product of gradients in extra and in factor, to the set of
    gradients in base.  Factor may be a scalar or a list (for the 
@@ -500,6 +507,50 @@ static SEXP add_scaled_SEXP(SEXP base, SEXP extra, SEXP factor)
 
     UNPROTECT(3);
     return r;
+}
+
+
+/* Create set of gradients from subsetting i'th element of gradients for 
+   a vector of length n. */
+
+SEXP attribute_hidden Rf_subset_vector_gradient(SEXP grad, R_len_t i, R_len_t n)
+{
+    if (grad == R_NilValue)
+        return R_NilValue;
+
+    if (TYPEOF(grad) == LISTSXP) {
+        SEXP res = R_NilValue;
+        SEXP tail;
+        while (grad != R_NilValue) {
+            SEXP g = cons_with_tag (Rf_subset_vector_gradient (CAR(grad), i, n),
+                                    R_NilValue, TAG(grad));
+            SET_GRADINDEX (g, GRADINDEX(grad));
+            if (res == R_NilValue) {
+                PROTECT (res = g);
+            }
+            else
+                SETCDR (tail, g);
+            tail = g;
+            grad = CDR(grad);
+        }
+        UNPROTECT(1);
+        return res;
+    }
+
+    else if (TYPEOF(grad) == VECSXP && GRAD_WRT_LIST(grad)) {
+        R_len_t m = LENGTH(grad);
+        SEXP res = PROTECT (allocVector(VECSXP,m));
+        SET_GRAD_WRT_LIST (res, 1);
+        for (R_len_t j = 0; j < m; j++)
+            SET_VECTOR_ELT (res, j, 
+              Rf_subset_vector_gradient (VECTOR_ELT(grad,j), i, n));
+        UNPROTECT(1);
+        return res;
+    }
+
+    if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
+    if (i < 0 || i >= n) abort();
+    return VECTOR_ELT (grad, i);
 }
 
 

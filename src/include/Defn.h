@@ -1135,7 +1135,7 @@ extern0 Rboolean R_mat_mult_with_BLAS [R_mat_mult_with_BLAS_len]
 #endif
 ;
 
-/* Tracing of gradient computations. */
+/* Gradient computations. */
 
 extern0 int R_gradient_trace INI_as(0);   /* trace gradient tracking? */
 extern void Rf_gradient_trace(SEXP);      /* function to trace R_gradient */
@@ -1143,6 +1143,7 @@ extern void Rf_gradient_trace(SEXP);      /* function to trace R_gradient */
 #define GRADIENT_TRACE(call) \
     do { if (R_gradient_trace) Rf_gradient_trace(call); } while (0)
 
+extern SEXP Rf_subset_vector_gradient (SEXP, R_len_t, R_len_t);
 
 /* Can BLAS routines be done in helper threads? */
 

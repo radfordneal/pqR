@@ -2909,21 +2909,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
             R_variant_result = 1;
 
         if (grad != R_NilValue) {
-            SEXP cell, tail;
-            R_gradient = R_NilValue;
-            do {
-                SEXP g = CAR(grad);
-                if (TYPEOF(g) != VECSXP || LENGTH(g) != n) abort();
-                cell = cons_with_tag (VECTOR_ELT(g,i), R_NilValue, TAG(grad));
-                SET_GRADINDEX (cell, GRADINDEX(grad));
-                if (R_gradient == R_NilValue)
-                    PROTECT(R_gradient = cell);
-                else
-                    SETCDR(tail,cell);
-                tail = cell;
-                grad = CDR(grad);
-            } while (grad != R_NilValue);
-            UNPROTECT(1);
+            R_gradient = Rf_subset_vector_gradient (grad, i, n);
             R_variant_result |= VARIANT_GRADIENT_FLAG;
         }
 
