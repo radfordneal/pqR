@@ -3777,3 +3777,84 @@ attr(,"gradient")$z
 [1] 109.0836
 
 > 
+> 
+> # Test gradients w.r.t. list values.
+> 
+> with gradient (a=list(5,55,555)) a
+[[1]]
+[1] 5
+
+[[2]]
+[1] 55
+
+[[3]]
+[1] 555
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+attr(,"gradient")[[2]][[3]]
+[1] 0
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0
+
+attr(,"gradient")[[3]][[3]]
+[1] 1
+
+
+> 
+> with gradient (a=list(x=7,y=list(z=10))) a
+$x
+[1] 7
+
+$y
+$y$z
+[1] 10
+
+
+attr(,"gradient")
+attr(,"gradient")$x
+attr(,"gradient")$x$x
+[1] 1
+
+attr(,"gradient")$x$y
+attr(,"gradient")$x$y$z
+[1] 0
+
+
+
+attr(,"gradient")$y
+attr(,"gradient")$y$z
+attr(,"gradient")$y$z$x
+[1] 0
+
+attr(,"gradient")$y$z$y
+attr(,"gradient")$y$z$y$z
+[1] 1
+
+
+
+
+> 

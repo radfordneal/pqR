@@ -758,3 +758,10 @@ with gradient (a=3.01) {
   xel(xel(r)) <- -a^2
   r
 }
+
+
+# Test gradients w.r.t. list values.
+
+with gradient (a=list(5,55,555)) a
+
+with gradient (a=list(x=7,y=list(z=10))) a

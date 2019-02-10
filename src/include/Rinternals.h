@@ -1017,6 +1017,9 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define GRADVARS(x)	SEXP_FROM_SEXP32(((ENVSEXP)UPTR_FROM_SEXP(x))->gradvars)
 #define SET_GRADVARS(x,v)  (((ENVSEXP)UPTR_FROM_SEXP(x))->gradvars \
                              = SEXP32_FROM_SEXP(v))
+#define GRADVARS_LEN(nv)(2*(nv))       /* length of GRADVARS for nv variables */
+#define GRADVARS_NV(v)	(LENGTH(v)/2)  /* number of variables in GRADVARS */
+
 #define GRADINDEX(x)	((unsigned)LEVELS(x) >> 8)
 #define SET_GRADINDEX(x,v) SETLEVELS(x,(LEVELS(x)&0xff)|((v)<<8))
 

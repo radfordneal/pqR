@@ -35,23 +35,40 @@
 
 
 /* Expand the structure of 'list' to match 'base' by replacing NULL elements 
-   that correspond to non-NULL elements by zeros, lists of zeros, etc. 
-   New lists are allocated where there are any changes, but the original
-   is used where there are no changes. */
+   that correspond to non-NULL elements by zeros, lists of zeros, etc.
+   Top levels with GRAD_WRT_LIST set are matched instead agains base2. 
+   Names are added to match those in the base or base2. */
 
-static SEXP expand_structure (SEXP base, SEXP list)
+static SEXP expand_structure (SEXP base, SEXP list, SEXP base2)
 {
+    if (TYPEOF(list) == VECSXP && GRAD_WRT_LIST(list)) {
+        if (TYPEOF(base2) != VECSXP || LENGTH(base2) != LENGTH(list)) abort();
+        if (!GRAD_WRT_LIST(base2)) abort();
+        R_len_t n = LENGTH(list);
+        SEXP res = PROTECT(allocVector(VECSXP,n));
+        setAttrib (res, R_NamesSymbol, getNamesAttrib(base2));
+        R_len_t i;
+        for (i = 0; i < n; i++)
+            SET_VECTOR_ELT (res, i, 
+              expand_structure (base, VECTOR_ELT(list,i), VECTOR_ELT(base2,i)));
+        UNPROTECT(1);
+        return res;
+    }
+
+    if (TYPEOF(base2) == VECSXP && GRAD_WRT_LIST(base2)) abort();
+
     if (list == R_NilValue) {
         if (base == R_NilValue)
             return R_NilValue;
         if (TYPEOF(base) != VECSXP)
-            return ScalarRealMaybeConst(0.0);
+            return R_ScalarRealZero;
         R_len_t n = LENGTH(base);
         SEXP res = PROTECT(allocVector(VECSXP,n));
-        setAttrib (res, R_NamesSymbol, getAttrib(base,R_NamesSymbol));
+        setAttrib (res, R_NamesSymbol, getNamesAttrib(base));
         R_len_t i;
         for (i = 0; i < n; i++)
-            SET_VECTOR_ELT (res, i, expand_structure (VECTOR_ELT(base,i),list));
+            SET_VECTOR_ELT (res, i, 
+              expand_structure (VECTOR_ELT(base,i), list, base2));
         UNPROTECT(1);
         return res;
     }
@@ -60,25 +77,11 @@ static SEXP expand_structure (SEXP base, SEXP list)
         if (TYPEOF(base) != VECSXP) abort();
         if (LENGTH(base) != LENGTH(list)) abort();
         R_len_t n = LENGTH(base);
-        SEXP old_el, new_el;
-        R_len_t i;
-        for (i = 0; i < n; i++) {
-            old_el = VECTOR_ELT(list,i);
-            new_el = expand_structure (VECTOR_ELT(base,i), old_el);
-            if (new_el != old_el)
-                break;
-        }
-        if (i == n)  /* no change to any elements */
-            return list;
         SEXP res = PROTECT(allocVector(VECSXP,n));
         setAttrib (res, R_NamesSymbol, getAttrib(base,R_NamesSymbol));
-        if (i > 0) copy_vector_elements (res, 0, list, 0, i);
-        for (;;) {
-            SET_VECTOR_ELT (res, i, new_el);
-            i += 1;
-            if (i == n) break;
-            old_el = VECTOR_ELT(list,i);
-            new_el = expand_structure (VECTOR_ELT(base,i), old_el);
+        for (R_len_t i = 0; i < n; i++) {
+            SET_VECTOR_ELT (res, i, 
+              expand_structure (VECTOR_ELT(base,i), VECTOR_ELT(list,i), base2));
         }
         UNPROTECT(1);
         return res;
@@ -87,6 +90,68 @@ static SEXP expand_structure (SEXP base, SEXP list)
     if (TYPEOF(base) == VECSXP) abort();
 
     return list;
+}
+
+
+/* Make an "identity" gradient for a value.  Has names at the top list level,
+   since will be used as 'base2' in expand_structure. */
+
+static SEXP make_id_recursive (SEXP val, SEXP top)
+{
+    R_len_t n = LENGTH(val);
+
+    SEXP res = PROTECT(allocVector(VECSXP,n));
+    setAttrib (res, R_NamesSymbol, getNamesAttrib(val));
+    SET_GRAD_WRT_LIST (res, 1);
+
+    for (R_len_t i = 0; i < n; i++) {
+        SEXP ntop = PROTECT (i == n-1 ? top : duplicate(top));
+        SEXP bot = ntop;
+        R_len_t j = 0;
+        while (j < LENGTH(bot)) {
+            if (VECTOR_ELT(bot,j) != R_NilValue) { 
+                bot = VECTOR_ELT(bot,j);
+                j = 0;
+            }
+            else
+                j += 1;
+        }
+        SEXP v = VECTOR_ELT (val, i);
+        if (TYPEOF(v) == REALSXP && LENGTH(v) == 1) {
+            SET_VECTOR_ELT (bot, i, R_ScalarRealOne);
+            SET_VECTOR_ELT (res, i, ntop);
+        }
+        else if (TYPEOF(v) == VECSXP) {
+            SET_VECTOR_ELT (bot, i, allocVector(VECSXP,LENGTH(v)));
+            SET_VECTOR_ELT (res, i, make_id_recursive (v, ntop));
+        }
+        UNPROTECT(1);
+    }
+
+#if 0
+REprintf("make_id: %d\n",GRAD_WRT_LIST(res));
+R_inspect(res);
+REprintf("------\n");
+#endif
+
+    UNPROTECT(1);
+    return res;
+}
+
+static SEXP make_id_grad (SEXP val)
+{
+    if (TYPEOF(val) == REALSXP && LENGTH(val) == 1)
+        return R_ScalarRealOne;
+
+    if (TYPEOF(val) == VECSXP) {
+        R_len_t n = LENGTH(val);
+        SEXP top = PROTECT(allocVector(VECSXP,n));
+        SEXP res = make_id_recursive (val, top);
+        UNPROTECT(1);
+        return res;
+    }
+ 
+    return R_NilValue;
 }
 
 
@@ -254,7 +319,7 @@ static SEXP get_gradient (SEXP env)
     PROTECT(gv);
     if (TYPEOF(gv) != VECSXP) abort();
     
-    int nv = LENGTH(gv);
+    int nv = GRADVARS_NV(gv);
 
     SEXP r = nv == 1 ? R_NilValue : allocVector(VECSXP,nv);
     PROTECT(r);
@@ -442,12 +507,12 @@ static SEXP add_scaled_SEXP(SEXP base, SEXP extra, SEXP factor)
 
 static SEXP create_gradient (SEXP result, SEXP result_grad, SEXP gv)
 {
-    int nv = LENGTH(gv);
+    int nv = GRADVARS_NV(gv);
 
     SEXP gr, gn;
 
     if (nv == 1)
-        gr = expand_structure (result, result_grad);
+        gr = expand_structure (result, result_grad, VECTOR_ELT(gv,1));
     else {
         R_len_t i;
         PROTECT (gr = allocVector (VECSXP, nv));
@@ -455,8 +520,9 @@ static SEXP create_gradient (SEXP result, SEXP result_grad, SEXP gv)
         setAttrib (gr, R_NamesSymbol, gn); 
         for (i = 0; i < nv; i++) {
             SET_STRING_ELT (gn, i, PRINTNAME (VECTOR_ELT (gv, i)));
-            SET_VECTOR_ELT (gr, i, 
-               expand_structure (result, VECTOR_ELT(result_grad,i)));
+            SET_VECTOR_ELT (gr, i, expand_structure (result, 
+                                                     VECTOR_ELT(result_grad,i),
+                                                     VECTOR_ELT(gv,nv+i)));
         }
         UNPROTECT(1);
     }
@@ -476,7 +542,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     if (nv < 1)
         errorcall (call, _("no gradient variables"));
 
-    SEXP gv = allocVector (VECSXP, nv);
+    SEXP gv = allocVector (VECSXP, GRADVARS_LEN(nv));
     SET_NAMEDCNT_MAX(gv);
     PROTECT(gv);
 
@@ -506,29 +572,28 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     PROTECT(newenv);
 
     /* Evaluate initial values assigned to variables, and put in binding 
-       cells, along with identity for gradient.  Also store gradients 
-       they may have in 'vargrad'. */
+       cells, along with identity for gradient, which also goes in GRADVARS.
+       Also store the gradients of initial variable values in 'vargrad'. */
 
     SEXP frame = R_NilValue;
     SEXP vargrad[nv];
 
-    PROTECT(frame);
+    PROTECT_INDEX fix;
+    PROTECT_WITH_INDEX(frame,&fix);
+
     for (i = 0, p = args; i < nv; i++, p = CDR(p)) {
         SEXP val = evalv (CAR(p), env, VARIANT_GRADIENT | VARIANT_PENDING_OK);
-        vargrad[i] = R_variant_result ? R_gradient : R_NilValue;
-        PROTECT(vargrad[i]);
-        if (TYPEOF(val) != REALSXP || LENGTH(val) != 1 /* for now */)
-            errorcall(call,_("gradient variable must have real scalar value"));
-        frame = cons_with_tag (val, frame, VECTOR_ELT(gv,i));
-        UNPROTECT(2);
-        PROTECT2(vargrad[i],frame);
-        SEXP id_grad = ScalarRealMaybeConst(1.0);
-        SEXP gcell = cons_with_tag (id_grad, R_NilValue, newenv);
-        SET_GRADINDEX (gcell, i+1);
-        SET_GRADIENT_IN_CELL (frame, gcell);
+        REPROTECT (frame = cons_with_tag (val, frame, VECTOR_ELT(gv,i)), fix);
+        PROTECT (vargrad[i] = R_variant_result ? R_gradient : R_NilValue);
+        SEXP id_grad = PROTECT (make_id_grad (val));
+        if (id_grad != R_NilValue) {
+            SET_VECTOR_ELT (gv, nv+i, id_grad);
+            SEXP gcell = cons_with_tag (id_grad, R_NilValue, newenv);
+            SET_GRADIENT_IN_CELL (frame, gcell);
+            SET_GRADINDEX (gcell, i+1);
+        }
         INC_NAMEDCNT(val);
     }
-    UNPROTECT(1); /* frame */
 
     /* Finish setting up new environment. */
 
@@ -590,7 +655,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     SET_GRADVARS(newenv,R_NilValue);  /* just in case it's somehow referenced */
 
-    UNPROTECT(4+nv);
+    UNPROTECT(5+2*nv);
     return result;
 }
 
@@ -779,7 +844,7 @@ attribute_hidden void Rf_gradient_trace (SEXP call)
         int ix = GRADINDEX(p);
         SEXP env = TAG(p);
         SEXP gv = GRADVARS(env);
-        if (gv==R_NoObject || TYPEOF(gv)!=VECSXP || ix < 1 || ix > LENGTH(gv))
+        if (gv==R_NoObject || TYPEOF(gv)!=VECSXP || ix<1 || ix>GRADVARS_NV(gv))
             REprintf("?? ");
         else
             REprintf("%s ",CHAR(PRINTNAME(VECTOR_ELT(gv,ix-1))));
