@@ -230,7 +230,8 @@ struct sxpinfo_struct {
 #   define TYPE_ET_CETERA_HAS_ATTR 0x80 /* Vector type, LISTSXP, or PROMSXP: 
                                              1 if ATTRIB != R_NilValue */
 
-    /* Second byte. */
+    /* Second byte.  Various flags, some of whose meaning varies with the
+       type of the object. */
 
     unsigned int nmcnt : 3;   /* Count of "names" referring to object */
 
@@ -244,7 +245,9 @@ struct sxpinfo_struct {
                                      Envir: store gradient with variables
                                      Promise: evaluate with VARIANT_GRADIENT */
     unsigned int base_sym_env : 1;/* Symbol: has base binding in global cache,
-                                     Envir: R_BaseEnv or R_BaseNamespace*/
+                                     Envir: R_BaseEnv or R_BaseNamespace 
+                                     VECSXP: Holds gradients wrt list variable,
+                                        as opposed to gradients _of_ list var */
 
     unsigned int obj : 1;     /* Set if this is an S3 or S4 object */
 
@@ -854,11 +857,6 @@ extern void helpers_wait_until_not_in_use(SEXP);
 
 #define ATTRIB(x)       NOT_LVALUE(TYPEOF(x)==SYMSXP ? R_NilValue : ATTRIB_W(x))
 
-#define GRADIENT_IN_CELL(x) ATTRIB_W(x)
-#define HAS_GRADIENT_IN_CELL(x) \
-(!HAS_ATTRIB(x) ? 0 : \
- TYPEOF(ATTRIB(x))==LISTSXP && TYPEOF(TAG(ATTRIB(x)))==ENVSXP ? 1 : (abort(),0))
-
 #define IS_PRINTNAME(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
 
 /* HAS_ATTR(x) check for existence of an attribute not R_NilValue, but only
@@ -974,8 +972,6 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SET_RDEBUG(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.debug=(v))
 #define RSTEP(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
 #define SET_RSTEP(x,v)	(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname=(v))
-#define STORE_GRAD(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
-#define SET_STORE_GRAD(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname=(v))
 
 /* Symbol Access Macros */
 #define PRINTNAME(x)	NOT_LVALUE(((SYMSEXP) UPTR_FROM_SEXP(x))->pname)
@@ -1006,11 +1002,27 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
                            /* 1 = R_BaseEnv or R_BaseNamespace */
 #define IS_USER_DATABASE(rho) \
   ( OBJECT((rho)) && inherits((rho), "UserDefinedDatabase") )
+
+
+/* Gradient-related stuff. */
+
+#define GRADIENT_IN_CELL(x) ATTRIB_W(x)
+#define HAS_GRADIENT_IN_CELL(x) \
+(!HAS_ATTRIB(x) ? 0 : \
+ TYPEOF(ATTRIB(x))==LISTSXP && TYPEOF(TAG(ATTRIB(x)))==ENVSXP ? 1 : (abort(),0))
+
+#define STORE_GRAD(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
+#define SET_STORE_GRAD(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname=(v))
+
 #define GRADVARS(x)	SEXP_FROM_SEXP32(((ENVSEXP)UPTR_FROM_SEXP(x))->gradvars)
 #define SET_GRADVARS(x,v)  (((ENVSEXP)UPTR_FROM_SEXP(x))->gradvars \
                              = SEXP32_FROM_SEXP(v))
 #define GRADINDEX(x)	((unsigned)LEVELS(x) >> 8)
 #define SET_GRADINDEX(x,v) SETLEVELS(x,(LEVELS(x)&0xff)|((v)<<8))
+
+#define GRAD_WRT_LIST(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.base_sym_env)
+#define SET_GRAD_WRT_LIST(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.base_sym_env=(v))
+
 
 #else /* not USE_RINTERNALS */
 

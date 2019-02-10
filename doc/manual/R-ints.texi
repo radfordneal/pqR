@@ -346,7 +346,8 @@ struct sxpinfo_struct @{
 #   define TYPE_ET_CETERA_HAS_ATTR 0x80 /* Vector type, LISTSXP, or PROMSXP: 
                                              1 if ATTRIB != R_NilValue */
 
-    /* Second byte. */
+    /* Second byte.  Various flags, some of whose meaning varies with the
+       type of the object. */
 
     unsigned int nmcnt : 3;   /* Count of "names" referring to object */
 
@@ -360,7 +361,9 @@ struct sxpinfo_struct @{
                                      Envir: store gradient with variables
                                      Promise: evaluate with VARIANT_GRADIENT */
     unsigned int base_sym_env : 1;/* Symbol: has base binding in global cache,
-                                     Envir: R_BaseEnv or R_BaseNamespace*/
+                                     Envir: R_BaseEnv or R_BaseNamespace
+                                     VECSXP: Holds gradients wrt list variable,
+                                        as opposed to gradients _of_ list var */
 
     unsigned int obj : 1;     /* Set if this is an S3 or S4 object */
 

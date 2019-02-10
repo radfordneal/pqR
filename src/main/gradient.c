@@ -41,12 +41,6 @@
 
 static SEXP expand_structure (SEXP base, SEXP list)
 {
-#if 0
-REprintf("expand\n"); 
-R_inspect(base); REprintf("--\n"); 
-R_inspect(list); REprintf("..\n");
-#endif
-
     if (list == R_NilValue) {
         if (base == R_NilValue)
             return R_NilValue;
@@ -593,6 +587,8 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
 
     }
+
+    SET_GRADVARS(newenv,R_NilValue);  /* just in case it's somehow referenced */
 
     UNPROTECT(4+nv);
     return result;
