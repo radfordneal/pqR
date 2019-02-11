@@ -2909,7 +2909,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
             R_variant_result = 1;
 
         if (grad != R_NilValue) {
-            R_gradient = Rf_subset_vector_gradient (grad, i, n);
+            R_gradient = subset_vector_gradient (grad, i, n);
             R_variant_result |= VARIANT_GRADIENT_FLAG;
         }
 
