@@ -105,6 +105,8 @@ static SEXP make_id_recursive (SEXP val, SEXP top)
     SET_GRAD_WRT_LIST (res, 1);
 
     for (R_len_t i = 0; i < n; i++) {
+
+        /* this code could be made for efficient, bypassing duplicate */
         SEXP ntop = PROTECT (i == n-1 ? top : duplicate(top));
         SEXP bot = ntop;
         R_len_t j = 0;
@@ -116,6 +118,7 @@ static SEXP make_id_recursive (SEXP val, SEXP top)
             else
                 j += 1;
         }
+
         SEXP v = VECTOR_ELT (val, i);
         if (TYPEOF(v) == REALSXP && LENGTH(v) == 1) {
             SET_VECTOR_ELT (bot, i, R_ScalarRealOne);

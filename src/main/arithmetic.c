@@ -1526,6 +1526,8 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
     R_variant_result = local_assign1 | local_assign2;
     double aval1 = *REAL(ans);
 
+    /* Handle gradients. */
+
     if (n==1 && (grad1 != R_NilValue || grad2 != R_NilValue) && !ISNAN(aval1)) {
         switch (opcode) {
         case PLUSOP: 
