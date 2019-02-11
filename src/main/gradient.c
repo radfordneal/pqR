@@ -498,8 +498,8 @@ static SEXP add_scaled_SEXP(SEXP base, SEXP extra, SEXP factor)
         SEXP res = R_NilValue; \
         SEXP tail; \
         while (grad != R_NilValue) { \
-            SEXP g = cons_with_tag (Rf_subset_vector_gradient \
-                       (CAR(grad), __VA_ARGS__), R_NilValue, TAG(grad)); \
+            SEXP g = cons_with_tag (fun (CAR(grad), __VA_ARGS__), \
+                                         R_NilValue, TAG(grad)); \
             SET_GRADINDEX (g, GRADINDEX(grad)); \
             if (res == R_NilValue) { \
                 PROTECT (res = g); \
@@ -517,8 +517,7 @@ static SEXP add_scaled_SEXP(SEXP base, SEXP extra, SEXP factor)
         SEXP res = PROTECT (allocVector(VECSXP,m)); \
         SET_GRAD_WRT_LIST (res, 1); \
         for (R_len_t j = 0; j < m; j++) \
-            SET_VECTOR_ELT (res, j,  \
-              Rf_subset_vector_gradient (VECTOR_ELT(grad,j), __VA_ARGS__)); \
+            SET_VECTOR_ELT (res, j, fun (VECTOR_ELT(grad,j), __VA_ARGS__)); \
         UNPROTECT(2); \
         return res; \
     } \
@@ -529,9 +528,9 @@ static SEXP add_scaled_SEXP(SEXP base, SEXP extra, SEXP factor)
 /* Create set of gradients from subsetting i'th element of gradients for 
    a vector of length n.  Protects its grad argument. */
 
-SEXP attribute_hidden subset_vector_gradient(SEXP grad, R_len_t i, R_len_t n)
+SEXP attribute_hidden subset_vector_gradient (SEXP grad, R_len_t i, R_len_t n)
 {
-    RECURSIVE_GRADIENT_APPLY (Rf_subset_vector_gradient, grad, i, n);
+    RECURSIVE_GRADIENT_APPLY (subset_vector_gradient, grad, i, n);
 
     if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
     if (i < 0 || i >= n) abort();
@@ -544,22 +543,14 @@ SEXP attribute_hidden subset_vector_gradient(SEXP grad, R_len_t i, R_len_t n)
 
 attribute_hidden SEXP copy_scaled_gradients (SEXP grad, double factor)
 {
-    SEXP p, q;
+    RECURSIVE_GRADIENT_APPLY (copy_scaled_gradients, grad, factor);
 
     PROTECT(grad);
 
-    for (p = grad, q = R_NilValue; p != R_NilValue; p = CDR(p)) {
-        PROTECT(q);
-        q = cons_with_tag (TYPEOF(CAR(p)) == REALSXP 
-                            ? ScalarRealMaybeConst (*REAL(CAR(p)) * factor)
-                            : scaled_list (CAR(p), factor),
-                           q, TAG(p));
-        SET_GRADINDEX (q, GRADINDEX(p));
-        UNPROTECT(1);
-    }
+    SEXP r = ScalarRealMaybeConst (*REAL(grad) * factor);
 
     UNPROTECT(1);
-    return q;
+    return r;
 }
 
 
