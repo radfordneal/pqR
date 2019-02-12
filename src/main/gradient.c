@@ -41,21 +41,22 @@
 
 static SEXP expand_structure (SEXP base, SEXP list, SEXP base2)
 {
-    if (TYPEOF(list) == VECSXP && GRAD_WRT_LIST(list)) {
-        if (TYPEOF(base2) != VECSXP || LENGTH(base2) != LENGTH(list)) abort();
-        if (!GRAD_WRT_LIST(base2)) abort();
-        R_len_t n = LENGTH(list);
+    if (TYPEOF(base2) == VECSXP && GRAD_WRT_LIST(base2)) {
+        R_len_t n = LENGTH(base2);
+        if (list != R_NilValue) {
+            if (TYPEOF(list) != VECSXP || !GRAD_WRT_LIST(list)) abort();
+            if (LENGTH(list) != n) abort();
+        }
         SEXP res = PROTECT(allocVector(VECSXP,n));
         setAttrib (res, R_NamesSymbol, getNamesAttrib(base2));
         R_len_t i;
         for (i = 0; i < n; i++)
-            SET_VECTOR_ELT (res, i, 
-              expand_structure (base, VECTOR_ELT(list,i), VECTOR_ELT(base2,i)));
+            SET_VECTOR_ELT (res, i, expand_structure (base, 
+                             list==R_NilValue ? R_NilValue : VECTOR_ELT(list,i),
+                             VECTOR_ELT(base2,i)));
         UNPROTECT(1);
         return res;
     }
-
-    if (TYPEOF(base2) == VECSXP && GRAD_WRT_LIST(base2)) abort();
 
     if (list == R_NilValue) {
         if (base == R_NilValue)
@@ -495,7 +496,6 @@ static SEXP add_scaled_SEXP(SEXP base, SEXP extra, SEXP factor)
    need to protect it again if required. */
 
 #define RECURSIVE_GRADIENT_APPLY(fun,grad,...) do { \
-    if (grad == R_NilValue) return R_NilValue; \
     PROTECT(grad); \
     if (TYPEOF(grad) == LISTSXP) { \
         SEXP res = R_NilValue; \
@@ -535,6 +535,9 @@ SEXP attribute_hidden subset_vector_gradient (SEXP grad, R_len_t i, R_len_t n)
 {
     RECURSIVE_GRADIENT_APPLY (subset_vector_gradient, grad, i, n);
 
+    if (grad == R_NilValue)
+        return R_NilValue;
+	
     if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
     if (i < 0 || i >= n) abort();
 
@@ -547,6 +550,9 @@ SEXP attribute_hidden subset_vector_gradient (SEXP grad, R_len_t i, R_len_t n)
 attribute_hidden SEXP copy_scaled_gradients (SEXP grad, double factor)
 {
     RECURSIVE_GRADIENT_APPLY (copy_scaled_gradients, grad, factor);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
 
     PROTECT(grad);
 
@@ -582,6 +588,99 @@ static SEXP create_gradient (SEXP result, SEXP result_grad, SEXP gv)
     }
 
     return gr;
+}
+
+
+/* Macro for building a function that applies a binary operation to all pairs
+   of gradients.  Protects grad and v, then unprotects them at the end, so
+   surrounding function will need to protect them again if required. */
+
+#define RECURSIVE_GRADIENT_APPLY2(fun,grad,v,...) do { \
+    PROTECT2(grad,v); \
+    if (TYPEOF(grad) == LISTSXP || TYPEOF(v) == LISTSXP) { \
+        if (grad != R_NilValue && TYPEOF(grad) != LISTSXP) abort(); \
+        if (v != R_NilValue && TYPEOF(v) != LISTSXP) abort(); \
+        SEXP res = R_NilValue; \
+/*      SEXP tail; \
+        while (grad != R_NilValue) { \
+            SEXP g = cons_with_tag (fun (CAR(grad), __VA_ARGS__), \
+                                         R_NilValue, TAG(grad)); \
+            SET_GRADINDEX (g, GRADINDEX(grad)); \
+            if (res == R_NilValue) { \
+                PROTECT (res = g); \
+            } \
+            else \
+                SETCDR (tail, g); \
+            tail = g; \
+            grad = CDR(grad); \
+        } \
+        UNPROTECT(2); */ \
+        return res; \
+    } \
+    else \
+    if (TYPEOF(grad) == VECSXP && GRAD_WRT_LIST(grad) \
+        || TYPEOF(v) == VECSXP && GRAD_WRT_LIST(v)) { \
+        R_len_t m = TYPEOF(grad) == VECSXP ? LENGTH(grad) : LENGTH(v); \
+        if (grad != R_NilValue) { \
+            if (TYPEOF(grad) != VECSXP || !GRAD_WRT_LIST(grad)) abort(); \
+            if (LENGTH(grad) != m) abort(); \
+        } \
+        if (v != R_NilValue) { \
+            if (TYPEOF(v) != VECSXP || !GRAD_WRT_LIST(v)) abort(); \
+            if (LENGTH(v) != m) abort(); \
+        } \
+        SEXP res = PROTECT (allocVector(VECSXP,m)); \
+        SET_GRAD_WRT_LIST (res, 1); \
+        for (R_len_t j = 0; j < m; j++) \
+            SET_VECTOR_ELT (res, j, \
+              fun (grad==R_NilValue ? R_NilValue : VECTOR_ELT(grad,j), \
+                   v==R_NilValue ? R_NilValue : VECTOR_ELT(v,j), \
+                   __VA_ARGS__)); \
+        UNPROTECT(3); \
+        return res; \
+    } \
+    UNPROTECT(2); \
+} while (0)
+
+
+/* Create set of gradients from grad that account for assigning v to the 
+   i'th element out of n (creating lists as necessary).  Protects its 
+   grad and v arguments. */
+
+SEXP attribute_hidden subassign_vector_gradient 
+                        (SEXP grad, SEXP v, R_len_t i, R_len_t n)
+{
+
+#if 0
+REprintf("subassign_vector_gradient %d %d\n",i,n);
+R_inspect(grad);
+REprintf("--\n");
+R_inspect(v);
+#endif
+
+    RECURSIVE_GRADIENT_APPLY2 (subassign_vector_gradient, grad, v, i, n);
+
+    if (grad == R_NilValue && v == R_NilValue)
+        return R_NilValue;
+
+    PROTECT2(grad,v);
+
+    if (grad == R_NilValue) 
+        grad = allocVector (VECSXP, n);
+    else {
+        if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
+        if (i < 0 || i >= n) abort();
+    }
+
+    SET_VECTOR_ELT (grad, i, v);
+
+#if 0
+REprintf("subassign_vector_gradient end\n",i,n);
+R_inspect(grad);
+#endif
+
+    UNPROTECT(2);
+    return grad;
 }
 
 

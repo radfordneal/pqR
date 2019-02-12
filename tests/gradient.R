@@ -764,4 +764,10 @@ with gradient (a=3.01) {
 
 with gradient (a=list(5,55,555)) a
 
-with gradient (a=list(x=7,y=list(z=10))) a
+with gradient (a=list(x=5,y=55,z=555)) a$x
+with gradient (a=list(x=5,y=55,z=555)) a$y
+with gradient (a=list(x=5,y=55,z=555)) a$z
+
+with gradient (a=list(x=5,y=55,z=555)) list(a$z,a$x^2)
+
+with gradient (a=list(x=7,y=list(3,z=10))) a

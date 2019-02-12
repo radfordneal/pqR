@@ -862,21 +862,21 @@ static SEXP makelist(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                         gv = CDR(gv);
                     }
                     if (gv == R_NilValue) {
-                        SEXP a = allocVector(VECSXP,n); 
-                        INC_NAMEDCNT(a);
-                        gv = cons_with_tag (a, R_gradient, TAG(ga));
+                        gv = cons_with_tag (R_NilValue, R_gradient, TAG(ga));
                         SET_GRADINDEX (gv, GRADINDEX(ga));
                         UNPROTECT_PROTECT (R_gradient = gv);
-                        if (names != R_NilValue)
-                            setAttrib (a, R_NamesSymbol, names);
                     }
-                    SET_VECTOR_ELEMENT_TO_VALUE (CAR(gv), i, CAR(ga));
+                    SETCAR (gv, subassign_vector_gradient(CAR(gv),CAR(ga),i,n));
                 }
+#if 0
+REprintf("makelist %d %d\n",i,n); R_inspect(R_gradient); REprintf("--\n");
+#endif
             }
         }
 
         UNPROTECT(1);
-        R_variant_result = VARIANT_GRADIENT_FLAG;
+        if (R_gradient != R_NilValue)
+            R_variant_result = VARIANT_GRADIENT_FLAG;
     }
 
     UNPROTECT(1);

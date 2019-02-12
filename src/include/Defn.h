@@ -1143,7 +1143,6 @@ extern void Rf_gradient_trace(SEXP);      /* function to trace R_gradient */
 #define GRADIENT_TRACE(call) \
     do { if (R_gradient_trace) Rf_gradient_trace(call); } while (0)
 
-extern SEXP Rf_subset_vector_gradient (SEXP, R_len_t, R_len_t);
 
 /* Can BLAS routines be done in helper threads? */
 
@@ -1397,6 +1396,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define StringFromReal		Rf_StringFromReal
 # define strIsASCII		Rf_strIsASCII
 # define StrToInternal		Rf_StrToInternal
+# define subassign_vector_gradient Rf_subassign_vector_gradient
 # define subset_vector_gradient	Rf_subset_vector_gradient
 # define substituteList		Rf_substituteList
 # define too_deep_error		Rf_too_deep_error
@@ -1630,6 +1630,7 @@ void SrcrefPrompt(const char *, SEXP);
 void ssort(SEXP*,int);
 void start_browser (SEXP, SEXP, SEXP, SEXP);
 int StrToInternal(const char *);
+SEXP subassign_vector_gradient(SEXP, SEXP, R_len_t, R_len_t);
 SEXP subset_vector_gradient(SEXP, R_len_t, R_len_t);
 SEXP substituteList(SEXP, SEXP);
 void R_trace_call(SEXP, SEXP);

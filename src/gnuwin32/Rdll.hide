@@ -417,6 +417,8 @@
  Rf_ssort
  Rf_start_browser
  Rf_stirlerr
+ Rf_subassign_vector_gradient
+ Rf_subset_vector_gradient
  Rf_substituteList
  Rf_ucstomb
  Rf_unbound_var_error
