@@ -3949,4 +3949,117 @@ attr(,"gradient")$y$z$y$z
 
 
 
+> with gradient (a=list(x=7,y=list(3,z=10))) list(a$y$z,a$x,-a$x)
+[[1]]
+[1] 10
+
+[[2]]
+[1] 7
+
+[[3]]
+[1] -7
+
+attr(,"gradient")
+attr(,"gradient")$x
+attr(,"gradient")$x[[1]]
+[1] 0
+
+attr(,"gradient")$x[[2]]
+[1] 1
+
+attr(,"gradient")$x[[3]]
+[1] -1
+
+
+attr(,"gradient")$y
+attr(,"gradient")$y[[1]]
+attr(,"gradient")$y[[1]][[1]]
+[1] 0
+
+attr(,"gradient")$y[[1]][[2]]
+[1] 0
+
+attr(,"gradient")$y[[1]][[3]]
+[1] 0
+
+
+attr(,"gradient")$y$z
+attr(,"gradient")$y$z[[1]]
+[1] 1
+
+attr(,"gradient")$y$z[[2]]
+[1] 0
+
+attr(,"gradient")$y$z[[3]]
+[1] 0
+
+
+
+> with gradient (a=list(x=7,y=list(3,z=10))) list(a$y,a$x,-a$x)
+[[1]]
+[[1]][[1]]
+[1] 3
+
+[[1]]$z
+[1] 10
+
+
+[[2]]
+[1] 7
+
+[[3]]
+[1] -7
+
+attr(,"gradient")
+attr(,"gradient")$x
+attr(,"gradient")$x[[1]]
+attr(,"gradient")$x[[1]][[1]]
+[1] 0
+
+attr(,"gradient")$x[[1]]$z
+[1] 0
+
+
+attr(,"gradient")$x[[2]]
+[1] 1
+
+attr(,"gradient")$x[[3]]
+[1] -1
+
+
+attr(,"gradient")$y
+attr(,"gradient")$y[[1]]
+attr(,"gradient")$y[[1]][[1]]
+attr(,"gradient")$y[[1]][[1]][[1]]
+[1] 1
+
+attr(,"gradient")$y[[1]][[1]]$z
+[1] 0
+
+
+attr(,"gradient")$y[[1]][[2]]
+[1] 0
+
+attr(,"gradient")$y[[1]][[3]]
+[1] 0
+
+
+attr(,"gradient")$y$z
+attr(,"gradient")$y$z[[1]]
+attr(,"gradient")$y$z[[1]][[1]]
+[1] 0
+
+attr(,"gradient")$y$z[[1]]$z
+[1] 1
+
+
+attr(,"gradient")$y$z[[2]]
+[1] 0
+
+attr(,"gradient")$y$z[[3]]
+[1] 0
+
+
+
+> 
 > 

@@ -849,32 +849,16 @@ static SEXP makelist(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* Find merged gradient information, if there is any. */
 
     if (has_grad) {
-
-        PROTECT(R_gradient = R_NilValue);
-
+        R_gradient = R_NilValue;
         for (arg = args, i = 0; arg != R_NilValue; arg = CDR(arg), i++) {
             if (HAS_GRADIENT_IN_CELL(arg)) {
-                SEXP ga;
-                for (ga = GRADIENT_IN_CELL(arg); ga!=R_NilValue; ga = CDR(ga)) {
-                    SEXP gv = R_gradient;
-                    while (gv != R_NilValue &&
-                      (TAG(gv) != TAG(ga) || GRADINDEX(gv) != GRADINDEX(ga))) {
-                        gv = CDR(gv);
-                    }
-                    if (gv == R_NilValue) {
-                        gv = cons_with_tag (R_NilValue, R_gradient, TAG(ga));
-                        SET_GRADINDEX (gv, GRADINDEX(ga));
-                        UNPROTECT_PROTECT (R_gradient = gv);
-                    }
-                    SETCAR (gv, subassign_vector_gradient(CAR(gv),CAR(ga),i,n));
-                }
+                R_gradient = subassign_vector_gradient 
+                               (R_gradient, GRADIENT_IN_CELL(arg), i, n);
 #if 0
-REprintf("makelist %d %d\n",i,n); R_inspect(R_gradient); REprintf("--\n");
+REprintf("*** makelist %d %d\n",i,n); R_inspect(R_gradient); REprintf("--\n");
 #endif
             }
         }
-
-        UNPROTECT(1);
         if (R_gradient != R_NilValue)
             R_variant_result = VARIANT_GRADIENT_FLAG;
     }

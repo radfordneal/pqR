@@ -771,3 +771,6 @@ with gradient (a=list(x=5,y=55,z=555)) a$z
 with gradient (a=list(x=5,y=55,z=555)) list(a$z,a$x^2)
 
 with gradient (a=list(x=7,y=list(3,z=10))) a
+with gradient (a=list(x=7,y=list(3,z=10))) list(a$y$z,a$x,-a$x)
+with gradient (a=list(x=7,y=list(3,z=10))) list(a$y,a$x,-a$x)
+
