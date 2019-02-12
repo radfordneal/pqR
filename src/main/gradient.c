@@ -550,7 +550,6 @@ attribute_hidden SEXP copy_scaled_gradients (SEXP grad, double factor)
 
 /* Create set of gradients from grad that account for assigning v to the 
    i'th element out of n of a vector list (creating lists as necessary).
-   The grad argument may be modified here.  
 
    Protects its grad and v arguments. */
 
@@ -577,12 +576,53 @@ R_inspect(v);
     else {
         if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
         if (i < 0 || i >= n) abort();
+        grad = dup_top_level(grad);
     }
 
     SET_VECTOR_ELT (grad, i, v);
 
     UNPROTECT(2);
     return grad;
+}
+
+
+/* Create set of gradients from grad that account for assigning v to a
+   new element after the last of a vector list.
+
+   Protects its grad and v arguments. */
+
+SEXP attribute_hidden extend_list_gradient (SEXP grad, SEXP v, R_len_t n)
+{
+#if 0
+REprintf("*** extend_list_gradient %d %d\n",n);
+R_inspect(grad);
+REprintf("--\n");
+R_inspect(v);
+#endif
+
+    RECURSIVE_GRADIENT_APPLY2 (extend_list_gradient, grad, v, n);
+
+    if (grad == R_NilValue && v == R_NilValue)
+        return R_NilValue;
+
+    PROTECT2(grad,v);
+
+    SEXP res = allocVector (VECSXP, n+1);
+    if (grad != R_NilValue) {
+        if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
+        copy_vector_elements (res, 0, grad, 0, n);
+    }
+
+    SET_VECTOR_ELT (res, n, v);
+
+#if 0
+REprintf("*** extend_list_gradient end\n");
+R_inspect();
+REprintf("==\n");
+#endif
+
+    UNPROTECT(2);
+    return res;
 }
 
 

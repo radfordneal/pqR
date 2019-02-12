@@ -1304,6 +1304,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define evalList_gradient	Rf_evalList_gradient
 # define evalList_v		Rf_evalList_v
 # define eval_unshared		Rf_eval_unshared
+# define extend_list_gradient	Rf_extend_list_gradient
 # define factorsConform		Rf_factorsConform
 # define findcontext		Rf_findcontext
 # define findFun_nospecsym	Rf_findFun_nospecsym
@@ -1526,6 +1527,7 @@ SEXP evalListUnshared(SEXP, SEXP);
 SEXP evalList_gradient(SEXP, SEXP, int, int, int);
 SEXP evalList_v(SEXP, SEXP, int);
 SEXP eval_unshared(SEXP,SEXP,int);
+SEXP extend_list_gradient(SEXP, SEXP, R_len_t);
 int factorsConform(SEXP, SEXP);
 void R_NORETURN findcontext(int, SEXP, SEXP);
 SEXP findFun_nospecsym(SEXP, SEXP);

@@ -4917,83 +4917,6 @@ SEXP attribute_hidden do_subassign2_dflt_int
 }
 
 
-/* Create a pairlist of gradient values for a vector list value, from
-   an existing pairlist of such gradient values ('grad'), and a pairlist
-   of gradient value for a element that is inserted into the list ('new').
-   The new gradient values should have length 'len' (possibly greater than
-   those in 'grad', if the inserted element is a new one).  The index
-   of the inserted element is 'ix'.  The vector of names of elements for
-   the new list is 'names'. */
-
-static SEXP new_veclist_grad 
-               (SEXP grad, R_len_t len, SEXP new, R_len_t ix, SEXP names)
-{
-    SEXP p, q, r;
-
-    if (ix < 0 || ix >= len) abort();
-
-    PROTECT2(new,names);
-    PROTECT(grad = copy_pairlist(grad));
-
-    /* Update gradient values in 'grad' to account for the insertion of
-       the new element.  This requires searching 'new' for a corresponding
-       gradient value; these are then deleted from 'new', but for efficiency
-       here, and so the remaining ones are identified. */
-
-    for (p = grad; p != R_NilValue; p = CDR(p)) {
-
-        if (CAR(p) == R_NilValue) continue;
-        if (TYPEOF(CAR(p)) != VECSXP) abort();
-
-        if (LENGTH(CAR(p)) == len) {
-            q = dup_top_level(CAR(p));
-            SETCAR(p,q);
-        }
-        else {
-            q = allocVector (VECSXP, len);
-            copy_vector_elements (q, 0, CAR(p), 0, 
-                                  len > LENGTH(CAR(p)) ? LENGTH(CAR(p)) : len);
-            SETCAR(p,q);
-            setAttrib (q, R_NamesSymbol, names);
-        }
-
-        SEXP prev;        
-        for (r = new; r != R_NilValue; r = CDR(r)) {
-            if (TAG(r)==TAG(p) && GRADINDEX(r)==GRADINDEX(p))
-                break;
-            prev = r;
-        }
-
-        if (r == R_NilValue)
-            SET_VECTOR_ELT (q, ix, R_NilValue);
-        else {
-            SET_VECTOR_ELT (q, ix, CAR(r));
-            INC_NAMEDCNT(CAR(r));
-            if (r == new)
-                new = CDR(r);
-            else
-                SETCDR(prev,CDR(r));
-        }
-    }
-
-    /* Create new gradient values for the list that are with respect to
-       variables only appearing in 'new', not in 'grad'. */
-
-    for (r = new; r != R_NilValue; r = CDR(r)) {
-        PROTECT(grad);
-        q = allocVector (VECSXP, len);
-        setAttrib (q, R_NamesSymbol, names);
-        grad = cons_with_tag (q, grad, TAG(r));
-        SET_GRADINDEX (grad, GRADINDEX(r));
-        SET_VECTOR_ELT (q, ix, CAR(r));
-        UNPROTECT(1);
-    }
-
-    UNPROTECT(3);
-    return grad;
-}
-
-
 /* R_subassign3_dflt is called from do_subassign3, and elsewhere.
    Protects x and val, and x_grad and val_grad; name should be a
    symbol and hence not needing protection.  Sets R_Visible to TRUE. */
@@ -5110,8 +5033,8 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val,
             DEC_NAMEDCNT (VECTOR_ELT(x,imatch));
             SET_VECTOR_ELEMENT_TO_VALUE(x, imatch, val);
             if (x_grad != R_NilValue || val_grad != R_NilValue)
-                res_grad = new_veclist_grad
-                             (x_grad, nx, val_grad, imatch, names);
+                res_grad = subassign_list_gradient
+                             (x_grad, val_grad, imatch, nx);
         }
         else {  /* adding a new element */
 
@@ -5136,8 +5059,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val,
             setAttrib (ans, R_NamesSymbol, ansnames);
 
             if (x_grad != R_NilValue || val_grad != R_NilValue)
-                res_grad = new_veclist_grad 
-                             (x_grad, nx+1, val_grad, nx, ansnames);
+                res_grad = extend_list_gradient (x_grad, val_grad, nx);
 
             UNPROTECT(2);
             x = ans;

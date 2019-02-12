@@ -795,3 +795,15 @@ with gradient (b=list(10,bb=list(bbb=3,4),20)) {
   r$a3 <- NULL
   r
 }
+
+with gradient (b=list(3,abc=4)) {
+  r <- list(x=b,y=b$abc,z=b$abc^2)
+  r$y <- b$abc^3
+  r
+}
+
+with gradient (b=list(3,abc=4)) {
+  r <- list(x=b,y=b$abc,z=b$abc^2)
+  r$w <- b$abc^3
+  r
+}
