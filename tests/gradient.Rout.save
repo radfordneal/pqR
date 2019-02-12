@@ -4346,3 +4346,79 @@ attr(,"gradient")$abc$w
 
 
 > 
+> 
+> # Test backpropagation.
+> 
+> with gradient (a=5) 
++   with gradient (d=a^2) sin(d)
+[1] -0.1323518
+attr(,"gradient")
+[1] 9.912028
+> 
+> with gradient (a=5,b=7) 
++   with gradient (d=a^2+b,e=a*b) sin(d)+sqrt(e)
+[1] 6.467506
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 8.933842
+
+attr(,"gradient")$b
+[1] 1.2568
+
+> 
+> with gradient (a=5,b=7) 
++   with gradient (d=a^2+b,e=a*b) list(sin(d)+sqrt(e),55)
+[[1]]
+[1] 6.467506
+
+[[2]]
+[1] 55
+
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+[1] 8.933842
+
+attr(,"gradient")$a[[2]]
+[1] 0
+
+
+attr(,"gradient")$b
+attr(,"gradient")$b[[1]]
+[1] 1.2568
+
+attr(,"gradient")$b[[2]]
+[1] 0
+
+
+> 
+> with gradient (L=list(a=5,b=7))
++   with gradient (d=L$a^2+L$b,e=L$a*L$b) sin(d)+sqrt(e)
+[1] 6.467506
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 8.933842
+
+attr(,"gradient")$b
+[1] 1.2568
+
+> 
+> if (FALSE) {
++ 
++ with gradient (a=5,b=7)
++   with gradient (M=list(d=a^2+b,e=a*b)) sin(M$d)+sqrt(M$e)
++ 
++ with gradient (a=5,b=7)
++   with gradient (M=list(d=a^2+b,e=a*b)) list(sin(M$d)+sqrt(M$e),55)
++ 
++ with gradient (L=list(a=5,b=7))
++   with gradient (M=list(d=L$a^2+L$b,e=L$a*L$b)) sin(M$d)+sqrt(M$e)
++ 
++ with gradient (L=list(a=5,b=7))
++   with gradient (d=L$a^2+L$b,e=L$a*L$b) list(sin(d)+sqrt(e),55)
++ 
++ with gradient (L=list(a=5,b=7))
++   with gradient (M=list(d=L$a^2+L$b,e=L$a*L$b)) list(sin(M$d)+sqrt(M$e),55)
++ 
++ }
+> 

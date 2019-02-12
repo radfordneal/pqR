@@ -807,3 +807,37 @@ with gradient (b=list(3,abc=4)) {
   r$w <- b$abc^3
   r
 }
+
+
+# Test backpropagation.
+
+with gradient (a=5) 
+  with gradient (d=a^2) sin(d)
+
+with gradient (a=5,b=7) 
+  with gradient (d=a^2+b,e=a*b) sin(d)+sqrt(e)
+
+with gradient (a=5,b=7) 
+  with gradient (d=a^2+b,e=a*b) list(sin(d)+sqrt(e),55)
+
+with gradient (L=list(a=5,b=7))
+  with gradient (d=L$a^2+L$b,e=L$a*L$b) sin(d)+sqrt(e)
+
+if (FALSE) {
+
+with gradient (a=5,b=7)
+  with gradient (M=list(d=a^2+b,e=a*b)) sin(M$d)+sqrt(M$e)
+
+with gradient (a=5,b=7)
+  with gradient (M=list(d=a^2+b,e=a*b)) list(sin(M$d)+sqrt(M$e),55)
+
+with gradient (L=list(a=5,b=7))
+  with gradient (M=list(d=L$a^2+L$b,e=L$a*L$b)) sin(M$d)+sqrt(M$e)
+
+with gradient (L=list(a=5,b=7))
+  with gradient (d=L$a^2+L$b,e=L$a*L$b) list(sin(d)+sqrt(e),55)
+
+with gradient (L=list(a=5,b=7))
+  with gradient (M=list(d=L$a^2+L$b,e=L$a*L$b)) list(sin(M$d)+sqrt(M$e),55)
+
+}
