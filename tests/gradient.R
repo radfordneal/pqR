@@ -768,7 +768,11 @@ with gradient (a=list(x=5,y=55,z=555)) a$x
 with gradient (a=list(x=5,y=55,z=555)) a$y
 with gradient (a=list(x=5,y=55,z=555)) a$z
 
-with gradient (a=list(x=5,y=55,z=555)) list(a$z,a$x^2)
+with gradient (a=list(x=5,y=55,z=555)) sqrt(a$y)
+with gradient (a=list(x=5,y=55,z=555)) a$z+a$x
+with gradient (a=list(x=5,y=55,z=555)) a$z*a$x
+
+with gradient (a=list(x=5,y=55,z=555)) list(a$z,a$x^2, a$x*a$y*a$z)
 
 with gradient (a=list(x=7,y=list(3,z=10))) a
 with gradient (a=list(x=7,y=list(3,z=10))) list(a$y$z,a$x,-a$x)

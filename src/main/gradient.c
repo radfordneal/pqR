@@ -549,60 +549,32 @@ R_inspect(v);
 }
 
 
-/* Add the product of gradients in extra and in factor, to the set of
-   gradients in base. 
+/* Add the product of gradients in extra times factor to the set of
+   gradients in base.
 
    Protects its arguments. */
 
 attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
 {
-    SEXP p, q, r;
+    RECURSIVE_GRADIENT_APPLY2 (add_scaled_gradients, base, extra, factor);
+
+    double d = 0.0;
 
     PROTECT2(base,extra);
 
-    r = R_NilValue;
-    
-    /* Include gradients found in base, possibly adding gradient from extra
-       times factor. */
-
-    for (p = base; p != R_NilValue; p = CDR(p)) {
-        for (q = extra; q != R_NilValue; q = CDR(q)) {
-            if (TAG(p) == TAG(q) && GRADINDEX(p) == GRADINDEX(q)) {
-                if (TYPEOF(CAR(q)) != REALSXP) abort();
-                if (TYPEOF(CAR(p)) != REALSXP) abort();
-                PROTECT(r);
-                r = cons_with_tag (
-                     ScalarRealMaybeConst(*REAL(CAR(p)) + *REAL(CAR(q))*factor),
-                     r, TAG(q));
-                SET_GRADINDEX (r, GRADINDEX(p));
-                UNPROTECT(1);
-                goto next_base;
-            }
-        }
-        r = cons_with_tag (CAR(p), r, TAG(p));
-        SET_GRADINDEX (r, GRADINDEX(p));
-      next_base: ;
+    if (base != R_NilValue) {
+        if (TYPEOF(base) != REALSXP || LENGTH(base) != 1) abort();
+        d = *REAL(base);
     }
 
-    /* Include gradients only found in extra, times factor. */
-
-    for (q = extra; q != R_NilValue; q = CDR(q)) {
-        for (p = base; p != R_NilValue; p = CDR(p)) {
-            if (TAG(p) == TAG(q) && GRADINDEX(p) == GRADINDEX(q)) {
-                goto next_extra;
-            }
-        }
-        if (TYPEOF(CAR(q)) != REALSXP) abort();
-        PROTECT(r);
-        r = cons_with_tag (ScalarRealMaybeConst (*REAL(CAR(q)) * factor),
-                           r, TAG(q));
-        SET_GRADINDEX (r, GRADINDEX(q));
-        UNPROTECT(1);
-      next_extra: ;
+    if (extra != R_NilValue) {
+        if (TYPEOF(extra) != REALSXP || LENGTH(extra) != 1) abort();
+        d += *REAL(extra) * factor;
     }
 
     UNPROTECT(2);
-    return r;
+
+    return ScalarRealMaybeConst(d);
 }
 
 
