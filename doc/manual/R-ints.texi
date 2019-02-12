@@ -600,7 +600,9 @@ have ever been stored in the environment, allowing quick determination
 that some symbols cannot be in the environment.  Finally, if the
 environment is for the body of a @code{with gradient} or @code{track gradient}
 construct, it contains a vector list of symbols for the variables
-whose gradient will be tracked, accessed by @code{GRADVARS}.
+whose gradient will be tracked, accessed by @code{GRADVARS}.  This 
+list is not seen by the garbage collector, and hence must be protected
+otherwise (by @code{with gradient} or @code{track gradient}).
 
 @item PROMSXP
 Pointers to the value, expression and environment (in which to evaluate
@@ -1003,6 +1005,28 @@ particular variable within that environment is identified by
 pairlist node, which indexes a table pointed by the @code{GRADVARS}
 field of the environment.
 
+The gradient information for the gradient of a scalar quantity with
+respect to a scalar variabl is just a scalar real.  If the gradient is
+for a list, the gradient is a list of gradients for the list elements,
+with arbitrary depth of nesting.  If the gradient is with respect to a
+list variable, the gradient information is a list with the
+@code{GRAD_WRT_LIST} flag set, with elements of this list being the
+gradient with respect to the elements of the variable (which may
+itself be a list, to arbitrary depth).  For example, the gradient
+information for a list of 10 scalars with respect to a list of 20
+scalars will be a list of length 20 with the @code{GRAD_WRT_LIST} flag
+set, whose elements are lists of length 10 without the
+@code{GRAD_WRT_LIST} flag set, which have scalar reals as elements.
+
+Gradient information may be @code{R_NilValue} when the gradient is
+zero (or all zeros for lists).  @code{R_NilValue} may also appear as a
+list element in a gradient value, indicating that the gradient for
+that portion of the variable is zero.  
+
+Gradient values do not have names (they are instead added when the
+gradient information is converted to user-visible form), but the lists
+with @code{GRADINDEX} may have names.
+
 @code{VARIANT_GRADIENT} is used when evaluating the body of a
 @code{with gradient} or @code{track gradient} construct, and passed on
 from there, for example in an if expression.  @code{VARIANT_GRADIENT}
@@ -1018,11 +1042,11 @@ their binding cell, accessed in this context as
 @code{GRADIENT_IN_CELL(x)}, and set by
 @code{SET_GRADIENT_IN_CELL(x,g)}.  Gradient information can also be
 stored in the attribute field of a promise, when it is forced, if it
-has the @code{STORE_GRAD} flag, and is accessed by the same macros.
-The internal @code{evalList_gradient} function evaluates a pairlist of
-arguments and returns a pairlist of values in which gradient
-information may be stored in the attribute field of each node, again
-for accesswith @code{GRADIENT_IN_CELL}.
+has the @code{STORE_GRAD} flag, and this informatiion is accessed by
+the same macros.  The internal @code{evalList_gradient} function
+evaluates a pairlist of arguments and returns a pairlist of values in
+which gradient information may be stored in the attribute field of
+each node, again for access with @code{GRADIENT_IN_CELL}.
 
 
 @node Contexts, Argument evaluation, Gradient information, R Internal Structures
