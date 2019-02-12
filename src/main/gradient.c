@@ -414,12 +414,12 @@ static inline SEXP get_other_gradients (SEXP xenv)
 } while (0)
 
 
-/* Create set of gradients from subsetting i'th element of gradients for 
-   a vector of length n.  Protects its grad argument. */
+/* Create set of gradients from subsetting the i'th element of gradients for 
+   a vector list of length n.  Protects its grad argument. */
 
-SEXP attribute_hidden subset_vector_gradient (SEXP grad, R_len_t i, R_len_t n)
+SEXP attribute_hidden subset_list_gradient (SEXP grad, R_len_t i, R_len_t n)
 {
-    RECURSIVE_GRADIENT_APPLY (subset_vector_gradient, grad, i, n);
+    RECURSIVE_GRADIENT_APPLY (subset_list_gradient, grad, i, n);
 
     if (grad == R_NilValue)
         return R_NilValue;
@@ -428,6 +428,43 @@ SEXP attribute_hidden subset_vector_gradient (SEXP grad, R_len_t i, R_len_t n)
     if (i < 0 || i >= n) abort();
 
     return VECTOR_ELT (grad, i);
+}
+
+
+/* Create set of gradients from deleting the i'th element of gradients for 
+   a vector list of length n.  Protects its grad argument. */
+
+SEXP attribute_hidden delete_list_gradient (SEXP grad, R_len_t i, R_len_t n)
+{
+
+#if 0
+REprintf("*** delete_list_gradient %d %d\n",i,n);
+R_inspect(grad);
+REprintf("--\n");
+#endif
+
+    RECURSIVE_GRADIENT_APPLY (delete_list_gradient, grad, i, n);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+	
+    if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
+    if (i < 0 || i >= n) abort();
+
+    PROTECT(grad);
+
+    SEXP res = allocVector (VECSXP, n-1);
+    if (i > 0) copy_vector_elements (res, 0, grad, 0, i);
+    if (i < n-1) copy_vector_elements (res, i, grad, i+1, n-1-i);
+
+#if 0
+REprintf("*** delete_list_gradient end\n");
+R_inspect(grad);
+REprintf("==\n");
+#endif
+
+    UNPROTECT(1);
+    return res;
 }
 
 
@@ -512,23 +549,23 @@ attribute_hidden SEXP copy_scaled_gradients (SEXP grad, double factor)
 
 
 /* Create set of gradients from grad that account for assigning v to the 
-   i'th element out of n (creating lists as necessary).  The grad argument
-   may be modified here.  
+   i'th element out of n of a vector list (creating lists as necessary).
+   The grad argument may be modified here.  
 
    Protects its grad and v arguments. */
 
-SEXP attribute_hidden subassign_vector_gradient 
-                        (SEXP grad, SEXP v, R_len_t i, R_len_t n)
+SEXP attribute_hidden subassign_list_gradient 
+                       (SEXP grad, SEXP v, R_len_t i, R_len_t n)
 {
 
 #if 0
-REprintf("*** subassign_vector_gradient %d %d\n",i,n);
+REprintf("*** subassign_list_gradient %d %d\n",i,n);
 R_inspect(grad);
 REprintf("--\n");
 R_inspect(v);
 #endif
 
-    RECURSIVE_GRADIENT_APPLY2 (subassign_vector_gradient, grad, v, i, n);
+    RECURSIVE_GRADIENT_APPLY2 (subassign_list_gradient, grad, v, i, n);
 
     if (grad == R_NilValue && v == R_NilValue)
         return R_NilValue;

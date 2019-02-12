@@ -778,3 +778,20 @@ with gradient (a=list(x=7,y=list(3,z=10))) a
 with gradient (a=list(x=7,y=list(3,z=10))) list(a$y$z,a$x,-a$x)
 with gradient (a=list(x=7,y=list(3,z=10))) list(a$y,a$x,-a$x)
 
+with gradient (b=list(3,abc=4)) {
+  r <- list(x=b,y=b$abc,z=b$abc^2)
+  r$y <- NULL
+  r
+}
+
+with gradient (b=list(3,abc=4)) {
+  r <- list(x=b,y=b$abc,z=b$abc^2)
+  r$x <- NULL
+  r
+}
+
+with gradient (b=list(10,bb=list(bbb=3,4),20)) {
+  r <- list(a1=7,a2=-b$bb$bbb,a3=b)
+  r$a3 <- NULL
+  r
+}

@@ -2909,7 +2909,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
             R_variant_result = 1;
 
         if (grad != R_NilValue) {
-            R_gradient = subset_vector_gradient (grad, i, n);
+            R_gradient = subset_list_gradient (grad, i, n);
             R_variant_result |= VARIANT_GRADIENT_FLAG;
         }
 
@@ -5102,17 +5102,8 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val,
         else if (val == R_NilValue) {  /* deleting an element */
 
             REPROTECT(x = DeleteListElementsSeq(x,imatch+1,imatch+1), pxidx);
-            if (x_grad != R_NilValue) {
-                REPROTECT (x_grad = copy_pairlist(x_grad), pxgidx);
-            }
-            for (SEXP p = x_grad; p != R_NilValue; p = CDR(p)) {
-                SEXP q = CAR(p);
-                if (q == R_NilValue) continue;
-                if (TYPEOF(q) != VECSXP || LENGTH(q) != nx) abort();
-                q = DeleteListElementsSeq (q, imatch+1, imatch+1);
-                SETCAR(p,q);
-            }
-            res_grad = x_grad;
+            if (x_grad != R_NilValue)
+                res_grad = delete_list_gradient (x_grad, imatch, nx);
         }
         else if (imatch >= 0) {  /* replacing an element */
 

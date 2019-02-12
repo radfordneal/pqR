@@ -852,7 +852,7 @@ static SEXP makelist(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         R_gradient = R_NilValue;
         for (arg = args, i = 0; arg != R_NilValue; arg = CDR(arg), i++) {
             if (HAS_GRADIENT_IN_CELL(arg)) {
-                R_gradient = subassign_vector_gradient 
+                R_gradient = subassign_list_gradient 
                                (R_gradient, GRADIENT_IN_CELL(arg), i, n);
 #if 0
 REprintf("*** makelist %d %d\n",i,n); R_inspect(R_gradient); REprintf("--\n");

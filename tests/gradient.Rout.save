@@ -4111,4 +4111,123 @@ attr(,"gradient")$y$z[[3]]
 
 
 > 
+> with gradient (b=list(3,abc=4)) {
++   r <- list(x=b,y=b$abc,z=b$abc^2)
++   r$y <- NULL
++   r
++ }
+$x
+$x[[1]]
+[1] 3
+
+$x$abc
+[1] 4
+
+
+$z
+[1] 16
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]]$x
+attr(,"gradient")[[1]]$x[[1]]
+[1] 1
+
+attr(,"gradient")[[1]]$x$abc
+[1] 0
+
+
+attr(,"gradient")[[1]]$z
+[1] 0
+
+
+attr(,"gradient")$abc
+attr(,"gradient")$abc$x
+attr(,"gradient")$abc$x[[1]]
+[1] 0
+
+attr(,"gradient")$abc$x$abc
+[1] 1
+
+
+attr(,"gradient")$abc$z
+[1] 8
+
+
+> 
+> with gradient (b=list(3,abc=4)) {
++   r <- list(x=b,y=b$abc,z=b$abc^2)
++   r$x <- NULL
++   r
++ }
+$y
+[1] 4
+
+$z
+[1] 16
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]]$y
+[1] 0
+
+attr(,"gradient")[[1]]$z
+[1] 0
+
+
+attr(,"gradient")$abc
+attr(,"gradient")$abc$y
+[1] 1
+
+attr(,"gradient")$abc$z
+[1] 8
+
+
+> 
+> with gradient (b=list(10,bb=list(bbb=3,4),20)) {
++   r <- list(a1=7,a2=-b$bb$bbb,a3=b)
++   r$a3 <- NULL
++   r
++ }
+$a1
+[1] 7
+
+$a2
+[1] -3
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]]$a1
+[1] 0
+
+attr(,"gradient")[[1]]$a2
+[1] 0
+
+
+attr(,"gradient")$bb
+attr(,"gradient")$bb$bbb
+attr(,"gradient")$bb$bbb$a1
+[1] 0
+
+attr(,"gradient")$bb$bbb$a2
+[1] -1
+
+
+attr(,"gradient")$bb[[2]]
+attr(,"gradient")$bb[[2]]$a1
+[1] 0
+
+attr(,"gradient")$bb[[2]]$a2
+[1] 0
+
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]]$a1
+[1] 0
+
+attr(,"gradient")[[3]]$a2
+[1] 0
+
+
 > 
