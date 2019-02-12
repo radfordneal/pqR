@@ -377,120 +377,6 @@ static inline SEXP get_other_gradients (SEXP xenv)
 }
 
 
-/* Add the product of gradients in extra and in factor, to the set of
-   gradients in base.  Factor may be a scalar or a list (for the 
-   add_scaled_SEXP version), as may the gradients in base.  The gradients
-   in extra must be scalars. 
-
-   Protects its arguments. */
-
-attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
-{
-    SEXP p, q, r;
-
-    PROTECT2(base,extra);
-
-    r = R_NilValue;
-    
-    /* Include gradients found in base, possibly adding gradient from extra
-       times factor. */
-
-    for (p = base; p != R_NilValue; p = CDR(p)) {
-        for (q = extra; q != R_NilValue; q = CDR(q)) {
-            if (TAG(p) == TAG(q) && GRADINDEX(p) == GRADINDEX(q)) {
-                if (TYPEOF(CAR(q)) != REALSXP) abort();
-                if (TYPEOF(CAR(p)) != REALSXP) abort();
-                PROTECT(r);
-                r = cons_with_tag (
-                     ScalarRealMaybeConst(*REAL(CAR(p)) + *REAL(CAR(q))*factor),
-                     r, TAG(q));
-                SET_GRADINDEX (r, GRADINDEX(p));
-                UNPROTECT(1);
-                goto next_base;
-            }
-        }
-        r = cons_with_tag (CAR(p), r, TAG(p));
-        SET_GRADINDEX (r, GRADINDEX(p));
-      next_base: ;
-    }
-
-    /* Include gradients only found in extra, times factor. */
-
-    for (q = extra; q != R_NilValue; q = CDR(q)) {
-        for (p = base; p != R_NilValue; p = CDR(p)) {
-            if (TAG(p) == TAG(q) && GRADINDEX(p) == GRADINDEX(q)) {
-                goto next_extra;
-            }
-        }
-        if (TYPEOF(CAR(q)) != REALSXP) abort();
-        PROTECT(r);
-        r = cons_with_tag (ScalarRealMaybeConst (*REAL(CAR(q)) * factor),
-                           r, TAG(q));
-        SET_GRADINDEX (r, GRADINDEX(q));
-        UNPROTECT(1);
-      next_extra: ;
-    }
-
-    UNPROTECT(2);
-    return r;
-}
-
-static SEXP add_scaled_SEXP(SEXP base, SEXP extra, SEXP factor)
-{
-    SEXP p, q, r;
-
-    if (TYPEOF(factor) == REALSXP) {
-        if (LENGTH(factor) != 1) abort();
-        return add_scaled_gradients (base, extra, *REAL(factor));
-    }
-
-    PROTECT3(base,extra,factor);
-
-    r = R_NilValue;
-    
-    /* Include gradients found in base, possibly adding gradient from extra
-       times factor. */
-
-    for (p = base; p != R_NilValue; p = CDR(p)) {
-        for (q = extra; q != R_NilValue; q = CDR(q)) {
-            if (TAG(p) == TAG(q) && GRADINDEX(p) == GRADINDEX(q)) {
-                if (TYPEOF(CAR(q)) != REALSXP) abort();
-                if (TYPEOF(CAR(p)) != TYPEOF(factor)) abort();
-                PROTECT(r);
-                r = cons_with_tag (
-                     add_scaled_list (CAR(p), factor, *REAL(CAR(q))),
-                     r, TAG(q));
-                SET_GRADINDEX (r, GRADINDEX(p));
-                UNPROTECT(1);
-                goto next_base;
-            }
-        }
-        r = cons_with_tag (CAR(p), r, TAG(p));
-        SET_GRADINDEX (r, GRADINDEX(p));
-      next_base: ;
-    }
-
-    /* Include gradients only found in extra, times factor. */
-
-    for (q = extra; q != R_NilValue; q = CDR(q)) {
-        for (p = base; p != R_NilValue; p = CDR(p)) {
-            if (TAG(p) == TAG(q) && GRADINDEX(p) == GRADINDEX(q)) {
-                goto next_extra;
-            }
-        }
-        if (TYPEOF(CAR(q)) != REALSXP) abort();
-        PROTECT(r);
-        r = cons_with_tag (scaled_list (factor, *REAL(CAR(q))), r, TAG(q));
-        SET_GRADINDEX (r, GRADINDEX(q));
-        UNPROTECT(1);
-      next_extra: ;
-    }
-
-    UNPROTECT(3);
-    return r;
-}
-
-
 /* Macro for building a function that applies an operation to all gradients. 
    Protects grad, then unprotects it at end, so surrounding function will
    need to protect it again if required. */
@@ -560,34 +446,6 @@ attribute_hidden SEXP copy_scaled_gradients (SEXP grad, double factor)
 
     UNPROTECT(1);
     return r;
-}
-
-
-/* Create user-visible form of gradient. */
-
-static SEXP create_gradient (SEXP result, SEXP result_grad, SEXP gv)
-{
-    int nv = GRADVARS_NV(gv);
-
-    SEXP gr, gn;
-
-    if (nv == 1)
-        gr = expand_structure (result, result_grad, VECTOR_ELT(gv,1));
-    else {
-        R_len_t i;
-        PROTECT (gr = allocVector (VECSXP, nv));
-        gn = allocVector (STRSXP, nv);
-        setAttrib (gr, R_NamesSymbol, gn); 
-        for (i = 0; i < nv; i++) {
-            SET_STRING_ELT (gn, i, PRINTNAME (VECTOR_ELT (gv, i)));
-            SET_VECTOR_ELT (gr, i, expand_structure (result, 
-                                                     VECTOR_ELT(result_grad,i),
-                                                     VECTOR_ELT(gv,nv+i)));
-        }
-        UNPROTECT(1);
-    }
-
-    return gr;
 }
 
 
@@ -688,6 +546,152 @@ R_inspect(v);
 
     UNPROTECT(2);
     return grad;
+}
+
+
+/* Add the product of gradients in extra and in factor, to the set of
+   gradients in base. 
+
+   Protects its arguments. */
+
+attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
+{
+    SEXP p, q, r;
+
+    PROTECT2(base,extra);
+
+    r = R_NilValue;
+    
+    /* Include gradients found in base, possibly adding gradient from extra
+       times factor. */
+
+    for (p = base; p != R_NilValue; p = CDR(p)) {
+        for (q = extra; q != R_NilValue; q = CDR(q)) {
+            if (TAG(p) == TAG(q) && GRADINDEX(p) == GRADINDEX(q)) {
+                if (TYPEOF(CAR(q)) != REALSXP) abort();
+                if (TYPEOF(CAR(p)) != REALSXP) abort();
+                PROTECT(r);
+                r = cons_with_tag (
+                     ScalarRealMaybeConst(*REAL(CAR(p)) + *REAL(CAR(q))*factor),
+                     r, TAG(q));
+                SET_GRADINDEX (r, GRADINDEX(p));
+                UNPROTECT(1);
+                goto next_base;
+            }
+        }
+        r = cons_with_tag (CAR(p), r, TAG(p));
+        SET_GRADINDEX (r, GRADINDEX(p));
+      next_base: ;
+    }
+
+    /* Include gradients only found in extra, times factor. */
+
+    for (q = extra; q != R_NilValue; q = CDR(q)) {
+        for (p = base; p != R_NilValue; p = CDR(p)) {
+            if (TAG(p) == TAG(q) && GRADINDEX(p) == GRADINDEX(q)) {
+                goto next_extra;
+            }
+        }
+        if (TYPEOF(CAR(q)) != REALSXP) abort();
+        PROTECT(r);
+        r = cons_with_tag (ScalarRealMaybeConst (*REAL(CAR(q)) * factor),
+                           r, TAG(q));
+        SET_GRADINDEX (r, GRADINDEX(q));
+        UNPROTECT(1);
+      next_extra: ;
+    }
+
+    UNPROTECT(2);
+    return r;
+}
+
+
+/* Add the product of gradients in extra and in factor, to the set of
+   gradients in base.  The gradients in extra must be scalars. 
+
+   Protects its arguments. */
+
+static SEXP add_scaled_SEXP(SEXP base, SEXP extra, SEXP factor)
+{
+    SEXP p, q, r;
+
+    if (TYPEOF(factor) == REALSXP) {
+        if (LENGTH(factor) != 1) abort();
+        return add_scaled_gradients (base, extra, *REAL(factor));
+    }
+
+    PROTECT3(base,extra,factor);
+
+    r = R_NilValue;
+    
+    /* Include gradients found in base, possibly adding gradient from extra
+       times factor. */
+
+    for (p = base; p != R_NilValue; p = CDR(p)) {
+        for (q = extra; q != R_NilValue; q = CDR(q)) {
+            if (TAG(p) == TAG(q) && GRADINDEX(p) == GRADINDEX(q)) {
+                if (TYPEOF(CAR(q)) != REALSXP) abort();
+                if (TYPEOF(CAR(p)) != TYPEOF(factor)) abort();
+                PROTECT(r);
+                r = cons_with_tag (
+                     add_scaled_list (CAR(p), factor, *REAL(CAR(q))),
+                     r, TAG(q));
+                SET_GRADINDEX (r, GRADINDEX(p));
+                UNPROTECT(1);
+                goto next_base;
+            }
+        }
+        r = cons_with_tag (CAR(p), r, TAG(p));
+        SET_GRADINDEX (r, GRADINDEX(p));
+      next_base: ;
+    }
+
+    /* Include gradients only found in extra, times factor. */
+
+    for (q = extra; q != R_NilValue; q = CDR(q)) {
+        for (p = base; p != R_NilValue; p = CDR(p)) {
+            if (TAG(p) == TAG(q) && GRADINDEX(p) == GRADINDEX(q)) {
+                goto next_extra;
+            }
+        }
+        if (TYPEOF(CAR(q)) != REALSXP) abort();
+        PROTECT(r);
+        r = cons_with_tag (scaled_list (factor, *REAL(CAR(q))), r, TAG(q));
+        SET_GRADINDEX (r, GRADINDEX(q));
+        UNPROTECT(1);
+      next_extra: ;
+    }
+
+    UNPROTECT(3);
+    return r;
+}
+
+
+/* Create user-visible form of gradient. */
+
+static SEXP create_gradient (SEXP result, SEXP result_grad, SEXP gv)
+{
+    int nv = GRADVARS_NV(gv);
+
+    SEXP gr, gn;
+
+    if (nv == 1)
+        gr = expand_structure (result, result_grad, VECTOR_ELT(gv,1));
+    else {
+        R_len_t i;
+        PROTECT (gr = allocVector (VECSXP, nv));
+        gn = allocVector (STRSXP, nv);
+        setAttrib (gr, R_NamesSymbol, gn); 
+        for (i = 0; i < nv; i++) {
+            SET_STRING_ELT (gn, i, PRINTNAME (VECTOR_ELT (gv, i)));
+            SET_VECTOR_ELT (gr, i, expand_structure (result, 
+                                                     VECTOR_ELT(result_grad,i),
+                                                     VECTOR_ELT(gv,nv+i)));
+        }
+        UNPROTECT(1);
+    }
+
+    return gr;
 }
 
 
