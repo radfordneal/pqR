@@ -655,6 +655,99 @@ attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
 }
 
 
+static SEXP add_lists (SEXP a, SEXP b)
+{
+    if (a == R_NilValue)
+        return b;
+
+    if (b == R_NilValue)
+        return a;
+
+    if (TYPEOF(a) == VECSXP) {
+        R_len_t n = LENGTH(a);
+        if (TYPEOF(b) != VECSXP || LENGTH(b) != n) abort();
+        PROTECT2(a,b);
+        SEXP res = PROTECT (allocVector(VECSXP,n));
+        for (R_len_t i = 0; i < n; i++)
+            SET_VECTOR_ELT (res, i, add_lists(VECTOR_ELT(a,i),VECTOR_ELT(b,i)));
+        UNPROTECT(3);
+        return res;
+    }
+
+    if (TYPEOF(a) != REALSXP || LENGTH(a) != 1) abort();
+    if (TYPEOF(b) != REALSXP || LENGTH(b) != 1) abort();
+
+    return ScalarRealMaybeConst (*REAL(a) + *REAL(b));
+}
+
+
+static SEXP mul_lists (SEXP a, SEXP b)
+{
+    if (a == R_NilValue || b == R_NilValue)
+        return R_ScalarRealZero;
+
+    if (TYPEOF(a) == VECSXP) {
+        R_len_t n = LENGTH(a);
+        if (TYPEOF(b) != VECSXP || LENGTH(b) != n) abort();
+        PROTECT2(a,b);
+        SEXP res = PROTECT (allocVector(VECSXP,n));
+        for (R_len_t i = 0; i < n; i++)
+            SET_VECTOR_ELT (res, i, mul_lists(VECTOR_ELT(a,i),VECTOR_ELT(b,i)));
+        UNPROTECT(3);
+        return res;
+    }
+
+    if (TYPEOF(a) != REALSXP || LENGTH(a) != 1) abort();
+    if (TYPEOF(b) != REALSXP || LENGTH(b) != 1) abort();
+
+    return ScalarRealMaybeConst (*REAL(a) * *REAL(b));
+}
+
+
+static SEXP scale_list (SEXP a, double d)
+{
+    if (a == R_NilValue)
+        return R_ScalarRealZero;
+
+    if (TYPEOF(a) == VECSXP) {
+        R_len_t n = LENGTH(a);
+        PROTECT(a);
+        SEXP res = PROTECT (allocVector(VECSXP,n));
+        for (R_len_t i = 0; i < n; i++)
+            SET_VECTOR_ELT (res, i, scale_list(VECTOR_ELT(a,i),d));
+        UNPROTECT(2);
+        return res;
+    }
+
+    if (TYPEOF(a) != REALSXP || LENGTH(a) != 1) abort();
+
+    return ScalarRealMaybeConst (*REAL(a) * d);
+}
+
+
+/* Backpropagate gradients, adding contributiions to gradients in 'base',
+   that are found by multiplying gradients of inner vars w.r.t. outer 
+   vars (in 'extra') by gradients of expression value  w.r.t. inner vars
+   (in 'factors').  The caller must protect 'factors', but not 'base' or
+   'extra'. */
+
+static SEXP backpropagate_gradients (SEXP base, SEXP extra, SEXP factors)
+{
+    RECURSIVE_GRADIENT_APPLY2 (backpropagate_gradients, base, extra, factors);
+
+    if (extra == R_NilValue)
+        return base;
+
+    PROTECT2(base,extra);
+
+    if (TYPEOF(extra) != REALSXP || LENGTH(extra) != 1) abort(); /* FOR NOW */
+
+    SEXP res = add_lists (base, scale_list (factors, *REAL(extra)));
+
+    UNPROTECT(2);
+    return res;
+}
+
 /* Add the product of gradients in extra and in factor, to the set of
    gradients in base.  The gradients in extra must be scalars. 
 
@@ -854,7 +947,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 SEXP g = vargrad[i];
                 SEXP r = nv > 1 ? VECTOR_ELT(result_grad,i) : result_grad;
                 if (g != R_NilValue && r != R_NilValue)
-                    other_grads = add_scaled_SEXP (other_grads, g, r);
+                    other_grads = backpropagate_gradients (other_grads, g, r);
             }
             UNPROTECT(1);
         }
@@ -972,7 +1065,7 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
                 if (! match_structure (result, gval, 0))
                     errorcall (call, 
                       _("computed gradient does not match type of value"));
-                resgrad = add_scaled_SEXP (resgrad, vargrad[vgi], gval);
+                resgrad = backpropagate_gradients (resgrad, vargrad[vgi], gval);
                 UNPROTECT(2);  /* gval, old resgrad */
                 PROTECT(resgrad);
             }
