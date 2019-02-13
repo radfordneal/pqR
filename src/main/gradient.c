@@ -532,73 +532,62 @@ attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
 }
 
 
-static SEXP add_lists (SEXP a, SEXP b)
-{
-    if (a == R_NilValue)
-        return b;
+/* Auxiliary functions used by backpropagate_gradients (below). */
 
+static SEXP add_scaled_list (SEXP a, SEXP b, double f)
+{
     if (b == R_NilValue)
         return a;
 
-    if (TYPEOF(a) == VECSXP) {
-        R_len_t n = LENGTH(a);
-        if (TYPEOF(b) != VECSXP || LENGTH(b) != n) abort();
-        PROTECT2(a,b);
+    if (TYPEOF(b) == VECSXP) {
+        R_len_t n = LENGTH(b);
         SEXP res = PROTECT (allocVector(VECSXP,n));
-        for (R_len_t i = 0; i < n; i++)
-            SET_VECTOR_ELT (res, i, add_lists(VECTOR_ELT(a,i),VECTOR_ELT(b,i)));
+        PROTECT2(a,b);
+        if (a == R_NilValue) {
+            for (R_len_t i = 0; i < n; i++)
+              SET_VECTOR_ELT (res, i, add_scaled_list (a, VECTOR_ELT(b,i), f));
+        }
+        else {
+            if (TYPEOF(b) != VECSXP || LENGTH(b) != n) abort();
+            for (R_len_t i = 0; i < n; i++) {
+                SET_VECTOR_ELT (res, i, add_scaled_list (VECTOR_ELT(a,i),
+                                                         VECTOR_ELT(b,i), f));
+            }
+        }
         UNPROTECT(3);
         return res;
     }
 
-    if (TYPEOF(a) != REALSXP || LENGTH(a) != 1) abort();
     if (TYPEOF(b) != REALSXP || LENGTH(b) != 1) abort();
 
-    return ScalarRealMaybeConst (*REAL(a) + *REAL(b));
+    if (a == R_NilValue)
+        return ScalarRealMaybeConst (*REAL(b) * f);
+
+    if (TYPEOF(a) != REALSXP || LENGTH(a) != 1) abort();
+
+    return ScalarRealMaybeConst (*REAL(a) + *REAL(b) * f);
 }
 
-
-static SEXP mul_lists (SEXP a, SEXP b)
+static SEXP backup (SEXP g, SEXP a, SEXP b)
 {
     if (a == R_NilValue || b == R_NilValue)
-        return R_ScalarRealZero;
+        return g;
 
-    if (TYPEOF(a) == VECSXP) {
-        R_len_t n = LENGTH(a);
-        if (TYPEOF(b) != VECSXP || LENGTH(b) != n) abort();
-        PROTECT2(a,b);
-        SEXP res = PROTECT (allocVector(VECSXP,n));
+    PROTECT3(a,b,g);
+
+    if (TYPEOF(b) == VECSXP && GRAD_WRT_LIST(b)) {
+        R_len_t n = LENGTH(b);
+        if (TYPEOF(a) != VECSXP || LENGTH(a) != n) abort();
         for (R_len_t i = 0; i < n; i++)
-            SET_VECTOR_ELT (res, i, mul_lists(VECTOR_ELT(a,i),VECTOR_ELT(b,i)));
-        UNPROTECT(3);
-        return res;
+            g = backup (g, VECTOR_ELT(a,i), VECTOR_ELT(b,i));
+    }
+    else {
+        if (TYPEOF(a) != REALSXP || LENGTH(a) != 1) abort();
+        g = add_scaled_list (g, b, *REAL(a));
     }
 
-    if (TYPEOF(a) != REALSXP || LENGTH(a) != 1) abort();
-    if (TYPEOF(b) != REALSXP || LENGTH(b) != 1) abort();
-
-    return ScalarRealMaybeConst (*REAL(a) * *REAL(b));
-}
-
-
-static SEXP scale_list (SEXP a, double d)
-{
-    if (a == R_NilValue)
-        return R_ScalarRealZero;
-
-    if (TYPEOF(a) == VECSXP) {
-        R_len_t n = LENGTH(a);
-        PROTECT(a);
-        SEXP res = PROTECT (allocVector(VECSXP,n));
-        for (R_len_t i = 0; i < n; i++)
-            SET_VECTOR_ELT (res, i, scale_list(VECTOR_ELT(a,i),d));
-        UNPROTECT(2);
-        return res;
-    }
-
-    if (TYPEOF(a) != REALSXP || LENGTH(a) != 1) abort();
-
-    return ScalarRealMaybeConst (*REAL(a) * d);
+    UNPROTECT(3);
+    return g;
 }
 
 
@@ -612,14 +601,14 @@ static SEXP backpropagate_gradients (SEXP base, SEXP extra, SEXP factors)
 {
     RECURSIVE_GRADIENT_APPLY2 (backpropagate_gradients, base, extra, factors);
 
-    if (extra == R_NilValue)
+    if (extra == R_NilValue || factors == R_NilValue)
         return base;
 
     PROTECT2(base,extra);
 
     if (TYPEOF(extra) != REALSXP || LENGTH(extra) != 1) abort(); /* FOR NOW */
 
-    SEXP res = add_lists (base, scale_list (factors, *REAL(extra)));
+    SEXP res = backup (base, extra, factors);
 
     UNPROTECT(2);
     return res;
