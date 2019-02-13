@@ -606,8 +606,6 @@ static SEXP backpropagate_gradients (SEXP base, SEXP extra, SEXP factors)
 
     PROTECT2(base,extra);
 
-    if (TYPEOF(extra) != REALSXP || LENGTH(extra) != 1) abort(); /* FOR NOW */
-
     SEXP res = backup (base, extra, factors);
 
     UNPROTECT(2);

@@ -19,11 +19,13 @@
   \code{\link{numericDeriv}}.
 
   The present implementation of these facilities is a preliminary
-  one that supports only gradients of scalar values, or lists of 
-  scalar values (or lists of lists of scalar values, etc), with respect
-  to scalar variables.  Support for differentiation of and with respect
-  to vectors, matrices, and arrays, and for differentiation with respect
-  to lists, is planned, as is support for higher-order derivatives.
+  one that supports only gradients of real scalar values, or lists of 
+  real scalar values (or lists of lists of real scalar values, etc), 
+  with respect to real scalar variables or lists of real scalar values 
+  (or lists of lists, etc).  Support for differentiation of and with respect
+  to vectors, matrices, and arrays is planned, as is support for 
+  higher-order derivatives.  Perhaps differentiation of complex values
+  will also be supported some day.
 }
 
 \usage{
@@ -129,8 +131,12 @@ variables used to compute \code{v1.expr}, \code{v2.expr}, etc.
 
 If computation of a gradient has not been requested, \code{compute gradient}
 will evaluate only the value, skipping evaluation of the expressions after
-\code{as}.  Computation of gradients for built-in functions is also
-skipped when it is known that the gradient will not be needed.
+\code{as}.  It is possible for the gradient expression to be
+evaluted for some variables but not others (e.g., in the form shown above,
+\code{g2.expr} might be evaluated but \code{g1.expr} not be evaluated).
+
+Computation of gradients for built-in functions is also skipped when
+it is known that the gradient will not be needed.
 
 Gradients can be computed for expressions that are not differentiable at
 some points, with the gradient returned at such points being arbitrary.
@@ -185,12 +191,19 @@ The gradient returned by \code{gradient_of} or attached as a \code{"gradient"}
 attribute by \code{with gradient} will be a scalar real if the gradient
 is with respect to only one variable, and the expression this is the gradient
 of has a scalar real value.  The gradient of a list is a list of the same
-form, with scalar gradients replacing the scalar elements.
+form, with scalar gradients replacing the scalar elements.  For a gradient
+with respect to a list variable, the gradient value is a list (or nested
+lists) of the same form, with elements that are the gradient of the
+expression value with respect to that element of the list; note that the
+gradient of an expression value could itself be a list.
 
 When the \code{with gradient} or
 \code{track gradient} construct has more than one variable, the gradient
 will be a list of scalar real values or lists, with names corresponding to the
-variables.
+variables.  Note that this is the same form as would be obtained if the
+values of these variables were combined into a named list which was then
+used as a single variable in the \code{with gradient} or \code{track gradient}
+construct (see the example below).
 }
 
 \examples{
@@ -263,5 +276,10 @@ with gradient (a=3)              # only the gradient with respect to a
   with gradient (b=10*a)         #   will be shown, but the chain rule 
     list(a,b,a*b)                #   is used to convert derivatives wrt
                                  #   to b into derivatives wrt to a
+
+with gradient (a=5,b=6) list(a^2,a*b)               # these give the same
+with gradient (x=list(a=5,b=6)) list(x$a^2,x$a*x$b) # value and gradient
+
 }
+
 \keyword{programming}
