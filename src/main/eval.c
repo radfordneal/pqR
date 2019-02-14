@@ -4098,7 +4098,6 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* retains any missing argument indicators. */
 
     if(DispatchOrEval(call, op, "[", args, rho, &ans, 0, argsevald)) {
-/*     if(DispatchAnyOrEval(call, op, "[", args, rho, &ans, 0, 0)) */
 	if (NAMEDCNT_GT_0(ans))
 	    SET_NAMEDCNT_MAX(ans);    /* IS THIS NECESSARY? */
         R_Visible = TRUE;
@@ -4124,15 +4123,19 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     int fast_sub = VARIANT_KIND(variant) == VARIANT_FAST_SUB;
+    SEXP array_grad = R_NilValue;
     SEXP ans;
         
     /* If we can easily determine that this will be handled by
        subset2_dflt_x, evaluate the array with VARIANT_UNCLASS and
        VARIANT_PENDING_OK, and perhaps evaluate indexes with
        VARIANT_SCALAR_STACK_OK (should be safe, since there will be
-       no later call of eval). */
+       no later call of eval). 
 
-    if (fast_sub || args != R_NilValue && CAR(args) != R_DotsSymbol) {
+       For now, don't do this if we need the gradient. */
+
+    if ((fast_sub || args != R_NilValue && CAR(args) != R_DotsSymbol)
+          && ! (variant & VARIANT_GRADIENT)) {
 
         SEXP array, ixlist;
         int obj;
@@ -4155,6 +4158,7 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         if (obj) {
             args = CONS(array,ixlist);
+            /* go on to general-purpose code below */
         }
         else if (ixlist == R_NilValue || TAG(ixlist) != R_NilValue 
                                       || CAR(ixlist) == R_DotsSymbol) {
@@ -4162,7 +4166,7 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             args = evalListKeepMissing(ixlist,rho);
             UNPROTECT(1);  /* array */
             return do_subset2_dflt_x (call, op, array, R_NoObject, R_NoObject,
-                                      args, rho, variant);
+                                      R_NilValue, args, rho, variant);
         }
         else {
             SEXP r;
@@ -4204,7 +4208,7 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 WAIT_UNTIL_COMPUTED(sb1);
             wait_until_arguments_computed(remargs);
             r = do_subset2_dflt_x (call, op, array, sb1, sb2,
-                                   remargs, rho, variant);
+                                   R_NilValue, remargs, rho, variant);
             R_scalar_stack = sv_scalar_stack;
             END_PROTECT;
             UNPROTECT(1);  /* array */
@@ -4213,8 +4217,17 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
     }
     else {
-        if (fast_sub) {
+        if (fast_sub)
             args = CONS (R_fast_sub_var, args);
+        else {
+            SEXP array = 
+              EVALV_NC (CAR(args), rho, VARIANT_UNCLASS | VARIANT_PENDING_OK
+                                         | (variant & VARIANT_GRADIENT));
+            if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+                PROTECT(array_grad = R_gradient);
+                R_variant_result = 0;
+            }
+            args = CONS (array, CDR(args));
         }
     }
 
@@ -4226,8 +4239,7 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* to the generic code below.  Note that evaluation */
     /* retains any missing argument indicators. */
 
-    if(DispatchOrEval(call, op, "[[", args, rho, &ans, 0, 0)) {
-/*     if(DispatchAnyOrEval(call, op, "[[", args, rho, &ans, 0, 0)) */
+    if(DispatchOrEval(call, op, "[[", args, rho, &ans, 0, -1)) {
 	if (NAMEDCNT_GT_0(ans))
 	    SET_NAMEDCNT_MAX(ans);    /* IS THIS NECESSARY? */
     }
@@ -4240,19 +4252,19 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         SEXP x = CAR(ans);
         args = CDR(ans);
-    
+
         if (args == R_NilValue || TAG(args) != R_NilValue)
             ans = do_subset2_dflt_x (call, op, x, R_NoObject, R_NoObject, 
-                                     args, rho, variant);
+                                     array_grad, args, rho, variant);
         else if (CDR(args) == R_NilValue || TAG(CDR(args)) != R_NilValue)
             ans = do_subset2_dflt_x (call, op, x, CAR(args), R_NoObject,
-                                     CDR(args), rho, variant);
+                                     array_grad, CDR(args), rho, variant);
         else
             ans = do_subset2_dflt_x (call, op, x, CAR(args), CADR(args),
-                                     CDDR(args), rho, variant);
+                                     array_grad, CDDR(args), rho, variant);
     }
 
-    UNPROTECT(1);
+    UNPROTECT (1 + (array_grad != R_NilValue));
     R_Visible = TRUE;
     return ans;
 }
@@ -5058,7 +5070,7 @@ static SEXP evalArgs(SEXP el, SEXP rho, int dropmissing)
 
 
 /* A version of DispatchOrEval that checks for possible S4 methods for
- * any argument, not just the first.  Used in the code for `[` in
+ * any argument, not just the first.  (Was?) used in the code for `[` in
  * do_subset.  Differs in that all arguments are evaluated
  * immediately, rather than after the call to R_possible_dispatch.
  * NOT ACTUALLY USED AT PRESENT.

@@ -2523,23 +2523,25 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op, SEXP x,
 
 SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
+    SEXP array_grad = HAS_GRADIENT_IN_CELL(args) 
+                       ? GRADIENT_IN_CELL(args) : R_NilValue;
     SEXP x = CAR(args);
     args = CDR(args);
     
     if (args == R_NilValue || TAG(args) != R_NilValue)
         return do_subset2_dflt_x (call, op, x, R_NoObject, R_NoObject, 
-                                  args, rho, 0);
+                                  array_grad, args, rho, 0);
     else if (CDR(args) == R_NilValue || TAG(CDR(args)) != R_NilValue)
         return do_subset2_dflt_x (call, op, x, CAR(args), R_NoObject,
-                                  CDR(args), rho, 0);
+                                  array_grad, CDR(args), rho, 0);
     else
         return do_subset2_dflt_x (call, op, x, CAR(args), CADR(args),
-                                  CDDR(args), rho, 0);
+                                  array_grad, CDDR(args), rho, 0);
 }
 
 /* Sets R_Visible to TRUE. */
-SEXP attribute_hidden do_subset2_dflt_x (SEXP call, SEXP op, 
-                                         SEXP x, SEXP sb1, SEXP sb2,
+SEXP attribute_hidden do_subset2_dflt_x (SEXP call, SEXP op, SEXP x,
+                                         SEXP sb1, SEXP sb2, SEXP array_grad,
                                          SEXP subs, SEXP rho, int variant)
 {
     int offset;
@@ -2547,7 +2549,7 @@ SEXP attribute_hidden do_subset2_dflt_x (SEXP call, SEXP op,
 
     R_Visible = TRUE;
 
-    if (isVector(x) && sb1 != R_NoObject) {
+    if (isVector(x) && sb1 != R_NoObject && array_grad == R_NilValue) {
 
         /* Check for one subscript, handling simple cases.  Doesn't handle
            simple cases with two subscripts here yet. */
@@ -2686,6 +2688,9 @@ SEXP attribute_hidden do_subset2_dflt_x (SEXP call, SEXP op,
                 int nm = NAMEDCNT(x);
                 if (nm > max_named) 
                     max_named = nm;
+                if (array_grad != R_NilValue)
+                    array_grad = 
+                      subset_list_gradient (array_grad, offset, lenx);
             }
         }
 
@@ -2706,6 +2711,7 @@ SEXP attribute_hidden do_subset2_dflt_x (SEXP call, SEXP op,
 	    else
                 out_of_bounds_error(call);
 	}
+
     } else { /* matrix or array indexing */
 
 	dimnames = getAttrib(x, R_DimNamesSymbol);
@@ -2747,6 +2753,10 @@ SEXP attribute_hidden do_subset2_dflt_x (SEXP call, SEXP op,
               || VARIANT_KIND(variant) == VARIANT_FAST_SUB)
              && max_named <= 1 && !NAMEDCNT_GT_1(ans))
             R_variant_result = 1;
+        if (array_grad != R_NilValue) {
+            R_gradient = subset_list_gradient (array_grad, offset, LENGTH(x));
+            R_variant_result |= VARIANT_GRADIENT_FLAG;
+        }
     }
     else if (TYPEOF(x) == INTSXP && CAN_USE_SCALAR_STACK(variant))
         ans = PUSH_SCALAR_INTEGER (INTEGER(x)[offset]);

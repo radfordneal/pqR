@@ -153,11 +153,13 @@ generated random value, if the state of the random number generator
 when calling the function were kept fixed.
 
 The following built-in functions and operators will compute gradients,
-with respect to all their real-valued arguments (unless noted), or
+with respect to all their scalar real arguments (unless noted), or
 when applicable, arguments that are lists of scalar reals (or lists of
 lists of scalar reals, etc.):
 \tabular{l}{
-list, $ (for vector lists only), $<- (for vector lists only) \cr
+list \cr
+$ (for vector lists only), [[ (for vector lists only) \cr
+$<- (for vector lists only) \cr
 \cr
 +, -, *, /, ^ (+ and - may be unary) \cr
 \cr

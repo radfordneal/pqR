@@ -652,6 +652,19 @@ with gradient (a=3.1, b=4.2) {
 }
 
 
+# Test gradients of list elements found with $ and [[.]].
+
+with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); list(r$z,r$y) }
+with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); list(r[[3]],r[[2]]) }
+
+with gradient (a=9) { r <- list(x=a,y=list(p=a^2,7,q=a^3))
+                      list(r$y$q,r$x) }
+with gradient (a=9) { r <- list(x=a,y=list(p=a^2,7,q=a^3))
+                      list(r[[2]][[3]],r[[1]]) }
+with gradient (a=9) { r <- list(x=a,y=list(p=a^2,7,q=a^3))
+                      list(r[[c(2,3)]],r[[1]]) }
+
+
 # Test 'compute gradient'.
 
 f <- function (x) compute gradient (x) x^2 as (123*x) # wrong, see if happens

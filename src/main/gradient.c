@@ -296,6 +296,9 @@ static inline SEXP get_other_gradients (SEXP xenv)
 
 SEXP attribute_hidden subset_list_gradient (SEXP grad, R_len_t i, R_len_t n)
 {
+#if 0
+REprintf("subset_list_gradient %d %d\n",i,n); R_inspect(grad); REprintf("--\n");
+#endif
     RECURSIVE_GRADIENT_APPLY (subset_list_gradient, grad, i, n);
 
     if (grad == R_NilValue)
