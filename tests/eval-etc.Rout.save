@@ -330,6 +330,84 @@ NULL
 [1] 2 2
 > 
 > 
+> ## Tests of internal DispatchOrEval procedure.
+> 
+> a <- 5
+> print(c(a,7))
+[1] 5 7
+> print(c(a,quote(cat("Hi!\n"))))
+[[1]]
+[1] 5
+
+[[2]]
+cat("Hi!\n")
+
+> 
+> a <- 5
+> class(a) <- "fred"
+> print(c(a,7))
+[1] 5 7
+> print(c(a,quote(cat("Hi!\n"))))
+[[1]]
+[1] 5
+
+[[2]]
+cat("Hi!\n")
+
+> 
+> c.fred <- function (...) 999
+> print(c(a,7))
+[1] 999
+> print(c(7,a))
+[1] 7 5
+> 
+> setClass ("bert",prototype=integer(1),contains="numeric")
+> 
+> a <- new("bert",5)
+> 
+> print(c(a,7))
+[1] 5 7
+> print(c(a,quote(cat("Hi!\n"))))
+[[1]]
+[1] 5
+
+[[2]]
+cat("Hi!\n")
+
+> 
+> f <- function (...) c(...,7)
+> print(f(a))
+[1] 5 7
+> print(f({cat("Howdy!\n");a}))
+Howdy!
+[1] 5 7
+> 
+> setClass ("george",prototype=integer(1),contains="numeric")
+> setMethod ("c","george",function(x,y)777)
+[1] "c"
+> 
+> print(c(a,7))
+[1] 5 7
+> print(c(a,quote(cat("Hi!\n"))))
+[[1]]
+[1] 5
+
+[[2]]
+cat("Hi!\n")
+
+> 
+> f <- function (...) c(...,7)
+> print(f(a))
+[1] 5 7
+> print(f({cat("Howdy!\n");a}))
+Howdy!
+[1] 5 7
+> 
+> b <- new("george",8)
+> print(c(b,12))
+[1] 777
+> 
+> 
 > ## Tests of 'missing'.
 > 
 > f <- function (x,y) c(missing(x),missing(y))
