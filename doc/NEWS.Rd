@@ -18,7 +18,48 @@
 
   \item Type \code{help(Gradient)} to read documentation on the automatic 
   differentiation facilities, as they exist so far.
+  }
 }
+
+
+\section{CHANGES IN VERSION RELEASED 2019-00-00}{
+
+  \subsection{INSTALLATION}{
+  \itemize{
+  \item .
+  }}
+
+  \subsection{BUG FIXES}{
+  \itemize{
+  \item Fixed a bug that is illustrated by the following example output,
+        from a fresh session started with \code{--vanilla}:
+\preformatted{    > setClass ("bert",prototype=integer(1),contains="numeric")
+    > a <- new("bert",5)
+    > print(c(a,quote(cat("Hi!\n"))))
+    [[1]]
+    [1] 5
+    
+    [[2]]
+    cat("Hi!\n")
+    
+    > setClass ("george",prototype=integer(1),contains="numeric")
+    > setMethod ("c","george",function(x,y)777)
+    [1] "c"
+    > print(c(a,quote(cat("Hi!\n"))))
+    Hi!
+    [1] 5
+}
+        The first evaluation of \code{c(a,quote(cat("Hi!\n")))} correctly
+        created a list containing the value of \code{a} and the quoted language
+        object.  After a method for \code{c} for class \code{"george"} was
+        defined, evaluating the same expression results in the quoted
+        argument being double-evaluated, so \code{"Hi\n"} is printed, and 
+        the value of \code{a} is concatenated with \code{NULL}.
+
+        This bug also exists in R Core versions to at least 3.5.2.  A
+        comment in the source code implies that this may be a long-known
+        bug, which is being tolerated, although the fix is not difficult.
+  }}
 }
 
 

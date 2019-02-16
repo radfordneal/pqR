@@ -4994,16 +4994,12 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 		RETURN_OUTSIDE_PROTECT (1);
 	    }
 	    else {
-		/* go on, with the evaluated args.  Not guaranteed to have
-		   the same semantics as if the arguments were not
-		   evaluated, in special cases (e.g., arg values that are
-		   LANGSXP).
-		   The use of the promiseArgs is supposed to prevent
-		   multiple evaluation after the call to possible_dispatch.
-		*/
-		if (dots)
+		if (dots) {
+                    /* re-evaluates first argument, but this should be OK since
+                       it's in a forced promise, so not really re-evaluated. */
 		    argValue = evalArgs(argValue, rho, dropmissing);
-		else {
+                }
+		else if (argsevald <= 0) {
 		    argValue = CONS(x, evalArgs(CDR(argValue),rho,dropmissing));
 		    SET_TAG(argValue, CreateTag(TAG(args)));
 		}
