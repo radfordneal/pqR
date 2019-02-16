@@ -213,6 +213,46 @@ print(c(i,j))
 print(c(a,b))
 
 
+## Tests of internal DispatchOrEval procedure.
+
+a <- 5
+print(c(a,7))
+print(c(a,quote(cat("Hi!\n"))))
+
+a <- 5
+class(a) <- "fred"
+print(c(a,7))
+print(c(a,quote(cat("Hi!\n"))))
+
+c.fred <- function (...) 999
+print(c(a,7))
+print(c(7,a))
+
+setClass ("bert",prototype=integer(1),contains="numeric")
+
+a <- new("bert",5)
+
+print(c(a,7))
+print(c(a,quote(cat("Hi!\n"))))
+
+f <- function (...) c(...,7)
+print(f(a))
+print(f({cat("Howdy!\n");a}))
+
+setClass ("george",prototype=integer(1),contains="numeric")
+setMethod ("c","george",function(x,y)777)
+
+print(c(a,7))
+print(c(a,quote(cat("Hi!\n"))))
+
+f <- function (...) c(...,7)
+print(f(a))
+print(f({cat("Howdy!\n");a}))
+
+b <- new("george",8)
+print(c(b,12))
+
+
 ## Tests of 'missing'.
 
 f <- function (x,y) c(missing(x),missing(y))
