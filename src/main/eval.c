@@ -2237,9 +2237,6 @@ if (installed_already("DBGG")) {
    to prevent modification by evaluation of later arguments, with
    NAMEDCNT decremented again when all arguments have been evaluated.
 
-   Used in eval and applyMethod (object.c) for builtin primitives,
-   do_internal (names.c) for builtin .Internals and in evalArgs. 
-
    R_variant_result is set to 0 before return. */
 
 SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
@@ -5063,52 +5060,6 @@ void attribute_hidden CheckFormals(SEXP ls)
 /*                         METHOD DISPATCH FOR PRIMITIVES                     */
 
 
-static SEXP evalArgs(SEXP el, SEXP rho, int dropmissing)
-{
-    return dropmissing ? evalList(el,rho) : evalListKeepMissing(el,rho);
-}
-
-
-/* A version of DispatchOrEval that checks for possible S4 methods for
- * any argument, not just the first.  (Was?) used in the code for `[` in
- * do_subset.  Differs in that all arguments are evaluated
- * immediately, rather than after the call to R_possible_dispatch.
- * NOT ACTUALLY USED AT PRESENT.
- */
-attribute_hidden
-int DispatchAnyOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
-		      SEXP rho, SEXP *ans, int dropmissing, int argsevald)
-{
-    if(R_has_methods(op)) {
-        SEXP argValue, el,  value; 
-	/* Rboolean hasS4 = FALSE; */ 
-	int nprotect = 0, dispatch;
-	if(!argsevald) {
-            PROTECT(argValue = evalArgs(args, rho, dropmissing));
-	    nprotect++;
-	    argsevald = TRUE;
-	}
-	else argValue = args;
-	for(el = argValue; el != R_NilValue; el = CDR(el)) {
-	    if(IS_S4_OBJECT(CAR(el))) {
-	        value = R_possible_dispatch(call, op, argValue, rho, TRUE);
-	        if (value != R_NoObject) {
-		    *ans = value;
-		    UNPROTECT(nprotect);
-		    return 1;
-	        }
-		else break;
-	    }
-	}
-	 /* else, use the regular DispatchOrEval, but now with evaluated args */
-	dispatch = DispatchOrEval(call, op, generic, argValue, rho, ans, dropmissing, argsevald);
-	UNPROTECT(nprotect);
-	return dispatch;
-    }
-    return DispatchOrEval(call, op, generic, args, rho, ans, dropmissing, argsevald);
-}
-
-
 /* DispatchOrEval is used in internal functions which dispatch to
  * object methods (e.g. "[" or "[[").  The code either builds promises
  * and dispatches to the appropriate method, or it evaluates the
@@ -5122,7 +5073,7 @@ int DispatchAnyOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
  */
 attribute_hidden
 int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
-		   SEXP rho, SEXP *ans, int dropmissing, int argsevald)
+		   SEXP rho, SEXP *ans, int last_arg_grad, int argsevald)
 {
 /* DispatchOrEval is called very frequently, most often in cases where
    no dispatching is needed and the isObject or the string-based
@@ -5139,127 +5090,131 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
     int dots = FALSE;
 
     if (argsevald != 0)
-	x = CAR(args);
+        x = CAR(args);
     else {
-	/* Find the object to dispatch on, dropping any leading
-	   ... arguments with missing or empty values.  If there are no
-	   arguments, R_NilValue is used. */
+        /* Find the object to dispatch on, dropping any leading
+           ... arguments with missing or empty values.  If there are no
+           arguments, R_NilValue is used. */
         x = R_NilValue;
-	for (; args != R_NilValue; args = CDR(args)) {
-	    if (CAR(args) == R_DotsSymbol) {
-		SEXP h = findVar(R_DotsSymbol, rho);
-		if (TYPEOF(h) == DOTSXP) {
+        for (; args != R_NilValue; args = CDR(args)) {
+            if (CAR(args) == R_DotsSymbol) {
+                SEXP h = findVar(R_DotsSymbol, rho);
+                if (TYPEOF(h) == DOTSXP) {
 #ifdef DODO
-		    /**** any self-evaluating value should be OK; this
-			  is used in byte compiled code. LT */
-		    /* just a consistency check */
-		    if (TYPEOF(CAR(h)) != PROMSXP)
-			error(_("value in '...' is not a promise"));
+                    /**** any self-evaluating value should be OK; this
+                          is used in byte compiled code. LT */
+                    /* just a consistency check */
+                    if (TYPEOF(CAR(h)) != PROMSXP)
+                        error(_("value in '...' is not a promise"));
 #endif
-		    dots = TRUE;
-		    x = eval(CAR(h), rho);
+                    dots = TRUE;
+                    x = eval(CAR(h), rho);
                     break;
-		}
-		else if (h != R_NilValue && h != R_MissingArg)
-		    dotdotdot_error();
-	    }
-	    else {
+                }
+                else if (h != R_NilValue && h != R_MissingArg)
+                    dotdotdot_error();
+            }
+            else {
                 dots = FALSE;
                 x = eval(CAR(args), rho);
                 break;
-	    }
-	}
+            }
+        }
     }
 
     if (isObject(x)) { /* try to dispatch on the object */
-	char *pt;
-	/* Try for formal method. */
-	if(IS_S4_OBJECT(x) && R_has_methods(op)) {
 
-	    BEGIN_INNER_PROTECT2 (value, argValue);
+        /* Try for formal method. */
 
-	    /* create a promise to pass down to applyClosure  */
-	    if (argsevald < 0)
-                argValue = promiseArgsWith1Value(CDR(call), rho, x, 0);
+        if (IS_S4_OBJECT(x) && R_has_methods(op)) {
+
+            SEXP first_arg_tag = CreateTag(TAG(args));
+
+            /* Create promises to pass down to applyClosure  */
+            if (argsevald < 0)
+                args = promiseArgsWith1Value(CDR(call), rho, x, 0);
             else if (argsevald == 0)
-		argValue = promiseArgsWith1Value(args, rho, x, 0);
-	    else 
-                argValue = args;
-	    /* This means S4 dispatch */
-	    value = R_possible_dispatch (call, op, argValue, rho, argsevald<=0);
-	    if (value != R_NoObject) {
-		*ans = value;
-		RETURN_OUTSIDE_PROTECT (1);
-	    }
-	    else {
-		if (dots) {
+                args = promiseArgsWith1Value(args, rho, x, 0);
+
+            /* This means S4 dispatch */
+            SEXP value = R_possible_dispatch(call, op, args, rho, argsevald<=0);
+            if (value != R_NoObject) {
+                *ans = value;
+                RETURN_OUTSIDE_PROTECT (1);
+            }
+
+            if (argsevald <= 0) {
+                if (dots) {
                     /* re-evaluates first argument, but this should be OK since
                        it's in a forced promise, so not really re-evaluated. */
-		    argValue = evalArgs(argValue, rho, dropmissing);
+                    args = evalListKeepMissing(args, rho);
                 }
-		else if (argsevald <= 0) {
-		    argValue = CONS(x, evalArgs(CDR(argValue),rho,dropmissing));
-		    SET_TAG(argValue, CreateTag(TAG(args)));
-		}
-		args = argValue; 
-		argsevald = 1;
-	    }
-
-            END_INNER_PROTECT;
-	}
-	if (TYPEOF(CAR(call)) == SYMSXP)
-	    pt = Rf_strrchr(CHAR(PRINTNAME(CAR(call))), '.');
-	else
-	    pt = NULL;
-
-	if (pt == NULL || strcmp(pt,".default")) {
-
-	    BEGIN_INNER_PROTECT2 (pargs, rho1);
-	    RCNTXT cntxt;
-
-            if (argsevald > 0) {  /* handle as in R_possible_dispatch */
-                pargs = promiseArgsWithValues(CDR(call), rho, args);
+                else {
+                    args = cons_with_tag (x, evalListKeepMissing(CDR(args),rho),
+                                          first_arg_tag);
+                }
+                argsevald = 1;
             }
+        }
+
+        char *pt;
+        if (TYPEOF(CAR(call)) == SYMSXP)
+            pt = Rf_strrchr(CHAR(PRINTNAME(CAR(call))), '.');
+        else
+            pt = NULL;
+
+        if (pt == NULL || strcmp(pt,".default")) {
+
+            SEXP pargs, rho1;
+            RCNTXT cntxt;
+
+            if (argsevald > 0)  /* handle as in R_possible_dispatch */
+                pargs = promiseArgsWithValues(CDR(call), rho, args);
             else
                 pargs = promiseArgsWith1Value(args, rho, x, 0); 
 
-	    /* The context set up here is needed because of the way
-	       usemethod() is written.  DispatchGroup() repeats some
-	       internal usemethod() code and avoids the need for a
-	       context; perhaps the usemethod() code should be
-	       refactored so the contexts around the usemethod() calls
-	       in this file can be removed.
+            /* The context set up here is needed because of the way
+               usemethod() is written.  DispatchGroup() repeats some
+               internal usemethod() code and avoids the need for a
+               context; perhaps the usemethod() code should be
+               refactored so the contexts around the usemethod() calls
+               in this file can be removed.
 
-	       Using rho for current and calling environment can be
-	       confusing for things like sys.parent() calls captured
-	       in promises (Gabor G had an example of this).  Also,
-	       since the context is established without a SETJMP using
-	       an R-accessible environment allows a segfault to be
-	       triggered (by something very obscure, but still).
-	       Hence here and in the other usemethod() uses below a
-	       new environment rho1 is created and used.  LT */
-	    rho1 = NewEnvironment(R_NilValue, R_NilValue, rho);
-	    begincontext(&cntxt, CTXT_RETURN, call, rho1, rho, pargs, op);
-	    if(usemethod(generic, x, call, pargs, rho1, rho, R_BaseEnv, 0, ans))
-	    {   endcontext(&cntxt);
-		RETURN_OUTSIDE_PROTECT (1);
-	    }
-	    endcontext(&cntxt);
+               Using rho for current and calling environment can be
+               confusing for things like sys.parent() calls captured
+               in promises (Gabor G had an example of this).  Also,
+               since the context is established without a SETJMP using
+               an R-accessible environment allows a segfault to be
+               triggered (by something very obscure, but still).
+               Hence here and in the other usemethod() uses below a
+               new environment rho1 is created and used.  LT */
 
-            END_INNER_PROTECT;
-	}
+            PROTECT(pargs);
+            rho1 = NewEnvironment(R_NilValue, R_NilValue, rho);
+            UNPROTECT(1);
+
+            begincontext(&cntxt, CTXT_RETURN, call, rho1, rho, pargs, op);
+
+            if (usemethod (generic, x, call, pargs, rho1, rho, 
+                           R_BaseEnv, 0, ans)) {
+                endcontext(&cntxt);
+                RETURN_OUTSIDE_PROTECT (1);
+            }
+
+            endcontext(&cntxt);
+        }
     }
 
     if (argsevald <= 0) {
-	if (dots)
-	    /* The first call argument was ... and may contain more than the
-	       object, so it needs to be evaluated here.  The object should be
-	       in a promise, so evaluating it again should be no problem. */
-	    args = evalArgs(args, rho, dropmissing);
-	else {
-	    args = cons_with_tag (x, evalArgs(CDR(args), rho, dropmissing),
+        if (dots)
+            /* The first call argument was ... and may contain more than the
+               object, so it needs to be evaluated here.  The object should be
+               in a promise, so evaluating it again should be no problem. */
+            args = evalListKeepMissing(args, rho);
+        else {
+            args = cons_with_tag (x, evalListKeepMissing (CDR(args), rho),
                                   TAG(args));
-	}
+        }
     }
 
     *ans = args;
