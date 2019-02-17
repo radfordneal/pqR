@@ -772,6 +772,20 @@ with gradient (a=3.01) {
   r
 }
 
+with gradient (a=3.01) {
+  r <- list(x=1,y=2)
+  class(r) <- "fred"
+  r$y <- a^2
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=1,y=2)
+  class(r) <- "fred"
+  r <- `$<-` (r, "y", a^2)
+  r
+}
+
 
 # Test gradients w.r.t. list values.
 

@@ -3855,6 +3855,50 @@ attr(,"gradient")$z
 [1] 109.0836
 
 > 
+> with gradient (a=3.01) {
++   r <- list(x=1,y=2)
++   class(r) <- "fred"
++   r$y <- a^2
++   r
++ }
+$x
+[1] 1
+
+$y
+[1] 9.0601
+
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+attr(,"gradient")$x
+[1] 0
+
+attr(,"gradient")$y
+[1] 6.02
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=1,y=2)
++   class(r) <- "fred"
++   r <- `$<-` (r, "y", a^2)
++   r
++ }
+$x
+[1] 1
+
+$y
+[1] 9.0601
+
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+attr(,"gradient")$x
+[1] 0
+
+attr(,"gradient")$y
+[1] 6.02
+
+> 
 > 
 > # Test gradients w.r.t. list values.
 > 
