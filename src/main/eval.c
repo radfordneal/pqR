@@ -4589,20 +4589,34 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
         UNPROTECT(1); /* sb1 */
 
-        SEXP r = do_subassign2_dflt_int (call, x, sb1, sb2, subs, rho, y);
+        SEXP r = do_subassign2_dflt_int
+                  (call, x, sb1, sb2, subs, rho, y, R_NilValue);
         R_scalar_stack = scalar_stack_sv;
         return r;
     }
 
+    int argsevald = 0;
     SEXP ans;
 
-    if (DispatchOrEval(call, op, "[[<-", args, rho, &ans, 0, 0)) {
+    if (variant & VARIANT_GRADIENT) {
+        args = cons_with_tag (evalv (CAR(args), rho, VARIANT_GRADIENT), 
+                              CDR(args), TAG(args));
+        if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+            SET_GRADIENT_IN_CELL (args, R_gradient);
+            R_variant_result = 0;
+        }
+        argsevald = -1;
+    }
+
+    if (DispatchOrEval (call, op, "[[<-", args, rho, &ans, 
+                        variant & VARIANT_GRADIENT, argsevald)) {
         R_Visible = TRUE;
         return ans;
     }
 
     return do_subassign2_dflt_int 
-            (call, CAR(ans), R_NoObject, R_NoObject, CDR(ans), rho, R_NoObject);
+            (call, CAR(ans), R_NoObject, R_NoObject, CDR(ans), rho, R_NoObject,
+             HAS_GRADIENT_IN_CELL(ans) ? GRADIENT_IN_CELL(ans) : R_NilValue);
 }
 
 static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
@@ -5089,7 +5103,9 @@ void attribute_hidden CheckFormals(SEXP ls)
 
    If last_arg_grad is non-zero, the gradient will be requested when
    evaluating the last argument (only), if there is more than one argument;
-   last_arg_grad is ignored if argsevald is 1.
+   last_arg_grad is ignored if argsevald is 1.  If argsevald is non-zero,
+   any gradient for the first (evaluated) argument will be preserved for S3
+   dispatching, and in the returned 'ans' if dispatch did not occur.
   
    The arg list is protected by this function, and needn't be by the caller.
  */
@@ -5106,13 +5122,16 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
      might come in with a "..." and that there might be other arguments
      in the "..." as well.  LT */
 
-    BEGIN_PROTECT1 (x);
+    BEGIN_PROTECT2 (x, x_grad);
     ALSO_PROTECT1 (args);
 
     int dots = FALSE;
 
-    if (argsevald != 0)
+    if (argsevald != 0) {
         x = CAR(args);
+        if (HAS_GRADIENT_IN_CELL(args)) 
+            x_grad = GRADIENT_IN_CELL(args);
+    }
     else {
         /* Find the object to dispatch on, dropping any leading
            ... arguments with missing or empty values.  If there are no
@@ -5243,6 +5262,9 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
                 : evalList_v (CDR(args), rho, VARIANT_MISSING_OK),
               TAG(args));
         }
+
+        if (x_grad != R_NilValue)
+            SET_GRADIENT_IN_CELL (args, x_grad);
     }
 
     *ans = args;

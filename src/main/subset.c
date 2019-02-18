@@ -4353,25 +4353,31 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     return x;
 }
 
-/* Returns 'subs' as the index list, and 'y' as the value to assign.
-   May modify 'subs'. */
+/* Returns 'subs' as the index list, and 'y' as the value to assign (with
+   'y_grad' as its gradient, or R_NilValue).  May modify 'subs'. */
 
-static void SubAssignArgs(SEXP *subs, SEXP *y, SEXP call)
+static void SubAssignArgs(SEXP *subs, SEXP *y, SEXP *y_grad, SEXP call)
 {
     SEXP args = *subs;
 
     if (args == R_NilValue)
-	errorcall(call,_("SubAssignArgs: invalid number of arguments"));
+        errorcall(call,_("SubAssignArgs: invalid number of arguments"));
+
+    *y_grad = R_NilValue;
 
     if (CDR(args) == R_NilValue) {
-	*subs = R_NilValue;
-	*y = CAR(args);
+        *subs = R_NilValue;
+        *y = CAR(args);
+        if (HAS_GRADIENT_IN_CELL(args))
+            *y_grad - GRADIENT_IN_CELL(args);
     }
     else {
-	while (CDDR(args) != R_NilValue)
-	    args = CDR(args);
-	*y = CADR(args);
-	SETCDR_NIL(args);
+        while (CDDR(args) != R_NilValue)
+            args = CDR(args);
+        *y = CADR(args);
+        if (HAS_GRADIENT_IN_CELL(CDR(args)))
+            *y_grad = GRADIENT_IN_CELL(CDR(args));
+        SETCDR_NIL(args);
     }
 }
 
@@ -4470,8 +4476,10 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
         }
     }
 
+    SEXP y_grad;
+
     if (y == R_NoObject)
-        SubAssignArgs (&subs, &y, call);
+        SubAssignArgs (&subs, &y, &y_grad, call);
     else if (ON_SCALAR_STACK(y) && !isVectorAtomic(x))
         y = DUP_STACK_VALUE(y);
 
@@ -4575,13 +4583,13 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
 SEXP attribute_hidden do_subassign2_dflt         /* called from elsewhere too */
                         (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    return do_subassign2_dflt_int 
-         (call, CAR(args), R_NoObject, R_NoObject, CDR(args), rho, R_NoObject);
+    return do_subassign2_dflt_int (call, CAR(args), R_NoObject, R_NoObject, 
+                                   CDR(args), rho, R_NoObject, R_NilValue);
 }
 
 /* Sets R_Visible to TRUE. */
-SEXP attribute_hidden do_subassign2_dflt_int
-         (SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP subs, SEXP rho, SEXP y)
+SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x, 
+      SEXP sb1, SEXP sb2, SEXP subs, SEXP rho, SEXP y, SEXP x_grad)
 {
     SEXP dims, newname, xup;
     int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch;
@@ -4594,9 +4602,11 @@ SEXP attribute_hidden do_subassign2_dflt_int
     ALSO_PROTECT5 (x, sb1, sb2, subs, y);
 
     SEXP xOrig = R_NilValue;
+    SEXP y_grad = R_NilValue;
+    SEXP res_grad = R_NilValue;
 
     if (y == R_NoObject)
-        SubAssignArgs (&subs, &y, call);
+        SubAssignArgs (&subs, &y, &y_grad, call);
     else if (ON_SCALAR_STACK(y) && !isVectorAtomic(x))
         y = DUP_STACK_VALUE(y);
 
@@ -4678,7 +4688,8 @@ SEXP attribute_hidden do_subassign2_dflt_int
        with no complications.  Any possible error conditions are handled by
        just falling through for the code below to handle it. */
 
-    if (nsubs == 1 && ndims <= 1 && !S4
+    if (nsubs == 1 && ndims <= 1 && !S4 
+         && x_grad == R_NilValue && y_grad == R_NilValue
          && (isVectorAtomic(x) || isVectorList(x) && y != R_NilValue)) {
         int type_plus_sb1 = TYPE_ETC(sb1) & ~TYPE_ET_CETERA_HAS_ATTR;
         if ((type_plus_sb1 == REALSXP || type_plus_sb1 == INTSXP 
@@ -4856,6 +4867,9 @@ SEXP attribute_hidden do_subassign2_dflt_int
             else if (isVectorList(x)) {
                 DEC_NAMEDCNT (VECTOR_ELT(x, offset));
                 SET_VECTOR_ELEMENT_TO_VALUE (x, offset, y);
+                if (x_grad != R_NilValue || y_grad != R_NilValue)
+                    res_grad = subassign_list_gradient
+                                 (x_grad, y_grad, offset, LENGTH(x));
             }
             else
                 errorcall(call,
@@ -4919,8 +4933,15 @@ SEXP attribute_hidden do_subassign2_dflt_int
     else
         xtop = x;
 
-    if (!isList(xtop)) SET_NAMEDCNT_0(xtop);
-    if(S4) SET_S4_OBJECT(xtop);
+    if (!isList(xtop))
+        SET_NAMEDCNT_0(xtop);
+    if (S4)
+        SET_S4_OBJECT(xtop);
+
+    if (res_grad != R_NilValue) {
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+        R_gradient = res_grad;
+    }
 
     RETURN_SEXP_INSIDE_PROTECT (xtop);
     END_PROTECT;
