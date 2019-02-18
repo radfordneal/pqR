@@ -709,7 +709,23 @@ with gradient (a=3.01) {
   r <- list(x=a^2,y=a^3,z=a^4)
   print(gradient_of(r))
   cat("--\n")
+  r[[2]] <- NULL
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
   r$w <- -a
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r[[4]] <- -a
   r
 }
 
@@ -741,6 +757,14 @@ with gradient (a=3.01) {
   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
   print(gradient_of(r))
   cat("--\n")
+  r[[2]][[2]] <- 1/a
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
   r$x$w <- NULL
   r
 }
@@ -749,7 +773,23 @@ with gradient (a=3.01) {
   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
   print(gradient_of(r))
   cat("--\n")
+  r[[2]][[2]] <- NULL
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
   r$x$u <- -a
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r[[2]][[4]] <- -a
   r
 }
 
@@ -793,6 +833,49 @@ with gradient (a=3.01) {
   print(gradient_of(r))
   cat("--\n")
   xel(xel(r)) <- -a^2
+  r
+}
+
+elip1 <- function (a,i) a[[i+1]]
+`elip1<-` <- function (a,i,value) { a[[i+1]] <- value; a }
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  elip1(r,0) <- 1/a
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  elip1(r,0) <- NULL
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  elip1(r,2) <- -a^2
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=list(w=3*a,x=4*a),y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  elip1(elip1(r,0),1) <- 1/a;
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=list(w=3*a),y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  elip1(elip1(r,1),0) <- -a^2
   r
 }
 

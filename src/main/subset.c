@@ -4853,11 +4853,17 @@ SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x,
     if (isVector(x)) {
 
         if (nsubs == 1 && isVectorList(x) && y == R_NilValue) {
-            x = DeleteListElementsSeq (x, offset+1, offset+1);
+            if (offset >= length_x)
+                res_grad = x_grad;
+            else {
+                x = DeleteListElementsSeq (x, offset+1, offset+1);
+                if (x_grad != R_NilValue)
+                    res_grad = delete_list_gradient (x_grad, offset, length_x);
+            }
         }
         else {
 
-            SubassignTypeFix(&x, &y, stretch, 2, call);
+            SubassignTypeFix (&x, &y, stretch, 2, call);
     
             if (NAMEDCNT_GT_1(x) || x == y)
                 x = dup_top_level(x);
@@ -4867,9 +4873,11 @@ SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x,
             else if (isVectorList(x)) {
                 DEC_NAMEDCNT (VECTOR_ELT(x, offset));
                 SET_VECTOR_ELEMENT_TO_VALUE (x, offset, y);
-                if (x_grad != R_NilValue || y_grad != R_NilValue)
-                    res_grad = subassign_list_gradient
-                                 (x_grad, y_grad, offset, LENGTH(x));
+                if (x_grad != R_NilValue || y_grad != R_NilValue) {
+                    res_grad = offset < length_x
+                     ? subassign_list_gradient(x_grad, y_grad, offset, length_x)
+                     : extend_list_gradient (x_grad, y_grad, offset);
+                }
             }
             else
                 errorcall(call,

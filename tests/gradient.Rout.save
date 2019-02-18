@@ -3437,6 +3437,37 @@ attr(,"gradient")$z
 +   r <- list(x=a^2,y=a^3,z=a^4)
 +   print(gradient_of(r))
 +   cat("--\n")
++   r[[2]] <- NULL
++   r
++ }
+$x
+[1] 6.02
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$x
+[1] 9.0601
+
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$x
+[1] 6.02
+
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=a^2,y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
 +   r$w <- -a
 +   r
 + }
@@ -3473,6 +3504,49 @@ attr(,"gradient")$z
 [1] 109.0836
 
 attr(,"gradient")$w
+[1] -1
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=a^2,y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   r[[4]] <- -a
++   r
++ }
+$x
+[1] 6.02
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$x
+[1] 9.0601
+
+$y
+[1] 27.2709
+
+$z
+[1] 82.08541
+
+[[4]]
+[1] -3.01
+
+attr(,"gradient")
+attr(,"gradient")$x
+[1] 6.02
+
+attr(,"gradient")$y
+[1] 27.1803
+
+attr(,"gradient")$z
+[1] 109.0836
+
+attr(,"gradient")[[4]]
 [1] -1
 
 > 
@@ -3690,7 +3764,141 @@ attr(,"gradient")$z
 +   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
 +   print(gradient_of(r))
 +   cat("--\n")
++   r[[2]][[2]] <- 1/a
++   r
++ }
+$a
+[1] 0
+
+$x
+$x$v
+[1] 0
+
+$x$w
+[1] 3
+
+$x$x
+[1] 4
+
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$a
+[1] 3
+
+$x
+$x$v
+[1] 8
+
+$x$w
+[1] 0.3322259
+
+$x$x
+[1] 12.04
+
+
+$y
+[1] 27.2709
+
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 0
+
+attr(,"gradient")$x
+attr(,"gradient")$x$v
+[1] 0
+
+attr(,"gradient")$x$w
+[1] -0.1103741
+
+attr(,"gradient")$x$x
+[1] 4
+
+
+attr(,"gradient")$y
+[1] 27.1803
+
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> with gradient (a=3.01) {
++   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
 +   r$x$w <- NULL
++   r
++ }
+$a
+[1] 0
+
+$x
+$x$v
+[1] 0
+
+$x$w
+[1] 3
+
+$x$x
+[1] 4
+
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$a
+[1] 3
+
+$x
+$x$v
+[1] 8
+
+$x$x
+[1] 12.04
+
+
+$y
+[1] 27.2709
+
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 0
+
+attr(,"gradient")$x
+attr(,"gradient")$x$v
+[1] 0
+
+attr(,"gradient")$x$x
+[1] 4
+
+
+attr(,"gradient")$y
+[1] 27.1803
+
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> with gradient (a=3.01) {
++   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   r[[2]][[2]] <- NULL
 +   r
 + }
 $a
@@ -3816,6 +4024,82 @@ attr(,"gradient")$x$x
 [1] 4
 
 attr(,"gradient")$x$u
+[1] -1
+
+
+attr(,"gradient")$y
+[1] 27.1803
+
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> with gradient (a=3.01) {
++   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   r[[2]][[4]] <- -a
++   r
++ }
+$a
+[1] 0
+
+$x
+$x$v
+[1] 0
+
+$x$w
+[1] 3
+
+$x$x
+[1] 4
+
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$a
+[1] 3
+
+$x
+$x$v
+[1] 8
+
+$x$w
+[1] 9.03
+
+$x$x
+[1] 12.04
+
+$x[[4]]
+[1] -3.01
+
+
+$y
+[1] 27.2709
+
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 0
+
+attr(,"gradient")$x
+attr(,"gradient")$x$v
+[1] 0
+
+attr(,"gradient")$x$w
+[1] 3
+
+attr(,"gradient")$x$x
+[1] 4
+
+attr(,"gradient")$x[[4]]
 [1] -1
 
 
@@ -4027,6 +4311,206 @@ attr(,"gradient")$x$x
 
 attr(,"gradient")$y
 [1] 27.1803
+
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> elip1 <- function (a,i) a[[i+1]]
+> `elip1<-` <- function (a,i,value) { a[[i+1]] <- value; a }
+> 
+> with gradient (a=3.01) {
++   r <- list(x=a^2,y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   elip1(r,0) <- 1/a
++   r
++ }
+$x
+[1] 6.02
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$x
+[1] 0.3322259
+
+$y
+[1] 27.2709
+
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$x
+[1] -0.1103741
+
+attr(,"gradient")$y
+[1] 27.1803
+
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=a^2,y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   elip1(r,0) <- NULL
++   r
++ }
+$x
+[1] 6.02
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$y
+[1] 27.2709
+
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$y
+[1] 27.1803
+
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> with gradient (a=3.01) {
++   r <- list(y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   elip1(r,2) <- -a^2
++   r
++ }
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$y
+[1] 27.2709
+
+$z
+[1] 82.08541
+
+[[3]]
+[1] -9.0601
+
+attr(,"gradient")
+attr(,"gradient")$y
+[1] 27.1803
+
+attr(,"gradient")$z
+[1] 109.0836
+
+attr(,"gradient")[[3]]
+[1] -6.02
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=list(w=3*a,x=4*a),y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   elip1(elip1(r,0),1) <- 1/a;
++   r
++ }
+$x
+$x$w
+[1] 3
+
+$x$x
+[1] 4
+
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$x
+$x$w
+[1] 9.03
+
+$x$x
+[1] 0.3322259
+
+
+$y
+[1] 27.2709
+
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$x
+attr(,"gradient")$x$w
+[1] 3
+
+attr(,"gradient")$x$x
+[1] -0.1103741
+
+
+attr(,"gradient")$y
+[1] 27.1803
+
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=list(w=3*a),y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   elip1(elip1(r,1),0) <- -a^2
++   r
++ }
+$x
+$x$w
+[1] 3
+
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$x
+$x$w
+[1] 9.03
+
+
+$y
+[1] -9.0601
+
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$x
+attr(,"gradient")$x$w
+[1] 3
+
+
+attr(,"gradient")$y
+[1] 0
 
 attr(,"gradient")$z
 [1] 109.0836

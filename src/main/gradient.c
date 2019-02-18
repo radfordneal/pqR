@@ -467,7 +467,7 @@ R_inspect(v);
 
 
 /* Create set of gradients from grad that account for assigning v to a
-   new element after the last of a vector list.
+   new element at index n (so new length is n+1).
 
    Protects its grad and v arguments. */
 
@@ -489,8 +489,8 @@ R_inspect(v);
 
     SEXP res = allocVector (VECSXP, n+1);
     if (grad != R_NilValue) {
-        if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
-        copy_vector_elements (res, 0, grad, 0, n);
+        if (TYPEOF(grad) != VECSXP) abort();
+        copy_vector_elements (res, 0, grad, 0, LENGTH(grad));
     }
 
     SET_VECTOR_ELT (res, n, v);
