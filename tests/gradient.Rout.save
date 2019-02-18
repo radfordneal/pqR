@@ -4477,7 +4477,7 @@ attr(,"gradient")$z
 +   r <- list(x=list(w=3*a),y=a^3,z=a^4)
 +   print(gradient_of(r))
 +   cat("--\n")
-+   elip1(elip1(r,1),0) <- -a^2
++   elip1(elip1(r,0),1) <- -a^2
 +   r
 + }
 $x
@@ -4496,9 +4496,12 @@ $x
 $x$w
 [1] 9.03
 
+$x[[2]]
+[1] -9.0601
+
 
 $y
-[1] -9.0601
+[1] 27.2709
 
 $z
 [1] 82.08541
@@ -4508,9 +4511,12 @@ attr(,"gradient")$x
 attr(,"gradient")$x$w
 [1] 3
 
+attr(,"gradient")$x[[2]]
+[1] -6.02
+
 
 attr(,"gradient")$y
-[1] 0
+[1] 27.1803
 
 attr(,"gradient")$z
 [1] 109.0836
@@ -4541,6 +4547,74 @@ attr(,"gradient")$y
 > with gradient (a=3.01) {
 +   r <- list(x=1,y=2)
 +   class(r) <- "fred"
++   r[[2]] <- a^2
++   r
++ }
+$x
+[1] 1
+
+$y
+[1] 9.0601
+
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+attr(,"gradient")$x
+[1] 0
+
+attr(,"gradient")$y
+[1] 6.02
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=1,y=2)
++   class(r) <- "fred"
++   r$x <- -a
++   r$y <- a^2
++   r
++ }
+$x
+[1] -3.01
+
+$y
+[1] 9.0601
+
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+attr(,"gradient")$x
+[1] -1
+
+attr(,"gradient")$y
+[1] 6.02
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=1,y=2)
++   class(r) <- "fred"
++   r$x <- -a
++   r[[2]] <- a^2
++   r
++ }
+$x
+[1] -3.01
+
+$y
+[1] 9.0601
+
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+attr(,"gradient")$x
+[1] -1
+
+attr(,"gradient")$y
+[1] 6.02
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=1,y=2)
++   class(r) <- "fred"
 +   r <- `$<-` (r, "y", a^2)
 +   r
 + }
@@ -4555,6 +4629,74 @@ attr(,"class")
 attr(,"gradient")
 attr(,"gradient")$x
 [1] 0
+
+attr(,"gradient")$y
+[1] 6.02
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=1,y=2)
++   class(r) <- "fred"
++   r <- `[[<-` (r, 2, a^2)
++   r
++ }
+$x
+[1] 1
+
+$y
+[1] 9.0601
+
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+attr(,"gradient")$x
+[1] 0
+
+attr(,"gradient")$y
+[1] 6.02
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=-1,y=2)
++   class(r) <- "fred"
++   r$x <- -a
++   r <- `$<-` (r, "y", a^2)
++   r
++ }
+$x
+[1] -3.01
+
+$y
+[1] 9.0601
+
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+attr(,"gradient")$x
+[1] -1
+
+attr(,"gradient")$y
+[1] 6.02
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=-1,y=2)
++   class(r) <- "fred"
++   r$x <- -a
++   r <- `[[<-` (r, 2, a^2)
++   r
++ }
+$x
+[1] -3.01
+
+$y
+[1] 9.0601
+
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+attr(,"gradient")$x
+[1] -1
 
 attr(,"gradient")$y
 [1] 6.02

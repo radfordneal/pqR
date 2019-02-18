@@ -875,7 +875,7 @@ with gradient (a=3.01) {
   r <- list(x=list(w=3*a),y=a^3,z=a^4)
   print(gradient_of(r))
   cat("--\n")
-  elip1(elip1(r,1),0) <- -a^2
+  elip1(elip1(r,0),1) <- -a^2
   r
 }
 
@@ -889,7 +889,53 @@ with gradient (a=3.01) {
 with gradient (a=3.01) {
   r <- list(x=1,y=2)
   class(r) <- "fred"
+  r[[2]] <- a^2
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=1,y=2)
+  class(r) <- "fred"
+  r$x <- -a
+  r$y <- a^2
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=1,y=2)
+  class(r) <- "fred"
+  r$x <- -a
+  r[[2]] <- a^2
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=1,y=2)
+  class(r) <- "fred"
   r <- `$<-` (r, "y", a^2)
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=1,y=2)
+  class(r) <- "fred"
+  r <- `[[<-` (r, 2, a^2)
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=-1,y=2)
+  class(r) <- "fred"
+  r$x <- -a
+  r <- `$<-` (r, "y", a^2)
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=-1,y=2)
+  class(r) <- "fred"
+  r$x <- -a
+  r <- `[[<-` (r, 2, a^2)
   r
 }
 

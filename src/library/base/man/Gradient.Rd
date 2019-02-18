@@ -159,7 +159,7 @@ lists of scalar reals, etc.):
 \tabular{l}{
 list \cr
 $ (for vector lists only), [[ (for vector lists only) \cr
-$<- (for vector lists only) \cr
+$<- (for vector lists only), [[<- (for vector lists only) \cr
 \cr
 +, -, *, /, ^ (+ and - may be unary) \cr
 \cr
@@ -281,6 +281,12 @@ with gradient (a=3)              # only the gradient with respect to a
 
 with gradient (a=5,b=6) list(a^2,a*b)               # these give the same
 with gradient (x=list(a=5,b=6)) list(x$a^2,x$a*x$b) # value and gradient
+
+with gradient (a=2) {            # find derivatives of powers of a, from
+    L <- list(a)                 #   a^1 to a^10, evaluated at a=2
+    for (i in 2..10) L[[i]] <- L[[i-1]] * a
+    L
+}
 
 }
 
