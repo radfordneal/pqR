@@ -1033,7 +1033,7 @@ static SEXP do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     x = CAR(args);
     if(isObject(x) && DispatchOrEval(call, op, "length<-", args,
-				     rho, &ans, 0, 1))
+				     rho, &ans, 0, 1, 0))
 	return(ans);
     if (!isVector(x) && !isPairList(x))
        errorcall(call,_("invalid argument"));

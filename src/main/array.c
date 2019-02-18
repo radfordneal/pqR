@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -409,7 +409,7 @@ static SEXP do_length(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     checkArity (op, args);
     check1arg_x (args, call);
 
-    if (DispatchOrEval (call, op, "length", args, rho, &ans, 0, 1))
+    if (DispatchOrEval (call, op, "length", args, rho, &ans, 0, 1, variant))
         return(ans);
 
     return do_fast_length (call, op, CAR(args), rho, variant);
@@ -2023,7 +2023,8 @@ static R_xlen_t dispatch_xlength(SEXP x, SEXP rho) {
             length_op = R_Primitive("length");
         PROTECT(args = list1(x));
         PROTECT(call = list2(install("length"),install("x")));
-        if (DispatchOrEval(call, length_op, "length", args, rho, &len, 0, 1)) {
+        if (DispatchOrEval (call, length_op, "length", args, rho, &len, 
+                            0, 1, 0)) {
             UNPROTECT(2);
             return (R_xlen_t)
                 (TYPEOF(len) == REALSXP ? REAL(len)[0] : asInteger(len));
@@ -2078,7 +2079,7 @@ SEXP attribute_hidden do_lengths(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (useNames == NA_LOGICAL)
 	error(_("invalid '%s' value"), "use.names");
 
-    if (DispatchOrEval(call, op, "lengths", args, rho, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "lengths", args, rho, &ans, 0, 1, 0))
       return(ans);
 
     Rboolean isList = isVectorList(x) || IS_S4_OBJECT(x);

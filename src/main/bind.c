@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2017, 2018 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2017, 2018, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -753,7 +753,7 @@ static SEXP do_c (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     /* Attempt method dispatch. */
 
-    if (DispatchOrEval(call, op, "c", args, env, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "c", args, env, &ans, 0, 1, variant))
 	return(ans);
 
     return do_c_dflt(call, op, ans, env, variant);
@@ -844,7 +844,7 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     /* Attempt method dispatch. */
 
-    if (DispatchOrEval(call, op, "unlist", args, env, &args, 0, 1))
+    if (DispatchOrEval(call, op, "unlist", args, env, &args, 0, 1, variant))
         return(args);
 
     /* Method dispatch has failed; run the default code. */

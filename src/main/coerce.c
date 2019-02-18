@@ -1495,7 +1495,7 @@ static SEXP do_ascharacter (SEXP call, SEXP op, SEXP args, SEXP rho,
 	case 5:
 	    name = "as.raw"; type = RAWSXP; break;
     }
-    if (DispatchOrEval(call, op, name, args, rho, &ans, 0, 1))
+    if (DispatchOrEval(call, op, name, args, rho, &ans, 0, 1, variant))
 	return(ans);
 
     /* Method dispatch has failed, we now just */
@@ -1530,7 +1530,7 @@ static SEXP do_asvector (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     SEXP x, ans;
     int type;
 
-    if (DispatchOrEval(call, op, "as.vector", args, rho, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "as.vector", args, rho, &ans, 0, 1, variant))
 	return(ans);
 
     /* Method dispatch has failed, we now just */
@@ -2013,7 +2013,7 @@ static SEXP do_is(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             case 102: nm = "is.array"; break;
             default: nm = ""; /* -Wall */
             }
-            if(DispatchOrEval(call, op, nm, args, rho, &ans, 0, 1))
+            if(DispatchOrEval(call, op, nm, args, rho, &ans, 0, 1, variant))
                 return(ans);
         }
     }
@@ -2416,7 +2416,7 @@ static SEXP do_isna (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     checkArity(op, args);
     check1arg_x (args, call);
 
-    if (DispatchOrEval(call, op, "is.na", args, rho, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "is.na", args, rho, &ans, 0, 1, variant))
 	return(ans);
 
     return do_fast_isna (call, op, CAR(args), rho, variant);
@@ -2486,7 +2486,7 @@ static SEXP do_isnan (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     checkArity(op, args);
     check1arg_x (args, call);
 
-    if (DispatchOrEval(call, op, "is.nan", args, rho, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "is.nan", args, rho, &ans, 0, 1, variant))
 	return(ans);
 
     return do_fast_isnan (call, op, CAR(args), rho, variant);
@@ -2569,7 +2569,7 @@ static SEXP do_isfinite (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     checkArity(op, args);
     check1arg_x (args, call);
 
-    if (DispatchOrEval(call, op, "is.finite", args, rho, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "is.finite", args, rho, &ans, 0, 1, variant))
 	return(ans);
 
     return do_fast_isfinite (call, op, CAR(args), rho, variant);
@@ -2651,7 +2651,7 @@ static SEXP do_isinfinite (SEXP call, SEXP op, SEXP args, SEXP rho,
     checkArity(op, args);
     check1arg_x (args, call);
 
-    if (DispatchOrEval(call, op, "is.infinite", args, rho, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "is.infinite", args, rho, &ans, 0, 1, variant))
 	return(ans);
 
     return do_fast_isinfinite (call, op, CAR(args), rho, variant);

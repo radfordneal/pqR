@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995-1998  Robert Gentleman and Ross Ihaka
@@ -597,7 +597,7 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     static const char * const ap[5] = 
                          { "x", "times", "length.out", "each", "..." };
 
-    if (DispatchOrEval(call, op, "rep", args, rho, &ans, 0, 0))
+    if (DispatchOrEval(call, op, "rep", args, rho, &ans, 0, 0, variant))
 	return(ans);
 
     /* This has evaluated all the non-missing arguments into ans */
@@ -824,7 +824,7 @@ static SEXP do_seq(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     static const char * const ap[6] =
         { "from", "to", "by", "length.out", "along.with", "..." };
 
-    if (DispatchOrEval(call, op, "seq", args, rho, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "seq", args, rho, &ans, 0, 1, variant))
 	return(ans);
 
     /* This is a primitive and we manage argument matching ourselves.
@@ -1025,8 +1025,8 @@ static SEXP do_seq_along(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
        where no methods are defined this is more efficient than an
        unconditional callback to R */
 
-    if (isObject(arg)
-	  && DispatchOrEval(call, length_op, "length", args, rho, &ans, 0, 1)) {
+    if (isObject(arg) && DispatchOrEval (call, length_op, "length", args, rho,
+                                         &ans, 0, 1, variant)) {
 	len = asInteger(ans);
     }
     else

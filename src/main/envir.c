@@ -3083,7 +3083,7 @@ static SEXP do_as_environment(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(isEnvironment(arg))
 	return arg;
     if(isObject(arg) &&
-       DispatchOrEval(call, op, "as.environment", args, rho, &ans, 0, 1))
+       DispatchOrEval(call, op, "as.environment", args, rho, &ans, 0, 1, 0))
 	return ans;
     switch(TYPEOF(arg)) {
     case STRSXP:

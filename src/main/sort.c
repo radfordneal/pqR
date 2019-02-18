@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2017, 2018 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2017, 2018, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1307,10 +1307,11 @@ static SEXP do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     check1arg_x (args, call);
 
-    if(DispatchOrEval(call, op, "xtfrm", args, rho, &ans, 0, 1)) return ans;
+    if (DispatchOrEval(call, op, "xtfrm", args, rho, &ans, 0, 1, 0))
+        return ans;
     /* otherwise dispatch the default method */
     PROTECT(fn = findFun(install("xtfrm.default"), rho));
-    PROTECT(prargs = promiseArgsWithValues(CDR(call), rho, args));
+    PROTECT(prargs = promiseArgsWithValues(CDR(call), rho, args, 0));
     ans = applyClosure(call, fn, prargs, rho, NULL);
     UNPROTECT(2);
     return ans;

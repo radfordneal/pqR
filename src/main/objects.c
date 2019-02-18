@@ -146,10 +146,12 @@ static SEXP applyMethod (SEXP call, SEXP op, SEXP args, SEXP rho,
 	check_stack_balance(op, save);
 	VMAXSET(vmax);
     }
-    else if (TYPEOF(op) == CLOSXP)
+    else if (TYPEOF(op) == CLOSXP) {
 	ans = applyClosure_v(call, op, args, rho, supplied, variant);
-    else
+    }
+    else {
 	ans = R_NilValue;
+    }
 
     return ans;
 }
@@ -1563,7 +1565,7 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 	if(isFunction(value)) {
 	    /* found a method, call it with promised args */
 	    if(!promisedArgs) {
-		PROTECT(s = promiseArgsWithValues(CDR(call), rho, args));
+		PROTECT(s = promiseArgsWithValues(CDR(call), rho, args, 0));
 		value =  applyClosure(call, value, s, rho, NULL);
 		UNPROTECT(1);
 		return value;
@@ -1579,7 +1581,7 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
     /* To do:  arrange for the setting to be restored in case of an
        error in method search */
     if(!promisedArgs) {
-	PROTECT(s = promiseArgsWithValues(CDR(call), rho, args));
+	PROTECT(s = promiseArgsWithValues(CDR(call), rho, args, 0));
 	value = applyClosure(call, fundef, s, rho, NULL);
 	UNPROTECT(1);
     } else

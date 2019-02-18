@@ -997,7 +997,7 @@ static SEXP do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     check1arg_x (args, call);
 
-    if (DispatchOrEval(call, op, "names<-", args, env, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "names<-", args, env, &ans, 0, 1, 0))
 	return(ans);
     /* Special case: removing non-existent names, to avoid a copy */
     if (CADR(args) == R_NilValue &&
@@ -1121,7 +1121,7 @@ static SEXP do_names(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXP obj, nms, ans;
     checkArity(op, args);
     check1arg_x (args, call);
-    if (DispatchOrEval(call, op, "names", args, env, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "names", args, env, &ans, 0, 1, variant))
 	return ans;
     PROTECT(obj = CAR(ans));
     if (isVector(obj) || isList(obj) || isLanguage(obj) || IS_S4_OBJECT(obj))
@@ -1152,7 +1152,7 @@ static SEXP do_dimnamesgets(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     check1arg_x (args, call);
 
-    if (DispatchOrEval(call, op, "dimnames<-", args, env, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "dimnames<-", args, env, &ans, 0, 1, 0))
 	return(ans);
     PROTECT(args = ans);
     if (NAMEDCNT_GT_1(CAR(args))) 
@@ -1251,7 +1251,7 @@ static SEXP do_dimnames(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP ans;
     checkArity(op, args);
     check1arg_x (args, call);
-    if (DispatchOrEval(call, op, "dimnames", args, env, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "dimnames", args, env, &ans, 0, 1, 0))
 	return(ans);
     PROTECT(args = ans);
     ans = getAttrib(CAR(args), R_DimNamesSymbol);
@@ -1271,7 +1271,7 @@ static SEXP do_dim(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     checkArity(op, args);
     check1arg_x (args, call);
 
-    if (DispatchOrEval(call, op, "dim", args, env, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "dim", args, env, &ans, 0, 1, variant))
 	return(ans);
 
     return do_fast_dim (call, op, CAR(args), env, variant);
@@ -1282,7 +1282,7 @@ static SEXP do_dimgets(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP ans, x;
 
     checkArity(op, args);
-    if (DispatchOrEval(call, op, "dim<-", args, env, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "dim<-", args, env, &ans, 0, 1, 0))
 	return(ans);
     x = CAR(args);
     /* Duplication might be expensive */
@@ -1396,7 +1396,7 @@ static SEXP do_levelsgets(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     check1arg_x (args, call);
 
-    if (DispatchOrEval(call, op, "levels<-", args, env, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "levels<-", args, env, &ans, 0, 1, 0))
 	/* calls, e.g., levels<-.factor() */
 	return(ans);
 
@@ -1707,7 +1707,7 @@ static SEXP do_ATgets(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SETCADR(args, input);
     UNPROTECT(1);  /* 'input' is now protected */
 
-    if (DispatchOrEval(call, op, "@<-", args, env, &ans, 0, 0))
+    if (DispatchOrEval(call, op, "@<-", args, env, &ans, 0, 0, variant))
         return(ans);
 
     PROTECT(obj = CAR(ans));

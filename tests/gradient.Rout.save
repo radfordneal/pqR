@@ -304,6 +304,30 @@ attr(,"class")
 attr(,"gradient")
 [1] -378.1313
 > 
+> `[[.xyzzy` <- function (x,i) if (i==0) x$x else x$y
+> `[[<-.xyzzy` <- function (x,i,value) { if (i==0) x$x<-value else x$y<-value; x }
+> 
+> with gradient (a=7) { L <- list(x=1,y=2); class(L)<-"xyzzy"; L$x<-a^2; L[[0]] }
+[1] 49
+attr(,"gradient")
+[1] 14
+> with gradient (a=7) { L <- list(x=1,y=2); class(L)<-"xyzzy"; L[[0]]<-a^2; L }
+$x
+[1] 49
+
+$y
+[1] 2
+
+attr(,"class")
+[1] "xyzzy"
+attr(,"gradient")
+attr(,"gradient")$x
+[1] 14
+
+attr(,"gradient")$y
+[1] 0
+
+> 
 > 
 > # Check tracking of gradients through S4 methods.  Not currently implemented,
 > # so this is disabled.
