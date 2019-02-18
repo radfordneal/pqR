@@ -4362,6 +4362,9 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* which could cause problems when "from" was */
     /* ..., as in PR#8718 */
     PROTECT(args = CONS(from, CONS(input, R_NilValue)));
+    if (grad != R_NilValue)
+        SET_GRADIENT_IN_CELL (args, grad);
+
     /* Change call used too, for compatibility with
        R-2.15.0:  It's accessible using "substitute", 
        and was a string in R-2.15.0. */

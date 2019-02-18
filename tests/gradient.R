@@ -159,11 +159,27 @@ b <- 200; class(b) <- c("mary","bert")
 biffle(b)
 with gradient (b) biffle(b)
 
-`[[.xyzzy` <- function (x,i) if (i==0) x$x else x$y
-`[[<-.xyzzy` <- function (x,i,value) { if (i==0) x$x<-value else x$y<-value; x }
+`[[.xyzzy` <- 
+  function (x,i) if (i==0) x$x else x$y
+`[[<-.xyzzy` <- 
+  function (x,i,value) { if (i==0) x$x<-value else x$y<-value; x }
 
 with gradient (a=7) { L <- list(x=1,y=2); class(L)<-"xyzzy"; L$x<-a^2; L[[0]] }
 with gradient (a=7) { L <- list(x=1,y=2); class(L)<-"xyzzy"; L[[0]]<-a^2; L }
+
+rm(`[[.xyzzy`)
+rm(`[[<-.xyzzy`)
+
+`$.xyzzy` <- 
+  function (x,i) if (i=="x") x[[1]] else x[[2]]
+`$<-.xyzzy` <- 
+  function (x,i,value) { if (i=="x") x[[1]]<-value else x[[2]]<-value; x }
+
+with gradient (a=7) { L <- list(x=1,y=2); class(L)<-"xyzzy"; L[[1]]<-a^2; L$x }
+with gradient (a=7) { L <- list(x=1,y=2); class(L)<-"xyzzy"; L$x<-a^2; L }
+
+rm(`$.xyzzy`)
+rm(`$<-.xyzzy`)
 
 
 # Check tracking of gradients through S4 methods.  Not currently implemented,
