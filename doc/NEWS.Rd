@@ -22,7 +22,13 @@
 }
 
 
-\section{CHANGES IN VERSION RELEASED 2019-00-00}{
+\section{CHANGES IN VERSION RELEASED 2019-02-19}{
+
+  \subsection{INTRODUCTION}{
+  \itemize{
+  \item This is a minor maintenance release, primarily for fixing the
+        installation issue described below.
+  }}
 
   \subsection{INSTALLATION}{
   \itemize{
