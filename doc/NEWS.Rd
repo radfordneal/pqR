@@ -10,7 +10,8 @@
 
   \subsection{INSTALLATION}{
   \itemize{
-  \item .
+  \item Fixed an issue in which "make install" on a Linux or Mac system would
+        not copy some header files needed when installing some packages.
   }}
 
   \subsection{BUG FIXES}{
