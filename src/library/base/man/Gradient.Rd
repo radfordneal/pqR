@@ -186,6 +186,12 @@ dt (with no ncp arg), pt (1st arg only, no ncp), qt (1st arg only,no ncp) \cr
 dunif, punif, qunif, runif \cr
 dweibull, pweibull, qweibull, rweibull
 }
+The following replacement functions do not compute any gradient information,
+but do leave undisturbed any gradient information that is associated with 
+the variable that they update:
+\tabular{l}{
+attr<-
+}
 }
 
 \value{

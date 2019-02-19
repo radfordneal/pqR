@@ -1650,12 +1650,15 @@ static void check_slot_assign(SEXP obj, SEXP input, SEXP value, SEXP env)
     UNPROTECT(3);
 }
 
-/* Implements   attr(obj, which = "<name>")  <-  value  */
+/* Implements   attr(obj, which = "<name>")  <-  value.  SPECIALSXP.  */
 
-static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
-    SEXP obj, name, argList;
-    static const char * const ap[3] = { "x", "which", "value" };
+    SEXP obj, name;
+
+    PROTECT (args = variant & VARIANT_GRADIENT 
+                      ? evalList_gradient (args, env, 0, 1, 0)
+                      : evalList (args, env));
 
     checkArity(op, args);
 
@@ -1665,8 +1668,9 @@ static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
     else
         PROTECT(obj);
 
-    /* argument matching */
-    argList = matchArgs_strings (ap, 3, args, call);
+    /* Argument matching - does not actually make much sense to do this! */
+    static const char * const ap[3] = { "x", "which", "value" };
+    SEXP argList = matchArgs_strings (ap, 3, args, call);
 
     PROTECT(argList);
 
@@ -1678,7 +1682,13 @@ static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
      *                  error(.....)
      */
     setAttrib(obj, name, CADDR(args));
-    UNPROTECT(2);
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        R_gradient = GRADIENT_IN_CELL(args);
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(3);
     return obj;
 }
 
@@ -2123,7 +2133,7 @@ attribute_hidden FUNTAB R_FunTab_attrib[] =
 {"attributes",	do_attributes,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"attributes<-",do_attributesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"attr",	do_attr,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"attr<-",	do_attrgets,	0,	1,	3,	{PP_FUNCALL, PREC_LEFT,	1}},
+{"attr<-",	do_attrgets,	0,	1000,	3,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"levels<-",	do_levelsgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 
 {"@",		do_AT,		0,	1000,	2,	{PP_DOLLAR,  PREC_DOLLAR, 0}},
