@@ -16,7 +16,7 @@ SGGC_HEADERS = sggc-app.h sggc.h sbset-app.h sbset.h
 
 ## Partially included by the API (1) headers in .., but not part of the
 ## API per se. 
-R_EXT_HEADERS = $(SGGC_HEADERS) \
+R_EXT_HEADERS0 = \
   Applic.h Arith.h BLAS.h Boolean.h Callbacks.h Complex.h Constants.h \
   Error.h GetX11Image.h \
   GraphicsDevice.h GraphicsEngine.h \
@@ -24,6 +24,7 @@ R_EXT_HEADERS = $(SGGC_HEADERS) \
   Parse.h Print.h PrtUtil.h R-ftp-http.h RS.h Random.h RConverters.h \
   Rdynload.h Riconv.h RStartup.h Utils.h eventloop.h libextern.h \
   rlocale.h stats_package.h stats_stubs.h Visibility.h
+R_EXT_HEADERS = $(SGGC_HEADERS) $(R_EXT_HEADERS0)
 
 DISTFILES = Makefile.in $(R_EXT_HEADERS)
 TIMESTAMPS = $(R_EXT_HEADERS:.h=.ts)
@@ -62,8 +63,12 @@ stamp-R:
 $(TIMESTAMPS): stamp-R
 
 install: installdirs
-	@for f in $(R_EXT_HEADERS); do \
+	@for f in $(R_EXT_HEADERS0); do \
 	  $(INSTALL_DATA) $(srcdir)/$${f} "$(DESTDIR)$(rincludedir)/R_ext"; \
+	done
+	@for f in $(SGGC_HEADERS); do \
+	  $(INSTALL_DATA) $(srcdir)/../../extra/sggc/$${f} \
+		"$(DESTDIR)$(rincludedir)/R_ext"; \
 	done
 installdirs:
 	@$(MKINSTALLDIRS) "$(DESTDIR)$(rincludedir)/R_ext"

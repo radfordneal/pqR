@@ -226,9 +226,9 @@ To install pqR in system directories, use the commands
     make install-pdf
     make install-info
 
-or some subset of them.  By default, these install to /usr/local, but
-this can be changed using the --prefix configure option.  For more
-details, see the R-admin manual.
+or some subset of them.  By default, these install to the subdirectory
+R of your home directory (on Linux), but this can be changed using the
+--prefix configure option.  For more details, see the R-admin manual.
 
 
 Building pqR from a development version
