@@ -1,4 +1,0 @@
-Speed improvements to c and unlist.
-
-Also improves speed of copy_elements using memmove.
-

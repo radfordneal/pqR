@@ -1,3 +1,0 @@
-Make "formals" work for primitive functions.  Motivated by
-rep.int becoming primitive, and being used in an example
-for Vectorize, which uses formals.

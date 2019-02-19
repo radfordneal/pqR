@@ -1,2 +1,0 @@
-Add more tests of helper threads to tests/helpers.R, checking that
-waits occur when they should.

@@ -1,8 +1,0 @@
-Miscellaneious small mods.
-
-Make more error functions NORETURN.
-
-Document hazards of UNPROTECT_PTR.
-
-Clean up va_list declarations to no longer look like function calls.
-
