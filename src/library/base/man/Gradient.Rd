@@ -7,6 +7,7 @@
 \alias{Gradient}
 \alias{with gradient}
 \alias{track gradient}
+\alias{back gradient}
 \alias{compute gradient}
 \alias{gradient_of}
 \alias{no_gradient}
@@ -38,6 +39,11 @@ track gradient (var=v.expr) expr
 track gradient (var) expr
 track gradient (var1=v1.expr,var2=v2.expr) expr
 track gradient (var1,var2) expr
+
+back gradient (var=v.expr) expr
+back gradient (var) expr
+back gradient (var1=v1.expr,var2=v2.expr) expr
+back gradient (var1,var2) expr
 
 compute gradient (var1=v1.expr, var2=v2.expr) expr as (g1.expr, g2.expr)
 compute gradient (var1, var2) expr as (g1.expr, g2.expr)
@@ -75,9 +81,10 @@ During the evaluation of \code{expr} within \code{with gradient},
 assignments to local variables (in the new environment) will record
 the gradient of the assigned value with respect to \code{var} (or
 \code{var1}, \code{var2}, etc.), and with respect to the variables
-listed in any enclosing \code{with gradient} or \code{track gradient}
-constructs, so that if the value of the variable is used to compute
-the final value for \code{with gradient}, its gradient can be
+listed in any enclosing \code{with gradient}, \code{track gradient},
+or active \code{back gradient} constructs, so that if the value of the
+variable is used to compute the final value for \code{with gradient},
+or is the argument of call of \code{gradient_of}, its gradient can be
 computed.  Note, however, that the gradients of attribute values are
 not recorded, nor are gradients recorded when non-local assignments
 are made with \code{<<-}.
@@ -89,11 +96,12 @@ when an expression is evaluated with \code{eval}, if the environment
 used for the evaluation is one in which gradients are being tracked.
 
 Within \code{expr}, the gradient of an expression, \code{e}, with
-respect the variable or variables of the enclosing \code{with
-gradient} construct can be found with \code{gradient_of(e)}.  The
-value of \code{gradient_of} does not itself have any gradient
-information --- hence \code{gradient_of(gradient_of(e))} will not
-produce a second derivative (it will always be zero).
+respect the variable or variables of the innermost enclosing
+\code{with gradient} or \code{track gradient} construct can be found
+with \code{gradient_of(e)}.  The value of \code{gradient_of} does not
+itself have any gradient information --- hence
+\code{gradient_of(gradient_of(e))} will not produce a second
+derivative (it will always be zero).
 
 Tracking of gradients can be explicitly suppressed (to save time) with
 \code{no_gradient(e)}.  Gradient tracking is automatically suppressed
@@ -104,16 +112,25 @@ conditions, as indexes, or as expressions iterated over with
 The \code{track gradient} construct is like \code{with gradient},
 except that the gradient is not attached to the final result.  It is
 therefore useful only in combination with calls of \code{gradient_of},
-or if it is inside another \code{track gradient} or
-\code{with gradient} construct.  When these constructs are nested,
-derivatives with respect to an inner variable may determine
-derivatives with respect to an outer variable, by application of the
-chain rule.
+or if it is inside (in a dynamic sense) another \code{track gradient},
+\code{with gradient}, or active \code{back gradient} construct.  When
+these gradient constructs are nested, derivatives with respect to an inner
+variable may determine derivatives with respect to an outer variable,
+by application of the chain rule (backpropagation).
 
-In forms of \code{with gradient} and \code{track gradient} in which no
-expression follows a variable, the expression is assumed to be the
-same as the variable (evaluated in the current (not the new)
-environment).
+The \code{back gradient} construct is like \code{track gradient},
+except that it does not allow \code{gradient_of}, and hence only needs
+to track gradients if they will be backpropagated to give gradients
+for a (dynamically) enclosing gradient construct.  It may therefore be
+included at little performance cost in a function that may either be
+called for only its value, or may be called for both its value and
+that value's gradient, depending on whether call from within a gradient
+construct.
+
+In forms of \code{with gradient}, \code{track gradient}, and
+\code{back gradient} in which no expression follows a variable, the
+expression is assumed to be the same as the variable (evaluated in the
+current (not the new) environment).
 
 The gradient of an expression can be specified explicity using the
 \code{compute gradient} construct, as an alternative to simply letting
@@ -293,6 +310,23 @@ with gradient (a=2) {            # find derivatives of powers of a, from
     for (i in 2..10) L[[i]] <- L[[i-1]] * a
     L
 }
+
+V <- as.list(seq(0,1,length=11))
+
+with gradient (V) {              # tracks gradient w.r.t. 11 elements of V
+    p <- 0
+    for (i along V) 
+        p <- p + i*V[[i]]
+    p^2 + p^3 + p^4 + p^5        # every operation computes derivatives
+}                                #   w.r.t. all 11 elements of V
+
+with gradient (V) {              # compute same result more efficiently...
+    p <- 0
+    for (i along V) 
+        p <- p + i*V[[i]]
+    back gradient (p)            # operations in the expresson below 
+        p^2 + p^3 + p^4 + p^5    #   compute derivative w.r.t. p only, then
+}                                #   chain rule gives gradient w.r.t. V
 
 }
 

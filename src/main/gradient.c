@@ -644,10 +644,12 @@ static SEXP create_gradient (SEXP result, SEXP result_grad, SEXP gv)
 }
 
 
-/* with_gradient (op == 0) and track_gradient (op == 1). */
+/* with gradient (op==0), track gradient (op==1), and back gradient (op==2). */
 
 static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
+    int need_grad = PRIMVAL(op) != 2 || (variant & VARIANT_GRADIENT);
+
     /* Check for errors in argument structure, and store symbols for variables
        for GRADVARS in 'gv'. */
 
@@ -660,6 +662,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     PROTECT(gv);
 
     SEXP p, q, r;
+    int vr;
     int i;
 
     for (i = 0, p = args; i < nv; i++, p = CDR(p)) {
@@ -685,8 +688,9 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     PROTECT(newenv);
 
     /* Evaluate initial values assigned to variables, and put in binding 
-       cells, along with identity for gradient, which also goes in GRADVARS.
-       Also store the gradients of initial variable values in 'vargrad'. */
+       cells.  Unless the gradient isn't needed, also put identity gradient
+       in binding cells, also put in GRADVARS, and also store the gradients
+       of initial variable values in 'vargrad'. */
 
     SEXP frame = R_NilValue;
     SEXP vargrad[nv];
@@ -694,16 +698,20 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     PROTECT_INDEX fix;
     PROTECT_WITH_INDEX(frame,&fix);
 
+    vr = need_grad ? VARIANT_GRADIENT | VARIANT_PENDING_OK : VARIANT_PENDING_OK;
+
     for (i = 0, p = args; i < nv; i++, p = CDR(p)) {
-        SEXP val = evalv (CAR(p), env, VARIANT_GRADIENT | VARIANT_PENDING_OK);
+        SEXP val = evalv (CAR(p), env, vr);
         REPROTECT (frame = cons_with_tag (val, frame, VECTOR_ELT(gv,i)), fix);
-        PROTECT (vargrad[i] = R_variant_result ? R_gradient : R_NilValue);
-        SEXP id_grad = PROTECT (make_id_grad (val));
-        if (id_grad != R_NilValue) {
-            SET_VECTOR_ELT (gv, nv+i, id_grad);
-            SEXP gcell = cons_with_tag (id_grad, R_NilValue, newenv);
-            SET_GRADIENT_IN_CELL (frame, gcell);
-            SET_GRADINDEX (gcell, i+1);
+        if (need_grad) {
+            PROTECT (vargrad[i] = R_variant_result ? R_gradient : R_NilValue);
+            SEXP id_grad = PROTECT (make_id_grad (val));
+            if (id_grad != R_NilValue) {
+                SET_VECTOR_ELT (gv, nv+i, id_grad);
+                SEXP gcell = cons_with_tag (id_grad, R_NilValue, newenv);
+                SET_GRADIENT_IN_CELL (frame, gcell);
+                SET_GRADINDEX (gcell, i+1);
+            }
         }
         INC_NAMEDCNT(val);
     }
@@ -713,11 +721,17 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SET_FRAME(newenv,frame);
     SET_RDEBUG(newenv,RDEBUG(env));
     set_symbits_in_env (newenv);
-    SET_STORE_GRAD(newenv,1);
-    SET_GRADVARS(newenv,gv);
+    if (need_grad) {
+        SET_STORE_GRAD(newenv,1);
+        SET_GRADVARS(newenv,gv);
+    }
 
     /* Evaluate body. */
 
+    vr = variant & VARIANT_PENDING_OK;
+    if (need_grad)
+        vr |= VARIANT_GRADIENT;
+              
     SEXP result = evalv (CAR(p), newenv, 
                          VARIANT_GRADIENT | (variant & VARIANT_PENDING_OK));
     PROTECT_INDEX rix;                   
@@ -744,7 +758,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     R_variant_result = 0;
 
-    if (res_has_grad && (variant & VARIANT_GRADIENT)) {
+    if (need_grad && res_has_grad && (variant & VARIANT_GRADIENT)) {
 
         SEXP other_grads = get_other_gradients (newenv);
 
@@ -768,7 +782,11 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     SET_GRADVARS(newenv,R_NilValue);  /* just in case it's somehow referenced */
 
-    UNPROTECT(5+2*nv);
+    if (need_grad)
+        UNPROTECT(5+2*nv);
+    else
+        UNPROTECT(5);
+
     return result;
 }
 
@@ -1002,7 +1020,9 @@ attribute_hidden FUNTAB R_FunTab_gradient[] =
 
 {"with gradient", do_gradient,  0,	1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"track gradient", do_gradient,  1,	1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"track gradient", do_gradient, 1,	1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+
+{"back gradient", do_gradient,  2,	1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"compute gradient", do_compute_grad,  0, 1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 

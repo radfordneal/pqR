@@ -1039,3 +1039,9 @@ with gradient (L=list(a=5,b=7))
 
 with gradient (L=list(a=5,b=7))
   with gradient (M=list(d=L$a^2+L$b,e=L$a*L$b)) list(sin(M$d)+sqrt(M$e),55)
+
+with gradient (L=list(a=5,b=7))
+  track gradient (M=list(d=L$a^2+L$b,e=L$a*L$b)) list(sin(M$d)+sqrt(M$e),55)
+
+with gradient (L=list(a=5,b=7))
+  back gradient (M=list(d=L$a^2+L$b,e=L$a*L$b)) list(sin(M$d)+sqrt(M$e),55)

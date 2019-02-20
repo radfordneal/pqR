@@ -1443,11 +1443,12 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
 
     /* Do the actual operation. */
 
-    double xval1, yval1;
+    double xval1, yval1, aval1;  /* may be needed for gradient */
 
     if (n!=0) {
 
-        xval1 = *REAL(x), yval1 = *REAL(y);  /* may be needed for gradient */
+        xval1 = TYPEOF(x) == REALSXP ? *REAL(x) : *INTEGER(x);
+        yval1 = TYPEOF(y) == REALSXP ? *REAL(y) : *INTEGER(y);
 
         threshold = T_arithmetic;
         if (TYPEOF(ans) == CPLXSXP)
@@ -1524,11 +1525,13 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
     }
 
     R_variant_result = local_assign1 | local_assign2;
-    double aval1 = *REAL(ans);
 
     /* Handle gradients. */
 
-    if (n==1 && (grad1 != R_NilValue || grad2 != R_NilValue) && !ISNAN(aval1)) {
+    if (TYPEOF(ans) == REALSXP && n==1 
+         && (grad1 != R_NilValue || grad2 != R_NilValue) 
+         && !ISNAN (aval1 = *REAL(ans))) {
+
         switch (opcode) {
         case PLUSOP: 
             if (grad1 == R_NilValue)

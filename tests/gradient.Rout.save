@@ -5486,3 +5486,55 @@ attr(,"gradient")$b[[2]]
 
 
 > 
+> with gradient (L=list(a=5,b=7))
++   track gradient (M=list(d=L$a^2+L$b,e=L$a*L$b)) list(sin(M$d)+sqrt(M$e),55)
+[[1]]
+[1] 6.467506
+
+[[2]]
+[1] 55
+
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+[1] 8.933842
+
+attr(,"gradient")$a[[2]]
+[1] 0
+
+
+attr(,"gradient")$b
+attr(,"gradient")$b[[1]]
+[1] 1.2568
+
+attr(,"gradient")$b[[2]]
+[1] 0
+
+
+> 
+> with gradient (L=list(a=5,b=7))
++   back gradient (M=list(d=L$a^2+L$b,e=L$a*L$b)) list(sin(M$d)+sqrt(M$e),55)
+[[1]]
+[1] 6.467506
+
+[[2]]
+[1] 55
+
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+[1] 8.933842
+
+attr(,"gradient")$a[[2]]
+[1] 0
+
+
+attr(,"gradient")$b
+attr(,"gradient")$b[[1]]
+[1] 1.2568
+
+attr(,"gradient")$b[[2]]
+[1] 0
+
+
+> 

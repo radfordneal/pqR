@@ -315,7 +315,8 @@ enum token_type {
   GT,           GE,             LT,        LE,               EQ,
   NE,           AND,            OR,        AND2,             OR2,
   NS_GET,       NS_GET_INT,     EXPT2,     SPECIAL,          COLON_ASSIGN,
-  DOTDOT,       BANGBANG,       WITHGRAD,  TRACKGRAD,        COMPUTEGRAD
+  DOTDOT,       BANGBANG,       WITHGRAD,  TRACKGRAD,        BACKGRAD,
+  COMPUTEGRAD
 };
 
 /* Names for tokens with codes >= 256.  These must correspond in order
@@ -331,7 +332,7 @@ static const char *const token_name[] = {
   "'!='",       "'&'",          "'|'",     "'&&'",           "'||'",
   "'::'",       "':::'",        "'**'",    "SPECIAL",        "':='",
   "'..'",       "'!!'",         "'with gradient'", "'track gradient'",
-                                "'compute gradient'"
+                                "'back gradient'", "'compute gradient'"
 };
 
 #define NUM_TRANSLATED 7  /* Number above (at front) that are translated */
@@ -357,7 +358,8 @@ static const char *const pdata_token_name[] = {
   "GT",         "GE",           "LT",      "LE",             "EQ",
   "NE",         "AND",          "OR",      "AND2",           "OR2",
   "NS_GET",     "NS_GET_INT",   "^",       "SPECIAL",        "COLON_ASSIGN",
-  "DOTDOT",     "BANGBANG",     "WITHGRAD","TRACKGRAD",      "COMPUTEGRAD"
+  "DOTDOT",     "BANGBANG",     "WITHGRAD","TRACKGRAD",      "BACKGRAD",
+  "COMPUTEGRAD"
 };
 
 
@@ -1550,6 +1552,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
 
             if (strcmp(CHAR(PRINTNAME(res)),"with") == 0
                  || strcmp(CHAR(PRINTNAME(res)),"track") == 0
+                 || strcmp(CHAR(PRINTNAME(res)),"back") == 0
                  || strcmp(CHAR(PRINTNAME(res)),"compute") == 0) {
 
                 char opname[20];
@@ -1558,8 +1561,9 @@ static SEXP parse_expr (int prec, int flags, int *paren)
                 SEXP op = install(opname);
 
                 enum token_type tk = 
-                  strcmp(CHAR(PRINTNAME(res)),"with") == 0 ? WITHGRAD :
+                  strcmp(CHAR(PRINTNAME(res)),"with")  == 0 ? WITHGRAD :
                   strcmp(CHAR(PRINTNAME(res)),"track") == 0 ? TRACKGRAD :
+                  strcmp(CHAR(PRINTNAME(res)),"back")  == 0 ? BACKGRAD :
                                                               COMPUTEGRAD;
                 set_token_in_rec (prev_token_rec(1), pdata_token_name[tk-256]);
                 set_text_in_rec (prev_token_rec(1), token_name[tk-256]);
@@ -3646,7 +3650,7 @@ static int token (int c, int no_sym_un)
    recognized.  No error is signaled here if a symbol or unary
    operator is seen anyway.  But if a second symbol is "gradient",
    no parse data record is created for it - instead a previous "with",
-   "track", or "compute" record is modified appropriately.
+   "track", "back", or "compute" record is modified appropriately.
 
    Returns 0 if end of file was immediately encountered, with no
    whitespace before, and 1 if not (even when END_OF_INPUT is the 
