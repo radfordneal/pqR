@@ -666,6 +666,8 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     int i;
 
     for (i = 0, p = args; i < nv; i++, p = CDR(p)) {
+        if (CAR(p) == R_MissingArg || CAR(p) == R_MissingUnder)
+            errorcall (call, _("no gradient variables"));
         SEXP t = TAG(p)==R_NilValue && TYPEOF(CAR(p))==SYMSXP ? CAR(p) 
                   : TAG(p);
         if (t == R_NilValue)
@@ -690,7 +692,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* Evaluate initial values assigned to variables, and put in binding 
        cells.  Unless the gradient isn't needed, also put identity gradient
        in binding cells, also put in GRADVARS, and also store the gradients
-       of initial variable values in 'vargrad'. */
+       of initial variable values in 'vargrad' (if need gradients). */
 
     SEXP frame = R_NilValue;
     SEXP vargrad[nv];
@@ -732,14 +734,13 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     if (need_grad)
         vr |= VARIANT_GRADIENT;
               
-    SEXP result = evalv (CAR(p), newenv, 
-                         VARIANT_GRADIENT | (variant & VARIANT_PENDING_OK));
+    SEXP result = evalv (CAR(p), newenv, vr);
     PROTECT_INDEX rix;                   
     PROTECT_WITH_INDEX(result,&rix);
 
     int res_has_grad = R_variant_result & VARIANT_GRADIENT_FLAG;
 
-    SEXP result_grad = get_gradient (newenv);
+    SEXP result_grad = need_grad ? get_gradient (newenv) : R_NilValue;
     PROTECT(result_grad);
 
     /* For 'with gradient', attach gradient attribute. */
