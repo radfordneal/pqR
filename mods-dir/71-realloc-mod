@@ -1,3 +1,0 @@
-Change interface to reallocVector to allow caller to suppress copy to
-new storage (sometimes more efficient for caller to do it).  This new
-facility is not used yet.
