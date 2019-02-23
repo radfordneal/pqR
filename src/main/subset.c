@@ -2760,11 +2760,18 @@ SEXP attribute_hidden do_subset2_dflt_x (SEXP call, SEXP op, SEXP x,
     }
     else if (TYPEOF(x) == INTSXP && CAN_USE_SCALAR_STACK(variant))
         ans = PUSH_SCALAR_INTEGER (INTEGER(x)[offset]);
-    else if (TYPEOF(x) == REALSXP && CAN_USE_SCALAR_STACK(variant))
+    else if (TYPEOF(x) == REALSXP && CAN_USE_SCALAR_STACK(variant)
+              && array_grad == R_NilValue)
         ans = PUSH_SCALAR_REAL (REAL(x)[offset]);
     else {
-	ans = allocVector(TYPEOF(x), 1);
+        ans = allocVector(TYPEOF(x), 1);
         copy_elements (ans, 0, 0, x, offset, 0, 1);
+        if (array_grad != R_NilValue) {
+            PROTECT(ans);
+            R_gradient = subset_numeric_gradient(array_grad, offset, LENGTH(x));
+            R_variant_result |= VARIANT_GRADIENT_FLAG;
+            UNPROTECT(1);
+        }
     }
     UNPROTECT(2);
     return ans;

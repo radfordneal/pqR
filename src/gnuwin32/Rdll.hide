@@ -421,6 +421,7 @@
  Rf_stirlerr
  Rf_subassign_list_gradient
  Rf_subset_list_gradient
+ Rf_subset_numeric_gradient
  Rf_substituteList
  Rf_ucstomb
  Rf_unbound_var_error

@@ -1400,6 +1400,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define StrToInternal		Rf_StrToInternal
 # define subassign_list_gradient Rf_subassign_list_gradient
 # define subset_list_gradient	Rf_subset_list_gradient
+# define subset_numeric_gradient Rf_subset_numeric_gradient
 # define substituteList		Rf_substituteList
 # define too_deep_error		Rf_too_deep_error
 # define tsConform		Rf_tsConform
@@ -1635,6 +1636,7 @@ void start_browser (SEXP, SEXP, SEXP, SEXP);
 int StrToInternal(const char *);
 SEXP subassign_list_gradient(SEXP, SEXP, R_len_t, R_len_t);
 SEXP subset_list_gradient(SEXP, R_len_t, R_len_t);
+SEXP subset_numeric_gradient(SEXP, R_len_t, R_len_t);
 SEXP substituteList(SEXP, SEXP);
 void R_trace_call(SEXP, SEXP);
 int Rf_translated_Seql (SEXP, SEXP);
