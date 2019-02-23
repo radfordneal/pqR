@@ -493,7 +493,17 @@ attribute_hidden SEXP copy_scaled_gradients (SEXP grad, double factor)
 
     PROTECT(grad);
 
-    SEXP r = ScalarRealMaybeConst (*REAL(grad) * factor);
+    if (TYPEOF(grad) != REALSXP) abort();
+    int glen = LENGTH(grad);
+    SEXP r;
+
+    if (glen == 1)
+        r = ScalarRealMaybeConst (*REAL(grad) * factor);
+    else {
+        r = allocVector (REALSXP, glen);
+        for (R_len_t i = 0; i < glen; i++)
+            REAL(r)[i] = REAL(grad)[i] * factor;
+    }
 
     UNPROTECT(1);
     return r;
@@ -649,23 +659,41 @@ attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
 {
     RECURSIVE_GRADIENT_APPLY2 (add_scaled_gradients, base, extra, factor);
 
-    double d = 0.0;
-
     PROTECT2(base,extra);
+    R_len_t glen;
+    SEXP r;
 
-    if (base != R_NilValue) {
-        if (TYPEOF(base) != REALSXP || LENGTH(base) != 1) abort();
-        d = *REAL(base);
+    if (base == R_NilValue && extra == R_NilValue) {
+        r = R_NilValue;
     }
+    else if (base == R_NilValue) {
+        if (TYPEOF(extra) != REALSXP) abort();
+        glen = LENGTH(extra);
+        r = allocVector (REALSXP, glen);
+        for (R_len_t i = 0; i < glen; i++)
+            REAL(r)[i] = REAL(extra)[i] * factor;
+    }
+    else if (extra == R_NilValue) {
+        if (TYPEOF(base) != REALSXP) abort();
+        glen = LENGTH(base);
+        r = allocVector (REALSXP, glen);
+        for (R_len_t i = 0; i < glen; i++)
+            REAL(r)[i] = REAL(base)[i];
+    }
+    else {
+        if (TYPEOF(base) != REALSXP) abort();
+        if (TYPEOF(extra) != REALSXP) abort();
+        glen = LENGTH(base);
+        if (LENGTH(extra) != glen) abort();
+        r = allocVector (REALSXP, glen);
+        for (R_len_t i = 0; i < glen; i++)
+            REAL(r)[i] = REAL(base)[i] + REAL(extra)[i] * factor;
 
-    if (extra != R_NilValue) {
-        if (TYPEOF(extra) != REALSXP || LENGTH(extra) != 1) abort();
-        d += *REAL(extra) * factor;
-    }
+    }   
 
     UNPROTECT(2);
 
-    return ScalarRealMaybeConst(d);
+    return r;
 }
 
 
