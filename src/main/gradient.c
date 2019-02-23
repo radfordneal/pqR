@@ -34,68 +34,170 @@
 #include "Defn.h"
 
 
-/* Expand the structure of 'list' to match 'base' by replacing NULL elements 
-   that correspond to non-NULL elements by zeros, lists of zeros, etc.
-   Top levels with GRAD_WRT_LIST set are matched instead agains base2. 
-   Names are added to match those in the base or base2. */
+#define NUMGRAD_LEN(g) TRUELENGTH(g)
+#define SET_NUMGRAD_LEN(g,l) SET_TRUELENGTH(g,l)
 
-static SEXP expand_structure (SEXP base, SEXP list, SEXP base2)
+
+/* Expand the structure of 'grad' to be a full gradient for 'value' by
+   replacing NULL elements that correspond to non-NULL elements by the
+   appropriate zero Jacobian.  The 'idg' argument is the identify
+   gradient to use as a skeleton, in top levels with GRAD_WRT_GRAD
+   set, and just below that, with NUMGRAD_LEN set to the length of the
+   numeric vector that that part of the gradient is with respect to.
+   Names are added to lists to match those in 'value' or 'idg'.  A 'dim'
+   attribute is added for Jacobian matrices with more than one column. */
+
+static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
 {
-    if (TYPEOF(base2) == VECSXP && GRAD_WRT_LIST(base2)) {
-        R_len_t n = LENGTH(base2);
-        if (list != R_NilValue) {
-            if (TYPEOF(list) != VECSXP || !GRAD_WRT_LIST(list)) abort();
-            if (LENGTH(list) != n) abort();
+    SEXP res;
+
+    if (TYPEOF(idg) == VECSXP && GRAD_WRT_LIST(idg)) {
+
+        /* Create list for gradient with respect to a list, filling in
+           element with recursive calls of expand_gradient. */
+
+        R_len_t n = LENGTH(idg);
+        if (grad != R_NilValue) {
+            if (TYPEOF(grad) != VECSXP || !GRAD_WRT_LIST(grad)) abort();
+            if (LENGTH(grad) != n) abort();
         }
-        SEXP res = PROTECT(allocVector(VECSXP,n));
-        setAttrib (res, R_NamesSymbol, getNamesAttrib(base2));
+        PROTECT (res = allocVector(VECSXP,n));
+        setAttrib (res, R_NamesSymbol, getNamesAttrib(idg));
         R_len_t i;
         for (i = 0; i < n; i++)
-            SET_VECTOR_ELT (res, i, expand_structure (base, 
-                             list==R_NilValue ? R_NilValue : VECTOR_ELT(list,i),
-                             VECTOR_ELT(base2,i)));
+            SET_VECTOR_ELT (res, i, expand_gradient (value, 
+                             grad==R_NilValue ? R_NilValue : VECTOR_ELT(grad,i),
+                             VECTOR_ELT(idg,i)));
         UNPROTECT(1);
         return res;
     }
 
-    if (list == R_NilValue) {
-        if (base == R_NilValue)
+    if (grad == R_NilValue) {
+
+        if (TYPEOF(value) == VECSXP) {
+
+            /* Fill in zero gradient for a NULL in 'grad' that corresponds
+               to a list in 'value', by calling expand_gradient recursively
+               to create the zero Jacobian matrices to put in the list. */
+
+            R_len_t n = LENGTH(value);
+            PROTECT (res = allocVector(VECSXP,n));
+            setAttrib (res, R_NamesSymbol, getNamesAttrib(value));
+            R_len_t i;
+            for (i = 0; i < n; i++)
+                SET_VECTOR_ELT (res, i, 
+                  expand_gradient (VECTOR_ELT(value,i), R_NilValue, idg));
+            UNPROTECT(1);
+            return res;
+        }
+
+        else if (TYPEOF(value) == REALSXP) { 
+
+            /* Fill in a zero Jacobian matrix for a missing gradient w.r.t.
+               a numeric vector, whose length will be NUMGRAD_LEN of 'idg'. */
+
+            R_len_t vlen = LENGTH(value);
+            R_len_t glen = NUMGRAD_LEN(idg);
+            uint64_t Jlen = (uint64_t)vlen * (uint64_t)glen;
+            if (Jlen > R_LEN_T_MAX)
+                error (_("gradient matrix would be too large\n"));
+            if (Jlen == 1)
+                return R_ScalarRealZero;
+            res = allocVector (REALSXP, (R_len_t) Jlen);
+            memset (REAL(res), 0, Jlen * sizeof(double));
+            if (glen != 1) {
+                PROTECT(res);
+                SEXP dim = allocVector (INTSXP, 2);
+                INTEGER(dim)[0] = vlen;
+                INTEGER(dim)[1] = glen;
+                setAttrib (res, R_DimSymbol, dim);
+                UNPROTECT(1);
+            }
+            return res;
+        }
+
+        else {
+
+            /* Let the gradient for a non-numeric value be NULL. */
+
             return R_NilValue;
-        if (TYPEOF(base) != VECSXP)
-            return R_ScalarRealZero;
-        R_len_t n = LENGTH(base);
-        SEXP res = PROTECT(allocVector(VECSXP,n));
-        setAttrib (res, R_NamesSymbol, getNamesAttrib(base));
-        R_len_t i;
-        for (i = 0; i < n; i++)
-            SET_VECTOR_ELT (res, i, 
-              expand_structure (VECTOR_ELT(base,i), list, base2));
-        UNPROTECT(1);
-        return res;
+        }
     }
 
-    if (TYPEOF(list) == VECSXP) {
-        if (TYPEOF(base) != VECSXP) abort();
-        if (LENGTH(base) != LENGTH(list)) abort();
-        R_len_t n = LENGTH(base);
-        SEXP res = PROTECT(allocVector(VECSXP,n));
-        setAttrib (res, R_NamesSymbol, getAttrib(base,R_NamesSymbol));
+    if (TYPEOF(grad) == VECSXP) {
+
+        /* Recursively scan lower levels when the gradient/value is a list. */
+
+        if (TYPEOF(value) != VECSXP) abort();
+        if (LENGTH(value) != LENGTH(grad)) abort();
+
+        R_len_t n = LENGTH(value);
+        PROTECT (res = allocVector(VECSXP,n));
+        setAttrib (res, R_NamesSymbol, getAttrib(value,R_NamesSymbol));
         for (R_len_t i = 0; i < n; i++) {
             SET_VECTOR_ELT (res, i, 
-              expand_structure (VECTOR_ELT(base,i), VECTOR_ELT(list,i), base2));
+              expand_gradient (VECTOR_ELT(value,i), VECTOR_ELT(grad,i), idg));
         }
         UNPROTECT(1);
+
         return res;
     }
 
-    if (TYPEOF(base) == VECSXP) abort();
+    if (TYPEOF(grad) == REALSXP) {
 
-    return list;
+        if (TYPEOF(value) != REALSXP) abort();
+
+        R_len_t vlen = LENGTH(value);
+        R_len_t glen = NUMGRAD_LEN(idg);
+        uint64_t Jlen = (uint64_t)vlen * (uint64_t)glen;
+
+        if (LENGTH(grad) != Jlen) abort();
+
+        if (glen != 1) {
+            PROTECT(grad);
+            SEXP dim = allocVector (INTSXP, 2);
+            INTEGER(dim)[0] = vlen;
+            INTEGER(dim)[1] = glen;
+            setAttrib (grad, R_DimSymbol, dim);
+            UNPROTECT(1);
+        }
+
+        return grad;
+    }
+
+    abort();  /* 'grad' should always be R_NilValue, VECSXP, or REALSXP */
 }
 
 
-/* Make an "identity" gradient for a value.  Has names at the top list level,
-   since will be used as 'base2' in expand_structure. */
+/* Make an "identity" gradient for a value.  Has names at the top list
+   levels, with GRAD_WRT_LIST set, since will be used as 'idg' in
+   expand_gradient.  Has NUMGRAD_LEN set to the length of the numeric
+   vector just below the GRAD_WRT_LIST level.  The "identity" gradient
+   for a numeric vector is an identity matrix (currenty represented
+   explicitly); for a list, it is a list with all but one element NULL,
+   with that element being the recursively-defined "identity" value. */
+
+static SEXP make_id_numeric (SEXP v)
+{
+    SEXP res;
+
+    if (LENGTH(v) == 1)
+        res = ScalarReal(1.0);  /* not constant, so SET_NUMGRAD_LEN works */
+    else {
+
+        R_len_t vlen = LENGTH(v);
+        uint64_t Jlen = (uint64_t)vlen * (uint64_t)vlen;
+        if (Jlen > R_LEN_T_MAX)
+            error (_("gradient matrix would be too large\n"));
+
+        res = allocVector (REALSXP, (R_len_t) Jlen);
+        memset (REAL(res), 0, Jlen * sizeof(double));
+        for (R_len_t j = 0; j < Jlen; j += vlen+1)
+            REAL(res)[j] = 1.0;
+    }
+
+    return res;
+}
 
 static SEXP make_id_recursive (SEXP val, SEXP top)
 {
@@ -107,7 +209,7 @@ static SEXP make_id_recursive (SEXP val, SEXP top)
 
     for (R_len_t i = 0; i < n; i++) {
 
-        /* this code could be made for efficient, bypassing duplicate */
+        /* this code could be made more efficient, bypassing duplicate */
         SEXP ntop = PROTECT (i == n-1 ? top : duplicate(top));
         SEXP bot = ntop;
         R_len_t j = 0;
@@ -121,12 +223,13 @@ static SEXP make_id_recursive (SEXP val, SEXP top)
         }
 
         SEXP v = VECTOR_ELT (val, i);
-        if (TYPEOF(v) == REALSXP && LENGTH(v) == 1) {
-            SET_VECTOR_ELT (bot, i, R_ScalarRealOne);
+        if (TYPEOF(v) == REALSXP) {
+            SET_VECTOR_ELT (bot, i, make_id_numeric(v));
+            SET_NUMGRAD_LEN (ntop, LENGTH(v));
             SET_VECTOR_ELT (res, i, ntop);
         }
         else if (TYPEOF(v) == VECSXP) {
-            SET_VECTOR_ELT (bot, i, allocVector(VECSXP,LENGTH(v)));
+            SET_VECTOR_ELT (bot, i, allocVector (VECSXP, LENGTH(v)));
             SET_VECTOR_ELT (res, i, make_id_recursive (v, ntop));
         }
         UNPROTECT(1);
@@ -138,51 +241,50 @@ static SEXP make_id_recursive (SEXP val, SEXP top)
 
 static SEXP make_id_grad (SEXP val)
 {
-    if (TYPEOF(val) == REALSXP && LENGTH(val) == 1)
-        return R_ScalarRealOne;
+    SEXP res = R_NilValue;
 
-    if (TYPEOF(val) == VECSXP) {
-        R_len_t n = LENGTH(val);
-        SEXP top = PROTECT(allocVector(VECSXP,n));
-        SEXP res = make_id_recursive (val, top);
+    if (TYPEOF(val) == REALSXP) {
+        res = make_id_numeric(val);
+        SET_NUMGRAD_LEN (res, LENGTH(val));
+    }
+
+    else if (TYPEOF(val) == VECSXP) {
+        SEXP top;
+        PROTECT (top = allocVector (VECSXP, LENGTH(val)));
+        res = make_id_recursive (val, top);
         UNPROTECT(1);
-        return res;
     }
  
-    return R_NilValue;
+    return res;
 }
 
 
 /* Test whether the structure of a gradient value matches the structure of
-   what it is the gradient of.  If any_for_0 is non-zero, a scalar zero in 
-   grad can match anything. */
+   what it is the gradient of. */
 
-static int match_structure (SEXP val, SEXP grad, int any_for_0)
+static int match_structure (SEXP val, SEXP grad)
 {
-    if (any_for_0 && TYPEOF(grad) == REALSXP
-                  && LENGTH(grad) == 1 
-                  && *REAL(grad) == 0)
-        return 1;
-
-    if (TYPEOF(val) != TYPEOF(grad))
-        return 0;
-
     if (TYPEOF(val) == REALSXP) {
-        if (LENGTH(val) != LENGTH(grad))
+        if (TYPEOF(grad) != REALSXP)
+            return 0;
+        if (LENGTH(val) != LENGTH(grad))  /* FOR NOW */
             return 0;
     }
     else if (TYPEOF(val) == VECSXP) {
+        if (TYPEOF(grad) != VECSXP)
+            return 0;
         if (LENGTH(val) != LENGTH(grad))
             return 0;
         R_len_t i;
         for (i = 0; i < LENGTH(val); i++) {
-            if (! match_structure (VECTOR_ELT(val,i),
-                                   VECTOR_ELT(grad,i), any_for_0))
+            if (! match_structure (VECTOR_ELT(val,i), VECTOR_ELT(grad,i)))
                 return 0;
         }
     }
-    else
-        return 0;
+    else {
+        if (grad != R_NilValue)
+            return 0;
+    }
 
     return 1;
 }
@@ -625,7 +727,7 @@ static SEXP create_gradient (SEXP result, SEXP result_grad, SEXP gv)
     SEXP gr, gn;
 
     if (nv == 1)
-        gr = expand_structure (result, result_grad, VECTOR_ELT(gv,1));
+        gr = expand_gradient (result, result_grad, VECTOR_ELT(gv,1));
     else {
         R_len_t i;
         PROTECT (gr = allocVector (VECSXP, nv));
@@ -633,9 +735,9 @@ static SEXP create_gradient (SEXP result, SEXP result_grad, SEXP gv)
         setAttrib (gr, R_NamesSymbol, gn); 
         for (i = 0; i < nv; i++) {
             SET_STRING_ELT (gn, i, PRINTNAME (VECTOR_ELT (gv, i)));
-            SET_VECTOR_ELT (gr, i, expand_structure (result, 
-                                                     VECTOR_ELT(result_grad,i),
-                                                     VECTOR_ELT(gv,nv+i)));
+            SET_VECTOR_ELT (gr, i, expand_gradient (result, 
+                                                    VECTOR_ELT(result_grad,i),
+                                                    VECTOR_ELT(gv,nv+i)));
         }
         UNPROTECT(1);
     }
@@ -888,7 +990,7 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
             if (vargrad[vgi] != R_NilValue) {
                 SEXP gval;
                 PROTECT (gval = evalv (CAR(q), newenv, VARIANT_PENDING_OK));
-                if (! match_structure (result, gval, 0))
+                if (! match_structure (result, gval))
                     errorcall (call, 
                       _("computed gradient does not match type of value"));
                 resgrad = backpropagate_gradients (resgrad, vargrad[vgi], gval);
