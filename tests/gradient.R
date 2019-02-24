@@ -1068,22 +1068,36 @@ with gradient (L=list(a=5,b=7))
 with gradient (L=list(a=5,b=7))
   back gradient (M=list(d=L$a^2+L$b,e=L$a*L$b)) list(sin(M$d)+sqrt(M$e),55)
 
-with gradient (L=c(a=5,b=7))
-  back gradient (M=c(d=L[["a"]]^2+L[["b"]],e=L[["a"]]*L[["b"]])) 
-    c(sin(M[["d"]])+sqrt(M[["e"]]),55)
+with gradient (L=c(a=5,b=7)) {
+  M <- c(d=0,e=0)
+  M[[1]] <- L[["a"]]^2+L[["b"]]
+  M[[2]] <- L[["a"]]*L[["b"]]
+  back gradient (M) {
+    c <- c(0,55)
+    c[[1]] <- sin(M[["d"]])+sqrt(M[["e"]])
+    c
+  }
+}
 
-with gradient (a=list(4.1,2.7,3.1,5.2)) 
+with gradient (a=list(4.1,2.7,3.1,5.2)) {
   back gradient (b=list(a[[2]],sin(a[[1]]+a[[4]]),a[[1]]^2)) {
     c <- list(0,0)
     c[[1]] <- b[[1]] + 4*b[[2]]
     c[[2]] <- b[[3]]^2 + b[[2]]
     c
   }
+}
 
-with gradient (a=c(4.1,2.7,3.1,5.2)) 
-  back gradient (b=c(a[[2]],sin(a[[1]]+a[[4]]),a[[1]]^2)) {
+with gradient (a=c(4.1,2.7,3.1,5.2)) {
+  b <- numeric(3)
+  b[[1]] <- a[[2]]
+  b[[2]] <- sin(a[[1]]+a[[4]])
+  b[[3]] <- a[[1]]^2
+  back gradient (b) {
     c <- numeric(2)
     c[[1]] <- b[[1]] + 4*b[[2]]
     c[[2]] <- b[[3]]^2 + b[[2]]
     c
   }
+}
+

@@ -19,14 +19,19 @@
   see \code{\link{deriv}}.  For numerical differentiation, see
   \code{\link{numericDeriv}}.
 
-  The present implementation of these facilities is a preliminary
-  one that supports only gradients of real scalar values, or lists of 
-  real scalar values (or lists of lists of real scalar values, etc), 
-  with respect to real scalar variables or lists of real scalar values 
-  (or lists of lists, etc).  Support for differentiation of and with respect
-  to vectors, matrices, and arrays is planned, as is support for 
-  higher-order derivatives.  Perhaps differentiation of complex values
-  will also be supported some day.
+  The present implementation of these facilities is a preliminary.  
+  It supports gradients of and with respect to real scalars, vectors,
+  matrices, and arrays, lists of such values, lists of lists, etc.
+  However, at present, only a very limited set of operations is 
+  supported for vectors, matrices, and arrays, including [[.]] for
+  accessing and replacing elements, but not [.].  Arithmetic operations
+  currently propagate gradients only when the operands are scalar.
+  Many vector-oriented operations, such as \code{sum}, \code{c}, and 
+  \code{cbind} are also not yet supported.  Support for a full range
+  of vector operations should be implemnted soon.
+
+  Support for higher-order derivatives is planned.  Perhaps
+  differentiation of complex values will also be supported some day.
 }
 
 \usage{
@@ -175,8 +180,9 @@ when applicable, arguments that are lists of scalar reals (or lists of
 lists of scalar reals, etc.):
 \tabular{l}{
 list \cr
-$ (for vector lists only), [[ (for vector lists only) \cr
-$<- (for vector lists only), [[<- (for vector lists only) \cr
+$ (for vector lists only), $<- (for vector lists only) \cr
+[[ (for vector lists and numeric vectors/matrices/arrays)  \cr
+[[<- (for vector lists and numeric vectors/matrices/arrays) \cr
 \cr
 +, -, *, /, ^ (+ and - may be unary) \cr
 \cr
@@ -212,19 +218,32 @@ attr<-
 }
 
 \value{
-The gradient returned by \code{gradient_of} or attached as a \code{"gradient"}
-attribute by \code{with gradient} will be a scalar real if the gradient
-is with respect to only one variable, and the expression this is the gradient
-of has a scalar real value.  The gradient of a list is a list of the same
-form, with scalar gradients replacing the scalar elements.  For a gradient
-with respect to a list variable, the gradient value is a list (or nested
+When the gradient is with respect to only one variable, the value
+returned by \code{gradient_of} or attached as a \code{"gradient"}
+attribute by \code{with gradient} will be a scalar real if this
+variable has a scalar real value and the expression this is the gradient of 
+also has a scalar real value.
+
+When the variable is scalar, but the expression is a real vector (or
+matrix, or array) of length greater than one, the gradient will be a
+vector of the same length.  When the variable is a vector (or matrix,
+or array) of length greater than one, the gradient will be a matrix
+(referred to as the "Jacobian" matrix) whose number of columns equals
+the length of the variable's value, and whose number of rows equals
+the length of the expression's value.  Note that \code{as.matrix} can
+be used to convert a numeric gradient value to always be a
+matrix, if that is desired.
+
+The gradient of a list is a list of the same form, with gradients as
+described above replacing the numeric elements.  For a gradient with
+respect to a list variable, the gradient value is a list (or nested
 lists) of the same form, with elements that are the gradient of the
-expression value with respect to that element of the list; note that the
-gradient of an expression value could itself be a list.
+expression value with respect to that element of the list; note that
+the gradient of an expression value could itself be a list.
 
 When the \code{with gradient} or
 \code{track gradient} construct has more than one variable, the gradient
-will be a list of scalar real values or lists, with names corresponding to the
+will be a list of gradient values, with names corresponding to the
 variables.  Note that this is the same form as would be obtained if the
 values of these variables were combined into a named list which was then
 used as a single variable in the \code{with gradient} or \code{track gradient}
@@ -311,22 +330,38 @@ with gradient (a=2) {            # find derivatives of powers of a, from
     L
 }
 
-V <- as.list(seq(0,1,length=11))
+with gradient (a=2) {            # same as above, but with a real vector
+    V <- a                       #   rather than a list
+    for (i in 2..10) V[[i]] <- V[[i-1]] * a
+    V
+}
 
-with gradient (V) {              # tracks gradient w.r.t. 11 elements of V
+L <- as.list(seq(0,1,length=11)) # list for use below...
+
+with gradient (L) {              # tracks gradient w.r.t. 11 elements of L
     p <- 0
-    for (i along V) 
-        p <- p + i*V[[i]]
+    for (i along L) 
+        p <- p + i*L[[i]]
     p^2 + p^3 + p^4 + p^5        # every operation computes derivatives
-}                                #   w.r.t. all 11 elements of V
+}                                #   w.r.t. all 11 elements of L
 
-with gradient (V) {              # compute same result more efficiently...
+with gradient (L) {              # compute same result more efficiently...
     p <- 0
-    for (i along V) 
-        p <- p + i*V[[i]]
+    for (i along L) 
+        p <- p + i*L[[i]]
     back gradient (p)            # operations in the expresson below 
         p^2 + p^3 + p^4 + p^5    #   compute derivative w.r.t. p only, then
-}                                #   chain rule gives gradient w.r.t. V
+}                                #   chain rule gives gradient w.r.t. L
+
+V <- seq(0,1,length=11)          # same as above, but using a real vector
+
+with gradient (V) {              # the gradient will be a 1 x 11 matrix
+    p <- 0
+    for (i along V) 
+        p <- p + i*V[[i]]
+    back gradient (p)
+        p^2 + p^3 + p^4 + p^5
+}
 
 }
 

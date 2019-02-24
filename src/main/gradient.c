@@ -33,6 +33,8 @@
 #define R_USE_SIGNALS
 #include "Defn.h"
 
+#include <matprod/matprod.h>
+
 
 #define GRADIENT_WRT_LEN(g) \
   (LENGTH(g) == 1 ? 1 : TRUELENGTH(g))
@@ -806,10 +808,12 @@ static SEXP add_scaled_list (SEXP a, SEXP b, SEXP f)
     if (b == R_NilValue)
         return a;
 
+    SEXP res;
+
     if (TYPEOF(b) == VECSXP) {
         R_len_t n = LENGTH(b);
-        SEXP res = PROTECT (allocVector(VECSXP,n));
         PROTECT2(a,b);
+        PROTECT (res = allocVector(VECSXP,n));
         if (a == R_NilValue) {
             for (R_len_t i = 0; i < n; i++)
               SET_VECTOR_ELT (res, i, add_scaled_list (a, VECTOR_ELT(b,i), f));
@@ -828,20 +832,41 @@ static SEXP add_scaled_list (SEXP a, SEXP b, SEXP f)
 
     if (TYPEOF(b) != REALSXP) abort();
 
-    if (a == R_NilValue) {
-
-        if (LENGTH(b) == 1 && LENGTH(f) == 1)
-            return ScalarRealMaybeConst (*REAL(f) * *REAL(b));
-
-        abort(); /* FOR NOW */
+    if (LENGTH(b) == 1 && LENGTH(f) == 1) {
+        if (a == R_NilValue)
+            return ScalarRealMaybeConst (*REAL(b) * *REAL(f));
+        if (TYPEOF(a) != REALSXP) abort();
+        if (LENGTH(a) != 1) abort();
+        return ScalarRealMaybeConst (*REAL(a) + *REAL(b) * *REAL(f));
     }
 
+    R_len_t k = GRADIENT_WRT_LEN(b);
+
+    if (LENGTH(b) % k != 0) abort();
+    R_len_t n = LENGTH(b) / k;
+
+    if (LENGTH(f) % k != 0) abort();
+    R_len_t m = LENGTH(f) / k;
+
+    uint64_t glen = (uint64_t)n * (uint64_t)m;
+    if (glen > R_LEN_T_MAX)
+        error (_("gradient matrix would be too large\n"));
+
+    res = allocVector (REALSXP, glen);
+    SET_GRADIENT_WRT_LEN (res, m);
+
+    matprod_mat_mat (REAL(b), REAL(f), REAL(res), n, k, m);
+
+    if (a == R_NilValue)
+        return res;
+
     if (TYPEOF(a) != REALSXP) abort();
+    if (LENGTH(a) != glen) abort();
 
-    if (LENGTH(a) == 1 && LENGTH(b) == 1 && LENGTH(f) == 1)
-        return ScalarRealMaybeConst (*REAL(a) + *REAL(f) * *REAL(b));
+    for (R_len_t i = 0; i < glen; i++) 
+        REAL(res)[i] += REAL(a)[i];
 
-    abort(); /* FOR NOW */
+    return res;
 }
 
 static SEXP backup (SEXP g, SEXP a, SEXP b)
