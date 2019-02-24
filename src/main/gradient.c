@@ -34,15 +34,18 @@
 #include "Defn.h"
 
 
-#define NUMGRAD_LEN(g) TRUELENGTH(g)
-#define SET_NUMGRAD_LEN(g,l) SET_TRUELENGTH(g,l)
+#define GRADIENT_WRT_LEN(g) \
+  (LENGTH(g) == 1 ? 1 : TRUELENGTH(g))
+
+#define SET_GRADIENT_WRT_LEN(g,l) \
+  (LENGTH(g) == 1 ? (void) 0 : (void) SET_TRUELENGTH(g,l))
 
 
 /* Expand the structure of 'grad' to be a full gradient for 'value' by
    replacing NULL elements that correspond to non-NULL elements by the
    appropriate zero Jacobian.  The 'idg' argument is the identify
    gradient to use as a skeleton, in top levels with GRAD_WRT_GRAD
-   set, and just below that, with NUMGRAD_LEN set to the length of the
+   set, and just below that, with GRADIENT_WRT_LEN set to the length of the
    numeric vector that that part of the gradient is with respect to.
    Names are added to lists to match those in 'value' or 'idg'.  A 'dim'
    attribute is added for Jacobian matrices with more than one column. */
@@ -94,10 +97,11 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
         else if (TYPEOF(value) == REALSXP) { 
 
             /* Fill in a zero Jacobian matrix for a missing gradient w.r.t.
-               a numeric vector, whose length will be NUMGRAD_LEN of 'idg'. */
+               a numeric vector, with the number of columns taken from 
+               GRADIENT_WRT_LEN of 'idg'. */
 
             R_len_t vlen = LENGTH(value);
-            R_len_t glen = NUMGRAD_LEN(idg);
+            R_len_t glen = GRADIENT_WRT_LEN(idg);
             uint64_t Jlen = (uint64_t)vlen * (uint64_t)glen;
             if (Jlen > R_LEN_T_MAX)
                 error (_("gradient matrix would be too large\n"));
@@ -148,7 +152,7 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
         if (TYPEOF(value) != REALSXP) abort();
 
         R_len_t vlen = LENGTH(value);
-        R_len_t glen = NUMGRAD_LEN(idg);
+        R_len_t glen = GRADIENT_WRT_LEN(idg);
         uint64_t Jlen = (uint64_t)vlen * (uint64_t)glen;
 
         if (LENGTH(grad) != Jlen) abort();
@@ -171,18 +175,20 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
 
 /* Make an "identity" gradient for a value.  Has names at the top list
    levels, with GRAD_WRT_LIST set, since will be used as 'idg' in
-   expand_gradient.  Has NUMGRAD_LEN set to the length of the numeric
-   vector just below the GRAD_WRT_LIST level.  The "identity" gradient
-   for a numeric vector is an identity matrix (currenty represented
-   explicitly); for a list, it is a list with all but one element NULL,
-   with that element being the recursively-defined "identity" value. */
+   expand_gradient.  Has GRADIENT_WRT_LEN set to the length of the
+   numeric vector just below the GRAD_WRT_LIST level, as well as in
+   the Jacobian matrix itself.  The "identity" gradient for a numeric
+   vector is an identity matrix (currenty represented explicitly); for
+   a list, it is a list with all but one element NULL, with that
+   element being the recursively-defined "identity" value. */
 
 static SEXP make_id_numeric (SEXP v)
 {
     SEXP res;
 
-    if (LENGTH(v) == 1)
-        res = ScalarReal(1.0);  /* not constant, so SET_NUMGRAD_LEN works */
+    if (LENGTH(v) == 1) {
+        res = R_ScalarRealOne;
+    }
     else {
 
         R_len_t vlen = LENGTH(v);
@@ -191,6 +197,7 @@ static SEXP make_id_numeric (SEXP v)
             error (_("gradient matrix would be too large\n"));
 
         res = allocVector (REALSXP, (R_len_t) Jlen);
+        SET_GRADIENT_WRT_LEN (res, vlen);
         memset (REAL(res), 0, Jlen * sizeof(double));
         for (R_len_t j = 0; j < Jlen; j += vlen+1)
             REAL(res)[j] = 1.0;
@@ -225,7 +232,7 @@ static SEXP make_id_recursive (SEXP val, SEXP top)
         SEXP v = VECTOR_ELT (val, i);
         if (TYPEOF(v) == REALSXP) {
             SET_VECTOR_ELT (bot, i, make_id_numeric(v));
-            SET_NUMGRAD_LEN (ntop, LENGTH(v));
+            SET_GRADIENT_WRT_LEN (ntop, LENGTH(v));
             SET_VECTOR_ELT (res, i, ntop);
         }
         else if (TYPEOF(v) == VECSXP) {
@@ -245,7 +252,6 @@ static SEXP make_id_grad (SEXP val)
 
     if (TYPEOF(val) == REALSXP) {
         res = make_id_numeric(val);
-        SET_NUMGRAD_LEN (res, LENGTH(val));
     }
 
     else if (TYPEOF(val) == VECSXP) {
@@ -439,6 +445,7 @@ R_inspect(grad); REprintf("--\n");
         if (glen % n != 0) abort();
         R_len_t slen = glen/n;
         SEXP res = allocVector (REALSXP, slen);
+        SET_GRADIENT_WRT_LEN (res, slen);
         copy_elements (res, 0, 1, grad, i, n, slen);
         return res;
     }
@@ -501,6 +508,7 @@ attribute_hidden SEXP copy_scaled_gradients (SEXP grad, double factor)
         r = ScalarRealMaybeConst (*REAL(grad) * factor);
     else {
         r = allocVector (REALSXP, glen);
+        SET_GRADIENT_WRT_LEN (r, GRADIENT_WRT_LEN(grad));
         for (R_len_t i = 0; i < glen; i++)
             REAL(r)[i] = REAL(grad)[i] * factor;
     }
@@ -672,16 +680,20 @@ R_inspect(v);
 
     PROTECT2(grad,v);
 
-    if (grad == R_NilValue) 
-        grad = allocVector (REALSXP, n * LENGTH(v));
+    R_len_t vlen = LENGTH(v);
+
+    if (grad == R_NilValue) {
+        grad = allocVector (REALSXP, n * vlen);
+        SET_GRADIENT_WRT_LEN (grad, vlen);
+    }
     else {
         if (TYPEOF(grad) != REALSXP) abort();
-        if (LENGTH(grad) != n * LENGTH(v)) abort();
+        if (LENGTH(grad) != n * vlen) abort();
         grad = dup_top_level(grad);
     }
 
     if (i < 0 || i >= n) abort();
-    copy_elements (grad, i, n, v, 0, 1, LENGTH(v));
+    copy_elements (grad, i, n, v, 0, 1, vlen);
 
     UNPROTECT(2);
     return grad;
@@ -714,6 +726,8 @@ R_inspect(v);
     R_len_t m = 0;
 
     SEXP res = allocVector (REALSXP, (n+1) * vlen);
+    SET_GRADIENT_WRT_LEN (res, vlen);
+
     memset (REAL(res), 0, LENGTH(res) * sizeof(double));
     if (grad != R_NilValue) {
         if (TYPEOF(grad) != REALSXP) abort();
@@ -744,17 +758,18 @@ attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
 {
     RECURSIVE_GRADIENT_APPLY2 (add_scaled_gradients, base, extra, factor);
 
+    if (base == R_NilValue && extra == R_NilValue)
+        return R_NilValue;
+
     PROTECT2(base,extra);
     R_len_t glen;
     SEXP r;
 
-    if (base == R_NilValue && extra == R_NilValue) {
-        r = R_NilValue;
-    }
-    else if (base == R_NilValue) {
+    if (base == R_NilValue) {
         if (TYPEOF(extra) != REALSXP) abort();
         glen = LENGTH(extra);
         r = allocVector (REALSXP, glen);
+        SET_GRADIENT_WRT_LEN (r, GRADIENT_WRT_LEN(extra));
         for (R_len_t i = 0; i < glen; i++)
             REAL(r)[i] = REAL(extra)[i] * factor;
     }
@@ -762,6 +777,7 @@ attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
         if (TYPEOF(base) != REALSXP) abort();
         glen = LENGTH(base);
         r = allocVector (REALSXP, glen);
+        SET_GRADIENT_WRT_LEN (r, GRADIENT_WRT_LEN(base));
         for (R_len_t i = 0; i < glen; i++)
             REAL(r)[i] = REAL(base)[i];
     }
@@ -771,6 +787,7 @@ attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
         glen = LENGTH(base);
         if (LENGTH(extra) != glen) abort();
         r = allocVector (REALSXP, glen);
+        SET_GRADIENT_WRT_LEN (r, GRADIENT_WRT_LEN(base));
         for (R_len_t i = 0; i < glen; i++)
             REAL(r)[i] = REAL(base)[i] + REAL(extra)[i] * factor;
 
@@ -784,7 +801,7 @@ attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
 
 /* Auxiliary functions used by backpropagate_gradients (below). */
 
-static SEXP add_scaled_list (SEXP a, SEXP b, double f)
+static SEXP add_scaled_list (SEXP a, SEXP b, SEXP f)
 {
     if (b == R_NilValue)
         return a;
@@ -798,6 +815,7 @@ static SEXP add_scaled_list (SEXP a, SEXP b, double f)
               SET_VECTOR_ELT (res, i, add_scaled_list (a, VECTOR_ELT(b,i), f));
         }
         else {
+
             if (TYPEOF(b) != VECSXP || LENGTH(b) != n) abort();
             for (R_len_t i = 0; i < n; i++) {
                 SET_VECTOR_ELT (res, i, add_scaled_list (VECTOR_ELT(a,i),
@@ -808,14 +826,22 @@ static SEXP add_scaled_list (SEXP a, SEXP b, double f)
         return res;
     }
 
-    if (TYPEOF(b) != REALSXP || LENGTH(b) != 1) abort();
+    if (TYPEOF(b) != REALSXP) abort();
 
-    if (a == R_NilValue)
-        return ScalarRealMaybeConst (*REAL(b) * f);
+    if (a == R_NilValue) {
 
-    if (TYPEOF(a) != REALSXP || LENGTH(a) != 1) abort();
+        if (LENGTH(b) == 1 && LENGTH(f) == 1)
+            return ScalarRealMaybeConst (*REAL(f) * *REAL(b));
 
-    return ScalarRealMaybeConst (*REAL(a) + *REAL(b) * f);
+        abort(); /* FOR NOW */
+    }
+
+    if (TYPEOF(a) != REALSXP) abort();
+
+    if (LENGTH(a) == 1 && LENGTH(b) == 1 && LENGTH(f) == 1)
+        return ScalarRealMaybeConst (*REAL(a) + *REAL(f) * *REAL(b));
+
+    abort(); /* FOR NOW */
 }
 
 static SEXP backup (SEXP g, SEXP a, SEXP b)
@@ -832,8 +858,8 @@ static SEXP backup (SEXP g, SEXP a, SEXP b)
             g = backup (g, VECTOR_ELT(a,i), VECTOR_ELT(b,i));
     }
     else {
-        if (TYPEOF(a) != REALSXP || LENGTH(a) != 1) abort();
-        g = add_scaled_list (g, b, *REAL(a));
+        if (TYPEOF(a) != REALSXP) abort();
+        g = add_scaled_list (g, b, a);
     }
 
     UNPROTECT(3);
@@ -843,7 +869,7 @@ static SEXP backup (SEXP g, SEXP a, SEXP b)
 
 /* Backpropagate gradients, adding contributiions to gradients in 'base',
    that are found by multiplying gradients of inner vars w.r.t. outer 
-   vars (in 'extra') by gradients of expression value  w.r.t. inner vars
+   vars (in 'extra') by gradients of expression value w.r.t. inner vars
    (in 'factors').  The caller must protect 'factors', but not 'base' or
    'extra'. */
 
@@ -938,8 +964,9 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     /* Evaluate initial values assigned to variables, and put in binding 
        cells.  Unless the gradient isn't needed, also put identity gradient
-       in binding cells, also put in GRADVARS, and also store the gradients
-       of initial variable values in 'vargrad' (if need gradients). */
+       in binding cells, also put in 'gv' (which will become GRADVARS).
+       Store the gradients of initial variable values in 'vargrad' (but
+       only if need gradients). */
 
     SEXP frame = R_NilValue;
     SEXP vargrad[nv];
