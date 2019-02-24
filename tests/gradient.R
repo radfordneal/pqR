@@ -1011,6 +1011,19 @@ with gradient (b=list(3,abc=4)) {
 }
 
 
+# Test gradients w.r.t. numeric vectors.
+
+with gradient (a=c(5,55,555)) a
+
+with gradient (a=c(x=5,y=55,z=555)) a[["x"]]
+with gradient (a=c(x=5,y=55,z=555)) a[["y"]]
+with gradient (a=c(x=5,y=55,z=555)) a[["z"]]
+
+with gradient (a=c(x=5,y=55,z=555)) sqrt(a[["y"]])
+with gradient (a=c(x=5,y=55,z=555)) a[["z"]]+a[["x"]]
+with gradient (a=c(x=5,y=55,z=555)) 2.1*a[["z"]]+3.4*a[["x"]]
+
+
 # Test backpropagation.
 
 with gradient (a=5) 
