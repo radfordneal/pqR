@@ -5420,6 +5420,18 @@ attr(,"gradient")$b
 [2,]    0 0.4357899
 
 > 
+> with gradient (a=c(-1.1,2.3)) {
++   x <- numeric(2)
++   x[[1]] <- a[[2]]^2
++   x[[2]] <- a[[1]]*a[[2]]
++   abs(x)
++ }
+[1] 5.29 2.53
+attr(,"gradient")
+     [,1] [,2]
+[1,]  0.0  4.6
+[2,] -2.3  1.1
+> 
 > 
 > # Test backpropagation.
 > 

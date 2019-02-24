@@ -2395,6 +2395,7 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP r, s, x, g;
     double opr, res;
+    R_len_t n;
 
     PROTECT (args = variant & VARIANT_GRADIENT 
                      ? evalList_gradient (args, env, 0, 1, 0)
@@ -2409,8 +2410,6 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         UNPROTECT(1);
 	return r;
     }
-
-    POP_IF_TOP_OF_STACK(x);
 
     if (TYPEOF(x) == INTSXP || TYPEOF(x) == LGLSXP) {
 	/* integer or logical ==> return integer,
@@ -2440,7 +2439,7 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     } 
 
     else if (TYPEOF(x) == REALSXP) {
-        int n = LENGTH(x);
+        n = LENGTH(x);
         if (VARIANT_KIND(variant) == VARIANT_SUM) {
             s = allocVector1REAL();
             DO_NOW_OR_LATER1 (variant, n >= T_abs,
@@ -2459,7 +2458,7 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                   PUSH_SCALAR_REAL(res)
               :   ScalarReal(res);
         }
-        else { /* x won't be on scalar stack, since n != 1 */
+        else {
             s = NAMEDCNT_EQ_0(x) ? x : allocVector(REALSXP, n);
             DO_NOW_OR_LATER1 (variant, n >= T_abs,
                               HELPERS_PIPE_IN01_OUT | HELPERS_MERGE_IN_OUT,
@@ -2475,11 +2474,30 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     PROTECT(s);
     maybe_dup_attributes (s, x, variant);
-    if (HAS_GRADIENT_IN_CELL(args)) {
-        if (TYPEOF(s) == REALSXP && LENGTH(s) == 1 && !ISNAN(*REAL(s))) {
-            R_gradient = copy_scaled_gradients (GRADIENT_IN_CELL(args),
-                                                sign(opr));
-            R_variant_result = VARIANT_GRADIENT_FLAG;
+
+    if (HAS_GRADIENT_IN_CELL(args) && TYPEOF(x) == REALSXP) {
+
+        SEXP grad = GRADIENT_IN_CELL(args);
+        SEXP res_grad = R_NilValue;
+
+        if (n == 1) {
+            if (!ISNAN(*REAL(s))) {
+                res_grad = copy_scaled_gradients (grad, sign(opr));
+            }
+        }
+        else {
+            SEXP gr = allocVector (REALSXP, n);
+            PROTECT(gr);
+            for (R_len_t i = 0; i < n; i++) {
+                REAL(gr)[i] = sign (REAL(x)[i]);
+            }
+            res_grad = copy_scaled_gradients_vec (grad, gr);
+            UNPROTECT(1);
+        }
+
+        if (res_grad != R_NilValue) {
+            R_variant_result |= VARIANT_GRADIENT_FLAG;
+            R_gradient = res_grad;
             GRADIENT_TRACE(call);
         }
     }
