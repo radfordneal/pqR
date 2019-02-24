@@ -1278,6 +1278,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define copyMostAttribNoClass	Rf_copyMostAttribNoClass
 # define copyMostAttribNoTs	Rf_copyMostAttribNoTs
 # define copy_scaled_gradients	Rf_copy_scaled_gradients
+# define copy_scaled_gradients_vec Rf_copy_scaled_gradients_vec
 # define CustomPrintValue	Rf_CustomPrintValue
 # define DataFrameClass		Rf_DataFrameClass
 # define ddfindVar		Rf_ddfindVar
@@ -1488,6 +1489,7 @@ SEXP Rf_EnsureString(SEXP);
 /* Other Internally Used Functions */
 
 SEXP copy_scaled_gradients (SEXP, double);
+SEXP copy_scaled_gradients_vec (SEXP, SEXP);
 SEXP add_scaled_gradients (SEXP, SEXP, double);
 SEXP Rf_allocCharsxp(R_len_t);
 SEXP alloc_or_reuse (SEXP, SEXP, SEXPTYPE, int, int, int);

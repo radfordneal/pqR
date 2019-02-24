@@ -270,6 +270,7 @@
  Rf_ComplexFromReal
  Rf_ComplexFromString
  Rf_copy_scaled_gradients
+ Rf_copy_scaled_gradients_vec
  Rf_CustomPrintValue
  Rf_DispatchAnyOrEval
  Rf_DispatchGroup

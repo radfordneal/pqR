@@ -520,6 +520,46 @@ attribute_hidden SEXP copy_scaled_gradients (SEXP grad, double factor)
 }
 
 
+/* Copy scaled gradients from those in grad with vector of scaling factors,
+   which are recycled when grad's length is a multiple of the length of factors.
+
+   Caller must protect factors, but not grad. */
+
+attribute_hidden SEXP copy_scaled_gradients_vec (SEXP grad, SEXP factors)
+{
+    RECURSIVE_GRADIENT_APPLY (copy_scaled_gradients_vec, grad, factors);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+
+    PROTECT(grad);
+
+    if (TYPEOF(factors) != REALSXP) abort();
+    if (TYPEOF(grad) != REALSXP) abort();
+
+    int flen = LENGTH(factors);
+    int glen = LENGTH(grad);
+
+    if (glen % flen != 0) abort();
+
+    SEXP r;
+
+    r = allocVector (REALSXP, glen);
+    SET_GRADIENT_WRT_LEN (r, GRADIENT_WRT_LEN(grad));
+
+    R_len_t i, j;
+    for (i = 0; i < glen; ) {
+        for (j = 0; j < flen; j++) {
+            REAL(r)[i] = REAL(grad)[i] * REAL(factors)[j];
+            i += 1;
+        }
+    }
+
+    UNPROTECT(1);
+    return r;
+}
+
+
 /* Macro for building a function that applies a binary operation to
    all pairs of gradients in g1 and g2.  Protects g1 and g2, then
    unprotects them at the end, so surrounding function will need to

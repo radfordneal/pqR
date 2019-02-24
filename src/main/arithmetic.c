@@ -2168,7 +2168,6 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
     if (!isNumeric(sa)) non_numeric_errorcall(call);
 
     int local_assign = 0;
-    int n = LENGTH(sa);
     SEXP sa0 = sa;
 
     if (TYPEOF(sa) != REALSXP)
@@ -2180,10 +2179,11 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
 
     PROTECT(sa);
 
+    R_len_t n = LENGTH(sa);
     double opr, res;
     SEXP sy;
 
-    if (LENGTH(sa) == 1) { /* scalar operation, including on scalar stack. */
+    if (n == 1) { /* scalar operation, including on scalar stack. */
 
         WAIT_UNTIL_COMPUTED(sa);
 
@@ -2225,7 +2225,7 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
 
             PROTECT(sy = allocVector1REAL());
             DO_NOW_OR_LATER1 (variant, 
-                        LENGTH(sa) >= T_math1 && R_math1_err_table[opcode] <= 1,
+                        n >= T_math1 && R_math1_err_table[opcode] <= 1,
                         HELPERS_PIPE_IN1, task_sum_math1, opcode, sy, sa);
         }
 
@@ -2234,16 +2234,15 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
             PROTECT(sy = local_assign || NAMEDCNT_EQ_0(sa) 
                            ? sa : allocVector(REALSXP, n));
 
-            if (helpers_not_multithreading_now || LENGTH(sa) < 2*T_math1
+            if (helpers_not_multithreading_now || n < 2*T_math1
                 || R_math1_err_table[opcode] > 1) {
 
                 /* Use only one task. */
 
-                DO_NOW_OR_LATER1 (variant,
-                            LENGTH(sa) >= T_math1 
-                              && R_math1_err_table[opcode] <= 1,
-                            HELPERS_PIPE_IN01_OUT,
-                            task_math1, opcode, sy, sa);
+                DO_NOW_OR_LATER1(variant,
+                                 n >= T_math1 && R_math1_err_table[opcode] <= 1,
+                                 HELPERS_PIPE_IN01_OUT,
+                                 task_math1, opcode, sy, sa);
             }
             else {
 
@@ -2270,11 +2269,31 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
 
     R_variant_result = local_assign; /* Defer setting to shortly before return*/
 
-    if (grad != R_NilValue && R_math1_deriv_table[opcode]) {
-        if (TYPEOF(sy) == REALSXP && LENGTH(sy) == 1 && !ISNAN(res)) {
-            double d = R_math1_deriv_table[opcode] (opr, res);
-            R_gradient = copy_scaled_gradients(grad,d);
-            R_variant_result = VARIANT_GRADIENT_FLAG;
+    if (grad != R_NilValue && R_math1_deriv_table[opcode] 
+                           && TYPEOF(sy) == REALSXP) {
+
+        SEXP res_grad = R_NilValue;
+
+        if (n == 1) {
+            if (!ISNAN(res)) {
+                double d = R_math1_deriv_table[opcode] (opr, res);
+                res_grad = copy_scaled_gradients (grad, d);
+            }
+        }
+        else {
+            double (*df)(double,double) = R_math1_deriv_table[opcode];
+            SEXP gr = allocVector (REALSXP, n);
+            PROTECT(gr);
+            for (R_len_t i = 0; i < n; i++) {
+                REAL(gr)[i] = df (REAL(sa)[i], REAL(sy)[i]);
+            }
+            res_grad = copy_scaled_gradients_vec (grad, gr);
+            UNPROTECT(1);
+        }
+
+        if (res_grad != R_NilValue) {
+            R_variant_result |= VARIANT_GRADIENT_FLAG;
+            R_gradient = res_grad;
             GRADIENT_TRACE(call);
         }
     }
@@ -3992,7 +4011,8 @@ SEXP do_math3 (SEXP call, SEXP op, SEXP args, SEXP env)
 static void setup_Math4 (SEXP *sa, SEXP *sb, SEXP *sc, SEXP *sd, SEXP *sy, 
                          int na, int nb, int nc, int nd, SEXP lcall)
 {
-    if (!isNumeric(*sa) || !isNumeric(*sb) || !isNumeric(*sc) || !isNumeric(*sd))
+    if (!isNumeric(*sa) || !isNumeric(*sb) 
+     || !isNumeric(*sc) || !isNumeric(*sd))
 	non_numeric_errorcall(lcall);
 
     if (na == 0 || nb == 0 || nc == 0 || nd == 0) {

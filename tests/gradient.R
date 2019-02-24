@@ -1032,6 +1032,20 @@ with gradient (a=c(9.1,4.1)) {
   b
 }
 
+with gradient (a=c(5.1,2.2,3.7)) {
+  x <- numeric(2)
+  x[[1]] <- a[[2]]^2
+  x[[2]] <- a[[3]]
+  sin(x)
+}
+
+with gradient (a=c(5.1,2.2,3.7),b=c(7.3,6.4)) {
+  x <- numeric(2)
+  x[[1]] <- a[[2]]^2
+  x[[2]] <- a[[3]]*b[[2]]
+  sin(x)
+}
+
 
 # Test backpropagation.
 
