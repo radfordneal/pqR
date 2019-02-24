@@ -1023,6 +1023,15 @@ with gradient (a=c(x=5,y=55,z=555)) sqrt(a[["y"]])
 with gradient (a=c(x=5,y=55,z=555)) a[["z"]]+a[["x"]]
 with gradient (a=c(x=5,y=55,z=555)) 2.1*a[["z"]]+3.4*a[["x"]]
 
+with gradient (a=c(9.1,4.1)) {
+  b <- numeric(3)
+  b[[2]] <- a[[1]]
+  b[[1]] <- 3*a[[2]] + b[[2]]
+  b[[3]] <- sin(a[[2]])
+  b[[5]] <- b[[1]]^2
+  b
+}
+
 
 # Test backpropagation.
 

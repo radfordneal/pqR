@@ -4875,8 +4875,15 @@ SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x,
             if (NAMEDCNT_GT_1(x) || x == y)
                 x = dup_top_level(x);
     
-            if (isVectorAtomic(x))
+            if (isVectorAtomic(x)) {
                 copy_elements_coerced (x, offset, 0, y, 0, 0, 1);
+                if (x_grad != R_NilValue || y_grad != R_NilValue) {
+                    res_grad = offset < length_x
+                     ? subassign_numeric_gradient (x_grad, y_grad, offset,
+                                                   length_x)
+                     : extend_numeric_gradient (x_grad, y_grad, offset);
+                }
+            }
             else if (isVectorList(x)) {
                 DEC_NAMEDCNT (VECTOR_ELT(x, offset));
                 SET_VECTOR_ELEMENT_TO_VALUE (x, offset, y);

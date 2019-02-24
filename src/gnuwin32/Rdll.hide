@@ -360,6 +360,7 @@
  Rf_evalList_v
  Rf_eval_unshared
  Rf_extend_list_gradient
+ Rf_extend_numeric_gradient
  Rf_findFun_nospecsym
  Rf_findVar1
  Rf_findcontext
@@ -420,6 +421,7 @@
  Rf_start_browser
  Rf_stirlerr
  Rf_subassign_list_gradient
+ Rf_subassign_numeric_gradient
  Rf_subset_list_gradient
  Rf_subset_numeric_gradient
  Rf_substituteList
