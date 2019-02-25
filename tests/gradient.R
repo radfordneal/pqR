@@ -1062,6 +1062,9 @@ with gradient (a=c(1.1,2.3),b=3.4) {
         dnorm(a,a,b), dnorm(a,b,a), dnorm(b,a,a), dnorm(b,a,b))
 }
 
+with gradient (a=c(1.1,2.3)) list (+a, -a)
+with gradient (a=c(1.1,2.3)) list (+sin(a), -sin(a))
+
 
 # Test backpropagation.
 

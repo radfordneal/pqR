@@ -1532,6 +1532,8 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
          && (grad1 != R_NilValue || grad2 != R_NilValue) 
          && !ISNAN (aval1 = *REAL(ans))) {
 
+        GRADIENT_TRACE(call);
+
         switch (opcode) {
         case PLUSOP: 
             if (grad1 == R_NilValue)
@@ -1589,7 +1591,6 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
             R_variant_result = VARIANT_GRADIENT_FLAG;
             break;
         }
-        GRADIENT_TRACE(call);
     }
 
     UNPROTECT(nprotect);
@@ -1714,11 +1715,30 @@ SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
 
     R_variant_result = local_assign;  /* do at end, just in case */
 
-    if (grad1 != R_NilValue && n == 1 && !ISNAN(*REAL(ans))) {
-        double d = opcode == MINUSOP ? -1 : 1;
-        R_gradient = copy_scaled_gradients(grad1,d);
-        R_variant_result = VARIANT_GRADIENT_FLAG;
+    if (grad1 != R_NilValue) {
+
         GRADIENT_TRACE(call);
+
+        double d = opcode == MINUSOP ? -1 : 1;
+        SEXP res_grad = R_NilValue;
+
+        if (n == 1) {
+            if (!ISNAN(*REAL(ans))) {
+                res_grad = copy_scaled_gradients(grad1,d);
+            }
+        }
+        else {
+
+            /* We can use the non-vector copy_scaled_gradients because the
+               factor is always the same for every element. */
+
+            res_grad = copy_scaled_gradients(grad1,d);
+        }
+
+        if (res_grad != R_NilValue) {
+            R_gradient = res_grad;
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
     }
 
     return ans;
@@ -2272,6 +2292,8 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
     if (grad != R_NilValue && R_math1_deriv_table[opcode] 
                            && TYPEOF(sy) == REALSXP) {
 
+        GRADIENT_TRACE(call);
+
         SEXP res_grad = R_NilValue;
 
         if (n == 1) {
@@ -2294,7 +2316,6 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
         if (res_grad != R_NilValue) {
             R_variant_result |= VARIANT_GRADIENT_FLAG;
             R_gradient = res_grad;
-            GRADIENT_TRACE(call);
         }
     }
 
@@ -2477,6 +2498,8 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     if (HAS_GRADIENT_IN_CELL(args) && TYPEOF(x) == REALSXP) {
 
+        GRADIENT_TRACE(call);
+
         SEXP grad = GRADIENT_IN_CELL(args);
         SEXP res_grad = R_NilValue;
 
@@ -2498,7 +2521,6 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         if (res_grad != R_NilValue) {
             R_variant_result |= VARIANT_GRADIENT_FLAG;
             R_gradient = res_grad;
-            GRADIENT_TRACE(call);
         }
     }
     UNPROTECT(2);  /* args, s */
@@ -2953,6 +2975,8 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (Dcall != 0 && (g1 != R_NilValue || g2 != R_NilValue)) {
 
+        GRADIENT_TRACE(call);
+
         SEXP res_grad = R_NilValue;
 
         if (n == 1) {
@@ -3023,7 +3047,6 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
         if (res_grad != R_NilValue) {
             R_gradient = res_grad;
             R_variant_result = VARIANT_GRADIENT_FLAG;
-            GRADIENT_TRACE(call);
         }
     }
 
@@ -4036,6 +4059,8 @@ SEXP do_math3 (SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (Dcall!=0 && (g1!=R_NilValue || g2!=R_NilValue || g3!=R_NilValue)) {
 
+        GRADIENT_TRACE(call);
+
         SEXP res_grad = R_NilValue;
 
         if (n == 1) {
@@ -4125,7 +4150,6 @@ SEXP do_math3 (SEXP call, SEXP op, SEXP args, SEXP env)
         if (res_grad != R_NilValue) {
             R_gradient = res_grad;
             R_variant_result = VARIANT_GRADIENT_FLAG;
-            GRADIENT_TRACE(call);
         }
     }
 
