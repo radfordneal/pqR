@@ -529,6 +529,11 @@ attribute_hidden SEXP copy_scaled_gradients_vec (SEXP grad, SEXP factors)
 {
     RECURSIVE_GRADIENT_APPLY (copy_scaled_gradients_vec, grad, factors);
 
+#if 0
+REprintf("cs: %d %d - %d %d\n",TYPEOF(grad),TYPEOF(factors),
+LENGTH(grad),LENGTH(factors));
+#endif
+
     if (grad == R_NilValue)
         return R_NilValue;
 
@@ -537,22 +542,24 @@ attribute_hidden SEXP copy_scaled_gradients_vec (SEXP grad, SEXP factors)
     if (TYPEOF(factors) != REALSXP) abort();
     if (TYPEOF(grad) != REALSXP) abort();
 
-    int flen = LENGTH(factors);
-    int glen = LENGTH(grad);
-
-    if (glen % flen != 0) abort();
-
+    R_len_t flen = LENGTH(factors);
+    R_len_t gn, gvars;
+    R_len_t i, j, k;
+    uint64_t glen;
     SEXP r;
 
+    gvars = GRADIENT_WRT_LEN(grad);
+    glen = (uint64_t)flen * (uint64_t)gvars;
+    gn = LENGTH(grad) / gvars;
+    if (LENGTH(grad) != gvars * gn) abort();
     r = allocVector (REALSXP, glen);
-    SET_GRADIENT_WRT_LEN (r, GRADIENT_WRT_LEN(grad));
-
-    R_len_t i, j;
-    for (i = 0; i < glen; ) {
+    SET_GRADIENT_WRT_LEN (r, gvars);
+    k = 0;
+    for (i = 0; i < glen; i += flen) {
         for (j = 0; j < flen; j++) {
-            REAL(r)[i] = REAL(grad)[i] * REAL(factors)[j];
-            i += 1;
+            REAL(r)[i+j] = REAL(grad)[k + j%gn] * REAL(factors)[j];
         }
+        k += gn;
     }
 
     UNPROTECT(1);
@@ -805,6 +812,7 @@ attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
 
     PROTECT2(base,extra);
     R_len_t glen;
+    R_len_t i;
     SEXP r;
 
     if (base == R_NilValue) {
@@ -812,7 +820,7 @@ attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
         glen = LENGTH(extra);
         r = allocVector (REALSXP, glen);
         SET_GRADIENT_WRT_LEN (r, GRADIENT_WRT_LEN(extra));
-        for (R_len_t i = 0; i < glen; i++)
+        for (i = 0; i < glen; i++)
             REAL(r)[i] = REAL(extra)[i] * factor;
     }
     else if (extra == R_NilValue) {
@@ -820,7 +828,7 @@ attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
         glen = LENGTH(base);
         r = allocVector (REALSXP, glen);
         SET_GRADIENT_WRT_LEN (r, GRADIENT_WRT_LEN(base));
-        for (R_len_t i = 0; i < glen; i++)
+        for (i = 0; i < glen; i++)
             REAL(r)[i] = REAL(base)[i];
     }
     else {
@@ -830,9 +838,92 @@ attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
         if (LENGTH(extra) != glen) abort();
         r = allocVector (REALSXP, glen);
         SET_GRADIENT_WRT_LEN (r, GRADIENT_WRT_LEN(base));
-        for (R_len_t i = 0; i < glen; i++)
+        for (i = 0; i < glen; i++)
             REAL(r)[i] = REAL(base)[i] + REAL(extra)[i] * factor;
 
+    }   
+
+    UNPROTECT(2);
+
+    return r;
+}
+
+
+/* Add the product of gradients in extra times elements in factors to
+   the set of gradients in base.  The length of factors indicates the
+   length of the vector this is the gradient for; the GRADIENT_WRT_LEN
+   of base and/or extra indicates the length of the vector that the
+   gradient is with respect to (they must match if neither is R_NilValue).
+   It is possible for extra to be short, with elements recycled to the
+   length of factors, and around that, there may be recycling over multiple
+   gradient elements.
+
+   Protects its base and extra arguments, but caller must protect factors. */
+
+attribute_hidden SEXP add_scaled_gradients_vec (SEXP base, SEXP extra, 
+                                                SEXP factors)
+{
+    RECURSIVE_GRADIENT_APPLY2 (add_scaled_gradients_vec, base, extra, factors);
+
+#if 0
+REprintf("as: %d %d %d - %d %d %d\n",TYPEOF(base),TYPEOF(extra),TYPEOF(factors),
+LENGTH(base),LENGTH(extra),LENGTH(factors));
+#endif
+
+    if (base == R_NilValue && extra == R_NilValue)
+        return R_NilValue;
+
+    PROTECT2(base,extra);
+
+    if (TYPEOF(factors) != REALSXP) abort();
+
+    R_len_t flen = LENGTH(factors);
+    R_len_t en, gvars;
+    R_len_t i, j, k;
+    uint64_t glen;
+    SEXP r;
+
+    if (base == R_NilValue) {
+        if (TYPEOF(extra) != REALSXP) abort();
+        gvars = GRADIENT_WRT_LEN(extra);
+        glen = (uint64_t)flen * (uint64_t)gvars;
+        en = LENGTH(extra) / gvars;
+        if (LENGTH(extra) != gvars * en) abort();
+        r = allocVector (REALSXP, glen);
+        SET_GRADIENT_WRT_LEN (r, gvars);
+        k = 0;
+        for (i = 0; i < glen; i += flen) {
+            for (j = 0; j < flen; j++) {
+                REAL(r)[i+j] = REAL(extra)[k + j%en] * REAL(factors)[j];
+            }
+            k += en;
+        }
+    }
+
+    else if (extra == R_NilValue) {
+        if (TYPEOF(base) != REALSXP) abort();
+        r = duplicate(base);
+    }
+
+    else {
+        if (TYPEOF(base) != REALSXP) abort();
+        if (TYPEOF(extra) != REALSXP) abort();
+        gvars = GRADIENT_WRT_LEN(extra);
+        if (GRADIENT_WRT_LEN(base) != gvars) abort();
+        glen = (uint64_t)flen * (uint64_t)gvars;
+        if (glen != LENGTH(base)) abort();
+        en = LENGTH(extra) / gvars;
+        if (LENGTH(extra) != gvars * en) abort();
+        r = allocVector (REALSXP, glen);
+        SET_GRADIENT_WRT_LEN (r, gvars);
+        k = 0;
+        for (i = 0; i < glen; i += flen) {
+            for (j = 0; j < flen; j++) {
+                REAL(r)[i+j] = REAL(base)[i+j] 
+                                + REAL(extra)[k + j%en] * REAL(factors)[j];
+            }
+            k += en;
+        }
     }   
 
     UNPROTECT(2);

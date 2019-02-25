@@ -1256,6 +1256,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 /*--- FUNCTIONS ------------------------------------------------------ */
 
 # define add_scaled_gradients	Rf_add_scaled_gradients
+# define add_scaled_gradients_vec Rf_add_scaled_gradients_vec
 # define allocCharsxp		Rf_allocCharsxp
 # define alloc_or_reuse		Rf_alloc_or_reuse
 # define apply_non_functon_error Rf_apply_non_function_error
@@ -1491,6 +1492,7 @@ SEXP Rf_EnsureString(SEXP);
 SEXP copy_scaled_gradients (SEXP, double);
 SEXP copy_scaled_gradients_vec (SEXP, SEXP);
 SEXP add_scaled_gradients (SEXP, SEXP, double);
+SEXP add_scaled_gradients_vec (SEXP, SEXP, SEXP);
 SEXP Rf_allocCharsxp(R_len_t);
 SEXP alloc_or_reuse (SEXP, SEXP, SEXPTYPE, int, int, int);
 SEXP Rf_append(SEXP, SEXP); /* apparently unused now */

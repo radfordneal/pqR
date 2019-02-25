@@ -1053,6 +1053,10 @@ with gradient (a=c(-1.1,2.3)) {
   abs(x)
 }
 
+with gradient (a=c(1.1,2.3),b=3.4) {
+  list (dt(a,5), dt(5,a), dt(a,a), dt(a,b), dt(b,a))
+}
+
 
 # Test backpropagation.
 
