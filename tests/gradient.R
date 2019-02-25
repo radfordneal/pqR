@@ -1057,6 +1057,11 @@ with gradient (a=c(1.1,2.3),b=3.4) {
   list (dt(a,5), dt(5,a), dt(a,a), dt(a,b), dt(b,a))
 }
 
+with gradient (a=c(1.1,2.3),b=3.4) {
+  list (dnorm(a,2,5), dnorm(5,a,2), dnorm(5,2,a), dnorm(a,a,a), 
+        dnorm(a,a,b), dnorm(a,b,a), dnorm(b,a,a), dnorm(b,a,b))
+}
+
 
 # Test backpropagation.
 

@@ -2985,7 +2985,7 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
 
             SEXP gr2 = g2 == R_NilValue ? R_NilValue : allocVector (REALSXP, n);
             PROTECT(gr2);
-/* REprintf("m2: %d %d %d\n",length(g1),length(g2),length(res)); */
+
             if (args == R_NilValue) {
                 for (R_len_t i = 0; i < n; i++)
                     Dcall (ap1[i%n1], ap2[i%n2], 
@@ -4034,38 +4034,99 @@ SEXP do_math3 (SEXP call, SEXP op, SEXP args, SEXP env)
 
     void (*Dcall)() = math3_table[ix].Dcall;
 
-    if (n == 1 && Dcall != 0 && !ISNAN(rp[0])
-               && (g1 != R_NilValue || g2 != R_NilValue || g3 != R_NilValue)) {
+    if (Dcall!=0 && (g1!=R_NilValue || g2!=R_NilValue || g3!=R_NilValue)) {
 
-        double grad1, grad2, grad3;
-        double *gp1 = g1 != R_NilValue ? &grad1 : 0;
-        double *gp2 = g2 != R_NilValue ? &grad2 : 0;
-        double *gp3 = g3 != R_NilValue ? &grad3 : 0;
+        SEXP res_grad = R_NilValue;
 
-        if (args == R_NilValue)
-            Dcall (ap1[0], ap2[0], ap3[0], gp1, gp2, gp3, rp[0]);
-        else if (CDR(args)==R_NilValue)
-            Dcall (ap1[0], ap2[0], ap3[0], gp1, gp2, gp3, rp[0], i1);
-        else
-            Dcall (ap1[0], ap2[0], ap3[0], gp1, gp2, gp3, rp[0], i1, i2);
-
-        R_gradient = R_NilValue;
-        if (g1 != R_NilValue) {
-            R_gradient = copy_scaled_gradients (g1, grad1);
+        if (n == 1) {
+            if (!ISNAN(rp[0])) {
+                double grad1, grad2, grad3;
+                double *gp1 = g1 != R_NilValue ? &grad1 : 0;
+                double *gp2 = g2 != R_NilValue ? &grad2 : 0;
+                double *gp3 = g3 != R_NilValue ? &grad3 : 0;
+        
+                if (args == R_NilValue)
+                    Dcall (ap1[0], ap2[0], ap3[0], gp1, gp2, gp3, rp[0]);
+                else if (CDR(args)==R_NilValue)
+                    Dcall(ap1[0], ap2[0], ap3[0], gp1, gp2, gp3, rp[0], i1);
+                else
+                    Dcall(ap1[0], ap2[0], ap3[0], gp1, gp2, gp3, rp[0], i1, i2);
+        
+                res_grad = R_NilValue;
+                if (g1 != R_NilValue) {
+                    res_grad = copy_scaled_gradients (g1, grad1);
+                }
+                if (g2 != R_NilValue) {
+                    res_grad = res_grad == R_NilValue 
+                                  ? copy_scaled_gradients (g2, grad2)
+                                  : add_scaled_gradients (res_grad, g2, grad2);
+                }
+                if (g3 != R_NilValue) {
+                    res_grad = res_grad == R_NilValue 
+                                  ? copy_scaled_gradients (g3, grad3)
+                                  : add_scaled_gradients (res_grad, g3, grad3);
+                }
+            }
         }
-        if (g2 != R_NilValue) {
-            R_gradient = R_gradient == R_NilValue 
-                          ? copy_scaled_gradients (g2, grad2)
-                          : add_scaled_gradients (R_gradient, g2, grad2);
-        }
-        if (g3 != R_NilValue) {
-            R_gradient = R_gradient == R_NilValue 
-                          ? copy_scaled_gradients (g3, grad3)
-                          : add_scaled_gradients (R_gradient, g3, grad3);
+
+        else {
+
+            SEXP gr1 = g1 == R_NilValue ? R_NilValue : allocVector (REALSXP, n);
+            PROTECT(gr1);
+
+            SEXP gr2 = g2 == R_NilValue ? R_NilValue : allocVector (REALSXP, n);
+            PROTECT(gr2);
+
+            SEXP gr3 = g3 == R_NilValue ? R_NilValue : allocVector (REALSXP, n);
+            PROTECT(gr3);
+
+            if (args == R_NilValue) {
+                for (R_len_t i = 0; i < n; i++)
+                    Dcall (ap1[i%n1], ap2[i%n2], ap3[i%n3],
+                           gr1 != R_NilValue ? REAL(gr1)+i : 0,
+                           gr2 != R_NilValue ? REAL(gr2)+i : 0,
+                           gr3 != R_NilValue ? REAL(gr3)+i : 0,
+                           rp[i]);
+            }
+            else if (CDR(args) == R_NilValue) {
+                for (R_len_t i = 0; i < n; i++)
+                    Dcall (ap1[i%n1], ap2[i%n2], ap3[i%n3],
+                           gr1 != R_NilValue ? REAL(gr1)+i : 0,
+                           gr2 != R_NilValue ? REAL(gr2)+i : 0,
+                           gr3 != R_NilValue ? REAL(gr3)+i : 0,
+                           rp[i], i1);
+            }
+            else {
+                for (R_len_t i = 0; i < n; i++)
+                    Dcall (ap1[i%n1], ap2[i%n2], ap3[i%n3],
+                           gr1 != R_NilValue ? REAL(gr1)+i : 0,
+                           gr2 != R_NilValue ? REAL(gr2)+i : 0,
+                           gr3 != R_NilValue ? REAL(gr3)+i : 0,
+                           rp[i], i1, i2);
+            }
+
+            if (g1 != R_NilValue) {
+                res_grad = copy_scaled_gradients_vec (g1, gr1);
+            }
+            if (g2 != R_NilValue) {
+                res_grad = res_grad == R_NilValue
+                            ? copy_scaled_gradients_vec (g2, gr2)
+                            : add_scaled_gradients_vec (res_grad, g2, gr2);
+            }
+            if (g3 != R_NilValue) {
+                res_grad = res_grad == R_NilValue
+                            ? copy_scaled_gradients_vec (g3, gr3)
+                            : add_scaled_gradients_vec (res_grad, g3, gr3);
+            }
+
+            UNPROTECT(3);
         }
 
-        R_variant_result = VARIANT_GRADIENT_FLAG;
-        GRADIENT_TRACE(call);
+        if (res_grad != R_NilValue) {
+            R_gradient = res_grad;
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            GRADIENT_TRACE(call);
+        }
     }
 
     if (naflag) NaN_warning();
