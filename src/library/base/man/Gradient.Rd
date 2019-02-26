@@ -22,10 +22,9 @@
   The present implementation of these facilities is a preliminary.  
   It supports gradients of and with respect to real scalars, vectors,
   matrices, and arrays, lists of such values, lists of lists, etc.
-  However, at present, only a very limited set of operations is 
+  However, at present, only a limited set of operations are
   supported for vectors, matrices, and arrays, including [[.]] for
-  accessing and replacing elements, but not [.].  Arithmetic operations
-  currently propagate gradients only when the operands are scalar.
+  accessing and replacing single elements, but not [.]. 
   Many vector-oriented operations, such as \code{sum}, \code{c}, and 
   \code{cbind} are also not yet supported.  Support for a full range
   of vector operations should be implemnted soon.
@@ -175,9 +174,9 @@ generated random value, if the state of the random number generator
 when calling the function were kept fixed.
 
 The following built-in functions and operators will compute gradients,
-with respect to all their scalar real arguments (unless noted), or
-when applicable, arguments that are lists of scalar reals (or lists of
-lists of scalar reals, etc.):
+with respect to all their real scalar, vector, matrix, or array arguments
+(unless noted), or when applicable, arguments that are lists of reals 
+(or lists of lists of reals, etc.):
 \tabular{l}{
 list \cr
 $ (for vector lists only), $<- (for vector lists only) \cr
