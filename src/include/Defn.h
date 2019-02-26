@@ -1491,7 +1491,7 @@ SEXP Rf_EnsureString(SEXP);
 
 SEXP copy_scaled_gradients (SEXP, double);
 SEXP copy_scaled_gradients_vec (SEXP, SEXP);
-SEXP add_scaled_gradients (SEXP, SEXP, double);
+SEXP add_scaled_gradients (SEXP, SEXP, double, int);
 SEXP add_scaled_gradients_vec (SEXP, SEXP, SEXP);
 SEXP Rf_allocCharsxp(R_len_t);
 SEXP alloc_or_reuse (SEXP, SEXP, SEXPTYPE, int, int, int);

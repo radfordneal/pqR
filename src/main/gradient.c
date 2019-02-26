@@ -42,6 +42,10 @@
 #define SET_GRADIENT_WRT_LEN(g,l) \
   (LENGTH(g) == 1 ? (void) 0 : (void) SET_TRUELENGTH(g,l))
 
+static void R_NORETURN gradient_matrix_too_large_error (void) {
+    error (_("gradient matrix would be too large"));
+}
+
 
 /* Expand the structure of 'grad' to be a full gradient for 'value' by
    replacing NULL elements that correspond to non-NULL elements by the
@@ -105,8 +109,7 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
             R_len_t vlen = LENGTH(value);
             R_len_t glen = GRADIENT_WRT_LEN(idg);
             uint64_t Jlen = (uint64_t)vlen * (uint64_t)glen;
-            if (Jlen > R_LEN_T_MAX)
-                error (_("gradient matrix would be too large\n"));
+            if (Jlen > R_LEN_T_MAX) gradient_matrix_too_large_error();
             if (Jlen == 1)
                 return R_ScalarRealZero;
             res = allocVector (REALSXP, (R_len_t) Jlen);
@@ -195,8 +198,7 @@ static SEXP make_id_numeric (SEXP v)
 
         R_len_t vlen = LENGTH(v);
         uint64_t Jlen = (uint64_t)vlen * (uint64_t)vlen;
-        if (Jlen > R_LEN_T_MAX)
-            error (_("gradient matrix would be too large\n"));
+        if (Jlen > R_LEN_T_MAX) gradient_matrix_too_large_error();
 
         res = allocVector (REALSXP, (R_len_t) Jlen);
         SET_GRADIENT_WRT_LEN (res, vlen);
@@ -798,49 +800,82 @@ REprintf("==\n");
 }
 
 
-/* Add the product of gradients in extra times factor to the set of
-   gradients in base.
+/* Add the product of gradients in extra times a scalar factor to the set of
+   gradients in base.  GRADIENT_WRT_LEN must be the same for base and extra
+   (except when R_NilValue).  The length of the result is given by n, with
+   base and extra recycled if shorter.
 
    Protects its arguments. */
 
-attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
+attribute_hidden SEXP add_scaled_gradients (SEXP base, SEXP extra, 
+                                            double factor, R_len_t n)
 {
-    RECURSIVE_GRADIENT_APPLY2 (add_scaled_gradients, base, extra, factor);
+    RECURSIVE_GRADIENT_APPLY2 (add_scaled_gradients, base, extra, factor, n);
 
     if (base == R_NilValue && extra == R_NilValue)
         return R_NilValue;
 
     PROTECT2(base,extra);
-    R_len_t glen;
-    R_len_t i;
+    R_len_t glen, gvars, elen, blen, en, bn;
+    R_len_t i, j, k, l;
     SEXP r;
 
     if (base == R_NilValue) {
         if (TYPEOF(extra) != REALSXP) abort();
-        glen = LENGTH(extra);
+        gvars = GRADIENT_WRT_LEN(extra);
+        if ((uint64_t)n*gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
+        glen = n * gvars;
         r = allocVector (REALSXP, glen);
-        SET_GRADIENT_WRT_LEN (r, GRADIENT_WRT_LEN(extra));
-        for (i = 0; i < glen; i++)
-            REAL(r)[i] = REAL(extra)[i] * factor;
+        SET_GRADIENT_WRT_LEN (r, gvars);
+        elen = LENGTH(extra);
+        en = elen / gvars;
+        if (en * gvars != elen) abort();
+        l = 0;
+        for (i = 0; i < glen; i += n) {
+            for (j = 0; j < n; j++)
+                REAL(r)[i+j] = REAL(extra)[l+j%en]*factor;
+            l += en;
+        }
     }
     else if (extra == R_NilValue) {
         if (TYPEOF(base) != REALSXP) abort();
-        glen = LENGTH(base);
+        gvars = GRADIENT_WRT_LEN(base);
+        if ((uint64_t)n*gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
+        glen = n * gvars;
         r = allocVector (REALSXP, glen);
-        SET_GRADIENT_WRT_LEN (r, GRADIENT_WRT_LEN(base));
-        for (i = 0; i < glen; i++)
-            REAL(r)[i] = REAL(base)[i];
+        SET_GRADIENT_WRT_LEN (r, gvars);
+        blen = LENGTH(base);
+        bn = blen / gvars;
+        if (bn * gvars != blen) abort();
+        k = 0;
+        for (i = 0; i < glen; i += n) {
+            for (j = 0; j < n; j++)
+                REAL(r)[i+j] = REAL(base)[k+j%bn];
+            k += bn;
+        }
     }
     else {
         if (TYPEOF(base) != REALSXP) abort();
         if (TYPEOF(extra) != REALSXP) abort();
-        glen = LENGTH(base);
-        if (LENGTH(extra) != glen) abort();
+        gvars = GRADIENT_WRT_LEN(base);
+        if (GRADIENT_WRT_LEN(extra) != gvars) abort();
+        if ((uint64_t)n*gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
+        glen = n * gvars;
         r = allocVector (REALSXP, glen);
-        SET_GRADIENT_WRT_LEN (r, GRADIENT_WRT_LEN(base));
-        for (i = 0; i < glen; i++)
-            REAL(r)[i] = REAL(base)[i] + REAL(extra)[i] * factor;
-
+        SET_GRADIENT_WRT_LEN (r, gvars);
+        blen = LENGTH(base);
+        bn = blen / gvars;
+        if (bn * gvars != blen) abort();
+        elen = LENGTH(extra);
+        en = elen / gvars;
+        if (en * gvars != elen) abort();
+        k = l = 0;
+        for (i = 0; i < glen; i += n) {
+            for (j = 0; j < n; j++)
+                REAL(r)[i+j] = REAL(base)[i+j%bn] + REAL(extra)[i+j%en]*factor;
+            k += bn;
+            l += en;
+        }
     }   
 
     UNPROTECT(2);
@@ -854,7 +889,7 @@ attribute_hidden SEXP add_scaled_gradients(SEXP base, SEXP extra, double factor)
    length of the vector this is the gradient for; the GRADIENT_WRT_LEN
    of base and/or extra indicates the length of the vector that the
    gradient is with respect to (they must match if neither is R_NilValue).
-   It is possible for extra to be short, with elements recycled to the
+   It is possible for base or extra to be short, with elements recycled to the
    length of factors, and around that, there may be recycling over multiple
    gradient elements.
 
@@ -878,8 +913,8 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
     if (TYPEOF(factors) != REALSXP) abort();
 
     R_len_t flen = LENGTH(factors);
-    R_len_t en, gvars;
-    R_len_t i, j, k;
+    R_len_t en, bn, gvars;
+    R_len_t i, j, k, l;
     uint64_t glen;
     SEXP r;
 
@@ -902,7 +937,19 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
 
     else if (extra == R_NilValue) {
         if (TYPEOF(base) != REALSXP) abort();
-        r = duplicate(base);
+        gvars = GRADIENT_WRT_LEN(base);
+        glen = (uint64_t)flen * (uint64_t)gvars;
+        bn = LENGTH(base) / gvars;
+        if (LENGTH(base) != gvars * bn) abort();
+        r = allocVector (REALSXP, glen);
+        SET_GRADIENT_WRT_LEN (r, gvars);
+        l = 0;
+        for (i = 0; i < glen; i += flen) {
+            for (j = 0; j < flen; j++) {
+                REAL(r)[i+j] = REAL(base)[l + j%bn];
+            }
+            l += bn;
+        }
     }
 
     else {
@@ -911,18 +958,20 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
         gvars = GRADIENT_WRT_LEN(extra);
         if (GRADIENT_WRT_LEN(base) != gvars) abort();
         glen = (uint64_t)flen * (uint64_t)gvars;
-        if (glen != LENGTH(base)) abort();
+        bn = LENGTH(base) / gvars;
+        if (LENGTH(base) != gvars * bn) abort();
         en = LENGTH(extra) / gvars;
         if (LENGTH(extra) != gvars * en) abort();
         r = allocVector (REALSXP, glen);
         SET_GRADIENT_WRT_LEN (r, gvars);
-        k = 0;
+        k = l = 0;
         for (i = 0; i < glen; i += flen) {
             for (j = 0; j < flen; j++) {
-                REAL(r)[i+j] = REAL(base)[i+j] 
+                REAL(r)[i+j] = REAL(base)[l + j%bn] 
                                 + REAL(extra)[k + j%en] * REAL(factors)[j];
             }
             k += en;
+            l += bn;
         }
     }   
 
@@ -980,8 +1029,7 @@ static SEXP add_scaled_list (SEXP a, SEXP b, SEXP f)
     R_len_t m = LENGTH(f) / k;
 
     uint64_t glen = (uint64_t)n * (uint64_t)m;
-    if (glen > R_LEN_T_MAX)
-        error (_("gradient matrix would be too large\n"));
+    if (glen > R_LEN_T_MAX) gradient_matrix_too_large_error();
 
     res = allocVector (REALSXP, glen);
     SET_GRADIENT_WRT_LEN (res, m);

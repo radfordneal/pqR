@@ -302,7 +302,7 @@ static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
                             R_gradient = copy_scaled_gradients (g2, gv2);
                         else
                             R_gradient = add_scaled_gradients (R_gradient,
-                                                               g2, gv2);
+                                                               g2, gv2, 1);
                     }
                     R_variant_result = VARIANT_GRADIENT_FLAG;
                     GRADIENT_TRACE(call);
