@@ -1362,7 +1362,13 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
          /* task_real_arithmetic takes REAL, INTEGER, and LOGICAL operands, 
             and assumes INTEGER and LOGICAL are really the same. */
 
-        ans = alloc_or_reuse (x, y, REALSXP, n, local_assign1, local_assign2);
+        if ((grad1 != R_NilValue || grad2 != R_NilValue)
+               && (opcode != PLUSOP && opcode != MINUSOP)) 
+            /* can't reuse operand space because needed for gradient calc. */
+            ans = allocVector (REALSXP, n);
+        else
+            ans = alloc_or_reuse (x, y, REALSXP, n, 
+                                  local_assign1, local_assign2);
         task = task_real_arithmetic;
         flags = HELPERS_PIPE_IN0_OUT;
 
@@ -1630,48 +1636,68 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                 break;
             case TIMESOP: 
                 if (grad1 == R_NilValue) {
-                    if (LENGTH(x) != n)
+                    if (TYPEOF(x) != REALSXP)
+                        for (i = 0; i < n; i++) REAL(f)[i] = INTEGER(x)[i%nx];
+                    else if (LENGTH(x) != n)
                         for (i = 0; i < n; i++) REAL(f)[i] = REAL(x)[i%nx];
-                    res_grad = copy_scaled_gradients_vec 
-                                 (grad2, LENGTH(x) == n ? x : f);
+                    res_grad = copy_scaled_gradients_vec (grad2, 
+                                TYPEOF(x) == REALSXP && LENGTH(x) == n ? x : f);
                 }
                 else if (grad2 == R_NilValue) {
-                    if (LENGTH(y) != n)
+                    if (TYPEOF(y) != REALSXP)
+                        for (i = 0; i < n; i++) REAL(f)[i] = INTEGER(y)[i%ny];
+                    else if (LENGTH(y) != n)
                         for (i = 0; i < n; i++) REAL(f)[i] = REAL(y)[i%ny];
-                    res_grad = copy_scaled_gradients_vec 
-                                 (grad1, LENGTH(y) == n ? y : f);
+                    res_grad = copy_scaled_gradients_vec (grad1, 
+                                TYPEOF(y) == REALSXP && LENGTH(y) == n ? y : f);
                 }
                 else {
-                    if (LENGTH(y) != n)
+                    if (TYPEOF(y) != REALSXP)
+                        for (i = 0; i < n; i++) REAL(f)[i] = INTEGER(y)[i%ny];
+                    else if (LENGTH(y) != n)
                         for (i = 0; i < n; i++) REAL(f)[i] = REAL(y)[i%ny];
-                    res_grad = copy_scaled_gradients_vec 
-                                 (grad1, LENGTH(y) == n ? y : f);
-                    if (LENGTH(x) != n)
+                    res_grad = copy_scaled_gradients_vec (grad1, 
+                                TYPEOF(y) == REALSXP && LENGTH(y) == n ? y : f);
+                    if (TYPEOF(x) != REALSXP)
+                        for (i = 0; i < n; i++) REAL(f)[i] = INTEGER(x)[i%nx];
+                    else if (LENGTH(x) != n)
                         for (i = 0; i < n; i++) REAL(f)[i] = REAL(x)[i%nx];
-                    res_grad = add_scaled_gradients_vec 
-                                 (res_grad, grad2, LENGTH(x) ==n ? x : f);
+                    res_grad = add_scaled_gradients_vec (res_grad, grad2, 
+                                TYPEOF(x) == REALSXP && LENGTH(x) == n ? x : f);
                 }
                 break;
             case DIVOP: 
                 if (grad1 == R_NilValue) {
                     for (i = 0; i < n; i++) {
-                        double t = REAL(y)[i%ny];
-                        REAL(f)[i] = -REAL(x)[i%nx] / (t*t);
+                        double tx = TYPEOF(x) == REALSXP ? REAL(x)[i%nx]
+                                                         : INTEGER(x)[i%nx];
+                        double ty = TYPEOF(y) == REALSXP ? REAL(y)[i%ny]
+                                                         : INTEGER(y)[i%ny];
+                        REAL(f)[i] = -tx / (ty*ty);
                     }
                     res_grad = copy_scaled_gradients_vec (grad2, f);
                 }
                 else if (grad2 == R_NilValue) {
-                    for (i = 0; i < n; i++)
-                        REAL(f)[i] = 1 / REAL(y)[i%ny];
+                    for (i = 0; i < n; i++) {
+                        double ty = TYPEOF(y) == REALSXP ? REAL(y)[i%ny]
+                                                         : INTEGER(y)[i%ny];
+                        REAL(f)[i] = 1 / ty;
+                    }
                     res_grad = copy_scaled_gradients_vec (grad1, f);
                 }
                 else {
-                    for (i = 0; i < n; i++)
+                    for (i = 0; i < n; i++) {
+                        double ty = TYPEOF(y) == REALSXP ? REAL(y)[i%ny]
+                                                         : INTEGER(y)[i%ny];
                         REAL(f)[i] = 1 / REAL(y)[i%ny];
+                    }
                     res_grad = copy_scaled_gradients_vec (grad1, f);
                     for (i = 0; i < n; i++) {
-                        double t = REAL(y)[i%ny];
-                        REAL(f)[i] = -REAL(x)[i%nx] / (t*t);
+                        double tx = TYPEOF(x) == REALSXP ? REAL(x)[i%nx]
+                                                         : INTEGER(x)[i%nx];
+                        double ty = TYPEOF(y) == REALSXP ? REAL(y)[i%ny]
+                                                         : INTEGER(y)[i%ny];
+                        REAL(f)[i] = -tx / (ty*ty);
                     }
                     res_grad = add_scaled_gradients_vec(res_grad, grad2, f);
                 }
@@ -1679,14 +1705,21 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
             case POWOP: ;
                 WAIT_UNTIL_COMPUTED(ans);
                 if (grad1 != R_NilValue) {
-                    for (i = 0; i < n; i++)
-                        REAL(f)[i] = REAL(ans)[i]*REAL(y)[i%ny]/REAL(x)[i%nx];
+                    for (i = 0; i < n; i++) {
+                        double tx = TYPEOF(x) == REALSXP ? REAL(x)[i%nx]
+                                                         : INTEGER(x)[i%nx];
+                        double ty = TYPEOF(y) == REALSXP ? REAL(y)[i%ny]
+                                                         : INTEGER(y)[i%ny];
+                        REAL(f)[i] = REAL(ans)[i] * ty / tx;
+                    }
                     res_grad = copy_scaled_gradients_vec (grad1, f);
                 }
                 if (grad2 != R_NilValue) {
-                    for (i = 0; i < n; i++)
-                        REAL(f)[i] = REAL(x)[i%nx] > 0
-                                      ? REAL(ans)[i] * log(REAL(x)[i%nx]) : 0;
+                    for (i = 0; i < n; i++) {
+                        double tx = TYPEOF(x) == REALSXP ? REAL(x)[i%nx]
+                                                         : INTEGER(x)[i%nx];
+                        REAL(f)[i] = tx > 0 ? REAL(ans)[i] * log(tx) : 0;
+                    }
                     res_grad = add_scaled_gradients_vec (res_grad, grad2, f);
                 }
                 break;

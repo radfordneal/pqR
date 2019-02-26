@@ -1072,6 +1072,19 @@ with gradient (a=c(1.1,2.3)) list (1+a, 1-a, a+1, a-1, a+a, a-a)
 with gradient (a=c(1.1,2.3)) list (2.1*a, 2.1/a, a*2.1, a/2.1, a*a, a/a)
 with gradient (a=c(1.1,2.3)) list (2.1^a, a^2.1, a^a)
 
+with gradient (a=c(1.7,-34.9)) list ((a+2)*(a+1), sin(a)^2+a)
+with gradient (a=1.7) list ((a+2)*(a+1), sin(a)^2+a)
+with gradient (a=-34.9) list ((a+2)*(a+1), sin(a)^2+a)
+
+with gradient (a=1.7) 
+  list (a+3L, a-3L, a*3L, 3L*a, a^3L, a/3L, 3L/a, 3L^a)
+with gradient (a=c(1.7,1.7)) 
+  list (a+3L, a-3L, a*3L, 3L*a, a^3L, a/3L, 3L/a, 3L^a)
+with gradient (a=1.7)
+  list (a+3, a-3, a*3, 3*a, a^3, a/3, 3/a, 3^a)
+with gradient (a=c(1.7,1.7))
+  list (a+3, a-3, a*3, 3*a, a^3, a/3, 3/a, 3^a)
+
 # Test backpropagation.
 
 with gradient (a=5) 
