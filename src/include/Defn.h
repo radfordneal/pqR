@@ -1489,7 +1489,7 @@ SEXP Rf_EnsureString(SEXP);
 
 /* Other Internally Used Functions */
 
-SEXP copy_scaled_gradients (SEXP, double);
+SEXP copy_scaled_gradients (SEXP, double, int);
 SEXP copy_scaled_gradients_vec (SEXP, SEXP);
 SEXP add_scaled_gradients (SEXP, SEXP, double, int);
 SEXP add_scaled_gradients_vec (SEXP, SEXP, SEXP);

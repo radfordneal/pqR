@@ -493,11 +493,12 @@ REprintf("==\n");
 }
 
 
-/* Copy scaled gradients from those in grad, which is protected here. */
+/* Copy scaled gradients from those in grad, which is protected here.  The
+   length of the value is given by n.  If grad is shorter, it is recycled. */
 
-attribute_hidden SEXP copy_scaled_gradients (SEXP grad, double factor)
+attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
 {
-    RECURSIVE_GRADIENT_APPLY (copy_scaled_gradients, grad, factor);
+    RECURSIVE_GRADIENT_APPLY (copy_scaled_gradients, grad, factor, n);
 
     if (grad == R_NilValue)
         return R_NilValue;
@@ -505,16 +506,28 @@ attribute_hidden SEXP copy_scaled_gradients (SEXP grad, double factor)
     PROTECT(grad);
 
     if (TYPEOF(grad) != REALSXP) abort();
-    int glen = LENGTH(grad);
+    R_len_t gn, gvars, glen;
+    R_len_t i, j, k;
     SEXP r;
+
+    gvars = GRADIENT_WRT_LEN(grad);
+    if ((uint64_t)n * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
+    glen = n * gvars;
+    gn = LENGTH(grad) / gvars;
+    if (LENGTH(grad) != gvars * gn) abort();
 
     if (glen == 1)
         r = ScalarRealMaybeConst (*REAL(grad) * factor);
     else {
         r = allocVector (REALSXP, glen);
         SET_GRADIENT_WRT_LEN (r, GRADIENT_WRT_LEN(grad));
-        for (R_len_t i = 0; i < glen; i++)
-            REAL(r)[i] = REAL(grad)[i] * factor;
+        k = 0;
+        for (i = 0; i < glen; i += n) {
+            for (j = 0; j < n; j++) {
+                REAL(r)[i+j] = REAL(grad)[k+j%gn] * factor;
+            }
+            k += gn;
+        }
     }
 
     UNPROTECT(1);
@@ -522,8 +535,8 @@ attribute_hidden SEXP copy_scaled_gradients (SEXP grad, double factor)
 }
 
 
-/* Copy scaled gradients from those in grad with vector of scaling factors,
-   which are recycled when grad's length is a multiple of the length of factors.
+/* Copy scaled gradients from those in grad with vector of scaling factors.
+   If grad is shorter, it is recycled. 
 
    Caller must protect factors, but not grad. */
 
@@ -545,13 +558,13 @@ LENGTH(grad),LENGTH(factors),GRADIENT_WRT_LEN(grad));
     if (TYPEOF(grad) != REALSXP) abort();
 
     R_len_t flen = LENGTH(factors);
-    R_len_t gn, gvars;
+    R_len_t gn, gvars, glen;
     R_len_t i, j, k;
-    uint64_t glen;
     SEXP r;
 
     gvars = GRADIENT_WRT_LEN(grad);
-    glen = (uint64_t)flen * (uint64_t)gvars;
+    if ((uint64_t)flen * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
+    glen = flen * gvars;
     gn = LENGTH(grad) / gvars;
     if (LENGTH(grad) != gvars * gn) abort();
     r = allocVector (REALSXP, glen);

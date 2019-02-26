@@ -111,7 +111,7 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
             if (g != R_NilValue) {
                 double (*Dcall)(double,double) = rand1_table[opcode].Dcall;
                 if (Dcall != 0) {
-                    R_gradient = copy_scaled_gradients (g, Dcall(r,av));
+                    R_gradient = copy_scaled_gradients (g, Dcall(r,av), 1);
                     R_variant_result = VARIANT_GRADIENT_FLAG;
                     GRADIENT_TRACE(call);
                 }
@@ -296,10 +296,10 @@ static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
                            g2 != R_NilValue ? &gv2 : 0);
                     R_gradient = R_NilValue;
                     if (g1 != R_NilValue)
-                        R_gradient = copy_scaled_gradients (g1, gv1);
+                        R_gradient = copy_scaled_gradients (g1, gv1, 1);
                     if (g2 != R_NilValue) {
                         if (R_gradient == R_NilValue)
-                            R_gradient = copy_scaled_gradients (g2, gv2);
+                            R_gradient = copy_scaled_gradients (g2, gv2, 1);
                         else
                             R_gradient = add_scaled_gradients (R_gradient,
                                                                g2, gv2, 1);
