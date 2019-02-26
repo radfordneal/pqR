@@ -530,8 +530,8 @@ attribute_hidden SEXP copy_scaled_gradients_vec (SEXP grad, SEXP factors)
     RECURSIVE_GRADIENT_APPLY (copy_scaled_gradients_vec, grad, factors);
 
 #if 0
-REprintf("cs: %d %d - %d %d\n",TYPEOF(grad),TYPEOF(factors),
-LENGTH(grad),LENGTH(factors));
+REprintf("cs: %d %d - %d %d - %d\n",TYPEOF(grad),TYPEOF(factors),
+LENGTH(grad),LENGTH(factors),GRADIENT_WRT_LEN(grad));
 #endif
 
     if (grad == R_NilValue)

@@ -1065,6 +1065,12 @@ with gradient (a=c(1.1,2.3),b=3.4) {
 with gradient (a=c(1.1,2.3)) list (+a, -a)
 with gradient (a=c(1.1,2.3)) list (+sin(a), -sin(a))
 
+with gradient (a=c(1.1,2.3),b=c(5.2,3.1)) list (a+b, a-b, a*b, a/b, a^b)
+with gradient (a=c(1.1,2.3,3.7),b=c(5.2,3.1)) list (a+b, a-b, a*b, a/b, a^b)
+with gradient (a=c(1.1,2.3),b=c(5.2,3.1,1.9)) list (a+b, a-b, a*b, a/b, a^b)
+with gradient (a=c(1.1,2.3)) list (1+a, 1-a, a+1, a-1, a+a, a-a)
+with gradient (a=c(1.1,2.3)) list (2.1*a, 2.1/a, a*2.1, a/2.1, a*a, a/a)
+with gradient (a=c(1.1,2.3)) list (2.1^a, a^2.1, a^a)
 
 # Test backpropagation.
 
