@@ -4133,6 +4133,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
 static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
+    int argsevald = 0;
     int fast_sub = VARIANT_KIND(variant) == VARIANT_FAST_SUB;
     SEXP array_grad = R_NilValue;
     SEXP ans;
@@ -4169,6 +4170,7 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         if (obj) {
             args = CONS(array,ixlist);
+            argsevald = -1;
             /* go on to general-purpose code below */
         }
         else if (ixlist == R_NilValue || TAG(ixlist) != R_NilValue 
@@ -4228,32 +4230,22 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
     }
     else {
-        if (fast_sub)
+        if (fast_sub) {
             args = CONS (R_fast_sub_var, args);
-        else {
-            SEXP array = 
-              EVALV_NC (CAR(args), rho, VARIANT_UNCLASS | VARIANT_PENDING_OK
-                                         | (variant & VARIANT_GRADIENT));
-            if (R_variant_result & VARIANT_GRADIENT_FLAG) {
-                PROTECT(array_grad = R_gradient);
-                R_variant_result = 0;
-                args = cons_with_tag (array, CDR(args), TAG(args));
-                SET_GRADIENT_IN_CELL (args, array_grad);
-            }
-            else
-                args = cons_with_tag (array, CDR(args), TAG(args));
+            argsevald = -1;
         }
     }
 
     PROTECT(args);
 
-    /* If the first argument is an object and there is an */
-    /* appropriate method, we dispatch to that method, */
-    /* otherwise we evaluate the arguments and fall through */
-    /* to the generic code below.  Note that evaluation */
-    /* retains any missing argument indicators. */
+    /* If the first argument is an object and there is an appropriate
+       method, we dispatch to that method, otherwise we evaluate the
+       arguments and fall through to the generic code below.  Note
+       that evaluation retains any missing argument indicators. */
 
-    if(DispatchOrEval(call, op, "[[", args, rho, &ans, 0, -1, variant)) {
+    if (DispatchOrEval (call, op, "[[", args, rho, &ans, 
+                        2 /* ask for gradient of 1st arg */,
+                        argsevald, variant)) {
 	if (NAMEDCNT_GT_0(ans))
 	    SET_NAMEDCNT_MAX(ans);    /* IS THIS NECESSARY? */
     }
@@ -4265,6 +4257,10 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         UNPROTECT_PROTECT(ans);
 
         SEXP x = CAR(ans);
+
+        if (HAS_GRADIENT_IN_CELL(ans))
+            PROTECT (array_grad = GRADIENT_IN_CELL(ans));
+
         args = CDR(ans);
 
         if (args == R_NilValue || TAG(args) != R_NilValue)
@@ -5111,11 +5107,13 @@ void attribute_hidden CheckFormals(SEXP ls)
    when argsevald is 1 (so args is the evaluated arguments).  If argsevald 
    is -1, only the first argument will have been evaluated.
 
-   If last_arg_grad is non-zero, the gradient will be requested when
-   evaluating the last argument (only), if there is more than one argument;
-   last_arg_grad is ignored if argsevald is 1.  If argsevald is non-zero,
-   any gradient for the first (evaluated) argument will be preserved for S3
-   dispatching, and in the returned 'ans' if dispatch did not occur.  
+   If first_last_arg_grad & 2 is non-zero, the gradient will be
+   requested when evaluating the first argument.  If first_last_arg_grad & 1 
+   is non-zero, the gradient will be requested when evaluating the
+   last argument, if there is more than one argument; first_last_arg_grad
+   is ignored if argsevald is 1.  If argsevald is non-zero, any gradient
+   for the first (evaluated) argument will be preserved for S3 dispatching,
+   and in the returned 'ans' if dispatch did not occur.
 
    The 'variant' argument is passed on to an S3 method, and is also used
    (when argsevald is not 1) to determine whether promises passed to the
@@ -5125,7 +5123,7 @@ void attribute_hidden CheckFormals(SEXP ls)
  */
 attribute_hidden
 int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
-		   SEXP rho, SEXP *ans, int last_arg_grad, int argsevald,
+		   SEXP rho, SEXP *ans, int first_last_arg_grad, int argsevald,
                    int variant)
 {
   /* DispatchOrEval is called very frequently, most often in cases where
@@ -5151,24 +5149,29 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
         /* Find the object to dispatch on, dropping any leading
            ... arguments with missing or empty values.  If there are no
            arguments, R_NilValue is used. */
+        int vr = first_last_arg_grad & 2 ? VARIANT_GRADIENT : 0;
         x = R_NilValue;
         for (; args != R_NilValue; args = CDR(args)) {
             if (CAR(args) == R_DotsSymbol) {
                 SEXP h = findVar(R_DotsSymbol, rho);
                 if (TYPEOF(h) == DOTSXP) {
                     dots = TRUE;
-                    x = eval(CAR(h), rho);
+                    x = evalv (CAR(h), rho, vr);
+                    if (R_variant_result) x_grad = R_gradient;
                     break;
                 }
                 else if (h != R_NilValue && h != R_MissingArg)
                     dotdotdot_error();
             }
             else {
-                x = eval(CAR(args), rho);
+                x = evalv (CAR(args), rho, vr);
+                if (R_variant_result) x_grad = R_gradient;
                 break;
             }
         }
     }
+
+    first_last_arg_grad &= ~2;
 
     if (isObject(x)) { /* try to dispatch on the object */
 
@@ -5185,7 +5188,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
                 args = promiseArgsWith1Value (args, rho, x, 
                                               x_grad, variant);
 
-            if (last_arg_grad && CDR(args) != R_NilValue) {
+            if (first_last_arg_grad && CDR(args) != R_NilValue) {
                 SEXP p = CDR(args);
                 while (CDR(p) != R_NilValue) p = CDR(p);
                 SET_STORE_GRAD(p,1);
@@ -5203,7 +5206,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
                 /* re-evaluates first argument, but this should be OK since
                    it's in a forced promise, so not really re-evaluated. */
 
-                args = last_arg_grad 
+                args = first_last_arg_grad 
                        ? evalList_gradient (args, rho, VARIANT_MISSING_OK, 0, 0)
                        : evalList_v (args, rho, VARIANT_MISSING_OK);
 
@@ -5226,7 +5229,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
                 pargs = promiseArgsWithValues (CDR(call), rho, args, variant);
             else {
                 pargs = promiseArgsWith1Value (args, rho, x, x_grad, variant); 
-                if (last_arg_grad && CDR(pargs) != R_NilValue) {
+                if (first_last_arg_grad && CDR(pargs) != R_NilValue) {
                     SEXP p = CDR(pargs);
                     while (CDR(p) != R_NilValue) p = CDR(p);
                     SET_STORE_GRAD(p,1);
@@ -5275,13 +5278,13 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
                in a promise, or be self-evaluating, so evaluating it again 
                should be no problem. */
 
-            args = last_arg_grad 
+            args = first_last_arg_grad 
                     ? evalList_gradient (args, rho, VARIANT_MISSING_OK, 0, 0)
                     : evalList_v (args, rho, VARIANT_MISSING_OK);
         }
         else {
             args = cons_with_tag (x, 
-              last_arg_grad 
+              first_last_arg_grad 
                 ? evalList_gradient (CDR(args), rho, VARIANT_MISSING_OK, 0, 0)
                 : evalList_v (CDR(args), rho, VARIANT_MISSING_OK),
               TAG(args));

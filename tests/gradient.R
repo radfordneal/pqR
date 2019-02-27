@@ -1010,6 +1010,9 @@ with gradient (b=list(3,abc=4)) {
   r
 }
 
+fsub <- function (...) `[[`(...)
+with gradient (a=list(7,8)) fsub(a,1)
+
 
 # Test gradients w.r.t. numeric vectors.
 

@@ -5329,6 +5329,17 @@ attr(,"gradient")$abc$w
 
 
 > 
+> fsub <- function (...) `[[`(...)
+> with gradient (a=list(7,8)) fsub(a,1)
+[1] 7
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1
+
+attr(,"gradient")[[2]]
+[1] 0
+
+> 
 > 
 > # Test gradients w.r.t. numeric vectors.
 > 
