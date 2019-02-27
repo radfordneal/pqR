@@ -1085,6 +1085,19 @@ with gradient (a=1.7)
 with gradient (a=c(1.7,1.7))
   list (a+3, a-3, a*3, 3*a, a^3, a/3, 3/a, 3^a)
 
+set.seed(179)
+with gradient (a=3.1) rexp(1,a)
+with gradient (a=0.2) rexp(1,a)
+with gradient (a=7.5) rexp(1,a)
+with gradient (a=3.1) rexp(1,a^2)
+with gradient (a=0.2) rexp(1,a^2)
+with gradient (a=7.5) rexp(1,a^2)
+
+set.seed(179)
+with gradient (a=c(3.1,0.2,7.5)) rexp(3,a)
+with gradient (a=c(3.1,0.2,7.5)) rexp(3,a^2)
+
+
 # Test backpropagation.
 
 with gradient (a=5) 

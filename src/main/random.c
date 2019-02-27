@@ -107,11 +107,11 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
 
             /* Compute gradient if requested. */
 
-            SEXP g = ATTRIB(CDR(args));
-            if (g != R_NilValue) {
+            if (HAS_GRADIENT_IN_CELL(CDR(args))) {
+                SEXP ga = GRADIENT_IN_CELL(CDR(args));
                 double (*Dcall)(double,double) = rand1_table[opcode].Dcall;
                 if (Dcall != 0) {
-                    R_gradient = copy_scaled_gradients (g, Dcall(r,av), 1);
+                    R_gradient = copy_scaled_gradients (ga, Dcall(r,av), 1);
                     R_variant_result = VARIANT_GRADIENT_FLAG;
                     GRADIENT_TRACE(call);
                 }
@@ -162,10 +162,29 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
         }
     }
 
+    PutRNGstate();
+
     if (naflag)
         warning(_("NAs produced"));
 
-    PutRNGstate();
+    /* Compute gradient if requested. */
+
+    if (HAS_GRADIENT_IN_CELL(CDR(args))) {
+        double (*Dcall)(double,double) = rand1_table[opcode].Dcall;
+        if (Dcall != 0) {
+            SEXP ga = GRADIENT_IN_CELL(CDR(args));
+            SEXP gx = allocVector (REALSXP, n);
+            PROTECT(gx);
+            for (R_len_t i = 0; i < n; i++)
+                REAL(gx)[i] = Dcall (REAL(x)[i], REAL(a)[i]);
+            R_gradient = copy_scaled_gradients_vec (ga, gx);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            GRADIENT_TRACE(call);
+            UNPROTECT(1);
+        }
+    }
+
+
     UNPROTECT(2); /* a, x */
     return x;
 }
