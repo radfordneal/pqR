@@ -2829,8 +2829,8 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        procedures. */
 
     if (variant & VARIANT_GRADIENT) {
-        grad1 = ATTRIB_W(argsevald);
-        grad2 = ATTRIB_W(CDR(argsevald));
+        grad1 = GRADIENT_IN_CELL (argsevald);
+        grad2 = GRADIENT_IN_CELL (CDR(argsevald));
         goto gradient;
     }
 
@@ -3058,8 +3058,8 @@ static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* FOR NOW:  Handle gradients with the general-case R_binary procedure. */
 
     if (variant & VARIANT_GRADIENT) {
-        grad1 = ATTRIB_W(argsevald);
-        grad2 = ATTRIB_W(CDR(argsevald));
+        grad1 = GRADIENT_IN_CELL (argsevald);
+        grad2 = GRADIENT_IN_CELL (CDR(argsevald));
         goto gradient;
     }
 

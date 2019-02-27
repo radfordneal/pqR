@@ -1097,6 +1097,26 @@ set.seed(179)
 with gradient (a=c(3.1,0.2,7.5)) rexp(3,a)
 with gradient (a=c(3.1,0.2,7.5)) rexp(3,a^2)
 
+set.seed(179)
+with gradient (a=3.1,b=2.4) rnorm(1,a,b)
+with gradient (a=0.2,b=0.9) rnorm(1,a,b)
+with gradient (a=3.1,b=2.4) rnorm(1,cos(a),sin(b)^2)
+with gradient (a=0.2,b=0.9) rnorm(1,cos(a),sin(b)^2)
+with gradient (a=3.1,b=2.4) rnorm(1,a,3)
+with gradient (a=0.2,b=0.9) rnorm(1,a,3)
+with gradient (a=3.1,b=2.4) rnorm(1,4,b)
+with gradient (a=0.2,b=0.9) rnorm(1,4,b)
+with gradient (a=0.7,b=1.8) rnorm(1,a^2,b)
+with gradient (a=0.9,b=1.6) rnorm(1,a^2,b)
+with gradient (a=0.7,b=1.2) rnorm(1,a^2,b)
+
+set.seed(179)
+with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,a,b)
+with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,cos(a),sin(b)^2)
+with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,a,3)
+with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,4,b)
+with gradient (a=c(0.7,0.9),b=c(1.8,1.6,1.2)) rnorm(3,a^2,b)
+
 
 # Test backpropagation.
 

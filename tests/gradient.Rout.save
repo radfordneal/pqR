@@ -6339,6 +6339,176 @@ attr(,"gradient")
 [2,]  0.000000000 -628.0972  0.000000000
 [3,]  0.000000000    0.0000 -0.003198441
 > 
+> set.seed(179)
+> with gradient (a=3.1,b=2.4) rnorm(1,a,b)
+[1] 3.898079
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1
+
+attr(,"gradient")$b
+[1] 0.3325331
+
+> with gradient (a=0.2,b=0.9) rnorm(1,a,b)
+[1] 0.6648697
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1
+
+attr(,"gradient")$b
+[1] 0.5165219
+
+> with gradient (a=3.1,b=2.4) rnorm(1,cos(a),sin(b)^2)
+[1] -1.392109
+attr(,"gradient")
+attr(,"gradient")$a
+[1] -0.04158066
+
+attr(,"gradient")$b
+[1] 0.8580087
+
+> with gradient (a=0.2,b=0.9) rnorm(1,cos(a),sin(b)^2)
+[1] 0.1557093
+attr(,"gradient")
+attr(,"gradient")$a
+[1] -0.1986693
+
+attr(,"gradient")$b
+[1] -1.308339
+
+> with gradient (a=3.1,b=2.4) rnorm(1,a,3)
+[1] 2.990818
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1
+
+attr(,"gradient")$b
+[1] 0
+
+> with gradient (a=0.2,b=0.9) rnorm(1,a,3)
+[1] 2.683433
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1
+
+attr(,"gradient")$b
+[1] 0
+
+> with gradient (a=3.1,b=2.4) rnorm(1,4,b)
+[1] 4.17983
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 0
+
+attr(,"gradient")$b
+[1] 0.0749291
+
+> with gradient (a=0.2,b=0.9) rnorm(1,4,b)
+[1] 5.014541
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 0
+
+attr(,"gradient")$b
+[1] 1.127268
+
+> with gradient (a=0.7,b=1.8) rnorm(1,a^2,b)
+[1] 1.333681
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1.4
+
+attr(,"gradient")$b
+[1] 0.4687117
+
+> with gradient (a=0.9,b=1.6) rnorm(1,a^2,b)
+[1] 1.896644
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1.8
+
+attr(,"gradient")$b
+[1] 0.6791523
+
+> with gradient (a=0.7,b=1.2) rnorm(1,a^2,b)
+[1] 0.7410938
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1.4
+
+attr(,"gradient")$b
+[1] 0.2092448
+
+> 
+> set.seed(179)
+> with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,a,b)
+[1] 3.8980794 0.6648697
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+
+attr(,"gradient")$b
+          [,1]      [,2]
+[1,] 0.3325331 0.0000000
+[2,] 0.0000000 0.5165219
+
+> with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,cos(a),sin(b)^2)
+[1] -1.3921093  0.1557093
+attr(,"gradient")
+attr(,"gradient")$a
+            [,1]       [,2]
+[1,] -0.04158066  0.0000000
+[2,]  0.00000000 -0.1986693
+
+attr(,"gradient")$b
+          [,1]      [,2]
+[1,] 0.8580087  0.000000
+[2,] 0.0000000 -1.308339
+
+> with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,a,3)
+[1] 2.990818 2.683433
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+
+attr(,"gradient")$b
+     [,1] [,2]
+[1,]    0    0
+[2,]    0    0
+
+> with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,4,b)
+[1] 4.179830 5.014541
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2]
+[1,]    0    0
+[2,]    0    0
+
+attr(,"gradient")$b
+          [,1]     [,2]
+[1,] 0.0749291 0.000000
+[2,] 0.0000000 1.127268
+
+> with gradient (a=c(0.7,0.9),b=c(1.8,1.6,1.2)) rnorm(3,a^2,b)
+[1] 1.3336810 1.8966437 0.7410938
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2]
+[1,]  1.4  0.0
+[2,]  0.0  1.8
+[3,]  1.4  0.0
+
+attr(,"gradient")$b
+          [,1]      [,2]      [,3]
+[1,] 0.4687117 0.0000000 0.0000000
+[2,] 0.0000000 0.6791523 0.0000000
+[3,] 0.0000000 0.0000000 0.2092448
+
+> 
 > 
 > # Test backpropagation.
 > 
