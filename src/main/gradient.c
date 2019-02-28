@@ -746,9 +746,12 @@ R_inspect(v);
 
     R_len_t vlen = LENGTH(v);
 
+    if ((uint64_t)n * vlen > R_LEN_T_MAX) gradient_matrix_too_large_error();
+
     if (grad == R_NilValue) {
         grad = allocVector (REALSXP, n * vlen);
         SET_GRADIENT_WRT_LEN (grad, vlen);
+        memset (REAL(grad), 0, LENGTH(grad) * sizeof(double));
     }
     else {
         if (TYPEOF(grad) != REALSXP) abort();
