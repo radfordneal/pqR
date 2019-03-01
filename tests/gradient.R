@@ -687,6 +687,37 @@ with gradient (a=9) { r <- list(x=a,y=list(p=a^2,7,q=a^3))
                       list(r[[c(2,3)]],r[[1]]) }
 
 
+# Test gradients of sub-lists found with [.].
+
+with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[2] }
+with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[c(2,1)] }
+with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[1..2] }
+with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[c(2,1,1,3)] }
+with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[c(5,1)] }
+with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[1..5] }
+
+
+# Test gradients of vector elements found with [[.]].
+
+with gradient (a=9) {
+  r <- numeric(4); r[[1]] <- a; r[[2]] <- a^2; r[[3]] <- a^3; r[[4]] <- sin(a)
+  list(r[[3]],r[[2]])
+}
+
+
+# Test gradients of sub-vectors found with [.].
+
+with gradient (a=9) {
+  r <- numeric(4); r[[1]] <- a; r[[2]] <- a^2; r[[3]] <- a^3; r[[4]] <- sin(a)
+  r[c(2,1,1,4)]
+}
+
+with gradient (a=9) {
+  r <- numeric(4); r[[1]] <- a; r[[2]] <- a^2; r[[3]] <- a^3; r[[4]] <- sin(a)
+  r[2..3]
+}
+
+
 # Test 'compute gradient'.
 
 f <- function (x) compute gradient (x) x^2 as (123*x) # wrong, see if happens

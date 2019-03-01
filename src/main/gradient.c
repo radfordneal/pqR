@@ -444,10 +444,11 @@ R_inspect(grad); REprintf("--\n");
     if (j < 0 || i >= n || j < i)
         return R_NilValue;
 
+    SEXP res = allocVector (VECSXP, j-i+1);
+
     if (i < 0) i = 0;
     if (j >= n) j = n-1;
 
-    SEXP res = allocVector (VECSXP, j-i+1);
     for (R_len_t k = i; k <= j; k++)
         SET_VECTOR_ELT (res, k-i, VECTOR_ELT(grad,k));
 
@@ -547,7 +548,16 @@ R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
 
     if (TYPEOF(grad) != REALSXP) abort();
 
-    return R_NilValue;  /* for now */
+    int k = LENGTH(indx);
+    SEXP res = allocVector (REALSXP, k);
+    
+    for (R_len_t j = 0; j < k; j++) {
+        R_len_t i = INTEGER(indx)[j];
+        if (i >= 1 && i <= n)
+            REAL(res)[j] = REAL(grad)[i-1];
+    }
+
+    return res;
 }
 
 
