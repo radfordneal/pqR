@@ -3940,8 +3940,9 @@ static SEXP do_allany(SEXP call, SEXP op, SEXP args, SEXP env)
 
 static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    SEXP ans;
     int argsevald = 0;
+    SEXP array_grad = R_NilValue;
+    SEXP array, ans;
 
     /* If we can easily determine that this will be handled by
        subset_dflt and has one or two index arguments in total, try to
@@ -3954,25 +3955,36 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (CAR(args) != R_DotsSymbol) {
 
         SEXP ixlist = CDR(args);
-        SEXP array;
 
-        array = EVALV_NC (CAR(args), rho, VARIANT_UNCLASS | VARIANT_PENDING_OK);
+        array = EVALV_NC (CAR(args), rho, variant & VARIANT_GRADIENT 
+                   ? VARIANT_UNCLASS | VARIANT_PENDING_OK | VARIANT_GRADIENT
+                   : VARIANT_UNCLASS | VARIANT_PENDING_OK);
+
+        if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+            array_grad = R_gradient;
+            R_variant_result &= ~VARIANT_GRADIENT_FLAG;
+        }
+
         int obj = isObject(array);
-        if (R_variant_result) {
+        if (R_variant_result & VARIANT_UNCLASS_FLAG) {
             obj = 0;
             R_variant_result = 0;
         }
 
         if (obj) {
             args = CONS(array,ixlist);
+            if (array_grad != R_NilValue)
+                SET_GRADIENT_IN_CELL (args, array_grad);
             argsevald = -1;
+            /* handle with general code below */
         }
         else if (ixlist == R_NilValue || TAG(ixlist) != R_NilValue 
                                       || CAR(ixlist) == R_DotsSymbol) {
-            PROTECT(array);
+            PROTECT2 (array, array_grad);
             args = evalListKeepMissing(ixlist,rho);
-            UNPROTECT(1);
-            return do_subset_dflt_seq (call, op, array, R_NoObject, R_NoObject,
+            UNPROTECT(2);
+            return do_subset_dflt_seq (call, op, array, array_grad,
+                                       R_NoObject, R_NoObject,
                                        args, rho, variant, 0);
         }
         else {
@@ -3982,7 +3994,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             SEXP r;
 
             BEGIN_PROTECT3 (sb1, sb2, remargs);
-            ALSO_PROTECT1 (array);
+            ALSO_PROTECT2 (array, array_grad);
 
             sb1 = EVALV (CAR(ixlist), rho, 
                          ixlist2 == R_NilValue ?  /* only 1 argument */
@@ -4009,7 +4021,8 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     SET_MISSING (remargs, R_isMissing(CAR(ixlist),rho));
                     sb1 = R_NoObject;
                 }
-                else if (!seq && isVectorAtomic(array) && !HAS_ATTRIB(array)) {
+                else if (!seq && isVectorAtomic(array) && !HAS_ATTRIB(array)
+                           && array_grad == R_NilValue) {
 
                     /* Do simplest cases here */
 
@@ -4090,7 +4103,7 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             }
 
             if (sb1 != R_NoObject) WAIT_UNTIL_COMPUTED(sb1);
-            r = do_subset_dflt_seq (call, op, array, sb1, sb2,
+            r = do_subset_dflt_seq (call, op, array, array_grad, sb1, sb2,
                                     remargs, rho, variant, seq);
 
           done:
@@ -4102,33 +4115,41 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
     }
 
-    /* If the first argument is an object and there is an */
-    /* appropriate method, we dispatch to that method, */
-    /* otherwise we evaluate the arguments and fall through */
-    /* to the generic code below.  Note that evaluation */
-    /* retains any missing argument indicators. */
+    /* If the first argument is an object and there is an appropriate
+       method, we dispatch to that method, otherwise we evaluate the
+       arguments and fall through to the generic code below.  Note
+       that evaluation retains any missing argument indicators. */
 
-    if(DispatchOrEval(call, op, "[", args, rho, &ans, 0, argsevald, variant)) {
+    if (DispatchOrEval (call, op, "[", args, rho, &ans, 
+                        2 /* ask for gradient of 1st argument */, 
+                        argsevald, variant)) {
 	if (NAMEDCNT_GT_0(ans))
 	    SET_NAMEDCNT_MAX(ans);    /* IS THIS NECESSARY? */
         R_Visible = TRUE;
 	return ans;
     }
 
-    /* Method dispatch has failed, we now */
-    /* run the generic internal code. */
-    SEXP x = CAR(ans);
+    /* Method dispatch has failed, we now run the generic internal code. */
+
+    array = CAR(ans);
+
+    if (HAS_GRADIENT_IN_CELL(ans))
+        array_grad = GRADIENT_IN_CELL(ans);
+
     args = CDR(ans);
 
     if (args == R_NilValue || TAG(args) != R_NilValue)
-        return do_subset_dflt_seq (call, op, x, R_NoObject, R_NoObject, 
-                                   args, rho, variant, 0);
+        return do_subset_dflt_seq (call, op, array, array_grad,
+                                   R_NoObject, R_NoObject, args,
+                                   rho, variant, 0);
     else if (CDR(args) == R_NilValue || TAG(CDR(args)) != R_NilValue)
-        return do_subset_dflt_seq (call, op, x, CAR(args), R_NoObject,
-                                   CDR(args), rho, variant, 0);
+        return do_subset_dflt_seq (call, op, array, array_grad,
+                                   CAR(args), R_NoObject, CDR(args),
+                                   rho, variant, 0);
     else
-        return do_subset_dflt_seq (call, op, x, CAR(args), CADR(args),
-                                   CDDR(args), rho, variant, 0);
+        return do_subset_dflt_seq (call, op, array, array_grad, 
+                                   CAR(args), CADR(args), CDDR(args),
+                                   rho, variant, 0);
 }
 
 static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
@@ -4251,8 +4272,7 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
     else {
 
-        /* Method dispatch has failed, we now */
-        /* run the generic internal code. */
+        /* Method dispatch has failed, we now run the generic internal code. */
 
         UNPROTECT_PROTECT(ans);
 

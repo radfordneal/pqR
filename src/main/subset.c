@@ -2366,16 +2366,20 @@ static SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2,
 SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP x = CAR(args);
+    SEXP x_grad = R_NilValue;
+    if (HAS_GRADIENT_IN_CELL(args))
+        x_grad = GRADIENT_IN_CELL(args);
+
     args = CDR(args);
     
     if (args == R_NilValue || TAG(args) != R_NilValue)
-        return do_subset_dflt_seq (call, op, x, R_NoObject, R_NoObject, 
+        return do_subset_dflt_seq (call, op, x, x_grad, R_NoObject, R_NoObject, 
                                    args, rho, 0, 0);
     else if (CDR(args) == R_NilValue || TAG(CDR(args)) != R_NilValue)
-        return do_subset_dflt_seq (call, op, x, CAR(args), R_NoObject,
+        return do_subset_dflt_seq (call, op, x, x_grad, CAR(args), R_NoObject,
                                    CDR(args), rho, 0, 0);
     else
-        return do_subset_dflt_seq (call, op, x, CAR(args), CADR(args),
+        return do_subset_dflt_seq (call, op, x, x_grad, CAR(args), CADR(args),
                                    CDDR(args), rho, 0, 0);
 }
 
@@ -2384,7 +2388,8 @@ SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
    length, and whether .. properties of the sequence.
 
    The first argument (the array, x) is passed separately rather than
-   as part of an argument list, for efficiency.  If sb1 is not R_NoObject, 
+   as part of an argument list, for efficiency.  It may have a
+   gradient in x_grad (in not, R_NilValue). If sb1 is not R_NoObject,
    it is the first subscript, which has no tag.  Similarly for sb2.
    Remaining subscripts and other arguments are in the pairlist subs.
 
@@ -2394,7 +2399,8 @@ SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
 
    Note:  x, sb1, and subs need not be protected on entry. */
 
-SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, 
+SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op,
+                                          SEXP x, SEXP x_grad,
                                           SEXP sb1, SEXP sb2, SEXP subs, 
                                           SEXP rho, int variant, int64_t seq)
 {
