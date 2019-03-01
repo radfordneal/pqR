@@ -32,7 +32,7 @@
  *
  *  Note on Matrix Subscripts
  *
- *  The special [ subscripting where dim(x) == ncol(subscript matrix)
+ *  The special [ subscripting where length(dim(x)) == ncol(subscript matrix)
  *  is handled inside VectorSubset. The subscript matrix is turned
  *  into a subscript vector of the appropriate size and then
  *  VectorSubset continues.  This provides coherence especially
@@ -1338,7 +1338,8 @@ static inline int whether_suppress_drop (SEXP sb)
 
 /* This is for all cases with a single index, including 1D arrays and
    matrix indexing of arrays */
-static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
+static SEXP VectorSubset (SEXP x, SEXP x_grad, SEXP subs, 
+                          int64_t seq, int drop, SEXP call)
 {
     SEXP sb = subs == R_NilValue ? R_MissingArg : CAR(subs);
     SEXP indx = R_NilValue;
@@ -1356,8 +1357,10 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
        packages, just return a duplicate of x if the subscripting has 
        the form x[,drop=FALSE]. */
 
-    if (sb == R_MissingArg && drop == FALSE)
+    if (sb == R_MissingArg && drop == FALSE) {
+        R_gradient = x_grad;
         return duplicate(x);
+    }
 
     PROTECT_WITH_INDEX (sb, &spi);
     dims = getDimAttrib(x);
@@ -1415,10 +1418,31 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
     /* Allocate and extract the result. */
 
     PROTECT (result = allocVector(TYPEOF(x),n));
-    if (sb==R_NoObject)
+
+    if (sb==R_NoObject) {
         ExtractRange(x, result, start, end, call);
-    else 
+        if (x_grad != R_NilValue) {
+            if (TYPEOF(result) == VECSXP)
+                R_gradient = subset_range_list_gradient 
+                               (x_grad, start-1, end-1, LENGTH(x));
+            else if (TYPEOF(result) == REALSXP)
+                R_gradient = subset_range_numeric_gradient 
+                               (x_grad, start-1, end-1, LENGTH(x));
+        }
+    }
+    else {
         ExtractSubset(x, result, indx, call);
+        if (x_grad != R_NilValue) {
+            if (TYPEOF(result) == VECSXP)
+                R_gradient = subset_indexes_list_gradient 
+                               (x_grad, indx, LENGTH(x));
+            else if (TYPEOF(result) == REALSXP)
+                R_gradient = subset_indexes_numeric_gradient 
+                               (x_grad, indx, LENGTH(x));
+        }
+    }
+
+    /* Extract names and source references, if present. */
 
     if (((attrib = getAttrib(x, R_NamesSymbol)) != R_NilValue) ||
         ( /* here we might have an array.  Use row names if 1D */
@@ -2355,13 +2379,13 @@ static SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2,
 }
 
 
-/* The do_subset function implementing the "[" subset operator is in eval.c. */
+/* The do_subset function implementing the "[" subset operator is in eval.c.
 
-/* do_subset_dflt and do_subset_dflt_seq are called from there and elsewhere
-   outside this module. */
+   do_subset_dflt_seq is called from there.
 
-/* do_subset_dflt doesn't have the "seq" argument of do_subset_dflt_seq, 
-   and takes all arguments as an arg list. */
+   do_subset_dflt doesn't have the "seq" argument of do_subset_dflt_seq, 
+   and takes all arguments as an arg list.  Currently used only by the
+   obsolete byte-code compiler. */
 
 SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -2409,7 +2433,8 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op,
 
     R_Visible = TRUE;
 
-    if (seq == 0 && sb1 != R_NoObject && subs==R_NilValue) {
+    if (seq == 0 && sb1 != R_NoObject && subs==R_NilValue 
+                 && x_grad == R_NilValue) {
 
         if (sb2 == R_NoObject) {  /* handle simples cases with one subscript */
             SEXP attr = ATTRIB(x);
@@ -2435,13 +2460,13 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op,
         }
     }
 
-    /* This was intended for compatibility with S, */
-    /* but in fact S does not do this. */
+    /* This was intended for compatibility with S, but in fact S does 
+       not do this. */
 
     if (x == R_NilValue)
 	return x;
 
-    PROTECT3(x,sb1,sb2);
+    PROTECT4(x,x_grad,sb1,sb2);
 
     drop = ExtractDropArg(&subs);
     if (sb2 != R_NoObject)
@@ -2455,8 +2480,8 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op,
     nsubs = length(subs);
     type = TYPEOF(x);
 
-    /* Here coerce pair-based objects into generic vectors. */
-    /* All subsetting takes place on the generic vector form. */
+    /* Here coerce pair-based objects into generic vectors.
+       All subsetting takes place on the generic vector form. */
 
     ax = x;
     if (isVector(x))
@@ -2480,11 +2505,17 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op,
     else
         nonsubsettable_error(call,x);
 
-    /* This is the actual subsetting code. */
-    /* The separation of arrays and matrices is purely an optimization. */
+    /* This is the actual subsetting code.
+
+       The separation of arrays and matrices is purely an optimization.
+
+       The VectorSubset, MatrixSubset, or ArraySubset functions may set
+       R_gradient. */
+
+    R_gradient = R_NilValue;
 
     if(nsubs < 2)
-	PROTECT(ans = VectorSubset(ax, subs, seq, drop, call));
+	PROTECT(ans = VectorSubset(ax, x_grad, subs, seq, drop, call));
     else {
         SEXP xdims = getDimAttrib(x);
 	if (nsubs != length(xdims))
@@ -2518,7 +2549,11 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op,
 	setAttrib(ans, R_TspSymbol, R_NilValue);
         setAttrib(ans, R_ClassSymbol, R_NilValue);
     }
-    UNPROTECT(6);
+
+    UNPROTECT(7);
+
+    if (R_gradient != R_NilValue)
+        R_variant_result = VARIANT_GRADIENT_FLAG;
 
     return ans;
 }
@@ -2696,7 +2731,7 @@ SEXP attribute_hidden do_subset2_dflt_x (SEXP call, SEXP op, SEXP x,
                     max_named = nm;
                 if (array_grad != R_NilValue)
                     array_grad = 
-                      subset_list_gradient (array_grad, offset, lenx);
+                      subset2_list_gradient (array_grad, offset, lenx);
             }
         }
 
@@ -2760,7 +2795,7 @@ SEXP attribute_hidden do_subset2_dflt_x (SEXP call, SEXP op, SEXP x,
              && max_named <= 1 && !NAMEDCNT_GT_1(ans))
             R_variant_result = 1;
         if (array_grad != R_NilValue) {
-            R_gradient = subset_list_gradient (array_grad, offset, LENGTH(x));
+            R_gradient = subset2_list_gradient (array_grad, offset, LENGTH(x));
             R_variant_result |= VARIANT_GRADIENT_FLAG;
         }
     }
@@ -2774,7 +2809,8 @@ SEXP attribute_hidden do_subset2_dflt_x (SEXP call, SEXP op, SEXP x,
         copy_elements (ans, 0, 0, x, offset, 0, 1);
         if (array_grad != R_NilValue) {
             PROTECT(ans);
-            R_gradient = subset_numeric_gradient(array_grad, offset, LENGTH(x));
+            R_gradient = subset_range_numeric_gradient
+                           (array_grad, offset, offset, LENGTH(x));
             R_variant_result |= VARIANT_GRADIENT_FLAG;
             UNPROTECT(1);
         }
@@ -2932,7 +2968,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
             R_variant_result = 1;
 
         if (grad != R_NilValue) {
-            R_gradient = subset_list_gradient (grad, i, n);
+            R_gradient = subset2_list_gradient (grad, i, n);
             R_variant_result |= VARIANT_GRADIENT_FLAG;
         }
 

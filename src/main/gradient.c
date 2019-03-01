@@ -404,14 +404,15 @@ static inline SEXP get_other_gradients (SEXP xenv)
 
 
 /* Create set of gradients from subsetting the i'th element of gradients for 
-   a vector list of length n.  Protects its grad argument. */
+   a vector list of length n.  Used for [[.]].  Protects its grad argument. */
 
-SEXP attribute_hidden subset_list_gradient (SEXP grad, R_len_t i, R_len_t n)
+SEXP attribute_hidden subset2_list_gradient (SEXP grad, R_len_t i, R_len_t n)
 {
 #if 0
-REprintf("subset_list_gradient %d %d\n",i,n); R_inspect(grad); REprintf("--\n");
+REprintf("subset2_list_gradient %d %d\n",i,n);
+R_inspect(grad); REprintf("--\n");
 #endif
-    RECURSIVE_GRADIENT_APPLY (subset_list_gradient, grad, i, n);
+    RECURSIVE_GRADIENT_APPLY (subset2_list_gradient, grad, i, n);
 
     if (grad == R_NilValue)
         return R_NilValue;
@@ -423,41 +424,135 @@ REprintf("subset_list_gradient %d %d\n",i,n); R_inspect(grad); REprintf("--\n");
 }
 
 
-/* Create set of gradients from subsetting the i'th element of gradients for 
-   a numeric vector of length n.  Protects its grad argument. */
+/* Create set of gradients from subsetting i'th to j'th elements of gradients
+   for a vector list of length n.  Used for [.].  Protects its grad argument. */
 
-SEXP attribute_hidden subset_numeric_gradient (SEXP grad, R_len_t i, R_len_t n)
+SEXP attribute_hidden subset_range_list_gradient 
+                        (SEXP grad, R_len_t i, R_len_t j, R_len_t n)
 {
 #if 0
-REprintf("subset_numeric_gradient %d %d\n",i,n);
+REprintf("subset_range_list_gradient %d %d %d\n",i,j,n);
 R_inspect(grad); REprintf("--\n");
 #endif
-    RECURSIVE_GRADIENT_APPLY (subset_numeric_gradient, grad, i, n);
+    RECURSIVE_GRADIENT_APPLY (subset_range_list_gradient, grad, i, j, n);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+	
+    if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
+
+    if (j < 0 || i >= n || j < i)
+        return R_NilValue;
+
+    if (i < 0) i = 0;
+    if (j >= n) j = n-1;
+
+    SEXP res = allocVector (VECSXP, j-i+1);
+    for (R_len_t k = i; k <= j; k++)
+        SET_VECTOR_ELT (res, k-i, VECTOR_ELT(grad,k));
+
+    return res;
+}
+
+
+/* Create set of gradients from subsetting indexed elements of gradients
+   for a vector list of length n.  Used for [.].  Protects its grad argument. */
+
+SEXP attribute_hidden subset_indexes_list_gradient 
+                        (SEXP grad, SEXP indx, R_len_t n)
+{
+#if 0
+REprintf("subset_indexes_list_gradient %d\n",n);
+R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY (subset_indexes_list_gradient, grad, indx, n);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+	
+    if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
+
+    int k = LENGTH(indx);
+    SEXP res = allocVector (VECSXP, k);
+    
+    for (R_len_t j = 0; j < k; j++) {
+        R_len_t i = INTEGER(indx)[j];
+        if (i >= 1 && i <= n)
+            SET_VECTOR_ELT (res, j, VECTOR_ELT(grad,i-1));
+    }
+
+    return res;
+}
+
+
+/* Create set of gradients from subsetting i'th to j'th elements of gradients
+   for numeric vector of length n.  Used for [.] and for [[.]] (with i==j). 
+   Protects its grad argument. */
+
+SEXP attribute_hidden subset_range_numeric_gradient 
+                        (SEXP grad, R_len_t i, R_len_t j, R_len_t n)
+{
+#if 0
+REprintf("subset_range_numeric_gradient %d %d %d\n",i,j,n);
+R_inspect(grad); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY (subset_range_numeric_gradient, grad, i, j, n);
 
     if (grad == R_NilValue)
         return R_NilValue;
 
-    if (i < 0 || i >= n) abort();
+    if (j < 0 || i >= n || j < i)
+        return R_NilValue;
+
+    if (i < 0) i = 0;
+    if (j >= n) j = n-1;
 
     if (TYPEOF(grad) != REALSXP) abort();
 
     R_len_t glen = LENGTH(grad);
 
-    if (glen == n)
+    if (glen == n && i == j)
         return ScalarReal (REAL(grad)[i]);
-    else {
-        if (glen % n != 0) abort();
-        R_len_t slen = glen/n;
-        SEXP res = allocVector (REALSXP, slen);
-        SET_GRADIENT_WRT_LEN (res, slen);
-        copy_elements (res, 0, 1, grad, i, n, slen);
-        return res;
+
+    if (glen % n != 0) abort();
+    R_len_t slen = glen/n;
+    R_len_t m = j-i+1;
+    SEXP res = allocVector (REALSXP, m * slen);
+    SET_GRADIENT_WRT_LEN (res, slen);
+    R_len_t k, l;
+    k = l = 0;
+    while (k < glen) {
+        copy_elements (res, l, 1, grad, k+i, 1, m);
+        k += n;
+        l += m;
     }
+    return res;
+}
+
+
+/* Create set of gradients from subsetting indexed elements of gradients for
+   numeric vector of length n.  Used for [.].  Protects its grad argument. */
+
+SEXP attribute_hidden subset_indexes_numeric_gradient 
+                        (SEXP grad, SEXP indx, R_len_t n)
+{
+#if 0
+REprintf("subset_indexes_numeric_gradient %d\n",n);
+R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY (subset_indexes_numeric_gradient, grad, indx, n);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+
+    if (TYPEOF(grad) != REALSXP) abort();
+
+    return R_NilValue;  /* for now */
 }
 
 
 /* Create set of gradients from deleting the i'th element of gradients for 
-   a vector list of length n.  Protects its grad argument. */
+   a vector list of length n.  Used for [[.]].  Protects its grad argument. */
 
 SEXP attribute_hidden delete_list_gradient (SEXP grad, R_len_t i, R_len_t n)
 {
