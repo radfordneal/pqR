@@ -683,4 +683,41 @@ INLINE_FUN void getBlockSrcrefs(SEXP call, SEXP **refs, int *len)
     }
 }
 
+
+/* Compute offset from k array indexes, and advance to next index set. 
+   Sets 'last' to one if this is the last index.*/
+
+INLINE_FUN R_len_t array_offset_from_index
+   (int **subs, int *nsubs, int *indx, int *offset, int k, int *last)
+{
+    R_len_t ii, jj;
+    int j;
+
+    jj = subs[0][indx[0]];
+
+    if (jj == NA_INTEGER)
+        ii = NA_INTEGER;    
+    else {
+        ii = jj-1;
+        for (j = 1; j < k; j++) {
+            jj = subs[j][indx[j]];
+            if (jj == NA_INTEGER)
+                break;
+            ii += (jj-1) * offset[j];
+        }
+    }
+
+    j = 0;
+    while (++indx[j] >= nsubs[j]) {
+        indx[j] = 0;
+        if (++j >= k) {
+            *last = 1;
+            break;
+        }
+    }
+
+    return ii;
+}
+
+
 #endif /* R_INLINES_H_ */

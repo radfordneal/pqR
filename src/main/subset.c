@@ -1900,7 +1900,7 @@ static SEXP MatrixSubset (SEXP x, SEXP subs, SEXP call,
 
 static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 {
-    int i, j, ii, jj, n;
+    int i, j, ii, n;
     SEXP dimnames, r, result;
     int mode = TYPEOF(x);
 
@@ -1925,7 +1925,6 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
         subs[i] = INTEGER(subv[i]);
 	nsubs[i] = LENGTH(subv[i]);
         n *= nsubs[i];
-        indx[i] = 0;
 	r = CDR(r);
     }
 
@@ -1955,20 +1954,15 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 
     /* Transfer the subset elements from "x" to "a". */
 
-    for (i = 0; ; i++) {
+    int last = 0;
 
-        jj = subs[0][indx[0]];
-        if (jj != NA_INTEGER) {
-            ii = jj-1;
-            for (j = 1; j < k; j++) {
-                jj = subs[j][indx[j]];
-                if (jj == NA_INTEGER)
-                    break;
-                ii += (jj-1) * offset[j];
-            }
-        }
+    for (i = 0; i < k; i++) indx[i] = 0;
 
-        if (jj != NA_INTEGER) {
+    for (i = 0; !last; i++) {
+
+        ii = array_offset_from_index (subs, nsubs, indx, offset, k, &last);
+
+        if (ii != NA_INTEGER) {
             switch (mode) {
             case LGLSXP:
                 LOGICAL(result)[i] = LOGICAL(x)[ii];
@@ -2002,7 +1996,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
                 break;
             }
         }
-        else { /* jj == NA_INTEGER */
+        else { /* ii == NA_INTEGER */
             switch (mode) {
             case LGLSXP:
                 LOGICAL(result)[i] = NA_LOGICAL;
@@ -2031,12 +2025,6 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
                            _("array subscripting not handled for this type"));
                 break;
             }
-        }
-
-        j = 0;
-        while (++indx[j] >= nsubs[j]) {
-            indx[j] = 0;
-            if (++j >= k) goto done;
         }
     }
 
