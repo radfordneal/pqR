@@ -704,6 +704,15 @@ with gradient (a=9) {
   list(r[[3]],r[[2]])
 }
 
+with gradient (a=c(9,5,2)) {
+  r <- numeric(4)
+  r[[1]] <- a[[2]]
+  r[[2]] <- a[[3]]^2 + a[[1]]
+  r[[3]] <- a[[3]]^3
+  r[[4]] <- sin(a[[1]])
+  list(r[[3]],r[[2]],r[[4]],r[[1]])
+}
+
 
 # Test gradients of sub-vectors found with [.].
 
@@ -714,6 +723,24 @@ with gradient (a=9) {
 
 with gradient (a=9) {
   r <- numeric(4); r[[1]] <- a; r[[2]] <- a^2; r[[3]] <- a^3; r[[4]] <- sin(a)
+  r[2..3]
+}
+
+with gradient (a=c(9,5,2)) {
+  r <- numeric(4)
+  r[[1]] <- a[[2]]
+  r[[2]] <- a[[3]]^2 + a[[1]]
+  r[[3]] <- a[[3]]^3
+  r[[4]] <- sin(a[[1]])
+  r[c(2,1,1,4)]
+}
+
+with gradient (a=c(9,5,2)) {
+  r <- numeric(4)
+  r[[1]] <- a[[2]]
+  r[[2]] <- a[[3]]^2 + a[[1]]
+  r[[3]] <- a[[3]]^3
+  r[[4]] <- sin(a[[1]])
   r[2..3]
 }
 

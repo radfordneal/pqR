@@ -548,13 +548,19 @@ R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
 
     if (TYPEOF(grad) != REALSXP) abort();
 
-    int k = LENGTH(indx);
-    SEXP res = allocVector (REALSXP, k);
+    R_len_t gvars = GRADIENT_WRT_LEN (grad);
+    int m = LENGTH(indx);
+
+    if ((uint64_t)m * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
+
+    SEXP res = allocVector (REALSXP, m * gvars);
     
-    for (R_len_t j = 0; j < k; j++) {
+    for (R_len_t j = 0; j < m; j++) {
         R_len_t i = INTEGER(indx)[j];
-        if (i >= 1 && i <= n)
-            REAL(res)[j] = REAL(grad)[i-1];
+        if (i >= 1 && i <= n) {
+            for (R_len_t k = 0; k < gvars; k++)
+                REAL(res)[j+k*m] = REAL(grad)[(i-1)+k*n];
+        }
     }
 
     return res;
