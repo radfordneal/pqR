@@ -1261,6 +1261,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define alloc_or_reuse		Rf_alloc_or_reuse
 # define apply_non_functon_error Rf_apply_non_function_error
 # define arg_missing_error	Rf_arg_missing_error
+# define array_subset_indexes_numeric_gradient Rf_array_subset_indexes_numeric_gradient 
 # define bcEval			Rf_bcEval
 # define beginbuiltincontext	Rf_beginbuiltincontext
 # define begincontext		Rf_begincontext
@@ -1501,6 +1502,8 @@ SEXP alloc_or_reuse (SEXP, SEXP, SEXPTYPE, int, int, int);
 SEXP Rf_append(SEXP, SEXP); /* apparently unused now */
 SEXP Rf_apply_debug_finish (SEXP, SEXP);
 SEXP Rf_apply_debug_setup (SEXP, SEXP, SEXP, SEXP, SEXP);
+SEXP array_subset_indexes_numeric_gradient 
+       (SEXP, int **, int *, int *, R_len_t, R_len_t);
 SEXP Rf_attributes_dup (SEXP, SEXP);
 SEXP bcEval(SEXP, SEXP, Rboolean);
 SEXP bytecodeExpr(SEXP);

@@ -1898,7 +1898,8 @@ static SEXP MatrixSubset (SEXP x, SEXP subs, SEXP call,
 }
 
 
-static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
+static SEXP ArraySubset (SEXP x, SEXP x_grad, SEXP s, 
+                         SEXP call, int drop, SEXP xdims, int k)
 {
     int i, j, ii, n;
     SEXP dimnames, r, result;
@@ -2030,6 +2031,15 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 
   done: ;
 
+    SEXP res_grad = R_NilValue;
+
+    if (x_grad != R_NilValue) {
+        if (TYPEOF(result) == REALSXP) {
+            res_grad = array_subset_indexes_numeric_gradient
+                         (x_grad, subs, nsubs, offset, k, LENGTH(x));
+        }
+    }
+
     /* Set up dimnames for result, but don't attach to result yet. */
 
     SEXP newdimnames;
@@ -2108,6 +2118,12 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
                              x, s, xdims */
 
     R_scalar_stack = sv_scalar_stack;
+
+    if (res_grad != R_NilValue) {
+        R_gradient = res_grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     return result;
 }
 
@@ -2525,7 +2541,7 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op,
 	if (nsubs == 2)
 	    ans = MatrixSubset(ax, subs, call, drop, xdims, seq);
 	else
-	    ans = ArraySubset(ax, subs, call, drop, xdims, nsubs);
+	    ans = ArraySubset(ax, x_grad, subs, call, drop, xdims, nsubs);
 	PROTECT(ans);
     }
 

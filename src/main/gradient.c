@@ -567,6 +567,60 @@ R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
 }
 
 
+/* Create set of gradients from subsetting indexed elements of gradients for
+   numeric array of length n with k dimensions.  Used for [.].  Protects 
+   its grad argument. */
+
+SEXP attribute_hidden array_subset_indexes_numeric_gradient (SEXP grad, 
+    int **subs, int *nsubs, int *offset, R_len_t k, R_len_t n)
+{
+#if 0
+REprintf("array_subset_indexes_numeric_gradient %d %d\n",k,n);
+R_inspect(grad); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY (array_subset_indexes_numeric_gradient,
+                              grad, subs, nsubs, offset, k, n);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+
+    if (TYPEOF(grad) != REALSXP) abort();
+
+    R_len_t gvars = GRADIENT_WRT_LEN (grad);
+    R_len_t m, i, v;
+    int indx[k];
+    int j;
+
+    m = 1;
+    for (j = 0; j < k; j++) {
+        m *= nsubs[j];
+        indx[j] = 0;
+    }
+
+    if ((uint64_t)m * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
+
+    SEXP res = allocVector (REALSXP, m * gvars);
+    int last = 0;
+
+    for (i = 0; !last; i++) {
+        R_len_t ii;
+        ii = array_offset_from_index (subs, nsubs, indx, offset, k, &last);
+        if (ii == NA_INTEGER) {
+            for (v = 0; v < gvars; v++)
+                REAL(res)[i+v*m] = NA_INTEGER;
+        }
+        else {
+            for (v = 0; v < gvars; v++)
+                REAL(res)[i+v*m] = REAL(grad)[ii+v*n];
+        }
+    }
+
+    if (i != m) abort();
+
+    return res;
+}
+
+
 /* Create set of gradients from deleting the i'th element of gradients for 
    a vector list of length n.  Used for [[.]].  Protects its grad argument. */
 
