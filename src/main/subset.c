@@ -1738,7 +1738,8 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
 
 /* Subset for a vector with dim attribute specifying two dimensions. */
 
-static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
+static SEXP MatrixSubset (SEXP x, SEXP subs, SEXP call, 
+                          int drop, SEXP dim, int64_t seq)
 {
     SEXP s0 = CAR(subs), s1 = CADR(subs);
     SEXP dims, result, sr, sc;
@@ -1750,8 +1751,6 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
 
     PROTECT2(x,subs);
     int nprotect = 2;
-
-    SEXP dim = getDimAttrib(x);
 
     nr = INTEGER(dim)[0];
     nc = INTEGER(dim)[1];
@@ -2076,11 +2075,25 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
     if (rdims <= 1) { /* result is vector without dims, but maybe with names */
         if (newdimnames != R_NilValue) {
             int w = -1;   /* which dimension to take names from, neg if none */
-            for (i = 0; i < k; i++) {
-                if (VECTOR_ELT(newdimnames,i) != R_NilValue) {
-                    if (nsubs[i] != 1 || suppress_drop[i]) {
-                        w = i;
-                        break;
+            if (rdims == 0) {  /* see if there's only one with dimnames */
+                for (i = 0; i < k; i++) {
+                    if (VECTOR_ELT(newdimnames,i) != R_NilValue) {
+                        if (w < 0) 
+                            w = i;   /* got one... */
+                        else {
+                            w = -1;  /* but turns out there's more than one */
+                            break;
+                        }
+                    }
+                }
+            }
+            else {  /* take the one that's not suppressed */
+                for (i = 0; i < k; i++) {
+                    if (VECTOR_ELT(newdimnames,i) != R_NilValue) {
+                        if (nsubs[i] != 1 || suppress_drop[i]) {
+                            w = i;
+                            break;
+                        }
                     }
                 }
             }
@@ -2507,7 +2520,8 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op,
 
     /* This is the actual subsetting code.
 
-       The separation of arrays and matrices is purely an optimization.
+       The separation of arrays and matrices is purely an optimization 
+       (except ArraySubset wouldn't be able to handle 'seq' being non-zero).
 
        The VectorSubset, MatrixSubset, or ArraySubset functions may set
        R_gradient. */
@@ -2517,11 +2531,11 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op,
     if(nsubs < 2)
 	PROTECT(ans = VectorSubset(ax, x_grad, subs, seq, drop, call));
     else {
-        SEXP xdims = getDimAttrib(x);
+        SEXP xdims = getDimAttrib(ax);
 	if (nsubs != length(xdims))
 	    errorcall(call, _("incorrect number of dimensions"));
 	if (nsubs == 2)
-	    ans = MatrixSubset(ax, subs, call, drop, seq);
+	    ans = MatrixSubset(ax, subs, call, drop, xdims, seq);
 	else
 	    ans = ArraySubset(ax, subs, call, drop, xdims, nsubs);
 	PROTECT(ans);

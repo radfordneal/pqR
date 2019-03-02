@@ -19,6 +19,14 @@
   \item Type \code{help(Gradient)} to read documentation on the automatic 
   differentiation facilities, as they exist so far.
   }
+
+  \subsection{BUG FIXES}{
+  \itemize{
+  \item Fixed a bug in which dimnames for an array of three or more
+        dimensions subscripted with \code{[]} were not converted
+        to names (as had been intended) when the result had its 
+        dimensions dropped, and only one dimension had names.
+  }}
 }
 
 
