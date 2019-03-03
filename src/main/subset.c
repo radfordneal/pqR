@@ -1735,7 +1735,7 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
 
 /* Subset for a vector with dim attribute specifying two dimensions. */
 
-static SEXP MatrixSubset (SEXP x, SEXP subs, SEXP call, 
+static SEXP MatrixSubset (SEXP x, SEXP x_grad, SEXP subs, SEXP call, 
                           int drop, SEXP dim, int64_t seq)
 {
     SEXP s0 = CAR(subs), s1 = CADR(subs);
@@ -1798,17 +1798,32 @@ static SEXP MatrixSubset (SEXP x, SEXP subs, SEXP call,
         error(_("dimensions would exceed maximum size of array"));
 
     PROTECT (result = allocVector(TYPEOF(x), nrs*ncs));
+    SEXP res_grad = R_NilValue;
     nprotect++;
 
     /* Extract elements from matrix x to result. */
 
-    if (s0 == R_NoObject)
+    if (s0 == R_NoObject) {
         range_of_rows_of_matrix(call, x, result, start, nrs, nr, sc);
+    }
+
     else if (nrs == 1 && (ii = INTEGER(sr)[0]) != NA_INTEGER 
-                      && ii >= 0 && ii <= nr)
+                      && ii >= 0 && ii <= nr) {
         one_row_of_matrix (call, x, result, ii, nr, sc);
-    else
+        if (x_grad != R_NilValue) {
+            if (TYPEOF(x) == VECSXP)
+                res_grad = matrix_subset_one_row_list_gradient
+                                  (x_grad, ii, nr, sc, LENGTH(x));
+            else if (TYPEOF(x) == REALSXP)
+                ;
+            PROTECT(res_grad);
+            nprotect++;
+        }
+    }
+
+    else {
         multiple_rows_of_matrix (call, x, result, sr, nr, sc);
+    }
 
     /* Set up dimnames of the returned value.  Not attached to result yet. */
 
@@ -1889,8 +1904,14 @@ static SEXP MatrixSubset (SEXP x, SEXP subs, SEXP call,
         setAttrib(result, R_DimNamesSymbol, newdimnames);
     }
 
-    UNPROTECT(nprotect);
+    if (res_grad != R_NilValue) {
+        R_gradient = res_grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     R_scalar_stack = sv_scalar_stack;
+    UNPROTECT(nprotect);
+
     return result;
 }
 
@@ -2541,7 +2562,7 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op,
 	if (TYPEOF(xdims) != INTSXP || nsubs != LENGTH(xdims))
 	    errorcall(call, _("incorrect number of dimensions"));
 	if (nsubs == 2)
-	    ans = MatrixSubset(ax, subs, call, drop, xdims, seq);
+	    ans = MatrixSubset(ax, x_grad, subs, call, drop, xdims, seq);
 	else
 	    ans = ArraySubset(ax, x_grad, subs, call, drop, xdims, nsubs);
 	PROTECT(ans);

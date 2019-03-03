@@ -696,6 +696,18 @@ with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[c(2,1,1,3)] }
 with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[c(5,1)] }
 with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[1..5] }
 
+L <- matrix (list(99,33,44,66,22,11),3,2)
+G <- with gradient (L) L[3,c(2,2,1)]
+L[,]
+G[]
+str(G)
+
+L <- matrix (list(99,33,44,66,22,11),3,2)
+G <- with gradient (L) L[1,c(2,2,1)]
+L[,]
+G[]
+str(G)
+
 L <- array (list(9,88,7,33,44,999,20,303,111,1111,222,3333,5555,330,1,0,-3,-2),
             c(3,2,3))
 G <- with gradient (L) L[c(3,1,1),c(2,2,1),c(2,1,3)]

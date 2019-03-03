@@ -3456,6 +3456,102 @@ attr(,"gradient")$<NA>
 NULL
 
 > 
+> L <- matrix (list(99,33,44,66,22,11),3,2)
+> G <- with gradient (L) L[3,c(2,2,1)]
+> L[,]
+     [,1] [,2]
+[1,] 99   66  
+[2,] 33   22  
+[3,] 44   11  
+> G[]
+[[1]]
+[1] 11
+
+[[2]]
+[1] 11
+
+[[3]]
+[1] 44
+
+> str(G)
+List of 3
+ $ : num 11
+ $ : num 11
+ $ : num 44
+ - attr(*, "gradient")=List of 6
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 3
+  .. ..$ : num 1
+  .. ..$ : num 1
+  .. ..$ : num 0
+> 
+> L <- matrix (list(99,33,44,66,22,11),3,2)
+> G <- with gradient (L) L[1,c(2,2,1)]
+> L[,]
+     [,1] [,2]
+[1,] 99   66  
+[2,] 33   22  
+[3,] 44   11  
+> G[]
+[[1]]
+[1] 66
+
+[[2]]
+[1] 66
+
+[[3]]
+[1] 99
+
+> str(G)
+List of 3
+ $ : num 66
+ $ : num 66
+ $ : num 99
+ - attr(*, "gradient")=List of 6
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 3
+  .. ..$ : num 1
+  .. ..$ : num 1
+  .. ..$ : num 0
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+> 
 > L <- array (list(9,88,7,33,44,999,20,303,111,1111,222,3333,5555,330,1,0,-3,-2),
 +             c(3,2,3))
 > G <- with gradient (L) L[c(3,1,1),c(2,2,1),c(2,1,3)]

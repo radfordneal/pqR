@@ -1357,6 +1357,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define matchArg		Rf_matchArg
 # define matchArgExact		Rf_matchArgExact
 # define matchPar		Rf_matchPar
+# define matrix_subset_one_row_list_gradient Rf_matrix_subset_one_row_list_gradient
 # define Mbrtowc		Rf_mbrtowc
 # define mbtoucs		Rf_mbtoucs
 # define mkCLOSXP		Rf_mkCLOSXP
@@ -1588,6 +1589,7 @@ SEXP markKnown(const char *, SEXP);
 SEXP matchArg(SEXP, SEXP*);
 SEXP matchArgExact(SEXP, SEXP*);
 SEXP matchPar(const char *, SEXP*);
+SEXP matrix_subset_one_row_list_gradient(SEXP, R_len_t, R_len_t, SEXP, R_len_t);
 SEXP mkCLOSXP(SEXP, SEXP, SEXP);
 SEXP mkFalse(void);
 SEXP mkPRIMSXP (int, int);

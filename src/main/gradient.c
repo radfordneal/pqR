@@ -567,6 +567,44 @@ R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
 }
 
 
+/* Create set of gradients from subsetting elements from one row of
+   gradients for vector list matrix of length n.  Used for [.].
+   Protects its grad argument. */
+
+SEXP attribute_hidden matrix_subset_one_row_list_gradient (SEXP grad, 
+       R_len_t ii, R_len_t nr, SEXP sc, R_len_t n)
+{
+#if 0
+REprintf("matrix_subset_one_row_list_gradient %d %d %d %d %d\n",
+          ii,nr,LENGTH(sc),*INTEGER(sc),n);
+R_inspect(grad); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY (matrix_subset_one_row_list_gradient, grad,
+                              ii, nr, sc, n);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+
+    if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
+
+    R_len_t ncs = LENGTH(sc);
+    SEXP res = allocVector (VECSXP, ncs);
+
+    int st = (ii-1) - nr;
+    int j;
+
+    for (j = 0; j < ncs; j++) {
+        int jj = INTEGER(sc)[j];
+        if (jj != NA_INTEGER)
+            SET_VECTOR_ELT (res, j, VECTOR_ELT (grad, st+jj*nr));
+    }
+#if 0
+REprintf("&&\n"); R_inspect(res);
+#endif
+    return res;
+}
+
+
 /* Create set of gradients from subsetting indexed elements of gradients for
    vector list array of length n with k dimensions.  Used for [.].  Protects 
    its grad argument. */
