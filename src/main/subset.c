@@ -64,12 +64,6 @@
 
 /* ----------------------------- SUBSCRIPTS --------------------------------- */
 
-/* We might get a call with R_NilValue from subassignment code */
-#define ECALL(call, yy) do { \
-  if (call == R_NilValue) error(yy); \
-  else errorcall(call, yy); \
-} while (0)
-
 static int integerOneIndex(int i, int len, SEXP call)
 {
     int indx = -1;
@@ -77,11 +71,11 @@ static int integerOneIndex(int i, int len, SEXP call)
     if (i > 0)
 	indx = i - 1;
     else if (i == 0 || len < 2) {
-	ECALL(call, _("attempt to select less than one element"));
+	errorcall(call, _("attempt to select less than one element"));
     } else if (len == 2 && i > -3)
 	indx = 2 + i;
     else {
-	ECALL(call, _("attempt to select more than one element"));
+	errorcall(call, _("attempt to select more than one element"));
     }
     return(indx);
 }
@@ -106,13 +100,13 @@ int get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 
     if (pos < 0 && length_s != 1) {
 	if (length_s > 1)
-	    ECALL(call, _("attempt to select more than one element"));
+	    errorcall(call, _("attempt to select more than one element"));
 	else
-	    ECALL(call, _("attempt to select less than one element"));
+	    errorcall(call, _("attempt to select less than one element"));
     } 
     else {
 	if(pos >= length_s)
-	    ECALL(call, _("internal error in use of recursive indexing"));
+	    errorcall(call, _("internal error in use of recursive indexing"));
     }
 
     if (pos < 0) pos = 0;
@@ -227,7 +221,7 @@ static SEXP mat2indsub(SEXP dims, SEXP s, SEXP call)
     SEXP rvec;
 
     if (ncols(s) != LENGTH(dims))
-	ECALL(call, _("incorrect number of columns in matrix subscript"));
+	errorcall(call, _("incorrect number of columns in matrix subscript"));
 
     PROTECT(rvec = allocVector(INTSXP, nrs));
     s = coerceVector(s, INTSXP);
@@ -244,14 +238,14 @@ static SEXP mat2indsub(SEXP dims, SEXP s, SEXP call)
 		break;
 	    }
 	    if (k < 0)
-		ECALL(call, 
+		errorcall(call, 
                   _("negative values are not allowed in a matrix subscript"));
 	    if (k == 0) {
 		INTEGER(rvec)[i] = -1;
 		break;
 	    }
 	    if (k > INTEGER(dims)[j])
-		ECALL(call, _("subscript out of bounds"));
+		out_of_bounds_error(call);
 	    INTEGER(rvec)[i] += (k - 1) * tdim;
 	    tdim *= INTEGER(dims)[j];
 	}
@@ -290,7 +284,7 @@ static SEXP strmat2intmat(SEXP s, SEXP dnamelist, SEXP call)
             s_elt = STRING_ELT(s, idx);
             if (s_elt == NA_STRING) v = NA_INTEGER;
             if (!CHAR(s_elt)[0]) v = 0; /* disallow "" match */
-            if (v == 0) errorcall(call, _("subscript out of bounds"));
+            if (v == 0) out_of_bounds_error(call);
             INTEGER(si)[idx] = v;
         }
         UNPROTECT(1);
@@ -311,7 +305,7 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
     int v;
 
     if (!canstretch && ns > nx)
-	ECALL(call, _("(subscript) logical subscript too long"));
+	errorcall(call, _("(subscript) logical subscript too long"));
 
     nmax = (ns > nx) ? ns : nx;
     *stretch = (ns > nx) ? ns : 0;
@@ -654,7 +648,7 @@ static SEXP integerSubscript (SEXP s, int ns, int nx, int *stretch, int *hasna,
         if (canstretch) 
             *stretch = max;
         else
-            ECALL(call, _("subscript out of bounds"));
+            out_of_bounds_error(call);
     }
 
     if (min > 0) /* All positive (or NA) */
@@ -663,7 +657,7 @@ static SEXP integerSubscript (SEXP s, int ns, int nx, int *stretch, int *hasna,
         if (max <= 0 && !*hasna) 
             return negativeSubscript(s, ns, nx);
         else
-            ECALL(call, _("only 0's may be mixed with negative subscripts"));
+            errorcall(call, _("only 0's may be mixed with negative subscripts"));
     }
     else /* min == 0 */
         return nonnegativeSubscript(s, ns, nx);
@@ -757,7 +751,7 @@ static SEXP stringSubscript (SEXP s, int ns, int nx, SEXP names,
     if (canstretch == 0) {
         for (i = 0; i < ns; i++) {
             if (INTEGER(indx)[i] == 0)
-                ECALL(call, _("subscript out of bounds"));
+                out_of_bounds_error(call);
         }
     }
     else if (canstretch < 0) {
@@ -814,9 +808,8 @@ static SEXP stringSubscript (SEXP s, int ns, int nx, SEXP names,
 */
 
 static SEXP internalArraySubscript
-            (int dim, SEXP s, SEXP dims, SEXP x, SEXP modified_obj, int *hasna)
+  (int dim, SEXP s, SEXP dims, SEXP x, SEXP modified_obj, int *hasna, SEXP call)
 {
-    SEXP call = R_NilValue;
     int nd, ns, stretch = 0;
     SEXP dnames, tmp;
     ns = length(s);
@@ -839,7 +832,7 @@ static SEXP internalArraySubscript
     case STRSXP:
 	dnames = getAttrib(x, R_DimNamesSymbol);
 	if (dnames == R_NilValue)
-	    ECALL(call, _("no 'dimnames' attribute for array"));
+	    errorcall(call, _("no 'dimnames' attribute for array"));
 	dnames = VECTOR_ELT(dnames, dim);
 	return stringSubscript(s, ns, nd, dnames, (STRING_ELT), &stretch, call);
     case SYMSXP:
@@ -852,12 +845,11 @@ static SEXP internalArraySubscript
 }
 
 
-/* Inline function to handle positive scalar real and integer
-   subscripts specially, putting them on the scalar stack, and
-   otherwise call internalArraySubscript. */
+/* Function to handle positive scalar real and integer subscripts specially,
+   putting them on the scalar stack, otherwise calling internalArraySubscript.*/
 
-static inline SEXP array_sub (SEXP sb, SEXP dim, int i, SEXP x, 
-                              SEXP modified_obj, int *hasna)
+static SEXP array_sub (SEXP sb, SEXP dim, int i, SEXP x, 
+                       SEXP modified_obj, int *hasna, SEXP call)
 {
     if ( (((1<<INTSXP) + (1<<REALSXP)) >> TYPEOF(sb)) & 1 ) {
         if (LENGTH(sb) == 1) {
@@ -880,7 +872,7 @@ static inline SEXP array_sub (SEXP sb, SEXP dim, int i, SEXP x,
     }
 
   fallback:
-    return internalArraySubscript (i, sb, dim, x, modified_obj, hasna);
+    return internalArraySubscript (i, sb, dim, x, modified_obj, hasna, call);
 }
 
 
@@ -915,7 +907,7 @@ SEXP arraySubscript (int dim, SEXP s, SEXP dims, AttrGetter dng,
     case STRSXP:
 	dnames = dng(x, R_DimNamesSymbol);
 	if (dnames == R_NilValue)
-	    ECALL(call, _("no 'dimnames' attribute for array"));
+	    errorcall(call, _("no 'dimnames' attribute for array"));
 	dnames = VECTOR_ELT(dnames, dim);
 	return stringSubscript(s, ns, nd, dnames, strg, &stretch, call);
     case SYMSXP:
@@ -967,7 +959,7 @@ static SEXP makeSubscript (SEXP x, SEXP s, int *stretch, int *hasna,
     *hasna = 0;
 
     if (!isVector(x) && !isList(x) && !isLanguage(x))
-	ECALL(call, _("subscripting on non-vector"));
+	errorcall(call, _("subscripting on non-vector"));
 
     nx = length(x);
     ns = length(s);
@@ -1512,8 +1504,9 @@ static SEXP VectorSubset (SEXP x, SEXP x_grad, SEXP subs,
 /* Used in MatrixSubset when only one (valid) row is accessed. */
 
 static void one_row_of_matrix (SEXP call, SEXP x, SEXP result, 
-                               int ii, int nr, SEXP sc, int ncs, int nc)
+                               int ii, int nr, SEXP sc)
 {
+    int ncs = LENGTH(sc);
     int typeofx = TYPEOF(x);
     int j, jj, st;
 
@@ -1528,8 +1521,9 @@ static void one_row_of_matrix (SEXP call, SEXP x, SEXP result,
             continue;
         }
 
-        if (jj < 1 || jj > nc)
-            out_of_bounds_error(call);
+        /* no check, since array_sub does it */
+        /* if (jj < 1 || jj > nc)
+            out_of_bounds_error(call); */
 
         switch (typeofx) {
         case LGLSXP:
@@ -1563,8 +1557,9 @@ static void one_row_of_matrix (SEXP call, SEXP x, SEXP result,
 /* Used in MatrixSubset for subsetting with range of rows. */
 
 static void range_of_rows_of_matrix (SEXP call, SEXP x, SEXP result, 
-    int start, int nrs, int nr, SEXP sc, int ncs, int nc)
+                                     int start, int nrs, int nr, SEXP sc)
 {
+    int ncs = LENGTH(sc);
     int i, j, jj, ij, jjnr;
 
     start -= 1;
@@ -1586,10 +1581,10 @@ static void range_of_rows_of_matrix (SEXP call, SEXP x, SEXP result,
             continue;
         }
 
-        /* Check for bad column index. */
+        /* Check for bad column index. Disabled since array_sub does it. */
 
-        if (jj < 1 || jj > nc)
-            out_of_bounds_error(call);
+        /* if (jj < 1 || jj > nc)
+            out_of_bounds_error(call); */
 
         /* Loops over range of rows. */
 
@@ -1643,8 +1638,10 @@ static void range_of_rows_of_matrix (SEXP call, SEXP x, SEXP result,
 /* Used in MatrixSubset for the general case of subsetting. */
 
 static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result, 
-    SEXP sr, int nrs, int nr, SEXP sc, int ncs, int nc)
+                                     SEXP sr, int nr, SEXP sc)
 {
+    int nrs = LENGTH(sr);
+    int ncs = LENGTH(sc);
     int i, j, ii, jj, ij, jjnr;
 
     /* Set rows of result to NAs where there are NA row indexes.  Also check 
@@ -1673,10 +1670,10 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
             continue;
         }
 
-        /* Check for bad column index. */
+        /* Check for bad column index.  Disabled since array_sub does it. */
 
-        if (jj < 1 || jj > nc)
-            out_of_bounds_error(call);
+        /* if (jj < 1 || jj > nc)
+            out_of_bounds_error(call); */
 
         /* Loops over row indexes, except skips NA row indexes, done above. */
 
@@ -1777,7 +1774,7 @@ static SEXP MatrixSubset (SEXP x, SEXP subs, SEXP call,
     if (s0 != R_NoObject) {
         if (drop == NA_LOGICAL) 
             suppress_drop_row = whether_suppress_drop(s0);
-        PROTECT (sr = array_sub (s0, dim, 0, x, R_NoObject, &rhasna));
+        PROTECT (sr = array_sub (s0, dim, 0, x, R_NoObject, &rhasna, call));
         nprotect++;
         nrs = LENGTH(sr);
     }
@@ -1789,7 +1786,7 @@ static SEXP MatrixSubset (SEXP x, SEXP subs, SEXP call,
     if (drop == FALSE)
         suppress_drop_row = suppress_drop_col = 1;
 
-    PROTECT (sc = array_sub (s1, dim, 1, x, R_NoObject, &chasna));
+    PROTECT (sc = array_sub (s1, dim, 1, x, R_NoObject, &chasna, call));
     nprotect++;
     ncs = LENGTH(sc);
 
@@ -1806,12 +1803,12 @@ static SEXP MatrixSubset (SEXP x, SEXP subs, SEXP call,
     /* Extract elements from matrix x to result. */
 
     if (s0 == R_NoObject)
-        range_of_rows_of_matrix(call, x, result, start, nrs, nr, sc, ncs, nc);
+        range_of_rows_of_matrix(call, x, result, start, nrs, nr, sc);
     else if (nrs == 1 && (ii = INTEGER(sr)[0]) != NA_INTEGER 
                       && ii >= 0 && ii <= nr)
-        one_row_of_matrix (call, x, result, ii, nr, sc, ncs, nc);
+        one_row_of_matrix (call, x, result, ii, nr, sc);
     else
-        multiple_rows_of_matrix (call, x, result, sr, nrs, nr, sc, ncs, nc);
+        multiple_rows_of_matrix (call, x, result, sr, nr, sc);
 
     /* Set up dimnames of the returned value.  Not attached to result yet. */
 
@@ -1922,7 +1919,8 @@ static SEXP ArraySubset (SEXP x, SEXP x_grad, SEXP s,
         else /* drop == NA_LOGICAL */ 
             suppress_drop[i] = CAR(r) == R_MissingArg ? MISSING(r) == 2
                                 : whether_suppress_drop(CAR(r));
-        PROTECT (subv[i] = array_sub (CAR(r), xdims, i, x, R_NoObject, &hasna));
+        PROTECT (subv[i] 
+                  = array_sub (CAR(r), xdims, i, x, R_NoObject, &hasna, call));
         subs[i] = INTEGER(subv[i]);
 	nsubs[i] = LENGTH(subv[i]);
         n *= nsubs[i];
@@ -3763,10 +3761,10 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 
     SEXP sv_scalar_stack = R_scalar_stack;
 
-    PROTECT (sr = array_sub (sb1, dim, 0, x, x, &rhasna));
+    PROTECT (sr = array_sub (sb1, dim, 0, x, x, &rhasna, call));
     nrs = LENGTH(sr);
 
-    PROTECT (sc = array_sub (sb2, dim, 1, x, x, &chasna));
+    PROTECT (sc = array_sub (sb2, dim, 1, x, x, &chasna, call));
     ncs = LENGTH(sc);
 
     /* Do assignment of a single atomic element with matching scalar type,
@@ -4250,7 +4248,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     int nmod = ny > 1;
     int zero = 0;
     for (i = 0; i < k; i++) {
-        PROTECT(tmp = array_sub (CAR(s), dims, i, x, x, &hasna[i]));
+        PROTECT(tmp = array_sub (CAR(s), dims, i, x, x, &hasna[i], call));
 	bound[i] = LENGTH(tmp);
         if (hasna[i]) {
             any_hasna = 1;
