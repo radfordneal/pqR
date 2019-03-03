@@ -444,6 +444,8 @@ R_inspect(grad); REprintf("--\n");
     if (j < 0 || i >= n || j < i)
         return R_NilValue;
 
+    PROTECT(grad);
+
     SEXP res = allocVector (VECSXP, j-i+1);
 
     if (i < 0) i = 0;
@@ -452,6 +454,7 @@ R_inspect(grad); REprintf("--\n");
     for (R_len_t k = i; k <= j; k++)
         SET_VECTOR_ELT (res, k-i, VECTOR_ELT(grad,k));
 
+    UNPROTECT(1);
     return res;
 }
 
@@ -473,6 +476,8 @@ R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
 	
     if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
 
+    PROTECT(grad);
+
     int k = LENGTH(indx);
     SEXP res = allocVector (VECSXP, k);
     
@@ -482,6 +487,7 @@ R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
             SET_VECTOR_ELT (res, j, VECTOR_ELT(grad,i-1));
     }
 
+    UNPROTECT(1);
     return res;
 }
 
@@ -515,6 +521,8 @@ R_inspect(grad); REprintf("--\n");
     if (glen == n && i == j)
         return ScalarReal (REAL(grad)[i]);
 
+    PROTECT(grad);
+
     if (glen % n != 0) abort();
     R_len_t slen = glen/n;
     R_len_t m = j-i+1;
@@ -527,12 +535,15 @@ R_inspect(grad); REprintf("--\n");
         k += n;
         l += m;
     }
+
+    UNPROTECT(1);
     return res;
 }
 
 
 /* Create set of gradients from subsetting indexed elements of gradients for
-   numeric vector of length n.  Used for [.].  Protects its grad argument. */
+   numeric vector of length n.  Used for [.].  Protects its grad argument. 
+   Caller must protect indx. */
 
 SEXP attribute_hidden subset_indexes_numeric_gradient 
                         (SEXP grad, SEXP indx, R_len_t n)
@@ -547,6 +558,8 @@ R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
         return R_NilValue;
 
     if (TYPEOF(grad) != REALSXP) abort();
+
+    PROTECT(grad);
 
     R_len_t gvars = GRADIENT_WRT_LEN (grad);
     int m = LENGTH(indx);
@@ -563,13 +576,14 @@ R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
         }
     }
 
+    UNPROTECT(1);
     return res;
 }
 
 
 /* Create set of gradients from subsetting elements from one row of
    gradients for vector list matrix of length n.  Used for [.].
-   Protects its grad argument. */
+   Protects its grad argument.  Caller must protect sc. */
 
 SEXP attribute_hidden matrix_subset_one_row_list_gradient (SEXP grad, 
        R_len_t ii, R_len_t nr, SEXP sc, R_len_t n)
@@ -587,6 +601,8 @@ R_inspect(grad); REprintf("--\n");
 
     if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
 
+    PROTECT(grad);
+
     R_len_t ncs = LENGTH(sc);
     SEXP res = allocVector (VECSXP, ncs);
 
@@ -601,6 +617,8 @@ R_inspect(grad); REprintf("--\n");
 #if 0
 REprintf("&&\n"); R_inspect(res);
 #endif
+
+    UNPROTECT(1);
     return res;
 }
 
@@ -624,6 +642,8 @@ R_inspect(grad); REprintf("--\n");
 
     if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
 
+    PROTECT(grad);
+
     R_len_t m, i, v;
     int indx[k];
     int j;
@@ -646,6 +666,7 @@ R_inspect(grad); REprintf("--\n");
 
     if (i != m) abort();
 
+    UNPROTECT(1);
     return res;
 }
 
@@ -668,6 +689,8 @@ R_inspect(grad); REprintf("--\n");
         return R_NilValue;
 
     if (TYPEOF(grad) != REALSXP) abort();
+
+    PROTECT(grad);
 
     R_len_t gvars = GRADIENT_WRT_LEN (grad);
     R_len_t m, i, v;
@@ -700,6 +723,7 @@ R_inspect(grad); REprintf("--\n");
 
     if (i != m) abort();
 
+    UNPROTECT(1);
     return res;
 }
 
