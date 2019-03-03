@@ -568,6 +568,51 @@ R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
 
 
 /* Create set of gradients from subsetting indexed elements of gradients for
+   vector list array of length n with k dimensions.  Used for [.].  Protects 
+   its grad argument. */
+
+SEXP attribute_hidden array_subset_indexes_list_gradient (SEXP grad, 
+    int **subs, int *nsubs, int *offset, R_len_t k, R_len_t n)
+{
+#if 0
+REprintf("array_subset_indexes_list_gradient %d %d\n",k,n);
+R_inspect(grad); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY (array_subset_indexes_list_gradient,
+                              grad, subs, nsubs, offset, k, n);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+
+    if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
+
+    R_len_t m, i, v;
+    int indx[k];
+    int j;
+
+    m = 1;
+    for (j = 0; j < k; j++) {
+        m *= nsubs[j];
+        indx[j] = 0;
+    }
+
+    SEXP res = allocVector (VECSXP, m);
+    int last = 0;
+
+    for (i = 0; !last; i++) {
+        R_len_t ii;
+        ii = array_offset_from_index (subs, nsubs, indx, offset, k, &last);
+        if (ii != NA_INTEGER)
+            SET_VECTOR_ELT (res, i, VECTOR_ELT (grad, ii));
+    }
+
+    if (i != m) abort();
+
+    return res;
+}
+
+
+/* Create set of gradients from subsetting indexed elements of gradients for
    numeric array of length n with k dimensions.  Used for [.].  Protects 
    its grad argument. */
 

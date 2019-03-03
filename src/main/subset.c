@@ -2038,6 +2038,10 @@ static SEXP ArraySubset (SEXP x, SEXP x_grad, SEXP s,
             res_grad = array_subset_indexes_numeric_gradient
                          (x_grad, subs, nsubs, offset, k, LENGTH(x));
         }
+        else if (TYPEOF(result) == VECSXP) {
+            res_grad = array_subset_indexes_list_gradient
+                         (x_grad, subs, nsubs, offset, k, LENGTH(x));
+        }
     }
 
     /* Set up dimnames for result, but don't attach to result yet. */

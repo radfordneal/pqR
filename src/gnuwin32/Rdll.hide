@@ -329,6 +329,8 @@
  Rf_apply_debug_setup
  Rf_apply_non_function_error
  Rf_arg_missing_error
+ Rf_array_subset_indexes_list_gradient
+ Rf_array_subset_indexes_numeric_gradient
  Rf_asLogicalNoNA_error
  Rf_asLogicalNoNA_warning
  Rf_attributes_dup
