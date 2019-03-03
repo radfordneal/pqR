@@ -623,6 +623,57 @@ REprintf("&&\n"); R_inspect(res);
 }
 
 
+/* Create set of gradients from subsetting elements from one row of
+   gradients for a numeric matrix of length n.  Used for [.].
+   Protects its grad argument.  Caller must protect sc. */
+
+SEXP attribute_hidden matrix_subset_one_row_numeric_gradient (SEXP grad, 
+       R_len_t ii, R_len_t nr, SEXP sc, R_len_t n)
+{
+#if 0
+REprintf("matrix_subset_one_row_numeric_gradient %d %d %d %d %d\n",
+          ii,nr,LENGTH(sc),*INTEGER(sc),n);
+R_inspect(grad); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY (matrix_subset_one_row_numeric_gradient, grad,
+                              ii, nr, sc, n);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+
+    if (TYPEOF(grad) != REALSXP) abort();
+
+    PROTECT(grad);
+
+    R_len_t ncs = LENGTH(sc);
+    R_len_t gvars = GRADIENT_WRT_LEN (grad);
+
+    if ((uint64_t)ncs * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
+
+    SEXP res = allocVector (REALSXP, ncs * gvars);
+    SET_GRADIENT_WRT_LEN (res, gvars);
+
+    memset (REAL(res), 0, LENGTH(res) * sizeof(double));
+
+    int st = (ii-1) - nr;
+    int j, k;
+
+    for (j = 0; j < ncs; j++) {
+        int jj = INTEGER(sc)[j];
+        if (jj != NA_INTEGER) {
+            for (k = 0; k < gvars; k++)
+                REAL(res)[j+k*ncs] = REAL(grad)[st+jj*nr+k*n];
+        }
+    }
+#if 0
+REprintf("&&\n"); R_inspect(res);
+#endif
+
+    UNPROTECT(1);
+    return res;
+}
+
+
 /* Create set of gradients from subsetting indexed elements of gradients for
    vector list array of length n with k dimensions.  Used for [.].  Protects 
    its grad argument. */
@@ -792,7 +843,7 @@ attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
         r = ScalarRealMaybeConst (*REAL(grad) * factor);
     else {
         r = allocVector (REALSXP, glen);
-        SET_GRADIENT_WRT_LEN (r, GRADIENT_WRT_LEN(grad));
+        SET_GRADIENT_WRT_LEN (r, gvars);
         k = 0;
         for (i = 0; i < glen; i += n) {
             for (j = 0; j < n; j++) {
@@ -1359,7 +1410,7 @@ static SEXP backup (SEXP g, SEXP a, SEXP b)
 }
 
 
-/* Backpropagate gradients, adding contributiions to gradients in 'base',
+/* Backpropagate gradients, adding contributions to gradients in 'base',
    that are found by multiplying gradients of inner vars w.r.t. outer 
    vars (in 'extra') by gradients of expression value w.r.t. inner vars
    (in 'factors').  The caller must protect 'factors', but not 'base' or

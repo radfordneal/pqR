@@ -1815,7 +1815,8 @@ static SEXP MatrixSubset (SEXP x, SEXP x_grad, SEXP subs, SEXP call,
                 res_grad = matrix_subset_one_row_list_gradient
                                   (x_grad, ii, nr, sc, LENGTH(x));
             else if (TYPEOF(x) == REALSXP)
-                ;
+                res_grad = matrix_subset_one_row_numeric_gradient
+                                  (x_grad, ii, nr, sc, LENGTH(x));
             PROTECT(res_grad);
             nprotect++;
         }
