@@ -413,7 +413,7 @@
  Rf_regfree
  Rf_rep_one_string_element
  Rf_rep_string_elements
- Rf_set_elements_to_NA_or_NULL
+ Rf_set_elements_to_NA
  Rf_set_subassign
  Rf_set_subassign_general
  Rf_set_symbits_in_env

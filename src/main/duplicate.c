@@ -223,43 +223,6 @@ static SEXP duplicate1(SEXP s)
 }
 
 
-/* Set n elements of vector x (starting at i) to the appropriate NA value, or
-   to R_NilValue for a VECSXP or EXPRSXP, or to 0 for a RAWSXP. */
-
-void set_elements_to_NA_or_NULL (SEXP x, int i, int n)
-{
-    int ln = i + n;
-
-    if (n == 0) return;
-
-    switch (TYPEOF(x)) {
-    case RAWSXP:
-        do RAW(x)[i++] = 0; while (i<ln);
-        break;
-    case LGLSXP:
-        do LOGICAL(x)[i++] = NA_LOGICAL; while (i<ln);
-        break;
-    case INTSXP:
-        do INTEGER(x)[i++] = NA_INTEGER; while (i<ln);
-        break;
-    case REALSXP:
-        do REAL(x)[i++] = NA_REAL; while (i<ln);
-        break;
-    case CPLXSXP:
-        do { COMPLEX(x)[i].r = COMPLEX(x)[i].i = NA_REAL; i++; } while (i<ln);
-        break;
-    case STRSXP:
-        do SET_STRING_ELT_NA (x, i++); while (i<ln);
-        break;
-    case VECSXP: case EXPRSXP:
-        do SET_VECTOR_ELT_NIL (x, i++); while (i<ln);
-        break;
-    default:
-	UNIMPLEMENTED_TYPE("set_elements_to_NA_or_NULL", x);
-    }
-}
-
-
 /* Set n elements of x, starting at i, to the repeated j'th element of v.
    Duplicates VECSXP and EXPRSXP elements. */
 

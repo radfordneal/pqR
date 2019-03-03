@@ -2540,7 +2540,7 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op,
 	PROTECT(ans = VectorSubset(ax, x_grad, subs, seq, drop, call));
     else {
         SEXP xdims = getDimAttrib(ax);
-	if (nsubs != length(xdims))
+	if (TYPEOF(xdims) != INTSXP || nsubs != LENGTH(xdims))
 	    errorcall(call, _("incorrect number of dimensions"));
 	if (nsubs == 2)
 	    ans = MatrixSubset(ax, subs, call, drop, xdims, seq);

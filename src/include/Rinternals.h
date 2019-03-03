@@ -1963,7 +1963,6 @@ SEXP Rf_ScalarRealMaybeConst(double);
 SEXP Rf_ScalarStringMaybeConst(SEXP);
 SEXP Rf_setAttrib(SEXP, SEXP, SEXP);
 void Rf_setSVector(SEXP*, int, SEXP);
-void Rf_set_elements_to_NA_or_NULL(SEXP, int, int);
 void Rf_set_symbits_in_env(SEXP);
 void Rf_setVar(SEXP, SEXP, SEXP);
 int Rf_set_var_in_frame(SEXP, SEXP, SEXP, int, int);
@@ -2409,7 +2408,6 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define ScalarRawMaybeConst		Rf_ScalarRawMaybeConst
 #define setAttrib		Rf_setAttrib
 #define setSVector		Rf_setSVector
-#define set_elements_to_NA_or_NULL Rf_set_elements_to_NA_or_NULL
 #define set_symbits_in_env	Rf_set_symbits_in_env
 #define setVar			Rf_setVar
 #define set_var_in_frame	Rf_set_var_in_frame

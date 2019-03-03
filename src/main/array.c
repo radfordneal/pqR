@@ -181,16 +181,18 @@ static SEXP do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT(ans = allocMatrix(TYPEOF(vals), nr, nc));
 
-    if(lendat) {
+    if (lendat) {
 	if (isVector(vals))
 	    copyMatrix(ans, vals, byrow);
 	else
 	    copyListMatrix(ans, vals, byrow);
-    } else if (isVectorAtomic(vals)) /* VECSXP/EXPRSXP already are R_NilValue */
-        set_elements_to_NA_or_NULL (ans, 0, nr*nc);
+    }
+    else if (isVectorAtomic(vals)) /* VECSXP/EXPRSXP already are R_NilValue */
+        Rf_set_elements_to_NA (ans, 0, 1, nr*nc);
 
-    if(!isNull(dimnames)&& length(dimnames) > 0)
+    if (!isNull(dimnames) && length(dimnames) > 0)
 	ans = dimnamesgets(ans, dimnames);
+
     UNPROTECT(1);
     return ans;
 }
@@ -1995,7 +1997,7 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT(ans = allocVector(TYPEOF(vals), nans));
     if (lendat == 0)
-        set_elements_to_NA_or_NULL (ans, 0, nans);
+        Rf_set_elements_to_NA (ans, 0, 1, nans);
     else
         copy_elements_recycled (ans, 0, vals, nans);
 
