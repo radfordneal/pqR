@@ -806,6 +806,16 @@ with gradient (a=c(9,5,2)) {
 }
 
 with gradient (a=c(9,5,2)) {
+  r <- numeric(6)
+  dim(r) <- c(3,2)
+  r[[1]] <- a[[2]]
+  r[[2]] <- a[[3]]^2 + a[[1]]
+  r[[3]] <- a[[3]]^3
+  r[[4]] <- sin(a[[1]])
+  list(r[2..3,1],r[1..2,c(2,1)])
+}
+
+with gradient (a=c(9,5,2)) {
   r <- numeric(4)
   dim(r) <- c(2,2)
   r[[1]] <- a[[2]]
