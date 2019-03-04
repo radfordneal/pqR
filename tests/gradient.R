@@ -715,6 +715,12 @@ G[,]
 str(G)
 
 L <- matrix (list(99,33,44,66,22,11),3,2)
+G <- with gradient (L) L[c(2,3),c(2,1,2)]
+L[,]
+G[,]
+str(G)
+
+L <- matrix (list(99,33,44,66,22,11),3,2)
 G <- with gradient (L) { L[[2,2]] <- L[[2,2]]^2; L[2..3,c(2,1,2)] }
 L[,]
 G[,]

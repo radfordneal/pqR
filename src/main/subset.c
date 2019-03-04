@@ -1834,6 +1834,15 @@ static SEXP MatrixSubset (SEXP x, SEXP x_grad, SEXP subs, SEXP call,
 
     else {
         multiple_rows_of_matrix (call, x, result, sr, nr, sc);
+        if (x_grad != R_NilValue) {
+            if (TYPEOF(x) == VECSXP)
+                res_grad = matrix_subset_indexes_list_gradient
+                                  (x_grad, sr, nr, sc, LENGTH(x));
+            else if (TYPEOF(x) == REALSXP)
+                ;
+            PROTECT(res_grad);
+            nprotect++;
+        }
     }
 
     /* Set up dimnames of the returned value.  Not attached to result yet. */

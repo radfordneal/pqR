@@ -800,6 +800,63 @@ REprintf("&&\n"); R_inspect(res);
 }
 
 
+/* Create set of gradients from subsetting indexed elements of
+   gradients for vector list matrix of length n.  Used for [.].
+   Protects its grad argument.  Caller must protect sr and sc. */
+
+SEXP attribute_hidden matrix_subset_indexes_list_gradient (SEXP grad, 
+    SEXP sr, R_len_t nr, SEXP sc, R_len_t n)
+{
+#if 0
+REprintf("matrix_subset_indexes_list_gradient %d %d %d %d %d %d\n",
+          LENGTH(sr),LENGTH(sc),*INTEGER(sr),*INTEGER(sc),nr,n);
+R_inspect(grad); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY (matrix_subset_indexes_list_gradient, grad,
+                              sr, nr, sc, n);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+
+    if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
+
+    PROTECT(grad);
+
+    int i, j, ii, jj, ij, jjnr;
+
+    R_len_t nrs = LENGTH(sr);
+    R_len_t ncs = LENGTH(sc);
+
+    SEXP res = allocVector (VECSXP, ncs * nrs);
+
+    for (j = 0, ij = 0; j < ncs; j++) {
+
+        jj = INTEGER(sc)[j];
+        if (jj == NA_INTEGER) {
+            ij += nrs;
+            continue;
+        }
+
+        int *sri = INTEGER(sr);
+        jjnr = (jj-1) * nr;
+
+        for (i = 0; i < nrs; i++, ij++) {
+            if ((ii = sri[i]) != NA_INTEGER) {
+                SEXP ve = VECTOR_ELT (grad, (ii-1)+jjnr);
+                SET_VECTOR_ELT (res, ij, ve);
+            }
+        }
+    }
+
+#if 0
+REprintf("&&\n"); R_inspect(res);
+#endif
+
+    UNPROTECT(1);
+    return res;
+}
+
+
 /* Create set of gradients from subsetting indexed elements of gradients for
    vector list array of length n with k dimensions.  Used for [.].  Protects 
    its grad argument. */
