@@ -988,7 +988,7 @@ attribute_hidden SEXP Rf_apply_debug_setup
     return body;
 }
 
-attribute_hidden SEXP Rf_apply_debug_finish (SEXP call, SEXP rho)
+attribute_hidden void Rf_apply_debug_finish (SEXP call, SEXP rho)
 {
     Rprintf("exiting from: ");
     int old_bl = R_BrowseLines;

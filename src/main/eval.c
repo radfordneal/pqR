@@ -4521,7 +4521,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     sb2 = R_NoObject;
     subs = CDR(args);
 
-    if (x != R_DotsSymbol) {
+    if (x != R_DotsSymbol && !(variant & VARIANT_GRADIENT)) {
 
         /* Mostly called from do_set, with first arg an evaluated promise. */
 
@@ -4553,19 +4553,22 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
     }
 
-    if (DispatchOrEval (call, op, "[<-", args, rho, &ans, 0, 
-                        argsevald, variant)) {
+    if (DispatchOrEval (call, op, "[<-", args, rho, &ans, 
+          !(variant & VARIANT_GRADIENT) ? 0 : 3 /* eval 1st and last arg */, 
+          argsevald, variant)) {
         R_Visible = TRUE;
         return ans;
     }
 
     return do_subassign_dflt_seq
-       (call, CAR(ans), R_NoObject, R_NoObject, CDR(ans), rho, R_NoObject, 0);
+       (call, CAR(ans), 
+        HAS_GRADIENT_IN_CELL(ans) ? GRADIENT_IN_CELL(ans) : R_NilValue, 
+        R_NoObject, R_NoObject, CDR(ans), rho, R_NoObject, 0);
 
     /* ... path that bypasses DispatchOrEval ... */
 
   dflt_seq:
-    r = do_subassign_dflt_seq (call, x, sb1, sb2, subs, rho, y, seq);
+    r = do_subassign_dflt_seq(call, x, R_NilValue, sb1, sb2, subs, rho, y, seq);
 
   ret:
     R_scalar_stack = sv_scalar_stack;

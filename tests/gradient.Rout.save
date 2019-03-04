@@ -8,11 +8,13 @@ Modifications to R in pqR are Copyright (C) 2013-2019 Radford M. Neal
 
 Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
-Platform: x86_64-unknown-linux-gnu (64-bit)
+Platform: x86_64-apple-darwin16.7.0 (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
 Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
 
 R is a collaborative project with many contributors.
 Type 'contributors()' for more information and

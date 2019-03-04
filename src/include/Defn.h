@@ -1298,7 +1298,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define EncodeRaw              Rf_EncodeRaw
 # define EncodeString           Rf_EncodeString
 # define EnsureString 		Rf_EnsureString
-# define delete_list_gradient	Rf_delete_list_gradient
+# define delete_range_list_gradient Rf_delete_range_list_gradient
 # define endcontext		Rf_endcontext
 # define envlength		Rf_envlength
 # define ErrorMessage		Rf_ErrorMessage
@@ -1507,7 +1507,7 @@ SEXP add_scaled_gradients_vec (SEXP, SEXP, SEXP);
 SEXP Rf_allocCharsxp(R_len_t);
 SEXP alloc_or_reuse (SEXP, SEXP, SEXPTYPE, int, int, int);
 SEXP Rf_append(SEXP, SEXP); /* apparently unused now */
-SEXP Rf_apply_debug_finish (SEXP, SEXP);
+void Rf_apply_debug_finish (SEXP, SEXP);
 SEXP Rf_apply_debug_setup (SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP array_subset_indexes_list_gradient 
        (SEXP, int **, int *, int *, R_len_t, R_len_t);
@@ -1540,7 +1540,7 @@ SEXP duplicated(SEXP, Rboolean);
 SEXP duplicated3(SEXP, SEXP, Rboolean);
 int any_duplicated(SEXP, Rboolean);
 int any_duplicated3(SEXP, SEXP, Rboolean);
-SEXP delete_list_gradient(SEXP, R_len_t, R_len_t);
+SEXP delete_range_list_gradient(SEXP, R_len_t, R_len_t, R_len_t);
 int envlength(SEXP);
 SEXP evalList(SEXP, SEXP);
 SEXP evalListKeepMissing(SEXP, SEXP);

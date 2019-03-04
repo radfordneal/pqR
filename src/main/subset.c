@@ -3258,7 +3258,7 @@ static SEXP DeleteListElementsSeq (SEXP x, R_len_t start, R_len_t end)
 }
 
 /* Returns list made from x (a LISTSXP, EXPRSXP, or NILSXP) with elements 
-   indexed by elements in "which" (an INSTSXP or NILSXP) deleted. */
+   indexed by elements in "which" (an INTSXP or NILSXP) deleted. */
 
 static SEXP DeleteListElements(SEXP x, SEXP which)
 {
@@ -3340,24 +3340,24 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
 
    The x argument must be protected by the caller. */
 
-static SEXP VectorAssignSeq 
-              (SEXP call, SEXP x, R_len_t start, R_len_t end, SEXP y)
+static SEXP VectorAssignSeq (SEXP call, 
+    SEXP x, SEXP x_grad, R_len_t start, R_len_t end, SEXP y, SEXP y_grad)
 {
-    int i, n, ny;
+    int i, n, nx, ny;
 
     if (x==R_NilValue && y==R_NilValue)
 	return R_NilValue;
 
     n = end - start + 1;
 
-    /* Here we make sure that the LHS has */
-    /* been coerced into a form which can */
-    /* accept elements from the RHS. */
+    /* Here we make sure that the LHS has been coerced into a form which can
+       accept elements from the RHS. */
 
     SubassignTypeFix (&x, &y, end > length(x) ? end : 0, 0, call);
 
     PROTECT(x);
 
+    nx = length(x);
     ny = length(y);
     if (ny > n) 
         ny = n;
@@ -3378,6 +3378,8 @@ static SEXP VectorAssignSeq
 	PROTECT(y);
 
     /* Do the actual assignment... */
+
+    SEXP res_grad = R_NilValue;
 
     if (n == 0) {
         /* nothing to do */
@@ -3415,9 +3417,16 @@ static SEXP VectorAssignSeq
     }
     else if (isVectorList(x) && y == R_NilValue) {
 	x = DeleteListElementsSeq(x, start, end);
+        if (x_grad != R_NilValue)
+            res_grad = delete_range_list_gradient (x_grad, start-1, end-1, nx);
     }
     else
         goto warn;
+
+    if (res_grad != R_NilValue) {
+        R_gradient = res_grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
 
     UNPROTECT(2);
     return x;
@@ -3473,7 +3482,8 @@ static inline SEXP NA_check_remove (SEXP call, SEXP indx, int *n, int err)
 }
 
 
-static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
+static SEXP VectorAssign (SEXP call, SEXP x, SEXP x_grad, 
+                          SEXP s, SEXP y, SEXP y_grad)
 {
     SEXP indx, newnames;
     int i, ii, iy, n, nx, ny;
@@ -3554,6 +3564,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
        from non-string vectors and from raw vectors to non-raw vectors are
        not handled here, but are avoided by coercion in SubassignTypeFix. */
 
+    SEXP res_grad = R_NilValue;
     int *ixp = INTEGER(indx);
     int k;
 
@@ -3751,10 +3762,13 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     case (EXPRSXP<<5) + NILSXP:
     case (VECSXP<<5)  + NILSXP:
+        if (x_grad != R_NilValue && TYPEOF(indx) == INTSXP && LENGTH(indx)==1) {
+            int i = INTEGER(indx)[0];
+            if (i > 0 && i <= LENGTH(x))
+            res_grad = delete_range_list_gradient (x_grad, i-1, i-1, LENGTH(x));
+        }
         x = DeleteListElements(x, indx);
-        UNPROTECT(4);
-        return x;
-        break;
+        goto ret;
 
     default:
         warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
@@ -3780,6 +3794,13 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
             }
         }
     }
+
+  ret:
+    if (res_grad != R_NilValue) {
+        R_gradient = res_grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     UNPROTECT(4);
     return x;
 }
@@ -4498,14 +4519,14 @@ static void SubAssignArgs(SEXP *subs, SEXP *y, SEXP *y_grad, SEXP call)
 
 SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    return do_subassign_dflt_seq 
-      (call, CAR(args), R_NoObject, R_NoObject, CDR(args), rho, R_NoObject, 0);
+    return do_subassign_dflt_seq (call, CAR(args), R_NilValue,
+        R_NoObject, R_NoObject, CDR(args), rho, R_NoObject, 0);
 }
 
 /* The last "seq" argument below is non-zero if the first subscript is a 
    sequence spec (a variant result).  Sets R_Visible to TRUE. */
 
-SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x, 
+SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x, SEXP x_grad,
                                              SEXP sb1, SEXP sb2, SEXP subs,
                                              SEXP rho, SEXP y, int64_t seq)
 {
@@ -4518,7 +4539,7 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
 
     /* Do simple cases quickly. */
 
-    if (!seq && sb1 != R_NoObject && subs == R_NilValue 
+    if (!seq && sb1 != R_NoObject && subs == R_NilValue && x_grad == R_NilValue
              && isVector(x) && !IS_S4_OBJECT(x) && !NAMEDCNT_GT_1(x)
              && y != R_NoObject 
              && (TYPEOF(y) == TYPEOF(x) 
@@ -4587,7 +4608,7 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
         }
     }
 
-    SEXP y_grad;
+    SEXP y_grad = R_NilValue;
 
     if (y == R_NoObject)
         SubAssignArgs (&subs, &y, &y_grad, call);
@@ -4638,7 +4659,7 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
 
     if (sb1 == R_NoObject) {
         /* 0 subscript arguments */
-        x = VectorAssignSeq (call, x, 1, length(x), y);
+        x = VectorAssignSeq (call, x, x_grad, 1, length(x), y, y_grad);
     }
     else if (sb2 == R_NoObject) {
         /* 1 subscript argument */
@@ -4646,14 +4667,14 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
             int start, end;
             sb1 = Rf_DecideVectorOrRange (seq, &start, &end, call);
             if (sb1 == R_NoObject) {
-                x = VectorAssignSeq (call, x, start, end, y);
+                x = VectorAssignSeq (call, x, x_grad, start, end, y, y_grad);
             }
         }
         if (sb1 == R_MissingArg) {
-            x = VectorAssignSeq (call, x, 1, length(x), y);
+            x = VectorAssignSeq (call, x, x_grad, 1, length(x), y, y_grad);
         }
         else if (sb1 != R_NoObject) {
-            x = VectorAssign (call, x, sb1, y);
+            x = VectorAssign (call, x, x_grad, sb1, y, y_grad);
         }
     }
     else if (subs == R_NilValue) {
@@ -4969,7 +4990,8 @@ SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x,
             else {
                 x = DeleteListElementsSeq (x, offset+1, offset+1);
                 if (x_grad != R_NilValue)
-                    res_grad = delete_list_gradient (x_grad, offset, length_x);
+                    res_grad = 
+                      delete_range_list_gradient (x_grad, offset, offset, length_x);
             }
         }
         else {
@@ -5183,7 +5205,8 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val,
 
             REPROTECT(x = DeleteListElementsSeq(x,imatch+1,imatch+1), pxidx);
             if (x_grad != R_NilValue)
-                res_grad = delete_list_gradient (x_grad, imatch, nx);
+                res_grad = delete_range_list_gradient
+                             (x_grad, imatch, imatch, nx);
         }
         else if (imatch >= 0) {  /* replacing an element */
 

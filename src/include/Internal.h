@@ -121,7 +121,8 @@ SEXP do_shade(SEXP, SEXP, SEXP, SEXP);
 SEXP do_sysinfo(SEXP,SEXP,SEXP,SEXP);
 SEXP do_syssleep(SEXP,SEXP,SEXP,SEXP);
 SEXP do_subassign_dflt(SEXP, SEXP, SEXP, SEXP);
-SEXP do_subassign_dflt_seq(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, int64_t);
+SEXP do_subassign_dflt_seq(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP,
+                           int64_t);
 SEXP do_subassign2_dflt(SEXP, SEXP, SEXP, SEXP);
 SEXP do_subassign2_dflt_int(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP do_subassigndf(SEXP, SEXP, SEXP, SEXP);
