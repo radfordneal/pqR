@@ -1805,6 +1805,15 @@ static SEXP MatrixSubset (SEXP x, SEXP x_grad, SEXP subs, SEXP call,
 
     if (s0 == R_NoObject) {
         range_of_rows_of_matrix(call, x, result, start, nrs, nr, sc);
+        if (x_grad != R_NilValue) {
+            if (TYPEOF(x) == VECSXP)
+                res_grad = matrix_subset_range_list_gradient
+                                  (x_grad, start, nrs, nr, sc, LENGTH(x));
+            else if (TYPEOF(x) == REALSXP)
+                ;
+            PROTECT(res_grad);
+            nprotect++;
+        }
     }
 
     else if (nrs == 1 && (ii = INTEGER(sr)[0]) != NA_INTEGER 

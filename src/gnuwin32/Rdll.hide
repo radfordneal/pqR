@@ -392,6 +392,9 @@
  Rf_matchArgs_tail
  Rf_matchPar
  Rf_matrix_subset_one_row_list_gradient
+ Rf_matrix_subset_one_row_numeric_gradient
+ Rf_matrix_subset_range_list_gradient
+ Rf_matrix_subset_range_numeric_gradient
  Rf_mbtoucs
  Rf_mkCLOSXP
  Rf_mkCharMulti
