@@ -4618,22 +4618,11 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         return r;
     }
 
-    int argsevald = 0;
     SEXP ans;
 
-    if (variant & VARIANT_GRADIENT) {
-
-        args = cons_with_tag (evalv (CAR(args), rho, VARIANT_GRADIENT), 
-                              CDR(args), TAG(args));
-        if (R_variant_result & VARIANT_GRADIENT_FLAG) {
-            SET_GRADIENT_IN_CELL (args, R_gradient);
-            R_variant_result = 0;
-        }
-        argsevald = -1;
-    }
-
     if (DispatchOrEval (call, op, "[[<-", args, rho, &ans, 
-                        variant & VARIANT_GRADIENT, argsevald, variant)) {
+         ! (variant & VARIANT_GRADIENT) ? 0 : 3 /* grad for 1st and last arg */,
+         0, variant)) {
         R_Visible = TRUE;
         return ans;
     }
@@ -4651,7 +4640,6 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXP into_grad = R_NilValue;
     SEXP schar = R_NilValue;
     SEXP name = R_NilValue;
-    int argsevald = 0;
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
         value = R_fast_sub_replacement; /* may be on scalar stack */
@@ -4712,10 +4700,7 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     PROTECT2(into,into_grad);
 
-    if (isObject(into)) {
-        argsevald = -1;
-    } 
-    else {
+    if (!isObject(into)) {
         if (name == R_NilValue) name = install_translated(schar);
         value = EVALV (value, env, variant & VARIANT_GRADIENT);
         if (R_variant_result & VARIANT_GRADIENT_FLAG) {
@@ -4739,7 +4724,8 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
       LCONS(CAR(call),CONS(CADR(call),CONS(string,CDR(CDDR(call))))));
 
     if (DispatchOrEval (ncall, op, "$<-", args, env, &ans, 
-                        variant & VARIANT_GRADIENT, argsevald, variant)) {
+         ! (variant & VARIANT_GRADIENT) ? 0 : 1 /* grad for last arg */,
+         -1, variant)) {
         UNPROTECT(4);
         R_Visible = TRUE;
         return ans;
