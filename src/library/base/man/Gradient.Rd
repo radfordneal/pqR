@@ -24,10 +24,14 @@
   matrices, and arrays, lists of such values, lists of lists, etc.
   However, at present, only a limited set of operations are
   supported for vectors, matrices, and arrays, including [[.]] for
-  accessing and replacing single elements, but not [.]. 
+  accessing and replacing single elements, and [.] for accessing,
+  but not replacing, subsets. 
   Many vector-oriented operations, such as \code{sum}, \code{c}, and 
   \code{cbind} are also not yet supported.  Support for a full range
-  of vector operations should be implemnted soon.
+  of vector operations should be implemnted soon.  
+
+  Some operations are currently implemented much less efficiently
+  than is planned for the full-fledged version.
 
   Support for higher-order derivatives is planned.  Perhaps
   differentiation of complex values will also be supported some day.
@@ -180,8 +184,9 @@ with respect to all their real scalar, vector, matrix, or array arguments
 \tabular{l}{
 list \cr
 $ (for vector lists only), $<- (for vector lists only) \cr
-[[ (for vector lists and numeric vectors/matrices/arrays)  \cr
-[[<- (for vector lists and numeric vectors/matrices/arrays) \cr
+[[ (for vector lists and numeric vectors, including matrices & arrays) \cr
+[[<- (for vector lists and numeric vectors, including matrices & arrays) \cr
+[ (for vector lists and numeric vectors, including matrices & arrays) \cr
 \cr
 +, -, *, /, ^ (+ and - may be unary) \cr
 \cr

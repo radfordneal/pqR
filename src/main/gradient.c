@@ -857,6 +857,75 @@ REprintf("&&\n"); R_inspect(res);
 }
 
 
+/* Create set of gradients from subsetting indexed elements of
+   gradients for a numeric matrix of length n.  Used for [.].
+   Protects its grad argument.  Caller must protect sr and sc. */
+
+SEXP attribute_hidden matrix_subset_indexes_numeric_gradient (SEXP grad, 
+    SEXP sr, R_len_t nr, SEXP sc, R_len_t n)
+{
+#if 0
+REprintf("matrix_subset_indexes_numeric_gradient %d %d %d %d %d %d\n",
+          LENGTH(sr),LENGTH(sc),*INTEGER(sr),*INTEGER(sc),nr,n);
+R_inspect(grad); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY (matrix_subset_indexes_numeric_gradient, grad,
+                              sr, nr, sc, n);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+
+    if (TYPEOF(grad) != REALSXP) abort();
+
+    R_len_t gvars = GRADIENT_WRT_LEN (grad);
+    if (LENGTH(grad) != (uint64_t)gvars * n) abort();
+
+    PROTECT(grad);
+
+    int i, j, k, ii, jj, ij, jjnr;
+
+    R_len_t nrs = LENGTH(sr);
+    R_len_t ncs = LENGTH(sc);
+
+    if ((uint64_t)ncs * nrs > R_LEN_T_MAX /* if true, next might overflow */
+     || (uint64_t)ncs * nrs * gvars > R_LEN_T_MAX) 
+        gradient_matrix_too_large_error();
+
+    SEXP res = allocVector (REALSXP, ncs * nrs * gvars);
+    SET_GRADIENT_WRT_LEN (res, gvars);
+
+    memset (REAL(res), 0, LENGTH(res) * sizeof(double));
+
+    int m = nrs * ncs;
+
+    for (j = 0, ij = 0; j < ncs; j++) {
+
+        jj = INTEGER(sc)[j];
+        if (jj == NA_INTEGER) {
+            ij += nrs;
+            continue;
+        }
+
+        int *sri = INTEGER(sr);
+        jjnr = (jj-1) * nr;
+
+        for (i = 0; i < nrs; i++, ij++) {
+            if ((ii = sri[i]) != NA_INTEGER) {
+                for (k = 0; k < gvars; k++)
+                    REAL(res)[ij+k*m] = REAL(grad)[(ii-1)+jjnr+k*n];
+            }
+        }
+    }
+
+#if 0
+REprintf("&&\n"); R_inspect(res);
+#endif
+
+    UNPROTECT(1);
+    return res;
+}
+
+
 /* Create set of gradients from subsetting indexed elements of gradients for
    vector list array of length n with k dimensions.  Used for [.].  Protects 
    its grad argument. */
