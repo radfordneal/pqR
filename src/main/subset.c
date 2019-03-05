@@ -3200,20 +3200,30 @@ static void SubassignTypeFix (SEXP *x, SEXP *y, int stretch, int level,
 
 /* Returns list made from x (a VECSXP, EXPRSXP, or NILSXP) with elements 
    from start to end (inclusive) deleted.  The start index will be positive. 
-   If start>end, no elements are deleted (x returned unchanged). */
+   If start>end, no elements are deleted (x returned unchanged). 
 
-static SEXP DeleteListElementsSeq (SEXP x, R_len_t start, R_len_t end)
+   If x_grad is not R_NilValue, deletion will also be done for the gradient,
+   and the result left in R_gradient.  R_gradient is otherwise set to
+   R_NilValue. */
+
+static SEXP DeleteListElementsSeq 
+              (SEXP x, SEXP x_grad, R_len_t start, R_len_t end)
 {
     SEXP xnew, xnames, xnewnames;
     R_len_t i, len;
+
+    R_gradient = R_NilValue;
 
     len = length(x);
     if (start < 1)
         start = 1;
     if (end > len) 
         end = len;
-    if (start > end)
+    if (start > end) {
+        if (x_grad != R_NilValue)
+            R_gradient = duplicate(x_grad);
         return x;
+    }
 
     if (NAMEDCNT_GT_1(x)) {
         PROTECT(xnew = allocVector(TYPEOF(x), len-(end-start+1)));
@@ -3253,17 +3263,26 @@ static SEXP DeleteListElementsSeq (SEXP x, R_len_t start, R_len_t end)
         UNPROTECT(1);
     }
 
+    if (x_grad != R_NilValue)
+        R_gradient = delete_range_list_gradient (x_grad, start-1, end-1, len);
+
     UNPROTECT(1);
     return xnew;
 }
 
 /* Returns list made from x (a LISTSXP, EXPRSXP, or NILSXP) with elements 
-   indexed by elements in "which" (an INTSXP or NILSXP) deleted. */
+   indexed by elements in "which" (an INTSXP or NILSXP) deleted. 
 
-static SEXP DeleteListElements(SEXP x, SEXP which)
+   If x_grad is not R_NilValue, deletion will also be done for the gradient,
+   and the result left in R_gradient.  R_gradient is otherwise set to
+   R_NilValue. */
+
+static SEXP DeleteListElements (SEXP x, SEXP x_grad, SEXP which)
 {
     SEXP include, xnew, xnames, xnewnames;
     R_len_t i, ii, len, lenw;
+
+    R_gradient = R_NilValue;
 
     if (x==R_NilValue || which==R_NilValue)
         return x;
@@ -3280,7 +3299,7 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
         int start = INTEGER(which)[0];
         int end = INTEGER(which)[lenw-1];
         if (start < 1) start = 1;
-        return DeleteListElementsSeq (x, start, end);
+        return DeleteListElementsSeq (x, x_grad, start, end);
     }
 
     /* create vector indicating which to delete */
@@ -3416,9 +3435,8 @@ static SEXP VectorAssignSeq (SEXP call,
         }
     }
     else if (isVectorList(x) && y == R_NilValue) {
-	x = DeleteListElementsSeq(x, start, end);
-        if (x_grad != R_NilValue)
-            res_grad = delete_range_list_gradient (x_grad, start-1, end-1, nx);
+	x = DeleteListElementsSeq (x, x_grad, start, end);
+        res_grad = R_gradient;
     }
     else
         goto warn;
@@ -3762,12 +3780,8 @@ static SEXP VectorAssign (SEXP call, SEXP x, SEXP x_grad,
 
     case (EXPRSXP<<5) + NILSXP:
     case (VECSXP<<5)  + NILSXP:
-        if (x_grad != R_NilValue && TYPEOF(indx) == INTSXP && LENGTH(indx)==1) {
-            int i = INTEGER(indx)[0];
-            if (i > 0 && i <= LENGTH(x))
-            res_grad = delete_range_list_gradient (x_grad, i-1, i-1, LENGTH(x));
-        }
-        x = DeleteListElements(x, indx);
+        x = DeleteListElements (x, x_grad, indx);
+        res_grad = R_gradient;
         goto ret;
 
     default:
@@ -4988,10 +5002,8 @@ SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x,
             if (offset >= length_x)
                 res_grad = x_grad;
             else {
-                x = DeleteListElementsSeq (x, offset+1, offset+1);
-                if (x_grad != R_NilValue)
-                    res_grad = 
-                      delete_range_list_gradient (x_grad, offset, offset, length_x);
+                x = DeleteListElementsSeq (x, x_grad, offset+1, offset+1);
+                res_grad = R_gradient;
             }
         }
         else {
@@ -5202,11 +5214,9 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val,
             ; 
 
         else if (val == R_NilValue) {  /* deleting an element */
-
-            REPROTECT(x = DeleteListElementsSeq(x,imatch+1,imatch+1), pxidx);
-            if (x_grad != R_NilValue)
-                res_grad = delete_range_list_gradient
-                             (x_grad, imatch, imatch, nx);
+            x = DeleteListElementsSeq (x, x_grad, imatch+1, imatch+1);
+            REPROTECT(x, pxidx);
+            res_grad = R_gradient;
         }
         else if (imatch >= 0) {  /* replacing an element */
 
