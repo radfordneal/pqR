@@ -1299,6 +1299,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define EncodeString           Rf_EncodeString
 # define EnsureString 		Rf_EnsureString
 # define delete_range_list_gradient Rf_delete_range_list_gradient
+# define delete_selected_list_gradient Rf_delete_selected_list_gradient
 # define endcontext		Rf_endcontext
 # define envlength		Rf_envlength
 # define ErrorMessage		Rf_ErrorMessage
@@ -1541,6 +1542,7 @@ SEXP duplicated3(SEXP, SEXP, Rboolean);
 int any_duplicated(SEXP, Rboolean);
 int any_duplicated3(SEXP, SEXP, Rboolean);
 SEXP delete_range_list_gradient(SEXP, R_len_t, R_len_t, R_len_t);
+SEXP delete_selected_list_gradient(SEXP, SEXP, R_len_t, R_len_t);
 int envlength(SEXP);
 SEXP evalList(SEXP, SEXP);
 SEXP evalListKeepMissing(SEXP, SEXP);

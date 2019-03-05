@@ -4888,6 +4888,87 @@ attr(,"gradient")$z
 +   r <- list(x=a^2,y=a^3,z=a^4)
 +   print(gradient_of(r))
 +   cat("--\n")
++   r[2] <- NULL
++   r
++ }
+$x
+[1] 6.02
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$x
+[1] 9.0601
+
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$x
+[1] 6.02
+
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=a^2,y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   r[1..2] <- NULL
++   r
++ }
+$x
+[1] 6.02
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=a^2,y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   r[c(2,2,1,1,2)] <- NULL
++   r
++ }
+$x
+[1] 6.02
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=a^2,y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
 +   r$w <- -a
 +   r
 + }

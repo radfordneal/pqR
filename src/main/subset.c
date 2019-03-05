@@ -3288,8 +3288,10 @@ static SEXP DeleteListElements (SEXP x, SEXP x_grad, SEXP which)
         return x;
     len = LENGTH(x);
     lenw = LENGTH(which);
-    if (len==0 || lenw==0) 
+    if (len==0 || lenw==0) {
+        R_gradient = x_grad;
         return x;
+    }
 
     /* handle deletion of a contiguous block (incl. one element) specially. */
     for (i = 1; i < lenw; i++)
@@ -3318,13 +3320,14 @@ static SEXP DeleteListElements (SEXP x, SEXP x_grad, SEXP which)
 	ii += INTEGER(include)[i];
     if (ii == len) {
 	UNPROTECT(1);
+        R_gradient = x_grad;
 	return x;
     }
 
     PROTECT(xnew = allocVector(TYPEOF(x), ii));
     ii = 0;
     for (i = 0; i < len; i++) {
-	if (INTEGER(include)[i] == 1) {
+	if (INTEGER(include)[i]) {
 	    SET_VECTOR_ELT(xnew, ii, VECTOR_ELT(x, i));
 	    ii++;
 	}
@@ -3347,6 +3350,12 @@ static SEXP DeleteListElements (SEXP x, SEXP x_grad, SEXP which)
     }
 
     copyMostAttrib(x, xnew);
+
+    if (x_grad != R_NilValue) {
+        R_gradient = 
+          delete_selected_list_gradient (x_grad, include, LENGTH(xnew), len);
+    }
+
     UNPROTECT(2);
     return xnew;
 }

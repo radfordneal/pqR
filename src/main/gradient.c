@@ -1063,10 +1063,59 @@ REprintf("--\n");
 
     SEXP res = allocVector (VECSXP, n-(j-i+1));
     if (i > 0) copy_vector_elements (res, 0, grad, 0, i);
-    if (j < n-1) copy_vector_elements (res, i, grad, i+1, n-1-j);
+    if (j < n-1) copy_vector_elements (res, i, grad, j+1, n-1-j);
 
 #if 0
 REprintf("*** delete_range_list_gradient end\n");
+R_inspect(res);
+REprintf("==\n");
+#endif
+
+    UNPROTECT(1);
+    return res;
+}
+
+
+/* Create set of gradients from deleting elements of gradients not in 'include'
+   for a vector list of length n.  Used for [[.]].  Protects its grad argument.
+ */
+
+SEXP attribute_hidden delete_selected_list_gradient (SEXP grad, 
+    SEXP include, R_len_t n_remain, R_len_t n)
+{
+
+#if 0
+REprintf("*** delete_selected_list_gradient %d %d\n",n_remain,n);
+R_inspect(grad);
+REprintf("--\n");
+#endif
+
+    RECURSIVE_GRADIENT_APPLY (delete_selected_list_gradient, grad,
+                              include, n_remain, n);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+
+    if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
+
+    if (n_remain == n)
+        return grad;
+
+    PROTECT(grad);
+
+    SEXP res = allocVector (VECSXP, n_remain);
+    R_len_t i, j;
+
+    j = 0;
+    for (i = 0; i < n; i++) {
+        if (INTEGER(include)[i]) {
+            SET_VECTOR_ELT (res, j, VECTOR_ELT(grad,i));
+            j += 1;
+        }
+    }
+
+#if 0
+REprintf("*** delete_selected_list_gradient end\n");
 R_inspect(res);
 REprintf("==\n");
 #endif

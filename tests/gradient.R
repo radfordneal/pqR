@@ -916,6 +916,30 @@ with gradient (a=3.01) {
   r <- list(x=a^2,y=a^3,z=a^4)
   print(gradient_of(r))
   cat("--\n")
+  r[2] <- NULL
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r[1..2] <- NULL
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r[c(2,2,1,1,2)] <- NULL
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
   r$w <- -a
   r
 }
