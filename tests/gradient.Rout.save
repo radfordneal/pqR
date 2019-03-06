@@ -5137,6 +5137,30 @@ attr(,"gradient")[[4]]
 [1] -1
 
 > 
+> with gradient (a=c(6,3,5)) { a[2] <- list(a[[1]]^2); a }
+[[1]]
+[1] 6
+
+[[2]]
+[1] 36
+
+[[3]]
+[1] 5
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2] [,3]
+[1,]    1    0    0
+
+attr(,"gradient")[[2]]
+     [,1] [,2] [,3]
+[1,]   12    0    0
+
+attr(,"gradient")[[3]]
+     [,1] [,2] [,3]
+[1,]    0    0    1
+
+> 
 > with gradient (a=3.01) {
 +   r <- list(w=-a,x=a^2,y=a^3,z=a^4)
 +   print(gradient_of(r))

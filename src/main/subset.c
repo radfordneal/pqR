@@ -3144,7 +3144,7 @@ static SEXP embedInVector(SEXP v)
    Level 2 is used for [[<-.  It does not coerce when assigning into a list.
 */
 
-static void SubassignTypeFix (SEXP *x, SEXP *y, SEXP *y_grad, 
+static void SubassignTypeFix (SEXP *x, SEXP *x_grad, SEXP *y, SEXP *y_grad, 
                               int stretch, int level, SEXP call)
 {
     Rboolean x_is_object = OBJECT(*x);  /* coercion can lose the object bit */
@@ -3168,8 +3168,10 @@ static void SubassignTypeFix (SEXP *x, SEXP *y, SEXP *y_grad,
               && ((((1<<STRSXP) + (1<<CPLXSXP) + (1<<REALSXP) + (1<<INTSXP))
                    >> type_y) & 1)
          || type_x == RAWSXP
-              && type_y != RAWSXP)
+              && type_y != RAWSXP) {
             *x = coerceVector (*x, type_y);
+            *x_grad = R_NilValue;
+        }
         if (level == 1) { 
             /* For when later code doesn't handle these cases. */
             if (type_y == RAWSXP && type_x != RAWSXP
@@ -3179,6 +3181,9 @@ static void SubassignTypeFix (SEXP *x, SEXP *y, SEXP *y_grad,
     }
     else if (atom_x && isVectorList(*y)) {
         *x = coerceVector (*x, type_y);
+        if (*x_grad != R_NilValue)
+            *x_grad = type_x != REALSXP ? R_NilValue
+                       : as_list_gradient (*x_grad, LENGTH(*x));
     }
     else if (isVectorList(*x)) {
         if (level != 2) {
@@ -3389,7 +3394,8 @@ static SEXP VectorAssignSeq (SEXP call,
     /* Here we make sure that the LHS has been coerced into a form which can
        accept elements from the RHS. */
 
-    SubassignTypeFix (&x, &y, &y_grad, end > length(x) ? end : 0, 0, call);
+    SubassignTypeFix (&x, &x_grad, &y, &y_grad, 
+                      end > length(x) ? end : 0, 0, call);
 
     PROTECT(x);
 
@@ -3421,8 +3427,12 @@ static SEXP VectorAssignSeq (SEXP call,
         /* nothing to do */
     }
     else if (isVectorAtomic(x)) {
-        if (TYPEOF(x) == TYPEOF(y))
+        if (TYPEOF(x) == TYPEOF(y)) {
             copy_elements_recycled (x, start-1, y, n);
+            if (x_grad != R_NilValue || y_grad != R_NilValue)
+/*               res_grad = subassign_range_numeric_gradient 
+                             (x_grad, y_grad, start-1, end-1, n) */;
+        }
         else if (isVectorAtomic(y)) {
             copy_elements_coerced (x, start-1, 1, y, 0, 1, ny);
             if (n > ny)
@@ -3562,7 +3572,7 @@ static SEXP VectorAssign (SEXP call, SEXP x, SEXP x_grad,
     /* Here we make sure that the LHS has */
     /* been coerced into a form which can */
     /* accept elements from the RHS. */
-    SubassignTypeFix(&x, &y, &y_grad, stretch, 1, call);
+    SubassignTypeFix (&x, &x_grad, &y, &y_grad, stretch, 1, call);
     if (n == 0) {
         UNPROTECT(2);
         return x;
@@ -3844,6 +3854,7 @@ static SEXP VectorAssign (SEXP call, SEXP x, SEXP x_grad,
 
 static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 {
+    SEXP x_grad = R_NilValue;
     SEXP y_grad = R_NilValue;
 
     int i, j, iy;
@@ -3923,7 +3934,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 	errorcall(call,
        _("number of items to replace is not a multiple of replacement length"));
 
-    SubassignTypeFix(&x, &y, &y_grad, 0, 1, call);
+    SubassignTypeFix (&x, &x_grad, &y, &y_grad, 0, 1, call);
     if (n == 0) {
         UNPROTECT(2);
         R_scalar_stack = sv_scalar_stack;
@@ -4316,6 +4327,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 
 static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 {
+    SEXP x_grad = R_NilValue;
     SEXP y_grad = R_NilValue;
 
     int i, j, ii, iy, k=0, ny;
@@ -4331,7 +4343,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     /* Here we make sure that the LHS has been coerced into */
     /* a form which can accept elements from the RHS. */
 
-    SubassignTypeFix(&x, &y, &y_grad, 0, 1, call);
+    SubassignTypeFix (&x, &x_grad, &y, &y_grad, 0, 1, call);
 
     PROTECT(x);
 
@@ -5037,7 +5049,7 @@ SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x,
         }
         else {
 
-            SubassignTypeFix (&x, &y, &y_grad, stretch, 2, call);
+            SubassignTypeFix (&x, &x_grad, &y, &y_grad, stretch, 2, call);
     
             if (NAMEDCNT_GT_1(x) || x == y)
                 x = dup_top_level(x);

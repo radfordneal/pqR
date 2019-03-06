@@ -968,6 +968,8 @@ with gradient (a=3.01) {
   r
 }
 
+with gradient (a=c(6,3,5)) { a[2] <- list(a[[1]]^2); a }
+
 with gradient (a=3.01) {
   r <- list(w=-a,x=a^2,y=a^3,z=a^4)
   print(gradient_of(r))
