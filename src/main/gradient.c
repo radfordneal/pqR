@@ -456,6 +456,10 @@ R_inspect(grad); REprintf("--\n");
 
     UNPROTECT(1);
     return res;
+#if 0
+REprintf("subset_range_list_gradient end\n");
+R_inspect(grad); REprintf("==\n");
+#endif
 }
 
 
@@ -1125,51 +1129,6 @@ REprintf("==\n");
 }
 
 
-/* Create set of gradients from deleting indexed elements of gradients
-   for a vector list of length n.  Used for [[.]].  Protects its grad argument.
- */
-
-SEXP attribute_hidden delete_indexes_list_gradient (SEXP grad, 
-    R_len_t i, R_len_t j, R_len_t n)
-{
-
-#if 0
-REprintf("*** delete_range_list_gradient %d %d %d\n",i,j,n);
-R_inspect(grad);
-REprintf("--\n");
-#endif
-
-    RECURSIVE_GRADIENT_APPLY (delete_range_list_gradient, grad, i, j, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
-	
-    if (i < 0) i = 0;
-    if (i >= n) i = n-1;
-    if (j >= n) j = n-1;
-
-    if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
-
-    if (j < i)
-        return grad;
-
-    PROTECT(grad);
-
-    SEXP res = allocVector (VECSXP, n-(j-i+1));
-    if (i > 0) copy_vector_elements (res, 0, grad, 0, i);
-    if (j < n-1) copy_vector_elements (res, i, grad, i+1, n-1-j);
-
-#if 0
-REprintf("*** delete_range_list_gradient end\n");
-R_inspect(grad);
-REprintf("==\n");
-#endif
-
-    UNPROTECT(1);
-    return res;
-}
-
-
 /* Copy scaled gradients from those in grad, which is protected here.  The
    length of the value is given by n.  If grad is shorter, it is recycled. */
 
@@ -1319,6 +1278,120 @@ LENGTH(grad),LENGTH(factors),GRADIENT_WRT_LEN(grad));
     } \
     UNPROTECT(2); \
 } while (0)
+
+
+/* Create set of gradients from grad that account for assigning a range
+   of elements gradients from v (recycled) for a vector list, extending 
+   to length n.
+
+   Protects its grad and v arguments. */
+
+SEXP attribute_hidden subassign_range_list_gradient 
+                        (SEXP grad, SEXP v, R_len_t i, R_len_t j, R_len_t n)
+{
+#if 0
+REprintf("*** subassign_range_list_gradient %d %d %d\n",i,j,n);
+R_inspect(grad);
+REprintf("--\n");
+R_inspect(v);
+#endif
+
+    RECURSIVE_GRADIENT_APPLY2 (subassign_range_list_gradient, grad, v, i, j, n);
+
+    if (grad == R_NilValue && v == R_NilValue)
+        return R_NilValue;
+
+    PROTECT2(grad,v);
+
+    if (grad == R_NilValue) 
+        grad = allocVector (VECSXP, n);
+    else {
+        if (TYPEOF(grad) != VECSXP) abort();
+        grad = dup_top_level(grad);
+        if (LENGTH(grad) < n) grad = reallocVector (grad, n, 1);
+    }
+
+    R_len_t k;
+    if (v == R_NilValue || LENGTH(v) == 0) {
+        for (k = 0; k <= j-i; k++)
+            SET_VECTOR_ELT (grad, i+k, R_NilValue);
+    }
+    else {
+        R_len_t lenv = LENGTH(v);
+        for (k = 0; k <= j-i; k++)
+            SET_VECTOR_ELT (grad, i+k, VECTOR_ELT (v, k % lenv));
+    }
+
+#if 0
+REprintf("*** subassign_range_list_gradient end\n");
+R_inspect(grad);
+REprintf("==\n");
+#endif
+
+    UNPROTECT(2);
+    return grad;
+}
+
+
+/* Create set of gradients from grad that account for assigning indexed
+   elements of a vector list gradients from v (recycled), extending to length n.
+
+   Protects its grad and v arguments. */
+
+SEXP attribute_hidden subassign_indexes_list_gradient 
+                        (SEXP grad, SEXP v, SEXP indx, R_len_t n)
+{
+#if 0
+REprintf("*** subassign_indexes_list_gradient %d\n",n);
+R_inspect(grad);
+REprintf("--\n");
+R_inspect(v);
+#endif
+
+    RECURSIVE_GRADIENT_APPLY2 (subassign_indexes_list_gradient, grad, v, 
+                               indx, n);
+
+    if (grad == R_NilValue && v == R_NilValue)
+        return R_NilValue;
+
+    PROTECT2(grad,v);
+
+    if (grad == R_NilValue) 
+        grad = allocVector (VECSXP, n);
+    else {
+        if (TYPEOF(grad) != VECSXP) abort();
+        grad = dup_top_level(grad);
+        if (LENGTH(grad) < n) grad = reallocVector (grad, n, 1);
+    }
+
+    if (v == R_NilValue || LENGTH(v) == 0) {
+        R_len_t lenv = LENGTH(v);
+        R_len_t k = LENGTH(indx);
+        for (R_len_t j = 0; j < k; j++) {
+            R_len_t i = INTEGER(indx)[j];
+            if (i >= 1 && i <= n)
+                SET_VECTOR_ELT (grad, i-1, R_NilValue);
+        }
+    }
+    else {
+        R_len_t lenv = LENGTH(v);
+        R_len_t k = LENGTH(indx);
+        for (R_len_t j = 0; j < k; j++) {
+            R_len_t i = INTEGER(indx)[j];
+            if (i >= 1 && i <= n)
+                SET_VECTOR_ELT (grad, i-1, VECTOR_ELT (v, j % lenv));
+        }
+    }
+
+#if 0
+REprintf("*** subassign_indexes_list_gradient end\n");
+R_inspect(grad);
+REprintf("==\n");
+#endif
+
+    UNPROTECT(2);
+    return grad;
+}
 
 
 /* Create set of gradients from grad that account for assigning an element

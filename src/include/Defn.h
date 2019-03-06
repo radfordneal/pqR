@@ -1411,7 +1411,9 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define strIsASCII		Rf_strIsASCII
 # define StrToInternal		Rf_StrToInternal
 # define subassign_list_gradient Rf_subassign_list_gradient
+# define subassign_indexes_list_gradient Rf_subassign_indexes_list_gradient
 # define subassign_numeric_gradient Rf_subassign_numeric_gradient
+# define subassign_range_list_gradient Rf_subassign_range_list_gradient
 # define subset2_list_gradient	Rf_subset2_list_gradient
 # define subset_indexes_list_gradient	Rf_subset_indexes_list_gradient
 # define subset_indexes_numeric_gradient Rf_subset_indexes_numeric_gradient
@@ -1667,7 +1669,9 @@ void ssort(SEXP*,int);
 void start_browser (SEXP, SEXP, SEXP, SEXP);
 int StrToInternal(const char *);
 SEXP subassign_list_gradient(SEXP, SEXP, R_len_t, R_len_t);
+SEXP subassign_indexes_list_gradient(SEXP, SEXP, SEXP, R_len_t);
 SEXP subassign_numeric_gradient(SEXP, SEXP, R_len_t, R_len_t);
+SEXP subassign_range_list_gradient(SEXP, SEXP, R_len_t, R_len_t, R_len_t);
 SEXP subset2_list_gradient(SEXP, R_len_t, R_len_t);
 SEXP subset_indexes_list_gradient(SEXP, SEXP, R_len_t);
 SEXP subset_indexes_numeric_gradient(SEXP, SEXP, R_len_t);

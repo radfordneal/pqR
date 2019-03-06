@@ -953,6 +953,14 @@ with gradient (a=3.01) {
 }
 
 with gradient (a=3.01) {
+  r <- list(w=-a,x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r[c(2,4)] <- list(10*a,7*a)
+  r
+}
+
+with gradient (a=3.01) {
   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
   print(gradient_of(r))
   cat("--\n")
@@ -980,7 +988,23 @@ with gradient (a=3.01) {
   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
   print(gradient_of(r))
   cat("--\n")
+  r$x[2] <- list(1/a)
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
   r[[2]][[2]] <- 1/a
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r[[2]][2] <- list(1/a)
   r
 }
 
@@ -997,6 +1021,15 @@ with gradient (a=3.01) {
   print(gradient_of(r))
   cat("--\n")
   r[[2]][[2]] <- NULL
+  r
+}
+
+if (FALSE)
+with gradient (a=3.01) {
+  r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r[[c(2,2)]] <- NULL
   r
 }
 
@@ -1159,6 +1192,14 @@ with gradient (a=3.01) {
   class(r) <- "fred"
   r$x <- -a
   r <- `[[<-` (r, 2, a^2)
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=-1,y=2,z=7)
+  class(r) <- "fred"
+  r$x <- -a
+  r <- `[<-` (r, c(3,2), list(a^2,a^3))
   r
 }
 

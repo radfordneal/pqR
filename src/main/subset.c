@@ -3442,6 +3442,9 @@ static SEXP VectorAssignSeq (SEXP call,
                 }
             }
         }
+        if (x_grad != R_NilValue || y_grad != R_NilValue)
+            res_grad = subassign_range_list_gradient 
+                         (x_grad, y_grad, start-1, end-1, n);
     }
     else if (isVectorList(x) && y == R_NilValue) {
 	x = DeleteListElementsSeq (x, x_grad, start, end);
@@ -3785,6 +3788,9 @@ static SEXP VectorAssign (SEXP call, SEXP x, SEXP x_grad,
                 if (++k == ny) k = 0;
             }
         }
+        if (x_grad != R_NilValue || y_grad != R_NilValue)
+            res_grad = subassign_indexes_list_gradient 
+                         (x_grad, y_grad, indx, nx);
         break;
 
     case (EXPRSXP<<5) + NILSXP:
