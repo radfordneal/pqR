@@ -1072,6 +1072,17 @@ with gradient (a=c(5.1,7.2,3.9,0.7)) { a[c(3,1)] <- 4; a }
 with gradient (a=c(5.1,7.2,3.9,0.7)) { a[c(3,1)] <- a[4]^2; a }
 with gradient (a=c(5.1,7.2,3.9,0.7)) { b<-numeric(5); b[4..5]<-a[c(3,1)]; b }
 
+with gradient (a=array(list(1.0,7.2,3.9,0.7,9.9,1.2,8.8,6.0),c(2,2,2))) { 
+  a[1,1,1] <- a[2,2,2]
+  a[2,c(1,2),c(2,1)] <- a[[1,1,1]]^2
+  a[1,c(1,2),1] <- list(a[[1,1,1]]^3,a[[1,1,1]]^4)
+  a[1,2,2] <- 99
+  a
+}
+
+
+# Subassignment with user-defined subassignment functions.
+
 xel <- function (a) a$x
 `xel<-` <- function (a,value) { a$x <- value; a }
 

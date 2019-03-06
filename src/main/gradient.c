@@ -975,14 +975,14 @@ REprintf("&&\n"); R_inspect(res);
    its grad argument. */
 
 SEXP attribute_hidden array_subset_indexes_list_gradient (SEXP grad, 
-    int **subs, int *nsubs, int *offset, R_len_t k, R_len_t n)
+    int **subs, int *bound, int *offset, R_len_t k, R_len_t n)
 {
 #if 0
 REprintf("array_subset_indexes_list_gradient %d %d\n",k,n);
 R_inspect(grad); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (array_subset_indexes_list_gradient,
-                              grad, subs, nsubs, offset, k, n);
+                              grad, subs, bound, offset, k, n);
 
     if (grad == R_NilValue)
         return R_NilValue;
@@ -997,7 +997,7 @@ R_inspect(grad); REprintf("--\n");
 
     m = 1;
     for (j = 0; j < k; j++) {
-        m *= nsubs[j];
+        m *= bound[j];
         indx[j] = 0;
     }
 
@@ -1006,7 +1006,7 @@ R_inspect(grad); REprintf("--\n");
 
     for (i = 0; !last; i++) {
         R_len_t ii;
-        ii = array_offset_from_index (subs, nsubs, indx, offset, k, 1, &last);
+        ii = array_offset_from_index (subs, bound, indx, offset, k, 1, &last);
         if (ii != NA_INTEGER)
             SET_VECTOR_ELT (res, i, VECTOR_ELT (grad, ii));
     }
@@ -1023,14 +1023,14 @@ R_inspect(grad); REprintf("--\n");
    its grad argument. */
 
 SEXP attribute_hidden array_subset_indexes_numeric_gradient (SEXP grad, 
-    int **subs, int *nsubs, int *offset, R_len_t k, R_len_t n)
+    int **subs, int *bound, int *offset, R_len_t k, R_len_t n)
 {
 #if 0
 REprintf("array_subset_indexes_numeric_gradient %d %d\n",k,n);
 R_inspect(grad); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (array_subset_indexes_numeric_gradient,
-                              grad, subs, nsubs, offset, k, n);
+                              grad, subs, bound, offset, k, n);
 
     if (grad == R_NilValue)
         return R_NilValue;
@@ -1046,7 +1046,7 @@ R_inspect(grad); REprintf("--\n");
 
     m = 1;
     for (j = 0; j < k; j++) {
-        m *= nsubs[j];
+        m *= bound[j];
         indx[j] = 0;
     }
 
@@ -1059,7 +1059,7 @@ R_inspect(grad); REprintf("--\n");
 
     for (i = 0; !last; i++) {
         R_len_t ii;
-        ii = array_offset_from_index (subs, nsubs, indx, offset, k, 1, &last);
+        ii = array_offset_from_index (subs, bound, indx, offset, k, 1, &last);
         if (ii == NA_INTEGER) {
             for (v = 0; v < gvars; v++)
                 REAL(res)[i+v*m] = NA_INTEGER;
@@ -1599,6 +1599,76 @@ REprintf("==\n");
 
     UNPROTECT(2);
     return grad;
+}
+
+/* Create set of gradients from grad that account for assigning indexed
+   elements of a vector list array gradients from v (recycled), extending
+   to length n.
+
+   Protects its grad and v arguments. */
+
+SEXP attribute_hidden array_subassign_indexes_list_gradient (SEXP grad, SEXP v,
+                      int **subs, int *bound, int *offset, R_len_t k, R_len_t n)
+{
+#if 0
+REprintf("*** array_subassign_indexes_list_gradient %d %d\n",k,n);
+R_inspect(grad);
+REprintf("--\n");
+R_inspect(v);
+#endif
+
+    RECURSIVE_GRADIENT_APPLY2 (array_subassign_indexes_list_gradient, grad, v, 
+                               subs, bound, offset, k, n);
+
+    if (grad == R_NilValue && v == R_NilValue)
+        return R_NilValue;
+
+    PROTECT2(grad,v);
+    SEXP res;
+
+    if (grad == R_NilValue) 
+        res = allocVector (VECSXP, n);
+    else {
+        if (TYPEOF(grad) != VECSXP) abort();
+        res = dup_top_level(grad);
+        if (LENGTH(res) < n) res = reallocVector (res, n, 1);
+    }
+
+    int last = 0;
+    int indx[k];
+    int j;
+
+    for (j = 0; j < k; j++) indx[j] = 0;
+
+    if (v == R_NilValue || LENGTH(v) == 0) {
+        while (!last) {
+            R_len_t ii;
+            ii = array_offset_from_index (subs, bound, indx, offset, 
+                                          k, 0, &last);
+            SET_VECTOR_ELT (res, ii, R_NilValue);
+        }
+    }
+    else {
+        if (TYPEOF(v) != VECSXP) abort();
+        R_len_t lenv = LENGTH(v);
+        R_len_t i = 0;
+        while (!last) {
+            R_len_t ii;
+            ii = array_offset_from_index (subs, bound, indx, offset, 
+                                          k, 0, &last);
+            SET_VECTOR_ELT (res, ii, VECTOR_ELT (v, i));
+            if (++i == lenv) i = 0;
+        }
+    }
+
+#if 0
+REprintf("*** array_subassign_indexes_list_gradient end\n");
+R_inspect(grad);
+REprintf("==\n");
+#endif
+
+    UNPROTECT(2);
+    return res;
 }
 
 

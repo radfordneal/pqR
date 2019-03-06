@@ -4510,6 +4510,13 @@ static SEXP ArrayAssign (SEXP call, SEXP x, SEXP x_grad,
         if (++i == ny) i = 0;
     }
 
+    if (x_grad != R_NilValue || y_grad != R_NilValue) {
+        if (TYPEOF(x) == VECSXP) {
+            res_grad = array_subassign_indexes_list_gradient
+                         (x_grad, y_grad, subs, bound, offset, k, LENGTH(x));
+        }
+    }
+
     if (res_grad != R_NilValue) {
         R_gradient = res_grad;
         R_variant_result = VARIANT_GRADIENT_FLAG;

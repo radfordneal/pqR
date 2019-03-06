@@ -701,7 +701,7 @@ INLINE_FUN R_len_t array_offset_from_index
         ii = jj-1;
         for (j = 1; j < k; j++) {
             jj = subs[j][indx[j]];
-            if (jj == NA_INTEGER)
+            if (chkNA && jj == NA_INTEGER)
                 break;
             ii += (jj-1) * offset[j];
         }

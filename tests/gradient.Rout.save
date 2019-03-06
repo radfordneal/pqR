@@ -5950,6 +5950,238 @@ attr(,"gradient")
 [4,]    0    0    1    0
 [5,]    1    0    0    0
 > 
+> with gradient (a=array(list(1.0,7.2,3.9,0.7,9.9,1.2,8.8,6.0),c(2,2,2))) { 
++   a[1,1,1] <- a[2,2,2]
++   a[2,c(1,2),c(2,1)] <- a[[1,1,1]]^2
++   a[1,c(1,2),1] <- list(a[[1,1,1]]^3,a[[1,1,1]]^4)
++   a[1,2,2] <- 99
++   a
++ }
+, , 1
+
+     [,1] [,2]
+[1,] 216  1296
+[2,] 36   36  
+
+, , 2
+
+     [,1] [,2]
+[1,] 9.9  99  
+[2,] 36   36  
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 0
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+attr(,"gradient")[[1]][[5]]
+[1] 0
+
+attr(,"gradient")[[1]][[6]]
+[1] 0
+
+attr(,"gradient")[[1]][[7]]
+[1] 0
+
+attr(,"gradient")[[1]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 0
+
+attr(,"gradient")[[2]][[3]]
+[1] 0
+
+attr(,"gradient")[[2]][[4]]
+[1] 0
+
+attr(,"gradient")[[2]][[5]]
+[1] 0
+
+attr(,"gradient")[[2]][[6]]
+[1] 0
+
+attr(,"gradient")[[2]][[7]]
+[1] 0
+
+attr(,"gradient")[[2]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0
+
+attr(,"gradient")[[3]][[3]]
+[1] 0
+
+attr(,"gradient")[[3]][[4]]
+[1] 0
+
+attr(,"gradient")[[3]][[5]]
+[1] 0
+
+attr(,"gradient")[[3]][[6]]
+[1] 0
+
+attr(,"gradient")[[3]][[7]]
+[1] 0
+
+attr(,"gradient")[[3]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[4]]
+attr(,"gradient")[[4]][[1]]
+[1] 0
+
+attr(,"gradient")[[4]][[2]]
+[1] 0
+
+attr(,"gradient")[[4]][[3]]
+[1] 0
+
+attr(,"gradient")[[4]][[4]]
+[1] 0
+
+attr(,"gradient")[[4]][[5]]
+[1] 0
+
+attr(,"gradient")[[4]][[6]]
+[1] 0
+
+attr(,"gradient")[[4]][[7]]
+[1] 0
+
+attr(,"gradient")[[4]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[5]]
+attr(,"gradient")[[5]][[1]]
+[1] 0
+
+attr(,"gradient")[[5]][[2]]
+[1] 0
+
+attr(,"gradient")[[5]][[3]]
+[1] 0
+
+attr(,"gradient")[[5]][[4]]
+[1] 0
+
+attr(,"gradient")[[5]][[5]]
+[1] 1
+
+attr(,"gradient")[[5]][[6]]
+[1] 0
+
+attr(,"gradient")[[5]][[7]]
+[1] 0
+
+attr(,"gradient")[[5]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[6]]
+attr(,"gradient")[[6]][[1]]
+[1] 0
+
+attr(,"gradient")[[6]][[2]]
+[1] 0
+
+attr(,"gradient")[[6]][[3]]
+[1] 0
+
+attr(,"gradient")[[6]][[4]]
+[1] 0
+
+attr(,"gradient")[[6]][[5]]
+[1] 0
+
+attr(,"gradient")[[6]][[6]]
+[1] 0
+
+attr(,"gradient")[[6]][[7]]
+[1] 0
+
+attr(,"gradient")[[6]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[7]]
+attr(,"gradient")[[7]][[1]]
+[1] 0
+
+attr(,"gradient")[[7]][[2]]
+[1] 0
+
+attr(,"gradient")[[7]][[3]]
+[1] 0
+
+attr(,"gradient")[[7]][[4]]
+[1] 0
+
+attr(,"gradient")[[7]][[5]]
+[1] 0
+
+attr(,"gradient")[[7]][[6]]
+[1] 0
+
+attr(,"gradient")[[7]][[7]]
+[1] 0
+
+attr(,"gradient")[[7]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[8]]
+attr(,"gradient")[[8]][[1]]
+[1] 108
+
+attr(,"gradient")[[8]][[2]]
+[1] 12
+
+attr(,"gradient")[[8]][[3]]
+[1] 864
+
+attr(,"gradient")[[8]][[4]]
+[1] 12
+
+attr(,"gradient")[[8]][[5]]
+[1] 0
+
+attr(,"gradient")[[8]][[6]]
+[1] 12
+
+attr(,"gradient")[[8]][[7]]
+[1] 0
+
+attr(,"gradient")[[8]][[8]]
+[1] 12
+
+
+> 
+> 
+> # Subassignment with user-defined subassignment functions.
+> 
 > xel <- function (a) a$x
 > `xel<-` <- function (a,value) { a$x <- value; a }
 > 
