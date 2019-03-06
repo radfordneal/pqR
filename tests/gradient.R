@@ -953,6 +953,22 @@ with gradient (a=3.01) {
 }
 
 with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r[4] <- list(-a)
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r[4] <- -a
+  r
+}
+
+with gradient (a=3.01) {
   r <- list(w=-a,x=a^2,y=a^3,z=a^4)
   print(gradient_of(r))
   cat("--\n")

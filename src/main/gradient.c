@@ -403,6 +403,44 @@ static inline SEXP get_other_gradients (SEXP xenv)
 } while (0)
 
 
+/* Create set of gradients from converting a numeric vector of length n
+   to a list.  Protects its grad argument. */
+
+SEXP attribute_hidden as_list_gradient (SEXP grad, R_len_t n)
+{
+#if 0
+REprintf("as_list_gradient %d\n",n);
+R_inspect(grad); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY (as_list_gradient, grad, n);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+	
+    if (TYPEOF(grad) != REALSXP) abort();
+
+    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+
+    if (LENGTH(grad) != n * gvars) abort();
+
+    SEXP res = allocVector (VECSXP, n);
+    PROTECT(res);
+
+    for (R_len_t i = 0; i < n; i++) {
+        SEXP r = allocVector(REALSXP,gvars);
+        SET_VECTOR_ELT (res, i, r);
+        memcpy (REAL(r), REAL(grad)+i*gvars, gvars * sizeof(double));
+    }
+
+    UNPROTECT(1);
+#if 0
+REprintf("as_list_gradient end\n",n);
+R_inspect(res); REprintf("==\n");
+#endif
+    return res;
+}
+
+
 /* Create set of gradients from subsetting the i'th element of gradients for 
    a vector list of length n.  Used for [[.]].  Protects its grad argument. */
 
@@ -1365,7 +1403,6 @@ R_inspect(v);
     }
 
     if (v == R_NilValue || LENGTH(v) == 0) {
-        R_len_t lenv = LENGTH(v);
         R_len_t k = LENGTH(indx);
         for (R_len_t j = 0; j < k; j++) {
             R_len_t i = INTEGER(indx)[j];
@@ -1374,6 +1411,7 @@ R_inspect(v);
         }
     }
     else {
+        if (TYPEOF(v) != VECSXP) abort();
         R_len_t lenv = LENGTH(v);
         R_len_t k = LENGTH(indx);
         for (R_len_t j = 0; j < k; j++) {
