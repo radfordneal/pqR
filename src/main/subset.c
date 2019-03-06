@@ -3863,11 +3863,10 @@ static SEXP VectorAssign (SEXP call, SEXP x, SEXP x_grad,
     return x;
 }
 
-static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
+static SEXP MatrixAssign (SEXP call, SEXP x, SEXP x_grad,
+                          SEXP sb1, SEXP sb2, SEXP y, SEXP y_grad)
 {
-    SEXP x_grad = R_NilValue;
-    SEXP y_grad = R_NilValue;
-
+    SEXP res_grad = R_NilValue;
     int i, j, iy;
     int rhasna, chasna;
     int_fast64_t n;
@@ -3892,9 +3891,10 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
     ncs = LENGTH(sc);
 
     /* Do assignment of a single atomic element with matching scalar type,
-       not being computed, specially. */
+       not being computed, specially.  Also, don't handle gradients, yet. */
 
     if (nrs == 1 && ncs == 1 && isVectorAtomic(x)
+          && x_grad == R_NilValue && y_grad == R_NilValue
           && (TYPE_ETC(y) & ~TYPE_ET_CETERA_HAS_ATTR) == TYPEOF(x)) {
         if (*INTEGER(sr) != NA_INTEGER && *INTEGER(sc) != NA_INTEGER) {
             R_len_t isub = (*INTEGER(sr)-1) + (*INTEGER(sc)-1) * nr;
@@ -3953,7 +3953,6 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
     }
 
     PROTECT(x);
-
 
     /* When array elements are being permuted the RHS must be
        duplicated or the elements get trashed.  FIXME : this should be
@@ -4330,17 +4329,21 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
         }
     }
 
+    if (res_grad != R_NilValue) {
+        R_gradient = res_grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     UNPROTECT(4);
     R_scalar_stack = sv_scalar_stack;
     return x;
 }
 
 
-static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
+static SEXP ArrayAssign (SEXP call, SEXP x, SEXP x_grad, 
+                         SEXP s, SEXP y, SEXP y_grad)
 {
-    SEXP x_grad = R_NilValue;
-    SEXP y_grad = R_NilValue;
-
+    SEXP res_grad = R_NilValue;
     int i, j, ii, iy, k=0, ny;
     int rep_assign = 0; /* 1 if elements assigned repeatedly into list array */
     int any_hasna = 0;
@@ -4544,6 +4547,12 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     }
 
   done:
+
+    if (res_grad != R_NilValue) {
+        R_gradient = res_grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     UNPROTECT(k+3);
     R_scalar_stack = sv_scalar_stack;
     return x;
@@ -4743,12 +4752,12 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x, SEXP x_grad,
     }
     else if (subs == R_NilValue) {
         /* 2 subscript arguments */
-        x = MatrixAssign(call, x, sb1, sb2, y);
+        x = MatrixAssign(call, x, x_grad, sb1, sb2, y, y_grad);
     }
     else {
         /* More than 2 subscript arguments */
         subs = CONS(sb1,CONS(sb2,subs));
-        x = ArrayAssign(call, x, subs, y);
+        x = ArrayAssign(call, x, x_grad, subs, y, y_grad);
     }
 
     if (oldtype == LANGSXP) {

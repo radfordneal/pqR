@@ -688,7 +688,7 @@ INLINE_FUN void getBlockSrcrefs(SEXP call, SEXP **refs, int *len)
    Sets 'last' to one if this is the last index.*/
 
 INLINE_FUN R_len_t array_offset_from_index
-   (int **subs, int *nsubs, int *indx, int *offset, int k, int *last)
+   (int **subs, int *bound, int *indx, int *offset, int k, int *last)
 {
     R_len_t ii, jj;
     int j;
@@ -708,7 +708,7 @@ INLINE_FUN R_len_t array_offset_from_index
     }
 
     j = 0;
-    while (++indx[j] >= nsubs[j]) {
+    while (++indx[j] >= bound[j]) {
         indx[j] = 0;
         if (++j >= k) {
             *last = 1;
