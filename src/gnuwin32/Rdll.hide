@@ -434,8 +434,10 @@
  Rf_stirlerr
  Rf_subassign_list_gradient
  Rf_subassign_indexes_list_gradient
+ Rf_subassign_indexes_numeric_gradient
  Rf_subassign_numeric_gradient
  Rf_subassign_range_list_gradient
+ Rf_subassign_range_numeric_gradient
  Rf_subset2_list_gradient
  Rf_subset_indexes_list_gradient
  Rf_subset_indexes_numeric_gradient

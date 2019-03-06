@@ -428,6 +428,7 @@ R_inspect(grad); REprintf("--\n");
 
     for (R_len_t i = 0; i < n; i++) {
         SEXP r = allocVector(REALSXP,gvars);
+        SET_GRADIENT_WRT_LEN (r, gvars);
         SET_VECTOR_ELT (res, i, r);
         memcpy (REAL(r), REAL(grad)+i*gvars, gvars * sizeof(double));
     }
@@ -609,6 +610,7 @@ R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
     if ((uint64_t)m * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
 
     SEXP res = allocVector (REALSXP, m * gvars);
+    SET_GRADIENT_WRT_LEN (res, gvars);
     
     for (R_len_t j = 0; j < m; j++) {
         R_len_t i = INTEGER(indx)[j];
@@ -1051,6 +1053,8 @@ R_inspect(grad); REprintf("--\n");
     if ((uint64_t)m * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
 
     SEXP res = allocVector (REALSXP, m * gvars);
+    SET_GRADIENT_WRT_LEN (res, gvars);
+
     int last = 0;
 
     for (i = 0; !last; i++) {
@@ -1319,8 +1323,7 @@ LENGTH(grad),LENGTH(factors),GRADIENT_WRT_LEN(grad));
 
 
 /* Create set of gradients from grad that account for assigning a range
-   of elements gradients from v (recycled) for a vector list, extending 
-   to length n.
+   of elements from v (recycled) to a vector list, extending to length n.
 
    Protects its grad and v arguments. */
 
@@ -1368,6 +1371,173 @@ REprintf("==\n");
 
     UNPROTECT(2);
     return grad;
+}
+
+
+/* Create set of gradients from grad that account for assigning a range
+   of elements from v (recycled) to a numeric vector, extending to length n.
+
+   Protects its grad and v arguments. */
+
+SEXP attribute_hidden subassign_range_numeric_gradient 
+                        (SEXP grad, SEXP v, R_len_t i, R_len_t j, R_len_t n)
+{
+#if 0
+REprintf("*** subassign_range_numeric_gradient %d %d %d\n",i,j,n);
+R_inspect(grad);
+REprintf("--\n");
+R_inspect(v);
+#endif
+
+    RECURSIVE_GRADIENT_APPLY2 (subassign_range_numeric_gradient, grad, v,
+                               i, j, n);
+
+    if (grad == R_NilValue && v == R_NilValue)
+        return R_NilValue;
+
+    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
+    if (v != R_NilValue && TYPEOF(v) != REALSXP) abort();
+
+    if (i < 0) i = 0;
+    if (i >= n) i = n-1;
+    if (j >= n) j = n-1;
+    if (j < i) abort();
+
+    PROTECT2(grad,v);
+
+    R_len_t gvars = GRADIENT_WRT_LEN (grad != R_NilValue ? grad : v);
+
+    R_len_t h, k, m;
+    SEXP res;
+
+    if ((uint64_t)n * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
+
+    if (grad == R_NilValue) {
+        res = allocVector (REALSXP, n * gvars);
+        memset (REAL(res), 0, LENGTH(res) * sizeof(double));
+    }
+    else {
+        if (TYPEOF(grad) != REALSXP) abort();
+        if (LENGTH(grad) == n * gvars)
+            res = duplicate(grad);
+        else {
+            res = allocVector (REALSXP, n * gvars);
+            m = LENGTH(grad) / gvars;
+            for (h = 0; h < gvars; h++) {
+                memcpy (REAL(res) + h*n, REAL(grad) + h*m, m * sizeof(double));
+                memset (REAL(res) + h*n + m, 0, (n-m) * sizeof(double));
+            }
+        }
+    }
+
+    SET_GRADIENT_WRT_LEN (res, gvars);
+
+    if (v == R_NilValue || LENGTH(v) == 0) {
+        for (h = 0; h < gvars; h++)
+            for (k = 0; k <= j-i; k++)
+                REAL(res)[h*n + (i + k)] = 0;
+    }
+    else {
+        m = LENGTH(v) / gvars;
+        if (m * gvars != LENGTH(v)) abort();
+        for (h = 0; h < gvars; h++)
+            for (k = 0; k <= j-i; k++)
+                REAL(res)[h*n + (i + k)] = REAL(v)[h*m + k % m];
+    }
+
+#if 0
+REprintf("*** subassign_range_numeric_gradient end\n");
+R_inspect(res);
+REprintf("==\n");
+#endif
+
+    UNPROTECT(2);
+    return res;
+}
+
+
+/* Create set of gradients from grad that account for assigning indexed
+   elements from v (recycled) to a numeric vector, extending to length n.
+
+   Protects its grad and v arguments. */
+
+SEXP attribute_hidden subassign_indexes_numeric_gradient 
+                        (SEXP grad, SEXP v, SEXP indx, R_len_t n)
+{
+#if 0
+REprintf("*** subassign_indexes_numeric_gradient %d\n",n);
+R_inspect(grad);
+REprintf("--\n");
+R_inspect(v);
+#endif
+
+    RECURSIVE_GRADIENT_APPLY2 (subassign_indexes_numeric_gradient, grad, v,
+                               indx, n);
+
+    if (grad == R_NilValue && v == R_NilValue)
+        return R_NilValue;
+
+    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
+    if (v != R_NilValue && TYPEOF(v) != REALSXP) abort();
+
+    PROTECT2(grad,v);
+
+    R_len_t gvars = GRADIENT_WRT_LEN (grad != R_NilValue ? grad : v);
+
+    R_len_t h, m;
+    SEXP res;
+
+    if ((uint64_t)n * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
+
+    if (grad == R_NilValue) {
+        res = allocVector (REALSXP, n * gvars);
+        memset (REAL(res), 0, LENGTH(res) * sizeof(double));
+    }
+    else {
+        if (TYPEOF(grad) != REALSXP) abort();
+        if (LENGTH(grad) == n * gvars)
+            res = duplicate(grad);
+        else {
+            res = allocVector (REALSXP, n * gvars);
+            m = LENGTH(grad) / gvars;
+            for (h = 0; h < gvars; h++) {
+                memcpy (REAL(res) + h*n, REAL(grad) + h*m, m * sizeof(double));
+                memset (REAL(res) + h*n + m, 0, (n-m) * sizeof(double));
+            }
+        }
+    }
+
+    SET_GRADIENT_WRT_LEN (res, gvars);
+
+    R_len_t k = LENGTH(indx);
+
+    if (v == R_NilValue || LENGTH(v) == 0) {
+        for (R_len_t j = 0; j < k; j++) {
+            R_len_t i = INTEGER(indx)[j];
+            if (i >= 1 && i <= n)
+                for (h = 0; h < gvars; h++)
+                    REAL(res) [h*n + i-1] = 0.0;
+        }
+    }
+    else {
+        if (TYPEOF(v) != REALSXP) abort();
+        m = LENGTH(v) / gvars;
+        for (R_len_t j = 0; j < k; j++) {
+            R_len_t i = INTEGER(indx)[j];
+            if (i >= 1 && i <= n)
+                for (h = 0; h < gvars; h++)
+                    REAL(res) [h*n + i-1] = REAL(v) [h*m + j % m];
+        }
+    }
+
+#if 0
+REprintf("*** subassign_indexes_numeric_gradient end\n");
+R_inspect(res);
+REprintf("==\n");
+#endif
+
+    UNPROTECT(2);
+    return res;
 }
 
 

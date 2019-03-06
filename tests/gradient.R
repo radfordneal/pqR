@@ -1067,6 +1067,11 @@ with gradient (a=3.01) {
   r
 }
 
+with gradient (a=c(5.1,7.2,3.9,0.7)) { a[3] <- 4; a }
+with gradient (a=c(5.1,7.2,3.9,0.7)) { a[c(3,1)] <- 4; a }
+with gradient (a=c(5.1,7.2,3.9,0.7)) { a[c(3,1)] <- a[4]^2; a }
+with gradient (a=c(5.1,7.2,3.9,0.7)) { b<-numeric(5); b[4..5]<-a[c(3,1)]; b }
+
 xel <- function (a) a$x
 `xel<-` <- function (a,value) { a$x <- value; a }
 

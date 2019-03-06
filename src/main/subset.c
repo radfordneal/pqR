@@ -3430,13 +3430,16 @@ static SEXP VectorAssignSeq (SEXP call,
         if (TYPEOF(x) == TYPEOF(y)) {
             copy_elements_recycled (x, start-1, y, n);
             if (x_grad != R_NilValue || y_grad != R_NilValue)
-/*               res_grad = subassign_range_numeric_gradient 
-                             (x_grad, y_grad, start-1, end-1, n) */;
+               res_grad = subassign_range_numeric_gradient 
+                             (x_grad, y_grad, start-1, end-1, n);
         }
         else if (isVectorAtomic(y)) {
             copy_elements_coerced (x, start-1, 1, y, 0, 1, ny);
             if (n > ny)
                 Rf_recycled_copy (x, start-1, ny, n);
+            if (x_grad != R_NilValue)
+               res_grad = subassign_range_numeric_gradient 
+                             (x_grad, R_NilValue, start-1, end-1, n);
         }
         else
             goto warn;
@@ -3819,6 +3822,14 @@ static SEXP VectorAssign (SEXP call, SEXP x, SEXP x_grad,
 
     default:
         warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
+    }
+
+    if ((x_grad != R_NilValue || y_grad != R_NilValue)) {
+        if (TYPEOF(x) == REALSXP) {  /* maybe always?  but just in case... */
+            if (TYPEOF(y) != REALSXP) y_grad = R_NilValue;
+            res_grad = subassign_indexes_numeric_gradient (x_grad, y_grad,
+                                                           indx, nx);
+        }
     }
 
     /* Check for additional named elements, if subscripting with strings. */
