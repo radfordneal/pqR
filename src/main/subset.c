@@ -4923,6 +4923,8 @@ SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x,
     if (nsubs == 1) { /* One vector index for a list. */
         len = length(sb1);
         if (len > 1) {
+            x_grad = R_NilValue;  /* gradient handling not supported when   */
+            y_grad = R_NilValue;  /*   index is a vector, descending levels */
             for (int i = 0; i < len-1; i++) {
                 if (!isVectorList(x) && !isPairList(x))
                     errorcall (call, 

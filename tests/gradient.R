@@ -1024,7 +1024,7 @@ with gradient (a=3.01) {
   r
 }
 
-if (FALSE)
+if (FALSE)  # not supported yet
 with gradient (a=3.01) {
   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
   print(gradient_of(r))

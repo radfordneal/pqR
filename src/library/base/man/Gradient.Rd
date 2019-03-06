@@ -181,43 +181,42 @@ The following built-in functions and operators will compute gradients,
 with respect to all their real scalar, vector, matrix, or array arguments
 (unless noted), or when applicable, arguments that are lists of reals 
 (or lists of lists of reals, etc.):
-\tabular{l}{
-list \cr
-$ (for vector lists only), $<- (for vector lists only) \cr
-[[ (for vector lists and numeric vectors, including matrices & arrays) \cr
-[[<- (for vector lists and numeric vectors, including matrices & arrays) \cr
-[ (for vector lists and numeric vectors, including matrices & arrays) \cr
-\cr
-+, -, *, /, ^ (+ and - may be unary) \cr
-\cr
-abs, sqrt, expm1, exp, log1p, log2, log10, log (one-argument form only) \cr
-cos, sin, tan, acos, asin, atan, atan2 \cr
-cosh, sinh, tanh, acosh, asinh, atanh \cr
-gamma, lgamma, digamma, trigamma, psigamma, beta, lbeta \cr
-\cr
-dbeta, pbeta (1st argument only), qbeta (1st argument only) \cr
-dchisq (no ncp arg), pchisq (1st only, no ncp), qchisq (1st only, no ncp) \cr
-dbinom, pbinom \cr
-dcauchy, pcauchy, qcauchy, rcauchy \cr
-dexp, pexp, qexp, rexp \cr
-df (no ncp argument), pf (1st arg only, no ncp), qf (1st arg only,no ncp) \cr
-dgamma, pgamma (1st and 3rd args only), qgamma (1st and 3rd args only) \cr
-Note: 3rd argument of dgamma/pgamma/qgamma may be either rate or scale \cr
-dgeom, pgeom \cr
-dlogis, plogis, qlogis, rlogis \cr
-dlnorm, plnorn, qlnorm, rlnorm \cr
-dnbinom (3rd arg (prob or mu) only), pnbinom (3rd arg (prob or mu) only) \cr
-dnorm, pnorm, qnorm, rnorm \cr
-dpois, ppois \cr
-dt (with no ncp arg), pt (1st arg only, no ncp), qt (1st arg only,no ncp) \cr
-dunif, punif, qunif, runif \cr
-dweibull, pweibull, qweibull, rweibull
+\preformatted{  list 
+  $ (for vector lists only), $<- (for vector lists only) 
+  [[ (for vector lists and numeric vectors, including matrices & arrays) 
+  [[<- (for vector lists and numeric vectors, including matrices & arrays; 
+        vector as index (indexing at multiple levels) not support yet) 
+  [ (for vector lists and numeric vectors, including matrices & arrays) 
+  
+  +, -, *, /, ^ (+ and - may be unary) 
+  
+  abs, sqrt, expm1, exp, log1p, log2, log10, log (one-argument form only) 
+  cos, sin, tan, acos, asin, atan, atan2 
+  cosh, sinh, tanh, acosh, asinh, atanh 
+  gamma, lgamma, digamma, trigamma, psigamma, beta, lbeta 
+  
+  dbeta, pbeta (1st argument only), qbeta (1st argument only) 
+  dchisq (no ncp arg), pchisq (1st only, no ncp), qchisq (1st only, no ncp) 
+  dbinom, pbinom 
+  dcauchy, pcauchy, qcauchy, rcauchy 
+  dexp, pexp, qexp, rexp 
+  df (no ncp argument), pf (1st arg only, no ncp), qf (1st arg only,no ncp) 
+  dgamma, pgamma (1st and 3rd args only), qgamma (1st and 3rd args only) 
+  Note: 3rd argument of dgamma/pgamma/qgamma may be either rate or scale 
+  dgeom, pgeom 
+  dlogis, plogis, qlogis, rlogis 
+  dlnorm, plnorn, qlnorm, rlnorm 
+  dnbinom (3rd arg (prob or mu) only), pnbinom (3rd arg (prob or mu) only) 
+  dnorm, pnorm, qnorm, rnorm 
+  dpois, ppois 
+  dt (with no ncp arg), pt (1st arg only, no ncp), qt (1st arg only,no ncp) 
+  dunif, punif, qunif, runif 
+  dweibull, pweibull, qweibull, rweibull
 }
 The following replacement functions do not compute any gradient information,
 but do leave undisturbed any gradient information that is associated with 
 the variable that they update:
-\tabular{l}{
-attr<-
+\preformatted{  attr<-
 }
 }
 
