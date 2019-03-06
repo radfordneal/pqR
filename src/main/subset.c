@@ -2001,7 +2001,7 @@ static SEXP ArraySubset (SEXP x, SEXP x_grad, SEXP s,
 
     for (i = 0; !last; i++) {
 
-        ii = array_offset_from_index (subs, nsubs, indx, offset, k, &last);
+        ii = array_offset_from_index (subs, nsubs, indx, offset, k, 1, &last);
 
         if (ii != NA_INTEGER) {
             switch (mode) {
@@ -4391,7 +4391,6 @@ static SEXP ArrayAssign (SEXP call, SEXP x, SEXP x_grad,
         subs[i] = INTEGER(tmp);
         if (bound[i] == 0) zero = 1;
         if (ny > 1) nmod = ((int_fast64_t)nmod * bound[i]) % ny;
-        indx[i] = 0;
 	s = CDR(s);
     }
 
@@ -4411,10 +4410,10 @@ static SEXP ArrayAssign (SEXP call, SEXP x, SEXP x_grad,
     }
 
     offset[1] = INTEGER(dims)[0];
-    offset[0] = offset[1] + 1;
+    /* offset[0] = offset[1] + 1; */  /* offset[0] is not currently used */
     for (i = 2; i < k; i++) {
         offset[i] = offset[i-1] * INTEGER(dims)[i-1];
-        offset[0] += offset[i];
+        /* offset[0] += offset[i]; */
     }
 
     /* Do the actual assignment... Note that assignments to string vectors
@@ -4422,65 +4421,38 @@ static SEXP ArrayAssign (SEXP call, SEXP x, SEXP x_grad,
        not handled here, but are avoided by coercion in SubassignTypeFix. */
 
     int which = (TYPEOF(x)<<5) + TYPEOF(y);
+    int last = 0;
 
-#   define AA_PRELUDE \
-    for (;;) { \
-        ii = subs[0][indx[0]] - offset[0]; \
-        if (k == 3) { \
-            ii += offset[1] * subs[1][indx[1]]; \
-            ii += offset[2] * subs[2][indx[2]]; \
-        } \
-        else if (k == 4) { \
-            ii += offset[1] * subs[1][indx[1]]; \
-            ii += offset[2] * subs[2][indx[2]]; \
-            ii += offset[3] * subs[3][indx[3]]; \
-        } \
-        else { \
-            for (j = 1; j < k; j++) \
-                ii += offset[j] * subs[j][indx[j]]; \
-        }
-
-#   define AA_POSTLUDE \
-        j = 0; \
-        while (++indx[j] >= bound[j]) { \
-            indx[j] = 0; \
-            if (++j >= k) goto done; \
-        } \
-        if (++i == ny) i = 0; \
-    } /* end of for(;;) */
+    for (i = 0; i < k; i++) indx[i] = 0;
 
     i = 0;
+    while (!last) {
 
-    switch (which) {
+        ii = array_offset_from_index (subs, bound, indx, offset, k, 0, &last);
 
-    case (LGLSXP<<5) + LGLSXP:
-    case (INTSXP<<5) + LGLSXP:
-    case (INTSXP<<5) + INTSXP:
-        AA_PRELUDE
+        switch (which) {
+
+        case (LGLSXP<<5) + LGLSXP:
+        case (INTSXP<<5) + LGLSXP:
+        case (INTSXP<<5) + INTSXP:
             INTEGER(x)[ii] = INTEGER(y)[i];
-        AA_POSTLUDE
-        break;
+            break;;
 
-    case (REALSXP<<5) + LGLSXP:
-    case (REALSXP<<5) + INTSXP:
-        AA_PRELUDE
+        case (REALSXP<<5) + LGLSXP:
+        case (REALSXP<<5) + INTSXP:
             iy = INTEGER(y)[i];
             if (iy == NA_INTEGER)
                 REAL(x)[ii] = NA_REAL;
             else
                 REAL(x)[ii] = iy;
-        AA_POSTLUDE
-        break;
+            break;;
 
-    case (REALSXP<<5) + REALSXP:
-        AA_PRELUDE
+        case (REALSXP<<5) + REALSXP:
             REAL(x)[ii] = REAL(y)[i];
-        AA_POSTLUDE
-        break;
+            break;;
 
-    case (CPLXSXP<<5) + LGLSXP:
-    case (CPLXSXP<<5) + INTSXP:
-        AA_PRELUDE
+        case (CPLXSXP<<5) + LGLSXP:
+        case (CPLXSXP<<5) + INTSXP:
             iy = INTEGER(y)[i];
             if (iy == NA_INTEGER) {
                 COMPLEX(x)[ii].r = NA_REAL;
@@ -4490,11 +4462,9 @@ static SEXP ArrayAssign (SEXP call, SEXP x, SEXP x_grad,
                 COMPLEX(x)[ii].r = iy;
                 COMPLEX(x)[ii].i = 0.0;
             }
-        AA_POSTLUDE
-        break;
+            break;;
 
-    case (CPLXSXP<<5) + REALSXP:
-        AA_PRELUDE
+        case (CPLXSXP<<5) + REALSXP:
             ry = REAL(y)[i];
             if (ISNA(ry)) {
                 COMPLEX(x)[ii].r = NA_REAL;
@@ -4504,32 +4474,24 @@ static SEXP ArrayAssign (SEXP call, SEXP x, SEXP x_grad,
                 COMPLEX(x)[ii].r = ry;
                 COMPLEX(x)[ii].i = 0.0;
             }
-        AA_POSTLUDE
-        break;
+            break;;
 
-    case (CPLXSXP<<5) + CPLXSXP:
-        AA_PRELUDE
+        case (CPLXSXP<<5) + CPLXSXP:
             COMPLEX(x)[ii] = COMPLEX(y)[i];
-        AA_POSTLUDE
-        break;
+            break;;
 
-    case (STRSXP<<5) + STRSXP:
-        AA_PRELUDE
+        case (STRSXP<<5) + STRSXP:
             SET_STRING_ELT(x, ii, STRING_ELT(y, i));
-        AA_POSTLUDE
-        break;
+            break;;
 
-    case (RAWSXP<<5) + RAWSXP:
-        AA_PRELUDE
+        case (RAWSXP<<5) + RAWSXP:
             RAW(x)[ii] = RAW(y)[i];
-        AA_POSTLUDE
-        break;
+            break;;
 
-    case (EXPRSXP<<5) + VECSXP:
-    case (EXPRSXP<<5) + EXPRSXP:
-    case (VECSXP<<5)  + EXPRSXP:
-    case (VECSXP<<5)  + VECSXP:
-        AA_PRELUDE
+        case (EXPRSXP<<5) + VECSXP:
+        case (EXPRSXP<<5) + EXPRSXP:
+        case (VECSXP<<5)  + EXPRSXP:
+        case (VECSXP<<5)  + VECSXP:
             SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i);
             if (!rep_assign) {
                 if (i == ny - 1) 
@@ -4539,14 +4501,14 @@ static SEXP ArrayAssign (SEXP call, SEXP x, SEXP x_grad,
                 if (NAMEDCNT_EQ_0(VECTOR_ELT(x,ii)))
                     SET_NAMEDCNT(VECTOR_ELT(x,ii),2);
             }
-        AA_POSTLUDE
-        break;
+            break;;
 
-    default:
-        warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
+        default:
+            errorcall (call, "sub assignment (*[*] <- *) not done; __bug?__");
+        }
+
+        if (++i == ny) i = 0;
     }
-
-  done:
 
     if (res_grad != R_NilValue) {
         R_gradient = res_grad;

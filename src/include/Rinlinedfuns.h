@@ -688,14 +688,14 @@ INLINE_FUN void getBlockSrcrefs(SEXP call, SEXP **refs, int *len)
    Sets 'last' to one if this is the last index.*/
 
 INLINE_FUN R_len_t array_offset_from_index
-   (int **subs, int *bound, int *indx, int *offset, int k, int *last)
+   (int **subs, int *bound, int *indx, int *offset, int k, int chkNA, int *last)
 {
     R_len_t ii, jj;
     int j;
 
     jj = subs[0][indx[0]];
 
-    if (jj == NA_INTEGER)
+    if (chkNA && jj == NA_INTEGER)
         ii = NA_INTEGER;    
     else {
         ii = jj-1;

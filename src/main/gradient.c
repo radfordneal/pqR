@@ -1006,7 +1006,7 @@ R_inspect(grad); REprintf("--\n");
 
     for (i = 0; !last; i++) {
         R_len_t ii;
-        ii = array_offset_from_index (subs, nsubs, indx, offset, k, &last);
+        ii = array_offset_from_index (subs, nsubs, indx, offset, k, 1, &last);
         if (ii != NA_INTEGER)
             SET_VECTOR_ELT (res, i, VECTOR_ELT (grad, ii));
     }
@@ -1059,7 +1059,7 @@ R_inspect(grad); REprintf("--\n");
 
     for (i = 0; !last; i++) {
         R_len_t ii;
-        ii = array_offset_from_index (subs, nsubs, indx, offset, k, &last);
+        ii = array_offset_from_index (subs, nsubs, indx, offset, k, 1, &last);
         if (ii == NA_INTEGER) {
             for (v = 0; v < gvars; v++)
                 REAL(res)[i+v*m] = NA_INTEGER;
