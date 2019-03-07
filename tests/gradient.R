@@ -1080,6 +1080,14 @@ with gradient (a=array(list(1.0,7.2,3.9,0.7,9.9,1.2,8.8,6.0),c(2,2,2))) {
   a
 }
 
+with gradient (a=array(c(1.0,7.2,3.9,0.7,9.9,1.2,8.8,6.0),c(2,2,2))) { 
+  a[1,1,1] <- a[2,2,2]
+  a[2,c(1,2),c(2,1)] <- a[[1,1,1]]^2
+  a[1,c(1,2),1] <- a[[1,1,1]]^c(3,4)
+  a[1,2,2] <- 99
+  a
+}
+
 
 # Subassignment with user-defined subassignment functions.
 

@@ -330,6 +330,7 @@
  Rf_apply_non_function_error
  Rf_arg_missing_error
  Rf_array_subassign_indexes_list_gradient
+ Rf_array_subassign_indexes_numeric_gradient
  Rf_array_subset_indexes_list_gradient
  Rf_array_subset_indexes_numeric_gradient
  Rf_as_list_gradient

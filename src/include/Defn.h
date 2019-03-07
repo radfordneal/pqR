@@ -1262,6 +1262,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define apply_non_functon_error Rf_apply_non_function_error
 # define arg_missing_error	Rf_arg_missing_error
 # define array_subassign_indexes_list_gradient Rf_array_subassign_indexes_list_gradient
+# define array_subassign_indexes_numeric_gradient Rf_array_subassign_indexes_numeric_gradient
 # define array_subset_indexes_list_gradient Rf_array_subset_indexes_list_gradient
 # define array_subset_indexes_numeric_gradient Rf_array_subset_indexes_numeric_gradient 
 # define as_list_gradient	Rf_as_list_gradient
@@ -1517,6 +1518,8 @@ SEXP Rf_append(SEXP, SEXP); /* apparently unused now */
 void Rf_apply_debug_finish (SEXP, SEXP);
 SEXP Rf_apply_debug_setup (SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP array_subassign_indexes_list_gradient 
+       (SEXP, SEXP, int **, int *, int *, R_len_t, R_len_t);
+SEXP array_subassign_indexes_numeric_gradient 
        (SEXP, SEXP, int **, int *, int *, R_len_t, R_len_t);
 SEXP array_subset_indexes_list_gradient 
        (SEXP, int **, int *, int *, R_len_t, R_len_t);

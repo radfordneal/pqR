@@ -4515,6 +4515,10 @@ static SEXP ArrayAssign (SEXP call, SEXP x, SEXP x_grad,
             res_grad = array_subassign_indexes_list_gradient
                          (x_grad, y_grad, subs, bound, offset, k, LENGTH(x));
         }
+        else if (TYPEOF(x) == REALSXP) {
+            res_grad = array_subassign_indexes_numeric_gradient
+                         (x_grad, y_grad, subs, bound, offset, k, LENGTH(x));
+        }
     }
 
     if (res_grad != R_NilValue) {

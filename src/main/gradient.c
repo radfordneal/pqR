@@ -1671,6 +1671,86 @@ REprintf("==\n");
     return res;
 }
 
+/* Create set of gradients from grad that account for assigning indexed
+   elements of a vector list array gradients from v (recycled), extending
+   to length n.
+
+   Protects its grad and v arguments. */
+
+SEXP attribute_hidden array_subassign_indexes_numeric_gradient 
+  (SEXP grad, SEXP v, int **subs, int *bound, int *offset, R_len_t k, R_len_t n)
+{
+#if 0
+REprintf("*** array_subassign_indexes_numeric_gradient %d %d\n",k,n);
+R_inspect(grad);
+REprintf("--\n");
+R_inspect(v);
+#endif
+
+    RECURSIVE_GRADIENT_APPLY2(array_subassign_indexes_numeric_gradient, grad, v,
+                              subs, bound, offset, k, n);
+
+    if (grad == R_NilValue && v == R_NilValue)
+        return R_NilValue;
+
+    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
+    if (v != R_NilValue && TYPEOF(v) != REALSXP) abort();
+
+    PROTECT2(grad,v);
+
+    R_len_t gvars = GRADIENT_WRT_LEN (grad != R_NilValue ? grad : v);
+    SEXP res;
+
+    if (grad == R_NilValue) {
+        res = allocVector (REALSXP, n * gvars);
+        memset (REAL(res), 0, LENGTH(res) * sizeof(double));
+    }
+    else {
+        if (TYPEOF(grad) != REALSXP) abort();
+        res = duplicate(grad);
+    }
+
+    SET_GRADIENT_WRT_LEN (res, gvars);
+
+    int last = 0;
+    int indx[k];
+    int j;
+
+    for (j = 0; j < k; j++) indx[j] = 0;
+
+    if (v == R_NilValue || LENGTH(v) == 0) {
+        while (!last) {
+            R_len_t ii, h;
+            ii = array_offset_from_index (subs, bound, indx, offset, 
+                                          k, 0, &last);
+            for (h = 0; h < gvars; h++)
+                REAL(res) [h*n + ii] = 0;
+        }
+    }
+    else {
+        R_len_t m = LENGTH(v) / gvars;
+        if (m * gvars != LENGTH(v)) abort();
+        R_len_t i = 0;
+        while (!last) {
+            R_len_t ii, h;
+            ii = array_offset_from_index (subs, bound, indx, offset, 
+                                          k, 0, &last);
+            for (h = 0; h < gvars; h++)
+                REAL(res) [h*n + ii] = REAL(v) [h*m + i];
+            if (++i == m) i = 0;
+        }
+    }
+
+#if 0
+REprintf("*** array_subassign_indexes_numeric_gradient end\n");
+R_inspect(grad);
+REprintf("==\n");
+#endif
+
+    UNPROTECT(2);
+    return res;
+}
+
 
 /* Create set of gradients from grad that account for assigning an element
    with gradient v to the i'th element out of n of a vector list with gradient
