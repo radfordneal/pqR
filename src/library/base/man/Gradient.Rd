@@ -23,12 +23,14 @@
   It supports gradients of and with respect to real scalars, vectors,
   matrices, and arrays, lists of such values, lists of lists, etc.
   However, at present, only a limited set of operations are
-  supported for vectors, matrices, and arrays, including [[.]] for
-  accessing and replacing single elements, and [.] for accessing,
-  but not replacing, subsets. 
-  Many vector-oriented operations, such as \code{sum}, \code{c}, and 
-  \code{cbind} are also not yet supported.  Support for a full range
-  of vector operations should be implemnted soon.  
+  supported for vectors, matrices, and arrays.  There is gra dient support
+  for accessing elements with $, [.], and [[.]].  There is also support
+  (though currently inefficient) for replacing elements with $, [.], 
+  and [[.]], except for multi-level vector subscripts with [[.]].
+  However, many vector and matrix oriented operations, such as \code{sum},
+  \code{c}, \code{cbind}, and \code{\%*\%} are not yet supported.
+  Support for a full range of vector and matrix operations should be 
+  implemnted soon.  
 
   Some operations are currently implemented much less efficiently
   than is planned for the full-fledged version.
@@ -187,6 +189,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
   [[<- (for vector lists and numeric vectors, including matrices & arrays; 
         vector as index (indexing at multiple levels) not support yet) 
   [ (for vector lists and numeric vectors, including matrices & arrays) 
+  [<- (for vector lists and numeric vectors, including matrices & arrays) 
   
   +, -, *, /, ^ (+ and - may be unary) 
   
@@ -235,7 +238,11 @@ or array) of length greater than one, the gradient will be a matrix
 the length of the variable's value, and whose number of rows equals
 the length of the expression's value.  Note that \code{as.matrix} can
 be used to convert a numeric gradient value to always be a
-matrix, if that is desired.
+matrix, if that is desired.  Note also that any \code{dim} attribute for
+the expression or variable is ignored when creating the Jacobian matrix,
+which is always a matrix (not a higher-dimensional array), or a simple
+vector if the Jacobian matrix has only one row or one column.  This can
+of course be changed if desired (see the example below).
 
 The gradient of a list is a list of the same form, with gradients as
 described above replacing the numeric elements.  For a gradient with
@@ -335,7 +342,7 @@ with gradient (a=2) {            # find derivatives of powers of a, from
 
 with gradient (a=2) {            # same as above, but with a real vector
     V <- a                       #   rather than a list
-    for (i in 2..10) V[[i]] <- V[[i-1]] * a
+    for (i in 2..10) V[i] <- V[i-1] * a
     V
 }
 
@@ -361,10 +368,25 @@ V <- seq(0,1,length=11)          # same as above, but using a real vector
 with gradient (V) {              # the gradient will be a 1 x 11 matrix
     p <- 0
     for (i along V) 
-        p <- p + i*V[[i]]
+        p <- p + i*V[i]
     back gradient (p)
         p^2 + p^3 + p^4 + p^5
 }
+
+# Make table of (a+j)^i and derivatives w.r.t. a, for a equal to 1.1.
+
+tbl <- function (a) {            # a function to compute such a table
+    T <- matrix (nrow=4, ncol=5)
+    for (i, j along T)
+        T[i,j] <- if (i == 1) a+j else T[i-1,j] * (a+j)
+    T
+}
+
+T <- with gradient (a=1.1) tbl(a)  # call tbl asking for the gradient
+
+T                                # note the gradient is a simple vector,
+array(attr(T,"gradient"),dim(T)) #   but dimensions can be added if needed
+
 
 }
 

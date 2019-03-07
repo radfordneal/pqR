@@ -4329,6 +4329,20 @@ static SEXP MatrixAssign (SEXP call, SEXP x, SEXP x_grad,
         }
     }
 
+    if (x_grad != R_NilValue || y_grad != R_NilValue) {
+        int *subs[2] = { INTEGER(sr), INTEGER(sc) };
+        int bound[2] = { nrs, ncs };
+        int offset[2] = { 0 /* unused */, nr };
+        if (TYPEOF(x) == VECSXP) {
+            res_grad = array_subassign_indexes_list_gradient
+                         (x_grad, y_grad, subs, bound, offset, 2, LENGTH(x));
+        }
+        else if (TYPEOF(x) == REALSXP) {
+            res_grad = array_subassign_indexes_numeric_gradient
+                         (x_grad, y_grad, subs, bound, offset, 2, LENGTH(x));
+        }
+    }
+
     if (res_grad != R_NilValue) {
         R_gradient = res_grad;
         R_variant_result = VARIANT_GRADIENT_FLAG;
