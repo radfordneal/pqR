@@ -1421,6 +1421,13 @@ with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,4,b)
 with gradient (a=c(0.7,0.9),b=c(1.8,1.6,1.2)) rnorm(3,a^2,b)
 
 
+# Test preservation of gradients through attribute setting.
+
+with gradient (a=c(33,11,0.7,99)) { attr(a,"fred") <- 123; a }
+with gradient (a=c(33,11,0.7,99)) { dim(a) <- c(2,2); a }
+with gradient (a=c(33,11,0.7,99)) { dim(a) <- NULL; a }
+
+
 # Test backpropagation.
 
 with gradient (a=5) 

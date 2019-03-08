@@ -1277,27 +1277,47 @@ static SEXP do_dim(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     return do_fast_dim (call, op, CAR(args), env, variant);
 }
 
-static SEXP do_dimgets(SEXP call, SEXP op, SEXP args, SEXP env)
+/* Implements dim(obj) <- dims.  SPECIAL, so can handle gradient for obj. */
+
+static SEXP do_dimgets(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP ans, x;
 
+    PROTECT (args = variant & VARIANT_GRADIENT 
+                      ? evalList_gradient (args, env, 0, 1, 0)
+                      : evalList (args, env));
+
     checkArity(op, args);
-    if (DispatchOrEval(call, op, "dim<-", args, env, &ans, 0, 1, 0))
-	return(ans);
+
+    if (DispatchOrEval(call, op, "dim<-", args, env, &ans, 0, 1, 0)) {
+        UNPROTECT(1);
+	return ans;
+    }
+
     x = CAR(args);
-    /* Duplication might be expensive */
+
+    /* Avoid duplication if setting to NULL when already NULL */
     if (CADR(args) == R_NilValue) {
 	SEXP s;
 	for (s = ATTRIB(x); s != R_NilValue; s = CDR(s))
 	    if (TAG(s) == R_DimSymbol || TAG(s) == R_NamesSymbol) break;
-	if (s == R_NilValue) 
-            return x;
+	if (s == R_NilValue)
+            goto ret;
     }
-    PROTECT(args = ans);
+
     if (NAMEDCNT_GT_1(x)) 
         SETCAR(args, x = dup_top_level(x));
+
     setAttrib(x, R_DimSymbol, CADR(args));
     setAttrib(x, R_NamesSymbol, R_NilValue);
+
+  ret:
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        R_gradient = GRADIENT_IN_CELL(args);
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     UNPROTECT(1);
     return x;
 }
@@ -1650,7 +1670,8 @@ static void check_slot_assign(SEXP obj, SEXP input, SEXP value, SEXP env)
     UNPROTECT(3);
 }
 
-/* Implements   attr(obj, which = "<name>")  <-  value.  SPECIALSXP.  */
+/* Implements   attr(obj, which = "<name>")  <-  value.  
+   SPECIAL, so can handle gradient for obj. */
 
 static SEXP do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
@@ -2129,7 +2150,7 @@ attribute_hidden FUNTAB R_FunTab_attrib[] =
 {"dimnames",	do_dimnames,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"dimnames<-",	do_dimnamesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"dim",		do_dim,		0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"dim<-",	do_dimgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
+{"dim<-",	do_dimgets,	0,	1000,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"attributes",	do_attributes,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"attributes<-",do_attributesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"attr",	do_attr,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},

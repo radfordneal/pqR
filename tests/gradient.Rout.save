@@ -8835,6 +8835,38 @@ attr(,"gradient")$b
 
 > 
 > 
+> # Test preservation of gradients through attribute setting.
+> 
+> with gradient (a=c(33,11,0.7,99)) { attr(a,"fred") <- 123; a }
+[1] 33.0 11.0  0.7 99.0
+attr(,"fred")
+[1] 123
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> with gradient (a=c(33,11,0.7,99)) { dim(a) <- c(2,2); a }
+     [,1] [,2]
+[1,]   33  0.7
+[2,]   11 99.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> with gradient (a=c(33,11,0.7,99)) { dim(a) <- NULL; a }
+[1] 33.0 11.0  0.7 99.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> 
+> 
 > # Test backpropagation.
 > 
 > with gradient (a=5) 
