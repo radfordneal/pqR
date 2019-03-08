@@ -990,42 +990,54 @@ SEXP attribute_hidden R_do_data_class(SEXP call, SEXP op, SEXP args, SEXP env)
   return R_data_class(CAR(args), FALSE);
 }
 
-/* names(object) <- name */
-static SEXP do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
+/* names(obj) <- name.  SPECIAL, so can handle gradient for obj. */
+
+static SEXP do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP ans;
+
+    PROTECT (args = variant & VARIANT_GRADIENT 
+                      ? evalList_gradient (args, env, 0, 1, 0)
+                      : evalList (args, env));
+
     checkArity(op, args);
     check1arg_x (args, call);
 
-    if (DispatchOrEval(call, op, "names<-", args, env, &ans, 0, 1, 0))
-	return(ans);
-    /* Special case: removing non-existent names, to avoid a copy */
-    if (CADR(args) == R_NilValue &&
-	getNamesAttrib(CAR(args)) == R_NilValue)
-	return CAR(args);
-    PROTECT(args = ans);
-    if (NAMEDCNT_GT_1(CAR(args)))
-	SETCAR(args, dup_top_level(CAR(args)));
-    if(IS_S4_OBJECT(CAR(args))) {
-	const char *klass = CHAR(STRING_ELT(R_data_class(CAR(args), FALSE), 0));
-	if(getNamesAttrib(CAR(args)) == R_NilValue) {
-	    /* S4 class w/o a names slot or attribute */
-	    if(TYPEOF(CAR(args)) == S4SXP)
-		errorcall(call,_("Class '%s' has no 'names' slot"), klass);
-	    else
-		warningcall(call,
-                  _("Class '%s' has no 'names' slot; assigning a names attribute will create an invalid object"), 
-                  klass);
-	}
-	else if(TYPEOF(CAR(args)) == S4SXP)
-	    errorcall(call,
-              _("Illegal to use names()<- to set the 'names' slot in a non-vector class ('%s')"),
-              klass);
-	/* else, go ahead, but can't check validity of replacement*/
+    if (DispatchOrEval(call, op, "names<-", args, env, &ans, 0, 1, 0)) {
+        UNPROTECT(1);
+        return(ans);
     }
 
     SEXP obj = CAR(args);
     SEXP nms = CADR(args);
+
+    /* Special case: removing non-existent names, to avoid a copy */
+
+    if (nms == R_NilValue && getNamesAttrib(CAR(args)) == R_NilValue)
+        goto ret;
+
+    if (NAMEDCNT_GT_1(obj)) {
+        obj = dup_top_level(obj);
+        SETCAR (args, obj);
+    }
+
+    if (IS_S4_OBJECT(obj)) {
+        const char *klass = CHAR(STRING_ELT(R_data_class(obj, FALSE), 0));
+        if(getNamesAttrib(obj) == R_NilValue) {
+            /* S4 class w/o a names slot or attribute */
+            if(TYPEOF(obj) == S4SXP)
+                errorcall(call,_("Class '%s' has no 'names' slot"), klass);
+            else
+                warningcall(call,
+                  _("Class '%s' has no 'names' slot; assigning a names attribute will create an invalid object"), 
+                  klass);
+        }
+        else if(TYPEOF(obj) == S4SXP)
+            errorcall(call,
+              _("Illegal to use names()<- to set the 'names' slot in a non-vector class ('%s')"),
+              klass);
+        /* else, go ahead, but can't check validity of replacement*/
+    }
 
     if (nms != R_NilValue && (TYPEOF(nms) != STRSXP || HAS_ATTRIB(nms))) {
         static SEXP asc = R_NoObject;
@@ -1034,14 +1046,23 @@ static SEXP do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
         SET_PRVALUE (prom, nms);
         SEXP cl = LCONS (asc, CONS(prom,R_NilValue));
         PROTECT(cl);
-	nms = eval(cl, env);
-	UNPROTECT(1);
+        nms = eval(cl, env);
+        UNPROTECT(1);
     }
+
     PROTECT(nms);
     setAttrib(obj, R_NamesSymbol, nms);
     SET_NAMEDCNT_0(obj);  /* the standard kludge for subassign primitives */
-    UNPROTECT(2);
+    UNPROTECT(1);
 
+  ret:
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        R_gradient = GRADIENT_IN_CELL(args);
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(1);
     return obj;
 }
 
@@ -2146,7 +2167,7 @@ attribute_hidden FUNTAB R_FunTab_attrib[] =
 {"oldClass",	do_class,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"oldClass<-",	do_classgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT, 1}},
 {"names",	do_names,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"names<-",	do_namesgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
+{"names<-",	do_namesgets,	0,	1000,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"dimnames",	do_dimnames,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"dimnames<-",	do_dimnamesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"dim",		do_dim,		0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
