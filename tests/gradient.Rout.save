@@ -8885,6 +8885,31 @@ attr(,"gradient")
 [3,]    0    0    1    0
 [4,]    0    0    0    1
 > 
+> with gradient (a=matrix(c(33,11,0.7,99),2,2)) {
++   dimnames(a) <- list(c("ww","xx"),c("yy","zz"))
++   a
++ }
+   yy   zz
+ww 33  0.7
+xx 11 99.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> 
+> with gradient (a=matrix(c(33,11,0.7,99),2,2)) { dimnames(a) <- NULL; a }
+     [,1] [,2]
+[1,]   33  0.7
+[2,]   11 99.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> 
 > 
 > # Test backpropagation.
 > 

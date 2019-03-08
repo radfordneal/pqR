@@ -1431,6 +1431,13 @@ with gradient (a=c(33,11,0.7,99)) { dim(a) <- NULL; a }
 with gradient (a=c(33,11,0.7,99)) { names(a) <- c("ww","xx","yy","zz"); a }
 with gradient (a=c(33,11,0.7,99)) { names(a) <- NULL; a }
 
+with gradient (a=matrix(c(33,11,0.7,99),2,2)) {
+  dimnames(a) <- list(c("ww","xx"),c("yy","zz"))
+  a
+}
+
+with gradient (a=matrix(c(33,11,0.7,99),2,2)) { dimnames(a) <- NULL; a }
+
 
 # Test backpropagation.
 

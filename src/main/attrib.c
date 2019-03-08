@@ -1166,19 +1166,35 @@ static SEXP do_names(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     return nms;
 }
 
-static SEXP do_dimnamesgets(SEXP call, SEXP op, SEXP args, SEXP env)
+/* Implements dimnames(obj) <- dn.  SPECIAL, so can handle gradient for obj. */
+
+static SEXP do_dimnamesgets
+                 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP ans;
+
+    PROTECT (args = variant & VARIANT_GRADIENT 
+                      ? evalList_gradient (args, env, 0, 1, 0)
+                      : evalList (args, env));
 
     checkArity(op, args);
     check1arg_x (args, call);
 
-    if (DispatchOrEval(call, op, "dimnames<-", args, env, &ans, 0, 1, 0))
+    if (DispatchOrEval(call, op, "dimnames<-", args, env, &ans, 0, 1, 0)) {
+        UNPROTECT(1);
 	return(ans);
-    PROTECT(args = ans);
+    }
+
     if (NAMEDCNT_GT_1(CAR(args))) 
         SETCAR(args, dup_top_level(CAR(args)));
+
     setAttrib(CAR(args), R_DimNamesSymbol, CADR(args));
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        R_gradient = GRADIENT_IN_CELL(args);
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     UNPROTECT(1);
     return CAR(args);
 }
@@ -2169,7 +2185,7 @@ attribute_hidden FUNTAB R_FunTab_attrib[] =
 {"names",	do_names,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"names<-",	do_namesgets,	0,	1000,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"dimnames",	do_dimnames,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"dimnames<-",	do_dimnamesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
+{"dimnames<-",	do_dimnamesgets,0,	1000,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"dim",		do_dim,		0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"dim<-",	do_dimgets,	0,	1000,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"attributes",	do_attributes,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
