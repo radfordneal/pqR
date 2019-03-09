@@ -1424,6 +1424,10 @@ with gradient (a=c(0.7,0.9),b=c(1.8,1.6,1.2)) rnorm(3,a^2,b)
 # Test preservation of gradients through attribute setting.
 
 with gradient (a=c(33,11,0.7,99)) { attr(a,"fred") <- 123; a }
+with gradient (a=c(33,11,0.7,99)) { attr(a,"fred") <- NULL; a }
+
+with gradient (a=c(33,11,0.7,99)) { attributes(a) <- list(X=1,y=2); a }
+with gradient (a=c(33,11,0.7,99)) { attributes(a) <- NULL; a }
 
 with gradient (a=c(33,11,0.7,99)) { dim(a) <- c(2,2); a }
 with gradient (a=c(33,11,0.7,99)) { dim(a) <- NULL; a }

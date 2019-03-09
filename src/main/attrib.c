@@ -1470,13 +1470,19 @@ static SEXP do_levelsgets(SEXP call, SEXP op, SEXP args, SEXP env)
     return CAR(args);
 }
 
-/* attributes(object) <- attrs */
-static SEXP do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
+/* attributes(object) <- attrs. SPECIAL so it can handle gradients for object */
+
+static SEXP do_attributesgets (SEXP call, SEXP op, SEXP args, SEXP env,
+                               int variant)
 {
-/* NOTE: The following code ensures that when an attribute list */
-/* is attached to an object, that the "dim" attibute is always */
-/* brought to the front of the list.  This ensures that when both */
-/* "dim" and "dimnames" are set that the "dim" is attached first. */
+    PROTECT (args = variant & VARIANT_GRADIENT 
+                      ? evalList_gradient (args, env, 0, 1, 0)
+                      : evalList (args, env));
+
+    /* NOTE: The following code ensures that when an attribute list 
+       is attached to an object, that the "dim" attibute is always 
+       brought to the front of the list.  This ensures that when both 
+       "dim" and "dimnames" are set that the "dim" is attached first. */
 
     SEXP object, attrs, names = R_NilValue /* -Wall */;
     int i, i0 = -1, nattrs;
@@ -1491,46 +1497,42 @@ static SEXP do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 
     /* Do checks before duplication */
     if (!isNewList(attrs))
-	errorcall(call,_("attributes must be a list or NULL"));
+        errorcall(call,_("attributes must be a list or NULL"));
     nattrs = length(attrs);
     if (nattrs > 0) {
-	names = getNamesAttrib(attrs);
-	if (names == R_NilValue)
-	    errorcall(call,_("attributes must be named"));
-	for (i = 1; i < nattrs; i++) {
-	    if (STRING_ELT(names, i) == R_NilValue ||
-		CHAR(STRING_ELT(names, i))[0] == '\0') { /* all ASCII tests */
-		errorcall(call,_("all attributes must have names [%d does not]"), i+1);
-	    }
-	}
+        names = getNamesAttrib(attrs);
+        if (names == R_NilValue)
+            errorcall(call,_("attributes must be named"));
+        for (i = 1; i < nattrs; i++) {
+            if (STRING_ELT(names, i) == R_NilValue ||
+                CHAR(STRING_ELT(names, i))[0] == '\0') { /* all ASCII tests */
+                errorcall(call,_("all attributes must have names [%d does not]"), i+1);
+            }
+        }
     }
 
     if (object == R_NilValue) {
-	if (attrs == R_NilValue)
-	    return R_NilValue;
-	else
-	    PROTECT(object = allocVector(VECSXP, 0));
+        if (attrs == R_NilValue) {
+            UNPROTECT(1);
+            return R_NilValue;
+        }
+        else
+            PROTECT(object = allocVector(VECSXP, 0));
     } else {
-	/* Unlikely to have NAMED == 0 here.
-	   As from R 2.7.0 we don't optimize NAMED == 1 _if_ we are
-	   setting any attributes as an error later on would leave
-	   'obj' changed */
-	if (NAMEDCNT_GT_1(object) || (NAMEDCNT_GT_0(object) && nattrs > 0))
-	    object = dup_top_level(object);
-	PROTECT(object);
+        /* Unlikely to have NAMED == 0 here.
+           As from R 2.7.0 we don't optimize NAMED == 1 _if_ we are
+           setting any attributes as an error later on would leave
+           'obj' changed */
+        if (NAMEDCNT_GT_1(object) || (NAMEDCNT_GT_0(object) && nattrs > 0))
+            object = dup_top_level(object);
+        PROTECT(object);
     }
 
 
     /* Empty the existing attribute list */
 
-    /* FIXME: the code below treats pair-based structures */
-    /* in a special way.  This can probably be dropped down */
-    /* the road (users should never encounter pair-based lists). */
-    /* Of course, if we want backward compatibility we can't */
-    /* make the change. :-( */
-
     if (isList(object))
-	setAttrib(object, R_NamesSymbol, R_NilValue);
+        setAttrib(object, R_NamesSymbol, R_NilValue);
     SET_ATTRIB(object, R_NilValue);
     /* We have just removed the class, but might reset it later */
     SET_OBJECT(object, 0);
@@ -1538,26 +1540,32 @@ static SEXP do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
        definitely in this one */
     if(nattrs == 0) UNSET_S4_OBJECT(object);
 
-    /* We do two passes through the attributes; the first */
-    /* finding and transferring "dim" and the second */
-    /* transferring the rest.  This is to ensure that */
-    /* "dim" occurs in the attribute list before "dimnames". */
+    /* We do two passes through the attributes; the first 
+       finding and transferring "dim" and the second 
+       transferring the rest.  This is to ensure that 
+       "dim" occurs in the attribute list before "dimnames". */
 
     if (nattrs > 0) {
-	for (i = 0; i < nattrs; i++) {
-	    if (!strcmp(CHAR(STRING_ELT(names, i)), "dim")) {
-		i0 = i;
-		setAttrib(object, R_DimSymbol, VECTOR_ELT(attrs, i));
-		break;
-	    }
-	}
-	for (i = 0; i < nattrs; i++) {
-	    if (i == i0) continue;
-	    setAttrib(object, install_translated (STRING_ELT(names,i)),
-		      VECTOR_ELT(attrs, i));
-	}
+        for (i = 0; i < nattrs; i++) {
+            if (!strcmp(CHAR(STRING_ELT(names, i)), "dim")) {
+                i0 = i;
+                setAttrib(object, R_DimSymbol, VECTOR_ELT(attrs, i));
+                break;
+            }
+        }
+        for (i = 0; i < nattrs; i++) {
+            if (i == i0) continue;
+            setAttrib(object, install_translated (STRING_ELT(names,i)),
+                      VECTOR_ELT(attrs, i));
+        }
     }
-    UNPROTECT(1);
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        R_gradient = GRADIENT_IN_CELL(args);
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(2);
     return object;
 }
 
@@ -1565,18 +1573,18 @@ static SEXP do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 
     attr <- function (x, which)
     {
-	if (!is.character(which))
-	    stop("attribute name must be of mode character")
-	if (length(which) != 1)
-	    stop("exactly one attribute name must be given")
-	attributes(x)[[which]]
-   }
+        if (!is.character(which))
+            stop("attribute name must be of mode character")
+        if (length(which) != 1)
+            stop("exactly one attribute name must be given")
+        attributes(x)[[which]]
+    }
 
-The R functions was being called very often and replacing it by
-something more efficient made a noticeable difference on several
-benchmarks.  There is still some inefficiency since using getAttrib
-means the attributes list will be searched twice, but this seems
-fairly minor.  LT */
+    The R functions was being called very often and replacing it by
+    something more efficient made a noticeable difference on several
+    benchmarks.  There is still some inefficiency since using getAttrib
+    means the attributes list will be searched twice, but this seems
+    fairly minor.  LT */
 
 static SEXP do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
 {
@@ -2189,7 +2197,7 @@ attribute_hidden FUNTAB R_FunTab_attrib[] =
 {"dim",		do_dim,		0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"dim<-",	do_dimgets,	0,	1000,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"attributes",	do_attributes,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"attributes<-",do_attributesgets,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
+{"attributes<-",do_attributesgets,0,	1000,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"attr",	do_attr,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"attr<-",	do_attrgets,	0,	1000,	3,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"levels<-",	do_levelsgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},

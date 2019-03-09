@@ -219,7 +219,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
 The following replacement functions do not compute any gradient information,
 but do leave undisturbed any gradient information that is associated with 
 the variable that they update:
-\preformatted{  attr<-, dim<-, names<-, dimnames<-
+\preformatted{  attr<-, attributes<-, names<-, dim<-, dimnames<-
 }
 }
 
