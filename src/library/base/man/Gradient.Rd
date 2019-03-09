@@ -192,6 +192,8 @@ with respect to all their real scalar, vector, matrix, or array arguments
   [<- (for vector lists and numeric vectors, including matrices & arrays) 
   
   +, -, *, /, ^ (+ and - may be unary) 
+
+  unclass
   
   abs, sqrt, expm1, exp, log1p, log2, log10, log (one-argument form only) 
   cos, sin, tan, acos, asin, atan, atan2 
@@ -219,7 +221,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
 The following replacement functions do not compute any gradient information,
 but do leave undisturbed any gradient information that is associated with 
 the variable that they update:
-\preformatted{  attr<-, attributes<-, names<-, dim<-, dimnames<-
+\preformatted{  attr<-, attributes<-, names<-, dim<-, dimnames<-, class<-, oldClass<-
 }
 }
 

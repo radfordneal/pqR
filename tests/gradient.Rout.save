@@ -8856,6 +8856,44 @@ attr(,"gradient")
 [3,]    0    0    1    0
 [4,]    0    0    0    1
 > 
+> with gradient (a=c(33,11,0.7,99)) { class(a) <- "fred"; a }
+[1] 33.0 11.0  0.7 99.0
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> with gradient (a=c(33,11,0.7,99)) { class(a) <- NULL; a }
+[1] 33.0 11.0  0.7 99.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> 
+> with gradient (a=c(33,11,0.7,99)) { oldClass(a) <- "fred"; a }
+[1] 33.0 11.0  0.7 99.0
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> with gradient (a=c(33,11,0.7,99)) { oldClass(a) <- NULL; a }
+[1] 33.0 11.0  0.7 99.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> 
 > with gradient (a=c(33,11,0.7,99)) { attributes(a) <- list(X=1,y=2); a }
 [1] 33.0 11.0  0.7 99.0
 attr(,"X")
@@ -8938,6 +8976,18 @@ attr(,"gradient")
 [2,]    0    1    0    0
 [3,]    0    0    1    0
 [4,]    0    0    0    1
+> 
+> 
+> # Miscellaneous tests.
+> 
+> a <- c(4,9)
+> class(a) <- "fred"
+> with gradient (a) unclass(a)^2
+[1] 16 81
+attr(,"gradient")
+     [,1] [,2]
+[1,]    8    0
+[2,]    0   18
 > 
 > 
 > # Test backpropagation.

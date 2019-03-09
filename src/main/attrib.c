@@ -700,9 +700,15 @@ SEXP classgets(SEXP vec, SEXP klass)
     error(_("attempt to set invalid 'class' attribute"));
 }
 
-/* oldClass<-(), primitive */
-static SEXP do_classgets(SEXP call, SEXP op, SEXP args, SEXP env)
+/* oldClass<-, SPECIALSXP so can pass on gradient. */
+
+static SEXP do_oldclassgets (SEXP call, SEXP op, SEXP args, SEXP env,
+                             int variant)
 {
+    PROTECT (args = variant & VARIANT_GRADIENT 
+                      ? evalList_gradient (args, env, 0, 1, 0)
+                      : evalList (args, env));
+    
     checkArity(op, args);
     check1arg_x (args, call);
 
@@ -710,14 +716,22 @@ static SEXP do_classgets(SEXP call, SEXP op, SEXP args, SEXP env)
         SETCAR(args, dup_top_level(CAR(args)));
     if (length(CADR(args)) == 0) 
         SETCADR(args, R_NilValue);
-    if(IS_S4_OBJECT(CAR(args)))
+    if (IS_S4_OBJECT(CAR(args)))
         UNSET_S4_OBJECT(CAR(args));
+ 
     setAttrib(CAR(args), R_ClassSymbol, CADR(args));
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        R_gradient = GRADIENT_IN_CELL(args);
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(1);
     return CAR(args);
 }
 
 /* oldClass, primitive */
-static SEXP do_class(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_oldclass(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     check1arg_x (args, call);
@@ -2188,8 +2202,8 @@ attribute_hidden FUNTAB R_FunTab_attrib[] =
 {".cache_class",R_do_data_class,1,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"comment",	do_comment,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"comment<-",	do_commentgets,	0,	11,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"oldClass",	do_class,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"oldClass<-",	do_classgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT, 1}},
+{"oldClass",	do_oldclass,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"oldClass<-",	do_oldclassgets,0,	1000,	2,	{PP_FUNCALL, PREC_LEFT, 1}},
 {"names",	do_names,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"names<-",	do_namesgets,	0,	1000,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"dimnames",	do_dimnames,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},

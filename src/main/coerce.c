@@ -3040,16 +3040,31 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
     return obj;
 }
 
-SEXP attribute_hidden R_do_set_class(SEXP call, SEXP op, SEXP args, SEXP env)
+/* class(x) <- v.  SPECIAL so it can propagate gradient of x. */
+
+static SEXP do_classgets (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
+    PROTECT (args = variant & VARIANT_GRADIENT 
+                      ? evalList_gradient (args, env, 0, 1, 0)
+                      : evalList (args, env));
+
     checkArity(op, args);
     check1arg_x (args, call);
 
     if (NAMEDCNT_GT_1(CAR(args)))
         SETCAR(args,dup_top_level(CAR(args)));
 
-    return R_set_class(CAR(args), CADR(args), call);
+    SEXP r = R_set_class(CAR(args), CADR(args), call);
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        R_gradient = GRADIENT_IN_CELL(args);
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(1);
+    return r;
 }
+
 
 /* primitive */
 static SEXP do_storage_mode(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -3143,7 +3158,7 @@ attribute_hidden FUNTAB R_FunTab_coerce[] =
 {"quote",	do_quote,	0,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"storage.mode<-",do_storage_mode,0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"class<-",	R_do_set_class,	0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"class<-",	do_classgets,	0,	1000,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };

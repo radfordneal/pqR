@@ -915,9 +915,14 @@ SEXP attribute_hidden Rf_makeUnclassed (SEXP a)
     return a;
 }
 
-/* primitive */
+/* SPECIAL, so can pass on gradient. */
+
 static SEXP do_unclass(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
+    PROTECT (args = variant & VARIANT_GRADIENT 
+                      ? evalList_gradient (args, env, 0, 1, 0)
+                      : evalList (args, env));
+    
     checkArity(op, args);
     check1arg_x (args, call);
 
@@ -942,6 +947,13 @@ static SEXP do_unclass(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     if (! (variant & VARIANT_PENDING_OK))
         WAIT_UNTIL_COMPUTED(a);
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        R_gradient = GRADIENT_IN_CELL(args);
+        R_variant_result |= VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(1);
     return a;
 }
 
@@ -1754,7 +1766,7 @@ attribute_hidden FUNTAB R_FunTab_objects[] =
 
 {"UseMethod",	do_usemethod,	0,	1200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"NextMethod",	do_nextmethod,	0,	1210,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"unclass",	do_unclass,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"unclass",	do_unclass,	0,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"inherits",	do_inherits,	0,	10011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"standardGeneric",do_standardGeneric,0, 201,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 

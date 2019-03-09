@@ -1426,6 +1426,12 @@ with gradient (a=c(0.7,0.9),b=c(1.8,1.6,1.2)) rnorm(3,a^2,b)
 with gradient (a=c(33,11,0.7,99)) { attr(a,"fred") <- 123; a }
 with gradient (a=c(33,11,0.7,99)) { attr(a,"fred") <- NULL; a }
 
+with gradient (a=c(33,11,0.7,99)) { class(a) <- "fred"; a }
+with gradient (a=c(33,11,0.7,99)) { class(a) <- NULL; a }
+
+with gradient (a=c(33,11,0.7,99)) { oldClass(a) <- "fred"; a }
+with gradient (a=c(33,11,0.7,99)) { oldClass(a) <- NULL; a }
+
 with gradient (a=c(33,11,0.7,99)) { attributes(a) <- list(X=1,y=2); a }
 with gradient (a=c(33,11,0.7,99)) { attributes(a) <- NULL; a }
 
@@ -1441,6 +1447,13 @@ with gradient (a=matrix(c(33,11,0.7,99),2,2)) {
 }
 
 with gradient (a=matrix(c(33,11,0.7,99),2,2)) { dimnames(a) <- NULL; a }
+
+
+# Miscellaneous tests.
+
+a <- c(4,9)
+class(a) <- "fred"
+with gradient (a) unclass(a)^2
 
 
 # Test backpropagation.
