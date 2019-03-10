@@ -1451,6 +1451,9 @@ with gradient (a=matrix(c(33,11,0.7,99),2,2)) { dimnames(a) <- NULL; a }
 
 # Miscellaneous tests.
 
+with gradient (a = list(3,9)) { for (v in a) print(gradient_of(v)); a }
+with gradient (a = c(3,1,9)) { for (v in a^2) print(gradient_of(v)); a }
+
 a <- c(4,9)
 class(a) <- "fred"
 with gradient (a) unclass(a)^2

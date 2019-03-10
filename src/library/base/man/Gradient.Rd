@@ -95,7 +95,8 @@ listed in any enclosing \code{with gradient}, \code{track gradient},
 or active \code{back gradient} constructs, so that if the value of the
 variable is used to compute the final value for \code{with gradient},
 or is the argument of call of \code{gradient_of}, its gradient can be
-computed.  Note, however, that the gradients of attribute values are
+computed.  This includes assignments made to a for loop variable.
+Note, however, that the gradients of attribute values are
 not recorded, nor are gradients recorded when non-local assignments
 are made with \code{<<-}.
 

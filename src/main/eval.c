@@ -1000,12 +1000,22 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     PROTECT2(args,rho);
 
-    PROTECT(val = EVALV_NC (val, rho, 
-                            in    ? VARIANT_SEQ | VARIANT_ANY_ATTR :
-                            along ? VARIANT_UNCLASS | VARIANT_ANY_ATTR :
-                                    VARIANT_UNCLASS | VARIANT_ANY_ATTR_EX_DIM));
-    dims = R_NilValue;
+    val = EVALV_NC (val, rho, 
+                    in    ? (STORE_GRAD(rho)
+                             ? VARIANT_SEQ | VARIANT_ANY_ATTR | VARIANT_GRADIENT
+                             : VARIANT_SEQ | VARIANT_ANY_ATTR) :
+                    along ? (nsyms == 1 
+                             ? VARIANT_UNCLASS | VARIANT_ANY_ATTR
+                             : VARIANT_UNCLASS | VARIANT_ANY_ATTR_EX_DIM) :
+                    /*else*/ VARIANT_UNCLASS | VARIANT_ANY_ATTR_EX_DIM);
 
+    SEXP val_grad = R_NilValue;
+    if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+        val_grad = R_gradient;
+        R_variant_result &= ~VARIANT_GRADIENT_FLAG;
+    }
+    PROTECT2(val,val_grad);
+    dims = R_NilValue;
     is_seq = 0;
 
     if (along) { /* "along" and therefore not seq variant */
@@ -1089,7 +1099,7 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             UNPROTECT(4);  /* dims, indexes, ixvals, bcells */
         if (in && !is_seq)
             DEC_NAMEDCNT(val);
-        UNPROTECT(3);      /* args, rho, val */
+        UNPROTECT(4);      /* args, rho, val, val_grad */
         R_Visible = FALSE;
         return R_NilValue;
     }
@@ -1158,12 +1168,16 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         /* Handle "in", "across", "down", and univariate "along". */
 
+        SEXP v_grad = R_NilValue;
+
 	switch (val_type) {
 
 	case EXPRSXP:
 	case VECSXP:
 	    v = VECTOR_ELT(val, i);
 	    SET_NAMEDCNT_MAX(v); /* maybe unnecessary? */
+            if (val_grad != R_NilValue)
+                v_grad = subset2_list_gradient (val_grad, i, n);
 	    break;
 
 	case LISTSXP:
@@ -1190,6 +1204,8 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 break;
             case REALSXP:
                 REAL(v)[0] = REAL(val)[i];
+                if (val_grad != R_NilValue)
+                    v_grad = subset_range_numeric_gradient (val_grad, i, i, n);
                 break;
             case CPLXSXP:
                 COMPLEX(v)[0] = COMPLEX(val)[i];
@@ -1211,6 +1227,9 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             set_var_in_frame (sym, v, rho, TRUE, 3);
             REPROTECT(bcell = R_binding_cell, bix);
         }
+
+        if (STORE_GRAD(rho) && bcell != R_NilValue) 
+            SET_GRADIENT_IN_CELL (bcell, v_grad);
 
     do_iter: ;
 
@@ -1245,7 +1264,7 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         UNPROTECT(2);  /* v, bcell */
     else 
         UNPROTECT(4);  /* dims, indexes, ixvals, bcells */
-    UNPROTECT(3);      /* val, rho, args */
+    UNPROTECT(4);      /* val, val_grad, rho, args */
     SET_RDEBUG(rho, dbg);
 
     return ret;
