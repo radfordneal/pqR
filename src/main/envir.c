@@ -772,7 +772,8 @@ static inline SEXP R_GetGlobalCache(SEXP symbol)
 
 
 /* Remove variable from a list, return the new list, and return its old value 
-   (R_NoObject if not there) in 'value'. */
+   (R_NoObject if not there) in 'value'.  Sets R_gradient to the gradient
+   stored with the value, R_NilValue if none. */
 
 static SEXP RemoveFromList(SEXP thing, SEXP list, SEXP *value)
 {
@@ -783,6 +784,8 @@ static SEXP RemoveFromList(SEXP thing, SEXP list, SEXP *value)
 
         if (TAG(curr) == thing) {
             *value = CAR(curr);
+            R_gradient = HAS_GRADIENT_IN_CELL(curr) ? GRADIENT_IN_CELL(curr)
+                                                    : R_NilValue;
             SETCAR(curr, R_UnboundValue); /* in case binding is cached */
             LOCK_BINDING(curr);           /* in case binding is cached */
             if (last==R_NilValue)
@@ -1776,11 +1779,14 @@ void gsetVar(SEXP symbol, SEXP value, SEXP rho)
 
   Remove variable and return its previous value, or R_NoObject if it
   didn't exist.  For a user database, R_NilValue is returned when the
-  variable exists, rather than the value. */
+  variable exists, rather than the value.  Sets R_gradient to the
+  gradient stored with the variable (or to R_NilValue if none). */
 
-SEXP attribute_hidden RemoveVariable(SEXP name, SEXP env)
+static SEXP RemoveVariable(SEXP name, SEXP env)
 {
     SEXP list, value;
+
+    R_gradient = R_NilValue;
 
     if (TYPEOF(name) != SYMSXP) abort();
 
@@ -1822,11 +1828,14 @@ SEXP attribute_hidden RemoveVariable(SEXP name, SEXP env)
     if (value != R_NoObject) {
         if(env == R_GlobalEnv) R_DirtyImage = 1;
 	if (IS_GLOBAL_FRAME(env)) {
-            PROTECT(value);
+            PROTECT2(value,R_gradient);
             R_FlushGlobalCache(name);
-            UNPROTECT(1);
+            UNPROTECT(2);
         }
     }
+
+    if (R_gradient != R_NilValue)
+        R_variant_result = VARIANT_GRADIENT_FLAG;
 
     return value;
 }
@@ -1973,7 +1982,7 @@ static SEXP do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    SEXP name, value;
+    SEXP name, value, grad;
 
     checkArity(op, args);
     check1arg(args, call, "x");
@@ -1982,7 +1991,7 @@ static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (TYPEOF(name) != SYMSXP)
         error(_("invalid argument"));
 
-    value = RemoveVariable (name, rho);
+    value = RemoveVariable (name, rho);  /* sets R_gradient */
 
     if (value == R_NoObject)
         unbound_var_error(name);
@@ -1990,6 +1999,8 @@ static SEXP do_get_rm (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (TYPEOF(value) == PROMSXP) {
         SEXP prvalue = forcePromise(value);
         DEC_NAMEDCNT_AND_PRVALUE(value);
+        if (HAS_GRADIENT_IN_CELL(value))
+            R_gradient = GRADIENT_IN_CELL(value);
         value = prvalue;
     }
     else

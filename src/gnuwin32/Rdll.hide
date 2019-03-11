@@ -314,7 +314,6 @@
  Rf_RealFromInteger
  Rf_RealFromLogical
  Rf_RealFromString
- Rf_RemoveVariable
  Rf_SrcrefPrompt
  Rf_StringFromComplex
  Rf_StringFromInteger

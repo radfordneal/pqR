@@ -9185,6 +9185,17 @@ attr(,"gradient")
 [3,]    0    0    1
 [4,]    0    0    0
 > 
+> with gradient (a=9) { b <- a^2; get_rm(b) }
+[1] 81
+attr(,"gradient")
+[1] 18
+> with gradient (a=9) structure(a^2,fred=9999)
+[1] 81
+attr(,"fred")
+[1] 9999
+attr(,"gradient")
+[1] 18
+> 
 > a <- c(4,9)
 > class(a) <- "fred"
 > with gradient (a) unclass(a)^2

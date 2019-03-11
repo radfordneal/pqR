@@ -1400,7 +1400,6 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define RealFromInteger	Rf_RealFromInteger
 # define RealFromLogical	Rf_RealFromLogical
 # define RealFromString		Rf_RealFromString
-# define RemoveVariable		Rf_RemoveVariable
 # define Seql			Rf_Seql
 # define set_length_list_gradient Rf_set_length_list_gradient
 # define set_length_numeric_gradient Rf_set_length_numeric_gradient
@@ -1647,7 +1646,6 @@ SEXP promiseArgs(SEXP, SEXP, int);
 SEXP promiseArgsWithValues(SEXP, SEXP, SEXP, int);
 SEXP promiseArgsWith1Value(SEXP, SEXP, SEXP, SEXP, int);
 void Rcons_vprintf(const char *, va_list);
-SEXP RemoveVariable(SEXP, SEXP);
 SEXP R_data_class(SEXP , Rboolean);
 SEXP R_data_class2(SEXP);
 void R_HashRehash(SEXP);

@@ -193,8 +193,6 @@ with respect to all their real scalar, vector, matrix, or array arguments
   [<- (for vector lists and numeric vectors, including matrices & arrays) 
   
   +, -, *, /, ^ (+ and - may be unary) 
-
-  unclass, length<-
   
   abs, sqrt, expm1, exp, log1p, log2, log10, log (one-argument form only) 
   cos, sin, tan, acos, asin, atan, atan2 
@@ -218,6 +216,8 @@ with respect to all their real scalar, vector, matrix, or array arguments
   dt (with no ncp arg), pt (1st arg only, no ncp), qt (1st arg only,no ncp) 
   dunif, punif, qunif, runif 
   dweibull, pweibull, qweibull, rweibull
+
+  unclass, structure, get_rm, length<-
 }
 The following replacement functions do not compute any gradient information,
 but do leave undisturbed any gradient information that is associated with 

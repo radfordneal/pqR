@@ -1462,6 +1462,9 @@ with gradient (a=c(99,33,11)) { length(a) <- 2; a }
 with gradient (a=c(99,33,11)) { length(a) <- 3; a }
 with gradient (a=c(99,33,11)) { length(a) <- 4; a }
 
+with gradient (a=9) { b <- a^2; get_rm(b) }
+with gradient (a=9) structure(a^2,fred=9999)
+
 a <- c(4,9)
 class(a) <- "fred"
 with gradient (a) unclass(a)^2
