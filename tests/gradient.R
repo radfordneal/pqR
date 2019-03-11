@@ -1454,6 +1454,14 @@ with gradient (a=matrix(c(33,11,0.7,99),2,2)) { dimnames(a) <- NULL; a }
 with gradient (a = list(3,9)) { for (v in a) print(gradient_of(v)); a }
 with gradient (a = c(3,1,9)) { for (v in a^2) print(gradient_of(v)); a }
 
+with gradient (a=list(99,33,11)) { length(a) <- 2; a }
+with gradient (a=list(99,33,11)) { length(a) <- 3; a }
+with gradient (a=list(99,33,11)) { length(a) <- 4; a }
+
+with gradient (a=c(99,33,11)) { length(a) <- 2; a }
+with gradient (a=c(99,33,11)) { length(a) <- 3; a }
+with gradient (a=c(99,33,11)) { length(a) <- 4; a }
+
 a <- c(4,9)
 class(a) <- "fred"
 with gradient (a) unclass(a)^2

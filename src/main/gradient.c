@@ -1260,6 +1260,92 @@ LENGTH(grad),LENGTH(factors),GRADIENT_WRT_LEN(grad));
 }
 
 
+/* Create set of gradients from grad that account for setting the length
+   of a vector list to n.
+
+   Protects its grad argument. */
+
+SEXP attribute_hidden set_length_list_gradient (SEXP grad, R_len_t n)
+{
+#if 0
+REprintf("*** set_length_list_gradient %d\n",n);
+R_inspect(grad);
+#endif
+
+    RECURSIVE_GRADIENT_APPLY (set_length_list_gradient, grad, n);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+
+    if (TYPEOF(grad) != VECSXP) abort();
+
+    PROTECT(grad);
+
+    SEXP res = allocVector (VECSXP, n);
+
+    copy_vector_elements (res, 0, grad, 0, LENGTH(grad));
+
+#if 0
+REprintf("*** set_length_list_gradient end\n");
+R_inspect(res);
+REprintf("==\n");
+#endif
+
+    UNPROTECT(1);
+    return res;
+}
+
+
+/* Create set of gradients from grad that account for setting the length
+   of a numeric vector to n.
+
+   Protects its grad argument. */
+
+SEXP attribute_hidden set_length_numeric_gradient (SEXP grad, R_len_t n)
+{
+#if 0
+REprintf("*** set_length_list_gradient %d\n",n);
+R_inspect(grad);
+#endif
+
+    RECURSIVE_GRADIENT_APPLY (set_length_numeric_gradient, grad, n);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+
+    PROTECT(grad);
+
+    if (TYPEOF(grad) != REALSXP) abort();
+
+    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    if ((uint64_t)n * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
+
+
+    SEXP res = allocVector (REALSXP, n * gvars);
+
+    R_len_t k = LENGTH(grad) / gvars;
+
+    if (n > k) {
+        memset (REAL(res), 0, LENGTH(res) * sizeof(double));
+        for (R_len_t h = 0; h < gvars; h++)
+            memcpy (REAL(res)+h*n, REAL(grad)+h*k, k * sizeof(double));
+    }
+    else {
+        for (R_len_t h = 0; h < gvars; h++)
+            memcpy (REAL(res)+h*n, REAL(grad)+h*k, n * sizeof(double));
+    }
+
+#if 0
+REprintf("*** set_length_list_gradient end\n");
+R_inspect(res);
+REprintf("==\n");
+#endif
+
+    UNPROTECT(1);
+    return res;
+}
+
+
 /* Macro for building a function that applies a binary operation to
    all pairs of gradients in g1 and g2.  Protects g1 and g2, then
    unprotects them at the end, so surrounding function will need to

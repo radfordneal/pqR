@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1402,6 +1402,8 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define RealFromString		Rf_RealFromString
 # define RemoveVariable		Rf_RemoveVariable
 # define Seql			Rf_Seql
+# define set_length_list_gradient Rf_set_length_list_gradient
+# define set_length_numeric_gradient Rf_set_length_numeric_gradient
 # define Scollate		Rf_Scollate
 # define sortVector		Rf_sortVector
 # define SrcrefPrompt		Rf_SrcrefPrompt
@@ -1668,6 +1670,8 @@ void R_SaveGlobalEnvToFile(const char *);
 void R_SaveToFile(SEXP, FILE*, int);
 void R_SaveToFileV(SEXP, FILE*, int, int);
 Rboolean R_seemsOldStyleS4Object(SEXP object);
+SEXP set_length_list_gradient (SEXP, R_len_t);
+SEXP set_length_numeric_gradient (SEXP, R_len_t);
 int R_SetOptionWarn(int);
 int R_SetOptionWidth(int);
 void R_Suicide(const char *);

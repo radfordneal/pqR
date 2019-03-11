@@ -194,7 +194,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
   
   +, -, *, /, ^ (+ and - may be unary) 
 
-  unclass
+  unclass, length<-
   
   abs, sqrt, expm1, exp, log1p, log2, log10, log (one-argument form only) 
   cos, sin, tan, acos, asin, atan, atan2 

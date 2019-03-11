@@ -1,6 +1,7 @@
 % File src/library/base/man/length.Rd
 % Part of the R package, http://www.R-project.org
 % Copyright 1995-2012 R Core Team
+% Modifications for pqR Copyright (c) 2019 Radford M. Neal.
 % Distributed under GPL 2 or later
 
 \name{length}
@@ -20,6 +21,21 @@ length(x) <- value
   \item{x}{an \R object.  For replacement, a vector or factor.}
   \item{value}{an integer: double values will be coerced to integer.}
 }
+
+\details{
+  Both functions are generic: you can write methods to handle specific
+  classes of objects, see \link{InternalMethods}.  \code{length<-} has a
+  \code{"factor"} method.
+
+  The replacement form can be used to reset the length of a vector (or
+  pairlist).  If a vector is shortened, extra values are discarded;
+  when a vector is lengthened, it is padded out to its new length with
+  \code{\link{NULL}} for lists, 0 for raw vectors, and
+  \code{\link{NA}} for other vectors.
+  
+  Both are \link{primitive} functions.
+}
+
 \value{
   The default method currently returns an \code{\link{integer}} of
   length 1.  Since this may change in the future and may
@@ -34,20 +50,8 @@ length(x) <- value
   differs from S.
 
   The replacement form removes all the attributes of \code{x} except its
-  names.
-}
-
-\details{
-  Both functions are generic: you can write methods to handle specific
-  classes of objects, see \link{InternalMethods}.  \code{length<-} has a
-  \code{"factor"} method.
-
-  The replacement form can be used to reset the length of a vector.  If
-  a vector is shortened, extra values are discarded and when a vector is
-  lengthened, it is padded out to its new length with \code{\link{NA}}s
-  (\code{nul} for raw vectors).
-  
-  Both are \link{primitive} functions.
+  names (except that all attributes are kept if the new length is the
+  same as the old length.)
 }
 
 \section{Warning}{

@@ -9030,6 +9030,161 @@ attr(,"gradient")
 [2,]    0    1    0
 [3,]    0    0    1
 > 
+> with gradient (a=list(99,33,11)) { length(a) <- 2; a }
+[[1]]
+[1] 99
+
+[[2]]
+[1] 33
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0
+
+
+> with gradient (a=list(99,33,11)) { length(a) <- 3; a }
+[[1]]
+[1] 99
+
+[[2]]
+[1] 33
+
+[[3]]
+[1] 11
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+attr(,"gradient")[[2]][[3]]
+[1] 0
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0
+
+attr(,"gradient")[[3]][[3]]
+[1] 1
+
+
+> with gradient (a=list(99,33,11)) { length(a) <- 4; a }
+[[1]]
+[1] 99
+
+[[2]]
+[1] 33
+
+[[3]]
+[1] 11
+
+[[4]]
+NULL
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+NULL
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+attr(,"gradient")[[2]][[3]]
+[1] 0
+
+attr(,"gradient")[[2]][[4]]
+NULL
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0
+
+attr(,"gradient")[[3]][[3]]
+[1] 1
+
+attr(,"gradient")[[3]][[4]]
+NULL
+
+
+> 
+> with gradient (a=c(99,33,11)) { length(a) <- 2; a }
+[1] 99 33
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+> with gradient (a=c(99,33,11)) { length(a) <- 3; a }
+[1] 99 33 11
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+> with gradient (a=c(99,33,11)) { length(a) <- 4; a }
+[1] 99 33 11 NA
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+[4,]    0    0    0
+> 
 > a <- c(4,9)
 > class(a) <- "fred"
 > with gradient (a) unclass(a)^2

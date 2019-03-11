@@ -1023,9 +1023,15 @@ SEXP lengthgets(SEXP x, R_len_t len)
 }
 
 
-static SEXP do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho)
+/* Implements length(x) <- len.  SPECIAL, so can preserve gradient of x. */
+
+static SEXP do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    R_len_t len;
+    PROTECT (args = variant & VARIANT_GRADIENT
+                      ? evalList_gradient (args, rho, 0, 1, 0)
+                      : evalList (args, rho));
+
+    R_len_t len, olen;
     SEXP x, ans;
 
     checkArity(op, args);
@@ -1033,13 +1039,18 @@ static SEXP do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     x = CAR(args);
     if(isObject(x) && DispatchOrEval(call, op, "length<-", args,
-				     rho, &ans, 0, 1, 0))
+				     rho, &ans, 0, 1, 0)) {
+        UNPROTECT(1);
 	return(ans);
+    }
+
     if (!isVector(x) && !isPairList(x))
        errorcall(call,_("invalid argument"));
+
+    olen = length(x);
     len = asVecSize(call,CADR(args));
 
-    if (isVector(x) && !NAMEDCNT_GT_1(x) && LENGTH(x) != len) {
+    if (isVector(x) && !NAMEDCNT_GT_1(x) && len != olen) {
         SEXP xnames = getNamesAttrib(x);
         if (xnames != R_NilValue) {
             R_len_t old_len = LENGTH(xnames);
@@ -1061,12 +1072,30 @@ static SEXP do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho)
         ATTRIB_W(x) = R_NilValue;
         if (xnames != R_NilValue)
             setAttrib (x, R_NamesSymbol, xnames);
-        UNPROTECT(2);  /* x, xnames */
         SET_NAMEDCNT_0(x);
-        return x;
+        UNPROTECT(2);  /* x, xnames */
     }
     else
-        return lengthgets(x, len);
+        x = lengthgets (x, len);
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        SEXP x_grad = GRADIENT_IN_CELL(args);
+        if (LENGTH(x) == olen) {
+            R_gradient = x_grad;
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
+        else if (TYPEOF(x) == VECSXP) {
+            R_gradient = set_length_list_gradient (x_grad, len);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
+        else if (TYPEOF(x) == REALSXP) {
+            R_gradient = set_length_numeric_gradient (x_grad, len);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
+    }
+
+    UNPROTECT(1);  /* args */
+    return x;
 }
 
 /* Expand dots in args, but do not evaluate */
@@ -1254,7 +1283,7 @@ attribute_hidden FUNTAB R_FunTab_builtin[] =
 {"expression",	do_expression,	0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"list",	do_list,	0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"vector",	do_vector,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"length<-",	do_lengthgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
+{"length<-",	do_lengthgets,	0,	1000,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"switch",	do_switch,	0,	1200,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
 
 {"setNumMathThreads", do_setnumthreads,      0, 11, 1,  {PP_FUNCALL, PREC_FN, 0}},
