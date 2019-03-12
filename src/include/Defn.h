@@ -1280,6 +1280,8 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define ComplexFromLogical	Rf_ComplexFromLogical
 # define ComplexFromReal	Rf_ComplexFromReal
 # define ComplexFromString	Rf_ComplexFromString
+# define copy_list_recycled_gradient Rf_copy_list_recycled_gradient
+# define copy_numeric_recycled_gradient Rf_copy_numeric_recycled_gradient
 # define copyListMatrix		Rf_copyListMatrix
 # define copyMostAttribNoClass	Rf_copyMostAttribNoClass
 # define copyMostAttribNoTs	Rf_copyMostAttribNoTs
@@ -1509,6 +1511,8 @@ SEXP Rf_EnsureString(SEXP);
 
 /* Other Internally Used Functions */
 
+SEXP copy_list_recycled_gradient (SEXP, R_len_t);
+SEXP copy_numeric_recycled_gradient (SEXP, R_len_t);
 SEXP copy_scaled_gradients (SEXP, double, int);
 SEXP copy_scaled_gradients_vec (SEXP, SEXP);
 SEXP add_scaled_gradients (SEXP, SEXP, double, int);

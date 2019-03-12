@@ -551,6 +551,10 @@ void copyVector(SEXP s, SEXP t)
     }
 }
 
+/* Copies pairlist to make pairlist matrix.  Not actually used at the moment,
+   since matrix(pairlist,nr,nc) gives error instead, even though pairlist
+   matrices can be created by dim(pairlist)<-c(nr,nc). */
+
 void attribute_hidden copyListMatrix(SEXP s, SEXP t, Rboolean byrow)
 {
     SEXP pt, tmp;
@@ -561,15 +565,15 @@ void attribute_hidden copyListMatrix(SEXP s, SEXP t, Rboolean byrow)
     ns = nr*nc;
     pt = t;
     if(byrow) {
-	PROTECT(tmp = allocVector(STRSXP, nr*nc));
+	PROTECT(tmp = allocVector(VECSXP, nr*nc));
 	for (i = 0; i < nr; i++)
 	    for (j = 0; j < nc; j++) {
-		SET_STRING_ELT(tmp, i + j * nr, duplicate(CAR(pt)));
+		SET_VECTOR_ELT(tmp, i + j * nr, duplicate(CAR(pt)));
 		pt = CDR(pt);
 		if(pt == R_NilValue) pt = t;
 	    }
 	for (i = 0; i < ns; i++) {
-	    SETCAR(s, STRING_ELT(tmp, i++));
+	    SETCAR(s, VECTOR_ELT(tmp, i++));
 	    s = CDR(s);
 	}
 	UNPROTECT(1);

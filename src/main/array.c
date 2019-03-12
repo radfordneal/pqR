@@ -105,19 +105,22 @@ SEXP allocMatrix(SEXPTYPE mode, int nrow, int ncol)
     return allocMatrix1 (allocMatrix0 (mode, nrow, ncol), nrow, ncol);
 }
 
-/* Package matrix uses this .Internal with 5 args: should have 7 */
+/* matrix - .Internal, with gradient asked for for 1st arg.
 
-/* NOTE:  In pqR, we now guarantee that the result of "matrix" is
-   unshared (relevant to .C and .Fortran with DUP=FALSE). */
+   pqR guarantees that the result of "matrix" is unshared (relevant to
+   .C and .Fortran with DUP=FALSE).
+
+   NOTE: Package matrix uses this .Internal with 5 args: should have 7. */
 
 static SEXP do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP vals, ans, snr, snc, dimnames;
     int nr = 1, nc = 1, byrow, lendat, miss_nr, miss_nc;
+    SEXP args_sv = args;
 
     checkArity(op, args);
     vals = CAR(args); args = CDR(args);
-    /* Supposedly as.vector() gave a vector type, but we check */
+    /* could be pairlist... */
     switch(TYPEOF(vals)) {
 	case LGLSXP:
 	case INTSXP:
@@ -162,6 +165,9 @@ static SEXP do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if (miss_nr) nr = ceil(lendat/(double) nc);
     else if (miss_nc) nc = ceil(lendat/(double) nr);
 
+    if ((uint64_t)nr * nc > INT_MAX)
+	error(_("too many elements specified"));
+
     if (lendat > 1) {
 	if ((nr * nc) % lendat != 0) {
 	    if (((lendat > nr) && (lendat / nr) * nr != lendat) ||
@@ -176,22 +182,43 @@ static SEXP do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
     }
 
-    if ((double)nr * (double)nc > INT_MAX)
-	error(_("too many elements specified"));
-
     PROTECT(ans = allocMatrix(TYPEOF(vals), nr, nc));
 
-    if (lendat) {
-	if (isVector(vals))
+    SEXP grad = R_NilValue;
+
+    if (lendat > 0) {
+	if (isVector(vals)) {
 	    copyMatrix(ans, vals, byrow);
-	else
+            if (HAS_GRADIENT_IN_CELL(args_sv)) {
+                if (byrow) {
+                    if (TYPEOF(vals) == VECSXP) {
+                    }
+                    else if (TYPEOF(vals) == REALSXP) {
+                    }
+                }
+                else {
+                    if (TYPEOF(ans) == VECSXP)
+                        grad = copy_list_recycled_gradient
+                                 (GRADIENT_IN_CELL(args_sv), LENGTH(ans));
+                    else if (TYPEOF(ans) == REALSXP)
+                        grad = copy_numeric_recycled_gradient
+                                 (GRADIENT_IN_CELL(args_sv), LENGTH(ans));
+                }
+            }
+        }
+	else /* not actually possible, given check above */
 	    copyListMatrix(ans, vals, byrow);
     }
-    else if (isVectorAtomic(vals)) /* VECSXP/EXPRSXP already are R_NilValue */
-        Rf_set_elements_to_NA (ans, 0, 1, nr*nc);
+    else if (isVectorAtomic(ans)) /* VECSXP/EXPRSXP already are R_NilValue */
+        Rf_set_elements_to_NA (ans, 0, 1, LENGTH(ans));
 
     if (!isNull(dimnames) && length(dimnames) > 0)
 	ans = dimnamesgets(ans, dimnames);
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
 
     UNPROTECT(1);
     return ans;
@@ -1996,10 +2023,11 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
     nans = (R_len_t) d;
 
     PROTECT(ans = allocVector(TYPEOF(vals), nans));
-    if (lendat == 0)
-        Rf_set_elements_to_NA (ans, 0, 1, nans);
-    else
+
+    if (lendat > 0)
         copy_elements_recycled (ans, 0, vals, nans);
+    else if (isVectorAtomic(ans)) /* VECSXP/EXPRSXP already are R_NilValue */
+        Rf_set_elements_to_NA (ans, 0, 1, nans);
 
     if (nd > 0) {
         ans = dimgets(ans, dims);
@@ -2007,6 +2035,22 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
         if (TYPEOF(dimnames) == VECSXP 
          || TYPEOF(dimnames) == LISTSXP) /* for now */
             ans = dimnamesgets(ans, dimnames);
+    }
+
+    SEXP grad = R_NilValue;
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        PROTECT(ans);
+        if (TYPEOF(ans) == VECSXP)
+            grad = copy_list_recycled_gradient(GRADIENT_IN_CELL(args), nans);
+        else if (TYPEOF(ans) == REALSXP)
+            grad = copy_numeric_recycled_gradient(GRADIENT_IN_CELL(args), nans);
+        UNPROTECT(1);
+    }
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
     }
 
     UNPROTECT(2);
@@ -2199,8 +2243,8 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 
 /* Internal */
 
-{"matrix",	do_matrix,	0,    1000011,	7,	{PP_FUNCALL, PREC_FN,	0}},
-{"array",	do_array,	0,    1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"matrix",	do_matrix,	0,    11000011,	7,	{PP_FUNCALL, PREC_FN,	0}},
+{"array",	do_array,	0,    11000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"drop",	do_drop,	0,    1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"row",		do_rowscols,	1,    1011011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"col",		do_rowscols,	2,    1011011,	1,	{PP_FUNCALL, PREC_FN,	0}},

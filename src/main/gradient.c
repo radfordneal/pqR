@@ -403,6 +403,84 @@ static inline SEXP get_other_gradients (SEXP xenv)
 } while (0)
 
 
+/* Create set of gradients from recycling a vector list to be of length n.
+   Protects its grad argument. */
+
+SEXP attribute_hidden copy_list_recycled_gradient (SEXP grad, R_len_t n)
+{
+#if 0
+REprintf("copy_list_recycled_gradient %d\n",n);
+R_inspect(grad); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY (copy_list_recycled_gradient, grad, n);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+	
+    if (TYPEOF(grad) != VECSXP) abort();
+    R_len_t k = LENGTH(grad);
+
+    SEXP res = allocVector (VECSXP, n);
+    PROTECT(res);
+
+    copy_vector_elements (res, 0, grad, 0, n>k ? k : n);
+
+    for (R_len_t i = k; i < n; i++) {
+        SET_VECTOR_ELT (res, i, VECTOR_ELT(res,i-k));
+    }
+
+    UNPROTECT(1);
+#if 0
+REprintf("copy_list_recycled_gradient end\n",n);
+R_inspect(res); REprintf("==\n");
+#endif
+    return res;
+}
+
+
+/* Create set of gradients from recycling a numeric vector to be of length n.
+   Protects its grad argument. */
+
+SEXP attribute_hidden copy_numeric_recycled_gradient (SEXP grad, R_len_t n)
+{
+#if 0
+REprintf("copy_numeric_recycled_gradient %d\n",n);
+R_inspect(grad); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY (copy_numeric_recycled_gradient, grad, n);
+
+    if (grad == R_NilValue)
+        return R_NilValue;
+	
+    if (TYPEOF(grad) != REALSXP) abort();
+    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t k = LENGTH(grad) / gvars;
+
+    if ((uint64_t)n * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
+
+    SEXP res = allocVector (REALSXP, n * gvars);
+    PROTECT(res);
+
+    R_len_t m = n > k ? k : n;
+    for (R_len_t i = 0; i < m; i++) {
+        for (R_len_t h = 0; h < gvars; h++)
+            REAL(res)[h*n+i] = REAL(grad)[h*k+i];
+    }
+
+    for (R_len_t i = k; i < n; i++) {
+        for (R_len_t h = 0; h < gvars; h++)
+            REAL(res)[h*n+i] = REAL(res)[h*n+i-k];
+    }
+
+    UNPROTECT(1);
+#if 0
+REprintf("copy_numeric_recycled_gradient end\n",n);
+R_inspect(res); REprintf("==\n");
+#endif
+    return res;
+}
+
+
 /* Create set of gradients from converting a numeric vector of length n
    to a list.  Protects its grad argument. */
 
