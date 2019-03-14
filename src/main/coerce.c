@@ -1524,14 +1524,17 @@ static SEXP do_ascharacter (SEXP call, SEXP op, SEXP args, SEXP rho,
 }
 
 /* NB: as.vector is used for several other as.xxxx, including
-   as.expression, as.list, as.pairlist, as.symbol, (as.single) */
+   as.expression, as.list, as.pairlist, as.symbol, (as.single)
+
+   First arg may come with gradient, may be pending. */
+
 static SEXP do_asvector (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP x, ans;
     int type;
 
     if (DispatchOrEval(call, op, "as.vector", args, rho, &ans, 0, 1, variant))
-	return(ans);
+        return ans;
 
     /* Method dispatch has failed, we now just */
     /* run the generic internal code */
@@ -1541,50 +1544,60 @@ static SEXP do_asvector (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     WAIT_UNTIL_COMPUTED(CADR(args));
 
     if (!isString(CADR(args)) || LENGTH(CADR(args)) != 1)
-	errorcall_return(call, R_MSG_mode);
+        errorcall_return(call, R_MSG_mode);
     if (!strcmp("function", (CHAR(STRING_ELT(CADR(args), 0))))) /* ASCII */
-	type = CLOSXP;
+        type = CLOSXP;
     else
-	type = str2type(CHAR(STRING_ELT(CADR(args), 0))); /* ASCII */
+        type = str2type(CHAR(STRING_ELT(CADR(args), 0))); /* ASCII */
 
     /* "any" case added in 2.13.0 */
-    if(type == ANYSXP || TYPEOF(x) == type) {
-        if (! (variant & VARIANT_PENDING_OK) )
-            WAIT_UNTIL_COMPUTED(x);
-	switch(TYPEOF(x)) {
-	case LGLSXP:
-	case INTSXP:
-	case REALSXP:
-	case CPLXSXP:
-	case STRSXP:
-	case RAWSXP:
-	    if (!HAS_ATTRIB(x))
-                return x;
-            if (NAMEDCNT_EQ_0(x))
+    if (type == ANYSXP || TYPEOF(x) == type) {
+        switch(TYPEOF(x)) {
+        case LGLSXP:
+        case INTSXP:
+        case REALSXP:
+        case CPLXSXP:
+        case STRSXP:
+        case RAWSXP:
+            if (!HAS_ATTRIB(x))
                 ans = x;
             else {
-                ans = duplicate(x);
+                if (NAMEDCNT_EQ_0(x))
+                    ans = x;
+                else {
+                    ans = duplicate(x);
+                }
+                CLEAR_ATTRIB(ans);
             }
-	    CLEAR_ATTRIB(ans);
-	    return ans;
-	case EXPRSXP:
-	case VECSXP:
-	    return x;
-	default:
-	    ;
-	}
+            if (TYPEOF(x) == REALSXP && HAS_GRADIENT_IN_CELL(args)) {
+                R_gradient = GRADIENT_IN_CELL(args);
+                R_variant_result = VARIANT_GRADIENT_FLAG;
+            }
+            if (! (variant & VARIANT_PENDING_OK) )
+                WAIT_UNTIL_COMPUTED(ans);
+            return ans;
+        case EXPRSXP:
+        case VECSXP:
+            if (TYPEOF(x) == VECSXP && HAS_GRADIENT_IN_CELL(args)) {
+                R_gradient = GRADIENT_IN_CELL(args);
+                R_variant_result = VARIANT_GRADIENT_FLAG;
+            }
+            return x;
+        default:
+            ;
+        }
     }
 
     WAIT_UNTIL_COMPUTED(x);
 
     if(IS_S4_OBJECT(x) && TYPEOF(x) == S4SXP) {
         SEXP v = R_getS4DataSlot(x, ANYSXP);
-	if(v == R_NilValue)
-	    error(_("no method for coercing this S4 class to a vector"));
-	x = v;
+        if(v == R_NilValue)
+            error(_("no method for coercing this S4 class to a vector"));
+        x = v;
     }
 
-    switch(type) {/* only those are valid : */
+    switch (type) {/* only those are valid : */
     case SYMSXP: /* for as.symbol */
     case LGLSXP:
     case INTSXP:
@@ -1597,22 +1610,25 @@ static SEXP do_asvector (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     case CLOSXP: /* non-primitive function */
     case RAWSXP:
     case ANYSXP: /* any */
-	break;
+        break;
     default:
-	errorcall_return(call, R_MSG_mode);
+        errorcall_return(call, R_MSG_mode);
     }
+
     ans = ascommon(call, x, type);
-    switch(TYPEOF(ans)) { /* keep attributes for these: */
+
+    switch (TYPEOF(ans)) { /* keep attributes for these: */
     case NILSXP: /* doesn't have any */
     case LISTSXP: /* but ascommon fiddled */
     case LANGSXP:
     case VECSXP:
     case EXPRSXP:
-	break;
+        break;
     default:
-	CLEAR_ATTRIB(ans);
-	break;
+        CLEAR_ATTRIB(ans);
+        break;
     }
+
     return ans;
 }
 
@@ -3113,7 +3129,7 @@ attribute_hidden FUNTAB R_FunTab_coerce[] =
 {"as.logical",	do_ascharacter,	4,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"as.raw",	do_ascharacter,	5,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"as.vector",	do_asvector,	0,	1011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.vector",	do_asvector,	0,	11011011, 2,	{PP_FUNCALL, PREC_FN,	0}},
 {"as.function.default",do_asfunction,0,	11,	2,	{PP_FUNCTION,PREC_FN,	  0}},
 {"as.call",	do_ascall,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
