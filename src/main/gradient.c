@@ -36,14 +36,24 @@
 #include <matprod/matprod.h>
 
 
-#define GRADIENT_WRT_LEN(g) \
-  (LENGTH(g) == 1 ? 1 : TRUELENGTH(g))
-
-#define SET_GRADIENT_WRT_LEN(g,l) \
-  (LENGTH(g) == 1 ? (void) 0 : (void) SET_TRUELENGTH(g,l))
-
 static void R_NORETURN gradient_matrix_too_large_error (void) {
     error (_("gradient matrix would be too large"));
+}
+
+static inline SEXP alloc_list_gradient (R_len_t n)
+{
+    return allocVector (VECSXP, n);
+}
+
+static SEXP alloc_numeric_gradient (R_len_t gvars, R_len_t n)
+{
+    if ((uint64_t) gvars * n > R_LEN_T_MAX)
+        error (_("gradient matrix would be too large"));
+
+    SEXP res = allocVector (REALSXP, gvars * n);
+    SET_GRADIENT_WRT_LEN (res, gvars);
+
+    return res;
 }
 
 
@@ -195,13 +205,9 @@ static SEXP make_id_numeric (SEXP v)
         res = R_ScalarRealOne;
     }
     else {
-
         R_len_t vlen = LENGTH(v);
-        uint64_t Jlen = (uint64_t)vlen * (uint64_t)vlen;
-        if (Jlen > R_LEN_T_MAX) gradient_matrix_too_large_error();
-
-        res = allocVector (REALSXP, (R_len_t) Jlen);
-        SET_GRADIENT_WRT_LEN (res, vlen);
+        res = alloc_numeric_gradient (vlen, vlen);
+        R_len_t Jlen = LENGTH(res);
         memset (REAL(res), 0, Jlen * sizeof(double));
         for (R_len_t j = 0; j < Jlen; j += vlen+1)
             REAL(res)[j] = 1.0;
@@ -214,7 +220,7 @@ static SEXP make_id_recursive (SEXP val, SEXP top)
 {
     R_len_t n = LENGTH(val);
 
-    SEXP res = PROTECT(allocVector(VECSXP,n));
+    SEXP res = PROTECT(alloc_list_gradient(n));
     setAttrib (res, R_NamesSymbol, getNamesAttrib(val));
     SET_GRAD_WRT_LIST (res, 1);
 
@@ -260,7 +266,7 @@ static SEXP make_id_grad (SEXP val)
 
     else if (TYPEOF(val) == VECSXP) {
         SEXP top;
-        PROTECT (top = allocVector (VECSXP, LENGTH(val)));
+        PROTECT (top = alloc_list_gradient(LENGTH(val)));
         res = make_id_recursive (val, top);
         UNPROTECT(1);
     }
@@ -456,10 +462,7 @@ R_inspect(grad); REprintf("--\n");
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
     R_len_t k = LENGTH(grad) / gvars;
 
-    if ((uint64_t)n * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
-
-    SEXP res = allocVector (REALSXP, n * gvars);
-    SET_GRADIENT_WRT_LEN (res, gvars);
+    SEXP res = alloc_numeric_gradient (gvars, n);
     PROTECT(res);
 
     R_len_t m = n > k ? k : n;
@@ -506,8 +509,7 @@ R_inspect(grad); REprintf("--\n");
     PROTECT(res);
 
     for (R_len_t i = 0; i < n; i++) {
-        SEXP r = allocVector(REALSXP,gvars);
-        SET_GRADIENT_WRT_LEN (r, gvars);
+        SEXP r = alloc_numeric_gradient (gvars, 1);
         SET_VECTOR_ELT (res, i, r);
         memcpy (REAL(r), REAL(grad)+i*gvars, gvars * sizeof(double));
     }
@@ -648,8 +650,7 @@ R_inspect(grad); REprintf("--\n");
     if (glen % n != 0) abort();
     R_len_t slen = glen/n;
     R_len_t m = j-i+1;
-    SEXP res = allocVector (REALSXP, m * slen);
-    SET_GRADIENT_WRT_LEN (res, slen);
+    SEXP res = alloc_numeric_gradient (slen, m);
     R_len_t k, l;
     k = l = 0;
     while (k < glen) {
@@ -686,10 +687,7 @@ R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
     R_len_t gvars = GRADIENT_WRT_LEN (grad);
     int m = LENGTH(indx);
 
-    if ((uint64_t)m * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
-
-    SEXP res = allocVector (REALSXP, m * gvars);
-    SET_GRADIENT_WRT_LEN (res, gvars);
+    SEXP res = alloc_numeric_gradient (gvars, m);
     
     for (R_len_t j = 0; j < m; j++) {
         R_len_t i = INTEGER(indx)[j];
@@ -773,10 +771,7 @@ R_inspect(grad); REprintf("--\n");
 
     R_len_t ncs = LENGTH(sc);
 
-    if ((uint64_t)ncs * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
-
-    SEXP res = allocVector (REALSXP, ncs * gvars);
-    SET_GRADIENT_WRT_LEN (res, gvars);
+    SEXP res = alloc_numeric_gradient (gvars, ncs);
 
     memset (REAL(res), 0, LENGTH(res) * sizeof(double));
 
@@ -883,12 +878,10 @@ R_inspect(grad); REprintf("--\n");
 
     R_len_t ncs = LENGTH(sc);
 
-    if ((uint64_t)ncs * nrs > R_LEN_T_MAX /* if true, next might overflow */
-     || (uint64_t)ncs * nrs * gvars > R_LEN_T_MAX) 
+    if ((uint64_t)ncs * nrs > R_LEN_T_MAX)
         gradient_matrix_too_large_error();
 
-    SEXP res = allocVector (REALSXP, ncs * nrs * gvars);
-    SET_GRADIENT_WRT_LEN (res, gvars);
+    SEXP res = alloc_numeric_gradient (gvars, ncs*nrs);
 
     memset (REAL(res), 0, LENGTH(res) * sizeof(double));
 
@@ -1010,12 +1003,10 @@ R_inspect(grad); REprintf("--\n");
     R_len_t nrs = LENGTH(sr);
     R_len_t ncs = LENGTH(sc);
 
-    if ((uint64_t)ncs * nrs > R_LEN_T_MAX /* if true, next might overflow */
-     || (uint64_t)ncs * nrs * gvars > R_LEN_T_MAX) 
+    if ((uint64_t)ncs * nrs > R_LEN_T_MAX)
         gradient_matrix_too_large_error();
 
-    SEXP res = allocVector (REALSXP, ncs * nrs * gvars);
-    SET_GRADIENT_WRT_LEN (res, gvars);
+    SEXP res = alloc_numeric_gradient (gvars, ncs*nrs);
 
     memset (REAL(res), 0, LENGTH(res) * sizeof(double));
 
@@ -1129,10 +1120,7 @@ R_inspect(grad); REprintf("--\n");
         indx[j] = 0;
     }
 
-    if ((uint64_t)m * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
-
-    SEXP res = allocVector (REALSXP, m * gvars);
-    SET_GRADIENT_WRT_LEN (res, gvars);
+    SEXP res = alloc_numeric_gradient (gvars, m);
 
     int last = 0;
 
@@ -1268,16 +1256,14 @@ attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
     SEXP r;
 
     gvars = GRADIENT_WRT_LEN(grad);
-    if ((uint64_t)n * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
-    glen = n * gvars;
     gn = LENGTH(grad) / gvars;
     if (LENGTH(grad) != gvars * gn) abort();
 
     if (glen == 1)
         r = ScalarRealMaybeConst (*REAL(grad) * factor);
     else {
-        r = allocVector (REALSXP, glen);
-        SET_GRADIENT_WRT_LEN (r, gvars);
+        r = alloc_numeric_gradient (gvars, n);
+        glen = n * gvars;
         k = 0;
         for (i = 0; i < glen; i += n) {
             for (j = 0; j < n; j++) {
@@ -1320,12 +1306,10 @@ LENGTH(grad),LENGTH(factors),GRADIENT_WRT_LEN(grad));
     SEXP r;
 
     gvars = GRADIENT_WRT_LEN(grad);
-    if ((uint64_t)flen * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
-    glen = flen * gvars;
     gn = LENGTH(grad) / gvars;
     if (LENGTH(grad) != gvars * gn) abort();
-    r = allocVector (REALSXP, glen);
-    SET_GRADIENT_WRT_LEN (r, gvars);
+    r = alloc_numeric_gradient (gvars, flen);
+    glen = flen * gvars;
     k = 0;
     for (i = 0; i < glen; i += flen) {
         for (j = 0; j < flen; j++) {
@@ -1397,12 +1381,9 @@ R_inspect(grad);
     if (TYPEOF(grad) != REALSXP) abort();
 
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
-    if ((uint64_t)n * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
-
-
-    SEXP res = allocVector (REALSXP, n * gvars);
-
     R_len_t k = LENGTH(grad) / gvars;
+
+    SEXP res = alloc_numeric_gradient (gvars, n);
 
     if (n > k) {
         memset (REAL(res), 0, LENGTH(res) * sizeof(double));
@@ -1575,10 +1556,8 @@ R_inspect(v);
     R_len_t h, k, m;
     SEXP res;
 
-    if ((uint64_t)n * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
-
     if (grad == R_NilValue) {
-        res = allocVector (REALSXP, n * gvars);
+        res = alloc_numeric_gradient (gvars, n);
         memset (REAL(res), 0, LENGTH(res) * sizeof(double));
     }
     else {
@@ -1586,7 +1565,7 @@ R_inspect(v);
         if (LENGTH(grad) == n * gvars)
             res = duplicate(grad);
         else {
-            res = allocVector (REALSXP, n * gvars);
+            res = alloc_numeric_gradient (gvars, n);
             m = LENGTH(grad) / gvars;
             for (h = 0; h < gvars; h++) {
                 memcpy (REAL(res) + h*n, REAL(grad) + h*m, m * sizeof(double));
@@ -1594,8 +1573,6 @@ R_inspect(v);
             }
         }
     }
-
-    SET_GRADIENT_WRT_LEN (res, gvars);
 
     if (v == R_NilValue || LENGTH(v) == 0) {
         for (h = 0; h < gvars; h++)
@@ -1652,10 +1629,8 @@ R_inspect(v);
     R_len_t h, m;
     SEXP res;
 
-    if ((uint64_t)n * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
-
     if (grad == R_NilValue) {
-        res = allocVector (REALSXP, n * gvars);
+        res = alloc_numeric_gradient (gvars, n);
         memset (REAL(res), 0, LENGTH(res) * sizeof(double));
     }
     else {
@@ -1663,7 +1638,7 @@ R_inspect(v);
         if (LENGTH(grad) == n * gvars)
             res = duplicate(grad);
         else {
-            res = allocVector (REALSXP, n * gvars);
+            res = alloc_numeric_gradient (gvars, n);
             m = LENGTH(grad) / gvars;
             for (h = 0; h < gvars; h++) {
                 memcpy (REAL(res) + h*n, REAL(grad) + h*m, m * sizeof(double));
@@ -1671,8 +1646,6 @@ R_inspect(v);
             }
         }
     }
-
-    SET_GRADIENT_WRT_LEN (res, gvars);
 
     R_len_t k = LENGTH(indx);
 
@@ -1867,15 +1840,13 @@ R_inspect(v);
     SEXP res;
 
     if (grad == R_NilValue) {
-        res = allocVector (REALSXP, n * gvars);
+        res = alloc_numeric_gradient (gvars, n);
         memset (REAL(res), 0, LENGTH(res) * sizeof(double));
     }
     else {
         if (TYPEOF(grad) != REALSXP) abort();
         res = duplicate(grad);
     }
-
-    SET_GRADIENT_WRT_LEN (res, gvars);
 
     int last = 0;
     int indx[k];
@@ -2019,11 +1990,8 @@ R_inspect(v);
 
     R_len_t vlen = LENGTH(v);
 
-    if ((uint64_t)n * vlen > R_LEN_T_MAX) gradient_matrix_too_large_error();
-
     if (grad == R_NilValue) {
-        grad = allocVector (REALSXP, n * vlen);
-        SET_GRADIENT_WRT_LEN (grad, vlen);
+        grad = alloc_numeric_gradient (vlen, n);
         memset (REAL(grad), 0, LENGTH(grad) * sizeof(double));
     }
     else {
@@ -2065,8 +2033,7 @@ R_inspect(v);
     R_len_t vlen = LENGTH(v);
     R_len_t m = 0;
 
-    SEXP res = allocVector (REALSXP, (n+1) * vlen);
-    SET_GRADIENT_WRT_LEN (res, vlen);
+    SEXP res = alloc_numeric_gradient (vlen, n+1);
 
     memset (REAL(res), 0, LENGTH(res) * sizeof(double));
     if (grad != R_NilValue) {
@@ -2112,10 +2079,8 @@ attribute_hidden SEXP add_scaled_gradients (SEXP base, SEXP extra,
     if (base == R_NilValue) {
         if (TYPEOF(extra) != REALSXP) abort();
         gvars = GRADIENT_WRT_LEN(extra);
-        if ((uint64_t)n*gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
+        r = alloc_numeric_gradient (gvars, n);
         glen = n * gvars;
-        r = allocVector (REALSXP, glen);
-        SET_GRADIENT_WRT_LEN (r, gvars);
         elen = LENGTH(extra);
         en = elen / gvars;
         if (en * gvars != elen) abort();
@@ -2129,10 +2094,8 @@ attribute_hidden SEXP add_scaled_gradients (SEXP base, SEXP extra,
     else if (extra == R_NilValue) {
         if (TYPEOF(base) != REALSXP) abort();
         gvars = GRADIENT_WRT_LEN(base);
-        if ((uint64_t)n*gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
+        r = alloc_numeric_gradient (gvars, n);
         glen = n * gvars;
-        r = allocVector (REALSXP, glen);
-        SET_GRADIENT_WRT_LEN (r, gvars);
         blen = LENGTH(base);
         bn = blen / gvars;
         if (bn * gvars != blen) abort();
@@ -2148,10 +2111,8 @@ attribute_hidden SEXP add_scaled_gradients (SEXP base, SEXP extra,
         if (TYPEOF(extra) != REALSXP) abort();
         gvars = GRADIENT_WRT_LEN(base);
         if (GRADIENT_WRT_LEN(extra) != gvars) abort();
-        if ((uint64_t)n*gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
+        r = alloc_numeric_gradient (gvars, n);
         glen = n * gvars;
-        r = allocVector (REALSXP, glen);
-        SET_GRADIENT_WRT_LEN (r, gvars);
         blen = LENGTH(base);
         bn = blen / gvars;
         if (bn * gvars != blen) abort();
@@ -2202,19 +2163,17 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
     if (TYPEOF(factors) != REALSXP) abort();
 
     R_len_t flen = LENGTH(factors);
-    R_len_t en, bn, gvars;
+    R_len_t en, bn, gvars, glen;
     R_len_t i, j, k, l;
-    uint64_t glen;
     SEXP r;
 
     if (base == R_NilValue) {
         if (TYPEOF(extra) != REALSXP) abort();
         gvars = GRADIENT_WRT_LEN(extra);
-        glen = (uint64_t)flen * (uint64_t)gvars;
         en = LENGTH(extra) / gvars;
         if (LENGTH(extra) != gvars * en) abort();
-        r = allocVector (REALSXP, glen);
-        SET_GRADIENT_WRT_LEN (r, gvars);
+        r = alloc_numeric_gradient (gvars, flen);
+        glen = flen * gvars;
         k = 0;
         for (i = 0; i < glen; i += flen) {
             for (j = 0; j < flen; j++) {
@@ -2227,11 +2186,10 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
     else if (extra == R_NilValue) {
         if (TYPEOF(base) != REALSXP) abort();
         gvars = GRADIENT_WRT_LEN(base);
-        glen = (uint64_t)flen * (uint64_t)gvars;
         bn = LENGTH(base) / gvars;
         if (LENGTH(base) != gvars * bn) abort();
-        r = allocVector (REALSXP, glen);
-        SET_GRADIENT_WRT_LEN (r, gvars);
+        r = alloc_numeric_gradient (gvars, flen);
+        glen = flen * gvars;
         l = 0;
         for (i = 0; i < glen; i += flen) {
             for (j = 0; j < flen; j++) {
@@ -2246,13 +2204,12 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
         if (TYPEOF(extra) != REALSXP) abort();
         gvars = GRADIENT_WRT_LEN(extra);
         if (GRADIENT_WRT_LEN(base) != gvars) abort();
-        glen = (uint64_t)flen * (uint64_t)gvars;
         bn = LENGTH(base) / gvars;
         if (LENGTH(base) != gvars * bn) abort();
         en = LENGTH(extra) / gvars;
         if (LENGTH(extra) != gvars * en) abort();
-        r = allocVector (REALSXP, glen);
-        SET_GRADIENT_WRT_LEN (r, gvars);
+        r = alloc_numeric_gradient (gvars, flen);
+        glen = flen * gvars;
         k = l = 0;
         for (i = 0; i < glen; i += flen) {
             for (j = 0; j < flen; j++) {
@@ -2317,11 +2274,8 @@ static SEXP add_scaled_list (SEXP a, SEXP b, SEXP f)
     if (LENGTH(f) % k != 0) abort();
     R_len_t m = LENGTH(f) / k;
 
-    uint64_t glen = (uint64_t)n * (uint64_t)m;
-    if (glen > R_LEN_T_MAX) gradient_matrix_too_large_error();
-
-    res = allocVector (REALSXP, glen);
-    SET_GRADIENT_WRT_LEN (res, m);
+    res = alloc_numeric_gradient (m, n);
+    R_len_t glen = n * m;
 
     matprod_mat_mat (REAL(b), REAL(f), REAL(res), n, k, m);
 
