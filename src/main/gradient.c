@@ -246,7 +246,7 @@ static SEXP make_id_recursive (SEXP val, SEXP top)
             SET_VECTOR_ELT (res, i, ntop);
         }
         else if (TYPEOF(v) == VECSXP) {
-            SET_VECTOR_ELT (bot, i, allocVector (VECSXP, LENGTH(v)));
+            SET_VECTOR_ELT (bot, i, alloc_list_gradient (LENGTH(v)));
             SET_VECTOR_ELT (res, i, make_id_recursive (v, ntop));
         }
         UNPROTECT(1);
@@ -425,7 +425,7 @@ R_inspect(grad); REprintf("--\n");
     if (TYPEOF(grad) != VECSXP) abort();
     R_len_t k = LENGTH(grad);
 
-    SEXP res = allocVector (VECSXP, n);
+    SEXP res = alloc_list_gradient (n);
     PROTECT(res);
 
     copy_vector_elements (res, 0, grad, 0, n>k ? k : n);
@@ -498,7 +498,7 @@ R_inspect(grad); REprintf("--\n");
 
     if (LENGTH(grad) != n * gvars) abort();
 
-    SEXP res = allocVector (VECSXP, n);
+    SEXP res = alloc_list_gradient (n);
     PROTECT(res);
 
     for (R_len_t i = 0; i < n; i++) {
@@ -553,7 +553,7 @@ R_inspect(grad); REprintf("--\n");
 
     PROTECT(grad);
 
-    SEXP res = allocVector (VECSXP, j-i+1);
+    SEXP res = alloc_list_gradient (j-i+1);
 
     if (i < 0) i = 0;
     if (j >= n) j = n-1;
@@ -587,7 +587,7 @@ R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
     PROTECT(grad);
 
     int k = LENGTH(indx);
-    SEXP res = allocVector (VECSXP, k);
+    SEXP res = alloc_list_gradient (k);
     
     for (R_len_t j = 0; j < k; j++) {
         R_len_t i = INTEGER(indx)[j];
@@ -700,7 +700,7 @@ R_inspect(grad); REprintf("--\n");
     PROTECT(grad);
 
     R_len_t ncs = LENGTH(sc);
-    SEXP res = allocVector (VECSXP, ncs);
+    SEXP res = alloc_list_gradient (ncs);
 
     int st = (ii-1) - nr;
     int j;
@@ -789,7 +789,7 @@ R_inspect(grad); REprintf("--\n");
 
     if ((uint64_t)ncs * nrs > R_LEN_T_MAX) gradient_matrix_too_large_error();
 
-    SEXP res = allocVector (VECSXP, ncs * nrs);
+    SEXP res = alloc_list_gradient (ncs * nrs);
 
     start -= 1;
 
@@ -906,7 +906,10 @@ R_inspect(grad); REprintf("--\n");
     R_len_t nrs = LENGTH(sr);
     R_len_t ncs = LENGTH(sc);
 
-    SEXP res = allocVector (VECSXP, ncs * nrs);
+    if ((uint64_t)ncs * nrs > R_LEN_T_MAX)
+        gradient_matrix_too_large_error();
+
+    SEXP res = alloc_list_gradient (ncs * nrs);
 
     for (j = 0, ij = 0; j < ncs; j++) {
 
@@ -1028,7 +1031,7 @@ R_inspect(grad); REprintf("--\n");
         indx[j] = 0;
     }
 
-    SEXP res = allocVector (VECSXP, m);
+    SEXP res = alloc_list_gradient (m);
     int last = 0;
 
     for (i = 0; !last; i++) {
@@ -1125,7 +1128,7 @@ REprintf("--\n");
 
     PROTECT(grad);
 
-    SEXP res = allocVector (VECSXP, n-(j-i+1));
+    SEXP res = alloc_list_gradient (n-(j-i+1));
     if (i > 0) copy_vector_elements (res, 0, grad, 0, i);
     if (j < n-1) copy_vector_elements (res, i, grad, j+1, n-1-j);
 
@@ -1164,7 +1167,7 @@ REprintf("--\n");
 
     PROTECT(grad);
 
-    SEXP res = allocVector (VECSXP, n_remain);
+    SEXP res = alloc_list_gradient (n_remain);
     R_len_t i, j;
 
     j = 0;
@@ -1283,7 +1286,7 @@ R_inspect(grad);
 
     PROTECT(grad);
 
-    SEXP res = allocVector (VECSXP, n);
+    SEXP res = alloc_list_gradient (n);
 
     copy_vector_elements (res, 0, grad, 0, LENGTH(grad));
 
@@ -1426,7 +1429,7 @@ R_inspect(v);
     PROTECT2(grad,v);
 
     if (grad == R_NilValue) 
-        grad = allocVector (VECSXP, n);
+        grad = alloc_list_gradient (n);
     else {
         if (TYPEOF(grad) != VECSXP) abort();
         grad = dup_top_level(grad);
@@ -1629,7 +1632,7 @@ R_inspect(v);
     PROTECT2(grad,v);
 
     if (grad == R_NilValue) 
-        grad = allocVector (VECSXP, n);
+        grad = alloc_list_gradient (n);
     else {
         if (TYPEOF(grad) != VECSXP) abort();
         grad = dup_top_level(grad);
@@ -1688,7 +1691,7 @@ R_inspect(v);
     SEXP res;
 
     if (grad == R_NilValue) 
-        res = allocVector (VECSXP, n);
+        res = alloc_list_gradient (n);
     else {
         if (TYPEOF(grad) != VECSXP) abort();
         res = dup_top_level(grad);
@@ -1829,7 +1832,7 @@ R_inspect(v);
     PROTECT2(grad,v);
 
     if (grad == R_NilValue) 
-        grad = allocVector (VECSXP, n);
+        grad = alloc_list_gradient (n);
     else {
         if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
         grad = dup_top_level(grad);
@@ -1860,7 +1863,7 @@ R_inspect(v);
 
     PROTECT2(grad,v);
 
-    SEXP res = allocVector (VECSXP, n+1);
+    SEXP res = alloc_list_gradient (n+1);
     if (grad != R_NilValue) {
         if (TYPEOF(grad) != VECSXP) abort();
         copy_vector_elements (res, 0, grad, 0, LENGTH(grad));
@@ -2141,7 +2144,7 @@ static SEXP add_scaled_list (SEXP a, SEXP b, SEXP f)
     if (TYPEOF(b) == VECSXP) {
         R_len_t n = LENGTH(b);
         PROTECT2(a,b);
-        PROTECT (res = allocVector(VECSXP,n));
+        PROTECT (res = alloc_list_gradient (n));
         if (a == R_NilValue) {
             for (R_len_t i = 0; i < n; i++)
               SET_VECTOR_ELT (res, i, add_scaled_list (a, VECTOR_ELT(b,i), f));
