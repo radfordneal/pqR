@@ -406,6 +406,8 @@ static inline SEXP get_other_gradients (SEXP xenv)
         return res; \
     } \
     UNPROTECT(1); \
+    if (grad == R_NilValue) \
+        return R_NilValue; \
 } while (0)
 
 
@@ -419,9 +421,6 @@ REprintf("copy_list_recycled_gradient %d\n",n);
 R_inspect(grad); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (copy_list_recycled_gradient, grad, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
 	
     if (TYPEOF(grad) != VECSXP) abort();
     R_len_t k = LENGTH(grad);
@@ -454,9 +453,6 @@ REprintf("copy_numeric_recycled_gradient %d\n",n);
 R_inspect(grad); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (copy_numeric_recycled_gradient, grad, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
 	
     if (TYPEOF(grad) != REALSXP) abort();
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
@@ -495,9 +491,6 @@ REprintf("as_list_gradient %d\n",n);
 R_inspect(grad); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (as_list_gradient, grad, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
 	
     if (TYPEOF(grad) != REALSXP) abort();
 
@@ -533,9 +526,6 @@ REprintf("subset2_list_gradient %d %d\n",i,n);
 R_inspect(grad); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (subset2_list_gradient, grad, i, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
 	
     if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
     if (i < 0 || i >= n) abort();
@@ -555,9 +545,6 @@ REprintf("subset_range_list_gradient %d %d %d\n",i,j,n);
 R_inspect(grad); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (subset_range_list_gradient, grad, i, j, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
 	
     if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
 
@@ -594,9 +581,6 @@ REprintf("subset_indexes_list_gradient %d\n",n);
 R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (subset_indexes_list_gradient, grad, indx, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
 	
     if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
 
@@ -628,9 +612,6 @@ REprintf("subset_range_numeric_gradient %d %d %d\n",i,j,n);
 R_inspect(grad); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (subset_range_numeric_gradient, grad, i, j, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
 
     if (j < 0 || i >= n || j < i)
         return R_NilValue;
@@ -677,9 +658,6 @@ R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (subset_indexes_numeric_gradient, grad, indx, n);
 
-    if (grad == R_NilValue)
-        return R_NilValue;
-
     if (TYPEOF(grad) != REALSXP) abort();
 
     PROTECT(grad);
@@ -716,9 +694,6 @@ R_inspect(grad); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (matrix_subset_one_row_list_gradient, grad,
                               ii, nr, sc, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
 
     if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
 
@@ -758,9 +733,6 @@ R_inspect(grad); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (matrix_subset_one_row_numeric_gradient, grad,
                               ii, nr, sc, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
 
     if (TYPEOF(grad) != REALSXP) abort();
 
@@ -808,9 +780,6 @@ R_inspect(grad); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (matrix_subset_range_list_gradient, grad,
                               start, nrs, nr, sc, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
 
     if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
 
@@ -865,9 +834,6 @@ R_inspect(grad); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (matrix_subset_range_numeric_gradient, grad,
                               start, nrs, nr, sc, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
 
     if (TYPEOF(grad) != REALSXP) abort();
 
@@ -931,9 +897,6 @@ R_inspect(grad); REprintf("--\n");
     RECURSIVE_GRADIENT_APPLY (matrix_subset_indexes_list_gradient, grad,
                               sr, nr, sc, n);
 
-    if (grad == R_NilValue)
-        return R_NilValue;
-
     if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
 
     PROTECT(grad);
@@ -987,9 +950,6 @@ R_inspect(grad); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (matrix_subset_indexes_numeric_gradient, grad,
                               sr, nr, sc, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
 
     if (TYPEOF(grad) != REALSXP) abort();
 
@@ -1054,9 +1014,6 @@ R_inspect(grad); REprintf("--\n");
     RECURSIVE_GRADIENT_APPLY (array_subset_indexes_list_gradient,
                               grad, subs, bound, offset, k, n);
 
-    if (grad == R_NilValue)
-        return R_NilValue;
-
     if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
 
     PROTECT(grad);
@@ -1101,9 +1058,6 @@ R_inspect(grad); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (array_subset_indexes_numeric_gradient,
                               grad, subs, bound, offset, k, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
 
     if (TYPEOF(grad) != REALSXP) abort();
 
@@ -1159,9 +1113,6 @@ REprintf("--\n");
 #endif
 
     RECURSIVE_GRADIENT_APPLY (delete_range_list_gradient, grad, i, j, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
 	
     if (i < 0) i = 0;
     if (i >= n) i = n-1;
@@ -1206,9 +1157,6 @@ REprintf("--\n");
     RECURSIVE_GRADIENT_APPLY (delete_selected_list_gradient, grad,
                               include, n_remain, n);
 
-    if (grad == R_NilValue)
-        return R_NilValue;
-
     if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
 
     if (n_remain == n)
@@ -1244,9 +1192,6 @@ REprintf("==\n");
 attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
 {
     RECURSIVE_GRADIENT_APPLY (copy_scaled_gradients, grad, factor, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
 
     PROTECT(grad);
 
@@ -1292,9 +1237,6 @@ REprintf("cs: %d %d - %d %d - %d\n",TYPEOF(grad),TYPEOF(factors),
 LENGTH(grad),LENGTH(factors),GRADIENT_WRT_LEN(grad));
 #endif
 
-    if (grad == R_NilValue)
-        return R_NilValue;
-
     PROTECT(grad);
 
     if (TYPEOF(factors) != REALSXP) abort();
@@ -1337,9 +1279,6 @@ R_inspect(grad);
 
     RECURSIVE_GRADIENT_APPLY (set_length_list_gradient, grad, n);
 
-    if (grad == R_NilValue)
-        return R_NilValue;
-
     if (TYPEOF(grad) != VECSXP) abort();
 
     PROTECT(grad);
@@ -1372,9 +1311,6 @@ R_inspect(grad);
 #endif
 
     RECURSIVE_GRADIENT_APPLY (set_length_numeric_gradient, grad, n);
-
-    if (grad == R_NilValue)
-        return R_NilValue;
 
     PROTECT(grad);
 
@@ -1465,6 +1401,8 @@ REprintf("==\n");
         return res; \
     } \
     UNPROTECT(2); \
+    if (g1 == R_NilValue && g2 == R_NilValue) \
+        return R_NilValue; \
 } while (0)
 
 
@@ -1484,9 +1422,6 @@ R_inspect(v);
 #endif
 
     RECURSIVE_GRADIENT_APPLY2 (subassign_range_list_gradient, grad, v, i, j, n);
-
-    if (grad == R_NilValue && v == R_NilValue)
-        return R_NilValue;
 
     PROTECT2(grad,v);
 
@@ -1537,9 +1472,6 @@ R_inspect(v);
 
     RECURSIVE_GRADIENT_APPLY2 (subassign_range_numeric_gradient, grad, v,
                                i, j, n);
-
-    if (grad == R_NilValue && v == R_NilValue)
-        return R_NilValue;
 
     if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
     if (v != R_NilValue && TYPEOF(v) != REALSXP) abort();
@@ -1615,9 +1547,6 @@ R_inspect(v);
 
     RECURSIVE_GRADIENT_APPLY2 (subassign_indexes_numeric_gradient, grad, v,
                                indx, n);
-
-    if (grad == R_NilValue && v == R_NilValue)
-        return R_NilValue;
 
     if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
     if (v != R_NilValue && TYPEOF(v) != REALSXP) abort();
@@ -1697,9 +1626,6 @@ R_inspect(v);
     RECURSIVE_GRADIENT_APPLY2 (subassign_indexes_list_gradient, grad, v, 
                                indx, n);
 
-    if (grad == R_NilValue && v == R_NilValue)
-        return R_NilValue;
-
     PROTECT2(grad,v);
 
     if (grad == R_NilValue) 
@@ -1757,9 +1683,6 @@ R_inspect(v);
 
     RECURSIVE_GRADIENT_APPLY2 (array_subassign_indexes_list_gradient, grad, v, 
                                subs, bound, offset, k, n);
-
-    if (grad == R_NilValue && v == R_NilValue)
-        return R_NilValue;
 
     PROTECT2(grad,v);
     SEXP res;
@@ -1827,9 +1750,6 @@ R_inspect(v);
 
     RECURSIVE_GRADIENT_APPLY2(array_subassign_indexes_numeric_gradient, grad, v,
                               subs, bound, offset, k, n);
-
-    if (grad == R_NilValue && v == R_NilValue)
-        return R_NilValue;
 
     if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
     if (v != R_NilValue && TYPEOF(v) != REALSXP) abort();
@@ -1906,9 +1826,6 @@ R_inspect(v);
 
     RECURSIVE_GRADIENT_APPLY2 (subassign_list_gradient, grad, v, i, n);
 
-    if (grad == R_NilValue && v == R_NilValue)
-        return R_NilValue;
-
     PROTECT2(grad,v);
 
     if (grad == R_NilValue) 
@@ -1940,9 +1857,6 @@ R_inspect(v);
 #endif
 
     RECURSIVE_GRADIENT_APPLY2 (extend_list_gradient, grad, v, n);
-
-    if (grad == R_NilValue && v == R_NilValue)
-        return R_NilValue;
 
     PROTECT2(grad,v);
 
@@ -1983,9 +1897,6 @@ R_inspect(v);
 
     RECURSIVE_GRADIENT_APPLY2 (subassign_numeric_gradient, grad, v, i, n);
 
-    if (grad == R_NilValue && v == R_NilValue)
-        return R_NilValue;
-
     PROTECT2(grad,v);
 
     R_len_t vlen = LENGTH(v);
@@ -2024,9 +1935,6 @@ R_inspect(v);
 #endif
 
     RECURSIVE_GRADIENT_APPLY2 (extend_numeric_gradient, grad, v, n);
-
-    if (grad == R_NilValue && v == R_NilValue)
-        return R_NilValue;
 
     PROTECT2(grad,v);
 
@@ -2067,9 +1975,6 @@ attribute_hidden SEXP add_scaled_gradients (SEXP base, SEXP extra,
                                             double factor, R_len_t n)
 {
     RECURSIVE_GRADIENT_APPLY2 (add_scaled_gradients, base, extra, factor, n);
-
-    if (base == R_NilValue && extra == R_NilValue)
-        return R_NilValue;
 
     PROTECT2(base,extra);
     R_len_t glen, gvars, elen, blen, en, bn;
@@ -2154,9 +2059,6 @@ attribute_hidden SEXP add_scaled_gradients_vec (SEXP base, SEXP extra,
 REprintf("as: %d %d %d - %d %d %d\n",TYPEOF(base),TYPEOF(extra),TYPEOF(factors),
 LENGTH(base),LENGTH(extra),LENGTH(factors));
 #endif
-
-    if (base == R_NilValue && extra == R_NilValue)
-        return R_NilValue;
 
     PROTECT2(base,extra);
 
