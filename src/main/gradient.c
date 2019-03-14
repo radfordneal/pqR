@@ -459,6 +459,7 @@ R_inspect(grad); REprintf("--\n");
     if ((uint64_t)n * gvars > R_LEN_T_MAX) gradient_matrix_too_large_error();
 
     SEXP res = allocVector (REALSXP, n * gvars);
+    SET_GRADIENT_WRT_LEN (res, gvars);
     PROTECT(res);
 
     R_len_t m = n > k ? k : n;
