@@ -494,6 +494,8 @@ R_inspect(grad); REprintf("--\n");
 	
     if (TYPEOF(grad) != REALSXP) abort();
 
+    PROTECT(grad);
+
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
 
     if (LENGTH(grad) != n * gvars) abort();
@@ -507,9 +509,65 @@ R_inspect(grad); REprintf("--\n");
         memcpy (REAL(r), REAL(grad)+i*gvars, gvars * sizeof(double));
     }
 
-    UNPROTECT(1);
+    UNPROTECT(2);
 #if 0
 REprintf("as_list_gradient end\n",n);
+R_inspect(res); REprintf("==\n");
+#endif
+    return res;
+}
+
+
+/* Create set of gradients from converting a vector list of length n
+   to a numeric vector.  Protects its grad argument. */
+
+SEXP attribute_hidden as_numeric_gradient (SEXP grad, R_len_t n)
+{
+#if 0
+REprintf("as_numeric_gradient %d\n",n);
+R_inspect(grad); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY (as_numeric_gradient, grad, n);
+	
+    if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
+
+    PROTECT(grad);
+
+    R_len_t gvars = -1;
+    R_len_t i, j, h;
+
+    for (i = 0; i < n; i++) {
+        SEXP e = VECTOR_ELT(grad,i);
+        if (TYPEOF(e) == REALSXP) {
+            R_len_t gv = GRADIENT_WRT_LEN(e);
+            if (LENGTH(e) != gv) abort();
+            if (gvars == -1) 
+                gvars = gv;
+            else 
+                if (gvars != gv) abort();
+        }
+    }
+
+    if (gvars == -1) {
+        UNPROTECT(1);
+        return R_NilValue;
+    }
+
+    SEXP res = alloc_numeric_gradient (gvars, n);
+    PROTECT(res);
+
+    j = 0;
+    for (i = 0; i < n; i++) {
+        SEXP e = VECTOR_ELT(grad,i);
+        if (TYPEOF(e) != REALSXP)
+           for (h = 0; h < gvars; h++) REAL(res)[j++] = 0;
+        else
+           for (h = 0; h < gvars; h++) REAL(res)[j++] = REAL(e)[h];
+    }
+
+    UNPROTECT(2);
+#if 0
+REprintf("as_numeric_gradient end\n",n);
 R_inspect(res); REprintf("==\n");
 #endif
     return res;

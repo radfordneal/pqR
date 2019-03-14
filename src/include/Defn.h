@@ -1266,6 +1266,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define array_subset_indexes_list_gradient Rf_array_subset_indexes_list_gradient
 # define array_subset_indexes_numeric_gradient Rf_array_subset_indexes_numeric_gradient 
 # define as_list_gradient	Rf_as_list_gradient
+# define as_numeric_gradient	Rf_as_numeric_gradient
 # define bcEval			Rf_bcEval
 # define beginbuiltincontext	Rf_beginbuiltincontext
 # define begincontext		Rf_begincontext
@@ -1531,6 +1532,7 @@ SEXP array_subset_indexes_list_gradient
 SEXP array_subset_indexes_numeric_gradient 
        (SEXP, int **, int *, int *, R_len_t, R_len_t);
 SEXP as_list_gradient(SEXP, R_len_t);
+SEXP as_numeric_gradient(SEXP, R_len_t);
 SEXP Rf_attributes_dup (SEXP, SEXP);
 SEXP bcEval(SEXP, SEXP, Rboolean);
 SEXP bytecodeExpr(SEXP);
