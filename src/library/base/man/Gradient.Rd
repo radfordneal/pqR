@@ -217,8 +217,9 @@ with respect to all their real scalar, vector, matrix, or array arguments
   dunif, punif, qunif, runif 
   dweibull, pweibull, qweibull, rweibull
 
+  array
+  as.vector, as.list
   unclass, structure, get_rm, length<-
-  as.vector
 }
 The following replacement functions do not compute any gradient information,
 but do leave undisturbed any gradient information that is associated with 
