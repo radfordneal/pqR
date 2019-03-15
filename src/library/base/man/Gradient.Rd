@@ -210,7 +210,8 @@ with respect to all their real scalar, vector, matrix, or array arguments
   dgeom, pgeom 
   dlogis, plogis, qlogis, rlogis 
   dlnorm, plnorn, qlnorm, rlnorm 
-  dnbinom (3rd arg (prob or mu) only), pnbinom (3rd arg (prob or mu) only) 
+  dnbinom (3rd arg only), pnbinom (3rd arg only)
+    Note: 3rd argument of dnbinom/pnbinom can be either prob or mu
   dnorm, pnorm, qnorm, rnorm 
   dpois, ppois 
   dt (with no ncp arg), pt (1st arg only, no ncp), qt (1st arg only,no ncp) 
