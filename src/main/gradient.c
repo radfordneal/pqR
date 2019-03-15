@@ -1265,7 +1265,7 @@ attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
     gn = LENGTH(grad) / gvars;
     if (LENGTH(grad) != gvars * gn) abort();
 
-    if (glen == 1)
+    if (n==1 && gvars == 1)
         r = ScalarRealMaybeConst (*REAL(grad) * factor);
     else {
         r = alloc_numeric_gradient (gvars, n);
@@ -2088,7 +2088,7 @@ attribute_hidden SEXP add_scaled_gradients (SEXP base, SEXP extra,
         k = l = 0;
         for (i = 0; i < glen; i += n) {
             for (j = 0; j < n; j++)
-                REAL(r)[i+j] = REAL(base)[i+j%bn] + REAL(extra)[i+j%en]*factor;
+                REAL(r)[i+j] = REAL(base)[k+j%bn] + REAL(extra)[l+j%en]*factor;
             k += bn;
             l += en;
         }

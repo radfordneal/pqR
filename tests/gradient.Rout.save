@@ -9592,6 +9592,19 @@ attr(,"gradient")
 [1,]    8    0
 [2,]    0   18
 > 
+> with gradient (a=c(9,7)) a^2+a[2]^3
+[1] 424 392
+attr(,"gradient")
+     [,1] [,2]
+[1,]   18  147
+[2,]    0  161
+> with gradient (a=c(9,7)) a[1]^2+a^3
+[1] 810 424
+attr(,"gradient")
+     [,1] [,2]
+[1,]  261    0
+[2,]   18  147
+> 
 > 
 > # Test backpropagation.
 > 

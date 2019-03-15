@@ -1491,6 +1491,9 @@ a <- c(4,9)
 class(a) <- "fred"
 with gradient (a) unclass(a)^2
 
+with gradient (a=c(9,7)) a^2+a[2]^3
+with gradient (a=c(9,7)) a[1]^2+a^3
+
 
 # Test backpropagation.
 
