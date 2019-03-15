@@ -1455,6 +1455,7 @@ with gradient (a=list(3,list(9,2))) as.vector(a)
 with gradient (a=c(3,1,9,2)) as.vector(a)
 
 with gradient (a=list(3,2,9)) as.vector(a,"double")
+with gradient (a=list(3,2,9)) as.double(a)
 with gradient (a=c(3,2,9)) as.vector(a,"list")
 with gradient (a=c(3,2,9)) as.list(a)
 

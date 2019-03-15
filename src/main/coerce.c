@@ -1487,8 +1487,9 @@ SEXP asCharacterFactor(SEXP x)
 }
 
 
-/* the "ascharacter" name is a historical anomaly: as.character used to be the
- * only primitive;  now, all these ops are : */
+/* do_ascharacter implements as.character, as.integer, as.complex, as.logical,
+   and as.raw, but not as.double (which handles gradients). */
+
 static SEXP do_ascharacter (SEXP call, SEXP op, SEXP args, SEXP rho, 
                             int variant)
 {
@@ -1539,6 +1540,68 @@ static SEXP do_ascharacter (SEXP call, SEXP op, SEXP args, SEXP rho,
     CLEAR_ATTRIB(ans);
     return ans;
 }
+
+
+/* Implement as.double/as.real/as.numeric. SPECIAL, so can  handle gradients. */
+
+static SEXP do_asdouble (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+{
+    PROTECT (args = variant & VARIANT_GRADIENT
+                      ? evalList_gradient (args, rho, 0, 1, 0)
+                      : evalList (args, rho));
+    SEXP ans;
+
+    check1arg_x (args, call);
+
+    if (DispatchOrEval(call, op, "as.double", args, rho, &ans, 0, 1, variant)) {
+        UNPROTECT(1);
+        return ans;
+    }
+
+    /* Method dispatch has failed, we now just run the generic internal code */
+
+    checkArity(op, args);
+
+    SEXP x = CAR(args);
+    SEXP x_grad = HAS_GRADIENT_IN_CELL(args) ? GRADIENT_IN_CELL(args)
+                                             : R_NilValue;
+
+    if (TYPEOF(x) == REALSXP) {
+        if (!HAS_ATTRIB(x))
+            ans = x;
+        else {
+            if (NAMEDCNT_EQ_0(x))
+                ans = x;
+            else {
+                ans = duplicate(x);
+            }
+            CLEAR_ATTRIB(ans);
+        }
+        if (x_grad != R_NilValue && TYPEOF(x) == REALSXP) {
+            R_gradient = x_grad;
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
+        if (! (variant & VARIANT_PENDING_OK) )
+            WAIT_UNTIL_COMPUTED(ans);
+        UNPROTECT(1);
+        return ans;
+    }
+
+    WAIT_UNTIL_COMPUTED(x);
+
+    R_gradient = R_NilValue;
+
+    PROTECT (ans = ascommon(call, x, x_grad, REALSXP));
+
+    if (R_gradient != R_NilValue)
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+
+    CLEAR_ATTRIB(ans);
+
+    UNPROTECT(2);
+    return ans;
+}
+
 
 /* NB: as.vector is used for several other as.xxxx, including
    as.expression, as.list, as.pairlist, as.symbol, (as.single)
@@ -3150,7 +3213,7 @@ attribute_hidden FUNTAB R_FunTab_coerce[] =
 
 {"as.character",do_ascharacter,	0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"as.integer",	do_ascharacter,	1,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"as.double",	do_ascharacter,	2,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.double",	do_asdouble,	2,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"as.complex",	do_ascharacter,	3,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"as.logical",	do_ascharacter,	4,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"as.raw",	do_ascharacter,	5,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},

@@ -206,7 +206,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
   dexp, pexp, qexp, rexp 
   df (no ncp argument), pf (1st arg only, no ncp), qf (1st arg only,no ncp) 
   dgamma, pgamma (1st and 3rd args only), qgamma (1st and 3rd args only) 
-  Note: 3rd argument of dgamma/pgamma/qgamma may be either rate or scale 
+    Note: 3rd argument of dgamma/pgamma/qgamma may be either rate or scale 
   dgeom, pgeom 
   dlogis, plogis, qlogis, rlogis 
   dlnorm, plnorn, qlnorm, rlnorm 
@@ -218,7 +218,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
   dweibull, pweibull, qweibull, rweibull
 
   array
-  as.vector, as.list
+  as.vector, as.list, as.double, as.numeric, as.real
   unclass, structure, get_rm, length<-
 }
 The following replacement functions do not compute any gradient information,
