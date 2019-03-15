@@ -268,7 +268,9 @@
  Rf_ComplexFromLogical
  Rf_ComplexFromReal
  Rf_ComplexFromString
+ Rf_copy_list_recycled_byrow_gradient
  Rf_copy_list_recycled_gradient
+ Rf_copy_numeric_recycled_byrow_gradient
  Rf_copy_numeric_recycled_gradient
  Rf_copy_scaled_gradients
  Rf_copy_scaled_gradients_vec

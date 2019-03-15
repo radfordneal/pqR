@@ -23,14 +23,14 @@
   It supports gradients of and with respect to real scalars, vectors,
   matrices, and arrays, lists of such values, lists of lists, etc.
   However, at present, only a limited set of operations are
-  supported for vectors, matrices, and arrays.  There is gra dient support
+  supported for vectors, matrices, and arrays.  There is gradient support
   for accessing elements with $, [.], and [[.]].  There is also support
   (though currently inefficient) for replacing elements with $, [.], 
   and [[.]], except for multi-level vector subscripts with [[.]].
   However, many vector and matrix oriented operations, such as \code{sum},
   \code{c}, \code{cbind}, and \code{\%*\%} are not yet supported.
   Support for a full range of vector and matrix operations should be 
-  implemnted soon.  
+  implemented soon.  
 
   Some operations are currently implemented much less efficiently
   than is planned for the full-fledged version.
@@ -184,7 +184,7 @@ The following built-in functions and operators will compute gradients,
 with respect to all their real scalar, vector, matrix, or array arguments
 (unless noted), or when applicable, arguments that are lists of reals 
 (or lists of lists of reals, etc.):
-\preformatted{  list 
+\preformatted{  list, matrix, array
   $ (for vector lists only), $<- (for vector lists only) 
   [[ (for vector lists and numeric vectors, including matrices & arrays) 
   [[<- (for vector lists and numeric vectors, including matrices & arrays; 
@@ -218,10 +218,17 @@ with respect to all their real scalar, vector, matrix, or array arguments
   dunif, punif, qunif, runif 
   dweibull, pweibull, qweibull, rweibull
 
-  array
   as.vector, as.list, as.double, as.numeric, as.real
   unclass, structure, get_rm, length<-
 }
+
+% TO COME: c, unlist, rep, cbind, rbind
+%          apply, lapply, sapply, vapply, mapply, replicate, simplify2array
+%          mean, sum, prod, min, max, pmin, pmax
+%          rowMeans, colMeans, rowSums, ColSums
+%          %*%, crossprod, tcrossprod
+%          solve, backsolve, forwardsolve, chol
+
 The following replacement functions do not compute any gradient information,
 but do leave undisturbed any gradient information that is associated with 
 the variable that they update:

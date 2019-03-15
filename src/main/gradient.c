@@ -436,7 +436,43 @@ R_inspect(grad); REprintf("--\n");
 
     UNPROTECT(1);
 #if 0
-REprintf("copy_list_recycled_gradient end\n",n);
+REprintf("copy_list_recycled_gradient end\n");
+R_inspect(res); REprintf("==\n");
+#endif
+    return res;
+}
+
+
+/* Create set of gradients from recycling a vector list to be of length n,
+   filling in a matrix by row.  Protects its grad argument. */
+
+SEXP attribute_hidden copy_list_recycled_byrow_gradient 
+                        (SEXP grad, R_len_t nr, R_len_t n)
+{
+#if 0
+REprintf("copy_list_recycled_byrow_gradient %d %d\n",nr,n);
+R_inspect(grad); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY (copy_list_recycled_byrow_gradient, grad, nr, n);
+	
+    if (TYPEOF(grad) != VECSXP) abort();
+    R_len_t ng = LENGTH(grad);
+    R_len_t nc = n / nr;
+
+    SEXP res = alloc_list_gradient (n);
+    PROTECT(res);
+
+    R_len_t n_1 = n-1;
+    R_len_t i, j, k;
+
+    for (i = 0, j = 0; i <= n_1; i++, j += nc) {
+        if (j > n_1) j -= n_1;
+        SET_VECTOR_ELT (res, i, VECTOR_ELT (grad, j % ng));
+    }
+
+    UNPROTECT(1);
+#if 0
+REprintf("copy_list_recycled_byrow_gradient end\n");
 R_inspect(res); REprintf("==\n");
 #endif
     return res;
@@ -474,7 +510,47 @@ R_inspect(grad); REprintf("--\n");
 
     UNPROTECT(1);
 #if 0
-REprintf("copy_numeric_recycled_gradient end\n",n);
+REprintf("copy_numeric_recycled_gradient end\n");
+R_inspect(res); REprintf("==\n");
+#endif
+    return res;
+}
+
+
+/* Create set of gradients from recycling a numeric vector to be of length n,
+   filling in a matrix by row.  Protects its grad argument. */
+
+SEXP attribute_hidden copy_numeric_recycled_byrow_gradient 
+                                   (SEXP grad, R_len_t nr, R_len_t n)
+{
+#if 0
+REprintf("copy_numeric_recycled_byrow_gradient %d %d\n",nr,n);
+R_inspect(grad); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY(copy_numeric_recycled_byrow_gradient, grad, nr, n);
+	
+    if (TYPEOF(grad) != REALSXP) abort();
+    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t ng = LENGTH(grad) / gvars;
+    R_len_t nc = n / nr;
+
+    SEXP res = alloc_numeric_gradient (gvars, n);
+    PROTECT(res);
+
+    R_len_t n_1 = n-1;
+    R_len_t i, k, h;
+    unsigned j;
+
+    for (h = 0; h <gvars; h++) {
+        for (i = 0, j = 0; i <= n_1; i++, j += nc) {
+            if (j > n_1) j -= n_1;
+            REAL(res) [h*n + i] = REAL(grad) [h*ng + j%ng];
+        }
+    }
+
+    UNPROTECT(1);
+#if 0
+REprintf("copy_numeric_recycled_byrow_gradient end\n");
 R_inspect(res); REprintf("==\n");
 #endif
     return res;
@@ -511,7 +587,7 @@ R_inspect(grad); REprintf("--\n");
 
     UNPROTECT(2);
 #if 0
-REprintf("as_list_gradient end\n",n);
+REprintf("as_list_gradient end\n");
 R_inspect(res); REprintf("==\n");
 #endif
     return res;
@@ -567,7 +643,7 @@ R_inspect(grad); REprintf("--\n");
 
     UNPROTECT(2);
 #if 0
-REprintf("as_numeric_gradient end\n",n);
+REprintf("as_numeric_gradient end\n");
 R_inspect(res); REprintf("==\n");
 #endif
     return res;

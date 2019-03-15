@@ -1466,16 +1466,21 @@ with gradient (a) as.list(a)
 rm(a)
 
 with gradient (a=list(3,list(9,2),9,8)) matrix(a,2,2)
+with gradient (a=list(3,8)) matrix(a,2,2)
 with gradient (a=c(3,1,9,2)) matrix(a,2,2)
 with gradient (a=12) matrix(a,2,2)
+with gradient (a=c(12,10)) matrix(a,3,2)
 with gradient (a=12) { M <- matrix(a,2,2); M[1,2] }
 
-#with gradient (a=list(3,list(9,2),9,8)) matrix(a,2,2,byrow=TRUE)
-#with gradient (a=c(3,1,9,2)) matrix(a,2,2,byrow=TRUE)
-#with gradient (a=12) matrix(a,2,2,byrow=TRUE)
-#with gradient (a=12) { M <- matrix(a,2,2,byrow=TRUE); M[1,2] }
+with gradient (a=list(3,list(9,2),9,8)) matrix(a,2,2,byrow=TRUE)
+with gradient (a=list(3,8)) matrix(a,2,2,byrow=TRUE)
+with gradient (a=c(3,1,9,2)) matrix(a,2,2,byrow=TRUE)
+with gradient (a=12) matrix(a,2,2,byrow=TRUE)
+with gradient (a=c(12,10)) matrix(a,3,2,byrow=TRUE)
+with gradient (a=12) { M <- matrix(a,2,2,byrow=TRUE); M[1,2] }
 
 with gradient (a=list(3,list(9,2),9,8)) array(a,c(2,2))
+with gradient (a=list(3,8)) array(a,c(2,2))
 with gradient (a=c(3,1,9,2,8,1,0,3,9,8,7,6)) array(a,c(2,3,2))
 with gradient (a=12) array(a,c(2,2,2))
 

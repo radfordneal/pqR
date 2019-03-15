@@ -188,21 +188,24 @@ static SEXP do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (lendat > 0) {
 	if (isVector(vals)) {
-	    copyMatrix(ans, vals, byrow);
+	    copyMatrix (ans, vals, byrow);
             if (HAS_GRADIENT_IN_CELL(args_sv)) {
+                SEXP gr = GRADIENT_IN_CELL(args_sv);
                 if (byrow) {
                     if (TYPEOF(vals) == VECSXP) {
+                        grad = copy_list_recycled_byrow_gradient
+                                         (gr, nr, LENGTH(ans));
                     }
                     else if (TYPEOF(vals) == REALSXP) {
+                        grad = copy_numeric_recycled_byrow_gradient
+                                            (gr, nr, LENGTH(ans));
                     }
                 }
                 else {
                     if (TYPEOF(ans) == VECSXP)
-                        grad = copy_list_recycled_gradient
-                                 (GRADIENT_IN_CELL(args_sv), LENGTH(ans));
+                        grad = copy_list_recycled_gradient (gr, LENGTH(ans));
                     else if (TYPEOF(ans) == REALSXP)
-                        grad = copy_numeric_recycled_gradient
-                                 (GRADIENT_IN_CELL(args_sv), LENGTH(ans));
+                        grad = copy_numeric_recycled_gradient (gr, LENGTH(ans));
                 }
             }
         }
