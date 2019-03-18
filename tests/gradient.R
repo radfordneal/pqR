@@ -1504,6 +1504,11 @@ with gradient (a=list(8,x=9,7),b=12) { a[2] <- b^2; unlist(a) }
 with gradient (a=list(8,list(9,7))) unlist(a)
 with gradient (a=list(8,list(9,7))) unlist(a,recursive=FALSE)
 
+with gradient (a=c(3,8)) c(a,a^2)
+with gradient (a=list(3,8)) c(a,a[[2]]^2,a)
+with gradient (a=list(3,list(8,7))) c(a,a[[1]]^2)
+with gradient (a=list(3,list(8,7))) c(a,a[[1]]^2,recursive=TRUE)
+
 with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,1,sqrt)
 with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,1,function(x)10*x[1]+x[2])
 with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,2,function(x)list(x,2*x))

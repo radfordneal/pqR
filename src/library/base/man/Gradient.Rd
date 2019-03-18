@@ -218,13 +218,13 @@ with respect to all their real scalar, vector, matrix, or array arguments
   dunif, punif, qunif, runif 
   dweibull, pweibull, qweibull, rweibull
 
-  unlist
+  c, unlist
   as.vector, as.list, as.double, as.numeric, as.real
   unclass, structure, get_rm, length<-
   apply
 }
 
-% TO COME: c, rep, cbind, rbind
+% TO COME: rep, cbind, rbind
 %          lapply, sapply, vapply, mapply, replicate, simplify2array
 %          mean, sum, prod, min, max, pmin, pmax
 %          rowMeans, colMeans, rowSums, ColSums
@@ -387,6 +387,9 @@ with gradient (V) {              # the gradient will be a 1 x 11 matrix
     back gradient (p)
         p^2 + p^3 + p^4 + p^5
 }
+
+track gradient (a=c(7,5))
+    gradient_of (c(a,a^2,a^3,a[1]*a[2])) # produces a 7 x 2 Jacobian matrix
 
 # Make table of (a+j)^i and derivatives w.r.t. a, for a equal to 1.1.
 

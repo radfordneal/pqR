@@ -710,17 +710,20 @@ static SEXP CombineNames (SEXP str1, SEXP str2)
 
 /* Code to process arguments to c().  Returns an argument list with the keyword
    arguments 'recursive' and 'use.names' removed, as well as any NULL args. 
-   *recurse and *usenames are set to the keyword arg values, if they are
-   present.  *anytags is set to whether any other args have tags.  *nargs is 
-   set to the length of the argument list returned. */
+   *recurse and *usenames are set to the corresponding keyword arg values,
+   if they are present.  *anytags is set to whether any other args have tags.
+   *anygrad is set to whether any arguments have gradient informaton.  *nargs
+   is set to the length of the argument list returned.  Doesn't disturb any
+   gradient information that may be present in the cells. */
 
 static SEXP process_c_args (SEXP ans, SEXP call, int *recurse, int *usenames, 
-                            int *anytags, unsigned *nargs)
+                            int *anytags, int *anygrad, unsigned *nargs)
 {
     SEXP a, n, last = R_NoObject, next = R_NoObject;
     int v, n_recurse = 0, n_usenames = 0;
 
     *anytags = 0;
+    *anygrad = 0;
     *nargs = 0;
 
     for (a = ans; a != R_NilValue; a = next) {
@@ -757,10 +760,13 @@ static SEXP process_c_args (SEXP ans, SEXP call, int *recurse, int *usenames,
 	else {
             if (n != R_NilValue) 
                 *anytags = 1;
+            if (HAS_GRADIENT_IN_CELL(a))
+                *anygrad = 1;
             *nargs += 1;
             last = a;
         }
     }
+
     return ans;
 }
 
@@ -769,29 +775,37 @@ static SEXP process_c_args (SEXP ans, SEXP call, int *recurse, int *usenames,
    necessary to separate the internal code for "c" and "unlist".
    Although the functions are quite similar, they operate on very
    different data structures.
-*/
 
-/* The major difference between the two functions is that the value of
+   The major difference between the two functions is that the value of
    the "recursive" argument is FALSE by default for "c" and TRUE for
    "unlist".  In addition, "c" takes ... while "unlist" takes a single
-   argument.
-*/
+   argument. */
+
+/* Handle 'c'.  SPECIAL, so arguments can be evaluated asking for gradient. */
 
 static SEXP do_c (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
+    PROTECT (args = (variant & VARIANT_GRADIENT)
+                      ? evalList_gradient (args, env, 0, INT_MAX, 0)
+                      : evalList (args, env));
     SEXP ans;
 
     checkArity(op, args);
 
     /* Attempt method dispatch. */
 
-    if (DispatchOrEval(call, op, "c", args, env, &ans, 0, 1, variant))
-	return(ans);
+    if (DispatchOrEval (call, op, "c", args, env, &ans, 0, 1, variant)) {
+        UNPROTECT(1);
+	return ans;
+    }
 
-    return do_c_dflt(call, op, ans, env, variant);
+    SEXP res = do_c_dflt(call, op, ans, env, variant);
+    
+    UNPROTECT(1);
+    return res;
 }
 
-/* function below is also called directly from eval.c */
+/* function below is also called directly from bytecode.c */
 
 #define OBJ_ARRAY_SIZE 30  /* size of array holdings objs to be concatenated */
 
@@ -800,16 +814,17 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
 {
     SEXP ans;
     unsigned nobj;
-    int recurse, usenames, anytags;
+    int recursive, usenames, anytags, anygrad;
     struct BindData data;
 
     usenames = 1;
-    recurse = 0;
+    recursive = 0;
 
-    PROTECT(args = process_c_args (args, call, &recurse, &usenames, 
-                                   &anytags, &nobj));
+    PROTECT(args = process_c_args (args, call, &recursive, &usenames, 
+                                   &anytags, &anygrad, &nobj));
 
-    if (!(usenames && anytags) && !recurse && nobj <= OBJ_ARRAY_SIZE) {
+    if (!anygrad && !(usenames && anytags) && !recursive 
+                 && nobj <= OBJ_ARRAY_SIZE) {
         SEXP objs[OBJ_ARRAY_SIZE];
         SEXP a;
         int i; 
@@ -834,7 +849,7 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
     data.ans_length = 0;
     data.ans_nnames = 0;
 
-    AnswerType (args, recurse ? INT_MAX : 1, usenames, &data, call);
+    AnswerType (args, recursive ? INT_MAX : 1, usenames, &data, call);
 
     /* Allocate the return value and set up to pass through 
        the arguments filling in values of the returned object. */
@@ -845,11 +860,14 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
     data.ans_grad = R_NilValue;
     PROTECT_WITH_INDEX (data.ans_grad, &data.ans_grad_pix);
 
-    if (data.ans_type == VECSXP || data.ans_type == EXPRSXP 
-                                || data.ans_type == NILSXP)
-        ListAnswer (args, R_NilValue, recurse ? 1 : -1, &data);
-    else
-        AtomicAnswer(args, R_NilValue, &data);
+    for (SEXP a = args; a != R_NilValue; a = CDR(a)) {
+        SEXP g = HAS_GRADIENT_IN_CELL(a) ? GRADIENT_IN_CELL(a) : R_NilValue;
+        if (data.ans_type == VECSXP || data.ans_type == EXPRSXP 
+                                    || data.ans_type == NILSXP)
+            ListAnswer (CAR(a), g, recursive, &data);
+        else
+            AtomicAnswer(CAR(a), g, &data);
+    }
 
     /* Build and attach the names attribute for the returned object. */
 
@@ -858,9 +876,14 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
         R_len_t first_in_seq = 0;
         R_len_t nix = 1;
         setAttrib (ans, R_NamesSymbol, names);
-        CreateNames (args, recurse ? INT_MAX : 1, names, &nix, 
+        CreateNames (args, recursive ? INT_MAX : 1, names, &nix, 
                      R_BlankString, 0, &first_in_seq);
         if (nix - 1 != LENGTH(names)) abort();
+    }
+
+    if (data.ans_grad != R_NilValue) {
+        R_gradient = data.ans_grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
     }
 
     UNPROTECT(3);
@@ -871,7 +894,7 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
 static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     struct BindData data;
-    int recurse, usenames;
+    int recursive, usenames;
     SEXP ans, lst;
 
     checkArity(op, args);
@@ -884,7 +907,7 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* Method dispatch has failed; run the default code. */
 
     PROTECT(lst = CAR(args));
-    recurse = asLogical(CADR(args));
+    recursive = asLogical(CADR(args));
     usenames = asLogical(CADDR(args));
 
     /* Return object unchanged if not a vector or list. */
@@ -932,7 +955,7 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     data.ans_length = 0;
     data.ans_nnames = 0;
 
-    AnswerType (lst, recurse ? INT_MAX : 1, usenames, &data, call);
+    AnswerType (lst, recursive ? INT_MAX : 1, usenames, &data, call);
 
     /* Allocate the return value and set up to pass through 
        the arguments filling in values of the returned object.
@@ -950,7 +973,7 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     if (data.ans_type == VECSXP || data.ans_type == EXPRSXP 
                                 || data.ans_type == NILSXP)
-        ListAnswer(lst, grad, recurse ? 1 : -1, &data);
+        ListAnswer(lst, grad, recursive ? 1 : -1, &data);
     else
         AtomicAnswer(lst, grad, &data);
 
@@ -961,7 +984,7 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         R_len_t first_in_seq = 0;
         R_len_t nix = 1;
         setAttrib(ans, R_NamesSymbol, names);
-        CreateNames (lst, recurse ? INT_MAX : 1, names, &nix,
+        CreateNames (lst, recursive ? INT_MAX : 1, names, &nix,
                      R_BlankString, 0, &first_in_seq);
         if (nix - 1 != LENGTH(names))  abort();
     }
@@ -1658,7 +1681,7 @@ attribute_hidden FUNTAB R_FunTab_bind[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"c",		do_c,		0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"c",		do_c,		0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"unlist",	do_unlist,	0,	10001011,3,	{PP_FUNCALL, PREC_FN,	0}},
 {"cbind",	do_bind,	1,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rbind",	do_bind,	2,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},

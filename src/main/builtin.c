@@ -867,7 +867,8 @@ REprintf("*** makelist %d %d\n",i,n); R_inspect(R_gradient); REprintf("--\n");
     return list;
 }
 
-/* This is a SPECIAL for "list".  Arguments are evaluated. */
+/* This is a SPECIAL for "list".  Arguments are evaluated here, perhaps
+   asking for gradient. */
 
 static SEXP do_list(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
