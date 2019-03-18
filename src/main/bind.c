@@ -259,16 +259,20 @@ static SEXP simple_concatenate (SEXP *objs, R_len_t nobj, int usenames,
 static SEXP cbind(SEXP, SEXP, SEXPTYPE, SEXP, int);
 static SEXP rbind(SEXP, SEXP, SEXPTYPE, SEXP, int);
 
-/* The following code establishes the return type for the */
-/* functions  unlist, c, cbind, and rbind and also determines */
-/* whether the returned object is to have a names attribute. */
+/* Information on type, etc. of result, and where to store it. */
 
 struct BindData {
     int  ans_type;
-    SEXP ans_ptr;
     int  ans_length;
     int  ans_nnames;
+    SEXP ans_ptr;
+    SEXP ans_grad;
+    PROTECT_INDEX ans_grad_pix;
 };
+
+/* The following code establishes the return type for the functions
+   unlist, c, cbind, and rbind and also determines whether the
+   returned object is to have a names attribute. */
 
 static void AnswerType (SEXP x, int recurse, int usenames, 
                         struct BindData *data, SEXP call)
@@ -348,7 +352,7 @@ static void AnswerType (SEXP x, int recurse, int usenames,
    'recursive' argument controls how elements are copied:  0: just at top
    level, -1: one level down, 1: recursively to any depth. */
 
-static void ListAnswer(SEXP x, int recursive, struct BindData *data)
+static void ListAnswer(SEXP x, SEXP grad, int recursive, struct BindData *data)
 {
     SEXP dptr = data->ans_ptr;
     R_len_t len, i;
@@ -377,8 +381,16 @@ static void ListAnswer(SEXP x, int recursive, struct BindData *data)
     case REALSXP:
         len = LENGTH(x);
         for (i = 0; i < len; i++)
-            SET_VECTOR_ELT (dptr, data->ans_length++,
+            SET_VECTOR_ELT (dptr, data->ans_length+i,
                             ScalarRealMaybeConst(REAL(x)[i]));
+        if (grad != R_NilValue) {
+            data->ans_grad = subassign_range_list_gradient 
+                               (data->ans_grad, as_list_gradient(grad,len),
+                                data->ans_length, data->ans_length+len-1,
+                                LENGTH(data->ans_ptr));
+            REPROTECT (data->ans_grad, data->ans_grad_pix);
+        }
+        data->ans_length += len;
         break;
     case CPLXSXP:
         len = LENGTH(x);
@@ -397,17 +409,28 @@ static void ListAnswer(SEXP x, int recursive, struct BindData *data)
         len = LENGTH(x);
         if (recursive != 0) {
             for (i = 0; i < len; i++)
-                ListAnswer (VECTOR_ELT(x, i), recursive == 1, data);
+                ListAnswer(VECTOR_ELT(x,i), grad == R_NilValue ? R_NilValue
+                                            : subset2_list_gradient(grad,i,len),
+                           recursive == 1, data);
         }
         else {
             for (i = 0; i < len; i++)
-                SET_VECTOR_ELEMENT_FROM_VECTOR (dptr, data->ans_length++, x, i);
+                SET_VECTOR_ELEMENT_FROM_VECTOR (dptr, data->ans_length+i, x, i);
+            if (grad != R_NilValue) {
+                data->ans_grad = 
+                  subassign_range_list_gradient
+                            (data->ans_grad, grad,
+                             data->ans_length, data->ans_length+LENGTH(x)-1,
+                             LENGTH(dptr));
+                REPROTECT (data->ans_grad, data->ans_grad_pix);
+            }
+            data->ans_length += len;
         }
         break;
     case LISTSXP:
         if (recursive != 0) {
             while (x != R_NilValue) {
-                ListAnswer (CAR(x), recursive == 1, data);
+                ListAnswer (CAR(x), R_NilValue, recursive == 1, data);
                 x = CDR(x);
             }
         }
@@ -428,7 +451,7 @@ static void ListAnswer(SEXP x, int recursive, struct BindData *data)
 
 /* Add elements to an atomic vector result. */
 
-static void AtomicAnswer(SEXP x, struct BindData *data)
+static void AtomicAnswer(SEXP x, SEXP grad, struct BindData *data)
 {
     int i, n;
     switch(TYPEOF(x)) {
@@ -436,19 +459,28 @@ static void AtomicAnswer(SEXP x, struct BindData *data)
         break;
     case LISTSXP:
         while (x != R_NilValue) {
-            AtomicAnswer(CAR(x), data);
+            AtomicAnswer(CAR(x), R_NilValue, data);
             x = CDR(x);
         }
         break;
     case EXPRSXP:
     case VECSXP:
         n = LENGTH(x);
-        for (i = 0; i < n; i++)
-            AtomicAnswer(VECTOR_ELT(x, i), data);
+        for (i = 0; i < n; i++) {
+            AtomicAnswer (VECTOR_ELT(x, i), grad == R_NilValue ? R_NilValue 
+                           : subset2_list_gradient(grad,i,n), data);
+        }
         break;
     default:
         copy_elements_coerced (data->ans_ptr, data->ans_length, 1,
                                x, 0, 1, LENGTH(x));
+        if (grad != R_NilValue) {
+            data->ans_grad = subassign_range_numeric_gradient 
+                               (data->ans_grad, grad, 
+                                data->ans_length, data->ans_length+LENGTH(x)-1,
+                                LENGTH(data->ans_ptr));
+            REPROTECT (data->ans_grad, data->ans_grad_pix);
+        }
         data->ans_length += LENGTH(x);
         break;
     }
@@ -810,12 +842,14 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
     PROTECT(ans = allocVector(data.ans_type, data.ans_length));
     data.ans_ptr = ans;
     data.ans_length = 0;
+    data.ans_grad = R_NilValue;
+    PROTECT_WITH_INDEX (data.ans_grad, &data.ans_grad_pix);
 
     if (data.ans_type == VECSXP || data.ans_type == EXPRSXP 
                                 || data.ans_type == NILSXP)
-        ListAnswer (args, recurse ? 1 : -1, &data);
+        ListAnswer (args, R_NilValue, recurse ? 1 : -1, &data);
     else
-        AtomicAnswer(args, &data);
+        AtomicAnswer(args, R_NilValue, &data);
 
     /* Build and attach the names attribute for the returned object. */
 
@@ -829,7 +863,7 @@ SEXP attribute_hidden do_c_dflt (SEXP call, SEXP op, SEXP args, SEXP env,
         if (nix - 1 != LENGTH(names)) abort();
     }
 
-    UNPROTECT(2);
+    UNPROTECT(3);
     return ans;
 } /* do_c */
 
@@ -860,9 +894,17 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         return lst;
     }
 
+    SEXP grad = R_NilValue;
+    if (HAS_GRADIENT_IN_CELL(args))
+        grad = GRADIENT_IN_CELL(args);
+
     /* Return atomic vector unchanged if it has no names, or we keep names. */
 
     if (isVectorAtomic(lst) && (usenames || getNamesAttrib(lst)==R_NilValue)) {
+        if (grad != R_NilValue) {
+            R_gradient = grad;
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
         UNPROTECT(1);
         return lst;
     }
@@ -870,7 +912,8 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     /* Try to handle simple cases quickly. */
 
     if (TYPEOF(lst) == VECSXP && LENGTH(lst) > 0 
-         && (!usenames || getNamesAttrib(lst) == R_NilValue)) {
+         && (!usenames || getNamesAttrib(lst) == R_NilValue)
+         && grad == R_NilValue) {
         if (NAMEDCNT_EQ_0(VECTOR_ELT(lst,0)))
             SET_NAMEDCNT_1(VECTOR_ELT(lst,0));  /* so won't be reallocated */
         ans = simple_concatenate ((SEXP*)DATAPTR(lst), LENGTH(lst), 
@@ -895,17 +938,21 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        the arguments filling in values of the returned object.
        If a non-vector argument was encountered (perhaps a list if 
        recursive = F) then we must return a list.  Otherwise, we use 
-       the natural coercion for vector types. */
+       the natural coercion for vector types.  
+
+       May put gradient in data.ans_grad if argument has gradient. */
 
     PROTECT(ans = allocVector(data.ans_type, data.ans_length));
     data.ans_ptr = ans;
     data.ans_length = 0;
+    data.ans_grad = R_NilValue;
+    PROTECT_WITH_INDEX (data.ans_grad, &data.ans_grad_pix);
 
     if (data.ans_type == VECSXP || data.ans_type == EXPRSXP 
                                 || data.ans_type == NILSXP)
-        ListAnswer(lst, recurse ? 1 : -1, &data);
+        ListAnswer(lst, grad, recurse ? 1 : -1, &data);
     else
-        AtomicAnswer(lst, &data);
+        AtomicAnswer(lst, grad, &data);
 
     /* Build and attach the names attribute for the returned object. */
 
@@ -919,7 +966,12 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         if (nix - 1 != LENGTH(names))  abort();
     }
 
-    UNPROTECT(2);
+    if (data.ans_grad != R_NilValue) {
+        R_gradient = data.ans_grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(3);
     return ans;
 } /* do_unlist */
 
@@ -1607,7 +1659,7 @@ attribute_hidden FUNTAB R_FunTab_bind[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {"c",		do_c,		0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"unlist",	do_unlist,	0,	1011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"unlist",	do_unlist,	0,	10001011,3,	{PP_FUNCALL, PREC_FN,	0}},
 {"cbind",	do_bind,	1,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rbind",	do_bind,	2,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 

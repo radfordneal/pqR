@@ -9880,6 +9880,38 @@ attr(,"fred")
 attr(,"gradient")
 [1] 18
 > 
+> with gradient (a=list(8,x=9,7)) unlist(a)
+  x   
+8 9 7 
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1 0 0
+
+attr(,"gradient")$x
+[1] 0 1 0
+
+attr(,"gradient")[[3]]
+[1] 0 0 1
+
+> with gradient (a=list(8,x=9,7),b=12) { a[2] <- b^2; unlist(a) }
+      x     
+  8 144   7 
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+[1] 1 0 0
+
+attr(,"gradient")$a$x
+[1] 0 0 0
+
+attr(,"gradient")$a[[3]]
+[1] 0 0 1
+
+
+attr(,"gradient")$b
+[1]  0 24  0
+
+> 
 > a <- c(4,9)
 > class(a) <- "fred"
 > with gradient (a) unclass(a)^2
