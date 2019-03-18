@@ -1405,6 +1405,8 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define RealFromInteger	Rf_RealFromInteger
 # define RealFromLogical	Rf_RealFromLogical
 # define RealFromString		Rf_RealFromString
+# define rep_each_list_gradient Rf_rep_each_list_gradient
+# define rep_each_numeric_gradient Rf_rep_each_numeric_gradient
 # define Seql			Rf_Seql
 # define set_length_list_gradient Rf_set_length_list_gradient
 # define set_length_numeric_gradient Rf_set_length_numeric_gradient
@@ -1671,6 +1673,8 @@ SEXP Rf_mkCharMulti (const char **, const int *, unsigned, cetype_t);
 SEXP Rf_mkCharRep (const char *, int, int, cetype_t);
 FILE* R_OpenLibraryFile(const char *);
 SEXP R_Primitive(const char *);
+SEXP rep_each_list_gradient (SEXP, SEXP, R_len_t);
+SEXP rep_each_numeric_gradient (SEXP, SEXP, R_len_t);
 void R_RestoreGlobalEnv(void);
 void R_RestoreGlobalEnvFromFile(const char *, Rboolean);
 void R_SaveGlobalEnv(void);

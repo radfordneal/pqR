@@ -424,6 +424,8 @@
  Rf_regerror
  Rf_regexec
  Rf_regfree
+ Rf_rep_each_list_gradient
+ Rf_rep_each_numeric_gradient
  Rf_rep_one_string_element
  Rf_rep_string_elements
  Rf_set_elements_to_NA

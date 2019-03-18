@@ -9869,6 +9869,99 @@ attr(,"gradient")
 [3,]    0    0    1
 [4,]    0    0    0
 > 
+> with gradient (a=c(3,5)) rep(c(a[2]^2,a[1]^3),length.out=7)
+[1] 25 27 25 27 25 27 25
+attr(,"gradient")
+     [,1] [,2]
+[1,]    0   10
+[2,]   27    0
+[3,]    0   10
+[4,]   27    0
+[5,]    0   10
+[6,]   27    0
+[7,]    0   10
+> with gradient (a=c(3,5)) rep(c(a[2]^2,a[1]^3),times=c(2,3))
+[1] 25 25 27 27 27
+attr(,"gradient")
+     [,1] [,2]
+[1,]    0   10
+[2,]    0   10
+[3,]   27    0
+[4,]   27    0
+[5,]   27    0
+> with gradient (a=list(3,5)) rep(c(a[[2]]^2,a[[1]]^3),times=c(2,3))
+[1] 25 25 27 27 27
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1]  0  0 27 27 27
+
+attr(,"gradient")[[2]]
+[1] 10 10  0  0  0
+
+> with gradient (a=list(3,5)) rep(list(a[[2]]^2,a[[1]]^3),times=c(2,3))
+[[1]]
+[1] 25
+
+[[2]]
+[1] 25
+
+[[3]]
+[1] 27
+
+[[4]]
+[1] 27
+
+[[5]]
+[1] 27
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 0
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 27
+
+attr(,"gradient")[[1]][[4]]
+[1] 27
+
+attr(,"gradient")[[1]][[5]]
+[1] 27
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 10
+
+attr(,"gradient")[[2]][[2]]
+[1] 10
+
+attr(,"gradient")[[2]][[3]]
+[1] 0
+
+attr(,"gradient")[[2]][[4]]
+[1] 0
+
+attr(,"gradient")[[2]][[5]]
+[1] 0
+
+
+> 
+> rep.fred <- function (x, times) x*times
+> a <- c(9,10); class(a) <- "fred"
+> with gradient (a) rep(a,100)
+[1]  900 1000
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+     [,1] [,2]
+[1,]  100    0
+[2,]    0  100
+> rm(a)
+> 
 > with gradient (a=9) { b <- a^2; get_rm(b) }
 [1] 81
 attr(,"gradient")
@@ -10186,6 +10279,7 @@ attr(,"gradient")
      [,1] [,2]
 [1,]    8    0
 [2,]    0   18
+> rm(a)
 > 
 > with gradient (a=c(9,7)) a^2+a[2]^3
 [1] 424 392

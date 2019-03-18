@@ -184,13 +184,17 @@ The following built-in functions and operators will compute gradients,
 with respect to all their real scalar, vector, matrix, or array arguments
 (unless noted), or when applicable, arguments that are lists of reals 
 (or lists of lists of reals, etc.):
-\preformatted{  list, matrix, array
-  $ (for vector lists only), $<- (for vector lists only) 
+\preformatted{  c, list, matrix, array, rep, unlist
+
+  [ (for vector lists and numeric vectors, including matrices & arrays) 
+  [<- (for vector lists and numeric vectors, including matrices & arrays) 
+
   [[ (for vector lists and numeric vectors, including matrices & arrays) 
   [[<- (for vector lists and numeric vectors, including matrices & arrays; 
         vector as index (indexing at multiple levels) not support yet) 
-  [ (for vector lists and numeric vectors, including matrices & arrays) 
-  [<- (for vector lists and numeric vectors, including matrices & arrays) 
+
+  $ (for vector lists only)
+  $<- (for vector lists only) 
   
   +, -, *, /, ^ (+ and - may be unary) 
   
@@ -218,13 +222,12 @@ with respect to all their real scalar, vector, matrix, or array arguments
   dunif, punif, qunif, runif 
   dweibull, pweibull, qweibull, rweibull
 
-  c, unlist
   as.vector, as.list, as.double, as.numeric, as.real
   unclass, structure, get_rm, length<-
   apply
 }
 
-% TO COME: rep, cbind, rbind
+% TO COME: rep.int, rep_len, cbind, rbind
 %          lapply, sapply, vapply, mapply, replicate, simplify2array
 %          mean, sum, prod, min, max, pmin, pmax
 %          rowMeans, colMeans, rowSums, ColSums

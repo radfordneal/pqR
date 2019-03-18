@@ -443,6 +443,117 @@ R_inspect(res); REprintf("==\n");
 }
 
 
+/* Create set of gradients from repeating each element of a vector list,
+   ending up as length n.  Protects its grad argument. */
+
+SEXP attribute_hidden rep_each_list_gradient (SEXP grad, SEXP t, R_len_t n)
+{
+#if 0
+REprintf("rep_each_list_gradient %d\n",n);
+R_inspect(grad); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY (rep_each_list_gradient, grad, t, n);
+	
+    if (TYPEOF(grad) != VECSXP) abort();
+    R_len_t l = LENGTH(grad);
+    R_len_t i, j, k;
+
+    SEXP res = alloc_list_gradient (n);
+    PROTECT(res);
+
+    if (LENGTH(t) == 1) {
+        R_len_t each = INTEGER(t)[0];
+        for (i = 0, j = 0; i < n; j++) {
+            if (j >= l) j = 0;
+            SEXP v = VECTOR_ELT (grad, j);
+            for (k = each; k > 0; k--) {
+                if (i >= n) abort();
+                SET_VECTOR_ELT (res, i, v);
+                i += 1;
+            }
+        }
+    }
+    else {
+        int *eachv = INTEGER(t);
+        for (i = 0, j = 0; i < n; j++) {
+            if (j >= l) j = 0;
+            SEXP v = VECTOR_ELT (grad, j);
+            for (k = eachv[j]; k > 0; k--) {
+                if (i >= n) abort();
+                SET_VECTOR_ELT (res, i, v);
+                i += 1;
+            }
+        }
+    }
+
+    UNPROTECT(1);
+#if 0
+REprintf("rep_each_list_gradient end\n");
+R_inspect(res); REprintf("==\n");
+#endif
+    return res;
+}
+
+
+/* Create set of gradients from repeating each element of a numeric vector,
+   ending up as length n.  Protects its grad argument. */
+
+SEXP attribute_hidden rep_each_numeric_gradient (SEXP grad, SEXP t, R_len_t n)
+{
+#if 0
+REprintf("rep_each_numeric_gradient %d\n",n);
+R_inspect(grad); REprintf("--\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY (rep_each_numeric_gradient, grad, t, n);
+	
+    if (TYPEOF(grad) != REALSXP) abort();
+    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t gn = LENGTH(grad) / gvars;
+    R_len_t i, j, k, h;
+
+    SEXP res = alloc_numeric_gradient (gvars, n);
+    PROTECT(res);
+
+
+    if (LENGTH(t) == 1) {
+        R_len_t each = INTEGER(t)[0];
+        for (i = 0, j = 0; i < n; j++) {
+            if (j >= gn) j = 0;
+            for (k = each; k > 0; k--) {
+                if (i >= n) abort();
+                for (h = 0; h < gvars; h++) {
+                    double v = REAL(grad)[h*gn+j];
+                    REAL(res)[h*n+i] = v;
+                }
+                i += 1;
+            }
+        }
+    }
+    else {
+        int *eachv = INTEGER(t);
+        for (i = 0, j = 0; i < n; j++) {
+            if (j >= gn) j = 0;
+            for (k = eachv[j]; k > 0; k--) {
+                if (i >= n) abort();
+                for (h = 0; h < gvars; h++) {
+                    double v = REAL(grad)[h*gn+j];
+                    REAL(res)[h*n+i] = v;
+                }
+                i += 1;
+            }
+        }
+    }
+
+done:
+    UNPROTECT(1);
+#if 0
+REprintf("rep_each_numeric_gradient end\n");
+R_inspect(res); REprintf("==\n");
+#endif
+    return res;
+}
+
+
 /* Create set of gradients from recycling a vector list to be of length n,
    filling in a matrix by row.  Protects its grad argument. */
 

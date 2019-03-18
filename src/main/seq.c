@@ -597,12 +597,18 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     static const char * const ap[5] = 
                          { "x", "times", "length.out", "each", "..." };
 
-    if (DispatchOrEval(call, op, "rep", args, rho, &ans, 0, 0, variant))
+    if (DispatchOrEval (call, op, "rep", args, rho, &ans, 
+                        2 /* ask for gradient for 1st argument */, 0, variant))
 	return(ans);
 
     /* This has evaluated all the non-missing arguments into ans */
     PROTECT(args = ans);
     nprotect++;
+
+    SEXP grad = R_NilValue;
+    SEXP x_grad = R_NilValue;
+    if (HAS_GRADIENT_IN_CELL(args))
+        x_grad = GRADIENT_IN_CELL(args);
 
     R_Visible = TRUE;
 
@@ -722,6 +728,23 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
          && (len_xn > 0 || (variant & VARIANT_PENDING_OK) != 0), 
       FALSE, 0, task_rep, 0, a, x, each_times);
 
+    if (x_grad != R_NilValue) {
+        if (TYPEOF(a) == VECSXP) {
+            if (each_times == (helpers_var_ptr)0
+                 || LENGTH(each_times) == 1 && INTEGER(each_times)[0] == 1)
+                grad = copy_list_recycled_gradient (x_grad, len);
+            else
+                grad = rep_each_list_gradient (x_grad, each_times, len);
+        }
+        else if (TYPEOF(a) == REALSXP) {
+            if (each_times == (helpers_var_ptr)0
+                 || LENGTH(each_times) == 1 && INTEGER(each_times)[0] == 1)
+                grad = copy_numeric_recycled_gradient (x_grad, len);
+            else
+                grad = rep_each_numeric_gradient (x_grad, each_times, len);
+        }
+    }
+
     if (len_xn > 0) {
         SEXP an = allocVector (TYPEOF(xn), len);
         task_rep (0, an, xn, each_times);
@@ -735,6 +758,11 @@ static SEXP do_rep(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	SET_S4_OBJECT(a);
     }
 #endif
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
 
     UNPROTECT(nprotect);
     return a;

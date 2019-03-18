@@ -1495,6 +1495,16 @@ with gradient (a=c(99,33,11)) { length(a) <- 2; a }
 with gradient (a=c(99,33,11)) { length(a) <- 3; a }
 with gradient (a=c(99,33,11)) { length(a) <- 4; a }
 
+with gradient (a=c(3,5)) rep(c(a[2]^2,a[1]^3),length.out=7)
+with gradient (a=c(3,5)) rep(c(a[2]^2,a[1]^3),times=c(2,3))
+with gradient (a=list(3,5)) rep(c(a[[2]]^2,a[[1]]^3),times=c(2,3))
+with gradient (a=list(3,5)) rep(list(a[[2]]^2,a[[1]]^3),times=c(2,3))
+
+rep.fred <- function (x, times) x*times
+a <- c(9,10); class(a) <- "fred"
+with gradient (a) rep(a,100)
+rm(a)
+
 with gradient (a=9) { b <- a^2; get_rm(b) }
 with gradient (a=9) structure(a^2,fred=9999)
 
@@ -1516,6 +1526,7 @@ with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,2,function(x)list(x,2*x))
 a <- c(4,9)
 class(a) <- "fred"
 with gradient (a) unclass(a)^2
+rm(a)
 
 with gradient (a=c(9,7)) a^2+a[2]^3
 with gradient (a=c(9,7)) a[1]^2+a^3
