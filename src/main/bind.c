@@ -474,7 +474,7 @@ static void AtomicAnswer(SEXP x, SEXP grad, struct BindData *data)
     default:
         copy_elements_coerced (data->ans_ptr, data->ans_length, 1,
                                x, 0, 1, LENGTH(x));
-        if (grad != R_NilValue) {
+        if (TYPEOF(data->ans_ptr) == REALSXP && grad != R_NilValue) {
             data->ans_grad = subassign_range_numeric_gradient 
                                (data->ans_grad, grad, 
                                 data->ans_length, data->ans_length+LENGTH(x)-1,
@@ -924,9 +924,9 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
     }
 
-    /* Determine the type of the returned value. */
-    /* The strategy here is appropriate because the */
-    /* object being operated on is a generic vector. */
+    /* Determine the type of the returned value.  The strategy here is
+       appropriate because the object being operated on is a generic
+       vector. */
 
     data.ans_type  = NILSXP;
     data.ans_length = 0;

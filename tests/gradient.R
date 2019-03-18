@@ -1498,8 +1498,15 @@ with gradient (a=c(99,33,11)) { length(a) <- 4; a }
 with gradient (a=9) { b <- a^2; get_rm(b) }
 with gradient (a=9) structure(a^2,fred=9999)
 
+with gradient (a=c(8,9,7)) unlist(a)
 with gradient (a=list(8,x=9,7)) unlist(a)
 with gradient (a=list(8,x=9,7),b=12) { a[2] <- b^2; unlist(a) }
+with gradient (a=list(8,list(9,7))) unlist(a)
+with gradient (a=list(8,list(9,7))) unlist(a,recursive=FALSE)
+
+with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,1,sqrt)
+with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,1,function(x)10*x[1]+x[2])
+with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,2,function(x)list(x,2*x))
 
 a <- c(4,9)
 class(a) <- "fred"

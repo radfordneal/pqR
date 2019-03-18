@@ -9880,6 +9880,13 @@ attr(,"fred")
 attr(,"gradient")
 [1] 18
 > 
+> with gradient (a=c(8,9,7)) unlist(a)
+[1] 8 9 7
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
 > with gradient (a=list(8,x=9,7)) unlist(a)
   x   
 8 9 7 
@@ -9910,6 +9917,125 @@ attr(,"gradient")$a[[3]]
 
 attr(,"gradient")$b
 [1]  0 24  0
+
+> with gradient (a=list(8,list(9,7))) unlist(a)
+[1] 8 9 7
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1 0 0
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0 1 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 0 0 1
+
+
+> with gradient (a=list(8,list(9,7))) unlist(a,recursive=FALSE)
+[[1]]
+[1] 8
+
+[[2]]
+[1] 9
+
+[[3]]
+[1] 7
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+attr(,"gradient")[[2]][[1]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[1]][[2]]
+[1] 1
+
+attr(,"gradient")[[2]][[1]][[3]]
+[1] 0
+
+
+attr(,"gradient")[[2]][[2]]
+attr(,"gradient")[[2]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[2]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[3]]
+[1] 1
+
+
+
+> 
+> with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,1,sqrt)
+     [,1]     [,2]
+[1,]    3 1.000000
+[2,]    2 1.414214
+attr(,"gradient")
+          [,1] [,2] [,3]      [,4]
+[1,] 0.1666667  0.0 0.00 0.0000000
+[2,] 0.0000000  0.0 0.25 0.0000000
+[3,] 0.0000000  0.5 0.00 0.0000000
+[4,] 0.0000000  0.0 0.00 0.3535534
+> with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,1,function(x)10*x[1]+x[2])
+[1] 94 12
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]   10    0    1    0
+[2,]    0   10    0    1
+> with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,2,function(x)list(x,2*x))
+[[1]]
+[[1]][[1]]
+[1] 9 1
+
+[[1]][[2]]
+[1] 18  2
+
+
+[[2]]
+[[2]][[1]]
+[1] 4 2
+
+[[2]][[2]]
+[1] 8 4
+
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+
+attr(,"gradient")[[1]][[2]]
+     [,1] [,2] [,3] [,4]
+[1,]    2    0    0    0
+[2,]    0    2    0    0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    1    0
+[2,]    0    0    0    1
+
+attr(,"gradient")[[2]][[2]]
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    2    0
+[2,]    0    0    0    2
+
 
 > 
 > a <- c(4,9)

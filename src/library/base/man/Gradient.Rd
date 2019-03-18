@@ -218,12 +218,14 @@ with respect to all their real scalar, vector, matrix, or array arguments
   dunif, punif, qunif, runif 
   dweibull, pweibull, qweibull, rweibull
 
+  unlist
   as.vector, as.list, as.double, as.numeric, as.real
   unclass, structure, get_rm, length<-
+  apply
 }
 
-% TO COME: c, unlist, rep, cbind, rbind
-%          apply, lapply, sapply, vapply, mapply, replicate, simplify2array
+% TO COME: c, rep, cbind, rbind
+%          lapply, sapply, vapply, mapply, replicate, simplify2array
 %          mean, sum, prod, min, max, pmin, pmax
 %          rowMeans, colMeans, rowSums, ColSums
 %          %*%, crossprod, tcrossprod
