@@ -506,9 +506,6 @@ void task_rep (helpers_op_t op, SEXP a, SEXP s, SEXP t)
 
 static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
-    static const char * const ap[2] = { "x", "times" };
-    PROTECT(args = matchArgs_strings (ap, 2, args, call));
-
     SEXP s = CAR(args);
     SEXP ncopy = CADR(args);
     SEXP a;
@@ -554,6 +551,24 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         && (variant & VARIANT_PENDING_OK) != 0, 
       FALSE, 0, task_rep, 0, a, s, ncopy);
 
+    SEXP grad = R_NilValue;
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        SEXP x_grad = GRADIENT_IN_CELL(args);
+        if (TYPEOF(a) == VECSXP) {
+            if (nc == 1)
+                grad = copy_list_recycled_gradient (x_grad, na);
+            else
+                grad = rep_each_list_gradient (x_grad, ncopy, na);
+        }
+        else if (TYPEOF(a) == REALSXP) {
+            if (nc == 1)
+                grad = copy_numeric_recycled_gradient (x_grad, na);
+            else
+                grad = rep_each_numeric_gradient (x_grad, ncopy, na);
+        }
+    }
+
 #ifdef _S4_rep_keepClass
     if(IS_S4_OBJECT(s)) { /* e.g. contains = "list" */
 	setAttrib(a, R_ClassSymbol, getClassAttrib(s));
@@ -577,7 +592,12 @@ static SEXP do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
     }
 
-    UNPROTECT(2 + (ncopy!=(helpers_var_ptr)0));
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(1 + (ncopy!=(helpers_var_ptr)0));
     return a;
 }
 
@@ -813,6 +833,16 @@ static SEXP do_rep_len(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
          && (variant & VARIANT_PENDING_OK) != 0, 
       FALSE, 0, task_rep, 0, a, s, (helpers_var_ptr) 0);
 
+    SEXP grad = R_NilValue;
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        SEXP x_grad = GRADIENT_IN_CELL(args);
+        if (TYPEOF(a) == VECSXP)
+            grad = copy_list_recycled_gradient (x_grad, na);
+        else if (TYPEOF(a) == REALSXP)
+            grad = copy_numeric_recycled_gradient (x_grad, na);
+    }
+
 #ifdef _S4_rep_keepClass
     if(IS_S4_OBJECT(s)) { /* e.g. contains = "list" */
 	setAttrib(a, R_ClassSymbol, getClassAttrib(s));
@@ -835,6 +865,12 @@ static SEXP do_rep_len(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 	UNPROTECT(1);
 	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
     }
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     UNPROTECT(1);
     return a;
 }
@@ -1093,8 +1129,8 @@ attribute_hidden FUNTAB R_FunTab_seq[] =
 
 {":",		do_colon,	0,	1000,	2,	{PP_BINARY2, PREC_COLON,  0}},
 {"..",		do_colon,	1,	1000,	2,	{PP_BINARY2, PREC_COLON,  0}},
-{"rep.int",	do_rep_int,	0,   1001011,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"rep_len",	do_rep_len,	0,   1001011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rep.int",	do_rep_int,	0,   11001011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"rep_len",	do_rep_len,	0,   11001011,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"rep",		do_rep,		0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq.int",	do_seq,		0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq_along",	do_seq_along,	0,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},

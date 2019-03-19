@@ -184,7 +184,7 @@ The following built-in functions and operators will compute gradients,
 with respect to all their real scalar, vector, matrix, or array arguments
 (unless noted), or when applicable, arguments that are lists of reals 
 (or lists of lists of reals, etc.):
-\preformatted{  c, list, matrix, array, rep, unlist
+\preformatted{  c, list, matrix, array, unlist, rep, rep.int, rep_len
 
   [ (for vector lists and numeric vectors, including matrices & arrays) 
   [<- (for vector lists and numeric vectors, including matrices & arrays) 
@@ -227,7 +227,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
   apply
 }
 
-% TO COME: rep.int, rep_len, cbind, rbind
+% TO COME: cbind, rbind
 %          lapply, sapply, vapply, mapply, replicate, simplify2array
 %          mean, sum, prod, min, max, pmin, pmax
 %          rowMeans, colMeans, rowSums, ColSums

@@ -1495,9 +1495,19 @@ with gradient (a=c(99,33,11)) { length(a) <- 2; a }
 with gradient (a=c(99,33,11)) { length(a) <- 3; a }
 with gradient (a=c(99,33,11)) { length(a) <- 4; a }
 
+with gradient (a=c(3,5)) rep_len(c(a[2]^2,a[1]^3),length.out=7)
+with gradient (a=list(3,5)) rep_len(a,5)
+
+with gradient (a=c(3,5)) rep.int(c(a[2]^2,a[1]^3),c(2,3))
+with gradient (a=c(3,5)) rep.int(c(a[2]^2,a[1]^3),2)
+with gradient (a=list(3,5)) rep.int(a,c(2,3))
+with gradient (a=list(3,5)) rep.int(a,2)
+
 with gradient (a=c(3,5)) rep(c(a[2]^2,a[1]^3),length.out=7)
+with gradient (a=c(3,5)) rep(c(a[2]^2,a[1]^3),times=4)
 with gradient (a=c(3,5)) rep(c(a[2]^2,a[1]^3),times=c(2,3))
 with gradient (a=list(3,5)) rep(c(a[[2]]^2,a[[1]]^3),times=c(2,3))
+with gradient (a=list(3,5)) rep(list(a[[2]]^2,a[[1]]^3),times=2)
 with gradient (a=list(3,5)) rep(list(a[[2]]^2,a[[1]]^3),times=c(2,3))
 
 rep.fred <- function (x, times) x*times
