@@ -1533,6 +1533,14 @@ with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,1,sqrt)
 with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,1,function(x)10*x[1]+x[2])
 with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,2,function(x)list(x,2*x))
 
+with gradient (a=c(36,1,25)) lapply(a,sqrt)
+with gradient (a=list(36,1,25)) lapply(a,function(x)c(x,sqrt(x)))
+
+with gradient (a=c(36,1,25)) sapply(a,sqrt)
+with gradient (a=list(36,1,25)) sapply(a,function(x)c(x,sqrt(x)))
+
+set.seed(1); with gradient (a=2) replicate(10,runif(1,-a,a))
+
 a <- c(4,9)
 class(a) <- "fred"
 with gradient (a) unclass(a)^2

@@ -10499,6 +10499,103 @@ attr(,"gradient")[[2]][[2]]
 
 
 > 
+> with gradient (a=c(36,1,25)) lapply(a,sqrt)
+[[1]]
+[1] 6
+
+[[2]]
+[1] 1
+
+[[3]]
+[1] 5
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+           [,1] [,2] [,3]
+[1,] 0.08333333    0    0
+
+attr(,"gradient")[[2]]
+     [,1] [,2] [,3]
+[1,]    0  0.5    0
+
+attr(,"gradient")[[3]]
+     [,1] [,2] [,3]
+[1,]    0    0  0.1
+
+> with gradient (a=list(36,1,25)) lapply(a,function(x)c(x,sqrt(x)))
+[[1]]
+[1] 36  6
+
+[[2]]
+[1] 1 1
+
+[[3]]
+[1] 25  5
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1.00000000 0.08333333
+
+attr(,"gradient")[[1]][[2]]
+[1] 0 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1.0 0.5
+
+attr(,"gradient")[[2]][[3]]
+[1] 0 0
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0 0
+
+attr(,"gradient")[[3]][[3]]
+[1] 1.0 0.1
+
+
+> 
+> with gradient (a=c(36,1,25)) sapply(a,sqrt)
+[1] 6 1 5
+attr(,"gradient")
+           [,1] [,2] [,3]
+[1,] 0.08333333  0.0  0.0
+[2,] 0.00000000  0.5  0.0
+[3,] 0.00000000  0.0  0.1
+> with gradient (a=list(36,1,25)) sapply(a,function(x)c(x,sqrt(x)))
+     [,1] [,2] [,3]
+[1,]   36    1   25
+[2,]    6    1    5
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1.00000000 0.08333333 0.00000000 0.00000000 0.00000000 0.00000000
+
+attr(,"gradient")[[2]]
+[1] 0.0 0.0 1.0 0.5 0.0 0.0
+
+attr(,"gradient")[[3]]
+[1] 0.0 0.0 0.0 0.0 1.0 0.1
+
+> 
+> set.seed(1); with gradient (a=2) replicate(10,runif(1,-a,a))
+ [1] -0.9379653 -0.5115044  0.2914135  1.6328312 -1.1932723  1.5935587
+ [7]  1.7787011  0.6431912  0.5164562 -1.7528549
+attr(,"gradient")
+ [1] -0.4689827 -0.2557522  0.1457067  0.8164156 -0.5966361  0.7967794
+ [7]  0.8893505  0.3215956  0.2582281 -0.8764275
+> 
 > a <- c(4,9)
 > class(a) <- "fred"
 > with gradient (a) unclass(a)^2

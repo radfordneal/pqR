@@ -35,16 +35,18 @@
 
 /* This is a special .Internal, so has unevaluated arguments.  It is
    called from a closure wrapper, so X and FUN are promises. */
-static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
+
+static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP R_fcall, ans, names, X, XX, FUN, dotsv, End;
     int i, n, no_dots;
     PROTECT_INDEX px;
 
     checkArity(op, args);
-    PROTECT_WITH_INDEX(X = CAR(args), &px);
-    PROTECT(XX = eval(CAR(args), rho));
     FUN = CADR(args);  /* must be unevaluated for use in e.g. bquote */
+
+    PROTECT_WITH_INDEX (X = CAR(args), &px);
+    PROTECT (XX = eval(CAR(args), rho));
 
     n = length(XX);
     if (n == NA_INTEGER) error(_("invalid length"));
@@ -58,27 +60,44 @@ static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* Build call: FUN(XX[[<ind>]], ...), with ... omitted if not there.
 
-       The R level code has ensured that XX is a vector.
-       If it is atomic we can speed things up slightly by
-       using the evaluated version.  (It's unclear why we 
-       can't always use XX, but let's keep as is - R.N.) 
+       The R level code has ensured that XX is a vector.  If it is
+       atomic we can speed things up slightly by using the evaluated
+       version (since it is self-evaluating), unless the gradient is
+       needed as well.
 
        Don't try to reuse the cell holding the index - causes problems. */
 
-    if(isVectorAtomic(XX)) X = XX;
+    if (isVectorAtomic(XX) && !(variant & VARIANT_GRADIENT)) 
+        X = XX;
 
     PROTECT(End = no_dots ? R_NilValue : CONS(R_DotsSymbol, R_NilValue));
+
+    SEXP grad;
+    PROTECT_INDEX gix;
+    PROTECT_WITH_INDEX (grad = R_NilValue, &gix);
 
     for(i = 0; i < n; i++) {
         PROTECT(R_fcall = LCONS (FUN, 
                            CONS (LCONS(R_Bracket2Symbol,
                                   CONS(X, CONS(ScalarInteger(i+1),R_NilValue))),
                                  End)));
-        SET_VECTOR_ELEMENT_TO_VALUE (ans, i, eval(R_fcall, rho));
+        SEXP v = evalv (R_fcall, rho, variant & VARIANT_GRADIENT);
         UNPROTECT(1);
+        SEXP g = R_variant_result & VARIANT_GRADIENT_FLAG
+                  ? R_gradient : R_NilValue;
+        SET_VECTOR_ELEMENT_TO_VALUE (ans, i, v);
+        if (g != R_NilValue) {
+            grad = subassign_list_gradient (grad, g, i, n);
+            REPROTECT (g, gix);
+        }
     }
 
-    UNPROTECT(4); /* X, XX, ans, End */
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(5); /* X, XX, ans, End, grad */
     return ans;
 }
 
@@ -382,7 +401,7 @@ attribute_hidden FUNTAB R_FunTab_apply[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"lapply",	do_lapply,	0,	10,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"lapply",	do_lapply,	0,	1010,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"vapply",	do_vapply,	0,	10,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"rapply",	do_rapply,	0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"islistfactor",do_islistfactor,0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
