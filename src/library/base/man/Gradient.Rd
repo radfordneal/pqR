@@ -231,7 +231,8 @@ with respect to all their real scalar, vector, matrix, or array arguments
 %          vapply, mapply
 %          mean, sum, prod, min, max, pmin, pmax
 %          rowMeans, colMeans, rowSums, ColSums
-%          %*%, crossprod, tcrossprod, t
+%          %*%, crossprod, tcrossprod, 
+%          t, drop, diag (two meanings), diag<-
 %          solve, backsolve, forwardsolve, chol
 
 The following replacement functions do not compute any gradient information,
