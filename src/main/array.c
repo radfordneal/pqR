@@ -1449,6 +1449,20 @@ static SEXP do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         UNPROTECT(1);
     }
     copyMostAttrib(a, r);
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        if (TYPEOF(r) == VECSXP) {
+            R_gradient = copy_list_recycled_byrow_gradient
+                           (GRADIENT_IN_CELL(args), ncol, len);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
+        else if (TYPEOF(r) == REALSXP) {
+            R_gradient = copy_numeric_recycled_byrow_gradient
+                           (GRADIENT_IN_CELL(args), ncol, len);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
+    }
+
     UNPROTECT(1);
     return r;
 
@@ -2259,7 +2273,7 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 {"col",		do_rowscols,	2,    1011011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"crossprod",	do_matprod,	1,    1011011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
 {"tcrossprod",	do_matprod,	2,    1011011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
-{"t.default",	do_transpose,	0,    1011011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"t.default",	do_transpose,	0,    11011011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"aperm",	do_aperm,	0,    1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"colSums",	do_colsum,	0,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"colMeans",	do_colsum,	1,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},

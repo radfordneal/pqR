@@ -1552,6 +1552,9 @@ with gradient (a=c(9,7)) a[1]^2+a^3
 with gradient (a=3,b=4) { x <- matrix(c(a,b,a),3,3); drop(x) }
 with gradient (a=3,b=4) { x <- matrix(c(a,b,a),9,1); drop(x) }
 
+with gradient (a=matrix(list(3,1,9,4),2,2)) t(a)
+with gradient (a=matrix(c(3,1,9,4),2,2)) t(a)
+with gradient (a=7) { b <- matrix(c(a,1,a^2,4,a^3,a^4),3,2); t(b) }
 
 # Test backpropagation.
 

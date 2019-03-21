@@ -225,14 +225,16 @@ with respect to all their real scalar, vector, matrix, or array arguments
   apply, lapply, sapply, replicate, simplify2array
   as.vector, as.list, as.double, as.numeric, as.real
   unclass, drop, structure, get_rm, length<-
+
+  t
 }
 
 % TO COME: cbind, rbind
-%          vapply, mapply
+%          vapply, mapply, rapply
 %          mean, sum, prod, min, max, pmin, pmax
 %          rowMeans, colMeans, rowSums, ColSums
 %          %*%, crossprod, tcrossprod, 
-%          t, diag (two meanings), diag<-
+%          diag (two meanings), diag<-
 %          solve, backsolve, forwardsolve, chol
 
 The following replacement functions do not compute any gradient information,
