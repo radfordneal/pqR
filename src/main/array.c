@@ -419,6 +419,12 @@ static SEXP do_drop(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    x = DropDims(x);
 	}
     }
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        R_gradient = GRADIENT_IN_CELL(args);
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     return x;
 }
 
@@ -2248,7 +2254,7 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 
 {"matrix",	do_matrix,	0,    11000011,	7,	{PP_FUNCALL, PREC_FN,	0}},
 {"array",	do_array,	0,    11000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"drop",	do_drop,	0,    1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"drop",	do_drop,	0,    11000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"row",		do_rowscols,	1,    1011011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"col",		do_rowscols,	2,    1011011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"crossprod",	do_matprod,	1,    1011011,	2,	{PP_FUNCALL, PREC_FN,	  0}},

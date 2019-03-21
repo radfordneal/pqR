@@ -28,7 +28,7 @@
   (though currently inefficient) for replacing elements with $, [.], 
   and [[.]], except for multi-level vector subscripts with [[.]].
   However, many vector and matrix oriented operations, such as \code{sum},
-  \code{c}, \code{cbind}, and \code{\%*\%} are not yet supported.
+  \code{cbind}, and \code{\%*\%} are not yet supported.
   Support for a full range of vector and matrix operations should be 
   implemented soon.  
 
@@ -224,7 +224,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
 
   apply, lapply, sapply, replicate, simplify2array
   as.vector, as.list, as.double, as.numeric, as.real
-  unclass, structure, get_rm, length<-
+  unclass, drop, structure, get_rm, length<-
 }
 
 % TO COME: cbind, rbind
@@ -232,7 +232,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
 %          mean, sum, prod, min, max, pmin, pmax
 %          rowMeans, colMeans, rowSums, ColSums
 %          %*%, crossprod, tcrossprod, 
-%          t, drop, diag (two meanings), diag<-
+%          t, diag (two meanings), diag<-
 %          solve, backsolve, forwardsolve, chol
 
 The following replacement functions do not compute any gradient information,

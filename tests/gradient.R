@@ -1549,6 +1549,9 @@ rm(a)
 with gradient (a=c(9,7)) a^2+a[2]^3
 with gradient (a=c(9,7)) a[1]^2+a^3
 
+with gradient (a=3,b=4) { x <- matrix(c(a,b,a),3,3); drop(x) }
+with gradient (a=3,b=4) { x <- matrix(c(a,b,a),9,1); drop(x) }
+
 
 # Test backpropagation.
 

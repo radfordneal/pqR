@@ -10619,6 +10619,28 @@ attr(,"gradient")
 [1,]  261    0
 [2,]   18  147
 > 
+> with gradient (a=3,b=4) { x <- matrix(c(a,b,a),3,3); drop(x) }
+     [,1] [,2] [,3]
+[1,]    3    3    3
+[2,]    4    4    4
+[3,]    3    3    3
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1 0 1 1 0 1 1 0 1
+
+attr(,"gradient")$b
+[1] 0 1 0 0 1 0 0 1 0
+
+> with gradient (a=3,b=4) { x <- matrix(c(a,b,a),9,1); drop(x) }
+[1] 3 4 3 3 4 3 3 4 3
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1 0 1 1 0 1 1 0 1
+
+attr(,"gradient")$b
+[1] 0 1 0 0 1 0 0 1 0
+
+> 
 > 
 > # Test backpropagation.
 > 
