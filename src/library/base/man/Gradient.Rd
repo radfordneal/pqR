@@ -191,7 +191,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
 
   [[ (for vector lists and numeric vectors, including matrices & arrays) 
   [[<- (for vector lists and numeric vectors, including matrices & arrays; 
-        vector as index (indexing at multiple levels) not support yet) 
+        vector as index (indexing at multiple levels) not supported yet) 
 
   $ (for vector lists only)
   $<- (for vector lists only) 
@@ -224,7 +224,8 @@ with respect to all their real scalar, vector, matrix, or array arguments
 
   apply, lapply, sapply, replicate, simplify2array
   as.vector, as.list, as.double, as.numeric, as.real
-  unclass, drop, structure, get_rm, length<-
+  unclass, drop, structure, get_rm
+  storage.mode<-, length<-
 
   diag (for creating diagonal matrix or extracting diagonal from matrix)
   diag<-

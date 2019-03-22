@@ -9148,6 +9148,64 @@ attr(,"gradient")[[2]]
 
 > rm(a)
 > 
+> with gradient (a=c(3,9)) { storage.mode(a) <- "double"; a }
+[1] 3 9
+attr(,"gradient")
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+> with gradient (a=list(3,9)) { storage.mode(a) <- "list"; a }
+[[1]]
+[1] 3
+
+[[2]]
+[1] 9
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+
+> with gradient (a=c(3,9)) { storage.mode(a) <- "list"; a }
+[[1]]
+[1] 3
+
+[[2]]
+[1] 9
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2]
+[1,]    1    0
+
+attr(,"gradient")[[2]]
+     [,1] [,2]
+[1,]    0    1
+
+> with gradient (a=list(3,9)) { storage.mode(a) <- "double"; a }
+[1] 3 9
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1 0
+
+attr(,"gradient")[[2]]
+[1] 0 1
+
+> with gradient (a=c(3,9)) { storage.mode(a) <- "character"; a }
+[1] "3" "9"
+> 
 > with gradient (a=list(3,list(9,2),9,8)) matrix(a,2,2)
      [,1]   [,2]
 [1,] 3      9   

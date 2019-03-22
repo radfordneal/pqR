@@ -1465,6 +1465,12 @@ a <- c(9,8); class(a)<-"fred"; as.list.fred <- function(x) list(x[2],x[1])
 with gradient (a) as.list(a)
 rm(a)
 
+with gradient (a=c(3,9)) { storage.mode(a) <- "double"; a }
+with gradient (a=list(3,9)) { storage.mode(a) <- "list"; a }
+with gradient (a=c(3,9)) { storage.mode(a) <- "list"; a }
+with gradient (a=list(3,9)) { storage.mode(a) <- "double"; a }
+with gradient (a=c(3,9)) { storage.mode(a) <- "character"; a }
+
 with gradient (a=list(3,list(9,2),9,8)) matrix(a,2,2)
 with gradient (a=list(3,8)) matrix(a,2,2)
 with gradient (a=c(3,1,9,2)) matrix(a,2,2)

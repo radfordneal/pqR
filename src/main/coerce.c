@@ -3171,36 +3171,60 @@ static SEXP do_classgets (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 }
 
 
-/* primitive */
-static SEXP do_storage_mode(SEXP call, SEXP op, SEXP args, SEXP env)
-{
-/* storage.mode(obj) <- value */
-    SEXP obj, value, ans;
-    SEXPTYPE type;
+/* storage.mode(obj) <- value.  SPECIAL so can handle gradient. */
 
+static SEXP do_storage_mode (SEXP call, SEXP op, SEXP args, SEXP env, 
+                             int variant)
+{
+    PROTECT (args = variant & VARIANT_GRADIENT
+                      ? evalList_gradient (args, env, 0, 1, 0)
+                      : evalList (args, env));
+
+    SEXP obj, grad, value, ans;
+    SEXPTYPE type;
+    
     checkArity(op, args);
     check1arg_x (args, call);
 
     obj = CAR(args);
+    grad = HAS_GRADIENT_IN_CELL(args) ? GRADIENT_IN_CELL(args) : R_NilValue;
 
     value = CADR(args);
     if (!isValidString(value) || STRING_ELT(value, 0) == NA_STRING)
-	errorcall(call,_("'value' must be non-null character string"));
+        errorcall(call,_("'value' must be non-null character string"));
+
     type = str2type(CHAR(STRING_ELT(value, 0)));
-    if(type == (SEXPTYPE) -1) {
-	/* For backwards compatibility we used to allow "real" and "single" */
-	if(streql(CHAR(STRING_ELT(value, 0)), "real")) {
-	    errorcall(call,"use of 'real' is defunct: use 'double' instead");
-	} else if(streql(CHAR(STRING_ELT(value, 0)), "single")) {
-	    errorcall(call,"use of 'single' is defunct: use mode<- instead");
-	} else
-	    errorcall(call,_("invalid value"));
+    if (type == (SEXPTYPE) -1) {
+        /* For backwards compatibility we used to allow "real" and "single" */
+        if (streql(CHAR(STRING_ELT(value, 0)), "real"))
+            errorcall(call,"use of 'real' is defunct: use 'double' instead");
+        else if(streql(CHAR(STRING_ELT(value, 0)), "single"))
+            errorcall(call,"use of 'single' is defunct: use mode<- instead");
+        else
+            errorcall(call,_("invalid value"));
     }
-    if(TYPEOF(obj) == type) return obj;
-    if(isFactor(obj))
-	errorcall(call,_("invalid to change the storage mode of a factor"));
-    PROTECT(ans = coerceVector(obj, type));
-    DUPLICATE_ATTRIB(ans, obj);
+
+    if (TYPEOF(obj) == type)
+        ans = obj;
+    else {
+        if (isFactor(obj))
+            errorcall(call,_("invalid to change the storage mode of a factor"));
+        PROTECT(ans = coerceVector(obj, type));
+        DUPLICATE_ATTRIB(ans, obj);
+        if (TYPEOF(ans) == REALSXP && TYPEOF(obj) == VECSXP)
+            grad = as_numeric_gradient (grad, LENGTH(ans));
+        else if (TYPEOF(ans) == VECSXP && TYPEOF(obj) == REALSXP)
+            grad = as_list_gradient (grad, LENGTH(ans));
+        else
+            grad = R_NilValue;
+        UNPROTECT(1);
+    }
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     UNPROTECT(1);
     return ans;
 }
@@ -3261,7 +3285,7 @@ attribute_hidden FUNTAB R_FunTab_coerce[] =
 {"do.call",	do_docall,	0,	211,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"substitute",	do_substitute,	0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"quote",	do_quote,	0,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"storage.mode<-",do_storage_mode,0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"storage.mode<-",do_storage_mode,0,	1000,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"class<-",	do_classgets,	0,	1000,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
