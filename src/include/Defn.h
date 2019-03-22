@@ -1290,6 +1290,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define copyMostAttribNoTs	Rf_copyMostAttribNoTs
 # define copy_scaled_gradients	Rf_copy_scaled_gradients
 # define copy_scaled_gradients_vec Rf_copy_scaled_gradients_vec
+# define create_diag_matrix_gradient Rf_create_diag_matrix_gradient
 # define CustomPrintValue	Rf_CustomPrintValue
 # define DataFrameClass		Rf_DataFrameClass
 # define ddfindVar		Rf_ddfindVar
@@ -1522,6 +1523,7 @@ SEXP copy_numeric_recycled_byrow_gradient (SEXP, R_len_t, R_len_t);
 SEXP copy_numeric_recycled_gradient (SEXP, R_len_t);
 SEXP copy_scaled_gradients (SEXP, double, int);
 SEXP copy_scaled_gradients_vec (SEXP, SEXP);
+SEXP create_diag_matrix_gradient (SEXP, R_len_t, R_len_t, R_len_t, R_len_t);
 SEXP add_scaled_gradients (SEXP, SEXP, double, int);
 SEXP add_scaled_gradients_vec (SEXP, SEXP, SEXP);
 SEXP Rf_allocCharsxp(R_len_t);

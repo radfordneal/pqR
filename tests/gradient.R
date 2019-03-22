@@ -1556,6 +1556,14 @@ with gradient (a=matrix(list(3,1,9,4),2,2)) t(a)
 with gradient (a=matrix(c(3,1,9,4),2,2)) t(a)
 with gradient (a=7) { b <- matrix(c(a,1,a^2,4,a^3,a^4),3,2); t(b) }
 
+with gradient (a=matrix(list(3,1,9,4),2,2)) diag(a)
+with gradient (a=matrix(c(3,1,9,4),2,2)) diag(a)
+
+with gradient (a=list(8,7)) diag(a)
+with gradient (a=c(8,7)) diag(a)
+with gradient (a=8,b=7) diag(c(a,a+3*b,b),3,3)
+
+
 # Test backpropagation.
 
 with gradient (a=5) 

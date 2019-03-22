@@ -1703,6 +1703,46 @@ REprintf("==\n");
 }
 
 
+/* Create set of gradients for a matrix created with a vector on its diagonal.
+
+   Protects its grad argument. */
+
+SEXP attribute_hidden create_diag_matrix_gradient 
+      (SEXP grad, R_len_t ng, R_len_t nr, R_len_t mn, R_len_t n)
+{
+#if 0
+REprintf("*** create_diag_matrix_gradient %d %d %d %d\n",ng,nr,mn,n);
+R_inspect(grad);
+REprintf("--\n");
+R_inspect(v);
+#endif
+
+    RECURSIVE_GRADIENT_APPLY (create_diag_matrix_gradient, grad, ng, nr, mn, n);
+
+    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
+
+    PROTECT(grad);
+
+    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+
+    SEXP res = alloc_numeric_gradient (gvars, n);
+    memset (REAL(res), 0, LENGTH(res) * sizeof(double));
+
+    for (int j = 0; j < mn; j++) 
+        for (int h = 0; h < gvars; h++)
+            REAL(res) [h*n + j*nr + j] = REAL(grad) [h*ng + j % ng];
+
+#if 0
+REprintf("*** create_diag_matrix_gradient end\n");
+R_inspect(res);
+REprintf("==\n");
+#endif
+
+    UNPROTECT(1);
+    return res;
+}
+
+
 /* Create set of gradients from grad that account for assigning a range
    of elements from v (recycled) to a numeric vector, extending to length n.
 

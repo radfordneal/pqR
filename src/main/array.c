@@ -2199,57 +2199,76 @@ SEXP attribute_hidden do_lengths(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-/** Internal 'diag' routine. Adapted from R-3.0.0, (C) 2012 The R Core Team 
+/** Internal 'diag' routine. Adapted from R-3.0.0, (C) 2012 The R Core Team.
+    Handles diag(x) when x is a vector, to create a matrix with x on diagonal.
  **/
 
 SEXP attribute_hidden do_diag(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, x, snr, snc;
     int nr = 1, nc = 1, nprotect = 1;
+    SEXP grad = R_NilValue;
 
     checkArity(op, args);
     x = CAR(args);
+    if (HAS_GRADIENT_IN_CELL(args))
+        grad = GRADIENT_IN_CELL(args);
     snr = CADR(args);
     snc = CADDR(args);
+
     nr = asInteger(snr);
     if (nr == NA_INTEGER)
-	error(_("invalid 'nrow' value (too large or NA)"));
+        error(_("invalid 'nrow' value (too large or NA)"));
     if (nr < 0)
-	error(_("invalid 'nrow' value (< 0)"));
+        error(_("invalid 'nrow' value (< 0)"));
     nc = asInteger(snc);
     if (nc == NA_INTEGER)
-	error(_("invalid 'ncol' value (too large or NA)"));
+        error(_("invalid 'ncol' value (too large or NA)"));
     if (nc < 0)
-	error(_("invalid 'ncol' value (< 0)"));
+        error(_("invalid 'ncol' value (< 0)"));
     int mn = (nr < nc) ? nr : nc;
     if (mn > 0 && LENGTH(x) == 0)
-	error(_("'x' must have positive length"));
+        error(_("'x' must have positive length"));
 
-   if ((double)nr * (double)nc > INT_MAX)
-	error(_("too many elements specified"));
+    if ((double)nr * (double)nc > INT_MAX)
+        error(_("too many elements specified"));
+    R_len_t nn = nr * nc;
 
-   if (TYPEOF(x) == CPLXSXP) {
-       PROTECT(ans = allocMatrix(CPLXSXP, nr, nc));
-       int nx = LENGTH(x);
-       R_len_t NR = nr;
-       Rcomplex *rx = COMPLEX(x), *ra = COMPLEX(ans), zero;
-       zero.r = zero.i = 0.0;
-       for (R_len_t i = 0; i < NR*nc; i++) ra[i] = zero;
-       for (int j = 0; j < mn; j++) ra[j * (NR+1)] = rx[j % nx];
-  } else {
-       if(TYPEOF(x) != REALSXP) {
-	   PROTECT(x = coerceVector(x, REALSXP));
-	   nprotect++;
-       }
-       PROTECT(ans = allocMatrix(REALSXP, nr, nc));
-       int nx = LENGTH(x);
-       R_len_t NR = nr;
-       double *rx = REAL(x), *ra = REAL(ans);
-       for (R_len_t i = 0; i < NR*nc; i++) ra[i] = 0.0;
-       for (int j = 0; j < mn; j++) ra[j * (NR+1)] = rx[j % nx];
-   }
-   UNPROTECT(nprotect);
-   return ans;
+    if (TYPEOF(x) == CPLXSXP) {
+        PROTECT(ans = allocMatrix(CPLXSXP, nr, nc));
+        int nx = LENGTH(x);
+        Rcomplex *rx = COMPLEX(x), *ra = COMPLEX(ans), zero;
+        zero.r = zero.i = 0.0;
+        for (R_len_t i = 0; i < nn; i++) ra[i] = zero;
+        for (int j = 0; j < mn; j++) ra[j*nr+j] = rx[j % nx];
+    }
+    else {
+        if (TYPEOF(x) != REALSXP) {
+            if (TYPEOF(x) == VECSXP) {
+                PROTECT (grad = as_numeric_gradient (grad, LENGTH(x)));
+                nprotect++;
+            }
+            else
+                grad = R_NilValue;
+            PROTECT (x = coerceVector(x, REALSXP));
+            nprotect++;
+        }
+        PROTECT(ans = allocMatrix(REALSXP, nr, nc));
+        int nx = LENGTH(x);
+        double *rx = REAL(x), *ra = REAL(ans);
+        for (R_len_t i = 0; i < nn; i++) ra[i] = 0.0;
+        for (int j = 0; j < mn; j++) ra[j*nr+j] = rx[j % nx];
+        if (grad != R_NilValue)
+            grad = create_diag_matrix_gradient (grad, nx, nr, mn, nn);
+    }
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(nprotect);
+    return ans;
 }
 
 
@@ -2279,7 +2298,7 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 {"colMeans",	do_colsum,	1,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"rowSums",	do_colsum,	2,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"rowMeans",	do_colsum,	3,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"diag",        do_diag,        0,      11,     3,      {PP_FUNCALL, PREC_FN,	0}},
+{"diag",        do_diag,        0,   10000011,	3,      {PP_FUNCALL, PREC_FN,	0}},
 {"lengths",     do_lengths,     0,      11,     2,      {PP_FUNCALL, PREC_FN,   0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
