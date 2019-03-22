@@ -1563,6 +1563,12 @@ with gradient (a=list(8,7)) diag(a)
 with gradient (a=c(8,7)) diag(a)
 with gradient (a=8,b=7) diag(c(a,a+3*b,b),3,3)
 
+with gradient (a=3) { M <- matrix(7,2,2); diag(M) <- a; M }
+with gradient (a=3) { M <- matrix(7,2,2); diag(M) <- c(a,a^2); M }
+
+# next loses dim attribute, which is strange, but accept that for now...
+with gradient (a=list(3)) { M <- matrix(7,2,2); diag(M) <- a; M }
+
 
 # Test backpropagation.
 

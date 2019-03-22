@@ -10800,6 +10800,49 @@ attr(,"gradient")$b
 [1] 0 0 0 0 3 0 0 0 1
 
 > 
+> with gradient (a=3) { M <- matrix(7,2,2); diag(M) <- a; M }
+     [,1] [,2]
+[1,]    3    7
+[2,]    7    3
+attr(,"gradient")
+[1] 1 0 0 1
+> with gradient (a=3) { M <- matrix(7,2,2); diag(M) <- c(a,a^2); M }
+     [,1] [,2]
+[1,]    3    7
+[2,]    7    9
+attr(,"gradient")
+[1] 1 0 0 6
+> 
+> # next loses dim attribute, which is strange, but accept that for now...
+> with gradient (a=list(3)) { M <- matrix(7,2,2); diag(M) <- a; M }
+[[1]]
+[1] 3
+
+[[2]]
+[1] 7
+
+[[3]]
+[1] 7
+
+[[4]]
+[1] 3
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+[1] 1
+
+
+> 
 > 
 > # Test backpropagation.
 > 
