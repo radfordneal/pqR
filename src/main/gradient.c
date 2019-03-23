@@ -279,15 +279,14 @@ static SEXP make_id_grad (SEXP val)
    what it is the gradient of.  Also fills in GRADIENT_WRT_LEN fields of
    Jacobian matrices in grad. */
 
-static int match_structure (SEXP val, SEXP grad)
+static int match_structure (SEXP val, SEXP grad, R_len_t gvars)
 {
     if (TYPEOF(val) == REALSXP) {
         if (TYPEOF(grad) != REALSXP)
             return 0;
-        if (LENGTH(grad) % LENGTH(val) != 0)
+        if (LENGTH(grad) != (uint64_t) gvars * LENGTH(val) != 0)
             return 0;
-        SET_GRADIENT_WRT_LEN (grad, LENGTH(grad) / LENGTH(val));
-          /* When/where can we check if this is correct? */
+        SET_GRADIENT_WRT_LEN (grad, gvars);
     }
     else if (TYPEOF(val) == VECSXP) {
         if (TYPEOF(grad) != VECSXP)
@@ -296,7 +295,7 @@ static int match_structure (SEXP val, SEXP grad)
             return 0;
         R_len_t i;
         for (i = 0; i < LENGTH(val); i++) {
-            if (! match_structure (VECTOR_ELT(val,i), VECTOR_ELT(grad,i)))
+            if (!match_structure(VECTOR_ELT(val,i), VECTOR_ELT(grad,i), gvars))
                 return 0;
         }
     }
@@ -2733,6 +2732,41 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     return result;
 }
 
+/* Look for a non-null Jacobian matrix, and return the number of rows
+   it has.  Returns zero if no non-null Jacobian matrix is found. */
+
+static R_len_t Jacobian_rows (SEXP g)
+{
+    R_len_t r;
+
+    if (g == R_NilValue) 
+        return 0;
+
+    if (TYPEOF(g) == LISTSXP) {
+        for (SEXP e = g; e != R_NilValue; e = CDR(e)) {
+            r = Jacobian_rows (CAR(e));
+            if (r != 0)
+                return r;
+        }
+    }
+
+    if (TYPEOF(g) == VECSXP) {
+        for (R_len_t i = 0; i < LENGTH(g); i++) {
+            r = Jacobian_rows (VECTOR_ELT(g,i));
+            if (r != 0)
+                return r;
+        }
+    }
+
+    if (TYPEOF(g) == REALSXP) {
+        R_len_t gvars = GRADIENT_WRT_LEN(g);
+        r = LENGTH(g) / gvars;
+        if (LENGTH(g) != r * gvars) abort();
+        return r;
+    }
+
+    abort();
+}
 
 static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
                              int variant)
@@ -2827,16 +2861,17 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
         PROTECT(resgrad);
         vgi = 0;
         for (q = grads; q != R_NilValue; q = CDR(q)) {
-            if (vargrad[vgi] != R_NilValue) {
-                SEXP gval;
-                PROTECT (gval = evalv (CAR(q), newenv, VARIANT_PENDING_OK));
-                if (! match_structure (result, gval))
-                    errorcall (call, 
-                      _("computed gradient does not match type of value"));
-                resgrad = backpropagate_gradients (resgrad, vargrad[vgi], gval);
-                UNPROTECT(2);  /* gval, old resgrad */
-                PROTECT(resgrad);
-            }
+            R_len_t gvars = Jacobian_rows (vargrad[vgi]);
+            if (gvars == 0)
+                continue;
+            SEXP gval;
+            PROTECT (gval = evalv (CAR(q), newenv, VARIANT_PENDING_OK));
+            if (! match_structure (result, gval, gvars))
+                errorcall (call, 
+                  _("computed gradient does not have the correct structure"));
+            resgrad = backpropagate_gradients (resgrad, vargrad[vgi], gval);
+            UNPROTECT(2);  /* gval, old resgrad */
+            PROTECT(resgrad);
             vgi += 1;
         }
         vr |= VARIANT_GRADIENT_FLAG;
