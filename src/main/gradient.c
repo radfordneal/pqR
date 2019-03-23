@@ -283,7 +283,8 @@ static int match_structure (SEXP val, SEXP grad)
     if (TYPEOF(val) == REALSXP) {
         if (TYPEOF(grad) != REALSXP)
             return 0;
-        if (LENGTH(val) != LENGTH(grad))  /* FOR NOW */
+        /* NEEDS TO KNOW HOW MANY VARS GRAD IS WRT - DISABLE CHECK FOR NOW */
+        if (0 && LENGTH(val) != LENGTH(grad))
             return 0;
     }
     else if (TYPEOF(val) == VECSXP) {
@@ -2417,9 +2418,55 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
 }
 
 
-/* Auxiliary functions used by backpropagate_gradients (below). */
+/* Backpropagate gradients, adding contributions to gradients in 'base', 
+   that are found by multiplying gradients of inner vars w.r.t. outer vars 
+   (in 'a') by gradients of expression value w.r.t. inner vars (in 'b').  
+   The caller must protect 'b', but not 'base' or 'a'. */
 
-static SEXP add_scaled_list (SEXP a, SEXP b, SEXP f)
+static SEXP add_jacobian_product (SEXP a, SEXP b, SEXP f);
+static SEXP backup (SEXP g, SEXP a, SEXP b);
+
+static SEXP backpropagate_gradients (SEXP base, SEXP a, SEXP b)
+{
+#if 0
+REprintf("backpropagate_gradients\n");
+R_inspect(base); REprintf("--\n");
+R_inspect(a); REprintf("--\n");
+R_inspect(b); REprintf("==\n");
+#endif
+    RECURSIVE_GRADIENT_APPLY2 (backpropagate_gradients, base, a, b);
+
+    return backup (base, a, b);
+}
+
+/* Add gradients w.r.t. outer variables to 'base' (which is a gradient for
+   a single variable/element) that are found from gradients of inner variables
+   w.r.t. outer variables in 'a', multiplied by gradients of expression value
+   w.r.t. inner variables in 'b'. */
+
+static SEXP backup (SEXP base, SEXP a, SEXP b)
+{
+    if (a == R_NilValue || b == R_NilValue)
+        return base;
+
+    PROTECT3(base,a,b);
+
+    if (TYPEOF(b) == VECSXP && GRAD_WRT_LIST(b)) {
+        R_len_t n = LENGTH(b);
+        if (TYPEOF(a) != VECSXP || LENGTH(a) != n) abort();
+        for (R_len_t i = 0; i < n; i++)
+            base = backup (base, VECTOR_ELT(a,i), VECTOR_ELT(b,i));
+    }
+    else {
+        if (TYPEOF(a) != REALSXP) abort();
+        base = add_jacobian_product (base, b, a);
+    }
+
+    UNPROTECT(3);
+    return base;
+}
+
+static SEXP add_jacobian_product (SEXP a, SEXP b, SEXP f)
 {
     if (b == R_NilValue)
         return a;
@@ -2432,13 +2479,13 @@ static SEXP add_scaled_list (SEXP a, SEXP b, SEXP f)
         PROTECT (res = alloc_list_gradient (n));
         if (a == R_NilValue) {
             for (R_len_t i = 0; i < n; i++)
-              SET_VECTOR_ELT (res, i, add_scaled_list (a, VECTOR_ELT(b,i), f));
+              SET_VECTOR_ELT (res, i, add_jacobian_product (a, VECTOR_ELT(b,i), f));
         }
         else {
 
             if (TYPEOF(b) != VECSXP || LENGTH(b) != n) abort();
             for (R_len_t i = 0; i < n; i++) {
-                SET_VECTOR_ELT (res, i, add_scaled_list (VECTOR_ELT(a,i),
+                SET_VECTOR_ELT (res, i, add_jacobian_product (VECTOR_ELT(a,i),
                                                          VECTOR_ELT(b,i), f));
             }
         }
@@ -2478,50 +2525,6 @@ static SEXP add_scaled_list (SEXP a, SEXP b, SEXP f)
     for (R_len_t i = 0; i < glen; i++) 
         REAL(res)[i] += REAL(a)[i];
 
-    return res;
-}
-
-static SEXP backup (SEXP g, SEXP a, SEXP b)
-{
-    if (a == R_NilValue || b == R_NilValue)
-        return g;
-
-    PROTECT3(a,b,g);
-
-    if (TYPEOF(b) == VECSXP && GRAD_WRT_LIST(b)) {
-        R_len_t n = LENGTH(b);
-        if (TYPEOF(a) != VECSXP || LENGTH(a) != n) abort();
-        for (R_len_t i = 0; i < n; i++)
-            g = backup (g, VECTOR_ELT(a,i), VECTOR_ELT(b,i));
-    }
-    else {
-        if (TYPEOF(a) != REALSXP) abort();
-        g = add_scaled_list (g, b, a);
-    }
-
-    UNPROTECT(3);
-    return g;
-}
-
-
-/* Backpropagate gradients, adding contributions to gradients in 'base',
-   that are found by multiplying gradients of inner vars w.r.t. outer 
-   vars (in 'extra') by gradients of expression value w.r.t. inner vars
-   (in 'factors').  The caller must protect 'factors', but not 'base' or
-   'extra'. */
-
-static SEXP backpropagate_gradients (SEXP base, SEXP extra, SEXP factors)
-{
-    RECURSIVE_GRADIENT_APPLY2 (backpropagate_gradients, base, extra, factors);
-
-    if (extra == R_NilValue || factors == R_NilValue)
-        return base;
-
-    PROTECT2(base,extra);
-
-    SEXP res = backup (base, extra, factors);
-
-    UNPROTECT(2);
     return res;
 }
 
