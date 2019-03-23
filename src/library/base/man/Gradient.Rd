@@ -230,7 +230,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
   diag (for creating diagonal matrix or extracting diagonal from matrix)
   diag<-
 
-  t
+  t, det, determinant
 }
 
 % TO COME: cbind, rbind

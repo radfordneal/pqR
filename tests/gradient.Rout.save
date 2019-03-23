@@ -9006,6 +9006,368 @@ attr(,"gradient")
 [4,]    0    0    0    1
 > 
 > 
+> # Test matrix operations.
+> 
+> with gradient (a=3,b=4) { x <- matrix(c(a,b,a),3,3); drop(x) }
+     [,1] [,2] [,3]
+[1,]    3    3    3
+[2,]    4    4    4
+[3,]    3    3    3
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1 0 1 1 0 1 1 0 1
+
+attr(,"gradient")$b
+[1] 0 1 0 0 1 0 0 1 0
+
+> with gradient (a=3,b=4) { x <- matrix(c(a,b,a),9,1); drop(x) }
+[1] 3 4 3 3 4 3 3 4 3
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1 0 1 1 0 1 1 0 1
+
+attr(,"gradient")$b
+[1] 0 1 0 0 1 0 0 1 0
+
+> 
+> with gradient (a=matrix(list(3,1,9,4),2,2)) t(a)
+     [,1] [,2]
+[1,] 3    1   
+[2,] 9    4   
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 0
+
+attr(,"gradient")[[2]][[3]]
+[1] 1
+
+attr(,"gradient")[[2]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 1
+
+attr(,"gradient")[[3]][[3]]
+[1] 0
+
+attr(,"gradient")[[3]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[4]]
+attr(,"gradient")[[4]][[1]]
+[1] 0
+
+attr(,"gradient")[[4]][[2]]
+[1] 0
+
+attr(,"gradient")[[4]][[3]]
+[1] 0
+
+attr(,"gradient")[[4]][[4]]
+[1] 1
+
+
+> with gradient (a=matrix(c(3,1,9,4),2,2)) t(a)
+     [,1] [,2]
+[1,]    3    1
+[2,]    9    4
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    0    1    0
+[3,]    0    1    0    0
+[4,]    0    0    0    1
+> with gradient (a=7) { b <- matrix(c(a,1,a^2,4,a^3,a^4),3,2); t(b) }
+     [,1] [,2] [,3]
+[1,]    7    1   49
+[2,]    4  343 2401
+attr(,"gradient")
+[1]    1    0    0  147   14 1372
+> 
+> with gradient (a=matrix(list(3,1,9,4),2,2)) diag(a)
+[[1]]
+[1] 3
+
+[[2]]
+[1] 4
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[4]]
+attr(,"gradient")[[4]][[1]]
+[1] 0
+
+attr(,"gradient")[[4]][[2]]
+[1] 1
+
+
+> with gradient (a=matrix(c(3,1,9,4),2,2)) diag(a)
+[1] 3 4
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    0    0    1
+> 
+> with gradient (a=list(8,7)) diag(a)
+     [,1] [,2]
+[1,]    8    0
+[2,]    0    7
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1 0 0 0
+
+attr(,"gradient")[[2]]
+[1] 0 0 0 1
+
+> with gradient (a=c(8,7)) diag(a)
+     [,1] [,2]
+[1,]    8    0
+[2,]    0    7
+attr(,"gradient")
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    0
+[3,]    0    0
+[4,]    0    1
+> with gradient (a=8,b=7) diag(c(a,a+3*b,b),3,3)
+     [,1] [,2] [,3]
+[1,]    8    0    0
+[2,]    0   29    0
+[3,]    0    0    7
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1 0 0 0 1 0 0 0 0
+
+attr(,"gradient")$b
+[1] 0 0 0 0 3 0 0 0 1
+
+> 
+> with gradient (a=3) { M <- matrix(7,2,2); diag(M) <- a; M }
+     [,1] [,2]
+[1,]    3    7
+[2,]    7    3
+attr(,"gradient")
+[1] 1 0 0 1
+> with gradient (a=3) { M <- matrix(7,2,2); diag(M) <- c(a,a^2); M }
+     [,1] [,2]
+[1,]    3    7
+[2,]    7    9
+attr(,"gradient")
+[1] 1 0 0 6
+> 
+> # next loses dim attribute, which is strange, but accept that for now...
+> with gradient (a=list(3)) { M <- matrix(7,2,2); diag(M) <- a; M }
+[[1]]
+[1] 3
+
+[[2]]
+[1] 7
+
+[[3]]
+[1] 7
+
+[[4]]
+[1] 3
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+[1] 1
+
+
+> 
+> X <- matrix(c(3.1,2,7, 0,1.7,5, 9,-3.2,6), 3, 3)
+> with gradient (X) det(X)
+[1] 64.12
+attr(,"gradient")
+     [,1] [,2]  [,3]  [,4]  [,5]  [,6] [,7]  [,8] [,9]
+[1,] 26.2   45 -15.3 -34.4 -44.4 27.92 -1.9 -15.5 5.27
+> numericDeriv (quote(det(X)), "X")
+[1] 64.12
+attr(,"gradient")
+     [,1] [,2]  [,3]  [,4]  [,5]  [,6] [,7]  [,8] [,9]
+[1,] 26.2   45 -15.3 -34.4 -44.4 27.92 -1.9 -15.5 5.27
+> with gradient (X) determinant(X)
+$modulus
+[1] 4.160756
+attr(,"logarithm")
+[1] TRUE
+
+$sign
+[1] 1
+
+attr(,"class")
+[1] "det"
+attr(,"gradient")
+attr(,"gradient")$modulus
+          [,1]      [,2]       [,3]       [,4]       [,5]      [,6]        [,7]
+[1,] 0.4086089 0.7018091 -0.2386151 -0.5364941 -0.6924517 0.4354336 -0.02963194
+           [,8]       [,9]
+[1,] -0.2417342 0.08218964
+
+attr(,"gradient")$sign
+NULL
+
+> numericDeriv (quote(determinant(X)$modulus), "X")
+[1] 4.160756
+attr(,"logarithm")
+[1] TRUE
+attr(,"gradient")
+          [,1]      [,2]       [,3]       [,4]       [,5]      [,6]        [,7]
+[1,] 0.4086089 0.7018091 -0.2386151 -0.5364941 -0.6924517 0.4354336 -0.02963194
+           [,8]       [,9]
+[1,] -0.2417343 0.08218964
+> with gradient (X) determinant(X,logarithm=FALSE)
+$modulus
+[1] 64.12
+attr(,"logarithm")
+[1] FALSE
+
+$sign
+[1] 1
+
+attr(,"class")
+[1] "det"
+attr(,"gradient")
+attr(,"gradient")$modulus
+     [,1] [,2]  [,3]  [,4]  [,5]  [,6] [,7]  [,8] [,9]
+[1,] 26.2   45 -15.3 -34.4 -44.4 27.92 -1.9 -15.5 5.27
+
+attr(,"gradient")$sign
+NULL
+
+> numericDeriv (quote(determinant(X,logarithm=FALSE)$modulus), "X")
+[1] 64.12
+attr(,"logarithm")
+[1] FALSE
+attr(,"gradient")
+     [,1] [,2]  [,3]  [,4]  [,5]  [,6] [,7]  [,8] [,9]
+[1,] 26.2   45 -15.3 -34.4 -44.4 27.92 -1.9 -15.5 5.27
+> 
+> X <- matrix(c(-31,2,7, 0,1.7,5, 9,-3.2,6), 3, 3)
+> with gradient (X) det(X)
+[1] -829.3
+attr(,"gradient")
+     [,1] [,2]  [,3]  [,4] [,5]  [,6] [,7] [,8]  [,9]
+[1,] 26.2   45 -15.3 -34.4 -249 -81.2 -1.9  155 -52.7
+> numericDeriv (quote(det(X)), "X")
+[1] -829.3
+attr(,"gradient")
+     [,1]     [,2]  [,3]      [,4] [,5]  [,6]      [,7] [,8]  [,9]
+[1,] 26.2 45.00001 -15.3 -34.40001 -249 -81.2 -1.900001  155 -52.7
+> with gradient (X) determinant(X)
+$modulus
+[1] 6.720582
+attr(,"logarithm")
+[1] TRUE
+
+$sign
+[1] -1
+
+attr(,"class")
+[1] "det"
+attr(,"gradient")
+attr(,"gradient")$modulus
+            [,1]        [,2]       [,3]       [,4]      [,5]      [,6]
+[1,] -0.03159291 -0.05426263 0.01844929 0.04148077 0.3002532 0.0979139
+            [,7]       [,8]       [,9]
+[1,] 0.002291089 -0.1869046 0.06354757
+
+attr(,"gradient")$sign
+NULL
+
+> numericDeriv (quote(determinant(X)$modulus), "X")
+[1] 6.720582
+attr(,"logarithm")
+[1] TRUE
+attr(,"gradient")
+            [,1]        [,2]      [,3]       [,4]      [,5]      [,6]
+[1,] -0.03159291 -0.05426264 0.0184493 0.04148078 0.3002532 0.0979139
+           [,7]       [,8]       [,9]
+[1,] 0.00229109 -0.1869046 0.06354757
+> with gradient (X) determinant(X,logarithm=FALSE)
+$modulus
+[1] 829.3
+attr(,"logarithm")
+[1] FALSE
+
+$sign
+[1] -1
+
+attr(,"class")
+[1] "det"
+attr(,"gradient")
+attr(,"gradient")$modulus
+      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9]
+[1,] -26.2  -45 15.3 34.4  249 81.2  1.9 -155 52.7
+
+attr(,"gradient")$sign
+NULL
+
+> numericDeriv (quote(determinant(X,logarithm=FALSE)$modulus), "X")
+[1] 829.3
+attr(,"logarithm")
+[1] FALSE
+attr(,"gradient")
+      [,1] [,2] [,3]     [,4] [,5] [,6] [,7] [,8] [,9]
+[1,] -26.2  -45 15.3 34.39999  249 81.2  1.9 -155 52.7
+> 
 > # Miscellaneous tests.
 > 
 > with gradient (a=list(3,list(9,2))) as.vector(a)
@@ -10704,230 +11066,6 @@ attr(,"gradient")
      [,1] [,2]
 [1,]  261    0
 [2,]   18  147
-> 
-> with gradient (a=3,b=4) { x <- matrix(c(a,b,a),3,3); drop(x) }
-     [,1] [,2] [,3]
-[1,]    3    3    3
-[2,]    4    4    4
-[3,]    3    3    3
-attr(,"gradient")
-attr(,"gradient")$a
-[1] 1 0 1 1 0 1 1 0 1
-
-attr(,"gradient")$b
-[1] 0 1 0 0 1 0 0 1 0
-
-> with gradient (a=3,b=4) { x <- matrix(c(a,b,a),9,1); drop(x) }
-[1] 3 4 3 3 4 3 3 4 3
-attr(,"gradient")
-attr(,"gradient")$a
-[1] 1 0 1 1 0 1 1 0 1
-
-attr(,"gradient")$b
-[1] 0 1 0 0 1 0 0 1 0
-
-> 
-> with gradient (a=matrix(list(3,1,9,4),2,2)) t(a)
-     [,1] [,2]
-[1,] 3    1   
-[2,] 9    4   
-attr(,"gradient")
-attr(,"gradient")[[1]]
-attr(,"gradient")[[1]][[1]]
-[1] 1
-
-attr(,"gradient")[[1]][[2]]
-[1] 0
-
-attr(,"gradient")[[1]][[3]]
-[1] 0
-
-attr(,"gradient")[[1]][[4]]
-[1] 0
-
-
-attr(,"gradient")[[2]]
-attr(,"gradient")[[2]][[1]]
-[1] 0
-
-attr(,"gradient")[[2]][[2]]
-[1] 0
-
-attr(,"gradient")[[2]][[3]]
-[1] 1
-
-attr(,"gradient")[[2]][[4]]
-[1] 0
-
-
-attr(,"gradient")[[3]]
-attr(,"gradient")[[3]][[1]]
-[1] 0
-
-attr(,"gradient")[[3]][[2]]
-[1] 1
-
-attr(,"gradient")[[3]][[3]]
-[1] 0
-
-attr(,"gradient")[[3]][[4]]
-[1] 0
-
-
-attr(,"gradient")[[4]]
-attr(,"gradient")[[4]][[1]]
-[1] 0
-
-attr(,"gradient")[[4]][[2]]
-[1] 0
-
-attr(,"gradient")[[4]][[3]]
-[1] 0
-
-attr(,"gradient")[[4]][[4]]
-[1] 1
-
-
-> with gradient (a=matrix(c(3,1,9,4),2,2)) t(a)
-     [,1] [,2]
-[1,]    3    1
-[2,]    9    4
-attr(,"gradient")
-     [,1] [,2] [,3] [,4]
-[1,]    1    0    0    0
-[2,]    0    0    1    0
-[3,]    0    1    0    0
-[4,]    0    0    0    1
-> with gradient (a=7) { b <- matrix(c(a,1,a^2,4,a^3,a^4),3,2); t(b) }
-     [,1] [,2] [,3]
-[1,]    7    1   49
-[2,]    4  343 2401
-attr(,"gradient")
-[1]    1    0    0  147   14 1372
-> 
-> with gradient (a=matrix(list(3,1,9,4),2,2)) diag(a)
-[[1]]
-[1] 3
-
-[[2]]
-[1] 4
-
-attr(,"gradient")
-attr(,"gradient")[[1]]
-attr(,"gradient")[[1]][[1]]
-[1] 1
-
-attr(,"gradient")[[1]][[2]]
-[1] 0
-
-
-attr(,"gradient")[[2]]
-attr(,"gradient")[[2]][[1]]
-[1] 0
-
-attr(,"gradient")[[2]][[2]]
-[1] 0
-
-
-attr(,"gradient")[[3]]
-attr(,"gradient")[[3]][[1]]
-[1] 0
-
-attr(,"gradient")[[3]][[2]]
-[1] 0
-
-
-attr(,"gradient")[[4]]
-attr(,"gradient")[[4]][[1]]
-[1] 0
-
-attr(,"gradient")[[4]][[2]]
-[1] 1
-
-
-> with gradient (a=matrix(c(3,1,9,4),2,2)) diag(a)
-[1] 3 4
-attr(,"gradient")
-     [,1] [,2] [,3] [,4]
-[1,]    1    0    0    0
-[2,]    0    0    0    1
-> 
-> with gradient (a=list(8,7)) diag(a)
-     [,1] [,2]
-[1,]    8    0
-[2,]    0    7
-attr(,"gradient")
-attr(,"gradient")[[1]]
-[1] 1 0 0 0
-
-attr(,"gradient")[[2]]
-[1] 0 0 0 1
-
-> with gradient (a=c(8,7)) diag(a)
-     [,1] [,2]
-[1,]    8    0
-[2,]    0    7
-attr(,"gradient")
-     [,1] [,2]
-[1,]    1    0
-[2,]    0    0
-[3,]    0    0
-[4,]    0    1
-> with gradient (a=8,b=7) diag(c(a,a+3*b,b),3,3)
-     [,1] [,2] [,3]
-[1,]    8    0    0
-[2,]    0   29    0
-[3,]    0    0    7
-attr(,"gradient")
-attr(,"gradient")$a
-[1] 1 0 0 0 1 0 0 0 0
-
-attr(,"gradient")$b
-[1] 0 0 0 0 3 0 0 0 1
-
-> 
-> with gradient (a=3) { M <- matrix(7,2,2); diag(M) <- a; M }
-     [,1] [,2]
-[1,]    3    7
-[2,]    7    3
-attr(,"gradient")
-[1] 1 0 0 1
-> with gradient (a=3) { M <- matrix(7,2,2); diag(M) <- c(a,a^2); M }
-     [,1] [,2]
-[1,]    3    7
-[2,]    7    9
-attr(,"gradient")
-[1] 1 0 0 6
-> 
-> # next loses dim attribute, which is strange, but accept that for now...
-> with gradient (a=list(3)) { M <- matrix(7,2,2); diag(M) <- a; M }
-[[1]]
-[1] 3
-
-[[2]]
-[1] 7
-
-[[3]]
-[1] 7
-
-[[4]]
-[1] 3
-
-attr(,"gradient")
-attr(,"gradient")[[1]]
-attr(,"gradient")[[1]][[1]]
-[1] 1
-
-attr(,"gradient")[[1]][[2]]
-[1] 0
-
-attr(,"gradient")[[1]][[3]]
-[1] 0
-
-attr(,"gradient")[[1]][[4]]
-[1] 1
-
-
 > 
 > 
 > # Test backpropagation.
