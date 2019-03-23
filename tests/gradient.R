@@ -872,10 +872,11 @@ with gradient (a=12) f(a)
 with gradient (a=12) f(a^2)
 
 g <- function (x,y)
-  compute gradient (x,y) list(x,y,x*y)
-  as (list(8,9,x+y), list(x,y,7))  # wrong, but see if it happens
+  compute gradient (x,y) list(x+y,x-y,x*y)
+  as (list(x*y,x+y,x+y), list(x-y,x-y,7*x*y))  # wrong, but see if it happens
 
 with gradient (z=9) g(100*z,z+1)
+#with gradient (z=c(9,7)) g(100*z,z+1)
 
 
 # Test subassign operations.
