@@ -276,16 +276,18 @@ static SEXP make_id_grad (SEXP val)
 
 
 /* Test whether the structure of a gradient value matches the structure of
-   what it is the gradient of. */
+   what it is the gradient of.  Also fills in GRADIENT_WRT_LEN fields of
+   Jacobian matrices in grad. */
 
 static int match_structure (SEXP val, SEXP grad)
 {
     if (TYPEOF(val) == REALSXP) {
         if (TYPEOF(grad) != REALSXP)
             return 0;
-        /* NEEDS TO KNOW HOW MANY VARS GRAD IS WRT - DISABLE CHECK FOR NOW */
-        if (0 && LENGTH(val) != LENGTH(grad))
+        if (LENGTH(grad) % LENGTH(val) != 0)
             return 0;
+        SET_GRADIENT_WRT_LEN (grad, LENGTH(grad) / LENGTH(val));
+          /* When/where can we check if this is correct? */
     }
     else if (TYPEOF(val) == VECSXP) {
         if (TYPEOF(grad) != VECSXP)
@@ -2446,6 +2448,12 @@ R_inspect(b); REprintf("==\n");
 
 static SEXP backup (SEXP base, SEXP a, SEXP b)
 {
+#if 0
+REprintf("backup\n");
+R_inspect(base); REprintf("--\n");
+R_inspect(a); REprintf("--\n");
+R_inspect(b); REprintf("==\n");
+#endif
     if (a == R_NilValue || b == R_NilValue)
         return base;
 
@@ -2457,50 +2465,60 @@ static SEXP backup (SEXP base, SEXP a, SEXP b)
         for (R_len_t i = 0; i < n; i++)
             base = backup (base, VECTOR_ELT(a,i), VECTOR_ELT(b,i));
     }
-    else {
-        if (TYPEOF(a) != REALSXP) abort();
-        base = add_jacobian_product (base, b, a);
-    }
+    else
+        base = add_jacobian_product (base, a, b);
 
     UNPROTECT(3);
     return base;
 }
 
-static SEXP add_jacobian_product (SEXP a, SEXP b, SEXP f)
+static SEXP add_jacobian_product (SEXP base, SEXP a, SEXP b)
 {
+#if 0
+REprintf("add jacobian product\n");
+R_inspect(base); REprintf("--\n");
+R_inspect(a); REprintf("--\n");
+R_inspect(b); REprintf("==\n");
+#endif
+    if (TYPEOF(a) != REALSXP) abort();
+
     if (b == R_NilValue)
-        return a;
+        return base;
 
     SEXP res;
 
     if (TYPEOF(b) == VECSXP) {
         R_len_t n = LENGTH(b);
-        PROTECT2(a,b);
+        PROTECT3(base,a,b);
         PROTECT (res = alloc_list_gradient (n));
-        if (a == R_NilValue) {
+        if (base == R_NilValue) {
             for (R_len_t i = 0; i < n; i++)
-              SET_VECTOR_ELT (res, i, add_jacobian_product (a, VECTOR_ELT(b,i), f));
+                SET_VECTOR_ELT (res, i, add_jacobian_product
+                                 (R_NilValue, a, VECTOR_ELT(b,i)));
         }
         else {
-
-            if (TYPEOF(b) != VECSXP || LENGTH(b) != n) abort();
             for (R_len_t i = 0; i < n; i++) {
-                SET_VECTOR_ELT (res, i, add_jacobian_product (VECTOR_ELT(a,i),
-                                                         VECTOR_ELT(b,i), f));
+                SET_VECTOR_ELT (res, i, add_jacobian_product
+                                 (VECTOR_ELT(base,i), a, VECTOR_ELT(b,i)));
             }
         }
-        UNPROTECT(3);
+
+#if 0
+REprintf("add jacobian product end (1)\n");
+R_inspect(res); REprintf("..\n");
+#endif
+        UNPROTECT(4);
         return res;
     }
 
     if (TYPEOF(b) != REALSXP) abort();
 
-    if (LENGTH(b) == 1 && LENGTH(f) == 1) {
-        if (a == R_NilValue)
-            return ScalarRealMaybeConst (*REAL(b) * *REAL(f));
-        if (TYPEOF(a) != REALSXP) abort();
-        if (LENGTH(a) != 1) abort();
-        return ScalarRealMaybeConst (*REAL(a) + *REAL(b) * *REAL(f));
+    if (LENGTH(a) == 1 && LENGTH(b) == 1) {
+        if (base == R_NilValue)
+            return ScalarRealMaybeConst (*REAL(a) * *REAL(b));
+        if (TYPEOF(base) != REALSXP) abort();
+        if (LENGTH(base) != 1) abort();
+        return ScalarRealMaybeConst (*REAL(base) + *REAL(a) * *REAL(b));
     }
 
     R_len_t k = GRADIENT_WRT_LEN(b);
@@ -2508,22 +2526,32 @@ static SEXP add_jacobian_product (SEXP a, SEXP b, SEXP f)
     if (LENGTH(b) % k != 0) abort();
     R_len_t n = LENGTH(b) / k;
 
-    if (LENGTH(f) % k != 0) abort();
-    R_len_t m = LENGTH(f) / k;
+    if (LENGTH(a) % k != 0) abort();
+    R_len_t gvars = LENGTH(a) / k;
 
-    res = alloc_numeric_gradient (m, n);
-    R_len_t glen = n * m;
+    res = alloc_numeric_gradient (gvars, n);
+    R_len_t glen = gvars * n;
 
-    matprod_mat_mat (REAL(b), REAL(f), REAL(res), n, k, m);
+    matprod_mat_mat (REAL(b), REAL(a), REAL(res), n, k, gvars);
 
-    if (a == R_NilValue)
+    if (base == R_NilValue) {
+#if 0
+REprintf("add jacobian product end (2)\n");
+R_inspect(res); REprintf("..\n");
+#endif
         return res;
+    }
 
-    if (TYPEOF(a) != REALSXP) abort();
-    if (LENGTH(a) != glen) abort();
+    if (TYPEOF(base) != REALSXP) abort();
+    if (LENGTH(base) != glen) abort();
 
     for (R_len_t i = 0; i < glen; i++) 
-        REAL(res)[i] += REAL(a)[i];
+        REAL(res)[i] += REAL(base)[i];
+
+#if 0
+REprintf("add jacobian product end (3)\n");
+R_inspect(res); REprintf("..\n");
+#endif
 
     return res;
 }

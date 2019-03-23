@@ -4720,9 +4720,11 @@ attr(,"gradient")
 attr(,"gradient")
 [1] 425088
 > 
-> g <- function (x,y)
+> g <- function (x,y)  # assume length(x) == length(y)
 +   compute gradient (x,y) list(x+y,x-y,x*y)
-+   as (list(x*y,x+y,x+y), list(x-y,x-y,7*x*y))  # wrong, but see if it happens
++   as # wrong, but see if it happens
++      (list (diag(x*y,length(x)), diag(x+y,length(x)), diag(x+y,length(x))), 
++       list (diag(x-y,length(x)), diag(x-y,length(x)), diag(7*x*y,length(x))))
 > 
 > with gradient (z=9) g(100*z,z+1)
 [[1]]
@@ -4744,7 +4746,32 @@ attr(,"gradient")[[2]]
 attr(,"gradient")[[3]]
 [1] 154000
 
-> #with gradient (z=c(9,7)) g(100*z,z+1)
+> with gradient (z=c(9,7)) g(100*z,z+1)
+[[1]]
+[1] 910 708
+
+[[2]]
+[1] 890 692
+
+[[3]]
+[1] 9000 5600
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+       [,1]   [,2]
+[1,] 900890      0
+[2,]      0 560692
+
+attr(,"gradient")[[2]]
+      [,1]  [,2]
+[1,] 91890     0
+[2,]     0 71492
+
+attr(,"gradient")[[3]]
+       [,1]   [,2]
+[1,] 154000      0
+[2,]      0 110000
+
 > 
 > 
 > # Test subassign operations.

@@ -163,6 +163,9 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
             if (a) Rprintf(","); Rprintf("BC"); a = 1; 
         }
     }
+    if (TYPEOF(v) == VECSXP && GRAD_WRT_LIST(v)) {
+        if (a) Rprintf(","); Rprintf("GL"); a = 1; 
+    }
     if (IS_S4_OBJECT(v)) { if (a) Rprintf(","); Rprintf("S4"); a = 1; }
     if (TYPEOF(v) == SYMSXP || TYPEOF(v) == LISTSXP) {
 	if (IS_ACTIVE_BINDING(v)) { if (a) Rprintf(","); Rprintf("AB"); a = 1; }
