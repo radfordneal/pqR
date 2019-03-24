@@ -2866,8 +2866,9 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
             R_len_t gvars = Jacobian_rows (vg);
             if (gvars == 0)
                 continue;
-            SEXP gval;
-            PROTECT (gval = evalv (CAR(q), newenv, VARIANT_PENDING_OK));
+            SEXP gval = evalv (CAR(q), newenv, VARIANT_PENDING_OK);
+            if (NAMEDCNT_GT_0(gval)) gval = duplicate(gval);
+            PROTECT(gval);
             if (! match_structure (result, gval, gvars))
                 errorcall (call, 
                   _("computed gradient does not have the correct structure"));
