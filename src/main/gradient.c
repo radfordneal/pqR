@@ -2831,19 +2831,20 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
         SET_FRAME (newenv, frame);  /* protects frame */
 
         if (variant & VARIANT_GRADIENT) {
+            vargrad[vgi] = R_NilValue;
             if (R_variant_result & VARIANT_GRADIENT_FLAG) {
-                PROTECT (vargrad[vgi] = R_gradient);
+                vargrad[vgi] = R_gradient;
                 any_grad = 1;
             }
-            else {
-                PROTECT (vargrad[vgi] = R_NilValue);
-            }
+            PROTECT(vargrad[vgi]);
         }
         vgi += 1;
 
     }
 
     SET_ENVSYMBITS (newenv, bits);
+
+    if (vgi != nv) abort();
 
     /* Evaluate body. */
 
@@ -2861,7 +2862,8 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
         PROTECT(resgrad);
         vgi = 0;
         for (q = grads; q != R_NilValue; q = CDR(q)) {
-            R_len_t gvars = Jacobian_rows (vargrad[vgi]);
+            SEXP vg = vargrad[vgi++];
+            R_len_t gvars = Jacobian_rows (vg);
             if (gvars == 0)
                 continue;
             SEXP gval;
@@ -2869,10 +2871,9 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
             if (! match_structure (result, gval, gvars))
                 errorcall (call, 
                   _("computed gradient does not have the correct structure"));
-            resgrad = backpropagate_gradients (resgrad, vargrad[vgi], gval);
+            resgrad = backpropagate_gradients (resgrad, vg, gval);
             UNPROTECT(2);  /* gval, old resgrad */
             PROTECT(resgrad);
-            vgi += 1;
         }
         vr |= VARIANT_GRADIENT_FLAG;
         R_gradient = resgrad;
