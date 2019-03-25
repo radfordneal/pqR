@@ -108,7 +108,7 @@ solve.default <-
             i <- (k-1) %% na + 1
             j <- (k-1) %/% na + 1
             g[_,k] <- 
-              as.vector (inv[_,i,drop=FALSE] %*% inv[j,_,drop=FALSE] %*% b)
+              as.vector (inv[_,i,drop=FALSE] %*% (inv[j,_,drop=FALSE] %*% b))
         }
         -g
     },
