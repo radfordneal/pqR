@@ -227,6 +227,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
   unclass, drop, structure, get_rm
   storage.mode<-, length<-
 
+  solve (default method only, for matrices, not QR decompositions)
   diag (for creating diagonal matrix or extracting diagonal from matrix)
   diag<-
 
@@ -238,7 +239,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
 %          mean, sum, prod, min, max, pmin, pmax
 %          rowMeans, colMeans, rowSums, ColSums
 %          %*%, crossprod, tcrossprod, 
-%          solve, backsolve, forwardsolve, chol
+%          backsolve, forwardsolve, chol
 
 The following replacement functions do not compute any gradient information,
 but do leave undisturbed any gradient information that is associated with 

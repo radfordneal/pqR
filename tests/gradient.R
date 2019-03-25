@@ -1490,6 +1490,26 @@ numericDeriv (quote(determinant(X)$modulus), "X")
 with gradient (X) determinant(X,logarithm=FALSE)
 numericDeriv (quote(determinant(X,logarithm=FALSE)$modulus), "X")
 
+A <- matrix(c(7,1,8.1,2.2),2,2)
+v <- c(55,33)
+V <- matrix(c(55,33,550,330,5500,3300),2,3)
+
+with gradient (A) solve(A)
+numericDeriv (quote(as.vector(solve(A))),"A")
+
+with gradient (A) solve(A,v)
+with gradient (v) solve(A,v)
+with gradient (A,v) solve(A,v)
+numericDeriv (quote(as.vector(solve(A,v))),"A")
+numericDeriv (quote(as.vector(solve(A,v))),"v")
+
+with gradient (A) solve(A,V)
+with gradient (V) solve(A,V)
+with gradient (A,V) solve(A,V)
+numericDeriv (quote(as.vector(solve(A,V))),"A")
+numericDeriv (quote(as.vector(solve(A,V))),"V")
+
+
 # Miscellaneous tests.
 
 with gradient (a=list(3,list(9,2))) as.vector(a)
