@@ -11144,6 +11144,20 @@ attr(,"gradient")[[3]][[3]]
 [1] 1.0 0.1
 
 
+> with gradient (a=5) lapply(list(10,100),function(x)x*a)
+[[1]]
+[1] 50
+
+[[2]]
+[1] 500
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 10
+
+attr(,"gradient")[[2]]
+[1] 100
+
 > 
 > with gradient (a=c(36,1,25)) sapply(a,sqrt)
 [1] 6 1 5

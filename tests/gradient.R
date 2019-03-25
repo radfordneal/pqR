@@ -1602,6 +1602,7 @@ with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,2,function(x)list(x,2*x))
 
 with gradient (a=c(36,1,25)) lapply(a,sqrt)
 with gradient (a=list(36,1,25)) lapply(a,function(x)c(x,sqrt(x)))
+with gradient (a=5) lapply(list(10,100),function(x)x*a)
 
 with gradient (a=c(36,1,25)) sapply(a,sqrt)
 with gradient (a=list(36,1,25)) sapply(a,function(x)c(x,sqrt(x)))
