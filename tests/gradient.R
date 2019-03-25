@@ -1604,6 +1604,10 @@ with gradient (a=c(36,1,25)) lapply(a,sqrt)
 with gradient (a=list(36,1,25)) lapply(a,function(x)c(x,sqrt(x)))
 with gradient (a=5) lapply(list(10,100),function(x)x*a)
 
+with gradient (a=c(36,1,25)) vapply(a,sqrt,numeric(1))
+with gradient (a=c(36,1,25)) vapply(a,function(x)c(x,sqrt(x)),c(0,0))
+with gradient (a=list(36,1,25)) vapply(a,function(x)list(x,sqrt(x)),list(0,0))
+
 with gradient (a=c(36,1,25)) sapply(a,sqrt)
 with gradient (a=list(36,1,25)) sapply(a,function(x)c(x,sqrt(x)))
 

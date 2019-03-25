@@ -104,7 +104,7 @@ static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 /* .Internal(vapply(X, FUN, FUN.VALUE, USE.NAMES)) */
 
 /* This is a special .Internal */
-static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP R_fcall, ans, X, XX, FUN, value, dim_v, dotsv, End;
     int i, n, commonLen, useNames, no_dots;
@@ -148,14 +148,19 @@ static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* Build call: FUN(XX[[<ind>]], ...), with ... omitted if not there.
 
-       The R level code has ensured that XX is a vector.
-       If it is atomic we can speed things up slightly by
-       using the evaluated version.  (It's unclear why we 
-       can't always use XX, but let's keep as is - R.N.)
+       The R level code has ensured that XX is a vector.  If it is
+       atomic we can speed things up slightly by using the evaluated
+       version (since it is self-evaluating), unless the gradient is
+       needed as well.
 
        Don't try to reuse the cell holding the index - causes problems. */
 
-    if(isVectorAtomic(XX)) X = XX;
+    if (isVectorAtomic(XX) && !(variant & VARIANT_GRADIENT)) 
+        X = XX;
+
+    SEXP grad;
+    PROTECT_INDEX gix;
+    PROTECT_WITH_INDEX (grad = R_NilValue, &gix);
 
     PROTECT(End = no_dots ? R_NilValue : CONS(R_DotsSymbol, R_NilValue));
 
@@ -166,9 +171,11 @@ static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
                            CONS (LCONS(R_Bracket2Symbol,
                                   CONS(X, CONS(ScalarInteger(i+1),R_NilValue))),
                                  End)));
-        tmp = eval(R_fcall, rho);
-        UNPROTECT(1);
-        PROTECT(tmp);
+        tmp = evalv (R_fcall, rho, variant & VARIANT_GRADIENT);
+        SEXP g = R_variant_result & VARIANT_GRADIENT_FLAG
+                  ? R_gradient : R_NilValue;
+        UNPROTECT(1); /* R_fcall */
+        PROTECT2(tmp,g);
         if (length(tmp) != commonLen)
             error(_("values must be length %d,\n but FUN(X[[%d]]) result is length %d"),
                   commonLen, i+1, length(tmp));
@@ -218,7 +225,18 @@ static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
                 error(_("type '%s' is not supported"), type2char(commonType));
             }
         }
-        UNPROTECT(1); /* tmp */
+
+        if (g != R_NilValue) {
+            if (commonType == VECSXP)
+                grad = subassign_range_list_gradient 
+                  (grad, g, i*commonLen, i*commonLen+commonLen-1, n*commonLen);
+            else if (commonType == REALSXP)
+                grad = subassign_range_numeric_gradient 
+                  (grad, g, i*commonLen, i*commonLen+commonLen-1, n*commonLen);
+            REPROTECT (g, gix);
+        }
+
+        UNPROTECT(2); /* tmp, g */
     }
 
     UNPROTECT(1); /* End */
@@ -260,7 +278,14 @@ static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 	}
     }
-    UNPROTECT(useNames ? 6 : 4); /* X, XX, value, ans + maybe names, rowNames */
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(useNames ? 7 : 5); /* X, XX, value, ans + maybe names, 
+                                    grad, rowNames */
     return ans;
 }
 
@@ -402,7 +427,7 @@ attribute_hidden FUNTAB R_FunTab_apply[] =
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
 {"lapply",	do_lapply,	0,	1010,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"vapply",	do_vapply,	0,	10,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"vapply",	do_vapply,	0,	1010,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"rapply",	do_rapply,	0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"islistfactor",do_islistfactor,0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 

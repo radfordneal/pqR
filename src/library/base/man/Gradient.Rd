@@ -222,7 +222,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
   dunif, punif, qunif, runif 
   dweibull, pweibull, qweibull, rweibull
 
-  apply, lapply, sapply, replicate, simplify2array
+  apply, lapply, sapply, vapply, replicate, simplify2array
   as.vector, as.list, as.double, as.numeric, as.real
   unclass, drop, structure, get_rm
   storage.mode<-, length<-
@@ -235,7 +235,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
 }
 
 % TO COME: cbind, rbind
-%          vapply, mapply, rapply
+%          mapply, rapply
 %          mean, sum, prod, min, max, pmin, pmax
 %          rowMeans, colMeans, rowSums, ColSums
 %          %*%, crossprod, tcrossprod, 

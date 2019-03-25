@@ -11159,6 +11159,91 @@ attr(,"gradient")[[2]]
 [1] 100
 
 > 
+> with gradient (a=c(36,1,25)) vapply(a,sqrt,numeric(1))
+[1] 6 1 5
+attr(,"gradient")
+           [,1] [,2] [,3]
+[1,] 0.08333333  0.0  0.0
+[2,] 0.00000000  0.5  0.0
+[3,] 0.00000000  0.0  0.1
+> with gradient (a=c(36,1,25)) vapply(a,function(x)c(x,sqrt(x)),c(0,0))
+     [,1] [,2] [,3]
+[1,]   36    1   25
+[2,]    6    1    5
+attr(,"gradient")
+           [,1] [,2] [,3]
+[1,] 1.00000000  0.0  0.0
+[2,] 0.08333333  0.0  0.0
+[3,] 0.00000000  1.0  0.0
+[4,] 0.00000000  0.5  0.0
+[5,] 0.00000000  0.0  1.0
+[6,] 0.00000000  0.0  0.1
+> with gradient (a=list(36,1,25)) vapply(a,function(x)list(x,sqrt(x)),list(0,0))
+     [,1] [,2] [,3]
+[1,] 36   1    25  
+[2,] 6    1    5   
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0.08333333
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+attr(,"gradient")[[1]][[5]]
+[1] 0
+
+attr(,"gradient")[[1]][[6]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 0
+
+attr(,"gradient")[[2]][[3]]
+[1] 1
+
+attr(,"gradient")[[2]][[4]]
+[1] 0.5
+
+attr(,"gradient")[[2]][[5]]
+[1] 0
+
+attr(,"gradient")[[2]][[6]]
+[1] 0
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0
+
+attr(,"gradient")[[3]][[3]]
+[1] 0
+
+attr(,"gradient")[[3]][[4]]
+[1] 0
+
+attr(,"gradient")[[3]][[5]]
+[1] 1
+
+attr(,"gradient")[[3]][[6]]
+[1] 0.1
+
+
+> 
 > with gradient (a=c(36,1,25)) sapply(a,sqrt)
 [1] 6 1 5
 attr(,"gradient")
