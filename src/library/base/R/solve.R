@@ -102,13 +102,11 @@ solve.default <-
             na <- nrow(a)
             inv <- solve.default (a, tol = tol, LINPACK = LINPACK)
         }
-        la <- na^2
-        g <- matrix (0, na*nv, la)
-        for (k across g) {
-            i <- (k-1) %% na + 1
-            j <- (k-1) %/% na + 1
-            g[_,k] <- 
-              as.vector (inv[_,i,drop=FALSE] %*% (inv[j,_,drop=FALSE] %*% b))
+        g <- matrix (0, na*nv, na^2)
+        for (j in 1..na) {
+            tmp <- inv[j,_] %*% b
+            for (i in 1..na)
+                g[_,(j-1)*na+i] <- inv[_,i] %*% tmp
         }
         -g
     },
