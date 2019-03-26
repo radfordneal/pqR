@@ -362,52 +362,52 @@ static SEXP do_mean (SEXP call, SEXP op, SEXP args, SEXP env)
 {
     long double s, si, t, ti;
     int_fast64_t smi;
-    SEXP x, ans;
+    SEXP x, x_grad, ans, grad;
     int n, i;
 
     x = CAR(args);
+    x_grad = HAS_GRADIENT_IN_CELL(args) ? GRADIENT_IN_CELL(args) : R_NilValue;
+    grad = R_NilValue;
 
     switch(TYPEOF(x)) {
     case LGLSXP:
     case INTSXP:
         n = LENGTH(x);
-        PROTECT(ans = allocVector1REAL());
         smi = 0;
         for (i = 0; i < n; i++) {
-            if(INTEGER(x)[i] == NA_INTEGER) {
+            if (INTEGER(x)[i] == NA_INTEGER) {
                 REAL(ans)[0] = R_NaReal;
-                UNPROTECT(1);
                 return ans;
             }
             smi += INTEGER(x)[i];
         }
-        REAL(ans)[0] = (double)smi / n;
+        ans = ScalarReal ((double)smi / n);
         break;
     case REALSXP:
         n = LENGTH(x);
-        PROTECT(ans = allocVector1REAL());
         s = 0;
         for (i = 0; i < n; i++) 
             s += REAL(x)[i];
         s /= n;
-        if(R_FINITE((double)s)) {
+        if (R_FINITE((double)s)) {
             t = 0;
             for (i = 0; i < n; i++) 
                 t += REAL(x)[i]-s;
             s += t/n;
         }
-        REAL(ans)[0] = s;
+        ans = ScalarReal(s);
+        if (x_grad != R_NilValue && R_FINITE(s))
+            grad = mean_gradient (x_grad, n);
         break;
     case CPLXSXP:
         n = LENGTH(x);
-        PROTECT(ans = allocVector(CPLXSXP, 1));
         s = si = 0;
         for (i = 0; i < n; i++) {
             s += COMPLEX(x)[i].r;
             si += COMPLEX(x)[i].i;
         }
         s /= n; si /= n;
-        if( R_FINITE((double)s) && R_FINITE((double)si) ) {
+        if (R_FINITE((double)s) && R_FINITE((double)si)) {
             t = ti = 0;
             for (i = 0; i < n; i++) {
                 t += COMPLEX(x)[i].r-s;
@@ -415,13 +415,19 @@ static SEXP do_mean (SEXP call, SEXP op, SEXP args, SEXP env)
             }
             s += t/n; si += ti/n;
         }
+        ans = allocVector (CPLXSXP, 1);
         COMPLEX(ans)[0].r = s;
         COMPLEX(ans)[0].i = si;
         break;
     default:
         error(R_MSG_type, type2char(TYPEOF(x)));
     }
-    UNPROTECT(1);
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     return ans;
 }
 
@@ -1524,7 +1530,7 @@ attribute_hidden FUNTAB R_FunTab_summary[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"mean",	do_mean,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"mean",	do_mean,	0,	10000011,1,	{PP_FUNCALL, PREC_FN,	0}},
 {"range",	do_range,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"which.min",	do_first_min,	0,   1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"which.max",	do_first_min,	1,   1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},

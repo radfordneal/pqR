@@ -1515,6 +1515,37 @@ LENGTH(grad),LENGTH(factors),GRADIENT_WRT_LEN(grad));
 }
 
 
+/* Find gradient of mean of vector, of length n. */
+
+attribute_hidden SEXP mean_gradient (SEXP grad, R_len_t n)
+{
+    RECURSIVE_GRADIENT_APPLY (mean_gradient, grad, n);
+
+    PROTECT(grad);
+
+    if (TYPEOF(grad) != REALSXP) abort();
+
+    R_len_t glen = LENGTH(grad);
+    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    if (glen != gvars * n) abort();
+
+    SEXP r = alloc_numeric_gradient (gvars, 1);
+
+    R_len_t i, j, k;
+
+    for (i = 0; i < n; i++) {
+        long double s = 0;
+        R_len_t e = (i+1)*n;
+        for (j = i*n; j < e; j++)
+            s += REAL(grad)[j];
+        REAL(r)[i] = s / n;
+    }
+
+    UNPROTECT(1);
+    return r;
+}
+
+
 /* Create set of gradients from grad that account for setting the length
    of a vector list to n.
 

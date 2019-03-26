@@ -1373,6 +1373,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define matrix_subset_one_row_numeric_gradient Rf_matrix_subset_one_row_numeric_gradient
 # define matrix_subset_range_list_gradient Rf_matrix_subset_range_list_gradient
 # define matrix_subset_range_numeric_gradient Rf_matrix_subset_range_numeric_gradient
+# define mean_gradient		Rf_mean_gradient
 # define Mbrtowc		Rf_mbrtowc
 # define mbtoucs		Rf_mbtoucs
 # define minmax_gradient	Rf_minmax_gradient
@@ -1632,6 +1633,7 @@ SEXP matrix_subset_range_list_gradient
       (SEXP, R_len_t, R_len_t, R_len_t, SEXP, R_len_t);
 SEXP matrix_subset_range_numeric_gradient
       (SEXP, R_len_t, R_len_t, R_len_t, SEXP, R_len_t);
+SEXP mean_gradient(SEXP, R_len_t);
 SEXP minmax_gradient(SEXP, SEXP, SEXP, SEXP, R_len_t);
 SEXP mkCLOSXP(SEXP, SEXP, SEXP);
 SEXP mkFalse(void);
