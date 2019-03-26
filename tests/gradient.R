@@ -1512,6 +1512,15 @@ numericDeriv (quote(as.vector(solve(A,V))),"V")
 
 # Miscellaneous tests.
 
+a <- c(7,1,8,9)
+b <- c(3,4,8,6)
+
+with gradient (a,b) pmin(a,b)
+with gradient (a,b) pmax(a,b)
+with gradient (a,b) pmax(a,b,a[1]+1)
+with gradient (a,b) pmax(a[1]+1,b,a)
+with gradient (a,b) pmax(a,b,a*b)
+
 with gradient (a=list(3,list(9,2))) as.vector(a)
 with gradient (a=c(3,1,9,2)) as.vector(a)
 

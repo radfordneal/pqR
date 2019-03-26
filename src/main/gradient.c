@@ -2254,6 +2254,75 @@ REprintf("==\n");
 }
 
 
+/* Create set of gradients for pmin/pmax.  The grad argument has accumulated
+   gradients from earlier arguments; v is the next argument.  Result is 
+   updated 'grad', which may be modified (assumed unshared).  The 'ans'
+   and 'arg' arguments are the full answer, and the argument corresponding
+   to v.
+
+   Protects its grad and v arguments. */
+
+SEXP attribute_hidden minmax_gradient (SEXP grad, SEXP v, SEXP ans, SEXP arg,
+                                       R_len_t n)
+{
+#if 0
+REprintf("*** minmax_gradient %d\n",n);
+R_inspect(grad);
+REprintf("--\n");
+R_inspect(v);
+REprintf("--\n");
+R_inspect(ans);
+REprintf("--\n");
+R_inspect(arg);
+#endif
+
+    RECURSIVE_GRADIENT_APPLY2 (minmax_gradient, grad, v, ans, arg, n);
+
+    PROTECT2(grad,v);
+
+    R_len_t gvars;
+    SEXP res;
+
+    if (grad != R_NilValue) {
+        if (TYPEOF(grad) != REALSXP) abort();
+        gvars = GRADIENT_WRT_LEN (grad);
+        res = grad;
+    }
+    else {
+        gvars = GRADIENT_WRT_LEN (v);
+        res = alloc_numeric_gradient (gvars, n);
+        memset (REAL(res), 0, LENGTH(res) * sizeof(double));
+    }
+
+    if (v != R_NilValue) {
+        if (TYPEOF(v) != REALSXP) abort();
+        R_len_t nv = LENGTH(v) / gvars;
+        R_len_t i = 0, j = 0;
+        R_len_t h;
+        while (i < n) {
+            /* REprintf("?? %d/%d %d/%d %f %f\n",
+                        i,n,j,nv,REAL(arg)[j],REAL(ans)[i]); */
+            if (REAL(ans)[i] == REAL(arg)[j]) {
+                for (h = 0; h < gvars; h++)
+                    REAL(res)[h*n+i] = REAL(v)[h*nv+j];
+            }
+            i += 1;
+            j += 1;
+            if (j >= nv) j = 0;
+        }
+    }
+
+#if 0
+REprintf("*** minmax_gradient end\n");
+R_inspect(res);
+REprintf("==\n");
+#endif
+
+    UNPROTECT(2);
+    return res;
+}
+
+
 /* Add the product of gradients in extra times a scalar factor to the set of
    gradients in base.  GRADIENT_WRT_LEN must be the same for base and extra
    (except when R_NilValue).  The length of the result is given by n, with

@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -1317,14 +1317,20 @@ static SEXP do_compcases(SEXP call, SEXP op, SEXP args, SEXP rho)
     error(_("not all arguments have the same length"));
 }
 
-/* op = 0 is pmin, op = 1 is pmax
-   NULL and logicals are handled as if they had been coerced to integer.
- */
-static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
+/* op = 0 is pmin, op = 1 is pmax.  
+   Internal, and SPECIAL so can handle gradients.
+   Passed na.rm argument followed by arguments to do min/max for.
+   NULL and logicals are handled as if they had been coerced to integer. */
+
+static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
+    PROTECT (args = variant & VARIANT_GRADIENT 
+                      ? evalList_gradient (args, rho, 0, INT_MAX, 1)
+                      : evalList (args, rho));
+
     int max = PRIMVAL(op) == 1;
 
-    SEXP a, x, ans;
+    SEXP a, x, ans, grad;
     int i, j, n, len, narm;
     SEXPTYPE type, anstype;
 
@@ -1346,8 +1352,17 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
     default:
         error(_("invalid input type"));
     }
+
     a = CDR(args);
-    if(a == R_NilValue) return x; /* one input */
+    if (a == R_NilValue) {
+        /* one input */
+        if (HAS_GRADIENT_IN_CELL(args)) {
+            R_gradient = GRADIENT_IN_CELL(args);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
+        UNPROTECT(1);
+        return x;
+    }
 
     len = length(x); /* not LENGTH, as NULL is allowed */
     for(; a != R_NilValue; a = CDR(a)) {
@@ -1363,18 +1378,22 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
         default:
             error(_("invalid input type"));
         }
-        if(type > anstype) anstype = type;  /* RELIES ON SEXPTYPE ORDERING! */
+        if (type > anstype) anstype = type;  /* RELIES ON SEXPTYPE ORDERING! */
         n = length(x);
         if ((len > 0) ^ (n > 0)) {
-            // till 2.15.0:  error(_("cannot mix 0-length vectors with others"));
+            // till 2.15.0:  error(_("cannot mix 0-length vectors with others"))
             len = 0;
             break;
         }
         len = imax2(len, n);
     }
-    if(anstype < INTSXP) anstype = INTSXP;
 
-    if(len == 0) return allocVector(anstype, 0);
+    if (anstype < INTSXP) anstype = INTSXP;  /* RELIES ON SEXPTYPE ORDERING! */
+
+    if (len == 0) {
+        UNPROTECT(1);
+        return allocVector(anstype, 0);
+    }
 
     /* Check for fractional recycling (added in 2.14.0) */
     for(a = args; a != R_NilValue; a = CDR(a)) {
@@ -1386,18 +1405,24 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     PROTECT(ans = allocVector(anstype, len));
+    PROTECT(grad = R_NilValue);
+
     x = CAR(args);
-    if (TYPEOF(x) != anstype)
+    if (TYPEOF(x) != anstype) {
         x = coerceVector(CAR(args), anstype);
+        SETCAR(args,x);
+    }
     copy_elements_recycled (ans, 0, x, len);
 
-    switch(anstype) {
-    case INTSXP:
-    {
-        int *r,  *ra = INTEGER(ans), tmp;
-        for (a = CDR(args); a != R_NilValue; a = CDR(a)) {
-            x = coerceVector(CAR(a), anstype);
-            n = LENGTH(x);
+    for (a = CDR(args); a != R_NilValue; a = CDR(a)) {
+
+        x = coerceVector (CAR(a), anstype);
+        n = LENGTH(x);
+        SETCAR(a,x);
+
+        switch(anstype) {
+        case INTSXP: {
+            int *r,  *ra = INTEGER(ans), tmp;
             r = INTEGER(x);
             for (i = 0, j = 0; i < len; i++, j++) {
                 if (j >= n) j = 0;
@@ -1411,15 +1436,10 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
                 else if (max ? tmp > ra[i] : tmp < ra[i])
                     ra[i] = tmp;
             }
+            break;
         }
-        break;
-    }
-    case REALSXP:
-    {
-        double *r, *ra = REAL(ans), tmp;
-        for (a = CDR(args); a != R_NilValue; a = CDR(a)) {
-            x = coerceVector(CAR(a), anstype);
-            n = LENGTH(x);
+        case REALSXP: {
+            double *r, *ra = REAL(ans), tmp;
             r = REAL(x);
             for (i = 0, j = 0; i < len; i++, j++) {
                 if (j >= n) j = 0;
@@ -1442,15 +1462,10 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
                 else if (max ? tmp > ra[i] : tmp < ra[i])
                     ra[i] = tmp;
             }
+            break;
         }
-        break;
-    }
-    case STRSXP:
-    {
-        for (a = CDR(args); a != R_NilValue; a = CDR(a)) {
+        case STRSXP: {
             SEXP tmp, rai, new;
-            PROTECT(x = coerceVector(CAR(a), anstype));
-            n = LENGTH(x);
             for (i = 0, j = 0; i < len; i++, j++) {
                 if (j >= n) j = 0;
                 tmp = STRING_ELT (x, j);
@@ -1467,14 +1482,39 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
                 if (new != rai)
                     SET_STRING_ELT (ans, i, new);
             }
-            UNPROTECT(1);
+            break;
         }
-        break;
+        default:
+            break;
+        }
     }
-    default:
-        break;
+
+    if ((variant & VARIANT_GRADIENT) && anstype == REALSXP) {
+        SEXP dup_ans = duplicate(ans);  /* so can be modified below */
+        for (a = args; a != R_NilValue; a = CDR(a)) {
+            SEXP v = CAR(a);
+            if (HAS_GRADIENT_IN_CELL(a)) {
+                grad = minmax_gradient 
+                         (grad, GRADIENT_IN_CELL(a), dup_ans, v, len);
+                UNPROTECT_PROTECT(grad);
+            }
+            n = LENGTH(v);
+            j = 0;
+            for (i = 0; i < len; i++) {
+                if (REAL(dup_ans)[i] == REAL(v)[j])
+                    REAL(dup_ans)[i] = NA_REAL;  /* so won't match again */
+                j += 1;
+                if (j >= n) j = 0;
+            }
+        }
     }
-    UNPROTECT(1);
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(3);
     return ans;
 }
 
@@ -1490,8 +1530,8 @@ attribute_hidden FUNTAB R_FunTab_summary[] =
 {"which.max",	do_first_min,	1,   1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"which",	do_which,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"complete.cases",do_compcases,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pmin",	do_pmin,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pmax",	do_pmin,	1,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pmin",	do_pmin,	0,	1010,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pmax",	do_pmin,	1,	1010,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* these four are group generic and so need to eval args */
 {"sum",		do_summary,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
