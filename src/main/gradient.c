@@ -1533,7 +1533,7 @@ attribute_hidden SEXP mean_gradient (SEXP grad, R_len_t n)
 
     R_len_t i, j, k;
 
-    for (i = 0; i < n; i++) {
+    for (i = 0; i < gvars; i++) {
         long double s = 0;
         R_len_t e = (i+1)*n;
         for (j = i*n; j < e; j++)
@@ -1623,6 +1623,46 @@ REprintf("==\n");
 }
 
 
+/* Create set of gradients for a matrix created with a vector on its diagonal.
+
+   Protects its grad argument. */
+
+SEXP attribute_hidden create_diag_matrix_gradient 
+      (SEXP grad, R_len_t ng, R_len_t nr, R_len_t mn, R_len_t n)
+{
+#if 0
+REprintf("*** create_diag_matrix_gradient %d %d %d %d\n",ng,nr,mn,n);
+R_inspect(grad);
+REprintf("--\n");
+R_inspect(v);
+#endif
+
+    RECURSIVE_GRADIENT_APPLY (create_diag_matrix_gradient, grad, ng, nr, mn, n);
+
+    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
+
+    PROTECT(grad);
+
+    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+
+    SEXP res = alloc_numeric_gradient (gvars, n);
+    memset (REAL(res), 0, LENGTH(res) * sizeof(double));
+
+    for (int j = 0; j < mn; j++) 
+        for (int h = 0; h < gvars; h++)
+            REAL(res) [h*n + j*nr + j] = REAL(grad) [h*ng + j % ng];
+
+#if 0
+REprintf("*** create_diag_matrix_gradient end\n");
+R_inspect(res);
+REprintf("==\n");
+#endif
+
+    UNPROTECT(1);
+    return res;
+}
+
+
 /* Macro for building a function that applies a binary operation to
    all pairs of gradients in g1 and g2.  Protects g1 and g2, then
    unprotects them at the end, so surrounding function will need to
@@ -1687,6 +1727,51 @@ REprintf("==\n");
 } while (0)
 
 
+/* Add gradient of sum of vector (a) with gradient (v) of length n, to 
+   previous gradient (grad).  Protects its grad and v arguments. */
+
+attribute_hidden SEXP sum_gradient 
+                       (SEXP grad, SEXP v, SEXP a, int narm, R_len_t n)
+{
+    RECURSIVE_GRADIENT_APPLY2 (sum_gradient, grad, v, a, narm, n);
+
+    if (v == R_NilValue)
+        return grad;
+
+    PROTECT2(grad,v);
+
+    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
+    if (TYPEOF(v) != REALSXP) abort();
+
+    R_len_t gvars = GRADIENT_WRT_LEN (grad != R_NilValue ? grad : v);
+
+    SEXP r = grad;
+    if (r == R_NilValue) {
+        r = alloc_numeric_gradient (gvars, 1);
+        memset (REAL(r), 0, LENGTH(r) * sizeof(double));
+    }
+
+    R_len_t i, j, k;
+
+    for (i = 0; i < gvars; i++) {
+        long double s = 0;
+        R_len_t b = i*n;
+        if (narm) {
+            for (j = 0; j < n; j++)
+                if (!ISNAN(REAL(a)[j])) s += REAL(v)[b+j];
+        }
+        else {
+            for (j = 0; j < n; j++)
+                s += REAL(v)[b+j];
+        }
+        REAL(r)[i] += s;
+    }
+
+    UNPROTECT(2);
+    return r;
+}
+
+
 /* Create set of gradients from grad that account for assigning a range
    of elements from v (recycled) to a vector list, extending to length n.
 
@@ -1733,46 +1818,6 @@ REprintf("==\n");
 
     UNPROTECT(2);
     return grad;
-}
-
-
-/* Create set of gradients for a matrix created with a vector on its diagonal.
-
-   Protects its grad argument. */
-
-SEXP attribute_hidden create_diag_matrix_gradient 
-      (SEXP grad, R_len_t ng, R_len_t nr, R_len_t mn, R_len_t n)
-{
-#if 0
-REprintf("*** create_diag_matrix_gradient %d %d %d %d\n",ng,nr,mn,n);
-R_inspect(grad);
-REprintf("--\n");
-R_inspect(v);
-#endif
-
-    RECURSIVE_GRADIENT_APPLY (create_diag_matrix_gradient, grad, ng, nr, mn, n);
-
-    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
-
-    PROTECT(grad);
-
-    R_len_t gvars = GRADIENT_WRT_LEN(grad);
-
-    SEXP res = alloc_numeric_gradient (gvars, n);
-    memset (REAL(res), 0, LENGTH(res) * sizeof(double));
-
-    for (int j = 0; j < mn; j++) 
-        for (int h = 0; h < gvars; h++)
-            REAL(res) [h*n + j*nr + j] = REAL(grad) [h*ng + j % ng];
-
-#if 0
-REprintf("*** create_diag_matrix_gradient end\n");
-R_inspect(res);
-REprintf("==\n");
-#endif
-
-    UNPROTECT(1);
-    return res;
 }
 
 

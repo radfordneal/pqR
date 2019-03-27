@@ -1436,6 +1436,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define subset_range_list_gradient	Rf_subset_range_list_gradient
 # define subset_range_numeric_gradient Rf_subset_range_numeric_gradient
 # define substituteList		Rf_substituteList
+# define sum_gradient		Rf_sum_gradient
 # define too_deep_error		Rf_too_deep_error
 # define tsConform		Rf_tsConform
 # define tspgets		Rf_tspgets
@@ -1712,6 +1713,7 @@ SEXP subset_indexes_numeric_gradient(SEXP, SEXP, R_len_t);
 SEXP subset_range_list_gradient(SEXP, R_len_t, R_len_t, R_len_t);
 SEXP subset_range_numeric_gradient(SEXP, R_len_t, R_len_t, R_len_t);
 SEXP substituteList(SEXP, SEXP);
+SEXP sum_gradient(SEXP, SEXP, SEXP, int, R_len_t);
 void R_trace_call(SEXP, SEXP);
 int Rf_translated_Seql (SEXP, SEXP);
 Rboolean tsConform(SEXP,SEXP);

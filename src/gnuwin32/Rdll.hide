@@ -456,6 +456,7 @@
  Rf_subset_range_list_gradient
  Rf_subset_range_numeric_gradient
  Rf_substituteList
+ Rf_sum_gradient
  Rf_ucstomb
  Rf_unbound_var_error
  Rf_utf8toucs

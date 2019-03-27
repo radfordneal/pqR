@@ -1515,6 +1515,12 @@ numericDeriv (quote(as.vector(solve(A,V))),"V")
 with gradient (a=c(3,1,5,4),b=7) mean(c(a,b,a))
 with gradient (a=c(3,1,5,4),b=7) mean(c(a,b,NA,a))
 
+with gradient (a=c(3,1,5)) sum(a)
+with gradient (a=c(3,1,5)) sum(a^2+a)
+with gradient (a=c(3,1,5)) sum(a^2,a)
+with gradient (a=c(3,1,5),b=7) sum(a^2+a,3*b)
+with gradient (a=c(3,1,NA,5),b=7) sum(a^2+a,3*b,na.rm=TRUE)
+
 a <- c(7,1,8,9)
 b <- c(3,4,8,6)
 

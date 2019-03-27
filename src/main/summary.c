@@ -438,7 +438,8 @@ static SEXP do_mean (SEXP call, SEXP op, SEXP args, SEXP env)
    nothing in common with the others (has only one arg and no na.rm, and
    dispatch is from an R-level generic). 
 
-   Note that for the fast forms, na.rm must be FALSE. */
+   Note that for the fast forms, na.rm must be FALSE, and gradients won't
+   be requested. */
 
 static SEXP do_fast_sum (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
 {
@@ -505,8 +506,12 @@ static SEXP do_fast_prod (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
     }
 }
 
-static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
+    PROTECT (args = variant & VARIANT_GRADIENT 
+                      ? evalList_gradient (args, env, 0, INT_MAX, 0)
+                      : evalList (args, env));
+
     SEXP ans, a, stmp = NA_STRING /* -Wall */, scum = NA_STRING, call2;
     double tmp = 0.0, s;
     Rcomplex z, ztmp, zcum={0.0, 0.0} /* -Wall */;
@@ -520,7 +525,8 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 	   or *value ([ir]min / max) is assigned */
 
     /* match to foo(..., na.rm=FALSE) */
-    PROTECT(args = fixup_NaRm(args));
+    args = fixup_NaRm(args);
+    UNPROTECT_PROTECT(args);
     PROTECT(call2 = LCONS(CAR(call),args));
 
     if (DispatchGroup("Summary", call2, op, args, env, &ans, 0)) {
@@ -582,6 +588,9 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     /*-- now loop over all arguments.  Do the 'op' switch INSIDE : */
+
+    SEXP grad;
+    PROTECT(grad = R_NilValue);
 
     updated = 0;
     empty = 1; /* for min/max, 1 if only 0-length arguments, or NA with na.rm=T */
@@ -693,6 +702,11 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 			if(!empty) zcum.r = Int2Real(icum);
 		    }
 		    zcum.r += rsum(REAL(a), LENGTH(a), narm);
+                    if (ans_type == REALSXP && HAS_GRADIENT_IN_CELL(args)) {
+                        SEXP v = GRADIENT_IN_CELL(args);
+                        grad = sum_gradient (grad, v, a, narm, LENGTH(a));
+                        UNPROTECT_PROTECT(grad);
+                    }
 		    break;
 		case CPLXSXP:
 		    if(ans_type == INTSXP) { /* shouldn't happen */
@@ -757,15 +771,10 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 		break;
 	    case STRSXP:
 		if (iop == 2 || iop == 3) {
-		    if(!empty && ans_type == INTSXP) {
+		    if(!empty && ans_type == INTSXP)
 			scum = StringFromInteger(icum, &warn);
-			UNPROTECT(1); /* scum */
-			PROTECT(scum);
-		    } else if(!empty && ans_type == REALSXP) {
+		    else if(!empty && ans_type == REALSXP)
 			scum = StringFromReal(zcum.r, &warn);
-			UNPROTECT(1); /* scum */
-			PROTECT(scum);
-		    }
 		    ans_type = STRSXP;
 		    break;
 		}
@@ -806,7 +815,13 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
                    break;
     case STRSXP:   SET_STRING_ELT(ans, 0, scum); break;
     }
-    UNPROTECT(1);  /* args */
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(2);  /* args, grad */
     return ans;
 
 na_answer: /* only INTSXP case currently used */
@@ -1540,10 +1555,10 @@ attribute_hidden FUNTAB R_FunTab_summary[] =
 {"pmax",	do_pmin,	1,	1010,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* these four are group generic and so need to eval args */
-{"sum",		do_summary,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"min",		do_summary,	2,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"max",		do_summary,	3,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"prod",	do_summary,	4,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sum",		do_summary,	0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"min",		do_summary,	2,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"max",		do_summary,	3,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"prod",	do_summary,	4,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };
