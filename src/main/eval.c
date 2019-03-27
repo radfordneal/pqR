@@ -837,14 +837,15 @@ static SEXP attribute_noinline Rf_builtin_op_no_cntxt(SEXP op, SEXP e, SEXP rho,
     SEXP res;
 
     /* See if this may be a fast primitive.  All fast primitives
-       should be BUILTIN.  We do a fast call only if there is exactly
-       one argument, with no tag, not missing or a ... argument; also
-       must not be an object if the fast primitive dispatches, unless
-       the argument was evaluated with VARIANT_UNCLASS and we got this
-       variant result.  The argument is stored in arg1. */
+       should be BUILTIN.  We do a fast call only if gradients are
+       requested, there is exactly one argument, with no tag, not
+       missing or a ... argument; also must not be an object if the
+       fast primitive dispatches, unless the argument was evaluated
+       with VARIANT_UNCLASS and we got this variant result.  The
+       argument is stored in arg1. */
 
     if (args!=R_NilValue) {
-        if (PRIMFUN_FAST(op) 
+        if (PRIMFUN_FAST(op) && !(variant & VARIANT_GRADIENT)
               && TAG(args)==R_NilValue && CDR(args)==R_NilValue
               && (arg1 = CAR(args))!=R_DotsSymbol 
               && arg1!=R_MissingArg && arg1!=R_MissingUnder) {
