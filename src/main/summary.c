@@ -375,10 +375,8 @@ static SEXP do_mean (SEXP call, SEXP op, SEXP args, SEXP env)
         n = LENGTH(x);
         smi = 0;
         for (i = 0; i < n; i++) {
-            if (INTEGER(x)[i] == NA_INTEGER) {
-                REAL(ans)[0] = R_NaReal;
-                return ans;
-            }
+            if (INTEGER(x)[i] == NA_INTEGER)
+                return ScalarReal(R_NaReal);
             smi += INTEGER(x)[i];
         }
         ans = ScalarReal ((double)smi / n);
@@ -832,7 +830,7 @@ na_answer: /* only INTSXP case currently used */
     case CPLXSXP:  COMPLEX(ans)[0].r = COMPLEX(ans)[0].i = NA_REAL; break;
     case STRSXP:   SET_STRING_ELT_NA(ans, 0); break;
     }
-    UNPROTECT(1);  /* args */
+    UNPROTECT(2);  /* args, grad */
     return ans;
 
 invalid_type:

@@ -1728,7 +1728,9 @@ REprintf("==\n");
 
 
 /* Add gradient of sum of vector (a) with gradient (v) of length n, to 
-   previous gradient (grad).  Protects its grad and v arguments. */
+   previous gradient (grad), which may be modified.  
+
+   Protects its grad and v arguments. */
 
 attribute_hidden SEXP sum_gradient 
                        (SEXP grad, SEXP v, SEXP a, int narm, R_len_t n)
@@ -1743,7 +1745,7 @@ attribute_hidden SEXP sum_gradient
     if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
     if (TYPEOF(v) != REALSXP) abort();
 
-    R_len_t gvars = GRADIENT_WRT_LEN (grad != R_NilValue ? grad : v);
+    R_len_t gvars = GRADIENT_WRT_LEN (v);
 
     SEXP r = grad;
     if (r == R_NilValue) {
