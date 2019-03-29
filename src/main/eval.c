@@ -5375,14 +5375,13 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     char *generic;
     Rboolean useS4 = TRUE, isOps = FALSE;
 
-    /* pre-test to avoid string computations when there is nothing to
+    /* Pre-test to avoid string computations when there is nothing to
        dispatch on because either there is only one argument and it
        isn't an object or there are two or more arguments but neither
        of the first two is an object -- both of these cases would be
-       rejected by the code following the string examination code
-       below */
-    if (args != R_NilValue && ! isObject(CAR(args)) &&
-	(CDR(args) == R_NilValue || ! isObject(CADR(args))))
+       rejected by the code following the string examination code below. */
+
+    if (!isObject(CAR(args)) && !isObject(CADR(args))) /* CAR/CDR nil is nil */
 	return 0;
 
     isOps = strcmp(group, "Ops") == 0;

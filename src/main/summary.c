@@ -429,10 +429,10 @@ static SEXP do_mean (SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-static int has_na_rm_arg (SEXP args)
+static int has_na_rm_or_dots (SEXP args)
 {
     while (args != R_NilValue) {
-        if (TAG(args) == R_NaRmSymbol)
+        if (TAG(args) == R_NaRmSymbol || CAR(args) == R_DotsSymbol)
             return 1;
         args = CDR(args);
     }
@@ -450,9 +450,9 @@ static int has_na_rm_arg (SEXP args)
 static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     int iop = PRIMVAL(op);
-    int vrt = iop == 0 /* sum */ && !has_na_rm_arg(args)
-                ? VARIANT_ANY_ATTR | VARIANT_SUM 
-                : VARIANT_ANY_ATTR;
+    int na_rm_or_dots = has_na_rm_or_dots(args);
+    int vrt = iop==0 /*sum*/ && !na_rm_or_dots ? VARIANT_ANY_ATTR | VARIANT_SUM 
+                                               : VARIANT_ANY_ATTR;
 
     PROTECT (args = iop == 0 /* sum */ && (variant & VARIANT_GRADIENT)
                      ? evalList_gradient (args, env, vrt, INT_MAX, 0)
@@ -465,28 +465,30 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     int first;
     SEXPTYPE ans_type;/* only INTEGER, REAL, COMPLEX or STRSXP here */
 
-    Rboolean narm;
-    int updated;
-	/* updated := 1 , as soon as (i)tmp (do_summary),
-	   or *value ([ir]min / max) is assigned */
+    Rboolean narm = FALSE;
+    int updated;   /* updated := 1 , as soon as (i)tmp (do_summary),
+                      or *value ([ir]min / max) is assigned */
 
-    /* match to foo(..., na.rm=FALSE) */
-    args = fixup_NaRm(args);
-    UNPROTECT_PROTECT(args);
-    PROTECT(call2 = LCONS(CAR(call),args));
-
-    if (DispatchGroup("Summary", call2, op, args, env, &ans, 0)) {
-	UNPROTECT(2);
-	return(ans);
+    if (isObject(CAR(args)) || isObject(CADR(args))) {
+        args = fixup_NaRm(args);
+        UNPROTECT_PROTECT(args);
+        PROTECT(call2 = LCONS(CAR(call),args));
+        if (DispatchGroup("Summary", call2, op, args, env, &ans, 0)) {
+            UNPROTECT(2);
+            return(ans);
+        }
+        UNPROTECT(1);
+        narm = asLogical (matchArgExact (R_NaRmSymbol, &args));
     }
-    UNPROTECT(1);
+    else if (na_rm_or_dots) {
+        args = fixup_NaRm(args);
+        UNPROTECT_PROTECT(args);
+        narm = asLogical (matchArgExact (R_NaRmSymbol, &args));
+    }
 
-#ifdef DEBUG_Summary
-    REprintf("C do_summary(op%s, *): did NOT dispatch\n", PRIMNAME(op));
-#endif
-
-    ans = matchArgExact(R_NaRmSymbol, &args);
-    narm = asLogical(ans);
+#   ifdef DEBUG_Summary
+        REprintf("C do_summary(op%s, *): did NOT dispatch\n", PRIMNAME(op));
+#   endif
 
     switch(iop) {
     case 0:/* sum */
