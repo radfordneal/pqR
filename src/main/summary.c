@@ -623,8 +623,6 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
 	    case 0:/* sum */
 
-                WAIT_UNTIL_COMPUTED(a);
-
 		switch(TYPEOF(a)) {
 		case LGLSXP:
 		case INTSXP:
