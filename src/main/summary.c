@@ -429,92 +429,40 @@ static SEXP do_mean (SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
+static int has_na_rm_arg (SEXP args)
+{
+    while (args != R_NilValue) {
+        if (TAG(args) == R_NaRmSymbol)
+            return 1;
+        args = CDR(args);
+    }
+
+    return 0;
+}
+
 /* do_summary provides a variety of data summaries
 	op :  0 = sum,  2 = min,  3 = max,  4 = prod
 
    NOTE: mean used to be done here, but is now separate, since it has
    nothing in common with the others (has only one arg and no na.rm, and
-   dispatch is from an R-level generic). 
-
-   Note that for the fast forms, na.rm must be FALSE, and gradients won't
-   be requested. */
-
-static SEXP do_fast_sum (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
-{
-    /* A variant return value for arg looks just like an arg of length one, 
-       and can be treated the same.  An arg of length one can be returned
-       as the result if it has the right type and no attributes. */
-
-    switch (TYPEOF(arg)) {
-
-    case NILSXP:  
-        return ScalarIntegerMaybeConst (0);
-
-    case LGLSXP:  /* assumes LOGICAL and INTEGER really the same */
-        WAIT_UNTIL_COMPUTED(arg);
-        return ScalarInteger (isum (INTEGER(arg), LENGTH(arg), 0, call));
-
-    case INTSXP:  
-        if (LENGTH(arg) == 1 && !HAS_ATTRIB(arg))
-            break;
-        WAIT_UNTIL_COMPUTED(arg);
-        return ScalarInteger (isum (INTEGER(arg), LENGTH(arg), 0, call));
-
-    case REALSXP:
-        if (LENGTH(arg) == 1 && !HAS_ATTRIB(arg)) 
-            break;
-        WAIT_UNTIL_COMPUTED(arg);
-        return ScalarReal (rsum (REAL(arg), LENGTH(arg), 0));
-
-    case CPLXSXP:
-        if (LENGTH(arg) == 1 && !HAS_ATTRIB(arg)) 
-            break;
-        WAIT_UNTIL_COMPUTED(arg);
-        return ScalarComplex (csum (COMPLEX(arg), LENGTH(arg), 0));
-
-    default:
-        errorcall(call, R_MSG_type, type2char(TYPEOF(arg)));
-    }
-
-    if (! (variant & VARIANT_PENDING_OK) )
-        WAIT_UNTIL_COMPUTED(arg);
-
-    return arg;
-}
-
-static SEXP do_fast_prod (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
-{
-    switch (TYPEOF(arg)) {
-
-    case NILSXP:  
-        return ScalarRealMaybeConst (1.0);
-
-    case LGLSXP:  /* assumes LOGICAL and INTEGER really the same */
-    case INTSXP:  
-        return ScalarReal (iprod (INTEGER(arg), LENGTH(arg), 0));
-
-    case REALSXP:
-        return ScalarReal (rprod (REAL(arg), LENGTH(arg), 0));
-
-    case CPLXSXP:
-        return ScalarComplex (cprod (COMPLEX(arg), LENGTH(arg), 0));
-
-    default:
-        errorcall(call, R_MSG_type, type2char(TYPEOF(arg)));
-    }
-}
+   dispatch is from an R-level generic). */
 
 static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
-    PROTECT (args = variant & VARIANT_GRADIENT 
-                      ? evalList_gradient (args, env, 0, INT_MAX, 0)
-                      : evalList (args, env));
+    int iop = PRIMVAL(op);
+    int vrt = iop == 0 /* sum */ && !has_na_rm_arg(args)
+                ? VARIANT_ANY_ATTR | VARIANT_SUM 
+                : VARIANT_ANY_ATTR;
+
+    PROTECT (args = iop == 0 /* sum */ && (variant & VARIANT_GRADIENT)
+                     ? evalList_gradient (args, env, vrt, INT_MAX, 0)
+                     : evalList_v (args, env, vrt));
 
     SEXP ans, a, stmp = NA_STRING /* -Wall */, scum = NA_STRING, call2;
     double tmp = 0.0, s;
     Rcomplex z, ztmp, zcum={0.0, 0.0} /* -Wall */;
     int itmp = 0, icum=0, int_a, real_a, empty, warn = 0 /* dummy */;
-    int iop, first;
+    int first;
     SEXPTYPE ans_type;/* only INTEGER, REAL, COMPLEX or STRSXP here */
 
     Rboolean narm;
@@ -540,7 +488,6 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     ans = matchArgExact(R_NaRmSymbol, &args);
     narm = asLogical(ans);
 
-    iop = PRIMVAL(op);
     switch(iop) {
     case 0:/* sum */
         /* we need to find out if _all_ the arguments are integer or logical
@@ -1559,13 +1506,4 @@ attribute_hidden FUNTAB R_FunTab_summary[] =
 {"prod",	do_summary,	4,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
-};
-
-/* Fast built-in functions in this file. See names.c for documentation */
-
-attribute_hidden FASTFUNTAB R_FastFunTab_summary[] = {
-/*slow func	fast func,   code or -1  dsptch variant */
-{ do_summary,	do_fast_sum,	0,	    1,  VARIANT_ANY_ATTR|VARIANT_SUM|VARIANT_PENDING_OK },
-{ do_summary,	do_fast_prod,	4,	    1,  VARIANT_ANY_ATTR },
-{ 0,		0,		0,	    0,  0 }
 };

@@ -294,8 +294,6 @@ extern FASTFUNTAB
     R_FastFunTab_complex[],
     R_FastFunTab_eval[],
     R_FastFunTab_array[],
-    R_FastFunTab_summary[],
-    R_FastFunTab_seq[],
     R_FastFunTab_coerce[],
     R_FastFunTab_attrib[];
 
@@ -303,8 +301,6 @@ static FASTFUNTAB *FastFunTab_ptrs[] = {
     R_FastFunTab_complex, 
     R_FastFunTab_eval,
     R_FastFunTab_array,
-    R_FastFunTab_summary,
-    R_FastFunTab_seq,
     R_FastFunTab_coerce,
     R_FastFunTab_attrib,
     NULL

@@ -82,7 +82,7 @@ SEXP attribute_hidden Rf_builtin_op (SEXP op, SEXP e, SEXP rho, int variant)
        argument is stored in arg1. */
 
     if (args!=R_NilValue) {
-        if (PRIMFUN_FAST(op) && !(variant & VARIANT_GRADIENT)
+        if (PRIMFUN_FAST(op)
               && TAG(args)==R_NilValue && CDR(args)==R_NilValue
               && (arg1 = CAR(args))!=R_DotsSymbol 
               && arg1!=R_MissingArg && arg1!=R_MissingUnder) {

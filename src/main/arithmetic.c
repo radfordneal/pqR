@@ -2361,7 +2361,7 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
 
         R_naflag = 0;
 
-        if (VARIANT_KIND(variant) == VARIANT_SUM) {
+        if (VARIANT_KIND(variant) == VARIANT_SUM && grad == R_NilValue) {
 
             /* Just need the sum. */
 
