@@ -200,10 +200,10 @@ static Rboolean attribute_noinline imin_max
     return updated;
 }
 
-static Rboolean attribute_noinline rmin_max
-                      (double *x, int n, double *value, Rboolean narm, int max)
+static R_len_t attribute_noinline rmin_max
+                 (double *x, int n, double *value, Rboolean narm, int max)
 {
-    int updated = FALSE;
+    R_len_t j = -1;
     double s = 0;
 
     if (n == 0) goto ret;
@@ -220,13 +220,13 @@ static Rboolean attribute_noinline rmin_max
 
     /* Look at values, update max or min, skip or exit for NaN values. */
 
-    s = x[i];
+    s = x [j = i];
     i += 1;
 
     if (max) {
         while (i < n) {
             if (x[i] > s)        /* never true if x[i] is a NaN */
-                s = x[i];
+                s = x [j = i];
             else if (x[i] <= s)  /* if so, not a NaN */
                 ;
             else { /* a NaN value */
@@ -238,7 +238,7 @@ static Rboolean attribute_noinline rmin_max
     else { /* min */
         while (i < n) {
             if (x[i] < s)        /* never true if x[i] is a NaN */
-                s = x[i];
+                s = x [j = i];
             else if (x[i] >= s)  /* if so, not a NaN */
                 ;
             else { /* a NaN value */
@@ -248,19 +248,17 @@ static Rboolean attribute_noinline rmin_max
         }
     }
 
-    updated = TRUE;
     goto ret;
 
   nan:
 
-    updated = TRUE;
-    s = x[i];
+    s = x [j = i];
 
     /* Make NA trump other NaN values. */
 
     while (i < n) {
         if (ISNA(x[i])) {
-            s = x[i];
+            s = x [j = i];
             goto ret;
         }
         i += 1;
@@ -269,7 +267,8 @@ static Rboolean attribute_noinline rmin_max
   ret:
 
     *value = s;
-    return updated;
+
+    return j+1;  /* 0 if not found, else 1-based index of min/max element */
 }
 
 static Rboolean smax(SEXP x, SEXP *value, Rboolean narm)
@@ -454,7 +453,7 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     int vrt = iop==0 /*sum*/ && !na_rm_or_dots ? VARIANT_ANY_ATTR | VARIANT_SUM 
                                                : VARIANT_ANY_ATTR;
 
-    PROTECT (args = iop == 0 /* sum */ && (variant & VARIANT_GRADIENT)
+    PROTECT (args = iop != 4 /* not prod */ && (variant & VARIANT_GRADIENT)
                      ? evalList_gradient (args, env, vrt, INT_MAX, 0)
                      : evalList_v (args, env, vrt));
 
@@ -540,7 +539,7 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     PROTECT(grad = R_NilValue);
 
     updated = 0;
-    empty = 1; /* for min/max, 1 if only 0-length arguments, or NA with na.rm=T */
+    empty = 1;  /* for min/max, 1 if only 0-len arguments, or NA with na.rm=T */
     while (args != R_NilValue) {
 	a = CAR(args);
 
