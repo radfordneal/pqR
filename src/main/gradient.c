@@ -887,6 +887,11 @@ R_inspect(grad); REprintf("--\n");
         l += m;
     }
 
+#if 0
+REprintf("subset_range_numeric_gradient end\n");
+R_inspect(res); REprintf("--\n");
+#endif
+
     UNPROTECT(1);
     return res;
 }

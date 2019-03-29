@@ -465,7 +465,7 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXPTYPE ans_type;/* only INTEGER, REAL, COMPLEX or STRSXP here */
 
     Rboolean narm = FALSE;
-    int updated;   /* updated := 1 , as soon as (i)tmp (do_summary),
+    int updated;   /* updated := 1/ix , as soon as (i)tmp (do_summary),
                       or *value ([ir]min / max) is assigned */
 
     if (isObject(CAR(args)) || isObject(CADR(args))) {
@@ -581,42 +581,66 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 		    goto invalid_type;
 		}
 
-		if(updated) {/* 'a' had non-NA elements; --> "add" tmp or itmp*/
-		    DbgP1(" updated:");
-		    if(ans_type == INTSXP) {
-			DbgP3(" INT: (old)icum= %ld, itmp=%ld\n", icum,itmp);
-			if (itmp == NA_INTEGER) goto na_answer;
-			if ((iop == 2 && itmp < icum) || /* min */
-			    (iop == 3 && itmp > icum))   /* max */
-			    icum = itmp;
-		    } else if(ans_type == REALSXP) {
-			if (int_a) tmp = Int2Real(itmp);
-			DbgP3(" REAL: (old)cum= %g, tmp=%g\n", zcum.r,tmp);
-			if (ISNA(zcum.r)); /* NA trumps anything */
-			else if (ISNAN(tmp)) {
-			    if (ISNA(tmp)) zcum.r = tmp;
-			    else zcum.r += tmp;/* NA or NaN */
-			} else if(
-			    (iop == 2 && tmp < zcum.r) ||
-			    (iop == 3 && tmp > zcum.r))	zcum.r = tmp;
-		    } else if(ans_type == STRSXP) {
-			if(empty) scum = stmp;
-			else {
-			    if(int_a)
-				stmp = StringFromInteger(itmp, &warn);
-			    if(real_a)
-				stmp = StringFromReal(tmp, &warn);
-			    if(((iop == 2 && stmp != scum && Scollate(stmp, scum) < 0)) ||
-			       (iop == 3 && stmp != scum && Scollate(stmp, scum) > 0) )
-				scum = stmp;
-			}
-		    }
-		}/*updated*/ else {
-		    /*-- in what cases does this happen here at all?
-		      -- if there are no non-missing elements.
-		     */
-		    DbgP2(" NOT updated [!! RARE !!]: int_a=%d\n", int_a);
-		}
+                if (updated) {/* 'a' had non-NA elements --> "add" tmp or itmp*/
+                    DbgP1(" updated:");
+                    if (ans_type == INTSXP) {
+                        DbgP3(" INT: (old)icum= %ld, itmp=%ld\n", icum,itmp);
+                        if (itmp == NA_INTEGER) goto na_answer;
+                        if ((iop == 2 && itmp < icum) || /* min */
+                            (iop == 3 && itmp > icum))   /* max */
+                            icum = itmp;
+                    }
+                    else if (ans_type == REALSXP) {
+                        if (int_a) tmp = Int2Real(itmp);
+                        DbgP3(" REAL: (old)cum= %g, tmp=%g\n", zcum.r,tmp);
+                        if (ISNA(zcum.r))
+                            updated = 0; /* NA trumps anything */
+                        else if (ISNAN(tmp)) {
+                            if (ISNA(tmp)) zcum.r = tmp;
+                            else zcum.r += tmp;/* NA or NaN */
+                        }
+                        else if (iop == 2 && tmp < zcum.r 
+                              || iop == 3 && tmp > zcum.r)
+                            zcum.r = tmp;
+                        else
+                            updated = 0;
+                        if (updated) {
+                            if (HAS_GRADIENT_IN_CELL(args)) {
+                                if (ISNAN(zcum.r))
+                                    grad = R_NilValue;
+                                else {
+                                    SEXP v = GRADIENT_IN_CELL(args);
+                                    grad = subset_range_numeric_gradient 
+                                      (v, updated-1, updated-1, LENGTH(a));
+                                }
+                                UNPROTECT_PROTECT (grad);
+                            }
+                            else if (grad != R_NilValue)
+                                UNPROTECT_PROTECT (grad = R_NilValue);
+                        }
+                    }
+                    else if (ans_type == STRSXP) {
+                        if (empty) 
+                            scum = stmp;
+                        else {
+                            if (int_a)
+                                stmp = StringFromInteger(itmp, &warn);
+                            if (real_a)
+                                stmp = StringFromReal(tmp, &warn);
+                            if (iop == 2 && stmp != scum 
+                                         && Scollate(stmp, scum) < 0
+                             || iop == 3 && stmp != scum 
+                                         && Scollate(stmp, scum) > 0)
+                                scum = stmp;
+                        }
+                    }
+                }
+                else {  /* not updated */
+                    /*-- in what cases does this happen here at all?
+                      -- if there are no non-missing elements.
+                     */
+                    DbgP2(" NOT updated [!! RARE !!]: int_a=%d\n", int_a);
+        	}
 
 		break;/*--- end of  min() / max() ---*/
 
