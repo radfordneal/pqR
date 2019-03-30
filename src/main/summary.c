@@ -540,17 +540,19 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     updated = 0;
     empty = 1;  /* for min/max, 1 if only 0-len arguments, or NA with na.rm=T */
+
     while (args != R_NilValue) {
+
 	a = CAR(args);
 
-	if(length(a) > 0) {
+	if (length(a) > 0) {
 
 	    switch(iop) {
 	    case 2:/* min */
 	    case 3:/* max */
 
 	        updated = 0;
-	        int_a = 0;/* int_a = 1	<-->	a is INTEGER */
+	        int_a = 0;  /* int_a = 1 <--> a is INTEGER */
 	        real_a = 0;
 
 		switch(TYPEOF(a)) {
@@ -562,16 +564,16 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 		    break;
 		case REALSXP:
 		    real_a = 1;
-		    if(ans_type == INTSXP) {/* change to REAL */
+		    if (ans_type == INTSXP) {/* change to REAL */
 			ans_type = REALSXP;
-			if(!empty) zcum.r = Int2Real(icum);
+			if (!empty) zcum.r = Int2Real(icum);
 		    }
                     updated = rmin_max (REAL(a), LENGTH(a), &tmp, narm, iop==3);
 		    break;
 		case STRSXP:
-		    if(!empty && ans_type == INTSXP)
+		    if (!empty && ans_type == INTSXP)
 			scum = StringFromInteger(icum, &warn);
-		    else if(!empty && ans_type == REALSXP)
+		    else if (!empty && ans_type == REALSXP)
 			scum = StringFromReal(zcum.r, &warn);
 		    ans_type = STRSXP;
 		    if (iop == 2) updated = smin(a, &stmp, narm);
@@ -591,10 +593,11 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                             icum = itmp;
                     }
                     else if (ans_type == REALSXP) {
+                        int do_grad = 1;
                         if (int_a) tmp = Int2Real(itmp);
                         DbgP3(" REAL: (old)cum= %g, tmp=%g\n", zcum.r,tmp);
                         if (ISNA(zcum.r))
-                            updated = 0; /* NA trumps anything */
+                            do_grad = 0; /* NA trumps anything */
                         else if (ISNAN(tmp)) {
                             if (ISNA(tmp)) zcum.r = tmp;
                             else zcum.r += tmp;/* NA or NaN */
@@ -603,8 +606,8 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                               || iop == 3 && tmp > zcum.r)
                             zcum.r = tmp;
                         else
-                            updated = 0;
-                        if (updated) {
+                            do_grad = 0;
+                        if (do_grad) {
                             if (HAS_GRADIENT_IN_CELL(args)) {
                                 if (ISNAN(zcum.r))
                                     grad = R_NilValue;
@@ -667,7 +670,7 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 		case REALSXP:
 		    if(ans_type == INTSXP) { /* shouldn't happen */
 			ans_type = REALSXP;
-			if(!empty) zcum.r = Int2Real(icum);
+			if (!empty) zcum.r = Int2Real(icum);
 		    }
 		    zcum.r += rsum(REAL(a), LENGTH(a), narm);
                     if (ans_type == REALSXP && HAS_GRADIENT_IN_CELL(args)) {
@@ -679,7 +682,7 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 		case CPLXSXP:
 		    if(ans_type == INTSXP) { /* shouldn't happen */
 			ans_type = CPLXSXP;
-			if(!empty) zcum.r = Int2Real(icum);
+			if (!empty) zcum.r = Int2Real(icum);
 		    } else if (ans_type == REALSXP)
 			ans_type = CPLXSXP;
 		    ztmp = csum(COMPLEX(a), LENGTH(a), narm);
@@ -753,9 +756,9 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 		break;
 	    case STRSXP:
 		if (iop == 2 || iop == 3) {
-		    if(!empty && ans_type == INTSXP)
+		    if (!empty && ans_type == INTSXP)
 			scum = StringFromInteger(icum, &warn);
-		    else if(!empty && ans_type == REALSXP)
+		    else if (!empty && ans_type == REALSXP)
 			scum = StringFromReal(zcum.r, &warn);
 		    ans_type = STRSXP;
 		    break;
@@ -764,19 +767,21 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 		goto invalid_type;
 	    }
 	    if(ans_type < TYPEOF(a) && ans_type != CPLXSXP) {
-		if(!empty && ans_type == INTSXP)
+		if (!empty && ans_type == INTSXP)
 		    zcum.r = Int2Real(icum);
 		ans_type = TYPEOF(a);
 	    }
 	}
+
 	DbgP3(" .. upd.=%d, empty: old=%d", updated, empty);
-	if(empty && updated) empty=0;
+	if (updated) empty = 0;
 	DbgP2(", new=%d\n", empty);
+
 	args = CDR(args);
     } /*-- while(..) loop over args */
 
     /*-------------------------------------------------------*/
-    if(empty && (iop == 2 || iop == 3)) {
+    if (empty && (iop == 2 || iop == 3)) {
 	if(ans_type == STRSXP) {
 	    warningcall(call, _("no non-missing arguments, returning NA"));
 	} else {
