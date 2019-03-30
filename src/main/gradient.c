@@ -1905,6 +1905,69 @@ R_inspect(a);
 }
 
 
+/* Find gradient of a matrix product.
+
+   Protects its x_grad and y_grad arguments. */
+
+attribute_hidden SEXP matprod_gradient(SEXP x_grad, SEXP y_grad, SEXP x, SEXP y,
+                                       R_len_t nrows, R_len_t k, R_len_t ncols)
+{
+#if 0
+REprintf("*** matprod_gradient %d %d %d\n",nrows,k,ncols);
+R_inspect(x_grad);
+REprintf("--\n");
+R_inspect(y_grad);
+REprintf("--\n");
+#endif
+
+    RECURSIVE_GRADIENT_APPLY2 (matprod_gradient, x_grad, y_grad, x, y,
+                               nrows, k, ncols);
+
+    if (x_grad != R_NilValue && TYPEOF(x_grad) != REALSXP) abort();
+    if (y_grad != R_NilValue && TYPEOF(y_grad) != REALSXP) abort();
+
+    PROTECT2(x_grad,y_grad);
+
+    R_len_t gvars = GRADIENT_WRT_LEN (x_grad != R_NilValue ? x_grad : y_grad);
+
+    R_len_t sz = nrows * ncols;
+    SEXP grad;
+    PROTECT (grad = alloc_numeric_gradient (gvars, sz));
+
+    if (y_grad != R_NilValue) {
+        matprod_mat_mat (REAL(x), REAL(y_grad), REAL(grad), 
+                         nrows, k, ncols * gvars);
+    }
+
+    if (x_grad != R_NilValue) {
+        if (y_grad == R_NilValue)
+            memset (REAL(grad), 0, LENGTH(grad) * sizeof(double));
+        SEXP tmpr, tmpx;
+        PROTECT (tmpr = allocVector (REALSXP, sz));
+        PROTECT (tmpx = allocVector (REALSXP, nrows * k));
+        for (R_len_t h = 0; h < gvars; h++) {
+            SEXP xg;
+            if (h == 0) 
+                xg = x_grad;
+            else {
+                xg = tmpx;
+                memcpy (REAL(xg), REAL(x_grad) + h*nrows*k, 
+                        sizeof(double) * nrows*k);
+            }
+            matprod_mat_mat (REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
+            R_len_t i, j;
+            j = h * sz;
+            for (i = 0; i < sz; i++) 
+                REAL(grad)[j++] += REAL(tmpr)[i];
+        }
+        UNPROTECT(2);
+    }
+
+    UNPROTECT(3);
+    return grad;
+}
+
+
 /* Create set of gradients from grad that account for assigning a range
    of elements from v (recycled) to a vector list, extending to length n.
 

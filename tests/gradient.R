@@ -1454,6 +1454,11 @@ with gradient (a=matrix(c(33,11,0.7,99),2,2)) { dimnames(a) <- NULL; a }
 
 # Test matrix operations.
 
+(A <- matrix(c(3,6,1,2),2,2))
+(B <- matrix(c(9,8,4,3,1,3),2,3))
+with gradient (A,B) A %*% B
+rm(A,B)
+
 with gradient (a=3,b=4) { x <- matrix(c(a,b,a),3,3); drop(x) }
 with gradient (a=3,b=4) { x <- matrix(c(a,b,a),9,1); drop(x) }
 

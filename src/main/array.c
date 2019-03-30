@@ -788,8 +788,8 @@ static SEXP do_transpose (SEXP, SEXP, SEXP, SEXP, int);
 static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP x = CAR(args), y = CADR(args), rest = CDDR(args);
+    SEXP x_grad = R_NilValue, y_grad = R_NilValue;
 
-    PROTECT_INDEX ix;
     int mode;
     SEXP ans;
 
@@ -816,13 +816,26 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
             int hm = -1;  /* Any methods?  -1 for not known yet */
 
-            PROTECT_WITH_INDEX(
-              x = evalv (x, rho, VARIANT_TRANS | VARIANT_PENDING_OK), &ix);
+            int vrt = variant & VARIANT_GRADIENT
+                       ? VARIANT_TRANS | VARIANT_PENDING_OK | VARIANT_GRADIENT
+                       : VARIANT_TRANS | VARIANT_PENDING_OK;
+            PROTECT(x = evalv (x, rho, vrt));
+            if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+                x_grad = R_gradient;
+                R_variant_result &= ~VARIANT_GRADIENT_FLAG;
+            }
+            PROTECT(x_grad);
+            nprotect += 1;
             x_transposed = R_variant_result;
-            PROTECT(y = evalv (y, rho, 
-                x_transposed || IS_S4_OBJECT(x) && (hm = R_has_methods(op))
-                  ? VARIANT_PENDING_OK 
-                  : VARIANT_TRANS | VARIANT_PENDING_OK));
+            if (x_transposed || IS_S4_OBJECT(x) && (hm = R_has_methods(op)))
+                vrt &= ~ VARIANT_TRANS;
+            PROTECT(y = evalv (y, rho, vrt));
+            if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+                y_grad = R_gradient;
+                R_variant_result &= ~VARIANT_GRADIENT_FLAG;
+            }
+            PROTECT(y_grad);
+            nprotect += 1;
             y_transposed = R_variant_result;
             R_variant_result = 0;
             nprotect += 2;
@@ -831,6 +844,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
             if ((IS_S4_OBJECT(x) || IS_S4_OBJECT(y))
                   && (hm == -1 ? R_has_methods(op) : hm)) {
+                SEXP ox = x;
                 SEXP value;
                 /* we don't want a transposed argument if the other is an 
                    S4 object, since that's not good for dispatch. */
@@ -839,8 +853,8 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     PROTECT (a = CONS(x,R_NilValue));
                     x = do_transpose (R_NilValue,R_NilValue,a,rho,0);
                     UNPROTECT(1);
-                    REPROTECT(x,ix);
-                    x_transposed = 0;
+                    PROTECT(x);
+                    nprotect += 1;
                 }
                 PROTECT(args = CONS(x,CONS(y,R_NilValue)));
                 nprotect += 1;
@@ -851,6 +865,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     R_Visible = TRUE;
                     return value;
                 }
+                x = ox;
             }
 
             /* Switch to crossprod or tcrossprod to handle a transposed arg. */
@@ -1144,6 +1159,13 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
 
     PROTECT(ans = allocMatrix1 (ans, nrows, ncols));
+
+    /* Handle gradient. */
+
+    if (x_grad != R_NilValue || y_grad != R_NilValue) {
+        R_gradient = matprod_gradient (x_grad, y_grad, x, y, nrows, k, ncols);
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
 
     /* Add names to the result as appropriate. */
 

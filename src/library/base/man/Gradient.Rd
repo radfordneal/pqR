@@ -231,16 +231,17 @@ with respect to all their real scalar, vector, matrix, or array arguments
   rowSums, rowMeans, .rowSums, .rowMeans, 
   colSums, colMeans, .colSums, .colMeans
 
+  t, %*%
+  det, determinant
+
   solve (default method only, for matrices, not QR decompositions)
   diag (for creating diagonal matrix or extracting diagonal from matrix)
   diag<-
-
-  t, det, determinant
 }
 
 % TO COME: cbind, rbind
 %          mapply, rapply
-%          %*%, crossprod, tcrossprod, 
+%          crossprod, tcrossprod, 
 %          backsolve, forwardsolve, chol
 %          cov, cor, var
 

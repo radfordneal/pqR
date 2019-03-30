@@ -405,6 +405,7 @@
  Rf_matrix_subset_one_row_numeric_gradient
  Rf_matrix_subset_range_list_gradient
  Rf_matrix_subset_range_numeric_gradient
+ Rf_matprod_gradient
  Rf_mean_gradient
  Rf_mbtoucs
  Rf_minmax_gradient
