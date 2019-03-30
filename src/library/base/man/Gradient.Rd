@@ -228,6 +228,8 @@ with respect to all their real scalar, vector, matrix, or array arguments
   storage.mode<-, length<-
 
   mean, sum, prod, min, max, pmin, pmax
+  rowSums, rowMeans, .rowSums, .rowMeans, 
+  colSums, colMeans, .colSums, .colMeans
 
   solve (default method only, for matrices, not QR decompositions)
   diag (for creating diagonal matrix or extracting diagonal from matrix)
@@ -238,7 +240,6 @@ with respect to all their real scalar, vector, matrix, or array arguments
 
 % TO COME: cbind, rbind
 %          mapply, rapply
-%          rowMeans, colMeans, rowSums, ColSums
 %          %*%, crossprod, tcrossprod, 
 %          backsolve, forwardsolve, chol
 %          cov, cor, var

@@ -432,6 +432,7 @@
  Rf_rep_each_numeric_gradient
  Rf_rep_one_string_element
  Rf_rep_string_elements
+ Rf_rowcolsumsmeans_gradient
  Rf_set_elements_to_NA
  Rf_set_length_list_gradient
  Rf_set_length_numeric_gradient

@@ -34,6 +34,7 @@
 #include "Defn.h"
 
 #include <matprod/matprod.h>
+#include <helpers/helpers-app.h>
 
 
 static void R_NORETURN gradient_matrix_too_large_error (void) {
@@ -1644,7 +1645,7 @@ R_inspect(v);
 
     RECURSIVE_GRADIENT_APPLY (create_diag_matrix_gradient, grad, ng, nr, mn, n);
 
-    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
+    if (TYPEOF(grad) != REALSXP) abort();
 
     PROTECT(grad);
 
@@ -1659,6 +1660,63 @@ R_inspect(v);
 
 #if 0
 REprintf("*** create_diag_matrix_gradient end\n");
+R_inspect(res);
+REprintf("==\n");
+#endif
+
+    UNPROTECT(1);
+    return res;
+}
+
+
+/* Create set of gradients for the result of (row/col)(Sums/Means).
+
+   Protects its grad argument. */
+
+SEXP attribute_hidden rowcolsumsmeans_gradient 
+                 (SEXP grad, SEXP x, int OP, int keepna, R_len_t nr, R_len_t nc)
+{
+    extern helpers_task_proc task_rowSums_or_rowMeans;
+    extern helpers_task_proc task_colSums_or_colMeans;
+#if 0
+REprintf("*** rowcolsumsmeans_gradient %d %d %d %d\n",OP,keepna,nr,nc);
+R_inspect(grad);
+REprintf("--\n");
+#endif
+
+    RECURSIVE_GRADIENT_APPLY (rowcolsumsmeans_gradient,
+                              grad, x, OP, keepna, nr, nc);
+
+    if (TYPEOF(grad) != REALSXP) abort();
+
+    PROTECT(grad);
+
+    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t n = OP < 2 ? nc : nr;
+
+    SEXP res = alloc_numeric_gradient (gvars, n);
+
+    if (OP < 2) {  /* colSums/Means */
+        for (R_len_t h = 0; h < gvars; h++) {
+            task_colSums_or_colMeans 
+              ( ((helpers_op_t)(h*nr*nc) << 33) |
+                ((helpers_op_t)nr << 2) | (OP<<1)&2 | keepna, res, grad, x);
+        }
+#if 0
+        task_colSums_or_colMeans
+          ( ((helpers_op_t)nr << 2) | (OP<<1)&2 | keepna, res, grad, x);
+#endif
+    }
+    else {  /* rowSums/Means */
+        for (R_len_t h = 0; h < gvars; h++) {
+            task_rowSums_or_rowMeans 
+              ( ((helpers_op_t)(h*nr*nc) << 33) |
+                ((helpers_op_t)nr << 2) | (OP<<1)&2 | keepna, res, grad, x);
+        }
+    }
+
+#if 0
+REprintf("*** rowcolsumsmeans_gradient end\n");
 R_inspect(res);
 REprintf("==\n");
 #endif

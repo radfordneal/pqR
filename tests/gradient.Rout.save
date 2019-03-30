@@ -9202,6 +9202,60 @@ attr(,"gradient")
 attr(,"gradient")
 [1] 1 0 0 6
 > 
+> with gradient (A=matrix(c(3,1,5,2,-3,9),2,3)) rowSums(A)
+[1]  5 12
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]    1    0    1    0    1    0
+[2,]    0    1    0    1    0    1
+> with gradient (A=matrix(c(3,1,5,2,-3,9),2,3)) colSums(A)
+[1] 4 7 6
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]    1    1    0    0    0    0
+[2,]    0    0    1    1    0    0
+[3,]    0    0    0    0    1    1
+> with gradient (A=matrix(c(3,1,5,2,-3,9),2,3)) rowMeans(A)
+[1] 1.666667 4.000000
+attr(,"gradient")
+          [,1]      [,2]      [,3]      [,4]      [,5]      [,6]
+[1,] 0.3333333 0.0000000 0.3333333 0.0000000 0.3333333 0.0000000
+[2,] 0.0000000 0.3333333 0.0000000 0.3333333 0.0000000 0.3333333
+> with gradient (A=matrix(c(3,1,5,2,-3,9),2,3)) colMeans(A)
+[1] 2.0 3.5 3.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]  0.5  0.5  0.0  0.0  0.0  0.0
+[2,]  0.0  0.0  0.5  0.5  0.0  0.0
+[3,]  0.0  0.0  0.0  0.0  0.5  0.5
+> 
+> with gradient (A=matrix(c(3,1,NA,2,-3,9),2,3)) rowSums(A,na.rm=TRUE)
+[1]  0 12
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]    1    0    0    0    1    0
+[2,]    0    1    0    1    0    1
+> with gradient (A=matrix(c(3,1,NA,2,-3,9),2,3)) colSums(A,na.rm=TRUE)
+[1] 4 2 6
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]    1    1    0    0    0    0
+[2,]    0    0    0    1    0    0
+[3,]    0    0    0    0    1    1
+> with gradient (A=matrix(c(3,1,NA,2,-3,9),2,3)) rowMeans(A,na.rm=TRUE)
+[1] 0 4
+attr(,"gradient")
+     [,1]      [,2] [,3]      [,4] [,5]      [,6]
+[1,]  0.5 0.0000000    0 0.0000000  0.5 0.0000000
+[2,]  0.0 0.3333333    0 0.3333333  0.0 0.3333333
+> with gradient (A=matrix(c(3,1,NA,2,-3,9),2,3)) colMeans(A,na.rm=TRUE)
+[1] 2 2 3
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]  0.5  0.5    0    0  0.0  0.0
+[2,]  0.0  0.0    0    1  0.0  0.0
+[3,]  0.0  0.0    0    0  0.5  0.5
+> 
 > # next loses dim attribute, which is strange, but accept that for now...
 > with gradient (a=list(3)) { M <- matrix(7,2,2); diag(M) <- a; M }
 [[1]]

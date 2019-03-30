@@ -1471,6 +1471,16 @@ with gradient (a=8,b=7) diag(c(a,a+3*b,b),3,3)
 with gradient (a=3) { M <- matrix(7,2,2); diag(M) <- a; M }
 with gradient (a=3) { M <- matrix(7,2,2); diag(M) <- c(a,a^2); M }
 
+with gradient (A=matrix(c(3,1,5,2,-3,9),2,3)) rowSums(A)
+with gradient (A=matrix(c(3,1,5,2,-3,9),2,3)) colSums(A)
+with gradient (A=matrix(c(3,1,5,2,-3,9),2,3)) rowMeans(A)
+with gradient (A=matrix(c(3,1,5,2,-3,9),2,3)) colMeans(A)
+
+with gradient (A=matrix(c(3,1,NA,2,-3,9),2,3)) rowSums(A,na.rm=TRUE)
+with gradient (A=matrix(c(3,1,NA,2,-3,9),2,3)) colSums(A,na.rm=TRUE)
+with gradient (A=matrix(c(3,1,NA,2,-3,9),2,3)) rowMeans(A,na.rm=TRUE)
+with gradient (A=matrix(c(3,1,NA,2,-3,9),2,3)) colMeans(A,na.rm=TRUE)
+
 # next loses dim attribute, which is strange, but accept that for now...
 with gradient (a=list(3)) { M <- matrix(7,2,2); diag(M) <- a; M }
 

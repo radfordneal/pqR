@@ -1656,14 +1656,14 @@ static SEXP do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* colSums(x, n, p, na.rm) and also the same with "row" and/or "Means". */
 
-void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
+void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP na)
 {
     int keepNA = op&1;        /* Don't skip NA/NaN elements? */
     int Means = op&2;         /* Find means rather than sums? */
     unsigned n = op>>2;       /* Number of rows in matrix */
-    unsigned o = op>>33;      /* Offset of start in x and ans */
     unsigned p = LENGTH(ans); /* Number of columns in matrix */
-    double *a = REAL(ans)+o;  /* Pointer to start of result vector */
+    unsigned o = op>>33;      /* Offset of start in x and ans */
+    double *a = REAL(ans)+o/n;/* Pointer to start of result vector */
     int np = n*p;             /* Number of elements we need in total */
     int avail = 0;            /* Number of input elements known to be computed*/
 
@@ -1677,7 +1677,7 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
     HELPERS_SETUP_OUT (n>500 ? 4 : n>50 ? 5 : 6);
 
     if (TYPEOF(x) == REALSXP) {
-        double *rx = REAL(x)+o;
+        const double *rx = REAL(x) + o;
         int e;
         k = 0;
         j = 0;
@@ -1723,12 +1723,13 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
             }
         }
         else { /* ! keepNA */
+            const double *rna = REAL(na);
             if (!Means) {
                 long double sum;
                 while (j < p) {
                     if (avail < k+n) HELPERS_WAIT_IN1 (avail, k+n-1, np);
                     for (sum = 0.0, i = n; i > 0; i--, k++)
-                        if (!ISNAN(rx[k])) sum += rx[k];
+                        if (!ISNAN(rna[k])) sum += rx[k];
                     a[j] = sum;
                     HELPERS_NEXT_OUT (j);
                 }
@@ -1738,7 +1739,7 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
                 while (j < p) {
                     if (avail < k+n) HELPERS_WAIT_IN1 (avail, k+n-1, np);
                     for (cnt = 0, sum = 0.0, i = n; i > 0; i--, k++)
-                        if (!ISNAN(rx[k])) { cnt += 1; sum += rx[k]; }
+                        if (!ISNAN(rna[k])) { cnt += 1; sum += rx[k]; }
                     a[j] = sum/cnt;
                     HELPERS_NEXT_OUT (j);
                 }
@@ -1753,7 +1754,7 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
 
         switch (TYPEOF(x)) {
         case INTSXP:
-            ix = INTEGER(x)+o;
+            ix = INTEGER(x) + o;
             k = 0;
             j = 0;
             while (j < p) {
@@ -1800,14 +1801,14 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
 
 #define rowSums_together 1024 /* Sum this number of rows (or fewer) together */
 
-void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
+void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP na)
 {
     int keepNA = op&1;        /* Don't skip NA/NaN elements? */
     int Means = op&2;         /* Find means rather than sums? */
-    unsigned p = op>>2;       /* Number of columns in matrix */
+    unsigned n = op>>2;       /* Number of rows in matrix */
+    unsigned p = LENGTH(x)/LENGTH(ans); /* Number of columns in matrix */
     unsigned o = op>>33;      /* Offset of start in x and ans */
-    unsigned n = LENGTH(ans); /* Number of rows in matrix */
-    double *a = REAL(ans)+o;  /* Pointer to result vector, initially the start*/
+    double *a = REAL(ans)+o/p;/* Pointer to result vector, initially the start*/
 
     int i, j;                 /* Row and column indexes */
 
@@ -1871,13 +1872,18 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
 
             else { /* ! keepNA */
 
+                double *rna = REAL(na);
+                double *rx0 = rx;
+
                 if (!Means) {
                     s = sums;
                     for (k = u; k > 0; k--, s++) 
                         *s = 0.0; 
                     for (j = p; j > 0; j--) {
-                        for (k = u, s = sums, rx2 = rx; k > 0; k--, s++, rx2++)
-                            if (!ISNAN(*rx2)) *s += *rx2;
+                        for (k = u, s = sums, rx2 = rx; 
+                             k > 0; 
+                             k--, s++, rx2++)
+                            if (!ISNAN(rna[rx2-rx0])) *s += *rx2;
                         rx += n;
                     }
                     for (k = u, s = sums; k > 0; k--, a++, s++) 
@@ -1892,7 +1898,7 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
                         for (k = u, s = sums, rx2 = rx, c = cnts; 
                              k > 0; 
                              k--, s++, rx2++, c++)
-                            if (!ISNAN(*rx2)) { *s += *rx2; *c += 1; }
+                            if (!ISNAN(rna[rx2-rx0])) { *s += *rx2; *c += 1; }
                         rx += n;
                     }
                     for (k = u, s = sums, c = cnts; k > 0; k--, a++, s++, c++) 
@@ -1967,6 +1973,9 @@ static SEXP do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     checkArity(op, args);
 
+    SEXP grad = 
+          HAS_GRADIENT_IN_CELL(args) ? GRADIENT_IN_CELL(args) : R_NilValue;
+
     /* we let x be being computed */
     x = CAR(args); args = CDR(args);
     /* other arguments we wait for */
@@ -1996,16 +2005,21 @@ static SEXP do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     if (OP < 2) { /* columns */
         ans = allocVector (REALSXP, p);
-        DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_colSums,
+        DO_NOW_OR_LATER2 (variant, LENGTH(x) >= T_colSums,
           HELPERS_PIPE_IN1_OUT, task_colSums_or_colMeans, 
-          ((helpers_op_t)n<<2) | (OP<<1) | !NaRm, ans, x);
+          ((helpers_op_t)n<<2) | (OP<<1)&2 | !NaRm, ans, x, x);
     }
 
     else { /* rows */
         ans = allocVector (REALSXP, n);
-        DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_rowSums,
+        DO_NOW_OR_LATER2 (variant, LENGTH(x) >= T_rowSums,
           HELPERS_PIPE_OUT, task_rowSums_or_rowMeans, 
-          ((helpers_op_t)p<<2) | (OP<<1)&2 | !NaRm, ans, x);
+          ((helpers_op_t)n<<2) | (OP<<1)&2 | !NaRm, ans, x, x);
+    }
+
+    if (grad != R_NilValue) {
+        R_gradient = rowcolsumsmeans_gradient (grad, x, OP, !NaRm, n, p);
+        R_variant_result = VARIANT_GRADIENT_FLAG;
     }
 
     return ans;
@@ -2296,10 +2310,10 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 {"tcrossprod",	do_matprod,	2,    1011011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
 {"t.default",	do_transpose,	0,    11011011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"aperm",	do_aperm,	0,    1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"colSums",	do_colsum,	0,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"colMeans",	do_colsum,	1,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"rowSums",	do_colsum,	2,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"rowMeans",	do_colsum,	3,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"colSums",	do_colsum,	0,   11011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"colMeans",	do_colsum,	1,   11011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"rowSums",	do_colsum,	2,   11011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"rowMeans",	do_colsum,	3,   11011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"diag",        do_diag,        0,   10000011,	3,      {PP_FUNCALL, PREC_FN,	0}},
 {"lengths",     do_lengths,     0,      11,     2,      {PP_FUNCALL, PREC_FN,   0}},
 
