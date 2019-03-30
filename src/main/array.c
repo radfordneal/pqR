@@ -1658,14 +1658,18 @@ static SEXP do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP na)
 {
+    if (LENGTH(ans) == 0) return;
+
     int keepNA = op&1;        /* Don't skip NA/NaN elements? */
     int Means = op&2;         /* Find means rather than sums? */
-    unsigned n = op>>2;       /* Number of rows in matrix */
-    unsigned p = LENGTH(ans); /* Number of columns in matrix */
-    unsigned o = op>>33;      /* Offset of start in x and ans */
-    double *a = REAL(ans)+o/n;/* Pointer to start of result vector */
+    unsigned p = (op>>2) & 0x7fffffff;  /* Number of columns in matrix */
+    unsigned n = LENGTH(x)/LENGTH(ans); /* Number of rows in matrix */
+    unsigned o = op>>33;      /* Offset of start in ans */
     int np = n*p;             /* Number of elements we need in total */
     int avail = 0;            /* Number of input elements known to be computed*/
+
+    double *a = REAL(ans)+o;  /* Pointer to start in result vector */
+    o *= n;                   /* Now offset of start in x */
 
     int cnt;                  /* # elements not NA/NaN, if Means and !keepNA */
     int i, j;                 /* Row and column indexes */
@@ -1803,12 +1807,16 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP na)
 
 void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP na)
 {
+    if (LENGTH(ans) == 0) return;
+
     int keepNA = op&1;        /* Don't skip NA/NaN elements? */
     int Means = op&2;         /* Find means rather than sums? */
-    unsigned n = op>>2;       /* Number of rows in matrix */
+    unsigned n = (op>>2) & 0x7fffffff;  /* Number of rows in matrix */
     unsigned p = LENGTH(x)/LENGTH(ans); /* Number of columns in matrix */
-    unsigned o = op>>33;      /* Offset of start in x and ans */
-    double *a = REAL(ans)+o/p;/* Pointer to result vector, initially the start*/
+    unsigned o = op>>33;      /* Offset of start in ans */
+
+    double *a = REAL(ans)+o;  /* Pointer to start in result vector */
+    o *= p;                   /* Now offset of start in x */
 
     int i, j;                 /* Row and column indexes */
 
@@ -2007,7 +2015,7 @@ static SEXP do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         ans = allocVector (REALSXP, p);
         DO_NOW_OR_LATER2 (variant, LENGTH(x) >= T_colSums,
           HELPERS_PIPE_IN1_OUT, task_colSums_or_colMeans, 
-          ((helpers_op_t)n<<2) | (OP<<1)&2 | !NaRm, ans, x, x);
+          ((helpers_op_t)p<<2) | (OP<<1)&2 | !NaRm, ans, x, x);
     }
 
     else { /* rows */

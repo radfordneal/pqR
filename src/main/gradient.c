@@ -1699,18 +1699,14 @@ REprintf("--\n");
     if (OP < 2) {  /* colSums/Means */
         for (R_len_t h = 0; h < gvars; h++) {
             task_colSums_or_colMeans 
-              ( ((helpers_op_t)(h*nr*nc) << 33) |
-                ((helpers_op_t)nr << 2) | (OP<<1)&2 | keepna, res, grad, x);
+              ( ((helpers_op_t)(h*nc) << 33) |
+                ((helpers_op_t)nc << 2) | (OP<<1)&2 | keepna, res, grad, x);
         }
-#if 0
-        task_colSums_or_colMeans
-          ( ((helpers_op_t)nr << 2) | (OP<<1)&2 | keepna, res, grad, x);
-#endif
     }
     else {  /* rowSums/Means */
         for (R_len_t h = 0; h < gvars; h++) {
             task_rowSums_or_rowMeans 
-              ( ((helpers_op_t)(h*nr*nc) << 33) |
+              ( ((helpers_op_t)(h*nr) << 33) |
                 ((helpers_op_t)nr << 2) | (OP<<1)&2 | keepna, res, grad, x);
         }
     }
