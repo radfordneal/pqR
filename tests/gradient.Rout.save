@@ -9567,6 +9567,52 @@ attr(,"gradient")$b
 [1] 3
 
 > 
+> with gradient (a=c(3,1,5)) prod(a)
+[1] 15
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    5   15    3
+> with gradient (a=c(3,1,5)) prod(a^2+a)
+[1] 720
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]  420 1080  264
+> with gradient (a=c(3,1,5)) prod(a^2,a)
+[1] 3375
+attr(,"gradient")
+     [,1]  [,2] [,3]
+[1,] 3375 10125 2025
+> with gradient (a=c(3,1,5),b=7) prod(a^2+a,3*b)
+[1] 15120
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1]  [,2] [,3]
+[1,] 8820 22680 5544
+
+attr(,"gradient")$b
+[1] 2160
+
+> with gradient (a=c(3,1,NA,5),b=7) prod(a^2+a,3*b,na.rm=FALSE)
+[1] NA
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    0    0
+
+attr(,"gradient")$b
+[1] 0
+
+> with gradient (a=c(3,1,NA,5),b=7) prod(a^2+a,3*b,na.rm=TRUE)
+[1] 15120
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1]  [,2] [,3] [,4]
+[1,] 8820 22680    0 5544
+
+attr(,"gradient")$b
+[1] 2160
+
+> 
 > with gradient (a=c(3,1,5)) max(a)
 [1] 5
 attr(,"gradient")

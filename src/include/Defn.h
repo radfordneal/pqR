@@ -1401,6 +1401,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define PrintVersionString    	Rf_PrintVersionString
 # define PrintWarnings		Rf_PrintWarnings
 # define PRSEEN_error		Rf_PRSEEN_error
+# define prod_gradient		Rf_prod_gradient
 # define promiseArgs		Rf_promiseArgs
 # define promiseArgsWithValues	Rf_promiseArgsWithValues
 # define promiseArgsWith1Value	Rf_promiseArgsWith1Value
@@ -1680,6 +1681,7 @@ SEXP Rf_mkCharMulti (const char **, const int *, unsigned, cetype_t);
 SEXP Rf_mkCharRep (const char *, int, int, cetype_t);
 FILE* R_OpenLibraryFile(const char *);
 SEXP R_Primitive(const char *);
+SEXP prod_gradient(SEXP, SEXP, SEXP, double, double, int, R_len_t);
 SEXP rep_each_list_gradient (SEXP, SEXP, R_len_t);
 SEXP rep_each_numeric_gradient (SEXP, SEXP, R_len_t);
 void R_RestoreGlobalEnv(void);

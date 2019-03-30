@@ -421,6 +421,7 @@
  Rf_osDynSymbol
  Rf_out_of_bounds_error
  Rf_pbeta_raw
+ Rf_prod_gradient
  Rf_promiseArgs
  Rf_qchisq_appr
  Rf_regcomp

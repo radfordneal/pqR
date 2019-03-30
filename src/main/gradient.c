@@ -1779,6 +1779,78 @@ attribute_hidden SEXP sum_gradient
 }
 
 
+/* Add gradient of product of vector (a) with gradient (v) of length n, to 
+   previous gradient (grad), which may be modified.  The pprod argument 
+   is the previous part of the product; nprod is the current part (product
+   of elements in a).
+
+   Protects its grad and v arguments. */
+
+attribute_hidden SEXP prod_gradient 
+  (SEXP grad, SEXP v, SEXP a, double pprod, double nprod, int narm, R_len_t n)
+{
+#if 0
+REprintf("*** prod_gradient %f %f %d %d\n",pprod,nprod,narm,n);
+R_inspect(grad);
+REprintf("--\n");
+R_inspect(v);
+REprintf("--\n");
+R_inspect(a);
+#endif
+
+    RECURSIVE_GRADIENT_APPLY2(prod_gradient, grad, v, a, pprod, nprod, narm, n);
+
+    R_len_t gvars;
+
+    if (grad != R_NilValue) {
+        if (TYPEOF(grad) != REALSXP) abort();
+        gvars = GRADIENT_WRT_LEN(grad);
+    }
+    else
+        gvars = GRADIENT_WRT_LEN(v);
+
+    if (v == R_NilValue) {
+        for (R_len_t i = 0; i < gvars; i++) {
+            REAL(grad)[i] *= nprod;
+        }
+        return grad;
+    }
+
+    R_len_t i, j, k;
+    if (TYPEOF(v) != REALSXP) abort();
+    PROTECT2(grad,v);
+
+    if (grad == R_NilValue) {
+        grad = alloc_numeric_gradient (gvars, 1);
+        for (i = 0; i < gvars; i++) {
+            REAL(grad)[i] = 0;
+        }
+    }
+
+    for (i = 0; i < gvars; i++) {
+        long double g = REAL(grad)[i];
+        long double p = pprod;
+        R_len_t b = i*n;
+        if (narm) {
+            for (j = 0; j < n; j++) if (!ISNAN(REAL(a)[j])) {
+                g = g * REAL(a)[j] + p * REAL(v)[b+j];
+                p *= REAL(a)[j];
+            }
+        }
+        else {
+            for (j = 0; j < n; j++) {
+                g = g * REAL(a)[j] + p * REAL(v)[b+j];
+                p *= REAL(a)[j];
+            }
+        }
+        REAL(grad)[i] = g;
+    }
+
+    UNPROTECT(2);
+    return grad;
+}
+
+
 /* Create set of gradients from grad that account for assigning a range
    of elements from v (recycled) to a vector list, extending to length n.
 

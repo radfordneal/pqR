@@ -1522,6 +1522,13 @@ with gradient (a=c(3,1,5),b=7) sum(a^2+a,3*b)
 with gradient (a=c(3,1,NA,5),b=7) sum(a^2+a,3*b,na.rm=FALSE)
 with gradient (a=c(3,1,NA,5),b=7) sum(a^2+a,3*b,na.rm=TRUE)
 
+with gradient (a=c(3,1,5)) prod(a)
+with gradient (a=c(3,1,5)) prod(a^2+a)
+with gradient (a=c(3,1,5)) prod(a^2,a)
+with gradient (a=c(3,1,5),b=7) prod(a^2+a,3*b)
+with gradient (a=c(3,1,NA,5),b=7) prod(a^2+a,3*b,na.rm=FALSE)
+with gradient (a=c(3,1,NA,5),b=7) prod(a^2+a,3*b,na.rm=TRUE)
+
 with gradient (a=c(3,1,5)) max(a)
 with gradient (a=c(3,1,5)) max(a-a^2)
 with gradient (a=c(3,1,5)) max(a^2,a)

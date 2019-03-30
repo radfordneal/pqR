@@ -453,7 +453,7 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     int vrt = iop==0 /*sum*/ && !na_rm_or_dots ? VARIANT_ANY_ATTR | VARIANT_SUM 
                                                : VARIANT_ANY_ATTR;
 
-    PROTECT (args = iop != 4 /* not prod */ && (variant & VARIANT_GRADIENT)
+    PROTECT (args = (variant & VARIANT_GRADIENT)
                      ? evalList_gradient (args, env, vrt, INT_MAX, 0)
                      : evalList_v (args, env, vrt));
 
@@ -685,6 +685,7 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 		    ztmp = csum(COMPLEX(a), LENGTH(a), narm);
 		    zcum.r += ztmp.r;
 		    zcum.i += ztmp.i;
+                    grad = R_NilValue;
 		    break;
 		default:
 		    goto invalid_type;
@@ -702,6 +703,18 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 			tmp = rprod(REAL(a), LENGTH(a), narm);
 		    else
 			tmp = iprod(INTEGER(a), LENGTH(a), narm);
+                    if (grad != R_NilValue || HAS_GRADIENT_IN_CELL(args)) {
+                        if (ISNAN(tmp) || ISNAN(zcum.r))
+                            grad = R_NilValue;
+                        else {
+                            SEXP v = 
+                              TYPEOF(a)==REALSXP && HAS_GRADIENT_IN_CELL(args) 
+                                ? GRADIENT_IN_CELL(args) : R_NilValue;
+                            grad = prod_gradient 
+                                    (grad, v, a, zcum.r, tmp, narm, LENGTH(a));
+                            UNPROTECT_PROTECT(grad);
+                        }
+                    }
 		    zcum.r *= tmp;
 		    zcum.i *= tmp;
 		    break;
@@ -715,6 +728,7 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                         R_from_C99_complex(&zcum, C99_from_R_complex(&z)
                                                    * C99_from_R_complex(&ztmp));
                     }
+                    grad = R_NilValue;
 		    break;
 		default:
 		    goto invalid_type;
