@@ -1660,9 +1660,10 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
 {
     int keepNA = op&1;        /* Don't skip NA/NaN elements? */
     int Means = op&2;         /* Find means rather than sums? */
-    unsigned n = op>>3;       /* Number of rows in matrix */
+    unsigned n = op>>2;       /* Number of rows in matrix */
+    unsigned o = op>>33;      /* Offset of start in x and ans */
     unsigned p = LENGTH(ans); /* Number of columns in matrix */
-    double *a = REAL(ans);    /* Pointer to start of result vector */
+    double *a = REAL(ans)+o;  /* Pointer to start of result vector */
     int np = n*p;             /* Number of elements we need in total */
     int avail = 0;            /* Number of input elements known to be computed*/
 
@@ -1676,7 +1677,7 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
     HELPERS_SETUP_OUT (n>500 ? 4 : n>50 ? 5 : 6);
 
     if (TYPEOF(x) == REALSXP) {
-        double *rx = REAL(x);
+        double *rx = REAL(x)+o;
         int e;
         k = 0;
         j = 0;
@@ -1752,7 +1753,7 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
 
         switch (TYPEOF(x)) {
         case INTSXP:
-            ix = INTEGER(x);
+            ix = INTEGER(x)+o;
             k = 0;
             j = 0;
             while (j < p) {
@@ -1803,9 +1804,10 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
 {
     int keepNA = op&1;        /* Don't skip NA/NaN elements? */
     int Means = op&2;         /* Find means rather than sums? */
-    unsigned p = op>>3;       /* Number of columns in matrix */
+    unsigned p = op>>2;       /* Number of columns in matrix */
+    unsigned o = op>>33;      /* Offset of start in x and ans */
     unsigned n = LENGTH(ans); /* Number of rows in matrix */
-    double *a = REAL(ans);    /* Pointer to result vector, initially the start*/
+    double *a = REAL(ans)+o;  /* Pointer to result vector, initially the start*/
 
     int i, j;                 /* Row and column indexes */
 
@@ -1824,7 +1826,7 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
             int k, u;
             int *c;
 
-            rx = REAL(x) + i;
+            rx = REAL(x) + o + i;
             u = n - i;
             if (u > rowSums_together) u = rowSums_together;
 
@@ -1915,7 +1917,7 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
         case INTSXP:
             i = 0;
             while (i < n) {
-                ix = INTEGER(x) + i;
+                ix = INTEGER(x) + o + i;
                 for (cnt = 0, lsum = 0, j = 0; j < p; j++, ix += n)
                     if (*ix != NA_INTEGER) {
                         cnt += 1; 
@@ -1996,14 +1998,14 @@ static SEXP do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         ans = allocVector (REALSXP, p);
         DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_colSums,
           HELPERS_PIPE_IN1_OUT, task_colSums_or_colMeans, 
-          ((helpers_op_t)n<<3) | (OP<<1) | !NaRm, ans, x);
+          ((helpers_op_t)n<<2) | (OP<<1) | !NaRm, ans, x);
     }
 
     else { /* rows */
         ans = allocVector (REALSXP, n);
         DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_rowSums,
           HELPERS_PIPE_OUT, task_rowSums_or_rowMeans, 
-          ((helpers_op_t)p<<3) | (OP<<1) | !NaRm, ans, x);
+          ((helpers_op_t)p<<2) | (OP<<1)&2 | !NaRm, ans, x);
     }
 
     return ans;
