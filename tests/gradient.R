@@ -1460,7 +1460,13 @@ with gradient (A,B) A %*% B
 At <- t(A)
 Bt <- t(B)
 with gradient (At,B) t(At) %*% B
+with gradient (At,B) crossprod(At,B)
 with gradient (A,Bt) A %*% t(Bt)
+with gradient (A,Bt) tcrossprod(A,Bt)
+with gradient (B) t(B) %*% B
+with gradient (B) crossprod(B)
+with gradient (B) B %*% t(B)
+with gradient (B) tcrossprod(B)
 (u <- c(11,21))
 (v <- c(10,20))
 with gradient (A,v) A %*% v

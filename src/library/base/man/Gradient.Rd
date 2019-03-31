@@ -22,18 +22,10 @@
   The present implementation of these facilities is a preliminary.  
   It supports gradients of and with respect to real scalars, vectors,
   matrices, and arrays, lists of such values, lists of lists, etc.
-  However, at present, only a limited set of operations are
-  supported for vectors, matrices, and arrays.  There is gradient support
-  for accessing elements with $, [.], and [[.]].  There is also support
-  (though currently inefficient) for replacing elements with $, [.], 
-  and [[.]], except for multi-level vector subscripts with [[.]].
-  However, many vector and matrix oriented operations, such as \code{sum},
-  \code{cbind}, and \code{\%*\%} are not yet supported.
-  Support for a full range of vector and matrix operations should be 
-  implemented soon.  
-
-  Some operations are currently implemented much less efficiently
-  than is planned for the full-fledged version.
+  However, at present, the set of operations supported for vectors, 
+  matrices, and arrays is somewhat limited, and some operations that
+  are supported are implemented much less efficiently than is planned
+  for a full-fledged version.
 
   Support for higher-order derivatives is planned.  Perhaps
   differentiation of complex values will also be supported some day.
@@ -231,7 +223,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
   rowSums, rowMeans, .rowSums, .rowMeans, 
   colSums, colMeans, .colSums, .colMeans
 
-  t, %*%
+  t, \%*\%, crossprod, tcrossprod
   det, determinant
 
   solve (default method only, for matrices, not QR decompositions)
@@ -241,7 +233,6 @@ with respect to all their real scalar, vector, matrix, or array arguments
 
 % TO COME: cbind, rbind
 %          mapply, rapply
-%          crossprod, tcrossprod, 
 %          backsolve, forwardsolve, chol
 %          cov, cor, var
 

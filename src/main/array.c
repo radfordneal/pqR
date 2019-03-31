@@ -900,11 +900,19 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             }
         }
     }
+    else {  /* crossprod or tcrossprod */
 
-    /* Handle the one-argument case of crossprod and tcrossprod. */
+        if (HAS_GRADIENT_IN_CELL(args)) 
+            x_grad = GRADIENT_IN_CELL(args);
 
-    if (y == R_NilValue && primop != 0) 
-        y = x;
+        if (HAS_GRADIENT_IN_CELL(CDR(args))) 
+            y_grad = GRADIENT_IN_CELL(CDR(args));
+
+        if (y == R_NilValue) { /* one argument, second assumed same as first */
+            y = x;
+            y_grad = x_grad;
+        }
+    }
 
     /* Check for bad arguments. */
 
@@ -2343,14 +2351,14 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 
 /* Internal */
 
-{"matrix",	do_matrix,	0,    11000011,	7,	{PP_FUNCALL, PREC_FN,	0}},
-{"array",	do_array,	0,    11000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"drop",	do_drop,	0,    11000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"matrix",	do_matrix,	0,   11000011,	7,	{PP_FUNCALL, PREC_FN,	0}},
+{"array",	do_array,	0,   11000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"drop",	do_drop,	0,   11000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"row",		do_rowscols,	1,    1011011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"col",		do_rowscols,	2,    1011011,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"crossprod",	do_matprod,	1,    1011011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
-{"tcrossprod",	do_matprod,	2,    1011011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
-{"t.default",	do_transpose,	0,    11011011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"crossprod",	do_matprod,	1,   21011011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
+{"tcrossprod",	do_matprod,	2,   21011011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
+{"t.default",	do_transpose,	0,   11011011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"aperm",	do_aperm,	0,    1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"colSums",	do_colsum,	0,   11011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"colMeans",	do_colsum,	1,   11011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
