@@ -1015,6 +1015,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     int pipeline = inhlpr && !helpers_not_pipelining_now;
     int split = !inhlpr || helpers_not_multithreading_now ? 0 : helpers_num+1;
     SEXP op1 = x, op2 = y;
+    SEXP gr1 = x_grad, gr2 = y_grad;
 
     helpers_task_proc *task_proc = 0;
     int flags = 0;
@@ -1117,7 +1118,10 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         else {  /* crossprod or tcrossprod, real, not dot product, not all 0s */
             if (nrows==1 || ncols==1) {
                 if (primop==1) {
-                    if (ncols==1) { op1 = y; op2 = x; }
+                    if (ncols==1) { 
+                        op1 = y; op2 = x; 
+                        gr1 = y_grad; gr2 = x_grad; 
+                    }
                     if (R_mat_mult_with_BLAS[2]) {
                         task_proc = task_matprod_vec_mat_BLAS;
                         if (!R_BLAS_in_helpers) inhlpr = 0;
@@ -1126,7 +1130,10 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                         par_matprod_vec_mat (ans, op1, op2, split, pipeline);
                 }
                 else {
-                    if (nrows==1) { op1 = y; op2 = x; }
+                    if (nrows==1) { 
+                        op1 = y; op2 = x; 
+                        gr1 = y_grad; gr2 = x_grad; 
+                    }
                     if (R_mat_mult_with_BLAS[1]) {
                         task_proc = task_matprod_mat_vec_BLAS;
                         if (!R_BLAS_in_helpers) inhlpr = 0;
@@ -1163,7 +1170,8 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* Handle gradient. */
 
     if (x_grad != R_NilValue || y_grad != R_NilValue) {
-        R_gradient = matprod_gradient (x_grad, y_grad, x, y, nrows, k, ncols);
+        R_gradient = matprod_gradient 
+                      (x_grad, y_grad, op1, op2, primop, nrows, k, ncols);
         R_variant_result = VARIANT_GRADIENT_FLAG;
     }
 
@@ -1402,6 +1410,10 @@ static SEXP do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     if (VARIANT_KIND(variant) == VARIANT_TRANS) {
         R_variant_result = 1;
+        if (HAS_GRADIENT_IN_CELL(args)) {
+            R_variant_result |= VARIANT_GRADIENT_FLAG;
+            R_gradient = GRADIENT_IN_CELL(args);
+        }
         return a;
     }
 

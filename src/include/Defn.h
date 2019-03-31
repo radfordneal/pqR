@@ -1637,7 +1637,7 @@ SEXP matrix_subset_range_list_gradient
       (SEXP, R_len_t, R_len_t, R_len_t, SEXP, R_len_t);
 SEXP matrix_subset_range_numeric_gradient
       (SEXP, R_len_t, R_len_t, R_len_t, SEXP, R_len_t);
-SEXP matprod_gradient (SEXP, SEXP, SEXP, SEXP, R_len_t, R_len_t, R_len_t);
+SEXP matprod_gradient (SEXP, SEXP, SEXP, SEXP, int, R_len_t, R_len_t, R_len_t);
 SEXP mean_gradient(SEXP, R_len_t);
 SEXP minmax_gradient(SEXP, SEXP, SEXP, SEXP, R_len_t);
 SEXP mkCLOSXP(SEXP, SEXP, SEXP);

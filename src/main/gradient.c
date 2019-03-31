@@ -1909,11 +1909,12 @@ R_inspect(a);
 
    Protects its x_grad and y_grad arguments. */
 
-attribute_hidden SEXP matprod_gradient(SEXP x_grad, SEXP y_grad, SEXP x, SEXP y,
-                                       R_len_t nrows, R_len_t k, R_len_t ncols)
+attribute_hidden SEXP matprod_gradient
+                        (SEXP x_grad, SEXP y_grad, SEXP x, SEXP y,
+                         int primop, R_len_t nrows, R_len_t k, R_len_t ncols)
 {
 #if 0
-REprintf("*** matprod_gradient %d %d %d\n",nrows,k,ncols);
+REprintf("*** matprod_gradient %d %d %d %d\n",primop,nrows,k,ncols);
 R_inspect(x_grad);
 REprintf("--\n");
 R_inspect(y_grad);
@@ -1921,7 +1922,7 @@ REprintf("--\n");
 #endif
 
     RECURSIVE_GRADIENT_APPLY2 (matprod_gradient, x_grad, y_grad, x, y,
-                               nrows, k, ncols);
+                               primop, nrows, k, ncols);
 
     if (x_grad != R_NilValue && TYPEOF(x_grad) != REALSXP) abort();
     if (y_grad != R_NilValue && TYPEOF(y_grad) != REALSXP) abort();
@@ -1931,17 +1932,25 @@ REprintf("--\n");
     R_len_t gvars = GRADIENT_WRT_LEN (x_grad != R_NilValue ? x_grad : y_grad);
 
     R_len_t sz = nrows * ncols;
+    int init_grad = 0;
     SEXP grad;
     PROTECT (grad = alloc_numeric_gradient (gvars, sz));
 
-    if (y_grad != R_NilValue) {
-        matprod_mat_mat (REAL(x), REAL(y_grad), REAL(grad), 
-                         nrows, k, ncols * gvars);
+    if (y_grad != R_NilValue && primop != 2) {
+        if (primop == 0)
+            matprod_mat_mat (REAL(x), REAL(y_grad), REAL(grad), 
+                             nrows, k, ncols * gvars);
+        else /* primop == 1 */
+            matprod_trans1 (REAL(x), REAL(y_grad), REAL(grad), 
+                            nrows, k, ncols * gvars);
+        init_grad = 1;
     }
 
     if (x_grad != R_NilValue) {
-        if (y_grad == R_NilValue)
+        if (!init_grad) {
             memset (REAL(grad), 0, LENGTH(grad) * sizeof(double));
+            init_grad = 1;
+        }
         SEXP tmpr, tmpx;
         PROTECT (tmpr = allocVector (REALSXP, sz));
         PROTECT (tmpx = allocVector (REALSXP, nrows * k));
@@ -1954,7 +1963,38 @@ REprintf("--\n");
                 memcpy (REAL(xg), REAL(x_grad) + h*nrows*k, 
                         sizeof(double) * nrows*k);
             }
-            matprod_mat_mat (REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
+            if (primop == 0)
+                matprod_mat_mat(REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
+            else if (primop == 1)
+                matprod_trans1(REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
+            else /* primop == 2 */
+                matprod_trans2(REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
+            R_len_t i, j;
+            j = h * sz;
+            for (i = 0; i < sz; i++) 
+                REAL(grad)[j++] += REAL(tmpr)[i];
+        }
+        UNPROTECT(2);
+    }
+
+    if (y_grad != R_NilValue && primop == 2) {
+        if (!init_grad) {
+            memset (REAL(grad), 0, LENGTH(grad) * sizeof(double));
+            init_grad = 1;
+        }
+        SEXP tmpr, tmpy;
+        PROTECT (tmpr = allocVector (REALSXP, sz));
+        PROTECT (tmpy = allocVector (REALSXP, k * ncols));
+        for (R_len_t h = 0; h < gvars; h++) {
+            SEXP yg;
+            if (h == 0) 
+                yg = y_grad;
+            else {
+                yg = tmpy;
+                memcpy (REAL(yg), REAL(y_grad) + h*k*ncols, 
+                        sizeof(double) * k*ncols);
+            }
+            matprod_trans2(REAL(x), REAL(yg), REAL(tmpr), nrows, k, ncols);
             R_len_t i, j;
             j = h * sz;
             for (i = 0; i < sz; i++) 

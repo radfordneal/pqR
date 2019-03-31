@@ -1457,7 +1457,17 @@ with gradient (a=matrix(c(33,11,0.7,99),2,2)) { dimnames(a) <- NULL; a }
 (A <- matrix(c(3,6,1,2),2,2))
 (B <- matrix(c(9,8,4,3,1,3),2,3))
 with gradient (A,B) A %*% B
-rm(A,B)
+At <- t(A)
+Bt <- t(B)
+with gradient (At,B) t(At) %*% B
+with gradient (A,Bt) A %*% t(Bt)
+(u <- c(11,21))
+(v <- c(10,20))
+with gradient (A,v) A %*% v
+with gradient (A,v) v %*% A
+with gradient (u,v) u %*% v
+with gradient (u,v) u %*% t(v)
+rm(A,B,At,Bt)
 
 with gradient (a=3,b=4) { x <- matrix(c(a,b,a),3,3); drop(x) }
 with gradient (a=3,b=4) { x <- matrix(c(a,b,a),9,1); drop(x) }
