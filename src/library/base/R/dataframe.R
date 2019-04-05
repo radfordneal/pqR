@@ -1,6 +1,6 @@
 #  File src/library/base/R/dataframe.R
 #  Part of the R package, http://www.R-project.org
-#  Modifications for pqR Copyright (c) 2013, 2016, 2018 Radford M. Neal.
+#  Modifications for pqR Copyright (c) 2013, 2016, 2018, 2019 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -157,17 +157,9 @@ as.data.frame.list <-
     function(x, row.names = NULL, optional = FALSE, ...,
              stringsAsFactors = default.stringsAsFactors())
 {
-    ## need to protect names in x.
-    cn <- names(x)
-    m <- match(c("row.names", "check.rows", "check.names", "stringsAsFactors"),
-               cn, 0L)
-    if(any(m)) {
-        cn[m] <- "..adfl." ! cn[m]
-        names(x) <- cn
-    }
-    x <- eval(as.call(c(expression(data.frame), x, check.names = !optional,
-                        stringsAsFactors = stringsAsFactors)))
-    if(any(m)) names(x) <- sub("^\\.\\.adfl\\.", "", names(x))
+    x <- data.frame (unclass(x), check.names = !optional,
+                                 stringsAsFactors = stringsAsFactors)
+
     if(!is.null(row.names)) {
 	# row.names <- as.character(row.names)
 	if(length(row.names) != dim(x)[[1L]])
@@ -175,6 +167,7 @@ as.data.frame.list <-
                           length(row.names), dim(x)[[1L]]), domain = NA)
 	attr(x, "row.names") <- row.names
     }
+
     x
 }
 
@@ -369,10 +362,19 @@ data.frame <-
 		} else new
 	    } else current
 	}
+
     object <- as.list(substitute(list(...)))[-1L]
+    if (length(object) == 1 
+         && (is.null(names(object)[[1]]) || names(object)[[1]] == "")
+         && typeof(..1) == "list" && !is.object(..1)) {
+        x <- ..1
+        object <- x
+    }
+    else
+        x <- list(...)
+
     mirn <- missing(row.names) # record before possibly changing
     mrn <- is.null(row.names) # missing or NULL
-    x <- list(...)
     n <- length(x)
     if(n < 1L) {
         if(!mrn) {

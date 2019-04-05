@@ -187,6 +187,8 @@ with respect to all their real scalar, vector, matrix, or array arguments
 
   $ (for vector lists only)
   $<- (for vector lists only) 
+
+  data.frame, as.data.frame
   
   +, -, *, /, ^ (+ and - may be unary) 
   

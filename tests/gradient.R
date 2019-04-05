@@ -1541,6 +1541,22 @@ numericDeriv (quote(as.vector(solve(A,V))),"A")
 numericDeriv (quote(as.vector(solve(A,V))),"V")
 
 
+# Tests with data frames.
+
+p <- function (df) { print(df); print(attr(df,"gradient")); }
+
+a <- c(3,7,1)
+b <- c(9,2,4)
+
+p( with gradient (a,b) 
+     data.frame(x=a,y=c(a[1]-b[1],a[1]+b[1],a[1]*b[2]),z=a+b) )
+
+p( with gradient (a,b) 
+     data.frame(list(x=a,y=c(a[1]-b[1],a[1]+b[1],a[1]*b[2]),z=a+b)) )
+
+p( with gradient (a,b) data.frame(matrix(c(a,b,a,a^2),4,3)) )
+
+
 # Miscellaneous tests.
 
 with gradient (a=c(3,1,5,4),b=7) mean(c(a,b,a))
