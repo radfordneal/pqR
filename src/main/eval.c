@@ -4743,6 +4743,7 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     string = allocVector(STRSXP,1);
     SET_STRING_ELT (string, 0, schar);
     PROTECT(args = CONS(into, CONS(string, CDDR(args))));
+    SET_GRADIENT_IN_CELL (args, into_grad);
     PROTECT(ncall = 
       LCONS(CAR(call),CONS(CADR(call),CONS(string,CDR(CDDR(call))))));
 
