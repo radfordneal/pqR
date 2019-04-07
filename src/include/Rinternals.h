@@ -1011,10 +1011,10 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 (!HAS_ATTRIB(x) ? 0 : \
  TYPEOF(ATTRIB(x))==LISTSXP && TYPEOF(TAG(ATTRIB(x)))==ENVSXP ? 1 : (abort(),0))
 
-#define GRADIENT_WRT_LEN(g) \
-  (LENGTH(g) == 1 ? 1 : TRUELENGTH(g))
-#define SET_GRADIENT_WRT_LEN(g,l) \
-  (LENGTH(g) == 1 ? (void) 0 : (void) SET_TRUELENGTH(g,l))
+#define GRADIENT_WRT_LEN(g) (TRUELENGTH(g) < 0 ? 0 \
+                        : TRUELENGTH(g) == 0 ? 1 : TRUELENGTH(g))
+#define SET_GRADIENT_WRT_LEN(g,l) (l == 0 ? SET_TRUELENGTH(g,-1) \
+                        : l == 1 ? SET_TRUELENGTH(g,0) : SET_TRUELENGTH(g,l))
 
 #define STORE_GRAD(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
 #define SET_STORE_GRAD(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname=(v))

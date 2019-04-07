@@ -1028,10 +1028,10 @@ to a numeric vector, which are the ultimate atomic elements at the
 leaves of a gradient information list, will have their
 @code{TRUELENGTH} field set to the number of numeric values the
 gradient is with respect to (ie, the number of columns in the Jacobian
-matrix), except that this may be omitted when the Jacobian matrix is
-1x1 (to allow use of constant objects in this case).  This value
-should be accessed with @code{GRADIENT_WRT_LEN}, which checks for the
-1x1 case, and set with @code{SET_GRADIENT_WRT_LEN}.
+matrix), except that 0 is stored as -1 and 1 is stored as 0, to to
+allow use of constant objects for which TRUELENGTH is 0.  This value
+should be accessed with @code{GRADIENT_WRT_LEN} and set with
+@code{SET_GRADIENT_WRT_LEN}, which handle this fudge.
 
 Gradient information may be @code{R_NilValue} when the gradient is
 zero (or all zeros for lists).  @code{R_NilValue} may also appear as a
