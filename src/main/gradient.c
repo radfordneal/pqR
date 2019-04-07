@@ -60,10 +60,12 @@ static SEXP alloc_numeric_gradient (R_len_t gvars, R_len_t n)
 
 /* Expand the structure of 'grad' to be a full gradient for 'value' by
    replacing NULL elements that correspond to non-NULL elements by the
-   appropriate zero Jacobian.  The 'idg' argument is the identify
-   gradient to use as a skeleton, in top levels with GRAD_WRT_GRAD
-   set, and just below that, with GRADIENT_WRT_LEN set to the length of the
-   numeric vector that that part of the gradient is with respect to.
+   appropriate zero Jacobian.  The 'idg' argument is the identity
+   gradient to use as a skeleton - it may have top VECSXP levels with
+   GRAD_WRT_LIST set, and just below that, GRADIENT_WRT_LEN is set to the 
+   length of the numeric vector that that part of the gradient (possibly
+   a list) is with respect to.
+
    Names are added to lists to match those in 'value' or 'idg'.  A 'dim'
    attribute is added for Jacobian matrices with more than one column. */
 
@@ -83,11 +85,12 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
         }
         PROTECT (res = allocVector(VECSXP,n));
         setAttrib (res, R_NamesSymbol, getNamesAttrib(idg));
-        R_len_t i;
-        for (i = 0; i < n; i++)
-            SET_VECTOR_ELT (res, i, expand_gradient (value, 
-                             grad==R_NilValue ? R_NilValue : VECTOR_ELT(grad,i),
-                             VECTOR_ELT(idg,i)));
+        if (grad != R_NilValue) {
+            R_len_t i;
+            for (i = 0; i < n; i++)
+                SET_VECTOR_ELT(res, i, expand_gradient (value, 
+                                        VECTOR_ELT(grad,i), VECTOR_ELT(idg,i)));
+        }
         UNPROTECT(1);
         return res;
     }
@@ -105,8 +108,8 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
             setAttrib (res, R_NamesSymbol, getNamesAttrib(value));
             R_len_t i;
             for (i = 0; i < n; i++)
-                SET_VECTOR_ELT (res, i, 
-                  expand_gradient (VECTOR_ELT(value,i), R_NilValue, idg));
+                SET_VECTOR_ELT (res, i, expand_gradient (VECTOR_ELT(value,i),
+                                         R_NilValue, idg));
             UNPROTECT(1);
             return res;
         }
@@ -155,8 +158,8 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
         PROTECT (res = allocVector(VECSXP,n));
         setAttrib (res, R_NamesSymbol, getAttrib(value,R_NamesSymbol));
         for (R_len_t i = 0; i < n; i++) {
-            SET_VECTOR_ELT (res, i, 
-              expand_gradient (VECTOR_ELT(value,i), VECTOR_ELT(grad,i), idg));
+            SET_VECTOR_ELT (res, i, expand_gradient (VECTOR_ELT(value,i), 
+                                      VECTOR_ELT(grad,i), idg));
         }
         UNPROTECT(1);
 
@@ -193,10 +196,11 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
    levels, with GRAD_WRT_LIST set, since will be used as 'idg' in
    expand_gradient.  Has GRADIENT_WRT_LEN set to the length of the
    numeric vector just below the GRAD_WRT_LIST level, as well as in
-   the Jacobian matrix itself.  The "identity" gradient for a numeric
-   vector is an identity matrix (currenty represented explicitly); for
-   a list, it is a list with all but one element NULL, with that
-   element being the recursively-defined "identity" value. */
+   the Jacobian matrices themselves.  The "identity" gradient for a
+   numeric vector is an identity matrix (currenty represented
+   explicitly); for a list, it is a list with all but one element
+   NULL, with that element being the recursively-defined "identity"
+   value. */
 
 static SEXP make_id_numeric (SEXP v)
 {
@@ -209,9 +213,15 @@ static SEXP make_id_numeric (SEXP v)
         R_len_t vlen = LENGTH(v);
         res = alloc_numeric_gradient (vlen, vlen);
         R_len_t Jlen = LENGTH(res);
-        memset (REAL(res), 0, Jlen * sizeof(double));
-        for (R_len_t j = 0; j < Jlen; j += vlen+1)
-            REAL(res)[j] = 1.0;
+        if (Jlen != 0) {
+            memset (REAL(res), 0, Jlen * sizeof(double));
+            R_len_t j = 0;
+            for (;;) { 
+                REAL(res)[j] = 1.0; 
+                if (j == Jlen-1) break;
+                j += vlen+1;
+            }
+        }
     }
 
     return res;
@@ -271,7 +281,7 @@ static SEXP make_id_grad (SEXP val)
         res = make_id_recursive (val, top);
         UNPROTECT(1);
     }
- 
+
     return res;
 }
 
@@ -2515,6 +2525,12 @@ R_inspect(v);
 
     if (i < 0 || i >= n) abort();
     copy_elements (grad, i, n, v, 0, 1, vlen);
+
+#if 0
+REprintf("*** subasign_numeric_gradient end\n");
+R_inspect(grad);
+REprintf("==\n");
+#endif
 
     UNPROTECT(2);
     return grad;

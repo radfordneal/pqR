@@ -1556,6 +1556,26 @@ p( with gradient (a,b)
 
 p( with gradient (a,b) data.frame(matrix(c(a,b,a,a^2),4,3)) )
 
+with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df$y }
+with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df[,"y"] }
+with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df[2:3,"y"] }
+with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df[[2,"y"]] }
+
+p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df } )
+p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df$y <- a^3; df } )
+p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df[,"y"] <- a^3; df } )
+p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df[2:3,"y"] <- a[1..2]^3; df } )
+#p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
+#  { df <- data.frame(x=a,y=b^2); df[[2,"y"]] <- a[2]; df } )
+
 
 # Miscellaneous tests.
 
