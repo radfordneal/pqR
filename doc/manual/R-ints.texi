@@ -600,10 +600,10 @@ have ever been stored in the environment, allowing quick determination
 that some symbols cannot be in the environment.  Finally, if the
 environment is for the body of a @code{with gradient}, @code{track gradient},
 or active @code{back gradient} construct, it contains a vector list of 
-symbols for the variables whose gradient will be tracked, accessed by
-@code{GRADVARS}.  This list is not seen by the garbage collector, and
-hence must be protected otherwise (by @code{with gradient} or
-@code{track gradient}).
+symbols (and other info) for the variables whose gradient will be
+tracked, accessed by @code{GRADVARS}.  This list is not seen by the
+garbage collector, and hence must be protected otherwise (by
+@code{with gradient} or @code{track gradient}).
 
 @item PROMSXP
 Pointers to the value, expression and environment (in which to evaluate
@@ -612,12 +612,13 @@ set to @code{R_NilValue}.  The attribute of a promise may hold gradient
 information, which is set when the promise is forced if requested.
 
 @item LISTSXP
-Pointers to the CAR, CDR (usually a @code{LISTSXP} or @code{R_NilValue}) and
-TAG (usually a @code{SYMSXP} or @code{R_NilValue}).  For LISTSXP nodes used
-to record gradient values, the TAG is the environment for the relevant
-@code{with gradient} or @code{trace gradient} construct; LISTSXP nodes
-used as binding cells may have such gradient information stored as their
-`attributes'.
+Pointers to the CAR, CDR (usually a @code{LISTSXP} or
+@code{R_NilValue}) and TAG (usually a @code{SYMSXP} or
+@code{R_NilValue}).  For LISTSXP nodes used to record gradient values,
+the TAG is the environment for the relevant @code{with gradient},
+@code{track gradient}, or @code{back gradient} construct; LISTSXP
+nodes used as binding cells may have such gradient information stored
+as their `attributes'.
 
 @item LANGSXP
 A special type of @code{LISTSXP} used for function calls.  (The CAR
@@ -900,9 +901,10 @@ this.
 
 Note that the `attributes' of a @code{CHARSXP} are used as part of the
 management of the @code{CHARSXP} cache: of course @code{CHARSXP}'s are
-not user-visible but C-level code might look at their attributes.  Also,
-`attributes' on binding cells in environments and on promises are used
-to record gradient information (see @ref{Gradient information} for details).
+not user-visible but C-level code might look at their attributes.
+Also, `attributes' on binding cells in environments, on promises, and
+on internal argument pairlists are used to record gradient information
+(see @ref{Gradient information} for details).
 
 The code assumes that the attributes of a node are either
 @code{R_NilValue} or a pairlist of non-zero length (and this is checked
