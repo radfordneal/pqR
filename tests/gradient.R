@@ -1107,6 +1107,8 @@ with gradient (a=array(c(1.0,7.2,3.9,0.7,9.9,1.2,8.8,6.0),c(2,2,2))) {
   a
 }
 
+with gradient (L=list(c(9,7,6),-2)) { L[[1]][[2]] <- 3; L }
+
 
 # Subassignment with user-defined subassignment functions.
 
@@ -1570,11 +1572,13 @@ p( with gradient (a=c(2,3,1),b=c(9,8,7))
 p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
   { df <- data.frame(x=a,y=b^2); df$y <- a^3; df } )
 p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df["y"] <- a^3; df } )
+p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
   { df <- data.frame(x=a,y=b^2); df[,"y"] <- a^3; df } )
 p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
   { df <- data.frame(x=a,y=b^2); df[2:3,"y"] <- a[1..2]^3; df } )
-#p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
-#  { df <- data.frame(x=a,y=b^2); df[[2,"y"]] <- a[2]; df } )
+p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df[[2,"y"]] <- a[2]; df } )
 
 
 # Miscellaneous tests.

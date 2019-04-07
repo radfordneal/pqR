@@ -2511,20 +2511,24 @@ R_inspect(v);
 
     PROTECT2(grad,v);
 
-    R_len_t vlen = LENGTH(v);
+    R_len_t gvars = grad == R_NilValue ? GRADIENT_WRT_LEN(v) 
+                                       : GRADIENT_WRT_LEN(grad);
 
     if (grad == R_NilValue) {
-        grad = alloc_numeric_gradient (vlen, n);
+        grad = alloc_numeric_gradient (gvars, n);
         memset (REAL(grad), 0, LENGTH(grad) * sizeof(double));
     }
     else {
         if (TYPEOF(grad) != REALSXP) abort();
-        if (LENGTH(grad) != n * vlen) abort();
+        if (LENGTH(grad) != (uint64_t) n * gvars) abort();
         grad = dup_top_level(grad);
     }
 
     if (i < 0 || i >= n) abort();
-    copy_elements (grad, i, n, v, 0, 1, vlen);
+    if (v == R_NilValue)
+        copy_elements (grad, i, n, R_ScalarRealZero, 0, 0, gvars);        
+    else
+        copy_elements (grad, i, n, v, 0, 1, gvars);
 
 #if 0
 REprintf("*** subasign_numeric_gradient end\n");

@@ -178,17 +178,18 @@ with respect to all their real scalar, vector, matrix, or array arguments
 (or lists of lists of reals, etc.):
 \preformatted{  c, list, matrix, array, unlist, rep, rep.int, rep_len
 
-  [ (for vector lists and numeric vectors, including matrices & arrays) 
+  [   (for vector lists and numeric vectors, including matrices & arrays) 
   [<- (for vector lists and numeric vectors, including matrices & arrays) 
 
-  [[ (for vector lists and numeric vectors, including matrices & arrays) 
+  [[   (for vector lists and numeric vectors, including matrices & arrays) 
   [[<- (for vector lists and numeric vectors, including matrices & arrays; 
         vector as index (indexing at multiple levels) not supported yet) 
 
-  $ (for vector lists only)
-  $<- (for vector lists only) 
+  $   (for vector lists, not pairlists or environments)
+  $<- (for vector lists, not pairlists for environments) 
 
   data.frame, as.data.frame
+  methods for access and assignment to data frames with [, [[, and $
   
   +, -, *, /, ^ (+ and - may be unary) 
   
