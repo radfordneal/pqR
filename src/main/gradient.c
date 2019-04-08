@@ -2987,6 +2987,22 @@ static SEXP create_gradient (SEXP result, SEXP result_grad, SEXP gv)
 
 /* with gradient (op==0), track gradient (op==1), and back gradient (op==2). */
 
+static void cleanup_gradient_environment (void *venv)
+{
+    SEXP env = (SEXP)venv;
+
+    /* Remove all variables in environment, decrementing NAMEDCNT for them. */
+
+    for (SEXP b = FRAME(env); b != R_NilValue; b = CDR(b)) DEC_NAMEDCNT(CAR(b));
+
+    SET_FRAME(env,R_NilValue);
+
+    /* Clear GRADVARS, just in case it's somehow referenced.  Note that it's
+       not seen by the garbage collector, so it better not be used anymore! */
+
+    SET_GRADVARS(env,R_NilValue);
+}
+
 static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     int need_grad = PRIMVAL(op) != 2 || (variant & VARIANT_GRADIENT);
@@ -3070,13 +3086,20 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         SET_GRADVARS(newenv,gv);
     }
 
-    /* Evaluate body. */
+    /* Evaluate body. Do it in a new context so cleanup_gradient_environment
+       can be called on an error exit. */
+
+    RCNTXT cntx;
+    begincontext (&cntx, CTXT_CCODE, call, newenv, env, R_NilValue, R_NilValue);
+    cntx.cend = cleanup_gradient_environment;
+    cntx.cenddata = newenv;
 
     vr = variant & VARIANT_PENDING_OK;
     if (need_grad)
         vr |= VARIANT_GRADIENT;
-              
+
     SEXP result = evalv (CAR(p), newenv, vr);
+
     PROTECT_INDEX rix;                   
     PROTECT_WITH_INDEX(result,&rix);
 
@@ -3084,6 +3107,8 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     SEXP result_grad = need_grad ? get_gradient (newenv) : R_NilValue;
     PROTECT(result_grad);
+
+    endcontext (&cntx);
 
     /* For 'with gradient', attach gradient attribute. */
     
@@ -3097,7 +3122,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         INC_NAMEDCNT(gr);
     }
 
-    /* Propage gradients backwards with the chain rule. */
+    /* Propagate gradients backwards with the chain rule. */
 
     R_variant_result = 0;
 
@@ -3123,7 +3148,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     }
 
-    SET_GRADVARS(newenv,R_NilValue);  /* just in case it's somehow referenced */
+    cleanup_gradient_environment(newenv);
 
     if (need_grad)
         UNPROTECT(5+2*nv);

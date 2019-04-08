@@ -68,6 +68,21 @@ no_gradient (e)
 }
 
 \details{
+
+The \code{with gradient}, \code{track gradient}, and \code{back
+gradient} constructs all ask that gradients of an expression with
+respect to certain variables be computed, with differences between
+them as described below.  The \code{gradient_of} and
+\code{no_gradient} functions may be used within these constructs.  
+The \code{compute gradient} construct specifies how gradients are
+computed; it is not needed for the many functions for which 
+gradient computations are built in.
+
+Gradients can be computed for expressions that are not differentiable at
+some points, with the gradient returned at such points being arbitrary.
+
+\section{Asking for gradient information}{
+
 The \code{with gradient} construct evaluates \code{expr} in a new
 environment (with the current environment as its parent) containing
 the variable \code{var} (or variables \code{var1}, \code{var2}, etc),
@@ -135,6 +150,17 @@ In forms of \code{with gradient}, \code{track gradient}, and
 expression is assumed to be the same as the variable (evaluated in the
 current (not the new) environment).
 
+When a \code{with gradient}, \code{track gradient}, or \code{back
+gradient} construct is exitted, either normally or by an error
+exit, the variables defined within it are removed.  This prevents
+unnecessary duplicaton of objects, but does mean that functions that
+have been created with this environment as their enclosing environment
+will no longer have access to these variables.
+
+}
+
+\section{Specifying how gradients should be computed}{
+
 The gradient of an expression can be specified explicity using the
 \code{compute gradient} construct, as an alternative to simply letting
 the gradient be obtained automatically, or as a necessary measure if
@@ -155,16 +181,21 @@ will evaluate only the value, skipping evaluation of the expressions after
 evaluted for some variables but not others (e.g., in the form shown above,
 \code{g2.expr} might be evaluated but \code{g1.expr} not be evaluated).
 
-Computation of gradients for built-in functions is also skipped when
-it is known that the gradient will not be needed.
+}
 
-Gradients can be computed for expressions that are not differentiable at
-some points, with the gradient returned at such points being arbitrary.
+\section{Functions and operators that know how to compute gradients}{
 
-Gradients may not have been defined for some builtin functions (even if
-they exist mathematically), in which case they will appear to be zero.
-When a builtin functions returns \code{NA} or a \code{NaN} value, the
-gradient will be regarded as zero (without an error or warning).
+Many functions and operators defined in the base and other packages
+know how to compute gradients.  Computation of gradients for built-in
+functions is skipped when it is known that the gradient will not be
+needed, so the overhead of the gradient facility when it is not being
+used is quite small.
+
+For those builtin functions that don't know how to compute gradients
+(but for which gradients exist mathematically), gradients will appear
+to be zero.  When a builtin functions returns \code{NA} or a
+\code{NaN} value, the gradient will be regarded as zero (without an
+error or warning, and maybe not consistently at present).
 
 Gradients may be defined for real-valued random generation functions
 (eg, \code{rnorm}).  The gradient for these functions indicates how a
@@ -243,6 +274,7 @@ The following replacement functions do not compute any gradient information,
 but do leave undisturbed any gradient information that is associated with 
 the variable that they update:
 \preformatted{  attr<-, attributes<-, names<-, dim<-, dimnames<-, class<-, oldClass<-
+}
 }
 }
 

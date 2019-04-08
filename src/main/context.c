@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2016, 2017 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2016, 2017, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -81,8 +81,8 @@
  *  A context is created with a call to
  *
  *	void begincontext(RCNTXT *cptr, int flags,
- *			  SEXP syscall, SEXP env, SEXP
- *			  sysp, SEXP promargs, SEXP callfun)
+ *			  SEXP syscall, SEXP env, SEXP sysp,
+ *			  SEXP promargs, SEXP callfun)
  *
  *  which sets up the context pointed to by cptr in the appropriate way.
  *  When the context goes "out-of-scope" a call to
