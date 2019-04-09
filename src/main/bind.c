@@ -1164,6 +1164,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 
     char argkind[nargs]; /* Kind of argument: 1=vector, 2=matrix, 3=other */
     SEXP argval[nargs];  /* Values of arguments, later maybe coerced versions */
+    SEXP arggrad[nargs]; /* Gradients for arguments */
     R_len_t matrows[nargs];  /* Numbers of rows in matrices */
     R_len_t matcols[nargs];  /* Numbers of columns in matrices */
     R_len_t arg_len[nargs];  /* Lengths of non-matrix args */
@@ -1175,7 +1176,16 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
        zero-rows case. */
 
     for (t = args, n = 0; t != R_NilValue; t = CDR(t), n++) {
-	argval[n] = TYPEOF(CAR(t))==PROMSXP ? PRVALUE(CAR(t)) : CAR(t);
+        if (TYPEOF(CAR(t)) == PROMSXP) {
+            argval[n] = PRVALUE(CAR(t));
+            arggrad[n] = HAS_GRADIENT_IN_CELL(CAR(t)) ? GRADIENT_IN_CELL(CAR(t))
+                                                      : R_NilValue;
+        }
+        else {
+            argval[n] = CAR(t);
+            arggrad[n] = HAS_GRADIENT_IN_CELL(t) ? GRADIENT_IN_CELL(t) 
+                                                 : R_NilValue;
+        }
         argkind[n] = !isVector(argval[n]) && !isPairList(argval[n]) ? 3
                       : isMatrix(argval[n]) ? 2 : 1;
         if (argkind[n] == 2) {
@@ -1258,10 +1268,21 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 
     if (mode == VECSXP) {
         for (n = 0; n < nargs; n++) {
-            if (argkind[n] != 3)
-                argval[n] = argkind[n] == 2 || arg_len[n] >= lenmin 
-                             ? coerceVector(argval[n],mode) : R_NilValue;
-            PROTECT(argval[n]);
+            if (argkind[n] != 3) {
+                if (argkind[n] == 2 || arg_len[n] >= lenmin) {
+                    if (TYPEOF(argval[n]) != VECSXP) {
+                        argval[n] = coerceVector(argval[n],mode);
+                        if (arggrad[n] != R_NilValue)
+                            arggrad[n] = as_list_gradient (arggrad[n],
+                                                           LENGTH(argval[n]));
+                    }
+                }
+                else {
+                    arggrad[n] = R_NilValue;
+                    argval[n] = R_NilValue;
+                }
+            }
+            PROTECT2(argval[n],arggrad[n]);
         }
     }
     else {
@@ -1269,6 +1290,9 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
             if (argkind[n] == 1 && arg_len[n] < lenmin) 
                 argval[n] = R_NilValue;
     }
+
+    SEXP grad = R_NilValue;
+    PROTECT(grad);
 
     /* Copy the data. */
 
@@ -1304,6 +1328,11 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
                         copy_elements (result, j*rows, 1,
                                        argval[n], 0, 1, idx*rows);
                     }
+                    if (arggrad[n] != R_NilValue) {
+                        grad = subassign_range_list_gradient (grad, arggrad[n],
+                                 j*rows, (j+idx)*rows, LENGTH(result));
+                        UNPROTECT_PROTECT(grad);
+                }
                 }
             }
             else {
@@ -1327,13 +1356,20 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
                     copy_elements_coerced (result, j*rows, 1,
                                            argval[n], 0, 1, idx*rows);
                 }
+                if (arggrad[n] != R_NilValue) {
+                    grad = subassign_range_numeric_gradient (grad, arggrad[n],
+                             j*rows, (j+idx)*rows, LENGTH(result));
+                    UNPROTECT_PROTECT(grad);
+                }
             }
             j += idx;
         }
     }
 
+    UNPROTECT(1);  /* grad */
+
     if (mode == VECSXP)
-        UNPROTECT(nargs);
+        UNPROTECT(2*nargs);  /* argval[] & arggrad[] */
 
     /* Adjust dimnames attributes. */
 
@@ -1391,6 +1427,11 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 	}
 	setAttrib(result, R_DimNamesSymbol, dn);
 	UNPROTECT(1);
+    }
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
     }
 
     UNPROTECT(1);
@@ -1503,6 +1544,8 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     /* allocate space for result. */
 
     PROTECT(result = allocMatrix(mode, rows, cols));
+
+    SEXP grad = R_NilValue;
 
     /* Coerce data for VECSXP result.  Replace args to ignore with R_NilValue */
 
@@ -1670,6 +1713,11 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 	}
 	setAttrib(result, R_DimNamesSymbol, dn);
 	UNPROTECT(1);
+    }
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
     }
 
     UNPROTECT(1);

@@ -1580,6 +1580,12 @@ p( with gradient (a=c(2,3,1),b=c(9,8,7))
 p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
   { df <- data.frame(x=a,y=b^2); df[[2,"y"]] <- a[2]; df } )
 
+df1 <- data.frame(x=a)
+df2 <- data.frame(x=b)
+df3 <- data.frame(y=b)
+p( with gradient (df1,df2) rbind(df1,df2) )
+p( with gradient (df1,df3) cbind(df1,df3) )
+
 
 # Miscellaneous tests.
 
@@ -1694,6 +1700,9 @@ rep.fred <- function (x, times) x*times
 a <- c(9,10); class(a) <- "fred"
 with gradient (a) rep(a,100)
 rm(a)
+
+with gradient (a=list(3,5),b=c(9,8),x=2) cbind(a,b,x)
+with gradient (a=c(3,5),b=c(9,8),x=2) cbind(a,b,x,a^2)
 
 with gradient (a=9) { b <- a^2; get_rm(b) }
 with gradient (a=9) structure(a^2,fred=9999)

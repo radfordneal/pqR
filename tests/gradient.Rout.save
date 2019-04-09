@@ -10242,6 +10242,81 @@ $b$y
 
 
 > 
+> df1 <- data.frame(x=a)
+> df2 <- data.frame(x=b)
+> df3 <- data.frame(y=b)
+> p( with gradient (df1,df2) rbind(df1,df2) )
+  x
+1 3
+2 7
+3 1
+4 9
+5 2
+6 4
+$df1
+$df1$x
+$df1$x$x
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+[4,]    0    0    0
+[5,]    0    0    0
+[6,]    0    0    0
+
+
+
+$df2
+$df2$x
+$df2$x$x
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+[4,]    1    0    0
+[5,]    0    1    0
+[6,]    0    0    1
+
+
+
+> p( with gradient (df1,df3) cbind(df1,df3) )
+  x y
+1 3 9
+2 7 2
+3 1 4
+$df1
+$df1$x
+$df1$x$x
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+$df1$x$y
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+
+
+$df3
+$df3$y
+$df3$y$x
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+$df3$y$y
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+
+
+> 
 > 
 > # Miscellaneous tests.
 > 
@@ -11808,6 +11883,130 @@ attr(,"gradient")
 [1,]  100    0
 [2,]    0  100
 > rm(a)
+> 
+> with gradient (a=list(3,5),b=c(9,8),x=2) cbind(a,b,x)
+     a b x
+[1,] 3 9 2
+[2,] 5 8 2
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+attr(,"gradient")$a[[1]][[1]]
+[1] 1
+
+attr(,"gradient")$a[[1]][[2]]
+[1] 0
+
+attr(,"gradient")$a[[1]][[3]]
+[1] 0
+
+attr(,"gradient")$a[[1]][[4]]
+[1] 0
+
+attr(,"gradient")$a[[1]][[5]]
+[1] 0
+
+attr(,"gradient")$a[[1]][[6]]
+[1] 0
+
+
+attr(,"gradient")$a[[2]]
+attr(,"gradient")$a[[2]][[1]]
+[1] 0
+
+attr(,"gradient")$a[[2]][[2]]
+[1] 1
+
+attr(,"gradient")$a[[2]][[3]]
+[1] 0
+
+attr(,"gradient")$a[[2]][[4]]
+[1] 0
+
+attr(,"gradient")$a[[2]][[5]]
+[1] 0
+
+attr(,"gradient")$a[[2]][[6]]
+[1] 0
+
+
+
+attr(,"gradient")$b
+attr(,"gradient")$b[[1]]
+     [,1] [,2]
+[1,]    0    0
+
+attr(,"gradient")$b[[2]]
+     [,1] [,2]
+[1,]    0    0
+
+attr(,"gradient")$b[[3]]
+     [,1] [,2]
+[1,]    1    0
+
+attr(,"gradient")$b[[4]]
+     [,1] [,2]
+[1,]    0    1
+
+attr(,"gradient")$b[[5]]
+     [,1] [,2]
+[1,]    0    0
+
+attr(,"gradient")$b[[6]]
+     [,1] [,2]
+[1,]    0    0
+
+
+attr(,"gradient")$x
+attr(,"gradient")$x[[1]]
+[1] 0
+
+attr(,"gradient")$x[[2]]
+[1] 0
+
+attr(,"gradient")$x[[3]]
+[1] 0
+
+attr(,"gradient")$x[[4]]
+[1] 0
+
+attr(,"gradient")$x[[5]]
+[1] 1
+
+attr(,"gradient")$x[[6]]
+[1] 1
+
+
+> with gradient (a=c(3,5),b=c(9,8),x=2) cbind(a,b,x,a^2)
+     a b x   
+[1,] 3 9 2  9
+[2,] 5 8 2 25
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+[3,]    0    0
+[4,]    0    0
+[5,]    0    0
+[6,]    0    0
+[7,]    6    0
+[8,]    0   10
+
+attr(,"gradient")$b
+     [,1] [,2]
+[1,]    0    0
+[2,]    0    0
+[3,]    1    0
+[4,]    0    1
+[5,]    0    0
+[6,]    0    0
+[7,]    0    0
+[8,]    0    0
+
+attr(,"gradient")$x
+[1] 0 0 0 0 1 1 0 0
+
 > 
 > with gradient (a=9) { b <- a^2; get_rm(b) }
 [1] 81
