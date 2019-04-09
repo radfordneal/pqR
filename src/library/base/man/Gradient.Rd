@@ -19,16 +19,13 @@
   see \code{\link{deriv}}.  For numerical differentiation, see
   \code{\link{numericDeriv}}.
 
-  The present implementation of these facilities is a preliminary.  
-  It supports gradients of and with respect to real scalars, vectors,
-  matrices, and arrays, lists of such values, lists of lists, etc.
-  However, at present, the set of operations supported for vectors, 
-  matrices, and arrays is somewhat limited, and some operations that
-  are supported are implemented much less efficiently than is planned
-  for a full-fledged version.
+  The present implementation of these facilities is preliminary.
+  Gradient computation for some operations is planned but not yet
+  implemented, and for some operations that are supported, gradient computations
+  are much less efficient than is planned for a full-fledged version.
 
-  Support for higher-order derivatives is planned.  Perhaps
-  differentiation of complex values will also be supported some day.
+  At present, there is no support for higher-order derivatives, or for
+  differentiation of complex values.
 }
 
 \usage{
@@ -137,13 +134,14 @@ variable may determine derivatives with respect to an outer variable,
 by application of the chain rule (backpropagation).
 
 The \code{back gradient} construct is like \code{track gradient},
-except that it does not allow \code{gradient_of}, and hence only needs
-to track gradients if they will be backpropagated to give gradients
-for a (dynamically) enclosing gradient construct.  It may therefore be
-included at little performance cost in a function that may either be
-called for only its value, or may be called for both its value and
-that value's gradient, depending on whether call from within a gradient
-construct.
+except that it does not allow \code{gradient_of} unless it is
+evaluated within a \code{with gradient} or \code{track gradient}
+construct, and hence only needs to track gradients if they will be
+backpropagated to give gradients for such a (dynamically) enclosing
+gradient construct.  It may therefore be included at little
+performance cost in a function that may either be called for only its
+value, or may be called for both its value and that value's gradient,
+depending on whether it is called from within a gradient construct.
 
 In forms of \code{with gradient}, \code{track gradient}, and
 \code{back gradient} in which no expression follows a variable, the
@@ -151,11 +149,11 @@ expression is assumed to be the same as the variable (evaluated in the
 current (not the new) environment).
 
 When a \code{with gradient}, \code{track gradient}, or \code{back
-gradient} construct is exitted, either normally or by an error
-exit, the variables defined within it are removed.  This prevents
-unnecessary duplicaton of objects, but does mean that functions that
-have been created with this environment as their enclosing environment
-will no longer have access to these variables.
+gradient} construct is exitted, either normally or by an error exit,
+the variables defined within its environment are removed.  This
+prevents unnecessary duplicaton of objects, but does mean that
+functions that have been created with this environment as their
+enclosing environment will no longer have access to these variables.
 
 Specifying how gradients should be computed:
 
@@ -355,7 +353,7 @@ set.seed(123); with gradient (r=5) rexp(1,r)
 
 set.seed(123); v1<-rexp(1,4.999)
 set.seed(123); v2<-rexp(1,5.001)
-(v2-v1) / 0.002                  # should be close to gradient above
+(v2-v1) / 0.002                  # should be close to rexp gradient above
 
 r <- with gradient (a=7) list(a,a^2)
 attr(r,"gradient")               # should be a list of 1 and 14
@@ -378,11 +376,11 @@ with gradient (a=7) {
 
 with gradient (a=3)              # only the gradient with respect to a
   with gradient (b=10*a)         #   will be shown, but the chain rule 
-    list(a,b,a*b)                #   is used to convert derivatives wrt
+    c(a,b,a*b)                   #   is used to convert derivatives wrt
                                  #   to b into derivatives wrt to a
 
-with gradient (a=5,b=6) list(a^2,a*b)               # these give the same
-with gradient (x=list(a=5,b=6)) list(x$a^2,x$a*x$b) # value and gradient
+with gradient (a=5,b=6) c(a^2,a*b)                # these give the same
+with gradient (x=list(a=5,b=6)) c(x$a^2,x$a*x$b)  #   value and gradient
 
 with gradient (a=2) {            # find derivatives of powers of a, from
     L <- list(a)                 #   a^1 to a^10, evaluated at a=2
@@ -440,6 +438,13 @@ T <- with gradient (a=1.1) tbl(a)  # call tbl asking for the gradient
 T                                # note the gradient is a simple vector,
 array(attr(T,"gradient"),dim(T)) #   but dimensions can be added if needed
 
+a <- c(3,1,5)
+b <- c(9,2,7)
+
+r <- with gradient (a,b) data.frame(a^2,a*b,b^2)
+print(r)                         # no gradient seen, since print.data.frame
+                                 #   doesn't print attributes
+attr(r,"gradient")               # but it's there
 
 }
 
