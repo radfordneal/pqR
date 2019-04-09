@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
@@ -1574,6 +1574,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
                 PROTECT_N (res = last = LCONS (op, R_NilValue));
 
                 EXPECT('(');
+                int var_count = 0;
                 for (;;) {
                     if (NEXT_TOKEN != SYMBOL)
                         PARSE_UNEXPECTED();
@@ -1588,6 +1589,7 @@ static SEXP parse_expr (int prec, int flags, int *paren)
                     }
                     SETCDR (last, cons_with_tag (val, R_NilValue, var));
                     last = CDR(last);
+                    var_count += 1;
                     if (NEXT_TOKEN != ',') break;
                     get_next_token(0);
                 }
@@ -1604,16 +1606,14 @@ static SEXP parse_expr (int prec, int flags, int *paren)
                         PARSE_UNEXPECTED();
                     get_next_token(0);
 
-                    EXPECT('(');
                     for (;;) {
-                        PARSE_SUB(grad = parse_expr 
-                                           (EQASSIGN_PREC, subflags, NULL));
+                        PARSE_SUB(grad = parse_expr (0, flags, NULL));
                         SETCDR (last, CONS (grad, R_NilValue));
                         last = CDR(last);
-                        if (NEXT_TOKEN != ',') break;
-                        get_next_token(0);
+                        var_count -= 1;
+                        if (var_count == 0) break;
+                        EXPECT(',');
                     }
-                    EXPECT(')');
                 }
             }
         }

@@ -96,7 +96,7 @@ solve.default <-
         }
         r
     }
-    as ({
+    as {
         if (!exists("inv",inherits=FALSE)) {
             nv <- if (is.matrix(b)) ncol(b) else 1
             na <- nrow(a)
@@ -120,7 +120,7 @@ solve.default <-
         for (i in 1..nv) 
             g [(i-1)*na + (1..na), (i-1)*na + (1..na)] <- inv
         g
-    })
+    }
 }
 
 solve <- function(a, b, ...) UseMethod("solve")

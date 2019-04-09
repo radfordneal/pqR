@@ -47,8 +47,8 @@ back gradient (var) expr
 back gradient (var1=v1.expr,var2=v2.expr) expr
 back gradient (var1,var2) expr
 
-compute gradient (var1=v1.expr, var2=v2.expr) expr as (g1.expr, g2.expr)
-compute gradient (var1, var2) expr as (g1.expr, g2.expr)
+compute gradient (var1=v1.expr, var2=v2.expr) expr as g1.expr, g2.expr
+compute gradient (var1, var2) expr as g1.expr, g2.expr
 
 gradient_of (e)
 no_gradient (e)
@@ -81,7 +81,7 @@ gradient computations are built in.
 Gradients can be computed for expressions that are not differentiable at
 some points, with the gradient returned at such points being arbitrary.
 
-\section{Asking for gradient information}{
+Asking for gradient information:
 
 The \code{with gradient} construct evaluates \code{expr} in a new
 environment (with the current environment as its parent) containing
@@ -157,9 +157,7 @@ unnecessary duplicaton of objects, but does mean that functions that
 have been created with this environment as their enclosing environment
 will no longer have access to these variables.
 
-}
-
-\section{Specifying how gradients should be computed}{
+Specifying how gradients should be computed:
 
 The gradient of an expression can be specified explicity using the
 \code{compute gradient} construct, as an alternative to simply letting
@@ -181,9 +179,7 @@ will evaluate only the value, skipping evaluation of the expressions after
 evaluted for some variables but not others (e.g., in the form shown above,
 \code{g2.expr} might be evaluated but \code{g1.expr} not be evaluated).
 
-}
-
-\section{Functions and operators that know how to compute gradients}{
+Functions and operators that know how to compute gradients:
 
 Many functions and operators defined in the base and other packages
 know how to compute gradients.  Computation of gradients for built-in
@@ -347,7 +343,7 @@ track gradient (a = 3) {
 
 sigmoid <- function (x)
     compute gradient (x) { v <- 1 / (1+exp(-x)); v }
-    as (v * (1-v))
+    as v * (1-v)
 
 sigmoid(1)                       # no gradient computed, only value
 with gradient (x=1) sigmoid(x)   # both value and gradient computed

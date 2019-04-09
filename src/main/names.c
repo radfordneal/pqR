@@ -413,6 +413,7 @@ static void SymbolShortcuts(void)
     R_BreakSymbol = install("break");
     R_WithGradientSymbol = install("with gradient");
     R_TrackGradientSymbol = install("track gradient");
+    R_BackGradientSymbol = install("back gradient");
     R_ComputeGradientSymbol = install("compute gradient");
     R_AsSymbol = install("as");
     R_ColonSymbol = install(":");

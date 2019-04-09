@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -989,7 +989,9 @@ static void deparse2buff(SEXP s, LocalParseData *d)
             else if ((op == R_BreakSymbol || op == R_NextSymbol) && nargs==0) {
                 print2buff(opname, d);
             }
-            else if ((op == R_WithGradientSymbol || op == R_TrackGradientSymbol)
+            else if ((op == R_WithGradientSymbol 
+                        || op == R_TrackGradientSymbol
+                        || op == R_BackGradientSymbol)
                        && nargs >= 2 && has_n_tags(s,nargs-1)
                    || op == R_ComputeGradientSymbol && nargs > 2 && nargs%2 == 1
                        && has_n_tags(s,nargs/2)) {
@@ -1013,15 +1015,11 @@ static void deparse2buff(SEXP s, LocalParseData *d)
                 deparse2buff(CAR(skip), d);
                 if (op == R_ComputeGradientSymbol) {
                     print2buff(" ", d);
-                    print2buff("as (", d);
+                    print2buff("as ", d);
                     for (t = CDR(skip); t != R_NilValue; t = CDR(t)) {
-                        int np = needsparens_arg(CAR(t));
-                        if (np) print2buff("(", d);
                         deparse2buff(CAR(t), d);
-                        if (np) print2buff(")", d);
                         if (CDR(t) != R_NilValue) print2buff(", ",d);
                     }
-                    print2buff(")", d);
                 }
             }
             else if (op == R_BraceSymbol) {

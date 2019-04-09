@@ -866,7 +866,7 @@ with gradient (a=c(9,5,2)) {
 
 # Test 'compute gradient'.
 
-f <- function (x) compute gradient (x) x^2 as (123*x) # wrong, see if happens
+f <- function (x) compute gradient (x) x^2 as 123*x # wrong, see if happens
 
 with gradient (a=12) f(a)
 with gradient (a=12) f(a^2)
@@ -874,8 +874,8 @@ with gradient (a=12) f(a^2)
 g <- function (x,y)  # assume length(x) == length(y)
   compute gradient (x,y) list(x+y,x-y,x*y)
   as # wrong, but see if it happens
-     (list (diag(x*y,length(x)), diag(x+y,length(x)), diag(x+y,length(x))), 
-      list (diag(x-y,length(x)), diag(x-y,length(x)), diag(7*x*y,length(x))))
+     list (diag(x*y,length(x)), diag(x+y,length(x)), diag(x+y,length(x))), 
+     list (diag(x-y,length(x)), diag(x-y,length(x)), diag(7*x*y,length(x)))
 
 with gradient (z=9) g(100*z,z+1)
 with gradient (z=c(9,7)) g(100*z,z+1)
