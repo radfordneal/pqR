@@ -1001,7 +1001,7 @@ static SEXP do_unlist(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
 /* cbind(deparse.level, ...) and rbind(deparse.level, ...) : */
 /* This is a special .Internal */
-static SEXP do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
+static SEXP do_bind(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     SEXP a, t, obj, classlist, classname, method, classmethod, rho;
     const char *generic;
@@ -1010,6 +1010,8 @@ static SEXP do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
     struct BindData data;
     char buf[512];
     const char *s, *klass;
+
+    variant &= VARIANT_GRADIENT;
 
     /* since R 2.2.0: first argument "deparse.level" */
     deparse_level = asInteger(eval(CAR(args), env));
@@ -1038,7 +1040,7 @@ static SEXP do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
      *	  drop through to the default code.
      */
 
-    PROTECT(args = promiseArgs(args, env, 0));
+    PROTECT(args = promiseArgs(args, env, variant));
 
     generic = ((PRIMVAL(op) == 1) ? "cbind" : "rbind");
     klass = "";
@@ -1082,7 +1084,7 @@ static SEXP do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     if (method != R_NilValue) {
 	PROTECT(method);
-	args = applyClosure(call, method, args, env, NULL);
+	args = applyClosure_v(call, method, args, env, NULL, variant);
 	UNPROTECT(2);
 	return args;
     }
@@ -1683,8 +1685,8 @@ attribute_hidden FUNTAB R_FunTab_bind[] =
 
 {"c",		do_c,		0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"unlist",	do_unlist,	0,	10001011,3,	{PP_FUNCALL, PREC_FN,	0}},
-{"cbind",	do_bind,	1,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"rbind",	do_bind,	2,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"cbind",	do_bind,	1,	1010,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"rbind",	do_bind,	2,	1010,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };

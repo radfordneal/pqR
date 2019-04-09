@@ -215,7 +215,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
   $   (for vector lists, not pairlists or environments)
   $<- (for vector lists, not pairlists for environments) 
 
-  data.frame, as.data.frame
+  data.frame, as.data.frame, cbind.data.frame, rbind.data.frame
   methods for access and assignment to data frames with [, [[, and $
   
   +, -, *, /, ^ (+ and - may be unary) 
