@@ -12008,6 +12008,133 @@ attr(,"gradient")$x
 [1] 0 0 0 0 1 1 0 0
 
 > 
+> with gradient (a=list(3,5),b=c(9,8),x=2) rbind(a,b,x)
+  [,1] [,2]
+a 3    5   
+b 9    8   
+x 2    2   
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+attr(,"gradient")$a[[1]][[1]]
+[1] 1
+
+attr(,"gradient")$a[[1]][[2]]
+[1] 0
+
+attr(,"gradient")$a[[1]][[3]]
+[1] 0
+
+attr(,"gradient")$a[[1]][[4]]
+[1] 0
+
+attr(,"gradient")$a[[1]][[5]]
+[1] 0
+
+attr(,"gradient")$a[[1]][[6]]
+[1] 0
+
+
+attr(,"gradient")$a[[2]]
+attr(,"gradient")$a[[2]][[1]]
+[1] 0
+
+attr(,"gradient")$a[[2]][[2]]
+[1] 0
+
+attr(,"gradient")$a[[2]][[3]]
+[1] 0
+
+attr(,"gradient")$a[[2]][[4]]
+[1] 1
+
+attr(,"gradient")$a[[2]][[5]]
+[1] 0
+
+attr(,"gradient")$a[[2]][[6]]
+[1] 0
+
+
+
+attr(,"gradient")$b
+attr(,"gradient")$b[[1]]
+     [,1] [,2]
+[1,]    0    0
+
+attr(,"gradient")$b[[2]]
+     [,1] [,2]
+[1,]    1    0
+
+attr(,"gradient")$b[[3]]
+     [,1] [,2]
+[1,]    0    0
+
+attr(,"gradient")$b[[4]]
+     [,1] [,2]
+[1,]    0    0
+
+attr(,"gradient")$b[[5]]
+     [,1] [,2]
+[1,]    0    1
+
+attr(,"gradient")$b[[6]]
+     [,1] [,2]
+[1,]    0    0
+
+
+attr(,"gradient")$x
+attr(,"gradient")$x[[1]]
+[1] 0
+
+attr(,"gradient")$x[[2]]
+[1] 0
+
+attr(,"gradient")$x[[3]]
+[1] 1
+
+attr(,"gradient")$x[[4]]
+[1] 0
+
+attr(,"gradient")$x[[5]]
+[1] 0
+
+attr(,"gradient")$x[[6]]
+[1] 1
+
+
+> with gradient (a=c(3,5),b=c(9,8),x=2) rbind(a,b,x,a^2)
+  [,1] [,2]
+a    3    5
+b    9    8
+x    2    2
+     9   25
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    0
+[3,]    0    0
+[4,]    6    0
+[5,]    0    1
+[6,]    0    0
+[7,]    0    0
+[8,]    0   10
+
+attr(,"gradient")$b
+     [,1] [,2]
+[1,]    0    0
+[2,]    1    0
+[3,]    0    0
+[4,]    0    0
+[5,]    0    0
+[6,]    0    1
+[7,]    0    0
+[8,]    0    0
+
+attr(,"gradient")$x
+[1] 0 0 1 0 0 0 1 0
+
+> 
 > with gradient (a=9) { b <- a^2; get_rm(b) }
 [1] 81
 attr(,"gradient")

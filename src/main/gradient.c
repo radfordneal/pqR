@@ -818,13 +818,13 @@ R_inspect(grad); REprintf("--\n");
 
     for (R_len_t k = i; k <= j; k++)
         SET_VECTOR_ELT (res, k-i, VECTOR_ELT(grad,k));
-
-    UNPROTECT(1);
-    return res;
 #if 0
 REprintf("subset_range_list_gradient end\n");
 R_inspect(grad); REprintf("==\n");
 #endif
+
+    UNPROTECT(1);
+    return res;
 }
 
 

@@ -1704,6 +1704,9 @@ rm(a)
 with gradient (a=list(3,5),b=c(9,8),x=2) cbind(a,b,x)
 with gradient (a=c(3,5),b=c(9,8),x=2) cbind(a,b,x,a^2)
 
+with gradient (a=list(3,5),b=c(9,8),x=2) rbind(a,b,x)
+with gradient (a=c(3,5),b=c(9,8),x=2) rbind(a,b,x,a^2)
+
 with gradient (a=9) { b <- a^2; get_rm(b) }
 with gradient (a=9) structure(a^2,fred=9999)
 
