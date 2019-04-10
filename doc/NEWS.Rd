@@ -20,13 +20,18 @@
   differentiation facilities, as they exist so far.
   }
 
+  \subsection{INSTALLATION}{
+  \itemize{
+  \item Fixed handling of \code{mat_mult_with_BLAS=T} or 
+        \code{mat_mult_with_BLAS=F} as an option to configure.
+  }}
+
   \subsection{BUG FIXES}{
   \itemize{
   \item Fixed a bug in which dimnames for an array of three or more
         dimensions subscripted with \code{[]} were not converted
         to names (as had been intended) when the result had its 
         dimensions dropped, and only one dimension had names.
-  }}
 }
 
 
