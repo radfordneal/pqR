@@ -10,6 +10,16 @@
 
   \subsection{INSTALLATION}{
   \itemize{
+  \item Fixed handling of \code{mat_mult_with_BLAS=T} or 
+        \code{mat_mult_with_BLAS=F} as an option to configure.
+  }}
+}
+
+
+\section{CHANGES IN VERSION RELEASED 2019-00-00}{
+
+  \subsection{INSTALLATION}{
+  \itemize{
   \item Fixed an issue in which "make install" on a Linux or Mac system would
         not copy some header files needed when installing some packages.
   }}
