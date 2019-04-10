@@ -19,6 +19,12 @@
   \item Type \code{help(Gradient)} to read documentation on the automatic 
   differentiation facilities, as they exist so far.
   }
+
+  \subsection{INSTALLATION}{
+  \itemize{
+  \item Fixed handling of \code{mat_mult_with_BLAS=T} or 
+        \code{mat_mult_with_BLAS=F} as an option to configure.
+  }}
 }
 
 
