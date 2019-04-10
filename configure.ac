@@ -3,7 +3,7 @@
 ### Process this file with autoconf to produce a configure script.
 ###
 ### Copyright (C) 1998-2011 R Core Team
-### Modifications for pqR copyright (C) 2012-2017 Radford Neal
+### Modifications for pqR copyright (C) 2012-2019 Radford Neal
 ###
 ### This file is part of R.
 ###
@@ -550,14 +550,14 @@ if test "${mat_mult_with_BLAS}" != TRUE -a \
         "${mat_mult_with_BLAS}" != T -a \
         "${mat_mult_with_BLAS}" != F -a \
         "${mat_mult_with_BLAS}" != NA; then 
+  AC_MSG_ERROR([Invalid value for mat_mult_with_BLAS: ${mat_mult_with_BLAS}])
+else
   if test "${mat_mult_with_BLAS}" = T; then
     mat_mult_with_BLAS=TRUE
   fi
   if test "${mat_mult_with_BLAS}" = F; then
     mat_mult_with_BLAS=FALSE
   fi
-  AC_MSG_ERROR([Invalid value for mat_mult_with_BLAS: ${mat_mult_with_BLAS}])
-else
   AC_DEFINE_UNQUOTED(R_MAT_MULT_WITH_BLAS_DEFAULT, ${mat_mult_with_BLAS}, 
    [Define this to the default for mat_mult_with_BLAS.])
 fi
