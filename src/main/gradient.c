@@ -3321,13 +3321,20 @@ static SEXP do_gradient_of(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
     checkArity (op, args);
 
-    if (TYPEOF(GRADVARS(env)) != VECSXP)
-        errorcall (call, _("gradient_of called outside gradient construct"));
+    RCNTXT *cntxt = R_GlobalContext;
 
+    while (TYPEOF(GRADVARS(cntxt->cloenv)) != VECSXP) {
+        cntxt = cntxt->nextcontext;
+        if (cntxt == NULL)
+           errorcall (call, 
+             _("gradient_of called when there is no gradient construct"));
+    }
+
+    SEXP genv = cntxt->cloenv;
     SEXP result = PROTECT (evalv (CAR(args), env, VARIANT_GRADIENT));
-    SEXP result_grad = PROTECT (get_gradient(env));
+    SEXP result_grad = PROTECT (get_gradient(genv));
 
-    SEXP r = create_gradient (result, result_grad, GRADVARS(env));
+    SEXP r = create_gradient (result, result_grad, GRADVARS(genv));
 
     R_variant_result = 0;
     UNPROTECT(2);

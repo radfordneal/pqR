@@ -110,10 +110,11 @@ for S3 methods, but not S4 methods.  Tracking will also be performed
 when an expression is evaluated with \code{eval}, if the environment
 used for the evaluation is one in which gradients are being tracked.
 
-Within \code{expr}, the gradient of an expression, \code{e}, with
-respect the variable or variables of the innermost enclosing
-\code{with gradient} or \code{track gradient} construct can be found
-with \code{gradient_of(e)}.  The value of \code{gradient_of} does not
+Within \code{expr}, or a function called from within it, the gradient
+of an expression, \code{e}, with respect the variable or variables of
+the innermost enclosing \code{with gradient}, \code{track gradient},
+or active \code{back gradient} construct can be found with
+\code{gradient_of(e)}.  The value of \code{gradient_of} does not
 itself have any gradient information --- hence
 \code{gradient_of(gradient_of(e))} will not produce a second
 derivative (it will always be zero).
@@ -170,6 +171,11 @@ respect to these new variables are not tracked automatically, but are
 instead specified by the expressions after \code{as}.  The chain rule
 is used to translate these gradients to gradients with respect to
 variables used to compute \code{v1.expr}, \code{v2.expr}, etc.
+
+The gradient computed by the expressions after \code{as} should in the
+same form as is returned by \code{gradient_of} or attached as a
+\code{gradient} attribute by \code{with gradient}, as described in the
+value section below.
 
 If computation of a gradient has not been requested, \code{compute gradient}
 will evaluate only the value, skipping evaluation of the expressions after
@@ -438,13 +444,25 @@ T <- with gradient (a=1.1) tbl(a)  # call tbl asking for the gradient
 T                                # note the gradient is a simple vector,
 array(attr(T,"gradient"),dim(T)) #   but dimensions can be added if needed
 
+# Gradient tracking for numeric data in a data frame.
+
 a <- c(3,1,5)
 b <- c(9,2,7)
 
 r <- with gradient (a,b) data.frame(a^2,a*b,b^2)
+
 print(r)                         # no gradient seen, since print.data.frame
-                                 #   doesn't print attributes
-attr(r,"gradient")               # but it's there
+                                 #   doesn't print attributes...
+
+attr(r,"gradient")               # ...but it's there
+
+# Defining and using a function to combine a value and a gradient.
+
+val_and_grad <- function (v)     # the call of gradient_of here will be
+    list (v, gradient_of(v))     #   valid when val_and_grad is called from
+                                 #   a place where gradient_of is valid...
+
+track gradient (a = 7) { b <- a^2; val_and_grad(10*b) }  # ... such as here
 
 }
 
