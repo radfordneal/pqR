@@ -3323,7 +3323,8 @@ static SEXP do_gradient_of(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     RCNTXT *cntxt = R_GlobalContext;
 
-    while (TYPEOF(GRADVARS(cntxt->cloenv)) != VECSXP) {
+    while (TYPEOF(cntxt->cloenv) != ENVSXP 
+            || TYPEOF(GRADVARS(cntxt->cloenv)) != VECSXP) {
         cntxt = cntxt->nextcontext;
         if (cntxt == NULL)
            errorcall (call, 
