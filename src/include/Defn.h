@@ -2104,10 +2104,10 @@ extern R_NORETURN void Rf_unprotect_error (void);
 
 void SET_ATTRIB_TO_ANYTHING (SEXP, SEXP);
 
-#define SET_GRADIENT_IN_CELL(x,v) \
-   (ATTRIB_W(x) != R_NilValue && !HAS_GRADIENT_IN_CELL(x) ? (void) abort() \
-      : (v) != R_NilValue && TYPEOF(v) != LISTSXP ? (void) abort() \
-      : SET_ATTRIB_TO_ANYTHING((x),(v)))
+
+/* Update gradient information in binding cell or promise. */
+
+void SET_GRADIENT_IN_CELL (SEXP, SEXP);
 
 
 /* Define R_INFINITE and ISNAN_NOT_NA here as inline functions, using a 

@@ -233,7 +233,7 @@ static SEXP do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             else if (commonType == REALSXP)
                 grad = subassign_range_numeric_gradient 
                   (grad, g, i*commonLen, i*commonLen+commonLen-1, n*commonLen);
-            REPROTECT (g, gix);
+            REPROTECT (grad, gix);
         }
 
         UNPROTECT(2); /* tmp, g */

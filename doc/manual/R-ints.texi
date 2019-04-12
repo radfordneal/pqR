@@ -1036,7 +1036,7 @@ which handle adding/subtracting one.
 Gradient information may be @code{R_NilValue} when the gradient is
 zero (or all zeros for lists).  @code{R_NilValue} may also appear as a
 list element in a gradient value, indicating that the gradient for
-that portion of the variable is zero.  
+that portion of the variable is zero.
 
 Gradient values do not have names (they are instead added when the
 gradient information is converted to user-visible form), but the lists
@@ -1064,6 +1064,17 @@ the same macros.  The internal @code{evalList_gradient} function
 evaluates a pairlist of arguments and returns a pairlist of values in
 which gradient information may be stored in the attribute fields of
 nodes, again for access with @code{GRADIENT_IN_CELL}.
+
+The number of references in binding cells or promises to the
+pairlists, vector lists, and numeric vectors holding gradient
+information is indicated by their @code{NAMEDCNT} fields.  This may
+sometimes be just an upper bound on the number of references, not the
+precise number.  When gradient informations is stored in a binding
+cell or promise, @code{NAMEDCNT} is incremented for all parts of the
+information, recursively, and correspondingly, @code{NAMEDCNT} may be
+decremented for all parts when a reference is removed.  An attempt is
+made to avoid duplication of gradient information on subassignment
+operations when @code{NAMEDCNT} is one.
 
 
 @node Contexts, Argument evaluation, Gradient information, R Internal Structures

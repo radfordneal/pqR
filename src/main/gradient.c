@@ -58,6 +58,61 @@ static SEXP alloc_numeric_gradient (R_len_t gvars, R_len_t n)
 }
 
 
+static void inc_gradient_namedcnt (SEXP v)
+{
+    switch (TYPEOF(v)) {
+    case LISTSXP:
+        for ( ; v != R_NilValue; v = CDR(v)) {
+            INC_NAMEDCNT(v);
+            inc_gradient_namedcnt(CAR(v));
+        }
+        break;
+    case VECSXP: ;
+        R_len_t len = LENGTH(v);
+        R_len_t i;
+        for (i = 0; i < len; i++)
+            inc_gradient_namedcnt (VECTOR_ELT(v,i));
+        break;
+    case REALSXP:
+        INC_NAMEDCNT(v);
+        break;
+    }
+}
+
+
+static void dec_gradient_namedcnt (SEXP v)
+{
+    switch (TYPEOF(v)) {
+    case LISTSXP:
+        for ( ; v != R_NilValue; v = CDR(v)) {
+            DEC_NAMEDCNT(v);
+            dec_gradient_namedcnt(CAR(v));
+        }
+        break;
+    case VECSXP: ;
+        R_len_t len = LENGTH(v);
+        R_len_t i;
+        for (i = 0; i < len; i++)
+            dec_gradient_namedcnt (VECTOR_ELT(v,i));
+        break;
+    case REALSXP:
+        DEC_NAMEDCNT(v);
+        break;
+    }
+}
+
+
+void SET_GRADIENT_IN_CELL (SEXP x, SEXP v)
+{
+   if (ATTRIB_W(x) != R_NilValue && !HAS_GRADIENT_IN_CELL(x)) abort();
+   if (v != R_NilValue && TYPEOF(v) != LISTSXP) abort();
+
+   dec_gradient_namedcnt (ATTRIB_W(x));
+   SET_ATTRIB_TO_ANYTHING (x,v);
+   inc_gradient_namedcnt (v);
+}
+
+
 /* Expand the structure of 'grad' to be a full gradient for 'value' by
    replacing NULL elements that correspond to non-NULL elements by the
    appropriate zero Jacobian.  The 'idg' argument is the identity

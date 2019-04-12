@@ -1600,8 +1600,6 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
             R_len_t i;
             SEXP f;
 
-            PROTECT (f = allocVector (REALSXP, n));
-
             switch (opcode) {
             case PLUSOP: 
                 if (grad1 == R_NilValue)
@@ -1620,6 +1618,7 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                     res_grad = add_scaled_gradients (grad1, grad2, -1.0, n);
                 break;
             case TIMESOP: 
+                PROTECT (f = allocVector (REALSXP, n));
                 if (grad1 == R_NilValue) {
                     if (TYPEOF(x) != REALSXP)
                         for (i = 0; i < n; i++) REAL(f)[i] = INTEGER(x)[i%nx];
@@ -1650,8 +1649,10 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                     res_grad = add_scaled_gradients_vec (res_grad, grad2, 
                                 TYPEOF(x) == REALSXP && LENGTH(x) == n ? x : f);
                 }
+                UNPROTECT(1);
                 break;
             case DIVOP: 
+                PROTECT (f = allocVector (REALSXP, n));
                 if (grad1 == R_NilValue) {
                     for (i = 0; i < n; i++) {
                         double tx = TYPEOF(x) == REALSXP ? REAL(x)[i%nx]
@@ -1686,8 +1687,10 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                     }
                     res_grad = add_scaled_gradients_vec(res_grad, grad2, f);
                 }
+                UNPROTECT(1);
                 break;
             case POWOP: ;
+                PROTECT (f = allocVector (REALSXP, n));
                 WAIT_UNTIL_COMPUTED(ans);
                 if (grad1 != R_NilValue) {
                     for (i = 0; i < n; i++) {
@@ -1707,10 +1710,9 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                     }
                     res_grad = add_scaled_gradients_vec (res_grad, grad2, f);
                 }
+                UNPROTECT(1);
                 break;
             }
-
-            UNPROTECT(1);
         }
 
         if (res_grad != R_NilValue) {
