@@ -1002,7 +1002,9 @@ static inline SEXP INTERNAL_fun (SEXP x)
    assignments.  They are NOT automatically protected. */
 
 LibExtern SEXP R_fast_sub_var;  /* Value of variable assigned to or subsetted */
+LibExtern SEXP R_fast_sub_var_grad;   /* ... gradient of above */
 LibExtern SEXP R_fast_sub_replacement;    /* Replacement value, for subassign */
+LibExtern SEXP R_fast_sub_replacement_grad;   /* ... gradient of above */
 
 
 #define R_binding_cell R_high_frequency_globals.binding_cell
@@ -2072,6 +2074,18 @@ extern R_NORETURN void Rf_unprotect_error (void);
     (R_PPStack[R_PPStackTop+2] = (s3)), \
     (R_PPStack[R_PPStackTop+3] = (s4)), \
     (R_PPStackTop += 4), \
+    (void)0 \
+)
+
+#undef  PROTECT5
+#define PROTECT5(s1,s2,s3,s4,s5) ( \
+    (R_PPStackTop+4 >= R_PPStackSize ? Rf_protect_error() : (void) 0), \
+    (R_PPStack[R_PPStackTop] = (s1)), \
+    (R_PPStack[R_PPStackTop+1] = (s2)), \
+    (R_PPStack[R_PPStackTop+2] = (s3)), \
+    (R_PPStack[R_PPStackTop+3] = (s4)), \
+    (R_PPStack[R_PPStackTop+4] = (s5)), \
+    (R_PPStackTop += 5), \
     (void)0 \
 )
 

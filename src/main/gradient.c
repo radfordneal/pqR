@@ -2162,7 +2162,7 @@ R_inspect(v);
     else {
         if (TYPEOF(grad) != REALSXP) abort();
         if (LENGTH(grad) == n * gvars)
-            res = duplicate(grad);
+            res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
         else {
             res = alloc_numeric_gradient (gvars, n);
             m = LENGTH(grad) / gvars;
@@ -2232,7 +2232,7 @@ R_inspect(v);
     else {
         if (TYPEOF(grad) != REALSXP) abort();
         if (LENGTH(grad) == n * gvars)
-            res = duplicate(grad);
+            res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
         else {
             res = alloc_numeric_gradient (gvars, n);
             m = LENGTH(grad) / gvars;
@@ -2495,18 +2495,25 @@ R_inspect(v);
 
     PROTECT2(grad,v);
 
+    SEXP res;
+
     if (grad == R_NilValue) 
-        grad = alloc_list_gradient (n);
+        res = alloc_list_gradient (n);
     else {
         if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
-        grad = dup_top_level(grad);
+        res = NAMEDCNT_GT_1(grad) ? dup_top_level(grad) : grad;
     }
 
     if (i < 0 || i >= n) abort();
-    SET_VECTOR_ELT (grad, i, v);
+    SET_VECTOR_ELT (res, i, v);
+
+#if 0
+REprintf("*** subassign_list_gradient end\n");
+R_inspect(res);
+#endif
 
     UNPROTECT(2);
-    return grad;
+    return res;
 }
 
 /* Create set of gradients from grad that account for assigning an element
@@ -2566,33 +2573,33 @@ R_inspect(v);
 
     PROTECT2(grad,v);
 
-    R_len_t gvars = grad == R_NilValue ? GRADIENT_WRT_LEN(v) 
-                                       : GRADIENT_WRT_LEN(grad);
+    R_len_t gvars = GRADIENT_WRT_LEN (grad != R_NilValue ? grad : v); 
+    SEXP res;
 
     if (grad == R_NilValue) {
-        grad = alloc_numeric_gradient (gvars, n);
-        memset (REAL(grad), 0, LENGTH(grad) * sizeof(double));
+        res = alloc_numeric_gradient (gvars, n);
+        memset (REAL(res), 0, LENGTH(res) * sizeof(double));
     }
     else {
         if (TYPEOF(grad) != REALSXP) abort();
         if (LENGTH(grad) != (uint64_t) n * gvars) abort();
-        grad = dup_top_level(grad);
+        res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
     }
 
     if (i < 0 || i >= n) abort();
     if (v == R_NilValue)
-        copy_elements (grad, i, n, R_ScalarRealZero, 0, 0, gvars);        
+        copy_elements (res, i, n, R_ScalarRealZero, 0, 0, gvars);        
     else
-        copy_elements (grad, i, n, v, 0, 1, gvars);
+        copy_elements (res, i, n, v, 0, 1, gvars);
 
 #if 0
 REprintf("*** subasign_numeric_gradient end\n");
-R_inspect(grad);
+R_inspect(res);
 REprintf("==\n");
 #endif
 
     UNPROTECT(2);
-    return grad;
+    return res;
 }
 
 

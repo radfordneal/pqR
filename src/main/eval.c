@@ -1555,8 +1555,8 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
 
         /* Evaluate the right hand side, asking for it on the scalar stack. 
-           May also get the gradient of the rhs, in which case we let it 
-           say in R_gradient, with VARIANT_GRADIENT_FLAG in R_variant_result. */
+           May also get the gradient of the rhs, in which case we let it stay
+           in R_gradient, with VARIANT_GRADIENT_FLAG in R_variant_result. */
 
         rhs = EVALV (rhs, rho, varnt);
 
@@ -1768,7 +1768,7 @@ static SEXP attribute_noinline Rf_set_subassign
     SEXP rhs_uneval = rhs;  /* save unevaluated rhs */
 
     int rhs_variant = STORE_GRAD(rho) ? VARIANT_GRADIENT 
-                                       : variant & VARIANT_GRADIENT;
+                                      : variant & VARIANT_GRADIENT;
     if (maybe_fast) {
         if (variant & (VARIANT_SCALAR_STACK_OK | VARIANT_NULL))
             rhs_variant |= VARIANT_SCALAR_STACK_OK;
@@ -1845,11 +1845,11 @@ static SEXP attribute_noinline Rf_set_subassign
 
 #if 0
 if ((variant & VARIANT_GRADIENT) || STORE_GRAD(rho) && !opval) {
-REprintf("==\n"); R_inspect(rhs);
-REprintf("--\n"); R_inspect(rhs_grad);
-REprintf("--\n"); R_inspect(varval);
-REprintf("--\n"); R_inspect(var_grad);
-REprintf("**\n");
+REprintf("...==\n"); R_inspect(rhs);
+REprintf("...--\n"); R_inspect(rhs_grad);
+REprintf("...--\n"); R_inspect(varval);
+REprintf("...--\n"); R_inspect(var_grad);
+REprintf("...**\n");
 }
 #endif
 
@@ -1876,17 +1876,24 @@ REprintf("**\n");
     if (depth == 1) {
         SEXP lhsprom, fn, e;
         if (maybe_fast && !isObject(varval)
-              && rhs_grad == R_NilValue && var_grad == R_NilValue  /* FOR NOW */
+              && (rhs_grad == R_NilValue && var_grad == R_NilValue
+                   || assgnfcn == R_DollarAssignSymbol)
               && CADDR(lhs) != R_DotsSymbol
               && (fn = FINDFUN(assgnfcn,rho), 
                   TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
             /* Use the fast interface.  No need to wait for rhs, since
                not evaluated with PENDING_OK */
             R_fast_sub_var = varval;
+            R_fast_sub_var_grad = var_grad;
             R_fast_sub_replacement = rhs;
+            R_fast_sub_replacement_grad = rhs_grad;
             R_variant_result = 0;
             newval = CALL_PRIMFUN (call, fn, CDDR(lhs), rho, 
                                    VARIANT_FAST_SUB);
+            if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+                res_grad = R_gradient;
+                R_variant_result = 0;
+            }
         }
         else {
             if (POP_IF_TOP_OF_STACK(rhs))  /* might be on stack if maybe_fast */
@@ -1907,6 +1914,9 @@ REprintf("vv\n"); R_inspect(var_grad);
                     SET_GRADIENT_IN_CELL (rhsprom, rhs_grad);
                     SET_STORE_GRAD (rhsprom, 1);
                 }
+#if 0
+REprintf("VV\n"); R_inspect(var_grad);
+#endif
                 newval = evalv (e, rho, VARIANT_GRADIENT);
                 if (R_variant_result & VARIANT_GRADIENT_FLAG) {
                     res_grad = R_gradient;
@@ -2078,6 +2088,7 @@ static SEXP attribute_noinline Rf_set_subassign_general
 
         if (fast) {
             R_fast_sub_var = s[d+1].value;
+            R_fast_sub_var_grad = s[d+1].grad;
             R_variant_result = 0;
             e = CALL_PRIMFUN (call, fn, fetch_args, rho, 
                   VARIANT_FAST_SUB /* implies QUERY_UNSHARED_SUBSET */);
@@ -2126,10 +2137,18 @@ static SEXP attribute_noinline Rf_set_subassign_general
           && (fn = FINDFUN(assgnfcn,rho), 
               TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
         R_fast_sub_var = s[1].value;
+        R_fast_sub_var_grad = s[1].grad;
         R_fast_sub_replacement = rhs;
+        R_fast_sub_replacement_grad = rhs_grad;
         PROTECT3 (R_fast_sub_replacement, R_fast_sub_var, fn);
+        PROTECT2 (R_fast_sub_replacement_grad, R_fast_sub_var_grad);
         newval = CALL_PRIMFUN (call, fn, s[0].store_args, rho, 
                                VARIANT_FAST_SUB);
+        if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+            newgrad = R_gradient;
+            R_variant_result = 0;
+        }
+        UNPROTECT(2);
         e = R_NilValue;
     }
     else {
@@ -4666,7 +4685,9 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
         value = R_fast_sub_replacement; /* may be on scalar stack */
+        value_grad = R_fast_sub_replacement_grad;
         into = R_fast_sub_var;
+        into_grad = R_fast_sub_var_grad;
         what = CAR(args);
         if (args == R_NilValue || CDR(args) != R_NilValue)
             errorcall (call, _("%d arguments passed to '%s' which requires %d"),
@@ -4699,6 +4720,15 @@ static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     if (VARIANT_KIND(variant) == VARIANT_FAST_SUB) {
         if (name == R_NilValue) name = install_translated(schar);
+#if 0
+if (into_grad != R_NilValue || value_grad != R_NilValue) {
+REprintf("---------\n");
+R_inspect(into_grad);
+REprintf(".........\n");
+R_inspect(value_grad);
+REprintf("=========\n");
+}
+#endif
         return R_subassign3_dflt (call, into, name, value, 
                                   into_grad, value_grad);
     }
