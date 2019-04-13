@@ -4561,7 +4561,7 @@ static void SubAssignArgs(SEXP *subs, SEXP *y, SEXP *y_grad, SEXP call)
         *subs = R_NilValue;
         *y = CAR(args);
         if (HAS_GRADIENT_IN_CELL(args))
-            *y_grad - GRADIENT_IN_CELL(args);
+            *y_grad = GRADIENT_IN_CELL(args);
     }
     else {
         while (CDDR(args) != R_NilValue)
