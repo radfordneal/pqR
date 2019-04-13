@@ -1876,9 +1876,6 @@ REprintf("...**\n");
     if (depth == 1) {
         SEXP lhsprom, fn, e;
         if (maybe_fast && !isObject(varval)
-              && (rhs_grad == R_NilValue && var_grad == R_NilValue
-                   || assgnfcn == R_DollarAssignSymbol 
-                   || assgnfcn == R_SubSubAssignSymbol)
               && CADDR(lhs) != R_DotsSymbol
               && (fn = FINDFUN(assgnfcn,rho), 
                   TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
@@ -4454,7 +4451,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP sv_scalar_stack = R_scalar_stack;
 
-    SEXP ans, r, x, sb1, sb2, subs, y;
+    SEXP ans, r, x, x_grad, sb1, sb2, subs, y, y_grad;
     int argsevald = 0;
     int64_t seq = 0;
 
@@ -4468,7 +4465,9 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
            as a range rather than a vector.  */
 
         y = R_fast_sub_replacement;  /* may be on scalar stack */
+        y_grad = R_fast_sub_replacement_grad;
         x = R_fast_sub_var;
+        x_grad = R_fast_sub_var_grad;
         sb1 = CAR(args);
         subs = CDR(args);
 
@@ -4484,7 +4483,8 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
                 /* Do the very simplest cases here. */
 
-                if (isVectorAtomic(x) && TYPEOF(x) == TYPE_ETC(y)) {
+                if (isVectorAtomic(x) && TYPEOF(x) == TYPE_ETC(y)
+                      && x_grad == R_NilValue && y_grad == R_NilValue) {
                     R_len_t len = LENGTH(x);
                     R_len_t ix = 0;
                     if (TYPE_ETC(sb1) == INTSXP && *INTEGER(sb1) >= 1
@@ -4556,7 +4556,9 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
 
     y = R_NoObject;  /* found later after other arguments */
+    y_grad = R_NilValue;
     x = CAR(args);   /* args are (x, indexes..., y) */
+    x_grad = R_NilValue;
     sb1 = R_NoObject;
     sb2 = R_NoObject;
     subs = CDR(args);
@@ -4608,8 +4610,8 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* ... path that bypasses DispatchOrEval ... */
 
   dflt_seq:
-    r = do_subassign_dflt_seq (call, x, R_NilValue, sb1, sb2, subs, rho, 
-                               y, R_NilValue, seq);
+    r = do_subassign_dflt_seq (call, x, x_grad, sb1, sb2, subs, rho, 
+                               y, y_grad, seq);
 
   ret:
     R_scalar_stack = sv_scalar_stack;

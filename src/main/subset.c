@@ -3431,7 +3431,7 @@ static SEXP VectorAssignSeq (SEXP call,
             copy_elements_recycled (x, start-1, y, n);
             if (x_grad != R_NilValue || y_grad != R_NilValue)
                res_grad = subassign_range_numeric_gradient 
-                             (x_grad, y_grad, start-1, end-1, n);
+                             (x_grad, y_grad, start-1, end-1, nx);
         }
         else if (isVectorAtomic(y)) {
             copy_elements_coerced (x, start-1, 1, y, 0, 1, ny);
@@ -3439,7 +3439,7 @@ static SEXP VectorAssignSeq (SEXP call,
                 Rf_recycled_copy (x, start-1, ny, n);
             if (x_grad != R_NilValue)
                res_grad = subassign_range_numeric_gradient 
-                             (x_grad, R_NilValue, start-1, end-1, n);
+                             (x_grad, R_NilValue, start-1, end-1, nx);
         }
         else
             goto warn;
@@ -3465,7 +3465,7 @@ static SEXP VectorAssignSeq (SEXP call,
         }
         if (x_grad != R_NilValue || y_grad != R_NilValue)
             res_grad = subassign_range_list_gradient 
-                         (x_grad, y_grad, start-1, end-1, n);
+                         (x_grad, y_grad, start-1, end-1, nx);
     }
     else if (isVectorList(x) && y == R_NilValue) {
 	x = DeleteListElementsSeq (x, x_grad, start, end);
