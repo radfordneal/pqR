@@ -4580,7 +4580,7 @@ static void SubAssignArgs(SEXP *subs, SEXP *y, SEXP *y_grad, SEXP call)
 SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     return do_subassign_dflt_seq (call, CAR(args), R_NilValue,
-        R_NoObject, R_NoObject, CDR(args), rho, R_NoObject, 0);
+        R_NoObject, R_NoObject, CDR(args), rho, R_NoObject, R_NilValue, 0);
 }
 
 /* The last "seq" argument below is non-zero if the first subscript is a 
@@ -4588,7 +4588,8 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x, SEXP x_grad,
                                              SEXP sb1, SEXP sb2, SEXP subs,
-                                             SEXP rho, SEXP y, int64_t seq)
+                                             SEXP rho, SEXP y, SEXP y_grad,
+                                             int64_t seq)
 {
     R_Visible = TRUE;
 
@@ -4599,7 +4600,8 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x, SEXP x_grad,
 
     /* Do simple cases quickly. */
 
-    if (!seq && sb1 != R_NoObject && subs == R_NilValue && x_grad == R_NilValue
+    if (!seq && sb1 != R_NoObject && subs == R_NilValue 
+             && x_grad == R_NilValue && y_grad == R_NilValue
              && isVector(x) && !IS_S4_OBJECT(x) && !NAMEDCNT_GT_1(x)
              && y != R_NoObject 
              && (TYPEOF(y) == TYPEOF(x) 
@@ -4667,8 +4669,6 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x, SEXP x_grad,
             RETURN_SEXP_INSIDE_PROTECT(x);
         }
     }
-
-    SEXP y_grad = R_NilValue;
 
     if (y == R_NoObject)
         SubAssignArgs (&subs, &y, &y_grad, call);
@@ -4775,13 +4775,14 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x, SEXP x_grad,
 SEXP attribute_hidden do_subassign2_dflt         /* called from elsewhere too */
                         (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    return do_subassign2_dflt_int (call, CAR(args), R_NoObject, R_NoObject, 
-                                   CDR(args), rho, R_NoObject, R_NilValue);
+    return do_subassign2_dflt_int 
+      (call, CAR(args), R_NoObject, R_NoObject, 
+       CDR(args), rho, R_NoObject, R_NilValue, R_NilValue);
 }
 
 /* Sets R_Visible to TRUE. */
 SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x, 
-      SEXP sb1, SEXP sb2, SEXP subs, SEXP rho, SEXP y, SEXP x_grad)
+      SEXP sb1, SEXP sb2, SEXP subs, SEXP rho, SEXP y, SEXP x_grad, SEXP y_grad)
 {
     SEXP dims, newname, xup;
     int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch;
@@ -4794,7 +4795,6 @@ SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x,
     ALSO_PROTECT5 (x, sb1, sb2, subs, y);
 
     SEXP xOrig = R_NilValue;
-    SEXP y_grad = R_NilValue;
     SEXP res_grad = R_NilValue;
 
     if (y == R_NoObject)

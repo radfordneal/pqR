@@ -1877,7 +1877,8 @@ REprintf("...**\n");
         SEXP lhsprom, fn, e;
         if (maybe_fast && !isObject(varval)
               && (rhs_grad == R_NilValue && var_grad == R_NilValue
-                   || assgnfcn == R_DollarAssignSymbol)
+                   || assgnfcn == R_DollarAssignSymbol 
+                   || assgnfcn == R_SubSubAssignSymbol)
               && CADDR(lhs) != R_DotsSymbol
               && (fn = FINDFUN(assgnfcn,rho), 
                   TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {
@@ -4602,12 +4603,13 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     return do_subassign_dflt_seq
        (call, CAR(ans), 
         HAS_GRADIENT_IN_CELL(ans) ? GRADIENT_IN_CELL(ans) : R_NilValue, 
-        R_NoObject, R_NoObject, CDR(ans), rho, R_NoObject, 0);
+        R_NoObject, R_NoObject, CDR(ans), rho, R_NoObject, R_NilValue, 0);
 
     /* ... path that bypasses DispatchOrEval ... */
 
   dflt_seq:
-    r = do_subassign_dflt_seq(call, x, R_NilValue, sb1, sb2, subs, rho, y, seq);
+    r = do_subassign_dflt_seq (call, x, R_NilValue, sb1, sb2, subs, rho, 
+                               y, R_NilValue, seq);
 
   ret:
     R_scalar_stack = sv_scalar_stack;
@@ -4620,7 +4622,9 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         SEXP scalar_stack_sv = R_scalar_stack;
         SEXP y = R_fast_sub_replacement; /* may be on the scalar stack */
+        SEXP y_grad = R_fast_sub_replacement_grad;
         SEXP x = R_fast_sub_var;
+        SEXP x_grad = R_fast_sub_var_grad;
         SEXP sb1, sb2, subs;
 
         sb1 = EVALV (CAR(args), rho, VARIANT_SCALAR_STACK_OK | 
@@ -4654,8 +4658,8 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
         UNPROTECT(1); /* sb1 */
 
-        SEXP r = do_subassign2_dflt_int
-                  (call, x, sb1, sb2, subs, rho, y, R_NilValue);
+        SEXP r = do_subassign2_dflt_int 
+                   (call, x, sb1, sb2, subs, rho, y, x_grad, y_grad);
         R_scalar_stack = scalar_stack_sv;
         return r;
     }
@@ -4671,7 +4675,8 @@ static SEXP do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     return do_subassign2_dflt_int 
             (call, CAR(ans), R_NoObject, R_NoObject, CDR(ans), rho, R_NoObject,
-             HAS_GRADIENT_IN_CELL(ans) ? GRADIENT_IN_CELL(ans) : R_NilValue);
+             HAS_GRADIENT_IN_CELL(ans) ? GRADIENT_IN_CELL(ans) : R_NilValue,
+             R_NilValue);
 }
 
 static SEXP do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
