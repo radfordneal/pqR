@@ -3217,6 +3217,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     else
         UNPROTECT(5);
 
+    R_Visible = TRUE;
     return result;
 }
 
@@ -3375,6 +3376,7 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
     UNPROTECT(2);  /* newenv, result */
 
     R_variant_result = vr;
+    R_Visible = TRUE;
     return result;
 }
 
