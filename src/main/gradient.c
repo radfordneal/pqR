@@ -2728,18 +2728,24 @@ REprintf("==\n");
 attribute_hidden SEXP add_scaled_gradients (SEXP base, SEXP extra, 
                                             double factor, R_len_t n)
 {
+#if 0
+REprintf("add_scaled_gradients: %d %d - %f %d %d %d\n",
+TYPEOF(base),TYPEOF(extra), factor, n,
+LENGTH(base),LENGTH(extra));
+#endif
+
     RECURSIVE_GRADIENT_APPLY2 (add_scaled_gradients, base, extra, factor, n);
 
     PROTECT2(base,extra);
-    R_len_t glen, gvars, elen, blen, en, bn;
+    R_len_t elen, blen, en, bn;
     R_len_t i, j, k, l;
-    SEXP r;
+
+    R_len_t gvars = GRADIENT_WRT_LEN (base != R_NilValue ? base : extra);
+    SEXP r = alloc_numeric_gradient (gvars, n);
+    R_len_t glen = n * gvars;
 
     if (base == R_NilValue) {
         if (TYPEOF(extra) != REALSXP) abort();
-        gvars = GRADIENT_WRT_LEN(extra);
-        r = alloc_numeric_gradient (gvars, n);
-        glen = n * gvars;
         elen = LENGTH(extra);
         en = elen / gvars;
         if (en * gvars != elen) abort();
@@ -2752,9 +2758,6 @@ attribute_hidden SEXP add_scaled_gradients (SEXP base, SEXP extra,
     }
     else if (extra == R_NilValue) {
         if (TYPEOF(base) != REALSXP) abort();
-        gvars = GRADIENT_WRT_LEN(base);
-        r = alloc_numeric_gradient (gvars, n);
-        glen = n * gvars;
         blen = LENGTH(base);
         bn = blen / gvars;
         if (bn * gvars != blen) abort();
@@ -2768,10 +2771,7 @@ attribute_hidden SEXP add_scaled_gradients (SEXP base, SEXP extra,
     else {
         if (TYPEOF(base) != REALSXP) abort();
         if (TYPEOF(extra) != REALSXP) abort();
-        gvars = GRADIENT_WRT_LEN(base);
         if (GRADIENT_WRT_LEN(extra) != gvars) abort();
-        r = alloc_numeric_gradient (gvars, n);
-        glen = n * gvars;
         blen = LENGTH(base);
         bn = blen / gvars;
         if (bn * gvars != blen) abort();
@@ -2807,24 +2807,27 @@ attribute_hidden SEXP add_scaled_gradients_vec (SEXP base, SEXP extra,
 {
     RECURSIVE_GRADIENT_APPLY2 (add_scaled_gradients_vec, base, extra, 
                                factors, n);
-
 #if 0
-REprintf("as: %d %d %d - %d %d %d %d\n",
+REprintf("add_scaled_gradients_vec: %d %d %d - %d %d %d %d\n",
 TYPEOF(base),TYPEOF(extra),TYPEOF(factors), n,
 LENGTH(base),LENGTH(extra),LENGTH(factors));
 #endif
 
-    PROTECT2(base,extra);
-
     if (TYPEOF(factors) != REALSXP) abort();
 
-    R_len_t flen = LENGTH(factors);
     R_len_t i, j, k, l;
     R_len_t en, bn;
 
     R_len_t gvars = GRADIENT_WRT_LEN (base != R_NilValue ? base : extra);
+
+    if (extra == R_NilValue && LENGTH(base) == (double)gvars*n)
+        return base;
+
+    PROTECT2(base,extra);
+
     SEXP r = alloc_numeric_gradient (gvars, n);
     R_len_t glen = n * gvars;
+    R_len_t flen = LENGTH(factors);
 
     if (base == R_NilValue) {
         if (TYPEOF(extra) != REALSXP) abort();
