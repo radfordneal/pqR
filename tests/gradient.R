@@ -1827,22 +1827,22 @@ pr <- function (...) {
 
 pr("start")
 track gradient (a=rep(3,n)) {
-  pr("A"); x <- a+2
-  pr("B"); x <- a-2
-  pr("C"); x <- a*2
-  pr("D"); x <- a/2
-  pr("E"); x <- a^2
+  pr("A"); x <- a+2.1
+  pr("B"); x <- a-2.1
+  pr("C"); x <- a*2.1
+  pr("D"); x <- a/2.1
+  pr("E"); x <- a^2.1
   NULL
 }
 pr("end")
 
 pr("start")
 track gradient (b=rep(4,n)) {
-  pr("A"); x <- 2+b
-  pr("B"); x <- 2-b
-  pr("C"); x <- 2*b
-  pr("D"); x <- 2/b
-  pr("E"); x <- 2^b
+  pr("A"); x <- 2.1+b
+  pr("B"); x <- 2.1-b
+  pr("C"); x <- 2.1*b
+  pr("D"); x <- 2.1/b
+  pr("E"); x <- 2.1^b
   NULL
 }
 pr("end")
@@ -1860,7 +1860,7 @@ pr("end")
 
 pr("start")
 r <- back gradient (a=rep(3,n)) {
-  pr("A"); b <- a^2
+  pr("A"); b <- a^2.1
   pr("B"); b[2] <- 7
   c <- b
   pr("C"); b[3] <- 8
@@ -1870,7 +1870,7 @@ pr("end")
 
 pr("start")
 r <- with gradient (a=rep(3,n)) {
-  pr("A"); b <- a^2
+  pr("A"); b <- a^2.1
   pr("B"); b[2] <- 7
   c <- b
   pr("C"); b[3] <- 8
