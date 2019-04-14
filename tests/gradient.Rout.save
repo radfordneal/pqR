@@ -12955,3 +12955,55 @@ attr(,"gradient")
 [2,] 274.691775    0    0 -0.9922253
 > 
 > 
+> # Test duplication when necessary and not when not.
+> 
+> n <- 100
+> pr <- function (...) { 
++   Rprofmemt(NULL)
++   cat(...,"\n")
++   Rprofmemt(nelem=n,bytes=FALSE)
++ }
+> 
+> pr("start")
+start 
+> r <- back gradient (a=rep(3,n)) {
++   pr("A"); b <- a^2
++   pr("B"); b[2] <- 7
++   c <- b
++   pr("C"); b[3] <- 8
++   pr("D"); b
++ }
+RPROFMEM: (double 100):
+A 
+RPROFMEM: (double 100):
+B 
+C 
+RPROFMEM: (double 100):
+D 
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> r <- with gradient (a=rep(3,n)) {
++   pr("A"); b <- a^2
++   pr("B"); b[2] <- 7
++   c <- b
++   pr("C"); b[3] <- 8
++   pr("D"); b
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+B 
+C 
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+D 
+RPROFMEM: (double 10000):
+> pr("end")
+end 
+> 

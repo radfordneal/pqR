@@ -1815,3 +1815,32 @@ with gradient (a=c(4.1,2.7,3.1,5.2)) {
   }
 }
 
+
+# Test duplication when necessary and not when not.
+
+n <- 100
+pr <- function (...) { 
+  Rprofmemt(NULL)
+  cat(...,"\n")
+  Rprofmemt(nelem=n,bytes=FALSE)
+}
+
+pr("start")
+r <- back gradient (a=rep(3,n)) {
+  pr("A"); b <- a^2
+  pr("B"); b[2] <- 7
+  c <- b
+  pr("C"); b[3] <- 8
+  pr("D"); b
+}
+pr("end")
+
+pr("start")
+r <- with gradient (a=rep(3,n)) {
+  pr("A"); b <- a^2
+  pr("B"); b[2] <- 7
+  c <- b
+  pr("C"); b[3] <- 8
+  pr("D"); b
+}
+pr("end")
