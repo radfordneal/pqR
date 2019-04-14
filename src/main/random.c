@@ -177,7 +177,7 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
             PROTECT(gv);
             for (R_len_t i = 0; i < n; i++)
                 REAL(gv)[i] = Dcall (REAL(x)[i], REAL(a)[i]);
-            R_gradient = copy_scaled_gradients_vec (ga, gv);
+            R_gradient = copy_scaled_gradients_vec (ga, gv, n);
             R_variant_result = VARIANT_GRADIENT_FLAG;
             GRADIENT_TRACE(call);
             UNPROTECT(1);
@@ -400,10 +400,10 @@ static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
             }
             R_gradient = R_NilValue;
             if (g1 != R_NilValue)
-                R_gradient = copy_scaled_gradients_vec (g1, gv1);
+                R_gradient = copy_scaled_gradients_vec (g1, gv1, n);
             if (g2 != R_NilValue) {
                 if (R_gradient == R_NilValue)
-                    R_gradient = copy_scaled_gradients_vec (g2, gv2);
+                    R_gradient = copy_scaled_gradients_vec (g2, gv2, n);
                 else
                     R_gradient = add_scaled_gradients_vec (R_gradient, g2, gv2);
             }

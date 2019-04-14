@@ -1517,19 +1517,18 @@ attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
     PROTECT(grad);
 
     if (TYPEOF(grad) != REALSXP) abort();
-    R_len_t gn, gvars, glen;
     R_len_t i, j, k;
     SEXP r;
 
-    gvars = GRADIENT_WRT_LEN(grad);
-    gn = LENGTH(grad) / gvars;
+    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t gn = LENGTH(grad) / gvars;
     if (LENGTH(grad) != gvars * gn) abort();
 
     if (n==1 && gvars == 1)
         r = ScalarRealMaybeConst (*REAL(grad) * factor);
     else {
         r = alloc_numeric_gradient (gvars, n);
-        glen = n * gvars;
+        R_len_t glen = n * gvars;
         k = 0;
         for (i = 0; i < glen; i += n) {
             for (j = 0; j < n; j++) {
@@ -1545,16 +1544,18 @@ attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
 
 
 /* Copy scaled gradients from those in grad with vector of scaling factors.
-   If grad is shorter, it is recycled. 
+   Length of the value is given by n; if grad or factors is shorter, it is 
+   recycled. 
 
    Caller must protect factors, but not grad. */
 
-attribute_hidden SEXP copy_scaled_gradients_vec (SEXP grad, SEXP factors)
+attribute_hidden SEXP copy_scaled_gradients_vec  
+    (SEXP grad, SEXP factors, R_len_t n)
 {
-    RECURSIVE_GRADIENT_APPLY (copy_scaled_gradients_vec, grad, factors);
+    RECURSIVE_GRADIENT_APPLY (copy_scaled_gradients_vec, grad, factors, n);
 
 #if 0
-REprintf("cs: %d %d - %d %d - %d\n",TYPEOF(grad),TYPEOF(factors),
+REprintf("cs: %d %d %d - %d %d - %d\n",TYPEOF(grad),TYPEOF(factors),n,
 LENGTH(grad),LENGTH(factors),GRADIENT_WRT_LEN(grad));
 #endif
 
@@ -1563,20 +1564,20 @@ LENGTH(grad),LENGTH(factors),GRADIENT_WRT_LEN(grad));
     if (TYPEOF(factors) != REALSXP) abort();
     if (TYPEOF(grad) != REALSXP) abort();
 
-    R_len_t flen = LENGTH(factors);
-    R_len_t gn, gvars, glen;
     R_len_t i, j, k;
     SEXP r;
 
-    gvars = GRADIENT_WRT_LEN(grad);
-    gn = LENGTH(grad) / gvars;
+    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t gn = LENGTH(grad) / gvars;
     if (LENGTH(grad) != gvars * gn) abort();
-    r = alloc_numeric_gradient (gvars, flen);
-    glen = flen * gvars;
+
+    r = alloc_numeric_gradient (gvars, n);
+    R_len_t glen = n * gvars;
+    R_len_t flen = LENGTH(factors);
     k = 0;
-    for (i = 0; i < glen; i += flen) {
-        for (j = 0; j < flen; j++) {
-            REAL(r)[i+j] = REAL(grad)[k + j%gn] * REAL(factors)[j];
+    for (i = 0; i < glen; i += n) {
+        for (j = 0; j < n; j++) {
+            REAL(r)[i+j] = REAL(grad)[k + j%gn] * REAL(factors)[j%flen];
         }
         k += gn;
     }

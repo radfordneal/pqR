@@ -1625,7 +1625,7 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                     else if (LENGTH(x) != n)
                         for (i = 0; i < n; i++) REAL(f)[i] = REAL(x)[i%nx];
                     res_grad = copy_scaled_gradients_vec (grad2, 
-                                TYPEOF(x) == REALSXP && LENGTH(x) == n ? x : f);
+                           TYPEOF(x) == REALSXP && LENGTH(x) == n ? x : f, n);
                 }
                 else if (grad2 == R_NilValue) {
                     if (TYPEOF(y) != REALSXP)
@@ -1633,7 +1633,7 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                     else if (LENGTH(y) != n)
                         for (i = 0; i < n; i++) REAL(f)[i] = REAL(y)[i%ny];
                     res_grad = copy_scaled_gradients_vec (grad1, 
-                                TYPEOF(y) == REALSXP && LENGTH(y) == n ? y : f);
+                           TYPEOF(y) == REALSXP && LENGTH(y) == n ? y : f, n);
                 }
                 else {
                     if (TYPEOF(y) != REALSXP)
@@ -1641,7 +1641,7 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                     else if (LENGTH(y) != n)
                         for (i = 0; i < n; i++) REAL(f)[i] = REAL(y)[i%ny];
                     res_grad = copy_scaled_gradients_vec (grad1, 
-                                TYPEOF(y) == REALSXP && LENGTH(y) == n ? y : f);
+                           TYPEOF(y) == REALSXP && LENGTH(y) == n ? y : f, n);
                     if (TYPEOF(x) != REALSXP)
                         for (i = 0; i < n; i++) REAL(f)[i] = INTEGER(x)[i%nx];
                     else if (LENGTH(x) != n)
@@ -1661,7 +1661,7 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                                                          : INTEGER(y)[i%ny];
                         REAL(f)[i] = -tx / (ty*ty);
                     }
-                    res_grad = copy_scaled_gradients_vec (grad2, f);
+                    res_grad = copy_scaled_gradients_vec (grad2, f, n);
                 }
                 else if (grad2 == R_NilValue) {
                     for (i = 0; i < n; i++) {
@@ -1669,7 +1669,7 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                                                          : INTEGER(y)[i%ny];
                         REAL(f)[i] = 1 / ty;
                     }
-                    res_grad = copy_scaled_gradients_vec (grad1, f);
+                    res_grad = copy_scaled_gradients_vec (grad1, f, n);
                 }
                 else {
                     for (i = 0; i < n; i++) {
@@ -1677,7 +1677,7 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                                                          : INTEGER(y)[i%ny];
                         REAL(f)[i] = 1 / REAL(y)[i%ny];
                     }
-                    res_grad = copy_scaled_gradients_vec (grad1, f);
+                    res_grad = copy_scaled_gradients_vec (grad1, f, n);
                     for (i = 0; i < n; i++) {
                         double tx = TYPEOF(x) == REALSXP ? REAL(x)[i%nx]
                                                          : INTEGER(x)[i%nx];
@@ -1700,7 +1700,7 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                                                          : INTEGER(y)[i%ny];
                         REAL(f)[i] = REAL(ans)[i] * ty / tx;
                     }
-                    res_grad = copy_scaled_gradients_vec (grad1, f);
+                    res_grad = copy_scaled_gradients_vec (grad1, f, n);
                 }
                 if (grad2 != R_NilValue) {
                     for (i = 0; i < n; i++) {
@@ -2433,7 +2433,7 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
             for (R_len_t i = 0; i < n; i++) {
                 REAL(gr)[i] = df (REAL(sa)[i], REAL(sy)[i]);
             }
-            res_grad = copy_scaled_gradients_vec (grad, gr);
+            res_grad = copy_scaled_gradients_vec (grad, gr, n);
             UNPROTECT(1);
         }
 
@@ -2638,7 +2638,7 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             for (R_len_t i = 0; i < n; i++) {
                 REAL(gr)[i] = sign (REAL(x)[i]);
             }
-            res_grad = copy_scaled_gradients_vec (grad, gr);
+            res_grad = copy_scaled_gradients_vec (grad, gr, n);
             UNPROTECT(1);
         }
 
@@ -3157,11 +3157,11 @@ SEXP do_math2 (SEXP call, SEXP op, SEXP args, SEXP env)
             }
 
             if (g1 != R_NilValue) {
-                res_grad = copy_scaled_gradients_vec (g1, gr1);
+                res_grad = copy_scaled_gradients_vec (g1, gr1, n);
             }
             if (g2 != R_NilValue) {
                 res_grad = res_grad == R_NilValue
-                            ? copy_scaled_gradients_vec (g2, gr2)
+                            ? copy_scaled_gradients_vec (g2, gr2, n)
                             : add_scaled_gradients_vec (res_grad, g2, gr2);
             }
 
@@ -4255,16 +4255,16 @@ SEXP do_math3 (SEXP call, SEXP op, SEXP args, SEXP env)
             }
 
             if (g1 != R_NilValue) {
-                res_grad = copy_scaled_gradients_vec (g1, gr1);
+                res_grad = copy_scaled_gradients_vec (g1, gr1, n);
             }
             if (g2 != R_NilValue) {
                 res_grad = res_grad == R_NilValue
-                            ? copy_scaled_gradients_vec (g2, gr2)
+                            ? copy_scaled_gradients_vec (g2, gr2, n)
                             : add_scaled_gradients_vec (res_grad, g2, gr2);
             }
             if (g3 != R_NilValue) {
                 res_grad = res_grad == R_NilValue
-                            ? copy_scaled_gradients_vec (g3, gr3)
+                            ? copy_scaled_gradients_vec (g3, gr3, n)
                             : add_scaled_gradients_vec (res_grad, g3, gr3);
             }
 

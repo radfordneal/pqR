@@ -1826,6 +1826,39 @@ pr <- function (...) {
 }
 
 pr("start")
+track gradient (a=rep(3,n)) {
+  pr("A"); x <- a+2
+  pr("B"); x <- a-2
+  pr("C"); x <- a*2
+  pr("D"); x <- a/2
+  pr("E"); x <- a^2
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (b=rep(4,n)) {
+  pr("A"); x <- 2+b
+  pr("B"); x <- 2-b
+  pr("C"); x <- 2*b
+  pr("D"); x <- 2/b
+  pr("E"); x <- 2^b
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (a=rep(3,n),b=rep(4,n)) {
+  pr("A"); x <- a+b
+  pr("B"); x <- a-b
+  pr("C"); x <- a*b
+  pr("D"); x <- a/b
+  pr("E"); x <- a^b
+  NULL
+}
+pr("end")
+
+pr("start")
 r <- back gradient (a=rep(3,n)) {
   pr("A"); b <- a^2
   pr("B"); b[2] <- 7

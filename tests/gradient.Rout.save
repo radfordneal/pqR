@@ -12966,6 +12966,118 @@ attr(,"gradient")
 > 
 > pr("start")
 start 
+> track gradient (a=rep(3,n)) {
++   pr("A"); x <- a+2
++   pr("B"); x <- a-2
++   pr("C"); x <- a*2
++   pr("D"); x <- a/2
++   pr("E"); x <- a^2
++   NULL
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+B 
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+C 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+D 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+E 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (b=rep(4,n)) {
++   pr("A"); x <- 2+b
++   pr("B"); x <- 2-b
++   pr("C"); x <- 2*b
++   pr("D"); x <- 2/b
++   pr("E"); x <- 2^b
++   NULL
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+B 
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+C 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+D 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+E 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (a=rep(3,n),b=rep(4,n)) {
++   pr("A"); x <- a+b
++   pr("B"); x <- a-b
++   pr("C"); x <- a*b
++   pr("D"); x <- a/b
++   pr("E"); x <- a^b
++   NULL
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+B 
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+C 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+D 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+E 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
 > r <- back gradient (a=rep(3,n)) {
 +   pr("A"); b <- a^2
 +   pr("B"); b[2] <- 7
