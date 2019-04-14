@@ -3170,6 +3170,9 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXP result_grad = need_grad ? get_gradient (newenv) : R_NilValue;
     PROTECT(result_grad);
 
+    cleanup_gradient_environment(newenv);
+    dec_gradient_namedcnt(result_grad);
+
     endcontext (&cntx);
 
     /* For 'with gradient', attach gradient attribute. */
@@ -3209,8 +3212,6 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         }
 
     }
-
-    cleanup_gradient_environment(newenv);
 
     if (need_grad)
         UNPROTECT(5+2*nv);
