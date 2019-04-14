@@ -1546,9 +1546,9 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
             switch (opcode) {
             case PLUSOP: 
                 if (grad1 == R_NilValue)
-                    res_grad = copy_scaled_gradients (grad2, 1.0, 1);
+                    res_grad = grad2;
                 else if (grad2 == R_NilValue)
-                    res_grad = copy_scaled_gradients (grad1, 1.0, 1);
+                    res_grad = grad1;
                 else
                     res_grad = add_scaled_gradients (grad1, grad2, 1.0, 1);
                 break;
@@ -1556,7 +1556,7 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                 if (grad1 == R_NilValue)
                     res_grad = copy_scaled_gradients (grad2, -1.0, 1);
                 else if (grad2 == R_NilValue)
-                    res_grad = copy_scaled_gradients (grad1, 1.0, 1);
+                    res_grad = grad1;
                 else
                     res_grad = add_scaled_gradients (grad1, grad2, -1.0, 1);
                 break;
@@ -1603,9 +1603,9 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
             switch (opcode) {
             case PLUSOP: 
                 if (grad1 == R_NilValue)
-                    res_grad = copy_scaled_gradients (grad2, 1.0, n);
+                    res_grad = grad2;
                 else if (grad2 == R_NilValue)
-                    res_grad = copy_scaled_gradients (grad1, 1.0, n);
+                    res_grad = grad1;
                 else
                     res_grad = add_scaled_gradients (grad1, grad2, 1.0, n);
                 break;
@@ -1613,7 +1613,7 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
                 if (grad1 == R_NilValue)
                     res_grad = copy_scaled_gradients (grad2, -1.0, n);
                 else if (grad2 == R_NilValue)
-                    res_grad = copy_scaled_gradients (grad1, 1.0, n);
+                    res_grad = grad1;
                 else
                     res_grad = add_scaled_gradients (grad1, grad2, -1.0, n);
                 break;
