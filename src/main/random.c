@@ -405,7 +405,8 @@ static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
                 if (R_gradient == R_NilValue)
                     R_gradient = copy_scaled_gradients_vec (g2, gv2, n);
                 else
-                    R_gradient = add_scaled_gradients_vec (R_gradient, g2, gv2);
+                    R_gradient = add_scaled_gradients_vec (R_gradient,
+                                                           g2, gv2, n);
             }
             R_variant_result = VARIANT_GRADIENT_FLAG;
             GRADIENT_TRACE(call);

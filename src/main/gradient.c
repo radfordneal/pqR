@@ -2794,23 +2794,23 @@ attribute_hidden SEXP add_scaled_gradients (SEXP base, SEXP extra,
 
 
 /* Add the product of gradients in extra times elements in factors to
-   the set of gradients in base.  The length of factors indicates the
-   length of the vector this is the gradient for; the GRADIENT_WRT_LEN
-   of base and/or extra indicates the length of the vector that the
-   gradient is with respect to (they must match if neither is R_NilValue).
-   It is possible for base or extra to be short, with elements recycled to the
-   length of factors, and around that, there may be recycling over multiple
-   gradient elements.
+   the set of gradients in base.  The 'n' argument is the length of
+   the vector this is the gradient for; the GRADIENT_WRT_LEN of base
+   and/or extra indicates the length of the vector that the gradient
+   is with respect to.  It is possible for base, extra, or factors to
+   be short, with elements recycled to length n.
 
    Protects its base and extra arguments, but caller must protect factors. */
 
 attribute_hidden SEXP add_scaled_gradients_vec (SEXP base, SEXP extra, 
-                                                SEXP factors)
+                                                SEXP factors, R_len_t n)
 {
-    RECURSIVE_GRADIENT_APPLY2 (add_scaled_gradients_vec, base, extra, factors);
+    RECURSIVE_GRADIENT_APPLY2 (add_scaled_gradients_vec, base, extra, 
+                               factors, n);
 
 #if 0
-REprintf("as: %d %d %d - %d %d %d\n",TYPEOF(base),TYPEOF(extra),TYPEOF(factors),
+REprintf("as: %d %d %d - %d %d %d %d\n",
+TYPEOF(base),TYPEOF(extra),TYPEOF(factors), n,
 LENGTH(base),LENGTH(extra),LENGTH(factors));
 #endif
 
@@ -2819,21 +2819,21 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
     if (TYPEOF(factors) != REALSXP) abort();
 
     R_len_t flen = LENGTH(factors);
-    R_len_t en, bn, gvars, glen;
     R_len_t i, j, k, l;
-    SEXP r;
+    R_len_t en, bn;
+
+    R_len_t gvars = GRADIENT_WRT_LEN (base != R_NilValue ? base : extra);
+    SEXP r = alloc_numeric_gradient (gvars, n);
+    R_len_t glen = n * gvars;
 
     if (base == R_NilValue) {
         if (TYPEOF(extra) != REALSXP) abort();
-        gvars = GRADIENT_WRT_LEN(extra);
         en = LENGTH(extra) / gvars;
         if (LENGTH(extra) != gvars * en) abort();
-        r = alloc_numeric_gradient (gvars, flen);
-        glen = flen * gvars;
         k = 0;
-        for (i = 0; i < glen; i += flen) {
-            for (j = 0; j < flen; j++) {
-                REAL(r)[i+j] = REAL(extra)[k + j%en] * REAL(factors)[j];
+        for (i = 0; i < glen; i += n) {
+            for (j = 0; j < n; j++) {
+                REAL(r)[i+j] = REAL(extra)[k + j%en] * REAL(factors)[j%flen];
             }
             k += en;
         }
@@ -2841,14 +2841,11 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
 
     else if (extra == R_NilValue) {
         if (TYPEOF(base) != REALSXP) abort();
-        gvars = GRADIENT_WRT_LEN(base);
         bn = LENGTH(base) / gvars;
         if (LENGTH(base) != gvars * bn) abort();
-        r = alloc_numeric_gradient (gvars, flen);
-        glen = flen * gvars;
         l = 0;
-        for (i = 0; i < glen; i += flen) {
-            for (j = 0; j < flen; j++) {
+        for (i = 0; i < glen; i += n) {
+            for (j = 0; j < n; j++) {
                 REAL(r)[i+j] = REAL(base)[l + j%bn];
             }
             l += bn;
@@ -2858,19 +2855,16 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
     else {
         if (TYPEOF(base) != REALSXP) abort();
         if (TYPEOF(extra) != REALSXP) abort();
-        gvars = GRADIENT_WRT_LEN(extra);
-        if (GRADIENT_WRT_LEN(base) != gvars) abort();
+        if (GRADIENT_WRT_LEN(extra) != gvars) abort();
         bn = LENGTH(base) / gvars;
         if (LENGTH(base) != gvars * bn) abort();
         en = LENGTH(extra) / gvars;
         if (LENGTH(extra) != gvars * en) abort();
-        r = alloc_numeric_gradient (gvars, flen);
-        glen = flen * gvars;
         k = l = 0;
-        for (i = 0; i < glen; i += flen) {
-            for (j = 0; j < flen; j++) {
+        for (i = 0; i < glen; i += n) {
+            for (j = 0; j < n; j++) {
                 REAL(r)[i+j] = REAL(base)[l + j%bn] 
-                                + REAL(extra)[k + j%en] * REAL(factors)[j];
+                                + REAL(extra)[k + j%en] * REAL(factors)[j%flen];
             }
             k += en;
             l += bn;

@@ -1534,7 +1534,7 @@ SEXP copy_scaled_gradients (SEXP, double, R_len_t);
 SEXP copy_scaled_gradients_vec (SEXP, SEXP, R_len_t);
 SEXP create_diag_matrix_gradient (SEXP, R_len_t, R_len_t, R_len_t, R_len_t);
 SEXP add_scaled_gradients (SEXP, SEXP, double, int);
-SEXP add_scaled_gradients_vec (SEXP, SEXP, SEXP);
+SEXP add_scaled_gradients_vec (SEXP, SEXP, SEXP, R_len_t);
 SEXP Rf_allocCharsxp(R_len_t);
 SEXP alloc_or_reuse (SEXP, SEXP, SEXPTYPE, int, int, int);
 SEXP Rf_append(SEXP, SEXP); /* apparently unused now */
