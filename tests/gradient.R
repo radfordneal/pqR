@@ -1848,6 +1848,28 @@ track gradient (b=rep(4,n)) {
 pr("end")
 
 pr("start")
+track gradient (x=7,a=rep(3,n)) {
+  pr("A"); x <- a+x
+  pr("B"); x <- a-x
+  pr("C"); x <- a*x
+  pr("D"); x <- a/x
+  pr("E"); x <- a^x
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (x=7,b=rep(4,n)) {
+  pr("A"); x <- x+b
+  pr("B"); x <- x-b
+  pr("C"); x <- x*b
+  pr("D"); x <- x/b
+  pr("E"); x <- x^b
+  NULL
+}
+pr("end")
+
+pr("start")
 track gradient (a=rep(3,n),b=rep(4,n)) {
   pr("A"); x <- a+b
   pr("B"); x <- a-b
@@ -1867,6 +1889,7 @@ r <- back gradient (a=rep(3,n)) {
   pr("D"); b
 }
 pr("end")
+r[1..5]; attr(r,"gradient")[1..5,1..5]
 
 pr("start")
 r <- with gradient (a=rep(3,n)) {
@@ -1877,3 +1900,52 @@ r <- with gradient (a=rep(3,n)) {
   pr("D"); b
 }
 pr("end")
+r[1..5]; attr(r,"gradient")[1..5,1..5]
+
+pr("start")
+r <- with gradient (a=rep(3,n)) {
+  pr("A"); L <- list(x=2,y=a^2.1)
+  pr("B"); L$y[2] <- 7
+  M <- L
+  pr("C"); L$y[3] <- 8
+  pr("D"); L$x <- a[2]
+  pr("E"); L
+}
+pr("end")
+r$x; r$y[1..5]; attr(r,"gradient")$x[1..5]; attr(r,"gradient")$y[1..5,1..5]
+
+pr("start")
+r <- with gradient (a=rep(3,n)) {
+  pr("A"); L <- list(x=2,y=a^2.1)
+  pr("B"); L[[2]][[2]] <- 7
+  M <- L
+  pr("C"); L[[2]][[3]] <- 8
+  pr("D"); L[[1]] <- a[[2]]
+  pr("E"); L
+}
+pr("end")
+r$x; r$y[1..5]; attr(r,"gradient")$x[1..5]; attr(r,"gradient")$y[1..5,1..5]
+
+pr("start")
+r <- with gradient (a=rep(3,n)) {
+  pr("A"); L <- c(list(x=2,y=a^2.1),rep(list(NULL),n))
+  pr("B"); L$y[2] <- 7
+  M <- L
+  pr("C"); L$y[3] <- 8
+  pr("D"); L$x <- a[2]
+  pr("E"); L
+}
+pr("end")
+r$x; r$y[1..5]; attr(r,"gradient")$x[1..5]; attr(r,"gradient")$y[1..5,1..5]
+
+pr("start")
+r <- with gradient (a=rep(3,n)) {
+  pr("A"); L <- c(list(x=2,y=a^2.1),rep(list(NULL),n))
+  pr("B"); L[[2]][[2]] <- 7
+  M <- L
+  pr("C"); L[[2]][[3]] <- 8
+  pr("D"); L[[1]] <- a[[2]]
+  pr("E"); L
+}
+pr("end")
+r$x; r$y[1..5]; attr(r,"gradient")$x[1..5]; attr(r,"gradient")$y[1..5,1..5]
