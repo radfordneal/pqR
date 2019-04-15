@@ -2736,11 +2736,15 @@ LENGTH(base),LENGTH(extra));
 
     RECURSIVE_GRADIENT_APPLY2 (add_scaled_gradients, base, extra, factor, n);
 
+    R_len_t gvars = GRADIENT_WRT_LEN (base != R_NilValue ? base : extra);
+
+    if (extra == R_NilValue && LENGTH(base) == (double)gvars*n)
+        return base;
+
     PROTECT2(base,extra);
     R_len_t elen, blen, en, bn;
     R_len_t i, j, k, l;
 
-    R_len_t gvars = GRADIENT_WRT_LEN (base != R_NilValue ? base : extra);
     SEXP r = alloc_numeric_gradient (gvars, n);
     R_len_t glen = n * gvars;
 
@@ -2815,15 +2819,14 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
 
     if (TYPEOF(factors) != REALSXP) abort();
 
-    R_len_t i, j, k, l;
-    R_len_t en, bn;
-
     R_len_t gvars = GRADIENT_WRT_LEN (base != R_NilValue ? base : extra);
 
     if (extra == R_NilValue && LENGTH(base) == (double)gvars*n)
         return base;
 
     PROTECT2(base,extra);
+    R_len_t i, j, k, l;
+    R_len_t en, bn;
 
     SEXP r = alloc_numeric_gradient (gvars, n);
     R_len_t glen = n * gvars;
