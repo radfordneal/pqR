@@ -1848,23 +1848,23 @@ track gradient (b=rep(4,n)) {
 pr("end")
 
 pr("start")
-track gradient (x=7,a=rep(3,n)) {
-  pr("A"); x <- a+x
-  pr("B"); x <- a-x
-  pr("C"); x <- a*x
-  pr("D"); x <- a/x
-  pr("E"); x <- a^x
+track gradient (q=7,a=rep(3,n)) {
+  pr("A"); x <- a+q
+  pr("B"); x <- a-q
+  pr("C"); x <- a*q
+  pr("D"); x <- a/q
+  pr("E"); x <- a^q
   NULL
 }
 pr("end")
 
 pr("start")
-track gradient (x=7,b=rep(4,n)) {
-  pr("A"); x <- x+b
-  pr("B"); x <- x-b
-  pr("C"); x <- x*b
-  pr("D"); x <- x/b
-  pr("E"); x <- x^b
+track gradient (q=7,b=rep(4,n)) {
+  pr("A"); x <- q+b
+  pr("B"); x <- q-b
+  pr("C"); x <- q*b
+  pr("D"); x <- q/b
+  pr("E"); x <- q^b
   NULL
 }
 pr("end")

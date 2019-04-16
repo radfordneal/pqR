@@ -13029,12 +13029,12 @@ end
 > 
 > pr("start")
 start 
-> track gradient (x=7,a=rep(3,n)) {
-+   pr("A"); x <- a+x
-+   pr("B"); x <- a-x
-+   pr("C"); x <- a*x
-+   pr("D"); x <- a/x
-+   pr("E"); x <- a^x
+> track gradient (q=7,a=rep(3,n)) {
++   pr("A"); x <- a+q
++   pr("B"); x <- a-q
++   pr("C"); x <- a*q
++   pr("D"); x <- a/q
++   pr("E"); x <- a^q
 +   NULL
 + }
 RPROFMEM: (double 100):
@@ -13044,23 +13044,19 @@ RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 B 
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 C 
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 D 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
-RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 E 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 NULL
@@ -13069,12 +13065,12 @@ end
 > 
 > pr("start")
 start 
-> track gradient (x=7,b=rep(4,n)) {
-+   pr("A"); x <- x+b
-+   pr("B"); x <- x-b
-+   pr("C"); x <- x*b
-+   pr("D"); x <- x/b
-+   pr("E"); x <- x^b
+> track gradient (q=7,b=rep(4,n)) {
++   pr("A"); x <- q+b
++   pr("B"); x <- q-b
++   pr("C"); x <- q*b
++   pr("D"); x <- q/b
++   pr("E"); x <- q^b
 +   NULL
 + }
 RPROFMEM: (double 100):
@@ -13082,26 +13078,23 @@ RPROFMEM: (double 10000):
 A 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 B 
+RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
 C 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
-RPROFMEM: (double 10000):
 D 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
 E 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 NULL
 > pr("end")
@@ -13123,7 +13116,6 @@ RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
 A 
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 B 
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):

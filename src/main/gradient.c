@@ -2723,6 +2723,9 @@ REprintf("==\n");
    (except when R_NilValue).  The length of the result is given by n, with
    base and extra recycled if shorter.
 
+   The result may sometimes equal 'base' or 'extra'.  Sometimes 'base' may 
+   be modified and resused for the result, if it has NAMEDCNT of zero.
+
    Protects its arguments. */
 
 attribute_hidden SEXP add_scaled_gradients (SEXP base, SEXP extra, 
@@ -2744,39 +2747,57 @@ LENGTH(base),LENGTH(extra));
     PROTECT2(base,extra);
     R_len_t elen, blen, en, bn;
     R_len_t i, j, k, l;
-
-    SEXP r = alloc_numeric_gradient (gvars, n);
-    R_len_t glen = n * gvars;
+    SEXP r;
 
     if (base == R_NilValue) {
         if (TYPEOF(extra) != REALSXP) abort();
         elen = LENGTH(extra);
         en = elen / gvars;
         if (en * gvars != elen) abort();
+        if (factor == 1.0 && elen == (uint64_t) gvars * n) {
+            UNPROTECT(2);
+            return extra;
+        }
+        r = alloc_numeric_gradient (gvars, n);
+        R_len_t glen = n * gvars;
         l = 0;
         for (i = 0; i < glen; i += n) {
             for (j = 0; j < n; j++)
                 REAL(r)[i+j] = REAL(extra)[l+j%en]*factor;
             l += en;
         }
+        UNPROTECT(2);
+        return r;
     }
-    else if (extra == R_NilValue) {
+
+    if (extra == R_NilValue) {
         if (TYPEOF(base) != REALSXP) abort();
         blen = LENGTH(base);
         bn = blen / gvars;
         if (bn * gvars != blen) abort();
+        if (blen == (uint64_t) gvars * n) {
+            UNPROTECT(2);
+            return base;
+        }
+        r = alloc_numeric_gradient (gvars, n);
+        R_len_t glen = n * gvars;
         k = 0;
         for (i = 0; i < glen; i += n) {
             for (j = 0; j < n; j++)
                 REAL(r)[i+j] = REAL(base)[k+j%bn];
             k += bn;
         }
+        UNPROTECT(2);
+        return r;
     }
     else {
         if (TYPEOF(base) != REALSXP) abort();
         if (TYPEOF(extra) != REALSXP) abort();
         if (GRADIENT_WRT_LEN(extra) != gvars) abort();
         blen = LENGTH(base);
+        r = NAMEDCNT_EQ_0(base) && blen == (uint64_t) gvars * n ? base
+             : alloc_numeric_gradient (gvars, n);
+        R_len_t glen = n * gvars;
         bn = blen / gvars;
         if (bn * gvars != blen) abort();
         elen = LENGTH(extra);
