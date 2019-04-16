@@ -1177,9 +1177,11 @@ static SEXP do_switch(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     if (!isVector(x) || length(x) != 1)
 	errorcall(call, _("EXPR must be a length 1 vector"));
     if (nargs > 1) {
+
 	/* There is a complication: if called from lapply
 	   there may be a ... argument */
 	PROTECT(w = expandDots(CDR(args), rho));
+
 	if (isString(x)) {
 	    for (y = w; y != R_NilValue; y = CDR(y)) {
 		if (TAG(y) != R_NilValue) {
@@ -1203,7 +1205,7 @@ static SEXP do_switch(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 			for (z = CDR(y); z != R_NilValue; z = CDR(z)) 
 			    if (TAG(z) == R_NilValue) dflt = setDflt(z, dflt);
 			    
-			ans =  eval(CAR(y), rho);
+			ans =  evalv (CAR(y), rho, VARIANT_PASS_ON(variant));
 			UNPROTECT(2);
 			return ans;
 		    }
@@ -1211,25 +1213,28 @@ static SEXP do_switch(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 		    dflt = setDflt(y, dflt);
 	    }
  	    if (dflt != R_NoObject) {
-		ans =  eval(dflt, rho);
+		ans =  evalv (dflt, rho, VARIANT_PASS_ON(variant));
 		UNPROTECT(2);
 		return ans;
 	    }
 	    /* fall through to error */
+
 	} else { /* Treat as numeric */
 	    argval = asInteger(x);
 	    if (argval != NA_INTEGER && argval >= 1 && argval <= length(w)) {
 		SEXP alt = CAR(nthcdr(w, argval - 1));
 		if (alt == R_MissingArg)
 		    error("empty alternative in numeric switch");
-		ans =  eval(alt, rho);
+		ans =  evalv (alt, rho, VARIANT_PASS_ON(variant));
 		UNPROTECT(2);
 		return ans;
 	    }
 	    /* fall through to error */
 	}
+
 	UNPROTECT(1); /* w */
     }
+
     /* an error */
     UNPROTECT(1); /* x */
     R_Visible = FALSE;
