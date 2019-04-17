@@ -1949,3 +1949,24 @@ r <- with gradient (a=rep(3,n)) {
 }
 pr("end")
 r$x; r$y[1..5]; attr(r,"gradient")$x[1..5]; attr(r,"gradient")$y[1..5,1..5]
+
+pr("start")
+r <- back gradient (a=rep(3,n)) {
+  pr("A"); a[2] <- 7
+  pr("B"); b <- c(a,a)
+  pr("C"); a[3] <- a[4]^2
+  pr("D"); c(a,b)
+}
+pr("end")
+r[1..10]
+
+pr("start")
+r <- with gradient (a=rep(3,n)) {
+  pr("A"); a[2] <- 7
+  pr("B"); b <- c(a,a)
+  pr("C"); a[3] <- a[4]^2
+  pr("D"); c(a,b)
+}
+pr("end")
+r[1..10]
+attr(r,"gradient")[1..10,1..10]
