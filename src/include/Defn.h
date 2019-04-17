@@ -2122,6 +2122,7 @@ void SET_ATTRIB_TO_ANYTHING (SEXP, SEXP);
 /* Update gradient information in binding cell or promise. */
 
 void SET_GRADIENT_IN_CELL (SEXP, SEXP);
+void SET_GRADIENT_IN_CELL_NR (SEXP, SEXP);  /* no NAMEDCNT inc or dec */
 
 
 /* Define R_INFINITE and ISNAN_NOT_NA here as inline functions, using a 

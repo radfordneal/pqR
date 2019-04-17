@@ -113,6 +113,15 @@ void SET_GRADIENT_IN_CELL (SEXP x, SEXP v)
 }
 
 
+void SET_GRADIENT_IN_CELL_NR (SEXP x, SEXP v)
+{
+   if (ATTRIB_W(x) != R_NilValue && !HAS_GRADIENT_IN_CELL(x)) abort();
+   if (v != R_NilValue && TYPEOF(v) != LISTSXP) abort();
+
+   SET_ATTRIB_TO_ANYTHING (x,v);
+}
+
+
 /* Expand the structure of 'grad' to be a full gradient for 'value' by
    replacing NULL elements that correspond to non-NULL elements by the
    appropriate zero Jacobian.  The 'idg' argument is the identity

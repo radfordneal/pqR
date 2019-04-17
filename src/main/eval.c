@@ -2392,7 +2392,7 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant,
                                  m > 0 ? variant : variant | VARIANT_GRADIENT), 
                                  R_NilValue, TAG(el));
             if (R_variant_result & VARIANT_GRADIENT_FLAG)
-                SET_GRADIENT_IN_CELL (ev, R_gradient);
+                SET_GRADIENT_IN_CELL_NR (ev, R_gradient);
             R_variant_result = 0;
             return ev;
         }
@@ -2434,7 +2434,7 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant,
                     i += 1;
                     ev = cons_with_tag (ev_el, R_NilValue, TAG(h));
                     if (R_variant_result & VARIANT_GRADIENT_FLAG)
-                        SET_GRADIENT_IN_CELL (ev, R_gradient);
+                        SET_GRADIENT_IN_CELL_NR (ev, R_gradient);
                     if (head==R_NilValue)
                         head = ev;
                     else
@@ -2463,7 +2463,7 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant,
             i += 1;
             ev = cons_with_tag (ev_el, R_NilValue, TAG(el));
             if (R_variant_result & VARIANT_GRADIENT_FLAG)
-                SET_GRADIENT_IN_CELL (ev, R_gradient);
+                SET_GRADIENT_IN_CELL_NR (ev, R_gradient);
             if (head==R_NilValue)
                 head = ev;
             else
