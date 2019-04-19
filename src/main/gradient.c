@@ -409,7 +409,6 @@ static SEXP get_gradient (SEXP env)
     for (p = gr; p != R_NilValue; p = CDR(p)) {
         if (TAG(p) == env) {
             int ix = GRADINDEX(p);
-            SET_NAMEDCNT_MAX(CAR(p));  /* may be able to be less drastic */
             if (nv == 1) {
                 if (ix != 1 || r != R_NilValue) abort();
                 r = CAR(p);
@@ -3061,11 +3060,11 @@ static SEXP create_gradient (SEXP result, SEXP result_grad, SEXP gv)
     if (nv == 1)
         gr = expand_gradient (result, result_grad, VECTOR_ELT(gv,1));
     else {
-        R_len_t i;
+        if (LENGTH(result_grad) != nv) abort();
         PROTECT (gr = allocVector (VECSXP, nv));
         gn = allocVector (STRSXP, nv);
         setAttrib (gr, R_NamesSymbol, gn); 
-        for (i = 0; i < nv; i++) {
+        for (R_len_t i = 0; i < nv; i++) {
             SET_STRING_ELT (gn, i, PRINTNAME (VECTOR_ELT (gv, i)));
             SET_VECTOR_ELT (gr, i, expand_gradient (result, 
                                                     VECTOR_ELT(result_grad,i),
@@ -3215,7 +3214,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
         SEXP gr = create_gradient (result, result_grad, gv);
         setAttrib (result, R_GradientSymbol, gr);
-        INC_NAMEDCNT(gr);
+        inc_gradient_namedcnt(result_grad);  /* after setAttrib, to avoid dup */
     }
 
     /* Propagate gradients backwards with the chain rule. */
@@ -3430,6 +3429,7 @@ static SEXP do_gradient_of(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     SEXP genv = cntxt->cloenv;
     SEXP result = PROTECT (evalv (CAR(args), env, VARIANT_GRADIENT));
     SEXP result_grad = PROTECT (get_gradient(genv));
+    inc_gradient_namedcnt(result_grad);
 
     SEXP r = create_gradient (result, result_grad, GRADVARS(genv));
 

@@ -13179,7 +13179,6 @@ C
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
 D 
-RPROFMEM: (double 10000):
 > pr("end")
 end 
 > r[1..5]; attr(r,"gradient")[1..5,1..5]
@@ -13390,7 +13389,6 @@ RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 D 
 RPROFMEM: (double 300):
-RPROFMEM: (double 30000):
 RPROFMEM: (double 30000):
 > pr("end")
 end 
