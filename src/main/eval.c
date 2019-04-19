@@ -1660,9 +1660,10 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     if (STORE_GRAD(rho)) {
         if (!opval && R_binding_cell != R_NilValue) {
-            SET_GRADIENT_IN_CELL (R_binding_cell, 
-                                  R_variant_result & VARIANT_GRADIENT_FLAG 
-                                    ? R_gradient : R_NilValue);
+            if (R_variant_result & VARIANT_GRADIENT_FLAG)
+                SET_GRADIENT_IN_CELL (R_binding_cell, R_gradient);
+            else if (HAS_GRADIENT_IN_CELL(R_binding_cell))
+                SET_GRADIENT_IN_CELL (R_binding_cell, R_NilValue);
         }
     }
 
@@ -1964,8 +1965,10 @@ if (res_grad != R_NilValue) { REprintf("oo\n"); R_inspect(res_grad); }
         bcell = R_binding_cell;
     }
 
-    if (bcell != R_NilValue)
-        SET_GRADIENT_IN_CELL (bcell, res_grad);
+    if (bcell != R_NilValue) {
+        if (res_grad != R_NilValue || HAS_GRADIENT_IN_CELL(bcell))
+            SET_GRADIENT_IN_CELL (bcell, res_grad);
+    }
 
     R_variant_result = 0;
     if (variant & VARIANT_NULL) {
@@ -4780,7 +4783,8 @@ REprintf("=========\n");
     string = allocVector(STRSXP,1);
     SET_STRING_ELT (string, 0, schar);
     PROTECT(args = CONS(into, CONS(string, CDDR(args))));
-    SET_GRADIENT_IN_CELL (args, into_grad);
+    if (into_grad != R_NilValue)
+        SET_GRADIENT_IN_CELL (args, into_grad);
     PROTECT(ncall = 
       LCONS(CAR(call),CONS(CADR(call),CONS(string,CDR(CDDR(call))))));
 
