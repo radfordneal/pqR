@@ -60,18 +60,24 @@ static SEXP alloc_numeric_gradient (R_len_t gvars, R_len_t n)
 
 static void inc_gradient_namedcnt (SEXP v)
 {
+#if 0
+REprintf("inc_gradient_namedcnt: %d %d %d %d.%d %p\n",
+TYPEOF(v),length(v),NAMEDCNT(v),CPTR_FROM_SEXP(v)/64,CPTR_FROM_SEXP(v)%64,v);
+#endif
     switch (TYPEOF(v)) {
     case LISTSXP:
         for ( ; v != R_NilValue; v = CDR(v)) {
             INC_NAMEDCNT(v);
-            inc_gradient_namedcnt(CAR(v));
+            if (CAR(v) != R_NilValue)
+                inc_gradient_namedcnt(CAR(v));
         }
         break;
     case VECSXP: ;
         R_len_t len = LENGTH(v);
         R_len_t i;
         for (i = 0; i < len; i++)
-            inc_gradient_namedcnt (VECTOR_ELT(v,i));
+            if (VECTOR_ELT(v,i) != R_NilValue)
+                inc_gradient_namedcnt (VECTOR_ELT(v,i));
         break;
     case REALSXP:
         INC_NAMEDCNT(v);
@@ -82,18 +88,24 @@ static void inc_gradient_namedcnt (SEXP v)
 
 static void dec_gradient_namedcnt (SEXP v)
 {
+#if 0
+REprintf("dec_gradient_namedcnt: %d %d %d %d.%d %p\n",
+TYPEOF(v),length(v),NAMEDCNT(v),CPTR_FROM_SEXP(v)/64,CPTR_FROM_SEXP(v)%64,v);
+#endif
     switch (TYPEOF(v)) {
     case LISTSXP:
         for ( ; v != R_NilValue; v = CDR(v)) {
             DEC_NAMEDCNT(v);
-            dec_gradient_namedcnt(CAR(v));
+            if (CAR(v) != R_NilValue)
+                dec_gradient_namedcnt(CAR(v));
         }
         break;
     case VECSXP: ;
         R_len_t len = LENGTH(v);
         R_len_t i;
         for (i = 0; i < len; i++)
-            dec_gradient_namedcnt (VECTOR_ELT(v,i));
+            if (VECTOR_ELT(v,i) != R_NilValue)
+                dec_gradient_namedcnt (VECTOR_ELT(v,i));
         break;
     case REALSXP:
         DEC_NAMEDCNT(v);
@@ -2084,6 +2096,7 @@ REprintf("--\n");
 
 /* Create set of gradients from grad that account for assigning a range
    of elements from v (recycled) to a vector list, extending to length n.
+   May use grad as the result if NAMEDCNT not greater than one.
 
    Protects its grad and v arguments. */
 
@@ -2101,38 +2114,41 @@ R_inspect(v);
 
     PROTECT2(grad,v);
 
+    SEXP res;
+
     if (grad == R_NilValue) 
-        grad = alloc_list_gradient (n);
+        res = alloc_list_gradient (n);
     else {
         if (TYPEOF(grad) != VECSXP) abort();
-        grad = dup_top_level(grad);
-        if (LENGTH(grad) < n) grad = reallocVector (grad, n, 1);
+        res = NAMEDCNT_GT_1(grad) ? dup_top_level(grad) : grad;
+        if (LENGTH(res) < n) res = reallocVector (res, n, 1);
     }
 
     R_len_t k;
     if (v == R_NilValue || LENGTH(v) == 0) {
         for (k = 0; k <= j-i; k++)
-            SET_VECTOR_ELT (grad, i+k, R_NilValue);
+            SET_VECTOR_ELT (res, i+k, R_NilValue);
     }
     else {
         R_len_t lenv = LENGTH(v);
         for (k = 0; k <= j-i; k++)
-            SET_VECTOR_ELT (grad, i+k, VECTOR_ELT (v, k % lenv));
+            SET_VECTOR_ELT (res, i+k, VECTOR_ELT (v, k % lenv));
     }
 
 #if 0
 REprintf("*** subassign_range_list_gradient end\n");
-R_inspect(grad);
+R_inspect(res);
 REprintf("==\n");
 #endif
 
     UNPROTECT(2);
-    return grad;
+    return res;
 }
 
 
 /* Create set of gradients from grad that account for assigning a range
    of elements from v (recycled) to a numeric vector, extending to length n.
+   May use grad as the result, if NAMEDCNT is not greater than one.
 
    Protects its grad and v arguments. */
 
@@ -2208,6 +2224,7 @@ REprintf("==\n");
 
 /* Create set of gradients from grad that account for assigning indexed
    elements from v (recycled) to a numeric vector, extending to length n.
+   May use grad as the result, if NAMEDCNT is not greater than one.
 
    Protects its grad and v arguments. */
 
@@ -2286,6 +2303,7 @@ REprintf("==\n");
 
 /* Create set of gradients from grad that account for assigning indexed
    elements of a vector list gradients from v (recycled), extending to length n.
+   May use grad as the result, if NAMEDCNT is not greater than one.
 
    Protects its grad and v arguments. */
 
@@ -2304,12 +2322,14 @@ R_inspect(v);
 
     PROTECT2(grad,v);
 
+    SEXP res;
+
     if (grad == R_NilValue) 
-        grad = alloc_list_gradient (n);
+        res = alloc_list_gradient (n);
     else {
         if (TYPEOF(grad) != VECSXP) abort();
-        grad = dup_top_level(grad);
-        if (LENGTH(grad) < n) grad = reallocVector (grad, n, 1);
+        res = NAMEDCNT_GT_1(grad) ? dup_top_level(grad) : grad;
+        if (LENGTH(res) < n) res = reallocVector (res, n, 1);
     }
 
     if (v == R_NilValue || LENGTH(v) == 0) {
@@ -2317,7 +2337,7 @@ R_inspect(v);
         for (R_len_t j = 0; j < k; j++) {
             R_len_t i = INTEGER(indx)[j];
             if (i >= 1 && i <= n)
-                SET_VECTOR_ELT (grad, i-1, R_NilValue);
+                SET_VECTOR_ELT (res, i-1, R_NilValue);
         }
     }
     else {
@@ -2327,23 +2347,23 @@ R_inspect(v);
         for (R_len_t j = 0; j < k; j++) {
             R_len_t i = INTEGER(indx)[j];
             if (i >= 1 && i <= n)
-                SET_VECTOR_ELT (grad, i-1, VECTOR_ELT (v, j % lenv));
+                SET_VECTOR_ELT (res, i-1, VECTOR_ELT (v, j % lenv));
         }
     }
 
 #if 0
 REprintf("*** subassign_indexes_list_gradient end\n");
-R_inspect(grad);
+R_inspect(res);
 REprintf("==\n");
 #endif
 
     UNPROTECT(2);
-    return grad;
+    return res;
 }
 
 /* Create set of gradients from grad that account for assigning indexed
-   elements of a vector list array gradients from v (recycled), extending
-   to length n.
+   elements of a list array of length n gradients from v (recycled).
+   May use grad as the result, if NAMEDCNT is not greater than one.
 
    Protects its grad and v arguments. */
 
@@ -2367,7 +2387,7 @@ R_inspect(v);
         res = alloc_list_gradient (n);
     else {
         if (TYPEOF(grad) != VECSXP) abort();
-        res = dup_top_level(grad);
+        res = NAMEDCNT_GT_1(grad) ? dup_top_level(grad) : grad;
         if (LENGTH(res) < n) res = reallocVector (res, n, 1);
     }
 
@@ -2409,8 +2429,8 @@ REprintf("==\n");
 }
 
 /* Create set of gradients from grad that account for assigning indexed
-   elements of a vector list array gradients from v (recycled), extending
-   to length n.
+   elements of a numeric array of length n gradients from v (recycled).
+   May use grad as the result, if NAMEDCNT is not greater than one.
 
    Protects its grad and v arguments. */
 
@@ -2441,7 +2461,7 @@ R_inspect(v);
     }
     else {
         if (TYPEOF(grad) != REALSXP) abort();
-        res = duplicate(grad);
+        res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
     }
 
     int last = 0;
@@ -2486,7 +2506,8 @@ REprintf("==\n");
 
 /* Create set of gradients from grad that account for assigning an element
    with gradient v to the i'th element out of n of a vector list with gradient
-   grad (creating lists as necessary).
+   grad (creating lists as necessary). May use grad as the result, if NAMEDCNT
+   is not greater than one.
 
    Protects its grad and v arguments. */
 
@@ -2564,7 +2585,8 @@ REprintf("==\n");
 
 /* Create set of gradients from grad that account for assigning an element
    with gradient v to the i'th element out of n of a numeric vector with
-   gradient grad (creating lists as necessary).
+   gradient grad.  May use grad as the result, if NAMEDCNT is not greater
+   than one.
 
    Protects its grad and v arguments. */
 

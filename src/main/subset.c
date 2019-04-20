@@ -3825,7 +3825,7 @@ static SEXP VectorAssign (SEXP call, SEXP x, SEXP x_grad,
     }
 
     if ((x_grad != R_NilValue || y_grad != R_NilValue)) {
-        if (TYPEOF(x) == REALSXP) {  /* maybe always?  but just in case... */
+        if (TYPEOF(x) == REALSXP) {
             if (TYPEOF(y) != REALSXP) y_grad = R_NilValue;
             res_grad = subassign_indexes_numeric_gradient (x_grad, y_grad,
                                                            indx, nx);

@@ -13352,6 +13352,56 @@ end
 > 
 > pr("start")
 start 
+> r <- with gradient (a=rep(3,n)+(1..n)) {
++   pr("A"); L <- c(list(x=2,y=a^2.1),rep(list(NULL),n))
++   pr("B"); q <- list(a[4])
++   pr("C"); L[2..3] <- q
++   M <- L
++   pr("D"); L[2..4] <- list(a[5])
++   pr("E"); L[2..3] <- list(a[6])
++   pr("F"); L
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (integer 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (list 100):
+RPROFMEM: (list 102):
+RPROFMEM: (list 102):
+RPROFMEM: (character 102):
+B 
+RPROFMEM: (double 100):
+C 
+D 
+RPROFMEM: (double 100):
+RPROFMEM: (list 102):
+E 
+RPROFMEM: (double 100):
+F 
+RPROFMEM: (list 102):
+RPROFMEM: (double 100):
+> pr("end")
+end 
+> r$x; r$y; 
+[1] 2
+[1] 9
+> attr(r,"gradient")$x[1..10]
+ [1] 0 0 0 0 0 0 0 0 0 0
+> attr(r,"gradient")$y[1..10]
+ [1] 0 0 0 0 0 1 0 0 0 0
+> attr(r,"gradient")[[3]][1..10]
+ [1] 0 0 0 0 0 1 0 0 0 0
+> attr(r,"gradient")[[4]][1..10]
+ [1] 0 0 0 0 1 0 0 0 0 0
+> attr(r,"gradient")[[5]][1..10]
+NULL
+> 
+> pr("start")
+start 
 > r <- back gradient (a=rep(3,n)) {
 +   pr("A"); a[2] <- 7
 +   pr("B"); b <- c(a,a)

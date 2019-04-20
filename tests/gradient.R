@@ -1951,6 +1951,24 @@ pr("end")
 r$x; r$y[1..5]; attr(r,"gradient")$x[1..5]; attr(r,"gradient")$y[1..5,1..5]
 
 pr("start")
+r <- with gradient (a=rep(3,n)+(1..n)) {
+  pr("A"); L <- c(list(x=2,y=a^2.1),rep(list(NULL),n))
+  pr("B"); q <- list(a[4])
+  pr("C"); L[2..3] <- q
+  M <- L
+  pr("D"); L[2..4] <- list(a[5])
+  pr("E"); L[2..3] <- list(a[6])
+  pr("F"); L
+}
+pr("end")
+r$x; r$y; 
+attr(r,"gradient")$x[1..10]
+attr(r,"gradient")$y[1..10]
+attr(r,"gradient")[[3]][1..10]
+attr(r,"gradient")[[4]][1..10]
+attr(r,"gradient")[[5]][1..10]
+
+pr("start")
 r <- back gradient (a=rep(3,n)) {
   pr("A"); a[2] <- 7
   pr("B"); b <- c(a,a)
