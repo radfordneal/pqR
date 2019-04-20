@@ -1818,12 +1818,19 @@ with gradient (a=c(4.1,2.7,3.1,5.2)) {
 
 # Test duplication when necessary and not when not.
 
-n <- 100
 pr <- function (...) { 
   Rprofmemt(NULL)
   cat(...,"\n")
   Rprofmemt(nelem=n,bytes=FALSE)
 }
+
+prp <- function (x) { 
+  Rprofmemt(NULL)
+  print(x)
+  Rprofmemt(nelem=n,bytes=FALSE)
+}
+
+n <- 100
 
 pr("start")
 track gradient (a=rep(3,n)) {
@@ -1988,3 +1995,16 @@ r <- with gradient (a=rep(3,n)) {
 pr("end")
 r[1..10]
 attr(r,"gradient")[1..10,1..10]
+
+n <- 8
+
+pr("start")
+track gradient (a=rep(3,n)) {
+  pr("A"); L <- list(a,a,a); prp(gradient_of(L))
+  pr("B"); L[[2]][1] <- 9; prp(gradient_of(L))
+  pr("C"); M <- L; L[[3]][2] <- L[[1]][3]; prp(gradient_of(L))
+  pr("D"); prp(gradient_of(M))
+  NULL
+}
+pr("end")
+

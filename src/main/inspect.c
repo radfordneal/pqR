@@ -85,7 +85,7 @@ static void PrintEnvironment(SEXP x)
             Rprintf(" garbled");
         else {
             int i;
-            for (i = 0; i < LENGTH(g); i++) {
+            for (i = 0; i < GRADVARS_NV(g); i++) {
                 if (TYPEOF(VECTOR_ELT(g,i)) != SYMSXP)
                     Rprintf(" ?");
                 else

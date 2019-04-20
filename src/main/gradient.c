@@ -73,6 +73,7 @@ TYPEOF(v),length(v),NAMEDCNT(v),CPTR_FROM_SEXP(v)/64,CPTR_FROM_SEXP(v)%64,v);
         }
         break;
     case VECSXP: ;
+        INC_NAMEDCNT(v);
         R_len_t len = LENGTH(v);
         R_len_t i;
         for (i = 0; i < len; i++)
@@ -101,6 +102,7 @@ TYPEOF(v),length(v),NAMEDCNT(v),CPTR_FROM_SEXP(v)/64,CPTR_FROM_SEXP(v)%64,v);
         }
         break;
     case VECSXP: ;
+        DEC_NAMEDCNT(v);
         R_len_t len = LENGTH(v);
         R_len_t i;
         for (i = 0; i < len; i++)
