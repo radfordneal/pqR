@@ -2023,3 +2023,15 @@ track gradient (a=rep(3,n)) {
 }
 pr("end")
 
+pr("start")
+track gradient (a=3,b=rep(4,n)) {
+  print(x <- gradient_of(b))
+  b[2] <- a
+  print(y <- gradient_of(b))
+  q <- a*b
+  print(z <- gradient_of(q))
+  q[7..8] <- b[1..2]
+  print(w <- gradient_of(q))
+  list(x,y,z,w)
+}
+pr("end")
