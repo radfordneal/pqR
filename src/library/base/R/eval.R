@@ -42,8 +42,8 @@ parent.env <- function(env)
     .Internal("parent.env<-"(env, value))
 
 local <-
-    function (expr, envir = new.env())
-    eval.parent(substitute(eval(quote(expr), envir)))
+    function (expr, envir = new.env(hash=FALSE))
+        eval(substitute(eval(quote(expr),envir)),parent.frame())
 
 Recall <- function(...) .Internal(Recall(...))
 
