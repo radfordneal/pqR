@@ -13688,18 +13688,17 @@ end
 > pr("start")
 start 
 > track gradient (a=3,b=rep(4,n)) {
-+   print(x <- gradient_of(b))
++   prp(x <- gradient_of(b))
 +   b[2] <- a
-+   print(y <- gradient_of(b))
++   prp(y <- gradient_of(b))
 +   q <- a*b
-+   print(z <- gradient_of(q))
++   prp(z <- gradient_of(q))
 +   q[7..8] <- b[1..2]
-+   print(w <- gradient_of(q))
++   prp(w <- gradient_of(q))
 +   list(x,y,z,w)
 + }
 RPROFMEM: (double 8):
 RPROFMEM: (double 64):
-RPROFMEM: (double 8):"print" 
 $a
 [1] 0 0 0 0 0 0 0 0
 
