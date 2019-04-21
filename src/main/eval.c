@@ -1887,6 +1887,10 @@ REprintf("...**\n");
             R_fast_sub_replacement = rhs;
             R_fast_sub_replacement_grad = rhs_grad;
             R_variant_result = 0;
+#if 0
+if (installed_already("DBGG")) { REprintf("RR\n"); R_inspect(rhs_grad);
+REprintf("VV\n"); R_inspect(var_grad); }
+#endif
             newval = CALL_PRIMFUN (call, fn, CDDR(lhs), rho, 
                                    VARIANT_FAST_SUB);
             if (R_variant_result & VARIANT_GRADIENT_FLAG) {
@@ -1898,8 +1902,8 @@ REprintf("...**\n");
             if (POP_IF_TOP_OF_STACK(rhs))  /* might be on stack if maybe_fast */
                 rhs = DUP_STACK_VALUE(rhs);
 #if 0
-REprintf("rr\n"); R_inspect(rhs_grad);
-REprintf("vv\n"); R_inspect(var_grad);
+if (installed_already("DBGG")) { REprintf("rr\n"); R_inspect(rhs_grad);
+REprintf("vv\n"); R_inspect(var_grad); }
 #endif
             PROTECT (rhsprom = mkValuePROMISE(rhs_uneval, rhs));
             PROTECT (lhsprom = mkValuePROMISE(CADR(lhs), varval));

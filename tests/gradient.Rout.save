@@ -13628,4 +13628,61 @@ NULL
 > pr("end")
 end 
 > 
+> pr("start")
+start 
+> track gradient (a=rep(3,n)) {
++   pr("A"); a[4] <- a[1]+a[2]
++   pr("B"); b <- a
++   pr("C"); b[2] <- a[5]
++   pr("D"); b[7] <- b[8]
++   pr("E"); b[1] <- b[6]+a[4]
++   pr("F"); a[6] <- a[1]
++   pr("G"); x <- a; x <- 7; a[8] <- 9
++   pr("H"); prp(gradient_of(a))
++   pr("I"); prp(gradient_of(b))
++   NULL
++ }
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+B 
+C 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+D 
+RPROFMEM: (double 8):
+E 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+F 
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+G 
+H 
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    0    0    0    0    0    0    0
+[2,]    0    1    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    1    1    0    0    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    1    0    0    0    0    0    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    0
+I 
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    1    0    0    0    1    0    0
+[2,]    0    0    0    0    1    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    1    1    0    0    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    0    1
+[8,]    0    0    0    0    0    0    0    1
+NULL
+> pr("end")
+end 
+> 
 > 

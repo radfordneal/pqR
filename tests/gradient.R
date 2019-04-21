@@ -2008,3 +2008,18 @@ track gradient (a=rep(3,n)) {
 }
 pr("end")
 
+pr("start")
+track gradient (a=rep(3,n)) {
+  pr("A"); a[4] <- a[1]+a[2]
+  pr("B"); b <- a
+  pr("C"); b[2] <- a[5]
+  pr("D"); b[7] <- b[8]
+  pr("E"); b[1] <- b[6]+a[4]
+  pr("F"); a[6] <- a[1]
+  pr("G"); x <- a; x <- 7; a[8] <- 9
+  pr("H"); prp(gradient_of(a))
+  pr("I"); prp(gradient_of(b))
+  NULL
+}
+pr("end")
+
