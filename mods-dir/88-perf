@@ -7,4 +7,6 @@ Pass variants to expr evaluated by switch.
 Speed of sampling without replacement improved for some cases, and
 overhead reduced for small cases of sample.
 
+Improved 'local'.
+
 Reduced interpretive overhead.
