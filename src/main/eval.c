@@ -2058,8 +2058,7 @@ static SEXP attribute_noinline Rf_set_subassign_general
         op = CAR(s[d].expr);
 
         fast = 0;
-        if ((op == R_DollarSymbol || op == R_Bracket2Symbol)
-             && s[d+1].grad == R_NilValue /* FOR NOW */ ) {
+        if (op == R_DollarSymbol || op == R_Bracket2Symbol) {
             fn = FINDFUN (op, rho);
             fast = TYPEOF(fn)==SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn);
         }
@@ -2098,6 +2097,10 @@ static SEXP attribute_noinline Rf_set_subassign_general
             e = CALL_PRIMFUN (call, fn, fetch_args, rho, 
                   VARIANT_FAST_SUB /* implies QUERY_UNSHARED_SUBSET */);
             UNPROTECT(1);  /* fetch_args */
+            if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+                s[d].grad = R_gradient;
+                R_variant_result &= ~VARIANT_GRADIENT_FLAG;
+            }
         }
         else {
             prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
@@ -4207,12 +4210,9 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
        subset2_dflt_x, evaluate the array with VARIANT_UNCLASS and
        VARIANT_PENDING_OK, and perhaps evaluate indexes with
        VARIANT_SCALAR_STACK_OK (should be safe, since there will be
-       no later call of eval). 
+       no later call of eval). */
 
-       For now, don't do this if we need the gradient. */
-
-    if ((fast_sub || args != R_NilValue && CAR(args) != R_DotsSymbol)
-          && ! (variant & VARIANT_GRADIENT)) {
+    if (fast_sub || args != R_NilValue && CAR(args) != R_DotsSymbol) {
 
         SEXP array, ixlist;
         int obj;
@@ -4220,12 +4220,17 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (fast_sub) {
             ixlist = args;
             array = R_fast_sub_var;
+            array_grad = R_fast_sub_var_grad;
             obj = isObject(array);
         }
         else {
             ixlist = CDR(args);
-            array = 
-              EVALV_NC (CAR(args), rho, VARIANT_UNCLASS | VARIANT_PENDING_OK);
+            array = EVALV_NC (CAR(args), rho, VARIANT_UNCLASS 
+                     | VARIANT_PENDING_OK | (variant & VARIANT_GRADIENT));
+            if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+                array_grad = R_gradient;
+                R_variant_result &= ~VARIANT_GRADIENT_FLAG;
+            }
             obj = isObject(array);
             if (R_variant_result) {
                 obj = 0;
@@ -4235,20 +4240,24 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
         if (obj) {
             args = CONS(array,ixlist);
+            if (array_grad != R_NilValue)
+                SET_GRADIENT_IN_CELL (args, array_grad);
             argsevald = -1;
             /* go on to general-purpose code below */
         }
         else if (ixlist == R_NilValue || TAG(ixlist) != R_NilValue 
                                       || CAR(ixlist) == R_DotsSymbol) {
-            PROTECT(array);
+            PROTECT2(array,array_grad);
             args = evalListKeepMissing(ixlist,rho);
-            UNPROTECT(1);  /* array */
-            return do_subset2_dflt_x (call, op, array, R_NoObject, R_NoObject,
-                                      R_NilValue, args, rho, variant);
+            SEXP r = do_subset2_dflt_x (call, op, array, R_NoObject, R_NoObject,
+                                        array_grad, args, rho, variant);
+            UNPROTECT(2);  /* array, array_grad */
+            R_Visible = TRUE;
+            return r;
         }
         else {
             SEXP r;
-            PROTECT(array);
+            PROTECT2(array,array_grad);
             BEGIN_PROTECT3 (sb1, sb2, remargs);
             SEXP sv_scalar_stack = R_scalar_stack;
             SEXP ixlist2 = CDR(ixlist);
@@ -4286,18 +4295,12 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 WAIT_UNTIL_COMPUTED(sb1);
             wait_until_arguments_computed(remargs);
             r = do_subset2_dflt_x (call, op, array, sb1, sb2,
-                                   R_NilValue, remargs, rho, variant);
+                                   array_grad, remargs, rho, variant);
             R_scalar_stack = sv_scalar_stack;
             END_PROTECT;
-            UNPROTECT(1);  /* array */
+            UNPROTECT(2);  /* array, array_grad */
             R_Visible = TRUE;
             return ON_SCALAR_STACK(r) ? PUSH_SCALAR(r) : r;
-        }
-    }
-    else {
-        if (fast_sub) {
-            args = CONS (R_fast_sub_var, args);
-            argsevald = -1;
         }
     }
 
@@ -4323,7 +4326,7 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         SEXP x = CAR(ans);
 
         if (HAS_GRADIENT_IN_CELL(ans))
-            PROTECT (array_grad = GRADIENT_IN_CELL(ans));
+            array_grad = GRADIENT_IN_CELL(ans);
 
         args = CDR(ans);
 
@@ -4338,7 +4341,7 @@ static SEXP do_subset2(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                                      array_grad, CDDR(args), rho, variant);
     }
 
-    UNPROTECT (1 + (array_grad != R_NilValue));
+    UNPROTECT(1);
     R_Visible = TRUE;
     return ans;
 }
@@ -4375,6 +4378,7 @@ static SEXP do_subset3(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
         what = CAR(args);
         from = R_fast_sub_var;
+        grad = R_fast_sub_var_grad;
     }
 
     else {

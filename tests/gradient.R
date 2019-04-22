@@ -2035,3 +2035,14 @@ track gradient (a=3,b=rep(4,n)) {
   list(x,y,z,w)
 }
 pr("end")
+
+pr("start")
+track gradient (a=7,b=6) {
+  pr("A"); L <- list(x=list(y=a,z=a)); prp(gradient_of(L))
+  pr("B"); L$x$z <- 2*b; prp(gradient_of(L))
+  pr("C"); L[[1]]$z <- 3*b; prp(gradient_of(L))
+  pr("D"); L[[1]][[2]] <- 4*b; prp(gradient_of(L))
+  pr("E"); L[[1]]$z <- 5*b; prp(gradient_of(L))
+  NULL
+}
+pr("end")

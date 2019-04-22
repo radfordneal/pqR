@@ -13831,3 +13831,122 @@ $b
 > pr("end")
 end 
 > 
+> pr("start")
+start 
+> track gradient (a=7,b=6) {
++   pr("A"); L <- list(x=list(y=a,z=a)); prp(gradient_of(L))
++   pr("B"); L$x$z <- 2*b; prp(gradient_of(L))
++   pr("C"); L[[1]]$z <- 3*b; prp(gradient_of(L))
++   pr("D"); L[[1]][[2]] <- 4*b; prp(gradient_of(L))
++   pr("E"); L[[1]]$z <- 5*b; prp(gradient_of(L))
++   NULL
++ }
+A 
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 1
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1] 0
+
+
+
+B 
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1] 2
+
+
+
+C 
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1] 3
+
+
+
+D 
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1] 4
+
+
+
+E 
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1] 5
+
+
+
+NULL
+> pr("end")
+end 
+> 
