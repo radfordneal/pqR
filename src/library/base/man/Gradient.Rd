@@ -251,7 +251,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
   dweibull, pweibull, qweibull, rweibull
 
   apply, lapply, sapply, vapply, replicate, simplify2array
-  as.vector, as.list, as.double, as.numeric, as.real
+  as.vector, as.list, as.double, as.numeric, as.real, as.matrix
   unclass, drop, structure, get_rm
   storage.mode<-, length<-
 
@@ -269,6 +269,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
 
 % TO COME: mapply, rapply
 %          backsolve, forwardsolve, chol
+%          aperm, sweep, scale
 %          cov, cor, var
 
 The following replacement functions do not compute any gradient information,
