@@ -2140,7 +2140,6 @@ static SEXP attribute_noinline Rf_set_subassign_general
     SEXP newgrad = R_NilValue;
 
     if (maybe_fast && !isObject(s[1].value) 
-          && rhs_grad == R_NilValue && var_grad == R_NilValue  /* FOR NOW */
           && CAR(s[0].store_args) != R_DotsSymbol
           && (fn = FINDFUN(assgnfcn,rho), 
               TYPEOF(fn) == SPECIALSXP && PRIMFASTSUB(fn) && !RTRACE(fn))) {

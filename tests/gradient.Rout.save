@@ -13214,7 +13214,6 @@ RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
 B 
-RPROFMEM: (double 10000):
 C 
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
@@ -13251,7 +13250,6 @@ RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
 B 
-RPROFMEM: (double 10000):
 C 
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
@@ -13292,7 +13290,6 @@ RPROFMEM: (list 102):
 RPROFMEM: (list 102):
 RPROFMEM: (character 102):
 B 
-RPROFMEM: (double 10000):
 RPROFMEM: (list 102):
 C 
 RPROFMEM: (list 102):
@@ -13337,7 +13334,6 @@ RPROFMEM: (list 102):
 RPROFMEM: (list 102):
 RPROFMEM: (character 102):
 B 
-RPROFMEM: (double 10000):
 RPROFMEM: (list 102):
 C 
 RPROFMEM: (list 102):
