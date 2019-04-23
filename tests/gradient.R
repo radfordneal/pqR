@@ -2049,10 +2049,22 @@ pr("end")
 
 pr("start")
 track gradient (a=7,b=6) {
-  pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b))); #prp(gradient_of(L))
-  pr("B"); L$x$z[2] <- a+b; #prp(gradient_of(L))
-  pr("C"); L$x$z[5] <- a-b; #prp(gradient_of(L))
-  pr("D"); L$x$z[2] <- a*b; #prp(gradient_of(L))
+  pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b))); prp(gradient_of(L))
+  pr("B"); L$x$z[2] <- a+b; prp(gradient_of(L))
+  pr("C"); L$x$z[5] <- a-b; prp(gradient_of(L))
+  pr("D"); L$x$z[2] <- a*b; prp(gradient_of(L))
+  pr("E"); M <- L; L$x$z[3] <- a^2+b^2; prp(gradient_of(L))
+  pr("F"); prp(gradient_of(M))
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (a=7,b=6) {
+  pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b)));
+  pr("B"); L$x$z[2] <- a+b;
+  pr("C"); L$x$z[5] <- a-b;
+  pr("D"); L$x$z[2] <- a*b;
   pr("E"); M <- L; L$x$z[3] <- a^2+b^2; prp(gradient_of(L))
   pr("F"); prp(gradient_of(M))
   NULL
@@ -2063,8 +2075,20 @@ pr("start")
 track gradient (a=7,b=6) {
   pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b))); prp(gradient_of(L))
   pr("B"); L[[1]][[2]][[2]] <- a+b; prp(gradient_of(L))
-  pr("C"); L[[1]][[2]][5] <- a-b; prp(gradient_of(L))
+  pr("C"); L[[1]][[2]][[5]] <- a-b; prp(gradient_of(L))
   pr("D"); L[[1]][[2]][[2]] <- a*b; prp(gradient_of(L))
+  pr("E"); M <- L; L[[1]][[2]][[3]] <- a^2+b^2; prp(gradient_of(L))
+  pr("F"); prp(gradient_of(M))
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (a=7,b=6) {
+  pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b)));
+  pr("B"); L[[1]][[2]][[2]] <- a+b;
+  pr("C"); L[[1]][[2]][[5]] <- a-b;
+  pr("D"); L[[1]][[2]][[2]] <- a*b;
   pr("E"); M <- L; L[[1]][[2]][[3]] <- a^2+b^2; prp(gradient_of(L))
   pr("F"); prp(gradient_of(M))
   NULL
