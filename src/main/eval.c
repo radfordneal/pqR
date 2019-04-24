@@ -2829,7 +2829,7 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     int opcode = PRIMVAL(op);
 
     SEXP argsevald, ans, arg1, arg2, grad1, grad2;
-    SEXP sv_scalar_stack = 0;
+    SEXP sv_scalar_stack = R_scalar_stack;
     int obj;
 
     if (variant & VARIANT_GRADIENT) {
@@ -2847,7 +2847,6 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
         /* Evaluate arguments, maybe putting them on the scalar stack. */
 
-        sv_scalar_stack = R_scalar_stack;
         argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env);
     }
 
@@ -2870,23 +2869,27 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
 
+    /* Set up grad1 and grad2 with gradient info. */
 
-    /* FOR NOW:  Handle gradients with the general-case R_unary and R_binary
-       procedures. */
+    grad1 = R_NilValue;
+    grad2 = R_NilValue;
 
     if (variant & VARIANT_GRADIENT) {
-        grad1 = GRADIENT_IN_CELL (argsevald);
-        grad2 = GRADIENT_IN_CELL (CDR(argsevald));
-        goto gradient;
+        if (HAS_GRADIENT_IN_CELL (argsevald))
+            grad1 = GRADIENT_IN_CELL (argsevald);
+        if (HAS_GRADIENT_IN_CELL (CDR(argsevald)))
+            grad2 = GRADIENT_IN_CELL (CDR(argsevald));
     }
 
-    /* Arguments are now in arg1 and arg2, and are protected. They may
+    /* Arguments are now in arg1 and arg2, and are protected.  They may
        be on the scalar stack, but if so, are removed now, though they
        may still be referenced.  Note that result might be on top of
        one of them - OK since after storing into it, the args won't be
        accessed again.
 
-       Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
+       Gradients are in grad1 and grad2, and protected. */
+
+    /* Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
        but faster. */
 
     R_scalar_stack = sv_scalar_stack;
@@ -2916,6 +2919,12 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             ans = NAMEDCNT_EQ_0(arg1) ?           (*REAL(arg1) = val, arg1)
                 : CAN_USE_SCALAR_STACK(variant) ? PUSH_SCALAR_REAL(val)
                 :                                 ScalarReal(val);
+
+            if (grad1 != R_NilValue) {
+                R_gradient = copy_scaled_gradients (grad1, 
+                               opcode == PLUSOP ? 1.0 : -1.0, 1);
+                R_variant_result = VARIANT_GRADIENT_FLAG;
+            }
 
             goto ret;
         }
@@ -3028,15 +3037,25 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         : CAN_USE_SCALAR_STACK(variant) ?             PUSH_SCALAR_REAL(val)
         :                                             ScalarReal(val);
 
+    if (variant & VARIANT_GRADIENT) {
+        if (grad1 != R_NilValue || grad2 != R_NilValue) {
+            double d = opcode == PLUSOP ? 1.0 : -1.0;
+            if (grad1 == R_NilValue)
+                R_gradient = d == 1.0 ? grad2 
+                                      : copy_scaled_gradients (grad2, d, 1);
+            else if (grad2 == R_NilValue)
+                R_gradient = grad1;
+            else
+                R_gradient = add_scaled_gradients (grad1, grad2, d, 1);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
+    }
+
     goto ret;
 
     /* Handle the general case. */
 
   general:
-
-    grad1 = grad2 = R_NilValue;
-
-  gradient:
 
     if (CDR(argsevald) != R_NilValue)
         ans = R_binary (call, opcode, arg1, arg2, obj&1, obj>>1, 
@@ -3060,7 +3079,7 @@ static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     int opcode = PRIMVAL(op);
 
     SEXP argsevald, ans, arg1, arg2, grad1, grad2;
-    SEXP sv_scalar_stack = 0;
+    SEXP sv_scalar_stack = R_scalar_stack;
     int obj;
 
     if (variant & VARIANT_GRADIENT) {
@@ -3078,7 +3097,6 @@ static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
         /* Evaluate arguments, maybe putting them on the scalar stack. */
 
-        sv_scalar_stack = R_scalar_stack;
         argsevald = scalar_stack_eval2(args, &arg1, &arg2, &obj, env);
     }
 
@@ -3101,12 +3119,16 @@ static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     if (CDDR(argsevald) != R_NilValue) goto arg_count_err;
 
-    /* FOR NOW:  Handle gradients with the general-case R_binary procedure. */
+    /* Set up grad1 and grad2 with gradient info. */
+
+    grad1 = R_NilValue;
+    grad2 = R_NilValue;
 
     if (variant & VARIANT_GRADIENT) {
-        grad1 = GRADIENT_IN_CELL (argsevald);
-        grad2 = GRADIENT_IN_CELL (CDR(argsevald));
-        goto gradient;
+        if (HAS_GRADIENT_IN_CELL (argsevald))
+            grad1 = GRADIENT_IN_CELL (argsevald);
+        if (HAS_GRADIENT_IN_CELL (CDR(argsevald)))
+            grad2 = GRADIENT_IN_CELL (CDR(argsevald));
     }
 
     /* Arguments are now in arg1 and arg2, and are protected. They may
@@ -3115,7 +3137,9 @@ static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
        one of them - OK since after storing into it, the args won't be
        accessed again.
 
-       Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
+       Gradients are in grad1 and grad2, and protected. */
+
+    /* Below same as POP_IF_TOP_OF_STACK(arg2); POP_IF_TOP_OF_STACK(arg1);
        but faster. */
 
     R_scalar_stack = sv_scalar_stack;
@@ -3203,15 +3227,54 @@ static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         : CAN_USE_SCALAR_STACK(variant) ?             PUSH_SCALAR_REAL(val)
         :                                             ScalarReal(val);
 
+    if (variant & VARIANT_GRADIENT) {
+        if (grad1 != R_NilValue || grad2 != R_NilValue) {
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+            switch (opcode) {
+            case TIMESOP:
+                if (grad1 == R_NilValue)
+                    R_gradient = copy_scaled_gradients (grad2, a1, 1);
+                else if (grad2 == R_NilValue)
+                    R_gradient = copy_scaled_gradients (grad1, a2, 1);
+                else
+                    R_gradient = add_scaled_gradients (
+                                   copy_scaled_gradients (grad1, a2, 1),
+                                   grad2, a1, 1);
+                break;
+            case DIVOP:
+                if (grad1 == R_NilValue)
+                    R_gradient = copy_scaled_gradients
+                                 (grad2, -a1/(a2*a2), 1);
+                else if (grad2 == R_NilValue)
+                    R_gradient = copy_scaled_gradients (grad1, 1/a2, 1);
+                else
+                    R_gradient = add_scaled_gradients (
+                                   copy_scaled_gradients (grad1, 1/a2, 1),
+                                   grad2, -a1/(a2*a2), 1);
+                break;
+            case POWOP: ;
+                double av = *REAL(ans);
+                R_gradient = R_NilValue;
+                if (av != 0) {
+                    if (grad1 != R_NilValue)
+                        R_gradient = copy_scaled_gradients
+                                      (grad1, av*a2/a1, 1);
+                    if (grad2 != R_NilValue && a1 > 0)
+                        R_gradient = add_scaled_gradients
+                                      (R_gradient, grad2, av*log(a1), 1);
+                }
+                break;
+            default:
+                R_variant_result = 0;
+            }
+        }
+    }
+
     goto ret;
 
     /* Handle the general case. */
 
   general:
-
-    grad1 = grad2 = R_NilValue;
-
-  gradient:
 
     if (CDR(argsevald) == R_NilValue) goto arg_count_err;
 
