@@ -1910,11 +1910,11 @@ REprintf("vv\n"); R_inspect(var_grad); }
             PROTECT(e = replaceCall (assgnfcn, lhsprom, CDDR(lhs), rhsprom));
             if (rhs_grad != R_NilValue || var_grad != R_NilValue) {
                 if (var_grad != R_NilValue) {
-                    SET_GRADIENT_IN_CELL (lhsprom, var_grad);
+                    SET_GRADIENT_IN_CELL_NR (lhsprom, var_grad);
                     SET_STORE_GRAD (lhsprom, 1);
                 }
                 if (rhs_grad != R_NilValue) {
-                    SET_GRADIENT_IN_CELL (rhsprom, rhs_grad);
+                    SET_GRADIENT_IN_CELL_NR (rhsprom, rhs_grad);
                     SET_STORE_GRAD (rhsprom, 1);
                 }
 #if 0
@@ -2105,7 +2105,7 @@ static SEXP attribute_noinline Rf_set_subassign_general
         else {
             prom = mkValuePROMISE(s[d+1].expr,s[d+1].value);
             if (s[d+1].grad != R_NilValue) {
-                SET_GRADIENT_IN_CELL (prom, s[d+1].grad);
+                SET_GRADIENT_IN_CELL_NR (prom, s[d+1].grad);
                 SET_STORE_GRAD (prom, 1);
                 PROTECT (e = LCONS (op, CONS (prom, fetch_args)));
                 R_variant_result = 0;
@@ -2168,11 +2168,11 @@ static SEXP attribute_noinline Rf_set_subassign_general
                                   s[0].store_args, rhsprom));
         if (rhs_grad != R_NilValue || s[1].grad != R_NilValue) {
             if (s[1].grad != R_NilValue) {
-                SET_GRADIENT_IN_CELL (lhsprom, s[1].grad);
+                SET_GRADIENT_IN_CELL_NR (lhsprom, s[1].grad);
                 SET_STORE_GRAD (lhsprom, 1);
             }
             if (rhs_grad != R_NilValue) {
-                SET_GRADIENT_IN_CELL (rhsprom, rhs_grad);
+                SET_GRADIENT_IN_CELL_NR (rhsprom, rhs_grad);
                 SET_STORE_GRAD (rhsprom, 1);
             }
             newval = evalv (e, rho, VARIANT_GRADIENT);
@@ -2207,12 +2207,12 @@ if (installed_already("DBGG")) {
            we have to replace, since that new object won't be part 
            of the object at the next level, even if the old one was. */
 
-        if (s[d].in_top == 1 && s[d].value == newval
-          && newgrad == R_NilValue && s[d+1].grad == R_NilValue /* FOR NOW */) {
+        if (s[d].in_top == 1 && s[d].value == newval && s[d].grad == newgrad) {
 
             /* Don't need to do replacement. */
 
             newval = s[d+1].value;
+            newgrad = s[d+1].grad;
         }
         else {
 
@@ -2222,12 +2222,12 @@ if (installed_already("DBGG")) {
             PROTECT (rhsprom = mkValuePROMISE (e, newval));
             if (newgrad != R_NilValue) {
                 SET_STORE_GRAD (rhsprom, 1);
-                SET_GRADIENT_IN_CELL (rhsprom, newgrad);
+                SET_GRADIENT_IN_CELL_NR (rhsprom, newgrad);
             }
             PROTECT (lhsprom = mkValuePROMISE (s[d+1].expr, s[d+1].value));
             if (s[d+1].grad != R_NilValue) {
                 SET_STORE_GRAD (lhsprom, 1);
-                SET_GRADIENT_IN_CELL (lhsprom, s[d+1].grad);
+                SET_GRADIENT_IN_CELL_NR (lhsprom, s[d+1].grad);
             }
             assgnfcn = FIND_SUBASSIGN_FUNC(CAR(s[d].expr));
             b = cons_with_tag (rhsprom, R_NilValue, R_ValueSymbol);
@@ -5369,7 +5369,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
         }
 
         if (x_grad != R_NilValue)
-            SET_GRADIENT_IN_CELL (args, x_grad);
+            SET_GRADIENT_IN_CELL_NR (args, x_grad);
     }
 
     *ans = args;

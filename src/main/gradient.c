@@ -118,21 +118,23 @@ TYPEOF(v),length(v),NAMEDCNT(v),CPTR_FROM_SEXP(v)/64,CPTR_FROM_SEXP(v)%64,v);
 
 void SET_GRADIENT_IN_CELL (SEXP x, SEXP v)
 {
-   if (ATTRIB_W(x) != R_NilValue && !HAS_GRADIENT_IN_CELL(x)) abort();
-   if (v != R_NilValue && TYPEOF(v) != LISTSXP) abort();
+    if (ATTRIB_W(x) != R_NilValue && !HAS_GRADIENT_IN_CELL(x)) abort();
+    if (v != R_NilValue && TYPEOF(v) != LISTSXP) abort();
 
-   dec_gradient_namedcnt (ATTRIB_W(x));
-   SET_ATTRIB_TO_ANYTHING (x,v);
-   inc_gradient_namedcnt (v);
+    if (ATTRIB_W(x) != v) {
+        dec_gradient_namedcnt (ATTRIB_W(x));
+        SET_ATTRIB_TO_ANYTHING (x,v);
+        inc_gradient_namedcnt (v);
+    }
 }
 
 
 void SET_GRADIENT_IN_CELL_NR (SEXP x, SEXP v)
 {
-   if (ATTRIB_W(x) != R_NilValue && !HAS_GRADIENT_IN_CELL(x)) abort();
-   if (v != R_NilValue && TYPEOF(v) != LISTSXP) abort();
+    if (ATTRIB_W(x) != R_NilValue && !HAS_GRADIENT_IN_CELL(x)) abort();
+    if (v != R_NilValue && TYPEOF(v) != LISTSXP) abort();
 
-   SET_ATTRIB_TO_ANYTHING (x,v);
+    SET_ATTRIB_TO_ANYTHING (x,v);
 }
 
 
