@@ -18,7 +18,7 @@ eval(expr, envir = parent.frame(),
                        parent.frame() else baseenv())
 evalq(expr, envir, enclos)
 eval.parent(expr, n = 1)
-local(expr, envir = new.env())
+local(expr, envir = new.env(hash=FALSE))
 }
 \arguments{
   \item{expr}{an object to be evaluated.  See \sQuote{Details}.}
