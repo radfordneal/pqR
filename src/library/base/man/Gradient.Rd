@@ -278,7 +278,6 @@ the variable that they update:
 \preformatted{  attr<-, attributes<-, names<-, dim<-, dimnames<-, class<-, oldClass<-
 }
 }
-}
 
 \value{
 When the gradient is with respect to only one variable, the value
