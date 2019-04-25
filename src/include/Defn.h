@@ -2022,9 +2022,9 @@ static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
    macros below call procedure in memory.c for error handling.  PROTECT_PTR is 
    not redefined, since it contains a significant amount of code.
 
-   Macros PROTECT2, PROTECT3, and PROTECT4 for protecting 2, 3, or 4 objects
-   are also defined.  There arguments should be simple variables - avoid
-   calling anything, and avoid any side effects.
+   Macros PROTECT2, PROTECT3, PROTECT4, and PROTECT5 for protecting 2, 3, 4,
+   or 5 objects are also defined.  There arguments should be simple variables
+   - avoid calling anything, and avoid any side effects.
 
    UNPROTECT_PROTECT(x) is the same as UNPROTECT(1); PROTECT(x), but faster.
 

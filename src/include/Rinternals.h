@@ -1178,6 +1178,7 @@ void SET_PRSEEN(SEXP x, int v);
 #define PROTECT2(s1,s2)		Rf_protect2(s1,s2) /* BEWARE! All args eval'd */
 #define PROTECT3(s1,s2,s3)	Rf_protect3(s1,s2,s3) /* before any protected */
 #define PROTECT4(s1,s2,s3,s4)	Rf_protect4(s1,s2,s3,s4)
+#define PROTECT5(s1,s2,s3,s4,s5) Rf_protect5(s1,s2,s3,s4,s5)
 #define UNPROTECT(n)		Rf_unprotect(n)
 #define UNPROTECT_PTR(s)	Rf_unprotect_ptr(s)
 

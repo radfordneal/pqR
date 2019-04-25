@@ -2464,6 +2464,15 @@ void Rf_protect4 (SEXP s1, SEXP s2, SEXP s3, SEXP s4)
               Rf_chk_valid_SEXP(s4));
 }
 
+void Rf_protect5 (SEXP s1, SEXP s2, SEXP s3, SEXP s4, SEXP s5)
+{
+    PROTECT5 (Rf_chk_valid_SEXP(s1),
+              Rf_chk_valid_SEXP(s2),
+              Rf_chk_valid_SEXP(s3),
+              Rf_chk_valid_SEXP(s4),
+              Rf_chk_valid_SEXP(s5));
+}
+
 
 /* "unprotect" pop argument list from top of R_PPStack */
 
