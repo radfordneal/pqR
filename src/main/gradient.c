@@ -885,14 +885,15 @@ R_inspect(grad); REprintf("--\n");
 	
     if (TYPEOF(grad) != VECSXP || LENGTH(grad) != n) abort();
 
-    if (j < 0 || i >= n || j < i)
+    if (i < 0 || j < 0) abort();
+
+    if (i >= n || j < i)
         return R_NilValue;
 
     PROTECT(grad);
 
     SEXP res = alloc_list_gradient (j-i+1);
 
-    if (i < 0) i = 0;
     if (j >= n) j = n-1;
 
     for (R_len_t k = i; k <= j; k++)
@@ -950,11 +951,10 @@ R_inspect(grad); REprintf("--\n");
 #endif
     RECURSIVE_GRADIENT_APPLY (subset_range_numeric_gradient, grad, i, j, n);
 
-    if (j < 0 || i >= n || j < i)
-        return R_NilValue;
+    if (i < 0 || j < 0) abort();
 
-    if (i < 0) i = 0;
-    if (j >= n) j = n-1;
+    if (i >= n || j < i)
+        return R_NilValue;
 
     if (TYPEOF(grad) != REALSXP) abort();
 
@@ -966,13 +966,18 @@ R_inspect(grad); REprintf("--\n");
     PROTECT(grad);
 
     if (glen % n != 0) abort();
-    R_len_t slen = glen/n;
+    R_len_t gvars = glen/n;
     R_len_t m = j-i+1;
-    SEXP res = alloc_numeric_gradient (slen, m);
+    R_len_t t = m;
+    SEXP res = alloc_numeric_gradient (gvars, m);
+    if (j >= n) {
+        memset (REAL(res), 0, LENGTH(res) * sizeof(double));
+        t = n - i;
+    }
     R_len_t k, l;
     k = l = 0;
     while (k < glen) {
-        copy_elements (res, l, 1, grad, k+i, 1, m);
+        copy_elements (res, l, 1, grad, k+i, 1, t);
         k += n;
         l += m;
     }
@@ -1014,6 +1019,10 @@ R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
         if (i >= 1 && i <= n) {
             for (R_len_t k = 0; k < gvars; k++)
                 REAL(res)[j+k*m] = REAL(grad)[(i-1)+k*n];
+        }
+        else {
+            for (R_len_t k = 0; k < gvars; k++)
+                REAL(res)[j+k*m] = 0;
         }
     }
 

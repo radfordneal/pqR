@@ -863,6 +863,11 @@ with gradient (a=c(9,5,2)) {
   list(r[c(2,1),1,1],r[2,2,2],r[2,c(3,1,1,2),2])
 }
 
+with gradient (a=c(3,5)) a[1..5]
+with gradient (a=c(3,5)) a[c(5,1,7,2,3)]
+with gradient (a=list(3,5)) a[1..5]
+with gradient (a=list(3,5)) a[c(5,1,7,2,3)]
+
 
 # Test 'compute gradient'.
 
