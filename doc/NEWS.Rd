@@ -32,6 +32,7 @@
         dimensions subscripted with \code{[]} were not converted
         to names (as had been intended) when the result had its 
         dimensions dropped, and only one dimension had names.
+  }}
 }
 
 
