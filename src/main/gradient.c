@@ -1821,14 +1821,16 @@ REprintf("--\n");
         for (R_len_t h = 0; h < gvars; h++) {
             task_colSums_or_colMeans 
               ( ((helpers_op_t)(h*nc) << 33) |
-                ((helpers_op_t)nc << 2) | (OP<<1)&2 | keepna, res, grad, x);
+                ((helpers_op_t)nc << 2) | (OP<<1)&2, res, grad,
+                                                     keepna ? R_NilValue : x);
         }
     }
     else {  /* rowSums/Means */
         for (R_len_t h = 0; h < gvars; h++) {
             task_rowSums_or_rowMeans 
               ( ((helpers_op_t)(h*nr) << 33) |
-                ((helpers_op_t)nr << 2) | (OP<<1)&2 | keepna, res, grad, x);
+                ((helpers_op_t)nr << 2) | (OP<<1)&2, res, grad,
+                                                     keepna ? R_NilValue : x);
         }
     }
 
@@ -1915,6 +1917,16 @@ REprintf("==\n");
 attribute_hidden SEXP sum_gradient 
                        (SEXP grad, SEXP v, SEXP a, int narm, R_len_t n)
 {
+#if 0
+REprintf("*** sum_gradient %d %d\n",narm,n);
+R_inspect(grad);
+REprintf("--\n");
+R_inspect(v);
+REprintf("--\n");
+R_inspect(a);
+#endif
+    extern helpers_task_proc task_colSums_or_colMeans;
+
     RECURSIVE_GRADIENT_APPLY2 (sum_gradient, grad, v, a, narm, n);
 
     if (v == R_NilValue)
@@ -1928,26 +1940,30 @@ attribute_hidden SEXP sum_gradient
     R_len_t gvars = GRADIENT_WRT_LEN (v);
 
     SEXP r = grad;
-    if (r == R_NilValue) {
+    if (r == R_NilValue)
         r = alloc_numeric_gradient (gvars, 1);
-        memset (REAL(r), 0, LENGTH(r) * sizeof(double));
-    }
 
-    R_len_t i, j, k;
-
-    for (i = 0; i < gvars; i++) {
-        long double s = 0;
-        R_len_t b = i*n;
-        if (narm) {
+    if (narm) {
+        R_len_t i, j;
+        if (grad == R_NilValue)
+            memset (REAL(r), 0, LENGTH(r) * sizeof(double));
+        for (i = 0; i < gvars; i++) {
+            long double s = 0;
+            R_len_t b = i*n;
             for (j = 0; j < n; j++)
                 if (!ISNAN(REAL(a)[j])) s += REAL(v)[b+j];
+            REAL(r)[i] += s;
         }
-        else {
-            for (j = 0; j < n; j++)
-                s += REAL(v)[b+j];
-        }
-        REAL(r)[i] += s;
     }
+    else {
+        task_colSums_or_colMeans (((helpers_op_t)gvars<<2) | (grad!=R_NilValue),
+                                  r, v, R_NilValue);
+    }
+
+#if 0
+REprintf("*** sum_gradient end\n",narm,n);
+R_inspect(r);
+#endif
 
     UNPROTECT(2);
     return r;

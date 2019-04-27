@@ -1702,7 +1702,7 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP na)
 {
     if (LENGTH(ans) == 0) return;
 
-    int keepNA = op&1;        /* Don't skip NA/NaN elements? */
+    int keepNA = na==R_NilValue;  /* Don't skip NA/NaN elements? */
     int Means = op&2;         /* Find means rather than sums? */
     unsigned p = (op>>2) & 0x7fffffff;  /* Number of columns in matrix */
     unsigned n = LENGTH(x)/LENGTH(ans); /* Number of rows in matrix */
@@ -1711,6 +1711,8 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP na)
     int avail = 0;            /* Number of input elements known to be computed*/
 
     double *a = REAL(ans)+o;  /* Pointer to start in result vector */
+    double *init = op&1 ? a : 0; /* array for initializing sums, to 0 if null */
+                                 /*   - only for summing reals */
     o *= n;                   /* Now offset of start in x */
 
     int cnt;                  /* # elements not NA/NaN, if Means and !keepNA */
@@ -1729,10 +1731,10 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP na)
         j = 0;
         if (keepNA) {
             if (p & 1) {  /* sum first column if there are an odd number */
-                long double sum;
+                long double sum = init ? init[j] : 0.0;
                 e = k + n;
                 if (avail < e) HELPERS_WAIT_IN1 (avail, e-1, np);
-                sum = (n & 1) ? rx[k++] : 0.0;
+                if (n & 1) sum += rx[k++];
                 while (k < e) {
                     sum += rx[k++];
                     sum += rx[k++];
@@ -1741,17 +1743,14 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP na)
                 HELPERS_NEXT_OUT (j);
             }
             while (j < p) {  /* sum pairs of columns */
-                long double sum, sum2;
+                long double sum = init ? init[j] : 0.0;
+                long double sum2 = init ? init[j+1] : 0.0;
                 e = k + 2*n;
                 if (avail < e) HELPERS_WAIT_IN1 (avail, e-1, np);
                 if (n & 1) {
-                    sum = rx[k];
-                    sum2 = rx[k+n];
+                    sum += rx[k];
+                    sum2 += rx[k+n];
                     k += 1;
-                }
-                else {
-                    sum = 0;
-                    sum2 = 0;
                 }
                 while (k+n < e) {
                     sum += rx[k];
@@ -1773,8 +1772,9 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP na)
             if (!Means) {
                 long double sum;
                 while (j < p) {
+                    sum = init ? init[j] : 0.0;
                     if (avail < k+n) HELPERS_WAIT_IN1 (avail, k+n-1, np);
-                    for (sum = 0.0, i = n; i > 0; i--, k++)
+                    for (i = n; i > 0; i--, k++)
                         if (!ISNAN(rna[k])) sum += rx[k];
                     a[j] = sum;
                     HELPERS_NEXT_OUT (j);
@@ -1783,8 +1783,9 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP na)
             else {
                 long double sum;
                 while (j < p) {
+                    sum = init ? init[j] : 0.0;
                     if (avail < k+n) HELPERS_WAIT_IN1 (avail, k+n-1, np);
-                    for (cnt = 0, sum = 0.0, i = n; i > 0; i--, k++)
+                    for (cnt = 0, i = n; i > 0; i--, k++)
                         if (!ISNAN(rna[k])) { cnt += 1; sum += rx[k]; }
                     a[j] = sum/cnt;
                     HELPERS_NEXT_OUT (j);
@@ -1851,7 +1852,7 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP na)
 {
     if (LENGTH(ans) == 0) return;
 
-    int keepNA = op&1;        /* Don't skip NA/NaN elements? */
+    int keepNA = na==R_NilValue;  /* Don't skip NA/NaN elements? */
     int Means = op&2;         /* Find means rather than sums? */
     unsigned n = (op>>2) & 0x7fffffff;  /* Number of rows in matrix */
     unsigned p = LENGTH(x)/LENGTH(ans); /* Number of columns in matrix */
@@ -2057,14 +2058,14 @@ static SEXP do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         ans = allocVector (REALSXP, p);
         DO_NOW_OR_LATER2 (variant, LENGTH(x) >= T_colSums,
           HELPERS_PIPE_IN1_OUT, task_colSums_or_colMeans, 
-          ((helpers_op_t)p<<2) | (OP<<1)&2 | !NaRm, ans, x, x);
+          ((helpers_op_t)p<<2) | (OP<<1)&2, ans, x, NaRm ? x : R_NilValue);
     }
 
     else { /* rows */
         ans = allocVector (REALSXP, n);
         DO_NOW_OR_LATER2 (variant, LENGTH(x) >= T_rowSums,
           HELPERS_PIPE_OUT, task_rowSums_or_rowMeans, 
-          ((helpers_op_t)n<<2) | (OP<<1)&2 | !NaRm, ans, x, x);
+          ((helpers_op_t)n<<2) | (OP<<1)&2, ans, x, NaRm ? x : R_NilValue);
     }
 
     if (grad != R_NilValue) {
