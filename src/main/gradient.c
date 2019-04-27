@@ -1564,8 +1564,16 @@ attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
         R_len_t glen = n * gvars;
         k = 0;
         for (i = 0; i < glen; i += n) {
-            for (j = 0; j < n; j++) {
-                REAL(r)[i+j] = REAL(grad)[k+j%gn] * factor;
+            if (gn == n) {
+                for (j = 0; j < n; j++)
+                    REAL(r)[i+j] = REAL(grad)[k+j] * factor;
+            } 
+            else {
+                R_len_t jg = 0;
+                for (j = 0; j < n; j++) {
+                    REAL(r)[i+j] = REAL(grad)[k+jg] * factor;
+                    if (++jg == gn) jg = 0;
+                }
             }
             k += gn;
         }
@@ -1609,8 +1617,22 @@ LENGTH(grad),LENGTH(factors),GRADIENT_WRT_LEN(grad));
     R_len_t flen = LENGTH(factors);
     k = 0;
     for (i = 0; i < glen; i += n) {
-        for (j = 0; j < n; j++) {
-            REAL(r)[i+j] = REAL(grad)[k + j%gn] * REAL(factors)[j%flen];
+        if (gn == n && flen == n) {
+            for (j = 0; j < n; j++)
+                REAL(r)[i+j] = REAL(grad)[k + j] * REAL(factors)[j];
+        }
+        else if (gn == n && flen == 1) {
+            double f = REAL(factors)[0];
+            for (j = 0; j < n; j++)
+                REAL(r)[i+j] = REAL(grad)[k + j] * f;
+        }
+        else {
+            R_len_t jg = 0, jf = 0;
+            for (j = 0; j < n; j++) {
+                REAL(r)[i+j] = REAL(grad)[k + jg] * REAL(factors)[jf];
+                if (++jg == gn) jg = 0;
+                if (++jf == flen) jf = 0;
+            }
         }
         k += gn;
     }
@@ -2805,8 +2827,11 @@ LENGTH(base),LENGTH(extra));
         R_len_t glen = n * gvars;
         l = 0;
         for (i = 0; i < glen; i += n) {
-            for (j = 0; j < n; j++)
-                REAL(r)[i+j] = REAL(extra)[l+j%en]*factor;
+            R_len_t je = 0;
+            for (j = 0; j < n; j++) {
+                REAL(r)[i+j] = REAL(extra)[l+je]*factor;
+                if (++je == en) je = 0;
+            }
             l += en;
         }
         UNPROTECT(2);
@@ -2826,8 +2851,11 @@ LENGTH(base),LENGTH(extra));
         R_len_t glen = n * gvars;
         k = 0;
         for (i = 0; i < glen; i += n) {
-            for (j = 0; j < n; j++)
-                REAL(r)[i+j] = REAL(base)[k+j%bn];
+            R_len_t jb = 0;
+            for (j = 0; j < n; j++) {
+                REAL(r)[i+j] = REAL(base)[k+jb];
+                if (++jb == bn) jb = 0;
+            }
             k += bn;
         }
         UNPROTECT(2);
@@ -2848,8 +2876,12 @@ LENGTH(base),LENGTH(extra));
         if (en * gvars != elen) abort();
         k = l = 0;
         for (i = 0; i < glen; i += n) {
-            for (j = 0; j < n; j++)
-                REAL(r)[i+j] = REAL(base)[k+j%bn] + REAL(extra)[l+j%en]*factor;
+            R_len_t jb = 0, je = 0;
+            for (j = 0; j < n; j++) {
+                REAL(r)[i+j] = REAL(base)[k+jb] + REAL(extra)[l+je]*factor;
+                if (++jb == bn) jb = 0;
+                if (++je == en) je = 0;
+            }
             k += bn;
             l += en;
         }
@@ -2902,8 +2934,11 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
         if (LENGTH(extra) != gvars * en) abort();
         k = 0;
         for (i = 0; i < glen; i += n) {
+            R_len_t je = 0, jf = 0;
             for (j = 0; j < n; j++) {
-                REAL(r)[i+j] = REAL(extra)[k + j%en] * REAL(factors)[j%flen];
+                REAL(r)[i+j] = REAL(extra)[k + je] * REAL(factors)[jf];
+                if (++je == en) je = 0;
+                if (++jf == flen) jf = 0;
             }
             k += en;
         }
@@ -2915,8 +2950,10 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
         if (LENGTH(base) != gvars * bn) abort();
         l = 0;
         for (i = 0; i < glen; i += n) {
+            R_len_t jb = 0;
             for (j = 0; j < n; j++) {
-                REAL(r)[i+j] = REAL(base)[l + j%bn];
+                REAL(r)[i+j] = REAL(base)[l + jb];
+                if (++jb == bn) jb = 0;
             }
             l += bn;
         }
@@ -2932,9 +2969,13 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
         if (LENGTH(extra) != gvars * en) abort();
         k = l = 0;
         for (i = 0; i < glen; i += n) {
+            R_len_t jb = 0, je = 0, jf = 0;
             for (j = 0; j < n; j++) {
-                REAL(r)[i+j] = REAL(base)[l + j%bn] 
-                                + REAL(extra)[k + j%en] * REAL(factors)[j%flen];
+                REAL(r)[i+j] = REAL(base)[l + jb] 
+                                + REAL(extra)[k + je] * REAL(factors)[jf];
+                if (++jb == bn) jb = 0;
+                if (++je == en) je = 0;
+                if (++jf == flen) jf = 0;
             }
             k += en;
             l += bn;
