@@ -14509,7 +14509,7 @@ $b$x$z
 NULL
 > pr("end")
 end 
-> #as.symbol("DBGG")
+> 
 > pr("start")
 start 
 > track gradient (a=7,b=6) {
@@ -14640,6 +14640,37 @@ $b$x$z
 
 
 
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (a=rep(7,n)) {
++   cat("W\n")
++   r <- compute gradient (a) {
++     cat("X\n")
++     list(5,1,9)
++   }
++   as {
++     cat("Y\n")
++     list(a*2,a*3,a*4)
++   }
++   cat("Z\n")
++   NULL
++ }
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+W
+X
+Y
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+Z
 NULL
 > pr("end")
 end 

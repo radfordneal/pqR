@@ -2101,7 +2101,7 @@ track gradient (a=7,b=6) {
   NULL
 }
 pr("end")
-#as.symbol("DBGG")
+
 pr("start")
 track gradient (a=7,b=6) {
   pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b)));
@@ -2122,6 +2122,22 @@ track gradient (a=7,b=6) {
   pr("D"); L$x$z[[2]] <- a*b
   pr("E"); M <- L; L$x$z[3] <- a^2+b^2; prp(gradient_of(L))
   pr("F"); prp(gradient_of(M))
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (a=rep(7,n)) {
+  cat("W\n")
+  r <- compute gradient (a) {
+    cat("X\n")
+    list(5,1,9)
+  }
+  as {
+    cat("Y\n")
+    list(a*2,a*3,a*4)
+  }
+  cat("Z\n")
   NULL
 }
 pr("end")
