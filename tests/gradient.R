@@ -1594,6 +1594,8 @@ p( with gradient (df1,df3) cbind(df1,df3) )
 
 # Miscellaneous tests.
 
+with gradient (a=7) invisible(a)
+
 with gradient (a=c(3,1,5,4),b=7) mean(c(a,b,a))
 with gradient (a=c(3,1,5,4),b=7) mean(c(a,b,NA,a))
 

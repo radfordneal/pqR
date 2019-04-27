@@ -254,6 +254,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
   as.vector, as.list, as.double, as.numeric, as.real, as.matrix
   unclass, drop, structure, get_rm
   storage.mode<-, length<-
+  invisible
 
   mean, sum, prod, min, max, pmin, pmax
   rowSums, rowMeans, .rowSums, .rowMeans, 
