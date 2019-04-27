@@ -701,13 +701,10 @@ R_inspect(grad); REprintf("--\n");
     PROTECT(res);
 
     R_len_t m = n > k ? k : n;
-    for (R_len_t i = 0; i < m; i++) {
-        for (R_len_t h = 0; h < gvars; h++)
+    for (R_len_t h = 0; h < gvars; h++) {
+        for (R_len_t i = 0; i < m; i++)
             REAL(res)[h*n+i] = REAL(grad)[h*k+i];
-    }
-
-    for (R_len_t i = k; i < n; i++) {
-        for (R_len_t h = 0; h < gvars; h++)
+        for (R_len_t i = k; i < n; i++)
             REAL(res)[h*n+i] = REAL(res)[h*n+i-k];
     }
 
@@ -747,7 +744,7 @@ R_inspect(grad); REprintf("--\n");
     for (h = 0; h <gvars; h++) {
         for (i = 0, j = 0; i <= n_1; i++, j += nc) {
             if (j > n_1) j -= n_1;
-            REAL(res) [h*n + i] = REAL(grad) [h*ng + j%ng];
+            REAL(res) [h*n + i] = REAL(grad) [h*ng + j % ng];
         }
     }
 
@@ -1775,8 +1772,8 @@ R_inspect(v);
     SEXP res = alloc_numeric_gradient (gvars, n);
     memset (REAL(res), 0, LENGTH(res) * sizeof(double));
 
-    for (int j = 0; j < mn; j++) 
-        for (int h = 0; h < gvars; h++)
+    for (int h = 0; h < gvars; h++)
+        for (int j = 0; j < mn; j++) 
             REAL(res) [h*n + j*nr + j] = REAL(grad) [h*ng + j % ng];
 
 #if 0
@@ -2776,8 +2773,6 @@ R_inspect(arg);
         R_len_t i = 0, j = 0;
         R_len_t h;
         while (i < n) {
-            /* REprintf("?? %d/%d %d/%d %f %f\n",
-                        i,n,j,nv,REAL(arg)[j],REAL(ans)[i]); */
             if (REAL(ans)[i] == REAL(arg)[j]) {
                 for (h = 0; h < gvars; h++)
                     REAL(res)[h*n+i] = REAL(v)[h*nv+j];
