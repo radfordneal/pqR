@@ -367,35 +367,48 @@ static SEXP make_id_grad (SEXP val)
 
 
 /* Test whether the structure of a gradient value matches the structure of
-   what it is the gradient of.  Also fills in GRADIENT_WRT_LEN fields of
-   Jacobian matrices in grad. */
+   what it is the gradient of.  Returns R_NoObject if doesn't match.  Returns
+   'grad' with GRADIENT_WRT_LEN fields set in Jacobian matrices (possibly
+   duplicating to do so). */
 
-static int match_structure (SEXP val, SEXP grad, R_len_t gvars)
+static SEXP match_structure (SEXP val, SEXP grad, R_len_t gvars)
 {
     if (TYPEOF(val) == REALSXP) {
         if (TYPEOF(grad) != REALSXP)
-            return 0;
+            return R_NoObject;
         if (LENGTH(grad) != (uint64_t) gvars * LENGTH(val) != 0)
-            return 0;
+            return R_NoObject;
+        if (NAMEDCNT_GT_0(grad)) grad = duplicate(grad);
         SET_GRADIENT_WRT_LEN (grad, gvars);
     }
     else if (TYPEOF(val) == VECSXP) {
         if (TYPEOF(grad) != VECSXP)
-            return 0;
+            return R_NoObject;
         if (LENGTH(val) != LENGTH(grad))
-            return 0;
+            return R_NoObject;
+        PROTECT(grad);
         R_len_t i;
         for (i = 0; i < LENGTH(val); i++) {
-            if (!match_structure(VECTOR_ELT(val,i), VECTOR_ELT(grad,i), gvars))
-                return 0;
+            SEXP e;
+            e = match_structure (VECTOR_ELT(val,i), VECTOR_ELT(grad,i), gvars);
+            if (e == R_NoObject)
+                return R_NoObject;
+            if (e != VECTOR_ELT(grad,i)) {
+                if (NAMEDCNT_GT_0(grad)) {
+                    grad = duplicate(grad);
+                    UNPROTECT_PROTECT(grad);
+                }
+                SET_VECTOR_ELT (grad, i, e);
+            }
         }
+        UNPROTECT(1);
     }
     else {
         if (grad != R_NilValue)
-            return 0;
+            return R_NoObject;
     }
 
-    return 1;
+    return grad;
 }
 
 
@@ -3505,11 +3518,12 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
             if (gvars == 0)
                 continue;
             SEXP gval = evalv (CAR(q), newenv, VARIANT_PENDING_OK);
-            if (NAMEDCNT_GT_0(gval)) gval = duplicate(gval);
             PROTECT(gval);
-            if (! match_structure (result, gval, gvars))
+            gval = match_structure (result, gval, gvars);
+            if (gval == R_NoObject)
                 errorcall (call, 
                   _("computed gradient does not have the correct structure"));
+            UNPROTECT_PROTECT(gval);
             resgrad = backpropagate_gradients (resgrad, vg, gval);
             UNPROTECT(2);  /* gval, old resgrad */
             PROTECT(resgrad);
