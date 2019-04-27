@@ -1772,9 +1772,13 @@ R_inspect(v);
     SEXP res = alloc_numeric_gradient (gvars, n);
     memset (REAL(res), 0, LENGTH(res) * sizeof(double));
 
-    for (int h = 0; h < gvars; h++)
-        for (int j = 0; j < mn; j++) 
-            REAL(res) [h*n + j*nr + j] = REAL(grad) [h*ng + j % ng];
+    for (int h = 0; h < gvars; h++) {
+        R_len_t jg = 0;
+        for (int j = 0; j < mn; j++) {
+            REAL(res) [h*n + j*nr + j] = REAL(grad) [h*ng + jg];
+            if (++jg == ng) jg = 0;
+        }
+    }
 
 #if 0
 REprintf("*** create_diag_matrix_gradient end\n");
@@ -2179,8 +2183,11 @@ R_inspect(v);
     }
     else {
         R_len_t lenv = LENGTH(v);
-        for (k = 0; k <= j-i; k++)
-            SET_VECTOR_ELT (res, i+k, VECTOR_ELT (v, k % lenv));
+        R_len_t kv = 0;
+        for (k = 0; k <= j-i; k++) {
+            SET_VECTOR_ELT (res, i+k, VECTOR_ELT (v, kv));
+            if (++kv == lenv) kv = 0;
+        }
     }
 
 #if 0
@@ -2246,17 +2253,37 @@ R_inspect(v);
         }
     }
 
+    R_len_t sij = j-i;
+
     if (v == R_NilValue || LENGTH(v) == 0) {
-        for (h = 0; h < gvars; h++)
-            for (k = 0; k <= j-i; k++)
-                REAL(res)[h*n + (i + k)] = 0;
+        for (h = 0; h < gvars; h++) {
+            R_len_t hn = h*n;
+            for (k = 0; k <= sij; k++)
+                REAL(res)[hn + i + k] = 0;
+        }
     }
     else {
         m = LENGTH(v) / gvars;
         if (m * gvars != LENGTH(v)) abort();
-        for (h = 0; h < gvars; h++)
-            for (k = 0; k <= j-i; k++)
-                REAL(res)[h*n + (i + k)] = REAL(v)[h*m + k % m];
+        for (h = 0; h < gvars; h++) {
+            R_len_t hn = h*n, hm = h*m;
+            if (m == 1) {
+                double vv = REAL(v)[hm];
+                for (k = 0; k <= sij; k++)
+                    REAL(res)[hn + i + k] = vv;
+            }
+            else if (m >= sij) {
+                for (k = 0; k <= sij; k++)
+                    REAL(res)[hn + i + k] = REAL(v)[hm + k];
+            }
+            else {
+                R_len_t kv = 0;
+                for (k = 0; k <= sij; k++) {
+                    REAL(res)[hn + i + k] = REAL(v)[hm + kv];
+                    if (++kv == m) kv = 0;
+                }
+            }
+        }
     }
 
 #if 0
@@ -2330,11 +2357,13 @@ R_inspect(v);
     else {
         if (TYPEOF(v) != REALSXP) abort();
         m = LENGTH(v) / gvars;
+        R_len_t jv = 0;
         for (R_len_t j = 0; j < k; j++) {
             R_len_t i = INTEGER(indx)[j];
             if (i >= 1 && i <= n)
                 for (h = 0; h < gvars; h++)
-                    REAL(res) [h*n + i-1] = REAL(v) [h*m + j % m];
+                    REAL(res) [h*n + i-1] = REAL(v) [h*m + jv];
+            if (++jv == m) jv = 0;
         }
     }
 
@@ -2392,10 +2421,12 @@ R_inspect(v);
         if (TYPEOF(v) != VECSXP) abort();
         R_len_t lenv = LENGTH(v);
         R_len_t k = LENGTH(indx);
+        R_len_t jv = 0;
         for (R_len_t j = 0; j < k; j++) {
             R_len_t i = INTEGER(indx)[j];
             if (i >= 1 && i <= n)
-                SET_VECTOR_ELT (res, i-1, VECTOR_ELT (v, j % lenv));
+                SET_VECTOR_ELT (res, i-1, VECTOR_ELT (v, jv));
+            if (++jv == lenv) jv = 0;
         }
     }
 
