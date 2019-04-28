@@ -85,7 +85,7 @@ static void PrintEnvironment(SEXP x)
             Rprintf(" garbled");
         else {
             int i;
-            for (i = 0; i < LENGTH(g); i++) {
+            for (i = 0; i < GRADVARS_NV(g); i++) {
                 if (TYPEOF(VECTOR_ELT(g,i)) != SYMSXP)
                     Rprintf(" ?");
                 else
@@ -162,6 +162,9 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec, int prom) {
         if (TYPEOF(v)==ENVSXP && IS_BASE(v)) { 
             if (a) Rprintf(","); Rprintf("BC"); a = 1; 
         }
+    }
+    if (TYPEOF(v) == VECSXP && GRAD_WRT_LIST(v)) {
+        if (a) Rprintf(","); Rprintf("GL"); a = 1; 
     }
     if (IS_S4_OBJECT(v)) { if (a) Rprintf(","); Rprintf("S4"); a = 1; }
     if (TYPEOF(v) == SYMSXP || TYPEOF(v) == LISTSXP) {

@@ -202,7 +202,6 @@
  R_decompress3
  R_dlsym
  R_do_data_class
- R_do_set_class
  R_dot_Class
  R_dot_Generic
  R_dot_GenericCallEnv
@@ -269,7 +268,13 @@
  Rf_ComplexFromLogical
  Rf_ComplexFromReal
  Rf_ComplexFromString
+ Rf_copy_list_recycled_byrow_gradient
+ Rf_copy_list_recycled_gradient
+ Rf_copy_numeric_recycled_byrow_gradient
+ Rf_copy_numeric_recycled_gradient
  Rf_copy_scaled_gradients
+ Rf_copy_scaled_gradients_vec
+ Rf_create_diag_matrix_gradient
  Rf_CustomPrintValue
  Rf_DispatchAnyOrEval
  Rf_DispatchGroup
@@ -314,7 +319,6 @@
  Rf_RealFromInteger
  Rf_RealFromLogical
  Rf_RealFromString
- Rf_RemoveVariable
  Rf_SrcrefPrompt
  Rf_StringFromComplex
  Rf_StringFromInteger
@@ -322,11 +326,18 @@
  Rf_StringFromReal
  Rf_VectorIndex
  Rf_add_scaled_gradients
+ Rf_add_scaled_gradients_vec
  Rf_allocCharsxp
  Rf_apply_debug_finish
  Rf_apply_debug_setup
  Rf_apply_non_function_error
  Rf_arg_missing_error
+ Rf_array_subassign_indexes_list_gradient
+ Rf_array_subassign_indexes_numeric_gradient
+ Rf_array_subset_indexes_list_gradient
+ Rf_array_subset_indexes_numeric_gradient
+ Rf_as_list_gradient
+ Rf_as_numeric_gradient
  Rf_asLogicalNoNA_error
  Rf_asLogicalNoNA_warning
  Rf_attributes_dup
@@ -347,7 +358,8 @@
  Rf_copyMostAttribNoClass
  Rf_copyMostAttribNoTs
  Rf_d1mach
- Rf_delete_list_gradient
+ Rf_delete_range_list_gradient
+ Rf_delete_selected_list_gradient
  Rf_deparse1s
  Rf_dotdotdot_error
  Rf_dpptr
@@ -360,6 +372,7 @@
  Rf_evalList_v
  Rf_eval_unshared
  Rf_extend_list_gradient
+ Rf_extend_numeric_gradient
  Rf_findFun_nospecsym
  Rf_findVar1
  Rf_findcontext
@@ -386,7 +399,16 @@
  Rf_matchArgs_nontrivial
  Rf_matchArgs_tail
  Rf_matchPar
+ Rf_matrix_subset_indexes_list_gradient
+ Rf_matrix_subset_indexes_numeric_gradient
+ Rf_matrix_subset_one_row_list_gradient
+ Rf_matrix_subset_one_row_numeric_gradient
+ Rf_matrix_subset_range_list_gradient
+ Rf_matrix_subset_range_numeric_gradient
+ Rf_matprod_gradient
+ Rf_mean_gradient
  Rf_mbtoucs
+ Rf_minmax_gradient
  Rf_mkCLOSXP
  Rf_mkCharMulti
  Rf_mkPROMISE
@@ -400,15 +422,21 @@
  Rf_osDynSymbol
  Rf_out_of_bounds_error
  Rf_pbeta_raw
+ Rf_prod_gradient
  Rf_promiseArgs
  Rf_qchisq_appr
  Rf_regcomp
  Rf_regerror
  Rf_regexec
  Rf_regfree
+ Rf_rep_each_list_gradient
+ Rf_rep_each_numeric_gradient
  Rf_rep_one_string_element
  Rf_rep_string_elements
- Rf_set_elements_to_NA_or_NULL
+ Rf_rowcolsumsmeans_gradient
+ Rf_set_elements_to_NA
+ Rf_set_length_list_gradient
+ Rf_set_length_numeric_gradient
  Rf_set_subassign
  Rf_set_subassign_general
  Rf_set_symbits_in_env
@@ -420,8 +448,18 @@
  Rf_start_browser
  Rf_stirlerr
  Rf_subassign_list_gradient
- Rf_subset_list_gradient
+ Rf_subassign_indexes_list_gradient
+ Rf_subassign_indexes_numeric_gradient
+ Rf_subassign_numeric_gradient
+ Rf_subassign_range_list_gradient
+ Rf_subassign_range_numeric_gradient
+ Rf_subset2_list_gradient
+ Rf_subset_indexes_list_gradient
+ Rf_subset_indexes_numeric_gradient
+ Rf_subset_range_list_gradient
+ Rf_subset_range_numeric_gradient
  Rf_substituteList
+ Rf_sum_gradient
  Rf_ucstomb
  Rf_unbound_var_error
  Rf_utf8toucs
@@ -462,6 +500,8 @@
  SET_ASCII
  SET_BYTES
  SET_CACHED
+ SET_GRADIENT_IN_CELL
+ SET_GRADIENT_IN_CELL_NR
  SET_LATIN1
  SET_PRIMOFFSET
  SET_UTF8

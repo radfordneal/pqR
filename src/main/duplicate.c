@@ -223,43 +223,6 @@ static SEXP duplicate1(SEXP s)
 }
 
 
-/* Set n elements of vector x (starting at i) to the appropriate NA value, or
-   to R_NilValue for a VECSXP or EXPRSXP, or to 0 for a RAWSXP. */
-
-void set_elements_to_NA_or_NULL (SEXP x, int i, int n)
-{
-    int ln = i + n;
-
-    if (n == 0) return;
-
-    switch (TYPEOF(x)) {
-    case RAWSXP:
-        do RAW(x)[i++] = 0; while (i<ln);
-        break;
-    case LGLSXP:
-        do LOGICAL(x)[i++] = NA_LOGICAL; while (i<ln);
-        break;
-    case INTSXP:
-        do INTEGER(x)[i++] = NA_INTEGER; while (i<ln);
-        break;
-    case REALSXP:
-        do REAL(x)[i++] = NA_REAL; while (i<ln);
-        break;
-    case CPLXSXP:
-        do { COMPLEX(x)[i].r = COMPLEX(x)[i].i = NA_REAL; i++; } while (i<ln);
-        break;
-    case STRSXP:
-        do SET_STRING_ELT_NA (x, i++); while (i<ln);
-        break;
-    case VECSXP: case EXPRSXP:
-        do SET_VECTOR_ELT_NIL (x, i++); while (i<ln);
-        break;
-    default:
-	UNIMPLEMENTED_TYPE("set_elements_to_NA_or_NULL", x);
-    }
-}
-
-
 /* Set n elements of x, starting at i, to the repeated j'th element of v.
    Duplicates VECSXP and EXPRSXP elements. */
 
@@ -588,6 +551,10 @@ void copyVector(SEXP s, SEXP t)
     }
 }
 
+/* Copies pairlist to make pairlist matrix.  Not actually used at the moment,
+   since matrix(pairlist,nr,nc) gives error instead, even though pairlist
+   matrices can be created by dim(pairlist)<-c(nr,nc). */
+
 void attribute_hidden copyListMatrix(SEXP s, SEXP t, Rboolean byrow)
 {
     SEXP pt, tmp;
@@ -598,15 +565,15 @@ void attribute_hidden copyListMatrix(SEXP s, SEXP t, Rboolean byrow)
     ns = nr*nc;
     pt = t;
     if(byrow) {
-	PROTECT(tmp = allocVector(STRSXP, nr*nc));
+	PROTECT(tmp = allocVector(VECSXP, nr*nc));
 	for (i = 0; i < nr; i++)
 	    for (j = 0; j < nc; j++) {
-		SET_STRING_ELT(tmp, i + j * nr, duplicate(CAR(pt)));
+		SET_VECTOR_ELT(tmp, i + j * nr, duplicate(CAR(pt)));
 		pt = CDR(pt);
 		if(pt == R_NilValue) pt = t;
 	    }
 	for (i = 0; i < ns; i++) {
-	    SETCAR(s, STRING_ELT(tmp, i++));
+	    SETCAR(s, VECTOR_ELT(tmp, i++));
 	    s = CDR(s);
 	}
 	UNPROTECT(1);

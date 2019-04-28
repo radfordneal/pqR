@@ -806,3 +806,43 @@ logical(0)
 [1]    600 360600 360600
 
 > 
+> 
+> # Test data.frame and as.data.frame as applied to lists.
+> 
+> L <- list(x=c(3,5),y=c(TRUE,FALSE),c("xx","yy"))
+> (df<-as.data.frame(L))
+  x     y c.xx.yy.
+1 3  TRUE       xx
+2 5 FALSE       yy
+> unlist(lapply(df,typeof))
+        x         y  c.xx.yy. 
+ "double" "logical" "integer" 
+> (df<-data.frame(L))
+  x     y c.xx.yy.
+1 3  TRUE       xx
+2 5 FALSE       yy
+> unlist(lapply(df,typeof))
+        x         y  c.xx.yy. 
+ "double" "logical" "integer" 
+> (df<-data.frame(L,stringsAsFactors=FALSE))
+  x     y c.xx.yy.
+1 3  TRUE       xx
+2 5 FALSE       yy
+> unlist(lapply(df,typeof))
+          x           y    c.xx.yy. 
+   "double"   "logical" "character" 
+> (df<-data.frame(Q=L))
+  Q.x   Q.y Q.c.xx.yy.
+1   3  TRUE         xx
+2   5 FALSE         yy
+> unlist(lapply(df,typeof))
+       Q.x        Q.y Q.c.xx.yy. 
+  "double"  "logical"  "integer" 
+> (df<-data.frame(Q=L,stringsAsFactors=FALSE))
+  Q.x   Q.y Q.c.xx.yy.
+1   3  TRUE         xx
+2   5 FALSE         yy
+> unlist(lapply(df,typeof))
+        Q.x         Q.y  Q.c.xx.yy. 
+   "double"   "logical" "character" 
+> 

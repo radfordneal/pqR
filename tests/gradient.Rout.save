@@ -3345,9 +3345,1492 @@ attr(,"gradient")[[2]]
 
 > 
 > 
+> # Test gradients of sub-lists found with [.].
+> 
+> with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[2] }
+$y
+[1] 81
+
+attr(,"gradient")
+attr(,"gradient")$y
+[1] 18
+
+> with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[c(2,1)] }
+$y
+[1] 81
+
+$x
+[1] 9
+
+attr(,"gradient")
+attr(,"gradient")$y
+[1] 18
+
+attr(,"gradient")$x
+[1] 1
+
+> with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[1..2] }
+$x
+[1] 9
+
+$y
+[1] 81
+
+attr(,"gradient")
+attr(,"gradient")$x
+[1] 1
+
+attr(,"gradient")$y
+[1] 18
+
+> with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[c(2,1,1,3)] }
+$y
+[1] 81
+
+$x
+[1] 9
+
+$x
+[1] 9
+
+$z
+[1] 729
+
+attr(,"gradient")
+attr(,"gradient")$y
+[1] 18
+
+attr(,"gradient")$x
+[1] 1
+
+attr(,"gradient")$x
+[1] 1
+
+attr(,"gradient")$z
+[1] 243
+
+> with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[c(5,1)] }
+$<NA>
+NULL
+
+$x
+[1] 9
+
+attr(,"gradient")
+attr(,"gradient")$<NA>
+NULL
+
+attr(,"gradient")$x
+[1] 1
+
+> with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[1..5] }
+$x
+[1] 9
+
+$y
+[1] 81
+
+$z
+[1] 729
+
+$<NA>
+NULL
+
+$<NA>
+NULL
+
+attr(,"gradient")
+attr(,"gradient")$x
+[1] 1
+
+attr(,"gradient")$y
+[1] 18
+
+attr(,"gradient")$z
+[1] 243
+
+attr(,"gradient")$<NA>
+NULL
+
+attr(,"gradient")$<NA>
+NULL
+
+> 
+> L <- matrix (list(99,33,44,66,22,11),3,2)
+> G <- with gradient (L) L[3,c(2,2,1)]
+> L[,]
+     [,1] [,2]
+[1,] 99   66  
+[2,] 33   22  
+[3,] 44   11  
+> G[]
+[[1]]
+[1] 11
+
+[[2]]
+[1] 11
+
+[[3]]
+[1] 44
+
+> str(G)
+List of 3
+ $ : num 11
+ $ : num 11
+ $ : num 44
+ - attr(*, "gradient")=List of 6
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 3
+  .. ..$ : num 1
+  .. ..$ : num 1
+  .. ..$ : num 0
+> 
+> L <- matrix (list(99,33,44,66,22,11),3,2)
+> G <- with gradient (L) L[1,c(2,2,1)]
+> L[,]
+     [,1] [,2]
+[1,] 99   66  
+[2,] 33   22  
+[3,] 44   11  
+> G[]
+[[1]]
+[1] 66
+
+[[2]]
+[1] 66
+
+[[3]]
+[1] 99
+
+> str(G)
+List of 3
+ $ : num 66
+ $ : num 66
+ $ : num 99
+ - attr(*, "gradient")=List of 6
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 3
+  .. ..$ : num 1
+  .. ..$ : num 1
+  .. ..$ : num 0
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 3
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+> 
+> L <- matrix (list(99,33,44,66,22,11),3,2)
+> G <- with gradient (L) L[2..3,c(2,1,2)]
+> L[,]
+     [,1] [,2]
+[1,] 99   66  
+[2,] 33   22  
+[3,] 44   11  
+> G[,]
+     [,1] [,2] [,3]
+[1,] 22   33   22  
+[2,] 11   44   11  
+> str(G)
+List of 6
+ $ : num 22
+ $ : num 11
+ $ : num 33
+ $ : num 44
+ $ : num 22
+ $ : num 11
+ - attr(*, "dim")= int [1:2] 2 3
+ - attr(*, "gradient")=List of 6
+  ..$ :List of 6
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 6
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 6
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 6
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 6
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  ..$ :List of 6
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+> 
+> L <- matrix (list(99,33,44,66,22,11),3,2)
+> G <- with gradient (L) L[c(2,3),c(2,1,2)]
+> L[,]
+     [,1] [,2]
+[1,] 99   66  
+[2,] 33   22  
+[3,] 44   11  
+> G[,]
+     [,1] [,2] [,3]
+[1,] 22   33   22  
+[2,] 11   44   11  
+> str(G)
+List of 6
+ $ : num 22
+ $ : num 11
+ $ : num 33
+ $ : num 44
+ $ : num 22
+ $ : num 11
+ - attr(*, "dim")= int [1:2] 2 3
+ - attr(*, "gradient")=List of 6
+  ..$ :List of 6
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 6
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 6
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 6
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 6
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  ..$ :List of 6
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+> 
+> L <- matrix (list(99,33,44,66,22,11),3,2)
+> G <- with gradient (L) { L[[2,2]] <- L[[2,2]]^2; L[2..3,c(2,1,2)] }
+> L[,]
+     [,1] [,2]
+[1,] 99   66  
+[2,] 33   22  
+[3,] 44   11  
+> G[,]
+     [,1] [,2] [,3]
+[1,] 484  33   484 
+[2,] 11   44   11  
+> str(G)
+List of 6
+ $ : num 484
+ $ : num 11
+ $ : num 33
+ $ : num 44
+ $ : num 484
+ $ : num 11
+ - attr(*, "dim")= int [1:2] 2 3
+ - attr(*, "gradient")=List of 6
+  ..$ :List of 6
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 6
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 6
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 6
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 6
+  .. ..$ : num 44
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 44
+  .. ..$ : num 0
+  ..$ :List of 6
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+> 
+> L <- array (list(9,88,7,33,44,999,20,303,111,1111,222,3333,5555,330,1,0,-3,-2),
++             c(3,2,3))
+> G <- with gradient (L) L[c(3,1,1),c(2,2,1),c(2,1,3)]
+> L[,,]
+, , 1
+
+     [,1] [,2]
+[1,] 9    33  
+[2,] 88   44  
+[3,] 7    999 
+
+, , 2
+
+     [,1] [,2]
+[1,] 20   1111
+[2,] 303  222 
+[3,] 111  3333
+
+, , 3
+
+     [,1] [,2]
+[1,] 5555 0   
+[2,] 330  -3  
+[3,] 1    -2  
+
+> G[,,]
+, , 1
+
+     [,1] [,2] [,3]
+[1,] 3333 3333 111 
+[2,] 1111 1111 20  
+[3,] 1111 1111 20  
+
+, , 2
+
+     [,1] [,2] [,3]
+[1,] 999  999  7   
+[2,] 33   33   9   
+[3,] 33   33   9   
+
+, , 3
+
+     [,1] [,2] [,3]
+[1,] -2   -2   1   
+[2,] 0    0    5555
+[3,] 0    0    5555
+
+> str(G)
+List of 27
+ $ : num 3333
+ $ : num 1111
+ $ : num 1111
+ $ : num 3333
+ $ : num 1111
+ $ : num 1111
+ $ : num 111
+ $ : num 20
+ $ : num 20
+ $ : num 999
+ $ : num 33
+ $ : num 33
+ $ : num 999
+ $ : num 33
+ $ : num 33
+ $ : num 7
+ $ : num 9
+ $ : num 9
+ $ : num -2
+ $ : num 0
+ $ : num 0
+ $ : num -2
+ $ : num 0
+ $ : num 0
+ $ : num 1
+ $ : num 5555
+ $ : num 5555
+ - attr(*, "dim")= int [1:3] 3 3 3
+ - attr(*, "gradient")=List of 18
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 27
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 1
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  ..$ :List of 27
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 1
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+  .. ..$ : num 0
+> 
+> 
+> # Test gradients of vector elements found with [[.]].
+> 
+> with gradient (a=9) {
++   r <- numeric(4); r[[1]] <- a; r[[2]] <- a^2; r[[3]] <- a^3; r[[4]] <- sin(a)
++   list(r[[3]],r[[2]])
++ }
+[[1]]
+[1] 729
+
+[[2]]
+[1] 81
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 243
+
+attr(,"gradient")[[2]]
+[1] 18
+
+> 
+> with gradient (a=c(9,5,2)) {
++   r <- numeric(4)
++   r[[1]] <- a[[2]]
++   r[[2]] <- a[[3]]^2 + a[[1]]
++   r[[3]] <- a[[3]]^3
++   r[[4]] <- sin(a[[1]])
++   list(r[[3]],r[[2]],r[[4]],r[[1]])
++ }
+[[1]]
+[1] 8
+
+[[2]]
+[1] 13
+
+[[3]]
+[1] 0.4121185
+
+[[4]]
+[1] 5
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2] [,3]
+[1,]    0    0   12
+
+attr(,"gradient")[[2]]
+     [,1] [,2] [,3]
+[1,]    1    0    4
+
+attr(,"gradient")[[3]]
+           [,1] [,2] [,3]
+[1,] -0.9111303    0    0
+
+attr(,"gradient")[[4]]
+     [,1] [,2] [,3]
+[1,]    0    1    0
+
+> 
+> with gradient (a=c(9,5,2)) {
++   r <- numeric(4)
++   dim(r) <- c(2,2)
++   r[[1]] <- a[[2]]
++   r[[2]] <- a[[3]]^2 + a[[1]]
++   r[[3]] <- a[[3]]^3
++   r[[4]] <- sin(a[[1]])
++   list(r[[2,1]],r[[1,2]],r[[1,1]],r[[2,2]])
++ }
+[[1]]
+[1] 13
+
+[[2]]
+[1] 8
+
+[[3]]
+[1] 5
+
+[[4]]
+[1] 0.4121185
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2] [,3]
+[1,]    1    0    4
+
+attr(,"gradient")[[2]]
+     [,1] [,2] [,3]
+[1,]    0    0   12
+
+attr(,"gradient")[[3]]
+     [,1] [,2] [,3]
+[1,]    0    1    0
+
+attr(,"gradient")[[4]]
+           [,1] [,2] [,3]
+[1,] -0.9111303    0    0
+
+> 
+> with gradient (a=c(9,5,2)) {
++   r <- numeric(12)
++   dim(r) <- c(2,3,2)
++   r[[1]] <- a[[2]]
++   r[[2]] <- a[[3]]^2 + a[[1]]
++   r[[3]] <- a[[3]]^3
++   r[[12]] <- sin(a[[1]])
++   list(r[[1,1,1]],r[[2,1,1]],r[[2,3,2]])
++ }
+[[1]]
+[1] 5
+
+[[2]]
+[1] 13
+
+[[3]]
+[1] 0.4121185
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2] [,3]
+[1,]    0    1    0
+
+attr(,"gradient")[[2]]
+     [,1] [,2] [,3]
+[1,]    1    0    4
+
+attr(,"gradient")[[3]]
+           [,1] [,2] [,3]
+[1,] -0.9111303    0    0
+
+> 
+> 
+> # Test gradients of sub-vectors found with [.].
+> 
+> with gradient (a=9) {
++   r <- numeric(4); r[[1]] <- a; r[[2]] <- a^2; r[[3]] <- a^3; r[[4]] <- sin(a)
++   r[c(2,1,1,4)]
++ }
+[1] 81.0000000  9.0000000  9.0000000  0.4121185
+attr(,"gradient")
+[1] 18.0000000  1.0000000  1.0000000 -0.9111303
+> 
+> with gradient (a=9) {
++   r <- numeric(4); r[[1]] <- a; r[[2]] <- a^2; r[[3]] <- a^3; r[[4]] <- sin(a)
++   r[2..3]
++ }
+[1]  81 729
+attr(,"gradient")
+[1]  18 243
+> 
+> with gradient (a=c(9,5,2)) {
++   r <- numeric(4)
++   r[[1]] <- a[[2]]
++   r[[2]] <- a[[3]]^2 + a[[1]]
++   r[[3]] <- a[[3]]^3
++   r[[4]] <- sin(a[[1]])
++   r[c(2,1,1,4)]
++ }
+[1] 13.0000000  5.0000000  5.0000000  0.4121185
+attr(,"gradient")
+           [,1] [,2] [,3]
+[1,]  1.0000000    0    4
+[2,]  0.0000000    1    0
+[3,]  0.0000000    1    0
+[4,] -0.9111303    0    0
+> 
+> with gradient (a=c(9,5,2)) {
++   r <- numeric(4)
++   r[[1]] <- a[[2]]
++   r[[2]] <- a[[3]]^2 + a[[1]]
++   r[[3]] <- a[[3]]^3
++   r[[4]] <- sin(a[[1]])
++   r[2..3]
++ }
+[1] 13  8
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    1    0    4
+[2,]    0    0   12
+> 
+> with gradient (a=c(9,5,2)) {
++   r <- numeric(4)
++   dim(r) <- c(2,2)
++   r[[1]] <- a[[2]]
++   r[[2]] <- a[[3]]^2 + a[[1]]
++   r[[3]] <- a[[3]]^3
++   r[[4]] <- sin(a[[1]])
++   list(r[2,1],r[1,2],r[1,1],r[2,2])
++ }
+[[1]]
+[1] 13
+
+[[2]]
+[1] 8
+
+[[3]]
+[1] 5
+
+[[4]]
+[1] 0.4121185
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2] [,3]
+[1,]    1    0    4
+
+attr(,"gradient")[[2]]
+     [,1] [,2] [,3]
+[1,]    0    0   12
+
+attr(,"gradient")[[3]]
+     [,1] [,2] [,3]
+[1,]    0    1    0
+
+attr(,"gradient")[[4]]
+           [,1] [,2] [,3]
+[1,] -0.9111303    0    0
+
+> 
+> with gradient (a=c(9,5,2)) {
++   r <- numeric(6)
++   dim(r) <- c(3,2)
++   r[[1]] <- a[[2]]
++   r[[2]] <- a[[3]]^2 + a[[1]]
++   r[[3]] <- a[[3]]^3
++   r[[4]] <- sin(a[[1]])
++   list(r[2..3,1],r[1..2,c(2,1)])
++ }
+[[1]]
+[1] 13  8
+
+[[2]]
+          [,1] [,2]
+[1,] 0.4121185    5
+[2,] 0.0000000   13
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2] [,3]
+[1,]    1    0    4
+[2,]    0    0   12
+
+attr(,"gradient")[[2]]
+           [,1] [,2] [,3]
+[1,] -0.9111303    0    0
+[2,]  0.0000000    0    0
+[3,]  0.0000000    1    0
+[4,]  1.0000000    0    4
+
+> 
+> with gradient (a=c(9,5,2)) {
++   r <- numeric(6)
++   dim(r) <- c(3,2)
++   r[[1]] <- a[[2]]
++   r[[2]] <- a[[3]]^2 + a[[1]]
++   r[[3]] <- a[[3]]^3
++   r[[4]] <- sin(a[[1]])
++   list(r[c(2,3),1],r[c(1,2),c(2,1)])
++ }
+[[1]]
+[1] 13  8
+
+[[2]]
+          [,1] [,2]
+[1,] 0.4121185    5
+[2,] 0.0000000   13
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2] [,3]
+[1,]    1    0    4
+[2,]    0    0   12
+
+attr(,"gradient")[[2]]
+           [,1] [,2] [,3]
+[1,] -0.9111303    0    0
+[2,]  0.0000000    0    0
+[3,]  0.0000000    1    0
+[4,]  1.0000000    0    4
+
+> 
+> with gradient (a=c(9,5,2)) {
++   r <- numeric(4)
++   dim(r) <- c(2,2)
++   r[[1]] <- a[[2]]
++   r[[2]] <- a[[3]]^2 + a[[1]]
++   r[[3]] <- a[[3]]^3
++   r[[4]] <- sin(a[[1]])
++   list(r[2,c(1,1,2)],r[2,c(1,1,2)]^2)
++ }
+[[1]]
+[1] 13.0000000 13.0000000  0.4121185
+
+[[2]]
+[1] 169.0000000 169.0000000   0.1698416
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+           [,1] [,2] [,3]
+[1,]  1.0000000    0    4
+[2,]  1.0000000    0    4
+[3,] -0.9111303    0    0
+
+attr(,"gradient")[[2]]
+           [,1] [,2] [,3]
+[1,] 26.0000000    0  104
+[2,] 26.0000000    0  104
+[3,] -0.7509872    0    0
+
+> 
+> with gradient (a=c(9,5,2)) {
++   r <- numeric(12)
++   dim(r) <- c(2,3,2)
++   r[[1]] <- a[[2]]
++   r[[2]] <- a[[3]]^2 + a[[1]]
++   r[[3]] <- a[[3]]^3
++   r[[12]] <- sin(a[[1]])
++   list(r[1,1,1],r[2,1,1],r[2,3,2])
++ }
+[[1]]
+[1] 5
+
+[[2]]
+[1] 13
+
+[[3]]
+[1] 0.4121185
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2] [,3]
+[1,]    0    1    0
+
+attr(,"gradient")[[2]]
+     [,1] [,2] [,3]
+[1,]    1    0    4
+
+attr(,"gradient")[[3]]
+           [,1] [,2] [,3]
+[1,] -0.9111303    0    0
+
+> 
+> with gradient (a=c(9,5,2)) {
++   r <- numeric(12)
++   dim(r) <- c(2,3,2)
++   r[[1]] <- a[[2]]
++   r[[2]] <- a[[3]]^2 + a[[1]]
++   r[[3]] <- a[[3]]^3
++   r[[8]] <- a[[3]]
++   r[[10]] <- sqrt(a[[1]])
++   r[[12]] <- sin(a[[1]])
++   list(r[c(2,1),1,1],r[2,2,2],r[2,c(3,1,1,2),2])
++ }
+[[1]]
+[1] 13  5
+
+[[2]]
+[1] 3
+
+[[3]]
+[1] 0.4121185 2.0000000 2.0000000 3.0000000
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2] [,3]
+[1,]    1    0    4
+[2,]    0    1    0
+
+attr(,"gradient")[[2]]
+          [,1] [,2] [,3]
+[1,] 0.1666667    0    0
+
+attr(,"gradient")[[3]]
+           [,1] [,2] [,3]
+[1,] -0.9111303    0    0
+[2,]  0.0000000    0    1
+[3,]  0.0000000    0    1
+[4,]  0.1666667    0    0
+
+> 
+> with gradient (a=c(3,5)) a[1..5]
+[1]  3  5 NA NA NA
+attr(,"gradient")
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+[3,]    0    0
+[4,]    0    0
+[5,]    0    0
+> with gradient (a=c(3,5)) a[c(5,1,7,2,3)]
+[1] NA  3 NA  5 NA
+attr(,"gradient")
+     [,1] [,2]
+[1,]    0    0
+[2,]    1    0
+[3,]    0    0
+[4,]    0    1
+[5,]    0    0
+> with gradient (a=list(3,5)) a[1..5]
+[[1]]
+[1] 3
+
+[[2]]
+[1] 5
+
+[[3]]
+NULL
+
+[[4]]
+NULL
+
+[[5]]
+NULL
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+NULL
+
+attr(,"gradient")[[1]][[4]]
+NULL
+
+attr(,"gradient")[[1]][[5]]
+NULL
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+attr(,"gradient")[[2]][[3]]
+NULL
+
+attr(,"gradient")[[2]][[4]]
+NULL
+
+attr(,"gradient")[[2]][[5]]
+NULL
+
+
+> with gradient (a=list(3,5)) a[c(5,1,7,2,3)]
+[[1]]
+NULL
+
+[[2]]
+[1] 3
+
+[[3]]
+NULL
+
+[[4]]
+[1] 5
+
+[[5]]
+NULL
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+NULL
+
+attr(,"gradient")[[1]][[2]]
+[1] 1
+
+attr(,"gradient")[[1]][[3]]
+NULL
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+attr(,"gradient")[[1]][[5]]
+NULL
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+NULL
+
+attr(,"gradient")[[2]][[2]]
+[1] 0
+
+attr(,"gradient")[[2]][[3]]
+NULL
+
+attr(,"gradient")[[2]][[4]]
+[1] 1
+
+attr(,"gradient")[[2]][[5]]
+NULL
+
+
+> 
+> 
 > # Test 'compute gradient'.
 > 
-> f <- function (x) compute gradient (x) x^2 as (123*x) # wrong, see if happens
+> f <- function (x) compute gradient (x) x^2 as 123*x # wrong, see if happens
 > 
 > with gradient (a=12) f(a)
 [1] 144
@@ -3358,29 +4841,57 @@ attr(,"gradient")
 attr(,"gradient")
 [1] 425088
 > 
-> g <- function (x,y)
-+   compute gradient (x,y) list(x,y,x*y)
-+   as (list(8,9,x+y), list(x,y,7))  # wrong, but see if it happens
+> g <- function (x,y)  # assume length(x) == length(y)
++   compute gradient (x,y) list(x+y,x-y,x*y)
++   as # wrong, but see if it happens
++      list (diag(x*y,length(x)), diag(x+y,length(x)), diag(x+y,length(x))), 
++      list (diag(x-y,length(x)), diag(x-y,length(x)), diag(7*x*y,length(x)))
 > 
 > with gradient (z=9) g(100*z,z+1)
 [[1]]
-[1] 900
+[1] 910
 
 [[2]]
-[1] 10
+[1] 890
 
 [[3]]
 [1] 9000
 
 attr(,"gradient")
 attr(,"gradient")[[1]]
-[1] 1700
+[1] 900890
 
 attr(,"gradient")[[2]]
-[1] 910
+[1] 91890
 
 attr(,"gradient")[[3]]
-[1] 91007
+[1] 154000
+
+> with gradient (z=c(9,7)) g(100*z,z+1)
+[[1]]
+[1] 910 708
+
+[[2]]
+[1] 890 692
+
+[[3]]
+[1] 9000 5600
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+       [,1]   [,2]
+[1,] 900890      0
+[2,]      0 560692
+
+attr(,"gradient")[[2]]
+      [,1]  [,2]
+[1,] 91890     0
+[2,]     0 71492
+
+attr(,"gradient")[[3]]
+       [,1]   [,2]
+[1,] 154000      0
+[2,]      0 110000
 
 > 
 > 
@@ -3526,6 +5037,87 @@ attr(,"gradient")$z
 +   r <- list(x=a^2,y=a^3,z=a^4)
 +   print(gradient_of(r))
 +   cat("--\n")
++   r[2] <- NULL
++   r
++ }
+$x
+[1] 6.02
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$x
+[1] 9.0601
+
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$x
+[1] 6.02
+
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=a^2,y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   r[1..2] <- NULL
++   r
++ }
+$x
+[1] 6.02
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=a^2,y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   r[c(2,2,1,1,2)] <- NULL
++   r
++ }
+$x
+[1] 6.02
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=a^2,y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
 +   r$w <- -a
 +   r
 + }
@@ -3606,6 +5198,162 @@ attr(,"gradient")$z
 
 attr(,"gradient")[[4]]
 [1] -1
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=a^2,y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   r[4] <- list(-a)
++   r
++ }
+$x
+[1] 6.02
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$x
+[1] 9.0601
+
+$y
+[1] 27.2709
+
+$z
+[1] 82.08541
+
+[[4]]
+[1] -3.01
+
+attr(,"gradient")
+attr(,"gradient")$x
+[1] 6.02
+
+attr(,"gradient")$y
+[1] 27.1803
+
+attr(,"gradient")$z
+[1] 109.0836
+
+attr(,"gradient")[[4]]
+[1] -1
+
+> 
+> with gradient (a=3.01) {
++   r <- list(x=a^2,y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   r[4] <- -a
++   r
++ }
+$x
+[1] 6.02
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$x
+[1] 9.0601
+
+$y
+[1] 27.2709
+
+$z
+[1] 82.08541
+
+[[4]]
+[1] -3.01
+
+attr(,"gradient")
+attr(,"gradient")$x
+[1] 6.02
+
+attr(,"gradient")$y
+[1] 27.1803
+
+attr(,"gradient")$z
+[1] 109.0836
+
+attr(,"gradient")[[4]]
+[1] -1
+
+> 
+> with gradient (a=c(6,3,5)) { a[2] <- list(a[[1]]^2); a }
+[[1]]
+[1] 6
+
+[[2]]
+[1] 36
+
+[[3]]
+[1] 5
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2] [,3]
+[1,]    1    0    0
+
+attr(,"gradient")[[2]]
+     [,1] [,2] [,3]
+[1,]   12    0    0
+
+attr(,"gradient")[[3]]
+     [,1] [,2] [,3]
+[1,]    0    0    1
+
+> 
+> with gradient (a=3.01) {
++   r <- list(w=-a,x=a^2,y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   r[c(2,4)] <- list(10*a,7*a)
++   r
++ }
+$w
+[1] -1
+
+$x
+[1] 6.02
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$w
+[1] -3.01
+
+$x
+[1] 30.1
+
+$y
+[1] 27.2709
+
+$z
+[1] 21.07
+
+attr(,"gradient")
+attr(,"gradient")$w
+[1] -1
+
+attr(,"gradient")$x
+[1] 10
+
+attr(,"gradient")$y
+[1] 27.1803
+
+attr(,"gradient")$z
+[1] 7
 
 > 
 > with gradient (a=3.01) {
@@ -3822,7 +5570,147 @@ attr(,"gradient")$z
 +   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
 +   print(gradient_of(r))
 +   cat("--\n")
++   r$x[2] <- list(1/a)
++   r
++ }
+$a
+[1] 0
+
+$x
+$x$v
+[1] 0
+
+$x$w
+[1] 3
+
+$x$x
+[1] 4
+
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$a
+[1] 3
+
+$x
+$x$v
+[1] 8
+
+$x$w
+[1] 0.3322259
+
+$x$x
+[1] 12.04
+
+
+$y
+[1] 27.2709
+
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 0
+
+attr(,"gradient")$x
+attr(,"gradient")$x$v
+[1] 0
+
+attr(,"gradient")$x$w
+[1] -0.1103741
+
+attr(,"gradient")$x$x
+[1] 4
+
+
+attr(,"gradient")$y
+[1] 27.1803
+
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> with gradient (a=3.01) {
++   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
 +   r[[2]][[2]] <- 1/a
++   r
++ }
+$a
+[1] 0
+
+$x
+$x$v
+[1] 0
+
+$x$w
+[1] 3
+
+$x$x
+[1] 4
+
+
+$y
+[1] 27.1803
+
+$z
+[1] 109.0836
+
+--
+$a
+[1] 3
+
+$x
+$x$v
+[1] 8
+
+$x$w
+[1] 0.3322259
+
+$x$x
+[1] 12.04
+
+
+$y
+[1] 27.2709
+
+$z
+[1] 82.08541
+
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 0
+
+attr(,"gradient")$x
+attr(,"gradient")$x$v
+[1] 0
+
+attr(,"gradient")$x$w
+[1] -0.1103741
+
+attr(,"gradient")$x$x
+[1] 4
+
+
+attr(,"gradient")$y
+[1] 27.1803
+
+attr(,"gradient")$z
+[1] 109.0836
+
+> 
+> with gradient (a=3.01) {
++   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   r[[2]][2] <- list(1/a)
 +   r
 + }
 $a
@@ -4016,6 +5904,15 @@ attr(,"gradient")$z
 [1] 109.0836
 
 > 
+> if (FALSE)  # not supported yet
++ with gradient (a=3.01) {
++   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
++   print(gradient_of(r))
++   cat("--\n")
++   r[[c(2,2)]] <- NULL
++   r
++ }
+> 
 > with gradient (a=3.01) {
 +   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
 +   print(gradient_of(r))
@@ -4167,6 +6064,572 @@ attr(,"gradient")$y
 attr(,"gradient")$z
 [1] 109.0836
 
+> 
+> with gradient (a=c(5.1,7.2,3.9,0.7)) { a[3] <- 4; a }
+[1] 5.1 7.2 4.0 0.7
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    0    0
+[4,]    0    0    0    1
+> with gradient (a=c(5.1,7.2,3.9,0.7)) { a[c(3,1)] <- 4; a }
+[1] 4.0 7.2 4.0 0.7
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    0    0
+[4,]    0    0    0    1
+> with gradient (a=c(5.1,7.2,3.9,0.7)) { a[c(3,1)] <- a[4]^2; a }
+[1] 0.49 7.20 0.49 0.70
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    0  1.4
+[2,]    0    1    0  0.0
+[3,]    0    0    0  1.4
+[4,]    0    0    0  1.0
+> with gradient (a=c(5.1,7.2,3.9,0.7)) { b<-numeric(5); b[4..5]<-a[c(3,1)]; b }
+[1] 0.0 0.0 0.0 3.9 5.1
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    0    0
+[2,]    0    0    0    0
+[3,]    0    0    0    0
+[4,]    0    0    1    0
+[5,]    1    0    0    0
+> 
+> with gradient (a=matrix(list(1.0,7.2,3.9,0.7,9.9,1.2,8.8,6.0),2,4)) { 
++   a[1,1] <- a[2,4]
++   a[2,c(1,3)] <- a[[1,1]]^2
++   a[1,c(1,2)] <- list(a[[1,1]]^3,a[[1,1]]^4)
++   a[1,4] <- 99
++   a
++ }
+     [,1] [,2] [,3] [,4]
+[1,] 216  1296 9.9  99  
+[2,] 36   0.7  36   6   
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 0
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+attr(,"gradient")[[1]][[5]]
+[1] 0
+
+attr(,"gradient")[[1]][[6]]
+[1] 0
+
+attr(,"gradient")[[1]][[7]]
+[1] 0
+
+attr(,"gradient")[[1]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 0
+
+attr(,"gradient")[[2]][[3]]
+[1] 0
+
+attr(,"gradient")[[2]][[4]]
+[1] 0
+
+attr(,"gradient")[[2]][[5]]
+[1] 0
+
+attr(,"gradient")[[2]][[6]]
+[1] 0
+
+attr(,"gradient")[[2]][[7]]
+[1] 0
+
+attr(,"gradient")[[2]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0
+
+attr(,"gradient")[[3]][[3]]
+[1] 0
+
+attr(,"gradient")[[3]][[4]]
+[1] 0
+
+attr(,"gradient")[[3]][[5]]
+[1] 0
+
+attr(,"gradient")[[3]][[6]]
+[1] 0
+
+attr(,"gradient")[[3]][[7]]
+[1] 0
+
+attr(,"gradient")[[3]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[4]]
+attr(,"gradient")[[4]][[1]]
+[1] 0
+
+attr(,"gradient")[[4]][[2]]
+[1] 0
+
+attr(,"gradient")[[4]][[3]]
+[1] 0
+
+attr(,"gradient")[[4]][[4]]
+[1] 1
+
+attr(,"gradient")[[4]][[5]]
+[1] 0
+
+attr(,"gradient")[[4]][[6]]
+[1] 0
+
+attr(,"gradient")[[4]][[7]]
+[1] 0
+
+attr(,"gradient")[[4]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[5]]
+attr(,"gradient")[[5]][[1]]
+[1] 0
+
+attr(,"gradient")[[5]][[2]]
+[1] 0
+
+attr(,"gradient")[[5]][[3]]
+[1] 0
+
+attr(,"gradient")[[5]][[4]]
+[1] 0
+
+attr(,"gradient")[[5]][[5]]
+[1] 1
+
+attr(,"gradient")[[5]][[6]]
+[1] 0
+
+attr(,"gradient")[[5]][[7]]
+[1] 0
+
+attr(,"gradient")[[5]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[6]]
+attr(,"gradient")[[6]][[1]]
+[1] 0
+
+attr(,"gradient")[[6]][[2]]
+[1] 0
+
+attr(,"gradient")[[6]][[3]]
+[1] 0
+
+attr(,"gradient")[[6]][[4]]
+[1] 0
+
+attr(,"gradient")[[6]][[5]]
+[1] 0
+
+attr(,"gradient")[[6]][[6]]
+[1] 0
+
+attr(,"gradient")[[6]][[7]]
+[1] 0
+
+attr(,"gradient")[[6]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[7]]
+attr(,"gradient")[[7]][[1]]
+[1] 0
+
+attr(,"gradient")[[7]][[2]]
+[1] 0
+
+attr(,"gradient")[[7]][[3]]
+[1] 0
+
+attr(,"gradient")[[7]][[4]]
+[1] 0
+
+attr(,"gradient")[[7]][[5]]
+[1] 0
+
+attr(,"gradient")[[7]][[6]]
+[1] 0
+
+attr(,"gradient")[[7]][[7]]
+[1] 0
+
+attr(,"gradient")[[7]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[8]]
+attr(,"gradient")[[8]][[1]]
+[1] 108
+
+attr(,"gradient")[[8]][[2]]
+[1] 12
+
+attr(,"gradient")[[8]][[3]]
+[1] 864
+
+attr(,"gradient")[[8]][[4]]
+[1] 0
+
+attr(,"gradient")[[8]][[5]]
+[1] 0
+
+attr(,"gradient")[[8]][[6]]
+[1] 12
+
+attr(,"gradient")[[8]][[7]]
+[1] 0
+
+attr(,"gradient")[[8]][[8]]
+[1] 1
+
+
+> 
+> with gradient (a=matrix(c(1.0,7.2,3.9,0.7,9.9,1.2,8.8,6.0),2,4)) { 
++   a[1,1] <- a[2,4]
++   a[2,c(1,3)] <- a[[1,1]]^2
++   a[1,c(1,2)] <- a[[1,1]]^c(3,4)
++   a[1,4] <- 99
++   a
++ }
+     [,1]   [,2] [,3] [,4]
+[1,]  216 1296.0  9.9   99
+[2,]   36    0.7 36.0    6
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    0    0    0    0    0    0    0  108
+[2,]    0    0    0    0    0    0    0   12
+[3,]    0    0    0    0    0    0    0  864
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    0    0   12
+[7,]    0    0    0    0    0    0    0    0
+[8,]    0    0    0    0    0    0    0    1
+> 
+> with gradient (a=array(list(1.0,7.2,3.9,0.7,9.9,1.2,8.8,6.0),c(2,2,2))) { 
++   a[1,1,1] <- a[2,2,2]
++   a[2,c(1,2),c(2,1)] <- a[[1,1,1]]^2
++   a[1,c(1,2),1] <- list(a[[1,1,1]]^3,a[[1,1,1]]^4)
++   a[1,2,2] <- 99
++   a
++ }
+, , 1
+
+     [,1] [,2]
+[1,] 216  1296
+[2,] 36   36  
+
+, , 2
+
+     [,1] [,2]
+[1,] 9.9  99  
+[2,] 36   36  
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 0
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+attr(,"gradient")[[1]][[5]]
+[1] 0
+
+attr(,"gradient")[[1]][[6]]
+[1] 0
+
+attr(,"gradient")[[1]][[7]]
+[1] 0
+
+attr(,"gradient")[[1]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 0
+
+attr(,"gradient")[[2]][[3]]
+[1] 0
+
+attr(,"gradient")[[2]][[4]]
+[1] 0
+
+attr(,"gradient")[[2]][[5]]
+[1] 0
+
+attr(,"gradient")[[2]][[6]]
+[1] 0
+
+attr(,"gradient")[[2]][[7]]
+[1] 0
+
+attr(,"gradient")[[2]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0
+
+attr(,"gradient")[[3]][[3]]
+[1] 0
+
+attr(,"gradient")[[3]][[4]]
+[1] 0
+
+attr(,"gradient")[[3]][[5]]
+[1] 0
+
+attr(,"gradient")[[3]][[6]]
+[1] 0
+
+attr(,"gradient")[[3]][[7]]
+[1] 0
+
+attr(,"gradient")[[3]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[4]]
+attr(,"gradient")[[4]][[1]]
+[1] 0
+
+attr(,"gradient")[[4]][[2]]
+[1] 0
+
+attr(,"gradient")[[4]][[3]]
+[1] 0
+
+attr(,"gradient")[[4]][[4]]
+[1] 0
+
+attr(,"gradient")[[4]][[5]]
+[1] 0
+
+attr(,"gradient")[[4]][[6]]
+[1] 0
+
+attr(,"gradient")[[4]][[7]]
+[1] 0
+
+attr(,"gradient")[[4]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[5]]
+attr(,"gradient")[[5]][[1]]
+[1] 0
+
+attr(,"gradient")[[5]][[2]]
+[1] 0
+
+attr(,"gradient")[[5]][[3]]
+[1] 0
+
+attr(,"gradient")[[5]][[4]]
+[1] 0
+
+attr(,"gradient")[[5]][[5]]
+[1] 1
+
+attr(,"gradient")[[5]][[6]]
+[1] 0
+
+attr(,"gradient")[[5]][[7]]
+[1] 0
+
+attr(,"gradient")[[5]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[6]]
+attr(,"gradient")[[6]][[1]]
+[1] 0
+
+attr(,"gradient")[[6]][[2]]
+[1] 0
+
+attr(,"gradient")[[6]][[3]]
+[1] 0
+
+attr(,"gradient")[[6]][[4]]
+[1] 0
+
+attr(,"gradient")[[6]][[5]]
+[1] 0
+
+attr(,"gradient")[[6]][[6]]
+[1] 0
+
+attr(,"gradient")[[6]][[7]]
+[1] 0
+
+attr(,"gradient")[[6]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[7]]
+attr(,"gradient")[[7]][[1]]
+[1] 0
+
+attr(,"gradient")[[7]][[2]]
+[1] 0
+
+attr(,"gradient")[[7]][[3]]
+[1] 0
+
+attr(,"gradient")[[7]][[4]]
+[1] 0
+
+attr(,"gradient")[[7]][[5]]
+[1] 0
+
+attr(,"gradient")[[7]][[6]]
+[1] 0
+
+attr(,"gradient")[[7]][[7]]
+[1] 0
+
+attr(,"gradient")[[7]][[8]]
+[1] 0
+
+
+attr(,"gradient")[[8]]
+attr(,"gradient")[[8]][[1]]
+[1] 108
+
+attr(,"gradient")[[8]][[2]]
+[1] 12
+
+attr(,"gradient")[[8]][[3]]
+[1] 864
+
+attr(,"gradient")[[8]][[4]]
+[1] 12
+
+attr(,"gradient")[[8]][[5]]
+[1] 0
+
+attr(,"gradient")[[8]][[6]]
+[1] 12
+
+attr(,"gradient")[[8]][[7]]
+[1] 0
+
+attr(,"gradient")[[8]][[8]]
+[1] 12
+
+
+> 
+> with gradient (a=array(c(1.0,7.2,3.9,0.7,9.9,1.2,8.8,6.0),c(2,2,2))) { 
++   a[1,1,1] <- a[2,2,2]
++   a[2,c(1,2),c(2,1)] <- a[[1,1,1]]^2
++   a[1,c(1,2),1] <- a[[1,1,1]]^c(3,4)
++   a[1,2,2] <- 99
++   a
++ }
+, , 1
+
+     [,1] [,2]
+[1,]  216 1296
+[2,]   36   36
+
+, , 2
+
+     [,1] [,2]
+[1,]  9.9   99
+[2,] 36.0   36
+
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    0    0    0    0    0    0    0  108
+[2,]    0    0    0    0    0    0    0   12
+[3,]    0    0    0    0    0    0    0  864
+[4,]    0    0    0    0    0    0    0   12
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    0    0   12
+[7,]    0    0    0    0    0    0    0    0
+[8,]    0    0    0    0    0    0    0   12
+> 
+> with gradient (L=list(c(9,7,6),-2)) { L[[1]][[2]] <- 3; L }
+[[1]]
+[1] 9 3 6
+
+[[2]]
+[1] -2
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    0    0
+[3,]    0    0    1
+
+attr(,"gradient")[[1]][[2]]
+     [,1] [,2] [,3]
+[1,]    0    0    0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0 0 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+
+> 
+> 
+> # Subassignment with user-defined subassignment functions.
 > 
 > xel <- function (a) a$x
 > `xel<-` <- function (a,value) { a$x <- value; a }
@@ -4760,6 +7223,35 @@ attr(,"gradient")$y
 [1] 6.02
 
 > 
+> with gradient (a=3.01) {
++   r <- list(x=-1,y=2,z=7)
++   class(r) <- "fred"
++   r$x <- -a
++   r <- `[<-` (r, c(3,2), list(a^2,a^3))
++   r
++ }
+$x
+[1] -3.01
+
+$y
+[1] 27.2709
+
+$z
+[1] 9.0601
+
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+attr(,"gradient")$x
+[1] -1
+
+attr(,"gradient")$y
+[1] 27.1803
+
+attr(,"gradient")$z
+[1] 6.02
+
+> 
 > 
 > # Test gradients w.r.t. list values.
 > 
@@ -5329,6 +7821,4974 @@ attr(,"gradient")$abc$w
 
 
 > 
+> fsub <- function (...) `[[`(...)
+> with gradient (a=list(7,8)) fsub(a,1)
+[1] 7
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1
+
+attr(,"gradient")[[2]]
+[1] 0
+
+> 
+> 
+> # Test gradients w.r.t. numeric vectors.
+> 
+> with gradient (a=c(5,55,555)) a
+[1]   5  55 555
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+> 
+> with gradient (a=c(x=5,y=55,z=555)) a[["x"]]
+[1] 5
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    1    0    0
+> with gradient (a=c(x=5,y=55,z=555)) a[["y"]]
+[1] 55
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    0    1    0
+> with gradient (a=c(x=5,y=55,z=555)) a[["z"]]
+[1] 555
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    0    0    1
+> 
+> with gradient (a=c(x=5,y=55,z=555)) sqrt(a[["y"]])
+[1] 7.416198
+attr(,"gradient")
+     [,1]       [,2] [,3]
+[1,]    0 0.06741999    0
+> with gradient (a=c(x=5,y=55,z=555)) a[["z"]]+a[["x"]]
+[1] 560
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    1    0    1
+> with gradient (a=c(x=5,y=55,z=555)) 2.1*a[["z"]]+3.4*a[["x"]]
+[1] 1182.5
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]  3.4    0  2.1
+> 
+> with gradient (a=c(9.1,4.1)) {
++   b <- numeric(3)
++   b[[2]] <- a[[1]]
++   b[[1]] <- 3*a[[2]] + b[[2]]
++   b[[3]] <- sin(a[[2]])
++   b[[5]] <- b[[1]]^2
++   b
++ }
+[1]  21.4000000   9.1000000  -0.8182771          NA 457.9600000
+attr(,"gradient")
+     [,1]        [,2]
+[1,]  1.0   3.0000000
+[2,]  1.0   0.0000000
+[3,]  0.0  -0.5748239
+[4,]  0.0   0.0000000
+[5,] 42.8 128.4000000
+> 
+> with gradient (a=c(5.1,2.2,3.7)) {
++   x <- numeric(2)
++   x[[1]] <- a[[2]]^2
++   x[[2]] <- a[[3]]
++   sin(x)
++ }
+[1] -0.9918688 -0.5298361
+attr(,"gradient")
+     [,1]      [,2]    [,3]
+[1,]    0 0.5599658  0.0000
+[2,]    0 0.0000000 -0.8481
+> 
+> with gradient (a=c(5.1,2.2,3.7),b=c(7.3,6.4)) {
++   x <- numeric(2)
++   x[[1]] <- a[[2]]^2
++   x[[2]] <- a[[3]]*b[[2]]
++   sin(x)
++ }
+[1] -0.9918688 -0.9930396
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1]      [,2]      [,3]
+[1,]    0 0.5599658 0.0000000
+[2,]    0 0.0000000 0.7537988
+
+attr(,"gradient")$b
+     [,1]      [,2]
+[1,]    0 0.0000000
+[2,]    0 0.4357899
+
+> 
+> with gradient (a=c(-1.1,2.3)) {
++   x <- numeric(2)
++   x[[1]] <- a[[2]]^2
++   x[[2]] <- a[[1]]*a[[2]]
++   abs(x)
++ }
+[1] 5.29 2.53
+attr(,"gradient")
+     [,1] [,2]
+[1,]  0.0  4.6
+[2,] -2.3  1.1
+> 
+> with gradient (a=c(1.1,2.3),b=3.4) {
++   list (dt(a,5), dt(5,a), dt(a,a), dt(a,b), dt(b,a))
++ }
+[[1]]
+[1] 0.19813859 0.04355096
+
+[[2]]
+[1] 0.011656861 0.006055387
+
+[[3]]
+[1] 0.14868309 0.05005083
+
+[[4]]
+[1] 0.18989332 0.04707694
+
+[[5]]
+[1] 0.02491717 0.01853109
+
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+           [,1]        [,2]
+[1,] -0.2105821  0.00000000
+[2,]  0.0000000 -0.05840654
+
+attr(,"gradient")$a[[2]]
+             [,1]         [,2]
+[1,] -0.005880715  0.000000000
+[2,]  0.000000000 -0.003246953
+
+attr(,"gradient")$a[[3]]
+           [,1]        [,2]
+[1,] -0.1050382  0.00000000
+[2,]  0.0000000 -0.05271019
+
+attr(,"gradient")$a[[4]]
+           [,1]        [,2]
+[1,] -0.1993674  0.00000000
+[2,]  0.0000000 -0.05482378
+
+attr(,"gradient")$a[[5]]
+             [,1]         [,2]
+[1,] -0.004620887  0.000000000
+[2,]  0.000000000 -0.004741683
+
+
+attr(,"gradient")$b
+attr(,"gradient")$b[[1]]
+[1] 0 0
+
+attr(,"gradient")$b[[2]]
+[1] 0 0
+
+attr(,"gradient")$b[[3]]
+[1] 0 0
+
+attr(,"gradient")$b[[4]]
+[1]  0.007296298 -0.002565247
+
+attr(,"gradient")$b[[5]]
+[1] -0.01405281 -0.01500136
+
+
+> 
+> with gradient (a=c(1.1,2.3),b=3.4) {
++   list (dnorm(a,2,5), dnorm(5,a,2), dnorm(5,2,a), dnorm(a,a,a), 
++         dnorm(a,a,b), dnorm(a,b,a), dnorm(b,a,a), dnorm(b,a,b))
++ }
+[[1]]
+[1] 0.07850630 0.07964497
+
+[[2]]
+[1] 0.02979735 0.08019166
+
+[[3]]
+[1] 0.00879777 0.07408744
+
+[[4]]
+[1] 0.3626748 0.1734532
+
+[[5]]
+[1] 0.117336 0.117336
+
+[[6]]
+[1] 0.04075409 0.15470822
+
+[[7]]
+[1] 0.04075409 0.15470822
+
+[[8]]
+[1] 0.09333873 0.11135304
+
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+            [,1]          [,2]
+[1,] 0.002826227  0.0000000000
+[2,] 0.000000000 -0.0009557396
+
+attr(,"gradient")$a[[2]]
+           [,1]       [,2]
+[1,] 0.02905242 0.00000000
+[2,] 0.00000000 0.05412937
+
+attr(,"gradient")$a[[3]]
+           [,1]       [,2]
+[1,] 0.05149108 0.00000000
+[2,] 0.00000000 0.02259098
+
+attr(,"gradient")$a[[4]]
+           [,1]        [,2]
+[1,] -0.3297044  0.00000000
+[2,]  0.0000000 -0.07541442
+
+attr(,"gradient")$a[[5]]
+     [,1] [,2]
+[1,]    0    0
+[2,]    0    0
+
+attr(,"gradient")$a[[6]]
+          [,1]        [,2]
+[1,] 0.2023926  0.00000000
+[2,] 0.0000000 -0.01970886
+
+attr(,"gradient")$a[[7]]
+          [,1]        [,2]
+[1,] 0.2023926  0.00000000
+[2,] 0.0000000 -0.01970886
+
+attr(,"gradient")$a[[8]]
+           [,1]       [,2]
+[1,] 0.01857085 0.00000000
+[2,] 0.00000000 0.01059588
+
+
+attr(,"gradient")$b
+attr(,"gradient")$b[[1]]
+[1] 0 0
+
+attr(,"gradient")$b[[2]]
+[1] 0 0
+
+attr(,"gradient")$b[[3]]
+[1] 0 0
+
+attr(,"gradient")$b[[4]]
+[1] 0 0
+
+attr(,"gradient")$b[[5]]
+[1] -0.03451058 -0.03451058
+
+attr(,"gradient")$b[[6]]
+[1] -0.07746645 -0.03216995
+
+attr(,"gradient")$b[[7]]
+[1] -0.07746645 -0.03216995
+
+attr(,"gradient")$b[[8]]
+[1] -0.03346078 -0.03991869
+
+
+> 
+> with gradient (a=c(1.1,2.3)) list (+a, -a)
+[[1]]
+[1] 1.1 2.3
+
+[[2]]
+[1] -1.1 -2.3
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+
+attr(,"gradient")[[2]]
+     [,1] [,2]
+[1,]   -1    0
+[2,]    0   -1
+
+> with gradient (a=c(1.1,2.3)) list (+sin(a), -sin(a))
+[[1]]
+[1] 0.8912074 0.7457052
+
+[[2]]
+[1] -0.8912074 -0.7457052
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+          [,1]      [,2]
+[1,] 0.4535961  0.000000
+[2,] 0.0000000 -0.666276
+
+attr(,"gradient")[[2]]
+           [,1]     [,2]
+[1,] -0.4535961 0.000000
+[2,]  0.0000000 0.666276
+
+> 
+> with gradient (a=c(1.1,2.3),b=c(5.2,3.1)) list (a+b, a-b, a*b, a/b, a^b)
+[[1]]
+[1] 6.3 5.4
+
+[[2]]
+[1] -4.1 -0.8
+
+[[3]]
+[1] 5.72 7.13
+
+[[4]]
+[1] 0.2115385 0.7419355
+
+[[5]]
+[1]  1.641504 13.223801
+
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+
+attr(,"gradient")$a[[2]]
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+
+attr(,"gradient")$a[[3]]
+     [,1] [,2]
+[1,]  5.2  0.0
+[2,]  0.0  3.1
+
+attr(,"gradient")$a[[4]]
+          [,1]      [,2]
+[1,] 0.1923077 0.0000000
+[2,] 0.0000000 0.3225806
+
+attr(,"gradient")$a[[5]]
+         [,1]     [,2]
+[1,] 7.759837  0.00000
+[2,] 0.000000 17.82338
+
+
+attr(,"gradient")$b
+attr(,"gradient")$b[[1]]
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+
+attr(,"gradient")$b[[2]]
+     [,1] [,2]
+[1,]   -1    0
+[2,]    0   -1
+
+attr(,"gradient")$b[[3]]
+     [,1] [,2]
+[1,]  1.1  0.0
+[2,]  0.0  2.3
+
+attr(,"gradient")$b[[4]]
+            [,1]      [,2]
+[1,] -0.04068047  0.000000
+[2,]  0.00000000 -0.239334
+
+attr(,"gradient")$b[[5]]
+         [,1]     [,2]
+[1,] 0.156452  0.00000
+[2,] 0.000000 11.01422
+
+
+> with gradient (a=c(1.1,2.3,3.7),b=c(5.2,3.1)) list (a+b, a-b, a*b, a/b, a^b)
+[[1]]
+[1] 6.3 5.4 8.9
+
+[[2]]
+[1] -4.1 -0.8 -1.5
+
+[[3]]
+[1]  5.72  7.13 19.24
+
+[[4]]
+[1] 0.2115385 0.7419355 0.7115385
+
+[[5]]
+[1]   1.641504  13.223801 900.842703
+
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+attr(,"gradient")$a[[2]]
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+attr(,"gradient")$a[[3]]
+     [,1] [,2] [,3]
+[1,]  5.2  0.0  0.0
+[2,]  0.0  3.1  0.0
+[3,]  0.0  0.0  5.2
+
+attr(,"gradient")$a[[4]]
+          [,1]      [,2]      [,3]
+[1,] 0.1923077 0.0000000 0.0000000
+[2,] 0.0000000 0.3225806 0.0000000
+[3,] 0.0000000 0.0000000 0.1923077
+
+attr(,"gradient")$a[[5]]
+         [,1]     [,2]     [,3]
+[1,] 7.759837  0.00000    0.000
+[2,] 0.000000 17.82338    0.000
+[3,] 0.000000  0.00000 1266.049
+
+
+attr(,"gradient")$b
+attr(,"gradient")$b[[1]]
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+[3,]    1    0
+
+attr(,"gradient")$b[[2]]
+     [,1] [,2]
+[1,]   -1    0
+[2,]    0   -1
+[3,]   -1    0
+
+attr(,"gradient")$b[[3]]
+     [,1] [,2]
+[1,]  1.1  0.0
+[2,]  0.0  2.3
+[3,]  3.7  0.0
+
+attr(,"gradient")$b[[4]]
+            [,1]      [,2]
+[1,] -0.04068047  0.000000
+[2,]  0.00000000 -0.239334
+[3,] -0.13683432  0.000000
+
+attr(,"gradient")$b[[5]]
+            [,1]     [,2]
+[1,]    0.156452  0.00000
+[2,]    0.000000 11.01422
+[3,] 1178.602074  0.00000
+
+
+Warning messages:
+1: In a + b :
+  longer object length is not a multiple of shorter object length
+2: In a - b :
+  longer object length is not a multiple of shorter object length
+3: In a * b :
+  longer object length is not a multiple of shorter object length
+4: In a/b :
+  longer object length is not a multiple of shorter object length
+5: In a^b :
+  longer object length is not a multiple of shorter object length
+> with gradient (a=c(1.1,2.3),b=c(5.2,3.1,1.9)) list (a+b, a-b, a*b, a/b, a^b)
+[[1]]
+[1] 6.3 5.4 3.0
+
+[[2]]
+[1] -4.1 -0.8 -0.8
+
+[[3]]
+[1] 5.72 7.13 2.09
+
+[[4]]
+[1] 0.2115385 0.7419355 0.5789474
+
+[[5]]
+[1]  1.641504 13.223801  1.198522
+
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+[3,]    1    0
+
+attr(,"gradient")$a[[2]]
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+[3,]    1    0
+
+attr(,"gradient")$a[[3]]
+     [,1] [,2]
+[1,]  5.2  0.0
+[2,]  0.0  3.1
+[3,]  1.9  0.0
+
+attr(,"gradient")$a[[4]]
+          [,1]      [,2]
+[1,] 0.1923077 0.0000000
+[2,] 0.0000000 0.3225806
+[3,] 0.5263158 0.0000000
+
+attr(,"gradient")$a[[5]]
+         [,1]     [,2]
+[1,] 7.759837  0.00000
+[2,] 0.000000 17.82338
+[3,] 2.070175  0.00000
+
+
+attr(,"gradient")$b
+attr(,"gradient")$b[[1]]
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+attr(,"gradient")$b[[2]]
+     [,1] [,2] [,3]
+[1,]   -1    0    0
+[2,]    0   -1    0
+[3,]    0    0   -1
+
+attr(,"gradient")$b[[3]]
+     [,1] [,2] [,3]
+[1,]  1.1  0.0  0.0
+[2,]  0.0  2.3  0.0
+[3,]  0.0  0.0  1.1
+
+attr(,"gradient")$b[[4]]
+            [,1]      [,2]       [,3]
+[1,] -0.04068047  0.000000  0.0000000
+[2,]  0.00000000 -0.239334  0.0000000
+[3,]  0.00000000  0.000000 -0.3047091
+
+attr(,"gradient")$b[[5]]
+         [,1]     [,2]      [,3]
+[1,] 0.156452  0.00000 0.0000000
+[2,] 0.000000 11.01422 0.0000000
+[3,] 0.000000  0.00000 0.1142314
+
+
+Warning messages:
+1: In a + b :
+  longer object length is not a multiple of shorter object length
+2: In a - b :
+  longer object length is not a multiple of shorter object length
+3: In a * b :
+  longer object length is not a multiple of shorter object length
+4: In a/b :
+  longer object length is not a multiple of shorter object length
+5: In a^b :
+  longer object length is not a multiple of shorter object length
+> with gradient (a=c(1.1,2.3)) list (1+a, 1-a, a+1, a-1, a+a, a-a)
+[[1]]
+[1] 2.1 3.3
+
+[[2]]
+[1] -0.1 -1.3
+
+[[3]]
+[1] 2.1 3.3
+
+[[4]]
+[1] 0.1 1.3
+
+[[5]]
+[1] 2.2 4.6
+
+[[6]]
+[1] 0 0
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+
+attr(,"gradient")[[2]]
+     [,1] [,2]
+[1,]   -1    0
+[2,]    0   -1
+
+attr(,"gradient")[[3]]
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+
+attr(,"gradient")[[4]]
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+
+attr(,"gradient")[[5]]
+     [,1] [,2]
+[1,]    2    0
+[2,]    0    2
+
+attr(,"gradient")[[6]]
+     [,1] [,2]
+[1,]    0    0
+[2,]    0    0
+
+> with gradient (a=c(1.1,2.3)) list (2.1*a, 2.1/a, a*2.1, a/2.1, a*a, a/a)
+[[1]]
+[1] 2.31 4.83
+
+[[2]]
+[1] 1.9090909 0.9130435
+
+[[3]]
+[1] 2.31 4.83
+
+[[4]]
+[1] 0.5238095 1.0952381
+
+[[5]]
+[1] 1.21 5.29
+
+[[6]]
+[1] 1 1
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2]
+[1,]  2.1  0.0
+[2,]  0.0  2.1
+
+attr(,"gradient")[[2]]
+          [,1]       [,2]
+[1,] -1.735537  0.0000000
+[2,]  0.000000 -0.3969754
+
+attr(,"gradient")[[3]]
+     [,1] [,2]
+[1,]  2.1  0.0
+[2,]  0.0  2.1
+
+attr(,"gradient")[[4]]
+          [,1]      [,2]
+[1,] 0.4761905 0.0000000
+[2,] 0.0000000 0.4761905
+
+attr(,"gradient")[[5]]
+     [,1] [,2]
+[1,]  2.2  0.0
+[2,]  0.0  4.6
+
+attr(,"gradient")[[6]]
+     [,1] [,2]
+[1,]    0    0
+[2,]    0    0
+
+> with gradient (a=c(1.1,2.3)) list (2.1^a, a^2.1, a^a)
+[[1]]
+[1] 2.261732 5.509401
+
+[[2]]
+[1] 1.221588 5.749479
+
+[[3]]
+[1] 1.110534 6.791630
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+         [,1]    [,2]
+[1,] 1.678064 0.00000
+[2,] 0.000000 4.08763
+
+attr(,"gradient")[[2]]
+         [,1]     [,2]
+[1,] 2.332122 0.000000
+[2,] 0.000000 5.249524
+
+attr(,"gradient")[[3]]
+         [,1]     [,2]
+[1,] 1.216379  0.00000
+[2,] 0.000000 12.44844
+
+> 
+> with gradient (a=c(1.7,-34.9)) list ((a+2)*(a+1), sin(a)^2+a)
+[[1]]
+[1]    9.99 1115.31
+
+[[2]]
+[1]   2.683399 -34.787222
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1]  [,2]
+[1,]  6.4   0.0
+[2,]  0.0 -66.8
+
+attr(,"gradient")[[2]]
+          [,1]      [,2]
+[1,] 0.7444589 0.0000000
+[2,] 0.0000000 0.3673567
+
+> with gradient (a=1.7) list ((a+2)*(a+1), sin(a)^2+a)
+[[1]]
+[1] 9.99
+
+[[2]]
+[1] 2.683399
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 6.4
+
+attr(,"gradient")[[2]]
+[1] 0.7444589
+
+> with gradient (a=-34.9) list ((a+2)*(a+1), sin(a)^2+a)
+[[1]]
+[1] 1115.31
+
+[[2]]
+[1] -34.78722
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] -66.8
+
+attr(,"gradient")[[2]]
+[1] 0.3673567
+
+> 
+> with gradient (a=1.7) 
++   list (a+3L, a-3L, a*3L, 3L*a, a^3L, a/3L, 3L/a, 3L^a)
+[[1]]
+[1] 4.7
+
+[[2]]
+[1] -1.3
+
+[[3]]
+[1] 5.1
+
+[[4]]
+[1] 5.1
+
+[[5]]
+[1] 4.913
+
+[[6]]
+[1] 0.5666667
+
+[[7]]
+[1] 1.764706
+
+[[8]]
+[1] 6.473008
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1
+
+attr(,"gradient")[[2]]
+[1] 1
+
+attr(,"gradient")[[3]]
+[1] 3
+
+attr(,"gradient")[[4]]
+[1] 3
+
+attr(,"gradient")[[5]]
+[1] 8.67
+
+attr(,"gradient")[[6]]
+[1] 0.3333333
+
+attr(,"gradient")[[7]]
+[1] -1.038062
+
+attr(,"gradient")[[8]]
+[1] 7.111326
+
+> with gradient (a=c(1.7,1.7)) 
++   list (a+3L, a-3L, a*3L, 3L*a, a^3L, a/3L, 3L/a, 3L^a)
+[[1]]
+[1] 4.7 4.7
+
+[[2]]
+[1] -1.3 -1.3
+
+[[3]]
+[1] 5.1 5.1
+
+[[4]]
+[1] 5.1 5.1
+
+[[5]]
+[1] 4.913 4.913
+
+[[6]]
+[1] 0.5666667 0.5666667
+
+[[7]]
+[1] 1.764706 1.764706
+
+[[8]]
+[1] 6.473008 6.473008
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+
+attr(,"gradient")[[2]]
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+
+attr(,"gradient")[[3]]
+     [,1] [,2]
+[1,]    3    0
+[2,]    0    3
+
+attr(,"gradient")[[4]]
+     [,1] [,2]
+[1,]    3    0
+[2,]    0    3
+
+attr(,"gradient")[[5]]
+     [,1] [,2]
+[1,] 8.67 0.00
+[2,] 0.00 8.67
+
+attr(,"gradient")[[6]]
+          [,1]      [,2]
+[1,] 0.3333333 0.0000000
+[2,] 0.0000000 0.3333333
+
+attr(,"gradient")[[7]]
+          [,1]      [,2]
+[1,] -1.038062  0.000000
+[2,]  0.000000 -1.038062
+
+attr(,"gradient")[[8]]
+         [,1]     [,2]
+[1,] 7.111326 0.000000
+[2,] 0.000000 7.111326
+
+> with gradient (a=1.7)
++   list (a+3, a-3, a*3, 3*a, a^3, a/3, 3/a, 3^a)
+[[1]]
+[1] 4.7
+
+[[2]]
+[1] -1.3
+
+[[3]]
+[1] 5.1
+
+[[4]]
+[1] 5.1
+
+[[5]]
+[1] 4.913
+
+[[6]]
+[1] 0.5666667
+
+[[7]]
+[1] 1.764706
+
+[[8]]
+[1] 6.473008
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1
+
+attr(,"gradient")[[2]]
+[1] 1
+
+attr(,"gradient")[[3]]
+[1] 3
+
+attr(,"gradient")[[4]]
+[1] 3
+
+attr(,"gradient")[[5]]
+[1] 8.67
+
+attr(,"gradient")[[6]]
+[1] 0.3333333
+
+attr(,"gradient")[[7]]
+[1] -1.038062
+
+attr(,"gradient")[[8]]
+[1] 7.111326
+
+> with gradient (a=c(1.7,1.7))
++   list (a+3, a-3, a*3, 3*a, a^3, a/3, 3/a, 3^a)
+[[1]]
+[1] 4.7 4.7
+
+[[2]]
+[1] -1.3 -1.3
+
+[[3]]
+[1] 5.1 5.1
+
+[[4]]
+[1] 5.1 5.1
+
+[[5]]
+[1] 4.913 4.913
+
+[[6]]
+[1] 0.5666667 0.5666667
+
+[[7]]
+[1] 1.764706 1.764706
+
+[[8]]
+[1] 6.473008 6.473008
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+
+attr(,"gradient")[[2]]
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+
+attr(,"gradient")[[3]]
+     [,1] [,2]
+[1,]    3    0
+[2,]    0    3
+
+attr(,"gradient")[[4]]
+     [,1] [,2]
+[1,]    3    0
+[2,]    0    3
+
+attr(,"gradient")[[5]]
+     [,1] [,2]
+[1,] 8.67 0.00
+[2,] 0.00 8.67
+
+attr(,"gradient")[[6]]
+          [,1]      [,2]
+[1,] 0.3333333 0.0000000
+[2,] 0.0000000 0.3333333
+
+attr(,"gradient")[[7]]
+          [,1]      [,2]
+[1,] -1.038062  0.000000
+[2,]  0.000000 -1.038062
+
+attr(,"gradient")[[8]]
+         [,1]     [,2]
+[1,] 7.111326 0.000000
+[2,] 0.000000 7.111326
+
+> 
+> set.seed(179)
+> with gradient (a=3.1) rexp(1,a)
+[1] 0.08403653
+attr(,"gradient")
+[1] -0.02710856
+> with gradient (a=0.2) rexp(1,a)
+[1] 3.193164
+attr(,"gradient")
+[1] -15.96582
+> with gradient (a=7.5) rexp(1,a)
+[1] 0.05260134
+attr(,"gradient")
+[1] -0.007013512
+> with gradient (a=3.1) rexp(1,a^2)
+[1] 0.01189765
+attr(,"gradient")
+[1] -0.007675904
+> with gradient (a=0.2) rexp(1,a^2)
+[1] 62.80972
+attr(,"gradient")
+[1] -628.0972
+> with gradient (a=7.5) rexp(1,a^2)
+[1] 0.01199416
+attr(,"gradient")
+[1] -0.003198441
+> 
+> set.seed(179)
+> with gradient (a=c(3.1,0.2,7.5)) rexp(3,a)
+[1] 0.08403653 3.19316357 0.05260134
+attr(,"gradient")
+            [,1]      [,2]         [,3]
+[1,] -0.02710856   0.00000  0.000000000
+[2,]  0.00000000 -15.96582  0.000000000
+[3,]  0.00000000   0.00000 -0.007013512
+> with gradient (a=c(3.1,0.2,7.5)) rexp(3,a^2)
+[1]  0.01189765 62.80972133  0.01199416
+attr(,"gradient")
+             [,1]      [,2]         [,3]
+[1,] -0.007675904    0.0000  0.000000000
+[2,]  0.000000000 -628.0972  0.000000000
+[3,]  0.000000000    0.0000 -0.003198441
+> 
+> set.seed(179)
+> with gradient (a=3.1,b=2.4) rnorm(1,a,b)
+[1] 3.898079
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1
+
+attr(,"gradient")$b
+[1] 0.3325331
+
+> with gradient (a=0.2,b=0.9) rnorm(1,a,b)
+[1] 0.6648697
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1
+
+attr(,"gradient")$b
+[1] 0.5165219
+
+> with gradient (a=3.1,b=2.4) rnorm(1,cos(a),sin(b)^2)
+[1] -1.392109
+attr(,"gradient")
+attr(,"gradient")$a
+[1] -0.04158066
+
+attr(,"gradient")$b
+[1] 0.8580087
+
+> with gradient (a=0.2,b=0.9) rnorm(1,cos(a),sin(b)^2)
+[1] 0.1557093
+attr(,"gradient")
+attr(,"gradient")$a
+[1] -0.1986693
+
+attr(,"gradient")$b
+[1] -1.308339
+
+> with gradient (a=3.1,b=2.4) rnorm(1,a,3)
+[1] 2.990818
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1
+
+attr(,"gradient")$b
+[1] 0
+
+> with gradient (a=0.2,b=0.9) rnorm(1,a,3)
+[1] 2.683433
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1
+
+attr(,"gradient")$b
+[1] 0
+
+> with gradient (a=3.1,b=2.4) rnorm(1,4,b)
+[1] 4.17983
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 0
+
+attr(,"gradient")$b
+[1] 0.0749291
+
+> with gradient (a=0.2,b=0.9) rnorm(1,4,b)
+[1] 5.014541
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 0
+
+attr(,"gradient")$b
+[1] 1.127268
+
+> with gradient (a=0.7,b=1.8) rnorm(1,a^2,b)
+[1] 1.333681
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1.4
+
+attr(,"gradient")$b
+[1] 0.4687117
+
+> with gradient (a=0.9,b=1.6) rnorm(1,a^2,b)
+[1] 1.896644
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1.8
+
+attr(,"gradient")$b
+[1] 0.6791523
+
+> with gradient (a=0.7,b=1.2) rnorm(1,a^2,b)
+[1] 0.7410938
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1.4
+
+attr(,"gradient")$b
+[1] 0.2092448
+
+> 
+> set.seed(179)
+> with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,a,b)
+[1] 3.8980794 0.6648697
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+
+attr(,"gradient")$b
+          [,1]      [,2]
+[1,] 0.3325331 0.0000000
+[2,] 0.0000000 0.5165219
+
+> with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,cos(a),sin(b)^2)
+[1] -1.3921093  0.1557093
+attr(,"gradient")
+attr(,"gradient")$a
+            [,1]       [,2]
+[1,] -0.04158066  0.0000000
+[2,]  0.00000000 -0.1986693
+
+attr(,"gradient")$b
+          [,1]      [,2]
+[1,] 0.8580087  0.000000
+[2,] 0.0000000 -1.308339
+
+> with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,a,3)
+[1] 2.990818 2.683433
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+
+attr(,"gradient")$b
+     [,1] [,2]
+[1,]    0    0
+[2,]    0    0
+
+> with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,4,b)
+[1] 4.179830 5.014541
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2]
+[1,]    0    0
+[2,]    0    0
+
+attr(,"gradient")$b
+          [,1]     [,2]
+[1,] 0.0749291 0.000000
+[2,] 0.0000000 1.127268
+
+> with gradient (a=c(0.7,0.9),b=c(1.8,1.6,1.2)) rnorm(3,a^2,b)
+[1] 1.3336810 1.8966437 0.7410938
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2]
+[1,]  1.4  0.0
+[2,]  0.0  1.8
+[3,]  1.4  0.0
+
+attr(,"gradient")$b
+          [,1]      [,2]      [,3]
+[1,] 0.4687117 0.0000000 0.0000000
+[2,] 0.0000000 0.6791523 0.0000000
+[3,] 0.0000000 0.0000000 0.2092448
+
+> 
+> 
+> # Test preservation of gradients through attribute setting.
+> 
+> with gradient (a=c(33,11,0.7,99)) { attr(a,"fred") <- 123; a }
+[1] 33.0 11.0  0.7 99.0
+attr(,"fred")
+[1] 123
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> with gradient (a=c(33,11,0.7,99)) { attr(a,"fred") <- NULL; a }
+[1] 33.0 11.0  0.7 99.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> 
+> with gradient (a=c(33,11,0.7,99)) { class(a) <- "fred"; a }
+[1] 33.0 11.0  0.7 99.0
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> with gradient (a=c(33,11,0.7,99)) { class(a) <- NULL; a }
+[1] 33.0 11.0  0.7 99.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> 
+> with gradient (a=c(33,11,0.7,99)) { oldClass(a) <- "fred"; a }
+[1] 33.0 11.0  0.7 99.0
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> with gradient (a=c(33,11,0.7,99)) { oldClass(a) <- NULL; a }
+[1] 33.0 11.0  0.7 99.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> 
+> with gradient (a=c(33,11,0.7,99)) { attributes(a) <- list(X=1,y=2); a }
+[1] 33.0 11.0  0.7 99.0
+attr(,"X")
+[1] 1
+attr(,"y")
+[1] 2
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> with gradient (a=c(33,11,0.7,99)) { attributes(a) <- NULL; a }
+[1] 33.0 11.0  0.7 99.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> 
+> with gradient (a=c(33,11,0.7,99)) { dim(a) <- c(2,2); a }
+     [,1] [,2]
+[1,]   33  0.7
+[2,]   11 99.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> with gradient (a=c(33,11,0.7,99)) { dim(a) <- NULL; a }
+[1] 33.0 11.0  0.7 99.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> 
+> with gradient (a=c(33,11,0.7,99)) { names(a) <- c("ww","xx","yy","zz"); a }
+  ww   xx   yy   zz 
+33.0 11.0  0.7 99.0 
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> with gradient (a=c(33,11,0.7,99)) { names(a) <- NULL; a }
+[1] 33.0 11.0  0.7 99.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> 
+> with gradient (a=matrix(c(33,11,0.7,99),2,2)) {
++   dimnames(a) <- list(c("ww","xx"),c("yy","zz"))
++   a
++ }
+   yy   zz
+ww 33  0.7
+xx 11 99.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> 
+> with gradient (a=matrix(c(33,11,0.7,99),2,2)) { dimnames(a) <- NULL; a }
+     [,1] [,2]
+[1,]   33  0.7
+[2,]   11 99.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> 
+> 
+> # Test matrix operations.
+> 
+> (A <- matrix(c(3,6,1,2),2,2))
+     [,1] [,2]
+[1,]    3    1
+[2,]    6    2
+> (B <- matrix(c(9,8,4,3,1,3),2,3))
+     [,1] [,2] [,3]
+[1,]    9    4    1
+[2,]    8    3    3
+> with gradient (A,B) A %*% B
+     [,1] [,2] [,3]
+[1,]   35   15    6
+[2,]   70   30   12
+attr(,"gradient")
+attr(,"gradient")$A
+     [,1] [,2] [,3] [,4]
+[1,]    9    0    8    0
+[2,]    0    9    0    8
+[3,]    4    0    3    0
+[4,]    0    4    0    3
+[5,]    1    0    3    0
+[6,]    0    1    0    3
+
+attr(,"gradient")$B
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]    3    1    0    0    0    0
+[2,]    6    2    0    0    0    0
+[3,]    0    0    3    1    0    0
+[4,]    0    0    6    2    0    0
+[5,]    0    0    0    0    3    1
+[6,]    0    0    0    0    6    2
+
+> At <- t(A)
+> Bt <- t(B)
+> with gradient (At,B) t(At) %*% B
+     [,1] [,2] [,3]
+[1,]   35   15    6
+[2,]   70   30   12
+attr(,"gradient")
+attr(,"gradient")$At
+     [,1] [,2] [,3] [,4]
+[1,]    9    8    0    0
+[2,]    0    0    9    8
+[3,]    4    3    0    0
+[4,]    0    0    4    3
+[5,]    1    3    0    0
+[6,]    0    0    1    3
+
+attr(,"gradient")$B
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]    3    1    0    0    0    0
+[2,]    6    2    0    0    0    0
+[3,]    0    0    3    1    0    0
+[4,]    0    0    6    2    0    0
+[5,]    0    0    0    0    3    1
+[6,]    0    0    0    0    6    2
+
+> with gradient (At,B) crossprod(At,B)
+     [,1] [,2] [,3]
+[1,]   35   15    6
+[2,]   70   30   12
+attr(,"gradient")
+attr(,"gradient")$At
+     [,1] [,2] [,3] [,4]
+[1,]    9    8    0    0
+[2,]    0    0    9    8
+[3,]    4    3    0    0
+[4,]    0    0    4    3
+[5,]    1    3    0    0
+[6,]    0    0    1    3
+
+attr(,"gradient")$B
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]    3    1    0    0    0    0
+[2,]    6    2    0    0    0    0
+[3,]    0    0    3    1    0    0
+[4,]    0    0    6    2    0    0
+[5,]    0    0    0    0    3    1
+[6,]    0    0    0    0    6    2
+
+> with gradient (A,Bt) A %*% t(Bt)
+     [,1] [,2] [,3]
+[1,]   35   15    6
+[2,]   70   30   12
+attr(,"gradient")
+attr(,"gradient")$A
+     [,1] [,2] [,3] [,4]
+[1,]    9    0    8    0
+[2,]    0    9    0    8
+[3,]    4    0    3    0
+[4,]    0    4    0    3
+[5,]    1    0    3    0
+[6,]    0    1    0    3
+
+attr(,"gradient")$Bt
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]    3    0    0    1    0    0
+[2,]    6    0    0    2    0    0
+[3,]    0    3    0    0    1    0
+[4,]    0    6    0    0    2    0
+[5,]    0    0    3    0    0    1
+[6,]    0    0    6    0    0    2
+
+> with gradient (A,Bt) tcrossprod(A,Bt)
+     [,1] [,2] [,3]
+[1,]   35   15    6
+[2,]   70   30   12
+attr(,"gradient")
+attr(,"gradient")$A
+     [,1] [,2] [,3] [,4]
+[1,]    9    0    8    0
+[2,]    0    9    0    8
+[3,]    4    0    3    0
+[4,]    0    4    0    3
+[5,]    1    0    3    0
+[6,]    0    1    0    3
+
+attr(,"gradient")$Bt
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]    3    0    0    1    0    0
+[2,]    6    0    0    2    0    0
+[3,]    0    3    0    0    1    0
+[4,]    0    6    0    0    2    0
+[5,]    0    0    3    0    0    1
+[6,]    0    0    6    0    0    2
+
+> with gradient (B) t(B) %*% B
+     [,1] [,2] [,3]
+[1,]  145   60   33
+[2,]   60   25   13
+[3,]   33   13   10
+attr(,"gradient")
+      [,1] [,2] [,3] [,4] [,5] [,6]
+ [1,]   18   16    0    0    0    0
+ [2,]    4    3    9    8    0    0
+ [3,]    1    3    0    0    9    8
+ [4,]    4    3    9    8    0    0
+ [5,]    0    0    8    6    0    0
+ [6,]    0    0    1    3    4    3
+ [7,]    1    3    0    0    9    8
+ [8,]    0    0    1    3    4    3
+ [9,]    0    0    0    0    2    6
+> with gradient (B) crossprod(B)
+     [,1] [,2] [,3]
+[1,]  145   60   33
+[2,]   60   25   13
+[3,]   33   13   10
+attr(,"gradient")
+      [,1] [,2] [,3] [,4] [,5] [,6]
+ [1,]   18   16    0    0    0    0
+ [2,]    4    3    9    8    0    0
+ [3,]    1    3    0    0    9    8
+ [4,]    4    3    9    8    0    0
+ [5,]    0    0    8    6    0    0
+ [6,]    0    0    1    3    4    3
+ [7,]    1    3    0    0    9    8
+ [8,]    0    0    1    3    4    3
+ [9,]    0    0    0    0    2    6
+> with gradient (B) B %*% t(B)
+     [,1] [,2]
+[1,]   98   87
+[2,]   87   82
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]   18    0    8    0    2    0
+[2,]    8    9    3    4    3    1
+[3,]    8    9    3    4    3    1
+[4,]    0   16    0    6    0    6
+> with gradient (B) tcrossprod(B)
+     [,1] [,2]
+[1,]   98   87
+[2,]   87   82
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]   18    0    8    0    2    0
+[2,]    8    9    3    4    3    1
+[3,]    8    9    3    4    3    1
+[4,]    0   16    0    6    0    6
+> (u <- c(11,21))
+[1] 11 21
+> (v <- c(10,20))
+[1] 10 20
+> with gradient (A,v) A %*% v
+     [,1]
+[1,]   50
+[2,]  100
+attr(,"gradient")
+attr(,"gradient")$A
+     [,1] [,2] [,3] [,4]
+[1,]   10    0   20    0
+[2,]    0   10    0   20
+
+attr(,"gradient")$v
+     [,1] [,2]
+[1,]    3    1
+[2,]    6    2
+
+> with gradient (A,v) v %*% A
+     [,1] [,2]
+[1,]  150   50
+attr(,"gradient")
+attr(,"gradient")$A
+     [,1] [,2] [,3] [,4]
+[1,]   10   20    0    0
+[2,]    0    0   10   20
+
+attr(,"gradient")$v
+     [,1] [,2]
+[1,]    3    6
+[2,]    1    2
+
+> with gradient (u,v) u %*% v
+     [,1]
+[1,]  530
+attr(,"gradient")
+attr(,"gradient")$u
+     [,1] [,2]
+[1,]   10   20
+
+attr(,"gradient")$v
+     [,1] [,2]
+[1,]   11   21
+
+> with gradient (u,v) u %*% t(v)
+     [,1] [,2]
+[1,]  110  220
+[2,]  210  420
+attr(,"gradient")
+attr(,"gradient")$u
+     [,1] [,2]
+[1,]   10    0
+[2,]    0   10
+[3,]   20    0
+[4,]    0   20
+
+attr(,"gradient")$v
+     [,1] [,2]
+[1,]   11    0
+[2,]   21    0
+[3,]    0   11
+[4,]    0   21
+
+> rm(A,B,At,Bt)
+> 
+> with gradient (a=3,b=4) { x <- matrix(c(a,b,a),3,3); drop(x) }
+     [,1] [,2] [,3]
+[1,]    3    3    3
+[2,]    4    4    4
+[3,]    3    3    3
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1 0 1 1 0 1 1 0 1
+
+attr(,"gradient")$b
+[1] 0 1 0 0 1 0 0 1 0
+
+> with gradient (a=3,b=4) { x <- matrix(c(a,b,a),9,1); drop(x) }
+[1] 3 4 3 3 4 3 3 4 3
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1 0 1 1 0 1 1 0 1
+
+attr(,"gradient")$b
+[1] 0 1 0 0 1 0 0 1 0
+
+> 
+> with gradient (a=matrix(list(3,1,9,4),2,2)) t(a)
+     [,1] [,2]
+[1,] 3    1   
+[2,] 9    4   
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 0
+
+attr(,"gradient")[[2]][[3]]
+[1] 1
+
+attr(,"gradient")[[2]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 1
+
+attr(,"gradient")[[3]][[3]]
+[1] 0
+
+attr(,"gradient")[[3]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[4]]
+attr(,"gradient")[[4]][[1]]
+[1] 0
+
+attr(,"gradient")[[4]][[2]]
+[1] 0
+
+attr(,"gradient")[[4]][[3]]
+[1] 0
+
+attr(,"gradient")[[4]][[4]]
+[1] 1
+
+
+> with gradient (a=matrix(c(3,1,9,4),2,2)) t(a)
+     [,1] [,2]
+[1,]    3    1
+[2,]    9    4
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    0    1    0
+[3,]    0    1    0    0
+[4,]    0    0    0    1
+> with gradient (a=7) { b <- matrix(c(a,1,a^2,4,a^3,a^4),3,2); t(b) }
+     [,1] [,2] [,3]
+[1,]    7    1   49
+[2,]    4  343 2401
+attr(,"gradient")
+[1]    1    0    0  147   14 1372
+> 
+> with gradient (a=matrix(list(3,1,9,4),2,2)) diag(a)
+[[1]]
+[1] 3
+
+[[2]]
+[1] 4
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[4]]
+attr(,"gradient")[[4]][[1]]
+[1] 0
+
+attr(,"gradient")[[4]][[2]]
+[1] 1
+
+
+> with gradient (a=matrix(c(3,1,9,4),2,2)) diag(a)
+[1] 3 4
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    0    0    1
+> 
+> with gradient (a=list(8,7)) diag(a)
+     [,1] [,2]
+[1,]    8    0
+[2,]    0    7
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1 0 0 0
+
+attr(,"gradient")[[2]]
+[1] 0 0 0 1
+
+> with gradient (a=c(8,7)) diag(a)
+     [,1] [,2]
+[1,]    8    0
+[2,]    0    7
+attr(,"gradient")
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    0
+[3,]    0    0
+[4,]    0    1
+> with gradient (a=8,b=7) diag(c(a,a+3*b,b),3,3)
+     [,1] [,2] [,3]
+[1,]    8    0    0
+[2,]    0   29    0
+[3,]    0    0    7
+attr(,"gradient")
+attr(,"gradient")$a
+[1] 1 0 0 0 1 0 0 0 0
+
+attr(,"gradient")$b
+[1] 0 0 0 0 3 0 0 0 1
+
+> 
+> with gradient (a=3) { M <- matrix(7,2,2); diag(M) <- a; M }
+     [,1] [,2]
+[1,]    3    7
+[2,]    7    3
+attr(,"gradient")
+[1] 1 0 0 1
+> with gradient (a=3) { M <- matrix(7,2,2); diag(M) <- c(a,a^2); M }
+     [,1] [,2]
+[1,]    3    7
+[2,]    7    9
+attr(,"gradient")
+[1] 1 0 0 6
+> 
+> with gradient (A=matrix(c(3,1,5,2,-3,9),2,3)) rowSums(A)
+[1]  5 12
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]    1    0    1    0    1    0
+[2,]    0    1    0    1    0    1
+> with gradient (A=matrix(c(3,1,5,2,-3,9),2,3)) colSums(A)
+[1] 4 7 6
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]    1    1    0    0    0    0
+[2,]    0    0    1    1    0    0
+[3,]    0    0    0    0    1    1
+> with gradient (A=matrix(c(3,1,5,2,-3,9),2,3)) rowMeans(A)
+[1] 1.666667 4.000000
+attr(,"gradient")
+          [,1]      [,2]      [,3]      [,4]      [,5]      [,6]
+[1,] 0.3333333 0.0000000 0.3333333 0.0000000 0.3333333 0.0000000
+[2,] 0.0000000 0.3333333 0.0000000 0.3333333 0.0000000 0.3333333
+> with gradient (A=matrix(c(3,1,5,2,-3,9),2,3)) colMeans(A)
+[1] 2.0 3.5 3.0
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]  0.5  0.5  0.0  0.0  0.0  0.0
+[2,]  0.0  0.0  0.5  0.5  0.0  0.0
+[3,]  0.0  0.0  0.0  0.0  0.5  0.5
+> 
+> with gradient (A=matrix(c(3,1,NA,2,-3,9),2,3)) rowSums(A,na.rm=TRUE)
+[1]  0 12
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]    1    0    0    0    1    0
+[2,]    0    1    0    1    0    1
+> with gradient (A=matrix(c(3,1,NA,2,-3,9),2,3)) colSums(A,na.rm=TRUE)
+[1] 4 2 6
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]    1    1    0    0    0    0
+[2,]    0    0    0    1    0    0
+[3,]    0    0    0    0    1    1
+> with gradient (A=matrix(c(3,1,NA,2,-3,9),2,3)) rowMeans(A,na.rm=TRUE)
+[1] 0 4
+attr(,"gradient")
+     [,1]      [,2] [,3]      [,4] [,5]      [,6]
+[1,]  0.5 0.0000000    0 0.0000000  0.5 0.0000000
+[2,]  0.0 0.3333333    0 0.3333333  0.0 0.3333333
+> with gradient (A=matrix(c(3,1,NA,2,-3,9),2,3)) colMeans(A,na.rm=TRUE)
+[1] 2 2 3
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]  0.5  0.5    0    0  0.0  0.0
+[2,]  0.0  0.0    0    1  0.0  0.0
+[3,]  0.0  0.0    0    0  0.5  0.5
+> 
+> # next loses dim attribute, which is strange, but accept that for now...
+> with gradient (a=list(3)) { M <- matrix(7,2,2); diag(M) <- a; M }
+[[1]]
+[1] 3
+
+[[2]]
+[1] 7
+
+[[3]]
+[1] 7
+
+[[4]]
+[1] 3
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+[1] 1
+
+
+> 
+> X <- matrix(c(3.1,2,7, 0,1.7,5, 9,-3.2,6), 3, 3)
+> with gradient (X) det(X)
+[1] 64.12
+attr(,"gradient")
+     [,1] [,2]  [,3]  [,4]  [,5]  [,6] [,7]  [,8] [,9]
+[1,] 26.2   45 -15.3 -34.4 -44.4 27.92 -1.9 -15.5 5.27
+> numericDeriv (quote(det(X)), "X")
+[1] 64.12
+attr(,"gradient")
+     [,1] [,2]  [,3]  [,4]  [,5]  [,6] [,7]  [,8] [,9]
+[1,] 26.2   45 -15.3 -34.4 -44.4 27.92 -1.9 -15.5 5.27
+> with gradient (X) determinant(X)
+$modulus
+[1] 4.160756
+attr(,"logarithm")
+[1] TRUE
+
+$sign
+[1] 1
+
+attr(,"class")
+[1] "det"
+attr(,"gradient")
+attr(,"gradient")$modulus
+          [,1]      [,2]       [,3]       [,4]       [,5]      [,6]        [,7]
+[1,] 0.4086089 0.7018091 -0.2386151 -0.5364941 -0.6924517 0.4354336 -0.02963194
+           [,8]       [,9]
+[1,] -0.2417342 0.08218964
+
+attr(,"gradient")$sign
+NULL
+
+> numericDeriv (quote(determinant(X)$modulus), "X")
+[1] 4.160756
+attr(,"logarithm")
+[1] TRUE
+attr(,"gradient")
+          [,1]      [,2]       [,3]       [,4]       [,5]      [,6]        [,7]
+[1,] 0.4086089 0.7018091 -0.2386151 -0.5364941 -0.6924517 0.4354336 -0.02963194
+           [,8]       [,9]
+[1,] -0.2417343 0.08218964
+> with gradient (X) determinant(X,logarithm=FALSE)
+$modulus
+[1] 64.12
+attr(,"logarithm")
+[1] FALSE
+
+$sign
+[1] 1
+
+attr(,"class")
+[1] "det"
+attr(,"gradient")
+attr(,"gradient")$modulus
+     [,1] [,2]  [,3]  [,4]  [,5]  [,6] [,7]  [,8] [,9]
+[1,] 26.2   45 -15.3 -34.4 -44.4 27.92 -1.9 -15.5 5.27
+
+attr(,"gradient")$sign
+NULL
+
+> numericDeriv (quote(determinant(X,logarithm=FALSE)$modulus), "X")
+[1] 64.12
+attr(,"logarithm")
+[1] FALSE
+attr(,"gradient")
+     [,1] [,2]  [,3]  [,4]  [,5]  [,6] [,7]  [,8] [,9]
+[1,] 26.2   45 -15.3 -34.4 -44.4 27.92 -1.9 -15.5 5.27
+> 
+> X <- matrix(c(-31,2,7, 0,1.7,5, 9,-3.2,6), 3, 3)
+> with gradient (X) det(X)
+[1] -829.3
+attr(,"gradient")
+     [,1] [,2]  [,3]  [,4] [,5]  [,6] [,7] [,8]  [,9]
+[1,] 26.2   45 -15.3 -34.4 -249 -81.2 -1.9  155 -52.7
+> numericDeriv (quote(det(X)), "X")
+[1] -829.3
+attr(,"gradient")
+     [,1]     [,2]  [,3]      [,4] [,5]  [,6]      [,7] [,8]  [,9]
+[1,] 26.2 45.00001 -15.3 -34.40001 -249 -81.2 -1.900001  155 -52.7
+> with gradient (X) determinant(X)
+$modulus
+[1] 6.720582
+attr(,"logarithm")
+[1] TRUE
+
+$sign
+[1] -1
+
+attr(,"class")
+[1] "det"
+attr(,"gradient")
+attr(,"gradient")$modulus
+            [,1]        [,2]       [,3]       [,4]      [,5]      [,6]
+[1,] -0.03159291 -0.05426263 0.01844929 0.04148077 0.3002532 0.0979139
+            [,7]       [,8]       [,9]
+[1,] 0.002291089 -0.1869046 0.06354757
+
+attr(,"gradient")$sign
+NULL
+
+> numericDeriv (quote(determinant(X)$modulus), "X")
+[1] 6.720582
+attr(,"logarithm")
+[1] TRUE
+attr(,"gradient")
+            [,1]        [,2]      [,3]       [,4]      [,5]      [,6]
+[1,] -0.03159291 -0.05426264 0.0184493 0.04148078 0.3002532 0.0979139
+           [,7]       [,8]       [,9]
+[1,] 0.00229109 -0.1869046 0.06354757
+> with gradient (X) determinant(X,logarithm=FALSE)
+$modulus
+[1] 829.3
+attr(,"logarithm")
+[1] FALSE
+
+$sign
+[1] -1
+
+attr(,"class")
+[1] "det"
+attr(,"gradient")
+attr(,"gradient")$modulus
+      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9]
+[1,] -26.2  -45 15.3 34.4  249 81.2  1.9 -155 52.7
+
+attr(,"gradient")$sign
+NULL
+
+> numericDeriv (quote(determinant(X,logarithm=FALSE)$modulus), "X")
+[1] 829.3
+attr(,"logarithm")
+[1] FALSE
+attr(,"gradient")
+      [,1] [,2] [,3]     [,4] [,5] [,6] [,7] [,8] [,9]
+[1,] -26.2  -45 15.3 34.39999  249 81.2  1.9 -155 52.7
+> 
+> A <- matrix(c(7,1,8.1,2.2),2,2)
+> v <- c(55,33)
+> V <- matrix(c(55,33,550,330,5500,3300),2,3)
+> 
+> with gradient (A) solve(A)
+           [,1]       [,2]
+[1,]  0.3013699 -1.1095890
+[2,] -0.1369863  0.9589041
+attr(,"gradient")
+            [,1]       [,2]        [,3]       [,4]
+[1,] -0.09082379  0.3343967  0.04128354 -0.1519985
+[2,]  0.04128354 -0.2889848 -0.01876525  0.1313567
+[3,]  0.33439670 -1.2311878 -0.28898480  1.0639895
+[4,] -0.15199850  1.0639895  0.13135673 -0.9194971
+> numericDeriv (quote(as.vector(solve(A))),"A")
+[1]  0.3013699 -0.1369863 -1.1095890  0.9589041
+attr(,"gradient")
+            [,1]       [,2]        [,3]       [,4]
+[1,] -0.09082379  0.3343967  0.04128354 -0.1519985
+[2,]  0.04128354 -0.2889848 -0.01876525  0.1313567
+[3,]  0.33439669 -1.2311879 -0.28898480  1.0639895
+[4,] -0.15199849  1.0639895  0.13135673 -0.9194971
+> 
+> with gradient (A) solve(A,v)
+[1] -20.04110  24.10959
+attr(,"gradient")
+          [,1]      [,2]      [,3]      [,4]
+[1,]  6.039782 -22.23738 -7.265904  26.75174
+[2,] -2.745356  19.21749  3.302683 -23.11878
+> with gradient (v) solve(A,v)
+[1] -20.04110  24.10959
+attr(,"gradient")
+           [,1]       [,2]
+[1,]  0.3013699 -1.1095890
+[2,] -0.1369863  0.9589041
+> with gradient (A,v) solve(A,v)
+[1] -20.04110  24.10959
+attr(,"gradient")
+attr(,"gradient")$A
+          [,1]      [,2]      [,3]      [,4]
+[1,]  6.039782 -22.23738 -7.265904  26.75174
+[2,] -2.745356  19.21749  3.302683 -23.11878
+
+attr(,"gradient")$v
+           [,1]       [,2]
+[1,]  0.3013699 -1.1095890
+[2,] -0.1369863  0.9589041
+
+> numericDeriv (quote(as.vector(solve(A,v))),"A")
+[1] -20.04110  24.10959
+attr(,"gradient")
+          [,1]      [,2]      [,3]      [,4]
+[1,]  6.039782 -22.23738 -7.265904  26.75173
+[2,] -2.745356  19.21749  3.302684 -23.11878
+> numericDeriv (quote(as.vector(solve(A,v))),"v")
+[1] -20.04110  24.10959
+attr(,"gradient")
+           [,1]       [,2]
+[1,]  0.3013699 -1.1095890
+[2,] -0.1369863  0.9589041
+> 
+> with gradient (A) solve(A,V)
+          [,1]      [,2]      [,3]
+[1,] -20.04110 -200.4110 -2004.110
+[2,]  24.10959  241.0959  2410.959
+attr(,"gradient")
+            [,1]        [,2]        [,3]        [,4]
+[1,]    6.039782   -22.23738   -7.265904    26.75174
+[2,]   -2.745356    19.21749    3.302683   -23.11878
+[3,]   60.397823  -222.37380  -72.659035   267.51736
+[4,]  -27.453556   192.17489   33.026834  -231.18784
+[5,]  603.978232 -2223.73804 -726.590355  2675.17358
+[6,] -274.535560  1921.74892  330.268343 -2311.87840
+> with gradient (V) solve(A,V)
+          [,1]      [,2]      [,3]
+[1,] -20.04110 -200.4110 -2004.110
+[2,]  24.10959  241.0959  2410.959
+attr(,"gradient")
+           [,1]       [,2]       [,3]       [,4]       [,5]       [,6]
+[1,]  0.3013699 -1.1095890  0.0000000  0.0000000  0.0000000  0.0000000
+[2,] -0.1369863  0.9589041  0.0000000  0.0000000  0.0000000  0.0000000
+[3,]  0.0000000  0.0000000  0.3013699 -1.1095890  0.0000000  0.0000000
+[4,]  0.0000000  0.0000000 -0.1369863  0.9589041  0.0000000  0.0000000
+[5,]  0.0000000  0.0000000  0.0000000  0.0000000  0.3013699 -1.1095890
+[6,]  0.0000000  0.0000000  0.0000000  0.0000000 -0.1369863  0.9589041
+> with gradient (A,V) solve(A,V)
+          [,1]      [,2]      [,3]
+[1,] -20.04110 -200.4110 -2004.110
+[2,]  24.10959  241.0959  2410.959
+attr(,"gradient")
+attr(,"gradient")$A
+            [,1]        [,2]        [,3]        [,4]
+[1,]    6.039782   -22.23738   -7.265904    26.75174
+[2,]   -2.745356    19.21749    3.302683   -23.11878
+[3,]   60.397823  -222.37380  -72.659035   267.51736
+[4,]  -27.453556   192.17489   33.026834  -231.18784
+[5,]  603.978232 -2223.73804 -726.590355  2675.17358
+[6,] -274.535560  1921.74892  330.268343 -2311.87840
+
+attr(,"gradient")$V
+           [,1]       [,2]       [,3]       [,4]       [,5]       [,6]
+[1,]  0.3013699 -1.1095890  0.0000000  0.0000000  0.0000000  0.0000000
+[2,] -0.1369863  0.9589041  0.0000000  0.0000000  0.0000000  0.0000000
+[3,]  0.0000000  0.0000000  0.3013699 -1.1095890  0.0000000  0.0000000
+[4,]  0.0000000  0.0000000 -0.1369863  0.9589041  0.0000000  0.0000000
+[5,]  0.0000000  0.0000000  0.0000000  0.0000000  0.3013699 -1.1095890
+[6,]  0.0000000  0.0000000  0.0000000  0.0000000 -0.1369863  0.9589041
+
+> numericDeriv (quote(as.vector(solve(A,V))),"A")
+[1]   -20.04110    24.10959  -200.41096   241.09589 -2004.10959  2410.95890
+attr(,"gradient")
+            [,1]        [,2]        [,3]        [,4]
+[1,]    6.039782   -22.23738   -7.265904    26.75173
+[2,]   -2.745356    19.21749    3.302684   -23.11878
+[3,]   60.397821  -222.37381  -72.659037   267.51735
+[4,]  -27.453555   192.17490   33.026835  -231.18783
+[5,]  603.978208 -2223.73814 -726.590373  2675.17348
+[6,] -274.535549  1921.74899  330.268351 -2311.87832
+> numericDeriv (quote(as.vector(solve(A,V))),"V")
+[1]   -20.04110    24.10959  -200.41096   241.09589 -2004.10959  2410.95890
+attr(,"gradient")
+           [,1]       [,2]       [,3]       [,4]       [,5]       [,6]
+[1,]  0.3013699 -1.1095890  0.0000000  0.0000000  0.0000000  0.0000000
+[2,] -0.1369863  0.9589041  0.0000000  0.0000000  0.0000000  0.0000000
+[3,]  0.0000000  0.0000000  0.3013699 -1.1095890  0.0000000  0.0000000
+[4,]  0.0000000  0.0000000 -0.1369863  0.9589041  0.0000000  0.0000000
+[5,]  0.0000000  0.0000000  0.0000000  0.0000000  0.3013699 -1.1095891
+[6,]  0.0000000  0.0000000  0.0000000  0.0000000 -0.1369863  0.9589041
+> 
+> 
+> # Tests with data frames.
+> 
+> p <- function (df) { print(df); print(attr(df,"gradient")); }
+> 
+> a <- c(3,7,1)
+> b <- c(9,2,4)
+> 
+> p( with gradient (a,b) 
++      data.frame(x=a,y=c(a[1]-b[1],a[1]+b[1],a[1]*b[2]),z=a+b) )
+  x  y  z
+1 3 -6 12
+2 7 12  9
+3 1  6  5
+$a
+$a$x
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+$a$y
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    1    0    0
+[3,]    2    0    0
+
+$a$z
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+
+$b
+$b$x
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+$b$y
+     [,1] [,2] [,3]
+[1,]   -1    0    0
+[2,]    1    0    0
+[3,]    0    3    0
+
+$b$z
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+
+> 
+> p( with gradient (a,b) 
++      data.frame(list(x=a,y=c(a[1]-b[1],a[1]+b[1],a[1]*b[2]),z=a+b)) )
+  x  y  z
+1 3 -6 12
+2 7 12  9
+3 1  6  5
+$a
+$a$x
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+$a$y
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    1    0    0
+[3,]    2    0    0
+
+$a$z
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+
+$b
+$b$x
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+$b$y
+     [,1] [,2] [,3]
+[1,]   -1    0    0
+[2,]    1    0    0
+[3,]    0    3    0
+
+$b$z
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+
+> 
+> p( with gradient (a,b) data.frame(matrix(c(a,b,a,a^2),4,3)) )
+  X1 X2 X3
+1  3  2  1
+2  7  4  9
+3  1  3 49
+4  9  7  1
+$a
+$a$X1
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+[4,]    0    0    0
+
+$a$X2
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    1    0    0
+[4,]    0    1    0
+
+$a$X3
+     [,1] [,2] [,3]
+[1,]    0    0    1
+[2,]    6    0    0
+[3,]    0   14    0
+[4,]    0    0    2
+
+
+$b
+$b$X1
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+[4,]    1    0    0
+
+$b$X2
+     [,1] [,2] [,3]
+[1,]    0    1    0
+[2,]    0    0    1
+[3,]    0    0    0
+[4,]    0    0    0
+
+$b$X3
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+[4,]    0    0    0
+
+
+> 
+> with gradient (a=c(2,3,1),b=c(9,8,7)) 
++   { df <- data.frame(x=a,y=b^2); df$y }
+[1] 81 64 49
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+attr(,"gradient")$b
+     [,1] [,2] [,3]
+[1,]   18    0    0
+[2,]    0   16    0
+[3,]    0    0   14
+
+> with gradient (a=c(2,3,1),b=c(9,8,7)) 
++   { df <- data.frame(x=a,y=b^2); df[,"y"] }
+[1] 81 64 49
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+attr(,"gradient")$b
+     [,1] [,2] [,3]
+[1,]   18    0    0
+[2,]    0   16    0
+[3,]    0    0   14
+
+> with gradient (a=c(2,3,1),b=c(9,8,7)) 
++   { df <- data.frame(x=a,y=b^2); df[2:3,"y"] }
+[1] 64 49
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+
+attr(,"gradient")$b
+     [,1] [,2] [,3]
+[1,]    0   16    0
+[2,]    0    0   14
+
+> with gradient (a=c(2,3,1),b=c(9,8,7)) 
++   { df <- data.frame(x=a,y=b^2); df[[2,"y"]] }
+[1] 64
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3]
+[1,]    0    0    0
+
+attr(,"gradient")$b
+     [,1] [,2] [,3]
+[1,]    0   16    0
+
+> 
+> p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
++   { df <- data.frame(x=a,y=b^2); df } )
+  x  y
+1 2 81
+2 3 64
+3 1 49
+$a
+$a$x
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+$a$y
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+
+$b
+$b$x
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+$b$y
+     [,1] [,2] [,3]
+[1,]   18    0    0
+[2,]    0   16    0
+[3,]    0    0   14
+
+
+> p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
++   { df <- data.frame(x=a,y=b^2); df$y <- a^3; df } )
+  x  y
+1 2  8
+2 3 27
+3 1  1
+$a
+$a$x
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+$a$y
+     [,1] [,2] [,3]
+[1,]   12    0    0
+[2,]    0   27    0
+[3,]    0    0    3
+
+
+$b
+$b$x
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+$b$y
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+
+> p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
++   { df <- data.frame(x=a,y=b^2); df["y"] <- a^3; df } )
+  x  y
+1 2  8
+2 3 27
+3 1  1
+$a
+$a$x
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+$a$y
+     [,1] [,2] [,3]
+[1,]   12    0    0
+[2,]    0   27    0
+[3,]    0    0    3
+
+
+$b
+$b$x
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+$b$y
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+
+> p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
++   { df <- data.frame(x=a,y=b^2); df[,"y"] <- a^3; df } )
+  x  y
+1 2  8
+2 3 27
+3 1  1
+$a
+$a$x
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+$a$y
+     [,1] [,2] [,3]
+[1,]   12    0    0
+[2,]    0   27    0
+[3,]    0    0    3
+
+
+$b
+$b$x
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+$b$y
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+
+> p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
++   { df <- data.frame(x=a,y=b^2); df[2:3,"y"] <- a[1..2]^3; df } )
+  x  y
+1 2 81
+2 3  8
+3 1 27
+$a
+$a$x
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+$a$y
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]   12    0    0
+[3,]    0   27    0
+
+
+$b
+$b$x
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+$b$y
+     [,1] [,2] [,3]
+[1,]   18    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+
+> p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
++   { df <- data.frame(x=a,y=b^2); df[[2,"y"]] <- a[2]; df } )
+  x  y
+1 2 81
+2 3  3
+3 1 49
+$a
+$a$x
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+$a$y
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    1    0
+[3,]    0    0    0
+
+
+$b
+$b$x
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+$b$y
+     [,1] [,2] [,3]
+[1,]   18    0    0
+[2,]    0    0    0
+[3,]    0    0   14
+
+
+> 
+> df1 <- data.frame(x=a)
+> df2 <- data.frame(x=b)
+> df3 <- data.frame(y=b)
+> p( with gradient (df1,df2) rbind(df1,df2) )
+  x
+1 3
+2 7
+3 1
+4 9
+5 2
+6 4
+$df1
+$df1$x
+$df1$x$x
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+[4,]    0    0    0
+[5,]    0    0    0
+[6,]    0    0    0
+
+
+
+$df2
+$df2$x
+$df2$x$x
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+[4,]    1    0    0
+[5,]    0    1    0
+[6,]    0    0    1
+
+
+
+> p( with gradient (df1,df3) cbind(df1,df3) )
+  x y
+1 3 9
+2 7 2
+3 1 4
+$df1
+$df1$x
+$df1$x$x
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+$df1$x$y
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+
+
+$df3
+$df3$y
+$df3$y$x
+     [,1] [,2] [,3]
+[1,]    0    0    0
+[2,]    0    0    0
+[3,]    0    0    0
+
+$df3$y$y
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+
+
+
+> 
+> 
+> # Miscellaneous tests.
+> 
+> with gradient (a=7) invisible(a)
+[1] 7
+attr(,"gradient")
+[1] 1
+> 
+> with gradient (a=c(3,1,5,4),b=7) mean(c(a,b,a))
+[1] 3.666667
+attr(,"gradient")
+attr(,"gradient")$a
+          [,1]      [,2]      [,3]      [,4]
+[1,] 0.2222222 0.2222222 0.2222222 0.2222222
+
+attr(,"gradient")$b
+[1] 0.1111111
+
+> with gradient (a=c(3,1,5,4),b=7) mean(c(a,b,NA,a))
+[1] NA
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    0    0
+
+attr(,"gradient")$b
+[1] 0
+
+> 
+> with gradient (a=c(3,1,5)) sum(a)
+[1] 9
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    1    1    1
+> with gradient (a=c(3,1,5)) sum(a^2+a)
+[1] 44
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    7    3   11
+> with gradient (a=c(3,1,5)) sum(a^2,a)
+[1] 44
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    7    3   11
+> with gradient (a=c(3,1,5),b=7) sum(a^2+a,3*b)
+[1] 65
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3]
+[1,]    7    3   11
+
+attr(,"gradient")$b
+[1] 3
+
+> with gradient (a=c(3,1,NA,5),b=7) sum(a^2+a,3*b,na.rm=FALSE)
+[1] NA
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3] [,4]
+[1,]   NA   NA   NA   NA
+
+attr(,"gradient")$b
+[1] 3
+
+> with gradient (a=c(3,1,NA,5),b=7) sum(a^2+a,3*b,na.rm=TRUE)
+[1] 65
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3] [,4]
+[1,]    7    3    0   11
+
+attr(,"gradient")$b
+[1] 3
+
+> 
+> with gradient (a=c(3,1,5)) prod(a)
+[1] 15
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    5   15    3
+> with gradient (a=c(3,1,5)) prod(a^2+a)
+[1] 720
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]  420 1080  264
+> with gradient (a=c(3,1,5)) prod(a^2,a)
+[1] 3375
+attr(,"gradient")
+     [,1]  [,2] [,3]
+[1,] 3375 10125 2025
+> with gradient (a=c(3,1,5),b=7) prod(a^2+a,3*b)
+[1] 15120
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1]  [,2] [,3]
+[1,] 8820 22680 5544
+
+attr(,"gradient")$b
+[1] 2160
+
+> with gradient (a=c(3,1,NA,5),b=7) prod(a^2+a,3*b,na.rm=FALSE)
+[1] NA
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    0    0
+
+attr(,"gradient")$b
+[1] 0
+
+> with gradient (a=c(3,1,NA,5),b=7) prod(a^2+a,3*b,na.rm=TRUE)
+[1] 15120
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1]  [,2] [,3] [,4]
+[1,] 8820 22680    0 5544
+
+attr(,"gradient")$b
+[1] 2160
+
+> 
+> with gradient (a=c(3,1,5)) max(a)
+[1] 5
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    0    0    1
+> with gradient (a=c(3,1,5)) max(a-a^2)
+[1] 0
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    0   -1    0
+> with gradient (a=c(3,1,5)) max(a^2,a)
+[1] 25
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    0    0   10
+> with gradient (a=c(3,1,5),b=7) max(a^2+a,3*b)
+[1] 30
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3]
+[1,]    0    0   11
+
+attr(,"gradient")$b
+[1] 0
+
+> with gradient (a=c(3,1,NA,5),b=7) max(a^2+a,3*b,na.rm=FALSE)
+[1] NA
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    0    0
+
+attr(,"gradient")$b
+[1] 0
+
+> with gradient (a=c(3,1,NA,5),b=7) max(a^2+a,3*b,na.rm=TRUE)
+[1] 30
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    0   11
+
+attr(,"gradient")$b
+[1] 0
+
+> 
+> with gradient (a=c(3,1,5)) min(a)
+[1] 1
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    0    1    0
+> with gradient (a=c(3,1,5)) min(a-a^2)
+[1] -20
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    0    0   -9
+> with gradient (a=c(3,1,5)) min(a^2,a)
+[1] 1
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    0    2    0
+> with gradient (a=c(3,1,5),b=0.1) min(a^2+a,3*b)
+[1] 0.3
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3]
+[1,]    0    0    0
+
+attr(,"gradient")$b
+[1] 3
+
+> with gradient (a=c(3,1,NA,5),b=7) min(a^2+a,3*b,na.rm=FALSE)
+[1] NA
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    0    0
+
+attr(,"gradient")$b
+[1] 0
+
+> with gradient (a=c(3,1,NA,5),b=7) min(a^2+a,3*b,na.rm=TRUE)
+[1] 2
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3] [,4]
+[1,]    0    3    0    0
+
+attr(,"gradient")$b
+[1] 0
+
+> 
+> a <- c(7,1,8,9)
+> b <- c(3,4,8,6)
+> 
+> with gradient (a,b) pmin(a,b)
+[1] 3 1 8 6
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    0
+
+attr(,"gradient")$b
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    0    0    0
+[3,]    0    0    0    0
+[4,]    0    0    0    1
+
+> with gradient (a,b) pmax(a,b)
+[1] 7 4 8 9
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    0    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+
+attr(,"gradient")$b
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    0    0
+[4,]    0    0    0    0
+
+> with gradient (a,b) pmax(a,b,a[1]+1)
+[1] 8 8 8 9
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    1    0    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+
+attr(,"gradient")$b
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    0    0
+[2,]    0    0    0    0
+[3,]    0    0    0    0
+[4,]    0    0    0    0
+
+> with gradient (a,b) pmax(a[1]+1,b,a)
+[1] 8 8 8 9
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    1    0    0    0
+[3,]    1    0    0    0
+[4,]    0    0    0    1
+
+attr(,"gradient")$b
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    0    0
+[2,]    0    0    0    0
+[3,]    0    0    0    0
+[4,]    0    0    0    0
+
+> with gradient (a,b) pmax(a,b,a*b)
+[1] 21  4 64 54
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2] [,3] [,4]
+[1,]    3    0    0    0
+[2,]    0    0    0    0
+[3,]    0    0    8    0
+[4,]    0    0    0    6
+
+attr(,"gradient")$b
+     [,1] [,2] [,3] [,4]
+[1,]    7    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    8    0
+[4,]    0    0    0    9
+
+> 
+> rm(a,b)
+> 
+> with gradient (a=list(3,list(9,2))) as.vector(a)
+[[1]]
+[1] 3
+
+[[2]]
+[[2]][[1]]
+[1] 9
+
+[[2]][[2]]
+[1] 2
+
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+attr(,"gradient")[[1]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[1]][[2]][[2]]
+[1] 0
+
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+attr(,"gradient")[[2]][[1]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[1]][[2]]
+attr(,"gradient")[[2]][[1]][[2]][[1]]
+[1] 1
+
+attr(,"gradient")[[2]][[1]][[2]][[2]]
+[1] 0
+
+
+
+attr(,"gradient")[[2]][[2]]
+attr(,"gradient")[[2]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[2]]
+attr(,"gradient")[[2]][[2]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[2]][[2]]
+[1] 1
+
+
+
+
+> with gradient (a=c(3,1,9,2)) as.vector(a)
+[1] 3 1 9 2
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> 
+> with gradient (a=list(3,2,9)) as.vector(a,"double")
+[1] 3 2 9
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1 0 0
+
+attr(,"gradient")[[2]]
+[1] 0 1 0
+
+attr(,"gradient")[[3]]
+[1] 0 0 1
+
+> with gradient (a=list(3,2,9)) as.double(a)
+[1] 3 2 9
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1 0 0
+
+attr(,"gradient")[[2]]
+[1] 0 1 0
+
+attr(,"gradient")[[3]]
+[1] 0 0 1
+
+> with gradient (a=c(3,2,9)) as.vector(a,"list")
+[[1]]
+[1] 3
+
+[[2]]
+[1] 2
+
+[[3]]
+[1] 9
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2] [,3]
+[1,]    1    0    0
+
+attr(,"gradient")[[2]]
+     [,1] [,2] [,3]
+[1,]    0    1    0
+
+attr(,"gradient")[[3]]
+     [,1] [,2] [,3]
+[1,]    0    0    1
+
+> with gradient (a=c(3,2,9)) as.list(a)
+[[1]]
+[1] 3
+
+[[2]]
+[1] 2
+
+[[3]]
+[1] 9
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2] [,3]
+[1,]    1    0    0
+
+attr(,"gradient")[[2]]
+     [,1] [,2] [,3]
+[1,]    0    1    0
+
+attr(,"gradient")[[3]]
+     [,1] [,2] [,3]
+[1,]    0    0    1
+
+> 
+> with gradient (a=list(9,0,2)) { a[[2]] <- "x"; as.vector(a,"double") }
+[1]  9 NA  2
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1 0 0
+
+attr(,"gradient")[[2]]
+[1] 0 0 0
+
+attr(,"gradient")[[3]]
+[1] 0 0 1
+
+Warning message:
+In as.vector(a, "double") : NAs introduced by coercion
+> 
+> a <- c(9,8); class(a)<-"fred"; as.list.fred <- function(x) list(x[2],x[1])
+> with gradient (a) as.list(a)
+[[1]]
+[1] 8
+
+[[2]]
+[1] 9
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2]
+[1,]    0    1
+
+attr(,"gradient")[[2]]
+     [,1] [,2]
+[1,]    1    0
+
+> rm(a)
+> 
+> with gradient (a=c(3,9)) { storage.mode(a) <- "double"; a }
+[1] 3 9
+attr(,"gradient")
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+> with gradient (a=list(3,9)) { storage.mode(a) <- "list"; a }
+[[1]]
+[1] 3
+
+[[2]]
+[1] 9
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+
+> with gradient (a=c(3,9)) { storage.mode(a) <- "list"; a }
+[[1]]
+[1] 3
+
+[[2]]
+[1] 9
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2]
+[1,]    1    0
+
+attr(,"gradient")[[2]]
+     [,1] [,2]
+[1,]    0    1
+
+> with gradient (a=list(3,9)) { storage.mode(a) <- "double"; a }
+[1] 3 9
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1 0
+
+attr(,"gradient")[[2]]
+[1] 0 1
+
+> with gradient (a=c(3,9)) { storage.mode(a) <- "character"; a }
+[1] "3" "9"
+> 
+> with gradient (a=list(3,list(9,2),9,8)) matrix(a,2,2)
+     [,1]   [,2]
+[1,] 3      9   
+[2,] List,2 8   
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+attr(,"gradient")[[1]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[1]][[2]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+attr(,"gradient")[[2]][[1]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[1]][[2]]
+attr(,"gradient")[[2]][[1]][[2]][[1]]
+[1] 1
+
+attr(,"gradient")[[2]][[1]][[2]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[2]][[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[2]][[1]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[2]][[2]]
+attr(,"gradient")[[2]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[2]]
+attr(,"gradient")[[2]][[2]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[2]][[2]]
+[1] 1
+
+
+attr(,"gradient")[[2]][[2]][[3]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[4]]
+[1] 0
+
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+attr(,"gradient")[[3]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[3]][[3]]
+[1] 1
+
+attr(,"gradient")[[3]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[4]]
+attr(,"gradient")[[4]][[1]]
+[1] 0
+
+attr(,"gradient")[[4]][[2]]
+attr(,"gradient")[[4]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[4]][[2]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[4]][[3]]
+[1] 0
+
+attr(,"gradient")[[4]][[4]]
+[1] 1
+
+
+> with gradient (a=list(3,8)) matrix(a,2,2)
+     [,1] [,2]
+[1,] 3    3   
+[2,] 8    8   
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 1
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+attr(,"gradient")[[2]][[3]]
+[1] 0
+
+attr(,"gradient")[[2]][[4]]
+[1] 1
+
+
+> with gradient (a=c(3,1,9,2)) matrix(a,2,2)
+     [,1] [,2]
+[1,]    3    9
+[2,]    1    2
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+[3,]    0    0    1    0
+[4,]    0    0    0    1
+> with gradient (a=12) matrix(a,2,2)
+     [,1] [,2]
+[1,]   12   12
+[2,]   12   12
+attr(,"gradient")
+[1] 1 1 1 1
+> with gradient (a=c(12,10)) matrix(a,3,2)
+     [,1] [,2]
+[1,]   12   10
+[2,]   10   12
+[3,]   12   10
+attr(,"gradient")
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+[3,]    1    0
+[4,]    0    1
+[5,]    1    0
+[6,]    0    1
+> with gradient (a=12) { M <- matrix(a,2,2); M[1,2] }
+[1] 12
+attr(,"gradient")
+[1] 1
+> 
+> with gradient (a=list(3,list(9,2),9,8)) matrix(a,2,2,byrow=TRUE)
+     [,1] [,2]  
+[1,] 3    List,2
+[2,] 9    8     
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+attr(,"gradient")[[1]][[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+attr(,"gradient")[[2]][[1]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[2]][[1]][[3]]
+attr(,"gradient")[[2]][[1]][[3]][[1]]
+[1] 1
+
+attr(,"gradient")[[2]][[1]][[3]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[2]][[1]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[2]][[2]]
+attr(,"gradient")[[2]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[2]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[3]]
+attr(,"gradient")[[2]][[2]][[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[3]][[2]]
+[1] 1
+
+
+attr(,"gradient")[[2]][[2]][[4]]
+[1] 0
+
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 1
+
+attr(,"gradient")[[3]][[3]]
+attr(,"gradient")[[3]][[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[3]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[3]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[4]]
+attr(,"gradient")[[4]][[1]]
+[1] 0
+
+attr(,"gradient")[[4]][[2]]
+[1] 0
+
+attr(,"gradient")[[4]][[3]]
+attr(,"gradient")[[4]][[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[4]][[3]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[4]][[4]]
+[1] 1
+
+
+> with gradient (a=list(3,8)) matrix(a,2,2,byrow=TRUE)
+     [,1] [,2]
+[1,] 3    8   
+[2,] 3    8   
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 1
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 0
+
+attr(,"gradient")[[2]][[3]]
+[1] 1
+
+attr(,"gradient")[[2]][[4]]
+[1] 1
+
+
+> with gradient (a=c(3,1,9,2)) matrix(a,2,2,byrow=TRUE)
+     [,1] [,2]
+[1,]    3    1
+[2,]    9    2
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    0    1    0
+[3,]    0    1    0    0
+[4,]    0    0    0    1
+> with gradient (a=12) matrix(a,2,2,byrow=TRUE)
+     [,1] [,2]
+[1,]   12   12
+[2,]   12   12
+attr(,"gradient")
+[1] 1 1 1 1
+> with gradient (a=c(12,10)) matrix(a,3,2,byrow=TRUE)
+     [,1] [,2]
+[1,]   12   10
+[2,]   12   10
+[3,]   12   10
+attr(,"gradient")
+     [,1] [,2]
+[1,]    1    0
+[2,]    1    0
+[3,]    1    0
+[4,]    0    1
+[5,]    0    1
+[6,]    0    1
+> with gradient (a=12) { M <- matrix(a,2,2,byrow=TRUE); M[1,2] }
+[1] 12
+attr(,"gradient")
+[1] 1
+> 
+> with gradient (a=list(3,list(9,2),9,8)) array(a,c(2,2))
+     [,1]   [,2]
+[1,] 3      9   
+[2,] List,2 8   
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+attr(,"gradient")[[1]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[1]][[2]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+attr(,"gradient")[[2]][[1]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[1]][[2]]
+attr(,"gradient")[[2]][[1]][[2]][[1]]
+[1] 1
+
+attr(,"gradient")[[2]][[1]][[2]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[2]][[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[2]][[1]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[2]][[2]]
+attr(,"gradient")[[2]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[2]]
+attr(,"gradient")[[2]][[2]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[2]][[2]]
+[1] 1
+
+
+attr(,"gradient")[[2]][[2]][[3]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[4]]
+[1] 0
+
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+attr(,"gradient")[[3]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[3]][[3]]
+[1] 1
+
+attr(,"gradient")[[3]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[4]]
+attr(,"gradient")[[4]][[1]]
+[1] 0
+
+attr(,"gradient")[[4]][[2]]
+attr(,"gradient")[[4]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[4]][[2]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[4]][[3]]
+[1] 0
+
+attr(,"gradient")[[4]][[4]]
+[1] 1
+
+
+> with gradient (a=list(3,8)) array(a,c(2,2))
+     [,1] [,2]
+[1,] 3    3   
+[2,] 8    8   
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 1
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+attr(,"gradient")[[2]][[3]]
+[1] 0
+
+attr(,"gradient")[[2]][[4]]
+[1] 1
+
+
+> with gradient (a=c(3,1,9,2,8,1,0,3,9,8,7,6)) array(a,c(2,3,2))
+, , 1
+
+     [,1] [,2] [,3]
+[1,]    3    9    8
+[2,]    1    2    1
+
+, , 2
+
+     [,1] [,2] [,3]
+[1,]    0    9    7
+[2,]    3    8    6
+
+attr(,"gradient")
+      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11] [,12]
+ [1,]    1    0    0    0    0    0    0    0    0     0     0     0
+ [2,]    0    1    0    0    0    0    0    0    0     0     0     0
+ [3,]    0    0    1    0    0    0    0    0    0     0     0     0
+ [4,]    0    0    0    1    0    0    0    0    0     0     0     0
+ [5,]    0    0    0    0    1    0    0    0    0     0     0     0
+ [6,]    0    0    0    0    0    1    0    0    0     0     0     0
+ [7,]    0    0    0    0    0    0    1    0    0     0     0     0
+ [8,]    0    0    0    0    0    0    0    1    0     0     0     0
+ [9,]    0    0    0    0    0    0    0    0    1     0     0     0
+[10,]    0    0    0    0    0    0    0    0    0     1     0     0
+[11,]    0    0    0    0    0    0    0    0    0     0     1     0
+[12,]    0    0    0    0    0    0    0    0    0     0     0     1
+> with gradient (a=12) array(a,c(2,2,2))
+, , 1
+
+     [,1] [,2]
+[1,]   12   12
+[2,]   12   12
+
+, , 2
+
+     [,1] [,2]
+[1,]   12   12
+[2,]   12   12
+
+attr(,"gradient")
+[1] 1 1 1 1 1 1 1 1
+> 
+> with gradient (a = list(3,9)) { for (v in a) print(gradient_of(v)); a }
+[[1]]
+[1] 1
+
+[[2]]
+[1] 0
+
+[[1]]
+[1] 0
+
+[[2]]
+[1] 1
+
+[[1]]
+[1] 3
+
+[[2]]
+[1] 9
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+
+> with gradient (a = c(3,1,9)) { for (v in a^2) print(gradient_of(v)); a }
+     [,1] [,2] [,3]
+[1,]    6    0    0
+     [,1] [,2] [,3]
+[1,]    0    2    0
+     [,1] [,2] [,3]
+[1,]    0    0   18
+[1] 3 1 9
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+> 
+> with gradient (a=list(99,33,11)) { length(a) <- 2; a }
+[[1]]
+[1] 99
+
+[[2]]
+[1] 33
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0
+
+
+> with gradient (a=list(99,33,11)) { length(a) <- 3; a }
+[[1]]
+[1] 99
+
+[[2]]
+[1] 33
+
+[[3]]
+[1] 11
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+attr(,"gradient")[[2]][[3]]
+[1] 0
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0
+
+attr(,"gradient")[[3]][[3]]
+[1] 1
+
+
+> with gradient (a=list(99,33,11)) { length(a) <- 4; a }
+[[1]]
+[1] 99
+
+[[2]]
+[1] 33
+
+[[3]]
+[1] 11
+
+[[4]]
+NULL
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+NULL
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+attr(,"gradient")[[2]][[3]]
+[1] 0
+
+attr(,"gradient")[[2]][[4]]
+NULL
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0
+
+attr(,"gradient")[[3]][[3]]
+[1] 1
+
+attr(,"gradient")[[3]][[4]]
+NULL
+
+
+> 
+> with gradient (a=c(99,33,11)) { length(a) <- 2; a }
+[1] 99 33
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+> with gradient (a=c(99,33,11)) { length(a) <- 3; a }
+[1] 99 33 11
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+> with gradient (a=c(99,33,11)) { length(a) <- 4; a }
+[1] 99 33 11 NA
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+[4,]    0    0    0
+> 
+> with gradient (a=c(3,5)) rep_len(c(a[2]^2,a[1]^3),length.out=7)
+[1] 25 27 25 27 25 27 25
+attr(,"gradient")
+     [,1] [,2]
+[1,]    0   10
+[2,]   27    0
+[3,]    0   10
+[4,]   27    0
+[5,]    0   10
+[6,]   27    0
+[7,]    0   10
+> with gradient (a=list(3,5)) rep_len(a,5)
+[[1]]
+[1] 3
+
+[[2]]
+[1] 5
+
+[[3]]
+[1] 3
+
+[[4]]
+[1] 5
+
+[[5]]
+[1] 3
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 1
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+attr(,"gradient")[[1]][[5]]
+[1] 1
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+attr(,"gradient")[[2]][[3]]
+[1] 0
+
+attr(,"gradient")[[2]][[4]]
+[1] 1
+
+attr(,"gradient")[[2]][[5]]
+[1] 0
+
+
+> 
+> with gradient (a=c(3,5)) rep.int(c(a[2]^2,a[1]^3),c(2,3))
+[1] 25 25 27 27 27
+attr(,"gradient")
+     [,1] [,2]
+[1,]    0   10
+[2,]    0   10
+[3,]   27    0
+[4,]   27    0
+[5,]   27    0
+> with gradient (a=c(3,5)) rep.int(c(a[2]^2,a[1]^3),2)
+[1] 25 27 25 27
+attr(,"gradient")
+     [,1] [,2]
+[1,]    0   10
+[2,]   27    0
+[3,]    0   10
+[4,]   27    0
+> with gradient (a=list(3,5)) rep.int(a,c(2,3))
+[[1]]
+[1] 3
+
+[[2]]
+[1] 3
+
+[[3]]
+[1] 5
+
+[[4]]
+[1] 5
+
+[[5]]
+[1] 5
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 1
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+attr(,"gradient")[[1]][[5]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 0
+
+attr(,"gradient")[[2]][[3]]
+[1] 1
+
+attr(,"gradient")[[2]][[4]]
+[1] 1
+
+attr(,"gradient")[[2]][[5]]
+[1] 1
+
+
+> with gradient (a=list(3,5)) rep.int(a,2)
+[[1]]
+[1] 3
+
+[[2]]
+[1] 5
+
+[[3]]
+[1] 3
+
+[[4]]
+[1] 5
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 1
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+attr(,"gradient")[[2]][[3]]
+[1] 0
+
+attr(,"gradient")[[2]][[4]]
+[1] 1
+
+
+> 
+> with gradient (a=c(3,5)) rep(c(a[2]^2,a[1]^3),length.out=7)
+[1] 25 27 25 27 25 27 25
+attr(,"gradient")
+     [,1] [,2]
+[1,]    0   10
+[2,]   27    0
+[3,]    0   10
+[4,]   27    0
+[5,]    0   10
+[6,]   27    0
+[7,]    0   10
+> with gradient (a=c(3,5)) rep(c(a[2]^2,a[1]^3),times=4)
+[1] 25 27 25 27 25 27 25 27
+attr(,"gradient")
+     [,1] [,2]
+[1,]    0   10
+[2,]   27    0
+[3,]    0   10
+[4,]   27    0
+[5,]    0   10
+[6,]   27    0
+[7,]    0   10
+[8,]   27    0
+> with gradient (a=c(3,5)) rep(c(a[2]^2,a[1]^3),times=c(2,3))
+[1] 25 25 27 27 27
+attr(,"gradient")
+     [,1] [,2]
+[1,]    0   10
+[2,]    0   10
+[3,]   27    0
+[4,]   27    0
+[5,]   27    0
+> with gradient (a=list(3,5)) rep(c(a[[2]]^2,a[[1]]^3),times=c(2,3))
+[1] 25 25 27 27 27
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1]  0  0 27 27 27
+
+attr(,"gradient")[[2]]
+[1] 10 10  0  0  0
+
+> with gradient (a=list(3,5)) rep(list(a[[2]]^2,a[[1]]^3),times=2)
+[[1]]
+[1] 25
+
+[[2]]
+[1] 27
+
+[[3]]
+[1] 25
+
+[[4]]
+[1] 27
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 0
+
+attr(,"gradient")[[1]][[2]]
+[1] 27
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+[1] 27
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 10
+
+attr(,"gradient")[[2]][[2]]
+[1] 0
+
+attr(,"gradient")[[2]][[3]]
+[1] 10
+
+attr(,"gradient")[[2]][[4]]
+[1] 0
+
+
+> with gradient (a=list(3,5)) rep(list(a[[2]]^2,a[[1]]^3),times=c(2,3))
+[[1]]
+[1] 25
+
+[[2]]
+[1] 25
+
+[[3]]
+[1] 27
+
+[[4]]
+[1] 27
+
+[[5]]
+[1] 27
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 0
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 27
+
+attr(,"gradient")[[1]][[4]]
+[1] 27
+
+attr(,"gradient")[[1]][[5]]
+[1] 27
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 10
+
+attr(,"gradient")[[2]][[2]]
+[1] 10
+
+attr(,"gradient")[[2]][[3]]
+[1] 0
+
+attr(,"gradient")[[2]][[4]]
+[1] 0
+
+attr(,"gradient")[[2]][[5]]
+[1] 0
+
+
+> 
+> rep.fred <- function (x, times) x*times
+> a <- c(9,10); class(a) <- "fred"
+> with gradient (a) rep(a,100)
+[1]  900 1000
+attr(,"class")
+[1] "fred"
+attr(,"gradient")
+     [,1] [,2]
+[1,]  100    0
+[2,]    0  100
+> rm(a)
+> 
+> with gradient (a=list(3,5),b=c(9,8),x=2) cbind(a,b,x)
+     a b x
+[1,] 3 9 2
+[2,] 5 8 2
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+attr(,"gradient")$a[[1]][[1]]
+[1] 1
+
+attr(,"gradient")$a[[1]][[2]]
+[1] 0
+
+attr(,"gradient")$a[[1]][[3]]
+[1] 0
+
+attr(,"gradient")$a[[1]][[4]]
+[1] 0
+
+attr(,"gradient")$a[[1]][[5]]
+[1] 0
+
+attr(,"gradient")$a[[1]][[6]]
+[1] 0
+
+
+attr(,"gradient")$a[[2]]
+attr(,"gradient")$a[[2]][[1]]
+[1] 0
+
+attr(,"gradient")$a[[2]][[2]]
+[1] 1
+
+attr(,"gradient")$a[[2]][[3]]
+[1] 0
+
+attr(,"gradient")$a[[2]][[4]]
+[1] 0
+
+attr(,"gradient")$a[[2]][[5]]
+[1] 0
+
+attr(,"gradient")$a[[2]][[6]]
+[1] 0
+
+
+
+attr(,"gradient")$b
+attr(,"gradient")$b[[1]]
+     [,1] [,2]
+[1,]    0    0
+
+attr(,"gradient")$b[[2]]
+     [,1] [,2]
+[1,]    0    0
+
+attr(,"gradient")$b[[3]]
+     [,1] [,2]
+[1,]    1    0
+
+attr(,"gradient")$b[[4]]
+     [,1] [,2]
+[1,]    0    1
+
+attr(,"gradient")$b[[5]]
+     [,1] [,2]
+[1,]    0    0
+
+attr(,"gradient")$b[[6]]
+     [,1] [,2]
+[1,]    0    0
+
+
+attr(,"gradient")$x
+attr(,"gradient")$x[[1]]
+[1] 0
+
+attr(,"gradient")$x[[2]]
+[1] 0
+
+attr(,"gradient")$x[[3]]
+[1] 0
+
+attr(,"gradient")$x[[4]]
+[1] 0
+
+attr(,"gradient")$x[[5]]
+[1] 1
+
+attr(,"gradient")$x[[6]]
+[1] 1
+
+
+> with gradient (a=c(3,5),b=c(9,8),x=2) cbind(a,b,x,a^2)
+     a b x   
+[1,] 3 9 2  9
+[2,] 5 8 2 25
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+[3,]    0    0
+[4,]    0    0
+[5,]    0    0
+[6,]    0    0
+[7,]    6    0
+[8,]    0   10
+
+attr(,"gradient")$b
+     [,1] [,2]
+[1,]    0    0
+[2,]    0    0
+[3,]    1    0
+[4,]    0    1
+[5,]    0    0
+[6,]    0    0
+[7,]    0    0
+[8,]    0    0
+
+attr(,"gradient")$x
+[1] 0 0 0 0 1 1 0 0
+
+> 
+> with gradient (a=list(3,5),b=c(9,8),x=2) rbind(a,b,x)
+  [,1] [,2]
+a 3    5   
+b 9    8   
+x 2    2   
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+attr(,"gradient")$a[[1]][[1]]
+[1] 1
+
+attr(,"gradient")$a[[1]][[2]]
+[1] 0
+
+attr(,"gradient")$a[[1]][[3]]
+[1] 0
+
+attr(,"gradient")$a[[1]][[4]]
+[1] 0
+
+attr(,"gradient")$a[[1]][[5]]
+[1] 0
+
+attr(,"gradient")$a[[1]][[6]]
+[1] 0
+
+
+attr(,"gradient")$a[[2]]
+attr(,"gradient")$a[[2]][[1]]
+[1] 0
+
+attr(,"gradient")$a[[2]][[2]]
+[1] 0
+
+attr(,"gradient")$a[[2]][[3]]
+[1] 0
+
+attr(,"gradient")$a[[2]][[4]]
+[1] 1
+
+attr(,"gradient")$a[[2]][[5]]
+[1] 0
+
+attr(,"gradient")$a[[2]][[6]]
+[1] 0
+
+
+
+attr(,"gradient")$b
+attr(,"gradient")$b[[1]]
+     [,1] [,2]
+[1,]    0    0
+
+attr(,"gradient")$b[[2]]
+     [,1] [,2]
+[1,]    1    0
+
+attr(,"gradient")$b[[3]]
+     [,1] [,2]
+[1,]    0    0
+
+attr(,"gradient")$b[[4]]
+     [,1] [,2]
+[1,]    0    0
+
+attr(,"gradient")$b[[5]]
+     [,1] [,2]
+[1,]    0    1
+
+attr(,"gradient")$b[[6]]
+     [,1] [,2]
+[1,]    0    0
+
+
+attr(,"gradient")$x
+attr(,"gradient")$x[[1]]
+[1] 0
+
+attr(,"gradient")$x[[2]]
+[1] 0
+
+attr(,"gradient")$x[[3]]
+[1] 1
+
+attr(,"gradient")$x[[4]]
+[1] 0
+
+attr(,"gradient")$x[[5]]
+[1] 0
+
+attr(,"gradient")$x[[6]]
+[1] 1
+
+
+> with gradient (a=c(3,5),b=c(9,8),x=2) rbind(a,b,x,a^2)
+  [,1] [,2]
+a    3    5
+b    9    8
+x    2    2
+     9   25
+attr(,"gradient")
+attr(,"gradient")$a
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    0
+[3,]    0    0
+[4,]    6    0
+[5,]    0    1
+[6,]    0    0
+[7,]    0    0
+[8,]    0   10
+
+attr(,"gradient")$b
+     [,1] [,2]
+[1,]    0    0
+[2,]    1    0
+[3,]    0    0
+[4,]    0    0
+[5,]    0    0
+[6,]    0    1
+[7,]    0    0
+[8,]    0    0
+
+attr(,"gradient")$x
+[1] 0 0 1 0 0 0 1 0
+
+> 
+> with gradient (a=9) { b <- a^2; get_rm(b) }
+[1] 81
+attr(,"gradient")
+[1] 18
+> with gradient (a=9) structure(a^2,fred=9999)
+[1] 81
+attr(,"fred")
+[1] 9999
+attr(,"gradient")
+[1] 18
+> 
+> with gradient (a=c(8,9,7)) unlist(a)
+[1] 8 9 7
+attr(,"gradient")
+     [,1] [,2] [,3]
+[1,]    1    0    0
+[2,]    0    1    0
+[3,]    0    0    1
+> with gradient (a=list(8,x=9,7)) unlist(a)
+  x   
+8 9 7 
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1 0 0
+
+attr(,"gradient")$x
+[1] 0 1 0
+
+attr(,"gradient")[[3]]
+[1] 0 0 1
+
+> with gradient (a=list(8,x=9,7),b=12) { a[2] <- b^2; unlist(a) }
+      x     
+  8 144   7 
+attr(,"gradient")
+attr(,"gradient")$a
+attr(,"gradient")$a[[1]]
+[1] 1 0 0
+
+attr(,"gradient")$a$x
+[1] 0 0 0
+
+attr(,"gradient")$a[[3]]
+[1] 0 0 1
+
+
+attr(,"gradient")$b
+[1]  0 24  0
+
+> with gradient (a=list(8,list(9,7))) unlist(a)
+[1] 8 9 7
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1 0 0
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0 1 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 0 0 1
+
+
+> with gradient (a=list(8,list(9,7))) unlist(a,recursive=FALSE)
+[[1]]
+[1] 8
+
+[[2]]
+[1] 9
+
+[[3]]
+[1] 7
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+attr(,"gradient")[[2]][[1]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[1]][[2]]
+[1] 1
+
+attr(,"gradient")[[2]][[1]][[3]]
+[1] 0
+
+
+attr(,"gradient")[[2]][[2]]
+attr(,"gradient")[[2]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[2]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[3]]
+[1] 1
+
+
+
+> 
+> with gradient (a=c(3,8)) c(a,a^2)
+[1]  3  8  9 64
+attr(,"gradient")
+     [,1] [,2]
+[1,]    1    0
+[2,]    0    1
+[3,]    6    0
+[4,]    0   16
+> with gradient (a=list(3,8)) c(a,a[[2]]^2,a)
+[[1]]
+[1] 3
+
+[[2]]
+[1] 8
+
+[[3]]
+[1] 64
+
+[[4]]
+[1] 3
+
+[[5]]
+[1] 8
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+[1] 1
+
+attr(,"gradient")[[1]][[5]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1
+
+attr(,"gradient")[[2]][[3]]
+[1] 16
+
+attr(,"gradient")[[2]][[4]]
+[1] 0
+
+attr(,"gradient")[[2]][[5]]
+[1] 1
+
+
+> with gradient (a=list(3,list(8,7))) c(a,a[[1]]^2)
+[[1]]
+[1] 3
+
+[[2]]
+[[2]][[1]]
+[1] 8
+
+[[2]][[2]]
+[1] 7
+
+
+[[3]]
+[1] 9
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+attr(,"gradient")[[1]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[1]][[2]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[1]][[3]]
+[1] 6
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+attr(,"gradient")[[2]][[1]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[1]][[2]]
+attr(,"gradient")[[2]][[1]][[2]][[1]]
+[1] 1
+
+attr(,"gradient")[[2]][[1]][[2]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[2]][[1]][[3]]
+[1] 0
+
+
+attr(,"gradient")[[2]][[2]]
+attr(,"gradient")[[2]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[2]]
+attr(,"gradient")[[2]][[2]][[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]][[2]][[2]]
+[1] 1
+
+
+attr(,"gradient")[[2]][[2]][[3]]
+[1] 0
+
+
+
+> with gradient (a=list(3,list(8,7))) c(a,a[[1]]^2,recursive=TRUE)
+[1] 3 8 7 9
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1 0 0 6
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0 1 0 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 0 0 1 0
+
+
+> 
+> with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,1,sqrt)
+     [,1]     [,2]
+[1,]    3 1.000000
+[2,]    2 1.414214
+attr(,"gradient")
+          [,1] [,2] [,3]      [,4]
+[1,] 0.1666667  0.0 0.00 0.0000000
+[2,] 0.0000000  0.0 0.25 0.0000000
+[3,] 0.0000000  0.5 0.00 0.0000000
+[4,] 0.0000000  0.0 0.00 0.3535534
+> with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,1,function(x)10*x[1]+x[2])
+[1] 94 12
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]   10    0    1    0
+[2,]    0   10    0    1
+> with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,2,function(x)list(x,2*x))
+[[1]]
+[[1]][[1]]
+[1] 9 1
+
+[[1]][[2]]
+[1] 18  2
+
+
+[[2]]
+[[2]][[1]]
+[1] 4 2
+
+[[2]][[2]]
+[1] 8 4
+
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+     [,1] [,2] [,3] [,4]
+[1,]    1    0    0    0
+[2,]    0    1    0    0
+
+attr(,"gradient")[[1]][[2]]
+     [,1] [,2] [,3] [,4]
+[1,]    2    0    0    0
+[2,]    0    2    0    0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    1    0
+[2,]    0    0    0    1
+
+attr(,"gradient")[[2]][[2]]
+     [,1] [,2] [,3] [,4]
+[1,]    0    0    2    0
+[2,]    0    0    0    2
+
+
+> 
+> with gradient (a=c(36,1,25)) lapply(a,sqrt)
+[[1]]
+[1] 6
+
+[[2]]
+[1] 1
+
+[[3]]
+[1] 5
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+           [,1] [,2] [,3]
+[1,] 0.08333333    0    0
+
+attr(,"gradient")[[2]]
+     [,1] [,2] [,3]
+[1,]    0  0.5    0
+
+attr(,"gradient")[[3]]
+     [,1] [,2] [,3]
+[1,]    0    0  0.1
+
+> with gradient (a=list(36,1,25)) lapply(a,function(x)c(x,sqrt(x)))
+[[1]]
+[1] 36  6
+
+[[2]]
+[1] 1 1
+
+[[3]]
+[1] 25  5
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1.00000000 0.08333333
+
+attr(,"gradient")[[1]][[2]]
+[1] 0 0
+
+attr(,"gradient")[[1]][[3]]
+[1] 0 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 1.0 0.5
+
+attr(,"gradient")[[2]][[3]]
+[1] 0 0
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0 0
+
+attr(,"gradient")[[3]][[3]]
+[1] 1.0 0.1
+
+
+> with gradient (a=5) lapply(list(10,100),function(x)x*a)
+[[1]]
+[1] 50
+
+[[2]]
+[1] 500
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 10
+
+attr(,"gradient")[[2]]
+[1] 100
+
+> 
+> with gradient (a=c(36,1,25)) vapply(a,sqrt,numeric(1))
+[1] 6 1 5
+attr(,"gradient")
+           [,1] [,2] [,3]
+[1,] 0.08333333  0.0  0.0
+[2,] 0.00000000  0.5  0.0
+[3,] 0.00000000  0.0  0.1
+> with gradient (a=c(36,1,25)) vapply(a,function(x)c(x,sqrt(x)),c(0,0))
+     [,1] [,2] [,3]
+[1,]   36    1   25
+[2,]    6    1    5
+attr(,"gradient")
+           [,1] [,2] [,3]
+[1,] 1.00000000  0.0  0.0
+[2,] 0.08333333  0.0  0.0
+[3,] 0.00000000  1.0  0.0
+[4,] 0.00000000  0.5  0.0
+[5,] 0.00000000  0.0  1.0
+[6,] 0.00000000  0.0  0.1
+> with gradient (a=list(36,1,25)) vapply(a,function(x)list(x,sqrt(x)),list(0,0))
+     [,1] [,2] [,3]
+[1,] 36   1    25  
+[2,] 6    1    5   
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] 1
+
+attr(,"gradient")[[1]][[2]]
+[1] 0.08333333
+
+attr(,"gradient")[[1]][[3]]
+[1] 0
+
+attr(,"gradient")[[1]][[4]]
+[1] 0
+
+attr(,"gradient")[[1]][[5]]
+[1] 0
+
+attr(,"gradient")[[1]][[6]]
+[1] 0
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 0
+
+attr(,"gradient")[[2]][[2]]
+[1] 0
+
+attr(,"gradient")[[2]][[3]]
+[1] 1
+
+attr(,"gradient")[[2]][[4]]
+[1] 0.5
+
+attr(,"gradient")[[2]][[5]]
+[1] 0
+
+attr(,"gradient")[[2]][[6]]
+[1] 0
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0
+
+attr(,"gradient")[[3]][[3]]
+[1] 0
+
+attr(,"gradient")[[3]][[4]]
+[1] 0
+
+attr(,"gradient")[[3]][[5]]
+[1] 1
+
+attr(,"gradient")[[3]][[6]]
+[1] 0.1
+
+
+> 
+> with gradient (a=c(36,1,25)) sapply(a,sqrt)
+[1] 6 1 5
+attr(,"gradient")
+           [,1] [,2] [,3]
+[1,] 0.08333333  0.0  0.0
+[2,] 0.00000000  0.5  0.0
+[3,] 0.00000000  0.0  0.1
+> with gradient (a=list(36,1,25)) sapply(a,function(x)c(x,sqrt(x)))
+     [,1] [,2] [,3]
+[1,]   36    1   25
+[2,]    6    1    5
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 1.00000000 0.08333333 0.00000000 0.00000000 0.00000000 0.00000000
+
+attr(,"gradient")[[2]]
+[1] 0.0 0.0 1.0 0.5 0.0 0.0
+
+attr(,"gradient")[[3]]
+[1] 0.0 0.0 0.0 0.0 1.0 0.1
+
+> 
+> set.seed(1); with gradient (a=2) replicate(10,runif(1,-a,a))
+ [1] -0.9379653 -0.5115044  0.2914135  1.6328312 -1.1932723  1.5935587
+ [7]  1.7787011  0.6431912  0.5164562 -1.7528549
+attr(,"gradient")
+ [1] -0.4689827 -0.2557522  0.1457067  0.8164156 -0.5966361  0.7967794
+ [7]  0.8893505  0.3215956  0.2582281 -0.8764275
+> 
+> a <- c(4,9)
+> class(a) <- "fred"
+> with gradient (a) unclass(a)^2
+[1] 16 81
+attr(,"gradient")
+     [,1] [,2]
+[1,]    8    0
+[2,]    0   18
+> rm(a)
+> 
+> with gradient (a=c(9,7)) a^2+a[2]^3
+[1] 424 392
+attr(,"gradient")
+     [,1] [,2]
+[1,]   18  147
+[2,]    0  161
+> with gradient (a=c(9,7)) a[1]^2+a^3
+[1] 810 424
+attr(,"gradient")
+     [,1] [,2]
+[1,]  261    0
+[2,]   18  147
+> 
 > 
 > # Test backpropagation.
 > 
@@ -5537,4 +12997,1681 @@ attr(,"gradient")$b[[2]]
 [1] 0
 
 
+> 
+> with gradient (L=c(a=5,b=7)) {
++   M <- c(d=0,e=0)
++   M[[1]] <- L[["a"]]^2+L[["b"]]
++   M[[2]] <- L[["a"]]*L[["b"]]
++   back gradient (M) {
++     c <- c(0,55)
++     c[[1]] <- sin(M[["d"]])+sqrt(M[["e"]])
++     c
++   }
++ }
+[1]  6.467506 55.000000
+attr(,"gradient")
+         [,1]   [,2]
+[1,] 8.933842 1.2568
+[2,] 0.000000 0.0000
+> 
+> with gradient (a=list(4.1,2.7,3.1,5.2)) {
++   back gradient (b=list(a[[2]],sin(a[[1]]+a[[4]]),a[[1]]^2)) {
++     c <- list(0,0)
++     c[[1]] <- b[[1]] + 4*b[[2]]
++     c[[2]] <- b[[3]]^2 + b[[2]]
++     c
++   }
++ }
+[[1]]
+[1] 3.197818
+
+[[2]]
+[1] 282.7006
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+attr(,"gradient")[[1]][[1]]
+[1] -3.968901
+
+attr(,"gradient")[[1]][[2]]
+[1] 274.6918
+
+
+attr(,"gradient")[[2]]
+attr(,"gradient")[[2]][[1]]
+[1] 1
+
+attr(,"gradient")[[2]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[3]]
+attr(,"gradient")[[3]][[1]]
+[1] 0
+
+attr(,"gradient")[[3]][[2]]
+[1] 0
+
+
+attr(,"gradient")[[4]]
+attr(,"gradient")[[4]][[1]]
+[1] -3.968901
+
+attr(,"gradient")[[4]][[2]]
+[1] -0.9922253
+
+
+> 
+> with gradient (a=c(4.1,2.7,3.1,5.2)) {
++   b <- numeric(3)
++   b[[1]] <- a[[2]]
++   b[[2]] <- sin(a[[1]]+a[[4]])
++   b[[3]] <- a[[1]]^2
++   back gradient (b) {
++     c <- numeric(2)
++     c[[1]] <- b[[1]] + 4*b[[2]]
++     c[[2]] <- b[[3]]^2 + b[[2]]
++     c
++   }
++ }
+[1]   3.197818 282.700554
+attr(,"gradient")
+           [,1] [,2] [,3]       [,4]
+[1,]  -3.968901    1    0 -3.9689013
+[2,] 274.691775    0    0 -0.9922253
+> 
+> 
+> # Test duplication when necessary and not when not.
+> 
+> pr <- function (...) { 
++   Rprofmemt(NULL)
++   cat(...,"\n")
++   Rprofmemt(nelem=n,bytes=FALSE)
++ }
+> 
+> prp <- function (x) { 
++   Rprofmemt(NULL)
++   print(x)
++   Rprofmemt(nelem=n,bytes=FALSE)
++ }
+> 
+> n <- 100
+> 
+> pr("start")
+start 
+> track gradient (a=rep(3,n)) {
++   pr("A"); x <- a+2.1
++   pr("B"); x <- a-2.1
++   pr("C"); x <- a*2.1
++   pr("D"); x <- a/2.1
++   pr("E"); x <- a^2.1
++   NULL
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+RPROFMEM: (double 100):
+B 
+RPROFMEM: (double 100):
+C 
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+D 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+E 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (b=rep(4,n)) {
++   pr("A"); x <- 2.1+b
++   pr("B"); x <- 2.1-b
++   pr("C"); x <- 2.1*b
++   pr("D"); x <- 2.1/b
++   pr("E"); x <- 2.1^b
++   NULL
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+RPROFMEM: (double 100):
+B 
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+C 
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+D 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+E 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (q=7,a=rep(3,n)) {
++   pr("A"); x <- a+q
++   pr("B"); x <- a-q
++   pr("C"); x <- a*q
++   pr("D"); x <- a/q
++   pr("E"); x <- a^q
++   NULL
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+B 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+C 
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 100):
+D 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 100):
+E 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 100):
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (q=7,b=rep(4,n)) {
++   pr("A"); x <- q+b
++   pr("B"); x <- q-b
++   pr("C"); x <- q*b
++   pr("D"); x <- q/b
++   pr("E"); x <- q^b
++   NULL
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+B 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+C 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+D 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+E 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (a=rep(3,n),b=rep(4,n)) {
++   pr("A"); x <- a+b
++   pr("B"); x <- a-b
++   pr("C"); x <- a*b
++   pr("D"); x <- a/b
++   pr("E"); x <- a^b
++   NULL
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+RPROFMEM: (double 100):
+B 
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+C 
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+D 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+E 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> r <- back gradient (a=rep(3,n)) {
++   pr("A"); b <- a^2.1
++   pr("B"); b[2] <- 7
++   c <- b
++   pr("C"); b[3] <- 8
++   pr("D"); b
++ }
+RPROFMEM: (double 100):
+A 
+RPROFMEM: (double 100):
+B 
+C 
+RPROFMEM: (double 100):
+D 
+> pr("end")
+end 
+> r[1..5]; attr(r,"gradient")[1..5,1..5]
+[1] 10.04511  7.00000  8.00000 10.04511 10.04511
+NULL
+> 
+> pr("start")
+start 
+> r <- with gradient (a=rep(3,n)) {
++   pr("A"); b <- a^2.1
++   pr("B"); b[2] <- 7
++   c <- b
++   pr("C"); b[3] <- 8
++   pr("D"); b
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+B 
+C 
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+D 
+> pr("end")
+end 
+> r[1..5]; attr(r,"gradient")[1..5,1..5]
+[1] 10.04511  7.00000  8.00000 10.04511 10.04511
+         [,1] [,2] [,3]     [,4]     [,5]
+[1,] 7.031576    0    0 0.000000 0.000000
+[2,] 0.000000    0    0 0.000000 0.000000
+[3,] 0.000000    0    0 0.000000 0.000000
+[4,] 0.000000    0    0 7.031576 0.000000
+[5,] 0.000000    0    0 0.000000 7.031576
+> 
+> pr("start")
+start 
+> r <- with gradient (a=rep(3,n)) {
++   pr("A"); L <- list(x=2,y=a^2.1)
++   pr("B"); L$y[2] <- 7
++   M <- L
++   pr("C"); L$y[3] <- 8
++   pr("D"); L$x <- a[2]
++   pr("E"); L
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+B 
+C 
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+D 
+RPROFMEM: (double 100):
+E 
+> pr("end")
+end 
+> r$x; r$y[1..5]; attr(r,"gradient")$x[1..5]; attr(r,"gradient")$y[1..5,1..5]
+[1] 3
+[1] 10.04511  7.00000  8.00000 10.04511 10.04511
+[1] 0 1 0 0 0
+         [,1] [,2] [,3]     [,4]     [,5]
+[1,] 7.031576    0    0 0.000000 0.000000
+[2,] 0.000000    0    0 0.000000 0.000000
+[3,] 0.000000    0    0 0.000000 0.000000
+[4,] 0.000000    0    0 7.031576 0.000000
+[5,] 0.000000    0    0 0.000000 7.031576
+> 
+> pr("start")
+start 
+> r <- with gradient (a=rep(3,n)) {
++   pr("A"); L <- list(x=2,y=a^2.1)
++   pr("B"); L[[2]][[2]] <- 7
++   M <- L
++   pr("C"); L[[2]][[3]] <- 8
++   pr("D"); L[[1]] <- a[[2]]
++   pr("E"); L
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+B 
+C 
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+D 
+RPROFMEM: (double 100):
+E 
+> pr("end")
+end 
+> r$x; r$y[1..5]; attr(r,"gradient")$x[1..5]; attr(r,"gradient")$y[1..5,1..5]
+[1] 3
+[1] 10.04511  7.00000  8.00000 10.04511 10.04511
+[1] 0 1 0 0 0
+         [,1] [,2] [,3]     [,4]     [,5]
+[1,] 7.031576    0    0 0.000000 0.000000
+[2,] 0.000000    0    0 0.000000 0.000000
+[3,] 0.000000    0    0 0.000000 0.000000
+[4,] 0.000000    0    0 7.031576 0.000000
+[5,] 0.000000    0    0 0.000000 7.031576
+> 
+> pr("start")
+start 
+> r <- with gradient (a=rep(3,n)) {
++   pr("A"); L <- c(list(x=2,y=a^2.1),rep(list(NULL),n))
++   pr("B"); L$y[2] <- 7
++   M <- L
++   pr("C"); L$y[3] <- 8
++   pr("D"); L$x <- a[2]
++   pr("E"); L
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (list 100):
+RPROFMEM: (list 102):
+RPROFMEM: (list 102):
+RPROFMEM: (character 102):
+B 
+C 
+RPROFMEM: (list 102):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (list 102):
+D 
+RPROFMEM: (double 100):
+E 
+RPROFMEM: (list 102):
+> pr("end")
+end 
+> r$x; r$y[1..5]; attr(r,"gradient")$x[1..5]; attr(r,"gradient")$y[1..5,1..5]
+[1] 3
+[1] 10.04511  7.00000  8.00000 10.04511 10.04511
+[1] 0 1 0 0 0
+         [,1] [,2] [,3]     [,4]     [,5]
+[1,] 7.031576    0    0 0.000000 0.000000
+[2,] 0.000000    0    0 0.000000 0.000000
+[3,] 0.000000    0    0 0.000000 0.000000
+[4,] 0.000000    0    0 7.031576 0.000000
+[5,] 0.000000    0    0 0.000000 7.031576
+> 
+> pr("start")
+start 
+> r <- with gradient (a=rep(3,n)) {
++   pr("A"); L <- c(list(x=2,y=a^2.1),rep(list(NULL),n))
++   pr("B"); L[[2]][[2]] <- 7
++   M <- L
++   pr("C"); L[[2]][[3]] <- 8
++   pr("D"); L[[1]] <- a[[2]]
++   pr("E"); L
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (list 100):
+RPROFMEM: (list 102):
+RPROFMEM: (list 102):
+RPROFMEM: (character 102):
+B 
+C 
+RPROFMEM: (list 102):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (list 102):
+D 
+RPROFMEM: (double 100):
+E 
+RPROFMEM: (list 102):
+> pr("end")
+end 
+> r$x; r$y[1..5]; attr(r,"gradient")$x[1..5]; attr(r,"gradient")$y[1..5,1..5]
+[1] 3
+[1] 10.04511  7.00000  8.00000 10.04511 10.04511
+[1] 0 1 0 0 0
+         [,1] [,2] [,3]     [,4]     [,5]
+[1,] 7.031576    0    0 0.000000 0.000000
+[2,] 0.000000    0    0 0.000000 0.000000
+[3,] 0.000000    0    0 0.000000 0.000000
+[4,] 0.000000    0    0 7.031576 0.000000
+[5,] 0.000000    0    0 0.000000 7.031576
+> 
+> pr("start")
+start 
+> r <- with gradient (a=rep(3,n)+(1..n)) {
++   pr("A"); L <- c(list(x=2,y=a^2.1),rep(list(NULL),n))
++   pr("B"); q <- list(a[4])
++   pr("C"); L[2..3] <- q
++   M <- L
++   pr("D"); L[2..4] <- list(a[5])
++   pr("E"); L[2..3] <- list(a[6])
++   pr("F"); L
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (integer 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (list 100):
+RPROFMEM: (list 102):
+RPROFMEM: (list 102):
+RPROFMEM: (character 102):
+B 
+RPROFMEM: (double 100):
+C 
+D 
+RPROFMEM: (double 100):
+RPROFMEM: (list 102):
+RPROFMEM: (list 102):
+E 
+RPROFMEM: (double 100):
+F 
+RPROFMEM: (list 102):
+RPROFMEM: (double 100):
+> pr("end")
+end 
+> r$x; r$y; 
+[1] 2
+[1] 9
+> attr(r,"gradient")$x[1..10]
+ [1] 0 0 0 0 0 0 0 0 0 0
+> attr(r,"gradient")$y[1..10]
+ [1] 0 0 0 0 0 1 0 0 0 0
+> attr(r,"gradient")[[3]][1..10]
+ [1] 0 0 0 0 0 1 0 0 0 0
+> attr(r,"gradient")[[4]][1..10]
+ [1] 0 0 0 0 1 0 0 0 0 0
+> attr(r,"gradient")[[5]][1..10]
+NULL
+> 
+> pr("start")
+start 
+> r <- back gradient (a=rep(3,n)) {
++   pr("A"); a[2] <- 7
++   pr("B"); b <- c(a,a)
++   pr("C"); a[3] <- a[4]^2
++   pr("D"); c(a,b)
++ }
+RPROFMEM: (double 100):
+A 
+B 
+RPROFMEM: (double 200):
+C 
+D 
+RPROFMEM: (double 300):
+> pr("end")
+end 
+> r[1..10]
+ [1] 3 7 9 3 3 3 3 3 3 3
+> 
+> pr("start")
+start 
+> r <- with gradient (a=rep(3,n)) {
++   pr("A"); a[2] <- 7
++   pr("B"); b <- c(a,a)
++   pr("C"); a[3] <- a[4]^2
++   pr("D"); c(a,b)
++ }
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+A 
+B 
+RPROFMEM: (double 200):
+RPROFMEM: (double 20000):
+C 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+D 
+RPROFMEM: (double 300):
+RPROFMEM: (double 30000):
+> pr("end")
+end 
+> r[1..10]
+ [1] 3 7 9 3 3 3 3 3 3 3
+> attr(r,"gradient")[1..10,1..10]
+RPROFMEM: (double 100):
+      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10]
+ [1,]    1    0    0    0    0    0    0    0    0     0
+ [2,]    0    0    0    0    0    0    0    0    0     0
+ [3,]    0    0    0    6    0    0    0    0    0     0
+ [4,]    0    0    0    1    0    0    0    0    0     0
+ [5,]    0    0    0    0    1    0    0    0    0     0
+ [6,]    0    0    0    0    0    1    0    0    0     0
+ [7,]    0    0    0    0    0    0    1    0    0     0
+ [8,]    0    0    0    0    0    0    0    1    0     0
+ [9,]    0    0    0    0    0    0    0    0    1     0
+[10,]    0    0    0    0    0    0    0    0    0     1
+> 
+> n <- 8
+> 
+> pr("start")
+start 
+> track gradient (a=rep(3,n)) {
++   pr("A"); L <- list(a,a,a); prp(gradient_of(L))
++   pr("B"); L[[2]][1] <- 9; prp(gradient_of(L))
++   pr("C"); M <- L; L[[3]][2] <- L[[1]][3]; prp(gradient_of(L))
++   pr("D"); prp(gradient_of(M))
++   NULL
++ }
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+A 
+[[1]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    0    0    0    0    0    0    0
+[2,]    0    1    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    1
+
+[[2]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    0    0    0    0    0    0    0
+[2,]    0    1    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    1
+
+[[3]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    0    0    0    0    0    0    0
+[2,]    0    1    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    1
+
+B 
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+[[1]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    0    0    0    0    0    0    0
+[2,]    0    1    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    1
+
+[[2]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    0    0    0    0    0    0    0    0
+[2,]    0    1    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    1
+
+[[3]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    0    0    0    0    0    0    0
+[2,]    0    1    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    1
+
+C 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+[[1]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    0    0    0    0    0    0    0
+[2,]    0    1    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    1
+
+[[2]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    0    0    0    0    0    0    0    0
+[2,]    0    1    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    1
+
+[[3]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    0    0    0    0    0    0    0
+[2,]    0    0    1    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    1
+
+D 
+[[1]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    0    0    0    0    0    0    0
+[2,]    0    1    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    1
+
+[[2]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    0    0    0    0    0    0    0    0
+[2,]    0    1    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    1
+
+[[3]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    0    0    0    0    0    0    0
+[2,]    0    1    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    1
+
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (a=rep(3,n)) {
++   pr("A"); a[4] <- a[1]+a[2]
++   pr("B"); b <- a
++   pr("C"); b[2] <- a[5]
++   pr("D"); b[7] <- b[8]
++   pr("E"); b[1] <- b[6]+a[4]
++   pr("F"); a[6] <- a[1]
++   pr("G"); x <- a; x <- 7; a[8] <- 9
++   pr("H"); prp(gradient_of(a))
++   pr("I"); prp(gradient_of(b))
++   NULL
++ }
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+B 
+C 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+D 
+RPROFMEM: (double 8):
+E 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+F 
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+G 
+H 
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    0    0    0    0    0    0    0
+[2,]    0    1    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    1    1    0    0    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    1    0    0    0    0    0    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    0
+I 
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    1    0    0    0    1    0    0
+[2,]    0    0    0    0    1    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    1    1    0    0    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    0    1
+[8,]    0    0    0    0    0    0    0    1
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (a=3,b=rep(4,n)) {
++   prp(x <- gradient_of(b))
++   b[2] <- a
++   prp(y <- gradient_of(b))
++   q <- a*b
++   prp(z <- gradient_of(q))
++   q[7..8] <- b[1..2]
++   prp(w <- gradient_of(q))
++   list(x,y,z,w)
++ }
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+$a
+[1] 0 0 0 0 0 0 0 0
+
+$b
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    0    0    0    0    0    0    0
+[2,]    0    1    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    1
+
+RPROFMEM: (double 64):
+RPROFMEM: (double 8):
+$a
+[1] 0 1 0 0 0 0 0 0
+
+$b
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    0    0    0    0    0    0    0
+[2,]    0    0    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    1
+
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+$a
+[1] 4 6 4 4 4 4 4 4
+
+$b
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    3    0    0    0    0    0    0    0
+[2,]    0    0    0    0    0    0    0    0
+[3,]    0    0    3    0    0    0    0    0
+[4,]    0    0    0    3    0    0    0    0
+[5,]    0    0    0    0    3    0    0    0
+[6,]    0    0    0    0    0    3    0    0
+[7,]    0    0    0    0    0    0    3    0
+[8,]    0    0    0    0    0    0    0    3
+
+RPROFMEM: (double 16):
+RPROFMEM: (double 64):
+RPROFMEM: (double 8):
+$a
+[1] 4 6 4 4 4 4 0 1
+
+$b
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    3    0    0    0    0    0    0    0
+[2,]    0    0    0    0    0    0    0    0
+[3,]    0    0    3    0    0    0    0    0
+[4,]    0    0    0    3    0    0    0    0
+[5,]    0    0    0    0    3    0    0    0
+[6,]    0    0    0    0    0    3    0    0
+[7,]    1    0    0    0    0    0    0    0
+[8,]    0    0    0    0    0    0    0    0
+
+[[1]]
+[[1]]$a
+[1] 0 0 0 0 0 0 0 0
+
+[[1]]$b
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    0    0    0    0    0    0    0
+[2,]    0    1    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    1
+
+
+[[2]]
+[[2]]$a
+[1] 0 1 0 0 0 0 0 0
+
+[[2]]$b
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    1    0    0    0    0    0    0    0
+[2,]    0    0    0    0    0    0    0    0
+[3,]    0    0    1    0    0    0    0    0
+[4,]    0    0    0    1    0    0    0    0
+[5,]    0    0    0    0    1    0    0    0
+[6,]    0    0    0    0    0    1    0    0
+[7,]    0    0    0    0    0    0    1    0
+[8,]    0    0    0    0    0    0    0    1
+
+
+[[3]]
+[[3]]$a
+[1] 4 6 4 4 4 4 4 4
+
+[[3]]$b
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    3    0    0    0    0    0    0    0
+[2,]    0    0    0    0    0    0    0    0
+[3,]    0    0    3    0    0    0    0    0
+[4,]    0    0    0    3    0    0    0    0
+[5,]    0    0    0    0    3    0    0    0
+[6,]    0    0    0    0    0    3    0    0
+[7,]    0    0    0    0    0    0    3    0
+[8,]    0    0    0    0    0    0    0    3
+
+
+[[4]]
+[[4]]$a
+[1] 4 6 4 4 4 4 0 1
+
+[[4]]$b
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    3    0    0    0    0    0    0    0
+[2,]    0    0    0    0    0    0    0    0
+[3,]    0    0    3    0    0    0    0    0
+[4,]    0    0    0    3    0    0    0    0
+[5,]    0    0    0    0    3    0    0    0
+[6,]    0    0    0    0    0    3    0    0
+[7,]    1    0    0    0    0    0    0    0
+[8,]    0    0    0    0    0    0    0    0
+
+
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (a=7,b=6) {
++   pr("A"); L <- list(x=list(y=a,z=a)); prp(gradient_of(L))
++   pr("B"); L$x$z <- 2*b; prp(gradient_of(L))
++   pr("C"); L[[1]]$z <- 3*b; prp(gradient_of(L))
++   pr("D"); L[[1]][[2]] <- 4*b; prp(gradient_of(L))
++   pr("E"); L[[1]]$z <- 5*b; prp(gradient_of(L))
++   NULL
++ }
+A 
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 1
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1] 0
+
+
+
+B 
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1] 2
+
+
+
+C 
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1] 3
+
+
+
+D 
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1] 4
+
+
+
+E 
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1] 5
+
+
+
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (a=7,b=6) {
++   pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b))); prp(gradient_of(L))
++   pr("B"); L$x$z[2] <- a+b; prp(gradient_of(L))
++   pr("C"); L$x$z[5] <- a-b; prp(gradient_of(L))
++   pr("D"); L$x$z[2] <- a*b; prp(gradient_of(L))
++   pr("E"); M <- L; L$x$z[3] <- a^2+b^2; prp(gradient_of(L))
++   pr("F"); prp(gradient_of(M))
++   NULL
++ }
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 1 0 1 0 1 1 0 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1] 0 1 0 1 0 0 1 1
+
+
+
+B 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 1 1 1 0 1 1 0 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1] 0 1 0 1 0 0 1 1
+
+
+
+C 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 1 1 1 0 1 1 0 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1]  0  1  0  1 -1  0  1  1
+
+
+
+D 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 1 6 1 0 1 1 0 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1]  0  7  0  1 -1  0  1  1
+
+
+
+E 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1]  1  6 14  0  1  1  0  0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1]  0  7 12  1 -1  0  1  1
+
+
+
+F 
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 1 6 1 0 1 1 0 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1]  0  7  0  1 -1  0  1  1
+
+
+
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (a=7,b=6) {
++   pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b))); prp(gradient_of(L))
++   pr("B"); L[[1]][[2]][[2]] <- a+b; prp(gradient_of(L))
++   pr("C"); L[[1]][[2]][[5]] <- a-b; prp(gradient_of(L))
++   pr("D"); L[[1]][[2]][[2]] <- a*b; prp(gradient_of(L))
++   pr("E"); M <- L; L[[1]][[2]][[3]] <- a^2+b^2; prp(gradient_of(L))
++   pr("F"); prp(gradient_of(M))
++   NULL
++ }
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 1 0 1 0 1 1 0 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1] 0 1 0 1 0 0 1 1
+
+
+
+B 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 1 1 1 0 1 1 0 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1] 0 1 0 1 0 0 1 1
+
+
+
+C 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 1 1 1 0 1 1 0 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1]  0  1  0  1 -1  0  1  1
+
+
+
+D 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 1 6 1 0 1 1 0 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1]  0  7  0  1 -1  0  1  1
+
+
+
+E 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1]  1  6 14  0  1  1  0  0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1]  0  7 12  1 -1  0  1  1
+
+
+
+F 
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 1 6 1 0 1 1 0 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1]  0  7  0  1 -1  0  1  1
+
+
+
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (a=7,b=6) {
++   pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b)));
++   pr("B"); L$x$z[2] <- a+b;
++   pr("C"); L$x$z[5] <- a-b;
++   pr("D"); L$x$z[2] <- a*b;
++   pr("E"); M <- L; L$x$z[3] <- a^2+b^2; prp(gradient_of(L))
++   pr("F"); prp(gradient_of(M))
++   NULL
++ }
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+B 
+C 
+D 
+E 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1]  1  6 14  0  1  1  0  0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1]  0  7 12  1 -1  0  1  1
+
+
+
+F 
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 1 6 1 0 1 1 0 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1]  0  7  0  1 -1  0  1  1
+
+
+
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (a=7,b=6) {
++   pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b)));
++   pr("B"); L[[1]][[2]][[2]] <- a+b;
++   pr("C"); L[[1]][[2]][[5]] <- a-b;
++   pr("D"); L[[1]][[2]][[2]] <- a*b;
++   pr("E"); M <- L; L[[1]][[2]][[3]] <- a^2+b^2; prp(gradient_of(L))
++   pr("F"); prp(gradient_of(M))
++   NULL
++ }
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+B 
+C 
+D 
+E 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1]  1  6 14  0  1  1  0  0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1]  0  7 12  1 -1  0  1  1
+
+
+
+F 
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 1 6 1 0 1 1 0 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1]  0  7  0  1 -1  0  1  1
+
+
+
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (a=7,b=6) {
++   pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b)));
++   pr("B"); L$x[[2]][2] <- a+b; # L$x[[2]][2] <- a+b;
++   pr("C"); L$x[[2]][5] <- a-b;
++   pr("D"); L$x[[2]][2] <- a*b;
++   pr("E"); M <- L; L[[1]][[2]][[3]] <- a^2+b^2; prp(gradient_of(L))
++   pr("F"); prp(gradient_of(M))
++   NULL
++ }
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+B 
+C 
+D 
+E 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1]  1  6 14  0  1  1  0  0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1]  0  7 12  1 -1  0  1  1
+
+
+
+F 
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 1 6 1 0 1 1 0 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1]  0  7  0  1 -1  0  1  1
+
+
+
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (a=7,b=6) {
++   pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b)))
++   pr("B"); L$x$z[[2]] <- a+b
++   pr("C"); L$x$z[[5]] <- a-b
++   pr("D"); L$x$z[[2]] <- a*b
++   pr("E"); M <- L; L$x$z[3] <- a^2+b^2; prp(gradient_of(L))
++   pr("F"); prp(gradient_of(M))
++   NULL
++ }
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+B 
+C 
+D 
+E 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1]  1  6 14  0  1  1  0  0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1]  0  7 12  1 -1  0  1  1
+
+
+
+F 
+$a
+$a$x
+$a$x$y
+[1] 1
+
+$a$x$z
+[1] 1 6 1 0 1 1 0 0
+
+
+
+$b
+$b$x
+$b$x$y
+[1] 0
+
+$b$x$z
+[1]  0  7  0  1 -1  0  1  1
+
+
+
+NULL
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> track gradient (a=rep(7,n)) {
++   cat("W\n")
++   r <- compute gradient (a) {
++     cat("X\n")
++     list(5,1,9)
++   }
++   as {
++     cat("Y\n")
++     list(a*2,a*3,a*4)
++   }
++   cat("Z\n")
++   NULL
++ }
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+W
+X
+Y
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+Z
+NULL
+> pr("end")
+end 
 > 

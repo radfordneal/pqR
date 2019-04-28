@@ -457,3 +457,18 @@ for (x in c(3,20,124,125,126,127,128,129,200,300,600)) {
     stopifnot(r == x*(x+1))
     cat("\n")
 }
+
+
+# Test data.frame and as.data.frame as applied to lists.
+
+L <- list(x=c(3,5),y=c(TRUE,FALSE),c("xx","yy"))
+(df<-as.data.frame(L))
+unlist(lapply(df,typeof))
+(df<-data.frame(L))
+unlist(lapply(df,typeof))
+(df<-data.frame(L,stringsAsFactors=FALSE))
+unlist(lapply(df,typeof))
+(df<-data.frame(Q=L))
+unlist(lapply(df,typeof))
+(df<-data.frame(Q=L,stringsAsFactors=FALSE))
+unlist(lapply(df,typeof))

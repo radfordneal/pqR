@@ -19,14 +19,13 @@
   see \code{\link{deriv}}.  For numerical differentiation, see
   \code{\link{numericDeriv}}.
 
-  The present implementation of these facilities is a preliminary
-  one that supports only gradients of real scalar values, or lists of 
-  real scalar values (or lists of lists of real scalar values, etc), 
-  with respect to real scalar variables or lists of real scalar values 
-  (or lists of lists, etc).  Support for differentiation of and with respect
-  to vectors, matrices, and arrays is planned, as is support for 
-  higher-order derivatives.  Perhaps differentiation of complex values
-  will also be supported some day.
+  The present implementation of these facilities is preliminary.
+  Gradient computation for some operations is planned but not yet
+  implemented, and for some operations that are supported, gradient computations
+  are much less efficient than is planned for a full-fledged version.
+
+  At present, there is no support for higher-order derivatives, or for
+  differentiation of complex values.
 }
 
 \usage{
@@ -45,8 +44,8 @@ back gradient (var) expr
 back gradient (var1=v1.expr,var2=v2.expr) expr
 back gradient (var1,var2) expr
 
-compute gradient (var1=v1.expr, var2=v2.expr) expr as (g1.expr, g2.expr)
-compute gradient (var1, var2) expr as (g1.expr, g2.expr)
+compute gradient (var1=v1.expr, var2=v2.expr) expr as g1.expr, g2.expr
+compute gradient (var1, var2) expr as g1.expr, g2.expr
 
 gradient_of (e)
 no_gradient (e)
@@ -66,6 +65,21 @@ no_gradient (e)
 }
 
 \details{
+
+The \code{with gradient}, \code{track gradient}, and \code{back
+gradient} constructs all ask that gradients of an expression with
+respect to certain variables be computed, with differences between
+them as described below.  The \code{gradient_of} and
+\code{no_gradient} functions may be used within these constructs.  
+The \code{compute gradient} construct specifies how gradients are
+computed; it is not needed for the many functions for which 
+gradient computations are built in.
+
+Gradients can be computed for expressions that are not differentiable at
+some points, with the gradient returned at such points being arbitrary.
+
+Asking for gradient information:
+
 The \code{with gradient} construct evaluates \code{expr} in a new
 environment (with the current environment as its parent) containing
 the variable \code{var} (or variables \code{var1}, \code{var2}, etc),
@@ -85,7 +99,8 @@ listed in any enclosing \code{with gradient}, \code{track gradient},
 or active \code{back gradient} constructs, so that if the value of the
 variable is used to compute the final value for \code{with gradient},
 or is the argument of call of \code{gradient_of}, its gradient can be
-computed.  Note, however, that the gradients of attribute values are
+computed.  This includes assignments made to a for loop variable.
+Note, however, that the gradients of attribute values are
 not recorded, nor are gradients recorded when non-local assignments
 are made with \code{<<-}.
 
@@ -95,10 +110,11 @@ for S3 methods, but not S4 methods.  Tracking will also be performed
 when an expression is evaluated with \code{eval}, if the environment
 used for the evaluation is one in which gradients are being tracked.
 
-Within \code{expr}, the gradient of an expression, \code{e}, with
-respect the variable or variables of the innermost enclosing
-\code{with gradient} or \code{track gradient} construct can be found
-with \code{gradient_of(e)}.  The value of \code{gradient_of} does not
+Within \code{expr}, or a function called from within it, the gradient
+of an expression, \code{e}, with respect the variable or variables of
+the innermost enclosing \code{with gradient}, \code{track gradient},
+or active \code{back gradient} construct can be found with
+\code{gradient_of(e)}.  The value of \code{gradient_of} does not
 itself have any gradient information --- hence
 \code{gradient_of(gradient_of(e))} will not produce a second
 derivative (it will always be zero).
@@ -119,18 +135,28 @@ variable may determine derivatives with respect to an outer variable,
 by application of the chain rule (backpropagation).
 
 The \code{back gradient} construct is like \code{track gradient},
-except that it does not allow \code{gradient_of}, and hence only needs
-to track gradients if they will be backpropagated to give gradients
-for a (dynamically) enclosing gradient construct.  It may therefore be
-included at little performance cost in a function that may either be
-called for only its value, or may be called for both its value and
-that value's gradient, depending on whether call from within a gradient
-construct.
+except that it does not allow \code{gradient_of} unless it is
+evaluated within a \code{with gradient} or \code{track gradient}
+construct, and hence only needs to track gradients if they will be
+backpropagated to give gradients for such a (dynamically) enclosing
+gradient construct.  It may therefore be included at little
+performance cost in a function that may either be called for only its
+value, or may be called for both its value and that value's gradient,
+depending on whether it is called from within a gradient construct.
 
 In forms of \code{with gradient}, \code{track gradient}, and
 \code{back gradient} in which no expression follows a variable, the
 expression is assumed to be the same as the variable (evaluated in the
 current (not the new) environment).
+
+When a \code{with gradient}, \code{track gradient}, or \code{back
+gradient} construct is exitted, either normally or by an error exit,
+the variables defined within its environment are removed.  This
+prevents unnecessary duplicaton of objects, but does mean that
+functions that have been created with this environment as their
+enclosing environment will no longer have access to these variables.
+
+Specifying how gradients should be computed:
 
 The gradient of an expression can be specified explicity using the
 \code{compute gradient} construct, as an alternative to simply letting
@@ -146,22 +172,30 @@ instead specified by the expressions after \code{as}.  The chain rule
 is used to translate these gradients to gradients with respect to
 variables used to compute \code{v1.expr}, \code{v2.expr}, etc.
 
+The gradient computed by the expressions after \code{as} should in the
+same form as is returned by \code{gradient_of} or attached as a
+\code{gradient} attribute by \code{with gradient}, as described in the
+value section below.
+
 If computation of a gradient has not been requested, \code{compute gradient}
 will evaluate only the value, skipping evaluation of the expressions after
 \code{as}.  It is possible for the gradient expression to be
 evaluted for some variables but not others (e.g., in the form shown above,
 \code{g2.expr} might be evaluated but \code{g1.expr} not be evaluated).
 
-Computation of gradients for built-in functions is also skipped when
-it is known that the gradient will not be needed.
+Functions and operators that know how to compute gradients:
 
-Gradients can be computed for expressions that are not differentiable at
-some points, with the gradient returned at such points being arbitrary.
+Many functions and operators defined in the base and other packages
+know how to compute gradients.  Computation of gradients for built-in
+functions is skipped when it is known that the gradient will not be
+needed, so the overhead of the gradient facility when it is not being
+used is quite small.
 
-Gradients may not have been defined for some builtin functions (even if
-they exist mathematically), in which case they will appear to be zero.
-When a builtin functions returns \code{NA} or a \code{NaN} value, the
-gradient will be regarded as zero (without an error or warning).
+For those builtin functions that don't know how to compute gradients
+(but for which gradients exist mathematically), gradients will appear
+to be zero.  When a builtin functions returns \code{NA} or a
+\code{NaN} value, the gradient will be regarded as zero (without an
+error or warning, and maybe not consistently at present).
 
 Gradients may be defined for real-valued random generation functions
 (eg, \code{rnorm}).  The gradient for these functions indicates how a
@@ -170,61 +204,113 @@ generated random value, if the state of the random number generator
 when calling the function were kept fixed.
 
 The following built-in functions and operators will compute gradients,
-with respect to all their scalar real arguments (unless noted), or
-when applicable, arguments that are lists of scalar reals (or lists of
-lists of scalar reals, etc.):
-\tabular{l}{
-list \cr
-$ (for vector lists only), [[ (for vector lists only) \cr
-$<- (for vector lists only), [[<- (for vector lists only) \cr
-\cr
-+, -, *, /, ^ (+ and - may be unary) \cr
-\cr
-abs, sqrt, expm1, exp, log1p, log2, log10, log (one-argument form only) \cr
-cos, sin, tan, acos, asin, atan, atan2 \cr
-cosh, sinh, tanh, acosh, asinh, atanh \cr
-gamma, lgamma, digamma, trigamma, psigamma, beta, lbeta \cr
-\cr
-dbeta, pbeta (1st argument only), qbeta (1st argument only) \cr
-dchisq (no ncp arg), pchisq (1st only, no ncp), qchisq (1st only, no ncp) \cr
-dbinom, pbinom \cr
-dcauchy, pcauchy, qcauchy, rcauchy \cr
-dexp, pexp, qexp, rexp \cr
-df (no ncp argument), pf (1st arg only, no ncp), qf (1st arg only,no ncp) \cr
-dgamma, pgamma (1st and 3rd args only), qgamma (1st and 3rd args only) \cr
-Note: 3rd argument of dgamma/pgamma/qgamma may be either rate or scale \cr
-dgeom, pgeom \cr
-dlogis, plogis, qlogis, rlogis \cr
-dlnorm, plnorn, qlnorm, rlnorm \cr
-dnbinom (3rd arg (prob or mu) only), pnbinom (3rd arg (prob or mu) only) \cr
-dnorm, pnorm, qnorm, rnorm \cr
-dpois, ppois \cr
-dt (with no ncp arg), pt (1st arg only, no ncp), qt (1st arg only,no ncp) \cr
-dunif, punif, qunif, runif \cr
-dweibull, pweibull, qweibull, rweibull
+with respect to all their real scalar, vector, matrix, or array arguments
+(unless noted), or when applicable, arguments that are lists of reals 
+(or lists of lists of reals, etc.):
+\preformatted{  if, ifelse, switch
+
+  c, rbind, cbind, list, matrix, array, unlist, rep, rep.int, rep_len
+
+  [   (for vector lists and numeric vectors, including matrices & arrays) 
+  [<- (for vector lists and numeric vectors, including matrices & arrays) 
+
+  [[   (for vector lists and numeric vectors, including matrices & arrays) 
+  [[<- (for vector lists and numeric vectors, including matrices & arrays; 
+        vector as index (indexing at multiple levels) not supported yet) 
+
+  $   (for vector lists, not pairlists or environments)
+  $<- (for vector lists, not pairlists for environments) 
+
+  data.frame, as.data.frame, cbind.data.frame, rbind.data.frame
+  methods for access and assignment to data frames with [, [[, and $
+  
+  +, -, *, /, ^ (+ and - may be unary) 
+  
+  abs, sqrt, expm1, exp, log1p, log2, log10, log (one-argument form only) 
+  cos, sin, tan, acos, asin, atan, atan2 
+  cosh, sinh, tanh, acosh, asinh, atanh 
+  gamma, lgamma, digamma, trigamma, psigamma, beta, lbeta 
+  
+  dbeta, pbeta (1st argument only), qbeta (1st argument only) 
+  dchisq (no ncp arg), pchisq (1st only, no ncp), qchisq (1st only, no ncp) 
+  dbinom, pbinom 
+  dcauchy, pcauchy, qcauchy, rcauchy 
+  dexp, pexp, qexp, rexp 
+  df (no ncp argument), pf (1st arg only, no ncp), qf (1st arg only,no ncp) 
+  dgamma, pgamma (1st and 3rd args only), qgamma (1st and 3rd args only) 
+    Note: 3rd argument of dgamma/pgamma/qgamma may be either rate or scale 
+  dgeom, pgeom 
+  dlogis, plogis, qlogis, rlogis 
+  dlnorm, plnorn, qlnorm, rlnorm 
+  dnbinom (3rd arg only), pnbinom (3rd arg only)
+    Note: 3rd argument of dnbinom/pnbinom can be either prob or mu
+  dnorm, pnorm, qnorm, rnorm 
+  dpois, ppois 
+  dt (with no ncp arg), pt (1st arg only, no ncp), qt (1st arg only,no ncp) 
+  dunif, punif, qunif, runif 
+  dweibull, pweibull, qweibull, rweibull
+
+  apply, lapply, sapply, vapply, replicate, simplify2array
+  as.vector, as.list, as.double, as.numeric, as.real, as.matrix
+  unclass, drop, structure, get_rm
+  storage.mode<-, length<-
+  invisible
+
+  mean, sum, prod, min, max, pmin, pmax
+  rowSums, rowMeans, .rowSums, .rowMeans, 
+  colSums, colMeans, .colSums, .colMeans
+
+  t, \%*\%, crossprod, tcrossprod
+  det, determinant
+
+  solve (default method only, for matrices, not QR decompositions)
+  diag (for creating diagonal matrix or extracting diagonal from matrix)
+  diag<-
 }
+
+% TO COME: mapply, rapply
+%          backsolve, forwardsolve, chol
+%          aperm, sweep, scale
+%          cov, cor, var
+
 The following replacement functions do not compute any gradient information,
 but do leave undisturbed any gradient information that is associated with 
 the variable that they update:
-\tabular{l}{
-attr<-
+\preformatted{  attr<-, attributes<-, names<-, dim<-, dimnames<-, class<-, oldClass<-
 }
 }
 
 \value{
-The gradient returned by \code{gradient_of} or attached as a \code{"gradient"}
-attribute by \code{with gradient} will be a scalar real if the gradient
-is with respect to only one variable, and the expression this is the gradient
-of has a scalar real value.  The gradient of a list is a list of the same
-form, with scalar gradients replacing the scalar elements.  For a gradient
-with respect to a list variable, the gradient value is a list (or nested
+When the gradient is with respect to only one variable, the value
+returned by \code{gradient_of} or attached as a \code{"gradient"}
+attribute by \code{with gradient} will be a scalar real if this
+variable has a scalar real value and the expression this is the gradient of 
+also has a scalar real value.
+
+When the variable is scalar, but the expression is a real vector (or
+matrix, or array) of length greater than one, the gradient will be a
+vector of the same length.  When the variable is a vector (or matrix,
+or array) of length greater than one, the gradient will be a matrix
+(referred to as the "Jacobian" matrix) whose number of columns equals
+the length of the variable's value, and whose number of rows equals
+the length of the expression's value.  Note that \code{as.matrix} can
+be used to convert a numeric gradient value to always be a
+matrix, if that is desired.  Note also that any \code{dim} attribute for
+the expression or variable is ignored when creating the Jacobian matrix,
+which is always a matrix (not a higher-dimensional array), or a simple
+vector if the Jacobian matrix has only one row or one column.  This can
+of course be changed if desired (see the example below).
+
+The gradient of a list is a list of the same form, with gradients as
+described above replacing the numeric elements.  For a gradient with
+respect to a list variable, the gradient value is a list (or nested
 lists) of the same form, with elements that are the gradient of the
-expression value with respect to that element of the list; note that the
-gradient of an expression value could itself be a list.
+expression value with respect to that element of the list; note that
+the gradient of an expression value could itself be a list.
 
 When the \code{with gradient} or
 \code{track gradient} construct has more than one variable, the gradient
-will be a list of scalar real values or lists, with names corresponding to the
+will be a list of gradient values, with names corresponding to the
 variables.  Note that this is the same form as would be obtained if the
 values of these variables were combined into a named list which was then
 used as a single variable in the \code{with gradient} or \code{track gradient}
@@ -263,7 +349,7 @@ track gradient (a = 3) {
 
 sigmoid <- function (x)
     compute gradient (x) { v <- 1 / (1+exp(-x)); v }
-    as (v * (1-v))
+    as v * (1-v)
 
 sigmoid(1)                       # no gradient computed, only value
 with gradient (x=1) sigmoid(x)   # both value and gradient computed
@@ -276,7 +362,7 @@ set.seed(123); with gradient (r=5) rexp(1,r)
 
 set.seed(123); v1<-rexp(1,4.999)
 set.seed(123); v2<-rexp(1,5.001)
-(v2-v1) / 0.002                  # should be close to gradient above
+(v2-v1) / 0.002                  # should be close to rexp gradient above
 
 r <- with gradient (a=7) list(a,a^2)
 attr(r,"gradient")               # should be a list of 1 and 14
@@ -299,11 +385,11 @@ with gradient (a=7) {
 
 with gradient (a=3)              # only the gradient with respect to a
   with gradient (b=10*a)         #   will be shown, but the chain rule 
-    list(a,b,a*b)                #   is used to convert derivatives wrt
+    c(a,b,a*b)                   #   is used to convert derivatives wrt
                                  #   to b into derivatives wrt to a
 
-with gradient (a=5,b=6) list(a^2,a*b)               # these give the same
-with gradient (x=list(a=5,b=6)) list(x$a^2,x$a*x$b) # value and gradient
+with gradient (a=5,b=6) c(a^2,a*b)                # these give the same
+with gradient (x=list(a=5,b=6)) c(x$a^2,x$a*x$b)  #   value and gradient
 
 with gradient (a=2) {            # find derivatives of powers of a, from
     L <- list(a)                 #   a^1 to a^10, evaluated at a=2
@@ -311,22 +397,75 @@ with gradient (a=2) {            # find derivatives of powers of a, from
     L
 }
 
-V <- as.list(seq(0,1,length=11))
+with gradient (a=2) {            # same as above, but with a real vector
+    V <- a                       #   rather than a list
+    for (i in 2..10) V[i] <- V[i-1] * a
+    V
+}
 
-with gradient (V) {              # tracks gradient w.r.t. 11 elements of V
+L <- as.list(seq(0,1,length=11)) # list for use below...
+
+with gradient (L) {              # tracks gradient w.r.t. 11 elements of L
     p <- 0
-    for (i along V) 
-        p <- p + i*V[[i]]
+    for (i along L) 
+        p <- p + i*L[[i]]
     p^2 + p^3 + p^4 + p^5        # every operation computes derivatives
-}                                #   w.r.t. all 11 elements of V
+}                                #   w.r.t. all 11 elements of L
 
-with gradient (V) {              # compute same result more efficiently...
+with gradient (L) {              # compute same result more efficiently...
     p <- 0
-    for (i along V) 
-        p <- p + i*V[[i]]
+    for (i along L) 
+        p <- p + i*L[[i]]
     back gradient (p)            # operations in the expresson below 
         p^2 + p^3 + p^4 + p^5    #   compute derivative w.r.t. p only, then
-}                                #   chain rule gives gradient w.r.t. V
+}                                #   chain rule gives gradient w.r.t. L
+
+V <- seq(0,1,length=11)          # same as above, but using a real vector
+
+with gradient (V) {              # the gradient will be a 1 x 11 matrix
+    p <- 0
+    for (i along V) 
+        p <- p + i*V[i]
+    back gradient (p)
+        p^2 + p^3 + p^4 + p^5
+}
+
+track gradient (a=c(7,5))
+    gradient_of (c(a,a^2,a^3,a[1]*a[2])) # produces a 7 x 2 Jacobian matrix
+
+# Make table of (a+j)^i and derivatives w.r.t. a, for a equal to 1.1.
+
+tbl <- function (a) {            # a function to compute such a table
+    T <- matrix (nrow=4, ncol=5)
+    for (i, j along T)
+        T[i,j] <- if (i == 1) a+j else T[i-1,j] * (a+j)
+    T
+}
+
+T <- with gradient (a=1.1) tbl(a)  # call tbl asking for the gradient
+
+T                                # note the gradient is a simple vector,
+array(attr(T,"gradient"),dim(T)) #   but dimensions can be added if needed
+
+# Gradient tracking for numeric data in a data frame.
+
+a <- c(3,1,5)
+b <- c(9,2,7)
+
+r <- with gradient (a,b) data.frame(a^2,a*b,b^2)
+
+print(r)                         # no gradient seen, since print.data.frame
+                                 #   doesn't print attributes...
+
+attr(r,"gradient")               # ...but it's there
+
+# Defining and using a function to combine a value and a gradient.
+
+val_and_grad <- function (v)     # the call of gradient_of here will be
+    list (v, gradient_of(v))     #   valid when val_and_grad is called from
+                                 #   a place where gradient_of is valid...
+
+track gradient (a = 7) { b <- a^2; val_and_grad(10*b) }  # ... such as here
 
 }
 

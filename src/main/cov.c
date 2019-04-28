@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013 by Radford M. Neal
+ *  Copyright (C) 2013, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995-2011	The R Core Team
@@ -620,8 +620,8 @@ static SEXP do_cov(SEXP call, SEXP op, SEXP args, SEXP env)
 
     checkArity(op, args);
 
-    /* compute correlations if PRIMVAL(op) == 0,
-	       covariances  if PRIMVAL(op) != 0 */
+    /* compute correlations if PRIMVAL(op) != 0,
+	       covariances  if PRIMVAL(op) == 0 */
     cor = PRIMVAL(op);
 
     /* Arg.1: x */

@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -137,9 +137,10 @@ extern0 SEXP	R_DownSymbol;         /* "down" */
 extern0 SEXP	R_IfSymbol;           /* "if" */
 extern0 SEXP	R_NextSymbol;         /* "next" */
 extern0 SEXP	R_BreakSymbol;        /* "break" */
-extern0 SEXP	R_WithGradientSymbol; /* "with gradient" */
+extern0 SEXP	R_WithGradientSymbol;   /* "with gradient" */
 extern0 SEXP	R_TrackGradientSymbol;  /* "track gradient" */
-extern0 SEXP	R_ComputeGradientSymbol;  /* "compute gradient" */
+extern0 SEXP	R_BackGradientSymbol;   /* "back gradient" */
+extern0 SEXP	R_ComputeGradientSymbol;/* "compute gradient" */
 extern0 SEXP	R_AsSymbol;           /* "as" */
 extern0 SEXP	R_ColonSymbol;        /* ":" */
 extern0 SEXP	R_DoubleColonSymbol;  /* "::" */
@@ -1001,7 +1002,9 @@ static inline SEXP INTERNAL_fun (SEXP x)
    assignments.  They are NOT automatically protected. */
 
 LibExtern SEXP R_fast_sub_var;  /* Value of variable assigned to or subsetted */
+LibExtern SEXP R_fast_sub_var_grad;   /* ... gradient of above */
 LibExtern SEXP R_fast_sub_replacement;    /* Replacement value, for subassign */
+LibExtern SEXP R_fast_sub_replacement_grad;   /* ... gradient of above */
 
 
 #define R_binding_cell R_high_frequency_globals.binding_cell
@@ -1256,10 +1259,17 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 /*--- FUNCTIONS ------------------------------------------------------ */
 
 # define add_scaled_gradients	Rf_add_scaled_gradients
+# define add_scaled_gradients_vec Rf_add_scaled_gradients_vec
 # define allocCharsxp		Rf_allocCharsxp
 # define alloc_or_reuse		Rf_alloc_or_reuse
 # define apply_non_functon_error Rf_apply_non_function_error
 # define arg_missing_error	Rf_arg_missing_error
+# define array_subassign_indexes_list_gradient Rf_array_subassign_indexes_list_gradient
+# define array_subassign_indexes_numeric_gradient Rf_array_subassign_indexes_numeric_gradient
+# define array_subset_indexes_list_gradient Rf_array_subset_indexes_list_gradient
+# define array_subset_indexes_numeric_gradient Rf_array_subset_indexes_numeric_gradient 
+# define as_list_gradient	Rf_as_list_gradient
+# define as_numeric_gradient	Rf_as_numeric_gradient
 # define bcEval			Rf_bcEval
 # define beginbuiltincontext	Rf_beginbuiltincontext
 # define begincontext		Rf_begincontext
@@ -1274,10 +1284,16 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define ComplexFromLogical	Rf_ComplexFromLogical
 # define ComplexFromReal	Rf_ComplexFromReal
 # define ComplexFromString	Rf_ComplexFromString
+# define copy_list_recycled_byrow_gradient Rf_copy_list_recycled_byrow_gradient
+# define copy_list_recycled_gradient Rf_copy_list_recycled_gradient
+# define copy_numeric_recycled_byrow_gradient Rf_copy_numeric_recycled_byrow_gradient
+# define copy_numeric_recycled_gradient Rf_copy_numeric_recycled_gradient
 # define copyListMatrix		Rf_copyListMatrix
 # define copyMostAttribNoClass	Rf_copyMostAttribNoClass
 # define copyMostAttribNoTs	Rf_copyMostAttribNoTs
 # define copy_scaled_gradients	Rf_copy_scaled_gradients
+# define copy_scaled_gradients_vec Rf_copy_scaled_gradients_vec
+# define create_diag_matrix_gradient Rf_create_diag_matrix_gradient
 # define CustomPrintValue	Rf_CustomPrintValue
 # define DataFrameClass		Rf_DataFrameClass
 # define ddfindVar		Rf_ddfindVar
@@ -1294,7 +1310,8 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define EncodeRaw              Rf_EncodeRaw
 # define EncodeString           Rf_EncodeString
 # define EnsureString 		Rf_EnsureString
-# define delete_list_gradient	Rf_delete_list_gradient
+# define delete_range_list_gradient Rf_delete_range_list_gradient
+# define delete_selected_list_gradient Rf_delete_selected_list_gradient
 # define endcontext		Rf_endcontext
 # define envlength		Rf_envlength
 # define ErrorMessage		Rf_ErrorMessage
@@ -1305,6 +1322,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define evalList_v		Rf_evalList_v
 # define eval_unshared		Rf_eval_unshared
 # define extend_list_gradient	Rf_extend_list_gradient
+# define extend_numeric_gradient Rf_extend_numeric_gradient
 # define factorsConform		Rf_factorsConform
 # define findcontext		Rf_findcontext
 # define findFun_nospecsym	Rf_findFun_nospecsym
@@ -1352,8 +1370,17 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define matchArg		Rf_matchArg
 # define matchArgExact		Rf_matchArgExact
 # define matchPar		Rf_matchPar
+# define matrix_subset_indexes_list_gradient Rf_matrix_subset_indexes_list_gradient
+# define matrix_subset_indexes_numeric_gradient Rf_matrix_subset_indexes_numeric_gradient
+# define matrix_subset_one_row_list_gradient Rf_matrix_subset_one_row_list_gradient
+# define matrix_subset_one_row_numeric_gradient Rf_matrix_subset_one_row_numeric_gradient
+# define matrix_subset_range_list_gradient Rf_matrix_subset_range_list_gradient
+# define matrix_subset_range_numeric_gradient Rf_matrix_subset_range_numeric_gradient
+# define matprod_gradient	Rf_matprod_gradient
+# define mean_gradient		Rf_mean_gradient
 # define Mbrtowc		Rf_mbrtowc
 # define mbtoucs		Rf_mbtoucs
+# define minmax_gradient	Rf_minmax_gradient
 # define mkCLOSXP		Rf_mkCLOSXP
 # define mkFalse		Rf_mkFalse
 # define mkPROMISE		Rf_mkPROMISE
@@ -1378,6 +1405,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define PrintVersionString    	Rf_PrintVersionString
 # define PrintWarnings		Rf_PrintWarnings
 # define PRSEEN_error		Rf_PRSEEN_error
+# define prod_gradient		Rf_prod_gradient
 # define promiseArgs		Rf_promiseArgs
 # define promiseArgsWithValues	Rf_promiseArgsWithValues
 # define promiseArgsWith1Value	Rf_promiseArgsWith1Value
@@ -1385,8 +1413,12 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define RealFromInteger	Rf_RealFromInteger
 # define RealFromLogical	Rf_RealFromLogical
 # define RealFromString		Rf_RealFromString
-# define RemoveVariable		Rf_RemoveVariable
+# define rep_each_list_gradient Rf_rep_each_list_gradient
+# define rep_each_numeric_gradient Rf_rep_each_numeric_gradient
+# define rowcolsumsmeans_gradient Rf_rowcolsumsmeans_gradient
 # define Seql			Rf_Seql
+# define set_length_list_gradient Rf_set_length_list_gradient
+# define set_length_numeric_gradient Rf_set_length_numeric_gradient
 # define Scollate		Rf_Scollate
 # define sortVector		Rf_sortVector
 # define SrcrefPrompt		Rf_SrcrefPrompt
@@ -1399,8 +1431,18 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define strIsASCII		Rf_strIsASCII
 # define StrToInternal		Rf_StrToInternal
 # define subassign_list_gradient Rf_subassign_list_gradient
-# define subset_list_gradient	Rf_subset_list_gradient
+# define subassign_indexes_list_gradient Rf_subassign_indexes_list_gradient
+# define subassign_indexes_numeric_gradient Rf_subassign_indexes_numeric_gradient
+# define subassign_numeric_gradient Rf_subassign_numeric_gradient
+# define subassign_range_list_gradient Rf_subassign_range_list_gradient
+# define subassign_range_numeric_gradient Rf_subassign_range_numeric_gradient
+# define subset2_list_gradient	Rf_subset2_list_gradient
+# define subset_indexes_list_gradient	Rf_subset_indexes_list_gradient
+# define subset_indexes_numeric_gradient Rf_subset_indexes_numeric_gradient
+# define subset_range_list_gradient	Rf_subset_range_list_gradient
+# define subset_range_numeric_gradient Rf_subset_range_numeric_gradient
 # define substituteList		Rf_substituteList
+# define sum_gradient		Rf_sum_gradient
 # define too_deep_error		Rf_too_deep_error
 # define tsConform		Rf_tsConform
 # define tspgets		Rf_tspgets
@@ -1484,13 +1526,30 @@ SEXP Rf_EnsureString(SEXP);
 
 /* Other Internally Used Functions */
 
-SEXP copy_scaled_gradients (SEXP, double);
-SEXP add_scaled_gradients (SEXP, SEXP, double);
+SEXP copy_list_recycled_byrow_gradient (SEXP, R_len_t, R_len_t);
+SEXP copy_list_recycled_gradient (SEXP, R_len_t);
+SEXP copy_numeric_recycled_byrow_gradient (SEXP, R_len_t, R_len_t);
+SEXP copy_numeric_recycled_gradient (SEXP, R_len_t);
+SEXP copy_scaled_gradients (SEXP, double, R_len_t);
+SEXP copy_scaled_gradients_vec (SEXP, SEXP, R_len_t);
+SEXP create_diag_matrix_gradient (SEXP, R_len_t, R_len_t, R_len_t, R_len_t);
+SEXP add_scaled_gradients (SEXP, SEXP, double, int);
+SEXP add_scaled_gradients_vec (SEXP, SEXP, SEXP, R_len_t);
 SEXP Rf_allocCharsxp(R_len_t);
 SEXP alloc_or_reuse (SEXP, SEXP, SEXPTYPE, int, int, int);
 SEXP Rf_append(SEXP, SEXP); /* apparently unused now */
-SEXP Rf_apply_debug_finish (SEXP, SEXP);
+void Rf_apply_debug_finish (SEXP, SEXP);
 SEXP Rf_apply_debug_setup (SEXP, SEXP, SEXP, SEXP, SEXP);
+SEXP array_subassign_indexes_list_gradient 
+       (SEXP, SEXP, int **, int *, int *, R_len_t, R_len_t);
+SEXP array_subassign_indexes_numeric_gradient 
+       (SEXP, SEXP, int **, int *, int *, R_len_t, R_len_t);
+SEXP array_subset_indexes_list_gradient 
+       (SEXP, int **, int *, int *, R_len_t, R_len_t);
+SEXP array_subset_indexes_numeric_gradient 
+       (SEXP, int **, int *, int *, R_len_t, R_len_t);
+SEXP as_list_gradient(SEXP, R_len_t);
+SEXP as_numeric_gradient(SEXP, R_len_t);
 SEXP Rf_attributes_dup (SEXP, SEXP);
 SEXP bcEval(SEXP, SEXP, Rboolean);
 SEXP bytecodeExpr(SEXP);
@@ -1518,7 +1577,8 @@ SEXP duplicated(SEXP, Rboolean);
 SEXP duplicated3(SEXP, SEXP, Rboolean);
 int any_duplicated(SEXP, Rboolean);
 int any_duplicated3(SEXP, SEXP, Rboolean);
-SEXP delete_list_gradient(SEXP, R_len_t, R_len_t);
+SEXP delete_range_list_gradient(SEXP, R_len_t, R_len_t, R_len_t);
+SEXP delete_selected_list_gradient(SEXP, SEXP, R_len_t, R_len_t);
 int envlength(SEXP);
 SEXP evalList(SEXP, SEXP);
 SEXP evalListKeepMissing(SEXP, SEXP);
@@ -1527,6 +1587,7 @@ SEXP evalList_gradient(SEXP, SEXP, int, int, int);
 SEXP evalList_v(SEXP, SEXP, int);
 SEXP eval_unshared(SEXP,SEXP,int);
 SEXP extend_list_gradient(SEXP, SEXP, R_len_t);
+SEXP extend_numeric_gradient(SEXP, SEXP, R_len_t);
 int factorsConform(SEXP, SEXP);
 void R_NORETURN findcontext(int, SEXP, SEXP);
 SEXP findFun_nospecsym(SEXP, SEXP);
@@ -1571,6 +1632,17 @@ SEXP markKnown(const char *, SEXP);
 SEXP matchArg(SEXP, SEXP*);
 SEXP matchArgExact(SEXP, SEXP*);
 SEXP matchPar(const char *, SEXP*);
+SEXP matrix_subset_indexes_list_gradient(SEXP, SEXP, R_len_t, SEXP, R_len_t);
+SEXP matrix_subset_indexes_numeric_gradient(SEXP, SEXP, R_len_t, SEXP, R_len_t);
+SEXP matrix_subset_one_row_list_gradient(SEXP, R_len_t, R_len_t, SEXP, R_len_t);
+SEXP matrix_subset_one_row_numeric_gradient(SEXP,R_len_t,R_len_t,SEXP,R_len_t);
+SEXP matrix_subset_range_list_gradient
+      (SEXP, R_len_t, R_len_t, R_len_t, SEXP, R_len_t);
+SEXP matrix_subset_range_numeric_gradient
+      (SEXP, R_len_t, R_len_t, R_len_t, SEXP, R_len_t);
+SEXP matprod_gradient (SEXP, SEXP, SEXP, SEXP, int, R_len_t, R_len_t, R_len_t);
+SEXP mean_gradient(SEXP, R_len_t);
+SEXP minmax_gradient(SEXP, SEXP, SEXP, SEXP, R_len_t);
 SEXP mkCLOSXP(SEXP, SEXP, SEXP);
 SEXP mkFalse(void);
 SEXP mkPRIMSXP (int, int);
@@ -1600,7 +1672,6 @@ SEXP promiseArgs(SEXP, SEXP, int);
 SEXP promiseArgsWithValues(SEXP, SEXP, SEXP, int);
 SEXP promiseArgsWith1Value(SEXP, SEXP, SEXP, SEXP, int);
 void Rcons_vprintf(const char *, va_list);
-SEXP RemoveVariable(SEXP, SEXP);
 SEXP R_data_class(SEXP , Rboolean);
 SEXP R_data_class2(SEXP);
 void R_HashRehash(SEXP);
@@ -1616,6 +1687,10 @@ SEXP Rf_mkCharMulti (const char **, const int *, unsigned, cetype_t);
 SEXP Rf_mkCharRep (const char *, int, int, cetype_t);
 FILE* R_OpenLibraryFile(const char *);
 SEXP R_Primitive(const char *);
+SEXP prod_gradient(SEXP, SEXP, SEXP, double, double, int, R_len_t);
+SEXP rep_each_list_gradient (SEXP, SEXP, R_len_t);
+SEXP rowcolsumsmeans_gradient (SEXP, SEXP, int, int, R_len_t, R_len_t);
+SEXP rep_each_numeric_gradient (SEXP, SEXP, R_len_t);
 void R_RestoreGlobalEnv(void);
 void R_RestoreGlobalEnvFromFile(const char *, Rboolean);
 void R_SaveGlobalEnv(void);
@@ -1623,6 +1698,8 @@ void R_SaveGlobalEnvToFile(const char *);
 void R_SaveToFile(SEXP, FILE*, int);
 void R_SaveToFileV(SEXP, FILE*, int, int);
 Rboolean R_seemsOldStyleS4Object(SEXP object);
+SEXP set_length_list_gradient (SEXP, R_len_t);
+SEXP set_length_numeric_gradient (SEXP, R_len_t);
 int R_SetOptionWarn(int);
 int R_SetOptionWidth(int);
 void R_Suicide(const char *);
@@ -1634,8 +1711,18 @@ void ssort(SEXP*,int);
 void start_browser (SEXP, SEXP, SEXP, SEXP);
 int StrToInternal(const char *);
 SEXP subassign_list_gradient(SEXP, SEXP, R_len_t, R_len_t);
-SEXP subset_list_gradient(SEXP, R_len_t, R_len_t);
+SEXP subassign_indexes_list_gradient(SEXP, SEXP, SEXP, R_len_t);
+SEXP subassign_indexes_numeric_gradient(SEXP, SEXP, SEXP, R_len_t);
+SEXP subassign_numeric_gradient(SEXP, SEXP, R_len_t, R_len_t);
+SEXP subassign_range_list_gradient(SEXP, SEXP, R_len_t, R_len_t, R_len_t);
+SEXP subassign_range_numeric_gradient(SEXP, SEXP, R_len_t, R_len_t, R_len_t);
+SEXP subset2_list_gradient(SEXP, R_len_t, R_len_t);
+SEXP subset_indexes_list_gradient(SEXP, SEXP, R_len_t);
+SEXP subset_indexes_numeric_gradient(SEXP, SEXP, R_len_t);
+SEXP subset_range_list_gradient(SEXP, R_len_t, R_len_t, R_len_t);
+SEXP subset_range_numeric_gradient(SEXP, R_len_t, R_len_t, R_len_t);
 SEXP substituteList(SEXP, SEXP);
+SEXP sum_gradient(SEXP, SEXP, SEXP, int, R_len_t);
 void R_trace_call(SEXP, SEXP);
 int Rf_translated_Seql (SEXP, SEXP);
 Rboolean tsConform(SEXP,SEXP);
@@ -1935,9 +2022,9 @@ static inline SEXP SKIP_USING_SYMBITS (SEXP rho, SEXP symbol)
    macros below call procedure in memory.c for error handling.  PROTECT_PTR is 
    not redefined, since it contains a significant amount of code.
 
-   Macros PROTECT2 and PROTECT3 for protecting 2 or 3 objects are also
-   defined.  There arguments should be simple variables - avoid calling 
-   anything, and avoid any side effects.
+   Macros PROTECT2, PROTECT3, PROTECT4, and PROTECT5 for protecting 2, 3, 4,
+   or 5 objects are also defined.  There arguments should be simple variables
+   - avoid calling anything, and avoid any side effects.
 
    UNPROTECT_PROTECT(x) is the same as UNPROTECT(1); PROTECT(x), but faster.
 
@@ -1979,6 +2066,29 @@ extern R_NORETURN void Rf_unprotect_error (void);
     (void)0 \
 )
 
+#undef  PROTECT4
+#define PROTECT4(s1,s2,s3,s4) ( \
+    (R_PPStackTop+3 >= R_PPStackSize ? Rf_protect_error() : (void) 0), \
+    (R_PPStack[R_PPStackTop] = (s1)), \
+    (R_PPStack[R_PPStackTop+1] = (s2)), \
+    (R_PPStack[R_PPStackTop+2] = (s3)), \
+    (R_PPStack[R_PPStackTop+3] = (s4)), \
+    (R_PPStackTop += 4), \
+    (void)0 \
+)
+
+#undef  PROTECT5
+#define PROTECT5(s1,s2,s3,s4,s5) ( \
+    (R_PPStackTop+4 >= R_PPStackSize ? Rf_protect_error() : (void) 0), \
+    (R_PPStack[R_PPStackTop] = (s1)), \
+    (R_PPStack[R_PPStackTop+1] = (s2)), \
+    (R_PPStack[R_PPStackTop+2] = (s3)), \
+    (R_PPStack[R_PPStackTop+3] = (s4)), \
+    (R_PPStack[R_PPStackTop+4] = (s5)), \
+    (R_PPStackTop += 5), \
+    (void)0 \
+)
+
 #undef  UNPROTECT
 #if 0  /* enable for stack underflow checking */
 #define UNPROTECT(n) \
@@ -2008,10 +2118,11 @@ extern R_NORETURN void Rf_unprotect_error (void);
 
 void SET_ATTRIB_TO_ANYTHING (SEXP, SEXP);
 
-#define SET_GRADIENT_IN_CELL(x,v) \
-   (ATTRIB_W(x) != R_NilValue && !HAS_GRADIENT_IN_CELL(x) ? (void) abort() \
-      : (v) != R_NilValue && TYPEOF(v) != LISTSXP ? (void) abort() \
-      : SET_ATTRIB_TO_ANYTHING((x),(v)))
+
+/* Update gradient information in binding cell or promise. */
+
+void SET_GRADIENT_IN_CELL (SEXP, SEXP);
+void SET_GRADIENT_IN_CELL_NR (SEXP, SEXP);  /* no NAMEDCNT inc or dec */
 
 
 /* Define R_INFINITE and ISNAN_NOT_NA here as inline functions, using a 

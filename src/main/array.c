@@ -105,19 +105,22 @@ SEXP allocMatrix(SEXPTYPE mode, int nrow, int ncol)
     return allocMatrix1 (allocMatrix0 (mode, nrow, ncol), nrow, ncol);
 }
 
-/* Package matrix uses this .Internal with 5 args: should have 7 */
+/* matrix - .Internal, with gradient asked for for 1st arg.
 
-/* NOTE:  In pqR, we now guarantee that the result of "matrix" is
-   unshared (relevant to .C and .Fortran with DUP=FALSE). */
+   pqR guarantees that the result of "matrix" is unshared (relevant to
+   .C and .Fortran with DUP=FALSE).
+
+   NOTE: Package matrix uses this .Internal with 5 args: should have 7. */
 
 static SEXP do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP vals, ans, snr, snc, dimnames;
     int nr = 1, nc = 1, byrow, lendat, miss_nr, miss_nc;
+    SEXP args_sv = args;
 
     checkArity(op, args);
     vals = CAR(args); args = CDR(args);
-    /* Supposedly as.vector() gave a vector type, but we check */
+    /* could be pairlist... */
     switch(TYPEOF(vals)) {
 	case LGLSXP:
 	case INTSXP:
@@ -162,6 +165,9 @@ static SEXP do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if (miss_nr) nr = ceil(lendat/(double) nc);
     else if (miss_nc) nc = ceil(lendat/(double) nr);
 
+    if ((uint64_t)nr * nc > INT_MAX)
+	error(_("too many elements specified"));
+
     if (lendat > 1) {
 	if ((nr * nc) % lendat != 0) {
 	    if (((lendat > nr) && (lendat / nr) * nr != lendat) ||
@@ -176,21 +182,47 @@ static SEXP do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
     }
 
-    if ((double)nr * (double)nc > INT_MAX)
-	error(_("too many elements specified"));
-
     PROTECT(ans = allocMatrix(TYPEOF(vals), nr, nc));
 
-    if(lendat) {
-	if (isVector(vals))
-	    copyMatrix(ans, vals, byrow);
-	else
-	    copyListMatrix(ans, vals, byrow);
-    } else if (isVectorAtomic(vals)) /* VECSXP/EXPRSXP already are R_NilValue */
-        set_elements_to_NA_or_NULL (ans, 0, nr*nc);
+    SEXP grad = R_NilValue;
 
-    if(!isNull(dimnames)&& length(dimnames) > 0)
+    if (lendat > 0) {
+	if (isVector(vals)) {
+	    copyMatrix (ans, vals, byrow);
+            if (HAS_GRADIENT_IN_CELL(args_sv)) {
+                SEXP gr = GRADIENT_IN_CELL(args_sv);
+                if (byrow) {
+                    if (TYPEOF(vals) == VECSXP) {
+                        grad = copy_list_recycled_byrow_gradient
+                                         (gr, nr, LENGTH(ans));
+                    }
+                    else if (TYPEOF(vals) == REALSXP) {
+                        grad = copy_numeric_recycled_byrow_gradient
+                                            (gr, nr, LENGTH(ans));
+                    }
+                }
+                else {
+                    if (TYPEOF(ans) == VECSXP)
+                        grad = copy_list_recycled_gradient (gr, LENGTH(ans));
+                    else if (TYPEOF(ans) == REALSXP)
+                        grad = copy_numeric_recycled_gradient (gr, LENGTH(ans));
+                }
+            }
+        }
+	else /* not actually possible, given check above */
+	    copyListMatrix(ans, vals, byrow);
+    }
+    else if (isVectorAtomic(ans)) /* VECSXP/EXPRSXP already are R_NilValue */
+        Rf_set_elements_to_NA (ans, 0, 1, LENGTH(ans));
+
+    if (!isNull(dimnames) && length(dimnames) > 0)
 	ans = dimnamesgets(ans, dimnames);
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     UNPROTECT(1);
     return ans;
 }
@@ -387,6 +419,12 @@ static SEXP do_drop(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    x = DropDims(x);
 	}
     }
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        R_gradient = GRADIENT_IN_CELL(args);
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     return x;
 }
 
@@ -750,8 +788,8 @@ static SEXP do_transpose (SEXP, SEXP, SEXP, SEXP, int);
 static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP x = CAR(args), y = CADR(args), rest = CDDR(args);
+    SEXP x_grad = R_NilValue, y_grad = R_NilValue;
 
-    PROTECT_INDEX ix;
     int mode;
     SEXP ans;
 
@@ -778,13 +816,26 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
             int hm = -1;  /* Any methods?  -1 for not known yet */
 
-            PROTECT_WITH_INDEX(
-              x = evalv (x, rho, VARIANT_TRANS | VARIANT_PENDING_OK), &ix);
+            int vrt = variant & VARIANT_GRADIENT
+                       ? VARIANT_TRANS | VARIANT_PENDING_OK | VARIANT_GRADIENT
+                       : VARIANT_TRANS | VARIANT_PENDING_OK;
+            PROTECT(x = evalv (x, rho, vrt));
+            if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+                x_grad = R_gradient;
+                R_variant_result &= ~VARIANT_GRADIENT_FLAG;
+            }
+            PROTECT(x_grad);
+            nprotect += 1;
             x_transposed = R_variant_result;
-            PROTECT(y = evalv (y, rho, 
-                x_transposed || IS_S4_OBJECT(x) && (hm = R_has_methods(op))
-                  ? VARIANT_PENDING_OK 
-                  : VARIANT_TRANS | VARIANT_PENDING_OK));
+            if (x_transposed || IS_S4_OBJECT(x) && (hm = R_has_methods(op)))
+                vrt &= ~ VARIANT_TRANS;
+            PROTECT(y = evalv (y, rho, vrt));
+            if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+                y_grad = R_gradient;
+                R_variant_result &= ~VARIANT_GRADIENT_FLAG;
+            }
+            PROTECT(y_grad);
+            nprotect += 1;
             y_transposed = R_variant_result;
             R_variant_result = 0;
             nprotect += 2;
@@ -793,6 +844,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
             if ((IS_S4_OBJECT(x) || IS_S4_OBJECT(y))
                   && (hm == -1 ? R_has_methods(op) : hm)) {
+                SEXP ox = x;
                 SEXP value;
                 /* we don't want a transposed argument if the other is an 
                    S4 object, since that's not good for dispatch. */
@@ -801,8 +853,8 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     PROTECT (a = CONS(x,R_NilValue));
                     x = do_transpose (R_NilValue,R_NilValue,a,rho,0);
                     UNPROTECT(1);
-                    REPROTECT(x,ix);
-                    x_transposed = 0;
+                    PROTECT(x);
+                    nprotect += 1;
                 }
                 PROTECT(args = CONS(x,CONS(y,R_NilValue)));
                 nprotect += 1;
@@ -813,6 +865,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                     R_Visible = TRUE;
                     return value;
                 }
+                x = ox;
             }
 
             /* Switch to crossprod or tcrossprod to handle a transposed arg. */
@@ -847,11 +900,19 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             }
         }
     }
+    else {  /* crossprod or tcrossprod */
 
-    /* Handle the one-argument case of crossprod and tcrossprod. */
+        if (HAS_GRADIENT_IN_CELL(args)) 
+            x_grad = GRADIENT_IN_CELL(args);
 
-    if (y == R_NilValue && primop != 0) 
-        y = x;
+        if (HAS_GRADIENT_IN_CELL(CDR(args))) 
+            y_grad = GRADIENT_IN_CELL(CDR(args));
+
+        if (y == R_NilValue) { /* one argument, second assumed same as first */
+            y = x;
+            y_grad = x_grad;
+        }
+    }
 
     /* Check for bad arguments. */
 
@@ -962,6 +1023,7 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     int pipeline = inhlpr && !helpers_not_pipelining_now;
     int split = !inhlpr || helpers_not_multithreading_now ? 0 : helpers_num+1;
     SEXP op1 = x, op2 = y;
+    SEXP gr1 = x_grad, gr2 = y_grad;
 
     helpers_task_proc *task_proc = 0;
     int flags = 0;
@@ -1064,7 +1126,10 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         else {  /* crossprod or tcrossprod, real, not dot product, not all 0s */
             if (nrows==1 || ncols==1) {
                 if (primop==1) {
-                    if (ncols==1) { op1 = y; op2 = x; }
+                    if (ncols==1) { 
+                        op1 = y; op2 = x; 
+                        gr1 = y_grad; gr2 = x_grad; 
+                    }
                     if (R_mat_mult_with_BLAS[2]) {
                         task_proc = task_matprod_vec_mat_BLAS;
                         if (!R_BLAS_in_helpers) inhlpr = 0;
@@ -1073,7 +1138,10 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                         par_matprod_vec_mat (ans, op1, op2, split, pipeline);
                 }
                 else {
-                    if (nrows==1) { op1 = y; op2 = x; }
+                    if (nrows==1) { 
+                        op1 = y; op2 = x; 
+                        gr1 = y_grad; gr2 = x_grad; 
+                    }
                     if (R_mat_mult_with_BLAS[1]) {
                         task_proc = task_matprod_mat_vec_BLAS;
                         if (!R_BLAS_in_helpers) inhlpr = 0;
@@ -1106,6 +1174,14 @@ static SEXP do_matprod (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
 
     PROTECT(ans = allocMatrix1 (ans, nrows, ncols));
+
+    /* Handle gradient. */
+
+    if (x_grad != R_NilValue || y_grad != R_NilValue) {
+        R_gradient = matprod_gradient 
+                      (x_grad, y_grad, op1, op2, primop, nrows, k, ncols);
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
 
     /* Add names to the result as appropriate. */
 
@@ -1342,6 +1418,10 @@ static SEXP do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     if (VARIANT_KIND(variant) == VARIANT_TRANS) {
         R_variant_result = 1;
+        if (HAS_GRADIENT_IN_CELL(args)) {
+            R_variant_result |= VARIANT_GRADIENT_FLAG;
+            R_gradient = GRADIENT_IN_CELL(args);
+        }
         return a;
     }
 
@@ -1411,6 +1491,20 @@ static SEXP do_transpose (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         UNPROTECT(1);
     }
     copyMostAttrib(a, r);
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        if (TYPEOF(r) == VECSXP) {
+            R_gradient = copy_list_recycled_byrow_gradient
+                           (GRADIENT_IN_CELL(args), ncol, len);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
+        else if (TYPEOF(r) == REALSXP) {
+            R_gradient = copy_numeric_recycled_byrow_gradient
+                           (GRADIENT_IN_CELL(args), ncol, len);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
+    }
+
     UNPROTECT(1);
     return r;
 
@@ -1604,15 +1698,22 @@ static SEXP do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* colSums(x, n, p, na.rm) and also the same with "row" and/or "Means". */
 
-void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
+void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP na)
 {
-    int keepNA = op&1;        /* Don't skip NA/NaN elements? */
+    if (LENGTH(ans) == 0) return;
+
+    int keepNA = na==R_NilValue;  /* Don't skip NA/NaN elements? */
     int Means = op&2;         /* Find means rather than sums? */
-    unsigned n = op>>3;       /* Number of rows in matrix */
-    unsigned p = LENGTH(ans); /* Number of columns in matrix */
-    double *a = REAL(ans);    /* Pointer to start of result vector */
+    unsigned p = (op>>2) & 0x7fffffff;  /* Number of columns in matrix */
+    unsigned n = LENGTH(x)/LENGTH(ans); /* Number of rows in matrix */
+    unsigned o = op>>33;      /* Offset of start in ans */
     int np = n*p;             /* Number of elements we need in total */
     int avail = 0;            /* Number of input elements known to be computed*/
+
+    double *a = REAL(ans)+o;  /* Pointer to start in result vector */
+    double *init = op&1 ? a : 0; /* array for initializing sums, to 0 if null */
+                                 /*   - only for summing reals */
+    o *= n;                   /* Now offset of start in x */
 
     int cnt;                  /* # elements not NA/NaN, if Means and !keepNA */
     int i, j;                 /* Row and column indexes */
@@ -1624,16 +1725,16 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
     HELPERS_SETUP_OUT (n>500 ? 4 : n>50 ? 5 : 6);
 
     if (TYPEOF(x) == REALSXP) {
-        double *rx = REAL(x);
+        const double *rx = REAL(x) + o;
         int e;
         k = 0;
         j = 0;
         if (keepNA) {
             if (p & 1) {  /* sum first column if there are an odd number */
-                long double sum;
+                long double sum = init ? init[j] : 0.0;
                 e = k + n;
                 if (avail < e) HELPERS_WAIT_IN1 (avail, e-1, np);
-                sum = (n & 1) ? rx[k++] : 0.0;
+                if (n & 1) sum += rx[k++];
                 while (k < e) {
                     sum += rx[k++];
                     sum += rx[k++];
@@ -1642,17 +1743,14 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
                 HELPERS_NEXT_OUT (j);
             }
             while (j < p) {  /* sum pairs of columns */
-                long double sum, sum2;
+                long double sum = init ? init[j] : 0.0;
+                long double sum2 = init ? init[j+1] : 0.0;
                 e = k + 2*n;
                 if (avail < e) HELPERS_WAIT_IN1 (avail, e-1, np);
                 if (n & 1) {
-                    sum = rx[k];
-                    sum2 = rx[k+n];
+                    sum += rx[k];
+                    sum2 += rx[k+n];
                     k += 1;
-                }
-                else {
-                    sum = 0;
-                    sum2 = 0;
                 }
                 while (k+n < e) {
                     sum += rx[k];
@@ -1670,12 +1768,14 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
             }
         }
         else { /* ! keepNA */
+            const double *rna = REAL(na);
             if (!Means) {
                 long double sum;
                 while (j < p) {
+                    sum = init ? init[j] : 0.0;
                     if (avail < k+n) HELPERS_WAIT_IN1 (avail, k+n-1, np);
-                    for (sum = 0.0, i = n; i > 0; i--, k++)
-                        if (!ISNAN(rx[k])) sum += rx[k];
+                    for (i = n; i > 0; i--, k++)
+                        if (!ISNAN(rna[k])) sum += rx[k];
                     a[j] = sum;
                     HELPERS_NEXT_OUT (j);
                 }
@@ -1683,9 +1783,10 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
             else {
                 long double sum;
                 while (j < p) {
+                    sum = init ? init[j] : 0.0;
                     if (avail < k+n) HELPERS_WAIT_IN1 (avail, k+n-1, np);
-                    for (cnt = 0, sum = 0.0, i = n; i > 0; i--, k++)
-                        if (!ISNAN(rx[k])) { cnt += 1; sum += rx[k]; }
+                    for (cnt = 0, i = n; i > 0; i--, k++)
+                        if (!ISNAN(rna[k])) { cnt += 1; sum += rx[k]; }
                     a[j] = sum/cnt;
                     HELPERS_NEXT_OUT (j);
                 }
@@ -1700,7 +1801,7 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
 
         switch (TYPEOF(x)) {
         case INTSXP:
-            ix = INTEGER(x);
+            ix = INTEGER(x) + o;
             k = 0;
             j = 0;
             while (j < p) {
@@ -1747,13 +1848,18 @@ void task_colSums_or_colMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
 
 #define rowSums_together 1024 /* Sum this number of rows (or fewer) together */
 
-void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
+void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP na)
 {
-    int keepNA = op&1;        /* Don't skip NA/NaN elements? */
+    if (LENGTH(ans) == 0) return;
+
+    int keepNA = na==R_NilValue;  /* Don't skip NA/NaN elements? */
     int Means = op&2;         /* Find means rather than sums? */
-    unsigned p = op>>3;       /* Number of columns in matrix */
-    unsigned n = LENGTH(ans); /* Number of rows in matrix */
-    double *a = REAL(ans);    /* Pointer to result vector, initially the start*/
+    unsigned n = (op>>2) & 0x7fffffff;  /* Number of rows in matrix */
+    unsigned p = LENGTH(x)/LENGTH(ans); /* Number of columns in matrix */
+    unsigned o = op>>33;      /* Offset of start in ans */
+
+    double *a = REAL(ans)+o;  /* Pointer to start in result vector */
+    o *= p;                   /* Now offset of start in x */
 
     int i, j;                 /* Row and column indexes */
 
@@ -1772,7 +1878,7 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
             int k, u;
             int *c;
 
-            rx = REAL(x) + i;
+            rx = REAL(x) + o + i;
             u = n - i;
             if (u > rowSums_together) u = rowSums_together;
 
@@ -1817,13 +1923,18 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
 
             else { /* ! keepNA */
 
+                double *rna = REAL(na);
+                double *rx0 = rx;
+
                 if (!Means) {
                     s = sums;
                     for (k = u; k > 0; k--, s++) 
                         *s = 0.0; 
                     for (j = p; j > 0; j--) {
-                        for (k = u, s = sums, rx2 = rx; k > 0; k--, s++, rx2++)
-                            if (!ISNAN(*rx2)) *s += *rx2;
+                        for (k = u, s = sums, rx2 = rx; 
+                             k > 0; 
+                             k--, s++, rx2++)
+                            if (!ISNAN(rna[rx2-rx0])) *s += *rx2;
                         rx += n;
                     }
                     for (k = u, s = sums; k > 0; k--, a++, s++) 
@@ -1838,7 +1949,7 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
                         for (k = u, s = sums, rx2 = rx, c = cnts; 
                              k > 0; 
                              k--, s++, rx2++, c++)
-                            if (!ISNAN(*rx2)) { *s += *rx2; *c += 1; }
+                            if (!ISNAN(rna[rx2-rx0])) { *s += *rx2; *c += 1; }
                         rx += n;
                     }
                     for (k = u, s = sums, c = cnts; k > 0; k--, a++, s++, c++) 
@@ -1863,7 +1974,7 @@ void task_rowSums_or_rowMeans (helpers_op_t op, SEXP ans, SEXP x, SEXP ignored)
         case INTSXP:
             i = 0;
             while (i < n) {
-                ix = INTEGER(x) + i;
+                ix = INTEGER(x) + o + i;
                 for (cnt = 0, lsum = 0, j = 0; j < p; j++, ix += n)
                     if (*ix != NA_INTEGER) {
                         cnt += 1; 
@@ -1913,6 +2024,9 @@ static SEXP do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     checkArity(op, args);
 
+    SEXP grad = 
+          HAS_GRADIENT_IN_CELL(args) ? GRADIENT_IN_CELL(args) : R_NilValue;
+
     /* we let x be being computed */
     x = CAR(args); args = CDR(args);
     /* other arguments we wait for */
@@ -1942,16 +2056,21 @@ static SEXP do_colsum (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     if (OP < 2) { /* columns */
         ans = allocVector (REALSXP, p);
-        DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_colSums,
+        DO_NOW_OR_LATER2 (variant, LENGTH(x) >= T_colSums,
           HELPERS_PIPE_IN1_OUT, task_colSums_or_colMeans, 
-          ((helpers_op_t)n<<3) | (OP<<1) | !NaRm, ans, x);
+          ((helpers_op_t)p<<2) | (OP<<1)&2, ans, x, NaRm ? x : R_NilValue);
     }
 
     else { /* rows */
         ans = allocVector (REALSXP, n);
-        DO_NOW_OR_LATER1 (variant, LENGTH(x) >= T_rowSums,
+        DO_NOW_OR_LATER2 (variant, LENGTH(x) >= T_rowSums,
           HELPERS_PIPE_OUT, task_rowSums_or_rowMeans, 
-          ((helpers_op_t)p<<3) | (OP<<1) | !NaRm, ans, x);
+          ((helpers_op_t)n<<2) | (OP<<1)&2, ans, x, NaRm ? x : R_NilValue);
+    }
+
+    if (grad != R_NilValue) {
+        R_gradient = rowcolsumsmeans_gradient (grad, x, OP, !NaRm, n, p);
+        R_variant_result = VARIANT_GRADIENT_FLAG;
     }
 
     return ans;
@@ -1994,10 +2113,11 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
     nans = (R_len_t) d;
 
     PROTECT(ans = allocVector(TYPEOF(vals), nans));
-    if (lendat == 0)
-        set_elements_to_NA_or_NULL (ans, 0, nans);
-    else
+
+    if (lendat > 0)
         copy_elements_recycled (ans, 0, vals, nans);
+    else if (isVectorAtomic(ans)) /* VECSXP/EXPRSXP already are R_NilValue */
+        Rf_set_elements_to_NA (ans, 0, 1, nans);
 
     if (nd > 0) {
         ans = dimgets(ans, dims);
@@ -2005,6 +2125,22 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
         if (TYPEOF(dimnames) == VECSXP 
          || TYPEOF(dimnames) == LISTSXP) /* for now */
             ans = dimnamesgets(ans, dimnames);
+    }
+
+    SEXP grad = R_NilValue;
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        PROTECT(ans);
+        if (TYPEOF(ans) == VECSXP)
+            grad = copy_list_recycled_gradient(GRADIENT_IN_CELL(args), nans);
+        else if (TYPEOF(ans) == REALSXP)
+            grad = copy_numeric_recycled_gradient(GRADIENT_IN_CELL(args), nans);
+        UNPROTECT(1);
+    }
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
     }
 
     UNPROTECT(2);
@@ -2130,57 +2266,76 @@ SEXP attribute_hidden do_lengths(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-/** Internal 'diag' routine. Adapted from R-3.0.0, (C) 2012 The R Core Team 
+/** Internal 'diag' routine. Adapted from R-3.0.0, (C) 2012 The R Core Team.
+    Handles diag(x) when x is a vector, to create a matrix with x on diagonal.
  **/
 
 SEXP attribute_hidden do_diag(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, x, snr, snc;
     int nr = 1, nc = 1, nprotect = 1;
+    SEXP grad = R_NilValue;
 
     checkArity(op, args);
     x = CAR(args);
+    if (HAS_GRADIENT_IN_CELL(args))
+        grad = GRADIENT_IN_CELL(args);
     snr = CADR(args);
     snc = CADDR(args);
+
     nr = asInteger(snr);
     if (nr == NA_INTEGER)
-	error(_("invalid 'nrow' value (too large or NA)"));
+        error(_("invalid 'nrow' value (too large or NA)"));
     if (nr < 0)
-	error(_("invalid 'nrow' value (< 0)"));
+        error(_("invalid 'nrow' value (< 0)"));
     nc = asInteger(snc);
     if (nc == NA_INTEGER)
-	error(_("invalid 'ncol' value (too large or NA)"));
+        error(_("invalid 'ncol' value (too large or NA)"));
     if (nc < 0)
-	error(_("invalid 'ncol' value (< 0)"));
+        error(_("invalid 'ncol' value (< 0)"));
     int mn = (nr < nc) ? nr : nc;
     if (mn > 0 && LENGTH(x) == 0)
-	error(_("'x' must have positive length"));
+        error(_("'x' must have positive length"));
 
-   if ((double)nr * (double)nc > INT_MAX)
-	error(_("too many elements specified"));
+    if ((double)nr * (double)nc > INT_MAX)
+        error(_("too many elements specified"));
+    R_len_t nn = nr * nc;
 
-   if (TYPEOF(x) == CPLXSXP) {
-       PROTECT(ans = allocMatrix(CPLXSXP, nr, nc));
-       int nx = LENGTH(x);
-       R_len_t NR = nr;
-       Rcomplex *rx = COMPLEX(x), *ra = COMPLEX(ans), zero;
-       zero.r = zero.i = 0.0;
-       for (R_len_t i = 0; i < NR*nc; i++) ra[i] = zero;
-       for (int j = 0; j < mn; j++) ra[j * (NR+1)] = rx[j % nx];
-  } else {
-       if(TYPEOF(x) != REALSXP) {
-	   PROTECT(x = coerceVector(x, REALSXP));
-	   nprotect++;
-       }
-       PROTECT(ans = allocMatrix(REALSXP, nr, nc));
-       int nx = LENGTH(x);
-       R_len_t NR = nr;
-       double *rx = REAL(x), *ra = REAL(ans);
-       for (R_len_t i = 0; i < NR*nc; i++) ra[i] = 0.0;
-       for (int j = 0; j < mn; j++) ra[j * (NR+1)] = rx[j % nx];
-   }
-   UNPROTECT(nprotect);
-   return ans;
+    if (TYPEOF(x) == CPLXSXP) {
+        PROTECT(ans = allocMatrix(CPLXSXP, nr, nc));
+        int nx = LENGTH(x);
+        Rcomplex *rx = COMPLEX(x), *ra = COMPLEX(ans), zero;
+        zero.r = zero.i = 0.0;
+        for (R_len_t i = 0; i < nn; i++) ra[i] = zero;
+        for (int j = 0; j < mn; j++) ra[j*nr+j] = rx[j % nx];
+    }
+    else {
+        if (TYPEOF(x) != REALSXP) {
+            if (TYPEOF(x) == VECSXP) {
+                PROTECT (grad = as_numeric_gradient (grad, LENGTH(x)));
+                nprotect++;
+            }
+            else
+                grad = R_NilValue;
+            PROTECT (x = coerceVector(x, REALSXP));
+            nprotect++;
+        }
+        PROTECT(ans = allocMatrix(REALSXP, nr, nc));
+        int nx = LENGTH(x);
+        double *rx = REAL(x), *ra = REAL(ans);
+        for (R_len_t i = 0; i < nn; i++) ra[i] = 0.0;
+        for (int j = 0; j < mn; j++) ra[j*nr+j] = rx[j % nx];
+        if (grad != R_NilValue)
+            grad = create_diag_matrix_gradient (grad, nx, nr, mn, nn);
+    }
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(nprotect);
+    return ans;
 }
 
 
@@ -2197,20 +2352,20 @@ attribute_hidden FUNTAB R_FunTab_array[] =
 
 /* Internal */
 
-{"matrix",	do_matrix,	0,    1000011,	7,	{PP_FUNCALL, PREC_FN,	0}},
-{"array",	do_array,	0,    1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"drop",	do_drop,	0,    1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"matrix",	do_matrix,	0,   11000011,	7,	{PP_FUNCALL, PREC_FN,	0}},
+{"array",	do_array,	0,   11000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"drop",	do_drop,	0,   11000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"row",		do_rowscols,	1,    1011011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"col",		do_rowscols,	2,    1011011,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"crossprod",	do_matprod,	1,    1011011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
-{"tcrossprod",	do_matprod,	2,    1011011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
-{"t.default",	do_transpose,	0,    1011011,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"crossprod",	do_matprod,	1,   21011011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
+{"tcrossprod",	do_matprod,	2,   21011011,	2,	{PP_FUNCALL, PREC_FN,	  0}},
+{"t.default",	do_transpose,	0,   11011011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"aperm",	do_aperm,	0,    1000011,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"colSums",	do_colsum,	0,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"colMeans",	do_colsum,	1,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"rowSums",	do_colsum,	2,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"rowMeans",	do_colsum,	3,    1011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"diag",        do_diag,        0,      11,     3,      {PP_FUNCALL, PREC_FN,	0}},
+{"colSums",	do_colsum,	0,   11011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"colMeans",	do_colsum,	1,   11011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"rowSums",	do_colsum,	2,   11011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"rowMeans",	do_colsum,	3,   11011011,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"diag",        do_diag,        0,   10000011,	3,      {PP_FUNCALL, PREC_FN,	0}},
 {"lengths",     do_lengths,     0,      11,     2,      {PP_FUNCALL, PREC_FN,   0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}

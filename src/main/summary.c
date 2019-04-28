@@ -1,6 +1,6 @@
 /*
  *  pqR : A pretty quick version of R
- *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018 by Radford M. Neal
+ *  Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019 by Radford M. Neal
  *
  *  Based on R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
@@ -200,10 +200,10 @@ static Rboolean attribute_noinline imin_max
     return updated;
 }
 
-static Rboolean attribute_noinline rmin_max
-                      (double *x, int n, double *value, Rboolean narm, int max)
+static R_len_t attribute_noinline rmin_max
+                 (double *x, int n, double *value, Rboolean narm, int max)
 {
-    int updated = FALSE;
+    R_len_t j = -1;
     double s = 0;
 
     if (n == 0) goto ret;
@@ -220,13 +220,13 @@ static Rboolean attribute_noinline rmin_max
 
     /* Look at values, update max or min, skip or exit for NaN values. */
 
-    s = x[i];
+    s = x [j = i];
     i += 1;
 
     if (max) {
         while (i < n) {
             if (x[i] > s)        /* never true if x[i] is a NaN */
-                s = x[i];
+                s = x [j = i];
             else if (x[i] <= s)  /* if so, not a NaN */
                 ;
             else { /* a NaN value */
@@ -238,7 +238,7 @@ static Rboolean attribute_noinline rmin_max
     else { /* min */
         while (i < n) {
             if (x[i] < s)        /* never true if x[i] is a NaN */
-                s = x[i];
+                s = x [j = i];
             else if (x[i] >= s)  /* if so, not a NaN */
                 ;
             else { /* a NaN value */
@@ -248,19 +248,17 @@ static Rboolean attribute_noinline rmin_max
         }
     }
 
-    updated = TRUE;
     goto ret;
 
   nan:
 
-    updated = TRUE;
-    s = x[i];
+    s = x [j = i];
 
     /* Make NA trump other NaN values. */
 
     while (i < n) {
         if (ISNA(x[i])) {
-            s = x[i];
+            s = x [j = i];
             goto ret;
         }
         i += 1;
@@ -269,7 +267,8 @@ static Rboolean attribute_noinline rmin_max
   ret:
 
     *value = s;
-    return updated;
+
+    return j+1;  /* 0 if not found, else 1-based index of min/max element */
 }
 
 static Rboolean smax(SEXP x, SEXP *value, Rboolean narm)
@@ -362,52 +361,50 @@ static SEXP do_mean (SEXP call, SEXP op, SEXP args, SEXP env)
 {
     long double s, si, t, ti;
     int_fast64_t smi;
-    SEXP x, ans;
+    SEXP x, x_grad, ans, grad;
     int n, i;
 
     x = CAR(args);
+    x_grad = HAS_GRADIENT_IN_CELL(args) ? GRADIENT_IN_CELL(args) : R_NilValue;
+    grad = R_NilValue;
 
     switch(TYPEOF(x)) {
     case LGLSXP:
     case INTSXP:
         n = LENGTH(x);
-        PROTECT(ans = allocVector1REAL());
         smi = 0;
         for (i = 0; i < n; i++) {
-            if(INTEGER(x)[i] == NA_INTEGER) {
-                REAL(ans)[0] = R_NaReal;
-                UNPROTECT(1);
-                return ans;
-            }
+            if (INTEGER(x)[i] == NA_INTEGER)
+                return ScalarReal(R_NaReal);
             smi += INTEGER(x)[i];
         }
-        REAL(ans)[0] = (double)smi / n;
+        ans = ScalarReal ((double)smi / n);
         break;
     case REALSXP:
         n = LENGTH(x);
-        PROTECT(ans = allocVector1REAL());
         s = 0;
         for (i = 0; i < n; i++) 
             s += REAL(x)[i];
         s /= n;
-        if(R_FINITE((double)s)) {
+        if (R_FINITE((double)s)) {
             t = 0;
             for (i = 0; i < n; i++) 
                 t += REAL(x)[i]-s;
             s += t/n;
         }
-        REAL(ans)[0] = s;
+        ans = ScalarReal(s);
+        if (x_grad != R_NilValue && R_FINITE(s))
+            grad = mean_gradient (x_grad, n);
         break;
     case CPLXSXP:
         n = LENGTH(x);
-        PROTECT(ans = allocVector(CPLXSXP, 1));
         s = si = 0;
         for (i = 0; i < n; i++) {
             s += COMPLEX(x)[i].r;
             si += COMPLEX(x)[i].i;
         }
         s /= n; si /= n;
-        if( R_FINITE((double)s) && R_FINITE((double)si) ) {
+        if (R_FINITE((double)s) && R_FINITE((double)si)) {
             t = ti = 0;
             for (i = 0; i < n; i++) {
                 t += COMPLEX(x)[i].r-s;
@@ -415,14 +412,31 @@ static SEXP do_mean (SEXP call, SEXP op, SEXP args, SEXP env)
             }
             s += t/n; si += ti/n;
         }
+        ans = allocVector (CPLXSXP, 1);
         COMPLEX(ans)[0].r = s;
         COMPLEX(ans)[0].i = si;
         break;
     default:
         error(R_MSG_type, type2char(TYPEOF(x)));
     }
-    UNPROTECT(1);
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     return ans;
+}
+
+static int has_na_rm_or_dots (SEXP args)
+{
+    while (args != R_NilValue) {
+        if (TAG(args) == R_NaRmSymbol || CAR(args) == R_DotsSymbol)
+            return 1;
+        args = CDR(args);
+    }
+
+    return 0;
 }
 
 /* do_summary provides a variety of data summaries
@@ -430,107 +444,51 @@ static SEXP do_mean (SEXP call, SEXP op, SEXP args, SEXP env)
 
    NOTE: mean used to be done here, but is now separate, since it has
    nothing in common with the others (has only one arg and no na.rm, and
-   dispatch is from an R-level generic). 
+   dispatch is from an R-level generic). */
 
-   Note that for the fast forms, na.rm must be FALSE. */
-
-static SEXP do_fast_sum (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
+static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
-    /* A variant return value for arg looks just like an arg of length one, 
-       and can be treated the same.  An arg of length one can be returned
-       as the result if it has the right type and no attributes. */
+    int iop = PRIMVAL(op);
+    int na_rm_or_dots = has_na_rm_or_dots(args);
+    int vrt = iop==0 /*sum*/ && !na_rm_or_dots ? VARIANT_ANY_ATTR | VARIANT_SUM 
+                                               : VARIANT_ANY_ATTR;
 
-    switch (TYPEOF(arg)) {
+    PROTECT (args = (variant & VARIANT_GRADIENT)
+                     ? evalList_gradient (args, env, vrt, INT_MAX, 0)
+                     : evalList_v (args, env, vrt));
 
-    case NILSXP:  
-        return ScalarIntegerMaybeConst (0);
-
-    case LGLSXP:  /* assumes LOGICAL and INTEGER really the same */
-        WAIT_UNTIL_COMPUTED(arg);
-        return ScalarInteger (isum (INTEGER(arg), LENGTH(arg), 0, call));
-
-    case INTSXP:  
-        if (LENGTH(arg) == 1 && !HAS_ATTRIB(arg))
-            break;
-        WAIT_UNTIL_COMPUTED(arg);
-        return ScalarInteger (isum (INTEGER(arg), LENGTH(arg), 0, call));
-
-    case REALSXP:
-        if (LENGTH(arg) == 1 && !HAS_ATTRIB(arg)) 
-            break;
-        WAIT_UNTIL_COMPUTED(arg);
-        return ScalarReal (rsum (REAL(arg), LENGTH(arg), 0));
-
-    case CPLXSXP:
-        if (LENGTH(arg) == 1 && !HAS_ATTRIB(arg)) 
-            break;
-        WAIT_UNTIL_COMPUTED(arg);
-        return ScalarComplex (csum (COMPLEX(arg), LENGTH(arg), 0));
-
-    default:
-        errorcall(call, R_MSG_type, type2char(TYPEOF(arg)));
-    }
-
-    if (! (variant & VARIANT_PENDING_OK) )
-        WAIT_UNTIL_COMPUTED(arg);
-
-    return arg;
-}
-
-static SEXP do_fast_prod (SEXP call, SEXP op, SEXP arg, SEXP env, int variant)
-{
-    switch (TYPEOF(arg)) {
-
-    case NILSXP:  
-        return ScalarRealMaybeConst (1.0);
-
-    case LGLSXP:  /* assumes LOGICAL and INTEGER really the same */
-    case INTSXP:  
-        return ScalarReal (iprod (INTEGER(arg), LENGTH(arg), 0));
-
-    case REALSXP:
-        return ScalarReal (rprod (REAL(arg), LENGTH(arg), 0));
-
-    case CPLXSXP:
-        return ScalarComplex (cprod (COMPLEX(arg), LENGTH(arg), 0));
-
-    default:
-        errorcall(call, R_MSG_type, type2char(TYPEOF(arg)));
-    }
-}
-
-static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
-{
     SEXP ans, a, stmp = NA_STRING /* -Wall */, scum = NA_STRING, call2;
     double tmp = 0.0, s;
     Rcomplex z, ztmp, zcum={0.0, 0.0} /* -Wall */;
     int itmp = 0, icum=0, int_a, real_a, empty, warn = 0 /* dummy */;
-    int iop, first;
+    int first;
     SEXPTYPE ans_type;/* only INTEGER, REAL, COMPLEX or STRSXP here */
 
-    Rboolean narm;
-    int updated;
-	/* updated := 1 , as soon as (i)tmp (do_summary),
-	   or *value ([ir]min / max) is assigned */
+    Rboolean narm = FALSE;
+    int updated;   /* updated := 1/ix , as soon as (i)tmp (do_summary),
+                      or *value ([ir]min / max) is assigned */
 
-    /* match to foo(..., na.rm=FALSE) */
-    PROTECT(args = fixup_NaRm(args));
-    PROTECT(call2 = LCONS(CAR(call),args));
-
-    if (DispatchGroup("Summary", call2, op, args, env, &ans, 0)) {
-	UNPROTECT(2);
-	return(ans);
+    if (isObject(CAR(args)) || isObject(CADR(args))) {
+        args = fixup_NaRm(args);
+        UNPROTECT_PROTECT(args);
+        PROTECT(call2 = LCONS(CAR(call),args));
+        if (DispatchGroup("Summary", call2, op, args, env, &ans, 0)) {
+            UNPROTECT(2);
+            return(ans);
+        }
+        UNPROTECT(1);
+        narm = asLogical (matchArgExact (R_NaRmSymbol, &args));
     }
-    UNPROTECT(1);
+    else if (na_rm_or_dots) {
+        args = fixup_NaRm(args);
+        UNPROTECT_PROTECT(args);
+        narm = asLogical (matchArgExact (R_NaRmSymbol, &args));
+    }
 
-#ifdef DEBUG_Summary
-    REprintf("C do_summary(op%s, *): did NOT dispatch\n", PRIMNAME(op));
-#endif
+#   ifdef DEBUG_Summary
+        REprintf("C do_summary(op%s, *): did NOT dispatch\n", PRIMNAME(op));
+#   endif
 
-    ans = matchArgExact(R_NaRmSymbol, &args);
-    narm = asLogical(ans);
-
-    iop = PRIMVAL(op);
     switch(iop) {
     case 0:/* sum */
         /* we need to find out if _all_ the arguments are integer or logical
@@ -577,19 +535,24 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 
     /*-- now loop over all arguments.  Do the 'op' switch INSIDE : */
 
+    SEXP grad;
+    PROTECT(grad = R_NilValue);
+
     updated = 0;
-    empty = 1; /* for min/max, 1 if only 0-length arguments, or NA with na.rm=T */
+    empty = 1;  /* for min/max, 1 if only 0-len arguments, or NA with na.rm=T */
+
     while (args != R_NilValue) {
+
 	a = CAR(args);
 
-	if(length(a) > 0) {
+	if (length(a) > 0) {
 
 	    switch(iop) {
 	    case 2:/* min */
 	    case 3:/* max */
 
 	        updated = 0;
-	        int_a = 0;/* int_a = 1	<-->	a is INTEGER */
+	        int_a = 0;  /* int_a = 1 <--> a is INTEGER */
 	        real_a = 0;
 
 		switch(TYPEOF(a)) {
@@ -601,16 +564,16 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 		    break;
 		case REALSXP:
 		    real_a = 1;
-		    if(ans_type == INTSXP) {/* change to REAL */
+		    if (ans_type == INTSXP) {/* change to REAL */
 			ans_type = REALSXP;
-			if(!empty) zcum.r = Int2Real(icum);
+			if (!empty) zcum.r = Int2Real(icum);
 		    }
                     updated = rmin_max (REAL(a), LENGTH(a), &tmp, narm, iop==3);
 		    break;
 		case STRSXP:
-		    if(!empty && ans_type == INTSXP)
+		    if (!empty && ans_type == INTSXP)
 			scum = StringFromInteger(icum, &warn);
-		    else if(!empty && ans_type == REALSXP)
+		    else if (!empty && ans_type == REALSXP)
 			scum = StringFromReal(zcum.r, &warn);
 		    ans_type = STRSXP;
 		    if (iop == 2) updated = smin(a, &stmp, narm);
@@ -620,48 +583,71 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 		    goto invalid_type;
 		}
 
-		if(updated) {/* 'a' had non-NA elements; --> "add" tmp or itmp*/
-		    DbgP1(" updated:");
-		    if(ans_type == INTSXP) {
-			DbgP3(" INT: (old)icum= %ld, itmp=%ld\n", icum,itmp);
-			if (itmp == NA_INTEGER) goto na_answer;
-			if ((iop == 2 && itmp < icum) || /* min */
-			    (iop == 3 && itmp > icum))   /* max */
-			    icum = itmp;
-		    } else if(ans_type == REALSXP) {
-			if (int_a) tmp = Int2Real(itmp);
-			DbgP3(" REAL: (old)cum= %g, tmp=%g\n", zcum.r,tmp);
-			if (ISNA(zcum.r)); /* NA trumps anything */
-			else if (ISNAN(tmp)) {
-			    if (ISNA(tmp)) zcum.r = tmp;
-			    else zcum.r += tmp;/* NA or NaN */
-			} else if(
-			    (iop == 2 && tmp < zcum.r) ||
-			    (iop == 3 && tmp > zcum.r))	zcum.r = tmp;
-		    } else if(ans_type == STRSXP) {
-			if(empty) scum = stmp;
-			else {
-			    if(int_a)
-				stmp = StringFromInteger(itmp, &warn);
-			    if(real_a)
-				stmp = StringFromReal(tmp, &warn);
-			    if(((iop == 2 && stmp != scum && Scollate(stmp, scum) < 0)) ||
-			       (iop == 3 && stmp != scum && Scollate(stmp, scum) > 0) )
-				scum = stmp;
-			}
-		    }
-		}/*updated*/ else {
-		    /*-- in what cases does this happen here at all?
-		      -- if there are no non-missing elements.
-		     */
-		    DbgP2(" NOT updated [!! RARE !!]: int_a=%d\n", int_a);
-		}
+                if (updated) {/* 'a' had non-NA elements --> "add" tmp or itmp*/
+                    DbgP1(" updated:");
+                    if (ans_type == INTSXP) {
+                        DbgP3(" INT: (old)icum= %ld, itmp=%ld\n", icum,itmp);
+                        if (itmp == NA_INTEGER) goto na_answer;
+                        if ((iop == 2 && itmp < icum) || /* min */
+                            (iop == 3 && itmp > icum))   /* max */
+                            icum = itmp;
+                    }
+                    else if (ans_type == REALSXP) {
+                        int do_grad = 1;
+                        if (int_a) tmp = Int2Real(itmp);
+                        DbgP3(" REAL: (old)cum= %g, tmp=%g\n", zcum.r,tmp);
+                        if (ISNA(zcum.r))
+                            do_grad = 0; /* NA trumps anything */
+                        else if (ISNAN(tmp)) {
+                            if (ISNA(tmp)) zcum.r = tmp;
+                            else zcum.r += tmp;/* NA or NaN */
+                        }
+                        else if (iop == 2 && tmp < zcum.r 
+                              || iop == 3 && tmp > zcum.r)
+                            zcum.r = tmp;
+                        else
+                            do_grad = 0;
+                        if (do_grad) {
+                            if (HAS_GRADIENT_IN_CELL(args)) {
+                                if (ISNAN(zcum.r))
+                                    grad = R_NilValue;
+                                else {
+                                    SEXP v = GRADIENT_IN_CELL(args);
+                                    grad = subset_range_numeric_gradient 
+                                      (v, updated-1, updated-1, LENGTH(a));
+                                }
+                                UNPROTECT_PROTECT (grad);
+                            }
+                            else if (grad != R_NilValue)
+                                UNPROTECT_PROTECT (grad = R_NilValue);
+                        }
+                    }
+                    else if (ans_type == STRSXP) {
+                        if (empty) 
+                            scum = stmp;
+                        else {
+                            if (int_a)
+                                stmp = StringFromInteger(itmp, &warn);
+                            if (real_a)
+                                stmp = StringFromReal(tmp, &warn);
+                            if (iop == 2 && stmp != scum 
+                                         && Scollate(stmp, scum) < 0
+                             || iop == 3 && stmp != scum 
+                                         && Scollate(stmp, scum) > 0)
+                                scum = stmp;
+                        }
+                    }
+                }
+                else {  /* not updated */
+                    /*-- in what cases does this happen here at all?
+                      -- if there are no non-missing elements.
+                     */
+                    DbgP2(" NOT updated [!! RARE !!]: int_a=%d\n", int_a);
+        	}
 
 		break;/*--- end of  min() / max() ---*/
 
 	    case 0:/* sum */
-
-                WAIT_UNTIL_COMPUTED(a);
 
 		switch(TYPEOF(a)) {
 		case LGLSXP:
@@ -684,19 +670,25 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 		case REALSXP:
 		    if(ans_type == INTSXP) { /* shouldn't happen */
 			ans_type = REALSXP;
-			if(!empty) zcum.r = Int2Real(icum);
+			if (!empty) zcum.r = Int2Real(icum);
 		    }
 		    zcum.r += rsum(REAL(a), LENGTH(a), narm);
+                    if (ans_type == REALSXP && HAS_GRADIENT_IN_CELL(args)) {
+                        SEXP v = GRADIENT_IN_CELL(args);
+                        grad = sum_gradient (grad, v, a, narm, LENGTH(a));
+                        UNPROTECT_PROTECT(grad);
+                    }
 		    break;
 		case CPLXSXP:
 		    if(ans_type == INTSXP) { /* shouldn't happen */
 			ans_type = CPLXSXP;
-			if(!empty) zcum.r = Int2Real(icum);
+			if (!empty) zcum.r = Int2Real(icum);
 		    } else if (ans_type == REALSXP)
 			ans_type = CPLXSXP;
 		    ztmp = csum(COMPLEX(a), LENGTH(a), narm);
 		    zcum.r += ztmp.r;
 		    zcum.i += ztmp.i;
+                    grad = R_NilValue;
 		    break;
 		default:
 		    goto invalid_type;
@@ -714,6 +706,18 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 			tmp = rprod(REAL(a), LENGTH(a), narm);
 		    else
 			tmp = iprod(INTEGER(a), LENGTH(a), narm);
+                    if (grad != R_NilValue || HAS_GRADIENT_IN_CELL(args)) {
+                        if (ISNAN(tmp) || ISNAN(zcum.r))
+                            grad = R_NilValue;
+                        else {
+                            SEXP v = 
+                              TYPEOF(a)==REALSXP && HAS_GRADIENT_IN_CELL(args) 
+                                ? GRADIENT_IN_CELL(args) : R_NilValue;
+                            grad = prod_gradient 
+                                    (grad, v, a, zcum.r, tmp, narm, LENGTH(a));
+                            UNPROTECT_PROTECT(grad);
+                        }
+                    }
 		    zcum.r *= tmp;
 		    zcum.i *= tmp;
 		    break;
@@ -727,6 +731,7 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
                         R_from_C99_complex(&zcum, C99_from_R_complex(&z)
                                                    * C99_from_R_complex(&ztmp));
                     }
+                    grad = R_NilValue;
 		    break;
 		default:
 		    goto invalid_type;
@@ -751,15 +756,10 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 		break;
 	    case STRSXP:
 		if (iop == 2 || iop == 3) {
-		    if(!empty && ans_type == INTSXP) {
+		    if (!empty && ans_type == INTSXP)
 			scum = StringFromInteger(icum, &warn);
-			UNPROTECT(1); /* scum */
-			PROTECT(scum);
-		    } else if(!empty && ans_type == REALSXP) {
+		    else if (!empty && ans_type == REALSXP)
 			scum = StringFromReal(zcum.r, &warn);
-			UNPROTECT(1); /* scum */
-			PROTECT(scum);
-		    }
 		    ans_type = STRSXP;
 		    break;
 		}
@@ -767,19 +767,21 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 		goto invalid_type;
 	    }
 	    if(ans_type < TYPEOF(a) && ans_type != CPLXSXP) {
-		if(!empty && ans_type == INTSXP)
+		if (!empty && ans_type == INTSXP)
 		    zcum.r = Int2Real(icum);
 		ans_type = TYPEOF(a);
 	    }
 	}
+
 	DbgP3(" .. upd.=%d, empty: old=%d", updated, empty);
-	if(empty && updated) empty=0;
+	if (updated) empty = 0;
 	DbgP2(", new=%d\n", empty);
+
 	args = CDR(args);
     } /*-- while(..) loop over args */
 
     /*-------------------------------------------------------*/
-    if(empty && (iop == 2 || iop == 3)) {
+    if (empty && (iop == 2 || iop == 3)) {
 	if(ans_type == STRSXP) {
 	    warningcall(call, _("no non-missing arguments, returning NA"));
 	} else {
@@ -800,7 +802,13 @@ static SEXP do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
                    break;
     case STRSXP:   SET_STRING_ELT(ans, 0, scum); break;
     }
-    UNPROTECT(1);  /* args */
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(2);  /* args, grad */
     return ans;
 
 na_answer: /* only INTSXP case currently used */
@@ -811,7 +819,7 @@ na_answer: /* only INTSXP case currently used */
     case CPLXSXP:  COMPLEX(ans)[0].r = COMPLEX(ans)[0].i = NA_REAL; break;
     case STRSXP:   SET_STRING_ELT_NA(ans, 0); break;
     }
-    UNPROTECT(1);  /* args */
+    UNPROTECT(2);  /* args, grad */
     return ans;
 
 invalid_type:
@@ -1317,14 +1325,20 @@ static SEXP do_compcases(SEXP call, SEXP op, SEXP args, SEXP rho)
     error(_("not all arguments have the same length"));
 }
 
-/* op = 0 is pmin, op = 1 is pmax
-   NULL and logicals are handled as if they had been coerced to integer.
- */
-static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
+/* op = 0 is pmin, op = 1 is pmax.  
+   Internal, and SPECIAL so can handle gradients.
+   Passed na.rm argument followed by arguments to do min/max for.
+   NULL and logicals are handled as if they had been coerced to integer. */
+
+static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
+    PROTECT (args = variant & VARIANT_GRADIENT 
+                      ? evalList_gradient (args, rho, 0, INT_MAX, 1)
+                      : evalList (args, rho));
+
     int max = PRIMVAL(op) == 1;
 
-    SEXP a, x, ans;
+    SEXP a, x, ans, grad;
     int i, j, n, len, narm;
     SEXPTYPE type, anstype;
 
@@ -1346,8 +1360,17 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
     default:
         error(_("invalid input type"));
     }
+
     a = CDR(args);
-    if(a == R_NilValue) return x; /* one input */
+    if (a == R_NilValue) {
+        /* one input */
+        if (HAS_GRADIENT_IN_CELL(args)) {
+            R_gradient = GRADIENT_IN_CELL(args);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
+        UNPROTECT(1);
+        return x;
+    }
 
     len = length(x); /* not LENGTH, as NULL is allowed */
     for(; a != R_NilValue; a = CDR(a)) {
@@ -1363,18 +1386,22 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
         default:
             error(_("invalid input type"));
         }
-        if(type > anstype) anstype = type;  /* RELIES ON SEXPTYPE ORDERING! */
+        if (type > anstype) anstype = type;  /* RELIES ON SEXPTYPE ORDERING! */
         n = length(x);
         if ((len > 0) ^ (n > 0)) {
-            // till 2.15.0:  error(_("cannot mix 0-length vectors with others"));
+            // till 2.15.0:  error(_("cannot mix 0-length vectors with others"))
             len = 0;
             break;
         }
         len = imax2(len, n);
     }
-    if(anstype < INTSXP) anstype = INTSXP;
 
-    if(len == 0) return allocVector(anstype, 0);
+    if (anstype < INTSXP) anstype = INTSXP;  /* RELIES ON SEXPTYPE ORDERING! */
+
+    if (len == 0) {
+        UNPROTECT(1);
+        return allocVector(anstype, 0);
+    }
 
     /* Check for fractional recycling (added in 2.14.0) */
     for(a = args; a != R_NilValue; a = CDR(a)) {
@@ -1386,18 +1413,24 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     PROTECT(ans = allocVector(anstype, len));
+    PROTECT(grad = R_NilValue);
+
     x = CAR(args);
-    if (TYPEOF(x) != anstype)
+    if (TYPEOF(x) != anstype) {
         x = coerceVector(CAR(args), anstype);
+        SETCAR(args,x);
+    }
     copy_elements_recycled (ans, 0, x, len);
 
-    switch(anstype) {
-    case INTSXP:
-    {
-        int *r,  *ra = INTEGER(ans), tmp;
-        for (a = CDR(args); a != R_NilValue; a = CDR(a)) {
-            x = coerceVector(CAR(a), anstype);
-            n = LENGTH(x);
+    for (a = CDR(args); a != R_NilValue; a = CDR(a)) {
+
+        x = coerceVector (CAR(a), anstype);
+        n = LENGTH(x);
+        SETCAR(a,x);
+
+        switch(anstype) {
+        case INTSXP: {
+            int *r,  *ra = INTEGER(ans), tmp;
             r = INTEGER(x);
             for (i = 0, j = 0; i < len; i++, j++) {
                 if (j >= n) j = 0;
@@ -1411,15 +1444,10 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
                 else if (max ? tmp > ra[i] : tmp < ra[i])
                     ra[i] = tmp;
             }
+            break;
         }
-        break;
-    }
-    case REALSXP:
-    {
-        double *r, *ra = REAL(ans), tmp;
-        for (a = CDR(args); a != R_NilValue; a = CDR(a)) {
-            x = coerceVector(CAR(a), anstype);
-            n = LENGTH(x);
+        case REALSXP: {
+            double *r, *ra = REAL(ans), tmp;
             r = REAL(x);
             for (i = 0, j = 0; i < len; i++, j++) {
                 if (j >= n) j = 0;
@@ -1442,15 +1470,10 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
                 else if (max ? tmp > ra[i] : tmp < ra[i])
                     ra[i] = tmp;
             }
+            break;
         }
-        break;
-    }
-    case STRSXP:
-    {
-        for (a = CDR(args); a != R_NilValue; a = CDR(a)) {
+        case STRSXP: {
             SEXP tmp, rai, new;
-            PROTECT(x = coerceVector(CAR(a), anstype));
-            n = LENGTH(x);
             for (i = 0, j = 0; i < len; i++, j++) {
                 if (j >= n) j = 0;
                 tmp = STRING_ELT (x, j);
@@ -1467,14 +1490,39 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
                 if (new != rai)
                     SET_STRING_ELT (ans, i, new);
             }
-            UNPROTECT(1);
+            break;
         }
-        break;
+        default:
+            break;
+        }
     }
-    default:
-        break;
+
+    if ((variant & VARIANT_GRADIENT) && anstype == REALSXP) {
+        SEXP dup_ans = duplicate(ans);  /* so can be modified below */
+        for (a = args; a != R_NilValue; a = CDR(a)) {
+            SEXP v = CAR(a);
+            if (HAS_GRADIENT_IN_CELL(a)) {
+                grad = minmax_gradient 
+                         (grad, GRADIENT_IN_CELL(a), dup_ans, v, len);
+                UNPROTECT_PROTECT(grad);
+            }
+            n = LENGTH(v);
+            j = 0;
+            for (i = 0; i < len; i++) {
+                if (REAL(dup_ans)[i] == REAL(v)[j])
+                    REAL(dup_ans)[i] = NA_REAL;  /* so won't match again */
+                j += 1;
+                if (j >= n) j = 0;
+            }
+        }
     }
-    UNPROTECT(1);
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(3);
     return ans;
 }
 
@@ -1484,29 +1532,20 @@ attribute_hidden FUNTAB R_FunTab_summary[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"mean",	do_mean,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"mean",	do_mean,	0,	10000011,1,	{PP_FUNCALL, PREC_FN,	0}},
 {"range",	do_range,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"which.min",	do_first_min,	0,   1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"which.max",	do_first_min,	1,   1000011,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"which",	do_which,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"complete.cases",do_compcases,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pmin",	do_pmin,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"pmax",	do_pmin,	1,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pmin",	do_pmin,	0,	1010,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"pmax",	do_pmin,	1,	1010,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* these four are group generic and so need to eval args */
-{"sum",		do_summary,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"min",		do_summary,	2,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"max",		do_summary,	3,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"prod",	do_summary,	4,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"sum",		do_summary,	0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"min",		do_summary,	2,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"max",		do_summary,	3,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"prod",	do_summary,	4,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
-};
-
-/* Fast built-in functions in this file. See names.c for documentation */
-
-attribute_hidden FASTFUNTAB R_FastFunTab_summary[] = {
-/*slow func	fast func,   code or -1  dsptch variant */
-{ do_summary,	do_fast_sum,	0,	    1,  VARIANT_ANY_ATTR|VARIANT_SUM|VARIANT_PENDING_OK },
-{ do_summary,	do_fast_prod,	4,	    1,  VARIANT_ANY_ATTR },
-{ 0,		0,		0,	    0,  0 }
 };

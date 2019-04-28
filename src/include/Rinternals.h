@@ -1011,6 +1011,9 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 (!HAS_ATTRIB(x) ? 0 : \
  TYPEOF(ATTRIB(x))==LISTSXP && TYPEOF(TAG(ATTRIB(x)))==ENVSXP ? 1 : (abort(),0))
 
+#define GRADIENT_WRT_LEN(g) (TRUELENGTH(g) + 1)
+#define SET_GRADIENT_WRT_LEN(g,l) SET_TRUELENGTH(g,l-1)
+
 #define STORE_GRAD(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
 #define SET_STORE_GRAD(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname=(v))
 
@@ -1174,6 +1177,8 @@ void SET_PRSEEN(SEXP x, int v);
 #define PROTECT(s)		Rf_protect(s)
 #define PROTECT2(s1,s2)		Rf_protect2(s1,s2) /* BEWARE! All args eval'd */
 #define PROTECT3(s1,s2,s3)	Rf_protect3(s1,s2,s3) /* before any protected */
+#define PROTECT4(s1,s2,s3,s4)	Rf_protect4(s1,s2,s3,s4)
+#define PROTECT5(s1,s2,s3,s4,s5) Rf_protect5(s1,s2,s3,s4,s5)
 #define UNPROTECT(n)		Rf_unprotect(n)
 #define UNPROTECT_PTR(s)	Rf_unprotect_ptr(s)
 
@@ -1953,6 +1958,7 @@ void Rf_PrintValue(SEXP);
 SEXP Rf_protect(SEXP);
 void Rf_protect2(SEXP, SEXP);
 void Rf_protect3(SEXP, SEXP, SEXP);
+void Rf_protect4(SEXP, SEXP, SEXP, SEXP);
 void Rf_rep_element (SEXP, int, SEXP, int, int);
 SEXP Rf_ScalarComplexMaybeConst(Rcomplex);
 SEXP Rf_ScalarIntegerMaybeConst(int);
@@ -1961,7 +1967,6 @@ SEXP Rf_ScalarRealMaybeConst(double);
 SEXP Rf_ScalarStringMaybeConst(SEXP);
 SEXP Rf_setAttrib(SEXP, SEXP, SEXP);
 void Rf_setSVector(SEXP*, int, SEXP);
-void Rf_set_elements_to_NA_or_NULL(SEXP, int, int);
 void Rf_set_symbits_in_env(SEXP);
 void Rf_setVar(SEXP, SEXP, SEXP);
 int Rf_set_var_in_frame(SEXP, SEXP, SEXP, int, int);
@@ -2407,7 +2412,6 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 #define ScalarRawMaybeConst		Rf_ScalarRawMaybeConst
 #define setAttrib		Rf_setAttrib
 #define setSVector		Rf_setSVector
-#define set_elements_to_NA_or_NULL Rf_set_elements_to_NA_or_NULL
 #define set_symbits_in_env	Rf_set_symbits_in_env
 #define setVar			Rf_setVar
 #define set_var_in_frame	Rf_set_var_in_frame

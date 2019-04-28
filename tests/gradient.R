@@ -687,18 +687,203 @@ with gradient (a=9) { r <- list(x=a,y=list(p=a^2,7,q=a^3))
                       list(r[[c(2,3)]],r[[1]]) }
 
 
+# Test gradients of sub-lists found with [.].
+
+with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[2] }
+with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[c(2,1)] }
+with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[1..2] }
+with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[c(2,1,1,3)] }
+with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[c(5,1)] }
+with gradient (a=9) { r <- list(x=a,y=a^2,z=a^3); r[1..5] }
+
+L <- matrix (list(99,33,44,66,22,11),3,2)
+G <- with gradient (L) L[3,c(2,2,1)]
+L[,]
+G[]
+str(G)
+
+L <- matrix (list(99,33,44,66,22,11),3,2)
+G <- with gradient (L) L[1,c(2,2,1)]
+L[,]
+G[]
+str(G)
+
+L <- matrix (list(99,33,44,66,22,11),3,2)
+G <- with gradient (L) L[2..3,c(2,1,2)]
+L[,]
+G[,]
+str(G)
+
+L <- matrix (list(99,33,44,66,22,11),3,2)
+G <- with gradient (L) L[c(2,3),c(2,1,2)]
+L[,]
+G[,]
+str(G)
+
+L <- matrix (list(99,33,44,66,22,11),3,2)
+G <- with gradient (L) { L[[2,2]] <- L[[2,2]]^2; L[2..3,c(2,1,2)] }
+L[,]
+G[,]
+str(G)
+
+L <- array (list(9,88,7,33,44,999,20,303,111,1111,222,3333,5555,330,1,0,-3,-2),
+            c(3,2,3))
+G <- with gradient (L) L[c(3,1,1),c(2,2,1),c(2,1,3)]
+L[,,]
+G[,,]
+str(G)
+
+
+# Test gradients of vector elements found with [[.]].
+
+with gradient (a=9) {
+  r <- numeric(4); r[[1]] <- a; r[[2]] <- a^2; r[[3]] <- a^3; r[[4]] <- sin(a)
+  list(r[[3]],r[[2]])
+}
+
+with gradient (a=c(9,5,2)) {
+  r <- numeric(4)
+  r[[1]] <- a[[2]]
+  r[[2]] <- a[[3]]^2 + a[[1]]
+  r[[3]] <- a[[3]]^3
+  r[[4]] <- sin(a[[1]])
+  list(r[[3]],r[[2]],r[[4]],r[[1]])
+}
+
+with gradient (a=c(9,5,2)) {
+  r <- numeric(4)
+  dim(r) <- c(2,2)
+  r[[1]] <- a[[2]]
+  r[[2]] <- a[[3]]^2 + a[[1]]
+  r[[3]] <- a[[3]]^3
+  r[[4]] <- sin(a[[1]])
+  list(r[[2,1]],r[[1,2]],r[[1,1]],r[[2,2]])
+}
+
+with gradient (a=c(9,5,2)) {
+  r <- numeric(12)
+  dim(r) <- c(2,3,2)
+  r[[1]] <- a[[2]]
+  r[[2]] <- a[[3]]^2 + a[[1]]
+  r[[3]] <- a[[3]]^3
+  r[[12]] <- sin(a[[1]])
+  list(r[[1,1,1]],r[[2,1,1]],r[[2,3,2]])
+}
+
+
+# Test gradients of sub-vectors found with [.].
+
+with gradient (a=9) {
+  r <- numeric(4); r[[1]] <- a; r[[2]] <- a^2; r[[3]] <- a^3; r[[4]] <- sin(a)
+  r[c(2,1,1,4)]
+}
+
+with gradient (a=9) {
+  r <- numeric(4); r[[1]] <- a; r[[2]] <- a^2; r[[3]] <- a^3; r[[4]] <- sin(a)
+  r[2..3]
+}
+
+with gradient (a=c(9,5,2)) {
+  r <- numeric(4)
+  r[[1]] <- a[[2]]
+  r[[2]] <- a[[3]]^2 + a[[1]]
+  r[[3]] <- a[[3]]^3
+  r[[4]] <- sin(a[[1]])
+  r[c(2,1,1,4)]
+}
+
+with gradient (a=c(9,5,2)) {
+  r <- numeric(4)
+  r[[1]] <- a[[2]]
+  r[[2]] <- a[[3]]^2 + a[[1]]
+  r[[3]] <- a[[3]]^3
+  r[[4]] <- sin(a[[1]])
+  r[2..3]
+}
+
+with gradient (a=c(9,5,2)) {
+  r <- numeric(4)
+  dim(r) <- c(2,2)
+  r[[1]] <- a[[2]]
+  r[[2]] <- a[[3]]^2 + a[[1]]
+  r[[3]] <- a[[3]]^3
+  r[[4]] <- sin(a[[1]])
+  list(r[2,1],r[1,2],r[1,1],r[2,2])
+}
+
+with gradient (a=c(9,5,2)) {
+  r <- numeric(6)
+  dim(r) <- c(3,2)
+  r[[1]] <- a[[2]]
+  r[[2]] <- a[[3]]^2 + a[[1]]
+  r[[3]] <- a[[3]]^3
+  r[[4]] <- sin(a[[1]])
+  list(r[2..3,1],r[1..2,c(2,1)])
+}
+
+with gradient (a=c(9,5,2)) {
+  r <- numeric(6)
+  dim(r) <- c(3,2)
+  r[[1]] <- a[[2]]
+  r[[2]] <- a[[3]]^2 + a[[1]]
+  r[[3]] <- a[[3]]^3
+  r[[4]] <- sin(a[[1]])
+  list(r[c(2,3),1],r[c(1,2),c(2,1)])
+}
+
+with gradient (a=c(9,5,2)) {
+  r <- numeric(4)
+  dim(r) <- c(2,2)
+  r[[1]] <- a[[2]]
+  r[[2]] <- a[[3]]^2 + a[[1]]
+  r[[3]] <- a[[3]]^3
+  r[[4]] <- sin(a[[1]])
+  list(r[2,c(1,1,2)],r[2,c(1,1,2)]^2)
+}
+
+with gradient (a=c(9,5,2)) {
+  r <- numeric(12)
+  dim(r) <- c(2,3,2)
+  r[[1]] <- a[[2]]
+  r[[2]] <- a[[3]]^2 + a[[1]]
+  r[[3]] <- a[[3]]^3
+  r[[12]] <- sin(a[[1]])
+  list(r[1,1,1],r[2,1,1],r[2,3,2])
+}
+
+with gradient (a=c(9,5,2)) {
+  r <- numeric(12)
+  dim(r) <- c(2,3,2)
+  r[[1]] <- a[[2]]
+  r[[2]] <- a[[3]]^2 + a[[1]]
+  r[[3]] <- a[[3]]^3
+  r[[8]] <- a[[3]]
+  r[[10]] <- sqrt(a[[1]])
+  r[[12]] <- sin(a[[1]])
+  list(r[c(2,1),1,1],r[2,2,2],r[2,c(3,1,1,2),2])
+}
+
+with gradient (a=c(3,5)) a[1..5]
+with gradient (a=c(3,5)) a[c(5,1,7,2,3)]
+with gradient (a=list(3,5)) a[1..5]
+with gradient (a=list(3,5)) a[c(5,1,7,2,3)]
+
+
 # Test 'compute gradient'.
 
-f <- function (x) compute gradient (x) x^2 as (123*x) # wrong, see if happens
+f <- function (x) compute gradient (x) x^2 as 123*x # wrong, see if happens
 
 with gradient (a=12) f(a)
 with gradient (a=12) f(a^2)
 
-g <- function (x,y)
-  compute gradient (x,y) list(x,y,x*y)
-  as (list(8,9,x+y), list(x,y,7))  # wrong, but see if it happens
+g <- function (x,y)  # assume length(x) == length(y)
+  compute gradient (x,y) list(x+y,x-y,x*y)
+  as # wrong, but see if it happens
+     list (diag(x*y,length(x)), diag(x+y,length(x)), diag(x+y,length(x))), 
+     list (diag(x-y,length(x)), diag(x-y,length(x)), diag(7*x*y,length(x)))
 
 with gradient (z=9) g(100*z,z+1)
+with gradient (z=c(9,7)) g(100*z,z+1)
 
 
 # Test subassign operations.
@@ -739,6 +924,30 @@ with gradient (a=3.01) {
   r <- list(x=a^2,y=a^3,z=a^4)
   print(gradient_of(r))
   cat("--\n")
+  r[2] <- NULL
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r[1..2] <- NULL
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r[c(2,2,1,1,2)] <- NULL
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
   r$w <- -a
   r
 }
@@ -748,6 +957,32 @@ with gradient (a=3.01) {
   print(gradient_of(r))
   cat("--\n")
   r[[4]] <- -a
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r[4] <- list(-a)
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r[4] <- -a
+  r
+}
+
+with gradient (a=c(6,3,5)) { a[2] <- list(a[[1]]^2); a }
+
+with gradient (a=3.01) {
+  r <- list(w=-a,x=a^2,y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r[c(2,4)] <- list(10*a,7*a)
   r
 }
 
@@ -779,7 +1014,23 @@ with gradient (a=3.01) {
   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
   print(gradient_of(r))
   cat("--\n")
+  r$x[2] <- list(1/a)
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
   r[[2]][[2]] <- 1/a
+  r
+}
+
+with gradient (a=3.01) {
+  r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r[[2]][2] <- list(1/a)
   r
 }
 
@@ -799,6 +1050,15 @@ with gradient (a=3.01) {
   r
 }
 
+if (FALSE)  # not supported yet
+with gradient (a=3.01) {
+  r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
+  print(gradient_of(r))
+  cat("--\n")
+  r[[c(2,2)]] <- NULL
+  r
+}
+
 with gradient (a=3.01) {
   r <- list(a=3,x=list(v=8,w=3*a,x=4*a),y=a^3,z=a^4)
   print(gradient_of(r))
@@ -814,6 +1074,48 @@ with gradient (a=3.01) {
   r[[2]][[4]] <- -a
   r
 }
+
+with gradient (a=c(5.1,7.2,3.9,0.7)) { a[3] <- 4; a }
+with gradient (a=c(5.1,7.2,3.9,0.7)) { a[c(3,1)] <- 4; a }
+with gradient (a=c(5.1,7.2,3.9,0.7)) { a[c(3,1)] <- a[4]^2; a }
+with gradient (a=c(5.1,7.2,3.9,0.7)) { b<-numeric(5); b[4..5]<-a[c(3,1)]; b }
+
+with gradient (a=matrix(list(1.0,7.2,3.9,0.7,9.9,1.2,8.8,6.0),2,4)) { 
+  a[1,1] <- a[2,4]
+  a[2,c(1,3)] <- a[[1,1]]^2
+  a[1,c(1,2)] <- list(a[[1,1]]^3,a[[1,1]]^4)
+  a[1,4] <- 99
+  a
+}
+
+with gradient (a=matrix(c(1.0,7.2,3.9,0.7,9.9,1.2,8.8,6.0),2,4)) { 
+  a[1,1] <- a[2,4]
+  a[2,c(1,3)] <- a[[1,1]]^2
+  a[1,c(1,2)] <- a[[1,1]]^c(3,4)
+  a[1,4] <- 99
+  a
+}
+
+with gradient (a=array(list(1.0,7.2,3.9,0.7,9.9,1.2,8.8,6.0),c(2,2,2))) { 
+  a[1,1,1] <- a[2,2,2]
+  a[2,c(1,2),c(2,1)] <- a[[1,1,1]]^2
+  a[1,c(1,2),1] <- list(a[[1,1,1]]^3,a[[1,1,1]]^4)
+  a[1,2,2] <- 99
+  a
+}
+
+with gradient (a=array(c(1.0,7.2,3.9,0.7,9.9,1.2,8.8,6.0),c(2,2,2))) { 
+  a[1,1,1] <- a[2,2,2]
+  a[2,c(1,2),c(2,1)] <- a[[1,1,1]]^2
+  a[1,c(1,2),1] <- a[[1,1,1]]^c(3,4)
+  a[1,2,2] <- 99
+  a
+}
+
+with gradient (L=list(c(9,7,6),-2)) { L[[1]][[2]] <- 3; L }
+
+
+# Subassignment with user-defined subassignment functions.
 
 xel <- function (a) a$x
 `xel<-` <- function (a,value) { a$x <- value; a }
@@ -961,6 +1263,14 @@ with gradient (a=3.01) {
   r
 }
 
+with gradient (a=3.01) {
+  r <- list(x=-1,y=2,z=7)
+  class(r) <- "fred"
+  r$x <- -a
+  r <- `[<-` (r, c(3,2), list(a^2,a^3))
+  r
+}
+
 
 # Test gradients w.r.t. list values.
 
@@ -1010,6 +1320,439 @@ with gradient (b=list(3,abc=4)) {
   r
 }
 
+fsub <- function (...) `[[`(...)
+with gradient (a=list(7,8)) fsub(a,1)
+
+
+# Test gradients w.r.t. numeric vectors.
+
+with gradient (a=c(5,55,555)) a
+
+with gradient (a=c(x=5,y=55,z=555)) a[["x"]]
+with gradient (a=c(x=5,y=55,z=555)) a[["y"]]
+with gradient (a=c(x=5,y=55,z=555)) a[["z"]]
+
+with gradient (a=c(x=5,y=55,z=555)) sqrt(a[["y"]])
+with gradient (a=c(x=5,y=55,z=555)) a[["z"]]+a[["x"]]
+with gradient (a=c(x=5,y=55,z=555)) 2.1*a[["z"]]+3.4*a[["x"]]
+
+with gradient (a=c(9.1,4.1)) {
+  b <- numeric(3)
+  b[[2]] <- a[[1]]
+  b[[1]] <- 3*a[[2]] + b[[2]]
+  b[[3]] <- sin(a[[2]])
+  b[[5]] <- b[[1]]^2
+  b
+}
+
+with gradient (a=c(5.1,2.2,3.7)) {
+  x <- numeric(2)
+  x[[1]] <- a[[2]]^2
+  x[[2]] <- a[[3]]
+  sin(x)
+}
+
+with gradient (a=c(5.1,2.2,3.7),b=c(7.3,6.4)) {
+  x <- numeric(2)
+  x[[1]] <- a[[2]]^2
+  x[[2]] <- a[[3]]*b[[2]]
+  sin(x)
+}
+
+with gradient (a=c(-1.1,2.3)) {
+  x <- numeric(2)
+  x[[1]] <- a[[2]]^2
+  x[[2]] <- a[[1]]*a[[2]]
+  abs(x)
+}
+
+with gradient (a=c(1.1,2.3),b=3.4) {
+  list (dt(a,5), dt(5,a), dt(a,a), dt(a,b), dt(b,a))
+}
+
+with gradient (a=c(1.1,2.3),b=3.4) {
+  list (dnorm(a,2,5), dnorm(5,a,2), dnorm(5,2,a), dnorm(a,a,a), 
+        dnorm(a,a,b), dnorm(a,b,a), dnorm(b,a,a), dnorm(b,a,b))
+}
+
+with gradient (a=c(1.1,2.3)) list (+a, -a)
+with gradient (a=c(1.1,2.3)) list (+sin(a), -sin(a))
+
+with gradient (a=c(1.1,2.3),b=c(5.2,3.1)) list (a+b, a-b, a*b, a/b, a^b)
+with gradient (a=c(1.1,2.3,3.7),b=c(5.2,3.1)) list (a+b, a-b, a*b, a/b, a^b)
+with gradient (a=c(1.1,2.3),b=c(5.2,3.1,1.9)) list (a+b, a-b, a*b, a/b, a^b)
+with gradient (a=c(1.1,2.3)) list (1+a, 1-a, a+1, a-1, a+a, a-a)
+with gradient (a=c(1.1,2.3)) list (2.1*a, 2.1/a, a*2.1, a/2.1, a*a, a/a)
+with gradient (a=c(1.1,2.3)) list (2.1^a, a^2.1, a^a)
+
+with gradient (a=c(1.7,-34.9)) list ((a+2)*(a+1), sin(a)^2+a)
+with gradient (a=1.7) list ((a+2)*(a+1), sin(a)^2+a)
+with gradient (a=-34.9) list ((a+2)*(a+1), sin(a)^2+a)
+
+with gradient (a=1.7) 
+  list (a+3L, a-3L, a*3L, 3L*a, a^3L, a/3L, 3L/a, 3L^a)
+with gradient (a=c(1.7,1.7)) 
+  list (a+3L, a-3L, a*3L, 3L*a, a^3L, a/3L, 3L/a, 3L^a)
+with gradient (a=1.7)
+  list (a+3, a-3, a*3, 3*a, a^3, a/3, 3/a, 3^a)
+with gradient (a=c(1.7,1.7))
+  list (a+3, a-3, a*3, 3*a, a^3, a/3, 3/a, 3^a)
+
+set.seed(179)
+with gradient (a=3.1) rexp(1,a)
+with gradient (a=0.2) rexp(1,a)
+with gradient (a=7.5) rexp(1,a)
+with gradient (a=3.1) rexp(1,a^2)
+with gradient (a=0.2) rexp(1,a^2)
+with gradient (a=7.5) rexp(1,a^2)
+
+set.seed(179)
+with gradient (a=c(3.1,0.2,7.5)) rexp(3,a)
+with gradient (a=c(3.1,0.2,7.5)) rexp(3,a^2)
+
+set.seed(179)
+with gradient (a=3.1,b=2.4) rnorm(1,a,b)
+with gradient (a=0.2,b=0.9) rnorm(1,a,b)
+with gradient (a=3.1,b=2.4) rnorm(1,cos(a),sin(b)^2)
+with gradient (a=0.2,b=0.9) rnorm(1,cos(a),sin(b)^2)
+with gradient (a=3.1,b=2.4) rnorm(1,a,3)
+with gradient (a=0.2,b=0.9) rnorm(1,a,3)
+with gradient (a=3.1,b=2.4) rnorm(1,4,b)
+with gradient (a=0.2,b=0.9) rnorm(1,4,b)
+with gradient (a=0.7,b=1.8) rnorm(1,a^2,b)
+with gradient (a=0.9,b=1.6) rnorm(1,a^2,b)
+with gradient (a=0.7,b=1.2) rnorm(1,a^2,b)
+
+set.seed(179)
+with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,a,b)
+with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,cos(a),sin(b)^2)
+with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,a,3)
+with gradient (a=c(3.1,0.2),b=c(2.4,0.9)) rnorm(2,4,b)
+with gradient (a=c(0.7,0.9),b=c(1.8,1.6,1.2)) rnorm(3,a^2,b)
+
+
+# Test preservation of gradients through attribute setting.
+
+with gradient (a=c(33,11,0.7,99)) { attr(a,"fred") <- 123; a }
+with gradient (a=c(33,11,0.7,99)) { attr(a,"fred") <- NULL; a }
+
+with gradient (a=c(33,11,0.7,99)) { class(a) <- "fred"; a }
+with gradient (a=c(33,11,0.7,99)) { class(a) <- NULL; a }
+
+with gradient (a=c(33,11,0.7,99)) { oldClass(a) <- "fred"; a }
+with gradient (a=c(33,11,0.7,99)) { oldClass(a) <- NULL; a }
+
+with gradient (a=c(33,11,0.7,99)) { attributes(a) <- list(X=1,y=2); a }
+with gradient (a=c(33,11,0.7,99)) { attributes(a) <- NULL; a }
+
+with gradient (a=c(33,11,0.7,99)) { dim(a) <- c(2,2); a }
+with gradient (a=c(33,11,0.7,99)) { dim(a) <- NULL; a }
+
+with gradient (a=c(33,11,0.7,99)) { names(a) <- c("ww","xx","yy","zz"); a }
+with gradient (a=c(33,11,0.7,99)) { names(a) <- NULL; a }
+
+with gradient (a=matrix(c(33,11,0.7,99),2,2)) {
+  dimnames(a) <- list(c("ww","xx"),c("yy","zz"))
+  a
+}
+
+with gradient (a=matrix(c(33,11,0.7,99),2,2)) { dimnames(a) <- NULL; a }
+
+
+# Test matrix operations.
+
+(A <- matrix(c(3,6,1,2),2,2))
+(B <- matrix(c(9,8,4,3,1,3),2,3))
+with gradient (A,B) A %*% B
+At <- t(A)
+Bt <- t(B)
+with gradient (At,B) t(At) %*% B
+with gradient (At,B) crossprod(At,B)
+with gradient (A,Bt) A %*% t(Bt)
+with gradient (A,Bt) tcrossprod(A,Bt)
+with gradient (B) t(B) %*% B
+with gradient (B) crossprod(B)
+with gradient (B) B %*% t(B)
+with gradient (B) tcrossprod(B)
+(u <- c(11,21))
+(v <- c(10,20))
+with gradient (A,v) A %*% v
+with gradient (A,v) v %*% A
+with gradient (u,v) u %*% v
+with gradient (u,v) u %*% t(v)
+rm(A,B,At,Bt)
+
+with gradient (a=3,b=4) { x <- matrix(c(a,b,a),3,3); drop(x) }
+with gradient (a=3,b=4) { x <- matrix(c(a,b,a),9,1); drop(x) }
+
+with gradient (a=matrix(list(3,1,9,4),2,2)) t(a)
+with gradient (a=matrix(c(3,1,9,4),2,2)) t(a)
+with gradient (a=7) { b <- matrix(c(a,1,a^2,4,a^3,a^4),3,2); t(b) }
+
+with gradient (a=matrix(list(3,1,9,4),2,2)) diag(a)
+with gradient (a=matrix(c(3,1,9,4),2,2)) diag(a)
+
+with gradient (a=list(8,7)) diag(a)
+with gradient (a=c(8,7)) diag(a)
+with gradient (a=8,b=7) diag(c(a,a+3*b,b),3,3)
+
+with gradient (a=3) { M <- matrix(7,2,2); diag(M) <- a; M }
+with gradient (a=3) { M <- matrix(7,2,2); diag(M) <- c(a,a^2); M }
+
+with gradient (A=matrix(c(3,1,5,2,-3,9),2,3)) rowSums(A)
+with gradient (A=matrix(c(3,1,5,2,-3,9),2,3)) colSums(A)
+with gradient (A=matrix(c(3,1,5,2,-3,9),2,3)) rowMeans(A)
+with gradient (A=matrix(c(3,1,5,2,-3,9),2,3)) colMeans(A)
+
+with gradient (A=matrix(c(3,1,NA,2,-3,9),2,3)) rowSums(A,na.rm=TRUE)
+with gradient (A=matrix(c(3,1,NA,2,-3,9),2,3)) colSums(A,na.rm=TRUE)
+with gradient (A=matrix(c(3,1,NA,2,-3,9),2,3)) rowMeans(A,na.rm=TRUE)
+with gradient (A=matrix(c(3,1,NA,2,-3,9),2,3)) colMeans(A,na.rm=TRUE)
+
+# next loses dim attribute, which is strange, but accept that for now...
+with gradient (a=list(3)) { M <- matrix(7,2,2); diag(M) <- a; M }
+
+X <- matrix(c(3.1,2,7, 0,1.7,5, 9,-3.2,6), 3, 3)
+with gradient (X) det(X)
+numericDeriv (quote(det(X)), "X")
+with gradient (X) determinant(X)
+numericDeriv (quote(determinant(X)$modulus), "X")
+with gradient (X) determinant(X,logarithm=FALSE)
+numericDeriv (quote(determinant(X,logarithm=FALSE)$modulus), "X")
+
+X <- matrix(c(-31,2,7, 0,1.7,5, 9,-3.2,6), 3, 3)
+with gradient (X) det(X)
+numericDeriv (quote(det(X)), "X")
+with gradient (X) determinant(X)
+numericDeriv (quote(determinant(X)$modulus), "X")
+with gradient (X) determinant(X,logarithm=FALSE)
+numericDeriv (quote(determinant(X,logarithm=FALSE)$modulus), "X")
+
+A <- matrix(c(7,1,8.1,2.2),2,2)
+v <- c(55,33)
+V <- matrix(c(55,33,550,330,5500,3300),2,3)
+
+with gradient (A) solve(A)
+numericDeriv (quote(as.vector(solve(A))),"A")
+
+with gradient (A) solve(A,v)
+with gradient (v) solve(A,v)
+with gradient (A,v) solve(A,v)
+numericDeriv (quote(as.vector(solve(A,v))),"A")
+numericDeriv (quote(as.vector(solve(A,v))),"v")
+
+with gradient (A) solve(A,V)
+with gradient (V) solve(A,V)
+with gradient (A,V) solve(A,V)
+numericDeriv (quote(as.vector(solve(A,V))),"A")
+numericDeriv (quote(as.vector(solve(A,V))),"V")
+
+
+# Tests with data frames.
+
+p <- function (df) { print(df); print(attr(df,"gradient")); }
+
+a <- c(3,7,1)
+b <- c(9,2,4)
+
+p( with gradient (a,b) 
+     data.frame(x=a,y=c(a[1]-b[1],a[1]+b[1],a[1]*b[2]),z=a+b) )
+
+p( with gradient (a,b) 
+     data.frame(list(x=a,y=c(a[1]-b[1],a[1]+b[1],a[1]*b[2]),z=a+b)) )
+
+p( with gradient (a,b) data.frame(matrix(c(a,b,a,a^2),4,3)) )
+
+with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df$y }
+with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df[,"y"] }
+with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df[2:3,"y"] }
+with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df[[2,"y"]] }
+
+p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df } )
+p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df$y <- a^3; df } )
+p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df["y"] <- a^3; df } )
+p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df[,"y"] <- a^3; df } )
+p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df[2:3,"y"] <- a[1..2]^3; df } )
+p( with gradient (a=c(2,3,1),b=c(9,8,7)) 
+  { df <- data.frame(x=a,y=b^2); df[[2,"y"]] <- a[2]; df } )
+
+df1 <- data.frame(x=a)
+df2 <- data.frame(x=b)
+df3 <- data.frame(y=b)
+p( with gradient (df1,df2) rbind(df1,df2) )
+p( with gradient (df1,df3) cbind(df1,df3) )
+
+
+# Miscellaneous tests.
+
+with gradient (a=7) invisible(a)
+
+with gradient (a=c(3,1,5,4),b=7) mean(c(a,b,a))
+with gradient (a=c(3,1,5,4),b=7) mean(c(a,b,NA,a))
+
+with gradient (a=c(3,1,5)) sum(a)
+with gradient (a=c(3,1,5)) sum(a^2+a)
+with gradient (a=c(3,1,5)) sum(a^2,a)
+with gradient (a=c(3,1,5),b=7) sum(a^2+a,3*b)
+with gradient (a=c(3,1,NA,5),b=7) sum(a^2+a,3*b,na.rm=FALSE)
+with gradient (a=c(3,1,NA,5),b=7) sum(a^2+a,3*b,na.rm=TRUE)
+
+with gradient (a=c(3,1,5)) prod(a)
+with gradient (a=c(3,1,5)) prod(a^2+a)
+with gradient (a=c(3,1,5)) prod(a^2,a)
+with gradient (a=c(3,1,5),b=7) prod(a^2+a,3*b)
+with gradient (a=c(3,1,NA,5),b=7) prod(a^2+a,3*b,na.rm=FALSE)
+with gradient (a=c(3,1,NA,5),b=7) prod(a^2+a,3*b,na.rm=TRUE)
+
+with gradient (a=c(3,1,5)) max(a)
+with gradient (a=c(3,1,5)) max(a-a^2)
+with gradient (a=c(3,1,5)) max(a^2,a)
+with gradient (a=c(3,1,5),b=7) max(a^2+a,3*b)
+with gradient (a=c(3,1,NA,5),b=7) max(a^2+a,3*b,na.rm=FALSE)
+with gradient (a=c(3,1,NA,5),b=7) max(a^2+a,3*b,na.rm=TRUE)
+
+with gradient (a=c(3,1,5)) min(a)
+with gradient (a=c(3,1,5)) min(a-a^2)
+with gradient (a=c(3,1,5)) min(a^2,a)
+with gradient (a=c(3,1,5),b=0.1) min(a^2+a,3*b)
+with gradient (a=c(3,1,NA,5),b=7) min(a^2+a,3*b,na.rm=FALSE)
+with gradient (a=c(3,1,NA,5),b=7) min(a^2+a,3*b,na.rm=TRUE)
+
+a <- c(7,1,8,9)
+b <- c(3,4,8,6)
+
+with gradient (a,b) pmin(a,b)
+with gradient (a,b) pmax(a,b)
+with gradient (a,b) pmax(a,b,a[1]+1)
+with gradient (a,b) pmax(a[1]+1,b,a)
+with gradient (a,b) pmax(a,b,a*b)
+
+rm(a,b)
+
+with gradient (a=list(3,list(9,2))) as.vector(a)
+with gradient (a=c(3,1,9,2)) as.vector(a)
+
+with gradient (a=list(3,2,9)) as.vector(a,"double")
+with gradient (a=list(3,2,9)) as.double(a)
+with gradient (a=c(3,2,9)) as.vector(a,"list")
+with gradient (a=c(3,2,9)) as.list(a)
+
+with gradient (a=list(9,0,2)) { a[[2]] <- "x"; as.vector(a,"double") }
+
+a <- c(9,8); class(a)<-"fred"; as.list.fred <- function(x) list(x[2],x[1])
+with gradient (a) as.list(a)
+rm(a)
+
+with gradient (a=c(3,9)) { storage.mode(a) <- "double"; a }
+with gradient (a=list(3,9)) { storage.mode(a) <- "list"; a }
+with gradient (a=c(3,9)) { storage.mode(a) <- "list"; a }
+with gradient (a=list(3,9)) { storage.mode(a) <- "double"; a }
+with gradient (a=c(3,9)) { storage.mode(a) <- "character"; a }
+
+with gradient (a=list(3,list(9,2),9,8)) matrix(a,2,2)
+with gradient (a=list(3,8)) matrix(a,2,2)
+with gradient (a=c(3,1,9,2)) matrix(a,2,2)
+with gradient (a=12) matrix(a,2,2)
+with gradient (a=c(12,10)) matrix(a,3,2)
+with gradient (a=12) { M <- matrix(a,2,2); M[1,2] }
+
+with gradient (a=list(3,list(9,2),9,8)) matrix(a,2,2,byrow=TRUE)
+with gradient (a=list(3,8)) matrix(a,2,2,byrow=TRUE)
+with gradient (a=c(3,1,9,2)) matrix(a,2,2,byrow=TRUE)
+with gradient (a=12) matrix(a,2,2,byrow=TRUE)
+with gradient (a=c(12,10)) matrix(a,3,2,byrow=TRUE)
+with gradient (a=12) { M <- matrix(a,2,2,byrow=TRUE); M[1,2] }
+
+with gradient (a=list(3,list(9,2),9,8)) array(a,c(2,2))
+with gradient (a=list(3,8)) array(a,c(2,2))
+with gradient (a=c(3,1,9,2,8,1,0,3,9,8,7,6)) array(a,c(2,3,2))
+with gradient (a=12) array(a,c(2,2,2))
+
+with gradient (a = list(3,9)) { for (v in a) print(gradient_of(v)); a }
+with gradient (a = c(3,1,9)) { for (v in a^2) print(gradient_of(v)); a }
+
+with gradient (a=list(99,33,11)) { length(a) <- 2; a }
+with gradient (a=list(99,33,11)) { length(a) <- 3; a }
+with gradient (a=list(99,33,11)) { length(a) <- 4; a }
+
+with gradient (a=c(99,33,11)) { length(a) <- 2; a }
+with gradient (a=c(99,33,11)) { length(a) <- 3; a }
+with gradient (a=c(99,33,11)) { length(a) <- 4; a }
+
+with gradient (a=c(3,5)) rep_len(c(a[2]^2,a[1]^3),length.out=7)
+with gradient (a=list(3,5)) rep_len(a,5)
+
+with gradient (a=c(3,5)) rep.int(c(a[2]^2,a[1]^3),c(2,3))
+with gradient (a=c(3,5)) rep.int(c(a[2]^2,a[1]^3),2)
+with gradient (a=list(3,5)) rep.int(a,c(2,3))
+with gradient (a=list(3,5)) rep.int(a,2)
+
+with gradient (a=c(3,5)) rep(c(a[2]^2,a[1]^3),length.out=7)
+with gradient (a=c(3,5)) rep(c(a[2]^2,a[1]^3),times=4)
+with gradient (a=c(3,5)) rep(c(a[2]^2,a[1]^3),times=c(2,3))
+with gradient (a=list(3,5)) rep(c(a[[2]]^2,a[[1]]^3),times=c(2,3))
+with gradient (a=list(3,5)) rep(list(a[[2]]^2,a[[1]]^3),times=2)
+with gradient (a=list(3,5)) rep(list(a[[2]]^2,a[[1]]^3),times=c(2,3))
+
+rep.fred <- function (x, times) x*times
+a <- c(9,10); class(a) <- "fred"
+with gradient (a) rep(a,100)
+rm(a)
+
+with gradient (a=list(3,5),b=c(9,8),x=2) cbind(a,b,x)
+with gradient (a=c(3,5),b=c(9,8),x=2) cbind(a,b,x,a^2)
+
+with gradient (a=list(3,5),b=c(9,8),x=2) rbind(a,b,x)
+with gradient (a=c(3,5),b=c(9,8),x=2) rbind(a,b,x,a^2)
+
+with gradient (a=9) { b <- a^2; get_rm(b) }
+with gradient (a=9) structure(a^2,fred=9999)
+
+with gradient (a=c(8,9,7)) unlist(a)
+with gradient (a=list(8,x=9,7)) unlist(a)
+with gradient (a=list(8,x=9,7),b=12) { a[2] <- b^2; unlist(a) }
+with gradient (a=list(8,list(9,7))) unlist(a)
+with gradient (a=list(8,list(9,7))) unlist(a,recursive=FALSE)
+
+with gradient (a=c(3,8)) c(a,a^2)
+with gradient (a=list(3,8)) c(a,a[[2]]^2,a)
+with gradient (a=list(3,list(8,7))) c(a,a[[1]]^2)
+with gradient (a=list(3,list(8,7))) c(a,a[[1]]^2,recursive=TRUE)
+
+with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,1,sqrt)
+with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,1,function(x)10*x[1]+x[2])
+with gradient (a=matrix(c(9,1,4,2),2,2)) apply(a,2,function(x)list(x,2*x))
+
+with gradient (a=c(36,1,25)) lapply(a,sqrt)
+with gradient (a=list(36,1,25)) lapply(a,function(x)c(x,sqrt(x)))
+with gradient (a=5) lapply(list(10,100),function(x)x*a)
+
+with gradient (a=c(36,1,25)) vapply(a,sqrt,numeric(1))
+with gradient (a=c(36,1,25)) vapply(a,function(x)c(x,sqrt(x)),c(0,0))
+with gradient (a=list(36,1,25)) vapply(a,function(x)list(x,sqrt(x)),list(0,0))
+
+with gradient (a=c(36,1,25)) sapply(a,sqrt)
+with gradient (a=list(36,1,25)) sapply(a,function(x)c(x,sqrt(x)))
+
+set.seed(1); with gradient (a=2) replicate(10,runif(1,-a,a))
+
+a <- c(4,9)
+class(a) <- "fred"
+with gradient (a) unclass(a)^2
+rm(a)
+
+with gradient (a=c(9,7)) a^2+a[2]^3
+with gradient (a=c(9,7)) a[1]^2+a^3
+
 
 # Test backpropagation.
 
@@ -1045,3 +1788,356 @@ with gradient (L=list(a=5,b=7))
 
 with gradient (L=list(a=5,b=7))
   back gradient (M=list(d=L$a^2+L$b,e=L$a*L$b)) list(sin(M$d)+sqrt(M$e),55)
+
+with gradient (L=c(a=5,b=7)) {
+  M <- c(d=0,e=0)
+  M[[1]] <- L[["a"]]^2+L[["b"]]
+  M[[2]] <- L[["a"]]*L[["b"]]
+  back gradient (M) {
+    c <- c(0,55)
+    c[[1]] <- sin(M[["d"]])+sqrt(M[["e"]])
+    c
+  }
+}
+
+with gradient (a=list(4.1,2.7,3.1,5.2)) {
+  back gradient (b=list(a[[2]],sin(a[[1]]+a[[4]]),a[[1]]^2)) {
+    c <- list(0,0)
+    c[[1]] <- b[[1]] + 4*b[[2]]
+    c[[2]] <- b[[3]]^2 + b[[2]]
+    c
+  }
+}
+
+with gradient (a=c(4.1,2.7,3.1,5.2)) {
+  b <- numeric(3)
+  b[[1]] <- a[[2]]
+  b[[2]] <- sin(a[[1]]+a[[4]])
+  b[[3]] <- a[[1]]^2
+  back gradient (b) {
+    c <- numeric(2)
+    c[[1]] <- b[[1]] + 4*b[[2]]
+    c[[2]] <- b[[3]]^2 + b[[2]]
+    c
+  }
+}
+
+
+# Test duplication when necessary and not when not.
+
+pr <- function (...) { 
+  Rprofmemt(NULL)
+  cat(...,"\n")
+  Rprofmemt(nelem=n,bytes=FALSE)
+}
+
+prp <- function (x) { 
+  Rprofmemt(NULL)
+  print(x)
+  Rprofmemt(nelem=n,bytes=FALSE)
+}
+
+n <- 100
+
+pr("start")
+track gradient (a=rep(3,n)) {
+  pr("A"); x <- a+2.1
+  pr("B"); x <- a-2.1
+  pr("C"); x <- a*2.1
+  pr("D"); x <- a/2.1
+  pr("E"); x <- a^2.1
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (b=rep(4,n)) {
+  pr("A"); x <- 2.1+b
+  pr("B"); x <- 2.1-b
+  pr("C"); x <- 2.1*b
+  pr("D"); x <- 2.1/b
+  pr("E"); x <- 2.1^b
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (q=7,a=rep(3,n)) {
+  pr("A"); x <- a+q
+  pr("B"); x <- a-q
+  pr("C"); x <- a*q
+  pr("D"); x <- a/q
+  pr("E"); x <- a^q
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (q=7,b=rep(4,n)) {
+  pr("A"); x <- q+b
+  pr("B"); x <- q-b
+  pr("C"); x <- q*b
+  pr("D"); x <- q/b
+  pr("E"); x <- q^b
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (a=rep(3,n),b=rep(4,n)) {
+  pr("A"); x <- a+b
+  pr("B"); x <- a-b
+  pr("C"); x <- a*b
+  pr("D"); x <- a/b
+  pr("E"); x <- a^b
+  NULL
+}
+pr("end")
+
+pr("start")
+r <- back gradient (a=rep(3,n)) {
+  pr("A"); b <- a^2.1
+  pr("B"); b[2] <- 7
+  c <- b
+  pr("C"); b[3] <- 8
+  pr("D"); b
+}
+pr("end")
+r[1..5]; attr(r,"gradient")[1..5,1..5]
+
+pr("start")
+r <- with gradient (a=rep(3,n)) {
+  pr("A"); b <- a^2.1
+  pr("B"); b[2] <- 7
+  c <- b
+  pr("C"); b[3] <- 8
+  pr("D"); b
+}
+pr("end")
+r[1..5]; attr(r,"gradient")[1..5,1..5]
+
+pr("start")
+r <- with gradient (a=rep(3,n)) {
+  pr("A"); L <- list(x=2,y=a^2.1)
+  pr("B"); L$y[2] <- 7
+  M <- L
+  pr("C"); L$y[3] <- 8
+  pr("D"); L$x <- a[2]
+  pr("E"); L
+}
+pr("end")
+r$x; r$y[1..5]; attr(r,"gradient")$x[1..5]; attr(r,"gradient")$y[1..5,1..5]
+
+pr("start")
+r <- with gradient (a=rep(3,n)) {
+  pr("A"); L <- list(x=2,y=a^2.1)
+  pr("B"); L[[2]][[2]] <- 7
+  M <- L
+  pr("C"); L[[2]][[3]] <- 8
+  pr("D"); L[[1]] <- a[[2]]
+  pr("E"); L
+}
+pr("end")
+r$x; r$y[1..5]; attr(r,"gradient")$x[1..5]; attr(r,"gradient")$y[1..5,1..5]
+
+pr("start")
+r <- with gradient (a=rep(3,n)) {
+  pr("A"); L <- c(list(x=2,y=a^2.1),rep(list(NULL),n))
+  pr("B"); L$y[2] <- 7
+  M <- L
+  pr("C"); L$y[3] <- 8
+  pr("D"); L$x <- a[2]
+  pr("E"); L
+}
+pr("end")
+r$x; r$y[1..5]; attr(r,"gradient")$x[1..5]; attr(r,"gradient")$y[1..5,1..5]
+
+pr("start")
+r <- with gradient (a=rep(3,n)) {
+  pr("A"); L <- c(list(x=2,y=a^2.1),rep(list(NULL),n))
+  pr("B"); L[[2]][[2]] <- 7
+  M <- L
+  pr("C"); L[[2]][[3]] <- 8
+  pr("D"); L[[1]] <- a[[2]]
+  pr("E"); L
+}
+pr("end")
+r$x; r$y[1..5]; attr(r,"gradient")$x[1..5]; attr(r,"gradient")$y[1..5,1..5]
+
+pr("start")
+r <- with gradient (a=rep(3,n)+(1..n)) {
+  pr("A"); L <- c(list(x=2,y=a^2.1),rep(list(NULL),n))
+  pr("B"); q <- list(a[4])
+  pr("C"); L[2..3] <- q
+  M <- L
+  pr("D"); L[2..4] <- list(a[5])
+  pr("E"); L[2..3] <- list(a[6])
+  pr("F"); L
+}
+pr("end")
+r$x; r$y; 
+attr(r,"gradient")$x[1..10]
+attr(r,"gradient")$y[1..10]
+attr(r,"gradient")[[3]][1..10]
+attr(r,"gradient")[[4]][1..10]
+attr(r,"gradient")[[5]][1..10]
+
+pr("start")
+r <- back gradient (a=rep(3,n)) {
+  pr("A"); a[2] <- 7
+  pr("B"); b <- c(a,a)
+  pr("C"); a[3] <- a[4]^2
+  pr("D"); c(a,b)
+}
+pr("end")
+r[1..10]
+
+pr("start")
+r <- with gradient (a=rep(3,n)) {
+  pr("A"); a[2] <- 7
+  pr("B"); b <- c(a,a)
+  pr("C"); a[3] <- a[4]^2
+  pr("D"); c(a,b)
+}
+pr("end")
+r[1..10]
+attr(r,"gradient")[1..10,1..10]
+
+n <- 8
+
+pr("start")
+track gradient (a=rep(3,n)) {
+  pr("A"); L <- list(a,a,a); prp(gradient_of(L))
+  pr("B"); L[[2]][1] <- 9; prp(gradient_of(L))
+  pr("C"); M <- L; L[[3]][2] <- L[[1]][3]; prp(gradient_of(L))
+  pr("D"); prp(gradient_of(M))
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (a=rep(3,n)) {
+  pr("A"); a[4] <- a[1]+a[2]
+  pr("B"); b <- a
+  pr("C"); b[2] <- a[5]
+  pr("D"); b[7] <- b[8]
+  pr("E"); b[1] <- b[6]+a[4]
+  pr("F"); a[6] <- a[1]
+  pr("G"); x <- a; x <- 7; a[8] <- 9
+  pr("H"); prp(gradient_of(a))
+  pr("I"); prp(gradient_of(b))
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (a=3,b=rep(4,n)) {
+  prp(x <- gradient_of(b))
+  b[2] <- a
+  prp(y <- gradient_of(b))
+  q <- a*b
+  prp(z <- gradient_of(q))
+  q[7..8] <- b[1..2]
+  prp(w <- gradient_of(q))
+  list(x,y,z,w)
+}
+pr("end")
+
+pr("start")
+track gradient (a=7,b=6) {
+  pr("A"); L <- list(x=list(y=a,z=a)); prp(gradient_of(L))
+  pr("B"); L$x$z <- 2*b; prp(gradient_of(L))
+  pr("C"); L[[1]]$z <- 3*b; prp(gradient_of(L))
+  pr("D"); L[[1]][[2]] <- 4*b; prp(gradient_of(L))
+  pr("E"); L[[1]]$z <- 5*b; prp(gradient_of(L))
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (a=7,b=6) {
+  pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b))); prp(gradient_of(L))
+  pr("B"); L$x$z[2] <- a+b; prp(gradient_of(L))
+  pr("C"); L$x$z[5] <- a-b; prp(gradient_of(L))
+  pr("D"); L$x$z[2] <- a*b; prp(gradient_of(L))
+  pr("E"); M <- L; L$x$z[3] <- a^2+b^2; prp(gradient_of(L))
+  pr("F"); prp(gradient_of(M))
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (a=7,b=6) {
+  pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b))); prp(gradient_of(L))
+  pr("B"); L[[1]][[2]][[2]] <- a+b; prp(gradient_of(L))
+  pr("C"); L[[1]][[2]][[5]] <- a-b; prp(gradient_of(L))
+  pr("D"); L[[1]][[2]][[2]] <- a*b; prp(gradient_of(L))
+  pr("E"); M <- L; L[[1]][[2]][[3]] <- a^2+b^2; prp(gradient_of(L))
+  pr("F"); prp(gradient_of(M))
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (a=7,b=6) {
+  pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b)));
+  pr("B"); L$x$z[2] <- a+b;
+  pr("C"); L$x$z[5] <- a-b;
+  pr("D"); L$x$z[2] <- a*b;
+  pr("E"); M <- L; L$x$z[3] <- a^2+b^2; prp(gradient_of(L))
+  pr("F"); prp(gradient_of(M))
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (a=7,b=6) {
+  pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b)));
+  pr("B"); L[[1]][[2]][[2]] <- a+b;
+  pr("C"); L[[1]][[2]][[5]] <- a-b;
+  pr("D"); L[[1]][[2]][[2]] <- a*b;
+  pr("E"); M <- L; L[[1]][[2]][[3]] <- a^2+b^2; prp(gradient_of(L))
+  pr("F"); prp(gradient_of(M))
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (a=7,b=6) {
+  pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b)));
+  pr("B"); L$x[[2]][2] <- a+b; # L$x[[2]][2] <- a+b;
+  pr("C"); L$x[[2]][5] <- a-b;
+  pr("D"); L$x[[2]][2] <- a*b;
+  pr("E"); M <- L; L[[1]][[2]][[3]] <- a^2+b^2; prp(gradient_of(L))
+  pr("F"); prp(gradient_of(M))
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (a=7,b=6) {
+  pr("A"); L <- list(x=list(y=a,z=c(a,b,a,b,a,a,b,b)))
+  pr("B"); L$x$z[[2]] <- a+b
+  pr("C"); L$x$z[[5]] <- a-b
+  pr("D"); L$x$z[[2]] <- a*b
+  pr("E"); M <- L; L$x$z[3] <- a^2+b^2; prp(gradient_of(L))
+  pr("F"); prp(gradient_of(M))
+  NULL
+}
+pr("end")
+
+pr("start")
+track gradient (a=rep(7,n)) {
+  cat("W\n")
+  r <- compute gradient (a) {
+    cat("X\n")
+    list(5,1,9)
+  }
+  as {
+    cat("Y\n")
+    list(a*2,a*3,a*4)
+  }
+  cat("Z\n")
+  NULL
+}
+pr("end")

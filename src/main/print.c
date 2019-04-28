@@ -107,20 +107,27 @@ void PrintDefaults(void)
     R_print.useSource = USESOURCE;
 }
 
-static SEXP do_invisible(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    R_Visible = FALSE;
+/* SPECIAL, so it can pass on gradient. */
 
-    switch (length(args)) {
-    case 0:
-	return R_NilValue;
-    case 1:
-	check1arg_x (args, call);
-	return CAR(args);
-    default:
-	checkArity(op, args); /* must fail */
-	return call;/* never used, just for -Wall */
+static SEXP do_invisible(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+{
+    args = evalList_gradient (args, rho, VARIANT_PASS_ON(variant), 1, 0);
+
+    if (args != R_NilValue) {  /* returns NULL if no args */
+
+        if (CDR(args) != R_NilValue)
+            checkArity(op, args); /* will fail */
+
+        check1arg_x (args, call);
+
+        if (HAS_GRADIENT_IN_CELL(args)) {
+            R_gradient = GRADIENT_IN_CELL(args);
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
     }
+
+    R_Visible = FALSE;
+    return CAR(args);
 }
 
 #if 0
@@ -1109,7 +1116,7 @@ attribute_hidden FUNTAB R_FunTab_print[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"invisible",	do_invisible,	0,	101,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"invisible",	do_invisible,	0,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 #if 0
 {"visibleflag", do_visibleflag,	0,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},
 #endif

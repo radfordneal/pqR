@@ -1,5 +1,6 @@
 #  File src/library/base/R/solve.R
 #  Part of the R package, http://www.R-project.org
+#  Modifications for pqR Copyright (c) 2019 Radford M. Neal.
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -36,55 +37,90 @@ solve.default <-
     function(a, b, tol = ifelse(LINPACK, 1e-7, .Machine$double.eps),
 	     LINPACK = FALSE, ...)
 {
-    if(is.complex(a) || (!missing(b) && is.complex(b))) {
-	a <- as.matrix(a)
-	if(missing(b)) {
+    if (is.complex(a) || (!missing(b) && is.complex(b))) {
+        a <- as.matrix(a)
+        if (missing(b)) {
             if(nrow(a) != ncol(a))
                 stop("only square matrices can be inverted")
-	    b <- diag(1.0+0.0i, nrow(a))
-	    colnames(b) <- rownames(a)
-	} else if(!is.complex(b)) b[] <- as.complex(b)
-	if(!is.complex(a)) a[] <- as.complex(a)
-	return (if (is.matrix(b)) {
-            if(ncol(a) != nrow(b)) stop("'b' must be compatible with 'a'")
-	    rownames(b) <- colnames(a)
-	    .Internal (La_zgesv (a, b))
-	} else
-	    drop(.Internal (La_zgesv (a, as.matrix(b)))))
-    }
-    if(is.qr(a)) {
-	warning("solve.default called with a \"qr\" object: use 'qr.solve'")
-	return(solve.qr(a, b, tol))
+            b <- diag(1.0+0.0i, nrow(a))
+            colnames(b) <- rownames(a)
+        }
+        else if (!is.complex(b))
+            b[] <- as.complex(b)
+        if (!is.complex(a))
+            a[] <- as.complex(a)
+        return (
+            if (is.matrix(b)) {
+                if (ncol(a) != nrow(b)) stop("'b' must be compatible with 'a'")
+                rownames(b) <- colnames(a)
+                .Internal (La_zgesv (a, b))
+            }
+            else
+                drop (.Internal (La_zgesv (a, as.matrix(b))))
+        )
     }
 
-    if(!LINPACK) {
-	a <- as.matrix(a)
-	if(missing(b)) {
-            if(nrow(a) != ncol(a))
-                stop("only square matrices can be inverted")
-	    b <- diag(1.0, nrow(a))
-	    colnames(b) <- rownames(a)
-	} else storage.mode(b) <- "double"
-	storage.mode(a) <- "double"
-	return (if (is.matrix(b)) {
-            if(ncol(a) != nrow(b)) stop("'b' must be compatible with 'a'")
-	    rownames(b) <- colnames(a)
-	    .Internal (La_dgesv (a, b, tol))
-	} else
-	    drop(.Internal (La_dgesv (a, as.matrix(b), tol))))
+    if (is.qr(a)) {
+        warning("solve.default called with a \"qr\" object: use 'qr.solve'")
+        return (solve.qr(a, b, tol))
     }
-    a <- qr(a, tol = tol)
-    nc <- ncol(a$qr)
-    if( a$rank != nc )
-	stop("singular matrix 'a' in 'solve'")
-    if( missing(b) ) {
-	if( nc != nrow(a$qr) )
-	    stop("only square matrices can be inverted")
-	## preserve dimnames
-	b <- diag(1, nc)
-	colnames(b) <- rownames(a$qr)
+
+    a <- as.matrix(a)
+    storage.mode(a) <- "double"
+
+    if (missing(b)) {
+        if (nrow(a) != ncol(a))
+            stop("only square matrices can be inverted")
+        b <- diag(1, nrow(a))
+        colnames(b) <- rownames(a)
+    } 
+    else 
+        storage.mode(b) <- "double"
+
+    compute gradient (a, b) {
+        if (!LINPACK) {
+            if (is.matrix(b)) {
+                if (ncol(a) != nrow(b)) stop("'b' must be compatible with 'a'")
+                rownames(b) <- colnames(a)
+                r <- .Internal (La_dgesv (a, b, tol))
+            }
+            else
+                r <- drop (.Internal (La_dgesv (a, as.matrix(b), tol)))
+        }
+        else {
+            a <- qr(a, tol = tol)
+            nc <- ncol(a$qr)
+            if (a$rank != nc)
+                stop("singular matrix 'a' in 'solve'")
+            r <- qr.coef(a, b)
+        }
+        r
     }
-    qr.coef(a, b)
+    as {
+        if (!exists("inv",inherits=FALSE)) {
+            nv <- if (is.matrix(b)) ncol(b) else 1
+            na <- nrow(a)
+            inv <- solve.default (a, tol = tol, LINPACK = LINPACK)
+        }
+        g <- matrix (0, na*nv, na^2)
+        for (j in 1..na) {
+            tmp <- inv[j,_] %*% b
+            for (i in 1..na)
+                g[_,(j-1)*na+i] <- inv[_,i] %*% tmp
+        }
+        -g
+    },
+    {
+        if (!exists("inv",inherits=FALSE)) {
+            nv <- if (is.matrix(b)) ncol(b) else 1
+            na <- nrow(a)
+            inv <- solve.default (a, tol = tol, LINPACK = LINPACK)
+        }
+        g <- matrix (0, na*nv, na*nv)
+        for (i in 1..nv) 
+            g [(i-1)*na + (1..na), (i-1)*na + (1..na)] <- inv
+        g
+    }
 }
 
 solve <- function(a, b, ...) UseMethod("solve")

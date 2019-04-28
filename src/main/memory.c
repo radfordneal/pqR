@@ -2441,7 +2441,7 @@ SEXP protect(SEXP s)
 }
 
 
-/* Push 2 or 3 arguments onto protect stack.  BEWARE! All arguments will
+/* Push 2, 3, or 4 arguments onto protect stack.  BEWARE! All arguments will
    be evaluated (in the C sense) before any are protected. */
 
 void Rf_protect2 (SEXP s1, SEXP s2)
@@ -2454,6 +2454,23 @@ void Rf_protect3 (SEXP s1, SEXP s2, SEXP s3)
     PROTECT3 (Rf_chk_valid_SEXP(s1),
               Rf_chk_valid_SEXP(s2),
               Rf_chk_valid_SEXP(s3));
+}
+
+void Rf_protect4 (SEXP s1, SEXP s2, SEXP s3, SEXP s4)
+{
+    PROTECT4 (Rf_chk_valid_SEXP(s1),
+              Rf_chk_valid_SEXP(s2),
+              Rf_chk_valid_SEXP(s3),
+              Rf_chk_valid_SEXP(s4));
+}
+
+void Rf_protect5 (SEXP s1, SEXP s2, SEXP s3, SEXP s4, SEXP s5)
+{
+    PROTECT5 (Rf_chk_valid_SEXP(s1),
+              Rf_chk_valid_SEXP(s2),
+              Rf_chk_valid_SEXP(s3),
+              Rf_chk_valid_SEXP(s4),
+              Rf_chk_valid_SEXP(s5));
 }
 
 

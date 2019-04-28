@@ -1402,45 +1402,62 @@ static SEXP asFunction(SEXP x)
     return f;
 }
 
-static SEXP ascommon(SEXP call, SEXP u, SEXPTYPE type)
+/* Convert to type.  When final type is REALXP or VECSXP, may set 
+   R_gradient to gradient (leaves unchanged otherwise). */
+
+static SEXP ascommon(SEXP call, SEXP u, SEXP u_grad, SEXPTYPE type)
 {
     /* -> as.vector(..) or as.XXX(.) : coerce 'u' to 'type' : */
     /* code assumes u is protected */
 
     SEXP v;
     if (type == CLOSXP) {
-	return asFunction(u);
+        return asFunction(u);
     }
     else if (isVector(u) || isList(u) || isLanguage(u)
-	     || (isSymbol(u) && type == EXPRSXP)) {
-	v = u;
-	/* this duplication may appear not to be needed in all cases,
-	   but beware that other code relies on it.
-	   (E.g  we clear attributes in do_asvector and do_ascharacter.)
+             || (isSymbol(u) && type == EXPRSXP)) {
+        v = u;
+        /* this duplication may appear not to be needed in all cases,
+           but beware that other code relies on it.
+           (E.g  we clear attributes in do_asvector and do_ascharacter.)
 
-	   Generally coerceVector will copy over attributes.
-	*/
-	if (type != ANYSXP && TYPEOF(u) != type) v = coerceVector(u, type);
-	else if (NAMEDCNT_GT_0(u)) v = duplicate(u);
+           Generally coerceVector will copy over attributes.
+        */
+        if (type != ANYSXP && TYPEOF(u) != type) {
+            v = coerceVector(u, type);
+            if (u_grad != R_NilValue) {
+                if (TYPEOF(u) == REALSXP && TYPEOF(v) == VECSXP)
+                    R_gradient = as_list_gradient (u_grad, LENGTH(v));
+                else if (TYPEOF(u) == VECSXP && TYPEOF(v) == REALSXP)
+                    R_gradient = as_numeric_gradient (u_grad, LENGTH(v));
+            }
+        }
+        else if (NAMEDCNT_GT_0(u)) {
+            v = duplicate(u);
+            if (u_grad != R_NilValue) {
+                if (TYPEOF(v) == VECSXP || TYPEOF(v) == REALSXP)
+                    R_gradient = u_grad;
+            }
+        }
 
-	/* drop attributes() and class() in some cases for as.pairlist:
-	   But why?  (And who actually coerces to pairlists?)
-	 */
-	if ((type == LISTSXP) &&
-	    !(TYPEOF(u) == LANGSXP || TYPEOF(u) == LISTSXP ||
-	      TYPEOF(u) == EXPRSXP || TYPEOF(u) == VECSXP)) {
-	    CLEAR_ATTRIB(v);
-	}
-	return v;
+        /* drop attributes() and class() in some cases for as.pairlist:
+           But why?  (And who actually coerces to pairlists?)
+         */
+        if ((type == LISTSXP) &&
+            !(TYPEOF(u) == LANGSXP || TYPEOF(u) == LISTSXP ||
+              TYPEOF(u) == EXPRSXP || TYPEOF(u) == VECSXP)) {
+            CLEAR_ATTRIB(v);
+        }
+        return v;
     }
     else if (isSymbol(u) && type == STRSXP)
-	return ScalarString(PRINTNAME(u));
+        return ScalarString(PRINTNAME(u));
     else if (isSymbol(u) && type == SYMSXP)
-	return u;
+        return u;
     else if (isSymbol(u) && type == VECSXP) {
-	v = allocVector(VECSXP, 1);
-	SET_VECTOR_ELT(v, 0, u);
-	return v;
+        v = allocVector(VECSXP, 1);
+        SET_VECTOR_ELT(v, 0, u);
+        return v;
     }
     else 
         errorcall(call, _("cannot coerce type '%s' to vector of type '%s'"),
@@ -1470,8 +1487,9 @@ SEXP asCharacterFactor(SEXP x)
 }
 
 
-/* the "ascharacter" name is a historical anomaly: as.character used to be the
- * only primitive;  now, all these ops are : */
+/* do_ascharacter implements as.character, as.integer, as.complex, as.logical,
+   and as.raw, but not as.double (which handles gradients). */
+
 static SEXP do_ascharacter (SEXP call, SEXP op, SEXP args, SEXP rho, 
                             int variant)
 {
@@ -1518,20 +1536,85 @@ static SEXP do_ascharacter (SEXP call, SEXP op, SEXP args, SEXP rho,
     }
 
     WAIT_UNTIL_COMPUTED(x);
-    ans = ascommon(call, x, type);
+    ans = ascommon(call, x, R_NilValue, type);
     CLEAR_ATTRIB(ans);
     return ans;
 }
 
+
+/* Implement as.double/as.real/as.numeric. SPECIAL, so can  handle gradients. */
+
+static SEXP do_asdouble (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
+{
+    PROTECT (args = variant & VARIANT_GRADIENT
+                      ? evalList_gradient (args, rho, 0, 1, 0)
+                      : evalList (args, rho));
+    SEXP ans;
+
+    check1arg_x (args, call);
+
+    if (DispatchOrEval(call, op, "as.double", args, rho, &ans, 0, 1, variant)) {
+        UNPROTECT(1);
+        return ans;
+    }
+
+    /* Method dispatch has failed, we now just run the generic internal code */
+
+    checkArity(op, args);
+
+    SEXP x = CAR(args);
+    SEXP x_grad = HAS_GRADIENT_IN_CELL(args) ? GRADIENT_IN_CELL(args)
+                                             : R_NilValue;
+
+    if (TYPEOF(x) == REALSXP) {
+        if (!HAS_ATTRIB(x))
+            ans = x;
+        else {
+            if (NAMEDCNT_EQ_0(x))
+                ans = x;
+            else {
+                ans = duplicate(x);
+            }
+            CLEAR_ATTRIB(ans);
+        }
+        if (x_grad != R_NilValue && TYPEOF(x) == REALSXP) {
+            R_gradient = x_grad;
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
+        if (! (variant & VARIANT_PENDING_OK) )
+            WAIT_UNTIL_COMPUTED(ans);
+        UNPROTECT(1);
+        return ans;
+    }
+
+    WAIT_UNTIL_COMPUTED(x);
+
+    R_gradient = R_NilValue;
+
+    PROTECT (ans = ascommon(call, x, x_grad, REALSXP));
+
+    if (R_gradient != R_NilValue)
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+
+    CLEAR_ATTRIB(ans);
+
+    UNPROTECT(2);
+    return ans;
+}
+
+
 /* NB: as.vector is used for several other as.xxxx, including
-   as.expression, as.list, as.pairlist, as.symbol, (as.single) */
+   as.expression, as.list, as.pairlist, as.symbol, (as.single)
+
+   First arg may come with gradient, may be pending. */
+
 static SEXP do_asvector (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 {
     SEXP x, ans;
     int type;
 
     if (DispatchOrEval(call, op, "as.vector", args, rho, &ans, 0, 1, variant))
-	return(ans);
+        return ans;
 
     /* Method dispatch has failed, we now just */
     /* run the generic internal code */
@@ -1541,50 +1624,63 @@ static SEXP do_asvector (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     WAIT_UNTIL_COMPUTED(CADR(args));
 
     if (!isString(CADR(args)) || LENGTH(CADR(args)) != 1)
-	errorcall_return(call, R_MSG_mode);
+        errorcall_return(call, R_MSG_mode);
     if (!strcmp("function", (CHAR(STRING_ELT(CADR(args), 0))))) /* ASCII */
-	type = CLOSXP;
+        type = CLOSXP;
     else
-	type = str2type(CHAR(STRING_ELT(CADR(args), 0))); /* ASCII */
+        type = str2type(CHAR(STRING_ELT(CADR(args), 0))); /* ASCII */
+
+    SEXP x_grad = HAS_GRADIENT_IN_CELL(args) ? GRADIENT_IN_CELL(args)
+                                             : R_NilValue;
 
     /* "any" case added in 2.13.0 */
-    if(type == ANYSXP || TYPEOF(x) == type) {
-        if (! (variant & VARIANT_PENDING_OK) )
-            WAIT_UNTIL_COMPUTED(x);
-	switch(TYPEOF(x)) {
-	case LGLSXP:
-	case INTSXP:
-	case REALSXP:
-	case CPLXSXP:
-	case STRSXP:
-	case RAWSXP:
-	    if (!HAS_ATTRIB(x))
-                return x;
-            if (NAMEDCNT_EQ_0(x))
+    if (type == ANYSXP || TYPEOF(x) == type) {
+        switch(TYPEOF(x)) {
+        case LGLSXP:
+        case INTSXP:
+        case REALSXP:
+        case CPLXSXP:
+        case STRSXP:
+        case RAWSXP:
+            if (!HAS_ATTRIB(x))
                 ans = x;
             else {
-                ans = duplicate(x);
+                if (NAMEDCNT_EQ_0(x))
+                    ans = x;
+                else {
+                    ans = duplicate(x);
+                }
+                CLEAR_ATTRIB(ans);
             }
-	    CLEAR_ATTRIB(ans);
-	    return ans;
-	case EXPRSXP:
-	case VECSXP:
-	    return x;
-	default:
-	    ;
-	}
+            if (x_grad != R_NilValue && TYPEOF(x) == REALSXP) {
+                R_gradient = x_grad;
+                R_variant_result = VARIANT_GRADIENT_FLAG;
+            }
+            if (! (variant & VARIANT_PENDING_OK) )
+                WAIT_UNTIL_COMPUTED(ans);
+            return ans;
+        case EXPRSXP:
+        case VECSXP:
+            if (x_grad != R_NilValue && TYPEOF(x) == VECSXP) {
+                R_gradient = x_grad;
+                R_variant_result = VARIANT_GRADIENT_FLAG;
+            }
+            return x;
+        default:
+            ;
+        }
     }
 
     WAIT_UNTIL_COMPUTED(x);
 
     if(IS_S4_OBJECT(x) && TYPEOF(x) == S4SXP) {
         SEXP v = R_getS4DataSlot(x, ANYSXP);
-	if(v == R_NilValue)
-	    error(_("no method for coercing this S4 class to a vector"));
-	x = v;
+        if(v == R_NilValue)
+            error(_("no method for coercing this S4 class to a vector"));
+        x = v;
     }
 
-    switch(type) {/* only those are valid : */
+    switch (type) {/* only those are valid : */
     case SYMSXP: /* for as.symbol */
     case LGLSXP:
     case INTSXP:
@@ -1597,22 +1693,31 @@ static SEXP do_asvector (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     case CLOSXP: /* non-primitive function */
     case RAWSXP:
     case ANYSXP: /* any */
-	break;
+        break;
     default:
-	errorcall_return(call, R_MSG_mode);
+        errorcall_return(call, R_MSG_mode);
     }
-    ans = ascommon(call, x, type);
-    switch(TYPEOF(ans)) { /* keep attributes for these: */
+
+    R_gradient = R_NilValue;
+
+    PROTECT (ans = ascommon(call, x, x_grad, type));
+
+    if (R_gradient != R_NilValue)
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+
+    switch (TYPEOF(ans)) { /* keep attributes for these: */
     case NILSXP: /* doesn't have any */
     case LISTSXP: /* but ascommon fiddled */
     case LANGSXP:
     case VECSXP:
     case EXPRSXP:
-	break;
+        break;
     default:
-	CLEAR_ATTRIB(ans);
-	break;
+        CLEAR_ATTRIB(ans);
+        break;
     }
+
+    UNPROTECT(1);
     return ans;
 }
 
@@ -2994,7 +3099,7 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
 	    if(IS_S4_OBJECT(obj)) /* NULL class is only valid for S3 objects */
                 do_unsetS4(obj, value);
 	    if(classTable[whichType].canChange) {
-		PROTECT(obj = ascommon(call, obj, valueType));
+		PROTECT(obj = ascommon(call, obj, R_NilValue, valueType));
 		nProtect++;
 	    }
 	    else if(valueType != TYPEOF(obj))
@@ -3040,47 +3145,86 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
     return obj;
 }
 
-SEXP attribute_hidden R_do_set_class(SEXP call, SEXP op, SEXP args, SEXP env)
+/* class(x) <- v.  SPECIAL so it can propagate gradient of x. */
+
+static SEXP do_classgets (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
+    PROTECT (args = variant & VARIANT_GRADIENT 
+                      ? evalList_gradient (args, env, 0, 1, 0)
+                      : evalList (args, env));
+
     checkArity(op, args);
     check1arg_x (args, call);
 
     if (NAMEDCNT_GT_1(CAR(args)))
         SETCAR(args,dup_top_level(CAR(args)));
 
-    return R_set_class(CAR(args), CADR(args), call);
+    SEXP r = R_set_class(CAR(args), CADR(args), call);
+
+    if (HAS_GRADIENT_IN_CELL(args)) {
+        R_gradient = GRADIENT_IN_CELL(args);
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(1);
+    return r;
 }
 
-/* primitive */
-static SEXP do_storage_mode(SEXP call, SEXP op, SEXP args, SEXP env)
-{
-/* storage.mode(obj) <- value */
-    SEXP obj, value, ans;
-    SEXPTYPE type;
 
+/* storage.mode(obj) <- value.  SPECIAL so can handle gradient. */
+
+static SEXP do_storage_mode (SEXP call, SEXP op, SEXP args, SEXP env, 
+                             int variant)
+{
+    PROTECT (args = variant & VARIANT_GRADIENT
+                      ? evalList_gradient (args, env, 0, 1, 0)
+                      : evalList (args, env));
+
+    SEXP obj, grad, value, ans;
+    SEXPTYPE type;
+    
     checkArity(op, args);
     check1arg_x (args, call);
 
     obj = CAR(args);
+    grad = HAS_GRADIENT_IN_CELL(args) ? GRADIENT_IN_CELL(args) : R_NilValue;
 
     value = CADR(args);
     if (!isValidString(value) || STRING_ELT(value, 0) == NA_STRING)
-	errorcall(call,_("'value' must be non-null character string"));
+        errorcall(call,_("'value' must be non-null character string"));
+
     type = str2type(CHAR(STRING_ELT(value, 0)));
-    if(type == (SEXPTYPE) -1) {
-	/* For backwards compatibility we used to allow "real" and "single" */
-	if(streql(CHAR(STRING_ELT(value, 0)), "real")) {
-	    errorcall(call,"use of 'real' is defunct: use 'double' instead");
-	} else if(streql(CHAR(STRING_ELT(value, 0)), "single")) {
-	    errorcall(call,"use of 'single' is defunct: use mode<- instead");
-	} else
-	    errorcall(call,_("invalid value"));
+    if (type == (SEXPTYPE) -1) {
+        /* For backwards compatibility we used to allow "real" and "single" */
+        if (streql(CHAR(STRING_ELT(value, 0)), "real"))
+            errorcall(call,"use of 'real' is defunct: use 'double' instead");
+        else if(streql(CHAR(STRING_ELT(value, 0)), "single"))
+            errorcall(call,"use of 'single' is defunct: use mode<- instead");
+        else
+            errorcall(call,_("invalid value"));
     }
-    if(TYPEOF(obj) == type) return obj;
-    if(isFactor(obj))
-	errorcall(call,_("invalid to change the storage mode of a factor"));
-    PROTECT(ans = coerceVector(obj, type));
-    DUPLICATE_ATTRIB(ans, obj);
+
+    if (TYPEOF(obj) == type)
+        ans = obj;
+    else {
+        if (isFactor(obj))
+            errorcall(call,_("invalid to change the storage mode of a factor"));
+        PROTECT(ans = coerceVector(obj, type));
+        DUPLICATE_ATTRIB(ans, obj);
+        if (TYPEOF(ans) == REALSXP && TYPEOF(obj) == VECSXP)
+            grad = as_numeric_gradient (grad, LENGTH(ans));
+        else if (TYPEOF(ans) == VECSXP && TYPEOF(obj) == REALSXP)
+            grad = as_list_gradient (grad, LENGTH(ans));
+        else
+            grad = R_NilValue;
+        UNPROTECT(1);
+    }
+
+    if (grad != R_NilValue) {
+        R_gradient = grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     UNPROTECT(1);
     return ans;
 }
@@ -3093,12 +3237,12 @@ attribute_hidden FUNTAB R_FunTab_coerce[] =
 
 {"as.character",do_ascharacter,	0,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"as.integer",	do_ascharacter,	1,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"as.double",	do_ascharacter,	2,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.double",	do_asdouble,	2,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"as.complex",	do_ascharacter,	3,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"as.logical",	do_ascharacter,	4,	1001,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"as.raw",	do_ascharacter,	5,	1001,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"as.vector",	do_asvector,	0,	1011,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"as.vector",	do_asvector,	0,	11011011, 2,	{PP_FUNCALL, PREC_FN,	0}},
 {"as.function.default",do_asfunction,0,	11,	2,	{PP_FUNCTION,PREC_FN,	  0}},
 {"as.call",	do_ascall,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
@@ -3141,9 +3285,9 @@ attribute_hidden FUNTAB R_FunTab_coerce[] =
 {"do.call",	do_docall,	0,	211,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"substitute",	do_substitute,	0,	1000,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"quote",	do_quote,	0,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"storage.mode<-",do_storage_mode,0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"storage.mode<-",do_storage_mode,0,	1000,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"class<-",	R_do_set_class,	0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"class<-",	do_classgets,	0,	1000,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };

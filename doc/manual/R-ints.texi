@@ -598,11 +598,12 @@ with tag the symbol and CAR the bound value.  Also contains
 the logical OR of the @code{symbits} fields of all symbols that
 have ever been stored in the environment, allowing quick determination
 that some symbols cannot be in the environment.  Finally, if the
-environment is for the body of a @code{with gradient} or @code{track gradient}
-construct, it contains a vector list of symbols for the variables
-whose gradient will be tracked, accessed by @code{GRADVARS}.  This 
-list is not seen by the garbage collector, and hence must be protected
-otherwise (by @code{with gradient} or @code{track gradient}).
+environment is for the body of a @code{with gradient}, @code{track gradient},
+or active @code{back gradient} construct, it contains a vector list of 
+symbols (and other info) for the variables whose gradient will be
+tracked, accessed by @code{GRADVARS}.  This list is not seen by the
+garbage collector, and hence must be protected otherwise (by
+@code{with gradient} or @code{track gradient}).
 
 @item PROMSXP
 Pointers to the value, expression and environment (in which to evaluate
@@ -611,12 +612,13 @@ set to @code{R_NilValue}.  The attribute of a promise may hold gradient
 information, which is set when the promise is forced if requested.
 
 @item LISTSXP
-Pointers to the CAR, CDR (usually a @code{LISTSXP} or @code{R_NilValue}) and
-TAG (usually a @code{SYMSXP} or @code{R_NilValue}).  For LISTSXP nodes used
-to record gradient values, the TAG is the environment for the relevant
-@code{with gradient} or @code{trace gradient} construct; LISTSXP nodes
-used as binding cells may have such gradient information stored as their
-`attributes'.
+Pointers to the CAR, CDR (usually a @code{LISTSXP} or
+@code{R_NilValue}) and TAG (usually a @code{SYMSXP} or
+@code{R_NilValue}).  For LISTSXP nodes used to record gradient values,
+the TAG is the environment for the relevant @code{with gradient},
+@code{track gradient}, or @code{back gradient} construct; LISTSXP
+nodes used as binding cells may have such gradient information stored
+as their `attributes'.
 
 @item LANGSXP
 A special type of @code{LISTSXP} used for function calls.  (The CAR
@@ -899,9 +901,10 @@ this.
 
 Note that the `attributes' of a @code{CHARSXP} are used as part of the
 management of the @code{CHARSXP} cache: of course @code{CHARSXP}'s are
-not user-visible but C-level code might look at their attributes.  Also,
-`attributes' on binding cells in environments and on promises are used
-to record gradient information (see @ref{Gradient information} for details).
+not user-visible but C-level code might look at their attributes.
+Also, `attributes' on binding cells in environments, on promises, and
+on internal argument pairlists are used to record gradient information
+(see @ref{Gradient information} for details).
 
 The code assumes that the attributes of a node are either
 @code{R_NilValue} or a pairlist of non-zero length (and this is checked
@@ -994,19 +997,21 @@ gradient information, if the evaluation is done with the
 details on variants).  After evaluation, the presence of variant
 information is indicated by @code{R_variant_result} having the
 @code{VARIANT_GRADIENT_FLAG} bit set, in which case the gradient
-information is in @code{R_gradient}.
+information is in @code{R_gradient}.  Note that @code{R_gradient}
+is not a root for the garbage collector, and so must be protected
+when necessary if it is being used.
 
 Gradient information takes the form of a pairlist of gradient values,
 in which the tag is not a symbol, but rather the environment of the
-@code{with gradient} or @code{track gradient} construct in which the
-variable for which the value is the gradient was defined.  The
-particular variable within that environment is identified by
-@code{GRADINDEX} (the top 8 bits of the general purpose field) for the
-pairlist node, which indexes a table pointed by the @code{GRADVARS}
-field of the environment.
+@code{with gradient}, @code{track gradient}, or @code{back gradient}
+construct in which the variable for which the value is the gradient
+was defined.  The particular variable within that environment is
+identified by @code{GRADINDEX} (the top 8 bits of the general purpose
+field) for the pairlist node, which indexes a table pointed by the
+@code{GRADVARS} field of the environment.
 
 The gradient information for the gradient of a scalar quantity with
-respect to a scalar variabl is just a scalar real.  If the gradient is
+respect to a scalar variable is just a scalar real.  If the gradient is
 for a list, the gradient is a list of gradients for the list elements,
 with arbitrary depth of nesting.  If the gradient is with respect to a
 list variable, the gradient information is a list with the
@@ -1018,35 +1023,58 @@ scalars will be a list of length 20 with the @code{GRAD_WRT_LIST} flag
 set, whose elements are lists of length 10 without the
 @code{GRAD_WRT_LIST} flag set, which have scalar reals as elements.
 
+Jacobian matrices, giving derivatives of a numeric vector with respect
+to a numeric vector, which are the ultimate atomic elements at the
+leaves of a gradient information list, will have their
+@code{TRUELENGTH} field set to the number of numeric values the
+gradient is with respect to (ie, the number of columns in the Jacobian
+matrix) minus one (subtracting one allows use of constant objects, for
+which TRUELENGTH is 0).  This value should be accessed with
+@code{GRADIENT_WRT_LEN} and set with @code{SET_GRADIENT_WRT_LEN},
+which handle adding/subtracting one.
+
 Gradient information may be @code{R_NilValue} when the gradient is
 zero (or all zeros for lists).  @code{R_NilValue} may also appear as a
 list element in a gradient value, indicating that the gradient for
-that portion of the variable is zero.  
+that portion of the variable is zero.
 
 Gradient values do not have names (they are instead added when the
 gradient information is converted to user-visible form), but the lists
-with @code{GRADINDEX} may have names.
+with @code{GRAD_WRT_LIST} set may have names.
 
 @code{VARIANT_GRADIENT} is used when evaluating the body of a
-@code{with gradient} or @code{track gradient} construct, and passed on
-from there, for example in an if expression.  @code{VARIANT_GRADIENT}
-is also used when evaluating the right-hand side of an assignment to a
-variable in an environment with the @code{STORE_GRAD} flag, which will
-be the case for an environment associated with @code{with gradient} or
-@code{track gradient} and for environments of functions called from
-there.
+@code{with gradient}, @code{track gradient}, or active @code{back
+gradient} construct, and passed on from there, for example in an if
+expression.  @code{VARIANT_GRADIENT} is also used when evaluating the
+right-hand side of an assignment to a variable in an environment with
+the @code{STORE_GRAD} flag, which will be the case for an environment
+associated with @code{with gradient}, @code{track gradient}, or an
+active @code{back gradient} construct, and for environments of
+functions called from there.
 
 Values assigned to variables in an environment with @code{STORE_GRAD}
 set have their gradient information stored as the attribute field of
 their binding cell, accessed in this context as
 @code{GRADIENT_IN_CELL(x)}, and set by
-@code{SET_GRADIENT_IN_CELL(x,g)}.  Gradient information can also be
+@code{SET_GRADIENT_IN_CELL(x,g)}, with its presence tested by
+@code{HAS_GRADIENT_IN_CELL(x)}.  Gradient information can also be
 stored in the attribute field of a promise, when it is forced, if it
 has the @code{STORE_GRAD} flag, and this informatiion is accessed by
 the same macros.  The internal @code{evalList_gradient} function
 evaluates a pairlist of arguments and returns a pairlist of values in
-which gradient information may be stored in the attribute field of
-each node, again for access with @code{GRADIENT_IN_CELL}.
+which gradient information may be stored in the attribute fields of
+nodes, again for access with @code{GRADIENT_IN_CELL}.
+
+The number of references in binding cells or promises to the
+pairlists, vector lists, and numeric vectors holding gradient
+information is indicated by their @code{NAMEDCNT} fields.  This may
+sometimes be just an upper bound on the number of references, not the
+precise number.  When gradient informations is stored in a binding
+cell or promise, @code{NAMEDCNT} is incremented for all parts of the
+information, recursively, and correspondingly, @code{NAMEDCNT} may be
+decremented for all parts when a reference is removed.  An attempt is
+made to avoid duplication of gradient information on subassignment
+operations when @code{NAMEDCNT} is one.
 
 
 @node Contexts, Argument evaluation, Gradient information, R Internal Structures

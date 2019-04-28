@@ -9,12 +9,12 @@
 \section{VERSION OF 2019-00-00}{
 
   \itemize{
-  \item This is a test version with a preliminary, and limited,
+  \item This is a test version with a preliminary
   implementation of automatic differentiation.  This is not expected
-  to become a stable release; that will wait until more complete
-  facilities for automatic differentiation have been implemented.
-  However, the version in this test release does demonstrate much 
-  about what the final facility will be like.
+  to become a stable release; that will wait until a more refined
+  implementation.  However, the version in this test release does 
+  demonstrate most of what the final facility will be like, except that 
+  some operations are much less efficient than they will be later.
 
   \item Type \code{help(Gradient)} to read documentation on the automatic 
   differentiation facilities, as they exist so far.
@@ -24,6 +24,14 @@
   \itemize{
   \item Fixed handling of \code{mat_mult_with_BLAS=T} or 
         \code{mat_mult_with_BLAS=F} as an option to configure.
+  }}
+
+  \subsection{BUG FIXES}{
+  \itemize{
+  \item Fixed a bug in which dimnames for an array of three or more
+        dimensions subscripted with \code{[]} were not converted
+        to names (as had been intended) when the result had its 
+        dimensions dropped, and only one dimension had names.
   }}
 }
 

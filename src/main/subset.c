@@ -32,7 +32,7 @@
  *
  *  Note on Matrix Subscripts
  *
- *  The special [ subscripting where dim(x) == ncol(subscript matrix)
+ *  The special [ subscripting where length(dim(x)) == ncol(subscript matrix)
  *  is handled inside VectorSubset. The subscript matrix is turned
  *  into a subscript vector of the appropriate size and then
  *  VectorSubset continues.  This provides coherence especially
@@ -64,12 +64,6 @@
 
 /* ----------------------------- SUBSCRIPTS --------------------------------- */
 
-/* We might get a call with R_NilValue from subassignment code */
-#define ECALL(call, yy) do { \
-  if (call == R_NilValue) error(yy); \
-  else errorcall(call, yy); \
-} while (0)
-
 static int integerOneIndex(int i, int len, SEXP call)
 {
     int indx = -1;
@@ -77,11 +71,11 @@ static int integerOneIndex(int i, int len, SEXP call)
     if (i > 0)
 	indx = i - 1;
     else if (i == 0 || len < 2) {
-	ECALL(call, _("attempt to select less than one element"));
+	errorcall(call, _("attempt to select less than one element"));
     } else if (len == 2 && i > -3)
 	indx = 2 + i;
     else {
-	ECALL(call, _("attempt to select more than one element"));
+	errorcall(call, _("attempt to select more than one element"));
     }
     return(indx);
 }
@@ -106,13 +100,13 @@ int get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 
     if (pos < 0 && length_s != 1) {
 	if (length_s > 1)
-	    ECALL(call, _("attempt to select more than one element"));
+	    errorcall(call, _("attempt to select more than one element"));
 	else
-	    ECALL(call, _("attempt to select less than one element"));
+	    errorcall(call, _("attempt to select less than one element"));
     } 
     else {
 	if(pos >= length_s)
-	    ECALL(call, _("internal error in use of recursive indexing"));
+	    errorcall(call, _("internal error in use of recursive indexing"));
     }
 
     if (pos < 0) pos = 0;
@@ -227,7 +221,7 @@ static SEXP mat2indsub(SEXP dims, SEXP s, SEXP call)
     SEXP rvec;
 
     if (ncols(s) != LENGTH(dims))
-	ECALL(call, _("incorrect number of columns in matrix subscript"));
+	errorcall(call, _("incorrect number of columns in matrix subscript"));
 
     PROTECT(rvec = allocVector(INTSXP, nrs));
     s = coerceVector(s, INTSXP);
@@ -244,14 +238,14 @@ static SEXP mat2indsub(SEXP dims, SEXP s, SEXP call)
 		break;
 	    }
 	    if (k < 0)
-		ECALL(call, 
+		errorcall(call, 
                   _("negative values are not allowed in a matrix subscript"));
 	    if (k == 0) {
 		INTEGER(rvec)[i] = -1;
 		break;
 	    }
 	    if (k > INTEGER(dims)[j])
-		ECALL(call, _("subscript out of bounds"));
+		out_of_bounds_error(call);
 	    INTEGER(rvec)[i] += (k - 1) * tdim;
 	    tdim *= INTEGER(dims)[j];
 	}
@@ -290,7 +284,7 @@ static SEXP strmat2intmat(SEXP s, SEXP dnamelist, SEXP call)
             s_elt = STRING_ELT(s, idx);
             if (s_elt == NA_STRING) v = NA_INTEGER;
             if (!CHAR(s_elt)[0]) v = 0; /* disallow "" match */
-            if (v == 0) errorcall(call, _("subscript out of bounds"));
+            if (v == 0) out_of_bounds_error(call);
             INTEGER(si)[idx] = v;
         }
         UNPROTECT(1);
@@ -311,7 +305,7 @@ static SEXP logicalSubscript (SEXP s, int ns, int nx, int *stretch,
     int v;
 
     if (!canstretch && ns > nx)
-	ECALL(call, _("(subscript) logical subscript too long"));
+	errorcall(call, _("(subscript) logical subscript too long"));
 
     nmax = (ns > nx) ? ns : nx;
     *stretch = (ns > nx) ? ns : 0;
@@ -654,7 +648,7 @@ static SEXP integerSubscript (SEXP s, int ns, int nx, int *stretch, int *hasna,
         if (canstretch) 
             *stretch = max;
         else
-            ECALL(call, _("subscript out of bounds"));
+            out_of_bounds_error(call);
     }
 
     if (min > 0) /* All positive (or NA) */
@@ -663,7 +657,7 @@ static SEXP integerSubscript (SEXP s, int ns, int nx, int *stretch, int *hasna,
         if (max <= 0 && !*hasna) 
             return negativeSubscript(s, ns, nx);
         else
-            ECALL(call, _("only 0's may be mixed with negative subscripts"));
+            errorcall(call, _("only 0's may be mixed with negative subscripts"));
     }
     else /* min == 0 */
         return nonnegativeSubscript(s, ns, nx);
@@ -757,7 +751,7 @@ static SEXP stringSubscript (SEXP s, int ns, int nx, SEXP names,
     if (canstretch == 0) {
         for (i = 0; i < ns; i++) {
             if (INTEGER(indx)[i] == 0)
-                ECALL(call, _("subscript out of bounds"));
+                out_of_bounds_error(call);
         }
     }
     else if (canstretch < 0) {
@@ -814,9 +808,8 @@ static SEXP stringSubscript (SEXP s, int ns, int nx, SEXP names,
 */
 
 static SEXP internalArraySubscript
-            (int dim, SEXP s, SEXP dims, SEXP x, SEXP modified_obj, int *hasna)
+  (int dim, SEXP s, SEXP dims, SEXP x, SEXP modified_obj, int *hasna, SEXP call)
 {
-    SEXP call = R_NilValue;
     int nd, ns, stretch = 0;
     SEXP dnames, tmp;
     ns = length(s);
@@ -839,7 +832,7 @@ static SEXP internalArraySubscript
     case STRSXP:
 	dnames = getAttrib(x, R_DimNamesSymbol);
 	if (dnames == R_NilValue)
-	    ECALL(call, _("no 'dimnames' attribute for array"));
+	    errorcall(call, _("no 'dimnames' attribute for array"));
 	dnames = VECTOR_ELT(dnames, dim);
 	return stringSubscript(s, ns, nd, dnames, (STRING_ELT), &stretch, call);
     case SYMSXP:
@@ -852,12 +845,11 @@ static SEXP internalArraySubscript
 }
 
 
-/* Inline function to handle positive scalar real and integer
-   subscripts specially, putting them on the scalar stack, and
-   otherwise call internalArraySubscript. */
+/* Function to handle positive scalar real and integer subscripts specially,
+   putting them on the scalar stack, otherwise calling internalArraySubscript.*/
 
-static inline SEXP array_sub (SEXP sb, SEXP dim, int i, SEXP x, 
-                              SEXP modified_obj, int *hasna)
+static SEXP array_sub (SEXP sb, SEXP dim, int i, SEXP x, 
+                       SEXP modified_obj, int *hasna, SEXP call)
 {
     if ( (((1<<INTSXP) + (1<<REALSXP)) >> TYPEOF(sb)) & 1 ) {
         if (LENGTH(sb) == 1) {
@@ -880,7 +872,7 @@ static inline SEXP array_sub (SEXP sb, SEXP dim, int i, SEXP x,
     }
 
   fallback:
-    return internalArraySubscript (i, sb, dim, x, modified_obj, hasna);
+    return internalArraySubscript (i, sb, dim, x, modified_obj, hasna, call);
 }
 
 
@@ -915,7 +907,7 @@ SEXP arraySubscript (int dim, SEXP s, SEXP dims, AttrGetter dng,
     case STRSXP:
 	dnames = dng(x, R_DimNamesSymbol);
 	if (dnames == R_NilValue)
-	    ECALL(call, _("no 'dimnames' attribute for array"));
+	    errorcall(call, _("no 'dimnames' attribute for array"));
 	dnames = VECTOR_ELT(dnames, dim);
 	return stringSubscript(s, ns, nd, dnames, strg, &stretch, call);
     case SYMSXP:
@@ -967,7 +959,7 @@ static SEXP makeSubscript (SEXP x, SEXP s, int *stretch, int *hasna,
     *hasna = 0;
 
     if (!isVector(x) && !isList(x) && !isLanguage(x))
-	ECALL(call, _("subscripting on non-vector"));
+	errorcall(call, _("subscripting on non-vector"));
 
     nx = length(x);
     ns = length(s);
@@ -1338,7 +1330,8 @@ static inline int whether_suppress_drop (SEXP sb)
 
 /* This is for all cases with a single index, including 1D arrays and
    matrix indexing of arrays */
-static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
+static SEXP VectorSubset (SEXP x, SEXP x_grad, SEXP subs, 
+                          int64_t seq, int drop, SEXP call)
 {
     SEXP sb = subs == R_NilValue ? R_MissingArg : CAR(subs);
     SEXP indx = R_NilValue;
@@ -1356,8 +1349,10 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
        packages, just return a duplicate of x if the subscripting has 
        the form x[,drop=FALSE]. */
 
-    if (sb == R_MissingArg && drop == FALSE)
+    if (sb == R_MissingArg && drop == FALSE) {
+        R_gradient = x_grad;
         return duplicate(x);
+    }
 
     PROTECT_WITH_INDEX (sb, &spi);
     dims = getDimAttrib(x);
@@ -1415,10 +1410,31 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
     /* Allocate and extract the result. */
 
     PROTECT (result = allocVector(TYPEOF(x),n));
-    if (sb==R_NoObject)
+
+    if (sb==R_NoObject) {
         ExtractRange(x, result, start, end, call);
-    else 
+        if (x_grad != R_NilValue) {
+            if (TYPEOF(result) == VECSXP)
+                R_gradient = subset_range_list_gradient 
+                               (x_grad, start-1, end-1, LENGTH(x));
+            else if (TYPEOF(result) == REALSXP)
+                R_gradient = subset_range_numeric_gradient 
+                               (x_grad, start-1, end-1, LENGTH(x));
+        }
+    }
+    else {
         ExtractSubset(x, result, indx, call);
+        if (x_grad != R_NilValue) {
+            if (TYPEOF(result) == VECSXP)
+                R_gradient = subset_indexes_list_gradient 
+                               (x_grad, indx, LENGTH(x));
+            else if (TYPEOF(result) == REALSXP)
+                R_gradient = subset_indexes_numeric_gradient 
+                               (x_grad, indx, LENGTH(x));
+        }
+    }
+
+    /* Extract names and source references, if present. */
 
     if (((attrib = getAttrib(x, R_NamesSymbol)) != R_NilValue) ||
         ( /* here we might have an array.  Use row names if 1D */
@@ -1488,8 +1504,9 @@ static SEXP VectorSubset(SEXP x, SEXP subs, int64_t seq, int drop, SEXP call)
 /* Used in MatrixSubset when only one (valid) row is accessed. */
 
 static void one_row_of_matrix (SEXP call, SEXP x, SEXP result, 
-                               int ii, int nr, SEXP sc, int ncs, int nc)
+                               int ii, int nr, SEXP sc)
 {
+    int ncs = LENGTH(sc);
     int typeofx = TYPEOF(x);
     int j, jj, st;
 
@@ -1504,8 +1521,9 @@ static void one_row_of_matrix (SEXP call, SEXP x, SEXP result,
             continue;
         }
 
-        if (jj < 1 || jj > nc)
-            out_of_bounds_error(call);
+        /* no check, since array_sub does it */
+        /* if (jj < 1 || jj > nc)
+            out_of_bounds_error(call); */
 
         switch (typeofx) {
         case LGLSXP:
@@ -1539,8 +1557,9 @@ static void one_row_of_matrix (SEXP call, SEXP x, SEXP result,
 /* Used in MatrixSubset for subsetting with range of rows. */
 
 static void range_of_rows_of_matrix (SEXP call, SEXP x, SEXP result, 
-    int start, int nrs, int nr, SEXP sc, int ncs, int nc)
+                                     int start, int nrs, int nr, SEXP sc)
 {
+    int ncs = LENGTH(sc);
     int i, j, jj, ij, jjnr;
 
     start -= 1;
@@ -1562,10 +1581,10 @@ static void range_of_rows_of_matrix (SEXP call, SEXP x, SEXP result,
             continue;
         }
 
-        /* Check for bad column index. */
+        /* Check for bad column index. Disabled since array_sub does it. */
 
-        if (jj < 1 || jj > nc)
-            out_of_bounds_error(call);
+        /* if (jj < 1 || jj > nc)
+            out_of_bounds_error(call); */
 
         /* Loops over range of rows. */
 
@@ -1619,8 +1638,10 @@ static void range_of_rows_of_matrix (SEXP call, SEXP x, SEXP result,
 /* Used in MatrixSubset for the general case of subsetting. */
 
 static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result, 
-    SEXP sr, int nrs, int nr, SEXP sc, int ncs, int nc)
+                                     SEXP sr, int nr, SEXP sc)
 {
+    int nrs = LENGTH(sr);
+    int ncs = LENGTH(sc);
     int i, j, ii, jj, ij, jjnr;
 
     /* Set rows of result to NAs where there are NA row indexes.  Also check 
@@ -1649,10 +1670,10 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
             continue;
         }
 
-        /* Check for bad column index. */
+        /* Check for bad column index.  Disabled since array_sub does it. */
 
-        if (jj < 1 || jj > nc)
-            out_of_bounds_error(call);
+        /* if (jj < 1 || jj > nc)
+            out_of_bounds_error(call); */
 
         /* Loops over row indexes, except skips NA row indexes, done above. */
 
@@ -1714,7 +1735,8 @@ static void multiple_rows_of_matrix (SEXP call, SEXP x, SEXP result,
 
 /* Subset for a vector with dim attribute specifying two dimensions. */
 
-static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
+static SEXP MatrixSubset (SEXP x, SEXP x_grad, SEXP subs, SEXP call, 
+                          int drop, SEXP dim, int64_t seq)
 {
     SEXP s0 = CAR(subs), s1 = CADR(subs);
     SEXP dims, result, sr, sc;
@@ -1726,8 +1748,6 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
 
     PROTECT2(x,subs);
     int nprotect = 2;
-
-    SEXP dim = getDimAttrib(x);
 
     nr = INTEGER(dim)[0];
     nc = INTEGER(dim)[1];
@@ -1754,7 +1774,7 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
     if (s0 != R_NoObject) {
         if (drop == NA_LOGICAL) 
             suppress_drop_row = whether_suppress_drop(s0);
-        PROTECT (sr = array_sub (s0, dim, 0, x, R_NoObject, &rhasna));
+        PROTECT (sr = array_sub (s0, dim, 0, x, R_NoObject, &rhasna, call));
         nprotect++;
         nrs = LENGTH(sr);
     }
@@ -1766,7 +1786,7 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
     if (drop == FALSE)
         suppress_drop_row = suppress_drop_col = 1;
 
-    PROTECT (sc = array_sub (s1, dim, 1, x, R_NoObject, &chasna));
+    PROTECT (sc = array_sub (s1, dim, 1, x, R_NoObject, &chasna, call));
     nprotect++;
     ncs = LENGTH(sc);
 
@@ -1778,17 +1798,53 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
         error(_("dimensions would exceed maximum size of array"));
 
     PROTECT (result = allocVector(TYPEOF(x), nrs*ncs));
+    SEXP res_grad = R_NilValue;
     nprotect++;
 
     /* Extract elements from matrix x to result. */
 
-    if (s0 == R_NoObject)
-        range_of_rows_of_matrix(call, x, result, start, nrs, nr, sc, ncs, nc);
+    if (s0 == R_NoObject) {
+        range_of_rows_of_matrix(call, x, result, start, nrs, nr, sc);
+        if (x_grad != R_NilValue) {
+            if (TYPEOF(x) == VECSXP)
+                res_grad = matrix_subset_range_list_gradient
+                                  (x_grad, start, nrs, nr, sc, LENGTH(x));
+            else if (TYPEOF(x) == REALSXP)
+                res_grad = matrix_subset_range_numeric_gradient
+                                  (x_grad, start, nrs, nr, sc, LENGTH(x));
+            PROTECT(res_grad);
+            nprotect++;
+        }
+    }
+
     else if (nrs == 1 && (ii = INTEGER(sr)[0]) != NA_INTEGER 
-                      && ii >= 0 && ii <= nr)
-        one_row_of_matrix (call, x, result, ii, nr, sc, ncs, nc);
-    else
-        multiple_rows_of_matrix (call, x, result, sr, nrs, nr, sc, ncs, nc);
+                      && ii >= 0 && ii <= nr) {
+        one_row_of_matrix (call, x, result, ii, nr, sc);
+        if (x_grad != R_NilValue) {
+            if (TYPEOF(x) == VECSXP)
+                res_grad = matrix_subset_one_row_list_gradient
+                                  (x_grad, ii, nr, sc, LENGTH(x));
+            else if (TYPEOF(x) == REALSXP)
+                res_grad = matrix_subset_one_row_numeric_gradient
+                                  (x_grad, ii, nr, sc, LENGTH(x));
+            PROTECT(res_grad);
+            nprotect++;
+        }
+    }
+
+    else {
+        multiple_rows_of_matrix (call, x, result, sr, nr, sc);
+        if (x_grad != R_NilValue) {
+            if (TYPEOF(x) == VECSXP)
+                res_grad = matrix_subset_indexes_list_gradient
+                                  (x_grad, sr, nr, sc, LENGTH(x));
+            else if (TYPEOF(x) == REALSXP)
+                res_grad = matrix_subset_indexes_numeric_gradient
+                                  (x_grad, sr, nr, sc, LENGTH(x));
+            PROTECT(res_grad);
+            nprotect++;
+        }
+    }
 
     /* Set up dimnames of the returned value.  Not attached to result yet. */
 
@@ -1869,15 +1925,22 @@ static SEXP MatrixSubset(SEXP x, SEXP subs, SEXP call, int drop, int64_t seq)
         setAttrib(result, R_DimNamesSymbol, newdimnames);
     }
 
-    UNPROTECT(nprotect);
+    if (res_grad != R_NilValue) {
+        R_gradient = res_grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     R_scalar_stack = sv_scalar_stack;
+    UNPROTECT(nprotect);
+
     return result;
 }
 
 
-static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
+static SEXP ArraySubset (SEXP x, SEXP x_grad, SEXP s, 
+                         SEXP call, int drop, SEXP xdims, int k)
 {
-    int i, j, ii, jj, n;
+    int i, j, ii, n;
     SEXP dimnames, r, result;
     int mode = TYPEOF(x);
 
@@ -1898,11 +1961,11 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
         else /* drop == NA_LOGICAL */ 
             suppress_drop[i] = CAR(r) == R_MissingArg ? MISSING(r) == 2
                                 : whether_suppress_drop(CAR(r));
-        PROTECT (subv[i] = array_sub (CAR(r), xdims, i, x, R_NoObject, &hasna));
+        PROTECT (subv[i] 
+                  = array_sub (CAR(r), xdims, i, x, R_NoObject, &hasna, call));
         subs[i] = INTEGER(subv[i]);
 	nsubs[i] = LENGTH(subv[i]);
         n *= nsubs[i];
-        indx[i] = 0;
 	r = CDR(r);
     }
 
@@ -1932,20 +1995,15 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
 
     /* Transfer the subset elements from "x" to "a". */
 
-    for (i = 0; ; i++) {
+    int last = 0;
 
-        jj = subs[0][indx[0]];
-        if (jj != NA_INTEGER) {
-            ii = jj-1;
-            for (j = 1; j < k; j++) {
-                jj = subs[j][indx[j]];
-                if (jj == NA_INTEGER)
-                    break;
-                ii += (jj-1) * offset[j];
-            }
-        }
+    for (i = 0; i < k; i++) indx[i] = 0;
 
-        if (jj != NA_INTEGER) {
+    for (i = 0; !last; i++) {
+
+        ii = array_offset_from_index (subs, nsubs, indx, offset, k, 1, &last);
+
+        if (ii != NA_INTEGER) {
             switch (mode) {
             case LGLSXP:
                 LOGICAL(result)[i] = LOGICAL(x)[ii];
@@ -1979,7 +2037,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
                 break;
             }
         }
-        else { /* jj == NA_INTEGER */
+        else { /* ii == NA_INTEGER */
             switch (mode) {
             case LGLSXP:
                 LOGICAL(result)[i] = NA_LOGICAL;
@@ -2009,15 +2067,22 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
                 break;
             }
         }
-
-        j = 0;
-        while (++indx[j] >= nsubs[j]) {
-            indx[j] = 0;
-            if (++j >= k) goto done;
-        }
     }
 
   done: ;
+
+    SEXP res_grad = R_NilValue;
+
+    if (x_grad != R_NilValue) {
+        if (TYPEOF(result) == REALSXP) {
+            res_grad = array_subset_indexes_numeric_gradient
+                         (x_grad, subs, nsubs, offset, k, LENGTH(x));
+        }
+        else if (TYPEOF(result) == VECSXP) {
+            res_grad = array_subset_indexes_list_gradient
+                         (x_grad, subs, nsubs, offset, k, LENGTH(x));
+        }
+    }
 
     /* Set up dimnames for result, but don't attach to result yet. */
 
@@ -2052,11 +2117,25 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
     if (rdims <= 1) { /* result is vector without dims, but maybe with names */
         if (newdimnames != R_NilValue) {
             int w = -1;   /* which dimension to take names from, neg if none */
-            for (i = 0; i < k; i++) {
-                if (VECTOR_ELT(newdimnames,i) != R_NilValue) {
-                    if (nsubs[i] != 1 || suppress_drop[i]) {
-                        w = i;
-                        break;
+            if (rdims == 0) {  /* see if there's only one with dimnames */
+                for (i = 0; i < k; i++) {
+                    if (VECTOR_ELT(newdimnames,i) != R_NilValue) {
+                        if (w < 0) 
+                            w = i;   /* got one... */
+                        else {
+                            w = -1;  /* but turns out there's more than one */
+                            break;
+                        }
+                    }
+                }
+            }
+            else {  /* take the one that's not suppressed */
+                for (i = 0; i < k; i++) {
+                    if (VECTOR_ELT(newdimnames,i) != R_NilValue) {
+                        if (nsubs[i] != 1 || suppress_drop[i]) {
+                            w = i;
+                            break;
+                        }
                     }
                 }
             }
@@ -2083,6 +2162,12 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop, SEXP xdims, int k)
                              x, s, xdims */
 
     R_scalar_stack = sv_scalar_stack;
+
+    if (res_grad != R_NilValue) {
+        R_gradient = res_grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     return result;
 }
 
@@ -2355,27 +2440,31 @@ static SEXP two_matrix_subscripts (SEXP x, SEXP dim, SEXP s1, SEXP s2,
 }
 
 
-/* The do_subset function implementing the "[" subset operator is in eval.c. */
+/* The do_subset function implementing the "[" subset operator is in eval.c.
 
-/* do_subset_dflt and do_subset_dflt_seq are called from there and elsewhere
-   outside this module. */
+   do_subset_dflt_seq is called from there.
 
-/* do_subset_dflt doesn't have the "seq" argument of do_subset_dflt_seq, 
-   and takes all arguments as an arg list. */
+   do_subset_dflt doesn't have the "seq" argument of do_subset_dflt_seq, 
+   and takes all arguments as an arg list.  Currently used only by the
+   obsolete byte-code compiler. */
 
 SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP x = CAR(args);
+    SEXP x_grad = R_NilValue;
+    if (HAS_GRADIENT_IN_CELL(args))
+        x_grad = GRADIENT_IN_CELL(args);
+
     args = CDR(args);
     
     if (args == R_NilValue || TAG(args) != R_NilValue)
-        return do_subset_dflt_seq (call, op, x, R_NoObject, R_NoObject, 
+        return do_subset_dflt_seq (call, op, x, x_grad, R_NoObject, R_NoObject, 
                                    args, rho, 0, 0);
     else if (CDR(args) == R_NilValue || TAG(CDR(args)) != R_NilValue)
-        return do_subset_dflt_seq (call, op, x, CAR(args), R_NoObject,
+        return do_subset_dflt_seq (call, op, x, x_grad, CAR(args), R_NoObject,
                                    CDR(args), rho, 0, 0);
     else
-        return do_subset_dflt_seq (call, op, x, CAR(args), CADR(args),
+        return do_subset_dflt_seq (call, op, x, x_grad, CAR(args), CADR(args),
                                    CDDR(args), rho, 0, 0);
 }
 
@@ -2384,7 +2473,8 @@ SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
    length, and whether .. properties of the sequence.
 
    The first argument (the array, x) is passed separately rather than
-   as part of an argument list, for efficiency.  If sb1 is not R_NoObject, 
+   as part of an argument list, for efficiency.  It may have a
+   gradient in x_grad (in not, R_NilValue). If sb1 is not R_NoObject,
    it is the first subscript, which has no tag.  Similarly for sb2.
    Remaining subscripts and other arguments are in the pairlist subs.
 
@@ -2394,7 +2484,8 @@ SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
 
    Note:  x, sb1, and subs need not be protected on entry. */
 
-SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op, SEXP x, 
+SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op,
+                                          SEXP x, SEXP x_grad,
                                           SEXP sb1, SEXP sb2, SEXP subs, 
                                           SEXP rho, int variant, int64_t seq)
 {
@@ -2403,7 +2494,8 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op, SEXP x,
 
     R_Visible = TRUE;
 
-    if (seq == 0 && sb1 != R_NoObject && subs==R_NilValue) {
+    if (seq == 0 && sb1 != R_NoObject && subs==R_NilValue 
+                 && x_grad == R_NilValue) {
 
         if (sb2 == R_NoObject) {  /* handle simples cases with one subscript */
             SEXP attr = ATTRIB(x);
@@ -2429,13 +2521,13 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op, SEXP x,
         }
     }
 
-    /* This was intended for compatibility with S, */
-    /* but in fact S does not do this. */
+    /* This was intended for compatibility with S, but in fact S does 
+       not do this. */
 
     if (x == R_NilValue)
 	return x;
 
-    PROTECT3(x,sb1,sb2);
+    PROTECT4(x,x_grad,sb1,sb2);
 
     drop = ExtractDropArg(&subs);
     if (sb2 != R_NoObject)
@@ -2449,8 +2541,8 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op, SEXP x,
     nsubs = length(subs);
     type = TYPEOF(x);
 
-    /* Here coerce pair-based objects into generic vectors. */
-    /* All subsetting takes place on the generic vector form. */
+    /* Here coerce pair-based objects into generic vectors.
+       All subsetting takes place on the generic vector form. */
 
     ax = x;
     if (isVector(x))
@@ -2474,19 +2566,26 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op, SEXP x,
     else
         nonsubsettable_error(call,x);
 
-    /* This is the actual subsetting code. */
-    /* The separation of arrays and matrices is purely an optimization. */
+    /* This is the actual subsetting code.
+
+       The separation of arrays and matrices is purely an optimization 
+       (except ArraySubset wouldn't be able to handle 'seq' being non-zero).
+
+       The VectorSubset, MatrixSubset, or ArraySubset functions may set
+       R_gradient. */
+
+    R_gradient = R_NilValue;
 
     if(nsubs < 2)
-	PROTECT(ans = VectorSubset(ax, subs, seq, drop, call));
+	PROTECT(ans = VectorSubset(ax, x_grad, subs, seq, drop, call));
     else {
-        SEXP xdims = getDimAttrib(x);
-	if (nsubs != length(xdims))
+        SEXP xdims = getDimAttrib(ax);
+	if (TYPEOF(xdims) != INTSXP || nsubs != LENGTH(xdims))
 	    errorcall(call, _("incorrect number of dimensions"));
 	if (nsubs == 2)
-	    ans = MatrixSubset(ax, subs, call, drop, seq);
+	    ans = MatrixSubset(ax, x_grad, subs, call, drop, xdims, seq);
 	else
-	    ans = ArraySubset(ax, subs, call, drop, xdims, nsubs);
+	    ans = ArraySubset(ax, x_grad, subs, call, drop, xdims, nsubs);
 	PROTECT(ans);
     }
 
@@ -2512,7 +2611,11 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op, SEXP x,
 	setAttrib(ans, R_TspSymbol, R_NilValue);
         setAttrib(ans, R_ClassSymbol, R_NilValue);
     }
-    UNPROTECT(6);
+
+    UNPROTECT(7);
+
+    if (R_gradient != R_NilValue)
+        R_variant_result = VARIANT_GRADIENT_FLAG;
 
     return ans;
 }
@@ -2690,7 +2793,7 @@ SEXP attribute_hidden do_subset2_dflt_x (SEXP call, SEXP op, SEXP x,
                     max_named = nm;
                 if (array_grad != R_NilValue)
                     array_grad = 
-                      subset_list_gradient (array_grad, offset, lenx);
+                      subset2_list_gradient (array_grad, offset, lenx);
             }
         }
 
@@ -2754,17 +2857,25 @@ SEXP attribute_hidden do_subset2_dflt_x (SEXP call, SEXP op, SEXP x,
              && max_named <= 1 && !NAMEDCNT_GT_1(ans))
             R_variant_result = 1;
         if (array_grad != R_NilValue) {
-            R_gradient = subset_list_gradient (array_grad, offset, LENGTH(x));
+            R_gradient = subset2_list_gradient (array_grad, offset, LENGTH(x));
             R_variant_result |= VARIANT_GRADIENT_FLAG;
         }
     }
     else if (TYPEOF(x) == INTSXP && CAN_USE_SCALAR_STACK(variant))
         ans = PUSH_SCALAR_INTEGER (INTEGER(x)[offset]);
-    else if (TYPEOF(x) == REALSXP && CAN_USE_SCALAR_STACK(variant))
+    else if (TYPEOF(x) == REALSXP && CAN_USE_SCALAR_STACK(variant)
+              && array_grad == R_NilValue)
         ans = PUSH_SCALAR_REAL (REAL(x)[offset]);
     else {
-	ans = allocVector(TYPEOF(x), 1);
+        ans = allocVector(TYPEOF(x), 1);
         copy_elements (ans, 0, 0, x, offset, 0, 1);
+        if (array_grad != R_NilValue) {
+            PROTECT(ans);
+            R_gradient = subset_range_numeric_gradient
+                           (array_grad, offset, offset, LENGTH(x));
+            R_variant_result |= VARIANT_GRADIENT_FLAG;
+            UNPROTECT(1);
+        }
     }
     UNPROTECT(2);
     return ans;
@@ -2919,7 +3030,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP name, SEXP call,
             R_variant_result = 1;
 
         if (grad != R_NilValue) {
-            R_gradient = subset_list_gradient (grad, i, n);
+            R_gradient = subset2_list_gradient (grad, i, n);
             R_variant_result |= VARIANT_GRADIENT_FLAG;
         }
 
@@ -3033,8 +3144,8 @@ static SEXP embedInVector(SEXP v)
    Level 2 is used for [[<-.  It does not coerce when assigning into a list.
 */
 
-static void SubassignTypeFix (SEXP *x, SEXP *y, int stretch, int level, 
-                              SEXP call)
+static void SubassignTypeFix (SEXP *x, SEXP *x_grad, SEXP *y, SEXP *y_grad, 
+                              int stretch, int level, SEXP call)
 {
     Rboolean x_is_object = OBJECT(*x);  /* coercion can lose the object bit */
 
@@ -3057,8 +3168,10 @@ static void SubassignTypeFix (SEXP *x, SEXP *y, int stretch, int level,
               && ((((1<<STRSXP) + (1<<CPLXSXP) + (1<<REALSXP) + (1<<INTSXP))
                    >> type_y) & 1)
          || type_x == RAWSXP
-              && type_y != RAWSXP)
+              && type_y != RAWSXP) {
             *x = coerceVector (*x, type_y);
+            *x_grad = R_NilValue;
+        }
         if (level == 1) { 
             /* For when later code doesn't handle these cases. */
             if (type_y == RAWSXP && type_x != RAWSXP
@@ -3068,10 +3181,21 @@ static void SubassignTypeFix (SEXP *x, SEXP *y, int stretch, int level,
     }
     else if (atom_x && isVectorList(*y)) {
         *x = coerceVector (*x, type_y);
+        if (*x_grad != R_NilValue)
+            *x_grad = type_x != REALSXP ? R_NilValue
+                       : as_list_gradient (*x_grad, LENGTH(*x));
     }
     else if (isVectorList(*x)) {
-        if (level != 2)
-	    *y = type_y==S4SXP ? embedInVector(*y) : coerceVector (*y, type_x);
+        if (level != 2) {
+	    if (type_y==S4SXP)
+                *y = embedInVector(*y);
+            else {
+                *y = coerceVector (*y, type_x);
+                if (*y_grad != R_NilValue)
+                    *y_grad = type_y != REALSXP ? R_NilValue
+                               : as_list_gradient (*y_grad, LENGTH(*y));
+            }
+        }
     }
     else {
 	errorcall(call,
@@ -3089,20 +3213,30 @@ static void SubassignTypeFix (SEXP *x, SEXP *y, int stretch, int level,
 
 /* Returns list made from x (a VECSXP, EXPRSXP, or NILSXP) with elements 
    from start to end (inclusive) deleted.  The start index will be positive. 
-   If start>end, no elements are deleted (x returned unchanged). */
+   If start>end, no elements are deleted (x returned unchanged). 
 
-static SEXP DeleteListElementsSeq (SEXP x, R_len_t start, R_len_t end)
+   If x_grad is not R_NilValue, deletion will also be done for the gradient,
+   and the result left in R_gradient.  R_gradient is otherwise set to
+   R_NilValue. */
+
+static SEXP DeleteListElementsSeq 
+              (SEXP x, SEXP x_grad, R_len_t start, R_len_t end)
 {
     SEXP xnew, xnames, xnewnames;
     R_len_t i, len;
+
+    R_gradient = R_NilValue;
 
     len = length(x);
     if (start < 1)
         start = 1;
     if (end > len) 
         end = len;
-    if (start > end)
+    if (start > end) {
+        if (x_grad != R_NilValue)
+            R_gradient = duplicate(x_grad);
         return x;
+    }
 
     if (NAMEDCNT_GT_1(x)) {
         PROTECT(xnew = allocVector(TYPEOF(x), len-(end-start+1)));
@@ -3142,24 +3276,35 @@ static SEXP DeleteListElementsSeq (SEXP x, R_len_t start, R_len_t end)
         UNPROTECT(1);
     }
 
+    if (x_grad != R_NilValue)
+        R_gradient = delete_range_list_gradient (x_grad, start-1, end-1, len);
+
     UNPROTECT(1);
     return xnew;
 }
 
 /* Returns list made from x (a LISTSXP, EXPRSXP, or NILSXP) with elements 
-   indexed by elements in "which" (an INSTSXP or NILSXP) deleted. */
+   indexed by elements in "which" (an INTSXP or NILSXP) deleted. 
 
-static SEXP DeleteListElements(SEXP x, SEXP which)
+   If x_grad is not R_NilValue, deletion will also be done for the gradient,
+   and the result left in R_gradient.  R_gradient is otherwise set to
+   R_NilValue. */
+
+static SEXP DeleteListElements (SEXP x, SEXP x_grad, SEXP which)
 {
     SEXP include, xnew, xnames, xnewnames;
     R_len_t i, ii, len, lenw;
+
+    R_gradient = R_NilValue;
 
     if (x==R_NilValue || which==R_NilValue)
         return x;
     len = LENGTH(x);
     lenw = LENGTH(which);
-    if (len==0 || lenw==0) 
+    if (len==0 || lenw==0) {
+        R_gradient = x_grad;
         return x;
+    }
 
     /* handle deletion of a contiguous block (incl. one element) specially. */
     for (i = 1; i < lenw; i++)
@@ -3169,7 +3314,7 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
         int start = INTEGER(which)[0];
         int end = INTEGER(which)[lenw-1];
         if (start < 1) start = 1;
-        return DeleteListElementsSeq (x, start, end);
+        return DeleteListElementsSeq (x, x_grad, start, end);
     }
 
     /* create vector indicating which to delete */
@@ -3188,13 +3333,14 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
 	ii += INTEGER(include)[i];
     if (ii == len) {
 	UNPROTECT(1);
+        R_gradient = x_grad;
 	return x;
     }
 
     PROTECT(xnew = allocVector(TYPEOF(x), ii));
     ii = 0;
     for (i = 0; i < len; i++) {
-	if (INTEGER(include)[i] == 1) {
+	if (INTEGER(include)[i]) {
 	    SET_VECTOR_ELT(xnew, ii, VECTOR_ELT(x, i));
 	    ii++;
 	}
@@ -3217,6 +3363,12 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
     }
 
     copyMostAttrib(x, xnew);
+
+    if (x_grad != R_NilValue) {
+        R_gradient = 
+          delete_selected_list_gradient (x_grad, include, LENGTH(xnew), len);
+    }
+
     UNPROTECT(2);
     return xnew;
 }
@@ -3229,24 +3381,25 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
 
    The x argument must be protected by the caller. */
 
-static SEXP VectorAssignSeq 
-              (SEXP call, SEXP x, R_len_t start, R_len_t end, SEXP y)
+static SEXP VectorAssignSeq (SEXP call, 
+    SEXP x, SEXP x_grad, R_len_t start, R_len_t end, SEXP y, SEXP y_grad)
 {
-    int i, n, ny;
+    int i, n, nx, ny;
 
     if (x==R_NilValue && y==R_NilValue)
 	return R_NilValue;
 
     n = end - start + 1;
 
-    /* Here we make sure that the LHS has */
-    /* been coerced into a form which can */
-    /* accept elements from the RHS. */
+    /* Here we make sure that the LHS has been coerced into a form which can
+       accept elements from the RHS. */
 
-    SubassignTypeFix (&x, &y, end > length(x) ? end : 0, 0, call);
+    SubassignTypeFix (&x, &x_grad, &y, &y_grad, 
+                      end > length(x) ? end : 0, 0, call);
 
     PROTECT(x);
 
+    nx = length(x);
     ny = length(y);
     if (ny > n) 
         ny = n;
@@ -3268,16 +3421,25 @@ static SEXP VectorAssignSeq
 
     /* Do the actual assignment... */
 
+    SEXP res_grad = R_NilValue;
+
     if (n == 0) {
         /* nothing to do */
     }
     else if (isVectorAtomic(x)) {
-        if (TYPEOF(x) == TYPEOF(y))
+        if (TYPEOF(x) == TYPEOF(y)) {
             copy_elements_recycled (x, start-1, y, n);
+            if (x_grad != R_NilValue || y_grad != R_NilValue)
+               res_grad = subassign_range_numeric_gradient 
+                             (x_grad, y_grad, start-1, end-1, nx);
+        }
         else if (isVectorAtomic(y)) {
             copy_elements_coerced (x, start-1, 1, y, 0, 1, ny);
             if (n > ny)
                 Rf_recycled_copy (x, start-1, ny, n);
+            if (x_grad != R_NilValue)
+               res_grad = subassign_range_numeric_gradient 
+                             (x_grad, R_NilValue, start-1, end-1, nx);
         }
         else
             goto warn;
@@ -3301,12 +3463,21 @@ static SEXP VectorAssignSeq
                 }
             }
         }
+        if (x_grad != R_NilValue || y_grad != R_NilValue)
+            res_grad = subassign_range_list_gradient 
+                         (x_grad, y_grad, start-1, end-1, nx);
     }
     else if (isVectorList(x) && y == R_NilValue) {
-	x = DeleteListElementsSeq(x, start, end);
+	x = DeleteListElementsSeq (x, x_grad, start, end);
+        res_grad = R_gradient;
     }
     else
         goto warn;
+
+    if (res_grad != R_NilValue) {
+        R_gradient = res_grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
 
     UNPROTECT(2);
     return x;
@@ -3362,7 +3533,8 @@ static inline SEXP NA_check_remove (SEXP call, SEXP indx, int *n, int err)
 }
 
 
-static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
+static SEXP VectorAssign (SEXP call, SEXP x, SEXP x_grad, 
+                          SEXP s, SEXP y, SEXP y_grad)
 {
     SEXP indx, newnames;
     int i, ii, iy, n, nx, ny;
@@ -3403,7 +3575,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     /* Here we make sure that the LHS has */
     /* been coerced into a form which can */
     /* accept elements from the RHS. */
-    SubassignTypeFix(&x, &y, stretch, 1, call);
+    SubassignTypeFix (&x, &x_grad, &y, &y_grad, stretch, 1, call);
     if (n == 0) {
         UNPROTECT(2);
         return x;
@@ -3443,6 +3615,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
        from non-string vectors and from raw vectors to non-raw vectors are
        not handled here, but are avoided by coercion in SubassignTypeFix. */
 
+    SEXP res_grad = R_NilValue;
     int *ixp = INTEGER(indx);
     int k;
 
@@ -3636,17 +3809,27 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
                 if (++k == ny) k = 0;
             }
         }
+        if (x_grad != R_NilValue || y_grad != R_NilValue)
+            res_grad = subassign_indexes_list_gradient 
+                         (x_grad, y_grad, indx, nx);
         break;
 
     case (EXPRSXP<<5) + NILSXP:
     case (VECSXP<<5)  + NILSXP:
-        x = DeleteListElements(x, indx);
-        UNPROTECT(4);
-        return x;
-        break;
+        x = DeleteListElements (x, x_grad, indx);
+        res_grad = R_gradient;
+        goto ret;
 
     default:
         warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
+    }
+
+    if ((x_grad != R_NilValue || y_grad != R_NilValue)) {
+        if (TYPEOF(x) == REALSXP) {
+            if (TYPEOF(y) != REALSXP) y_grad = R_NilValue;
+            res_grad = subassign_indexes_numeric_gradient (x_grad, y_grad,
+                                                           indx, nx);
+        }
     }
 
     /* Check for additional named elements, if subscripting with strings. */
@@ -3669,12 +3852,21 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
             }
         }
     }
+
+  ret:
+    if (res_grad != R_NilValue) {
+        R_gradient = res_grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     UNPROTECT(4);
     return x;
 }
 
-static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
+static SEXP MatrixAssign (SEXP call, SEXP x, SEXP x_grad,
+                          SEXP sb1, SEXP sb2, SEXP y, SEXP y_grad)
 {
+    SEXP res_grad = R_NilValue;
     int i, j, iy;
     int rhasna, chasna;
     int_fast64_t n;
@@ -3692,16 +3884,17 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 
     SEXP sv_scalar_stack = R_scalar_stack;
 
-    PROTECT (sr = array_sub (sb1, dim, 0, x, x, &rhasna));
+    PROTECT (sr = array_sub (sb1, dim, 0, x, x, &rhasna, call));
     nrs = LENGTH(sr);
 
-    PROTECT (sc = array_sub (sb2, dim, 1, x, x, &chasna));
+    PROTECT (sc = array_sub (sb2, dim, 1, x, x, &chasna, call));
     ncs = LENGTH(sc);
 
     /* Do assignment of a single atomic element with matching scalar type,
-       not being computed, specially. */
+       not being computed, specially.  Also, don't handle gradients, yet. */
 
     if (nrs == 1 && ncs == 1 && isVectorAtomic(x)
+          && x_grad == R_NilValue && y_grad == R_NilValue
           && (TYPE_ETC(y) & ~TYPE_ET_CETERA_HAS_ATTR) == TYPEOF(x)) {
         if (*INTEGER(sr) != NA_INTEGER && *INTEGER(sc) != NA_INTEGER) {
             R_len_t isub = (*INTEGER(sr)-1) + (*INTEGER(sc)-1) * nr;
@@ -3752,7 +3945,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
 	errorcall(call,
        _("number of items to replace is not a multiple of replacement length"));
 
-    SubassignTypeFix(&x, &y, 0, 1, call);
+    SubassignTypeFix (&x, &x_grad, &y, &y_grad, 0, 1, call);
     if (n == 0) {
         UNPROTECT(2);
         R_scalar_stack = sv_scalar_stack;
@@ -3760,7 +3953,6 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
     }
 
     PROTECT(x);
-
 
     /* When array elements are being permuted the RHS must be
        duplicated or the elements get trashed.  FIXME : this should be
@@ -4137,14 +4329,35 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP sb1, SEXP sb2, SEXP y)
         }
     }
 
+    if (x_grad != R_NilValue || y_grad != R_NilValue) {
+        int *subs[2] = { INTEGER(sr), INTEGER(sc) };
+        int bound[2] = { nrs, ncs };
+        int offset[2] = { 0 /* unused */, nr };
+        if (TYPEOF(x) == VECSXP) {
+            res_grad = array_subassign_indexes_list_gradient
+                         (x_grad, y_grad, subs, bound, offset, 2, LENGTH(x));
+        }
+        else if (TYPEOF(x) == REALSXP) {
+            res_grad = array_subassign_indexes_numeric_gradient
+                         (x_grad, y_grad, subs, bound, offset, 2, LENGTH(x));
+        }
+    }
+
+    if (res_grad != R_NilValue) {
+        R_gradient = res_grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     UNPROTECT(4);
     R_scalar_stack = sv_scalar_stack;
     return x;
 }
 
 
-static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
+static SEXP ArrayAssign (SEXP call, SEXP x, SEXP x_grad, 
+                         SEXP s, SEXP y, SEXP y_grad)
 {
+    SEXP res_grad = R_NilValue;
     int i, j, ii, iy, k=0, ny;
     int rep_assign = 0; /* 1 if elements assigned repeatedly into list array */
     int any_hasna = 0;
@@ -4158,7 +4371,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     /* Here we make sure that the LHS has been coerced into */
     /* a form which can accept elements from the RHS. */
 
-    SubassignTypeFix(&x, &y, 0, 1, call);
+    SubassignTypeFix (&x, &x_grad, &y, &y_grad, 0, 1, call);
 
     PROTECT(x);
 
@@ -4179,7 +4392,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     int nmod = ny > 1;
     int zero = 0;
     for (i = 0; i < k; i++) {
-        PROTECT(tmp = array_sub (CAR(s), dims, i, x, x, &hasna[i]));
+        PROTECT(tmp = array_sub (CAR(s), dims, i, x, x, &hasna[i], call));
 	bound[i] = LENGTH(tmp);
         if (hasna[i]) {
             any_hasna = 1;
@@ -4192,7 +4405,6 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
         subs[i] = INTEGER(tmp);
         if (bound[i] == 0) zero = 1;
         if (ny > 1) nmod = ((int_fast64_t)nmod * bound[i]) % ny;
-        indx[i] = 0;
 	s = CDR(s);
     }
 
@@ -4212,10 +4424,10 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     }
 
     offset[1] = INTEGER(dims)[0];
-    offset[0] = offset[1] + 1;
+    /* offset[0] = offset[1] + 1; */  /* offset[0] is not currently used */
     for (i = 2; i < k; i++) {
         offset[i] = offset[i-1] * INTEGER(dims)[i-1];
-        offset[0] += offset[i];
+        /* offset[0] += offset[i]; */
     }
 
     /* Do the actual assignment... Note that assignments to string vectors
@@ -4223,65 +4435,38 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
        not handled here, but are avoided by coercion in SubassignTypeFix. */
 
     int which = (TYPEOF(x)<<5) + TYPEOF(y);
+    int last = 0;
 
-#   define AA_PRELUDE \
-    for (;;) { \
-        ii = subs[0][indx[0]] - offset[0]; \
-        if (k == 3) { \
-            ii += offset[1] * subs[1][indx[1]]; \
-            ii += offset[2] * subs[2][indx[2]]; \
-        } \
-        else if (k == 4) { \
-            ii += offset[1] * subs[1][indx[1]]; \
-            ii += offset[2] * subs[2][indx[2]]; \
-            ii += offset[3] * subs[3][indx[3]]; \
-        } \
-        else { \
-            for (j = 1; j < k; j++) \
-                ii += offset[j] * subs[j][indx[j]]; \
-        }
-
-#   define AA_POSTLUDE \
-        j = 0; \
-        while (++indx[j] >= bound[j]) { \
-            indx[j] = 0; \
-            if (++j >= k) goto done; \
-        } \
-        if (++i == ny) i = 0; \
-    } /* end of for(;;) */
+    for (i = 0; i < k; i++) indx[i] = 0;
 
     i = 0;
+    while (!last) {
 
-    switch (which) {
+        ii = array_offset_from_index (subs, bound, indx, offset, k, 0, &last);
 
-    case (LGLSXP<<5) + LGLSXP:
-    case (INTSXP<<5) + LGLSXP:
-    case (INTSXP<<5) + INTSXP:
-        AA_PRELUDE
+        switch (which) {
+
+        case (LGLSXP<<5) + LGLSXP:
+        case (INTSXP<<5) + LGLSXP:
+        case (INTSXP<<5) + INTSXP:
             INTEGER(x)[ii] = INTEGER(y)[i];
-        AA_POSTLUDE
-        break;
+            break;;
 
-    case (REALSXP<<5) + LGLSXP:
-    case (REALSXP<<5) + INTSXP:
-        AA_PRELUDE
+        case (REALSXP<<5) + LGLSXP:
+        case (REALSXP<<5) + INTSXP:
             iy = INTEGER(y)[i];
             if (iy == NA_INTEGER)
                 REAL(x)[ii] = NA_REAL;
             else
                 REAL(x)[ii] = iy;
-        AA_POSTLUDE
-        break;
+            break;;
 
-    case (REALSXP<<5) + REALSXP:
-        AA_PRELUDE
+        case (REALSXP<<5) + REALSXP:
             REAL(x)[ii] = REAL(y)[i];
-        AA_POSTLUDE
-        break;
+            break;;
 
-    case (CPLXSXP<<5) + LGLSXP:
-    case (CPLXSXP<<5) + INTSXP:
-        AA_PRELUDE
+        case (CPLXSXP<<5) + LGLSXP:
+        case (CPLXSXP<<5) + INTSXP:
             iy = INTEGER(y)[i];
             if (iy == NA_INTEGER) {
                 COMPLEX(x)[ii].r = NA_REAL;
@@ -4291,11 +4476,9 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
                 COMPLEX(x)[ii].r = iy;
                 COMPLEX(x)[ii].i = 0.0;
             }
-        AA_POSTLUDE
-        break;
+            break;;
 
-    case (CPLXSXP<<5) + REALSXP:
-        AA_PRELUDE
+        case (CPLXSXP<<5) + REALSXP:
             ry = REAL(y)[i];
             if (ISNA(ry)) {
                 COMPLEX(x)[ii].r = NA_REAL;
@@ -4305,32 +4488,24 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
                 COMPLEX(x)[ii].r = ry;
                 COMPLEX(x)[ii].i = 0.0;
             }
-        AA_POSTLUDE
-        break;
+            break;;
 
-    case (CPLXSXP<<5) + CPLXSXP:
-        AA_PRELUDE
+        case (CPLXSXP<<5) + CPLXSXP:
             COMPLEX(x)[ii] = COMPLEX(y)[i];
-        AA_POSTLUDE
-        break;
+            break;;
 
-    case (STRSXP<<5) + STRSXP:
-        AA_PRELUDE
+        case (STRSXP<<5) + STRSXP:
             SET_STRING_ELT(x, ii, STRING_ELT(y, i));
-        AA_POSTLUDE
-        break;
+            break;;
 
-    case (RAWSXP<<5) + RAWSXP:
-        AA_PRELUDE
+        case (RAWSXP<<5) + RAWSXP:
             RAW(x)[ii] = RAW(y)[i];
-        AA_POSTLUDE
-        break;
+            break;;
 
-    case (EXPRSXP<<5) + VECSXP:
-    case (EXPRSXP<<5) + EXPRSXP:
-    case (VECSXP<<5)  + EXPRSXP:
-    case (VECSXP<<5)  + VECSXP:
-        AA_PRELUDE
+        case (EXPRSXP<<5) + VECSXP:
+        case (EXPRSXP<<5) + EXPRSXP:
+        case (VECSXP<<5)  + EXPRSXP:
+        case (VECSXP<<5)  + VECSXP:
             SET_VECTOR_ELEMENT_FROM_VECTOR(x, ii, y, i);
             if (!rep_assign) {
                 if (i == ny - 1) 
@@ -4340,14 +4515,31 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
                 if (NAMEDCNT_EQ_0(VECTOR_ELT(x,ii)))
                     SET_NAMEDCNT(VECTOR_ELT(x,ii),2);
             }
-        AA_POSTLUDE
-        break;
+            break;;
 
-    default:
-        warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
+        default:
+            errorcall (call, "sub assignment (*[*] <- *) not done; __bug?__");
+        }
+
+        if (++i == ny) i = 0;
     }
 
-  done:
+    if (x_grad != R_NilValue || y_grad != R_NilValue) {
+        if (TYPEOF(x) == VECSXP) {
+            res_grad = array_subassign_indexes_list_gradient
+                         (x_grad, y_grad, subs, bound, offset, k, LENGTH(x));
+        }
+        else if (TYPEOF(x) == REALSXP) {
+            res_grad = array_subassign_indexes_numeric_gradient
+                         (x_grad, y_grad, subs, bound, offset, k, LENGTH(x));
+        }
+    }
+
+    if (res_grad != R_NilValue) {
+        R_gradient = res_grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
     UNPROTECT(k+3);
     R_scalar_stack = sv_scalar_stack;
     return x;
@@ -4369,7 +4561,7 @@ static void SubAssignArgs(SEXP *subs, SEXP *y, SEXP *y_grad, SEXP call)
         *subs = R_NilValue;
         *y = CAR(args);
         if (HAS_GRADIENT_IN_CELL(args))
-            *y_grad - GRADIENT_IN_CELL(args);
+            *y_grad = GRADIENT_IN_CELL(args);
     }
     else {
         while (CDDR(args) != R_NilValue)
@@ -4387,16 +4579,17 @@ static void SubAssignArgs(SEXP *subs, SEXP *y, SEXP *y_grad, SEXP call)
 
 SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    return do_subassign_dflt_seq 
-      (call, CAR(args), R_NoObject, R_NoObject, CDR(args), rho, R_NoObject, 0);
+    return do_subassign_dflt_seq (call, CAR(args), R_NilValue,
+        R_NoObject, R_NoObject, CDR(args), rho, R_NoObject, R_NilValue, 0);
 }
 
 /* The last "seq" argument below is non-zero if the first subscript is a 
    sequence spec (a variant result).  Sets R_Visible to TRUE. */
 
-SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x, 
+SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x, SEXP x_grad,
                                              SEXP sb1, SEXP sb2, SEXP subs,
-                                             SEXP rho, SEXP y, int64_t seq)
+                                             SEXP rho, SEXP y, SEXP y_grad,
+                                             int64_t seq)
 {
     R_Visible = TRUE;
 
@@ -4408,6 +4601,7 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
     /* Do simple cases quickly. */
 
     if (!seq && sb1 != R_NoObject && subs == R_NilValue 
+             && x_grad == R_NilValue && y_grad == R_NilValue
              && isVector(x) && !IS_S4_OBJECT(x) && !NAMEDCNT_GT_1(x)
              && y != R_NoObject 
              && (TYPEOF(y) == TYPEOF(x) 
@@ -4476,8 +4670,6 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
         }
     }
 
-    SEXP y_grad;
-
     if (y == R_NoObject)
         SubAssignArgs (&subs, &y, &y_grad, call);
     else if (ON_SCALAR_STACK(y) && !isVectorAtomic(x))
@@ -4527,7 +4719,7 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
 
     if (sb1 == R_NoObject) {
         /* 0 subscript arguments */
-        x = VectorAssignSeq (call, x, 1, length(x), y);
+        x = VectorAssignSeq (call, x, x_grad, 1, length(x), y, y_grad);
     }
     else if (sb2 == R_NoObject) {
         /* 1 subscript argument */
@@ -4535,24 +4727,24 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
             int start, end;
             sb1 = Rf_DecideVectorOrRange (seq, &start, &end, call);
             if (sb1 == R_NoObject) {
-                x = VectorAssignSeq (call, x, start, end, y);
+                x = VectorAssignSeq (call, x, x_grad, start, end, y, y_grad);
             }
         }
         if (sb1 == R_MissingArg) {
-            x = VectorAssignSeq (call, x, 1, length(x), y);
+            x = VectorAssignSeq (call, x, x_grad, 1, length(x), y, y_grad);
         }
         else if (sb1 != R_NoObject) {
-            x = VectorAssign (call, x, sb1, y);
+            x = VectorAssign (call, x, x_grad, sb1, y, y_grad);
         }
     }
     else if (subs == R_NilValue) {
         /* 2 subscript arguments */
-        x = MatrixAssign(call, x, sb1, sb2, y);
+        x = MatrixAssign(call, x, x_grad, sb1, sb2, y, y_grad);
     }
     else {
         /* More than 2 subscript arguments */
         subs = CONS(sb1,CONS(sb2,subs));
-        x = ArrayAssign(call, x, subs, y);
+        x = ArrayAssign(call, x, x_grad, subs, y, y_grad);
     }
 
     if (oldtype == LANGSXP) {
@@ -4583,13 +4775,14 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x,
 SEXP attribute_hidden do_subassign2_dflt         /* called from elsewhere too */
                         (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    return do_subassign2_dflt_int (call, CAR(args), R_NoObject, R_NoObject, 
-                                   CDR(args), rho, R_NoObject, R_NilValue);
+    return do_subassign2_dflt_int 
+      (call, CAR(args), R_NoObject, R_NoObject, 
+       CDR(args), rho, R_NoObject, R_NilValue, R_NilValue);
 }
 
 /* Sets R_Visible to TRUE. */
 SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x, 
-      SEXP sb1, SEXP sb2, SEXP subs, SEXP rho, SEXP y, SEXP x_grad)
+      SEXP sb1, SEXP sb2, SEXP subs, SEXP rho, SEXP y, SEXP x_grad, SEXP y_grad)
 {
     SEXP dims, newname, xup;
     int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch;
@@ -4602,7 +4795,6 @@ SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x,
     ALSO_PROTECT5 (x, sb1, sb2, subs, y);
 
     SEXP xOrig = R_NilValue;
-    SEXP y_grad = R_NilValue;
     SEXP res_grad = R_NilValue;
 
     if (y == R_NoObject)
@@ -4762,6 +4954,8 @@ SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x,
     if (nsubs == 1) { /* One vector index for a list. */
         len = length(sb1);
         if (len > 1) {
+            x_grad = R_NilValue;  /* gradient handling not supported when   */
+            y_grad = R_NilValue;  /*   index is a vector, descending levels */
             for (int i = 0; i < len-1; i++) {
                 if (!isVectorList(x) && !isPairList(x))
                     errorcall (call, 
@@ -4856,20 +5050,26 @@ SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x,
             if (offset >= length_x)
                 res_grad = x_grad;
             else {
-                x = DeleteListElementsSeq (x, offset+1, offset+1);
-                if (x_grad != R_NilValue)
-                    res_grad = delete_list_gradient (x_grad, offset, length_x);
+                x = DeleteListElementsSeq (x, x_grad, offset+1, offset+1);
+                res_grad = R_gradient;
             }
         }
         else {
 
-            SubassignTypeFix (&x, &y, stretch, 2, call);
+            SubassignTypeFix (&x, &x_grad, &y, &y_grad, stretch, 2, call);
     
             if (NAMEDCNT_GT_1(x) || x == y)
                 x = dup_top_level(x);
     
-            if (isVectorAtomic(x))
+            if (isVectorAtomic(x)) {
                 copy_elements_coerced (x, offset, 0, y, 0, 0, 1);
+                if (x_grad != R_NilValue || y_grad != R_NilValue) {
+                    res_grad = offset < length_x
+                     ? subassign_numeric_gradient (x_grad, y_grad, offset,
+                                                   length_x)
+                     : extend_numeric_gradient (x_grad, y_grad, offset);
+                }
+            }
             else if (isVectorList(x)) {
                 DEC_NAMEDCNT (VECTOR_ELT(x, offset));
                 SET_VECTOR_ELEMENT_TO_VALUE (x, offset, y);
@@ -5062,10 +5262,9 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP name, SEXP val,
             ; 
 
         else if (val == R_NilValue) {  /* deleting an element */
-
-            REPROTECT(x = DeleteListElementsSeq(x,imatch+1,imatch+1), pxidx);
-            if (x_grad != R_NilValue)
-                res_grad = delete_list_gradient (x_grad, imatch, nx);
+            x = DeleteListElementsSeq (x, x_grad, imatch+1, imatch+1);
+            REPROTECT(x, pxidx);
+            res_grad = R_gradient;
         }
         else if (imatch >= 0) {  /* replacing an element */
 
