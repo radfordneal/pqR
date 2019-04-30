@@ -1595,7 +1595,7 @@ REprintf("==\n");
 
 attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
 {
-    RECURSIVE_GRADIENT_APPLY (copy_scaled_gradients, grad, factor, n);
+    RECURSIVE_GRADIENT_APPLY_NO_EXPAND (copy_scaled_gradients, grad, factor, n);
 
     PROTECT(grad);
 
@@ -1605,27 +1605,50 @@ attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
 
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
     R_len_t gn = JACOBIAN_LENGTH(grad) / gvars;
-    if (LENGTH(grad) != gvars * gn) abort();
 
-    if (n==1 && gvars == 1)
+    if (DIAGONAL_JACOBIAN(grad) && n != gvars) {
+        grad = expand_to_full_jacobian(grad);
+        UNPROTECT_PROTECT(grad);
+    }
+
+    if (DIAGONAL_JACOBIAN(grad)) {
+        R_len_t glen = JACOBIAN_VALUE_LENGTH(grad);
+        r = allocVector (REALSXP, glen);
+        SET_GRADIENT_WRT_LEN (r, gvars);
+        SET_DIAGONAL_JACOBIAN (r, 1);
+        for (i = 0; i < glen; i++)
+            REAL(r)[i] = REAL(grad)[i] * factor;
+    }
+    else if (n==1 && gvars == 1) {
         r = ScalarRealMaybeConst (*REAL(grad) * factor);
+    }
     else {
         r = alloc_numeric_gradient (gvars, n);
         R_len_t glen = n * gvars;
-        k = 0;
-        for (i = 0; i < glen; i += n) {
-            if (gn == n) {
-                for (j = 0; j < n; j++)
-                    REAL(r)[i+j] = REAL(grad)[k+j] * factor;
-            } 
-            else {
+        if (gn == n) {
+            for (i = 0; i < glen; i++)
+                REAL(r)[i] = REAL(grad)[i] * factor;
+        } 
+        else if (gn == 1) {
+            k = 0;
+            for (i = 0; i < glen; i += n) {
+                double d = REAL(grad)[k] * factor;
+                for (j = 0; j < n; j++) {
+                    REAL(r)[i+j] = d;
+                }
+                k += 1;
+            }
+        } 
+        else {
+            k = 0;
+            for (i = 0; i < glen; i += n) {
                 R_len_t jg = 0;
                 for (j = 0; j < n; j++) {
                     REAL(r)[i+j] = REAL(grad)[k+jg] * factor;
                     if (++jg == gn) jg = 0;
                 }
+                k += gn;
             }
-            k += gn;
         }
     }
 
