@@ -138,6 +138,46 @@ void SET_GRADIENT_IN_CELL_NR (SEXP x, SEXP v)
 }
 
 
+/* Expand a compact Jacobian representation to a full Jacobian matrix. */
+
+static SEXP expand_to_full_jacobian (SEXP grad)
+{
+    if (TYPEOF(grad) != REALSXP) abort();
+
+    if (DIAGONAL_JACOBIAN(grad)) {
+        R_len_t gvars = GRADIENT_WRT_LEN(grad);
+        PROTECT(grad);
+        SEXP new = alloc_numeric_gradient (gvars, gvars);
+        memset (REAL(new), 0, LENGTH(new) * sizeof(double));
+        R_len_t i, j;
+        if (LENGTH(grad) == 1) {
+            double d = REAL(grad)[0];
+            i = 0; j = 0;
+            for (;;) {
+                REAL(new)[j] = d;
+                i += 1;
+                if (i == gvars) break;
+                j += gvars+1;
+            }
+        }
+        else {
+            i = 0; j = 0;
+            for (;;) {
+                REAL(new)[j] = REAL(grad)[i];
+                i += 1;
+                if (i == gvars) break;
+                j += gvars+1;
+            }
+        }
+        UNPROTECT(1);
+        return new;
+    }
+
+    else 
+        return grad;
+}
+
+
 /* Expand the structure of 'grad' to be a full gradient for 'value' by
    replacing NULL elements that correspond to non-NULL elements by the
    appropriate zero Jacobian.  The 'idg' argument is the identity
@@ -254,13 +294,14 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
         R_len_t glen = GRADIENT_WRT_LEN(idg);
         uint64_t Jlen = (uint64_t)vlen * (uint64_t)glen;
 
-        if (LENGTH(grad) != Jlen) abort();
+        if (JACOBIAN_LENGTH(grad) != Jlen) abort();
 
         if (glen != 1) {
             PROTECT(grad);
             SEXP dim = allocVector (INTSXP, 2);
             INTEGER(dim)[0] = vlen;
             INTEGER(dim)[1] = glen;
+            grad = expand_to_full_jacobian (grad);
             setAttrib (grad, R_DimSymbol, dim);
             UNPROTECT(1);
         }
@@ -277,31 +318,23 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
    expand_gradient.  Has GRADIENT_WRT_LEN set to the length of the
    numeric vector just below the GRAD_WRT_LIST level, as well as in
    the Jacobian matrices themselves.  The "identity" gradient for a
-   numeric vector is an identity matrix (currenty represented
-   explicitly); for a list, it is a list with all but one element
-   NULL, with that element being the recursively-defined "identity"
-   value. */
+   numeric vector is an identity matrix, represented compactly; for
+   a list, it is a list with all but one element NULL, with that element 
+   being the recursively-defined "identity" value. */
 
 static SEXP make_id_numeric (SEXP v)
 {
+    R_len_t vlen = LENGTH(v);
     SEXP res;
 
-    if (LENGTH(v) == 1) {
+    if (vlen == 1) {
         res = R_ScalarRealOne;
     }
     else {
-        R_len_t vlen = LENGTH(v);
-        res = alloc_numeric_gradient (vlen, vlen);
-        R_len_t Jlen = LENGTH(res);
-        if (Jlen != 0) {
-            memset (REAL(res), 0, Jlen * sizeof(double));
-            R_len_t j = 0;
-            for (;;) { 
-                REAL(res)[j] = 1.0; 
-                if (j == Jlen-1) break;
-                j += vlen+1;
-            }
-        }
+        res = allocVector1REAL();
+        SET_GRADIENT_WRT_LEN (res, vlen);
+        SET_DIAGONAL_JACOBIAN (res, 1);
+        REAL(res)[0] = 1;
     }
 
     return res;
@@ -479,9 +512,16 @@ static inline SEXP get_other_gradients (SEXP xenv)
 
 /* Macro for building a function that applies an operation to all gradients. 
    Protects grad, then unprotects it at end, so surrounding function will
-   need to protect it again if required. */
+   need to protect it again if required.  The NO_EXPAND version does not
+   expand compact gradient representations. */
 
 #define RECURSIVE_GRADIENT_APPLY(fun,grad,...) do { \
+    RECURSIVE_GRADIENT_APPLY_NO_EXPAND(fun,grad,__VA_ARGS__); \
+    if (TYPEOF(grad) == REALSXP && DIAGONAL_JACOBIAN(grad)) \
+        grad = expand_to_full_jacobian(grad); \
+} while (0)
+
+#define RECURSIVE_GRADIENT_APPLY_NO_EXPAND(fun,grad,...) do { \
     PROTECT(grad); \
     if (TYPEOF(grad) == LISTSXP) { \
         SEXP res = R_NilValue; \
@@ -613,7 +653,7 @@ R_inspect(grad); REprintf("--\n");
 	
     if (TYPEOF(grad) != REALSXP) abort();
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
-    R_len_t gn = LENGTH(grad) / gvars;
+    R_len_t gn = JACOBIAN_LENGTH(grad) / gvars;
     R_len_t i, j, k, h;
 
     SEXP res = alloc_numeric_gradient (gvars, n);
@@ -708,7 +748,7 @@ R_inspect(grad); REprintf("--\n");
 	
     if (TYPEOF(grad) != REALSXP) abort();
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
-    R_len_t k = LENGTH(grad) / gvars;
+    R_len_t k = JACOBIAN_LENGTH(grad) / gvars;
 
     SEXP res = alloc_numeric_gradient (gvars, n);
     PROTECT(res);
@@ -744,7 +784,7 @@ R_inspect(grad); REprintf("--\n");
 	
     if (TYPEOF(grad) != REALSXP) abort();
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
-    R_len_t ng = LENGTH(grad) / gvars;
+    R_len_t ng = JACOBIAN_LENGTH(grad) / gvars;
     R_len_t nc = n / nr;
 
     SEXP res = alloc_numeric_gradient (gvars, n);
@@ -1564,7 +1604,7 @@ attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
     SEXP r;
 
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
-    R_len_t gn = LENGTH(grad) / gvars;
+    R_len_t gn = JACOBIAN_LENGTH(grad) / gvars;
     if (LENGTH(grad) != gvars * gn) abort();
 
     if (n==1 && gvars == 1)
@@ -1619,7 +1659,7 @@ LENGTH(grad),LENGTH(factors),GRADIENT_WRT_LEN(grad));
     SEXP r;
 
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
-    R_len_t gn = LENGTH(grad) / gvars;
+    R_len_t gn = JACOBIAN_LENGTH(grad) / gvars;
     if (LENGTH(grad) != gvars * gn) abort();
 
     r = alloc_numeric_gradient (gvars, n);
@@ -1735,7 +1775,7 @@ R_inspect(grad);
     if (TYPEOF(grad) != REALSXP) abort();
 
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
-    R_len_t k = LENGTH(grad) / gvars;
+    R_len_t k = JACOBIAN_LENGTH(grad) / gvars;
 
     SEXP res = alloc_numeric_gradient (gvars, n);
 
@@ -1862,9 +1902,24 @@ REprintf("==\n");
 /* Macro for building a function that applies a binary operation to
    all pairs of gradients in g1 and g2.  Protects g1 and g2, then
    unprotects them at the end, so surrounding function will need to
-   protect them again if required. */
+   protect them again if required.  The NO_EXPAND version does not
+   expand compact gradient representations. */
 
 #define RECURSIVE_GRADIENT_APPLY2(fun,g1,g2,...) do { \
+    RECURSIVE_GRADIENT_APPLY2_NO_EXPAND(fun,g1,g2,__VA_ARGS__); \
+    if (TYPEOF(g1) == REALSXP && DIAGONAL_JACOBIAN(g1)) { \
+        PROTECT(g2); \
+        g1 = expand_to_full_jacobian(g1); \
+        UNPROTECT(1); \
+    } \
+    if (TYPEOF(g2) == REALSXP && DIAGONAL_JACOBIAN(g2)) { \
+        PROTECT(g1); \
+        g2 = expand_to_full_jacobian(g2); \
+        UNPROTECT(1); \
+    } \
+} while (0)
+
+#define RECURSIVE_GRADIENT_APPLY2_NO_EXPAND(fun,g1,g2,...) do { \
     PROTECT2(g1,g2); \
     if (TYPEOF(g1) == LISTSXP || TYPEOF(g2) == LISTSXP) { \
         if (g1 != R_NilValue && TYPEOF(g1) != LISTSXP) abort(); \
@@ -2258,7 +2313,7 @@ R_inspect(v);
             res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
         else {
             res = alloc_numeric_gradient (gvars, n);
-            m = LENGTH(grad) / gvars;
+            m = JACOBIAN_LENGTH(grad) / gvars;
             for (h = 0; h < gvars; h++) {
                 memcpy (REAL(res) + h*n, REAL(grad) + h*m, m * sizeof(double));
                 memset (REAL(res) + h*n + m, 0, (n-m) * sizeof(double));
@@ -2276,7 +2331,7 @@ R_inspect(v);
         }
     }
     else {
-        m = LENGTH(v) / gvars;
+        m = JACOBIAN_LENGTH(v) / gvars;
         if (m * gvars != LENGTH(v)) abort();
         for (h = 0; h < gvars; h++) {
             R_len_t hn = h*n, hm = h*m;
@@ -2349,7 +2404,7 @@ R_inspect(v);
             res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
         else {
             res = alloc_numeric_gradient (gvars, n);
-            m = LENGTH(grad) / gvars;
+            m = JACOBIAN_LENGTH(grad) / gvars;
             for (h = 0; h < gvars; h++) {
                 memcpy (REAL(res) + h*n, REAL(grad) + h*m, m * sizeof(double));
                 memset (REAL(res) + h*n + m, 0, (n-m) * sizeof(double));
@@ -2369,7 +2424,7 @@ R_inspect(v);
     }
     else {
         if (TYPEOF(v) != REALSXP) abort();
-        m = LENGTH(v) / gvars;
+        m = JACOBIAN_LENGTH(v) / gvars;
         R_len_t jv = 0;
         for (R_len_t j = 0; j < k; j++) {
             R_len_t i = INTEGER(indx)[j];
@@ -2572,7 +2627,7 @@ R_inspect(v);
         }
     }
     else {
-        R_len_t m = LENGTH(v) / gvars;
+        R_len_t m = JACOBIAN_LENGTH(v) / gvars;
         if (m * gvars != LENGTH(v)) abort();
         R_len_t i = 0;
         while (!last) {
@@ -2813,7 +2868,7 @@ R_inspect(arg);
 
     if (v != R_NilValue) {
         if (TYPEOF(v) != REALSXP) abort();
-        R_len_t nv = LENGTH(v) / gvars;
+        R_len_t nv = JACOBIAN_LENGTH(v) / gvars;
         R_len_t i = 0, j = 0;
         R_len_t h;
         while (i < n) {
@@ -3411,8 +3466,8 @@ static R_len_t Jacobian_rows (SEXP g)
 
     if (TYPEOF(g) == REALSXP) {
         R_len_t gvars = GRADIENT_WRT_LEN(g);
-        r = LENGTH(g) / gvars;
-        if (LENGTH(g) != r * gvars) abort();
+        r = JACOBIAN_LENGTH(g) / gvars;
+        if (JACOBIAN_LENGTH(g) != r * gvars) abort();
         return r;
     }
 

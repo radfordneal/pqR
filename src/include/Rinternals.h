@@ -238,7 +238,8 @@ struct sxpinfo_struct {
     unsigned int in_use: 1;   /* whether contents may be in use by a helper */
 
     unsigned int debug : 1;       /* Function/Environment: is being debugged
-                                     Symbol: maybe use fast subassign */
+                                     Symbol: maybe use fast subassign
+                                     REALSXP: is diagonal of Jacobian matrix */
     unsigned int rstep_pname : 1; /* Function: is to be debugged just once
                                      Symbol: subassign counterpart follows it
                                      CHARSXP: is used as a symbol's printname
@@ -1029,6 +1030,13 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define GRAD_WRT_LIST(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.base_sym_env)
 #define SET_GRAD_WRT_LIST(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.base_sym_env=(v))
 
+#define DIAGONAL_JACOBIAN(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.debug)
+#define SET_DIAGONAL_JACOBIAN(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.debug=(v))
+
+#define JACOBIAN_LENGTH(g) (DIAGONAL_JACOBIAN(g) \
+  ? GRADIENT_WRT_LEN(g) * GRADIENT_WRT_LEN(g) : LENGTH(g))
+
+#define JACOBIAN_VALUE_LENGTH(g) LENGTH(g)
 
 #else /* not USE_RINTERNALS */
 

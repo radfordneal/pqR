@@ -13108,7 +13108,6 @@ start
 +   NULL
 + }
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 A 
 RPROFMEM: (double 100):
 B 
@@ -13116,13 +13115,16 @@ RPROFMEM: (double 100):
 C 
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
 D 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
 E 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 NULL
 > pr("end")
@@ -13139,22 +13141,25 @@ start
 +   NULL
 + }
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 A 
 RPROFMEM: (double 100):
 B 
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
 C 
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 D 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
 E 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 NULL
 > pr("end")
@@ -13171,25 +13176,29 @@ start
 +   NULL
 + }
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 A 
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 B 
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 C 
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 D 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 E 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 NULL
@@ -13207,27 +13216,31 @@ start
 +   NULL
 + }
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 A 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
 B 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
 C 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 D 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
 E 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 NULL
 > pr("end")
@@ -13244,16 +13257,20 @@ start
 +   NULL
 + }
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 A 
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
 B 
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
 C 
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 D 
@@ -13261,9 +13278,13 @@ RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
 E 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 NULL
@@ -13302,10 +13323,10 @@ start
 +   pr("D"); b
 + }
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 A 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 B 
 C 
@@ -13334,16 +13355,17 @@ start
 +   pr("E"); L
 + }
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 A 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 B 
 C 
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
 D 
+RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 E 
 > pr("end")
@@ -13370,16 +13392,17 @@ start
 +   pr("E"); L
 + }
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 A 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 B 
 C 
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
 D 
+RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 E 
 > pr("end")
@@ -13406,10 +13429,10 @@ start
 +   pr("E"); L
 + }
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 A 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 RPROFMEM: (list 100):
 RPROFMEM: (list 102):
@@ -13422,6 +13445,7 @@ RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
 RPROFMEM: (list 102):
 D 
+RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 E 
 RPROFMEM: (list 102):
@@ -13449,10 +13473,10 @@ start
 +   pr("E"); L
 + }
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 A 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 RPROFMEM: (list 100):
 RPROFMEM: (list 102):
@@ -13465,6 +13489,7 @@ RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
 RPROFMEM: (list 102):
 D 
+RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 E 
 RPROFMEM: (list 102):
@@ -13495,23 +13520,26 @@ start
 RPROFMEM: (double 100):
 RPROFMEM: (integer 100):
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 A 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
 RPROFMEM: (double 10000):
 RPROFMEM: (list 100):
 RPROFMEM: (list 102):
 RPROFMEM: (list 102):
 RPROFMEM: (character 102):
 B 
+RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 C 
 D 
+RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 RPROFMEM: (list 102):
 RPROFMEM: (list 102):
 E 
+RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 F 
 RPROFMEM: (list 102):
@@ -13561,8 +13589,8 @@ start
 +   pr("D"); c(a,b)
 + }
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 A 
+RPROFMEM: (double 10000):
 B 
 RPROFMEM: (double 200):
 RPROFMEM: (double 20000):
@@ -13602,8 +13630,10 @@ start
 +   NULL
 + }
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
 A 
+RPROFMEM: (double 64):
+RPROFMEM: (double 64):
+RPROFMEM: (double 64):
 [[1]]
      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
 [1,]    1    0    0    0    0    0    0    0
@@ -13763,10 +13793,12 @@ start
 +   NULL
 + }
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
 A 
+RPROFMEM: (double 64):
 RPROFMEM: (double 8):
+RPROFMEM: (double 64):
 RPROFMEM: (double 8):
+RPROFMEM: (double 64):
 B 
 C 
 RPROFMEM: (double 8):
@@ -13818,7 +13850,6 @@ start
 +   list(x,y,z,w)
 + }
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
 $a
 [1] 0 0 0 0 0 0 0 0
 
@@ -14660,13 +14691,13 @@ start
 +   NULL
 + }
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
 W
 X
 Y
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
+RPROFMEM: (double 64):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
