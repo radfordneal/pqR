@@ -1666,11 +1666,14 @@ attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
 attribute_hidden SEXP copy_scaled_gradients_vec  
     (SEXP grad, SEXP factors, R_len_t n)
 {
-    RECURSIVE_GRADIENT_APPLY (copy_scaled_gradients_vec, grad, factors, n);
-
+    RECURSIVE_GRADIENT_APPLY_NO_EXPAND (copy_scaled_gradients_vec,
+                                        grad, factors, n);
 #if 0
-REprintf("cs: %d %d %d - %d %d - %d\n",TYPEOF(grad),TYPEOF(factors),n,
+REprintf("csv: %d %d %d - %d %d - %d\n",TYPEOF(grad),TYPEOF(factors),n,
 LENGTH(grad),LENGTH(factors),GRADIENT_WRT_LEN(grad));
+R_inspect(grad);
+REprintf("--\n");
+R_inspect(factors);
 #endif
 
     PROTECT(grad);
@@ -1683,32 +1686,81 @@ LENGTH(grad),LENGTH(factors),GRADIENT_WRT_LEN(grad));
 
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
     R_len_t gn = JACOBIAN_LENGTH(grad) / gvars;
-    if (LENGTH(grad) != gvars * gn) abort();
-
-    r = alloc_numeric_gradient (gvars, n);
-    R_len_t glen = n * gvars;
     R_len_t flen = LENGTH(factors);
-    k = 0;
-    for (i = 0; i < glen; i += n) {
-        if (gn == n && flen == n) {
-            for (j = 0; j < n; j++)
-                REAL(r)[i+j] = REAL(grad)[k + j] * REAL(factors)[j];
-        }
-        else if (gn == n && flen == 1) {
+
+    if (1 || DIAGONAL_JACOBIAN(grad) && n != gvars) {
+        grad = expand_to_full_jacobian(grad);
+        UNPROTECT_PROTECT(grad);
+    }
+
+    if (DIAGONAL_JACOBIAN(grad)) {
+        R_len_t glen = JACOBIAN_VALUE_LENGTH(grad);
+        if (flen == 1) {
+            r = allocVector (REALSXP, glen);
+            SET_GRADIENT_WRT_LEN (r, gvars);
+            SET_DIAGONAL_JACOBIAN (r, 1);
             double f = REAL(factors)[0];
-            for (j = 0; j < n; j++)
-                REAL(r)[i+j] = REAL(grad)[k + j] * f;
+            for (i = 0; i < glen; i++)
+                REAL(r)[i] = REAL(grad)[i] * f;
         }
         else {
-            R_len_t jg = 0, jf = 0;
-            for (j = 0; j < n; j++) {
-                REAL(r)[i+j] = REAL(grad)[k + jg] * REAL(factors)[jf];
-                if (++jg == gn) jg = 0;
-                if (++jf == flen) jf = 0;
+            r = allocVector (REALSXP, n);
+            SET_GRADIENT_WRT_LEN (r, gvars);
+            SET_DIAGONAL_JACOBIAN (r, 1);
+            if (flen == n && glen == 1) {
+                double g = REAL(grad)[0];
+                for (j = 0; j < n; j++)
+                    REAL(r)[j] = g * REAL(factors)[j];
+            }
+            else if (flen == n && glen == n) {
+                for (j = 0; j < n; j++)
+                    REAL(r)[j] = REAL(grad)[j] * REAL(factors)[j];
+            }
+            else {
+                R_len_t jg = 0, jf = 0;
+                for (j = 0; j < n; j++) {
+                    REAL(r)[j] = REAL(grad)[jg] * REAL(factors)[jf];
+                    if (++jg == glen) jg = 0;
+                    if (++jf == flen) jf = 0;
+                }
             }
         }
-        k += gn;
     }
+    else {
+        r = alloc_numeric_gradient (gvars, n);
+        R_len_t glen = n * gvars;
+        k = 0;
+        for (i = 0; i < glen; i += n) {
+            if (gn == n && flen == n) {
+                for (j = 0; j < n; j++)
+                    REAL(r)[i+j] = REAL(grad)[k + j] * REAL(factors)[j];
+            }
+            else if (gn == n && flen == 1) {
+                double f = REAL(factors)[0];
+                for (j = 0; j < n; j++)
+                    REAL(r)[i+j] = REAL(grad)[k + j] * f;
+            }
+            else if (gn == 1 && flen == n) {
+                double g = REAL(grad)[k];
+                for (j = 0; j < n; j++)
+                    REAL(r)[i+j] = g * REAL(factors)[j];
+            }
+            else {
+                R_len_t jg = 0, jf = 0;
+                for (j = 0; j < n; j++) {
+                    REAL(r)[i+j] = REAL(grad)[k + jg] * REAL(factors)[jf];
+                    if (++jg == gn) jg = 0;
+                    if (++jf == flen) jf = 0;
+                }
+            }
+            k += gn;
+        }
+    }
+
+#if 0
+REprintf("csv end\n");
+R_inspect(r);
+#endif
 
     UNPROTECT(1);
     return r;
