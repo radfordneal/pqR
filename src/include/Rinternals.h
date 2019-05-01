@@ -244,7 +244,8 @@ struct sxpinfo_struct {
                                      Symbol: subassign counterpart follows it
                                      CHARSXP: is used as a symbol's printname
                                      Envir: store gradient with variables
-                                     Promise: evaluate with VARIANT_GRADIENT */
+                                     Promise: evaluate with VARIANT_GRADIENT
+                                     REALSXP: full jacobian cached as attrib */
     unsigned int base_sym_env : 1;/* Symbol: has base binding in global cache,
                                      Envir: R_BaseEnv or R_BaseNamespace 
                                      VECSXP: Holds gradients wrt list variable,
@@ -1037,6 +1038,10 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
   ? GRADIENT_WRT_LEN(g) * GRADIENT_WRT_LEN(g) : LENGTH(g))
 
 #define JACOBIAN_VALUE_LENGTH(g) LENGTH(g)
+#define JACOBIAN_CACHED_AS_ATTRIB(g) \
+  NOT_LVALUE(UPTR_FROM_SEXP(g)->sxpinfo.base_sym_env)
+#define SET_JACOBIAN_CACHED_AS_ATTRIB(g,v) \
+  (UPTR_FROM_SEXP(g)->sxpinfo.base_sym_env = (v))
 
 #else /* not USE_RINTERNALS */
 

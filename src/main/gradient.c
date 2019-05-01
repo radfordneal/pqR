@@ -82,6 +82,8 @@ TYPEOF(v),length(v),NAMEDCNT(v),CPTR_FROM_SEXP(v)/64,CPTR_FROM_SEXP(v)%64,v);
         break;
     case REALSXP:
         INC_NAMEDCNT(v);
+        if (JACOBIAN_CACHED_AS_ATTRIB(v))
+            INC_NAMEDCNT(ATTRIB_W(v));
         break;
     }
 }
@@ -111,6 +113,8 @@ TYPEOF(v),length(v),NAMEDCNT(v),CPTR_FROM_SEXP(v)/64,CPTR_FROM_SEXP(v)%64,v);
         break;
     case REALSXP:
         DEC_NAMEDCNT(v);
+        if (JACOBIAN_CACHED_AS_ATTRIB(v))
+            DEC_NAMEDCNT(ATTRIB_W(v));
         break;
     }
 }
@@ -144,6 +148,9 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 {
     if (TYPEOF(grad) != REALSXP) abort();
 
+    if (JACOBIAN_CACHED_AS_ATTRIB(grad))
+        return ATTRIB_W(grad);
+
     if (DIAGONAL_JACOBIAN(grad)) {
         R_len_t gvars = GRADIENT_WRT_LEN(grad);
         PROTECT(grad);
@@ -169,6 +176,11 @@ static SEXP expand_to_full_jacobian (SEXP grad)
                 j += gvars+1;
             }
         }
+
+        SET_ATTRIB_TO_ANYTHING(grad,new);
+        SET_JACOBIAN_CACHED_AS_ATTRIB(grad,1);
+        SET_NAMEDCNT(new,NAMEDCNT(grad));
+
         UNPROTECT(1);
         return new;
     }
@@ -1688,7 +1700,7 @@ R_inspect(factors);
     R_len_t gn = JACOBIAN_LENGTH(grad) / gvars;
     R_len_t flen = LENGTH(factors);
 
-    if (1 || DIAGONAL_JACOBIAN(grad) && n != gvars) {
+    if (DIAGONAL_JACOBIAN(grad) && n != gvars) {
         grad = expand_to_full_jacobian(grad);
         UNPROTECT_PROTECT(grad);
     }

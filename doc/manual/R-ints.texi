@@ -360,7 +360,8 @@ struct sxpinfo_struct @{
                                      Symbol: subassign counterpart follows it
                                      CHARSXP: is used as a symbol's printname
                                      Envir: store gradient with variables
-                                     Promise: evaluate with VARIANT_GRADIENT */
+                                     Promise: evaluate with VARIANT_GRADIENT
+                                     REALSXP: full jacobian cached as attrib */
     unsigned int base_sym_env : 1;/* Symbol: has base binding in global cache,
                                      Envir: R_BaseEnv or R_BaseNamespace
                                      VECSXP: Holds gradients wrt list variable,
@@ -905,16 +906,19 @@ management of the @code{CHARSXP} cache: of course @code{CHARSXP}'s are
 not user-visible but C-level code might look at their attributes.
 Also, `attributes' on binding cells in environments, on promises, and
 on internal argument pairlists are used to record gradient information
-(see @ref{Gradient information} for details).
+(see @ref{Gradient information} for details).  The @code{ATTRIB} field
+of a numeric vector representing a Jacobian matrix for a gradient may
+be used for purposes such as caching an expanded version of the Jacobian.
 
-The code assumes that the attributes of a node are either
-@code{R_NilValue} or a pairlist of non-zero length (and this is checked
-by @code{SET_ATTRIB}).  The attributes are named (via tags on the
-pairlist).  The replacement function @code{attributes<-} ensures that
-@code{"dim"} precedes @code{"dimnames"} in the pairlist.  Attribute
-@code{"dim"} is one of several that is treated specially: the values are
-checked, and any @code{"names"} and @code{"dimnames"} attributes are
-removed.  Similarly, you cannot set @code{"dimnames"} without having set
+The code assumes that the attributes of a node (except for special
+uses noted above) are either @code{R_NilValue} or a pairlist of
+non-zero length (and this is checked by @code{SET_ATTRIB}).  The
+attributes are named (via tags on the pairlist).  The replacement
+function @code{attributes<-} ensures that @code{"dim"} precedes
+@code{"dimnames"} in the pairlist.  Attribute @code{"dim"} is one of
+several that is treated specially: the values are checked, and any
+@code{"names"} and @code{"dimnames"} attributes are removed.
+Similarly, you cannot set @code{"dimnames"} without having set
 @code{"dim"}, and the value assigned must be a list of the correct
 length and with elements of the correct lengths (and all zero-length
 elements are replaced by @code{R_NilValue}).
@@ -1033,6 +1037,11 @@ matrix) minus one (subtracting one allows use of constant objects, for
 which TRUELENGTH is 0).  This value should be accessed with
 @code{GRADIENT_WRT_LEN} and set with @code{SET_GRADIENT_WRT_LEN},
 which handle adding/subtracting one.
+
+Jacobian matrices may be stored in a compact form (eg, just the
+diagonal elements if the matrix is diagonal), with the @code{ATTRIB}
+field sometimes being used.  Some @code{sxpinfo} bits are used to
+indicate such compact forms.
 
 Gradient information may be @code{R_NilValue} when the gradient is
 zero (or all zeros for lists).  @code{R_NilValue} may also appear as a
