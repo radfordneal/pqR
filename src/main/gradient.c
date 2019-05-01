@@ -2066,7 +2066,8 @@ REprintf("==\n");
 
 
 /* Add gradient of sum of vector (a) with gradient (v) of length n, to 
-   previous gradient (grad), which may be modified.  
+   previous gradient (grad), which may be modified, and should be in
+   expanded form.  
 
    Protects its grad and v arguments. */
 
@@ -2083,37 +2084,65 @@ R_inspect(a);
 #endif
     extern helpers_task_proc task_colSums_or_colMeans;
 
-    RECURSIVE_GRADIENT_APPLY2 (sum_gradient, grad, v, a, narm, n);
+    RECURSIVE_GRADIENT_APPLY2_NO_EXPAND (sum_gradient, grad, v, a, narm, n);
 
     if (v == R_NilValue)
         return grad;
-
-    PROTECT2(grad,v);
 
     if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
     if (TYPEOF(v) != REALSXP) abort();
 
     R_len_t gvars = GRADIENT_WRT_LEN (v);
 
+    PROTECT(v);
+    PROTECT(grad);
+
+    if (TYPEOF(grad) == REALSXP) {
+        if (DIAGONAL_JACOBIAN(grad)) abort();
+        if (JACOBIAN_LENGTH(grad) != gvars) abort();
+    }
+
     SEXP r = grad;
     if (r == R_NilValue)
         r = alloc_numeric_gradient (gvars, 1);
 
-    if (narm) {
-        R_len_t i, j;
+    if (DIAGONAL_JACOBIAN(v)) {
+        R_len_t i;
         if (grad == R_NilValue)
             memset (REAL(r), 0, LENGTH(r) * sizeof(double));
-        for (i = 0; i < gvars; i++) {
-            long double s = 0;
-            R_len_t b = i*n;
-            for (j = 0; j < n; j++)
-                if (!ISNAN(REAL(a)[j])) s += REAL(v)[b+j];
-            REAL(r)[i] += s;
+        if (LENGTH(v) == 1) {
+            double d = REAL(v)[0];
+            if (!narm || !ISNAN(d))
+                for (i = 0; i < gvars; i++)
+                    REAL(r)[i] += d;
+        }
+        else if (narm) {
+            for (i = 0; i < gvars; i++)
+                if (!ISNAN(REAL(v)[i]))
+                    REAL(r)[i] += REAL(v)[i];
+        }
+        else {
+            for (i = 0; i < gvars; i++)
+                REAL(r)[i] += REAL(v)[i];
         }
     }
     else {
-        task_colSums_or_colMeans (((helpers_op_t)gvars<<2) | (grad!=R_NilValue),
-                                  r, v, R_NilValue);
+        if (narm) {
+            R_len_t i, j;
+            if (grad == R_NilValue)
+                memset (REAL(r), 0, LENGTH(r) * sizeof(double));
+            for (i = 0; i < gvars; i++) {
+                long double s = 0;
+                R_len_t b = i*n;
+                for (j = 0; j < n; j++)
+                    if (!ISNAN(REAL(a)[j])) s += REAL(v)[b+j];
+                REAL(r)[i] += s;
+            }
+        }
+        else {
+            task_colSums_or_colMeans 
+              (((helpers_op_t)gvars<<2) | (grad!=R_NilValue), r, v, R_NilValue);
+        }
     }
 
 #if 0
