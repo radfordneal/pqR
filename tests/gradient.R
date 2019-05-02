@@ -2141,3 +2141,25 @@ track gradient (a=rep(7,n)) {
   NULL
 }
 pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A"); L <- list(x=list(y=a))
+  pr("B"); b <- a
+  pr("C"); b[2] <- b[1]  # makes jacobian for b non-diagonal
+  pr("D"); L$x$y <- a+1
+  pr("E"); L$x$y <- 3*a
+  pr("F"); L$x$y <- b
+  L
+}
+pr("end")
+
+pr("start")
+with gradient (L=list(x=list(y=c(3,9,7,4,2,6,5,8)))) {
+  pr("A"); b <- L$x$y
+  pr("B"); b[2] <- b[1]  # makes jacobian for b non-diagonal
+  pr("F"); L$x$y <- b
+  L
+}
+pr("end")
+
