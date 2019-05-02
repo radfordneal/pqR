@@ -142,7 +142,9 @@ void SET_GRADIENT_IN_CELL_NR (SEXP x, SEXP v)
 }
 
 
-/* Expand a compact Jacobian representation to a full Jacobian matrix. */
+/* Expand a compact Jacobian representation to a full Jacobian matrix. 
+
+   Protects its grad argument. */
 
 static SEXP expand_to_full_jacobian (SEXP grad)
 {
@@ -187,6 +189,126 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 
     else 
         return grad;
+}
+
+
+/* Copy a jacobian with scaling, either a full jacobian or diagonal. 
+   Gradient to copy with scaling in in grad, for vector of length gn,
+   with respect to gvars variables.  Result should be a gradient for
+   a vector of length n with gvars variables.  Scaling factors are in f, with 
+   length flen, not necessarily equal to n.  When gn or flen are less than
+   n, recycling is done as necessary.
+
+   Protects the grad argument. */
+
+static SEXP copy_scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
+                                  double *f, R_len_t flen, R_len_t n)
+{
+    R_len_t i, j, k;
+    SEXP r;
+
+    if (flen == 1 && *f == 1.0 && gn == n)
+        return grad;
+
+    PROTECT(grad);
+
+    if (DIAGONAL_JACOBIAN(grad)) {  /* diagonal jacobian, so gn == gvars */
+
+        R_len_t glen = JACOBIAN_VALUE_LENGTH(grad);
+        if (flen == 1) {
+            r = allocVector (REALSXP, glen);
+            SET_GRADIENT_WRT_LEN (r, gvars);
+            SET_DIAGONAL_JACOBIAN (r, 1);
+            double d = *f;
+            for (i = 0; i < glen; i++)
+                REAL(r)[i] = REAL(grad)[i] * d;
+        }
+        else {
+            r = allocVector (REALSXP, n);
+            SET_GRADIENT_WRT_LEN (r, gvars);
+            SET_DIAGONAL_JACOBIAN (r, 1);
+            if (flen >= n && glen == 1) {
+                double g = REAL(grad)[0];
+                for (j = 0; j < n; j++)
+                    REAL(r)[j] = g * f[j];
+            }
+            else if (flen >= n && glen >= n) {
+                for (j = 0; j < n; j++)
+                    REAL(r)[j] = REAL(grad)[j] * f[j];
+            }
+            else {
+                R_len_t jg = 0, jf = 0;
+                for (j = 0; j < n; j++) {
+                    REAL(r)[j] = REAL(grad)[jg] * f[jf];
+                    if (++jg == glen) jg = 0;
+                    if (++jf == flen) jf = 0;
+                }
+            }
+        }
+    }
+
+    else if (n == 1 && gvars == 1)  {  /* 1-by-1 jacobian */
+
+        r = ScalarRealMaybeConst (*REAL(grad) * *f);
+    }
+
+    else {  /* full jacobian, not 1-by-1 */
+
+        r = alloc_numeric_gradient (gvars, n);
+        R_len_t glen = n * gvars;
+        k = 0;
+        if (gn == n && flen == 1) {
+            double d = *f;
+            for (i = 0; i < glen; i++)
+                REAL(r)[i] = REAL(grad)[i] * d;
+        }
+        else if (gn == 1 && flen == 1) {
+            double d = *f;
+            for (i = 0; i < glen; i += n) {
+                double g = REAL(grad)[k] * d;
+                for (j = 0; j < n; j++)
+                    REAL(r)[i+j] = g;
+                k += gn;
+            }
+        }
+        else if (gn == 1 && flen >= n) {
+            for (i = 0; i < glen; i += n) {
+                double g = REAL(grad)[k];
+                for (j = 0; j < n; j++)
+                    REAL(r)[i+j] = g * f[j];
+                k += gn;
+            }
+        }
+        else if (gn >= n && flen == 1) {
+            double d = *f;
+            for (i = 0; i < glen; i += n) {
+                for (j = 0; j < n; j++)
+                    REAL(r)[i+j] = REAL(grad)[k + j] * d;
+                k += gn;
+            }
+        }
+        else if (gn >= n && flen >= n) {
+            for (i = 0; i < glen; i += n) {
+                for (j = 0; j < n; j++)
+                    REAL(r)[i+j] = REAL(grad)[k + j] * f[j];
+                k += gn;
+            }
+        }
+        else {  /* general case */
+            for (i = 0; i < glen; i += n) {
+                R_len_t jg = 0, jf = 0;
+                for (j = 0; j < n; j++) {
+                    REAL(r)[i+j] = REAL(grad)[k + jg] * f[jf];
+                    if (++jg == gn) jg = 0;
+                    if (++jf == flen) jf = 0;
+                }
+                k += gn;
+            }
+        }
+    }
+
+    UNPROTECT(1);
+    return r;
 }
 
 
@@ -1609,63 +1731,16 @@ attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
 {
     RECURSIVE_GRADIENT_APPLY_NO_EXPAND (copy_scaled_gradients, grad, factor, n);
 
-    PROTECT(grad);
-
     if (TYPEOF(grad) != REALSXP) abort();
-    R_len_t i, j, k;
-    SEXP r;
 
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
+
+    if (DIAGONAL_JACOBIAN(grad) && n != gvars)
+        grad = expand_to_full_jacobian(grad);
+
     R_len_t gn = JACOBIAN_LENGTH(grad) / gvars;
 
-    if (DIAGONAL_JACOBIAN(grad) && n != gvars) {
-        grad = expand_to_full_jacobian(grad);
-        UNPROTECT_PROTECT(grad);
-    }
-
-    if (DIAGONAL_JACOBIAN(grad)) {
-        R_len_t glen = JACOBIAN_VALUE_LENGTH(grad);
-        r = allocVector (REALSXP, glen);
-        SET_GRADIENT_WRT_LEN (r, gvars);
-        SET_DIAGONAL_JACOBIAN (r, 1);
-        for (i = 0; i < glen; i++)
-            REAL(r)[i] = REAL(grad)[i] * factor;
-    }
-    else if (n==1 && gvars == 1) {
-        r = ScalarRealMaybeConst (*REAL(grad) * factor);
-    }
-    else {
-        r = alloc_numeric_gradient (gvars, n);
-        R_len_t glen = n * gvars;
-        if (gn == n) {
-            for (i = 0; i < glen; i++)
-                REAL(r)[i] = REAL(grad)[i] * factor;
-        } 
-        else if (gn == 1) {
-            k = 0;
-            for (i = 0; i < glen; i += n) {
-                double d = REAL(grad)[k] * factor;
-                for (j = 0; j < n; j++) {
-                    REAL(r)[i+j] = d;
-                }
-                k += 1;
-            }
-        } 
-        else {
-            k = 0;
-            for (i = 0; i < glen; i += n) {
-                R_len_t jg = 0;
-                for (j = 0; j < n; j++) {
-                    REAL(r)[i+j] = REAL(grad)[k+jg] * factor;
-                    if (++jg == gn) jg = 0;
-                }
-                k += gn;
-            }
-        }
-    }
-
-    UNPROTECT(1);
-    return r;
+    return copy_scaled_jacobian (grad, gvars, gn, &factor, 1, n);
 }
 
 
@@ -1688,8 +1763,6 @@ REprintf("--\n");
 R_inspect(factors);
 #endif
 
-    PROTECT(grad);
-
     if (TYPEOF(factors) != REALSXP) abort();
     if (TYPEOF(grad) != REALSXP) abort();
 
@@ -1700,82 +1773,10 @@ R_inspect(factors);
     R_len_t gn = JACOBIAN_LENGTH(grad) / gvars;
     R_len_t flen = LENGTH(factors);
 
-    if (DIAGONAL_JACOBIAN(grad) && n != gvars) {
+    if (DIAGONAL_JACOBIAN(grad) && n != gvars)
         grad = expand_to_full_jacobian(grad);
-        UNPROTECT_PROTECT(grad);
-    }
 
-    if (DIAGONAL_JACOBIAN(grad)) {
-        R_len_t glen = JACOBIAN_VALUE_LENGTH(grad);
-        if (flen == 1) {
-            r = allocVector (REALSXP, glen);
-            SET_GRADIENT_WRT_LEN (r, gvars);
-            SET_DIAGONAL_JACOBIAN (r, 1);
-            double f = REAL(factors)[0];
-            for (i = 0; i < glen; i++)
-                REAL(r)[i] = REAL(grad)[i] * f;
-        }
-        else {
-            r = allocVector (REALSXP, n);
-            SET_GRADIENT_WRT_LEN (r, gvars);
-            SET_DIAGONAL_JACOBIAN (r, 1);
-            if (flen == n && glen == 1) {
-                double g = REAL(grad)[0];
-                for (j = 0; j < n; j++)
-                    REAL(r)[j] = g * REAL(factors)[j];
-            }
-            else if (flen == n && glen == n) {
-                for (j = 0; j < n; j++)
-                    REAL(r)[j] = REAL(grad)[j] * REAL(factors)[j];
-            }
-            else {
-                R_len_t jg = 0, jf = 0;
-                for (j = 0; j < n; j++) {
-                    REAL(r)[j] = REAL(grad)[jg] * REAL(factors)[jf];
-                    if (++jg == glen) jg = 0;
-                    if (++jf == flen) jf = 0;
-                }
-            }
-        }
-    }
-    else {
-        r = alloc_numeric_gradient (gvars, n);
-        R_len_t glen = n * gvars;
-        k = 0;
-        for (i = 0; i < glen; i += n) {
-            if (gn == n && flen == n) {
-                for (j = 0; j < n; j++)
-                    REAL(r)[i+j] = REAL(grad)[k + j] * REAL(factors)[j];
-            }
-            else if (gn == n && flen == 1) {
-                double f = REAL(factors)[0];
-                for (j = 0; j < n; j++)
-                    REAL(r)[i+j] = REAL(grad)[k + j] * f;
-            }
-            else if (gn == 1 && flen == n) {
-                double g = REAL(grad)[k];
-                for (j = 0; j < n; j++)
-                    REAL(r)[i+j] = g * REAL(factors)[j];
-            }
-            else {
-                R_len_t jg = 0, jf = 0;
-                for (j = 0; j < n; j++) {
-                    REAL(r)[i+j] = REAL(grad)[k + jg] * REAL(factors)[jf];
-                    if (++jg == gn) jg = 0;
-                    if (++jf == flen) jf = 0;
-                }
-            }
-            k += gn;
-        }
-    }
-
-#if 0
-REprintf("csv end\n");
-R_inspect(r);
-#endif
-
-    UNPROTECT(1);
-    return r;
+    return copy_scaled_jacobian (grad, gvars, gn, REAL(factors), flen, n);
 }
 
 
