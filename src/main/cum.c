@@ -203,19 +203,32 @@ static void icummin(SEXP x, SEXP s)
         is[i] = NA_INTEGER;
 }
 
-static SEXP do_cum(SEXP call, SEXP op, SEXP args, SEXP env)
+
+/* SPECIAL, so it can handle gradients. */
+
+static SEXP do_cum(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 {
-    SEXP s, t, ans;
+    SEXP s, t, ans, t_grad, s_grad;
+
+    PROTECT (args = (variant & VARIANT_GRADIENT)
+                     ? evalList_gradient (args, env, 0, 1, 0)
+                     : evalList_v (args, env, 0));
+
+    PROTECT (t_grad = HAS_GRADIENT_IN_CELL(args) ? GRADIENT_IN_CELL(args)
+                                                 : R_NilValue);
+    s_grad = R_NilValue;
 
     checkArity(op, args);
-    if (DispatchGroup("Math", call, op, args, env, &ans, 0))
+    if (DispatchGroup("Math", call, op, args, env, &ans, 0)) {
+        UNPROTECT(2);
         return ans;
+    }
 
     if (isComplex(CAR(args))) {
         PROTECT(t = CAR(args));
         PROTECT(s = allocVector(CPLXSXP, LENGTH(t)));
         setAttrib(s, R_NamesSymbol, getNamesAttrib(t));
-        if (LENGTH(t) == 0) { UNPROTECT(2); return s; }
+        if (LENGTH(t) == 0) { UNPROTECT(4); return s; }
         switch (PRIMVAL(op) ) {
         case 1:        /* cumsum */
             ccumsum(t,s);
@@ -237,7 +250,7 @@ static SEXP do_cum(SEXP call, SEXP op, SEXP args, SEXP env)
         PROTECT(t = CAR(args));  /* no need to coerce LGL to INT */
         PROTECT(s = allocVector(INTSXP, LENGTH(t)));
         setAttrib(s, R_NamesSymbol, getNamesAttrib(t));
-        if (LENGTH(t) == 0) { UNPROTECT(2); return s; }
+        if (LENGTH(t) == 0) { UNPROTECT(4); return s; }
         switch (PRIMVAL(op) ) {
         case 1: /* cumsum */
             icumsum(t,s);  /* may produce a warning, which allocates */
@@ -257,10 +270,12 @@ static SEXP do_cum(SEXP call, SEXP op, SEXP args, SEXP env)
         PROTECT(t = coerceVector(CAR(args), REALSXP));
         PROTECT(s = allocVector(REALSXP, LENGTH(t)));
         setAttrib(s, R_NamesSymbol, getNamesAttrib(t));
-        if (LENGTH(t) == 0) { UNPROTECT(2); return s; }
+        if (LENGTH(t) == 0) { UNPROTECT(4); return s; }
         switch (PRIMVAL(op) ) {
         case 1: /* cumsum */
             cumsum(t,s);
+            if (t_grad != R_NilValue)
+                s_grad = cumsum_gradient (t_grad, s, LENGTH(t));
             break;
         case 2: /* cumprod */
             cumprod(t,s);
@@ -276,7 +291,12 @@ static SEXP do_cum(SEXP call, SEXP op, SEXP args, SEXP env)
         }
     }
 
-    UNPROTECT(2);  /* t, s */
+    if (s_grad != R_NilValue) {
+        R_gradient = s_grad;
+        R_variant_result = VARIANT_GRADIENT_FLAG;
+    }
+
+    UNPROTECT(4);  /* args, t_grad, t, s */
     return s;
 }
 
@@ -286,10 +306,10 @@ attribute_hidden FUNTAB R_FunTab_cum[] =
 {
 /* printname	c-entry		offset	eval	arity	pp-kind	     precedence	rightassoc */
 
-{"cumsum",	do_cum,		1,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"cumprod",	do_cum,		2,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"cummax",	do_cum,		3,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"cummin",	do_cum,		4,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"cumsum",	do_cum,		1,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"cumprod",	do_cum,		2,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"cummax",	do_cum,		3,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"cummin",	do_cum,		4,	1000,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {NULL,		NULL,		0,	0,	0,	{PP_INVALID, PREC_FN,	0}}
 };

@@ -256,7 +256,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
   storage.mode<-, length<-
   invisible
 
-  mean, sum, prod, min, max, pmin, pmax
+  mean, sum, prod, min, max, pmin, pmax, cumsum
   rowSums, rowMeans, .rowSums, .rowMeans, 
   colSums, colMeans, .colSums, .colMeans
 
@@ -269,6 +269,7 @@ with respect to all their real scalar, vector, matrix, or array arguments
 }
 
 % TO COME: mapply, rapply
+%          cumprod, cummin, cummax
 %          backsolve, forwardsolve, chol
 %          aperm, sweep, scale
 %          cov, cor, var

@@ -1991,6 +1991,44 @@ REprintf("==\n");
 }
 
 
+/* Find gradient for the cumulative sum of a vector.  The s argument is the
+   cumsum result, used to adjust for NA.
+
+   Protects the grad argument, but not the s argument. */
+
+attribute_hidden SEXP cumsum_gradient (SEXP grad, SEXP s, R_len_t n)
+{
+    RECURSIVE_GRADIENT_APPLY (cumsum_gradient, grad, s, n);
+
+    if (TYPEOF(grad) != REALSXP) abort();
+
+    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t glen = JACOBIAN_LENGTH(grad);
+    if (glen != (double) gvars * n) abort();
+
+    PROTECT(grad);
+
+    SEXP res = alloc_numeric_gradient (gvars, n);
+
+    R_len_t i, j, k;
+
+    for (k = n; k > 0 && ISNAN(REAL(s)[k-1]); k--) ;
+
+    for (i = 0; i < glen; i += n) {
+        double sg = 0;
+        for (j = 0; j < k; j++) {
+            sg += REAL(grad)[i+j];
+            REAL(res)[i+j] = sg;
+        }
+        for ( ; j < n; j++)
+            REAL(res)[i+j] = 0;
+    }
+
+    UNPROTECT(1);
+    return res;
+}
+
+
 /* Macro for building a function that applies a binary operation to
    all pairs of gradients in g1 and g2.  Protects g1 and g2, then
    unprotects them at the end, so surrounding function will need to

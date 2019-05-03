@@ -1294,6 +1294,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define copy_scaled_gradients	Rf_copy_scaled_gradients
 # define copy_scaled_gradients_vec Rf_copy_scaled_gradients_vec
 # define create_diag_matrix_gradient Rf_create_diag_matrix_gradient
+# define cumsum_gradient	Rf_cumsum_gradient
 # define CustomPrintValue	Rf_CustomPrintValue
 # define DataFrameClass		Rf_DataFrameClass
 # define ddfindVar		Rf_ddfindVar
@@ -1563,6 +1564,7 @@ void CleanEd(void);
 void copyListMatrix(SEXP, SEXP, Rboolean);
 void copyMostAttribNoClass(SEXP, SEXP);
 void copyMostAttribNoTs(SEXP, SEXP);
+SEXP cumsum_gradient(SEXP, SEXP, R_len_t);
 void CustomPrintValue(SEXP, SEXP);
 void DataFrameClass(SEXP);
 SEXP ddfindVar(SEXP, SEXP);
