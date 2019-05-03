@@ -3182,15 +3182,38 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
     bn = JACOBIAN_LENGTH(base) / gvars;
     en = JACOBIAN_LENGTH(extra) / gvars;
 
+    R_len_t i, j, k, l;
+    SEXP r;
+
+    if (DIAGONAL_JACOBIAN(base) && bn==n && DIAGONAL_JACOBIAN(extra) && en==n) {
+
+        PROTECT2(base,extra);
+
+        r = NAMEDCNT_EQ_0(base) && LENGTH(base) == gvars ? base
+             : allocVector (REALSXP, gvars);
+        R_len_t blen = LENGTH(base);
+        R_len_t elen = LENGTH(extra);
+        R_len_t jb = 0, je = 0, jf = 0;
+        for (i = 0; i < gvars; i++) {
+            REAL(r)[i] = REAL(base)[jb] + REAL(extra)[je] * REAL(factors)[jf];
+            if (++jb == blen) jb = 0;
+            if (++je == elen) je = 0;
+            if (++jf == flen) jf = 0;
+        }
+
+        SET_GRADIENT_WRT_LEN (r, gvars);
+        SET_DIAGONAL_JACOBIAN (r, 1);
+
+        UNPROTECT(2);
+        return r;
+    }
+
     PROTECT(extra);
     base = expand_to_full_jacobian(base);
     UNPROTECT(1);
     PROTECT(base);
     extra = expand_to_full_jacobian(extra);
     PROTECT(extra);
-
-    R_len_t i, j, k, l;
-    SEXP r;
 
     r = NAMEDCNT_EQ_0(base) && LENGTH(base) == (uint64_t) gvars * n ? base
          : alloc_numeric_gradient (gvars, n);

@@ -2168,7 +2168,7 @@ with gradient (a=c(3,9,7,4,2,6,5,8)+0.1) {
   pr("A"); x <- a^a
   pr("B"); y <- x^(1/a)
   pr("C"); z <- dnorm(a,a+1,a+2)
-  list(x,y,z)
+  pr("D"); list(x,y,z)
 }
 pr("end")
 

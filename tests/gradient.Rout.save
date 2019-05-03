@@ -14760,23 +14760,20 @@ start
 +   pr("A"); x <- a^a
 +   pr("B"); y <- x^(1/a)
 +   pr("C"); z <- dnorm(a,a+1,a+2)
-+   list(x,y,z)
++   pr("D"); list(x,y,z)
 + }
 RPROFMEM: (double 8):
 A 
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
-RPROFMEM: (double 64):
 B 
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
-RPROFMEM: (double 64):
+RPROFMEM: (double 8):
 C 
 RPROFMEM: (double 8):"dnorm" 
 RPROFMEM: (double 8):"dnorm" 
@@ -14785,7 +14782,10 @@ RPROFMEM: (double 8):"dnorm"
 RPROFMEM: (double 8):"dnorm" 
 RPROFMEM: (double 8):"dnorm" 
 RPROFMEM: (double 8):"dnorm" 
-RPROFMEM: (double 64):"dnorm" 
+D 
+RPROFMEM: (double 64):
+RPROFMEM: (double 64):
+RPROFMEM: (double 64):
 [[1]]
 [1] 3.335963e+01 5.336748e+08 1.106456e+06 3.253972e+02 4.749638e+00
 [6] 6.173223e+04 4.060765e+03 2.284171e+07
