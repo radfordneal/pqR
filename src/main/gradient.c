@@ -193,7 +193,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 
 
 /* Copy a jacobian with scaling, either a full jacobian or diagonal. 
-   Gradient to copy with scaling in in grad, for vector of length gn,
+   Gradient to copy with scaling is in grad, for vector of length gn,
    with respect to gvars variables.  Result should be a gradient for
    a vector of length n with gvars variables.  Scaling factors are in f, with 
    length flen, not necessarily equal to n.  When gn or flen are less than
@@ -210,9 +210,13 @@ static SEXP copy_scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
     if (flen == 1 && *f == 1.0 && gn == n)
         return grad;
 
+    if (DIAGONAL_JACOBIAN(grad) && gn != n)
+        grad = expand_to_full_jacobian (grad);
+
+
     PROTECT(grad);
 
-    if (DIAGONAL_JACOBIAN(grad)) {  /* diagonal jacobian, so gn == gvars */
+    if (DIAGONAL_JACOBIAN(grad)) {
 
         R_len_t glen = JACOBIAN_VALUE_LENGTH(grad);
         if (flen == 1) {
@@ -268,7 +272,7 @@ static SEXP copy_scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
                 double g = REAL(grad)[k] * d;
                 for (j = 0; j < n; j++)
                     REAL(r)[i+j] = g;
-                k += gn;
+                k += 1;
             }
         }
         else if (gn == 1 && flen >= n) {
@@ -276,7 +280,7 @@ static SEXP copy_scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
                 double g = REAL(grad)[k];
                 for (j = 0; j < n; j++)
                     REAL(r)[i+j] = g * f[j];
-                k += gn;
+                k += 1;
             }
         }
         else if (gn >= n && flen == 1) {
@@ -3015,8 +3019,9 @@ REprintf("==\n");
    (except when R_NilValue).  The length of the result is given by n, with
    base and extra recycled if shorter.
 
-   The result may sometimes equal 'base' or 'extra'.  Sometimes 'base' may 
-   be modified and resused for the result, if it has NAMEDCNT of zero.
+   The result may sometimes equal 'base' or 'extra'.  Sometimes 'base' or
+   'extra' be modified and resused for the result, if it has NAMEDCNT of zero,
+   or they may be returned unchanged.
 
    Protects its arguments. */
 
@@ -3029,90 +3034,63 @@ TYPEOF(base),TYPEOF(extra), factor, n,
 LENGTH(base),LENGTH(extra));
 #endif
 
-    RECURSIVE_GRADIENT_APPLY2 (add_scaled_gradients, base, extra, factor, n);
+    RECURSIVE_GRADIENT_APPLY2_NO_EXPAND (add_scaled_gradients, 
+                                         base, extra, factor, n);
 
     R_len_t gvars = GRADIENT_WRT_LEN (base != R_NilValue ? base : extra);
 
     if (extra == R_NilValue && LENGTH(base) == (double)gvars*n)
         return base;
 
-    PROTECT2(base,extra);
     R_len_t elen, blen, en, bn;
     R_len_t i, j, k, l;
     SEXP r;
 
     if (base == R_NilValue) {
         if (TYPEOF(extra) != REALSXP) abort();
-        elen = LENGTH(extra);
+        elen = JACOBIAN_LENGTH(extra);
         en = elen / gvars;
-        if (en * gvars != elen) abort();
-        if (factor == 1.0 && elen == (uint64_t) gvars * n) {
-            UNPROTECT(2);
-            return extra;
-        }
-        r = alloc_numeric_gradient (gvars, n);
-        R_len_t glen = n * gvars;
-        l = 0;
-        for (i = 0; i < glen; i += n) {
-            R_len_t je = 0;
-            for (j = 0; j < n; j++) {
-                REAL(r)[i+j] = REAL(extra)[l+je]*factor;
-                if (++je == en) je = 0;
-            }
-            l += en;
-        }
-        UNPROTECT(2);
-        return r;
+        return copy_scaled_jacobian (extra, gvars, en, &factor, 1, n);
     }
 
     if (extra == R_NilValue) {
         if (TYPEOF(base) != REALSXP) abort();
-        blen = LENGTH(base);
+        blen = JACOBIAN_LENGTH(base);
         bn = blen / gvars;
-        if (bn * gvars != blen) abort();
-        if (blen == (uint64_t) gvars * n) {
-            UNPROTECT(2);
-            return base;
-        }
-        r = alloc_numeric_gradient (gvars, n);
-        R_len_t glen = n * gvars;
-        k = 0;
-        for (i = 0; i < glen; i += n) {
-            R_len_t jb = 0;
-            for (j = 0; j < n; j++) {
-                REAL(r)[i+j] = REAL(base)[k+jb];
-                if (++jb == bn) jb = 0;
-            }
-            k += bn;
-        }
-        UNPROTECT(2);
-        return r;
+        static double one = 1.0;
+        return copy_scaled_jacobian (base, gvars, bn, &one, 1, n);
     }
-    else {
-        if (TYPEOF(base) != REALSXP) abort();
-        if (TYPEOF(extra) != REALSXP) abort();
-        if (GRADIENT_WRT_LEN(extra) != gvars) abort();
-        blen = LENGTH(base);
-        r = NAMEDCNT_EQ_0(base) && blen == (uint64_t) gvars * n ? base
-             : alloc_numeric_gradient (gvars, n);
-        R_len_t glen = n * gvars;
-        bn = blen / gvars;
-        if (bn * gvars != blen) abort();
-        elen = LENGTH(extra);
-        en = elen / gvars;
-        if (en * gvars != elen) abort();
-        k = l = 0;
-        for (i = 0; i < glen; i += n) {
-            R_len_t jb = 0, je = 0;
-            for (j = 0; j < n; j++) {
-                REAL(r)[i+j] = REAL(base)[k+jb] + REAL(extra)[l+je]*factor;
-                if (++jb == bn) jb = 0;
-                if (++je == en) je = 0;
-            }
-            k += bn;
-            l += en;
+
+    PROTECT(extra);
+    base = expand_to_full_jacobian(base);
+    UNPROTECT(1);
+    PROTECT(base);
+    extra = expand_to_full_jacobian(extra);
+    PROTECT(extra);
+
+    if (TYPEOF(base) != REALSXP) abort();
+    if (TYPEOF(extra) != REALSXP) abort();
+    if (GRADIENT_WRT_LEN(extra) != gvars) abort();
+    blen = LENGTH(base);
+    r = NAMEDCNT_EQ_0(base) && blen == (uint64_t) gvars * n ? base
+         : alloc_numeric_gradient (gvars, n);
+    R_len_t glen = n * gvars;
+    bn = blen / gvars;
+    if (bn * gvars != blen) abort();
+    elen = LENGTH(extra);
+    en = elen / gvars;
+    if (en * gvars != elen) abort();
+    k = l = 0;
+    for (i = 0; i < glen; i += n) {
+        R_len_t jb = 0, je = 0;
+        for (j = 0; j < n; j++) {
+            REAL(r)[i+j] = REAL(base)[k+jb] + REAL(extra)[l+je]*factor;
+            if (++jb == bn) jb = 0;
+            if (++je == en) je = 0;
         }
-    }   
+        k += bn;
+        l += en;
+    }
 
     UNPROTECT(2);
 
