@@ -13150,8 +13150,7 @@ RPROFMEM: (double 100):
 E 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
-RPROFMEM: (double 10000):
+RPROFMEM: (double 100):
 NULL
 > pr("end")
 end 
@@ -13175,19 +13174,16 @@ RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 C 
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 D 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 E 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 NULL
 > pr("end")
@@ -13213,18 +13209,16 @@ RPROFMEM: (double 100):
 C 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
-RPROFMEM: (double 10000):
 D 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
+RPROFMEM: (double 100):
 E 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
+RPROFMEM: (double 100):
 NULL
 > pr("end")
 end 
@@ -13248,21 +13242,17 @@ RPROFMEM: (double 100):
 C 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
-RPROFMEM: (double 10000):
-RPROFMEM: (double 10000):
+RPROFMEM: (double 100):
 D 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
-RPROFMEM: (double 10000):
+RPROFMEM: (double 100):
 E 
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 100):
-RPROFMEM: (double 10000):
-RPROFMEM: (double 10000):
+RPROFMEM: (double 100):
 NULL
 > pr("end")
 end 
@@ -13850,7 +13840,6 @@ $b
 [7,]    0    0    0    0    0    0    1    0
 [8,]    0    0    0    0    0    0    0    1
 
-RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 64):
@@ -14780,14 +14769,12 @@ RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 64):
 RPROFMEM: (double 64):
-RPROFMEM: (double 64):
 B 
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
 RPROFMEM: (double 64):
 RPROFMEM: (double 64):
 C 
@@ -14798,8 +14785,6 @@ RPROFMEM: (double 8):"dnorm"
 RPROFMEM: (double 8):"dnorm" 
 RPROFMEM: (double 8):"dnorm" 
 RPROFMEM: (double 8):"dnorm" 
-RPROFMEM: (double 64):"dnorm" 
-RPROFMEM: (double 64):"dnorm" 
 RPROFMEM: (double 64):"dnorm" 
 [[1]]
 [1] 3.335963e+01 5.336748e+08 1.106456e+06 3.253972e+02 4.749638e+00

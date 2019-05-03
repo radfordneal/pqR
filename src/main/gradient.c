@@ -3043,8 +3043,6 @@ LENGTH(base),LENGTH(extra));
         return base;
 
     R_len_t en, bn;
-    R_len_t i, j, k, l;
-    SEXP r;
 
     if (base == R_NilValue) {
         if (TYPEOF(extra) != REALSXP) abort();
@@ -3065,6 +3063,9 @@ LENGTH(base),LENGTH(extra));
 
     bn = JACOBIAN_LENGTH(base) / gvars;
     en = JACOBIAN_LENGTH(extra) / gvars;
+
+    R_len_t i, j, k, l;
+    SEXP r;
 
     if (DIAGONAL_JACOBIAN(base) && bn==n && DIAGONAL_JACOBIAN(extra) && en==n) {
 
@@ -3143,8 +3144,8 @@ LENGTH(base),LENGTH(extra));
 attribute_hidden SEXP add_scaled_gradients_vec (SEXP base, SEXP extra, 
                                                 SEXP factors, R_len_t n)
 {
-    RECURSIVE_GRADIENT_APPLY2 (add_scaled_gradients_vec, base, extra, 
-                               factors, n);
+    RECURSIVE_GRADIENT_APPLY2_NO_EXPAND (add_scaled_gradients_vec, base, extra, 
+                                         factors, n);
 #if 0
 REprintf("add_scaled_gradients_vec: %d %d %d - %d %d %d %d\n",
 TYPEOF(base),TYPEOF(extra),TYPEOF(factors), n,
@@ -3158,66 +3159,54 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
     if (extra == R_NilValue && LENGTH(base) == (double)gvars*n)
         return base;
 
-    PROTECT2(base,extra);
-    R_len_t i, j, k, l;
-    R_len_t en, bn;
-
-    SEXP r = alloc_numeric_gradient (gvars, n);
-    R_len_t glen = n * gvars;
     R_len_t flen = LENGTH(factors);
+    R_len_t en, bn;
 
     if (base == R_NilValue) {
         if (TYPEOF(extra) != REALSXP) abort();
-        en = LENGTH(extra) / gvars;
-        if (LENGTH(extra) != gvars * en) abort();
-        k = 0;
-        for (i = 0; i < glen; i += n) {
-            R_len_t je = 0, jf = 0;
-            for (j = 0; j < n; j++) {
-                REAL(r)[i+j] = REAL(extra)[k + je] * REAL(factors)[jf];
-                if (++je == en) je = 0;
-                if (++jf == flen) jf = 0;
-            }
-            k += en;
-        }
+        en = JACOBIAN_LENGTH(extra) / gvars;
+        return copy_scaled_jacobian (extra, gvars, en, REAL(factors), flen, n);
     }
 
-    else if (extra == R_NilValue) {
+    if (extra == R_NilValue) {
         if (TYPEOF(base) != REALSXP) abort();
-        bn = LENGTH(base) / gvars;
-        if (LENGTH(base) != gvars * bn) abort();
-        l = 0;
-        for (i = 0; i < glen; i += n) {
-            R_len_t jb = 0;
-            for (j = 0; j < n; j++) {
-                REAL(r)[i+j] = REAL(base)[l + jb];
-                if (++jb == bn) jb = 0;
-            }
-            l += bn;
-        }
+        bn = JACOBIAN_LENGTH(base) / gvars;
+        static double one = 1.0;
+        return copy_scaled_jacobian (base, gvars, bn, &one, 1, n);
     }
 
-    else {
-        if (TYPEOF(base) != REALSXP) abort();
-        if (TYPEOF(extra) != REALSXP) abort();
-        if (GRADIENT_WRT_LEN(extra) != gvars) abort();
-        bn = LENGTH(base) / gvars;
-        if (LENGTH(base) != gvars * bn) abort();
-        en = LENGTH(extra) / gvars;
-        if (LENGTH(extra) != gvars * en) abort();
-        k = l = 0;
-        for (i = 0; i < glen; i += n) {
-            R_len_t jb = 0, je = 0, jf = 0;
-            for (j = 0; j < n; j++) {
-                REAL(r)[i+j] = REAL(base)[l + jb] 
-                                + REAL(extra)[k + je] * REAL(factors)[jf];
-                if (++jb == bn) jb = 0;
-                if (++je == en) je = 0;
-                if (++jf == flen) jf = 0;
-            }
-            k += en;
-            l += bn;
+    if (TYPEOF(base) != REALSXP) abort();
+    if (TYPEOF(extra) != REALSXP) abort();
+    if (GRADIENT_WRT_LEN(extra) != gvars) abort();
+
+    bn = JACOBIAN_LENGTH(base) / gvars;
+    en = JACOBIAN_LENGTH(extra) / gvars;
+
+    PROTECT(extra);
+    base = expand_to_full_jacobian(base);
+    UNPROTECT(1);
+    PROTECT(base);
+    extra = expand_to_full_jacobian(extra);
+    PROTECT(extra);
+
+    R_len_t i, j, k, l;
+    SEXP r;
+
+    r = NAMEDCNT_EQ_0(base) && LENGTH(base) == (uint64_t) gvars * n ? base
+         : alloc_numeric_gradient (gvars, n);
+    R_len_t glen = n * gvars;
+    k = l = 0;
+    for (i = 0; i < glen; i += n) {
+        R_len_t jb = 0, je = 0, jf = 0;
+        for (j = 0; j < n; j++) {
+            REAL(r)[i+j] = REAL(base)[l + jb] 
+                            + REAL(extra)[k + je] * REAL(factors)[jf];
+            if (++jb == bn) jb = 0;
+            if (++je == en) je = 0;
+            if (++jf == flen) jf = 0;
         }
+        k += en;
+        l += bn;
     }   
 
     UNPROTECT(2);
