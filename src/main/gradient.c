@@ -3042,23 +3042,65 @@ LENGTH(base),LENGTH(extra));
     if (extra == R_NilValue && LENGTH(base) == (double)gvars*n)
         return base;
 
-    R_len_t elen, blen, en, bn;
+    R_len_t en, bn;
     R_len_t i, j, k, l;
     SEXP r;
 
     if (base == R_NilValue) {
         if (TYPEOF(extra) != REALSXP) abort();
-        elen = JACOBIAN_LENGTH(extra);
-        en = elen / gvars;
+        en = JACOBIAN_LENGTH(extra) / gvars;
         return copy_scaled_jacobian (extra, gvars, en, &factor, 1, n);
     }
 
     if (extra == R_NilValue) {
         if (TYPEOF(base) != REALSXP) abort();
-        blen = JACOBIAN_LENGTH(base);
-        bn = blen / gvars;
+        bn = JACOBIAN_LENGTH(base) / gvars;
         static double one = 1.0;
         return copy_scaled_jacobian (base, gvars, bn, &one, 1, n);
+    }
+
+    if (TYPEOF(base) != REALSXP) abort();
+    if (TYPEOF(extra) != REALSXP) abort();
+    if (GRADIENT_WRT_LEN(extra) != gvars) abort();
+
+    bn = JACOBIAN_LENGTH(base) / gvars;
+    en = JACOBIAN_LENGTH(extra) / gvars;
+
+    if (DIAGONAL_JACOBIAN(base) && bn==n && DIAGONAL_JACOBIAN(extra) && en==n) {
+
+        PROTECT2(base,extra);
+
+        if (NAMEDCNT_EQ_0(base) && LENGTH(base) == LENGTH(extra)) {
+            r = base;
+            l = LENGTH(base);
+            for (i = 0; i < l; i++) 
+                REAL(r)[i] += REAL(extra)[i] * factor;
+        }
+        else if (LENGTH(base) == 1 && LENGTH(extra) == 1)
+            r = ScalarReal (*REAL(base) + *REAL(extra) * factor);
+        else if (LENGTH(base) == 1) {
+            r = allocVector (REALSXP, gvars);
+            double d = *REAL(base);
+            for (i = 0; i < gvars; i++) 
+                REAL(r)[i] = d + REAL(extra)[i] * factor;
+        }
+        else if (LENGTH(extra) == 1) {
+            r = allocVector (REALSXP, gvars);
+            double d = *REAL(extra) * factor;
+            for (i = 0; i < gvars; i++) 
+                REAL(r)[i] = REAL(base)[i] + d;
+        }
+        else {
+            r = allocVector (REALSXP, gvars);
+            for (i = 0; i < gvars; i++) 
+                REAL(r)[i] = REAL(base)[i] + REAL(extra)[i] * factor;
+        }
+
+        SET_GRADIENT_WRT_LEN (r, gvars);
+        SET_DIAGONAL_JACOBIAN (r, 1);
+
+        UNPROTECT(2);
+        return r;
     }
 
     PROTECT(extra);
@@ -3068,18 +3110,9 @@ LENGTH(base),LENGTH(extra));
     extra = expand_to_full_jacobian(extra);
     PROTECT(extra);
 
-    if (TYPEOF(base) != REALSXP) abort();
-    if (TYPEOF(extra) != REALSXP) abort();
-    if (GRADIENT_WRT_LEN(extra) != gvars) abort();
-    blen = LENGTH(base);
-    r = NAMEDCNT_EQ_0(base) && blen == (uint64_t) gvars * n ? base
+    r = NAMEDCNT_EQ_0(base) && LENGTH(base) == (uint64_t) gvars * n ? base
          : alloc_numeric_gradient (gvars, n);
     R_len_t glen = n * gvars;
-    bn = blen / gvars;
-    if (bn * gvars != blen) abort();
-    elen = LENGTH(extra);
-    en = elen / gvars;
-    if (en * gvars != elen) abort();
     k = l = 0;
     for (i = 0; i < glen; i += n) {
         R_len_t jb = 0, je = 0;
