@@ -275,6 +275,8 @@
  Rf_copy_scaled_gradients
  Rf_copy_scaled_gradients_vec
  Rf_create_diag_matrix_gradient
+ Rf_cummax_gradient
+ Rf_cummin_gradient
  Rf_cumsum_gradient
  Rf_CustomPrintValue
  Rf_DispatchAnyOrEval

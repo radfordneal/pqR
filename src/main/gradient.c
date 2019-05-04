@@ -2029,6 +2029,80 @@ attribute_hidden SEXP cumsum_gradient (SEXP grad, SEXP s, R_len_t n)
 }
 
 
+/* Find gradient for the cumulative max of a vector.  The v argument is the
+   cummax argument; the s argument is the cummax result.
+
+   Protects the grad argument, but not the v and s arguments. */
+
+attribute_hidden SEXP cummax_gradient (SEXP grad, SEXP v, SEXP s, R_len_t n)
+{
+    RECURSIVE_GRADIENT_APPLY (cummax_gradient, grad, v, s, n);
+
+    if (TYPEOF(grad) != REALSXP) abort();
+
+    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t glen = JACOBIAN_LENGTH(grad);
+    if (glen != (double) gvars * n) abort();
+
+    PROTECT(grad);
+
+    SEXP res = alloc_numeric_gradient (gvars, n);
+    memset (REAL(res), 0, glen * sizeof(double));
+
+    R_len_t i, j, k, m;
+
+    for (k = n; k > 0 && ISNAN(REAL(s)[k-1]); k--) ;
+
+    m = 0;
+    for (j = 0; j < k; j++) {
+        if (REAL(v)[j] > REAL(v)[m])
+            m = j;
+        for (i = 0; i < glen; i += n)
+            REAL(res)[i+j] = REAL(grad)[i+m];
+    }
+
+    UNPROTECT(1);
+    return res;
+}
+
+
+/* Find gradient for the cumulative min of a vector.  The v argument is the
+   cummax argument; the s argument is the cummin result.
+
+   Protects the grad argument, but not the v and s arguments. */
+
+attribute_hidden SEXP cummin_gradient (SEXP grad, SEXP v, SEXP s, R_len_t n)
+{
+    RECURSIVE_GRADIENT_APPLY (cummin_gradient, grad, v, s, n);
+
+    if (TYPEOF(grad) != REALSXP) abort();
+
+    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t glen = JACOBIAN_LENGTH(grad);
+    if (glen != (double) gvars * n) abort();
+
+    PROTECT(grad);
+
+    SEXP res = alloc_numeric_gradient (gvars, n);
+    memset (REAL(res), 0, glen * sizeof(double));
+
+    R_len_t i, j, k, m;
+
+    for (k = n; k > 0 && ISNAN(REAL(s)[k-1]); k--) ;
+
+    m = 0;
+    for (j = 0; j < k; j++) {
+        if (REAL(v)[j] < REAL(v)[m])
+            m = j;
+        for (i = 0; i < glen; i += n)
+            REAL(res)[i+j] = REAL(grad)[i+m];
+    }
+
+    UNPROTECT(1);
+    return res;
+}
+
+
 /* Macro for building a function that applies a binary operation to
    all pairs of gradients in g1 and g2.  Protects g1 and g2, then
    unprotects them at the end, so surrounding function will need to

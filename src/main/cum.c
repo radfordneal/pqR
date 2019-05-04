@@ -282,9 +282,13 @@ static SEXP do_cum(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             break;
         case 3: /* cummax */
             cummax(t,s);
+            if (t_grad != R_NilValue)
+                s_grad = cummax_gradient (t_grad, t, s, LENGTH(t));
             break;
         case 4: /* cummin */
             cummin(t,s);
+            if (t_grad != R_NilValue)
+                s_grad = cummin_gradient (t_grad, t, s, LENGTH(t));
             break;
         default:
             errorcall(call, _("unknown cumxxx function"));
