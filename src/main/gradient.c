@@ -3129,11 +3129,12 @@ REprintf("==\n");
 }
 
 
-/* Create set of gradients for pmin/pmax.  The grad argument has accumulated
-   gradients from earlier arguments; v is the next argument.  Result is 
-   updated 'grad', which may be modified (assumed unshared).  The 'ans'
-   and 'arg' arguments are the full answer, and the argument corresponding
-   to v.
+/* Create set of gradients for pmin/pmax of vector of length 'n'.  The
+   grad argument has accumulated gradients from earlier arguments; v
+   is the next argument (which may shorter than 'n', and if so recycled).
+   Result is updated 'grad', if not R_NilValue, which may be modified
+   (assumed unshared).  The 'ans' and 'arg' arguments are the full
+   answer, and the argument corresponding to v.
 
    Protects its grad and v arguments. */
 
@@ -3151,27 +3152,58 @@ REprintf("--\n");
 R_inspect(arg);
 #endif
 
-    RECURSIVE_GRADIENT_APPLY2 (minmax_gradient, grad, v, ans, arg, n);
+    RECURSIVE_GRADIENT_APPLY2_NO_EXPAND (minmax_gradient, grad, v, ans, arg, n);
+
+    if (v == R_NilValue)
+        return grad;
+
+    if (TYPEOF(v) != REALSXP) abort();
+    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
 
     PROTECT2(grad,v);
 
-    R_len_t gvars;
+    R_len_t gvars = GRADIENT_WRT_LEN(v);
+    R_len_t nv = JACOBIAN_LENGTH(v) / gvars;
     SEXP res;
 
-    if (grad != R_NilValue) {
-        if (TYPEOF(grad) != REALSXP) abort();
-        gvars = GRADIENT_WRT_LEN (grad);
-        res = grad;
-    }
-    else {
-        gvars = GRADIENT_WRT_LEN (v);
-        res = alloc_numeric_gradient (gvars, n);
+    res = grad;
+    if (res == R_NilValue) {
+        if (!DIAGONAL_JACOBIAN(v) || gvars != n)
+            res = alloc_numeric_gradient (gvars, n);
+        else {
+            res = allocVector (REALSXP, gvars);
+            SET_GRADIENT_WRT_LEN (res, gvars);
+            SET_DIAGONAL_JACOBIAN (res, 1);
+        }
         memset (REAL(res), 0, LENGTH(res) * sizeof(double));
     }
 
-    if (v != R_NilValue) {
-        if (TYPEOF(v) != REALSXP) abort();
-        R_len_t nv = JACOBIAN_LENGTH(v) / gvars;
+    if (DIAGONAL_JACOBIAN(v) && DIAGONAL_JACOBIAN(res)) {
+        R_len_t i = 0, j = 0;
+        while (i < n) {
+            if (REAL(ans)[i] == REAL(arg)[j])
+                REAL(res)[i] = LENGTH(v) == 1 ? *REAL(v) : REAL(v)[j];
+            i += 1;
+            j += 1;
+            if (j >= nv) j = 0;
+        }
+    }
+    else if (DIAGONAL_JACOBIAN(v)) {
+        R_len_t i = 0, j = 0;
+        R_len_t h;
+        while (i < n) {
+            if (REAL(ans)[i] == REAL(arg)[j]) {
+                for (h = 0; h < gvars; h++)
+                    REAL(res)[h*n+i] = 0;
+                REAL(res)[j*n+i] = LENGTH(v) == 1 ? *REAL(v) : REAL(v)[j];
+            }
+            i += 1;
+            j += 1;
+            if (j >= nv) j = 0;
+        }
+    }
+    else {
+        res = expand_to_full_jacobian(res);
         R_len_t i = 0, j = 0;
         R_len_t h;
         while (i < n) {

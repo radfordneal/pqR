@@ -2183,3 +2183,14 @@ with gradient (a=c(3,9,7,4,2,6,5,8)+0.1) {
 }
 pr("end")
 
+pr("start")
+with gradient (a=c(3,9,0.04,4,0.16,6,5,8)) {
+  pr("A"); b <- c(a[2],a[-2])  # has non-diagonal jacobian
+  pr("B"); w <- pmax(a,sqrt(a))
+  pr("C"); x <- pmax(b,b)
+  pr("D"); y <- pmax(a,b)
+  pr("E"); z <- pmax(b,a)
+  pr("F"); list(w,x,y,z)
+}
+pr("end")
+
