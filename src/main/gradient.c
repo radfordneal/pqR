@@ -2242,16 +2242,16 @@ R_inspect(a);
 
     RECURSIVE_GRADIENT_APPLY2_NO_EXPAND (sum_gradient, grad, v, a, narm, n);
 
+    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
+
     if (v == R_NilValue)
         return grad;
 
-    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
     if (TYPEOF(v) != REALSXP) abort();
 
     R_len_t gvars = GRADIENT_WRT_LEN (v);
 
-    PROTECT(v);
-    PROTECT(grad);
+    PROTECT2(v,grad);
 
     if (TYPEOF(grad) == REALSXP) {
         if (DIAGONAL_JACOBIAN(grad)) abort();
@@ -2330,56 +2330,87 @@ REprintf("--\n");
 R_inspect(a);
 #endif
 
-    RECURSIVE_GRADIENT_APPLY2(prod_gradient, grad, v, a, pprod, nprod, narm, n);
+    RECURSIVE_GRADIENT_APPLY2_NO_EXPAND (prod_gradient, grad, v, a, 
+                                         pprod, nprod, narm, n);
 
-    R_len_t gvars;
+    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
 
-    if (grad != R_NilValue) {
-        if (TYPEOF(grad) != REALSXP) abort();
-        gvars = GRADIENT_WRT_LEN(grad);
-    }
-    else
-        gvars = GRADIENT_WRT_LEN(v);
+    R_len_t i, j, k;
 
     if (v == R_NilValue) {
-        for (R_len_t i = 0; i < gvars; i++) {
+        R_len_t glen = JACOBIAN_VALUE_LENGTH(grad);
+        for (i = 0; i < glen; i++) {
             REAL(grad)[i] *= nprod;
         }
         return grad;
     }
 
-    R_len_t i, j, k;
     if (TYPEOF(v) != REALSXP) abort();
-    PROTECT2(grad,v);
 
-    if (grad == R_NilValue) {
-        grad = alloc_numeric_gradient (gvars, 1);
-        for (i = 0; i < gvars; i++) {
-            REAL(grad)[i] = 0;
-        }
+    R_len_t gvars = GRADIENT_WRT_LEN(v);
+
+    PROTECT2(v,grad);
+
+    if (TYPEOF(grad) == REALSXP) {
+        if (DIAGONAL_JACOBIAN(grad)) abort();
+        if (JACOBIAN_LENGTH(grad) != gvars) abort();
     }
 
-    for (i = 0; i < gvars; i++) {
-        long double g = REAL(grad)[i];
-        long double p = pprod;
-        R_len_t b = i*n;
-        if (narm) {
-            for (j = 0; j < n; j++) if (!ISNAN(REAL(a)[j])) {
-                g = g * REAL(a)[j] + p * REAL(v)[b+j];
-                p *= REAL(a)[j];
+    SEXP r = grad;
+    if (r == R_NilValue) {
+        r = alloc_numeric_gradient (gvars, 1);
+        memset (REAL(r), 0, LENGTH(r) * sizeof(double));
+    }
+
+    if (DIAGONAL_JACOBIAN(v)) {
+        for (i = 0; i < gvars; i++) {
+            long double g = REAL(r)[i];
+            long double p = pprod;
+            double d = LENGTH(v) == 1 ? *REAL(v) : REAL(v)[i];
+            if (narm) {
+                for (j = 0; j < n; j++) {
+                    if (!ISNAN(REAL(a)[j])) {
+                        g *= REAL(a)[j];
+                        if (j == i) g += p * d;
+                        p *= REAL(a)[j];
+                    }
+                }
             }
-        }
-        else {
-            for (j = 0; j < n; j++) {
-                g = g * REAL(a)[j] + p * REAL(v)[b+j];
-                p *= REAL(a)[j];
+            else {
+                for (j = 0; j < n; j++) {
+                    g *= REAL(a)[j];
+                    if (j == i) g += p * d;
+                    p *= REAL(a)[j];
+                }
             }
+            REAL(r)[i] = g;
         }
-        REAL(grad)[i] = g;
+    }
+    else {
+        for (i = 0; i < gvars; i++) {
+            long double g = REAL(r)[i];
+            long double p = pprod;
+            R_len_t b = i*n;
+            if (narm) {
+                for (j = 0; j < n; j++) {
+                    if (!ISNAN(REAL(a)[j])) {
+                        g = g * REAL(a)[j] + p * REAL(v)[b+j];
+                        p *= REAL(a)[j];
+                    }
+                }
+            }
+            else {
+                for (j = 0; j < n; j++) {
+                    g = g * REAL(a)[j] + p * REAL(v)[b+j];
+                    p *= REAL(a)[j];
+                }
+            }
+            REAL(r)[i] = g;
+        }
     }
 
     UNPROTECT(2);
-    return grad;
+    return r;
 }
 
 
