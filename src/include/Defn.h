@@ -1296,6 +1296,7 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define create_diag_matrix_gradient Rf_create_diag_matrix_gradient
 # define cummax_gradient	Rf_cummax_gradient
 # define cummin_gradient	Rf_cummin_gradient
+# define cumprod_gradient	Rf_cumprod_gradient
 # define cumsum_gradient	Rf_cumsum_gradient
 # define CustomPrintValue	Rf_CustomPrintValue
 # define DataFrameClass		Rf_DataFrameClass
@@ -1568,6 +1569,7 @@ void copyMostAttribNoClass(SEXP, SEXP);
 void copyMostAttribNoTs(SEXP, SEXP);
 SEXP cummax_gradient(SEXP, SEXP, SEXP, R_len_t);
 SEXP cummin_gradient(SEXP, SEXP, SEXP, R_len_t);
+SEXP cumprod_gradient(SEXP, SEXP, SEXP, R_len_t);
 SEXP cumsum_gradient(SEXP, SEXP, R_len_t);
 void CustomPrintValue(SEXP, SEXP);
 void DataFrameClass(SEXP);

@@ -1601,7 +1601,8 @@ with gradient (a=c(3,1,5,4),b=7) mean(c(a,b,NA,a))
 
 with gradient (a=c(3,1,5,4),b=7) cumsum(c(a,b,NA,a))
 with gradient (a=c(3,1,5,4),b=7) { x <- a^2; x[2] <- a[3]; cumsum(c(x,b^3)) }
-#with gradient (a=c(3,1,5,4),b=7) cumprod(c(a,b,NA,a))
+with gradient (a=c(3,1,5,4),b=7) cumprod(c(a,b,NA,a))
+with gradient (a=c(3,1,5,4),b=7) { x <- a^2; x[2] <- a[3]; cumprod(c(x,b^3)) }
 with gradient (a=c(3,1,5,4),b=7) cummax(c(a,b,NA,a))
 with gradient (a=c(3,1,5,4),b=7) { x <- a^2; x[2] <- a[3]; cummax(c(x,b^3)) }
 with gradient (a=c(3,1,5,4),b=7) { x <- a^2; x[2] <- sum(a); cummax(c(x,b^3)) }

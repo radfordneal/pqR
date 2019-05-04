@@ -2029,6 +2029,45 @@ attribute_hidden SEXP cumsum_gradient (SEXP grad, SEXP s, R_len_t n)
 }
 
 
+/* Find gradient for the cumulative product of a vector.  The v argument is the
+   cummax argument; the s argument is the cumprod result.
+
+   Protects the grad argument, but not the v and s arguments. */
+
+attribute_hidden SEXP cumprod_gradient (SEXP grad, SEXP v, SEXP s, R_len_t n)
+{
+    RECURSIVE_GRADIENT_APPLY (cumprod_gradient, grad, v, s, n);
+
+    if (TYPEOF(grad) != REALSXP) abort();
+
+    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t glen = JACOBIAN_LENGTH(grad);
+    if (glen != (double) gvars * n) abort();
+
+    PROTECT(grad);
+
+    SEXP res = alloc_numeric_gradient (gvars, n);
+
+    R_len_t i, j, k;
+
+    for (k = n; k > 0 && ISNAN(REAL(s)[k-1]); k--) ;
+
+    for (i = 0; i < glen; i += n) {
+        if (k > 0) {
+            REAL(res)[i] = REAL(grad)[i];
+            for (j = 1; j < k; j++)
+                REAL(res)[i+j] = REAL(v)[j] * REAL(res)[i+j-1]
+                               + REAL(grad)[i+j] * REAL(s)[j-1];
+        }
+        for (j = k; j < n; j++)
+            REAL(res)[i+j] = 0;
+    }
+
+    UNPROTECT(1);
+    return res;
+}
+
+
 /* Find gradient for the cumulative max of a vector.  The v argument is the
    cummax argument; the s argument is the cummax result.
 

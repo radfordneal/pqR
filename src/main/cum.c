@@ -279,6 +279,8 @@ static SEXP do_cum(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             break;
         case 2: /* cumprod */
             cumprod(t,s);
+            if (t_grad != R_NilValue)
+                s_grad = cumprod_gradient (t_grad, t, s, LENGTH(t));
             break;
         case 3: /* cummax */
             cummax(t,s);

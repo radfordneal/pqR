@@ -10500,7 +10500,39 @@ attr(,"gradient")$a
 attr(,"gradient")$b
 [1]   0   0   0   0 147
 
-> #with gradient (a=c(3,1,5,4),b=7) cumprod(c(a,b,NA,a))
+> with gradient (a=c(3,1,5,4),b=7) cumprod(c(a,b,NA,a))
+ [1]   3   3  15  60 420  NA  NA  NA  NA  NA
+attr(,"gradient")
+attr(,"gradient")$a
+      [,1] [,2] [,3] [,4]
+ [1,]    1    0    0    0
+ [2,]    1    3    0    0
+ [3,]    5   15    3    0
+ [4,]   20   60   12   15
+ [5,]  140  420   84  105
+ [6,]    0    0    0    0
+ [7,]    0    0    0    0
+ [8,]    0    0    0    0
+ [9,]    0    0    0    0
+[10,]    0    0    0    0
+
+attr(,"gradient")$b
+ [1]  0  0  0  0 60  0  0  0  0  0
+
+> with gradient (a=c(3,1,5,4),b=7) { x <- a^2; x[2] <- a[3]; cumprod(c(x,b^3)) }
+[1]       9      45    1125   18000 6174000
+attr(,"gradient")
+attr(,"gradient")$a
+        [,1] [,2]    [,3]    [,4]
+[1,]       6    0       0       0
+[2,]      30    0       9       0
+[3,]     750    0     675       0
+[4,]   12000    0   10800    9000
+[5,] 4116000    0 3704400 3087000
+
+attr(,"gradient")$b
+[1]       0       0       0       0 2646000
+
 > with gradient (a=c(3,1,5,4),b=7) cummax(c(a,b,NA,a))
  [1]  3  3  5  5  7 NA NA NA NA NA
 attr(,"gradient")
