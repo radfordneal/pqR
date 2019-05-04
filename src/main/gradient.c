@@ -46,13 +46,23 @@ static inline SEXP alloc_list_gradient (R_len_t n)
     return allocVector (VECSXP, n);
 }
 
-static SEXP alloc_numeric_gradient (R_len_t gvars, R_len_t n)
+static SEXP alloc_jacobian (R_len_t gvars, R_len_t n)
 {
     if ((uint64_t) gvars * n > R_LEN_T_MAX)
         error (_("gradient matrix would be too large"));
 
     SEXP res = allocVector (REALSXP, gvars * n);
     SET_GRADIENT_WRT_LEN (res, gvars);
+
+    return res;
+}
+
+static SEXP alloc_diagonal_jacobian (R_len_t gvars, R_len_t m)
+{
+    if (m != gvars && m != 1) abort();
+    SEXP res = allocVector (REALSXP, m);
+    SET_GRADIENT_WRT_LEN (res, gvars);
+    SET_DIAGONAL_JACOBIAN (res, 1);
 
     return res;
 }
@@ -156,7 +166,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
     if (DIAGONAL_JACOBIAN(grad)) {
         R_len_t gvars = GRADIENT_WRT_LEN(grad);
         PROTECT(grad);
-        SEXP new = alloc_numeric_gradient (gvars, gvars);
+        SEXP new = alloc_jacobian (gvars, gvars);
         memset (REAL(new), 0, LENGTH(new) * sizeof(double));
         R_len_t i, j;
         if (LENGTH(grad) == 1) {
@@ -220,17 +230,13 @@ static SEXP copy_scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
 
         R_len_t glen = JACOBIAN_VALUE_LENGTH(grad);
         if (flen == 1) {
-            r = allocVector (REALSXP, glen);
-            SET_GRADIENT_WRT_LEN (r, gvars);
-            SET_DIAGONAL_JACOBIAN (r, 1);
+            r = alloc_diagonal_jacobian (gvars, glen);
             double d = *f;
             for (i = 0; i < glen; i++)
                 REAL(r)[i] = REAL(grad)[i] * d;
         }
         else {
-            r = allocVector (REALSXP, n);
-            SET_GRADIENT_WRT_LEN (r, gvars);
-            SET_DIAGONAL_JACOBIAN (r, 1);
+            r = alloc_diagonal_jacobian (gvars, n);
             if (flen >= n && glen == 1) {
                 double g = REAL(grad)[0];
                 for (j = 0; j < n; j++)
@@ -258,7 +264,7 @@ static SEXP copy_scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
 
     else {  /* full jacobian, not 1-by-1 */
 
-        r = alloc_numeric_gradient (gvars, n);
+        r = alloc_jacobian (gvars, n);
         R_len_t glen = n * gvars;
         k = 0;
         if (gn == n && flen == 1) {
@@ -469,9 +475,7 @@ static SEXP make_id_numeric (SEXP v)
         res = R_ScalarRealOne;
     }
     else {
-        res = allocVector1REAL();
-        SET_GRADIENT_WRT_LEN (res, vlen);
-        SET_DIAGONAL_JACOBIAN (res, 1);
+        res = alloc_diagonal_jacobian (vlen, 1);
         REAL(res)[0] = 1;
     }
 
@@ -794,7 +798,7 @@ R_inspect(grad); REprintf("--\n");
     R_len_t gn = JACOBIAN_LENGTH(grad) / gvars;
     R_len_t i, j, k, h;
 
-    SEXP res = alloc_numeric_gradient (gvars, n);
+    SEXP res = alloc_jacobian (gvars, n);
     PROTECT(res);
 
 
@@ -888,7 +892,7 @@ R_inspect(grad); REprintf("--\n");
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
     R_len_t k = JACOBIAN_LENGTH(grad) / gvars;
 
-    SEXP res = alloc_numeric_gradient (gvars, n);
+    SEXP res = alloc_jacobian (gvars, n);
     PROTECT(res);
 
     R_len_t m = n > k ? k : n;
@@ -925,7 +929,7 @@ R_inspect(grad); REprintf("--\n");
     R_len_t ng = JACOBIAN_LENGTH(grad) / gvars;
     R_len_t nc = n / nr;
 
-    SEXP res = alloc_numeric_gradient (gvars, n);
+    SEXP res = alloc_jacobian (gvars, n);
     PROTECT(res);
 
     R_len_t n_1 = n-1;
@@ -971,7 +975,7 @@ R_inspect(grad); REprintf("--\n");
     PROTECT(res);
 
     for (R_len_t i = 0; i < n; i++) {
-        SEXP r = alloc_numeric_gradient (gvars, 1);
+        SEXP r = alloc_jacobian (gvars, 1);
         SET_VECTOR_ELT (res, i, r);
         memcpy (REAL(r), REAL(grad)+i*gvars, gvars * sizeof(double));
     }
@@ -1020,7 +1024,7 @@ R_inspect(grad); REprintf("--\n");
         return R_NilValue;
     }
 
-    SEXP res = alloc_numeric_gradient (gvars, n);
+    SEXP res = alloc_jacobian (gvars, n);
     PROTECT(res);
 
     j = 0;
@@ -1157,7 +1161,7 @@ R_inspect(grad); REprintf("--\n");
     R_len_t gvars = glen/n;
     R_len_t m = j-i+1;
     R_len_t t = m;
-    SEXP res = alloc_numeric_gradient (gvars, m);
+    SEXP res = alloc_jacobian (gvars, m);
     if (j >= n) {
         memset (REAL(res), 0, LENGTH(res) * sizeof(double));
         t = n - i;
@@ -1200,7 +1204,7 @@ R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
     R_len_t gvars = GRADIENT_WRT_LEN (grad);
     int m = LENGTH(indx);
 
-    SEXP res = alloc_numeric_gradient (gvars, m);
+    SEXP res = alloc_jacobian (gvars, m);
     
     for (R_len_t j = 0; j < m; j++) {
         R_len_t i = INTEGER(indx)[j];
@@ -1282,7 +1286,7 @@ R_inspect(grad); REprintf("--\n");
 
     R_len_t ncs = LENGTH(sc);
 
-    SEXP res = alloc_numeric_gradient (gvars, ncs);
+    SEXP res = alloc_jacobian (gvars, ncs);
 
     memset (REAL(res), 0, LENGTH(res) * sizeof(double));
 
@@ -1386,7 +1390,7 @@ R_inspect(grad); REprintf("--\n");
     if ((uint64_t)ncs * nrs > R_LEN_T_MAX)
         gradient_matrix_too_large_error();
 
-    SEXP res = alloc_numeric_gradient (gvars, ncs*nrs);
+    SEXP res = alloc_jacobian (gvars, ncs*nrs);
 
     memset (REAL(res), 0, LENGTH(res) * sizeof(double));
 
@@ -1508,7 +1512,7 @@ R_inspect(grad); REprintf("--\n");
     if ((uint64_t)ncs * nrs > R_LEN_T_MAX)
         gradient_matrix_too_large_error();
 
-    SEXP res = alloc_numeric_gradient (gvars, ncs*nrs);
+    SEXP res = alloc_jacobian (gvars, ncs*nrs);
 
     memset (REAL(res), 0, LENGTH(res) * sizeof(double));
 
@@ -1616,7 +1620,7 @@ R_inspect(grad); REprintf("--\n");
         indx[j] = 0;
     }
 
-    SEXP res = alloc_numeric_gradient (gvars, m);
+    SEXP res = alloc_jacobian (gvars, m);
 
     int last = 0;
 
@@ -1798,7 +1802,7 @@ attribute_hidden SEXP mean_gradient (SEXP grad, R_len_t n)
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
     if (glen != gvars * n) abort();
 
-    SEXP r = alloc_numeric_gradient (gvars, 1);
+    SEXP r = alloc_jacobian (gvars, 1);
 
     R_len_t i, j, k;
 
@@ -1869,7 +1873,7 @@ R_inspect(grad);
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
     R_len_t k = JACOBIAN_LENGTH(grad) / gvars;
 
-    SEXP res = alloc_numeric_gradient (gvars, n);
+    SEXP res = alloc_jacobian (gvars, n);
 
     if (n > k) {
         memset (REAL(res), 0, LENGTH(res) * sizeof(double));
@@ -1914,7 +1918,7 @@ R_inspect(v);
 
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
 
-    SEXP res = alloc_numeric_gradient (gvars, n);
+    SEXP res = alloc_jacobian (gvars, n);
     memset (REAL(res), 0, LENGTH(res) * sizeof(double));
 
     for (int h = 0; h < gvars; h++) {
@@ -1961,7 +1965,7 @@ REprintf("--\n");
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
     R_len_t n = OP < 2 ? nc : nr;
 
-    SEXP res = alloc_numeric_gradient (gvars, n);
+    SEXP res = alloc_jacobian (gvars, n);
 
     if (OP < 2) {  /* colSums/Means */
         for (R_len_t h = 0; h < gvars; h++) {
@@ -2008,7 +2012,7 @@ attribute_hidden SEXP cumsum_gradient (SEXP grad, SEXP s, R_len_t n)
 
     PROTECT(grad);
 
-    SEXP res = alloc_numeric_gradient (gvars, n);
+    SEXP res = alloc_jacobian (gvars, n);
 
     R_len_t i, j, k;
 
@@ -2046,7 +2050,7 @@ attribute_hidden SEXP cumprod_gradient (SEXP grad, SEXP v, SEXP s, R_len_t n)
 
     PROTECT(grad);
 
-    SEXP res = alloc_numeric_gradient (gvars, n);
+    SEXP res = alloc_jacobian (gvars, n);
 
     R_len_t i, j, k;
 
@@ -2085,7 +2089,7 @@ attribute_hidden SEXP cummax_gradient (SEXP grad, SEXP v, SEXP s, R_len_t n)
 
     PROTECT(grad);
 
-    SEXP res = alloc_numeric_gradient (gvars, n);
+    SEXP res = alloc_jacobian (gvars, n);
     memset (REAL(res), 0, glen * sizeof(double));
 
     R_len_t i, j, k, m;
@@ -2122,7 +2126,7 @@ attribute_hidden SEXP cummin_gradient (SEXP grad, SEXP v, SEXP s, R_len_t n)
 
     PROTECT(grad);
 
-    SEXP res = alloc_numeric_gradient (gvars, n);
+    SEXP res = alloc_jacobian (gvars, n);
     memset (REAL(res), 0, glen * sizeof(double));
 
     R_len_t i, j, k, m;
@@ -2260,7 +2264,7 @@ R_inspect(a);
 
     SEXP r = grad;
     if (r == R_NilValue)
-        r = alloc_numeric_gradient (gvars, 1);
+        r = alloc_jacobian (gvars, 1);
 
     if (DIAGONAL_JACOBIAN(v)) {
         R_len_t i;
@@ -2358,7 +2362,7 @@ R_inspect(a);
 
     SEXP r = grad;
     if (r == R_NilValue) {
-        r = alloc_numeric_gradient (gvars, 1);
+        r = alloc_jacobian (gvars, 1);
         memset (REAL(r), 0, LENGTH(r) * sizeof(double));
     }
 
@@ -2443,7 +2447,7 @@ REprintf("--\n");
     R_len_t sz = nrows * ncols;
     int init_grad = 0;
     SEXP grad;
-    PROTECT (grad = alloc_numeric_gradient (gvars, sz));
+    PROTECT (grad = alloc_jacobian (gvars, sz));
 
     if (y_grad != R_NilValue && primop != 2) {
         if (primop == 0)
@@ -2607,7 +2611,7 @@ R_inspect(v);
     SEXP res;
 
     if (grad == R_NilValue) {
-        res = alloc_numeric_gradient (gvars, n);
+        res = alloc_jacobian (gvars, n);
         memset (REAL(res), 0, LENGTH(res) * sizeof(double));
     }
     else {
@@ -2615,7 +2619,7 @@ R_inspect(v);
         if (LENGTH(grad) == n * gvars)
             res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
         else {
-            res = alloc_numeric_gradient (gvars, n);
+            res = alloc_jacobian (gvars, n);
             m = JACOBIAN_LENGTH(grad) / gvars;
             for (h = 0; h < gvars; h++) {
                 memcpy (REAL(res) + h*n, REAL(grad) + h*m, m * sizeof(double));
@@ -2698,7 +2702,7 @@ R_inspect(v);
     SEXP res;
 
     if (grad == R_NilValue) {
-        res = alloc_numeric_gradient (gvars, n);
+        res = alloc_jacobian (gvars, n);
         memset (REAL(res), 0, LENGTH(res) * sizeof(double));
     }
     else {
@@ -2706,7 +2710,7 @@ R_inspect(v);
         if (LENGTH(grad) == n * gvars)
             res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
         else {
-            res = alloc_numeric_gradient (gvars, n);
+            res = alloc_jacobian (gvars, n);
             m = JACOBIAN_LENGTH(grad) / gvars;
             for (h = 0; h < gvars; h++) {
                 memcpy (REAL(res) + h*n, REAL(grad) + h*m, m * sizeof(double));
@@ -2906,7 +2910,7 @@ R_inspect(v);
     SEXP res;
 
     if (grad == R_NilValue) {
-        res = alloc_numeric_gradient (gvars, n);
+        res = alloc_jacobian (gvars, n);
         memset (REAL(res), 0, LENGTH(res) * sizeof(double));
     }
     else {
@@ -3058,7 +3062,7 @@ R_inspect(v);
     SEXP res;
 
     if (grad == R_NilValue) {
-        res = alloc_numeric_gradient (gvars, n);
+        res = alloc_jacobian (gvars, n);
         memset (REAL(res), 0, LENGTH(res) * sizeof(double));
     }
     else {
@@ -3106,7 +3110,7 @@ R_inspect(v);
     R_len_t vlen = LENGTH(v);
     R_len_t m = 0;
 
-    SEXP res = alloc_numeric_gradient (vlen, n+1);
+    SEXP res = alloc_jacobian (vlen, n+1);
 
     memset (REAL(res), 0, LENGTH(res) * sizeof(double));
     if (grad != R_NilValue) {
@@ -3169,12 +3173,9 @@ R_inspect(arg);
     res = grad;
     if (res == R_NilValue) {
         if (!DIAGONAL_JACOBIAN(v) || gvars != n)
-            res = alloc_numeric_gradient (gvars, n);
-        else {
-            res = allocVector (REALSXP, gvars);
-            SET_GRADIENT_WRT_LEN (res, gvars);
-            SET_DIAGONAL_JACOBIAN (res, 1);
-        }
+            res = alloc_jacobian (gvars, n);
+        else
+            res = alloc_diagonal_jacobian (gvars, n);
         memset (REAL(res), 0, LENGTH(res) * sizeof(double));
     }
 
@@ -3290,29 +3291,32 @@ LENGTH(base),LENGTH(extra));
             l = LENGTH(base);
             for (i = 0; i < l; i++) 
                 REAL(r)[i] += REAL(extra)[i] * factor;
-        }
-        else if (LENGTH(base) == 1 && LENGTH(extra) == 1)
-            r = ScalarReal (*REAL(base) + *REAL(extra) * factor);
-        else if (LENGTH(base) == 1) {
-            r = allocVector (REALSXP, gvars);
-            double d = *REAL(base);
-            for (i = 0; i < gvars; i++) 
-                REAL(r)[i] = d + REAL(extra)[i] * factor;
-        }
-        else if (LENGTH(extra) == 1) {
-            r = allocVector (REALSXP, gvars);
-            double d = *REAL(extra) * factor;
-            for (i = 0; i < gvars; i++) 
-                REAL(r)[i] = REAL(base)[i] + d;
+            SET_GRADIENT_WRT_LEN (r, gvars);
+            SET_DIAGONAL_JACOBIAN (r, 1);
         }
         else {
-            r = allocVector (REALSXP, gvars);
-            for (i = 0; i < gvars; i++) 
-                REAL(r)[i] = REAL(base)[i] + REAL(extra)[i] * factor;
+            if (LENGTH(base) == 1 && LENGTH(extra) == 1) {
+                r = alloc_diagonal_jacobian (gvars, 1);
+                *REAL(r) = *REAL(base) + *REAL(extra) * factor;
+            }
+            else {
+                r = alloc_diagonal_jacobian (gvars, n);
+                if (LENGTH(base) == 1) {
+                    double d = *REAL(base);
+                    for (i = 0; i < gvars; i++) 
+                        REAL(r)[i] = d + REAL(extra)[i] * factor;
+                }
+                else if (LENGTH(extra) == 1) {
+                    double d = *REAL(extra) * factor;
+                    for (i = 0; i < gvars; i++) 
+                        REAL(r)[i] = REAL(base)[i] + d;
+                }
+                else {
+                    for (i = 0; i < gvars; i++) 
+                        REAL(r)[i] = REAL(base)[i] + REAL(extra)[i] * factor;
+                }
+            }
         }
-
-        SET_GRADIENT_WRT_LEN (r, gvars);
-        SET_DIAGONAL_JACOBIAN (r, 1);
 
         UNPROTECT(2);
         return r;
@@ -3326,7 +3330,7 @@ LENGTH(base),LENGTH(extra));
     PROTECT(extra);
 
     r = NAMEDCNT_EQ_0(base) && LENGTH(base) == (uint64_t) gvars * n ? base
-         : alloc_numeric_gradient (gvars, n);
+         : alloc_jacobian (gvars, n);
     R_len_t glen = n * gvars;
     k = l = 0;
     for (i = 0; i < glen; i += n) {
@@ -3403,8 +3407,14 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
 
         PROTECT2(base,extra);
 
-        r = NAMEDCNT_EQ_0(base) && LENGTH(base) == gvars ? base
-             : allocVector (REALSXP, gvars);
+        if (NAMEDCNT_EQ_0(base) && LENGTH(base) == gvars) {
+            r = base;
+            SET_GRADIENT_WRT_LEN (r, gvars);
+            SET_DIAGONAL_JACOBIAN (r, 1);
+        }
+        else 
+            r = alloc_diagonal_jacobian (gvars, gvars);
+
         R_len_t blen = LENGTH(base);
         R_len_t elen = LENGTH(extra);
         R_len_t jb = 0, je = 0, jf = 0;
@@ -3414,9 +3424,6 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
             if (++je == elen) je = 0;
             if (++jf == flen) jf = 0;
         }
-
-        SET_GRADIENT_WRT_LEN (r, gvars);
-        SET_DIAGONAL_JACOBIAN (r, 1);
 
         UNPROTECT(2);
         return r;
@@ -3430,7 +3437,7 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
     PROTECT(extra);
 
     r = NAMEDCNT_EQ_0(base) && LENGTH(base) == (uint64_t) gvars * n ? base
-         : alloc_numeric_gradient (gvars, n);
+         : alloc_jacobian (gvars, n);
     R_len_t glen = n * gvars;
     k = l = 0;
     for (i = 0; i < glen; i += n) {
@@ -3561,7 +3568,7 @@ R_inspect(res); REprintf("..\n");
     if (LENGTH(a) % k != 0) abort();
     R_len_t gvars = LENGTH(a) / k;
 
-    res = alloc_numeric_gradient (gvars, n);
+    res = alloc_jacobian (gvars, n);
     R_len_t glen = gvars * n;
 
     matprod_mat_mat (REAL(b), REAL(a), REAL(res), n, k, gvars);
