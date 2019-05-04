@@ -1792,13 +1792,13 @@ R_inspect(factors);
 
 attribute_hidden SEXP mean_gradient (SEXP grad, R_len_t n)
 {
-    RECURSIVE_GRADIENT_APPLY (mean_gradient, grad, n);
+    RECURSIVE_GRADIENT_APPLY_NO_EXPAND (mean_gradient, grad, n);
 
     PROTECT(grad);
 
     if (TYPEOF(grad) != REALSXP) abort();
 
-    R_len_t glen = LENGTH(grad);
+    R_len_t glen = JACOBIAN_LENGTH(grad);
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
     if (glen != gvars * n) abort();
 
@@ -1806,12 +1806,25 @@ attribute_hidden SEXP mean_gradient (SEXP grad, R_len_t n)
 
     R_len_t i, j, k;
 
-    for (i = 0; i < gvars; i++) {
-        long double s = 0;
-        R_len_t e = (i+1)*n;
-        for (j = i*n; j < e; j++)
-            s += REAL(grad)[j];
-        REAL(r)[i] = s / n;
+    if (DIAGONAL_JACOBIAN(grad)) {
+        if (LENGTH(grad) == 1) {
+            double d = *REAL(grad) / n;
+            for (i = 0; i < gvars; i++)
+                REAL(r)[i] = d;
+        }
+        else {
+            for (i = 0; i < gvars; i++)
+                REAL(r)[i] = REAL(grad)[i] / n;
+        }
+    }
+    else {
+        for (i = 0; i < gvars; i++) {
+            long double s = 0;
+            R_len_t e = (i+1)*n;
+            for (j = i*n; j < e; j++)
+                s += REAL(grad)[j];
+            REAL(r)[i] = s / n;
+        }
     }
 
     UNPROTECT(1);

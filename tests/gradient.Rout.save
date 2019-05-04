@@ -15103,4 +15103,54 @@ attr(,"gradient")[[4]]
 > pr("end")
 end 
 > 
+> pr("start")
+start 
+> with gradient (a=c(3,9,7,4,2,6,5,8)+0.1) {
++   pr("A"); x <- mean(a)
++   pr("B"); y <- mean(a^2)
++   pr("C"); b <- a; b[2] <- b[8]
++   pr("D"); z <- mean(b)
++   pr("E"); list(x,y,z)
++ }
+RPROFMEM: (double 8):
+A 
+RPROFMEM: (double 8):"mean.default" "mean" 
+B 
+RPROFMEM: (double 8):"mean" 
+RPROFMEM: (double 8):"mean" 
+RPROFMEM: (double 8):"mean" 
+RPROFMEM: (double 8):"mean.default" "mean" 
+C 
+RPROFMEM: (double 64):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+D 
+RPROFMEM: (double 8):"mean.default" "mean" 
+E 
+[[1]]
+[1] 5.6
+
+[[2]]
+[1] 36.61
+
+[[3]]
+[1] 5.475
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+      [,1]  [,2]  [,3]  [,4]  [,5]  [,6]  [,7]  [,8]
+[1,] 0.125 0.125 0.125 0.125 0.125 0.125 0.125 0.125
+
+attr(,"gradient")[[2]]
+      [,1]  [,2]  [,3]  [,4]  [,5]  [,6]  [,7]  [,8]
+[1,] 0.775 2.275 1.775 1.025 0.525 1.525 1.275 2.025
+
+attr(,"gradient")[[3]]
+      [,1] [,2]  [,3]  [,4]  [,5]  [,6]  [,7] [,8]
+[1,] 0.125    0 0.125 0.125 0.125 0.125 0.125 0.25
+
+> pr("end")
+end 
+> 
 > 

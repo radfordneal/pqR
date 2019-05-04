@@ -2194,3 +2194,13 @@ with gradient (a=c(3,9,0.04,4,0.16,6,5,8)) {
 }
 pr("end")
 
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)+0.1) {
+  pr("A"); x <- mean(a)
+  pr("B"); y <- mean(a^2)
+  pr("C"); b <- a; b[2] <- b[8]
+  pr("D"); z <- mean(b)
+  pr("E"); list(x,y,z)
+}
+pr("end")
+
