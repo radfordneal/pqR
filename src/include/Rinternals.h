@@ -1014,7 +1014,7 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
  TYPEOF(ATTRIB(x))==LISTSXP && TYPEOF(TAG(ATTRIB(x)))==ENVSXP ? 1 : (abort(),0))
 
 #define GRADIENT_WRT_LEN(g) (TRUELENGTH(g) + 1)
-#define SET_GRADIENT_WRT_LEN(g,l) SET_TRUELENGTH(g,l-1)
+#define SET_GRADIENT_WRT_LEN(g,l) SET_TRUELENGTH(g,(l)-1)
 
 #define STORE_GRAD(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
 #define SET_STORE_GRAD(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname=(v))
@@ -1031,15 +1031,25 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define GRAD_WRT_LIST(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.base_sym_env)
 #define SET_GRAD_WRT_LIST(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.base_sym_env=(v))
 
-#define DIAGONAL_JACOBIAN(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.debug)
+#define DIAGONAL_JACOBIAN(x) \
+  (TYPEOF(x) == REALSXP && NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.debug))
 #define SET_DIAGONAL_JACOBIAN(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.debug=(v))
 
-#define JACOBIAN_LENGTH(g) (DIAGONAL_JACOBIAN(g) \
-  ? GRADIENT_WRT_LEN(g) * GRADIENT_WRT_LEN(g) : LENGTH(g))
+#define JACOBIAN_LEN0(g) (DIAGONAL_JACOBIAN(g) \
+                              ? GRADIENT_WRT_LEN(g) * GRADIENT_WRT_LEN(g) \
+                              : LENGTH(g))
+
+#define JACOBIAN_LENGTH(g) (CHAINED_JACOBIAN(g) && LENGTH(g) == 1 \
+                             ? JACOBIAN_LEN0(ATTRIB_W(g)) : JACOBIAN_LEN0(g))
 
 #define JACOBIAN_VALUE_LENGTH(g) LENGTH(g)
+
+#define CHAINED_JACOBIAN(g) \
+  (TYPEOF(g) == REALSXP && !JACOBIAN_CACHED_AS_ATTRIB(g) \
+    && TYPEOF(ATTRIB_W(g)) == REALSXP)
+
 #define JACOBIAN_CACHED_AS_ATTRIB(g) \
-  NOT_LVALUE(UPTR_FROM_SEXP(g)->sxpinfo.base_sym_env)
+  (TYPEOF(g) == REALSXP && NOT_LVALUE(UPTR_FROM_SEXP(g)->sxpinfo.base_sym_env))
 #define SET_JACOBIAN_CACHED_AS_ATTRIB(g,v) \
   (UPTR_FROM_SEXP(g)->sxpinfo.base_sym_env = (v))
 
