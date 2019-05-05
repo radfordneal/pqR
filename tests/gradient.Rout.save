@@ -15238,9 +15238,7 @@ RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 B 
 RPROFMEM: (double 8):
-RPROFMEM: (double 8):
 C 
-RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 D 
 RPROFMEM: (double 8):
@@ -15248,8 +15246,8 @@ RPROFMEM: (double 64):
 RPROFMEM: (double 64):
 E 
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
 F 
+RPROFMEM: (double 64):
 RPROFMEM: (double 64):
 [[1]]
 [1]  90 810 490 160  40 360 250 640

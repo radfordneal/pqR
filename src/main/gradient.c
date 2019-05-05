@@ -1813,8 +1813,6 @@ attribute_hidden SEXP copy_scaled_gradients_vec
     RECURSIVE_GRADIENT_APPLY_NO_EXPAND (copy_scaled_gradients_vec,
                                         grad, factors, n);
 
-    if (CHAINED_JACOBIAN(grad)) grad = expand_to_full_jacobian(grad);
-
 #if 0
 REprintf("csv: %d %d %d - %d %d - %d\n",TYPEOF(grad),TYPEOF(factors),n,
 LENGTH(grad),LENGTH(factors),GRADIENT_WRT_LEN(grad));
@@ -1826,15 +1824,40 @@ R_inspect(factors);
     if (TYPEOF(factors) != REALSXP) abort();
     if (TYPEOF(grad) != REALSXP) abort();
 
-    R_len_t i, j, k;
-    SEXP r;
-
-    R_len_t gvars = GRADIENT_WRT_LEN(grad);
-    R_len_t gn = JACOBIAN_LENGTH(grad) / gvars;
     R_len_t flen = LENGTH(factors);
+    R_len_t gvars = GRADIENT_WRT_LEN(grad);
 
-    if (DIAGONAL_JACOBIAN(grad) && n != gvars)
+    if (flen != 1 && CHAINED_JACOBIAN(grad) 
+     || n != gvars && DIAGONAL_JACOBIAN(grad))
         grad = expand_to_full_jacobian(grad);
+
+    R_len_t gn = JACOBIAN_LENGTH(grad) / gvars;
+
+    if (flen == 1) {
+
+        double factor = *REAL(factors);
+
+        if (factor == 1.0 && gn == n)
+            return grad;
+
+        if (CHAINED_JACOBIAN(grad)) {
+            PROTECT(grad);
+            SEXP res = ScalarReal (factor * *REAL(grad));
+            SET_GRADIENT_WRT_LEN (res, gvars);
+            SET_ATTRIB_TO_ANYTHING (res, ATTRIB_W(grad));
+            UNPROTECT(1);
+            return res;
+        }
+
+        if (LENGTH(grad) >= MIN_CHAIN) {
+            PROTECT(grad);
+            SEXP res = ScalarReal(factor);
+            SET_GRADIENT_WRT_LEN (res, gvars);
+            SET_ATTRIB_TO_ANYTHING (res, grad);
+            UNPROTECT(1);
+            return res;
+        }
+    }
 
     return copy_scaled_jacobian (grad, gvars, gn, REAL(factors), flen, n);
 }
