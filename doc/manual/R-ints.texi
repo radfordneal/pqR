@@ -354,8 +354,7 @@ struct sxpinfo_struct @{
     unsigned int in_use: 1;   /* whether contents may be in use by a helper */
 
     unsigned int debug : 1;       /* Function/Environment: is being debugged
-                                     Symbol: maybe use fast subassign
-                                     REALSXP: is diagonal of Jacobian matrix */
+                                     Symbol: maybe use fast subassign */
     unsigned int rstep_pname : 1; /* Function: is to be debugged just once
                                      Symbol: subassign counterpart follows it
                                      CHARSXP: is used as a symbol's printname
@@ -432,8 +431,8 @@ one (bit 4) is not at all general purpose, but is instead reserved in
 all objects.  The only meaning of `general purpose' seems to have been
 that people using them felt no obligation to document their usage.
 
-We label these bit from 0 to 15.  Bits 0--5 and bits 14--15 have been
-used as described below (mainly from detective work on the sources).
+We label these bits from 0 to 15.  Some uses of these bits are
+described below:
 
 @findex gp bits
 @findex LEVELS
@@ -456,7 +455,15 @@ lookup} for further details.
 @findex SET_GRADINDEX
 Bits 8-15 in a node in a pairlist of gradient values holds the index
 of the variable whose gradient is recorded, within the list in the relevant
-@code{with gradient} or @code{track gradient} construct, starting with 1.
+@code{with gradient}, @code{track gradient}, or active @code{back gradient}
+construct, starting with 1.
+
+@findex JACOBIAN_TYPE
+@findex SET_JACOBIAN_TYPE
+Bit 8-15 in a REALSXP representing an internal Jacobian matrix (not a user
+visible one, as for example from @code{gradient_of}) are used to specify 
+whether a compact form of the matrix is used, and if so of what type.  Zero
+means a full Jacobain matrix.
 
 @findex MISSING
 @findex SET_MISSING
@@ -907,7 +914,7 @@ not user-visible but C-level code might look at their attributes.
 Also, `attributes' on binding cells in environments, on promises, and
 on internal argument pairlists are used to record gradient information
 (see @ref{Gradient information} for details).  The @code{ATTRIB} field
-of a numeric vector representing a Jacobian matrix for a gradient may
+of a REALSXP vector representing a Jacobian matrix for a gradient may
 be used for purposes such as caching an expanded version of the Jacobian.
 
 The code assumes that the attributes of a node (except for special
@@ -1039,9 +1046,16 @@ which TRUELENGTH is 0).  This value should be accessed with
 which handle adding/subtracting one.
 
 Jacobian matrices may be stored in a compact form (eg, just the
-diagonal elements if the matrix is diagonal), with the @code{ATTRIB}
-field sometimes being used.  Some @code{sxpinfo} bits are used to
-indicate such compact forms.
+diagonal elements if the matrix is diagonal), with the type of compact
+representation being in @code{JACOBIAN_TYPE) (which is 8 of the
+@code{gp} bits), with zero if it is not a compact form.  The full form
+of a compact Jacobian may be needed, and if computed is stored in the
+attribute field of the compact form (the compact representation may
+still be used when doing so is faster).  A @code{sxpinfo} bit accessed with
+@code{JACOBIAN_CACHED_AS_ATTRIB} indicates if a cached form exists.
+Some compact forms also use the attribute (accessed with
+@code{ATTRIB_W} to bypass normal checks), but if so, they must not be
+used after this is replaced by the cached full Jacobian.
 
 Gradient information may be @code{R_NilValue} when the gradient is
 zero (or all zeros for lists).  @code{R_NilValue} may also appear as a

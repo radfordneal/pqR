@@ -1031,25 +1031,34 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define GRAD_WRT_LIST(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.base_sym_env)
 #define SET_GRAD_WRT_LIST(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.base_sym_env=(v))
 
-#define DIAGONAL_JACOBIAN(x) \
-  (TYPEOF(x) == REALSXP && NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.debug))
-#define SET_DIAGONAL_JACOBIAN(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.debug=(v))
+#define JACOBIAN_TYPE(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp>>8)
+#define SET_JACOBIAN_TYPE(x,v) \
+ (UPTR_FROM_SEXP(x)->sxpinfo.gp = UPTR_FROM_SEXP(x)->sxpinfo.gp & 0xff | (v<<8))
 
-#define JACOBIAN_LEN0(g) (DIAGONAL_JACOBIAN(g) \
-                              ? GRADIENT_WRT_LEN(g) * GRADIENT_WRT_LEN(g) \
-                              : LENGTH(g))
+#define DIAGONAL_JACOBIAN 1 /* Only diagonal stored, as 1 element if all same */
+#define SCALED_JACOBIAN 2   /* Scaling of Jacobian in attr, maybe length 1 */
 
-#define JACOBIAN_LENGTH(g) (CHAINED_JACOBIAN(g) && LENGTH(g) == 1 \
-                             ? JACOBIAN_LEN0(ATTRIB_W(g)) : JACOBIAN_LEN0(g))
+#define JACOBIAN_COLS(g) GRAD_WRT_LEN(g)  /* Number of columns in Jacobian */
 
-#define JACOBIAN_VALUE_LENGTH(g) LENGTH(g)
+#define JACOBIAN_ROWS(g)                  /* Number of rows in Jacobian */ \
+  (JACOBIAN_TYPE(g) == SCALED_JACOBIAN ? JACOBIAN_ROWS0(ATRIB_W(g)) \
+                                       : JACOBIAN_ROWS0(g))
+#define JACOBIAN_ROWS0(g) \
+  (JACOBIAN_TYPE(g) == DIAGONAL_JACOBIAN ? GRAD_WRT_LEN(g) \
+                                         : LENGTH(g) / GRAD_WRT_LEN(g))
 
-#define CHAINED_JACOBIAN(g) \
-  (TYPEOF(g) == REALSXP && !JACOBIAN_CACHED_AS_ATTRIB(g) \
-    && TYPEOF(ATTRIB_W(g)) == REALSXP)
+#define JACOBIAN_LENGTH(g)                /* Rows X Cols of full Jacobian */ \
+  (JACOBIAN_TYPE(g) == SCALED_JACOBIAN ? JACOBIAN_LEN0(ATTRIB_W(g)) \
+                                       : JACOBIAN_LEN0(g))
+#define JACOBIAN_LEN0(g) \
+  (JACOBIAN_TYPE(g) == DIAGONAL_JACOBIAN \
+    ? GRADIENT_WRT_LEN(g) * GRADIENT_WRT_LEN(g) : LENGTH(g))
+
+#define JACOBIAN_VALUE_LENGTH(g) LENGTH(g) /* Double values in representation */
 
 #define JACOBIAN_CACHED_AS_ATTRIB(g) \
   (TYPEOF(g) == REALSXP && NOT_LVALUE(UPTR_FROM_SEXP(g)->sxpinfo.base_sym_env))
+
 #define SET_JACOBIAN_CACHED_AS_ATTRIB(g,v) \
   (UPTR_FROM_SEXP(g)->sxpinfo.base_sym_env = (v))
 
