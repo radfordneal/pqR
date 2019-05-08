@@ -52,7 +52,7 @@ static SEXP alloc_jacobian (R_len_t gvars, R_len_t n)
         error (_("gradient matrix would be too large"));
 
     SEXP res = allocVector (REALSXP, gvars * n);
-    SET_GRADIENT_WRT_LEN (res, gvars);
+    SET_GRAD_WRT_LEN (res, gvars);
 
     return res;
 }
@@ -61,7 +61,7 @@ static SEXP alloc_diagonal_jacobian (R_len_t gvars, R_len_t m)
 {
     if (m != gvars && m != 1) abort();
     SEXP res = allocVector (REALSXP, m);
-    SET_GRADIENT_WRT_LEN (res, gvars);
+    SET_GRAD_WRT_LEN (res, gvars);
     SET_JACOBIAN_TYPE(res,DIAGONAL_JACOBIAN);
 
     return res;
@@ -165,19 +165,29 @@ static SEXP expand_to_full_jacobian (SEXP grad)
     if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) {
 
         SEXP next, new;
-
-        if (LENGTH(grad) != 1) abort();  /* All that's handled at the moment */
+        R_len_t i;
 
         PROTECT (grad);
         PROTECT (next = expand_to_full_jacobian (ATTRIB_W(grad)));
-        R_len_t len = LENGTH(next);
-        R_len_t gvars = GRADIENT_WRT_LEN(next);
-        new = NAMEDCNT_EQ_0(next) ? next : alloc_jacobian (gvars, len / gvars);
 
-        double d = *REAL(grad);
-        R_len_t i;
-        for (i = 0; i < len; i++)
-            REAL(new)[i] = d * REAL(next)[i];
+        R_len_t len = LENGTH(next);
+        R_len_t gvars = GRAD_WRT_LEN(next);
+        new = NAMEDCNT_EQ_0(next) ? next 
+                                  : alloc_jacobian (gvars, len / gvars);
+
+        if (LENGTH(grad) == 1) {
+            double d = *REAL(grad);
+            for (i = 0; i < len; i++)
+                REAL(new)[i] = d * REAL(next)[i];
+        }
+        else {
+            R_len_t n = LENGTH(grad);
+            R_len_t j = 0;
+            for (i = 0; i < len; i++) {
+                REAL(new)[i] = REAL(grad)[j] * REAL(next)[i];
+                if (++j == n) j = 0;
+            }
+        }
 
         SET_ATTRIB_TO_ANYTHING(grad,new);
         SET_JACOBIAN_CACHED_AS_ATTRIB(grad,1);
@@ -189,7 +199,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 
     if (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN) {
 
-        R_len_t gvars = GRADIENT_WRT_LEN(grad);
+        R_len_t gvars = GRAD_WRT_LEN(grad);
         R_len_t i, j;
 
         PROTECT(grad);
@@ -352,7 +362,7 @@ static SEXP copy_scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
    replacing NULL elements that correspond to non-NULL elements by the
    appropriate zero Jacobian.  The 'idg' argument is the identity
    gradient to use as a skeleton - it may have top VECSXP levels with
-   GRAD_WRT_LIST set, and just below that, GRADIENT_WRT_LEN is set to the 
+   GRAD_WRT_LIST set, and just below that, GRAD_WRT_LEN is set to the 
    length of the numeric vector that that part of the gradient (possibly
    a list) is with respect to.
 
@@ -408,10 +418,10 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
 
             /* Fill in a zero Jacobian matrix for a missing gradient w.r.t.
                a numeric vector, with the number of columns taken from 
-               GRADIENT_WRT_LEN of 'idg'. */
+               GRAD_WRT_LEN of 'idg'. */
 
             R_len_t vlen = LENGTH(value);
-            R_len_t gvars = GRADIENT_WRT_LEN(idg);
+            R_len_t gvars = GRAD_WRT_LEN(idg);
             uint64_t Jlen = (uint64_t)vlen * (uint64_t)gvars;
             if (Jlen > R_LEN_T_MAX) gradient_matrix_too_large_error();
             if (Jlen == 1)
@@ -461,7 +471,7 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
         if (TYPEOF(value) != REALSXP) abort();
 
         R_len_t vlen = LENGTH(value);
-        R_len_t gvars = GRADIENT_WRT_LEN(idg);
+        R_len_t gvars = GRAD_WRT_LEN(idg);
         uint64_t Jlen = (uint64_t)vlen * (uint64_t)gvars;
 
         if (JACOBIAN_LENGTH(grad) != Jlen) abort();
@@ -485,7 +495,7 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
 
 /* Make an "identity" gradient for a value.  Has names at the top list
    levels, with GRAD_WRT_LIST set, since will be used as 'idg' in
-   expand_gradient.  Has GRADIENT_WRT_LEN set to the length of the
+   expand_gradient.  Has GRAD_WRT_LEN set to the length of the
    numeric vector just below the GRAD_WRT_LIST level, as well as in
    the Jacobian matrices themselves.  The "identity" gradient for a
    numeric vector is an identity matrix, represented compactly; for
@@ -534,7 +544,7 @@ static SEXP make_id_recursive (SEXP val, SEXP top)
         SEXP v = VECTOR_ELT (val, i);
         if (TYPEOF(v) == REALSXP) {
             SET_VECTOR_ELT (bot, i, make_id_numeric(v));
-            SET_GRADIENT_WRT_LEN (ntop, LENGTH(v));
+            SET_GRAD_WRT_LEN (ntop, LENGTH(v));
             SET_VECTOR_ELT (res, i, ntop);
         }
         else if (TYPEOF(v) == VECSXP) {
@@ -569,7 +579,7 @@ static SEXP make_id_grad (SEXP val)
 
 /* Test whether the structure of a gradient value matches the structure of
    what it is the gradient of.  Returns R_NoObject if doesn't match.  Returns
-   'grad' with GRADIENT_WRT_LEN fields set in Jacobian matrices (possibly
+   'grad' with GRAD_WRT_LEN fields set in Jacobian matrices (possibly
    duplicating to do so). */
 
 static SEXP match_structure (SEXP val, SEXP grad, R_len_t gvars)
@@ -580,7 +590,7 @@ static SEXP match_structure (SEXP val, SEXP grad, R_len_t gvars)
         if (LENGTH(grad) != (uint64_t) gvars * LENGTH(val) != 0)
             return R_NoObject;
         if (NAMEDCNT_GT_0(grad)) grad = duplicate(grad);
-        SET_GRADIENT_WRT_LEN (grad, gvars);
+        SET_GRAD_WRT_LEN (grad, gvars);
     }
     else if (TYPEOF(val) == VECSXP) {
         if (TYPEOF(grad) != VECSXP)
@@ -820,7 +830,7 @@ R_inspect(grad); REprintf("--\n");
     RECURSIVE_GRADIENT_APPLY (rep_each_numeric_gradient, grad, t, n);
 	
     if (TYPEOF(grad) != REALSXP) abort();
-    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t gvars = GRAD_WRT_LEN(grad);
     R_len_t gn = JACOBIAN_LENGTH(grad) / gvars;
     R_len_t i, j, k, h;
 
@@ -915,7 +925,7 @@ R_inspect(grad); REprintf("--\n");
     RECURSIVE_GRADIENT_APPLY (copy_numeric_recycled_gradient, grad, n);
 	
     if (TYPEOF(grad) != REALSXP) abort();
-    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t gvars = GRAD_WRT_LEN(grad);
     R_len_t k = JACOBIAN_LENGTH(grad) / gvars;
 
     SEXP res = alloc_jacobian (gvars, n);
@@ -951,7 +961,7 @@ R_inspect(grad); REprintf("--\n");
     RECURSIVE_GRADIENT_APPLY(copy_numeric_recycled_byrow_gradient, grad, nr, n);
 	
     if (TYPEOF(grad) != REALSXP) abort();
-    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t gvars = GRAD_WRT_LEN(grad);
     R_len_t ng = JACOBIAN_LENGTH(grad) / gvars;
     R_len_t nc = n / nr;
 
@@ -993,7 +1003,7 @@ R_inspect(grad); REprintf("--\n");
 
     PROTECT(grad);
 
-    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t gvars = GRAD_WRT_LEN(grad);
 
     if (LENGTH(grad) != n * gvars) abort();
 
@@ -1036,7 +1046,7 @@ R_inspect(grad); REprintf("--\n");
     for (i = 0; i < n; i++) {
         SEXP e = VECTOR_ELT(grad,i);
         if (TYPEOF(e) == REALSXP) {
-            R_len_t gv = GRADIENT_WRT_LEN(e);
+            R_len_t gv = GRAD_WRT_LEN(e);
             if (LENGTH(e) != gv) abort();
             if (gvars == -1) 
                 gvars = gv;
@@ -1227,7 +1237,7 @@ R_inspect(grad); REprintf("..\n"); R_inspect(indx); REprintf("--\n");
 
     PROTECT(grad);
 
-    R_len_t gvars = GRADIENT_WRT_LEN (grad);
+    R_len_t gvars = GRAD_WRT_LEN (grad);
     int m = LENGTH(indx);
 
     SEXP res = alloc_jacobian (gvars, m);
@@ -1305,7 +1315,7 @@ R_inspect(grad); REprintf("--\n");
 
     if (TYPEOF(grad) != REALSXP) abort();
 
-    R_len_t gvars = GRADIENT_WRT_LEN (grad);
+    R_len_t gvars = GRAD_WRT_LEN (grad);
     if (LENGTH(grad) != (uint64_t)gvars * n) abort();
 
     PROTECT(grad);
@@ -1406,7 +1416,7 @@ R_inspect(grad); REprintf("--\n");
 
     if (TYPEOF(grad) != REALSXP) abort();
 
-    R_len_t gvars = GRADIENT_WRT_LEN (grad);
+    R_len_t gvars = GRAD_WRT_LEN (grad);
     if (LENGTH(grad) != (uint64_t)gvars * n) abort();
 
     PROTECT(grad);
@@ -1525,7 +1535,7 @@ R_inspect(grad); REprintf("--\n");
 
     if (TYPEOF(grad) != REALSXP) abort();
 
-    R_len_t gvars = GRADIENT_WRT_LEN (grad);
+    R_len_t gvars = GRAD_WRT_LEN (grad);
     if (LENGTH(grad) != (uint64_t)gvars * n) abort();
 
     PROTECT(grad);
@@ -1635,7 +1645,7 @@ R_inspect(grad); REprintf("--\n");
 
     PROTECT(grad);
 
-    R_len_t gvars = GRADIENT_WRT_LEN (grad);
+    R_len_t gvars = GRAD_WRT_LEN (grad);
     R_len_t m, i, v;
     int indx[k];
     int j;
@@ -1769,31 +1779,43 @@ attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
 
     if (TYPEOF(grad) != REALSXP) abort();
 
-    R_len_t gvars = GRADIENT_WRT_LEN(grad);
-    R_len_t gn = JACOBIAN_LENGTH(grad) / gvars;
+    R_len_t gvars = GRAD_WRT_LEN(grad);
+    R_len_t gn = JACOBIAN_ROWS(grad);
 
-    if (factor == 1.0 && gn == n)
-        return grad;
-
-    if ((JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN) && n != gvars)
+    if (gn != n)
         grad = expand_to_full_jacobian(grad);
 
+    if (factor == 1.0)
+        return grad;
+
+    R_len_t len = LENGTH(grad);
+
     if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) {
+        SEXP res;
         PROTECT(grad);
-        SEXP res = ScalarReal (factor * *REAL(grad));
-        SET_GRADIENT_WRT_LEN (res, gvars);
+        if (len == 1)
+            res = ScalarReal (factor * *REAL(grad));
+        else {
+            R_len_t i;
+            res = allocVector (REALSXP, len);
+            if (LENGTH(grad) != len) abort();
+            for (i = 0; i < len; i++)
+                REAL(res)[i] = factor * REAL(grad)[i];
+        }
+        SET_GRAD_WRT_LEN (res, gvars);
         SET_ATTRIB_TO_ANYTHING (res, ATTRIB_W(grad));
-        SET_JACOBIAN_TYPE (res, SCALED_JACOBIAN);
+        SET_JACOBIAN_TYPE (res, SCALED_JACOBIAN | DIAGONAL_JACOBIAN);
         UNPROTECT(1);
         return res;
     }
 
-    if (LENGTH(grad) >= MIN_CHAIN) {
+    if (len >= MIN_CHAIN) {
+        SEXP res;
         PROTECT(grad);
-        SEXP res = ScalarReal(factor);
-        SET_GRADIENT_WRT_LEN (res, gvars);
+        res = ScalarReal(factor);
+        SET_GRAD_WRT_LEN (res, gvars);
         SET_ATTRIB_TO_ANYTHING (res, grad);
-        SET_JACOBIAN_TYPE (res, SCALED_JACOBIAN);
+        SET_JACOBIAN_TYPE (res, SCALED_JACOBIAN | DIAGONAL_JACOBIAN);
         UNPROTECT(1);
         return res;
     }
@@ -1816,7 +1838,7 @@ attribute_hidden SEXP copy_scaled_gradients_vec
 
 #if 0
 REprintf("csv: %d %d %d - %d %d - %d\n",TYPEOF(grad),TYPEOF(factors),n,
-LENGTH(grad),LENGTH(factors),GRADIENT_WRT_LEN(grad));
+LENGTH(grad),LENGTH(factors),GRAD_WRT_LEN(grad));
 R_inspect(grad);
 REprintf("--\n");
 R_inspect(factors);
@@ -1826,13 +1848,16 @@ R_inspect(factors);
     if (TYPEOF(grad) != REALSXP) abort();
 
     R_len_t flen = LENGTH(factors);
-    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t gvars = GRAD_WRT_LEN(grad);
+    R_len_t gn = JACOBIAN_ROWS(grad);
 
-    if (flen != 1 && (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN)
-     || n != gvars && (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN))
+    if (gn != n)
         grad = expand_to_full_jacobian(grad);
 
-    R_len_t gn = JACOBIAN_LENGTH(grad) / gvars;
+    if (flen != 1 && (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN))
+        grad = expand_to_full_jacobian(grad);
+
+    R_len_t len = LENGTH(grad);
 
     if (flen == 1) {
 
@@ -1842,21 +1867,30 @@ R_inspect(factors);
             return grad;
 
         if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) {
+            SEXP res;
             PROTECT(grad);
-            SEXP res = ScalarReal (factor * *REAL(grad));
-            SET_GRADIENT_WRT_LEN (res, gvars);
+            if (len == 1)
+                res = ScalarReal (factor * *REAL(grad));
+            else {
+                R_len_t i;
+                res = allocVector (REALSXP, len);
+                if (LENGTH(grad) != len) abort();
+                for (i = 0; i < len; i++)
+                    REAL(res)[i] = factor * REAL(grad)[i];
+            }
+            SET_GRAD_WRT_LEN (res, gvars);
             SET_ATTRIB_TO_ANYTHING (res, ATTRIB_W(grad));
-            SET_JACOBIAN_TYPE (res, SCALED_JACOBIAN);
+            SET_JACOBIAN_TYPE (res, SCALED_JACOBIAN | DIAGONAL_JACOBIAN);
             UNPROTECT(1);
             return res;
         }
 
-        if (LENGTH(grad) >= MIN_CHAIN) {
+        if (len >= MIN_CHAIN) {
             PROTECT(grad);
             SEXP res = ScalarReal(factor);
-            SET_GRADIENT_WRT_LEN (res, gvars);
+            SET_GRAD_WRT_LEN (res, gvars);
             SET_ATTRIB_TO_ANYTHING (res, grad);
-            SET_JACOBIAN_TYPE (res, SCALED_JACOBIAN);
+            SET_JACOBIAN_TYPE (res, SCALED_JACOBIAN | DIAGONAL_JACOBIAN);
             UNPROTECT(1);
             return res;
         }
@@ -1880,7 +1914,7 @@ attribute_hidden SEXP mean_gradient (SEXP grad, R_len_t n)
     if (TYPEOF(grad) != REALSXP) abort();
 
     R_len_t glen = JACOBIAN_LENGTH(grad);
-    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t gvars = GRAD_WRT_LEN(grad);
     if (glen != gvars * n) abort();
 
     SEXP r = alloc_jacobian (gvars, 1);
@@ -1965,7 +1999,7 @@ R_inspect(grad);
 
     if (TYPEOF(grad) != REALSXP) abort();
 
-    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t gvars = GRAD_WRT_LEN(grad);
     R_len_t k = JACOBIAN_LENGTH(grad) / gvars;
 
     SEXP res = alloc_jacobian (gvars, n);
@@ -2011,7 +2045,7 @@ R_inspect(v);
 
     PROTECT(grad);
 
-    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t gvars = GRAD_WRT_LEN(grad);
 
     SEXP res = alloc_jacobian (gvars, n);
     memset (REAL(res), 0, LENGTH(res) * sizeof(double));
@@ -2057,7 +2091,7 @@ REprintf("--\n");
 
     PROTECT(grad);
 
-    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t gvars = GRAD_WRT_LEN(grad);
     R_len_t n = OP < 2 ? nc : nr;
 
     SEXP res = alloc_jacobian (gvars, n);
@@ -2101,7 +2135,7 @@ attribute_hidden SEXP cumsum_gradient (SEXP grad, SEXP s, R_len_t n)
 
     if (TYPEOF(grad) != REALSXP) abort();
 
-    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t gvars = GRAD_WRT_LEN(grad);
     R_len_t glen = JACOBIAN_LENGTH(grad);
     if (glen != (double) gvars * n) abort();
 
@@ -2139,7 +2173,7 @@ attribute_hidden SEXP cumprod_gradient (SEXP grad, SEXP v, SEXP s, R_len_t n)
 
     if (TYPEOF(grad) != REALSXP) abort();
 
-    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t gvars = GRAD_WRT_LEN(grad);
     R_len_t glen = JACOBIAN_LENGTH(grad);
     if (glen != (double) gvars * n) abort();
 
@@ -2178,7 +2212,7 @@ attribute_hidden SEXP cummax_gradient (SEXP grad, SEXP v, SEXP s, R_len_t n)
 
     if (TYPEOF(grad) != REALSXP) abort();
 
-    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t gvars = GRAD_WRT_LEN(grad);
     R_len_t glen = JACOBIAN_LENGTH(grad);
     if (glen != (double) gvars * n) abort();
 
@@ -2215,7 +2249,7 @@ attribute_hidden SEXP cummin_gradient (SEXP grad, SEXP v, SEXP s, R_len_t n)
 
     if (TYPEOF(grad) != REALSXP) abort();
 
-    R_len_t gvars = GRADIENT_WRT_LEN(grad);
+    R_len_t gvars = GRAD_WRT_LEN(grad);
     R_len_t glen = JACOBIAN_LENGTH(grad);
     if (glen != (double) gvars * n) abort();
 
@@ -2355,7 +2389,7 @@ R_inspect(a);
 
     if (TYPEOF(v) != REALSXP) abort();
 
-    R_len_t gvars = GRADIENT_WRT_LEN (v);
+    R_len_t gvars = GRAD_WRT_LEN (v);
 
     PROTECT2(v,grad);
 
@@ -2453,7 +2487,7 @@ R_inspect(a);
 
     if (TYPEOF(v) != REALSXP) abort();
 
-    R_len_t gvars = GRADIENT_WRT_LEN(v);
+    R_len_t gvars = GRAD_WRT_LEN(v);
 
     PROTECT2(v,grad);
 
@@ -2544,7 +2578,7 @@ REprintf("--\n");
 
     PROTECT2(x_grad,y_grad);
 
-    R_len_t gvars = GRADIENT_WRT_LEN (x_grad != R_NilValue ? x_grad : y_grad);
+    R_len_t gvars = GRAD_WRT_LEN (x_grad != R_NilValue ? x_grad : y_grad);
 
     R_len_t sz = nrows * ncols;
     int init_grad = 0;
@@ -2707,7 +2741,7 @@ R_inspect(v);
 
     PROTECT2(grad,v);
 
-    R_len_t gvars = GRADIENT_WRT_LEN (grad != R_NilValue ? grad : v);
+    R_len_t gvars = GRAD_WRT_LEN (grad != R_NilValue ? grad : v);
 
     R_len_t h, k, m;
     SEXP res;
@@ -2798,7 +2832,7 @@ R_inspect(v);
 
     PROTECT2(grad,v);
 
-    R_len_t gvars = GRADIENT_WRT_LEN (grad != R_NilValue ? grad : v);
+    R_len_t gvars = GRAD_WRT_LEN (grad != R_NilValue ? grad : v);
 
     R_len_t h, m;
     SEXP res;
@@ -3008,7 +3042,7 @@ R_inspect(v);
 
     PROTECT2(grad,v);
 
-    R_len_t gvars = GRADIENT_WRT_LEN (grad != R_NilValue ? grad : v);
+    R_len_t gvars = GRAD_WRT_LEN (grad != R_NilValue ? grad : v);
     SEXP res;
 
     if (grad == R_NilValue) {
@@ -3160,7 +3194,7 @@ R_inspect(v);
 
     PROTECT2(grad,v);
 
-    R_len_t gvars = GRADIENT_WRT_LEN (grad != R_NilValue ? grad : v); 
+    R_len_t gvars = GRAD_WRT_LEN (grad != R_NilValue ? grad : v); 
     SEXP res;
 
     if (grad == R_NilValue) {
@@ -3268,7 +3302,7 @@ R_inspect(arg);
 
     PROTECT2(grad,v);
 
-    R_len_t gvars = GRADIENT_WRT_LEN(v);
+    R_len_t gvars = GRAD_WRT_LEN(v);
     R_len_t nv = JACOBIAN_LENGTH(v) / gvars;
     SEXP res;
 
@@ -3333,7 +3367,7 @@ REprintf("==\n");
 
 
 /* Add the product of gradients in extra times a scalar factor to the set of
-   gradients in base.  GRADIENT_WRT_LEN must be the same for base and extra
+   gradients in base.  GRAD_WRT_LEN must be the same for base and extra
    (except when R_NilValue).  The length of the result is given by n, with
    base and extra recycled if shorter.
 
@@ -3355,7 +3389,7 @@ LENGTH(base),LENGTH(extra));
     RECURSIVE_GRADIENT_APPLY2_NO_EXPAND (add_scaled_gradients, 
                                          base, extra, factor, n);
 
-    R_len_t gvars = GRADIENT_WRT_LEN (base != R_NilValue ? base : extra);
+    R_len_t gvars = GRAD_WRT_LEN (base != R_NilValue ? base : extra);
 
     if (extra == R_NilValue && LENGTH(base) == (double)gvars*n)
         return base;
@@ -3377,7 +3411,7 @@ LENGTH(base),LENGTH(extra));
 
     if (TYPEOF(base) != REALSXP) abort();
     if (TYPEOF(extra) != REALSXP) abort();
-    if (GRADIENT_WRT_LEN(extra) != gvars) abort();
+    if (GRAD_WRT_LEN(extra) != gvars) abort();
 
     bn = JACOBIAN_LENGTH(base) / gvars;
     en = JACOBIAN_LENGTH(extra) / gvars;
@@ -3395,7 +3429,7 @@ LENGTH(base),LENGTH(extra));
             l = LENGTH(base);
             for (i = 0; i < l; i++) 
                 REAL(r)[i] += REAL(extra)[i] * factor;
-            SET_GRADIENT_WRT_LEN (r, gvars);
+            SET_GRAD_WRT_LEN (r, gvars);
             SET_JACOBIAN_TYPE (r, DIAGONAL_JACOBIAN);
         }
         else {
@@ -3456,7 +3490,7 @@ LENGTH(base),LENGTH(extra));
 
 /* Add the product of gradients in extra times elements in factors to
    the set of gradients in base.  The 'n' argument is the length of
-   the vector this is the gradient for; the GRADIENT_WRT_LEN of base
+   the vector this is the gradient for; the GRAD_WRT_LEN of base
    and/or extra indicates the length of the vector that the gradient
    is with respect to.  It is possible for base, extra, or factors to
    be short, with elements recycled to length n.
@@ -3476,7 +3510,7 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
 
     if (TYPEOF(factors) != REALSXP) abort();
 
-    R_len_t gvars = GRADIENT_WRT_LEN (base != R_NilValue ? base : extra);
+    R_len_t gvars = GRAD_WRT_LEN (base != R_NilValue ? base : extra);
 
     if (extra == R_NilValue && LENGTH(base) == (double)gvars*n)
         return base;
@@ -3499,7 +3533,7 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
 
     if (TYPEOF(base) != REALSXP) abort();
     if (TYPEOF(extra) != REALSXP) abort();
-    if (GRADIENT_WRT_LEN(extra) != gvars) abort();
+    if (GRAD_WRT_LEN(extra) != gvars) abort();
 
     bn = JACOBIAN_LENGTH(base) / gvars;
     en = JACOBIAN_LENGTH(extra) / gvars;
@@ -3514,7 +3548,7 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
 
         if (NAMEDCNT_EQ_0(base) && LENGTH(base) == gvars) {
             r = base;
-            SET_GRADIENT_WRT_LEN (r, gvars);
+            SET_GRAD_WRT_LEN (r, gvars);
             SET_JACOBIAN_TYPE (r, DIAGONAL_JACOBIAN);
         }
         else 
@@ -3665,7 +3699,7 @@ R_inspect(res); REprintf("..\n");
         return ScalarRealMaybeConst (*REAL(base) + *REAL(a) * *REAL(b));
     }
 
-    R_len_t k = GRADIENT_WRT_LEN(b);
+    R_len_t k = GRAD_WRT_LEN(b);
 
     if (LENGTH(b) % k != 0) abort();
     R_len_t n = LENGTH(b) / k;
@@ -3931,7 +3965,7 @@ static R_len_t Jacobian_rows (SEXP g)
     }
 
     if (TYPEOF(g) == REALSXP) {
-        R_len_t gvars = GRADIENT_WRT_LEN(g);
+        R_len_t gvars = GRAD_WRT_LEN(g);
         r = JACOBIAN_LENGTH(g) / gvars;
         if (JACOBIAN_LENGTH(g) != r * gvars) abort();
         return r;

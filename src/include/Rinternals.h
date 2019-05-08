@@ -1013,8 +1013,8 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 (!HAS_ATTRIB(x) ? 0 : \
  TYPEOF(ATTRIB(x))==LISTSXP && TYPEOF(TAG(ATTRIB(x)))==ENVSXP ? 1 : (abort(),0))
 
-#define GRADIENT_WRT_LEN(g) (TRUELENGTH(g) + 1)
-#define SET_GRADIENT_WRT_LEN(g,l) SET_TRUELENGTH(g,(l)-1)
+#define GRAD_WRT_LEN(g) (TRUELENGTH(g) + 1)
+#define SET_GRAD_WRT_LEN(g,l) SET_TRUELENGTH(g,(l)-1)
 
 #define STORE_GRAD(x)	NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname)
 #define SET_STORE_GRAD(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.rstep_pname=(v))
@@ -1033,7 +1033,7 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 
 #define JACOBIAN_TYPE(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp>>8)
 #define SET_JACOBIAN_TYPE(x,v) \
- (UPTR_FROM_SEXP(x)->sxpinfo.gp = UPTR_FROM_SEXP(x)->sxpinfo.gp & 0xff | (v<<8))
+ (UPTR_FROM_SEXP(x)->sxpinfo.gp = UPTR_FROM_SEXP(x)->sxpinfo.gp&0xff | ((v)<<8))
 
 #define SCALED_JACOBIAN 1   /* Scaled form of Jacobian in attribute.  Form of
                                scaling factor specified by other bits. */
@@ -1042,7 +1042,7 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define JACOBIAN_COLS(g) GRAD_WRT_LEN(g)  /* Number of columns in Jacobian */
 
 #define JACOBIAN_ROWS(g)                  /* Number of rows in Jacobian */ \
-  (JACOBIAN_TYPE(g) & SCALED_JACOBIAN ? JACOBIAN_ROWS0(ATRIB_W(g)) \
+  (JACOBIAN_TYPE(g) & SCALED_JACOBIAN ? JACOBIAN_ROWS0(ATTRIB_W(g)) \
                                       : JACOBIAN_ROWS0(g))
 #define JACOBIAN_ROWS0(g) \
   (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN ? GRAD_WRT_LEN(g) \
@@ -1050,10 +1050,10 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 
 #define JACOBIAN_LENGTH(g)                /* Rows X Cols of full Jacobian */ \
   (JACOBIAN_TYPE(g) & SCALED_JACOBIAN ? JACOBIAN_LEN0(ATTRIB_W(g)) \
-                                       : JACOBIAN_LEN0(g))
+                                      : JACOBIAN_LEN0(g))
 #define JACOBIAN_LEN0(g) \
-  (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN \
-    ? GRADIENT_WRT_LEN(g) * GRADIENT_WRT_LEN(g) : LENGTH(g))
+  (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN ? GRAD_WRT_LEN(g) * GRAD_WRT_LEN(g) \
+                                        : LENGTH(g))
 
 #define JACOBIAN_VALUE_LENGTH(g) LENGTH(g) /* Double values in representation */
 

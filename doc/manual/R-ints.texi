@@ -1088,8 +1088,8 @@ Jacobian matrices will have their @code{TRUELENGTH} field set to the
 number of numeric values the gradient is with respect to (ie, the
 number of columns in the Jacobian matrix) minus one (subtracting one
 allows use of constant objects, for which TRUELENGTH is 0).  This
-value should be accessed with @code{GRADIENT_WRT_LEN} and set with
-@code{SET_GRADIENT_WRT_LEN}, which handle adding/subtracting one.
+value should be accessed with @code{GRAD_WRT_LEN} and set with
+@code{SET_GRAD_WRT_LEN}, which handle adding/subtracting one.
 
 Jacobian matrices may be stored in a compact form (eg, just the
 diagonal elements if the matrix is diagonal), with the type of compact
@@ -1102,7 +1102,7 @@ with @code{JACOBIAN_CACHED_AS_ATTRIB} indicates if a cached form
 exists.  Some compact forms also use the attribute field (accessed
 with @code{ATTRIB_W} to bypass normal checks), but if so, they must
 not be used after this is replaced by the cached full Jacobian.  The
-@code{GRADIENT_WRT_LEN} field for the representation of a Jacobian
+@code{GRAD_WRT_LEN} field for the representation of a Jacobian
 matrix is always the number of columns in the full Jacobian matrix
 (which may not be the number of columns in some matrix used as part of
 a compact represention of the Jacobian matrix).
