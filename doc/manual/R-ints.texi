@@ -1013,68 +1013,16 @@ information is in @code{R_gradient}.  Note that @code{R_gradient}
 is not a root for the garbage collector, and so must be protected
 when necessary if it is being used.
 
-Gradient information takes the form of a pairlist of gradient values,
-in which the tag is not a symbol, but rather the environment of the
-@code{with gradient}, @code{track gradient}, or @code{back gradient}
-construct in which the variable for which the value is the gradient
-was defined.  The particular variable within that environment is
-identified by @code{GRADINDEX} (the top 8 bits of the general purpose
-field) for the pairlist node, which indexes a table pointed by the
-@code{GRADVARS} field of the environment.
-
-The gradient information for the gradient of a scalar quantity with
-respect to a scalar variable is just a scalar real.  If the gradient is
-for a list, the gradient is a list of gradients for the list elements,
-with arbitrary depth of nesting.  If the gradient is with respect to a
-list variable, the gradient information is a list with the
-@code{GRAD_WRT_LIST} flag set, with elements of this list being the
-gradient with respect to the elements of the variable (which may
-itself be a list, to arbitrary depth).  For example, the gradient
-information for a list of 10 scalars with respect to a list of 20
-scalars will be a list of length 20 with the @code{GRAD_WRT_LIST} flag
-set, whose elements are lists of length 10 without the
-@code{GRAD_WRT_LIST} flag set, which have scalar reals as elements.
-
-Jacobian matrices, giving derivatives of a numeric vector with respect
-to a numeric vector, which are the ultimate atomic elements at the
-leaves of a gradient information list, will have their
-@code{TRUELENGTH} field set to the number of numeric values the
-gradient is with respect to (ie, the number of columns in the Jacobian
-matrix) minus one (subtracting one allows use of constant objects, for
-which TRUELENGTH is 0).  This value should be accessed with
-@code{GRADIENT_WRT_LEN} and set with @code{SET_GRADIENT_WRT_LEN},
-which handle adding/subtracting one.
-
-Jacobian matrices may be stored in a compact form (eg, just the
-diagonal elements if the matrix is diagonal), with the type of compact
-representation being in @code{JACOBIAN_TYPE) (which is 8 of the
-@code{gp} bits), with zero if it is not a compact form.  The full form
-of a compact Jacobian may be needed, and if computed is stored in the
-attribute field of the compact form (the compact representation may
-still be used when doing so is faster).  A @code{sxpinfo} bit accessed with
-@code{JACOBIAN_CACHED_AS_ATTRIB} indicates if a cached form exists.
-Some compact forms also use the attribute (accessed with
-@code{ATTRIB_W} to bypass normal checks), but if so, they must not be
-used after this is replaced by the cached full Jacobian.
-
-Gradient information may be @code{R_NilValue} when the gradient is
-zero (or all zeros for lists).  @code{R_NilValue} may also appear as a
-list element in a gradient value, indicating that the gradient for
-that portion of the variable is zero.
-
-Gradient values do not have names (they are instead added when the
-gradient information is converted to user-visible form), but the lists
-with @code{GRAD_WRT_LIST} set may have names.
-
 @code{VARIANT_GRADIENT} is used when evaluating the body of a
 @code{with gradient}, @code{track gradient}, or active @code{back
-gradient} construct, and passed on from there, for example in an if
-expression.  @code{VARIANT_GRADIENT} is also used when evaluating the
-right-hand side of an assignment to a variable in an environment with
-the @code{STORE_GRAD} flag, which will be the case for an environment
-associated with @code{with gradient}, @code{track gradient}, or an
-active @code{back gradient} construct, and for environments of
-functions called from there.
+gradient} construct, and passed on from there, for example to the true
+or false branch of an if expression (but not when evaluating the
+condition in the if expression).  @code{VARIANT_GRADIENT} is also used
+when evaluating the right-hand side of an assignment to a variable in
+an environment with the @code{STORE_GRAD} flag, which will be the case
+for an environment associated with @code{with gradient}, @code{track
+gradient}, or an active @code{back gradient} construct, and for
+environments of functions called from there.
 
 Values assigned to variables in an environment with @code{STORE_GRAD}
 set have their gradient information stored as the attribute field of
@@ -1095,10 +1043,69 @@ information is indicated by their @code{NAMEDCNT} fields.  This may
 sometimes be just an upper bound on the number of references, not the
 precise number.  When gradient informations is stored in a binding
 cell or promise, @code{NAMEDCNT} is incremented for all parts of the
-information, recursively, and correspondingly, @code{NAMEDCNT} may be
-decremented for all parts when a reference is removed.  An attempt is
-made to avoid duplication of gradient information on subassignment
-operations when @code{NAMEDCNT} is one.
+gradient information, recursively, and correspondingly,
+@code{NAMEDCNT} may be decremented for all parts when a reference is
+removed.  An attempt is made to avoid duplication of gradient
+information on subassignment operations when @code{NAMEDCNT} is one.
+
+Gradient information takes the form of a pairlist of gradient values,
+in which the tag is not a symbol, but rather the environment of the
+@code{with gradient}, @code{track gradient}, or @code{back gradient}
+construct in which the variable for which the value is the gradient
+was defined.  The particular variable within that environment is
+identified by @code{GRADINDEX} (the top 8 bits of the general purpose
+field) for the pairlist node, which indexes a table pointed by the
+@code{GRADVARS} field of the environment.
+
+The gradient information for the gradient of a scalar quantity with
+respect to a scalar variable is just a scalar real.  If the gradient is
+for a list, the gradient is a list of gradients for the list elements,
+with arbitrary depth of nesting.  If the gradient is with respect to a
+list variable, the gradient information is a list with the
+@code{GRAD_WRT_LIST} flag set, with elements of this list being the
+gradients with respect to the elements of the variable (which may
+itself be a list, to arbitrary depth).  For example, the gradient
+information for a list of 10 scalars with respect to a list of 20
+scalars will be a list of length 20 with the @code{GRAD_WRT_LIST} flag
+set, whose elements are lists of length 10 without the
+@code{GRAD_WRT_LIST} flag set, which have scalar reals as elements.
+
+Internal gradient values do not have names (they are instead added
+when the gradient information is converted to user-visible form), but
+the lists with @code{GRAD_WRT_LIST} set may have names.
+
+Gradient information may be @code{R_NilValue} when the gradient is
+zero (or all zeros for lists).  @code{R_NilValue} may also appear as a
+list element in a gradient value, indicating that the gradient for
+that portion of the variable is zero.
+
+The gradient of a real vector with respect to a real vector is a real
+~Jacobian" matrix (which for internal versions may be missing its
+@code{dim} attribute), whose rows correspond to elements of the vector
+it is the gradient for, and whose columns correspond to elements of
+the vector with respect to which this is the gradient.  Internal
+Jacobian matrices will have their @code{TRUELENGTH} field set to the
+number of numeric values the gradient is with respect to (ie, the
+number of columns in the Jacobian matrix) minus one (subtracting one
+allows use of constant objects, for which TRUELENGTH is 0).  This
+value should be accessed with @code{GRADIENT_WRT_LEN} and set with
+@code{SET_GRADIENT_WRT_LEN}, which handle adding/subtracting one.
+
+Jacobian matrices may be stored in a compact form (eg, just the
+diagonal elements if the matrix is diagonal), with the type of compact
+representation being in @code{JACOBIAN_TYPE) (which is 8 of the
+@code{gp} bits), with zero if it is not a compact form.  The full form
+of a compact Jacobian may be needed, and if computed is stored in the
+attribute field of the compact form (the compact representation may
+still be used when doing so is faster).  A @code{sxpinfo} bit accessed
+with @code{JACOBIAN_CACHED_AS_ATTRIB} indicates if a cached form
+exists.  Some compact forms also use the attribute field (accessed
+with @code{ATTRIB_W} to bypass normal checks), but if so, they must
+not be used after this is replaced by the cached full Jacobian.  The
+@code{GRADIENT_WRT_LEN} field for the representation of a Jacobian
+matrix is always the number of columns in the full Jacobian matrix
+(which may not be the number of columns in some matrix used as part of
+a compact represention of the Jacobian matrix).
 
 
 @node Contexts, Argument evaluation, Gradient information, R Internal Structures

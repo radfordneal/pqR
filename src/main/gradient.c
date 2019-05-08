@@ -162,7 +162,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
     if (JACOBIAN_CACHED_AS_ATTRIB(grad))
         return ATTRIB_W(grad);
 
-    if (JACOBIAN_TYPE(grad) == SCALED_JACOBIAN) {
+    if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) {
 
         SEXP next, new;
 
@@ -187,7 +187,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         return new;
     }
 
-    if (JACOBIAN_TYPE(grad) == DIAGONAL_JACOBIAN) {
+    if (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN) {
 
         R_len_t gvars = GRADIENT_WRT_LEN(grad);
         R_len_t i, j;
@@ -246,13 +246,13 @@ static SEXP copy_scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
     if (flen == 1 && *f == 1.0 && gn == n)
         return grad;
 
-    if (JACOBIAN_TYPE(grad) == DIAGONAL_JACOBIAN && gn != n)
+    if ((JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN) && gn != n)
         grad = expand_to_full_jacobian (grad);
 
 
     PROTECT(grad);
 
-    if (JACOBIAN_TYPE(grad) == DIAGONAL_JACOBIAN) {
+    if (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN) {
 
         R_len_t glen = JACOBIAN_VALUE_LENGTH(grad);
         if (flen == 1) {
@@ -1775,10 +1775,10 @@ attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
     if (factor == 1.0 && gn == n)
         return grad;
 
-    if (JACOBIAN_TYPE(grad) == DIAGONAL_JACOBIAN && n != gvars)
+    if ((JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN) && n != gvars)
         grad = expand_to_full_jacobian(grad);
 
-    if (JACOBIAN_TYPE(grad) == SCALED_JACOBIAN) {
+    if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) {
         PROTECT(grad);
         SEXP res = ScalarReal (factor * *REAL(grad));
         SET_GRADIENT_WRT_LEN (res, gvars);
@@ -1828,8 +1828,8 @@ R_inspect(factors);
     R_len_t flen = LENGTH(factors);
     R_len_t gvars = GRADIENT_WRT_LEN(grad);
 
-    if (flen != 1 && JACOBIAN_TYPE(grad) == SCALED_JACOBIAN 
-     || n != gvars && JACOBIAN_TYPE(grad) == DIAGONAL_JACOBIAN)
+    if (flen != 1 && (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN)
+     || n != gvars && (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN))
         grad = expand_to_full_jacobian(grad);
 
     R_len_t gn = JACOBIAN_LENGTH(grad) / gvars;
@@ -1841,7 +1841,7 @@ R_inspect(factors);
         if (factor == 1.0 && gn == n)
             return grad;
 
-        if (JACOBIAN_TYPE(grad) == SCALED_JACOBIAN) {
+        if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) {
             PROTECT(grad);
             SEXP res = ScalarReal (factor * *REAL(grad));
             SET_GRADIENT_WRT_LEN (res, gvars);
@@ -1872,7 +1872,7 @@ attribute_hidden SEXP mean_gradient (SEXP grad, R_len_t n)
 {
     RECURSIVE_GRADIENT_APPLY_NO_EXPAND (mean_gradient, grad, n);
 
-    if (JACOBIAN_TYPE(grad) == SCALED_JACOBIAN)
+    if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN)
         grad = expand_to_full_jacobian(grad);
 
     PROTECT(grad);
@@ -1887,7 +1887,7 @@ attribute_hidden SEXP mean_gradient (SEXP grad, R_len_t n)
 
     R_len_t i, j, k;
 
-    if (JACOBIAN_TYPE(grad) == DIAGONAL_JACOBIAN) {
+    if (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN) {
         if (LENGTH(grad) == 1) {
             double d = *REAL(grad) / n;
             for (i = 0; i < gvars; i++)
@@ -2245,16 +2245,18 @@ attribute_hidden SEXP cummin_gradient (SEXP grad, SEXP v, SEXP s, R_len_t n)
    all pairs of gradients in g1 and g2.  Protects g1 and g2, then
    unprotects them at the end, so surrounding function will need to
    protect them again if required.  The NO_EXPAND version does not
-   expand compact gradient representations. */
+   expand compact gradient representations
+
+     - except that currently it does expand scaled forms... */
 
 #define RECURSIVE_GRADIENT_APPLY2(fun,g1,g2,...) do { \
     RECURSIVE_GRADIENT_APPLY2_NO_EXPAND(fun,g1,g2,__VA_ARGS__); \
-    if (TYPEOF(g1) == REALSXP && JACOBIAN_TYPE(g1) == DIAGONAL_JACOBIAN) { \
+    if (JACOBIAN_TYPE(g1) != 0) { \
         PROTECT(g2); \
         g1 = expand_to_full_jacobian(g1); \
         UNPROTECT(1); \
     } \
-    if (TYPEOF(g2) == REALSXP && JACOBIAN_TYPE(g2) == DIAGONAL_JACOBIAN) { \
+    if (JACOBIAN_TYPE(g2) != 0) { \
         PROTECT(g1); \
         g2 = expand_to_full_jacobian(g2); \
         UNPROTECT(1); \
@@ -2314,9 +2316,9 @@ attribute_hidden SEXP cummin_gradient (SEXP grad, SEXP v, SEXP s, R_len_t n)
         UNPROTECT(3); \
         return res; \
     } \
-    if (JACOBIAN_TYPE(g1) == SCALED_JACOBIAN) \
+    if (JACOBIAN_TYPE(g1) & SCALED_JACOBIAN) \
         g1 = expand_to_full_jacobian(g1); \
-    if (JACOBIAN_TYPE(g2) == SCALED_JACOBIAN) { \
+    if (JACOBIAN_TYPE(g2) & SCALED_JACOBIAN) { \
         PROTECT(g1); g2 = expand_to_full_jacobian(g2); UNPROTECT(1); \
     } \
     UNPROTECT(2); \
@@ -2358,7 +2360,7 @@ R_inspect(a);
     PROTECT2(v,grad);
 
     if (TYPEOF(grad) == REALSXP) {
-        if (JACOBIAN_TYPE(grad) == DIAGONAL_JACOBIAN) abort();
+        if (JACOBIAN_TYPE(grad) != 0) abort();
         if (JACOBIAN_LENGTH(grad) != gvars) abort();
     }
 
@@ -2366,7 +2368,7 @@ R_inspect(a);
     if (r == R_NilValue)
         r = alloc_jacobian (gvars, 1);
 
-    if (JACOBIAN_TYPE(v) == DIAGONAL_JACOBIAN) {
+    if (JACOBIAN_TYPE(v) & DIAGONAL_JACOBIAN) {
         R_len_t i;
         if (grad == R_NilValue)
             memset (REAL(r), 0, LENGTH(r) * sizeof(double));
@@ -2456,7 +2458,7 @@ R_inspect(a);
     PROTECT2(v,grad);
 
     if (TYPEOF(grad) == REALSXP) {
-        if (JACOBIAN_TYPE(grad) == DIAGONAL_JACOBIAN) abort();
+        if (JACOBIAN_TYPE(grad) != 0) abort();
         if (JACOBIAN_LENGTH(grad) != gvars) abort();
     }
 
@@ -2466,7 +2468,7 @@ R_inspect(a);
         memset (REAL(r), 0, LENGTH(r) * sizeof(double));
     }
 
-    if (JACOBIAN_TYPE(v) == DIAGONAL_JACOBIAN) {
+    if (JACOBIAN_TYPE(v) & DIAGONAL_JACOBIAN) {
         for (i = 0; i < gvars; i++) {
             long double g = REAL(r)[i];
             long double p = pprod;
@@ -3272,15 +3274,15 @@ R_inspect(arg);
 
     res = grad;
     if (res == R_NilValue) {
-        if (JACOBIAN_TYPE(v) != DIAGONAL_JACOBIAN || gvars != n)
-            res = alloc_jacobian (gvars, n);
-        else
+        if ((JACOBIAN_TYPE(v) & DIAGONAL_JACOBIAN) && gvars == n)
             res = alloc_diagonal_jacobian (gvars, n);
+        else
+            res = alloc_jacobian (gvars, n);
         memset (REAL(res), 0, LENGTH(res) * sizeof(double));
     }
 
-    if (JACOBIAN_TYPE(v) == DIAGONAL_JACOBIAN 
-     && JACOBIAN_TYPE(res) == DIAGONAL_JACOBIAN) {
+    if ((JACOBIAN_TYPE(v) & DIAGONAL_JACOBIAN)
+     && (JACOBIAN_TYPE(res) & DIAGONAL_JACOBIAN)) {
         R_len_t i = 0, j = 0;
         while (i < n) {
             if (REAL(ans)[i] == REAL(arg)[j])
@@ -3290,7 +3292,7 @@ R_inspect(arg);
             if (j >= nv) j = 0;
         }
     }
-    else if (JACOBIAN_TYPE(v) == DIAGONAL_JACOBIAN) {
+    else if (JACOBIAN_TYPE(v) & DIAGONAL_JACOBIAN) {
         R_len_t i = 0, j = 0;
         R_len_t h;
         while (i < n) {
@@ -3383,8 +3385,8 @@ LENGTH(base),LENGTH(extra));
     R_len_t i, j, k, l;
     SEXP r;
 
-    if (JACOBIAN_TYPE(base) == DIAGONAL_JACOBIAN && bn==n 
-     && JACOBIAN_TYPE(extra) == DIAGONAL_JACOBIAN && en==n) {
+    if ((JACOBIAN_TYPE(base) & DIAGONAL_JACOBIAN) && bn==n 
+     && (JACOBIAN_TYPE(extra) & DIAGONAL_JACOBIAN) && en==n) {
 
         PROTECT2(base,extra);
 
@@ -3505,8 +3507,8 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
     R_len_t i, j, k, l;
     SEXP r;
 
-    if (JACOBIAN_TYPE(base) == DIAGONAL_JACOBIAN && bn==n 
-     && JACOBIAN_TYPE(extra) == DIAGONAL_JACOBIAN && en==n) {
+    if ((JACOBIAN_TYPE(base) & DIAGONAL_JACOBIAN) && bn==n 
+     && (JACOBIAN_TYPE(extra) & DIAGONAL_JACOBIAN) && en==n) {
 
         PROTECT2(base,extra);
 
