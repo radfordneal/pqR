@@ -3375,20 +3375,19 @@ LENGTH(base),LENGTH(extra));
 
     R_len_t gvars = GRAD_WRT_LEN (base != R_NilValue ? base : extra);
 
-    if (extra == R_NilValue && LENGTH(base) == (double)gvars*n)
-        return base;
-
     R_len_t en, bn;
 
     if (base == R_NilValue) {
         if (TYPEOF(extra) != REALSXP) abort();
-        en = JACOBIAN_LENGTH(extra) / gvars;
+        en = JACOBIAN_ROWS(extra);
         return copy_scaled_jacobian (extra, gvars, en, &factor, 1, n);
     }
 
     if (extra == R_NilValue) {
         if (TYPEOF(base) != REALSXP) abort();
-        bn = JACOBIAN_LENGTH(base) / gvars;
+        bn = JACOBIAN_ROWS(base);
+        if (bn == n)
+            return base;
         static double one = 1.0;
         return copy_scaled_jacobian (base, gvars, bn, &one, 1, n);
     }
@@ -3397,8 +3396,8 @@ LENGTH(base),LENGTH(extra));
     if (TYPEOF(extra) != REALSXP) abort();
     if (GRAD_WRT_LEN(extra) != gvars) abort();
 
-    bn = JACOBIAN_LENGTH(base) / gvars;
-    en = JACOBIAN_LENGTH(extra) / gvars;
+    bn = JACOBIAN_ROWS(base);
+    en = JACOBIAN_ROWS(extra);
 
     R_len_t i, j, k, l;
     SEXP r;
@@ -3495,22 +3494,21 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
     if (TYPEOF(factors) != REALSXP) abort();
 
     R_len_t gvars = GRAD_WRT_LEN (base != R_NilValue ? base : extra);
-
-    if (extra == R_NilValue && LENGTH(base) == (double)gvars*n)
-        return base;
-
     R_len_t flen = LENGTH(factors);
+
     R_len_t en, bn;
 
     if (base == R_NilValue) {
         if (TYPEOF(extra) != REALSXP) abort();
-        en = JACOBIAN_LENGTH(extra) / gvars;
+        en = JACOBIAN_ROWS(extra);
         return copy_scaled_jacobian (extra, gvars, en, REAL(factors), flen, n);
     }
 
     if (extra == R_NilValue) {
         if (TYPEOF(base) != REALSXP) abort();
-        bn = JACOBIAN_LENGTH(base) / gvars;
+        bn = JACOBIAN_ROWS(base);
+        if (bn == n)
+            return base;
         static double one = 1.0;
         return copy_scaled_jacobian (base, gvars, bn, &one, 1, n);
     }
@@ -3519,8 +3517,8 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
     if (TYPEOF(extra) != REALSXP) abort();
     if (GRAD_WRT_LEN(extra) != gvars) abort();
 
-    bn = JACOBIAN_LENGTH(base) / gvars;
-    en = JACOBIAN_LENGTH(extra) / gvars;
+    bn = JACOBIAN_ROWS(base);
+    en = JACOBIAN_ROWS(extra);
 
     R_len_t i, j, k, l;
     SEXP r;
