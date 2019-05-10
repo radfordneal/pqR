@@ -14002,7 +14002,6 @@ $b
 
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
 $a
 [1] 4 6 4 4 4 4 4 4
 
@@ -15511,8 +15510,9 @@ RPROFMEM: (double 64):
 D 
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
+RPROFMEM: (double 8):
 E 
+RPROFMEM: (double 64):
 RPROFMEM: (double 64):
 RPROFMEM: (double 64):
 RPROFMEM: (double 64):
