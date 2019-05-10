@@ -2263,9 +2263,7 @@ attribute_hidden SEXP cummin_gradient (SEXP grad, SEXP v, SEXP s, R_len_t n)
    all pairs of gradients in g1 and g2.  Protects g1 and g2, then
    unprotects them at the end, so surrounding function will need to
    protect them again if required.  The NO_EXPAND version does not
-   expand compact gradient representations
-
-     - except that currently it does expand scaled forms... */
+   expand compact gradient representations. */
 
 #define RECURSIVE_GRADIENT_APPLY2(fun,g1,g2,...) do { \
     RECURSIVE_GRADIENT_APPLY2_NO_EXPAND(fun,g1,g2,__VA_ARGS__); \
@@ -2334,11 +2332,6 @@ attribute_hidden SEXP cummin_gradient (SEXP grad, SEXP v, SEXP s, R_len_t n)
         UNPROTECT(3); \
         return res; \
     } \
-    if (JACOBIAN_TYPE(g1) & SCALED_JACOBIAN) \
-        g1 = expand_to_full_jacobian(g1); \
-    if (JACOBIAN_TYPE(g2) & SCALED_JACOBIAN) { \
-        PROTECT(g1); g2 = expand_to_full_jacobian(g2); UNPROTECT(1); \
-    } \
     UNPROTECT(2); \
     if (g1 == R_NilValue && g2 == R_NilValue) \
         return R_NilValue; \
@@ -2375,7 +2368,17 @@ R_inspect(a);
 
     R_len_t gvars = GRAD_WRT_LEN (v);
 
-    PROTECT2(v,grad);
+    PROTECT(v);
+    PROTECT(grad);
+
+    if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN)
+        UNPROTECT_PROTECT(grad = expand_to_full_jacobian(grad));
+
+    if (JACOBIAN_TYPE(v) & SCALED_JACOBIAN) {
+        v = expand_to_full_jacobian(v);
+        UNPROTECT(2); 
+        PROTECT2(v,grad);
+    }
 
     if (TYPEOF(grad) == REALSXP) {
         if (JACOBIAN_TYPE(grad) != 0) abort();
@@ -2473,7 +2476,17 @@ R_inspect(a);
 
     R_len_t gvars = GRAD_WRT_LEN(v);
 
-    PROTECT2(v,grad);
+    PROTECT(v);
+    PROTECT(grad);
+
+    if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN)
+        UNPROTECT_PROTECT(grad = expand_to_full_jacobian(grad));
+
+    if (JACOBIAN_TYPE(v) & SCALED_JACOBIAN) {
+        v = expand_to_full_jacobian(v);
+        UNPROTECT(2); 
+        PROTECT2(v,grad);
+    }
 
     if (TYPEOF(grad) == REALSXP) {
         if (JACOBIAN_TYPE(grad) != 0) abort();
@@ -3284,7 +3297,17 @@ R_inspect(arg);
     if (TYPEOF(v) != REALSXP) abort();
     if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
 
-    PROTECT2(grad,v);
+    PROTECT(v);
+    PROTECT(grad);
+
+    if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN)
+        UNPROTECT_PROTECT(grad = expand_to_full_jacobian(grad));
+
+    if (JACOBIAN_TYPE(v) & SCALED_JACOBIAN) {
+        v = expand_to_full_jacobian(v);
+        UNPROTECT(2); 
+        PROTECT2(v,grad);
+    }
 
     R_len_t gvars = GRAD_WRT_LEN(v);
     R_len_t nv = JACOBIAN_LENGTH(v) / gvars;
@@ -3390,6 +3413,18 @@ LENGTH(base),LENGTH(extra));
             return base;
         static double one = 1.0;
         return copy_scaled_jacobian (base, gvars, bn, &one, 1, n);
+    }
+
+    if (JACOBIAN_TYPE(base) & SCALED_JACOBIAN) {
+        PROTECT(extra);
+        base = expand_to_full_jacobian(base);
+        UNPROTECT(1);
+    }
+
+    if (JACOBIAN_TYPE(extra) & SCALED_JACOBIAN) {
+        PROTECT(base);
+        extra = expand_to_full_jacobian(extra);
+        UNPROTECT(1);
     }
 
     if (TYPEOF(base) != REALSXP) abort();
@@ -3511,6 +3546,18 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
             return base;
         static double one = 1.0;
         return copy_scaled_jacobian (base, gvars, bn, &one, 1, n);
+    }
+
+    if (JACOBIAN_TYPE(base) & SCALED_JACOBIAN) {
+        PROTECT(extra);
+        base = expand_to_full_jacobian(base);
+        UNPROTECT(1);
+    }
+
+    if (JACOBIAN_TYPE(extra) & SCALED_JACOBIAN) {
+        PROTECT(base);
+        extra = expand_to_full_jacobian(extra);
+        UNPROTECT(1);
     }
 
     if (TYPEOF(base) != REALSXP) abort();
