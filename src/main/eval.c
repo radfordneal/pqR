@@ -2949,7 +2949,7 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 :                                 ScalarReal(val);
 
             if (grad1 != R_NilValue) {
-                R_gradient = copy_scaled_gradients (grad1, 
+                R_gradient = scaled_gradients (grad1, 
                                opcode == PLUSOP ? 1.0 : -1.0, 1);
                 R_variant_result = VARIANT_GRADIENT_FLAG;
             }
@@ -3070,7 +3070,7 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             double d = opcode == PLUSOP ? 1.0 : -1.0;
             if (grad1 == R_NilValue)
                 R_gradient = d == 1.0 ? grad2 
-                                      : copy_scaled_gradients (grad2, d, 1);
+                                      : scaled_gradients (grad2, d, 1);
             else if (grad2 == R_NilValue)
                 R_gradient = grad1;
             else
@@ -3236,23 +3236,23 @@ static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             switch (opcode) {
             case TIMESOP:
                 if (grad1 == R_NilValue)
-                    R_gradient = copy_scaled_gradients (grad2, a1, 1);
+                    R_gradient = scaled_gradients (grad2, a1, 1);
                 else if (grad2 == R_NilValue)
-                    R_gradient = copy_scaled_gradients (grad1, a2, 1);
+                    R_gradient = scaled_gradients (grad1, a2, 1);
                 else
                     R_gradient = add_scaled_gradients (
-                                   copy_scaled_gradients (grad1, a2, 1),
+                                   scaled_gradients (grad1, a2, 1),
                                    grad2, a1, 1);
                 break;
             case DIVOP:
                 if (grad1 == R_NilValue)
-                    R_gradient = copy_scaled_gradients
+                    R_gradient = scaled_gradients
                                  (grad2, -a1/(a2*a2), 1);
                 else if (grad2 == R_NilValue)
-                    R_gradient = copy_scaled_gradients (grad1, 1/a2, 1);
+                    R_gradient = scaled_gradients (grad1, 1/a2, 1);
                 else
                     R_gradient = add_scaled_gradients (
-                                   copy_scaled_gradients (grad1, 1/a2, 1),
+                                   scaled_gradients (grad1, 1/a2, 1),
                                    grad2, -a1/(a2*a2), 1);
                 break;
             case POWOP: ;
@@ -3260,7 +3260,7 @@ static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 R_gradient = R_NilValue;
                 if (av != 0) {
                     if (grad1 != R_NilValue)
-                        R_gradient = copy_scaled_gradients
+                        R_gradient = scaled_gradients
                                       (grad1, av*a2/a1, 1);
                     if (grad2 != R_NilValue && a1 > 0)
                         R_gradient = add_scaled_gradients

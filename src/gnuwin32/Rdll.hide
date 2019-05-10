@@ -272,8 +272,6 @@
  Rf_copy_list_recycled_gradient
  Rf_copy_numeric_recycled_byrow_gradient
  Rf_copy_numeric_recycled_gradient
- Rf_copy_scaled_gradients
- Rf_copy_scaled_gradients_vec
  Rf_create_diag_matrix_gradient
  Rf_cummax_gradient
  Rf_cummin_gradient
@@ -437,6 +435,8 @@
  Rf_rep_one_string_element
  Rf_rep_string_elements
  Rf_rowcolsumsmeans_gradient
+ Rf_scaled_gradients
+ Rf_scaled_gradients_vec
  Rf_set_elements_to_NA
  Rf_set_length_list_gradient
  Rf_set_length_numeric_gradient

@@ -1291,8 +1291,8 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define copyListMatrix		Rf_copyListMatrix
 # define copyMostAttribNoClass	Rf_copyMostAttribNoClass
 # define copyMostAttribNoTs	Rf_copyMostAttribNoTs
-# define copy_scaled_gradients	Rf_copy_scaled_gradients
-# define copy_scaled_gradients_vec Rf_copy_scaled_gradients_vec
+# define scaled_gradients	Rf_scaled_gradients
+# define scaled_gradients_vec Rf_scaled_gradients_vec
 # define create_diag_matrix_gradient Rf_create_diag_matrix_gradient
 # define cummax_gradient	Rf_cummax_gradient
 # define cummin_gradient	Rf_cummin_gradient
@@ -1534,8 +1534,8 @@ SEXP copy_list_recycled_byrow_gradient (SEXP, R_len_t, R_len_t);
 SEXP copy_list_recycled_gradient (SEXP, R_len_t);
 SEXP copy_numeric_recycled_byrow_gradient (SEXP, R_len_t, R_len_t);
 SEXP copy_numeric_recycled_gradient (SEXP, R_len_t);
-SEXP copy_scaled_gradients (SEXP, double, R_len_t);
-SEXP copy_scaled_gradients_vec (SEXP, SEXP, R_len_t);
+SEXP scaled_gradients (SEXP, double, R_len_t);
+SEXP scaled_gradients_vec (SEXP, SEXP, R_len_t);
 SEXP create_diag_matrix_gradient (SEXP, R_len_t, R_len_t, R_len_t, R_len_t);
 SEXP add_scaled_gradients (SEXP, SEXP, double, int);
 SEXP add_scaled_gradients_vec (SEXP, SEXP, SEXP, R_len_t);

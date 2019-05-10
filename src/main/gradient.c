@@ -1778,9 +1778,9 @@ REprintf("==\n");
 /* Copy scaled gradients from those in grad, which is protected here.  The
    length of the value is given by n.  If grad is shorter, it is recycled. */
 
-attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
+attribute_hidden SEXP scaled_gradients(SEXP grad, double factor, R_len_t n)
 {
-    RECURSIVE_GRADIENT_APPLY_NO_EXPAND (copy_scaled_gradients, grad, factor, n);
+    RECURSIVE_GRADIENT_APPLY_NO_EXPAND (scaled_gradients, grad, factor, n);
 
     if (TYPEOF(grad) != REALSXP) abort();
 
@@ -1831,10 +1831,10 @@ attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
 
    Caller must protect factors, but not grad. */
 
-attribute_hidden SEXP copy_scaled_gradients_vec  
+attribute_hidden SEXP scaled_gradients_vec  
     (SEXP grad, SEXP factors, R_len_t n)
 {
-    RECURSIVE_GRADIENT_APPLY_NO_EXPAND (copy_scaled_gradients_vec,
+    RECURSIVE_GRADIENT_APPLY_NO_EXPAND (scaled_gradients_vec,
                                         grad, factors, n);
 #if 0
 REprintf("csv: %d %d %d - %d %d - %d\n",TYPEOF(grad),TYPEOF(factors),n,
