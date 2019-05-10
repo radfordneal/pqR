@@ -1374,8 +1374,8 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
 
         if (n > 1) {
 
-            if (opcode == DIVOP && ny == 1 && (TYPEOF(y)==REALSXP ? REAL(y)[0]
-                                                      : INTEGER(y)[0]) == 2.0) {
+            if (opcode == DIVOP && ny == 1 
+                  && (TYPEOF(y)==REALSXP ? REAL(y)[0] : INTEGER(y)[0]) == 2.0) {
                 opcode = TIMESOP;
                 replace_by_half = TRUE;
             }
@@ -1535,6 +1535,9 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
     /* Handle gradients. */
 
     if (TYPEOF(ans)==REALSXP && (grad1 != R_NilValue || grad2 != R_NilValue)) {
+
+        if (replace_by_half)
+            opcode = DIVOP;  /* back to x/2 from 0.5*x for gradient calc */
 
         GRADIENT_TRACE(call);
         WAIT_UNTIL_COMPUTED_2(x,y);

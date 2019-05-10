@@ -175,13 +175,13 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         new = NAMEDCNT_EQ_0(next) ? next 
                                   : alloc_jacobian (gvars, len / gvars);
 
-        if (LENGTH(grad) == 1) {
+        R_len_t n = LENGTH(grad);
+        if (n == 1) {
             double d = *REAL(grad);
             for (i = 0; i < len; i++)
                 REAL(new)[i] = d * REAL(next)[i];
         }
         else {
-            R_len_t n = LENGTH(grad);
             R_len_t j = 0;
             for (i = 0; i < len; i++) {
                 REAL(new)[i] = REAL(grad)[j] * REAL(next)[i];
@@ -259,7 +259,6 @@ static SEXP copy_scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
     if ((JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN) && gn != n)
         grad = expand_to_full_jacobian (grad);
 
-
     PROTECT(grad);
 
     if (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN) {
@@ -292,6 +291,9 @@ static SEXP copy_scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
             }
         }
     }
+
+    else if (JACOBIAN_TYPE(grad) != 0)
+        abort();
 
     else if (n == 1 && gvars == 1)  {  /* 1-by-1 jacobian */
 
@@ -476,12 +478,13 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
 
         if (JACOBIAN_LENGTH(grad) != Jlen) abort();
 
+        grad = expand_to_full_jacobian (grad);
+
         if (gvars != 1) {
             PROTECT(grad);
             SEXP dim = allocVector (INTSXP, 2);
             INTEGER(dim)[0] = vlen;
             INTEGER(dim)[1] = gvars;
-            grad = expand_to_full_jacobian (grad);
             setAttrib (grad, R_DimSymbol, dim);
             UNPROTECT(1);
         }
@@ -1768,10 +1771,12 @@ REprintf("==\n");
 }
 
 
+#define MIN_SCALAR_SCALE_BENEFIT 2
+#define MIN_VECTOR_SCALE_BENEFIT 2
+
+
 /* Copy scaled gradients from those in grad, which is protected here.  The
    length of the value is given by n.  If grad is shorter, it is recycled. */
-
-#define MIN_CHAIN 2
 
 attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
 {
@@ -1782,15 +1787,12 @@ attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
     R_len_t gvars = GRAD_WRT_LEN(grad);
     R_len_t gn = JACOBIAN_ROWS(grad);
 
-    if (gn != n)
-        grad = expand_to_full_jacobian(grad);
-
-    if (factor == 1.0)
+    if (gn == n && factor == 1.0)
         return grad;
 
     R_len_t len = LENGTH(grad);
 
-    if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) {
+    if (gn == n && (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN)) {
         SEXP res;
         PROTECT(grad);
         if (len == 1)
@@ -1798,7 +1800,6 @@ attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
         else {
             R_len_t i;
             res = allocVector (REALSXP, len);
-            if (LENGTH(grad) != len) abort();
             for (i = 0; i < len; i++)
                 REAL(res)[i] = factor * REAL(grad)[i];
         }
@@ -1809,7 +1810,7 @@ attribute_hidden SEXP copy_scaled_gradients(SEXP grad, double factor, R_len_t n)
         return res;
     }
 
-    if (len >= MIN_CHAIN) {
+    if (gn ==n && len >= MIN_SCALAR_SCALE_BENEFIT) {
         SEXP res;
         PROTECT(grad);
         res = ScalarReal(factor);
@@ -1835,7 +1836,6 @@ attribute_hidden SEXP copy_scaled_gradients_vec
 {
     RECURSIVE_GRADIENT_APPLY_NO_EXPAND (copy_scaled_gradients_vec,
                                         grad, factors, n);
-
 #if 0
 REprintf("csv: %d %d %d - %d %d - %d\n",TYPEOF(grad),TYPEOF(factors),n,
 LENGTH(grad),LENGTH(factors),GRAD_WRT_LEN(grad));
@@ -1851,15 +1851,9 @@ R_inspect(factors);
     R_len_t gvars = GRAD_WRT_LEN(grad);
     R_len_t gn = JACOBIAN_ROWS(grad);
 
-    if (gn != n)
-        grad = expand_to_full_jacobian(grad);
-
-    if (flen != 1 && (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN))
-        grad = expand_to_full_jacobian(grad);
-
     R_len_t len = LENGTH(grad);
 
-    if (flen == 1) {
+    if (gn ==n && flen == 1) {
 
         double factor = *REAL(factors);
 
@@ -1874,7 +1868,6 @@ R_inspect(factors);
             else {
                 R_len_t i;
                 res = allocVector (REALSXP, len);
-                if (LENGTH(grad) != len) abort();
                 for (i = 0; i < len; i++)
                     REAL(res)[i] = factor * REAL(grad)[i];
             }
@@ -1885,9 +1878,43 @@ R_inspect(factors);
             return res;
         }
 
-        if (len >= MIN_CHAIN) {
+        if (len >= MIN_SCALAR_SCALE_BENEFIT) {
             PROTECT(grad);
             SEXP res = ScalarReal(factor);
+            SET_GRAD_WRT_LEN (res, gvars);
+            SET_ATTRIB_TO_ANYTHING (res, grad);
+            SET_JACOBIAN_TYPE (res, SCALED_JACOBIAN | DIAGONAL_JACOBIAN);
+            UNPROTECT(1);
+            return res;
+        }
+    }
+
+    else if (gn == n && flen == n) {
+
+        if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) {
+            PROTECT(grad);
+            SEXP res = duplicate(factors);
+            R_len_t i;
+            if (len == 1) {
+                double d = *REAL(grad);
+                for (i = 0; i < len; i++)
+                    REAL(res)[i] = REAL(factors)[i] * d;
+            }
+            else {
+                if (len != n) abort();
+                for (i = 0; i < len; i++)
+                    REAL(res)[i] = REAL(factors)[i] * REAL(grad)[i];
+            }
+            SET_GRAD_WRT_LEN (res, gvars);
+            SET_ATTRIB_TO_ANYTHING (res, ATTRIB_W(grad));
+            SET_JACOBIAN_TYPE (res, SCALED_JACOBIAN | DIAGONAL_JACOBIAN);
+            UNPROTECT(1);
+            return res;
+        }
+
+        if (len >= (double) MIN_VECTOR_SCALE_BENEFIT * flen) {
+            PROTECT(grad);
+            SEXP res = duplicate(factors);
             SET_GRAD_WRT_LEN (res, gvars);
             SET_ATTRIB_TO_ANYTHING (res, grad);
             SET_JACOBIAN_TYPE (res, SCALED_JACOBIAN | DIAGONAL_JACOBIAN);

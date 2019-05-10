@@ -15304,7 +15304,7 @@ start
 +   pr("C"); z <- a/b
 +   pr("D"); q <- c(a[1]*a[3],a[3],a[2],a[2]*a[8],a[1]*a[3],a[4],a[5],a[7]*a[8])
 +   pr("E"); w <- q*b
-+   pr("D"); list(x,y,z,q,w)
++   pr("F"); list(x,y,z,q,w)
 + }
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
@@ -15337,9 +15337,10 @@ RPROFMEM: (double 8):
 RPROFMEM: (double 64):
 E 
 RPROFMEM: (double 8):
+RPROFMEM: (double 8):
 RPROFMEM: (double 64):
 RPROFMEM: (double 8):
-D 
+F 
 RPROFMEM: (double 64):
 RPROFMEM: (double 64):
 RPROFMEM: (double 64):

@@ -2233,7 +2233,7 @@ with gradient (a=c(3,9,7,4,2,6,5,8),
   pr("C"); z <- a/b
   pr("D"); q <- c(a[1]*a[3],a[3],a[2],a[2]*a[8],a[1]*a[3],a[4],a[5],a[7]*a[8])
   pr("E"); w <- q*b
-  pr("D"); list(x,y,z,q,w)
+  pr("F"); list(x,y,z,q,w)
 }
 pr("end")
 
