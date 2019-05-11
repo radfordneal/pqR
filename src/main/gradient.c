@@ -1845,6 +1845,12 @@ attribute_hidden SEXP scaled_gradients(SEXP grad, double factor, R_len_t n)
 {
     RECURSIVE_GRADIENT_APPLY_NO_EXPAND (scaled_gradients, grad, factor, n);
 
+#if 0
+REprintf("scaled_gradients: %d - %d %d %d - %f\n",TYPEOF(grad),n,
+LENGTH(grad),GRAD_WRT_LEN(grad),factor);
+R_inspect(grad);
+#endif
+
     if (TYPEOF(grad) != REALSXP) abort();
 
     R_len_t gvars = GRAD_WRT_LEN(grad);
@@ -1866,7 +1872,7 @@ attribute_hidden SEXP scaled_gradients_vec
     RECURSIVE_GRADIENT_APPLY_NO_EXPAND (scaled_gradients_vec,
                                         grad, factors, n);
 #if 0
-REprintf("csv: %d %d %d - %d %d - %d\n",TYPEOF(grad),TYPEOF(factors),n,
+REprintf("scaled_gradients_vec: %d %d - %d %d %d - %d\n",TYPEOF(grad),TYPEOF(factors),n,
 LENGTH(grad),LENGTH(factors),GRAD_WRT_LEN(grad));
 R_inspect(grad);
 REprintf("--\n");
@@ -3373,6 +3379,16 @@ REprintf("==\n");
 }
 
 
+static int same_attributes (SEXP a, SEXP b)
+{
+    SEXP A = ATTRIB_W(a), B = ATTRIB_W(b);
+
+    return A == B || TYPEOF(A) == REALSXP && TYPEOF(B) == REALSXP 
+                       && LENGTH(A) == LENGTH(B) 
+                       && memcmp (A, B, LENGTH(A)*sizeof(double)) == 0;
+}
+
+
 /* Add the product of gradients in extra times a scalar factor to the set of
    gradients in base.  GRAD_WRT_LEN must be the same for base and extra
    (except when R_NilValue).  The length of the result is given by n, with
@@ -3387,14 +3403,17 @@ REprintf("==\n");
 attribute_hidden SEXP add_scaled_gradients (SEXP base, SEXP extra, 
                                             double factor, R_len_t n)
 {
+    RECURSIVE_GRADIENT_APPLY2_NO_EXPAND (add_scaled_gradients, 
+                                         base, extra, factor, n);
 #if 0
 REprintf("add_scaled_gradients: %d %d - %f %d %d %d\n",
 TYPEOF(base),TYPEOF(extra), factor, n,
 LENGTH(base),LENGTH(extra));
+REprintf("--\n");
+R_inspect(base);
+REprintf("--\n");
+R_inspect(extra);
 #endif
-
-    RECURSIVE_GRADIENT_APPLY2_NO_EXPAND (add_scaled_gradients, 
-                                         base, extra, factor, n);
 
     R_len_t gvars = GRAD_WRT_LEN (base != R_NilValue ? base : extra);
 
@@ -3415,18 +3434,6 @@ LENGTH(base),LENGTH(extra));
         return copy_scaled_jacobian (base, gvars, bn, &one, 1, n);
     }
 
-    if (JACOBIAN_TYPE(base) & SCALED_JACOBIAN) {
-        PROTECT(extra);
-        base = expand_to_full_jacobian(base);
-        UNPROTECT(1);
-    }
-
-    if (JACOBIAN_TYPE(extra) & SCALED_JACOBIAN) {
-        PROTECT(base);
-        extra = expand_to_full_jacobian(extra);
-        UNPROTECT(1);
-    }
-
     if (TYPEOF(base) != REALSXP) abort();
     if (TYPEOF(extra) != REALSXP) abort();
     if (GRAD_WRT_LEN(extra) != gvars) abort();
@@ -3437,8 +3444,11 @@ LENGTH(base),LENGTH(extra));
     R_len_t i, j, k, l;
     SEXP r;
 
-    if ((JACOBIAN_TYPE(base) & DIAGONAL_JACOBIAN) && bn==n 
-     && (JACOBIAN_TYPE(extra) & DIAGONAL_JACOBIAN) && en==n) {
+    if ( (JACOBIAN_TYPE(base) & DIAGONAL_JACOBIAN) && bn==n 
+      && (JACOBIAN_TYPE(extra) & DIAGONAL_JACOBIAN) && en==n
+      && (!(JACOBIAN_TYPE(base) & SCALED_JACOBIAN)
+             && !(JACOBIAN_TYPE(extra) & SCALED_JACOBIAN) 
+          || same_attributes(base,extra)) ) {
 
         PROTECT2(base,extra);
 
@@ -3447,8 +3457,6 @@ LENGTH(base),LENGTH(extra));
             l = LENGTH(base);
             for (i = 0; i < l; i++) 
                 REAL(r)[i] += REAL(extra)[i] * factor;
-            SET_GRAD_WRT_LEN (r, gvars);
-            SET_JACOBIAN_TYPE (r, DIAGONAL_JACOBIAN);
         }
         else {
             if (LENGTH(base) == 1 && LENGTH(extra) == 1) {
@@ -3471,6 +3479,10 @@ LENGTH(base),LENGTH(extra));
                     for (i = 0; i < gvars; i++) 
                         REAL(r)[i] = REAL(base)[i] + REAL(extra)[i] * factor;
                 }
+            }
+            if (JACOBIAN_TYPE(base) & SCALED_JACOBIAN) {
+                SET_ATTRIB_TO_ANYTHING (r, ATTRIB_W(base));
+                SET_JACOBIAN_TYPE (r, JACOBIAN_TYPE(base));
             }
         }
 
@@ -3524,6 +3536,12 @@ attribute_hidden SEXP add_scaled_gradients_vec (SEXP base, SEXP extra,
 REprintf("add_scaled_gradients_vec: %d %d %d - %d %d %d %d\n",
 TYPEOF(base),TYPEOF(extra),TYPEOF(factors), n,
 LENGTH(base),LENGTH(extra),LENGTH(factors));
+REprintf("--\n");
+R_inspect(base);
+REprintf("--\n");
+R_inspect(extra);
+REprintf("--\n");
+R_inspect(factors);
 #endif
 
     if (TYPEOF(factors) != REALSXP) abort();
@@ -3548,18 +3566,6 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
         return copy_scaled_jacobian (base, gvars, bn, &one, 1, n);
     }
 
-    if (JACOBIAN_TYPE(base) & SCALED_JACOBIAN) {
-        PROTECT(extra);
-        base = expand_to_full_jacobian(base);
-        UNPROTECT(1);
-    }
-
-    if (JACOBIAN_TYPE(extra) & SCALED_JACOBIAN) {
-        PROTECT(base);
-        extra = expand_to_full_jacobian(extra);
-        UNPROTECT(1);
-    }
-
     if (TYPEOF(base) != REALSXP) abort();
     if (TYPEOF(extra) != REALSXP) abort();
     if (GRAD_WRT_LEN(extra) != gvars) abort();
@@ -3570,8 +3576,11 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
     R_len_t i, j, k, l;
     SEXP r;
 
-    if ((JACOBIAN_TYPE(base) & DIAGONAL_JACOBIAN) && bn==n 
-     && (JACOBIAN_TYPE(extra) & DIAGONAL_JACOBIAN) && en==n) {
+    if ( (JACOBIAN_TYPE(base) & DIAGONAL_JACOBIAN) && bn==n 
+      && (JACOBIAN_TYPE(extra) & DIAGONAL_JACOBIAN) && en==n
+      && (!(JACOBIAN_TYPE(base) & SCALED_JACOBIAN)
+             && !(JACOBIAN_TYPE(extra) & SCALED_JACOBIAN) 
+          || same_attributes(base,extra)) ) {
 
         PROTECT2(base,extra);
 
@@ -3591,6 +3600,11 @@ LENGTH(base),LENGTH(extra),LENGTH(factors));
             if (++jb == blen) jb = 0;
             if (++je == elen) je = 0;
             if (++jf == flen) jf = 0;
+        }
+
+        if (JACOBIAN_TYPE(base) & SCALED_JACOBIAN) {
+            SET_ATTRIB_TO_ANYTHING (r, ATTRIB_W(base));
+            SET_JACOBIAN_TYPE (r, JACOBIAN_TYPE(base));
         }
 
         UNPROTECT(2);
