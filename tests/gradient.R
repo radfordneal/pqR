@@ -2246,3 +2246,11 @@ with gradient (a=c(3,9,7,4,2,6,5,8),b=c(3,9,7,4,2,6,5,8)) {
   pr("E"); list(x,y,z,w)
 }
 pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A"); x <- cumsum(a)
+  pr("B"); y <- x^2 + sin(x)
+  pr("C"); list(x,y)
+}
+pr("end")
