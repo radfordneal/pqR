@@ -1035,9 +1035,11 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SET_JACOBIAN_TYPE(x,v) \
  (UPTR_FROM_SEXP(x)->sxpinfo.gp = UPTR_FROM_SEXP(x)->sxpinfo.gp&0xff | ((v)<<8))
 
-#define SCALED_JACOBIAN 1   /* Scaled form of Jacobian in attribute.  Form of
-                               scaling factor specified by other bits. */
-#define DIAGONAL_JACOBIAN 2 /* Only diagonal stored, as 1 element if all same */
+#define SCALED_JACOBIAN 1    /* Scaled form of Jacobian in attribute.  Form of
+                                scaling factor specified by other bits. */
+#define DIAGONAL_JACOBIAN 2  /* Only diagonal stored, single value if all same*/
+#define NOW_CACHED_JACOBIAN 128  /* Only cache value valid - previous compact
+                                    form no longer available */
 
 #define JACOBIAN_COLS(g) GRAD_WRT_LEN(g)  /* Number of columns in Jacobian */
 

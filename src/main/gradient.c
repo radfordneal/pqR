@@ -196,9 +196,10 @@ static SEXP expand_to_full_jacobian (SEXP grad)
             }
         }
 
-        SET_ATTRIB_TO_ANYTHING(grad,new);
-        SET_JACOBIAN_CACHED_AS_ATTRIB(grad,1);
-        SET_NAMEDCNT(new,NAMEDCNT(grad));
+        SET_ATTRIB_TO_ANYTHING (grad, new);
+        SET_JACOBIAN_CACHED_AS_ATTRIB (grad, 1);
+        SET_JACOBIAN_TYPE (grad, NOW_CACHED_JACOBIAN); /* scaled form defunct */
+        SET_NAMEDCNT (new, NAMEDCNT(grad));
 
         UNPROTECT(2);
         return new;
@@ -960,6 +961,8 @@ static inline SEXP get_other_gradients (SEXP xenv)
     UNPROTECT(1); \
     if (grad == R_NilValue) \
         return R_NilValue; \
+    if (JACOBIAN_TYPE(grad) & NOW_CACHED_JACOBIAN) \
+        grad = ATTRIB_W(grad); \
 } while (0)
 
 
@@ -2500,6 +2503,10 @@ attribute_hidden SEXP cummin_gradient (SEXP grad, SEXP v, SEXP s, R_len_t n)
     UNPROTECT(2); \
     if (g1 == R_NilValue && g2 == R_NilValue) \
         return R_NilValue; \
+    if (g1 != R_NilValue && (JACOBIAN_TYPE(g1) & NOW_CACHED_JACOBIAN)) \
+        g1 = ATTRIB_W(g1); \
+    if (g2 != R_NilValue && (JACOBIAN_TYPE(g2) & NOW_CACHED_JACOBIAN)) \
+        g2 = ATTRIB_W(g2); \
 } while (0)
 
 

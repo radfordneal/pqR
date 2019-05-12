@@ -1093,7 +1093,7 @@ value should be accessed with @code{GRAD_WRT_LEN} and set with
 
 Jacobian matrices may be stored in a compact form (eg, just the
 diagonal elements if the matrix is diagonal), with the type of compact
-representation being in @code{JACOBIAN_TYPE) (which is 8 of the
+representation being in @code{JACOBIAN_TYPE} (which is top 8 of the
 @code{gp} bits), with zero if it is not a compact form.  The full form
 of a compact Jacobian may be needed, and if computed is stored in the
 attribute field of the compact form (the compact representation may
