@@ -15652,7 +15652,6 @@ RPROFMEM: (double 8):"dnorm"
 RPROFMEM: (double 8):"dnorm" 
 RPROFMEM: (double 8):"dnorm" 
 RPROFMEM: (double 8):"dnorm" 
-RPROFMEM: (double 64):"dnorm" 
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 D 
@@ -15817,12 +15816,11 @@ B
 RPROFMEM: (double 8):
 C 
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
-RPROFMEM: (double 64):
 D 
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
 E 
+RPROFMEM: (double 64):
+RPROFMEM: (double 64):
 [[1]]
 [1]  3 12 19 23 25 31 36 44
 
@@ -15889,12 +15887,13 @@ RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 C 
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
-RPROFMEM: (double 64):
+RPROFMEM: (double 8):
 D 
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
+RPROFMEM: (double 8):
 E 
+RPROFMEM: (double 64):
+RPROFMEM: (double 64):
 [[1]]
 [1]  3 12 19 23 25 31 36 44
 

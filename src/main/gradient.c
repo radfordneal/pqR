@@ -435,6 +435,17 @@ static SEXP scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
 }
 
 
+/* Add a scaled jacobian to another jacobian.  The jacobians may full,
+   or diagonal or scaled jacobians.  Gradient to add to is in 'base',
+   for vector of length bn, with respect to gvars variables.  Result
+   should be a gradient for a vector of length n with gvars variables.
+   Gradient to scale and add to 'base' is in 'extra', for en
+   variables.  Scaling factors are in f, with length 'flen', not
+   necessarily equal to n.  When bn, en, or flen are less than n,
+   recycling is done as necessary.
+
+   Protects the 'base' and 'extra' arguments. */
+
 static SEXP add_scaled_jacobian (SEXP base, SEXP extra, 
                                  double *f, R_len_t flen, R_len_t n)
 {
@@ -445,102 +456,197 @@ static SEXP add_scaled_jacobian (SEXP base, SEXP extra,
 
     if (GRAD_WRT_LEN(extra) != gvars) abort();
 
-    R_len_t bn = JACOBIAN_ROWS(base);
-    R_len_t en = JACOBIAN_ROWS(extra);
-
     R_len_t i, j, k, l;
     SEXP r;
 
-    if ( (JACOBIAN_TYPE(base) & DIAGONAL_JACOBIAN) && bn==n 
-      && (JACOBIAN_TYPE(extra) & DIAGONAL_JACOBIAN) && en==n
-      && (!(JACOBIAN_TYPE(base) & SCALED_JACOBIAN)
-             && !(JACOBIAN_TYPE(extra) & SCALED_JACOBIAN) 
-          || (JACOBIAN_TYPE(base) & SCALED_JACOBIAN)
-                && (JACOBIAN_TYPE(extra) & SCALED_JACOBIAN) 
-                && same_numeric_content(ATTRIB_W(base),ATTRIB_W(extra))) ) {
+    R_len_t bn = JACOBIAN_ROWS(base);
+    R_len_t en = JACOBIAN_ROWS(extra);
 
-        PROTECT2(base,extra);
+    if (bn == n && en == n) {
+
+        int bscaled = JACOBIAN_TYPE(base) & SCALED_JACOBIAN;
+        int escaled = JACOBIAN_TYPE(extra) & SCALED_JACOBIAN;
 
         R_len_t blen = LENGTH(base);
         R_len_t elen = LENGTH(extra);
 
-        if (flen == 1 && blen == 1 && elen == 1) {
-            r = NAMEDCNT_EQ_0(base) ? base : alloc_diagonal_jacobian (gvars, 1);
-            *REAL(r) = *REAL(base) + *REAL(extra) * *f;
+        if ( (JACOBIAN_TYPE(base) & DIAGONAL_JACOBIAN)
+          && (JACOBIAN_TYPE(extra) & DIAGONAL_JACOBIAN)
+          && (!bscaled && !escaled || bscaled && escaled 
+                 && same_numeric_content(ATTRIB_W(base),ATTRIB_W(extra))) ) {
+
+            PROTECT2(base,extra);
+
+            if (flen == 1 && blen == 1 && elen == 1) {
+                r = NAMEDCNT_EQ_0(base) ? base 
+                     : alloc_diagonal_jacobian (gvars, 1);
+                *REAL(r) = *REAL(base) + *REAL(extra) * *f;
+            }
+
+            else {
+
+                r = NAMEDCNT_EQ_0(base) && blen == gvars ? base
+                     : alloc_diagonal_jacobian (gvars, gvars);
+
+                if (flen == 1) {
+                    double factor = *f;
+                    if (blen == 1) {
+                        double d = *REAL(base);
+                        R_len_t je = 0;
+                        for (i = 0; i < gvars; i++) {
+                            REAL(r)[i] = d + REAL(extra)[je] * factor;
+                            if (++je == elen) je = 0;
+                        }
+                    }
+                    else if (elen == 1) {
+                        double d = *REAL(extra) * factor;
+                        R_len_t jb = 0;
+                        for (i = 0; i < gvars; i++) {
+                            REAL(r)[i] = REAL(base)[jb] + d;
+                            if (++jb == blen) jb = 0;
+                        }
+                    }
+                    else {
+                        R_len_t jb = 0, je = 0;
+                        for (i = 0; i < gvars; i++) {
+                            REAL(r)[i] = REAL(base)[jb]+REAL(extra)[je]*factor;
+                            if (++jb == blen) jb = 0;
+                            if (++je == elen) je = 0;
+                        }
+                    }
+                }
+                else {
+                    if (blen == 1) {
+                        double d = *REAL(base);
+                        R_len_t je = 0, jf = 0;
+                        for (i = 0; i < gvars; i++) {
+                            REAL(r)[i] = d + REAL(extra)[je] * f[jf];
+                            if (++je == elen) je = 0;
+                            if (++jf == flen) jf = 0;
+                        }
+                    }
+                    else if (elen == 1) {
+                        double d = *REAL(extra);
+                        R_len_t jb = 0, jf = 0;
+                        for (i = 0; i < gvars; i++) {
+                            REAL(r)[i] = REAL(base)[jb] + d * f[jf];
+                            if (++jb == blen) jb = 0;
+                            if (++jf == flen) jf = 0;
+                        }
+                    }
+                    else {
+                        R_len_t jb = 0, je = 0, jf = 0;
+                        for (i = 0; i < gvars; i++) {
+                            REAL(r)[i] = REAL(base)[jb] + REAL(extra)[je]*f[jf];
+                            if (++jb == blen) jb = 0;
+                            if (++je == elen) je = 0;
+                            if (++jf == flen) jf = 0;
+                        }
+                    }
+                }
+            }
+
+            if (JACOBIAN_TYPE(base) & SCALED_JACOBIAN) {
+                SET_ATTRIB_TO_ANYTHING (r, ATTRIB_W(base));
+                SET_JACOBIAN_TYPE (r, JACOBIAN_TYPE(base));
+            }
+
+            UNPROTECT(2);
+            return r;
         }
 
-        else {
+        if (!bscaled && escaled && (JACOBIAN_TYPE(extra) & DIAGONAL_JACOBIAN)
+              && same_numeric_content(base,ATTRIB_W(extra))) {
 
-            if (NAMEDCNT_EQ_0(base) && blen == gvars)
-                r = base;
-            else 
-                r = alloc_diagonal_jacobian (gvars, gvars);
+            PROTECT2(base,extra);
 
-            if (flen == 1) {
-                double factor = *f;
-                if (blen == 1) {
-                    double d = *REAL(base);
+            if (flen == 1 && elen == 1) {
+                r = NAMEDCNT_EQ_0(extra) ? extra
+                     : alloc_diagonal_jacobian (gvars, 1);
+                *REAL(r) = 1.0 + *REAL(extra) * *f;
+            }
+
+            else {
+
+                r = NAMEDCNT_EQ_0(extra) && elen == gvars ? extra
+                     : alloc_diagonal_jacobian (gvars, gvars);
+
+                if (flen == 1) {
+                    double factor = *f;
                     R_len_t je = 0;
                     for (i = 0; i < gvars; i++) {
-                        REAL(r)[i] = d + REAL(extra)[je] * factor;
+                        REAL(r)[i] = 1.0 + REAL(extra)[je] * factor;
                         if (++je == elen) je = 0;
-                    }
-                }
-                else if (elen == 1) {
-                    double d = *REAL(extra) * factor;
-                    R_len_t jb = 0;
-                    for (i = 0; i < gvars; i++) {
-                        REAL(r)[i] = REAL(base)[jb] + d;
-                        if (++jb == blen) jb = 0;
                     }
                 }
                 else {
-                    R_len_t jb = 0, je = 0;
-                    for (i = 0; i < gvars; i++) {
-                        REAL(r)[i] = REAL(base)[jb] + REAL(extra)[je] * factor;
-                        if (++jb == blen) jb = 0;
-                        if (++je == elen) je = 0;
-                    }
-                }
-            }
-            else {
-                if (blen == 1) {
-                    double d = *REAL(base);
                     R_len_t je = 0, jf = 0;
                     for (i = 0; i < gvars; i++) {
-                        REAL(r)[i] = d + REAL(extra)[je] * f[jf];
-                        if (++je == elen) je = 0;
-                        if (++jf == flen) jf = 0;
-                    }
-                }
-                else if (elen == 1) {
-                    double d = *REAL(extra);
-                    R_len_t jb = 0, jf = 0;
-                    for (i = 0; i < gvars; i++) {
-                        REAL(r)[i] = REAL(base)[jb] + d * f[jf];
-                        if (++jb == blen) jb = 0;
-                        if (++jf == flen) jf = 0;
-                    }
-                }
-                else {
-                    R_len_t jb = 0, je = 0, jf = 0;
-                    for (i = 0; i < gvars; i++) {
-                        REAL(r)[i] = REAL(base)[jb] + REAL(extra)[je] * f[jf];
-                        if (++jb == blen) jb = 0;
+                        REAL(r)[i] = 1.0 + REAL(extra)[je] * f[jf];
                         if (++je == elen) je = 0;
                         if (++jf == flen) jf = 0;
                     }
                 }
             }
+
+            SET_ATTRIB_TO_ANYTHING (r, ATTRIB_W(extra));
+            SET_JACOBIAN_TYPE (r, JACOBIAN_TYPE(extra));
+
+            UNPROTECT(2);
+            return r;
         }
 
-        if (JACOBIAN_TYPE(base) & SCALED_JACOBIAN) {
+        if (bscaled && !escaled && (JACOBIAN_TYPE(base) & DIAGONAL_JACOBIAN)
+              && same_numeric_content(ATTRIB_W(base),extra)) {
+
+            PROTECT2(base,extra);
+
+            if (flen == 1 && blen == 1) {
+                r = NAMEDCNT_EQ_0(base) ? base 
+                     : alloc_diagonal_jacobian (gvars, 1);
+                *REAL(r) = *REAL(base) + *f;
+            }
+
+            else {
+
+                r = NAMEDCNT_EQ_0(base) && blen == gvars ? base
+                     : alloc_diagonal_jacobian (gvars, gvars);
+
+                if (flen == 1) {
+                    double factor = *f;
+                    R_len_t jb = 0;
+                    for (i = 0; i < gvars; i++) {
+                        REAL(r)[i] = REAL(base)[jb] + factor;
+                        if (++jb == blen) jb = 0;
+                    }
+                }
+                else {
+                    if (blen == 1) {
+                        double d = *REAL(base);
+                        R_len_t jf = 0;
+                        for (i = 0; i < gvars; i++) {
+                            REAL(r)[i] = d + f[jf];
+                            if (++jf == flen) jf = 0;
+                        }
+                    }
+                    else {
+                        R_len_t jb = 0, jf = 0;
+                        for (i = 0; i < gvars; i++) {
+                            REAL(r)[i] = REAL(base)[jb] + f[jf];
+                            if (++jb == blen) jb = 0;
+                            if (++jf == flen) jf = 0;
+                        }
+                    }
+                }
+
+            }
+
             SET_ATTRIB_TO_ANYTHING (r, ATTRIB_W(base));
             SET_JACOBIAN_TYPE (r, JACOBIAN_TYPE(base));
-        }
 
-        UNPROTECT(2);
-        return r;
+            UNPROTECT(2);
+            return r;
+        }
     }
 
     PROTECT(extra);
