@@ -2265,3 +2265,23 @@ with gradient (a=c(3,9,7,4,2,6,5,8)) {
   pr("E"); list(w,x,y,z)
 }
 pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A"); x <- cumsum(a)
+  pr("B"); y <- 3*x
+  pr("C"); z <- x + y
+  pr("D"); z <- z + x
+  pr("E"); list(x,y,z)
+}
+pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A"); x <- cumsum(a)
+  pr("B"); y <- x^2
+  pr("C"); z <- y + x
+  pr("D"); z <- x + z
+  pr("E"); list(x,y,z)
+}
+pr("end")
