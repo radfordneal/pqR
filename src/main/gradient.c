@@ -923,7 +923,7 @@ static SEXP match_structure (SEXP val, SEXP grad, R_len_t gvars)
     if (TYPEOF(val) == REALSXP) {
         if (TYPEOF(grad) != REALSXP)
             return R_NoObject;
-        if (LENGTH(grad) != (uint64_t) gvars * LENGTH(val) != 0)
+        if (LENGTH(grad) != (uint64_t) gvars * LENGTH(val))
             return R_NoObject;
         if (NAMEDCNT_GT_0(grad)) grad = duplicate(grad);
         SET_GRAD_WRT_LEN (grad, gvars);
@@ -3841,12 +3841,17 @@ R_inspect(res); REprintf("..\n");
 
     if (TYPEOF(b) != REALSXP) abort();
 
+    PROTECT (b = expand_to_full_jacobian(b));
+
     if (LENGTH(a) == 1 && LENGTH(b) == 1) {
-        if (base == R_NilValue)
-            return ScalarRealMaybeConst (*REAL(a) * *REAL(b));
+        if (base == R_NilValue) {
+            res = ScalarRealMaybeConst (*REAL(a) * *REAL(b));
+            goto ret;
+        }
         if (TYPEOF(base) != REALSXP) abort();
         if (LENGTH(base) != 1) abort();
-        return ScalarRealMaybeConst (*REAL(base) + *REAL(a) * *REAL(b));
+        res = ScalarRealMaybeConst (*REAL(base) + *REAL(a) * *REAL(b));
+        goto ret;
     }
 
     R_len_t k = GRAD_WRT_LEN(b);
@@ -3867,7 +3872,7 @@ R_inspect(res); REprintf("..\n");
 REprintf("add jacobian product end (2)\n");
 R_inspect(res); REprintf("..\n");
 #endif
-        return res;
+        goto ret;
     }
 
     if (TYPEOF(base) != REALSXP) abort();
@@ -3881,6 +3886,8 @@ REprintf("add jacobian product end (3)\n");
 R_inspect(res); REprintf("..\n");
 #endif
 
+  ret:
+    UNPROTECT(1);
     return res;
 }
 

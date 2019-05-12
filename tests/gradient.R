@@ -2285,3 +2285,13 @@ with gradient (a=c(3,9,7,4,2,6,5,8)) {
   pr("E"); list(x,y,z)
 }
 pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A")
+  r <- back gradient (b = a^2) {
+    pr("B"); 3*b
+  }
+  pr("D"); r
+}
+pr("end")
