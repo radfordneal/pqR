@@ -923,9 +923,15 @@ static SEXP match_structure (SEXP val, SEXP grad, R_len_t gvars)
     if (TYPEOF(val) == REALSXP) {
         if (TYPEOF(grad) != REALSXP)
             return R_NoObject;
-        if (LENGTH(grad) != (uint64_t) gvars * LENGTH(val))
+        if (NAMEDCNT_GT_0(grad))
+            grad = duplicate(grad);
+        if (LENGTH(grad) == (uint64_t) gvars * LENGTH(val))  /* full jacobian */
+            SET_JACOBIAN_TYPE (grad, 0);
+        else if (LENGTH(grad) == gvars && gvars == LENGTH(val))   /* diagonal */
+            SET_JACOBIAN_TYPE (grad, DIAGONAL_JACOBIAN);
+        else
             return R_NoObject;
-        if (NAMEDCNT_GT_0(grad)) grad = duplicate(grad);
+        SET_ATTRIB (grad, R_NilValue);  /* just in case... */
         SET_GRAD_WRT_LEN (grad, gvars);
     }
     else if (TYPEOF(val) == VECSXP) {
@@ -942,8 +948,10 @@ static SEXP match_structure (SEXP val, SEXP grad, R_len_t gvars)
                 return R_NoObject;
             if (e != VECTOR_ELT(grad,i)) {
                 if (NAMEDCNT_GT_0(grad)) {
+                    PROTECT(e);
                     grad = duplicate(grad);
-                    UNPROTECT_PROTECT(grad);
+                    UNPROTECT(2);
+                    PROTECT(grad);
                 }
                 SET_VECTOR_ELT (grad, i, e);
             }
@@ -3858,29 +3866,49 @@ R_inspect(b); REprintf("==\n");
 
     if (JACOBIAN_TYPE(b) & DIAGONAL_JACOBIAN) {
 
-        /* Note:  Here a might be in compact form. */
+        /* Note:  Here a might or might not be in compact form. */
 
         R_len_t alen = LENGTH(a);
         R_len_t blen = LENGTH(b);
 
-        res = duplicate(a);
-        SET_JACOBIAN_TYPE (res, JACOBIAN_TYPE(a));
+        if (JACOBIAN_TYPE(a) & DIAGONAL_JACOBIAN) {
 
-        if (blen == 1) {
-            double d = *REAL(b);
-            for (i = 0; i < alen; i++)
-                REAL(res)[i] = d * REAL(a)[i];
-        }
-        else if (JACOBIAN_TYPE(a) & DIAGONAL_JACOBIAN) {
-            if (blen != k) abort();
-            for (i = 0; i < alen; i++)
-                REAL(res)[i] = REAL(b)[i] * REAL(a)[i];
+            if (alen != blen && alen != 1 && blen != 1) abort();
+            res = alloc_diagonal_jacobian (gvars, blen == 1 ? alen : blen);
+            SET_ATTRIB_TO_ANYTHING (res, ATTRIB_W(a));
+            SET_JACOBIAN_TYPE (res, JACOBIAN_TYPE(a));
+
+            if (blen == 1) {
+                double d = *REAL(b);
+                for (i = 0; i < alen; i++)
+                    REAL(res)[i] = d * REAL(a)[i];
+            }
+            else if (alen == 1) {
+                double d = *REAL(a);
+                for (i = 0; i < blen; i++)
+                    REAL(res)[i] = REAL(b)[i] * d;
+            }
+            else {
+                if (alen != blen) abort();
+                for (i = 0; i < alen; i++)
+                    REAL(res)[i] = REAL(b)[i] * REAL(a)[i];
+            }
         }
         else {
-            if (blen != k) abort();
-            for (i = 0; i < alen; i += k)
-                for (j = 0; j < k; j++)
-                    REAL(res)[i+j] = REAL(b)[j] * REAL(a)[i+j];
+ 
+            res = alloc_jacobian (gvars, n);
+ 
+            if (blen == 1) {
+                double d = *REAL(b);
+                for (i = 0; i < alen; i++)
+                    REAL(res)[i] = d * REAL(a)[i];
+            }
+            else {
+                if (blen != k) abort();
+                for (i = 0; i < alen; i += k)
+                    for (j = 0; j < k; j++)
+                        REAL(res)[i+j] = REAL(b)[j] * REAL(a)[i+j];
+            }
         }
     }
 

@@ -175,7 +175,11 @@ variables used to compute \code{v1.expr}, \code{v2.expr}, etc.
 The gradient computed by the expressions after \code{as} should in the
 same form as is returned by \code{gradient_of} or attached as a
 \code{gradient} attribute by \code{with gradient}, as described in the
-value section below.
+value section below, except that Jacobain matrices that are square
+with zero values off the diagonal may be returned as a vector of just the
+diagonal elements.  The \code{dim} attribute of the Jacobian matrices 
+returned is ignored, but the numeric values returned must nevertheless 
+correspond to those for a matrix with the correct dimensions.
 
 If computation of a gradient has not been requested, \code{compute gradient}
 will evaluate only the value, skipping evaluation of the expressions after
@@ -355,8 +359,10 @@ sigmoid(1)                       # no gradient computed, only value
 with gradient (x=1) sigmoid(x)   # both value and gradient computed
 
 track gradient (x=1)             # should compute the same gradient
-    gradient_of (1/(1+exp(-x)))  # as above, but perhaps more slowly
-                                 # (though maybe not since x is scalar)
+    gradient_of (1/(1+exp(-x)))  # as above
+
+track gradient (x=c(-3,1,2))     # gradient will be a diagonal jacobian
+    gradient_of (1/(1+exp(-x)))  # matrix, given by its diagonal elements
 
 set.seed(123); with gradient (r=5) rexp(1,r)
 
