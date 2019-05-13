@@ -360,7 +360,7 @@ struct sxpinfo_struct @{
                                      CHARSXP: is used as a symbol's printname
                                      Envir: store gradient with variables
                                      Promise: evaluate with VARIANT_GRADIENT
-                                     REALSXP: full jacobian cached as attrib */
+                                     Vec type: full jacobian cached as attrib */
     unsigned int base_sym_env : 1;/* Symbol: has base binding in global cache,
                                      Envir: R_BaseEnv or R_BaseNamespace
                                      VECSXP: Holds gradients wrt list variable,
@@ -1080,7 +1080,7 @@ list element in a gradient value, indicating that the gradient for
 that portion of the variable is zero.
 
 The gradient of a real vector with respect to a real vector is a real
-~Jacobian" matrix (which for internal versions may be missing its
+"Jacobian" matrix (which for internal versions may be missing its
 @code{dim} attribute), whose rows correspond to elements of the vector
 it is the gradient for, and whose columns correspond to elements of
 the vector with respect to which this is the gradient.  Internal
@@ -1106,6 +1106,10 @@ not be used after this is replaced by the cached full Jacobian.  The
 matrix is always the number of columns in the full Jacobian matrix
 (which may not be the number of columns in some matrix used as part of
 a compact represention of the Jacobian matrix).
+
+A Jacobian matrix may also be represented by a function closure,
+stored in an @code{EXPRSXP} vector, which has @code{GRAD_WRT_LEN}
+and other fields as for REALSXP vectors representing Jacobian matrices.
 
 
 @node Contexts, Argument evaluation, Gradient information, R Internal Structures

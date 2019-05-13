@@ -245,7 +245,7 @@ struct sxpinfo_struct {
                                      CHARSXP: is used as a symbol's printname
                                      Envir: store gradient with variables
                                      Promise: evaluate with VARIANT_GRADIENT
-                                     REALSXP: full jacobian cached as attrib */
+                                     Vec type: full jacobian cached as attrib */
     unsigned int base_sym_env : 1;/* Symbol: has base binding in global cache,
                                      Envir: R_BaseEnv or R_BaseNamespace 
                                      VECSXP: Holds gradients wrt list variable,
@@ -1038,6 +1038,7 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SCALED_JACOBIAN 1    /* Scaled form of Jacobian in attribute.  Form of
                                 scaling factor specified by other bits. */
 #define DIAGONAL_JACOBIAN 2  /* Only diagonal stored, single value if all same*/
+#define CLOSURE_JACOBIAN 4   /* Jacobian specified by function closure */
 #define NOW_CACHED_JACOBIAN 128  /* Only cache value valid - previous compact
                                     form no longer available */
 
@@ -1830,6 +1831,8 @@ LibExtern SEXP	R_LogSymbol;        /* "log" */
 LibExtern SEXP	R_ValueSymbol;	    /* "value" */
 LibExtern SEXP	R_GradientSymbol;   /* "gradient" */
 LibExtern SEXP	R_HessianSymbol;    /* "hessian" */
+LibExtern SEXP	R_RightSymbol;      /* "right" */
+LibExtern SEXP	R_LeftSymbol;       /* "left" */
 
 LibExtern SEXP  R_dot_defined;      /* ".defined" */
 LibExtern SEXP  R_dot_Method;       /* ".Method" */

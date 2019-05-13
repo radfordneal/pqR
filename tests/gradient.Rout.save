@@ -4953,6 +4953,59 @@ attr(,"gradient")[[3]]
 [2,]      0 110000
 
 > 
+> g <- function (x,y)  # assume length(x) == length(y)
++   compute gradient (x,y) list(x+y,x-y,x*y)
++   as # wrong, but see if it happens
++      list (function () x*y, function () x+y, function () x+y),
++      list (function () x-y, function () x-y, function () 7*x*y)
+> 
+> with gradient (z=9) g(100*z,z+1)
+[[1]]
+[1] 910
+
+[[2]]
+[1] 890
+
+[[3]]
+[1] 9000
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+[1] 900890
+
+attr(,"gradient")[[2]]
+[1] 91890
+
+attr(,"gradient")[[3]]
+[1] 154000
+
+> with gradient (z=c(9,7)) g(100*z,z+1)
+[[1]]
+[1] 910 708
+
+[[2]]
+[1] 890 692
+
+[[3]]
+[1] 9000 5600
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+       [,1]   [,2]
+[1,] 900890      0
+[2,]      0 560692
+
+attr(,"gradient")[[2]]
+      [,1]  [,2]
+[1,] 91890     0
+[2,]     0 71492
+
+attr(,"gradient")[[3]]
+       [,1]   [,2]
+[1,] 154000      0
+[2,]      0 110000
+
+> 
 > 
 > # Test subassign operations.
 > 

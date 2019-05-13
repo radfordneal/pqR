@@ -895,6 +895,15 @@ g <- function (x,y)  # assume length(x) == length(y)
 with gradient (z=9) g(100*z,z+1)
 with gradient (z=c(9,7)) g(100*z,z+1)
 
+g <- function (x,y)  # assume length(x) == length(y)
+  compute gradient (x,y) list(x+y,x-y,x*y)
+  as # wrong, but see if it happens
+     list (function () x*y, function () x+y, function () x+y),
+     list (function () x-y, function () x-y, function () 7*x*y)
+
+with gradient (z=9) g(100*z,z+1)
+with gradient (z=c(9,7)) g(100*z,z+1)
+
 
 # Test subassign operations.
 

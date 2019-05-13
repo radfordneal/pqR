@@ -383,6 +383,8 @@ static void SymbolShortcuts(void)
     R_ValueSymbol = install("value");
     R_GradientSymbol = install("gradient");
     R_HessianSymbol = install("hessian");
+    R_RightSymbol = install("right");
+    R_LeftSymbol = install("left");
 
     R_dot_defined = install(".defined");
     R_dot_Method = install(".Method");

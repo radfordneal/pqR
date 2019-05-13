@@ -163,11 +163,45 @@ void SET_GRADIENT_IN_CELL_NR (SEXP x, SEXP v)
 
 static SEXP expand_to_full_jacobian (SEXP grad)
 {
-    if (TYPEOF(grad) != REALSXP)
+    if (TYPEOF(grad) != REALSXP && TYPEOF(grad) != EXPRSXP)
         return grad;
 
     if (JACOBIAN_CACHED_AS_ATTRIB(grad))
         return ATTRIB_W(grad);
+
+    if (JACOBIAN_TYPE(grad) & CLOSURE_JACOBIAN) {
+
+        if (TYPEOF(grad) != EXPRSXP || LENGTH(grad) != 2) abort();
+        if (TYPEOF(VECTOR_ELT(grad,0)) != CLOSXP) abort();
+        if (TYPEOF(VECTOR_ELT(grad,1)) != INTSXP) abort();
+
+        R_len_t gvars = GRAD_WRT_LEN(grad);
+        R_len_t rows = *INTEGER(VECTOR_ELT(grad,1));
+        SEXP call, new;
+
+        PROTECT (grad);
+        PROTECT (call = LCONS (VECTOR_ELT(grad,0), R_NilValue));
+        new = eval (call, R_EmptyEnv);
+        if (NAMEDCNT_GT_0(new))
+            new = duplicate(new);
+        UNPROTECT_PROTECT(new);
+        SET_GRAD_WRT_LEN (new, gvars);
+
+        if (LENGTH(new) != (uint64_t) rows * gvars) {  /* not full jacobian */
+            if (rows != gvars) abort();
+            if (LENGTH(new) != gvars) abort();
+            SET_JACOBIAN_TYPE (new, DIAGONAL_JACOBIAN);
+            new = expand_to_full_jacobian (new);
+            UNPROTECT_PROTECT(new);
+        }
+
+        SET_ATTRIB_TO_ANYTHING (grad, new);
+        SET_JACOBIAN_CACHED_AS_ATTRIB (grad, 1);
+        SET_NAMEDCNT (new, NAMEDCNT(grad));
+
+        UNPROTECT(2);
+        return new;
+    }
 
     if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) {
 
@@ -921,20 +955,48 @@ static SEXP make_id_grad (SEXP val)
 static SEXP match_structure (SEXP val, SEXP grad, R_len_t gvars)
 {
     if (TYPEOF(val) == REALSXP) {
-        if (TYPEOF(grad) != REALSXP)
-            return R_NoObject;
-        if (NAMEDCNT_GT_0(grad))
-            grad = duplicate(grad);
-        if (LENGTH(grad) == (uint64_t) gvars * LENGTH(val))  /* full jacobian */
-            SET_JACOBIAN_TYPE (grad, 0);
-        else if (LENGTH(grad) == gvars && gvars == LENGTH(val))   /* diagonal */
-            SET_JACOBIAN_TYPE (grad, DIAGONAL_JACOBIAN);
+
+        if (TYPEOF(grad) == CLOSXP) {
+            SEXP fm = FORMALS(grad);
+            if (CDDR(fm) != R_NilValue)  /* check for more than two arguments */
+                return R_NoObject;
+            if (fm != R_NilValue         /* check args are 'left' or 'right' */
+                && TAG(fm) != R_RightSymbol && TAG(fm) != R_LeftSymbol
+             || CDR(fm) != R_NilValue
+                && TAG(CDR(fm)) != R_RightSymbol && TAG(CDR(fm)) != R_LeftSymbol
+             || CDR(fm) != R_NilValue && TAG(fm) == TAG(CDR(fm)))
+                return R_NoObject;
+            PROTECT(grad);
+            SEXP e = allocVector (EXPRSXP, 2);
+            UNPROTECT(1);
+            SET_VECTOR_ELT (e, 0, grad);
+            INC_NAMEDCNT(grad);
+            PROTECT(e);
+            SET_VECTOR_ELT (e, 1, ScalarIntegerMaybeConst(LENGTH(val)));
+            UNPROTECT(1);
+            grad = e;
+            SET_JACOBIAN_TYPE (grad, CLOSURE_JACOBIAN);
+        }
+
+        else if (TYPEOF(grad) == REALSXP) {
+            if (NAMEDCNT_GT_0(grad))
+                grad = duplicate(grad);
+            if (LENGTH(grad) == (uint64_t)gvars*LENGTH(val)) /* full jacobian */
+                SET_JACOBIAN_TYPE (grad, 0);
+            else if (LENGTH(grad) == gvars && gvars == LENGTH(val))/* diagonal*/
+                SET_JACOBIAN_TYPE (grad, DIAGONAL_JACOBIAN);
+            else
+                return R_NoObject;
+            SET_ATTRIB (grad, R_NilValue);  /* just in case... */
+        }
+
         else
             return R_NoObject;
-        SET_ATTRIB (grad, R_NilValue);  /* just in case... */
+
         SET_GRAD_WRT_LEN (grad, gvars);
     }
     else if (TYPEOF(val) == VECSXP) {
+
         if (TYPEOF(grad) != VECSXP)
             return R_NoObject;
         if (LENGTH(val) != LENGTH(grad))

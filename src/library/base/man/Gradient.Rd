@@ -181,6 +181,31 @@ diagonal elements.  The \code{dim} attribute of the Jacobian matrices
 returned is ignored, but the numeric values returned must nevertheless 
 correspond to those for a matrix with the correct dimensions.
 
+A Jacobian matrix may be replaced by a function that computes the
+Jacobian matrix, or computes products of it with another matrix.  Such
+a function must have 0, 1, or 2 arguments, which if present must be
+named \code{right} or \code{left}.  The function may be called with no
+arguments, with just a \code{right} argument (if present), or with
+just a \code{left} argument (if present); the function must be
+prepared for any of these possibilities.  If called with no arguments
+(testable with \code{missing}), the function must return the Jacobian
+matrix (which may be just the diagonal part, as above).  If called
+with a \code{right} argument (a matrix, or a vector representing a
+matrix with one column), the function must return the product of the
+Jacobian matrix with the \code{right} matrix.  If called with a
+\code{left} argument (a matrix, or vector representing a matrix with
+one row), the function must return the product of the \code{left}
+matrix with the Jacobian matrix.  For these latter cases, it is
+possible that the function may be able to compute the product
+efficiently without ever creating the full Jacobian matrix.  The
+function will not be called with both \code{right} and \code{left}
+arguments.
+
+NOTE: At present, the function will always be called with no
+arguments, even if it has been written to handle \code{right} or
+\code{left} arguments, so this feature is presently mostly pointless,
+but it will become useful in future.
+
 If computation of a gradient has not been requested, \code{compute gradient}
 will evaluate only the value, skipping evaluation of the expressions after
 \code{as}.  It is possible for the gradient expression to be
