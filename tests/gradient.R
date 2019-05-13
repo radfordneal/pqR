@@ -2299,6 +2299,16 @@ pr("end")
 pr("start")
 with gradient (a=c(3,9,7,4,2,6,5,8)) {
   pr("A")
+  r <- back gradient (b = a^2, c = a^3) {
+    pr("B"); 3*b + 4*c
+  }
+  pr("C"); r
+}
+pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A")
   r <- compute gradient (b = a^2)
          { pr("B"); 3*b }
        as { pr("C"); diag(rep(3,length(b))) }

@@ -3764,7 +3764,7 @@ R_inspect(base); REprintf("--\n");
 R_inspect(a); REprintf("--\n");
 R_inspect(b); REprintf("==\n");
 #endif
-    RECURSIVE_GRADIENT_APPLY2 (backpropagate_gradients, base, a, b);
+    RECURSIVE_GRADIENT_APPLY2_NO_EXPAND (backpropagate_gradients, base, a, b);
 
     return backup (base, a, b);
 }
@@ -3808,6 +3808,7 @@ R_inspect(base); REprintf("--\n");
 R_inspect(a); REprintf("--\n");
 R_inspect(b); REprintf("==\n");
 #endif
+
     if (TYPEOF(a) != REALSXP) abort();
 
     if (b == R_NilValue)
@@ -3825,6 +3826,7 @@ R_inspect(b); REprintf("==\n");
                                  (R_NilValue, a, VECTOR_ELT(b,i)));
         }
         else {
+            if (TYPEOF(base) != VECSXP) abort();
             for (R_len_t i = 0; i < n; i++) {
                 SET_VECTOR_ELT (res, i, add_jacobian_product
                                  (VECTOR_ELT(base,i), a, VECTOR_ELT(b,i)));
@@ -3834,6 +3836,8 @@ R_inspect(b); REprintf("==\n");
         return res;
     }
 
+    PROTECT2(base,a);
+
     if (base != R_NilValue && TYPEOF(base) != REALSXP) abort();
     if (TYPEOF(a) != REALSXP) abort();
 
@@ -3842,7 +3846,7 @@ R_inspect(b); REprintf("==\n");
 
     if (TYPEOF(b) != REALSXP) abort();
 
-    PROTECT3 (base,a,b);
+    PROTECT(b);
 
     R_len_t k = JACOBIAN_COLS(b);
     R_len_t n = JACOBIAN_ROWS(b);
@@ -3854,15 +3858,23 @@ R_inspect(b); REprintf("==\n");
 
     if (JACOBIAN_TYPE(b) & DIAGONAL_JACOBIAN) {
 
+        /* Note:  Here a might be in compact form. */
+
         R_len_t alen = LENGTH(a);
         R_len_t blen = LENGTH(b);
 
         res = duplicate(a);
+        SET_JACOBIAN_TYPE (res, JACOBIAN_TYPE(a));
 
         if (blen == 1) {
             double d = *REAL(b);
             for (i = 0; i < alen; i++)
                 REAL(res)[i] = d * REAL(a)[i];
+        }
+        else if (JACOBIAN_TYPE(a) & DIAGONAL_JACOBIAN) {
+            if (blen != k) abort();
+            for (i = 0; i < alen; i++)
+                REAL(res)[i] = REAL(b)[i] * REAL(a)[i];
         }
         else {
             if (blen != k) abort();
@@ -3874,23 +3886,33 @@ R_inspect(b); REprintf("==\n");
 
     else {  /* b is a full Jacobian */
 
+        PROTECT(a = expand_to_full_jacobian(a));
+
         if (LENGTH(a) == 1 && LENGTH(b) == 1) {
             if (base == R_NilValue) {
                 res = ScalarRealMaybeConst (*REAL(a) * *REAL(b));
-                goto ret;
             }
-            if (LENGTH(base) != 1) abort();
-            res = ScalarRealMaybeConst (*REAL(base) + *REAL(a) * *REAL(b));
+            else {
+                base = expand_to_full_jacobian(base);
+                if (LENGTH(base) != 1) abort();
+                res = ScalarRealMaybeConst (*REAL(base) + *REAL(a) * *REAL(b));
+            }
+            UNPROTECT(1);
             goto ret;
         }
 
         res = alloc_jacobian (gvars, n);
-
         matprod_mat_mat (REAL(b), REAL(a), REAL(res), n, k, gvars);
+
+        UNPROTECT(1);
     }
 
     if (base == R_NilValue)
         goto ret;
+
+    PROTECT (res = expand_to_full_jacobian(res));
+    base = expand_to_full_jacobian(base);
+    UNPROTECT(1);
 
     R_len_t glen = gvars * n;
 
@@ -3900,6 +3922,12 @@ R_inspect(b); REprintf("==\n");
         REAL(res)[i] += REAL(base)[i];
 
   ret:
+
+#if 0
+REprintf("add jacobian product end\n");
+R_inspect(res);
+#endif
+
     UNPROTECT(3);
     return res;
 }

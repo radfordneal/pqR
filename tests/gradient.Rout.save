@@ -15956,9 +15956,9 @@ RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 B 
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
-RPROFMEM: (double 64):
+RPROFMEM: (double 8):
 C 
+RPROFMEM: (double 64):
 [1]  27 243 147  48  12 108  75 192
 attr(,"gradient")
      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
@@ -15970,6 +15970,45 @@ attr(,"gradient")
 [6,]    0    0    0    0    0   36    0    0
 [7,]    0    0    0    0    0    0   30    0
 [8,]    0    0    0    0    0    0    0   48
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> with gradient (a=c(3,9,7,4,2,6,5,8)) {
++   pr("A")
++   r <- back gradient (b = a^2, c = a^3) {
++     pr("B"); 3*b + 4*c
++   }
++   pr("C"); r
++ }
+RPROFMEM: (double 8):
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+B 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+RPROFMEM: (double 64):
+C 
+[1]  135 3159 1519  304   44  972  575 2240
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]  126    0    0    0    0    0    0    0
+[2,]    0 1026    0    0    0    0    0    0
+[3,]    0    0  630    0    0    0    0    0
+[4,]    0    0    0  216    0    0    0    0
+[5,]    0    0    0    0   60    0    0    0
+[6,]    0    0    0    0    0  468    0    0
+[7,]    0    0    0    0    0    0  330    0
+[8,]    0    0    0    0    0    0    0  816
 > pr("end")
 end 
 > 
