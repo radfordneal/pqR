@@ -16158,6 +16158,57 @@ end
 > pr("start")
 start 
 > with gradient (a=c(3,9,7,4,2,6,5,8)) {
++   pr("A"); x <- a[3]
++   pr("B"); r <- a*x
++   pr("C"); s <- x*a
++   pr("D"); list(r,s)
++ }
+RPROFMEM: (double 8):
+A 
+RPROFMEM: (double 64):
+RPROFMEM: (double 8):
+B 
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+C 
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+D 
+[[1]]
+[1] 21 63 49 28 14 42 35 56
+
+[[2]]
+[1] 21 63 49 28 14 42 35 56
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    7    0    3    0    0    0    0    0
+[2,]    0    7    9    0    0    0    0    0
+[3,]    0    0   14    0    0    0    0    0
+[4,]    0    0    4    7    0    0    0    0
+[5,]    0    0    2    0    7    0    0    0
+[6,]    0    0    6    0    0    7    0    0
+[7,]    0    0    5    0    0    0    7    0
+[8,]    0    0    8    0    0    0    0    7
+
+attr(,"gradient")[[2]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    7    0    3    0    0    0    0    0
+[2,]    0    7    9    0    0    0    0    0
+[3,]    0    0   14    0    0    0    0    0
+[4,]    0    0    4    7    0    0    0    0
+[5,]    0    0    2    0    7    0    0    0
+[6,]    0    0    6    0    0    7    0    0
+[7,]    0    0    5    0    0    0    7    0
+[8,]    0    0    8    0    0    0    0    7
+
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> with gradient (a=c(3,9,7,4,2,6,5,8)) {
 +   pr("A")
 +   r <- compute gradient (b = a^2)
 +          { pr("B"); 3*b }

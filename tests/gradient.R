@@ -2335,6 +2335,15 @@ pr("end")
 
 pr("start")
 with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A"); x <- a[3]
+  pr("B"); r <- a*x
+  pr("C"); s <- x*a
+  pr("D"); list(r,s)
+}
+pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
   pr("A")
   r <- compute gradient (b = a^2)
          { pr("B"); 3*b }
