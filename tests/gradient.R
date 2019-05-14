@@ -2327,10 +2327,48 @@ pr("end")
 
 pr("start")
 with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A"); b <- a^2
+  pr("B"); r <- 3*b
+  pr("C"); r
+}
+pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
   pr("A")
   r <- compute gradient (b = a^2)
          { pr("B"); 3*b }
        as { pr("C"); diag(rep(3,length(b))) }
+  pr("D"); r
+}
+pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A")
+  r <- compute gradient (b = a^2)
+         { pr("B"); 3*b }
+       as { pr("C"); function () diag(rep(3,length(b))) }
+  pr("D"); r
+}
+pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A")
+  r <- compute gradient (b = a^2)
+         { pr("B"); 3*b }
+       as { pr("C"); rep(3,length(b)) }
+  pr("D"); r
+}
+pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A")
+  r <- compute gradient (b = a^2)
+         { pr("B"); 3*b }
+       as { pr("C"); function () rep(3,length(b)) }
   pr("D"); r
 }
 pr("end")

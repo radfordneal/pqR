@@ -16127,6 +16127,37 @@ end
 > pr("start")
 start 
 > with gradient (a=c(3,9,7,4,2,6,5,8)) {
++   pr("A"); b <- a^2
++   pr("B"); r <- 3*b
++   pr("C"); r
++ }
+RPROFMEM: (double 8):
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+B 
+RPROFMEM: (double 8):
+C 
+RPROFMEM: (double 64):
+RPROFMEM: (double 64):
+[1]  27 243 147  48  12 108  75 192
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]   18    0    0    0    0    0    0    0
+[2,]    0   54    0    0    0    0    0    0
+[3,]    0    0   42    0    0    0    0    0
+[4,]    0    0    0   24    0    0    0    0
+[5,]    0    0    0    0   12    0    0    0
+[6,]    0    0    0    0    0   36    0    0
+[7,]    0    0    0    0    0    0   30    0
+[8,]    0    0    0    0    0    0    0   48
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> with gradient (a=c(3,9,7,4,2,6,5,8)) {
 +   pr("A")
 +   r <- compute gradient (b = a^2)
 +          { pr("B"); 3*b }
@@ -16143,6 +16174,113 @@ RPROFMEM: (double 8):
 C 
 RPROFMEM: (double 8):"diag" 
 RPROFMEM: (double 64):"diag" 
+RPROFMEM: (double 64):
+RPROFMEM: (double 64):
+D 
+[1]  27 243 147  48  12 108  75 192
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]   18    0    0    0    0    0    0    0
+[2,]    0   54    0    0    0    0    0    0
+[3,]    0    0   42    0    0    0    0    0
+[4,]    0    0    0   24    0    0    0    0
+[5,]    0    0    0    0   12    0    0    0
+[6,]    0    0    0    0    0   36    0    0
+[7,]    0    0    0    0    0    0   30    0
+[8,]    0    0    0    0    0    0    0   48
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> with gradient (a=c(3,9,7,4,2,6,5,8)) {
++   pr("A")
++   r <- compute gradient (b = a^2)
++          { pr("B"); 3*b }
++        as { pr("C"); function () diag(rep(3,length(b))) }
++   pr("D"); r
++ }
+RPROFMEM: (double 8):
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+B 
+RPROFMEM: (double 8):
+C 
+RPROFMEM: (double 8):"diag" "<Anonymous>" 
+RPROFMEM: (double 64):"diag" "<Anonymous>" 
+RPROFMEM: (double 64):
+RPROFMEM: (double 64):
+D 
+[1]  27 243 147  48  12 108  75 192
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]   18    0    0    0    0    0    0    0
+[2,]    0   54    0    0    0    0    0    0
+[3,]    0    0   42    0    0    0    0    0
+[4,]    0    0    0   24    0    0    0    0
+[5,]    0    0    0    0   12    0    0    0
+[6,]    0    0    0    0    0   36    0    0
+[7,]    0    0    0    0    0    0   30    0
+[8,]    0    0    0    0    0    0    0   48
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> with gradient (a=c(3,9,7,4,2,6,5,8)) {
++   pr("A")
++   r <- compute gradient (b = a^2)
++          { pr("B"); 3*b }
++        as { pr("C"); rep(3,length(b)) }
++   pr("D"); r
++ }
+RPROFMEM: (double 8):
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+B 
+RPROFMEM: (double 8):
+C 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+D 
+RPROFMEM: (double 64):
+[1]  27 243 147  48  12 108  75 192
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]   18    0    0    0    0    0    0    0
+[2,]    0   54    0    0    0    0    0    0
+[3,]    0    0   42    0    0    0    0    0
+[4,]    0    0    0   24    0    0    0    0
+[5,]    0    0    0    0   12    0    0    0
+[6,]    0    0    0    0    0   36    0    0
+[7,]    0    0    0    0    0    0   30    0
+[8,]    0    0    0    0    0    0    0   48
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> with gradient (a=c(3,9,7,4,2,6,5,8)) {
++   pr("A")
++   r <- compute gradient (b = a^2)
++          { pr("B"); 3*b }
++        as { pr("C"); function () rep(3,length(b)) }
++   pr("D"); r
++ }
+RPROFMEM: (double 8):
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+B 
+RPROFMEM: (double 8):
+C 
+RPROFMEM: (double 8):"<Anonymous>" 
+RPROFMEM: (double 64):
 RPROFMEM: (double 64):
 RPROFMEM: (double 64):
 D 
