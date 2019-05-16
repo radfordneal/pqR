@@ -1,6 +1,6 @@
 
-R version 3.5.2 RC (2018-12-13 r75856) -- "Eggshell Igloo"
-Copyright (C) 2018 The R Foundation for Statistical Computing
+R version 3.5.3 RC (2019-03-03 r76193) -- "Great Truth"
+Copyright (C) 2019 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -1770,8 +1770,8 @@ detaching ‘package:grid’
 > ### ** Examples
 > 
 > ## The displayable colors from four planes of Lab space
-> ab <- expand.grid(a = (-10:15)*10,
-+                   b = (-15:10)*10)
+> ab <- as.matrix(expand.grid(a = (-10:15)*10,
++                             b = (-15:10)*10))
 > require(graphics); require(stats) # for na.omit
 > par(mfrow = c(2, 2), mar = .1+c(3, 3, 3, .5), mgp = c(2,  .8,  0))
 > 
@@ -3799,7 +3799,7 @@ $zlab
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  11.136 0.291 11.47 0 0 
+Time elapsed:  11.117 0.265 11.427 0 0 
 > grDevices::dev.off()
 null device 
           1 

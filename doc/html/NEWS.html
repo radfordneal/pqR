@@ -7,6 +7,55 @@
 
 <h2>R News</h2>
 
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.5.3</h3>
+
+
+
+<h4>INSTALLATION on a UNIX-ALIKE</h4>
+
+
+<ul>
+<li><p> Detection of flags for C++98/11/14/17 has been improved: in
+particular if CXX??STD is set, it is tried first with no
+additional flags.
+</p>
+</li></ul>
+
+
+
+
+<h4>PACKAGE INSTALLATION</h4>
+
+
+<ul>
+<li><p> New macro <span class="samp">F_VISIBILITY</span> as an alternative to
+<span class="samp">F77_VISIBILITY</span>.  This will become the preferred form in
+<span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span> 3.6.0.
+</p>
+</li></ul>
+
+
+
+
+<h4>BUG FIXES</h4>
+
+
+<ul>
+<li> <p><code>writeLines(readLines(fnam), fnam)</code> now works as expected,
+thanks to Peter Meissner's <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17528">PR#17528</a>.
+</p>
+</li>
+<li> <p><code>setClassUnion()</code> no longer warns, but uses <code>message()</code>
+for now, when encountering &ldquo;non local&rdquo; subclasses of class members.
+</p>
+</li>
+<li> <p><code>stopifnot(exprs = T)</code> no longer fails.
+</p>
+</li></ul>
+
+
+
+
 <h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.5.2</h3>
 
 

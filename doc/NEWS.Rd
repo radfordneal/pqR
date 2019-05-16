@@ -5,6 +5,37 @@
 \title{R News}
 \encoding{UTF-8}
 
+\section{\Rlogo CHANGES IN R 3.5.3}{
+
+  \subsection{INSTALLATION on a UNIX-ALIKE}{
+    \itemize{
+      \item Detection of flags for C++98/11/14/17 has been improved: in
+      particular if CXX??STD is set, it is tried first with no
+      additional flags.
+    }
+  }
+
+  \subsection{PACKAGE INSTALLATION}{
+    \itemize{
+      \item New macro \samp{F_VISIBILITY} as an alternative to
+      \samp{F77_VISIBILITY}.  This will become the preferred form in
+      \R 3.6.0.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{writeLines(readLines(fnam), fnam)} now works as expected,
+      thanks to Peter Meissner's \PR{17528}.
+
+      \item \code{setClassUnion()} no longer warns, but uses \code{message()}
+      for now, when encountering \dQuote{non local} subclasses of class members.
+
+      \item \code{stopifnot(exprs = T)} no longer fails.
+    }
+  }
+}
+
 \section{\Rlogo CHANGES IN R 3.5.2}{
 
   \subsection{PACKAGE INSTALLATION}{

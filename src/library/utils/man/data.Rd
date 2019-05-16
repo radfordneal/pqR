@@ -1,6 +1,6 @@
 % File src/library/utils/man/data.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2014 R Core Team
+% Copyright 1995-2019 R Core Team
 % Distributed under GPL 2 or later
 
 \name{data}
@@ -98,19 +98,24 @@ data(\dots, list = character(), package = NULL, lib.loc = NULL,
   already loaded from another library.
 
   To just look in the \file{data} directory of the current working
-  directory, set \code{package = character(0)} (and \code{lib.loc =
-    NULL}, the default).
+  directory, set \code{package = character(0)}
+  (and \code{lib.loc = NULL}, the default).
 }
 \value{
-  A character vector of all data sets specified, or information about
-  all available data sets in an object of class \code{"packageIQR"} if
-  none were specified.
+  A character vector of all data sets specified (whether found or not),
+  or information about all available data sets in an object of class
+  \code{"packageIQR"} if none were specified.
 }
 \section{Good practice}{
+  There is no requirement for \code{data(\var{foo})} to create an object
+  named \code{\var{foo}} (nor to create one object), although it much
+  reduces confusion if this convention is followed (and it is enforced
+  if datasets are lazy-loaded).
+  
   \code{data()} was originally intended to allow users to load datasets
   from packages for use in their examples, and as such it loaded the
   datasets into the workspace \code{\link{.GlobalEnv}}.  This avoided
-  having large datasets in memory when not in use.  That need has been
+  having large datasets in memory when not in use: that need has been
   almost entirely superseded by lazy-loading of datasets.
 
   The ability to specify a dataset by name (without quotes) is a
@@ -121,8 +126,9 @@ data(\dots, list = character(), package = NULL, lib.loc = NULL,
   has the almost always undesirable side-effect of putting an object in
   the user's workspace (and indeed, of replacing any object of that name
   already there).  It would almost always be better to put the object in
-  the current evaluation environment by \code{data(\dots, envir =
-  environment())}.  However, two alternatives are usually preferable,
+  the current evaluation environment by
+  \code{data(\dots, envir = environment())}.
+  However, two alternatives are usually preferable,
   both described in the \sQuote{Writing R Extensions} manual.
   \itemize{
     \item For sets of data, set up a package to use lazy-loading of data.
@@ -147,6 +153,14 @@ data(\dots, list = character(), package = NULL, lib.loc = NULL,
   For instance one can convert numeric vectors to factors with the
   appropriate labels.  Thus, the \file{.R} file can effectively contain
   a metadata specification for the plaintext formats.
+}
+\section{Warning}{
+  This function creates objects in the \code{envir} environment (by
+  default the user's workspace) replacing any which already
+  existed. \code{data("foo")} can silently create objects other than
+  \code{foo}: there have been instances in published  packages where it
+  created/replaced \code{\link{.Random.seed}} and hence change the seed
+  for the session.
 }
 \seealso{
   \code{\link{help}} for obtaining documentation on data sets,
