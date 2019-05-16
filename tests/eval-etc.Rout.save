@@ -1,5 +1,5 @@
 
-R version 3.5.3 RC (2019-03-03 r76193) -- "Great Truth"
+R version 3.6.0 beta (2019-04-15 r76395) -- "Planting of a Tree"
 Copyright (C) 2019 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -207,6 +207,7 @@ Levels: a b <NA>
 +     identical(r1,r2)
 + )
 > ## partly failed in R 3.4.0 alpha
+> rm(CO) # as its deparse() depends on if utils was installed w/ keep.source.pkgs=TRUE
 > 
 > source(file.path(Sys.getenv("SRCDIR"), "eval-fns.R"), echo = TRUE)
 
@@ -234,12 +235,25 @@ Levels: a b <NA>
 
 > check_EPD <- function(obj, show = !hasReal(obj), oNam = deparse(substitute(obj)), 
 +     control = c("keepInteger", "showAttributes", "keepNA"), not .... [TRUNCATED] 
+
+> runEPD_checks <- function(env = .GlobalEnv) {
++     stopifnot(is.environment(env))
++     for (nm in ls(envir = env)) {
++         cat(nm, ": ", sep = .... [TRUNCATED] 
 >                                         #---------
 > 
 > library(stats)
 > ## some more "critical" cases
 > nmdExp <- expression(e1 = sin(pi), e2 = cos(-pi))
-> xn <- setNames(pi^(1:3), paste0("pi^",1:3))
+> xn <- setNames(3.5^(1:3), paste0("3½^",1:3)) # 3.5: so have 'show'
+> ## "" in names :
+> x0 <- xn; names(x0)[2] <- ""
+> en0  <- setNames(0L, "")
+> en12 <- setNames(1:2, c("",""))
+> en24 <- setNames(2:4, c("two","","vier"))
+> enx0  <- `storage.mode<-`(en0, "double")
+> enx12 <- `storage.mode<-`(en12,"double")
+> enx24 <- `storage.mode<-`(en24,"double")
 > L1 <- list(c(A="Txt"))
 > L2 <- list(el = c(A=2.5))
 > ## "m:n" named integers and _inside list_
@@ -263,6 +277,8 @@ Levels: a b <NA>
 + 		    deparse(lf)))
 Warning message:
 In deparse(lf, control = "all") : deparse may be incomplete
+> abc <- setNames(letters[1:4], c("one", "recursive", "use.names", "four"))
+> r13 <- i13 <- setNames(1:3, names(abc)[3:1]); mode(r13) <- "double"
 > if(getRversion() >= "3.5.0") {
 +     ## Creating a collection of S4 objects, ensuring deparse <-> parse are inverses
 + library(methods)
@@ -351,17 +367,7 @@ new("mp", .Data = list(new("mp1", prec = integer(0), d = integer(0)),
     new("mp1", prec = 1L, d = 3:5)))
 > 
 > ## Action!  Check deparse <--> parse  consistency for *all* objects:
-> for(nm in ls(env=.GlobalEnv)) {
-+     cat(nm,": ", sep="")
-+     ## if(!any(nm == "mf")) ## 'mf' [bug in deparse(mf, control="all") now fixed]
-+         check_EPD(obj = (x <- .GlobalEnv[[nm]]))
-+     if(is.function(x) && !inherits(x, "classGeneratorFunction")) {
-+         ## FIXME? classGeneratorFunction, e.g., mForm don't "work" yet
-+         cat("checking body(.):\n"   ); check_EPD(   body(x))
-+         cat("checking formals(.):\n"); check_EPD(formals(x))
-+     }
-+     cat("--=--=--=--=--\n")
-+ }
+> runEPD_checks()
 A: function (x, y, ...) 
 {
     B <- function(a, b, ...) {
@@ -390,98 +396,6 @@ quote(match.call())
  --> checking list(*): Ok
 checking formals(.):
 as.pairlist(alist(... = ))
-__ not parse()able __: hasMissObj(.) is true 
---=--=--=--=--
-CO: function (..., file = NULL, append = FALSE, type = c("output", 
-    "message"), split = FALSE) 
-{
-    args <- substitute(list(...))[-1L]
-    type <- match.arg(type)
-    rval <- NULL
-    closeit <- TRUE
-    if (is.null(file)) 
-        file <- textConnection("rval", "w", local = TRUE)
-    else if (is.character(file)) 
-        file <- file(file, if (append) 
-            "a"
-        else "w")
-    else if (inherits(file, "connection")) {
-        if (!isOpen(file)) 
-            open(file, if (append) 
-                "a"
-            else "w")
-        else closeit <- FALSE
-    }
-    else stop("'file' must be NULL, a character string or a connection")
-    sink(file, type = type, split = split)
-    on.exit({
-        sink(type = type, split = split)
-        if (closeit) close(file)
-    })
-    pf <- parent.frame()
-    evalVis <- function(expr) withVisible(eval(expr, pf))
-    for (i in seq_along(args)) {
-        expr <- args[[i]]
-        tmp <- switch(mode(expr), expression = lapply(expr, evalVis), 
-            call = , name = list(evalVis(expr)), stop("bad argument"))
-        for (item in tmp) if (item$visible) 
-            print(item$value)
-    }
-    on.exit()
-    sink(type = type, split = split)
-    if (closeit) 
-        close(file)
-    if (is.null(rval)) 
-        invisible(NULL)
-    else rval
-}
- --> checking list(*): Ok
-checking body(.):
-quote({
-    args <- substitute(list(...))[-1L]
-    type <- match.arg(type)
-    rval <- NULL
-    closeit <- TRUE
-    if (is.null(file)) 
-        file <- textConnection("rval", "w", local = TRUE)
-    else if (is.character(file)) 
-        file <- file(file, if (append) 
-            "a"
-        else "w")
-    else if (inherits(file, "connection")) {
-        if (!isOpen(file)) 
-            open(file, if (append) 
-                "a"
-            else "w")
-        else closeit <- FALSE
-    }
-    else stop("'file' must be NULL, a character string or a connection")
-    sink(file, type = type, split = split)
-    on.exit({
-        sink(type = type, split = split)
-        if (closeit) close(file)
-    })
-    pf <- parent.frame()
-    evalVis <- function(expr) withVisible(eval(expr, pf))
-    for (i in seq_along(args)) {
-        expr <- args[[i]]
-        tmp <- switch(mode(expr), expression = lapply(expr, evalVis), 
-            call = , name = list(evalVis(expr)), stop("bad argument"))
-        for (item in tmp) if (item$visible) 
-            print(item$value)
-    }
-    on.exit()
-    sink(type = type, split = split)
-    if (closeit) 
-        close(file)
-    if (is.null(rval)) 
-        invisible(NULL)
-    else rval
-})
- --> checking list(*): Ok
-checking formals(.):
-as.pairlist(alist(... = , file = NULL, append = FALSE, type = quote(c("output", 
-    "message")), split = FALSE))
 __ not parse()able __: hasMissObj(.) is true 
 --=--=--=--=--
 DD: function (...) 
@@ -545,6 +459,10 @@ a3: quote(CC(1, 2, 3))
 aa: quote(B(a = x + y, b = 3))
  --> checking list(*): Ok
 --=--=--=--=--
+abc: structure(c("a", "b", "c", "d"), .Names = c("one", "recursive", 
+"use.names", "four"))
+ --> checking list(*): Ok
+--=--=--=--=--
 attrS4: function (x) 
 c(S4 = isS4(x), obj = is.object(x), type.S4 = typeof(x) == "S4")
  --> checking list(*): Ok
@@ -605,7 +523,8 @@ check_EPD: function (obj, show = !hasReal(obj), oNam = deparse(substitute(obj)),
                 paste("but", ae.txt), "\n")
         }
         if (!isTRUE(ae)) 
-            stop("Not equal: ", ae.txt, " giving\n", ae)
+            stop("Not equal: ", ae.txt, paste(c(" giving", head(ae, 
+                2), if (length(ae) > 2) "...."), collapse = "\n  "))
     }
     if (!is.language(obj)) {
         ob2. <- eval(obj)
@@ -646,7 +565,8 @@ quote({
                 paste("but", ae.txt), "\n")
         }
         if (!isTRUE(ae)) 
-            stop("Not equal: ", ae.txt, " giving\n", ae)
+            stop("Not equal: ", ae.txt, paste(c(" giving", head(ae, 
+                2), if (length(ae) > 2) "...."), collapse = "\n  "))
     }
     if (!is.language(obj)) {
         ob2. <- eval(obj)
@@ -687,6 +607,24 @@ e2: quote(c(`a b c` = 1, b = 2))
  --> checking list(*): Ok
 --=--=--=--=--
 e3: quote(c(`Variance ratio` = 1, `tail area` = pf(1, 1, 1)))
+ --> checking list(*): Ok
+--=--=--=--=--
+en0: structure(0L, .Names = "")
+ --> checking list(*): Ok
+--=--=--=--=--
+en12: structure(1:2, .Names = c("", ""))
+ --> checking list(*): Ok
+--=--=--=--=--
+en24: structure(2:4, .Names = c("two", "", "vier"))
+ --> checking list(*): Ok
+--=--=--=--=--
+enx0: structure(0, .Names = "")
+ --> checking list(*): Ok
+--=--=--=--=--
+enx12: structure(c(1, 2), .Names = c("", ""))
+ --> checking list(*): Ok
+--=--=--=--=--
+enx24: c(two = 2, 3, vier = 4)
  --> checking list(*): Ok
 --=--=--=--=--
 f: function (x, ...) 
@@ -793,6 +731,9 @@ i0: structure(integer(0), .Names = character(0), foo = "bar")
  --> checking list(*): Ok
 --=--=--=--=--
 i00: structure(integer(0), .Names = character(0))
+ --> checking list(*): Ok
+--=--=--=--=--
+i13: structure(1:3, .Names = c("use.names", "recursive", "one"))
  --> checking list(*): Ok
 --=--=--=--=--
 i6: structure(5:6, .Names = c("e", "f"))
@@ -936,6 +877,10 @@ r1: list(value = quote({
 }), visible = TRUE)
  --> checking list(*): Ok
 --=--=--=--=--
+r13: structure(c(1, 2, 3), .Names = c("use.names", "recursive", "one"
+))
+ --> checking list(*): Ok
+--=--=--=--=--
 r2: list(value = quote({
     if (!evaluated) {
         exprs <- substitute(exprs)
@@ -949,6 +894,48 @@ r2: list(value = quote({
         width.cutoff = width.cutoff, deparseCtrl = deparseCtrl, 
         ...)
 }), visible = TRUE)
+ --> checking list(*): Ok
+--=--=--=--=--
+runEPD_checks: function (env = .GlobalEnv) 
+{
+    stopifnot(is.environment(env))
+    for (nm in ls(envir = env)) {
+        cat(nm, ": ", sep = "")
+        x <- env[[nm]]
+        check_EPD(x, oNam = nm)
+        if (is.function(x) && !inherits(x, "classGeneratorFunction")) {
+            cat("checking body(.):\n")
+            check_EPD(if (is.language(bx <- body(x))) 
+                removeSource(bx)
+            else bx)
+            cat("checking formals(.):\n")
+            check_EPD(formals(x))
+        }
+        cat("--=--=--=--=--\n")
+    }
+}
+ --> checking list(*): Ok
+checking body(.):
+quote({
+    stopifnot(is.environment(env))
+    for (nm in ls(envir = env)) {
+        cat(nm, ": ", sep = "")
+        x <- env[[nm]]
+        check_EPD(x, oNam = nm)
+        if (is.function(x) && !inherits(x, "classGeneratorFunction")) {
+            cat("checking body(.):\n")
+            check_EPD(if (is.language(bx <- body(x))) 
+                removeSource(bx)
+            else bx)
+            cat("checking formals(.):\n")
+            check_EPD(formals(x))
+        }
+        cat("--=--=--=--=--\n")
+    }
+})
+ --> checking list(*): Ok
+checking formals(.):
+pairlist(env = quote(.GlobalEnv))
  --> checking list(*): Ok
 --=--=--=--=--
 sii: structure(4:7, foo = list(B = "bar", G = "grizzly", vec = structure(1:2, .Names = c("a", 
@@ -977,9 +964,14 @@ __ not parse()able __: hasMissObj(.) is true
 --=--=--=--=--
 u:  --> checking list(*): Ok
 --=--=--=--=--
-x:  --> checking list(*): Ok
+x: c(1L, NA, NA)
+ --> checking list(*): Ok
 --=--=--=--=--
-xn:  --> checking list(*): Ok
+x0: c(`3½^1` = 3.5, 12.25, `3½^3` = 42.875)
+ --> checking list(*): Ok
+--=--=--=--=--
+xn: c(`3½^1` = 3.5, `3½^2` = 12.25, `3½^3` = 42.875)
+ --> checking list(*): Ok
 --=--=--=--=--
 ydata:  --> checking list(*): Ok
 --=--=--=--=--
@@ -997,6 +989,7 @@ Warning messages:
 8: In dput(x, control = control) : deparse may be incomplete
 9: In deparse(expr, backtick = backtick, ...) : deparse may be incomplete
 10: In deparse(expr, backtick = backtick, ...) : deparse may be incomplete
+> 
 > summary(warnings())
 Summary of (a total of 10) warning messages:
 6x : In dput(x, control = control) : deparse may be incomplete
@@ -1007,5 +1000,5 @@ Summary of (a total of 10) warning messages:
 > 
 > ## at the very end
 > cat('Time elapsed: ', proc.time() - .proctime00,'\n')
-Time elapsed:  0.318 0.009 0.332 0 0 
+Time elapsed:  0.306 0.014 0.326 0 0 
 > 

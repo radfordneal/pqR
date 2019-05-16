@@ -1,7 +1,7 @@
 #  File src/library/tools/R/translations.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ en_quote <- function(potfile, outfile)
     cmd <- paste("msgconv -t UTF-8 -o", tfile2, tfile)
     if(system(cmd) != 0L) stop("running msgconv failed", domain = NA)
     lines <- readLines(tfile2) # will be in UTF-8
-    starts <- grep("^msgstr", lines)
+    starts <- which(startsWith(lines, "msgstr"))
     current <- 1L; out <- character()
     for (s in starts) {
         if (current < s)
@@ -38,7 +38,7 @@ en_quote <- function(potfile, outfile)
         start <- sub('([^"]*)"(.*)"$', "\\1", lines[s])
         this <- sub('([^"]*)"(.*)"$', "\\2", lines[s])
         current <- s+1L
-        while(grepl('^"', lines[current])) {
+        while(startsWith(lines[current], '"')) {
             this <- c(this, sub('^"(.*)"$', "\\1", lines[current]))
             current <- current + 1L
         }
@@ -316,7 +316,7 @@ make_translations_pkg <- function(srcdir, outDir = ".", append = "-1")
                     ver[1], ver[2], ver[1], ver[2] + 1)
     lines <- c(lines, deps)
     writeLines(lines, file.path(dest, "DESCRIPTION"))
-    cmd <- file.path(R.home(), "bin", "R")
+    cmd <- shQuote(file.path(R.home(), "bin", "R"))
     cmd <- paste(cmd, "CMD", "build", shQuote(dest))
     if(system(cmd) != 0L) stop("R CMD build failed")
     tarball <- Sys.glob(file.path(tempdir(), "translations_*.tar.gz"))

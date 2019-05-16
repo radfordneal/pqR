@@ -67,7 +67,7 @@ function(hDB, path, pkg)
 	    colnames(keywords) <- colnames(hDB[[4L]])
 	    keywords[,"Concept"] <- unlist(vDB$Keywords)
 	    keywords[,"ID"] <- unlist(lapply(1:nrow(vDB),
-		   function(i) rep(id[i], length(vDB$Keywords[[i]]))))
+		   function(i) rep.int(id[i], length(vDB$Keywords[[i]]))))
 	    keywords[,"Package"] <- pkg
 	    hDB[[4L]] <- rbind(hDB[[4L]], keywords)
 	}
@@ -460,8 +460,7 @@ function(package = NULL, lib.loc = NULL,
 	    else find.package(p, lib.loc, quiet = TRUE)
 	    if(length(path) == 0L) {
                 if(is.null(package)) next
-		else stop(gettextf("could not find package %s", sQuote(p)),
-                          domain = NA)
+		else stop(packageNotFoundError(p, lib.loc, sys.call()))
             }
 	    ## Hsearch 'Meta/hsearch.rds' indices were introduced in
 	    ## R 1.8.0.	 If they are missing, we really cannot use
@@ -499,7 +498,7 @@ function(package = NULL, lib.loc = NULL,
             if(is.null(hDB))
                 hDB <- hDB0
             nh <- NROW(hDB[[1L]])
-            hDB[[1L]] <- cbind(hDB[[1L]], Type = rep("help", nh))
+            hDB[[1L]] <- cbind(hDB[[1L]], Type = rep.int("help", nh))
             if(nh)
                 hDB[[1L]][, "LibPath"] <- path
             if(want_type_vignette)
@@ -540,10 +539,10 @@ function(package = NULL, lib.loc = NULL,
 
         ## Make the IDs globally unique by prefixing them with the
 	## number of the package in the global index.
-	for(i in which(sapply(db, NROW) > 0L)) {
+	for(i in which(vapply(db, NROW, 0L) > 0L)) {
 	    db[[i]][, "ID"] <-
 		paste(rep.int(seq_along(packages_in_hsearch_db),
-			      sapply(dbMat[, i], NROW)),
+			      vapply(dbMat[, i], NROW, 0L)),
 		      db[[i]][, "ID"],
 		      sep = "/")
 	}
@@ -571,7 +570,7 @@ function(package = NULL, lib.loc = NULL,
             }
 	}
 	bad_IDs <-
-	    unlist(sapply(db,
+	    unlist(lapply(db,
 			  function(u)
                               u[rowSums(is.na(nchar(u, "chars",
                                                     allowNA = TRUE,
@@ -584,7 +583,7 @@ function(package = NULL, lib.loc = NULL,
                 db[[i]][ind, ] <- iconv(db[[i]][ind, ], "latin1", "")
             }
             bad_IDs <-
-                unlist(sapply(db,
+                unlist(lapply(db,
                               function(u)
                                   u[rowSums(is.na(nchar(u, "chars",
                                                         allowNA = TRUE,
@@ -612,11 +611,8 @@ function(package = NULL, lib.loc = NULL,
 	    }
 	}
 
-        ## Remove keywords which are empty or package.skeleton()
-        ## leftovers.
-        ind <- is.na(match(db$Keywords[, "Keyword"],
-                           c("", "~kwd1", "~kwd2",
-                             "~~ other possible keyword(s) ~~")))
+        ## Remove keywords which are empty.
+        ind <- nzchar(db$Keywords[, "Keyword"])
         db$Keywords <- db$Keywords[ind, , drop = FALSE]
         ## Remove concepts which are empty.
         ind <- nzchar(db$Concepts[, "Concept"])
@@ -697,16 +693,16 @@ function(x, ...)
         browser <- getOption("browser")
         port <- tools::startDynamicHelp(NA)
 	if (port > 0L) {
-            .hsearch_results(x)
-            url <- paste0("http://127.0.0.1:", port,
-                          "/doc/html/Search?results=1")
+            tools:::.httpd_objects(port, x)
+            url <- sprintf("http://127.0.0.1:%d/doc/html/Search?objects=1&port=%d",
+                           port, port)
             ## <NOTE>
             ## Older versions used the following, which invokes the
             ## dynamic HTML help system in a way that this calls
             ## help.search() to give the results to be displayed.
             ## This is now avoided by passing the (already available)
             ## results to the dynamic help system using the dynamic
-            ## variable .hsearch_results().
+            ## variable .httpd_objects().
 	    ## url <-
             ##     paste0("http://127.0.0.1:", port,
             ##            "/doc/html/Search?pattern=",
@@ -822,17 +818,6 @@ function(x, ...)
     invisible(x)
 }
 
-.hsearch_results <-
-local({
-    res <- NULL
-    function(new) {
-	if(!missing(new))
-	    res <<- new
-	else
-	    res
-    }
-})
-
 hsearch_db_concepts <-
 function(db = hsearch_db())
 {
@@ -843,8 +828,8 @@ function(db = hsearch_db())
     entries <- split(as.data.frame(db$Base[pos, ],
                                    stringsAsFactors = FALSE),
                      db$Concepts[, "Concept"])
-    enums <- sapply(entries, NROW)
-    pnums <- sapply(entries, function(e) length(unique(e$Package)))
+    enums <- vapply(entries, NROW, 0L)
+    pnums <- vapply(entries, function(e) length(unique(e$Package)), 0L)
     pos <- order(enums, pnums, decreasing = TRUE)
     data.frame(Concept = names(entries)[pos],
                Frequency = enums[pos],
@@ -860,8 +845,8 @@ function(db = hsearch_db())
     entries <- split(as.data.frame(db$Base[pos, ],
                                    stringsAsFactors = FALSE),
                      db$Keywords[, "Keyword"])
-    enums <- sapply(entries, NROW)
-    pnums <- sapply(entries, function(e) length(unique(e$Package)))
+    enums <- vapply(entries, NROW, 0L)
+    pnums <- vapply(entries, function(e) length(unique(e$Package)), 0L)
     standard <- .get_standard_Rd_keywords_with_descriptions()
     concepts <- standard$Descriptions[match(names(entries),
                                             standard$Keywords)]

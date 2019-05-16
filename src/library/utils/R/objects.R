@@ -89,11 +89,16 @@ function(generic.function, class, envir=parent.frame())
     S3MethodsStopList <- tools::nonS3methods(NULL)
     knownGenerics <- getKnownS3generics()
     sp <- search()
+    if(nzchar(lookup <-
+                  Sys.getenv("_R_S3_METHOD_LOOKUP_BASEENV_AFTER_GLOBALENV_"))) {
+        lookup <- tools:::config_val_to_logical(lookup)
+        if(lookup) sp <- sp[c(1L, length(sp))]
+    }
     methods.called <- identical(sys.call(-1)[[1]], as.symbol("methods"))
     an <- lapply(seq_along(sp), ls)
     lens <- lengths(an)
     an <- unlist(an, use.names=FALSE)
-    names(an) <- rep(sp, lens)
+    names(an) <- rep.int(sp, lens)
     an <- an[!duplicated(an)] # removed masked objects, *keep* names
     info <- data.frame(visible = rep.int(TRUE, length(an)),
 		       from = .rmpkg(names(an)),
@@ -191,9 +196,9 @@ function(generic.function, class, envir=parent.frame())
     else stop("must supply 'generic.function' or 'class'")
 
     info$generic <- if (!missing(generic.function))
-        rep(generic.function, nrow(info))
+        rep.int(generic.function, nrow(info))
     else sub(paste0("\\.", class, "$"), "", row.names(info))
-    info$isS4 <- rep(FALSE, nrow(info))
+    info$isS4 <- rep.int(FALSE, nrow(info))
 
     info <- info[sort.list(row.names(info)), , drop=FALSE]
     res <- row.names(info)
@@ -206,12 +211,22 @@ function(generic.function, class, envir=parent.frame())
 methods <-
 function(generic.function, class)
 {
-    if (!missing(generic.function) && !is.character(generic.function))
-        generic.function <- deparse(substitute(generic.function))
+    envir <- parent.frame()
+    if(!missing(generic.function) && !is.character(generic.function)) {
+        what <- substitute(generic.function)
+        if(is.function(generic.function) &&
+           is.call(what) &&
+           (deparse(what[[1L]])[1L] %in% c("::", ":::"))) {
+            generic.function <- as.character(what[[3L]])
+            envir <- asNamespace(as.character(what[[2L]]))
+        } else
+            generic.function <- deparse(what)
+    }
+
     if (!missing(class) && !is.character(class))
         class <- paste(deparse(substitute(class)))
 
-    s3 <- .S3methods(generic.function, class, parent.frame())
+    s3 <- .S3methods(generic.function, class, envir)
     s4 <- if (.isMethodsDispatchOn()) {
         methods::.S4methods(generic.function, class)
     } else NULL

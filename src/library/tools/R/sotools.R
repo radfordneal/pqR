@@ -1,7 +1,7 @@
 #  File src/library/tools/R/sotools.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 2011-2017 The R Core Team
+#  Copyright (C) 2011-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -17,14 +17,29 @@
 #  https://www.R-project.org/Licenses/
 
 if(.Platform$OS.type == "windows") {
+    read_symbols_from_dll_state <- new.env(hash = FALSE) # small
     read_symbols_from_dll <- function(f, rarch)
     {
-        ## reasonable to assume this on the path
-        DLL_nm <- "objdump.exe"
-        if(!nzchar(Sys.which(DLL_nm))) {
-            warning("this requires 'objdump.exe' to be on the PATH")
-            return()
-        }
+	DLL_nm <- read_symbols_from_dll_state$DLL_nm
+	if (is.null(DLL_nm)) {
+	    ## R CMD config will fail when 'sh' (from Rtools) is not on PATH
+	    DLL_nm <- tryCatch(
+	        Rcmd(c("config", "OBJDUMP"), stdout = TRUE, stderr = FALSE),
+		error = function(x) NULL,
+		warning = function(x) NULL)
+
+	    if (is.null(DLL_nm) || !nzchar(DLL_nm) ||
+	        !file.exists(paste0(DLL_nm, ".exe"))) {
+
+		## fall back to the old behavior: take OBJDUMP from PATH
+		DLL_nm <- "objdump.exe"
+		if(!nzchar(Sys.which(DLL_nm))) {
+		    warning("this requires 'objdump.exe' to be on the PATH")
+		    return()
+		}
+	    }
+	    read_symbols_from_dll_state$DLL_nm <- DLL_nm
+	}
         f <- file_path_as_absolute(f)
         s0 <- suppressWarnings(system2(DLL_nm, c("-x", shQuote(f)),
                                        stdout = TRUE, stderr = TRUE))
@@ -755,7 +770,7 @@ function(file = "symbols.rds")
     objects <- commandArgs(trailingOnly = TRUE)
     tables <- lapply(objects, read_symbols_from_object_file)
     names(tables) <- objects
-    saveRDS(tables, file = file)
+    saveRDS(tables, file = file, version = 2)
 }
 
 
@@ -973,21 +988,21 @@ function(nrdb, align = TRUE, include_declarations = FALSE)
             "*/",
             if(NROW(y <- nrdb$.C)) {
                  args <- sapply(y$n, function(n) if(n >= 0)
-                                paste(rep("void *", n), collapse=", ")
+                                paste(rep.int("void *", n), collapse=", ")
                                 else "/* FIXME */")
                 c("", "/* .C calls */",
                   paste0("extern void ", y$s, "(", args, ");"))
            },
             if(NROW(y <- nrdb$.Call)) {
                 args <- sapply(y$n, function(n) if(n >= 0)
-                               paste(rep("SEXP", n), collapse=", ")
+                               paste(rep.int("SEXP", n), collapse=", ")
                                else "/* FIXME */")
                c("", "/* .Call calls */",
                   paste0("extern SEXP ", y$s, "(", args, ");"))
             },
             if(NROW(y <- nrdb$.Fortran)) {
                  args <- sapply(y$n, function(n) if(n >= 0)
-                                paste(rep("void *", n), collapse=", ")
+                                paste(rep.int("void *", n), collapse=", ")
                                 else "/* FIXME */")
                 c("", "/* .Fortran calls */",
                   paste0("extern void F77_NAME(", y$s, ")(", args, ");"))

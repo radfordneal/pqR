@@ -1,7 +1,7 @@
 #  File src/library/graphics/R/boxplot.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2018 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ function(x, ..., range = 1.5, width = NULL, varwidth = FALSE,
 	 notch = FALSE, outline = TRUE, names, plot = TRUE,
 	 border = par("fg"), col = NULL, log = "",
 	 pars = list(boxwex = 0.8, staplewex = 0.5, outwex = 0.5),
+	 ann = !add,
 	 horizontal = FALSE, add = FALSE, at = NULL)
 {
     args <- list(x, ...)
@@ -69,6 +70,7 @@ function(x, ..., range = 1.5, width = NULL, varwidth = FALSE,
                 c(list(z, notch = notch, width = width, varwidth = varwidth,
                        log = log, border = border, pars = pars,
                        outline = outline, horizontal = horizontal, add = add,
+                       ann = ann,
                        at = at), args[namedargs]))
 	invisible(z)
     }
@@ -91,6 +93,9 @@ boxplot.matrix <- function(x, use.cols = TRUE, ...)
 
 boxplot.formula <-
     function(formula, data = NULL, ..., subset, na.action = NULL,
+             xlab = paste(names(mf)[-response], collapse = " : "),
+             ylab = names(mf)[ response],
+             add = FALSE, ann = !add,
 	     drop = FALSE, sep = ".", lex.order = FALSE)
 {
     if(missing(formula) || (length(formula) != 3L))
@@ -99,25 +104,38 @@ boxplot.formula <-
     if(is.matrix(eval(m$data, parent.frame())))
 	m$data <- as.data.frame(data)
     m$... <- m$drop <- m$sep <- m$lex.order <- NULL
+    m$xlab <- m$ylab  <- m$add <- m$ann <- NULL
     m$na.action <- na.action # force use of default for this method
     ## need stats:: for non-standard evaluation
-    m[[1L]] <- quote(stats::model.frame)
+    m[[1L]] <- quote(stats::model.frame.default)
     mf <- eval(m, parent.frame())
     response <- attr(attr(mf, "terms"), "response")
     boxplot(split(mf[[response]], mf[-response],
 		  drop = drop, sep = sep, lex.order = lex.order),
+	    xlab = xlab, ylab = ylab, add = add, ann = ann,
 	    ...)
 }
 
 bxp <- function(z, notch = FALSE, width = NULL, varwidth = FALSE,
                 outline = TRUE, notch.frac = 0.5, log = "", border = par("fg"),
 		pars = NULL, frame.plot = axes, horizontal = FALSE,
+                ann = TRUE,
 		add = FALSE, at = NULL, show.names = NULL, ...)
 {
-    pars <- c(list(...), pars)
-    ## this could give duplicates, so ensure first mentioned wins.
-    pars <- pars[unique(names(pars))]
-
+    pars <- as.list(pars)
+    if(...length()) { ## ensure '...' takes precedence over 'pars' and does not have duplicates
+	nmsA <- names(args <- list(...))
+	if(anyDuplicated(nmsA)) {
+	    iD <- duplicated(nmsA)
+	    warning(sprintf(ngettext(sum(iD),
+				     "Duplicated argument %s is disregarded",
+				     "Duplicated arguments %s are disregarded"),
+			    sub("^list\\((.*)\\)", "\\1", deparse(args[iD]))),
+		    domain = NA)
+	    nmsA <- names(args <- args[!iD])
+	}
+	pars[nmsA] <- args
+    }
     bplt <- function(x, wid, stats, out, conf, notch, xlog, i)
     {
 	## Draw single box plot
@@ -200,8 +218,8 @@ bxp <- function(z, notch = FALSE, width = NULL, varwidth = FALSE,
 	z$group <- integer()
     if(is.null(pars$ylim))
 	ylim <- range(z$stats[is.finite(z$stats)],
-		      if(outline) z$out  [is.finite(z$out)],
-		      if(notch) z$conf [is.finite(z$conf)])
+		      if(outline) z$out[is.finite(z$out)],
+		      if(notch)  z$conf[is.finite(z$conf)])
     else {
 	ylim <- pars$ylim
 	pars$ylim <- NULL
@@ -302,7 +320,7 @@ bxp <- function(z, notch = FALSE, width = NULL, varwidth = FALSE,
 				   at = at, labels = z$names), ax.pars))
 	do.call("Axis", c(list(x = z$stats, side = 2 - horizontal), ax.pars))
     }
-    do.call("title",
+    if(ann) do.call(title,
 	    pars[names(pars) %in% c("main", "cex.main", "col.main",
 				    "sub", "cex.sub", "col.sub",
 				    "xlab", "ylab", "cex.lab", "col.lab")])

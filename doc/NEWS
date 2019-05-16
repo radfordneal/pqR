@@ -1,5 +1,765 @@
 R News
 
+CHANGES IN R 3.6.0:
+
+  SIGNIFICANT USER-VISIBLE CHANGES:
+
+    * Serialization format version 3 becomes the default for
+      serialization and saving of the workspace (save(), serialize(),
+      saveRDS(), compiler::cmpfile()).  Serialized data in format 3
+      cannot be read by versions of R prior to version 3.5.0.
+      Serialization format version 2 is still supported and can be
+      selected by version = 2 in the save/serialization functions.  The
+      default can be changed back for the whole R session by setting
+      environment variables R_DEFAULT_SAVE_VERSION and
+      R_DEFAULT_SERIALIZE_VERSION to 2.  For maximal
+      back-compatibility, files vignette.rds and partial.rdb generated
+      by R CMD build are in serialization format version 2, and resave
+      by default produces files in serialization format version 2
+      (unless the original is already in format version 3).
+
+    * The default method for generating from a discrete uniform
+      distribution (used in sample(), for instance) has been changed.
+      This addresses the fact, pointed out by Ottoboni and Stark, that
+      the previous method made sample() noticeably non-uniform on large
+      populations.  See PR#17494 for a discussion.  The previous method
+      can be requested using RNGkind() or RNGversion() if necessary for
+      reproduction of old results.  Thanks to Duncan Murdoch for
+      contributing the patch and Gabe Becker for further assistance.
+
+      The output of RNGkind() has been changed to also return the
+      'kind' used by sample().
+
+  NEW FEATURES:
+
+    * Sys.setFileTime() has been vectorized so arguments path and time
+      of length greater than one are now supported.
+
+    * axis() gets new option gap.axis = NA for specifying a
+      multiplication factor for the minimal "gap" (distance) between
+      axis labels drawn.  Its default is 1 for labels _parallel_ to the
+      axis, and 0.25 for perpendicular ones.
+
+      Perpendicular labels no longer overlap, fixing bug PR#17384.
+
+    * The default method of plot() gains new arguments xgap.axis = NA
+      and ygap.axis = NA to be passed to the x- and y- axis(..,
+      gap.axis=*) calls.
+
+    * removeSource() now works not only for functions but also for some
+      language objects.
+
+    * as.call(), rep.int(), rep_len() and nchar() dispatch internally.
+
+    * is(object, class2) looks for class2 in the calling namespace
+      after looking in the namespace of class(object).
+
+    * extendrange(.., f) with a length-2 f now extends separately to
+      the left and the right.
+
+    * lengths() dispatches internally to S4 methods.
+
+    * download.file() on Windows now uses URLdecode() to determine the
+      file extension, and uses binary transfer (mode = "wb") also for
+      file extension .rds.
+
+      The help page for download.file() now contains the same
+      information on all platforms.
+
+    * Setting C locale for collation _via_ environment variables LC_ALL
+      and LC_COLLATE and _via_ a call to Sys.setlocale() now takes
+      precedence over environment variable R_ICU_LOCALE.
+
+    * There is a new function, nullfile(), to give the file name of the
+      null system device (e.g., /dev/null) on the current platform.
+
+    * There are two new options, keep.parse.data and
+      keep.parse.data.pkgs, which control whether parse data are
+      included into sources when keep.source or keep.source.pkgs is
+      TRUE.  By default, keep.parse.data.pkgs is now FALSE, which
+      changes previous behavior and significantly reduces space and
+      time overhead when sources are kept when installing packages.
+
+    * In rapply(x, ..), x can also be "list-like" and of length >=
+      2^{31}.
+
+    * trimws() gets new optional whitespace argument, allowing more
+      extensive definitions of "space", such as including Unicode
+      spaces (as wished in PR#17431).
+
+    * weighted.mean() no longer coerces the weights to a double/numeric
+      vector, since sum() now handles integer overflow. This makes
+      weighted.mean() more polymorphic and endomorphic, but be aware
+      that the results are no longer guaranteed to be a vector of type
+      double.
+
+    * When loading namespaces, S3 method registrations which overwrite
+      previous registrations are now noted by default (using
+      packageStartupMessage()).
+
+    * compiler::cmpfile() gains a version argument, for use when the
+      output file should be saved in serialization format 2.
+
+    * The axis labeling in the default method of pairs() may now be
+      toggled by new options horOdd and verOdd.
+
+    * (Not Windows nor macOS.) Package tcltk now supports an
+      environment variable R_DONT_USE_TK which if set disables Tk
+      initialization.  This is intended for use to circumvent errors in
+      loading the package, e.g. with recent Linux running under an
+      address sanitizer.
+
+    * The numeric method of all.equal() gets optional arguments countEQ
+      and formatFUN.  If countEQ is true, the mean error is more
+      sensible when many entries are *eq*ual.
+
+    * outer(x,y, FUN = "*") is more efficient using tcrossprod(u,v)
+      instead of u %*% t(v).
+
+    * vcov(<mlm>) is more efficient via new optional arguments in
+      summary.mlm().
+
+    * The default method of summary() gets an option to choose the
+      _kind_ of quantile()s to use; wish of PR#17438.
+
+    * Fitting multiple linear models _via_ lm() does work with _matrix_
+      offsets, as suggested in PR#17407.
+
+    * The new functions mem.maxVSize() and mem.maxMSize() allow the
+      maximal size of the vector heap and the maximal number of nodes
+      allowed in the current R process to be queried and set.
+
+    * news() gains support for NEWS.md files.
+
+    * An effort has been started to have our reference manuals, i.e.,
+      all help pages. show platform-independent information (rather
+      than Windows or Unix-alike specifics visible only on that
+      platform).  Consequently, the Windows version of X11() / x11()
+      got identical formal arguments to the Unix one.
+
+    * sessionInfo()$running has been factored out in a new variable
+      osVersion.
+
+    * slice.index() now also works for multi-dimensional margins.
+
+    * untar() used with an external tar command assumes this supports
+      decompression including xz and automagically detecting the
+      compression type.  This has been true of all mainstream
+      implementations since 2009 (for GNU tar, since version 1.22):
+      older implementations are still supported _via_ the new argument
+      support_old_tars whose default is controlled by environment
+      variable R_SUPPORT_OLD_TARS.  (It looks like NetBSD and OpenBSD
+      have 'older' tar commands for this purpose.)
+
+    * The new function asplit() allow splitting an array or matrix by
+      its margins.
+
+    * New functions errorCondition() and warningCondition() provide a
+      convenient way to create structured error and warning objects.
+
+      .Deprecated() now signals a warning of class "deprecatedWarning",
+      and .Defunct() now signals an error of class "defunctError".
+
+    * Many 'package not found' errors are now signaled as errors of
+      class "packageNotFoundError".
+
+    * As an experimental feature, when loadNamespace() fails because
+      the requested package is not available the error is initially
+      signaled with a retry_loadNamespace restart available.  This
+      allows a calling handler to try to install the package and
+      continue.
+
+    * S3method() directives in NAMESPACE can now also be used to
+      perform _delayed_ S3 method registration.
+
+    * Experimentally, setting environment variable
+      _R_CHECK_LENGTH_1_LOGIC2_ will lead to warnings (or errors if the
+      variable is set to a 'true' value) when && or || encounter and
+      use arguments of length more than one.
+
+    * Added "lines" and "chars" coordinate systems to grconvertX() and
+      grconvertY().
+
+    * getOption() is more efficient notably for the rare case when
+      called with two arguments, from several contributors in PR#17394.
+
+    * In .col(dim) and .row(dim), dim now may also be an integer-valued
+      "double".
+
+    * sQuote() and dQuote() get an explicit q argument with obvious
+      default instead of using getOption("fancyQuotes") implicitly and
+      unconditionally.
+
+    * unzip() can list archives with comments and with spaces in file
+      names even using an external unzip command.
+
+    * Command line completion has a new setting rc.settings(dots =
+      FALSE) to remove ... from the list of possible function
+      arguments.
+
+    * library() no longer checks packages with compiled code match
+      R.version$platform.  loadNamespace() never has, and increasingly
+      the 'canonical name' does not reflect the important
+      characteristics of compiled code.
+
+    * The primitive functions drop() and unclass() now avoid
+      duplicating their data for atomic vectors that are large enough,
+      by returning ALTREP wrapper objects with adjusted attributes.
+      R-level assignments to change attributes will also use wrapper
+      objects to avoid duplicating data for larger atomic vectors. R
+      functions like structure() and unname() will therefore not
+      duplicate data in these settings.  Generic vectors as produced by
+      list() are not yet covered by this optimization but may be in due
+      course.
+
+    * In formals(), envir becomes an optional argument instead of being
+      hardwired.
+
+    * Instead of signalling an error for an invalid S4 object x, str(x)
+      now gives a warning and subsequently still shows most parts of x,
+      e.g., when slots are missing.
+
+    * gamma(x) and lgamma(x) no longer warn when correctly returning
+      Inf or underflowing to zero.  This helps maximum likelihood and
+      similar computations.
+
+    * convertColor() is now vectorized, so a lot faster for converting
+      many colours at once.  The new argument vectorized to
+      colorConverter() ensures that non-vectorized colour converters
+      still work.  (Thanks to Brodie Gaslam.)
+
+    * download.file() and url() get new argument headers for custom
+      HTTP headers, e.g., allowing to perform basic http
+      authentication, thanks to a patch contributed by G'abor Cs'ardi.
+
+    * File-based connection functions file(), gzfile(), bzfile() and
+      xzfile() now signal an error when used on a directory.
+
+    * For approx(), splinefun() _etc_, a new setting ties =
+      c("ordered", <fun>) allows skipping the sorting and still treat
+      ties.
+
+    * format(x) gives a more user friendly error message in the case
+      where no method is defined.  A minimal method is provided in
+      format.default(x) when isS4(x) is true.
+
+    * which(x) now also works when x is a long vector, thanks to
+      Suharto Anggono's PR#17201.  *NB*: this may return a double
+      result, breaking the previous guarantee of an integer result.
+
+    * seq.default() is more careful to return an integer (as opposed to
+      double) result when its arguments are large and/or classed
+      objects; see comment #9 of Suharto Anggono's PR#17497.
+
+    * The plot() method for lm and glm fits, plot.lm(), gains a new
+      option iter.smooth with a default of 0 for binomial fits, no
+      longer down-weighting when smoothing the residuals.
+
+    * zip() passes its list of files _via_ standard input to the
+      external command when too long for the command line (on some
+      platforms).
+
+    * data() gains an overwrite argument.
+
+    * t.test() now also returns the standard error (in list component
+      stderr).
+
+    * model.matrix(*, contrasts.arg = CC) now warns about invalid
+      contrasts.args.
+
+    * Performance of substr() and substring() has been improved.
+
+    * stopifnot() has been simplified thanks to Suharto Anggono's
+      proposals to become considerably faster for cheap expressions.
+
+    * The default 'user agent' has been changed when accessing http://
+      and https:// sites using libcurl.  (A site was found which caused
+      libcurl to infinite-loop with the previous default.)
+
+    * sessionInfo() now also contains RNGkind() and prints it when it
+      differs from the default; based on a proposal and patch by Gabe
+      Becker in PR#17535.  Also, RNGversion(getRversion()) works
+      directly.
+
+    * library() and require() now allow more control over handling
+      search path conflicts when packages are attached. The policy is
+      controlled by the new conflicts.policy option.
+
+    * barplot() gets a formula method, thanks to a patch proposal by
+      Arni Magnusson in PR#17521.
+
+    * pmax() and pmin(x) now also work for long vectors, thanks to
+      Suharto Anggono's PR#17533.
+
+    * bxp() now warns when omitting duplicated arguments.
+
+    * New hcl.colors() function to provide wide range of HCL-based
+      colour palettes with much better perceptual properties than the
+      existing RGB/HSV-based palettes like rainbow().
+
+      Also a new hcl.pals() function to list available palette names
+      for hcl.colors().
+
+      Contributed by Achim Zeileis.
+
+    * The default colours for image() and filled.contour() are now
+      based on hcl.colors().
+
+    * The palette-generating functions rainbow(), gray.colors(), etc.
+      get a new rev argument to facilitate reversing the order of
+      colors.
+
+    * New str2lang() and str2expression() as streamlined versions of
+      parse(text=., keep.source=FALSE) allow to abstract typical call
+      constructions, e.g., in formula manipulations.  (Somewhat
+      experimental)
+
+    * Add update_PACKAGES() for incrementally updating a package
+      repository index, instead of rebuilding the index from scratch.
+      Thanks to Gabe Becker in PR#17544 for the patch, based on part of
+      his switchr package.
+
+  INSTALLATION on a UNIX-ALIKE:
+
+    * The options selected for the C++ compiler default to the C++11
+      standard if supported, otherwise to the C++98 standard.
+
+    * Visibility macros such as C_VISIBILITY can now be user-set
+      (including to empty), e.g. in config.site.
+
+    * Macro FCLIBS, which has sometimes been needed on Solaris, has
+      been renamed to FCLIBS_XTRA.
+
+    * Macro F77 is always set to the value of FC, so the latter should
+      be set to user-select the Fortran compiler for both fixed-form
+      and free-form Fortran.  In particular, gfortran is now the first
+      choice for F77, not f95.
+
+      Macros FFLAGS and FCFLAGS remain distinct to allow for a compiler
+      which needs a flag to select free- or fixed-form Fortran (most
+      use the source-file extension to choose: .f is fixed-form and
+      .f90 and .f95 are free-form).
+
+      If only one of them is set, its value is used for both.
+
+    * The special-casing of CFLAGS, CXXFLAGS and FFLAGS for Intel
+      compilers on Linux has been removed: we do not have recent
+      experience but the generic defaults now chosen are the same as
+      those previously special-cased for x86_64.
+
+      If necessary, override the defaults on the configure command line
+      or in file config.site.
+
+    * Long-untested configure support for HP-UX and very old versions
+      of Linux has been removed.
+
+    * configure --with-blas (without specifying a value) includes
+      OpenBLAS in its search (before ATLAS and a generic BLAS).  This
+      follows recent versions of the ax_blas autoconf macro.
+
+    * The configure macro MAKEINFO has been updated to TEXI2ANY.
+
+    * Support for make install-strip has been enhanced.
+
+  PACKAGE INSTALLATION:
+
+    * Source package installation is by default 'staged': the package
+      is installed into a temporary location under the final library
+      directory and moved into place once the installation is complete.
+      The benefit is that partially-installed packages are hidden from
+      other R sessions.
+
+      The overall default is set by environment variable
+      R_INSTALL_STAGED.  R CMD INSTALL has new options --staged-install
+      and --no-staged-install, and packages can use the StagedInstall
+      field in their DESCRIPTION file to opt out.  (That opt-out is a
+      temporary measure which may be withdrawn in future.)
+
+      Staged installation requires either --pkglock or --lock, one of
+      which is used by default.
+
+    * The interpretation of source code with extension .f is changing.
+      Previously this denoted FORTRAN 77 code, but current compilers no
+      longer have a FORTRAN 77 mode and interpret it as 'fixed-form'
+      Fortran 90 (or later where supported) code.  Extensions .f90 and
+      .f95 continue to indicate 'free-form' Fortran code.
+
+      Legal FORTRAN 77 code is also legal fixed-form Fortran 9x;
+      however this change legitimizes the use of later features, in
+      particular to replace features marked 'obsolescent' in Fortran 90
+      and 'deleted' in Fortran 2018 which gfortran 8.x and later warn
+      about.
+
+    * Packages containing files in the src directory with extensions
+      .f90 or .f95 are now linked using the C or C++ compiler rather
+      than the Fortran 9x compiler.  This is consistent with fixed-form
+      Fortran code and allows mixing of C++ and free-form Fortran on
+      most platforms.
+
+      Consequentially, a package which includes free-form Fortran 9x
+      code which uses OpenMP should include SHLIB_OPENMP_CFLAGS (or the
+      CXXFLAGS version if they also include C++ code) in PKG_LIBS
+      rather than SHLIB_OPENMP_FCFLAGS - fortunately on almost all
+      current platforms they are the same flag.
+
+    * Macro PKG_FFLAGS will be used for the compilation of both
+      fixed-form and free-form Fortran code unless PKG_FCFLAGS is also
+      set (in src/Makevars or src/Makevars.win).
+
+    * The make macro F_VISIBILITY is now preferred for both fixed-form
+      and free-form Fortran, for use in src/Makevars and similar.
+
+    * R CMD INSTALL gains a new option --strip which (where supported)
+      strips installed shared object(s): this can also be achieved by
+      setting the environment variable _R_SHLIB_STRIP_ to a true value.
+
+      The new option --strip-lib attempts stripping of static and
+      shared libraries installed under lib.
+
+      These are most useful on platforms using GNU binutils (such as
+      Linux) and compiling with -g flags.
+
+    * There is more support for installing UTF-8-encoded packages in a
+      strict Latin-1 locale (and probably for other Latin locales):
+      non-ASCII comments in R code (and NAMESPACE files) are worked
+      around better.
+
+  UTILITIES:
+
+    * R CMD check now optionally checks makefiles for correct and
+      portable use of the SHLIB_OPENMP_*FLAGS macros.
+
+    * R CMD check now evaluates \Sexpr{} expressions (including those
+      in macros) before checking the contents of Rd files and so
+      detects issues both in evaluating the expressions and in the
+      expanded contents.
+
+    * R CMD check now lists missing packages separated by commas and
+      with regular quotes such as to be useful as argument in calling
+      install.packages(c(..)); from a suggestion by Marcel Ramos.
+
+    * tools::Rd2latex() now uses UTF-8 as its default output encoding.
+
+    * R CMD check now checks line endings of files with extension .hpp
+      and those under inst/include.  The check now includes that a
+      non-empty file is terminated with a newline.
+
+      R CMD build will correct line endings in such files.
+
+    * R CMD check now tries re-building all vignettes rather than
+      stopping at the first error: whilst doing so it adds 'bookmarks'
+      to the log.  By default (see the 'R Internals' manual) it
+      re-builds each vignette in a separate process.
+
+      It now checks for duplicated vignette titles (also known as
+      'index entries'): they are used as hyperlinks on CRAN package
+      pages and so do need to be unique.
+
+    * R CMD check has more comprehensive checks on the data directory
+      and the functioning of data() in a package.
+
+    * R CMD check now checks autoconf-generated configure files have
+      their corresponding source files, including optionally attempting
+      to regenerate them on platforms with autoreconf.
+
+    * R CMD build has a new option --compression to select the
+      compression used for the tarball.
+
+    * R CMD build now removes src/*.mod files on all platforms.
+
+  C-LEVEL FACILITIES:
+
+    * New pointer protection C functions R_PreserveInMSet and
+      R_ReleaseFromMSet have been introduced to replace UNPROTECT_PTR,
+      which is not safe to mix with UNPROTECT (and with
+      PROTECT_WITH_INDEX). Intended for use in parsers only.
+
+    * NAMEDMAX has been raised to 7 to allow further protection of
+      intermediate results from (usually ill-advised) assignments in
+      arguments to BUILTIN functions. Properly written package code
+      should not be affected.
+
+    * R_unif_index is now considered to be part of the C API.
+
+    * R_GetCurrentEnv() allows C code to retrieve the current
+      environment.
+
+  DEPRECATED AND DEFUNCT:
+
+    * Argument compressed of untar() is deprecated - it is only used
+      for external tar commands which increasingly for extraction
+      auto-detect compression and ignore their zjJ flags.
+
+    * var(f) and hence sd(f) now give an error for factor arguments;
+      they gave a deprecation warning since R 3.2.3, PR#16564.
+
+    * Package tools' vignetteDepends() has been deprecated (it called a
+      function deprecated since Feb 2016), being partly replaced by
+      newly exported vignetteInfo().
+
+    * The f77_f2c script has been removed: it no longer sufficed to
+      compile the .f files in R.
+
+    * The deprecated legacy support of make macros such as CXX1X has
+      been removed: use the CXX11 forms instead.
+
+    * Make macro F77_VISIBILITY is deprecated in favour of
+      F_VISIBILITY.
+
+    * Make macros F77, FCPIFCPLAGS and SHLIB_OPENMP_FCFLAGS are
+      deprecated in favour of FC, FPICFLAGS and SHLIB_OPENMP_FFLAGS
+      respectively.
+
+    * $.data.frame had become an expensive version of the default
+      method, so has been removed. (Thanks to Radford Neal for picking
+      this up and to Duncan Murdoch for providing a patch.)
+
+  BUG FIXES:
+
+    * replayPlot(r) now also works in the same R session when r has
+      been "reproduced" from serialization, typically after saving to
+      and reading from an RDS file.
+
+    * substr() and substring() now signal an error when the input is
+      invalid UTF-8.
+
+    * file.copy() now works also when its argument to is of length
+      greater than one.
+
+    * mantelhaen.test() no longer suffers from integer overflow in
+      largish cases, thanks to Ben Bolker's PR#17383.
+
+    * Calling setGeneric("foo") in a package no longer fails when the
+      enclosing environment of the implicit generic foo() is
+      .GlobalEnv.
+
+    * untar(file("<some>.tar.gz"), *) now gives a better error message,
+      suggesting to use gzfile() instead.
+
+    * Method dispatch uses more relevant environments when looking up
+      class definitions.
+
+    * The documentation for identify() incorrectly claimed that the
+      indices of identified points were returned in the order that the
+      points were selected.  identify() now has a new argument order to
+      allow the return value to include the order in which points were
+      identified; the documentation has been updated.  Reported by
+      Richard Rowe and Samuel Granjeaud.
+
+    * order(...., decreasing=c(TRUE, FALSE)) could fail in some cases.
+      Reported from StackOverflow via Karl Nordstr"om.
+
+    * User macros in Rd files now accept empty and multi-line
+      arguments.
+
+    * Changes in print.*(), thanks to Lionel Henry's patches in
+      PR#17398:
+
+        * Printing lists, pairlists or attributes containing calls with
+          S3 class no longer evaluate those.
+
+        * Printing S4 objects within lists and pairlists dispatches
+          with show() rather than print(), as with auto-printing.
+
+        * The indexing tags (names or [[<n>]]) of recursive data
+          structures are now printed correctly in complex cases.
+
+        * Arguments supplied to print() are now properly forwarded to
+          methods when printing lists, pairlists or attributes
+          containing S3 objects.
+
+        * The print parameters are now preserved when printing S3
+          objects or deparsing symbols and calls.  Previously, printing
+          lists containing S3 objects or expressions would reset these
+          parameters.
+
+        * Printing lists, pairlists or attributes containing functions
+          now uses srcref attributes if present.
+
+    * Calling install.packages() with a length zero pkgs argument now
+      is a no-op (PR#17422).
+
+    * unlist(x) now returns a correct factor when x is a nested list
+      with factor leaves, fixing PR#12572 and PR#17419.
+
+    * The documentation help(family) gives more details about the aic
+      component, thanks to Ben Bolker's prompting.
+
+    * The documentation for attributes and `attributes<-` now gives x
+      as name of the first and main argument which the implementation
+      has been requiring, fixing PR#17434.  For consistency, the first
+      argument name is also changed from obj to x for
+      `mostattributes<-`.
+
+    * strwidth() now uses par("font") as default font face (PR#17352).
+
+    * plot(<table>, log="x") no longer warns about log.
+
+    * The print() method for "htest" objects now formats the test
+      statistic and parameter directly and hence no longer rounds to
+      units _before_ the decimal point.  Consequently, printing of
+      t.test() results with a small number of digits now shows
+      non-large df's to the full precision (PR#17444).
+
+    * kruskal.test() and fligner.test() no longer erroneously insist on
+      numeric g group arguments (PR#16719).
+
+    * Printing a news db via the browser now does a much better job
+      (PR#17433).
+
+    * print.aov() missed column names in the multivariate case due to
+      misspelling (reported by Chris Andrews).
+
+    * axis() now creates valid at locations also for small subnormal
+      number ranges in log scale plots.
+
+    * format.POSIXlt() now also recycles the zone and gmtoff list
+      components to full length when needed, and its internal C code
+      detects have_zone in more cases.  In some cases, this changes its
+      output to become compatible with format.POSIXct().
+
+    * On Windows, detectCores() in package parallel now detects
+      processors in all processor groups, not just the group R is
+      running in (impacts particularly systems with more than 64
+      logical processors).  Reported by Arunkumar Srinivasan.
+
+    * On Windows, socketSelect() would hang with more than 64 sockets,
+      and hence parallel::clusterApplyLB() would hang with more than 64
+      workers.  Reported by Arunkumar Srinivasan.
+
+    * as(1L, "double") now does coerce (PR#17457).
+
+    * lm.influence(), influence.measures(), rstudent() etc now work
+      (more) correctly for multivariate models ("mlm"), thanks to
+      (anonymous) stackoverflow remarks.
+
+    * sample.int(2.9, *, replace=TRUE) again behaves as documented and
+      as in R < 3.0.0, namely identically to sample.int(2, ..).
+
+    * Fixes to convertColor() for chromatic adaptation; thanks to
+      Brodie Gaslam PR#17473.
+
+    * Using \Sexpr[stage=install]{..} to create an Rd section no longer
+      gives a warning in R CMD check; problem originally posted by
+      G'abor Cs'ardi, then reported as PR#17479 with a partial patch by
+      Duncan Murdoch.
+
+    * Parse data now include a special node for equal assignment.
+
+    * split.default() no longer relies on [[<-(), so it behaves as
+      expected when splitting an object by a factor with the empty
+      string as one of its levels.  Thanks to Brad Friedman for the
+      report.
+
+    * Line numbers in messages about .Rd files are now more reliable,
+      thanks to a patch from Duncan Murdoch.
+
+    * In the numeric method for all.equal(), a numeric scale argument
+      is now checked to be positive and allowed to be of length > 1.
+      (The latter worked originally and with a warning in recent
+      years).
+
+    * Deferred string conversions now record the OutDec option setting
+      when not equal to the default.  Reported by Michael Sannella.
+
+    * When y is numeric and f a factor, plot(y ~ f) nicely uses "y" and
+      "f" as y- and x-labels.  The more direct boxplot(y ~ f) now does
+      too.  The new argument ann = FALSE may be used to suppress these.
+
+    * Subassignment to no/empty rows of a data frame is more consistent
+      and typically a no-op in all cases instead of sometimes an error;
+      part of Emil Bode's PR#17483.
+
+    * Calls like formatC(*, zero.print = "< 0.001") no longer give an
+      error and are further improved via new optional argument
+      replace.zero.  Reported by David Hugh-Jones.
+
+    * methods::formalArgs("<fn>") now finds the same function as
+      formals("<fn>"), fixing Emil Bode's PR#17499.
+
+    * The methods package better handles duplicated class names across
+      packages.
+
+    * The default method of seq() now avoids integer overflow, thanks
+      to the report and "cumsum" patch of Suharto Anggono's PR#17497.
+
+    * sub() no longer loses encodings for non-ASCII replacements
+      (PR#17509).
+
+    * Fix for rotated raster image on X11 device.  (Partial fix for
+      PR#17148; thanks to Mikko Korpela).
+
+    * formula(model.frame(frml, ..)) now returns frml in all cases,
+      thanks to Bill Dunlap.  The previous behavior is available as
+      DF2formula(<model.frame>).
+
+    * ar.ols() also returns scalar var.pred in univariate case
+      (PR#17517).
+
+    * normalizePath() now treats NA path as non-existent and normalizes
+      it to NA.  file.access() treats NA file name as non-existent.
+      file.edit() and connection functions such as file() now treat NA
+      file names as errors.
+
+    * The internal regularize.values() auxiliary of approx(),
+      splinefun() etc now warns again when there are ties and the
+      caller did not specify ties.  Further, it no longer duplicates x
+      and y unnecessarily when x is already sorted (PR#17515).
+
+    * strtoi("", base) now gives NA on all platforms, following its
+      documentation.  Reported by Michael Chirico.
+
+    * In the definition of an S4 class, prototype elements are checked
+      against the slots of the class, with giving a prototype for an
+      undefined slot now being an error.  (Reported by Bill Dunlap.)
+
+    * From setClassUnion(), if environment variable
+      _R_METHODS_SHOW_CHECKSUBCLASSES is set to true, the internal
+      .checkSubclasses() utility prints debugging info to see where it
+      is used.
+
+    * max.col(m) with an m of zero columns now returns integer NA
+      (instead of 1).
+
+    * axTicks() no longer returns small "almost zero" numbers (in
+      exponential format) instead of zero, fixing Ilario Gelmetti's
+      PR#17534.
+
+    * isSymmetric(matrix(0, dimnames=list("A","b"))) is FALSE again, as
+      always documented.
+
+    * The cairo_pdf graphics device (and other Cairo-based devices) now
+      clip correctly to the right and bottom border.
+
+      There was an off-by-one-pixel bug, reported by Lee Kelvin.
+
+    * as.roman(3) <= 2:4 and all other comparisons now work, as do
+      group "Summary" function calls such as max(as.roman(sample(20)))
+      and as.roman(NA).  (Partly reported by Bill Dunlap in PR#17542.)
+
+    * reformulate("x", response = "sin(y)") no longer produces extra
+      back quotes, PR#17359, and gains new optional argument env.
+
+    * When reading console input from stdin with re-encoding (R
+      --encoding=enc < input) the code on a Unix-alike now ensures that
+      each converted input line is terminated with a newline even if
+      re-encoding fails.
+
+    * as.matrix.data.frame() now produces better strings from logicals,
+      thanks to PR#17548 from Gabe Becker.
+
+    * The S4 generic signature of rowSums(), rowMeans(), colSums() and
+      colMeans() is restricted to "x".
+
+    * match(x, tab) now works for long _character_ vectors x, thanks to
+      PR#17552 by Andreas Kersting.
+
+    * Class unions are unloaded when their namespace is unloaded
+      (PR#17531, adapted from a patch by Brodie Gaslam).
+
+    * selectMethod() is robust to ANY-truncation of method signatures
+      (thanks to Herve Pages for the report).
+
 CHANGES IN R 3.5.3:
 
   INSTALLATION on a UNIX-ALIKE:
@@ -476,7 +1236,7 @@ CHANGES IN R 3.5.0:
       maximum of 16GB and the available physical memory. This is to
       avoid having the R process killed when macOS over-commits memory.
 
-    * sum(x) and sum(x1,x2,..,x<N>) with many or long logical or
+    * sum(x) and sum(x1, x2, .., x<N>) with many or long logical or
       integer vectors no longer overflows (and returns NA with a
       warning), but returns double numbers in such cases.
 
@@ -2313,7 +3073,7 @@ CHANGES IN R 3.3.0:
       R_INTERACTIVE_DEVICE.
 
     * On Unix-like platforms which support the getline C library
-      function, system(*,intern = TRUE) no longer truncates (output)
+      function, system(*, intern = TRUE) no longer truncates (output)
       lines longer than 8192 characters, thanks to Karl Millar.
       (PR#16544)
 
@@ -2370,7 +3130,7 @@ CHANGES IN R 3.3.0:
       by Winston Chang.
 
     * New string utilities startsWith(x, prefix) and endsWith(x,
-      suffix).  Also provide speedups for some grepl("^...",*) uses
+      suffix).  Also provide speedups for some grepl("^...", *) uses
       (related to proposals in PR#16490).
 
     * Reference class finalizers run at exit, as well as on garbage
@@ -2680,7 +3440,7 @@ CHANGES IN R 3.2.5:
   BUG FIXES:
 
     * format.POSIXlt() behaved incorrectly in R 3.2.4.  E.g. the output
-      of format(as.POSIXlt(paste0(1940:2000,"-01-01"), tz = "CET"),
+      of format(as.POSIXlt(paste0(1940:2000, "-01-01"), tz = "CET"),
       usetz = TRUE) ended in two "CEST" time formats.
 
 CHANGES IN R 3.2.4:

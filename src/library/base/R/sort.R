@@ -182,18 +182,16 @@ order <- function(..., na.last = TRUE, decreasing = FALSE,
 
     ## fastpass, take advantage of ALTREP metadata
     decreasing <- as.logical(decreasing)
-    if (length(z) == 1L && is.numeric(z[[1L]]) && !is.object(z[[1]]) &&
-       length(z[[1L]]) > 0) {
-        x <- z[[1L]]
+    if (length(z) == 1L && is.numeric(x <- z[[1L]]) && !is.object(x) && length(x) > 0) {
         if (.Internal(sorted_fpass(x, decreasing, na.last)))
-            return(seq(along = x))
+            return(seq_along(x))
     }
 
     method <- match.arg(method)
     if(any(vapply(z, is.object, logical(1L)))) {
         z <- lapply(z, function(x) if(is.object(x)) as.vector(xtfrm(x)) else x)
-        return(do.call("order", c(z, na.last = na.last, decreasing = decreasing,
-                                  method = method)))
+        return(do.call("order", c(z, list(na.last = na.last, decreasing = decreasing,
+                                  method = method))))
     }
 
     if (method == "auto") {
@@ -220,7 +218,7 @@ order <- function(..., na.last = TRUE, decreasing = FALSE,
     ok <- if(is.matrix(na)) rowSums(na) == 0L else !any(na)
     if(all(!ok)) return(integer())
     z[[1L]][!ok] <- NA
-    ans <- do.call("order", c(z, decreasing = decreasing))
+    ans <- do.call("order", c(z, list(decreasing = decreasing)))
     ans[ok[ans]]
 }
 
@@ -229,10 +227,9 @@ sort.list <- function(x, partial = NULL, na.last = TRUE, decreasing = FALSE,
 {
     ## fastpass, take advantage of ALTREP metadata
     decreasing <- as.logical(decreasing)
-    if(is.null(partial) && is.numeric(x) && !is.object(x) &&
-       length(x) > 0){
+    if(is.null(partial) && is.numeric(x) && !is.object(x) && length(x) > 0) {
         if (.Internal(sorted_fpass(x, decreasing, na.last)))
-            return(seq(along = x))
+            return(seq_along(x))
     }
 
     method <- match.arg(method)
@@ -268,8 +265,11 @@ xtfrm.default <- function(x)
     if(is.numeric(x)) unclass(x) else as.vector(rank(x, ties.method = "min",
                                                      na.last = "keep"))
 xtfrm.factor <- function(x) as.integer(x) # primitive, so needs a wrapper
-xtfrm.Surv <- function(x)
-    order(if(ncol(x) == 2L) order(x[,1L], x[,2L]) else order(x[,1L], x[,2L], x[,3L])) # needed by 'party'
+
+## ## Moved to package survival
+## xtfrm.Surv <- function(x)
+##     order(if(ncol(x) == 2L) order(x[,1L], x[,2L]) else order(x[,1L], x[,2L], x[,3L])) # needed by 'party'
+
 xtfrm.AsIs <- function(x)
 {
     if(length(cl <- class(x)) > 1) oldClass(x) <- cl[-1L]

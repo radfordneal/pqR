@@ -150,6 +150,7 @@ stopifnot(
     identical(r1,r2)
 )
 ## partly failed in R 3.4.0 alpha
+rm(CO) # as its deparse() depends on if utils was installed w/ keep.source.pkgs=TRUE
 
 source(file.path(Sys.getenv("SRCDIR"), "eval-fns.R"), echo = TRUE)
                                         #---------
@@ -157,7 +158,15 @@ source(file.path(Sys.getenv("SRCDIR"), "eval-fns.R"), echo = TRUE)
 library(stats)
 ## some more "critical" cases
 nmdExp <- expression(e1 = sin(pi), e2 = cos(-pi))
-xn <- setNames(pi^(1:3), paste0("pi^",1:3))
+xn <- setNames(3.5^(1:3), paste0("3½^",1:3)) # 3.5: so have 'show'
+## "" in names :
+x0 <- xn; names(x0)[2] <- ""
+en0  <- setNames(0L, "")
+en12 <- setNames(1:2, c("",""))
+en24 <- setNames(2:4, c("two","","vier"))
+enx0  <- `storage.mode<-`(en0, "double")
+enx12 <- `storage.mode<-`(en12,"double")
+enx24 <- `storage.mode<-`(en24,"double")
 L1 <- list(c(A="Txt"))
 L2 <- list(el = c(A=2.5))
 ## "m:n" named integers and _inside list_
@@ -179,6 +188,8 @@ fm <- y ~ f(x)
 lf <- list(ff = fm, osf = ~ sin(x))
 stopifnot(identical(deparse(lf, control="all"), # no longer quote()s
 		    deparse(lf)))
+abc <- setNames(letters[1:4], c("one", "recursive", "use.names", "four"))
+r13 <- i13 <- setNames(1:3, names(abc)[3:1]); mode(r13) <- "double"
 if(getRversion() >= "3.5.0") {
     ## Creating a collection of S4 objects, ensuring deparse <-> parse are inverses
 library(methods)
@@ -212,17 +223,8 @@ stopifnot(identical(mf, eval(parse(text=deparse(mf)))))
 }# S4 deparse()ing only since R 3.5.0
 
 ## Action!  Check deparse <--> parse  consistency for *all* objects:
-for(nm in ls(env=.GlobalEnv)) {
-    cat(nm,": ", sep="")
-    ## if(!any(nm == "mf")) ## 'mf' [bug in deparse(mf, control="all") now fixed]
-        check_EPD(obj = (x <- .GlobalEnv[[nm]]))
-    if(is.function(x) && !inherits(x, "classGeneratorFunction")) {
-        ## FIXME? classGeneratorFunction, e.g., mForm don't "work" yet
-        cat("checking body(.):\n"   ); check_EPD(   body(x))
-        cat("checking formals(.):\n"); check_EPD(formals(x))
-    }
-    cat("--=--=--=--=--\n")
-}
+runEPD_checks()
+
 summary(warnings())
 ## "dput    may be incomplete"
 ## "deparse may be incomplete"

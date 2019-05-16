@@ -1,10 +1,12 @@
 #### Regression Tests that need "much" memory
 #### (and are slow even with enough GBytes of mem)
 
+print(si <- sessionInfo(), locale=FALSE)
+Sys.info()
 ## Run (currently _only_)  when inside tests/  by
 '
-make test-Large
-'
+time   make test-large
+' # giving ~ 35 min [R-devel 2019-01]
 
 ## From CRAN package 'sfsmisc':
 Sys.memGB <- function (kind = "MemTotal")
@@ -80,7 +82,8 @@ if(FALSE) { # object.size() itself is taking a lot of time!
     os <- structure(19327353184, class = "object_size")
     print(os, units = "GB") # 18
 }
-if(exists("res")) rm(res); gc() # for the next step
+if(exists("res")) rm(res)
+gc(reset = TRUE) # for the next step
 
 ### Testing PR#17992  c() / unlist() name creation for large vectors
 ## Part 2 (https://bugs.r-project.org/bugzilla/show_bug.cgi?id=17292#c4):
@@ -97,7 +100,8 @@ str(res) # is fast!
 ## - attr(*, "names")= chr [1:2147483648] "a.b" "a.b" "a.b" "a.b" ...
 gc() # back to ~ 18.4 GB
 rm(res)
-}); gc() # for the next step
+})
+gc(reset = TRUE) # for the next step
 
 ## Large string's encodeString() -- PR#15885
 if(availableGB > 4) system.time(local(withAutoprint({
@@ -117,13 +121,18 @@ if(availableGB > 6) system.time(withAutoprint({
     head(r) ; length(r) # was only 21 in  R < 3.5.0
     stopifnot(all.equal(length(r), 400000001, tol = 0.1))
 })) ## 4.8--5.5 sec.
-rm(r); gc()
+rm(r)
+gc()
 
-if(availableGB > 17) withAutoprint({
-    n <- 2.2e9; n/.Machine$integer.max  # 1.024 ==> need  long vectors!
-    system.time(ii <- seq_len(n))       #   user  system elapsed
-                                        #  2.592   6.979   9.593
-    system.time(i2 <- ii[-n])           # 16.057  25.361  41.548 (slow!)
+n <- 4e4 # << for quick testing, comment next line
+n <- 2.2e9
+
+if(availableGB > 60) withAutoprint({
+    n/.Machine$integer.max  # 1.024 ==> need  long vectors!
+    ii <- seq_len(n)          #   user  system elapsed  [seq_len() fast: ALTREP "compact"]
+    system.time(ii <- ii + 0) #  6.726  17.558  24.450 (slow!, seen faster)
+    system.time(i2 <- ii[-n]) # 14.267  23.532  37.918 (slow!, seen slower: el.= 51)
+    ##
     ## NB: keep n, i, i2 for "below"
 })
 ## In R <= 3.4.1 :
@@ -132,38 +141,55 @@ if(availableGB > 17) withAutoprint({
 ##     nx=2200000000, ns=1, s=0x426db18) at ../../../R/src/main/subscript.c:691
 ## 691			    LOGICAL(indx)[ix] = 0;
 
-if(availableGB > 70) withAutoprint({
-    system.time( x <- ii/n )            #  7.29 user; 11.5--14.36 elapsed
-    system.time( y <- sin(pi*x) )       # 50.5  user; 57.4--76.1  elapsed
+if(availableGB > 99) withAutoprint({
+    system.time( x <- ii/n )            #   5.45 user; 11.5--14.36 elapsed
+    system.time( y <- sin(pi*x) )       #  42 user; 48.9--..  elapsed
+    system.time(sorted <- !is.unsorted(x)) # ~ 4 elapsed
+    stopifnot(sorted)
     ## default n (= "nout") = 50:
-    system.time(ap1 <- approx(x,y, ties = "ordered"))# 15.6 user; 25.8 elapsed
+    system.time(ap1 <- approx(x,y, ties = "ordered"))# 15 user; 25 elapsed
     stopifnot(exprs = {
 	is.list(ap1)
 	names(ap1) == c("x","y")
 	length(ap1$x) == 50
-	all.equal(ap1$y, sin(pi*ap1$x), tol= 1e-15)
+	all.equal(ap1$y, sin(pi*ap1$x), tol= 1e-9)
     })
-    rm(ap1); gc() ## keep x,y,n,i2 --> max used: 92322 Mb
+    rm(ap1) # keep x,y,n,i2
+    gc()     # --> max used: 92322 Mb
 })
+
+## which() and ifelse() working for long vectors
+if(availableGB > 165) withAutoprint({
+    system.time(iis <- which(isMl <- ii < 9999)) # 5.8 user,  8.8 elapsed
+    gc() # 59 GB max used
+    system.time(r <- ifelse(isMl, ii, ii*1.125)) #        user  system elapsed
+    stopifnot(exprs = {                 # in R 3.5.2 : 124.989 174.726 300.656
+	## GB's ifelse() + using which(<long>) 3.6.0 :  71.815  81.823 154.124
+	length(r) == n
+        iis == seq_len(9998)
+    })
+    rm(isMl, iis, r)
+})
+gc() # 159 GB max used
 
 if(availableGB > 211) withAutoprint({ ## continuing from above
     ## both large (x,y) *and* large output (x,y):
-    system.time(xo <- x+1/(2*n))     # 9.0 elapsed
+    system.time(xo <- x + 1/(2*n))     # ~ 9 elapsed
     system.time(ap <- approx(x,y, ties = "ordered", xout = xo))
-                                        # elapsed 561.4; using ~ 67 GB
-    gc() # showing max.used ~ 109106 Mb
+                                       # 194 user, 214--500 elapsed
+    gc(reset = TRUE) # showing max.used ~ 1..... Mb
     stopifnot(exprs = {
 	is.list(ap)
 	names(ap) == c("x","y")
 	length(ap$x) == n
 	is.na(ap$y[n]) # because ap$x[n] > 1, i.e., outside of [0,1]
-	all.equal(ap$y[i2], sin(pi*xo[i2]), tol= 1e-15)
+	all.equal(ap$y[i2], sin(pi*xo[i2]), tol= if(n < 1e7) 1e-8 else 1e-15)
     })
     rm(ap); gc() # showing used 83930 Mb | max.used 210356.6 Mb
     ## only large x,y :
     system.time(apf <- approxfun(x,y, ties="ordered", rule = 2))# elapsed: ~26s
     xi <- seq(0, 1, by = 2^-12) ## linear interpol. is less accurate than spline:
-    stopifnot(all.equal(apf(xi), sin(pi*xi), tol= 1e-11))
+    stopifnot(all.equal(apf(xi), sin(pi*xi), tol= if(n < 1e7) 1e-7 else 1e-11))
     rm(apf); gc() # (~ unchanged)
     system.time(ssf <- splinefun(x,y, ties = "ordered"))
                                         # elapsed 120 s; using ~ 158 GB
@@ -178,7 +204,7 @@ if(availableGB > 211) withAutoprint({ ## continuing from above
 	all.equal(ssf(xi), ss$y,       tol= 1e-15)
     })
     rm(x, y, xo, ss, ssf) # remove long vector objects
-    gc()
+    gc(reset=TRUE)
 })
 
 ## sum(<Integer|Logical>) -- should no longer overflow: ----------------------------------------
@@ -195,6 +221,7 @@ if(availableGB > 24) withAutoprint({
         identical(sL, as.integer(2^29))
     })
 }) ## sL would be NA with an "integer overflow" warning in R <= 3.4.x
+gc(reset=TRUE)
 
 ## 2) many (and relatively long and large) integers
 L <- as.integer(2^31 - 1)## = 2147483647L = .Machine$integer.max ("everywhere")
@@ -215,4 +242,34 @@ if(availableGB > 12) withAutoprint({
 })
 
 
+## seq() remaining integer: (PR 17497, comment #9)
+if(availableGB > 16) withAutoprint({
+    i <- as.integer(2^30)
+    system.time(i2.31 <- seq(-i, by=1L, length=2*i+1)) # 30.6 sec elapsed
+    object.size(i2.31) # 8'589'934'648 bytes [ was 17.17 GB in R <= 3.5.x ]
+    stopifnot(is.integer(i2.31),  i2.31[1] == -i,  i2.31[length(i2.31)] == i)
+
+    ## pmax(), pmin() with long vectors, PR 17533
+    if(availableGB > 24) withAutoprint({
+        system.time(i2.31 <- pmin(i2.31, 0L)) # 7.1 sec
+        str(i2.31)
+        system.time(stopifnot(i2.31[(i+1):length(i2.31)] == 0)) # 16.7 sec
+    })
+})
+
+
+## match(<long character>, *)  PR#17552
+if(availableGB > 44) { ## seen 40 G ('RES')
+    print(system.time(m <- match(rep("a", 2^31), "a")))# 52 sec user
+    stopifnot(all(m == 1L))
+    rm(m)
+    system.time({x <- character(2^31); x[26:1] <- letters })
+    system.time(m <- match(x, "a"))# 45 sec user
+    print(head(m, 40))
+    system.time(stopifnot(m[26] == 1L, is.na(m[-26])))
+    rm(x, m)
+}
+
+
+gc() # NB the "max used"
 proc.time() # total

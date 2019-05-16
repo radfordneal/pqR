@@ -1,7 +1,7 @@
 #  File src/library/base/R/print.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,11 +23,27 @@ print.default <- function(x, digits = NULL, quote = TRUE, na.print = NULL,
                           print.gap = NULL, right = FALSE, max = NULL,
                           useSource = TRUE, ...)
 {
-    noOpt <- missing(digits) && missing(quote) && missing(na.print) &&
-	missing(print.gap) && missing(right) && missing(max) &&
-	missing(useSource) && missing(...)
-    .Internal(print.default(x, digits, quote, na.print, print.gap, right, max,
-			    useSource, noOpt))
+    # Arguments are wrapped in another pairlist because we need to
+    # forward them to recursive print() calls.
+    args <- pairlist(
+	digits = digits,
+	quote = quote,
+	na.print = na.print,
+	print.gap = print.gap,
+	right = right,
+	max = max,
+	useSource = useSource,
+        ...
+    )
+
+    # Missing elements are not forwarded so we pass their
+    # `missingness`. Also this helps decide whether to call show()
+    # with S4 objects (if any argument print() is used instead).
+    missings <- c(missing(digits), missing(quote), missing(na.print),
+		  missing(print.gap), missing(right), missing(max),
+		  missing(useSource))
+
+    .Internal(print.default(x, args, missings))
 }
 
 prmatrix <-
@@ -100,7 +116,7 @@ print.simple.list <- function(x, ...)
     print(noquote(cbind("_"=unlist(x))), ...)
 
 print.function <- function(x, useSource = TRUE, ...)
-    .Internal(print.function(x, useSource, ...))
+    print.default(x, useSource=useSource, ...)
 
 ## used for getenv()
 print.Dlist <- function(x, ...)

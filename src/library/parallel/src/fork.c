@@ -81,7 +81,7 @@ void Dprintf(char *format, ...) {
    can never become attached.
 
    An attached child is visible to R user code and always has file descriptors
-   sifd and pifd open and >= 0). It becomes detached via readChild() when it
+   sifd and pifd open and >= 0. It becomes detached via readChild() when it
    returns an integer (signalling to user that the child is finishing or has
    failed). An attached child is never waited for in the signal handler as
    user R code is allowed to invoke operations on the child, such as kill - if
@@ -256,7 +256,7 @@ static void compact_children() {
 	    if (ci->ppid != ppid) {
 		close_fds_child_ci(ci);
 #ifdef MC_DEBUG
-		Dprintf("removing child %d from the listi as it is not ours\n", ci->pid);
+		Dprintf("removing child %d from the list as it is not ours\n", ci->pid);
 #endif
 	    }
 #ifdef MC_DEBUG
@@ -288,6 +288,8 @@ SEXP mc_prepare_cleanup()
     ci->waitedfor = 1;
     ci->detached = 1;
     ci->pid = -1; /* a cleanup mark */
+    ci->pfd = -1;
+    ci->sifd = -1; /* set fds to -1 to simplify close */
     ci->ppid = getpid();
     ci->next = children;
     children = ci;
@@ -361,7 +363,7 @@ SEXP mc_cleanup(SEXP sKill, SEXP sDetach, SEXP sShutdown)
 	    /* only kills if not waited for */
 	    kill_detached_child_ci(ci, sig);
 	if (!ci->detached && detach) {
-	    /* With sKill ==  FALSE (mclapply mc.cleanup=FALSE), send
+	    /* With sKill == FALSE (mclapply mc.cleanup=FALSE), send
 	       SIGUSR1 to just detach the child. Detaching also closes the file
 	       descriptors which contributes to termination probably even more,
 	       as it is not likely that the child will be finished and just
@@ -909,7 +911,7 @@ static SEXP read_child_ci(child_info_t *ci)
     Dprintf("read_child_ci(%d) - read length returned %lld\n", pid, (long long)n);
 #endif
     if (n != sizeof(len) || len == 0) {
-	/* child is exiting (len==0), or error */
+	/* child is exiting (n==0), or error */
 	terminate_and_detach_child_ci(ci);
 	return ScalarInteger(pid);
     } else {

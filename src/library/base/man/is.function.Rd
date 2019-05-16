@@ -1,6 +1,6 @@
 % File src/library/base/man/is.function.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2007 R Core Team
+% Copyright 1995-2018 R Core Team
 % Distributed under GPL 2 or later
 
 \name{is.function}
@@ -16,9 +16,9 @@ is.primitive(x)
   \item{x}{an \R object.}
 }
 \details{
-  \code{is.primitive(x)} tests if \code{x} is a primitive function
-  (either a \code{"builtin"} or \code{"special"} as described for
-  \code{\link{typeof}})?  It is a \link{primitive} function.
+  \code{is.primitive(x)} tests if \code{x} is a \link{primitive} function,
+  i.e, if \code{\link{typeof}(x)} is either \code{"builtin"} or
+  \code{"special"}.
 }
 \value{
   \code{TRUE} if \code{x} is a (primitive) function, and \code{FALSE}
@@ -26,8 +26,8 @@ is.primitive(x)
 }
 \examples{
 is.function(1) # FALSE
-is.function(is.primitive)  # TRUE: it is a function, but ..
-is.primitive(is.primitive) # FALSE:it's not a primitive one, whereas
+is.function (is.primitive) # TRUE: it is a function, but ..
+is.primitive(is.primitive) # FALSE: it's not a primitive one, whereas
 is.primitive(is.function)  # TRUE: that one *is*
 }
 \keyword{programming}

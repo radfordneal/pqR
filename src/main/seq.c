@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998-2017  The R Core Team.
+ *  Copyright (C) 1998-2018  The R Core Team.
  *  Copyright (C) 1995-1998  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -347,6 +347,9 @@ SEXP attribute_hidden do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
     R_xlen_t nc;
     SEXP a;
 
+    if (DispatchOrEval(call, op, "rep.int", args, rho, &a, 0, 0))
+      return(a);
+
     if (!isVector(ncopy))
 	error(_("invalid type (%s) for '%s' (must be a vector)"),
 	      type2char(TYPEOF(ncopy)), "times");
@@ -403,6 +406,10 @@ SEXP attribute_hidden do_rep_len(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP a, s, len;
 
     checkArity(op, args);
+
+    if (DispatchOrEval(call, op, "rep_len", args, rho, &a, 0, 0))
+      return(a);
+
     s = CAR(args);
 
     if (!isVector(s) && s != R_NilValue)
@@ -889,8 +896,7 @@ SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho)
 		   reduced below 1/INT_MAX this is the same as the
 		   next, so this is future-proofing against longer integers.
 		*/
-		/* seq.default gives integer result from
-		   from + (0:n)*by
+		/* as seq.default also returns integer for from + (0:n)*by
 		*/
 		nn = (R_xlen_t) n;
 		ans = allocVector(INTSXP, nn+1);

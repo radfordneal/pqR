@@ -2344,12 +2344,13 @@ attr(foo, "srcref") <- NULL
 foo
 (f <- structure(function(){}, note = "just a note",
                 yada = function() "not the same"))
+print(f, useSource = TRUE)
 print(f, useSource = FALSE) # must print attributes
-print.function <- function(x, ...) { str(x,...); invisible(x) }
-print.function
-f
-rm(print.function)
 ## auto-printing and printing differed up to R 2.9.x
+
+## Make sure deparsing does not reset parameters
+print(list(f, expression(foo), f, quote(foo), f, base::list, f),
+      useSource = FALSE)
 
 printCoefmat(cbind(0,1))
 ## would print NaN up to R 2.9.0
@@ -3117,3 +3118,7 @@ tryCatch(stopifnot(exprs = expression(
 cat("Error: ", M3, "\n")
 ## was partly not ok for many weeks in R-devel, early 2018
 
+
+## print.htest() with small 'digits'
+print(t.test(1:28), digits = 3)
+## showed 'df = 30' from signif(*, digits=1) and too many digits for CI, in R <= 3.5.1

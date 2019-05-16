@@ -117,7 +117,7 @@ as.character.Rd <- function(x, deparse = FALSE, ...)
     USERMACROS <- c("USERMACRO", "\\newcommand", "\\renewcommand")
     EQN <- c("\\deqn", "\\eqn", "\\figure")
     modes <- c(RLIKE = 1L, LATEXLIKE = 2L, VERBATIM = 3L, INOPTION = 4L, COMMENTMODE = 5L, UNKNOWNMODE = 6L)
-    tags  <- c(RCODE = 1L, TEXT = 2L,      VERB = 3L,                  COMMENT = 5L,     UNKNOWN = 6L)
+    tags  <- c(RCODE = 1L, TEXT      = 2L, VERB     = 3L,                COMMENT     = 5L, UNKNOWN     = 6L)
     state <- c(braceDepth = 0L, inRString = 0L)
     needBraces <- FALSE  # if next character is alphabetic, separate by braces.
     inEqn <- 0L
@@ -133,7 +133,7 @@ as.character.Rd <- function(x, deparse = FALSE, ...)
     	        result <- character()
     	    	for (i in seq_along(x))
                     result <- c(result, pr(x[[i]], quoteBraces))
-    	    } else if (length(grep("^#", tag))) {
+    	    } else if (startsWith(tag, "#")) {
     	    	if (deparse) {
     	    	    dep <- deparseRdElement(x[[1L]][[1L]],
                                             c(state, modes["LATEXLIKE"],

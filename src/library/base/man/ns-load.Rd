@@ -1,6 +1,6 @@
 % File src/library/base/man/ns-load.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2017 R Core Team
+% Copyright 1995-2019 R Core Team
 % Distributed under GPL 2 or later
 
 \name{ns-load}
@@ -18,10 +18,11 @@
   Functions to load and unload name spaces.
 }
 \usage{
-attachNamespace(ns, pos = 2L, depends = NULL)
+attachNamespace(ns, pos = 2L, depends = NULL, exclude, include.only)
 loadNamespace(package, lib.loc = NULL,
               keep.source = getOption("keep.source.pkgs"),
-              partial = FALSE, versionCheck = NULL)
+              partial = FALSE, versionCheck = NULL,
+              keep.parse.data = getOption("keep.parse.data.pkgs"))
 requireNamespace(package, ..., quietly = FALSE)
 loadedNamespaces()
 unloadNamespace(ns)
@@ -34,15 +35,15 @@ isNamespaceLoaded(name)
     recorded in object \code{.Depends} in the package.}
   \item{package}{string naming the package/name space to load.}
   \item{lib.loc}{character vector specifying library search path.}
-  \item{keep.source}{Now ignored except during package installation.
-    For more details see this argument to \code{\link{library}}.
-  }
+  \item{keep.source}{Now ignored except during package installation.}
+  \item{keep.parse.data}{Ignored except during package installation.}
   \item{partial}{logical; if true, stop just after loading code.}
   \item{versionCheck}{\code{NULL} or a version specification (a list
     with components \code{op} and \code{version}).}
   \item{quietly}{logical: should progress and error messages be suppressed?}
   \item{name}{string or \sQuote{name}, see \code{\link{as.symbol}},
     of a package, e.g., \code{"stats"}.}
+  \item{exclude, include.only}{character vectors; see \code{\link{library}}.}
   \item{\dots}{further arguments to be passed to \code{loadNamespace}.}
 }
 \details{

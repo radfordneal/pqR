@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1999--2017  The R Core Team
+ *  Copyright (C) 1999--2018  The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -543,8 +543,32 @@ const char *EncodeString(SEXP s, int w, int quote, Rprt_adj justify)
 			strlen(CHAR(R_print.na_string_noquote)));
 	quote = 0;
     } else {
+	if(IS_BYTES(s)) {
+	    ienc = CE_NATIVE;
 #ifdef Win32
-	if(WinUTF8out) {
+	    if (WinUTF8out)
+		ienc = CE_UTF8;
+#endif
+	    p = CHAR(s);
+	    cnt = (int) strlen(p);
+	    const char *q;
+	    char *pp = R_alloc(4*cnt+1, 1), *qq = pp, buf[5];
+	    for (q = p; *q; q++) {
+		unsigned char k = (unsigned char) *q;
+		if (k >= 0x20 && k < 0x80) {
+		    *qq++ = *q;
+		    if (quote && *q == '"') cnt++;
+		} else {
+		    snprintf(buf, 5, "\\x%02x", k);
+		    for(j = 0; j < 4; j++) *qq++ = buf[j];
+		    cnt += 3;
+		}
+	    }
+	    *qq = '\0';
+	    p = pp;
+	    i = cnt;
+#ifdef Win32
+	} else if(WinUTF8out) {
 	    if(ienc == CE_UTF8) {
 		p = CHAR(s);
 		i = Rstrlen(s, quote);
@@ -560,30 +584,9 @@ const char *EncodeString(SEXP s, int w, int quote, Rprt_adj justify)
 		}
 		ienc = CE_UTF8;
 	    }
-	} else
 #endif
-	{
-	    if(IS_BYTES(s)) {
-		ienc = CE_NATIVE;
-		p = CHAR(s);
-		cnt = (int) strlen(p);
-		const char *q;
-		char *pp = R_alloc(4*cnt+1, 1), *qq = pp, buf[5];
-		for (q = p; *q; q++) {
-		    unsigned char k = (unsigned char) *q;
-		    if (k >= 0x20 && k < 0x80) {
-			*qq++ = *q;
-			if (quote && *q == '"') cnt++;
-		    } else {
-			snprintf(buf, 5, "\\x%02x", k);
-			for(j = 0; j < 4; j++) *qq++ = buf[j];
-			cnt += 3;
-		    }
-		}
-		*qq = '\0';
-		p = pp;
-		i = cnt;
-	    } else if (useUTF8 && ienc == CE_UTF8) {
+	} else {
+	    if (useUTF8 && ienc == CE_UTF8) {
 		p = CHAR(s);
 		i = Rstrlen(s, quote);
 		cnt = LENGTH(s);
@@ -784,7 +787,7 @@ const char *EncodeElement(SEXP x, int indx, int quote, char cdec)
     return EncodeElement0(x, indx, quote, dec);
 }
 
-const char *EncodeElement0(SEXP x, int indx, int quote, const char *dec)
+const char *EncodeElement0(SEXP x, R_xlen_t indx, int quote, const char *dec)
 {
     int w, d, e, wi, di, ei;
     const char *res;

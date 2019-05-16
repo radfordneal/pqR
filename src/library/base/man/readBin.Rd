@@ -25,7 +25,7 @@ writeBin(object, con, size = NA_integer_,
     the mode: one of \code{"numeric"}, \code{"double"},
     \code{"integer"}, \code{"int"}, \code{"logical"}, \code{"complex"},
     \code{"character"}, \code{"raw"}.}
-  \item{n}{integer.  The (maximal) number of records to be
+  \item{n}{numeric.  The (maximal) number of records to be
     read.  You can use an over-estimate here, but not too large as
     storage is reserved for \code{n} items.}
   \item{size}{integer.  The number of bytes per element in the byte
@@ -41,7 +41,7 @@ writeBin(object, con, size = NA_integer_,
   \item{useBytes}{See \code{\link{writeLines}}.}
 }
 \details{
-  These functions are intended to be used with binary-mode connections.
+  These functions can only be used with binary-mode connections.
   If \code{con} is a character string, the functions call
   \code{\link{file}} to obtain a binary-mode file connection which is
   opened for the duration of the function call.
@@ -96,10 +96,6 @@ writeBin(object, con, size = NA_integer_,
   which does not contain C-style character strings, warnings (usually
   many) are given.  From a file or connection, the input will be broken
   into pieces of length 10000 with any final part being discarded.
-
-  Using these functions on a text-mode connection may work but should
-  not be mixed with text-mode access to the connection, especially if
-  the connection was opened with an \code{encoding} argument.
 }
 
 \value{

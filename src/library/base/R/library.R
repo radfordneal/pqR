@@ -16,25 +16,73 @@
 #  A copy of the GNU General Public License is available at
 #  https://www.R-project.org/Licenses/
 
-testPlatformEquivalence <-
-function(built, run)
-{
-    ## args are "cpu-vendor-os", but os might be 'linux-gnu'!
-    ## remove vendor field
-    built <- gsub("([^-]*)-([^-]*)-(.*)", "\\1-\\3", built)
-    run <- gsub("([^-]*)-([^-]*)-(.*)", "\\1-\\3", run)
-    ## macOS supports multiple CPUs by using 'universal' binaries
-    if (startsWith(built, "universal-darwin") && nzchar(.Platform$r_arch))
-        built <- sub("^universal", R.version$arch, built)
-    ## allow for small mismatches, e.g. OS version number and i686 vs i586.
-    length(agrep(built, run)) > 0
-}
+## Usage removed in 3.6.0
+## testPlatformEquivalence <-
+## function(built, run)
+## {
+##     ## args are "cpu-vendor-os", but os might be 'linux-gnu'!
+##     ## remove vendor field
+##     built <- gsub("([^-]*)-([^-]*)-(.*)", "\\1-\\3", built)
+##     run <- gsub("([^-]*)-([^-]*)-(.*)", "\\1-\\3", run)
+##     ## macOS supports multiple CPUs by using 'universal' binaries
+##     if (startsWith(built, "universal-darwin") && nzchar(.Platform$r_arch))
+##         built <- sub("^universal", R.version$arch, built)
+##     ## allow for small mismatches, e.g. OS version number and i686 vs i586.
+##     length(agrep(built, run)) > 0
+## }
+
+## If we want this it would be better to factor out the core of checkConflicts.
+## searchConflicts <- function(pkg) {
+##     vars <- getNamespaceExports(pkg)
+##     conflicts <- function(pos) intersect(vars, ls(pos, all = TRUE))
+##     val <- Filter(length, sapply(search()[-1], conflicts))
+##     if (length(val)) val else NULL
+## }
+
+conflictRules <-
+    local({
+        data <- new.env()
+        function(pkg, mask.ok = NULL, exclude = NULL) {
+            if ((! missing(mask.ok)) || (! missing(exclude)))
+                assign(pkg, list(mask.ok = mask.ok, exclude = exclude),
+                       envir = data)
+            else if (exists(pkg, envir = data, inherits = FALSE))
+                get(pkg, envir = data, inherits = FALSE)
+            else NULL
+        }
+    })
 
 library <-
 function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
-         logical.return = FALSE, warn.conflicts = TRUE,
-	 quietly = FALSE, verbose = getOption("verbose"))
+         logical.return = FALSE, warn.conflicts,
+	 quietly = FALSE, verbose = getOption("verbose"),
+         mask.ok, exclude, include.only,
+         attach.required = missing(include.only))
 {
+    conf.ctrl <- getOption("conflicts.policy")
+    if (is.character(conf.ctrl))
+        conf.ctrl <-
+            switch(conf.ctrl,
+                   strict = list(error = TRUE, warn = FALSE),
+                   depends.ok = list(error = TRUE,
+                                     generics.ok = TRUE,
+                                     can.mask = c("base", "methods", "utils",
+                                                  "grDevices", "graphics",
+                                                  "stats"),
+                                     depends.ok = TRUE),
+                   warning(gettextf("unknown conflict policy: %s",
+                                    sQuote(conf.ctrl)),
+                           call. = FALSE, domain = NA))
+    if (! is.list(conf.ctrl))
+        conf.ctrl <- NULL
+    stopOnConflict <- isTRUE(conf.ctrl$error)
+
+    if (missing(warn.conflicts))
+        warn.conflicts <- if (isFALSE(conf.ctrl$warn)) FALSE else TRUE
+    if ((! missing(include.only)) && (! missing(exclude)))
+        stop(gettext("only one of 'include.only' and 'exclude' can be used"),
+             call. = FALSE, domain = NA)
+
     testRversion <- function(pkgInfo, pkgname, pkgpath)
     {
         if(is.null(built <- pkgInfo$Built))
@@ -82,11 +130,11 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
             ## allow mismatches if r_arch is in use, e.g.
             ## i386-gnu-linux vs x86-gnu-linux depending on
             ## build system.
-            if(!nzchar(r_arch) && grepl("\\w", platform) &&
-               !testPlatformEquivalence(platform, R.version$platform))
-                stop(gettextf("package %s was built for %s",
-                              sQuote(pkgname), platform),
-                     call. = FALSE, domain = NA)
+##             if(!nzchar(r_arch) && grepl("\\w", platform) &&
+##                !testPlatformEquivalence(platform, R.version$platform))
+##                 stop(gettextf("package %s was built for %s",
+##                               sQuote(pkgname), platform),
+##                      call. = FALSE, domain = NA)
         } else {  # Windows
             ## a check for 'mingw' suffices, since i386 and x86_64
             ## have DLLs in different places.  This allows binary packages
@@ -141,9 +189,11 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
             gen <- gen[from != package]
             ob <- ob[!(ob %in% gen)]
         }
-        fst <- TRUE
+
 	ipos <- seq_along(sp)[-c(lib.pos,
 				 match(c("Autoloads", "CheckExEnv"), sp, 0L))]
+        cpos <- NULL
+        conflicts <- vector("list", 0)
         for (i in ipos) {
             obj.same <- match(names(as.environment(i)), ob, nomatch = 0L)
             if (any(obj.same > 0)) {
@@ -169,15 +219,58 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
 		if(length(same) && identical(sp[i], "package:base"))
 		    same <- same[not.Ident(same, ignore.environment = TRUE)]
                 if(length(same)) {
-                    if (fst) {
-                        fst <- FALSE
-                        packageStartupMessage(gettextf("\nAttaching package: %s\n",
-                                                       sQuote(package)),
-                                              domain = NA)
+                    conflicts[[sp[i]]] <- same
+                    cpos[sp[i]] <- i
+                }
+            }
+        }
+        if (length(conflicts)) {
+            if (stopOnConflict) {
+                emsg <- ""
+                pkg <- names(conflicts)
+                notOK <- vector("list", 0)
+                for (i in seq_along(conflicts)) {
+                    pkgname <- sub("^package:", "", pkg[i])
+                    if (pkgname %in% canMaskEnv$canMask)
+                        next
+                    same <- conflicts[[i]]
+                    if (is.list(mask.ok))
+                        myMaskOK <- mask.ok[[pkgname]]
+                    else myMaskOK <- mask.ok
+
+                    ## adjust 'same' for conflict resolution specifications
+                    if (isTRUE(myMaskOK))
+                        same <- NULL
+                    else if (is.character(myMaskOK))
+                        same <- setdiff(same, myMaskOK)
+
+                    if (length(same)) {
+                        notOK[[pkg[i]]] <- same
+                        msg <- .maskedMsg(sort(same), pkg = sQuote(pkg[i]),
+                                          by = cpos[i] < lib.pos)
+                        emsg <- paste(emsg, msg, sep = "\n")
                     }
-		    msg <- .maskedMsg(sort(same), pkg = sQuote(sp[i]),
-                                      by = i < lib.pos)
-		    packageStartupMessage(msg, domain = NA)
+                }
+                if (length(notOK)) {
+                    msg <- gettextf("Conflicts attaching package %s:\n%s",
+                                    sQuote(package),
+                                    emsg)
+                    stop(errorCondition(msg,
+                                        package = package,
+                                        conflicts = conflicts,
+                                        class = "packageConflictError"))
+                }
+            }
+            if (warn.conflicts) {
+                ## Use separate messages to preserve previous behavior.
+                packageStartupMessage(gettextf("\nAttaching package: %s\n",
+                                               sQuote(package)), domain = NA)
+                pkg <- names(conflicts)
+                for (i in seq_along(conflicts)) {
+                    msg <- .maskedMsg(sort(conflicts[[i]]),
+                                      pkg = sQuote(pkg[i]),
+                                      by = cpos[i] < lib.pos)
+                    packageStartupMessage(msg, domain = NA)
                 }
             }
         }
@@ -212,6 +305,8 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
 	    pkgpath <- find.package(package, lib.loc, quiet = TRUE,
                                     verbose = verbose)
             if(length(pkgpath) == 0L) {
+                if(length(lib.loc) && !logical.return)
+                    stop(packageNotFoundError(package, lib.loc, sys.call()))
                 txt <- if(length(lib.loc))
                     gettextf("there is no package called %s", sQuote(package))
                 else
@@ -242,8 +337,29 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
                     pos <- 2
                 } else pos <- npos
             }
-            .getRequiredPackages2(pkgInfo, quietly = quietly)
+
             deps <- unique(names(pkgInfo$Depends))
+            depsOK <- isTRUE(conf.ctrl$depends.ok)
+            if (depsOK) {
+                canMaskEnv <- dynGet("__library_can_mask__", NULL)
+                if (is.null(canMaskEnv)) {
+                    canMaskEnv <- new.env()
+                    canMaskEnv$canMask <- union("base", conf.ctrl$can.mask)
+                    "__library_can_mask__" <- canMaskEnv
+                }
+                canMaskEnv$canMask <- unique(c(package, deps,
+                                               canMaskEnv$canMask))
+            }
+            else canMaskEnv <- NULL
+
+            if (attach.required)
+                .getRequiredPackages2(pkgInfo, quietly = quietly)
+
+            cr <- conflictRules(package)
+            if (missing(mask.ok))
+                mask.ok <- cr$mask.ok
+            if (missing(exclude))
+                exclude <- cr$exclude
 
             ## If the namespace mechanism is available and the package
             ## has a namespace, then the namespace loading mechanism
@@ -269,7 +385,8 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
 		tt <- tryCatch({
                     attr(package, "LibPath") <- which.lib.loc
                     ns <- loadNamespace(package, lib.loc)
-                    env <- attachNamespace(ns, pos = pos, deps)
+                    env <- attachNamespace(ns, pos = pos, deps,
+                                           exclude, include.only)
 		}, error = function(e) {
 		    P <- if(!is.null(cc <- conditionCall(e)))
 			     paste(" in", deparse(cc)[1L]) else ""
@@ -289,8 +406,13 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
                     ## depend on methods
                     nogenerics <-
                         !.isMethodsDispatchOn() || checkNoGenerics(env, package)
-                    if(warn.conflicts && # never will with a namespace
-                       !exists(".conflicts.OK", envir = env, inherits = FALSE))
+                    if (isFALSE(conf.ctrl$generics.ok) ||
+                        (stopOnConflict && ! isTRUE(conf.ctrl$generics.ok)))
+                        nogenerics <- TRUE ## no silent masking for genrics
+                    if(stopOnConflict ||
+                       (warn.conflicts && # never will with a namespace
+                        !exists(".conflicts.OK", envir = env,
+                                inherits = FALSE)))
                         checkConflicts(package, pkgname, pkgpath,
                                        nogenerics, ns)
                     on.exit()
@@ -558,8 +680,9 @@ function(chname, libpath, verbose = getOption("verbose"),
 }
 
 require <-
-function(package, lib.loc = NULL, quietly = FALSE, warn.conflicts = TRUE,
-         character.only = FALSE)
+function(package, lib.loc = NULL, quietly = FALSE, warn.conflicts,
+         character.only = FALSE, mask.ok, exclude, include.only,
+         attach.required = missing(include.only))
 {
     if(!character.only)
         package <- as.character(substitute(package)) # allowing "require(eda)"
@@ -573,7 +696,11 @@ function(package, lib.loc = NULL, quietly = FALSE, warn.conflicts = TRUE,
                                   character.only = TRUE,
                                   logical.return = TRUE,
                                   warn.conflicts = warn.conflicts,
-				  quietly = quietly),
+				  quietly = quietly,
+                                  mask.ok = mask.ok,
+                                  exclude = exclude,
+                                  include.only = include.only,
+                                  attach.required = attach.required),
                           error = function(e) e)
         if (inherits(value, "error")) {
             if (!quietly) {
@@ -722,24 +849,27 @@ function(package = NULL, lib.loc = NULL, quiet = FALSE,
     }
 
     if(!quiet && length(bad)) {
-        if(length(out) == 0L) {
-            if(length(bad) == 1L) {
-                stop(gettextf("there is no package called %s", sQuote(pkg)),
-                     domain = NA)
-            } else {
-                stop(ngettext(length(bad),
-                              "there is no package called",
-                              "there are no packages called"), " ",
-                     paste(sQuote(bad), collapse = ", "), domain = NA)
-
-            }
-        }
+        if(length(out) == 0L)
+            stop(packageNotFoundError(bad, lib.loc, sys.call()))
         for(pkg in bad)
             warning(gettextf("there is no package called %s", sQuote(pkg)),
                     domain = NA)
     }
 
     out
+}
+
+packageNotFoundError <-
+function(package, lib.loc, call = NULL) {
+    if(length(package) == 1L)
+        msg <- gettextf("there is no package called %s", sQuote(package))
+    else
+        msg <- paste0(ngettext(length(package),
+                               "there is no package called",
+                               "there are no packages called"), " ",
+                      paste(sQuote(package), collapse = ", "))
+    errorCondition(msg, package = package, lib.loc = lib.loc, call = call,
+                   class = "packageNotFoundError")
 }
 
 format.packageInfo <-

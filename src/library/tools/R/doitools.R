@@ -64,7 +64,7 @@ doi_db_from_package_Rd_db <-
 function(db)
 {
     dois <- Filter(length, lapply(db, .get_dois_from_Rd))
-    doi_db(unlist(.canonicalize_doi(dois), use.names = FALSE),
+    doi_db(.canonicalize_doi(unlist(dois, use.names = FALSE)),
            rep.int(file.path("man", names(dois)),
                    lengths(dois)))
 }
@@ -150,7 +150,7 @@ function(db, verbose = FALSE)
     }
 
     .check <- function(d) {
-        u <- paste0("http://doi.org/", d)
+        u <- paste0("https://doi.org/", d)
         ## Do we need to percent encode parts of the DOI name?
         h <- .fetch(u, d)
         if(inherits(h, "error")) {
@@ -162,7 +162,7 @@ function(db, verbose = FALSE)
         }
 
         ## Similar to URLs, see e.g.
-        ##   curl -I -L http://doi.org/10.1016/j.csda.2009.12.005
+        ##   curl -I -L https://doi.org/10.1016/j.csda.2009.12.005
         ## (As of 2016-12, this actually gives 400 Bad Request.)
         if(any(grepl("301 Moved Permanently", h, useBytes = TRUE))) {
             ind <- grep("^[Ll]ocation: ", h, useBytes = TRUE)
@@ -238,7 +238,7 @@ function(x, ...)
 
     paste0(sprintf("DOI: %s", x$DOI),
            sprintf("\nFrom: %s",
-                   sapply(x$From, paste, collapse = "\n      ")),
+                   vapply(x$From, paste, "", collapse = "\n      ")),
            ifelse((s <- x$Status) == "",
                   "",
                   sprintf("\nStatus: %s", s)),

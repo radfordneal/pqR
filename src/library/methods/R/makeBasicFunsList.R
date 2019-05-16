@@ -163,6 +163,10 @@ utils::globalVariables(".addBasicGeneric")
     ## funs <- .addBasicGeneric(funs, "is.unsorted", internal=TRUE,
     ##                          internalArgs=c("x", "strictly"))
     funs <- .addBasicGeneric(funs, "as.vector", internal=TRUE)
+    funs <- .addBasicGeneric(funs, "lengths", internal=TRUE)
+    ## funs <- .addBasicGeneric(funs, "nchar", internal=TRUE)
+    ## funs <- .addBasicGeneric(funs, "rep_len", internal=TRUE)
+    ## funs <- .addBasicGeneric(funs, "rep.int", internal=TRUE)
 
     assign(".BasicFunsList", funs, envir=where)
     rm(.addBasicGeneric, envir=where)
@@ -215,22 +219,22 @@ utils::globalVariables(".addBasicGeneric")
 			standardGeneric("colMeans"),
 	       useAsDefault = function(x, na.rm = FALSE, dims = 1, ...)
 			base::colMeans(x, na.rm=na.rm, dims=dims, ...),
-	       signature = c("x", "na.rm", "dims"), where = where)
+	       signature = "x", where = where)
     setGeneric("colSums", function(x, na.rm = FALSE, dims = 1, ...)
 			standardGeneric("colSums"),
 	       useAsDefault = function(x, na.rm = FALSE, dims = 1, ...)
 			base::colSums(x, na.rm=na.rm, dims=dims, ...),
-	       signature = c("x", "na.rm", "dims"), where = where)
+	       signature = "x", where = where)
     setGeneric("rowMeans", function(x, na.rm = FALSE, dims = 1, ...)
 			standardGeneric("rowMeans"),
 	       useAsDefault = function(x, na.rm = FALSE, dims = 1, ...)
 			base::rowMeans(x, na.rm=na.rm, dims=dims, ...),
-	       signature = c("x", "na.rm", "dims"), where = where)
+	       signature = "x", where = where)
     setGeneric("rowSums", function(x, na.rm = FALSE, dims = 1, ...)
 			standardGeneric("rowSums"),
 	       useAsDefault = function(x, na.rm = FALSE, dims = 1, ...)
 			base::rowSums(x, na.rm=na.rm, dims=dims, ...),
-	       signature = c("x", "na.rm", "dims"), where = where)
+	       signature = "x", where = where)
     setGenericImplicit("colMeans", where, FALSE)
     setGenericImplicit("colSums",  where, FALSE)
     setGenericImplicit("rowMeans", where, FALSE)

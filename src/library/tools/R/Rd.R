@@ -33,7 +33,7 @@ function(file, encoding = "unknown")
 
     aliases <- .Rd_get_metadata(Rd, "alias")
     concepts <- .Rd_get_metadata(Rd, "concept")
-    keywords <- .Rd_get_metadata(Rd, "keyword")
+    keywords <- .Rd_get_metadata(Rd, "keyword") %w/o% .Rd_keywords_auto
 
     ## Could be none or more than one ... argh.
     Rd_type <- .Rd_get_doc_type(Rd)
@@ -152,8 +152,8 @@ function(contents, packageName, outFile)
     if(is.data.frame(contents))
         contents <-
             cbind(contents$Name,
-                  sapply(contents$Aliases, paste, collapse = " "),
-                  sapply(contents$Keywords, paste, collapse = " "),
+                  vapply(contents$Aliases, paste, "", collapse = " "),
+                  vapply(contents$Keywords, paste, "", collapse = " "),
                   contents$Title)
     else
         contents <-
@@ -191,8 +191,9 @@ function(contents, type = NULL)
     }
 
     ## Drop all Rd objects marked as 'internal' from the index.
-    idx <- is.na(sapply(keywords, function(x) match("internal", x)))
-
+    idx <- (vapply(keywords,
+                   function(x) match("internal", x, 0L),
+                   0L) == 0L)
     index <- contents[idx, c("Name", "Title"), drop = FALSE]
     if(nrow(index)) {
         ## If a \name is not a valid \alias, replace it by the first
@@ -250,7 +251,7 @@ function(RdFiles, outFile = "", type = NULL,
 ### * Rd_db
 
 Rd_db <-
-function(package, dir, lib.loc = NULL)
+function(package, dir, lib.loc = NULL, stages = "build")
 {
     ## Build an Rd 'data base' from an installed package or the unpacked
     ## package sources as a list containing the parsed Rd objects.
@@ -294,8 +295,8 @@ function(package, dir, lib.loc = NULL)
             eof_pos <-
                 grep("^\\\\eof$", lines, perl = TRUE, useBytes = TRUE)
             db <- split(lines[-eof_pos],
-                        rep(seq_along(eof_pos),
-                            times = diff(c(0, eof_pos)))[-eof_pos])
+                        rep.int(seq_along(eof_pos),
+                                diff(c(0, eof_pos)))[-eof_pos])
         } else return(structure(list(), names = character()))
 
         ## NB: we only get here for pre-2.10.0 installs
@@ -331,7 +332,7 @@ function(package, dir, lib.loc = NULL)
             dir <- file_path_as_absolute(dir)
         built_file <- file.path(dir, "build", "partial.rdb")
         db <- .build_Rd_db(dir,
-                           stages = "build",
+                           stages = stages,
                            built_file = built_file)
         if(length(db)) {
             first <- nchar(file.path(dir, "man")) + 2L
@@ -515,6 +516,11 @@ function(x, kind)
     else
         unique(trimws(sapply(x, as.character)))
 }
+
+### * .Rd_keywords_auto
+
+.Rd_keywords_auto <-
+    c("~kwd1", "~kwd2", "~~ other possible keyword(s) ~~")
 
 ### * .Rd_get_section
 

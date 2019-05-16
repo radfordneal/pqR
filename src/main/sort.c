@@ -27,6 +27,8 @@
 #include <Internal.h>
 #include <Rmath.h>
 #include <R_ext/RS.h>  /* for Calloc/Free */
+#include <float.h> /* for DBL_MAX */
+#include <R_ext/Itermacros.h> /* for ITERATE_BY_REGION */
 
 			/*--- Part I: Comparison Utilities ---*/
 
@@ -80,10 +82,15 @@ static int scmp(SEXP x, SEXP y, Rboolean nalast)
     return Scollate(x, y);
 }
 
+#define R_INT_MIN 1 + INT_MIN //INT_MIN is NA_INTEGER
 Rboolean isUnsorted(SEXP x, Rboolean strictly)
 {
     R_xlen_t n, i;
-
+    int itmp = INT_MIN; /* this is NA_INTEGER, < all valid nonNA R integer
+			   values */
+    double dtmp = R_NegInf; /*  R_NegInf is min possible double	"value",
+			        ***this is <= all nonNA R numeric values but
+				NOT < all nonNA	values*** */
     if (!isVectorAtomic(x))
 	error(_("only atomic vectors can be tested to be sorted"));
     n = XLENGTH(x);
@@ -95,28 +102,71 @@ Rboolean isUnsorted(SEXP x, Rboolean strictly)
 
 	    /* The only difference between strictly and not is '>' vs '>='
 	       but we want the if() outside the loop */
+
+	    /* x can be an ALTREP here provided that its sortedness is unknown, 
+	       so we use ITERATE_BY_REGION to get the multiple INTEGER calls
+	       outside of the tight loop and be ALTREP safe. */
 	case LGLSXP:
 	case INTSXP:
 	    if(strictly) {
-		for(i = 0; i+1 < n ; i++)
-		    if(INTEGER(x)[i] >= INTEGER(x)[i+1])
-			return TRUE;
+		ITERATE_BY_REGION(x, xptr, i, nbatch, int, INTEGER, {
+			/* itmp initialized to INT_MIN which is < all
+			   valid nonNA R int values so no need to
+			   exclude first iteration
 
+			   After first iteration itmp is value at end
+			   of last batch */
+			if(itmp >= xptr[0]) 
+			    return TRUE;
+			for(R_xlen_t k = 0; k < nbatch - 1; k++) {
+			    if(xptr[k] >= xptr[k+1])
+				return TRUE;
+			}
+			itmp = xptr[nbatch - 1];
+		    });
 	    } else {
-		for(i = 0; i+1 < n ; i++)
-		    if(INTEGER(x)[i] > INTEGER(x)[i+1])
-			return TRUE;
+		ITERATE_BY_REGION(x, xptr, i, nbatch, int, INTEGER, {
+			if(itmp > xptr[0]) //deal with batch barriers
+			    return TRUE;
+			for(R_xlen_t k = 0; k < nbatch - 1; k++) {
+			    if(xptr[k] > xptr[k+1])
+				return TRUE;
+			}
+			itmp = xptr[nbatch - 1];
+		    });
 	    }
 	    break;
 	case REALSXP:
 	    if(strictly) {
-		for(i = 0; i+1 < n ; i++)
-		    if(REAL(x)[i] >= REAL(x)[i+1])
-			return TRUE;
+		ITERATE_BY_REGION(x, xptr, i, nbatch, double, REAL, {
+			/* first element could be R_NegInf which is
+			   initialization value of dtmp so don't do
+			   the barrier check at i == 0 since its >=
+			   here
+
+			   After first iteration dtmp is value at end
+			   of last batch */
+			if(i > 0 && dtmp >= xptr[0]) //deal with batch barriers
+			    return TRUE;
+			for(R_xlen_t k = 0; k < nbatch - 1; k++) {
+			    if(xptr[k] >= xptr[k+1])
+				return TRUE;
+			}
+			dtmp = xptr[nbatch - 1];
+		    });
 	    } else {
-		for(i = 0; i+1 < n ; i++)
-		    if(REAL(x)[i] > REAL(x)[i+1])
-			return TRUE;
+		/* nonstrict, first element can never be < dtmp (== R_NegInf),
+		   so no need to exclude first iteration in barrier check */
+		ITERATE_BY_REGION(x, xptr, i, nbatch, double, REAL, {
+			if(dtmp > xptr[0]) /* deal with batch barriers, dtmp
+					      is end of last batch */
+			    return TRUE;
+			for(R_xlen_t k = 0; k < nbatch - 1; k++) {
+			    if(xptr[k] > xptr[k+1])
+				return TRUE;
+			}
+			dtmp = xptr[nbatch - 1];
+		    });
 	    }
 	    break;
 	case CPLXSXP:
@@ -364,7 +414,7 @@ Rboolean fastpass_sortcheck(SEXP x, int wanted) {
 	return FALSE;
 
     int sorted = UNKNOWN_SORTEDNESS;
-    Rboolean noNA, done = FALSE;
+    Rboolean noNA = FALSE, done = FALSE;
 
     switch(TYPEOF(x)) {
     case INTSXP:
@@ -379,6 +429,7 @@ Rboolean fastpass_sortcheck(SEXP x, int wanted) {
 	/* keep sorted == UNKNOWN_SORTEDNESS */
 	break;
     }
+
     /* we know wanted is not NA_INTEGER or 0 at this point because
        of the immediate return at the beginning for that case */
     if(!KNOWN_SORTED(sorted)) {
@@ -386,9 +437,31 @@ Rboolean fastpass_sortcheck(SEXP x, int wanted) {
     } else if(sorted == wanted) {   
 	done = TRUE;
 	/* if there are no NAs, na.last can be ignored */
-    } else if(noNA && sorted * wanted > 0) { /* same sign, thus same direction of sort */
+    } else if(noNA && sorted * wanted > 0) {
+	/* same sign, thus same direction of sort */
 	done = TRUE;
     }
+
+    /* Increasing, usually fairly short, sequences of integers often
+       arise as levels in as.factor.  A quick check here allows a fast
+       return in sort.int. */
+    if (! done && TYPEOF(x) == INTSXP && wanted > 0 && ! ALTREP(x)) {
+	R_xlen_t len = XLENGTH(x);
+	if (len > 0) {
+	    int *px = INTEGER(x);
+	    int last = px[0];
+	    if (last != NA_INTEGER) {
+		for (R_xlen_t i = 1; i < len; i++) {
+		    int next = px[i];
+		    if (next < last || next == NA_INTEGER)
+			return FALSE;
+		    else last = next;
+		}
+		return TRUE;
+	    }
+	}
+    }
+
     return done;
 }
 

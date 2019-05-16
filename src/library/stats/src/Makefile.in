@@ -37,7 +37,7 @@ OBJECTS = $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o)
 # need config.h
 PKG_CPPFLAGS = -I../../../include -I$(top_srcdir)/src/include -DHAVE_CONFIG_H
 PKG_CFLAGS = @R_OPENMP_CFLAGS@ $(C_VISIBILITY)
-PKG_FFLAGS = $(F77_VISIBILITY)
+PKG_FFLAGS = $(F_VISIBILITY)
 
 SHLIB = $(pkg)@SHLIB_EXT@
 
@@ -70,9 +70,10 @@ include $(top_srcdir)/share/make/shlib.mk
 LTO = @LTO@
 
 ## Meeded with i386 gcc 4.5.0 -- PR#14427
+## (SHLIB_FFLAGS is apparently currently unused)
 portsrc_FFLAGS=$(FPICFLAGS) $(SHLIB_FFLAGS) @SAFE_FFLAGS@
 portsrc.o: portsrc.f
-	$(F77) $(portsrc_FFLAGS) -c $< -o $@
+	$(FC) $(portsrc_FFLAGS) -c $< -o $@
 
 mostlyclean: clean
 clean:

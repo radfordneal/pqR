@@ -1,6 +1,6 @@
 % File src/library/tools/man/makeLazyLoading.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2011 R Core Team
+% Copyright 1995-2019 R Core Team
 % Distributed under GPL 2 or later
 
 \name{makeLazyLoading}
@@ -8,13 +8,20 @@
 \title{Lazy Loading of Packages}
 \usage{
 makeLazyLoading(package, lib.loc = NULL, compress = TRUE,
-                keep.source = getOption("keep.source.pkgs"))
+                keep.source = getOption("keep.source.pkgs"),
+                keep.parse.data = getOption("keep.parse.data.pkgs"),
+                set.install.dir = NULL)
 }
 \arguments{
   \item{package}{package name string}
   \item{lib.loc}{library trees, as in \code{library}}
   \item{keep.source}{logical; should sources be kept when saving from source}
+  \item{keep.parse.data}{logical; should parse data be kept with sources
+    when \code{keep.source} is \code{TRUE}.}
   \item{compress}{logical; whether to compress entries on the database.}
+  \item{set.install.dir}{character or null; if not null, set installation
+    directory to this value before serializing internal data structures
+    (for internal use, staged installation)}
 }
 \description{
   Tools for lazy loading of packages from a database.

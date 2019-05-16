@@ -55,7 +55,7 @@
         }
         fdef <- fdefault
         body(fdef) <- substitute(standardGeneric(NAME), list(NAME = f))
-        environment(fdef) <- asNamespace(package)
+        environment(fdef) <- .NamespaceOrPackage(package)
     }
     ## give the function a new environment, to cache methods later
     ev <- new.env()
@@ -830,6 +830,11 @@ cacheMetaData <-
                identical(cldef@package, pkg)) {
                 .uncacheClass(cl, cldef)
                 .removeSuperclassBackRefs(cl, cldef, searchWhere)
+                if(is(cldef, "ClassUnionRepresentation")) {
+                    subclasses <- names(cldef@subclasses)
+                    for(subclass in subclasses)
+                        .removeSuperClass(subclass, cl)
+                }
             }
         }
     }
@@ -1056,7 +1061,12 @@ methodSignatureMatrix <- function(object, sigSlots = c("target", "defined"))
 {
     if(length(sigSlots)) {
         allSlots <- lapply(sigSlots, slot, object = object)
-        mm <- unlist(allSlots)
+        n <- max(lengths(allSlots))
+        mm <- unlist(lapply(allSlots, function(s) {
+            length(s) <- n
+            s[is.na(s)] <- "ANY"
+            s
+        }))
         mm <- matrix(mm, nrow = length(allSlots), byrow = TRUE)
         dimnames(mm) <- list(sigSlots, names(allSlots[[1L]]))
         mm
@@ -1098,7 +1108,7 @@ methodSignatureMatrix <- function(object, sigSlots = c("target", "defined"))
 #             deflt <- finalDefaultMethod(other)
 #         if(!is.null(deflt))
 #             allMethods <- insertMethod(allMethods, "ANY", argName, deflt)
-        }
+    }
     allMethods
 }
 
@@ -1109,7 +1119,7 @@ methodSignatureMatrix <- function(object, sigSlots = c("target", "defined"))
             name <- def
         def <- getFunction(def)
     }
-    if(is(def, "function"))
+    if(is.function(def))
         paste0(name, "(", paste(args, collapse=", "), ")")
     else
         ""
@@ -1208,7 +1218,7 @@ metaNameUndo <- function(strings, prefix, searchForm = FALSE)
     methods <- mlist@methods
     for(i in seq_along(methods)) {
         mi <- methods[[i]]
-        if(is(mi, "function")) {
+        if(is.function(mi)) {
             body(mi, envir = environment(mi)) <-
                 substitute({.Generic <- FF; BODY},
                            list(FF = f,BODY = body(mi)))
@@ -1246,11 +1256,11 @@ metaNameUndo <- function(strings, prefix, searchForm = FALSE)
 
 .ChangeFormals <- function(def, defForArgs, msg = "<unidentified context>")
 {
-    if(!is(def, "function"))
+    if(!is.function(def))
         stop(gettextf("trying to change the formal arguments in %s in an object of class %s; expected a function definition",
                       msg, dQuote(class(def))),
              domain = NA)
-    if(!is(defForArgs, "function"))
+    if(!is.function(defForArgs))
         stop(gettextf("trying to change the formal arguments in %s, but getting the new formals from an object of class %s; expected a function definition",
                       msg, dQuote(class(def))),
              domain = NA)
@@ -1342,7 +1352,7 @@ metaNameUndo <- function(strings, prefix, searchForm = FALSE)
     ev <- topenv(parent.frame()) # .GlobalEnv or the environment in which methods is being built.
     for(back in seq.int(from = -n, length.out = nmax)) {
         fun <- sys.function(back)
-        if(is(fun, "function")) {
+        if(is.function(fun)) {
             ## Note that "fun" may actually be a method definition, and still will be counted.
             ## This appears to be the correct semantics, in
             ## the sense that, if the call came from a method, it's the method's environment
@@ -1462,7 +1472,7 @@ getGroupMembers <- function(group, recursive = FALSE, character = TRUE)
                 members <- .recMembers(members, .methodsNamespace)
             }
             else
-                members <- .recMembers(members, .asEnvironmentPackage(where))
+                members <- .recMembers(members, .requirePackage(where))
         }
         if(character)
             sapply(members, function(x){
@@ -1824,7 +1834,7 @@ setLoadAction <- function(action,
     for(i in seq_along(actions)) {
         f <- actions[[i]]
         fname <- anames[[i]]
-        if(!is(f, "function"))
+        if(!is.function(f))
             stop(gettextf("non-function action: %s",
                           sQuote(fname)),
                  domain = NA)
@@ -1915,11 +1925,12 @@ evalqOnLoad <- function(expr, where = topenv(parent.frame()), aname = "")
         0L
 }
 
-## test whether this function could be an S3 generic, either
+## test whether this function  _could be_  an S3 generic, either
 ## a primitive or a function calling UseMethod()
 isS3Generic <- function(fdef) {
-    if(is.primitive(fdef))
-        identical(typeof(fdef), "builtin")
-    else
-        "UseMethod" %in% .getGlobalFuns(fdef) # from refClass.R
+    switch(typeof(fdef),
+           "special" = FALSE,
+           "builtin" = TRUE,
+           ## otherwise:
+           "UseMethod" %in% .getGlobalFuns(fdef)) # from refClass.R
 }

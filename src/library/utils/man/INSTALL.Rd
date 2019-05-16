@@ -1,11 +1,12 @@
 % File src/library/utils/man/INSTALL.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2017 R Core Team
+% Copyright 1995-2019 R Core Team
 % Distributed under GPL 2 or later
 
 \name{INSTALL}
 \alias{INSTALL}
 \alias{R_INSTALL_TAR}
+\alias{R_INSTALL_STAGED}
 
 \title{Install Add-on Packages}
 \description{Utility for installing add-on packages.}
@@ -158,9 +159,26 @@
   There are two ways to install for all available sub-architectures.  If
   the configure script is known to work for both Windows architectures,
   use flag \option{--force-biarch} (and packages can specify this
-  \emph{via} a \samp{Biarch} field in their \code{DESCRIPTION} files).
+  \emph{via} a \samp{Biarch: yes} field in their \code{DESCRIPTION} files).
   Second, a single tarball can be installed with
 \preformatted{R CMD INSTALL --merge-multiarch mypkg_version.tar.gz}
+}
+
+\section{Staged installation}{
+  The default way to install source packages changed in \R 3.6.0, so
+  packages are first installed to a temporary location and then (if
+  successful) moved to the destination library directory.  Some older
+  packages were written in ways that assume direct installation to the
+  destination library.
+
+  Staged installation can currently be overridden by having a line
+  \samp{StagedInstall: no} in the package's \file{DESCRIPTION} file,
+  \emph{via} flag \option{--no-staged-install} or by setting environment
+  variable \env{R_INSTALL_STAGED} to a false value
+  (e.g.\sspace{}\samp{false} or \samp{no}).
+
+  Staged installation requires either \option{--pkglock} or
+  \option{--lock}, one of which is used by default.
 }
 
 \seealso{
@@ -176,7 +194,7 @@
 #ifdef windows
   (on the Help menu in \code{RGui}),
 #endif
-  \code{\link{RShowDoc}} and the \file{doc/manual} subdirectory of the
-  \R source tree.
+  \emph{via} \code{\link{RShowDoc}} or in the \file{doc/manual}
+  subdirectory of the \R source tree.
 }
 \keyword{utilities}

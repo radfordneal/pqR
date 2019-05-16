@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
+ *  Copyright (C) 1997--2019  The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2017  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Pulic License as published by
@@ -180,11 +180,11 @@ int R_nchar(SEXP string, nchar_type type_,
 		int nc = 0;
 		for( ; *p; p += utf8clen(*p)) {
 		    utf8toucs(&wc1, p);
-		    if (IS_HIGH_SURROGATE(wc1)) 
+		    if (IS_HIGH_SURROGATE(wc1))
 		    	ucs = utf8toucs32(wc1, p);
 		    else
 		    	ucs = wc1;
-		    nc += Ri18n_wcwidth(ucs); 
+		    nc += Ri18n_wcwidth(ucs);
 		}
 		return nc;
 	    }
@@ -217,7 +217,7 @@ int R_nchar(SEXP string, nchar_type type_,
 
 SEXP attribute_hidden do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP d, s, x, stype;
+    SEXP d, s, x, stype, ans;
     int nargs = length(args);
 
 #ifdef R_version_3_4_or_so
@@ -230,6 +230,8 @@ SEXP attribute_hidden do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
 			   (unsigned long) nargs),
 	      nargs, PRIMNAME(op), 3, 4);
 #endif
+    if (DispatchOrEval(call, op, "nchar", args, env, &ans, 0, 1))
+      return(ans);
     if (isFactor(CAR(args)))
 	error(_("'%s' requires a character vector"), "nchar()");
     PROTECT(x = coerceVector(CAR(args), STRSXP));
@@ -273,34 +275,57 @@ SEXP attribute_hidden do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
     return s;
 }
 
-static void substr(char *buf, const char *str, int ienc, int sa, int so)
+/* Assumes sa < so; sa, so are 1-based indices in character units to str,
+   len is length of str in bytes, excluding the terminator.
+
+   Returns pointer to result string in rfrom, of length rlen (in bytes,
+   excluding the terminator - the string is not terminated).
+
+   *rfrom may be invalid pointer when rlen is zero.
+*/
+static void substr(const char *str, int len, int ienc, int sa, int so,
+                   R_xlen_t idx, int isascii, const char **rfrom,
+	           int *rlen, int assumevalid)
 {
-/* Store the substring	str [sa:so]  into buf[] */
-    int i, j, used;
+    int i;
+    const char *end = str + len;
 
     if (ienc == CE_UTF8) {
-	const char *end = str + strlen(str);
-	for (i = 0; i < so && str < end; i++) {
-	    int used = utf8clen(*str);
-	    if (i < sa - 1) { str += used; continue; }
-	    for (j = 0; j < used; j++) *buf++ = *str++;
+	if (!assumevalid && !utf8Valid(str)) {
+	    char msg[30];
+	    sprintf(msg, "element %ld", (long)idx+1);
+	    error(_("invalid multibyte string, %s"), msg);
 	}
-    } else if (ienc == CE_LATIN1 || ienc == CE_BYTES) {
-	for (str += (sa - 1), i = sa; i <= so; i++) *buf++ = *str++;
+	for (i = 0; i < sa - 1 && str < end; i++)
+	    str += utf8clen(*str);
+	*rfrom = str;
+	for(; i < so && str < end; i++)
+	    str += utf8clen(*str);
+	*rlen = (int) (str - *rfrom);
+    } else if (!isascii && ienc != CE_LATIN1 && ienc != CE_BYTES
+               && mbcslocale) {
+	mbstate_t mb_st;
+	mbs_init(&mb_st);
+	for (i = 0; i < sa - 1 && str < end; i++)
+	    /* throws error on invalid multi-byte string */
+	    str += Mbrtowc(NULL, str, MB_CUR_MAX, &mb_st);
+	*rfrom = str;
+	for (; i < so && str < end; i++)
+	    /* throws error on invalid multi-byte string */
+	    str += (int) Mbrtowc(NULL, str, MB_CUR_MAX, &mb_st);
+	*rlen = (int) (str - *rfrom);
     } else {
-	if (mbcslocale && !strIsASCII(str)) {
-	    const char *end = str + strlen(str);
-	    mbstate_t mb_st;
-	    mbs_init(&mb_st);
-	    for (i = 1; i < sa; i++) str += Mbrtowc(NULL, str, MB_CUR_MAX, &mb_st);
-	    for (i = sa; i <= so && str < end; i++) {
-		used = (int) Mbrtowc(NULL, str, MB_CUR_MAX, &mb_st);
-		for (j = 0; j < used; j++) *buf++ = *str++;
-	    }
-	} else
-	    for (str += (sa - 1), i = sa; i <= so; i++) *buf++ = *str++;
+	if (so - 1 < len) {
+	    *rfrom = str + sa - 1;
+	    *rlen = so - sa + 1;
+	} else if (sa - 1 < len) {
+	    *rfrom = str + sa - 1;
+	    *rlen = len - (sa - 1);
+	} else {
+	    *rfrom = NULL;
+	    *rlen = 0;
+	}
     }
-    *buf = '\0';
 }
 
 SEXP attribute_hidden
@@ -313,6 +338,7 @@ do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("extracting substrings from a non-character object"));
     R_xlen_t len = XLENGTH(x);
     PROTECT(s = allocVector(STRSXP, len));
+    SEXP lastel = NULL;
     if (len > 0) {
 	SEXP sa = CADR(args),
 	    so = CADDR(args);
@@ -332,18 +358,23 @@ do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	    cetype_t ienc = getCharCE(el);
 	    const char *ss = CHAR(el);
-	    size_t slen = strlen(ss); /* FIXME -- should handle embedded nuls */
-	    char *buf = R_AllocStringBuffer(slen+1, &cbuff);
+	    int slen = LENGTH(el);
 	    if (start < 1) start = 1;
-	    if (start > stop || start > slen) {
-		buf[0] = '\0';
+	    if (start > stop) {
+		SET_STRING_ELT(s, i, R_BlankString);
 	    } else {
-		if (stop > slen) stop = (int) slen;
-		substr(buf, ss, ienc, start, stop);
+		const char *rfrom;
+		int rlen;
+		/* Skip checking UTF-8 validity if the string is the same
+		   R object as previously. This improves performance of
+		   substring() used on a single string but many substrings
+		   to be extracted from it */
+		substr(ss, slen, ienc, start, stop, i,
+		       IS_ASCII(el), &rfrom, &rlen, el == lastel);
+		SET_STRING_ELT(s, i, mkCharLenCE(rfrom, rlen, ienc));
 	    }
-	    SET_STRING_ELT(s, i, mkCharCE(buf, ienc));
+	    lastel = el;
 	}
-	R_FreeStringBufferL(&cbuff);
     }
     SHALLOW_DUPLICATE_ATTRIB(s, x);
     /* This copied the class, if any */
@@ -377,7 +408,7 @@ do_startsWith(SEXP call, SEXP op, SEXP args, SEXP env)
 	} else {
 	    // ASCII matching will do for ASCII Xfix except in non-UTF-8 MBCS
 	    Rboolean need_translate = TRUE;
-	    if (strIsASCII(CHAR(el)) && (utf8locale || !mbcslocale)) 
+	    if (strIsASCII(CHAR(el)) && (utf8locale || !mbcslocale))
 		need_translate = FALSE;
 	    cp y0 = need_translate ? translateCharUTF8(el) : CHAR(el);
 	    int ylen = (int) strlen(y0);
@@ -433,7 +464,7 @@ do_startsWith(SEXP call, SEXP op, SEXP args, SEXP env)
 		    else if (x1[i1] < y1[i2])
 			LOGICAL(ans)[i] = 0;
 		    else // memcmp should be faster than strncmp
-			LOGICAL(ans)[i] = 
+			LOGICAL(ans)[i] =
 			    memcmp(x0[i1], y0[i2], y1[i2]) == 0;
 		});
 	} else { // endsWith
@@ -445,7 +476,7 @@ do_startsWith(SEXP call, SEXP op, SEXP args, SEXP env)
 			if (off < 0)
 			    LOGICAL(ans)[i] = 0;
 			else {
-			    LOGICAL(ans)[i] = 
+			    LOGICAL(ans)[i] =
 				memcmp(x0[i1] + off, y0[i2], y1[i2]) == 0;
 			}
 		    }
@@ -458,12 +489,23 @@ do_startsWith(SEXP call, SEXP op, SEXP args, SEXP env)
 
 
 static void
-substrset(char *buf, const char *const str, cetype_t ienc, int sa, int so)
+substrset(char *buf, const char *const str, cetype_t ienc, int sa, int so,
+          R_xlen_t xidx, R_xlen_t vidx)
 {
     /* Replace the substring buf[sa:so] by str[] */
     int i, in = 0, out = 0;
 
     if (ienc == CE_UTF8) {
+	if (!utf8Valid(buf)) {
+	    char msg[30];
+	    sprintf(msg, "element %ld", (long)xidx+1);
+	    error(_("invalid multibyte string, %s"), msg);
+	}
+	if (!utf8Valid(str)) {
+	    char msg[30];
+	    sprintf(msg, "value element %ld", (long)vidx+1);
+	    error(_("invalid multibyte string, %s"), msg);
+	}
 	for (i = 1; i < sa; i++) buf += utf8clen(*buf);
 	for (i = sa; i <= so && in < strlen(str); i++) {
 	    in +=  utf8clen(str[in]);
@@ -561,7 +603,7 @@ SEXP attribute_hidden do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 		/* might expand under MBCS */
 		buf = R_AllocStringBuffer(slen+strlen(v_ss), &cbuff);
 		strcpy(buf, ss);
-		substrset(buf, v_ss, ienc2, start, stop);
+		substrset(buf, v_ss, ienc2, start, stop, i, i % v);
 		SET_STRING_ELT(s, i, mkCharCE(buf, ienc2));
 	    }
 	    vmaxset(vmax);
@@ -883,24 +925,15 @@ SEXP attribute_hidden do_makenames(SEXP call, SEXP op, SEXP args, SEXP env)
 	    strcpy(tmp, translateChar(STRING_ELT(arg, i)));
 	}
 	if (mbcslocale) {
-	    /* This cannot lengthen the string, so safe to overwrite it.
-	       Would also be possible a char at a time.
-	     */
+	    /* This cannot lengthen the string, so safe to overwrite it. */
 	    int nc = (int) mbstowcs(NULL, tmp, 0);
-	    wchar_t *wstr = Calloc(nc+1, wchar_t), *wc;
 	    if (nc >= 0) {
+		wchar_t *wstr = Calloc(nc+1, wchar_t);
 		mbstowcs(wstr, tmp, nc+1);
-		for (wc = wstr; *wc; wc++) {
+		for (wchar_t * wc = wstr; *wc; wc++) {
 		    if (*wc == L'.' || (allow_ && *wc == L'_'))
 			/* leave alone */;
 		    else if (!iswalnum((int)*wc)) *wc = L'.';
-		    /* If it changes into dot here,
-		     * length will become short on mbcs.
-		     * The name which became short will contain garbage.
-		     * cf.
-		     *   >  make.names(c("\u30fb"))
-		     *   [1] "X.\0"
-		     */
 		}
 		wcstombs(tmp, wstr, strlen(tmp)+1);
 		Free(wstr);
@@ -912,7 +945,7 @@ SEXP attribute_hidden do_makenames(SEXP call, SEXP op, SEXP args, SEXP env)
 		/* else leave alone */
 	    }
 	}
-	l = (int) strlen(tmp);        /* needed? */
+//	l = (int) strlen(tmp);        /* needed? */
 	SET_STRING_ELT(ans, i, mkChar(tmp));
 	/* do we have a reserved word?  If so the name is invalid */
 	if (!isValidName(tmp)) {
@@ -1570,17 +1603,16 @@ SEXP attribute_hidden do_strtrim(SEXP call, SEXP op, SEXP args, SEXP env)
 
 static int strtoi(SEXP s, int base)
 {
-    long int res;
-    char *endp;
+    if(s == NA_STRING || CHAR(s)[0] == '\0') return(NA_INTEGER);
 
     /* strtol might return extreme values on error */
     errno = 0;
-
-    if(s == NA_STRING) return(NA_INTEGER);
-    res = strtol(CHAR(s), &endp, base); /* ASCII */
-    if(errno || *endp != '\0') res = NA_INTEGER;
-    if(res > INT_MAX || res < INT_MIN) res = NA_INTEGER;
-    return (int) res;
+    char *endp;
+    long int res = strtol(CHAR(s), &endp, base); /* ASCII */
+    return (errno || *endp != '\0' ||
+	    res > INT_MAX || res < INT_MIN)
+	? NA_INTEGER
+	: (int) res;
 }
 
 SEXP attribute_hidden do_strtoi(SEXP call, SEXP op, SEXP args, SEXP env)

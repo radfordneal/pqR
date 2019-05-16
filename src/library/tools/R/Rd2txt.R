@@ -1,7 +1,7 @@
 #  File src/library/tools/R/Rd2txt.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -25,8 +25,7 @@
 
 tabExpand <- function(x) {
     srcref <- attr(x, "srcref")
-    if (is.null(srcref)) start <- 0L
-    else start <- srcref[5L] - 1L
+    start <- if(is.null(srcref)) 0L else srcref[5L] - 1L
     .Call(C_doTabExpand, x, start)
 }
 
@@ -226,7 +225,7 @@ transformMethod <- function(i, blocks, Rdfile) {
 	findClose(j)
 	chars[char] <- ""
 	blocks[j] <- editblock(blocks[[j]],
-	                         paste(chars, collapse=""))
+                               paste(chars, collapse=""))
 
 	methodtype <- ""
     } else {
@@ -274,7 +273,7 @@ transformMethod <- function(i, blocks, Rdfile) {
 		     list(structure("'\n", Rd_tag="RCODE", srcref=srcref)),
 		     blocks[-seq_len(i)] )
     blocks
-}
+}# transformMethod()
 
 Rd2txt <-
     function(Rd, out="", package = "", defines=.Platform$OS.type,
@@ -375,7 +374,7 @@ Rd2txt <-
 
     put <- function(...) {
         txt <- paste0(..., collapse="")
-        trail <- grepl("\n$", txt)
+        trail <- endsWith(txt, "\n")
         # Convert newlines
         txt <- strsplit(txt, "\n", fixed = TRUE)[[1L]]
         if (dropBlank) {
@@ -662,7 +661,7 @@ Rd2txt <-
                    ## Test to see if we can convert the encoded version
                    txt <- as.character(block[[1L]])
                    test <- iconv(txt, "UTF-8", outputEncoding, mark = FALSE)
-                   txt <- if(!is.na(test)) txt else as.character(block[[2L]])
+                   txt <- if(!anyNA(test)) txt else as.character(block[[2L]])
                    put(txt)
                } ,
                "\\eqn" = {
@@ -755,6 +754,7 @@ Rd2txt <-
                         else
                             entries
                     })
+        if(!length(entries)) return()
         rows <- entries[[length(entries)]]$row
         cols <- max(sapply(entries, function(e) e$col))
         widths <- rep_len(0L, cols)

@@ -2,7 +2,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2016  The R Core Team
+ *  Copyright (C) 1997--2018  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -98,7 +98,7 @@ typedef struct yyltype
 
 /* Functions used in the parsing process */
 
-static SEXP	GrowList(SEXP, SEXP);
+static void	GrowList(SEXP, SEXP);
 static int	KeywordLookup(const char *);
 static SEXP	UserMacroLookup(const char *);
 static SEXP	InstallKeywords();
@@ -130,11 +130,15 @@ struct ParseState {
     SEXP	Value;
     int	xxinitvalue;
     SEXP	xxMacroList;/* A hashed environment containing all the standard and user-defined macro names */
+    SEXP mset; /* Precious mset for protecting parser semantic values */
     ParseState *prevState;
 };
 
 static Rboolean busy = FALSE;
 static ParseState parseState;
+
+#define PRESERVE_SV(x) R_PreserveInMSet((x), parseState.mset)
+#define RELEASE_SV(x)  R_ReleaseFromMSet((x), parseState.mset)
 
 #define RLIKE 1		/* Includes R strings; xxinRString holds the opening quote char, or 0 outside a string */
 #define LATEXLIKE 2
@@ -176,6 +180,12 @@ static int	mkText(int);
 static int	mkVerb(int);
 static int 	mkComment(int);
 
+static SEXP R_RdTagSymbol = NULL;
+static SEXP R_RdOptionSymbol = NULL;
+static SEXP R_DefinitionSymbol = NULL;
+static SEXP R_DynamicFlagSymbol = NULL;
+static SEXP R_MacroSymbol = NULL;
+
 #define YYSTYPE		SEXP
 
 %}
@@ -199,7 +209,7 @@ static int 	mkComment(int);
    pattern, just in case the last item is unmatched and we need to back out.  But
    it is safe to list more, so we do. */
 
-%destructor { UNPROTECT_PTR($$); } SECTIONHEADER RSECTIONHEADER
+%destructor { RELEASE_SV($$); } SECTIONHEADER RSECTIONHEADER
 VSECTIONHEADER SECTIONHEADER2 RCODEMACRO SEXPR LATEXMACRO VERBMACRO
 OPTMACRO ESCAPE LISTSECTION ITEMIZE DESCRIPTION NOITEM LATEXMACRO2
 VERBMACRO2 VERBLATEX LATEXMACRO3 IFDEF ENDIF TEXT RCODE VERB COMMENT UNKNOWN
@@ -211,12 +221,12 @@ VerbatimArg1 VerbatimArg2 IfDefTarget ArgItems Option
 
 %%
 
-Init:		STARTFILE RdFile END_OF_INPUT		{ xxsavevalue($2, &@$); UNPROTECT_PTR($1); YYACCEPT; }
-	|	STARTFRAGMENT RdFragment END_OF_INPUT	{ xxsavevalue($2, &@$); UNPROTECT_PTR($1); YYACCEPT; }
-	|	error					{ PROTECT(parseState.Value = R_NilValue);  YYABORT; }
+Init:		STARTFILE RdFile END_OF_INPUT		{ xxsavevalue($2, &@$); RELEASE_SV($1); YYACCEPT; }
+	|	STARTFRAGMENT RdFragment END_OF_INPUT	{ xxsavevalue($2, &@$); RELEASE_SV($1); YYACCEPT; }
+	|	error					{ PRESERVE_SV(parseState.Value = R_NilValue);  YYABORT; }
 	;
 
-RdFragment :    goLatexLike ArgItems  		{ $$ = $2; UNPROTECT_PTR($1); }
+RdFragment :    goLatexLike ArgItems  		{ $$ = $2; RELEASE_SV($1); }
 	;
 	
 RdFile	:	SectionList			{ $$ = $1; }
@@ -231,7 +241,7 @@ Section:	VSECTIONHEADER VerbatimArg	{ $$ = xxmarkup($1, $2, STATIC, &@$); }
 	|	SECTIONHEADER  LatexArg  	{ $$ = xxmarkup($1, $2, STATIC, &@$); }
 	|	LISTSECTION    Item2Arg		{ $$ = xxmarkup($1, $2, STATIC, &@$); }
 	|	SECTIONHEADER2 LatexArg LatexArg2 { $$ = xxmarkup2($1, $2, $3, 2, STATIC, &@$); }
-	|	IFDEF IfDefTarget SectionList ENDIF { $$ = xxmarkup2($1, $2, $3, 2, HAS_IFDEF, &@$); UNPROTECT_PTR($4); } 
+	|	IFDEF IfDefTarget SectionList ENDIF { $$ = xxmarkup2($1, $2, $3, 2, HAS_IFDEF, &@$); RELEASE_SV($4); }
 	|	IFDEF IfDefTarget SectionList error { $$ = xxmarkup2($1, $2, $3, 2, HAS_IFDEF, &@$); }
 	|	SEXPR       goOption RLikeArg2   { $$ = xxmarkup($1, $3, HAS_SEXPR, &@$); xxpopMode($2); }
 	|	SEXPR       goOption Option RLikeArg2 { $$ = xxOptionmarkup($1, $3, $4, HAS_SEXPR, &@$); xxpopMode($2); }
@@ -267,7 +277,7 @@ Markup:		LATEXMACRO  LatexArg 		{ $$ = xxmarkup($1, $2, STATIC, &@$); }
 	|	VERBMACRO2  VerbatimArg1	{ $$ = xxmarkup2($1, $2, R_NilValue, 1, STATIC, &@$); }
 	|       VERBMACRO2  VerbatimArg1 VerbatimArg2 { $$ = xxmarkup2($1, $2, $3, 2, STATIC, &@$); }
 	|	ESCAPE				{ $$ = xxmarkup($1, R_NilValue, STATIC, &@$); }
-	|	IFDEF IfDefTarget ArgItems ENDIF { $$ = xxmarkup2($1, $2, $3, 2, HAS_IFDEF, &@$); UNPROTECT_PTR($4); }
+	|	IFDEF IfDefTarget ArgItems ENDIF { $$ = xxmarkup2($1, $2, $3, 2, HAS_IFDEF, &@$); RELEASE_SV($4); }
 	|	IFDEF IfDefTarget ArgItems error { $$ = xxmarkup2($1, $2, $3, 2, HAS_IFDEF, &@$); }
 	|	VERBLATEX   VerbatimArg LatexArg2 { $$ = xxmarkup2($1, $2, $3, 2, STATIC, &@$); }
 	
@@ -361,8 +371,8 @@ Option:		'[' Item ']'			{ $$ = $2; }
 static SEXP xxpushMode(int newmode, int newitem, int neweqn)
 {
     SEXP ans;
-    PROTECT(ans = allocVector(INTSXP, 7));
-    
+
+    PRESERVE_SV(ans = allocVector(INTSXP, 7));
     INTEGER(ans)[0] = parseState.xxmode;		/* Lexer mode */
     INTEGER(ans)[1] = parseState.xxitemType;	/* What is \item? */
     INTEGER(ans)[2] = parseState.xxbraceDepth;	/* Brace depth used in RCODE and VERBATIM */
@@ -398,38 +408,35 @@ static void xxpopMode(SEXP oldmode)
     parseState.xxQuoteCol  = INTEGER(oldmode)[5];
     parseState.xxinEqn	= INTEGER(oldmode)[6];
     
-    UNPROTECT_PTR(oldmode);
+    RELEASE_SV(oldmode);
 }
 
 static int getDynamicFlag(SEXP item)
 {
-    SEXP flag = getAttrib(item, install("dynamicFlag"));
+    SEXP flag = getAttrib(item, R_DynamicFlagSymbol);
     if (isNull(flag)) return 0;
     else return INTEGER(flag)[0];
 }
 
 static void setDynamicFlag(SEXP item, int flag)
 {
-    if (flag) {
-    	SEXP s_dynamicFlag = install("dynamicFlag");
-    	setAttrib(item, s_dynamicFlag, ScalarInteger(flag));
-    }
+    if (flag)
+	setAttrib(item, R_DynamicFlagSymbol, ScalarInteger(flag));
 }
 
 static SEXP xxnewlist(SEXP item)
 {
-    SEXP ans, tmp;
+    SEXP ans;
 #if DEBUGVALS
     Rprintf("xxnewlist(item=%p)", item);
 #endif    
-    PROTECT(tmp = NewList());
+    PRESERVE_SV(ans = NewList());
     if (item) {
     	int flag = getDynamicFlag(item);
-    	PROTECT(ans = GrowList(tmp, item));
+	GrowList(ans, item);
     	setDynamicFlag(ans, flag);
-    	UNPROTECT_PTR(tmp);
-    	UNPROTECT_PTR(item);
-    } else ans = tmp;
+	RELEASE_SV(item);
+    }
 #if DEBUGVALS
     Rprintf(" result: %p is length %d\n", ans, length(ans));
 #endif
@@ -481,21 +488,19 @@ static SEXP xxnewlist9(SEXP item1, SEXP item2, SEXP item3, SEXP item4, SEXP item
                   item9);
 }
 
-static SEXP xxlist(SEXP oldlist, SEXP item)
+static SEXP xxlist(SEXP list, SEXP item)
 {
-    SEXP ans;
-    int flag = getDynamicFlag(oldlist) | getDynamicFlag(item);
+    int flag = getDynamicFlag(list) | getDynamicFlag(item);
 #if DEBUGVALS
-    Rprintf("xxlist(oldlist=%p, item=%p)", oldlist, item);
+    Rprintf("xxlist(list=%p, item=%p)", list, item);
 #endif
-    PROTECT(ans = GrowList(oldlist, item));
-    UNPROTECT_PTR(item);
-    UNPROTECT_PTR(oldlist);
-    setDynamicFlag(ans, flag);
+    GrowList(list, item);
+    RELEASE_SV(item);
+    setDynamicFlag(list, flag);
 #if DEBUGVALS
-    Rprintf(" result: %p is length %d\n", ans, length(ans));
+    Rprintf(" result: %p is length %d\n", list, length(list));
 #endif
-    return ans;
+    return list;
 }
 
 static SEXP xxmarkup(SEXP header, SEXP body, int flag, YYLTYPE *lloc)
@@ -505,18 +510,19 @@ static SEXP xxmarkup(SEXP header, SEXP body, int flag, YYLTYPE *lloc)
     Rprintf("xxmarkup(header=%p, body=%p)", header, body);    
 #endif
     if (isNull(body)) 
-        PROTECT(ans = allocVector(VECSXP, 0));
+        PRESERVE_SV(ans = allocVector(VECSXP, 0));
     else {
         flag |= getDynamicFlag(body);
-	PROTECT(ans = PairToVectorList(CDR(body)));
-    	UNPROTECT_PTR(body);	
+	PRESERVE_SV(ans = PairToVectorList(CDR(body)));
+	RELEASE_SV(body);
     }
     if (isNull(header))
-    	PROTECT(header = mkString("LIST"));
-    	
-    setAttrib(ans, install("Rd_tag"), header);
+	setAttrib(ans, R_RdTagSymbol, mkString("LIST"));
+    else {
+	setAttrib(ans, R_RdTagSymbol, header);
+	RELEASE_SV(header);
+    }
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
-    UNPROTECT_PTR(header);
     setDynamicFlag(ans, flag);
 #if DEBUGVALS
     Rprintf(" result: %p\n", ans);    
@@ -556,21 +562,29 @@ static SEXP xxnewcommand(SEXP cmd, SEXP name, SEXP defn, YYLTYPE *lloc)
 	yyerror(buffer);
     }
     PROTECT(ans = ScalarInteger(USERMACRO + maxarg));
-    setAttrib(ans, install("Rd_tag"), cmd);
-    setAttrib(ans, install("definition"), thedefn);
+    setAttrib(ans, R_RdTagSymbol, cmd);
+    setAttrib(ans, R_DefinitionSymbol, thedefn);
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
     defineVar(installTrChar(STRING_ELT(thename, 0)), ans, parseState.xxMacroList);
+    UNPROTECT(2); /* thedefn, ans */
 
-    UNPROTECT_PTR(thedefn);
-    UNPROTECT_PTR(cmd);
-    UNPROTECT_PTR(name);
-    UNPROTECT_PTR(defn); 
+    PRESERVE_SV(ans);
+    RELEASE_SV(cmd);
+    RELEASE_SV(name);
+    RELEASE_SV(defn);
     return ans;
 }
 
 #define START_MACRO -2
 #define END_MACRO -3
-    	
+
+static Rboolean isComment(SEXP elt)
+{
+    SEXP a = getAttrib(elt, R_RdTagSymbol);
+    return isString(a) && LENGTH(a) == 1 &&
+           !strcmp(CHAR(STRING_ELT(a, 0)), "COMMENT");
+}
+
 static SEXP xxusermacro(SEXP macro, SEXP args, YYLTYPE *lloc)
 {
     SEXP ans, value, nextarg;
@@ -581,19 +595,62 @@ static SEXP xxusermacro(SEXP macro, SEXP args, YYLTYPE *lloc)
     Rprintf("xxusermacro(macro=%p, args=%p)", macro, args);
 #endif
     len = length(args)-1;
-    PROTECT(ans = allocVector(STRSXP, len + 1));
+    PRESERVE_SV(ans = allocVector(STRSXP, len + 1));
     value = UserMacroLookup(CHAR(STRING_ELT(macro,0)));
     if (TYPEOF(value) == STRSXP)
     	SET_STRING_ELT(ans, 0, STRING_ELT(value, 0));
     else
     	error(_("No macro definition for '%s'."), CHAR(STRING_ELT(macro,0)));
-/*    Rprintf("len = %d", len); */
+
     for (i = 0, nextarg=args; i < len; i++, nextarg = CDR(nextarg)) {
-/*        Rprintf("arg i is");
-        PrintValue(CADR(CADR(nextarg))); */
-	SET_STRING_ELT(ans, i+1, STRING_ELT(CADR(CADR(nextarg)), 0));
-    }	
-    UNPROTECT_PTR(args);
+	if (isNull(CDR(CADR(nextarg)))) {
+	    /* This happens for an empty argument {} and for invocation
+	       of a macro with zero parameters. In that case, the ""
+	       element of ans is not needed but does no harm. */
+	    SET_STRING_ELT(ans, i+1, mkChar(""));
+	    continue;
+	}
+	if (isNull(CDR(CDR(CADR(nextarg))))) {
+	    /* The common case: argument without newline nor comment.
+	       (when the length is 1, there can be no comment) */
+	    SEXP s = CADR(CADR(nextarg));
+	    if (TYPEOF(s) == STRSXP && LENGTH(s) == 1)
+		SET_STRING_ELT(ans, i+1, STRING_ELT(s, 0));
+	    else
+		error("internal error: invalid argument to xxusermacro");
+	    continue;
+	}
+
+	/* An argument with a newline or comment or both. Exclude comments and
+	   concatenate VERBs from different lines (newline characters are
+	   in the VERBs already. */
+	const void *vmax = vmaxget();
+	SEXP si;
+	size_t ilen = 0;
+	for(si = CDR(CADR(nextarg)); si != R_NilValue; si = CDR(si)) {
+	    SEXP stri = CAR(si);
+	    if (TYPEOF(stri) == STRSXP && LENGTH(stri) == 1) {
+		if (!isComment(stri))
+		    ilen += LENGTH(STRING_ELT(stri, 0));
+	    } else
+		error("internal error: invalid argument to xxusermacro");
+	}
+
+	char *str = (char *)R_alloc(ilen + 1, sizeof(char));
+	size_t offset = 0;
+	for(si = CDR(CADR(nextarg)); si != R_NilValue; si = CDR(si)) {
+	    SEXP stri = CAR(si);
+	    if (!isComment(stri)) {
+		int nc = LENGTH(STRING_ELT(stri, 0));
+		memcpy(str + offset, CHAR(STRING_ELT(stri, 0)), nc);
+		offset += nc;
+	    }
+	}
+	str[offset] = '\0';
+	SET_STRING_ELT(ans, i+1, mkChar(str));
+        vmaxset(vmax);
+    }
+    RELEASE_SV(args);
 
     /* Now push the expanded macro onto the input stream, in reverse order */
     xxungetc(END_MACRO);
@@ -601,20 +658,24 @@ static SEXP xxusermacro(SEXP macro, SEXP args, YYLTYPE *lloc)
     for (c = start + strlen(start); c > start; c--) {
     	if (c > start + 1 && *(c-2) == '#' && isdigit(*(c-1))) {
     	    int which = *(c-1) - '0';
+	    if (which >= len + 1)
+		/* currently this won't happen, because the parser gets
+		   confused whenever there is invalid number of {} arguments
+		   to a user macro */
+		error(_("Not enough arguments passed to user macro '%s'"),
+		        CHAR(STRING_ELT(macro,0)));
     	    const char *arg = CHAR(STRING_ELT(ans, which));
     	    for (size_t ii = strlen(arg); ii > 0; ii--) xxungetc(arg[ii-1]);
     	    c--;
-    	} else {
+	} else
     	    xxungetc(*(c-1));
-    	}
     }
     xxungetc(START_MACRO);
     
-    SEXP s_Rd_tag = install("Rd_tag");
-    setAttrib(ans, s_Rd_tag, mkString("USERMACRO"));
+    setAttrib(ans, R_RdTagSymbol, mkString("USERMACRO"));
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
-    setAttrib(ans, install("macro"), macro);
-    UNPROTECT_PTR(macro);
+    setAttrib(ans, R_MacroSymbol, macro);
+    RELEASE_SV(macro);
 #if DEBUGVALS
     Rprintf(" result: %p\n", ans);
 #endif
@@ -628,13 +689,13 @@ static SEXP xxOptionmarkup(SEXP header, SEXP option, SEXP body, int flag, YYLTYP
     Rprintf("xxOptionmarkup(header=%p, option=%p, body=%p)", header, option, body);    
 #endif
     flag |= getDynamicFlag(body);
-    PROTECT(ans = PairToVectorList(CDR(body)));
-    UNPROTECT_PTR(body);	
-    setAttrib(ans, install("Rd_tag"), header);
-    UNPROTECT_PTR(header);
+    PRESERVE_SV(ans = PairToVectorList(CDR(body)));
+    RELEASE_SV(body);
+    setAttrib(ans, R_RdTagSymbol, header);
+    RELEASE_SV(header);
     flag |= getDynamicFlag(option);
-    setAttrib(ans, install("Rd_option"), option);
-    UNPROTECT_PTR(option);
+    setAttrib(ans, R_RdOptionSymbol, option);
+    RELEASE_SV(option);
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
     setDynamicFlag(ans, flag);    
 #if DEBUGVALS
@@ -650,11 +711,11 @@ static SEXP xxmarkup2(SEXP header, SEXP body1, SEXP body2, int argcount, int fla
     Rprintf("xxmarkup2(header=%p, body1=%p, body2=%p)", header, body1, body2);        
 #endif
     
-    PROTECT(ans = allocVector(VECSXP, argcount));
+    PRESERVE_SV(ans = allocVector(VECSXP, argcount));
     if (!isNull(body1)) {
     	int flag1 = getDynamicFlag(body1);
     	SET_VECTOR_ELT(ans, 0, PairToVectorList(CDR(body1)));
-    	UNPROTECT_PTR(body1);
+	RELEASE_SV(body1);
     	setDynamicFlag(VECTOR_ELT(ans, 0), flag1);
     	flag |= flag1;
     }
@@ -663,12 +724,12 @@ static SEXP xxmarkup2(SEXP header, SEXP body1, SEXP body2, int argcount, int fla
 	if (argcount < 2) error("internal error: inconsistent argument count");
 	flag2 = getDynamicFlag(body2);
     	SET_VECTOR_ELT(ans, 1, PairToVectorList(CDR(body2)));    
-    	UNPROTECT_PTR(body2);
+	RELEASE_SV(body2);
     	setDynamicFlag(VECTOR_ELT(ans, 1), flag2);
     	flag |= flag2;
     }
-    setAttrib(ans, install("Rd_tag"), header);
-    UNPROTECT_PTR(header);    
+    setAttrib(ans, R_RdTagSymbol, header);
+    RELEASE_SV(header);
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
     setDynamicFlag(ans, flag);
 #if DEBUGVALS
@@ -684,11 +745,11 @@ static SEXP xxmarkup3(SEXP header, SEXP body1, SEXP body2, SEXP body3, int flag,
     Rprintf("xxmarkup2(header=%p, body1=%p, body2=%p, body3=%p)", header, body1, body2, body3);        
 #endif
     
-    PROTECT(ans = allocVector(VECSXP, 3));
+    PRESERVE_SV(ans = allocVector(VECSXP, 3));
     if (!isNull(body1)) {
     	int flag1 = getDynamicFlag(body1);
     	SET_VECTOR_ELT(ans, 0, PairToVectorList(CDR(body1)));
-    	UNPROTECT_PTR(body1);
+	RELEASE_SV(body1);
     	setDynamicFlag(VECTOR_ELT(ans, 0), flag1);
     	flag |= flag1;
     }
@@ -696,7 +757,7 @@ static SEXP xxmarkup3(SEXP header, SEXP body1, SEXP body2, SEXP body3, int flag,
     	int flag2;
 	flag2 = getDynamicFlag(body2);
     	SET_VECTOR_ELT(ans, 1, PairToVectorList(CDR(body2)));    
-    	UNPROTECT_PTR(body2);
+	RELEASE_SV(body2);
     	setDynamicFlag(VECTOR_ELT(ans, 1), flag2);
     	flag |= flag2;
     }
@@ -704,12 +765,12 @@ static SEXP xxmarkup3(SEXP header, SEXP body1, SEXP body2, SEXP body3, int flag,
     	int flag3;
 	flag3 = getDynamicFlag(body3);
     	SET_VECTOR_ELT(ans, 2, PairToVectorList(CDR(body3)));    
-    	UNPROTECT_PTR(body3);
+	RELEASE_SV(body3);
     	setDynamicFlag(VECTOR_ELT(ans, 2), flag3);
     	flag |= flag3;
     }    
-    setAttrib(ans, install("Rd_tag"), header);
-    UNPROTECT_PTR(header);    
+    setAttrib(ans, R_RdTagSymbol, header);
+    RELEASE_SV(header);
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
     setDynamicFlag(ans, flag);
 #if DEBUGVALS
@@ -721,19 +782,18 @@ static SEXP xxmarkup3(SEXP header, SEXP body1, SEXP body2, SEXP body3, int flag,
 static void xxsavevalue(SEXP Rd, YYLTYPE *lloc)
 {
     int flag = getDynamicFlag(Rd);
-    PROTECT(parseState.Value = PairToVectorList(CDR(Rd)));
+    PRESERVE_SV(parseState.Value = PairToVectorList(CDR(Rd)));
     if (!isNull(parseState.Value)) {
     	setAttrib(parseState.Value, R_ClassSymbol, mkString("Rd"));
     	setAttrib(parseState.Value, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
     	setDynamicFlag(parseState.Value, flag);
     }
-    UNPROTECT_PTR(Rd);
+    RELEASE_SV(Rd);
 }
 
 static SEXP xxtag(SEXP item, int type, YYLTYPE *lloc)
 {
-    SEXP s_Rd_tag = install("Rd_tag");
-    setAttrib(item, s_Rd_tag, mkString(yytname[YYTRANSLATE(type)]));
+    setAttrib(item, R_RdTagSymbol, mkString(yytname[YYTRANSLATE(type)]));
     setAttrib(item, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
     return item;
 }
@@ -870,7 +930,7 @@ static SEXP makeSrcref(YYLTYPE *lloc, SEXP srcfile)
     INTEGER(val)[5] = lloc->last_column;
     setAttrib(val, R_SrcfileSymbol, srcfile);
     setAttrib(val, R_ClassSymbol, mkString("srcref"));
-    UNPROTECT(1);
+    UNPROTECT(1); /* val */
     return val;
 }
 
@@ -881,7 +941,7 @@ static SEXP mkString2(const char *s, size_t len)
 
     PROTECT(t = allocVector(STRSXP, 1));
     SET_STRING_ELT(t, 0, mkCharLenCE(s, (int) len, enc));
-    UNPROTECT(1);
+    UNPROTECT(1); /* t */
     return t;
 }
 
@@ -904,23 +964,35 @@ static SEXP NewList(void)
 
 /* Add a new element at the end of a stretchy list */
 
-static SEXP GrowList(SEXP l, SEXP s)
+static void GrowList(SEXP l, SEXP s)
 {
     SEXP tmp;
-    PROTECT(s);
     tmp = CONS(s, R_NilValue);
-    UNPROTECT(1);
     SETCDR(CAR(l), tmp);
     SETCAR(l, tmp);
-    return l;
 }
 
 /*--------------------------------------------------------------------------*/
+
+static void InitSymbols(void)
+{
+    if (!R_RdTagSymbol)
+	R_RdTagSymbol = install("Rd_tag");
+    if (!R_RdOptionSymbol)
+	R_RdOptionSymbol = install("Rd_option");
+    if (!R_DefinitionSymbol)
+	R_DefinitionSymbol = install("definition");
+    if (!R_DynamicFlagSymbol)
+	R_DynamicFlagSymbol = install("dynamicFlag");
+    if (!R_MacroSymbol)
+	R_MacroSymbol = install("macro");
+}
  
 static SEXP ParseRd(ParseStatus *status, SEXP srcfile, Rboolean fragment, SEXP macros)
 {
     Rboolean keepmacros = !isLogical(macros) || asLogical(macros);
-    
+
+    InitSymbols();
     R_ParseContextLast = 0;
     R_ParseContext[0] = '\0';
     
@@ -949,7 +1021,7 @@ static SEXP ParseRd(ParseStatus *status, SEXP srcfile, Rboolean fragment, SEXP m
 	
     PROTECT(macros);
     PROTECT(parseState.xxMacroList = R_NewHashedEnv(macros, ScalarInteger(0)));
-    UNPROTECT_PTR(macros);
+    PROTECT(parseState.mset = R_NewPreciousMSet(50));
     
     parseState.Value = R_NilValue;
     
@@ -962,8 +1034,8 @@ static SEXP ParseRd(ParseStatus *status, SEXP srcfile, Rboolean fragment, SEXP m
 #if DEBUGVALS
     Rprintf("ParseRd result: %p\n", parseState.Value);    
 #endif    
-    UNPROTECT_PTR(parseState.Value);
-    UNPROTECT_PTR(parseState.xxMacroList);
+    RELEASE_SV(parseState.Value);
+    UNPROTECT(3); /* macros, parseState.xxMacroList, parseState.mset */
     
     if (pushbase != pushback) free(pushbase);
     
@@ -1170,12 +1242,12 @@ static SEXP InstallKeywords()
     num = sizeof(keywords)/sizeof(keywords[0]);
     PROTECT(result = R_NewHashedEnv(R_EmptyEnv, ScalarInteger(num)));
     for (i = 0; keywords[i].name; i++) {
-        PROTECT(name = install(keywords[i].name));
+        name = install(keywords[i].name);
         PROTECT(val = ScalarInteger(keywords[i].token));
     	defineVar(name, val, result);
-    	UNPROTECT(2);
+	UNPROTECT(1); /* val */
     }
-    UNPROTECT(1);
+    UNPROTECT(1); /* result */
     return result;
 }
     	
@@ -1191,8 +1263,8 @@ static SEXP UserMacroLookup(const char *s)
     SEXP rec = findVar(install(s), parseState.xxMacroList);
     if (rec == R_UnboundValue) error(_("Unable to find macro %s"), s);
     PROTECT(rec);
-    SEXP res = getAttrib(rec, install("definition"));
-    UNPROTECT(1);
+    SEXP res = getAttrib(rec, R_DefinitionSymbol);
+    UNPROTECT(1); /* rec */
     return res;
 }
 
@@ -1363,7 +1435,7 @@ static int token(void)
         yylloc.last_line = 0;
         yylloc.last_column = 0;
         yylloc.last_byte = 0;
-    	PROTECT(yylval = mkString(""));
+	PRESERVE_SV(yylval = mkString(""));
         c = parseState.xxinitvalue;
     	parseState.xxinitvalue = 0;
     	return(c);
@@ -1456,7 +1528,7 @@ static int mkText(int c)
     };
 stop:
     if (c != '\n') xxungetc(c); /* newline causes a break, but we keep it */
-    PROTECT(yylval = mkString2(stext, bp - stext));
+    PRESERVE_SV(yylval = mkString2(stext, bp - stext));
     if(stext != st0) free(stext);
     return TEXT;
 }
@@ -1472,7 +1544,7 @@ static int mkComment(int c)
     
     xxungetc(c);
     
-    PROTECT(yylval = mkString2(stext, bp - stext));
+    PRESERVE_SV(yylval = mkString2(stext, bp - stext));
     if(stext != st0) free(stext);    
     return COMMENT;
 }
@@ -1574,7 +1646,7 @@ static int mkCode(int c)
     	c = xxgetc();
     }
     if (c != '\n') xxungetc(c);
-    PROTECT(yylval = mkString2(stext, bp - stext));
+    PRESERVE_SV(yylval = mkString2(stext, bp - stext));
     if(stext != st0) free(stext);
     return RCODE; 
 }
@@ -1613,7 +1685,7 @@ static int mkMarkup(int c)
     	    }
         }
     }
-    PROTECT(yylval = mkString2(stext, bp - stext - 1));
+    PRESERVE_SV(yylval = mkString2(stext, bp - stext - 1));
     if(stext != st0) free(stext);
     xxungetc(c);
     return retval;
@@ -1632,7 +1704,7 @@ static int mkIfdef(int c)
     xxungetc(c);
     
     retval = KeywordLookup(stext);
-    PROTECT(yylval = mkString2(stext, bp - stext - 1));
+    PRESERVE_SV(yylval = mkString2(stext, bp - stext - 1));
     
     switch (retval) {
     case ENDIF:  /* eat chars to the end of the line */
@@ -1640,7 +1712,7 @@ static int mkIfdef(int c)
     	while (c != '\n' && c != R_EOF);
     	break;
     case UNKNOWN:
-    	UNPROTECT(1);
+	RELEASE_SV(yylval);
     	bp--; bp--;
     	for (; bp > stext; bp--) 
     	    xxungetc(*bp);
@@ -1696,7 +1768,7 @@ static int mkVerb(int c)
     	c = xxgetc();
     };
     if (c != '\n') xxungetc(c);
-    PROTECT(yylval = mkString2(stext, bp - stext));
+    PRESERVE_SV(yylval = mkString2(stext, bp - stext));
     if(stext != st0) free(stext);
     return VERB;  
 }
@@ -1948,7 +2020,7 @@ SEXP deparseRd(SEXP e, SEXP state)
     
     PopState();
     
-    UNPROTECT(1);
+    UNPROTECT(1); /* result */
     return result;
 }
 

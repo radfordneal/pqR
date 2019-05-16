@@ -1,7 +1,7 @@
 #  File src/library/base/R/all.equal.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -46,7 +46,9 @@ all.equal.default <- function(target, current, ...)
 
 all.equal.numeric <-
     function(target, current, tolerance = sqrt(.Machine$double.eps),
-             scale = NULL, ..., check.attributes = TRUE)
+             scale = NULL, countEQ = FALSE,
+             formatFUN = function(err, what) format(err),
+             ..., check.attributes = TRUE)
 {
     if (!is.numeric(tolerance))
         stop("'tolerance' should be numeric")
@@ -83,28 +85,34 @@ all.equal.numeric <-
 			    "in current", sum(out), "in target"))
 	return(msg)
     }
-    out <- out | target == current
+    out <- out | target == current # equal NAs _or_ numbers
     if(all(out)) return(if(is.null(msg)) TRUE else msg)
-
-    target <- target[!out]
+    if(countEQ) {
+        N <- length(out)
+        sabst0 <- sum(abs(target[out]))
+    } else
+        sabst0 <- 0
+    target  <- target [!out]
     current <- current[!out]
+    if(!countEQ) N <- length(target)
     if(is.integer(target) && is.integer(current)) target <- as.double(target)
-    xy <- mean(abs(target - current)) ## abs(z) == Mod(z) for complex
+    xy <- sum(abs(target - current))/N ## abs(z) == Mod(z) for complex
     what <-
 	if(is.null(scale)) {
-	    xn <- mean(abs(target))
+	    xn <- (sabst0 + sum(abs(target)))/N
 	    if(is.finite(xn) && xn > tolerance) {
 		xy <- xy/xn
 		"relative"
 	    } else "absolute"
 	} else {
+	    stopifnot(all(scale > 0))
 	    xy <- xy/scale
-	    if(scale == 1) "absolute" else "scaled"
+	    if(all(abs(scale - 1) < 1e-7)) "absolute" else "scaled"
 	}
 
     if (cplx) what <- paste(what, "Mod") # PR#10575
     if(is.na(xy) || xy > tolerance)
-        msg <- c(msg, paste("Mean", what, "difference:", format(xy)))
+        msg <- c(msg, paste("Mean", what, "difference:", formatFUN(xy, what)))
 
     if(is.null(msg)) TRUE else msg
 }
@@ -141,14 +149,14 @@ all.equal.character <-
     ne <- !nas & (target != current)
     if(!any(ne) && is.null(msg)) TRUE
     else if(sum(ne) == 1L) c(msg, paste("1 string mismatch"))
-    else if(sum(ne) > 1L) c(msg, paste(sum(ne), "string mismatches"))
+    else if(sum(ne) >  1L) c(msg, paste(sum(ne), "string mismatches"))
     else msg
 }
 
 ## In 'base' these are all visible, so need to test both args:
 
 all.equal.envRefClass <- function (target, current, ...) {
-    if(!methods::is(target, "envRefClass")) return("'target' is not an envRefClass")
+    if(!methods::is(target,  "envRefClass")) return("'target' is not an envRefClass")
     if(!methods::is(current, "envRefClass")) return("'current' is not an envRefClass")
     if(!isTRUE(ae <- all.equal(class(target), class(current), ...)))
 	return(sprintf("Classes differ: %s", paste(ae, collapse=" ")))

@@ -27,7 +27,7 @@ LIBOBJECTS = $(LIBSOURCES:.f=.o) @USE_VECLIB_G95FIX_TRUE@ vecLibg95f.o vecLibg95
 
 distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
 DISTFILES = \
-	LICENSE README R.patch Makefile.in Makefile.win \
+	LICENSE README Makefile.in Makefile.win \
 	Rlapackrc.rc dllversion.rc \
 	$(HEADERS) Lapack.c init_win.c \
 	vecLibg95c.c vecLibg95f.f \
@@ -37,7 +37,7 @@ DISTFILES = \
 lapack_la = lapack$(SHLIB_EXT)
 Rlapack_la = libRlapack$(R_DYLIB_EXT)
 lapack_la_OBJECTS = $(OBJECTS)
-## Used for passing '+s' to SHLIB_LINK on HP-UX.
+## Formerly uxsed for passing '+s' to SHLIB_LINK on HP-UX.
 lapack_la_LDFLAGS = @LAPACK_LDFLAGS@
 lapack_la_LIBADD = $(LIBR1) @DYLIB_UNDEFINED_ALLOWED_FALSE@ $(LIBINTL)
 
@@ -65,9 +65,10 @@ Makedeps: Makefile $(DEPENDS)
 
 ## treated separately: e.g. we need to force stores with 
 ## gcc >= 3.4.0 at least on i686
+## (SHLIB_FFLAGS is apparently currently unused)
 DLAMC_FFLAGS=$(FPICFLAGS) $(SHLIB_FFLAGS) @SAFE_FFLAGS@
 dlamch.o: dlamch.f
-	$(F77) $(DLAMC_FFLAGS) -c $< -o $@
+	$(FC) $(DLAMC_FFLAGS) -c $< -o $@
 
 R: Makedeps
 @USE_EXTERNAL_LAPACK_FALSE@	@$(MAKE) rhome="$(abs_top_builddir)" $(Rlapack_la) Rlapack_install
@@ -97,13 +98,13 @@ installdirs:
 	@$(MKINSTALLDIRS) "$(DESTDIR)$(Rexecmodulesdir)"
 install-strip-Rlapack:
 	@$(SHELL) $(top_srcdir)/tools/copy-if-change $(Rlapack_la) "$(DESTDIR)$(Rexeclibdir)/$(Rlapack_la)"
-	@if test -n "$(STRIP_LIBS)"; then \
-	  $(STRIP_LIBS) "$(DESTDIR)$(Rexeclibdir)/$(Rlapack_la)"; \
+	@if test -n "$(STRIP_SHARED_LIB)"; then \
+	  $(STRIP_SHARED_LIB) "$(DESTDIR)$(Rexeclibdir)/$(Rlapack_la)"; \
 	fi
 install-strip: @USE_EXTERNAL_LAPACK_FALSE@ install-strip-Rlapack
 	@$(SHELL) $(top_srcdir)/tools/copy-if-change $(lapack_la) "$(DESTDIR)$(Rexecmodulesdir)/$(lapack_la)"
-	@if test -n "$(STRIP_LIBS)"; then \
-	  $(STRIP_LIBS) "$(DESTDIR)$(Rexecmodulesdir)/$(lapack_la)"; \
+	@if test -n "$(STRIP_SHARED_LIB)"; then \
+	  $(STRIP_SHARED_LIB) "$(DESTDIR)$(Rexecmodulesdir)/$(lapack_la)"; \
 	fi
 uninstall:
 	@rm -f "$(Rexecmodulesdir)/$(lapack_la)"

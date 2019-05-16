@@ -73,7 +73,7 @@ get_exclude_patterns <- function()
 
 ## Check for files listed in .Rbuildignore or get_exclude_patterns()
 inRbuildignore <- function(files, pkgdir) {
-    exclude <- rep(FALSE, length(files))
+    exclude <- rep.int(FALSE, length(files))
     ignore <- get_exclude_patterns()
     ## handle .Rbuildignore:
     ## 'These patterns should be Perl regexps, one per line,
@@ -152,6 +152,8 @@ inRbuildignore <- function(files, pkgdir) {
             "  --compact-vignettes=  try to compact PDF files under inst/doc:",
             '                        "no" (default), "qpdf", "gs", "gs+qpdf", "both"',
             "  --compact-vignettes   same as --compact-vignettes=qpdf",
+            "  --compression=        type of compression to be used on tarball:",
+            '                        "gzip" (default), "none", "bzip2", "xz"',
             "  --md5                 add MD5 sums",
             "  --log                 log to file 'pkg-00build.log' when processing ",
             "                        the pkgdir with basename 'pkg'",
@@ -310,7 +312,7 @@ inRbuildignore <- function(files, pkgdir) {
                     Sys.setenv(R_LIBS = libdir)
                 }
 
-                ## Tangle all vignettes now.
+                ## Tangle (and weave) all vignettes now.
 
                 cmd <- file.path(R.home("bin"), "Rscript")
                 args <- c("--vanilla",
@@ -338,11 +340,13 @@ inRbuildignore <- function(files, pkgdir) {
                 if (basename(vigns$dir) == "vignettes") {
                     ## inst may not yet exist
                     dir.create(doc_dir, recursive = TRUE, showWarnings = FALSE)
-                    tocopy <- c(vigns$docs, vigns$outputs, unlist(vigns$sources))
+                    tocopy <- unique(c(vigns$docs, vigns$outputs,
+                                       unlist(vigns$sources)))
                     copied <- file.copy(tocopy, doc_dir, copy.date = TRUE)
                     if (!all(copied)) {
-                    	warning(sQuote("inst/doc"),
-                    	        ngettext(sum(!copied), " file\n", " files\n"),
+                    	warning(sprintf(ngettext(sum(!copied),
+                                                 "%s file\n", "%s files\n"),
+                                        sQuote("inst/doc")),
                     	        strwrap(paste(sQuote(basename(tocopy[!copied])), collapse=", "),
                     	                indent = 4, exdent = 2),
 			        "\n  ignored as vignettes have been rebuilt.",
@@ -358,7 +362,7 @@ inRbuildignore <- function(files, pkgdir) {
                             allfiles <- dir("vignettes", all.files = TRUE,
                                             full.names = TRUE, recursive = TRUE,
                                             include.dirs = TRUE)
-                            inst <- rep(FALSE, length(allfiles))
+                            inst <- rep.int(FALSE, length(allfiles))
                             for (e in extras)
                                 inst <- inst | grepl(e, allfiles, perl = TRUE,
                                                      ignore.case = TRUE)
@@ -419,8 +423,8 @@ inRbuildignore <- function(files, pkgdir) {
                 gs_quality <- "none"
             }
             qpdf <-
-                ifelse(compact_vignettes %in% c("qpdf", "gs+qpdf", "both"),
-                       Sys.which(Sys.getenv("R_QPDF", "qpdf")), "")
+                if(compact_vignettes %in% c("qpdf", "gs+qpdf", "both"))
+                    Sys.which(Sys.getenv("R_QPDF", "qpdf")) else ""
             res <- compactPDF(pdfs, qpdf = qpdf,
                               gs_cmd = gs_cmd, gs_quality = gs_quality)
             res <- format(res, diff = 1e5)
@@ -460,8 +464,8 @@ inRbuildignore <- function(files, pkgdir) {
                         } else warning("unable to run 'make clean' in 'src'",
                                        domain = NA)
                     }
-                    ## Also cleanup possible Unix leftovers ...
-                    unlink(c(Sys.glob(c("*.o", "*.sl", "*.so", "*.dylib")),
+                    ## Also cleanup possible leftovers ...
+                    unlink(c(Sys.glob(c("*.o", "*.so", "*.dylib", "*.mod")),
                              paste0(pkgname, c(".a", ".dll", ".def")),
                              "symbols.rds"))
                     if (dir.exists(".libs")) unlink(".libs", recursive = TRUE)
@@ -484,8 +488,8 @@ inRbuildignore <- function(files, pkgdir) {
                         Ssystem(Sys.getenv("MAKE", "make"),
                                 c(makefiles, "clean"))
                     }
-                    ## Also cleanup possible Windows leftovers ...
-                    unlink(c(Sys.glob(c("*.o", "*.sl", "*.so", "*.dylib")),
+                    ## Also cleanup possible leftovers ...
+                    unlink(c(Sys.glob(c("*.o", "*.so", "*.dylib", "*.mod")),
                              paste0(pkgname, c(".a", ".dll", ".def")),
                              "symbols.rds"))
                     if (dir.exists(".libs")) unlink(".libs", recursive = TRUE)
@@ -603,7 +607,10 @@ inRbuildignore <- function(files, pkgdir) {
 	}
 	needRefman <- manual &&
             parse_description_field(desc, "BuildManual", TRUE) &&
-            any(sapply(db, function(Rd) any(getDynamicFlags(Rd)[c("install", "render")])))
+            any(vapply(db,
+                       function(Rd)
+                           any(getDynamicFlags(Rd)[c("install", "render")]),
+                       NA))
 	if (needRefman) {
 	    messageLog(Log, "building the PDF package manual")
 	    dir.create("build", showWarnings = FALSE)
@@ -847,6 +854,7 @@ inRbuildignore <- function(files, pkgdir) {
         args <- strsplit(args,'nextArg', fixed = TRUE)[[1L]][-1L]
     }
 
+    compression <- "gzip"
     while(length(args)) {
         a <- args[1L]
         if (a %in% c("-h", "--help")) {
@@ -858,7 +866,7 @@ inRbuildignore <- function(files, pkgdir) {
                 R.version[["major"]], ".",  R.version[["minor"]],
                 " (r", R.version[["svn rev"]], ")\n", sep = "")
             cat("",
-                "Copyright (C) 1997-2018 The R Core Team.",
+                .R_copyright_msg(1997),
                 "This is free software; see the GNU General Public License version 2",
                 "or later for copying conditions.  There is NO warranty.",
                 sep = "\n")
@@ -888,7 +896,10 @@ inRbuildignore <- function(files, pkgdir) {
             with_md5 <- TRUE
         } else if (a == "--log") {
             with_log <- TRUE
-        } else if (substr(a, 1, 1) == "-") {
+        } else if (substr(a, 1, 14) == "--compression=") {
+            compression <- match.arg(substr(a, 15, 1000),
+                                     c("none", "gzip", "bzip2", "xz"))
+        } else if (startsWith(a, "-")) {
             message("Warning: unknown option ", sQuote(a))
         } else pkgs <- c(pkgs, a)
         args <- args[-1L]
@@ -965,7 +976,7 @@ inRbuildignore <- function(files, pkgdir) {
         Tdir <- tempfile("Rbuild")
         dir.create(Tdir, mode = "0755")
         if (WINDOWS) {
-            ## This preserves read-only for files, and (as of r71464) dates
+            ## This preserves read-only for files, and dates
             if (!file.copy(pkgname, Tdir, recursive = TRUE, copy.date = TRUE)) {
                 errorLog(Log, "copying to build directory failed")
                 do_exit(1L)
@@ -1101,7 +1112,7 @@ inRbuildignore <- function(files, pkgdir) {
         if (!hasDep350) {
             ## re-read files after exclusions have been applied
             allfiles <- dir(".", all.files = TRUE, recursive = TRUE,
-                            full.names = TRUE, include.dirs = TRUE)
+                            full.names = TRUE)
             allfiles <- substring(allfiles, 3L)  # drop './'
             vers  <- get_serialization_version(allfiles)
             toonew <- names(vers[vers >= 3L])
@@ -1132,16 +1143,18 @@ inRbuildignore <- function(files, pkgdir) {
         }
 
         ## Finalize
-        filename <- paste0(pkgname, "_", desc["Version"], ".tar.gz")
+        ext <- switch(compression,
+                      "none"="", "gzip"= ".gz", "bzip2" = ".bz2", "xz" = ".xz")
+        filename <- paste0(pkgname, "_", desc["Version"], ".tar", ext)
         filepath <- file.path(startdir, filename)
         ## NB: ../../../../tests/reg-packages.R relies on this exact format!
         messageLog(Log, "building ", sQuote(filename))
-        res <- utils::tar(filepath, pkgname, compression = "gzip",
+        res <- utils::tar(filepath, pkgname, compression = compression,
                           compression_level = 9L,
                           tar = Sys.getenv("R_BUILD_TAR"),
                           extra_flags = NULL) # use trapdoor
         if (res) {
-            errorLog(Log, "packaging into .tar.gz failed")
+            errorLog(Log, "packaging into tarball failed")
             do_exit(1L)
         }
         message("") # blank line

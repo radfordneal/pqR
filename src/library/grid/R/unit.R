@@ -105,6 +105,24 @@ convertNative <- function(unit, dimension="x", type="location") {
   .Defunct("convertUnit")
 }
 
+deviceLoc <- function(x, y, valueOnly=FALSE) {
+    result <- grid.Call(C_devLoc, x, y)
+    names(result) <- c("x", "y")
+    if (!valueOnly)
+        list(x=unit(result$x, "in"), y=unit(result$y, "in"))
+    else
+        result
+}
+
+deviceDim <- function(w, h, valueOnly=FALSE) {
+    result <- grid.Call(C_devDim, w, h)
+    names(result) <- c("w", "h")
+    if (!valueOnly)
+        list(w=unit(result$w, "in"), h=unit(result$h, "in"))
+    else
+        result
+}
+
 # This is like the "convert" functions:  it evaluates units (immediately)
 # in the current context
 calcStringMetric <- function(text) {
@@ -677,7 +695,7 @@ grobX.grob <- function(x, theta) {
 }
 
 grobX.gList <- function(x, theta) {
-  unit(rep(convertTheta(theta), length(gList)), "grobx", data=x)
+  unit(rep(convertTheta(theta), length(x)), "grobx", data=x)
 }
 
 grobX.gPath <- function(x, theta) {
@@ -698,7 +716,7 @@ grobY.grob <- function(x, theta) {
 }
 
 grobY.gList <- function(x, theta) {
-  unit(rep(convertTheta(theta), length(gList)), "groby", data=x)
+  unit(rep(convertTheta(theta), length(x)), "groby", data=x)
 }
 
 grobY.gPath <- function(x, theta) {
@@ -719,7 +737,7 @@ grobWidth.grob <- function(x) {
 }
 
 grobWidth.gList <- function(x) {
-  unit(rep_len(1, length(gList)), "grobwidth", data=x)
+  unit(rep_len(1, length(x)), "grobwidth", data=x)
 }
 
 grobWidth.gPath <- function(x) {
@@ -740,7 +758,7 @@ grobHeight.grob <- function(x) {
 }
 
 grobHeight.gList <- function(x) {
-  unit(rep_len(1, length(gList)), "grobheight", data=x)
+  unit(rep_len(1, length(x)), "grobheight", data=x)
 }
 
 grobHeight.gPath <- function(x) {
@@ -761,7 +779,7 @@ grobAscent.grob <- function(x) {
 }
 
 grobAscent.gList <- function(x) {
-  unit(rep_len(1, length(gList)), "grobascent", data=x)
+  unit(rep_len(1, length(x)), "grobascent", data=x)
 }
 
 grobAscent.gPath <- function(x) {
@@ -782,7 +800,7 @@ grobDescent.grob <- function(x) {
 }
 
 grobDescent.gList <- function(x) {
-  unit(rep_len(1, length(gList)), "grobdescent", data=x)
+  unit(rep_len(1, length(x)), "grobdescent", data=x)
 }
 
 grobDescent.gPath <- function(x) {

@@ -46,7 +46,8 @@ file(description = "", open = "", blocking = TRUE,
 
 url(description, open = "", blocking = TRUE,
     encoding = getOption("encoding"),
-    method = getOption("url.method", "default"))
+    method = getOption("url.method", "default"),
+    headers = NULL)
 
 gzfile(description, open = "", encoding = getOption("encoding"),
        compression = 6)
@@ -98,6 +99,10 @@ isIncomplete(con)
     \code{c("default", "internal", "wininet", "libcurl")}:
 %% FIXME:  Consider  "auto", as in download.file()
     see \sQuote{Details}.}
+  \item{headers}{named character vector of HTTP headers to use in HTTP
+    requests.  It is ignored for non-HTTP URLs.  The \code{User-Agent}
+    header, coming from the \code{HTTPUserAgent} option (see
+    \code{\link{options}}) is used as the first header, automatically.}
   \item{compression}{integer in 0--9.  The amount of compression to be
     applied when writing, from none to maximal available.  For
     \code{xzfile} can also be negative: see the \sQuote{Compression}
@@ -128,7 +133,9 @@ isIncomplete(con)
   C-level \sQuote{standard input} of the process (which need not be
   connected to anything in a console or embedded version of \R, and is
   not in \code{RGui} on Windows).  See also \code{\link{stdin}()} for
-  the subtly different R-level concept of \code{stdin}.
+  the subtly different R-level concept of \code{stdin}. See
+  \code{\link{nullfile}()} for a platform-independent way to get
+  filename of the null device.
 
   For \code{url} the description is a complete URL including scheme
   (such as \samp{http://}, \samp{https://}, \samp{ftp://} or
@@ -230,7 +237,7 @@ isIncomplete(con)
 
   No attempt is made to decode a percent-encoded \samp{file:} URL: call
   \code{\link{URLdecode}} if necessary.
-  
+
   All the methods attempt to follow redirected HTTP URLs, but the
   \code{"internal"} method is unable to follow redirections to HTTPS URLs.
 
@@ -557,7 +564,7 @@ isIncomplete(con)
 
   \code{\link{memCompress}} for more ways to (de)compress and references
   on data compression.
-  
+
   \code{\link{extSoftVersion}} for the versions of the \code{zlib} (for
   \code{gzfile}), \code{bzip2} and \code{xz} libraries in use.
 

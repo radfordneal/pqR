@@ -1,7 +1,7 @@
 #  File src/library/base/R/eigen.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -25,10 +25,8 @@ isSymmetric.matrix <- function(object, tol = 100*.Machine$double.eps, tol1 = 8*t
     ## cheap pretest: is it square?
     d <- dim(object)
     if((n <- d[1L]) != d[2L]) return(FALSE)
-    if(n <= 1L) return(TRUE)
-    ## else: square (n x n) matrix, n >= 2 :
     iCplx <- is.complex(object)
-    if(length(tol1)) {
+    if(n > 1L && length(tol1)) {
 	## initial pre-tests, fast for large non-symmetric:
 	Cj <- if(iCplx) Conj else identity
 	for(i in unique(c(1L, 2L, n-1L, n)))

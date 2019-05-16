@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2015-2017 The R Core Team
+ *  Copyright (C) 2015-2018 The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -222,7 +222,6 @@ static int curlMultiCheckerrs(CURLM *mhnd)
     }
     return retval;
 }
-
 static void curlCommon(CURL *hnd, int redirect, int verify)
 {
     const char *capath = getenv("CURL_CA_BUNDLE");
@@ -237,6 +236,7 @@ static void curlCommon(CURL *hnd, int redirect, int verify)
 	curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYHOST, 0L);
 	curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0L);
     }
+#if 0
     // for consistency, but all utils:::makeUserAgent does is look up an option.
     SEXP sMakeUserAgent = install("makeUserAgent");
     SEXP agentFun = PROTECT(lang2(sMakeUserAgent, ScalarLogical(0)));
@@ -247,6 +247,24 @@ static void curlCommon(CURL *hnd, int redirect, int verify)
     if(TYPEOF(sua) != NILSXP)
 	curl_easy_setopt(hnd, CURLOPT_USERAGENT, CHAR(STRING_ELT(sua, 0)));
     UNPROTECT(2);
+#else
+    int Default = 1;
+    SEXP sua = GetOption1(install("HTTPUserAgent")); // set in utils startup
+    if (TYPEOF(sua) == STRSXP && LENGTH(sua) == 1 ) {
+	const char *p = CHAR(STRING_ELT(sua, 0));
+	if (p[0] && p[1] && p[2] && p[0] == 'R' && p[1] == ' ' && p[2] == '(') {
+	} else {
+	    Default = 0;
+	    curl_easy_setopt(hnd, CURLOPT_USERAGENT, p);
+	}
+    }
+    if (Default) {
+	char buf[20];
+	curl_version_info_data *d = curl_version_info(CURLVERSION_NOW);
+	snprintf(buf, 20, "libcurl/%s", d->version);
+	curl_easy_setopt(hnd, CURLOPT_USERAGENT, buf);
+    }
+#endif
     int timeout0 = asInteger(GetOption1(install("timeout")));
     long timeout = timeout0 = NA_INTEGER ? 0 : 1000L * timeout0;
     curl_easy_setopt(hnd, CURLOPT_CONNECTTIMEOUT_MS, timeout);
@@ -323,10 +341,10 @@ in_do_curlGetHeaders(SEXP call, SEXP op, SEXP args, SEXP rho)
     errbuf[0] = '\0';
     CURLcode ret = curl_easy_perform(hnd);
     if (ret != CURLE_OK) {
-	if (errbuf[0]) 
+	if (errbuf[0])
 	    error(_("libcurl error code %d:\n\t%s\n"), ret, errbuf);
 	else if(ret == 77)
-	    error(_("libcurl error code %d:\n\t%s\n"), ret, 
+	    error(_("libcurl error code %d:\n\t%s\n"), ret,
 		  "unable to access SSL/TLS CA certificates");
 	else // rare case, error but no message
 	    error("libcurl error code %d\n", ret);
@@ -469,10 +487,10 @@ in_do_curlDownload(SEXP call, SEXP op, SEXP args, SEXP rho)
     error(_("download.file(method = \"libcurl\") is not supported on this platform"));
     return R_NilValue;
 #else
-    SEXP scmd, sfile, smode;
+    SEXP scmd, sfile, smode, sheaders;
     const char *url, *file, *mode;
     int quiet, cacheOK;
-    struct curl_slist *slist1 = NULL;
+    struct curl_slist *headers = NULL;
 
     scmd = CAR(args); args = CDR(args);
     if (!isString(scmd) || length(scmd) < 1)
@@ -490,9 +508,23 @@ in_do_curlDownload(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isString(smode) || length(smode) != 1)
 	error(_("invalid '%s' argument"), "mode");
     mode = CHAR(STRING_ELT(smode, 0));
-    cacheOK = asLogical(CAR(args));
+    cacheOK = asLogical(CAR(args)); args = CDR(args);
     if (cacheOK == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "cacheOK");
+    sheaders = CAR(args);
+    if(TYPEOF(sheaders) != NILSXP && !isString(sheaders))
+	error(_("invalid '%s' argument"), "headers");
+    if(TYPEOF(sheaders) != NILSXP) {
+	for (int i = 0; i < LENGTH(sheaders); i++) {
+	    struct curl_slist *tmp =
+		curl_slist_append(headers, CHAR(STRING_ELT(sheaders, i)));
+	    if (!tmp) {
+		curl_slist_free_all(headers);
+		error(_("out of memory"));
+	    }
+	    headers = tmp;
+	}
+    }
 
     /* This comes mainly from curl --libcurl on the call used by
        download.file(method = "curl").
@@ -502,7 +534,13 @@ in_do_curlDownload(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!cacheOK) {
 	/* This _is_ the right way to do this: see §14.9 of
 	   http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html */
-	slist1 = curl_slist_append(slist1, "Pragma: no-cache");
+	struct curl_slist *tmp =
+	    curl_slist_append(headers, "Pragma: no-cache");
+	if(!tmp) {
+	    curl_slist_free_all(headers);
+	    error(_("out of memory"));
+	}
+	headers = tmp;
     }
 
     CURLM *mhnd = curl_multi_init();
@@ -521,8 +559,7 @@ in_do_curlDownload(SEXP call, SEXP op, SEXP args, SEXP rho)
 #if (LIBCURL_VERSION_MINOR >= 25)
 	curl_easy_setopt(hnd[i], CURLOPT_TCP_KEEPALIVE, 1L);
 #endif
-	if (!cacheOK)
-	    curl_easy_setopt(hnd[i], CURLOPT_HTTPHEADER, slist1);
+	curl_easy_setopt(hnd[i], CURLOPT_HTTPHEADER, headers);
 
 	/* check that destfile can be written */
 	file = translateChar(STRING_ELT(sfile, i));
@@ -641,12 +678,12 @@ in_do_curlDownload(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     n_err += curlMultiCheckerrs(mhnd);
 
+    long status = 0L;
     for (int i = 0; i < nurls; i++) {
 	if (out[i]) {
 	    fclose(out[i]);
 	    double dl;
 	    curl_easy_getinfo(hnd[i], CURLINFO_SIZE_DOWNLOAD, &dl);
-	    long status;
 	    curl_easy_getinfo(hnd[i], CURLINFO_RESPONSE_CODE, &status);
 	    // should we do something about incomplete transfers?
 	    if (status != 200 && dl == 0. && strchr(mode, 'w'))
@@ -655,12 +692,8 @@ in_do_curlDownload(SEXP call, SEXP op, SEXP args, SEXP rho)
 	curl_multi_remove_handle(mhnd, hnd[i]);
 	curl_easy_cleanup(hnd[i]);
     }
-    // This can show an invalid read: can it be improved?
-    long status = 0L;
-    if(nurls == 1)
-	curl_easy_getinfo(hnd[0], CURLINFO_RESPONSE_CODE, &status);
     curl_multi_cleanup(mhnd);
-    if (!cacheOK) curl_slist_free_all(slist1);
+    curl_slist_free_all(headers);
 
     if(nurls > 1) {
 	if (n_err == nurls) error(_("cannot download any files"));
@@ -703,6 +736,7 @@ typedef struct Curlconn {
     Rboolean available; // to be read out
     int sr; // 'still running' count
     CURLM *mh; CURL *hnd;
+    struct curl_slist *headers;
 } *RCurlconn;
 
 static size_t rcvData(void *ptr, size_t size, size_t nitems, void *ctx)
@@ -771,6 +805,7 @@ static void Curl_close(Rconnection con)
 {
     RCurlconn ctxt = (RCurlconn)(con->private);
 
+    curl_slist_free_all(ctxt->headers);
     curl_multi_remove_handle(ctxt->mh, ctxt->hnd);
     curl_easy_cleanup(ctxt->hnd);
     curl_multi_cleanup(ctxt->mh);
@@ -830,6 +865,9 @@ static Rboolean Curl_open(Rconnection con)
     curl_easy_setopt(ctxt->hnd, CURLOPT_TCP_KEEPALIVE, 1L);
 #endif
 
+    if (ctxt->headers) {
+	curl_easy_setopt(ctxt->hnd, CURLOPT_HTTPHEADER, ctxt->headers);
+    }
     curl_easy_setopt(ctxt->hnd, CURLOPT_WRITEFUNCTION, rcvData);
     curl_easy_setopt(ctxt->hnd, CURLOPT_WRITEDATA, ctxt);
     ctxt->mh = curl_multi_init();
@@ -868,7 +906,8 @@ static int Curl_fgetc_internal(Rconnection con)
 
 // 'type' is unused.
 Rconnection
-in_newCurlUrl(const char *description, const char * const mode, int type)
+in_newCurlUrl(const char *description, const char * const mode,
+	      SEXP headers, int type)
 {
 #ifdef HAVE_LIBCURL
     Rconnection new = (Rconnection) malloc(sizeof(struct Rconn));
@@ -908,6 +947,18 @@ in_newCurlUrl(const char *description, const char * const mode, int type)
 	free(new);
 	error(_("allocation of url connection failed"));
 	/* for Solaris 12.5 */ new = NULL;
+    }
+    ctxt->headers = NULL;
+    for (int i = 0; i < LENGTH(headers); i++) {
+	struct curl_slist *tmp =
+	    curl_slist_append(ctxt->headers, CHAR(STRING_ELT(headers, i)));
+	if (!tmp) {
+	    free(new->description); free(new->class); free(new->private);
+	    free(new); curl_slist_free_all(ctxt->headers);
+	    error(_("allocation of url connection failed"));
+	    /* for Solaris 12.5 */ new = NULL;
+	}
+	ctxt->headers = tmp;
     }
     return new;
 #else

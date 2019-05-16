@@ -1,7 +1,7 @@
 #  File src/library/utils/R/windows/download.file.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -18,7 +18,8 @@
 
 download.file <-
     function(url, destfile, method, quiet = FALSE, mode = "w",
-             cacheOK = TRUE, extra = getOption("download.file.extra"), ...)
+             cacheOK = TRUE, extra = getOption("download.file.extra"),
+             headers = NULL, ...)
 {
     destfile # check supplied
     method <- if (missing(method))
@@ -27,23 +28,33 @@ download.file <-
         match.arg(method, c("auto", "internal", "wininet", "libcurl",
                             "wget", "curl", "lynx"))
 
-    if(missing(mode) && length(grep("\\.(gz|bz2|xz|tgz|zip|rda|RData)$", url)))
+    if(missing(mode) && length(grep("\\.(gz|bz2|xz|tgz|zip|rd[as]|RData)$",
+				    URLdecode(url))))
         mode <- "wb"
     if(method == "auto") {
         if(length(url) != 1L || typeof(url) != "character")
             stop("'url' must be a length-one character vector");
 	method <-
-            if(grepl("^ftps:", url) && capabilities("libcurl")) "libcurl"
+            if(startsWith(url, "ftps:") && capabilities("libcurl")) "libcurl"
             else "wininet"
     }
 
+    nh <- names(headers)
+    if(length(nh) != length(headers) || any(nh == "") || anyNA(headers) || anyNA(nh))
+	stop("'headers' must have names and must not be NA")
+
     switch(method,
 	   "internal" =, "wininet" = {
+	       if(!is.null(headers))
+		   headers <- paste0(nh, ": ", headers, "\r\n", collapse = "")
 	       status <- .External(C_download, url, destfile, quiet, mode, cacheOK,
-				   method == "wininet")
+				   headers, method == "wininet")
 	   },
 	   "libcurl" = {
-	       status <- .Internal(curlDownload(url, destfile, quiet, mode, cacheOK))
+	       if(!is.null(headers))
+		   headers <- paste0(nh, ": ", headers)
+	       status <- .Internal(curlDownload(url, destfile, quiet, mode, cacheOK,
+						headers))
 	   },
 	   "wget" = {
 	       if(length(url) != 1L || typeof(url) != "character")

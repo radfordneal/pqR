@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998--2017	The R Core Team.
+ *  Copyright (C) 1998--2019	The R Core Team.
  *  Copyright (C) 1995, 1996	Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -177,6 +177,8 @@ static void lineprof(char* buf, SEXP srcref)
 }
 
 #if !defined(Win32) && defined(HAVE_PTHREAD)
+// <signal.h> is needed for pthread_kill on most platforms (and by POSIX
+//  but apparently not FreeBSD): it is included above.
 # include <pthread.h>
 static pthread_t R_profiled_thread;
 #endif
@@ -416,6 +418,8 @@ static void R_InitProfiling(SEXP filename, int append, double dinterval,
 #else /* not Win32 */
 #ifdef HAVE_PTHREAD
     R_profiled_thread = pthread_self();
+#else
+    error("profiling requires 'pthread' support");
 #endif
 
     signal(SIGPROF, doprof);
@@ -1295,7 +1299,7 @@ SEXP attribute_hidden R_cmpfun1(SEXP fun)
 
     PROTECT(fcall = lang3(R_TripleColonSymbol, packsym, funsym));
     PROTECT(call = lang2(fcall, fun));
-    val = eval(call, R_GlobalEnv);
+    PROTECT(val = eval(call, R_GlobalEnv));
     if (TYPEOF(BODY(val)) != BCODESXP)
 	/* Compilation may have failed because R alocator could not malloc
 	   memory to extend the R heap, so we run GC to release some pages.
@@ -1305,7 +1309,7 @@ SEXP attribute_hidden R_cmpfun1(SEXP fun)
 	   A more general solution might be to run the GC conditionally inside
 	   error handling. */
 	R_gc();
-    UNPROTECT(2);
+    UNPROTECT(3); /* fcall, call, val */
 
     R_Visible = old_visible;
     return val;
@@ -1475,7 +1479,7 @@ static R_INLINE Rboolean R_isReplaceSymbol(SEXP fun)
 	strstr(CHAR(PRINTNAME(fun)), "<-"))
 	return TRUE;
     else return FALSE;
-}	
+}
 #endif
 
 /* There's another copy of this in main.c */
@@ -1485,7 +1489,11 @@ static void PrintCall(SEXP call, SEXP rho)
         blines = asInteger(GetOption1(install("deparse.max.lines")));
     if(blines != NA_INTEGER && blines > 0)
 	R_BrowseLines = blines;
-    PrintValueRec(call, rho);
+
+    R_PrintData pars;
+    PrintInit(&pars, rho);
+    PrintValueRec(call, &pars);
+
     R_BrowseLines = old_bl;
 }
 
@@ -1559,6 +1567,13 @@ static R_INLINE void cleanupEnvVector(SEXP v)
        local variable. It would be cheaper to just use
        DECREMENT_REFCNT. It might also make sense to max out at len =
        10 or so. But this may still be too expensive. */
+
+    /* FIXME: Disabled for now since a BUILTIN that saves its (NR)
+       list can cause problems. .External.graphics does this for
+       recording. Probably the best option is to not have the args go
+       down as NR. */
+    return;
+
     R_xlen_t len = LENGTH(v);
     for (R_xlen_t i = 0; i < len; i++)
 	SET_VECTOR_ELT(v, i, R_NilValue);
@@ -1684,8 +1699,6 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 	(CADR(call) == R_TmpvalSymbol && ! R_isReplaceSymbol(CAR(call)));
 #endif
 
-    UNPROTECT(1); /* newrho - below protected via context */
-
     /*  If we have a generic function we need to use the sysparent of
 	the generic as the sysparent of the method because the method
 	is a straight substitution of the generic.  */
@@ -1699,6 +1712,8 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
     if (MAYBE_REFERENCED(val) && is_getter_call)
     	val = shallow_duplicate(val);
 #endif
+
+    UNPROTECT(1); /* newrho */
     return val;
 }
 
@@ -1947,7 +1962,11 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
     if ((vl = findVarInFrame3(rho, symbol, TRUE)) != R_UnboundValue) {
 	vl = eval(symbol, rho);	/* for promises */
 	if(MAYBE_SHARED(vl)) {
-	    PROTECT(vl = shallow_duplicate(vl));
+	    /* Using R_shallow_duplicate_attr may defer duplicating
+	       data until it it is needed. If the data are duplicated,
+	       then the wrapper can be discarded at the end of the
+	       assignment process in try_assign_unwrap(). */
+	    PROTECT(vl = R_shallow_duplicate_attr(vl));
 	    defineVar(symbol, vl, rho);
 	    INCREMENT_NAMED(vl);
 	    UNPROTECT(1);
@@ -1997,18 +2016,10 @@ static SEXP replaceCall(SEXP fun, SEXP val, SEXP args, SEXP rhs)
 }
 
 
-static SEXP assignCall(SEXP op, SEXP symbol, SEXP fun,
-		       SEXP val, SEXP args, SEXP rhs)
-{
-    PROTECT(op);
-    PROTECT(symbol);
-    val = replaceCall(fun, val, args, rhs);
-    UNPROTECT(2);
-    return lang3(op, symbol, val);
-}
-
-
-/* rho only needed for _R_CHECK_LENGTH_1_CONDITION_=package:name */
+/* rho is only needed for _R_CHECK_LENGTH_1_CONDITION_=package:name and for
+     detecting the current package in related diagnostic messages; it should
+     be removed when length >1 condition is turned into an error
+*/
 static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call, SEXP rho)
 {
     Rboolean cond = NA_LOGICAL;
@@ -2027,41 +2038,15 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call, SEXP rho)
 
     int len = length(s);
     if (len > 1) {
-	PROTECT(s);	 /* needed as per PR#15990.  call gets protected by warningcall() */
-	char *check = getenv("_R_CHECK_LENGTH_1_CONDITION_");
-	const void *vmax = vmaxget();
-	Rboolean err = check && StringTrue(check); /* warn by default */
-	if (!err && check) {
-	    /* err when the condition is evaluated in given package */
-	    const char *pprefix  = "package:";
-	    size_t lprefix = strlen(pprefix);
-	    if (!strncmp(pprefix, check, lprefix)) {
-		/* check starts with "package:" */
-		SEXP spkg = R_NilValue;
-		for(; spkg == R_NilValue && rho != R_EmptyEnv; rho = ENCLOS(rho))
-		    if (R_IsPackageEnv(rho))
-			spkg = R_PackageEnvName(rho);
-		    else if (R_IsNamespaceEnv(rho))
-			spkg = R_NamespaceEnvSpec(rho);
-		if (spkg != R_NilValue) {
-		    const char *pkgname = translateChar(STRING_ELT(spkg, 0));
-		    if (!strcmp(check + lprefix, pkgname))
-			err = TRUE;
-		    if (!strcmp(check + lprefix, "_R_CHECK_PACKAGE_NAME_")) {
-			/* package name specified in _R_CHECK_PACKAGE_NAME */
-			const char *envpname = getenv("_R_CHECK_PACKAGE_NAME_");
-			if (envpname && !strcmp(envpname, pkgname))
-			    err = TRUE;
-		    }
-		}
-	    }
-	}
-	if (err)
-	    errorcall(call, _("the condition has length > 1"));
-        else
-	    warningcall(call,
-		    _("the condition has length > 1 and only the first element will be used"));
-	vmaxset(vmax);
+	/* needed as per PR#15990.  call gets protected by warningcall() */
+	/* FIXME: should be protected by caller, not here */
+	PROTECT(s);
+	R_BadValueInRCode(s, call, rho,
+	    "the condition has length > 1",
+	    _("the condition has length > 1"),
+	    _("the condition has length > 1 and only the first element will be used"),
+	    "_R_CHECK_LENGTH_1_CONDITION_",
+	    TRUE /* by default issue warning */);
 	UNPROTECT(1);
     }
     if (len > 0) {
@@ -2095,14 +2080,15 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call, SEXP rho)
     ((isLanguage(body) && CAR(body) == R_BraceSymbol) ? 1 : 0)
 
 /* Allocate space for the loop variable value the first time through
-   (when v == R_NilValue) and when the value has been assigned to
-   another variable (NAMED(v) > 1). This should be safe and avoid
-   allocation in many cases. */
-#define ALLOC_LOOP_VAR(v, val_type, vpi) do { \
-	if (v == R_NilValue || MAYBE_SHARED(v)) { \
-	    REPROTECT(v = allocVector(val_type, 1), vpi); \
-	    INCREMENT_NAMED(v);				  \
-	} \
+   (when v == R_NilValue) and when the value may have been assigned to
+   another variable. This should be safe and avoid allocation in many
+   cases. */
+#define ALLOC_LOOP_VAR(v, val_type, vpi) do {			\
+	if (v == R_NilValue || MAYBE_SHARED(v) ||		\
+	    ATTRIB(v) != R_NilValue || (v) != CAR(cell)) {	\
+	    REPROTECT(v = allocVector(val_type, 1), vpi);	\
+	    INCREMENT_NAMED(v);					\
+	}							\
     } while(0)
 
 SEXP attribute_hidden do_if(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -2612,6 +2598,36 @@ static R_INLINE SEXP mkRHSPROMISE(SEXP expr, SEXP rhs)
     return R_mkEVPROMISE_NR(expr, rhs);
 }
 
+static SEXP GET_BINDING_CELL(SEXP, SEXP);
+static SEXP BINDING_VALUE(SEXP);
+
+static R_INLINE SEXP
+try_assign_unwrap(SEXP value, SEXP sym, SEXP rho, SEXP cell)
+{
+    /* If EnsureLocal() has introduced a wrapper for the LHS object in
+       a complex assignment and the data has been duplicated, then it
+       may be possible to remove the wrapper before assigning the
+       final value to a its symbol. */
+    if (! MAYBE_REFERENCED(value))
+	/* Typical case for NAMED; can also happen for REFCNT. */
+	return R_tryUnwrap(value);
+#ifdef SWITCH_TO_REFCNT
+    else {
+	/* Typical case for REFCNT; might not be safe to unwrap for NAMED. */
+	if (! MAYBE_SHARED(value)) {
+	    if (cell == NULL)  /* for AST; byte code has the binding */
+		cell = GET_BINDING_CELL(sym, rho);
+	    /* Ruling out active bindigns may not be necessary at this
+	       point, but just to be safe ... */
+	    if (! IS_ACTIVE_BINDING(cell) &&
+		value == BINDING_VALUE(cell))
+		return R_tryUnwrap(value);
+	}
+    }
+#endif
+    return value;
+}
+
 static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP expr, lhs, rhs, saverhs, tmp, afun, rhsprom;
@@ -2741,9 +2757,21 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    error(_("invalid function in complex assignment"));
     }
     SET_TEMPVARLOC_FROM_CAR(tmploc, lhs);
-    PROTECT(expr = assignCall(asymSymbol[PRIMVAL(op)], CDR(lhs),
-			      afun, R_TmpvalSymbol, CDDR(expr), rhsprom));
-    expr = eval(expr, rho);
+    SEXP lhsSym = CDR(lhs);
+
+    PROTECT(expr = replaceCall(afun, R_TmpvalSymbol, CDDR(expr), rhsprom));
+    SEXP value = eval(expr, rho);
+
+    if (PRIMVAL(op) == 2)                       /* <<- */
+	setVar(lhsSym, value, ENCLOS(rho));
+    else {                                      /* <-, = */
+	if (ALTREP(value))
+	    value = try_assign_unwrap(value, lhsSym, rho, NULL);
+	defineVar(lhsSym, value, rho);
+    }
+    INCREMENT_NAMED(value);
+    R_Visible = FALSE;
+
     endcontext(&cntxt); /* which does not run the remove */
     UNPROTECT(nprot);
     unbindVar(R_TmpvalSymbol, rho);
@@ -3169,19 +3197,18 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
 	UNPROTECT(1);
     }
     else if (TYPEOF(expr) == EXPRSXP) {
-	int i, n;
 	SEXP srcrefs = getBlockSrcrefs(expr);
 	PROTECT(expr);
-	n = LENGTH(expr);
 	tmp = R_NilValue;
 	begincontext(&cntxt, CTXT_RETURN, R_GlobalContext->call,
 	             env, rho, args, op);
-	if (!SETJMP(cntxt.cjmpbuf))
-	    for(i = 0 ; i < n ; i++) {
+	if (!SETJMP(cntxt.cjmpbuf)) {
+	    int n = LENGTH(expr);
+	    for(int i = 0 ; i < n ; i++) {
 		R_Srcref = getSrcref(srcrefs, i);
 		tmp = eval(VECTOR_ELT(expr, i), env);
 	    }
-	else {
+	} else {
 	    tmp = R_ReturnedValue;
 	    if (tmp == R_RestartToken) {
 		cntxt.callflag = CTXT_RETURN;  /* turn restart off */
@@ -3459,7 +3486,9 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	       in a promise, so evaluating it again should be no problem. */
 	    *ans = evalArgs(args, rho, dropmissing, call, 0);
 	else {
+	    INCREMENT_LINKS(x);
 	    PROTECT(*ans = CONS_NR(x, evalArgs(CDR(args), rho, dropmissing, call, 1)));
+	    DECREMENT_LINKS(x);
 	    SET_TAG(*ans, CreateTag(TAG(args)));
 	    UNPROTECT(1);
 	}
@@ -3684,7 +3713,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 }
 
 /* start of bytecode section */
-static int R_bcVersion = 10;
+static int R_bcVersion = 11;
 static int R_bcMinVersion = 9;
 
 static SEXP R_AddSym = NULL;
@@ -3891,6 +3920,9 @@ enum {
   SEQALONG_OP,
   SEQLEN_OP,
   BASEGUARD_OP,
+  INCLNK_OP,
+  DECLNK_OP,
+  DECLNK_N_OP,
   OPCOUNT
 };
 
@@ -3925,37 +3957,20 @@ static SEXP seq_int(int n1, int n2)
 #endif
 }
 
-#ifdef TYPED_STACK
-# define COMPACT_INTSEQ
-# ifdef COMPACT_INTSEQ
-#  define INTSEQSXP 9999
-# endif
-#define CACHE_SCALARS
+#define COMPACT_INTSEQ
+#ifdef COMPACT_INTSEQ
+# define INTSEQSXP 9999
+#endif
+
 static R_INLINE SEXP GETSTACK_PTR_TAG(R_bcstack_t *s)
 {
     /* no error checking since only called with tag != 0 */
     SEXP value;
     switch (s->tag) {
     case REALSXP:
-#ifdef CACHE_SCALARS
-	if (R_CachedScalarReal != NULL) {
-	    value = R_CachedScalarReal;
-	    R_CachedScalarReal = NULL;
-	    SET_SCALAR_DVAL(value, s->u.dval);
-	}
-	else
-#endif
 	value = ScalarReal(s->u.dval);
 	break;
     case INTSXP:
-#ifdef CACHE_SCALARS
-	if (R_CachedScalarInteger != NULL) {
-	    value = R_CachedScalarInteger;
-	    R_CachedScalarInteger = NULL;
-	    SET_SCALAR_IVAL(value, s->u.ival);
-	}
-	else
-#endif
 	value = ScalarInteger(s->u.ival);
 	break;
     case LGLSXP:
@@ -4010,26 +4025,8 @@ static R_INLINE SEXP GETSTACK_PTR_TAG(R_bcstack_t *s)
     } while (0)
 
 #define IS_STACKVAL_BOXED(idx)	(R_BCNodeStackTop[idx].tag == 0)
-#else
-#define GETSTACK_PTR(s) (*(s))
 
-#define GETSTACK_SXPVAL_PTR(s) (*(s))
-
-#define GETSTACK_IVAL_PTR(s) INTEGER(*(s))[0]
-
-#define SETSTACK_PTR(s, v) do { \
-    SEXP __v__ = (v); \
-    *(s) = __v__; \
-} while (0)
-
-#define SETSTACK_REAL_PTR(s, v) SETSTACK_PTR(s, ScalarReal(v))
-#define SETSTACK_INTEGER_PTR(s, v) SETSTACK_PTR(s, ScalarInteger(v))
-#define SETSTACK_LOGICAL_PTR(s, v) SETSTACK_PTR(s, ScalarLogical(v))
-
-#define IS_STACKVAL_BOXED(idx)	(TRUE)
-#endif
-
-#if defined(TYPED_STACK) && defined(COMPACT_INTSEQ)
+#ifdef COMPACT_INTSEQ
 #define SETSTACK_INTSEQ(idx, rn1, rn2) do {	\
 	SEXP info = allocVector(INTSXP, 2);	\
 	INTEGER(info)[0] = (int) rn1;		\
@@ -4055,102 +4052,56 @@ static R_INLINE SEXP GETSTACK_PTR_TAG(R_bcstack_t *s)
 #define SETSTACK_LOGICAL(i, v) SETSTACK_LOGICAL_PTR(R_BCNodeStackTop + (i), v)
 
 
-/* The next two macros will allow reuse a scalar box, if provided. The
-   box is assumed to be of the correct type and size and to have no
-   attributes. */
-#ifdef CACHE_SCALARS
-#define SETSTACK_REAL_EX(idx, dval, ans) do {		\
-	SEXP __ans__ = (ans);				\
-	if (__ans__ && R_CachedScalarReal == NULL)	\
-	    R_CachedScalarReal = __ans__;		\
-	SETSTACK_REAL(idx, dval);			\
-    } while (0)
-
-#define SETSTACK_INTEGER_EX(idx, ival, ans) do {	\
-	SEXP __ans__ = (ans);				\
-	if (__ans__ && R_CachedScalarInteger == NULL)	\
-	    R_CachedScalarInteger = __ans__;		\
-	SETSTACK_INTEGER(idx, ival);			\
-    } while (0)
-#else
-#define SETSTACK_REAL_EX(idx, dval, ans) do { \
-	if (ans) {			      \
-	    SET_SCALAR_DVAL(ans, dval);	      \
-	    SETSTACK(idx, ans);		      \
-	}				      \
-	else SETSTACK_REAL(idx, dval);	      \
-    } while (0)
-
-#define SETSTACK_INTEGER_EX(idx, ival, ans) do { \
-	if (ans) {				 \
-	    INTEGER(ans)[0] = ival;		 \
-	    SETSTACK(idx, ans);			 \
-	}					 \
-	else SETSTACK_INTEGER(idx, ival);	 \
-    } while (0)
-#endif
-
-typedef union { double dval; int ival; } scalar_value_t;
-
 /* bcStackScalar() checks whether the object in the specified stack
-   location is a simple real, integer, or logical scalar (i.e. length
-   one and no attributes.  If so, the type is returned as the function
-   value and the value is returned in the structure pointed to by the
-   second argument; if not, then zero is returned as the function
-   value. The boxed value can be returned through a pointer argument
-   if it is suitable for re-use. */
-static R_INLINE int bcStackScalarEx(R_bcstack_t *s, scalar_value_t *v,
-				    SEXP *pv)
+   location is an immediate scalar or a boxed simple real, integer, or
+   logical scalar (i.e. length one and no attributes).  For immediate
+   values the stack pointer is returned; for others the supplied stack
+   structure pointer is returned after filling its fields
+   appropriately. */
+static R_INLINE R_bcstack_t *bcStackScalar(R_bcstack_t *s, R_bcstack_t *v)
 {
-#ifdef TYPED_STACK
-    int tag = s->tag;
+    switch (s->tag) {
+    case REALSXP:
+    case INTSXP:
+    case LGLSXP: return s;
+    }
 
-    if (tag)
-	switch(tag) {
-	case REALSXP: v->dval = s->u.dval; return tag;
-	case INTSXP: v->ival = s->u.ival; return tag;
-	case LGLSXP: v->ival = s->u.ival; return tag;
-	}
-#endif
     SEXP x = GETSTACK_SXPVAL_PTR(s);
     if (IS_SIMPLE_SCALAR(x, REALSXP)) {
-#ifndef NO_SAVE_ALLOC
-	if (pv && NO_REFERENCES(x)) *pv = x;
-#endif
-	v->dval = SCALAR_DVAL(x);
-	return REALSXP;
+	v->tag = REALSXP;
+	v->u.dval = SCALAR_DVAL(x);
+	return v;
     }
     else if (IS_SIMPLE_SCALAR(x, INTSXP)) {
-#ifndef NO_SAVE_ALLOC
-	if (pv && NO_REFERENCES(x)) *pv = x;
-#endif
-	v->ival = SCALAR_IVAL(x);
-	return INTSXP;
+	v->tag = INTSXP;
+	v->u.ival = SCALAR_IVAL(x);
+	return v;
     }
     else if (IS_SIMPLE_SCALAR(x, LGLSXP)) {
-	v->ival = SCALAR_LVAL(x);
-	return LGLSXP;
+	v->tag = LGLSXP;
+	v->u.ival = SCALAR_LVAL(x);
+	return v;
     }
-    else return 0;
+    else {
+	v->tag = 0;
+	v->u.sxpval = NULL;
+	return v;
+    }
 }
-
-#define bcStackScalar(s, v) bcStackScalarEx(s, v, NULL)
 
 #define INTEGER_TO_LOGICAL(x) \
     ((x) == NA_INTEGER ? NA_LOGICAL : (x) ? TRUE : FALSE)
 #define INTEGER_TO_REAL(x) ((x) == NA_INTEGER ? NA_REAL : (x))
 #define LOGICAL_TO_REAL(x) ((x) == NA_LOGICAL ? NA_REAL : (x))
 
-static R_INLINE int bcStackScalarRealEx(R_bcstack_t *s, scalar_value_t *px,
-					SEXP *pv)
+static R_INLINE R_bcstack_t *bcStackScalarReal(R_bcstack_t *s, R_bcstack_t *v)
 {
-    int typex = bcStackScalarEx(s, px, pv);
-    if (typex == INTSXP) {
-	typex = REALSXP;
-	px->dval = INTEGER_TO_REAL(px->ival);
-	if (pv) *pv = NULL;
+    v = bcStackScalar(s, v);
+    if (v->tag == INTSXP) {
+	v->tag = REALSXP;
+	v->u.dval = INTEGER_TO_REAL(v->u.ival);
     }
-    return typex;
+    return v;
 }
 
 #define DO_FAST_RELOP2(op,a,b) do { \
@@ -4161,26 +4112,40 @@ static R_INLINE int bcStackScalarRealEx(R_bcstack_t *s, scalar_value_t *px,
     NEXT(); \
 } while (0)
 
-# define FastRelop2(op,opval,opsym) do { \
-    scalar_value_t vx; \
-    scalar_value_t vy; \
-    int typex = bcStackScalar(R_BCNodeStackTop - 2, &vx); \
-    int typey = bcStackScalar(R_BCNodeStackTop - 1, &vy); \
-    if (typex == REALSXP && ! ISNAN(vx.dval)) { \
-	if (typey == REALSXP && ! ISNAN(vy.dval)) \
-	    DO_FAST_RELOP2(op, vx.dval, vy.dval); \
-	else if (typey == INTSXP && vy.ival != NA_INTEGER) \
-	    DO_FAST_RELOP2(op, vx.dval, vy.ival); \
-    } \
-    else if (typex == INTSXP && vx.ival != NA_INTEGER) { \
-	if (typey == REALSXP && ! ISNAN(vy.dval)) \
-	    DO_FAST_RELOP2(op, vx.ival, vy.dval); \
-	else if (typey == INTSXP && vy.ival != NA_INTEGER) { \
-	    DO_FAST_RELOP2(op, vx.ival, vy.ival); \
-	} \
-    } \
-    Relop2(opval, opsym); \
-} while (0)
+#define INCLNK_STACK_PTR(s) do {		\
+	if ((s)->tag == 0)			\
+	    INCREMENT_LINKS((s)->u.sxpval);	\
+    } while (0)
+
+#define DECLNK_STACK_PTR(s) do {		\
+	if ((s)->tag == 0)			\
+	    DECREMENT_LINKS((s)->u.sxpval);	\
+    } while (0)
+
+#define FastRelop2(op,opval,opsym) do {					\
+	R_bcstack_t vvx, vvy;						\
+	R_bcstack_t *vx = bcStackScalar(R_BCNodeStackTop - 2, &vvx);	\
+	R_bcstack_t *vy = bcStackScalar(R_BCNodeStackTop - 1, &vvy);	\
+	if (vx->tag == REALSXP && ! ISNAN(vx->u.dval)) {		\
+	    if (vy->tag == REALSXP && ! ISNAN(vy->u.dval))		\
+		DO_FAST_RELOP2(op, vx->u.dval, vy->u.dval);		\
+	    else if (vy->tag == INTSXP && vy->u.ival != NA_INTEGER)	\
+		DO_FAST_RELOP2(op, vx->u.dval, vy->u.ival);		\
+	}								\
+	else if (vx->tag == INTSXP && vx->u.ival != NA_INTEGER) {	\
+	    if (vy->tag == REALSXP && ! ISNAN(vy->u.dval))		\
+		DO_FAST_RELOP2(op, vx->u.ival, vy->u.dval);		\
+	    else if (vy->tag == INTSXP && vy->u.ival != NA_INTEGER) {	\
+		DO_FAST_RELOP2(op, vx->u.ival, vy->u.ival);		\
+	    }								\
+	}								\
+	Relop2(opval, opsym);						\
+    } while (0)
+
+/* not actually optimized yet; ignore op, opval for now */
+#define FastLogic2(op, opval, opsym) do {		\
+	Builtin2(do_logic, opsym, rho);		\
+    } while (0)
 
 static R_INLINE SEXP getPrimitive(SEXP symbol, SEXPTYPE type)
 {
@@ -4302,119 +4267,90 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 //On Linux this is quite a bit faster; not on macOS El Capitan:
 //#define CMP_ISNAN(x) ((x) != (x))
 #define FastMath1(fun, sym) do {					\
-	scalar_value_t vx;						\
-	SEXP sa = NULL;							\
-	int typex = bcStackScalarEx(R_BCNodeStackTop - 1, &vx, &sa);	\
-	if (typex == REALSXP) {						\
-	    double dval = fun(vx.dval);					\
+	R_bcstack_t vvx;						\
+	R_bcstack_t *vx = bcStackScalar(R_BCNodeStackTop - 1, &vvx);	\
+	if (vx->tag == REALSXP) {					\
+	    double dval = fun(vx->u.dval);				\
 	    if (CMP_ISNAN(dval)) {					\
 		SEXP call = VECTOR_ELT(constants, GETOP());		\
-		if (ISNAN(vx.dval)) dval = vx.dval;			\
+		if (ISNAN(vx->u.dval)) dval = vx->u.dval;		\
 		else warningcall(call, R_MSG_NA);			\
 	    }								\
 	    else SKIP_OP();						\
-	    SETSTACK_REAL_EX(-1, dval, sa);				\
+	    SETSTACK_REAL(-1, dval);					\
 	    R_Visible = TRUE;						\
 	    NEXT();							\
 	}								\
-	else if (typex == INTSXP && vx.ival != NA_INTEGER) {		\
+	else if (vx->tag == INTSXP && vx->u.ival != NA_INTEGER) {	\
 	    SKIP_OP();							\
-	    SETSTACK_REAL_EX(-1, fun(vx.ival), NULL);			\
+	    SETSTACK_REAL(-1, fun(vx->u.ival));				\
 	    R_Visible = TRUE;						\
 	    NEXT();							\
 	}								\
 	Builtin1(do_math1,sym,rho);					\
     } while (0)
 
-#ifdef NO_SAVE_ALLOC
-# define DO_FAST_BINOP(fun,a,b,v) do {		\
-    SKIP_OP(); \
-    SETSTACK_REAL(-2, fun(a, b));		\
-    R_BCNodeStackTop--; \
-    R_Visible = TRUE; \
-    NEXT(); \
-} while (0)
-
-# define DO_FAST_BINOP_INT(fun, a, b, v) do {	    \
-    double dval = fun((double) (a), (double) (b));	\
-    if (dval <= INT_MAX && dval >= INT_MIN + 1) { \
-	SKIP_OP(); \
-	SETSTACK_INTEGER(-2, (int) dval); \
-	R_BCNodeStackTop--; \
-	R_Visible = TRUE; \
-	NEXT(); \
-    } \
-} while(0)
-#else
-/* these reuse one of the two values on the top of the stack if it is
-   of the right type and has no references. It is known that both of
-   these will have length one and have no attributes. */
-# define DO_FAST_BINOP(fun, a, b, ans) do {				\
-	SKIP_OP();							\
-	double dval = fun(a, b);					\
-	SETSTACK_REAL_EX(-2, dval, ans);				\
-	R_BCNodeStackTop--;						\
-	R_Visible = TRUE;						\
-	NEXT();								\
+#define DO_FAST_BINOP(fun,a,b) do {		\
+	SKIP_OP();				\
+	SETSTACK_REAL(-2, fun(a, b));		\
+	R_BCNodeStackTop--;			\
+	R_Visible = TRUE;			\
+	NEXT();					\
     } while (0)
 
-# define DO_FAST_BINOP_INT(fun, a, b, ans) do {				\
-	double dval = fun((double) (a), (double) (b));			\
-	if (dval <= INT_MAX && dval >= INT_MIN + 1) {			\
-	    int val = (int) dval;					\
-	    SKIP_OP();							\
-	    SETSTACK_INTEGER_EX(-2, val, ans);				\
-	    R_BCNodeStackTop--;						\
-	    R_Visible = TRUE;						\
-	    NEXT();							\
-	}								\
+#define DO_FAST_BINOP_INT(fun, a, b) do {		\
+	double dval = fun((double) (a), (double) (b));	\
+	if (dval <= INT_MAX && dval >= INT_MIN + 1) {	\
+	    SKIP_OP();					\
+	    SETSTACK_INTEGER(-2, (int) dval);		\
+	    R_BCNodeStackTop--;				\
+	    R_Visible = TRUE;				\
+	    NEXT();					\
+	}						\
     } while(0)
-#endif
 
 #define FastUnary(op, opsym) do {					\
-	scalar_value_t vx;						\
-	SEXP sa = NULL;							\
-	int typex = bcStackScalarEx(R_BCNodeStackTop - 1, &vx, &sa);	\
-	if (typex == REALSXP) {						\
+	R_bcstack_t vvx;						\
+	R_bcstack_t *vx = bcStackScalar(R_BCNodeStackTop - 1, &vvx);	\
+	if (vx->tag == REALSXP) {					\
 	    SKIP_OP();							\
-	    SETSTACK_REAL_EX(-1, op vx.dval, sa);			\
+	    SETSTACK_REAL(-1, op vx->u.dval);				\
 	    R_Visible = TRUE;						\
 	    NEXT();							\
 	}								\
-	else if (typex == INTSXP && vx.ival != NA_INTEGER) {		\
+	else if (vx->tag == INTSXP && vx->u.ival != NA_INTEGER) {	\
 	    SKIP_OP();							\
-	    SETSTACK_INTEGER_EX(-1, op vx.ival, sa);			\
+	    SETSTACK_INTEGER(-1, op vx->u.ival);			\
 	    R_Visible = TRUE;						\
 	    NEXT();							\
 	}								\
 	Arith1(opsym);							\
     } while (0)
 
-# define FastBinary(op,opval,opsym) do { \
-    scalar_value_t vx; \
-    scalar_value_t vy; \
-    SEXP sa = NULL; \
-    SEXP sb = NULL; \
-    int typex = bcStackScalarEx(R_BCNodeStackTop - 2, &vx, &sa);	\
-    int typey = bcStackScalarEx(R_BCNodeStackTop - 1, &vy, &sb);	\
-    if (typex == REALSXP) { \
-	if (typey == REALSXP) \
-	    DO_FAST_BINOP(op, vx.dval, vy.dval, sa ? sa : sb);	\
-	else if (typey == INTSXP && vy.ival != NA_INTEGER) \
-	    DO_FAST_BINOP(op, vx.dval, vy.ival, sa);	   \
-    } \
-    else if (typex == INTSXP && vx.ival != NA_INTEGER) { \
-	if (typey == REALSXP) \
-	    DO_FAST_BINOP(op, vx.ival, vy.dval, sb);	     \
-	else if (typey == INTSXP && vy.ival != NA_INTEGER) { \
-	    if (opval == DIVOP || opval == POWOP) \
-		DO_FAST_BINOP(op, (double) vx.ival, (double) vy.ival, NULL); \
-	    else \
-		DO_FAST_BINOP_INT(op, vx.ival, vy.ival, sa ? sa : sb);	\
-	} \
-    } \
-    Arith2(opval, opsym); \
-} while (0)
+#define FastBinary(op,opval,opsym) do {					\
+	R_bcstack_t vvx, vvy;						\
+	R_bcstack_t *vx = bcStackScalar(R_BCNodeStackTop - 2, &vvx);	\
+	R_bcstack_t *vy = bcStackScalar(R_BCNodeStackTop - 1, &vvy);	\
+	if (vx->tag == REALSXP) {					\
+	    if (vy->tag == REALSXP)					\
+		DO_FAST_BINOP(op, vx->u.dval, vy->u.dval);		\
+	    else if (vy->tag == INTSXP && vy->u.ival != NA_INTEGER)	\
+		DO_FAST_BINOP(op, vx->u.dval, vy->u.ival);		\
+	}								\
+	else if (vx->tag == INTSXP && vx->u.ival != NA_INTEGER) {	\
+	    int ix = vx->u.ival;					\
+	    if (vy->tag == REALSXP)					\
+		DO_FAST_BINOP(op, ix, vy->u.dval);			\
+	    else if (vy->tag == INTSXP && vy->u.ival != NA_INTEGER) {	\
+		int iy = vy->u.ival;					\
+		if (opval == DIVOP || opval == POWOP)			\
+		    DO_FAST_BINOP(op, (double) ix, (double) iy);	\
+		else							\
+		    DO_FAST_BINOP_INT(op, ix, iy);			\
+	    }								\
+	}								\
+	Arith2(opval, opsym);						\
+    } while (0)
 
 #define R_ADD(x, y) ((x) + (y))
 #define R_SUB(x, y) ((x) - (y))
@@ -4436,18 +4372,17 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 #endif
 
 #define DO_LOG() do {							\
-	scalar_value_t vx;						\
-	SEXP sa = NULL;							\
-	int typex = bcStackScalarRealEx(R_BCNodeStackTop - 1, &vx, &sa); \
-	if (typex == REALSXP) {						\
-	    double dval = R_log(vx.dval);				\
+	R_bcstack_t vvx;						\
+	R_bcstack_t *vx = bcStackScalarReal(R_BCNodeStackTop - 1, &vvx); \
+	if (vx->tag == REALSXP) {					\
+	    double dval = R_log(vx->u.dval);				\
 	    if (CMP_ISNAN(dval)) {					\
 		SEXP call = VECTOR_ELT(constants, GETOP());		\
-		if (ISNAN(vx.dval)) dval = vx.dval;			\
+		if (ISNAN(vx->u.dval)) dval = vx->u.dval;		\
 		else warningcall(call, R_MSG_NA);			\
 	    }								\
 	    else SKIP_OP();						\
-	    SETSTACK_REAL_EX(-1, dval, sa);				\
+	    SETSTACK_REAL(-1, dval);					\
 	    R_Visible = TRUE;						\
 	    NEXT();							\
 	}								\
@@ -4461,22 +4396,20 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
  } while (0)
 
 #define DO_LOGBASE() do {						\
-	scalar_value_t vx, vy;						\
-	SEXP sa = NULL;							\
-	SEXP sb = NULL;							\
-	int typex = bcStackScalarRealEx(R_BCNodeStackTop - 2, &vx, &sa); \
-	int typey = bcStackScalarRealEx(R_BCNodeStackTop - 1, &vy, &sb); \
-	if (typex == REALSXP && typey == REALSXP) {			\
-	    double dval = logbase(vx.dval, vy.dval);			\
+	R_bcstack_t vvx, vvy;						\
+	R_bcstack_t *vx = bcStackScalarReal(R_BCNodeStackTop - 2, &vvx); \
+	R_bcstack_t *vy = bcStackScalarReal(R_BCNodeStackTop - 1, &vvy); \
+	if (vx->tag == REALSXP && vy->tag == REALSXP) {			\
+	    double dval = logbase(vx->u.dval, vy->u.dval);		\
 	    if (ISNAN(dval)) {						\
 		SEXP call = VECTOR_ELT(constants, GETOP());		\
-		if (ISNAN(vx.dval)) dval = vx.dval;			\
-		else if (ISNAN(vy.dval)) dval = vy.dval;		\
+		if (ISNAN(vx->u.dval)) dval = vx->u.dval;		\
+		else if (ISNAN(vy->u.dval)) dval = vy->u.dval;		\
 		else warningcall(call, R_MSG_NA);			\
 	    }								\
 	    else SKIP_OP();						\
 	    R_BCNodeStackTop--;						\
-	    SETSTACK_REAL_EX(-1, dval, sa);				\
+	    SETSTACK_REAL(-1, dval);					\
 	    R_Visible = TRUE;						\
 	    NEXT();							\
 	}								\
@@ -4541,16 +4474,15 @@ static R_INLINE double (*getMath1Fun(int i, SEXP call))(double) {
 #define DO_MATH1() do {							\
 	SEXP call = VECTOR_ELT(constants, GETOP());			\
 	double (*fun)(double) = getMath1Fun(GETOP(), call);		\
-	scalar_value_t vx;						\
-	SEXP sa = NULL;							\
-	int typex = bcStackScalarRealEx(R_BCNodeStackTop - 1, &vx, &sa); \
-	if (typex == REALSXP) {						\
-	    double dval = fun(vx.dval);					\
+	R_bcstack_t vvx;						\
+	R_bcstack_t *vx = bcStackScalarReal(R_BCNodeStackTop - 1, &vvx); \
+	if (vx->tag == REALSXP) {					\
+	    double dval = fun(vx->u.dval);				\
             if (ISNAN(dval)) {						\
-		if (ISNAN(vx.dval)) dval = vx.dval;			\
+		if (ISNAN(vx->u.dval)) dval = vx->u.dval;		\
 		else warningcall(call, R_MSG_NA);			\
 	    }								\
-	    SETSTACK_REAL_EX(-1, dval, sa);				\
+	    SETSTACK_REAL(-1, dval);					\
 	    R_Visible = TRUE;						\
 	    NEXT();							\
 	}								\
@@ -4597,13 +4529,12 @@ static R_INLINE double (*getMath1Fun(int i, SEXP call))(double) {
     } while (0)
 
 #define DO_COLON() do {							\
-	scalar_value_t vx;						\
-	scalar_value_t vy;						\
-	int typex = bcStackScalarRealEx(R_BCNodeStackTop - 2, &vx, NULL); \
-	int typey = bcStackScalarRealEx(R_BCNodeStackTop - 1, &vy, NULL); \
-	if (typex == REALSXP && typey == REALSXP) {			\
-	    double rn1 = vx.dval;					\
-	    double rn2 = vy.dval;					\
+	R_bcstack_t vvx, vvy;						\
+	R_bcstack_t *vx = bcStackScalarReal(R_BCNodeStackTop - 2, &vvx); \
+	R_bcstack_t *vy = bcStackScalarReal(R_BCNodeStackTop - 1, &vvy); \
+	if (vx->tag == REALSXP && vy->tag == REALSXP) {			\
+	    double rn1 = vx->u.dval;					\
+	    double rn2 = vy->u.dval;					\
 	    if (R_FINITE(rn1) && R_FINITE(rn2) &&			\
 		INT_MIN <= rn1 && INT_MAX >= rn1 &&			\
 		INT_MIN <= rn2 && INT_MAX >= rn2 &&			\
@@ -4633,10 +4564,10 @@ static R_INLINE double (*getMath1Fun(int i, SEXP call))(double) {
     } while (0)
 
 #define DO_SEQ_LEN() do {						\
-	scalar_value_t vx;						\
-	int typex = bcStackScalarRealEx(R_BCNodeStackTop - 1, &vx, NULL); \
-	if (typex == REALSXP) {						\
-	    double rlen = vx.dval;					\
+	R_bcstack_t vvx;						\
+	R_bcstack_t *vx = bcStackScalarReal(R_BCNodeStackTop - 1, &vvx); \
+	if (vx->tag == REALSXP) {					\
+	    double rlen = vx->u.dval;					\
 	    if (1 <= rlen && INT_MAX >= rlen &&				\
 		rlen == (int) rlen) {					\
 		SKIP_OP(); /* skip 'call' index */			\
@@ -4650,7 +4581,7 @@ static R_INLINE double (*getMath1Fun(int i, SEXP call))(double) {
 
 static R_INLINE SEXP getForLoopSeq(int offset, Rboolean *iscompact)
 {
-#if defined(TYPED_STACK) && defined(COMPACT_INTSEQ)
+#ifdef COMPACT_INTSEQ
     R_bcstack_t *s = R_BCNodeStackTop + offset;
     if (s->tag == INTSEQSXP) {
 	*iscompact = TRUE;
@@ -4669,7 +4600,6 @@ static R_INLINE SEXP getForLoopSeq(int offset, Rboolean *iscompact)
   R_BCNodeStackTop = __ntop__; \
 } while (0)
 
-#ifdef TYPED_STACK
 #define BCNPUSH_REAL(v) do { \
   double __value__ = (v); \
   R_bcstack_t *__ntop__ = R_BCNodeStackTop + 1; \
@@ -4687,7 +4617,15 @@ static R_INLINE SEXP getForLoopSeq(int offset, Rboolean *iscompact)
   __ntop__[-1].tag = INTSXP; \
   R_BCNodeStackTop = __ntop__; \
 } while (0)
-#endif
+
+#define BCNPUSH_LOGICAL(v) do { \
+  int __value__ = (v); \
+  R_bcstack_t *__ntop__ = R_BCNodeStackTop + 1; \
+  if (__ntop__ > R_BCNodeStackEnd) nodeStackOverflow(); \
+  __ntop__[-1].u.ival = __value__; \
+  __ntop__[-1].tag = LGLSXP; \
+  R_BCNodeStackTop = __ntop__; \
+} while (0)
 
 #define BCNDUP() do { \
     R_bcstack_t *__ntop__ = R_BCNodeStackTop + 1; \
@@ -4736,15 +4674,6 @@ static void NORET nodeStackOverflow()
     error(_("node stack overflow"));
 }
 
-#ifdef BC_INT_STACK
-static void NORET intStackOverflow()
-{
-    error(_("integer stack overflow"));
-}
-#endif
-
-#ifdef TYPED_STACK
-
 /* Allocate consecutive space of nelems node stack elements */
 static R_INLINE void* BCNALLOC(int nelems) {
     void *ans;
@@ -4757,9 +4686,6 @@ static R_INLINE void* BCNALLOC(int nelems) {
     R_BCNodeStackTop += nelems;
     return ans;
 }
-#else
-# error BCNALLOC and such for untyped stack not available yet
-#endif
 
 /* Allocate R context on the node stack */
 #define RCNTXT_ELEMS ((sizeof(RCNTXT) + sizeof(R_bcstack_t) - 1) \
@@ -4904,8 +4830,7 @@ typedef R_bcstack_t * R_binding_cache_t;
 #  define VCACHE(i) GETSTACK_SXPVAL_PTR(vcache + (i))
 #  define GET_CACHED_BINDING_CELL(vcache, sidx) \
     (vcache ? VCACHE(CACHEIDX(sidx)) : R_NilValue)
-#  define GET_SMALLCACHE_BINDING_CELL(vcache, sidx) \
-    (vcache ? VCACHE(sidx) : R_NilValue)
+#  define GET_SMALLCACHE_BINDING_CELL(vcache, sidx) VCACHE(sidx)
 
 #  define SET_CACHED_BINDING(vcache, sidx, cell) \
     do { if (vcache) VCACHE(CACHEIDX(sidx)) = (cell); } while (0)
@@ -4976,22 +4901,50 @@ static R_INLINE SEXP FORCE_PROMISE(SEXP value, SEXP symbol, SEXP rho,
     return value;
 }
 
-static R_INLINE SEXP FIND_VAR_NO_CACHE(SEXP symbol, SEXP rho, SEXP cell)
+static R_INLINE void INCLNK_stack(R_bcstack_t *base, R_bcstack_t *top)
 {
-    SEXP value;
+    for (R_bcstack_t *p = base; p < top; p++) {
+	if (p->tag == RAWMEM_TAG)
+	    p += p->u.ival;
+	else if (p->tag == 0)
+	    INCREMENT_LINKS(p->u.sxpval);
+    }
+}
+
+static R_INLINE void DECLNK_stack(R_bcstack_t *base, R_bcstack_t *top)
+{
+    for (R_bcstack_t *p = base; p < top; p++) {
+	if (p->tag == RAWMEM_TAG)
+	    p += p->u.ival;
+	else if (p->tag == 0)
+	    DECREMENT_LINKS(p->u.sxpval);
+    }
+}
+
+static R_INLINE SEXP FIND_VAR_NO_CACHE(SEXP symbol, SEXP rho, SEXP cell,
+				       R_bcstack_t *stack_base)
+{
+    R_varloc_t loc;
     /* only need to search the current frame again if
        binding was special or frame is a base frame */
     if (cell != R_NilValue ||
 	rho == R_BaseEnv || rho == R_BaseNamespace)
-	value =  findVar(symbol, rho);
+	loc =  R_findVarLoc(symbol, rho);
     else
-	value =  findVar(symbol, ENCLOS(rho));
-    return value;
+	loc =  R_findVarLoc(symbol, ENCLOS(rho));
+    if (loc.cell && IS_ACTIVE_BINDING(loc.cell)) {
+	INCLNK_stack(stack_base, R_BCNodeStackTop);
+	SEXP value = R_GetVarLocValue(loc);
+	DECLNK_stack(stack_base, R_BCNodeStackTop);
+	return value;
+    }	
+    else return R_GetVarLocValue(loc);
 }
 
 static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 			    Rboolean dd, Rboolean keepmiss,
-			    R_binding_cache_t vcache, int sidx)
+			    R_binding_cache_t vcache, int sidx,
+			    R_bcstack_t *stack_base)
 {
     SEXP value;
     if (dd)
@@ -5000,7 +4953,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 	SEXP cell = GET_BINDING_CELL_CACHE(symbol, rho, vcache, sidx);
 	value = BINDING_VALUE(cell);
 	if (value == R_UnboundValue)
-	    value = FIND_VAR_NO_CACHE(symbol, rho, cell);
+	    value = FIND_VAR_NO_CACHE(symbol, rho, cell, stack_base);
     }
     else
 	value = findVar(symbol, rho);
@@ -5010,9 +4963,18 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
     else if (value == R_MissingArg)
 	MAYBE_MISSING_ARGUMENT_ERROR(symbol, keepmiss);
     else if (TYPEOF(value) == PROMSXP) {
-	PROTECT(value);
-	value = FORCE_PROMISE(value, symbol, rho, keepmiss);
-	UNPROTECT(1);
+	SEXP pv = PRVALUE(value);
+	if (pv == R_UnboundValue) {
+	    PROTECT(value);
+	    INCLNK_stack(stack_base, R_BCNodeStackTop);
+	    value = FORCE_PROMISE(value, symbol, rho, keepmiss);
+	    DECLNK_stack(stack_base, R_BCNodeStackTop);
+	    UNPROTECT(1);
+	}
+	else {
+	        ENSURE_NAMEDMAX(pv);
+		value = pv;
+	}
     } else ENSURE_NAMED(value); /* should not really be needed - LT */
     return value;
 }
@@ -5023,49 +4985,49 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
    smallcache is true then a modulus operation on the index is not
    needed, nor is a check that a non-null value corresponds to the
    requested symbol. The symbol from the constant pool is also usually
-   not needed. The test TYPOF(value) != SYMBOL rules out R_MissingArg
-   and R_UnboundValue as these are implemented s symbols.  It also
-   rules other symbols, but as those are rare they are handled by the
-   getvar() call. */
+   not needed. Active bindings will have functions as their values.
+   Skipping SYMSXP values rules out R_MissingArg and R_UnboundValue as
+   these are implemented s symbols.  It also rules other symbols, but
+   as those are rare they are handled by the getvar() call. */
 #define DO_GETVAR(dd,keepmiss) do { \
     int sidx = GETOP(); \
-    if (!dd && smallcache) { \
-	SEXP cell = GET_SMALLCACHE_BINDING_CELL(vcache, sidx); \
-	/* try fast handling of REALSXP, INTSXP, LGLSXP */ \
-	/* (cell won't be R_NilValue or an active binding) */ \
-	SEXP value = CAR(cell); \
-	int type = TYPEOF(value); \
-	switch(type) { \
-	case REALSXP: \
-	case INTSXP: \
-	case LGLSXP: \
-	    ENSURE_NAMED(value); /* should not really be needed - LT */ \
-	    R_Visible = TRUE; \
-	    BCNPUSH(value); \
-	    NEXT(); \
-	} \
-	if (cell != R_NilValue && ! IS_ACTIVE_BINDING(cell)) { \
-	    value = CAR(cell); \
-	    if (TYPEOF(value) != SYMSXP) {	\
-		if (TYPEOF(value) == PROMSXP) {		\
-		    SEXP pv = PRVALUE(value);		\
-		    if (pv == R_UnboundValue) {		\
-			SEXP symbol = VECTOR_ELT(constants, sidx);	\
-			value = FORCE_PROMISE(value, symbol, rho, keepmiss); \
-		    }							\
-		    else value = pv;					\
-		}							\
-		/* should not really be needed - LT */			\
-		else ENSURE_NAMED(value);				\
-		R_Visible = TRUE;					\
+    R_Visible = TRUE;	     \
+    if (!dd && smallcache) {						\
+	SEXP cell = GET_SMALLCACHE_BINDING_CELL(vcache, sidx);		\
+	SEXP value = CAR(cell);						\
+	int type = TYPEOF(value);					\
+	/* extract value of forced promises */				\
+	if (type == PROMSXP) {						\
+	    SEXP pv = PRVALUE(value);					\
+	    if (pv != R_UnboundValue) {					\
+		value = pv;						\
+		type = TYPEOF(value);					\
+	    }								\
+	}								\
+	/* try fast handling of some types; for these the */		\
+	/* cell won't be R_NilValue or an active binding */		\
+	switch(type) {							\
+	case REALSXP:							\
+	case INTSXP:							\
+	case LGLSXP:							\
+	case CPLXSXP:							\
+	case STRSXP:							\
+	case VECSXP:							\
+	case RAWSXP:							\
+	    BCNPUSH(value);						\
+	    NEXT();							\
+	case SYMSXP:							\
+	case PROMSXP:							\
+	    break;							\
+	default:							\
+	    if (cell != R_NilValue && ! IS_ACTIVE_BINDING(cell)) {	\
 		BCNPUSH(value);						\
 		NEXT();							\
 	    }								\
 	}								\
     }									\
     SEXP symbol = VECTOR_ELT(constants, sidx);				\
-    R_Visible = TRUE;							\
-    BCNPUSH(getvar(symbol, rho, dd, keepmiss, vcache, sidx));		\
+    BCNPUSH(getvar(symbol, rho, dd, keepmiss, vcache, sidx, stack_base)); \
     NEXT();								\
 } while (0)
 #else
@@ -5073,7 +5035,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
   int sidx = GETOP(); \
   SEXP symbol = VECTOR_ELT(constants, sidx); \
   R_Visible = TRUE; \
-  BCNPUSH(getvar(symbol, rho, dd, keepmiss, vcache, sidx));	\
+  BCNPUSH(getvar(symbol, rho, dd, keepmiss, vcache, sidx, stack_base));	\
   NEXT(); \
 } while (0)
 #endif
@@ -5292,8 +5254,10 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
 	    SETSTACK(-1, value); \
 	    BC_CHECK_SIGINT(); \
 	    pc = codebase + label; \
+	    NEXT(); \
 	} \
     } \
+    INCREMENT_LINKS(value); \
     NEXT(); \
 } while (0)
 
@@ -5315,8 +5279,10 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
 	    SETSTACK(-1, value); \
 	    BC_CHECK_SIGINT(); \
 	    pc = codebase + label; \
+	    NEXT(); \
 	} \
     } \
+    INCREMENT_LINKS(lhs); \
     NEXT(); \
 } while (0)
 
@@ -5338,30 +5304,35 @@ static int current_opcode = NO_CURRENT_OPCODE;
 static int opcode_counts[OPCOUNT];
 #endif
 
-#define BC_COUNT_DELTA 1000
-
+static void bc_check_sigint()
+{
+    R_CheckUserInterrupt();
 #ifndef IMMEDIATE_FINALIZERS
-/* finalizers are run here since this should only be called at
-   points where running arbitrary code should be safe */
-#define BC_CHECK_SIGINT() do { \
-  if (++evalcount > BC_COUNT_DELTA) { \
-      R_CheckUserInterrupt(); \
-      R_RunPendingFinalizers(); \
-      evalcount = 0; \
-  } \
-} while (0)
-#else
-#define BC_CHECK_SIGINT() do { \
-  if (++evalcount > BC_COUNT_DELTA) { \
-      R_CheckUserInterrupt(); \
-      evalcount = 0; \
-  } \
-} while (0)
+    /* finalizers are run here since this should only be called at
+       points where running arbitrary code should be safe */
+    R_RunPendingFinalizers();
 #endif
+}
+
+#define BC_COUNT_DELTA 1023
+#define BC_CHECK_SIGINT() do {			\
+	if (++evalcount > BC_COUNT_DELTA) {	\
+	    bc_check_sigint();			\
+	    evalcount = 0;			\
+	}					\
+    } while (0)
+
+/* use loop index for faster check */
+#define BC_LOOP_COUNT_MASK 1023
+#define BC_CHECK_SIGINT_LOOP(i) do {		\
+	if ((i & BC_LOOP_COUNT_MASK) == 0) {	\
+	    bc_check_sigint();			\
+	    evalcount = 0;			\
+	}					\
+    } while (0)
 
 static R_INLINE R_xlen_t bcStackIndex(R_bcstack_t *s)
 {
-#ifdef TYPED_STACK
     switch(s->tag) {
     case INTSXP:
 	if (s->u.ival != NA_INTEGER)
@@ -5377,7 +5348,7 @@ static R_INLINE R_xlen_t bcStackIndex(R_bcstack_t *s)
     case LGLSXP: return -1;
     default: break;
     }
-#endif
+
     SEXP idx = GETSTACK_SXPVAL_PTR(s);
     if (IS_SCALAR(idx, INTSXP)) {
 	int ival = SCALAR_IVAL(idx);
@@ -5404,27 +5375,27 @@ static R_INLINE SEXP mkVector1(SEXP s)
 #define DO_FAST_VECELT(sv, vec,  i, subset2) do {		\
 	switch (TYPEOF(vec)) {					\
 	case REALSXP:						\
-	    if (XLENGTH(vec) <= i) break;			\
+	    if (i < 0 || XLENGTH(vec) <= i) break;		\
 	    SETSTACK_REAL_PTR(sv, REAL_ELT(vec, i));		\
 	    return;						\
 	case INTSXP:						\
-	    if (XLENGTH(vec) <= i) break;			\
+	    if (i < 0 || XLENGTH(vec) <= i) break;		\
 	    SETSTACK_INTEGER_PTR(sv, INTEGER_ELT(vec, i));	\
 	    return;						\
 	case LGLSXP:						\
-	    if (XLENGTH(vec) <= i) break;			\
+	    if (i < 0 || XLENGTH(vec) <= i) break;		\
 	    SETSTACK_LOGICAL_PTR(sv, LOGICAL_ELT(vec, i));	\
 	    return;						\
 	case CPLXSXP:						\
-	    if (XLENGTH(vec) <= i) break;			\
+	    if (i < 0 || XLENGTH(vec) <= i) break;		\
 	    SETSTACK_PTR(sv, ScalarComplex(COMPLEX_ELT(vec, i)));	\
 	    return;						\
 	case RAWSXP:						\
-	    if (XLENGTH(vec) <= i) break;			\
+	    if (i < 0 || XLENGTH(vec) <= i) break;		\
 	    SETSTACK_PTR(sv, ScalarRaw(RAW(vec)[i]));		\
 	    return;						\
 	case VECSXP:						\
-	    if (XLENGTH(vec) <= i) break;			\
+	    if (i < 0 || XLENGTH(vec) <= i) break;		\
 	    SEXP elt = VECTOR_ELT(vec, i);			\
 	    RAISE_NAMED(elt, NAMED(vec));			\
 	    if (subset2)					\
@@ -5440,19 +5411,17 @@ static R_INLINE SEXP mkVector1(SEXP s)
      (TAG(ATTRIB(vec)) == R_DimSymbol &&	\
       CDR(ATTRIB(vec)) == R_NilValue))
 
-static R_INLINE void VECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *si,
+static R_INLINE void VECSUBSET_PTR(SEXP vec, R_bcstack_t *si,
 				   R_bcstack_t *sv, SEXP rho,
 				   SEXP consts, int callidx,
 				   Rboolean subset2)
 {
-    SEXP idx, args, value;
-    SEXP vec = GETSTACK_PTR(sx);
     R_xlen_t i = bcStackIndex(si) - 1;
-
-    if (i >= 0 && (subset2 || FAST_VECELT_OK(vec)))
+    if ((subset2 || FAST_VECELT_OK(vec)))
 	DO_FAST_VECELT(sv, vec, i, subset2);
 
     /* fall through to the standard default handler */
+    SEXP idx, args, value;
     idx = GETSTACK_PTR(si);
     args = CONS_NR(idx, R_NilValue);
     args = CONS_NR(vec, args);
@@ -5468,11 +5437,14 @@ static R_INLINE void VECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *si,
 
 #define DO_VECSUBSET(rho, sub2) do {					\
 	int callidx = GETOP();						\
-	VECSUBSET_PTR(R_BCNodeStackTop - 2, R_BCNodeStackTop - 1,	\
-		      R_BCNodeStackTop - 2, rho,			\
-		      constants, callidx, sub2);			\
+	R_bcstack_t *sx = R_BCNodeStackTop - 2;				\
+	R_bcstack_t *si = R_BCNodeStackTop - 1;				\
+	DECLNK_STACK_PTR(sx);						\
+	SEXP vec = GETSTACK_PTR(sx);					\
+	VECSUBSET_PTR(vec, si, sx, rho, constants, callidx, sub2);	\
 	R_BCNodeStackTop--;						\
 	R_Visible = TRUE;						\
+	NEXT();								\
     } while(0)
 
 static R_INLINE SEXP getMatrixDim(SEXP mat)
@@ -5527,6 +5499,7 @@ static R_INLINE void MATSUBSET_PTR(R_bcstack_t *sx,
 				   SEXP consts, int callidx,
 				   Rboolean subset2)
 {
+    DECLNK_STACK_PTR(sx);
     SEXP idx, jdx, args, value;
     SEXP mat = GETSTACK_PTR(sx);
 
@@ -5592,6 +5565,7 @@ static R_INLINE void SUBSET_N_PTR(R_bcstack_t *sx, int rank,
 				  SEXP rho, SEXP consts, int callidx,
 				  Rboolean subset2)
 {
+    DECLNK_STACK_PTR(sx);
     SEXP args, value;
     SEXP x = GETSTACK_PTR(sx);
 
@@ -5626,28 +5600,31 @@ static R_INLINE void SUBSET_N_PTR(R_bcstack_t *sx, int rank,
 	R_Visible = TRUE;						\
     } while (0)
 
-static R_INLINE Rboolean setElementFromScalar(SEXP vec, R_xlen_t i, int typev,
-					      scalar_value_t *v)
+static R_INLINE Rboolean setElementFromScalar(SEXP vec, R_xlen_t i,
+					      R_bcstack_t *srhs)
 {
     if (i < 0) return FALSE;
 
+    R_bcstack_t vv;
+    R_bcstack_t *v = bcStackScalar(srhs, &vv);
+
     if (TYPEOF(vec) == REALSXP) {
 	if (XLENGTH(vec) <= i) return FALSE;
-	switch(typev) {
-	case REALSXP: REAL(vec)[i] = v->dval; return TRUE;
-	case INTSXP: REAL(vec)[i] = INTEGER_TO_REAL(v->ival); return TRUE;
-	case LGLSXP: REAL(vec)[i] = LOGICAL_TO_REAL(v->ival); return TRUE;
+	switch(v->tag) {
+	case REALSXP: REAL(vec)[i] = v->u.dval; return TRUE;
+	case INTSXP: REAL(vec)[i] = INTEGER_TO_REAL(v->u.ival); return TRUE;
+	case LGLSXP: REAL(vec)[i] = LOGICAL_TO_REAL(v->u.ival); return TRUE;
 	}
     }
-    else if (typev == TYPEOF(vec)) {
-	switch(typev) {
+    else if (v->tag == TYPEOF(vec)) {
+	switch(v->tag) {
 	case INTSXP:
 	    if (XLENGTH(vec) <= i) return FALSE;
-	    INTEGER(vec)[i] = v->ival;
+	    INTEGER(vec)[i] = v->u.ival;
 	    return TRUE;
 	case LGLSXP:
 	    if (XLENGTH(vec) <= i) return FALSE;
-	    LOGICAL(vec)[i] = INTEGER_TO_LOGICAL(v->ival);
+	    LOGICAL(vec)[i] = INTEGER_TO_LOGICAL(v->u.ival);
 	    return TRUE;
 	}
     }
@@ -5655,9 +5632,7 @@ static R_INLINE Rboolean setElementFromScalar(SEXP vec, R_xlen_t i, int typev,
 }
 
 #define DO_FAST_SETVECELT(sv, srhs, vec,  i, subset2) do {		\
-	scalar_value_t v;						\
-	int typev = bcStackScalar(srhs, &v);				\
-	if (setElementFromScalar(vec, i, typev, &v)) {			\
+	if (setElementFromScalar(vec, i, srhs)) {			\
 	    SETSTACK_PTR(sv, vec);					\
 	    SETTER_CLEAR_NAMED(vec);					\
 	    return;							\
@@ -5674,18 +5649,12 @@ static R_INLINE Rboolean setElementFromScalar(SEXP vec, R_xlen_t i, int typev,
 	}								\
     } while (0)
 
-static R_INLINE void VECSUBASSIGN_PTR(R_bcstack_t *sx, R_bcstack_t *srhs,
+static R_INLINE void VECSUBASSIGN_PTR(SEXP vec, R_bcstack_t *srhs,
 				      R_bcstack_t *si, R_bcstack_t *sv,
 				      SEXP rho, SEXP consts, int callidx,
 				      Rboolean subassign2)
 {
     SEXP idx, args, value;
-    SEXP vec = GETSTACK_PTR(sx);
-
-    if (MAYBE_SHARED(vec)) {
-	vec = duplicate(vec);
-	SETSTACK_PTR(sx, vec);
-    }
 
     R_xlen_t i = bcStackIndex(si) - 1;
     if (i >= 0)
@@ -5710,10 +5679,18 @@ static R_INLINE void VECSUBASSIGN_PTR(R_bcstack_t *sx, R_bcstack_t *srhs,
 
 #define DO_VECSUBASSIGN(rho, sub2) do {					\
 	int callidx = GETOP();						\
-	VECSUBASSIGN_PTR(R_BCNodeStackTop - 3, R_BCNodeStackTop - 2,	\
-			 R_BCNodeStackTop - 1, R_BCNodeStackTop - 3,	\
-			 rho, constants, callidx, sub2);		\
+	R_bcstack_t *sx = R_BCNodeStackTop - 3;				\
+	R_bcstack_t *srhs = R_BCNodeStackTop - 2;			\
+	R_bcstack_t *si = R_BCNodeStackTop - 1;				\
+	DECLNK_STACK_PTR(sx);						\
+	SEXP vec = GETSTACK_PTR(sx);					\
+	if (MAYBE_SHARED(vec)) {					\
+	    vec = shallow_duplicate(vec);				\
+	    SETSTACK_PTR(sx, vec);					\
+	}								\
+	VECSUBASSIGN_PTR(vec, srhs, si, sx, rho, constants, callidx, sub2); \
 	R_BCNodeStackTop -= 2;						\
+	NEXT();								\
     } while (0)
 
 static R_INLINE void MATSUBASSIGN_PTR(R_bcstack_t *sx, R_bcstack_t *srhs,
@@ -5722,11 +5699,12 @@ static R_INLINE void MATSUBASSIGN_PTR(R_bcstack_t *sx, R_bcstack_t *srhs,
 				      SEXP rho, SEXP consts, int callidx,
 				      Rboolean subassign2)
 {
+    DECLNK_STACK_PTR(sx);
     SEXP dim, idx, jdx, args, value;
     SEXP mat = GETSTACK_PTR(sx);
 
     if (MAYBE_SHARED(mat)) {
-	mat = duplicate(mat);
+	mat = shallow_duplicate(mat);
 	SETSTACK_PTR(sx, mat);
     }
 
@@ -5777,11 +5755,12 @@ static R_INLINE void SUBASSIGN_N_PTR(R_bcstack_t *sx, int rank,
 				     SEXP rho, SEXP consts, int callidx,
 				     Rboolean subassign2)
 {
+    DECLNK_STACK_PTR(sx);
     SEXP dim, args, value;
     SEXP x = GETSTACK_PTR(sx);
 
     if (MAYBE_SHARED(x)) {
-	x = duplicate(x);
+	x = shallow_duplicate(x);
 	SETSTACK_PTR(sx, x);
     }
 
@@ -5818,7 +5797,9 @@ static R_INLINE void SUBASSIGN_N_PTR(R_bcstack_t *sx, int rank,
 	R_BCNodeStackTop -= rank + 1;					\
     } while (0)
 
-#define FIXUP_SCALAR_LOGICAL(callidx, arg, op) do {			\
+/* rho is only needed for _R_CHECK_LENGTH_1_LOGIC2_ */
+#define FIXUP_SCALAR_LOGICAL(rho, callidx, arg, op, warn_level) do {	\
+	if (R_BCNodeStackTop[-1].tag == LGLSXP) break;			\
 	SEXP val = GETSTACK(-1);					\
 	if (IS_SIMPLE_SCALAR(val, LGLSXP))				\
 	    SETSTACK(-1, ScalarLogical(SCALAR_LVAL(val)));		\
@@ -5826,7 +5807,10 @@ static R_INLINE void SUBASSIGN_N_PTR(R_bcstack_t *sx, int rank,
 	    if (!isNumber(val))						\
 		errorcall(VECTOR_ELT(constants, callidx),		\
 			  _("invalid %s type in 'x %s y'"), arg, op);	\
-	    SETSTACK(-1, ScalarLogical(asLogical(val)));		\
+	    SETSTACK(-1, ScalarLogical(asLogical2(			\
+					   val, /*checking*/ 1,		\
+					   VECTOR_ELT(constants, callidx),	\
+					   rho)));			\
 	}								\
     } while(0)
 
@@ -5875,13 +5859,20 @@ static R_INLINE void checkForMissings(SEXP args, SEXP call)
 #define FOR_LOOP_STATE_SIZE 4
 
 #define GET_VEC_LOOP_VALUE(var, pos) do {		\
-    (var) = GETSTACK(pos);				\
-    if (MAYBE_SHARED(var)) {				\
-	(var) = allocVector(TYPEOF(seq), 1);		\
-	SETSTACK(pos, var);				\
-	INCREMENT_NAMED(var);				\
-    }							\
-} while (0)
+	(var) = GETSTACK(pos);				\
+	if ((var) != CAR(cell) || MAYBE_SHARED(var) ||	\
+	    ATTRIB(var) != R_NilValue) {		\
+	    (var) = allocVector(TYPEOF(seq), 1);	\
+	    SETSTACK(pos, var);				\
+	    INCREMENT_NAMED(var);			\
+	}						\
+    } while (0)
+
+#define SET_FOR_LOOP_VAR(value, cell, rho) do {			\
+	if (CAR(cell) == R_UnboundValue ||			\
+	    ! SET_BINDING_VALUE(cell, value))			\
+	    defineVar(BINDING_SYMBOL(cell), value, rho);	\
+    } while (0)
 
 /* Loops that cannot have their SETJMPs optimized out are bracketed by
    STARTLOOPCNTXT and ENLOOPCNTXT instructions.  The STARTLOOPCNTXT
@@ -5937,10 +5928,9 @@ static R_INLINE SEXP SymbolValue(SEXP sym)
 static R_INLINE Rboolean GETSTACK_LOGICAL_NO_NA_PTR(R_bcstack_t *s, int callidx,
 						    SEXP constants, SEXP rho)
 {
-#ifdef TYPED_STACK
     if (s->tag == LGLSXP && s->u.ival != NA_LOGICAL)
 	return s->u.ival;
-#endif
+
     SEXP value = GETSTACK_PTR(s);
     if (IS_SCALAR(value, LGLSXP)) {
 	Rboolean lval = SCALAR_LVAL(value);
@@ -5949,6 +5939,14 @@ static R_INLINE Rboolean GETSTACK_LOGICAL_NO_NA_PTR(R_bcstack_t *s, int callidx,
     }
     SEXP call = VECTOR_ELT(constants, callidx);
     return asLogicalNoNA(value, call, rho);
+}
+
+#define GETSTACK_LOGICAL(n) GETSTACK_LOGICAL_PTR(R_BCNodeStackTop + (n))
+static R_INLINE Rboolean GETSTACK_LOGICAL_PTR(R_bcstack_t *s)
+{
+    if (s->tag == LGLSXP) return s->u.ival;
+    SEXP value = GETSTACK_PTR(s);
+    return SCALAR_LVAL(value);
 }
 
 /* Find locations table in the constant pool */
@@ -6172,20 +6170,6 @@ Rboolean attribute_hidden R_BCVersionOK(SEXP s)
 	(version >= R_bcMinVersion && version <= R_bcVersion);
 }
 
-static R_INLINE Rboolean FIND_ON_STACK(SEXP x, R_bcstack_t *base, int skip)
-{
-    /* Check whether the value is on the stack before modifying.  If
-       'skip' is true the top value on the stack is ignored. LT */
-    R_bcstack_t *checktop = skip ? R_BCNodeStackTop - 1 : R_BCNodeStackTop;
-    for (R_bcstack_t *p = base; p < checktop; p++) {
-	if (p->tag == RAWMEM_TAG)
-	    p += p->u.ival;
-	else if (p->u.sxpval == x && p->tag == 0)
-	    return TRUE;
-    }
-    return FALSE;
-}
-
 static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 {
   SEXP retvalue = R_NilValue, constants;
@@ -6198,9 +6182,6 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   void *oldbcpc = R_BCpc;
   BCODE *currentpc = NULL;
 
-#ifdef BC_INT_STACK
-  IStackval *olditop = R_BCIntStackTop;
-#endif
 #ifdef BC_PROFILING
   int old_current_opcode = current_opcode;
 #endif
@@ -6245,7 +6226,6 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   R_BCpc = &currentpc;
   R_binding_cache_t vcache = NULL;
   Rboolean smallcache = TRUE;
-  R_bcstack_t *vcache_top = NULL;
 #ifdef USE_BINDING_CACHE
   if (useCache) {
       R_len_t n = LENGTH(constants);
@@ -6258,7 +6238,6 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 # ifdef CACHE_ON_STACK
       /* initialize binding cache on the stack */
       vcache = R_BCNodeStackTop;
-      vcache_top = vcache + n;
       if (R_BCNodeStackTop + n > R_BCNodeStackEnd)
 	  nodeStackOverflow();
       while (n > 0) {
@@ -6270,10 +6249,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       /* allocate binding cache and protect on stack */
       vcache = allocVector(VECSXP, n);
       BCNPUSH(vcache);
-      vcache_top = R_BCNodeStackTop;
 # endif
   }
+  else smallcache = FALSE;
 #endif
+  R_bcstack_t *stack_base = R_BCNodeStackTop;
 
   BEGIN_MACHINE {
     OP(BCMISMATCH, 0): error(_("byte code version mismatch"));
@@ -6372,7 +6352,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	defineVar(symbol, R_NilValue, rho);
 	BCNPUSH(GET_BINDING_CELL(symbol, rho));
 
-	SEXP value = allocVector(INTSXP, 2);
+	SEXP value = allocVector(INTSXP, 3);
 	int *info = INTEGER0(value);
 	info[0] = -1;
 #ifdef COMPACT_INTSEQ
@@ -6389,6 +6369,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  info[1] = length(seq);
 	else errorcall(VECTOR_ELT(constants, callidx),
 		       _("invalid for() loop sequence"));
+#ifdef COMPACT_INTSEQ
+	info[2] = iscompact ? INTSEQSXP : TYPEOF(seq);
+#else
+	info[2] = TYPEOF(seq);
+#endif
 	BCNPUSH(value);
 
 	/* bump up links count of seq to avoid modification by loop code */
@@ -6408,6 +6393,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    break;
 	default: BCNPUSH(R_NilValue);
 	}
+	/* the seq, binding cell, and value on the stack are now boxed */
 
 	BC_CHECK_SIGINT();
 	pc = codebase + label;
@@ -6420,33 +6406,61 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	int i = ++loopinfo[0];
 	int n = loopinfo[1];
 	if (i < n) {
-	  Rboolean iscompact = FALSE;
-	  SEXP seq = getForLoopSeq(-4, &iscompact);
-	  SEXP cell = GETSTACK(-3);
+	  BC_CHECK_SIGINT_LOOP(i);
+	  pc = codebase + label;
+	  int type = loopinfo[2];
+	  SEXP seq = GETSTACK_SXPVAL(-4);
+	  SEXP cell = GETSTACK_SXPVAL(-3);
 	  SEXP value = NULL;
-	  switch (TYPEOF(seq)) {
-	  case LGLSXP:
+	  switch (type) {
+	  case REALSXP:
+	    value = CAR(cell);
+	    if (NOT_SHARED(value) && IS_SIMPLE_SCALAR(value, REALSXP)) {
+		SET_SCALAR_DVAL(value, REAL_ELT(seq, i));
+		NEXT();
+	    }
 	    GET_VEC_LOOP_VALUE(value, -1);
-	    SET_SCALAR_LVAL(value, LOGICAL_ELT(seq, i));
-	    break;
+	    SET_SCALAR_DVAL(value, REAL_ELT(seq, i));
+	    SET_FOR_LOOP_VAR(value, cell, rho);
+	    NEXT();
 	  case INTSXP:
+	    value = CAR(cell);
+	    if (NOT_SHARED(value) && IS_SIMPLE_SCALAR(value, INTSXP)) {
+		SET_SCALAR_IVAL(value, INTEGER_ELT(seq, i));
+		NEXT();
+	    }
 	    GET_VEC_LOOP_VALUE(value, -1);
+	    SET_SCALAR_IVAL(value, INTEGER_ELT(seq, i));
+	    SET_FOR_LOOP_VAR(value, cell, rho);
+	    NEXT();
 #ifdef COMPACT_INTSEQ
-	    if (iscompact) {
+	  case INTSEQSXP:
+	    {
 		int *info = INTEGER(seq);
 		int n1 = info[0];
 		int n2 = info[1];
-		int val = n1 <= n2 ? n1 + i : n1 - i;
-		INTEGER(value)[0] = val;
+		int ival = n1 <= n2 ? n1 + i : n1 - i;
+		value = CAR(cell);
+		if (NOT_SHARED(value) && IS_SIMPLE_SCALAR(value, INTSXP)) {
+		    SET_SCALAR_IVAL(value, ival);
+		    NEXT();
+		}
+		GET_VEC_LOOP_VALUE(value, -1);
+		SET_SCALAR_IVAL(value, ival);
+		SET_FOR_LOOP_VAR(value, cell, rho);
+		NEXT();
 	    }
-	    else
 #endif
-	    SET_SCALAR_IVAL(value, INTEGER_ELT(seq, i));
-	    break;
-	  case REALSXP:
+	  case LGLSXP:
+	    value = CAR(cell);
+	    if (NOT_SHARED(value) && IS_SIMPLE_SCALAR(value, LGLSXP)) {
+		SET_SCALAR_LVAL(value, LOGICAL_ELT(seq, i));
+		NEXT();
+	    }
 	    GET_VEC_LOOP_VALUE(value, -1);
-	    SET_SCALAR_DVAL(value, REAL_ELT(seq, i));
-	    break;
+	    SET_SCALAR_LVAL(value, LOGICAL_ELT(seq, i));
+	    SET_FOR_LOOP_VAR(value, cell, rho);
+	    NEXT();
 	  case CPLXSXP:
 	    GET_VEC_LOOP_VALUE(value, -1);
 	    SET_SCALAR_CVAL(value, COMPLEX_ELT(seq, i));
@@ -6472,17 +6486,13 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  default:
 	    error(_("invalid sequence argument in for loop"));
 	  }
-	  if (CAR(cell) == R_UnboundValue || ! SET_BINDING_VALUE(cell, value))
-	      defineVar(BINDING_SYMBOL(cell), value, rho);
-	  BC_CHECK_SIGINT();
-	  pc = codebase + label;
+	  SET_FOR_LOOP_VAR(value, cell, rho);
 	}
 	NEXT();
       }
     OP(ENDFOR, 0):
       {
-	Rboolean iscompact = FALSE;
-	SEXP seq = getForLoopSeq(-4, &iscompact);
+	SEXP seq = GETSTACK_SXPVAL(-4);
 	DECREMENT_LINKS(seq);
 	R_BCNodeStackTop -= FOR_LOOP_STATE_SIZE - 1;
 	SETSTACK(-1, R_NilValue);
@@ -6502,8 +6512,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	NEXT();
       }
     OP(LDNULL, 0): R_Visible = TRUE; BCNPUSH(R_NilValue); NEXT();
-    OP(LDTRUE, 0): R_Visible = TRUE; BCNPUSH(R_TrueValue); NEXT();
-    OP(LDFALSE, 0): R_Visible = TRUE; BCNPUSH(R_FalseValue); NEXT();
+    OP(LDTRUE, 0): R_Visible = TRUE; BCNPUSH_LOGICAL(TRUE); NEXT();
+    OP(LDFALSE, 0): R_Visible = TRUE; BCNPUSH_LOGICAL(FALSE); NEXT();
     OP(GETVAR, 1): DO_GETVAR(FALSE, FALSE);
     OP(DDVAL, 1): DO_GETVAR(TRUE, FALSE);
     OP(SETVAR, 1):
@@ -6516,43 +6526,23 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    SEXP symbol = VECTOR_ELT(constants, sidx);
 	    loc = GET_BINDING_CELL_CACHE(symbol, rho, vcache, sidx);
 	}
-#ifdef TYPED_STACK
+
 	R_bcstack_t *s = R_BCNodeStackTop - 1;
-	/* reading the locked bit is OK even if cell is R_NilValue */
-	if (s->tag && ! BINDING_IS_LOCKED(loc)) {
-	    /* if cell is R_NilValue or an active binding, or if the value
-	       is R_UnboundValue, then TYPEOF(CAR(cell)) will not match the
-	       immediate value tag. */
-	    SEXP x = CAR(loc);  /* fast, but assumes binding is a CONS */
-	    if (NOT_SHARED(x) && IS_SIMPLE_SCALAR(x, s->tag)) {
-		/* if the binding value is not shared and is a simple
-		   scalar of the same type as the immediate value,
-		   then we can copy the stack value into the binding
-		   value */
-
-#define MAX_ON_STACK_CHECK 63
-		/* Check whether the value is on the stack before
-		   modifying.  Limit the number of items to check to
-		   MAX_ON_STACK_CHECK; this will result in some
-		   defensive boxing. This number could be tuned; in
-		   some limited testing ncheck never went above
-		   36. Not worrying BCNALLOC stuff could result in
-		   false positives and unnecessary boxing but is
-		   probably worth it for avoiding checking and
-		   branching. LT */
-		int tag = s->tag;
-		if (R_BCNodeStackTop - vcache_top > MAX_ON_STACK_CHECK ||
-		    FIND_ON_STACK(x, vcache_top, TRUE))
-		    tag = 0;		
-
-		switch (tag) {
-		case REALSXP: SET_SCALAR_DVAL(x, s->u.dval); NEXT();
-		case INTSXP: SET_SCALAR_IVAL(x, s->u.ival); NEXT();
-		case LGLSXP: SET_SCALAR_LVAL(x, s->u.ival); NEXT();
-		}
+	int tag = s->tag;
+	SEXP x = CAR(loc);  /* fast, but assumes binding is a CONS */
+	if (NOT_SHARED(x) && IS_SIMPLE_SCALAR(x, tag))
+	    /* If the binding value is not shared and is a simple
+	       scalar of the same type as the immediate value, then we
+	       can copy the stack value into the binding
+	       value. NOT_SHARED implies the binding is not locked;
+	       the types imply the binding is not R_NilValue and not
+	       an active binding. */
+	    switch (tag) {
+	    case REALSXP: SET_SCALAR_DVAL(x, s->u.dval); NEXT();
+	    case INTSXP: SET_SCALAR_IVAL(x, s->u.ival); NEXT();
+	    case LGLSXP: SET_SCALAR_LVAL(x, s->u.ival); NEXT();
 	    }
-	}
-#endif
+
 	SEXP value = GETSTACK(-1);
 	INCREMENT_NAMED(value);
 	if (! SET_BINDING_VALUE(loc, value)) {
@@ -6649,7 +6639,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	if (ftype != SPECIALSXP) {
 	  SEXP value;
 	  if (ftype == BUILTINSXP) {
-	    if (TYPEOF(code) == BCODESXP) 
+	    if (TYPEOF(code) == BCODESXP)
 	      value = bcEval(code, rho, TRUE);
 	    else
 	      /* uncommon but possible, the compiler may decide not to compile
@@ -6831,9 +6821,21 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(LE, 1): FastRelop2(<=, LEOP, R_LeSym);
     OP(GE, 1): FastRelop2(>=, GEOP, R_GeSym);
     OP(GT, 1): FastRelop2(>, GTOP, R_GtSym);
-    OP(AND, 1): Builtin2(do_logic, R_AndSym, rho);
-    OP(OR, 1): Builtin2(do_logic, R_OrSym, rho);
-    OP(NOT, 1): Builtin1(do_logic, R_NotSym, rho);
+    OP(AND, 1): FastLogic2(&, ANDOP, R_AndSym);
+    OP(OR, 1): FastLogic2(|, OROP, R_OrSym);
+    OP(NOT, 1):
+      {
+	  R_Visible = TRUE;
+	  R_bcstack_t *s = R_BCNodeStackTop - 1;
+	  if (s->tag == LGLSXP) {
+	      int ival = s->u.ival;
+	      if (ival != NA_LOGICAL)
+		  s->u.ival = ival ? FALSE : TRUE;
+	      SKIP_OP();
+	      NEXT();
+	  }
+	  Builtin1(do_logic, R_NotSym, rho);
+      }
     OP(DOTSERR, 0): error(_("'...' used in an incorrect context"));
     OP(STARTASSIGN, 1):
       {
@@ -6851,10 +6853,6 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    )
 	    value = EnsureLocal(symbol, rho);
 
-	if (MAYBE_REFERENCED(value) &&
-	    FIND_ON_STACK(value, vcache_top, FALSE))
-	    value = shallow_duplicate(value);
-
 	BCNPUSH(value);
 	BCNDUP2ND();
 	/* top three stack entries are now RHS value, LHS value, RHS value */
@@ -6870,6 +6868,13 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, sidx);
 	SEXP cell = GET_BINDING_CELL_CACHE(symbol, rho, vcache, sidx);
 	SEXP value = GETSTACK(-1); /* leave on stack for GC protection */
+	if (ALTREP(value)) {
+	    SEXP v = try_assign_unwrap(value, symbol, rho, cell);
+	    if (v != value) {
+		SETSTACK(-1, v);
+		value = v;
+	    }
+	}
 	INCREMENT_NAMED(value);
 	if (! SET_BINDING_VALUE(cell, value))
 	    defineVar(symbol, value, rho);
@@ -6892,8 +6897,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(STARTSUBASSIGN, 2): DO_START_ASSIGN_DISPATCH("[<-");
     OP(DFLTSUBASSIGN, 0):
       DO_DFLT_ASSIGN_DISPATCH(do_subassign_dflt, R_SubassignSym);
-    OP(STARTC, 2): DO_STARTDISPATCH("c");
-    OP(DFLTC, 0): DO_DFLTDISPATCH(do_c_dflt, R_CSym);
+    OP(STARTC, 2): DO_STARTDISPATCH("c");             /* no longe used */
+    OP(DFLTC, 0): DO_DFLTDISPATCH(do_c_dflt, R_CSym); /* no longe used */
     OP(STARTSUBSET2, 2): DO_STARTDISPATCH("[[");
     OP(DFLTSUBSET2, 0): DO_DFLTDISPATCH(do_subset2_dflt, R_Subset2Sym);
     OP(STARTSUBASSIGN2, 2): DO_START_ASSIGN_DISPATCH("[[<-");
@@ -6965,31 +6970,30 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(ISSYMBOL, 0): DO_ISTYPE(SYMSXP); /**** S4 thingy allowed now???*/
     OP(ISOBJECT, 0): DO_ISTEST(OBJECT);
     OP(ISNUMERIC, 0): DO_ISTEST(isNumericOnly);
-    OP(VECSUBSET, 1): DO_VECSUBSET(rho, FALSE); NEXT();
+    OP(VECSUBSET, 1): DO_VECSUBSET(rho, FALSE);
     OP(MATSUBSET, 1): DO_MATSUBSET(rho, FALSE); NEXT();
-    OP(VECSUBASSIGN, 1): DO_VECSUBASSIGN(rho, FALSE); NEXT();
+    OP(VECSUBASSIGN, 1): DO_VECSUBASSIGN(rho, FALSE);
     OP(MATSUBASSIGN, 1): DO_MATSUBASSIGN(rho, FALSE); NEXT();
     OP(AND1ST, 2): {
 	int callidx = GETOP();
 	int label = GETOP();
-	FIXUP_SCALAR_LOGICAL(callidx, "'x'", "&&");
-	SEXP value = GETSTACK(-1);
-	if (SCALAR_LVAL(value) == FALSE)
+	FIXUP_SCALAR_LOGICAL(rho, callidx, "'x'", "&&", warn_lev);
+	Rboolean val = GETSTACK_LOGICAL(-1);
+	if (val == FALSE)
 	    pc = codebase + label;
 	R_Visible = TRUE;
 	NEXT();
     }
     OP(AND2ND, 1): {
 	int callidx = GETOP();
-	FIXUP_SCALAR_LOGICAL(callidx, "'y'", "&&");
-	SEXP value = GETSTACK(-1);
+	FIXUP_SCALAR_LOGICAL(rho, callidx, "'y'", "&&", warn_lev);
+	Rboolean val = GETSTACK_LOGICAL(-1);
 	/* The first argument is TRUE or NA. If the second argument is
 	   not TRUE then its value is the result. If the second
 	   argument is TRUE, then the first argument's value is the
 	   result. */
-	Rboolean val = SCALAR_LVAL(value);
 	if (val == FALSE || val == NA_LOGICAL)
-	    SETSTACK(-2, value);
+	    SETSTACK_LOGICAL(-2, val);
 	R_BCNodeStackTop -= 1;
 	R_Visible = TRUE;
 	NEXT();
@@ -6997,9 +7001,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(OR1ST, 2):  {
 	int callidx = GETOP();
 	int label = GETOP();
-	FIXUP_SCALAR_LOGICAL(callidx, "'x'", "||");
-	SEXP value = GETSTACK(-1);
-	Rboolean val = SCALAR_LVAL(value);
+	FIXUP_SCALAR_LOGICAL(rho, callidx, "'x'", "||", warn_lev);
+	Rboolean val = GETSTACK_LOGICAL(-1);
 	if (val != NA_LOGICAL &&
 	    val != FALSE) /* is true */
 	    pc = codebase + label;
@@ -7008,14 +7011,14 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     }
     OP(OR2ND, 1):  {
 	int callidx = GETOP();
-	FIXUP_SCALAR_LOGICAL(callidx, "'y'", "||");
-	SEXP value = GETSTACK(-1);
+	FIXUP_SCALAR_LOGICAL(rho, callidx, "'y'", "||", warn_lev);
+	Rboolean val = GETSTACK_LOGICAL(-1);
 	/* The first argument is FALSE or NA. If the second argument is
 	   not FALSE then its value is the result. If the second
 	   argument is FALSE, then the first argument's value is the
 	   result. */
-	if (SCALAR_LVAL(value) != FALSE)
-	    SETSTACK(-2, value);
+	if (val != FALSE)
+	    SETSTACK_LOGICAL(-2, val);
 	R_BCNodeStackTop -= 1;
 	R_Visible = TRUE;
 	NEXT();
@@ -7035,7 +7038,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	SEXP value = GETSTACK(-1);
-	BCNPUSH(getvar(symbol, ENCLOS(rho), FALSE, FALSE, NULL, 0));
+	BCNPUSH(getvar(symbol, ENCLOS(rho), FALSE, FALSE, NULL, 0, stack_base));
 	BCNPUSH(value);
 	/* top three stack entries are now RHS value, LHS value, RHS value */
 	FIXUP_RHS_NAMED(value);
@@ -7192,13 +7195,10 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 #define STACKVAL_MAYBE_SHARED(idx)				\
 	(IS_STACKVAL_BOXED(idx) &&				\
 	 MAYBE_SHARED(GETSTACK_SXPVAL_PTR(R_BCNodeStackTop + (idx))))
-#define STACKVAL_IS_ON_STACK(idx)					\
-	FIND_ON_STACK(GETSTACK_SXPVAL(idx), vcache_top, TRUE)
 
 	if (STACKVAL_MAYBE_REFERENCED(-1) &&
 	    (STACKVAL_MAYBE_SHARED(-1) ||
-	     STACKVAL_MAYBE_SHARED(-3) ||
-	     STACKVAL_IS_ON_STACK(-1)))
+	     STACKVAL_MAYBE_SHARED(-3)))
 	    GETSTACK_SXPVAL_PTR(&tmp) =
 		shallow_duplicate(GETSTACK_SXPVAL_PTR(&tmp));
 
@@ -7267,9 +7267,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     }
     OP(STARTSUBSET_N, 2): DO_STARTDISPATCH_N("[");
     OP(STARTSUBASSIGN_N, 2): DO_START_ASSIGN_DISPATCH_N("[<-");
-    OP(VECSUBSET2, 1): DO_VECSUBSET(rho, TRUE); NEXT();
+    OP(VECSUBSET2, 1): DO_VECSUBSET(rho, TRUE);
     OP(MATSUBSET2, 1): DO_MATSUBSET(rho, TRUE); NEXT();
-    OP(VECSUBASSIGN2, 1): DO_VECSUBASSIGN(rho, TRUE); NEXT();
+    OP(VECSUBASSIGN2, 1): DO_VECSUBASSIGN(rho, TRUE);
     OP(MATSUBASSIGN2, 1): DO_MATSUBASSIGN(rho, TRUE); NEXT();
     OP(STARTSUBSET2_N, 2): DO_STARTDISPATCH_N("[[");
     OP(STARTSUBASSIGN2_N, 2): DO_START_ASSIGN_DISPATCH_N("[[<-");
@@ -7285,6 +7285,16 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(SEQALONG, 1): DO_SEQ_ALONG(); NEXT();
     OP(SEQLEN, 1): DO_SEQ_LEN(); NEXT();
     OP(BASEGUARD, 2): DO_BASEGUARD(); NEXT();
+    OP(INCLNK, 0):
+      INCLNK_STACK_PTR(R_BCNodeStackTop - 1);
+      NEXT();
+    OP(DECLNK, 0):
+      DECLNK_STACK_PTR(R_BCNodeStackTop - 2);
+      NEXT();
+    OP(DECLNK_N, 1):
+      for (int n = GETOP(), i = 0; i < n; i++)
+	  DECLNK_STACK_PTR(R_BCNodeStackTop - 2 - i);
+      NEXT();
     LASTOP;
   }
 
@@ -7294,9 +7304,6 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   R_BCpc = oldbcpc;
   R_Srcref = oldsrcref;
   R_BCNodeStackTop = oldntop;
-#ifdef BC_INT_STACK
-  R_BCIntStackTop = olditop;
-#endif
 #ifdef BC_PROFILING
   current_opcode = old_current_opcode;
 #endif
@@ -7691,49 +7698,6 @@ SEXP attribute_hidden do_bcversion(SEXP call, SEXP op, SEXP args, SEXP rho)
   SEXP ans = allocVector(INTSXP, 1);
   INTEGER(ans)[0] = R_bcVersion;
   return ans;
-}
-
-SEXP attribute_hidden do_loadfile(SEXP call, SEXP op, SEXP args, SEXP env)
-{
-    SEXP file, s;
-    FILE *fp;
-
-    checkArity(op, args);
-
-    PROTECT(file = coerceVector(CAR(args), STRSXP));
-
-    if (! isValidStringF(file))
-	error(_("bad file name"));
-
-    fp = RC_fopen(STRING_ELT(file, 0), "rb", TRUE);
-    if (!fp)
-	error(_("unable to open 'file'"));
-    s = R_LoadFromFile(fp, 0);
-    fclose(fp);
-
-    UNPROTECT(1);
-    return s;
-}
-
-SEXP attribute_hidden do_savefile(SEXP call, SEXP op, SEXP args, SEXP env)
-{
-    FILE *fp;
-
-    checkArity(op, args);
-
-    if (!isValidStringF(CADR(args)))
-	error(_("'file' must be non-empty string"));
-    if (TYPEOF(CADDR(args)) != LGLSXP)
-	error(_("'ascii' must be logical"));
-
-    fp = RC_fopen(STRING_ELT(CADR(args), 0), "wb", TRUE);
-    if (!fp)
-	error(_("unable to open 'file'"));
-
-    R_SaveToFileV(CAR(args), fp, INTEGER(CADDR(args))[0], 0);
-
-    fclose(fp);
-    return R_NilValue;
 }
 
 #ifdef UNUSED

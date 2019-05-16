@@ -268,7 +268,7 @@ function(x, sort = TRUE, verbose = FALSE, indent = 2L, ...)
     } else {
         sep <- sprintf("\n%s", strrep(" ", indent))
         paste(names(from),
-              sapply(from, paste, collapse = sep),
+              vapply(from, paste, "", collapse = sep),
               sep = sep)
     }
 }
@@ -726,7 +726,7 @@ function(ifile, encoding = "unknown", ignore = character())
                 col1 <- which(ptab == col1) + 1L
             }
             substring(lines[line1], col1) <- texts[1L]
-            pos <- seq(from = 2L, length.out = n - 2L)
+            pos <- seq.int(from = 2L, length.out = n - 2L)
             if(length(pos))
                 lines[line1 + pos - 1] <- texts[pos]
             if(length(ptab <- tab[[as.character(line2)]])) {
@@ -1130,10 +1130,11 @@ function(ifile, encoding = "UTF-8")
         ## Legibility ...
         l1 <- p[1L]; c1 <- p[2L]; l2 <- p[3L]; c2 <- p[4L]
         if(l1 < l2) {
-            w <- seq(l1 + 1L, l2 - 1L)
-            if(length(w))
-                y[w] <- x[w]
             substring(y[l1], c1, n[l1]) <- substring(x[l1], c1, n[l1])
+            if(l1 + 1L < l2) {
+                w <- seq.int(from = l1 + 1L, to = l2 - 1L)
+                y[w] <- x[w]
+            }
             substring(y[l2], 1L, c2) <- substring(x[l2], 1L, c2)
         } else {
             substring(y[l1], c1, c2) <- substring(x[l1], c1, c2)

@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998--2017  The R Core Team.
+ *  Copyright (C) 1998--2019  The R Core Team.
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -414,13 +414,13 @@ static int vsfac = 1; /* current units for vsize: changes at initialization */
 R_size_t attribute_hidden R_GetMaxVSize(void)
 {
     if (R_MaxVSize == R_SIZE_T_MAX) return R_SIZE_T_MAX;
-    return R_MaxVSize*vsfac;
+    return R_MaxVSize * vsfac;
 }
 
 void attribute_hidden R_SetMaxVSize(R_size_t size)
 {
     if (size == R_SIZE_T_MAX) return;
-    if (size / vsfac >= R_VSize) R_MaxVSize = (size+1)/vsfac;
+    if (size / vsfac >= R_VSize) R_MaxVSize = (size + 1) / vsfac;
 }
 
 R_size_t attribute_hidden R_GetMaxNSize(void)
@@ -437,6 +437,42 @@ void attribute_hidden R_SetPPSize(R_size_t size)
 {
     R_PPStackSize = (int) size;
 }
+
+SEXP attribute_hidden do_maxVSize(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    const double MB = 1048576.0;
+    double newval = asReal(CAR(args));
+
+    if (newval > 0) {
+	if (newval == R_PosInf)
+	    R_MaxVSize = R_SIZE_T_MAX;
+	else
+	    R_SetMaxVSize((R_size_t) (newval * MB));
+    }
+
+    if (R_MaxVSize == R_SIZE_T_MAX)
+	return ScalarReal(R_PosInf);
+    else
+	return ScalarReal(R_GetMaxVSize() / MB);
+}
+
+SEXP attribute_hidden do_maxNSize(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    double newval = asReal(CAR(args));
+
+    if (newval > 0) {
+	if (newval == R_PosInf)
+	    R_MaxNSize = R_SIZE_T_MAX;
+	else
+	    R_SetMaxNSize((R_size_t) newval);
+    }
+
+    if (R_MaxNSize == R_SIZE_T_MAX)
+	return ScalarReal(R_PosInf);
+    else
+	return ScalarReal(R_GetMaxNSize());
+}
+
 
 /* Miscellaneous Globals. */
 
@@ -956,7 +992,8 @@ static void TryToReleasePages(void)
 
 	    maxrel = R_GenHeap[i].AllocCount;
 	    for (gen = 0; gen < NUM_OLD_GENERATIONS; gen++)
-		maxrel -= (1.0 + R_MaxKeepFrac) * R_GenHeap[i].OldCount[gen];
+		maxrel -= (int)((1.0 + R_MaxKeepFrac) * 
+				R_GenHeap[i].OldCount[gen]);
 	    maxrel_pages = maxrel > 0 ? maxrel / page_count : 0;
 
 	    /* all nodes in New space should be both free and unmarked */
@@ -1098,7 +1135,7 @@ static void AdjustHeapSize(R_size_t size_needed)
 	    R_NSize += change;
     }
     else if (node_occup < R_NShrinkFrac) {
-	R_NSize -= (R_NShrinkIncrMin + R_NShrinkIncrFrac * R_NSize);
+	R_NSize -= (R_size_t)(R_NShrinkIncrMin + R_NShrinkIncrFrac * R_NSize);
 	if (R_NSize < NNeeded)
 	    R_NSize = (NNeeded < R_MaxNSize) ? NNeeded: R_MaxNSize;
 	if (R_NSize < orig_R_NSize)
@@ -1113,7 +1150,7 @@ static void AdjustHeapSize(R_size_t size_needed)
 	    R_VSize += change;
     }
     else if (vect_occup < R_VShrinkFrac) {
-	R_VSize -= R_VShrinkIncrMin + R_VShrinkIncrFrac * R_VSize;
+	R_VSize -= (R_size_t)(R_VShrinkIncrMin + R_VShrinkIncrFrac * R_VSize);
 	if (R_VSize < VNeeded)
 	    R_VSize = VNeeded;
 	if (R_VSize < orig_R_VSize)
@@ -1404,6 +1441,7 @@ void R_RunWeakRefFinalizer(SEXP w)
 
 static Rboolean RunFinalizers(void)
 {
+    R_CHECK_THREAD;
     /* Prevent this function from running again when already in
        progress. Jumps can only occur inside the top level context
        where they will be caught, so the flag is guaranteed to be
@@ -1700,17 +1738,11 @@ static void RunGenCollect(R_size_t size_needed)
     FORWARD_NODE(R_VStack);		   /* R_alloc stack */
 
     for (R_bcstack_t *sp = R_BCNodeStackBase; sp < R_BCNodeStackTop; sp++) {
-#ifdef TYPED_STACK
 	if (sp->tag == RAWMEM_TAG)
 	    sp += sp->u.ival;
 	else if (sp->tag == 0 || IS_PARTIAL_SXP_TAG(sp->tag))
 	    FORWARD_NODE(sp->u.sxpval);
-#else
-	FORWARD_NODE(*sp);
-#endif
     }
-    FORWARD_NODE(R_CachedScalarReal);
-    FORWARD_NODE(R_CachedScalarInteger);
 
     /* main processing loop */
     PROCESS_NODES();
@@ -2135,18 +2167,8 @@ void attribute_hidden InitMemory()
 	(R_bcstack_t *) malloc(R_BCNODESTACKSIZE * sizeof(R_bcstack_t));
     if (R_BCNodeStackBase == NULL)
 	R_Suicide("couldn't allocate node stack");
-#ifdef BC_INT_STACK
-    R_BCIntStackBase =
-      (IStackval *) malloc(R_BCINTSTACKSIZE * sizeof(IStackval));
-    if (R_BCIntStackBase == NULL)
-	R_Suicide("couldn't allocate integer stack");
-#endif
     R_BCNodeStackTop = R_BCNodeStackBase;
     R_BCNodeStackEnd = R_BCNodeStackBase + R_BCNODESTACKSIZE;
-#ifdef BC_INT_STACK
-    R_BCIntStackTop = R_BCIntStackBase;
-    R_BCIntStackEnd = R_BCIntStackBase + R_BCINTSTACKSIZE;
-#endif
 
     R_weak_refs = R_NilValue;
 
@@ -2260,6 +2282,40 @@ char *S_realloc(char *p, long new, long old, int size)
     memset(q + nold, 0, (size_t)new*size - nold);
     return q;
 }
+
+
+/* Allocation functions that GC on initial failure */
+
+void *R_malloc_gc(size_t n)
+{
+    void *np = malloc(n);
+    if (np == NULL) {
+	R_gc();
+	np = malloc(n);
+    }
+    return np;
+}
+
+void *R_calloc_gc(size_t n, size_t s)
+{
+    void *np = calloc(n, s);
+    if (np == NULL) {
+	R_gc();
+	np = calloc(n, s);
+    }
+    return np;
+}
+
+void *R_realloc_gc(void *p, size_t n)
+{
+    void *np = realloc(p, n);
+    if (np == NULL) {
+	R_gc();
+	np = realloc(p, n);
+    }
+    return np;
+}
+
 
 /* "allocSExp" allocate a SEXPREC */
 /* call gc if necessary */
@@ -2961,13 +3017,45 @@ static void gc_end_timing(void)
 
 #define R_MAX(a,b) (a) < (b) ? (b) : (a)
 
+#ifdef THREADCHECK
+# if !defined(Win32) && defined(HAVE_PTHREAD)
+#   include <pthread.h>
+void attribute_hidden R_check_thread(const char *s)
+{
+    static Rboolean main_thread_inited = FALSE;
+    static pthread_t main_thread;
+    if (! main_thread_inited) {
+        main_thread = pthread_self();
+        main_thread_inited = TRUE;
+    }
+    if (! pthread_equal(main_thread, pthread_self())) {
+        char buf[1024];
+	size_t bsize = sizeof buf;
+	memset(buf, 0, bsize);
+        snprintf(buf, bsize - 1, "Wrong thread calling '%s'", s);
+        R_Suicide(buf);
+    }
+}
+# else
+/* This could be implemented for Windows using their threading API */ 
+void attribute_hidden R_check_thread(const char *s) {}
+# endif
+#endif
+
 static void R_gc_internal(R_size_t size_needed)
 {
+    R_CHECK_THREAD;
     if (!R_GCEnabled) {
       if (NO_FREE_NODES())
 	R_NSize = R_NodesInUse + 1;
+
+      if (num_old_gens_to_collect < NUM_OLD_GENERATIONS &&
+	  VHEAP_FREE() < size_needed + R_MinFreeFrac * R_VSize)
+	num_old_gens_to_collect++;
+
       if (size_needed > VHEAP_FREE())
 	R_VSize += size_needed - VHEAP_FREE();
+
       gc_pending = TRUE;
       return;
     }
@@ -3048,16 +3136,16 @@ static void R_gc_internal(R_size_t size_needed)
 		  sexptype2char(first_bad_sexp_type_old_type),
 		  first_bad_sexp_type_line);
 	else
-	    error("GC encountered a node (%p) with an unknown SEXP type: %s"
+	    error("GC encountered a node (%p) with an unknown SEXP type: %d"
 		  " at memory.c:%d",
 		  first_bad_sexp_type_sexp,
-		  sexptype2char(first_bad_sexp_type),
+		  first_bad_sexp_type,
 		  first_bad_sexp_type_line);
 #else
-	error("GC encountered a node (%p) with an unknown SEXP type: %s"
+	error("GC encountered a node (%p) with an unknown SEXP type: %d"
 	      " at memory.c:%d",
 	      first_bad_sexp_type_sexp,
-	      sexptype2char(first_bad_sexp_type),
+	      first_bad_sexp_type,
 	      first_bad_sexp_type_line);
 #endif
     }
@@ -3161,6 +3249,7 @@ void NORET R_signal_unprotect_error(void)
 #ifndef INLINE_PROTECT
 SEXP protect(SEXP s)
 {
+    R_CHECK_THREAD;
     if (R_PPStackTop >= R_PPStackSize)
 	R_signal_protect_error();
     R_PPStack[R_PPStackTop++] = CHK(s);
@@ -3172,6 +3261,7 @@ SEXP protect(SEXP s)
 
 void unprotect(int l)
 {
+    R_CHECK_THREAD;
     if (R_PPStackTop >=  l)
 	R_PPStackTop -= l;
     else R_signal_unprotect_error();
@@ -3182,6 +3272,7 @@ void unprotect(int l)
 
 void unprotect_ptr(SEXP s)
 {
+    R_CHECK_THREAD;
     int i = R_PPStackTop;
 
     /* go look for  s  in  R_PPStack */
@@ -3203,6 +3294,7 @@ void unprotect_ptr(SEXP s)
 
 int Rf_isProtected(SEXP s)
 {
+    R_CHECK_THREAD;
     int i = R_PPStackTop;
 
     /* go look for  s  in  R_PPStack */
@@ -3235,6 +3327,7 @@ void NORET R_signal_reprotect_error(PROTECT_INDEX i)
 #ifndef INLINE_PROTECT
 void R_Reprotect(SEXP s, PROTECT_INDEX i)
 {
+    R_CHECK_THREAD;
     if (i >= R_PPStackTop || i < 0)
 	R_signal_reprotect_error(i);
     R_PPStack[i] = s;
@@ -3247,6 +3340,7 @@ void R_Reprotect(SEXP s, PROTECT_INDEX i)
    to old. */
 SEXP R_CollectFromIndex(PROTECT_INDEX i)
 {
+    R_CHECK_THREAD;
     SEXP res;
     int top = R_PPStackTop, j = 0;
     if (i > top) i = top;
@@ -3309,6 +3403,7 @@ void R_chk_free(void *ptr)
 
 void R_PreserveObject(SEXP object)
 {
+    R_CHECK_THREAD;
     R_PreciousList = CONS(object, R_PreciousList);
 }
 
@@ -3325,9 +3420,138 @@ static SEXP RecursiveRelease(SEXP object, SEXP list)
 
 void R_ReleaseObject(SEXP object)
 {
+    R_CHECK_THREAD;
     R_PreciousList =  RecursiveRelease(object, R_PreciousList);
 }
 
+/* This code is similar to R_PreserveObject/R_ReleasObject, but objects are
+   kept in a provided multi-set (which needs to be itself protected).
+   When protected via PROTECT, the multi-set is automatically unprotected
+   during long jump, and thus all its members are eventually reclaimed.
+   These functions were introduced for parsers generated by bison, because
+   one cannot instruct bison to use PROTECT/UNPROTECT when working with
+   the stack of semantic values. */
+
+/* Multi-set is defined by a triple (store, npreserved, initialSize)
+     npreserved is the number of elements in the store (counting each instance
+       of the same value)
+     store is a VECSXP or R_NilValue
+       when VECSXP, preserved values are stored at the beginning, filled up by
+       R_NilValue
+     initialSize is the size for the VECSXP to be allocated if preserving values
+       while store is R_NilValue
+
+    The representation is CONS(store, npreserved) with TAG()==initialSize
+*/
+
+/* Create new multi-set for protecting objects. initialSize may be zero
+   (a hardcoded default is then used). */
+SEXP R_NewPreciousMSet(int initialSize)
+{
+    SEXP npreserved, mset, isize;
+
+    /* npreserved is modified in place */
+    npreserved = allocVector(INTSXP, 1);
+    SET_INTEGER_ELT(npreserved, 0, 0);
+    PROTECT(mset = CONS(R_NilValue, npreserved));
+    /* isize is not modified in place */
+    if (initialSize < 0)
+	error("'initialSize' must be non-negative");
+    isize = ScalarInteger(initialSize);
+    SET_TAG(mset, isize);
+    UNPROTECT(1); /* mset */
+    return mset;
+}
+
+static void checkMSet(SEXP mset)
+{
+    SEXP store = CAR(mset);
+    SEXP npreserved = CDR(mset);
+    SEXP isize = TAG(mset);
+    if (/*MAYBE_REFERENCED(mset) ||*/
+	((store != R_NilValue) &&
+	 (TYPEOF(store) != VECSXP /*|| MAYBE_REFERENCED(store)*/)) ||
+	(TYPEOF(npreserved) != INTSXP || XLENGTH(npreserved) != 1 /*||
+	 MAYBE_REFERENCED(npreserved)*/) ||
+	(TYPEOF(isize) != INTSXP || XLENGTH(isize) != 1))
+
+	error("Invalid mset");
+}
+
+/* Add object to multi-set. The object will be protected as long as the
+   multi-set is protected. */
+void R_PreserveInMSet(SEXP x, SEXP mset)
+{
+    if (x == R_NilValue || isSymbol(x))
+	return; /* no need to preserve */
+    PROTECT(x);
+    checkMSet(mset);
+    SEXP store = CAR(mset);
+    int *n = INTEGER(CDR(mset));
+    if (store == R_NilValue) {
+	R_xlen_t newsize = INTEGER_ELT(TAG(mset), 0);
+	if (newsize == 0)
+	    newsize = 4; /* default minimum size */
+	store = allocVector(VECSXP, newsize);
+	SETCAR(mset, store);
+    }
+    R_xlen_t size = XLENGTH(store);
+    if (*n == size) {
+	R_xlen_t newsize = 2 * size;
+	if (newsize >= INT_MAX || newsize < size)
+	    error("Multi-set overflow");
+	SEXP newstore = PROTECT(allocVector(VECSXP, newsize));
+	for(R_xlen_t i = 0; i < size; i++)
+	    SET_VECTOR_ELT(newstore, i, VECTOR_ELT(store, i));
+	SETCAR(mset, newstore);
+	UNPROTECT(1); /* newstore */
+	store = newstore;
+    }
+    UNPROTECT(1); /* x */
+    SET_VECTOR_ELT(store, (*n)++, x);
+}
+
+/* Remove (one instance of) the object from the multi-set. If there is another
+   instance of the object in the multi-set, it will still be protected. If there
+   is no instance of the object, the function does nothing. */
+void R_ReleaseFromMSet(SEXP x, SEXP mset)
+{
+    if (x == R_NilValue || isSymbol(x))
+	return; /* not preserved */
+    checkMSet(mset);
+    SEXP store = CAR(mset);
+    if (store == R_NilValue)
+	return; /* not preserved */
+    int *n = INTEGER(CDR(mset));
+    for(R_xlen_t i = (*n) - 1; i >= 0; i--) {
+	if (VECTOR_ELT(store, i) == x) {
+	    for(;i < (*n) - 1; i++)
+		SET_VECTOR_ELT(store, i, VECTOR_ELT(store, i + 1));
+	    SET_VECTOR_ELT(store, i, R_NilValue);
+	    (*n)--;
+	    return;
+	}
+    }
+    /* not preserved */
+}
+
+/* Release all objects from the multi-set, but the multi-set can be used for
+   preserving more objects. */
+void R_ReleaseMSet(SEXP mset, int keepSize)
+{
+    checkMSet(mset);
+    SEXP store = CAR(mset);
+    if (store == R_NilValue)
+	return; /* already empty */
+    int *n = INTEGER(CDR(mset));
+    if (XLENGTH(store) <= keepSize) {
+	/* just free the entries */
+	for(R_xlen_t i = 0; i < *n; i++)
+	    SET_VECTOR_ELT(store, i, R_NilValue);
+    } else
+	SETCAR(mset, R_NilValue);
+    *n = 0;
+}
 
 /* External Pointer Objects */
 SEXP R_MakeExternalPtr(void *p, SEXP tag, SEXP prot)
@@ -3421,6 +3645,11 @@ int (REFCNT)(SEXP x) { return REFCNT(CHK(x)); }
 int (TRACKREFS)(SEXP x) { return TRACKREFS(CHK(x)); }
 int (ALTREP)(SEXP x) { return ALTREP(CHK(x)); }
 int (IS_SCALAR)(SEXP x, int type) { return IS_SCALAR(CHK(x), type); }
+void (DECREMENT_REFCNT)(SEXP x) { DECREMENT_REFCNT(CHK(x)); }
+void (INCREMENT_REFCNT)(SEXP x) { INCREMENT_REFCNT(CHK(x)); }
+void (DISABLE_REFCNT)(SEXP x)  { DISABLE_REFCNT(CHK(x)); }
+void (ENABLE_REFCNT)(SEXP x) { ENABLE_REFCNT(CHK(x)); }
+void (MARK_NOT_MUTABLE)(SEXP x) { MARK_NOT_MUTABLE(CHK(x)); }
 
 void (SET_ATTRIB)(SEXP x, SEXP v) {
     if(TYPEOF(v) != LISTSXP && TYPEOF(v) != NILSXP)
@@ -3674,8 +3903,8 @@ void (SET_STRING_ELT)(SEXP x, R_xlen_t i, SEXP v) {
        error("Value of SET_STRING_ELT() must be a 'CHARSXP' not a '%s'",
 	     type2char(TYPEOF(v)));
     if (i < 0 || i >= XLENGTH(x))
-	error(_("attempt to set index %lu/%lu in SET_STRING_ELT"),
-	      i, XLENGTH(x));
+	error(_("attempt to set index %lld/%lld in SET_STRING_ELT"),
+	      (long long)i, (long long)XLENGTH(x));
     CHECK_OLD_TO_NEW(x, v);
     if (ALTREP(x))
 	ALTSTRING_SET_ELT(x, i, v);
@@ -3695,8 +3924,8 @@ SEXP (SET_VECTOR_ELT)(SEXP x, R_xlen_t i, SEXP v) {
 	      "SET_VECTOR_ELT", "list", type2char(TYPEOF(x)));
     }
     if (i < 0 || i >= XLENGTH(x))
-	error(_("attempt to set index %lu/%lu in SET_VECTOR_ELT"),
-	      i, XLENGTH(x));
+	error(_("attempt to set index %lld/%lld in SET_VECTOR_ELT"),
+	      (long long)i, (long long)XLENGTH(x));
     FIX_REFCNT(x, VECTOR_ELT(x, i), v);
     CHECK_OLD_TO_NEW(x, v);
     return VECTOR_ELT(x, i) = v;

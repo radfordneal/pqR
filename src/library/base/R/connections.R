@@ -20,6 +20,9 @@ stdin <- function() .Internal(stdin())
 stdout <- function() .Internal(stdout())
 stderr <- function() .Internal(stderr())
 
+nullfile <- function()
+    if (.Platform$OS.type == "windows") "nul:" else "/dev/null"
+
 isatty <- function(con) {
     if (!inherits(con, "terminal")) FALSE
     else .Internal(isatty(con))
@@ -90,10 +93,17 @@ fifo <- function(description, open = "", blocking = FALSE,
 
 url <- function(description, open = "", blocking = TRUE,
                 encoding = getOption("encoding"),
-                method = getOption("url.method", "default"))
+                method = getOption("url.method", "default"), headers = NULL)
 {
     method <- match.arg(method, c("default", "internal", "libcurl", "wininet"))
-    .Internal(url(description, open, blocking, encoding, method))
+    if(!is.null(headers)) {
+        nh <- names(headers)
+        if(length(nh) != length(headers) || any(nh == "") || anyNA(headers) || anyNA(nh))
+            stop("'headers' must have names and must not be NA")
+        headers <- paste0(nh, ": ", headers)
+        headers <- list(headers, paste0(headers, "\r\n", collapse = ""))
+    }
+    .Internal(url(description, open, blocking, encoding, method, headers))
 }
 
 gzfile <- function(description, open = "",
@@ -197,6 +207,7 @@ summary.connection <- function(object, ...)
 
 showConnections <- function(all = FALSE)
 {
+    gc() # to run finalizers
     set <- getAllConnections()
     if(!all) set <- set[set > 2L]
     ans <- matrix("", length(set), 7L)
@@ -208,23 +219,24 @@ showConnections <- function(all = FALSE)
     else ans[, , drop = FALSE]
 }
 
-getAllConnections <- function()
-    .Internal(getAllConnections())
+## undocumented
+getAllConnections <- function() .Internal(getAllConnections())
 
 getConnection <- function(what) .Internal(getConnection(what))
 
 closeAllConnections <- function()
 {
-    # first re-divert any diversion of stderr.
+    ## first re-divert any diversion of stderr.
     i <- sink.number(type = "message")
     if(i > 0L) sink(stderr(), type = "message")
-    # now unwind the sink diversion stack.
+    ## now unwind the sink diversion stack.
     n <- sink.number()
     if(n > 0L) for(i in seq_len(n)) sink()
-    # get all the open connections.
+    gc() # to run finalizers
+    ## get all the open connections.
     set <- getAllConnections()
     set <- set[set > 2L]
-    # and close all user connections.
+    ## and close all user connections.
     for(i in seq_along(set)) close(getConnection(set[i]))
     invisible()
 }

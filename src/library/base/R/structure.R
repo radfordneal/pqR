@@ -34,7 +34,8 @@ structure <- function (.Data, ...)
 	if("factor" %in% attrib[["class", exact = TRUE]]
            && typeof(.Data) == "double")
             storage.mode(.Data) <- "integer"
-	attributes(.Data) <- c(attributes(.Data), attrib)
+        attributes(.Data) <- c(attributes(.Data), attrib)
+        .Data
     }
-    .Data
+    else .Data
 }

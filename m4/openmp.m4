@@ -21,7 +21,7 @@
 # You should have received a copy of the GNU General Public License
 # and a copy of the Autoconf Configure Script Exception along with
 # this program; see the files COPYINGv3 and COPYING.EXCEPTION
-# respectively.  If not, see <http://www.gnu.org/licenses/>.
+# respectively.  If not, see <https://www.gnu.org/licenses/>.
 
 # Written by David MacKenzie, with help from
 # Akim Demaille, Paul Eggert,
@@ -30,6 +30,8 @@
 
 # [a small part, modified for clang and Intel in 2015,6, Solaris in 2017.]
 
+# _AC_LANG_OPENMP is a language-dependent program defined in c.m4 in
+# the autoconf library.
 
 # R_OPENMP
 # --------

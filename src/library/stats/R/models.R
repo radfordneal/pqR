@@ -1,7 +1,7 @@
 #  File src/library/stats/R/models.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -39,17 +39,13 @@ formula.default <- function (x = NULL, env = parent.frame(), ...)
 formula.formula <- function(x, ...) x
 formula.terms <- function(x, ...) {
     env <- environment(x)
-    attributes(x) <- list(class="formula")
-    if (!is.null(env))
-    	environment(x) <- env
-    else
-    	environment(x) <- globalenv()
+    attributes(x) <- list(class = "formula") # dropping all other attr.
+    environment(x) <- if(is.null(env)) globalenv() else env
     x
 }
 
-formula.data.frame <- function (x, ...)
-{
-    nm <- sapply(names(x), as.name)
+DF2formula <- function(x, env = parent.frame()) {
+    nm <- unlist(lapply(names(x), as.name))
     if (length(nm) > 1L) {
         rhs <- nm[-1L]
         lhs <- nm[1L]
@@ -60,8 +56,15 @@ formula.data.frame <- function (x, ...)
     ff <- parse(text = paste(lhs, paste(rhs, collapse = "+"), sep = "~"),
                 keep.source = FALSE)
     ff <- eval(ff)
-    environment(ff) <- parent.frame()
+    environment(ff) <- env
     ff
+}
+
+formula.data.frame <- function (x, ...)
+{
+    if(length(tx <- attr(x, "terms")) && length(ff <- formula.terms(tx)))
+	ff
+    else DF2formula(x, parent.frame())
 }
 
 formula.character <- function(x, env = parent.frame(), ...)
@@ -145,21 +148,39 @@ delete.response <- function (termobj)
     termobj
 }
 
-reformulate <- function (termlabels, response=NULL, intercept = TRUE)
+reformulate <- function (termlabels, response=NULL, intercept = TRUE, env = parent.frame())
 {
+    ## an extension of formula.character()
+    str2code <- function(s) parse(text = s, keep.source = FALSE)[[1L]]
     if(!is.character(termlabels) || !length(termlabels))
         stop("'termlabels' must be a character vector of length at least one")
-    has.resp <- !is.null(response)
-    termtext <- paste(if(has.resp) "response", "~",
-		      paste(termlabels, collapse = "+"),
-		      collapse = "")
+    termtext <- paste(termlabels, collapse = "+")
     if(!intercept) termtext <- paste(termtext, "- 1")
-    rval <- eval(parse(text = termtext, keep.source = FALSE)[[1L]])
-    if(has.resp) rval[[2L]] <-
-        if(is.character(response)) as.symbol(response) else response
-    ## response can be a symbol or call as  Surv(ftime, case)
-    environment(rval) <- parent.frame()
-    rval
+    terms <- str2code(termtext)
+    fexpr <-
+	if(is.null(response))
+	    call("~", terms)
+	else
+	    call("~",
+		 ## response can be a symbol or call as  Surv(ftime, case)
+		 if(is.character(response))
+                     tryCatch(str2code(response),
+                              error = function(e) {
+                                  sc <- sys.calls()
+                                  sc1 <- lapply(sc, `[[`, 1L)
+                                  isF <- function(cl) is.symbol(cl) && cl == quote(reformulate)
+                                  reformCall <- sc[[match(TRUE, vapply(sc1, isF, NA))]]
+                                  warning(warningCondition(message = paste(sprintf(
+		"Unparseable 'response' \"%s\"; use is deprecated.  Use as.name(.) or `..`!",
+									response),
+						conditionMessage(e), sep="\n"),
+                                      class = c("reformulate", "deprecatedWarning"),
+                                      call = reformCall)) # , domain=NA
+                                  as.symbol(response)
+                              })
+                 else response,
+		 terms)
+    formula(fexpr, env)
 }
 
 drop.terms <- function(termobj, dropx = NULL, keep.response = FALSE)
@@ -171,20 +192,20 @@ drop.terms <- function(termobj, dropx = NULL, keep.response = FALSE)
             stop(gettextf("'termobj' must be a object of class %s",
                           dQuote("terms")),
                  domain = NA)
-	newformula <- reformulate(attr(termobj, "term.labels")[-dropx],
-				  if (keep.response) termobj[[2L]] else NULL,
-                                  attr(termobj, "intercept"))
-        environment(newformula) <- environment(termobj)
+	newformula <-
+	    reformulate(attr(termobj, "term.labels")[-dropx],
+			response = if(keep.response) termobj[[2L]],
+			intercept = attr(termobj, "intercept"),
+			env = environment(termobj))
 	result <- terms(newformula, specials=names(attr(termobj, "specials")))
 
 	# Edit the optional attributes
 
 	response <- attr(termobj, "response")
-	if (response && !keep.response)
-	    # we have a response in termobj, but not in the result
-	    dropOpt <- c(response, dropx + length(response))
-	else
-	    dropOpt <- dropx + max(response)
+	dropOpt <- if(response && !keep.response) # we have a response in termobj, but not in the result
+		       c(response, dropx + length(response))
+		   else
+		       dropx + max(response)
 
 	if (!is.null(predvars <- attr(termobj, "predvars"))) {
 	    # predvars is a language expression giving a list of
@@ -204,11 +225,10 @@ drop.terms <- function(termobj, dropx = NULL, keep.response = FALSE)
 
 `[.terms` <- function (termobj, i)
 {
-    resp <- if (attr(termobj, "response")) termobj[[2L]] else NULL
+    resp <- if (attr(termobj, "response")) termobj[[2L]]
     newformula <- attr(termobj, "term.labels")[i]
     if (length(newformula) == 0L) newformula <- "1"
-    newformula <- reformulate(newformula, resp, attr(termobj, "intercept"))
-    environment(newformula) <- environment(termobj)
+    newformula <- reformulate(newformula, resp, attr(termobj, "intercept"), environment(termobj))
     result <- terms(newformula, specials = names(attr(termobj, "specials")))
 
     # Edit the optional attributes
@@ -339,7 +359,8 @@ offset <- function(object) object
     ## when called from predict.nls, vars not match.
     new <- vapply(m, .MFclass, "")
     new <- new[names(new) %in% names(cl)]
-     if(length(new) == 0L) return()
+    if(length(new) == 0L) return(invisible())
+    ## else
     old <- cl[names(new)]
     if(!ordNotOK) {
         old[old == "ordered"] <- "factor"
@@ -364,6 +385,7 @@ offset <- function(object) object
                  paste(sQuote(names(old)[wrong]), collapse=", ")),
                  call. = FALSE, domain = NA)
     }
+    else invisible()
 }
 
 ##' Model Frame Class
@@ -511,7 +533,8 @@ model.frame.default <-
                              domain = NA)
 		    data[[nm]] <- factor(xi, levels=xl, exclude=NULL)
 		    if (!identical(attr(data[[nm]], "contrasts"), ctr))
-		    	warning(gettext(sprintf("contrasts dropped from factor %s", nm), domain = NA),
+		    	warning(gettext(sprintf("contrasts dropped from factor %s",
+						nm), domain = NA),
 		    	        call. = FALSE)
 		}
 	    }
@@ -523,8 +546,9 @@ model.frame.default <-
 	        ctr <- attr(x, "contrasts")
 		data[[nm]] <- x[, drop = TRUE]
 		if (!identical(attr(data[[nm]], "contrasts"), ctr))
-		    warning(gettext(sprintf("contrasts dropped from factor %s due to missing levels", nm), domain = NA),
-		            call. = FALSE)
+		    warning(gettext(sprintf(
+				"contrasts dropped from factor %s due to missing levels",
+					    nm), domain = NA), call. = FALSE)
 	    }
 	}
     }
@@ -583,9 +607,12 @@ model.matrix.default <- function(object, data = environment(object),
                 contrasts(data[[nn]]) <- contr.funs[1 + isOF[nn]]
         ## it might be safer to have numerical contrasts:
         ##	  get(contr.funs[1 + isOF[nn]])(nlevels(data[[nn]]))
-        if (!is.null(contrasts.arg) && is.list(contrasts.arg)) {
+        if (!is.null(contrasts.arg)) {
+          if (!is.list(contrasts.arg))
+              warning("non-list contrasts argument ignored")
+          else {  ## contrasts.arg is a list
             if (is.null(namC <- names(contrasts.arg)))
-                stop("invalid 'contrasts.arg' argument")
+                stop("'contrasts.arg' argument must be named")
             for (nn in namC) {
                 if (is.na(ni <- match(nn, namD)))
                     warning(gettextf("variable '%s' is absent, its contrast will be ignored", nn),
@@ -596,15 +623,15 @@ model.matrix.default <- function(object, data = environment(object),
                     else contrasts(data[[ni]]) <- contrasts.arg[[nn]]
                 }
             }
-        }
+          }
+        } ## non-null contrasts.arg
     } else { #  no rhs terms ('~1', or '~0'): internal model.matrix needs some variable
 	isF <- FALSE
 	data[["x"]] <- raw(nrow(data))
     }
     ans <- .External2(C_modelmatrix, t, data) # modelmatrix() in ../src/model.c
-    cons <- if(any(isF))
-	lapply(data[isF], attr, "contrasts") ## else NULL
-    attr(ans, "contrasts") <- cons
+    if(any(isF))
+	attr(ans, "contrasts") <- lapply(data[isF], attr, "contrasts")
     ans
 }
 
@@ -674,13 +701,11 @@ makepredictcall.default  <- function(var, call)
     xvars <- vapply(attr(Terms, "variables"), deparse2, "")[-1L]
     if((yvar <- attr(Terms, "response")) > 0) xvars <- xvars[-yvar]
     if(length(xvars)) {
-        xlev <- lapply(m[xvars],
-        	    function(x)
-        	    	if(is.factor(x)) levels(x)
-        	    	else if (is.character(x)) levels(as.factor(x))
-        	    	else NULL)
-        xlev[!vapply(xlev, is.null, NA)]
-    } else NULL
+	xlev <- lapply(m[xvars], function(x)
+	    if(is.factor(x)) levels(x)
+	    else if(is.character(x)) levels(as.factor(x))) # else NULL
+	xlev[!vapply(xlev, is.null, NA)]
+    }
 }
 
 get_all_vars <- function(formula, data = NULL, ...)
@@ -710,8 +735,8 @@ get_all_vars <- function(formula, data = NULL, ...)
     env <- environment(formula)
     rownames <- .row_names_info(data, 0L) #attr(data, "row.names")
     varnames <- all.vars(formula)
-    inp <- parse(text = paste("list(", paste(varnames, collapse = ","), ")"),
-                 keep.source = FALSE)
+    inp <- parse(text = paste0("list(", paste(varnames, collapse = ","), ")"),
+                 keep.source = FALSE) # ->  expression( list(v1, v2, ..) )
     variables <- eval(inp, data, env)
     if(is.null(rownames) && (resp <- attr(formula, "response")) > 0) {
         ## see if we can get rownames from the response

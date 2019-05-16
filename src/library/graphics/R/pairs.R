@@ -46,7 +46,8 @@ function (x, labels, panel = points, ...,
           diag.panel = NULL, text.panel = textPanel,
           label.pos = 0.5 + has.diag/3, line.main = 3,
           cex.labels = NULL, font.labels = 1,
-          row1attop = TRUE, gap = 1, log = "")
+          row1attop = TRUE, gap = 1, log = "",
+          horOdd = !row1attop, verOdd = !row1attop)
 {
     if(doText <- missing(text.panel) || is.function(text.panel))
 	textPanel <-
@@ -131,8 +132,8 @@ function (x, labels, panel = points, ...,
                       axes = FALSE, type = "n", ..., log = l)
             if(i == j || (i < j && has.lower) || (i > j && has.upper) ) {
                 box()
-                j.odd <- (match(j, jSet) + !row1attop) %% 2L
-                i.odd <- (match(i, iSet) + !row1attop) %% 2L
+                j.odd <- (match(j, jSet) + horOdd) %% 2L
+                i.odd <- (match(i, iSet) + verOdd) %% 2L
                 if(i == iSet[1L] && (!j.odd || !has.upper || !has.lower))
                     localAxis(3L, x[, j], x[, i], ...)
                 if(i == iSet[ni] && ( j.odd || !has.upper || !has.lower))

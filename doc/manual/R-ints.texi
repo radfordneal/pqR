@@ -418,7 +418,7 @@ elements (rounded up to a multiple of 8 bytes, with the 8-byte blocks
 being the `Vcells' referred in the documentation for @code{gc()}).
 
 The `data' for the various types are given in the table below.  A lot of
-this is interpretation, i.e. the types are not checked.
+this is interpretation, i.e.@: the types are not checked.
 
 @table @code
 @item NILSXP
@@ -860,7 +860,7 @@ context stack.
 
 Note that the @code{sysparent} element of the structure is not the same
 thing as @code{sys.parent()}.  Element @code{sysparent} is primarily
-used in managing changes of the function being evaluated, i.e. by
+used in managing changes of the function being evaluated, i.e.@: by
 @code{Recall} and method dispatch.
 
 @code{CTXT_CCODE} contexts are currently used in @code{cat()},
@@ -1165,7 +1165,7 @@ pairlist of the objects to be saved and serializing that single object.
 pairlist or a vector list) and assigns the elements of the object in the
 specified environment.  The header line serves two purposes in @R{}: it
 identifies the serialization format so @code{load} can switch to the
-appropriate reader code, and the linefeed allows the detection of files
+appropriate reader code, and the newline @code{\n} allows the detection of files
 which have been subjected to a non-binary transfer which re-mapped line
 endings.  It can also be thought of as a `magic number' in the sense
 used by the @command{file} program (although @R{} save files are not yet
@@ -1258,7 +1258,7 @@ not all) of the character manipulation functions will either preserve
 the declaration or re-encode the character string.
 
 Strings that refer to the OS such as file names need to be passed
-through a wide-character interface on some OSes (e.g. Windows).
+through a wide-character interface on some OSes (e.g.@: Windows).
 
 When are character strings declared to be of known encoding?  One way is
 to do so directly via @code{Encoding}.  The parser declares the encoding
@@ -1277,11 +1277,11 @@ systems are capable of producing UTF-8 strings and this is the nearest
 we have to a universal format.  For those that do not (for example those
 lacking a powerful enough @code{iconv}), it is likely that they work in
 Latin-1, the old @R{} assumption. Then the parser can return a
-UTF-8-encoded string if it encounters a @samp{\uxxx} escape for a
+UTF-8-encoded string if it encounters a @samp{\uxxxx} escape for a
 Unicode point that cannot be represented in the current charset.  (This
 needs MBCS support, and was only enabled@footnote{See define
 @code{USE_UTF8_IF_POSSIBLE} in file @file{src/main/gram.c}.} on
-Windows.)  This is enabled for all platforms, and a @samp{\uxxx} or
+Windows.)  This is enabled for all platforms, and a @samp{\uxxxx} or
 @samp{\Uxxxxxxxx} escape ensures that the parsed string will be marked
 as UTF-8.
 
@@ -2710,8 +2710,8 @@ path specifications (the last being the current directory on drive
 systems to be installed on top on the graphics `engine' -- currently
 there are two such systems, one supporting `base' graphics (based on
 that in S and whose @R{} code@footnote{The C code is in files
-@code{base.c}, @code{graphics.c}, @code{par.c}, @code{plot.c} and
-@code{plot3d.c} in directory @file{src/main}.} is in package
+@file{base.c}, @file{graphics.c}, @file{par.c}, @file{plot.c} and
+@file{plot3d.c} in directory @file{src/main}.} is in package
 @pkg{graphics}) and one implemented in package @pkg{grid}.
 
 Some notes on the historical changes can be found at
@@ -2753,7 +2753,7 @@ the user for confirmation.
 @item when a device become the current device or stops being the current
 device (this is usually used to change the window title on a screen
 device).
-@item when drawing starts or finishes (e.g. used to flush graphics to
+@item when drawing starts or finishes (e.g.@: used to flush graphics to
 the screen when drawing stops).
 @item wait for an event, for example a mouse click or keypress.
 @item an `onexit' action, to clean up if plotting is interrupted (by an
@@ -3049,7 +3049,7 @@ and @code{descent} how far it extends below the baseline.
 the character is placed.  For @code{ascent} and @code{descent} this is
 intended to be the bounding box of the `ink' put down by the glyph and
 not the box which might be used when assembling a line of conventional
-text (it needs to be for e.g. @code{hat(beta)} to work correctly).
+text (it needs to be for e.g.@: @code{hat(beta)} to work correctly).
 However, the @code{width} is used in plotmath to advance to the next
 character, and so needs to include left and right bearings.
 
@@ -3499,7 +3499,7 @@ The base graphics system was migrated to package @pkg{graphics} in @R{}
 3.0.0: it was previously implemented in files in @file{src/main}.
 
 For historical reasons it is largely implemented in two layers.
-Files @file{plot.c}, @code{plot3d.c} and @code{par.c} contain the code
+Files @file{plot.c}, @file{plot3d.c} and @file{par.c} contain the code
 for the around 30 @code{.External} calls that implement the basic
 graphics operations.  This code then calls functions with names starting
 with @code{G} and declared in header @file{Rgraphics.h} in file
@@ -3824,8 +3824,8 @@ interactively.
 Default: true.
 @item _R_CHECK_VIGNETTES_NLINES_
 Maximum number of lines to show from the bottom of the output when
-reporting errors in running or re-building vignettes. (As from @R{}
-3.4.0, @code{0} means all lines will be shown.)
+reporting errors in running or re-building vignettes. ( Value @code{0}
+means all lines will be shown.)
 Default: 10 for running, 25 for re-building.
 @item _R_CHECK_CODOC_S4_METHODS_
 Control whether @code{codoc()} testing is also performed on S4 methods.
@@ -3890,7 +3890,9 @@ Default: false, even though the warnings are justifiable.
 If true, check @R{} code for non-ascii characters.
 Default: true.
 @item _R_CHECK_ASCII_DATA_
-If true, check data for non-ascii characters.
+If true, check data for non-ascii characters.  @emph{En route}, checks
+that all the datasets can be loaded and that their components can be
+accessed.
 Default: true.
 @item _R_CHECK_COMPACT_DATA_
 If true, check data for ascii and uncompressed saves, and also check if
@@ -3921,6 +3923,9 @@ command is found (including one that does not respect the @option{-k}
 flag to report in units of 1Kb, or reports in a different format -- the
 GNU, macOS and Solaris @command{du} commands have been tested).
 Default: true if @command{du} is found.
+@item _R_CHECK_PKG_SIZES_THRESHOLD_
+Threshold used for @env{_R_CHECK_PKG_SIZES_} (in Mb).
+Default: 5
 @item _R_CHECK_DOC_SIZES_
 Should @command{qpdf} be used to check the installed sizes of PDFs?
 Default: true if @command{qpdf} is found.
@@ -4100,7 +4105,7 @@ Default: false (but true for CRAN submission checks).
 
 @item _R_CHECK_GCT_N_
 Should the @option{--use-gct} use @code{gctorture2(@var{n})} rather than
-@code{gctorture(TRUE)}?  Use to a positive integer to enable this.
+@code{gctorture(TRUE)}?  Use a positive integer to enable this.
 Default: @code{0}.
 
 @item _R_CHECK_LIMIT_CORES_
@@ -4128,7 +4133,7 @@ Default: false.
 @item _R_CHECK_S3_METHODS_NOT_REGISTERED_
 If set to a true value, report (apparent) S3 methods exported but not
 registered.
-Default: false (but true for CRAN submission checks).
+Default: true.
 
 @item _R_CHECK_OVERWRITE_REGISTERED_S3_METHODS_
 If set to a true value, report already registered S3 methods in
@@ -4144,10 +4149,12 @@ Default: 13.
 @item _R_CHECK_NATIVE_ROUTINE_REGISTRATION_
 If set to a true value, report if the entry points to register native
 routines and to suppress dynamic search are not found in a package's
-DLL.  (@strong{NB:} this requires system commands @command{nm} and on
-Windows, @command{objdump.exe} to be on the @env{PATH}.  This would be
-normal when using a package with compiled code (which are the only ones
-this checks), but Windows' users should check.)
+DLL.  (@strong{NB:} this requires system command @command{nm} to be on the
+@env{PATH}. On Windows, @command{objdump.exe} is first searched for in
+compiler toolchain specified via @code{Makeconf} (can be customized by
+environment variable @env{BINPREF}). If not found there, it must be on the
+@env{PATH}. On Unix this would be normal when using a package with compiled
+code (which are the only ones this checks), but Windows' users should check.)
 Default: false (but true for CRAN submission checks).
 
 @item _R_CHECK_NO_STOP_ON_TEST_ERROR_
@@ -4202,6 +4209,75 @@ It does so by putting scripts at the head of the path which print a
 message and fail.
 Default: false (but true for CRAN submission checks).
 
+@item _R_CHECK_PACKAGES_USED_IN_TESTS_USE_SUBDIRS_
+If set to a true value, also check the R code in common unit test
+subdirectories of @file{tests} for undeclared package dependencies.
+Default: false (but true for CRAN submission checks).
+
+@item _R_CHECK_SHLIB_OPENMP_FLAGS_
+Check correct and portable use of @code{SHLIB_OPENMP_*FLAGS} in
+@file{src/Makevars} (and similar).
+Default: false (but true for CRAN submission checks).
+
+@item _R_CHECK_CONNECTIONS_LEFT_OPEN_
+When checking examples, check for each example if connections are left
+open: if any are found, this is reported with a fatal error.  NB:
+`connections' includes most use of files and any parallel clusters which
+have not be stopped by @code{stopCluster()}.
+Default: false (but true for CRAN submission checks).
+
+@item _R_CHECK_FUTURE_FILE_TIMESTAMPS_
+Check if any of the input files has a timestamp in the future (and to do
+so, checks that the system clock is correct to within 5 minutes).
+Default: false (but true for CRAN submission checks).
+@c _R_CHECK_SYSTEM_CLOCK_ can be used to disable the clock check, for
+@c use on a check farm.
+
+@item _R_CHECK_LENGTH_1_CONDITION_
+Optionally check if the condition in @code{if} and @code{while} statements
+has length greater than one.  For a true value (@samp{T}, @samp{True},
+@samp{TRUE} or @samp{true}), give an error.  For a false value (@samp{F},
+@samp{False}, @samp{FALSE} or @samp{false}) or when unset, print a warning. 
+Any other non-true non-empty value needs to be a list of commands separated
+by comma: @samp{abort} causes R to terminate unconditionally instead of
+signalling an error, @samp{verbose} prints very detailed diagnostic message,
+@samp{package:pkg} restricts the check to if/while statements executing in
+the namespace of package @samp{pkg}, @samp{package:_R_CHECK_PACKAGE_NAME_}
+restricts the check to if/while statements executing in the package that is
+currently being checked by @code{R CMD check}, @samp{warn} causes R to
+report a warning instead of signalling an error.
+Default: unset (warning is reported)
+
+@item _R_CHECK_LENGTH_1_LOGIC2_
+Optionally check if either argument of the binary operators @code{&&} and
+@code{||} has length greater than one.  The format is the same as for
+_R_CHECK_LENGTH_1_CONDITION_.
+Default: unset (nothing is reported, but
+@samp{package:_R_CHECK_PACKAGE_NAME_,abort,verbose} for the CRAN
+submission checks).
+
+@item _R_CHECK_BUILD_VIGNETTES_SEPARATELY_
+Prior to @R{} 3.6.0, re-building the vignette outputs was done in a
+single @R{} session which allowed accidental reliance of one vignette on
+another (for example, in the loading of packages).  The current default
+is to use a separate session for each vignette; this option allows
+testing the older behaviour,
+Default: true
+
+@item _R_CHECK_SYSTEM_CLOCK_
+As part of the `checking for future file timestamps' enabled by
+@option{--as-cran}, check the system clock against an external clock to
+catch errors such as the wrong day or even year.  Not necessary on
+systems doing repeated checks.
+Default: true (but false for CRAN checking)
+
+@item _R_CHECK_AUTOCONF_
+For packages with a @file{configure} file generated by GNU
+@command{autoconf} and either @file{configure.ac} or
+@file{configure,.in}, check that @command{autoreconf} can, if available,
+be run in a copy of the sources (this will detect missing source files
+and report @command{autoconf} warnings).
+Default: false (but true for CRAN submission checks).
 @end vtable
 
 CRAN's submission checks use something like
@@ -4232,6 +4308,12 @@ _R_CHECK_COMPILATION_FLAGS_=TRUE
 _R_CHECK_R_DEPENDS_=warn
 _R_CHECK_SERIALIZATION_=TRUE
 _R_CHECK_R_ON_PATH_=TRUE
+_R_CHECK_PACKAGES_USED_IN_TESTS_USE_SUBDIRS_=TRUE
+_R_CHECK_SHLIB_OPENMP_FLAGS_=TRUE
+_R_CHECK_CONNECTIONS_LEFT_OPEN_=TRUE
+_R_CHECK_FUTURE_FILE_TIMESTAMPS_=TRUE
+_R_CHECK_LENGTH_1_LOGIC2_=package:_R_CHECK_PACKAGE_NAME_,abort,verbose
+_R_CHECK_AUTOCONF_=true
 @end example
 
 @noindent
@@ -4273,10 +4355,11 @@ Limit for running all the tests for one sub-architecture (and the
 default limit for running one test).
 
 @item _R_CHECK_ONE_VIGNETTE_ELAPSED_TIMEOUT_
-Limit for running the @R{} code in one vignette.
+Limit for running the @R{} code in one vignette, including for
+re-building each vignette separately. 
 
 @item _R_CHECK_BUILD_VIGNETTES_ELAPSED_TIMEOUT_
-Limit for re-building (all) vignettes.
+Limit for re-building all vignettes.
 
 @item _R_CHECK_PKGMAN_ELAPSED_TIMEOUT_
 Limit for each attempt at building the PDF package manual.
@@ -4321,8 +4404,7 @@ they are supported on all mainstream @R{} platforms (including Windows
 and macOS).
 
 @item
-A FORTRAN 77 compiler (but not Fortran 9x, although it is nowadays
-widely available).
+A fixed-form Fortran compiler.
 
 @item
 A simple @command{make}, considering the features of @command{make} in
@@ -4625,7 +4707,7 @@ elements.  Now longer vectors are allowed on 64-bit platforms, matrices
 with more elements are supported provided that each of the dimensions is
 no more than 2^31-1.  However, not all applications can be supported.
 
-The main problem is linear algebra done by FORTRAN code compiled
+The main problem is linear algebra done by Fortran code compiled
 with 32-bit @code{INTEGER}.  Although not guaranteed, it seems that all
 the compilers currently used with @R{} on a 64-bit platform allow
 matrices each of whose dimensions is less than 2^31 but with more than

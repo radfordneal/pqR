@@ -1,7 +1,7 @@
 #  File src/library/methods/R/as.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2015 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -26,8 +26,6 @@ as <-
   ## no valid way to coerce the two objects).  Otherwise, `NULL' is returned.
   function(object, Class, strict = TRUE, ext = possibleExtends(thisClass, Class))
 {
-    ## prior to 2.7.0 there was a pseudo-class "double"
-    if(.identC(Class, "double")) Class <- "numeric"
     thisClass <- .class1(object)
     if(.identC(thisClass, Class) || .identC(Class, "ANY"))
         return(object)
@@ -59,7 +57,7 @@ as <-
                 else {
                   test <- ext@test
                   asMethod <- .makeAsMethod(ext@coerce, ext@simple, Class, ClassDef, where)
-                  canCache <- (!is(test, "function")) || isTRUE(body(test))
+                  canCache <- (!is.function(test)) || isTRUE(body(test))
                  }
             }
             if(is.null(asMethod) && extends(Class, thisClass)) {
@@ -170,7 +168,7 @@ as <-
                 else {
                     test <- asMethod@test
                     asMethod <- asMethod@replace
-                    canCache <- (!is(test, "function")) || isTRUE(body(test))
+                    canCache <- (!is.function(test)) || isTRUE(body(test))
                     if(canCache) { ##the replace code is a bare function
                         ClassDef <- getClassDef(Class, where)
                         asMethod <- .asCoerceMethod(asMethod, thisClass, ClassDef, TRUE, where)
@@ -288,7 +286,7 @@ setAs <-
       }, where = where)
   basics <- c(
  "POSIXct",  "POSIXlt", "Date",  "array",  "call",  "character",  "complex",  "data.frame",
- ## "double",
+ "double",
  "environment",  "expression",  "factor",  "formula",  "function",  "integer",
  "list",  "logical",  "matrix",  "name",  "numeric",  "ordered",
   "single",  "table",   "vector")
@@ -358,7 +356,7 @@ setAs <-
     stop("undefined 'coerce' method")
 
 .makeAsMethod <- function(expr, simple, Class, ClassDef, where) {
-    if(is(expr, "function")) {
+    if(is.function(expr)) {
         where <- environment(expr)
         args <- formalArgs(expr)
         if(!identical(args, "from"))
@@ -436,8 +434,7 @@ canCoerce <- function(object, Class) {
     fdef[[2L]]$to <- ClassDef@className
     fdef <- eval(fdef)
     body(fdef, environment(def)) <- body(def)
-    attr(fdef, "source") <- deparse(fdef) # because it's wrong from the quote()
-    utils::removeSource(fdef)
+    attr(fdef, "srcref") <- attr(def, "srcref")
     sig <- new("signature")
     sig@.Data <- c(thisClass, ClassDef@className)
     sig@names <- c("from", "to")

@@ -3,7 +3,7 @@
  *  file extra.c
  *  Copyright (C) 1998--2003  Guido Masarotto and Brian Ripley
  *  Copyright (C) 2004	      The R Foundation
- *  Copyright (C) 2005--2017  The R Core Team
+ *  Copyright (C) 2005--2019  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -389,6 +389,9 @@ SEXP do_dllversion(SEXP call, SEXP op, SEXP args, SEXP rho)
 int Rwin_rename(const char *from, const char *to)
 {
     for(int retries = 0; retries < 10; retries++) {
+	/* coreutils first call MoveFileEx without flags; only if it fails
+	   with ERROR_FILE_EXISTS or ERROR_ALREADY_EXISTING, they call again
+	   with MOVEFILE_REPLACE_EXISTING */
 	if (MoveFileEx(from, to, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED | MOVEFILE_WRITE_THROUGH))
 	    return 0;
 	DWORD err = GetLastError();
@@ -461,7 +464,13 @@ SEXP do_normalizepath(SEXP call, SEXP op, SEXP args, SEXP rho)
     	SEXP result;
 	el = STRING_ELT(paths, i);
 	result = el;
-	if(getCharCE(el) == CE_UTF8) {
+	if (el == NA_STRING) {
+	    result = NA_STRING;
+	    if(mustWork == 1)
+		errorcall(call, "path[%d]=NA", i+1);
+	    else if(mustWork == NA_LOGICAL)
+		warningcall(call, "path[%d]=NA", i+1);
+	} else if(getCharCE(el) == CE_UTF8) {
 	    if ((res = GetFullPathNameW(filenameToWchar(el, FALSE), 32768, 
 					wtmp, &wtmp2)) && res <= 32768) {
 		if ((res = GetLongPathNameW(wtmp, wlongpath, 32768))
@@ -674,8 +683,15 @@ int winAccessW(const wchar_t *path, int mode)
 {
     DWORD attr = GetFileAttributesW(path);
 
-    if(attr == 0xffffffff) return -1;
+    if(attr == INVALID_FILE_ATTRIBUTES)
+	/* file does not exist or may be locked */
+	return -1;
+
     if(mode == F_OK) return 0;
+    
+    if ((mode & W_OK)
+	&& !(attr & FILE_ATTRIBUTE_DIRECTORY)
+	&& (attr & FILE_ATTRIBUTE_READONLY)) return -1;
 
     if(mode & X_OK)
 	if(!(attr & FILE_ATTRIBUTE_DIRECTORY)) { /* Directory, so OK */
@@ -690,6 +706,9 @@ int winAccessW(const wchar_t *path, int mode)
 	/* Now look for file security info */
 	SECURITY_DESCRIPTOR *sdPtr = NULL;
 	DWORD size = 0;
+	PSID sid = 0;
+	BOOL sidDefaulted;
+	SID_IDENTIFIER_AUTHORITY samba_unmapped = {{0, 0, 0, 0, 0, 22}};
 	GENERIC_MAPPING genMap;
 	HANDLE hToken = NULL;
 	DWORD desiredAccess = 0;
@@ -702,14 +721,25 @@ int winAccessW(const wchar_t *path, int mode)
 	/* get size */
 	GetFileSecurityW(path,
 			 OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION
-			 | DACL_SECURITY_INFORMATION, 0, 0, &size);
+			 | DACL_SECURITY_INFORMATION | LABEL_SECURITY_INFORMATION,
+			 0, 0, &size);
 	error = GetLastError();
-	if (error != ERROR_INSUFFICIENT_BUFFER) return -1;
+	if (error == ERROR_NOT_SUPPORTED)
+	    /* happens for some remote shares */
+	    return _waccess(path, mode);
+	if (error != ERROR_INSUFFICIENT_BUFFER) 
+	    return -1;
 	sdPtr = (SECURITY_DESCRIPTOR *) alloca(size);
 	if(!GetFileSecurityW(path,
 			     OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION
-			     | DACL_SECURITY_INFORMATION, sdPtr, size, &size))
+			     | DACL_SECURITY_INFORMATION | LABEL_SECURITY_INFORMATION, sdPtr, size, &size))
 	    return -1;
+	/* rely on attrib checks for unmapped samba owners and groups */
+	if (!GetSecurityDescriptorOwner(sdPtr, &sid, &sidDefaulted))
+	    return 0;
+	if (IsValidSid(sid) &&
+	    !memcmp(GetSidIdentifierAuthority(sid), &samba_unmapped, sizeof(SID_IDENTIFIER_AUTHORITY)))
+	    return 0;
 	/*
 	 * Perform security impersonation of the user and open the
 	 * resulting thread token.
@@ -735,9 +765,6 @@ int winAccessW(const wchar_t *path, int mode)
 	CloseHandle(hToken);
 	if (!accessYesNo) return -1;
 
-	if ((mode & W_OK)
-	    && !(attr & FILE_ATTRIBUTE_DIRECTORY)
-	    && (attr & FILE_ATTRIBUTE_READONLY)) return -1;
     }
     return 0;
 }

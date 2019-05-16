@@ -1,7 +1,7 @@
 #  File src/library/tools/R/admin.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -303,16 +303,23 @@ function(dir, outDir)
         con <- file(outFile, "a")
         on.exit(close(con))  # Windows does not like files left open
         for(f in codeFiles) {
-            tmp <- iconv(readLines(f, warn = FALSE), from = enc, to = "")
-            if(length(bad <- which(is.na(tmp)))) {
-                warning(sprintf(ngettext(length(bad),
+            lines <- readLines(f, warn = FALSE)
+            tmp <- iconv(lines, from = enc, to = "")
+            bad <- which(is.na(tmp))
+            if(length(bad))
+                tmp <- iconv(lines, from = enc, to = "", sub = "byte")
+            ## do not report purely comment lines,
+            ## nor trailing comments not after quotes
+            comm <- grep("^[^#'\"]*#", lines[bad],
+                         invert = TRUE, useBytes = TRUE)
+            bad2 <- bad[comm]
+            if(length(bad2)) {
+                warning(sprintf(ngettext(length(bad2),
                                          "unable to re-encode %s line %s",
                                          "unable to re-encode %s lines %s"),
                                 sQuote(basename(f)),
-                                paste(bad, collapse = ", ")),
+                                paste(bad2, collapse = ", ")),
                         domain = NA, call. = FALSE)
-                tmp <- iconv(readLines(f, warn = FALSE), from = enc, to = "",
-                             sub = "byte")
             }
             writeLines(paste0("#line 1 \"", f, "\""), con)
             writeLines(tmp, con)
@@ -933,7 +940,7 @@ checkRdaFiles <- function(paths)
         paths <- Sys.glob(c(file.path(paths, "*.rda"),
                             file.path(paths, "*.RData")))
         ## Exclude .RData, which this may or may not match
-        paths <- filtergrep("/[.]RData$", paths)
+        paths <- paths[!endsWith(paths, "/.RData")]
     }
     res <- data.frame(size = NA_real_, ASCII = NA,
                       compress = NA_character_, version = NA_integer_,
@@ -1045,6 +1052,7 @@ compactPDF <-
         paths <- Sys.glob(file.path(paths, "*.pdf"))
     dummy <- rep.int(NA_real_, length(paths))
     ans <- data.frame(old = dummy, new = dummy, row.names = paths)
+    ## These should not have spaces, but quote below to be safe.
     tf <- tempfile("pdf"); tf2 <- tempfile("pdf")
     for (p in paths) {
         res <- 0
@@ -1055,15 +1063,17 @@ compactPDF <-
                              "-dCompatibilityLevel=1.5",
                              "-dAutoRotatePages=/None",
                              sprintf("-sOutputFile=%s", tf),
-                             gs_extras, p), FALSE, FALSE)
+                             gs_extras, shQuote(p)), FALSE, FALSE)
             if(!res && use_qpdf) {
                 unlink(tf2) # precaution
                 file.rename(tf, tf2)
-                res <- system2(qpdf, c(qpdf_flags, tf2, tf), FALSE, FALSE)
+                res <- system2(qpdf, c(qpdf_flags, shQuote(tf2), shQuote(tf)),
+                               FALSE, FALSE)
                 unlink(tf2)
             }
         } else if(use_qpdf) {
-            res <- system2(qpdf, c(qpdf_flags, p, tf), FALSE, FALSE)
+            res <- system2(qpdf, c(qpdf_flags, shQuote(p), shQuote(tf)),
+                           FALSE, FALSE)
         }
         if(!res && file.exists(tf)) {
             old <- file.size(p); new <-  file.size(tf)

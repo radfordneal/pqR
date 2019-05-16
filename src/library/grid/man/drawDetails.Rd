@@ -50,7 +50,7 @@ postDrawDetails(x)
   Note that \code{preDrawDetails} and \code{postDrawDetails} are
   also called in the calculation of \code{"grobwidth"} and
   \code{"grobheight"} units.
-}
+ }
 \value{
   None of these functions are expected to return a value.
 }

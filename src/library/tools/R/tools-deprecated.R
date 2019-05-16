@@ -115,8 +115,7 @@ pkgDepends <- function(pkg, recursive=TRUE, local=TRUE,
 
     depMtrx <- getDepMtrx(pkg, instPkgs, local)
     if (is.null(depMtrx))               # Package was not found
-        stop(gettextf("package '%s' was not found", pkg),
-             domain = NA)
+        stop(packageNotFoundError(pkg, lib.loc, sys.call()))
 
     getDepList(depMtrx, instPkgs, recursive, local, reduce)
 }
@@ -393,5 +392,28 @@ installFoundDepends <- function(depPkgList, ...) {
 
     NULL
 }
+
+
+## <entry>
+## Deprecated in 3.6.0 (r75... (12 Sep 2018)) -- should have belonged to prev.
+vignetteDepends <-
+    function(vignette, recursive = TRUE, reduce = TRUE,
+             local = TRUE, lib.loc = NULL)
+{
+    .Deprecated("vignetteInfo()$depends or package_dependencies()")
+
+    if (length(vignette) != 1L)
+        stop("argument 'vignette' must be of length 1")
+    if (!nzchar(vignette)) return(invisible()) # lets examples work.
+    if (!file.exists(vignette))
+        stop(gettextf("file '%s' not found", vignette), domain = NA)
+
+    vigDeps <- vignetteInfo(vignette)$depends
+
+    depMtrx <- getVigDepMtrx(vigDeps)
+    instPkgs <- utils::installed.packages(lib.loc=lib.loc)
+    getDepList(depMtrx, instPkgs, recursive, local, reduce)
+}## ^^^^^^^^^^ deprecated since Feb. 2016
+
 
 ## </entry>

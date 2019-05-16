@@ -63,7 +63,9 @@ check_EPD <- function(obj, show = !hasReal(obj), oNam = deparse(substitute(obj))
             ## differs for "no-ldouble": sprintf("all.equal(*,*, tol = %.3g)", eq.tol)
             cat("not identical(*, ignore.env=T),", if(isTRUE(ae)) paste("but", ae.txt), "\n")
         }
-        if(!isTRUE(ae)) stop("Not equal: ", ae.txt, " giving\n", ae)
+        if(!isTRUE(ae)) stop("Not equal: ", ae.txt,
+                             paste(c(" giving", head(ae, 2),
+                                     if(length(ae) > 2) "...."), collapse = "\n  "))
     }
     if(!is.language(obj)) {
 	ob2. <- eval(obj) ## almost always *NOT* identical to obj, but eval()ed
@@ -74,4 +76,23 @@ check_EPD <- function(obj, show = !hasReal(obj), oNam = deparse(substitute(obj))
         cat("Ok\n")
     }
     invisible(obj)
+}
+
+
+##' Check deparse <--> parse  consistency for *all* objects:
+runEPD_checks <- function(env = .GlobalEnv) {
+    stopifnot(is.environment(env))
+    for(nm in ls(envir=env)) {
+	cat(nm,": ", sep="")
+	x <- env[[nm]]
+	## if(!any(nm == "mf")) ## 'mf' [bug in deparse(mf, control="all") now fixed]
+	check_EPD(x, oNam=nm)
+	if(is.function(x) && !inherits(x, "classGeneratorFunction")) {
+	    ## FIXME? classGeneratorFunction, e.g., mForm don't "work" yet
+	    cat("checking body(.):\n")
+	    check_EPD(if(is.language(bx <- body(x))) removeSource(bx) else bx)
+	    cat("checking formals(.):\n"); check_EPD(formals(x))
+	}
+	cat("--=--=--=--=--\n")
+    }
 }

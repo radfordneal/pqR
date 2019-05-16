@@ -37,6 +37,7 @@ SUBDIRS = Embedding Examples
 SUBDIRS_WITH_NO_BUILD = Pkgs
 
 ## SRCDIR is used by reg-tests-1a.R, reg-IO2.R and reg-packages.R
+## NB: SRCDIR is not available on windows so make any new tests robust to this
 ## GNU gettext disables LANGUAGE if LC_ALL=C, but other systems might not.
 R = LANGUAGE=en LC_ALL=C SRCDIR=$(srcdir) R_DEFAULT_PACKAGES= $(top_builddir)/bin/R --vanilla
 R2 = R_DEFAULT_PACKAGES= $(top_builddir)/bin/R --vanilla
@@ -91,7 +92,7 @@ clean:
 	-@rm -f FALSE* PACKAGES* .R .tex mirrors.html ./-package.Rd ex.gz
 	-@rm -f testit.txt testit.html testit.tex testit-Ex.R
 	-@rm -f ver20.txt ver20.html ver20.tex ver20-Ex.R
-	-@rm -Rf anRpackage myTst* myLib
+	-@rm -Rf anRpackage myTst* myLib myLib_2
 	-@rm -f *.tar.gz
 	-@rm -f keepsource.tex test-system2 test-system.Rout
 	-@rm -f *.log *.tsin *.trin

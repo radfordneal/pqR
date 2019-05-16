@@ -99,6 +99,9 @@ tar(tarfile, files = NULL,
   \command{configure} will try \command{gnutar} and \command{gtar}
   before \code{tar}.
 
+  %% Heirloom Toolchest (http://heirloom.sourceforge.net/) is
+  %% another implementation available on NetBSD, but probably not the default.
+
   Known problems arise from
   \itemize{
     \item The handling of file paths of more than 100 bytes.  These were
@@ -154,12 +157,11 @@ tar(tarfile, files = NULL,
 
 \section{Compression}{
   When an external \command{tar} command is used, compressing the tar
-  archive may require the appropriate command (\command{gzip},
-  \command{bzip2} or \command{xz}) to be available.  For GNU
-  \command{tar}, further compression programs can be specified by
-  e.g.\sspace{}\code{extra_flags = "-I lz4"}.
-  %% with some restrictions, see
-  %% https://www.gnu.org/software/tar/manual/html_section/tar_68.html#SEC135
+  archive requires that \command{tar} supports the \option{-z},
+  \option{-j} or \option{-J} flag, and may require the appropriate
+  command (\command{gzip}, \command{bzip2} or \command{xz}) to be
+  available.  For GNU \command{tar}, further compression programs can be
+  specified by e.g.\sspace{}\code{extra_flags = "-I lz4"}.
   Some versions of \command{bsdtar} accept options such as
   \option{--lz4}, \option{--lzop} and \option{--lrzip} or an external
   compressor \emph{via} \code{--use-compress-program lz4}: these could
@@ -168,7 +170,10 @@ tar(tarfile, files = NULL,
   NetBSD prior to 8.0 used flag \option{--xz} rather than \option{-J},
   so this should be used \emph{via} \code{extra_flags = "--xz"} rather
   than \code{compression = "xz"}.  The commands from OpenBSD and the
-  Heirloom Toolchest are not doumented to support \command{xz}.
+  Heirloom Toolchest are not documented to support \command{xz}.
+
+  The \command{tar} programs in commercial Unixen such as AIX and
+  Solaris do not support compression.
 }
 
 \note{

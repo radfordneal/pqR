@@ -41,10 +41,10 @@ function(contriburl = contrib.url(repos, type), method,
 		  dimnames = list(NULL, c(fields, "Repository")))
 
     for(repos in contriburl) {
-        localcran <- length(grep("^file:", repos)) > 0L
+        localcran <- startsWith(repos, "file:")
         if(localcran) {
             ## see note in download.packages
-            if(substring(repos, 1L, 8L) == "file:///") {
+            if(startsWith(repos, "file:///")) {
                 tmpf <- paste0(substring(repos, 8L), "/PACKAGES")
                 if(.Platform$OS.type == "windows") {
                     if(length(grep("^/[A-Za-z]:", tmpf)))
@@ -333,7 +333,7 @@ function(db)
     if(is.na(CRAN)) return(db)
     for(d in dups) {
         pos <- which(packages == d)
-        ind <- substring(db[pos, "Repository"], 1, nchar(CRAN)) != CRAN
+        ind <- !startsWith(db[pos, "Repository"], CRAN)
         if(!all(ind)) drop <- c(drop, pos[ind])
     }
     if(length(drop)) db[-drop, , drop = FALSE] else db
@@ -725,7 +725,7 @@ download.packages <- function(pkgs, destdir, available = NULL,
                               contriburl = contrib.url(repos, type),
                               method, type = getOption("pkgType"), ...)
 {
-    nonlocalcran <- length(grep("^file:", contriburl)) < length(contriburl)
+    nonlocalcran <- !all(startsWith(contriburl, "file:"))
     if(nonlocalcran && !dir.exists(destdir))
         stop("'destdir' is not a directory")
 
@@ -750,7 +750,7 @@ download.packages <- function(pkgs, destdir, available = NULL,
                 keep[duplicated(keep)] <- FALSE
                 ok[ok][!keep] <- FALSE
             }
-            if (substr(type, 1L, 10L) == "mac.binary") type <- "mac.binary"
+            if (startsWith(type, "mac.binary")) type <- "mac.binary"
             ## in Oct 2009 we introduced file names in PACKAGES files
             File <- available[ok, "File"]
             fn <- paste0(p, "_", available[ok, "Version"],
@@ -761,9 +761,9 @@ download.packages <- function(pkgs, destdir, available = NULL,
             have_fn <- !is.na(File)
             fn[have_fn] <- File[have_fn]
             repos <- available[ok, "Repository"]
-            if(length(grep("^file:", repos)) > 0L) { # local repository
+            if(startsWith(repos, "file:")) { # local repository
                 ## This could be file: + file path or a file:/// URL.
-                if(substring(repos, 1L, 8L) == "file:///") {
+                if(startsWith(repos, "file:///")) {
                     ## We need to derive the file name from the URL
                     ## This is tricky as so many forms have been allowed,
                     ## and indeed external methods may do even more.
@@ -818,7 +818,7 @@ contrib.url <- function(repos, type = getOption("pkgType"))
         m <- match("@CRAN@", repos)
         nm <- names(repos)
         repos[m] <- getOption("repos")["CRAN"]
-        if(is.null(nm)) nm <- rep("", length(repos))
+        if(is.null(nm)) nm <- rep.int("", length(repos))
         nm[m] <- "CRAN"
         names(repos) <- nm
     }
@@ -935,7 +935,7 @@ setRepositories <-
     pkgType <- getOption("pkgType")
     if (pkgType == "both") pkgType <- "source" #.Platform$pkgType
     if (pkgType == "binary") pkgType <- .Platform$pkgType
-    if(length(grep("^mac\\.binary", pkgType))) pkgType <- "mac.binary"
+    if(startsWith(pkgType, "mac.binary")) pkgType <- "mac.binary"
     thisType <- a[[pkgType]]
     a <- a[thisType, 1L:3L]
     repos <- getOption("repos")
@@ -947,7 +947,7 @@ setRepositories <-
     new <- !(repos %in% a[["URL"]])
     if(any(new)) {
         aa <- names(repos[new])
-        if(is.null(aa)) aa <- rep("", length(repos[new]))
+        if(is.null(aa)) aa <- rep.int("", length(repos[new]))
         aa[aa == ""] <- repos[new][aa == ""]
         newa <- data.frame(menu_name=aa, URL=repos[new], default=TRUE)
         row.names(newa) <- aa
@@ -1121,7 +1121,7 @@ compareVersion <- function(a, b)
     }
     done <- names(DL[lens == 0L]); DL <- DL[lens > 0L]
     while(length(DL)) {
-        OK <- sapply(DL, function(x) all(x %in% done))
+        OK <- vapply(DL, function(x) all(x %in% done), NA)
         if(!any(OK)) {
             warning(gettextf("packages %s are mutually dependent",
                              paste(sQuote(names(DL)), collapse = ", ")),

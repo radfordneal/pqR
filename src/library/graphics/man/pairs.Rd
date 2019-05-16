@@ -24,7 +24,8 @@ pairs(x, \dots)
       diag.panel = NULL, text.panel = textPanel,
       label.pos = 0.5 + has.diag/3, line.main = 3,
       cex.labels = NULL, font.labels = 1,
-      row1attop = TRUE, gap = 1, log = "")
+      row1attop = TRUE, gap = 1, log = "",
+      horOdd = !row1attop, verOdd = !row1attop)
 }
 \arguments{
   \item{x}{the coordinates of points given as numeric columns of a
@@ -76,6 +77,10 @@ pairs(x, \dots)
     indices specifying the indices of those variables where logarithmic
     axes should be used for both x and y.  \code{log = "xy"} specifies
     logarithmic axes for all variables.}
+  \item{horOdd, verOdd}{\code{\link{logical}} (or integer) determining
+    how the horizontal and vertical axis labeling happens.  If true, the
+    axis labelling starts at the first (from top left) row or column,
+    respectively.}
 }
 \details{
   The \eqn{ij}th scatterplot contains \code{x[,i]} plotted against
@@ -143,7 +148,7 @@ panel.hist <- function(x, ...)
     rect(breaks[-nB], 0, breaks[-1], y, col = "cyan", ...)
 }
 pairs(USJudgeRatings[1:5], panel = panel.smooth,
-      cex = 1.5, pch = 24, bg = "light blue",
+      cex = 1.5, pch = 24, bg = "light blue", horOdd=TRUE,
       diag.panel = panel.hist, cex.labels = 2, font.labels = 2)
 
 ## put (absolute) correlations on the upper panels,

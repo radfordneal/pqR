@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1997--2018  The R Core Team
+ *  Copyright (C) 1997--2019  The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -1087,33 +1087,66 @@ SEXP attribute_hidden do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* which(x) : indices of non-NA TRUE values in x */
 SEXP attribute_hidden do_which(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP v, v_nms, ans, ans_nms = R_NilValue;
-    int i, j = 0, len, *buf;
-
     checkArity(op, args);
-    v = CAR(args);
+    SEXP v = CAR(args);
     if (!isLogical(v))
 	error(_("argument to 'which' is not logical"));
-    len = length(v);
-    buf = (int *) R_alloc(len, sizeof(int));
-
-    int *pv = LOGICAL(v);
-    for (i = 0; i < len; i++) {
-	if (pv[i] == TRUE) {
-	    buf[j] = i + 1;
-	    j++;
-	}
-    }
+    R_xlen_t len = xlength(v), i, j = 0;
+    SEXP ans;
+#ifdef LONG_VECTOR_SUPPORT
+    if (len > R_SHORT_LEN_MAX) {
+    R_xlen_t xoffset = 1; // 1 for 1-based indexing of response
+    double *buf = (double *) R_alloc(len, sizeof(double));
+    ITERATE_BY_REGION(v, ptr, idx, nb, int, LOGICAL, {
+	    for(R_xlen_t i = 0; i < nb; i++) {
+		if(ptr[i] == TRUE) {
+		    buf[j] = (double)(xoffset + i); // offset has +1 built in
+		    j++;
+		}
+	    }
+	    xoffset += nb; // move to beginning of next buffer (+1 since R-based)
+	});
 
     len = j;
+    PROTECT(ans = allocVector(REALSXP, len));
+    // buf has doubles in it, memcopy if we found any indices.
+    if(len) memcpy(REAL(ans), buf, sizeof(double) * len);
+    } else
+#endif
+    {
+    int ioffset = 1;
+    int *buf = (int *) R_alloc(len, sizeof(int));
+    /* use iteration macros to be ALTREP safe and pull ptr retrieval out of tight loop */
+    ITERATE_BY_REGION(v, ptr, idx, nb, int, LOGICAL, {
+	    for(int i = 0; i < nb; i++) {
+		if(ptr[i] == TRUE) {
+		    buf[j] = ioffset + i; // offset has +1 built in
+		    j++;
+		}
+	    }
+	    ioffset += nb; // move to beginning of next buffer
+	});
+
+    len = j;
+    // buf has ints in it and we're returning ints, memcopy if we found any indices;
     PROTECT(ans = allocVector(INTSXP, len));
     if(len) memcpy(INTEGER(ans), buf, sizeof(int) * len);
+    }
 
-    if ((v_nms = getAttrib(v, R_NamesSymbol)) != R_NilValue) {
-	PROTECT(ans_nms = allocVector(STRSXP, len));
-	int *pa = INTEGER(ans);
+    SEXP v_nms = getAttrib(v, R_NamesSymbol);
+    if (v_nms != R_NilValue) {
+	SEXP ans_nms = PROTECT(allocVector(STRSXP, len));
+#ifdef LONG_VECTOR_SUPPORT
+	if (TYPEOF(ans) == REALSXP)
 	for (i = 0; i < len; i++) {
-	    SET_STRING_ELT(ans_nms, i, STRING_ELT(v_nms, pa[i] - 1));
+	    SET_STRING_ELT(ans_nms, i,
+			   STRING_ELT(v_nms, (R_xlen_t)REAL(ans)[i] - 1));
+	}
+	else
+#endif
+	for (i = 0; i < len; i++) {
+	    SET_STRING_ELT(ans_nms, i,
+			   STRING_ELT(v_nms, (R_xlen_t)INTEGER(ans)[i] - 1));
 	}
 	setAttrib(ans, R_NamesSymbol, ans_nms);
 	UNPROTECT(1);
@@ -1128,19 +1161,14 @@ SEXP attribute_hidden do_which(SEXP call, SEXP op, SEXP args, SEXP rho)
  */
 SEXP attribute_hidden do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP a, x, ans;
-    int narm;
-    R_xlen_t i, n, len, i1;
-    SEXPTYPE type, anstype;
-
-    narm = asLogical(CAR(args));
+    int narm = asLogical(CAR(args));
     if(narm == NA_LOGICAL)
 	error(_("invalid '%s' value"), "na.rm");
     args = CDR(args);
-    x = CAR(args);
     if(args == R_NilValue) error(_("no arguments"));
+    SEXP x = CAR(args);
 
-    anstype = TYPEOF(x);
+    SEXPTYPE anstype = TYPEOF(x);
     switch(anstype) {
     case NILSXP:
     case LGLSXP:
@@ -1151,13 +1179,14 @@ SEXP attribute_hidden do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
     default:
 	error(_("invalid input type"));
     }
-    a = CDR(args);
+    SEXP a = CDR(args);
     if(a == R_NilValue) return x; /* one input */
 
-    len = xlength(x); /* not LENGTH, as NULL is allowed */
+    R_xlen_t n, len = xlength(x), /* not LENGTH, as NULL is allowed */
+	i, i1; 
     for(; a != R_NilValue; a = CDR(a)) {
 	x = CAR(a);
-	type = TYPEOF(x);
+	SEXPTYPE type = TYPEOF(x);
 	switch(type) {
 	case NILSXP:
 	case LGLSXP:
@@ -1181,14 +1210,14 @@ SEXP attribute_hidden do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(len == 0) return allocVector(anstype, 0);
     /* Check for fractional recycling (added in 2.14.0) */
     for(a = args; a != R_NilValue; a = CDR(a)) {
-	n = length(CAR(a));
+	n = xlength(CAR(a));
 	if (len % n) {
 	    warning(_("an argument will be fractionally recycled"));
 	    break;
 	}
     }
 
-    PROTECT(ans = allocVector(anstype, len));
+    SEXP ans = PROTECT(allocVector(anstype, len));
     switch(anstype) {
     case INTSXP:
     {

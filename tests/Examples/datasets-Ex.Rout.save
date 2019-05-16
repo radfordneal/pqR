@@ -1,5 +1,5 @@
 
-R version 3.5.3 RC (2019-03-03 r76193) -- "Great Truth"
+R version 3.6.0 beta (2019-04-15 r76395) -- "Planting of a Tree"
 Copyright (C) 2019 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -2105,9 +2105,8 @@ Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’
 > 
 > # 6) Replace infinite values by +/- 6 as in Student's paper:
 > 
-> zobs[infZ <- is.infinite(zobs)] # 3 of them
-  73  312  674 
--Inf  Inf -Inf 
+> zobs[infZ <- is.infinite(zobs)] # none of them 
+named numeric(0)
 > zobs[infZ] <- 6 * sign(zobs[infZ])
 > 
 > # 7) Plot the distribution:
@@ -3257,7 +3256,7 @@ F-statistic: 19.76 on 5 and 41 DF,  p-value: 5.594e-10
 > flush(stderr()); flush(stdout())
 > 
 > ### Name: trees
-> ### Title: Girth, Height and Volume for Black Cherry Trees
+> ### Title: Diameter, Height and Volume for Black Cherry Trees
 > ### Aliases: trees
 > ### Keywords: datasets
 > 
@@ -3513,7 +3512,7 @@ c0   -5.14
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  2.042 0.041 2.095 0 0 
+Time elapsed:  1.959 0.063 2.032 0 0 
 > grDevices::dev.off()
 null device 
           1 

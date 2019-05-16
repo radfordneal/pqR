@@ -117,7 +117,7 @@ browseEnv <- function(envir = .GlobalEnv, pattern,
 		for(i in seq_len(lg)){
 		    M <- M+1L
 		    ParentID[M] <- N
-		    if(nm[i] == "") nm[i] = paste0("[[",i,"]]")
+		    if(nm[i] == "") nm[i] <- paste0("[[",i,"]]")
 		    md.l  <- mode(obj.nms[[i]])
 		    objdim.l <- dim(obj.nms[[i]])
 		    if(length(objdim.l) == 0L)
@@ -257,7 +257,7 @@ wsbrowser <- function(IDS, IsRoot, IsContainer, ItemsPerContainer,
 	   windows = , ## do we need anything here?
 	   unix = { url <- fname },
 	   )
-    if(substr(url, 1L, 1L) != "/")
+    if(!startsWith(url, "/"))
 	url <- paste0("/", url)
     url <- paste0("file://", URLencode(url))
 
