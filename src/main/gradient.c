@@ -79,9 +79,9 @@ static SEXP alloc_closure_jacobian (R_len_t gvars, R_len_t n, SEXP closure)
     PROTECT(closure);
     SEXP res = allocVector (EXPRSXP, 2);
     UNPROTECT_PROTECT(res);
-    SET_VECTOR_ELT (res, 0, closure);
+    SET_VECTOR_ELT (res, 1, closure);
     INC_NAMEDCNT (closure);
-    SET_VECTOR_ELT (res, 1, ScalarIntegerMaybeConst(n));
+    SET_VECTOR_ELT (res, 0, ScalarIntegerMaybeConst(n));
     SET_GRAD_WRT_LEN (res, gvars);
     SET_JACOBIAN_TYPE (res, CLOSURE_JACOBIAN);
     UNPROTECT(1);
@@ -104,7 +104,7 @@ TYPEOF(v),length(v),NAMEDCNT(v),CPTR_FROM_SEXP(v)/64,CPTR_FROM_SEXP(v)%64,v);
                 inc_gradient_namedcnt(CAR(v));
         }
         break;
-    case VECSXP: ;
+    case VECSXP:
         INC_NAMEDCNT(v);
         R_len_t len = LENGTH(v);
         R_len_t i;
@@ -112,6 +112,7 @@ TYPEOF(v),length(v),NAMEDCNT(v),CPTR_FROM_SEXP(v)/64,CPTR_FROM_SEXP(v)%64,v);
             if (VECTOR_ELT(v,i) != R_NilValue)
                 inc_gradient_namedcnt (VECTOR_ELT(v,i));
         break;
+    case EXPRSXP:
     case REALSXP:
         INC_NAMEDCNT(v);
         INC_NAMEDCNT(ATTRIB_W(v));
@@ -134,7 +135,7 @@ TYPEOF(v),length(v),NAMEDCNT(v),CPTR_FROM_SEXP(v)/64,CPTR_FROM_SEXP(v)%64,v);
                 dec_gradient_namedcnt(CAR(v));
         }
         break;
-    case VECSXP: ;
+    case VECSXP:
         DEC_NAMEDCNT(v);
         R_len_t len = LENGTH(v);
         R_len_t i;
@@ -142,6 +143,7 @@ TYPEOF(v),length(v),NAMEDCNT(v),CPTR_FROM_SEXP(v)/64,CPTR_FROM_SEXP(v)%64,v);
             if (VECTOR_ELT(v,i) != R_NilValue)
                 dec_gradient_namedcnt (VECTOR_ELT(v,i));
         break;
+    case EXPRSXP:
     case REALSXP:
         DEC_NAMEDCNT(v);
         DEC_NAMEDCNT(ATTRIB_W(v));
@@ -187,15 +189,15 @@ static SEXP expand_to_full_jacobian (SEXP grad)
     if (JACOBIAN_TYPE(grad) & CLOSURE_JACOBIAN) {
 
         if (TYPEOF(grad) != EXPRSXP || LENGTH(grad) != 2) abort();
-        if (TYPEOF(VECTOR_ELT(grad,0)) != CLOSXP) abort();
-        if (TYPEOF(VECTOR_ELT(grad,1)) != INTSXP) abort();
+        if (TYPEOF(VECTOR_ELT(grad,1)) != CLOSXP) abort();
+        if (TYPEOF(VECTOR_ELT(grad,0)) != INTSXP) abort();
 
         R_len_t gvars = GRAD_WRT_LEN(grad);
         R_len_t rows = JACOBIAN_ROWS(grad);
         SEXP call, new;
 
         PROTECT (grad);
-        PROTECT (call = LCONS (VECTOR_ELT(grad,0), R_NilValue));
+        PROTECT (call = LCONS (JACOBIAN_CLOSURE(grad), R_NilValue));
         new = eval (call, R_EmptyEnv);
         if (NAMEDCNT_GT_0(new))
             new = duplicate(new);
@@ -213,6 +215,12 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         SET_ATTRIB_TO_ANYTHING (grad, new);
         SET_JACOBIAN_CACHED_AS_ATTRIB (grad, 1);
         SET_NAMEDCNT (new, NAMEDCNT(grad));
+
+        if (0) {  /* not for now... */
+            SET_JACOBIAN_TYPE (grad, NOW_CACHED_JACOBIAN); /* closure no more */
+            SET_VECTOR_ELT (grad, 0, R_NilValue);          /* recover memory */
+            SET_VECTOR_ELT (grad, 1, R_NilValue);
+        }
 
         UNPROTECT(2);
         return new;
@@ -246,9 +254,9 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         }
 
         SET_ATTRIB_TO_ANYTHING (grad, new);
+        SET_NAMEDCNT (new, NAMEDCNT(grad));
         SET_JACOBIAN_CACHED_AS_ATTRIB (grad, 1);
         SET_JACOBIAN_TYPE (grad, NOW_CACHED_JACOBIAN); /* scaled form defunct */
-        SET_NAMEDCNT (new, NAMEDCNT(grad));
 
         UNPROTECT(2);
         return new;

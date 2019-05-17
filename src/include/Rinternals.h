@@ -1034,15 +1034,22 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 
 /* Access to Jacobian matrices. */
 
-#define JACOBIAN_TYPE(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp>>8)
+#define JACOBIAN_TYPE(x) \
+  NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp>>8)
 #define SET_JACOBIAN_TYPE(x,v) \
  (UPTR_FROM_SEXP(x)->sxpinfo.gp = UPTR_FROM_SEXP(x)->sxpinfo.gp&0xff | ((v)<<8))
 
-#define SCALED_JACOBIAN 1    /* Scaled form of Jacobian in attribute.  Form of
-                                scaling factor specified by other bits. */
-#define DIAGONAL_JACOBIAN 2  /* Only diagonal stored, single value if all same*/
-#define CLOSURE_JACOBIAN 4   /* Jacobian specified by function closure */
-#define NOW_CACHED_JACOBIAN 128  /* Only cache value valid - previous compact
+#define SCALED_JACOBIAN 1    /* Scaled form of Jacobian in attribute.  Scaling
+                                factor is diagonal matrix in remainder. */
+#define PRODUCT_JACOBIAN 2   /* Product with Jacobian in attribute on right.
+                                Matrix on left as specified by other bits, must
+                                have number of rows explicitly available. */
+#define SUM_JACOBIAN 4       /* Sum with Jacobian in attribute. */
+#define MATPROD_JACOBIAN 8   /* Jacobian from matrix product with attribute. */
+#define DIAGONAL_JACOBIAN 16 /* Only diagonal stored; single value -> all same*/
+#define ONE_IN_ROW_JACOBIAN 32 /* Jacobian with one non-zero element per row */
+#define CLOSURE_JACOBIAN 64   /* Jacobian specified by function closure */
+#define NOW_CACHED_JACOBIAN 128  /* Only cached value valid - previous compact
                                     form no longer available */
 
 #define JACOBIAN_COLS(g) GRAD_WRT_LEN(g)  /* Number of columns in Jacobian */
@@ -1051,9 +1058,10 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
   (JACOBIAN_TYPE(g) & SCALED_JACOBIAN ? JACOBIAN_ROWS0(ATTRIB_W(g)) : \
                                         JACOBIAN_ROWS0(g))
 #define JACOBIAN_ROWS0(g) \
-  (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN ? GRAD_WRT_LEN(g) : \
-   JACOBIAN_TYPE(g) & CLOSURE_JACOBIAN  ? *INTEGER(VECTOR_ELT(g,1)) : \
-                                          LENGTH(g) / GRAD_WRT_LEN(g))
+  (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN   ? GRAD_WRT_LEN(g) : \
+   JACOBIAN_TYPE(g) & ONE_IN_ROW_JACOBIAN ? LENGTH(g)/2 : \
+   JACOBIAN_TYPE(g) & CLOSURE_JACOBIAN    ? *INTEGER(VECTOR_ELT(g,0)) : \
+                                            LENGTH(g) / GRAD_WRT_LEN(g))
 
 #define JACOBIAN_LENGTH(g)                /* Rows X Cols of full Jacobian */ \
   (JACOBIAN_TYPE(g) & SCALED_JACOBIAN ? JACOBIAN_LEN0(ATTRIB_W(g)) : \
@@ -1061,11 +1069,14 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define JACOBIAN_LEN0(g) \
   (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN \
      ? (uint64_t) GRAD_WRT_LEN(g) * GRAD_WRT_LEN(g) : \
+   JACOBIAN_TYPE(g) & ONE_IN_ROW_JACOBIAN \
+     ? (uint64_t) (LENGTH(g)/2) * GRAD_WRT_LEN(g) : \
    JACOBIAN_TYPE(g) & CLOSURE_JACOBIAN \
-     ? (uint64_t) *INTEGER(VECTOR_ELT(g,1)) * GRAD_WRT_LEN(g) : \
+     ? (uint64_t) *INTEGER(VECTOR_ELT(g,0)) * GRAD_WRT_LEN(g) : \
        (uint64_t) LENGTH(g))
 
-#define JACOBIAN_VALUE_LENGTH(g) LENGTH(g) /* Numeric values in representation*/
+#define JACOBIAN_VALUE_LENGTH(g) \
+  (JACOBIAN_TYPE(g) & ONE_IN_ROW_JACOBIAN ? LENGTH(g)/2 : LENGTH(g))
 
 #define JACOBIAN_CACHED_AS_ATTRIB(g) \
   (TYPEOF(g) == REALSXP && NOT_LVALUE(UPTR_FROM_SEXP(g)->sxpinfo.base_sym_env))
@@ -1073,7 +1084,7 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define SET_JACOBIAN_CACHED_AS_ATTRIB(g,v) \
   (UPTR_FROM_SEXP(g)->sxpinfo.base_sym_env = (v))
 
-#define JACOBIAN_CLOSURE(g) VECTOR_ELT((g),0)
+#define JACOBIAN_CLOSURE(g) VECTOR_ELT((g),1)
 
 
 #else /* not USE_RINTERNALS */
