@@ -1031,6 +1031,9 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define GRAD_WRT_LIST(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.base_sym_env)
 #define SET_GRAD_WRT_LIST(x,v) (UPTR_FROM_SEXP(x)->sxpinfo.base_sym_env=(v))
 
+
+/* Access to Jacobian matrices. */
+
 #define JACOBIAN_TYPE(x) NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp>>8)
 #define SET_JACOBIAN_TYPE(x,v) \
  (UPTR_FROM_SEXP(x)->sxpinfo.gp = UPTR_FROM_SEXP(x)->sxpinfo.gp&0xff | ((v)<<8))
@@ -1045,26 +1048,33 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define JACOBIAN_COLS(g) GRAD_WRT_LEN(g)  /* Number of columns in Jacobian */
 
 #define JACOBIAN_ROWS(g)                  /* Number of rows in Jacobian */ \
-  (JACOBIAN_TYPE(g) & SCALED_JACOBIAN ? JACOBIAN_ROWS0(ATTRIB_W(g)) \
-                                      : JACOBIAN_ROWS0(g))
+  (JACOBIAN_TYPE(g) & SCALED_JACOBIAN ? JACOBIAN_ROWS0(ATTRIB_W(g)) : \
+                                        JACOBIAN_ROWS0(g))
 #define JACOBIAN_ROWS0(g) \
-  (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN ? GRAD_WRT_LEN(g) \
-                                        : LENGTH(g) / GRAD_WRT_LEN(g))
+  (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN ? GRAD_WRT_LEN(g) : \
+   JACOBIAN_TYPE(g) & CLOSURE_JACOBIAN  ? *INTEGER(VECTOR_ELT(g,1)) : \
+                                          LENGTH(g) / GRAD_WRT_LEN(g))
 
 #define JACOBIAN_LENGTH(g)                /* Rows X Cols of full Jacobian */ \
-  (JACOBIAN_TYPE(g) & SCALED_JACOBIAN ? JACOBIAN_LEN0(ATTRIB_W(g)) \
-                                      : JACOBIAN_LEN0(g))
+  (JACOBIAN_TYPE(g) & SCALED_JACOBIAN ? JACOBIAN_LEN0(ATTRIB_W(g)) : \
+                                        JACOBIAN_LEN0(g))
 #define JACOBIAN_LEN0(g) \
-  (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN ? GRAD_WRT_LEN(g) * GRAD_WRT_LEN(g) \
-                                        : LENGTH(g))
+  (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN \
+     ? (uint64_t) GRAD_WRT_LEN(g) * GRAD_WRT_LEN(g) : \
+   JACOBIAN_TYPE(g) & CLOSURE_JACOBIAN \
+     ? (uint64_t) *INTEGER(VECTOR_ELT(g,1)) * GRAD_WRT_LEN(g) : \
+       (uint64_t) LENGTH(g))
 
-#define JACOBIAN_VALUE_LENGTH(g) LENGTH(g) /* Double values in representation */
+#define JACOBIAN_VALUE_LENGTH(g) LENGTH(g) /* Numeric values in representation*/
 
 #define JACOBIAN_CACHED_AS_ATTRIB(g) \
   (TYPEOF(g) == REALSXP && NOT_LVALUE(UPTR_FROM_SEXP(g)->sxpinfo.base_sym_env))
 
 #define SET_JACOBIAN_CACHED_AS_ATTRIB(g,v) \
   (UPTR_FROM_SEXP(g)->sxpinfo.base_sym_env = (v))
+
+#define JACOBIAN_CLOSURE(g) VECTOR_ELT((g),0)
+
 
 #else /* not USE_RINTERNALS */
 

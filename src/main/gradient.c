@@ -69,7 +69,22 @@ static SEXP alloc_diagonal_jacobian (R_len_t gvars, R_len_t m)
     if (m != gvars && m != 1) abort();
     SEXP res = allocVector (REALSXP, m);
     SET_GRAD_WRT_LEN (res, gvars);
-    SET_JACOBIAN_TYPE(res,DIAGONAL_JACOBIAN);
+    SET_JACOBIAN_TYPE( res, DIAGONAL_JACOBIAN);
+
+    return res;
+}
+
+static SEXP alloc_closure_jacobian (R_len_t gvars, R_len_t n, SEXP closure)
+{
+    PROTECT(closure);
+    SEXP res = allocVector (EXPRSXP, 2);
+    UNPROTECT_PROTECT(res);
+    SET_VECTOR_ELT (res, 0, closure);
+    INC_NAMEDCNT (closure);
+    SET_VECTOR_ELT (res, 1, ScalarIntegerMaybeConst(n));
+    SET_GRAD_WRT_LEN (res, gvars);
+    SET_JACOBIAN_TYPE (res, CLOSURE_JACOBIAN);
+    UNPROTECT(1);
 
     return res;
 }
@@ -176,7 +191,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         if (TYPEOF(VECTOR_ELT(grad,1)) != INTSXP) abort();
 
         R_len_t gvars = GRAD_WRT_LEN(grad);
-        R_len_t rows = *INTEGER(VECTOR_ELT(grad,1));
+        R_len_t rows = JACOBIAN_ROWS(grad);
         SEXP call, new;
 
         PROTECT (grad);
@@ -966,16 +981,7 @@ static SEXP match_structure (SEXP val, SEXP grad, R_len_t gvars)
                 && TAG(CDR(fm)) != R_RightSymbol && TAG(CDR(fm)) != R_LeftSymbol
              || CDR(fm) != R_NilValue && TAG(fm) == TAG(CDR(fm)))
                 return R_NoObject;
-            PROTECT(grad);
-            SEXP e = allocVector (EXPRSXP, 2);
-            UNPROTECT(1);
-            SET_VECTOR_ELT (e, 0, grad);
-            INC_NAMEDCNT(grad);
-            PROTECT(e);
-            SET_VECTOR_ELT (e, 1, ScalarIntegerMaybeConst(LENGTH(val)));
-            UNPROTECT(1);
-            grad = e;
-            SET_JACOBIAN_TYPE (grad, CLOSURE_JACOBIAN);
+            grad = alloc_closure_jacobian (gvars, LENGTH(val), grad);
         }
 
         else if (TYPEOF(grad) == REALSXP) {
