@@ -184,7 +184,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         return grad;
 
     if (JACOBIAN_CACHED_AS_ATTRIB(grad))
-        return ATTRIB_W(grad);
+        return CACHED_JACOBIAN(grad);
 
     if (JACOBIAN_TYPE(grad) & CLOSURE_JACOBIAN) {
 
@@ -212,9 +212,9 @@ static SEXP expand_to_full_jacobian (SEXP grad)
             UNPROTECT_PROTECT(new);
         }
 
-        SET_ATTRIB_TO_ANYTHING (grad, new);
-        SET_JACOBIAN_CACHED_AS_ATTRIB (grad, 1);
+        SET_CACHED_JACOBIAN (grad, new);
         SET_NAMEDCNT (new, NAMEDCNT(grad));
+        SET_JACOBIAN_CACHED_AS_ATTRIB (grad, 1);
 
         if (0) {  /* not for now... */
             SET_JACOBIAN_TYPE (grad, NOW_CACHED_JACOBIAN); /* closure no more */
@@ -232,7 +232,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         R_len_t i;
 
         PROTECT (grad);
-        PROTECT (next = expand_to_full_jacobian (ATTRIB_W(grad)));
+        PROTECT (next = expand_to_full_jacobian (NEXT_JACOBIAN(grad)));
 
         R_len_t len = LENGTH(next);
         R_len_t gvars = GRAD_WRT_LEN(next);
@@ -253,7 +253,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
             }
         }
 
-        SET_ATTRIB_TO_ANYTHING (grad, new);
+        SET_CACHED_JACOBIAN (grad, new);
         SET_NAMEDCNT (new, NAMEDCNT(grad));
         SET_JACOBIAN_CACHED_AS_ATTRIB (grad, 1);
         SET_JACOBIAN_TYPE (grad, NOW_CACHED_JACOBIAN); /* scaled form defunct */
@@ -291,9 +291,10 @@ static SEXP expand_to_full_jacobian (SEXP grad)
             }
         }
 
-        SET_ATTRIB_TO_ANYTHING(grad,new);
+        SET_CACHED_JACOBIAN (grad, new);
+        SET_NAMEDCNT (new, NAMEDCNT(grad));
         SET_JACOBIAN_CACHED_AS_ATTRIB(grad,1);
-        SET_NAMEDCNT(new,NAMEDCNT(grad));
+        /* diagonal form remains valid */
 
         UNPROTECT(1);
         return new;
@@ -348,7 +349,7 @@ static SEXP scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
                     REAL(r)[i] = factor * REAL(grad)[i];
             }
             SET_GRAD_WRT_LEN (r, gvars);
-            SET_ATTRIB_TO_ANYTHING (r, ATTRIB_W(grad));
+            SET_NEXT_JACOBIAN (r, NEXT_JACOBIAN(grad));
             SET_JACOBIAN_TYPE (r, JACOBIAN_TYPE(grad));
             goto ret;
         }
@@ -356,7 +357,7 @@ static SEXP scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
         if (glen >= MIN_SCALAR_SCALE_BENEFIT) {
             r = ScalarReal(factor);
             SET_GRAD_WRT_LEN (r, gvars);
-            SET_ATTRIB_TO_ANYTHING (r, grad);
+            SET_NEXT_JACOBIAN (r, grad);
             SET_JACOBIAN_TYPE (r, SCALED_JACOBIAN | DIAGONAL_JACOBIAN);
             goto ret;
         }
@@ -378,7 +379,7 @@ static SEXP scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
                     REAL(r)[i] = f[i] * REAL(grad)[i];
             }
             SET_GRAD_WRT_LEN (r, gvars);
-            SET_ATTRIB_TO_ANYTHING (r, ATTRIB_W(grad));
+            SET_NEXT_JACOBIAN (r, NEXT_JACOBIAN(grad));
             SET_JACOBIAN_TYPE (r, JACOBIAN_TYPE(grad));
             goto ret;
         }
@@ -387,7 +388,7 @@ static SEXP scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
             r = allocVector (REALSXP, n);
             memcpy (REAL(r), f, n * sizeof(double));
             SET_GRAD_WRT_LEN (r, gvars);
-            SET_ATTRIB_TO_ANYTHING (r, grad);
+            SET_NEXT_JACOBIAN (r, grad);
             SET_JACOBIAN_TYPE (r, SCALED_JACOBIAN | DIAGONAL_JACOBIAN);
             goto ret;
         }
@@ -529,8 +530,8 @@ static SEXP add_scaled_jacobian (SEXP base, SEXP extra,
 
         if ( (JACOBIAN_TYPE(base) & DIAGONAL_JACOBIAN)
           && (JACOBIAN_TYPE(extra) & DIAGONAL_JACOBIAN)
-          && (!bscaled && !escaled || bscaled && escaled 
-                 && same_numeric_content(ATTRIB_W(base),ATTRIB_W(extra))) ) {
+          && (!bscaled && !escaled || bscaled && escaled && 
+             same_numeric_content(NEXT_JACOBIAN(base),NEXT_JACOBIAN(extra))) ) {
 
             PROTECT2(base,extra);
 
@@ -604,7 +605,7 @@ static SEXP add_scaled_jacobian (SEXP base, SEXP extra,
             }
 
             if (JACOBIAN_TYPE(base) & SCALED_JACOBIAN) {
-                SET_ATTRIB_TO_ANYTHING (r, ATTRIB_W(base));
+                SET_NEXT_JACOBIAN (r, NEXT_JACOBIAN(base));
                 SET_JACOBIAN_TYPE (r, JACOBIAN_TYPE(base));
             }
 
@@ -613,7 +614,7 @@ static SEXP add_scaled_jacobian (SEXP base, SEXP extra,
         }
 
         if (!bscaled && escaled && (JACOBIAN_TYPE(extra) & DIAGONAL_JACOBIAN)
-              && same_numeric_content(base,ATTRIB_W(extra))) {
+              && same_numeric_content(base,NEXT_JACOBIAN(extra))) {
 
             PROTECT2(base,extra);
 
@@ -646,7 +647,7 @@ static SEXP add_scaled_jacobian (SEXP base, SEXP extra,
                 }
             }
 
-            SET_ATTRIB_TO_ANYTHING (r, ATTRIB_W(extra));
+            SET_NEXT_JACOBIAN (r, NEXT_JACOBIAN(extra));
             SET_JACOBIAN_TYPE (r, JACOBIAN_TYPE(extra));
 
             UNPROTECT(2);
@@ -654,7 +655,7 @@ static SEXP add_scaled_jacobian (SEXP base, SEXP extra,
         }
 
         if (bscaled && !escaled && (JACOBIAN_TYPE(base) & DIAGONAL_JACOBIAN)
-              && same_numeric_content(ATTRIB_W(base),extra)) {
+              && same_numeric_content(NEXT_JACOBIAN(base),extra)) {
 
             PROTECT2(base,extra);
 
@@ -698,7 +699,7 @@ static SEXP add_scaled_jacobian (SEXP base, SEXP extra,
 
             }
 
-            SET_ATTRIB_TO_ANYTHING (r, ATTRIB_W(base));
+            SET_NEXT_JACOBIAN (r, NEXT_JACOBIAN(base));
             SET_JACOBIAN_TYPE (r, JACOBIAN_TYPE(base));
 
             UNPROTECT(2);
@@ -1152,7 +1153,7 @@ static inline SEXP get_other_gradients (SEXP xenv)
     if (grad == R_NilValue) \
         return R_NilValue; \
     if (JACOBIAN_TYPE(grad) & NOW_CACHED_JACOBIAN) \
-        grad = ATTRIB_W(grad); \
+        grad = CACHED_JACOBIAN(grad); \
 } while (0)
 
 
@@ -2694,9 +2695,9 @@ attribute_hidden SEXP cummin_gradient (SEXP grad, SEXP v, SEXP s, R_len_t n)
     if (g1 == R_NilValue && g2 == R_NilValue) \
         return R_NilValue; \
     if (g1 != R_NilValue && (JACOBIAN_TYPE(g1) & NOW_CACHED_JACOBIAN)) \
-        g1 = ATTRIB_W(g1); \
+        g1 = CACHED_JACOBIAN(g1); \
     if (g2 != R_NilValue && (JACOBIAN_TYPE(g2) & NOW_CACHED_JACOBIAN)) \
-        g2 = ATTRIB_W(g2); \
+        g2 = CACHED_JACOBIAN(g2); \
 } while (0)
 
 
@@ -3951,7 +3952,7 @@ R_inspect(b); REprintf("==\n");
 
             if (alen != blen && alen != 1 && blen != 1) abort();
             res = alloc_diagonal_jacobian (gvars, blen == 1 ? alen : blen);
-            SET_ATTRIB_TO_ANYTHING (res, ATTRIB_W(a));
+            SET_NEXT_JACOBIAN (res, NEXT_JACOBIAN(a)); /* might be R_NilValue */
             SET_JACOBIAN_TYPE (res, JACOBIAN_TYPE(a));
 
             if (blen == 1) {

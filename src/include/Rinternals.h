@@ -1055,7 +1055,7 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 #define JACOBIAN_COLS(g) GRAD_WRT_LEN(g)  /* Number of columns in Jacobian */
 
 #define JACOBIAN_ROWS(g)                  /* Number of rows in Jacobian */ \
-  (JACOBIAN_TYPE(g) & SCALED_JACOBIAN ? JACOBIAN_ROWS0(ATTRIB_W(g)) : \
+  (JACOBIAN_TYPE(g) & SCALED_JACOBIAN ? JACOBIAN_ROWS0(NEXT_JACOBIAN(g)) : \
                                         JACOBIAN_ROWS0(g))
 #define JACOBIAN_ROWS0(g) \
   (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN   ? GRAD_WRT_LEN(g) : \
@@ -1064,7 +1064,7 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
                                             LENGTH(g) / GRAD_WRT_LEN(g))
 
 #define JACOBIAN_LENGTH(g)                /* Rows X Cols of full Jacobian */ \
-  (JACOBIAN_TYPE(g) & SCALED_JACOBIAN ? JACOBIAN_LEN0(ATTRIB_W(g)) : \
+  (JACOBIAN_TYPE(g) & SCALED_JACOBIAN ? JACOBIAN_LEN0(NEXT_JACOBIAN(g)) : \
                                         JACOBIAN_LEN0(g))
 #define JACOBIAN_LEN0(g) \
   (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN \
@@ -1083,6 +1083,12 @@ static inline void UNSET_S4_OBJECT_inline (SEXP x) {
 
 #define SET_JACOBIAN_CACHED_AS_ATTRIB(g,v) \
   (UPTR_FROM_SEXP(g)->sxpinfo.base_sym_env = (v))
+
+#define CACHED_JACOBIAN(g) ATTRIB_W(g)
+#define SET_CACHED_JACOBIAN(g,v) SET_ATTRIB_TO_ANYTHING((g),(v))
+
+#define NEXT_JACOBIAN(g) ATTRIB_W(g)
+#define SET_NEXT_JACOBIAN(g,v) SET_ATTRIB_TO_ANYTHING((g),(v))
 
 #define JACOBIAN_CLOSURE(g) VECTOR_ELT((g),1)
 
