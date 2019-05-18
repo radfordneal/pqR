@@ -74,6 +74,18 @@ static SEXP alloc_diagonal_jacobian (R_len_t gvars, R_len_t m)
     return res;
 }
 
+static SEXP alloc_one_in_row_jacobian (R_len_t gvars, R_len_t n)
+{
+    if (n > R_LEN_T_MAX/2)
+        error (_("gradient matrix would be too large"));
+
+    SEXP res = allocVector (REALSXP, 2*n);
+    SET_GRAD_WRT_LEN (res, gvars);
+    SET_JACOBIAN_TYPE( res, ONE_IN_ROW_JACOBIAN);
+
+    return res;
+}
+
 static SEXP alloc_closure_jacobian (R_len_t gvars, R_len_t n, SEXP closure)
 {
     PROTECT(closure);
@@ -300,6 +312,30 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         return new;
     }
 
+    if (JACOBIAN_TYPE(grad) & ONE_IN_ROW_JACOBIAN) {
+
+        R_len_t gvars = GRAD_WRT_LEN(grad);
+        R_len_t n = LENGTH(grad)/2;
+        R_len_t i, j;
+
+        PROTECT(grad);
+        SEXP new = alloc_jacobian (gvars, n);
+        memset (REAL(new), 0, LENGTH(new) * sizeof(double));
+
+        for (i = 0; i < n; i++) {
+            j = (R_len_t) REAL(grad)[n+i];
+            REAL(new)[j] = REAL(grad)[i];
+        }
+
+        SET_CACHED_JACOBIAN (grad, new);
+        SET_NAMEDCNT (new, NAMEDCNT(grad));
+        SET_JACOBIAN_CACHED_AS_ATTRIB(grad,1);
+        /* one-in-row form remains valid */
+
+        UNPROTECT(1);
+        return new;
+    }
+
     return grad;
 }
 
@@ -323,9 +359,6 @@ static SEXP scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
     R_len_t i, j, k;
     SEXP r;
 
-    if ((JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN) && gn != n)
-        grad = expand_to_full_jacobian (grad);
-
     R_len_t glen = JACOBIAN_VALUE_LENGTH(grad);
 
     PROTECT(grad);
@@ -334,39 +367,33 @@ static SEXP scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
 
         double factor = *f;
 
-        if (factor == 1.0 && gn == n) {
+        if (factor == 1.0) {
             r = grad;
             goto ret;
         }
 
         if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) {
-            if (glen == 1)
+            if (glen == 1 && (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN))
                 r = ScalarReal (factor * *REAL(grad));
             else {
                 R_len_t i;
-                r = allocVector (REALSXP, glen);
+                r = allocVector (REALSXP, LENGTH(grad));
                 for (i = 0; i < glen; i++)
                     REAL(r)[i] = factor * REAL(grad)[i];
+                if (JACOBIAN_TYPE(grad) & ONE_IN_ROW_JACOBIAN)
+                    memcpy (REAL(r)+glen, REAL(grad)+glen, glen*sizeof(double));
             }
             SET_GRAD_WRT_LEN (r, gvars);
             SET_NEXT_JACOBIAN (r, NEXT_JACOBIAN(grad));
             SET_JACOBIAN_TYPE (r, JACOBIAN_TYPE(grad));
             goto ret;
         }
-
-        if (glen >= MIN_SCALAR_SCALE_BENEFIT) {
-            r = ScalarReal(factor);
-            SET_GRAD_WRT_LEN (r, gvars);
-            SET_NEXT_JACOBIAN (r, grad);
-            SET_JACOBIAN_TYPE (r, SCALED_JACOBIAN | DIAGONAL_JACOBIAN);
-            goto ret;
-        }
     }
 
-    else if (gn == n && flen == n) {
+    if (gn == n && flen == n) {
 
         if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) {
-            r = allocVector (REALSXP, glen);
+            r = allocVector (REALSXP, LENGTH(grad));
             R_len_t i;
             if (glen == 1) {
                 double d = *REAL(grad);
@@ -383,18 +410,17 @@ static SEXP scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
             SET_JACOBIAN_TYPE (r, JACOBIAN_TYPE(grad));
             goto ret;
         }
-
-        if (glen >= (double) MIN_VECTOR_SCALE_BENEFIT * flen) {
-            r = allocVector (REALSXP, n);
-            memcpy (REAL(r), f, n * sizeof(double));
-            SET_GRAD_WRT_LEN (r, gvars);
-            SET_NEXT_JACOBIAN (r, grad);
-            SET_JACOBIAN_TYPE (r, SCALED_JACOBIAN | DIAGONAL_JACOBIAN);
-            goto ret;
-        }
     }
 
-    if (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN) {
+    if (gn == n && flen == 1 && glen >= MIN_SCALAR_SCALE_BENEFIT) {
+        r = ScalarReal(*f);
+        SET_GRAD_WRT_LEN (r, gvars);
+        SET_NEXT_JACOBIAN (r, grad);
+        SET_JACOBIAN_TYPE (r, SCALED_JACOBIAN | DIAGONAL_JACOBIAN);
+        goto ret;
+    }
+
+    if (gn == n && (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN)) {
 
         if (flen == 1) {
             r = alloc_diagonal_jacobian (gvars, glen);
@@ -422,12 +448,54 @@ static SEXP scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
                 }
             }
         }
+
+        goto ret;
     }
 
-    else if (JACOBIAN_TYPE(grad) != 0)
+    if (gn == n && (JACOBIAN_TYPE(grad) & ONE_IN_ROW_JACOBIAN)) {
+
+        r = alloc_one_in_row_jacobian (gvars, n);
+        memcpy (REAL(r)+n, REAL(grad)+n, n*sizeof(double));
+
+        if (flen == 1) {
+            double d = *f;
+            for (i = 0; i < n; i++)
+                REAL(r)[i] = REAL(grad)[i] * d;
+        }
+        else {
+            if (flen >= n) {
+                for (j = 0; j < n; j++)
+                    REAL(r)[j] = REAL(grad)[j] * f[j];
+            }
+            else {
+                R_len_t jf = 0;
+                for (j = 0; j < n; j++) {
+                    REAL(r)[j] = REAL(grad)[j] * f[jf];
+                    if (++jf == flen) jf = 0;
+                }
+            }
+        }
+
+        goto ret;
+    }
+
+    if (gn ==n && flen == n && glen >= (double) MIN_VECTOR_SCALE_BENEFIT*flen) {
+        r = allocVector (REALSXP, n);
+        memcpy (REAL(r), f, n * sizeof(double));
+        SET_GRAD_WRT_LEN (r, gvars);
+        SET_NEXT_JACOBIAN (r, grad);
+        SET_JACOBIAN_TYPE (r, SCALED_JACOBIAN | DIAGONAL_JACOBIAN);
+        goto ret;
+    }
+
+    if (gn != n && (JACOBIAN_TYPE(grad) 
+                      & (DIAGONAL_JACOBIAN | ONE_IN_ROW_JACOBIAN)))
+        grad = expand_to_full_jacobian (grad);
+
+    if (JACOBIAN_TYPE(grad) != 0)
         abort();
 
-    else if (n == 1 && gvars == 1)  {  /* 1-by-1 jacobian */
+    if (n == 1 && gvars == 1)  {  /* 1-by-1 jacobian */
 
         r = ScalarRealMaybeConst (*REAL(grad) * *f);
     }
