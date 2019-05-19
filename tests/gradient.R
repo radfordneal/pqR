@@ -2400,3 +2400,31 @@ with gradient (a=c(3,9,7,4,2,6,5,8)) {
   pr("E"); list(b,c,d,e)
 }
 pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A"); b <- a[c(3,4,5,6,7,8,9,10)]
+  pr("B"); c <- b[c(2,3,4)]
+  pr("C"); d <- 3*c
+  pr("D"); list(b,c,d)
+}
+pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A"); b <- 7*cumsum(a)[c(3,4,5,6,7,8,9,10)]
+  pr("B"); c <- b[c(2,3,4,5)]
+  pr("C"); d <- c[c(2,3)]
+  pr("D"); e <- 3*d
+  pr("E"); list(b,c,d,e)
+}
+pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A"); b <- a[3]
+  pr("B"); c <- b + 2*a[3]
+  pr("C"); d <- b + 2*a[4]
+  pr("D"); list(b,c,d)
+}
+pr("end")
