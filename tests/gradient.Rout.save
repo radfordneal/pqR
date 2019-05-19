@@ -13641,7 +13641,6 @@ C
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
 D 
-RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 E 
 > pr("end")
@@ -13728,7 +13727,6 @@ RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
 RPROFMEM: (list 102):
 D 
-RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 E 
 RPROFMEM: (list 102):
@@ -16346,6 +16344,129 @@ attr(,"gradient")
 [6,]    0    0    0    0    0   36    0    0
 [7,]    0    0    0    0    0    0   30    0
 [8,]    0    0    0    0    0    0    0   48
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> with gradient (a=c(3,9,7,4,2,6,5,8)) {
++   pr("A"); b <- a[3..10]
++   pr("B"); c <- b[2..4]
++   pr("C"); d <- 3*c
++   pr("D"); list(b,c,d)
++ }
+RPROFMEM: (double 8):
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 16):
+B 
+C 
+D 
+RPROFMEM: (double 64):
+RPROFMEM: (double 24):
+RPROFMEM: (double 24):
+[[1]]
+[1]  7  4  2  6  5  8 NA NA
+
+[[2]]
+[1] 4 2 6
+
+[[3]]
+[1] 12  6 18
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    0    0    1    0    0    0    0    0
+[2,]    0    0    0    1    0    0    0    0
+[3,]    0    0    0    0    1    0    0    0
+[4,]    0    0    0    0    0    1    0    0
+[5,]    0    0    0    0    0    0    1    0
+[6,]    0    0    0    0    0    0    0    1
+[7,]    0    0    0    0    0    0    0    0
+[8,]    0    0    0    0    0    0    0    0
+
+attr(,"gradient")[[2]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    0    0    0    1    0    0    0    0
+[2,]    0    0    0    0    1    0    0    0
+[3,]    0    0    0    0    0    1    0    0
+
+attr(,"gradient")[[3]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    0    0    0    3    0    0    0    0
+[2,]    0    0    0    0    3    0    0    0
+[3,]    0    0    0    0    0    3    0    0
+
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> with gradient (a=c(3,9,7,4,2,6,5,8)) {
++   pr("A"); b <- 7*cumsum(a)[3..10]
++   pr("B"); c <- b[2..5]
++   pr("C"); d <- c[2..3]
++   pr("D"); e <- 3*d
++   pr("E"); list(b,c,d,e)
++ }
+RPROFMEM: (double 8):
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+RPROFMEM: (double 64):
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+RPROFMEM: (double 8):
+B 
+RPROFMEM: (double 64):
+RPROFMEM: (double 32):
+C 
+RPROFMEM: (double 16):
+D 
+E 
+RPROFMEM: (double 16):
+[[1]]
+[1] 133 161 175 217 252 308  NA  NA
+
+[[2]]
+[1] 161 175 217 252
+
+[[3]]
+[1] 175 217
+
+[[4]]
+[1] 525 651
+
+attr(,"gradient")
+attr(,"gradient")[[1]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    7    7    7    0    0    0    0    0
+[2,]    7    7    7    7    0    0    0    0
+[3,]    7    7    7    7    7    0    0    0
+[4,]    7    7    7    7    7    7    0    0
+[5,]    7    7    7    7    7    7    7    0
+[6,]    7    7    7    7    7    7    7    7
+[7,]    0    0    0    0    0    0    0    0
+[8,]    0    0    0    0    0    0    0    0
+
+attr(,"gradient")[[2]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    7    7    7    7    0    0    0    0
+[2,]    7    7    7    7    7    0    0    0
+[3,]    7    7    7    7    7    7    0    0
+[4,]    7    7    7    7    7    7    7    0
+
+attr(,"gradient")[[3]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    7    7    7    7    7    0    0    0
+[2,]    7    7    7    7    7    7    0    0
+
+attr(,"gradient")[[4]]
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]   21   21   21   21   21    0    0    0
+[2,]   21   21   21   21   21   21    0    0
+
 > pr("end")
 end 
 > 

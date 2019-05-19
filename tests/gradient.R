@@ -2381,3 +2381,22 @@ with gradient (a=c(3,9,7,4,2,6,5,8)) {
   pr("D"); r
 }
 pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A"); b <- a[3..10]
+  pr("B"); c <- b[2..4]
+  pr("C"); d <- 3*c
+  pr("D"); list(b,c,d)
+}
+pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A"); b <- 7*cumsum(a)[3..10]
+  pr("B"); c <- b[2..5]
+  pr("C"); d <- c[2..3]
+  pr("D"); e <- 3*d
+  pr("E"); list(b,c,d,e)
+}
+pr("end")

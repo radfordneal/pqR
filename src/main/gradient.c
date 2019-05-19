@@ -251,19 +251,23 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         new = NAMEDCNT_EQ_0(next) ? next 
                                   : alloc_jacobian (gvars, len / gvars);
 
-        R_len_t n = LENGTH(grad);
-        if (n == 1) {
-            double d = *REAL(grad);
-            for (i = 0; i < len; i++)
-                REAL(new)[i] = d * REAL(next)[i];
-        }
-        else {
-            R_len_t j = 0;
-            for (i = 0; i < len; i++) {
-                REAL(new)[i] = REAL(grad)[j] * REAL(next)[i];
-                if (++j == n) j = 0;
+        if (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN) {
+            R_len_t n = LENGTH(grad);
+            if (n == 1) {
+                double d = *REAL(grad);
+                for (i = 0; i < len; i++)
+                    REAL(new)[i] = d * REAL(next)[i];
+            }
+            else {
+                R_len_t j = 0;
+                for (i = 0; i < len; i++) {
+                    REAL(new)[i] = REAL(grad)[j] * REAL(next)[i];
+                    if (++j == n) j = 0;
+                }
             }
         }
+        else
+            abort();
 
         SET_CACHED_JACOBIAN (grad, new);
         SET_NAMEDCNT (new, NAMEDCNT(grad));
@@ -324,14 +328,13 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 
         for (i = 0; i < n; i++) {
             j = (R_len_t) REAL(grad)[n+i];
-            REAL(new)[j] = REAL(grad)[i];
+            REAL(new)[i+n*j] = REAL(grad)[i];
         }
 
         SET_CACHED_JACOBIAN (grad, new);
         SET_NAMEDCNT (new, NAMEDCNT(grad));
         SET_JACOBIAN_CACHED_AS_ATTRIB(grad,1);
         /* one-in-row form remains valid */
-
         UNPROTECT(1);
         return new;
     }
@@ -373,15 +376,14 @@ static SEXP scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
         }
 
         if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) {
-            if (glen == 1 && (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN))
+            if (! (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN)) abort();
+            if (glen == 1)
                 r = ScalarReal (factor * *REAL(grad));
             else {
                 R_len_t i;
                 r = allocVector (REALSXP, LENGTH(grad));
                 for (i = 0; i < glen; i++)
                     REAL(r)[i] = factor * REAL(grad)[i];
-                if (JACOBIAN_TYPE(grad) & ONE_IN_ROW_JACOBIAN)
-                    memcpy (REAL(r)+glen, REAL(grad)+glen, glen*sizeof(double));
             }
             SET_GRAD_WRT_LEN (r, gvars);
             SET_NEXT_JACOBIAN (r, NEXT_JACOBIAN(grad));
@@ -1322,7 +1324,7 @@ R_inspect(grad); REprintf("--\n");
 	
     if (TYPEOF(grad) != REALSXP) abort();
     R_len_t gvars = GRAD_WRT_LEN(grad);
-    R_len_t gn = JACOBIAN_LENGTH(grad) / gvars;
+    R_len_t gn = JACOBIAN_ROWS(grad);
     R_len_t i, j, k, h;
 
     SEXP res = alloc_jacobian (gvars, n);
@@ -1417,7 +1419,7 @@ R_inspect(grad); REprintf("--\n");
 	
     if (TYPEOF(grad) != REALSXP) abort();
     R_len_t gvars = GRAD_WRT_LEN(grad);
-    R_len_t k = JACOBIAN_LENGTH(grad) / gvars;
+    R_len_t k = JACOBIAN_ROWS(grad);
 
     SEXP res = alloc_jacobian (gvars, n);
     PROTECT(res);
@@ -1453,7 +1455,7 @@ R_inspect(grad); REprintf("--\n");
 	
     if (TYPEOF(grad) != REALSXP) abort();
     R_len_t gvars = GRAD_WRT_LEN(grad);
-    R_len_t ng = JACOBIAN_LENGTH(grad) / gvars;
+    R_len_t ng = JACOBIAN_ROWS(grad);
     R_len_t nc = n / nr;
 
     SEXP res = alloc_jacobian (gvars, n);
@@ -1668,37 +1670,83 @@ SEXP attribute_hidden subset_range_numeric_gradient
 REprintf("subset_range_numeric_gradient %d %d %d\n",i,j,n);
 R_inspect(grad); REprintf("--\n");
 #endif
-    RECURSIVE_GRADIENT_APPLY (subset_range_numeric_gradient, grad, i, j, n);
+    RECURSIVE_GRADIENT_APPLY_NO_EXPAND (subset_range_numeric_gradient,
+                                        grad, i, j, n);
 
     if (i < 0 || j < 0) abort();
 
     if (i >= n || j < i)
         return R_NilValue;
 
-    if (TYPEOF(grad) != REALSXP) abort();
-
-    R_len_t glen = LENGTH(grad);
-
-    if (glen == n && i == j)
-        return ScalarReal (REAL(grad)[i]);
-
-    PROTECT(grad);
-
-    if (glen % n != 0) abort();
-    R_len_t gvars = glen/n;
     R_len_t m = j-i+1;
     R_len_t t = m;
-    SEXP res = alloc_jacobian (gvars, m);
-    if (j >= n) {
-        memset (REAL(res), 0, LENGTH(res) * sizeof(double));
-        t = n - i;
-    }
     R_len_t k, l;
-    k = l = 0;
-    while (k < glen) {
-        copy_elements (res, l, 1, grad, k+i, 1, t);
-        k += n;
-        l += m;
+
+    R_len_t gvars = GRAD_WRT_LEN(grad);
+    SEXP res;
+
+    if (JACOBIAN_TYPE(grad) & (DIAGONAL_JACOBIAN | ONE_IN_ROW_JACOBIAN)
+          && ! (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN)) {
+
+        PROTECT(grad);
+
+        res = alloc_one_in_row_jacobian (gvars, m);
+
+        if (j >= n) {
+            t = n - i;
+            memset (REAL(res)+t, 0, (j-n+1) * sizeof(double));
+            memset (REAL(res)+m+t, 0, (j-n+1) * sizeof(double));
+        }
+
+        if (LENGTH(grad) == 1) {
+            double d = *REAL(grad);
+            for (k = 0; k < t; k++) 
+                REAL(res)[k] = d;
+        }
+        else {
+            for (k = 0; k < t; k++) 
+                REAL(res)[k] = REAL(grad)[i+k];
+        }
+
+        if (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN) {
+            for (k = 0; k < t; k++)
+                REAL(res)[m+k] = i+k;
+        }
+        else {  /* JACOBIAN_TYPE(grad) & ONE_IN_ROW_JACOBIAN */
+            for (k = 0; k < t; k++)
+                REAL(res)[m+k] = REAL(grad)[n+i+k];
+        }
+
+        UNPROTECT(1);
+    }
+
+    else {
+
+        grad = expand_to_full_jacobian (grad);
+
+        if (TYPEOF(grad) != REALSXP) abort();
+
+        R_len_t glen = LENGTH(grad);
+
+        if (glen == n && i == j)
+            return ScalarReal (REAL(grad)[i]);
+
+        PROTECT(grad);
+
+        if (glen % n != 0) abort();
+        res = alloc_jacobian (gvars, m);
+        if (j >= n) {
+            memset (REAL(res), 0, LENGTH(res) * sizeof(double));
+            t = n - i;
+        }
+        k = l = 0;
+        while (k < glen) {
+            copy_elements (res, l, 1, grad, k+i, 1, t);
+            k += n;
+            l += m;
+        }
+
+        UNPROTECT(1);
     }
 
 #if 0
@@ -1706,7 +1754,6 @@ REprintf("subset_range_numeric_gradient end\n");
 R_inspect(res); REprintf("--\n");
 #endif
 
-    UNPROTECT(1);
     return res;
 }
 
