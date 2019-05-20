@@ -13604,7 +13604,6 @@ C
 RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
 D 
-RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 E 
 > pr("end")
@@ -13683,7 +13682,6 @@ RPROFMEM: (double 100):
 RPROFMEM: (double 10000):
 RPROFMEM: (list 102):
 D 
-RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 E 
 RPROFMEM: (list 102):
@@ -13767,7 +13765,6 @@ RPROFMEM: (list 102):
 RPROFMEM: (list 102):
 RPROFMEM: (character 102):
 B 
-RPROFMEM: (double 10000):
 RPROFMEM: (double 100):
 C 
 D 
@@ -14026,9 +14023,9 @@ start
 + }
 RPROFMEM: (double 8):
 A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
 RPROFMEM: (double 64):
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
 B 
 C 
 RPROFMEM: (double 8):
@@ -14992,8 +14989,8 @@ start
 RPROFMEM: (double 8):
 A 
 B 
-RPROFMEM: (double 64):
 RPROFMEM: (double 8):
+RPROFMEM: (double 64):
 RPROFMEM: (double 8):
 RPROFMEM: (double 64):
 F 
@@ -15124,11 +15121,11 @@ start
 + }
 RPROFMEM: (double 8):
 A 
-RPROFMEM: (double 64):
+RPROFMEM: (double 14):
 RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
 RPROFMEM: (double 56):
-RPROFMEM: (double 8):
-RPROFMEM: (double 64):
 B 
 RPROFMEM: (double 8):"pmax" 
 RPROFMEM: (double 8):"pmax" 
@@ -15229,8 +15226,8 @@ RPROFMEM: (double 8):"mean"
 RPROFMEM: (double 8):"mean" 
 RPROFMEM: (double 8):"mean.default" "mean" 
 C 
-RPROFMEM: (double 64):
 RPROFMEM: (double 8):
+RPROFMEM: (double 64):
 RPROFMEM: (double 8):
 RPROFMEM: (double 64):
 D 
@@ -15429,21 +15426,20 @@ RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 D 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
 RPROFMEM: (double 64):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
-RPROFMEM: (double 64):
 E 
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
@@ -16163,13 +16159,13 @@ start
 + }
 RPROFMEM: (double 8):
 A 
-RPROFMEM: (double 64):
-RPROFMEM: (double 8):
 B 
 RPROFMEM: (double 8):
 RPROFMEM: (double 64):
+RPROFMEM: (double 8):
 C 
 RPROFMEM: (double 8):
+RPROFMEM: (double 64):
 RPROFMEM: (double 64):
 D 
 [[1]]
@@ -16483,12 +16479,12 @@ A
 RPROFMEM: (double 8):
 RPROFMEM: (integer 8):
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
-RPROFMEM: (double 64):
+RPROFMEM: (double 16):
 B 
-RPROFMEM: (double 24):
 C 
 D 
+RPROFMEM: (double 64):
+RPROFMEM: (double 24):
 RPROFMEM: (double 24):
 [[1]]
 [1]  7  4  2  6  5  8 NA NA
@@ -16513,15 +16509,15 @@ attr(,"gradient")[[1]]
 
 attr(,"gradient")[[2]]
      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
-[1,]    0    0    0    1    0    0    0    0
-[2,]    0    0    0    0    1    0    0    0
-[3,]    0    0    0    0    0    1    0    0
+[1,]    0    1    0    0    0    0    0    0
+[2,]    0    1    0    0    0    0    0    0
+[3,]    1    0    0    0    0    0    0    0
 
 attr(,"gradient")[[3]]
      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
-[1,]    0    0    0    3    0    0    0    0
-[2,]    0    0    0    0    3    0    0    0
-[3,]    0    0    0    0    0    3    0    0
+[1,]    0    3    0    0    0    0    0    0
+[2,]    0    3    0    0    0    0    0    0
+[3,]    3    0    0    0    0    0    0    0
 
 > pr("end")
 end 
@@ -16607,9 +16603,8 @@ start
 + }
 RPROFMEM: (double 8):
 A 
-RPROFMEM: (double 64):
-RPROFMEM: (double 8):
 B 
+RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 C 
