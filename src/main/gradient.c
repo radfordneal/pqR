@@ -2490,7 +2490,7 @@ R_inspect(grad);
     if (TYPEOF(grad) != REALSXP) abort();
 
     R_len_t gvars = GRAD_WRT_LEN(grad);
-    R_len_t k = JACOBIAN_LENGTH(grad) / gvars;
+    R_len_t k = JACOBIAN_ROWS(grad);
 
     SEXP res = alloc_jacobian (gvars, n);
 
@@ -3263,7 +3263,7 @@ R_inspect(v);
             res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
         else {
             res = alloc_jacobian (gvars, n);
-            m = JACOBIAN_LENGTH(grad) / gvars;
+            m = JACOBIAN_ROWS(grad);
             for (h = 0; h < gvars; h++) {
                 memcpy (REAL(res) + h*n, REAL(grad) + h*m, m * sizeof(double));
                 memset (REAL(res) + h*n + m, 0, (n-m) * sizeof(double));
@@ -3281,7 +3281,7 @@ R_inspect(v);
         }
     }
     else {
-        m = JACOBIAN_LENGTH(v) / gvars;
+        m = JACOBIAN_ROWS(v);
         if (m * gvars != LENGTH(v)) abort();
         for (h = 0; h < gvars; h++) {
             R_len_t hn = h*n, hm = h*m;
@@ -3354,7 +3354,7 @@ R_inspect(v);
             res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
         else {
             res = alloc_jacobian (gvars, n);
-            m = JACOBIAN_LENGTH(grad) / gvars;
+            m = JACOBIAN_ROWS(grad);
             for (h = 0; h < gvars; h++) {
                 memcpy (REAL(res) + h*n, REAL(grad) + h*m, m * sizeof(double));
                 memset (REAL(res) + h*n + m, 0, (n-m) * sizeof(double));
@@ -3374,7 +3374,7 @@ R_inspect(v);
     }
     else {
         if (TYPEOF(v) != REALSXP) abort();
-        m = JACOBIAN_LENGTH(v) / gvars;
+        m = JACOBIAN_ROWS(v);
         R_len_t jv = 0;
         for (R_len_t j = 0; j < k; j++) {
             R_len_t i = INTEGER(indx)[j];
@@ -3577,7 +3577,7 @@ R_inspect(v);
         }
     }
     else {
-        R_len_t m = JACOBIAN_LENGTH(v) / gvars;
+        R_len_t m = JACOBIAN_ROWS(v);
         if (m * gvars != LENGTH(v)) abort();
         R_len_t i = 0;
         while (!last) {
@@ -3820,7 +3820,7 @@ R_inspect(arg);
     }
 
     R_len_t gvars = GRAD_WRT_LEN(v);
-    R_len_t nv = JACOBIAN_LENGTH(v) / gvars;
+    R_len_t nv = JACOBIAN_ROWS(v);
     SEXP res;
 
     res = grad;
@@ -4416,7 +4416,7 @@ static R_len_t Jacobian_rows (SEXP g)
 
     if (TYPEOF(g) == REALSXP) {
         R_len_t gvars = GRAD_WRT_LEN(g);
-        r = JACOBIAN_LENGTH(g) / gvars;
+        r = JACOBIAN_ROWS(g);
         if (JACOBIAN_LENGTH(g) != r * gvars) abort();
         return r;
     }
