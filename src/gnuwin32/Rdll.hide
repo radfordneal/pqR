@@ -373,7 +373,6 @@
  Rf_evalList_v
  Rf_eval_unshared
  Rf_extend_list_gradient
- Rf_extend_numeric_gradient
  Rf_findFun_nospecsym
  Rf_findVar1
  Rf_findcontext
@@ -453,7 +452,6 @@
  Rf_subassign_list_gradient
  Rf_subassign_indexes_list_gradient
  Rf_subassign_indexes_numeric_gradient
- Rf_subassign_numeric_gradient
  Rf_subassign_range_list_gradient
  Rf_subassign_range_numeric_gradient
  Rf_subset2_list_gradient

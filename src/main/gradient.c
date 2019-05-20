@@ -3259,7 +3259,7 @@ R_inspect(v);
     }
     else {
         if (TYPEOF(grad) != REALSXP) abort();
-        if (LENGTH(grad) == n * gvars)
+        if (LENGTH(grad) == (uint64_t) n * gvars)
             res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
         else {
             res = alloc_jacobian (gvars, n);
@@ -3282,7 +3282,6 @@ R_inspect(v);
     }
     else {
         m = JACOBIAN_ROWS(v);
-        if (m * gvars != LENGTH(v)) abort();
         for (h = 0; h < gvars; h++) {
             R_len_t hn = h*n, hm = h*m;
             if (m == 1) {
@@ -3671,102 +3670,6 @@ R_inspect(v);
 
 #if 0
 REprintf("*** extend_list_gradient end\n");
-R_inspect(res);
-REprintf("==\n");
-#endif
-
-    UNPROTECT(2);
-    return res;
-}
-
-
-/* Create set of gradients from grad that account for assigning an element
-   with gradient v to the i'th element out of n of a numeric vector with
-   gradient grad.  May use grad as the result, if NAMEDCNT is not greater
-   than one.
-
-   Protects its grad and v arguments. */
-
-SEXP attribute_hidden subassign_numeric_gradient 
-                       (SEXP grad, SEXP v, R_len_t i, R_len_t n)
-{
-#if 0
-REprintf("*** subassign_numeric_gradient %d %d\n",i,n);
-R_inspect(grad);
-REprintf("--\n");
-R_inspect(v);
-#endif
-
-    RECURSIVE_GRADIENT_APPLY2 (subassign_numeric_gradient, grad, v, i, n);
-
-    PROTECT2(grad,v);
-
-    R_len_t gvars = GRAD_WRT_LEN (grad != R_NilValue ? grad : v); 
-    SEXP res;
-
-    if (grad == R_NilValue) {
-        res = alloc_jacobian (gvars, n);
-        memset (REAL(res), 0, LENGTH(res) * sizeof(double));
-    }
-    else {
-        if (TYPEOF(grad) != REALSXP) abort();
-        if (LENGTH(grad) != (uint64_t) n * gvars) abort();
-        res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
-    }
-
-    if (i < 0 || i >= n) abort();
-    if (v == R_NilValue)
-        copy_elements (res, i, n, R_ScalarRealZero, 0, 0, gvars);        
-    else
-        copy_elements (res, i, n, v, 0, 1, gvars);
-
-#if 0
-REprintf("*** subasign_numeric_gradient end\n");
-R_inspect(res);
-REprintf("==\n");
-#endif
-
-    UNPROTECT(2);
-    return res;
-}
-
-
-/* Create set of gradients from grad that account for assigning an element
-   with gradient v as a new element of a numeric vector at index n (so new
-   length is n+1).
-
-   Protects its grad and v arguments. */
-
-SEXP attribute_hidden extend_numeric_gradient (SEXP grad, SEXP v, R_len_t n)
-{
-#if 0
-REprintf("*** extend_numeric_gradient %d\n",n);
-R_inspect(grad);
-REprintf("--\n");
-R_inspect(v);
-#endif
-
-    RECURSIVE_GRADIENT_APPLY2 (extend_numeric_gradient, grad, v, n);
-
-    PROTECT2(grad,v);
-
-    R_len_t vlen = LENGTH(v);
-    R_len_t m = 0;
-
-    SEXP res = alloc_jacobian (vlen, n+1);
-
-    memset (REAL(res), 0, LENGTH(res) * sizeof(double));
-    if (grad != R_NilValue) {
-        if (TYPEOF(grad) != REALSXP) abort();
-        if (LENGTH(grad) % vlen != 0) abort();
-        m = LENGTH(grad) / vlen;
-        for (R_len_t i = 0; i < m; i++)
-            copy_elements (res, i, n+1, grad, i, m, vlen);
-    }
-    copy_elements (res, n, n+1, v, 0, 1, vlen);
-
-#if 0
-REprintf("*** extend_numeric_gradient end\n");
 R_inspect(res);
 REprintf("==\n");
 #endif

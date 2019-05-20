@@ -5064,10 +5064,9 @@ SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x,
             if (isVectorAtomic(x)) {
                 copy_elements_coerced (x, offset, 0, y, 0, 0, 1);
                 if (x_grad != R_NilValue || y_grad != R_NilValue) {
-                    res_grad = offset < length_x
-                     ? subassign_numeric_gradient (x_grad, y_grad, offset,
-                                                   length_x)
-                     : extend_numeric_gradient (x_grad, y_grad, offset);
+                    res_grad = subassign_range_numeric_gradient 
+                                (x_grad, y_grad, offset, offset, 
+                                 offset < length_x ? length_x : offset+1);
                 }
             }
             else if (isVectorList(x)) {

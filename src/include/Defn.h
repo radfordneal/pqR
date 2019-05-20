@@ -1326,7 +1326,6 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define evalList_v		Rf_evalList_v
 # define eval_unshared		Rf_eval_unshared
 # define extend_list_gradient	Rf_extend_list_gradient
-# define extend_numeric_gradient Rf_extend_numeric_gradient
 # define factorsConform		Rf_factorsConform
 # define findcontext		Rf_findcontext
 # define findFun_nospecsym	Rf_findFun_nospecsym
@@ -1437,7 +1436,6 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define subassign_list_gradient Rf_subassign_list_gradient
 # define subassign_indexes_list_gradient Rf_subassign_indexes_list_gradient
 # define subassign_indexes_numeric_gradient Rf_subassign_indexes_numeric_gradient
-# define subassign_numeric_gradient Rf_subassign_numeric_gradient
 # define subassign_range_list_gradient Rf_subassign_range_list_gradient
 # define subassign_range_numeric_gradient Rf_subassign_range_numeric_gradient
 # define subset2_list_gradient	Rf_subset2_list_gradient
@@ -1595,7 +1593,6 @@ SEXP evalList_gradient(SEXP, SEXP, int, int, int);
 SEXP evalList_v(SEXP, SEXP, int);
 SEXP eval_unshared(SEXP,SEXP,int);
 SEXP extend_list_gradient(SEXP, SEXP, R_len_t);
-SEXP extend_numeric_gradient(SEXP, SEXP, R_len_t);
 int factorsConform(SEXP, SEXP);
 void R_NORETURN findcontext(int, SEXP, SEXP);
 SEXP findFun_nospecsym(SEXP, SEXP);
@@ -1721,7 +1718,6 @@ int StrToInternal(const char *);
 SEXP subassign_list_gradient(SEXP, SEXP, R_len_t, R_len_t);
 SEXP subassign_indexes_list_gradient(SEXP, SEXP, SEXP, R_len_t);
 SEXP subassign_indexes_numeric_gradient(SEXP, SEXP, SEXP, R_len_t);
-SEXP subassign_numeric_gradient(SEXP, SEXP, R_len_t, R_len_t);
 SEXP subassign_range_list_gradient(SEXP, SEXP, R_len_t, R_len_t, R_len_t);
 SEXP subassign_range_numeric_gradient(SEXP, SEXP, R_len_t, R_len_t, R_len_t);
 SEXP subset2_list_gradient(SEXP, R_len_t, R_len_t);
