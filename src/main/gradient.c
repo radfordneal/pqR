@@ -2351,8 +2351,6 @@ LENGTH(grad),GRAD_WRT_LEN(grad),factor);
 R_inspect(grad);
 #endif
 
-    if (TYPEOF(grad) != REALSXP) abort();
-
     R_len_t gvars = GRAD_WRT_LEN(grad);
     R_len_t gn = JACOBIAN_ROWS(grad);
 
@@ -2380,7 +2378,6 @@ R_inspect(factors);
 #endif
 
     if (TYPEOF(factors) != REALSXP) abort();
-    if (TYPEOF(grad) != REALSXP) abort();
 
     R_len_t flen = LENGTH(factors);
     R_len_t gvars = GRAD_WRT_LEN(grad);
@@ -2396,16 +2393,16 @@ attribute_hidden SEXP mean_gradient (SEXP grad, R_len_t n)
 {
     RECURSIVE_GRADIENT_APPLY_NO_EXPAND (mean_gradient, grad, n);
 
-    if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN)
+    if ((JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) ||
+          ! (JACOBIAN_TYPE(grad) & (DIAGONAL_JACOBIAN | ONE_IN_ROW_JACOBIAN)))
         grad = expand_to_full_jacobian(grad);
 
     PROTECT(grad);
 
     if (TYPEOF(grad) != REALSXP) abort();
 
-    R_len_t glen = JACOBIAN_LENGTH(grad);
     R_len_t gvars = GRAD_WRT_LEN(grad);
-    if (glen != gvars * n) abort();
+    if (JACOBIAN_ROWS(grad) != n) abort();
 
     SEXP r = alloc_jacobian (gvars, 1);
 
@@ -2420,6 +2417,12 @@ attribute_hidden SEXP mean_gradient (SEXP grad, R_len_t n)
         else {
             for (i = 0; i < gvars; i++)
                 REAL(r)[i] = REAL(grad)[i] / n;
+        }
+    }
+    else if (JACOBIAN_TYPE(grad) & ONE_IN_ROW_JACOBIAN) {
+        memset (REAL(r), 0, LENGTH(r) * sizeof(double));
+        for (i = 0; i < n; i++) {
+            REAL(r) [(R_len_t)REAL(grad)[n+i]] += REAL(grad)[i] / n;
         }
     }
     else {
@@ -2869,30 +2872,23 @@ R_inspect(a);
 
     RECURSIVE_GRADIENT_APPLY2_NO_EXPAND (sum_gradient, grad, v, a, narm, n);
 
-    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
-
     if (v == R_NilValue)
         return grad;
-
-    if (TYPEOF(v) != REALSXP) abort();
 
     R_len_t gvars = GRAD_WRT_LEN (v);
 
     PROTECT(v);
     PROTECT(grad);
 
-    if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN)
+    if ((JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) || 
+           ! (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN))
         UNPROTECT_PROTECT(grad = expand_to_full_jacobian(grad));
 
-    if (JACOBIAN_TYPE(v) & SCALED_JACOBIAN) {
+    if ((JACOBIAN_TYPE(v) & SCALED_JACOBIAN) ||
+           ! (JACOBIAN_TYPE(v) & DIAGONAL_JACOBIAN)) {
         v = expand_to_full_jacobian(v);
         UNPROTECT(2); 
         PROTECT2(v,grad);
-    }
-
-    if (TYPEOF(grad) == REALSXP) {
-        if (JACOBIAN_TYPE(grad) != 0) abort();
-        if (JACOBIAN_LENGTH(grad) != gvars) abort();
     }
 
     SEXP r = grad;
@@ -2970,8 +2966,6 @@ R_inspect(a);
     RECURSIVE_GRADIENT_APPLY2_NO_EXPAND (prod_gradient, grad, v, a, 
                                          pprod, nprod, narm, n);
 
-    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
-
     R_len_t i, j, k;
 
     if (v == R_NilValue) {
@@ -2989,18 +2983,15 @@ R_inspect(a);
     PROTECT(v);
     PROTECT(grad);
 
-    if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN)
+    if ((JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) || 
+           ! (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN))
         UNPROTECT_PROTECT(grad = expand_to_full_jacobian(grad));
 
-    if (JACOBIAN_TYPE(v) & SCALED_JACOBIAN) {
+    if ((JACOBIAN_TYPE(v) & SCALED_JACOBIAN) ||
+           ! (JACOBIAN_TYPE(v) & DIAGONAL_JACOBIAN)) {
         v = expand_to_full_jacobian(v);
         UNPROTECT(2); 
         PROTECT2(v,grad);
-    }
-
-    if (TYPEOF(grad) == REALSXP) {
-        if (JACOBIAN_TYPE(grad) != 0) abort();
-        if (JACOBIAN_LENGTH(grad) != gvars) abort();
     }
 
     SEXP r = grad;
@@ -3235,72 +3226,155 @@ REprintf("--\n");
 R_inspect(v);
 #endif
 
-    RECURSIVE_GRADIENT_APPLY2 (subassign_range_numeric_gradient, grad, v,
-                               i, j, n);
-
-    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
-    if (v != R_NilValue && TYPEOF(v) != REALSXP) abort();
+    RECURSIVE_GRADIENT_APPLY2_NO_EXPAND (subassign_range_numeric_gradient, 
+                                         grad, v, i, j, n);
 
     if (i < 0) i = 0;
     if (i >= n) i = n-1;
     if (j >= n) j = n-1;
     if (j < i) abort();
 
-    PROTECT2(grad,v);
-
     R_len_t gvars = GRAD_WRT_LEN (grad != R_NilValue ? grad : v);
+    R_len_t sij = j-i;
 
     R_len_t h, k, m;
     SEXP res;
 
-    if (grad == R_NilValue) {
-        res = alloc_jacobian (gvars, n);
-        memset (REAL(res), 0, LENGTH(res) * sizeof(double));
-    }
-    else {
-        if (TYPEOF(grad) != REALSXP) abort();
-        if (LENGTH(grad) == (uint64_t) n * gvars)
-            res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
-        else {
-            res = alloc_jacobian (gvars, n);
-            m = JACOBIAN_ROWS(grad);
-            for (h = 0; h < gvars; h++) {
-                memcpy (REAL(res) + h*n, REAL(grad) + h*m, m * sizeof(double));
-                memset (REAL(res) + h*n + m, 0, (n-m) * sizeof(double));
+    const int compact_grad =  grad == R_NilValue 
+           || (JACOBIAN_TYPE(grad) & (DIAGONAL_JACOBIAN | ONE_IN_ROW_JACOBIAN))
+                && ! (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN);
+
+    const int compact_v =  v == R_NilValue 
+           || (JACOBIAN_TYPE(v) & (DIAGONAL_JACOBIAN | ONE_IN_ROW_JACOBIAN))
+                && ! (JACOBIAN_TYPE(v) & SCALED_JACOBIAN);
+
+    if (compact_grad && compact_v) {
+
+        PROTECT2(grad,v);
+
+        if (grad == R_NilValue || (m = JACOBIAN_ROWS(grad)) != n 
+                               || (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN)) {
+            res = alloc_one_in_row_jacobian (gvars, n);
+            memset (REAL(res), 0, LENGTH(res) * sizeof(double));
+            if (grad == R_NilValue) {
+                /* nothing more to do */
+            }
+            else if (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN) {
+                int diag_v1 = LENGTH(grad) == 1;
+                if (m > n) abort();
+                for (k = 0; k < m; k++) {
+                    REAL(res)[k] = diag_v1 ? *REAL(grad) : REAL(grad)[k];
+                    REAL(res)[n+k] = k;
+                }
+            }
+            else { /* JACOBIAN_TYPE(grad) & ONE_IN_ROW_JACOBIAN */
+                if (m > n) abort();
+                for (k = 0; k < m; k++) {
+                    REAL(res)[k] = REAL(grad)[k];
+                    REAL(res)[n+k] = REAL(grad)[m+k];
+                }
             }
         }
-    }
-
-    R_len_t sij = j-i;
-
-    if (v == R_NilValue || LENGTH(v) == 0) {
-        for (h = 0; h < gvars; h++) {
-            R_len_t hn = h*n;
-            for (k = 0; k <= sij; k++)
-                REAL(res)[hn + i + k] = 0;
+        else {  /* JACOBIAN_TYPE(grad) & ONE_IN_ROW_JACOBIAN */
+            res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
+            SET_JACOBIAN_TYPE (res, JACOBIAN_TYPE(grad));
         }
-    }
-    else {
-        m = JACOBIAN_ROWS(v);
-        for (h = 0; h < gvars; h++) {
-            R_len_t hn = h*n, hm = h*m;
+
+        if (v == R_NilValue || LENGTH(v) == 0) {
+            for (k = 0; k <= sij; k++)
+                REAL(res)[i + k] = 0;
+        }
+        else {
+            int diag_v = JACOBIAN_TYPE(v) & DIAGONAL_JACOBIAN;
+            int diag_v1 = diag_v && LENGTH(v) == 1;
+            m = JACOBIAN_ROWS(v);
             if (m == 1) {
-                double vv = REAL(v)[hm];
-                for (k = 0; k <= sij; k++)
-                    REAL(res)[hn + i + k] = vv;
+                double vv = REAL(v)[0];
+                double ix = diag_v ? 0 : REAL(v)[1];
+                for (k = 0; k <= sij; k++) {
+                    REAL(res)[i + k] = vv;
+                    REAL(res)[n + i + k] = ix;
+                }
             }
             else if (m >= sij) {
-                for (k = 0; k <= sij; k++)
-                    REAL(res)[hn + i + k] = REAL(v)[hm + k];
+                for (k = 0; k <= sij; k++) {
+                    REAL(res)[i + k] = diag_v1 ? *REAL(v) : REAL(v)[k];
+                    REAL(res)[n + i + k] = diag_v ? k : REAL(v)[m + k];
+                }
             }
             else {
                 R_len_t kv = 0;
                 for (k = 0; k <= sij; k++) {
-                    REAL(res)[hn + i + k] = REAL(v)[hm + kv];
+                    REAL(res)[i + k] = diag_v1 ? *REAL(v) : REAL(v)[kv];
+                    REAL(res)[n + i + k] = diag_v ? k : REAL(v)[m + kv];
                     if (++kv == m) kv = 0;
                 }
             }
         }
+
+        UNPROTECT(2);
+    }
+
+    else {
+
+        PROTECT2(grad,v);
+        grad = expand_to_full_jacobian(grad);
+        v = expand_to_full_jacobian(v);
+        UNPROTECT(2);
+
+        if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
+        if (v != R_NilValue && TYPEOF(v) != REALSXP) abort();
+
+        PROTECT2(grad,v);
+
+        if (grad == R_NilValue) {
+            res = alloc_jacobian (gvars, n);
+            memset (REAL(res), 0, LENGTH(res) * sizeof(double));
+        }
+        else {
+            m = JACOBIAN_ROWS(grad);
+            if (m == n)
+                res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
+            else {
+                res = alloc_jacobian (gvars, n);
+                for (h = 0; h < gvars; h++) {
+                    memcpy(REAL(res) + h*n, REAL(grad) + h*m, m*sizeof(double));
+                    memset(REAL(res) + h*n + m, 0, (n-m) * sizeof(double));
+                }
+            }
+        }
+
+        if (v == R_NilValue || LENGTH(v) == 0) {
+            for (h = 0; h < gvars; h++) {
+                R_len_t hn = h*n;
+                for (k = 0; k <= sij; k++)
+                    REAL(res)[hn + i + k] = 0;
+            }
+        }
+        else {
+            m = JACOBIAN_ROWS(v);
+            for (h = 0; h < gvars; h++) {
+                R_len_t hn = h*n, hm = h*m;
+                if (m == 1) {
+                    double vv = REAL(v)[hm];
+                    for (k = 0; k <= sij; k++)
+                        REAL(res)[hn + i + k] = vv;
+                }
+                else if (m >= sij) {
+                    for (k = 0; k <= sij; k++)
+                        REAL(res)[hn + i + k] = REAL(v)[hm + k];
+                }
+                else {
+                    R_len_t kv = 0;
+                    for (k = 0; k <= sij; k++) {
+                        REAL(res)[hn + i + k] = REAL(v)[hm + kv];
+                        if (++kv == m) kv = 0;
+                    }
+                }
+            }
+        }
+
+        UNPROTECT(2);
     }
 
 #if 0
@@ -3309,7 +3383,6 @@ R_inspect(res);
 REprintf("==\n");
 #endif
 
-    UNPROTECT(2);
     return res;
 }
 
@@ -3707,16 +3780,15 @@ R_inspect(arg);
     if (v == R_NilValue)
         return grad;
 
-    if (TYPEOF(v) != REALSXP) abort();
-    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
-
     PROTECT(v);
     PROTECT(grad);
 
-    if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN)
+    if ((JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) || 
+           ! (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN))
         UNPROTECT_PROTECT(grad = expand_to_full_jacobian(grad));
 
-    if (JACOBIAN_TYPE(v) & SCALED_JACOBIAN) {
+    if ((JACOBIAN_TYPE(v) & SCALED_JACOBIAN) ||
+           ! (JACOBIAN_TYPE(v) & DIAGONAL_JACOBIAN)) {
         v = expand_to_full_jacobian(v);
         UNPROTECT(2); 
         PROTECT2(v,grad);
