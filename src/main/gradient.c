@@ -3403,58 +3403,130 @@ REprintf("--\n");
 R_inspect(v);
 #endif
 
-    RECURSIVE_GRADIENT_APPLY2 (subassign_indexes_numeric_gradient, grad, v,
-                               indx, n);
-
-    if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
-    if (v != R_NilValue && TYPEOF(v) != REALSXP) abort();
-
-    PROTECT2(grad,v);
+    RECURSIVE_GRADIENT_APPLY2_NO_EXPAND (subassign_indexes_numeric_gradient,
+                                         grad, v, indx, n);
 
     R_len_t gvars = GRAD_WRT_LEN (grad != R_NilValue ? grad : v);
+    R_len_t l = LENGTH(indx);
 
-    R_len_t h, m;
+    R_len_t h, i, j, k, m;
     SEXP res;
 
-    if (grad == R_NilValue) {
-        res = alloc_jacobian (gvars, n);
-        memset (REAL(res), 0, LENGTH(res) * sizeof(double));
-    }
-    else {
-        if (TYPEOF(grad) != REALSXP) abort();
-        if (LENGTH(grad) == n * gvars)
-            res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
-        else {
-            res = alloc_jacobian (gvars, n);
-            m = JACOBIAN_ROWS(grad);
-            for (h = 0; h < gvars; h++) {
-                memcpy (REAL(res) + h*n, REAL(grad) + h*m, m * sizeof(double));
-                memset (REAL(res) + h*n + m, 0, (n-m) * sizeof(double));
+    const int compact_grad =  grad == R_NilValue
+           || (JACOBIAN_TYPE(grad) & (DIAGONAL_JACOBIAN | ONE_IN_ROW_JACOBIAN))
+                && ! (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN);
+
+    const int compact_v =  v == R_NilValue
+           || (JACOBIAN_TYPE(v) & (DIAGONAL_JACOBIAN | ONE_IN_ROW_JACOBIAN))
+                && ! (JACOBIAN_TYPE(v) & SCALED_JACOBIAN);
+
+    if (compact_grad && compact_v) {
+
+        PROTECT2(grad,v);
+
+        if (grad == R_NilValue || (m = JACOBIAN_ROWS(grad)) != n
+                               || (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN)) {
+            res = alloc_one_in_row_jacobian (gvars, n);
+            memset (REAL(res), 0, LENGTH(res) * sizeof(double));
+            if (grad == R_NilValue) {
+                /* nothing more to do */
+            }
+            else if (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN) {
+                int diag_v1 = LENGTH(grad) == 1;
+                if (m > n) abort();
+                for (k = 0; k < m; k++) {
+                    REAL(res)[k] = diag_v1 ? *REAL(grad) : REAL(grad)[k];
+                    REAL(res)[n+k] = k;
+                }
+            }
+            else { /* JACOBIAN_TYPE(grad) & ONE_IN_ROW_JACOBIAN */
+                if (m > n) abort();
+                for (k = 0; k < m; k++) {
+                    REAL(res)[k] = REAL(grad)[k];
+                    REAL(res)[n+k] = REAL(grad)[m+k];
+                }
             }
         }
-    }
-
-    R_len_t k = LENGTH(indx);
-
-    if (v == R_NilValue || LENGTH(v) == 0) {
-        for (R_len_t j = 0; j < k; j++) {
-            R_len_t i = INTEGER(indx)[j];
-            if (i >= 1 && i <= n)
-                for (h = 0; h < gvars; h++)
-                    REAL(res) [h*n + i-1] = 0.0;
+        else {  /* JACOBIAN_TYPE(grad) & ONE_IN_ROW_JACOBIAN */
+            res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
+            SET_JACOBIAN_TYPE (res, JACOBIAN_TYPE(grad));
         }
+
+        if (v == R_NilValue || LENGTH(v) == 0) {
+            for (j = 0; j < l; j++) {
+                i = INTEGER(indx)[j];
+                if (i >= 1 && i <= n)
+                    REAL(res) [i-1] = 0.0;
+            }
+        }
+        else {
+            m = JACOBIAN_ROWS(v);
+            int diag_v = JACOBIAN_TYPE(v) & DIAGONAL_JACOBIAN;
+            R_len_t vl = diag_v && LENGTH(v) == 1 ? 1 : m;
+            R_len_t jv = 0;
+            for (j = 0; j < l; j++) {
+                i = INTEGER(indx)[j];
+                if (i >= 1 && i <= n) {
+                    REAL(res)[i-1] = REAL(v)[jv];
+                    REAL(res)[n + i-1] = diag_v ? j : REAL(v)[m + jv];
+                }
+                if (++jv == vl) jv = 0;
+            }
+        }
+
+        UNPROTECT(2);
     }
+
     else {
-        if (TYPEOF(v) != REALSXP) abort();
-        m = JACOBIAN_ROWS(v);
-        R_len_t jv = 0;
-        for (R_len_t j = 0; j < k; j++) {
-            R_len_t i = INTEGER(indx)[j];
-            if (i >= 1 && i <= n)
-                for (h = 0; h < gvars; h++)
-                    REAL(res) [h*n + i-1] = REAL(v) [h*m + jv];
-            if (++jv == m) jv = 0;
+
+        PROTECT2(grad,v);
+        grad = expand_to_full_jacobian(grad);
+        v = expand_to_full_jacobian(v);
+        UNPROTECT(2);
+
+        if (grad != R_NilValue && TYPEOF(grad) != REALSXP) abort();
+        if (v != R_NilValue && TYPEOF(v) != REALSXP) abort();
+
+        PROTECT2(grad,v);
+
+        if (grad == R_NilValue) {
+            res = alloc_jacobian (gvars, n);
+            memset (REAL(res), 0, LENGTH(res) * sizeof(double));
         }
+        else {
+            m = JACOBIAN_ROWS(grad);
+            if (m == n)
+                res = NAMEDCNT_GT_1(grad) ? duplicate(grad) : grad;
+            else {
+                res = alloc_jacobian (gvars, n);
+                for (h = 0; h < gvars; h++) {
+                    memcpy(REAL(res) + h*n, REAL(grad) + h*m, m*sizeof(double));
+                    memset(REAL(res) + h*n + m, 0, (n-m) * sizeof(double));
+                }
+            }
+        }
+
+        if (v == R_NilValue || LENGTH(v) == 0) {
+            for (j = 0; j < l; j++) {
+                i = INTEGER(indx)[j];
+                if (i >= 1 && i <= n)
+                    for (h = 0; h < gvars; h++)
+                        REAL(res) [h*n + i-1] = 0.0;
+            }
+        }
+        else {
+            m = JACOBIAN_ROWS(v);
+            R_len_t jv = 0;
+            for (j = 0; j < l; j++) {
+                i = INTEGER(indx)[j];
+                if (i >= 1 && i <= n)
+                    for (h = 0; h < gvars; h++)
+                        REAL(res) [h*n + i-1] = REAL(v) [h*m + jv];
+                if (++jv == m) jv = 0;
+            }
+        }
+
+        UNPROTECT(2);
     }
 
 #if 0
@@ -3463,7 +3535,6 @@ R_inspect(res);
 REprintf("==\n");
 #endif
 
-    UNPROTECT(2);
     return res;
 }
 
