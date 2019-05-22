@@ -202,16 +202,17 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 
         if (JACOBIAN_TYPE(grad) != PRODUCT_JACOBIAN) abort();  /* no others */
 
-        R_len_t gvars = GRAD_WRT_LEN(grad);
-        R_len_t rows = JACOBIAN_ROWS(grad);
-
         SEXP right, new;
 
         PROTECT (right = expand_to_full_jacobian (NEXT_JACOBIAN(grad)));
+
+        R_len_t gvars = GRAD_WRT_LEN(grad);
+        R_len_t cols = JACOBIAN_ROWS(right);
+        R_len_t rows = LENGTH(grad) / cols;
+
         new = alloc_jacobian (gvars, rows);
 
-        matprod_mat_mat (REAL(grad), REAL(right), REAL(new), 
-                         rows, JACOBIAN_ROWS(right), gvars);
+        matprod_mat_mat (REAL(grad), REAL(right), REAL(new), rows, cols, gvars);
 
         UNPROTECT(1);
         return new;
@@ -956,10 +957,10 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
 
         R_len_t vlen = LENGTH(value);
         R_len_t gvars = GRAD_WRT_LEN(idg);
+/*
         uint64_t Jlen = (uint64_t)vlen * (uint64_t)gvars;
-
         if (JACOBIAN_LENGTH(grad) != Jlen) abort();
-
+*/
         grad = expand_to_full_jacobian (grad);
 
         if (gvars != 1) {
@@ -4226,8 +4227,9 @@ R_inspect(b); REprintf("==\n");
         }
         else {
             res = NAMEDCNT_EQ_0(b) ? b : alloc_jacobian (gvars, n);
-            SET_JACOBIAN_TYPE (b, PRODUCT_JACOBIAN);
-            SET_NEXT_JACOBIAN (b, a);
+            SET_JACOBIAN_TYPE (res, PRODUCT_JACOBIAN);
+            SET_GRAD_WRT_LEN (res, gvars);
+            SET_NEXT_JACOBIAN (res, a);
         }
 
         UNPROTECT(1);
