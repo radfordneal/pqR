@@ -198,6 +198,25 @@ static SEXP expand_to_full_jacobian (SEXP grad)
     if (JACOBIAN_CACHED_AS_ATTRIB(grad))
         return CACHED_JACOBIAN(grad);
 
+    if (JACOBIAN_TYPE(grad) & PRODUCT_JACOBIAN) {
+
+        if (JACOBIAN_TYPE(grad) != PRODUCT_JACOBIAN) abort();  /* no others */
+
+        R_len_t gvars = GRAD_WRT_LEN(grad);
+        R_len_t rows = JACOBIAN_ROWS(grad);
+
+        SEXP right, new;
+
+        PROTECT (right = expand_to_full_jacobian (NEXT_JACOBIAN(grad)));
+        new = alloc_jacobian (gvars, rows);
+
+        matprod_mat_mat (REAL(grad), REAL(right), REAL(new), 
+                         rows, JACOBIAN_ROWS(right), gvars);
+
+        UNPROTECT(1);
+        return new;
+    }
+
     if (JACOBIAN_TYPE(grad) & CLOSURE_JACOBIAN) {
 
         if (TYPEOF(grad) != EXPRSXP || LENGTH(grad) != 2) abort();
@@ -272,7 +291,8 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         SET_CACHED_JACOBIAN (grad, new);
         SET_NAMEDCNT (new, NAMEDCNT(grad));
         SET_JACOBIAN_CACHED_AS_ATTRIB (grad, 1);
-        SET_JACOBIAN_TYPE (grad, NOW_CACHED_JACOBIAN); /* scaled form defunct */
+        SET_JACOBIAN_TYPE (grad, NOW_CACHED_JACOBIAN);
+        /* scaled form is now defunct */
 
         UNPROTECT(2);
         return new;
@@ -335,6 +355,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         SET_NAMEDCNT (new, NAMEDCNT(grad));
         SET_JACOBIAN_CACHED_AS_ATTRIB(grad,1);
         /* one-in-row form remains valid */
+
         UNPROTECT(1);
         return new;
     }
@@ -4199,8 +4220,15 @@ R_inspect(b); REprintf("==\n");
             goto ret;
         }
 
-        res = alloc_jacobian (gvars, n);
-        matprod_mat_mat (REAL(b), REAL(a), REAL(res), n, k, gvars);
+        if (0) {  /* never now, for testing */
+            res = alloc_jacobian (gvars, n);
+            matprod_mat_mat (REAL(b), REAL(a), REAL(res), n, k, gvars);
+        }
+        else {
+            res = NAMEDCNT_EQ_0(b) ? b : alloc_jacobian (gvars, n);
+            SET_JACOBIAN_TYPE (b, PRODUCT_JACOBIAN);
+            SET_NEXT_JACOBIAN (b, a);
+        }
 
         UNPROTECT(1);
     }

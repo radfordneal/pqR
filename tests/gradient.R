@@ -2435,7 +2435,7 @@ with gradient (a=c(3,9,7,4,2,6,5,8)) {
   pr("B"); b[[3]] <- a[[5]];
   pr("C"); b[[7]] <- a[[2]];
   pr("D"); c <- 3*b
-  pr("D"); list(b,c)
+  pr("E"); list(b,c)
 }
 pr("end")
 
@@ -2445,7 +2445,7 @@ with gradient (a=c(3,9,7,4,2,6,5,8)) {
   pr("B"); b[[3]] <- a[5];
   pr("C"); b[[7]] <- a[2];
   pr("D"); c <- 3*b
-  pr("D"); list(b,c)
+  pr("E"); list(b,c)
 }
 pr("end")
 
@@ -2455,7 +2455,7 @@ with gradient (a=c(3,9,7,4,2,6,5,8)) {
   pr("B"); b[3..4] <- a[5];
   pr("C"); b[7..9] <- a[2..4];
   pr("D"); c <- 3*b
-  pr("D"); list(b,c)
+  pr("E"); list(b,c)
 }
 pr("end")
 
@@ -2465,7 +2465,7 @@ with gradient (a=c(3,9,7,4,2,6,5,8)) {
   pr("B"); b[c(4,3)] <- a[5];
   pr("C"); b[c(7,9,8)] <- a[c(2,4,3)];
   pr("D"); c <- 3*b
-  pr("D"); list(b,c)
+  pr("E"); list(b,c)
 }
 pr("end")
 
@@ -2475,6 +2475,14 @@ with gradient (a=c(3,9,7,4,2,6,5,8)) {
   pr("B"); b[c(4,3)] <- a[5]+a[7];
   pr("C"); b[c(7,9,8)] <- a[c(2,4,3)];
   pr("D"); c <- 3*b
-  pr("D"); list(b,c)
+  pr("E"); list(b,c)
+}
+pr("end")
+
+pr("start")
+with gradient (a=c(3,9,7,4,2,6,5,8)) {
+  pr("A"); b <- a[1]+a[8]
+  pr("B"); r <- back gradient (b) rep(b,9)
+  pr("C"); r
 }
 pr("end")
