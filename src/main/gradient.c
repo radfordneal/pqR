@@ -54,10 +54,11 @@
 #define SCALED_JACOBIAN 1    /* Scaled form of Jacobian in attribute.  Scaling
                                 factor is diagonal matrix in remainder. */
 #define PRODUCT_JACOBIAN 2   /* Product with Jacobian in attribute on right.
-                                Matrix on left as specified by other bits, must
-                                have number of rows explicitly available. */
-#define SUM_JACOBIAN 4       /* Sum with Jacobian in attribute. */
-#define MATPROD_JACOBIAN 8   /* Jacobian from matrix product with attribute. */
+                                Matrix on left as second element of EXPRSXP. */
+#define SUM_JACOBIAN 4       /* Sum of Jacobian in attribute with matrices 
+                                as second an later elements in EXPRSXP. */
+#define MATPROD_JACOBIAN 8   /* Jacobian from matrix product with attribute of
+                                second element in EXPRSXP (on left or right). */
 #define DIAGONAL_JACOBIAN 16 /* Only diagonal stored; single value -> all same*/
 #define ONE_IN_ROW_JACOBIAN 32 /* Jacobian with one non-zero element per row */
 #define CLOSURE_JACOBIAN 64   /* Jacobian specified by function closure */
@@ -72,7 +73,8 @@
 #define JACOBIAN_ROWS0(g) \
   (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN   ? GRAD_WRT_LEN(g) : \
    JACOBIAN_TYPE(g) & ONE_IN_ROW_JACOBIAN ? LENGTH(g)/2 : \
-   JACOBIAN_TYPE(g) & CLOSURE_JACOBIAN    ? *INTEGER(VECTOR_ELT(g,0)) : \
+   JACOBIAN_TYPE(g) & (CLOSURE_JACOBIAN | PRODUCT_JACOBIAN) \
+                                          ? *INTEGER(VECTOR_ELT(g,0)) : \
                                             LENGTH(g) / GRAD_WRT_LEN(g))
 
 #define JACOBIAN_LENGTH(g)                /* Rows X Cols of full Jacobian */ \
@@ -83,7 +85,7 @@
      ? (uint64_t) GRAD_WRT_LEN(g) * GRAD_WRT_LEN(g) : \
    JACOBIAN_TYPE(g) & ONE_IN_ROW_JACOBIAN \
      ? (uint64_t) (LENGTH(g)/2) * GRAD_WRT_LEN(g) : \
-   JACOBIAN_TYPE(g) & CLOSURE_JACOBIAN \
+   JACOBIAN_TYPE(g) & (CLOSURE_JACOBIAN | PRODUCT_JACOBIAN) \
      ? (uint64_t) *INTEGER(VECTOR_ELT(g,0)) * GRAD_WRT_LEN(g) : \
        (uint64_t) LENGTH(g))
 
@@ -103,6 +105,7 @@
 #define SET_NEXT_JACOBIAN(g,v) SET_ATTRIB_TO_ANYTHING((g),(v))
 
 #define JACOBIAN_CLOSURE(g) VECTOR_ELT((g),1)
+#define JACOBIAN_MATRIX1(g) VECTOR_ELT((g),1)
 
 
 /* -------------------------------------------------------------------------- */
@@ -172,6 +175,22 @@ static SEXP alloc_closure_jacobian (R_len_t gvars, R_len_t n, SEXP closure)
     return res;
 }
 
+static SEXP alloc_product_jacobian (R_len_t gvars, R_len_t n,
+                                    SEXP left, SEXP right)
+{
+    PROTECT2(left,right);
+    SEXP res = allocVector (EXPRSXP, 2);
+    PROTECT(res);
+    SET_VECTOR_ELT (res, 1, left);
+    SET_VECTOR_ELT (res, 0, ScalarIntegerMaybeConst(n));
+    SET_GRAD_WRT_LEN (res, gvars);
+    SET_JACOBIAN_TYPE (res, PRODUCT_JACOBIAN);
+    SET_NEXT_JACOBIAN (res, right);
+    UNPROTECT(3);
+
+    return res;
+}
+
 
 static void inc_gradient_namedcnt (SEXP v)
 {
@@ -188,17 +207,21 @@ TYPEOF(v),length(v),NAMEDCNT(v),CPTR_FROM_SEXP(v)/64,CPTR_FROM_SEXP(v)%64,v);
         }
         break;
     case VECSXP:
+    case EXPRSXP:
         INC_NAMEDCNT(v);
+        INC_NAMEDCNT(ATTRIB_W(v));
         R_len_t len = LENGTH(v);
         R_len_t i;
         for (i = 0; i < len; i++)
             if (VECTOR_ELT(v,i) != R_NilValue)
                 inc_gradient_namedcnt (VECTOR_ELT(v,i));
         break;
-    case EXPRSXP:
     case REALSXP:
         INC_NAMEDCNT(v);
         INC_NAMEDCNT(ATTRIB_W(v));
+        break;
+    default:
+        INC_NAMEDCNT(v);
         break;
     }
 }
@@ -218,18 +241,22 @@ TYPEOF(v),length(v),NAMEDCNT(v),CPTR_FROM_SEXP(v)/64,CPTR_FROM_SEXP(v)%64,v);
                 dec_gradient_namedcnt(CAR(v));
         }
         break;
+    case EXPRSXP:
     case VECSXP:
         DEC_NAMEDCNT(v);
+        DEC_NAMEDCNT(ATTRIB_W(v));
         R_len_t len = LENGTH(v);
         R_len_t i;
         for (i = 0; i < len; i++)
             if (VECTOR_ELT(v,i) != R_NilValue)
                 dec_gradient_namedcnt (VECTOR_ELT(v,i));
         break;
-    case EXPRSXP:
     case REALSXP:
         DEC_NAMEDCNT(v);
         DEC_NAMEDCNT(ATTRIB_W(v));
+        break;
+    default:
+        DEC_NAMEDCNT(v);
         break;
     }
 }
@@ -273,17 +300,18 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 
         if (JACOBIAN_TYPE(grad) != PRODUCT_JACOBIAN) abort();  /* no others */
 
-        SEXP right, new;
+        SEXP left, right, new;
 
         PROTECT (right = expand_to_full_jacobian (NEXT_JACOBIAN(grad)));
+        left = JACOBIAN_MATRIX1(grad);
 
         R_len_t gvars = GRAD_WRT_LEN(grad);
-        R_len_t cols = JACOBIAN_ROWS(right);
-        R_len_t rows = LENGTH(grad) / cols;
+        R_len_t rows = JACOBIAN_ROWS(grad);
+        R_len_t cols = LENGTH(left) / rows;
 
         new = alloc_jacobian (gvars, rows);
 
-        matprod_mat_mat (REAL(grad), REAL(right), REAL(new), rows, cols, gvars);
+        matprod_mat_mat (REAL(left), REAL(right), REAL(new), rows, cols, gvars);
 
         UNPROTECT(1);
         return new;
@@ -1022,16 +1050,13 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
         return res;
     }
 
-    if (TYPEOF(grad) == REALSXP) {
+    if (TYPEOF(grad) == REALSXP || TYPEOF(grad) == EXPRSXP) {
 
         if (TYPEOF(value) != REALSXP) abort();
 
         R_len_t vlen = LENGTH(value);
         R_len_t gvars = GRAD_WRT_LEN(idg);
-/*
-        uint64_t Jlen = (uint64_t)vlen * (uint64_t)gvars;
-        if (JACOBIAN_LENGTH(grad) != Jlen) abort();
-*/
+
         grad = expand_to_full_jacobian (grad);
 
         if (gvars != 1) {
@@ -1046,7 +1071,7 @@ static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
         return grad;
     }
 
-    abort();  /* 'grad' should always be R_NilValue, VECSXP, or REALSXP */
+    abort();  /* 'grad' should be R_NilValue, VECSXP, EXPRSXP, or REALSXP */
 }
 
 
@@ -4209,9 +4234,6 @@ R_inspect(b); REprintf("==\n");
 
     PROTECT2(base,a);
 
-    if (base != R_NilValue && TYPEOF(base) != REALSXP) abort();
-    if (TYPEOF(a) != REALSXP) abort();
-
     if (JACOBIAN_TYPE(b) != 0 && JACOBIAN_TYPE(b) != DIAGONAL_JACOBIAN)
         b = expand_to_full_jacobian(b);
 
@@ -4296,12 +4318,8 @@ R_inspect(b); REprintf("==\n");
             res = alloc_jacobian (gvars, n);
             matprod_mat_mat (REAL(b), REAL(a), REAL(res), n, k, gvars);
         }
-        else {
-            res = NAMEDCNT_EQ_0(b) ? b : alloc_jacobian (gvars, n);
-            SET_JACOBIAN_TYPE (res, PRODUCT_JACOBIAN);
-            SET_GRAD_WRT_LEN (res, gvars);
-            SET_NEXT_JACOBIAN (res, a);
-        }
+        else
+            res = alloc_product_jacobian (gvars, n, b, a);
 
         UNPROTECT(1);
     }
@@ -4551,6 +4569,7 @@ static R_len_t Jacobian_rows (SEXP g)
             if (r != 0)
                 return r;
         }
+        return 0;
     }
 
     if (TYPEOF(g) == VECSXP) {
@@ -4559,16 +4578,10 @@ static R_len_t Jacobian_rows (SEXP g)
             if (r != 0)
                 return r;
         }
+        return 0;
     }
 
-    if (TYPEOF(g) == REALSXP) {
-        R_len_t gvars = GRAD_WRT_LEN(g);
-        r = JACOBIAN_ROWS(g);
-        if (JACOBIAN_LENGTH(g) != r * gvars) abort();
-        return r;
-    }
-
-    abort();
+    return JACOBIAN_ROWS(g);
 }
 
 static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,

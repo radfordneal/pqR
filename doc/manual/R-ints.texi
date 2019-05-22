@@ -1108,8 +1108,10 @@ matrix is always the number of columns in the full Jacobian matrix
 a compact represention of the Jacobian matrix).
 
 A Jacobian matrix may also be represented by a function closure,
-stored in an @code{EXPRSXP} vector, which has @code{GRAD_WRT_LEN}
-and other fields as for REALSXP vectors representing Jacobian matrices.
+stored in an @code{EXPRSXP} vector, which has @code{GRAD_WRT_LEN} and
+other fields as for REALSXP vectors representing Jacobian matrices,
+including @code{JACOBIAN_TYPE}.  Other compact forms may also be
+represented with @code{EXPRSXP} vectors.
 
 
 @node Contexts, Argument evaluation, Gradient information, R Internal Structures
