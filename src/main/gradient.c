@@ -37,6 +37,77 @@
 #include <helpers/helpers-app.h>
 
 
+/* -------------------------------------------------------------------------
+   IMPORTANT NOTE:  See the section on "Gradient information" in R-ints for 
+   more documentation on the scheme for handling gradients.  It should be
+   kept in sync with the code.
+   ------------------------------------------------------------------------- */
+
+
+/* Access to Jacobian matrices. */
+
+#define JACOBIAN_TYPE(x) \
+  NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp>>8)
+#define SET_JACOBIAN_TYPE(x,v) \
+ (UPTR_FROM_SEXP(x)->sxpinfo.gp = UPTR_FROM_SEXP(x)->sxpinfo.gp&0xff | ((v)<<8))
+
+#define SCALED_JACOBIAN 1    /* Scaled form of Jacobian in attribute.  Scaling
+                                factor is diagonal matrix in remainder. */
+#define PRODUCT_JACOBIAN 2   /* Product with Jacobian in attribute on right.
+                                Matrix on left as specified by other bits, must
+                                have number of rows explicitly available. */
+#define SUM_JACOBIAN 4       /* Sum with Jacobian in attribute. */
+#define MATPROD_JACOBIAN 8   /* Jacobian from matrix product with attribute. */
+#define DIAGONAL_JACOBIAN 16 /* Only diagonal stored; single value -> all same*/
+#define ONE_IN_ROW_JACOBIAN 32 /* Jacobian with one non-zero element per row */
+#define CLOSURE_JACOBIAN 64   /* Jacobian specified by function closure */
+#define NOW_CACHED_JACOBIAN 128  /* Only cached value valid - previous compact
+                                    form no longer available */
+
+#define JACOBIAN_COLS(g) GRAD_WRT_LEN(g)  /* Number of columns in Jacobian */
+
+#define JACOBIAN_ROWS(g)                  /* Number of rows in Jacobian */ \
+  (JACOBIAN_TYPE(g) & SCALED_JACOBIAN ? JACOBIAN_ROWS0(NEXT_JACOBIAN(g)) : \
+                                        JACOBIAN_ROWS0(g))
+#define JACOBIAN_ROWS0(g) \
+  (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN   ? GRAD_WRT_LEN(g) : \
+   JACOBIAN_TYPE(g) & ONE_IN_ROW_JACOBIAN ? LENGTH(g)/2 : \
+   JACOBIAN_TYPE(g) & CLOSURE_JACOBIAN    ? *INTEGER(VECTOR_ELT(g,0)) : \
+                                            LENGTH(g) / GRAD_WRT_LEN(g))
+
+#define JACOBIAN_LENGTH(g)                /* Rows X Cols of full Jacobian */ \
+  (JACOBIAN_TYPE(g) & SCALED_JACOBIAN ? JACOBIAN_LEN0(NEXT_JACOBIAN(g)) : \
+                                        JACOBIAN_LEN0(g))
+#define JACOBIAN_LEN0(g) \
+  (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN \
+     ? (uint64_t) GRAD_WRT_LEN(g) * GRAD_WRT_LEN(g) : \
+   JACOBIAN_TYPE(g) & ONE_IN_ROW_JACOBIAN \
+     ? (uint64_t) (LENGTH(g)/2) * GRAD_WRT_LEN(g) : \
+   JACOBIAN_TYPE(g) & CLOSURE_JACOBIAN \
+     ? (uint64_t) *INTEGER(VECTOR_ELT(g,0)) * GRAD_WRT_LEN(g) : \
+       (uint64_t) LENGTH(g))
+
+#define JACOBIAN_VALUE_LENGTH(g) \
+  (JACOBIAN_TYPE(g) & ONE_IN_ROW_JACOBIAN ? LENGTH(g)/2 : LENGTH(g))
+
+#define JACOBIAN_CACHED_AS_ATTRIB(g) \
+  (TYPEOF(g) == REALSXP && NOT_LVALUE(UPTR_FROM_SEXP(g)->sxpinfo.base_sym_env))
+
+#define SET_JACOBIAN_CACHED_AS_ATTRIB(g,v) \
+  (UPTR_FROM_SEXP(g)->sxpinfo.base_sym_env = (v))
+
+#define CACHED_JACOBIAN(g) ATTRIB_W(g)
+#define SET_CACHED_JACOBIAN(g,v) SET_ATTRIB_TO_ANYTHING((g),(v))
+
+#define NEXT_JACOBIAN(g) ATTRIB_W(g)
+#define SET_NEXT_JACOBIAN(g,v) SET_ATTRIB_TO_ANYTHING((g),(v))
+
+#define JACOBIAN_CLOSURE(g) VECTOR_ELT((g),1)
+
+
+/* -------------------------------------------------------------------------- */
+
+
 static void R_NORETURN gradient_matrix_too_large_error (void) {
     error (_("gradient matrix would be too large"));
 }
