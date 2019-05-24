@@ -336,6 +336,14 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 
         matprod_mat_mat (REAL(left), REAL(right), REAL(new), rows, cols, gvars);
 
+        SET_CACHED_JACOBIAN (grad, new);
+        SET_NAMEDCNT (new, NAMEDCNT(grad));
+        SET_JACOBIAN_CACHED_AS_ATTRIB (grad, 1);
+        SET_JACOBIAN_TYPE (grad, NOW_CACHED_JACOBIAN);
+        SET_VECTOR_ELT (grad, 0, R_NilValue);  /* recover memory */
+        SET_VECTOR_ELT (grad, 1, R_NilValue);
+        /* product form is now defunct */
+
         UNPROTECT(2);
         return new;
     }
@@ -358,6 +366,14 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         new = alloc_jacobian (gvars, n * m);
 
         matprod_mat_mat (REAL(left), REAL(right), REAL(new), n, k, m * gvars);
+
+        SET_CACHED_JACOBIAN (grad, new);
+        SET_NAMEDCNT (new, NAMEDCNT(grad));
+        SET_JACOBIAN_CACHED_AS_ATTRIB (grad, 1);
+        SET_JACOBIAN_TYPE (grad, NOW_CACHED_JACOBIAN);
+        SET_VECTOR_ELT (grad, 0, R_NilValue);  /* recover memory */
+        SET_VECTOR_ELT (grad, 1, R_NilValue);
+        /* matprod form is now defunct */
 
         UNPROTECT(2);
         return new;
