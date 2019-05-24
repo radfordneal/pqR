@@ -56,9 +56,11 @@
 #define PRODUCT_JACOBIAN 2   /* Product with Jacobian in attribute on right.
                                 Matrix on left as second element of EXPRSXP. */
 #define SUM_JACOBIAN 4       /* Sum of Jacobian in attribute with matrices 
-                                as second an later elements in EXPRSXP. */
-#define MATPROD_JACOBIAN 8   /* Jacobian from matrix product with attribute of
-                                second element in EXPRSXP (on left or right). */
+                                as second and later elements in EXPRSXP. */
+#define MATPROD_JACOBIAN  8  /* Jacobian from matrix product of attribute with
+                                second element in EXPRSXP, order and whether
+                                transposed indicated by other gp bits.  Third
+                                element of EXPRSXP is # of rows in factor.*/
 #define DIAGONAL_JACOBIAN 16 /* Only diagonal stored; single value -> all same*/
 #define ONE_IN_ROW_JACOBIAN 32 /* Jacobian with one non-zero element per row */
 #define CLOSURE_JACOBIAN 64   /* Jacobian specified by function closure */
@@ -73,7 +75,7 @@
 #define JACOBIAN_ROWS0(g) \
   (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN   ? GRAD_WRT_LEN(g) : \
    JACOBIAN_TYPE(g) & ONE_IN_ROW_JACOBIAN ? LENGTH(g)/2 : \
-   JACOBIAN_TYPE(g) & (CLOSURE_JACOBIAN | PRODUCT_JACOBIAN) \
+   JACOBIAN_TYPE(g) & (CLOSURE_JACOBIAN | PRODUCT_JACOBIAN | MATPROD_JACOBIAN) \
                                           ? *INTEGER(VECTOR_ELT(g,0)) : \
                                             LENGTH(g) / GRAD_WRT_LEN(g))
 
@@ -85,7 +87,7 @@
      ? (uint64_t) GRAD_WRT_LEN(g) * GRAD_WRT_LEN(g) : \
    JACOBIAN_TYPE(g) & ONE_IN_ROW_JACOBIAN \
      ? (uint64_t) (LENGTH(g)/2) * GRAD_WRT_LEN(g) : \
-   JACOBIAN_TYPE(g) & (CLOSURE_JACOBIAN | PRODUCT_JACOBIAN) \
+   JACOBIAN_TYPE(g) & (CLOSURE_JACOBIAN | PRODUCT_JACOBIAN | MATPROD_JACOBIAN) \
      ? (uint64_t) *INTEGER(VECTOR_ELT(g,0)) * GRAD_WRT_LEN(g) : \
        (uint64_t) LENGTH(g))
 
@@ -106,6 +108,7 @@
 
 #define JACOBIAN_CLOSURE(g) VECTOR_ELT((g),1)
 #define JACOBIAN_MATRIX1(g) VECTOR_ELT((g),1)
+#define JACOBIAN_MAT_ROWS(g) (*INTEGER(VECTOR_ELT((g),2)))
 
 
 /* -------------------------------------------------------------------------- */
@@ -186,6 +189,23 @@ static SEXP alloc_product_jacobian (R_len_t gvars, R_len_t n,
     SET_GRAD_WRT_LEN (res, gvars);
     SET_JACOBIAN_TYPE (res, PRODUCT_JACOBIAN);
     SET_NEXT_JACOBIAN (res, right);
+    UNPROTECT(3);
+
+    return res;
+}
+
+static SEXP alloc_matprod_jacobian (R_len_t gvars, R_len_t n, R_len_t nr,
+                                    SEXP factor, SEXP grad)
+{
+    PROTECT2(factor,grad);
+    SEXP res = allocVector (EXPRSXP, 3);
+    PROTECT(res);
+    SET_VECTOR_ELT (res, 0, ScalarIntegerMaybeConst(n));
+    SET_VECTOR_ELT (res, 1, factor);
+    SET_VECTOR_ELT (res, 2, ScalarIntegerMaybeConst(nr));
+    SET_GRAD_WRT_LEN (res, gvars);
+    SET_JACOBIAN_TYPE (res, MATPROD_JACOBIAN);
+    SET_NEXT_JACOBIAN (res, grad);
     UNPROTECT(3);
 
     return res;
@@ -296,6 +316,10 @@ static SEXP expand_to_full_jacobian (SEXP grad)
     if (JACOBIAN_CACHED_AS_ATTRIB(grad))
         return CACHED_JACOBIAN(grad);
 
+    PROTECT(grad);
+
+    R_len_t gvars = GRAD_WRT_LEN(grad);
+
     if (JACOBIAN_TYPE(grad) & PRODUCT_JACOBIAN) {
 
         if (JACOBIAN_TYPE(grad) != PRODUCT_JACOBIAN) abort();  /* no others */
@@ -305,7 +329,6 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         PROTECT (right = expand_to_full_jacobian (NEXT_JACOBIAN(grad)));
         left = JACOBIAN_MATRIX1(grad);
 
-        R_len_t gvars = GRAD_WRT_LEN(grad);
         R_len_t rows = JACOBIAN_ROWS(grad);
         R_len_t cols = LENGTH(left) / rows;
 
@@ -313,7 +336,30 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 
         matprod_mat_mat (REAL(left), REAL(right), REAL(new), rows, cols, gvars);
 
-        UNPROTECT(1);
+        UNPROTECT(2);
+        return new;
+    }
+
+    if (JACOBIAN_TYPE(grad) & MATPROD_JACOBIAN) {
+
+        /* Only handles factor on left, for %*%, at the moment. */
+
+        if (JACOBIAN_TYPE(grad) != MATPROD_JACOBIAN) abort();  /* no others */
+
+        SEXP left, right, new;
+
+        PROTECT (right = expand_to_full_jacobian (NEXT_JACOBIAN(grad)));
+        left = JACOBIAN_MATRIX1(grad);
+
+        R_len_t n = JACOBIAN_MAT_ROWS(grad);
+        R_len_t k = LENGTH(left) / n;
+        R_len_t m = JACOBIAN_ROWS(right) / k;
+
+        new = alloc_jacobian (gvars, n * m);
+
+        matprod_mat_mat (REAL(left), REAL(right), REAL(new), n, k, m * gvars);
+
+        UNPROTECT(2);
         return new;
     }
 
@@ -323,11 +369,9 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         if (TYPEOF(VECTOR_ELT(grad,1)) != CLOSXP) abort();
         if (TYPEOF(VECTOR_ELT(grad,0)) != INTSXP) abort();
 
-        R_len_t gvars = GRAD_WRT_LEN(grad);
         R_len_t rows = JACOBIAN_ROWS(grad);
         SEXP call, new;
 
-        PROTECT (grad);
         PROTECT (call = LCONS (JACOBIAN_CLOSURE(grad), R_NilValue));
         new = eval (call, R_EmptyEnv);
         if (NAMEDCNT_GT_0(new))
@@ -362,11 +406,9 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         SEXP next, new;
         R_len_t i;
 
-        PROTECT (grad);
         PROTECT (next = expand_to_full_jacobian (NEXT_JACOBIAN(grad)));
 
         R_len_t len = LENGTH(next);
-        R_len_t gvars = GRAD_WRT_LEN(next);
         new = NAMEDCNT_EQ_0(next) ? next 
                                   : alloc_jacobian (gvars, len / gvars);
 
@@ -403,7 +445,6 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         R_len_t gvars = GRAD_WRT_LEN(grad);
         R_len_t i, j;
 
-        PROTECT(grad);
         SEXP new = alloc_jacobian (gvars, gvars);
         memset (REAL(new), 0, LENGTH(new) * sizeof(double));
 
@@ -438,11 +479,9 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 
     if (JACOBIAN_TYPE(grad) & ONE_IN_ROW_JACOBIAN) {
 
-        R_len_t gvars = GRAD_WRT_LEN(grad);
         R_len_t n = LENGTH(grad)/2;
         R_len_t i, j;
 
-        PROTECT(grad);
         SEXP new = alloc_jacobian (gvars, n);
         memset (REAL(new), 0, LENGTH(new) * sizeof(double));
 
@@ -460,6 +499,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         return new;
     }
 
+    UNPROTECT(1);
     return grad;
 }
 
@@ -3170,7 +3210,8 @@ R_inspect(a);
 }
 
 
-/* Find gradient of a matrix product.
+/* Find gradient of a matrix product.  The primop argument is 0 for %*%,
+   1 for crossprod, and 2 for tcrossprod.
 
    Protects its x_grad and y_grad arguments. */
 
@@ -3197,8 +3238,17 @@ REprintf("--\n");
     R_len_t gvars = GRAD_WRT_LEN (x_grad != R_NilValue ? x_grad : y_grad);
 
     R_len_t sz = nrows * ncols;
-    int init_grad = 0;
     SEXP grad;
+
+    if (1
+     && x_grad == R_NilValue && primop == 0) {
+
+        grad = alloc_matprod_jacobian (gvars, nrows * k, nrows, x, y_grad);
+        UNPROTECT(2);
+        return grad;
+    }
+
+    int init_grad = 0;
     PROTECT (grad = alloc_jacobian (gvars, sz));
 
     if (y_grad != R_NilValue && primop != 2) {
@@ -3269,6 +3319,7 @@ REprintf("--\n");
     }
 
     UNPROTECT(3);
+
     return grad;
 }
 
