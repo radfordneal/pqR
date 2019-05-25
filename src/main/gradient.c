@@ -110,6 +110,11 @@
 #define JACOBIAN_MATRIX1(g) VECTOR_ELT((g),1)
 #define JACOBIAN_MAT_ROWS(g) (*INTEGER(VECTOR_ELT((g),2)))
 
+#define MATPROD_JACOBIAN_TYPE(x) \
+  NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp&0xf)
+#define SET_MATPROD_JACOBIAN_TYPE(x,v) \
+ (UPTR_FROM_SEXP(x)->sxpinfo.gp = UPTR_FROM_SEXP(x)->sxpinfo.gp&0xfff0 | (v))
+
 
 /* -------------------------------------------------------------------------- */
 
@@ -195,7 +200,7 @@ static SEXP alloc_product_jacobian (R_len_t gvars, R_len_t n,
 }
 
 static SEXP alloc_matprod_jacobian (R_len_t gvars, R_len_t n, R_len_t nr,
-                                    SEXP factor, SEXP grad)
+                                    int matprod_type, SEXP factor, SEXP grad)
 {
     PROTECT2(factor,grad);
     SEXP res = allocVector (EXPRSXP, 3);
@@ -205,6 +210,7 @@ static SEXP alloc_matprod_jacobian (R_len_t gvars, R_len_t n, R_len_t nr,
     SET_VECTOR_ELT (res, 2, ScalarIntegerMaybeConst(nr));
     SET_GRAD_WRT_LEN (res, gvars);
     SET_JACOBIAN_TYPE (res, MATPROD_JACOBIAN);
+    SET_MATPROD_JACOBIAN_TYPE (res, matprod_type);
     SET_NEXT_JACOBIAN (res, grad);
     UNPROTECT(3);
 
@@ -304,6 +310,41 @@ void SET_GRADIENT_IN_CELL_NR (SEXP x, SEXP v)
 }
 
 
+static void prod_grad_mat (SEXP x_grad, SEXP y, SEXP grad, R_len_t gvars, 
+                           R_len_t nrows, R_len_t k, R_len_t ncols, int primop)
+{
+    R_len_t sz = nrows * ncols;
+    SEXP tmpr, tmpx;
+    R_len_t h;
+
+    PROTECT (tmpr = allocVector (REALSXP, sz));
+    PROTECT (tmpx = allocVector (REALSXP, nrows * k));
+
+    for (h = 0; h < gvars; h++) {
+        SEXP xg;
+        if (h == 0) 
+            xg = x_grad;
+        else {
+            xg = tmpx;
+            memcpy (REAL(xg), REAL(x_grad) + h * nrows*k, 
+                    sizeof(double) * nrows*k);
+        }
+        if (primop == 0)
+            matprod_mat_mat(REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
+        else if (primop == 1)
+            matprod_trans1(REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
+        else /* primop == 2 */
+            matprod_trans2(REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
+        R_len_t i, j;
+        j = h * sz;
+        for (i = 0; i < sz; i++) 
+            REAL(grad)[j++] += REAL(tmpr)[i];
+    }
+
+    UNPROTECT(2);
+}
+
+
 /* Expand a compact Jacobian representation to a full Jacobian matrix. 
 
    Protects its grad argument. */
@@ -350,22 +391,48 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 
     if (JACOBIAN_TYPE(grad) & MATPROD_JACOBIAN) {
 
-        /* Only handles factor on left, for %*%, at the moment. */
+        /* Only handles %*%, at the moment (no transposition). */
 
         if (JACOBIAN_TYPE(grad) != MATPROD_JACOBIAN) abort();  /* no others */
 
         SEXP left, right, new;
 
-        PROTECT (right = expand_to_full_jacobian (NEXT_JACOBIAN(grad)));
-        left = JACOBIAN_MATRIX1(grad);
+        switch (MATPROD_JACOBIAN_TYPE(grad)) {
 
-        R_len_t n = JACOBIAN_MAT_ROWS(grad);
-        R_len_t k = LENGTH(left) / n;
-        R_len_t m = JACOBIAN_ROWS(right) / k;
+        case 0: {  /* factor on left */
 
-        new = alloc_jacobian (gvars, n * m);
+            PROTECT (right = expand_to_full_jacobian (NEXT_JACOBIAN(grad)));
+            left = JACOBIAN_MATRIX1(grad);
 
-        matprod_mat_mat (REAL(left), REAL(right), REAL(new), n, k, m * gvars);
+            R_len_t n = JACOBIAN_MAT_ROWS(grad);
+            R_len_t k = LENGTH(left) / n;
+            R_len_t m = JACOBIAN_ROWS(right) / k;
+
+            new = alloc_jacobian (gvars, n * m);
+
+            matprod_mat_mat (REAL(left), REAL(right), REAL(new), n, k, m*gvars);
+
+            break;
+        }
+
+        case 1: {  /* factor on right */
+
+            PROTECT (left = expand_to_full_jacobian (NEXT_JACOBIAN(grad)));
+            right = JACOBIAN_MATRIX1(grad);
+
+            R_len_t n = JACOBIAN_MAT_ROWS(grad);
+            R_len_t r = JACOBIAN_ROWS(left);
+            R_len_t k = r / n;
+            R_len_t s = LENGTH(right);
+            R_len_t m = s / k;
+            R_len_t h;
+
+            new = alloc_jacobian (gvars, n * m);
+
+            prod_grad_mat (right, left, new, gvars, n, k, m, 0);
+
+            break;
+        }}
 
         SET_CACHED_JACOBIAN (grad, new);
         SET_NAMEDCNT (new, NAMEDCNT(grad));
@@ -3259,7 +3326,15 @@ REprintf("--\n");
     if (1
      && x_grad == R_NilValue && primop == 0) {
 
-        grad = alloc_matprod_jacobian (gvars, nrows * k, nrows, x, y_grad);
+        grad = alloc_matprod_jacobian (gvars, nrows*ncols, nrows, 0, x, y_grad);
+        UNPROTECT(2);
+        return grad;
+    }
+
+    if (0 /* not working yet */
+     && y_grad == R_NilValue && primop == 0) {
+
+        grad = alloc_matprod_jacobian (gvars, nrows*ncols, nrows, 1, y, x_grad);
         UNPROTECT(2);
         return grad;
     }
@@ -3282,30 +3357,7 @@ REprintf("--\n");
             memset (REAL(grad), 0, LENGTH(grad) * sizeof(double));
             init_grad = 1;
         }
-        SEXP tmpr, tmpx;
-        PROTECT (tmpr = allocVector (REALSXP, sz));
-        PROTECT (tmpx = allocVector (REALSXP, nrows * k));
-        for (R_len_t h = 0; h < gvars; h++) {
-            SEXP xg;
-            if (h == 0) 
-                xg = x_grad;
-            else {
-                xg = tmpx;
-                memcpy (REAL(xg), REAL(x_grad) + h*nrows*k, 
-                        sizeof(double) * nrows*k);
-            }
-            if (primop == 0)
-                matprod_mat_mat(REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
-            else if (primop == 1)
-                matprod_trans1(REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
-            else /* primop == 2 */
-                matprod_trans2(REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
-            R_len_t i, j;
-            j = h * sz;
-            for (i = 0; i < sz; i++) 
-                REAL(grad)[j++] += REAL(tmpr)[i];
-        }
-        UNPROTECT(2);
+        prod_grad_mat (x_grad, y, grad, gvars, nrows, k, ncols, primop);
     }
 
     if (y_grad != R_NilValue && primop == 2) {

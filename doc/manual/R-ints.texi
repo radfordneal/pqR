@@ -460,10 +460,15 @@ construct, starting with 1.
 
 @findex JACOBIAN_TYPE
 @findex SET_JACOBIAN_TYPE
-Bit 8-15 in a REALSXP representing an internal Jacobian matrix (not a user
-visible one, as for example from @code{gradient_of}) are used to specify 
+Bit 8-15 in a REALSXP or EXPRSXP representing an internal Jacobian matrix (not
+a user visible one, as for example from @code{gradient_of}) are used to specify 
 whether a compact form of the matrix is used, and if so of what type.  Zero
-means a full Jacobain matrix.
+means a full Jacobian matrix.
+
+@findex MATPROD_JACOBIAN_TYPE
+@findex SET_MATPROD_JACOBIAN_TYPE
+Bit 0-3 in an EXPRSXP representing a matrix product form of Jacobian matrix
+specify the order of products, and whether each is to be transposed first.
 
 @findex MISSING
 @findex SET_MISSING
