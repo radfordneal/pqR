@@ -515,6 +515,43 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         return new;
     }
 
+    if (JACOBIAN_TYPE(grad) & SUM_JACOBIAN) {
+
+        if (JACOBIAN_TYPE(grad) != SUM_JACOBIAN) abort();  /* no others */
+
+        if (TYPEOF(grad) != EXPRSXP || LENGTH(grad) < 2) abort();
+
+        R_len_t rows = JACOBIAN_ROWS(grad);
+        R_len_t i, j;
+        SEXP new, a;
+
+        PROTECT (new = alloc_jacobian (gvars, rows));
+        R_len_t l = LENGTH(new);
+
+        a = VECTOR_ELT (grad, 1);
+        a = expand_to_full_jacobian(a);
+        if (LENGTH(a) != l) abort();
+        memcpy (REAL(new), REAL(a), l * sizeof(double));
+
+        for (i = 2; i < LENGTH(grad); i++) {
+            a = expand_to_full_jacobian(a);
+            if (LENGTH(a) != l) abort();
+            for (j = 0; j < l; j++)
+                REAL(new)[j] += REAL(a)[j];
+        }
+        
+        SET_CACHED_JACOBIAN (grad, new);
+        SET_NAMEDCNT (new, NAMEDCNT(grad));
+        SET_JACOBIAN_CACHED_AS_ATTRIB (grad, 1);
+        SET_JACOBIAN_TYPE (grad, NOW_CACHED_JACOBIAN);
+        for (i = 1; i < LENGTH(grad); i++)
+            SET_VECTOR_ELT (grad, i, R_NilValue);  /* recover memory */
+        /* sum form is now defunct */
+
+        UNPROTECT(2);
+        return new;
+    }
+
     if (JACOBIAN_TYPE(grad) & CLOSURE_JACOBIAN) {
 
         if (TYPEOF(grad) != EXPRSXP || LENGTH(grad) != 2) abort();
