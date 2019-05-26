@@ -2496,3 +2496,47 @@ with gradient (A,B) {
   pr("C"); list(X,Y)
 }
 pr("end")
+
+(A <- matrix(c(3,6,1,2),2,2))
+(B <- matrix(c(9,8,4,3,1,3),2,3))
+(C <- matrix(c(4,3,7),3,1))
+pr("start")
+with gradient (A,B) {
+  pr("A"); X <- A %*% B
+  pr("B"); Y <- X %*% C
+  pr("C"); Y
+}
+pr("end")
+
+(A <- matrix(c(3,6,1,2),2,2))
+(B <- matrix(c(9,8,4,3,1,3),2,3))
+(C <- matrix(c(4,3,7),3,1))
+pr("start")
+with gradient (A,B) {
+  pr("A"); X <- B %*% C
+  pr("B"); Y <- A %*% X
+  pr("C"); Y
+}
+pr("end")
+
+(A <- matrix(c(4,3,7),1,3))
+(B <- matrix(c(9,8,4,3,1,3),3,2))
+(C <- matrix(c(3,6,1,2),2,2))
+pr("start")
+with gradient (A,B) {
+  pr("A"); X <- A %*% B
+  pr("B"); Y <- X %*% C
+  pr("C"); Y
+}
+pr("end")
+
+(A <- matrix(c(4,3,7),1,3))
+(B <- matrix(c(9,8,4,3,1,3),3,2))
+(C <- matrix(c(3,6,1,2),2,2))
+pr("start")
+with gradient (A,B) {
+  pr("A"); X <- B %*% C
+  pr("B"); Y <- A %*% X
+  pr("C"); Y
+}
+pr("end")
