@@ -429,7 +429,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 
             new = alloc_jacobian (gvars, n * m);
 
-            prod_grad_mat (right, left, new, gvars, n, k, m, 0);
+            prod_grad_mat (left, right, new, gvars, n, k, m, 0);
 
             break;
         }}
@@ -3331,7 +3331,7 @@ REprintf("--\n");
         return grad;
     }
 
-    if (0 /* not working yet */
+    if (1
      && y_grad == R_NilValue && primop == 0) {
 
         grad = alloc_matprod_jacobian (gvars, nrows*ncols, nrows, 1, y, x_grad);

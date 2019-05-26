@@ -16960,9 +16960,9 @@ start
 + }
 A 
 RPROFMEM: (double 16):
-RPROFMEM: (double 24):
 RPROFMEM: (double 36):
 B 
+RPROFMEM: (double 24):
 RPROFMEM: (double 24):
 RPROFMEM: (double 36):
 C 
