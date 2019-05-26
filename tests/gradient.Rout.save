@@ -17046,10 +17046,10 @@ RPROFMEM: (double 16):
 RPROFMEM: (double 36):
 B 
 RPROFMEM: (double 36):
-RPROFMEM: (double 24):
-C 
-RPROFMEM: (double 8):
 RPROFMEM: (double 12):
+RPROFMEM: (double 24):
+RPROFMEM: (double 8):
+C 
      [,1]
 [1,]  227
 [2,]  454
@@ -17089,12 +17089,12 @@ start
 + }
 A 
 RPROFMEM: (double 36):
+RPROFMEM: (double 12):
 B 
 RPROFMEM: (double 16):
-RPROFMEM: (double 12):
-C 
 RPROFMEM: (double 8):
 RPROFMEM: (double 12):
+C 
      [,1]
 [1,]  227
 [2,]  454
@@ -17134,10 +17134,10 @@ start
 A 
 RPROFMEM: (double 9):
 RPROFMEM: (double 36):
+RPROFMEM: (double 12):
 B 
 RPROFMEM: (double 12):
 C 
-RPROFMEM: (double 12):
      [,1] [,2]
 [1,]  480  160
 attr(,"gradient")
@@ -17178,8 +17178,8 @@ RPROFMEM: (double 36):
 B 
 RPROFMEM: (double 9):
 RPROFMEM: (double 36):
-C 
 RPROFMEM: (double 12):
+C 
      [,1] [,2]
 [1,]  480  160
 attr(,"gradient")

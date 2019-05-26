@@ -3389,24 +3389,27 @@ REprintf("--\n");
 
     R_len_t gvars = GRAD_WRT_LEN (x_grad != R_NilValue ? x_grad : y_grad);
 
-    R_len_t sz = nrows * ncols;
     SEXP grad;
 
-    if (x_grad == R_NilValue) {
-        grad = alloc_matprod_jacobian (gvars, nrows*ncols, nrows, 
-                                       2*primop + 0, x, y_grad);
-        UNPROTECT(2);
-        return grad;
+    if ((uint64_t)nrows*k*ncols > 7
+           && nrows > 1 && ncols > 1) {  /* worthwhile deferring */
+ 
+       if (x_grad == R_NilValue) {
+            grad = alloc_matprod_jacobian (gvars, nrows*ncols, nrows, 
+                                           2*primop + 0, x, y_grad);
+            UNPROTECT(2);
+            return grad;
+        }
+
+        if (y_grad == R_NilValue) {
+            grad = alloc_matprod_jacobian (gvars, nrows*ncols, nrows, 
+                                           2*primop + 1, y, x_grad);
+            UNPROTECT(2);
+            return grad;
+        }
     }
 
-    if (y_grad == R_NilValue) {
-        grad = alloc_matprod_jacobian (gvars, nrows*ncols, nrows, 
-                                       2*primop + 1, y, x_grad);
-        UNPROTECT(2);
-        return grad;
-    }
-
-    PROTECT (grad = alloc_jacobian (gvars, sz));
+    PROTECT (grad = alloc_jacobian (gvars, nrows * ncols));
     int initg = FALSE;
 
     if (y_grad != R_NilValue) {
