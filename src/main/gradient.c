@@ -311,37 +311,74 @@ void SET_GRADIENT_IN_CELL_NR (SEXP x, SEXP v)
 
 
 static void prod_grad_mat (SEXP x_grad, SEXP y, SEXP grad, R_len_t gvars, 
-                           R_len_t nrows, R_len_t k, R_len_t ncols, int primop)
+                           R_len_t nrows, R_len_t k, R_len_t ncols, 
+                           int primop, int add)
 {
     R_len_t sz = nrows * ncols;
-    SEXP tmpr, tmpx;
-    R_len_t h;
+    R_len_t h, i, j;
+    SEXP tmpr;
 
-    PROTECT (tmpr = allocVector (REALSXP, sz));
-    PROTECT (tmpx = allocVector (REALSXP, nrows * k));
+    tmpr = gvars == 1 && !add ? grad : allocVector (REALSXP, sz);
 
-    for (h = 0; h < gvars; h++) {
-        SEXP xg;
-        if (h == 0) 
-            xg = x_grad;
-        else {
-            xg = tmpx;
-            memcpy (REAL(xg), REAL(x_grad) + h * nrows*k, 
-                    sizeof(double) * nrows*k);
-        }
+    PROTECT (tmpr);
+
+    if (gvars == 1) {
         if (primop == 0)
-            matprod_mat_mat(REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
+            matprod_mat_mat(REAL(x_grad), REAL(y), REAL(tmpr), nrows, k, ncols);
         else if (primop == 1)
-            matprod_trans1(REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
+            matprod_trans1(REAL(x_grad), REAL(y), REAL(tmpr), nrows, k, ncols);
         else /* primop == 2 */
-            matprod_trans2(REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
-        R_len_t i, j;
-        j = h * sz;
-        for (i = 0; i < sz; i++) 
-            REAL(grad)[j++] += REAL(tmpr)[i];
+            matprod_trans2(REAL(x_grad), REAL(y), REAL(tmpr), nrows, k, ncols);
+        if (add) {
+            for (i = 0; i < sz; i++) 
+                REAL(grad)[i] += REAL(tmpr)[i];
+        }
+        else
+            ;  /* tmpr will be grad, so result already in right place */
+    }
+    else {
+
+        SEXP tmpx = allocVector (REALSXP, nrows * k);
+
+        PROTECT(tmpx);
+
+        for (h = 0; h < gvars; h++) {
+
+            SEXP xg;
+            if (h == 0) 
+                xg = x_grad;
+            else {
+                xg = tmpx;
+                memcpy (REAL(xg), REAL(x_grad) + h * nrows*k, 
+                        sizeof(double) * nrows*k);
+            }
+
+            if (primop == 0)
+                matprod_mat_mat(REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
+            else if (primop == 1)
+                matprod_trans1(REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
+            else /* primop == 2 */
+                matprod_trans2(REAL(xg), REAL(y), REAL(tmpr), nrows, k, ncols);
+    
+            j = h * sz;
+            if (add) {
+                for (i = 0; i < sz; i++) 
+                    REAL(grad)[j++] += REAL(tmpr)[i];
+            }
+            else
+                memcpy (REAL(grad) + j, REAL(tmpr), sz * sizeof(double));
+        }
+
+        UNPROTECT(1);
     }
 
-    UNPROTECT(2);
+    UNPROTECT(1);
+}
+
+static void prod_mat_grad (SEXP x, SEXP y_grad, SEXP grad, R_len_t gvars, 
+                           R_len_t nrows, R_len_t k, R_len_t ncols, 
+                           int primop, int add)
+{
 }
 
 
@@ -395,9 +432,10 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 
         if (JACOBIAN_TYPE(grad) != MATPROD_JACOBIAN) abort();  /* no others */
 
+        int primop = MATPROD_JACOBIAN_TYPE(grad) >> 1;
         SEXP left, right, new;
 
-        switch (MATPROD_JACOBIAN_TYPE(grad)) {
+        switch (MATPROD_JACOBIAN_TYPE(grad) & 1) {
 
         case 0: {  /* factor on left */
 
@@ -429,7 +467,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 
             new = alloc_jacobian (gvars, n * m);
 
-            prod_grad_mat (left, right, new, gvars, n, k, m, 0);
+            prod_grad_mat (left, right, new, gvars, n, k, m, primop, FALSE);
 
             break;
         }}
@@ -3323,24 +3361,22 @@ REprintf("--\n");
     R_len_t sz = nrows * ncols;
     SEXP grad;
 
-    if (1
-     && x_grad == R_NilValue && primop == 0) {
-
-        grad = alloc_matprod_jacobian (gvars, nrows*ncols, nrows, 0, x, y_grad);
+    if (x_grad == R_NilValue && primop == 0) {
+        grad = alloc_matprod_jacobian (gvars, nrows*ncols, nrows, 
+                                       2*primop + 0, x, y_grad);
         UNPROTECT(2);
         return grad;
     }
 
-    if (1
-     && y_grad == R_NilValue && primop == 0) {
-
-        grad = alloc_matprod_jacobian (gvars, nrows*ncols, nrows, 1, y, x_grad);
+    if (y_grad == R_NilValue && primop == 0) {
+        grad = alloc_matprod_jacobian (gvars, nrows*ncols, nrows, 
+                                       2*primop + 1, y, x_grad);
         UNPROTECT(2);
         return grad;
     }
 
-    int init_grad = 0;
     PROTECT (grad = alloc_jacobian (gvars, sz));
+    int initg = FALSE;
 
     if (y_grad != R_NilValue && primop != 2) {
         if (primop == 0)
@@ -3349,21 +3385,18 @@ REprintf("--\n");
         else /* primop == 1 */
             matprod_trans1 (REAL(x), REAL(y_grad), REAL(grad), 
                             nrows, k, ncols * gvars);
-        init_grad = 1;
+        initg = TRUE;
     }
 
     if (x_grad != R_NilValue) {
-        if (!init_grad) {
-            memset (REAL(grad), 0, LENGTH(grad) * sizeof(double));
-            init_grad = 1;
-        }
-        prod_grad_mat (x_grad, y, grad, gvars, nrows, k, ncols, primop);
+        prod_grad_mat (x_grad, y, grad, gvars, nrows, k, ncols, primop, initg);
+        initg = TRUE;
     }
 
     if (y_grad != R_NilValue && primop == 2) {
-        if (!init_grad) {
+        if (!initg) {
             memset (REAL(grad), 0, LENGTH(grad) * sizeof(double));
-            init_grad = 1;
+            initg = TRUE;
         }
         SEXP tmpr, tmpy;
         PROTECT (tmpr = allocVector (REALSXP, sz));
