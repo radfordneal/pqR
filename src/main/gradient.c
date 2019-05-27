@@ -126,6 +126,7 @@ static void R_NORETURN gradient_matrix_too_large_error (void) {
 static int same_numeric_content (SEXP a, SEXP b)
 {
     return TYPEOF(a) == REALSXP && TYPEOF(b) == REALSXP 
+        && LEVELS(a) == LEVELS(b) /* includes JACOBIAN_TYPE */
         && (a == b || LENGTH(a) == LENGTH(b) 
                         && memcmp (a, b, LENGTH(a)*sizeof(double)) == 0);
 }
@@ -913,8 +914,8 @@ static SEXP scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
 }
 
 
-/* Add a scaled jacobian to another jacobian.  The jacobians may full,
-   or diagonal or scaled jacobians.  Gradient to add to is in 'base',
+/* Add a scaled jacobian to another jacobian.  The jacobians may be full,
+   or diagonal, or scaled jacobians.  Gradient to add to is in 'base',
    for vector of length bn, with respect to gvars variables.  Result
    should be a gradient for a vector of length n with gvars variables.
    Gradient to scale and add to 'base' is in 'extra', for en
@@ -1033,7 +1034,8 @@ static SEXP add_scaled_jacobian (SEXP base, SEXP extra,
             return r;
         }
 
-        if (!bscaled && escaled && (JACOBIAN_TYPE(extra) & DIAGONAL_JACOBIAN)
+        if (!bscaled && escaled 
+              && (JACOBIAN_TYPE(extra) & DIAGONAL_JACOBIAN)
               && same_numeric_content(base,NEXT_JACOBIAN(extra))) {
 
             PROTECT2(base,extra);
@@ -1074,7 +1076,8 @@ static SEXP add_scaled_jacobian (SEXP base, SEXP extra,
             return r;
         }
 
-        if (bscaled && !escaled && (JACOBIAN_TYPE(base) & DIAGONAL_JACOBIAN)
+        if (bscaled && !escaled 
+              && (JACOBIAN_TYPE(base) & DIAGONAL_JACOBIAN)
               && same_numeric_content(NEXT_JACOBIAN(base),extra)) {
 
             PROTECT2(base,extra);
