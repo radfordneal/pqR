@@ -1137,7 +1137,8 @@ static SEXP add_scaled_jacobian (SEXP base, SEXP extra,
             return r;
         }
 
-        if (1) {  /* skip if too small to bother deferring */
+        if (0) {  /* skip if too small to bother deferring, always at the
+                     moement, since not useful with current implementation */
 
             PROTECT2(base,extra);
 
