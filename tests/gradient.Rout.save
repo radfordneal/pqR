@@ -14024,9 +14024,10 @@ start
 + }
 RPROFMEM: (double 8):
 A 
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
 RPROFMEM: (double 64):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
 B 
 C 
 RPROFMEM: (double 8):
@@ -14035,6 +14036,7 @@ RPROFMEM: (double 64):
 D 
 RPROFMEM: (double 8):
 E 
+RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 F 
@@ -15424,12 +15426,16 @@ RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
 RPROFMEM: (double 64):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
@@ -15606,12 +15612,15 @@ RPROFMEM: (double 8):
 C 
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
+RPROFMEM: (double 8):
 D 
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
 E 
+RPROFMEM: (double 64):
+RPROFMEM: (double 64):
+RPROFMEM: (double 64):
 RPROFMEM: (double 64):
 RPROFMEM: (double 64):
 RPROFMEM: (double 64):
@@ -16160,8 +16169,10 @@ RPROFMEM: (double 8):
 C 
 RPROFMEM: (double 8):
 RPROFMEM: (double 64):
-RPROFMEM: (double 64):
 D 
+RPROFMEM: (double 64):
+RPROFMEM: (double 64):
+RPROFMEM: (double 64):
 [[1]]
 [1] 21 63 49 28 14 42 35 56
 
@@ -16598,13 +16609,15 @@ start
 RPROFMEM: (double 8):
 A 
 B 
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
 C 
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
 D 
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
 [[1]]
 [1] 7
 
@@ -16869,6 +16882,7 @@ RPROFMEM: (double 10):"numeric"
 B 
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
+RPROFMEM: (double 8):
 RPROFMEM: (double 80):
 C 
 RPROFMEM: (double 24):
@@ -16921,11 +16935,13 @@ start
 + }
 RPROFMEM: (double 8):
 A 
-RPROFMEM: (double 8):
-RPROFMEM: (double 8):
 B 
 RPROFMEM: (double 9):
 RPROFMEM: (double 9):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
+RPROFMEM: (double 8):
 C 
 RPROFMEM: (double 72):
 [1] 11 11 11 11 11 11 11 11 11

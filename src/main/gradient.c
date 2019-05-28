@@ -75,7 +75,8 @@
 #define JACOBIAN_ROWS0(g) \
   (JACOBIAN_TYPE(g) & DIAGONAL_JACOBIAN   ? GRAD_WRT_LEN(g) : \
    JACOBIAN_TYPE(g) & ONE_IN_ROW_JACOBIAN ? LENGTH(g)/2 : \
-   JACOBIAN_TYPE(g) & (CLOSURE_JACOBIAN | PRODUCT_JACOBIAN | MATPROD_JACOBIAN) \
+   JACOBIAN_TYPE(g) \
+    & (CLOSURE_JACOBIAN | PRODUCT_JACOBIAN | SUM_JACOBIAN | MATPROD_JACOBIAN) \
                                           ? *INTEGER(VECTOR_ELT(g,0)) : \
                                             LENGTH(g) / GRAD_WRT_LEN(g))
 
@@ -87,7 +88,8 @@
      ? (uint64_t) GRAD_WRT_LEN(g) * GRAD_WRT_LEN(g) : \
    JACOBIAN_TYPE(g) & ONE_IN_ROW_JACOBIAN \
      ? (uint64_t) (LENGTH(g)/2) * GRAD_WRT_LEN(g) : \
-   JACOBIAN_TYPE(g) & (CLOSURE_JACOBIAN | PRODUCT_JACOBIAN | MATPROD_JACOBIAN) \
+   JACOBIAN_TYPE(g) \
+    & (CLOSURE_JACOBIAN | PRODUCT_JACOBIAN | SUM_JACOBIAN | MATPROD_JACOBIAN) \
      ? (uint64_t) *INTEGER(VECTOR_ELT(g,0)) * GRAD_WRT_LEN(g) : \
        (uint64_t) LENGTH(g))
 
@@ -179,6 +181,18 @@ static SEXP alloc_closure_jacobian (R_len_t gvars, R_len_t n, SEXP closure)
     SET_VECTOR_ELT (res, 0, ScalarIntegerMaybeConst(n));
     SET_GRAD_WRT_LEN (res, gvars);
     SET_JACOBIAN_TYPE (res, CLOSURE_JACOBIAN);
+    UNPROTECT(1);
+
+    return res;
+}
+
+static SEXP alloc_sum_jacobian (R_len_t gvars, R_len_t n, R_len_t terms)
+{
+    SEXP res = allocVector (EXPRSXP, terms+1);
+    PROTECT(res);
+    SET_VECTOR_ELT (res, 0, ScalarIntegerMaybeConst(n));
+    SET_GRAD_WRT_LEN (res, gvars);
+    SET_JACOBIAN_TYPE (res, SUM_JACOBIAN);
     UNPROTECT(1);
 
     return res;
@@ -529,13 +543,12 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         PROTECT (new = alloc_jacobian (gvars, rows));
         R_len_t l = LENGTH(new);
 
-        a = VECTOR_ELT (grad, 1);
-        a = expand_to_full_jacobian(a);
+        a = expand_to_full_jacobian (VECTOR_ELT (grad, 1));
         if (LENGTH(a) != l) abort();
         memcpy (REAL(new), REAL(a), l * sizeof(double));
 
         for (i = 2; i < LENGTH(grad); i++) {
-            a = expand_to_full_jacobian(a);
+            a = expand_to_full_jacobian (VECTOR_ELT (grad, i));
             if (LENGTH(a) != l) abort();
             for (j = 0; j < l; j++)
                 REAL(new)[j] += REAL(a)[j];
@@ -928,9 +941,6 @@ static SEXP scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
 static SEXP add_scaled_jacobian (SEXP base, SEXP extra, 
                                  double *f, R_len_t flen, R_len_t n)
 {
-    if (TYPEOF(base) != REALSXP) abort();
-    if (TYPEOF(extra) != REALSXP) abort();
-
     R_len_t gvars = GRAD_WRT_LEN(base);
 
     if (GRAD_WRT_LEN(extra) != gvars) abort();
@@ -1034,8 +1044,7 @@ static SEXP add_scaled_jacobian (SEXP base, SEXP extra,
             return r;
         }
 
-        if (!bscaled && escaled 
-              && (JACOBIAN_TYPE(extra) & DIAGONAL_JACOBIAN)
+        if (!bscaled && escaled && (JACOBIAN_TYPE(extra) & DIAGONAL_JACOBIAN)
               && same_numeric_content(base,NEXT_JACOBIAN(extra))) {
 
             PROTECT2(base,extra);
@@ -1076,8 +1085,7 @@ static SEXP add_scaled_jacobian (SEXP base, SEXP extra,
             return r;
         }
 
-        if (bscaled && !escaled 
-              && (JACOBIAN_TYPE(base) & DIAGONAL_JACOBIAN)
+        if (bscaled && !escaled && (JACOBIAN_TYPE(base) & DIAGONAL_JACOBIAN)
               && same_numeric_content(NEXT_JACOBIAN(base),extra)) {
 
             PROTECT2(base,extra);
@@ -1127,6 +1135,78 @@ static SEXP add_scaled_jacobian (SEXP base, SEXP extra,
 
             UNPROTECT(2);
             return r;
+        }
+
+        if (1) {  /* skip if too small to bother deferring */
+
+            PROTECT2(base,extra);
+
+            if (escaled && (JACOBIAN_TYPE(extra) & DIAGONAL_JACOBIAN)) {
+
+                if (flen == 1 && elen == 1) {
+                    r = NAMEDCNT_EQ_0(extra) ? extra
+                         : alloc_diagonal_jacobian (gvars, 1);
+                    *REAL(r) = *REAL(extra) * *f;
+                }
+
+                else {
+
+                    r = NAMEDCNT_EQ_0(extra) && elen == gvars ? extra
+                         : alloc_diagonal_jacobian (gvars, gvars);
+
+                    if (flen == 1) {
+                        double factor = *f;
+                        R_len_t je = 0;
+                        for (i = 0; i < gvars; i++) {
+                            REAL(r)[i] = REAL(extra)[je] * factor;
+                            if (++je == elen) je = 0;
+                        }
+                    }
+                    else {
+                        R_len_t je = 0, jf = 0;
+                        for (i = 0; i < gvars; i++) {
+                            REAL(r)[i] = REAL(extra)[je] * f[jf];
+                            if (++je == elen) je = 0;
+                            if (++jf == flen) jf = 0;
+                        }
+                    }
+                }
+
+                SET_NEXT_JACOBIAN (r, NEXT_JACOBIAN(extra));
+                SET_JACOBIAN_TYPE (r, JACOBIAN_TYPE(extra));
+            }
+
+            else {  /* !escaled */
+
+                if (flen == 1) {
+                    r = alloc_diagonal_jacobian (gvars, 1);
+                    *REAL(r) = *f;
+                }
+
+                else {
+
+                    r = alloc_diagonal_jacobian (gvars, gvars);
+
+                    R_len_t jf = 0;
+                    for (i = 0; i < gvars; i++) {
+                        REAL(r)[i] = f[jf];
+                        if (++jf == flen) jf = 0;
+                    }
+                }
+
+                SET_NEXT_JACOBIAN (r, extra);
+                SET_JACOBIAN_TYPE (r, SCALED_JACOBIAN | DIAGONAL_JACOBIAN);
+            }
+
+            PROTECT(r);
+
+            SEXP s = alloc_sum_jacobian (gvars, n, 2);
+
+            SET_VECTOR_ELT (s, 1, base);
+            SET_VECTOR_ELT (s, 2, r);
+
+            UNPROTECT(3);
+            return s;
         }
     }
 
@@ -4400,8 +4480,6 @@ R_inspect(a); REprintf("--\n");
 R_inspect(b); REprintf("==\n");
 #endif
 
-    if (TYPEOF(a) != REALSXP) abort();
-
     if (b == R_NilValue)
         return base;
 
@@ -4425,6 +4503,12 @@ R_inspect(b); REprintf("==\n");
         }
         UNPROTECT(4);
         return res;
+    }
+
+    if (TYPEOF(a) != REALSXP) {
+        PROTECT2(base,b);
+        a = expand_to_full_jacobian(a);
+        UNPROTECT(2);
     }
 
     PROTECT2(base,a);
