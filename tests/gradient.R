@@ -2501,7 +2501,7 @@ pr("end")
 (B <- matrix(c(9,8,4,3,1,3),2,3))
 (C <- matrix(c(4,3,7),3,1))
 pr("start")
-with gradient (A,B) {
+with gradient (A,B,C) {
   pr("A"); X <- A %*% B
   pr("B"); Y <- X %*% C
   pr("C"); Y
@@ -2512,7 +2512,7 @@ pr("end")
 (B <- matrix(c(9,8,4,3,1,3),2,3))
 (C <- matrix(c(4,3,7),3,1))
 pr("start")
-with gradient (A,B) {
+with gradient (A,B,C) {
   pr("A"); X <- B %*% C
   pr("B"); Y <- A %*% X
   pr("C"); Y
@@ -2523,7 +2523,7 @@ pr("end")
 (B <- matrix(c(9,8,4,3,1,3),3,2))
 (C <- matrix(c(3,6,1,2),2,2))
 pr("start")
-with gradient (A,B) {
+with gradient (A,B,C) {
   pr("A"); X <- A %*% B
   pr("B"); Y <- X %*% C
   pr("C"); Y
@@ -2534,9 +2534,47 @@ pr("end")
 (B <- matrix(c(9,8,4,3,1,3),3,2))
 (C <- matrix(c(3,6,1,2),2,2))
 pr("start")
-with gradient (A,B) {
+with gradient (A,B,C) {
   pr("A"); X <- B %*% C
   pr("B"); Y <- A %*% X
   pr("C"); Y
+}
+pr("end")
+
+(A <- matrix(c(4,3,7),1,3))
+(B <- matrix(c(9,8,4,3,1,3),3,2))
+(C <- matrix(c(3,6,1,2),2,2))
+(D <- matrix(c(7,3,4,6,1,2,-2,8),2,4))
+pr("start")
+with gradient (A,B,C,D) {
+  pr("A"); X <- C %*% D
+  pr("B"); Y <- B %*% X
+  pr("C"); Z <- A %*% Y
+  pr("D"); Z
+}
+pr("end")
+
+(A <- matrix(c(4,3,7),1,3))
+(B <- matrix(c(9,8,4,3,1,3),3,2))
+(C <- matrix(c(3,6,1,2),2,2))
+(D <- matrix(c(7,3,4,6,1,2,-2,8),2,4))
+pr("start")
+with gradient (A,B,C,D) {
+  pr("A"); X <- C %*% D
+  pr("B"); Y <- B %*% X
+  pr("C"); Z <- A %*% Y
+  pr("D"); Z
+}
+pr("end")
+
+pr("start")
+with gradient (D = matrix(c(7,3,4,6,1,2,-2,8),2,4)) {
+  A <- D[1..1,2..4]
+  B <- D[c(1,2,1),3..4]
+  C <- D[_,c(4,2)]
+  pr("A"); X <- C %*% D
+  pr("B"); Y <- B %*% X
+  pr("C"); Z <- A %*% Y
+  pr("D"); Z
 }
 pr("end")

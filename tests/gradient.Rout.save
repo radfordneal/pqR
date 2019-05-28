@@ -17036,7 +17036,7 @@ end
 [3,]    7
 > pr("start")
 start 
-> with gradient (A,B) {
+> with gradient (A,B,C) {
 +   pr("A"); X <- A %*% B
 +   pr("B"); Y <- X %*% C
 +   pr("C"); Y
@@ -17049,6 +17049,7 @@ RPROFMEM: (double 36):
 RPROFMEM: (double 12):
 RPROFMEM: (double 24):
 RPROFMEM: (double 8):
+RPROFMEM: (double 9):
 C 
      [,1]
 [1,]  227
@@ -17063,6 +17064,11 @@ attr(,"gradient")$B
      [,1] [,2] [,3] [,4] [,5] [,6]
 [1,]   12    4    9    3   21    7
 [2,]   24    8   18    6   42   14
+
+attr(,"gradient")$C
+     [,1] [,2] [,3]
+[1,]   35   15    6
+[2,]   70   30   12
 
 > pr("end")
 end 
@@ -17082,7 +17088,7 @@ end
 [3,]    7
 > pr("start")
 start 
-> with gradient (A,B) {
+> with gradient (A,B,C) {
 +   pr("A"); X <- B %*% C
 +   pr("B"); Y <- A %*% X
 +   pr("C"); Y
@@ -17090,6 +17096,7 @@ start
 A 
 RPROFMEM: (double 36):
 RPROFMEM: (double 12):
+RPROFMEM: (double 9):
 B 
 RPROFMEM: (double 16):
 RPROFMEM: (double 8):
@@ -17109,6 +17116,11 @@ attr(,"gradient")$B
 [1,]   12    4    9    3   21    7
 [2,]   24    8   18    6   42   14
 
+attr(,"gradient")$C
+     [,1] [,2] [,3]
+[1,]   35   15    6
+[2,]   70   30   12
+
 > pr("end")
 end 
 > 
@@ -17126,7 +17138,7 @@ end
 [2,]    6    2
 > pr("start")
 start 
-> with gradient (A,B) {
+> with gradient (A,B,C) {
 +   pr("A"); X <- A %*% B
 +   pr("B"); Y <- X %*% C
 +   pr("C"); Y
@@ -17137,6 +17149,8 @@ RPROFMEM: (double 36):
 RPROFMEM: (double 12):
 B 
 RPROFMEM: (double 12):
+RPROFMEM: (double 16):
+RPROFMEM: (double 8):
 C 
      [,1] [,2]
 [1,]  480  160
@@ -17150,6 +17164,11 @@ attr(,"gradient")$B
      [,1] [,2] [,3] [,4] [,5] [,6]
 [1,]   12    9   21   24   18   42
 [2,]    4    3    7    8    6   14
+
+attr(,"gradient")$C
+     [,1] [,2] [,3] [,4]
+[1,]   88   36    0    0
+[2,]    0    0   88   36
 
 > pr("end")
 end 
@@ -17168,15 +17187,18 @@ end
 [2,]    6    2
 > pr("start")
 start 
-> with gradient (A,B) {
+> with gradient (A,B,C) {
 +   pr("A"); X <- B %*% C
 +   pr("B"); Y <- A %*% X
 +   pr("C"); Y
 + }
 A 
 RPROFMEM: (double 36):
+RPROFMEM: (double 16):
 B 
 RPROFMEM: (double 9):
+RPROFMEM: (double 24):
+RPROFMEM: (double 8):
 RPROFMEM: (double 36):
 RPROFMEM: (double 12):
 C 
@@ -17193,6 +17215,214 @@ attr(,"gradient")$B
 [1,]   12    9   21   24   18   42
 [2,]    4    3    7    8    6   14
 
+attr(,"gradient")$C
+     [,1] [,2] [,3] [,4]
+[1,]   88   36    0    0
+[2,]    0    0   88   36
+
+> pr("end")
+end 
+> 
+> (A <- matrix(c(4,3,7),1,3))
+     [,1] [,2] [,3]
+[1,]    4    3    7
+> (B <- matrix(c(9,8,4,3,1,3),3,2))
+     [,1] [,2]
+[1,]    9    3
+[2,]    8    1
+[3,]    4    3
+> (C <- matrix(c(3,6,1,2),2,2))
+     [,1] [,2]
+[1,]    3    1
+[2,]    6    2
+> (D <- matrix(c(7,3,4,6,1,2,-2,8),2,4))
+RPROFMEM: (double 8):"matrix" 
+RPROFMEM: (double 8):"matrix" 
+     [,1] [,2] [,3] [,4]
+[1,]    7    4    1   -2
+[2,]    3    6    2    8
+> pr("start")
+start 
+> with gradient (A,B,C,D) {
++   pr("A"); X <- C %*% D
++   pr("B"); Y <- B %*% X
++   pr("C"); Z <- A %*% Y
++   pr("D"); Z
++ }
+RPROFMEM: (list 8):
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 16):
+RPROFMEM: (double 64):
+B 
+RPROFMEM: (double 12):
+RPROFMEM: (double 36):
+RPROFMEM: (double 64):
+RPROFMEM: (double 32):
+RPROFMEM: (double 8):
+C 
+RPROFMEM: (double 9):
+RPROFMEM: (double 12):
+RPROFMEM: (double 48):
+RPROFMEM: (double 16):
+RPROFMEM: (double 96):
+RPROFMEM: (double 32):
+RPROFMEM: (double 72):
+RPROFMEM: (double 12):
+RPROFMEM: (double 24):
+D 
+     [,1] [,2] [,3] [,4]
+[1,] 3840 2880  800  320
+attr(,"gradient")
+attr(,"gradient")$A
+     [,1] [,2] [,3]
+[1,]  360  240  240
+[2,]  270  180  180
+[3,]   75   50   50
+[4,]   30   20   20
+
+attr(,"gradient")$B
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]   96   72  168  192  144  336
+[2,]   72   54  126  144  108  252
+[3,]   20   15   35   40   30   70
+[4,]    8    6   14   16   12   28
+
+attr(,"gradient")$C
+     [,1] [,2] [,3] [,4]
+[1,]  616  252  264  108
+[2,]  352  144  528  216
+[3,]   88   36  176   72
+[4,] -176  -72  704  288
+
+attr(,"gradient")$D
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]  480  160    0    0    0    0    0    0
+[2,]    0    0  480  160    0    0    0    0
+[3,]    0    0    0    0  480  160    0    0
+[4,]    0    0    0    0    0    0  480  160
+
+> pr("end")
+end 
+> 
+> (A <- matrix(c(4,3,7),1,3))
+     [,1] [,2] [,3]
+[1,]    4    3    7
+> (B <- matrix(c(9,8,4,3,1,3),3,2))
+     [,1] [,2]
+[1,]    9    3
+[2,]    8    1
+[3,]    4    3
+> (C <- matrix(c(3,6,1,2),2,2))
+     [,1] [,2]
+[1,]    3    1
+[2,]    6    2
+> (D <- matrix(c(7,3,4,6,1,2,-2,8),2,4))
+RPROFMEM: (double 8):"matrix" 
+RPROFMEM: (double 8):"matrix" 
+     [,1] [,2] [,3] [,4]
+[1,]    7    4    1   -2
+[2,]    3    6    2    8
+> pr("start")
+start 
+> with gradient (A,B,C,D) {
++   pr("A"); X <- C %*% D
++   pr("B"); Y <- B %*% X
++   pr("C"); Z <- A %*% Y
++   pr("D"); Z
++ }
+RPROFMEM: (list 8):
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 16):
+RPROFMEM: (double 64):
+B 
+RPROFMEM: (double 12):
+RPROFMEM: (double 36):
+RPROFMEM: (double 64):
+RPROFMEM: (double 32):
+RPROFMEM: (double 8):
+C 
+RPROFMEM: (double 9):
+RPROFMEM: (double 12):
+RPROFMEM: (double 48):
+RPROFMEM: (double 16):
+RPROFMEM: (double 96):
+RPROFMEM: (double 32):
+RPROFMEM: (double 72):
+RPROFMEM: (double 12):
+RPROFMEM: (double 24):
+D 
+     [,1] [,2] [,3] [,4]
+[1,] 3840 2880  800  320
+attr(,"gradient")
+attr(,"gradient")$A
+     [,1] [,2] [,3]
+[1,]  360  240  240
+[2,]  270  180  180
+[3,]   75   50   50
+[4,]   30   20   20
+
+attr(,"gradient")$B
+     [,1] [,2] [,3] [,4] [,5] [,6]
+[1,]   96   72  168  192  144  336
+[2,]   72   54  126  144  108  252
+[3,]   20   15   35   40   30   70
+[4,]    8    6   14   16   12   28
+
+attr(,"gradient")$C
+     [,1] [,2] [,3] [,4]
+[1,]  616  252  264  108
+[2,]  352  144  528  216
+[3,]   88   36  176   72
+[4,] -176  -72  704  288
+
+attr(,"gradient")$D
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]  480  160    0    0    0    0    0    0
+[2,]    0    0  480  160    0    0    0    0
+[3,]    0    0    0    0  480  160    0    0
+[4,]    0    0    0    0    0    0  480  160
+
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> with gradient (D = matrix(c(7,3,4,6,1,2,-2,8),2,4)) {
++   A <- D[1..1,2..4]
++   B <- D[c(1,2,1),3..4]
++   C <- D[_,c(4,2)]
++   pr("A"); X <- C %*% D
++   pr("B"); Y <- B %*% X
++   pr("C"); Z <- A %*% Y
++   pr("D"); Z
++ }
+RPROFMEM: (double 8):"matrix" 
+RPROFMEM: (double 8):"matrix" 
+RPROFMEM: (double 64):
+RPROFMEM: (double 24):
+RPROFMEM: (double 48):
+RPROFMEM: (double 32):
+A 
+RPROFMEM: (double 8):
+RPROFMEM: (double 64):
+RPROFMEM: (double 8):
+B 
+RPROFMEM: (double 12):
+RPROFMEM: (double 96):
+RPROFMEM: (double 12):
+C 
+RPROFMEM: (double 32):
+D 
+     [,1] [,2] [,3] [,4]
+[1,]  288  336  104  272
+attr(,"gradient")
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]   24   40 -138   12  584   -2   26  102
+[2,]    0    0  -72   64  608   16   32   84
+[3,]    0    0  -26    8  208   46   10   24
+[4,]    0    0    4   32  400   36   52   64
 > pr("end")
 end 
 > 
