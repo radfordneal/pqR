@@ -446,77 +446,45 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 
     R_len_t gvars = GRAD_WRT_LEN(grad);
 
-    if (JACOBIAN_TYPE(grad) & PRODUCT_JACOBIAN) {
+    if (JACOBIAN_TYPE(grad) & (PRODUCT_JACOBIAN | MATPROD_JACOBIAN)) {
 
-        if (JACOBIAN_TYPE(grad) != PRODUCT_JACOBIAN) abort();  /* no others */
+        SEXP factor, next, left, right, new;
 
-        SEXP left, right, new;
+        PROTECT (next = expand_to_full_jacobian (NEXT_JACOBIAN(grad)));
+        factor = JACOBIAN_MATRIX1(grad);
 
-        PROTECT (right = expand_to_full_jacobian (NEXT_JACOBIAN(grad)));
-        left = JACOBIAN_MATRIX1(grad);
-
-        R_len_t rows = JACOBIAN_ROWS(grad);
-        R_len_t cols = LENGTH(left) / rows;
-
-        new = alloc_jacobian (gvars, rows);
-
-        matprod_mat_mat (REAL(left), REAL(right), REAL(new), rows, cols, gvars);
-
-        SET_CACHED_JACOBIAN (grad, new);
-        SET_NAMEDCNT (new, NAMEDCNT(grad));
-        SET_JACOBIAN_CACHED_AS_ATTRIB (grad, 1);
-        SET_JACOBIAN_TYPE (grad, NOW_CACHED_JACOBIAN);
-        SET_VECTOR_ELT (grad, 0, R_NilValue);  /* recover memory */
-        SET_VECTOR_ELT (grad, 1, R_NilValue);
-        /* product form is now defunct */
-
-        UNPROTECT(2);
-        return new;
-    }
-
-    if (JACOBIAN_TYPE(grad) & MATPROD_JACOBIAN) {
-
-        if (JACOBIAN_TYPE(grad) != MATPROD_JACOBIAN) abort();  /* no others */
-
-        int primop = MATPROD_JACOBIAN_TYPE(grad) >> 1;
-        SEXP left, right, new;
-
-        switch (MATPROD_JACOBIAN_TYPE(grad) & 1) {
-
-        case 0: {  /* factor on left */
-
-            PROTECT (right = expand_to_full_jacobian (NEXT_JACOBIAN(grad)));
-            left = JACOBIAN_MATRIX1(grad);
-
-            R_len_t n = JACOBIAN_MAT_ROWS(grad);
-            R_len_t k = LENGTH(left) / n;
-            R_len_t m = JACOBIAN_ROWS(right) / k;
-
-            new = alloc_jacobian (gvars, n * m);
-
-            prod_mat_grad (left, right, new, gvars, n, k, m, primop);
-
-            break;
+        if (JACOBIAN_TYPE(grad) & PRODUCT_JACOBIAN) {
+            right = next;
+            left = factor;
+            R_len_t rows = JACOBIAN_ROWS(grad);
+            R_len_t cols = LENGTH(left) / rows;
+            new = alloc_jacobian (gvars, rows);
+            matprod_mat_mat (REAL(left), REAL(right), REAL(new), 
+                             rows, cols, gvars);
         }
-
-        case 1: {  /* factor on right */
-
-            PROTECT (left = expand_to_full_jacobian (NEXT_JACOBIAN(grad)));
-            right = JACOBIAN_MATRIX1(grad);
-
+        else if (MATPROD_JACOBIAN_TYPE(grad) & 1) {  /* factor on right */
+            left = next;
+            right = factor;
             R_len_t n = JACOBIAN_MAT_ROWS(grad);
             R_len_t r = JACOBIAN_ROWS(left);
             R_len_t k = r / n;
             R_len_t s = LENGTH(right);
             R_len_t m = s / k;
             R_len_t h;
-
             new = alloc_jacobian (gvars, n * m);
-
-            prod_grad_mat (left, right, new, gvars, n, k, m, primop, FALSE);
-
-            break;
-        }}
+            prod_grad_mat (left, right, new, gvars, n, k, m, 
+                           MATPROD_JACOBIAN_TYPE(grad) >> 1, FALSE);
+        }
+        else {  /* factor on left */
+            right = next;
+            left = factor;
+            R_len_t n = JACOBIAN_MAT_ROWS(grad);
+            R_len_t k = LENGTH(left) / n;
+            R_len_t m = JACOBIAN_ROWS(right) / k;
+            new = alloc_jacobian (gvars, n * m);
+            prod_mat_grad (left, right, new, gvars, n, k, m,
+                           MATPROD_JACOBIAN_TYPE(grad) >> 1);
+        }
 
         SET_CACHED_JACOBIAN (grad, new);
         SET_NAMEDCNT (new, NAMEDCNT(grad));
@@ -524,7 +492,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
         SET_JACOBIAN_TYPE (grad, NOW_CACHED_JACOBIAN);
         SET_VECTOR_ELT (grad, 0, R_NilValue);  /* recover memory */
         SET_VECTOR_ELT (grad, 1, R_NilValue);
-        /* matprod form is now defunct */
+        /* product or matprod form is now defunct */
 
         UNPROTECT(2);
         return new;
