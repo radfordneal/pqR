@@ -36,7 +36,6 @@
 #include <matprod/matprod.h>
 #include <helpers/helpers-app.h>
 
-
 /* -------------------------------------------------------------------------
    IMPORTANT NOTE:  See the section on "Gradient information" in R-ints for 
    more documentation on the scheme for handling gradients.  It should be
@@ -444,7 +443,7 @@ static SEXP find_jacobian_with_min_rows (SEXP grad)
     pos = grad;
 
     while (JACOBIAN_TYPE(grad) 
-            & (PRODUCT_JACOBIAN | MATPROD_JACOBIAN | SCALED_JACOBIAN)) {
+            & (PRODUCT_JACOBIAN /*| MATPROD_JACOBIAN*/ | SCALED_JACOBIAN)) {
 
         if (JACOBIAN_ROWS(grad) <= min_rows) {
             min_rows = JACOBIAN_ROWS(grad);
@@ -475,8 +474,9 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
     if (!(JACOBIAN_TYPE(grad) & (PRODUCT_JACOBIAN | MATPROD_JACOBIAN))) abort();
 
     PROTECT (grad);
-REprintf("A\n"); R_inspect(grad);
+
     R_len_t rows = JACOBIAN_ROWS(grad);
+    R_len_t cols;
 
     SEXP res = grad;
     SEXP pos = grad;
@@ -486,7 +486,11 @@ REprintf("A\n"); R_inspect(grad);
     for (;;) {
 
         pos = NEXT_JACOBIAN(pos);
-        R_len_t cols = JACOBIAN_ROWS(pos);
+
+        cols = JACOBIAN_TYPE(pos) 
+                    & (SCALED_JACOBIAN | PRODUCT_JACOBIAN | MATPROD_JACOBIAN)
+                 ? JACOBIAN_ROWS(NEXT_JACOBIAN(pos)) 
+                 : JACOBIAN_COLS(pos);
 
         if ((uint64_t)rows * cols > R_LEN_T_MAX)
             error (_("gradient matrix would be too large"));
@@ -522,7 +526,6 @@ REprintf("A\n"); R_inspect(grad);
                     }
                     if (i != rl) abort();
                 }
-REprintf("X\n");
             }
             else if (MATPROD_JACOBIAN_TYPE(res) & 1) {
                 abort();
@@ -541,7 +544,6 @@ REprintf("X\n");
                 SEXP res_mat = JACOBIAN_MATRIX1(res);
                 matprod_mat_mat (REAL(res_mat), REAL(JACOBIAN_MATRIX1(pos)),
                                  REAL(new), rows, LENGTH(res_mat)/rows, cols);
-REprintf("Y\n");
             }
             else if (MATPROD_JACOBIAN_TYPE(res) & 1) {
                 abort();
@@ -551,7 +553,7 @@ REprintf("Y\n");
             }
         }
 
-        else if (JACOBIAN_TYPE(pos) & MATPROD_JACOBIAN) {
+        else if (0 && JACOBIAN_TYPE(pos) & MATPROD_JACOBIAN) {
 
             if (JACOBIAN_TYPE(res) & PRODUCT_JACOBIAN) {
                 abort();
@@ -568,13 +570,11 @@ REprintf("Y\n");
 
             PROTECT(new);
             pos = expand_to_full_jacobian (pos);
-REprintf("YY\n"); R_inspect(pos); REprintf("--\n"); R_inspect(res);
 
             if (JACOBIAN_TYPE(res) & PRODUCT_JACOBIAN) {
                 SEXP res_mat = JACOBIAN_MATRIX1(res);
                 matprod_mat_mat (REAL(res_mat), REAL(pos),
                                  REAL(new), rows, LENGTH(res_mat)/rows, cols);
-REprintf("YYY\n"); R_inspect(new);
             }
             else if (MATPROD_JACOBIAN_TYPE(res) & 1) {
                 abort();
@@ -595,7 +595,6 @@ REprintf("YYY\n"); R_inspect(new);
     UNPROTECT(2);
 
     SET_GRAD_WRT_LEN (res, GRAD_WRT_LEN(grad));
-REprintf("B\n"); R_inspect(res);
     return res;
 }
 
@@ -620,6 +619,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 
         SEXP min, new;
 
+if (JACOBIAN_TYPE(grad) & PRODUCT_JACOBIAN) { /* FOR NOW */
         min = find_jacobian_with_min_rows (grad);
         new = reverse_expand_to_full_jacobian (min);
 
@@ -627,7 +627,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
             UNPROTECT(1);
             return new;
         }
-
+}
         SEXP left, right;
 
         if (JACOBIAN_TYPE(grad) & PRODUCT_JACOBIAN) {
@@ -4621,7 +4621,7 @@ R_inspect(b); REprintf("==\n");
 
 static SEXP add_jacobian_product (SEXP base, SEXP a, SEXP b)
 {
-#if 1
+#if 0
 REprintf("add jacobian product\n");
 R_inspect(base); REprintf("--\n");
 R_inspect(a); REprintf("--\n");
@@ -4746,7 +4746,6 @@ R_inspect(b); REprintf("==\n");
             matprod_mat_mat (REAL(b), REAL(a), REAL(res), n, k, gvars);
         }
         else 
-REprintf("Z\n"),
             res = alloc_product_jacobian (gvars, n, b, a);
 
         UNPROTECT(1);
@@ -4768,7 +4767,7 @@ REprintf("Z\n"),
 
   ret:
 
-#if 1
+#if 0
 REprintf("add jacobian product end\n");
 R_inspect(res);
 #endif
