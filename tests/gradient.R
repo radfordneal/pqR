@@ -2487,6 +2487,8 @@ with gradient (a=c(3,9,7,4,2,6,5,8)) {
 }
 pr("end")
 
+# Chains that might be done in reverse mode.
+
 (A <- matrix(c(3,6,1,2),2,2))
 (B <- matrix(c(9,8,4,3,1,3),2,3))
 pr("start")

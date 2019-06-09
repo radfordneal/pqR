@@ -176,10 +176,11 @@ The gradient computed by the expressions after \code{as} should in the
 same form as is returned by \code{gradient_of} or attached as a
 \code{gradient} attribute by \code{with gradient}, as described in the
 value section below, except that Jacobain matrices that are square
-with zero values off the diagonal may be returned as a vector of just the
-diagonal elements.  The \code{dim} attribute of the Jacobian matrices 
-returned is ignored, but the numeric values returned must nevertheless 
-correspond to those for a matrix with the correct dimensions.
+with zero values off the diagonal may be returned as a vector of just
+the diagonal elements.  The \code{dim} attribute (if present) of the
+Jacobian matrices returned is ignored, but the numeric values returned
+must nevertheless correspond to those for a matrix with the correct
+dimensions.
 
 A Jacobian matrix may be replaced by a function that computes the
 Jacobian matrix, or computes products of it with another matrix.  Such
@@ -199,7 +200,9 @@ matrix with the Jacobian matrix.  For these latter cases, it is
 possible that the function may be able to compute the product
 efficiently without ever creating the full Jacobian matrix.  The
 function will not be called with both \code{right} and \code{left}
-arguments.
+arguments.  The function may be called more than once, and may be
+called after evaluation of the \code{compute gradient} expression has
+completed.
 
 NOTE: At present, the function will always be called with no
 arguments, even if it has been written to handle \code{right} or
