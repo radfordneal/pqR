@@ -471,6 +471,11 @@ static SEXP expand_to_full_jacobian (SEXP grad);
 
 static SEXP reverse_expand_to_full_jacobian (SEXP grad)
 {
+
+#if 0
+    REprintf("reverse_expand_to_full_jacobian\n"); R_inspect(grad);
+#endif
+
     if (!(JACOBIAN_TYPE(grad) & (PRODUCT_JACOBIAN | MATPROD_JACOBIAN))) abort();
 
     PROTECT (grad);
@@ -595,6 +600,11 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
     UNPROTECT(2);
 
     SET_GRAD_WRT_LEN (res, GRAD_WRT_LEN(grad));
+
+#if 0
+    REprintf("reverse_expand_to_full_jacobian end\n"); R_inspect(res);
+#endif
+
     return res;
 }
 
@@ -605,6 +615,11 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
 
 static SEXP expand_to_full_jacobian (SEXP grad)
 {
+
+#if 0
+    REprintf("expand_to_full_jacobian\n"); R_inspect(grad);
+#endif
+
     if (TYPEOF(grad) != REALSXP && TYPEOF(grad) != EXPRSXP)
         return grad;
 
@@ -1626,6 +1641,12 @@ static SEXP make_id_grad (SEXP val)
 
 static SEXP match_structure (SEXP val, SEXP grad, R_len_t gvars)
 {
+#if 0
+    REprintf("match structure %d\n",gvars); 
+    R_inspect(val); REprintf("--\n");
+    R_inspect(grad);
+#endif
+
     if (TYPEOF(val) == REALSXP) {
 
         if (TYPEOF(grad) == CLOSXP) {
@@ -1687,6 +1708,11 @@ static SEXP match_structure (SEXP val, SEXP grad, R_len_t gvars)
         if (grad != R_NilValue)
             return R_NoObject;
     }
+
+#if 0
+    REprintf("match structure end\n"); 
+    R_inspect(grad);
+#endif
 
     return grad;
 }
@@ -4628,8 +4654,13 @@ R_inspect(a); REprintf("--\n");
 R_inspect(b); REprintf("==\n");
 #endif
 
-    if (b == R_NilValue)
+    if (b == R_NilValue) {
+#if 0
+REprintf("add jacobian product end (1)\n");
+R_inspect(base);
+#endif
         return base;
+    }
 
     SEXP res;
 
@@ -4650,6 +4681,10 @@ R_inspect(b); REprintf("==\n");
             }
         }
         UNPROTECT(4);
+#if 0
+REprintf("add jacobian product end (2)\n");
+R_inspect(res);
+#endif
         return res;
     }
 
@@ -4726,9 +4761,8 @@ R_inspect(b); REprintf("==\n");
 
     else {  /* b is a full Jacobian */
 
-        PROTECT(a = expand_to_full_jacobian(a));
-
-        if (LENGTH(a) == 1 && LENGTH(b) == 1) {
+        if (JACOBIAN_LENGTH(a) == 1 && LENGTH(b) == 1) {
+            PROTECT(a = expand_to_full_jacobian(a));
             if (base == R_NilValue) {
                 res = ScalarRealMaybeConst (*REAL(a) * *REAL(b));
             }
@@ -4742,13 +4776,13 @@ R_inspect(b); REprintf("==\n");
         }
 
         if (0) {  /* never now, for testing */
+            PROTECT(a = expand_to_full_jacobian(a));
             res = alloc_jacobian (gvars, n);
             matprod_mat_mat (REAL(b), REAL(a), REAL(res), n, k, gvars);
+            UNPROTECT(1);
         }
         else 
             res = alloc_product_jacobian (gvars, n, b, a);
-
-        UNPROTECT(1);
     }
 
     if (base == R_NilValue)
@@ -4768,7 +4802,7 @@ R_inspect(b); REprintf("==\n");
   ret:
 
 #if 0
-REprintf("add jacobian product end\n");
+REprintf("add jacobian product end (3)\n");
 R_inspect(res);
 #endif
 
