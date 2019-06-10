@@ -2580,3 +2580,63 @@ with gradient (D = matrix(c(7,3,4,6,1,2,-2,8),2,4)) {
   pr("D"); Z
 }
 pr("end")
+
+Rprofmemt(NULL)
+
+n <- 100
+
+F <- seq(from=1,by=0.01,length=n)
+F1 <- rep(1,length=n)
+
+f <- function (x) 2*x
+
+pr("start")
+r1 <- with gradient (a = numeric(n)) f(f(a))
+print(attr(r1,"gradient")[1..3,1..3])
+pr("end")
+
+pr("start")
+r1 <- with gradient (a = numeric(n)) f(f(f(a)))
+print(attr(r1,"gradient")[1..3,1..3])
+pr("end")
+
+pr("start")
+r1 <- with gradient (a = numeric(n)) F*f(10*f(F*f(a)))
+print(attr(r1,"gradient")[1..3,1..3])
+pr("end")
+
+g <- function (x) compute gradient (x) 2*x as D
+
+D <- diag(2,n)
+
+pr("start")
+r2 <- with gradient (a = numeric(n)) g(g(a))
+print(attr(r2,"gradient")[1..3,1..3])
+pr("end")
+
+pr("start")
+r2 <- with gradient (a = numeric(n)) g(g(g(a)))
+print(attr(r2,"gradient")[1..3,1..3])
+pr("end")
+
+pr("start")
+r2 <- with gradient (a = numeric(n)) F*g(10*g(F*g(a)))
+print(attr(r2,"gradient")[1..3,1..3])
+pr("end")
+
+D <- rep(2,n)
+
+pr("start")
+r2 <- with gradient (a = numeric(n)) g(g(a))
+print(attr(r2,"gradient")[1..3,1..3])
+pr("end")
+
+pr("start")
+r2 <- with gradient (a = numeric(n)) g(g(g(a)))
+print(attr(r2,"gradient")[1..3,1..3])
+pr("end")
+
+pr("start")
+r2 <- with gradient (a = numeric(n)) F*g(10*g(F*g(a)))
+print(attr(r2,"gradient")[1..3,1..3])
+pr("end")

@@ -16942,6 +16942,8 @@ attr(,"gradient")
 > pr("end")
 end 
 > 
+> # Chains that might be done in reverse mode.
+> 
 > (A <- matrix(c(3,6,1,2),2,2))
      [,1] [,2]
 [1,]    3    1
@@ -17422,6 +17424,216 @@ attr(,"gradient")
 [2,]    0    0  -72   64  608   16   32   84
 [3,]    0    0  -26    8  208   46   10   24
 [4,]    0    0    4   32  400   36   52   64
+> pr("end")
+end 
+> 
+> Rprofmemt(NULL)
+> 
+> n <- 100
+> 
+> F <- seq(from=1,by=0.01,length=n)
+> F1 <- rep(1,length=n)
+> 
+> f <- function (x) 2*x
+> 
+> pr("start")
+start 
+> r1 <- with gradient (a = numeric(n)) f(f(a))
+RPROFMEM: (double 100):"numeric" 
+RPROFMEM: (double 100):"f" "f" 
+RPROFMEM: (double 100):"f" 
+RPROFMEM: (double 10000):
+RPROFMEM: (list 253):
+> print(attr(r1,"gradient")[1..3,1..3])
+     [,1] [,2] [,3]
+[1,]    4    0    0
+[2,]    0    4    0
+[3,]    0    0    4
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> r1 <- with gradient (a = numeric(n)) f(f(f(a)))
+RPROFMEM: (double 100):"numeric" 
+RPROFMEM: (double 100):"f" "f" "f" 
+RPROFMEM: (double 100):"f" "f" 
+RPROFMEM: (double 100):"f" 
+RPROFMEM: (double 10000):
+> print(attr(r1,"gradient")[1..3,1..3])
+     [,1] [,2] [,3]
+[1,]    8    0    0
+[2,]    0    8    0
+[3,]    0    0    8
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> r1 <- with gradient (a = numeric(n)) F*f(10*f(F*f(a)))
+RPROFMEM: (double 100):"numeric" 
+RPROFMEM: (double 100):"f" "f" "f" 
+RPROFMEM: (double 100):"f" "f" 
+RPROFMEM: (double 100):"f" "f" 
+RPROFMEM: (double 100):"f" "f" 
+RPROFMEM: (double 100):"f" 
+RPROFMEM: (double 100):"f" 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+> print(attr(r1,"gradient")[1..3,1..3])
+     [,1]   [,2]   [,3]
+[1,]   80  0.000  0.000
+[2,]    0 81.608  0.000
+[3,]    0  0.000 83.232
+> pr("end")
+end 
+> 
+> g <- function (x) compute gradient (x) 2*x as D
+> 
+> D <- diag(2,n)
+RPROFMEM: (double 10000):"diag" 
+> 
+> pr("start")
+start 
+> r2 <- with gradient (a = numeric(n)) g(g(a))
+RPROFMEM: (double 100):"numeric" 
+RPROFMEM: (double 100):"g" "g" 
+RPROFMEM: (double 10000):"g" "g" 
+RPROFMEM: (double 100):"g" 
+RPROFMEM: (double 10000):"g" 
+RPROFMEM: (double 10000):"g" 
+RPROFMEM: (double 10000):"g" 
+RPROFMEM: (double 10000):
+> print(attr(r2,"gradient")[1..3,1..3])
+     [,1] [,2] [,3]
+[1,]    4    0    0
+[2,]    0    4    0
+[3,]    0    0    4
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> r2 <- with gradient (a = numeric(n)) g(g(g(a)))
+RPROFMEM: (double 100):"numeric" 
+RPROFMEM: (double 100):"g" "g" "g" 
+RPROFMEM: (double 10000):"g" "g" "g" 
+RPROFMEM: (double 100):"g" "g" 
+RPROFMEM: (double 10000):"g" "g" 
+RPROFMEM: (double 10000):"g" "g" 
+RPROFMEM: (double 10000):"g" "g" 
+RPROFMEM: (double 100):"g" 
+RPROFMEM: (double 10000):"g" 
+RPROFMEM: (double 10000):"g" 
+RPROFMEM: (double 10000):
+> print(attr(r2,"gradient")[1..3,1..3])
+     [,1] [,2] [,3]
+[1,]    8    0    0
+[2,]    0    8    0
+[3,]    0    0    8
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> r2 <- with gradient (a = numeric(n)) F*g(10*g(F*g(a)))
+RPROFMEM: (double 100):"numeric" 
+RPROFMEM: (double 100):"g" "g" "g" 
+RPROFMEM: (double 10000):"g" "g" "g" 
+RPROFMEM: (double 100):"g" "g" 
+RPROFMEM: (double 100):"g" "g" 
+RPROFMEM: (double 100):"g" "g" 
+RPROFMEM: (double 10000):"g" "g" 
+RPROFMEM: (double 100):"g" 
+RPROFMEM: (double 100):"g" 
+RPROFMEM: (double 10000):"g" 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+RPROFMEM: (double 10000):
+> print(attr(r2,"gradient")[1..3,1..3])
+     [,1]   [,2]   [,3]
+[1,]   80  0.000  0.000
+[2,]    0 81.608  0.000
+[3,]    0  0.000 83.232
+> pr("end")
+end 
+> 
+> D <- rep(2,n)
+RPROFMEM: (double 100):
+> 
+> pr("start")
+start 
+> r2 <- with gradient (a = numeric(n)) g(g(a))
+RPROFMEM: (double 100):"numeric" 
+RPROFMEM: (double 100):"g" "g" 
+RPROFMEM: (double 100):"g" "g" 
+RPROFMEM: (double 100):"g" "g" 
+RPROFMEM: (double 100):"g" 
+RPROFMEM: (double 100):"g" 
+RPROFMEM: (double 100):"g" 
+RPROFMEM: (double 10000):
+> print(attr(r2,"gradient")[1..3,1..3])
+     [,1] [,2] [,3]
+[1,]    4    0    0
+[2,]    0    4    0
+[3,]    0    0    4
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> r2 <- with gradient (a = numeric(n)) g(g(g(a)))
+RPROFMEM: (double 100):"numeric" 
+RPROFMEM: (double 100):"g" "g" "g" 
+RPROFMEM: (double 100):"g" "g" "g" 
+RPROFMEM: (double 100):"g" "g" "g" 
+RPROFMEM: (double 100):"g" "g" 
+RPROFMEM: (double 100):"g" "g" 
+RPROFMEM: (double 100):"g" "g" 
+RPROFMEM: (double 100):"g" 
+RPROFMEM: (double 100):"g" 
+RPROFMEM: (double 100):"g" 
+RPROFMEM: (double 10000):
+> print(attr(r2,"gradient")[1..3,1..3])
+     [,1] [,2] [,3]
+[1,]    8    0    0
+[2,]    0    8    0
+[3,]    0    0    8
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> r2 <- with gradient (a = numeric(n)) F*g(10*g(F*g(a)))
+RPROFMEM: (double 100):"numeric" 
+RPROFMEM: (double 100):"g" "g" "g" 
+RPROFMEM: (double 100):"g" "g" "g" 
+RPROFMEM: (double 100):"g" "g" "g" 
+RPROFMEM: (double 100):"g" "g" 
+RPROFMEM: (double 100):"g" "g" 
+RPROFMEM: (double 100):"g" "g" 
+RPROFMEM: (double 100):"g" "g" 
+RPROFMEM: (double 100):"g" "g" 
+RPROFMEM: (double 100):"g" 
+RPROFMEM: (double 100):"g" 
+RPROFMEM: (double 100):"g" 
+RPROFMEM: (double 100):"g" 
+RPROFMEM: (double 100):
+RPROFMEM: (double 100):
+RPROFMEM: (double 10000):
+> print(attr(r2,"gradient")[1..3,1..3])
+     [,1]   [,2]   [,3]
+[1,]   80  0.000  0.000
+[2,]    0 81.608  0.000
+[3,]    0  0.000 83.232
 > pr("end")
 end 
 > 

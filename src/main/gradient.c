@@ -881,7 +881,7 @@ if (JACOBIAN_TYPE(grad) & PRODUCT_JACOBIAN) { /* FOR NOW */
 #define MIN_VECTOR_SCALE_BENEFIT 2.0
 
 static SEXP scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
-                                  double *f, R_len_t flen, R_len_t n)
+                             double *f, R_len_t flen, R_len_t n)
 {
     R_len_t i, j, k;
     SEXP r;
@@ -919,16 +919,16 @@ static SEXP scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
     if (gn == n && flen == n) {
 
         if (JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) {
-            r = allocVector (REALSXP, LENGTH(grad));
+            r = allocVector (REALSXP, n);
             R_len_t i;
             if (glen == 1) {
                 double d = *REAL(grad);
-                for (i = 0; i < glen; i++)
+                for (i = 0; i < n; i++)
                     REAL(r)[i] = f[i] * d;
             }
             else {
                 if (glen != n) abort();
-                for (i = 0; i < glen; i++)
+                for (i = 0; i < n; i++)
                     REAL(r)[i] = f[i] * REAL(grad)[i];
             }
             SET_GRAD_WRT_LEN (r, gvars);
@@ -1431,6 +1431,12 @@ static SEXP add_scaled_jacobian (SEXP base, SEXP extra,
 static SEXP expand_gradient (SEXP value, SEXP grad, SEXP idg)
 {
     SEXP res;
+
+#if 0
+REprintf("expand_gradient\n"); R_inspect(value); 
+REprintf("--\n"); R_inspect(grad);
+REprintf("--\n"); R_inspect(idg);
+#endif
 
     if (TYPEOF(idg) == VECSXP && GRAD_WRT_LIST(idg)) {
 
@@ -2987,7 +2993,14 @@ R_inspect(factors);
     R_len_t gvars = GRAD_WRT_LEN(grad);
     R_len_t gn = JACOBIAN_ROWS(grad);
 
-    return scaled_jacobian (grad, gvars, gn, REAL(factors), flen, n);
+    SEXP res = scaled_jacobian (grad, gvars, gn, REAL(factors), flen, n);
+
+#if 0
+REprintf("scaled_gradients_vec end\n");
+R_inspect(res);
+#endif
+
+    return res;
 }
 
 
