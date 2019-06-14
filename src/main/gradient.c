@@ -463,9 +463,17 @@ static SEXP find_jacobian_with_min_rows (SEXP grad)
 
 
 /* Reverse mode expansion of a Jacobian representation.  The expanded form
-   is returned and stored in grad as the cached Jacobian.
+   (a full numeric Jacobian matrix) is returned, and is also stored in grad
+   as the cached Jacobian.
 
-   Protects its argument. */
+   The expansion proceeds by updating a representation in (currently of either
+   PRODUCT_JACOBIAN or MATPROD_JACOBIAN form) that absorbs progessively more
+   initial elements of the chain starting with 'grad', with this representation
+   being held in local variables here (to avoid the overhead of allocating 
+   objects for this).  The final result when combined with the Jacobian after
+   the end of the chain will be a full Jacobian.
+
+   Protects its 'grad' argument. */
 
 static SEXP expand_to_full_jacobian (SEXP grad);
 
@@ -480,13 +488,29 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
 
     PROTECT (grad);
 
-    R_len_t rows = JACOBIAN_ROWS(grad);
-    R_len_t cols;
+    R_len_t gvars = GRAD_WRT_LEN(grad); /* Columns in final jacobian for grad */
 
-    SEXP res = grad;
-    SEXP pos = grad;
+    int jacobian_type;         /* Type of result so far */
+    int matprod_jacobian_type; /* Sub-type when type is MATPROD_JACOBIAN */
+    R_len_t mat_rows;          /* Matrix rows in product when type is 
+                                  MATPROD_JACOBIAN, corr. to JACOBIAN_MAT_ROWS*/
+    R_len_t rows;              /* Rows in Jacobian, corr. to JACOBIAN_ROWS */
+    SEXP res_mat;              /* Matrix, correpsonding to JACOBIAN_MATRIX1 */
 
-    PROTECT(res);
+    SEXP pos;                  /* Next factor in chain to multiply result by */
+    SEXP new_mat;              /* Matrix that will become next res_mat */
+    R_len_t cols;              /* Columns for new_mat */
+
+    rows = JACOBIAN_ROWS(grad);/* Stays same as more factors multiply on right*/
+
+    PROTECT(res_mat = JACOBIAN_MATRIX1(grad));
+    jacobian_type = JACOBIAN_TYPE(grad);
+    if (jacobian_type == MATPROD_JACOBIAN) {
+        matprod_jacobian_type = MATPROD_JACOBIAN_TYPE(grad);
+        mat_rows = JACOBIAN_MAT_ROWS(grad);
+    }
+
+    pos = grad;
 
     for (;;) {
 
@@ -494,29 +518,25 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
 
         cols = JACOBIAN_TYPE(pos) 
                     & (SCALED_JACOBIAN | PRODUCT_JACOBIAN | MATPROD_JACOBIAN)
-                 ? JACOBIAN_ROWS(NEXT_JACOBIAN(pos)) 
+                 ? JACOBIAN_ROWS(NEXT_JACOBIAN(pos)) /* cols = rows of next */
                  : JACOBIAN_COLS(pos);
 
         if ((uint64_t)rows * cols > R_LEN_T_MAX)
             error (_("gradient matrix would be too large"));
 
-        SEXP new = allocVector (REALSXP, rows * cols);
-
         if (JACOBIAN_TYPE(pos) & SCALED_JACOBIAN) {
 
             if (! JACOBIAN_TYPE(pos) & DIAGONAL_JACOBIAN) abort();
-
-            SET_JACOBIAN_TYPE (new, JACOBIAN_TYPE(res));
 
             double *p = REAL(pos);
             R_len_t pl = LENGTH(pos);
             R_len_t i, j, k;
 
-            if (JACOBIAN_TYPE(res) & PRODUCT_JACOBIAN) {
-                SEXP res_mat = JACOBIAN_MATRIX1(res);
+            if (jacobian_type & PRODUCT_JACOBIAN) {
+                new_mat = allocVector (REALSXP, rows * cols);
                 double *r = REAL(res_mat);
                 R_len_t rl = LENGTH(res_mat);
-                double *n = REAL(new);
+                double *n = REAL(new_mat);
                 if (pl == 1) {
                     double d = *p;
                     for (i = 0; i <rl; i++) n[i] = r[i] * d;
@@ -532,80 +552,85 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
                     if (i != rl) abort();
                 }
             }
-            else if (MATPROD_JACOBIAN_TYPE(res) & 1) {
-                abort();
+            else if (matprod_jacobian_type & 1) {
+goto general;
             }
             else {
-                abort();
+goto general;
             }
         }
 
         else if (JACOBIAN_TYPE(pos) & PRODUCT_JACOBIAN) {
 
-            SET_JACOBIAN_TYPE (new, JACOBIAN_TYPE(pos));
-            SET_NEXT_JACOBIAN (new, NEXT_JACOBIAN(pos));
-
-            if (JACOBIAN_TYPE(res) & PRODUCT_JACOBIAN) {
-                SEXP res_mat = JACOBIAN_MATRIX1(res);
+            if (jacobian_type & PRODUCT_JACOBIAN) {
+                new_mat = allocVector (REALSXP, rows * cols);
                 matprod_mat_mat (REAL(res_mat), REAL(JACOBIAN_MATRIX1(pos)),
-                                 REAL(new), rows, LENGTH(res_mat)/rows, cols);
+                  REAL(new_mat), rows, LENGTH(res_mat)/rows, cols);
             }
-            else if (MATPROD_JACOBIAN_TYPE(res) & 1) {
-                abort();
+            else if (matprod_jacobian_type & 1) {
+goto general;
             }
             else {
-                abort();
+goto general;
             }
         }
 
-        else if (0 && JACOBIAN_TYPE(pos) & MATPROD_JACOBIAN) {
+        else if (JACOBIAN_TYPE(pos) & MATPROD_JACOBIAN) {
 
-            if (JACOBIAN_TYPE(res) & PRODUCT_JACOBIAN) {
-                abort();
+            if (jacobian_type & PRODUCT_JACOBIAN) {
+goto general;
             }
-            else if (MATPROD_JACOBIAN_TYPE(res) & 1) {
-                abort();
+            else if (matprod_jacobian_type & 1) {
+goto general;
             }
             else {
-                abort();
+goto general;
             }
         }
 
-        else {
-
-            PROTECT(new);
-            pos = expand_to_full_jacobian (pos);
-
-            if (JACOBIAN_TYPE(res) & PRODUCT_JACOBIAN) {
-                SEXP res_mat = JACOBIAN_MATRIX1(res);
-                matprod_mat_mat (REAL(res_mat), REAL(pos),
-                                 REAL(new), rows, LENGTH(res_mat)/rows, cols);
-            }
-            else if (MATPROD_JACOBIAN_TYPE(res) & 1) {
-                abort();
-            }
-            else {
-                abort();
-            }
-
-            res = new;
-            UNPROTECT(1);
-
+        else
             break;  /* end of chain */
-        }
 
-        UNPROTECT_PROTECT (res = new);
+        UNPROTECT_PROTECT (res_mat = new_mat);
     }
 
-    UNPROTECT(2);
+general:
 
-    SET_GRAD_WRT_LEN (res, GRAD_WRT_LEN(grad));
+    pos = expand_to_full_jacobian (pos);
+    new_mat = allocVector (REALSXP, rows * cols);
+
+    if (jacobian_type & PRODUCT_JACOBIAN) {
+        matprod_mat_mat (REAL(res_mat), REAL(pos),
+          REAL(new_mat), rows, LENGTH(res_mat)/rows, cols);
+    }
+    else if (matprod_jacobian_type & 1) {  /* pos is on left */
+        R_len_t n = mat_rows;
+        R_len_t r = JACOBIAN_ROWS(pos);
+        R_len_t k = r / n;
+        R_len_t s = LENGTH(res_mat);
+        R_len_t m = s / k;
+#if 1
+REprintf("YYYYYY %d : %d %d %d : %d %d\n",gvars,n,k,m,r,s);
+R_inspect(grad); REprintf("--\n");
+R_inspect(pos); REprintf("--\n");
+R_inspect(res_mat); REprintf("==\n");
+#endif
+        prod_grad_mat (pos, res_mat, new_mat, gvars, n, k, m,
+                       matprod_jacobian_type >> 1, FALSE);
+    }
+    else {  /* pos is right factor */
+        abort();
+    }
+
+    UNPROTECT(2);   /* res_mat, grad */
+
+    SET_GRAD_WRT_LEN (new_mat, GRAD_WRT_LEN(grad));
 
 #if 0
-    REprintf("reverse_expand_to_full_jacobian end\n"); R_inspect(res);
+    REprintf("reverse_expand_to_full_jacobian end\n"); R_inspect(new_mat);
 #endif
 
-    return res;
+    return new_mat;
 }
 
 
@@ -662,8 +687,13 @@ if (JACOBIAN_TYPE(grad) & PRODUCT_JACOBIAN) { /* FOR NOW */
             R_len_t k = r / n;
             R_len_t s = LENGTH(right);
             R_len_t m = s / k;
-            R_len_t h;
             new = alloc_jacobian (gvars, n * m);
+#if 0
+REprintf("XXXXXX %d : %d %d %d : %d %d\n",gvars,n,k,m,r,s);
+R_inspect(grad); REprintf("--\n");
+R_inspect(left); REprintf("--\n");
+R_inspect(right); REprintf("==\n");
+#endif
             prod_grad_mat (left, right, new, gvars, n, k, m, 
                            MATPROD_JACOBIAN_TYPE(grad) >> 1, FALSE);
         }
