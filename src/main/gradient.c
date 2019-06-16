@@ -609,7 +609,7 @@ general:
         R_len_t k = r / n;
         R_len_t s = LENGTH(res_mat);
         R_len_t m = s / k;
-#if 1
+#if 0
 REprintf("YYYYYY %d : %d %d %d : %d %d\n",gvars,n,k,m,r,s);
 R_inspect(grad); REprintf("--\n");
 R_inspect(pos); REprintf("--\n");
@@ -619,7 +619,17 @@ R_inspect(res_mat); REprintf("==\n");
                        matprod_jacobian_type >> 1, FALSE);
     }
     else {  /* pos is right factor */
-        abort();
+        R_len_t n = mat_rows;
+        R_len_t k = LENGTH(res_mat) / n;
+        R_len_t m = JACOBIAN_ROWS(pos) / k;
+#if 0
+REprintf("ZZZZZZ %d : %d %d %d\n",gvars,n,k,m);
+R_inspect(grad); REprintf("--\n");
+R_inspect(pos); REprintf("--\n");
+R_inspect(res_mat); REprintf("==\n");
+#endif
+        prod_mat_grad (res_mat, pos, new_mat, gvars, n, k, m,
+                       matprod_jacobian_type >> 1);
     }
 
     UNPROTECT(2);   /* res_mat, grad */
@@ -659,7 +669,6 @@ static SEXP expand_to_full_jacobian (SEXP grad)
 
         SEXP min, new;
 
-if (JACOBIAN_TYPE(grad) & PRODUCT_JACOBIAN) { /* FOR NOW */
         min = find_jacobian_with_min_rows (grad);
         new = reverse_expand_to_full_jacobian (min);
 
@@ -667,7 +676,7 @@ if (JACOBIAN_TYPE(grad) & PRODUCT_JACOBIAN) { /* FOR NOW */
             UNPROTECT(1);
             return new;
         }
-}
+
         SEXP left, right;
 
         if (JACOBIAN_TYPE(grad) & PRODUCT_JACOBIAN) {
@@ -3735,14 +3744,14 @@ REprintf("--\n");
             grad = alloc_matprod_jacobian (gvars, nrows*ncols, nrows, 
                                            2*primop + 0, x, y_grad);
             UNPROTECT(2);
-            return grad;
+            goto ret;
         }
 
         if (y_grad == R_NilValue) {
             grad = alloc_matprod_jacobian (gvars, nrows*ncols, nrows, 
                                            2*primop + 1, y, x_grad);
             UNPROTECT(2);
-            return grad;
+            goto ret;
         }
     }
 
@@ -3760,6 +3769,13 @@ REprintf("--\n");
     }
 
     UNPROTECT(3);
+
+ret:
+
+#if 0
+REprintf("*** matprod_gradient end\n");
+R_inspect(grad);
+#endif
 
     return grad;
 }

@@ -8,13 +8,11 @@ Modifications to R in pqR are Copyright (C) 2013-2019 Radford M. Neal
 
 Some modules are from R-2.15.1 or later versions distributed by the R Core Team
 
-Platform: x86_64-apple-darwin16.7.0 (64-bit)
+Platform: x86_64-unknown-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
 Type 'license()' or 'licence()' for distribution details.
-
-  Natural language support but running in an English locale
 
 R is a collaborative project with many contributors.
 Type 'contributors()' for more information and
@@ -13064,6 +13062,25 @@ attr(,"gradient")
 [1,]  261    0
 [2,]   18  147
 > 
+> a <- c(3,1,7,4)
+> b <- a+0.1
+> with gradient (a) sin(a+0.1)
+[1]  0.04158066  0.89120736  0.72896904 -0.81827711
+attr(,"gradient")
+           [,1]      [,2]      [,3]       [,4]
+[1,] -0.9991352 0.0000000 0.0000000  0.0000000
+[2,]  0.0000000 0.4535961 0.0000000  0.0000000
+[3,]  0.0000000 0.0000000 0.6845467  0.0000000
+[4,]  0.0000000 0.0000000 0.0000000 -0.5748239
+> with gradient (b) sin(b)
+[1]  0.04158066  0.89120736  0.72896904 -0.81827711
+attr(,"gradient")
+           [,1]      [,2]      [,3]       [,4]
+[1,] -0.9991352 0.0000000 0.0000000  0.0000000
+[2,]  0.0000000 0.4535961 0.0000000  0.0000000
+[3,]  0.0000000 0.0000000 0.6845467  0.0000000
+[4,]  0.0000000 0.0000000 0.0000000 -0.5748239
+> 
 > 
 > # Test backpropagation.
 > 
@@ -15755,6 +15772,7 @@ RPROFMEM: (double 8):"dnorm"
 RPROFMEM: (double 8):"dnorm" 
 RPROFMEM: (double 8):
 RPROFMEM: (double 8):
+RPROFMEM: (double 8):
 D 
 RPROFMEM: (double 64):
 RPROFMEM: (double 64):
@@ -16970,6 +16988,8 @@ RPROFMEM: (double 24):
 RPROFMEM: (double 36):
 C 
 RPROFMEM: (double 36):
+RPROFMEM: (double 24):
+RPROFMEM: (double 36):
 [[1]]
      [,1] [,2] [,3]
 [1,]   35   15    6
@@ -17445,7 +17465,6 @@ RPROFMEM: (double 100):"numeric"
 RPROFMEM: (double 100):"f" "f" 
 RPROFMEM: (double 100):"f" 
 RPROFMEM: (double 10000):
-RPROFMEM: (list 253):
 > print(attr(r1,"gradient")[1..3,1..3])
      [,1] [,2] [,3]
 [1,]    4    0    0

@@ -1783,6 +1783,11 @@ rm(a)
 with gradient (a=c(9,7)) a^2+a[2]^3
 with gradient (a=c(9,7)) a[1]^2+a^3
 
+a <- c(3,1,7,4)
+b <- a+0.1
+with gradient (a) sin(a+0.1)
+with gradient (b) sin(b)
+
 
 # Test backpropagation.
 
