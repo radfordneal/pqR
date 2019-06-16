@@ -2356,7 +2356,7 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
 
         POP_IF_TOP_OF_STACK(sa0);
 
-        if (local_assign || NAMEDCNT_EQ_0(sa)) {
+        if ((local_assign || NAMEDCNT_EQ_0(sa)) && grad == R_NilValue) {
             sy = sa;
             *REAL(sy) = res;
         }
@@ -2388,7 +2388,8 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
 
         else {
 
-            PROTECT(sy = local_assign || NAMEDCNT_EQ_0(sa) 
+            PROTECT(sy = (local_assign || NAMEDCNT_EQ_0(sa))
+                               && grad == R_NilValue
                            ? sa : allocVector(REALSXP, n));
 
             if (helpers_not_multithreading_now || n < 2*T_math1
