@@ -16333,7 +16333,6 @@ RPROFMEM: (double 8):"diag"
 RPROFMEM: (double 64):"diag" 
 D 
 RPROFMEM: (double 64):
-RPROFMEM: (double 64):
 [1]  27 243 147  48  12 108  75 192
 attr(,"gradient")
      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
@@ -16368,7 +16367,6 @@ C
 RPROFMEM: (double 8):"diag" "<Anonymous>" 
 RPROFMEM: (double 64):"diag" "<Anonymous>" 
 D 
-RPROFMEM: (double 64):
 RPROFMEM: (double 64):
 [1]  27 243 147  48  12 108  75 192
 attr(,"gradient")
@@ -16439,7 +16437,6 @@ C
 RPROFMEM: (double 8):"<Anonymous>" 
 RPROFMEM: (double 64):
 D 
-RPROFMEM: (double 64):
 RPROFMEM: (double 64):
 [1]  27 243 147  48  12 108  75 192
 attr(,"gradient")

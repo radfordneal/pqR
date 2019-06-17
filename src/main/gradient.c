@@ -598,25 +598,37 @@ general:
 
     if (JACOBIAN_TYPE(pos) == DIAGONAL_JACOBIAN) {
 
+        if (res_mat != new_mat)
+            new_mat = duplicate(res_mat);
+
         if (LENGTH(pos) == 1) {  /* multiply everything by same factor */
             double d = *REAL(pos);
-            if (d == 1.0) {  /* 'pos' is identity */
-                if (res_mat != new_mat) {
-                    new_mat = duplicate(res_mat);
-                    SET_JACOBIAN_TYPE (new_mat, JACOBIAN_TYPE(res_mat));
-                }
-            }
-            else {
-                R_len_t i, l;
-                new_mat = duplicate(res_mat);
-                l = LENGTH(new_mat);
-                for (i = 0; i < l; i++) REAL(new_mat)[i] *= d;
+            if (d != 1.0) {  /* 'pos' is not identity matrix */
+                R_len_t l = LENGTH(new_mat);
+                R_len_t i;
+                for (i = 0; i < l; i++)
+                    REAL(new_mat)[i] *= d;
             }
         }
 
-        else {  /* full diagonal */
+        else {  /* full diagonal with (possibly) different values */
+
+            if (jacobian_type & PRODUCT_JACOBIAN) {
+                if (LENGTH(pos) != cols) abort();
+                R_len_t i, j;
+                for (j = 0; j < cols; j++) {
+                    double d = REAL(pos)[j];
+                    for (i = 0; i < rows; i++)
+                        REAL(new_mat)[i+j*rows] *= d;
+                }
+            }
+            else
 goto general2;
         }
+
+        SET_GRAD_WRT_LEN (new_mat, gvars);
+        SET_JACOBIAN_TYPE (new_mat, 0);
+        SET_MATPROD_JACOBIAN_TYPE (new_mat, 0);
     }
 
     else {
