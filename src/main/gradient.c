@@ -498,7 +498,7 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
     SEXP res_mat;              /* Matrix, correpsonding to JACOBIAN_MATRIX1 */
 
     SEXP pos;                  /* Next factor in chain to multiply result by */
-    SEXP new_mat;              /* Matrix that will become next res_mat */
+    SEXP new_mat = NULL;       /* Matrix that will become next res_mat */
     R_len_t cols;              /* Columns for new_mat */
 
     rows = JACOBIAN_ROWS(grad);/* Stays same as more factors multiply on right*/
@@ -596,40 +596,69 @@ goto general;
 
 general:
 
-    pos = expand_to_full_jacobian (pos);
-    new_mat = allocVector (REALSXP, rows * cols);
+    if (JACOBIAN_TYPE(pos) == DIAGONAL_JACOBIAN) {
 
-    if (jacobian_type & PRODUCT_JACOBIAN) {
-        matprod_mat_mat (REAL(res_mat), REAL(pos),
-          REAL(new_mat), rows, LENGTH(res_mat)/rows, cols);
+        if (LENGTH(pos) == 1) {  /* multiply everything by same factor */
+            double d = *REAL(pos);
+            if (d == 1.0) {  /* 'pos' is identity */
+                if (res_mat != new_mat) {
+                    new_mat = duplicate(res_mat);
+                    SET_JACOBIAN_TYPE (new_mat, JACOBIAN_TYPE(res_mat));
+                }
+            }
+            else {
+                R_len_t i, l;
+                new_mat = duplicate(res_mat);
+                l = LENGTH(new_mat);
+                for (i = 0; i < l; i++) REAL(new_mat)[i] *= d;
+            }
+        }
+
+        else {  /* full diagonal */
+goto general2;
+        }
     }
-    else if (matprod_jacobian_type & 1) {  /* pos is on left */
-        R_len_t n = mat_rows;
-        R_len_t r = JACOBIAN_ROWS(pos);
-        R_len_t k = r / n;
-        R_len_t s = LENGTH(res_mat);
-        R_len_t m = s / k;
+
+    else {
+general2:
+        /* Nothing clever to be done - expand 'pos' and multiply it by the
+           by current matrix (possibly on either left or right). */
+
+        pos = expand_to_full_jacobian (pos);
+        new_mat = allocVector (REALSXP, rows * cols);
+
+        if (jacobian_type & PRODUCT_JACOBIAN) {
+            matprod_mat_mat (REAL(res_mat), REAL(pos),
+              REAL(new_mat), rows, LENGTH(res_mat)/rows, cols);
+        }
+        else if (matprod_jacobian_type & 1) {  /* pos is on left */
+            R_len_t n = mat_rows;
+            R_len_t r = JACOBIAN_ROWS(pos);
+            R_len_t k = r / n;
+            R_len_t s = LENGTH(res_mat);
+            R_len_t m = s / k;
 #if 0
 REprintf("YYYYYY %d : %d %d %d : %d %d\n",gvars,n,k,m,r,s);
 R_inspect(grad); REprintf("--\n");
 R_inspect(pos); REprintf("--\n");
 R_inspect(res_mat); REprintf("==\n");
 #endif
-        prod_grad_mat (pos, res_mat, new_mat, gvars, n, k, m,
-                       matprod_jacobian_type >> 1, FALSE);
-    }
-    else {  /* pos is right factor */
-        R_len_t n = mat_rows;
-        R_len_t k = LENGTH(res_mat) / n;
-        R_len_t m = JACOBIAN_ROWS(pos) / k;
+            prod_grad_mat (pos, res_mat, new_mat, gvars, n, k, m,
+                           matprod_jacobian_type >> 1, FALSE);
+        }
+        else {  /* pos is right factor */
+            R_len_t n = mat_rows;
+            R_len_t k = LENGTH(res_mat) / n;
+            R_len_t m = JACOBIAN_ROWS(pos) / k;
 #if 0
 REprintf("ZZZZZZ %d : %d %d %d\n",gvars,n,k,m);
 R_inspect(grad); REprintf("--\n");
 R_inspect(pos); REprintf("--\n");
 R_inspect(res_mat); REprintf("==\n");
 #endif
-        prod_mat_grad (res_mat, pos, new_mat, gvars, n, k, m,
-                       matprod_jacobian_type >> 1);
+            prod_mat_grad (res_mat, pos, new_mat, gvars, n, k, m,
+                           matprod_jacobian_type >> 1);
+        }
     }
 
     UNPROTECT(2);   /* res_mat, grad */
