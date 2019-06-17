@@ -1566,6 +1566,15 @@ with gradient (A,V) solve(A,V)
 numericDeriv (quote(as.vector(solve(A,V))),"A")
 numericDeriv (quote(as.vector(solve(A,V))),"V")
 
+A <- matrix(c(3,1,7,4),2,2)
+B <- matrix(c(4,8,2,9,3,6),2,3)
+
+with gradient (A,B) ((3*A) %*% sin(A+0.1)) %*% (7*B)
+
+numericDeriv (quote(((3*A) %*% sin(A+0.1)) %*% (7*B)), "A")
+numericDeriv (quote(((3*A) %*% sin(A+0.1)) %*% (7*B)), "B")
+
+
 
 # Tests with data frames.
 
