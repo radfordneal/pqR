@@ -429,7 +429,8 @@ static void prod_mat_grad (SEXP x, SEXP y_grad, SEXP grad, R_len_t gvars,
     /* Faster special handling when 'y_grad' is diagonal jacobian (and not 
        transposed). */
 
-    if (primop==0 && JACOBIAN_TYPE(y_grad) == DIAGONAL_JACOBIAN && primop != 2) {
+    if (JACOBIAN_TYPE(y_grad) == DIAGONAL_JACOBIAN && primop != 2) {
+
         R_len_t lgrad = LENGTH(grad);
         R_len_t lx = LENGTH(x);
         R_len_t lr = nrows * ncols;
@@ -452,13 +453,25 @@ static void prod_mat_grad (SEXP x, SEXP y_grad, SEXP grad, R_len_t gvars,
             }
         }
         else {  /* primop == 1 */
+            if (lx != nrows * k) abort();
+            double *dp = REAL(y_grad);
+            s = 0;
+            for (i = 0; i < lr; i += nrows) {
+                for (j = 0; j < k; j++) {
+                    double d = *dp;
+                    if (LENGTH(y_grad) != 1) dp += 1;
+                    for (t = 0; t < nrows; t++)
+                        REAL(grad)[s+i+t] = d * REAL(x)[j+t*k];
+                    s += lr;
+                }
+            }
         }
 
         UNPROTECT(3);
         return;
     }
 
-    /* General case. */
+    /* The general case. */
 
     y_grad = expand_to_full_jacobian (y_grad);
 
