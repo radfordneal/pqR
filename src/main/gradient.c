@@ -117,6 +117,9 @@
  (UPTR_FROM_SEXP(x)->sxpinfo.gp = UPTR_FROM_SEXP(x)->sxpinfo.gp&0xfff0 | (v))
 
 
+static SEXP expand_to_full_jacobian(SEXP);
+static SEXP reverse_expand_to_full_jacobian(SEXP);
+
 /* -------------------------------------------------------------------------- */
 
 
@@ -324,10 +327,36 @@ void SET_GRADIENT_IN_CELL_NR (SEXP x, SEXP v)
 }
 
 
+/* Procedures to multiply gradient by matrix or matrix by gradient, storing
+   result in 'grad'.  Expands gradient factor if necessary (often handles 
+   diagonal ones directly). */
+
 static void prod_grad_mat (SEXP x_grad, SEXP y, SEXP grad, R_len_t gvars, 
                            R_len_t nrows, R_len_t k, R_len_t ncols, 
                            int primop, int add)
 {
+    PROTECT2(y,grad);
+    PROTECT(x_grad);
+
+    if (0 && JACOBIAN_TYPE(x_grad) == DIAGONAL_JACOBIAN && primop != 1) {
+
+        R_len_t i, j;
+
+        memset (REAL(grad), 0, LENGTH(grad) * sizeof(double));
+
+        if (primop == 0) {
+        
+        }
+        else {  /* primop == 2 */
+        }
+
+        UNPROTECT(3);
+    }
+
+    x_grad = expand_to_full_jacobian (x_grad);
+
+    UNPROTECT_PROTECT(x_grad);
+
     R_len_t sz = nrows * ncols;
     R_len_t h, i, j;
     SEXP tmpr;
@@ -351,6 +380,8 @@ static void prod_grad_mat (SEXP x_grad, SEXP y, SEXP grad, R_len_t gvars,
             ;  /* tmpr will be grad, so result already in right place */
     }
     else {
+
+        /* May need to copy because matprod_* have alignment requirements. */
 
         SEXP tmpx = allocVector (REALSXP, nrows * k);
 
@@ -386,12 +417,39 @@ static void prod_grad_mat (SEXP x_grad, SEXP y, SEXP grad, R_len_t gvars,
         UNPROTECT(1);
     }
 
-    UNPROTECT(1);
+    UNPROTECT(4);
 }
 
 static void prod_mat_grad (SEXP x, SEXP y_grad, SEXP grad, R_len_t gvars, 
                            R_len_t nrows, R_len_t k, R_len_t ncols, int primop)
 {
+    PROTECT2(x,grad);
+    PROTECT(y_grad);
+
+    /* Faster special handling when 'grad' is diagonal jacobian (and not 
+       transposed). */
+
+    if (0 && JACOBIAN_TYPE(y_grad) == DIAGONAL_JACOBIAN && primop != 2) {
+
+        R_len_t i, j;
+
+        memset (REAL(grad), 0, LENGTH(grad) * sizeof(double));
+
+        if (primop == 0) {
+            
+        }
+        else {  /* primop == 1 */
+        }
+
+        UNPROTECT(3);
+    }
+
+    /* General case. */
+
+    y_grad = expand_to_full_jacobian (y_grad);
+
+    UNPROTECT_PROTECT(y_grad);
+
     if (primop == 0) {
         matprod_mat_mat (REAL(x), REAL(y_grad), REAL(grad),
                          nrows, k, ncols * gvars);
@@ -401,6 +459,8 @@ static void prod_mat_grad (SEXP x, SEXP y_grad, SEXP grad, R_len_t gvars,
                         nrows, k, ncols * gvars);
     }
     else {  /* primop == 2 */
+
+        /* May need to copy because matprod_trans2 has alignment requirement. */
 
         R_len_t sz = nrows * ncols;
         SEXP tmpr, tmpy;
@@ -426,6 +486,8 @@ static void prod_mat_grad (SEXP x, SEXP y_grad, SEXP grad, R_len_t gvars,
 
         UNPROTECT(2);
     }
+
+    UNPROTECT(3);
 }
 
 
@@ -636,10 +698,10 @@ general2:
         /* Nothing clever to be done - expand 'pos' and multiply it by the
            by current matrix (possibly on either left or right). */
 
-        pos = expand_to_full_jacobian (pos);
-        new_mat = allocVector (REALSXP, rows * cols);
+        PROTECT(new_mat = allocVector (REALSXP, rows * cols));
 
         if (jacobian_type & PRODUCT_JACOBIAN) {
+            pos = expand_to_full_jacobian (pos);
             matprod_mat_mat (REAL(res_mat), REAL(pos),
               REAL(new_mat), rows, LENGTH(res_mat)/rows, cols);
         }
@@ -671,6 +733,8 @@ R_inspect(res_mat); REprintf("==\n");
             prod_mat_grad (res_mat, pos, new_mat, gvars, n, k, m,
                            matprod_jacobian_type >> 1);
         }
+
+        UNPROTECT(1);  /* new_mat */
     }
 
     UNPROTECT(2);   /* res_mat, grad */
@@ -730,7 +794,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
                              rows, cols, gvars);
         }
         else if (MATPROD_JACOBIAN_TYPE(grad) & 1) {  /* factor on right */
-            PROTECT (left = expand_to_full_jacobian (NEXT_JACOBIAN(grad)));
+            left = NEXT_JACOBIAN(grad);
             right = JACOBIAN_MATRIX1(grad);
             R_len_t n = JACOBIAN_MAT_ROWS(grad);
             R_len_t r = JACOBIAN_ROWS(left);
@@ -748,7 +812,7 @@ R_inspect(right); REprintf("==\n");
                            MATPROD_JACOBIAN_TYPE(grad) >> 1, FALSE);
         }
         else {  /* factor on left */
-            PROTECT (right = expand_to_full_jacobian (NEXT_JACOBIAN(grad)));
+            right = NEXT_JACOBIAN(grad);
             left = JACOBIAN_MATRIX1(grad);
             R_len_t n = JACOBIAN_MAT_ROWS(grad);
             R_len_t k = LENGTH(left) / n;
@@ -3760,17 +3824,18 @@ attribute_hidden SEXP matprod_gradient
 {
 #if 0
 REprintf("*** matprod_gradient %d %d %d %d\n",primop,nrows,k,ncols);
+R_inspect(x);
+REprintf("--\n");
 R_inspect(x_grad);
+REprintf("--\n");
+R_inspect(y);
 REprintf("--\n");
 R_inspect(y_grad);
 REprintf("--\n");
 #endif
 
-    RECURSIVE_GRADIENT_APPLY2 (matprod_gradient, x_grad, y_grad, x, y,
+    RECURSIVE_GRADIENT_APPLY2_NO_EXPAND (matprod_gradient, x_grad, y_grad, x, y,
                                primop, nrows, k, ncols);
-
-    if (x_grad != R_NilValue && TYPEOF(x_grad) != REALSXP) abort();
-    if (y_grad != R_NilValue && TYPEOF(y_grad) != REALSXP) abort();
 
     PROTECT2(x_grad,y_grad);
 
@@ -3778,7 +3843,7 @@ REprintf("--\n");
 
     SEXP grad;
 
-    if ((uint64_t)nrows*k*ncols > 7
+    if (0 && (uint64_t)nrows*k*ncols > 7
            && nrows > 1 && ncols > 1) {  /* worthwhile deferring */
  
        if (x_grad == R_NilValue) {
