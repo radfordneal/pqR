@@ -17079,7 +17079,6 @@ A
 RPROFMEM: (double 24):
 RPROFMEM: (double 16):
 RPROFMEM: (double 36):
-RPROFMEM: (double 36):
 B 
 RPROFMEM: (double 24):
 RPROFMEM: (double 36):
@@ -17162,11 +17161,9 @@ A
 RPROFMEM: (double 24):
 RPROFMEM: (double 16):
 RPROFMEM: (double 36):
-RPROFMEM: (double 36):
 B 
 RPROFMEM: (double 12):
 RPROFMEM: (double 8):
-RPROFMEM: (double 9):
 C 
      [,1]
 [1,]  227
@@ -17213,7 +17210,6 @@ start
 A 
 RPROFMEM: (double 12):
 RPROFMEM: (double 36):
-RPROFMEM: (double 9):
 B 
 RPROFMEM: (double 8):
 RPROFMEM: (double 16):
@@ -17263,11 +17259,9 @@ start
 A 
 RPROFMEM: (double 9):
 RPROFMEM: (double 12):
-RPROFMEM: (double 36):
 B 
 RPROFMEM: (double 12):
 RPROFMEM: (double 8):
-RPROFMEM: (double 16):
 C 
      [,1] [,2]
 [1,]  480  160
@@ -17313,7 +17307,6 @@ A
 RPROFMEM: (double 36):
 RPROFMEM: (double 36):
 RPROFMEM: (double 24):
-RPROFMEM: (double 16):
 B 
 RPROFMEM: (double 9):
 RPROFMEM: (double 8):
@@ -17372,7 +17365,6 @@ RPROFMEM: (double 8):
 RPROFMEM: (double 32):
 RPROFMEM: (double 16):
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
 RPROFMEM: (double 64):
 B 
 RPROFMEM: (double 12):
@@ -17454,7 +17446,6 @@ RPROFMEM: (double 8):
 RPROFMEM: (double 32):
 RPROFMEM: (double 16):
 RPROFMEM: (double 8):
-RPROFMEM: (double 64):
 RPROFMEM: (double 64):
 B 
 RPROFMEM: (double 12):
