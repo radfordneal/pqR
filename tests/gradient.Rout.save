@@ -17076,13 +17076,15 @@ start
 +   pr("C"); list(X,Y)
 + }
 A 
-RPROFMEM: (double 24):
-RPROFMEM: (double 16):
-RPROFMEM: (double 36):
 B 
 RPROFMEM: (double 24):
-RPROFMEM: (double 36):
+RPROFMEM: (double 24):
+RPROFMEM: (double 16):
 C 
+RPROFMEM: (double 36):
+RPROFMEM: (double 24):
+RPROFMEM: (double 36):
+RPROFMEM: (double 36):
 [[1]]
      [,1] [,2] [,3]
 [1,]   35   15    6
@@ -17158,12 +17160,12 @@ start
 +   pr("C"); Y
 + }
 A 
-RPROFMEM: (double 24):
-RPROFMEM: (double 16):
-RPROFMEM: (double 36):
 B 
 RPROFMEM: (double 12):
+RPROFMEM: (double 36):
 RPROFMEM: (double 8):
+RPROFMEM: (double 24):
+RPROFMEM: (double 16):
 C 
      [,1]
 [1,]  227
@@ -17304,13 +17306,13 @@ start
 +   pr("C"); Y
 + }
 A 
-RPROFMEM: (double 36):
-RPROFMEM: (double 36):
-RPROFMEM: (double 24):
 B 
 RPROFMEM: (double 9):
 RPROFMEM: (double 8):
+RPROFMEM: (double 24):
 RPROFMEM: (double 12):
+RPROFMEM: (double 36):
+RPROFMEM: (double 36):
 C 
      [,1] [,2]
 [1,]  480  160
@@ -17362,23 +17364,23 @@ start
 RPROFMEM: (list 8):
 A 
 RPROFMEM: (double 8):
-RPROFMEM: (double 32):
-RPROFMEM: (double 16):
-RPROFMEM: (double 8):
-RPROFMEM: (double 64):
 B 
 RPROFMEM: (double 12):
-RPROFMEM: (double 72):
-RPROFMEM: (double 36):
-RPROFMEM: (double 12):
-RPROFMEM: (double 96):
-RPROFMEM: (double 48):
 C 
 RPROFMEM: (double 12):
 RPROFMEM: (double 9):
 RPROFMEM: (double 16):
+RPROFMEM: (double 48):
 RPROFMEM: (double 32):
+RPROFMEM: (double 16):
+RPROFMEM: (double 8):
+RPROFMEM: (double 32):
+RPROFMEM: (double 96):
+RPROFMEM: (double 64):
 RPROFMEM: (double 24):
+RPROFMEM: (double 72):
+RPROFMEM: (double 36):
+RPROFMEM: (double 12):
 D 
      [,1] [,2] [,3] [,4]
 [1,] 3840 2880  800  320
@@ -17443,23 +17445,23 @@ start
 RPROFMEM: (list 8):
 A 
 RPROFMEM: (double 8):
-RPROFMEM: (double 32):
-RPROFMEM: (double 16):
-RPROFMEM: (double 8):
-RPROFMEM: (double 64):
 B 
 RPROFMEM: (double 12):
-RPROFMEM: (double 72):
-RPROFMEM: (double 36):
-RPROFMEM: (double 12):
-RPROFMEM: (double 96):
-RPROFMEM: (double 48):
 C 
 RPROFMEM: (double 12):
 RPROFMEM: (double 9):
 RPROFMEM: (double 16):
+RPROFMEM: (double 48):
 RPROFMEM: (double 32):
+RPROFMEM: (double 16):
+RPROFMEM: (double 8):
+RPROFMEM: (double 32):
+RPROFMEM: (double 96):
+RPROFMEM: (double 64):
 RPROFMEM: (double 24):
+RPROFMEM: (double 72):
+RPROFMEM: (double 36):
+RPROFMEM: (double 12):
 D 
      [,1] [,2] [,3] [,4]
 [1,] 3840 2880  800  320

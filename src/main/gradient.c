@@ -685,12 +685,14 @@ goto general;
 
 general:
 
-    if (JACOBIAN_TYPE(pos) == DIAGONAL_JACOBIAN) {
+    if (JACOBIAN_TYPE(pos) == DIAGONAL_JACOBIAN
+     && jacobian_type == PRODUCT_JACOBIAN) {
 
         if (res_mat != new_mat)
             new_mat = duplicate(res_mat);
 
         if (LENGTH(pos) == 1) {  /* multiply everything by same factor */
+
             double d = *REAL(pos);
             if (d != 1.0) {  /* 'pos' is not identity matrix */
                 R_len_t l = LENGTH(new_mat);
@@ -702,17 +704,13 @@ general:
 
         else {  /* full diagonal with (possibly) different values */
 
-            if (jacobian_type & PRODUCT_JACOBIAN) {
-                if (LENGTH(pos) != cols) abort();
-                R_len_t i, j;
-                for (j = 0; j < cols; j++) {
-                    double d = REAL(pos)[j];
-                    for (i = 0; i < rows; i++)
-                        REAL(new_mat)[i+j*rows] *= d;
-                }
+            if (LENGTH(pos) != cols) abort();
+            R_len_t i, j;
+            for (j = 0; j < cols; j++) {
+                double d = REAL(pos)[j];
+                for (i = 0; i < rows; i++)
+                    REAL(new_mat)[i+j*rows] *= d;
             }
-            else
-goto general2;
         }
 
         SET_GRAD_WRT_LEN (new_mat, gvars);
@@ -721,9 +719,6 @@ goto general2;
     }
 
     else {
-general2:
-        /* Nothing clever to be done - expand 'pos' and multiply it by the
-           by current matrix (possibly on either left or right). */
 
         PROTECT(new_mat = allocVector (REALSXP, rows * cols));
 
@@ -3851,12 +3846,12 @@ attribute_hidden SEXP matprod_gradient
 {
 #if 0
 REprintf("*** matprod_gradient %d %d %d %d\n",primop,nrows,k,ncols);
-R_inspect(x);
-REprintf("--\n");
+//R_inspect(x);
+//REprintf("--\n");
 R_inspect(x_grad);
 REprintf("--\n");
-R_inspect(y);
-REprintf("--\n");
+//R_inspect(y);
+//REprintf("--\n");
 R_inspect(y_grad);
 REprintf("--\n");
 #endif
@@ -3870,7 +3865,7 @@ REprintf("--\n");
 
     SEXP grad;
 
-    if (0 && (uint64_t)nrows*k*ncols > 7
+    if ((uint64_t)nrows*k*ncols > 7
            && nrows > 1 && ncols > 1) {  /* worthwhile deferring */
  
        if (x_grad == R_NilValue) {
