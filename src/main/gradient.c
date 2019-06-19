@@ -335,35 +335,65 @@ static void prod_grad_mat (SEXP x_grad, SEXP y, SEXP grad, R_len_t gvars,
                            R_len_t nrows, R_len_t k, R_len_t ncols, 
                            int primop, int add)
 {
-    PROTECT2(y,grad);
-    PROTECT(x_grad);
-
-    if (0 && JACOBIAN_TYPE(x_grad) == DIAGONAL_JACOBIAN && primop != 1) {
-
-        R_len_t i, j;
-
-        memset (REAL(grad), 0, LENGTH(grad) * sizeof(double));
-
-        if (primop == 0) {
-        
-        }
-        else {  /* primop == 2 */
-        }
-
-        UNPROTECT(3);
-    }
-
-    x_grad = expand_to_full_jacobian (x_grad);
-
-    UNPROTECT_PROTECT(x_grad);
+    PROTECT3(x_grad,y,grad);
 
     R_len_t sz = nrows * ncols;
-    R_len_t h, i, j;
     SEXP tmpr;
 
-    tmpr = gvars == 1 && !add ? grad : allocVector (REALSXP, sz);
+    /* Faster special handling when 'x_grad' is diagonal jacobian (and not 
+       transposed). */
 
-    PROTECT (tmpr);
+    if (JACOBIAN_TYPE(x_grad) == DIAGONAL_JACOBIAN && primop != 1) {
+
+        R_len_t lgrad = LENGTH(grad);
+        R_len_t lr = nrows * ncols;
+        R_len_t i, j, s;
+
+        double *dp = REAL(x_grad);
+
+        PROTECT (tmpr = !add ? grad : allocVector (REALSXP, lgrad));
+
+        memset (REAL(tmpr), 0, lgrad * sizeof(double));
+
+        if (primop == 0) {
+            for (j = 0; j < k; j++) {
+                for (i = 0; i < nrows; i++) {
+                    double d = *dp;
+                    if (LENGTH(x_grad) != 1) dp += 1;
+                    for (s = 0; s < ncols; s++) {
+                        REAL(tmpr)[lr*(i+j*nrows)+s*nrows+i] 
+                          = d * REAL(y)[s*k+j];
+                    }
+                }
+            }
+        }
+        else {  /* primop == 2 (tcrossprod) */
+            for (j = 0; j < k; j++) {
+                for (i = 0; i < nrows; i++) {
+                    double d = *dp;
+                    if (LENGTH(x_grad) != 1) dp += 1;
+                    for (s = 0; s < ncols; s++) {
+                        REAL(tmpr)[lr*(i+j*nrows)+s*nrows+i]
+                          = d * REAL(y)[j*ncols+s];
+                    }
+                }
+            }
+        }
+
+        if (add) {
+            for (i = 0; i < lgrad; i++) 
+                REAL(grad)[i] += REAL(tmpr)[i];
+        }
+
+        UNPROTECT(4);
+        return;
+    }
+
+    PROTECT(x_grad = expand_to_full_jacobian (x_grad));
+
+    PROTECT (tmpr = gvars == 1 && !add ? grad : allocVector (REALSXP, sz));
+
+    R_len_t h, i, j;
 
     if (gvars == 1) {
         if (primop == 0)
@@ -417,14 +447,13 @@ static void prod_grad_mat (SEXP x_grad, SEXP y, SEXP grad, R_len_t gvars,
         UNPROTECT(1);
     }
 
-    UNPROTECT(4);
+    UNPROTECT(5);
 }
 
 static void prod_mat_grad (SEXP x, SEXP y_grad, SEXP grad, R_len_t gvars, 
                            R_len_t nrows, R_len_t k, R_len_t ncols, int primop)
 {
-    PROTECT2(x,grad);
-    PROTECT(y_grad);
+    PROTECT3(x,y_grad,grad);
 
     /* Faster special handling when 'y_grad' is diagonal jacobian (and not 
        transposed). */
@@ -436,11 +465,12 @@ static void prod_mat_grad (SEXP x, SEXP y_grad, SEXP grad, R_len_t gvars,
         R_len_t lr = nrows * ncols;
         R_len_t i, j, s, t;
 
+        double *dp = REAL(y_grad);
+
         memset (REAL(grad), 0, lgrad * sizeof(double));
 
         if (primop == 0) {
             if (lx != nrows * k) abort();
-            double *dp = REAL(y_grad);
             s = 0;
             for (i = 0; i < lr; i += nrows) {
                 for (j = 0; j < lx; j += nrows) {
@@ -452,9 +482,8 @@ static void prod_mat_grad (SEXP x, SEXP y_grad, SEXP grad, R_len_t gvars,
                 }
             }
         }
-        else {  /* primop == 1 */
+        else {  /* primop == 1 (crossprod) */
             if (lx != nrows * k) abort();
-            double *dp = REAL(y_grad);
             s = 0;
             for (i = 0; i < lr; i += nrows) {
                 for (j = 0; j < k; j++) {
@@ -475,17 +504,17 @@ static void prod_mat_grad (SEXP x, SEXP y_grad, SEXP grad, R_len_t gvars,
 
     y_grad = expand_to_full_jacobian (y_grad);
 
-    UNPROTECT_PROTECT(y_grad);
+    PROTECT(y_grad);
 
     if (primop == 0) {
         matprod_mat_mat (REAL(x), REAL(y_grad), REAL(grad),
                          nrows, k, ncols * gvars);
     }
-    else if (primop == 1) {
+    else if (primop == 1) {  /* crossprod */
         matprod_trans1 (REAL(x), REAL(y_grad), REAL(grad),
                         nrows, k, ncols * gvars);
     }
-    else {  /* primop == 2 */
+    else {  /* primop == 2 (tcrossprod) */
 
         /* May need to copy because matprod_trans2 has alignment requirement. */
 
@@ -514,7 +543,7 @@ static void prod_mat_grad (SEXP x, SEXP y_grad, SEXP grad, R_len_t gvars,
         UNPROTECT(2);
     }
 
-    UNPROTECT(3);
+    UNPROTECT(4);
 }
 
 
