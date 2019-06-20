@@ -670,10 +670,10 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
                     if (i != rl) abort();
                 }
             }
-            else if (matprod_jacobian_type & 1) {
+            else if (matprod_jacobian_type & 1) {  /* const factor on right */
 goto general;
             }
-            else {
+            else {  /* const factor on left */
 goto general;
             }
         }
@@ -685,24 +685,35 @@ goto general;
                 matprod_mat_mat (REAL(res_mat), REAL(JACOBIAN_MATRIX1(pos)),
                   REAL(new_mat), rows, LENGTH(res_mat)/rows, cols);
             }
-            else if (matprod_jacobian_type & 1) {
+            else if (matprod_jacobian_type & 1) {  /* const factor on right */
 goto general;
             }
-            else {
+            else {  /* const factor on left */
 goto general;
             }
         }
 
         else if (JACOBIAN_TYPE(pos) & MATPROD_JACOBIAN) {
 
+            SEXP pos_mat = JACOBIAN_MATRIX1(pos);
+            R_len_t pos_rows = JACOBIAN_MAT_ROWS(pos);
+            R_len_t pos_cols = LENGTH(pos_mat) / pos_rows;
+
             if (jacobian_type & PRODUCT_JACOBIAN) {
 goto general;
             }
-            else if (matprod_jacobian_type & 1) {
+            else if (matprod_jacobian_type & 1) {  /* const factor on right */
 goto general;
             }
-            else {
+            else {  /* const factor on left */
+                if (MATPROD_JACOBIAN_TYPE(pos) & 1) { /* const factor on right*/
 goto general;
+                }
+                else {  /* const factor on left */
+                    new_mat = allocVector (REALSXP, mat_rows * pos_cols);
+                    matprod_mat_mat (REAL(res_mat), REAL(JACOBIAN_MATRIX1(pos)),
+                      REAL(new_mat), mat_rows, pos_rows, pos_cols);
+                }
             }
         }
 

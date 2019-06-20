@@ -17084,7 +17084,6 @@ C
 RPROFMEM: (double 36):
 RPROFMEM: (double 24):
 RPROFMEM: (double 36):
-RPROFMEM: (double 36):
 [[1]]
      [,1] [,2] [,3]
 [1,]   35   15    6
@@ -17367,7 +17366,6 @@ RPROFMEM: (double 48):
 RPROFMEM: (double 32):
 RPROFMEM: (double 32):
 RPROFMEM: (double 96):
-RPROFMEM: (double 64):
 RPROFMEM: (double 24):
 RPROFMEM: (double 72):
 D 
@@ -17443,7 +17441,6 @@ RPROFMEM: (double 48):
 RPROFMEM: (double 32):
 RPROFMEM: (double 32):
 RPROFMEM: (double 96):
-RPROFMEM: (double 64):
 RPROFMEM: (double 24):
 RPROFMEM: (double 72):
 D 
