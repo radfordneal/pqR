@@ -3926,8 +3926,7 @@ REprintf("--\n");
 
     SEXP grad;
 
-    if ((uint64_t)nrows*k*ncols > 7
-           && nrows > 1 && ncols > 1) {  /* worthwhile deferring */
+    if (TRUE) {  /* always defer for now - may help with later in chain */
  
        if (x_grad == R_NilValue) {
             grad = alloc_matprod_jacobian (gvars, nrows, k, ncols,
@@ -3959,10 +3958,17 @@ REprintf("--\n");
 
     UNPROTECT(3);
 
+#if 0
+REprintf("*** matprod_gradient end non-deferred\n");
+R_inspect(grad);
+#endif
+
+    return grad;
+
 ret:
 
 #if 0
-REprintf("*** matprod_gradient end\n");
+REprintf("*** matprod_gradient end deferred\n");
 R_inspect(grad);
 #endif
 
