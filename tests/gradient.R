@@ -2576,9 +2576,9 @@ pr("end")
 (D <- matrix(c(7,3,4,6,1,2,-2,8),2,4))
 pr("start")
 with gradient (A,B,C,D) {
-  pr("A"); X <- C %*% D
-  pr("B"); Y <- B %*% X
-  pr("C"); Z <- A %*% Y
+  pr("A"); X <- A %*% B
+  pr("B"); Y <- X %*% C
+  pr("C"); Z <- Y %*% D
   pr("D"); Z
 }
 pr("end")

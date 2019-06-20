@@ -110,6 +110,8 @@
 #define JACOBIAN_CLOSURE(g) VECTOR_ELT((g),1)
 #define JACOBIAN_MATRIX1(g) VECTOR_ELT((g),1)
 #define JACOBIAN_MAT_ROWS(g) (*INTEGER(VECTOR_ELT((g),2)))
+#define JACOBIAN_MAT_K(g) (*INTEGER(VECTOR_ELT((g),3)))
+#define JACOBIAN_MAT_COLS(g) (*INTEGER(VECTOR_ELT((g),4)))
 
 #define MATPROD_JACOBIAN_TYPE(x) \
   NOT_LVALUE(UPTR_FROM_SEXP(x)->sxpinfo.gp&0xf)
@@ -216,15 +218,18 @@ static SEXP alloc_product_jacobian (R_len_t gvars, R_len_t n,
     return res;
 }
 
-static SEXP alloc_matprod_jacobian (R_len_t gvars, R_len_t n, R_len_t nr,
+static SEXP alloc_matprod_jacobian (R_len_t gvars, 
+                                    R_len_t nr, R_len_t k, R_len_t nc,
                                     int matprod_type, SEXP factor, SEXP grad)
 {
     PROTECT2(factor,grad);
-    SEXP res = allocVector (EXPRSXP, 3);
+    SEXP res = allocVector (EXPRSXP, 5);
     PROTECT(res);
-    SET_VECTOR_ELT (res, 0, ScalarIntegerMaybeConst(n));
+    SET_VECTOR_ELT (res, 0, ScalarIntegerMaybeConst(nr*nc));
     SET_VECTOR_ELT (res, 1, factor);
     SET_VECTOR_ELT (res, 2, ScalarIntegerMaybeConst(nr));
+    SET_VECTOR_ELT (res, 3, ScalarIntegerMaybeConst(k));
+    SET_VECTOR_ELT (res, 4, ScalarIntegerMaybeConst(nc));
     SET_GRAD_WRT_LEN (res, gvars);
     SET_JACOBIAN_TYPE (res, MATPROD_JACOBIAN);
     SET_MATPROD_JACOBIAN_TYPE (res, matprod_type);
@@ -612,6 +617,8 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
     int matprod_jacobian_type; /* Sub-type when type is MATPROD_JACOBIAN */
     R_len_t mat_rows;          /* Matrix rows in product when type is 
                                   MATPROD_JACOBIAN, corr. to JACOBIAN_MAT_ROWS*/
+    R_len_t mat_k;             /* Corr. to JACOBIAN_MAT_K */
+    R_len_t mat_cols;          /* Corr. to JACOBIAN_MAT_COLS */
     R_len_t rows;              /* Rows in Jacobian, corr. to JACOBIAN_ROWS */
     SEXP res_mat;              /* Matrix, correpsonding to JACOBIAN_MATRIX1 */
 
@@ -626,6 +633,8 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
     if (jacobian_type == MATPROD_JACOBIAN) {
         matprod_jacobian_type = MATPROD_JACOBIAN_TYPE(grad);
         mat_rows = JACOBIAN_MAT_ROWS(grad);
+        mat_k = JACOBIAN_MAT_K(grad);
+        mat_cols = JACOBIAN_MAT_COLS(grad);
     }
 
     pos = grad;
@@ -697,22 +706,34 @@ goto general;
 
             SEXP pos_mat = JACOBIAN_MATRIX1(pos);
             R_len_t pos_rows = JACOBIAN_MAT_ROWS(pos);
-            R_len_t pos_cols = LENGTH(pos_mat) / pos_rows;
+            R_len_t pos_k = JACOBIAN_MAT_K(pos);
+            R_len_t pos_cols = JACOBIAN_MAT_COLS(pos);
 
             if (jacobian_type & PRODUCT_JACOBIAN) {
 goto general;
             }
             else if (matprod_jacobian_type & 1) {  /* const factor on right */
+                if (MATPROD_JACOBIAN_TYPE(pos) & 1) { /* const factor on right*/
+/*REprintf("QQQQ %d %d %d : %d %d %d\n",mat_rows,mat_k,mat_cols,
+                                      pos_rows,pos_k,pos_cols);*/
+                    new_mat = allocVector (REALSXP, pos_k * mat_cols);
+                    matprod_mat_mat(REAL(pos_mat), REAL(res_mat), REAL(new_mat),
+                                    pos_k, pos_cols, mat_cols);
+                    mat_k = pos_k;
+                }
+                else {  /* const factor on left */
 goto general;
+                }
             }
             else {  /* const factor on left */
                 if (MATPROD_JACOBIAN_TYPE(pos) & 1) { /* const factor on right*/
 goto general;
                 }
                 else {  /* const factor on left */
-                    new_mat = allocVector (REALSXP, mat_rows * pos_cols);
-                    matprod_mat_mat (REAL(res_mat), REAL(JACOBIAN_MATRIX1(pos)),
-                      REAL(new_mat), mat_rows, pos_rows, pos_cols);
+                    new_mat = allocVector (REALSXP, mat_rows * pos_k);
+                    matprod_mat_mat(REAL(res_mat), REAL(pos_mat), REAL(new_mat),
+                                    mat_rows, pos_rows, pos_k);
+                    mat_k = pos_k;
                 }
             }
         }
@@ -3909,14 +3930,14 @@ REprintf("--\n");
            && nrows > 1 && ncols > 1) {  /* worthwhile deferring */
  
        if (x_grad == R_NilValue) {
-            grad = alloc_matprod_jacobian (gvars, nrows*ncols, nrows, 
+            grad = alloc_matprod_jacobian (gvars, nrows, k, ncols,
                                            2*primop + 0, x, y_grad);
             UNPROTECT(2);
             goto ret;
         }
 
         if (y_grad == R_NilValue) {
-            grad = alloc_matprod_jacobian (gvars, nrows*ncols, nrows, 
+            grad = alloc_matprod_jacobian (gvars, nrows, k, ncols,
                                            2*primop + 1, y, x_grad);
             UNPROTECT(2);
             goto ret;

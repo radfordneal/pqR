@@ -17424,25 +17424,22 @@ RPROFMEM: (double 8):"matrix"
 > pr("start")
 start 
 > with gradient (A,B,C,D) {
-+   pr("A"); X <- C %*% D
-+   pr("B"); Y <- B %*% X
-+   pr("C"); Z <- A %*% Y
++   pr("A"); X <- A %*% B
++   pr("B"); Y <- X %*% C
++   pr("C"); Z <- Y %*% D
 +   pr("D"); Z
 + }
 RPROFMEM: (list 8):
 A 
-RPROFMEM: (double 8):
+RPROFMEM: (double 12):
 B 
 RPROFMEM: (double 12):
+RPROFMEM: (double 8):
 C 
-RPROFMEM: (double 12):
 RPROFMEM: (double 16):
-RPROFMEM: (double 48):
-RPROFMEM: (double 32):
-RPROFMEM: (double 32):
-RPROFMEM: (double 96):
+RPROFMEM: (double 12):
 RPROFMEM: (double 24):
-RPROFMEM: (double 72):
+RPROFMEM: (double 32):
 D 
      [,1] [,2] [,3] [,4]
 [1,] 3840 2880  800  320
