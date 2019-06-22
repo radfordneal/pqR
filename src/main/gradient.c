@@ -134,7 +134,7 @@ static int same_numeric_content (SEXP a, SEXP b)
     return TYPEOF(a) == REALSXP && TYPEOF(b) == REALSXP 
         && LEVELS(a) == LEVELS(b) /* includes JACOBIAN_TYPE */
         && (a == b || LENGTH(a) == LENGTH(b) 
-                        && memcmp (a, b, LENGTH(a)*sizeof(double)) == 0);
+             && memcmp (REAL(a), REAL(b), LENGTH(a)*sizeof(double)) == 0);
 }
 
 static inline SEXP alloc_list_gradient (R_len_t n)
