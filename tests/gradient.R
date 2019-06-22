@@ -1869,6 +1869,9 @@ with gradient (a=c(4.1,2.7,3.1,5.2)) {
 
 # Test duplication when necessary and not when not.
 
+A <- B <- C <- D <- E <- F <- NULL  # kludge to avoid RPROFMEM messages from
+                                    # expansion of hash table for global env
+
 pr <- function (...) { 
   Rprofmemt(NULL)
   cat(...,"\n")

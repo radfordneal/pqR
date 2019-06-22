@@ -13474,6 +13474,9 @@ attr(,"gradient")
 > 
 > # Test duplication when necessary and not when not.
 > 
+> A <- B <- C <- D <- E <- F <- NULL  # kludge to avoid RPROFMEM messages from
+>                                     # expansion of hash table for global env
+> 
 > pr <- function (...) { 
 +   Rprofmemt(NULL)
 +   cat(...,"\n")
