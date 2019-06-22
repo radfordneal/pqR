@@ -623,7 +623,7 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
     SEXP res_mat;              /* Matrix, correpsonding to JACOBIAN_MATRIX1 */
 
     SEXP pos;                  /* Next factor in chain to multiply result by */
-    SEXP new_mat = NULL;       /* Matrix that will become next res_mat */
+    SEXP new_mat = R_NoObject; /* Matrix that will become next res_mat */
     R_len_t cols;              /* Columns for new_mat */
 
     rows = JACOBIAN_ROWS(grad);/* Stays same as more factors multiply on right*/
