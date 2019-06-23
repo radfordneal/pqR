@@ -2614,6 +2614,13 @@ with gradient (D = matrix(c(7,3,4,6,1,2,-2,8),2,4)) {
 }
 pr("end")
 
+A <- matrix(c(3,6,8,2),2,2)
+B <- A+1
+
+pr("start")
+with gradient (A) B %*% (3 * (B %*% A))
+pr("end")
+
 Rprofmemt(NULL)
 
 n <- 100

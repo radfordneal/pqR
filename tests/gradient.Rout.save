@@ -17565,6 +17565,26 @@ attr(,"gradient")
 > pr("end")
 end 
 > 
+> A <- matrix(c(3,6,8,2),2,2)
+> B <- A+1
+> 
+> pr("start")
+start 
+> with gradient (A) B %*% (3 * (B %*% A))
+RPROFMEM: (double 16):
+RPROFMEM: (double 16):
+     [,1] [,2]
+[1,] 1845 2274
+[2,] 1737 1608
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,]  237  189    0    0
+[2,]  147  216    0    0
+[3,]    0    0  237  189
+[4,]    0    0  147  216
+> pr("end")
+end 
+> 
 > Rprofmemt(NULL)
 > 
 > n <- 100

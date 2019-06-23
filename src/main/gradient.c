@@ -714,20 +714,18 @@ goto general;
             }
             else if (matprod_jacobian_type & 1) {  /* const factor on right */
                 if (MATPROD_JACOBIAN_TYPE(pos) & 1) { /* const factor on right*/
-/*REprintf("QQQQ %d %d %d : %d %d %d\n",mat_rows,mat_k,mat_cols,
-                                      pos_rows,pos_k,pos_cols);*/
                     new_mat = allocVector (REALSXP, pos_k * mat_cols);
                     matprod_mat_mat(REAL(pos_mat), REAL(res_mat), REAL(new_mat),
                                     pos_k, pos_cols, mat_cols);
                     mat_k = pos_k;
                 }
                 else {  /* const factor on left */
-goto general;
+                    goto general;
                 }
             }
             else {  /* const factor on left */
                 if (MATPROD_JACOBIAN_TYPE(pos) & 1) { /* const factor on right*/
-goto general;
+                    goto general;
                 }
                 else {  /* const factor on left */
                     new_mat = allocVector (REALSXP, mat_rows * pos_k);
