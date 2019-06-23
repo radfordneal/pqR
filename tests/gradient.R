@@ -2616,6 +2616,18 @@ pr("end")
 
 A <- matrix(c(3,6,8,2),2,2)
 B <- A+1
+Bt <- t(B)
+
+pr("start")
+with gradient (A) B %*% (B %*% A)
+with gradient (A) B %*% crossprod(Bt,A)
+with gradient (A) crossprod (Bt, B %*% A)
+with gradient (A) crossprod (Bt, crossprod (Bt,A))
+with gradient (A) (A %*% B) %*% B
+with gradient (A) tcrossprod(A,Bt) %*% B
+with gradient (A) tcrossprod (A %*% B, Bt)
+with gradient (A) tcrossprod (tcrossprod(A,Bt), Bt)
+pr("end")
 
 pr("start")
 with gradient (A) B %*% (3 * (B %*% A))

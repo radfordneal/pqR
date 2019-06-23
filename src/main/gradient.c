@@ -713,6 +713,10 @@ goto general;
 goto general;
             }
             else if (matprod_jacobian_type & 1) {  /* const factor on right */
+                if (matprod_jacobian_type >> 1)
+                    goto general;  /* FOR NOW */
+                if (MATPROD_JACOBIAN_TYPE(pos) >> 1)
+                    goto general;  /* FOR NOW */
                 if (MATPROD_JACOBIAN_TYPE(pos) & 1) { /* const factor on right*/
                     new_mat = allocVector (REALSXP, pos_k * mat_cols);
                     matprod_mat_mat(REAL(pos_mat), REAL(res_mat), REAL(new_mat),
@@ -724,6 +728,10 @@ goto general;
                 }
             }
             else {  /* const factor on left */
+                if (matprod_jacobian_type >> 1)
+                    goto general;  /* FOR NOW */
+                if (MATPROD_JACOBIAN_TYPE(pos) >> 1)
+                    goto general;  /* FOR NOW */
                 if (MATPROD_JACOBIAN_TYPE(pos) & 1) { /* const factor on right*/
                     goto general;
                 }
