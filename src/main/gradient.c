@@ -332,9 +332,65 @@ void SET_GRADIENT_IN_CELL_NR (SEXP x, SEXP v)
 }
 
 
-/* Procedures to multiply gradient by matrix or matrix by gradient, storing
-   result in 'grad'.  Expands gradient factor if necessary (often handles 
-   diagonal ones directly). */
+/* Multiply each column, seen as an nr x k matrix, of the diagonal matrix with 
+   diagonal elements in xdiag by the k x nc matrix y (on the right), storing
+   the result in z (which has nr * k * nr * nc elements).
+
+   If lx is 1, xdiag has a single value, which is repeated. */
+
+static void mul_diag_mat (double *xdiag, double *y, double *z, 
+                          int lx, int nr, int k, int nc)
+{
+    int lr = nr * nc;
+    int i, j, s;
+
+    memset (z, 0, sizeof(double) * nr * k * lr);
+
+    for (j = 0; j < k; j++) {
+        for (i = 0; i < nr; i++) {
+            double d = *xdiag;
+            if (lx != 1) xdiag += 1;
+            for (s = 0; s < nc; s++) {
+                z[lr*(i+j*nr)+s*nr+i] = d * y[s*k+j];
+            }
+        }
+    }
+} 
+
+
+/* Multiply each column, seen as an k x nc matrix, of the diagonal matrix with 
+   diagonal elements in ydiag by the nr x k matrix x (on the left), storing
+   the result in z (which has k * nc * nr * nc elements).
+
+   If ly is 1, ydiag has a single value, which is repeated. */
+
+static void mul_mat_diag (double *x, double *ydiag, double *z, 
+                          int ly, int nr, int k, int nc)
+{
+    int lr = nr * nc;
+    int lx = nr * k;
+    int i, j, s, t;
+
+    if (lx != nr * k) abort();
+
+    memset (z, 0, sizeof(double) * k * nc * lr);
+
+    s = 0;
+    for (i = 0; i < lr; i += nr) {
+        for (j = 0; j < lx; j += nr) {
+            double d = *ydiag;
+            if (ly != 1) ydiag += 1;
+            for (t = 0; t < nr; t++)
+                z[s+i+t] = d * x[j+t];
+            s += lr;
+        }
+    }
+} 
+
+
+/* Procedures used to multiply gradient by matrix or matrix by
+   gradient, storing result in 'grad'.  They expand the gradient
+   factor if necessary (often handling diagonal ones directly). */
 
 static void prod_grad_mat (SEXP x_grad, SEXP y, SEXP grad, R_len_t gvars, 
                            R_len_t nrows, R_len_t k, R_len_t ncols, 
@@ -361,16 +417,9 @@ static void prod_grad_mat (SEXP x_grad, SEXP y, SEXP grad, R_len_t gvars,
         memset (REAL(tmpr), 0, lgrad * sizeof(double));
 
         if (primop == 0) {
-            for (j = 0; j < k; j++) {
-                for (i = 0; i < nrows; i++) {
-                    double d = *dp;
-                    if (LENGTH(x_grad) != 1) dp += 1;
-                    for (s = 0; s < ncols; s++) {
-                        REAL(tmpr)[lr*(i+j*nrows)+s*nrows+i] 
-                          = d * REAL(y)[s*k+j];
-                    }
-                }
-            }
+            if (lgrad != lr * nrows * k) abort();
+            mul_diag_mat (REAL(x_grad), REAL(y), REAL(tmpr),
+                          LENGTH(x_grad), nrows, k, ncols);
         }
         else {  /* primop == 2 (tcrossprod) */
             for (j = 0; j < k; j++) {
@@ -475,17 +524,9 @@ static void prod_mat_grad (SEXP x, SEXP y_grad, SEXP grad, R_len_t gvars,
         memset (REAL(grad), 0, lgrad * sizeof(double));
 
         if (primop == 0) {
-            if (lx != nrows * k) abort();
-            s = 0;
-            for (i = 0; i < lr; i += nrows) {
-                for (j = 0; j < lx; j += nrows) {
-                    double d = *dp;
-                    if (LENGTH(y_grad) != 1) dp += 1;
-                    for (t = 0; t < nrows; t++)
-                        REAL(grad)[s+i+t] = d * REAL(x)[j+t];
-                    s += lr;
-                }
-            }
+            if (lgrad != lr * k * ncols) abort();
+            mul_mat_diag (REAL(x), REAL(y_grad), REAL(grad),
+                          LENGTH(y_grad), nrows, k, ncols);
         }
         else {  /* primop == 1 (crossprod) */
             if (lx != nrows * k) abort();
@@ -680,9 +721,13 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
                 }
             }
             else if (matprod_jacobian_type & 1) {  /* const factor on right */
+                if (matprod_jacobian_type >> 1)
+                    goto general;  /* FOR NOW */
 goto general;
             }
             else {  /* const factor on left */
+                if (matprod_jacobian_type >> 1)
+                    goto general;  /* FOR NOW */
 goto general;
             }
         }
