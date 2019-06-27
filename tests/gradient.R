@@ -2636,6 +2636,18 @@ with gradient (A) (3 * (B %*% A)) %*% B
 with gradient (A) ((B %*% A) * 3) %*% B
 pr("end")
 
+A <- matrix(33,10,10)
+A2 <- matrix(22,10,10)
+B <- matrix(47,2,10)
+Bt <- t(B)
+
+pr("start")
+with gradient (A) B %*% (3 * A)
+with gradient (A) (3 * A) %*% Bt
+with gradient (A) B %*% (3 * (A2 %*% A))
+with gradient (A) (3 * (A2 %*% A)) %*% Bt
+pr("end")
+
 Rprofmemt(NULL)
 
 n <- 100
