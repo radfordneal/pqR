@@ -17673,6 +17673,7 @@ start
 > with gradient (A) B %*% (3 * (B %*% A))
 RPROFMEM: (double 16):
 RPROFMEM: (double 16):
+RPROFMEM: (double 16):
      [,1] [,2]
 [1,] 1845 2274
 [2,] 1737 1608
@@ -17683,6 +17684,7 @@ attr(,"gradient")
 [3,]    0    0  237  189
 [4,]    0    0  147  216
 > with gradient (A) B %*% ((B %*% A) * 3)
+RPROFMEM: (double 16):
 RPROFMEM: (double 16):
 RPROFMEM: (double 16):
      [,1] [,2]
@@ -17697,6 +17699,7 @@ attr(,"gradient")
 > with gradient (A) (3 * (B %*% A)) %*% B
 RPROFMEM: (double 16):
 RPROFMEM: (double 16):
+RPROFMEM: (double 16):
      [,1] [,2]
 [1,] 1842 2232
 [2,] 1770 1611
@@ -17707,6 +17710,7 @@ attr(,"gradient")
 [3,]  108  243   36   81
 [4,]  189   81   63   27
 > with gradient (A) ((B %*% A) * 3) %*% B
+RPROFMEM: (double 16):
 RPROFMEM: (double 16):
 RPROFMEM: (double 16):
      [,1] [,2]
@@ -18139,6 +18143,7 @@ RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 20):
 RPROFMEM: (double 2000):
+RPROFMEM: (double 2000):
 RPROFMEM: (double 10000):
          [,1]     [,2]     [,3]     [,4]     [,5]     [,6]     [,7]     [,8]
 [1,] 10236600 10236600 10236600 10236600 10236600 10236600 10236600 10236600
@@ -18341,9 +18346,8 @@ RPROFMEM: (double 100):
 RPROFMEM: (double 100):
 RPROFMEM: (double 20):
 RPROFMEM: (double 2000):
+RPROFMEM: (double 2000):
 RPROFMEM: (double 10000):
-RPROFMEM: (double 20):
-RPROFMEM: (double 100):
           [,1]     [,2]
  [1,] 10236600 10236600
  [2,] 10236600 10236600

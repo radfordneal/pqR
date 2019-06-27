@@ -723,12 +723,18 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
             else if (matprod_jacobian_type & 1) {  /* const factor on right */
                 if (matprod_jacobian_type >> 1)
                     goto general;  /* FOR NOW */
-goto general;
+                new_mat = allocVector (REALSXP, rows * cols);
+                mul_diag_mat (p, REAL(res_mat), REAL(new_mat), 
+                              pl, mat_rows, mat_k, mat_cols);
+                jacobian_type = PRODUCT_JACOBIAN;
             }
             else {  /* const factor on left */
                 if (matprod_jacobian_type >> 1)
                     goto general;  /* FOR NOW */
-goto general;
+                new_mat = allocVector (REALSXP, rows * cols);
+                mul_mat_diag (REAL(res_mat), p, REAL(new_mat), 
+                              pl, mat_rows, mat_k, mat_cols);
+                jacobian_type = PRODUCT_JACOBIAN;
             }
         }
 
