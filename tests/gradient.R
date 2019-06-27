@@ -2631,6 +2631,9 @@ pr("end")
 
 pr("start")
 with gradient (A) B %*% (3 * (B %*% A))
+with gradient (A) B %*% ((B %*% A) * 3)
+with gradient (A) (3 * (B %*% A)) %*% B
+with gradient (A) ((B %*% A) * 3) %*% B
 pr("end")
 
 Rprofmemt(NULL)
