@@ -691,7 +691,8 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
 
         if ((uint64_t)rows * cols > R_LEN_T_MAX)
             error (_("gradient matrix would be too large"));
-
+//REprintf("PPP: %d %d\n",rows,cols);
+//R_inspect(pos);
         if (JACOBIAN_TYPE(pos) & SCALED_JACOBIAN) {
 
             if (! JACOBIAN_TYPE(pos) & DIAGONAL_JACOBIAN) abort();
@@ -761,7 +762,44 @@ goto general;
             R_len_t pos_cols = JACOBIAN_MAT_COLS(pos);
 
             if (jacobian_type & PRODUCT_JACOBIAN) {
+                if (MATPROD_JACOBIAN_TYPE(pos) >> 1)
+                    goto general;  /* FOR NOW */
+                if (MATPROD_JACOBIAN_TYPE(pos) & 1) {  /* factor on right */
 goto general;
+                }
+                else {  /* factor on left */
+
+                    new_mat = allocVector (REALSXP, rows * cols);
+
+                    double *rm = REAL(res_mat);
+                    double *pm = REAL(pos_mat);
+                    double *nm = REAL(new_mat);
+
+                    R_len_t pmr = JACOBIAN_MAT_ROWS(pos);
+                    R_len_t pml = LENGTH(pos_mat);
+
+                    R_len_t i, j, k, s, t;
+                    double a;
+
+//REprintf("ZZZ: %d %d %d %d\n",rows,cols,pmr,pml);
+                    s = 0; t = 0;
+                    for (j = 0; j < cols; j++) {
+                        for (i = 0; i < rows; i++) {
+                            a = 0;
+                            for (k = 0; k < pmr; k++) {
+//REprintf("zzz: %d - %f * %f = %f\n",i+j*rows,
+// rm[i+(s+k)*rows], pm[t+k], rm[i+(s+k)*rows] * pm[t+k]);
+                                a += rm[i+(s+k)*rows] * pm[t+k];
+                            }
+                            nm[i+j*rows] = a;
+                        }
+                        t += pmr;
+                        if (t == pml) {
+                            t = 0;
+                            s += pmr;
+                        }
+                    }
+                }
             }
             else if (matprod_jacobian_type & 1) {  /* const factor on right */
                 if (matprod_jacobian_type >> 1)
@@ -802,6 +840,9 @@ goto general;
     }
 
 general:
+
+//REprintf("GENERAL: %d\n",jacobian_type);
+//R_inspect(pos);
 
     if (JACOBIAN_TYPE(pos) == DIAGONAL_JACOBIAN
      && jacobian_type == PRODUCT_JACOBIAN) {
