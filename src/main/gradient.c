@@ -1192,13 +1192,12 @@ R_inspect(right); REprintf("==\n");
 }
 
 
-/* Copy a jacobian with scaling.  The jacobian may be a full one, or a
-   diagonal one, or a scaled jacobian.  Gradient to copy with scaling
-   is in grad, for vector of length gn, with respect to gvars
-   variables.  Result should be a gradient for a vector of length n
-   with gvars variables.  Scaling factors are in f, with length flen,
-   not necessarily equal to n.  When gn or flen are less than n,
-   recycling is done as necessary.
+/* Copy a jacobian with scaling.  Gradient to copy with scaling is in
+   'grad' (in any form), for vector of length gn, with respect to
+   gvars variables.  Result should be a gradient for a vector of
+   length n with gvars variables.  Scaling factors are in f, with
+   length flen, not necessarily equal to n.  When gn or flen are less
+   than n, recycling is done as necessary.
 
    Protects the grad argument. */
 
@@ -1414,14 +1413,13 @@ static SEXP scaled_jacobian (SEXP grad, R_len_t gvars, R_len_t gn,
 }
 
 
-/* Add a scaled jacobian to another jacobian.  The jacobians may be full,
-   or diagonal, or scaled jacobians.  Gradient to add to is in 'base',
-   for vector of length bn, with respect to gvars variables.  Result
-   should be a gradient for a vector of length n with gvars variables.
-   Gradient to scale and add to 'base' is in 'extra', for en
-   variables.  Scaling factors are in f, with length 'flen', not
-   necessarily equal to n.  When bn, en, or flen are less than n,
-   recycling is done as necessary.
+/* Add a scaled jacobian to another jacobian.  The jacobians may be of
+   any form.  Gradient to add to is in 'base', for vector of length
+   bn, with respect to gvars variables.  Result should be a gradient
+   for a vector of length n with gvars variables.  Gradient to scale
+   and add to 'base' is in 'extra', for en variables.  Scaling factors
+   are in f, with length 'flen', not necessarily equal to n.  When bn,
+   en, or flen are less than n, recycling is done as necessary.
 
    Protects the 'base' and 'extra' arguments. */
 
@@ -1625,7 +1623,7 @@ static SEXP add_scaled_jacobian (SEXP base, SEXP extra,
         }
 
         if (0) {  /* skip if too small to bother deferring, always at the
-                     moement, since not useful with current implementation */
+                     moment, since not useful with current implementation */
 
             PROTECT2(base,extra);
 
@@ -4877,13 +4875,11 @@ R_inspect(extra);
     R_len_t gvars = GRAD_WRT_LEN (base != R_NilValue ? base : extra);
 
     if (base == R_NilValue) {
-        if (TYPEOF(extra) != REALSXP) abort();
         R_len_t en = JACOBIAN_ROWS(extra);
         return scaled_jacobian (extra, gvars, en, &factor, 1, n);
     }
 
     if (extra == R_NilValue) {
-        if (TYPEOF(base) != REALSXP) abort();
         R_len_t bn = JACOBIAN_ROWS(base);
         if (bn == n)
             return base;
@@ -4927,13 +4923,11 @@ R_inspect(factors);
     R_len_t flen = LENGTH(factors);
 
     if (base == R_NilValue) {
-        if (TYPEOF(extra) != REALSXP) abort();
         R_len_t en = JACOBIAN_ROWS(extra);
         return scaled_jacobian (extra, gvars, en, REAL(factors), flen, n);
     }
 
     if (extra == R_NilValue) {
-        if (TYPEOF(base) != REALSXP) abort();
         R_len_t bn = JACOBIAN_ROWS(base);
         if (bn == n)
             return base;
