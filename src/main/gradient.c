@@ -762,41 +762,67 @@ goto general;
             R_len_t pos_cols = JACOBIAN_MAT_COLS(pos);
 
             if (jacobian_type & PRODUCT_JACOBIAN) {
+
                 if (MATPROD_JACOBIAN_TYPE(pos) >> 1)
                     goto general;  /* FOR NOW */
+
+                new_mat = allocVector (REALSXP, rows * cols);
+
+                double *rm = REAL(res_mat);
+                double *pm = REAL(pos_mat);
+                double *nm = REAL(new_mat);
+
                 if (MATPROD_JACOBIAN_TYPE(pos) & 1) {  /* factor on right */
-goto general;
-                }
-                else {  /* factor on left */
 
-                    new_mat = allocVector (REALSXP, rows * cols);
-
-                    double *rm = REAL(res_mat);
-                    double *pm = REAL(pos_mat);
-                    double *nm = REAL(new_mat);
-
-                    R_len_t pmr = JACOBIAN_MAT_ROWS(pos);
-                    R_len_t pml = LENGTH(pos_mat);
-
+                    R_len_t pos_size = pos_rows * pos_cols;
                     R_len_t i, j, k, s, t;
                     double a;
 
-//REprintf("ZZZ: %d %d %d %d\n",rows,cols,pmr,pml);
+//REprintf("ZZZ: %d %d : %d %d %d\n",rows,cols,pos_rows,pos_k,pos_cols);
+//R_inspect(res_mat);
+//REprintf("--\n");
+//R_inspect(pos);
                     s = 0; t = 0;
                     for (j = 0; j < cols; j++) {
                         for (i = 0; i < rows; i++) {
                             a = 0;
-                            for (k = 0; k < pmr; k++) {
+                            for (k = 0; k < pos_cols; k++) {
+
+                                a += rm[i+(t+k*pos_rows)*rows] * pm[s+k*pos_k];
+ 
 //REprintf("zzz: %d - %f * %f = %f\n",i+j*rows,
-// rm[i+(s+k)*rows], pm[t+k], rm[i+(s+k)*rows] * pm[t+k]);
+// rm[i+(t+k*pos_rows)*rows], pm[s+k*pos_k], 
+// rm[i+(t+k*pos_rows)*rows]*pm[s+k*pos_k]);
+
+                            }
+                            nm[i+j*rows] = a;
+                        }
+                        t += 1;
+                        if (t == pos_rows) {
+                            t = 0;
+                            s += 1;
+                        }
+                    }
+                }
+                else {  /* factor on left */
+
+                    R_len_t pos_len = LENGTH(pos_mat);
+                    R_len_t i, j, k, s, t;
+                    double a;
+
+                    s = 0; t = 0;
+                    for (j = 0; j < cols; j++) {
+                        for (i = 0; i < rows; i++) {
+                            a = 0;
+                            for (k = 0; k < pos_rows; k++) {
                                 a += rm[i+(s+k)*rows] * pm[t+k];
                             }
                             nm[i+j*rows] = a;
                         }
-                        t += pmr;
-                        if (t == pml) {
+                        t += pos_rows;
+                        if (t == pos_len) {
                             t = 0;
-                            s += pmr;
+                            s += pos_rows;
                         }
                     }
                 }

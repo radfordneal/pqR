@@ -18612,7 +18612,6 @@ attr(,"gradient")
 start 
 > with gradient (W,b,u) u %*% tanh (b + W %*% x)
 RPROFMEM: (double 75):
-RPROFMEM: (double 375):
          [,1]
 [1,] 7.888979
 attr(,"gradient")
