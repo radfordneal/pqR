@@ -711,7 +711,7 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
                     for (i = 0; i <rl; i++) n[i] = r[i] * d;
                 }
                 else {
-                    if (pl != rows) abort();
+                    if (pl != cols) abort();
                     i = 0;
                     for (j = 0; j <pl; j++) {
                         double d = p[j];
@@ -3818,8 +3818,7 @@ attribute_hidden SEXP cummin_gradient (SEXP grad, SEXP v, SEXP s, R_len_t n)
 
 
 /* Add gradient of sum of vector (a) with gradient (v) of length n, to 
-   previous gradient (grad), which may be modified, and should be in
-   expanded form.  
+   previous gradient (grad), which may be modified.
 
    Protects its grad and v arguments. */
 
@@ -3846,23 +3845,24 @@ R_inspect(a);
     PROTECT(v);
     PROTECT(grad);
 
-    if ((JACOBIAN_TYPE(grad) & SCALED_JACOBIAN) || 
-           ! (JACOBIAN_TYPE(grad) & DIAGONAL_JACOBIAN))
+    int do_rev = grad == R_NilValue && !narm;  /* Set up for reverse mode? */
+
+    if (grad != R_NilValue && JACOBIAN_TYPE(grad) != DIAGONAL_JACOBIAN)
         UNPROTECT_PROTECT(grad = expand_to_full_jacobian(grad));
 
-    if ((JACOBIAN_TYPE(v) & SCALED_JACOBIAN) ||
-           ! (JACOBIAN_TYPE(v) & DIAGONAL_JACOBIAN)) {
+    if (!do_rev && JACOBIAN_TYPE(v) != DIAGONAL_JACOBIAN) {
         v = expand_to_full_jacobian(v);
         UNPROTECT(2); 
         PROTECT2(v,grad);
     }
 
     SEXP r = grad;
-    if (r == R_NilValue)
-        r = alloc_jacobian (gvars, 1);
 
-    if (JACOBIAN_TYPE(v) & DIAGONAL_JACOBIAN) {
+    if (JACOBIAN_TYPE(v) == DIAGONAL_JACOBIAN) {
+
         R_len_t i;
+        if (r == R_NilValue)
+            r = alloc_jacobian (gvars, 1);
         if (grad == R_NilValue)
             memset (REAL(r), 0, LENGTH(r) * sizeof(double));
         if (LENGTH(v) == 1) {
@@ -3881,7 +3881,22 @@ R_inspect(a);
                 REAL(r)[i] += REAL(v)[i];
         }
     }
+    else if (do_rev) {
+
+        /* Kludge to do reverse mode for sum using PRODUCT_JACOBIAN with 1s. */
+
+        R_len_t i;
+
+        SEXP ones = allocVector (REALSXP, JACOBIAN_ROWS(v));
+        for (i = 0; i < n; i++)
+            REAL(ones)[i] = 1.0;
+
+        r = alloc_product_jacobian (gvars, 1, ones, v);
+    }
     else {
+
+        if (r == R_NilValue)
+            r = alloc_jacobian (gvars, 1);
         if (narm) {
             R_len_t i, j;
             if (grad == R_NilValue)

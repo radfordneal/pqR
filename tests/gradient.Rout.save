@@ -18546,23 +18546,17 @@ attr(,"gradient")
 > pr("end")
 end 
 > 
+> Rprofmemt(NULL)
+> 
 > x <- rep(c(0.08,-0.04,0.14),5)
-RPROFMEM: (double 15):
 > W <- matrix(c(4,2),5,15)
-RPROFMEM: (char 75):"matrix" 
-RPROFMEM: (list 50):"doWithOneRestart" "withOneRestart" "withRestarts" ".signalSimpleWarning" "matrix" 
-RPROFMEM: (character 50):"doWithOneRestart" "withOneRestart" "withRestarts" ".signalSimpleWarning" "matrix" 
-RPROFMEM: (double 75):"matrix" 
 Warning message:
-RPROFMEM: (char 22):
 In matrix(c(4, 2), 5, 15) :
   data length [2] is not a sub-multiple or multiple of the number of rows [5]
 > Wt <- t(W)
-RPROFMEM: (double 75):"t.default" "t" 
 > b <- c(0.4,0.3,0.1,-0.3,0.2)
 > u <- c(2,-2,-1,4,5)
 > 
-> Rprofmemt(NULL)
 > numericDeriv (quote (u %*% tanh (b + W %*% x)), "W")
          [,1]
 [1,] 7.888979
@@ -18659,7 +18653,6 @@ end
 > pr("start")
 start 
 > with gradient (W,b,u) sum (u * tanh (b + W %*% x))
-RPROFMEM: (double 375):
 RPROFMEM: (double 75):
 [1] 7.888979
 attr(,"gradient")
@@ -18755,7 +18748,6 @@ end
 > pr("start")
 start 
 > with gradient (Wt,b,u) sum (u * tanh (b + x %*% Wt))
-RPROFMEM: (double 375):
 RPROFMEM: (double 75):
 [1] 7.888979
 attr(,"gradient")

@@ -2648,13 +2648,14 @@ with gradient (A) B %*% (3 * (A2 %*% A))
 with gradient (A) (3 * (A2 %*% A)) %*% Bt
 pr("end")
 
+Rprofmemt(NULL)
+
 x <- rep(c(0.08,-0.04,0.14),5)
 W <- matrix(c(4,2),5,15)
 Wt <- t(W)
 b <- c(0.4,0.3,0.1,-0.3,0.2)
 u <- c(2,-2,-1,4,5)
 
-Rprofmemt(NULL)
 numericDeriv (quote (u %*% tanh (b + W %*% x)), "W")
 numericDeriv (quote (u %*% tanh (b + W %*% x)), "b")
 numericDeriv (quote (u %*% tanh (b + W %*% x)), "u")
