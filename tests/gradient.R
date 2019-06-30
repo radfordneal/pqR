@@ -2676,6 +2676,12 @@ pr("start")
 with gradient (Wt,b,u) sum (u * tanh (b + x %*% Wt))
 pr("end")
 
+A <- matrix(c(3,1,7,2),2,2)
+B <- matrix(c(10,20,30,-10),2,2)
+
+with gradient (A) { C <- B%*%A; dim(C) <- c(1,4); c(100,200,500,700)%*%C }
+with gradient (A) { C <- A%*%B; dim(C) <- NULL; C%*%c(100,200,500,700) }
+
 Rprofmemt(NULL)
 
 n <- 100

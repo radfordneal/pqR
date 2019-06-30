@@ -654,7 +654,8 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
 
     R_len_t gvars = GRAD_WRT_LEN(grad); /* Columns in final jacobian for grad */
 
-    int jacobian_type;         /* Type of result so far */
+    int jacobian_type;         /* Type of result so far.  Currently, should be
+                                  either PRODUCT_JACOBIAN or MATPROD_JACOBIAN */
     int matprod_jacobian_type; /* Sub-type when type is MATPROD_JACOBIAN */
     R_len_t mat_rows;          /* Matrix rows in product when type is 
                                   MATPROD_JACOBIAN, corr. to JACOBIAN_MAT_ROWS*/
@@ -681,6 +682,9 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
     pos = grad;
 
     for (;;) {
+
+        if (jacobian_type != PRODUCT_JACOBIAN 
+         && jacobian_type != MATPROD_JACOBIAN) abort();
 
         pos = NEXT_JACOBIAN(pos);
 
@@ -828,11 +832,16 @@ goto general;
                 }
             }
             else if (matprod_jacobian_type & 1) {  /* const factor on right */
+//REprintf("ZZZ1: %d %d : %d %d %d : %d %d %d\n",rows,cols,
+//                                               mat_rows,mat_k,mat_cols,
+//                                               pos_rows,pos_k,pos_cols);
                 if (matprod_jacobian_type >> 1)
                     goto general;  /* FOR NOW */
                 if (MATPROD_JACOBIAN_TYPE(pos) >> 1)
                     goto general;  /* FOR NOW */
                 if (MATPROD_JACOBIAN_TYPE(pos) & 1) { /* const factor on right*/
+                    if (mat_rows != pos_rows || mat_k != pos_cols)
+                        goto general;  /* dimensions must have been fiddled */
                     new_mat = allocVector (REALSXP, pos_k * mat_cols);
                     matprod_mat_mat(REAL(pos_mat), REAL(res_mat), REAL(new_mat),
                                     pos_k, pos_cols, mat_cols);
@@ -843,6 +852,9 @@ goto general;
                 }
             }
             else {  /* const factor on left */
+//REprintf("ZZZ2: %d %d : %d %d %d : %d %d %d\n",rows,cols,
+//                                               mat_rows,mat_k,mat_cols,
+//                                               pos_rows,pos_k,pos_cols);
                 if (matprod_jacobian_type >> 1)
                     goto general;  /* FOR NOW */
                 if (MATPROD_JACOBIAN_TYPE(pos) >> 1)
@@ -851,6 +863,8 @@ goto general;
                     goto general;
                 }
                 else {  /* const factor on left */
+                    if (mat_cols != pos_cols || mat_k != pos_rows)
+                        goto general;  /* dimensions must have been fiddled */
                     new_mat = allocVector (REALSXP, mat_rows * pos_k);
                     matprod_mat_mat(REAL(res_mat), REAL(pos_mat), REAL(new_mat),
                                     mat_rows, pos_rows, pos_k);
@@ -932,7 +946,7 @@ R_inspect(res_mat); REprintf("==\n");
             R_len_t k = LENGTH(res_mat) / n;
             R_len_t m = JACOBIAN_ROWS(pos) / k;
 #if 0
-REprintf("ZZZZZZ %d : %d %d %d\n",gvars,n,k,m);
+REprintf("XXXXXX %d : %d %d %d\n",gvars,n,k,m);
 R_inspect(grad); REprintf("--\n");
 R_inspect(pos); REprintf("--\n");
 R_inspect(res_mat); REprintf("==\n");
