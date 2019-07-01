@@ -750,11 +750,70 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
                 matprod_mat_mat (REAL(res_mat), REAL(JACOBIAN_MATRIX1(pos)),
                   REAL(new_mat), rows, LENGTH(res_mat)/rows, cols);
             }
+
             else if (matprod_jacobian_type & 1) {  /* const factor on right */
-goto general;
+
+                if (matprod_jacobian_type >> 1)
+                    goto general;  /* FOR NOW */
+
+                PROTECT(new_mat = allocVector (REALSXP, rows * cols));
+
+                /* May need to copy due to matprod_* alignment requirements. */
+
+                SEXP pos_mat = JACOBIAN_MATRIX1(pos);
+                R_len_t prows = JACOBIAN_ROWS(pos);
+
+                SEXP tmpp = cols == 1 ? pos_mat : allocVector (REALSXP, prows);
+                PROTECT(tmpp);
+
+                SEXP tmpr = cols == 1 ? new_mat : allocVector (REALSXP, rows);
+                PROTECT(tmpr);
+
+                R_len_t h;
+
+                if (mat_rows * mat_k != prows) abort();
+                if (mat_rows * mat_cols != rows) abort();
+//REprintf("loop:\n");
+//R_inspect(res_mat);
+//R_inspect(pos_mat);
+                for (h = 0; h < cols; h++) {
+
+                    SEXP x;
+                    if (h == 0) 
+                        x = pos_mat;
+                    else {
+                        x = tmpp;
+                        memcpy (REAL(x), REAL(pos_mat) + h*prows,
+                                sizeof(double) * prows);
+                    }
+//REprintf("MMM %d %d %d %d : %d %d %d\n",
+// h,prows,rows,cols,mat_rows,mat_k,mat_cols);
+//R_inspect(x);
+                    matprod_mat_mat (REAL(x), REAL(res_mat), REAL(tmpr),
+                                     mat_rows, mat_k, mat_cols);
+//REprintf("mmm\n"); R_inspect(tmpr);            
+                    if (cols != 1)
+                        memcpy (REAL(new_mat) + h*rows, REAL(tmpr), 
+                                sizeof(double) * rows);
+                }
+
+                jacobian_type = PRODUCT_JACOBIAN;
+
+                UNPROTECT(3);
+//REprintf("end loop:\n");
+//R_inspect(new_mat);
             }
             else {  /* const factor on left */
-goto general;
+
+                if (matprod_jacobian_type >> 1)
+                    goto general;  /* FOR NOW */
+
+                new_mat = allocVector (REALSXP, rows * cols);
+
+                matprod_mat_mat (REAL(res_mat), REAL(JACOBIAN_MATRIX1(pos)),
+                  REAL(new_mat), mat_rows, mat_k, cols);
+
+                jacobian_type = PRODUCT_JACOBIAN;
             }
         }
 
