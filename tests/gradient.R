@@ -2701,6 +2701,10 @@ pr("start")
 with gradient (x=c(3,1,4,2)) c(1,1,1) %*% ff(ff(ff(x)))
 pr("end")
 
+pr("start")
+with gradient (x=c(3,1,4,2)) ff(ff(ff(x))) %*% c(1,1,1)
+pr("end")
+
 Rprofmemt(NULL)
 
 n <- 100

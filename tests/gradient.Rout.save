@@ -18892,6 +18892,26 @@ attr(,"gradient")
 > pr("end")
 end 
 > 
+> pr("start")
+start 
+> with gradient (x=c(3,1,4,2)) ff(ff(ff(x))) %*% c(1,1,1)
+RPROFMEM: (double 4):
+RPROFMEM: (double 12):"ff" "ff" "ff" 
+RPROFMEM: (double 9):"ff" "ff" 
+RPROFMEM: (double 12):"ff" "ff" 
+RPROFMEM: (double 9):"ff" 
+RPROFMEM: (double 12):"ff" 
+RPROFMEM: (expression 5):
+RPROFMEM: (double 4):
+RPROFMEM: (double 12):
+     [,1]
+[1,]    9
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,] 4913 4913 4913 4913
+> pr("end")
+end 
+> 
 > Rprofmemt(NULL)
 > 
 > n <- 100
