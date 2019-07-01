@@ -881,8 +881,10 @@ goto general;
 
 general:
 
-//REprintf("GENERAL: %d\n",jacobian_type);
-//R_inspect(pos);
+#if 0
+REprintf("GENERAL: %d\n",jacobian_type);
+R_inspect(pos);
+#endif
 
     if (JACOBIAN_TYPE(pos) == DIAGONAL_JACOBIAN
      && jacobian_type == PRODUCT_JACOBIAN) {
@@ -919,12 +921,16 @@ general:
 
     else {
 
-        PROTECT(new_mat = allocVector (REALSXP, rows * cols));
+        PROTECT (new_mat = allocVector (REALSXP, rows * gvars));
 
         if (jacobian_type & PRODUCT_JACOBIAN) {
             pos = expand_to_full_jacobian (pos);
+#if 0
+REprintf("WWW2 %d %d %d %d\n",rows,LENGTH(res_mat),cols,gvars); 
+R_inspect(pos); REprintf("$$\n"); R_inspect(res_mat); REprintf("%%\n");
+#endif
             matprod_mat_mat (REAL(res_mat), REAL(pos),
-              REAL(new_mat), rows, LENGTH(res_mat)/rows, cols);
+              REAL(new_mat), rows, LENGTH(res_mat)/rows, gvars);
         }
         else if (matprod_jacobian_type & 1) {  /* pos is on left */
             R_len_t n = mat_rows;
@@ -933,9 +939,10 @@ general:
             R_len_t s = LENGTH(res_mat);
             R_len_t m = s / k;
 #if 0
-REprintf("YYYYYY %d : %d %d %d : %d %d\n",gvars,n,k,m,r,s);
+REprintf("YYYYYY %d %d %d : %d %d %d : %d %d\n",gvars,rows,cols,n,k,m,r,s);
 R_inspect(grad); REprintf("--\n");
 R_inspect(pos); REprintf("--\n");
+R_inspect(new_mat); REprintf("^^\n");
 R_inspect(res_mat); REprintf("==\n");
 #endif
             prod_grad_mat (pos, res_mat, new_mat, gvars, n, k, m,
@@ -946,9 +953,10 @@ R_inspect(res_mat); REprintf("==\n");
             R_len_t k = LENGTH(res_mat) / n;
             R_len_t m = JACOBIAN_ROWS(pos) / k;
 #if 0
-REprintf("XXXXXX %d : %d %d %d\n",gvars,n,k,m);
+REprintf("XXXXXX %d %d %d : %d %d %d\n",gvars,rows,cols,n,k,m);
 R_inspect(grad); REprintf("--\n");
 R_inspect(pos); REprintf("--\n");
+R_inspect(new_mat); REprintf("^^\n");
 R_inspect(res_mat); REprintf("==\n");
 #endif
             prod_mat_grad (res_mat, pos, new_mat, gvars, n, k, m,
@@ -1024,7 +1032,7 @@ static SEXP expand_to_full_jacobian (SEXP grad)
             R_len_t m = s / k;
             new = alloc_jacobian (gvars, n * m);
 #if 0
-REprintf("XXXXXX %d : %d %d %d : %d %d\n",gvars,n,k,m,r,s);
+REprintf("FFF %d : %d %d %d : %d %d\n",gvars,n,k,m,r,s);
 R_inspect(grad); REprintf("--\n");
 R_inspect(left); REprintf("--\n");
 R_inspect(right); REprintf("==\n");
@@ -1039,6 +1047,12 @@ R_inspect(right); REprintf("==\n");
             R_len_t k = LENGTH(left) / n;
             R_len_t m = JACOBIAN_ROWS(right) / k;
             new = alloc_jacobian (gvars, n * m);
+#if 0
+REprintf("GGG %d : %d %d %d\n",gvars,n,k,m);
+R_inspect(grad); REprintf("--\n");
+R_inspect(left); REprintf("--\n");
+R_inspect(right); REprintf("==\n");
+#endif
             prod_mat_grad (left, right, new, gvars, n, k, m,
                            MATPROD_JACOBIAN_TYPE(grad) >> 1);
         }
