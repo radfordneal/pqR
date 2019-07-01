@@ -2684,6 +2684,25 @@ with gradient (A) { C <- A%*%B; dim(C) <- NULL; C%*%c(100,200,500,700) }
 
 Rprofmemt(NULL)
 
+n <- 4
+
+ff <- function (x) compute gradient (x) c(3,4,2) as rep(c(7,2,8),length(x))
+gg <- function (x) compute gradient (x) sum(x) as rep(1,length(x))
+
+pr("start")
+with gradient (x=c(3,1,4,2)) gg(ff(ff(ff(x))))
+pr("end")
+
+pr("start")
+with gradient (x=c(3,1,4,2)) sum(ff(ff(ff(x))))
+pr("end")
+
+pr("start")
+with gradient (x=c(3,1,4,2)) c(1,1,1) %*% ff(ff(ff(x)))
+pr("end")
+
+Rprofmemt(NULL)
+
 n <- 100
 
 F <- seq(from=1,by=0.01,length=n)

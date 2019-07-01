@@ -18832,6 +18832,68 @@ attr(,"gradient")
 > 
 > Rprofmemt(NULL)
 > 
+> n <- 4
+> 
+> ff <- function (x) compute gradient (x) c(3,4,2) as rep(c(7,2,8),length(x))
+> gg <- function (x) compute gradient (x) sum(x) as rep(1,length(x))
+> 
+> pr("start")
+start 
+> with gradient (x=c(3,1,4,2)) gg(ff(ff(ff(x))))
+RPROFMEM: (double 4):
+RPROFMEM: (double 12):"ff" "ff" "ff" "gg" 
+RPROFMEM: (double 9):"ff" "ff" "gg" 
+RPROFMEM: (double 12):"ff" "ff" "gg" 
+RPROFMEM: (double 9):"ff" "gg" 
+RPROFMEM: (double 12):"ff" "gg" 
+RPROFMEM: (double 12):"gg" 
+RPROFMEM: (double 4):
+[1] 9
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,] 4913 4913 4913 4913
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> with gradient (x=c(3,1,4,2)) sum(ff(ff(ff(x))))
+RPROFMEM: (double 4):
+RPROFMEM: (double 12):"ff" "ff" "ff" 
+RPROFMEM: (double 9):"ff" "ff" 
+RPROFMEM: (double 12):"ff" "ff" 
+RPROFMEM: (double 9):"ff" 
+RPROFMEM: (double 12):"ff" 
+RPROFMEM: (double 4):
+[1] 9
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,] 4913 4913 4913 4913
+> pr("end")
+end 
+> 
+> pr("start")
+start 
+> with gradient (x=c(3,1,4,2)) c(1,1,1) %*% ff(ff(ff(x)))
+RPROFMEM: (double 4):
+RPROFMEM: (double 12):"ff" "ff" "ff" 
+RPROFMEM: (double 9):"ff" "ff" 
+RPROFMEM: (double 12):"ff" "ff" 
+RPROFMEM: (double 9):"ff" 
+RPROFMEM: (double 12):"ff" 
+RPROFMEM: (expression 5):
+RPROFMEM: (double 4):
+RPROFMEM: (double 12):
+     [,1]
+[1,]    9
+attr(,"gradient")
+     [,1] [,2] [,3] [,4]
+[1,] 4913 4913 4913 4913
+> pr("end")
+end 
+> 
+> Rprofmemt(NULL)
+> 
 > n <- 100
 > 
 > F <- seq(from=1,by=0.01,length=n)
