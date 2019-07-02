@@ -2570,6 +2570,8 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 	return r;
     }
 
+    int dograd = HAS_GRADIENT_IN_CELL(args) && TYPEOF(x) == REALSXP;
+
     if (TYPEOF(x) == INTSXP || TYPEOF(x) == LGLSXP) {
 	/* integer or logical ==> return integer,
 	   factor was covered by Math.factor. */
@@ -2618,7 +2620,7 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
               :   ScalarReal(res);
         }
         else {
-            s = NAMEDCNT_EQ_0(x) ? x : allocVector(REALSXP, n);
+            s = NAMEDCNT_EQ_0(x) && !dograd ? x : allocVector(REALSXP, n);
             DO_NOW_OR_LATER1 (variant, n >= T_abs,
                               HELPERS_PIPE_IN01_OUT | HELPERS_MERGE_IN_OUT,
                               task_abs, 0, s, x);
@@ -2634,7 +2636,7 @@ SEXP do_abs(SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     PROTECT(s);
     maybe_dup_attributes (s, x, variant);
 
-    if (HAS_GRADIENT_IN_CELL(args) && TYPEOF(x) == REALSXP) {
+    if (dograd) {
 
         GRADIENT_TRACE(call);
 

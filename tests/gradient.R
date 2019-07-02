@@ -1677,6 +1677,14 @@ with gradient (a,b) pmax(a,b,a*b)
 
 rm(a,b)
 
+d <- c(5,-7,8,-2)
+
+with gradient (d) abs(d+1)
+with gradient (d) sin(d+1)
+with gradient (d) log(d+10)
+
+rm(d)
+
 with gradient (a=list(3,list(9,2))) as.vector(a)
 with gradient (a=c(3,1,9,2)) as.vector(a)
 
