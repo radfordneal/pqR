@@ -5138,6 +5138,8 @@ R_inspect(base);
 
     SEXP res;
 
+    /* Handle case where 'b' is a vector of gradients with recursive calls. */
+
     if (TYPEOF(b) == VECSXP) {
         R_len_t n = LENGTH(b);
         PROTECT3(base,a,b);
@@ -5162,11 +5164,8 @@ R_inspect(res);
         return res;
     }
 
-    if (TYPEOF(a) != REALSXP) {
-        PROTECT2(base,b);
-        a = expand_to_full_jacobian(a);
-        UNPROTECT(2);
-    }
+    /* From here down, 'base', 'a', and 'b' should all be either R_NilValue 
+       or a representation of a Jacobian matrix. */
 
     PROTECT2(base,a);
 
@@ -5187,7 +5186,12 @@ R_inspect(res);
 
     if (JACOBIAN_TYPE(b) & DIAGONAL_JACOBIAN) {
 
-        /* Note:  Here a might or might not be in compact form. */
+        /* Note:  Here 'a' might or might not be in full form. */
+
+        if (! (JACOBIAN_TYPE(a) & DIAGONAL_JACOBIAN))
+            a = expand_to_full_jacobian(a);
+
+        PROTECT(a);
 
         R_len_t alen = LENGTH(a);
         R_len_t blen = LENGTH(b);
@@ -5215,8 +5219,9 @@ R_inspect(res);
                     REAL(res)[i] = REAL(b)[i] * REAL(a)[i];
             }
         }
+
         else {
- 
+
             res = alloc_jacobian (gvars, n);
  
             if (blen == 1) {
@@ -5231,21 +5236,28 @@ R_inspect(res);
                         REAL(res)[i+j] = REAL(b)[j] * REAL(a)[i+j];
             }
         }
+
+        UNPROTECT(1);
     }
 
     else {  /* b is a full Jacobian */
+
+        if (TYPEOF(a) != REALSXP)
+            a = expand_to_full_jacobian(a);
+
+        PROTECT(a);
 
         if (JACOBIAN_LENGTH(a) == 1 && LENGTH(b) == 1) {
             PROTECT(a = expand_to_full_jacobian(a));
             if (base == R_NilValue) {
                 res = ScalarRealMaybeConst (*REAL(a) * *REAL(b));
             }
-            else {
+            else { /* handle adding to 'base' here, rather than by code below */
                 base = expand_to_full_jacobian(base);
                 if (LENGTH(base) != 1) abort();
                 res = ScalarRealMaybeConst (*REAL(base) + *REAL(a) * *REAL(b));
             }
-            UNPROTECT(1);
+            UNPROTECT(2);
             goto ret;
         }
 
@@ -5253,25 +5265,30 @@ R_inspect(res);
             PROTECT(a = expand_to_full_jacobian(a));
             res = alloc_jacobian (gvars, n);
             matprod_mat_mat (REAL(b), REAL(a), REAL(res), n, k, gvars);
+            UNPROTECT(2);
+        }
+        else {
+            res = alloc_product_jacobian (gvars, n, b, a);
             UNPROTECT(1);
         }
-        else 
-            res = alloc_product_jacobian (gvars, n, b, a);
     }
 
-    if (base == R_NilValue)
-        goto ret;
+    /* See if we need to add backpropagated gradient to gradient in 'base'.  
+       Currently done by expanding both, then simply adding. */
 
-    PROTECT (res = expand_to_full_jacobian(res));
-    base = expand_to_full_jacobian(base);
-    UNPROTECT(1);
+    if (base != R_NilValue) {
 
-    R_len_t glen = gvars * n;
+        PROTECT (res = expand_to_full_jacobian(res));
+        base = expand_to_full_jacobian(base);
+        UNPROTECT(1);
 
-    if (LENGTH(base) != glen) abort();
+        R_len_t glen = gvars * n;
 
-    for (i = 0; i < glen; i++) 
-        REAL(res)[i] += REAL(base)[i];
+        if (LENGTH(base) != glen) abort();
+
+        for (i = 0; i < glen; i++) 
+            REAL(res)[i] += REAL(base)[i];
+    }
 
   ret:
 

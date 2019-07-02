@@ -19232,14 +19232,14 @@ RPROFMEM: (double 6):
 RPROFMEM: (expression 5):
 RPROFMEM: (double 8):
 RPROFMEM: (expression 5):
+RPROFMEM: (double 48):
 RPROFMEM: (double 18):
-RPROFMEM: (double 48):
+RPROFMEM: (double 24):
 RPROFMEM: (double 12):
-RPROFMEM: (double 24):
-RPROFMEM: (double 24):
 RPROFMEM: (double 32):
-RPROFMEM: (double 30):
+RPROFMEM: (double 24):
 RPROFMEM: (double 48):
+RPROFMEM: (double 30):
 RPROFMEM: (double 40):
         [,1]
 [1,] 5267136
