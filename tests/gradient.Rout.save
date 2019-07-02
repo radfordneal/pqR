@@ -19116,3 +19116,154 @@ RPROFMEM: (double 10000):
 > pr("end")
 end 
 > 
+> 
+> Rprofmemt(NULL)
+> 
+> n <- 3
+> 
+> Z <- matrix(c(-3,1,3,8,2),6,5)
+> A <- matrix(c(3,9,7,2,2,-1,3,-2),4,6)
+> B <- matrix(c(8,4),3,4)
+> C <- matrix(c(-1,2,5),6,3)
+> D <- matrix(c(7,5,3,1),8,6)
+> x <- c(7,-1,2,4,9)
+> 
+> (r <- numericDeriv (quote ({
++   Y <- Z %*% x
++   Y <- A %*% Y
++   Y <- B %*% Y
++   Y <- C %*% Y
++   Y <- D %*% Y
++   Y
++ }), "x"))
+        [,1]
+[1,] 5267136
+[2,] 3762240
+[3,] 2257344
+[4,]  752448
+[5,] 5267136
+[6,] 3762240
+[7,] 2257344
+[8,]  752448
+attr(,"gradient")
+      [,1]   [,2]   [,3]   [,4]   [,5]
+[1,] 89376 215712 224448 300720 356160
+[2,] 63840 154080 160320 214800 254400
+[3,] 38304  92448  96192 128880 152640
+[4,] 12768  30816  32064  42960  50880
+[5,] 89376 215712 224448 300720 356160
+[6,] 63840 154080 160320 214800 254400
+[7,] 38304  92448  96192 128880 152640
+[8,] 12768  30816  32064  42960  50880
+> g <- attr(r,"gradient")
+> 
+> pr("start")
+start 
+> (r <- with gradient (x) {
++   pr("Z"); Y <- Z %*% x
++   pr("A"); Y <- A %*% Y
++   pr("B"); Y <- B %*% Y
++   pr("C"); Y <- C %*% Y
++   pr("D"); Y <- D %*% Y
++   pr("E"); Y
++ })
+Z 
+RPROFMEM: (double 6):
+RPROFMEM: (expression 5):
+A 
+RPROFMEM: (double 4):
+RPROFMEM: (expression 5):
+B 
+RPROFMEM: (double 3):
+RPROFMEM: (expression 5):
+C 
+RPROFMEM: (double 6):
+RPROFMEM: (expression 5):
+D 
+RPROFMEM: (double 8):
+RPROFMEM: (expression 5):
+E 
+RPROFMEM: (double 24):
+RPROFMEM: (double 32):
+RPROFMEM: (double 48):
+RPROFMEM: (double 40):
+RPROFMEM: (double 40):
+        [,1]
+[1,] 5267136
+[2,] 3762240
+[3,] 2257344
+[4,]  752448
+[5,] 5267136
+[6,] 3762240
+[7,] 2257344
+[8,]  752448
+attr(,"gradient")
+      [,1]   [,2]   [,3]   [,4]   [,5]
+[1,] 89376 215712 224448 300720 356160
+[2,] 63840 154080 160320 214800 254400
+[3,] 38304  92448  96192 128880 152640
+[4,] 12768  30816  32064  42960  50880
+[5,] 89376 215712 224448 300720 356160
+[6,] 63840 154080 160320 214800 254400
+[7,] 38304  92448  96192 128880 152640
+[8,] 12768  30816  32064  42960  50880
+> pr("end")
+end 
+> 
+> identical(attr(r,"gradient"),g)
+[1] TRUE
+> 
+> pr("start")
+start 
+> (r <- with gradient (x) {
++   back gradient (Y = Z %*% x)
++     back gradient (Y = A %*% Y)
++       back gradient (Y = B %*% Y)
++         back gradient (Y = C %*% Y)
++           D %*% Y
++ })
+RPROFMEM: (double 6):
+RPROFMEM: (expression 5):
+RPROFMEM: (double 4):
+RPROFMEM: (expression 5):
+RPROFMEM: (double 3):
+RPROFMEM: (expression 5):
+RPROFMEM: (double 6):
+RPROFMEM: (expression 5):
+RPROFMEM: (double 8):
+RPROFMEM: (expression 5):
+RPROFMEM: (double 18):
+RPROFMEM: (double 48):
+RPROFMEM: (double 12):
+RPROFMEM: (double 24):
+RPROFMEM: (double 24):
+RPROFMEM: (double 32):
+RPROFMEM: (double 30):
+RPROFMEM: (double 48):
+RPROFMEM: (double 40):
+        [,1]
+[1,] 5267136
+[2,] 3762240
+[3,] 2257344
+[4,]  752448
+[5,] 5267136
+[6,] 3762240
+[7,] 2257344
+[8,]  752448
+attr(,"gradient")
+      [,1]   [,2]   [,3]   [,4]   [,5]
+[1,] 89376 215712 224448 300720 356160
+[2,] 63840 154080 160320 214800 254400
+[3,] 38304  92448  96192 128880 152640
+[4,] 12768  30816  32064  42960  50880
+[5,] 89376 215712 224448 300720 356160
+[6,] 63840 154080 160320 214800 254400
+[7,] 38304  92448  96192 128880 152640
+[8,] 12768  30816  32064  42960  50880
+> pr("end")
+end 
+> 
+> identical(attr(r,"gradient"),g)
+[1] TRUE
+> 
+RPROFMEM: (char 5):

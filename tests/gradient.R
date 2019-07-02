@@ -2764,3 +2764,50 @@ pr("start")
 r2 <- with gradient (a = numeric(n)) F*g(10*g(F*g(a)))
 print(attr(r2,"gradient")[1..3,1..3])
 pr("end")
+
+
+Rprofmemt(NULL)
+
+n <- 3
+
+Z <- matrix(c(-3,1,3,8,2),6,5)
+A <- matrix(c(3,9,7,2,2,-1,3,-2),4,6)
+B <- matrix(c(8,4),3,4)
+C <- matrix(c(-1,2,5),6,3)
+D <- matrix(c(7,5,3,1),8,6)
+x <- c(7,-1,2,4,9)
+
+(r <- numericDeriv (quote ({
+  Y <- Z %*% x
+  Y <- A %*% Y
+  Y <- B %*% Y
+  Y <- C %*% Y
+  Y <- D %*% Y
+  Y
+}), "x"))
+g <- attr(r,"gradient")
+
+pr("start")
+(r <- with gradient (x) {
+  pr("Z"); Y <- Z %*% x
+  pr("A"); Y <- A %*% Y
+  pr("B"); Y <- B %*% Y
+  pr("C"); Y <- C %*% Y
+  pr("D"); Y <- D %*% Y
+  pr("E"); Y
+})
+pr("end")
+
+identical(attr(r,"gradient"),g)
+
+pr("start")
+(r <- with gradient (x) {
+  back gradient (Y = Z %*% x)
+    back gradient (Y = A %*% Y)
+      back gradient (Y = B %*% Y)
+        back gradient (Y = C %*% Y)
+          D %*% Y
+})
+pr("end")
+
+identical(attr(r,"gradient"),g)
