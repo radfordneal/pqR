@@ -5444,6 +5444,7 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         vr |= VARIANT_GRADIENT;
 
     SEXP result = evalv (CAR(p), newenv, vr);
+    PROTECT(R_variant_result & VARIANT_GRADIENT_FLAG ? R_gradient : R_NilValue);
 
     PROTECT_INDEX rix;                   
     PROTECT_WITH_INDEX(result,&rix);
@@ -5497,9 +5498,9 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     }
 
     if (need_grad)
-        UNPROTECT(5+2*nv);
+        UNPROTECT(6+2*nv);
     else
-        UNPROTECT(5);
+        UNPROTECT(6);
 
     R_Visible = TRUE;
     return result;
