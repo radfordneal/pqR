@@ -1635,7 +1635,13 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
       set_in_frame:
 
-        set_var_in_frame (lhs, rhs, rho, TRUE, 3);
+        if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+            PROTECT (R_gradient);
+            set_var_in_frame (lhs, rhs, rho, TRUE, 3);
+            UNPROTECT(1);
+        }
+        else
+            set_var_in_frame (lhs, rhs, rho, TRUE, 3);
     }
 
     else if (TYPE_ETC(lhs) == LANGSXP) {  /* other parts will be 0 */
