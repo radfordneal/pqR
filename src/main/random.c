@@ -67,7 +67,7 @@ static struct {
 
 static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP a;
+    SEXP a, x;
     int n, na;
 
     checkArity(op, args);
@@ -100,6 +100,8 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
         double r = fncall (av);
         PutRNGstate();
 
+        PROTECT (x = ScalarReal(r));
+
         if (ISNAN(r)) {
             warning(_("NAs produced"));
         }
@@ -118,11 +120,11 @@ static SEXP do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
             }
         }
 
-        UNPROTECT(1); /* a */
-        return ScalarReal(r);
+        UNPROTECT(2); /* a, x */
+        return x;
     }
 
-    SEXP x = allocVector(REALSXP, n);
+    x = allocVector(REALSXP, n);
     PROTECT(x);
 
     if (n == 0) {
@@ -260,7 +262,7 @@ static struct {
 
 static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP a1, a2;
+    SEXP a1, a2, x;
     int n, na1, na2;
 
     checkArity(op, args);
@@ -297,6 +299,8 @@ static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
         double r = rf (av1, av2);
         PutRNGstate();
 
+        PROTECT (x = ScalarReal(r));
+
         if (ISNAN(r)) {
             warning(_("NAs produced"));
         }
@@ -331,11 +335,11 @@ static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
             }
         }
 
-        UNPROTECT(2); /* a1, a2 */
-        return ScalarReal(r);
+        UNPROTECT(3); /* x, a1, a2 */
+        return x;
     }
 
-    SEXP x = allocVector(REALSXP, n);
+    x = allocVector(REALSXP, n);
     PROTECT(x);
 
     if (n == 0) {
