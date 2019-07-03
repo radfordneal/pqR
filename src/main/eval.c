@@ -2393,10 +2393,16 @@ SEXP attribute_hidden evalList_v (SEXP el, SEXP rho, int variant)
 static SEXP make_grad_cell (SEXP car, SEXP tag)
 {
     SEXP s;
-    PROTECT(R_gradient);
-    s = cons_with_tag (car, R_NilValue, tag);
-    SET_GRADIENT_IN_CELL_NR (s, R_gradient);
-    UNPROTECT(1);
+
+    if (R_variant_result & VARIANT_GRADIENT_FLAG) {
+        PROTECT(R_gradient);
+        s = cons_with_tag (car, R_NilValue, tag);
+        SET_GRADIENT_IN_CELL_NR (s, R_gradient);
+        UNPROTECT(1);
+    }
+    else
+        s = cons_with_tag (car, R_NilValue, tag);
+
     return s;
 }
 
@@ -2415,9 +2421,7 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant,
         if (CAR(el) != R_DotsSymbol) {
             ev_el  = EVALV (CAR(el), rho,
                             m > 0 ? variant : variant | VARIANT_GRADIENT);
-            ev = R_variant_result & VARIANT_GRADIENT_FLAG 
-                  ? make_grad_cell (ev_el, TAG(el)) 
-                  : cons_with_tag(ev_el, R_NilValue, TAG(el));
+            ev = make_grad_cell (ev_el, TAG(el));
             R_variant_result = 0;
             return ev;
         }
@@ -2456,10 +2460,8 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant,
                                           : VARIANT_PENDING_OK;
                     }
                     ev_el = evalv (CAR(h), rho, vr);
+                    ev = make_grad_cell (ev_el, TAG(h));
                     i += 1;
-                    ev = R_variant_result & VARIANT_GRADIENT_FLAG
-                          ? make_grad_cell (ev_el, TAG(h))
-                          : cons_with_tag (ev_el, R_NilValue, TAG(h));
                     if (head==R_NilValue)
                         head = ev;
                     else
@@ -2485,10 +2487,8 @@ SEXP attribute_hidden evalList_gradient (SEXP el, SEXP rho, int variant,
                                   : VARIANT_PENDING_OK;
             }
             ev_el = EVALV (CAR(el), rho, vr);
+            ev = make_grad_cell (ev_el, TAG(el));
             i += 1;
-            ev = R_variant_result & VARIANT_GRADIENT_FLAG
-                  ? make_grad_cell (ev_el, TAG(el))
-                  : cons_with_tag (ev_el, R_NilValue, TAG(el));
             if (head==R_NilValue)
                 head = ev;
             else
