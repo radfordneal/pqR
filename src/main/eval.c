@@ -3068,6 +3068,7 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     if (variant & VARIANT_GRADIENT) {
         if (grad1 != R_NilValue || grad2 != R_NilValue) {
             double d = opcode == PLUSOP ? 1.0 : -1.0;
+            PROTECT(ans);
             if (grad1 == R_NilValue)
                 R_gradient = d == 1.0 ? grad2 
                                       : scaled_gradients (grad2, d, 1);
@@ -3075,6 +3076,7 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 R_gradient = grad1;
             else
                 R_gradient = add_scaled_gradients (grad1, grad2, d, 1);
+            UNPROTECT(1);
             R_variant_result = VARIANT_GRADIENT_FLAG;
         }
     }
@@ -3233,6 +3235,7 @@ static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
     if (variant & VARIANT_GRADIENT) {
         if (grad1 != R_NilValue || grad2 != R_NilValue) {
             R_variant_result = VARIANT_GRADIENT_FLAG;
+            PROTECT(ans);
             switch (opcode) {
             case TIMESOP:
                 if (grad1 == R_NilValue)
@@ -3270,6 +3273,7 @@ static SEXP do_arith2 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
             default:
                 R_variant_result = 0;
             }
+            UNPROTECT(1);
         }
     }
 

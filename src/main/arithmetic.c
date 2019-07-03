@@ -1526,7 +1526,8 @@ SEXP attribute_hidden R_binary (SEXP call, int opcode, SEXP x, SEXP y,
         }
     
         if(xS4 || yS4) {   /* Only set the bit:  no method defined! */
-            ans = asS4(ans, TRUE, TRUE);
+            PROTECT (ans = asS4(ans, TRUE, TRUE));
+            nprotect++;
         }
     }
 
@@ -1858,6 +1859,8 @@ SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
 
     if (grad1 != R_NilValue) {
 
+        PROTECT(ans);
+
         GRADIENT_TRACE(call);
 
         double d = opcode == MINUSOP ? -1 : 1;
@@ -1876,6 +1879,8 @@ SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
             R_gradient = res_grad;
             R_variant_result = VARIANT_GRADIENT_FLAG;
         }
+
+        UNPROTECT(1);
     }
 
     return ans;
@@ -2338,7 +2343,9 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
 
     R_len_t n = LENGTH(sa);
     double opr, res;
-    SEXP sy;
+
+    SEXP sy;  /* Should be protected once computed - may be a grad computation,
+                 may be warnings, and attributes may be duplicated. */
 
     if (n == 1) { /* scalar operation, including on scalar stack. */
 
@@ -2357,22 +2364,18 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
         POP_IF_TOP_OF_STACK(sa0);
 
         if ((local_assign || NAMEDCNT_EQ_0(sa)) && grad == R_NilValue) {
-            sy = sa;
+            PROTECT(sy = sa);
             *REAL(sy) = res;
         }
         else if (CAN_USE_SCALAR_STACK(variant) && NO_ATTRIBUTES_OK(variant,sa))
-            sy = PUSH_SCALAR_REAL(res);
+            PROTECT(sy = PUSH_SCALAR_REAL(res));
         else {
             PROTECT(sy = ScalarReal(res));
             maybe_dup_attributes (sy, sa, variant);
-            UNPROTECT(1);
         }
     }
 
     else { /* not scalar */
-
-        /* Note: need to protect sy below because some ops may produce a warning
-           and attributes may be duplicated. */
 
         R_naflag = 0;
 
@@ -2422,7 +2425,6 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
 
         if (R_naflag)
             NaN_warningcall(call);
-        UNPROTECT(1);
     }
 
     R_variant_result = local_assign; /* Defer setting to shortly before return*/
@@ -2457,7 +2459,7 @@ SEXP attribute_hidden do_math1 (SEXP call, SEXP op, SEXP args, SEXP env,
         }
     }
 
-    UNPROTECT(3);  /* sa|args, grad, sa (possibly changed) */
+    UNPROTECT(4);  /* sa|args, grad, sa (possibly changed), sy */
     return sy;
 }
 
