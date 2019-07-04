@@ -1410,6 +1410,7 @@ static SEXP VectorSubset (SEXP x, SEXP x_grad, SEXP subs,
     /* Allocate and extract the result. */
 
     PROTECT (result = allocVector(TYPEOF(x),n));
+    R_gradient = R_NilValue;
 
     if (sb==R_NoObject) {
         ExtractRange(x, result, start, end, call);
@@ -1433,6 +1434,8 @@ static SEXP VectorSubset (SEXP x, SEXP x_grad, SEXP subs,
                                (x_grad, indx, LENGTH(x));
         }
     }
+
+    PROTECT(R_gradient);
 
     /* Extract names and source references, if present. */
 
@@ -1467,7 +1470,7 @@ static SEXP VectorSubset (SEXP x, SEXP x_grad, SEXP subs,
     /* FIXME: this is wrong, because the slots are gone, so result is
        an invalid object of the S4 class! JMC 3/3/09 */
 
-    UNPROTECT(2 + (sb!=R_NoObject));
+    UNPROTECT(3 + (sb!=R_NoObject));
 
     /* One-dimensional arrays should have their dimensions dropped only 
        if the result has length one and drop TRUE or is NA_LOGICAL without
@@ -1478,6 +1481,7 @@ static SEXP VectorSubset (SEXP x, SEXP x_grad, SEXP subs,
 
         if (len > 1 || drop == FALSE || drop == NA_LOGICAL && suppress_drop) {
             SEXP attr;
+            PROTECT(R_gradient);
             PROTECT(result);
             PROTECT(attr = allocVector1INT());
             INTEGER(attr)[0] = len;
@@ -1493,7 +1497,7 @@ static SEXP VectorSubset (SEXP x, SEXP x_grad, SEXP subs,
             }
             else 
                 setAttrib(result, R_DimSymbol, attr);
-            UNPROTECT(2);
+            UNPROTECT(3);
         }
     }
 
@@ -2084,6 +2088,8 @@ static SEXP ArraySubset (SEXP x, SEXP x_grad, SEXP s,
         }
     }
 
+    PROTECT(res_grad);
+
     /* Set up dimnames for result, but don't attach to result yet. */
 
     SEXP newdimnames;
@@ -2158,8 +2164,8 @@ static SEXP ArraySubset (SEXP x, SEXP x_grad, SEXP s,
         UNPROTECT(1); /* newdims */
     }
 
-    UNPROTECT(k+6); /* ... + result, dimnames, newdimnames,
-                             x, s, xdims */
+    UNPROTECT(k+7); /* ... + result, dimnames, newdimnames,
+                             x, s, xdims, res_grad */
 
     R_scalar_stack = sv_scalar_stack;
 
