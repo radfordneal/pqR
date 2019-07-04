@@ -3147,9 +3147,11 @@ static SEXP embedInVector(SEXP v)
 static void SubassignTypeFix (SEXP *x, SEXP *x_grad, SEXP *y, SEXP *y_grad, 
                               int stretch, int level, SEXP call)
 {
+    PROTECT4 (*x, *x_grad, *y, *y_grad);
+
     Rboolean x_is_object = OBJECT(*x);  /* coercion can lose the object bit */
 
-    const int type_x = TYPEOF(*x), type_y = TYPEOF(*y);
+    int type_x = TYPEOF(*x), type_y = TYPEOF(*y);
     int atom_x;
 
     if (type_x == type_y || type_y == NILSXP) {
@@ -3171,6 +3173,7 @@ static void SubassignTypeFix (SEXP *x, SEXP *x_grad, SEXP *y, SEXP *y_grad,
               && type_y != RAWSXP) {
             *x = coerceVector (*x, type_y);
             *x_grad = R_NilValue;
+            type_x = type_y;
         }
         if (level == 1) { 
             /* For when later code doesn't handle these cases. */
@@ -3181,9 +3184,12 @@ static void SubassignTypeFix (SEXP *x, SEXP *x_grad, SEXP *y, SEXP *y_grad,
     }
     else if (atom_x && isVectorList(*y)) {
         *x = coerceVector (*x, type_y);
-        if (*x_grad != R_NilValue)
+        if (*x_grad != R_NilValue) {
+            PROTECT(*x);
             *x_grad = type_x != REALSXP ? R_NilValue
                        : as_list_gradient (*x_grad, LENGTH(*x));
+            UNPROTECT(1);
+        }
     }
     else if (isVectorList(*x)) {
         if (level != 2) {
@@ -3191,9 +3197,12 @@ static void SubassignTypeFix (SEXP *x, SEXP *x_grad, SEXP *y, SEXP *y_grad,
                 *y = embedInVector(*y);
             else {
                 *y = coerceVector (*y, type_x);
-                if (*y_grad != R_NilValue)
+                if (*y_grad != R_NilValue) {
+                    PROTECT(*y);
                     *y_grad = type_y != REALSXP ? R_NilValue
                                : as_list_gradient (*y_grad, LENGTH(*y));
+                    UNPROTECT(1);
+                }
             }
         }
     }
@@ -3203,11 +3212,14 @@ static void SubassignTypeFix (SEXP *x, SEXP *x_grad, SEXP *y, SEXP *y_grad,
 	      type2char(type_y), type2char(type_x));
     }
 
+    UNPROTECT(4);
+
     if (stretch) {
-	PROTECT(*y);
+        PROTECT4 (*x, *x_grad, *y, *y_grad);
 	*x = EnlargeVector(call, *x, stretch);
-	UNPROTECT(1);
+        UNPROTECT(4);
     }
+
     SET_OBJECT(*x, x_is_object);
 }
 
@@ -4594,7 +4606,7 @@ SEXP attribute_hidden do_subassign_dflt_seq (SEXP call, SEXP x, SEXP x_grad,
     R_Visible = TRUE;
 
     BEGIN_PROTECT0 ();
-    ALSO_PROTECT5 (x, sb1, sb2, subs, y);
+    ALSO_PROTECT7 (x, x_grad, sb1, sb2, subs, y, y_grad);
 
     WAIT_UNTIL_COMPUTED(x);
 
@@ -4792,7 +4804,7 @@ SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x,
     R_Visible = TRUE;
 
     BEGIN_PROTECT2 (names, xtop);
-    ALSO_PROTECT5 (x, sb1, sb2, subs, y);
+    ALSO_PROTECT7 (x, sb1, sb2, subs, y, x_grad, y_grad);
 
     SEXP xOrig = R_NilValue;
     SEXP res_grad = R_NilValue;
