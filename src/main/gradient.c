@@ -5407,9 +5407,10 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
 
     for (i = 0, p = args; i < nv; i++, p = CDR(p)) {
         SEXP val = evalv (CAR(p), env, vr);
-        REPROTECT (frame = cons_with_tag (val, frame, VECTOR_ELT(gv,i)), fix);
         if (need_grad) {
             PROTECT (vargrad[i] = R_variant_result ? R_gradient : R_NilValue);
+            REPROTECT (frame = cons_with_tag (val, frame, VECTOR_ELT(gv,i)),
+                       fix);
             SEXP id_grad = PROTECT (make_id_grad (val));
             if (id_grad != R_NilValue) {
                 SET_VECTOR_ELT (gv, nv+i, id_grad);
@@ -5418,6 +5419,9 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 SET_GRADINDEX (gcell, i+1);
             }
         }
+        else
+            REPROTECT (frame = cons_with_tag (val, frame, VECTOR_ELT(gv,i)),
+                       fix);
         INC_NAMEDCNT(val);
     }
 
@@ -5594,10 +5598,9 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
         SEXP t = TAG(p)==R_NilValue && TYPEOF(CAR(p))==SYMSXP ? CAR(p) : TAG(p);
         SEXP val = evalv (CAR(p), env, 
                           (variant & VARIANT_GRADIENT) | VARIANT_PENDING_OK);
-        frame = cons_with_tag (val, frame, t);
+
         bits |= SYMBITS(t);
         INC_NAMEDCNT(val);
-        SET_FRAME (newenv, frame);  /* protects frame */
 
         if (variant & VARIANT_GRADIENT) {
             vargrad[vgi] = R_NilValue;
@@ -5609,6 +5612,8 @@ static SEXP do_compute_grad (SEXP call, SEXP op, SEXP args, SEXP env,
         }
         vgi += 1;
 
+        frame = cons_with_tag (val, frame, t);
+        SET_FRAME (newenv, frame);  /* protects frame */
     }
 
     SET_ENVSYMBITS (newenv, bits);

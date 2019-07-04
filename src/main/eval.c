@@ -4104,9 +4104,11 @@ static SEXP do_subset(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
 
         if (obj) {
+            PROTECT(array_grad);
             args = CONS(array,ixlist);
             if (array_grad != R_NilValue)
                 SET_GRADIENT_IN_CELL (args, array_grad);
+            UNPROTECT(1);
             argsevald = -1;
             /* handle with general code below */
         }

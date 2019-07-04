@@ -2482,7 +2482,7 @@ SEXP attribute_hidden do_subset_dflt (SEXP call, SEXP op, SEXP args, SEXP rho)
 
    Sets R_Visible to TRUE.
 
-   Note:  x, sb1, and subs need not be protected on entry. */
+   Note:  x, x_grad, sb1, sb2, and subs need not be protected on entry. */
 
 SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op,
                                           SEXP x, SEXP x_grad,
@@ -2494,7 +2494,7 @@ SEXP attribute_hidden do_subset_dflt_seq (SEXP call, SEXP op,
 
     R_Visible = TRUE;
 
-    if (seq == 0 && sb1 != R_NoObject && subs==R_NilValue 
+    if (seq == 0 && sb1 != R_NoObject && subs == R_NilValue 
                  && x_grad == R_NilValue) {
 
         if (sb2 == R_NoObject) {  /* handle simples cases with one subscript */
