@@ -1424,7 +1424,7 @@ static SEXP ascommon(SEXP call, SEXP u, SEXP u_grad, SEXPTYPE type)
            Generally coerceVector will copy over attributes.
         */
         if (type != ANYSXP && TYPEOF(u) != type) {
-            v = coerceVector(u, type);
+            PROTECT (v = coerceVector(u, type));
             if (u_grad != R_NilValue) {
                 if (TYPEOF(u) == REALSXP && TYPEOF(v) == VECSXP)
                     R_gradient = as_list_gradient (u_grad, LENGTH(v));
@@ -1433,7 +1433,7 @@ static SEXP ascommon(SEXP call, SEXP u, SEXP u_grad, SEXPTYPE type)
             }
         }
         else if (NAMEDCNT_GT_0(u)) {
-            v = duplicate(u);
+            PROTECT (v = duplicate(u));
             if (u_grad != R_NilValue) {
                 if (TYPEOF(v) == VECSXP || TYPEOF(v) == REALSXP)
                     R_gradient = u_grad;
@@ -1448,6 +1448,7 @@ static SEXP ascommon(SEXP call, SEXP u, SEXP u_grad, SEXPTYPE type)
               TYPEOF(u) == EXPRSXP || TYPEOF(u) == VECSXP)) {
             CLEAR_ATTRIB(v);
         }
+        UNPROTECT(1);
         return v;
     }
     else if (isSymbol(u) && type == STRSXP)
@@ -1592,13 +1593,14 @@ static SEXP do_asdouble (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     R_gradient = R_NilValue;
 
     PROTECT (ans = ascommon(call, x, x_grad, REALSXP));
+    PROTECT (R_gradient);
 
     if (R_gradient != R_NilValue)
         R_variant_result = VARIANT_GRADIENT_FLAG;
 
     CLEAR_ATTRIB(ans);
 
-    UNPROTECT(2);
+    UNPROTECT(3);
     return ans;
 }
 
@@ -1701,6 +1703,7 @@ static SEXP do_asvector (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     R_gradient = R_NilValue;
 
     PROTECT (ans = ascommon(call, x, x_grad, type));
+    PROTECT (R_gradient);
 
     if (R_gradient != R_NilValue)
         R_variant_result = VARIANT_GRADIENT_FLAG;
@@ -1717,7 +1720,7 @@ static SEXP do_asvector (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         break;
     }
 
-    UNPROTECT(1);
+    UNPROTECT(2);
     return ans;
 }
 
