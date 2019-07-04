@@ -3,7 +3,7 @@
 # Added for pqR, 2019 Radford M. Neal.
 
 
-# gctorture()  # Can enable for testing, but slow
+#gctorture()  # Can enable for testing, but slow
 
 
 # Check consistency of simple math derivatives using track gradient with 'D'

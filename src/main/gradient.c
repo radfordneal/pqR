@@ -1974,18 +1974,18 @@ REprintf("--\n"); R_inspect(idg);
         R_len_t vlen = LENGTH(value);
         R_len_t gvars = GRAD_WRT_LEN(idg);
 
-        grad = expand_to_full_jacobian (grad);
+        res = expand_to_full_jacobian (grad);
 
         if (gvars != 1) {
-            PROTECT(grad);
+            PROTECT(res);
             SEXP dim = allocVector (INTSXP, 2);
             INTEGER(dim)[0] = vlen;
             INTEGER(dim)[1] = gvars;
-            setAttrib (grad, R_DimSymbol, dim);
+            setAttrib (res, R_DimSymbol, dim);
             UNPROTECT(1);
         }
 
-        return grad;
+        return res;
     }
 
     abort();  /* 'grad' should be R_NilValue, VECSXP, EXPRSXP, or REALSXP */
@@ -5444,12 +5444,12 @@ static SEXP do_gradient (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
         vr |= VARIANT_GRADIENT;
 
     SEXP result = evalv (CAR(p), newenv, vr);
-    PROTECT(R_variant_result & VARIANT_GRADIENT_FLAG ? R_gradient : R_NilValue);
+    int res_has_grad = R_variant_result & VARIANT_GRADIENT_FLAG;
+
+    PROTECT (res_has_grad ? R_gradient : R_NilValue);
 
     PROTECT_INDEX rix;                   
     PROTECT_WITH_INDEX(result,&rix);
-
-    int res_has_grad = R_variant_result & VARIANT_GRADIENT_FLAG;
 
     SEXP result_grad = need_grad ? get_gradient (newenv) : R_NilValue;
     PROTECT(result_grad);
