@@ -1271,10 +1271,11 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
             if (argkind[n] != 3) {
                 if (argkind[n] == 2 || arg_len[n] >= lenmin) {
                     if (TYPEOF(argval[n]) != VECSXP) {
-                        argval[n] = coerceVector(argval[n],mode);
+                        PROTECT (argval[n] = coerceVector(argval[n],mode));
                         if (arggrad[n] != R_NilValue)
                             arggrad[n] = as_list_gradient (arggrad[n],
                                                            LENGTH(argval[n]));
+                        UNPROTECT(1);
                     }
                 }
                 else {
@@ -1564,10 +1565,11 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
             if (argkind[n] != 3) {
                 if (argkind[n] == 2 || arg_len[n] >= lenmin) {
                     if (TYPEOF(argval[n]) != VECSXP) {
-                        argval[n] = coerceVector(argval[n],mode);
+                        PROTECT(argval[n] = coerceVector(argval[n],mode));
                         if (arggrad[n] != R_NilValue)
                             arggrad[n] = as_list_gradient (arggrad[n],
                                                            LENGTH(argval[n]));
+                        UNPROTECT(1);
                     }
                 }
                 else {
@@ -1636,12 +1638,13 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
                         }
                         if (arggrad[n] != R_NilValue) {
                             R_len_t vlen = LENGTH(argval[n]);
-                            for (h = j; h < m; h++)
+                            for (h = j; h < m; h++) {
                                 grad = subassign_range_list_gradient (grad,
                                  subset_range_list_gradient (arggrad[n], 
                                    (h*idx) % vlen, ((h+1)*idx-1) % vlen, vlen),
                                  i+h*rows, i+h*rows+idx-1, LENGTH(result));
-                            UNPROTECT_PROTECT(grad);
+                                UNPROTECT_PROTECT(grad);
+                            }
                         }
                     }
                 }
@@ -1678,12 +1681,13 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
                     }
                     if (arggrad[n] != R_NilValue) {
                         R_len_t vlen = LENGTH(argval[n]);
-                        for (h = j; h < m; h++)
+                        for (h = j; h < m; h++) {
                             grad = subassign_range_numeric_gradient (grad,
                              subset_range_numeric_gradient (arggrad[n], 
                                (h*idx) % vlen, ((h+1)*idx-1) % vlen, vlen),
                              i+h*rows, i+h*rows+idx-1, LENGTH(result));
-                        UNPROTECT_PROTECT(grad);
+                            UNPROTECT_PROTECT(grad);
+                        }
                     }
                 }
                 i += idx;
