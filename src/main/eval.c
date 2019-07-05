@@ -2965,9 +2965,11 @@ static SEXP do_arith1 (SEXP call, SEXP op, SEXP args, SEXP env, int variant)
                 :                                 ScalarReal(val);
 
             if (grad1 != R_NilValue) {
+                PROTECT(ans);
                 R_gradient = scaled_gradients (grad1, 
                                opcode == PLUSOP ? 1.0 : -1.0, 1);
                 R_variant_result = VARIANT_GRADIENT_FLAG;
+                UNPROTECT(1);
             }
 
             goto ret;
@@ -4708,6 +4710,7 @@ static SEXP do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     /* ... path that bypasses DispatchOrEval ... */
 
   dflt_seq:
+
     r = do_subassign_dflt_seq (call, x, x_grad, sb1, sb2, subs, rho, 
                                y, y_grad, seq);
 
