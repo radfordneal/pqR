@@ -1078,6 +1078,7 @@ static SEXP do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         x = lengthgets (x, len);
 
     if (HAS_GRADIENT_IN_CELL(args)) {
+        PROTECT(x);
         SEXP x_grad = GRADIENT_IN_CELL(args);
         if (LENGTH(x) == olen) {
             R_gradient = x_grad;
@@ -1091,6 +1092,7 @@ static SEXP do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
             R_gradient = set_length_numeric_gradient (x_grad, len);
             R_variant_result = VARIANT_GRADIENT_FLAG;
         }
+        UNPROTECT(1);
     }
 
     UNPROTECT(1);  /* args */
