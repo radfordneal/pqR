@@ -1416,7 +1416,7 @@ static SEXP ascommon(SEXP call, SEXP u, SEXP u_grad, SEXPTYPE type)
     }
     else if (isVector(u) || isList(u) || isLanguage(u)
              || (isSymbol(u) && type == EXPRSXP)) {
-        v = u;
+
         /* this duplication may appear not to be needed in all cases,
            but beware that other code relies on it.
            (E.g  we clear attributes in do_asvector and do_ascharacter.)
@@ -1439,6 +1439,8 @@ static SEXP ascommon(SEXP call, SEXP u, SEXP u_grad, SEXPTYPE type)
                     R_gradient = u_grad;
             }
         }
+        else
+            PROTECT (v = u);
 
         /* drop attributes() and class() in some cases for as.pairlist:
            But why?  (And who actually coerces to pairlists?)
