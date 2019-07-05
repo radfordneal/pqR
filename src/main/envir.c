@@ -780,12 +780,14 @@ static SEXP RemoveFromList(SEXP thing, SEXP list, SEXP *value)
     SEXP last = R_NilValue;
     SEXP curr = list;
 
+    R_gradient = R_NilValue;
+
     while (curr != R_NilValue) {
 
         if (TAG(curr) == thing) {
             *value = CAR(curr);
-            R_gradient = HAS_GRADIENT_IN_CELL(curr) ? GRADIENT_IN_CELL(curr)
-                                                    : R_NilValue;
+            if (HAS_GRADIENT_IN_CELL(curr))
+                R_gradient = GRADIENT_IN_CELL(curr);
             SETCAR(curr, R_UnboundValue); /* in case binding is cached */
             LOCK_BINDING(curr);           /* in case binding is cached */
             if (last==R_NilValue)
