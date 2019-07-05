@@ -408,10 +408,13 @@ static void ListAnswer(SEXP x, SEXP grad, int recursive, struct BindData *data)
     case EXPRSXP:
         len = LENGTH(x);
         if (recursive != 0) {
-            for (i = 0; i < len; i++)
-                ListAnswer(VECTOR_ELT(x,i), grad == R_NilValue ? R_NilValue
-                                            : subset2_list_gradient(grad,i,len),
-                           recursive == 1, data);
+            for (i = 0; i < len; i++) {
+                SEXP g = grad == R_NilValue ? R_NilValue
+                          : subset2_list_gradient(grad,i,len);
+                PROTECT(g);
+                ListAnswer(VECTOR_ELT(x,i), g, recursive == 1, data);
+                UNPROTECT(1);
+            }
         }
         else {
             for (i = 0; i < len; i++)
@@ -467,8 +470,11 @@ static void AtomicAnswer(SEXP x, SEXP grad, struct BindData *data)
     case VECSXP:
         n = LENGTH(x);
         for (i = 0; i < n; i++) {
-            AtomicAnswer (VECTOR_ELT(x, i), grad == R_NilValue ? R_NilValue 
-                           : subset2_list_gradient(grad,i,n), data);
+            SEXP g = grad == R_NilValue ? R_NilValue 
+                      : subset2_list_gradient(grad,i,n);
+            PROTECT(g);
+            AtomicAnswer (VECTOR_ELT(x,i), g, data);
+            UNPROTECT(1);
         }
         break;
     default:
