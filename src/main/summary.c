@@ -393,8 +393,11 @@ static SEXP do_mean (SEXP call, SEXP op, SEXP args, SEXP env)
             s += t/n;
         }
         ans = ScalarReal(s);
-        if (x_grad != R_NilValue && R_FINITE(s))
+        if (x_grad != R_NilValue && R_FINITE(s)) {
+            PROTECT(ans);
             grad = mean_gradient (x_grad, n);
+            UNPROTECT(1);
+        }
         break;
     case CPLXSXP:
         n = LENGTH(x);
