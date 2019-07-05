@@ -1225,8 +1225,10 @@ static SEXP do_for (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         }
 
         if (bcell == R_NilValue || CAR(bcell) != v) {
+            PROTECT(v_grad);
             set_var_in_frame (sym, v, rho, TRUE, 3);
             REPROTECT(bcell = R_binding_cell, bix);
+            UNPROTECT(1);
         }
 
         if (STORE_GRAD(rho) && bcell != R_NilValue) 
