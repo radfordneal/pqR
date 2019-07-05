@@ -3415,7 +3415,7 @@ static SEXP VectorAssignSeq (SEXP call,
     SubassignTypeFix (&x, &x_grad, &y, &y_grad, 
                       end > length(x) ? end : 0, 0, call);
 
-    PROTECT(x);
+    PROTECT3(x,x_grad,y_grad);  /* y protected below */
 
     nx = length(x);
     ny = length(y);
@@ -3497,12 +3497,12 @@ static SEXP VectorAssignSeq (SEXP call,
         R_variant_result = VARIANT_GRADIENT_FLAG;
     }
 
-    UNPROTECT(2);
+    UNPROTECT(4);
     return x;
 
   warn:
     warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
-    UNPROTECT(2);
+    UNPROTECT(4);
     return x;
 }
 
@@ -3599,7 +3599,7 @@ static SEXP VectorAssign (SEXP call, SEXP x, SEXP x_grad,
         return x;
     }
 
-    PROTECT(x);
+    PROTECT4(x,x_grad,y,y_grad);
 
     ny = length(y);
     nx = length(x);
@@ -3877,7 +3877,7 @@ static SEXP VectorAssign (SEXP call, SEXP x, SEXP x_grad,
         R_variant_result = VARIANT_GRADIENT_FLAG;
     }
 
-    UNPROTECT(4);
+    UNPROTECT(7);
     return x;
 }
 
@@ -3970,7 +3970,7 @@ static SEXP MatrixAssign (SEXP call, SEXP x, SEXP x_grad,
         return x;
     }
 
-    PROTECT(x);
+    PROTECT3(x,x_grad,y_grad);  /* y protected below */
 
     /* When array elements are being permuted the RHS must be
        duplicated or the elements get trashed.  FIXME : this should be
@@ -4366,7 +4366,7 @@ static SEXP MatrixAssign (SEXP call, SEXP x, SEXP x_grad,
         R_variant_result = VARIANT_GRADIENT_FLAG;
     }
 
-    UNPROTECT(4);
+    UNPROTECT(6);
     R_scalar_stack = sv_scalar_stack;
     return x;
 }
@@ -4391,7 +4391,7 @@ static SEXP ArrayAssign (SEXP call, SEXP x, SEXP x_grad,
 
     SubassignTypeFix (&x, &x_grad, &y, &y_grad, 0, 1, call);
 
-    PROTECT(x);
+    PROTECT3(x,x_grad,y_grad);  /* y protected below */
 
     /* When array elements are being permuted the RHS must be
        duplicated or the elements get trashed.  FIXME : this should be
@@ -4436,7 +4436,7 @@ static SEXP ArrayAssign (SEXP call, SEXP x, SEXP x_grad,
         errorcall (call, _("NAs are not allowed in subscripted assignments"));
 
     if (zero) {
-	UNPROTECT(k+3);
+	UNPROTECT(k+5);
         R_scalar_stack = sv_scalar_stack;
 	return x;
     }
@@ -4558,7 +4558,7 @@ static SEXP ArrayAssign (SEXP call, SEXP x, SEXP x_grad,
         R_variant_result = VARIANT_GRADIENT_FLAG;
     }
 
-    UNPROTECT(k+3);
+    UNPROTECT(k+5);
     R_scalar_stack = sv_scalar_stack;
     return x;
 }
@@ -4809,11 +4809,10 @@ SEXP attribute_hidden do_subassign2_dflt_int (SEXP call, SEXP x,
 
     R_Visible = TRUE;
 
-    BEGIN_PROTECT2 (names, xtop);
+    BEGIN_PROTECT3 (names, xtop, res_grad);
     ALSO_PROTECT7 (x, sb1, sb2, subs, y, x_grad, y_grad);
 
     SEXP xOrig = R_NilValue;
-    SEXP res_grad = R_NilValue;
 
     if (y == R_NoObject)
         SubAssignArgs (&subs, &y, &y_grad, call);
