@@ -395,8 +395,9 @@ static SEXP do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
             SEXP g1 = GRADIENT_IN_CELL(CDR(args));
             SEXP g2 = GRADIENT_IN_CELL(CDDR(args));
             SEXP gv1 = g1 != R_NilValue ? allocVector (REALSXP, n) : R_NilValue;
+            PROTECT(gv1);
             SEXP gv2 = g2 != R_NilValue ? allocVector (REALSXP, n) : R_NilValue;
-            PROTECT2(gv1,gv2);
+            PROTECT(gv2);
             for (R_len_t i = 0; i < n; i++) {
                 Dcall (REAL(x)[i], REAL(a1)[i%na1], REAL(a2)[i%na2], 
                        g1 != R_NilValue ? &REAL(gv1)[i] : 0,
