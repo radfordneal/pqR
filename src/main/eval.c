@@ -1605,6 +1605,8 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         if (NAMEDCNT_GT_0(rhs)
          && (rhs_type_etc&~TYPE_ET_CETERA_TYPE)==0 /* scalar, no attr, n.b.c. */
          && (((NONPOINTER_VECTOR_TYPES & ~(1<<CPLXSXP)) >> rhs_type_etc) & 1)) {
+            PROTECT (R_variant_result & VARIANT_GRADIENT_FLAG ? R_gradient
+                                                              : R_NilValue);
             if (v == R_UnboundValue)
                 v = findVarInFrame3_nolast (rho, lhs, 7);
             if (TYPE_ETC(v) == rhs_type_etc  /* won't be if R_UnboundValue */
@@ -1615,10 +1617,12 @@ static SEXP do_set (SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 WAIT_UNTIL_NOT_IN_USE(v);  /* won't be being computed */
                 memcpy(REAL(v),REAL(rhs),sizeof(double)); /* others no bigger */
                 rhs = v; /* for return value */
+                UNPROTECT(1);
                 goto done;
             }
             if (POP_IF_TOP_OF_STACK(rhs))
                 rhs = DUP_STACK_VALUE(rhs);
+            UNPROTECT(1);
         }
 
         /* Assign rhs to lhs using the binding cell found above. */
