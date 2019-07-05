@@ -88,7 +88,7 @@ static SEXP do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
         SET_VECTOR_ELEMENT_TO_VALUE (ans, i, v);
         if (g != R_NilValue) {
             grad = subassign_list_gradient (grad, g, i, n);
-            REPROTECT (g, gix);
+            REPROTECT (grad, gix);
         }
     }
 
