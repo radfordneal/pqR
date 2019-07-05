@@ -1341,7 +1341,7 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     int max = PRIMVAL(op) == 1;
 
-    SEXP a, x, ans, grad;
+    SEXP a, x, ans;
     int i, j, n, len, narm;
     SEXPTYPE type, anstype;
 
@@ -1416,7 +1416,6 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
     }
 
     PROTECT(ans = allocVector(anstype, len));
-    PROTECT(grad = R_NilValue);
 
     x = CAR(args);
     if (TYPEOF(x) != anstype) {
@@ -1502,6 +1501,9 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
 
     if ((variant & VARIANT_GRADIENT) && anstype == REALSXP) {
         SEXP dup_ans = duplicate(ans);  /* so can be modified below */
+        PROTECT(dup_ans);
+        SEXP grad = R_NilValue;
+        PROTECT(grad);
         for (a = args; a != R_NilValue; a = CDR(a)) {
             SEXP v = CAR(a);
             if (HAS_GRADIENT_IN_CELL(a)) {
@@ -1518,14 +1520,14 @@ static SEXP do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho, int variant)
                 if (j >= n) j = 0;
             }
         }
+        if (grad != R_NilValue) {
+            R_gradient = grad;
+            R_variant_result = VARIANT_GRADIENT_FLAG;
+        }
+        UNPROTECT(2);
     }
 
-    if (grad != R_NilValue) {
-        R_gradient = grad;
-        R_variant_result = VARIANT_GRADIENT_FLAG;
-    }
-
-    UNPROTECT(3);
+    UNPROTECT(2);
     return ans;
 }
 
