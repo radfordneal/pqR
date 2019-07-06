@@ -699,7 +699,7 @@ static SEXP reverse_expand_to_full_jacobian (SEXP grad)
 //R_inspect(pos);
         if (JACOBIAN_TYPE(pos) & SCALED_JACOBIAN) {
 
-            if (! JACOBIAN_TYPE(pos) & DIAGONAL_JACOBIAN) abort();
+            if (! (JACOBIAN_TYPE(pos) & DIAGONAL_JACOBIAN)) abort();
 
             double *p = REAL(pos);
             R_len_t pl = LENGTH(pos);
