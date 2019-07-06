@@ -1,2 +1,0 @@
-Implements the new binary operators !! and ! as concise ways of
-calling paste and paste0.

@@ -1,3 +1,0 @@
-Speed improvements to 'which' - loop unrolling, use of local array,
-and of reallocVector - two implementations for 32/64-bit platforms.
-

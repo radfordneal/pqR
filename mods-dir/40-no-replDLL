@@ -1,2 +1,0 @@
-Eliminates the R_ReplDLLinit and R_replDLLd1 procedures in main.c,
-and the calls of R_ReplDLL... in the front-ends/rtest.c program.

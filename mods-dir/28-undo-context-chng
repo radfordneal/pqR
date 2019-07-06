@@ -1,2 +1,0 @@
-Changed the order of fields in the "context" structure
-back to what it was, since RStudio relies on this order.
