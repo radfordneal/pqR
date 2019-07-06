@@ -6,19 +6,36 @@
 \encoding{UTF-8}
 
 
-\section{VERSION OF 2019-00-00}{
+\section{CHANGES IN TEST VERSION RELEASED 2019-07-05}{
 
+  \subsection{INTRODUCTION}{
   \itemize{
-  \item This is a test version with a preliminary
-  implementation of automatic differentiation.  This is not expected
-  to become a stable release; that will wait until a more refined
-  implementation.  However, the version in this test release does 
-  demonstrate most of what the final facility will be like, except that 
-  some operations are much less efficient than they will be later.
 
-  \item Type \code{help(Gradient)} to read documentation on the automatic 
-  differentiation facilities, as they exist so far.
-  }
+  \item This is a test version with a preliminary implementation of
+  automatic differentiation.  Though not yet ready for real use, this
+  version does demonstrate most of what the final automatic differentiation
+  facility will be like, although some operations are substantially less 
+  efficient than they will be later.
+  }}
+
+  \subsection{NEW FEATURE}{
+  \itemize{
+
+  \item A facility for run-time automatic differentiation is now
+  implemented.  Most R expressions that produce a real value can now
+  be evaluated in a way that gives both their value and the
+  derivatives of this value with respect to one or more variables.
+  This is done by run-time application of the chain rule for
+  derivatives (not by numerical differentitation).  
+
+  Automatic differentiation is implemented with a hybrid of ``forward
+  mode'' and ``reverse mode'' approaches, using a run-time assessment
+  of which mode is faster (although some operations can currently only
+  be done in forward mode).
+
+  Type \code{help(Gradient)} to read documentation on the automatic 
+  differentiation facilities.
+  }}
 
   \subsection{INSTALLATION}{
   \itemize{
