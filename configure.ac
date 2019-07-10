@@ -2,7 +2,7 @@
 ###
 ### Process this file with autoconf to produce a configure script.
 ###
-### Copyright (C) 1998-2018 R Core Team
+### Copyright (C) 1998-2019 R Core Team
 ###
 ### This file is part of R.
 ###
@@ -142,7 +142,8 @@ case "${host_os}" in
     ## Allow for ppc64le (Debian calls ppc64el), powerpc64le ...
     case "${host_cpu}" in
       x86_64|mips64|ppc64*|powerpc64*|sparc64|s390x)
-        if test -d /usr/lib64; then
+        ## Debian/Ubuntu has "lib64", but the primary location is "lib"
+        if test -d /usr/lib64 && test ! -f /etc/debian_version; then
           libnn=lib64
 	fi
       ;;
@@ -326,15 +327,20 @@ AM_CONDITIONAL(BUILD_HTML, [test "x${want_prebuilt_html}" = xyes])
 AC_ARG_ENABLE([lto],
 [AS_HELP_STRING([--enable-lto],[enable link-time optimization @<:@no@:>@])],
 [want_lto="${enableval}"], [want_lto=no])
-## FIXME: add a test for gcc >= 4.5.0
-if test "x${want_lto}" != xno; then
-  LTO=-flto
-fi
+## TODO: add a test for gcc >= 4.5.0 and/or clang/flang
 if test "x${want_lto}" = xyes; then
+  ## used in Makeconf
+  LTO=-flto
+  ## used in etc/Makeconf
   LTOALL=-flto
+elif  test "x${want_lto}" = xR; then
+  LTO=-flto
+elif  test "x${want_lto}" != xno; then
+  AC_MSG_WARN([Unknown value --enable-lto=${enableval}])
 fi
 AC_SUBST(LTO)
 AC_SUBST(LTOALL)
+## used in src/main/Makefile
 AM_CONDITIONAL(BUILD_LTO, [test "x${want_lto}" != xno])
 
 AC_ARG_ENABLE([java],
@@ -784,8 +790,8 @@ if test "${use_readline}" = yes; then
   if test "${use_readline}" = no; then
     AC_MSG_ERROR([--with-readline=yes (default) and headers/libs are not available])
   else
-    ## the NetBSD emulation supplied by macOS does not have this
-    AC_CHECK_FUNCS(history_truncate_file)
+    ## the NetBSD emulation supplied by macOS does not have these
+    AC_CHECK_FUNCS(history_truncate_file tilde_expand_word)
     ## rl_completion_matches is >= 4.2.
     ## rl_resize_terminal is >= 4.0 ane we use it only for >= 6.3.
     ## rl_callback_sigcleanup is in pre-releases for 7.0, not yet used.
@@ -1038,6 +1044,26 @@ if test "${SAFE_FFLAGS+set}" != set; then
   fi
 fi
 
+## If the Fortran compiler is gfortran >= 7, add
+## -fno-optimize-sibling-calls to avoid recent gfortran optimizations
+## that break with LAPACK/BLAS-style passing of length-1 strings
+## (without hidden arguments giving their lengths).
+AC_MSG_CHECKING([if need -fno-optimize-sibling-calls for gfortran])
+AC_CACHE_VAL([r_cv_have_gfortran7],
+[r_cv_have_gfortran7=no
+if test "x${GFC}" = xyes; then
+  gfortran_version_maj=`echo "__GNUC__" | ${FC} -E -P - | ${SED} 's/ //g'`
+  if test ${gfortran_version_maj} -ge 7; then
+    r_cv_have_gfortran7=yes
+  fi
+fi])
+
+if test "x${r_cv_have_gfortran7}" = xyes; then
+  AC_MSG_RESULT([yes])
+  R_XTRA_FFLAGS="-fno-optimize-sibling-calls"
+else
+  AC_MSG_RESULT([no])
+fi
 
 AC_SUBST(CFLAGS)
 AC_SUBST(MAIN_CFLAGS)
@@ -1055,7 +1081,7 @@ AC_SUBST(R_XTRA_CFLAGS)
 AC_SUBST(R_XTRA_CPPFLAGS)
 ## unused
 AC_SUBST(R_XTRA_CXXFLAGS)
-## unused
+## used for gfortran >= 7
 AC_SUBST(R_XTRA_FFLAGS)
 ## formerly used on HP-UX
 AC_SUBST(R_XTRA_LIBS)
@@ -1175,7 +1201,7 @@ if test "${ac_cv_fc_compiler_gnu}" = yes; then
 fi
 ## Assume flang is the same as clang (it is a modified front end)
 case "${FC}" in
-  *flang)
+  *flang|flang-*)
     fpicflags=${cpicflags}
     ;;
 esac

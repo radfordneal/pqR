@@ -1,5 +1,83 @@
 R News
 
+CHANGES IN R 3.6.1:
+
+  INSTALLATION on a UNIX-ALIKE:
+
+    * The default detection of the shell variable libNN is overridden
+      for derivatives of Debian Linux, some of which have started to
+      have a /usr/lib64 directory.  (E.g. Ubuntu 19.04.)  As before, it
+      can be specified in config.site.
+
+  UTILITIES:
+
+    * R CMD config knows the values of AR and RANLIB, often set for LTO
+      builds.
+
+  DEPRECATED AND DEFUNCT:
+
+    * The use of a character vector with .Fortran() is formally
+      deprecated and gives a non-portability warning.  (It has long
+      been strongly discouraged in 'Writing R Extensions'.)
+
+  BUG FIXES:
+
+    * On Windows, GUI package installation via menuInstallPkgs() works
+      again, thanks to Len Weil's and Duncan Murdoch's PR#17556.
+
+    * R CMD check on data() fixing PR#17558 thanks to Duncan Murdoch.
+
+    * quasi(*, variance = list(..)) now works more efficiently, and
+      should work in all cases fixing PR#17560.  Further, quasi(var =
+      mu(1-mu)) and quasi(var = "mu ^ 3") now work, and quasi(variance
+      = "log(mu)") now gives a correct error message.
+
+    * Creation of lazy loading database during package installation is
+      again robust to Rprofile changing the current working directory
+      (PR#17559).
+
+    * boxplot(y ~ f, horizontal=TRUE) now produces correct x- and
+      y-labels.
+
+    * rbind.data.frame() allows to keep <NA> levels from factor columns
+      (PR#17562) via new option factor.exclude.
+
+      Additionally, it works in one more case with matrix-columns which
+      had been reported on 2017-01-16 by Krzysztof Banas.
+
+    * Correct messaging in C++ pragma checks in tools code for R CMD
+      check, fixing PR#17566 thanks to Xavier Robin.
+
+    * print()ing and auto-printing no longer differs for functions with
+      a user defined print.function, thanks to Bill Dunlap's report.
+
+    * On Windows, writeClipboard(.., format = <n>) now does correctly
+      pass format to the underlying C code, thanks to a bug report
+      (with patch) by Jenny Bryan.
+
+    * as.data.frame() treats 1D arrays the same as vectors, PR#17570.
+
+    * Improvements in smoothEnds(x, *) working with NAs (towards
+      runmed() working in that case, in the next version of R).
+
+    * vcov(glm(<quasi>), dispersion = *) works correctly again, fixing
+      PR#17571 thanks to Pavel Krivitsky.
+
+    * R CMD INSTALL of binary packages on Windows now works also with
+      per-directory locking.
+
+    * R CMD INSTALL and install.packages() on Windows are now more
+      robust against a locked file in an earlier installation of the
+      package to be installed.  The default value of option
+      install.lock on Windows has been changed to TRUE.
+
+    * On Unix alikes (when readline is active), only expand tilde (~)
+      file names starting with a tilde, instead of almost all tildes.
+
+    * In R documentation (*.Rd) files, \item [..] is no longer treated
+      specially when rendered in LaTeX and hence pdf, but rather shows
+      the brackets in all cases.
+
 CHANGES IN R 3.6.0:
 
   SIGNIFICANT USER-VISIBLE CHANGES:

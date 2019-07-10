@@ -1115,9 +1115,10 @@ pL  <- vapply(fLrg, function(f)length(pretty(c(-f,f), n = 100,  min.n = 1)), 1L)
 pL
 pL3 <- vapply(fLrg, function(f)length(pretty(c(-f,f), n = 10^3, min.n = 1)), 1L)
 pL3
-stopifnot(71 <= pL, pL <= 141, 81 <= pL[-7], # not on Win-64: pL[-15] <= 121,
+stopifnot(71 <= pL, pL <= 141, # 81 <= pL[-7], # not on Win-64: pL[-15] <= 121,
           701 <= pL3, pL3 <= 1401) # <= 1201 usually
 ## in R < 3.5.0, both had values as low as 17
+## without long doubles, min(pl[-7]) is 71.
 
 
 ### Several returnValue() fixes (r 73111) --------------------------
@@ -2018,6 +2019,7 @@ stopifnot(! is.null(names(sort.int(x))))
 d <- as.POSIXlt("2018-01-01")
 match(0, d)
 ## Gave a segfault in R < 3.6.0.
+proc.time() - .pt; .pt <- proc.time()
 
 
 ## as(1L, "double") - PR#17457
@@ -2274,15 +2276,18 @@ stopifnot(exprs = {
 ## in R <= 3.5.1
 
 
-## str() now even works with invalid objects:
+## str() now even works with invalid S4  objects:
+## this needs Matrix loaded to be an S4 generic
+if(requireNamespace('Matrix', lib.loc = .Library)) {
 moS <- mo <- findMethods("isSymmetric")
 attr(mo, "arguments") <- NULL
-validObject(mo, TRUE)# shows what's wrong
+print(validObject(mo, TRUE)) # shows what's wrong
 tools::assertError(capture.output( mo ))
 op <- options(warn = 1)# warning:
 str(mo, max.level = 2)
 options(op)# revert
 ## in R <= 3.5.x, str() gave error instead of the warning
+}
 
 
 ## seq.default() w/ integer overflow in border cases: -- PR#17497, Suharto Anggono
@@ -2638,6 +2643,135 @@ stopifnot(exprs = {
 
 ## str2expression(<empty>) :
 stopifnot(identical(str2expression(character()), expression()))
+
+
+## quasi(*, variance = list()) - should not deparse(); PR#17560
+## like quasipoisson() :
+devRes <- function(y, mu, wt) { 2 * wt * (y * log(ifelse(y == 0, 1, y/mu)) - (y-mu)) }
+init <- expression({
+    if(any(y < 0)) stop("y < 0")
+    n <- rep.int(1, nobs)
+    mustart <- y + 0.1
+})
+myquasi <- quasi(link = "log",
+                 variance = list(name = "my quasi Poisson",
+                     varfun  = function(mu) mu,
+                     validmu = function(mu) all(is.finite(mu)) && all(mu > 0),
+                     dev.resids = devRes,
+                     initialize = init))
+x  <- runif(100, min=0, max=1)
+y  <- rpois(100, lambda=1)
+fq1 <- glm(y ~ x, family = myquasi)
+fqP <- glm(y ~ x, family = quasipoisson)
+str(keep <- setdiff(names(fq1), c("family", "call")))
+identNoE <- function(x,y, ...) identical(x,y, ignore.environment=TRUE, ...)
+stopifnot(exprs = {
+    all.equal(fq1[keep], fqP[keep])
+    ## quasi() failed badly "switch(vtemp, ... EXPR must be a length 1 vector" in R <= 3.6.0
+    identNoE(quasi(var = mu),        quasi(variance = "mu"))
+    identNoE(quasi(var = mu(1-mu)),  quasi(variance = "mu(1- mu)"))# both failed in R <= 3.6.0
+    identNoE(quasi(var = mu^3),      quasi(variance = "mu ^ 3"))   #  2nd failed in R <= 3.6.0
+    is.character(msg <- tryCatch(quasi(variance = "log(mu)"), error=conditionMessage)) &&
+        grepl("variance.*log\\(mu\\).* invalid", msg) ## R <= 3.6.0: 'variance' "NA" is invalid
+})
+
+
+## rbind.data.frame() should *not* drop NA level of factors -- PR#17562
+fcts <- function(N=8, k=3) addNA(factor(sample.int(k, N, replace=TRUE), levels=1:k))
+set.seed(7) # <- leads to some  "0 counts" [more interesting: they are kept]
+dfa <- data.frame(x=fcts())
+dfb <- data.frame(x=fcts()) ; rbind(table(dfa), table(dfb))
+dfy <- data.frame(y=fcts())
+yN <- c(1:3, NA_character_, 5:8)
+dfay  <- cbind(dfa, dfy)
+dfby  <- cbind(dfa, data.frame(y = yN))
+dfcy  <- dfa; dfcy$y <- yN # y: a <char> column
+## dNay := drop unused levels from dfay incl NA
+dNay <- dfay; dNay[] <- lapply(dfay, factor)
+str(dfay) # both (x, y) have NA level
+str(dfby) # (x: yes / y: no) NA level
+str(dNay) # both: no NA level
+stopifnot(exprs = { ## "trivial" (non rbind-related) assertions :
+    identical(levels(dfa$x), c(1:3, NA_character_) -> full_lev)
+    identical(levels(dfb$x),  full_lev)
+    identical(levels(dfay$x), full_lev) # cbind() does work
+    identical(levels(dfay$y), full_lev)
+    identical(levels(dfby$x), full_lev)
+    is.character(dfcy$y)
+	   anyNA(dfcy$y)
+    identical(levels(dfby$y), as.character((1:8)[-4]) -> levN) # no NA levels
+    identical(lapply(dNay, levels),
+              list(x = c("2","3"), y = levN[1:3])) # no NA levels
+})
+## R in 3.6.z, z >= 1 needs 'factor.exclude=NULL'
+dfaby <- rbind(dfay, dfby, factor.exclude=NULL)
+dNaby <- rbind(dNay, dfby, factor.exclude=NULL)
+dfacy <- rbind(dfay, dfcy, factor.exclude=NULL)
+dfcay <- rbind(dfcy, dfay, factor.exclude=NULL) # 1st arg col. is char => rbind() keeps char
+stopifnot(exprs = {
+    identical(levels(rbind(dfa, dfb, factor.exclude=NULL)$x), full_lev)
+    identical(levels(dfaby$x),           full_lev)
+    identical(levels(dfaby$y),                 yN) # failed a while
+    identical(levels(dNaby$y),               levN) #  (ditto)
+    identical(dfacy, dfaby)
+    is.character(dfcay$y)
+	   anyNA(dfcay$y)
+    identical(dfacy$x, dfcay$x)
+    identical(lapply(rbind(dfby, dfay, factor.exclude=NULL), levels),
+              list(x = full_lev, y = c(levN, NA)))
+    identical(lapply(rbind(dfay, dfby, factor.exclude = NA), levels),
+              list(x = as.character(1:3), y = levN))
+    identical(lapply(rbind(dfay, dfby, factor.exclude=NULL), levels),
+	      list(x = full_lev, y = yN))
+})
+
+## rbind.data.frame() should work in all cases with "matrix-columns":
+m <- matrix(1:12, 3) ## m.N := [m]atrix with (row)[N]ames :
+m.N <- m ; rownames(m.N) <- letters [1:3]
+## data frames with these matrices as *column*s:
+dfm   <- data.frame(c = 1:3, m = I(m))
+dfm.N <- data.frame(c = 1:3, m = I(m.N))
+(mNm <- rbind(m.N, m))
+dfmmN <- rbind(dfm, dfm.N)
+dfmNm <- rbind(dfm.N, dfm)
+stopifnot(exprs = {
+    identical(     dim(dfmNm), c(6L, 2L))
+    identical(dimnames(dfmNm), list(c(letters[1:3],1:3), c("c","m")))
+    is.matrix(m. <- dfmNm[,"m"])
+    identical(dim(m.), c(6L, 4L))
+    identical(dfmNm, dfmmN[c(4:6, 1:3), ])
+    identical(unname(mNm), unname(m.))
+})
+## The last rbind() had failed since at least R 2.0.0
+
+
+## as.data.frame.array(<1D array>) -- PR#17570
+str(x2 <- as.data.frame(array(1:2)))
+stopifnot(identical(x2[[1]], 1:2))
+## still was "array" in R <= 3.6.0
+
+
+## vcov(<quasi>, dispersion = *) -- PR#17571
+counts <- c(18,17,15,20,10,20,25,13,12)
+treatment <- gl(3,3)
+outcome <- gl(3,1,9)
+## Poisson and Quasipoisson
+ poisfit <- glm(counts ~ outcome + treatment, family = poisson())
+qpoisfit <- glm(counts ~ outcome + treatment, family = quasipoisson())
+spois     <- summary( poisfit)
+sqpois    <- summary(qpoisfit)
+sqpois.d1 <- summary(qpoisfit, dispersion=1)
+SE1 <- sqrt(diag(V <- vcov(poisfit)))
+stopifnot(exprs = { ## Same variances and same as V
+    all.equal(vcov(spois), V)
+    all.equal(vcov(qpoisfit, dispersion=1), V) ## << was wrong
+    all.equal(vcov(sqpois.d1), V)
+    all.equal(spois    $coefficients[,"Std. Error"], SE1)
+    all.equal(sqpois.d1$coefficients[,"Std. Error"], SE1)
+    all.equal(sqpois   $coefficients[,"Std. Error"],
+              sqrt(sqpois$dispersion) * SE1)
+})
+## vcov(. , dispersion=*) was wrong on R versions 3.5.0 -- 3.6.0
 
 
 

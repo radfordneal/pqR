@@ -5,6 +5,100 @@
 \title{R News}
 \encoding{UTF-8}
 
+\section{\Rlogo CHANGES IN R 3.6.1}{
+
+  \subsection{INSTALLATION on a UNIX-ALIKE}{
+    \itemize{
+      \item The default detection of the shell variable \code{libNN} is
+      overridden for derivatives of Debian Linux, some of which have
+      started to have a \file{/usr/lib64} directory.
+      (E.g.\sspace{}Ubuntu 19.04.)  As before, it can be specified in
+      \file{config.site}.
+    }
+  }
+
+  \subsection{UTILITIES}{
+    \itemize{
+      \item \command{R CMD config} knows the values of \code{AR} and
+      \code{RANLIB}, often set for LTO builds.
+    }
+  }
+
+  \subsection{DEPRECATED AND DEFUNCT}{
+    \itemize{
+      \item The use of a character vector with \code{.Fortran()} is
+      formally deprecated and gives a non-portability warning.  (It has
+      long been strongly discouraged in \sQuote{Writing R Extensions}.)
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item On Windows, GUI package installation via \code{menuInstallPkgs()}
+      works again, thanks to Len Weil's and Duncan Murdoch's \PR{17556}.
+
+      \item \command{R CMD check} on \code{data()} fixing \PR{17558}
+      thanks to Duncan Murdoch.
+
+      \item \code{quasi(*, variance = list(..))} now works more
+      efficiently, and should work in all cases fixing \PR{17560}.
+      Further, \code{quasi(var = mu(1-mu))} and \code{quasi(var = "mu ^ 3")}
+      now work, and \code{quasi(variance = "log(mu)")} now gives a correct
+      error message.
+
+      \item Creation of lazy loading database during package installation is
+      again robust to Rprofile changing the current working directory
+      (\PR{17559}).
+
+      \item \code{boxplot(y ~ f, horizontal=TRUE)} now produces correct x-
+      and y-labels.
+
+      \item \code{rbind.data.frame()} allows to keep \code{<NA>} levels
+      from factor columns (\PR{17562}) via new option \code{factor.exclude}.
+
+      Additionally, it works in one more case with matrix-columns which
+      had been reported on 2017-01-16 by Krzysztof Banas.
+
+      \item Correct messaging in C++ pragma checks in \pkg{tools} code for
+      \command{R CMD check}, fixing \PR{17566} thanks to Xavier Robin.
+
+      \item{print()}ing and auto-printing no longer differs for
+      \code{function}s with a user defined \code{print.function}, thanks to
+      Bill Dunlap's report.
+
+      \item On Windows, \code{writeClipboard(.., format = <n>)} now
+      does correctly pass \code{format} to the underlying C code, thanks to
+      a bug report (with patch) by Jenny Bryan.
+
+      \item \code{as.data.frame()} treats 1D arrays the same as vectors,
+      \PR{17570}.
+
+      \item Improvements in \code{smoothEnds(x, *)} working with
+      \code{NA}s (towards \code{runmed()} working in that case, in the next
+      version of R).
+
+      \item \code{vcov(glm(<quasi>), dispersion = *)} works correctly
+      again, fixing \PR{17571} thanks to Pavel Krivitsky.
+
+      \item \command{R CMD INSTALL} of binary packages on Windows now
+      works also with per-directory locking.
+
+      \item \command{R CMD INSTALL} and \code{install.packages()} on Windows
+      are now more robust against a locked file in an earlier installation
+      of the package to be installed.  The default value of option
+      \code{install.lock} on Windows has been changed to \code{TRUE}.
+
+      \item On Unix alikes (when \command{readline} is active), only
+      expand tilde (\code{~}) file names starting with a tilde, instead of
+      almost all tildes.
+
+      \item In R documentation (\file{*.Rd}) files, \samp{\item [..]} is no
+      longer treated specially when rendered in LaTeX and hence pdf, but
+      rather shows the brackets in all cases.
+    }
+  }
+}
+
 \section{\Rlogo CHANGES IN R 3.6.0}{
 
    \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{

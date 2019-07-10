@@ -946,6 +946,7 @@ environment variable @env{TZ}.
 * Debugging Symbols::           
 * OpenMP Support::              
 * C++ Support::                 
+* Link-Time Optimization::      
 @end menu
 
 @node Debugging Symbols, OpenMP Support, Other Options, Other Options
@@ -1012,7 +1013,7 @@ OpenMP program, which is not the same as compiling a shared object and
 loading it into the C program of @R{}'s executable.  Note that
 overridden values are not tested.
 
-@node C++ Support,  , OpenMP Support, Other Options
+@node C++ Support, Link-Time Optimization, OpenMP Support, Other Options
 @subsection C++ Support
 
 C++ is not used by @R{} itself, but support is provided for installing
@@ -1112,6 +1113,50 @@ Extensions' manual.  Prior to @R{} 3.6.0 the default C++ standard was
 that of the compiler used: currently it is C++11 if supported by the
 compiler: this can be overridden by setting @samp{CXXSTD} when @R{} is
 configured, for example to @samp{-std=gnu++14}.
+
+@node Link-Time Optimization,  , C++ Support, Other Options
+@subsection Link-Time Optimization
+
+There is support for using link-time optimization (LTO) if the toolchain
+supports it: configure with flag @option{--enable-lto}.
+
+Whether toolchains support LTO is often unclear: all of the C compiler,
+the Fortran compiler and linker have to support it, and support it by
+the same mechanism (so mixing compiler families may not work and a
+non-system linker may be needed).  It has been tested recently on Linux
+with @command{gcc}/@command{gfortran} 8.x and 9.x: that needed setting
+@example
+AR=gcc-ar
+RANLIB=gcc-ranlib
+@end example
+@noindent
+(e.g.@: in @file{config.site}).  For non-system compilers or if those
+wrappers have not been installed one may need something like
+@example
+AR="ar --plugin=/path/to/liblto_plugin.so"
+RANLIB="ranlib --plugin=/path/to/liblto_plugin.so
+@end example
+@noindent
+Unfortunately this may be accepted but silently do nothing if some of
+the toolchain does not support LTO: that happens on macOS (at the time
+of writing).
+
+When LTO is enabled it is used for compiled code in packages (including
+the recommended packages) unless the flag @option{--enable-lto=R} is
+used.  With sufficient diagnostic flags (e.g.@: @option{-Wall} in GCC)
+this can flag inconsistencies between source files in a package.
+
+LTO support was added in 2011 for @command{gcc} 4.5.x on Linux but was
+little used before 2019.
+
+With @command{gcc}/@command{gfortran} 9.x@footnote{and probably 8.4 and
+later when released.} this will flag inconsistencies in calls to
+Fortran subroutines/functions, both between Fortran source files and
+between Fortran and C/C++.  @command{gfortran} 9.x can help
+understanding these by extracting C prototypes from Fortran source files
+with its @option{-fc-prototypes-external} option, e.g.@: that (at the
+time of writing) Fortran @code{LOGICAL} corresponds to
+@code{int_least32_t *}.
 
 @node Testing a Unix-alike Installation,  , Other Options, Installing R under Unix-alikes
 @section Testing an Installation
@@ -1785,7 +1830,7 @@ Windows' CRLF line endings.
 The front page of a @acronym{CRAN} site has a link `Download R for (Mac)
 OS X'. Click on that, then download the file
 @file{R-@value{VERSIONno}.pkg} and install it. This runs on macOS 10.11
-and later (El Capitan, Sierra, High Sierra, Mojave, @dots{}).
+and later (El Capitan, Sierra, High Sierra, Mojave, Catalina, @dots{}).
 
 Installers for R-patched and R-devel are usually available from
 @uref{https://mac.R-project.org}.  (Some of these packages are
@@ -1989,7 +2034,11 @@ expects a stack size of at least 8MB and to be able to open at least 256
 file descriptors.  (Any modern OS should have default limits at least as
 large as these, but apparently NetBSD may not.  Use the shell command
 @command{ulimit} (@command{sh}/@command{bash}) or @command{limit}
-(@command{csh}/@command{tcsh}) to check.)
+(@command{csh}/@command{tcsh}) to check.)  For some
+compilers@footnote{The Oracle compilers on Solaris (where the issue is
+parsing very complex @R{} expressions) and pre-releases of GCC 9 on
+Linux.} and packages a larger stack size has been needed: 20-25MB has
+sufficed to date.
 
 @R{} makes use of a number of environment variables, the default values
 of many of which are set in file @file{@var{R_HOME}/etc/Renviron} (there
@@ -3287,7 +3336,8 @@ Fortran}).  Your C compiler should be
 @acronym{IEEE}@tie{}754}, POSIX 1003.1 and C99-compliant.@footnote{Note
 that C11 compilers need not be C99-compliant: @R{} requires support for
 @code{double complex} and variable-length arrays which are optional in
-C11 but is mandatory in C99.}  @R{} tries to choose suitable
+C11 but are mandatory in C99.  C18 (also known as C17) is a `bugfix
+release' of C11, clarifying the standard.} @R{} tries to choose suitable
 flags@footnote{Examples are @option{-std=gnu99}, @option{-std=c99} and
 @option{-c99}.} for the C compilers it knows about, but you may have to
 set @code{CC} or @code{CFLAGS} suitably.  For versions of @command{gcc}
@@ -4975,8 +5025,9 @@ fresh OS installation, running e.g.@: @command{make} in a terminal will
 offer the installation of the command-line tools.  If you have installed
 Xcode, this provides the command-line tools.  The tools will need to be
 reinstalled when macOS is upgraded, as upgrading partially removes
-them.)  For macOS 10.14 (`Mojave') an additional step is needed to
-install the headers to @file{/usr/include}: from a Terminal run
+them.)  For macOS 10.14 (`Mojave') and version 10.x of the tools an
+additional step is needed to install the headers to @file{/usr/include}:
+from a Terminal run
 @c https://developer.apple.com/documentation/xcode_release_notes/xcode_10_release_notes
 @example
 sudo installer -pkg \
@@ -4985,9 +5036,10 @@ sudo installer -pkg \
 @end example
 @noindent
 (This will need to be re-run if the OS decides to update the Command
-Line Tools.)  Alternatively, change the include path @emph{via}
+Line Tools: betas of version 11 are not currently supported.)
+Alternatively, change the include path @emph{via}
 @example
-CPPFLAGS="-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include"
+CPPFLAGS="-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include"
 @end example
 @noindent
 Which is said to be going to be needed for future versions of macOS.
@@ -5079,34 +5131,32 @@ FLIBS = -L/usr/local/gfortran/lib/gcc/x86_64-apple-darwin18/8.2.0
 (with lines broken here for legibility).
 
 Current @acronym{CRAN} binary distributions use the build of
-@command{clang} 6.0.0 contained in
-@uref{https://cran.r-project.org/@/bin/@/macosx/@/tools/@/clang-6.0.0.pkg}.
-Other recent distributions of @command{clang} are often available from
-@uref{http://llvm.org/releases/}: for example at the time of
-writing@footnote{It is unstated what the minimum OS requirement is for
-these: the distribution of 5.0.0 required Sierra or later.} of 6.0.1,
-7.0.0 and 8.0.0.  In particular, all of these include support for OpenMP
-which Apple builds of @command{clang} do not.  Suppose one of these
-distributions is installed under @file{/usr/local/clang6}.  Then @R{}
-could be configured by something like
+@command{clang} 7.0.0 contained in
+@uref{https://cran.r-project.org/@/bin/@/macosx/@/tools/@/clang-7.0.0.pkg}.
+Other recent distributions of @command{clang} are available from
+@uref{http://llvm.org/releases/} (on which the above are based).  In
+particular, all of these include support for OpenMP which Apple builds
+of @command{clang} do not.  Suppose one of these distributions is
+installed under @file{/usr/local/clang7}.  Then @R{} could be configured
+by something like
 @example
 ./configure --x-includes=/opt/X11/include --x-libraries=/opt/X11/lib \
 PKG_CONFIG_PATH=/opt/X11/lib/pkgconfig:/usr/local/lib/pkgconfig:/usr/lib/pkgconfig \
-DYLD_FALLBACK_LIBRARY_PATH=/usr/local/clang6/lib:/usr/local/lib
+DYLD_FALLBACK_LIBRARY_PATH=/usr/local/clang7/lib:/usr/local/lib
 @end example
 @noindent
 with @file{config.site} containing
 @example
-CC=/usr/local/clang6/bin/clang
+CC=/usr/local/clang7/bin/clang
 OBJC=$CC
 FC=/usr/local/gfortran/bin/gfortran
-CXX=/usr/local/clang6/bin/clang++
-LDFLAGS="-L/usr/local/clang6/lib -L/usr/local/lib"
-R_LD_LIBRARY_PATH=/usr/local/clang6/lib:/usr/local/lib
+CXX=/usr/local/clang7/bin/clang++
+LDFLAGS="-L/usr/local/clang7/lib -L/usr/local/lib"
+R_LD_LIBRARY_PATH=/usr/local/clang7/lib:/usr/local/lib
 @end example
 @noindent
 The care to specify library paths is to ensure that the OpenMP runtime
-library, here @file{/usr/local/clang6/lib/libomp.dylib}, is found when
+library, here @file{/usr/local/clang7/lib/libomp.dylib}, is found when
 needed.  If this works, you should see the line
 @example
 checking whether OpenMP SIMD reduction is supported... yes
@@ -5175,7 +5225,7 @@ The @TeX{} implementation used by the developers is MacTeX
 (@uref{https://www.tug.org/mactex/}): the full installation is about
 5GB, but a smaller version (`Basic TeX') is available at
 @uref{https://www.tug.org/mactex/morepackages.html} to which you will
-need to add some packages, e.g.@: for the 2018 version we needed to
+need to add some packages, e.g.@: for the 2019 version we needed to
 add@footnote{E.g.@: @emph{via} @command{tlmgr install cm-super helvetic
 inconsolata texinfo} .}  @pkg{cm-super}, @pkg{helvetic},
 @pkg{inconsolata} and @pkg{texinfo} which brought this to about 310MB.

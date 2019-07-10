@@ -103,7 +103,9 @@ FILE *R_OpenInitFile(void)
      *   R_ChooseFile is interface-specific
      */
 
+#if defined(HAVE_LIBREADLINE) && defined(HAVE_TILDE_EXPAND_WORD)
 char *R_ExpandFileName_readline(const char *s, char *buff);  /* sys-std.c */
+#endif
 
 static char newFileName[PATH_MAX];
 static int HaveHOME=-1;
@@ -146,7 +148,7 @@ extern Rboolean UsingReadline;
 
 const char *R_ExpandFileName(const char *s)
 {
-#ifdef HAVE_LIBREADLINE
+#if defined(HAVE_LIBREADLINE) && defined(HAVE_TILDE_EXPAND_WORD)
     if(UsingReadline) {
 	const char * c = R_ExpandFileName_readline(s, newFileName);
 	/* we can return the result only if tilde_expand is not broken */

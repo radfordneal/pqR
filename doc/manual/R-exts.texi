@@ -3449,7 +3449,7 @@ distribution with the package sources.  By including the vignette
 outputs in the package sources it is not necessary that these can be
 re-built at install time, i.e., the package author can use private @R{}
 packages, screen snapshots and @LaTeX{} extensions which are only
-available on his machine.@footnote{provided the conditions of the
+available on their machine.@footnote{provided the conditions of the
 package's license are met: many, including @acronym{CRAN}, see the
 omission of source components as incompatible with an Open Source
 license.}
@@ -4537,7 +4537,7 @@ all @R{} platforms.
 Under no circumstances should your compiled code ever call @code{abort}
 or @code{exit}@footnote{or where supported the variants @code{_Exit} and
 @code{_exit}.}: these terminate the user's @R{} process, quite possibly
-including all his unsaved work.  One usage that could call @code{abort}
+losing all unsaved work.  One usage that could call @code{abort}
 is the @code{assert} macro in C or C++ functions, which should never be
 active in production code.  The normal way to ensure that is to define
 the macro @code{NDEBUG}, and @command{R CMD INSTALL} does so as part of
@@ -5117,9 +5117,9 @@ various standards.
 Both the compiler and OS (@emph{via} system header files, which may
 differ by architecture even for nominally the same OS) affect the
 compilability of C/C++ code.  Compilers from the GCC, @command{clang},
-Intel and Oracle Studio suites are routinely used with @R{}, and both
-@command{clang} and Oracle have more than one implementation of C++
-headers and library.  The range of possibilities makes comprehensive
+Intel and Oracle Developer Studio suites are routinely used with @R{},
+and both @command{clang} and Oracle have more than one implementation of
+C++ headers and library.  The range of possibilities makes comprehensive
 empirical checking impossible, and regrettably compilers are patchy at
 best on warning about non-standard code.
 
@@ -7026,9 +7026,11 @@ so that e.g.@: @kbd{??Spearman} will succeed in finding the
 help page for the test for association between paired samples using
 Spearman's @eqn{\rho, rho}.
 
-
 (Note that @code{help.search()} only uses ``sections'' of documentation
 objects with no additional markup.)
+
+Each @code{\concept} entry should give a @emph{single} index term (word
+or phrase), and not use any Rd markup.
 
 If you want to cross reference such items from other help files @emph{via}
 @code{\link}, you need to use @code{\alias} and not @code{\concept}.
@@ -8033,6 +8035,7 @@ which provide complementary examples to those given here.)
 * Debugging R code::            
 * Checking memory access::      
 * Debugging compiled code::     
+* Using Link-time Optimization::  
 @end menu
 
 
@@ -8955,8 +8958,8 @@ and detects memory access errors, uninitialized reads and memory leaks.
 
 Most of the Fortran compilers used with @R{} allow code to be compiled
 with checking of array bounds: for example @command{gfortran} has option
-@option{-fbounds-check} and Oracle Studio has @option{-C}.  This will
-give an error when the upper or lower bound is exceeded, e.g.
+@option{-fbounds-check} and Oracle Developer Studio has @option{-C}.
+This will give an error when the upper or lower bound is exceeded, e.g.
 @example
 At line 97 of file .../src/appl/dqrdc2.f
 Fortran runtime error: Index '1' of dimension 1 of array 'x' above upper bound of 0
@@ -8964,7 +8967,7 @@ Fortran runtime error: Index '1' of dimension 1 of array 'x' above upper bound o
 
 One does need to be aware that lazy programmers often specify Fortran
 dimensions as @code{1} rather than @code{*} or a real bound and these
-will be reported.
+will be reported (as may @code{*} dimensions)
 
 It is easy to arrange to use this check on just the code in your
 package: add to @file{~/.R/Makevars} something like (for
@@ -8976,15 +8979,14 @@ FFLAGS = -g -O2 -mtune=native -fbounds-check
 @noindent
 when you run @command{R CMD check}.
 
-This may report incorrectly errors with the way that Fortran character
-variables are passed, particularly when Fortran subroutines are called
-from C code.  This may include the use of BLAS and LAPACK subroutines in
-@R{}, so it is not advisable to build @R{} itself with bounds checking
-(and may not even be possible as these subroutines are called during the
-@R{} build).
+This may report errors with the way that Fortran character variables are
+passed, particularly when Fortran subroutines are called from C code.
+This may include the use of BLAS and LAPACK subroutines in @R{}, so it
+is not advisable to build @R{} itself with bounds checking (and may not
+even be possible as these subroutines are called during the @R{} build).
 
 
-@node Debugging compiled code,  , Checking memory access, Debugging
+@node Debugging compiled code, Using Link-time Optimization, Checking memory access, Debugging
 @section Debugging compiled code
 @cindex Debugging
 
@@ -9281,6 +9283,44 @@ parameters: maximum depth and the maximal number of elements that will
 be printed for scalar vectors. The defaults in @code{R_inspect} are
 currently -1 (no limit) and 5 respectively.
 
+@node Using Link-time Optimization,  , Debugging compiled code, Debugging
+@section Using Link-time Optimization
+
+Where supported, @emph{link time optimization} provides a comprehensive
+way to check the consistency of calls between Fortran files or between C
+and Fortran.
+@ifset UseExternalXrefs
+@xref{Link-Time Optimization, , Link-Time Optimization,
+R-admin, R Installation and Administration}.
+@end ifset
+
+For example:
+@example
+boot.f:61: warning: type of 'ddot' does not match original declaration [-Wlto-type-mismatch]
+        y(j,i)=ddot(p,x(j,1),n,b(1,j,i),1)
+crq.f:1023: note: return value type mismatch
+@end example
+@noindent
+where the package author forgot to declare
+@example
+      double precision ddot
+      external ddot
+@end example
+@noindent
+in @file{boot.f}.
+
+Or:
+
+@example
+rkpk2.f:77:5: warning: type of 'dstup' does not match original declaration [-Wlto-type-mismatch]
+      *info, wk)
+rkpk1.f:2565:5: note: type mismatch in parameter 14
+       subroutine dstup (s, lds, nobs, nnull, qraux, jpvt, y, q, ldqr,
+rkpk1.f:2565:5: note: 'dstup' was previously declared here
+@end example
+@noindent
+where the fourteenth argument 'dum' was missing in the call.
+
 
 @node System and foreign language interfaces, The R API, Debugging, Top
 @chapter System and foreign language interfaces
@@ -9367,15 +9407,14 @@ subroutine.
 @item @code{integer}   @tab @code{int *}     @tab @code{INTEGER}
 @item @code{double}    @tab @code{double *}  @tab @code{DOUBLE PRECISION}
 @item @code{complex}   @tab @code{Rcomplex *} @tab @code{DOUBLE COMPLEX}
-@item @code{character} @tab @code{char **}   @tab @code{CHARACTER*255}
+@item @code{character} @tab @code{char **}   @tab @code{CHARACTER(255)}
 @item @code{raw}       @tab @code{unsigned char *}    @tab none
 @end multitable
 @end quotation
 
 @noindent
-Do please note the first two.  On the 64-bit Unix/Linux/macOS platforms,
-@code{long} is 64-bit whereas @code{int} and @code{INTEGER} are 32-bit.
-Code ported from S-PLUS (which uses @code{long *} for @code{logical} and
+On all @R{} platforms @code{int} and @code{INTEGER} are 32-bit.  Code
+ported from S-PLUS (which uses @code{long *} for @code{logical} and
 @code{integer}) will not work on all 64-bit platforms (although it may
 appear to work on some, including Windows).  Note also that if your
 compiled code is a mixture of C functions and Fortran subprograms the
@@ -9390,9 +9429,11 @@ be possible to pass @code{Rcomplex} to a C99 function expecting a
 @code{complex} type.  Moreover, the compatibility can depend on the
 optimization level set for the compiler.)
 
-Only a single character string can be passed to or from Fortran, and the
-success of this is compiler-dependent.  Other @R{} objects can be passed
-to @code{.C}, but it is much better to use one of the other interfaces.
+Only a single character string of fixed length can be passed to or from
+Fortran (the length is not passed), and the success of this is
+compiler-dependent: its use was formally deprecated in 2019.  Other @R{}
+objects can be passed to @code{.C}, but it is much better to use one of
+the other interfaces.
 
 It is possible to pass numeric vectors of storage mode @code{double} to
 C as @code{float *} or to Fortran as @code{REAL} by setting the
@@ -9479,17 +9520,17 @@ option @code{CBoundsCheck = TRUE}.} to allocate a new string @emph{via}
 new string.  However, when character vectors are used other than in a
 read-only way, the @code{.Call} interface is much to be preferred.
 
-Passing character strings to Fortran code needs even more care, and
-should be avoided where possible.  Only the first element of the
-character vector is passed in, as a fixed-length (255) character array.
-Up to 255 characters are passed back to a length-one character vector.
-How well this works (or even if it works at all) depends on the C and
-Fortran compilers on each platform (including on their options).  Often
-what is being passed to Fortran is one of a small set of possible values
-(a factor in @R{} terms) which could alternatively be passed as an
-integer code: similarly Fortran code that wants to generate diagnostic
-messages can pass an integer code to a C or @R{} wrapper which will
-convert it to a character string.
+Passing character strings to Fortran code needs even more care, is
+deprecated and should be avoided where possible.  Only the first element
+of the character vector is passed in, as a fixed-length (255) character
+array.  Up to 255 characters are passed back to a length-one character
+vector.  How well this works (or even if it works at all) depends on the
+C and Fortran compilers on each platform (including on their options).
+Often what is being passed to Fortran is one of a small set of possible
+values (a factor in @R{} terms) which could alternatively be passed as
+an integer code: similarly Fortran code that wants to generate
+diagnostic messages could pass an integer code to a C or @R{} wrapper
+which would convert it to a character string.
 
 It is possible to pass some @R{} objects other than atomic vectors @emph{via}
 @code{.C}, but this is only supported for historical compatibility: use
@@ -10062,11 +10103,18 @@ void F77_NAME(supsmu)(int *n, double *x, double *y,
 @end group
 @end example
 
+@noindent
+@command{gfortran} 9.2@footnote{This was added just after release as
+9.1.} and later can help generate such prototypes with its flag
+@option{-fc-prototypes-external} (although one will need to replace the
+hard-coded trailing underscore with the @code{F77_NAME} macro).
+
 One can get away with inaccurate argument lists in the declarations: it
 is easy to specify the arguments for @code{.Call} (all @code{SEXP}) and
 @code{.External} (one @code{SEXP}) and as the arguments for @code{.C}
 and @code{.Fortran} are all pointers, specifying them as @code{void *}
-suffices. (For most platforms one can omit all the arguments.)
+suffices. (For most platforms one can omit all the arguments, although
+link-time optimization will warn.)
 
 @item
 (Optional but highly recommended.)  Restrict @code{.Call} etc to use the
@@ -13185,7 +13233,7 @@ to access a Fortran common block from C
 @end table
 
 On most current platforms these are all the same, but it is unwise to
-rely on this.  Note that names with underscores were not legal in
+rely on this.  Note that names containing underscores were not legal in
 Fortran 77, and are not portably handled by the above macros.  (Also,
 all Fortran names for use by @R{} are lower case, but this is not
 enforced by the macros.)
@@ -13227,13 +13275,32 @@ used.  (Passing values @emph{via} arguments is safer.)
 The standard packages, for example @pkg{stats}, are a rich source of
 further examples.
 
-Passing character strings from C to Fortran or @emph{vice versa} is
-not portable (and to Fortran 90 or later is even less so).  We have
-found that it helps to ensure that a C string to be passed is followed
-by several @code{nul}s (and not just the one needed as a C terminator).
-But for maximal portability character strings in Fortran should be
-avoided.
+Passing character strings from C to Fortran or @emph{vice versa} is not
+portable.  We have found that it helps to ensure that a C string to be
+passed is followed by several @code{nul}s (and not just the one needed
+as a C terminator).  But for maximal portability character strings in
+Fortran should be avoided.
 
+Where supported, @emph{link time optimization} provides a reliable way
+to check the consistency of calls to C from Fortran or @emph{vice
+versa}.
+@ifset UseExternalXrefs
+@xref{Link-Time Optimization, , Link-Time Optimization,
+R-admin, R Installation and Administration}.
+@end ifset
+One place where this occurs is the registration of @code{.Fortran} calls
+in C code (@pxref{Registering native routines}).  For example
+@example
+init.c:10:13: warning: type of 'vsom_' does not match original
+ declaration [-Wlto-type-mismatch]
+  extern void F77_NAME(vsom)(void *, void *, void *, void *, 
+    void *, void *, void *, void *, void *);
+vsom.f90:20:33: note: type mismatch in parameter 9
+   subroutine vsom(neurons,dt,dtrows,dtcols,xdim,ydim,alpha,train)
+vsom.f90:20:33: note: 'vsom' was previously declared here
+@end example
+shows that a subroutine has been registered with 9 arguments (as that is
+what the @code{.Fortran} call used) but only has 8.
 
 @node Numerical analysis subroutines, Optimization, Calling C from Fortran and vice versa, The R API
 @section Numerical analysis subroutines
@@ -14208,7 +14275,7 @@ for example package @pkg{stats}.  Most compilers which allow control of
 visibility will allow control of visibility for all symbols @emph{via} a
 flag, and where known the flag is encapsulated in the macros
 @samp{C_VISIBILITY}, @samp{CXX_VISIBILITY}@footnote{As from @R{} 3.5.2:
-his applies to the compiler for the default C++ dialect (currently
+This applies to the compiler for the default C++ dialect (currently
 normally C++11) and not necessarily to other dialects.} and
 @samp{F_VISIBILITY} for C, C++ and Fortran
 compilers.@footnote{@samp{F77_VISIBILITY} was used prior to @R 3.6.0 and

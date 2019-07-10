@@ -7,6 +7,136 @@
 
 <h2>R News</h2>
 
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.6.1</h3>
+
+
+
+<h4>INSTALLATION on a UNIX-ALIKE</h4>
+
+
+<ul>
+<li><p> The default detection of the shell variable <code>libNN</code> is
+overridden for derivatives of Debian Linux, some of which have
+started to have a &lsquo;<span class="file">/usr/lib64</span>&rsquo; directory.
+(E.g. Ubuntu 19.04.)  As before, it can be specified in
+&lsquo;<span class="file">config.site</span>&rsquo;.
+</p>
+</li></ul>
+
+
+
+
+<h4>UTILITIES</h4>
+
+
+<ul>
+<li> <p><code>R CMD config</code> knows the values of <code>AR</code> and
+<code>RANLIB</code>, often set for LTO builds.
+</p>
+</li></ul>
+
+
+
+
+<h4>DEPRECATED AND DEFUNCT</h4>
+
+
+<ul>
+<li><p> The use of a character vector with <code>.Fortran()</code> is
+formally deprecated and gives a non-portability warning.  (It has
+long been strongly discouraged in &lsquo;Writing R Extensions&rsquo;.)
+</p>
+</li></ul>
+
+
+
+
+<h4>BUG FIXES</h4>
+
+
+<ul>
+<li><p> On Windows, GUI package installation via <code>menuInstallPkgs()</code>
+works again, thanks to Len Weil's and Duncan Murdoch's <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17556">PR#17556</a>.
+</p>
+</li>
+<li> <p><code>R CMD check</code> on <code>data()</code> fixing <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17558">PR#17558</a>
+thanks to Duncan Murdoch.
+</p>
+</li>
+<li> <p><code>quasi(*, variance = list(..))</code> now works more
+efficiently, and should work in all cases fixing <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17560">PR#17560</a>.
+Further, <code>quasi(var = mu(1-mu))</code> and <code>quasi(var = "mu ^ 3")</code>
+now work, and <code>quasi(variance = "log(mu)")</code> now gives a correct
+error message.
+</p>
+</li>
+<li><p> Creation of lazy loading database during package installation is
+again robust to Rprofile changing the current working directory
+(<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17559">PR#17559</a>).
+</p>
+</li>
+<li> <p><code>boxplot(y ~ f, horizontal=TRUE)</code> now produces correct x-
+and y-labels.
+</p>
+</li>
+<li> <p><code>rbind.data.frame()</code> allows to keep <code>&lt;NA&gt;</code> levels
+from factor columns (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17562">PR#17562</a>) via new option <code>factor.exclude</code>.
+</p>
+<p>Additionally, it works in one more case with matrix-columns which
+had been reported on 2017-01-16 by Krzysztof Banas.
+</p>
+</li>
+<li><p> Correct messaging in C++ pragma checks in <span class="pkg">tools</span> code for
+<code>R CMD check</code>, fixing <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17566">PR#17566</a> thanks to Xavier Robin.
+</p>
+</li>
+<li><p>print()ing and auto-printing no longer differs for
+<code>function</code>s with a user defined <code>print.function</code>, thanks to
+Bill Dunlap's report.
+</p>
+</li>
+<li><p> On Windows, <code>writeClipboard(.., format = &lt;n&gt;)</code> now
+does correctly pass <code>format</code> to the underlying C code, thanks to
+a bug report (with patch) by Jenny Bryan.
+</p>
+</li>
+<li> <p><code>as.data.frame()</code> treats 1D arrays the same as vectors,
+<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17570">PR#17570</a>.
+</p>
+</li>
+<li><p> Improvements in <code>smoothEnds(x, *)</code> working with
+<code>NA</code>s (towards <code>runmed()</code> working in that case, in the next
+version of R).
+</p>
+</li>
+<li> <p><code>vcov(glm(&lt;quasi&gt;), dispersion = *)</code> works correctly
+again, fixing <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17571">PR#17571</a> thanks to Pavel Krivitsky.
+</p>
+</li>
+<li> <p><code>R CMD INSTALL</code> of binary packages on Windows now
+works also with per-directory locking.
+</p>
+</li>
+<li> <p><code>R CMD INSTALL</code> and <code>install.packages()</code> on Windows
+are now more robust against a locked file in an earlier installation
+of the package to be installed.  The default value of option
+<code>install.lock</code> on Windows has been changed to <code>TRUE</code>.
+</p>
+</li>
+<li><p> On Unix alikes (when <code>readline</code> is active), only
+expand tilde (<code>~</code>) file names starting with a tilde, instead of
+almost all tildes.
+</p>
+</li>
+<li><p> In R documentation (&lsquo;<span class="file">*.Rd</span>&rsquo;) files, <span class="samp">\item [..]</span> is no
+longer treated specially when rendered in LaTeX and hence pdf, but
+rather shows the brackets in all cases.
+</p>
+</li></ul>
+
+
+
+
 <h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.6.0</h3>
 
 
