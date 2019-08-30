@@ -1,4 +1,5 @@
-Fixes immediately after pqR-2018-11-18.
+Fixes after pqR-2018-11-18, and then after 2019-02-19.
 
 Includes doc fixes for standard distributions.
 
+Fix from R-3.1.1 for problem with update.formula(~1, ~. - y)

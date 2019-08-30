@@ -827,7 +827,9 @@ static SEXP do_termsform(SEXP call, SEXP op, SEXP args, SEXP rho)
     a = CDR(a);
 
     nvar = length(varlist) - 1;
-    nwords = (nvar - 1) / WORDSIZE + 1;
+
+    /* In allocating words need to allow for intercept term */
+    nwords = (int) (nvar / WORDSIZE + 1);
 
     /* Step 2: Recode the model terms in binary form */
     /* and at the same time, expand the model formula. */
