@@ -50,6 +50,21 @@
         to names (as had been intended) when the result had its 
         dimensions dropped, and only one dimension had names.
   }}
+
+  \subsection{BUG FIXES FROM R CORE RELEASES}{
+  \itemize{
+  \item From R-3.1.1: For a formula with exactly 32 variables the 32nd variable
+      was aliased to the intercept in some C-level computations of
+      terms, so that for example attempting to remove it would remove
+      the intercept instead (and leave a corrupt internal structure).
+      (\PR{15735}).
+
+      [ Note: This also fixes problems with formulas
+      having zero variables, as manifested, for example, in 
+\preformatted{    update.formula (~1, ~. - y)
+}
+      Thanks to Marduk Bolanos for this example (pqR issue #40). ]
+  }}
 }
 
 
