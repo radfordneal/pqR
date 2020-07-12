@@ -1128,7 +1128,7 @@ static size_t fifo_read(void *ptr, size_t size, size_t nitems,
     Rfifoconn this = con->private;
 
     /* uses 'size_t' for len */
-    if ((double) size * (double) nitems > SSIZE_MAX)
+    if ((double) size * (double) nitems > (double) SSIZE_MAX)
 	error(_("too large a block specified"));
     return read(this->fd, ptr, size * nitems)/size;
 }
@@ -1139,7 +1139,7 @@ static size_t fifo_write(const void *ptr, size_t size, size_t nitems,
     Rfifoconn this = con->private;
 
     /* uses 'size_t' for len */
-    if ((double) size * (double) nitems > SSIZE_MAX)
+    if ((double) size * (double) nitems > (double) SSIZE_MAX)
 	error(_("too large a block specified"));
     return write(this->fd, ptr, size * nitems)/size;
 }
@@ -2801,7 +2801,7 @@ static size_t raw_write(const void *ptr, size_t size, size_t nitems,
     Rrawconn this = con->private;
     size_t freespace = XLENGTH(this->data) - this->pos, bytes = size*nitems;
 
-    if ((double) size * (double) nitems + (double) this->pos > R_LEN_T_MAX)
+    if ((double) size * (double) nitems + (double) this->pos > R_XLEN_T_MAX)
 	error(_("attempting to add too many elements to raw vector"));
     /* resize may fail, when this will give an error */
     if(bytes >= freespace) raw_resize(this, bytes + this->pos);
@@ -2824,7 +2824,7 @@ static size_t raw_read(void *ptr, size_t size, size_t nitems,
     Rrawconn this = con->private;
     size_t available = this->nbytes - this->pos, request = size*nitems, used;
 
-    if ((double) size * (double) nitems + (double) this->pos > R_LEN_T_MAX)
+    if ((double) size * (double) nitems + (double) this->pos > R_XLEN_T_MAX)
 	error(_("too large a block specified"));
     used = (request < available) ? request : available;
     memmove(ptr, RAW(this->data) + this->pos, used);
@@ -2998,7 +2998,7 @@ static void text_init(Rconnection con, SEXP text, int type)
 	    (double) strlen(type == 1 ? translateChar(STRING_ELT(text, i))
 			    : ((type == 3) ?translateCharUTF8(STRING_ELT(text, i))
 			       : CHAR(STRING_ELT(text, i))) ) + 1;
-    if (dnc >= SIZE_MAX)
+    if (dnc >= (double) SIZE_MAX)
 	error(_("too many characters for text connection"));
     else nchars = (size_t) dnc;
     this->data = (char *) malloc(nchars+1);
@@ -6164,7 +6164,7 @@ static void init_filters(void)
 }
 
 attribute_hidden
-SEXP R_compress3(SEXP in, Rboolean *err)
+SEXP R_compress3(SEXP in)
 {
     const void *vmax = vmaxget();
     unsigned int inlen, outlen;

@@ -7,6 +7,246 @@
 
 <h2>R News</h2>
 
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.6.2</h3>
+
+
+
+<h4>NEW FEATURES</h4>
+
+
+<ul>
+<li> <p><code>runmed(x, *)</code> gains a new option <code>na.action</code>
+determining <em>how</em> to handle <code>NaN</code> or <code>NA</code> in <code>x</code>.
+</p>
+</li>
+<li> <p><code>dotchart()</code> gains new options <code>ann</code>, <code>xaxt</code>,
+<code>frame.plot</code> and <code>log</code>.
+</p>
+</li></ul>
+
+
+
+
+<h4>INSTALLATION on a UNIX-ALIKE</h4>
+
+
+<ul>
+<li><p> Detection of the C stack direction has been moved from
+run-time to <code>configure</code>: this is safer with LTO builds and
+allows the detection to be overridden &ndash; see file
+&lsquo;<span class="file">config.site</span>&rsquo;.
+</p>
+</li>
+<li><p> Source-code changes enable installation on platforms using
+<code>gcc -fno-common</code> (the expected default for
+<code>gcc 10.x</code>).
+</p>
+</li></ul>
+
+
+
+
+<h4>C-LEVEL FACILITIES</h4>
+
+
+<ul>
+<li> <p><code>installTrChar</code> (which is nowadays is wrapped by
+<code>installChar</code>) is defined in &lsquo;<span class="file">Rinternals.h</span>&rsquo;.  (Neither
+are part of the API.)
+</p>
+</li></ul>
+
+
+
+
+<h4>PACKAGE INSTALLATION</h4>
+
+
+<ul>
+<li><p> Header &lsquo;<span class="file">Rconfig.h</span>&rsquo; contains the value of
+<code>FC_LEN_T</code> deduced at installation which is used by the
+prototypes in headers &lsquo;<span class="file">R_ext/BLAS.h</span>&rsquo; and
+&lsquo;<span class="file">R_ext/Lapack.h</span>&rsquo; but to avoid extensive breakage this is
+only exposed when <code>USE_FC_LEN_T</code> is defined.
+</p>
+<p>If a package's C/C++ calls to BLAS/LAPACK allow for the
+&lsquo;hidden&rsquo; arguments used by most Fortran compilers to pass
+the lengths of Fortran character arguments, define
+<code>USE_FC_LEN_T</code> and include &lsquo;<span class="file">Rconfig.h</span>&rsquo; (possibly
+<em>via</em> &lsquo;<span class="file">R.h</span>&rsquo;) before including &lsquo;<span class="file">R_ext/BLAS.h</span>&rsquo; or
+&lsquo;<span class="file">R_ext/Lapack.h</span>&rsquo;.
+</p>
+</li>
+<li><p> A package with Fortran source code and perhaps C (but not
+C++) sources can request for its shared object/DLL to be linked by
+the Fortran compiler by including a line <code>USE_FC_TO_LINK=</code> in
+&lsquo;<span class="file">src/Makevars[.win]</span>&rsquo; and using <code>$(SHLIB_OPENMP_FFLAGS)</code>
+as part of <code>PKG_LIBS</code>.
+</p>
+<p>The known reason for doing so is a package which uses Fortran
+(only) OpenMP on a platform where the Fortran OpenMP runtime is
+incompatible with the C one (e.g. <code>gfortran</code> 9.x
+with <code>clang</code>).
+</p>
+</li></ul>
+
+
+
+
+<h4>UTILITIES</h4>
+
+
+<ul>
+<li> <p><code>R CMD check</code> has a new option to mitigate checks
+leaving files/directories in &lsquo;<span class="file">/tmp</span>&rsquo;.  See the &lsquo;R
+Internals&rsquo; manual &ndash; this is part of <code>--as-cran</code>.
+</p>
+</li></ul>
+
+
+
+
+<h4>Windows</h4>
+
+
+<ul>
+<li><p> The default standard for C++ in package installation is
+C++11 (as it has been on other platforms where available since <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span>
+3.6.0: the default toolchain on Windows was defaulting to C++98).
+</p>
+</li></ul>
+
+
+
+
+<h4>DEPRECATED AND DEFUNCT</h4>
+
+
+<ul>
+<li><p> Support for specifying C++98 in package installation is
+deprecated.
+</p>
+</li>
+<li><p> Support in <code>R CMD config</code> for <span class="samp">F77</span>,
+<span class="samp">FCPIFCPLAGS</span>, <span class="samp">CPP</span>, <span class="samp">CXXCPP</span> and <span class="samp">CXX98</span> and
+similar is deprecated.  (<span class="samp">CPP</span> is found from the system
+<code>make</code> and may well not be set.)
+</p>
+<p>Use <span class="samp">$CC -E</span> and <span class="samp">$CXX -E</span> instead of <span class="samp">CPP</span> and
+<span class="samp">CXXCPP</span>.
+</p>
+</li></ul>
+
+
+
+
+<h4>BUG FIXES</h4>
+
+
+<ul>
+<li> <p><code>runmed(x, *)</code> when <code>x</code> contains missing values
+now works consistently for both <code>algorithm="Stuetzle"</code> and
+<code>"Turlach"</code>, and no longer segfaults for <code>"Turlach"</code>, as
+reported by Hilmar Berger.
+</p>
+</li>
+<li> <p><code>apply(diag(3), 2:3, mean)</code> now gives a helpful error message.
+</p>
+</li>
+<li> <p><code>dgamma(x, shape, log=TRUE)</code> now longer overflows
+to <code>Inf</code> for shape &lt; 1 and very small <code>x</code>, fixing
+<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17577">PR#17577</a>, reported by Jonathan Rougier.
+</p>
+</li>
+<li><p> Buffer overflow in building error messages fixed. Reported
+by Benjamin Tremblay.
+</p>
+</li>
+<li> <p><code>options(str = .)</code> is correctly initialized at
+package <span class="pkg">utils</span> load time, now.  A consequence is that
+<code>str()</code> in scripts now is more consistent to interactive use,
+e.g., when displaying function(**) argument lists.
+</p>
+</li>
+<li> <p><code>as.numeric(&lt;call&gt;)</code> now gives correct error message.
+</p>
+</li>
+<li><p> Printing <code>ls.str()</code> no longer wrongly shows
+<code>"&lt;missing&gt;"</code> in rare cases.
+</p>
+</li>
+<li><p> Auto-printing S4 objects no longer duplicates the object,
+for faster speed and reduced memory consumption. Reported by Aaron
+Lun.
+</p>
+</li>
+<li> <p><code>pchisq(&lt;LRG&gt;, &lt;LRG&gt;, ncp=100)</code> no longer takes
+practically forever in some cases.  Hence ditto for corresponding
+<code>qchisq()</code> calls.
+</p>
+</li>
+<li> <p><code>x %% L</code> for finite <code>x</code> no longer returns
+<code>NaN</code> when <code>L</code> is infinite, nor suffers from cancellation
+for large finite <code>L</code>, thanks to Long Qu's <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17611">PR#17611</a>.
+</p>
+<p>Analogously, <code>x %/% L</code> and <code>L %/% x</code> suffer less from
+cancellation and return values corresponding to limits for large
+<code>L</code>.
+</p>
+</li>
+<li> <p><code>grepl(NA, *)</code> now returns <code>logical</code> as documented.
+</p>
+</li>
+<li> <p><code>options(warn=1e11)</code> is an error now, instead of later
+leading to C stack overflow because of infinite recursion.
+</p>
+</li>
+<li> <p><code>R_tryCatch</code> no longer transfers control for all
+conditions. Reported and patch provided by Lionel Henry in
+<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17617">PR#17617</a>.
+</p>
+</li>
+<li> <p><code>format(object.size(.), digits=NULL)</code> now works, fixing
+<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17628">PR#17628</a> reported by Jonathan Carroll.
+</p>
+</li>
+<li> <p><code>get_all_vars(f, d)</code> now also works for cases, e.g. where
+<code>d</code> contains a matrix.  Reported by Simon Wood in 2009 and patch
+provided by Ben Bolker in <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=13624">PR#13624</a>.
+</p>
+<p>Additionally, it now also works when some variables are data frames,
+fixing <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=14905">PR#14905</a>, reported by Patrick Breheny.
+</p>
+</li>
+<li> <p><code>barplot()</code> could get spacings wrong if there were exactly two
+bars <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=15522">PR#15522</a>.  Patch by Michael Chirico.
+</p>
+</li>
+<li> <p><code>power.t.test()</code> works in more cases when returning values
+of n smaller than 2.
+</p>
+</li>
+<li> <p><code>dotchart(*, pch=., groups=.)</code> now works better.  Reported
+by Robert and confirmed by Nic Rochette in <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16953">PR#16953</a>.
+</p>
+</li>
+<li> <p><code>canCoerce(obj, cl)</code> no longer assumes
+<code>length(class(obj)) == 1</code>.
+</p>
+</li>
+<li> <p><code>plot.formula(*, subset = *)</code> now also works in a boundary
+case reported by Robert Schlicht (TU Dresden).
+</p>
+</li>
+<li> <p><code>readBin()</code> and <code>writeBin()</code> of a
+<code>rawConnection()</code> now also work in large cases, thanks to a
+report and proposal by Taeke Harkema in <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17665">PR#17665</a>.
+</p>
+</li></ul>
+
+
+
+
 <h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.6.1</h3>
 
 

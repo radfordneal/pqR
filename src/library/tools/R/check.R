@@ -1039,11 +1039,11 @@ add_dummies <- function(dir, Log)
                     }
                     msg <- if (is.na(findEmail(BR))) {
                         if (grepl("(^|.* )[^ ]+@[[:alnum:]._]+", BR))
-                            "BugReports field is not a suitable URL but appears to contain an email address\n  not specified by mailto: nor contained in < >"
+                            "BugReports field is not a suitable URL but appears to contain an email address\n  not specified by mailto: nor contained in < >\n   use the Contact field instead"
                         else
                             "BugReports field should be the URL of a single webpage"
                     } else
-                        "BugReports field is not a suitable URL but contains an email address\n  which will be used as from R 3.4.0"
+                        "BugReports field is not a suitable URL but contains an email address:\n   use the Contact field instead"
                 }
             } else {
                 msg <- "BugReports field should not be empty"
@@ -2954,12 +2954,13 @@ add_dummies <- function(dir, Log)
 
                 c1 <- grepl("^[[:space:]]*PKG_LIBS", lines, useBytes = TRUE)
                 anyInLIBS <- any(grepl("SHLIB_OPENMP_", lines[c1], useBytes = TRUE))
+                use_fc <- any(grepl("^USE_FC_TO_LINK", lines, useBytes = TRUE))
 
                 ## Now see what sort of files we have
-                have_c <- length(dir('src', patt = "[.]c$", recursive = TRUE)) > 0L
-                have_cxx <- length(dir('src', patt = "[.](cc|cpp)$", recursive = TRUE)) > 0L
-                have_f <- length(dir('src', patt = "[.]f$", recursive = TRUE)) > 0L
-                have_f9x <- length(dir('src', patt = "[.]f9[05]$", recursive = TRUE)) > 0L
+                have_c <- length(dir('src', pattern = "[.]c$", recursive = TRUE)) > 0L
+                have_cxx <- length(dir('src', pattern = "[.](cc|cpp)$", recursive = TRUE)) > 0L
+                have_f <- length(dir('src', pattern = "[.]f$", recursive = TRUE)) > 0L
+                have_f9x <- length(dir('src', pattern = "[.]f9[05]$", recursive = TRUE)) > 0L
                 used <- character()
                 for (f in c("C", "CXX", "F", "FC"))  {
                     this <- this2 <- paste0(f, "FLAGS")
@@ -3014,13 +3015,14 @@ add_dummies <- function(dir, Log)
                         c_or_cxx <- if(have_cxx) "CXXFLAGS" else "CFLAGS"
                         this2 <- if (f %in% c("F", "FC")) c_or_cxx else this
                         pat2 <- paste0("SHLIB_OPENMP_", this2)
-                        if(!any(grepl(pat2, lines[c1], useBytes = TRUE))) {
+                        if(!any(grepl(pat2, lines[c1], useBytes = TRUE))
+                           && !use_fc) {
                             if (!any) noteLog(Log)
                             any <- TRUE
                             msg <- if(anyInLIBS) {
                                 if (f == "F")
                                     sprintf("SHLIB_OPENMP_FFLAGS is included in PKG_FFLAGS but not SHLIB_OPENMP_%s in PKG_LIBS\n", c_or_cxx)
-                                 else if (f == "FC")
+                                else if (f == "FC")
                                      sprintf("SHLIB_OPENMP_%sFLAGS is included in PKG_FCFLAGS but not SHLIB_OPENMP_%s in PKG_LIBS\n", f_or_fc, c_or_cxx)
                                else
                                     sprintf("SHLIB_OPENMP_%s is included in PKG_%s but not in PKG_LIBS\n",
@@ -3056,7 +3058,7 @@ add_dummies <- function(dir, Log)
                     pat2 <- paste0("SHLIB_OPENMP_", this)
                     res <- any(grepl(pat2 , lines[c1], useBytes = TRUE))
                     cnt <- cnt + res
-                    if (res && f %in% c( "F", "FC"))  {
+                    if (res && f %in% c( "F", "FC") && !use_fc)  {
                         if (!any) noteLog(Log)
                         any <- TRUE
                         printLog(Log,"  ", m, ": ",
@@ -3079,6 +3081,8 @@ add_dummies <- function(dir, Log)
                     ## Fortran exceptions
                     if (((!have_cxx && f == "C") || (have_cxx && f == "CXX"))
                         && any(c("FFLAGS", "FCFLAGS") %in% used)) next
+                    ## A package still used PKG_FCFLAGS
+                    if (use_fc && f == "F" && used == "FCFLAGS") next
                     if (res) {
                         if (!any) noteLog(Log)
                         any <- TRUE
@@ -3225,6 +3229,9 @@ add_dummies <- function(dir, Log)
             if (file.exists(instlog) && dir.exists('src')) {
                 checkingLog(Log, "compilation flags used")
                 lines <- readLines(instlog, warn = FALSE)
+                ## skip stuff before building libs
+                ll <- grep("^[*][*][*] libs", lines, useBytes = TRUE)
+                if (length(ll)) lines <- lines(-1:ll[1L])
                 poss <- grep(" -[Wmf]", lines,  useBytes = TRUE, value = TRUE)
                 ## compilation lines start at the left margin,
                 ## and are not configure/echo lines
@@ -5040,7 +5047,7 @@ add_dummies <- function(dir, Log)
             noteLog(Log)
             printLog(Log, sprintf("  installed size is %4.1fMb\n", total/1024))
             rest <- res2[-nrow(res2), ]
-            rest[, 2L] <- sub("./", "", rest[, 2L])
+            rest[, 2L] <- sub("./", "", rest[, 2L], fixed=TRUE)
             ## keep only top-level directories
             rest <- rest[!grepl("/", rest[, 2L]), ]
             rest <- rest[rest[, 1L] > 1024, ] # > 1Mb
@@ -5805,6 +5812,10 @@ add_dummies <- function(dir, Log)
     R_check_serialization <-
         config_val_to_logical(Sys.getenv("_R_CHECK_SERIALIZATION_", "FALSE"))
 
+    R_check_things_in_temp_dir <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_THINGS_IN_TEMP_DIR_",
+                                         "FALSE"))
+
     if (!nzchar(check_subdirs)) check_subdirs <- R_check_subdirs_strict
 
     if (as_cran) {
@@ -5856,6 +5867,7 @@ add_dummies <- function(dir, Log)
         R_check_toplevel_files <- TRUE
         R_check_vignettes_skip_run_maybe <- TRUE
         R_check_serialization <- TRUE
+        R_check_things_in_temp_dir <- TRUE
     } else {
         ## do it this way so that INSTALL produces symbols.rds
         ## when called from check but not in general.
@@ -5885,6 +5897,16 @@ add_dummies <- function(dir, Log)
     setwd(outdir)
     outdir <- getwd()
     setwd(startdir)
+
+    sessdir <- ""
+    if (R_check_things_in_temp_dir) {
+        ## tempdir() should be unique, so don't need a special name within it
+        sessdir <- file.path(tempdir(), "working_dir")
+        if (!dir.create(sessdir))
+            stop("unable to create working directory for subprocesses",
+                 domain = NA)
+        Sys.setenv(TMPDIR = sessdir)
+    }
 
     R_LIBS <- Sys.getenv("R_LIBS")
     arg_libdir <- libdir
@@ -6253,6 +6275,29 @@ add_dummies <- function(dir, Log)
                 }
             }
         }
+
+        if (R_check_things_in_temp_dir) {
+            checkingLog(Log, "for detritus in the temp directory")
+            ff <- list.files(sessdir, include.dirs = TRUE)
+            ## Exclude session temp dirs from crashed subprocesses
+            dir <- file.info(ff)$isdir
+            poss <- grepl("^Rtmp[A-Za-z0-9.]{6}$", ff, useBytes = TRUE)
+            ff <- ff[!(poss & dir)]
+            patt <- Sys.getenv("_R_CHECK_THINGS_IN_TEMP_DIR_EXCLUDE_")
+            if (length(patt)) ff <- ff[!grepl(patt, ff, useBytes = TRUE)]
+	    ff <- ff[!is.na(ff)]
+            if (length(ff)) {
+                noteLog(Log)
+                msg <- c("Found the following files/directories:",
+                         strwrap(paste(sQuote(ff), collapse = " "),
+                                 indent = 2L, exdent = 2L))
+                printLog0(Log, paste(msg, collapse = "\n"), "\n")
+            } else
+                resultLog(Log, "OK")
+            ## clean up of this process would also do this
+            unlink(sessdir, recursive = TRUE)
+        }
+
         summaryLog(Log)
 
         if(config_val_to_logical(Sys.getenv("_R_CHECK_CRAN_STATUS_SUMMARY_",

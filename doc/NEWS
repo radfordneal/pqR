@@ -1,5 +1,149 @@
 R News
 
+CHANGES IN R 3.6.2:
+
+  NEW FEATURES:
+
+    * runmed(x, *) gains a new option na.action determining _how_ to
+      handle NaN or NA in x.
+
+    * dotchart() gains new options ann, xaxt, frame.plot and log.
+
+  INSTALLATION on a UNIX-ALIKE:
+
+    * Detection of the C stack direction has been moved from run-time
+      to configure: this is safer with LTO builds and allows the
+      detection to be overridden - see file config.site.
+
+    * Source-code changes enable installation on platforms using gcc
+      -fno-common (the expected default for gcc 10.x).
+
+  C-LEVEL FACILITIES:
+
+    * installTrChar (which is nowadays is wrapped by installChar) is
+      defined in Rinternals.h.  (Neither are part of the API.)
+
+  PACKAGE INSTALLATION:
+
+    * Header Rconfig.h contains the value of FC_LEN_T deduced at
+      installation which is used by the prototypes in headers
+      R_ext/BLAS.h and R_ext/Lapack.h but to avoid extensive breakage
+      this is only exposed when USE_FC_LEN_T is defined.
+
+      If a package's C/C++ calls to BLAS/LAPACK allow for the 'hidden'
+      arguments used by most Fortran compilers to pass the lengths of
+      Fortran character arguments, define USE_FC_LEN_T and include
+      Rconfig.h (possibly _via_ R.h) before including R_ext/BLAS.h or
+      R_ext/Lapack.h.
+
+    * A package with Fortran source code and perhaps C (but not C++)
+      sources can request for its shared object/DLL to be linked by the
+      Fortran compiler by including a line USE_FC_TO_LINK= in
+      src/Makevars[.win] and using $(SHLIB_OPENMP_FFLAGS) as part of
+      PKG_LIBS.
+
+      The known reason for doing so is a package which uses Fortran
+      (only) OpenMP on a platform where the Fortran OpenMP runtime is
+      incompatible with the C one (e.g. gfortran 9.x with clang).
+
+  UTILITIES:
+
+    * R CMD check has a new option to mitigate checks leaving
+      files/directories in /tmp.  See the 'R Internals' manual - this
+      is part of --as-cran.
+
+  Windows:
+
+    * The default standard for C++ in package installation is C++11 (as
+      it has been on other platforms where available since R 3.6.0: the
+      default toolchain on Windows was defaulting to C++98).
+
+  DEPRECATED AND DEFUNCT:
+
+    * Support for specifying C++98 in package installation is
+      deprecated.
+
+    * Support in R CMD config for F77, FCPIFCPLAGS, CPP, CXXCPP and
+      CXX98 and similar is deprecated.  (CPP is found from the system
+      make and may well not be set.)
+
+      Use $CC -E and $CXX -E instead of CPP and CXXCPP.
+
+  BUG FIXES:
+
+    * runmed(x, *) when x contains missing values now works
+      consistently for both algorithm="Stuetzle" and "Turlach", and no
+      longer segfaults for "Turlach", as reported by Hilmar Berger.
+
+    * apply(diag(3), 2:3, mean) now gives a helpful error message.
+
+    * dgamma(x, shape, log=TRUE) now longer overflows to Inf for shape
+      < 1 and very small x, fixing PR#17577, reported by Jonathan
+      Rougier.
+
+    * Buffer overflow in building error messages fixed. Reported by
+      Benjamin Tremblay.
+
+    * options(str = .) is correctly initialized at package utils load
+      time, now.  A consequence is that str() in scripts now is more
+      consistent to interactive use, e.g., when displaying function(**)
+      argument lists.
+
+    * as.numeric(<call>) now gives correct error message.
+
+    * Printing ls.str() no longer wrongly shows "<missing>" in rare
+      cases.
+
+    * Auto-printing S4 objects no longer duplicates the object, for
+      faster speed and reduced memory consumption. Reported by Aaron
+      Lun.
+
+    * pchisq(<LRG>, <LRG>, ncp=100) no longer takes practically forever
+      in some cases.  Hence ditto for corresponding qchisq() calls.
+
+    * x %% L for finite x no longer returns NaN when L is infinite, nor
+      suffers from cancellation for large finite L, thanks to Long Qu's
+      PR#17611.
+
+      Analogously, x %/% L and L %/% x suffer less from cancellation
+      and return values corresponding to limits for large L.
+
+    * grepl(NA, *) now returns logical as documented.
+
+    * options(warn=1e11) is an error now, instead of later leading to C
+      stack overflow because of infinite recursion.
+
+    * R_tryCatch no longer transfers control for all conditions.
+      Reported and patch provided by Lionel Henry in PR#17617.
+
+    * format(object.size(.), digits=NULL) now works, fixing PR#17628
+      reported by Jonathan Carroll.
+
+    * get_all_vars(f, d) now also works for cases, e.g. where d
+      contains a matrix.  Reported by Simon Wood in 2009 and patch
+      provided by Ben Bolker in PR#13624.
+
+      Additionally, it now also works when some variables are data
+      frames, fixing PR#14905, reported by Patrick Breheny.
+
+    * barplot() could get spacings wrong if there were exactly two bars
+      PR#15522.  Patch by Michael Chirico.
+
+    * power.t.test() works in more cases when returning values of n
+      smaller than 2.
+
+    * dotchart(*, pch=., groups=.) now works better.  Reported by
+      Robert and confirmed by Nic Rochette in PR#16953.
+
+    * canCoerce(obj, cl) no longer assumes length(class(obj)) == 1.
+
+    * plot.formula(*, subset = *) now also works in a boundary case
+      reported by Robert Schlicht (TU Dresden).
+
+    * readBin() and writeBin() of a rawConnection() now also work in
+      large cases, thanks to a report and proposal by Taeke Harkema in
+      PR#17665.
+
 CHANGES IN R 3.6.1:
 
   INSTALLATION on a UNIX-ALIKE:

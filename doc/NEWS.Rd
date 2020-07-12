@@ -5,6 +5,181 @@
 \title{R News}
 \encoding{UTF-8}
 
+\section{\Rlogo CHANGES IN R 3.6.2}{
+
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item \code{runmed(x, *)} gains a new option \code{na.action}
+      determining \emph{how} to handle \code{NaN} or \code{NA} in \code{x}.
+
+      \item \code{dotchart()} gains new options \code{ann}, \code{xaxt},
+      \code{frame.plot} and \code{log}.
+    }
+  }
+
+  \subsection{INSTALLATION on a UNIX-ALIKE}{
+    \itemize{
+      \item Detection of the C stack direction has been moved from
+      run-time to \command{configure}: this is safer with LTO builds and
+      allows the detection to be overridden -- see file
+      \file{config.site}.
+
+      \item Source-code changes enable installation on platforms using
+      \command{gcc -fno-common} (the expected default for
+      \command{gcc 10.x}).
+    }
+  }
+
+  \subsection{C-LEVEL FACILITIES}{
+    \itemize{
+      \item \code{installTrChar} (which is nowadays is wrapped by
+      \code{installChar}) is defined in \file{Rinternals.h}.  (Neither
+      are part of the API.)
+    }
+  }
+
+  \subsection{PACKAGE INSTALLATION}{
+    \itemize{
+      \item Header \file{Rconfig.h} contains the value of
+      \code{FC_LEN_T} deduced at installation which is used by the
+      prototypes in headers \file{R_ext/BLAS.h} and
+      \file{R_ext/Lapack.h} but to avoid extensive breakage this is
+      only exposed when \code{USE_FC_LEN_T} is defined.
+
+      If a package's C/C++ calls to BLAS/LAPACK allow for the
+      \sQuote{hidden} arguments used by most Fortran compilers to pass
+      the lengths of Fortran character arguments, define
+      \code{USE_FC_LEN_T} and include \file{Rconfig.h} (possibly
+      \emph{via} \file{R.h}) before including \file{R_ext/BLAS.h} or
+      \file{R_ext/Lapack.h}.
+
+      \item A package with Fortran source code and perhaps C (but not
+      C++) sources can request for its shared object/DLL to be linked by
+      the Fortran compiler by including a line \code{USE_FC_TO_LINK=} in
+      \file{src/Makevars[.win]} and using \code{$(SHLIB_OPENMP_FFLAGS)}
+      as part of \code{PKG_LIBS}.
+
+      The known reason for doing so is a package which uses Fortran
+      (only) OpenMP on a platform where the Fortran OpenMP runtime is
+      incompatible with the C one (e.g.\sspace{}\command{gfortran} 9.x
+      with \command{clang}).
+    }
+  }
+
+  \subsection{UTILITIES}{
+    \itemize{
+      \item \command{R CMD check} has a new option to mitigate checks
+      leaving files/directories in \file{/tmp}.  See the \sQuote{R
+	Internals} manual -- this is part of \code{--as-cran}.
+    }
+  }
+
+  \subsection{Windows}{
+    \itemize{
+      \item The default standard for C++ in package installation is
+      C++11 (as it has been on other platforms where available since \R{}
+      3.6.0: the default toolchain on Windows was defaulting to C++98).
+    }
+  }
+
+  \subsection{DEPRECATED AND DEFUNCT}{
+    \itemize{
+      \item Support for specifying C++98 in package installation is
+      deprecated.
+
+      \item Support in \command{R CMD config} for \samp{F77},
+      \samp{FCPIFCPLAGS}, \samp{CPP}, \samp{CXXCPP} and \samp{CXX98} and
+      similar is deprecated.  (\samp{CPP} is found from the system
+      \command{make} and may well not be set.)
+
+      Use \samp{$CC -E} and \samp{$CXX -E} instead of \samp{CPP} and
+      \samp{CXXCPP}.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{runmed(x, *)} when \code{x} contains missing values
+      now works consistently for both \code{algorithm="Stuetzle"} and
+      \code{"Turlach"}, and no longer segfaults for \code{"Turlach"}, as
+      reported by Hilmar Berger.
+
+      \item \code{apply(diag(3), 2:3, mean)} now gives a helpful error message.
+
+      \item \code{dgamma(x, shape, log=TRUE)} now longer overflows
+      to \code{Inf} for shape < 1 and very small \code{x}, fixing
+      \PR{17577}, reported by Jonathan Rougier.
+
+      \item Buffer overflow in building error messages fixed. Reported
+      by Benjamin Tremblay.
+
+      \item \code{options(str = .)} is correctly initialized at
+      package \pkg{utils} load time, now.  A consequence is that
+      \code{str()} in scripts now is more consistent to interactive use,
+      e.g., when displaying function(**) argument lists.
+
+      \item \code{as.numeric(<call>)} now gives correct error message.
+
+      \item Printing \code{ls.str()} no longer wrongly shows
+      \code{"<missing>"} in rare cases.
+
+      \item Auto-printing S4 objects no longer duplicates the object,
+      for faster speed and reduced memory consumption. Reported by Aaron
+      Lun.
+
+      \item \code{pchisq(<LRG>, <LRG>, ncp=100)} no longer takes
+      practically forever in some cases.  Hence ditto for corresponding
+      \code{qchisq()} calls.
+
+      \item \code{x \%\% L} for finite \code{x} no longer returns
+      \code{NaN} when \code{L} is infinite, nor suffers from cancellation
+      for large finite \code{L}, thanks to Long Qu's \PR{17611}.
+
+      Analogously, \code{x \%/\% L} and \code{L \%/\% x} suffer less from
+      cancellation and return values corresponding to limits for large
+      \code{L}.
+
+      \item \code{grepl(NA, *)} now returns \code{logical} as documented.
+
+      \item \code{options(warn=1e11)} is an error now, instead of later
+      leading to C stack overflow because of infinite recursion.
+
+      \item \code{R_tryCatch} no longer transfers control for all
+      conditions. Reported and patch provided by Lionel Henry in
+      \PR{17617}.
+
+      \item \code{format(object.size(.), digits=NULL)} now works, fixing
+      \PR{17628} reported by Jonathan Carroll.
+
+      \item \code{get_all_vars(f, d)} now also works for cases, e.g. where
+      \code{d} contains a matrix.  Reported by Simon Wood in 2009 and patch
+      provided by Ben Bolker in \PR{13624}.
+
+      Additionally, it now also works when some variables are data frames,
+      fixing \PR{14905}, reported by Patrick Breheny.
+
+      \item \code{barplot()} could get spacings wrong if there were exactly two
+      bars \PR{15522}.  Patch by Michael Chirico.
+
+      \item \code{power.t.test()} works in more cases when returning values
+      of n smaller than 2.
+
+      \item \code{dotchart(*, pch=., groups=.)} now works better.  Reported
+      by Robert and confirmed by Nic Rochette in \PR{16953}.
+
+      \item \code{canCoerce(obj, cl)} no longer assumes
+      \code{length(class(obj)) == 1}.
+
+      \item \code{plot.formula(*, subset = *)} now also works in a boundary
+      case reported by Robert Schlicht (TU Dresden).
+
+      \item \code{readBin()} and \code{writeBin()} of a
+      \code{rawConnection()} now also work in large cases, thanks to a
+      report and proposal by Taeke Harkema in \PR{17665}.
+    }
+  }
+}
+
 \section{\Rlogo CHANGES IN R 3.6.1}{
 
   \subsection{INSTALLATION on a UNIX-ALIKE}{

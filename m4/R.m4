@@ -1,6 +1,6 @@
 ### R.m4 -- extra macros for configuring R		-*- Autoconf -*-
 ###
-### Copyright (C) 1998-2018 R Core Team
+### Copyright (C) 1998-2019 R Core Team
 ###
 ### This file is part of R.
 ###
@@ -330,6 +330,7 @@ dnl   ${srcdir}/foo.o: /path/to/bar.h
 dnl Could be made to work, of course ...
 dnl Note also that it does not create a 'conftest.o: conftest.c' line.
 dnl For gcc 3.2 or better, we want to use '-MM' in case this works.
+dnl Also adopted by clang, so version test is not really appopriate.
 cc_minus_MM=false
 if test "${GCC}" = yes; then
   case "${CC_VERSION}" in
@@ -338,7 +339,7 @@ if test "${GCC}" = yes; then
   esac
 fi
 for prog in "${cc_minus_MM}" "${CC} -M" "${CPP} -M" "cpp -M"; do
-  if ${prog} conftest.c 2>/dev/null | \
+  if ${prog} ${CPPFLAGS} conftest.c 2>/dev/null | \
       grep 'conftest.o: conftest.c' >/dev/null; then
     r_cv_prog_cc_m="${prog}"
     break
@@ -346,6 +347,8 @@ for prog in "${cc_minus_MM}" "${CC} -M" "${CPP} -M" "cpp -M"; do
 done])
 if test "${r_cv_prog_cc_m}" = "${cc_minus_MM}"; then
   r_cv_prog_cc_m="\$(CC) -MM"
+elif  test "${r_cv_prog_cc_m}" = "${CC} -M"; then
+  r_cv_prog_cc_m="\$(CC) -M"
 fi
 if test -z "${r_cv_prog_cc_m}"; then
   AC_MSG_RESULT([no])
@@ -364,7 +367,7 @@ AC_DEFUN([R_PROG_CC_C_O_LO],
 echo "int some_variable = 0;" > conftest.c
 dnl No real point in using AC_LANG_* and ${ac_ext}, as we need to create
 dnl hard-wired suffix rules.
-ac_try='${CC} ${CFLAGS} -c conftest.c -o TMP/conftest.lo 1>&AS_MESSAGE_LOG_FD'
+ac_try='${CC} ${CPPFLAGS} ${CFLAGS} -c conftest.c -o TMP/conftest.lo 1>&AS_MESSAGE_LOG_FD'
 if AC_TRY_EVAL(ac_try) \
     && test -f TMP/conftest.lo \
     && AC_TRY_EVAL(ac_try); then
@@ -513,6 +516,7 @@ fi
 ## ------------
 ## Check whether the C++ compiler accepts '-M' for generating
 ## dependencies.
+## Not currently used -- better to use -MM if it were.
 AC_DEFUN([R_PROG_CXX_M],
 [AC_REQUIRE([R_PROG_CC_M])
 AC_CACHE_CHECK([whether ${CXX} accepts -M for generating dependencies],
@@ -521,7 +525,7 @@ AC_CACHE_CHECK([whether ${CXX} accepts -M for generating dependencies],
 dnl No real point in using AC_LANG_* and ${ac_ext}, as we need to create
 dnl hard-wired suffix rules.  We could be a bit more careful as we
 dnl actually only test suffix '.cc'.
-if test -n "`${CXX} -M conftest.cc 2>/dev/null | grep conftest`"; then
+if test -n "`${CXX} ${CPPFLAGS} -M conftest.cc 2>/dev/null | grep conftest`"; then
   r_cv_prog_cxx_m=yes
 else
   r_cv_prog_cxx_m=no
@@ -532,6 +536,7 @@ fi])
 ## -------------------
 ## Generate a Make fragment with suffix rules for the C++ compiler.
 ## Used for both building R (Makeconf) and add-ons (etc/Makeconf).
+## <FIXME> If the .d rules were actually use, use CXXXPP? </FIXME>
 AC_DEFUN([R_PROG_CXX_MAKEFRAG],
 [r_cxx_rules_frag=Makefrag.cxx
 AC_REQUIRE([R_PROG_CXX_M])
@@ -835,7 +840,7 @@ int main () {
   exit(0);
 }
 EOF]
-if ${CC} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
+if ${CC} ${CPPFLAGS} ${CPPFLAGS} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
   ## <NOTE>
   ## This should really use MAIN_LD, and hence come after this is
   ## determined (and necessary additions to MAIN_LDFLAGS were made).
@@ -844,7 +849,7 @@ if ${CC} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
   ## and SHLIB_LDFLAGS (and note that on HP-UX with native cc we have to
   ## use ld for SHLIB_LD) ...
   ## Be nice to people who put compiler architecture opts in CFLAGS
-  if ${CC} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
+  if ${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
        conftest.${ac_objext} conftestf.${ac_objext} ${FLIBS} \
        ${LIBM} 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD;
   ## </NOTE>
@@ -925,7 +930,7 @@ int main () {
   exit(res);
 }
 EOF]
-if ${CC} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
+if ${CC} ${CPPFLAGS} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
   ## <NOTE>
   ## This should really use MAIN_LD, and hence come after this is
   ## determined (and necessary additions to MAIN_LDFLAGS were made).
@@ -933,7 +938,7 @@ if ${CC} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
   ## Also, to be defensive there should be a similar test with SHLIB_LD
   ## and SHLIB_LDFLAGS (and note that on HP-UX with native cc we have to
   ## use ld for SHLIB_LD) ...
-  if ${CC} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
+  if ${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
        conftest.${ac_objext} conftestf.${ac_objext} ${FLIBS} \
        ${LIBM} 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD;
   ## </NOTE>
@@ -1012,7 +1017,7 @@ int main () {
     else exit(1);
 }
 EOF]
-if ${CC} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
+if ${CC} ${CPPFLAGS} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
   ## <NOTE>
   ## This should really use MAIN_LD, and hence come after this is
   ## determined (and necessary additions to MAIN_LDFLAGS were made).
@@ -1020,7 +1025,7 @@ if ${CC} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
   ## Also, to be defensive there should be a similar test with SHLIB_LD
   ## and SHLIB_LDFLAGS (and note that on HP-UX with native cc we have to
   ## use ld for SHLIB_LD) ...
-  if ${CC} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
+  if ${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
        conftest.${ac_objext} conftestf.${ac_objext} ${FLIBS} \
        ${LIBM} 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD;
   ## </NOTE>
@@ -1045,6 +1050,70 @@ else
 fi
 AC_SUBST(HAVE_FORTRAN_DOUBLE_COMPLEX)
 ])# R_PROG_FC_CC_COMPAT_COMPLEX
+
+## R_PROG_FC_CHAR_LEN_T
+## --------------------
+## Check whether the Fortran CHARACTER lengths are passed as size_t
+## NB: they may not actually be size_t, but we don't care about
+## signedness and on most 64-bit platforms a 32-bit type will be
+## passed in a 64-bit register or stack slot.
+##
+## (It is docuemnted that for gfortran < 8, int is used.)
+AC_DEFUN([R_PROG_FC_CHAR_LEN_T],
+[AC_CACHE_VAL([r_cv_prog_fc_char_len_t],
+[cat > conftestf.f <<EOF
+      subroutine testit()
+      external xerbla
+      call xerbla('abcde', -10)
+      end
+EOF
+${FC} ${FFLAGS} -c conftestf.f 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD
+[cat > conftest.c <<EOF
+/* A C function calling a Fortran subroutine which calls xerbla
+   written in C, emulating how R calls BLAS/LAPACK routines */
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include "confdefs.h"
+#ifdef HAVE_F77_UNDERSCORE
+# define F77_SYMBOL(x)   x ## _
+#else
+# define F77_SYMBOL(x)   x
+#endif
+
+extern void F77_SYMBOL(testit)();
+
+void F77_SYMBOL(xerbla)(const char *srname, int *info, 
+			const size_t srname_len)
+{
+    printf ("char len %lu\n",  srname_len);
+    if (srname_len != 5) exit(-1);
+    if (strncmp(srname, "abcde", 5)) exit(-2);
+    if (*info != -10) exit(-3);
+}
+
+int main()
+{
+    F77_SYMBOL(testit)();
+    return 0;
+}
+EOF]
+if ${CC} ${CPPFLAGS} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
+  if ${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
+       conftest.${ac_objext} conftestf.${ac_objext} ${FLIBS} \
+       1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD;
+  then
+    ## redirect error messages to config.log
+    output=`./conftest${ac_exeext} 2>&AS_MESSAGE_LOG_FD`
+    if test ${?} = 0; then
+      r_cv_prog_fc_char_len_t=size_t
+    fi
+  fi
+fi
+])
+rm -Rf conftest conftest.* conftestf.* core
+])# R_PROG_FC_CHAR_LEN_T
+
 
 ## Unused but perhaps useful
 ## R_PROG_FC_FLAG(FLAG, [ACTION-IF-TRUE])
@@ -1082,12 +1151,17 @@ AC_DEFUN([R_PROG_OBJC_M],
 AC_CACHE_VAL([r_cv_prog_objc_m],
 [echo "#include <math.h>" > conftest.m
 for prog in "${OBJC} -MM" "${OBJC} -M" "${CPP} -M" "cpp -M"; do
-  if ${prog} conftest.m 2>/dev/null | \
+  if ${prog} ${CPPFLAGS} conftest.m 2>/dev/null | \
       grep 'conftest.o: conftest.m' >/dev/null; then
     r_cv_prog_objc_m="${prog}"
     break
   fi
 done])
+if test "${r_cv_prog_objc_m}" = "${OBJC} -MM"; then
+  r_cv_prog_objc_m="\$(OBJC) -MM"
+elif  test "${r_cv_prog_objc_m}" = "${OBJC} -M"; then
+  r_cv_prog_objc_m="\$(OBJC) -M"
+fi
 if test -z "${r_cv_prog_objc_m}"; then
   AC_MSG_RESULT([no])
 else
@@ -1621,15 +1695,13 @@ AC_DEFUN([R_X11_Xmu],
 fi])# R_X11_XMu
 
 
-# R_CHECK_FRAMEWORK(function, framework,
-#                   [action-if-found], [action-if-not-found],
-#                   [other-libs])
-# generic check for a framework, a function should be supplied to
-# make sure the proper framework is found.
-# default action is to set have_..._fw to yes/no and to define
-# HAVE_..._FW if present
-# NB: the does NOT cache have_..._fw, so use with care
-
+## R_CHECK_FRAMEWORK(function, framework,
+##                   [action-if-found], [action-if-not-found],
+##                   [other-libs])
+## generic check for a framework, a function should be supplied to
+## make sure the proper framework is found.
+## default action is to set have_..._fw to yes/no and to define
+## HAVE_..._FW if present
 AC_DEFUN([R_CHECK_FRAMEWORK],
 [ AC_CACHE_CHECK([for $1 in $2 framework], [r_cv_check_fw_$2],
   r_cv_check_fw_save_LIBS=$LIBS
@@ -1638,11 +1710,12 @@ AC_DEFUN([R_CHECK_FRAMEWORK],
   AC_LINK_IFELSE([AC_LANG_CALL([],[$1])],
                  [r_cv_check_fw_$2="-framework $2"],[])
   LIBS=$r_cv_check_fw_save_LIBS
+  )
+  dnl define HAVE_..._FW even if cached
   AS_IF([test "$r_cv_check_fw_$2" != no],
         [m4_default([$3], [AC_DEFINE_UNQUOTED(AS_TR_CPP(HAVE_$2_FW), 1, [Defined if framework $2 is present])
-	AS_TR_SH(have_$2_fw)=yes])],
-	[m4_default([$4], AS_TR_SH(have_$2_fw)=no)])
-)
+  	AS_TR_SH(have_$2_fw)=yes])],
+  	[m4_default([$4], AS_TR_SH(have_$2_fw)=no)])
 ])# R_CHECK_FRAMEWORK
 
 ## R_AQUA
@@ -2614,7 +2687,7 @@ int main () {
   exit(iflag);
 }
 EOF]
-if ${CC} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
+if ${CC} ${CPPFLAGS} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
   ## <NOTE>
   ## This should really use MAIN_LD, and hence come after this is
   ## determined (and necessary additions to MAIN_LDFLAGS were made).
@@ -2622,7 +2695,7 @@ if ${CC} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
   ## Also, to be defensive there should be a similar test with SHLIB_LD
   ## and SHLIB_LDFLAGS (and note that on HP-UX with native cc we have to
   ## use ld for SHLIB_LD) ...
-  if ${CC} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
+  if ${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
        conftest.${ac_objext} conftestf.${ac_objext} ${FLIBS} \
        ${LIBM} ${BLAS_LIBS} 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD;
   ## </NOTE>
@@ -2751,7 +2824,7 @@ int main ()
   exit(0);
 }
 EOF]
-if ${CC} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
+if ${CC} ${CPPFLAGS} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
   ## <NOTE>
   ## This should really use MAIN_LD, and hence come after this is
   ## determined (and necessary additions to MAIN_LDFLAGS were made).
@@ -2759,7 +2832,7 @@ if ${CC} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
   ## Also, to be defensive there should be a similar test with SHLIB_LD
   ## and SHLIB_LDFLAGS (and note that on HP-UX with native cc we have to
   ## use ld for SHLIB_LD) ...
-  if ${CC} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
+  if ${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
        conftest.${ac_objext} ${FLIBS} \
        ${LIBM} ${BLAS_LIBS} 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD;
   ## </NOTE>
@@ -4300,6 +4373,74 @@ else
     AC_MSG_RESULT([no])
 fi
 ])# R_PTHREAD
+
+
+## R_CSTACK_DIRECTION
+## -----------------
+## Moved to configure as LTO may defeat runtime strategy.
+AC_DEFUN([R_CSTACK_DIRECTION],
+[AC_MSG_CHECKING([for C stack direction])
+AC_CACHE_VAL([r_cv_cstack_direction],
+[cat > conftest1.c <<EOF
+#include <stdint.h>
+uintptr_t dummy_ii(void)
+{
+    int ii;
+
+    /* This is intended to return a local address. We could just return
+       (uintptr_t) &ii, but doing it indirectly through ii_addr avoids
+       a compiler warning (-Wno-return-local-addr would do as well).
+    */
+    volatile uintptr_t ii_addr = (uintptr_t) &ii;
+    return ii_addr;
+}
+EOF
+cat > conftest.c <<EOF
+#include <stdio.h>
+#include <stdint.h>
+extern uintptr_t dummy_ii(void);
+
+typedef uintptr_t (*dptr_type)(void);
+volatile dptr_type dummy_ii_ptr;
+
+int main(int ac, char **av)
+{
+    int i;
+    dummy_ii_ptr = dummy_ii;
+        
+    /* call dummy_ii via a volatile function pointer to prevent inlinining in
+       case the tests are accidentally built with LTO */
+    uintptr_t ii = dummy_ii_ptr();
+    /* 1 is downwards */
+    return ((uintptr_t)&i > ii) ? 1 : -1;
+}
+EOF
+dnl Allow this to be overruled in config.site
+if test "x${R_C_STACK_DIRECTION}" != "x"; then
+ r_cv_cstack_direction=${R_C_STACK_DIRECTION}
+else
+if ${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
+      conftest.c conftest1.c \
+      1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD;
+  then
+    ## redirect error messages to config.log
+    output=`./conftest${ac_exeext} 2>&AS_MESSAGE_LOG_FD`
+    if test ${?} = 1; then
+      r_cv_cstack_direction=down
+    elif test ${?} = 1; then
+      r_cv_cstack_direction=up
+    fi
+fi
+fi
+])
+rm -Rf conftest conftest?.* core
+if test -n "${r_cv_cstack_direction}"; then
+  AC_MSG_RESULT(${r_cv_cstack_direction})
+else
+  AC_MSG_RESULT([don't know (assume down)])
+  r_cv_cstack_direction=down
+fi
+])# R_CSTACK_DIRECTION
 
 ### Local variables: ***
 ### mode: outline-minor ***

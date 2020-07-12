@@ -2,6 +2,7 @@
 
 pdf("reg-tests-1d.pdf", encoding = "ISOLatin1.enc")
 .pt <- proc.time()
+tryCid <- function(expr) tryCatch(expr, error = identity)
 
 ## body() / formals() notably the replacement versions
 x <- NULL; tools::assertWarning(   body(x) <-    body(mean))	# to be error
@@ -2762,6 +2763,7 @@ spois     <- summary( poisfit)
 sqpois    <- summary(qpoisfit)
 sqpois.d1 <- summary(qpoisfit, dispersion=1)
 SE1 <- sqrt(diag(V <- vcov(poisfit)))
+(noLdbl <- (.Machine$sizeof.longdouble <= 8)) ## TRUE when --disable-long-double
 stopifnot(exprs = { ## Same variances and same as V
     all.equal(vcov(spois), V)
     all.equal(vcov(qpoisfit, dispersion=1), V) ## << was wrong
@@ -2772,6 +2774,225 @@ stopifnot(exprs = { ## Same variances and same as V
               sqrt(sqpois$dispersion) * SE1)
 })
 ## vcov(. , dispersion=*) was wrong on R versions 3.5.0 -- 3.6.0
+
+
+## runmed(<x_with_NA>, "Turlach") still seg.faults in 3.6.0 {reported by Hilmar Berger}
+dd1 <- c(rep(NaN,82), rep(-1, 144), rep(1, 74))
+xT1 <-  runmed(dd1, 21, algorithm="T", print.level=1)# gave seg.fault
+xS1 <-  runmed(dd1, 21, algorithm="S", print.level=1)
+if(FALSE)
+cbind(dd1, xT1, xS1)
+nN <- !is.na(xT1)
+stopifnot(xT1[nN] == c(rep(-1, 154), rep(1, 74)))
+dd2 <- c(rep(-1, 144), rep(1, 74), rep(NaN,82))
+xS2 <- runmed(dd2, 21, algorithm = "Stuetzle", print.level=1)
+xT2 <- runmed(dd2, 21, algorithm = "Turlach" , print.level=1)
+if(FALSE)
+cbind(dd2, xS2, xT2) # here, "St" and "Tu" are "the same"
+nN <- !is.na(xT2)
+stopifnot(exprs = { ## both NA|NaN and non-NA are the same:
+    identical(xT2[nN], xS2[nN])
+    identical(is.na(xS2) , !nN)
+    { i <- 1:(144+74); xT2[i] == dd2[i] }
+})
+## close to *minimal* repr.example:
+x5 <- c(NA,NA, 1:3/4)
+rS <- runmed(x5, k= 3, algorithm = "St", print.level=3)
+rT <- runmed(x5, k= 3, algorithm = "Tu", print.level=3)
+stopifnot(exprs = {
+    identical(rS, rT)
+    rT == c(1,1,1:3)/4
+})
+## a bit larger:
+x14 <- c(NA,NA,NA,NA, 1:10/4)
+rS14 <- runmed(x14, k = 7, algorithm="S", print.level=2)
+rT14 <- runmed(x14, k = 7, algorithm="T", print.level=2)
+## cbind(x14, rT14, rS14)
+(naActs <- eval(formals(runmed)$na.action)); names(naActs) <- naActs
+allT14 <- lapply(naActs, function(naA)
+    tryCatch(runmed(x14, k = 7, algorithm="T", na.action=naA, print.level=2),
+             error=identity, warning=identity))
+rTo14 <- runmed(na.omit(x14), k=7, algorithm="T")
+stopifnot(exprs = {
+    identical(  rT14, rS14)
+    identical(c(rT14), c(NaN,NaN, .5, .5, .5, .75, x14[-(1:6)]))
+    identical(  rT14, allT14$"+Big_alternate")
+    (allT14$"-Big_alternate" >= rT14)[-(1:2)] # slightly surprisingly
+    identical(allT14$na.omit[-(1:4)], c(rTo14))
+    inherits(Tfail <- allT14$fail, "error")
+    grepl("^runmed\\(.*: .*NA.*x\\[1\\]", Tfail$message)
+})
+
+
+
+
+
+
+
+## misleading error message when coercing language object to atomic, etc:
+e <- tryCid(as.double(quote(foo(1))))
+stopifnot(inherits(e, "error"), grepl("'language'", e$message, fixed=TRUE))
+## had 'pairlist' in R <= 3.6.1
+
+
+## print(ls.str(<environment with error object with "missing" in message text>))
+msg <- "arguments in the signature are missing"
+e1 <- new.env(hash=FALSE)
+e1$Err <- structure(list(message = msg, call = quote(foo(bar))),
+                    class = c("simpleError", "error", "condition"))
+writeLines(prE <- capture.output(ls.str(e1)))
+## was "Err: <missing>" in R <= 3.6.1
+stopifnot(exprs = { length(prE) >= 3
+    grepl("List of 2", prE[[1]], fixed=TRUE)
+    grepl(msg,         prE[[2]], fixed=TRUE)
+    grepl("call.* foo\\(bar\\)", prE[[3]])
+})
+
+
+.M <- .Machine
+str(.M[grep("^sizeof", names(.M))]) ## also differentiate long-double..
+b64 <- .M$sizeof.pointer == 8
+arch <- Sys.info()[["machine"]]
+onWindows <- .Platform$OS.type == "windows"
+if(!(onWindows && arch == "x86")) {
+## PR#17577 - dgamma(x, shape)  for shape < 1 (=> +Inf at x=0) and very small x
+stopifnot(exprs = {
+    all.equal(dgamma(2^-1027, shape = .99 , log=TRUE), 7.1127667376, tol=1e-10)
+    all.equal(dgamma(2^-1031, shape = 1e-2, log=TRUE), 702.8889158,  tol=1e-10)
+    all.equal(dgamma(2^-1048, shape = 1e-7, log=TRUE), 710.30007699, tol=1e-10)
+    all.equal(dgamma(2^-1048, shape = 1e-7, scale = 1e-315, log=TRUE),
+              709.96858768, tol=1e-10)
+})
+## all gave Inf in R <= 3.6.1
+} else cat("PR#17577 bug fix not checked, as it may not work on this platform\n")
+
+
+
+
+
+
+
+
+## x %% +- Inf -- PR#17611  //  also  %/%  for "large" args
+for(x in list(0:3, c(0, 0.5+0:2))) {
+    xp <- x[x != 0] # x "positive"
+    for(L in c(2^(2:9), 1000^(1:7), Inf))
+        stopifnot(exprs = {
+            ## ----------------- %% -------------
+            ## same signs :
+               x  %%  L ==  x
+             (-x) %% -L == -x
+            ## opposite signs, x > 0 :
+            (-xp) %%  L == L-xp
+              xp  %% -L == xp-L
+            ## ----------------- %/% ------------
+              x  %/%  L == pmin(0, sign(x))
+            (-x) %/% -L == x  %/%  L
+            (-x) %/%  L == pmin(0, sign(-x))
+              x  %/% -L == (-x) %/% L
+              ## L . x :
+              L %/%  xp == (-L) %/% -xp
+              L %/% -xp == (-L) %/%  xp
+        })
+    stopifnot(exprs = {
+        Inf %/%   x == sign( x+(x==0))*Inf
+        Inf %/% -xp == -Inf
+    })
+}
+## these all returned  NaN  when L == Inf  in R <= 3.6.1
+##
+## Further - very basics and some large (working "since ever"):
+stopifnot(exprs = {
+    -6:17 %%  3L == 0:2
+    -5:15 %% -3L == -2:0
+    is.finite(x <- 2^(1:1022))
+    x %% (x.2 <- x/2) == 0
+    x %/% 2 == x.2
+    x[1:52] %% 3 == 2:1
+   -x[1:52] %% 3 == 1:2
+}) # larger x suffer from cancellation (well, warning too early now):
+tools::assertWarning(x[60:68] %% 3)
+
+## grepl(<NA>, ...)
+N <- grepl(NA_character_, "something")
+stopifnot(is.na(N), is.logical(N))
+## gave integer instead of logical in R <= 3.6.1
+
+
+## options(warn=1e11) leading to infinite loop -> "C Stack ..." error
+tools::assertError(options(warn = 1+.Machine$integer.max))
+## "worked" and gave problems later in R <= 3.6.1
+
+
+## PR#17628
+df <- data.frame(x = 1, y = 2); class(df$y) <- "object_size"
+df ## --> print.data.frame(*, digits=NULL)' -- error in R <= 3.6.1
+format(object.size(pi), digits=NULL)
+## error in R <= 3.6.1
+
+## PR#15522
+pos <- barplot(1:2, space=c(9, 1),
+    ylim=c(0, 21), xlim=c(0, 11), horiz=TRUE,
+    plot=FALSE)
+stopifnot(all.equal(pos, cbind(c(9.5, 11.5))))
+## bar spacing was wrong in R <= 3.6.1
+
+
+
+
+
+## PR#13624 : get_all_vars(*, <matrix>):
+ok_get_all_vars <- function(form,d) { ## get_all_vars() :<=> model_frame() apart from "terms"
+    mf <- if(missing(d)) model.frame(form) else model.frame(form,d)
+    attr(mf, "terms") <- NULL
+    identical(mf,
+              if(missing(d)) get_all_vars(form) else get_all_vars(form,d))
+}
+M <- matrix(1:15, 5,3)
+n <- 26:30
+T <- TRUE
+m <- 2:7
+stopifnot(exprs = {
+    ok_get_all_vars(~ M)
+    ok_get_all_vars(~M+n)
+    ok_get_all_vars(~ X ,               list(X=  M))
+    ok_get_all_vars(~z+X,               list(X=  M,  z=n))
+    ok_get_all_vars(~z+X,               list(X=I(M), z=n))
+    ok_get_all_vars(~z+X,    data.frame(     X=I(M), z=n))
+    ok_get_all_vars(~z+X,    data.frame(list(X=I(M), z=n)))
+    ok_get_all_vars(~z+X, as.data.frame(list(X=I(M), z=n)))
+    lengths(d <- get_all_vars(~ n + T, "2n" = 2*n)) == 5L
+    identical(d[,"T"], rep.int(TRUE, 5))
+    ## recycling works when commensurate:
+    lengths(d6 <- get_all_vars(~ m + T, one=1, "2 s"=1:2, "3's"=3:1, `f 3` = gl(3,2))) == 6
+    identical(colnames(d6), c("m", "T", "one", "2 s", "3's", "f 3"))
+})
+## all but the first 4 cases worked already in R <= 3.6.1
+
+
+## power.t.test() failure for very small (unreasonable) n;  R-devel m.list Oct.4, 2019
+(ptt0 <- power.t.test(delta=10,  sd=1,       power=0.9 , sig.level=0.05, tol = 1e-8))
+(ptt1 <- power.t.test(delta=0.6, sd=0.00001, power=0.9 , sig.level=0.05))
+(ptt2 <- power.t.test(delta=2,   sd = 1e-8,  power=0.99, sig.level=0.01))
+stopifnot(exprs = {
+    all.equal(0.9, power.t.test(delta=10, sd=1, n = ptt0 $ n)$power)
+    all.equal(ptt1$n, 1.00428,   tol = 1e-5)
+    all.equal(ptt2$n, 1.1215733, tol = 1e-5)
+})
+## when uniroot() was trying n < 1, the code failed previously (in 2nd and 3rd case)
+
+
+## get_all_vars() when some variables are data frames - PR#14905
+x <- (1:10)/10
+Y <- data.frame(A = 2^x, B = pi*x)
+gav <- get_all_vars(Y[,1] ~ x)
+stopifnot(exprs = {
+    is.data.frame(gav)
+    ncol(gav) == 3
+    identical(gav, cbind(Y, x))
+    identical(get_all_vars(x ~ Y), cbind(x, Y))
+})
+## the last were wrong in R <= 3.6.1
 
 
 

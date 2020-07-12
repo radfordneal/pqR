@@ -173,7 +173,7 @@
 ## CXXPICFLAGS=
 
 ## Option to specify the default C++ standard, 
-## e.g. -std=c++98 or -std=gnu++98
+## e.g. -std=c++11 or -std=gnu++11
 ## CXXSTD=
 
 ## The command to be used to load shared objects which contain object
@@ -187,6 +187,10 @@
 ## automatically detected by configure, and anything set here will be in
 ## addition unless SHLIB_CXXLD is given.
 ## SHLIB_CXXLDFLAGS=
+
+## Not used by R but configure can fail to find it, so set to
+## "$CXX -E" if it does.
+## CXXCPP=
 
 ## Tcl/Tk settings.
 ## Use TCLTK_LIBS for all '-L' and '-l' options needed for linking
@@ -356,3 +360,14 @@
 ## C_VISIBILITY=
 ## CXX_VISIBILITY=
 ## F_VISIBILITY=
+
+## Fortran-C compatibility
+## The C type used by Fortran to pass 'hidden' character lengths (if any)
+## Often size_t (unsigned int or long, or long long in Win64)
+## Allow user to override the configure checks if they know what they
+## are doing (the value is unchecked).
+## FC_LEN_T=
+
+## C Stack Direction
+## In case optimization defeats the configure test: 'down' (the usual) or 'up'
+## R_C_STACK_DIRECTION=

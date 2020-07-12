@@ -662,6 +662,8 @@ AC_PROG_CXX
 ## check this actually compiles
 R_PROG_CXX
 
+## AC_PROG_CXXCPP looks for limits.h and does not include CPPFLAGS
+## CXXCPP is used in other places (not in R), so leave alone CXXCPP itself
 AC_PROG_CXXCPP
 if test "${CXXCPP}" = "${CXX} -E"; then
   CXXCPP0="\$(CXX) -E"
@@ -892,6 +894,19 @@ AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(double)
 AC_CHECK_SIZEOF(size_t)
+
+R_CSTACK_DIRECTION
+
+if test "${r_cv_cstack_direction}" = "up"; then
+  cstack_dir=-1
+else
+  cstack_dir=1
+fi
+AC_DEFINE_UNQUOTED([C_STACK_DIRECTION], ${cstack_dir}, 
+                    [C stack direction: 1 (down) or -1 (up)])
+
+
+
 AC_ARG_ENABLE([long-double],
 [AS_HELP_STRING([--enable-long-double],[use long double type @<:@yes@:>@])],
 [if test "${enableval}" = no; then
@@ -1064,6 +1079,22 @@ if test "x${r_cv_have_gfortran7}" = xyes; then
 else
   AC_MSG_RESULT([no])
 fi
+
+### type for Fortran 'hidden' character lengths, if any
+AC_MSG_CHECKING([for type of 'hidden' Fortran character lengths])
+if test "x${FC_LEN_T}" != "x"; then
+  fc_len_t=${FC_LEN_T}
+else
+  R_PROG_FC_CHAR_LEN_T
+  fc_len_t=${r_cv_prog_fc_char_len_t}
+fi
+AC_MSG_RESULT([${fc_len_t}])
+
+if test "x${fc_len_t}" != "xunknown"; then
+   AC_DEFINE_UNQUOTED([FC_LEN_T], ${fc_len_t}, 
+                      [C type used for Fortran character lengths])
+fi
+
 
 AC_SUBST(CFLAGS)
 AC_SUBST(MAIN_CFLAGS)
@@ -1880,9 +1911,17 @@ AC_SUBST(MACOS_SIERRA)
 ## Some OSes need -lrt: Linux (for glibc versions before 2.17), Solaris,
 ## not FreeBSD. 
 ## Unsurprising, as POSIX 2008 moved it from its timers section to base.
-## timespec_get is C11.
 AC_CHECK_LIB(rt, clock_gettime)
-R_CHECK_FUNCS([clock_gettime timespec_get], [#include <time.h>])
+R_CHECK_FUNCS([clock_gettime], [#include <time.h>])
+## timespec_get is C11.
+## macOS added timespec_get in 10.15 but used 10.15's SDK for 10.14 (Darwin 18)
+case "${host_os}" in
+   darwin1[[012345678]].*)
+   ;;
+   *)
+     R_CHECK_FUNCS([timespec_get], [#include <time.h>])
+   ;;
+esac
 ## We need setenv or putenv.  It seems that everyone does have
 ## putenv, as earlier versions of R would have failed without it.
 ## It is not always declared, so we do not require a declaration.

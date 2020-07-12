@@ -1,6 +1,6 @@
 % File src/library/base/man/Arithmetic.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2018 R Core Team
+% Copyright 1995-2019 R Core Team
 % Distributed under GPL 2 or later
 
 \name{Arithmetic}
@@ -52,12 +52,16 @@ x \%/\% y
   \code{-} for subtraction, \code{*} for multiplication, \code{/} for
   division and \code{^} for exponentiation.
 
-  \code{\%\%} indicates \code{x mod y} and \code{\%/\%} indicates
-  integer division.  It is guaranteed that \code{x == (x \%\% y) + y * (
-  x \%/\% y )} (up to rounding error) unless \code{y == 0} where the
-  result of \code{\%\%} is \code{\link{NA_integer_}} or
-  \code{\link{NaN}} (depending on the \code{\link{typeof}} of the
-  arguments), and for non-\link{finite} arguments.
+  \code{\%\%} indicates \code{x mod y} (\dQuote{x modulo y}) and
+  \code{\%/\%} indicates integer division.  It is guaranteed that
+  \describe{
+    \item{\code{ x == (x \%\% y) + y * (x \%/\% y) }}{\sspace (up to rounding error)}
+  }
+  unless \code{y == 0} where the result of \code{\%\%} is
+  \code{\link{NA_integer_}} or \code{\link{NaN}} (depending on the
+  \code{\link{typeof}} of the arguments) or for some non-\link{finite}
+  arguments, e.g., when the RHS of the identity above
+  amounts to \code{Inf - Inf}.
 
   If either argument is complex the result will be complex, otherwise if
   one or both arguments are numeric, the result will be numeric.  If
@@ -107,7 +111,7 @@ x \%/\% y
 
   \code{\%\%} and \code{x \%/\% y} can be used for non-integer \code{y},
   e.g.\sspace{}\code{1 \%/\% 0.2}, but the results are subject to representation
-  error and so may be platform-dependent.  Because the IEC 60059
+  error and so may be platform-dependent.  Because the IEC 60559
   representation of \code{0.2} is a binary fraction slightly larger than
   \code{0.2}, the answer to \code{1 \%/\% 0.2} should be \code{4} but
   most platforms give \code{5}.
@@ -135,11 +139,12 @@ x \%/\% y
   \R is dependent on OS services (and they on FPUs) for floating-point
   arithmetic.  On all current \R platforms IEC 60559 (also known as IEEE
   754) arithmetic is used, but some things in those standards are
-  optional.  In particular, the support for \emph{denormal numbers}
+  optional.  In particular, the support for \emph{denormal} aka
+  \emph{subnormal} numbers
   (those outside the range given by \code{\link{.Machine}}) may differ
   between platforms and even between calculations on a single platform.
 
-  Another potential issue is signed zeroes: on IEC 60659 platforms there
+  Another potential issue is signed zeroes: on IEC 60559 platforms there
   are two zeroes with internal representations differing by sign.  Where
   possible \R treats them as the same, but for example direct output
   from C code often does not do so and may output \samp{-0.0} (and on
@@ -178,6 +183,10 @@ x \%/\% y
   \url{http://www.validlab.com/goldberg/paper.ps}.
   Extended PDF version at
   \url{http://www.validlab.com/goldberg/paper.pdf}.
+
+  For the IEC 60559 (aka IEEE 754) standard:
+  \url{https://www.iso.org/standard/57469.html} and
+  \url{https://en.wikipedia.org/wiki/IEEE_754}.
 }
 \seealso{
   \code{\link{sqrt}} for miscellaneous and \code{\link{Special}} for special
@@ -193,5 +202,6 @@ x + 1
 2 * x + 3
 x \%\% 2 #-- is periodic
 x \%/\% 5
+x \%\% Inf # now is defined by limit (gave NaN in earlier versions of R)
 }
 \keyword{arith}
