@@ -1,14 +1,14 @@
 % File src/library/base/man/paste.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2014 R Core Team
+% Copyright 1995-2020 R Core Team
 % Distributed under GPL 2 or later
 
 \name{paste}
 \title{Concatenate Strings}
 \concept{combine strings}
 \usage{
-paste (\dots, sep = " ", collapse = NULL)
-paste0(\dots, collapse = NULL)
+paste (\dots, sep = " ", collapse = NULL, recycle0 = FALSE)
+paste0(\dots,            collapse = NULL, recycle0 = FALSE)
 }
 \alias{paste}
 \alias{paste0}
@@ -18,6 +18,11 @@ paste0(\dots, collapse = NULL)
     \code{\link{NA_character_}}.}
   \item{collapse}{an optional character string to separate the results.  Not
     \code{\link{NA_character_}}.}
+  \item{recycle0}{\code{\link{logical}} indicating if zero-length
+    character arguments should lead to the zero-length
+    \code{\link{character}(0)} after the \code{sep}-phase (which turns into
+    \code{""} in the \code{collapse}-phase, i.e., when \code{collapse} is
+    not \code{NULL}).}
 }
 \description{
   Concatenate vectors after converting to character.
@@ -28,7 +33,9 @@ paste0(\dots, collapse = NULL)
   them (separating them by the string given by \code{sep}).  If the
   arguments are vectors, they are concatenated term-by-term to give a
   character vector result.  Vector arguments are recycled as needed,
-  with zero-length arguments being recycled to \code{""}.
+  with zero-length arguments being recycled to \code{""} only if
+  \code{recycle0} is not true \emph{or} \code{collapse} is not
+  \code{NULL}.
 
   Note that \code{paste()} coerces \code{\link{NA_character_}}, the
   character missing value, to \code{"NA"} which may seem
@@ -44,8 +51,8 @@ paste0(\dots, collapse = NULL)
 }
 \value{
   A character vector of the concatenated values.  This will be of length
-  zero if all the objects are, unless \code{collapse} is non-NULL in
-  which case it is a single empty string.
+  zero if all the objects are, unless \code{collapse} is non-NULL, in which
+  case it is \code{""} (a single empty string).
 
   If any input into an element of the result is in UTF-8 (and none are
   declared with encoding \code{"bytes"}, see \code{\link{Encoding}}),
@@ -112,5 +119,19 @@ paste(month.abb, nth, sep = ": ", collapse = "; ")
     "Stopping distance of cars (ft) vs. speed (mph) from Ezekiel (1930)",
     width = 30), collapse = "\n"))
 plot(dist ~ speed, cars, main = title)
+
+## 'recycle0 = TRUE' allows more vectorized behaviour, i.e. zero-length recycling :
+valid <- FALSE
+val <- pi
+paste("The value is", val[valid], "-- not so good!")
+paste("The value is", val[valid], "-- good: empty!", recycle0=TRUE) # -> character(0)
+## When  'collapse = <string>',  the result is a length-1 string :
+paste("foo", {}, "bar", collapse="|")                  # |-->  "foo  bar"
+paste("foo", {}, "bar", collapse="|", recycle0 = TRUE) # |-->  ""
+## all empty args
+paste(	  collapse="|")                  # |-->  ""  as do all these:
+paste(	  collapse="|", recycle0 = TRUE)
+paste({}, collapse="|")
+paste({}, collapse="|", recycle0 = TRUE)
 }
 \keyword{character}

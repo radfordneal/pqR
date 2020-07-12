@@ -5,7 +5,63 @@
 \title{R News}
 \encoding{UTF-8}
 
-\section{\Rlogo CHANGES IN 4.0.0}{
+\section{\Rlogo CHANGES IN R 4.0.1}{
+
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item \code{paste()} and \code{paste0()} gain a new optional
+      argument \code{recycle0}.  When set to true, zero-length
+      arguments are recycled leading to \code{character(0)} after the
+      \code{sep}-concatenation, i.e., to the empty string \code{""} if
+      \code{collapse} is a string and to the zero-length value
+      \code{character(0)} when \code{collapse = NULL}.
+
+      A package whose code uses this should depend on \samp{R (>= 4.0.1)}.
+
+      \item The \code{summary(<warnings>)} method now maps the counts
+      correctly to the warning messages.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{aov(frml, ...)} now also works where the \code{formula}
+      deparses to more than 500 characters, thanks to a report and patch
+      proposal by Jan Hauffa.
+
+      \item Fix a dozen places (code, examples) as \code{Sys.setlocale()}
+      returns the new rather than the previous setting.
+
+      \item Fix for adding two complex \pkg{grid} units via \code{sum()}.
+      Thanks to Gu Zuguang for the report and Thomas Lin Pedersen for
+      the patch.
+
+      \item Fix \code{parallel::mclapply(..., mc.preschedule=FALSE)}
+      to handle raw vector results correctly. \PR{17779}
+
+      \item Computing the \code{base} value, i.e., 2, \dQuote{everywhere},
+      now uses \code{FLT_RADIX}, as the original \file{machar} code looped
+      indefinitely on the ppc64 architecture for the \code{longdouble} case.
+
+      \item In \R 4.0.0, \code{sort.list(x)} when \code{is.object(x)} was
+      true, e.g., for \code{x <- I(letters)}, was accidentally using
+      \code{method = "radix"}.  Consequently, e.g., \code{merge(<data.frame>)}
+      was much slower than previously; reported in \PR{17794}.
+
+      \item \code{plot(y ~ x, ylab = quote(y[i]))} now works, as e.g., for
+      \code{xlab}; related to \PR{10525}.
+
+      \item \code{parallel::detect.cores(all.tests = TRUE)} tries a
+      matching OS name before the other tests (which were intended only
+      for unknown OSes).
+
+      \item Parse data for raw strings is now recorded correctly. Reported
+      by Gabor Csardi.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 4.0.0}{
 
   \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
     \itemize{
@@ -197,7 +253,8 @@
 
       \item \code{sort.list(x)} now works for non-atomic objects
       \code{x} and \code{method = "auto"} (the default) or
-      \code{"radix"} in cases \code{order(x)} works.
+      \code{"radix"} in cases \code{order(x)} works, typically via a
+      \code{xtfrm()} method.
 
       \item Where they are available, \code{writeBin()} allows
       long vectors.% (those of length \eqn{\ge 2^{31}}{>= 2^31}).
@@ -742,7 +799,7 @@
       \item \code{scan()} issues with UTF-8 data when running in a DBCS
       locale have been resolved (\PR{16520}, \PR{16584}).
 
-      \item \command{RTerm} now accepts enhanced/arrow keys also with
+      \item \command{Rterm} now accepts enhanced/arrow keys also with
       ConPTY.
 
       \item \R can can now be started \emph{via} the launcher icon in a

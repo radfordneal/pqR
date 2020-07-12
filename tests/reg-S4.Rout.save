@@ -1,5 +1,5 @@
 
-R version 4.0.0 RC (2020-04-16 r78240) -- "Arbor Day"
+R version 4.0.0 Patched (2020-05-18 r78485) -- "Arbor Day"
 Copyright (C) 2020 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -1299,6 +1299,15 @@ Also defined by 'package2'
 value <- new("A")
 > ## was ... <-  new(structure("A", package = ".GlobalEnv"))
 > ## for a few days in R-devel (Nov.2017)
+> 
+> 
+> ## Error messages occurring during method selection are forwarded
+> f <- function(x) x
+> setGeneric("f")
+[1] "f"
+> setMethod("f", signature("NULL"), function(x) NULL)
+> err <- tryCatch(f(stop("this is mentioned")), error = identity)
+> stopifnot(identical(err$message, "error in evaluating the argument 'x' in selecting a method for function 'f': this is mentioned"))
 > 
 > 
 > ## canCoerce(obj, .)  when length(class(obj)) > 1 :

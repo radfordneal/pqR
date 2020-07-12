@@ -1,5 +1,5 @@
 
-R version 4.0.0 RC (2020-04-16 r78240) -- "Arbor Day"
+R version 4.0.0 Patched (2020-05-18 r78485) -- "Arbor Day"
 Copyright (C) 2020 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -992,13 +992,13 @@ Warning messages:
 > 
 > summary(warnings())
 Summary of (a total of 10) warning messages:
-6x : In dput(x, control = control) : deparse may be incomplete
-4x : In deparse(expr, backtick = backtick, ...) : deparse may be incomplete
+4x : In dput(x, control = control) : deparse may be incomplete
+6x : In deparse(expr, backtick = backtick, ...) : deparse may be incomplete
 > ## "dput    may be incomplete"
 > ## "deparse may be incomplete"
 > 
 > 
 > ## at the very end
 > cat('Time elapsed: ', proc.time() - .proctime00,'\n')
-Time elapsed:  0.351 0.011 0.366 0 0 
+Time elapsed:  0.349 0.016 0.37 0 0 
 > 

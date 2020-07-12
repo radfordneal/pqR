@@ -2224,12 +2224,14 @@ add_dummies <- function(dir, Log)
             ## Grr, get() in undoc can change the search path
             ## Current example is TeachingDemos
             out <- out[!startsWith(out, "Loading required package:")]
-            err <- startsWith(out, "Error")
-            if (any(err)) {
-                errorLog(Log)
-                printLog0(Log, paste(c(out, ""), collapse = "\n"))
-                maybe_exit(1L)
-            } else if (length(out)) {
+            ## We do not need to report errors here as check ERRORs.
+            ## err <- startsWith(out, "Error")
+            ## if (any(err)) {
+            ##     errorLog(Log)
+            ##     printLog0(Log, paste(c(out, ""), collapse = "\n"))
+            ##     maybe_exit(1L)
+            ## } else
+            if (length(out)) {
                 warningLog(Log)
                 printLog0(Log, paste(c(out, ""), collapse = "\n"))
                 wrapLog("All user-level objects",
@@ -2711,7 +2713,12 @@ add_dummies <- function(dir, Log)
                       "Package has no Sweave vignette sources and no VignetteBuilder field.\n")
         }
 
+        libpaths <- .libPaths()
+        if(do_install)
+            .libPaths(c(libdir, libpaths))
         vigns <- pkgVignettes(dir = pkgdir, check = TRUE)
+        if(do_install)
+            .libPaths(libpaths)
         if(length(msg <- vigns[["msg"]])) {
             if(!any) noteLog(Log)
             any <- TRUE
@@ -3377,7 +3384,9 @@ add_dummies <- function(dir, Log)
                              tokens, useBytes = TRUE, value = TRUE)
                 machs <- grep("^[-]m", tokens,
                               value = TRUE, perl = TRUE, useBytes = TRUE)
-                ## The only -m flag which is reasonably portable is -mtune
+                ## The only -m flag which is reasonably portable is
+                ## -mtune and even that is debatable as it currently
+                ## does nothing and may be removed on clang.
                 machs <- setdiff(machs,
                                  c(except, c("-m", # not a flag
                                              "-msse2", "-mfpmath=sse", # SAFE_FFLAGS
@@ -3387,7 +3396,9 @@ add_dummies <- function(dir, Log)
                                              "-multiply_defined" # macOS
                                              )))
                 machs <- machs[!startsWith(machs, "-mtune=")]
-                machs <- machs[!startsWith(machs, "-mmacosx-")]  # macOS target flags
+                ## This should only appear on macOS!
+                if(grepl('darwin', R.version$platform))
+                    machs <- machs[!startsWith(machs, "-mmacosx-")]  # macOS target flags
                 warns <- c(warns, diags, opts, machs)
                 if(any(startsWith(warns, "-Wno-")) || length(diags)) {
                     warningLog(Log)
@@ -3689,6 +3700,7 @@ add_dummies <- function(dir, Log)
                               stdout = exout, stderr = exout,
                               stdin = exfile, arch = arch, timeout = tlim)
             t2 <- proc.time()
+            print_time(t1, t2, Log)
             if (status) {
                 errorLog(Log, "Running examples in ",
                          sQuote(basename(exfile)),
@@ -3719,7 +3731,6 @@ add_dummies <- function(dir, Log)
                 return(FALSE)
             }
 
-            print_time(t1, t2, Log)
             ## Look at the output from running the examples.  For
             ## the time being, report warnings about use of
             ## deprecated , as the next release will make
@@ -4014,8 +4025,8 @@ add_dummies <- function(dir, Log)
                               stdout = "", stderr = "", arch = arch,
                               timeout = tlim)
             t2 <- proc.time()
+            print_time(t1, t2, Log)
             if (status) {
-                print_time(t1, t2, Log)
                 errorLog(Log)
                 if (Log$con > 0L && file.exists(logf)) {
                     ## write individual results only to 00check.log
@@ -4065,7 +4076,6 @@ add_dummies <- function(dir, Log)
                 }
                 return(FALSE)
             } else {
-                print_time(t1, t2, Log)
                 resultLog(Log, "OK")
                 if (Log$con > 0L && file.exists(logf)) {
                     ## write results only to 00check.log
@@ -4411,14 +4421,13 @@ add_dummies <- function(dir, Log)
                     }
                 }
                 t2 <- proc.time()
+                print_time(t1, t2, Log)
                 if(!ran) {
-                    print_time(t1, t2, Log)
                     resultLog(Log, "NONE")
                     ## printLog0(Log, out0)
                     if (!is.null(Log) && Log$con > 0L)
                         cat(out0, sep ="", file = Log$con)
                 } else {
-                    print_time(t1, t2, Log)
                     if(R_check_suppress_RandR_message)
                         res <- filtergrep('^Xlib: *extension "RANDR" missing on display',
                                           res, useBytes = TRUE)
@@ -4967,7 +4976,8 @@ add_dummies <- function(dir, Log)
                              ## new in gcc 8
                              ": warning: .* \\[-Wcatch-value=\\]",
                              ": warning: .* \\[-Wlto-type-mismatch\\]",
-                             ": warning: .* \\[-Wunused-value\\]",
+                             ## removed 2020-05, nowadays clang only
+                             ## ": warning: .* \\[-Wunused-value\\]",
                              ## warning in g++, fatal in clang++.
                              ": warning: .* \\[-Wnarrowing\\]",
                              ## -pedantic warning in gcc, fatal in clang and ODS
@@ -4984,7 +4994,14 @@ add_dummies <- function(dir, Log)
                              ": warning: C[+][+] designated initializers",
                              ": warning: designated initializers are a C99 feature",
                              ## Fatal, not warning, for clang and Solaris ODS
-                             ": warning: .* with a value, in function returning void"
+                             ": warning: .* with a value, in function returning void",
+                             ## gcc 10 some -fanalyzer warnings
+                             ": warning: .*\\[-Wanalyzer-null-dereference\\]",
+                             ": warning: .*\\[-Wanalyzer-double-free\\]",
+                             ": warning: .*\\[-Wanalyzer-malloc-leak\\]",
+                             ": warning: .*\\[-Wanalyzer-file-leak\\]",
+                             ": warning: .*\\[-Wanalyzer-use-after-free\\]",
+                             ": warning: .*\\[-Wanalyzer-free-of-non-heap\\]"
                             )
 
                 ## warning most seen with -D_FORTIFY_SOURCE
@@ -5033,8 +5050,8 @@ add_dummies <- function(dir, Log)
                 lines <- grep("exceeds maximum object size.*-W(alloc-size-larger-than|stringop-overflow)", lines,
                               value = TRUE, useBytes = TRUE, invert = TRUE)
 
-                ## Filter out boost header warning
-                ex_re <- "BH/include/boost/.*\\[-Wtautological-overlap-compare\\]"
+                ## Filter out boost/armadillo header warnings
+                ex_re <- "(BH/include/boost|RcppArmadillo/include/armadillo_bits)/.*\\[-Wtautological-overlap-compare\\]"
                 lines <- filtergrep(ex_re, lines, useBytes = TRUE)
 
                 ## and GNU extensions in system headers
@@ -6525,7 +6542,12 @@ add_dummies <- function(dir, Log)
                           "Rdlatex.log",
                           "R_check_bin",
                           "build_vignettes.log",
-                          "tests", "vign_test"))
+                          "tests", "vign_test",
+                          if(this_multiarch)
+                              c(paste0("examples_", inst_archs),
+                                paste0(pkgname, "-Ex_", inst_archs, ".Rout"),
+                                paste0("tests_", inst_archs))
+                          ))
             ## Examples calling dev.new() give files Rplots*.pdf,
             ## building vignettes give *.log files: be nice ...
             things <- things[!grepl("^Rplots.*[.]pdf$|[.]log$", things)]

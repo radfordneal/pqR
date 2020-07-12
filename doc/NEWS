@@ -1,6 +1,55 @@
 R News
 
-CHANGES IN 4.0.0:
+CHANGES IN R 4.0.1:
+
+  NEW FEATURES:
+
+    * paste() and paste0() gain a new optional argument recycle0.  When
+      set to true, zero-length arguments are recycled leading to
+      character(0) after the sep-concatenation, i.e., to the empty
+      string "" if collapse is a string and to the zero-length value
+      character(0) when collapse = NULL.
+
+      A package whose code uses this should depend on R (>= 4.0.1).
+
+    * The summary(<warnings>) method now maps the counts correctly to
+      the warning messages.
+
+  BUG FIXES:
+
+    * aov(frml, ...) now also works where the formula deparses to more
+      than 500 characters, thanks to a report and patch proposal by Jan
+      Hauffa.
+
+    * Fix a dozen places (code, examples) as Sys.setlocale() returns
+      the new rather than the previous setting.
+
+    * Fix for adding two complex grid units via sum().  Thanks to Gu
+      Zuguang for the report and Thomas Lin Pedersen for the patch.
+
+    * Fix parallel::mclapply(..., mc.preschedule=FALSE) to handle raw
+      vector results correctly. PR#17779
+
+    * Computing the base value, i.e., 2, "everywhere", now uses
+      FLT_RADIX, as the original machar code looped indefinitely on the
+      ppc64 architecture for the longdouble case.
+
+    * In R 4.0.0, sort.list(x) when is.object(x) was true, e.g., for x
+      <- I(letters), was accidentally using method = "radix".
+      Consequently, e.g., merge(<data.frame>) was much slower than
+      previously; reported in PR#17794.
+
+    * plot(y ~ x, ylab = quote(y[i])) now works, as e.g., for xlab;
+      related to PR#10525.
+
+    * parallel::detect.cores(all.tests = TRUE) tries a matching OS name
+      before the other tests (which were intended only for unknown
+      OSes).
+
+    * Parse data for raw strings is now recorded correctly. Reported by
+      Gabor Csardi.
+
+CHANGES IN R 4.0.0:
 
   SIGNIFICANT USER-VISIBLE CHANGES:
 
@@ -174,7 +223,8 @@ CHANGES IN 4.0.0:
     * Printing methods(..) now uses a new format() method.
 
     * sort.list(x) now works for non-atomic objects x and method =
-      "auto" (the default) or "radix" in cases order(x) works.
+      "auto" (the default) or "radix" in cases order(x) works,
+      typically via a xtfrm() method.
 
     * Where they are available, writeBin() allows long vectors.
 
@@ -661,7 +711,7 @@ CHANGES IN 4.0.0:
     * scan() issues with UTF-8 data when running in a DBCS locale have
       been resolved (PR#16520, PR#16584).
 
-    * RTerm now accepts enhanced/arrow keys also with ConPTY.
+    * Rterm now accepts enhanced/arrow keys also with ConPTY.
 
     * R can can now be started _via_ the launcher icon in a user
       documents directory whose path is not representable in the system

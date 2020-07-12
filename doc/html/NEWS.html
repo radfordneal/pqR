@@ -7,7 +7,83 @@
 
 <h2>R News</h2>
 
-<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN 4.0.0</h3>
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 4.0.1</h3>
+
+
+
+<h4>NEW FEATURES</h4>
+
+
+<ul>
+<li> <p><code>paste()</code> and <code>paste0()</code> gain a new optional
+argument <code>recycle0</code>.  When set to true, zero-length
+arguments are recycled leading to <code>character(0)</code> after the
+<code>sep</code>-concatenation, i.e., to the empty string <code>""</code> if
+<code>collapse</code> is a string and to the zero-length value
+<code>character(0)</code> when <code>collapse = NULL</code>.
+</p>
+<p>A package whose code uses this should depend on <span class="samp">R (&gt;= 4.0.1)</span>.
+</p>
+</li>
+<li><p> The <code>summary(&lt;warnings&gt;)</code> method now maps the counts
+correctly to the warning messages.
+</p>
+</li></ul>
+
+
+
+
+<h4>BUG FIXES</h4>
+
+
+<ul>
+<li> <p><code>aov(frml, ...)</code> now also works where the <code>formula</code>
+deparses to more than 500 characters, thanks to a report and patch
+proposal by Jan Hauffa.
+</p>
+</li>
+<li><p> Fix a dozen places (code, examples) as <code>Sys.setlocale()</code>
+returns the new rather than the previous setting.
+</p>
+</li>
+<li><p> Fix for adding two complex <span class="pkg">grid</span> units via <code>sum()</code>.
+Thanks to Gu Zuguang for the report and Thomas Lin Pedersen for
+the patch.
+</p>
+</li>
+<li><p> Fix <code>parallel::mclapply(..., mc.preschedule=FALSE)</code>
+to handle raw vector results correctly. <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17779">PR#17779</a>
+</p>
+</li>
+<li><p> Computing the <code>base</code> value, i.e., 2, &ldquo;everywhere&rdquo;,
+now uses <code>FLT_RADIX</code>, as the original &lsquo;<span class="file">machar</span>&rsquo; code looped
+indefinitely on the ppc64 architecture for the <code>longdouble</code> case.
+</p>
+</li>
+<li><p> In <span style="font-family: Courier New, Courier; color: #666666;"><b>R</b></span> 4.0.0, <code>sort.list(x)</code> when <code>is.object(x)</code> was
+true, e.g., for <code>x &lt;- I(letters)</code>, was accidentally using
+<code>method = "radix"</code>.  Consequently, e.g., <code>merge(&lt;data.frame&gt;)</code>
+was much slower than previously; reported in <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17794">PR#17794</a>.
+</p>
+</li>
+<li> <p><code>plot(y ~ x, ylab = quote(y[i]))</code> now works, as e.g., for
+<code>xlab</code>; related to <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=10525">PR#10525</a>.
+</p>
+</li>
+<li> <p><code>parallel::detect.cores(all.tests = TRUE)</code> tries a
+matching OS name before the other tests (which were intended only
+for unknown OSes).
+</p>
+</li>
+<li><p> Parse data for raw strings is now recorded correctly. Reported
+by Gabor Csardi.
+</p>
+</li></ul>
+
+
+
+
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 4.0.0</h3>
 
 
 
@@ -249,7 +325,8 @@ vector of class names used for S3 method dispatch.
 </li>
 <li> <p><code>sort.list(x)</code> now works for non-atomic objects
 <code>x</code> and <code>method = "auto"</code> (the default) or
-<code>"radix"</code> in cases <code>order(x)</code> works.
+<code>"radix"</code> in cases <code>order(x)</code> works, typically via a
+<code>xtfrm()</code> method.
 </p>
 </li>
 <li><p> Where they are available, <code>writeBin()</code> allows
@@ -961,7 +1038,7 @@ encoding (at least on Windows 10 they were sometimes omitted,
 locale have been resolved (<a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16520">PR#16520</a>, <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16584">PR#16584</a>).
 </p>
 </li>
-<li> <p><code>RTerm</code> now accepts enhanced/arrow keys also with
+<li> <p><code>Rterm</code> now accepts enhanced/arrow keys also with
 ConPTY.
 </p>
 </li>
