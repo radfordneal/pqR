@@ -5,6 +5,46 @@
 \title{R News}
 \encoding{UTF-8}
 
+\section{\Rlogo CHANGES IN R 3.6.3}{
+
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item The included LAPACK has been updated to version 3.9.0 (for
+      the included routines, just bug fixes).
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item Fixed a C level integer overflow in \code{rhyper()}; reported
+      by Benjamin Tyner in \PR{17694}.
+
+      \item Uses of \code{url(gzcon(.))} needing to extend buffer size
+      have failed (with HTTP/2 servers), reported by Gábor Csárdi.
+
+      \item \code{predict(loess(..), se=TRUE)} now errors out (instead of
+      seg.faulting etc) for large sample sizes, thanks to a report and
+      patch by Benjamin Tyner in \PR{17121}.
+
+      \item \code{tools:assertCondition(., "error")} and hence
+      \code{assertError()} no longer return errors twice (invisibly).
+
+      \item \code{update(form, new)} in the case of a long \code{new}
+      formula sometimes wrongly eliminated the intercept from \code{form},
+      or (more rarely) added a garbage term (or seg.faulted !); the fix
+      happened by simplifying the C-level logic of \code{terms.formula()}.
+      Reported by Mathias Ambühl in \PR{16326}.
+
+      \item The error message from \code{stopifnot(.., <error producing call>)}
+      again contains the full \code{"stopifnot(.......)"} call: Its
+      attempted suppression did not work consistently. % & was an ugly hack
+
+      \item On Windows, \code{download.file(., , "wininet", headers=character())}
+      would fail; reported with patch proposal by Kevin Ushey in \PR{17710}.
+    }
+  }
+}
+
 \section{\Rlogo CHANGES IN R 3.6.2}{
 
   \subsection{NEW FEATURES}{

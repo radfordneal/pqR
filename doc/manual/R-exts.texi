@@ -585,9 +585,13 @@ include the current package, or ones listed in @samp{Depends},
 implicitly appended.  See @ref{Non-Sweave vignettes} for details.  Note
 that if, for example, a vignette has engine @samp{knitr::rmarkdown},
 then @CRANpkg{knitr} provides the engine but both @pkg{knitr} and
-@CRANpkg{rmarkdown} are needed for using it, so both these packages need
-to be at least suggested (as @pkg{rmarkdown} is only suggested by
-@pkg{knitr}, and hence not available automatically along with it).
+@CRANpkg{rmarkdown} are needed for using it, so @emph{both} these
+packages need to be in the @samp{VignetteBuilder} field and at least
+suggested (as @pkg{rmarkdown} is only suggested by @pkg{knitr}, and
+hence not available automatically along with it).  Many packages using
+@CRANpkg{knitr} also need the package @CRANpkg{formatR} which it
+suggests and so the user package needs to do so too and include this in
+@samp{VignetteBuilder}.
 
 @c DESCRIPTION field Encoding
 If the @file{DESCRIPTION} file is not entirely in @acronym{ASCII} it
@@ -927,6 +931,10 @@ Packages used to run examples or tests conditionally (e.g.@: @emph{via}
 @code{if(require(@var{pkgname}))}) should be listed in @samp{Suggests}
 or @samp{Enhances}.  (This allows checkers to ensure that all the
 packages needed for a complete check are installed.)
+
+@item
+Packages needed to use datasets from the package should be in
+@samp{Imports}: this includes those needed to define S4 classes used.
 @end itemize
 
 @noindent
@@ -940,10 +948,9 @@ used by @code{library} when it loads the package, and
 @samp{Imports} and (for @code{dependencies = TRUE}) @samp{Suggests}
 fields.
 
-It is increasingly important that the information in these fields is
-complete and accurate: it is for example used to compute which packages
-depend on an updated package and which packages can safely be installed
-in parallel.
+It is important that the information in these fields is complete and
+accurate: it is for example used to compute which packages depend on an
+updated package and which packages can safely be installed in parallel.
 
 This scheme was developed before all packages had namespaces (@R{}
 2.14.0 in October 2011), and good practice changed once that was in
@@ -1055,6 +1062,14 @@ installed without recommended packages, and which packages are
 As noted above, packages in @samp{Enhances} @emph{must} be used
 conditionally and hence objects within them should always be accessed
 @emph{via} @code{::}.
+
+On most systems, @command{R CMD check} can be run with only those
+packages declared in @samp{Depends} and @samp{Imports} by setting
+environment variable @env{_R_CHECK_DEPENDS_ONLY_=true}, whereas setting
+@env{_R_CHECK_SUGGESTS_ONLY_=true} also allows suggested packages, but
+not those in @samp{Enhances} nor those not mentioned in the
+@file{DESCRIPTION} file.  It is recommended that a package is checked
+with each of these set, as well as with neither.
 
 @node The INDEX file, Package subdirectories, Package Dependencies, Package structure
 @subsection The @file{INDEX} file
@@ -1338,6 +1353,15 @@ file for running the examples when the latter are checked.  Reference
 output should be produced without having the @option{--timings} option
 set (and note that @option{--as-cran} sets it).
 
+If reference output is included for examples, tests or vignettes do make
+sure that it is fully reproducible, as it will be compared verbatim to
+that produced in a check run, unless the @samp{IGNORE_RDIFF} markup is
+used.  Things which trip maintainers up include displayed version
+numbers from loading other packages, printing numerical results to an
+unreproducibly high precision and printing timings.  Another trap is
+small values which are in fact rounding error from zero: consider using
+@code{zapsmall}.
+
 Subdirectory @file{exec} could contain additional executable scripts the
 package needs, typically scripts for interpreters such as the shell,
 Perl, or Tcl.  NB: only files (and not directories) under @file{exec} are
@@ -1403,7 +1427,9 @@ not attaching them by using @code{requireNamespace(@var{pkg}, quietly =
 TRUE)} and using @code{@var{pkg}::} to refer to objects in the
 namespace).
 
-If your data files are large and you are not using @samp{LazyData} you
+If you are not using @samp{LazyData} and either your data files are large
+or e.g., you use @file{data/foo.R} scripts to produce your data, loading
+your namespace, you 
 can speed up installation by providing a file @file{datalist} in the
 @file{data} subdirectory.  This should have one line per topic that
 @code{data()} will find, in the format @samp{foo} if @code{data(foo)}
@@ -1555,7 +1581,7 @@ expansion is a known issue: see
 for this and others.  Some checks can be done by the
 @code{checkbashisms} Perl script at
 @uref{https://sourceforge.net/@/projects/@/checkbaskisms/@/files}, also
-found in some Linux distributions.})  shell script @file{configure} in
+available in most Linux distributions in a package named either @samp{devscripts} or @samp{devscripts-checkbashisms}.}) shell script @file{configure} in
 your package which (if present) is executed by @code{R CMD INSTALL}
 before any other action is performed.  This can be a script created by
 the Autoconf mechanism, but may also be a script written by yourself.
@@ -2612,9 +2638,9 @@ features which are not otherwise implemented in C++, and C++ compilers
 commonly accept C99 extensions to C++98.  A minor update@footnote{The
 changes are linked from
 @uref{https://isocpp.org/@/std/@/standing-documents/@/sd-6-sg10-feature-test-recommendations}.}
-to C++11 (C++14) was published in December 2014.  The latest standard
-(C++17) was published in December 2017, and a further revision (`C++20')
-is in preparation.
+(`C++14') was published in December 2014.  A revision (`C++17') was
+published in December 2017, and a further revision (`C++20', with many
+new features) is scheduled for publication in May 2020.
 
 What standard a C++ compiler aims to support can be hard to determine:
 the value@footnote{Values @code{199711}, @code{201103L} and
@@ -4427,7 +4453,9 @@ behaviours are allowed
 (@uref{http://pubs.opengroup.org/@/onlinepubs/@/9699919799/@/utilities/@/echo.html})
 and both occur as defaults on @R{} platforms: portable applications
 should not use @option{-n} (as the first argument) nor escape
-sequences. Another common issue is the construction
+sequences.  The recommended replacement for @command{echo -n} is the
+command @command{printf}.
+Another common issue is the construction
 @example
 export FOO=value
 @end example
@@ -4439,13 +4467,20 @@ portable: @code{-f} is normally what is intended.  Flags @option{-a} and
 @option{-o} are nowadays declared obsolescent by POSIX and should not be
 used.
 
+Use of `brace expansion', e.g.,
+@example
+rm -f src/*.@{o,so,d@}
+@end example
+@noindent
+is not portable.
+
 The @option{-o} flag for @command{set} in shell scripts is optional in
 POSIX and not supported on all the platforms @R{} is used on.
 
 On macOS Catalina which shell @file{/bin/sh} invokes is user- and
 platform-dependent: it might be @command{bash} version 3.2,
 @command{dash} or @command{zsh} (for new accounts it is @command{zsh},
-for accounts ported from earlier version it is usually @command{bash}).
+for accounts ported from an earlier version it is usually @command{bash}).
 
 @item
 Make use of the abilities of your compilers to check the
@@ -4475,7 +4510,7 @@ features from later standards.  (Although @R{} only requires Fortran 90,
 @command{gfortran} does not have a way to specify that standard.)
 
 @R{} has tested that @code{DOUBLE COMPLEX} works and so is preferred to
-@code{COMPLEX*16}.  (Fortran code can use something like
+@code{COMPLEX*16}.  (One can also use something like
 @code{COMPLEX(KIND=KIND(0.0D0))}@footnote{See
 @uref{http://people.ds.cam.ac.uk/nmm1/fortran/paper_07.pdf}.}.)
 
@@ -4545,7 +4580,7 @@ you should use a configure test for a C99/C++11 type such as
 @code{int_fast64_t} (and failing that, @code{long long}@footnote{but
 note that @code{long long} is not a standard C++98 type, and C++
 compilers for earlier versions of @R{} set up for strict C++98
-conformance will reject it.  C++11 (the default since @R{} 3.6.0)
+conformance will reject it.  C++11 (the default since @R{} 3.6.2)
 includes @code{long long}.}) and typedef your own type, or use another
 suitable type (such as @code{size_t}).
 @c https://en.cppreference.com/w/cpp/language/types claims long long is
@@ -4733,12 +4768,15 @@ locales).
 
 @item
 Make sure that any version requirement for Java code is both declared in
-the @samp{SystemRequirements} field and tested at runtime (not least as
-the Java installation when the package is installed might not be the
-same as when the package is run and will not be for binary packages).
-Java 8 is available for fewer platforms than Java 7, and Java 11 for
-fewer still (at the time of writing, only @cputype{x86_64} Linux, macOS,
-64-bit Windows and 64-bit Solaris 11 from Oracle).
+the @samp{SystemRequirements} field@footnote{If a Java interpreter is
+required directly (not @emph{via} @CRANpkg{rJava}) this must be declared
+and its presence tested like any other external command.} and tested at
+runtime (not least as the Java installation when the package is
+installed might not be the same as when the package is run and will not
+be for binary packages).  Java 8 is available for fewer platforms than
+Java 7, and Java 11 for fewer still (at the time of writing, only
+@cputype{x86_64} Linux, macOS, 64-bit Windows and 64-bit Solaris 11 from
+Oracle).
 
 When specifying a minimum Java version please use the official version
 names, which are (confusingly)
@@ -4748,7 +4786,7 @@ names, which are (confusingly)
 @noindent
 and as from 2018 a year.month scheme such as @samp{18.3} is also in use.
 
-A suitable test Java at least version 8 for packages using
+A suitable test for Java at least version 8 for packages using
 @CRANpkg{rJava} would be something like
 @example
 .jinit()
@@ -4804,8 +4842,9 @@ redirecting to @samp{https://} URLs.} that vary by build but are not
 documented.
 
 Usage of external commands should always be conditional on a test for
-existence (perhaps using @code{Sys.which}), as well as declared in the
-@samp{SystemRequirements} field.
+presence (perhaps using @code{Sys.which}), as well as declared in the
+@samp{SystemRequirements} field.  A package should pass its checks
+without warnings nor errors without the external command being present.
 
 An external command can be a (possibly optional) requirement for an
 imported or suggested package but needed for examples, tests or
@@ -4814,13 +4853,13 @@ and conditional.
 
 Interpreters for scripting languages such as Perl, Python and Ruby need
 to be declared as system requirements and used conditionally: for
-example macOS 10.16 is announced not to have them.  Python 2 is widely
-deprecated and will be removed from some major distributions by Jan
-2020.
+example macOS 10.16 has been announced not to have them.  Python 2 has
+passed end-of-life and been removed from some major distributions.  This
+applies also to a Java interpreter (which macOS does not have by default).
 
 @item
 Be sure to use portable encoding names: none of @code{utf8}, @code{mac}
-and @code{macroman} are.  See the help for @code{file} for more details.
+and @code{macroman} is.  See the help for @code{file} for more details.
 
 
 @item
@@ -4977,7 +5016,7 @@ and suitable options might be
 ; see @uref{http://www.ghostscript.com/@/doc/@/current/@/Ps2pdf.htm} for
 more such and consider all the options for image downsampling).  There
 have been examples in @acronym{CRAN} packages for which current versions
-of Ghostscript  produced much better reductions than earlier ones.
+of Ghostscript  produced much bigger reductions than earlier ones.
 
 We come across occasionally large PDF files containing excessively
 complicated figures using PDF vector graphics: such figures are often
@@ -5104,14 +5143,14 @@ Writing portable C and C++ code is mainly a matter of observing the
 standards (C99, C++11 or where declared C++98/14/17) and testing that
 extensions (such as POSIX functions) are supported.
 
-@strong{C++ standards}: As from version 3.6.0, @R{} defaults to C++11
-where available@footnote{which it is on all known platforms}.  However,
-in earlier versions the default standard was that of the compiler used,
-often C++98 or C++14.  Thus for portability it is desirable to specify
-the C++ standard@footnote{For C++98 this is only possible since @R{}
-3.5.0, for C++11 since @R{} 3.1.0.} assumed for a package.  Because most
-packages will be made available for earlier versions on @R{}, comments
-below about C++98 have been retained.
+@strong{C++ standards}: As from version 3.6.0 (3.6.2 on Windows), @R{}
+defaults to C++11 where available@footnote{which it is on all known
+platforms}.  However, in earlier versions the default standard was that
+of the compiler used, often C++98 or C++14.  Thus for portability it is
+desirable to specify the C++ standard@footnote{For C++98 this is only
+possible since @R{} 3.5.0, for C++11 since @R{} 3.1.0.} assumed for a
+package.  Because most packages will be made available for earlier
+versions on @R{}, comments below about C++98 have been retained.
 
 Note that the `TR1' C++ extensions are not part of any of these
 standards and the @code{<tr1/@var{name}>} headers are not supplied by some of
@@ -5418,7 +5457,7 @@ ISO C++11 does not allow conversion from string literal to 'char *'
 removed in C++17.
 
 There are quite a lot of other C++98 features deprecated in C++11 and
-removed in C++17, and @command{clang} 9 has started to warn about
+removed in C++17, and @command{clang} 9 and later warn about
 them. Examples include @code{bind1st}/@code{bind2nd} (use
 @code{std::bind} or
 lambdas@footnote{@uref{https://stackoverflow.com/questions/32739018/a-replacement-for-stdbind2nd}})
@@ -5443,6 +5482,12 @@ Inclusion by such headers of C-style headers such as @file{math.h} (see above).
 @noindent
 The most portable way to interface to other software with a C API is to
 use C code (which can normally be mixed with C++ code in a package).
+
+@item
+@code{reinterpret_cast} in C++ is not safe for pointers: for example the types
+may have different alignment requirements.  Use @code{memcpy} to copy
+the contents to a fresh variable of the destination type.
+@c seen in 2019 for casts to both int32 and double from a byte stream
 
 @item
 Avoid platform-specific code if at all possible, but if you need to test
@@ -5488,7 +5533,20 @@ definitions cannot be merged and the linker will give an error if the
 same variable is defined in more than one object file.  To avoid this,
 all but one of the C source files should declare the variable
 @code{extern} --- which means that any such variables included in header
-files need to be declared @code{extern}.
+files need to be declared @code{extern}.  A commonly used idiom
+(including by @R{} itself) is to define all global variables as
+@code{extern} in a header, say @file{globals.h} (and nowhere else), and
+then in one (and one only) source file use
+@example
+#define extern
+# include "globals.h"
+#undef extern
+@end example
+
+A cleaner approach is not to have global variables at all, but to place
+in a single file common variables (declared @code{static}) followed by
+all the functions which make use of them: this may result in more
+efficient code.
 
 The `modern' behaviour can be seen@footnote{In principle this could
 depend on the OS, but has been checked on Linux and macOS.} by using
@@ -6403,7 +6461,8 @@ Output from code between comments
 @end example
 @noindent
 is ignored when comparing check output to reference output (a
-@file{-Ex.Rout.save} file).
+@file{-Ex.Rout.save} file).  This markup can also be used for scripts
+under @file{tests}.
 
 @findex \keyword
 @item \keyword@{@var{key}@}
@@ -8652,11 +8711,12 @@ memory all belongs to @R{}, @code{valgrind} would not (and did not)
 detect the problem in an uninstrumented build of @R{}.  In this example
 the stack trace was enough to isolate and fix the bug, which was in
 @code{tsc_transpose}, and in this example running under
-@code{gctorture()} did not provide any additional information.  When the
-stack trace is not sufficiently informative the option
-@option{--db-attach=yes} to @code{valgrind} may be helpful.  This starts
-a post-mortem debugger (by default @code{gdb}) so that variables in the
-C code can be inspected (@pxref{Inspecting R objects}).
+@code{gctorture()} did not provide any additional information.
+@c Was removed: see https://sourceforge.net/p/valgrind/mailman/message/34306867/
+@c When the stack trace is not sufficiently informative the option
+@c @option{--db-attach=yes} to @code{valgrind} may be helpful.  This starts
+@c a post-mortem debugger (by default @code{gdb}) so that variables in the
+@c C code can be inspected (@pxref{Inspecting R objects}).
 
 @command{valgrind} is good at spotting the use of uninitialized values:
 use option @option{--track-origins=yes} to show where these originated
@@ -9377,7 +9437,7 @@ dstup.f:20: note: 'dqrdc' was previously declared here
 @noindent
 @code{dqrdc} is a LINPACK routine from @R{}, @code{jpvt} is an integer
 array and @code{work} is a double precision one so @code{dum} cannot
-match both.  (If @option{--emable-lto=check} had been used the
+match both.  (If @option{--enable-lto=check} had been used the
 comparison would have been with the definition in @R{}.)
 
 For Fortran files all in the package, most inconsistencies can be
@@ -11739,7 +11799,7 @@ rebound immediately.  (Provided the remaining code in @code{"foo<-"}
 make no reference to @code{x}, and no one is going to attempt a direct
 call such as @code{y <- "foo<-"(x)}.)
 
-This mechanism is likely to be replaced in future versions of @R{}. To
+This mechanism is to be replaced in @R{} 4.0.0. To
 support future changes, package code should use the macros
 @code{MAYBE_REFERENCED}, @code{MAYBE_SHARED}, and
 @code{MARK_NOT_MUTABLE}. These currently correspond to
@@ -13289,7 +13349,9 @@ of the appropriate type (@code{double precision}, @code{real} and
 @code{integer} respectively).  These routines print the label on one
 line and then print @var{data} as if it were an @R{} vector on
 subsequent line(s).  They work with zero @var{ndata}, and so can be used
-to print a label alone.
+to print a label alone.  Note though that some compilers will give an
+error or warning unless @var{data} is an array: others will accept a
+scalar when @var{ndata} has value one or zero.
 
 @node Calling C from Fortran and vice versa, Numerical analysis subroutines, Printing, The R API
 @section Calling C from Fortran and vice versa
@@ -13413,9 +13475,8 @@ would be
       end
 @end example
 @noindent
-in file @file{rmsg.f}. Using @command{gfortran} 9.2 and
-later@footnote{or 9.1-patched since 2019-05-09.} we can extract the C
-view by
+in file @file{rmsg.f}. Using @command{gfortran} 9.2 and later we can
+extract the C view by
 @example
 gfortran -c -fc-prototypes-external rmsg.f
 @end example
@@ -13521,7 +13582,7 @@ Cdgemm(const char *transa, const char *transb, const int *m,
 @end example
 
 @noindent
-Alternatively, do as @R{} does as from version 3.6.1-patched and pass
+Alternatively, do as @R{} does as from version 3.6.2 and pass
 the character length(s) from C to Fortran. A portable way to do this is
 @example
 // before any R headers, or define in PKG_CPPFLAGS
@@ -14255,8 +14316,10 @@ file is provided as
 Return a pathname for a temporary file with name beginning with
 @var{prefix} and ending with @var{fileext} in directory @var{tmpdir}.
 A @code{NULL} prefix or extension is replaced by @code{""}.  Note that
-the return value is @code{malloc}ed and should be @code{free}d when no
-longer needed (unlike the system call @code{tmpnam}).
+the return value is dynamically allocated and should be freed using
+@code{R_free_tmpnam} when no longer needed (unlike the
+system call @code{tmpnam}). Freeing the result using @code{free} is no
+longer recommended. 
 @end deftypefun
 
 @c ----
@@ -15525,7 +15588,7 @@ currently available that interface directly with @R{} and provide a
 @itemize
 @item
 There is a (D)COM server called @code{StatConnector} written by Thomas
-Baier available @emph{via} @uref{http://sunsite.univie.ac.at/rcom/},
+Baier available @emph{via} @uref{http://www.autstat.com/},
 which works with @R{} packages to support transfer of data to and from
 @R{} and remote execution of @R{} commands, as well as embedding of an
 @R{} graphics window.

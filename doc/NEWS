@@ -1,5 +1,41 @@
 R News
 
+CHANGES IN R 3.6.3:
+
+  NEW FEATURES:
+
+    * The included LAPACK has been updated to version 3.9.0 (for the
+      included routines, just bug fixes).
+
+  BUG FIXES:
+
+    * Fixed a C level integer overflow in rhyper(); reported by
+      Benjamin Tyner in PR#17694.
+
+    * Uses of url(gzcon(.)) needing to extend buffer size have failed
+      (with HTTP/2 servers), reported by G'abor Cs'ardi.
+
+    * predict(loess(..), se=TRUE) now errors out (instead of
+      seg.faulting etc) for large sample sizes, thanks to a report and
+      patch by Benjamin Tyner in PR#17121.
+
+    * tools:assertCondition(., "error") and hence assertError() no
+      longer return errors twice (invisibly).
+
+    * update(form, new) in the case of a long new formula sometimes
+      wrongly eliminated the intercept from form, or (more rarely)
+      added a garbage term (or seg.faulted !); the fix happened by
+      simplifying the C-level logic of terms.formula().  Reported by
+      Mathias Amb"uhl in PR#16326.
+
+    * The error message from stopifnot(.., <error producing call>)
+      again contains the full "stopifnot(.......)" call: Its attempted
+      suppression did not work consistently.
+
+    * On Windows, download.file(., , "wininet", headers=character())
+      would fail; reported with patch proposal by Kevin Ushey in
+      PR#17710.
+
 CHANGES IN R 3.6.2:
 
   NEW FEATURES:

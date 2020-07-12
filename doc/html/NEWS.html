@@ -7,6 +7,63 @@
 
 <h2>R News</h2>
 
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.6.3</h3>
+
+
+
+<h4>NEW FEATURES</h4>
+
+
+<ul>
+<li><p> The included LAPACK has been updated to version 3.9.0 (for
+the included routines, just bug fixes).
+</p>
+</li></ul>
+
+
+
+
+<h4>BUG FIXES</h4>
+
+
+<ul>
+<li><p> Fixed a C level integer overflow in <code>rhyper()</code>; reported
+by Benjamin Tyner in <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17694">PR#17694</a>.
+</p>
+</li>
+<li><p> Uses of <code>url(gzcon(.))</code> needing to extend buffer size
+have failed (with HTTP/2 servers), reported by Gábor Csárdi.
+</p>
+</li>
+<li> <p><code>predict(loess(..), se=TRUE)</code> now errors out (instead of
+seg.faulting etc) for large sample sizes, thanks to a report and
+patch by Benjamin Tyner in <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17121">PR#17121</a>.
+</p>
+</li>
+<li> <p><code>tools:assertCondition(., "error")</code> and hence
+<code>assertError()</code> no longer return errors twice (invisibly).
+</p>
+</li>
+<li> <p><code>update(form, new)</code> in the case of a long <code>new</code>
+formula sometimes wrongly eliminated the intercept from <code>form</code>,
+or (more rarely) added a garbage term (or seg.faulted !); the fix
+happened by simplifying the C-level logic of <code>terms.formula()</code>.
+Reported by Mathias Ambühl in <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=16326">PR#16326</a>.
+</p>
+</li>
+<li><p> The error message from <code>stopifnot(.., &lt;error producing call&gt;)</code>
+again contains the full <code>"stopifnot(.......)"</code> call: Its
+attempted suppression did not work consistently. 
+</p>
+</li>
+<li><p> On Windows, <code>download.file(., , "wininet", headers=character())</code>
+would fail; reported with patch proposal by Kevin Ushey in <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17710">PR#17710</a>.
+</p>
+</li></ul>
+
+
+
+
 <h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 3.6.2</h3>
 
 

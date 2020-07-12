@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-<!-- This manual is for R, version 3.6.2 (2019-12-12).
+<!-- This manual is for R, version 3.6.3 (2020-02-29).
 
 Copyright (C) 2001-2018 R Core Team
 
@@ -297,7 +297,10 @@ p {
     </ul></li>
     <li><a name="toc-macOS-2" href="#macOS">C.3 macOS</a>
     <ul class="no-bullet">
-      <li><a name="toc-Prerequisites-1" href="#Prerequisites">C.3.1 Prerequisites</a></li>
+      <li><a name="toc-Prerequisites-1" href="#Prerequisites">C.3.1 Prerequisites</a>
+      <ul class="no-bullet">
+        <li><a name="toc-Note-for-Catalina-users-1" href="#Note-for-Catalina-users">C.3.1.1 Note for Catalina users</a></li>
+      </ul></li>
       <li><a name="toc-Recommended-C_002fC_002b_002b-compilers-1" href="#Recommended-C_002fC_002b_002b-compilers">C.3.2 Recommended C/C++ compilers</a></li>
       <li><a name="toc-Other-libraries-1" href="#Other-libraries">C.3.3 Other libraries</a></li>
       <li><a name="toc-Tcl_002fTk-headers-and-libraries-1" href="#Tcl_002fTk-headers-and-libraries">C.3.4 Tcl/Tk headers and libraries</a></li>
@@ -336,7 +339,7 @@ p {
 
 <p>This is a guide to installation and administration for R.
 </p>
-<p>This manual is for R, version 3.6.2 (2019-12-12).
+<p>This manual is for R, version 3.6.3 (2020-02-29).
 </p>
 <p>Copyright &copy; 2001&ndash;2018 R Core Team
 </p>
@@ -726,7 +729,8 @@ have <code>texi2dvi</code> and <samp>texinfo.tex</samp> installed (which are par
 of the <acronym>GNU</acronym> <strong>texinfo</strong> distribution but are, especially
 <samp>texinfo.tex</samp>, often made part of the TeX package in
 re-distributions).  The path to <code>texi2any</code> can be set by macro
-&lsquo;<samp>TEXI2ANY</samp>&rsquo; in <samp>config.site</samp>.
+&lsquo;<samp>TEXI2ANY</samp>&rsquo; in <samp>config.site</samp>.  NB: <code>texi2any</code> require
+<code>perl</code>.
 </p>
 <p>The PDF versions can be viewed using any recent PDF viewer: they have
 hyperlinks that can be followed.  The info files are suitable for
@@ -936,13 +940,13 @@ specified on the <code>make install</code> command line (at least for
 <code>libdir</code>.  The C header files can be installed to the value of
 <code>rincludedir</code>: note that as the headers are not installed into a
 subdirectory you probably want something like
-<code>rincludedir=/usr/local/include/R-3.6.2</code>.
+<code>rincludedir=/usr/local/include/R-3.6.3</code>.
 </p>
 <p>If you want the R home to be something other than
 <samp><var>libdir</var>/R</samp>, use <samp>rhome</samp>: for example
 </p>
 <div class="example">
-<pre class="example">make install rhome=/usr/local/lib64/R-3.6.2
+<pre class="example">make install rhome=/usr/local/lib64/R-3.6.3
 </pre></div>
 
 <p>will use a version-specific R home on a non-Debian Linux 64-bit
@@ -1486,7 +1490,7 @@ conversion to short name equivalents (a.k.a. DOS 8.3 names), then R
 <em>must</em> be installed in a path that does not contain spaces.
 </p>
 <p>Installation is <em>via</em> the installer
-<samp>R-3.6.2-win.exe</samp>.  Just double-click on the icon and
+<samp>R-3.6.3-win.exe</samp>.  Just double-click on the icon and
 follow the instructions.  When installing on a 64-bit version of Windows
 the options will include 32- or 64-bit versions of R (and the default is
 to install both).  You can uninstall R from the Control Panel.
@@ -1553,12 +1557,12 @@ will call this directory <samp><var>R_HOME</var></samp> below.
 
 <p>You need to collect the following sets of files:
 </p><ul>
-<li> Get the R source code tarball <samp>R-3.6.2.tar.gz</samp> from
+<li> Get the R source code tarball <samp>R-3.6.3.tar.gz</samp> from
 <acronym>CRAN</acronym>.  Open a command window (or another shell) at directory
 <var>R_HOME</var>, and run
 
 <div class="example">
-<pre class="example">tar -xf R-3.6.2.tar.gz
+<pre class="example">tar -xf R-3.6.3.tar.gz
 </pre></div>
 
 <p>to create the source tree in <var>R_HOME</var>.  <strong>Beware</strong>: do use
@@ -1567,7 +1571,7 @@ If you are using an account with administrative privileges you may get a
 lot of messages which can be suppressed by
 </p>
 <div class="example">
-<pre class="example">tar --no-same-owner -xf R-3.6.2.tar.gz
+<pre class="example">tar --no-same-owner -xf R-3.6.3.tar.gz
 </pre></div>
 
 <a name="index-TAR_005fOPTIONS-1"></a>
@@ -1882,7 +1886,7 @@ source tree) in <samp>src/gnuwin32/installer</samp> run
 installation (in double quotes if it contains spaces or backslashes).
 </p>
 <p>Both methods create an executable with a standard name such as
-<samp>R-3.6.2-win.exe</samp>, so please rename it to indicate that
+<samp>R-3.6.3-win.exe</samp>, so please rename it to indicate that
 it is customized.  If you intend to <em>distribute</em> a customized
 installer please do check that license requirements are met &ndash; note that
 the installer will state that the contents are distributed under GPL
@@ -1941,21 +1945,21 @@ make msi
 </pre></div>
 
 <p>which will result in a file with a name like
-<samp>R-3.6.2-win32.msi</samp>.  This can be double-clicked to be
+<samp>R-3.6.3-win32.msi</samp>.  This can be double-clicked to be
 installed, but those who need it will know what to do with it (usually
 by running <code>msiexec /i</code> with additional options).  Properties
 that users might want to set from the <code>msiexec</code> command line
 include &lsquo;<samp>ALLUSERS</samp>&rsquo;, &lsquo;<samp>INSTALLDIR</samp>&rsquo; (something like
-<samp>c:\Program Files\R\R-3.6.2</samp>) and &lsquo;<samp>RMENU</samp>&rsquo; (the path
+<samp>c:\Program Files\R\R-3.6.3</samp>) and &lsquo;<samp>RMENU</samp>&rsquo; (the path
 to the &lsquo;<samp>R</samp>&rsquo; folder on the start menu) and &lsquo;<samp>STARTDIR</samp>&rsquo; (the
 starting directory for R shortcuts, defaulting to something like
 <samp>c:\Users\name\Documents\R</samp>).
 </p>
 <p>The MSI installer can be built both from a 32-bit build of R
-(<samp>R-3.6.2-win32.msi</samp>) and from a 64-bit build of R
-(<samp>R-3.6.2-win64.msi</samp>, optionally including 32-bit files
+(<samp>R-3.6.3-win32.msi</samp>) and from a 64-bit build of R
+(<samp>R-3.6.3-win64.msi</samp>, optionally including 32-bit files
 by setting the macro <code>HOME32</code>, when the name is
-<samp>R-3.6.2-win.msi</samp>).  Unlike the main installer, a 64-bit
+<samp>R-3.6.3-win.msi</samp>).  Unlike the main installer, a 64-bit
 MSI installer can only be run on 64-bit Windows.
 </p>
 <p>Thanks to David del Campo (Dept of Statistics, University of Oxford)
@@ -2026,13 +2030,13 @@ Windows&rsquo; CRLF line endings.
 </p>
 <p>The front page of a <acronym>CRAN</acronym> site has a link &lsquo;Download R for (Mac)
 OS X&rsquo;. Click on that, then download the file
-<samp>R-3.6.2.pkg</samp> and install it. This runs on macOS 10.11
+<samp>R-3.6.3.pkg</samp> and install it. This runs on macOS 10.11
 and later (El Capitan, Sierra, High Sierra, Mojave, Catalina, &hellip;).
 </p>
 <p>Installers for R-patched and R-devel are usually available from
 <a href="https://mac.R-project.org">https://mac.R-project.org</a>.  (Some of these packages are
-unsigned: to install those Control/right/two-finger click, select
-&lsquo;<samp>Open with</samp>&rsquo; and &lsquo;<samp>Installer</samp>&rsquo;.)
+unsigned/not notarized: to install those Control/right/two-finger click,
+select &lsquo;<samp>Open With</samp>&rsquo; and &lsquo;<samp>Installer</samp>&rsquo;.)
 </p>
 <p>For some older versions of the OS you can in principle (it is little
 tested) install R from the sources (see <a href="#macOS">macOS</a>).
@@ -3644,9 +3648,9 @@ coverage.  See the R help on <code>X11</code> on selecting such fonts.
 <code>tiff()</code> need the appropriate headers and libraries installed:
 <code>jpeg</code> (version 6b or later, or <code>libjpeg-turbo</code>) or
 <code>libpng</code> (version 1.2.7 or later) and <code>zlib</code> or <code>libtiff</code>
-(versions 4.0.[5-10] have been tested) respectively.
+(versions 4.0.[5-10] and 4.1.0 have been tested) respectively.
 <code>pkg-config</code> is used if available and so needs the appropriate
-<samp>.pc</samp> file (which requires <code>libtiff</code> version 4.0.x and is not
+<samp>.pc</samp> file (which requires <code>libtiff</code> version 4.x and is not
 available on all platforms for <code>jpeg</code> before version 9c).  They
 also need support for either <code>X11</code> or <code>cairo</code> (see above).
 Should support for these devices <strong>not</strong> be required or broken
@@ -4285,8 +4289,29 @@ meant that on Sun Sparc using the Oracle compilers the flag
 <acronym>BLAS</acronym>/LAPACK was built with the same Fortran compiler used to
 build R.
 </p>
-
-
+<p>LAPACK 3.9.0 has a bug in which the DCOMBSSQ subroutine has a bug that
+may cause NA to be interpreted as zero. This is fixed in R 3.6.3, but if
+you use an external LAPACK, you may need to fix it there.
+</p>
+<p>The code (in <code>dlapack.f</code>) should read
+</p><div class="example">
+<pre class="example">*     ..
+*     .. Executable Statements ..
+*
+      IF( V1( 1 ).GE.V2( 1 ) ) THEN
+         IF( V1( 1 ).NE.ZERO ) THEN
+            V1( 2 ) = V1( 2 ) + ( V2( 1 ) / V1( 1 ) )**2 * V2( 2 )
+         ELSE
+            V1( 2 ) = V1( 2 ) + V2( 2 )
+         END IF
+      ELSE
+         V1( 2 ) = V2( 2 ) + ( V1( 1 ) / V2( 1 ) )**2 * V1( 2 )
+         V1( 1 ) = V2( 1 )
+      END IF
+      RETURN
+</pre></div>
+<p>(The inner ELSE clause was missing in LAPACK 3.9.0).
+</p>
 <hr>
 <a name="Configuration-on-a-Unix_002dalike"></a>
 <a name="Configuration-on-a-Unix_002dalike-1"></a>
@@ -5208,6 +5233,10 @@ example by setting
 </p>
 </li><li> A TeX installation. See <a href="#Other-libraries">Other libraries</a>.
 
+</li><li> <code>texi2any</code> from a &lsquo;<samp>texinfo</samp>&rsquo; distribution, which requires
+<code>perl</code> (currently part of macOS but it has been announced that
+it will not be from macOS 10.16).  (An old version of <code>texi2any</code>
+has been included in the binary distribution of R.)
 </li><li> Compilers supporting OpenMP: see the next subsection.
 </li></ul>
 
@@ -5232,6 +5261,26 @@ PKG_CONFIG_PATH=/opt/X11/lib/pkgconfig:/usr/local/lib/pkgconfig:/usr/lib/pkgconf
 and appropriate compilers, e.g. Fortran and the C/C++ compilers from
 those tools.  Some packages have further requirements such as
 <code>pkg-config</code>.
+</p>
+
+<hr>
+<a name="Note-for-Catalina-users"></a>
+<a name="Note-for-Catalina-users-1"></a>
+<h4 class="subsubsection">C.3.1.1 Note for Catalina users</h4>
+
+<p>The default security settings for Catalina can make it difficult to
+install Apple packages built after 2019-06-01 which have not been
+&lsquo;notarized&rsquo;<a name="DOCF79" href="#FOOT79"><sup>79</sup></a>
+by Apple.  And not just packages, as this has been seen for executables
+contained in tarballs/zipfiles (for example, for <code>pandoc</code>).
+</p>
+<p>There are workarounds, including in some cases not installing the latest
+version.  Usually one can use &lsquo;<samp>Open With</samp>&rsquo;
+(Control/right/two-finger-click in Finder), then select &lsquo;<samp>Installer</samp>&rsquo;
+and &lsquo;<samp>Open</samp>&rsquo; if you get a further warning message.
+</p>
+<p>This applies also to some R distributions, including R 3.6.2 and
+&lsquo;nightly builds&rsquo; from <a href="https://mac.r-project.org/">https://mac.r-project.org/</a>.
 </p>
 <hr>
 <a name="Recommended-C_002fC_002b_002b-compilers"></a>
@@ -5299,7 +5348,7 @@ are available from <a href="https://mac.R-project.org/libs/">https://mac.R-proje
 <a name="index-BLAS-library-1"></a>
 <a name="index-LAPACK-library-1"></a>
 <p>The <code>Accelerate</code>
-library<a name="DOCF79" href="#FOOT79"><sup>79</sup></a>
+library<a name="DOCF80" href="#FOOT80"><sup>80</sup></a>
 can be used <em>via</em> the configuration options
 </p>
 <div class="example">
@@ -5307,7 +5356,7 @@ can be used <em>via</em> the configuration options
 </pre></div>
 
 <p>to provide potentially higher-performance versions of the <acronym>BLAS</acronym>
-and LAPACK routines.<a name="DOCF80" href="#FOOT80"><sup>80</sup></a>
+and LAPACK routines.<a name="DOCF81" href="#FOOT81"><sup>81</sup></a>
 This also includes a full LAPACK which can be used <em>via</em>
 <samp>--with-lapack</samp>: however, the version of LAPACK it contains is
 often seriously old.
@@ -5334,12 +5383,14 @@ times before 1902 or after 2037 (despite using a 64-bit <code>time_t</code>).
 5GB, but a smaller version (&lsquo;Basic TeX&rsquo;) is available at
 <a href="https://www.tug.org/mactex/morepackages.html">https://www.tug.org/mactex/morepackages.html</a> to which you will
 need to add some packages, e.g. for the 2019 version we needed to
-add<a name="DOCF81" href="#FOOT81"><sup>81</sup></a>  <strong>cm-super</strong>, <strong>helvetic</strong>,
-<strong>inconsolata</strong> and <strong>texinfo</strong> which brought this to about 310MB.
-&lsquo;<samp>TeX Live Utility</samp>&rsquo; (available <em>via</em> the MacTeX front page)
-provides a graphical means to manage TeX packages.  This is
-documented to require Sierra or later: for earlier versions see the
-instructions on the MacTeX front page.
+add<a name="DOCF82" href="#FOOT82"><sup>82</sup></a>  <strong>cm-super</strong>, <strong>helvetic</strong>,
+<strong>inconsolata</strong> and <strong>texinfo</strong> which brought this to about
+310MB. (After updates in Dec 2019 it was also necessary to add
+<strong>letltxmacro</strong> to make <samp>NEWS.pdf</samp>.)  &lsquo;<samp>TeX Live Utility</samp>&rsquo;
+(available <em>via</em> the MacTeX front page) provides a graphical means
+to manage TeX packages.  This is documented to require Sierra or
+later: for earlier versions see the instructions on the MacTeX front
+page.
 </p>
 <p>Checking packages thoroughly requires <code>ghostscript</code> (part of the
 full MacTeX distribution or separately from
@@ -5402,20 +5453,20 @@ tclvalue(.Tcl(&quot;tk windowingsystem&quot;))  # &quot;x11&quot; or &quot;aqua&
 <a name="Java"></a>
 <h4 class="subsection">C.3.5 Java</h4>
 
-<p>The situation with Java support on macOS is messy,<a name="DOCF82" href="#FOOT82"><sup>82</sup></a> and
+<p>The situation with Java support on macOS is messy,<a name="DOCF83" href="#FOOT83"><sup>83</sup></a> and
 distribution of Java for all platforms changed in 2018.
 </p>
 <p>macOS no longer comes with an installed Java runtime (JRE), and a macOS
 upgrade may remove one if already installed: it is intended to be
 installed at first use.  Check if a JRE is installed by running
 <code>java -version</code> in a <code>Terminal</code> window: if Java is not
-installed<a name="DOCF83" href="#FOOT83"><sup>83</sup></a> this should prompt you to install it.  You can
+installed<a name="DOCF84" href="#FOOT84"><sup>84</sup></a> this should prompt you to install it.  You can
 also install directly a recent Java from Oracle (currently from
 <a href="http://www.oracle.com/technetwork/java/javase/downloads/index.html">http://www.oracle.com/technetwork/java/javase/downloads/index.html</a>).
 Builds of OpenJDK may also be available, e.g. from
 <a href="http://jdk.java.net/">http://jdk.java.net/</a>.  We recommend you install a version with
-long-term support, e.g. 8 or 11 (but not 9, 10 or 12 which have/had a
-6-month lifetime).
+long-term support, e.g. 8 or 11 (but not 9, 10, 12 or 13 which
+have/had a 6-month lifetime).
 </p>
 <p>Binary distributions of R are built against a specific version
 (e.g. 9) of Java so <code>sudo R CMD javareconf</code> will likely be
@@ -5430,7 +5481,7 @@ run.
 <p>Configuring and building R both looks for a JRE and for support for
 compiling JNI programs (used by packages <a href="https://CRAN.R-project.org/package=rJava"><strong>rJava</strong></a> and
 <a href="https://CRAN.R-project.org/package=JavaGD"><strong>JavaGD</strong></a>); the latter requires a JDK (Java SDK) and not just a
-JRE<a name="DOCF84" href="#FOOT84"><sup>84</sup></a>.
+JRE<a name="DOCF85" href="#FOOT85"><sup>85</sup></a>.
 </p>
 <p>The build process tries to fathom out what JRE/JDK to use, but it may
 need some help, e.g. by setting <code>JAVA_HOME</code>.  A JDK can be
@@ -5532,7 +5583,7 @@ in the <samp>/Applications</samp> folder.
 
 
 <p>R has been built successfully on Solaris 10 using the (zero cost)
-Oracle Developer Studio<a name="DOCF85" href="#FOOT85"><sup>85</sup></a> compilers: there has also been success with
+Oracle Developer Studio<a name="DOCF86" href="#FOOT86"><sup>86</sup></a> compilers: there has also been success with
 <code>gcc</code>/<code>gfortran</code>.  (Recent Sun machines are AMD Opterons
 or Intel Xeons (&lsquo;<samp>amd64</samp>&rsquo;) rather than &lsquo;<samp>x86</samp>&rsquo;, but 32-bit
 &lsquo;<samp>x86</samp>&rsquo; executables are the default.)  How these compilers
@@ -5664,7 +5715,7 @@ selected as LAPACK <em>via</em>
 </pre></div>
 
 <p>This has often given test failures in the past, in several different
-places.<a name="DOCF86" href="#FOOT86"><sup>86</sup></a>
+places.<a name="DOCF87" href="#FOOT87"><sup>87</sup></a>
 </p>
 <p>Parsing very complex R expressions needs a lot of stack space when
 the Oracle compilers are used: several packages require the stack
@@ -5725,7 +5776,7 @@ version of Solaris in use.  (This can be ascertained from <code>gcc
 several reports of problems were due to using <code>gcc</code> compiled on
 one version of Solaris on a later version.  Note that this can even
 apply to OS patches: some 2016 patches to Solaris 10 changed its C
-header files in way incompatible<a name="DOCF87" href="#FOOT87"><sup>87</sup></a> with the modified versions included with OpenCSW&rsquo;s
+header files in way incompatible<a name="DOCF88" href="#FOOT88"><sup>88</sup></a> with the modified versions included with OpenCSW&rsquo;s
 binary distribution.
 </p>
 <p>The notes here are for <code>gcc</code> set up to use the Solaris linker:
@@ -5799,7 +5850,7 @@ developers.)
 check</code>, and residual support from earlier experiments was removed in
 R 3.3.0.
 </p>
-<p>The 64-bit version was never unsupported.
+<p>The 64-bit version was never supported.
 </p>
 <hr>
 <a name="New-platforms"></a>
@@ -5875,7 +5926,7 @@ will not need to build add-on packages from source; see <a href="#Add_002don-pac
 </p>
 <p>We have found that the build process for R is quite sensitive to
 the choice of tools: please follow our instructions <strong>exactly</strong>,
-even to the choice of particular versions of the tools.<a name="DOCF88" href="#FOOT88"><sup>88</sup></a>  The build process for add-on packages is somewhat more
+even to the choice of particular versions of the tools.<a name="DOCF89" href="#FOOT89"><sup>89</sup></a>  The build process for add-on packages is somewhat more
 forgiving, but we recommend using the exact toolset at first, and only
 substituting other tools once you are familiar with the process.
 </p>
@@ -5928,7 +5979,7 @@ use filepaths containing spaces: you can always use the short forms
 
 <p>It is essential that the directory containing the command line tools
 comes first or second in the path: there are typically like-named
-tools<a name="DOCF89" href="#FOOT89"><sup>89</sup></a> in other directories, and they will <strong>not</strong>
+tools<a name="DOCF90" href="#FOOT90"><sup>90</sup></a> in other directories, and they will <strong>not</strong>
 work. The ordering of the other directories is less important, but if in
 doubt, use the order above.
 </p>
@@ -5977,7 +6028,7 @@ install LaTeX packages on first use.
 <a name="The-Inno-Setup-installer-1"></a>
 <h3 class="section">D.2 The Inno Setup installer</h3>
 
-<p>To make the installer package (<samp>R-3.6.2-win.exe</samp>) we
+<p>To make the installer package (<samp>R-3.6.3-win.exe</samp>) we
 currently require the Unicode version of Inno Setup 5.3.7 or later from
 <a href="http://jrsoftware.org/">http://jrsoftware.org/</a> (starting from 6.0, Inno Setup provides only
 one version, which supports Unicode). This is <em>not</em> included in
@@ -6670,41 +6721,44 @@ separately.</p>
 unsigned packages: to install them you may need to right-click and
 select <code>Open with -&gt; Installer</code>.</p>
 <h3><a name="FOOT79" href="#DOCF79">(79)</a></h3>
-<p><a href="https://developer.apple.com/documentation/accelerate">https://developer.apple.com/documentation/accelerate</a>.</p>
+<p>See
+<a href="https://developer.apple.com//documentation/xcode/notarizing_macos_software_before_distribution">https://developer.apple.com//documentation/xcode/notarizing_macos_software_before_distribution</a>.</p>
 <h3><a name="FOOT80" href="#DOCF80">(80)</a></h3>
+<p><a href="https://developer.apple.com/documentation/accelerate">https://developer.apple.com/documentation/accelerate</a>.</p>
+<h3><a name="FOOT81" href="#DOCF81">(81)</a></h3>
 <p>It was reported that for some non-Apple
 toolchains <code>CPPFLAGS</code> needed to contain <code>-D__ACCELERATE__</code>:
 not needed for <code>clang</code> from <a href="releases.llvm.org">releases.llvm.org</a> though.</p>
-<h3><a name="FOOT81" href="#DOCF81">(81)</a></h3>
+<h3><a name="FOOT82" href="#DOCF82">(82)</a></h3>
 <p>E.g. <em>via</em> <code>tlmgr install cm-super helvetic
 inconsolata texinfo</code> .</p>
-<h3><a name="FOOT82" href="#DOCF82">(82)</a></h3>
+<h3><a name="FOOT83" href="#DOCF83">(83)</a></h3>
 <p>For more
 details see <a href="http://www.macstrategy.com/article.php?3">http://www.macstrategy.com/article.php?3</a>.</p>
-<h3><a name="FOOT83" href="#DOCF83">(83)</a></h3>
-<p>In the unlikely event that the version reported does
-not start with <code>1.8.0</code>, <code>9</code>, <code>10</code> or <code>11</code> you need
-to update your Java.</p>
 <h3><a name="FOOT84" href="#DOCF84">(84)</a></h3>
+<p>In the unlikely event that the version reported does
+not start with <code>1.8.0</code>, <code>11</code> or higher you need
+to update your Java.</p>
+<h3><a name="FOOT85" href="#DOCF85">(85)</a></h3>
 <p>As from Java 11, there is no separate client JRE
 distribution.</p>
-<h3><a name="FOOT85" href="#DOCF85">(85)</a></h3>
+<h3><a name="FOOT86" href="#DOCF86">(86)</a></h3>
 <p>Oracle Solaris Studio prior to 2016,
 and previously Sun Studio.</p>
-<h3><a name="FOOT86" href="#DOCF86">(86)</a></h3>
+<h3><a name="FOOT87" href="#DOCF87">(87)</a></h3>
 <p>When last checked it failed in <samp>tests/reg-BLAS.R</samp>,
 and on some builds, including for &lsquo;<samp>amd64</samp>&rsquo;, it failed in
 <code>example(eigen)</code>.</p>
-<h3><a name="FOOT87" href="#DOCF87">(87)</a></h3>
+<h3><a name="FOOT88" href="#DOCF88">(88)</a></h3>
 <p>In particular, header
 <samp>cmath</samp> in C++11 mode includes <samp>math.h</samp> and
 <samp>iso/math_c99.h</samp> and <code>gcc</code> had &lsquo;fixed&rsquo; an earlier version
 of the latter.</p>
-<h3><a name="FOOT88" href="#DOCF88">(88)</a></h3>
+<h3><a name="FOOT89" href="#DOCF89">(89)</a></h3>
 <p>For
 example, the Cygwin version of <code>make 3.81</code> fails to work
 correctly.</p>
-<h3><a name="FOOT89" href="#DOCF89">(89)</a></h3>
+<h3><a name="FOOT90" href="#DOCF90">(90)</a></h3>
 <p>such as <code>sort</code>, <code>find</code> and perhaps
 <code>make</code>.</p>
 </div>
