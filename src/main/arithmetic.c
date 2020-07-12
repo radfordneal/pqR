@@ -1635,8 +1635,9 @@ SEXP attribute_hidden do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (length(args) >= 2 &&
 	isSymbol(CADR(args)) && R_isMissing(CADR(args), env)) {
-	double digits = 0;
-	if(PRIMVAL(op) == 10004) digits = 6.0; // for signif()
+	double digits = 0.; // round()
+	if(PRIMVAL(op) == 10004) // signif()
+	    digits = 6.;
 	PROTECT(args = list2(CAR(args), ScalarReal(digits))); nprotect++;
     }
 
@@ -1648,13 +1649,14 @@ SEXP attribute_hidden do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
     n = length(args);
     if (n != 1 && n != 2)
 	error(ngettext("%d argument passed to '%s' which requires 1 or 2 arguments",
-		       "%d arguments passed to '%s'which requires 1 or 2 arguments", n),
+		       "%d arguments passed to '%s' which requires 1 or 2 arguments", n),
 	      n, PRIMNAME(op));
 
     if (! DispatchGroup("Math", call2, op, args, env, &res)) {
 	if(n == 1) {
-	    double digits = 0.0;
-	    if(PRIMVAL(op) == 10004) digits = 6.0;
+	    double digits = 0.; // round()
+	    if(PRIMVAL(op) == 10004) // signif()
+		digits = 6.;
 	    SETCDR(args, CONS(ScalarReal(digits), R_NilValue));
 	} else {
 	    /* If named, do argument matching by name */

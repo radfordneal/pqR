@@ -7,6 +7,51 @@
 
 <h2>R News</h2>
 
+<h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 4.0.2</h3>
+
+
+
+<h4>UTILITIES</h4>
+
+
+<ul>
+<li> <p><code>R CMD check</code> skips vignette re-building (with a
+warning) if the <span class="samp">VignetteBuilder</span> package(s) are not available.
+</p>
+</li></ul>
+
+
+
+
+<h4>BUG FIXES</h4>
+
+
+<ul>
+<li><p> Paths with non-ASCII characters caused problems for 
+package loading on Windows <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17833">PR#17833</a>.
+</p>
+</li>
+<li><p> Using <span class="pkg">tcltk</span> widgets no longer crashes R on
+Windows.
+</p>
+</li>
+<li> <p><code>source(*, echo=TRUE)</code> no longer fails in some cases with
+empty lines; reported by Bill Dunlap in <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17769">PR#17769</a>.
+</p>
+</li>
+<li> <p><code>on.exit()</code> now correctly matches named arguments, thanks
+to <a href="https://bugs.R-project.org/bugzilla3/show_bug.cgi?id=17815">PR#17815</a> (including patch) by Brodie Gaslam.
+</p>
+</li>
+<li> <p><code>regexpr(*, perl=TRUE)</code> no longer returns incorrect
+positions into text containing characters outside of the Unicode
+Basic Multilingual Plane on Windows.
+</p>
+</li></ul>
+
+
+
+
 <h3><img src="../help/figures/../../html/Rlogo.svg" class="toplogo" alt="[R logo]" /> CHANGES IN R 4.0.1</h3>
 
 

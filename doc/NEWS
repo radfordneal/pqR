@@ -1,5 +1,29 @@
 R News
 
+CHANGES IN R 4.0.2:
+
+  UTILITIES:
+
+    * R CMD check skips vignette re-building (with a warning) if the
+      VignetteBuilder package(s) are not available.
+
+  BUG FIXES:
+
+    * Paths with non-ASCII characters caused problems for package
+      loading on Windows PR#17833.
+
+    * Using tcltk widgets no longer crashes R on Windows.
+
+    * source(*, echo=TRUE) no longer fails in some cases with empty
+      lines; reported by Bill Dunlap in PR#17769.
+
+    * on.exit() now correctly matches named arguments, thanks to
+      PR#17815 (including patch) by Brodie Gaslam.
+
+    * regexpr(*, perl=TRUE) no longer returns incorrect positions into
+      text containing characters outside of the Unicode Basic
+      Multilingual Plane on Windows.
+
 CHANGES IN R 4.0.1:
 
   NEW FEATURES:

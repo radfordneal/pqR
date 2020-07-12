@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-<!-- This manual is for R, version 4.0.1 (2020-06-06).
+<!-- This manual is for R, version 4.0.2 (2020-06-22).
 
 Copyright (C) 2001-2018 R Core Team
 
@@ -324,7 +324,7 @@ p {
 
 <p>This is a guide to installation and administration for R.
 </p>
-<p>This manual is for R, version 4.0.1 (2020-06-06).
+<p>This manual is for R, version 4.0.2 (2020-06-22).
 </p>
 <p>Copyright &copy; 2001&ndash;2018 R Core Team
 </p>
@@ -924,13 +924,13 @@ specified on the <code>make install</code> command line (at least for
 <code>libdir</code>.  The C header files can be installed to the value of
 <code>rincludedir</code>: note that as the headers are not installed into a
 subdirectory you probably want something like
-<code>rincludedir=/usr/local/include/R-4.0.1</code>.
+<code>rincludedir=/usr/local/include/R-4.0.2</code>.
 </p>
 <p>If you want the R home to be something other than
 <samp><var>libdir</var>/R</samp>, use <samp>rhome</samp>: for example
 </p>
 <div class="example">
-<pre class="example">make install rhome=/usr/local/lib64/R-4.0.1
+<pre class="example">make install rhome=/usr/local/lib64/R-4.0.2
 </pre></div>
 
 <p>will use a version-specific R home on a non-Debian Linux 64-bit
@@ -1493,7 +1493,7 @@ conversion to short name equivalents (a.k.a. DOS 8.3 names), then R
 <em>must</em> be installed in a path that does not contain spaces.
 </p>
 <p>Installation is <em>via</em> the installer
-<samp>R-4.0.1-win.exe</samp>.  Just double-click on the icon and
+<samp>R-4.0.2-win.exe</samp>.  Just double-click on the icon and
 follow the instructions.  When installing on a 64-bit version of Windows
 the options will include 32- or 64-bit versions of R (and the default is
 to install both).  You can uninstall R from the Control Panel.
@@ -1644,7 +1644,7 @@ Windows&rsquo; CRLF line endings.
 </p>
 <p>The front page of a <acronym>CRAN</acronym> site has a link &lsquo;Download R for (Mac)
 OS X&rsquo;. Click on that, then download the file
-<samp>R-4.0.1.pkg</samp> and install it. This runs on macOS 10.13
+<samp>R-4.0.2.pkg</samp> and install it. This runs on macOS 10.13
 and later (High Sierra, Mojave, Catalina, &hellip;).
 </p>
 <p>Installers for R-patched and R-devel are usually available from
@@ -3295,9 +3295,9 @@ environment variable <code>R_GSCMD</code> at that time.
 following packages and their development versions, and this may provide
 a useful checklist for other systems:
 </p><div class="example">
-<pre class="example">bzip2 cairo fontconfig freetype fribidi glib2 libX11 libXext libXt
-libcurl libicu libjpeg libpng libtiff libtirpc libxcrypt ncurses pango
-pcre readline tcl tk xz zlib
+<pre class="example">bzip2 cairo fontconfig freetype fribidi glib2 harfbuzz libX11 libXext
+libXt libcurl libicu libjpeg libpng libtiff libtirpc libxcrypt ncurses
+pango pcre2 readline tcl tk xz zlib
 </pre></div>
 
 
@@ -3358,7 +3358,7 @@ a sub-architecture-specific version).  A typical setting for
 &lsquo;<samp>x86_64</samp>&rsquo; Linux is
 </p>
 <div class="example">
-<pre class="example">JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.212.b04-0.fc30.x86_64/jre
+<pre class="example">JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.252.b09-0.fc32.x86_64/jre
 R_JAVA_LD_LIBRARY_PATH=${JAVA_HOME}/lib/that/server
 </pre></div>
 
@@ -3387,13 +3387,15 @@ path when configuring. For example, on that system any of
 <pre class="example">JAVA_HOME=/usr/lib/jvm/java
 JAVA_HOME=/usr/lib/jvm/java-1.8.0
 JAVA_HOME=/usr/lib/jvm/java-1.8.0/jre
+JAVA_HOME=/usr/lib/jvm/jre-1.8.0
 </pre></div>
 
-<p>worked.
+<p>worked (since the &lsquo;auto&rsquo; setting of <code>/etc/alternatives</code> chose
+Java 8 aka 1.8.0).
 </p>
 <p>&lsquo;Non-server&rsquo; Oracle distributions of Java as from version 11 are of a
 full JDK.  However, Linux distributions can be confusing: for example
-Fedora 30 had
+Fedora 32 had
 </p><div class="example">
 <pre class="example">java-1.8.0-openjdk
 java-1.8.0-openjdk-devel
@@ -3621,7 +3623,7 @@ for some later CPUs.
 <p>See see <a href="#Shared-BLAS">Shared BLAS</a> for an alternative (and in many ways preferable)
 way to use them.
 </p>
-<p>Some platforms provide multiple builds of OpenBLAS: for example Fedora 30
+<p>Some platforms provide multiple builds of OpenBLAS: for example Fedora 32
 has RPMs<a name="DOCF63" href="#FOOT63"><sup>63</sup></a>
 </p><div class="example">
 <pre class="example">openblas
@@ -4544,7 +4546,7 @@ versions of the compilers this has caused problems in at least one
 
 <p>is appropriate since most (but not all) software installs its 64-bit
 libraries in <samp>/usr/local/lib64</samp>.  To build a 32-bit version of R
-on &lsquo;<samp>x86_64</samp>&rsquo; with Fedora 30 we used
+on &lsquo;<samp>x86_64</samp>&rsquo; with Fedora 32 we used
 </p>
 <div class="example">
 <pre class="example">CC=&quot;gcc -m32&quot;
@@ -4616,7 +4618,7 @@ without SSE2 support.  Note that it is a <em>replacement</em> for
 perhaps the optimization level).
 </p>
 <p>Additional compilation flags can be specified for added safety/security
-checks.  For example Fedora 30 adds
+checks.  For example Fedora adds
 </p>
 <div class="example">
 <pre class="example">-Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS
@@ -6069,7 +6071,7 @@ Debian/Ubuntu world: see also
 in Debian/Ubuntu.</p>
 <h3><a name="FOOT55" href="#DOCF55">(55)</a></h3>
 <p>This is the default as
-from <code>glibc</code> 2.26 and has been confirmed for Fedora 28, which does
+from <code>glibc</code> 2.26 and has been confirmed for Fedora &gt;= 28, which does
 not mention this on its <code>man</code> pages.</p>
 <h3><a name="FOOT56" href="#DOCF56">(56)</a></h3>
 <p>R uses <samp>rpc/xdr.h</samp> but that

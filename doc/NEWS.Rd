@@ -5,6 +5,36 @@
 \title{R News}
 \encoding{UTF-8}
 
+\section{\Rlogo CHANGES IN R 4.0.2}{
+
+  \subsection{UTILITIES}{
+    \itemize{
+      \item \command{R CMD check} skips vignette re-building (with a
+      warning) if the \samp{VignetteBuilder} package(s) are not available.
+    }
+  }
+
+   \subsection{BUG FIXES}{
+    \itemize{
+      \item Paths with non-ASCII characters caused problems for 
+      package loading on Windows \PR{17833}.
+
+      \item Using \pkg{tcltk} widgets no longer crashes R on
+      Windows.
+
+      \item \code{source(*, echo=TRUE)} no longer fails in some cases with
+      empty lines; reported by Bill Dunlap in \PR{17769}.
+
+      \item \code{on.exit()} now correctly matches named arguments, thanks
+      to \PR{17815} (including patch) by Brodie Gaslam.
+
+      \item \code{regexpr(*, perl=TRUE)} no longer returns incorrect
+      positions into text containing characters outside of the Unicode
+      Basic Multilingual Plane on Windows.
+    }
+  }
+}
+
 \section{\Rlogo CHANGES IN R 4.0.1}{
 
   \subsection{NEW FEATURES}{
