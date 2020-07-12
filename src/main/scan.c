@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1998-2018   The R Core Team.
+ *  Copyright (C) 1998-2020   The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -42,6 +42,10 @@
 #include <Print.h>
 
 #include <rlocale.h> /* for btowc */
+
+#ifdef Win32
+#include <trioremap.h> /* for %lld */
+#endif
 
 /* The size of vector initially allocated by scan */
 #define SCAN_BLOCKSIZE		1000
@@ -330,7 +334,7 @@ fillBuffer(SEXPTYPE type, int strip, int *bch, LocalData *d,
 */
     char *bufp;
     int c, quote, filled, nbuf = MAXELTSIZE, m, mm = 0;
-    Rboolean dbcslocale = (MB_CUR_MAX == 2);
+    Rboolean dbcslocale = (MB_CUR_MAX == 2) && !d->isUTF8 && !d->isLatin1;
 
     m = 0;
     filled = 1;
@@ -563,7 +567,8 @@ static SEXP scanVector(SEXPTYPE type, R_xlen_t maxitems, R_xlen_t maxlines,
 
     nprev = 0; n = 0; linesread = 0; bch = 1;
 
-    if (d->ttyflag) sprintf(ConsolePrompt, "1: ");
+    if (d->ttyflag)
+	snprintf(ConsolePrompt, CONSOLE_PROMPT_SIZE, "1: ");
 
     strip = asLogical(stripwhite);
 
@@ -578,7 +583,8 @@ static SEXP scanVector(SEXPTYPE type, R_xlen_t maxitems, R_xlen_t maxlines,
 	    if (linesread == maxlines)
 		break;
 	    if (d->ttyflag)
-		sprintf(ConsolePrompt, "%lld: ", (long long) (n + 1));
+		snprintf(ConsolePrompt, CONSOLE_PROMPT_SIZE,
+		         "%lld: ", (long long) (n + 1));
 	    nprev = n;
 	}
 	if (n == blocksize) {
@@ -698,7 +704,8 @@ static SEXP scanFrame(SEXP what, R_xlen_t maxitems, R_xlen_t maxlines,
     bch = 1;
     c = 0;			/* -Wall */
 
-    if (d->ttyflag) sprintf(ConsolePrompt, "1: ");
+    if (d->ttyflag)
+	snprintf(ConsolePrompt, CONSOLE_PROMPT_SIZE, "1: ");
 
     // we checked its type in do_scan
     int *lstrip = LOGICAL(stripwhite);
@@ -734,7 +741,8 @@ static SEXP scanFrame(SEXP what, R_xlen_t maxitems, R_xlen_t maxlines,
 	    if (maxlines > 0 && linesread == maxlines)
 		goto done;
 	    if (d->ttyflag)
-		sprintf(ConsolePrompt, "%lld: ", (long long) (n + 1));
+		snprintf(ConsolePrompt, CONSOLE_PROMPT_SIZE,
+		         "%lld: ", (long long) (n + 1));
 	}
 	if (n == blksize && colsread == 0) {
 	    if(blksize > R_XLEN_T_MAX/2) error(_("too many items"));

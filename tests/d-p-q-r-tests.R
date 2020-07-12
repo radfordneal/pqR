@@ -94,10 +94,10 @@ stopifnot(dpois(0:5,0)		 == c(1, rep(0,5)),
 n1 <- 20; n2 <- 16
 for(lambda in rexp(n1))
     for(k in rpois(n2, lambda))
-	stopifnot(all.equal(1 - pchisq(2*lambda, 2*(1+ 0:k)),
+	stopifnot(all.equal(pchisq(2*lambda, 2*(1+ 0:k), lower.tail = FALSE),
 			    pp <- cumsum(dpois(0:k, lambda=lambda)),
 			    tolerance = 100*Meps),
-		  all.equal(pp, ppois(0:k, lambda=lambda), tolerance = 100*Meps),
+		  all.equal(    pp, ppois(0:k, lambda=lambda), tolerance = 100*Meps),
 		  all.equal(1 - pp, ppois(0:k, lambda=lambda, lower.tail = FALSE)))
 
 
@@ -1053,13 +1053,19 @@ p <- c(2, rep(1, 200))
 x <- sample(length(p), 100000, prob = p, replace = TRUE)
 stopifnot(sum(x == 1) == 994)
 
-## check for faiure of new walker_Probsample
+## check for failure of new walker_Probsample
 RNGversion("3.6.0")
 set.seed(12345)
 epsilon <- 1e-10
-p201 <- prop.table( rep( c(1, epsilon), c(201, 999-201)))
+p201 <- proportions( rep( c(1, epsilon), c(201, 999-201)))
 x <- sample(length(p201), 100000, prob = p201, replace = TRUE)
 stopifnot(sum(x <= 201) == 100000)
+
+## The PR#17577 bug fix for dgamma() is currently "optimized away" on Windows 32-bit (8087 proc).
+## --> check in ./reg-tests-1d.R (with no *.Rout.save) currently
+
+## Ditto for  pchisq(<LRG>, <LRG>, ..)
+
 
 
 cat("Time elapsed: ", proc.time() - .ptime,"\n")

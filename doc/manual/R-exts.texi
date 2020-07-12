@@ -280,8 +280,8 @@ For the conventions for files @file{NEWS} and @file{ChangeLog} in the
 @uref{https://www.gnu.org/@/prep/@/standards/@/standards.html#Documentation}.
 
 The package subdirectory should be given the same name as the package.
-Because some file systems (e.g., those on Windows and by default on OS
-X) are not case-sensitive, to maintain portability it is strongly
+Because some file systems (e.g., those on Windows and by default on
+macOS) are not case-sensitive, to maintain portability it is strongly
 recommended that case distinctions not be used to distinguish different
 packages.  For example, if you have a package named @file{foo}, do not
 also create a package named @file{Foo}.
@@ -667,7 +667,7 @@ order listed in the @samp{RdMacros} field, before any macro definitions
 in the current package are loaded.  Macro definitions in individual
 @file{.Rd} files in the @file{man} directory are loaded last, and are
 local to later parts of that file.  In case of duplicates, the last
-loaded definition will be used@footnote{Duplicate definitions may
+loaded definition will be used.@footnote{Duplicate definitions may
 trigger a warning: see @ref{User-defined macros}.}  Both @command{R CMD
 Rd2pdf} and @command{R CMD Rdconv} have an optional flag
 @option{--RdMacros=pkglist}.  The option is also a comma-separated list
@@ -850,7 +850,7 @@ versions.
 It is inadvisable to use a dependence on @R{} with patchlevel (the third
 digit) other than zero.  Doing so with packages which others depend on
 will cause the other packages to become unusable under earlier versions
-in the series, and e.g.@: versions 3.x.1 are widely used throughout the
+in the series, and e.g.@: versions 4.x.1 are widely used throughout the
 Northern Hemisphere academic year.
 
 Both @code{library} and the @R{} package checking facilities use this
@@ -1333,7 +1333,7 @@ are written to a @file{.Rout} file.  If there is a
 corresponding@footnote{The best way to generate such a file is to copy
 the @file{.Rout} from a successful run of @command{R CMD check}.  If you
 want to generate it separately, do run @R{} with options
-@option{--vanilla --slave} and with environment variable
+@option{--vanilla --no-echo} and with environment variable
 @env{LANGUAGE=en} set to get messages in English.  Be careful not to use
 output with the option @option{--timings} (and note that
 @option{--as-cran} sets it).} @file{.Rout.save} file, these two are
@@ -1356,7 +1356,7 @@ set (and note that @option{--as-cran} sets it).
 If reference output is included for examples, tests or vignettes do make
 sure that it is fully reproducible, as it will be compared verbatim to
 that produced in a check run, unless the @samp{IGNORE_RDIFF} markup is
-used.  Things which trip maintainers up include displayed version
+used.  Things which trip up maintainers include displayed version
 numbers from loading other packages, printing numerical results to an
 unreproducibly high precision and printing timings.  Another trap is
 small values which are in fact rounding error from zero: consider using
@@ -1501,14 +1501,15 @@ package---the source files should not be installed.
 If your package requires one of these interpreters or an extension then
 this should be declared in the @samp{SystemRequirements} field of its
 @file{DESCRIPTION} file.  (Users of Java most often do so @emph{via}
-@CRANpkg{rJava}, when depending on/importing that suffices.)
+@CRANpkg{rJava}, when depending on/importing that suffices unless there
+is a version requirement on Java code in the package.)
 
 Windows and Mac users should be aware that the Tcl extensions
 @samp{BWidget} and @samp{Tktable} which are currently included with the
-@R{} for Windows and in the macOS installers @emph{are} extensions and do
-need to be declared for users of other platforms (and that
-@samp{Tktable} is less widely available than it used to be, including
-not in the main repositories for major Linux distributions).
+@R{} for Windows (and formerly in the macOS installer) @emph{are}
+extensions and do need to be declared for users of other platforms (and
+that @samp{Tktable} is less widely available than it used to be,
+including not in the main repositories for major Linux distributions).
 @c Not in Fedora since 17, only in launchpad for Ubuntu.
 
 @samp{BWidget} needs to be installed by the user on other OSes.  This is
@@ -1525,8 +1526,8 @@ then download the sources from
 at the command line run something like
 
 @example
-tar xf bwidget-1.9.8.tar.gz
-sudo mv bwidget-1.9.8 /usr/local/lib
+tar xf bwidget-1.9.14.tar.gz
+sudo mv bwidget-1.9.14 /usr/local/lib
 @end example
 
 @noindent
@@ -1710,8 +1711,9 @@ linked into a shared library) @samp{CPICFLAGS}.  For Fortran, be careful
 to use @samp{FC FFLAGS FPICFLAGS} for fixed-form Fortran and 
 @samp{FC FCFLAGS FPICFLAGS} for free-form Fortran.  (Packages intended to
 be used with @R{} versions before 3.6.0 should use the legacy forms
-@samp{F77 FFLAGS FPICFLAGS} and @samp{FC FCFLAGS FCPICFLAGS}, which are
-still accepted.)
+@samp{F77 FFLAGS FPICFLAGS} and @samp{FC FCFLAGS FCPICFLAGS}, but
+@samp{F77} and @samp{FCPICFLAGS} are no longer defined, so such packages
+should depend on @samp{R (< 4.0)}.)
 
 To check for an external BLAS library using the @code{AX_BLAS} macro
 from the official Autoconf Macro Archive, one can simply do
@@ -1761,7 +1763,7 @@ used on that platform.  (Optionally, there can be a @file{cleanup.win}
 script.  Both should be shell scripts to be executed by @command{ash},
 which is a minimal version of Bourne-style @command{sh}.)  When
 @file{configure.win} is run the environment variables @env{R_HOME}
-(which uses @samp{/} as the file separator), @env{R_ARCH} and Use
+(which uses @samp{/} as the file separator), @env{R_ARCH} and
 @env{R_ARCH_BIN} will be set.  Use @env{R_ARCH} to decide if this is a
 64-bit build (its value there is @samp{/x64}) and to install DLLs to the
 correct place (@file{$@{R_HOME@}/libs$@{R_ARCH@}}).  Use
@@ -1860,8 +1862,7 @@ licence).
 * Configure example::
 * Using F9x code::
 * Using C++11 code::
-* Using C++14 code::
-* Using C++17 code::
+* Using C++14 and later::
 @end menu
 
 @node Using Makevars, Configure example, Configure and cleanup, Configure and cleanup
@@ -2185,7 +2186,7 @@ PKG_LIBS = $(SHLIB_OPENMP_CFLAGS)
 @end example
 
 Note that the macro @code{SHLIB_OPENMP_CXXFLAGS} applies to the default
-C++11 compiler and not necessarily to the C++98/14/17 compiler: users of
+C++11 compiler and not necessarily to the C++14/17/20 compiler: users of
 the latter should do their own @command{configure} checks.  If you do
 use your own checks, make sure that OpenMP support is complete by
 compiling and linking an OpenMP-using program: on some platforms the
@@ -2254,23 +2255,21 @@ macro has value a date which can be mapped to an OpenMP version: for
 example, value @code{201307} is the date of version 4.0 (July
 2013). However this may be used to denote the latest version which is
 partially supported, not that which is fully implemented.}  to say what
-version of OpenMP is supported: version 3.1 (and much of 4.0) is
-supported by recent versions of the Linux, Windows and Solaris
+version of OpenMP is supported: version 3.1 (and much of 4.0, 4.5 or
+5.0) is supported by recent versions of the Linux, Windows and Solaris
 platforms, but portable packages cannot assume that end users have
-recent versions.  Apple builds of @command{clang}
-on macOS currently have no OpenMP support, but @acronym{CRAN} binary
-packages are built with a @command{clang}-based toolchain which supports
-OpenMP.  @uref{http://www.openmp.org/@/resources/@/openmp-compilers-tools}
-gives some idea of what compilers support what versions.
+recent versions.  Apple builds of @command{clang} on macOS have no
+OpenMP support.
+@uref{http://www.openmp.org/@/resources/@/openmp-compilers-tools} gives
+some idea of what compilers support what versions.
 
 The performance of OpenMP varies substantially between platforms.  The
-Windows implementation has substantial overheads@footnote{as did the
-GCC-based Apple implementation, but not the Intel/LLVM OpenMP runtime
-on macOS.}, so is only beneficial if quite substantial tasks are run in
-parallel.  Also, on Windows new threads are started with the
-default@footnote{Windows default, not MinGW-w64 default.} FPU control
-word, so computations done on OpenMP threads will not make use of
-extended-precision arithmetic which is the default for the main process.
+Windows implementation has substantial overheads, so is only beneficial
+if quite substantial tasks are run in parallel.  Also, on Windows new
+threads are started with the default@footnote{Windows default, not
+MinGW-w64 default.} FPU control word, so computations done on OpenMP
+threads will not make use of extended-precision arithmetic which is the
+default for the main process.
 @c mingw64-public, 2015-02-02.
 @c https://stackoverflow.com/questions/2553725/is-the-fpu-control-word-setting-per-thread-or-per-process
 
@@ -2622,35 +2621,27 @@ define a module of the same name in multiple source files.
 @c As was done by frailtypack in 2018-12: gfortran accepted this, ODS
 @c on Solaris did not.
 
-@node Using C++11 code, Using C++14 code, Using F9x code, Configure and cleanup
+@node Using C++11 code, Using C++14 and later, Using F9x code, Configure and cleanup
 @subsection Using C++11 code
 
 @R{} can be built without a C++ compiler although one is available (but
-not necessarily installed) on all known @R{} platforms.  For full
-portability across platforms, all that can be assumed is approximate
-support for the C++98 standard (the widely used @command{g++} deviates
-considerably from the standard).  Some compilers have a concept of
-`C++03' (`essentially a bug fix') or `C++ Technical Report 1' (TR1), an
-optional addition to the `C++03' revision which was published in 2007.
-A revised standard was published in 2011 and compilers with pretty much
-complete implementations are available.  C++11 added all of the C99
-features which are not otherwise implemented in C++, and C++ compilers
-commonly accept C99 extensions to C++98.  A minor update@footnote{The
-changes are linked from
+not necessarily installed) on all known @R{} platforms.  As from @R{}
+4.0.0 a C++ compiler will be selected only if it conforms to the 2011
+standard (`C++11').  A minor update@footnote{The changes are linked from
 @uref{https://isocpp.org/@/std/@/standing-documents/@/sd-6-sg10-feature-test-recommendations}.}
 (`C++14') was published in December 2014.  A revision (`C++17') was
 published in December 2017, and a further revision (`C++20', with many
 new features) is scheduled for publication in May 2020.
 
 What standard a C++ compiler aims to support can be hard to determine:
-the value@footnote{Values @code{199711}, @code{201103L} and
-@code{201402L} are most commonly used for C++98, C++11 and C++14
-respectively, but some compilers set @code{1L}.  The official value for
-C++17 is @code{201703L} but some compiler versions have smaller values
-so a test of @code{__cplusplus > 201402L} is safer.} of
-@code{__cplusplus} may help but some compilers use it to denote a
-standard which is partially supported and some the latest standard which
-is (almost) fully supported.
+the value@footnote{Values @code{199711}, @code{201103L}, @code{201402L}
+and @code{201703L} are most commonly used for C++98, C++11, C++14 and
+C++17 respectively, but some compilers set @code{1L}.  At the time of
+writing there was no official value for C++20, but some compilers are
+using @code{202002L}, others @code{201703L}.} of @code{__cplusplus} may
+help but some compilers use it to denote a standard which is partially
+supported and some the latest standard which is (almost) fully
+supported.
 
 The webpage
 @uref{http://en.cppreference.com/@/w/@/cpp/@/compiler_support} gives
@@ -2661,7 +2652,7 @@ As from version 3.6.2@footnote{version 3.6.0 except on Windows.}, @R{}
 selects a default C++ compiler with options that conform as far as
 possible@footnote{allowing `GNU extensions', but if possible excluding
 C++14 features.} to C++11. Packages which do not specify @samp{R (>=
-3.6.2)} in their @file{DESCRIPTION} files need to explicitly require
+4.0)} in their @file{DESCRIPTION} files need to explicitly require
 C++11, hence the rest of this section.
 
 In order to specify C++11 code in a package to be used with @R{}
@@ -2686,56 +2677,6 @@ SystemRequirements: C++11
 If a package does have a @file{src/Makevars[.win]} file then setting the
 make variable @samp{CXX_STD} is preferred, as it allows @command{R CMD
 SHLIB} to work correctly in the package's @file{src} directory.
-
-Conversely, to ensure that the C++98 standard is assumed even when this
-is not the compiler default, use
-
-@example
-SystemRequirements: C++98
-@end example
-@noindent
-or
-@example
-CXX_STD = CXX98
-@end example
-@noindent
-But note that this is deprecated and will be ignorwd in future versions
-of @R{}.
-
-The C++11 compiler will be used systematically by R for all C++ code
-if the environment variable @env{USE_CXX11} is defined (with any
-value). Hence this environment variable should be defined when invoking
-@command{R CMD SHLIB} in the absence of a @file{Makevars} file (or
-@file{Makevars.win} on Windows) if a C++11 compiler is required.
-
-Further control over compilation of C++11 code can be obtained by
-specifying the macros @samp{CXX11} and @samp{CXX11STD} when @R{} is
-configured@footnote{For
-details of these and related macros, see file @file{config.site} in
-the @R{} sources.}, or in a personal or site @file{Makevars} file.
-@ifset UseExternalXrefs
-@xref{Customizing package compilation, , Customizing package compilation,
-R-admin, R Installation and Administration}.
-@end ifset
-If C++11 support is not available then these macros are both empty; if
-it is available by default, @samp{CXX11} defaults to @samp{CXX} and
-@samp{CXX11STD} is empty . Otherwise, @samp{CXX11} defaults to the same
-value as the C++ compiler @samp{CXX} and the flag @samp{CXX11STD}
-defaults to @option{-std=c++11} or similar.  It is possible to specify
-@samp{CXX11} to be a distinct compiler just for C++11--using packages,
-e.g.@: @command{g++} on Solaris.  Note however that different C++
-compilers (and even different versions of the same compiler) often
-differ in their ABI so their outputs can rarely be mixed. By setting
-@samp{CXX11STD} it is also possible to choose a different dialect of the
-standard such as @option{-std=c++11}.
-
-As noted above, support for C++11 varies across platforms: on some
-platforms, it may be possible or necessary to select a different
-compiler for C++11, @emph{via} personal or site @file{Makevars} files.
-
-There is no guarantee that C++11 can be used in a package in combination
-with any other compiled language (even C), as the C++11 compiler may be
-incompatible with the native compilers for the platform.
 
 If a package using C++11 has a @command{configure} script it is
 essential that it selects the correct compiler, @emph{via} something like
@@ -2767,11 +2708,11 @@ by @command{R CMD SHLIB} as used by default by @command{R CMD INSTALL}.
 They do not necessarily apply if there is a @file{src/Makefile} file,
 nor to compilation done in vignettes or @emph{via} other packages.
 
-@node Using C++14 code, Using C++17 code, Using C++11 code, Configure and cleanup
-@subsection Using C++14 code
+@node Using C++14 and later,  , Using C++11 code, Configure and cleanup
+@subsection Using C++14 and later
 
-Support for a C++14 compiler (where available) was been added to @R{}
-from version 3.4.0.  Similar considerations to C++11 apply, with the
+Support for a C++14 compiler (where available) has been in @R{}
+since version 3.4.0.  Similar considerations to C++11 apply, with the
 variables associated with the C++14 compiler using the prefix
 @samp{CXX14} instead of @samp{CXX11}. Hence to use C++14 code in a
 package, the package's @file{Makevars} file (or @file{Makevars.win} on
@@ -2781,7 +2722,7 @@ CXX_STD = CXX14
 @end example
 
 In the absence of a @file{Makevars} file, C++14 support can also be
-requested by the line:
+requested by the line
 @example
 SystemRequirements: C++14
 @end example
@@ -2789,7 +2730,7 @@ SystemRequirements: C++14
 in the @file{DESCRIPTION} file. Finally, the C++14 compiler can be
 used systematically by setting the environment variable @env{USE_CXX14}.
 
-Note that code written for C++11 that emulates features of C++14 will
+Code written for C++11 that emulates features of C++14 will
 not necessarily compile under a C++14 compiler@footnote{As from @R{}
 3.4.0, @command{configure} attempts to supply a C++14 compiler only if
 explicitly requested.  However, earlier versions of @R{} will use the
@@ -2824,10 +2765,10 @@ using std::make_unique;
 #endif
 @end example
 
-Note that @command{g++} 4.9.x (as used for @R{} on Windows at
-least up to 3.6.x) has only partial C++14 support, and the flag to
-obtain that support is not included in the default Windows build of @R{}
---- one could try something like
+Note that Windows builds prior to @R{} 4.0.0 used @command{g++} 4.9.x
+which had only partial C++14 support, and the flag to obtain that
+support was not included in the default Windows build of @R{} --- one
+could try something like
 
 @example
 CXX14="$(BINPREF)g++ $(M_ARCH)"
@@ -2836,52 +2777,26 @@ CXX14STD=-std=gnu1y
 @end example
 
 @noindent
-in @file{@var{HOME}/.R/Makevars.win}.
+in @file{@var{HOME}/.R/Makevars.win}.  The @command{g++} version used
+from @R{} 4.0.0 supports C++14 with flag @option{-std=gnu14} and for
+back-compatibility @option{-std=gnu1y}.
 
+C++17 (as from @R{} 3.4.0) and C++20 (as from @R{} 4.0.0) can be
+specified in an analogous way (replacing @code{14} by @code{17} or
+@code{20}) but compiler/OS support is platform-dependent.  Feature tests
+can be used (and probably should be as support is still patchy,
+especially library support).
 
-@node Using C++17 code,  , Using C++14 code, Configure and cleanup
-@subsection Using C++17 code
+C++17 and C++20 support are available with the default builds of @R{} on
+macOS and Windows as from @R{} 4.0.0.
 
-Support for C++17 was added to @R{} version 3.4.0. The @file{configure}
-script tests a subset of C++17 features.  @code{clang 4.0.0} and
-@code{gcc 7.1} and later versions passed these tests (with flag
-@option{-std=gnu++17} or @option{-std=gnu++1z} chosen by the
-@file{configure} script).  Note that the C++17 feature tests are
-incomplete and are subject to change in future @R{} versions as
-support for the standard improves.
-@c Both the compiler and the library are involved, conceivably also the
-@c OS headers.
-
-The variables associated with the C++17 compiler use the prefix
-@samp{CXX17}.  Hence to use C++17 code in a package, the package's
-@file{Makevars} file (or @file{Makevars.win} on Windows) should
-include the line
-@example
-CXX_STD = CXX17
-@end example
-
-In the absence of a @file{Makevars} file, C++17 support can also be
-requested by the line:
-@example
-SystemRequirements: C++17
-@end example
-@noindent
-in the @file{DESCRIPTION} file. Finally, the C++17 compiler can be
-used systematically by setting the environment variable @env{USE_CXX17}.
-
-As for C++14, feature tests can be used (and probably should be as
-support is still patchy, especially library support).
-
-No C++17 support is enabled in the current default build of @R{} on
-Windows.
 
 @node Checking and building packages, Writing package vignettes, Configure and cleanup, Creating R packages
 @section Checking and building packages
 
 Before using these tools, please check that your package can be
-installed (which checked it can be loaded).  @code{R CMD check} will
-@emph{inter alia} do this, but you may get more detailed error messages
-doing the install directly.
+installed.  @code{R CMD check} will @emph{inter alia} do this, but you
+may get more detailed error messages doing the install directly.
 
 @menu
 * Checking packages::
@@ -3007,7 +2922,7 @@ used in the same locale.
 @item
 It is checked that the package can be loaded, first with the usual
 default packages and then only with package @pkg{base} already
-loaded. It is checked that the namespace this can be loaded in an empty
+loaded. It is checked that the namespace can be loaded in an empty
 session with only the @pkg{base} namespace loaded.  (Namespaces and
 packages can be loaded very early in the session, before the default
 packages are available, so packages should work then.)
@@ -3018,7 +2933,7 @@ Package startup functions are checked for correct argument lists and
 (incorrect) calls to functions which modify the search path or
 inappropriately generate messages.  The @R{} code is checked for
 possible problems using @CRANpkg{codetools}.  In addition, it is checked
-whether S3 methods have all arguments of the corresponding generic, and
+whether S3 methods have all the arguments of the corresponding generic, and
 whether the final argument of replacement functions is called
 @samp{value}.  All foreign function calls (@code{.C}, @code{.Fortran},
 @code{.Call} and @code{.External} calls) are tested to see if they have
@@ -3446,7 +3361,7 @@ and be comprised entirely of @acronym{ASCII} letters or digits or hyphen
 or underscore.
 
 A special case is @emph{package vignettes}.  Vignettes are documents in
-PDF or @HTML{} format obtained from plain text literate source files
+PDF or @HTML{} format obtained from plain-text literate source files
 from which @R{} knows how to extract @R{} code and create output (in
 PDF/@HTML{} or intermediate @LaTeX{}).  Vignette engines do this work,
 using ``tangle'' and ``weave'' functions respectively.  Sweave, provided
@@ -3746,14 +3661,15 @@ to be accessed @emph{via} @code{::}, e.g.@:
 Namespaces are @emph{sealed} once they are loaded.  Sealing means that
 imports and exports cannot be changed and that internal variable
 bindings cannot be changed.  Sealing allows a simpler implementation
-strategy for the namespace mechanism.  Sealing also allows code
-analysis and compilation tools to accurately identify the definition
-corresponding to a global variable reference in a function body.
+strategy for the namespace mechanism and allows code analysis and
+compilation tools to accurately identify the definition corresponding to
+a global variable reference in a function body.
 
 The namespace controls the search strategy for variables used by
 functions in the package.  If not found locally, @R{} searches the
 package namespace first, then the imports, then the base namespace and
-then the normal search path.
+then the normal search path (so the base namespace precedes the normal
+search rather than being at the end of it).
 
 
 @menu
@@ -3797,8 +3713,8 @@ broad patterns are not recommended for production code: it is better to
 list all exports or use narrowly-defined groups.  (This pattern applies
 to S4 classes.)  Beware of patterns which include names starting with a
 period: some of these are internal-only variables and should never be
-exported, e.g.@: @samp{.__S3MethodsTable__.} (and the code nowadays
-excludes known cases).
+exported, e.g.@: @samp{.__S3MethodsTable__.} (and loading excludes known
+cases).
 
 Packages implicitly import the base namespace.
 Variables exported from other packages with namespaces need to be
@@ -3826,7 +3742,9 @@ importFrom(foo, f, g)
 specifies that the exported variables @code{f} and @code{g} of the
 package @pkg{foo} are to be imported.  Using @code{importFrom}
 selectively rather than @code{import} is good practice and recommended
-notably when importing from packages with more than a dozen exports.
+notably when importing from packages with more than a dozen exports and
+especially from those written by others (so what they export can change
+in future).
 
 To import every symbol from a package but for a few exceptions,
 pass the @code{except} argument to @code{import}. The directive
@@ -3897,8 +3815,8 @@ S3method(print, check_so_symbols, .print.via.format)
 @noindent
 when @code{print.check_so_symbols} is not needed.
 
-As of @R{} version 3.6.0, one can also use @code{S3method()} directives
-to perform @emph{delayed} registration.  With
+As from @R{} 3.6.0 one can also use @code{S3method()} directives to
+perform @emph{delayed} registration.  With
 @example
 if(getRversion() >= "3.6.0") @{
     S3method(pkg::gen, cls)
@@ -3910,7 +3828,7 @@ function @code{gen.cls} will get registered as an S3 method for class
 namespace of @code{pkg} is loaded.  This can be employed to deal with
 situations where the method is not ``immediately'' needed, and having to
 pre-load the namespace of @code{pkg} (and all its strong dependencies)
-in order to perform immediate registration is considered too ``costly''.
+in order to perform immediate registration is considered too onerous.
 
 @node Load hooks, useDynLib, Registering S3 methods, Package namespaces
 @subsection Load hooks
@@ -3937,8 +3855,9 @@ path to the installed package.  There is also a hook @code{.onUnload}
 which is called when the namespace is unloaded (@emph{via} a call to
 @code{unloadNamespace}, perhaps called by @code{detach(unload = TRUE)})
 with argument the full path to the installed package's directory.
-@code{.onUnload} and @code{.onDetach} should be defined in the namespace
-and not exported, but @code{.Last.lib} does need to be exported.
+Functions @code{.onUnload} and @code{.onDetach} should be defined in the
+namespace and not exported, but @code{.Last.lib} does need to be
+exported.
 
 Packages are not likely to need @code{.onAttach} (except perhaps for a
 start-up banner); code to set options and load shared objects should be
@@ -4009,7 +3928,7 @@ rather than
 There are at least two benefits to this approach.  Firstly, the symbol
 lookup is done just once for each symbol rather than each time the
 routine is invoked.  Secondly, this removes any ambiguity in resolving
-symbols that might be present in several compiled DLLs.  However, this
+symbols that might be present in more than one DLL.  However, this
 approach is nowadays deprecated in favour of supplying registration
 information (see below).
 
@@ -4137,10 +4056,10 @@ which makes the @R{} variables corresponding to the Fortran symbols
 namespace.
 
 @strong{NB}: Using these arguments for a package which does not register
-native symbols merely slows down the package loading (although at the
-time of writing 90 @acronym{CRAN} packages did so).  Once symbols are
-registered, check that the corresponding @R{} variables are not
-accidentally exported by a pattern in the @file{NAMESPACE} file.
+native symbols merely slows down the package loading (although many
+@acronym{CRAN} packages have done so).  Once symbols are registered,
+check that the corresponding @R{} variables are not accidentally
+exported by a pattern in the @file{NAMESPACE} file.
 
 
 @node An example, Namespaces with S4 classes and methods, useDynLib, Package namespaces
@@ -4231,8 +4150,7 @@ example, the @pkg{stats4} package has
 
 @example
 export(mle) # exporting methods implicitly exports the generic
-importFrom("graphics", plot)
-importFrom("stats", optim, qchisq)
+importFrom("stats", approx, optim, pchisq, predict, qchisq, qnorm, spline)
 ## For these, we define methods or (AIC, BIC, nobs) an implicit generic:
 importFrom("stats", AIC, BIC, coef, confint, logLik, nobs, profile,
            update, vcov)
@@ -4260,7 +4178,7 @@ export the generic, and exporting a generic in the namespace will also
 export its methods.  If the generic function is not local to this
 package, either because it was imported as a generic function or because
 the non-generic version has been made generic solely to add S4 methods
-to it (as for functions such as @code{plot} in the example above), it
+to it (as for functions such as @code{coef} in the example above), it
 can be declared @emph{via} either or both of @code{export} or
 @code{exportMethods}, but the latter is clearer (and is used in the
 @pkg{stats4} example above).  In particular, for primitive functions
@@ -4329,8 +4247,8 @@ Note that @code{importMethodsFrom} will also import any generics defined
 in the namespace on those methods.
 
 It is important if you export S4 methods that the corresponding generics
-are available.  You may for example need to import @code{plot} from
-@pkg{graphics} to make visible a function to be converted into its
+are available.  You may for example need to import @code{coef} from
+@pkg{stats} to make visible a function to be converted into its
 implicit generic.  But it is better practice to make use of the generics
 exported by @pkg{stats4} as this enables multiple packages to
 unambiguously set methods on those generics.
@@ -4498,11 +4416,11 @@ personal @file{Makevars} files.
 R-admin, R Installation and Administration},
 @end ifset
 
-Portable C++ code needs to follow the 1998 standard (and not use
-features from C99), or to specify a C++11 compiler (see @ref{Using C++11
-code}) where available (which is not the case on all @R{} platforms).
-Currently C++14 code is less portable and C++17 support is patchy across
-@R{} platforms.
+Portable C++ code needs to follow the 2011 standard or to specify
+C+14/17/20 (see @ref{Using C++14 and later}) where available (which is
+not the case on all @R{} platforms).  Currently C++14 code is less
+portable than C++11 and C++17/20 support is patchy across @R{}
+platforms.
 
 If using Fortran with the GNU compiler, use the flags
 @option{-std=f95 -Wall -pedantic} which reject most GNU extensions and
@@ -4582,7 +4500,8 @@ note that @code{long long} is not a standard C++98 type, and C++
 compilers for earlier versions of @R{} set up for strict C++98
 conformance will reject it.  C++11 (the default since @R{} 3.6.2)
 includes @code{long long}.}) and typedef your own type, or use another
-suitable type (such as @code{size_t}).
+suitable type (such as @code{size_t}, but beware that is unsigned and
+@code{ssize_t} is not portable).
 @c https://en.cppreference.com/w/cpp/language/types claims long long is
 @c >= 64-bit, but that is not obvious in the standard.
 
@@ -4758,7 +4677,7 @@ However, some Linux distributions micro-package, so locales defined by
 
 @item
 Avoid spaces in file names, not least as they can cause difficulties for
-external tools.  A recent example was a package with a @CRANpkg{knitr}
+external tools.  An example was a package with a @CRANpkg{knitr}
 vignette that used spaces in plot names: this caused some versions of
 @command{pandoc} to fail with a baffling error message.
 @c msmtools in June 2016 failed with pandoc 1.12 but not 1.16.
@@ -4784,7 +4703,7 @@ names, which are (confusingly)
 1.1 1.2 1.3 1.4 5.0 6 7 8 9 10 11 12 13
 @end example
 @noindent
-and as from 2018 a year.month scheme such as @samp{18.3} is also in use.
+and as from 2018 a year.month scheme such as @samp{18.9} is also in use.
 
 A suitable test for Java at least version 8 for packages using
 @CRANpkg{rJava} would be something like
@@ -4828,6 +4747,11 @@ Some packages have stated a requirement on a particular JDK, but a
 package should only be requiring a JRE unless providing its own Java
 interface.
 
+Java 8 is still in widespread use (and may remain so because of licence
+changes, although Oracle will end its support even for personal use at
+the end of 2020), but Java 7 was the latest provided by Oracle for
+several platforms.
+
 @item
 A package with a hard-to-satisfy system requirement is by definition not
 portable, annoyingly so if this is not declared in the
@@ -4835,11 +4759,12 @@ portable, annoyingly so if this is not declared in the
 @command{pandoc}, which is only available for a very limited range of
 platforms (and has onerous requirements to install from source) and has
 capabilities@footnote{For example, the ability to handle @samp{https://}
-URLs, which even the build in some major Linux distributions in 2018 did
-not possess.  Further, Linux and macOS builds from late 2017 with
-@samp{https://} support were unable to download from some sites using or
-redirecting to @samp{https://} URLs.} that vary by build but are not
-documented.
+URLs, which even the build in some major Linux distributions in 2020 did
+not possess (and some of those builds were of far-from-current
+versions).} that vary by build but are not documented.  Some recent
+versions of @command{pandoc} for macOS do not work on @R{}'s target of
+High Sierra (and this too was undocumented): at the time of writing the
+latest that did was @samp{2.7.3}.
 
 Usage of external commands should always be conditional on a test for
 presence (perhaps using @code{Sys.which}), as well as declared in the
@@ -4859,7 +4784,8 @@ applies also to a Java interpreter (which macOS does not have by default).
 
 @item
 Be sure to use portable encoding names: none of @code{utf8}, @code{mac}
-and @code{macroman} is.  See the help for @code{file} for more details.
+and @code{macroman} is portable.  See the help for @code{file} for more
+details.
 
 
 @item
@@ -4910,8 +4836,8 @@ practice seen in distributed packages include:
 It is not reasonable to test the time taken by a command: you cannot
 know how fast or how heavily loaded an @R{} platform might be.  At best
 you can test a ratio of times, and even that is fraught with
-difficulties and not advisable: the just-in-time compiler (JIT) and the GC
-may trigger at unpredictable times, following heuristics that may change
+difficulties and not advisable: for example, the garbage collector may
+trigger at unpredictable times following heuristics that may change
 without notice.
 
 @item
@@ -4943,16 +4869,18 @@ tests on your platform achieve a particular tolerance says little about
 other platforms.  @R{} is configured by default to make use of long
 doubles where available, but they may not be available or be too slow
 for routine use.  Most @R{} platforms use @cputype{ix86} or
-@cputype{x86_64} CPUs: these may use extended precision registers on some
-but not all of their FPU instructions.  Thus the achieved precision can
-depend on the compiler version and optimization flags---our experience
-is that 32-bit builds tend to be less precise than 64-bit ones.  But not
-all platforms use those CPUs, and not all@footnote{Not doing so is the
-default on Windows, overridden for the @R{} executables.  It is also the
-default on some Solaris compilers.} which use them configure them to
-allow the use of extended precision.  In particular, ARM CPUs do not
-(currently) have extended precision nor long doubles, and long double
-was 64-bit on HP/PA Linux.
+@cputype{x86_64} CPUs: these may use extended precision registers on
+some but not all of their FPU instructions.  Thus the achieved precision
+can depend on the compiler version and optimization flags---our
+experience is that 32-bit builds tend to be less precise than 64-bit
+ones.  But not all platforms use those CPUs, and not all@footnote{Not
+doing so is the default on Windows, overridden for the @R{} executables.
+It is also the default on some Solaris compilers.} which use them
+configure them to allow the use of extended precision.  In particular,
+32-bit ARM CPUs do not (currently) have extended precision nor long
+doubles, and long double was 64-bit on HP/PA Linux.  On the other hand
+some CPUs have higher-precision modes than @cputype{x86_64} used for
+@code{long double}, notably 64-bit ARM and Sparc (as from v9).
 
 If you must try to establish a tolerance empirically, configure and
 build @R{} with @option{--disable-long-double} and use appropriate
@@ -5013,10 +4941,11 @@ and suitable options might be
 @end example
 
 @noindent
-; see @uref{http://www.ghostscript.com/@/doc/@/current/@/Ps2pdf.htm} for
+See @uref{http://www.ghostscript.com/@/doc/@/current/@/Ps2pdf.htm} for
 more such and consider all the options for image downsampling).  There
 have been examples in @acronym{CRAN} packages for which current versions
-of Ghostscript  produced much bigger reductions than earlier ones.
+of Ghostscript produced much bigger reductions than earlier ones (e.g.@:
+at the upgrade from @code{9.50} to @code{9.52} in March 2020).
 
 We come across occasionally large PDF files containing excessively
 complicated figures using PDF vector graphics: such figures are often
@@ -5140,17 +5069,17 @@ so it is strongly recommended to check in a UTF-8 locale.
 @end menu
 
 Writing portable C and C++ code is mainly a matter of observing the
-standards (C99, C++11 or where declared C++98/14/17) and testing that
+standards (C99, C++11 or where declared C++14/17/20) and testing that
 extensions (such as POSIX functions) are supported.
 
 @strong{C++ standards}: As from version 3.6.0 (3.6.2 on Windows), @R{}
 defaults to C++11 where available@footnote{which it is on all known
-platforms}.  However, in earlier versions the default standard was that
-of the compiler used, often C++98 or C++14.  Thus for portability it is
-desirable to specify the C++ standard@footnote{For C++98 this is only
-possible since @R{} 3.5.0, for C++11 since @R{} 3.1.0.} assumed for a
-package.  Because most packages will be made available for earlier
-versions on @R{}, comments below about C++98 have been retained.
+platforms, and is required as from @R{} 4.0.0}. However, in earlier
+versions the default standard was that of the compiler used, often C++98
+or C++14.  Packages which are for use only with @R{} 3.6.2 or later can
+assume C++11 or specify a later standard.  However, those which may be
+used in earlier versions need to specify C++11 explicitly (@pxref{Using
+C++11 code}) or be tested under all of C++11, C++98 and C++14.
 
 Note that the `TR1' C++ extensions are not part of any of these
 standards and the @code{<tr1/@var{name}>} headers are not supplied by some of
@@ -5275,13 +5204,12 @@ Including C-style headers in C++ code is not portable.  Including the
 legacy header@footnote{which often is the same as the header included by
 the C compiler, but some compilers have wrappers for some of the C
 headers.} @file{math.h} in C++ code may conflict with @file{cmath} which
-may be included by other headers.  This is particularly problematic with
-C++11 compilers, as functions like @code{sqrt} and @code{isnan} are
-defined for @code{double} arguments in @file{math.h} and for a range of
-types including @code{double} in @file{cmath}.  Similar issues have been
-seen for @file{stdlib.h} and @file{cstdlib}.  Including the C++ version
-first used to be a sufficient workaround but for some 2016 compilers
-only one could be included.
+may be included by other headers.  In C++11, functions like @code{sqrt}
+and @code{isnan} are defined for @code{double} arguments in
+@file{math.h} and for a range of types including @code{double} in
+@file{cmath}.  Similar issues have been seen for @file{stdlib.h} and
+@file{cstdlib}.  Including the C++ header first used to be a sufficient
+workaround but for some 2016 compilers only one could be included.
 
 @item
 Be careful to include the headers which define the functions you use.
@@ -5363,10 +5291,18 @@ name.
 
 @item
 @code{typedef}s in OS headers can conflict with those in the package:
-examples include @code{ulong} on several OSes and @code{index_t} and
-@code{single} on Solaris.  (Note that these may conflict with other uses
-as identifiers, e.g.@: defining a C++ function called @code{single}.)
+examples include @code{ulong} on several OSes, @code{index_t} and
+@code{single} on Solaris and @code{thread} using @command{clang++} from
+version 9.  (Note that these may conflict with other uses as
+identifiers, e.g.@: defining a C++ function called @code{single}.)
 @c as done by package Emcdf in June 2017.
+@c and thread as a typedef by RVowalWabbit
+The POSIX standard reserves (in §2.2.2) all identifiers ending in
+@code{_t}.
+
+@item
+Some compilers do not allow a space between @code{-D} and the macro to
+be defined.  Similarly for @code{-U}.
 
 @item
 If you use OpenMP, check carefully that you have followed the advice in
@@ -5379,9 +5315,16 @@ OpenMP in C/C++ code will need to use
 @end example
 @noindent
 Any use of OpenMP functions, e.g.@: @code{omp_set_num_threads}, also
-needs to be conditioned.
+needs to be conditioned.  To avoid incessant warnings such as
+@example
+warning: ignoring #pragma omp parallel [-Wunknown-pragmas]
+@end example
 
-And do not hardcode @option{-lgomp}: not only is that specific to the
+@noindent
+uses of such pragmas should also be conditioned (or commented out if
+they are used in code in a package not enabling OpenMP on any platform).
+
+Do not hardcode @option{-lgomp}: not only is that specific to the
 GCC family of compilers, using the correct linker flag often sets up the
 run-time path to the library.
 
@@ -5412,22 +5355,6 @@ which are part of the X/Open standard: to use these define
 header @file{Rmath.h}.
 
 @item
-Similarly, package authors commonly assume things are part of C++ when
-they were introduced in C++11 if at all.  Recent examples from
-@acronym{CRAN} packages include the C99/C++11 functions
-@example
-erf expm1 fmin fmax lgamma lround loglp round snprintf strcasecmp trunc
-@end example
-@noindent
-(all of which are in the @code{std} namespace in C++11) and the POSIX
-functions @code{strdup} and @code{strncasecmp} and constants @code{M_PI}
-and @code{M_LN2} (see the previous item).  @R{} has long provided
-@code{fmax2}, @code{fmin2}, @code{fround}, @code{ftrunc},
-@code{lgammafn} and many of the X/Open constants, declared in header
-@file{Rmath.h}.  Uses of @code{erf} can be replaced by @code{pnorm} (see
-the @R{} help page for the latter).
-
-@item
 Using @code{alloca} portably is tricky: it is neither an ISO C/C++ nor a
 POSIX function.  An adequately portable preamble is
 @example
@@ -5444,7 +5371,7 @@ POSIX function.  An adequately portable preamble is
 @item
 Compiler writers feel free to implement features from later standards
 than the one specified, so for example they may implement or warn on
-C++14 or C++17 features.  Portable code will not use such features -- it
+C++14/17/20 features.  Portable code will not use such features -- it
 can be hard to know what they are but the most common warnings are
 @example
 'register' storage class specifier is deprecated and incompatible with C++17
@@ -5555,6 +5482,10 @@ versions of @command{gcc} and also in @command{clang}.  It is
 recommended that packages are if possible checked with that flag to
 ensure portability.
 
+@option{-fno-common} is said to be particularly beneficial for ARM cpus
+and has been proposed to be the default for future versions of
+@command{clang}.
+
 This is not pertinent to C++ which does not permit tentative definitions.
 
 @node Binary distribution,  , Portable C and C++ code, Writing portable packages
@@ -5602,9 +5533,9 @@ WinBuilder, and write a @file{configure.win} file to install them.
 @end itemize
 
 @noindent
-Be aware that license requirements will need to be met so you may need
-to supply the sources for the additional components (and will if your
-package has a GPL-like license).
+Be aware that license requirements you may require you to supply the
+sources for the additional components (and will if your package has a
+GPL-like license).
 
 
 @node Diagnostic messages, Internationalization, Writing portable packages, Creating R packages
@@ -7722,10 +7653,11 @@ particular these allow call graphs to be studied.
 Measuring memory use in @R{} code is useful either when the code takes
 more memory than is conveniently available or when memory allocation and
 copying of objects is responsible for slow code. There are three ways to
-profile memory use over time in @R{} code. All three require @R{} to
-have been compiled with @option{--enable-memory-profiling}, which is not
-the default, but is currently used for the macOS and Windows binary
-distributions. All can be misleading, for different reasons.
+profile memory use over time in @R{} code. The seond and third require
+@R{} to have been compiled with @option{--enable-memory-profiling},
+which is not the default, but is currently used for the macOS and
+Windows binary distributions. All can be misleading, for different
+reasons.
 
 In understanding the memory profiles it is useful to know a little more
 about @R{}'s memory allocation. Looking at the results of @code{gc()}
@@ -7880,6 +7812,9 @@ contains some hints gleaned from various @R{} users.  Some methods need
 to be different for a compiled executable and for dynamic/shared
 libraries/objects as used by @R{} packages.  We know of no good way to
 profile DLLs on Windows.
+
+This chapter is based on reports from users and the information may not
+be current.
 
 @menu
 * Linux::
@@ -8122,13 +8057,7 @@ up to those for Snow Leopard), and @command{Instruments} (part of
 
 This chapter covers the debugging of @R{} extensions, starting with the
 ways to get useful error information and moving on to how to deal with
-errors that crash @R{}.  For those who prefer other styles there are
-contributed packages such as @CRANpkg{debug} on @acronym{CRAN}
-(described in an article in
-@uref{https://CRAN.R-project.org/@/doc/@/Rnews/@/Rnews_2003-3.pdf, R-News
-3/3}).  (There are notes from 2002 provided by Roger Peng at
-@uref{http://www.biostat.jhsph.edu/@/~rpeng/@/docs/@/R-debug-tools.pdf}
-which provide complementary examples to those given here.)
+errors that crash @R{}.
 
 @menu
 * Browsing::
@@ -8225,7 +8154,7 @@ scope).
 Suppose your @R{} program gives an error message.  The first thing to
 find out is what @R{} was doing at the time of the error, and the most
 useful tool is @code{traceback()}.  We suggest that this is run whenever
-the cause of the error is not immediately obvious.  Daily, errors are
+the cause of the error is not immediately obvious.  Errors are often
 reported to the @R{} mailing lists as being in some package when
 @code{traceback()} would show that the error was being reported by some
 other package or base @R{}.  Here is an example from the regression
@@ -8861,7 +8790,7 @@ More recent versions@footnote{including @command{gcc} 7.1 and
 @option{-fsanitize-address-use-after-scope}: see
 @uref{https://github.com/@/google/@/sanitizers/@/wiki/@/AddressSanitizerUseAfterScope}.
 
-One of the checks done by ASAN is that @code{malloc/free} and in C++
+One of the checks done by ASan is that @code{malloc/free} and in C++
 @code{new/delete} and @code{new[]/delete[]} are used consistently
 (rather than say @code{free} being used to dealloc memory allocated by
 @code{new[]}).  This matters on some systems but not all: unfortunately
@@ -8872,7 +8801,7 @@ environment variable @env{RGL_USE_NULL=true}.} are not consistent.  The
 check can be suppressed by including @samp{alloc_dealloc_mismatch=0} in
 @env{ASAN_OPTIONS}.
 
-ASAN also checks system calls and sometimes reports can refer to
+ASan also checks system calls and sometimes reports can refer to
 problems in the system software and not the package nor @R{}.  A couple
 of reports have been of `heap-use-after-free' errors in the X11
 libraries called from Tcl/Tk.
@@ -8902,7 +8831,7 @@ However, this was made the default as from @command{clang} 3.5 and
 When LSan is enabled, leaks give the process a failure error status (by
 default @code{23}).  For an @R{} package this means the @R{} process,
 and as the parser retains some memory to the end of the process, if @R{}
-itself was built against ASan, all runs will have a failure error status
+itself was built against ASan all runs will have a failure error status
 (which may include running @R{} as part of building @R{} itself).
 
 To disable this, allocation-mismatch checking and some strict C++
@@ -8979,25 +8908,21 @@ For GCC see
 @uref{https://gcc.gnu.org/@/onlinedocs/@/gcc/@/Instrumentation-Options.html}
 (or the manual for your version of GCC, installed or @emph{via}
 @uref{https://gcc.gnu.org/@/onlinedocs/}: look for `Program
-Instrumentation Options') for the options supported by GCC: 6 and 7 supported
+Instrumentation Options') for the options supported by GCC: 8 supported
 @example
--fsanitize=alignment,bool,bounds,enum,integer-divide-by-zero,
-nonnull-attribute,null,object-size,return,returns-nonnull-attribute,
-shift,signed-integer-overflow,unreachable,vla-bound,vptr
+-fsanitize=alignment,bool,bounds,builtin,enum,integer-divide-by-zero,
+nonnull-attribute,null,object-size,pointer-overflow,return,
+returns-nonnull-attribute,shift,unreachable,vla-bound,vptr
 @end example
 @noindent
 plus the more specific versions @code{shift-base} and
 @code{shift-exponent} and non-default options
 @example
-bound-strict,float-cast-overflow,float-divide-by-zero
+bound-strict,float-cast-overflow,float-divide-by-zero,signed-integer-overflow
 @end example
 @noindent
 where @code{float-divide-by-zero} is not desirable for @R{} uses and
-@code{bounds-strict} is an extension of @code{bounds}. From GCC 8
-@code{signed-integer-overflow} is no longer a default part of
-@option{-fsanitize=undefined}, but can be specified separately.  It adds
-options @option{-fsanitize=pointer-overflow} and
-@option{-fsanitize=builtin}.
+@code{bounds-strict} is an extension of @code{bounds}.
 
 Other useful flags include
 @example
@@ -9032,9 +8957,8 @@ For more details on the topic see
 (which has 3 parts).
 
 It may or may not be possible to build @R{} itself with
-@option{-fsanitize=undefined}: when last tried it worked with
-@command{clang} but there were problems with OpenMP-using code with
-@command{gcc}.
+@option{-fsanitize=undefined}: problems have been seen with OpenMP-using
+code with @command{gcc} but there has been success with @command{clang}.
 
 
 @node Other analyses with `clang', Using `Dr. Memory', Using Undefined Behaviour Sanitizer, Checking memory access
@@ -9100,8 +9024,10 @@ Sooner or later programmers will be faced with the need to debug
 compiled code loaded into @R{}.  This section is geared to platforms
 using @command{gdb} with code compiled by @code{gcc}, but similar things
 are possible with other debuggers such as @command{lldb}
-(@uref{http://lldb.llvm.org/}, used on macOS) and Sun's @command{dbx}:
-some debuggers have graphical front-ends available.
+(@uref{http://lldb.llvm.org/}, used on macOS: however `notarized'
+executable such as distributed @acronym{CRAN} builds are not allowed to be
+debuggeed) and Sun's @command{dbx}: some debuggers have graphical
+front-ends available.
 
 Consider first `crashes', that is when @R{} terminated unexpectedly with
 an illegal memory access (a `segfault' or `bus error'), illegal
@@ -9412,7 +9338,9 @@ where the package author forgot to declare
       external ddot
 @end example
 @noindent
-in @file{boot.f}.
+in @file{boot.f}.  That package had its own copy of @code{ddot}: to
+detect misuse of the one in @R{}'s BLAS library would have needed @R{}
+configured with @option{--enable-lto=check}.
 
 Further examples:
 
@@ -9585,7 +9513,10 @@ Logical values are sent as @code{0} (@code{FALSE}), @code{1}
 (@code{TRUE}) or @code{INT_MIN = -2147483648} (@code{NA}, but only if
 @code{NAOK} is true), and the compiled code should return one of these
 three values.  (Non-zero values other than @code{INT_MIN} are mapped to
-@code{TRUE}.)
+@code{TRUE}.)  Note that the use of @code{int *} for Fortran logical is
+not guaranteed to be portable (although people have gotten away with it
+for many years): it is better to pass integers and convert to/from
+Fortran logical in a Fortran wrapper.
 
 Unless formal argument @code{NAOK} is true, all the other arguments are
 checked for missing values @code{NA} and for the @acronym{IEEE} special
@@ -9600,7 +9531,7 @@ package writers using the same symbol name, and such name clashes are
 normally sufficient to cause @R{} to crash.  (If it is not present and
 the call is from the body of a function defined in a package namespace,
 the shared object loaded by the first (if any) @code{useDynLib}
-directive will be used.  
+directive will be used.) 
 @c However, prior to @R{} 2.15.2 the detection of the correct namespace is
 @c unreliable and you are strongly recommended to use the @code{PACKAGE}
 @c argument for packages to be used with earlier versions of @R{}.
@@ -10713,9 +10644,7 @@ resetting buffers on open files).
 Most @R{} header files can be included within C++ programs but they
 should @strong{not} be included within an @code{extern "C"} block (as
 they include system headers@footnote{Even including C system headers in
-such a block has caused compilation errors.}).  The inclusion of system
-headers in C++ changed in @R{} 3.3.0, so if you care about earlier
-versions of @R{} please check your package there.
+such a block has caused compilation errors.}).
 
 Legacy header @file{S.h} cannot be used with C++.
 
@@ -10837,7 +10766,7 @@ display here)
 @example
 PKGB_PATH=`echo 'library(packB);
   cat(system.file("lib",  package="packB", mustWork=TRUE))' \
- | "$@{R_HOME@}/bin/R" --vanilla --slave`
+ | "$@{R_HOME@}/bin/R" --vanilla --no-echo`
 PKG_LIBS="$(PKGB_PATH)$(R_ARCH)/libpackB.a"
 @end example
 
@@ -10848,7 +10777,7 @@ a shared object, @file{.so}, on that platform) we could use
 @example
 PKGB_PATH=`echo 'library(packB);
   cat(system.file("lib", package="packB", mustWork=TRUE))' \
- | "$@{R_HOME@}/bin/R" --vanilla --slave`
+ | "$@{R_HOME@}/bin/R" --vanilla --no-echo`
 PKG_LIBS=-L"$(PKGB_PATH)$(R_ARCH)" -lpackB
 @end example
 
@@ -10870,7 +10799,7 @@ e.g.@:
 @example
 PKGB_PATH=`echo 'library(packB);
   cat(system.file("lib", package="packB", mustWork=TRUE)))' \
- | "$@{R_HOME@}/bin/R" --vanilla --slave`
+ | "$@{R_HOME@}/bin/R" --vanilla --no-echo`
 PKG_LIBS=-L"$(PKGB_PATH)$(R_ARCH)" -Wl,-rpath,"$(PKGB_PATH)$(R_ARCH)" -lpackB
 @end example
 
@@ -10921,7 +10850,7 @@ where it is by something like
 @example
 PKGB_PATH=`echo 'library(packB);
   cat(system.file("libs", package="packB", mustWork=TRUE))' \
- | rterm --vanilla --slave`
+ | rterm --vanilla --no-echo`
 PKG_LIBS= -L"$(PKGB_PATH)$(R_ARCH)" -lexB
 @end example
 
@@ -11724,6 +11653,8 @@ Function @code{R_compute_identical} corresponds to @R{}'s @code{identical} funct
 @findex duplicate
 @cindex Copying objects
 
+[The @code{NAMED} mechanism has been replaced by reference counting.]
+
 When assignments are done in @R{} such as
 
 @example
@@ -11763,8 +11694,8 @@ The maximal value is @code{NAMEDMAX}.
 @end table
 
 @noindent
-Note the past tenses: @R{} does not do full reference counting and there
-may currently be fewer bindings.
+Note the past tenses: @R{} does not do currently do full reference
+counting and there may currently be fewer bindings.
 
 It is safe to modify the value of any @code{SEXP} for which
 @code{NAMED(foo)} is zero, and if @code{NAMED(foo)} is two or more, the
@@ -12636,8 +12567,8 @@ the external pointer represents, if that memory is allocated from the
 @R{} heap.  Both @code{tag} and @code{prot} can be @code{R_NilValue},
 and often are.
 
-An alternative way as from @R{} 3.4.0 to create an external pointer from
-a function pointer is
+An alternative way to create an external pointer from a function pointer
+is
 
 @example
 typedef void * (*R_DL_FUNC)();
@@ -13311,7 +13242,7 @@ Functions @code{Rvprintf} and @code{REvprintf} are analogues using the
 @code{vprintf} interface.  Because that is a C99@footnote{also part of
 C++11.} interface, they are only defined by @file{R_ext/Print.h} in C++
 code if the macro @code{R_USE_C99_IN_CXX} is defined when it is
-included.
+included or, as from @R{} 4.0.0, a C++11 compiler is used.
 
 Another circumstance when it may be important to use these functions is
 when using parallel computation on a cluster of computational nodes, as
@@ -13326,11 +13257,11 @@ their output will be re-directed/logged appropriately.
 @cindex Printing from Fortran
 
 On many systems Fortran @code{write} and @code{print} statements can be
-used, but the output may not interleave well with that of C, and will be
+used, but the output may not interleave well with that of C, and may be
 invisible on @acronym{GUI} interfaces.  They are not portable and best
 avoided.
 
-Three subroutines are provided to ease the output of information from
+Some subroutines are provided to ease the output of information from
 Fortran code.
 
 @example
@@ -13342,16 +13273,32 @@ subroutine intpr (@var{label}, @var{nchar}, @var{data}, @var{ndata})
 @end example
 
 @noindent
+and from @R{}@tie{}4.0.0,
+@example
+@group
+subroutine labelpr(@var{label}, @var{nchar})
+subroutine dblepr1(@var{label}, @var{nchar}, @var{var})
+subroutine realpr1(@var{label}, @var{nchar}, @var{var})
+subroutine intpr1 (@var{label}, @var{nchar}, @var{var})
+@end group
+@end example
+
+@noindent
 Here @var{label} is a character label of up to 255 characters,
 @var{nchar} is its length (which can be @code{-1} if the whole label is
-to be used), and @var{data} is an array of length at least @var{ndata}
-of the appropriate type (@code{double precision}, @code{real} and
-@code{integer} respectively).  These routines print the label on one
-line and then print @var{data} as if it were an @R{} vector on
-subsequent line(s).  They work with zero @var{ndata}, and so can be used
-to print a label alone.  Note though that some compilers will give an
-error or warning unless @var{data} is an array: others will accept a
-scalar when @var{ndata} has value one or zero.
+to be used), @var{data} is an array of length at least @var{ndata} of
+the appropriate type (@code{double precision}, @code{real} and
+@code{integer} respectively) and @var{var} is a (scalar) variable.
+These routines print the label on one line and then print @var{data} or
+@var{var} as if it were an @R{} vector on subsequent line(s).  Note that
+some compilers will give an error or warning unless @var{data} is an
+array: others will accept a scalar when @var{ndata} has value one or
+zero.  @strong{NB:} There is no check on the type of @var{data} or
+@var{var}, so using @code{real} (including a real constant) instead of
+@code{double precision} will give incorrect answers.
+
+@code{intpr} works with zero @var{ndata} so can be used to print a
+label in earlier versions of @R{}.
 
 @node Calling C from Fortran and vice versa, Numerical analysis subroutines, Printing, The R API
 @section Calling C from Fortran and vice versa
@@ -13465,9 +13412,9 @@ later, @command{gfortran} 9.2 introduced an option
 and made it the current default but said it might be withdrawn in future.
 
 Suppose we want a function to report a message from Fortran to @R{}'s
-console (one could use @code{intpr} with dummy data, but it might be the
-basis of a custom reporting function).  Suppose the equivalent in Fortran
-would be
+console (one could use @code{labelpr}, or @code{intpr} with dummy data,
+but this might be the basis of a custom reporting function).  Suppose the
+equivalent in Fortran would be
 @example
       subroutine rmsg(msg)
       character*(*) msg
@@ -13526,10 +13473,9 @@ void F77_NAME(rmsg)(char *msg)
 @end example
 
 
-An alternative is to use Fortran 2003 features@footnote{These started to
-be implemented in compilers @emph{ca} 2007, e.g.@: in @command{gfortran}
-4.3.} to set up the Fortran routine to pass a C-compatible character
-string.  We could use something like
+An alternative is to use Fortran 2003 features to set up the Fortran
+routine to pass a C-compatible character string.  We could use something
+like
 @example
       module cfuncs
         use iso_c_binding, only: c_char, c_null_char
@@ -13556,9 +13502,11 @@ void cmsg(const char *msg)
 @}
 @end example
 
-Passing a variable-length string from C to Fortran is trickier, but all
-the uses in BLAS and LAPACK are of a single character, and for these we
-can write a wrapper in Fortran along the lines of
+Passing a variable-length string from C to Fortran is trickier, but
+@uref{https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-bind}
+provides a recipe.  However, all the uses in BLAS and LAPACK are of a
+single character, and for these we can write a wrapper in Fortran
+along the lines of
 @example
       subroutine c_dgemm(transa, transb, m, n, k, alpha,
      +     a, lda, b, ldb, beta, c, ldc)
@@ -13610,7 +13558,9 @@ type so it is pretty portable to use @code{int *} on the C/C++ side.
 However, recent versions of @command{gfortran} @emph{via} the option
 @option{-fc-prototypes-external} say the C equivalent is
 @code{int_least32_t *}: `Link-Time Optimization' will report @code{int
-*} as a mismatch.
+*} as a mismatch. It is possible to use @code{iso_c_binding} in Fortran
+to map LOGICAL variables to the C99 type @code{_Bool}, but it is usually
+simpler to pass integers to and fro.
 
 @node Numerical analysis subroutines, Optimization, Calling C from Fortran and vice versa, The R API
 @section Numerical analysis subroutines
@@ -14313,6 +14263,7 @@ file is provided as
 
 @deftypefun {char *} R_tmpnam (const char *@var{prefix}, const char *@var{tmpdir})
 @deftypefunx {char *} R_tmpnam2 (const char *@var{prefix}, const char *@var{tmpdir}, const char *@var{fileext})
+@deftypefunx {void} R_free_tmpnam (char *@var{name})
 Return a pathname for a temporary file with name beginning with
 @var{prefix} and ending with @var{fileext} in directory @var{tmpdir}.
 A @code{NULL} prefix or extension is replaced by @code{""}.  Note that
@@ -14380,7 +14331,7 @@ Free the resources of an encoding object.
 @cindex Cleanup code
 @cindex Error handling
 
-Two functions are available for establishing condition handlers from
+Three functions are available for establishing condition handlers from
 within C code:
 
 @example
@@ -14393,6 +14344,8 @@ SEXP R_tryCatch(SEXP (*fun)(void *data), void *data,
 		SEXP,
 		SEXP (*hndlr)(SEXP cond, void *hdata), void *hdata,
 		void (*clean)(void *cdata), void *cdata);
+SEXP R_withCallingErrorHandler(SEXP (*fun)(void *data), void *data,
+			       SEXP (*hndlr)(SEXP cond, void *hdata), void *hdata)
 @end example
 
 @code{R_tryCatchError} establishes an exiting handler for conditions
@@ -14406,6 +14359,11 @@ if condition handling or cleanup are not needed.
 
 These are currently implemented using the R-level @code{tryCatch}
 mechanism so are subject to some overhead.
+
+@code{R_withCallingErrorHandler} establishes a calling handler for
+conditions inheriting form class @code{error}.  It establishes the
+handler without calling back into @R{} and will therefore be more
+efficient.
 
 The function @code{R_UnwindProtect} can be used to ensure that a cleanup
 action takes place on ordinary return as well as on a non-local transfer
@@ -14588,14 +14546,13 @@ visibility will allow control of visibility for all symbols @emph{via} a
 flag, and where known the flag is encapsulated in the macros
 @samp{C_VISIBILITY}, @samp{CXX_VISIBILITY}@footnote{As from @R{} 3.5.2:
 This applies to the compiler for the default C++ dialect (currently
-normally C++11) and not necessarily to other dialects.} and
-@samp{F_VISIBILITY} for C, C++ and Fortran
-compilers.@footnote{@samp{F77_VISIBILITY} was used prior to @R 3.6.0 and
-is still available (but deprecated).  In some cases the Fortran
-compilers accept the flag but do not actually hide their symbols.}
-These are defined in @file{etc/Makeconf} and so available for normal
-compilation of package code.  For example, @file{src/Makevars} could
-include some of
+C++11) and not necessarily to other dialects.} and @samp{F_VISIBILITY}
+for C, C++ and Fortran compilers.@footnote{@samp{F77_VISIBILITY} was
+used prior to @R 3.6.0 and was still available in 3.6.x.  In some cases
+the Fortran compilers accept the flag but do not actually hide their
+symbols.}  These are defined in @file{etc/Makeconf} and so available for
+normal compilation of package code.  For example, @file{src/Makevars}
+could include some of
 
 @example
 PKG_CFLAGS=$(C_VISIBILITY)
@@ -14942,7 +14899,7 @@ base::foo}.  This is @strong{not} a good idea, as it captures the base
 function at the time of installation and it might be changed as @R{} is
 patched or updated.
 
-The same idea can be applied for functions in other packages with namespaces.
+The same idea can be applied for functions in other packages.
 
 @node Linking GUIs and other front-ends to R, Function and variable index, Generic functions and methods, Top
 @chapter Linking GUIs and other front-ends to R
@@ -14953,8 +14910,7 @@ to @R{} and perhaps to receive results back (not necessarily in a text
 format).  There are other routes besides those described here, for
 example the package @CRANpkg{Rserve} (from @acronym{CRAN}, see also
 @uref{https://www.rforge.net/@/Rserve/}) and connections to Java in
-@samp{JRI} (part of the @CRANpkg{rJava} package on @acronym{CRAN}) and
-the Omegahat/Bioconductor package @samp{SJava}.
+@samp{JRI} (part of the @CRANpkg{rJava} package on @acronym{CRAN}).
 
 Note that the APIs described in this chapter are only intended to be
 used in an alternative front-end: they are not part of the API made
@@ -15148,7 +15104,7 @@ and for a static @R{} library
 
 @example
 pkg-config --cflags libR
-pkg-config --libs --static libR
+pkg-config --static --libs libR
 @end example
 
 @noindent
@@ -15227,7 +15183,6 @@ extern int  (*ptr_R_EditFile)(const char *);
 extern void (*ptr_R_loadhistory)(SEXP, SEXP, SEXP, SEXP);
 extern void (*ptr_R_savehistory)(SEXP, SEXP, SEXP, SEXP);
 extern void (*ptr_R_addhistory)(SEXP, SEXP, SEXP, SEXP);
-// added in R 3.0.0
 extern int  (*ptr_R_EditFiles)(int, const char **, const char **, const char *);
 extern SEXP (*ptr_do_selectlist)(SEXP, SEXP, SEXP, SEXP);
 extern SEXP (*ptr_do_dataentry)(SEXP, SEXP, SEXP, SEXP);
@@ -15538,9 +15493,9 @@ so include the header and define @code{HAVE_UINTPTR_T} before including
 
 These will be set@footnote{at least on platforms where the values are
 available, that is having @code{getrlimit} and on Linux or having
-@code{sysctl} supporting @code{KERN_USRSTACK}, including FreeBSD and OS
-X.} when @code{Rf_initialize_R} is called, to values appropriate to the
-main thread.  Stack-checking can be disabled by setting
+@code{sysctl} supporting @code{KERN_USRSTACK}, including FreeBSD and
+macOS.} when @code{Rf_initialize_R} is called, to values appropriate to
+the main thread.  Stack-checking can be disabled by setting
 @code{R_CStackLimit = (uintptr_t)-1} immediately after
 @code{Rf_initialize_R} is called, but it is better to if possible set
 appropriate values.  (What these are and how to determine them are
@@ -15595,11 +15550,11 @@ which works with @R{} packages to support transfer of data to and from
 
 Recent versions have usage restrictions.
 
-@item
-Another (D)COM server, @code{RDCOMServer}, may be available from Omegahat,
-@uref{http://www.omegahat.net/}.  Its philosophy is discussed in
-@uref{http://www.omegahat.net/@/RDCOMServer/@/Docs/@/Paradigm.html} and is
-very different from the purpose of this section.
+@c @item
+@c Another (D)COM server, @code{RDCOMServer}, may be available from Omegahat,
+@c @uref{http://www.omegahat.net/}.  Its philosophy is discussed in
+@c @uref{http://www.omegahat.net/@/RDCOMServer/@/Docs/@/Paradigm.html} and is
+@c very different from the purpose of this section.
 @end itemize
 @node Calling R.dll directly, Finding R_HOME, Using (D)COM, Embedding R under Windows
 @subsection Calling R.dll directly

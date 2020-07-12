@@ -1,7 +1,7 @@
 #  File src/library/utils/R/packages.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2018 The R Core Team
+#  Copyright (C) 1995-2020 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -20,8 +20,8 @@ available.packages <-
 function(contriburl = contrib.url(repos, type), method,
          fields = NULL, type = getOption("pkgType"),
          filters = NULL, repos = getOption("repos"),
-         ignore_repo_cache =  FALSE, max_repo_cache_age,
-         ...)
+         ignore_repo_cache = FALSE, max_repo_cache_age,
+         quiet = TRUE, ...)
 {
     requiredFields <-
         c(tools:::.get_standard_repository_db_fields(), "File")
@@ -71,7 +71,7 @@ function(contriburl = contrib.url(repos, type), method,
                     if(isTRUE(age < max_repo_cache_age)) {
                         res0 <- readRDS(dest)
                         used_dest <- TRUE
-                        ## Be defensive ...
+                        ## Be defensive :
                         if(length(res0))
                             rownames(res0) <- res0[, "Package"]
                     }
@@ -88,13 +88,13 @@ function(contriburl = contrib.url(repos, type), method,
                 z <- tryCatch({
                     download.file(url = paste0(repos, "/PACKAGES.rds"),
                                   destfile = dest, method = method,
-                                  cacheOK = FALSE, quiet = TRUE, mode = "wb")
+                                  cacheOK = FALSE, quiet = quiet, mode = "wb", ...)
                 }, error = identity)
                 options(op)
                 if(!inherits(z, "error")) {
                     z <- res0 <- tryCatch(readRDS(dest), error = identity)
-                     if(ignore_repo_cache) unlink(dest)
-               }
+                    if(ignore_repo_cache) unlink(dest)
+                }
 
                 if(inherits(z, "error")) {
                     ## Downloading or reading .rds failed, so try the
@@ -108,7 +108,7 @@ function(contriburl = contrib.url(repos, type), method,
                         ## This is a binary file
                         download.file(url = paste0(repos, "/PACKAGES.gz"),
                                       destfile = tmpf, method = method,
-                                      cacheOK = FALSE, quiet = TRUE, mode = "wb")
+                                      cacheOK = FALSE, quiet = quiet, mode = "wb", ...)
                     }, error = identity)
                     if(inherits(z, "error"))
                         z <- tryCatch({
@@ -116,7 +116,7 @@ function(contriburl = contrib.url(repos, type), method,
                             ## LF, so use binary mode to avoid CRLF.
                             download.file(url = paste0(repos, "/PACKAGES"),
                                           destfile = tmpf, method = method,
-                                          cacheOK = FALSE, quiet = TRUE, mode = "wb")
+                                          cacheOK = FALSE, quiet = quiet, mode = "wb", ...)
                         }, error = identity)
                     options(op)
 
@@ -133,6 +133,9 @@ function(contriburl = contrib.url(repos, type), method,
                                      repos),
                             ":\n  ", conditionMessage(z),
                             call. = FALSE, immediate. = TRUE, domain = NA)
+                    ## Do not cache incorrect results. It can be a page
+                    ## from a web proxy about inaccessible network.
+                    unlink(dest)
                     next
                 }
 
@@ -491,12 +494,8 @@ old.packages <- function(lib.loc = NULL, repos = getOption("repos"),
         deps <- onRepos["Depends"]
         if(!is.na(deps)) {
             Rdeps <- tools:::.split_dependencies(deps)[["R", exact=TRUE]]
-            if(length(Rdeps) > 1L) {
-                target <- Rdeps$version
-                res <- do.call(Rdeps$op, list(currentR, target))
- ##               res <- eval(parse(text=paste("currentR", Rdeps$op, "target")))
-                if(!res) next
-            }
+            if(length(Rdeps) > 1L && !do.call(Rdeps$op, list(currentR, Rdeps$version)))
+                next
         }
         update <- rbind(update,
                         c(instPkgs[k, c("Package", "LibPath", "Version", "Built")],
@@ -1040,7 +1039,6 @@ compareVersion <- function(a, b)
             current <- as.package_version(installed[pkgs == x[[1L]], "Version"])
             target <- as.package_version(x[[3L]])
             any(do.call(x$op, list(current, target)))
-##            eval(parse(text = paste("any(current", x$op, "target)")))
         } else x[[1L]] %in% pkgs
     })
     xx <- xx[!have]
@@ -1058,7 +1056,6 @@ compareVersion <- function(a, b)
             current <- as.package_version(available[pkgs == x[[1L]], "Version"])
             target <- as.package_version(x[[3L]])
             res <- any(do.call(x$op, list(current, target)))
-##            res <- eval(parse(text = paste("any(current", x$op, "target)")))
             if(res) canget <- c(canget, x[[1L]])
             else  miss <- c(miss, paste0(x[[1L]], " (>= ", x[[3L]], ")"))
         } else if(x[[1L]] %in% pkgs) canget <- c(canget, x[[1L]])

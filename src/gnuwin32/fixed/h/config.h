@@ -16,6 +16,10 @@
    language is requested. */
 #define ENABLE_NLS 1
 
+/* C type used for Fortran character lengths */
+/* will be size_t for gfortran >= 8, int before */
+/* #undef FC_LEN_T */
+
 /* Define to dummy `main' function (if any) required to link to the Fortran
    libraries. */
 /* #undef FC_DUMMY_MAIN */
@@ -596,6 +600,8 @@
 
 /* Define if your system has pcre2. */
 /* #undef HAVE_PCRE2 */
+#define HAVE_PCRE2 1
+#define PCRE2_CODE_UNIT_WIDTH 8
 
 /* Define to 1 if you have the <pcre.h> header file. */
 /* #undef HAVE_PCRE_H */

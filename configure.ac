@@ -79,7 +79,8 @@ AC_DEFINE_UNQUOTED(R_OS, "${host_os}",
 ## exclude some unsupported OSes
 case "${host_os}" in
    ## Darwin 1.3.1 was macOS 10.0, 1.4.1 was 10.1, 5 is 10.2 etc
-   ## with 13 being 10.9.  We no longer support < 10.6 (Snow Leopard, Darwin 10)
+   ## with 18 being 10.14.
+   ## We no longer support < 10.6 (Snow Leopard, Darwin 10)
    ## https://en.wikipedia.org/wiki/Darwin_OS
    darwin1.*)
      AC_MSG_ERROR([The earliest supported macOS is 10.6.]
@@ -335,6 +336,12 @@ if test "x${want_lto}" = xyes; then
   LTOALL=-flto
 elif  test "x${want_lto}" = xR; then
   LTO=-flto
+elif  test "x${want_lto}" = xcheck; then
+  ## use for maintainer checking.
+  LTO=-flto
+  LTOALL=-flto
+  LIBR0="-L\"\$(R_HOME)/lib\$(R_ARCH)\""
+  LIBR1="${LIBR1} -lLinpack"
 elif  test "x${want_lto}" != xno; then
   AC_MSG_WARN([Unknown value --enable-lto=${enableval}])
 fi
@@ -342,6 +349,7 @@ AC_SUBST(LTO)
 AC_SUBST(LTOALL)
 ## used in src/main/Makefile
 AM_CONDITIONAL(BUILD_LTO, [test "x${want_lto}" != xno])
+AM_CONDITIONAL(BUILD_LTO_CHECK, [test "x${want_lto}" = xcheck])
 
 AC_ARG_ENABLE([java],
 [AS_HELP_STRING([--enable-java],[enable Java @<:@yes@:>@])],
@@ -370,6 +378,18 @@ AC_ARG_WITH([readline],
 [AS_HELP_STRING([--with-readline],[use readline library @<:@yes@:>@])],
 [R_ARG_USE(readline)],
 [use_readline=yes])
+
+## PCRE2.
+AC_ARG_WITH([pcre2],
+[AS_HELP_STRING([--with-pcre2],[use PCRE2 library (if available) @<:@yes@:>@])],
+[R_ARG_USE(pcre2)],
+[use_pcre2=yes])
+
+## PCRE1.
+AC_ARG_WITH([pcre1],
+[AS_HELP_STRING([--with-pcre1],[use PCRE1 library (if available and PCRE2 is not) @<:@yes@:>@])],
+[R_ARG_USE(pcre1)],
+[use_pcre1=no])
 
 ## Aqua.
 AC_ARG_WITH([aqua],
@@ -1682,23 +1702,18 @@ AC_SUBST(STATICR2)
 AC_SUBST(R_DYLIB_EXT)
 
 ## Test support for C++ standards
-R_STDCXX([98], [CXX98], [CXX])
 R_STDCXX([11], [CXX11], [CXX])
 R_STDCXX([14], [CXX14], [CXX11])
 R_STDCXX([17], [CXX17], [CXX14])
+R_STDCXX([20], [CXX20], [CXX17])
 
-## Set default compiler to C++11 if available; otherwise C++98
+## Set default compiler to C++11 if available
 if test -n "${CXX}" && test -z "${CXXSTD}"; then
   if test -n "${CXX11}"; then
     CXX=${CXX11}
     CXXSTD=${CXX11STD}
     CXXFLAGS=${CXX11FLAGS}
     CXXPICFLAGS=${CXX11PICFLAGS}
-  elif test -n "${CXX98}"; then
-    CXX=${CXX98}
-    CXXSTD=${CXX98STD}
-    CXXFLAGS=${CXX98FLAGS}
-    CXXPICFLAGS=${CXX98PICFLAGS}
   fi
 fi
 
@@ -2313,11 +2328,8 @@ R_BZLIB
 ## LZMA headers and libraries from xz-utils
 R_LZMA
 
-## PCRE headers and libraries.
+## PCRE[12] headers and libraries.
 R_PCRE
-
-## PCRE2 header and 8-bit library.
-R_PCRE2
 
 ## tre headers and libraries.
 R_TRE
@@ -2465,7 +2477,7 @@ AC_FC_SRCEXT(f95, [dummy=1], [dummy=0])
 R_OPENMP
 AC_LANG_POP()
 
-## SHLIB_FCLD and {SHLIB_FCLDFLAGS are legacy
+## SHLIB_FCLD and {SHLIB_FCLDFLAGS are legacy, but might be used in a Makefile
 if test -z "${SHLIB_FCLD}"; then
   shlib_fcld_was_given=no
   SHLIB_FCLD="\$(FC)"
@@ -2758,10 +2770,10 @@ AC_OUTPUT
 r_c_compiler="${CC} ${R_XTRA_CFLAGS} ${CFLAGS}"
 ## R_XTRA_CXXFLAGS is currently unused, but if it were applies to all dialects
 r_cxx_compiler="${CXX} ${CXXSTD} ${R_XTRA_CXXFLAGS} ${CXXFLAGS}"
-r_cxx98_compiler="${CXX98} ${CXX98STD} ${R_XTRA_CXXFLAGS} ${CXX98FLAGS}"
 r_cxx11_compiler="${CXX11} ${CXX11STD} ${R_XTRA_CXXFLAGS} ${CXX11FLAGS}"
 r_cxx14_compiler="${CXX14} ${CXX14STD} ${R_XTRA_CXXFLAGS} ${CXX14FLAGS}"
 r_cxx17_compiler="${CXX17} ${CXX17STD} ${R_XTRA_CXXFLAGS} ${CXX17FLAGS}"
+r_cxx20_compiler="${CXX20} ${CXX20STD} ${R_XTRA_CXXFLAGS} ${CXX20FLAGS}"
 r_f77_compiler="${FC} ${R_XTRA_FFLAGS} ${FFLAGS}"
 r_f95_compiler="${FC} ${R_XTRA_FFLAGS} ${FCFLAGS}"
 r_objc_compiler="${OBJC} ${OBJCFLAGS}"
@@ -2774,8 +2786,13 @@ for item in X11 aqua tcltk; do
   fi
 done
 r_external_libs=
+if test "${r_cv_have_pcre2utf}" = yes; then
+  R_SH_VAR_ADD(r_external_libs, [pcre2], [, ])
+elif test "${r_cv_have_pcre832}" = yes; then
+  R_SH_VAR_ADD(r_external_libs, [pcre1], [, ])
+fi
 if test "${use_readline}" = yes; then
-  r_external_libs=readline
+  R_SH_VAR_ADD(r_external_libs, [readline], [, ])
 fi
 if test "${acx_blas_ok}" = "yes"; then
   ## Try to figure out which BLAS was used.
@@ -2888,10 +2905,9 @@ R is now configured for ${host}
   Fortran fixed-form compiler: ${r_f77_compiler}
 
   Default C++ compiler:        ${r_cxx_compiler}
-  C++98 compiler:              ${r_cxx98_compiler}
-  C++11 compiler:              ${r_cxx11_compiler}
   C++14 compiler:              ${r_cxx14_compiler}
   C++17 compiler:              ${r_cxx17_compiler}
+  C++20 compiler:              ${r_cxx20_compiler}
   Fortran free-form compiler:  ${r_f95_compiler}
   Obj-C compiler:	       ${r_objc_compiler}
 
@@ -2928,9 +2944,6 @@ if test -n "${warn_fcpicflags}"; then
 fi
 if test -n "${warn_tcltk_version}"; then
   AC_MSG_WARN([${warn_tcltk_version}])
-fi
-if test -n "${warn_pcre_version}"; then
-  AC_MSG_WARN([${warn_pcre_version}])
 fi
 if test -n "${warn_info}"; then
   AC_MSG_WARN([${warn_info}])

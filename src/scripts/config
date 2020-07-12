@@ -5,7 +5,7 @@
 ## Usage:
 ##   R CMD config [options] [VAR]
 
-## Copyright (C) 2002-2019 The R Core Team
+## Copyright (C) 2002-2020 The R Core Team
 ##
 ## This document is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -20,11 +20,11 @@
 ## A copy of the GNU General Public License is available at
 ## https://www.R-project.org/Licenses/
 
-revision='$Revision: 77118 $'
+revision='$Revision: 78111 $'
 version=`set - ${revision}; echo ${2}`
 version="R configuration information retrieval script: ${R_VERSION} (r${version})
 
-Copyright (C) 2002-2019 The R Core Team.
+Copyright (C) 2002-2020 The R Core Team.
 This is free software; see the GNU General Public License version 2
 or later for copying conditions.  There is NO warranty."
 
@@ -52,18 +52,12 @@ Variables:
   CFLAGS        C compiler flags
   CPICFLAGS     special flags for compiling C code to be included in a
 		shared library
-  CPP           C preprocessor (deprecated, may not be set)
   CPPFLAGS      C/C++ preprocessor flags, e.g. -I<dir> if you have
 		headers in a nonstandard directory <dir>
   CXX           default compiler command for C++ code
   CXXCPP        C++ preprocessor (deprecated)
   CXXFLAGS      compiler flags for CXX
   CXXPICFLAGS   special flags for compiling C++ code to be included in a
-		shared library
-  CXX98         compiler command for C++98 code  (deprecated)
-  CXX98CPP      C++98 preprocessor
-  CXX98FLAGS    compiler flags for CXX98
-  CXX98PICFLAGS special flags for compiling C++98 code to be included in a
 		shared library
   CXX11         compiler command for C++11 code
   CXX11STD      flag used with CXX11 to enable C++11 support
@@ -83,13 +77,18 @@ Variables:
   CXX17PICFLAGS
                 special flags for compiling C++17 code to be included in
                 a shared library
+  CXX20         compiler command for C++20 code
+  CXX20STD      flag used with CXX20 to enable C++20 support
+  CXX20FLAGS    further compiler flags for CXX20
+  CXX20PICFLAGS
+                special flags for compiling C++20 code to be included in
+                a shared library
   DYLIB_EXT	file extension (including '.') for dynamic libraries
   DYLIB_LD      command for linking dynamic libraries which contain
 		object files from a C or Fortran compiler only
   DYLIB_LDFLAGS
 		special flags used by DYLIB_LD
   FC            Fortran compiler command
-  F77           Fortran compiler command (deprecated: use FC)
   FFLAGS        fixed-form Fortran compiler flags
   FCFLAGS       free-form Fortran 9x compiler flags
   FLIBS         linker flags needed to link Fortran code
@@ -115,9 +114,9 @@ Variables:
   SHLIB_CXXFLAGS
                 additional CXXFLAGS used when building shared objects
   SHLIB_CXXLD   command for linking shared objects which contain
-		object files from a C++ compiler (and CXX98 CXX11 CXX14 CXX17)
+		object files from a C++ compiler (and CXX11 CXX14 CXX17 CXX20)
   SHLIB_CXXLDFLAGS
-		special flags used by SHLIB_CXXLD (and CXX98 CXX11 CXX14 CXX17)
+		special flags used by SHLIB_CXXLD (and CXX11 CXX14 CXX17 CXX20)
   SHLIB_EXT	file extension (including '.') for shared objects
   SHLIB_FFLAGS  additional FFLAGS used when building shared objects
   SHLIB_LD      command for linking shared objects which contain
@@ -256,7 +255,7 @@ if test "${personal}" = "yes"; then
   if test "${R_OSTYPE}" = "windows"; then
     if test -f "${R_MAKEVARS_USER}"; then
       makefiles="${makefiles} -f \"${R_MAKEVARS_USER}\""
-    elif test ${R_ARCH} = "/x64" -a -f "${HOME}/.R/Makevars.win64"; then
+    elif test ${R_ARCH} = "/x64" && test -f "${HOME}/.R/Makevars.win64"; then
       makefiles="${makefiles} -f \"${HOME}\"/.R/Makevars.win64"
     elif test -f "${HOME}/.R/Makevars.win"; then
       makefiles="${makefiles} -f \"${HOME}\"/.R/Makevars.win"
@@ -277,17 +276,16 @@ fi
 query="${MAKE} -s ${makefiles} print R_HOME=${R_HOME}"
 
 ok_c_vars="CC CFLAGS CPICFLAGS CPPFLAGS"
-ok_cxx_vars="CXX CXXFLAGS CXXPICFLAGS CXX11 CXX11STD CXX11FLAGS CXX11PICFLAGS CXX14 CXX14STD CXX14FLAGS CXX14PICFLAGS CXX17 CXX17STD CXX17FLAGS CXX17PICFLAGS"
+ok_cxx_vars="CXX CXXFLAGS CXXPICFLAGS CXX11 CXX11STD CXX11FLAGS CXX11PICFLAGS CXX14 CXX14STD CXX14FLAGS CXX14PICFLAGS CXX17 CXX17STD CXX17FLAGS CXX17PICFLAGS CXX20 CXX20STD CXX20FLAGS CXX20PICFLAGS"
 ok_dylib_vars="DYLIB_EXT DYLIB_LD DYLIB_LDFLAGS"
 ok_objc_vars="OBJC OBJCFLAGS"
 ok_java_vars="JAVA JAVAC JAVAH JAR JAVA_HOME JAVA_LIBS JAVA_CPPFLAGS"
-## F77 is legacy
 ok_ftn_vars="FC FFLAGS FPICFLAGS FLIBS FCFLAGS SAFE_FFLAGS"
 ok_ld_vars="LDFLAGS"
-ok_shlib_vars="SHLIB_CFLAGS SHLIB_CXXFLAGS SHLIB_CXXLD SHLIB_CXXLDFLAGS SHLIB_CXX98LD SHLIB_CXX98LDFLAGS SHLIB_CXX11LD SHLIB_CXX11LDFLAGS SHLIB_CXX14LD SHLIB_CXX14LDFLAGS SHLIB_CXX17LD SHLIB_CXX17LDFLAGS SHLIB_EXT SHLIB_FFLAGS SHLIB_LD SHLIB_LDFLAGS"
+ok_shlib_vars="SHLIB_CFLAGS SHLIB_CXXFLAGS SHLIB_CXXLD SHLIB_CXXLDFLAGS SHLIB_CXX11LD SHLIB_CXX11LDFLAGS SHLIB_CXX14LD SHLIB_CXX14LDFLAGS SHLIB_CXX17LD SHLIB_CXX17LDFLAGS SHLIB_CXX20LD SHLIB_CXX20LDFLAGS SHLIB_EXT SHLIB_FFLAGS SHLIB_LD SHLIB_LDFLAGS"
 ok_tcltk_vars="TCLTK_CPPFLAGS TCLTK_LIBS"
 ok_other_vars="BLAS_LIBS LAPACK_LIBS MAKE LIBnn AR RANLIB"
-deprecated_vars="CPP CXXCPP CXX98 CXX98STD CXX98FLAGS CXX98PICFLAGS F77 FCPICFLAGS"
+deprecated_vars="CPP CXXCPP"
 if test "${R_OSTYPE}" = "windows"; then
   ok_win_vars="LOCAL_SOFT COMPILED_BY OBJDUMP"
 fi

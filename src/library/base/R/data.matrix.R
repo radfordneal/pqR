@@ -1,7 +1,7 @@
 #  File src/library/base/R/data.matrix.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2012 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -21,9 +21,10 @@ data.matrix <- function(frame, rownames.force = NA)
     if(!is.data.frame(frame)) return(as.matrix(frame))
 
     d <- dim(frame)
-    rn <- if(rownames.force %in% FALSE) NULL
-    else if(rownames.force %in% TRUE) row.names(frame)
-    else {if(.row_names_info(frame) <= 0L) NULL else row.names(frame)}
+    rn <- if(isFALSE(rownames.force)) NULL
+          else if(isTRUE(rownames.force)) row.names(frame)
+          else if(.row_names_info(frame) <= 0L) NULL
+          else row.names(frame)
 
     for(i in seq_len(d[2L])) {
         xi <- frame[[i]]
@@ -31,6 +32,10 @@ data.matrix <- function(frame, rownames.force = NA)
         if(is.integer(xi) || is.numeric(xi)) next
         if(is.logical(xi) || is.factor(xi)) {
             frame[[i]] <- as.integer(xi)
+            next
+        }
+        if(is.character(xi)) {
+            frame[[i]] <- as.integer(factor(xi))
             next
         }
         frame[[i]] <- if(isS4(xi)) methods::as(xi, "numeric") else as.numeric(xi)

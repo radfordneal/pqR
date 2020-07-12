@@ -90,7 +90,7 @@ imagedir:
 	unzip -qao dosfiles.zip
 	$(RM) dosfiles.zip
 	$(CP) -p $(R_HOME)/doc/NEWS.pdf $(RPREFIX)/doc
-	$(CP) -p $(R_HOME)/doc/NEWS.rds $(R_HOME)/doc/CHANGES.rds $(RPREFIX)/doc
+	$(CP) -p $(R_HOME)/doc/NEWS.rds $(R_HOME)/doc/NEWS.2.rds  $(R_HOME)/doc/NEWS.3.rds $(R_HOME)/doc/CHANGES.rds $(RPREFIX)/doc
 #
 # files to make source packages
 	$(MKDIR) -p $(RPREFIX)/share \
@@ -103,7 +103,7 @@ imagedir:
 	(cd ..; $(MAKE) --no-print-directory PKGDIR=. pkgclean-windlgs)
 	$(CP) -pR ../windlgs $(RPREFIX)/src/library
 # Edit Makeconf
-	$(SED) -e 's!^BINPREF [?]= .*!BINPREF ?= c:/Rtools/mingw_64/bin/!' \
+	$(SED) -e 's!^BINPREF [?]= .*!BINPREF ?= "$$(RTOOLS40_ROOT)/mingw64/bin/"!' \
 	  $(R_HOME)/etc/x64/Makeconf > $(RPREFIX)/etc/x64/Makeconf
 # test dir
 	mkdir $(RPREFIX)/tests
@@ -117,12 +117,12 @@ md5sums:
 	@echo "adding MD5 checksums"
 	@(cd $(RPREFIX); echo "tools:::.installMD5sums(\".\")" | \
 	  R_DEFAULT_PACKAGES=NULL LC_COLLATE=C R_OSTYPE=windows \
-	  ../../../../$(BINDIR)/Rterm.exe --vanilla --slave)
+	  ../../../../$(BINDIR)/Rterm.exe --vanilla --no-echo)
 
 PDF_FILES = $(wildcard $(RPREFIX)/library/*/doc/*.pdf)
 
 fixups:
-	echo "make.packages.html(.Library,temp=FALSE,verbose=FALSE)" | $(RPREFIX)/$(BINDIR)/Rterm.exe --vanilla --slave LC_COLLATE=C
+	echo "make.packages.html(.Library,temp=FALSE,verbose=FALSE)" | $(RPREFIX)/$(BINDIR)/Rterm.exe --vanilla --no-echo LC_COLLATE=C
 	$(CP) -pRf $(R_HOME)/Tcl $(RPREFIX)
 	$(RM) $(RPREFIX)/Tcl*/lib/*.lib
 ifneq ($(strip $(QPDF)),)
@@ -147,7 +147,7 @@ ifneq ($(strip $(HOME32)),)
              > $(RPREFIX)/library/$${f}/DESCRIPTION; \
 	done
 # Edit Makeconf file to default Rtools location
-	$(SED) -e 's!^BINPREF [?]= .*!BINPREF ?= c:/Rtools/mingw_32/bin/!' \
+	$(SED) -e 's!^BINPREF [?]= .*!BINPREF ?= "$$(RTOOLS40_ROOT)/mingw32/bin/"!' \
 	  $(HOME32)/etc/i386/Makeconf > $(RPREFIX)/etc/i386/Makeconf
 else
 	@echo "------------ not including 32-bit files"
@@ -205,11 +205,11 @@ distclean: clean
 	rm -f R*-win*.exe R*-win*.msi
 
 myR:
-	echo "make.packages.html(.Library, verbose=FALSE)" | "$(IMAGEDIR)/$(BINDIR)/Rterm.exe" --vanilla --slave LC_COLLATE=C
+	echo "make.packages.html(.Library, verbose=FALSE)" | "$(IMAGEDIR)/$(BINDIR)/Rterm.exe" --vanilla --no-echo LC_COLLATE=C
 	@echo "adding MD5 checksums"
 	@(cd "$(IMAGEDIR)"; echo "tools:::.installMD5sums(\".\")" | \
 	  R_DEFAULT_PACKAGES=NULL LC_COLLATE=C R_OSTYPE=windows \
-	  "$(IMAGEDIR)/$(BINDIR)/Rterm.exe" --vanilla --slave)
+	  "$(IMAGEDIR)/$(BINDIR)/Rterm.exe" --vanilla --no-echo)
 	../../../bin$(R_ARCH)/Rscript JRins.R \
 	  $(RPREFIX) "$(IMAGEDIR)" $(MDISDI) \
 	  $(HelpStyle) $(Producer) "$(ISDIR)"

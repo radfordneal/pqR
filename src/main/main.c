@@ -126,7 +126,7 @@ static char BrowsePrompt[20];
 
 static const char *R_PromptString(int browselevel, int type)
 {
-    if (R_Slave) {
+    if (R_NoEcho) {
 	BrowsePrompt[0] = '\0';
 	return BrowsePrompt;
     }
@@ -202,6 +202,10 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
     int c, browsevalue;
     SEXP value, thisExpr;
     Rboolean wasDisplayed = FALSE;
+
+    /* clear warnings that might have accumulated during a jump to top level */
+    if (R_CollectWarnings)
+	PrintWarnings();
 
     if(!*state->bufp) {
 	    R_Busy(0);
@@ -726,6 +730,22 @@ void attribute_hidden BindDomain(char *R_Home)
 #endif
 }
 
+/* #define DEBUG_STACK_DETECTION */
+/* Not to be enabled in production use: the debugging code is more fragile
+   than the detection itself. */
+
+#ifdef DEBUG_STACK_DETECTION
+static uintptr_t almostFillStack() {
+    volatile uintptr_t dummy;
+
+    dummy = (uintptr_t) &dummy;
+    if (R_CStackStart - R_CStackDir * R_CStackLimit + R_CStackDir * 1024 < R_CStackDir * dummy)
+	return almostFillStack();
+    else
+	return dummy;
+}
+#endif
+
 void setup_Rmainloop(void)
 {
     volatile int doneit;
@@ -734,7 +754,7 @@ void setup_Rmainloop(void)
     char deferred_warnings[11][250];
     volatile int ndeferred_warnings = 0;
 
-#if 0 
+#ifdef DEBUG_STACK_DETECTION 
     /* testing stack base and size detection */
     printf("stack limit %ld, start %lx dir %d \n",
 	(unsigned long) R_CStackLimit,
@@ -749,11 +769,17 @@ void setup_Rmainloop(void)
     printf("accessing first byte...\n");
     volatile char dummy = *(char *)firstb;
     if (R_CStackLimit != (uintptr_t)(-1)) {
+	/* have to access all bytes in order to map stack, e.g. on Linux
+	   just reading does not seem to always do the job, so better
+	   first almost fill up the stack using recursive function calls
+	 */
+	printf("almost filling up stack...\n");
+	printf("filled stack up to %lx\n", almostFillStack());
 	printf("accessing all bytes...\n");
-	/* have to access all bytes in order to map stack, e.g. on Linux */
 	for(uintptr_t o = 0; o < R_CStackLimit; o++)
 	    /* with exact bounds, o==-1 and o==R_CStackLimit will segfault */
-	    dummy = *((char *)firstb - R_CStackDir * o);
+	    /* +dummy to silence -Wunused-but-set-variable */
+	    dummy = *((char *)firstb - R_CStackDir * o) + dummy;
     }
 #endif
 
@@ -878,6 +904,7 @@ void setup_Rmainloop(void)
     R_Toplevel.conexit = R_NilValue;
     R_Toplevel.vmax = NULL;
     R_Toplevel.nodestack = R_BCNodeStackTop;
+    R_Toplevel.bcprottop = R_BCProtTop;
     R_Toplevel.cend = NULL;
     R_Toplevel.cenddata = NULL;
     R_Toplevel.intsusp = FALSE;
@@ -1068,8 +1095,8 @@ extern SA_TYPE SaveAction; /* from src/main/startup.c */
 
 static void end_Rmainloop(void)
 {
-    /* refrain from printing trailing '\n' in slave mode */
-    if (!R_Slave)
+    /* refrain from printing trailing '\n' in no-echo mode */
+    if (!R_NoEcho)
 	Rprintf("\n");
     /* run the .Last function. If it gives an error, will drop back to main
        loop. */

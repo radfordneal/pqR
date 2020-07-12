@@ -1,7 +1,7 @@
 #  File src/library/base/R/stop.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2019 The R Core Team
+#  Copyright (C) 1995-2020 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -31,31 +31,25 @@ stop <- function(..., call. = TRUE, domain = NULL)
         .Internal(stop(call., .makeMessage(..., domain = domain)))
 }
 
-stopifnot <- function(..., exprs, local = TRUE)
+stopifnot <- function(..., exprs, exprObject, local = TRUE)
 {
     n <- ...length()
-    if(!missing(exprs)) {
-	if(n)
-	    stop("Must use 'exprs' or unnamed expressions, but not both")
+    if((has.e <- !missing(exprs)) || !missing(exprObject)) {
+	if(n || (has.e && !missing(exprObject)))
+	    stop("Only one of 'exprs', 'exprObject' or expressions, not more")
 	envir <- if (isTRUE(local)) parent.frame()
 		 else if(isFALSE(local)) .GlobalEnv
 		 else if (is.environment(local)) local
 		 else stop("'local' must be TRUE, FALSE or an environment")
-	exprs <- substitute(exprs) # protect from evaluation
-	E1 <- if(is.call(exprs)) exprs[[1]]
+	E1 <- if(has.e && is.call(exprs <- substitute(exprs))) exprs[[1]]
 	cl <- if(is.symbol(E1) &&
-		 (E1 == quote(`{`) || E1 == quote(expression))) {
+		 E1 == quote(`{`)) {
 		  exprs[[1]] <- quote(stopifnot) ## --> stopifnot(*, *, ..., *) :
 		  exprs
 	      }
 	      else
 		  as.call(c(quote(stopifnot),
-			    if(is.null(E1) && is.symbol(exprs) &&
-			       is.expression(E1 <- eval(exprs))) # the *name* of an expression
-				as.list(E1)
-			    else
-				as.expression(exprs)
-			    )) # or fail ..
+			    if(!has.e) exprObject else as.expression(exprs))) # or fail ..
         names(cl) <- NULL
 	return(eval(cl, envir=envir))
     }
@@ -73,7 +67,9 @@ stopifnot <- function(..., exprs, local = TRUE)
     for (i in seq_len(n)) {
 	r <- ...elt(i)
 	if (!(is.logical(r) && !anyNA(r) && all(r))) {
-	    cl.i <- match.call()[[i+1L]]
+	  dots <- match.call()[-1L]
+          if(is.null(msg <- names(dots)) || !nzchar(msg <- msg[i])) {
+	    cl.i <- dots[[i]]
 	    msg <- ## special case for decently written 'all.equal(*)':
 		if(is.call(cl.i) && identical(cl.i[[1]], quote(all.equal)) &&
 		   (is.null(ni <- names(cl.i)) || length(cl.i) == 3L ||
@@ -87,8 +83,9 @@ stopifnot <- function(..., exprs, local = TRUE)
 				     "%s is not TRUE",
 				     "%s are not all TRUE"),
 			    Dparse(cl.i))
-            stop(simpleError(msg, call = if(p <- sys.parent(1L)) sys.call(p)))
-	}
+	  }
+	    stop(simpleError(msg, call = if(p <- sys.parent(1L)) sys.call(p)))
+        }
     }
     invisible()
 }

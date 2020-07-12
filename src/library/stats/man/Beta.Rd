@@ -79,7 +79,7 @@ rbeta(n, shape1, shape2, ncp = 0)
 }
 \note{
   Supplying \code{ncp = 0} uses the algorithm for the non-central
-  distribution, which is not the same algorithm used if \code{ncp} is
+  distribution, which is not the same algorithm as when \code{ncp} is
   omitted.  This is to give consistent behaviour in extreme cases with
   values of \code{ncp} very near zero.
 }
@@ -113,7 +113,7 @@ rbeta(n, shape1, shape2, ncp = 0)
 
   \item The non-central \code{pbeta} uses a C translation of
 
-  Lenth, R. V. (1987) Algorithm AS226: Computing noncentral beta
+  Lenth, R. V. (1987) Algorithm AS 226: Computing noncentral beta
   probabilities. \emph{Appl. Statist}, \bold{36}, 241--244,
   incorporating\cr
   Frick, H. (1990)'s AS R84, \emph{Appl. Statist}, \bold{39}, 311--2,

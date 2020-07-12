@@ -1,6 +1,6 @@
 R FAQ
 Frequently Asked Questions on R
-Version 2018-10-18
+Version 2020-02-20
 Kurt Hornik
 
 
@@ -44,9 +44,8 @@ R FAQ
   5.1 Which add-on packages exist for R?
     5.1.1 Add-on packages in R
     5.1.2 Add-on packages from CRAN
-    5.1.3 Add-on packages from Omegahat
-    5.1.4 Add-on packages from Bioconductor
-    5.1.5 Other add-on packages
+    5.1.3 Add-on packages from Bioconductor
+    5.1.4 Other add-on packages
   5.2 How can add-on packages be installed?
   5.3 How can add-on packages be used?
   5.4 How can add-on packages be removed?
@@ -123,7 +122,7 @@ questions about R.
 1.1 Legalese
 ============
 
-This document is copyright © 1998-2018 by Kurt Hornik.
+This document is copyright © 1998-2020 by Kurt Hornik.
 
    This document is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by the
@@ -156,13 +155,13 @@ CRAN site (*note What is CRAN?::).
 1.3 Citing this document
 ========================
 
-In publications, please refer to this FAQ as Hornik (2018), "The R FAQ",
+In publications, please refer to this FAQ as Hornik (2020), "The R FAQ",
 and give the above, _official_ URL:
 
      @Misc{,
        author        = {Kurt Hornik},
        title         = {{R} {FAQ}},
-       year          = {2018},
+       year          = {2020},
        url           = {https://CRAN.R-project.org/doc/FAQ/R-FAQ.html}
      }
 
@@ -199,11 +198,10 @@ script files.
 
    The design of R has been heavily influenced by two existing
 languages: Becker, Chambers & Wilks' S (*note What is S?::) and
-Sussman's Scheme
-(https://www.cs.indiana.edu/scheme-repository/home.html).  Whereas the
-resulting language is very similar in appearance to S, the underlying
-implementation and semantics are derived from Scheme.  *Note What are
-the differences between R and S?::, for further details.
+Sussman's Scheme (http://community.schemewiki.org/?scheme-faq).  Whereas
+the resulting language is very similar in appearance to S, the
+underlying implementation and semantics are derived from Scheme.  *Note
+What are the differences between R and S?::, for further details.
 
    The core of R is an interpreted computer language which allows
 branching and looping as well as modular programming using functions.
@@ -451,12 +449,6 @@ for on-line reading in HTML and PDF formats, and as hardcopy via LaTeX,
 see *note How can R be installed?::.  An up-to-date HTML version is
 always available for web browsing at <https://stat.ethz.ch/R-manual/>.
 
-   Printed copies of the R reference manual for some version(s) are
-available from Network Theory Ltd, at
-<http://www.network-theory.co.uk/R/base/>.  For each set of manuals
-sold, the publisher donates USD 10 to the R Foundation (*note What is
-the R Foundation?::).
-
    The R distribution also comes with the following manuals.
 
    * "An Introduction to R" ('R-intro') includes information on data
@@ -602,9 +594,6 @@ you include information on the system and version of R being used.  See
    See <https://www.R-project.org/mail.html> for more information on the
 R mailing lists.
 
-   The R Core Team can be reached at <R-core@lists.R-project.org> for
-comments and reports.
-
 2.10 What is CRAN?
 ==================
 
@@ -637,10 +626,10 @@ CRAN archive server (<https://CRAN-archive.R-project.org/>).
 2.11 Can I use R for commercial purposes?
 =========================================
 
-R is released under the GNU General Public License (GPL), version 2.  If
-you have any questions regarding the legality of using R in any
-particular situation you should bring it up with your legal counsel.  We
-are in no position to offer legal advice.
+R is released under the GNU General Public License (GPL), version 2 or
+version 3.  If you have any questions regarding the legality of using R
+in any particular situation you should bring it up with your legal
+counsel.  We are in no position to offer legal advice.
 
    It is the opinion of the R Core Team that one can use R for
 commercial purposes (e.g., in business or in consulting).  The GPL, like
@@ -1168,12 +1157,8 @@ in Plots", _Journal of Computational and Graphical Statistics_, *9*,
 
 For a very long time, there was no such thing.
 
-   XLSolutions Corporation (http://www.xlsolutions-corp.com/) is
-currently beta testing a commercially supported version of R named R+
-(read R plus).
-
-   Revolution Analytics (http://www.revolution-computing.com/) has
-released REvolution R, now available as Microsoft R (see
+   Revolution Analytics (http://revolutionanalytics.com/) has released
+REvolution R, now available as Microsoft R (see
 <http://blog.revolutionanalytics.com/2016/01/microsoft-r-open.html> for
 more information).
 
@@ -1304,26 +1289,7 @@ in all binary distributions of R.
 topic and providing tools to automatically install all packages for
 special areas of interest.
 
-   Some CRAN packages that do not build out of the box on Windows,
-require additional software, or are shipping third party libraries for
-Windows cannot be made available on CRAN in form of a Windows binary
-packages.  Nevertheless, some of these packages are available at the
-"CRAN extras" repository at <https://www.stats.ox.ac.uk/pub/RWin/>
-kindly provided by Brian D. Ripley.  Note that this repository is a
-default repository for recent versions of R for Windows.
-
-5.1.3 Add-on packages from Omegahat
------------------------------------
-
-The Omega Project for Statistical Computing (http://www.omegahat.net/)
-provides a variety of open-source software for statistical applications,
-with special emphasis on web-based software, Java, the Java virtual
-machine, and distributed computing.  A CRAN style R package repository
-is available via <http://www.omegahat.net/R/>.  See
-<http://www.omegahat.net/> for information on most R packages available
-from the Omega project.
-
-5.1.4 Add-on packages from Bioconductor
+5.1.3 Add-on packages from Bioconductor
 ---------------------------------------
 
 Bioconductor (https://www.bioconductor.org/) is an open source and open
@@ -1339,7 +1305,7 @@ and probe) and experiment data packages.  See
 <https://www.bioconductor.org/download/> for available packages and a
 complete taxonomy via BioC Views.
 
-5.1.5 Other add-on packages
+5.1.4 Other add-on packages
 ---------------------------
 
 Many more packages are available from places other than the three
@@ -1541,10 +1507,15 @@ pulldown menus.
 6.2 Should I run R from within Emacs?
 =====================================
 
-Yes, _definitely_.  Inferior R mode provides a readline/history
-mechanism, object name completion, and syntax-based highlighting of the
-interaction buffer using Font Lock mode, as well as a very convenient
-interface to the R help system.
+Yes, instead of just running it in a console, _definitely_.  As an
+alternative to other IDE's such as Rstudio, _possibly_, notably if you
+are interested to use Emacs for other computer interaction.  You'd be
+using ESS, Emacs Speaks Statistics, see previous FAQ.
+
+   Inferior R mode provides a readline/history mechanism, object name
+completion, and syntax-based highlighting of the interaction buffer
+using Font Lock mode, as well as a very convenient interface to the R
+help system.
 
    Of course, it also integrates nicely with the mechanisms for editing
 R source using Emacs.  One can write code in one Emacs buffer and send

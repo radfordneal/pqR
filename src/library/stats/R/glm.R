@@ -1,7 +1,7 @@
 #  File src/library/stats/R/glm.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ glm <- function(formula, family = gaussian, data, weights,
                 x = FALSE, y = TRUE,
 		singular.ok = TRUE, contrasts = NULL, ...)
 {
-    call <- match.call()
+    cal <- match.call()
     ## family
     if(is.character(family))
         family <- get(family, mode = "function", envir = parent.frame())
@@ -81,7 +81,8 @@ glm <- function(formula, family = gaussian, data, weights,
     offset <- as.vector(model.offset(mf))
     if(!is.null(offset)) {
         if(length(offset) != NROW(Y))
-            stop(gettextf("number of offsets is %d should equal %d (number of observations)", length(offset), NROW(Y)), domain = NA)
+	    stop(gettextf("number of offsets is %d should equal %d (number of observations)",
+			  length(offset), NROW(Y)), domain = NA)
     }
     ## these allow starting values to be expressed in terms of other vars.
     mustart <- model.extract(mf, "mustart")
@@ -119,13 +120,13 @@ glm <- function(formula, family = gaussian, data, weights,
     fit$na.action <- attr(mf, "na.action")
     if(x) fit$x <- X
     if(!y) fit$y <- NULL
-    fit <- c(fit, list(call = call, formula = formula,
-		       terms = mt, data = data,
-		       offset = offset, control = control, method = method,
-		       contrasts = attr(X, "contrasts"),
-                       xlevels = .getXlevels(mt, mf)))
-    class(fit) <- c(fit$class, c("glm", "lm"))
-    fit
+    structure(c(fit,
+		list(call = cal, formula = formula,
+		     terms = mt, data = data,
+		     offset = offset, control = control, method = method,
+		     contrasts = attr(X, "contrasts"),
+		     xlevels = .getXlevels(mt, mf))),
+	      class = c(fit$class, c("glm", "lm")))
 }
 
 
@@ -144,8 +145,8 @@ glm.control <- function(epsilon = 1e-8, maxit = 25, trace = FALSE)
 ## Updated by KH as suggested by BDR on 1998/06/16
 
 glm.fit <-
-    function (x, y, weights = rep(1, nobs), start = NULL,
-	      etastart = NULL, mustart = NULL, offset = rep(0, nobs),
+    function (x, y, weights = rep.int(1, nobs), start = NULL,
+	      etastart = NULL, mustart = NULL, offset = rep.int(0, nobs),
 	      family = gaussian(), control = list(), intercept = TRUE,
 	      singular.ok = TRUE)
 {
@@ -455,6 +456,7 @@ anova.glm <- function(object, ..., dispersion = NULL, test = NULL)
                        control=object$control))
       r <- fit$residuals
       w <- fit$weights
+      icpt <- attr(object$terms, "intercept")
     }
 
     ## if there is more than one explanatory variable then
@@ -470,7 +472,7 @@ anova.glm <- function(object, ..., dispersion = NULL, test = NULL)
             eta <- object$linear.predictors
             y <- object$fitted.values + object$residuals * mu.eta(eta)
         }
-	for(i in seq_len(nvars-1L)) {
+	for(i in seq_len(max(nvars - 1L, 0))) { # nvars == 0 can happen
 	    ## explanatory variables up to i are kept in the model
 	    ## use method from glm to find residual deviance
 	    ## and df for each sequential fit
@@ -486,7 +488,8 @@ anova.glm <- function(object, ..., dispersion = NULL, test = NULL)
               zz <- eval(call(if(is.function(method)) "method" else method,
                              x=x[, varseq <= i, drop = FALSE],
                              y=r,
-                             weights=w))
+                             weights=w,
+                             intercept=icpt))
               score[i] <-  zz$null.deviance - zz$deviance
               r <- fit$residuals
               w <- fit$weights
@@ -498,7 +501,8 @@ anova.glm <- function(object, ..., dispersion = NULL, test = NULL)
           zz <- eval(call(if(is.function(method)) "method" else method,
                           x=x,
                           y=r,
-                          weights=w))
+                          weights=w,
+                          intercept=icpt))
           score[nvars] <- zz$null.deviance - zz$deviance
         }
     }
@@ -586,17 +590,19 @@ anova.glmlist <- function(object, ..., dispersion=NULL, test=NULL)
       df <- -diff(resdf)
 
       for (i in seq_len(nmodels-1)) {
-        m1 <- if (df[i]>0) object[[i]] else object[[i+1]]
-        m2 <- if (df[i]>0) object[[i+1]] else object[[i]]
+        m1 <- if (df[i] > 0) object[[i]] else object[[i+1]]
+        m2 <- if (df[i] > 0) object[[i+1]] else object[[i]]
         r <- m1$residuals
         w <- m1$weights
         method <- m2$method
+        icpt <- attr(m1$terms, "intercept")
         zz <- eval(call(if(is.function(method)) "method" else method,
                         x=model.matrix(m2),
                         y=r,
-                        weights=w))
+                        weights=w,
+                        intercept=icpt))
         score[i+1] <-  zz$null.deviance - zz$deviance
-        if (df < 0) score[i+1] <- - score[i+1]
+        if (df[i] < 0) score[i+1] <- - score[i+1]
       }
     }
 

@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1997-2017   The R Core Team
+ *  Copyright (C) 1997-2020   The R Core Team
  *  Copyright (C) 1995-1996   Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -207,7 +207,7 @@ FILE *RC_fopen(const SEXP fn, const char *mode, const Rboolean expand)
 FILE *RC_fopen(const SEXP fn, const char *mode, const Rboolean expand)
 {
     const void *vmax = vmaxget();
-    const char *filename = translateChar(fn), *res;
+    const char *filename = translateCharFP(fn), *res;
     if(fn == NA_STRING || !filename) return NULL;
     if(expand) res = R_ExpandFileName(filename);
     else res = filename;
@@ -273,9 +273,9 @@ SEXP attribute_hidden do_tempfile(SEXP call, SEXP op, SEXP args, SEXP env)
     slen = (n3 > slen) ? n3 : slen;
     PROTECT(ans = allocVector(STRSXP, slen));
     for(i = 0; i < slen; i++) {
-	tn = translateChar( STRING_ELT( pattern , i%n1 ) );
-	td = translateChar( STRING_ELT( tempdir , i%n2 ) );
-	te = translateChar( STRING_ELT( fileext , i%n3 ) );
+	tn = translateCharFP( STRING_ELT( pattern , i%n1 ) );
+	td = translateCharFP( STRING_ELT( tempdir , i%n2 ) );
+	te = translateCharFP( STRING_ELT( fileext , i%n3 ) );
 	/* try to get a new file name */
 	tm = R_tmpnam2(tn, td, te);
 	SET_STRING_ELT(ans, i, mkChar(tm));
@@ -603,7 +603,7 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
     } else {
 	int mark, toRaw;
 	const char *from, *to;
-	Rboolean isLatin1 = FALSE, isUTF8 = FALSE;
+	Rboolean isLatin1 = FALSE, isUTF8 = FALSE, fromUTF8 = FALSE;
 
 	args = CDR(args);
 	if(!isString(CAR(args)) || length(CAR(args)) != 1)
@@ -628,6 +628,8 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 	    error(_("invalid '%s' argument"), "toRaw");
 	/* some iconv's allow "UTF8", but libiconv does not */
 	if(streql(from, "UTF8") || streql(from, "utf8") ) from = "UTF-8";
+	if(streql(from, "UTF-8") || (streql(from, "") && known_to_be_utf8))
+	    fromUTF8 = TRUE;
 	if(streql(to, "UTF8") || streql(to, "utf8") ) to = "UTF-8";
 	/* Should we do something about marked CHARSXPs in 'from = ""'? */
 	if(streql(to, "UTF-8")) isUTF8 = TRUE;
@@ -690,15 +692,43 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 	    /* Then convert input  */
 	    res = Riconv(obj, &inbuf , &inb, &outbuf, &outb);
 	    *outbuf = '\0';
-	    /* other possible error conditions are incomplete
-	       and invalid multibyte chars */
+	    /* other possible error conditions are
+	       incomplete and invalid multibyte chars */
 	    if(res == -1 && errno == E2BIG) {
 		R_AllocStringBuffer(2*cbuff.bufsize, &cbuff);
 		goto top_of_loop;
 	    } else if(res == -1 && sub &&
 		      (errno == EILSEQ || errno == EINVAL)) {
 		/* it seems this gets thrown for non-convertible input too */
-		if(strcmp(sub, "byte") == 0) {
+		if(fromUTF8 && streql(sub, "Unicode")) {
+		    if(outb < 13) {
+			R_AllocStringBuffer(2*cbuff.bufsize, &cbuff);
+			goto top_of_loop;
+		    }
+		    wchar_t wc;
+		    ssize_t clen = utf8toucs(&wc, inbuf);
+		    if(clen > 0 && inb >= clen) {
+			R_wchar_t ucs;
+			if (IS_HIGH_SURROGATE(wc))
+			    ucs = utf8toucs32(wc, inbuf);
+			else
+			    ucs = (R_wchar_t) wc;
+			inbuf += clen; inb -= clen;
+			if(ucs < 65536) {
+			    // gcc 7 objects to this with unsigned int
+			    snprintf(outbuf, 9, "<U+%04X>", (unsigned short) ucs);
+			    outbuf += 8; outb -= 8;
+			} else {
+			    /* R_wchar_t is unsigned int on Windows, 
+			       otherwise wchar_t (usually int).
+			       In any case Unicode points <= 0x10FFFF
+			    */
+			    snprintf(outbuf, 13, "<U+%08X>", (unsigned int) ucs);
+			    outbuf += 12; outb -= 12;
+			}
+		    }
+		    goto next_char;
+		}  else if(strcmp(sub, "byte") == 0) {
 		    if(outb < 5) {
 			R_AllocStringBuffer(2*cbuff.bufsize, &cbuff);
 			goto top_of_loop;
@@ -706,14 +736,13 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 		    snprintf(outbuf, 5, "<%02x>", (unsigned char)*inbuf);
 		    outbuf += 4; outb -= 4;
 		} else {
-		    size_t j;
-		    if(outb < strlen(sub)) {
+		    size_t sub_len = strlen(sub);
+		    if(outb < sub_len) {
 			R_AllocStringBuffer(2*cbuff.bufsize, &cbuff);
 			goto top_of_loop;
 		    }
-		    memcpy(outbuf, sub, j = strlen(sub));
-		    outbuf += j;
-		    outb -= j;
+		    memcpy(outbuf, sub, sub_len);
+		    outbuf += sub_len; outb -= sub_len;
 		}
 		inbuf++; inb--;
 		goto next_char;
@@ -831,10 +860,11 @@ static R_INLINE nttype_t needsTranslation(SEXP x) {
 static void *latin1_obj = NULL, *utf8_obj=NULL, *ucsmb_obj=NULL,
     *ucsutf8_obj=NULL;
 
-/* Translates string in "ans" to native encoding returning it as string
+/* Translates string in "ans" to native encoding returning it in string
    buffer "cbuff" */
-static void translateToNative(const char *ans, R_StringBuffer *cbuff,
-			      nttype_t ttype) {
+static int translateToNative(const char *ans, R_StringBuffer *cbuff,
+			     nttype_t ttype, int mustWork)
+{
 
     if (ttype == NT_NONE)
 	error(_("internal error: no translation needed"));
@@ -843,6 +873,7 @@ static void translateToNative(const char *ans, R_StringBuffer *cbuff,
     const char *inbuf, *from;
     char *outbuf;
     size_t inb, outb, res;
+    Rboolean failed = FALSE;
 
     if(ttype == NT_FROM_LATIN1) {
 	if(!latin1_obj) {
@@ -898,25 +929,25 @@ next_char:
 	    R_AllocStringBuffer(2*cbuff->bufsize, cbuff);
 	    goto top_of_loop;
 	}
+	failed = TRUE;
 	if (ttype == NT_FROM_UTF8) {
 	    /* if starting in UTF-8, use \uxxxx */
 	    /* This must be the first byte */
-	    size_t clen;
 	    wchar_t wc;
-	    Rwchar_t ucs;
-	    clen = utf8toucs(&wc, inbuf);
+	    ssize_t clen = utf8toucs(&wc, inbuf);
 	    if(clen > 0 && inb >= clen) {
+		R_wchar_t ucs;
 	    	if (IS_HIGH_SURROGATE(wc))
 	    	    ucs = utf8toucs32(wc, inbuf);
 	    	else
-	    	    ucs = (Rwchar_t) wc;
+	    	    ucs = (R_wchar_t) wc;
 		inbuf += clen; inb -= clen;
 		if(ucs < 65536) {
 		// gcc 7 objects to this with unsigned int
 		    snprintf(outbuf, 9, "<U+%04X>", (unsigned short) ucs);
 		    outbuf += 8; outb -= 8;
 		} else {
-		    // Rwchar_t is usually unsigned int, but wchar_t need not be
+		    // R_wchar_t is usually unsigned int, but wchar_t need not be
 		    snprintf(outbuf, 13, "<U+%08X>", (unsigned int) ucs);
 		    outbuf += 12; outb -= 12;
 		}
@@ -925,7 +956,7 @@ next_char:
 		outbuf += 4; outb -= 4;
 		inbuf++; inb--;
 	    }
-	} else {
+	} else { // not from UTF-8
 	    snprintf(outbuf, 5, "<%02x>", (unsigned char)*inbuf);
 	    outbuf += 4; outb -= 4;
 	    inbuf++; inb--;
@@ -933,6 +964,16 @@ next_char:
 	goto next_char;
     }
     *outbuf = '\0';
+    if (mustWork && failed) {
+	if (mustWork == 2) {
+	    warning(_("unable to translate '%s' to native encoding"), 
+		    cbuff->data);
+	    return 1;
+	} else
+	    error(_("unable to translate '%s' to native encoding"),
+		  cbuff->data);
+    }
+    return 0;
 }
 
 
@@ -948,7 +989,48 @@ const char *translateChar(SEXP x)
     if (t == NT_NONE) return ans;
 
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
-    translateToNative(ans, &cbuff, t);
+    translateToNative(ans, &cbuff, t, 0);
+
+    size_t res = strlen(cbuff.data) + 1;
+    char *p = R_alloc(res, 1);
+    memcpy(p, cbuff.data, res);
+    R_FreeStringBuffer(&cbuff);
+    return p;
+}
+
+/* Variant which must work, used for file paths, including devices */
+const char *translateCharFP(SEXP x)
+{
+    if(TYPEOF(x) != CHARSXP)
+	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
+	      "translateChar", type2char(TYPEOF(x)));
+    nttype_t t = needsTranslation(x);
+    const char *ans = CHAR(x);
+    if (t == NT_NONE) return ans;
+
+    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
+    translateToNative(ans, &cbuff, t, 1);
+
+    size_t res = strlen(cbuff.data) + 1;
+    char *p = R_alloc(res, 1);
+    memcpy(p, cbuff.data, res);
+    R_FreeStringBuffer(&cbuff);
+    return p;
+}
+
+/* Variant which may return NULL, used for file paths */
+attribute_hidden
+const char *translateCharFP2(SEXP x)
+{
+    if(TYPEOF(x) != CHARSXP)
+	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
+	      "translateChar", type2char(TYPEOF(x)));
+    nttype_t t = needsTranslation(x);
+    const char *ans = CHAR(x);
+    if (t == NT_NONE) return ans;
+
+    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
+    if (translateToNative(ans, &cbuff, t, 2)) return NULL;
 
     size_t res = strlen(cbuff.data) + 1;
     char *p = R_alloc(res, 1);
@@ -966,21 +1048,30 @@ SEXP installTrChar(SEXP x)
     if (t == NT_NONE) return installNoTrChar(x);
 
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
-    translateToNative(CHAR(x), &cbuff, t);
+    // For back-compatibility this allows installing
+    // symbols with escapes, with a warning.
+    translateToNative(CHAR(x), &cbuff, t, 2);
 
     SEXP Sans = install(cbuff.data);
     R_FreeStringBuffer(&cbuff);
     return Sans;
 }
 
-/* now translates, now same as installTrChar */
-SEXP installChar(SEXP x)
+/* Translates as from R 3.6.0.
+   As from R 4.0.0 unused in newly installed code as installChar is
+   remapped to Rf_installTrChar. 
+ */
+SEXP Rf_installChar(SEXP x)
 {
-    return installTrChar(x);
+    return Rf_installTrChar(x);
 }
 
 /* This may return a R_alloc-ed result, so the caller has to manage the
-   R_alloc stack */
+   R_alloc stack.
+
+   Use for writeLines/Bin/Char, the first only with useBytes = TRUE.
+
+*/
 const char *translateChar0(SEXP x)
 {
     if(TYPEOF(x) != CHARSXP)
@@ -1047,6 +1138,75 @@ next_char:
     }
     *outbuf = '\0';
     Riconv_close(obj);
+    res = strlen(cbuff.data) + 1;
+    p = R_alloc(res, 1);
+    memcpy(p, cbuff.data, res);
+    R_FreeStringBuffer(&cbuff);
+    return p;
+}
+
+/* Variant which does not return escaped string */
+attribute_hidden
+const char *trCharUTF8(SEXP x)
+{
+    void *obj;
+    const char *inbuf, *ans = CHAR(x);
+    char *outbuf, *p, *from = "";
+    size_t inb, outb, res;
+    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
+    Rboolean failed = FALSE;
+
+    if(TYPEOF(x) != CHARSXP)
+	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
+	      "translateCharUTF8", type2char(TYPEOF(x)));
+    if(x == NA_STRING) return ans;
+    if(IS_UTF8(x)) return ans;
+    if(IS_ASCII(x)) return ans;
+    if(IS_BYTES(x))
+	error(_("translating strings with \"bytes\" encoding is not allowed"));
+
+    if (IS_LATIN1(x))
+#ifdef HAVE_ICONV_CP1252
+	from = "CP1252";
+#else
+	from = "latin1";
+#endif
+    obj = Riconv_open("UTF-8", from);
+    if(obj == (void *)(-1))
+#ifdef Win32
+	error(_("unsupported conversion from '%s' in codepage %d"),
+	      from, localeCP);
+#else
+	error(_("unsupported conversion from '%s' to '%s'"),
+	      from, "UTF-8");
+#endif
+    R_AllocStringBuffer(0, &cbuff);
+top_of_loop:
+    inbuf = ans; inb = strlen(inbuf);
+    outbuf = cbuff.data; outb = cbuff.bufsize - 1;
+    /* First initialize output */
+    Riconv (obj, NULL, NULL, &outbuf, &outb);
+next_char:
+    /* Then convert input  */
+    res = Riconv(obj, &inbuf , &inb, &outbuf, &outb);
+    if(res == -1 && errno == E2BIG) {
+	R_AllocStringBuffer(2*cbuff.bufsize, &cbuff);
+	goto top_of_loop;
+    } else if(res == -1 && (errno == EILSEQ || errno == EINVAL)) {
+	if(outb < 5) {
+	    R_AllocStringBuffer(2*cbuff.bufsize, &cbuff);
+	    goto top_of_loop;
+	}
+	failed = TRUE;
+	snprintf(outbuf, 5, "<%02x>", (unsigned char)*inbuf);
+	outbuf += 4; outb -= 4;
+	inbuf++; inb--;
+	goto next_char;
+    }
+    *outbuf = '\0';
+    Riconv_close(obj);
+    if (failed)
+	error(_("unable to translate '%s' to UTF-8"),  cbuff.data);
     res = strlen(cbuff.data) + 1;
     p = R_alloc(res, 1);
     memcpy(p, cbuff.data, res);
@@ -1183,7 +1343,7 @@ const char *reEnc(const char *x, cetype_t ce_in, cetype_t ce_out, int subst)
 	if(ce_out == CE_UTF8) {
 	    size_t nc = 3*strlen(x)+1; /* all in BMP */
 	    p = R_alloc(nc, 1);
-	    Rf_AdobeSymbol2utf8(p, x, nc);
+	    Rf_AdobeSymbol2utf8(p, x, nc, TRUE);
 	    return p;
 	} else return x;
     }
@@ -1750,6 +1910,11 @@ char * R_tmpnam2(const char *prefix, const char *tempdir, const char *fileext)
     return res;
 }
 
+void R_free_tmpnam(char *name)
+{
+    if (name) free(name);
+}
+
 SEXP attribute_hidden do_proctime(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, nm;
@@ -1925,3 +2090,95 @@ SEXP attribute_hidden do_glob(SEXP call, SEXP op, SEXP args, SEXP env)
     if (initialized) globfree(&globbuf);
     return ans;
 }
+
+/* isatty is in unistd.h, or io.h on Windows */
+#ifdef Win32
+# include <io.h>
+#endif
+
+#ifdef Win32
+
+#if _WIN32_WINNT < 0x0600
+/* available from Windows Vista */
+typedef enum _FILE_INFO_BY_HANDLE_CLASS {
+  FileBasicInfo,
+  FileStandardInfo,
+  FileNameInfo,
+  FileRenameInfo,
+  FileDispositionInfo,
+  FileAllocationInfo,
+  FileEndOfFileInfo,
+  FileStreamInfo,
+  FileCompressionInfo,
+  FileAttributeTagInfo,
+  FileIdBothDirectoryInfo,
+  FileIdBothDirectoryRestartInfo,
+  FileIoPriorityHintInfo,
+  FileRemoteProtocolInfo,
+  FileFullDirectoryInfo,
+  FileFullDirectoryRestartInfo,
+  FileStorageInfo,
+  FileAlignmentInfo,
+  FileIdInfo,
+  FileIdExtdDirectoryInfo,
+  FileIdExtdDirectoryRestartInfo,
+  FileDispositionInfoEx,
+  FileRenameInfoEx,
+  MaximumFileInfoByHandleClass,
+  FileCaseSensitiveInfo,
+  FileNormalizedNameInfo
+} FILE_INFO_BY_HANDLE_CLASS, *PFILE_INFO_BY_HANDLE_CLASS;
+
+typedef struct _FILE_NAME_INFO {
+  DWORD FileNameLength;
+  WCHAR FileName[1];
+} FILE_NAME_INFO, *PFILE_NAME_INFO;
+#endif
+
+typedef BOOL (WINAPI *LPFN_GFIBH_EX) (HANDLE, FILE_INFO_BY_HANDLE_CLASS,
+                                      LPVOID, DWORD);
+
+int attribute_hidden R_is_redirection_tty(int fd)
+{
+    /* for now detects only msys/cygwin redirection tty */
+    static LPFN_GFIBH_EX gfibh = NULL;
+    static Rboolean initialized = FALSE;
+
+    if (!initialized) {
+	initialized = TRUE;
+	gfibh = (LPFN_GFIBH_EX) GetProcAddress(
+	    GetModuleHandle(TEXT("kernel32")),
+	    "GetFileInformationByHandleEx");
+    }
+    if (gfibh == NULL)
+	return 0;
+
+    HANDLE h = (HANDLE) _get_osfhandle(fd);
+    if (h == INVALID_HANDLE_VALUE || GetFileType(h) != FILE_TYPE_PIPE)
+	return 0;
+    FILE_NAME_INFO *fnInfo;
+    DWORD size = sizeof(FILE_NAME_INFO) + MAX_PATH*sizeof(WCHAR);
+    if (!(fnInfo = (FILE_NAME_INFO*)malloc(size)))
+	return 0;
+    int res = 0;
+    if (gfibh(h, FileNameInfo, fnInfo, size)) 
+	/* e.g. msys-1888ae32e00d56aa-pty0-from-master,
+	        cygwin-e022582115c10879-pty0-from-master */
+	/* test borrowed from git */
+	res = ((wcsstr(fnInfo->FileName, L"msys-") ||
+	        wcsstr(fnInfo->FileName, L"cygwin-")) &&
+		wcsstr(fnInfo->FileName, L"-pty"));
+    free(fnInfo);
+    return res;
+}
+#endif
+
+int attribute_hidden R_isatty(int fd)
+{
+#ifdef Win32
+    if (R_is_redirection_tty(fd))
+	return 1;
+#endif
+    return isatty(fd);
+}
+

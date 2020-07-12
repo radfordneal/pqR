@@ -1,7 +1,7 @@
 #   File src/library/utils/R/Sweave.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -26,12 +26,11 @@
 ### SweaveReadFile figures out an encoding, uses it (not currently for
 ### \SweaveInclude files) and returns it as an attribute.  This is
 ### then passed as an attribute of 'file' to the driver's setup
-### routine.  Unless it is "" or "ASCII", the RweaveLatex driver
-### re-encodes the output back to 'encoding': the Rtangle driver
-### leaves it in the encoding of the current locale and records what
-### that is in a comment.  The "UTF-8" encoding is preserved on
-### both input and output in RweaveLatex, but is handled like
-### other encodings in Rtangle.
+### routine.  Unless it is "" or "ASCII", the RweaveLatex and Rtangle
+### drivers re-encode the output back to 'encoding', and preserve the
+### "UTF-8" encoding on both input and output.  (Up to 3.6, the Rtangle
+### driver left things in the encoding of the current locale and recorded
+### what that was in a comment.) 
 ###
 ### SweaveReadFile first looks for a call to one of the LaTeX packages
 ### inputen[cx] and deduces the vignette encoding from that, falling
@@ -520,7 +519,7 @@ SweaveHooks <- function(options, run = FALSE, envir = .GlobalEnv)
     if(nzchar(driver)) args <- c(args, driver)
     args <- c(args, encoding = encoding)
     if(nzchar(options)) {
-        opts <- eval(parse(text = paste("list(", options, ")")))
+        opts <- eval(str2expression(paste0("list(", options, ")")))
         args <- c(args, opts)
     }
     output <- do.call(tools::buildVignette, args)
@@ -624,7 +623,7 @@ SweaveHooks <- function(options, run = FALSE, envir = .GlobalEnv)
     args <- list(file=file, tangle=TRUE, weave=FALSE, engine=engine,
                  encoding=encoding)
     if(nzchar(options)) {
-        opts <- eval(parse(text = paste("list(", options, ")")))
+        opts <- eval(str2expression(paste0("list(", options, ")")))
         args <- c(args, opts)
     }
     output <- do.call(tools::buildVignette, args)

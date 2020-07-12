@@ -20,7 +20,7 @@
 ar <-
     function (x, aic = TRUE, order.max = NULL,
               method = c("yule-walker","burg", "ols", "mle", "yw"),
-              na.action = na.fail, series = deparse(substitute(x)), ...)
+              na.action = na.fail, series = deparse1(substitute(x)), ...)
 {
     res <- switch(match.arg(method),
                   yw =,
@@ -43,7 +43,7 @@ ar.yw.default <-
     function (x, aic = TRUE, order.max = NULL, na.action = na.fail,
               demean = TRUE, series = NULL, ...)
 {
-    if(is.null(series)) series <- deparse(substitute(x))
+    if(is.null(series)) series <- deparse1(substitute(x))
     ists <- is.ts(x)
     x <- na.action(as.ts(x))
     if(ists) xtsp <- tsp(x)
@@ -197,7 +197,7 @@ predict.ar <- function(object, newdata, n.ahead = 1L, se.fit = TRUE, ...)
 {
     if (n.ahead < 1L) stop("'n.ahead' must be at least 1")
     if(missing(newdata)) {
-        newdata <- eval.parent(parse(text=object$series))
+        newdata <- eval.parent(str2lang(object$series))
         if (!is.null(nas <- object$call$na.action))
             newdata <- eval.parent(call(nas, newdata))
     }
@@ -259,7 +259,7 @@ predict.ar <- function(object, newdata, n.ahead = 1L, se.fit = TRUE, ...)
 ar.mle <- function (x, aic = TRUE, order.max = NULL, na.action = na.fail,
                     demean = TRUE, series = NULL, ...)
 {
-    if(is.null(series)) series <- deparse(substitute(x))
+    if(is.null(series)) series <- deparse1(substitute(x))
     ists <- is.ts(x)
     if (!is.null(dim(x)))
         stop("MLE only implemented for univariate series")
@@ -335,7 +335,7 @@ ar.mle <- function (x, aic = TRUE, order.max = NULL, na.action = na.fail,
 ar.ols <- function (x, aic = TRUE, order.max = NULL, na.action = na.fail,
                     demean = TRUE, intercept = demean, series = NULL, ...)
 {
-    if(is.null(series)) series <- deparse(substitute(x))
+    if(is.null(series)) series <- deparse1(substitute(x))
     rescale <- TRUE
     ists <- is.ts(x)
     x <- na.action(as.ts(x))
@@ -478,7 +478,7 @@ ar.yw.mts <-
 function (x, aic = TRUE, order.max = NULL, na.action = na.fail,
     demean = TRUE, series = NULL, var.method = 1L, ...)
 {
-    if (is.null(series)) series <- deparse(substitute(x))
+    if (is.null(series)) series <- deparse1(substitute(x))
     if (ists <- is.ts(x)) xtsp <- tsp(x)
     x <- na.action(as.ts(x))
     if(any(is.na(x) != is.na(x[,1]))) stop("NAs in 'x' must be the same row-wise")
@@ -545,7 +545,7 @@ ar.burg.default <-
     function (x, aic = TRUE, order.max = NULL, na.action = na.fail,
                    demean = TRUE, series = NULL, var.method = 1L, ...)
 {
-    if(is.null(series)) series <- deparse(substitute(x))
+    if(is.null(series)) series <- deparse1(substitute(x))
     if (ists <- is.ts(x)) xtsp <- tsp(x)
     x <- na.action(as.ts(x))
     if(anyNA(x)) stop("NAs in 'x'")
@@ -599,7 +599,7 @@ function (x, aic = TRUE, order.max = NULL, na.action = na.fail,
           demean = TRUE, series = NULL, var.method = 1L, ...)
 {
     if (is.null(series))
-        series <- deparse(substitute(x))
+        series <- deparse1(substitute(x))
     if (ists <- is.ts(x))
         xtsp <- tsp(x)
     x <- na.action(as.ts(x))

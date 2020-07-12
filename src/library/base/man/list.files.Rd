@@ -1,6 +1,6 @@
 % File src/library/base/man/list.files.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2019 R Core Team
+% Copyright 1995-2020 R Core Team
 % Distributed under GPL 2 or later
 
 \name{list.files}
@@ -24,11 +24,13 @@ list.dirs(path = ".", full.names = TRUE, recursive = TRUE)
     corresponds to the working directory, \code{\link{getwd}()}.  Tilde
     expansion (see \code{\link{path.expand}}) is performed.  Missing
     values will be ignored.  Elements with a marked encoding will
-    be converted to the native encoding.}
+    be converted to the native encoding (and if that fails, considered
+    non-existent).}
   \item{pattern}{an optional \link{regular expression}.  Only file names
     which match the regular expression will be returned.}
   \item{all.files}{a logical value.  If \code{FALSE}, only the
-    names of visible files are returned.  If \code{TRUE},
+    names of visible files are returned (following Unix-style visibility,
+    that is files whose name does not start with a dot).  If \code{TRUE},
     all file names will be returned.}
   \item{full.names}{a logical value.  If \code{TRUE}, the directory
     path is prepended to the file names to give a relative file path.
@@ -56,6 +58,8 @@ list.dirs(path = ".", full.names = TRUE, recursive = TRUE)
   \code{list.dirs} implicitly has \code{all.files = TRUE}, and if
   \code{recursive = TRUE}, the answer includes \code{path} itself
   (provided it is a readable directory).
+
+  \code{dir} is an alias for \code{list.files}.
 }
 \author{Ross Ihaka, Brian Ripley}
 \note{

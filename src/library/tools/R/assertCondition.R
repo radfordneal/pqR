@@ -27,7 +27,7 @@ assertCondition <-
             tryCatch(expr, error = function(e) conds <<- c(conds, list(e))),
             warning = function(w) {
                 conds <<- c(conds, list(w))
-                invokeRestart("muffleWarning")
+                tryInvokeRestart("muffleWarning")
             },
             condition = function(cond)
                 conds <<- c(conds, list(cond)))
@@ -68,32 +68,32 @@ assertCondition <-
 		      .Wanted, .exprString))
 }
 
-assertError <- function(expr, verbose = FALSE) {
+assertError <- function(expr, classes = "error", verbose = FALSE) {
     d.expr <- .deparseTrim(substitute(expr), cutoff = 30L)
-    tryCatch(res <- assertCondition(expr, "error", .exprString = d.expr),
+    tryCatch(res <- assertCondition(expr, classes, .exprString = d.expr),
              error = function(e)
                  stop(gettextf("Failed to get error in evaluating %s", d.expr),
                       call. = FALSE)
              )
     if(verbose) {
         error <- res[vapply(res,
-                            function(cond) "error" %in% class(cond),
+                            function(cond) any(match(classes, class(cond), 0L) > 0L),
                             NA)]
         message(sprintf("Asserted error: %s", error[[1]]$message))
     }
     invisible(res)
 }
 
-assertWarning <- function(expr, verbose = FALSE) {
+assertWarning <- function(expr, classes = "warning", verbose = FALSE) {
     d.expr <- .deparseTrim(substitute(expr), cutoff = 30L)
-    res <- assertCondition(expr, "warning", .exprString = d.expr)
+    res <- assertCondition(expr, classes, .exprString = d.expr)
     if(any(vapply(res,
                   function(cond) "error" %in% class(cond),
                   NA)))
         stop(gettextf("Got warning in evaluating %s, but also an error", d.expr))
     if(verbose) {
         warning <- res[vapply(res,
-                              function(cond) "warning" %in% class(cond),
+                              function(cond) any(match(classes, class(cond), 0L) > 0L),
                               NA)]
         message(sprintf("Asserted warning: %s", warning[[1]]$message))
     }
@@ -104,7 +104,7 @@ assertWarning <- function(expr, verbose = FALSE) {
     res <- deparse(expr)
     if(length(res) > 1) {
         if(res[[1]] == "{") {
-            exprs <- sub("^[ \t]*", "", res[c(-1, -length(res))])
+            exprs <- sub("^[ \t]*", "", res[c(-1L, -length(res))])
             res <- paste0("{", paste(exprs, collapse = "; "), "}")
         }
         else

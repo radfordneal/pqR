@@ -1,7 +1,7 @@
 #  File src/library/base/R/parse.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2019 The R Core Team
+#  Copyright (C) 1995-2020 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ parse <- function(file = "", n = NULL, text = NULL, prompt = "?",
             	if (missing(srcfile))
             	    srcfile <- filename
             	if (keep.source) {
-		    text <- readLines(file, warn = FALSE)
+		    text <- readLines(file, warn = FALSE, encoding = encoding)
 		    if (!length(text)) text <- ""
             	    close(file)
             	    file <- stdin()
@@ -60,7 +60,7 @@ parse <- function(file = "", n = NULL, text = NULL, prompt = "?",
 if(FALSE) {  # R level implementation (not used):
 str2expression <- function(text) parse(text=text, keep.source=FALSE)
 str2lang       <- function(s) parse(text=s, keep.source=FALSE)[[1L]]
-## Actually, we do check twice:
+## For str2lang(), actually, we check 'length 1' twice:
 str2lang       <- function(s) {
     stopifnot(length(s) == 1L)
     ex <- parse(text=s, keep.source=FALSE)

@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1995--2018  The R Core Team
+ *  Copyright (C) 1995--2019  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -1124,6 +1124,8 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream)
 		WriteItem(ATTRIB(s), ref_table, stream);
 	    if (TAG(s) != R_NilValue)
 		WriteItem(TAG(s), ref_table, stream);
+	    if (BNDCELL_TAG(s))
+		R_expand_binding_value(s);
 	    WriteItem(CAR(s), ref_table, stream);
 	    /* now do a tail call to WriteItem to handle the CDR */
 	    s = CDR(s);
@@ -1406,8 +1408,10 @@ void R_Serialize(SEXP s, R_outpstream_t stream)
  * Unserialize Code
  */
 
+// used in saveload.c
 attribute_hidden int R_ReadItemDepth = 0, R_InitReadItemDepth;
-static char lastname[8192];
+
+static char lastname[8192] = "<unknown>";
 
 #define INITIAL_REFREAD_TABLE_SIZE 128
 
@@ -1850,11 +1854,13 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	SETLEVELS(s, levs);
 	SET_OBJECT(s, objf);
 	R_ReadItemDepth++;
+	Rboolean set_lastname = FALSE;
 	SET_ATTRIB(s, hasattr ? ReadItem(ref_table, stream) : R_NilValue);
 	SET_TAG(s, hastag ? ReadItem(ref_table, stream) : R_NilValue);
 	if (hastag && R_ReadItemDepth == R_InitReadItemDepth + 1 &&
 	    isSymbol(TAG(s))) {
 	    snprintf(lastname, 8192, "%s", CHAR(PRINTNAME(TAG(s))));
+	    set_lastname = TRUE;
 	}
 	if (hastag && R_ReadItemDepth <= 0) {
 	    Rprintf("%*s", 2*(R_ReadItemDepth - R_InitReadItemDepth), "");
@@ -1866,6 +1872,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	/* For reading closures and promises stored in earlier versions, convert NULL env to baseenv() */
 	if      (type == CLOSXP && CLOENV(s) == R_NilValue) SET_CLOENV(s, R_BaseEnv);
 	else if (type == PROMSXP && PRENV(s) == R_NilValue) SET_PRENV(s, R_BaseEnv);
+	if (set_lastname) strcpy(lastname, "<unknown>");
 	UNPROTECT(1); /* s */
 	return s;
     default:
@@ -1904,7 +1911,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    }
 	    break;
 	case CHARSXP:
-	    /* Let us suppose these will still be limited to 2^31 -1 bytes */
+	    /* these are currently limited to 2^31 -1 bytes */
 	    length = InInteger(stream);
 	    if (length == -1)
 		PROTECT(s = NA_STRING);
@@ -2146,11 +2153,9 @@ SEXP R_Unserialize(R_inpstream_t stream)
     case 3:
     {
 	int nelen = InInteger(stream);
-	char nbuf[nelen + 1];
-	InString(stream, nbuf, nelen);
-	nbuf[nelen] = '\0';
-	nelen = nelen < (R_CODESET_MAX + 1) ? nelen : R_CODESET_MAX;
-	strncpy(stream->native_encoding, nbuf, nelen);
+	if (nelen > R_CODESET_MAX)
+	    error(_("invalid length of encoding name"));
+	InString(stream, stream->native_encoding, nelen);
 	stream->native_encoding[nelen] = '\0';
 	break;
     }
@@ -2239,6 +2244,8 @@ SEXP R_SerializeInfo(R_inpstream_t stream)
     if (version == 3) {
 	SET_STRING_ELT(names, 4, mkChar("native_encoding"));
 	int nelen = InInteger(stream);
+	if (nelen > R_CODESET_MAX)
+	    error(_("invalid length of encoding name"));
 	char nbuf[nelen + 1];
 	InString(stream, nbuf, nelen);
 	nbuf[nelen] = '\0';
@@ -2922,7 +2929,10 @@ static SEXP appendRawToFile(SEXP file, SEXP bytes)
 	error( _("cannot open file '%s': %s"), CHAR(STRING_ELT(file, 0)),
 	       strerror(errno));
     }
-    fseek(fp, 0, SEEK_END);
+    if (fseek(fp, 0, SEEK_END) != 0) {
+	fclose(fp);
+	error(_("seek failed on %s"), CHAR(STRING_ELT(file, 0)));
+    }
 #endif
 
     len = LENGTH(bytes);

@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1997--2019  The R Core Team
+ *  Copyright (C) 1997--2020  The R Core Team
  *  Copyright (C) 2003--2018  The R Foundation
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
@@ -133,6 +133,7 @@ FUNTAB R_FunTab[] =
 {"ngettext",	do_ngettext,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	  0}},
 {"bindtextdomain",do_bindtextdomain,0,	11,	2,	{PP_FUNCALL, PREC_FN,	  0}},
 {".addCondHands",do_addCondHands,	0,	111,	5,	{PP_FUNCALL, PREC_FN,	  0}},
+{".addGlobHands",do_addGlobHands,	0,	111,	5,	{PP_FUNCALL, PREC_FN,	  0}},
 {".resetCondHands",do_resetCondHands,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {".signalCondition",do_signalCondition,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	  0}},
 {".dfltStop",do_dfltStop,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	  0}},
@@ -205,6 +206,7 @@ FUNTAB R_FunTab[] =
 {"oldClass<-",	do_classgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT, 1}},
 {"class",	R_do_data_class,0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {".cache_class",R_do_data_class,1,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{".class2",	R_do_data_class,2,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"class<-",	R_do_set_class,	0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"unclass",	do_unclass,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"names",	do_names,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -261,6 +263,7 @@ FUNTAB R_FunTab[] =
 {"crossprod",	do_matprod,	1,	11,	2,	{PP_FUNCALL, PREC_FN,   0}},
 {"tcrossprod",	do_matprod,	2,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"lengths",	do_lengths,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"sequence",	do_sequence,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"attach",	do_attach,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"detach",	do_detach,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -808,7 +811,7 @@ FUNTAB R_FunTab[] =
 {"Sys.getpid",	do_sysgetpid,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"normalizePath",do_normalizepath,0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"Sys.glob",	do_glob,	0,      11,	2,      {PP_FUNCALL, PREC_FN,   0}},
-{"unlink",	do_unlink,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"unlink",	do_unlink,	0,	111,	4,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* Complex Valued Functions */
 {"polyroot",	do_polyroot,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -880,7 +883,10 @@ FUNTAB R_FunTab[] =
 {"textConnection",do_textconnection,0,	11,     5,      {PP_FUNCALL, PREC_FN,	0}},
 {"textConnectionValue",do_textconvalue,0,11,    1,      {PP_FUNCALL, PREC_FN,	0}},
 {"socketConnection",do_sockconn,0,	11,     7,      {PP_FUNCALL, PREC_FN,	0}},
+{"socketAccept",do_sockconn,	1,	11,     5,      {PP_FUNCALL, PREC_FN,	0}},
 {"sockSelect",do_sockselect,	0,	11,     3,      {PP_FUNCALL, PREC_FN,	0}},
+{"serverSocket",do_serversocket,0,	11,     1,      {PP_FUNCALL, PREC_FN,	0}},
+{"socketTimeout",do_socktimeout,0,	11,     2,      {PP_FUNCALL, PREC_FN,	0}},
 {"getConnection",do_getconnection,0,	11,	1,      {PP_FUNCALL, PREC_FN,	0}},
 {"getAllConnections",do_getallconnections,0,11, 0,      {PP_FUNCALL, PREC_FN,	0}},
 {"summary.connection",do_sumconnection,0,11,    1,      {PP_FUNCALL, PREC_FN,	0}},
@@ -899,6 +905,7 @@ FUNTAB R_FunTab[] =
 {"bindingIsLocked", do_bndIsLocked,	0, 11,	2,      {PP_FUNCALL, PREC_FN,	0}},
 {"makeActiveBinding", do_mkActiveBnd,	0, 111,	3,      {PP_FUNCALL, PREC_FN,	0}},
 {"bindingIsActive", do_bndIsActive,	0, 11,	2,      {PP_FUNCALL, PREC_FN,	0}},
+{"activeBindingFunction", do_activeBndFun,	0, 11,	2,      {PP_FUNCALL, PREC_FN,	0}},
 /* looks like mkUnbound is unused in base R */
 {"mkUnbound",	do_mkUnbound,		0, 111,	1,      {PP_FUNCALL, PREC_FN,	0}},
 {"isNamespaceEnv",do_isNSEnv,		0, 11,	1,      {PP_FUNCALL, PREC_FN,	0}},
@@ -1074,6 +1081,7 @@ static void SymbolShortcuts(void)
     R_DollarSymbol = install("$");
     R_DotsSymbol = install("...");
     R_DropSymbol = install("drop");
+    R_EvalSymbol = install("eval");
 
     /* The last value symbol is used by the interpreter for recording
        the value of the most recently evaluated top level

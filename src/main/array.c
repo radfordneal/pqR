@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998-2018   The R Core Team
+ *  Copyright (C) 1998-2019   The R Core Team
  *  Copyright (C) 2002-2015   The R Foundation
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
@@ -26,8 +26,8 @@
 #include <Defn.h>
 #include <Internal.h>
 #include <Rmath.h>
-#include <R_ext/RS.h>     /* for Calloc/Free */
-#include <R_ext/Applic.h> /* for dgemm */
+#include <R_ext/RS.h>     /* for Calloc/Free, F77_CALL */
+#include <R_ext/BLAS.h>
 #include <R_ext/Itermacros.h>
 
 #include "duplicate.h"
@@ -434,6 +434,7 @@ SEXP attribute_hidden do_length(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     SEXP x = CAR(args), ans;
 
+    /* DispatchOrEval internal generic: length */
     if (isObject(x) &&
        DispatchOrEval(call, op, "length", args, rho, &ans, 0, 1)) {
 	if (length(ans) == 1 && TYPEOF(ans) == REALSXP) {
@@ -472,6 +473,7 @@ R_xlen_t attribute_hidden dispatch_xlength(SEXP x, SEXP call, SEXP rho) {
         if (length_op == NULL)
             length_op = R_Primitive("length");
         PROTECT(args = list1(x));
+	/* DispatchOrEval internal generic: length */
         if (DispatchOrEval(call, length_op, "length", args, rho, &len, 0, 1)) {
             UNPROTECT(1);
             return (R_xlen_t)
@@ -519,6 +521,7 @@ SEXP attribute_hidden do_lengths(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (useNames == NA_LOGICAL)
 	error(_("invalid '%s' value"), "use.names");
 
+    /* DispatchOrEval internal generic: lengths */
     if (DispatchOrEval(call, op, "lengths", args, rho, &ans, 0, 1))
       return(ans);
 
@@ -1694,7 +1697,7 @@ SEXP attribute_hidden do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     a = CAR(args);
     if (!isArray(a))
-	error(_("invalid first argument, must be an array"));
+	error(_("invalid first argument, must be %s"), "an array");
 
     PROTECT(dimsa = getAttrib(a, R_DimSymbol));
     n = LENGTH(dimsa);

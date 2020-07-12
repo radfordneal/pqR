@@ -179,13 +179,31 @@ unpackPkgZip <- function(pkg, pkgname, lib, libs_only = FALSE,
                 ## Move the new package to the install lib
                 ## file.rename automatically retries few times if necessary
 		## due to anti-virus interference
-                ret <- file.rename(file.path(tmpDir, pkgname), instPath)
+                tmpInstPath <- file.path(tmpDir, pkgname)
+                ret <- file.rename(tmpInstPath, instPath)
                 if(!ret) {
-                    warning(gettextf("unable to move temporary installation %s to %s",
-                                     sQuote(normalizePath(file.path(tmpDir, pkgname), mustWork = FALSE)),
-                                     sQuote(normalizePath(instPath, mustWork = FALSE))),
-                            domain = NA, call. = FALSE, immediate. = TRUE)
-                    restorePrevious <- TRUE # Might not be used
+                    if (dir.exists(tmpInstPath) && !dir.exists(instPath)) {
+                        warning(gettextf("unable to move temporary installation %s to %s, copying instead",
+                                         sQuote(normalizePath(tmpInstPath, mustWork = FALSE)),
+                                         sQuote(normalizePath(instPath, mustWork = FALSE))),
+                                domain = NA, call. = FALSE, immediate. = TRUE)
+                        ret <- file.copy(tmpInstPath, dirname(instPath),
+                                         recursive = TRUE, copy.date = TRUE)
+                        if(any(!ret)) {
+                            warning(gettextf("unable to copy temporary installation %s to %s",
+                                             sQuote(normalizePath(tmpInstPath, mustWork = FALSE)),
+                                             sQuote(normalizePath(instPath, mustWork = FALSE))),
+                                    domain = NA, call. = FALSE, immediate. = TRUE)
+                            restorePrevious <- TRUE # Might not be used
+                        }
+                        unlink(tmpInstPath, recursive = TRUE)
+                    } else {
+                        warning(gettextf("unable to move temporary installation %s to %s",
+                                         sQuote(normalizePath(tmpInstPath, mustWork = FALSE)),
+                                         sQuote(normalizePath(instPath, mustWork = FALSE))),
+                                domain = NA, call. = FALSE, immediate. = TRUE)
+                        restorePrevious <- TRUE # Might not be used
+                    }
                 }
             } else {
                 warning(gettextf("cannot remove prior installation of package %s",
@@ -212,25 +230,9 @@ unpackPkgZip <- function(pkg, pkgname, lib, libs_only = FALSE,
              lock = getOption("install.lock", TRUE), quiet = FALSE, ...)
 {
     if(!length(pkgs)) return(invisible())
-    ## look for package in use.
     pkgnames <- basename(pkgs)
     pkgnames <- sub("\\.zip$", "", pkgnames)
     pkgnames <- sub("_[0-9.-]+$", "", pkgnames)
-    ## there is no guarantee we have got the package name right:
-    ## foo.zip might contain package bar or Foo or FOO or ....
-    ## but we can't tell without trying to unpack it.
-    inuse <- search()
-    inuse <- sub("^package:", "", inuse[grep("^package:", inuse)])
-    inuse <- pkgnames %in% inuse
-    if(any(inuse)) {
-        warning(sprintf(ngettext(sum(inuse),
-                "package %s is in use and will not be installed",
-                "packages %s are in use and will not be installed"),
-                        paste(sQuote(pkgnames[inuse]), collapse=", ")),
-                call. = FALSE, domain = NA, immediate. = TRUE)
-        pkgs <- pkgs[!inuse]
-        pkgnames <- pkgnames[!inuse]
-    }
 
     if(is.null(contriburl)) {
         for(i in seq_along(pkgs)) {

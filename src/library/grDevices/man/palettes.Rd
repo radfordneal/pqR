@@ -21,21 +21,24 @@ hcl.colors(n, palette = "viridis", alpha = NULL, rev = FALSE, fixup = TRUE)
 hcl.pals(type = NULL)
 
 rainbow(n, s = 1, v = 1, start = 0, end = max(1, n - 1)/n,
-        alpha = 1, rev = FALSE)
-heat.colors(n, alpha = 1, rev = FALSE)
-terrain.colors(n, alpha = 1, rev = FALSE)
-topo.colors(n, alpha = 1, rev = FALSE)
-cm.colors(n, alpha = 1, rev = FALSE)
+        alpha, rev = FALSE)
+heat.colors(n, alpha, rev = FALSE)
+terrain.colors(n, alpha, rev = FALSE)
+topo.colors(n, alpha, rev = FALSE)
+cm.colors(n, alpha, rev = FALSE)
 }
 \arguments{
   \item{n}{the number of colors (\eqn{\ge 1}) to be in the
     palette.}
-  \item{palette}{the name of the palette to generate colors from.
-    The name is matched to the list of available palettes (listed in the
-    details), ignoring upper vs. lower case, spaces, dashes, etc. in the
-    matching.}
-  \item{alpha}{the alpha transparency, a number in [0,1], see argument
-    \code{alpha} in \code{\link{hsv}} and \code{\link{hcl}}, respectively.}
+  \item{palette}{a valid palette name (one of \code{hcl.pals()}).
+    The name is matched to the list of available palettes, ignoring
+    upper vs. lower case, spaces, dashes, etc. in the matching.}
+  \item{alpha}{an alpha-transparency level in the range [0,1]
+    (0 means transparent and 1 means opaque), see argument
+    \code{alpha} in \code{\link{hsv}} and \code{\link{hcl}}, respectively.\cr
+    Since \R 4.0.0, a \code{\link{missing}}, i.e., not explicitly specified
+    \code{alpha} is equivalent to \code{alpha = NULL}, which does \emph{not}
+    add opacity codes (\code{"FF"}) to the individual color hex codes.}
   \item{rev}{logical indicating whether the ordering of the colors should
     be reversed.}
   \item{fixup}{logical indicating whether the resulting color should be
@@ -64,7 +67,7 @@ the corresponding palettes are typically not a good choice for statistical
 graphics and data visualization.
 
 In contrast, HCL (hue-chroma-luminance) colors are much more suitable for
-capturing human color perception (see also \code{\link{hcl}} and better color
+capturing human color perception (see also \code{\link{hcl}}) and better color
 palettes can be derived based on HCL coordinates.
 Conceptually, three types of palettes are often distinguished:
 \itemize{
@@ -96,6 +99,21 @@ palette with relatively high chroma throughout so that it also works reasonably
 well as a qualitative palette. However, while viridis is a rather robust default
 palette, more suitable HCL palettes are available for most visualizations.
 
+For example, \code{"Dark 3"} works well for shading points or lines in
+up to five groups, \code{"YlGnBu"} is a sequential palette similar to
+\code{"viridis"} but with aligned chroma/luminance, and
+\code{"Green-Brown"} or \code{"Blue-Red 3"} are colorblind-safe
+diverging palettes.
+
+Further qualitative palettes are provided in the 
+\code{\link{palette.colors}} function. While the qualitative palettes in 
+\code{hcl.colors} are always based on the same combination of chroma and 
+luminance, the \code{palette.colors} vary in chroma and luminance up to 
+a certain degree. The advantage of fixing chroma/luminance is that the 
+perceptual weight of the resulting colors is more balanced. The 
+advantage of allowing variation is that more distinguishable colors can 
+be obtained, especially for viewers with color vision deficiencies.
+
 Note that the \code{rainbow} function implements the (in-)famous rainbow (or
 jet) color palette that was used very frequently in many software packages but
 has been widely criticized for its many perceptual problems.
@@ -122,7 +140,7 @@ suitable palette from \code{hcl.colors} instead of
   Accessed March 26, 2019.
 
   Zeileis, A., Fisher, J. C., Hornik, K., Ihaka, R., McWhite, C. D., Murrell, P., Stauffer, R. and Wilke, C. O. (2019).
-  \dQuote{ccolorspace: A toolbox for manipulating and assessing colors and palettes.}
+  \dQuote{colorspace: A toolbox for manipulating and assessing colors and palettes.}
   arXiv:1903.06490, arXiv.org E-Print Archive.
   \url{http://arxiv.org/abs/1903.06490}.
 
@@ -166,7 +184,7 @@ demo.pal <-
     plot(i, i+d, type = "n", yaxt = "n", ylab = "", main = main)
     for (k in 1:nt) {
         rect(i-.5, (k-1)*j+ dy, i+.4, k*j,
-             col = eval(parse(text = ch.col[k])), border = border)
+             col = eval(str2lang(ch.col[k])), border = border)
         text(2*j,  k * j + dy/4, ch.col[k])
     }
 }
@@ -181,7 +199,7 @@ hcl.swatch <- function(type = NULL, n = 5, nrow = 11,
     nswatch <- min(ncol, nrow)
 
     par(mar = rep(0.1, 4),
-        mfrow = c(1, min(5, ncol \%/\% nrow + 1)),
+        mfrow = c(1, min(5, ceiling(ncol/nrow))),
         pin = c(1, 0.5 * nswatch),
         cex = 0.7)
 

@@ -1,7 +1,7 @@
 #  File src/library/utils/R/aspell.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -383,8 +383,7 @@ function(x, ...)
         writeLines(c(sprintf("File '%s':", nms[i]),
                      sprintf("  Line %s: \"%s\", \"%s\", \"%s\"",
                              format(e$Line),
-                             gsub("\"", "\\\"", e$Left),
-                             e$Original,
+                             gsub("\"", "\\\"", e$Left ), e$Original,
                              gsub("\"", "\\\"", e$Right)),
                      ""))
     }
@@ -535,7 +534,7 @@ function(dir, drop = c("\\author", "\\references"),
     }
 
     macros <- tools::loadPkgRdMacros(dir,
-                                     macros = file.path(R.home("share"), 
+                                     macros = file.path(R.home("share"),
                                                         "Rd", "macros",
                                                         "system.Rd"))
 
@@ -801,7 +800,7 @@ function(file, encoding = "unknown")
         ##   ... used in a situation where it doesn't exist
         ## so eliminate these.
         ## (Note that we also drop "..." strings.)
-        call <- parse(text = call)[[1L]]
+        call <- str2lang(call)
         call <- call[ as.character(call) != "..." ]
         mc <- as.list(match.call(get(fun, envir = .BaseNamespaceEnv),
                                  call))
@@ -817,7 +816,7 @@ function(file, encoding = "unknown")
         strings <- as.character(args[vapply(args, is.character, TRUE)])
         ## Need to canonicalize to match string constants before and
         ## after parsing ...
-        texts <- vapply(parse(text = table$text), as.character, "")
+        texts <- vapply(str2expression(table$text), as.character, "")
         pos <- which(!is.na(match(texts, strings)))
         cbind(table[pos, ], caller = rep.int(fun, length(pos)))
     }
@@ -1089,7 +1088,7 @@ function(dir, ignore = character(),
                 aspell_find_dictionaries(d, file.path(dir, ".aspell"))
         }
     }
-    
+
     program <- aspell_find_program(program)
 
     aspell(files,
@@ -1142,7 +1141,7 @@ function(ifile, encoding = "UTF-8")
     }
     y
 }
-    
+
 ## For spell checking packages.
 
 aspell_package <-

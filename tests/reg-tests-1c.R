@@ -639,18 +639,19 @@ stopifnot(identical(check2(one, , three), c(FALSE, TRUE, FALSE)))
 ### envRefClass check moved to methods package
 
 
-## takes too long with JIT enabled:
-.jit.lev <- compiler::enableJIT(0)
-Sys.getenv("_R_CHECK_LENGTH_1_CONDITION_") -> oldV
-Sys.setenv("_R_CHECK_LENGTH_1_CONDITION_" = "false") # only *warn*
-## while did not protect its argument, which caused an error
-## under gctorture, PR#15990
-gctorture()
-suppressWarnings(while(c(FALSE, TRUE)) 1)
-gctorture(FALSE)
-## gave an error because the test got released when the warning was generated.
-compiler::enableJIT(.jit.lev)# revert
-Sys.setenv("_R_CHECK_LENGTH_1_CONDITION_" = oldV)
+## commented out for 4.0.0, as not very important.
+## ## takes too long with JIT enabled:
+## .jit.lev <- compiler::enableJIT(0)
+## Sys.getenv("_R_CHECK_LENGTH_1_CONDITION_") -> oldV
+## Sys.setenv("_R_CHECK_LENGTH_1_CONDITION_" = "false") # only *warn*
+## ## while did not protect its argument, which caused an error
+## ## under gctorture, PR#15990
+## gctorture()
+## suppressWarnings(while(c(FALSE, TRUE)) 1)
+## gctorture(FALSE)
+## ## gave an error because the test got released when the warning was generated.
+## compiler::enableJIT(.jit.lev)# revert
+## Sys.setenv("_R_CHECK_LENGTH_1_CONDITION_" = oldV)
 
 
 ## hist(x, breaks =) with too large bins, PR#15988
@@ -1036,7 +1037,7 @@ for(mat in mat.l) {
     n.set <- if(nrow(mat) < 999) -3:3 else 0:3
     stopifnot(
         vapply(n.set, function(n) identCO (head(mat, n), headI(mat, n)), NA),
-        vapply(n.set, function(n) identCO (tail (mat, n, addrownums=FALSE),
+        vapply(n.set, function(n) identCO (tail (mat, n, keepnums=FALSE),
                                            tailI(mat, n)), NA),
         vapply(n.set, function(n) all.equal(tail(mat, n), tailI(mat, n),
                                             check.attributes=FALSE), NA))
@@ -1276,7 +1277,8 @@ stopifnot( # depends on contrasts:
 ## a 'use.na=TRUE' example
 dd <- data.frame(x1 = rep(letters[1:2], each=3),
                  x2 = rep(LETTERS[1:3], 2),
-                 y = rnorm(6))
+                 y = rnorm(6),
+                 stringsAsFactors = TRUE)
 dd[6,2] <- "B" # => no (b,C) combination => that coef should be NA
 fm3 <- lm(y ~ x1*x2, dd)
 (d3F <- dummy.coef(fm3, use.na=FALSE))

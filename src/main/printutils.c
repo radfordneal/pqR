@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1999--2019  The R Core Team
+ *  Copyright (C) 1999--2020  The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -314,7 +314,9 @@ const char *EncodeReal2(double x, int w, int d, int e)
     return buff;
 }
 
+#ifdef formatComplex_USING_signif
 void z_prec_r(Rcomplex *r, Rcomplex *x, double digits);
+#endif
 
 #define NB3 NB+3
 const char
@@ -336,12 +338,14 @@ const char
 	const char *Im, *tmp;
 	int flagNegIm = 0;
 	Rcomplex y;
+#ifdef formatComplex_USING_signif
 	/* formatComplex rounded, but this does not, and we need to
 	   keep it that way so we don't get strange trailing zeros.
 	   But we do want to avoid printing small exponentials that
 	   are probably garbage.
 	 */
 	z_prec_r(&y, &x, R_print.digits);
+#endif
 	/* EncodeReal has static buffer, so copy */
 	tmp = EncodeReal0(y.r == 0. ? y.r : x.r, wr, dr, er, dec);
 	strcpy(Re, tmp);
@@ -399,7 +403,7 @@ int Rstrwid(const char *str, int slen, cetype_t ienc, int quote)
 	int res;
 	mbstate_t mb_st;
 	wchar_t wc;
-	Rwchar_t k; /* not wint_t as it might be signed */
+	R_wchar_t k; /* not wint_t as it might be signed */
 
 	if(ienc != CE_UTF8)  mbs_init(&mb_st);
 	for (i = 0; i < slen; i++) {
@@ -539,8 +543,10 @@ const char *EncodeString(SEXP s, int w, int quote, Rprt_adj justify)
 
     if (s == NA_STRING) {
 	p = quote ? CHAR(R_print.na_string) : CHAR(R_print.na_string_noquote);
-	cnt = i = (int)(quote ? strlen(CHAR(R_print.na_string)) :
-			strlen(CHAR(R_print.na_string_noquote)));
+	cnt = (int)(quote ? strlen(CHAR(R_print.na_string)) :
+		strlen(CHAR(R_print.na_string_noquote)));
+	i = (quote ? Rstrlen(R_print.na_string, 0) :
+		Rstrlen(R_print.na_string_noquote, 0));
 	quote = 0;
     } else {
 	if(IS_BYTES(s)) {
@@ -947,6 +953,13 @@ void Rvprintf(const char *format, va_list arg)
 
 void REvprintf(const char *format, va_list arg)
 {
+    static char *malloc_buf = NULL;
+
+    if (malloc_buf) {
+	char *tmp = malloc_buf;
+	malloc_buf = NULL;
+	free(tmp);
+    }
     if(R_ErrorCon != 2) {
 	Rconnection con = getConnection_no_err(R_ErrorCon);
 	if(con == NULL) {
@@ -970,10 +983,34 @@ void REvprintf(const char *format, va_list arg)
 	} else vfprintf(R_Consolefile, format, arg);
     } else {
 	char buf[BUFSIZE];
+	Rboolean printed = FALSE;
+	va_list aq;
 
-	vsnprintf(buf, BUFSIZE, format, arg);
+	va_copy(aq, arg);
+	int res = vsnprintf(buf, BUFSIZE, format, aq);
+	va_end(aq);
 	buf[BUFSIZE-1] = '\0';
-	R_WriteConsoleEx(buf, (int) strlen(buf), 1);
+	if (res >= BUFSIZE) {
+	    /* A very long string has been truncated. Try to allocate a large
+	       buffer for it to print it in full. Do not use R_alloc() as this
+	       can be run due to memory allocation error from the R heap.
+	       Do not use contexts and do not throw any errors nor warnings
+	       as this may be run from error handling. */
+	    int size = res + 1;
+	    malloc_buf = (char *)malloc(size * sizeof(char));
+	    if (malloc_buf) {
+		res = vsnprintf(malloc_buf, size, format, arg);
+		if (res == size - 1) {
+		    R_WriteConsoleEx(malloc_buf, res, 1);
+		    printed = TRUE;
+		}
+		char *tmp = malloc_buf;
+		malloc_buf = NULL;
+		free(tmp);
+	    }
+	}
+	if (!printed)
+	    R_WriteConsoleEx(buf, (int) strlen(buf), 1);
     }
 }
 

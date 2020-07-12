@@ -1,5 +1,5 @@
 
-R version 3.6.2 Patched (2020-02-12 r77795) -- "Dark and Stormy Night"
+R version 4.0.0 RC (2020-04-16 r78240) -- "Arbor Day"
 Copyright (C) 2020 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -177,13 +177,13 @@ $allowed
 > cbind(palette(), adjustcolor(1:8, 0.75))
      [,1]      [,2]       
 [1,] "black"   "#000000BF"
-[2,] "red"     "#FF0000BF"
-[3,] "green3"  "#00CD00BF"
-[4,] "blue"    "#0000FFBF"
-[5,] "cyan"    "#00FFFFBF"
-[6,] "magenta" "#FF00FFBF"
-[7,] "yellow"  "#FFFF00BF"
-[8,] "gray"    "#BEBEBEBF"
+[2,] "#DF536B" "#DF536BBF"
+[3,] "#61D04F" "#61D04FBF"
+[4,] "#2297E6" "#2297E6BF"
+[5,] "#28E2E5" "#28E2E5BF"
+[6,] "#CD0BBC" "#CD0BBCBF"
+[7,] "#F5C710" "#F5C710BF"
+[8,] "gray62"  "#9E9E9EBF"
 > 
 > ##  alpha = 1/2 * previous alpha --> opaque colors
 > x <- palette(adjustcolor(palette(), 0.5))
@@ -197,13 +197,13 @@ $allowed
 > cbind(x, x.)
      x         x.         
 [1,] "black"   "#80808099"
-[2,] "red"     "#FF808099"
-[3,] "green3"  "#80FF8099"
-[4,] "blue"    "#8080FF99"
-[5,] "cyan"    "#80FFFF99"
-[6,] "magenta" "#FF80FF99"
-[7,] "yellow"  "#FFFF8099"
-[8,] "gray"    "#FFFFFF99"
+[2,] "#DF536B" "#FFBACA99"
+[3,] "#61D04F" "#C3FFB799"
+[4,] "#2297E6" "#97E9FF99"
+[5,] "#28E2E5" "#9BFFFF99"
+[6,] "#CD0BBC" "#FF87FF99"
+[7,] "#F5C710" "#FFFF8B99"
+[8,] "gray62"  "#EEEEEE99"
 > op <- par(bg = adjustcolor("goldenrod", offset = -rep(.4, 4)), xpd = NA)
 > plot(0:9, 0:9, type = "n", axes = FALSE, xlab = "", ylab = "",
 +      main = "adjustcolor() -> translucent")
@@ -219,8 +219,8 @@ $allowed
 [3,] 0.3333333 0.3333333 0.3333333    0
 [4,] 0.0000000 0.0000000 0.0000000    1
 > adjustcolor(x, transform = M)
-[1] "#000000FF" "#555555FF" "#444444FF" "#555555FF" "#AAAAAAFF" "#AAAAAAFF"
-[7] "#AAAAAAFF" "#BEBEBEFF"
+[1] "#000000FF" "#8A8A8AFF" "#808080FF" "#8A8A8AFF" "#A5A5A5FF" "#878787FF"
+[7] "#999999FF" "#9E9E9EFF"
 > 
 > ## revert to previous palette: active
 > palette(opal)
@@ -541,6 +541,34 @@ $out
 > 
 > 
 > cleanEx()
+> nameEx("cairoSymbolFont")
+> ### * cairoSymbolFont
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: cairoSymbolFont
+> ### Title: Specify a Symbol Font
+> ### Aliases: cairoSymbolFont
+> ### Keywords: device
+> 
+> ### ** Examples
+> 
+> ## Not run: 
+> ##D ## If a font uses PUA, we can just specify the font name ...
+> ##D cairo_pdf(symbolfamily="OpenSymbol")
+> ##D dev.off()
+> ##D ## ... or equivalently ...
+> ##D cairo_pdf(symbolfamily=cairoSymbolFont("OpenSymbol"))
+> ##D dev.off()
+> ##D 
+> ##D ## If a font does not use PUA, we must indicate that ...
+> ##D cairo_pdf(symbolfamily=cairoSymbolFont("Nimbus Sans", usePUA=FALSE))
+> ##D dev.off()
+> ## End(Not run)
+> 
+> 
+> 
+> cleanEx()
 > nameEx("check.options")
 > ### * check.options
 > 
@@ -661,9 +689,9 @@ blue  225      71
 > 
 > col2rgb(1:8)  # the ones from the palette() (if the default)
       [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
-red      0  255    0    0    0  255  255  190
-green    0    0  205    0  255    0  255  190
-blue     0    0    0  255  255  255    0  190
+red      0  223   97   34   40  205  245  158
+green    0   83  208  151  226   11  199  158
+blue     0  107   79  230  229  188   16  158
 > 
 > col2rgb(paste0("gold", 1:4))
       [,1] [,2] [,3] [,4]
@@ -684,9 +712,9 @@ green   0 205
 blue    0 239
 > col2rgb(c(palette = 1:3))
       palette1 palette2 palette3
-red          0      255        0
-green        0        0      205
-blue         0        0        0
+red          0      223       97
+green        0       83      208
+blue         0      107       79
 > 
 > ##-- NON-INTRODUCTORY examples --
 > 
@@ -1752,7 +1780,88 @@ detaching ‘package:grid’
 > 
 > x <- 10*1:nrow(volcano)
 > y <- 10*1:ncol(volcano)
-> contourLines(x, y, volcano)
+> cl <- contourLines(x, y, volcano)
+> ## summarize the sizes of each the contour lines :
+> cbind(lev = vapply(cl, `[[`, .5, "level"),
++        n  = vapply(cl, function(l) length(l$x), 1))
+      lev   n
+ [1,] 100  47
+ [2,] 100  16
+ [3,] 100  11
+ [4,] 110  45
+ [5,] 110  48
+ [6,] 110 126
+ [7,] 110  14
+ [8,] 120 270
+ [9,] 130 259
+[10,] 140 245
+[11,] 150 207
+[12,] 150  13
+[13,] 160 165
+[14,] 160  31
+[15,] 170 169
+[16,] 170   5
+[17,] 170  21
+[18,] 180 105
+[19,] 180  15
+[20,] 190  49
+> 
+> z <- outer(-9:25, -9:25)
+> pretty(range(z), 10) # -300 -200 ... 600 700
+ [1] -300 -200 -100    0  100  200  300  400  500  600  700
+> utils::str(c2 <- contourLines(z))
+List of 12
+ $ :List of 3
+  ..$ level: num -200
+  ..$ x    : num [1:4] 0 0.00895 0.01961 0.02844
+  ..$ y    : num [1:4] 0.918 0.941 0.971 1
+ $ :List of 3
+  ..$ level: num -200
+  ..$ x    : num [1:4] 0.918 0.941 0.971 1
+  ..$ y    : num [1:4] 0 0.00895 0.01961 0.02844
+ $ :List of 3
+  ..$ level: num -100
+  ..$ x    : num [1:19] 0 0.0196 0.0294 0.0385 0.0546 ...
+  ..$ y    : num [1:19] 0.592 0.618 0.632 0.647 0.676 ...
+ $ :List of 3
+  ..$ level: num -100
+  ..$ x    : num [1:19] 0.592 0.618 0.632 0.647 0.676 ...
+  ..$ y    : num [1:19] 0 0.0196 0.0294 0.0385 0.0546 ...
+ $ :List of 3
+  ..$ level: num 0
+  ..$ x    : num [1:34] 0 0.0294 0.0588 0.0882 0.1176 ...
+  ..$ y    : num [1:34] 0.267 0.268 0.268 0.268 0.269 ...
+ $ :List of 3
+  ..$ level: num 0
+  ..$ x    : num [1:34] 0.267 0.268 0.268 0.268 0.269 ...
+  ..$ y    : num [1:34] 0 0.0294 0.0588 0.0882 0.1176 ...
+ $ :List of 3
+  ..$ level: num 100
+  ..$ x    : num [1:44] 1 0.995 0.971 0.941 0.912 ...
+  ..$ y    : num [1:44] 0.381 0.382 0.387 0.393 0.398 ...
+ $ :List of 3
+  ..$ level: num 200
+  ..$ x    : num [1:36] 1 0.997 0.971 0.941 0.918 ...
+  ..$ y    : num [1:36] 0.499 0.5 0.51 0.52 0.529 ...
+ $ :List of 3
+  ..$ level: num 300
+  ..$ x    : num [1:28] 1 0.998 0.971 0.943 0.941 ...
+  ..$ y    : num [1:28] 0.617 0.618 0.632 0.647 0.648 ...
+ $ :List of 3
+  ..$ level: num 400
+  ..$ x    : num [1:20] 1 0.999 0.971 0.957 0.941 ...
+  ..$ y    : num [1:20] 0.734 0.735 0.755 0.765 0.776 ...
+ $ :List of 3
+  ..$ level: num 500
+  ..$ x    : num [1:12] 1 0.999 0.971 0.965 0.941 ...
+  ..$ y    : num [1:12] 0.852 0.853 0.877 0.882 0.904 ...
+ $ :List of 3
+  ..$ level: num 600
+  ..$ x    : num [1:4] 1 0.999 0.971 0.97
+  ..$ y    : num [1:4] 0.97 0.971 0.999 1
+>    # no segments for {-300, 700};
+>    #  2 segments for {-200, -100, 0}
+>    #  1 segment  for  100:600
 > 
 > 
 > 
@@ -1810,23 +1919,23 @@ detaching ‘package:grid’
 > cols <- t(col2rgb(palette())); rownames(cols) <- palette(); cols
         red green blue
 black     0     0    0
-red     255     0    0
-green3    0   205    0
-blue      0     0  255
-cyan      0   255  255
-magenta 255     0  255
-yellow  255   255    0
-gray    190   190  190
+#DF536B 223    83  107
+#61D04F  97   208   79
+#2297E6  34   151  230
+#28E2E5  40   226  229
+#CD0BBC 205    11  188
+#F5C710 245   199   16
+gray62  158   158  158
 > zapsmall(lab <- convertColor(cols, from = "sRGB", to = "Lab", scale.in = 255))
-               L         a          b
-black    0.00000   0.00000    0.00000
-red     53.48418  80.01027   67.38407
-green3  71.91841 -73.33548   70.41134
-blue    32.24075  78.82042 -107.93632
-cyan    91.01106 -48.46075  -14.29081
-magenta 60.50231  97.95195  -60.51490
-yellow  97.14950 -21.36677   94.42044
-gray    76.97594   0.00000    0.00000
+               L         a         b
+black    0.00000   0.00000   0.00000
+#DF536B 55.16051  56.30900  16.18063
+#61D04F 74.89688 -55.97739  53.00681
+#2297E6 59.98342  -3.54255 -48.62932
+#28E2E5 82.01645 -41.73498 -14.10432
+#CD0BBC 48.23048  79.84315 -42.53326
+#F5C710 82.05072   2.31748  81.63638
+gray62  65.11425   0.00000   0.00000
 > stopifnot(all.equal(cols, # converting back.. getting the original:
 +    round(convertColor(lab, from = "Lab", to = "sRGB", scale.out = 255)),
 +                     check.attributes = FALSE))
@@ -2339,46 +2448,46 @@ display gamma = 2.2
 > (cols <- t(col2rgb(palette())))
      red green blue
 [1,]   0     0    0
-[2,] 255     0    0
-[3,]   0   205    0
-[4,]   0     0  255
-[5,]   0   255  255
-[6,] 255     0  255
-[7,] 255   255    0
-[8,] 190   190  190
+[2,] 223    83  107
+[3,]  97   208   79
+[4,]  34   151  230
+[5,]  40   226  229
+[6,] 205    11  188
+[7,] 245   199   16
+[8,] 158   158  158
 > zapsmall(luv <- convertColor(cols, from = "sRGB", to = "Luv", scale.in = 255))
-            L         u          v
-[1,]  0.00000   0.00000    0.00000
-[2,] 53.48418 175.36468   37.80017
-[3,] 71.91841 -68.70661   87.86408
-[4,] 32.24075  -9.66060 -130.19297
-[5,] 91.01106 -71.17303  -15.34147
-[6,] 60.50231  84.56678 -108.14654
-[7,] 97.14950   7.89815  106.44098
-[8,] 76.97594   0.00000    0.00000
+            L         u         v
+[1,]  0.00000   0.00000   0.00000
+[2,] 55.16051  99.94871   8.95299
+[3,] 74.89688 -51.95694  73.49647
+[4,] 59.98342 -36.43653 -76.74275
+[5,] 82.01645 -61.64283 -15.85619
+[6,] 48.23048  74.70628 -73.95136
+[7,] 82.05072  40.07525  84.92489
+[8,] 65.11425   0.00000   0.00000
 > (hex <- convertColor(luv, from = "Luv",  to = hexcolor, scale.out = NULL))
      [,1]     
 [1,] "#000000"
-[2,] "#FF0000"
-[3,] "#00CD00"
-[4,] "#0000FF"
-[5,] "#00FFFF"
-[6,] "#FF00FF"
-[7,] "#FFFF00"
-[8,] "#BEBEBE"
+[2,] "#DF536B"
+[3,] "#61D04F"
+[4,] "#2297E6"
+[5,] "#28E2E5"
+[6,] "#CD0BBC"
+[7,] "#F5C710"
+[8,] "#9E9E9E"
 > 
 > ## must make hex a matrix before using it
 > (cc <- round(convertColor(as.matrix(hex), from = hexcolor, to = "sRGB",
 +                           scale.in = NULL, scale.out = 255)))
      [,1] [,2] [,3]
 [1,]    0    0    0
-[2,]  255    0    0
-[3,]    0  205    0
-[4,]    0    0  255
-[5,]    0  255  255
-[6,]  255    0  255
-[7,]  255  255    0
-[8,]  190  190  190
+[2,]  223   83  107
+[3,]   97  208   79
+[4,]   34  151  230
+[5,]   40  226  229
+[6,]  205   11  188
+[7,]  245  199   16
+[8,]  158  158  158
 > stopifnot(cc == cols)
 > 
 > ## Internally vectorized version of hexcolor, notice the use
@@ -2400,13 +2509,13 @@ display gamma = 2.2
 +                            scale.in = NULL, scale.out = 255)))
      [,1] [,2] [,3]
 [1,]    0    0    0
-[2,]  255    0    0
-[3,]    0  205    0
-[4,]    0    0  255
-[5,]    0  255  255
-[6,]  255    0  255
-[7,]  255  255    0
-[8,]  190  190  190
+[2,]  223   83  107
+[3,]   97  208   79
+[4,]   34  151  230
+[5,]   40  226  229
+[6,]  205   11  188
+[7,]  245  199   16
+[8,]  158  158  158
 > stopifnot(ccv == cols)
 > 
 > 
@@ -2419,7 +2528,7 @@ display gamma = 2.2
 > flush(stderr()); flush(stdout())
 > 
 > ### Name: n2mfrow
-> ### Title: Compute Default mfrow From Number of Plots
+> ### Title: Compute Default 'mfrow' From Number of Plots
 > ### Aliases: n2mfrow
 > ### Keywords: dplot utilities
 > 
@@ -2437,10 +2546,14 @@ display gamma = 2.2
 +    plot(x, x^j, main = substitute(x^ exp, list(exp = j)), type = "l",
 +    col = "blue")
 > 
-> sapply(1:10, n2mfrow)
-     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10]
-[1,]    1    2    3    2    3    3    3    3    3     4
-[2,]    1    1    1    2    2    2    3    3    3     3
+> sapply(1:14, n2mfrow)
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11] [,12] [,13] [,14]
+[1,]    1    2    3    2    3    3    3    3    3     4     4     4     4     4
+[2,]    1    1    1    2    2    2    3    3    3     3     3     3     4     4
+> sapply(1:14, n2mfrow, asp=16/9)
+     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11] [,12] [,13] [,14]
+[1,]    1    2    2    2    2    2    2    3    3     3     3     3     3     3
+[2,]    1    1    2    2    3    3    4    3    3     4     4     4     5     5
 > 
 > 
 > 
@@ -2484,7 +2597,7 @@ Sturges   Scott      FD
 > 
 > ### Name: palette
 > ### Title: Set or View the Graphics Palette
-> ### Aliases: palette
+> ### Aliases: palette palette.pals palette.colors
 > ### Keywords: color sysdata
 > 
 > ### ** Examples
@@ -2492,18 +2605,27 @@ Sturges   Scott      FD
 > require(graphics)
 > 
 > palette()               # obtain the current palette
+[1] "black"   "#DF536B" "#61D04F" "#2297E6" "#28E2E5" "#CD0BBC" "#F5C710"
+[8] "gray62" 
+> palette("R3");palette() # old default palette
 [1] "black"   "red"     "green3"  "blue"    "cyan"    "magenta" "yellow" 
 [8] "gray"   
-> palette(rainbow(6))     # six color rainbow
+> palette("ggplot2")      # ggplot2-style palette
+> palette()
+[1] "black"   "#F8766D" "#00BA38" "#619CFF" "#00BFC4" "#F564E3" "#B79F00"
+[8] "gray62" 
+> 
+> palette(hcl.colors(8, "viridis"))
 > 
 > (palette(gray(seq(0,.9,len = 25)))) # gray scales; print old palette
-[1] "red"     "yellow"  "green"   "cyan"    "blue"    "magenta"
+[1] "#4B0055" "#3C3777" "#006290" "#008A98" "#00AC8E" "#25C771" "#A6DA42"
+[8] "#FDE333"
 > matplot(outer(1:100, 1:30), type = "l", lty = 1,lwd = 2, col = 1:30,
 +         main = "Gray Scales Palette",
 +         sub = "palette(gray(seq(0, .9, len=25)))")
 > palette("default")      # reset back to the default
 > 
-> ## on a device where alpha-transparency is supported,
+> ## on a device where alpha transparency is supported,
 > ##  use 'alpha = 0.3' transparency with the default palette :
 > mycols <- adjustcolor(palette(), alpha.f = 0.3)
 > opal <- palette(mycols)
@@ -2514,8 +2636,61 @@ Sturges   Scott      FD
 > points(xy, col = 8, pch = 16, cex = 1.5)
 > palette("default")
 > 
+> ## List available built-in palettes
+> palette.pals()
+ [1] "R3"              "R4"              "ggplot2"         "Okabe-Ito"      
+ [5] "Accent"          "Dark 2"          "Paired"          "Pastel 1"       
+ [9] "Pastel 2"        "Set 1"           "Set 2"           "Set 3"          
+[13] "Tableau 10"      "Classic Tableau" "Polychrome 36"   "Alphabet"       
+> 
+> ## Demonstrate the colors 1:8 in different palettes using a custom matplot()
+> sinplot <- function(main=NULL) {
++     x <- outer(
++ 	seq(-pi, pi, length.out = 50),
++ 	seq(0, pi, length.out = 8),
++ 	function(x, y) sin(x - y)
++     )
++     matplot(x, type = "l", lwd = 4, lty = 1, col = 1:8, ylab = "", main=main)
++ }
+> sinplot("default palette")
+> 
+> palette("R3");        sinplot("R3")
+> palette("Okabe-Ito"); sinplot("Okabe-Ito")
+> palette("Tableau")  ; sinplot("Tableau")
+> palette("default") # reset
+> 
+> ## color swatches for palette.colors()
+> palette.swatch <- function(palette = palette.pals(), n = 8, nrow = 8,
++                            border = "black", cex = 1, ...)
++ {
++      cols <- sapply(palette, palette.colors, n = n, recycle = TRUE)
++      ncol <- ncol(cols)
++      nswatch <- min(ncol, nrow)
++      op <- par(mar = rep(0.1, 4),
++                mfrow = c(1, min(5, ceiling(ncol/nrow))),
++      	       cex = cex, ...)
++      on.exit(par(op))
++      while (length(palette)) {
++  	subset <- seq_len(min(nrow, ncol(cols)))
++  	plot.new()
++  	plot.window(c(0, n), c(0.25, nrow + 0.25))
++  	y <- rev(subset)
++  	text(0, y + 0.1, palette[subset], adj = c(0, 0))
++  	y <- rep(y, each = n)
++  	rect(rep(0:(n-1), n), y, rep(1:n, n), y - 0.5,
++  	     col = cols[, subset], border = border)
++  	palette <- palette[-subset]
++  	cols    <- cols [, -subset]
++      }
++ }
+> 
+> palette.swatch()
+> 
+> palette.swatch(n = 26) # show full "Alphabet"; recycle most others
 > 
 > 
+> 
+> graphics::par(get("par.postscript", pos = 'CheckExEnv'))
 > cleanEx()
 > nameEx("palettes")
 > ### * palettes
@@ -2551,7 +2726,7 @@ Sturges   Scott      FD
 +     plot(i, i+d, type = "n", yaxt = "n", ylab = "", main = main)
 +     for (k in 1:nt) {
 +         rect(i-.5, (k-1)*j+ dy, i+.4, k*j,
-+              col = eval(parse(text = ch.col[k])), border = border)
++              col = eval(str2lang(ch.col[k])), border = border)
 +         text(2*j,  k * j + dy/4, ch.col[k])
 +     }
 + }
@@ -2566,7 +2741,7 @@ Sturges   Scott      FD
 +     nswatch <- min(ncol, nrow)
 + 
 +     par(mar = rep(0.1, 4),
-+         mfrow = c(1, min(5, ncol %/% nrow + 1)),
++         mfrow = c(1, min(5, ceiling(ncol/nrow))),
 +         pin = c(1, 0.5 * nswatch),
 +         cex = 0.7)
 + 
@@ -2677,7 +2852,7 @@ List of 18
  $ pointsize  : num 12
  $ pagecentre : logi TRUE
  $ colormodel : chr "srgb"
- $ useDingbats: logi TRUE
+ $ useDingbats: logi FALSE
  $ useKerning : logi TRUE
  $ fillOddEven: logi FALSE
  $ compress   : logi TRUE
@@ -4093,7 +4268,7 @@ $zlab
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  10.472 0.24 10.752 0 0 
+Time elapsed:  49.767 0.671 50.666 0 0 
 > grDevices::dev.off()
 null device 
           1 

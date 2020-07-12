@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2001-2017   The R Core Team.
+ *  Copyright (C) 2001-2020   The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -35,7 +35,8 @@ static R_InternetRoutines routines, *ptr = &routines;
 /*
 SEXP Rdownload(SEXP args);
 Rconnection R_newurl(char *description, char *mode);
-Rconnection R_newsock(char *host, int port, int server, char *mode, int timeout);
+Rconnection R_newsock(char *host, int port, int server, int serverfd, char *mode, int timeout);
+Rconnection R_newservsock(int port);
 
 
 Next 6 are for use by libxml, only
@@ -102,17 +103,29 @@ R_newurl(const char *description, const char * const mode, SEXP headers, int typ
 }
 
 Rconnection attribute_hidden
-R_newsock(const char *host, int port, int server, const char * const mode,
-	  int timeout)
+R_newsock(const char *host, int port, int server, int serverfd,
+          const char * const mode, int timeout)
 {
     if(!initialized) internet_Init();
     if(initialized > 0)
-	return (*ptr->newsock)(host, port, server, mode, timeout);
+	return (*ptr->newsock)(host, port, server, serverfd, mode, timeout);
     else {
 	error(_("internet routines cannot be loaded"));
 	return (Rconnection)0;
     }
 }
+
+Rconnection attribute_hidden R_newservsock(int port)
+{
+    if(!initialized) internet_Init();
+    if(initialized > 0)
+	return (*ptr->newservsock)(port);
+    else {
+	error(_("internet routines cannot be loaded"));
+	return (Rconnection)0;
+    }
+}
+
 
 void *R_HTTPOpen(const char *url)
 {
@@ -201,7 +214,7 @@ SEXP Rsockconnect(SEXP sport, SEXP shost)
     if (length(sport) != 1) error("invalid 'socket' argument");
     int port = asInteger(sport);
     char *host[1];
-    host[0] = (char *) translateChar(STRING_ELT(shost, 0));
+    host[0] = (char *) translateCharFP(STRING_ELT(shost, 0));
     if(!initialized) internet_Init();
     if(initialized > 0)
 	(*ptr->sockconnect)(&port, host);
@@ -278,7 +291,7 @@ SEXP Rsockwrite(SEXP ssock, SEXP sstring)
 {
     if (length(ssock) != 1) error("invalid 'socket' argument");
     int sock = asInteger(ssock), start = 0, end, len;
-    char *buf = (char *) translateChar(STRING_ELT(sstring, 0)), *abuf[1];
+    char *buf = (char *) translateCharFP(STRING_ELT(sstring, 0)), *abuf[1];
     end = len = (int) strlen(buf);
     abuf[0] = buf;
     if(!initialized) internet_Init();

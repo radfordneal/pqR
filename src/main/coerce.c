@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1997-2019  The R Core Team
+ *  Copyright (C) 1997-2020  The R Core Team
  *  Copyright (C) 2003-2019  The R Foundation
  *  Copyright (C) 1995,1996  Robert Gentleman, Ross Ihaka
  *
@@ -35,6 +35,9 @@
 #include <Rmath.h>
 #include <Print.h>
 
+#ifdef Win32
+#include <trioremap.h> /* for %lld */
+#endif
 
 /* This section of code handles type conversion for elements */
 /* of data vectors.  Type coercion throughout R should use these */
@@ -1356,13 +1359,12 @@ static SEXP ascommon(SEXP call, SEXP u, SEXPTYPE type)
     /* -> as.vector(..) or as.XXX(.) : coerce 'u' to 'type' : */
     /* code assumes u is protected */
 
-    SEXP v;
     if (type == CLOSXP) {
 	return asFunction(u);
     }
     else if (isVector(u) || isList(u) || isLanguage(u)
 	     || (isSymbol(u) && type == EXPRSXP)) {
-	v = u;
+	SEXP v;
 	if (type != ANYSXP && TYPEOF(u) != type) v = coerceVector(u, type);
 	else v = u;
 
@@ -1382,7 +1384,7 @@ static SEXP ascommon(SEXP call, SEXP u, SEXPTYPE type)
     else if (isSymbol(u) && type == SYMSXP)
 	return u;
     else if (isSymbol(u) && type == VECSXP) {
-	v = allocVector(VECSXP, 1);
+	SEXP v = allocVector(VECSXP, 1);
 	SET_VECTOR_ELT(v, 0, u);
 	return v;
     }
@@ -1451,6 +1453,12 @@ SEXP attribute_hidden do_asatomic(SEXP call, SEXP op, SEXP args, SEXP rho)
     case 5:
 	name = "as.raw"; type = RAWSXP; break;
     }
+    /* DispatchOrEval internal generic: as.character */
+    /* DispatchOrEval internal generic: as.integer */
+    /* DispatchOrEval internal generic: as.double */
+    /* DispatchOrEval internal generic: as.complex */
+    /* DispatchOrEval internal generic: as.logical */
+    /* DispatchOrEval internal generic: as.raw */
     if (DispatchOrEval(call, op, name, args, rho, &ans, 0, 1))
 	return(ans);
 
@@ -1477,6 +1485,7 @@ SEXP attribute_hidden do_asvector(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP x, ans;
     int type;
 
+    /* DispatchOrEval internal generic: as.vector */
     if (DispatchOrEval(call, op, "as.vector", args, rho, &ans, 0, 1))
 	return(ans);
 
@@ -1604,6 +1613,18 @@ SEXP attribute_hidden do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
     return args;
 }
 
+typedef struct parse_info {
+    Rconnection con;
+    Rboolean old_latin1;
+    Rboolean old_utf8;
+}  parse_cleanup_info;
+
+static void parse_cleanup(void *data)
+{
+    parse_cleanup_info *pci = (parse_cleanup_info *)data;
+    known_to_be_latin1 = pci->old_latin1;
+    known_to_be_utf8 = pci->old_utf8;
+}
 
 /* primitive,
  * op = 0 : str2lang(s)
@@ -1625,6 +1646,35 @@ SEXP attribute_hidden do_str2lang(SEXP call, SEXP op, SEXP args, SEXP rho) {
 	    return(allocVector(EXPRSXP, 0));
 
     ParseStatus status;
+    parse_cleanup_info pci;
+    pci.old_latin1 = known_to_be_latin1;
+    pci.old_utf8 = known_to_be_utf8;
+    RCNTXT cntxt;
+
+    /* set up context to recover known_to_be_* variable */
+    begincontext(&cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
+                 R_NilValue, R_NilValue);
+    cntxt.cend = &parse_cleanup;
+    cntxt.cenddata = &pci;
+
+    /* Preserve uncertainty in encoding as in do_parse(): if at least one
+       argument is of "unknown" encoding, the result is also flagged
+       "unknown". To be kept in sync with do_parse().
+    */
+    known_to_be_latin1 = known_to_be_utf8 = FALSE;
+    Rboolean allKnown = TRUE;
+    for(int i = 0; i < LENGTH(args); i++)
+	if(!ENC_KNOWN(STRING_ELT(args, i)) &&
+	   !IS_ASCII(STRING_ELT(args, i))) {
+	    allKnown = FALSE;
+	    break;
+	}
+    if (allKnown) {
+	/* strings can be flagged as from known encoding */
+	known_to_be_latin1 = pci.old_latin1;
+	known_to_be_utf8 = pci.old_utf8;
+    }
+
     SEXP srcfile = PROTECT(mkString("<text>"));
     SEXP ans = PROTECT(R_ParseVector(args, -1, &status, srcfile));
     if (status != PARSE_OK) parseError(call, R_ParseError);
@@ -1633,6 +1683,11 @@ SEXP attribute_hidden do_str2lang(SEXP call, SEXP op, SEXP args, SEXP rho) {
 	    errorcall(call, _("parsing result not of length one, but %d"), LENGTH(ans));
 	ans = VECTOR_ELT(ans, 0);
     }
+
+    known_to_be_latin1 = pci.old_latin1;
+    known_to_be_utf8 = pci.old_utf8;
+    endcontext(&cntxt);
+
     UNPROTECT(2);
     return ans;
 }
@@ -1644,6 +1699,7 @@ SEXP attribute_hidden do_ascall(SEXP call, SEXP op, SEXP args, SEXP rho)
     check1arg(args, call, "x");
 
     SEXP ans;
+    /* DispatchOrEval internal generic: as.call */
     if (DispatchOrEval(call, op, "as.call", args, rho, &ans, 0, 1))
 	return(ans);
 
@@ -1901,6 +1957,9 @@ SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
 	case 102: nm = "is.array"; break;
 	default: nm = ""; /* -Wall */
 	}
+	/* DispatchOrEval internal generic: is.numeric */
+	/* DispatchOrEval internal generic: is.matrix */
+	/* DispatchOrEval internal generic: is.array */
 	if(DispatchOrEval(call, op, nm, args, rho, &ans, 0, 1))
 	    return(ans);
     }
@@ -2130,6 +2189,7 @@ SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     check1arg(args, call, "x");
 
+    /* DispatchOrEval internal generic: is.na */
     if (DispatchOrEval(call, op, "is.na", args, rho, &ans, 1, 1))
 	return(ans);
     PROTECT(args = ans);
@@ -2301,6 +2361,7 @@ static Rboolean anyNA(SEXP call, SEXP op, SEXP args, SEXP env)
 	call2 = PROTECT(shallow_duplicate(call));
 	for (i = 0; i < n; i++, x = CDR(x)) {
 	    SETCAR(args2, CAR(x)); SETCADR(call2, CAR(x));
+	    /* DispatchOrEval internal generic: anyNA */
 	    if ((DispatchOrEval(call2, op, "anyNA", args2, env, &ans, 0, 1)
 		 && asLogical(ans)) || anyNA(call2, op, args2, env)) {
 		UNPROTECT(2);
@@ -2317,6 +2378,7 @@ static Rboolean anyNA(SEXP call, SEXP op, SEXP args, SEXP env)
 	call2 = PROTECT(shallow_duplicate(call));
 	for (i = 0; i < n; i++) {
 	    SETCAR(args2, VECTOR_ELT(x, i)); SETCADR(call2, VECTOR_ELT(x, i));
+	    /* DispatchOrEval internal generic: anyNA */
 	    if ((DispatchOrEval(call2, op, "anyNA", args2, env, &ans, 0, 1)
 		 && asLogical(ans)) || anyNA(call2, op, args2, env)) {
 		UNPROTECT(2);
@@ -2342,6 +2404,7 @@ SEXP attribute_hidden do_anyNA(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (length(args) < 1 || length(args) > 2)
 	errorcall(call, "anyNA takes 1 or 2 arguments");
 
+    /* DispatchOrEval internal generic: anyNA */
     if (DispatchOrEval(call, op, "anyNA", args, rho, &ans, 0, 1))
 	return ans;
 
@@ -2355,7 +2418,7 @@ SEXP attribute_hidden do_anyNA(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (do_anyNA_formals == NULL)
 	    do_anyNA_formals = allocFormalsList2(install("x"),
 						 R_RecursiveSymbol);
-	PROTECT(args = matchArgs(do_anyNA_formals, args, call));
+	PROTECT(args = matchArgs_NR(do_anyNA_formals, args, call));
 	if(CADR(args) ==  R_MissingArg) SETCADR(args, ScalarLogical(FALSE));
 	ans = ScalarLogical(anyNA(call, op, args, rho));
 	UNPROTECT(1);
@@ -2372,6 +2435,7 @@ SEXP attribute_hidden do_isnan(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     check1arg(args, call, "x");
 
+    /* DispatchOrEval internal generic: is.nan */
     if (DispatchOrEval(call, op, "is.nan", args, rho, &ans, 1, 1))
 	return(ans);
 
@@ -2420,6 +2484,7 @@ SEXP attribute_hidden do_isfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     check1arg(args, call, "x");
 
+    /* DispatchOrEval internal generic: is.finite */
     if (DispatchOrEval(call, op, "is.finite", args, rho, &ans, 0, 1))
 	return(ans);
 #ifdef stringent_is
@@ -2487,6 +2552,7 @@ SEXP attribute_hidden do_isinfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     check1arg(args, call, "x");
 
+    /* DispatchOrEval internal generic: is.infinite */
     if (DispatchOrEval(call, op, "is.infinite", args, rho, &ans, 0, 1))
 	return(ans);
 #ifdef stringent_is
@@ -2719,6 +2785,7 @@ SEXP attribute_hidden substituteList(SEXP el, SEXP rho)
 		error(_("'...' used in an incorrect context"));
 	} else {
 	    h = substitute(CAR(el), rho);
+	    ENSURE_NAMEDMAX(h);
 	    if (isLanguage(el))
 		h = LCONS(h, R_NilValue);
 	    else
@@ -2752,7 +2819,7 @@ SEXP attribute_hidden do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
 						  install("env"));
 
     /* argument matching */
-    PROTECT(argList = matchArgs(do_substitute_formals, args, call));
+    PROTECT(argList = matchArgs_NR(do_substitute_formals, args, call));
 
     /* set up the environment for substitution */
     if (CADR(argList) == R_MissingArg)

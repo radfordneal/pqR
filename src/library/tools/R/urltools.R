@@ -51,16 +51,11 @@ function(x)
         tag <- attr(e, "Rd_tag")
         ## Rd2HTML and Rd2latex remove whitespace and \n from URLs.
         if(identical(tag, "\\url")) {
-            urls <<-
-                c(urls, trimws(gsub("\n", "", .Rd_deparse(e, tag = FALSE),
-                                    fixed = TRUE, useBytes = TRUE)))
+            urls <<- c(urls, lines2str(.Rd_deparse(e, tag = FALSE)))
         } else if(identical(tag, "\\href")) {
-            urls <<-
-                c(urls, trimws(gsub("\n", "",
-                                    .Rd_deparse(e[[1L]], tag = FALSE),
-                                    fixed = TRUE, useBytes = TRUE)))
+            urls <<- c(urls, lines2str(.Rd_deparse(e[[1L]], tag = FALSE)))
         } else if(is.list(e))
-              lapply(e, recurse)
+            lapply(e, recurse)
     }
     lapply(x, recurse)
     unique(trimws(urls))
@@ -89,7 +84,7 @@ function(f)
     setwd(d)
     g <- tempfile(tmpdir = d, fileext = ".xml")
     system2("pdftohtml",
-            c("-s -q -i -c -xml", basename(f), basename(g)))
+            c("-s -q -i -c -xml", shQuote(basename(f)), shQuote(basename(g))))
     ## Oh dear: seems that pdftohtml can fail without a non-zero exit
     ## status.
     if(file.exists(g))
@@ -180,11 +175,22 @@ function(meta)
     for(v in meta[fields]) {
         if(is.na(v)) next
         pattern <-
-            "<(URL: *)?((https?|ftp)://[^[:space:],]*)[[:space:]]>"
+            "<(URL: *)?((https?|ftp)://[^[:space:],]*)[[:space:]]*>"
         m <- gregexpr(pattern, v)
         urls <- c(urls, .gregexec_at_pos(pattern, v, m, 3L))
         regmatches(v, m) <- ""
         pattern <- "(^|[^>\"])((https?|ftp)://[^[:space:],]*)"
+        m <- gregexpr(pattern, v)
+        urls <- c(urls, .gregexec_at_pos(pattern, v, m, 3L))
+    }
+    if(!is.na(v <- meta["Description"])) {
+        pattern <-
+            "<(URL: *)?((https?|ftp)://[^[:space:]]+)[[:space:]]*>"
+        m <- gregexpr(pattern, v)
+        urls <- c(urls, .gregexec_at_pos(pattern, v, m, 3L))
+        regmatches(v, m) <- ""
+        pattern <-
+            "([^>\"])((https?|ftp)://[[:alnum:]/.:@+\\_~%#?=&;,-]+[[:alnum:]/])"
         m <- gregexpr(pattern, v)
         urls <- c(urls, .gregexec_at_pos(pattern, v, m, 3L))
     }
@@ -595,7 +601,7 @@ function(x, ...)
                   sprintf("\nStatus: %s", s)),
            ifelse((m <- x$Message) == "",
                   "",
-                  sprintf("\nMessage: %s", gsub("\n", "\n  ", m))),
+                  sprintf("\nMessage: %s", gsub("\n", "\n  ", m, fixed=TRUE))),
            ifelse((m <- x$Spaces) == "",
                   "",
                   "\nURL contains spaces"),

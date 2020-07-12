@@ -1,6 +1,6 @@
 % File src/library/utils/man/available.packages.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2017 R Core Team
+% Copyright 1995-2019 R Core Team
 % Distributed under GPL 2 or later
 
 \name{available.packages}
@@ -18,8 +18,8 @@
 available.packages(contriburl = contrib.url(repos, type), method,
                    fields = NULL, type = getOption("pkgType"),
                    filters = NULL, repos = getOption("repos"),
-                   ignore_repo_cache =  FALSE, max_repo_cache_age,
-                   \dots)
+                   ignore_repo_cache = FALSE, max_repo_cache_age,
+                   quiet = TRUE, \dots)
 }
 \arguments{
   \item{contriburl}{
@@ -33,7 +33,7 @@ available.packages(contriburl = contrib.url(repos, type), method,
   \item{type}{
     character string, indicate which type of packages: see
     \code{\link{install.packages}}.
-  
+
     If \code{type = "both"} this will use the source repository.
   }
   \item{fields}{
@@ -54,9 +54,12 @@ available.packages(contriburl = contrib.url(repos, type), method,
   \item{max_repo_cache_age}{any cached values older than this in seconds
     will be ignored. See \sQuote{Details}.
   }
+  \item{quiet}{logical, passed to \code{\link{download.file}()}; change
+    only if you know what you are doing.}
   \item{\dots}{
     allow additional arguments to be passed from callers (which might be
-    arguments to future versions of this function).
+    arguments to future versions of this function).  Currently these are
+    all passed to \code{\link{download.file}()}.
   }
 }
 \details{

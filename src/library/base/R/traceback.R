@@ -1,7 +1,7 @@
 #  File src/library/base/R/traceback.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -16,17 +16,40 @@
 #  A copy of the GNU General Public License is available at
 #  https://www.R-project.org/Licenses/
 
-.traceback <- function(x = NULL) {
-    if(is.null(x) && !is.null(x <- get0(".Traceback", envir = baseenv())))
-	{}
-    else if (is.numeric(x))
-    	x <- .Internal(traceback(x))
+.traceback <- function(x = NULL,
+		       max.lines = getOption("traceback.max.lines",
+					     getOption("deparse.max.lines", -1L)))
+{
+    stopifnot(length(max.lines) <= 1) # TODO?  allow vector along x
+    .is.positive.intlike <- function(x)
+        is.numeric(x) && length(x) == 1L && !is.na(x) && as.integer(x) >= 0L
+
+    if(int.x <- .is.positive.intlike(x))
+	x <- .Internal(traceback(x))
+    if(int.x || (is.null(x) && !is.null(x <- get0(".Traceback", envir = baseenv()))) ||
+       is.pairlist(x) || is.list(x))
+    {
+        valid.max.lines <- .is.positive.intlike(max.lines)
+        nlines <- if(valid.max.lines) max.lines + 1L else max.lines
+        for(i in seq_along(x)) {
+            srcref <- attr(x[[i]], 'srcref')
+            if(typeof(x[[i]]) == "language")
+                x[[i]] <- deparse(x[[i]], nlines=nlines)
+            if(valid.max.lines && length(x[[i]]) > max.lines) {
+                x[[i]] <- x[[i]][seq_len(max.lines)]
+                attr(x[[i]], 'truncated') <- TRUE
+            }
+            attr(x[[i]], 'srcref') <- srcref
+        }
+    }
     x
 }
 
-traceback <- function(x = NULL, max.lines = getOption("deparse.max.lines"))
+traceback <- function(x = NULL,
+                      max.lines = getOption("traceback.max.lines",
+                                            getOption("deparse.max.lines", -1L)))
 {
-    n <- length(x <- .traceback(x))
+    n <- length(x <- .traceback(x, max.lines=max.lines))
     if(n == 0L)
         cat(gettext("No traceback available"), "\n")
     else {
@@ -40,8 +63,8 @@ traceback <- function(x = NULL, max.lines = getOption("deparse.max.lines"))
                 paste0(" at ", basename(srcfile$filename), "#", srcref[1L])
             }
             ## Truncate deparsed code (destroys attributes of xi)
-            if(is.numeric(max.lines) && max.lines > 0L && max.lines < m) {
-                xi <- c(xi[seq_len(max.lines)], " ...")
+            if(isTRUE(attr(xi, 'truncated'))) {
+                xi <- c(xi, " ...")
                 m <- length(xi)
             }
             if (!is.null(srcloc)) {

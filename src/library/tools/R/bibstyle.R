@@ -1,7 +1,7 @@
 #  File src/library/tools/R/bibstyle.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2013 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -94,11 +94,12 @@ makeJSS <- function() {
     fmtSchool <- plainclean
     ## fmtTechreportnumber <- labelclean(prefix="Technical Report ")
     fmtUrl <- label(prefix="\\url{", suffix="}")
-    fmtTitle <- function(title)
-        if (length(title))
+    fmtTitle <- function(title) 
+        if (length(title)) {
+            title <- gsub("%", "\\\\\\%", title)
             paste0("\\dQuote{",
                    addPeriod(collapse(cleanupLatex(title))), "}")
-
+        }
     fmtYear <- function(year) {
         if (!length(year)) year <- "????"
         paste0("(", collapse(year), ")")
@@ -158,7 +159,13 @@ makeJSS <- function() {
     }
 
     extraInfo <- function(paper) {
-        result <- paste(c(fmtDOI(paper$doi), fmtNote(paper$note),
+    	# PR#17725:  DOIs can contain % signs, and need multiple 
+    	#            levels of escaping when translated to Rd.
+    	escapeDOIPercent <- function(s) gsub("%", 
+    					  paste0(paste(rep("\\", 11), collapse=""), "%"),
+    					  fixed = TRUE,
+    					  s)
+        result <- paste(c(fmtDOI(escapeDOIPercent(paper$doi)), fmtNote(paper$note),
                           fmtEprint(paper$eprint), fmtUrl(paper$url)),
                         collapse=", ")
         if (nzchar(result)) result
@@ -414,5 +421,5 @@ toRd.bibentry <- function(obj, style=NULL, ...) {
     	    Unpublished = formatUnpublished(paper),
     	    paste("bibtype", attr(paper, "bibtype"),"not implemented") ))
     }
-    result
+    gsub("(^|[^\\])((\\\\\\\\)*)%", "\\1\\2\\\\%", result)
 }

@@ -1,5 +1,5 @@
 
-R version 3.6.2 Patched (2020-02-12 r77795) -- "Dark and Stormy Night"
+R version 4.0.0 RC (2020-04-16 r78240) -- "Arbor Day"
 Copyright (C) 2020 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -18,7 +18,7 @@ Type 'q()' to quit R.
 > ## tests of boundary cases in read.table()
 > 
 > ## force standard handling for character cols
-> options(stringsAsFactors=TRUE)
+> options(stringsAsFactors=FALSE) # R >= 4.0.0
 > 
 > # empty file
 > file.create("foo1")
@@ -120,7 +120,7 @@ Error in read.table("foo6", header = TRUE, fill = TRUE) :
 +     "2 NA NA NA NA NA NA\n",
 +     "3 1 2 3 NA TRUE def\n",
 +     sep = "", file = "foo7")
-> (res <- read.table("foo7"))
+> (res <- read.table("foo7", stringsAsFactors=TRUE))
    A   B      C  D     E    F
 1  1 1.1 1.1+0i NA FALSE  abc
 2 NA  NA     NA NA    NA <NA>

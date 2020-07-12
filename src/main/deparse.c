@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1997--2018  The R Core Team
+ *  Copyright (C) 1997--2020  The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -35,7 +35,7 @@
  *    do_dump() -> deparse1() -> deparse1WithCutoff()
  *  ---------
  *  Workhorse: deparse1WithCutoff() -> deparse2() -> deparse2buff() --> {<itself>, ...}
- *  ---------  ~~~~~~~~~~~~~~~~~~ `-- implicit arg R_BrowseLines == getOption("deparse.max.lines")
+ *  ---------  ~~~~~~~~~~~~~~~~~~  implicit arg R_BrowseLines == getOption("deparse.max.lines")
  *
  *  ./errors.c: PrintWarnings() | warningcall_dflt() ... -> deparse1s() -> deparse1WithCutoff()
  *  ./print.c : Print[Language|Closure|Expression]()    --> deparse1w() -> deparse1WithCutoff()
@@ -792,33 +792,6 @@ static void attr2(SEXP s, LocalParseData *d, Rboolean not_names)
     print2buff(")", d);
 }
 
-
-static void printcomment(SEXP s, LocalParseData *d)
-{
-    SEXP cmt;
-    int i, ncmt;
-    const void *vmax = vmaxget();
-
-    /* look for old-style comments first */
-
-    if(isList(TAG(s)) && !isNull(TAG(s))) {
-	for (s = TAG(s); s != R_NilValue; s = CDR(s)) {
-	    print2buff(translateChar(STRING_ELT(CAR(s), 0)), d);
-	    writeline(d);
-	}
-    }
-    else {
-	cmt = getAttrib(s, R_CommentSymbol);
-	ncmt = length(cmt);
-	for(i = 0 ; i < ncmt ; i++) {
-	    print2buff(translateChar(STRING_ELT(cmt, i)), d);
-	    writeline(d);
-	}
-    }
-    vmaxset(vmax);
-}
-
-
 static const char *quotify(SEXP name, int quote)
 {
     const char *s = CHAR(name);
@@ -1092,7 +1065,6 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 	break;
     }
     case LANGSXP:
-	printcomment(s, d);
 	if (!isNull(ATTRIB(s)))
 	    d->sourceable = FALSE;
 	SEXP op = CAR(s);
@@ -1256,7 +1228,6 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 		    print2buff(")", d);
 		    break;
 		case PP_FUNCTION:
-		    printcomment(s, d);
 		    if (!(d->opts & USESOURCE) || !isString(CADDR(s))) {
 			print2buff(CHAR(PRINTNAME(op)), d); /* ASCII */
 			print2buff("(", d);
@@ -1571,13 +1542,16 @@ static void vector2buff(SEXP vector, LocalParseData *d)
     Rboolean surround = FALSE, allNA,
 	intSeq = FALSE; // := TRUE iff integer sequence 'm:n' (up *or* down)
     if(TYPEOF(vector) == INTSXP) {
-	int *vec = INTEGER(vector), d_i;
+	int *vec = INTEGER(vector);
+	// vec[1] - vec[0] could overflow, and does in package Rmpfr
+	double d_i = (double) vec[1] - (double)vec[0];
 	intSeq = (tlen > 1 &&
 		  vec[0] != NA_INTEGER &&
 		  vec[1] != NA_INTEGER &&
-		  abs(d_i = vec[1] - vec[0]) == 1);
+		  fabs(d_i) == 1);
 	if(intSeq) for(i = 2; i < tlen; i++) {
-	    if((vec[i] == NA_INTEGER) || (vec[i] - vec[i-1]) != d_i) {
+	    if((vec[i] == NA_INTEGER) ||
+	       ((double)vec[i] - (double)vec[i-1]) != d_i) {
 		intSeq = FALSE;
 		break;
 	    }
@@ -1741,7 +1715,7 @@ static void vector2buff(SEXP vector, LocalParseData *d)
 		    strp = hex;
 		} else
 		    strp = EncodeElement(vector, i, quote, '.');
-	    } else if (TYPEOF(vector) == REALSXP && (d->opts & DIGITS16)) {
+	    } else if (TYPEOF(vector) == REALSXP && (d->opts & DIGITS17)) {
 		double x = REAL(vector)[i];
 		if (R_FINITE(x)) {
 		    snprintf(hex, 32, "%.17g", x);
@@ -1755,7 +1729,7 @@ static void vector2buff(SEXP vector, LocalParseData *d)
 		    strp = hex;
 		} else
 		    strp = EncodeElement(vector, i, quote, '.');
-	    } else if (TYPEOF(vector) == CPLXSXP && (d->opts & DIGITS16)) {
+	    } else if (TYPEOF(vector) == CPLXSXP && (d->opts & DIGITS17)) {
 		Rcomplex z =  COMPLEX(vector)[i];
 		if (R_FINITE(z.r) && R_FINITE(z.i)) {
 		    snprintf(hex, 64, "%.17g%+.17gi", z.r, z.i);
@@ -1789,7 +1763,9 @@ static void src2buff1(SEXP srcref, LocalParseData *d)
     PROTECT(srcref = eval(srcref, R_BaseEnv));
     n = length(srcref);
     for(i = 0 ; i < n ; i++) {
-	print2buff(translateChar(STRING_ELT(srcref, i)), d);
+	/* use EncodeChar also to produce embedded UTF-8 for character
+	   literals (with Rgui) */
+	print2buff(EncodeChar(STRING_ELT(srcref, i)), d);
 	if(i < n-1) writeline(d);
     }
     UNPROTECT(3);

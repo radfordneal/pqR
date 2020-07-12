@@ -1,6 +1,6 @@
 ### R.m4 -- extra macros for configuring R		-*- Autoconf -*-
 ###
-### Copyright (C) 1998-2019 R Core Team
+### Copyright (C) 1998-2020 R Core Team
 ###
 ### This file is part of R.
 ###
@@ -193,11 +193,6 @@ if test -n "${TEXI2ANY}"; then
   AC_PATH_PROGS(INSTALL_INFO,
                 [${INSTALL_INFO} ginstall-info install-info],
                 false)
-  if test "ac_cv_path_INSTALL_INFO" = "false"; then
-    if test "${r_cv_prog_perl_v5}" = yes; then
-      INSTALL_INFO="perl \$(top_srcdir)/tools/install-info.pl"
-    fi
-  fi
   AC_SUBST(INSTALL_INFO)
 fi
 if test "${r_cv_prog_texi2any_v5}" != yes; then
@@ -3053,16 +3048,15 @@ caddr_t hello() {
               [r_cv_zlib_mmap=yes])])
 ])# _R_ZLIB_MMAP
 
-## Notes on PCRE2 support (in the future).
-## The header is pcre2.h, and the 8-bit lib is libpcre2-8.
-## There is a pcre2-config script, and a pkgconfig file.
 ## R_PCRE
 ## ------
 ## If selected, try finding system pcre library and headers.
 ## RedHat put the headers in /usr/include/pcre.
 ## JIT was possible in >= 8.20 , and important bug fixes in 8.32
 AC_DEFUN([R_PCRE],
-[AC_CHECK_LIB(pcre, pcre_fullinfo, [have_pcre=yes], [have_pcre=no])
+[AC_REQUIRE([R_PCRE2])
+if test "x${r_cv_have_pcre2utf}" != xyes && test "x${use_pcre1}" = xyes; then
+AC_CHECK_LIB(pcre, pcre_fullinfo, [have_pcre=yes], [have_pcre=no])
 if test "${have_pcre}" = yes; then
   AC_CHECK_HEADERS(pcre.h pcre/pcre.h)
   if test "${ac_cv_header_pcre_h}" = no \
@@ -3073,7 +3067,7 @@ fi
 if test "x${have_pcre}" = xyes; then
 r_save_LIBS="${LIBS}"
 LIBS="-lpcre ${LIBS}"
-AC_CACHE_CHECK([if PCRE version >= 8.20, < 10.0 and has UTF-8 support], [r_cv_have_pcre820],
+AC_CACHE_CHECK([if PCRE1 version >= 8.32 and has UTF-8 support], [r_cv_have_pcre832],
 [AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #ifdef HAVE_PCRE_PCRE_H
 #include <pcre/pcre.h>
@@ -3082,11 +3076,12 @@ AC_CACHE_CHECK([if PCRE version >= 8.20, < 10.0 and has UTF-8 support], [r_cv_ha
 #include <pcre.h>
 #endif
 #endif
+#include <stdlib.h>
 int main() {
 #ifdef PCRE_MAJOR
 #if PCRE_MAJOR > 8
   exit(1);
-#elif PCRE_MAJOR == 8 && PCRE_MINOR >= 20
+#elif PCRE_MAJOR == 8 && PCRE_MINOR >= 32
 {
     int ans;
     int res = pcre_config(PCRE_CONFIG_UTF8, &ans);
@@ -3099,40 +3094,24 @@ int main() {
   exit(1);
 #endif
 }
-]])], [r_cv_have_pcre820=yes], [r_cv_have_pcre820=no], [r_cv_have_pcre820=no])])
+]])], [r_cv_have_pcre832=yes], [r_cv_have_pcre832=no], [r_cv_have_pcre832=no])])
 fi
-if test "x${r_cv_have_pcre820}" != xyes; then
+if test "x${r_cv_have_pcre832}" != xyes; then
   have_pcre=no
   LIBS="${r_save_LIBS}"
+fi
 else
-AC_CACHE_CHECK([if PCRE version >= 8.32], [r_cv_have_pcre_832],
-[AC_RUN_IFELSE([AC_LANG_SOURCE([[
-#ifdef HAVE_PCRE_PCRE_H
-#include <pcre/pcre.h>
-#else
-#ifdef HAVE_PCRE_H
-#include <pcre.h>
-#endif
-#endif
-int main() {
-#if PCRE_MAJOR == 8 && PCRE_MINOR >= 32
-  exit(0);
-#else
-  exit(1);
-#endif
-}
-]])], [r_cv_have_pcre_832=yes], [r_cv_have_pcre_832=no], [r_cv_have_pcre_832=no])])
+  have_pcre=no
+  r_cv_have_pcre832=no
 fi
 
 AC_MSG_CHECKING([whether PCRE support suffices])
-if test "x${r_cv_have_pcre820}" != xyes; then
-  AC_MSG_ERROR([pcre >= 8.20 library and headers are required])
+if test "x${r_cv_have_pcre2utf}" != xyes && \
+   test "x${r_cv_have_pcre832}" != xyes; then
+  AC_MSG_RESULT([no])
+  AC_MSG_ERROR([PCRE2 library and headers are required, or use --with-pcre1 and PCRE >= 8.32 with UTF-8 support])
 else
   AC_MSG_RESULT([yes])
-fi
-if test "x${r_cv_have_pcre_832}" != xyes; then
-  warn_pcre_version="pcre < 8.32 is deprecated"
-  AC_MSG_WARN([${warn_pcre_version}])
 fi
 ])# R_PCRE
 
@@ -3141,6 +3120,7 @@ fi
 ## Try finding pcre2 (8-bit) library and header.
 AC_DEFUN([R_PCRE2],
 [have_pcre2=no
+if test "x${use_pcre2}" = xyes; then
 if "${PKG_CONFIG}" --exists libpcre2-8; then
   PCRE2_CPPFLAGS=`"${PKG_CONFIG}" --cflags libpcre2-8`
   PCRE2_LIBS=`"${PKG_CONFIG}" --libs libpcre2-8`
@@ -3163,12 +3143,28 @@ if test "x${have_pcre2}" = "xyes"; then
   if test "x${have_pcre2}" = "xyes"; then
     AC_CHECK_LIB(pcre2-8, pcre2_compile_8, [have_pcre2=yes], [have_pcre2=no])
   fi
-  if test "x${have_pcre2}" = "xyes"; then
+  dnl now check it was built with UTF-8 support
+  AC_CACHE_CHECK([if PCRE2 has Unicode support], [r_cv_have_pcre2utf],
+[AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
+#include <stdlib.h>
+int main() {
+    int ans;
+    int res = pcre2_config(PCRE2_CONFIG_UNICODE, &ans);
+    if (res || ans != 1) exit(1); else exit(0);
+}
+]])], [r_cv_have_pcre2utf=yes], [r_cv_have_pcre2utf=no], [r_cv_have_pcre2utf=no])])
+  if test "x${r_cv_have_pcre2utf}" = "xyes"; then
     AC_DEFINE(HAVE_PCRE2, 1, [Define if your system has pcre2.])
   else
     CPPFLAGS="${r_save_CPPFLAGS}"
     LIBS="${r_save_LIBS}"
   fi
+fi
+else
+  have_pcre2=no
+  r_cv_have_pcre2utf=no
 fi
 ])# R_PCRE2
 
@@ -4157,7 +4153,7 @@ LIBS="${CURL_LIBS} ${LIBS}"
 AC_CHECK_HEADERS(curl/curl.h, [have_libcurl=yes], [have_libcurl=no])
 
 if test "x${have_libcurl}" = "xyes"; then
-AC_CACHE_CHECK([if libcurl is version 7 and >= 7.22.0], [r_cv_have_curl722],
+AC_CACHE_CHECK([if libcurl is version 7 and >= 7.28.0], [r_cv_have_curl722],
 [AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <stdlib.h>
 #include <curl/curl.h>
@@ -4166,7 +4162,7 @@ int main()
 #ifdef LIBCURL_VERSION_MAJOR
 #if LIBCURL_VERSION_MAJOR > 7
   exit(1);
-#elif LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR >= 22
+#elif LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR >= 28
   exit(0);
 #else
   exit(1);
@@ -4175,9 +4171,9 @@ int main()
   exit(1);
 #endif
 }
-]])], [r_cv_have_curl722=yes], [r_cv_have_curl722=no], [r_cv_have_curl722=no])])
+]])], [r_cv_have_curl728=yes], [r_cv_have_curl728=no], [r_cv_have_curl728=no])])
 fi
-if test "x${r_cv_have_curl722}" = xno; then
+if test "x${r_cv_have_curl728}" = xno; then
   have_libcurl=no
 fi
 
@@ -4201,13 +4197,13 @@ if test "x${r_cv_have_curl_https}" = xno; then
   have_libcurl=no
 fi
 if test "x${have_libcurl}" = xyes; then
-  AC_DEFINE(HAVE_LIBCURL, 1, [Define if your system has libcurl >= 7.22.0 with support for https.])
+  AC_DEFINE(HAVE_LIBCURL, 1, [Define if your system has libcurl >= 7.28.0 with support for https.])
   CPPFLAGS="${r_save_CPPFLAGS}"
   LIBS="${r_save_LIBS}"
   AC_SUBST(CURL_CPPFLAGS)
   AC_SUBST(CURL_LIBS)
 else
-  AC_MSG_ERROR([libcurl >= 7.22.0 library and headers are required with support for https])
+  AC_MSG_ERROR([libcurl >= 7.28.0 library and headers are required with support for https])
 fi
 ])# R_LIBCURL
 

@@ -66,7 +66,7 @@ assocplot(x, col = c("black", "red"), space = 0.3,
   Graphical methods for categorical data.
   \emph{SAS User Group International Conference Proceedings}, \bold{17},
   190--200.
-  \url{http://www.math.yorku.ca/SCS/sugi/sugi17-paper.html}
+  \url{http://datavis.ca/papers/sugi/sugi17.pdf}
 
   Meyer, D., Zeileis, A., and Hornik, K. (2006)  
   The strucplot Framework: Visualizing Multi-Way Contingency Tables with
@@ -76,7 +76,7 @@ assocplot(x, col = c("black", "red"), space = 0.3,
 }
 \examples{
 ## Aggregate over sex:
-x <- margin.table(HairEyeColor, c(1, 2))
+x <- marginSums(HairEyeColor, c(1, 2))
 x
 assocplot(x, main = "Relation between hair and eye color")
 }

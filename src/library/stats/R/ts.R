@@ -1,7 +1,7 @@
 #  File src/library/stats/R/ts.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2018 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@ ts <- function(data = NA, start = 1, end = numeric(), frequency = 1,
     if(missing(frequency)) frequency <- 1/deltat
     else if(missing(deltat)) deltat <- 1/frequency
 
-    if(frequency > 1 && abs(frequency - round(frequency)) < ts.eps)
+    if(frequency > 1 && 0 < (d <- abs(frequency - round(frequency))) && d < ts.eps)
 	frequency <- round(frequency)
 
     if(length(start) > 1L) {
@@ -64,7 +64,11 @@ ts <- function(data = NA, start = 1, end = numeric(), frequency = 1,
 	start <- end - (ndata - 1)/frequency
 
     if(start > end) stop("'start' cannot be after 'end'")
-    nobs <- floor((end - start) * frequency + 1.01)
+
+    cycles <- as.numeric((end - start)*frequency) # as.n*(): get rid of date/time
+    if(abs(round(cycles) - cycles) > ts.eps * max(cycles, 1))
+    	stop("'end' must be a whole number of cycles after 'start'")
+    nobs <- floor(cycles + 1.01)
 
     if(nobs != ndata)
 	data <-
@@ -118,24 +122,28 @@ as.ts.default <- function(x, ...)
     else ts(x)
 }
 
-.cbind.ts <- function(sers, nmsers, dframe = FALSE, union = TRUE)
+.cbind.ts <- function(sers, nmsers, dframe = FALSE, union = TRUE,
+                      ts.eps = getOption("ts.eps"))
 {
     nulls <- vapply(sers, is.null, NA)
     sers <- sers[!nulls]
     nser <- length(sers)
     if(nser == 0L) return(NULL)
     if(nser == 1L)
-        if(dframe) return(as.data.frame(sers[[1L]])) else return(sers[[1L]])
+        return(if(dframe) as.data.frame(sers[[1L]]) else sers[[1L]])
     tsser <- vapply(sers, function(x) length(tsp(x)) > 0L, NA)
     if(!any(tsser))
         stop("no time series supplied")
     sers <- lapply(sers, as.ts)
-    nsers <- vapply(sers, NCOL, 1)
     tsps <- sapply(sers[tsser], tsp)
     freq <- mean(tsps[3,])
-    if(max(abs(tsps[3,] - freq)) > getOption("ts.eps")) {
+    if(max(abs(tsps[3,] - freq)) > ts.eps)
         stop("not all series have the same frequency")
-    }
+
+    ## cos(2pi ph) + 1i*sin(2pi ph); ph := phases
+    eph <- exp(2i*(pi * apply(tsps, 2L, function(tsp) (tsp[1L]*tsp[3L]) %% 1)))
+    if(max(Mod(eph - mean(eph))) > ts.eps)
+    	stop("not all series have the same phase")
     if(union) {
         st <- min(tsps[1,])
         en <- max(tsps[2,])
@@ -158,6 +166,7 @@ as.ts.default <- function(x, ...)
         }
         tsps <- sapply(sers, tsp)
     }
+    nsers <- vapply(sers, NCOL, 1)
     if(dframe) {
 	x <- setNames(vector("list", nser), nmsers)
     } else {
@@ -221,14 +230,13 @@ Ops.ts <- function(e1, e2)
     } else {
         nc1 <- NCOL(e1)
         nc2 <- NCOL(e2)
-        ## use ts.intersect to align e1 and e2
+        ## align e1 and e2
         e12 <- .cbind.ts(list(e1, e2),
                          c(deparse(substitute(e1))[1L],
                            deparse(substitute(e2))[1L]),
                          union = FALSE)
-        e1 <- if(is.matrix(e1)) e12[, 1L:nc1, drop = FALSE] else e12[, 1]
-        e2 <- if(is.matrix(e2)) e12[, nc1 + (1L:nc2), drop = FALSE]
-        else e12[, nc1 + 1]
+        e1 <- if(is.matrix(e1)) e12[,        1L:nc1 , drop = FALSE] else e12[, 1]
+        e2 <- if(is.matrix(e2)) e12[, nc1 + (1L:nc2), drop = FALSE] else e12[, nc1 + 1]
         NextMethod(.Generic)
     }
 }
@@ -295,9 +303,8 @@ na.omit.ts <- function(object, ...)
 
 is.mts <- function (x) inherits(x, "mts")
 
-start.default <- function(x, ...)
+start.default <- function(x, ts.eps = getOption("ts.eps"), ...)
 {
-    ts.eps <- getOption("ts.eps")
     tsp <- attr(hasTsp(x), "tsp")
     is <- tsp[1L]*tsp[3L]
     if(abs(tsp[3L] - round(tsp[3L])) < ts.eps &&
@@ -309,9 +316,8 @@ start.default <- function(x, ...)
     else tsp[1L]
 }
 
-end.default <- function(x, ...)
+end.default <- function(x, ts.eps = getOption("ts.eps"), ...)
 {
-    ts.eps <- getOption("ts.eps")
     tsp <- attr(hasTsp(x), "tsp")
     is <- tsp[2L]*tsp[3L]
     if(abs(tsp[3L] - round(tsp[3L])) < ts.eps &&
@@ -612,8 +618,8 @@ plot.ts <-
 	if (frame.plot) box(...)
     }## {plotts}
 
-    xlabel <- if (!missing(x)) deparse(substitute(x))# else NULL
-    ylabel <- if (!missing(y)) deparse(substitute(y))
+    xlabel <- if (!missing(x)) deparse1(substitute(x))# else NULL
+    ylabel <- if (!missing(y)) deparse1(substitute(y))
     plotts(x = x, y = y, plot.type = plot.type,
 	   xy.labels = xy.labels, xy.lines = xy.lines,
 	   panel = panel, nc = nc, xlabel = xlabel, ylabel = ylabel,
@@ -626,20 +632,22 @@ lines.ts <- function(x, ...)
 
 window.default <- function(x, start = NULL, end = NULL,
                            frequency = NULL, deltat = NULL,
-                           extend = FALSE, ...)
+                           extend = FALSE, ts.eps = getOption("ts.eps"), ...)
 {
     x <- hasTsp(x)
     xtsp <- tsp(x)
     xfreq <- xtsp[3L]
     xtime <- time(x)
-    ts.eps <- getOption("ts.eps")
 
     if(!is.null(frequency) && !is.null(deltat) &&
        abs(frequency*deltat - 1) > ts.eps)
-        stop("'frequency' and 'deltat' are both supplied and are inconsistent")
-    if (is.null(frequency) && is.null(deltat)) yfreq <- xfreq
-    else if (is.null(deltat)) yfreq <- frequency
-    else if (is.null(frequency)) yfreq <- 1/deltat
+        stop("'frequency' and 'deltat' are both not NULL and are inconsistent")
+    yfreq <- if(is.null(frequency) && is.null(deltat))
+                 xfreq
+             else if(is.null(deltat))
+                 frequency
+             else if(is.null(frequency))
+                 1/deltat
     thin <- round(xfreq/yfreq)
     if (yfreq > 0 && abs(xfreq/yfreq -thin) < ts.eps) {
         yfreq <- xfreq/thin
@@ -690,9 +698,12 @@ window.default <- function(x, start = NULL, end = NULL,
         ## first adjust start and end to the time base
         ## try to ensure that they are exactly n/xfreq
         stoff <- ceiling((start - xtsp[1L]) * xfreq - ts.eps)
-        ystart <- (round(xtsp[1L]*xfreq) + stoff)/xfreq
+        ystart <- stoff/xfreq + xtsp[1L]
         enoff <- floor((end - xtsp[2L]) * xfreq + ts.eps)
-        yend <- (round(xtsp[2L]*xfreq) + enoff)/xfreq
+        yend <- enoff/xfreq + xtsp[2L]
+        # Rounding can cause problems #PR13272
+        if (ystart > yend && (ystart - yend)*xfreq < ts.eps)
+            yend <- ystart
         nold <- round(xfreq*(xtsp[2L] - xtsp[1L])) + 1
         ## both start and end could be outside time base
         ## and indeed the new ad old ranges might not intersect.
@@ -782,7 +793,7 @@ ts.plot <- function(..., gpars = list())
     }
     sers <- do.call("ts.union", dots)
     if(is.null(gpars$ylab))
-        gpars$ylab <- if(NCOL(sers) > 1) "" else deparse(substitute(...))
+        gpars$ylab <- if(NCOL(sers) > 1) "" else deparse1(substitute(...))
     do.call("plot.ts", c(list(sers, plot.type = "single"), gpars))
 }
 

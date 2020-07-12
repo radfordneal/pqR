@@ -123,7 +123,7 @@ for granting permission to distribute this modified version of the notes
 in this way, and for being a supporter of @R{} from way back.
 
 Comments and corrections are always welcome.  Please address email
-correspondence to @email{R-core@@R-project.org}.
+correspondence to @email{R-help@@R-project.org}.
 
 @subheading Suggestions to the reader
 
@@ -976,7 +976,7 @@ of characters delimited by the double quote character, e.g.,
 Character strings are entered using either matching double (@code{"}) or
 single (@code{'}) quotes, but are printed using double quotes (or
 sometimes without quotes).  They use C-style escape sequences, using
-@code{\} as the escape character, so @code{\\} is entered and printed as
+@code{\} as the escape character, so @code{\} is entered and printed as
 @code{\\}, and inside double quotes @code{"} is entered as @code{\"}.
 Other useful escape sequences are @code{\n}, newline, @code{\t}, tab and
 @code{\b}, backspace---see @command{?Quotes} for a full list.
@@ -6409,7 +6409,7 @@ available from
 
 @noindent
 and these can be accessed from @R{} via the package @CRANpkg{rggobi}, described at
-@uref{http://www.ggobi.org/rggobi}.
+@uref{http://ggobi.org/rggobi.html}.
 
 Also, package @CRANpkg{rgl} provides ways to interact with 3D plots, for example
 of surfaces.
@@ -6503,7 +6503,8 @@ packages) are distributed with every binary distribution of @R{}.  Most
 are available for download from @acronym{CRAN}
 (@uref{https://CRAN.R-project.org/} and its mirrors) and other
 repositories such as Bioconductor (@uref{https://www.bioconductor.org/}).
-and Omegahat (@uref{http://www.omegahat.net/}).  The @emph{R FAQ}
+@c and Omegahat (@uref{http://www.omegahat.net/}).
+The @emph{R FAQ}
 contains a list of CRAN packages current at the time of release, but the
 collection of available packages changes very frequently.
 
@@ -6854,7 +6855,7 @@ suitably coded.
 Change @code{Expt} and @code{Run} into factors.
 
 @item attach(mm)
-Make the data frame visible at position 3 (the default).
+Make the data frame visible at position 2 (the default).
 
 @item plot(Expt, Speed, main="Speed of Light Data", xlab="Experiment No.")
 Compare the five experiments with simple boxplots.
@@ -7165,7 +7166,7 @@ maximum allowed on that version of Windows.
 @itemx -q
 Do not print out the initial copyright and welcome messages.
 
-@item --slave
+@item --no-echo
 Make @R{} run as quietly as possible.  This option is intended to
 support programs which use @R{} to compute results for them.  It implies
 @option{--quiet} and @option{--no-save}.
@@ -7494,7 +7495,7 @@ Pinard) is to use a @emph{here document} like
 @example
 #!/bin/sh
 [environment variables can be set here]
-R --slave [other options] <<EOF
+R --no-echo [other options] <<EOF
 
    R program goes here...
 

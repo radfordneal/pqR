@@ -2,7 +2,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2019  The R Core Team
+ *  Copyright (C) 1997--2020  The R Core Team
  *  Copyright (C) 2009--2011  Romain Francois
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -407,17 +407,19 @@ static int	xxvalue(SEXP, int, YYLTYPE *);
 
 prog	:	END_OF_INPUT			{ YYACCEPT; }
 	|	'\n'				{ yyresult = xxvalue(NULL,2,NULL);	goto yyreturn; }
-	|	expr_or_assign '\n'			{ yyresult = xxvalue($1,3,&@1);	goto yyreturn; }
-	|	expr_or_assign ';'			{ yyresult = xxvalue($1,4,&@1);	goto yyreturn; }
+	|	expr_or_assign_or_help '\n'	{ yyresult = xxvalue($1,3,&@1);	goto yyreturn; }
+	|	expr_or_assign_or_help ';'	{ yyresult = xxvalue($1,4,&@1);	goto yyreturn; }
 	|	error	 			{ YYABORT; }
 	;
 
-expr_or_assign  :    expr                       { $$ = $1; }
-                |    equal_assign               { $$ = $1; }
+expr_or_assign_or_help  :    expr               { $$ = $1; }
+                |    expr_or_assign_or_help EQ_ASSIGN expr_or_assign_or_help    { $$ = xxbinary($2,$1,$3); setId( $$, @$); }
+                |    expr_or_assign_or_help '?'  expr_or_assign_or_help		{ $$ = xxbinary($2,$1,$3); setId( $$, @$); }
                 ;
 
-equal_assign    :    expr EQ_ASSIGN expr_or_assign              { $$ = xxbinary($2,$1,$3); setId( $$, @$); }
-                ;
+expr_or_help  :    expr				    { $$ = $1; }
+	      |    expr_or_help '?' expr_or_help    { $$ = xxbinary($2,$1,$3); setId( $$, @$); }
+              ;
 
 expr	: 	NUM_CONST			{ $$ = $1;	setId( $$, @$); }
 	|	STR_CONST			{ $$ = $1;	setId( $$, @$); }
@@ -425,13 +427,13 @@ expr	: 	NUM_CONST			{ $$ = $1;	setId( $$, @$); }
 	|	SYMBOL				{ $$ = $1;	setId( $$, @$); }
 
 	|	'{' exprlist '}'		{ $$ = xxexprlist($1,&@1,$2); setId( $$, @$); }
-	|	'(' expr_or_assign ')'		{ $$ = xxparen($1,$2);	setId( $$, @$); }
+	|	'(' expr_or_assign_or_help ')'	{ $$ = xxparen($1,$2);	setId( $$, @$); }
 
 	|	'-' expr %prec UMINUS		{ $$ = xxunary($1,$2);	setId( $$, @$); }
 	|	'+' expr %prec UMINUS		{ $$ = xxunary($1,$2);	setId( $$, @$); }
 	|	'!' expr %prec UNOT		{ $$ = xxunary($1,$2);	setId( $$, @$); }
 	|	'~' expr %prec TILDE		{ $$ = xxunary($1,$2);	setId( $$, @$); }
-	|	'?' expr			{ $$ = xxunary($1,$2);	setId( $$, @$); }
+	|	'?' expr_or_assign_or_help	{ $$ = xxunary($1,$2);	setId( $$, @$); }
 
 	|	expr ':'  expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
 	|	expr '+'  expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
@@ -440,9 +442,7 @@ expr	: 	NUM_CONST			{ $$ = $1;	setId( $$, @$); }
 	|	expr '/' expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
 	|	expr '^' expr 			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
 	|	expr SPECIAL expr		{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr '%' expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
 	|	expr '~' expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr '?' expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
 	|	expr LT expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
 	|	expr LE expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
 	|	expr EQ expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
@@ -453,17 +453,16 @@ expr	: 	NUM_CONST			{ $$ = $1;	setId( $$, @$); }
 	|	expr OR expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
 	|	expr AND2 expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
 	|	expr OR2 expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-
 	|	expr LEFT_ASSIGN expr 		{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
 	|	expr RIGHT_ASSIGN expr 		{ $$ = xxbinary($2,$3,$1);	setId( $$, @$); }
-	|	FUNCTION '(' formlist ')' cr expr_or_assign %prec LOW
+	|	FUNCTION '(' formlist ')' cr expr_or_assign_or_help %prec LOW
 						{ $$ = xxdefun($1,$3,$6,&@$); 	setId( $$, @$); }
 	|	expr '(' sublist ')'		{ $$ = xxfuncall($1,$3);  setId( $$, @$); modif_token( &@1, SYMBOL_FUNCTION_CALL ) ; }
-	|	IF ifcond expr_or_assign 	{ $$ = xxif($1,$2,$3);	setId( $$, @$); }
-	|	IF ifcond expr_or_assign ELSE expr_or_assign	{ $$ = xxifelse($1,$2,$3,$5);	setId( $$, @$); }
-	|	FOR forcond expr_or_assign %prec FOR 	{ $$ = xxfor($1,$2,$3);	setId( $$, @$); }
-	|	WHILE cond expr_or_assign	{ $$ = xxwhile($1,$2,$3);	setId( $$, @$); }
-	|	REPEAT expr_or_assign			{ $$ = xxrepeat($1,$2);	setId( $$, @$); }
+	|	IF ifcond expr_or_assign_or_help 	{ $$ = xxif($1,$2,$3);	setId( $$, @$); }
+	|	IF ifcond expr_or_assign_or_help ELSE expr_or_assign_or_help	{ $$ = xxifelse($1,$2,$3,$5);	setId( $$, @$); }
+	|	FOR forcond expr_or_assign_or_help %prec FOR	{ $$ = xxfor($1,$2,$3);	setId( $$, @$); }
+	|	WHILE cond expr_or_assign_or_help   { $$ = xxwhile($1,$2,$3);	setId( $$, @$); }
+	|	REPEAT expr_or_assign_or_help	    { $$ = xxrepeat($1,$2);	setId( $$, @$); }
 	|	expr LBB sublist ']' ']'	{ $$ = xxsubscript($1,$2,$3);	setId( $$, @$); }
 	|	expr '[' sublist ']'		{ $$ = xxsubscript($1,$2,$3);	setId( $$, @$); }
 	|	SYMBOL NS_GET SYMBOL		{ $$ = xxbinary($2,$1,$3);      setId( $$, @$); modif_token( &@1, SYMBOL_PACKAGE ) ; }
@@ -483,21 +482,21 @@ expr	: 	NUM_CONST			{ $$ = $1;	setId( $$, @$); }
 	;
 
 
-cond	:	'(' expr ')'			{ $$ = xxcond($2);   }
+cond	:	'(' expr_or_help ')'			{ $$ = xxcond($2);   }
 	;
 
-ifcond	:	'(' expr ')'			{ $$ = xxifcond($2); }
+ifcond	:	'(' expr_or_help ')'			{ $$ = xxifcond($2); }
 	;
 
-forcond :	'(' SYMBOL IN expr ')' 		{ $$ = xxforcond($2,$4);	setId( $$, @$); }
+forcond :	'(' SYMBOL IN expr_or_help ')' 		{ $$ = xxforcond($2,$4);	setId( $$, @$); }
 	;
 
 
 exprlist:					{ $$ = xxexprlist0();	setId( $$, @$); }
-	|	expr_or_assign			{ $$ = xxexprlist1($1, &@1); }
-	|	exprlist ';' expr_or_assign	{ $$ = xxexprlist2($1, $3, &@3); }
+	|	expr_or_assign_or_help			{ $$ = xxexprlist1($1, &@1); }
+	|	exprlist ';' expr_or_assign_or_help	{ $$ = xxexprlist2($1, $3, &@3); }
 	|	exprlist ';'			{ $$ = $1;		setId( $$, @$); }
-	|	exprlist '\n' expr_or_assign	{ $$ = xxexprlist2($1, $3, &@3); }
+	|	exprlist '\n' expr_or_assign_or_help	{ $$ = xxexprlist2($1, $3, &@3); }
 	|	exprlist '\n'			{ $$ = $1;}
 	;
 
@@ -506,20 +505,20 @@ sublist	:	sub				{ $$ = xxsublist1($1);	  }
 	;
 
 sub	:					{ $$ = xxsub0();	 }
-	|	expr				{ $$ = xxsub1($1, &@1);  }
+	|	expr_or_help			{ $$ = xxsub1($1, &@1);  }
 	|	SYMBOL EQ_ASSIGN 		{ $$ = xxsymsub0($1, &@1); 	modif_token( &@2, EQ_SUB ) ; modif_token( &@1, SYMBOL_SUB ) ; }
-	|	SYMBOL EQ_ASSIGN expr		{ $$ = xxsymsub1($1,$3, &@1); 	modif_token( &@2, EQ_SUB ) ; modif_token( &@1, SYMBOL_SUB ) ; }
+	|	SYMBOL EQ_ASSIGN expr_or_help	{ $$ = xxsymsub1($1,$3, &@1); 	modif_token( &@2, EQ_SUB ) ; modif_token( &@1, SYMBOL_SUB ) ; }
 	|	STR_CONST EQ_ASSIGN 		{ $$ = xxsymsub0($1, &@1); 	modif_token( &@2, EQ_SUB ) ; }
-	|	STR_CONST EQ_ASSIGN expr	{ $$ = xxsymsub1($1,$3, &@1); 	modif_token( &@2, EQ_SUB ) ; }
+	|	STR_CONST EQ_ASSIGN expr_or_help    { $$ = xxsymsub1($1,$3, &@1); 	modif_token( &@2, EQ_SUB ) ; }
 	|	NULL_CONST EQ_ASSIGN 		{ $$ = xxnullsub0(&@1); 	modif_token( &@2, EQ_SUB ) ; }
-	|	NULL_CONST EQ_ASSIGN expr	{ $$ = xxnullsub1($3, &@1); 	modif_token( &@2, EQ_SUB ) ; }
+	|	NULL_CONST EQ_ASSIGN expr_or_help   { $$ = xxnullsub1($3, &@1); 	modif_token( &@2, EQ_SUB ) ; }
 	;
 
 formlist:					{ $$ = xxnullformal(); }
 	|	SYMBOL				{ $$ = xxfirstformal0($1); 	modif_token( &@1, SYMBOL_FORMALS ) ; }
-	|	SYMBOL EQ_ASSIGN expr		{ $$ = xxfirstformal1($1,$3); 	modif_token( &@1, SYMBOL_FORMALS ) ; modif_token( &@2, EQ_FORMALS ) ; }
+	|	SYMBOL EQ_ASSIGN expr_or_help	{ $$ = xxfirstformal1($1,$3); 	modif_token( &@1, SYMBOL_FORMALS ) ; modif_token( &@2, EQ_FORMALS ) ; }
 	|	formlist ',' SYMBOL		{ $$ = xxaddformal0($1,$3, &@3);   modif_token( &@3, SYMBOL_FORMALS ) ; }
-	|	formlist ',' SYMBOL EQ_ASSIGN expr	
+	|	formlist ',' SYMBOL EQ_ASSIGN expr_or_help
 						{ $$ = xxaddformal1($1,$3,$5,&@3); modif_token( &@3, SYMBOL_FORMALS ) ; modif_token( &@4, EQ_FORMALS ) ;}
 	;
 
@@ -610,6 +609,98 @@ static int xxungetc(int c)
     if(npush >= PUSHBACK_BUFSIZE) return EOF;
     pushback[npush++] = c;
     return c;
+}
+
+/* Only used from finish_mbcs_in_parse_context. */
+static int add_mbcs_byte_to_parse_context()
+{
+    int c;
+
+    if (EndOfFile)
+	error(_("invalid multibyte character in parser at line %d"),
+	      ParseState.xxlineno);
+    if(npush)
+	c = pushback[--npush];
+    else
+	c = ptr_getc();
+    if (c == EOF) 
+	error(_("invalid multibyte character in parser at line %d"),
+	      ParseState.xxlineno);
+    
+    R_ParseContextLast = (R_ParseContextLast + 1) % PARSE_CONTEXT_SIZE;
+    R_ParseContext[R_ParseContextLast] = (char) c;
+    return c;
+}
+
+/* On error, the parse context may end inside a multi-byte character. Add
+   the missing bytes to the context to so that it contains full characters. */
+static void finish_mbcs_in_parse_context()
+{
+    int i, c, nbytes = 0, first;
+    Rboolean mbcs = FALSE;
+
+    /* find the first byte of the context */
+    for(i = R_ParseContextLast;
+        R_ParseContext[i];
+        i = (i + PARSE_CONTEXT_SIZE - 1) % PARSE_CONTEXT_SIZE) {
+
+	nbytes++;
+	if (nbytes == PARSE_CONTEXT_SIZE)
+	    break;
+    }
+    if (!nbytes)
+	return;
+    if (!R_ParseContext[i])
+	first = (i + 1) % PARSE_CONTEXT_SIZE;
+    else
+	first = i;
+
+    /* decode multi-byte characters */
+    for(i = 0; i < nbytes; i++) {
+	c = R_ParseContext[(first + i) % PARSE_CONTEXT_SIZE];
+	if ((unsigned int)c < 0x80) continue; /* ASCII */
+
+	if (utf8locale) {
+	    /* UTF-8 could be handled more efficiently, searching from the end
+	       of the string */
+	    i += utf8clen((char) c) - 1;
+	    if (i >= nbytes) {
+		while (i >= nbytes) {
+		    add_mbcs_byte_to_parse_context();
+		    nbytes++;
+		}
+		return;
+	    }
+	} else
+	    mbcs = TRUE;
+    }
+    if (!mbcs)
+	return;
+
+    /* copy the context to a linear buffer */
+    char buf[nbytes + MB_CUR_MAX];
+
+    for(i = 0; i < nbytes; i++)
+	buf[i] = R_ParseContext[(first + i) % PARSE_CONTEXT_SIZE];
+
+    for(i = 0; i < nbytes; i++) {
+	wchar_t wc;
+	int res;
+	mbstate_t mb_st;
+	
+	mbs_init(&mb_st);
+	res = (int) mbrtowc(&wc, buf + i, nbytes - i, &mb_st);
+	while (res == -2 && nbytes < sizeof(buf)) {
+	    /* This is not necessarily correct for stateful MBCS */
+	    buf[nbytes++] = (char) add_mbcs_byte_to_parse_context();
+	    mbs_init(&mb_st);
+	    res = (int) mbrtowc(&wc, buf + i, nbytes - i, &mb_st);
+	}	   
+	if (res == -1)
+	    error(_("invalid multibyte character in parser at line %d"),
+		  ParseState.xxlineno);
+	i += res - 1;
+    }
 }
 
 /*
@@ -1003,6 +1094,16 @@ static SEXP xxfuncall(SEXP expr, SEXP args)
     return ans;
 }
 
+static SEXP mkChar2(const char *name)
+{
+    cetype_t enc = CE_NATIVE;
+
+    if(known_to_be_latin1) enc = CE_LATIN1;
+    else if(known_to_be_utf8) enc = CE_UTF8;
+
+    return mkCharLenCE(name, (int) strlen(name), enc);
+}
+
 static SEXP mkString2(const char *s, size_t len, Rboolean escaped)
 {
     SEXP t;
@@ -1101,11 +1202,13 @@ static SEXP xxexprlist(SEXP a1, YYLTYPE *lloc, SEXP a2)
 	    PrependToSrcRefs(s);
 	    attachSrcrefs(a2);
 	    UNPROTECT(2); /* prevSrcrefs, s */
+#ifndef SWITCH_TO_REFCNT
 	    /* SrcRefs got NAMED by being an attribute, preventively
 	       getAttrib(), but it has not in fact been referenced. Set NAMED
 	       to 0 to avoid overhead in further setAttrib calls due to cycle
 	       detection. */
 	    SET_NAMED(prevSrcrefs, 0);
+#endif
 	    PS_SET_SRCREFS(prevSrcrefs);
 	}
 	PRESERVE_SV(ans = a2);
@@ -1515,7 +1618,7 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
 	    SEXP s_filename = install("filename");
 	    defineVar(s_filename, ScalarString(mkChar("")), PS_ORIGINAL);
 	    SEXP s_lines = install("lines");
-	    defineVar(s_lines, ScalarString(mkChar(buf)), PS_ORIGINAL);
+	    defineVar(s_lines, ScalarString(mkChar2(buf)), PS_ORIGINAL);
     	    PROTECT(class = allocVector(STRSXP, 2));
             SET_STRING_ELT(class, 0, mkChar("srcfilecopy"));
             SET_STRING_ELT(class, 1, mkChar("srcfile"));
@@ -2023,6 +2126,8 @@ static void yyerror(const char *s)
     static char const yyunexpected[] = "syntax error, unexpected ";
     static char const yyexpecting[] = ", expecting ";
     char *expecting;
+    
+    finish_mbcs_in_parse_context();
 
     R_ParseError     = yylloc.first_line;
     R_ParseErrorCol  = yylloc.first_column;
@@ -2708,6 +2813,125 @@ static int StringValue(int c, Rboolean forSymbol)
     }
 }
 
+static int RawStringValue(int c)
+{
+    int quote = c;
+    int delim = ')';
+    char currtext[1010], *ct = currtext;
+    char st0[MAXELTSIZE];
+    unsigned int nstext = MAXELTSIZE;
+    char *stext = st0, *bp = st0;
+    PROTECT_INDEX sti;
+    int wcnt = 0;
+    ucs_t wcs[10001];
+    Rboolean oct_or_hex = FALSE, use_wcs = FALSE, currtext_truncated = FALSE;
+
+    /* count dashes between the opening quote and opening delimiter */
+    int ndash = 0;
+    while (nextchar('-')) ndash++;
+
+    if (! nextchar('(')) {
+	if (nextchar('['))
+	    delim = ']';
+	else if (nextchar('{'))
+	    delim = '}';
+	else if (nextchar('|'))
+	    delim = '|';
+	else		
+	    error(_("malformed raw string literal at line %d"),
+		  ParseState.xxlineno);
+    }
+
+    PROTECT_WITH_INDEX(R_NilValue, &sti);
+    CTEXT_PUSH(c);
+    while ((c = xxgetc()) != R_EOF) {
+	if (c == delim) {
+	    /* count the dashes after the closing delimiter */
+	    int nd = 0;
+	    while (nd < ndash && nextchar('-')) nd++;
+	    
+	    if (nd == ndash && nextchar(quote))
+		/* right number of dashes, right quote: were done! */
+		break;
+	    else {
+		/* not done: emit closing delimiter, dashes, and continue */
+		CTEXT_PUSH(delim);
+		STEXT_PUSH(delim);
+		WTEXT_PUSH(delim);
+		for (int i = 0; i < nd; i++) {
+		    CTEXT_PUSH('-');
+		    STEXT_PUSH('-');
+		    WTEXT_PUSH('-');
+		}
+		continue;
+	    }
+	}
+	CTEXT_PUSH(c);
+	if(mbcslocale) {
+	    int i, clen;
+	    ucs_t wc;
+	    clen = mbcs_get_next2(c, &wc);
+	    WTEXT_PUSH(wc);
+	    ParseState.xxbyteno += clen-1;
+	    
+	    for(i = 0; i < clen - 1; i++){
+		STEXT_PUSH(c);
+		c = xxgetc();
+		if (c == R_EOF) break;
+		CTEXT_PUSH(c);
+	    }
+	    if (c == R_EOF) break;
+	    STEXT_PUSH(c);
+	    continue;
+	}
+	STEXT_PUSH(c);
+	if ((unsigned int) c < 0x80) WTEXT_PUSH(c);
+	else { /* have an 8-bit char in the current encoding */
+#ifdef WC_NOT_UNICODE
+	    ucs_t wc;
+	    char s[2] = " ";
+	    s[0] = (char) c;
+	    mbtoucs(&wc, s, 2);
+#else
+	    wchar_t wc;
+	    char s[2] = " ";
+	    s[0] = (char) c;
+	    mbrtowc(&wc, s, 2, NULL);
+#endif
+	    WTEXT_PUSH(wc);
+	}
+    }
+    STEXT_PUSH('\0');
+    WTEXT_PUSH(0);
+    yytext[0] = '\0';
+    if (c == R_EOF) {
+	PRESERVE_SV(yylval = R_NilValue);
+	UNPROTECT(1); /* release stext */
+    	return INCOMPLETE_STRING;
+    } else {
+    	CTEXT_PUSH(c);
+    	CTEXT_PUSH('\0');
+    }
+    if (!currtext_truncated)
+    	strcpy(yytext, currtext);
+    else if (!use_wcs) {
+        size_t total = strlen(stext);
+        snprintf(yytext, MAXELTSIZE, "[%u chars quoted with '%c']", (unsigned int)total, quote);
+    } else 
+        snprintf(yytext, MAXELTSIZE, "[%d wide chars quoted with '%c']", wcnt, quote);
+    if(use_wcs) {
+	if(oct_or_hex)
+	    error(_("mixing Unicode and octal/hex escapes in a string is not allowed"));
+	if(wcnt < 10000)
+	    PRESERVE_SV(yylval = mkStringUTF8(wcs, wcnt)); /* include terminator */
+	else
+	    error(_("string at line %d containing Unicode escapes not in this locale\nis too long (max 10000 chars)"), ParseState.xxlineno);
+    } else
+	PRESERVE_SV(yylval = mkString2(stext,  bp - stext - 1, oct_or_hex));
+    UNPROTECT(1); /* release stext */
+    return STR_CONST;
+}
+
 static int SpecialValue(int c)
 {
     DECLARE_YYTEXT_BUFP(yyp);
@@ -2905,6 +3129,15 @@ static int token(void)
     if (c == '.') return NumericValue(c);
     /* We don't care about other than ASCII digits */
     if (isdigit(c)) return NumericValue(c);
+
+    /* raw string literal */
+
+    if (c == 'r' || c == 'R') {
+	if (nextchar('"'))
+	    return RawStringValue('"');
+	else if (nextchar('\''))
+	    return RawStringValue('\'');
+    }
 
     /* literal strings */
 
@@ -3373,7 +3606,7 @@ static void record_( int first_parsed, int first_column, int last_parsed, int la
 	_ID( ParseState.data_count )           = id ;          
 	_PARENT(ParseState.data_count)         = 0 ; 
 	if ( text_in )
-	    SET_STRING_ELT(PS_TEXT, ParseState.data_count, mkChar(text_in));
+	    SET_STRING_ELT(PS_TEXT, ParseState.data_count, mkChar2(text_in));
 	else
 	    SET_STRING_ELT(PS_TEXT, ParseState.data_count, mkChar(""));
 	

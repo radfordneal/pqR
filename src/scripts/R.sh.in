@@ -75,7 +75,7 @@ Options:
   --min-vsize=N         Set vector heap minimum to N bytes; '4M' = 4 MegaB
   -q, --quiet           Don't print startup message
   --silent              Same as --quiet
-  --slave               Make R run as quietly as possible
+  -s, --no-echo         Make R run as quietly as possible
   --interactive         Force an interactive session
   --verbose             Print more information about progress
   -d, --debugger=NAME   Run R through debugger NAME
@@ -212,23 +212,31 @@ while test -n "${1}"; do
       args="${args} --file=$a"
       ;;
     --no-environ)
-      export R_ENVIRON=''
-      export R_ENVIRON_USER=''
+      R_ENVIRON=''
+      export R_ENVIRON
+      R_ENVIRON_USER=''
+      export R_ENVIRON_USER
       args="${args} ${1}"
       ;;
     --no-site-file)
-      export R_PROFILE=''
+      R_PROFILE=''
+      export R_PROFILE
       args="${args} ${1}"
       ;;
     --no-init-file)
-      export R_PROFILE_USER=''
+      R_PROFILE_USER=''
+      export R_PROFILE_USER
       args="${args} ${1}"
       ;;
     --vanilla)
-      export R_ENVIRON=''
-      export R_ENVIRON_USER=''
-      export R_PROFILE=''
-      export R_PROFILE_USER=''
+      R_ENVIRON=''
+      export R_ENVIRON
+      R_ENVIRON_USER=''
+      export R_ENVIRON_USER
+      R_PROFILE=''
+      export R_PROFILE
+      R_PROFILE_USER=''
+      export R_PROFILE_USER
       args="${args} ${1}"
       ;;
     *)

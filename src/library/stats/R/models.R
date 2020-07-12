@@ -29,9 +29,9 @@ formula.default <- function (x = NULL, env = parent.frame(), ...)
     else {
         form <- switch(mode(x),
                        NULL = structure(list(), class = "formula"),
-                       character = formula(
-                           eval(parse(text = x, keep.source = FALSE)[[1L]])),
-                       call = eval(x), stop("invalid formula"))
+                       character = eval(str2expression(x)), # ever used?  formula.character!
+                       call = eval(x),
+                       stop("invalid formula"))
         environment(form) <- env
         form
     }
@@ -45,17 +45,14 @@ formula.terms <- function(x, ...) {
 }
 
 DF2formula <- function(x, env = parent.frame()) {
-    nm <- unlist(lapply(names(x), as.name))
-    if (length(nm) > 1L) {
-        rhs <- nm[-1L]
-        lhs <- nm[1L]
-    } else if (length(nm) == 1L) {
-        rhs <- nm[1L]
-        lhs <- NULL
-    } else stop("cannot create a formula from a zero-column data frame")
-    ff <- parse(text = paste(lhs, paste(rhs, collapse = "+"), sep = "~"),
-                keep.source = FALSE)
-    ff <- eval(ff)
+    nm <- lapply(names(x), as.name)
+    mkRHS <- function(nms) Reduce(function(x, y) call("+", x, y), nms)
+    ff <- if (length(nm) > 1L)
+              call("~", nm[[1L]], mkRHS(nm[-1L]))
+          else if (length(nm) == 1L)
+              call("~", nm[[1L]])
+          else stop("cannot create a formula from a zero-column data frame")
+    class(ff) <- "formula" # was ff <- eval(ff)
     environment(ff) <- env
     ff
 }
@@ -67,9 +64,50 @@ formula.data.frame <- function (x, ...)
     else DF2formula(x, parent.frame())
 }
 
+## Future version {w/o .Deprecated etc}:
 formula.character <- function(x, env = parent.frame(), ...)
 {
-    ff <- formula(eval(parse(text=x, keep.source = FALSE)[[1L]]))
+    ff <- str2lang(x)
+    if(!(is.call(ff) && is.symbol(c. <- ff[[1L]]) && c. == quote(`~`)))
+        stop(gettextf("invalid formula: %s", deparse2(x)), domain=NA)
+    class(ff) <- "formula"
+    environment(ff) <- env
+    ff
+}
+
+## Active version helping to move towards future version:
+formula.character <- function(x, env = parent.frame(), ...)
+{
+    ff <- if(length(x) > 1L) {
+              .Deprecated(msg=
+ "Using formula(x) is deprecated when x is a character vector of length > 1.
+  Consider formula(paste(x, collapse = \" \")) instead.")
+              str2expression(x)[[1L]]
+          } else {
+              str2lang(x)
+          }
+    if(!is.call(ff))
+        stop(gettextf("invalid formula %s: not a call", deparse2(x)), domain=NA)
+    ## else
+    if(is.symbol(c. <- ff[[1L]]) && c. == quote(`~`)) {
+        ## perfect
+    } else {
+        if(is.symbol(c.)) { ## back compatibility
+            ff <- if(c. == quote(`=`)) {
+                      .Deprecated(msg = gettextf(
+				"invalid formula %s: assignment is deprecated",
+				deparse2(x)))
+                      ff[[3L]] # RHS of "v = <form>" (pkgs 'GeNetIt', 'KMgene')
+                  } else if(c. == quote(`(`) || c. == quote(`{`)) {
+                      .Deprecated(msg = gettextf(
+			"invalid formula %s: extraneous call to `%s` is deprecated",
+			deparse2(x), as.character(c.)))
+                      eval(ff)
+                  }
+        } else
+            stop(gettextf("invalid formula %s", deparse2(x)), domain=NA)
+    }
+    class(ff) <- "formula"
     environment(ff) <- env
     ff
 }
@@ -151,12 +189,11 @@ delete.response <- function (termobj)
 reformulate <- function (termlabels, response=NULL, intercept = TRUE, env = parent.frame())
 {
     ## an extension of formula.character()
-    str2code <- function(s) parse(text = s, keep.source = FALSE)[[1L]]
     if(!is.character(termlabels) || !length(termlabels))
         stop("'termlabels' must be a character vector of length at least one")
     termtext <- paste(termlabels, collapse = "+")
     if(!intercept) termtext <- paste(termtext, "- 1")
-    terms <- str2code(termtext)
+    terms <- str2lang(termtext)
     fexpr <-
 	if(is.null(response))
 	    call("~", terms)
@@ -164,7 +201,7 @@ reformulate <- function (termlabels, response=NULL, intercept = TRUE, env = pare
 	    call("~",
 		 ## response can be a symbol or call as  Surv(ftime, case)
 		 if(is.character(response))
-                     tryCatch(str2code(response),
+                     tryCatch(str2lang(response),
                               error = function(e) {
                                   sc <- sys.calls()
                                   sc1 <- lapply(sc, `[[`, 1L)

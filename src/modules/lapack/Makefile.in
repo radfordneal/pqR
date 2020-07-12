@@ -14,6 +14,7 @@ include $(top_builddir)/Makeconf
 SOURCES_C = Lapack.c @USE_VECLIB_G95FIX_TRUE@ vecLibg95c.c
 SOURCES_F = @USE_VECLIB_G95FIX_TRUE@ vecLibg95f.f
 
+## BUILD_LTO_CHECK_TRUE relies on using the internal LAPACK
 DEPENDS = $(SOURCES_C:.c=.d)
 SOURCES = $(SOURCES_C) $(SOURCES_F)
 OBJECTS = $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o)
@@ -35,12 +36,13 @@ DISTFILES = \
 	dble.txt cmplx.txt
 
 lapack_la = lapack$(SHLIB_EXT)
-Rlapack_la = libRlapack$(R_DYLIB_EXT)
 lapack_la_OBJECTS = $(OBJECTS)
 ## Formerly uxsed for passing '+s' to SHLIB_LINK on HP-UX.
 lapack_la_LDFLAGS = @LAPACK_LDFLAGS@
 lapack_la_LIBADD = $(LIBR1) @DYLIB_UNDEFINED_ALLOWED_FALSE@ $(LIBINTL)
 
+@BUILD_LTO_CHECK_FALSE@Rlapack_la = libRlapack$(R_DYLIB_EXT)
+@BUILD_LTO_CHECK_TRUE@Rlapack_la = libRlapack.a
 Rlapack_la_OBJECTS = $(LIBOBJECTS)
 ## This used to skip FLIBS, but that relied on all the functions
 ## needed being loaded into R.bin/libR.so, and that need not be the
@@ -66,7 +68,8 @@ Makedeps: Makefile $(DEPENDS)
 ## treated separately: e.g. we need to force stores with 
 ## gcc >= 3.4.0 at least on i686
 ## (SHLIB_FFLAGS is apparently currently unused)
-DLAMC_FFLAGS=$(FPICFLAGS) $(SHLIB_FFLAGS) @SAFE_FFLAGS@
+LTO = @LTO@
+DLAMC_FFLAGS=$(FPICFLAGS) $(SHLIB_FFLAGS) @SAFE_FFLAGS@ $(LTO)
 dlamch.o: dlamch.f
 	$(FC) $(DLAMC_FFLAGS) -c $< -o $@
 
@@ -84,7 +87,8 @@ $(lapack_la): $(lapack_la_OBJECTS)
 ## Include BLAS here, as with (static) ATLAS that pulls all the
 ## BLAS routines into one place.
 $(Rlapack_la): $(LIBOBJECTS)
-	$(DYLIB_LINK) -o $@ $(LIBOBJECTS) @RLAPACK_LDFLAGS@ @BLAS_LIBS@ $(Rlapack_la_LIBADD)
+	@BUILD_LTO_CHECK_FALSE@$(DYLIB_LINK) -o $@ $(LIBOBJECTS) @RLAPACK_LDFLAGS@ @BLAS_LIBS@ $(Rlapack_la_LIBADD)
+	@BUILD_LTO_CHECK_TRUE@$(AR) -cr $@ $(LIBOBJECTS)
 
 Rlapack_install: $(Rlapack_la) 
 	@$(MKINSTALLDIRS) "$(DESTDIR)$(Rexeclibdir)"

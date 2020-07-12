@@ -4,7 +4,7 @@
 pdf("reg-tests-2.pdf", encoding = "ISOLatin1.enc")
 
 ## force standard handling for data frames
-options(stringsAsFactors=TRUE)
+options(stringsAsFactors=FALSE) # R >= 4.0.0
 options(useFancyQuotes=FALSE)
 
 ### moved from various .Rd files
@@ -62,7 +62,8 @@ summary(bI <- besselI(x = x <- 10:700, 1))
 ## data.frame
 set.seed(123)
 L3 <- LETTERS[1:3]
-d <- data.frame(cbind(x=1, y=1:10), fac = sample(L3, 10, replace=TRUE))
+d <- data.frame(cbind(x=1, y=1:10), fac = sample(L3, 10, replace=TRUE),
+                stringsAsFactors=TRUE)
 str(d)
 (d0  <- d[, FALSE]) # NULL dataframe with 10 rows
 (d.0 <- d[FALSE, ]) # <0 rows> dataframe  (3 cols)
@@ -174,7 +175,7 @@ kronecker(fred, bill, make=TRUE)
 authors <- data.frame(
     surname = c("Tukey", "Venables", "Tierney", "Ripley", "McNeil"),
     nationality = c("US", "Australia", "US", "UK", "Australia"),
-    deceased = c("yes", rep("no", 4)))
+    deceased = c("yes", rep("no", 4)), stringsAsFactors=TRUE)
 books <- data.frame(
     name = c("Tukey", "Venables", "Tierney",
              "Ripley", "Ripley", "McNeil", "R Core"),
@@ -185,7 +186,8 @@ books <- data.frame(
               "Interactive Data Analysis",
               "An Introduction to R"),
     other.author = c(NA, "Ripley", NA, NA, NA, NA,
-                     "Venables & Smith"))
+		     "Venables & Smith"),
+	   stringsAsFactors=TRUE)
 b2 <- books; names(b2)[1] <- names(authors)[1]
 
 merge(authors, b2, all.x = TRUE)
@@ -223,7 +225,8 @@ tabulate(numeric(0))
 ## end of moved from tabulate.Rd
 
 ## ts
-# Ensure working arithmetic for `ts' objects :
+# Ensure working arithmetic for 'ts' objects :
+z <- ts(matrix(1:900, 100, 3), start = c(1961, 1), frequency = 12)
 stopifnot(z == z)
 stopifnot(z-z == 0)
 
@@ -913,7 +916,7 @@ aa[["row.names"]] <- A
 aa
 ## wrong printed names in 1.7.1
 
-## assigning to NULL
+## assigning to NULL --- now consistently behaves as if assigning to list() !
 a <- NULL
 a[["a"]] <- 1
 a
@@ -970,7 +973,9 @@ dat[3, 1] <- dat[4, 2] <- NA
 lm.influence(lm(y ~ x1 + x2, data=dat, weights=wt, na.action=na.omit))
 lm.influence(lm(y ~ x1 + x2, data=dat, weights=wt, na.action=na.exclude))
 lm.influence(lm(y ~ 0, data=dat, weights=wt, na.action=na.omit))
+print(width = 99,
 lm.influence(lm(y ~ 0, data=dat, weights=wt, na.action=na.exclude))
+) ; stopifnot(getOption("width") == 80)
 lm.influence(lm(y ~ 0 + x3, data=dat, weights=wt, na.action=na.omit))
 lm.influence(lm(y ~ 0 + x3, data=dat, weights=wt, na.action=na.exclude))
 lm.influence(lm(y ~ 0, data=dat, na.action=na.exclude))
@@ -1319,11 +1324,13 @@ Mat <- matrix(c(1:3, letters[1:3], 1:3, LETTERS[1:3],
               3, 6)
 foo <- tempfile()
 write.table(Mat, foo, col.names = FALSE, row.names = FALSE)
-read.table(foo, colClasses = c(NA, NA, "NULL", "character", "Date", "POSIXct"))
+read.table(foo, colClasses = c(NA, NA, "NULL", "character", "Date", "POSIXct"),
+           stringsAsFactors=TRUE)
 unlist(sapply(.Last.value, class))
-read.table(foo, colClasses = c("factor",NA,"NULL","factor","Date","POSIXct"))
+read.table(foo, colClasses = c("factor",NA,"NULL","factor","Date","POSIXct"),
+           stringsAsFactors=TRUE)
 unlist(sapply(.Last.value, class))
-read.table(foo, colClasses = c(V4="character"))
+read.table(foo, colClasses = c(V4="character"), stringsAsFactors=TRUE)
 unlist(sapply(.Last.value, class))
 unlink(foo)
 ## added in 2.0.0
@@ -1605,10 +1612,10 @@ m21[which(m21 == 0, arr.ind = TRUE)]
 ## tests of indexing as quoted in Extract.Rd
 x <- NULL
 x$foo <- 2
-x # length-1 vector
+x # now, a list
 x <- NULL
 x[[2]] <- pi
-x # numeric vector
+x # now, a list, too
 x <- NULL
 x[[1]] <- 1:3
 x # list
@@ -1740,7 +1747,7 @@ f <- function(...) browser()
 do.call(f, mtcars)
 c
 
-options(error = expression(NULL))
+op <- c(op, options(error = expression(NULL)))
 f <- function(...) stop()
 do.call(f, mtcars)
 traceback()
@@ -1880,10 +1887,11 @@ d.AD <- data.frame(treatment = gl(3,3), outcome = gl(3,1,9),
                    counts = c(18,17,15,20,10,20,25,13,12))
 fit <- glm(counts ~ outcome + treatment, family = poisson,
            data = d.AD, weights = c(0, rep(1,8)))
-residuals(fit, type="working") # first was NA < 2.4.0
+print(residuals(fit, type="working"),
+      width = 37) # first was NA < 2.4.0 //  using new 'width'
 ## working residuals were NA for zero-weight cases.
 fit2 <- glm(counts ~ outcome + treatment, family = poisson,
-           data = d.AD, weights = c(0, rep(1,8)), y = FALSE)
+            data = d.AD, weights = c(0, rep(1,8)), y = FALSE)
 for(z in c("response", "working", "deviance", "pearson"))
     stopifnot(all.equal(residuals(fit, type=z), residuals(fit2, type=z),
                         scale = 1, tolerance = 1e-10))
@@ -2614,8 +2622,9 @@ is.unsorted(data.frame(x=3:4, y=1:2))
 
 library("methods")# (not needed here)
 assertError <- tools::assertError
-assertError( getMethod(ls, "bar", fdef=ls), verbose=TRUE)
-assertError( getMethod(show, "bar"), verbose=TRUE)
+assertErrorV <- function(expr) assertError(expr, verbose=TRUE)
+assertErrorV( getMethod(ls, "bar", fdef=ls) )
+assertErrorV( getMethod(show, "bar") )
 ## R < 2.15.1 gave
 ##   cannot coerce type 'closure' to vector of type 'character'
 
@@ -2693,7 +2702,8 @@ substitute(f(x), list(f = quote(g(y))))
 
 
 ## PR#15247 : str() on invalid data frame names (where print() works):
-d <- data.frame(1:3, "B", 4); names(d) <- c("A", "B\xba","C\xabcd")
+d <- data.frame(1:3, "B", 4, stringsAsFactors=TRUE)
+names(d) <- c("A", "B\xba","C\xabcd")
 str(d)
 ## gave an error in R <= 3.0.0
 
@@ -2799,12 +2809,12 @@ str(max(NA_character_, "bla"))
 
 ## When two entries needed to be cut to width, str() mixed up
 ## the values (reported by Gerrit Eichner)
-oldopts <- options(width=70, stringsAsFactors=TRUE)
+oldopts <- options(width=70)
 n <- 11      # number of rows of data frame
 M <- 10000   # order of magnitude of numerical values
 longer.char.string <- "zjtvorkmoydsepnxkabmeondrjaanutjmfxlgzmrbjp"
 X <- data.frame( A = 1:n * M,
-                 B = rep( longer.char.string, n))
+                 B = factor(rep(longer.char.string, n)))
 str( X, strict.width = "cut")
 options(oldopts)
 ## The first row of the str() result was duplicated.
@@ -3066,11 +3076,11 @@ sprintf("%d", c(1,NA))
 sprintf("%d", c(NA,1))
 ##
 ## these should fail
-sprintf("%d", 1.1)
-sprintf("%d", c(1.1,1))
-sprintf("%d", c(1,1.1))
-sprintf("%d", NaN)
-sprintf("%d", c(1,NaN))
+assertErrorV( sprintf("%d", 1.1) )
+assertErrorV( sprintf("%d", c(1.1,1)) )
+assertErrorV( sprintf("%d", c(1,1.1)) )
+assertErrorV( sprintf("%d", NaN) )
+assertErrorV( sprintf("%d", c(1,NaN)) )
 
 
 ## formatting of named raws:
@@ -3113,8 +3123,8 @@ stopifnot(exprs = {
 stopifnot(exprs = 2 == 2)
 try(stopifnot(exprs = 1 > 2))
 ## passing an expression object:
-stopifnot(exprs = expression(2 == 2, pi < 4))
-tryCatch(stopifnot(exprs = expression(
+stopifnot(exprObject = expression(2 == 2, pi < 4))
+tryCatch(stopifnot(exprObject = expression(
                        2 == 2,
                        { cat("\n Kilroy again .."); TRUE },
                        pi < 4,
@@ -3128,3 +3138,21 @@ cat("Error: ", M3, "\n")
 ## print.htest() with small 'digits'
 print(t.test(1:28), digits = 3)
 ## showed 'df = 30' from signif(*, digits=1) and too many digits for CI, in R <= 3.5.1
+
+
+## str(<d.frame w/ attrib>):
+treeA <- trees
+attr(treeA, "someA") <- 1:77
+str(treeA)
+## now shows the *length* of "someA"
+
+
+## summaryRprof() bug PR#15886 :
+Rprof(tf <- tempfile("Rprof.out"), memory.profiling=TRUE, line.profiling=FALSE)
+out <- lapply(1:10000, rnorm, n= 512)
+Rprof(NULL)
+if(interactive())
+    print(length(readLines(tf))) # ca. 10 .. 20 lines
+op <- options(warn = 2) # no warnings, even !
+for (cs in 1:21) s <- summaryRprof(tf, memory="tseries", chunksize=cs)
+options(op) ## "always" triggered an error (or a warning) in R <= 3.6.3

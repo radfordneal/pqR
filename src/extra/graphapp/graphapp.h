@@ -6,7 +6,7 @@
  *  This header file is designed to be platform-independent.
  *
  *  Copyright 2006-8	The R Foundation
- *  Copyrigth 2013	The R Core Team
+ *  Copyright 2013-19	The R Core Team
  *
  */
 
@@ -41,8 +41,6 @@ extern "C" {
  */
 
 typedef unsigned char GAbyte;
-
-#define byte GAbyte
 
 #ifndef objptr
   typedef struct { int kind; } gui_obj;
@@ -114,7 +112,7 @@ struct imagedata {
     int     height;
     int     cmapsize;
     rgb *   cmap;
-    byte *  pixels;
+    GAbyte *  pixels;
 };
 
 /*
@@ -916,10 +914,10 @@ int	getkeystate(void);
 bitmap	newbitmap(int width, int height, int depth);
 bitmap	loadbitmap(const char *name);
 bitmap	imagetobitmap(image img);
-bitmap	createbitmap(int width, int height, int depth, byte *data);
-void	setbitmapdata(bitmap b, byte data[]);
-void	getbitmapdata(bitmap b, byte data[]);
-void	getbitmapdata2(bitmap b, byte **data);
+bitmap	createbitmap(int width, int height, int depth, GAbyte *data);
+void	setbitmapdata(bitmap b, GAbyte data[]);
+void	getbitmapdata(bitmap b, GAbyte data[]);
+void	getbitmapdata2(bitmap b, GAbyte **data);
 
 /*
  *  Images.
@@ -933,8 +931,8 @@ int     imagedepth(image img);
 int     imagewidth(image img);
 int     imageheight(image img);
 
-void	setpixels(image img, byte pixels[]);
-byte *	getpixels(image img);
+void	setpixels(image img, GAbyte pixels[]);
+GAbyte *	getpixels(image img);
 
 void	setpalette(image img, int length, rgb cmap[]);
 rgb *	getpalette(image img);
@@ -1095,12 +1093,12 @@ window	parentwindow(control c);
  *  Control states.
  */
 
-#define Visible		0x0001L
-#define Enabled	0x0002L
-#define Checked	0x0004L
-#define Highlighted	0x0008L
-#define Armed           0x0010L
-#define Focus           0x0020L
+#define GA_Visible	0x0001L
+#define GA_Enabled	0x0002L
+#define GA_Checked	0x0004L
+#define GA_Highlighted	0x0008L
+#define GA_Armed	0x0010L
+#define GA_Focus	0x0020L
 
 /*
  *  Create buttons, scrollbars, controls etc on the current window.
@@ -1199,7 +1197,7 @@ long	currenttime(void);
  */
 
 cursor	newcursor(point hotspot, image img);
-cursor	createcursor(point offset, byte *white_mask, byte *black_shape);
+cursor	createcursor(point offset, GAbyte *white_mask, GAbyte *black_shape);
 cursor	loadcursor(const char *name);
 void	setcursor(cursor c);
 

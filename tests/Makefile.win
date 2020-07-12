@@ -30,7 +30,7 @@ ECHO_C =
 ECHO_N = -n
 ECHO_T = 
 MK = $(MAKE) -f Makefile.win
-TAR = tar
+TAR ?= tar
 
 ## override Makefile.common
 test-src-reg-1e = reg-win.R
@@ -83,7 +83,7 @@ distclean: clean
 	-@rm -f *.fail
 
 install-tests:
-	@for f in $(INSTFILES); do \
+	@for f in Makefile.common $(INSTFILES) eval-fns.R; do \
 	  cp $(srcdir)/$${f} "$(INST_TO)"; \
 	done
 	@$(MAKE) -C Examples -f Makefile.win install-tests INST_TO="$(INST_TO)"

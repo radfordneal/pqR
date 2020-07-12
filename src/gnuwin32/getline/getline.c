@@ -17,6 +17,8 @@
  *   Edin Hodzic, Eric J Bivona, Kai Uwe Rommel, Danny Quah, Ulrich Betzler
  */
 
+ /* Copyright (C) 2018-2020 The R Core Team */
+
 #include       "getline.h"
 
 static int      gl_tab();  /* forward reference needed for gl_tab_hook */
@@ -162,7 +164,11 @@ gl_getc(void)
 	  nAlt = 0;
 	  bbb  = 0;
 	} 
-	else if (st & ENHANCED_KEY) { 
+	else if (st & ENHANCED_KEY) {
+	  /* FIXME: remove this eventually as these keys are already
+	     accepted below without ENHANCED_KEY flag, but check it
+	     does not change any expected behavior wrt to other enhanced keys
+	  */
 	  switch(vk) {
 	  case VK_LEFT: c=2 ;break;
 	  case VK_RIGHT: c=6;break;
@@ -172,19 +178,24 @@ gl_getc(void)
 	  case VK_DOWN: c=14;break;		
 	  case VK_DELETE:  c='\004';break;
 	  }
-	} 
+	}
 	else if (AltIsDown) { /* Interpret Alt+xxx entries */
+	    /* Alt+xxx entries may be given directly by user or may
+	       result from pasting a character that does not map to
+	       a key on the current keyboard (in that case the numbers
+	       are with numlock on at least on Windows 10), which has
+	       been observed with tilde on Italian keyboard (PR17679). */
 	  switch (vk) {
-	  case VK_INSERT: n = 0; break;
-	  case VK_END: n = 1; break;
-	  case VK_DOWN: n = 2; break;
-	  case VK_NEXT: n = 3;break;
-	  case VK_LEFT: n = 4; break;
-	  case VK_CLEAR:  n = 5; break;
-	  case VK_RIGHT: n = 6; break;
-	  case VK_HOME: n = 7; break;
-	  case VK_UP: n = 8; break;
-	  case VK_PRIOR: n = 9; break;	 
+	  case VK_NUMPAD0: case VK_INSERT: n = 0; break;
+	  case VK_NUMPAD1: case VK_END: n = 1; break;
+	  case VK_NUMPAD2: case VK_DOWN: n = 2; break;
+	  case VK_NUMPAD3: case VK_NEXT: n = 3;break;
+	  case VK_NUMPAD4: case VK_LEFT: n = 4; break;
+	  case VK_NUMPAD5: case VK_CLEAR:  n = 5; break;
+	  case VK_NUMPAD6: case VK_RIGHT: n = 6; break;
+	  case VK_NUMPAD7: case VK_HOME: n = 7; break;
+	  case VK_NUMPAD8: case VK_UP: n = 8; break;
+	  case VK_NUMPAD9: case VK_PRIOR: n = 9; break;	 
 	  default: n = -1;
 	  }
 	  if (n >= 0) bbb = 10 * bbb + n;
@@ -194,7 +205,22 @@ gl_getc(void)
 	    bbb = 0;
 	    nAlt = 0;
 	  } 
-	} 
+	}
+	/* with conPTY on Windows 10, the ENHANCED_KEY state is not set */
+	else if (vk == VK_LEFT)
+	    c = 2;
+	else if (vk == VK_RIGHT)
+	    c = 6;
+	else if (vk == VK_HOME)
+	    c = '\001';
+	else if (vk == VK_END)
+	    c = '\005';
+	else if (vk == VK_UP)
+	    c = 16;
+	else if (vk == VK_DOWN)
+	    c = 14;
+	else if (vk == VK_DELETE)
+	    c = '\004';
 	else {
 	  /* Originally uChar.AsciiChar was used here and for MBCS characters
 	     GetConsoleInput returned as many events as bytes in the character.
@@ -1043,7 +1069,7 @@ hist_save(const char *p)
 
     if (nl) {
         if ((s = (char *) malloc(len)) != 0) {
-            strncpy(s, p, len-1);
+            memcpy(s, p, len-1);
 	    s[len-1] = 0;
 	}
     } else {

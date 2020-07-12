@@ -83,7 +83,7 @@ axis.POSIXct <- function(side, x, at, format, labels = TRUE, ...)
     axis(side, at = z, labels = labels, ...)
 }
 
-hist.POSIXt <- function(x, breaks, ..., xlab = deparse(substitute(x)),
+hist.POSIXt <- function(x, breaks, ..., xlab = deparse1(substitute(x)),
                         plot = TRUE, freq = FALSE,
                         start.on.monday = TRUE, format, right = TRUE)
 {
@@ -218,7 +218,7 @@ axis.Date <- function(side, x, at, format, labels = TRUE, ...)
     if (d < 7) # days of a week
         if(missing(format)) format <- "%a"
     if(d < 100) { # month and day
-        z <- structure(pretty(z), class="Date")
+        z <- .Date(pretty(z))
         if(missing(format)) format <- "%b %d"
     } else if(d < 1.1*365) { # months
         zz <- as.POSIXlt(z)
@@ -249,7 +249,7 @@ axis.Date <- function(side, x, at, format, labels = TRUE, ...)
 }
 
 
-hist.Date <- function(x, breaks, ..., xlab = deparse(substitute(x)),
+hist.Date <- function(x, breaks, ..., xlab = deparse1(substitute(x)),
                       plot = TRUE, freq = FALSE,
                       start.on.monday = TRUE, format, right = TRUE)
 {

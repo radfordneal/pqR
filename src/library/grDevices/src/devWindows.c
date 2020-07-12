@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2004-2018   The R Core Team
+ *  Copyright (C) 2004-2020   The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1998--2003  Guido Masarotto and Brian Ripley
  *  Copyright (C) 2004        The R Foundation
@@ -2786,7 +2786,7 @@ static void doRaster(unsigned int *raster, int x, int y, int w, int h,
     gadesc *xd = (gadesc *) dd->deviceSpecific;
     rect  dr = rect(x, y, w, h);
     image img;
-    byte *imageData;
+    GAbyte *imageData;
 
     TRACEDEVGA("raster");
 
@@ -2800,9 +2800,9 @@ static void doRaster(unsigned int *raster, int x, int y, int w, int h,
        We could re-order the lines here (top to bottom) to avoid a copy
        in imagetobitmap.
      */
-    imageData = (byte *) R_alloc(4*w*h, sizeof(byte));
+    imageData = (GAbyte *) R_alloc(4*w*h, sizeof(GAbyte));
     for (int i = 0; i < w*h; i++) {
-        byte alpha = R_ALPHA(raster[i]);
+        GAbyte alpha = R_ALPHA(raster[i]);
 	double fac = alpha/255.0;
 	imageData[i*4 + 3] = alpha;
 	imageData[i*4 + 2] = 0.49 + fac * R_RED(raster[i]);
@@ -2975,7 +2975,7 @@ static SEXP GA_Cap(pDevDesc dd)
     gadesc *xd = (gadesc *) dd->deviceSpecific;
     SEXP dim, raster = R_NilValue;
     image img = NULL;
-    byte *screenData;
+    GAbyte *screenData;
 
     /* These in-place conversions are ok */
     TRACEDEVGA("cap");
@@ -3432,7 +3432,7 @@ SEXP savePlot(SEXP args)
     if (!isString(filename) || LENGTH(filename) != 1)
 	error(_("invalid filename argument in 'savePlot'"));
     /* in 2.8.0 this will always be passed as native, but be conserative */
-    fn = translateChar(STRING_ELT(filename, 0));
+    fn = translateCharFP(STRING_ELT(filename, 0));
     type = CADDR(args);
     if (!isString(type) || LENGTH(type) != 1)
 	error(_("invalid type argument in 'savePlot'"));
@@ -3641,7 +3641,7 @@ SEXP devga(SEXP args)
 
     vmax = vmaxget();
     args = CDR(args); /* skip entry point name */
-    display = translateChar(STRING_ELT(CAR(args), 0));
+    display = translateCharFP(STRING_ELT(CAR(args), 0));
     args = CDR(args);
     width = asReal(CAR(args));
     args = CDR(args);
@@ -3721,10 +3721,12 @@ SEXP devga(SEXP args)
 	char type[100], *file = NULL, fn[MAX_PATH];
 	strcpy(type, "windows");
 	if (display[0]) {
-	    strncpy(type, display, 100);
+	    strncpy(type, display, 100 - 1);
+	    type[100 - 1] = '\0';
 	    char *p = strchr(display, ':');
 	    if (p) {
-		strncpy(fn, p+1, MAX_PATH);
+		strncpy(fn, p+1, MAX_PATH - 1);
+		fn[MAX_PATH - 1] = '\0';
 		file = fn;
 	    }
 	    // Package tkrplot assumes the exact form here,
@@ -3837,6 +3839,10 @@ static HINSTANCE hRcairoDll;
 
 typedef SEXP (*R_cairoVersion_t)(void);
 static R_cairoVersion_t R_cairoVersion = NULL;
+typedef SEXP (*R_pangoVersion_t)(void);
+static R_pangoVersion_t R_pangoVersion = NULL;
+typedef SEXP (*R_cairoFT_t)(void);
+static R_cairoFT_t R_cairoFT = NULL;
 
 static int Load_Rcairo_Dll()
 {
@@ -3852,6 +3858,10 @@ static int Load_Rcairo_Dll()
 	     != NULL)) {
 	    R_cairoVersion = (R_cairoVersion_t)
 		GetProcAddress(hRcairoDll, "in_CairoVersion");
+	    R_pangoVersion = (R_pangoVersion_t)
+		GetProcAddress(hRcairoDll, "in_PangoVersion");
+	    R_cairoFT = (R_cairoFT_t)
+		GetProcAddress(hRcairoDll, "in_CairoFT");
 	    RcairoAlreadyLoaded = 1;
 	} else {
 	    if (hRcairoDll != NULL) FreeLibrary(hRcairoDll);
@@ -3879,6 +3889,18 @@ SEXP cairoVersion(void)
 {
     if (!Load_Rcairo_Dll() || R_cairoVersion == NULL) return mkString("");
     else return (R_cairoVersion)();
+}
+
+SEXP pangoVersion(void)
+{
+    if (!Load_Rcairo_Dll() || R_cairoVersion == NULL) return mkString("");
+    else return (R_pangoVersion)();
+}
+
+SEXP cairoFT(void)
+{
+    if (!Load_Rcairo_Dll() || R_cairoVersion == NULL) return mkString("");
+    else return (R_cairoFT)();
 }
 
 SEXP bmVersion(void)

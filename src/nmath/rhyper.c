@@ -102,14 +102,14 @@ double rhyper(double nn1in, double nn2in, double kkin)
     /* check parameter validity */
 
     if(!R_FINITE(nn1in) || !R_FINITE(nn2in) || !R_FINITE(kkin))
-	ML_ERR_return_NAN;
+	ML_WARN_return_NAN;
 
     nn1in = R_forceint(nn1in);
     nn2in = R_forceint(nn2in);
     kkin  = R_forceint(kkin);
 
     if (nn1in < 0 || nn2in < 0 || kkin < 0 || kkin > nn1in + nn2in)
-	ML_ERR_return_NAN;
+	ML_WARN_return_NAN;
     if (nn1in >= INT_MAX || nn2in >= INT_MAX || kkin >= INT_MAX) {
 	/* large n -- evade integer overflow (and inappropriate algorithms)
 	   -------- */
@@ -147,7 +147,7 @@ double rhyper(double nn1in, double nn2in, double kkin)
     }
     if (setup2) { // k
 	ks = kk; // save
-	if (kk + kk >= N) {
+	if ((double)kk + kk >= N) { // this could overflow
 	    k = (int)(N - kk);
 	} else {
 	    k = kk;
@@ -248,7 +248,7 @@ double rhyper(double nn1in, double nn2in, double kkin)
 	if(n_uv >= 10000) {
 	    REprintf("rhyper(*, n1=%d, n2=%d, k=%d): branch III: giving up after %d rejections\n",
 		     nn1, nn2, kk, n_uv);
-	    ML_ERR_return_NAN;
+	    ML_WARN_return_NAN;
         }
 #ifdef DEBUG_rhyper
 	REprintf(" ... L30 [%d]: new (u=%g, v ~ U[0,1]=%g): ", n_uv, u,v);
@@ -373,7 +373,7 @@ L_finis:  /* return appropriate variate */
 #ifdef DEBUG_rhyper
     REprintf(" L_finis: ix = %d, then", ix);
 #endif
-    if (kk + kk >= N) {
+    if ((double)kk + kk >= N) {
 	if (nn1 > nn2) {
 	    ix = kk - nn2 + ix;
 	} else {

@@ -36,12 +36,14 @@ tiff(filename = "Rplot\%03d.tiff",
      type = c("cairo", "Xlib", "quartz"), antialias)
 }
 \arguments{
-  \item{filename}{the name of the output file.
+  \item{filename}{the output file path.
     The page number is substituted if a C integer format is included in
     the character string, as in the default.  (The result must be less
     than \code{PATH_MAX} characters long, and may be truncated if not.
     See \code{\link{postscript}} for further details.)  Tilde expansion
-    is performed where supported by the platform.}
+    is performed where supported by the platform.  An input with
+    a marked encoding is converted to the native encoding on an error is
+    given.}
   \item{width}{the width of the device.}
   \item{height}{the height of the device.}
   \item{units}{The units in which \code{height} and \code{width} are
@@ -65,7 +67,11 @@ tiff(filename = "Rplot\%03d.tiff",
 
     For types \code{"cairo"} and \code{"quartz"}, the \code{family}
     argument can be supplied.  See the \sQuote{Cairo fonts}
-    section in the help for \code{\link{X11}}.}
+    section in the help for \code{\link{X11}}.
+    
+    For type \code{"cairo"}, the \code{symbolfamily}
+    argument can be supplied.  See \code{\link{X11.options}}.
+  }
 
   \item{type}{character string, one of \code{"Xlib"} or \code{"quartz"}
     (some macOS builds) or \code{"cairo"}.  The latter will only be

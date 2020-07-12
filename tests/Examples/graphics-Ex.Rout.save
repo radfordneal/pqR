@@ -1,5 +1,5 @@
 
-R version 3.6.2 Patched (2020-02-12 r77795) -- "Dark and Stormy Night"
+R version 4.0.0 RC (2020-04-16 r78240) -- "Arbor Day"
 Copyright (C) 2020 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -102,7 +102,7 @@ Type 'q()' to quit R.
 > ### ** Examples
 > 
 > ## Aggregate over sex:
-> x <- margin.table(HairEyeColor, c(1, 2))
+> x <- marginSums(HairEyeColor, c(1, 2))
 > x
        Eye
 Hair    Brown Blue Hazel Green
@@ -698,6 +698,18 @@ temperature no yes
 +         main = "20 levels; \"simple\" labelling method")
 > par(op)
 > 
+> ## Passing multiple colours / lty / lwd :
+> op <- par(mfrow = c(1, 2))
+> z <- outer(-9:25, -9:25)
+> ## Using default levels <- pretty(range(z, finite = TRUE), 10),
+> ##  the first and last of which typically are *not* drawn:
+> (levs <- pretty(z, n=10)) # -300 -200 ... 600 700
+ [1] -300 -200 -100    0  100  200  300  400  500  600  700
+> contour(z, col = 1:4)
+> ## Set levels explicitly; show that 'lwd' and 'lty' are recycled as well:
+> contour(z, levels=levs[-c(1,length(levs))], col = 1:5, lwd = 1:3 *1.5, lty = 1:3)
+> par(op)
+> 
 > ## Persian Rug Art:
 > x <- y <- seq(-4*pi, 4*pi, len = 27)
 > r <- sqrt(outer(x^2, y^2, "+"))
@@ -861,9 +873,11 @@ temperature no yes
 > ### ** Examples
 > 
 > dotchart(VADeaths, main = "Death Rates in Virginia - 1940")
+> 
 > op <- par(xaxs = "i")  # 0 -- 100%
 > dotchart(t(VADeaths), xlim = c(0,100), bg = "skyblue",
-+          main = "Death Rates in Virginia - 1940")
++          main = "Death Rates in Virginia - 1940", xlab = "rate [ % ]",
++          ylab = "Grouping:  Age  x   Urbanity . Gender")
 > par(op)
 > 
 > 
@@ -942,7 +956,7 @@ Female Yes                89  17 202 131  94  24
 > ## frequencies standardized to equate the margins for admission
 > ## and sex.
 > ## Figure 1 in Friendly (1994).
-> fourfoldplot(margin.table(x, c(1, 2)))
+> fourfoldplot(marginSums(x, c(1, 2)))
 > 
 > ## Fourfold display of x, with frequencies in each table
 > ## standardized to equate the margins for admission and sex.
@@ -1466,6 +1480,21 @@ List of 2
 +         main = "Fisher's Iris Data")
 > par(op)
 > 
+> ## 'x' a "Date" vector :
+> nd <- length(dv <- seq(as.Date("1959-02-21"), by = "weeks", length.out = 100))
+> mSC <- cbind(I=1, sin=sin(pi*(1:nd)/8), cos=cos(pi*(1:nd)/8))
+> matplot(dv, mSC, type = "b", main = "matplot(<Date>, y)")
+> 
+> ## 'x' a "POSIXct" date-time vector :
+> ct <- seq(c(ISOdate(2000,3,20)), by = "15 mins", length.out = 100)
+> matplot(ct, mSC, type = "b", main = "matplot(<POSIXct>, y)")
+> ## or the same with even more axis flexibility:
+> matplot(ct, mSC, type = "b", main = "matplot(<POSIXct>, y)", xaxt="n")
+> Axis(ct, side=1, at = ct[1+4*(0:24)])
+> 
+> ## Also works for data frame columns:
+> matplot(iris[1:50,1:4])
+> 
 > 
 > 
 > graphics::par(get("par.postscript", pos = 'CheckExEnv'))
@@ -1616,7 +1645,7 @@ List of 2
 > ### ** Examples
 > 
 > pairs(swiss, panel = panel.smooth, pch = ".")  # emphasize the smooths
-> pairs(swiss, panel = panel.smooth, lwd = 2, cex = 1.5, col = "blue")  # hmm...
+> pairs(swiss, panel = panel.smooth, lwd = 2, cex = 1.5, col = 4)  # hmm...
 > 
 > 
 > 
@@ -1838,35 +1867,6 @@ armed.forces
 > 
 > 
 > cleanEx()
-> nameEx("plot")
-> ### * plot
-> 
-> flush(stderr()); flush(stdout())
-> 
-> ### Name: plot
-> ### Title: Generic X-Y Plotting
-> ### Aliases: plot
-> ### Keywords: hplot
-> 
-> ### ** Examples
-> 
-> require(stats) # for lowess, rpois, rnorm
-> plot(cars)
-> lines(lowess(cars))
-> 
-> plot(sin, -pi, 2*pi) # see ?plot.function
-> 
-> ## Discrete Distribution Plot:
-> plot(table(rpois(100, 5)), type = "h", col = "red", lwd = 10,
-+      main = "rpois(100, lambda = 5)")
-> 
-> ## Simple quantiles/ECDF, see ecdf() {library(stats)} for a better one:
-> plot(x <- sort(rnorm(47)), type = "s", main = "plot(x, type = \"s\")")
-> points(x, cex = .5, col = "dark red")
-> 
-> 
-> 
-> cleanEx()
 > nameEx("plot.dataframe")
 > ### * plot.dataframe
 > 
@@ -1897,7 +1897,7 @@ armed.forces
 > 
 > ### Name: plot.default
 > ### Title: The Default Scatterplot Function
-> ### Aliases: plot.default
+> ### Aliases: plot.default plot
 > ### Keywords: hplot
 > 
 > ### ** Examples
@@ -2144,7 +2144,7 @@ N
 > points.default # to see how it calls "plot.xy(xy.coords(x, y), ...)"
 function (x, y = NULL, type = "p", ...) 
 plot.xy(xy.coords(x, y), type = type, ...)
-<bytecode: 0x2e6d708>
+<bytecode: 0x2849a90>
 <environment: namespace:graphics>
 > 
 > 
@@ -2575,7 +2575,7 @@ treatment none some marked
 > 
 > ## applications and admissions by department at UC Berkeley
 > ## (two-way tables)
-> (spineplot(margin.table(UCBAdmissions, c(3, 2)),
+> (spineplot(marginSums(UCBAdmissions, c(3, 2)),
 +            main = "Applications at UCB"))
     Gender
 Dept Male Female
@@ -2585,7 +2585,7 @@ Dept Male Female
    D  417    375
    E  191    393
    F  373    341
-> (spineplot(margin.table(UCBAdmissions, c(3, 1)),
+> (spineplot(marginSums(UCBAdmissions, c(3, 1)),
 +            main = "Admissions at UCB"))
     Admit
 Dept Admitted Rejected
@@ -3014,7 +3014,7 @@ function (xy = 1, warn.log = TRUE)
     u <- par("usr")
     xy * c(u[2L] - u[1L], u[4L] - u[3L])/par("pin")
 }
-<bytecode: 0x4501f30>
+<bytecode: 0x43139a0>
 <environment: namespace:graphics>
 > 
 > ## plot labels offset 0.12 inches to the right
@@ -3095,7 +3095,7 @@ function (xy = 1, warn.log = TRUE)
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  2.79 0.059 2.863 0 0 
+Time elapsed:  4.009 0.062 4.103 0 0 
 > grDevices::dev.off()
 null device 
           1 

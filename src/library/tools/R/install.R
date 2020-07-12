@@ -1,7 +1,7 @@
 #  File src/library/tools/R/install.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2019 The R Core Team
+#  Copyright (C) 1995-2020 The R Core Team
 #
 # NB: also copyright dates in Usages.
 #
@@ -67,6 +67,28 @@ if(FALSE) {
     tmpdir <- ""
     clean_on_error <- TRUE
 
+    R_runR_deps_only <- function(cmd, deps_only_env, multiarch = FALSE, ...) {
+        deps_only <-
+            config_val_to_logical(Sys.getenv("_R_CHECK_INSTALL_DEPENDS_",
+                                             "FALSE"))
+        env <- if (deps_only) deps_only_env
+               else ""
+        ## needed for some packages (AnnotationDbi) that install other
+        ## packages during their tests (otherwise system profile fails
+        ## because it cannot find the tests startup file)
+        env <- paste(env, "R_TESTS=")
+        opts <- "--no-save --no-restore --no-echo"
+        if (deps_only) {
+            opts <- paste(opts, "--no-init-file --no-site-file")
+            if (!multiarch)
+              ## do not use --no-environ with multiarch, because Renviron
+              ## may include architecture-specific settings that may differ
+              ## from settings of the host process architecture
+              opts <- paste(opts, "--no-environ")
+        }
+        R_runR(cmd = cmd, Ropts = opts, env = env, ...)
+    }
+
     do_exit <-
 	if(no.q)
 	    function(status) stop(".install_packages() exit status ", status)
@@ -129,7 +151,13 @@ if(FALSE) {
     # command sent to another R process.  Currently it only fixes backslashes;
     # more extensive escaping might be a good idea
     quote_path <- function(path, quote = "'")
-    	paste0(quote, gsub("\\\\", "\\\\\\\\", path), quote)
+    	paste0(quote, gsub("\\", "\\\\", path, fixed=TRUE), quote)
+
+    # Escape backslashes in a replacement string for gsub etc.
+    # To be used when the replacement is a path name which may include
+    # backslashes, e.g. with UNC paths on Windows.
+    quote_replacement <- function(r)
+        paste0(gsub("\\", "\\\\", r, fixed=TRUE))
 
     on.exit(do_exit_on_error())
     WINDOWS <- .Platform$OS.type == "windows"
@@ -226,6 +254,7 @@ if(FALSE) {
             "      --configure-vars=VARS",
             "			set variables for the configure scripts (if any)",
             "      --strip           strip shared object(s)",
+            "      --strip-lib       strip static/dynamic libraries under lib/",
             "      --dsym            (macOS only) generate dSYM directory",
             "      --built-timestamp=STAMP",
             "                   set timestamp for Built: entry in DESCRIPTION",
@@ -339,25 +368,13 @@ if(FALSE) {
             sys_requires <- desc["SystemRequirements"]
             if (!is.na(sys_requires)) {
                 sys_requires <- unlist(strsplit(sys_requires, ","))
-                if(any(grepl("^[[:space:]]*C[+][+]17[[:space:]]*$",
-                             sys_requires, ignore.case=TRUE))) {
-                    Sys.setenv("R_PKG_CXX_STD"="CXX17")
-                    on.exit(Sys.unsetenv("R_PKG_CXX_STD"))
-                }
-                else if(any(grepl("^[[:space:]]*C[+][+]14[[:space:]]*$",
-                             sys_requires, ignore.case=TRUE))) {
-                    Sys.setenv("R_PKG_CXX_STD"="CXX14")
-                    on.exit(Sys.unsetenv("R_PKG_CXX_STD"))
-                }
-                else if(any(grepl("^[[:space:]]*C[+][+]11[[:space:]]*$",
-                             sys_requires, ignore.case=TRUE))) {
-                    Sys.setenv("R_PKG_CXX_STD"="CXX11")
-                    on.exit(Sys.unsetenv("R_PKG_CXX_STD"))
-                }
-                else if(any(grepl("^[[:space:]]*C[+][+]98[[:space:]]*$",
-                                  sys_requires, ignore.case=TRUE))) {
-                    Sys.setenv("R_PKG_CXX_STD"="CXX98")
-                    on.exit(Sys.unsetenv("R_PKG_CXX_STD"))
+                for (i in cxx_standards) {
+                    pattern <- paste0("^[[:space:]]*C[+][+]",i,"[[:space:]]*$")
+                    if(any(grepl(pattern, sys_requires, ignore.case=TRUE))) {
+                        Sys.setenv("R_PKG_CXX_STD"=i)
+                        on.exit(Sys.unsetenv("R_PKG_CXX_STD"))
+                        break
+                    }
                 }
             }
         }
@@ -538,10 +555,9 @@ if(FALSE) {
 		## is no way to create it later.
 
 		if (dsym && startsWith(R.version$os, "darwin")) {
-		    message(gettextf("generating debug symbols (%s)", "dSYM"),
-                            domain = NA)
+		    starsmsg(stars, gettextf("generating debug symbols (%s)", "dSYM"))
 		    dylib <- Sys.glob(paste0(dest, "/*", SHLIB_EXT))
-                    for (file in dylib) system(paste0("dsymutil ", file))
+                    for (d in dylib) system(paste0("dsymutil ", d))
 		}
 
                 if(config_val_to_logical(Sys.getenv("_R_SHLIB_BUILD_OBJECTS_SYMBOL_TABLES_",
@@ -637,7 +653,8 @@ if(FALSE) {
                     idxs <- gsub(re, "\\1", out)
                     old_paths <- paths
                     # "\\$ORIGIN/.."
-                    paths <- gsub(instdir, final_instdir, paths, fixed = TRUE)
+                    paths <- gsub(instdir, quote_replacement(final_instdir),
+                                  paths, fixed = TRUE)
                     changed <- paths != old_paths
                     paths <- paths[changed]
                     old_paths <- old_paths[changed]
@@ -646,12 +663,12 @@ if(FALSE) {
                         hardcoded_paths <- TRUE
                         qp <- gsub('([" \\])', "\\\\\\1", paths[i])
                         qp <- gsub("'", "\\\\'", qp)
-                        cmd <- paste("elfedit -e \"dyn:value -dynndx -s",
-                                     idxs[i], qp, "\"", shQuote(l))
+                        cmd <- paste0("elfedit -e \"dyn:value -dynndx -s ",
+                                     idxs[i], " ", qp, "\" ", shQuote(l))
                         message(cmd)
                         ret <- suppressWarnings(system(cmd, intern = FALSE))
                         if (ret == 0)
-                            message("NOTE: fixed path ", old_paths[i])
+                            message("NOTE: fixed path ", sQuote(old_paths[i]))
                     }
                     out <- suppressWarnings(
                         system(paste("elfedit -re dyn:value", shQuote(l)), intern = TRUE))
@@ -672,8 +689,8 @@ if(FALSE) {
                         grepl(instdir, oldid, fixed = TRUE)) {
 
                         hardcoded_paths <- TRUE
-                        newid <- gsub(instdir, final_instdir, oldid,
-                                      fixed = TRUE)
+                        newid <- gsub(instdir, quote_replacement(final_instdir),
+                                      oldid, fixed = TRUE)
                         cmd <- paste("install_name_tool -id", shQuote(newid),
                                      shQuote(l))
                         message(cmd)
@@ -682,7 +699,7 @@ if(FALSE) {
                             ## NOTE: install_name does not signal an error in
                             ## some cases
                             message("NOTE: fixed library identification name ",
-                                    oldid)
+                                    sQuote(oldid))
                     }
 
                     ## change paths to other libraries
@@ -693,8 +710,8 @@ if(FALSE) {
                                   paths)
                     old_paths <- paths
                     # "@loader_path/.."
-                    paths <- gsub(instdir, final_instdir, paths,
-                                  fixed = TRUE)
+                    paths <- gsub(instdir, quote_replacement(final_instdir),
+                                  paths, fixed = TRUE)
                     changed <- paths != old_paths
                     paths <- paths[changed]
                     old_paths <- old_paths[changed]
@@ -709,7 +726,7 @@ if(FALSE) {
                             ## NOTE: install_name does not signal an error in
                             ## some cases
                             message("NOTE: fixed library path ",
-                                    old_paths[i])
+                                    sQuote(old_paths[i]))
                     }
                     out <- suppressWarnings(
                         system(paste("otool -L", shQuote(l)), intern = TRUE))
@@ -728,8 +745,8 @@ if(FALSE) {
                         paths <- gsub("(.*) \\(offset .*", "\\1", paths)
                         old_paths <- paths
                         # "@loader_path/.."
-                        paths <- gsub(instdir, final_instdir, paths,
-                                               fixed = TRUE)
+                        paths <- gsub(instdir, quote_replacement(final_instdir),
+                                      paths, fixed = TRUE)
                         changed <- paths != old_paths
                         paths <- paths[changed]
                         old_paths <- old_paths[changed]
@@ -743,7 +760,7 @@ if(FALSE) {
                             ret <- suppressWarnings(system(cmd))
                             if (ret == 0)
                                 message("NOTE: fixed rpath ",
-                                        old_paths[i])
+                                        sQuote(old_paths[i]))
                         }
                     }
 
@@ -763,8 +780,8 @@ if(FALSE) {
                                intern = TRUE))
                     old_rpath <- rpath
                     # "\\$ORIGIN/.."
-                    rpath <- gsub(instdir, final_instdir, rpath,
-                                  fixed = TRUE)
+                    rpath <- gsub(instdir, quote_replacement(final_instdir),
+                                  rpath, fixed = TRUE)
                     if (length(rpath) && nzchar(rpath) && old_rpath != rpath) {
                         hardcoded_paths <- TRUE
                         cmd <- paste("patchelf", "--set-rpath",
@@ -772,7 +789,7 @@ if(FALSE) {
                         message(cmd)
                         ret <- suppressWarnings(system(cmd))
                         if (ret == 0)
-                            message("NOTE: fixed rpath ", old_rpath)
+                            message("NOTE: fixed rpath ", sQuote(old_rpath))
                         rpath <- suppressWarnings(
                             system(paste("patchelf --print-rpath",
                                          shQuote(l)), intern = TRUE))
@@ -789,8 +806,8 @@ if(FALSE) {
                         paths <- gsub(re, "\\1", out)
                         old_paths <- paths
                         # "\\$ORIGIN/.."
-                        paths <- gsub(instdir, final_instdir, paths,
-                                      fixed = TRUE)
+                        paths <- gsub(instdir, quote_replacement(final_instdir),
+                                      paths, fixed = TRUE)
                         changed <- paths != old_paths
                         paths <- paths[changed]
                         old_paths <- old_paths[changed]
@@ -803,7 +820,7 @@ if(FALSE) {
                             ret <- suppressWarnings(system(cmd))
                             if (ret == 0)
                                 message("NOTE: fixed library path ",
-                                        old_paths[i])
+                                        sQuote(old_paths[i]))
                         }
                         out <- suppressWarnings(
                             system(paste("readelf -d", shQuote(l)), intern = TRUE))
@@ -825,7 +842,8 @@ if(FALSE) {
                     rpath <- gsub(".*PATH=", "", rpath)
                     old_rpath <- rpath
                     # "\\$ORIGIN/.."
-                    rpath <- gsub(instdir, final_instdir, rpath, fixed = TRUE)
+                    rpath <- gsub(instdir, quote_replacement(final_instdir),
+                                  rpath, fixed = TRUE)
                     if (length(rpath) && nzchar(rpath) && old_rpath != rpath) {
                         hardcoded_paths <- TRUE
                         cmd <- paste("chrpath", "-r", shQuote(rpath),
@@ -833,7 +851,7 @@ if(FALSE) {
                         message(cmd)
                         ret <- suppressWarnings(system(cmd))
                         if (ret == 0)
-                            message("NOTE: fixed rpath ", old_rpath)
+                            message("NOTE: fixed rpath ", sQuote(old_rpath))
                         out <- suppressWarnings(
                             system(paste("chrpath", shQuote(l)), intern = TRUE))
                         rpath <- grep(".*PATH=", out, value = TRUE)
@@ -867,7 +885,8 @@ if(FALSE) {
                     }
                 }
             }
-        }
+        } # patch_rpaths()
+
         ## Make the destination directories available to the developer's
         ## installation scripts (e.g. configure)
         Sys.setenv(R_LIBRARY_DIR = lib)
@@ -1066,7 +1085,7 @@ if(FALSE) {
         }
 
         if (install_libs && dir.exists("src") &&
-            length(dir("src", all.files = TRUE) > 2L)) {
+            length(dir("src", all.files = TRUE)) > 2L) {
             starsmsg(stars, "libs")
             if (!file.exists(file.path(R.home("include"), "R.h")))
                 ## maybe even an error?  But installing Fortran-based packages should work
@@ -1094,7 +1113,7 @@ if(FALSE) {
                                           target, sQuote(pkgname)),
                                  call. = FALSE, domain = NA)
                     }
-                    clink_cppflags <- paste(paste0('-I"', paths, '/include"'),
+                    clink_cppflags <- paste(paste0("-I'", paths, "/include'"),
                                             collapse = " ")
                     Sys.setenv(CLINK_CPPFLAGS = clink_cppflags)
                 }
@@ -1431,7 +1450,7 @@ if(FALSE) {
             } else character()
             for(e in ignore)
                 i_dirs <- filtergrep(e, i_dirs, perl = TRUE, ignore.case = TRUE)
-            lapply(gsub("^inst", instdir, i_dirs),
+            lapply(gsub("^inst", quote_replacement(instdir), i_dirs),
                    function(p) dir.create(p, FALSE, TRUE)) # be paranoid
             i_files <- list.files("inst", all.files = TRUE,
                                   full.names = TRUE, recursive = TRUE)
@@ -1447,7 +1466,7 @@ if(FALSE) {
                 i_files <- filtergrep("inst/doc/.*[.](png|jpg|jpeg|gif|ps|eps)$",
                                       i_files, perl = TRUE, ignore.case = TRUE)
             i_files <- i_files %w/o% "Makefile"
-            i2_files <- gsub("^inst", instdir, i_files)
+            i2_files <- gsub("^inst", quote_replacement(instdir), i_files)
             file.copy(i_files, i2_files)
             if (!WINDOWS) {
                 ## make executable if the source file was (for owner)
@@ -1465,8 +1484,11 @@ if(FALSE) {
             }
 	}
 
+        rait <- Sys.getenv("R_ALWAYS_INSTALL_TESTS", "FALSE")
+        install_tests <- install_tests || config_val_to_logical(rait)
+
 	if (install_tests && dir.exists("tests") &&
-            length(dir("tests", all.files = TRUE) > 2L)) {
+            length(dir("tests", all.files = TRUE)) > 2L) {
 	    starsmsg(stars, "tests")
 	    file.copy("tests", instdir, recursive = TRUE)
 	}
@@ -1508,15 +1530,6 @@ if(FALSE) {
             cmd <- append(cmd,
                 paste0("if (isNamespaceLoaded(\"",pkg_name, "\"))",
                            " unloadNamespace(\"", pkg_name, "\")"))
-            deps_only <-
-                config_val_to_logical(Sys.getenv("_R_CHECK_INSTALL_DEPENDS_", "FALSE"))
-            env <- if (deps_only) setRlibs(LinkingTo = TRUE, quote = TRUE)
-                   else ""
-
-            ## needed for some packages (AnnotationDbi) that install other
-            ## packages during their tests (otherwise system profile fails
-            ## because it cannot find the tests startup file)
-            env <- paste(env, "R_TESTS=")
             cmd <- append(cmd,
                 "suppressPackageStartupMessages(.getRequiredPackages(quietly = TRUE))")
             if (pkg_staged_install)
@@ -1526,14 +1539,13 @@ if(FALSE) {
                 set.install.dir <- ""
             cmd <- append(cmd,
                 paste0("tools:::makeLazyLoading(\"", pkg_name, "\", ",
-                                                    "\"", lib, "\", ",
+                                              quote_path(lib), ", ",
                                 "keep.source = ", keep.source, ", ",
                         "keep.parse.data = ", keep.parse.data,
                                               set.install.dir, ")"))
-            opts <- paste(if(deps_only) "--vanilla" else "--no-save",
-                          "--slave")
             cmd <- paste(cmd, collapse="\n")
-            out <- R_runR(cmd, opts, env = env)
+            out <- R_runR_deps_only(cmd,
+                                    setRlibs(LinkingTo = TRUE, quote = TRUE))
             if(length(out))
                 cat(paste(c(out, ""), collapse = "\n"))
             if(length(attr(out, "status")))
@@ -1577,8 +1589,14 @@ if(FALSE) {
 	## pkg indices: this also tangles the vignettes (if installed)
 	if (install_inst || install_demo || install_help) {
 	    starsmsg(stars, "building package indices")
-	    res <- try(.install_package_indices(".", instdir))
-	    if (inherits(res, "try-error"))
+            cmd <- c("tools:::.install_package_indices(\".\",",
+                     quote_path(instdir), ")")
+            cmd <- paste(cmd, collapse="\n")
+            out <- R_runR_deps_only(cmd,
+                                    setRlibs(LinkingTo = TRUE, quote = TRUE))
+            if(length(out))
+                cat(paste(c(out, ""), collapse = "\n"))
+            if (length(attr(out, "status")))
 		errmsg("installing package indices failed")
             if(dir.exists("vignettes")) {
                 starsmsg(stars, "installing vignettes")
@@ -1616,19 +1634,14 @@ if(FALSE) {
             if (!is.null(extra_cmd))
               cmd <- paste0(cmd, "\n", extra_cmd)
             ## R_LIBS was set already, but Rprofile/Renviron may change it
-            ## R_runR is in check.R
-            deps_only <-
-                config_val_to_logical(Sys.getenv("_R_CHECK_INSTALL_DEPENDS_", "FALSE"))
-            env <- if (deps_only) setRlibs(lib0, self = TRUE, quote = TRUE) else ""
-            ## FIXME: clear R_TESTS?
             tlim <- get_timeout(Sys.getenv("_R_INSTALL_TEST_LOAD_ELAPSED_TIMEOUT_"))
             if (length(test_archs) > 1L) {
                 msgs <- character()
-                opts <- "--no-save --slave"
                 for (arch in test_archs) {
                     starsmsg("***", "arch - ", arch)
-                    out <- R_runR(cmd, opts, env = env, arch = arch,
-                                  timeout = tlim)
+                    out <- R_runR_deps_only(cmd,
+                        deps_only_env = setRlibs(lib0, self = TRUE, quote = TRUE),
+                        arch = arch, timeout = tlim, multiarch = TRUE)
                     if(length(attr(out, "status")))
                         msgs <- c(msgs, arch)
                     if(length(out))
@@ -1640,9 +1653,9 @@ if(FALSE) {
                     errmsg(msg) # does not return
                 }
             } else {
-                opts <- paste(if(deps_only) "--vanilla" else "--no-save",
-                              "--slave")
-                out <- R_runR(cmd, opts, env = env, timeout = tlim)
+                out <- R_runR_deps_only(cmd,
+                    deps_only_env = setRlibs(lib0, self = TRUE, quote = TRUE),
+                    timeout = tlim)
                 if(length(out)) {
                     cat(paste(c(out, ""), collapse = "\n"))
                 }
@@ -1664,10 +1677,15 @@ if(FALSE) {
             if (WINDOWS) {
                 unlink(final_instdir, recursive = TRUE) # needed for file.rename
                 if (!file.rename(instdir, final_instdir)) {
-                    message("WARNING: moving package to final location failed, copying instead")
-                    file.copy(instdir, dirname(final_instdir), recursive = TRUE,
-                              copy.date = TRUE)
-                    unlink(instdir, recursive = TRUE)
+                    if (dir.exists(instdir) && !dir.exists(final_instdir)) {
+                        message("WARNING: moving package to final location failed, copying instead")
+                        ret <- file.copy(instdir, dirname(final_instdir),
+                                         recursive = TRUE, copy.date = TRUE)
+                        if (any(!ret))
+                            errmsg("   copying to final location failed")
+                        unlink(instdir, recursive = TRUE)
+                    } else
+                        errmsg("   moving to final location failed")
                 }
             } else {
                 patch_rpaths()
@@ -1717,7 +1735,28 @@ if(FALSE) {
                            sQuote("--no-staged-install"))
             }
         }
-    }
+
+        if (do_strip_lib &&
+            nzchar(strip_cmd <- Sys.getenv("R_STRIP_STATIC_LIB")) &&
+            length(a_s <- Sys.glob(file.path(file.path(lib, curPkg),
+                                             "lib", "*.a")))) {
+            if(length(a_s) > 1L)
+                starsmsg(stars, "stripping static libraries under lib")
+            else
+                starsmsg(stars, "stripping static library under lib")
+            system(paste(c(strip_cmd, shQuote(a_s)), collapse = " "))
+        }
+        if (do_strip_lib &&
+            nzchar(strip_cmd <- Sys.getenv("R_STRIP_SHARED_LIB")) &&
+            length(so_s <- Sys.glob(file.path(file.path(lib, curPkg), "lib",
+                                              paste0("*", SHLIB_EXT))))) {
+            if(length(so_s) > 1L)
+                starsmsg(stars, "stripping dynamic libraries under lib")
+            else
+                starsmsg(stars, "stripping dynamic library under lib")
+            system(paste(c(strip_cmd, shQuote(so_s)), collapse = " "))
+        }
+    } ## do_install_source
 
     options(showErrorCalls = FALSE)
     pkgs <- character()
@@ -1776,7 +1815,7 @@ if(FALSE) {
     install_inst <- TRUE
     install_help <- TRUE
     install_tests <- FALSE
-    do_strip <- FALSE
+    do_strip <- do_strip_lib <- FALSE
 
     while(length(args)) {
         a <- args[1L]
@@ -1789,7 +1828,7 @@ if(FALSE) {
                 R.version[["major"]], ".",  R.version[["minor"]],
                 " (r", R.version[["svn rev"]], ")\n", sep = "")
             cat("",
-                "Copyright (C) 2000-2016 The R Core Team.",
+                "Copyright (C) 2000-2020 The R Core Team.",
                 "This is free software; see the GNU General Public License version 2",
                 "or later for copying conditions.  There is NO warranty.",
                 sep = "\n")
@@ -1905,6 +1944,8 @@ if(FALSE) {
             dsym <- TRUE
         } else if (a == "--strip") {
             do_strip <- TRUE
+        } else if (a == "--strip-lib") {
+            do_strip_lib <- TRUE
         } else if (substr(a, 1, 18) == "--built-timestamp=") {
             built_stamp <- substr(a, 19, 1000)
         } else if (startsWith(a, "-")) {
@@ -2272,10 +2313,7 @@ if(FALSE) {
     with_f77 <- FALSE
     with_f9x <- FALSE
     with_objc <- FALSE
-    use_cxx98 <- FALSE
-    use_cxx11 <- FALSE
-    use_cxx14 <- FALSE
-    use_cxx17 <- FALSE
+    use_cxxstd <- NULL
     use_fc_link <- FALSE
     pkg_libs <- character()
     clean <- FALSE
@@ -2294,7 +2332,7 @@ if(FALSE) {
                 R.version[["major"]], ".",  R.version[["minor"]],
                 " (r", R.version[["svn rev"]], ")\n", sep = "")
             cat("",
-                "Copyright (C) 2000-2013 The R Core Team.",
+                "Copyright (C) 2000-2020 The R Core Team.",
                 "This is free software; see the GNU General Public License version 2",
                 "or later for copying conditions.  There is NO warranty.",
                 sep = "\n")
@@ -2374,23 +2412,11 @@ if(FALSE) {
         if (length(grep("^OBJECTS *=", lines, perl=TRUE, useBytes = TRUE)))
             makeobjs <- ""
         if (length(ll <- grep("^CXX_STD *=", lines, perl = TRUE,
-                              value = TRUE, useBytes = TRUE))) {
-            cxxstd <- gsub("^CXX_STD *=", "", ll)
-            cxxstd <- gsub(" *", "", cxxstd)
-            if (cxxstd == "CXX17") {
-                use_cxx17 <- TRUE
-                with_cxx <- TRUE
-            }
-            else if (cxxstd == "CXX14") {
-                use_cxx14 <- TRUE
-                with_cxx <- TRUE
-            }
-            else if (cxxstd == "CXX11") {
-                use_cxx11 <- TRUE
-                with_cxx <- TRUE
-            }
-            else if (cxxstd == "CXX98") {
-                use_cxx98 <- TRUE
+                              value = TRUE, useBytes = TRUE)) == 1) {
+            val <- gsub("^CXX_STD *= *CXX", "", ll)
+            val <- gsub(" +$", "", val)
+            if (val %in% cxx_standards) {
+                use_cxxstd <- val
                 with_cxx <- TRUE
             }
         }
@@ -2402,60 +2428,29 @@ if(FALSE) {
         if (length(grep("^OBJECTS *=", lines, perl = TRUE, useBytes = TRUE)))
             makeobjs <- ""
         if (length(ll <- grep("^CXX_STD *=", lines, perl = TRUE,
-                              value = TRUE, useBytes = TRUE))) {
-            cxxstd <- gsub("^CXX_STD *=", "", ll)
-            cxxstd <- gsub(" *", "", cxxstd)
-            if (cxxstd == "CXX17") {
-                use_cxx17 <- TRUE
-                with_cxx <- TRUE
-            }
-            else if (cxxstd == "CXX14") {
-                use_cxx14 <- TRUE
-                with_cxx <- TRUE
-            }
-            else if (cxxstd == "CXX11") {
-                use_cxx11 <- TRUE
-                with_cxx <- TRUE
-            }
-            else if (cxxstd == "CXX98") {
-                use_cxx98 <- TRUE
+                              value = TRUE, useBytes = TRUE)) == 1) {
+            val <- gsub("^CXX_STD *= *CXX", "", ll)
+            val <- gsub(" +$", "", val)
+            if (val %in% cxx_standards) {
+                use_cxxstd <- val
                 with_cxx <- TRUE
             }
         }
         if (any(grepl("^USE_FC_TO_LINK", lines, perl=TRUE, useBytes = TRUE)))
             use_fc_link <- TRUE
     }
-    if (!use_cxx11 && !use_cxx14 && !use_cxx17 && !use_cxx98) {
-        val17 <- Sys.getenv("USE_CXX17", NA_character_)
-        val14 <- Sys.getenv("USE_CXX14", NA_character_)
-        val11 <- Sys.getenv("USE_CXX11", NA_character_)
-        val98 <- Sys.getenv("USE_CXX98", NA_character_)
-        if (!is.na(val17)) {
-            use_cxx17 <- TRUE
-        }
-        else if(!is.na(val14)) {
-            use_cxx14 <- TRUE
-        }
-        else if (!is.na(val11)) {
-            use_cxx11 <- TRUE
-        }
-        else if (!is.na(val98)) {
-            use_cxx98 <- TRUE
-        }
-        else {
-            val <- Sys.getenv("R_PKG_CXX_STD")
-            if (val == "CXX17") {
-                use_cxx17 <- TRUE
+    if (is.null(use_cxxstd)) {
+        for (i in cxx_standards) {
+            if (nzchar(Sys.getenv(paste0("USE_CXX", i)))) {
+                use_cxxstd <- i
+                break
             }
-            else if (val == "CXX14") {
-                use_cxx14 <- TRUE
-            }
-            else if (val == "CXX11") {
-                use_cxx11 <- TRUE
-            }
-            else if (val == "CXX98") {
-                use_cxx98 <- TRUE
-            }
+        }
+    }
+    if (is.null(use_cxxstd)) {
+        val <- Sys.getenv("R_PKG_CXX_STD")
+        if (val %in% cxx_standards) {
+            use_cxxstd <- val
         }
     }
 
@@ -2463,7 +2458,7 @@ if(FALSE) {
         checkCXX <- function(cxxstd) {
             for (i in rev(seq_along(makefiles))) {
                 lines <- readLines(makefiles[i], warn = FALSE)
-                pattern <- paste0("^", cxxstd, " *= *")
+                pattern <- paste0("^CXX", cxxstd, " *= *")
                 ll <- grep(pattern, lines, perl = TRUE, value = TRUE,
                            useBytes = TRUE)
                 for (j in rev(seq_along(ll))) {
@@ -2473,52 +2468,34 @@ if(FALSE) {
             }
             return(FALSE)
         }
-        if (use_cxx17 && !checkCXX("CXX17")) {
-            stop("C++17 standard requested but CXX17 is not defined")
-        }
-        if (use_cxx14 && !checkCXX("CXX14")) {
-            stop("C++14 standard requested but CXX14 is not defined")
-        }
-        if (use_cxx11 && !checkCXX("CXX11")) {
-            stop("C++11 standard requested but CXX11 is not defined")
-        }
-        if (use_cxx98 && !checkCXX("CXX98")) {
-            stop("C++98 standard requested but CXX98 is not defined")
-        }
-        if (use_cxx98) {
-            warning("Support for C++98 is deprecated", call. = FALSE)
+        if (!is.null(use_cxxstd)) {
+            if (use_cxxstd == "98") {
+                stop("C++98 standard requested but unsupported",
+                     call. = FALSE, domain = NA)
+            }
+            if (!checkCXX(use_cxxstd)) {
+                stop(paste0("C++", use_cxxstd, " standard requested but CXX",
+                            use_cxxstd, " is not defined"),
+                     call. = FALSE, domain = NA)
+            }
         }
     }
 
     makeargs <- paste0("SHLIB=", shQuote(shlib))
     if (with_cxx) {
-        makeargs <- if (use_cxx17)
-            c("CXX='$(CXX17) $(CXX17STD)'",
-              "CXXFLAGS='$(CXX17FLAGS)'",
-              "CXXPICFLAGS='$(CXX17PICFLAGS)'",
-              "SHLIB_LDFLAGS='$(SHLIB_CXX17LDFLAGS)'",
-              "SHLIB_LD='$(SHLIB_CXX17LD)'", makeargs)
-        else if (use_cxx14)
-            c("CXX='$(CXX14) $(CXX14STD)'",
-              "CXXFLAGS='$(CXX14FLAGS)'",
-              "CXXPICFLAGS='$(CXX14PICFLAGS)'",
-              "SHLIB_LDFLAGS='$(SHLIB_CXX14LDFLAGS)'",
-              "SHLIB_LD='$(SHLIB_CXX14LD)'", makeargs)
-        else if (use_cxx11)
-            c("CXX='$(CXX11) $(CXX11STD)'",
-              "CXXFLAGS='$(CXX11FLAGS)'",
-              "CXXPICFLAGS='$(CXX11PICFLAGS)'",
-              "SHLIB_LDFLAGS='$(SHLIB_CXX11LDFLAGS)'",
-              "SHLIB_LD='$(SHLIB_CXX11LD)'", makeargs)
-        else if (use_cxx98)
-            c("CXX='$(CXX98) $(CXX98STD)'",
-              "CXXFLAGS='$(CXX98FLAGS)'",
-              "CXXPICFLAGS='$(CXX98PICFLAGS)'",
-              "SHLIB_LDFLAGS='$(SHLIB_CXX98LDFLAGS)'",
-              "SHLIB_LD='$(SHLIB_CXX98LD)'", makeargs)
-        else
-            c("SHLIB_LDFLAGS='$(SHLIB_CXXLDFLAGS)'",
-              "SHLIB_LD='$(SHLIB_CXXLD)'", makeargs)
+        if (!is.null(use_cxxstd)) {
+            cxx_makeargs <- sprintf(c("CXX='$(CXX%s) $(CXX%sSTD)'",
+                                      "CXXFLAGS='$(CXX%sFLAGS)'",
+                                      "CXXPICFLAGS='$(CXX%sPICFLAGS)'",
+                                      "SHLIB_LDFLAGS='$(SHLIB_CXX%sLDFLAGS)'",
+                                      "SHLIB_LD='$(SHLIB_CXX%sLD)'"),
+                                    use_cxxstd, use_cxxstd)
+            makeargs <- c(cxx_makeargs, makeargs)
+        }
+        else {
+            makeargs <-  c("SHLIB_LDFLAGS='$(SHLIB_CXXLDFLAGS)'",
+                           "SHLIB_LD='$(SHLIB_CXXLD)'", makeargs)
+        }
     } else if (use_fc_link && (with_f77 || with_f9x))
         makeargs <- c("SHLIB_LDFLAGS='$(SHLIB_FCLDFLAGS)'",
                       "SHLIB_LD='$(SHLIB_FCLD)'", makeargs)
@@ -2678,7 +2655,7 @@ if(FALSE) {
             last <- nrow(M)
             nongen <- gen %in% c("ar", "bw", "contr", "dyn", "lm", "qr", "ts", "which", ".Call", ".External", ".Library", ".First", ".Last")
             nc <- nchar(gen)
-            asg <- (nc > 3) & substr(gen, nc-1, nc) == "<-"
+            asg <- (nc > 3) & endsWith(gen, "<-")
             skip <- (gen == c("", gen[-last])) & (M$File == c("", M$File[-last])) & !nongen
             skip <- skip | asg
             ##N <- cbind(M$Topic, gen, c("", gen[-last]), skip)
@@ -2695,11 +2672,11 @@ if(FALSE) {
     htmlize <- function(x, backtick)
     {
         x <- gsub("&", "&amp;", x, fixed = TRUE)
-        x <- gsub("<", "&lt;", x, fixed = TRUE)
-        x <- gsub(">", "&gt;", x, fixed = TRUE)
+        x <- gsub("<", "&lt;",  x, fixed = TRUE)
+        x <- gsub(">", "&gt;",  x, fixed = TRUE)
         if (backtick) {
             x <- gsub("---", "-", x, fixed = TRUE)
-            x <- gsub("--", "-", x, fixed = TRUE)
+            x <- gsub("--",  "-", x, fixed = TRUE)
             ## these have been changed in the Rd parser
             #x <- gsub("``", "&ldquo;", x, fixed = TRUE)
             #x <- gsub("''", "&rdquo;", x, fixed = TRUE)
@@ -2709,7 +2686,7 @@ if(FALSE) {
         x
     }
     M$HTopic <- htmlize(M$Topic, FALSE)
-    M$Title <- htmlize(M$Title, TRUE)
+    M$ Title <- htmlize(M$Title, TRUE)
 
     ## No need to handle encodings: everything is in UTF-8
 
@@ -2809,7 +2786,7 @@ if(FALSE) {
     .whandler <-  function(e) {
         .messages <<- c(.messages,
                         paste("Rd warning:", conditionMessage(e)))
-        invokeRestart("muffleWarning")
+        tryInvokeRestart("muffleWarning")
     }
     .ehandler <- function(e) {
         message("", domain = NA) # force newline
@@ -2874,21 +2851,21 @@ if(FALSE) {
     if ("html" %in% types) {
         type <- "html"
         have <- list.files(file.path(outDir, dirname[type]))
-        have2 <- sub("\\.html", "", basename(have))
+        have2 <- sub(".html", "", basename(have), fixed=TRUE)
         drop <- have[have2 %notin% c(bfs, "00Index", "R.css")]
         unlink(file.path(outDir, dirname[type], drop))
     }
     if ("latex" %in% types) {
         type <- "latex"
         have <- list.files(file.path(outDir, dirname[type]))
-        have2 <- sub("\\.tex", "", basename(have))
+        have2 <- sub(".tex", "", basename(have), fixed=TRUE)
         drop <- have[have2 %notin% bfs]
         unlink(file.path(outDir, dirname[type], drop))
     }
     if ("example" %in% types) {
         type <- "example"
         have <- list.files(file.path(outDir, dirname[type]))
-        have2 <- sub("\\.R", "", basename(have))
+        have2 <- sub(".R", "", basename(have), fixed=TRUE)
         drop <- have[have2 %notin% bfs]
         unlink(file.path(outDir, dirname[type], drop))
     }
@@ -2979,6 +2956,7 @@ function()
     m
 }
 
+cxx_standards <- c("20", "17", "14", "11", "98")
 
 ### Local variables: ***
 ### mode: outline-minor ***

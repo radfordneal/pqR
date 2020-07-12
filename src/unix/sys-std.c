@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2017  The R Core Team
+ *  Copyright (C) 1997--2020  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -95,7 +95,7 @@ void attribute_hidden Rstd_Suicide(const char *s)
   e.g. after invoking a resume restart. If the interrupt handler
   returns then the select call is retried. If the timeout is not NULL
   then the timeout is adjusted for the elapsed time before the retry.
-  If the supplied timout value is zero, select is called without
+  If the supplied timeout value is zero, select is called without
   setting up an error handler since it should return immediately.
  */
 
@@ -142,7 +142,7 @@ int R_SelectEx(int  n,  fd_set  *readfds,  fd_set  *writefds,
 		   by timeval, which is what select() on Linux does as
 		   well. */
 		double new_time = currentTime();
-		double elapsed = new_time = base_time;
+		double elapsed = new_time - base_time;
 		base_time = new_time;
 		time_t elapsed_sec = (time_t) elapsed;
 		if (tm.tv_sec > elapsed_sec)
@@ -950,7 +950,7 @@ Rstd_ReadConsole(const char *prompt, unsigned char *buf, int len,
     if(!R_Interactive) {
 	size_t ll;
 	int err = 0;
-	if (!R_Slave) {
+	if (!R_NoEcho) {
 	    fputs(prompt, stdout);
 	    fflush(stdout); /* make sure prompt is output */
 	}
@@ -993,7 +993,7 @@ Rstd_ReadConsole(const char *prompt, unsigned char *buf, int len,
 	    && (ll == 0 || buf[ll - 1] != '\n') && ll < (size_t)len) {
 	    buf[ll++] = '\n'; buf[ll] = '\0';
 	}
-	if (!R_Slave) {
+	if (!R_NoEcho) {
 	    fputs((char *)buf, stdout);
 	    fflush(stdout);
 	}
@@ -1356,7 +1356,7 @@ void attribute_hidden Rstd_loadhistory(SEXP call, SEXP op, SEXP args, SEXP env)
     sfile = CAR(args);
     if (!isString(sfile) || LENGTH(sfile) < 1)
 	errorcall(call, _("invalid '%s' argument"), "file");
-    p = R_ExpandFileName(translateChar(STRING_ELT(sfile, 0)));
+    p = R_ExpandFileName(translateCharFP(STRING_ELT(sfile, 0)));
     if(strlen(p) > PATH_MAX - 1)
 	errorcall(call, _("'file' argument is too long"));
     strcpy(file, p);
@@ -1379,7 +1379,7 @@ void attribute_hidden Rstd_savehistory(SEXP call, SEXP op, SEXP args, SEXP env)
     sfile = CAR(args);
     if (!isString(sfile) || LENGTH(sfile) < 1)
 	errorcall(call, _("invalid '%s' argument"), "file");
-    p = R_ExpandFileName(translateChar(STRING_ELT(sfile, 0)));
+    p = R_ExpandFileName(translateCharFP(STRING_ELT(sfile, 0)));
     if(strlen(p) > PATH_MAX - 1)
 	errorcall(call, _("'file' argument is too long"));
     strcpy(file, p);

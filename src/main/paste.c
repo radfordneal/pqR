@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
+ *  Copyright (C) 1997--2019  The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2015  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -115,7 +115,7 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 		SET_VECTOR_ELT(x, j, coerceVector(xj, STRSXP));
 
 	    if (!isString(VECTOR_ELT(x, j)))
-		error(_("non-string argument to internal 'paste'"));
+		error(_("non-string argument to .Internal(%s)"), PRIMNAME(op));
 	}
 	if(XLENGTH(VECTOR_ELT(x, j)) > maxlen)
 	    maxlen = XLENGTH(VECTOR_ELT(x, j));
@@ -277,36 +277,36 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
+/*
+  Encoding support added for R 4.0.0.  One would normally expect file
+  paths (and their components) to be in the session encoding, but on
+  Windows there is some support for Unicode paths encoded (inside R) in UTF-8.
+
+  This should not do translations with escapes.
+ */
 SEXP attribute_hidden do_filepath(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP ans, sep, x;
-    int i, j, k, ln, maxlen, nx, nzero, pwidth, sepw;
-    const char *s, *csep, *cbuf;
-    char *buf;
-
     checkArity(op, args);
 
     /* Check the arguments */
 
-    x = CAR(args);
+    SEXP x = CAR(args);
     if (!isVectorList(x))
 	error(_("invalid first argument"));
-    nx = length(x);
-    if(nx == 0) return allocVector(STRSXP, 0);
+    int nx = length(x);
+    if (nx == 0) return allocVector(STRSXP, 0);
 
-
-    sep = CADR(args);
+    SEXP sep = CADR(args);
     if (!isString(sep) || LENGTH(sep) <= 0 || STRING_ELT(sep, 0) == NA_STRING)
 	error(_("invalid separator"));
     sep = STRING_ELT(sep, 0);
-    csep = CHAR(sep);
-    sepw = (int) strlen(csep); /* hopefully 1 */
+    const char *csep = CHAR(sep);
+    int sepw = (int) strlen(csep); /* hopefully 1 */
 
     /* Any zero-length argument gives zero-length result */
-    maxlen = 0; nzero = 0;
-    for (j = 0; j < nx; j++) {
+    int maxlen = 0, nzero = 0;
+    for (int j = 0; j < nx; j++) {
 	if (!isString(VECTOR_ELT(x, j))) {
-	    /* formerly in R code: moved to C for speed */
 	    SEXP call, xj = VECTOR_ELT(x, j);
 	    if(OBJECT(xj)) { /* method dispatch */
 		PROTECT(call = lang2(R_AsCharacterSymbol, xj));
@@ -318,31 +318,60 @@ SEXP attribute_hidden do_filepath(SEXP call, SEXP op, SEXP args, SEXP env)
 		SET_VECTOR_ELT(x, j, coerceVector(xj, STRSXP));
 
 	    if (!isString(VECTOR_ELT(x, j)))
-		error(_("non-string argument to Internal paste"));
+		error(_("non-string argument to .Internal(%s)"), PRIMNAME(op));
 	}
-	ln = LENGTH(VECTOR_ELT(x, j));
-	if(ln > maxlen) maxlen = ln;
-	if(ln == 0) {nzero++; break;}
+	int ln = LENGTH(VECTOR_ELT(x, j));
+	if (ln == 0) {nzero++; break;}
+	if (ln > maxlen) maxlen = ln;
     }
-    if(nzero || maxlen == 0) return allocVector(STRSXP, 0);
+    if (nzero || maxlen == 0) return allocVector(STRSXP, 0);
 
-    PROTECT(ans = allocVector(STRSXP, maxlen));
+    for (int j = 0; j < nx; j++) {
+	int k = LENGTH(VECTOR_ELT(x, j));
+	for (int i = 0; i < k; i++) {
+	    SEXP cs = STRING_ELT(VECTOR_ELT(x, j), i);
+	    if (IS_BYTES(cs))
+		error(_("strings with \"bytes\" encoding are not allowed"));
+	}
+    }
+    SEXP ans = PROTECT(allocVector(STRSXP, maxlen));
 
-    for (i = 0; i < maxlen; i++) {
-	pwidth = 0;
-	for (j = 0; j < nx; j++) {
-	    k = LENGTH(VECTOR_ELT(x, j));
-	    pwidth += (int) strlen(translateChar(STRING_ELT(VECTOR_ELT(x, j), i % k)));
+    for (int i = 0; i < maxlen; i++) {
+	Rboolean use_UTF8;
+	if (utf8locale)
+	    use_UTF8 = TRUE;
+	else {
+	    use_UTF8 = FALSE;
+	    for (int j = 0; j < nx; j++) {
+		int k = LENGTH(VECTOR_ELT(x, j));
+		SEXP cs = STRING_ELT(VECTOR_ELT(x, j), i % k);
+		if(IS_UTF8(cs)) {use_UTF8 = TRUE; break;}
+		if(!latin1locale && IS_LATIN1(cs)) {use_UTF8 = TRUE; break;}
+	    }
+	}
+	int pwidth = 0;
+	for (int j = 0; j < nx; j++) {
+	    int k = LENGTH(VECTOR_ELT(x, j));
+	    SEXP cs = STRING_ELT(VECTOR_ELT(x, j), i % k);
+	    if(use_UTF8)
+		pwidth += (int) strlen(trCharUTF8(cs));
+	    else
+		pwidth += (int) strlen(translateCharFP(cs));
 	}
 	pwidth += (nx - 1) * sepw;
-	cbuf = buf = R_AllocStringBuffer(pwidth, &cbuff);
-	for (j = 0; j < nx; j++) {
-	    k = LENGTH(VECTOR_ELT(x, j));
-	    if (k > 0) {
-		s = translateChar(STRING_ELT(VECTOR_ELT(x, j), i % k));
-		strcpy(buf, s);
-		buf += strlen(s);
-	    }
+	char *buf = R_AllocStringBuffer(pwidth, &cbuff);
+	const char *cbuf = buf;
+	for (int j = 0; j < nx; j++) {
+	    int k = LENGTH(VECTOR_ELT(x, j));
+	    // k == 0 already handled above
+	    SEXP cs = STRING_ELT(VECTOR_ELT(x, j), i % k);
+	    const char *s;
+	    if (use_UTF8)
+		s = trCharUTF8(cs);
+	    else
+		s = translateCharFP(cs);
+	    strcpy(buf, s);
+	    buf += strlen(s);
 	    if (j != nx - 1 && sepw != 0) {
 		strcpy(buf, csep);
 		buf += sepw;
@@ -358,7 +387,7 @@ SEXP attribute_hidden do_filepath(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	}
 #endif
-	SET_STRING_ELT(ans, i, mkChar(cbuf));
+	SET_STRING_ELT(ans, i, mkCharCE(cbuf, use_UTF8 ? CE_UTF8 : 0));
     }
     R_FreeStringBufferL(&cbuff);
     UNPROTECT(1);
@@ -384,7 +413,7 @@ SEXP attribute_hidden do_format(SEXP call, SEXP op, SEXP args, SEXP env)
 	return mkString(EncodeEnvironment(x));
     }
     else if (!isVector(x))
-	error(_("first argument must be atomic"));
+	error(_("first argument must be atomic or environment"));
     args = CDR(args);
 
     trim = asLogical(CAR(args));
@@ -425,7 +454,7 @@ SEXP attribute_hidden do_format(SEXP call, SEXP op, SEXP args, SEXP env)
     if(isLogical(CAR(args))) {
 	int tmp = LOGICAL(CAR(args))[0];
 	if(tmp == NA_LOGICAL) sci = NA_INTEGER;
-	else sci = tmp > 0 ?-100 : 100;
+	else sci = tmp > 0 ? -99 : 310;
     } else if (isNumeric(CAR(args))) {
 	sci = asInteger(CAR(args));
     } else

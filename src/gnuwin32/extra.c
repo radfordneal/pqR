@@ -3,7 +3,7 @@
  *  file extra.c
  *  Copyright (C) 1998--2003  Guido Masarotto and Brian Ripley
  *  Copyright (C) 2004	      The R Foundation
- *  Copyright (C) 2005--2019  The R Core Team
+ *  Copyright (C) 2005--2020  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -31,12 +31,14 @@
 
 
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 #include "Defn.h"
 #include <Internal.h>
 #include "Fileio.h"
 #include <direct.h>
 #include "graphapp/ga.h"
+#include "rlocale.h"
 /* Mingw-w64 defines this to be 0x0502 */
 #ifndef _WIN32_WINNT
 # define _WIN32_WINNT 0x0502 /* for GetLongPathName, KEY_WOW64_64KEY */
@@ -59,7 +61,8 @@ void internal_shellexec(const char * file)
     home = getenv("R_HOME");
     if (home == NULL)
 	error(_("R_HOME not set"));
-    strncpy(home2, home, 10000);
+    strncpy(home2, home, 10000 - 1);
+    home2[10000 - 1] = '\0';
     for(p = home2; *p; p++) if(*p == '/') *p = '\\';
     ret = (uintptr_t) ShellExecute(NULL, "open", file, NULL, home2, SW_SHOW);
     if(ret <= 32) { /* an error condition */
@@ -434,6 +437,289 @@ const char *formatError(DWORD res)
     return buf;
 }
 
+#if _WIN32_WINNT < 0x0600
+/* FIXME: also used in sysutils.c */
+/* available from Windows Vista */
+typedef enum _FILE_INFO_BY_HANDLE_CLASS {
+  FileBasicInfo,
+  FileStandardInfo,
+  FileNameInfo,
+  FileRenameInfo,
+  FileDispositionInfo,
+  FileAllocationInfo,
+  FileEndOfFileInfo,
+  FileStreamInfo,
+  FileCompressionInfo,
+  FileAttributeTagInfo,
+  FileIdBothDirectoryInfo,
+  FileIdBothDirectoryRestartInfo,
+  FileIoPriorityHintInfo,
+  FileRemoteProtocolInfo,
+  FileFullDirectoryInfo,
+  FileFullDirectoryRestartInfo,
+  FileStorageInfo,
+  FileAlignmentInfo,
+  FileIdInfo,
+  FileIdExtdDirectoryInfo,
+  FileIdExtdDirectoryRestartInfo,
+  FileDispositionInfoEx,
+  FileRenameInfoEx,
+  MaximumFileInfoByHandleClass,
+  FileCaseSensitiveInfo,
+  FileNormalizedNameInfo
+} FILE_INFO_BY_HANDLE_CLASS, *PFILE_INFO_BY_HANDLE_CLASS;
+
+/* MinGW defines this structure even for Vista. Older versions of MinGW
+   define it differently from Windows (two ULONGLONG fields). Newer
+   versions and Windows use
+ 
+typedef struct _FILE_ID_128 {
+  BYTE Identifier[16];
+} FILE_ID_128, *PFILE_ID_128;
+*/
+#elif _WIN32_WINNT < 0x0602
+/* These constants were added to FILE_INFO_BY_HANDLE_CLASS in Windows 8 */
+enum {
+  FileStorageInfo = FileFullDirectoryRestartInfo + 1,
+  FileAlignmentInfo,
+  FileIdInfo,
+  FileIdExtdDirectoryInfo,
+  FileIdExtdDirectoryRestartInfo
+};
+#endif
+
+#if WIN32_WINNT < 0x602 || !defined(__MINGW32__)
+/* Available in Windows Server 2012, but also in MinGW from Windows 8.  */
+typedef struct _FILE_ID_INFO {
+  ULONGLONG   VolumeSerialNumber;
+  FILE_ID_128 FileId;
+} FILE_ID_INFO, *PFILE_ID_INFO;
+#endif
+
+typedef BOOL (WINAPI *LPFN_GFIBH_EX) (HANDLE, FILE_INFO_BY_HANDLE_CLASS,
+                                      LPVOID, DWORD);
+
+static int isSameFile(HANDLE a, HANDLE b)
+{
+    static LPFN_GFIBH_EX gfibh = NULL;
+    static Rboolean initialized = FALSE;
+    FILE_ID_INFO aid, bid;
+
+    if (!initialized) {
+	initialized = TRUE;
+	gfibh = (LPFN_GFIBH_EX) GetProcAddress(
+	    GetModuleHandle(TEXT("kernel32")),
+	    "GetFileInformationByHandleEx");
+    }
+    if (gfibh == NULL)
+	return -1;
+
+    memset(&aid, 0, sizeof(FILE_ID_INFO));
+    memset(&bid, 0, sizeof(FILE_ID_INFO));
+    if (!gfibh(a, FileIdInfo, &aid, sizeof(FILE_ID_INFO)) ||
+        !gfibh(b, FileIdInfo, &bid, sizeof(FILE_ID_INFO)))
+	/* on Vista and Win7 it is expected to fail because FileIdInfo
+	   is not supported */
+	return -1;
+
+    if (aid.VolumeSerialNumber == bid.VolumeSerialNumber &&
+	!memcmp(&aid.FileId, &bid.FileId, sizeof(FILE_ID_128)))
+
+	return 1;
+    else
+	return 0;
+}
+
+#if _WIN32_WINNT < 0x0600
+/* available from Windows Vista */
+typedef DWORD (WINAPI *LPFN_GFPNBH) (HANDLE, LPSTR, DWORD, DWORD);
+typedef DWORD (WINAPI *LPFN_GFPNBHW) (HANDLE, LPWSTR, DWORD, DWORD);
+/*
+DWORD GetFinalPathNameByHandle(
+    HANDLE hFile,
+    LPSTR lpszFilePath,
+    DWORD cchFilePath,
+    DWORD dwFlags);
+
+DWORD GetFinalPathNameByHandleW(
+    HANDLE hFile,
+    LPWSTR lpszFilePath,
+    DWORD  cchFilePath,
+    DWORD  dwFlags
+);
+*/
+#endif
+
+/*
+   Returns TRUE on success. On failure, "res" may be modified but not useful.
+*/
+static Rboolean getFinalPathName(const char *orig, char *res)
+{
+    HANDLE horig, hres;
+    int ret;
+#if _WIN32_WINNT < 0x0600
+    static LPFN_GFPNBH gfpnbh = NULL;
+    static Rboolean initialized = FALSE;
+
+    if (!initialized) {
+	initialized = TRUE;
+	gfpnbh = (LPFN_GFPNBH) GetProcAddress(
+	    GetModuleHandle(TEXT("kernel32")),
+	    "GetFinalPathNameByHandleA");
+    }
+    if (gfpnbh == NULL)
+	return FALSE;
+#endif
+
+    /* FILE_FLAG_BACKUP_SEMANTICS needed to open a directory */
+    horig = CreateFile(orig, 0,
+                       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                       NULL, OPEN_EXISTING,
+	               FILE_ATTRIBUTE_HIDDEN | FILE_FLAG_BACKUP_SEMANTICS,
+                       NULL);
+    if (horig == INVALID_HANDLE_VALUE) 
+	return FALSE;
+#if _WIN32_WINNT < 0x0600
+    ret = gfpnbh(horig, res, MAX_PATH, VOLUME_NAME_DOS);
+#else
+    ret = GetFinalPathNameByHandle(horig, res, MAX_PATH, VOLUME_NAME_DOS);
+#endif
+    
+    if (!ret || ret > MAX_PATH) {
+	CloseHandle(horig);
+	return FALSE;
+    }
+    
+    /* get rid of the \\?\ prefix */
+    int len = strlen(res);
+    int strip = 0;
+    if (len < 4 || strncmp("\\\\?\\", res, 4)) {
+	/* res should start with \\?\ */
+	CloseHandle(horig);
+	return FALSE;
+    }
+    
+    if (len > 8 && !strncmp("UNC\\", res+4, 4)) {
+	/* UNC path \\?\UNC */
+	res[6] = '\\'; /* replace the "C" in "UNC" to get "\\" prefix */
+	strip = 6;
+    } else if (len >= 6 && isalpha(res[4]) && res[5] == ':' && res[6] == '\\')
+	/* \\?\D: */
+	strip = 4;
+    else {
+	CloseHandle(horig);
+	return FALSE;
+    }
+    memmove(res, res+strip, len-strip+1);
+
+    /* sanity check if the file exists using the normalized path, a normalized
+       path to an existing file should still be working */
+    /* FILE_FLAG_BACKUP_SEMANTICS needed to open a directory */
+    hres = CreateFile(res, 0,
+                      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                      NULL, OPEN_EXISTING,
+                      FILE_ATTRIBUTE_HIDDEN | FILE_FLAG_BACKUP_SEMANTICS,
+                      NULL);
+    if (hres == INVALID_HANDLE_VALUE) {
+	CloseHandle(horig);
+	return FALSE;
+    }
+
+    /* check that the handles point to the same file, which may not be
+       always the case because of silent best-fit encoding conversion
+       done by Windows */
+    ret = isSameFile(horig, hres);
+    CloseHandle(horig);
+    CloseHandle(hres);
+
+    return (ret == 1) ? TRUE : FALSE;
+}
+
+/*
+   Returns TRUE on success. On failure, "res" may be modified but not useful.
+*/
+static Rboolean getFinalPathNameW(const wchar_t *orig, wchar_t *res)
+{
+    HANDLE horig, hres;
+    int ret;
+#if _WIN32_WINNT < 0x0600
+    static LPFN_GFPNBHW gfpnbhw = NULL;
+    static Rboolean initialized = FALSE;
+
+    if (!initialized) {
+	initialized = TRUE;
+	gfpnbhw = (LPFN_GFPNBHW) GetProcAddress(
+	    GetModuleHandle(TEXT("kernel32")),
+	    "GetFinalPathNameByHandleW");
+    }
+    if (gfpnbhw == NULL)
+	return FALSE;
+#endif
+
+    /* FILE_FLAG_BACKUP_SEMANTICS needed to open a directory */
+    horig = CreateFileW(orig, 0,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                        NULL, OPEN_EXISTING,
+                        FILE_ATTRIBUTE_HIDDEN | FILE_FLAG_BACKUP_SEMANTICS,
+                        NULL);
+    if (horig == INVALID_HANDLE_VALUE) 
+	return FALSE;
+
+#if _WIN32_WINNT < 0x0600
+    ret = gfpnbhw(horig, res, 32767, VOLUME_NAME_DOS);
+#else
+    ret = GetFinalPathNameByHandleW(horig, res, 32767, VOLUME_NAME_DOS);
+#endif
+
+    if (!ret || ret > 32768) {
+	CloseHandle(horig);
+	return FALSE;
+    }
+    
+    /* get rid of the \\?\ prefix */
+    size_t len = wcslen(res);
+    int strip = 0;
+    if (len < 4 || wcsncmp(L"\\\\?\\", res, 4)) {
+	/* res should start with \\?\ */
+	CloseHandle(horig);
+	return FALSE;
+    }
+    
+    if (len > 8 && !wcsncmp(L"UNC\\", res+4, 4)) {
+	/* UNC path \\?\UNC */
+	res[6] = L'\\';
+	strip = 6;
+    } else if (len >= 6 && Ri18n_iswctype(res[4], Ri18n_wctype("alpha"))
+	     && res[5] == L':' && res[6] == L'\\')
+	/* \\?\D: */
+	strip = 4;
+    else {
+	CloseHandle(horig);
+	return FALSE;
+    }
+    wmemmove(res, res+strip, len-strip+1);
+
+    /* sanity check if the file exists using the normalized path, a normalized
+       path to an existing file should still be working */
+    /* FILE_FLAG_BACKUP_SEMANTICS needed to open a directory */
+    hres = CreateFileW(res, 0,
+                       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                       NULL, OPEN_EXISTING,
+                       FILE_ATTRIBUTE_HIDDEN | FILE_FLAG_BACKUP_SEMANTICS,
+                       NULL);
+    if (hres == INVALID_HANDLE_VALUE) {
+	CloseHandle(horig);
+	return FALSE;
+    }
+
+    /* sanity check that the handles point to the same file; they should, but
+       better be safe wrt to undocumented features/changes of gfpnbhw */
+    ret = isSameFile(horig, hres);
+    CloseHandle(horig);
+    CloseHandle(hres);
+
+    return ret ? TRUE : FALSE; /* return TRUE when isSameFile fails with -1 */
+}
 
 void R_UTF8fixslash(char *s); /* from main/util.c */
 SEXP do_normalizepath(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -460,8 +746,8 @@ SEXP do_normalizepath(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT(ans = allocVector(STRSXP, n));
     for (i = 0; i < n; i++) {
-    	int warn = 0;
     	SEXP result;
+	Rboolean ok = FALSE;
 	el = STRING_ELT(paths, i);
 	result = el;
 	if (el == NA_STRING) {
@@ -471,71 +757,108 @@ SEXP do_normalizepath(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    else if(mustWork == NA_LOGICAL)
 		warningcall(call, "path[%d]=NA", i+1);
 	} else if(getCharCE(el) == CE_UTF8) {
-	    if ((res = GetFullPathNameW(filenameToWchar(el, FALSE), 32768, 
-					wtmp, &wtmp2)) && res <= 32768) {
-		if ((res = GetLongPathNameW(wtmp, wlongpath, 32768))
-		    && res <= 32768) {
-	    	    wcstoutf8(longpath, wlongpath, sizeof(longpath));
-		    if(fslash) R_UTF8fixslash(longpath);
-	    	    result = mkCharCE(longpath, CE_UTF8);
-		} else if(mustWork == 1) {
-		    errorcall(call, "path[%d]=\"%s\": %s", i+1, 
-			      translateChar(el), 
-			      formatError(GetLastError()));	
-	    	} else {
-	    	    wcstoutf8(tmp, wtmp, sizeof(tmp));
-		    if(fslash) R_UTF8fixslash(tmp);
-	    	    result = mkCharCE(tmp, CE_UTF8);
-	    	    warn = 1;
-	    	}
-	    } else if(mustWork == 1) {
-		errorcall(call, "path[%d]=\"%s\": %s", i+1, 
-			  translateChar(el), 
-			  formatError(GetLastError()));	
-	    } else {
-		if (fslash) {
-		    strcpy(tmp, translateCharUTF8(el));
-		    R_UTF8fixslash(tmp);
-	    	    result = mkCharCE(tmp, CE_UTF8);
+	    wchar_t *norm = NULL;
+	    const wchar_t* wel = filenameToWchar(el, FALSE);
+
+	    if (getFinalPathNameW(wel, wtmp)) {
+		norm = wtmp;
+		ok = TRUE;
+		/* if normalized to UNC path but full path is D:..., fall back
+		   to GetLongPathName */
+		if (norm[0] == L'\\' && norm[1] == L'\\') {
+		    res = GetFullPathNameW(wel, 32768, wlongpath, &wtmp2);
+		    if (res && res <= 32768 &&
+		        Ri18n_iswctype(wlongpath[0], Ri18n_wctype("alpha")) &&
+		        wlongpath[1] == L':') {
+
+			ok = FALSE;
+			norm = NULL;
+			/* NOTE: GetFullPathName is called twice */
+		    }
 		}
-	    	warn = 1;
 	    }
-	    if (warn && (mustWork == NA_LOGICAL))
-	    	warningcall(call, "path[%d]=\"%ls\": %s", i+1, 
-			    filenameToWchar(el,FALSE), 
-			    formatError(GetLastError()));
+
+	    if (!ok) {
+		/* silently fall back to GetFullPathNameW/GetLongPathNameW */
+		res = GetFullPathNameW(wel, 32768, wtmp, &wtmp2);
+		if (res && res <= 32768) {
+		    norm = wtmp;
+		    res = GetLongPathNameW(wtmp, wlongpath, 32768);
+		    if (res && res <= 32768) {
+			norm = wlongpath;
+			ok = TRUE;
+		    }
+		}
+	    }
+	    if (!ok) {
+		if (mustWork == 1) {
+		    errorcall(call, "path[%d]=\"%ls\": %s", i+1, 
+			      wel, formatError(GetLastError()));
+		} else if (mustWork == NA_LOGICAL) {
+		    warningcall(call, "path[%d]=\"%ls\": %s", i+1, 
+				wel, formatError(GetLastError()));
+		}
+	    }
+
+	    char *normutf8 = tmp;
+	    if (norm)
+		wcstoutf8(tmp, norm, sizeof(tmp));
+	    else if (fslash)
+		strcpy(tmp, translateCharUTF8(el));
+	    else
+		normutf8 = (char *)translateCharUTF8(el);
+
+	    if (fslash) R_UTF8fixslash(normutf8);
+	    result = mkCharCE(normutf8, CE_UTF8);
 	} else {
-	    if ((res = GetFullPathName(translateChar(el), MAX_PATH, tmp, &tmp2)) 
-		&& res <= MAX_PATH) {
-	    	if ((res = GetLongPathName(tmp, longpath, MAX_PATH))
-		    && res <= MAX_PATH) {
-		    if(fslash) R_fixslash(longpath);
-	    	    result = mkChar(longpath);
-		} else if(mustWork == 1) {
-		    errorcall(call, "path[%d]=\"%s\": %s", i+1, 
-			      translateChar(el), 
-			      formatError(GetLastError()));	
-	    	} else {
-		    if(fslash) R_fixslash(tmp);
-	    	    result = mkChar(tmp);
-	    	    warn = 1;
-	    	}
-	    } else if(mustWork == 1) {
-		errorcall(call, "path[%d]=\"%s\": %s", i+1, 
-			  translateChar(el), 
-			  formatError(GetLastError()));	
-	    } else {
-		if (fslash) {
-		    strcpy(tmp, translateChar(el));
-		    R_fixslash(tmp);
-		    result = mkChar(tmp);
+	    char *norm = NULL;
+	    const char *tel = translateChar(el);
+	    if (getFinalPathName(tel, tmp)) {
+		norm = tmp;
+		ok = TRUE;
+		/* if normalized to UNC path but full path is D:..., fall back
+		   to GetLongPathName */
+		if (norm[0] == '\\' && norm[1] == '\\') {
+		    res = GetFullPathName(tel, MAX_PATH, longpath, &tmp2);
+		    if (res && res <= MAX_PATH &&
+		        isalpha(longpath[0]) && longpath[1] == ':') {
+
+			ok = FALSE;
+			norm = NULL;
+			/* NOTE: GetFullPathName is called twice */
+		    }
 		}
-	    	warn = 1;
 	    }
-	    if (warn && (mustWork == NA_LOGICAL))
-		warningcall(call, "path[%d]=\"%s\": %s", i+1, 
-			    translateChar(el), 
-			    formatError(GetLastError()));	
+	    if (!ok) {
+		/* silently fall back to GetFullPathName/GetLongPathName */
+		res = GetFullPathName(tel, MAX_PATH, tmp, &tmp2);
+		if (res && res <= MAX_PATH) {
+		    norm = tmp;
+		    res = GetLongPathName(tmp, longpath, MAX_PATH);
+		    if (res && res <= MAX_PATH) {
+			norm = longpath;
+			ok = TRUE;
+		    }
+		}
+	    }
+	    if (!ok) {
+		if (mustWork == 1) {
+		    errorcall(call, "path[%d]=\"%s\": %s", i+1, 
+			      tel, formatError(GetLastError()));
+		} else if (mustWork == NA_LOGICAL) {
+		    warningcall(call, "path[%d]=\"%s\": %s", i+1, 
+				tel, formatError(GetLastError()));
+		}
+		if (!norm) {
+		    if (fslash) {
+			strcpy(tmp, tel);
+			norm = tmp;
+		    } else
+			norm = (char *)tel;
+		}
+	    }
+	    if (fslash) R_fixslash(norm);
+	    result = mkChar(norm);
 	}
 	SET_STRING_ELT(ans, i, result);
     }

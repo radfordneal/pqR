@@ -1,7 +1,7 @@
 #  File src/library/utils/R/packages2.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2018 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -244,8 +244,27 @@ install.packages <-
 	}
     }
 
+    if (.Platform$OS.type == "windows" && length(pkgs)) {
+        ## look for package in use.
+        pkgnames <- get_package_name(pkgs)
+        ## there is no guarantee we have got the package name right:
+        ## foo.zip might contain package bar or Foo or FOO or ....
+        ## but we can't tell without trying to unpack it.
+        inuse <- search()
+        inuse <- sub("^package:", "", inuse[grep("^package:", inuse)])
+        inuse <- pkgnames %in% inuse
+        if(any(inuse)) {
+            warning(sprintf(ngettext(sum(inuse),
+                    "package %s is in use and will not be installed",
+                    "packages %s are in use and will not be installed"),
+                            paste(sQuote(pkgnames[inuse]), collapse=", ")),
+                    call. = FALSE, domain = NA, immediate. = TRUE)
+            pkgs <- pkgs[!inuse]
+        }
+    }
+
     if(!length(pkgs)) return(invisible())
-        
+
     if(missing(lib) || is.null(lib)) {
         lib <- .libPaths()[1L]
 	if(!quiet && length(.libPaths()) > 1L)
@@ -409,7 +428,7 @@ install.packages <-
 
         hasArchs <-  !is.na(av2[bins, "Archs"])
         needsCmp <- !(available[bins, "NeedsCompilation"] %in% "no")
-        hasSrc <- hasArchs | needsCmp  
+        hasSrc <- hasArchs | needsCmp
 
         srcvers <- available[bins, "Version"]
         later <- as.numeric_version(binvers) < srcvers
@@ -572,7 +591,7 @@ install.packages <-
         }
         ## Avoid problems with backslashes
         ## -- will mess up UNC names, but they don't work
-        pkgs <- gsub("\\\\", "/", pkgs)
+        pkgs <- gsub("\\", "/", pkgs, fixed=TRUE)
     } else {
         if(startsWith(type, "mac.binary")) {
             if(!grepl("darwin", R.version$platform))
@@ -590,15 +609,6 @@ install.packages <-
         if(!file.exists(file.path(R.home("bin"), "INSTALL")))
             stop("This version of R is not set up to install source packages\nIf it was installed from an RPM, you may need the R-devel RPM")
     }
-
-    ## we need to ensure that R CMD INSTALL runs with the same
-    ## library trees as this session.
-    ## FIXME: At least on Windows, either run sub-R directly (to avoid sh)
-    ## or run the install in the current process.
-    libpath <- .libPaths()
-    libpath <- libpath[! libpath %in% .Library]
-    if(length(libpath))
-        libpath <- paste(libpath, collapse = .Platform$path.sep)
 
     cmd0 <- file.path(R.home("bin"), "R")
     args0 <- c("CMD", "INSTALL")
@@ -625,7 +635,11 @@ install.packages <-
         stop(gettextf("invalid %s argument", sQuote("keep_outputs")),
              domain = NA)
 
-    if(length(libpath)) {
+    ## we need to ensure that R CMD INSTALL runs with the same
+    ## library trees, i.e., .R_LIBS() as this session.
+    ## FIXME: At least on Windows, either run sub-R directly (to avoid sh)
+    ## or run the install in the current process.
+    if(length(libpath <- .R_LIBS())) {
         ## <NOTE>
         ## For the foreseeable future, the 'env' argument to system2()
         ## on Windows is limited to calls to make and rterm (but not R
@@ -667,7 +681,7 @@ install.packages <-
            if (is.na(update[i, 1L])) next
            args <- c(args0,
                      get_install_opts(update[i, 1L]),
-                     "-l", shQuote(update[i, 2L]),
+                     "-l",    shQuote(update[i, 2L]),
                      getConfigureArgs(update[i, 1L]),
                      getConfigureVars(update[i, 1L]),
                      shQuote(update[i, 1L]))
@@ -755,12 +769,13 @@ install.packages <-
             aDL <- .make_dependency_list(upkgs, available, recursive = TRUE)
             for(i in seq_len(nrow(update))) {
                 pkg <- update[i, 1L]
+                fil <- update[i, 3L]
                 args <- c(args0,
-                          get_install_opts(update[i, 3L]),
+                          get_install_opts(fil),
                           "-l", shQuote(update[i, 2L]),
-                          getConfigureArgs(update[i, 3L]),
-                          getConfigureVars(update[i, 3L]),
-                          shQuote(update[i, 3L]),
+                          getConfigureArgs(fil),
+                          getConfigureVars(fil),
+                          shQuote(fil),
                           ">", paste0(pkg, ".out"),
                           "2>&1")
                 ## <NOTE>
@@ -815,12 +830,13 @@ install.packages <-
             outfiles <- paste0(update[, 1L], ".out")
             for(i in seq_len(nrow(update))) {
                 outfile <- if(keep_outputs) outfiles[i] else output
+                fil <- update[i, 3L]
                 args <- c(args0,
-                          get_install_opts(update[i, 3L]),
+                          get_install_opts(fil),
                           "-l", shQuote(update[i, 2L]),
-                          getConfigureArgs(update[i, 3L]),
-                          getConfigureVars(update[i, 3L]),
-                          update[i, 3L])
+                          getConfigureArgs(fil),
+                          getConfigureVars(fil),
+                          shQuote(fil))
                 status <- system2(cmd0, args, env = env,
                                   stdout = outfile, stderr = outfile,
                                   timeout = tlim)
@@ -856,7 +872,7 @@ install.packages <-
     } else if(!is.null(tmpd) && is.null(destdir)) unlink(tmpd, TRUE)
 
     invisible()
-}
+}##end install.packages
 
 ## treat variables as global in a package, for codetools & check
 globalVariables <- function(names, package, add = TRUE)
@@ -908,4 +924,14 @@ packageName <- function(env = parent.frame()) {
     else if (identical(env, .BaseNamespaceEnv))
 	"base"
     ## else NULL
+}
+
+##' R's .libPaths() to be used in 'R CMD ...' or similar,
+##' most easily by a previous  Sys.setenv(R_LIBS = .R_LIBS())
+## not yet exported
+.R_LIBS <- function(libp = .libPaths()) {
+    libp <- libp[! libp %in% .Library]
+    if(length(libp))
+        paste(libp, collapse = .Platform$path.sep)
+    else "" # character(0) would fail in Sys.setenv()
 }

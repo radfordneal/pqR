@@ -46,7 +46,9 @@ function(file, fields = NULL, all = FALSE, keep.white = NULL)
         if(all(cnts <= 1L)) {
             ## No repeated tags ...
             out[cbind(nums, tf)] <- vals
-            out <- as.data.frame(out, stringsAsFactors = FALSE)
+            out <- as.data.frame(out,
+                                 optional = TRUE,
+                                 stringsAsFactors = FALSE)
         }
         else {
             levs <- colSums(cnts > 1L) == 0L
@@ -54,7 +56,9 @@ function(file, fields = NULL, all = FALSE, keep.white = NULL)
                 inds <- tf %in% levels(tf)[levs]
                 out[cbind(nums[inds], tf[inds])] <- vals[inds]
             }
-            out <- as.data.frame(out, stringsAsFactors = FALSE)
+            out <- as.data.frame(out,
+                                 optional = TRUE,
+                                 stringsAsFactors = FALSE)
             for(l in levels(tf)[!levs]) {
                 out[[l]] <- rep.int(list(NA_character_), nrow(cnts))
                 i <- tf == l
@@ -65,8 +69,7 @@ function(file, fields = NULL, all = FALSE, keep.white = NULL)
         out
     }
 
-    ## This needs to be done in an 8-bit locale,
-    ## both for the regexps and strtrim().
+    ## This needs to be done in an 8-bit locale for the regexps.
     ctype <-  Sys.getlocale("LC_CTYPE")
     on.exit(Sys.setlocale("LC_CTYPE", ctype), add = TRUE)
     Sys.setlocale("LC_CTYPE", "C")
@@ -77,7 +80,7 @@ function(file, fields = NULL, all = FALSE, keep.white = NULL)
     ## start with blanks but have no ':' ...
     ind <- grep("^[^[:blank:]][^:]*$", lines)
     if(length(ind)) {
-        lines <- strtrim(lines[ind], 0.7 * getOption("width"))
+        lines <- substr(lines[ind], 1L, 0.7 * getOption("width"))
         stop(gettextf("Invalid DCF format.\nRegular lines must have a tag.\nOffending lines start with:\n%s",
                       paste0("  ", lines, collapse = "\n")),
              domain = NA)
@@ -99,10 +102,10 @@ function(file, fields = NULL, all = FALSE, keep.white = NULL)
     line_has_tag <- grepl("^[^[:blank:]][^:]*:", lines)
 
     ## Check that records start with tag lines.
-    pos <- which(diff(nums) > 0L) + 1L
+    pos <- c(1L, which(diff(nums) > 0L) + 1L)
     ind <- !line_has_tag[pos]
     if(any(ind)) {
-        lines <- strtrim(lines[pos[ind]], 0.7 * getOption("width"))
+        lines <- substr(lines[pos[ind]], 1L, 0.7 * getOption("width"))
         stop(gettextf("Invalid DCF format.\nContinuation lines must not start a record.\nOffending lines start with:\n%s",
                       paste0("  ", lines, collapse = "\n")),
              domain = NA)
@@ -172,7 +175,7 @@ function(x, file = "", append = FALSE, useBytes = FALSE,
 
 
     if(!is.data.frame(x))
-        x <- as.data.frame(x, stringsAsFactors = FALSE)
+        x <- as.data.frame(x, optional = TRUE, stringsAsFactors = FALSE)
     nmx <- names(x)
     out <- matrix("", nrow(x), ncol(x))
 

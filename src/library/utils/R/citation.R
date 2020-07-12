@@ -1,7 +1,7 @@
 #  File src/library/utils/R/citation.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2018 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ function(given = NULL, family = NULL, middle = NULL,
                  email = email, role = role, comment = comment,
 		 first = first, last = last)
     if(all(vapply(args, is.null, NA)))
-        return(structure(list(), class = "person"))
+        return(.person())
 
     args <- lapply(args, .listify)
     args_length <- lengths(args)
@@ -117,8 +117,8 @@ function(given = NULL, family = NULL, middle = NULL,
         if(length(comment)) {
             ## Be nice and recognize ORCID identifiers given as URLs
             ## but perhaps without an ORCID name.
-            ind <- grepl(paste0("^https?://orcid.org/",
-                                "([[:digit:]]{4}[-]){3}[[:digit:]]{3}[[:alnum:]]$"),
+            ind <- grepl(sprintf("^https?://orcid.org/%s$",
+                                 tools:::.ORCID_iD_regexp),
                          comment)
             if(any(ind)) {
                 if(is.null(names(comment)))
@@ -155,8 +155,14 @@ function(given = NULL, family = NULL, middle = NULL,
     ## </COMMENT>
     ## Yes!
 
-    structure(rval[!vapply(rval, is.null, NA)],
-              class = "person")
+    .person(rval[!vapply(rval, is.null, NA)])
+}
+
+.person <-
+function(x = list())
+{
+    class(x) <- "person"
+    x
 }
 
 .canonicalize_person_role <-
@@ -507,13 +513,15 @@ function(object, ...)
 .canonicalize_ORCID_identifier <-
 function(x)
 {
-    paste0("https://orcid.org/", sub(".*/", "", x))
+    paste0("https://orcid.org/",
+           sub(tools:::.ORCID_iD_variants_regexp, "\\3", x))
 }
 
 .expand_ORCID_identifier <-
 function(x)
 {
-    if(any(ind <- (names(x) == "ORCID")))
+    if(any(ind <- ((names(x) == "ORCID") &
+                   grepl(tools:::.ORCID_iD_variants_regexp, x))))
         x[ind] <- paste0("<",
                          .canonicalize_ORCID_identifier(x[ind]),
                          ">")
@@ -531,7 +539,7 @@ function(bibtype, textVersion = NULL, header = NULL, footer = NULL, key = NULL,
 
     args <- c(list(...), other)
     if(!length(args))
-        return(structure(list(), class = "bibentry"))
+        return(.bibentry())
     if(any(vapply(names(args), .is_not_nonempty_text, NA)))
         stop("all fields have to be named")
 
@@ -616,8 +624,14 @@ function(bibtype, textVersion = NULL, header = NULL, footer = NULL, key = NULL,
     if(!.is_not_nonempty_text(mfooter))
         attr(rval, "mfooter") <- paste(mfooter, collapse = "\n")
 
-    class(rval) <- "bibentry"
-    rval
+    .bibentry(rval)
+}
+
+.bibentry <-
+function(x = list())
+{
+    class(x) <- "bibentry"
+    x
 }
 
 .bibentry_check_bibentry1 <-
@@ -852,8 +866,7 @@ function(x, more = list())
         }
     }
 
-    class(x) <- "bibentry"
-    x
+    .bibentry(x)
 }
 
 print.bibentry <-
@@ -1053,8 +1066,7 @@ function(x, name, value)
     ## check whether all elements still have their required fields
     for(i in seq_along(x)) .bibentry_check_bibentry1(x[[i]])
 
-    class(x) <- "bibentry"
-    x
+    .bibentry(x)
 }
 
 c.bibentry <-
@@ -1067,8 +1079,7 @@ function(..., recursive = FALSE)
                 domain = NA)
     args <- lapply(args, unclass)
     rval <- do.call("c", args)
-    class(rval) <- "bibentry"
-    rval
+    .bibentry(rval)
 }
 
 toBibtex.bibentry <-
@@ -1181,10 +1192,11 @@ function(file, meta = NULL)
             mfooter <- c(mfooter, x)
     }
 
-    rval <- if(length(rval) == 1L)
-        rval[[1L]]
-    else
-        do.call("c", rval)
+    rlen <- length(rval)
+    if(rlen == 1L)
+        rval <- rval[[1L]]
+    else if(rlen > 1L)
+        rval <- do.call("c", rval)
     if(!.is_not_nonempty_text(mheader))
         attr(rval, "mheader") <- paste(mheader, collapse = "\n")
     if(!.is_not_nonempty_text(mfooter))
@@ -1360,7 +1372,11 @@ function(package = "base", lib.loc = NULL, auto = NULL)
 
 .citation <-
 function(x, package = NULL)
-    structure(x, package = package, class = c("citation", "bibentry"))
+{
+    class(x) <- c("citation", "bibentry")
+    attr(x, "package") <- package
+    x
+}
 
 .read_authors_at_R_field <-
 function(x)
@@ -1371,7 +1387,7 @@ function(x)
         writeLines(x, con, useBytes = TRUE)
         eval(parse(con, encoding = "UTF-8"))
     } else {
-        eval(parse(text = x))
+        eval(str2expression(x))
     }
 
     ## Let's by nice ...
@@ -1481,7 +1497,7 @@ function(x)
     ## (RFC 5322 <https://tools.ietf.org/html/rfc5322>).
     if(any(ind <- grepl(",", display))) {
         display[ind] <- sprintf("\"%s\"",
-                                gsub("\"", "\\\\\"", display[ind]))
+                                gsub("\"", "\\\"", display[ind], fixed=TRUE))
     }
     paste(display, address)
 }

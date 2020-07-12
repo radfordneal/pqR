@@ -94,7 +94,8 @@ barplot(height, \dots)
   \item{axisnames}{logical.  If \code{TRUE}, and if there are
     \code{names.arg} (see above), the
     other axis is drawn (with \code{lty = 0}) and labeled.}
-  \item{cex.axis}{expansion factor for numeric axis labels.}
+  \item{cex.axis}{expansion factor for numeric axis labels (see
+    \code{\link{par}('cex')}).}
   \item{cex.names}{expansion factor for axis names (bar labels).}
   \item{inside}{logical.  If \code{TRUE}, the lines which divide
     adjacent (non-stacked!) bars will be drawn.  Only applies when
@@ -102,7 +103,8 @@ barplot(height, \dots)
 %MM: we still have "NotYetUsed" -- the above describes S-plus 6.1 (not
 % precisely documented!) behavior!
   \item{plot}{logical.  If \code{FALSE}, nothing is plotted.}
-  \item{axis.lty}{the graphics parameter \code{lty} applied to the axis
+  \item{axis.lty}{the graphics parameter \code{lty} (see
+    \code{\link{par}('lty')}) applied to the axis
     and tick marks of the categorical (default horizontal) axis.  Note
     that by default the axis is suppressed.}
   \item{offset}{a vector indicating how much the bars should be shifted
@@ -117,11 +119,13 @@ barplot(height, \dots)
     names.  Only used if \code{legend.text} is supplied.}
   \item{formula}{a formula where the \code{y} variables are numeric data
     to plot against the categorical \code{x} variables.  The formula
-    can have one of three forms: \preformatted{
+    can have one of three forms:
+    \preformatted{
       y ~ x
       y ~ x1 + x2
-      cbind(y1, y2) ~ x},
-    see the examples.}
+      cbind(y1, y2) ~ x
+    }
+    (see the examples).}
   \item{data}{a data frame (or list) from which the variables in formula
     should be taken.}
   \item{subset}{an optional vector specifying a subset of observations

@@ -1146,7 +1146,7 @@ static SEXP La_qr(SEXP Ain)
 
     SEXP jpvt = PROTECT(allocVector(INTSXP, n));
     for (int i = 0; i < n; i++) INTEGER(jpvt)[i] = 0;
-    SEXP tau = PROTECT(allocVector(REALSXP, m < n ? m : n));
+    SEXP tau = PROTECT(allocVector(REALSXP, m < n ? m : n)); // qraux
     int info, lwork = -1;
     double tmp;
     F77_CALL(dgeqp3)(&m, &n, REAL(A), &m, INTEGER(jpvt), REAL(tau),
@@ -1379,6 +1379,9 @@ static SEXP mod_do_lapack(SEXP call, SEXP op, SEXP args, SEXP env)
     {
 #if defined(HAVE_DLADDR) && defined(HAVE_REALPATH)
 	Dl_info dl_info;
+	/* the call to dladdr() converts a function pointer to an object
+	   pointer, which is not allowed by ISO C, but there is no compliant
+	   alternative to using dladdr() */
 	// dladdr has first arg void * on Solaris.  This is not POSIX.
 	if (dladdr((void *) F77_NAME(ilaver), &dl_info)) {
 	    char buf[PATH_MAX+1];

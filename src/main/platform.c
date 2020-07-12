@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
+ *  Copyright (C) 1998--2020 The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1998--2019 The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -50,17 +50,57 @@
 
 # include <errno.h>
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h> /* for symlink, getpid */
+#endif
+
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+
+#ifdef Win32
+/* Mingw-w64 defines this to be 0x0502 */
+#ifndef _WIN32_WINNT
+# define _WIN32_WINNT 0x0500 /* for CreateHardLink */
+#endif
+#include <windows.h>
+typedef BOOLEAN (WINAPI *PCSL)(LPWSTR, LPWSTR, DWORD);
+static PCSL pCSL = NULL;
+const char *formatError(DWORD res);  /* extra.c */
+/* Windows does not have link(), but it does have CreateHardLink() on NTFS */
+#undef HAVE_LINK
+#define HAVE_LINK 1
+/* Windows does not have symlink(), but >= Vista does have
+   CreateSymbolicLink() on NTFS */
+#undef HAVE_SYMLINK
+#define HAVE_SYMLINK 1
+#endif
+
 /* Machine Constants */
 
-static void
-machar(int *ibeta, int *it, int *irnd, int *ngrd, int *machep, int *negep,
-       int *iexp, int *minexp, int *maxexp, double *eps,
-       double *epsneg, double *xmin, double *xmax);
+#define DTYPE double
+#define MACH_NAME machar
+#define ABS fabs
+#include "machar.c"
+#undef DTYPE
+#undef MACH_NAME
+#undef ABS
+
+#ifdef HAVE_LONG_DOUBLE
+# define DTYPE long double
+# define MACH_NAME machar_LD
+# define ABS fabsl
+# include "machar.c"
+# undef DTYPE
+# undef MACH_NAME
+# undef ABS
+#endif
 
 static void Init_R_Machine(SEXP rho)
 {
-    SEXP ans, nms;
-
     machar(&R_AccuracyInfo.ibeta,
 	   &R_AccuracyInfo.it,
 	   &R_AccuracyInfo.irnd,
@@ -76,8 +116,15 @@ static void Init_R_Machine(SEXP rho)
 	   &R_AccuracyInfo.xmax);
 
     R_dec_min_exponent = (int) floor(log10(R_AccuracyInfo.xmin)); /* smallest decimal exponent */
-    PROTECT(ans = allocVector(VECSXP, 18));
-    PROTECT(nms = allocVector(STRSXP, 18));
+
+#ifdef HAVE_LONG_DOUBLE
+# define MACH_SIZE 18+10
+#else
+# define MACH_SIZE 18
+#endif
+    SEXP ans = PROTECT(allocVector(VECSXP, MACH_SIZE)),
+	 nms = PROTECT(allocVector(STRSXP, MACH_SIZE));
+
     SET_STRING_ELT(nms, 0, mkChar("double.eps"));
     SET_VECTOR_ELT(ans, 0, ScalarReal(R_AccuracyInfo.eps));
 
@@ -135,6 +182,70 @@ static void Init_R_Machine(SEXP rho)
 
     SET_STRING_ELT(nms, 17, mkChar("sizeof.pointer"));
     SET_VECTOR_ELT(ans, 17, ScalarInteger(sizeof(SEXP)));
+
+#ifdef HAVE_LONG_DOUBLE
+    static struct {
+	int ibeta, it, irnd, ngrd, machep, negep, iexp, minexp, maxexp;
+	long double eps, epsneg, xmin, xmax;
+    } R_LD_AccuracyInfo;
+
+    machar_LD(&R_LD_AccuracyInfo.ibeta,
+	      &R_LD_AccuracyInfo.it,
+	      &R_LD_AccuracyInfo.irnd,
+	      &R_LD_AccuracyInfo.ngrd,
+	      &R_LD_AccuracyInfo.machep,
+	      &R_LD_AccuracyInfo.negep,
+	      &R_LD_AccuracyInfo.iexp,
+	      &R_LD_AccuracyInfo.minexp,
+	      &R_LD_AccuracyInfo.maxexp,
+	      &R_LD_AccuracyInfo.eps,
+	      &R_LD_AccuracyInfo.epsneg,
+	      &R_LD_AccuracyInfo.xmin,
+	      &R_LD_AccuracyInfo.xmax);
+
+    SET_STRING_ELT(nms, 18+0, mkChar("longdouble.eps"));
+    SET_VECTOR_ELT(ans, 18+0, ScalarReal((double) R_LD_AccuracyInfo.eps));
+
+    SET_STRING_ELT(nms, 18+1, mkChar("longdouble.neg.eps"));
+    SET_VECTOR_ELT(ans, 18+1, ScalarReal((double) R_LD_AccuracyInfo.epsneg));
+
+    /*
+    SET_STRING_ELT(nms, 18+2, mkChar("longdouble.xmin"));     // not representable as double
+    SET_VECTOR_ELT(ans, 18+2, ScalarReal(R_LD_AccuracyInfo.xmin));
+
+    SET_STRING_ELT(nms, 18+3, mkChar("longdouble.xmax"));    // not representable as double
+    SET_VECTOR_ELT(ans, 18+3, ScalarReal(R_LD_AccuracyInfo.xmax));
+
+    SET_STRING_ELT(nms, 18+4, mkChar("longdouble.base"));    // same as "all"
+    SET_VECTOR_ELT(ans, 18+4, ScalarInteger(R_LD_AccuracyInfo.ibeta));
+    */
+
+    SET_STRING_ELT(nms, 18+2, mkChar("longdouble.digits"));
+    SET_VECTOR_ELT(ans, 18+2, ScalarInteger(R_LD_AccuracyInfo.it));
+
+    SET_STRING_ELT(nms, 18+3, mkChar("longdouble.rounding"));
+    SET_VECTOR_ELT(ans, 18+3, ScalarInteger(R_LD_AccuracyInfo.irnd));
+
+    SET_STRING_ELT(nms, 18+4, mkChar("longdouble.guard"));
+    SET_VECTOR_ELT(ans, 18+4, ScalarInteger(R_LD_AccuracyInfo.ngrd));
+
+    SET_STRING_ELT(nms, 18+5, mkChar("longdouble.ulp.digits"));
+    SET_VECTOR_ELT(ans, 18+5, ScalarInteger(R_LD_AccuracyInfo.machep));
+
+    SET_STRING_ELT(nms, 18+6, mkChar("longdouble.neg.ulp.digits"));
+    SET_VECTOR_ELT(ans, 18+6, ScalarInteger(R_LD_AccuracyInfo.negep));
+
+    SET_STRING_ELT(nms, 18+7, mkChar("longdouble.exponent"));
+    SET_VECTOR_ELT(ans, 18+7, ScalarInteger(R_LD_AccuracyInfo.iexp));
+
+    SET_STRING_ELT(nms, 18+8, mkChar("longdouble.min.exp"));
+    SET_VECTOR_ELT(ans, 18+8, ScalarInteger(R_LD_AccuracyInfo.minexp));
+
+    SET_STRING_ELT(nms, 18+9, mkChar("longdouble.max.exp"));
+    SET_VECTOR_ELT(ans, 18+9, ScalarInteger(R_LD_AccuracyInfo.maxexp));
+
+#endif
+
     setAttrib(ans, R_NamesSymbol, nms);
     defineVar(install(".Machine"), ans, rho);
     UNPROTECT(2);
@@ -269,6 +380,7 @@ void attribute_hidden R_check_locale(void)
 	    snprintf(native_enc, R_CODESET_MAX, "CP%d", localeCP);
 	    native_enc[R_CODESET_MAX] = 0;
 	}
+	systemCP = GetACP();
     }
 #endif
 #if defined(SUPPORT_UTF8_WIN32) /* never at present */
@@ -341,17 +453,17 @@ SEXP attribute_hidden do_fileshow(SEXP call, SEXP op, SEXP args, SEXP rho)
 #ifdef Win32
 	    f[i] = acopy_string(reEnc(CHAR(el), getCharCE(el), CE_UTF8, 1));
 #else
-	    f[i] = acopy_string(translateChar(el));
+	    f[i] = acopy_string(translateCharFP(el));
 #endif
 	else
 	    error(_("invalid filename specification"));
 	if (STRING_ELT(hd, i) != NA_STRING)
-	    h[i] = acopy_string(translateChar(STRING_ELT(hd, i)));
+	    h[i] = acopy_string(translateCharFP(STRING_ELT(hd, i)));
 	else
 	    error(_("invalid '%s' argument"), "headers");
     }
     if (isValidStringF(tl))
-	t = acopy_string(translateChar(STRING_ELT(tl, 0)));
+	t = acopy_string(translateCharFP(STRING_ELT(tl, 0)));
     else
 	t = "";
     if (isValidStringF(pg)) {
@@ -483,6 +595,7 @@ SEXP attribute_hidden do_filecreate(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    LOGICAL(ans)[i] = 1;
 	    fclose(fp);
 	} else if (show) {
+	    // translateChar will translate the file, using escapes
 	    warning(_("cannot create file '%s', reason '%s'"),
 		    translateChar(STRING_ELT(fn, i)), strerror(errno));
 	}
@@ -507,7 +620,7 @@ SEXP attribute_hidden do_fileremove(SEXP call, SEXP op, SEXP args, SEXP rho)
 #ifdef Win32
 		(_wremove(filenameToWchar(STRING_ELT(f, i), TRUE)) == 0);
 #else
-		(remove(R_ExpandFileName(translateChar(STRING_ELT(f, i)))) == 0);
+		(remove(R_ExpandFileName(translateCharFP(STRING_ELT(f, i)))) == 0);
 #endif
 	    if(!LOGICAL(ans)[i])
 		warning(_("cannot remove file '%s', reason '%s'"),
@@ -517,35 +630,6 @@ SEXP attribute_hidden do_fileremove(SEXP call, SEXP op, SEXP args, SEXP rho)
     UNPROTECT(1);
     return ans;
 }
-
-#ifdef HAVE_UNISTD_H
-#include <unistd.h> /* for symlink, getpid */
-#endif
-
-#ifdef HAVE_SYS_TYPES_H
-# include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_STAT_H
-# include <sys/stat.h>
-#endif
-
-#ifdef Win32
-/* Mingw-w64 defines this to be 0x0502 */
-#ifndef _WIN32_WINNT
-# define _WIN32_WINNT 0x0500 /* for CreateHardLink */
-#endif
-#include <windows.h>
-typedef BOOLEAN (WINAPI *PCSL)(LPWSTR, LPWSTR, DWORD);
-static PCSL pCSL = NULL;
-const char *formatError(DWORD res);  /* extra.c */
-/* Windows does not have link(), but it does have CreateHardLink() on NTFS */
-#undef HAVE_LINK
-#define HAVE_LINK 1
-/* Windows does not have symlink(), but >= Vista does have
-   CreateSymbolicLink() on NTFS */
-#undef HAVE_SYMLINK
-#define HAVE_SYMLINK 1
-#endif
 
 /* the Win32 stuff here is not ready for release:
 
@@ -613,18 +697,20 @@ SEXP attribute_hidden do_filesymlink(SEXP call, SEXP op, SEXP args, SEXP rho)
 #else
 	    char from[PATH_MAX], to[PATH_MAX];
 	    const char *p;
-	    p = R_ExpandFileName(translateChar(STRING_ELT(f1, i%n1)));
+	    p = R_ExpandFileName(translateCharFP(STRING_ELT(f1, i%n1)));
 	    if (strlen(p) >= PATH_MAX - 1) {
 		LOGICAL(ans)[i] = 0;
 		continue;
 	    }
 	    strcpy(from, p);
-	    p = R_ExpandFileName(translateChar(STRING_ELT(f2, i%n2)));
+
+	    p = R_ExpandFileName(translateCharFP(STRING_ELT(f2, i%n2)));
 	    if (strlen(p) >= PATH_MAX - 1) {
 		LOGICAL(ans)[i] = 0;
 		continue;
 	    }
 	    strcpy(to, p);
+
 	    /* Rprintf("linking %s to %s\n", from, to); */
 	    LOGICAL(ans)[i] = symlink(from, to) == 0;
 	    if(!LOGICAL(ans)[i])
@@ -685,18 +771,20 @@ SEXP attribute_hidden do_filelink(SEXP call, SEXP op, SEXP args, SEXP rho)
 #else
 	    char from[PATH_MAX], to[PATH_MAX];
 	    const char *p;
-	    p = R_ExpandFileName(translateChar(STRING_ELT(f1, i%n1)));
+	    p = R_ExpandFileName(translateCharFP(STRING_ELT(f1, i%n1)));
 	    if (strlen(p) >= PATH_MAX - 1) {
 		LOGICAL(ans)[i] = 0;
 		continue;
 	    }
 	    strcpy(from, p);
-	    p = R_ExpandFileName(translateChar(STRING_ELT(f2, i%n2)));
+
+	    p = R_ExpandFileName(translateCharFP(STRING_ELT(f2, i%n2)));
 	    if (strlen(p) >= PATH_MAX - 1) {
 		LOGICAL(ans)[i] = 0;
 		continue;
 	    }
 	    strcpy(to, p);
+
 	    LOGICAL(ans)[i] = link(from, to) == 0;
 	    if(!LOGICAL(ans)[i]) {
 		warning(_("cannot link '%s' to '%s', reason '%s'"),
@@ -722,13 +810,13 @@ SEXP attribute_hidden do_filerename(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP f1, f2, ans;
     int i, n1, n2;
+    int res;
 #ifdef Win32
     wchar_t from[PATH_MAX], to[PATH_MAX];
     const wchar_t *w;
 #else
     char from[PATH_MAX], to[PATH_MAX];
     const char *p;
-    int res;
 #endif
 
     checkArity(op, args);
@@ -757,13 +845,18 @@ SEXP attribute_hidden do_filerename(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (wcslen(w) >= PATH_MAX - 1)
 	    error(_("expanded 'to' name too long"));
 	wcsncpy(to, w, PATH_MAX - 1);
-	LOGICAL(ans)[i] = (Rwin_wrename(from, to) == 0);
+	res = Rwin_wrename(from, to);
+	if(res) {
+	    warning(_("cannot rename file '%ls' to '%ls', reason '%s'"),
+		    from, to, formatError(GetLastError()));
+	}
+	LOGICAL(ans)[i] = (res == 0);
 #else
-	p = R_ExpandFileName(translateChar(STRING_ELT(f1, i)));
+	p = R_ExpandFileName(translateCharFP(STRING_ELT(f1, i)));
 	if (strlen(p) >= PATH_MAX - 1)
 	    error(_("expanded 'from' name too long"));
 	strncpy(from, p, PATH_MAX - 1);
-	p = R_ExpandFileName(translateChar(STRING_ELT(f2, i)));
+	p = R_ExpandFileName(translateCharFP(STRING_ELT(f2, i)));
 	if (strlen(p) >= PATH_MAX - 1)
 	    error(_("expanded 'to' name too long"));
 	strncpy(to, p, PATH_MAX - 1);
@@ -880,14 +973,15 @@ SEXP attribute_hidden do_fileinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
 		*(p-1) != L':') *p = 0;
 	}
 #else
-	const char *efn = R_ExpandFileName(translateChar(STRING_ELT(fn, i)));
+	const char *p = translateCharFP2(STRING_ELT(fn, i));
+	const char *efn = p ? R_ExpandFileName(p) : p;
 #endif
 	if (STRING_ELT(fn, i) != NA_STRING &&
 #ifdef Win32
 	    _wstati64(wfn, &sb)
 #else
 	    /* Target not link */
-	    stat(efn, &sb)
+	    p && stat(efn, &sb)
 #endif
 	    == 0) {
 	    REAL(fsize)[i] = (double) sb.st_size;
@@ -908,7 +1002,7 @@ SEXP attribute_hidden do_fileinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
 #define WINDOWS_TICK 10000000
 #define SEC_TO_UNIX_EPOCH 11644473600LL
 	    {
-		FILETIME c_ft, a_ft, m_ft; 
+		FILETIME c_ft, a_ft, m_ft;
 		HANDLE h;
 		int success = 0;
 		h = CreateFileW(wfn, 0,
@@ -917,7 +1011,7 @@ SEXP attribute_hidden do_fileinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
 		if (h != INVALID_HANDLE_VALUE) {
 		    int res  = GetFileTime(h, &c_ft, &a_ft, &m_ft);
 		    CloseHandle(h);
-		    if (res) { 
+		    if (res) {
 			ULARGE_INTEGER time;
 			time.LowPart = m_ft.dwLowDateTime;
 			time.HighPart = m_ft.dwHighDateTime;
@@ -936,7 +1030,7 @@ SEXP attribute_hidden do_fileinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
 		if (!success) {
 		    REAL(mtime)[i] = NA_REAL;
 		    REAL(ctime)[i] = NA_REAL;
-		    REAL(atime)[i] = NA_REAL;	
+		    REAL(atime)[i] = NA_REAL;
 	        }
 	    }
 #else
@@ -1058,20 +1152,18 @@ SEXP attribute_hidden do_direxists(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    if (len > 1 && (*p == L'/' || *p == L'\\') &&
 		*(p-1) != L':') *p = 0;
 	}
-#else
-	const char *efn = R_ExpandFileName(translateChar(STRING_ELT(fn, i)));
-#endif
-	if (STRING_ELT(fn, i) != NA_STRING &&
-#ifdef Win32
-	    _wstati64(wfn, &sb)
-#else
-	    /* Target not link */
-	    stat(efn, &sb)
-#endif
-	    == 0) {
+	if (STRING_ELT(fn, i) != NA_STRING && _wstati64(wfn, &sb) == 0) {
 	    LOGICAL(ans)[i] = (sb.st_mode & S_IFDIR) > 0;
 
 	} else LOGICAL(ans)[i] = 0;
+#else
+	const char *p = translateCharFP2(STRING_ELT(fn, i));
+	if (p && STRING_ELT(fn, i) != NA_STRING &&
+	    /* Target not link */
+	    stat(R_ExpandFileName(p), &sb) == 0) {
+	    LOGICAL(ans)[i] = (sb.st_mode & S_IFDIR) > 0;
+	} else LOGICAL(ans)[i] = 0;
+#endif
     }
     // copy names?
     UNPROTECT(1);
@@ -1238,7 +1330,9 @@ SEXP attribute_hidden do_listfiles(SEXP call, SEXP op, SEXP args, SEXP rho)
     int count = 0;
     for (int i = 0; i < LENGTH(d) ; i++) {
 	if (STRING_ELT(d, i) == NA_STRING) continue;
-	const char *dnp = R_ExpandFileName(translateChar(STRING_ELT(d, i)));
+	const char *p = translateCharFP2(STRING_ELT(d, i));
+	if (!p) continue;
+	const char *dnp = R_ExpandFileName(p);
 	list_files(dnp, fullnames ? dnp : NULL, &count, &ans, allfiles,
 		   recursive, pattern ? &reg : NULL, &countmax, idx,
 		   idirs, /* allowdots = */ !nodots);
@@ -1314,27 +1408,27 @@ static void list_dirs(const char *dnp, const char *nm,
 
 SEXP attribute_hidden do_listdirs(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    PROTECT_INDEX idx;
-    SEXP d, ans;
-    int fullnames, count, i, recursive;
-    const char *dnp;
     int countmax = 128;
 
     checkArity(op, args);
-    d = CAR(args); args = CDR(args);
+    SEXP d = CAR(args); args = CDR(args);
     if (!isString(d)) error(_("invalid '%s' argument"), "directory");
-    fullnames = asLogical(CAR(args)); args = CDR(args);
+    int fullnames = asLogical(CAR(args)); args = CDR(args);
     if (fullnames == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "full.names");
-    recursive = asLogical(CAR(args)); args = CDR(args);
+    int recursive = asLogical(CAR(args)); args = CDR(args);
     if (recursive == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "recursive");
 
+    PROTECT_INDEX idx;
+    SEXP ans;
     PROTECT_WITH_INDEX(ans = allocVector(STRSXP, countmax), &idx);
-    count = 0;
-    for (i = 0; i < LENGTH(d) ; i++) {
+    int count = 0;
+    for (int i = 0; i < LENGTH(d) ; i++) {
 	if (STRING_ELT(d, i) == NA_STRING) continue;
-	dnp = R_ExpandFileName(translateChar(STRING_ELT(d, i)));
+	const char *p = translateCharFP2(STRING_ELT(d, i));
+	if (!p) continue;
+	const char *dnp = R_ExpandFileName(p);
 	list_dirs(dnp, "", fullnames, &count, &ans, &countmax, idx, recursive);
     }
     REPROTECT(ans = lengthgets(ans, count), idx);
@@ -1381,7 +1475,9 @@ SEXP attribute_hidden do_fileexists(SEXP call, SEXP op, SEXP args, SEXP rho)
 		LOGICAL(ans)[i] =
 		    R_WFileExists(filenameToWchar(STRING_ELT(file, i), TRUE));
 #else
-	    LOGICAL(ans)[i] = R_FileExists(translateChar(STRING_ELT(file, i)));
+	    // returns NULL if not translatable
+	    const char *p = translateCharFP2(STRING_ELT(file, i));
+	    LOGICAL(ans)[i] = p && R_FileExists(p);
 #endif
 	} else LOGICAL(ans)[i] = FALSE;
     }
@@ -1435,12 +1531,12 @@ SEXP attribute_hidden do_fileaccess(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans = allocVector(INTSXP, n));
     for (i = 0; i < n; i++)
 	if (STRING_ELT(fn, i) != NA_STRING) {
-	    INTEGER(ans)[i] =
 #ifdef Win32
+	    INTEGER(ans)[i] =
 		winAccessW(filenameToWchar(STRING_ELT(fn, i), TRUE), modemask);
 #else
-		access(R_ExpandFileName(translateChar(STRING_ELT(fn, i))),
-		       modemask);
+	    const char *p = translateCharFP2(STRING_ELT(fn, i));
+	    INTEGER(ans)[i] = p ? access(R_ExpandFileName(p), modemask): -1;
 #endif
 	} else INTEGER(ans)[i] = -1; /* treat NA as non-existent file */
     UNPROTECT(1);
@@ -1497,7 +1593,7 @@ static int delReparsePoint(const wchar_t *name)
     return res == 0;
 }
 
-static int R_unlink(wchar_t *name, int recursive, int force)
+static int R_unlink(const wchar_t *name, int recursive, int force)
 {
     R_CheckStack(); // called recursively
     if (wcscmp(name, L".") == 0 || wcscmp(name, L"..") == 0) return 0;
@@ -1620,14 +1716,13 @@ static int R_unlink(const char *name, int recursive, int force)
 
 #endif
 
-
 /* Note that wildcards are allowed in 'names' */
 #ifdef Win32
 # include <dos_wglob.h>
 SEXP attribute_hidden do_unlink(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP  fn;
-    int i, j, nfiles, res, failures = 0, recursive, force;
+    int i, j, nfiles, res, failures = 0, recursive, force, expand;
     const wchar_t *names;
     wglob_t globbuf;
 
@@ -1643,16 +1738,27 @@ SEXP attribute_hidden do_unlink(SEXP call, SEXP op, SEXP args, SEXP env)
 	force = asLogical(CADDR(args));
 	if (force == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "force");
+	expand = asLogical(CADDDR(args));
+	if (expand == NA_LOGICAL)
+	    error(_("invalid '%s' argument"), "expand");
 	for (i = 0; i < nfiles; i++) {
 	    if (STRING_ELT(fn, i) != NA_STRING) {
-		names = filenameToWchar(STRING_ELT(fn, i), TRUE);
-		//Rprintf("do_unlink(%ls)\n", names);
-		res = dos_wglob(names, GLOB_NOCHECK, NULL, &globbuf);
-		if (res == GLOB_NOSPACE)
-		    error(_("internal out-of-memory condition"));
-		for (j = 0; j < globbuf.gl_pathc; j++)
-		    failures += R_unlink(globbuf.gl_pathv[j], recursive, force);
-		dos_wglobfree(&globbuf);
+		/* FIXME: does not convert encodings, currently matching
+		          filenameToWchar */
+		if (streql(CHAR(STRING_ELT(fn, i)),"~"))
+		    continue;
+		names = filenameToWchar(STRING_ELT(fn, i), expand ? TRUE : FALSE);
+		if (expand) {
+		    res = dos_wglob(names, GLOB_NOCHECK, NULL, &globbuf);
+		    if (res == GLOB_NOSPACE)
+			error(_("internal out-of-memory condition"));
+		    for (j = 0; j < globbuf.gl_pathc; j++)
+			failures += R_unlink(globbuf.gl_pathv[j], recursive,
+			                     force);
+		    dos_wglobfree(&globbuf);
+		} else {
+		    failures += R_unlink(names, recursive, force);
+		}
 	    } else failures++;
 	}
     }
@@ -1666,7 +1772,8 @@ SEXP attribute_hidden do_unlink(SEXP call, SEXP op, SEXP args, SEXP env)
 SEXP attribute_hidden do_unlink(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP  fn;
-    int i, nfiles, failures = 0, recursive, force;
+    int i, nfiles, failures = 0, recursive, force, expand;
+    Rboolean useglob = FALSE;
     const char *names;
 #if defined(HAVE_GLOB)
     int j, res;
@@ -1685,27 +1792,39 @@ SEXP attribute_hidden do_unlink(SEXP call, SEXP op, SEXP args, SEXP env)
 	force = asLogical(CADDR(args));
 	if (force == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "force");
+	expand = asLogical(CADDDR(args));
+	if (expand == NA_LOGICAL)
+	    error(_("invalid '%s' argument"), "expand");
+#if defined(HAVE_GLOB)
+	if (expand)
+	    useglob = TRUE;
+#endif
 	for (i = 0; i < nfiles; i++) {
 	    if (STRING_ELT(fn, i) != NA_STRING) {
-		names = R_ExpandFileName(translateChar(STRING_ELT(fn, i)));
+		names = translateChar(STRING_ELT(fn, i));
+		if (streql(names, "~"))
+		    continue;
+		if (expand)
+		    names = R_ExpandFileName(names);
+		if (useglob) {
 #if defined(HAVE_GLOB)
-		res = glob(names, GLOB_NOCHECK, NULL, &globbuf);
+		    res = glob(names, GLOB_NOCHECK, NULL, &globbuf);
 # ifdef GLOB_ABORTED
-		if (res == GLOB_ABORTED)
-		    warning(_("read error on '%s'"), names);
+		    if (res == GLOB_ABORTED)
+			warning(_("read error on '%s'"), names);
 # endif
 # ifdef GLOB_NOSPACE
-		if (res == GLOB_NOSPACE)
-		    error(_("internal out-of-memory condition"));
+		    if (res == GLOB_NOSPACE)
+			error(_("internal out-of-memory condition"));
 # endif
-		for (j = 0; j < globbuf.gl_pathc; j++)
-		    failures += R_unlink(globbuf.gl_pathv[j], recursive, force);
-		globfree(&globbuf);
-	    } else failures++;
-#else /* HAVE_GLOB */
-		failures += R_unlink(names, recursive, force);
-	    } else failures++;
+		    for (j = 0; j < globbuf.gl_pathc; j++)
+			failures += R_unlink(globbuf.gl_pathv[j], recursive,
+			                     force);
+		    globfree(&globbuf);
 #endif
+		} else
+		    failures += R_unlink(names, recursive, force);
+	    } else failures++;
 	}
     }
     return ScalarInteger(failures ? 1 : 0);
@@ -1924,15 +2043,18 @@ SEXP attribute_hidden do_pathexpand(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans = allocVector(STRSXP, n));
     for (i = 0; i < n; i++) {
 	SEXP tmp = STRING_ELT(fn, i);
-	if (tmp != NA_STRING) {
 #ifndef Win32
-	    tmp = markKnown(R_ExpandFileName(translateChar(tmp)), tmp);
+	const char *p = translateCharFP2(tmp);
+	if (p && tmp != NA_STRING)
+	    tmp = markKnown(R_ExpandFileName(p), tmp);
 #else
-/* Windows can have files and home directories that aren't representable in the native encoding (e.g. latin1), so
-   we need to translate everything to UTF8.  */
-	    tmp = mkCharCE(R_ExpandFileNameUTF8(translateCharUTF8(tmp)), CE_UTF8);
+/* Windows can have files and home directories that aren't representable
+   in the native encoding (e.g. latin1), so we need to translate
+   everything to UTF8.
+*/
+	if (tmp != NA_STRING)
+	    tmp = mkCharCE(R_ExpandFileNameUTF8(trCharUTF8(tmp)), CE_UTF8);
 #endif
-	}
 	SET_STRING_ELT(ans, i, tmp);
     }
     UNPROTECT(1);
@@ -2174,7 +2296,7 @@ SEXP attribute_hidden do_dircreate(SEXP call, SEXP op, SEXP args, SEXP env)
     if (recursive == NA_LOGICAL) recursive = 0;
     mode = asInteger(CADDDR(args));
     if (mode == NA_LOGICAL) mode = 0777;
-    strcpy(dir, R_ExpandFileName(translateChar(STRING_ELT(path, 0))));
+    strcpy(dir, R_ExpandFileName(translateCharFP(STRING_ELT(path, 0))));
     /* remove trailing slashes */
     p = dir + strlen(dir) - 1;
     while (*p == '/' && strlen(dir) > 1) *p-- = '\0';
@@ -2311,7 +2433,7 @@ static int do_copy(const wchar_t* from, const wchar_t* name, const wchar_t* to,
 	return 1;
     }
     struct _stati64 sb;
-    int nc, nfail = 0, res;
+    int nfail = 0, res;
     wchar_t dest[PATH_MAX + 1], this[PATH_MAX + 1];
 
     if (wcslen(from) + wcslen(name) >= PATH_MAX) {
@@ -2326,7 +2448,6 @@ static int do_copy(const wchar_t* from, const wchar_t* name, const wchar_t* to,
 	wchar_t p[PATH_MAX + 1];
 
 	if (!recursive) return 1;
-	nc = wcslen(to);
 	if (wcslen(to) + wcslen(name) >= PATH_MAX) {
 	    warning(_("over-long path"));
 	    return 1;
@@ -2358,6 +2479,7 @@ static int do_copy(const wchar_t* from, const wchar_t* name, const wchar_t* to,
 		    continue;
 		if (wcslen(name) + wcslen(de->d_name) + 1 >= PATH_MAX) {
 		    warning(_("over-long path"));
+		    _wclosedir(dir);
 		    return 1;
 		}
 		wsprintfW(p, L"%ls%\\%ls", name, de->d_name);
@@ -2366,18 +2488,19 @@ static int do_copy(const wchar_t* from, const wchar_t* name, const wchar_t* to,
 	    }
 	    _wclosedir(dir);
 	} else {
-	    warning(_("problem reading dir %ls: %s"), this, strerror(errno));
+	    warning(_("problem reading directory %ls: %s"), this, strerror(errno));
 	    nfail++; /* we were unable to read a dir */
 	}
+	// chmod(dest, ... perms ...)  [TODO?]
 	if(dates) copyFileTime(this, dest);
     } else { /* a file */
 	FILE *fp1 = NULL, *fp2 = NULL;
 	wchar_t buf[APPENDBUFSIZE];
 
 	nfail = 0;
-	nc = wcslen(to);
+	int nc = wcslen(to);
 	if (nc + wcslen(name) >= PATH_MAX) {
-	    warning(_("over-long path length"));
+	    warning(_("over-long path"));
 	    nfail++;
 	    goto copy_error;
 	}
@@ -2391,7 +2514,7 @@ static int do_copy(const wchar_t* from, const wchar_t* name, const wchar_t* to,
 		goto copy_error;
 	    }
 	    while ((nc = fread(buf, 1, APPENDBUFSIZE, fp1)) == APPENDBUFSIZE)
-		if (fwrite(buf, 1, APPENDBUFSIZE, fp2) != APPENDBUFSIZE) {
+		if (    fwrite(buf, 1, APPENDBUFSIZE, fp2)  != APPENDBUFSIZE) {
 		    nfail++;
 		    goto copy_error;
 		}
@@ -2400,13 +2523,11 @@ static int do_copy(const wchar_t* from, const wchar_t* name, const wchar_t* to,
 		goto copy_error;
 	    }
 	} else if (!over) {
-	  nfail++;
-	  goto copy_error;
+	    nfail++;
+	    goto copy_error;
 	}
-	if(fp1) fclose(fp1);
-	fp1 = NULL;
-	if(fp2) fclose(fp2);
-	fp2 = NULL;
+	if(fp1) { fclose(fp1); fp1 = NULL; }
+	if(fp2) { fclose(fp2); fp2 = NULL; }
 	/* FIXME: perhaps manipulate mode as we do in Sys.chmod? */
 	if(perms) _wchmod(dest, sb.st_mode & 0777);
 	if(dates) copyFileTime(this, dest);
@@ -2417,55 +2538,57 @@ copy_error:
     return nfail;
 }
 
-/* file.copy(files, dir, over, recursive=TRUE, perms), only */
+/* file.copy(from, to, overwrite, recursive, copy.mode, copy.date)
+ * --------- Windows */
 SEXP attribute_hidden do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP fn, to, ans;
-    wchar_t *p, dir[PATH_MAX], from[PATH_MAX], name[PATH_MAX];
-    int i, nfiles, over, recursive, perms, dates, nfail;
-
     checkArity(op, args);
-    fn = CAR(args);
-    nfiles = length(fn);
-    PROTECT(ans = allocVector(LGLSXP, nfiles));
+    SEXP fn = CAR(args);
+    int nfiles = length(fn);
+    SEXP ans = PROTECT(allocVector(LGLSXP, nfiles));
     if (nfiles > 0) {
 	args = CDR(args);
 	if (!isString(fn))
 	    error(_("invalid '%s' argument"), "from");
-	to = CAR(args); args = CDR(args);
+	SEXP to = CAR(args); args = CDR(args);
 	if (!isString(to) || LENGTH(to) != 1)
 	    error(_("invalid '%s' argument"), "to");
-	over = asLogical(CAR(args)); args = CDR(args);
+	int over = asLogical(CAR(args)); args = CDR(args);
 	if (over == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "overwrite");
-	recursive = asLogical(CAR(args)); args = CDR(args);
+	int recursive = asLogical(CAR(args)); args = CDR(args);
 	if (recursive == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "recursive");
-	perms = asLogical(CAR(args)); args = CDR(args);
+	int perms = asLogical(CAR(args)); args = CDR(args);
 	if (perms == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "copy.mode");
-	dates = asLogical(CAR(args));
+	int dates = asLogical(CAR(args));
 	if (dates == NA_LOGICAL)
-	    error(_("invalid '%s' argument"), "copy.dates");
-	p = filenameToWchar(STRING_ELT(to, 0), TRUE);
+	    error(_("invalid '%s' argument"), "copy.date");
+	wchar_t *p = filenameToWchar(STRING_ELT(to, 0), TRUE);
 	if (wcslen(p) >= PATH_MAX)
 	    error(_("'%s' path too long"), "to");
+	wchar_t dir[PATH_MAX];
 	wcsncpy(dir, p, PATH_MAX);
 	dir[PATH_MAX - 1] = L'\0';
 	if (*(dir + (wcslen(dir) - 1)) !=  L'\\')
 	    wcsncat(dir, L"\\", PATH_MAX);
-	for (i = 0; i < nfiles; i++) {
+	int nfail;
+	for (int i = 0; i < nfiles; i++) {
 	    if (STRING_ELT(fn, i) != NA_STRING) {
 	    	p = filenameToWchar(STRING_ELT(fn, i), TRUE);
 	    	if (wcslen(p) >= PATH_MAX)
 	    	    error(_("'%s' path too long"), "from");
+		wchar_t from[PATH_MAX];
 		wcsncpy(from, p, PATH_MAX);
 		from[PATH_MAX - 1] = L'\0';
-		if(wcslen(from)) {
-		    /* If there was a trailing sep, this is a mistake */
-		    p = from + (wcslen(from) - 1);
+		size_t ll = wcslen(from);
+		if (ll) {  // people do pass ""
+		    /* If there is a trailing sep, this is a mistake */
+		    p = from + (ll - 1);
 		    if(*p == L'\\') *p = L'\0';
 		    p = wcsrchr(from, L'\\') ;
+		    wchar_t name[PATH_MAX];
 		    if (p) {
 			wcsncpy(name, p+1, PATH_MAX);
 			name[PATH_MAX - 1] = L'\0';
@@ -2527,13 +2650,13 @@ static void copyFileTime(const char *from, const char * to)
 #if defined(HAVE_UTIMENSAT)
     struct timespec times[2];
 
-    times[0].tv_sec = times[1].tv_sec = (int)ftime;
+    times[0].tv_sec  = times[1].tv_sec  = (int)ftime;
     times[0].tv_nsec = times[1].tv_nsec = (int)(1e9*(ftime - (int)ftime));
     utimensat(AT_FDCWD, to, times, 0);
 #elif defined(HAVE_UTIMES)
     struct timeval times[2];
 
-    times[0].tv_sec = times[1].tv_sec = (int)ftime;
+    times[0].tv_sec  = times[1].tv_sec  = (int)ftime;
     times[0].tv_usec = times[1].tv_usec = (int)(1e6*(ftime - (int)ftime));
     utimes(to, times);
 #elif defined(HAVE_UTIME)
@@ -2552,11 +2675,11 @@ static int do_copy(const char* from, const char* name, const char* to,
 	warning(_("too deep nesting"));
 	return 1;
     }
-
     struct stat sb;
-    int nfail = 0, res, mask;
-    char dest[PATH_MAX+1], this[PATH_MAX+1];
+    int nfail = 0, res;
+    char dest[PATH_MAX + 1], this[PATH_MAX + 1];
 
+    int mask;
 #ifdef HAVE_UMASK
     int um = umask(0); umask((mode_t) um);
     mask = 0777 & ~um;
@@ -2565,7 +2688,7 @@ static int do_copy(const char* from, const char* name, const char* to,
 #endif
     /* REprintf("from: %s, name: %s, to: %s\n", from, name, to); */
     if (strlen(from) + strlen(name) >= PATH_MAX) {
-	warning(_("over-long path length"));
+	warning(_("over-long path"));
 	return 1;
     }
     snprintf(this, PATH_MAX+1, "%s%s", from, name);
@@ -2574,11 +2697,11 @@ static int do_copy(const char* from, const char* name, const char* to,
     if ((sb.st_mode & S_IFDIR) > 0) { /* a directory */
 	DIR *dir;
 	struct dirent *de;
-	char p[PATH_MAX+1];
+	char p[PATH_MAX + 1];
 
 	if (!recursive) return 1;
 	if (strlen(to) + strlen(name) >= PATH_MAX) {
-	    warning(_("over-long path length"));
+	    warning(_("over-long path"));
 	    return 1;
 	}
 	snprintf(dest, PATH_MAX+1, "%s%s", to, name);
@@ -2609,7 +2732,7 @@ static int do_copy(const char* from, const char* name, const char* to,
 		if (streql(de->d_name, ".") || streql(de->d_name, ".."))
 		    continue;
 		if (strlen(name) + strlen(de->d_name) + 1 >= PATH_MAX) {
-		    warning(_("over-long path length"));
+		    warning(_("over-long path"));
 		    closedir(dir);
 		    return 1;
 		}
@@ -2619,8 +2742,7 @@ static int do_copy(const char* from, const char* name, const char* to,
 	    }
 	    closedir(dir);
 	} else {
-	    warning(_("problem reading directory %s: %s"),
-		    this, strerror(errno));
+	    warning(_("problem reading directory %s: %s"), this, strerror(errno));
 	    nfail++; /* we were unable to read a dir */
 	}
 	chmod(dest, (mode_t) (perms ? (sb.st_mode & mask): mask));
@@ -2631,8 +2753,8 @@ static int do_copy(const char* from, const char* name, const char* to,
 
 	nfail = 0;
 	size_t nc = strlen(to);
-	if (strlen(to) + strlen(name) >= PATH_MAX) {
-	    warning(_("over-long path length"));
+	if (nc + strlen(name) >= PATH_MAX) {
+	    warning(_("over-long path"));
 	    nfail++;
 	    goto copy_error;
 	}
@@ -2647,7 +2769,7 @@ static int do_copy(const char* from, const char* name, const char* to,
 		goto copy_error;
 	    }
 	    while ((nc = fread(buf, 1, APPENDBUFSIZE, fp1)) == APPENDBUFSIZE)
-		if (fwrite(buf, 1, APPENDBUFSIZE, fp2) != APPENDBUFSIZE) {
+		if (    fwrite(buf, 1, APPENDBUFSIZE, fp2)  != APPENDBUFSIZE) {
 		    nfail++;
 		    goto copy_error;
 		}
@@ -2655,11 +2777,14 @@ static int do_copy(const char* from, const char* name, const char* to,
 		nfail++;
 		goto copy_error;
 	    }
-	    if(fp2) {fclose(fp2); fp2 = NULL;}
-	    if(perms) chmod(dest, sb.st_mode & mask);
-	    if(dates) copyFileTime(this, dest);
-	} else if (!over)
+	} else if (!over) {
 	    nfail++;
+	    goto copy_error;
+	}
+	if(fp1) { fclose(fp1); fp1 = NULL; }
+	if(fp2) { fclose(fp2); fp2 = NULL; }
+	if(perms) chmod(dest, sb.st_mode & mask);
+	if(dates) copyFileTime(this, dest);
 copy_error:
 	if(fp2) fclose(fp2);
 	if(fp1) fclose(fp1);
@@ -2667,55 +2792,56 @@ copy_error:
     return nfail;
 }
 
-/* file.copy(files, dir, recursive), only */
+/* file.copy(from, to, overwrite, recursive, copy.mode, copy.date)
+ * --------- Unix-alike */
 SEXP attribute_hidden do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP fn, to, ans;
-    char *p, dir[PATH_MAX], from[PATH_MAX], name[PATH_MAX];
-    int i, nfiles, over, recursive, perms, dates, nfail;
-
     checkArity(op, args);
-    fn = CAR(args);
-    nfiles = length(fn);
-    PROTECT(ans = allocVector(LGLSXP, nfiles));
+    SEXP fn = CAR(args);
+    int nfiles = length(fn);
+    SEXP ans = PROTECT(allocVector(LGLSXP, nfiles));
     if (nfiles > 0) {
 	args = CDR(args);
 	if (!isString(fn))
 	    error(_("invalid '%s' argument"), "from");
-	to = CAR(args); args = CDR(args);
+	SEXP to = CAR(args); args = CDR(args);
 	if (!isString(to) || LENGTH(to) != 1)
 	    error(_("invalid '%s' argument"), "to");
-	over = asLogical(CAR(args)); args = CDR(args);
+	int over = asLogical(CAR(args)); args = CDR(args);
 	if (over == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "overwrite");
-	recursive = asLogical(CAR(args)); args = CDR(args);
+	int recursive = asLogical(CAR(args)); args = CDR(args);
 	if (recursive == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "recursive");
-	perms = asLogical(CAR(args)); args = CDR(args);
+	int perms = asLogical(CAR(args)); args = CDR(args);
 	if (perms == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "copy.mode");
-	dates = asLogical(CAR(args));
+	int dates = asLogical(CAR(args));
 	if (dates == NA_LOGICAL)
-	    error(_("invalid '%s' argument"), "copy.dates");
-	const char* q = R_ExpandFileName(translateChar(STRING_ELT(to, 0)));
+	    error(_("invalid '%s' argument"), "copy.date");
+	const char* q = R_ExpandFileName(translateCharFP(STRING_ELT(to, 0)));
 	if(strlen(q) > PATH_MAX - 2) // allow for '/' and terminator
 	    error(_("invalid '%s' argument"), "to");
+	char dir[PATH_MAX];
 	strncpy(dir, q, PATH_MAX);
 	dir[PATH_MAX - 1] = '\0';
 	if (*(dir + (strlen(dir) - 1)) !=  '/')
 	    strcat(dir, "/");
-	for (i = 0; i < nfiles; i++) {
+	int nfail;
+	for (int i = 0; i < nfiles; i++) {
 	    if (STRING_ELT(fn, i) != NA_STRING) {
+		char from[PATH_MAX];
 		strncpy(from,
-			R_ExpandFileName(translateChar(STRING_ELT(fn, i))),
+			R_ExpandFileName(translateCharFP(STRING_ELT(fn, i))),
 			PATH_MAX - 1);
 		from[PATH_MAX - 1] = '\0';
 		size_t ll = strlen(from);
 		if (ll) {  // people do pass ""
 		    /* If there is a trailing sep, this is a mistake */
-		    p = from + (ll - 1);
+		    char* p = from + (ll - 1);
 		    if(*p == '/') *p = '\0';
 		    p = strrchr(from, '/') ;
+		    char name[PATH_MAX];
 		    if (p) {
 			strncpy(name, p+1, PATH_MAX - 1);
 			name[PATH_MAX - 1] = '\0';
@@ -2740,7 +2866,7 @@ SEXP attribute_hidden do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_l10n_info(SEXP call, SEXP op, SEXP args, SEXP env)
 {
 #ifdef Win32
-    int len = 4;
+    int len = 5;
 #else
     int len = 3;
 #endif
@@ -2757,6 +2883,8 @@ SEXP attribute_hidden do_l10n_info(SEXP call, SEXP op, SEXP args, SEXP env)
 #ifdef Win32
     SET_STRING_ELT(names, 3, mkChar("codepage"));
     SET_VECTOR_ELT(ans, 3, ScalarInteger(localeCP));
+    SET_STRING_ELT(names, 4, mkChar("system.codepage"));
+    SET_VECTOR_ELT(ans, 4, ScalarInteger(systemCP));
 #endif
     setAttrib(ans, R_NamesSymbol, names);
     UNPROTECT(2);
@@ -2804,7 +2932,7 @@ SEXP attribute_hidden do_syschmod(SEXP call, SEXP op, SEXP args, SEXP env)
 #ifdef Win32
 	    res = _wchmod(filenameToWchar(STRING_ELT(paths, i), TRUE), mode);
 #else
-	    res = chmod(R_ExpandFileName(translateChar(STRING_ELT(paths, i))),
+	    res = chmod(R_ExpandFileName(translateCharFP(STRING_ELT(paths, i))),
 			mode);
 #endif
 	} else res = 1;
@@ -2834,6 +2962,7 @@ SEXP attribute_hidden do_sysumask(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP ans;
     int mode;
     mode_t res = 0;
+    Rboolean visible;
 
     checkArity(op, args);
     mode = asInteger(CAR(args));
@@ -2841,18 +2970,19 @@ SEXP attribute_hidden do_sysumask(SEXP call, SEXP op, SEXP args, SEXP env)
     if (mode == NA_INTEGER) {
 	res = umask(0);
 	umask(res);
-	R_Visible = TRUE;
+	visible = TRUE;
     } else {
 	res = umask((mode_t) mode);
-	R_Visible = FALSE;
+	visible = FALSE;
     }
 #else
     warning(_("insufficient OS support on this platform"));
-    R_Visible = FALSE;
+    visible = FALSE;
 #endif
     PROTECT(ans = ScalarInteger(res));
     setAttrib(ans, R_ClassSymbol, mkString("octmode"));
     UNPROTECT(1);
+    R_Visible = visible;
     return ans;
 }
 
@@ -2867,16 +2997,17 @@ SEXP attribute_hidden do_readlink(SEXP call, SEXP op, SEXP args, SEXP env)
 #ifdef HAVE_READLINK
     char buf[PATH_MAX+1];
     for (int i = 0; i < n; i++) {
-	memset(buf, 0, PATH_MAX+1);
-	ssize_t res = 
-	    readlink(R_ExpandFileName(translateChar(STRING_ELT(paths, i))),
-		     buf, PATH_MAX);
-	if (res == PATH_MAX) {
-	    SET_STRING_ELT(ans, i, mkChar(buf));
-	    warning("possible truncation of value for element %d", i + 1);
-	} else if (res >= 0) SET_STRING_ELT(ans, i, mkChar(buf));
-	else if (errno == EINVAL) SET_STRING_ELT(ans, i, mkChar(""));
-	else SET_STRING_ELT(ans, i,  NA_STRING);
+	const char *p = translateCharFP2(STRING_ELT(paths, i));
+	if (p) {
+	    memset(buf, 0, PATH_MAX+1);
+	    ssize_t res = readlink(R_ExpandFileName(p), buf, PATH_MAX);
+	    if (res == PATH_MAX) {
+		SET_STRING_ELT(ans, i, mkChar(buf));
+		warning("possible truncation of value for element %d", i + 1);
+	    } else if (res >= 0) SET_STRING_ELT(ans, i, mkChar(buf));
+	    else if (errno == EINVAL) SET_STRING_ELT(ans, i, mkChar(""));
+	    else SET_STRING_ELT(ans, i,  NA_STRING);
+	} else SET_STRING_ELT(ans, i,  NA_STRING);
     }
 #endif
     UNPROTECT(1);
@@ -2956,11 +3087,11 @@ do_setFileTime(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(times = coerceVector(CADR(args), REALSXP));
     m = XLENGTH(times);
     if (!m && n) error(_("'%s' must be of length at least one"), "time");
-    
+
     PROTECT(ans = allocVector(LGLSXP, n));
     vmax = vmaxget();
     for(R_xlen_t i = 0; i < n; i++) {
-	fn = translateChar(STRING_ELT(paths, i));
+	fn = translateCharFP(STRING_ELT(paths, i));
 	ftime = REAL(times)[i % m];
 	#ifdef Win32
 	    res = winSetFileTime(fn, ftime);
@@ -2986,7 +3117,7 @@ do_setFileTime(SEXP call, SEXP op, SEXP args, SEXP rho)
 	#endif
 	LOGICAL(ans)[i] = (res == 0) ? FALSE : TRUE;
 	fn = NULL;
-	vmaxset(vmax); // throws away result of translateChar
+	vmaxset(vmax); // throws away result of translateCharFP
     }
     UNPROTECT(2); /* times, ans */
     return ans;
@@ -3026,7 +3157,7 @@ SEXP attribute_hidden do_mkjunction(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(hd == INVALID_HANDLE_VALUE) {
 	warning("cannot open reparse point '%ls', reason '%s'",
 		to, formatError(GetLastError()));
-	return ScalarLogical(1);
+	return ScalarLogical(0);
     }
     TMN_REPARSE_DATA_BUFFER rdb;
     const size_t nbytes = wcslen(from) * 2;
@@ -3054,10 +3185,16 @@ SEXP attribute_hidden do_mkjunction(SEXP call, SEXP op, SEXP args, SEXP rho)
 #include <zlib.h>
 #include <bzlib.h>
 #include <lzma.h>
-#ifdef HAVE_PCRE_PCRE_H
-# include <pcre/pcre.h>
+
+#ifdef HAVE_PCRE2
+  /* PCRE2_CODE_UNIT_WIDTH is defined to 8 via config.h */
+# include<pcre2.h>
 #else
-# include <pcre.h>
+# ifdef HAVE_PCRE_PCRE_H
+#  include <pcre/pcre.h>
+# else
+#  include <pcre.h>
+# endif
 #endif
 
 #ifdef USE_ICU
@@ -3120,7 +3257,11 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
     snprintf(p, 256, "%s", lzma_version_string());
     SET_STRING_ELT(ans, i, mkChar(p));
     SET_STRING_ELT(nms, i++, mkChar("xz"));
+#ifdef HAVE_PCRE2
+    pcre2_config(PCRE2_CONFIG_VERSION, p);
+#else
     snprintf(p, 256, "%s", pcre_version());
+#endif
     SET_STRING_ELT(ans, i, mkChar(p));
     SET_STRING_ELT(nms, i++, mkChar("PCRE"));
 #ifdef USE_ICU
@@ -3180,6 +3321,9 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     Dl_info dl_info1, dl_info2;
 
+    /* these calls to dladdr() convert a function pointer to an object
+       pointer, which is not allowed by ISO C, but there is no compliant
+       alternative to using dladdr() */
     if (!dladdr((void *)do_eSoftVersion, &dl_info1)) ok = FALSE;
     if (!dladdr((void *)dladdr, &dl_info2)) ok = FALSE;
 
@@ -3237,306 +3381,3 @@ SEXP attribute_hidden do_syssleep(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-
-/* Formerly src/appl/machar.c:
- * void machar()  -- computes ALL `machine constants' at once.
- * -------------  -- compare with ../nmath/i1mach.c & ../nmath/d1mach.c
- *		     which use the C  <float.h> constants !
- *      algorithm 665, collected algorithms from acm.
- *      this work published in transactions on mathematical software,
- *      vol. 14, no. 4, pp. 303-311.
- *
- *  this fortran 77 subroutine is intended to determine the parameters
- *   of the floating-point arithmetic system specified below.  the
- *   determination of the first three uses an extension of an algorithm
- *   due to m. malcolm, cacm 15 (1972), pp. 949-951, incorporating some,
- *   but not all, of the improvements suggested by m. gentleman and s.
- *   marovich, cacm 17 (1974), pp. 276-277.  an earlier version of this
- *   program was published in the book software manual for the
- *   elementary functions by w. j. cody and w. waite, prentice-hall,
- *   englewood cliffs, nj, 1980.
- *
- *  the program as given here must be modified before compiling.  if
- *   a single (double) precision version is desired, change all
- *   occurrences of cs (  ) in columns 1 and 2 to blanks.
- *
- *  parameter values reported are as follows:
- *
- *       ibeta   - the radix for the floating-point representation
- *       it      - the number of base ibeta digits in the floating-point
- *                 significand
- *       irnd    - 0 if floating-point addition chops
- *                 1 if floating-point addition rounds, but not in the
- *                   ieee style
- *                 2 if floating-point addition rounds in the ieee style
- *                 3 if floating-point addition chops, and there is
- *                   partial underflow
- *                 4 if floating-point addition rounds, but not in the
- *                   ieee style, and there is partial underflow
- *                 5 if floating-point addition rounds in the ieee style,
- *                   and there is partial underflow
- *       ngrd    - the number of guard digits for multiplication with
- *                 truncating arithmetic.  it is
- *                 0 if floating-point arithmetic rounds, or if it
- *                   truncates and only  it  base  ibeta digits
- *                   participate in the post-normalization shift of the
- *                   floating-point significand in multiplication;
- *                 1 if floating-point arithmetic truncates and more
- *                   than  it  base  ibeta  digits participate in the
- *                   post-normalization shift of the floating-point
- *                   significand in multiplication.
- *       machep  - the largest negative integer such that
- *                 1.0+float(ibeta)**machep .ne. 1.0, except that
- *                 machep is bounded below by  -(it+3)
- *       negeps  - the largest negative integer such that
- *                 1.0-float(ibeta)**negeps .ne. 1.0, except that
- *                 negeps is bounded below by  -(it+3)
- *       iexp    - the number of bits (decimal places if ibeta = 10)
- *                 reserved for the representation of the exponent
- *                 (including the bias or sign) of a floating-point
- *                 number
- *       minexp  - the largest in magnitude negative integer such that
- *                 float(ibeta)**minexp is positive and normalized
- *       maxexp  - the smallest positive power of  beta  that overflows
- *       eps     - the smallest positive floating-point number such
- *                 that  1.0+eps .ne. 1.0. in particular, if either
- *                 ibeta = 2  or  irnd = 0, eps = float(ibeta)**machep.
- *                 otherwise,  eps = (float(ibeta)**machep)/2
- *       epsneg  - a small positive floating-point number such that
- *                 1.0-epsneg .ne. 1.0. in particular, if ibeta = 2
- *                 or  irnd = 0, epsneg = float(ibeta)**negeps.
- *                 otherwise,  epsneg = (ibeta**negeps)/2.  because
- *                 negeps is bounded below by -(it+3), epsneg may not
- *                 be the smallest number that can alter 1.0 by
- *                 subtraction.
- *       xmin    - the smallest non-vanishing normalized floating-point
- *                 power of the radix, i.e.,  xmin = float(ibeta)**minexp
- *       xmax    - the largest finite floating-point number.  in
- *                 particular  xmax = (1.0-epsneg)*float(ibeta)**maxexp
- *                 note - on some machines  xmax  will be only the
- *                 second, or perhaps third, largest number, being
- *                 too small by 1 or 2 units in the last digit of
- *                 the significand.
- *
- *     latest revision - april 20, 1987
- *
- *     author - w. j. cody
- *              argonne national laboratory
- *
- */
-
-
-static void
-machar(int *ibeta, int *it, int *irnd, int *ngrd, int *machep, int *negep,
-       int *iexp, int *minexp, int *maxexp, double *eps,
-       double *epsneg, double *xmin, double *xmax)
-{
-	volatile double a, b, beta, betain, betah, one,
-		t, temp, tempa, temp1, two, y, z, zero;
-	int i, itemp, iz, j, k, mx, nxres;
-
-	one = 1;
-	two = one+one;
-	zero = one-one;
-
-		/* determine ibeta, beta ala malcolm. */
-
-	a = one;
-	do {
-		a = a + a;
-		temp = a + one;
-		temp1 = temp - a;
-	}
-	while(temp1 - one == zero);
-	b = one;
-	do {
-		b = b + b;
-		temp = a + b;
-		itemp = (int)(temp - a);
-	}
-	while (itemp == 0);
-	*ibeta = itemp;
-	beta = *ibeta;
-
-		/* determine it, irnd */
-
-	*it = 0;
-	b = one;
-	do {
-		*it = *it + 1;
-		b = b * beta;
-		temp = b + one;
-		temp1 = temp - b;
-	}
-	while(temp1 - one == zero);
-	*irnd = 0;
-	betah = beta / two;
-	temp = a + betah;
-	if (temp - a != zero)
-		*irnd = 1;
-	tempa = a + beta;
-	temp = tempa + betah;
-	if (*irnd == 0 && temp - tempa != zero)
-		*irnd = 2;
-
-		/* determine negep, epsneg */
-
-	*negep = *it + 3;
-	betain = one / beta;
-	a = one;
-	for(i=1 ; i<=*negep ; i++)
-		a = a * betain;
-	b = a;
-	for(;;) {
-		temp = one - a;
-		if (temp - one != zero)
-			break;
-		a = a * beta;
-		*negep = *negep - 1;
-	}
-	*negep = -*negep;
-	*epsneg = a;
-	if (*ibeta != 2 && *irnd != 0) {
-		a = (a * (one + a)) / two;
-		temp = one - a;
-		if (temp - one != zero)
-			*epsneg = a;
-	}
-
-		/* determine machep, eps */
-
-	*machep = -*it - 3;
-	a = b;
-	for(;;) {
-		temp = one + a;
-		if (temp - one != zero)
-			break;
-		a = a * beta;
-		*machep = *machep + 1;
-	}
-	*eps = a;
-	temp = tempa + beta * (one + *eps);
-	if (*ibeta != 2 && *irnd != 0) {
-		a = (a * (one + a)) / two;
-		temp = one + a;
-		if (temp - one != zero)
-			*eps = a;
-	}
-
-		/* determine ngrd */
-
-	*ngrd = 0;
-	temp = one + *eps;
-	if (*irnd == 0 && temp * one - one != zero)
-		*ngrd = 1;
-
-	/* determine iexp, minexp, xmin */
-
-	/* loop to determine largest i and k = 2**i such that */
-	/*        (1/beta) ** (2**(i)) */
-	/* does not underflow. */
-	/* exit from loop is signaled by an underflow. */
-
-	i = 0;
-	k = 1;
-	z = betain;
-	t = one + *eps;
-	nxres = 0;
-	for(;;) {
-		y = z;
-		z = y * y;
-
-		/* check for underflow here */
-
-		a = z * one;
-		temp = z * t;
-		if (a+a == zero || fabs(z) >= y)
-			break;
-		temp1 = temp * betain;
-		if (temp1 * beta == z)
-			break;
-		i = i+1;
-		k = k+k;
-	}
-	if (*ibeta != 10) {
-		*iexp = i + 1;
-		mx = k + k;
-	}
-	else {
-		/* this segment is for decimal machines only */
-
-		*iexp = 2;
-		iz = *ibeta;
-		while (k >= iz) {
-			iz = iz * *ibeta;
-			iexp = iexp + 1;
-		}
-		mx = iz + iz - 1;
-	}
-	do {
-		/* loop to determine minexp, xmin */
-		/* exit from loop is signaled by an underflow */
-
-		*xmin = y;
-		y = y * betain;
-
-		/* check for underflow here */
-
-		a = y * one;
-		temp = y * t;
-		if (a+a == zero || fabs(y) >= *xmin)
-			goto L10;
-		k = k + 1;
-		temp1 = temp * betain;
-	}
-	while(temp1 * beta != y);
-	nxres = 3;
-	*xmin = y;
-L10:	*minexp = -k;
-
-	/* determine maxexp, xmax */
-
-	if (mx <= k + k - 3 && *ibeta != 10) {
-		mx = mx + mx;
-		*iexp = *iexp + 1;
-	}
-	*maxexp = mx + *minexp;
-
-	/* adjust irnd to reflect partial underflow */
-
-	*irnd = *irnd + nxres;
-
-	/* adjust for ieee-style machines */
-
-	if (*irnd == 2 || *irnd == 5)
-		*maxexp = *maxexp - 2;
-
-	/* adjust for non-ieee machines with partial underflow */
-
-	if (*irnd == 3 || *irnd == 4)
-		*maxexp = *maxexp - *it;
-
-	/* adjust for machines with implicit leading bit in binary */
-	/* significand, and machines with radix point at extreme */
-	/* right of significand. */
-
-	i = *maxexp + *minexp;
-	if (*ibeta == 2 && i == 0)
-		*maxexp = *maxexp - 1;
-	if (i > 20)
-		*maxexp = *maxexp - 1;
-	if (a != y)
-		*maxexp = *maxexp - 2;
-	*xmax = one - *epsneg;
-	if (*xmax * one != *xmax)
-		*xmax = one - beta * *epsneg;
-	*xmax = *xmax / (beta * beta * beta * *xmin);
-	i = *maxexp + *minexp + 3;
-	if (i>0)
-		for(j=1 ; j<=i ; j++) {
-			if (*ibeta == 2)
-				*xmax = *xmax + *xmax;
-			if (*ibeta != 2)
-				*xmax = *xmax * beta;
-		}
-}

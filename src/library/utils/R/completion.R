@@ -340,7 +340,7 @@ specialOpCompletionsHelper <- function(op, suffix, prefix)
 {
     tryToEval <- function(s)
     {
-	tryCatch(eval(parse(text = s), envir = .GlobalEnv), error = function(e)e)
+	tryCatch(eval(str2expression(s), envir = .GlobalEnv), error = function(e)e)
     }
     switch(op,
            "$" = {
@@ -449,7 +449,7 @@ matchAvailableTopics <- function(prefix, text)
     }
     if (length(text) != 1L || text == "") return (character())
     ## Update list of help topics if necessary
-    pkgpaths <- searchpaths()[substr(search(), 1L, 8L) == "package:"]
+    pkgpaths <- searchpaths()[startsWith(search(), "package:")]
     if (!identical(basename(pkgpaths), .CompletionEnv[["attached_packages"]])) {
         assign("attached_packages",
                basename(pkgpaths),
@@ -908,10 +908,10 @@ fileCompletions <- function(token)
     ## are included.  Get 'correct' partial file name by looking back
     ## to begin quote
     pfilename <- correctFilenameToken()
-    
     ## This may come from an illegal string like "C:\Prog".  Try to parse it:
-    pfilename <- try(eval(parse(text = paste0('"', token, '"'))), silent = TRUE)
-    if (inherits(pfilename, "try-error"))
+    pfilename <- tryCatch(eval(str2expression(paste0('"', token, '"'))),
+                          error = identity)
+    if (inherits(pfilename, "error"))
     	return(character())
 
     ## Sys.glob doesn't work without expansion.  Is that intended?
@@ -925,7 +925,7 @@ fileCompletions <- function(token)
     ## actually looking for something inside the directory.  Note that
     ## we don't actually test to see if it's a directory, because if
     ## it is not, list.files() will simply return character(0).
-    if (length(comps) == 1 && substring(comps, nchar(comps), nchar(comps)) == "/") {
+    if (length(comps) == 1 && endsWith(comps, "/")) {
         filesInside <- list.files(comps, all.files = TRUE, full.names = FALSE, no.. = TRUE)
         if (length(filesInside)) comps <- c(comps, file.path(comps, filesInside))
     }

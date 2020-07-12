@@ -1,10 +1,11 @@
 % File src/library/base/man/deparse.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2018 R Core Team
+% Copyright 1995-2020 R Core Team
 % Distributed under GPL 2 or later
 
 \name{deparse}
 \alias{deparse}
+\alias{deparse1}
 \title{Expression Deparsing}
 \description{
   Turn unevaluated expressions into character strings.
@@ -14,6 +15,8 @@ deparse(expr, width.cutoff = 60L,
         backtick = mode(expr) \%in\% c("call", "expression", "(", "function"),
         control = c("keepNA", "keepInteger", "niceNames", "showAttributes"),
         nlines = -1L)
+
+deparse1(expr, collapse = " ", width.cutoff = 500L, ...)
 }
 \arguments{
   \item{expr}{any \R expression.}
@@ -25,10 +28,13 @@ deparse(expr, width.cutoff = 60L,
     See \code{\link{.deparseOpts}}.}
   \item{nlines}{integer: the maximum number of lines to produce.
     Negative values indicate no limit.}
+  \item{collapse}{a string, passed to \code{\link{parse}()}.}
+  \item{\dots}{further arguments passed to \code{deparse()}.}
 }
 \details{
-  This function turns unevaluated expressions (where \sQuote{expression}
-  is taken in a wider sense than the strict concept of a vector of mode
+  These functions turn unevaluated expressions (where \sQuote{expression}
+  is taken in a wider sense than the strict concept of a vector of
+  \code{\link{mode}} and type (\code{\link{typeof}})
   \code{"expression"} used in \code{\link{expression}}) into character
   strings (a kind of inverse to \code{\link{parse}}).
 
@@ -42,18 +48,27 @@ deparse(expr, width.cutoff = 60L,
   symbols but only composite expressions.  This is a compromise to
   avoid breaking existing code.
 
-  Using \code{control = "all"} comes closest to making \code{deparse()}
-  an inverse of \code{parse()}.  However, not all objects are
-  deparse-able even with this option and a warning will be issued if the
-  function recognizes that it is being asked to do the impossible.
+  Using \code{control = c("all", "hexDigits")} comes closest to making \code{deparse()}
+  an inverse of \code{parse()} (but we have not yet seen an example where
+  \code{"all"}, now including \code{"digits17"}, would not have been as
+  good).  However, not all objects are deparse-able even with these options
+  and a warning will be issued if the function recognizes that it is being
+  asked to do the impossible.
 
-  Numeric and complex vectors are converted using 15 significant digits:
+  Unless \code{control} contains \code{"digits17"} or \code{"hexDigits"},
+  (or \code{"all"} or \code{"exact"} which include one of these), numeric
+  and complex vectors are converted using 15 significant digits:
   see \code{\link{as.character}} for more details.
 
   \code{width.cutoff} is a lower bound for the line lengths: deparsing a
   line proceeds until at least \code{width.cutoff} \emph{bytes} have
   been output and e.g.\sspace{}\code{arg = value} expressions will not be split
   across lines.
+
+  \code{deparse1()} is a simple utility added in \R{} 4.0.0 to ensure a
+  string result (\code{\link{character}} vector of length one),
+  typically used in name construction, as
+  \code{deparse1(\link{substitute}(.))}.
 }
 \note{
   To avoid the risk of a source attribute out of sync with the actual
@@ -71,6 +86,10 @@ deparse(expr, width.cutoff = 60L,
   Wadsworth & Brooks/Cole.
 }
 \seealso{
+  \code{\link{.deparseOpts}} for available \code{control} settings;
+  \code{\link{dput}()} and \code{\link{dump}()} for related functions using
+  identical internal deparsing functionality.
+
   \code{\link{substitute}},
   \code{\link{parse}},
   \code{\link{expression}}.
@@ -82,11 +101,12 @@ require(stats); require(graphics)
 
 deparse(args(lm))
 deparse(args(lm), width = 500)
-myplot <-
-function(x, y) {
-    plot(x, y, xlab = deparse(substitute(x)),
-        ylab = deparse(substitute(y)))
+
+myplot <- function(x, y) {
+    plot(x, y, xlab = deparse1(substitute(x)),
+               ylab = deparse1(substitute(y)))
 }
+
 e <- quote(`foo bar`)
 deparse(e)
 deparse(e, backtick = TRUE)

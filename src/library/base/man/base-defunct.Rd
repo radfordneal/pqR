@@ -1,6 +1,6 @@
 % File src/library/base/man/base-defunct.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2016 R Core Team
+% Copyright 1995-2020 R Core Team
 % Distributed under GPL 2 or later
 
 \name{base-defunct}
@@ -55,7 +55,6 @@
 \alias{.Import}
 \alias{.ImportFrom}
 \alias{.Export}
-\alias{.S3method}
 \alias{.First.lib}
 \alias{mem.limits}
 \alias{.readRDS}
@@ -140,30 +139,29 @@ manglePackageName(pkgName, pkgVersion)
 .Import(...)
 .ImportFrom(name, ...)
 .Export(...)
-.S3method(generic, class, method)
 
 # Defunct in 2.14.0
 .First.lib(lib, pkg)
 
-# Defunct in 2.15.0
+# Defunct in 2.15.0, removed for 4.0.0
 mem.limits(nsize = NA, vsize = NA)
 .saveRDS(\dots)
 .readRDS(\dots)
-Sys.putenv(\dots)
+Sys.putenv(\dots) # (removed much earlier)
 
 # Defunct in 3.0.0
 real(length = 0)
 as.real(x, \dots)
 is.real(x)
 
-# Defunct in 3.1.0
+# Defunct in 3.1.0, removed for 4.1.0
 .find.package(\dots)
 .path.package(\dots)
 }
 \details{
   Some of these have stubs which report that they are defunct, but most
   have been removed completely (apart from being documented here).
-  
+
   \code{category} has been an old-S function before there were factors;
   should be replaced by \code{\link{factor}} throughout!
 
@@ -253,9 +251,8 @@ is.real(x)
   \code{manglePackageName} was part of the defunct support for versioned
   installs.
 
-  \code{.Import}, \code{.ImportFrom}, \code{.Export} and
-  \code{.S3method} were part of an experimental alternative way to
-  specify namespaces.
+  \code{.Import}, \code{.ImportFrom}, and \code{.Export} were part of an
+  experimental alternative way to specify namespaces.
 
   \code{.First.lib} was the load/attach hook for packages without
   namespaces: use \code{\link{.onLoad}} or \code{\link{.onAttach}} instead.

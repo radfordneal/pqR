@@ -1,7 +1,7 @@
 #  File src/library/utils/R/prompt.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2015 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -85,21 +85,18 @@ function(object, filename = NULL, name = NULL,
                        if(!is.missing.arg(argls[[i]]))
                        paste0(" = ",
                               ## need to backtick symbols
-                              paste(deparse(argls[[i]],
-                                            backtick = TRUE,
-                                            width.cutoff = 500L),
-                                    collapse="\n")))
+                              deparse1(argls[[i]], "\n", backtick = TRUE)))
         if(i != n) Call <- paste0(Call, ", ")
     }
 
     ## Construct the definition for \examples.
     x.def <- deparse(x)
-    if(any(br <- substr(x.def, 1L, 1L) == "}"))
+    if(any(br <- startsWith(x.def, "}")))
         x.def[br] <- paste0("  ", x.def[br])
 
     ## escape "%" :
-    x.def <- gsub("%", "\\\\%", x.def)
-    Call <- gsub("%", "\\\\%", Call)
+    x.def <- gsub("%", "\\%", x.def, fixed=TRUE)
+    Call  <- gsub("%", "\\%", Call,  fixed=TRUE)
 
     Rdtxt <-
         list(name = paste0("\\name{", name, "}"),
@@ -145,11 +142,16 @@ function(object, filename = NULL, name = NULL,
              "## The function is currently defined as",
              x.def,
              "}"),
-             keywords = c(paste("% Add one or more standard keywords,",
-             "see file 'KEYWORDS' in the"),
-             "% R documentation directory.",
-             "\\keyword{ ~kwd1 }% use one of  RShowDoc(\"KEYWORDS\")",
-             "\\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line"))
+             keywords =
+                 c("% Add one or more standard keywords, see file 'KEYWORDS' in the",
+                   "% R documentation directory (show via RShowDoc(\"KEYWORDS\")):",
+                   "% \\keyword{ ~kwd1 }",
+                   "% \\keyword{ ~kwd2 }",
+                   "% Use only one keyword per line.",
+                   "% For non-standard keywords, use \\concept instead of \\keyword:",
+                   "% \\concept{ ~cpt1 }",
+                   "% \\concept{ ~cpt2 }",
+                   "% Use only one concept per line."))
 
     Rdtxt$arguments <- if(n)
         c("\\arguments{",

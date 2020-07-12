@@ -1,6 +1,6 @@
 % File src/library/utils/man/install.packages.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2018 R Core Team
+% Copyright 1995-2019 R Core Team
 % Distributed under GPL 2 or later
 
 \name{install.packages}
@@ -168,7 +168,9 @@ install.packages(pkgs, lib, repos = getOption("repos"),
     additional options, with names the respective package names.
   }
   \item{quiet}{
-    logical: if true, reduce the amount of output.
+    logical: if true, reduce the amount of output.  This is \emph{not}
+    passed to \code{\link{available.packages}()} in case that is called, on
+    purpose.
   }
   \item{keep_outputs}{
     a logical: if true, keep the outputs from installing source packages
@@ -178,9 +180,10 @@ install.packages(pkgs, lib, repos = getOption("repos"),
     Ignored when installing from local files.
   }
   \item{\dots}{
-    Arguments to be passed to \code{\link{download.file}} or to the
-    functions for binary installs on macOS and Windows (which accept
-    an argument \code{"lock"}: see the section on \sQuote{Locking}).
+    Arguments to be passed to \code{\link{download.file}},
+    \code{\link{available.packages}}, or to the functions for binary
+    installs on macOS and Windows (which accept an argument \code{"lock"}:
+    see the section on \sQuote{Locking}).
   }
 }
 \details{
@@ -255,7 +258,7 @@ install.packages(pkgs, lib, repos = getOption("repos"),
   installing from a repository or tarballs, although it will be a little
   slower.)
 
-  When installing a binary package, \code{install.packages} will abort
+  When installing a package on Windows, \code{install.packages} will abort
   the install if it detects that the package is already installed and is
   currently in use.  In some circumstances (e.g., multiple instances of
   \R running at the same time and sharing a library) it will not detect a

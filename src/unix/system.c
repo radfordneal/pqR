@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2019  The R Core Team
+ *  Copyright (C) 1997--2020  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@
 #endif
 
 #ifdef HAVE_UNISTD_H
-# include <unistd.h>		/* isatty() */
+# include <unistd.h>
 #endif
 
 #include <errno.h>
@@ -145,6 +145,9 @@ extern void * __libc_stack_end;
 #endif
 
 int R_running_as_main_program = 0;
+
+/* In ../main/main.c, to avoid inlining */
+extern uintptr_t dummy_ii(void);
 
 /* Protection against embedded misuse, PR#15420 */
 static int num_initialized = 0;
@@ -474,7 +477,7 @@ int Rf_initialize_R(int ac, char **av)
 	R_Interactive = useaqua;
     else
 #endif
-	R_Interactive = R_Interactive && (force_interactive || isatty(0));
+	R_Interactive = R_Interactive && (force_interactive || R_isatty(0));
 
 #ifdef HAVE_AQUA
     /* for Aqua and non-dumb terminal use callbacks instead of connections
@@ -536,8 +539,8 @@ int R_EditFiles(int nfile, const char **file, const char **title,
 
 	if (ptr_R_EditFile) ptr_R_EditFile((char *) file[0]);
 	else {
-	    /* Quote path if necessary */
-	    if (editor[0] != '"' && Rf_strchr(editor, ' '))
+	    /* Quote path if not quoted */
+	    if (editor[0] != '"')
 		snprintf(buf, 1024, "\"%s\" \"%s\"", editor, file[0]);
 	    else
 		snprintf(buf, 1024, "%s \"%s\"", editor, file[0]);

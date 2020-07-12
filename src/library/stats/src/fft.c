@@ -733,9 +733,9 @@ static int kt;
 static int maxf;
 static int maxp;
 
-/* At the end of factorization,	 
+/* At the end of factorization,
  *	nfac[]	contains the factors,
- *	m_fac	contains the number of factors and 
+ *	m_fac	contains the number of factors and
  *	kt	contains the number of square factors  */
 
 /* non-API, but used by package RandomFields */

@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2018  The R Core Team
+ *  Copyright (C) 1997--2020  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -65,6 +65,7 @@ static FILE *ifp = NULL;
 static char ifile[MAX_PATH] = "\0";
 
 __declspec(dllexport) UImode  CharacterMode = RGui; /* some compilers want initialized for export */
+__declspec(dllexport) Rboolean EmitEmbeddedUTF8 = FALSE;
 int ConsoleAcceptCmd;
 void set_workspace_name(const char *fn); /* ../main/startup.c */
 
@@ -320,7 +321,7 @@ FileReadConsole(const char *prompt, char *buf, int len, int addhistory)
 {
     int ll, err = 0;
 
-    if (!R_Slave) {
+    if (!R_NoEcho) {
 	fputs(prompt, stdout);
 	fflush(stdout);
     }
@@ -351,7 +352,7 @@ FileReadConsole(const char *prompt, char *buf, int len, int addhistory)
 	buf[ll++] = '\n'; buf[ll] = '\0';
     }
 
-    if (!R_Interactive && !R_Slave) {
+    if (!R_Interactive && !R_NoEcho) {
 	fputs(buf, stdout);
 	fflush(stdout);
     }
@@ -565,8 +566,8 @@ int R_ShowFiles(int nfile, const char **file, const char **headers,
 			warning(buf);
 		    }
 		} else {
-		    /* Quote path if necessary */
-		    if(pager[0] != '"' && Rf_strchr(pager, ' '))
+		    /* Quote path if not quoted */
+		    if(pager[0] != '"')
 			snprintf(buf, 1024, "\"%s\" \"%s\"", pager, file[i]);
 		    else
 			snprintf(buf, 1024, "%s \"%s\"", pager, file[i]);
@@ -612,8 +613,8 @@ int R_EditFiles(int nfile, const char **file, const char **title,
 	    if (!strcmp(editor, "internal")) {
 		Rgui_Edit(file[i], CE_UTF8, title[i], 0);
 	    } else {
-		/* Quote path if necessary */
-		if (editor[0] != '"' && Rf_strchr(editor, ' '))
+		/* Quote path if not quoted */
+		if (editor[0] != '"')
 		    snprintf(buf, 1024, "\"%s\" \"%s\"", editor, file[i]);
 		else
 		    snprintf(buf, 1024, "%s \"%s\"", editor, file[i]);
@@ -754,13 +755,16 @@ void R_SetWin32(Rstart Rp)
     switch(CharacterMode) {
     case RGui:
 	R_GUIType = "Rgui";
+	Rp->EmitEmbeddedUTF8 = TRUE;
 	break;
     case RTerm:
 	R_GUIType = "RTerm";
+	Rp->EmitEmbeddedUTF8 = FALSE;
 	break;
     default:
 	R_GUIType = "unknown";
     }
+    EmitEmbeddedUTF8 = Rp->EmitEmbeddedUTF8;
     TrueReadConsole = Rp->ReadConsole;
     TrueWriteConsole = Rp->WriteConsole;
     TrueWriteConsoleEx = Rp->WriteConsoleEx;
@@ -821,13 +825,13 @@ char *PrintUsage(void)
     char msg0[] =
 	"Start R, a system for statistical computation and graphics, with the\nspecified options\n\nEnvVars: Environmental variables can be set by NAME=value strings\n\nOptions:\n  -h, --help            Print usage message and exit\n  --version             Print version info and exit\n  --encoding=enc        Specify encoding to be used for stdin\n  --encoding enc        ditto\n  --save                Do save workspace at the end of the session\n  --no-save             Don't save it\n",
 	msg1[] =
-	"  --no-environ          Don't read the site and user environment files\n  --no-site-file        Don't read the site-wide Rprofile\n  --no-init-file        Don't read the .Rprofile or ~/.Rprofile files\n  --restore             Do restore previously saved objects at startup\n  --no-restore-data     Don't restore previously saved objects\n  --no-restore-history  Don't restore the R history file\n  --no-restore          Don't restore anything\n",
+	"  --no-environ          Don't read the site and user environment files\n  --no-site-file        Don't read the site-wide Rprofile\n  --no-init-file        Don't read the .Rprofile or ~/.Rprofile files\n  --restore             Do restore previously saved objects at startup\n  --no-restore-data     Don't restore previously saved objects\n  --no-restore-history  Don't restore the R history file\n  --no-restore          Don't restore anything\n  --workspace=file      Workspace to be restored\n",
 	msg2[] =
 	"  --vanilla             Combine --no-save, --no-restore, --no-site-file,\n                          --no-init-file and --no-environ\n",
 	msg2b[] =
 	"  --max-mem-size=N      Set limit for memory to be used by R\n  --max-ppsize=N        Set max size of protect stack to N\n",
 	msg3[] =
-	"  -q, --quiet           Don't print startup message\n  --silent              Same as --quiet\n  --slave               Make R run as quietly as possible\n  --verbose             Print more information about progress\n  --args                Skip the rest of the command line\n",
+	"  -q, --quiet           Don't print startup message\n  --silent              Same as --quiet\n  --no-echo             Make R run as quietly as possible\n  --verbose             Print more information about progress\n  --args                Skip the rest of the command line\n",
 	msg4[] =
 	"  --ess                 Don't use getline for command-line editing\n                          and assert interactive use\n  -f file               Take input from 'file'\n  --file=file           ditto\n  -e expression         Use 'expression' as input\n\nOne or more -e options can be used, but not together with -f or --file\n",
 	msg5[] = "\nAn argument ending in .RData (in any case) is taken as the path\nto the workspace to be restored (and implies --restore)";
@@ -875,6 +879,37 @@ static int isDir(char *path)
 	isdir &= (access(path, W_OK) == 0);
     }
     return isdir;
+}
+
+static Rboolean use_workspace(Rstart Rp, char *name, Rboolean usedRdata)
+{
+    char s[1024];
+    char path[MAX_PATH];
+    char *p;
+
+    if(!usedRdata) {
+	if (strlen(name) >= MAX_PATH) {
+	     /* if generated by Windows it must fit */
+	    snprintf(s, 1024, _("Workspace name '%s' is too long\n"), name);
+	    R_ShowMessage(s);
+	} else {
+	    set_workspace_name(name);
+	    strcpy(path, name);
+	    for (p = path; *p; p++) if (*p == '\\') *p = '/';
+	    p = Rf_strrchr(path, '/');
+	    if(p) {
+		*p = '\0';
+		chdir(path);
+	    }
+	    usedRdata = TRUE;
+	    Rp->RestoreAction = SA_RESTORE;
+	    return TRUE;
+	}
+    } else {
+	snprintf(s, 1024, _("ARGUMENT '%s' __ignored__\n"), name);
+	R_ShowMessage(s);
+    }
+    return FALSE;
 }
 
 int cmdlineoptions(int ac, char **av)
@@ -936,10 +971,10 @@ int cmdlineoptions(int ac, char **av)
 	       it resolved to documents folder in systemprofile. This has do be done
 	       before process_user_Renviron(), because user .Renviron may be read from
 	       the current directory, which is expected to be userdocs. */
-	    TCHAR mydocs[MAX_PATH + 1];
-	    if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PERSONAL|CSIDL_FLAG_CREATE,
-					  NULL, 0, mydocs))) 
-		SetCurrentDirectory(mydocs);
+	    wchar_t mydocs[MAX_PATH + 1];
+	    if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_PERSONAL|CSIDL_FLAG_CREATE,
+		                           NULL, 0, mydocs))) 
+		SetCurrentDirectoryW(mydocs);
 	}
 
     Rp->CallBack = R_DoNothing;
@@ -950,6 +985,20 @@ int cmdlineoptions(int ac, char **av)
 	    Rp->R_Interactive = TRUE;
 	    Rp->ReadConsole = ThreadedReadConsole;
 	    InThreadReadConsole = CharReadConsole;
+	} else if (R_is_redirection_tty(0) && R_is_redirection_tty(1)) {
+	    /* Note it is not currently possible to use line editing with Msys2
+	       terminals such as mintty, because we cannot disable buffering in
+	       the terminal. One can only do that from applications linked
+	       against the Cygwin runtime, but R is linked against Msvcrt
+	       via Mingw and using multiple runtimes is not possible.
+
+	       Msys2/cygwin is handled in AppMain() by re-executing using
+	       winpty. This branch is taken when winpty is not available.
+	    */
+	    Rp->R_Interactive = TRUE;
+	    Rp->ReadConsole = ThreadedReadConsole;
+	    InThreadReadConsole = FileReadConsole;
+	    setvbuf(stdout, NULL, _IONBF, 0);
 	} else {
 	    Rp->R_Interactive = FALSE;
 	    Rp->ReadConsole = FileReadConsole;
@@ -1107,6 +1156,8 @@ int cmdlineoptions(int ac, char **av)
 			R_Suicide(s);
 		    }
 		}
+	    } else if (!strncmp(*av, "--workspace=", 12)) {
+		usedRdata = use_workspace(Rp, *av + 12, usedRdata);
 	    } else if(CharacterMode == RTerm && !strcmp(*av, "-e")) {
 		ac--; av++;
 		if (!ac || !strlen(*av)) {
@@ -1129,25 +1180,9 @@ int cmdlineoptions(int ac, char **av)
 	} else {
 	    /* Look for *.RData, as given by drag-and-drop 
 	       and file association */
-	    char path[MAX_PATH];
 
-	    if(!usedRdata &&
-	       strlen(*av) >= 6 &&
-	       stricmp(*av+strlen(*av)-6, ".RData") == 0) {
-		set_workspace_name(*av);
-		strcpy(path, *av); /* this was generated by Windows so must fit */
-		for (p = path; *p; p++) if (*p == '\\') *p = '/';
-		p = Rf_strrchr(path, '/');
-		if(p) {
-		    *p = '\0';
-		    chdir(path);
-		}
-		usedRdata = TRUE;
-		Rp->RestoreAction = SA_RESTORE;
-	    } else {
-		snprintf(s, 1024, _("ARGUMENT '%s' __ignored__\n"), *av);
-		R_ShowMessage(s);
-	    }
+	    if (strlen(*av) >= 6 && stricmp(*av+strlen(*av)-6, ".RData") == 0)
+		usedRdata = use_workspace(Rp, *av, usedRdata);
 	}
     }
     if(strlen(cmdlines)) {

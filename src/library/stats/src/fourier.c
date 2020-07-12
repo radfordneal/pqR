@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998--2018  The R Core Team
+ *  Copyright (C) 1998--2020  The R Core Team
  *  Copyright (C) 1995--1997  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -39,6 +39,7 @@
 #endif
 
 
+// workhorse routines from fft.c
 void fft_factor(int n, int *pmaxf, int *pmaxp);
 Rboolean fft_work(double *a, double *b, int nseg, int n, int nspn,
 		  int isn, double *work, int *iwork);
@@ -266,7 +267,10 @@ SEXP nextn(SEXP n, SEXP f)
 	}
     }
     SEXP ans = PROTECT(allocVector(use_int ? INTSXP : REALSXP, nn)); nprot++;
-    if(nn == 0) return(ans);
+    if(nn == 0) {
+	UNPROTECT(nprot);
+	return(ans);
+    }
     if(use_int) {
 	int *n_ = INTEGER(n),
 	    *r  = INTEGER(ans);

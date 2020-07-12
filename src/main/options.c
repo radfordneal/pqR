@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998-2019   The R Core Team.
+ *  Copyright (C) 1998-2020   The R Core Team.
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -137,26 +137,40 @@ SEXP GetOption1(SEXP tag)
     return CAR(opt);
 }
 
-int GetOptionWidth(void)
+int FixupWidth(SEXP width, warn_type warn)
 {
-    int w;
-    w = asInteger(GetOption1(install("width")));
-    if (w < R_MIN_WIDTH_OPT || w > R_MAX_WIDTH_OPT) {
-	warning(_("invalid printing width, used 80"));
-	return 80;
+    int w = asInteger(width);
+    if (w == NA_INTEGER || w < R_MIN_WIDTH_OPT || w > R_MAX_WIDTH_OPT) {
+	switch(warn) {
+	case iWARN: warning(_("invalid printing width %d, used 80"), w);
+	case iSILENT:
+	    return 80; // for SILENT and WARN
+	case iERROR: error(_("invalid printing width"));
+	}
     }
     return w;
 }
-
-int GetOptionDigits(void)
+int GetOptionWidth(void)
 {
-    int d;
-    d = asInteger(GetOption1(install("digits")));
-    if (d < R_MIN_DIGITS_OPT || d > R_MAX_DIGITS_OPT) {
-	warning(_("invalid printing digits, used 7"));
-	return 7;
+    return FixupWidth(GetOption1(install("width")), iWARN);
+}
+
+int FixupDigits(SEXP digits, warn_type warn)
+{
+    int d = asInteger(digits);
+    if (d == NA_INTEGER || d < R_MIN_DIGITS_OPT || d > R_MAX_DIGITS_OPT) {
+	switch(warn) {
+	case iWARN: warning(_("invalid printing digits %d, used 7"), d);
+	case iSILENT:
+	    return 7; // for SILENT and WARN
+	case iERROR: error(_("invalid printing digits %d"), d);
+	}
     }
     return d;
+}
+int GetOptionDigits(void)
+{
+    return FixupDigits(GetOption1(install("digits")), iWARN);
 }
 
 attribute_hidden
@@ -289,7 +303,7 @@ void attribute_hidden InitOptions(void)
     v = CDR(v);
 
     SET_TAG(v, install("echo"));
-    SETCAR(v, ScalarLogical(!R_Slave));
+    SETCAR(v, ScalarLogical(!R_NoEcho));
     v = CDR(v);
 
     SET_TAG(v, install("verbose"));
@@ -394,6 +408,8 @@ SEXP attribute_hidden do_getOption(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
+static Rboolean warned_on_strings_as_fact = FALSE; // -> once-per-session warning
+
 /* This needs to manage R_Visible */
 SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -473,7 +489,7 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 	UNIMPLEMENTED_TYPE("options", args);
     }
 
-    R_Visible = FALSE;
+    Rboolean visible = FALSE;
     for (int i = 0 ; i < n ; i++) { /* i-th argument */
 	SEXP argi = R_NilValue, namei = R_NilValue;
 	switch (TYPEOF(args)) {
@@ -649,7 +665,7 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		/* Should be quicker than checking options(echo)
 		   every time R prompts for input:
 		   */
-		R_Slave = !k;
+		R_NoEcho = !k;
 		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
 	    }
 	    else if (streql(CHAR(namei), "OutDec")) {
@@ -776,6 +792,10 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 			SET_VECTOR_ELT(value, i,
 				       SetOption(tag, ScalarInteger(R_PCRE_study)));
 		}
+#ifdef HAVE_PCRE2
+		if (R_PCRE_study != -2)
+		    warning(_("'PCRE_study' has no effect with PCRE2"));
+#endif
 	    }
 	    else if (streql(CHAR(namei), "PCRE_use_JIT")) {
 		int use_JIT = asLogical(argi);
@@ -787,6 +807,21 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		R_PCRE_limit_recursion = asLogical(argi);
 		SET_VECTOR_ELT(value, i,
 			       SetOption(tag, ScalarLogical(R_PCRE_limit_recursion)));
+		/* could warn for PCRE2 >= 10.30, but the value is ignored also when
+		   JIT is used  */
+	    }
+	    else if (streql(CHAR(namei), "stringsAsFactors")) {
+		int strings_as_fact;
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1 ||
+		    (strings_as_fact = asLogical(argi)) == NA_LOGICAL)
+		    error(_("invalid value for '%s'"), CHAR(namei));
+		if(strings_as_fact && !warned_on_strings_as_fact) {
+		    warned_on_strings_as_fact = TRUE;
+		    warning(_("'%s' is deprecated and will be disabled"),
+			    "options(stringsAsFactors = TRUE)");
+		}
+		SET_VECTOR_ELT(value, i,
+			       SetOption(tag, ScalarLogical(strings_as_fact)));
 	    }
 	    else {
 		SET_VECTOR_ELT(value, i, SetOption(tag, duplicate(argi)));
@@ -803,10 +838,11 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 	    SET_VECTOR_ELT(value, i, duplicate(CAR(FindTaggedItem(options, install(tag)))));
 	    SET_STRING_ELT(names, i, STRING_ELT(argi, 0));
-	    R_Visible = TRUE;
+	    visible = TRUE;
 	}
     } /* for() */
     setAttrib(value, R_NamesSymbol, names);
     UNPROTECT(2);
+    R_Visible = visible;
     return value;
 }

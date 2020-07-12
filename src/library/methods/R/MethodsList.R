@@ -535,11 +535,11 @@ matchSignature <-
                       length(sigClasses),
                       length(signature)),
              domain = NA)
+    if(length(signature) > length(anames))
+        stop(gettextf("more elements in the method signature (%d) than in the generic signature (%d) for function %s",
+                      length(signature), length(anames), sQuote(fun@generic)), domain = NA)
     if(is.null(names(signature))) {
         which <- seq_along(signature)
-        if(length(which) > length(anames))
-          stop(gettextf("more elements in the method signature (%d) than in the generic signature (%d) for function %s",
-	       length(which), length(anames), sQuote(fun@generic)), domain = NA)
     }
     else {
         ## construct a function call with the same naming pattern  &
@@ -548,6 +548,18 @@ matchSignature <-
         for(i in seq_along(sigList))
             sigList[[i]] <- c(sigClasses[[i]], pkgs[[i]])
         fcall <- do.call("call", c("fun", sigList))
+        argmatches <- charmatch(names(sigList), anames)
+        if (anyNA(argmatches))
+            stop(gettextf("there are named arguments (%s) in the method signature that are missing from the generic signature, for function %s",
+                          paste(sQuote(names(sigList)[is.na(argmatches)]),
+                                collapse = ", "),
+                          sQuote(fun@generic), domain = NA))
+        ambig <- argmatches == 0L & names(sigList) != ""
+        if (any(ambig))
+            stop(gettextf("there are named arguments (%s) in the method signature that ambiguously match the generic signature, for function %s",
+                          paste(sQuote(names(sigList)[ambig]),
+                                collapse = ", "),
+                          sQuote(fun@generic), domain = NA))
         ## match the call to the formal signature (usually the formal args)
         if(identical(anames, formalArgs(fun)))
             smatch <- match.call(fun, fcall)
@@ -676,7 +688,7 @@ promptMethods <- function(f, filename = NULL, methods)
     ## to.  If it 'FALSE', the methods skeleton is returned, to be
     ## included in other printing (typically, the output from 'prompt').
 
-    escape <- function(txt) gsub("%", "\\\\%", txt)
+    escape <- function(txt) gsub("%", "\\%", txt, fixed=TRUE)
     packageString <- ""
 
     fdef <- getGeneric(f)

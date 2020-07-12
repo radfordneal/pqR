@@ -1,7 +1,7 @@
 #  File src/library/graphics/R/spineplot.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2015 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -82,8 +82,8 @@ function(x, y = NULL,
 	if(!is.null(ylevels))
           y <- factor(y, levels = if(is.numeric(ylevels)) levels(y)[ylevels] else ylevels)
         x.categorical <- is.factor(x)
-        if(is.null(xlab)) xlab <- deparse(substitute(x))
-        if(is.null(ylab)) ylab <- deparse(substitute(y))
+        if(is.null(xlab)) xlab <- deparse1(substitute(x))
+        if(is.null(ylab)) ylab <- deparse1(substitute(y))
         if(x.categorical) {
             tab <- table(x, y)
             xnam <- levels(x)
@@ -101,7 +101,7 @@ function(x, y = NULL,
 
     if(x.categorical) {
         ## compute rectangle positions on x axis
-        xat <- c(0, cumsum(prop.table(margin.table(tab, 1)) + off))
+        xat <- c(0, cumsum(proportions(marginSums(tab, 1)) + off))
         xaxlabels <- if(is.null(xaxlabels)) xnam else rep_len(xaxlabels, nx)
     } else {
         ## handle non-numeric x
@@ -124,7 +124,7 @@ function(x, y = NULL,
         ## construct table
         tab <- table(x1, y)
         ## compute rectangle positions on x axis
-        xat <- c(0, cumsum(prop.table(margin.table(tab, 1)))) # c(0, cumsum(prop.table(table(x1))))
+        xat <- c(0, cumsum(proportions(marginSums(tab, 1)))) # c(0, cumsum(proportions(table(x1))))
         nx <- NROW(tab)
         xaxlabels <- if(is.null(xaxlabels)) {
 	  if(xnumeric) breaks else c(xorig[1L], xorig[c(diff(as.numeric(x1)) > 0, TRUE)])
@@ -134,7 +134,9 @@ function(x, y = NULL,
     }
 
     ## compute rectangle positions on y axis
-    yat <- rbind(0, apply(prop.table(tab, 1), 1L, cumsum))
+    ## (reversing order compared to version R < 4.0.0)
+    yaxlabels <- rev(yaxlabels)
+    yat <- rbind(0, apply(proportions(tab[, ncol(tab):1L, drop = FALSE], 1), 1L, cumsum))
     yat[is.na(yat)] <- 1
 
     if(is.null(xlim)) xlim <- c(0, 1 + off * (nx-1L))
