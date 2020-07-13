@@ -38,7 +38,6 @@
 
 #ifdef __MAIN__
 #define LibExtern LibExport
-#define extern
 #elif defined(R_DLL_BUILD)
 #define LibExtern extern
 #else
