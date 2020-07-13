@@ -1462,6 +1462,8 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define yychar			Rf_yychar
 # define yylval			Rf_yylval
 # define yynerrs		Rf_yynerrs
+# define yydebug		Rf_yydebug
+# define yylloc			Rf_yylloc
 # define yyparse		Rf_yyparse
 
 /* Platform Dependent Gui Hooks */

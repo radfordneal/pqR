@@ -26,6 +26,10 @@
  *  http://www.r-project.org/Licenses/
  */
 
+
+/** When changed, do:  bison -l gramLatex.y; mv gramLatex.tab.c gramLatex.c **/
+
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -36,10 +40,19 @@
 #include <R_ext/RS.h>           /* for R_chk_* allocation */
 #include <ctype.h>
 
-/* bison creates a non-static symbol yylloc in both gramLatex.o and gramRd.o,
+/* bison creates non-static symbols in both gramLatex.o and gramRd.o,
    so remap */
 
-#define yylloc yyllocL
+#undef yylloc
+#define yylloc Rf_yyllocL
+#undef yylval
+#define yylval Rf_yylvalL
+#undef yydebug
+#define yydebug Rf_yydebugL
+#undef yynerrs
+#define yynerrs Rf_yynerrsL
+#undef yychar
+#define yychar Rf_yycharL
 
 #define DEBUGVALS 0		/* 1 causes detailed internal state output to R console */	
 #define DEBUGMODE 0		/* 1 causes Bison output of parse state, to stdout or stderr */

@@ -25,6 +25,10 @@
  *  http://www.r-project.org/Licenses/
  */
 
+
+/** When changed, do:  bison -l gramRd.y; mv gramRd.tab.c gramRd.c **/
+
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
