@@ -3,7 +3,7 @@
 ### Process this file with autoconf to produce a configure script.
 ###
 ### Copyright (C) 1998-2011 R Core Team
-### Modifications for pqR copyright (C) 2012-2019 Radford Neal
+### Modifications for pqR copyright (C) 2012-2020 Radford Neal
 ###
 ### This file is part of R.
 ###
@@ -61,6 +61,14 @@ AH_BOTTOM([
 ## C compiling makes use of that.  If it is ever removed, we
 ## would need it or something similar here.
 
+
+## Ensure we do not pick up values from outside configure
+R_XTRA_CFLAGS=
+R_XTRA_CPPFLAGS=
+R_XTRA_CXXFLAGS=
+R_XTRA_FFLAGS=
+R_XTRA_FCFLAGS=
+R_XTRA_LIBS=
 
 ### ** Platform.
 
@@ -1209,6 +1217,55 @@ if test "${SAFE_FFLAGS+set}" != set; then
 fi
 
 
+## F90/F95 support
+AC_PROG_FC()
+AC_LANG_PUSH(Fortran)
+AC_FC_SRCEXT(f90, [dummy=1], [dummy=0])
+AC_FC_SRCEXT(f95, [dummy=1], [dummy=0])
+AC_OPENMP
+AC_LANG_POP()
+if test -z "${SHLIB_FCLD}"; then
+  shlib_fcld_was_given=no
+  SHLIB_FCLD="${FC}"
+fi
+: ${SHLIB_FCLDFLAGS="${SHLIB_LDFLAGS}"}
+AC_SUBST(SHLIB_FCLD)
+AC_SUBST(SHLIB_FCLDFLAGS)
+## x86 Solaris' f95 needs additional libs when building a DSO
+FCLIBS=${FCLIBS}
+AC_SUBST(FCLIBS)
+
+
+## Fix for Fortran-C interface issue, adapted from R-4.0.2:
+##
+## If the Fortran compiler is gfortran >= 7, add
+## -fno-optimize-sibling-calls to avoid recent gfortran optimizations
+## that break with LAPACK/BLAS-style passing of length-1 strings
+## (without hidden arguments giving their lengths).
+
+## Also use -fallow-argument-mismatch to accomodate old Fortran code 
+## with gfortran-10.
+
+AC_MSG_CHECKING([if need -fno-optimize-sibling-calls for gfortran])
+AC_CACHE_VAL([r_cv_have_gfortran7],
+[r_cv_have_gfortran7=no
+if test "x${GFC}" = xyes; then
+  gfortran_version_maj=`echo "__GNUC__" | ${FC} -E -P - | ${SED} 's/ //g'`
+  if test ${gfortran_version_maj} -ge 7; then
+    r_cv_have_gfortran7=yes
+  fi
+fi])
+
+if test "x${r_cv_have_gfortran7}" = xyes; then
+  AC_MSG_RESULT([yes])
+  R_XTRA_FFLAGS="${R_XTRA_FFLAGS} -fno-optimize-sibling-calls -fallow-argument-mismatch"
+  R_XTRA_FCFLAGS="${R_XTRA_FCFLAGS} -fno-optimize-sibling-calls -fallow-argument-mismatch"
+else
+  AC_MSG_RESULT([no])
+fi
+
+## End of code adapted from R-4.0.2.
+
 AC_SUBST(CFLAGS)
 AC_SUBST(MAIN_CFLAGS)
 AC_SUBST(SHLIB_CFLAGS)
@@ -1222,6 +1279,7 @@ AC_SUBST(R_XTRA_CFLAGS)
 AC_SUBST(R_XTRA_CPPFLAGS)
 AC_SUBST(R_XTRA_CXXFLAGS)
 AC_SUBST(R_XTRA_FFLAGS)
+AC_SUBST(R_XTRA_FCFLAGS)
 AC_SUBST(R_XTRA_LIBS)
 AC_SUBST(OBJC_LIBS)
 AC_SUBST(OBJCFLAGS)
@@ -1856,15 +1914,18 @@ AC_SUBST(R_OPENMP_FFLAGS)
 CPPFLAGS_KEEP=${CPPFLAGS}
 CFLAGS_KEEP=${CFLAGS}
 FFLAGS_KEEP=${FFLAGS}
+FCFLAGS_KEEP=${FCFLAGS}
 CXXFLAGS_KEEP=${CXXFLAGS}
 CPPFLAGS="${CPPFLAGS} ${R_XTRA_CPPFLAGS}"
 if test "${want_R_shlib}" = yes; then
   CFLAGS="${CFLAGS} ${CPICFLAGS} ${R_XTRA_CFLAGS}"
   FFLAGS="${FFLAGS} ${FPICFLAGS} ${R_XTRA_FFLAGS}"
+  FCFLAGS="${FCFLAGS} ${FPICFLAGS} ${R_XTRA_FCFLAGS}"
   CXXFLAGS="${CXXFLAGS} ${CXXPICFLAGS} ${R_XTRA_CXXFLAGS}"
 else
   CFLAGS="${CFLAGS} ${R_XTRA_CFLAGS}"
   FFLAGS="${FFLAGS} ${R_XTRA_FFLAGS}"
+  FCFLAGS="${FCFLAGS} ${R_XTRA_FCFLAGS}"
   CXXFLAGS="${CXXFLAGS} ${R_XTRA_CXXFLAGS}"
 fi
 
@@ -2369,24 +2430,6 @@ AC_SUBST(R_BATCHSAVE)
 ## Java support
 R_JAVA
 
-## F90/F95 support
-AC_PROG_FC()
-AC_LANG_PUSH(Fortran)
-AC_FC_SRCEXT(f90, [dummy=1], [dummy=0])
-AC_FC_SRCEXT(f95, [dummy=1], [dummy=0])
-AC_OPENMP
-AC_LANG_POP()
-if test -z "${SHLIB_FCLD}"; then
-  shlib_fcld_was_given=no
-  SHLIB_FCLD="${FC}"
-fi
-: ${SHLIB_FCLDFLAGS="${SHLIB_LDFLAGS}"}
-AC_SUBST(SHLIB_FCLD)
-AC_SUBST(SHLIB_FCLDFLAGS)
-## x86 Solaris' f95 needs additional libs when building a DSO
-FCLIBS=${FCLIBS}
-AC_SUBST(FCLIBS)
-
 ## OpenMP package stuff (needs to come *after* configuration of all
 ## compilers).
 if test "x${shlib_ld_was_given}" = xno -a \
@@ -2755,6 +2798,7 @@ AC_CONFIG_COMMANDS([stamp-h],
 CPPFLAGS=${CPPFLAGS_KEEP}
 CFLAGS=${CFLAGS_KEEP}
 FFLAGS=${FFLAGS_KEEP}
+FCFLAGS=${FCFLAGS_KEEP}
 CXXFLAGS=${CXXFLAGS_KEEP}
 
 AC_OUTPUT
@@ -2767,7 +2811,7 @@ AC_OUTPUT
 r_c_compiler="${CC} ${R_XTRA_CFLAGS} ${CFLAGS}"
 r_cxx_compiler="${CXX} ${R_XTRA_CXXFLAGS} ${CXXFLAGS}"
 r_f77_compiler="${F77} ${R_XTRA_FFLAGS} ${FFLAGS}"
-r_f95_compiler="${FC} ${FCFLAGS}"
+r_f95_compiler="${FC} ${R_XTRA_FCFLAGS} ${FCFLAGS}"
 r_objc_compiler="${OBJC} ${OBJCFLAGS}"
 r_interfaces=
 ## we will not have tested for X11 under some configure options, so
