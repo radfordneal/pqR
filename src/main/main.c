@@ -29,7 +29,7 @@
 #include <config.h>
 #endif
 
-#include <math.h> /* avoid redefinition of extern in Defn.h */
+#include <math.h>  /* avoid (former?) redefinition of extern in Defn.h */
 #include <float.h>
 #include <ctype.h>
 #include <stdlib.h>
