@@ -101,6 +101,23 @@ static void Init_R_Machine(SEXP rho)
          "Floating-point arithmetic lacks denormalized numbers (not IEEE)\n");
     }
 
+    /* Check that fused multiply-add is not done. */
+
+    volatile static double a = 1.0+((long long)1<<52);
+    volatile static double b = 3.0;
+    volatile static double c = -(double)((long long)2<<52);
+    volatile static double d = 4.0+((long long)1<<52);
+
+    double r = a*b+c;
+    if (r != d) {
+        R_Suicide(
+         "Fused multiply-add is being done (not reproducible)\n");
+    }
+
+    /* Try to stop the arithmetic above from being done at compile time. */
+
+    val1 = val2 = a = b = c = d = 0;
+
     R_dec_min_exponent = floor(log10(R_AccuracyInfo.xmin)); /* smallest decimal exponent */
     PROTECT(ans = allocVector(VECSXP, 18));
     PROTECT(nms = allocVector(STRSXP, 18));

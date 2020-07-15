@@ -1243,9 +1243,6 @@ AC_SUBST(FCLIBS)
 ## that break with LAPACK/BLAS-style passing of length-1 strings
 ## (without hidden arguments giving their lengths).
 
-## Also use -fallow-argument-mismatch to accomodate old Fortran code 
-## with gfortran-10.
-
 AC_MSG_CHECKING([if need -fno-optimize-sibling-calls for gfortran])
 AC_CACHE_VAL([r_cv_have_gfortran7],
 [r_cv_have_gfortran7=no
@@ -1258,13 +1255,116 @@ fi])
 
 if test "x${r_cv_have_gfortran7}" = xyes; then
   AC_MSG_RESULT([yes])
-  R_XTRA_FFLAGS="${R_XTRA_FFLAGS} -fno-optimize-sibling-calls -fallow-argument-mismatch"
-  R_XTRA_FCFLAGS="${R_XTRA_FCFLAGS} -fno-optimize-sibling-calls -fallow-argument-mismatch"
+  R_XTRA_FFLAGS="${R_XTRA_FFLAGS} -fno-optimize-sibling-calls"
+  R_XTRA_FCFLAGS="${R_XTRA_FCFLAGS} -fno-optimize-sibling-calls"
 else
   AC_MSG_RESULT([no])
 fi
 
 ## End of code adapted from R-4.0.2.
+
+
+## Enable -fallow-argument-mismatch to accomodate old Fortran code 
+## with gfortran-10.
+
+AC_MSG_CHECKING([if can use -fallow-argument-mismatch for gfortran])
+AC_CACHE_VAL([r_cv_have_gfortran10],
+[r_cv_have_gfortran10=no
+if test "x${GFC}" = xyes; then
+  gfortran_version_maj=`echo "__GNUC__" | ${FC} -E -P - | ${SED} 's/ //g'`
+  if test ${gfortran_version_maj} -ge 10; then
+    r_cv_have_gfortran10=yes
+  fi
+fi])
+
+if test "x${r_cv_have_gfortran10}" = xyes; then
+  AC_MSG_RESULT([yes])
+  R_XTRA_FFLAGS="${R_XTRA_FFLAGS} -fallow-argument-mismatch"
+  R_XTRA_FCFLAGS="${R_XTRA_FCFLAGS} -fallow-argument-mismatch"
+else
+  AC_MSG_RESULT([no])
+fi
+
+
+## If possible, use -ffp-contract=off flag so numerical results
+## will be reproducible.
+
+## Fortran:
+
+AC_MSG_CHECKING([if can use -ffp-contract=off for Fortran])
+AC_CACHE_VAL([r_cv_have_gfortran46],
+[r_cv_have_gfortran46=no
+if test "x${GFC}" = xyes; then
+  gfortran_version_maj=`echo "__GNUC__" | ${FC} -E -P - | ${SED} 's/ //g'`
+  if test ${gfortran_version_maj} -ge 5; then
+    r_cv_have_gfortran46=yes
+  fi
+  if test ${gfortran_version_maj} -eq 4; then
+    gfortran_version_min=`echo "__GNUC_MINOR__" | ${FC} -E -P - | ${SED} 's/ //g'`
+    if test ${gfortran_version_min} -ge 6; then
+      r_cv_have_gfortran46=yes
+    fi
+  fi
+fi])
+
+if test "x${r_cv_have_gfortran46}" = xyes; then
+  AC_MSG_RESULT([yes])
+  R_XTRA_FFLAGS="${R_XTRA_FFLAGS} -ffp-contract=off"
+  R_XTRA_FCFLAGS="${R_XTRA_FCFLAGS} -ffp-contract=off"
+else
+  AC_MSG_RESULT([no])
+fi
+
+## C:
+
+AC_MSG_CHECKING([if can use -ffp-contract=off for C])
+AC_CACHE_VAL([r_cv_have_gcc46],
+[r_cv_have_gcc46=no
+if test "x${GFC}" = xyes; then
+  gcc_version_maj=`echo "__GNUC__" | ${CC} -E -P - | ${SED} 's/ //g'`
+  if test ${gcc_version_maj} -ge 5; then
+    r_cv_have_gcc46=yes
+  fi
+  if test ${gcc_version_maj} -eq 4; then
+    gcc_version_min=`echo "__GNUC_MINOR__" | ${CC} -E -P - | ${SED} 's/ //g'`
+    if test ${gcc_version_min} -ge 6; then
+      r_cv_have_gcc46=yes
+    fi
+  fi
+fi])
+
+if test "x${r_cv_have_gcc46}" = xyes; then
+  AC_MSG_RESULT([yes])
+  R_XTRA_CFLAGS="${R_XTRA_CFLAGS} -ffp-contract=off"
+else
+  AC_MSG_RESULT([no])
+fi
+
+## C++:
+
+AC_MSG_CHECKING([if can use -ffp-contract=off for C++])
+AC_CACHE_VAL([r_cv_have_gxx46],
+[r_cv_have_gxx46=no
+if test "x${GXX}" = xyes; then
+  gxx_version_maj=`echo "__GNUC__" | ${CXX} -E -P - | ${SED} 's/ //g'`
+  if test ${gxx_version_maj} -ge 5; then
+    r_cv_have_gxx46=yes
+  fi
+  if test ${gxx_version_maj} -eq 4; then
+    gxx_version_min=`echo "__GNUC_MINOR__" | ${CXX} -E -P - | ${SED} 's/ //g'`
+    if test ${gxx_version_min} -ge 6; then
+      r_cv_have_gxx46=yes
+    fi
+  fi
+fi])
+
+if test "x${r_cv_have_gxx46}" = xyes; then
+  AC_MSG_RESULT([yes])
+  R_XTRA_CXXFLAGS="${R_XTRA_CXXFLAGS} -ffp-contract=off"
+else
+  AC_MSG_RESULT([no])
+fi
+
 
 AC_SUBST(CFLAGS)
 AC_SUBST(MAIN_CFLAGS)

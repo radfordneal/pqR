@@ -8,3 +8,7 @@ Fix installation problems:
 
    Avoid inadvertent use of 'common', so the -fno-common default in
    gcc-10 will work.
+
+Also, automatically add -ffp-contract=off to ensure reproducible arithmetic,
+by disabling (eg) fused multiply-add.  Check that fused multiply-add isn't
+done on startup.
