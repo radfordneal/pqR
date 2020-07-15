@@ -39,8 +39,26 @@
 
   \subsection{INSTALLATION}{
   \itemize{
+  \item For suitably-recent versions, the gfortran option
+        -fno-optimize-sibling-calls is automatically 
+        enabled, to avoid problems with the Fortran/C 
+        interface.  See the blog post by Tomas Kalibera
+        at https://developer.r-project.org/Blog/public/2019/09/25/gfortran-issues-with-lapack-ii
+  \item For suitably-recent versions, the gfortran option
+        -fallow-argument-mismatch is automatically enabled,
+        to avoid language compatibility problems with old Fortran code.
+  \itme For suitably-recent versions, the gcc, g++, and gfortran
+        option -ffp-contract=off is automatically enabled,
+        to prevent use of instructions such as fused multiply-add
+        that would make numerical results be non-reproducible
+        (for different R code that should be equivalent, for different
+         processors, for different compilers, and for different
+         compiler optimization settings).
+  \item On startup, a check is made that fused multiply-adds are not 
+        done, since this would make numerical results non-reproducible.
   \item Fixed handling of \code{mat_mult_with_BLAS=T} or 
         \code{mat_mult_with_BLAS=F} as an option to configure.
+  \item Fixed some problems with using gcc-10.
   }}
 
   \subsection{BUG FIXES}{

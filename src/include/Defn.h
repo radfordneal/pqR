@@ -974,9 +974,11 @@ FUNTAB	R_FunTab[];	    /* Built in functions */
 #ifdef __MAIN__
 # define INI_as(v) = v
 #define extern0 attribute_hidden
+#define extern1
 #else
 # define INI_as(v)
 #define extern0 extern
+#define extern1 extern
 #endif
 
 
@@ -1070,8 +1072,8 @@ extern0 int	R_Expressions_keep INI_as(5000);	/* options(expressions) */
 extern0 Rboolean R_KeepSource	INI_as(FALSE);	/* options(keep.source) */
 extern0 int	R_WarnLength	INI_as(1000);	/* Error/warning max length */
 extern0 int	R_nwarnings	INI_as(50);
-extern uintptr_t R_CStackStart	INI_as((uintptr_t)-1);/* Initial stack address*/
-extern uintptr_t R_CStackLimit  INI_as((uintptr_t)-1);/* C stack limit */
+extern1 uintptr_t R_CStackStart	INI_as((uintptr_t)-1);/* Initial stack address*/
+extern1 uintptr_t R_CStackLimit  INI_as((uintptr_t)-1);/* C stack limit */
 #define R_CStackThreshold R_high_frequency_globals.CStackThreshold
 
 #define R_Profiling R_high_frequency_globals.Profiling
@@ -1085,7 +1087,7 @@ extern uintptr_t R_CStackLimit  INI_as((uintptr_t)-1);/* C stack limit */
 #if 1                        /* Enable or disable assumption below */
 #define R_CStackDir 1          /* Assume down, which is almost always true */
 #else
-extern int CStackDir;          /* Determine at run time initialization */
+extern1 int CStackDir;       /* Determine at run time initialization */
 #endif
 #endif
 #endif
@@ -1097,14 +1099,14 @@ extern0 struct RPRSTACK *R_PendingPromises INI_as(NULL); /* Pending promise stac
 /* File Input/Output */
 LibExtern Rboolean R_Interactive INI_as(TRUE);	/* TRUE during interactive use*/
 extern0 Rboolean R_Quiet	INI_as(FALSE);	/* Be as quiet as possible */
-extern Rboolean  R_Slave	INI_as(FALSE);	/* Run as a slave process */
+extern1 Rboolean R_Slave	INI_as(FALSE);	/* Run as a slave process */
 extern0 Rboolean R_Verbose	INI_as(FALSE);	/* Be verbose */
 LibExtern Rboolean R_PeekForElse INI_as(FALSE); /* Look ahead for 'else'? */
 /* extern int	R_Console; */	    /* Console active flag */
 /* IoBuffer R_ConsoleIob; : --> ./IOStuff.h */
 /* R_Consolefile is used in the internet module */
-extern FILE*	R_Consolefile	INI_as(NULL);	/* Console output file */
-extern FILE*	R_Outputfile	INI_as(NULL);	/* Output file */
+extern1 FILE*	R_Consolefile	INI_as(NULL);	/* Console output file */
+extern1 FILE*	R_Outputfile	INI_as(NULL);	/* Output file */
 extern0 int	R_ErrorCon	INI_as(2);	/* Error connection */
 LibExtern char *R_TempDir	INI_as(NULL);	/* Name of per-session dir */
 extern0 char   *Sys_TempDir	INI_as(NULL);	/* Name of per-session dir
@@ -1123,7 +1125,7 @@ extern0 int	R_ParseContextLast INI_as(0); /* last character in context buffer */
 extern0 int	R_ParseContextLine; /* Line in file of the above */
 
 /* Image Dump/Restore */
-extern int	R_DirtyImage	INI_as(0);	/* Current image dirty */
+extern1 int	R_DirtyImage	INI_as(0);	/* Current image dirty */
 
 /* How should %*% operations be done - with C routines or BLAS routines?  
    For four kinds of operations: vec-dot, mat-vec, vec-mat, mat-mat.
@@ -1191,15 +1193,15 @@ extern int Rf_initEmbeddedR(int argc, char **argv);
 
 /* GUI type */
 
-extern char	*R_GUIType	INI_as("unknown");
-extern Rboolean R_isForkedChild		INI_as(FALSE); /* was this forked? */
+extern1 char	*R_GUIType	INI_as("unknown");
+extern1 Rboolean R_isForkedChild	INI_as(FALSE); /* was this forked? */
 
-extern double cpuLimit			INI_as(-1.0);
-extern double cpuLimit2			INI_as(-1.0);
-extern double cpuLimitValue		INI_as(-1.0);
-extern double elapsedLimit		INI_as(-1.0);
-extern double elapsedLimit2		INI_as(-1.0);
-extern double elapsedLimitValue		INI_as(-1.0);
+extern1 double cpuLimit			INI_as(-1.0);
+extern1 double cpuLimit2		INI_as(-1.0);
+extern1 double cpuLimitValue		INI_as(-1.0);
+extern1 double elapsedLimit		INI_as(-1.0);
+extern1 double elapsedLimit2		INI_as(-1.0);
+extern1 double elapsedLimitValue	INI_as(-1.0);
 
 void resetTimeLimits(void);
 
@@ -1464,6 +1466,8 @@ extern0 Rboolean known_to_be_utf8 INI_as(FALSE);
 # define yychar			Rf_yychar
 # define yylval			Rf_yylval
 # define yynerrs		Rf_yynerrs
+# define yydebug		Rf_yydebug
+# define yylloc			Rf_yylloc
 # define yyparse		Rf_yyparse
 
 /* Platform Dependent Gui Hooks */

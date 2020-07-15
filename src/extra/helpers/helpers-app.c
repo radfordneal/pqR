@@ -109,7 +109,7 @@ char *Rf_task_name (helpers_task_proc *task)
 
 char *Rf_var_name (helpers_var_ptr var)
 {
-    char h[100], s[100];
+    char h[50], s[100];
     char *p;
     sprintf (h, "%llx", (long long int) var);
     sprintf (s, "%c%d:%s", TYPEOF(var)==INTSXP ? 'I'
