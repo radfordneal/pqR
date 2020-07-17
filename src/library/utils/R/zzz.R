@@ -28,7 +28,7 @@
 	     str = list(strict.width = "no", digits.d = 3, vec.len = 4),
 	     demo.ask = "default", example.ask = "default",
 	     HTTPUserAgent = defaultUserAgent(),
-             repos = c(pqR = "ftp://price.utstat.utoronto.ca",
+             repos = c(pqR = "http://repos.pqR-project.org",
                        CRAN = "http://cloud.r-project.org"),
 	     menu.graphics = TRUE,
              mailer = "mailto")

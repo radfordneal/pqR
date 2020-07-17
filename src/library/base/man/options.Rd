@@ -626,7 +626,7 @@ getOption(x, default = NULL)
 
     \item{\code{repos}:}{URLs of the repositories for use by
       \code{\link{update.packages}}.  Defaults to \code{
-          c(pqR = "ftp://price.utstat.utoronto.ca",
+          c(pqR = "http://repos.pqR-project.org",
             CRAN = "http://cloud.r-project.org")
       }
 
