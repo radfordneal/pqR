@@ -11,7 +11,7 @@ if(.Platform$OS.type == "unix" &&
    is.null(nsl("cran.r-project.org"))) q()
 
 # test do_download.
-a <- available.packages(contrib.url("ftp://price.utstat.utoronto.ca"))
+a <- available.packages(contrib.url("http://repos.pqR-project.org"))
 colnames(a)
 a["ggplot2","License"]
 
@@ -23,11 +23,23 @@ close(zz)
 ## check graceful failure:
 try(zz <- url("http://foo.bar", "r"))
 
-# and via read.table, test http and ftp.
+# and via read.table, test http # and ftp.
 
 (http_dat <- read.table("http://pqR-project.org/test.dat"))
-(ftp_dat  <- read.table("ftp://price.utstat.utoronto.ca/test.dat"))
-identical(http_dat,ftp_dat)
+#(ftp_dat  <- read.table("ftp://pqR-project.org/test.dat"))
+#identical(http_dat,ftp_dat)
+
+real_dat <- as.data.frame(matrix(c(
+  10.1, 20.1, 30, 40, 50.1,
+  20.2, 20.2, 30, 40, 50.2,
+  30.3, 20.3, 30, 40, 50.3,
+  40.4, 20.4, 30, 40, 50.4,
+  50.5, 20.5, 30, 40, 50.5,
+  60.6, 20.6, 30, 40, 50.6,
+  70.7, 20.7, 30, 40, 50.7,
+  80.8, 20.8, 30, 40, 50.8,
+  90.9, 20.9, 30, 40, 50.9), nrow=9, ncol=5, byrow=TRUE))
+identical(http_dat,real_dat)
 
 ## everything from here on is directly over sockets
 if(!capabilities("sockets")) stop("no socket capabilities")
@@ -69,5 +81,5 @@ if(nchar(Sys.getenv("http_proxy")) > 0
    || nchar(Sys.getenv("HTTP_PROXY")) > 0) {
     cat("http proxy is set, so skip test of http over sockets\n")
 } else {
-    httpget("http://www.cs.utoronto.ca/~radford/test.dat")
+    httpget("http://repos.pqR-project.org/test.dat")
 }

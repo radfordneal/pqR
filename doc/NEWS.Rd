@@ -22,6 +22,9 @@
 
   \subsection{INSTALLATION}{
   \itemize{
+  \item The default package repository for \code{install.package} is now
+        \url{http://repos.pqR-project.org} (followed by 
+        \url{http://cloud.r-project.org} if the package is not found there).
   \item For suitably-recent versions, the gfortran option
         -fno-optimize-sibling-calls is automatically 
         enabled, to avoid problems with the Fortran/C 
