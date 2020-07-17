@@ -22,19 +22,16 @@
 
   \subsection{INSTALLATION}{
   \itemize{
-  \item The default package repository for \code{install.package} is now
-        \url{http://repos.pqR-project.org} (followed by 
-        \url{http://cloud.r-project.org} if the package is not found there).
   \item For suitably-recent versions, the gfortran option
-        -fno-optimize-sibling-calls is automatically 
+        \code{-fno-optimize-sibling-calls} is automatically 
         enabled, to avoid problems with the Fortran/C 
         interface.  See the blog post by Tomas Kalibera
-        at https://developer.r-project.org/Blog/public/2019/09/25/gfortran-issues-with-lapack-ii
+        at \url{https://developer.r-project.org/Blog/public/2019/09/25/gfortran-issues-with-lapack-ii}.
   \item For suitably-recent versions, the gfortran option
-        -fallow-argument-mismatch is automatically enabled,
+        \code{-fallow-argument-mismatch} is automatically enabled,
         to avoid language compatibility problems with old Fortran code.
-  \itme For suitably-recent versions, the gcc, g++, and gfortran
-        option -ffp-contract=off is automatically enabled,
+  \item For suitably-recent versions, the gcc, g++, and gfortran
+        option \code{-ffp-contract=off} is automatically enabled,
         to prevent use of instructions such as fused multiply-add
         that would make numerical results be non-reproducible
         (for different R code that should be equivalent, for different
@@ -44,7 +41,14 @@
         done, since this would make numerical results non-reproducible.
   \item Fixed handling of \code{mat_mult_with_BLAS=T} or 
         \code{mat_mult_with_BLAS=F} as an option to configure.
-  \item Fixed some problems with using gcc-10.
+  \item Fixed some problems that show up when using gcc-10.
+  }}
+
+  \subsection{FEATURE CHANGES}{
+  \itemize{
+  \item The default package repository for \code{install.packages} is now
+        \url{http://repos.pqR-project.org} (followed, if not found there, by 
+        \url{http://cloud.r-project.org}).
   }}
 
   \subsection{BUG FIXES}{
