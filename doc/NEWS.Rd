@@ -6,24 +6,41 @@
 \encoding{UTF-8}
 
 
-\section{VERSION OF 2019-00-00}{
+\section{VERSION OF 2020-00-00}{
 
   \itemize{
-  \item This is a test version with a preliminary
-  implementation of automatic differentiation.  This is not expected
-  to become a stable release; that will wait until a more refined
-  implementation.  However, the version in this test release does 
-  demonstrate most of what the final facility will be like, except that 
-  some operations are much less efficient than they will be later.
+  \item This release fixes some installation issues, changes the
+        URL of the default pqR package repository, and fixes a few bugs
 
-  \item Type \code{help(Gradient)} to read documentation on the automatic 
-  differentiation facilities, as they exist so far.
+  \item This release also has a preliminary implementation of automatic 
+        differentiation, and of recursive arithmetic on lists (which is
+        especially useful in conjunction with automatic differentiation).
   }
 
   \subsection{INSTALLATION}{
   \itemize{
   \item Fixed handling of \code{mat_mult_with_BLAS=T} or 
         \code{mat_mult_with_BLAS=F} as an option to configure.
+  }}
+
+  \subsection{NEW FEATURES}{
+  \itemize{
+  \item A new automatic differentiation facility has been implemented.
+        The implementation is not yet polished.  There may be bugs.
+        In some situations, performance is not as good as it should
+        be in the final version, and is sometimes drastically inefficient.
+        This version does, however, demonstrate what the final facility
+        will be like.
+
+        Type \code{help(Gradient)} to read documentation on the automatic 
+        differentiation facilities
+  \item One can now do arithmetic (+, -, *, /, ^, %%, %/%) on lists 
+        (and lists of lists, etc.), with the result computed recursively.
+        For binary operations, the two operands must be lists that match 
+        exactly in length and names, or one operand must be a scalar.
+        Similarly, mathematical functions of one argument may now be
+        lists, with the results computed recursively. This facility is
+        preliminary and might change in future.
   }}
 
   \subsection{BUG FIXES}{
