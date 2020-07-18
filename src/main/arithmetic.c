@@ -1810,8 +1810,21 @@ SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
     if (opcode != MINUSOP && opcode != PLUSOP)
         errorcall(call, _("invalid unary operator"));
 
-    if ( ! ((NUMBER_TYPES >> type) & 1))
+    if ( ! ((NUMBER_TYPES >> type) & 1)) {
+        if (type == VECSXP) {
+            SEXP call;
+            s1 = isObject(s1) && !obj1 ? Rf_makeUnclassed(s1) : s1;
+            PROTECT (call = LCONS (install(opcode==PLUSOP ? "+.list" : "-.list"),
+                                   CONS (mkPROMISE(s1,R_EmptyEnv), R_NilValue)));
+            if (variant & VARIANT_GRADIENT)
+            { /* .... */
+            }
+            ans = eval(call,env);
+            UNPROTECT(1);
+            return ans;
+        }
         errorcall(call, _("invalid argument to unary operator"));
+    }
 
     n = LENGTH(s1);
 
@@ -1835,7 +1848,7 @@ SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
             for (int i = 0; i<LENGTH(s1); i++) INTEGER(ans)[i] = LOGICAL(s1)[i];
         }
     }
-    else if (opcode==MINUSOP) {
+    else { /* opcode==MINUSOP */
         if (type == LGLSXP) 
             ; /* allocated above */
         else if (isObject(s1) && !obj1)
@@ -1852,8 +1865,6 @@ SEXP attribute_hidden R_unary (SEXP call, int opcode, SEXP s1, int obj1,
                               : HELPERS_PIPE_IN01_OUT,
           task_unary_minus, 0, ans, s1);
     }
-    else
-        errorcall(call, _("invalid argument to unary operator"));
 
     R_variant_result = local_assign;  /* do at end, just in case */
 

@@ -6,35 +6,16 @@
 \encoding{UTF-8}
 
 
-\section{CHANGES IN TEST VERSION RELEASED 2019-07-05}{
+\section{VERSION OF 2020-00-00}{
 
   \subsection{INTRODUCTION}{
   \itemize{
+  \item This release fixes some installation issues, changes the
+        URL of the default pqR package repository, and fixes a few bugs
 
-  \item This is a test version with a preliminary implementation of
-  automatic differentiation.  Though not yet ready for real use, this
-  version does demonstrate most of what the final automatic differentiation
-  facility will be like, although some operations are substantially less 
-  efficient than they will be later.
-  }}
-
-  \subsection{NEW FEATURE}{
-  \itemize{
-
-  \item A facility for run-time automatic differentiation is now
-  implemented.  Most R expressions that produce a real value can now
-  be evaluated in a way that gives both their value and the
-  derivatives of this value with respect to one or more variables.
-  This is done by run-time application of the chain rule for
-  derivatives (not by numerical differentitation).  
-
-  Automatic differentiation is implemented with a hybrid of ``forward
-  mode'' and ``reverse mode'' approaches, using a run-time assessment
-  of which mode is faster (although some operations can currently only
-  be done in forward mode).
-
-  Type \code{help(Gradient)} to read documentation on the automatic 
-  differentiation facilities.
+  \item This release also has a preliminary implementation of automatic 
+        differentiation, and of recursive arithmetic on lists (which is
+        especially useful in conjunction with automatic differentiation).
   }}
 
   \subsection{INSTALLATION}{
@@ -66,6 +47,26 @@
   \item The default package repository for \code{install.packages} is now
         \url{http://repos.pqR-project.org} (followed, if not found there, by 
         \url{http://cloud.r-project.org}).
+  }}
+
+  \subsection{NEW FEATURES}{
+  \itemize{
+  \item A new automatic differentiation facility has been implemented.
+        The implementation is not yet polished.  There may be bugs.
+        In some situations, performance is not as good as it should
+        be in the final version, and is sometimes drastically inefficient.
+        This version does, however, demonstrate what the final facility
+        will be like.
+
+        Type \code{help(Gradient)} to read documentation on the automatic 
+        differentiation facilities
+  \item One can now do arithmetic (+, -, *, /, ^, %%, %/%) on lists 
+        (and lists of lists, etc.), with the result computed recursively.
+        For binary operations, the two operands must be lists that match 
+        exactly in length and names, or one operand must be a scalar.
+        Similarly, mathematical functions of one argument may now be
+        lists, with the results computed recursively. This facility is
+        preliminary and might change in future.
   }}
 
   \subsection{BUG FIXES}{
